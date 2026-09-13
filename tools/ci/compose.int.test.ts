@@ -60,6 +60,30 @@ describe('ambiente do compose', () => {
     expect(politicaCache).toContain('allkeys-lru')
   })
 
+  it('a soma dos pools de todas as instâncias que usam o Postgres cabe no max_connections, com folga para operação', () => {
+    const ambiente = lerAmbienteDeTeste()
+    const configuracao = JSON.parse(composeOuFalha('config', '--format', 'json')) as {
+      services: Record<string, { environment?: Record<string, string | null> }>
+    }
+    const pools = Object.values(configuracao.services).flatMap((servico) => {
+      const maximo = servico.environment?.['BANCO_POOL_MAXIMO']
+      return maximo === undefined || maximo === null ? [] : [Number(maximo)]
+    })
+    // As duas APIs, no mínimo. Worker e despachante entram na soma quando existirem.
+    expect(pools.length).toBeGreaterThanOrEqual(2)
+    const consultar = (sql: string) =>
+      Number(
+        composeOuFalha(
+          'exec', '-T', 'postgres', 'psql', '-U', valorObrigatorio(ambiente, 'POSTGRES_USUARIO'),
+          '-d', valorObrigatorio(ambiente, 'POSTGRES_BANCO'), '-tAc', sql,
+        ).trim(),
+      )
+    const disponiveis = consultar('show max_connections') - consultar('show superuser_reserved_connections')
+    // Migração e psql de operação abrem conexão fora dos pools.
+    const FOLGA_PARA_OPERACAO = 10
+    expect(pools.reduce((soma, maximo) => soma + maximo, 0) + FOLGA_PARA_OPERACAO).toBeLessThanOrEqual(disponiveis)
+  })
+
   it('Postgres tem pgvector disponível', () => {
     const ambiente = lerAmbienteDeTeste()
     const saida = composeOuFalha(

@@ -1,0 +1,81 @@
+# Borda local: só balanceia. HTTPS, acesso fechado e cabeçalhos de staging ficam para quando o
+# staging existir (tasks/prd-fundacao-tecnica/notas-staging.md).
+{
+	auto_https off
+	# A API de administração escuta só no loopback do container e serve de sonda do compose.
+	admin 127.0.0.1:2019
+	persist_config off
+
+	# Nada de requisição no log (regra 20, item 9): nem acesso, nem o log de erro por requisição,
+	# nem o do proxy, que registra URL com query, IP e User-Agent quando a resposta é interrompida
+	# (upstream que cai no meio, aluno que fecha a aba). Fica o log do próprio Caddy (boot).
+	log default {
+		output stderr
+		format json
+		exclude http.log.access http.log.error http.handlers.reverse_proxy
+	}
+	# A sonda da borda à parte: só host e caminho da sonda, e é o que mostra instância fora do balanceamento.
+	log sonda {
+		output stderr
+		format json
+		include http.handlers.reverse_proxy.health_checker
+	}
+}
+
+(sonda_e_troca) {
+	# A sonda é a `/prontidao`, que não consulta dependência. `/saude` fica de fora, senão um
+	# Postgres lento tiraria as duas APIs de uma vez.
+	#
+	# A instância que drena responde 503 na hora e sai do balanceamento em até
+	# health_interval × health_fails (4 s), dentro de DRENAGEM_ESPERA_BORDA_MS (5 s). Instância só
+	# lenta não sai: com timeout de 3 s e duas falhas seguidas, uma rodada lenta na manhã de
+	# segunda não tira as duas APIs do ar ao mesmo tempo. As relações são conferidas em
+	# tools/ci/borda.test.ts.
+	health_uri /prontidao
+	health_interval 2s
+	health_timeout 3s
+	health_fails 2
+	health_passes 1
+	# Instância que recusou a conexão (reiniciando) é trocada pela outra dentro deste prazo, em vez de 502.
+	lb_try_duration 5s
+	lb_try_interval 250ms
+	transport http {
+		# Menor que a ociosidade HTTP das instâncias (OCIOSIDADE_HTTP_MS, 65 s): quem fecha a
+		# conexão ociosa é a borda, e nenhuma requisição cai num socket que a instância acabou de fechar.
+		keepalive 30s
+	}
+}
+
+:8080 {
+	# A sonda é da rede interna: a borda não a expõe.
+	@prontidao path /prontidao /prontidao/*
+	handle @prontidao {
+		respond 404
+	}
+
+	@realtime path /socket.io/*
+	handle @realtime {
+		reverse_proxy realtime-1:3000 realtime-2:3000 {
+			# O polling do socket.io faz várias requisições HTTP por sessão, e todas precisam cair na
+			# mesma instância. O cookie só leva o hash do destino, nada do usuário.
+			lb_policy cookie educa_realtime
+			import sonda_e_troca
+		}
+	}
+
+	handle {
+		reverse_proxy api-1:3000 api-2:3000 {
+			import sonda_e_troca
+		}
+	}
+
+	# Nenhuma instância atendeu: o cliente recebe o mesmo envelope de erro da API, e não um 502 vazio.
+	# A mensagem é a do catálogo (MENSAGENS_DE_ERRO, conferida em tools/ci/borda.test.ts), e o
+	# `requisicaoId` é gerado aqui, sem nada da URL.
+	handle_errors 502 503 504 {
+		header Content-Type "application/json; charset=utf-8"
+		header Cache-Control no-store
+		header Retry-After 5
+		respond `{"erro":{"codigo":"INDISPONIVEL_TENTE_DE_NOVO","mensagem":"O sistema está indisponível no momento. Tente de novo em instantes.","requisicaoId":"{http.request.uuid}"}}` 503
+	}
+}

@@ -22,18 +22,18 @@ em qualquer instância, sempre dentro da sala da própria escola.
 
 ## Subtarefas
 
-- [ ] 5.1 — `infra/Caddyfile`: balanceia `api-1/api-2` e `realtime-1/realtime-2`, com
+- [x] 5.1 — `infra/Caddyfile`: balanceia `api-1/api-2` e `realtime-1/realtime-2`, com
   `health_uri /prontidao` a cada 2 s, `lb_try_duration 5s`, `lb_policy cookie` no
   realtime e sem log de acesso
-- [ ] 5.2 — `/prontidao` responde 200 enquanto a instância não drena e não consulta nenhuma
+- [x] 5.2 — `/prontidao` responde 200 enquanto a instância não drena e não consulta nenhuma
   dependência. No SIGTERM, a instância passa `/prontidao` para 503, termina as requisições
   em até 10 s e sai (`enableShutdownHooks`)
-- [ ] 5.3 — `apps/realtime` (NestJS + socket.io):
+- [x] 5.3 — `apps/realtime` (NestJS + socket.io):
   - `@socket.io/redis-streams-adapter` no Redis de fila, com `maxLen`
   - namespace `/sistema` autenticado pelo mesmo JWT
   - sala `escola:{esc}` definida pelo token, nunca pelo cliente
   - cliente com reconexão e espalhamento aleatório
-- [ ] 5.4 — Testes
+- [x] 5.4 — Testes
 
 ## Arquivos previstos
 
@@ -50,7 +50,7 @@ em qualquer instância, sempre dentro da sala da própria escola.
 
 | Cenário | Tipo | O que prova |
 |---|---|---|
-| caminho feliz: `docker compose restart api-1` durante uma rajada contínua dá zero 502 e zero erro cru | integração (compose) | quebra sem drenagem ou sem `health_uri` |
+| caminho feliz: `docker compose restart api-1` durante uma rajada contínua dá zero 502 e zero erro cru | integração (compose) | quebra sem fechamento gracioso (SIGKILL no lugar do restart); a espera da drenagem e o `health_uri` são provados pelo SIGTERM em api-2, pela drenagem in-process e pela API travada |
 | clientes em `realtime-1` e `realtime-2` recebem a mesma emissão | integração | quebra sem o adaptador Redis |
 | borda: handshake por polling mantém a instância pelo cookie | integração | quebra sem `lb_policy cookie` |
 | borda: com o worker parado, a API segue respondendo | integração | a API não depende do worker (RF2) |
@@ -59,13 +59,13 @@ em qualquer instância, sempre dentro da sala da própria escola.
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
-- [ ] E2E verde (se tocou tela)
-- [ ] Vetos aprovados (se aplicáveis)
-- [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
+- [x] E2E verde (se tocou tela)
+- [x] Vetos aprovados (se aplicáveis)
+- [x] Revisão aprovada
+- [x] Commit feito, só com os arquivos desta tarefa
 
 ## Fora do escopo desta tarefa
 

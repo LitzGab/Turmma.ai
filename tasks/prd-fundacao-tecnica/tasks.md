@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 4 de 15 concluídas
+**Status:** 5 de 15 concluídas
 
 ## Lista
 
@@ -30,11 +30,11 @@
   - [x] 4.3 `GET /v1/sistema/contexto`
   - [x] 4.4 Testes: token inválido, flag desligada, escola vinda do cliente ignorada
 
-- [ ] **5.0 — Duas instâncias de API e realtime trocam sem derrubar requisição**
-  - [ ] 5.1 Caddy local balanceando, com `health_uri`, sticky no realtime e sem log de acesso
-  - [ ] 5.2 `/prontidao` com drenagem no SIGTERM
-  - [ ] 5.3 `apps/realtime` com adaptador de streams do Redis e sala por escola
-  - [ ] 5.4 Testes: restart na rajada sem 502, mensagem entre instâncias, sala isolada por escola
+- [x] **5.0 — Duas instâncias de API e realtime trocam sem derrubar requisição**
+  - [x] 5.1 Caddy local balanceando, com `health_uri`, sticky no realtime e sem log de acesso
+  - [x] 5.2 `/prontidao` com drenagem no SIGTERM
+  - [x] 5.3 `apps/realtime` com adaptador de streams do Redis e sala por escola
+  - [x] 5.4 Testes: restart na rajada sem 502, mensagem entre instâncias, sala isolada por escola
 
 - [ ] **6.0 — Rate limit por usuário e por escola, com seguro em memória**
   - [ ] 6.1 Guard com chaves de usuário e escola, e de IP só em `@RotaAnonima`

@@ -1,3 +1,4 @@
+import type { EventEmitter } from 'node:events'
 import pg from 'pg'
 import { ehErroDoPostgres } from '../erro/resumir-erro.js'
 
@@ -37,6 +38,39 @@ function ehSubmittable(valor: unknown): boolean {
   return typeof valor === 'object' && valor !== null && typeof (valor as { submit?: unknown }).submit === 'function'
 }
 
+/** O que o pg expõe em runtime e os tipos de `PoolClient` não declaram. */
+interface ConexaoComProtocolo {
+  readyForQuery?: boolean
+  connection?: EventEmitter
+}
+
+/**
+ * Espera o ReadyForQuery que o Postgres manda logo depois do ErrorResponse. O pg rejeita a
+ * consulta ao ler o ErrorResponse, antes do ReadyForQuery; quando os dois chegam em pacotes TCP
+ * separados (rede sob carga), o estado da transação lido nesse intervalo ainda é o da consulta
+ * anterior, e uma sessão com transação abortada voltaria ao pool como limpa.
+ *
+ * `false` se ele não chegou no prazo: a conexão não tem estado confiável e é descartada.
+ */
+function aguardarReadyForQuery(conexao: pg.PoolClient, limiteMs: number): Promise<boolean> {
+  const { readyForQuery, connection: protocolo } = conexao as pg.PoolClient & ConexaoComProtocolo
+  if (readyForQuery === true) return Promise.resolve(true)
+  if (protocolo === undefined) return Promise.resolve(false)
+  return new Promise((resolver) => {
+    // O ouvinte do próprio cliente foi registrado na conexão antes deste: quando este roda, o
+    // estado da transação já foi atualizado.
+    const aoFicarPronta = (): void => {
+      clearTimeout(prazo)
+      resolver(true)
+    }
+    const prazo = setTimeout(() => {
+      protocolo.off('readyForQuery', aoFicarPronta)
+      resolver(false)
+    }, limiteMs)
+    protocolo.once('readyForQuery', aoFicarPronta)
+  })
+}
+
 /**
  * `pg.Pool#query` devolve a conexão com o erro da consulta, e o pool descarta a conexão em
  * qualquer erro. Às 10h de uma segunda, com unicidade violada e consulta cortada pelo timeout
@@ -47,7 +81,7 @@ function ehSubmittable(valor: unknown): boolean {
  * consulta em stream seguem o comportamento original. Transação de verdade não passa por aqui:
  * usa `pool.connect()` e devolve a conexão explicitamente.
  */
-function consultaQueDevolveAConexao(pool: pg.Pool): Consulta {
+function consultaQueDevolveAConexao(pool: pg.Pool, limiteReadyForQueryMs: number): Consulta {
   const original = pool.query.bind(pool) as Consulta
   return async function consultar(...argumentos: unknown[]): Promise<unknown> {
     if (typeof argumentos.at(-1) === 'function' || ehSubmittable(argumentos[0])) {
@@ -68,6 +102,8 @@ function consultaQueDevolveAConexao(pool: pg.Pool): Consulta {
     } catch (erro) {
       if (ehErroDeConexao(erro)) {
         descartarCom = erro instanceof Error ? erro : new Error('consulta falhou')
+      } else if (!(await aguardarReadyForQuery(conexao, limiteReadyForQueryMs))) {
+        descartarCom = new Error('sem ReadyForQuery depois do erro da consulta')
       }
       throw erro
     } finally {
@@ -102,7 +138,7 @@ export function criarPool(config: ConfiguracaoBanco, aoPerderConexaoOciosa: () =
   pool.on('error', aoPerderConexaoOciosa)
   // A assinatura sobrecarregada de `query` não tem como ser escrita sem `any`; o comportamento
   // é o mesmo em todas as formas, e os testes de integração cobrem a forma com promessa.
-  pool.query = consultaQueDevolveAConexao(pool) as unknown as typeof pool.query
+  pool.query = consultaQueDevolveAConexao(pool, config.timeoutConexaoMs) as unknown as typeof pool.query
   return pool
 }
 

@@ -14,7 +14,8 @@ export interface SobreposicaoDeTeste {
  * teste. A porta não importa: o teste escuta numa porta livre.
  */
 export function configuracaoDeTeste(sobreposicao: SobreposicaoDeTeste = {}): ConfiguracaoApi {
-  const ambiente = { ...lerAmbienteDeTeste(), ...sobreposicao.ambiente }
+  // Espera curta da drenagem: no teste não há borda a avisar, e todo `app.close()` passa por ela.
+  const ambiente = { ...lerAmbienteDeTeste(), DRENAGEM_ESPERA_BORDA_MS: '10', ...sobreposicao.ambiente }
   const usuario = valorObrigatorio(ambiente, 'POSTGRES_USUARIO')
   const senha = valorObrigatorio(ambiente, 'POSTGRES_SENHA')
   const banco = valorObrigatorio(ambiente, 'POSTGRES_BANCO')

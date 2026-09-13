@@ -1,8 +1,10 @@
 import {
   ConfiguracaoInvalida,
+  lerConfiguracaoDrenagem,
   lerConfiguracaoIdentidade,
   validarAmbiente,
   type ConfiguracaoBanco,
+  type ConfiguracaoDrenagem,
   type ConfiguracaoIdentidade,
 } from '@educa/nucleo'
 import { z } from 'zod'
@@ -23,6 +25,7 @@ export interface ConfiguracaoApi {
   porta: number
   banco: ConfiguracaoBanco
   identidade: ConfiguracaoIdentidade
+  drenagem: ConfiguracaoDrenagem
 }
 
 /** Executa a leitura e devolve o erro de configuração em vez de lançar, para somar os problemas. */
@@ -42,8 +45,9 @@ function tentar<T>(ler: () => T): { valor: T } | { erro: ConfiguracaoInvalida } 
 export function lerConfiguracao(ambiente: Record<string, string | undefined>): ConfiguracaoApi {
   const api = tentar(() => validarAmbiente(esquemaAmbiente, ambiente))
   const identidade = tentar(() => lerConfiguracaoIdentidade(ambiente))
-  if ('erro' in api || 'erro' in identidade) {
-    const erros = [api, identidade].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
+  const drenagem = tentar(() => lerConfiguracaoDrenagem(ambiente))
+  if ('erro' in api || 'erro' in identidade || 'erro' in drenagem) {
+    const erros = [api, identidade, drenagem].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
     throw new ConfiguracaoInvalida(
       erros.flatMap((erro) => erro.variaveis).sort(),
       erros.flatMap((erro) => erro.motivos),
@@ -59,5 +63,6 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
       timeoutConsultaMs: valores.BANCO_TIMEOUT_CONSULTA_MS,
     },
     identidade: identidade.valor,
+    drenagem: drenagem.valor,
   }
 }

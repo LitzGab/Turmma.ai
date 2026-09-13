@@ -10,8 +10,8 @@
     "node": ">=22.18.0 <23"
   },
   "scripts": {
-    "build": "npm run build -w @educa/shared && npm run build -w @educa/nucleo && npm run build -w @educa/api && npm run build -w @educa/web",
-    "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
+    "build": "npm run build -w @educa/shared && npm run build -w @educa/nucleo && npm run build -w @educa/api && npm run build -w @educa/realtime && npm run build -w @educa/web",
+    "typecheck": "tsc -p tsconfig.json && tsc -p infra/tsconfig.json && npm run typecheck --workspaces --if-present",
     "lint": "eslint . --max-warnings=0 && node tools/guardas/lint.ts",
     "test": "vitest run",
     "test:unidade": "vitest run --project unidade",

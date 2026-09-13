@@ -11,6 +11,8 @@ const ambienteValido = {
   AMBIENTE: 'local',
   ACEITAR_TOKEN_SINTETICO: 'true',
   IDENTIDADE_CHAVE_ASSINATURA: 'chave_sintetica_de_teste_com_32_caracteres',
+  DRENAGEM_ESPERA_BORDA_MS: '4000',
+  DRENAGEM_PRAZO_MS: '10000',
 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
@@ -38,6 +40,7 @@ describe('lerConfiguracao', () => {
         chaveAssinatura: new TextEncoder().encode(ambienteValido.IDENTIDADE_CHAVE_ASSINATURA),
         emissoresAceitos: [EMISSOR_TOKEN_SINTETICO],
       },
+      drenagem: { esperaDaBordaMs: 4000, prazoMs: 10000 },
     })
   })
 
@@ -62,6 +65,11 @@ describe('lerConfiguracao', () => {
     const erro = erroDe({ ...ambienteValido, AMBIENTE: 'producao' })
     expect(erro.variaveis).toEqual(['ACEITAR_TOKEN_SINTETICO'])
     expect(erro.message).toContain(MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO)
+  })
+
+  it('não sobe com a espera da borda igual ou maior que o prazo da drenagem: nenhuma requisição terminaria', () => {
+    expect(erroDe({ ...ambienteValido, DRENAGEM_ESPERA_BORDA_MS: '10000' }).variaveis).toEqual(['DRENAGEM_ESPERA_BORDA_MS'])
+    expect(erroDe({ ...ambienteValido, DRENAGEM_ESPERA_BORDA_MS: '12000' }).variaveis).toEqual(['DRENAGEM_ESPERA_BORDA_MS'])
   })
 
   it('em produção com a flag desligada, sobe sem aceitar nenhum emissor sintético', () => {

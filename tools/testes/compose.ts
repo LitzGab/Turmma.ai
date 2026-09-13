@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { ARGUMENTOS_COMPOSE } from '../ci/compose.ts'
 import { raizRepositorio } from '../ci/executar.ts'
 
@@ -13,6 +13,29 @@ export function compose(...argumentos: string[]): ResultadoComando {
     encoding: 'utf8',
   })
   return { codigo: resultado.status ?? 1, saida: `${resultado.stdout}${resultado.stderr}` }
+}
+
+/**
+ * Como `compose`, sem bloquear o event loop: o teste segue disparando requisição enquanto o
+ * compose reinicia ou para um serviço.
+ */
+export function composeAssincrono(...argumentos: string[]): Promise<ResultadoComando> {
+  return new Promise((resolver) => {
+    const processo = spawn('docker', [...ARGUMENTOS_COMPOSE, ...argumentos], { cwd: raizRepositorio })
+    let saida = ''
+    processo.stdout.on('data', (parte: Buffer) => (saida += parte.toString()))
+    processo.stderr.on('data', (parte: Buffer) => (saida += parte.toString()))
+    processo.on('error', () => resolver({ codigo: 127, saida }))
+    processo.on('close', (codigo) => resolver({ codigo: codigo ?? 1, saida }))
+  })
+}
+
+export async function composeAssincronoOuFalha(...argumentos: string[]): Promise<string> {
+  const resultado = await composeAssincrono(...argumentos)
+  if (resultado.codigo !== 0) {
+    throw new Error(`docker compose ${argumentos.join(' ')} falhou:\n${resultado.saida}`)
+  }
+  return resultado.saida
 }
 
 export function composeOuFalha(...argumentos: string[]): string {

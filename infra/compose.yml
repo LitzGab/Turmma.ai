@@ -87,7 +87,11 @@ services:
       retries: 30
       start_period: 5s
 
-  api:
+  # Duas APIs atrás da borda. Nenhuma guarda estado que a outra precise (regra 80, item 5), e a
+  # soma dos pools das duas cabe no `max_connections` do Postgres (teste em tools/ci/compose.int.test.ts).
+  api-1: &api
+    # Imagem com nome fixo: as duas réplicas usam a mesma, construída uma vez só.
+    image: educa-api:local
     build:
       context: ..
       dockerfile: infra/docker/api.Dockerfile
@@ -100,8 +104,12 @@ services:
       BANCO_TIMEOUT_CONSULTA_MS: ${BANCO_TIMEOUT_CONSULTA_MS:?defina BANCO_TIMEOUT_CONSULTA_MS}
       ACEITAR_TOKEN_SINTETICO: ${ACEITAR_TOKEN_SINTETICO:?defina ACEITAR_TOKEN_SINTETICO}
       IDENTIDADE_CHAVE_ASSINATURA: ${IDENTIDADE_CHAVE_ASSINATURA:?defina IDENTIDADE_CHAVE_ASSINATURA}
+      DRENAGEM_ESPERA_BORDA_MS: ${DRENAGEM_ESPERA_BORDA_MS:?defina DRENAGEM_ESPERA_BORDA_MS}
+      DRENAGEM_PRAZO_MS: ${DRENAGEM_PRAZO_MS:?defina DRENAGEM_PRAZO_MS}
+    # Acima de DRENAGEM_PRAZO_MS: o Docker só manda SIGKILL depois de a drenagem ter tido o prazo inteiro.
+    stop_grace_period: 15s
     ports:
-      - 127.0.0.1:${API_PORTA_HOST:?defina API_PORTA_HOST}:3000
+      - 127.0.0.1:${API_1_PORTA_HOST:?defina API_1_PORTA_HOST}:3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -112,16 +120,79 @@ services:
       retries: 30
       start_period: 5s
 
+  api-2:
+    <<: *api
+    ports:
+      - 127.0.0.1:${API_2_PORTA_HOST:?defina API_2_PORTA_HOST}:3000
+
+  # Dois realtimes: a emissão atravessa as instâncias pelo stream do Redis de fila.
+  realtime-1: &realtime
+    image: educa-realtime:local
+    build:
+      context: ..
+      dockerfile: infra/docker/realtime.Dockerfile
+    environment:
+      AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
+      REALTIME_PORTA: '3000'
+      REDIS_FILA_URL: redis://redis-fila:6379
+      REALTIME_STREAM_TAMANHO_MAXIMO: ${REALTIME_STREAM_TAMANHO_MAXIMO:?defina REALTIME_STREAM_TAMANHO_MAXIMO}
+      ACEITAR_TOKEN_SINTETICO: ${ACEITAR_TOKEN_SINTETICO:?defina ACEITAR_TOKEN_SINTETICO}
+      IDENTIDADE_CHAVE_ASSINATURA: ${IDENTIDADE_CHAVE_ASSINATURA:?defina IDENTIDADE_CHAVE_ASSINATURA}
+      DRENAGEM_ESPERA_BORDA_MS: ${DRENAGEM_ESPERA_BORDA_MS:?defina DRENAGEM_ESPERA_BORDA_MS}
+      DRENAGEM_PRAZO_MS: ${DRENAGEM_PRAZO_MS:?defina DRENAGEM_PRAZO_MS}
+    stop_grace_period: 15s
+    ports:
+      - 127.0.0.1:${REALTIME_1_PORTA_HOST:?defina REALTIME_1_PORTA_HOST}:3000
+    depends_on:
+      redis-fila:
+        condition: service_healthy
+    healthcheck:
+      # Sem `/saude` própria: o realtime não tem banco, e a prontidão não consulta o Redis.
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/prontidao').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  realtime-2:
+    <<: *realtime
+    ports:
+      - 127.0.0.1:${REALTIME_2_PORTA_HOST:?defina REALTIME_2_PORTA_HOST}:3000
+
+  # Borda local (infra/Caddyfile): balanceia as duas APIs e os dois realtimes, sem log de acesso.
+  borda:
+    image: caddy:2.11.4-alpine
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - 127.0.0.1:${BORDA_PORTA_HOST:?defina BORDA_PORTA_HOST}:8080
+    depends_on:
+      api-1:
+        condition: service_healthy
+      api-2:
+        condition: service_healthy
+      realtime-1:
+        condition: service_healthy
+      realtime-2:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:2019/config/]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 2s
+
   web:
     build:
       context: ..
       dockerfile: infra/docker/web.Dockerfile
     environment:
-      API_URL_INTERNA: http://api:3000
+      # A web chega à API pela borda, como o navegador chegará em staging.
+      API_URL_INTERNA: http://borda:8080
     ports:
       - 127.0.0.1:${WEB_PORTA_HOST:?defina WEB_PORTA_HOST}:4173
     depends_on:
-      api:
+      borda:
         condition: service_healthy
     healthcheck:
       test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:4173/]

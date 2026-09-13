@@ -13,5 +13,7 @@ registrarErrosDoProcesso(logger)
 const app = await NestFactory.create<NestExpressApplication>(AppModule.com(config), { bufferLogs: true })
 configurarAplicacao(app, logger)
 app.disable('x-powered-by')
-app.enableShutdownHooks()
+// SIGTERM drena antes de sair (Drenagem, em @educa/nucleo). `useProcessExit`: o Node é o PID 1 do
+// container e ignoraria o sinal que o Nest reenvia a si mesmo no fim.
+app.enableShutdownHooks(['SIGTERM', 'SIGINT'], { useProcessExit: true })
 await app.listen(config.porta, '0.0.0.0')

@@ -27,7 +27,8 @@ describe('.env.example e compose', () => {
   })
 
   it('todo serviço do compose tem healthcheck, para `up --wait` esperar o serviço de verdade', () => {
-    const { services } = parse(lerArquivo('infra/compose.yml')) as { services: Record<string, Servico> }
+    // `merge`: as réplicas (api-2, realtime-2) herdam o serviço da primeira com `<<: *âncora`, como no compose.
+    const { services } = parse(lerArquivo('infra/compose.yml'), { merge: true }) as { services: Record<string, Servico> }
     expect(Object.keys(services).length).toBeGreaterThan(0)
     for (const [nome, servico] of Object.entries(services)) {
       expect(servico.healthcheck?.test, `${nome} sem healthcheck`).toBeDefined()

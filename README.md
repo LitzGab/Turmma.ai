@@ -20,11 +20,13 @@ só tem valor sintético.
 
 ```bash
 npm ci
-docker compose up        # Postgres (pgvector), Redis de fila, Redis de cache, storage S3, API e web
+docker compose up        # Postgres (pgvector), Redis de fila, Redis de cache, storage S3, borda, 2 APIs, 2 realtimes e web
 ```
 
-A web fica em http://127.0.0.1:58080 e mostra o estado da API; a API responde em
-http://127.0.0.1:53000/saude. As portas publicadas escutam só no loopback e estão em
+A web fica em http://127.0.0.1:58080 e mostra o estado da API; a API responde pela borda
+(Caddy, `infra/Caddyfile`) em http://127.0.0.1:53000/saude, e o realtime em
+http://127.0.0.1:53000/socket.io/. A borda balanceia duas instâncias de cada, e
+`docker compose restart api-1` troca uma instância sem derrubar requisição. As portas publicadas escutam só no loopback e estão em
 `.env.example`. Para mudar alguma na sua máquina, crie um `.env` na raiz: ele sobrepõe o
 exemplo no `docker compose up`, mas testes e esteira usam sempre o `.env.example`.
 
