@@ -35,11 +35,14 @@ job_registro     id pk, escola_id?, fila, prioridade smallint, tipo, dados jsonb
                  nao_urgente bool, estado (aguardando|reservado|publicado|ativo|concluido|falhou),
                  requisicao_id?, reservado_ate?, criado_em, iniciado_em?, concluido_em?, codigo_falha?
   parcial (fila, escola_id, criado_em) where estado not in ('concluido','falhou')
+  parcial (fila, escola_id, criado_em) where estado not in ('concluido','falhou') and not nao_urgente
+                 (10.0: a reserva do horário letivo, só urgentes, sem atravessar os segurados)
   parcial (concluido_em) where estado in ('concluido','falhou')
   check escola_id is not null or tipo like 'sistema.%'
 configuracao_operacional_escola
                  escola_id pk, fuso?, dias_letivos?, inicio?, fim?, limite_req_usuario_min?,
                  limite_req_escola_min?, vagas jsonb?        (nulo = padrão do ambiente)
+  check inicio < fim quando os dois existem; horário padrão em JANELA_LETIVA_* do ambiente
 uso_infra_diario escola_id, dia (America/Sao_Paulo), requisicoes, jobs, bytes_storage;
                  pk (escola_id, dia)
 ```
@@ -47,7 +50,10 @@ uso_infra_diario escola_id, dia (America/Sao_Paulo), requisicoes, jobs, bytes_st
 `requisicao_id` (acrescentado na 7.0) é o da requisição que pediu o job: é por ele que o RF9
 segue a trilha da API ao despachante e ao worker. Não há FK para `escola`; o F1 a adiciona
 expandindo. O serviço `migrar` roda antes das
-instâncias, só expande, e usa `lock_timeout='5s'` com 3 tentativas.
+instâncias, só expande, e usa `lock_timeout='5s'` com 3 tentativas. O migrador do Drizzle aplica tudo numa transação,
+então não há `CREATE INDEX CONCURRENTLY`: o índice da 10.0 nasceu sem ele porque o F0 não tem
+dado de produção. Antes do primeiro índice numa tabela que já cresce com aluno em produção, o
+`migrar` precisa de um caminho fora da transação.
 
 ## 4. API
 
@@ -78,7 +84,13 @@ do chamador e emite `pg_notify('job')`.
 1. **Seleção:** por fila, em ordem de prioridade, lista as escolas com job `aguardando` ou
    reserva vencida e pula o não urgente que cai na janela letiva.
 2. **Reserva:** em rodízio de escolas, uma transação curta com `FOR UPDATE SKIP LOCKED`
-   passa a linha para `reservado`, com `reservado_ate=now()+30s`, e faz commit.
+   passa a linha para `reservado`, com `reservado_ate=now()+30s`, e faz commit. Na fila de
+   lote, os urgentes são reservados primeiro (índice de pendentes urgentes) e, só fora da
+   janela letiva da escola e com vaga sobrando, os não urgentes por ordem de chegada: às
+   18h o acúmulo do dia não passa na frente do urgente que chega (10.0). A janela vale para
+   a reserva: um não urgente publicado antes das 7h e parado no pool de lote cheio começa
+   no worker mesmo depois das 7h, dentro das vagas de lote da escola. Leitura da
+   configuração que falha sem leitura anterior usa a janela padrão, como as vagas.
 3. **Vaga:** só depois da reserva, toma a vaga com Lua no ZSET `vaga:{fila}:{escola}`
    (membro `jobId`, validade 60 s, vaga vencida removida antes). Sem vaga, a linha volta a
    `aguardando`.

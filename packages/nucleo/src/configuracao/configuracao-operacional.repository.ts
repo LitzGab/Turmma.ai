@@ -5,6 +5,11 @@ import { configuracaoOperacionalEscola, type VagasConfiguradas } from '../db/sch
 
 /** O que a escola configurou. Nulo é "usa o padrão do ambiente". */
 export interface LinhaOperacional {
+  fuso: string | null
+  diasLetivos: number[] | null
+  /** `HH:MM:SS`, como o Postgres devolve `time`. */
+  inicio: string | null
+  fim: string | null
   limiteReqUsuarioMin: number | null
   limiteReqEscolaMin: number | null
   vagas: VagasConfiguradas | null
@@ -24,6 +29,10 @@ export class ConfiguracaoOperacionalRepository {
     if (escolaId === undefined) throw new Error('configuração operacional sem escola no contexto')
     const [linha] = await this.banco
       .select({
+        fuso: configuracaoOperacionalEscola.fuso,
+        diasLetivos: configuracaoOperacionalEscola.diasLetivos,
+        inicio: configuracaoOperacionalEscola.inicio,
+        fim: configuracaoOperacionalEscola.fim,
         limiteReqUsuarioMin: configuracaoOperacionalEscola.limiteReqUsuarioMin,
         limiteReqEscolaMin: configuracaoOperacionalEscola.limiteReqEscolaMin,
         vagas: configuracaoOperacionalEscola.vagas,

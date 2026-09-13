@@ -38,6 +38,12 @@ export const jobRegistro = pgTable(
     index('job_registro_pendentes_idx')
       .on(tabela.fila, tabela.escolaId, tabela.criadoEm)
       .where(sql`estado not in ('concluido', 'falhou')`),
+    // No horário letivo, o despachante reserva só os urgentes da escola (tarefa 10.0). Sem este índice,
+    // a reserva desceria pelo de pendentes atravessando cada não urgente segurado, a cada rodada, a
+    // manhã inteira; com ele, desce direto aos urgentes.
+    index('job_registro_pendentes_urgentes_idx')
+      .on(tabela.fila, tabela.escolaId, tabela.criadoEm)
+      .where(sql`estado not in ('concluido', 'falhou') and not nao_urgente`),
     // O expurgo (11.0) apaga os finalizados antigos sem varrer os pendentes.
     index('job_registro_finalizados_idx').on(tabela.concluidoEm).where(sql`estado in ('concluido', 'falhou')`),
     check('job_registro_escola_ou_sistema', sql`escola_id is not null or tipo like 'sistema.%'`),

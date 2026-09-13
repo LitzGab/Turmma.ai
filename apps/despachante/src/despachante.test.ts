@@ -1,4 +1,4 @@
-import { contextoAtual, criarLogger, type EscolaComPendentes, type JobReservado } from '@educa/nucleo'
+import { contextoAtual, criarLogger, type EscolaComPendentes, type JanelaLetiva, type JobReservado } from '@educa/nucleo'
 import type { Fila } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { Despachante, type DependenciasDoDespachante } from './despachante.js'
@@ -12,7 +12,15 @@ interface Reserva {
   escolaId: string | null
   rotinaDoSistema: boolean
   limite: number
+  soUrgentes: boolean
 }
+
+/** O padrão do `.env.example`: São Paulo, de segunda a sexta, das 07:00 às 18:00. */
+const JANELA_PADRAO: JanelaLetiva = { fuso: 'America/Sao_Paulo', diasLetivos: [1, 2, 3, 4, 5], inicio: '07:00', fim: '18:00' }
+/** Domingo, 13/09/2026, 12h em São Paulo: fora do horário letivo padrão. */
+const DOMINGO_MEIO_DIA = new Date('2026-09-13T12:00:00-03:00')
+/** Terça, 15/09/2026, 10h em São Paulo: dentro do horário letivo padrão. */
+const TERCA_10H = new Date('2026-09-15T10:00:00-03:00')
 
 /** Despachante com repository, vagas e fila falsos, que registram o que o despachante pediu e em que contexto. */
 function montar({
@@ -24,6 +32,9 @@ function montar({
   lote,
   publicadosDaEscola = [],
   membrosDaVaga = [],
+  janelaDaEscola = () => JANELA_PADRAO,
+  agora = DOMINGO_MEIO_DIA,
+  urgentesDisponiveis = Number.POSITIVE_INFINITY,
 }: {
   pendentes: EscolaComPendentes[]
   livres?: (fila: Fila, escolaId: string | null, limite: number) => number
@@ -33,6 +44,10 @@ function montar({
   lote?: number
   publicadosDaEscola?: string[]
   membrosDaVaga?: string[]
+  janelaDaEscola?: (escolaId: string | null) => JanelaLetiva
+  agora?: Date
+  /** Quantos urgentes a reserva com `soUrgentes` ainda encontra; a reserva sem filtro sempre enche o limite. */
+  urgentesDisponiveis?: number
 }) {
   const ordem: string[] = []
   const reservas: Reserva[] = []
@@ -50,11 +65,14 @@ function montar({
       consultasDePublicados.push([...ids])
       return Promise.resolve(publicadosDaEscola)
     },
-    reservarDaEscola: (fila: Fila, limite: number): Promise<JobReservado[]> => {
+    reservarDaEscola: (fila: Fila, limite: number, opcoes?: { soUrgentes?: boolean }): Promise<JobReservado[]> => {
       const contexto = contextoAtual()
       const escolaId = contexto?.escolaId ?? null
-      reservas.push({ fila, escolaId, rotinaDoSistema: contexto?.rotinaDoSistema === true, limite })
-      return Promise.resolve(Array.from({ length: limite }, () => ({ id: `job-${++sequencia}`, escolaId, requisicaoId: null, tipo: 'sintetico', fila })))
+      const soUrgentes = opcoes?.soUrgentes === true
+      reservas.push({ fila, escolaId, rotinaDoSistema: contexto?.rotinaDoSistema === true, limite, soUrgentes })
+      const quantidade = soUrgentes ? Math.min(limite, urgentesDisponiveis) : limite
+      if (soUrgentes) urgentesDisponiveis -= quantidade
+      return Promise.resolve(Array.from({ length: quantidade }, () => ({ id: `job-${++sequencia}`, escolaId, requisicaoId: null, tipo: 'sintetico', fila })))
     },
     devolverParaAguardando: (ids: readonly string[]) => {
       devolvidos.push(...ids)
@@ -96,9 +114,12 @@ function montar({
       },
     },
     vagasDaEscola: { daEscola: () => Promise.resolve(vagasDaEscola) },
+    // Como a configuração de verdade: a janela é a da escola do contexto em que o despachante pergunta.
+    janelaDaEscola: { daEscola: () => Promise.resolve(janelaDaEscola(contextoAtual()?.escolaId ?? null)) },
+    relogio: { agora: () => agora },
     logger: criarLogger({ servico: 'despachante-teste', nivel: 'silent' }),
   }
-  return { despachante: new Despachante(dependencias, lote === undefined ? {} : { lote }), reservas, devolvidos, publicados, liberados, tomadas, mantidas, ordem, consultasDePublicados }
+  return { dependencias, despachante: new Despachante(dependencias, lote === undefined ? {} : { lote }), reservas, devolvidos, publicados, liberados, tomadas, mantidas, ordem, consultasDePublicados }
 }
 
 describe('Despachante.rodada', () => {
@@ -129,7 +150,7 @@ describe('Despachante.rodada', () => {
       vagasDaEscola: { interativa: 5, normal: 5, lote: 7 },
     })
     expect(await despachante.rodada()).toBe(2)
-    expect(reservas).toEqual([{ fila: 'lote', escolaId: ESCOLA_A, rotinaDoSistema: false, limite: 2 }])
+    expect(reservas).toEqual([{ fila: 'lote', escolaId: ESCOLA_A, rotinaDoSistema: false, limite: 2, soUrgentes: true }])
     expect(tomadas).toEqual([{ fila: 'lote', escolaId: ESCOLA_A, limite: 7, ids: ['job-1', 'job-2'] }])
     expect(publicados).toEqual(['job-1', 'job-2'])
   })
@@ -194,7 +215,7 @@ describe('Despachante.rodada', () => {
   it('rotina do sistema (sem escola) reserva no contexto de rotina, com a vaga própria do sistema', async () => {
     const { despachante, reservas, tomadas } = montar({ pendentes: [{ fila: 'lote', escolaId: null }], livres: () => 1 })
     await despachante.rodada()
-    expect(reservas).toEqual([{ fila: 'lote', escolaId: null, rotinaDoSistema: true, limite: 1 }])
+    expect(reservas).toEqual([{ fila: 'lote', escolaId: null, rotinaDoSistema: true, limite: 1, soUrgentes: true }])
     expect(tomadas.map(({ escolaId }) => escolaId)).toEqual([null])
   })
 
@@ -208,5 +229,85 @@ describe('Despachante.rodada', () => {
     expect(reservas.splice(0).map(({ escolaId, limite }) => [escolaId, limite])).toEqual([[ESCOLA_A, 100]])
     expect(await despachante.rodada()).toBe(100)
     expect(reservas.splice(0).map(({ escolaId }) => escolaId)).toEqual([ESCOLA_B])
+  })
+})
+
+describe('Despachante.rodada no horário letivo', () => {
+  const pendentesNasTresFilas: EscolaComPendentes[] = [
+    { fila: 'interativa', escolaId: ESCOLA_A },
+    { fila: 'normal', escolaId: ESCOLA_A },
+    { fila: 'lote', escolaId: ESCOLA_A },
+  ]
+
+  it('terça às 10h: na fila de lote reserva só os urgentes; interativa e normal nunca são seguradas', async () => {
+    const { despachante, reservas } = montar({ pendentes: pendentesNasTresFilas, agora: TERCA_10H, urgentesDisponiveis: 0 })
+    await despachante.rodada()
+    expect(reservas.map(({ fila, soUrgentes }) => [fila, soUrgentes])).toEqual([
+      ['interativa', false],
+      ['normal', false],
+      ['lote', true],
+    ])
+  })
+
+  it('fora do horário letivo o lote reserva os urgentes primeiro e completa as vagas com os não urgentes', async () => {
+    const { despachante, reservas, publicados } = montar({ pendentes: pendentesNasTresFilas, agora: DOMINGO_MEIO_DIA, livres: () => 2, urgentesDisponiveis: 1 })
+    await despachante.rodada()
+    expect(reservas.map(({ fila, soUrgentes, limite }) => [fila, soUrgentes, limite])).toEqual([
+      ['interativa', false, 2],
+      ['normal', false, 2],
+      ['lote', true, 2],
+      ['lote', false, 1],
+    ])
+    expect(publicados).toHaveLength(6)
+  })
+
+  it('fora do horário letivo, urgentes que enchem as vagas dispensam a segunda reserva', async () => {
+    const { despachante, reservas } = montar({ pendentes: [{ fila: 'lote', escolaId: ESCOLA_A }], agora: DOMINGO_MEIO_DIA, livres: () => 2, urgentesDisponiveis: 5 })
+    expect(await despachante.rodada()).toBe(2)
+    expect(reservas.map(({ soUrgentes, limite }) => [soUrgentes, limite])).toEqual([[true, 2]])
+  })
+
+  it('a hora vem do relógio injetado a cada rodada: 17h59 segura, 18h00 solta', async () => {
+    let agora = new Date('2026-09-15T17:59:59.999-03:00')
+    const pendentes: EscolaComPendentes[] = [{ fila: 'lote', escolaId: ESCOLA_A }]
+    const falsos = montar({ pendentes, urgentesDisponiveis: 0 })
+    const despachante = new Despachante({ ...falsos.dependencias, relogio: { agora: () => agora } })
+    await despachante.rodada()
+    expect(falsos.reservas.splice(0).map(({ soUrgentes }) => soUrgentes)).toEqual([true])
+    agora = new Date('2026-09-15T18:00:00-03:00')
+    await despachante.rodada()
+    expect(falsos.reservas.map(({ soUrgentes }) => soUrgentes)).toEqual([true, false])
+  })
+
+  it('isolamento: a janela é a da escola do contexto; o sábado letivo da A não segura o lote da B', async () => {
+    const sabado10h = new Date('2026-09-19T10:00:00-03:00')
+    const { despachante, reservas } = montar({
+      pendentes: [
+        { fila: 'lote', escolaId: ESCOLA_A },
+        { fila: 'lote', escolaId: ESCOLA_B },
+      ],
+      janelaDaEscola: (escolaId) => (escolaId === ESCOLA_A ? { ...JANELA_PADRAO, diasLetivos: [1, 2, 3, 4, 5, 6] } : JANELA_PADRAO),
+      agora: sabado10h,
+      urgentesDisponiveis: 0,
+    })
+    await despachante.rodada()
+    expect(reservas.map(({ escolaId, soUrgentes }) => [escolaId, soUrgentes])).toEqual([
+      [ESCOLA_A, true],
+      [ESCOLA_B, true],
+      [ESCOLA_B, false],
+    ])
+  })
+
+  it('a rotina do sistema (sem escola) segue o horário letivo padrão', async () => {
+    const { despachante, reservas } = montar({ pendentes: [{ fila: 'lote', escolaId: null }], agora: TERCA_10H, urgentesDisponiveis: 0 })
+    await despachante.rodada()
+    expect(reservas.map(({ escolaId, rotinaDoSistema, soUrgentes }) => [escolaId, rotinaDoSistema, soUrgentes])).toEqual([[null, true, true]])
+  })
+
+  it('escola sem vaga livre na janela não chega a reservar: o segurado não gera escrita', async () => {
+    const { despachante, reservas, tomadas } = montar({ pendentes: [{ fila: 'lote', escolaId: ESCOLA_A }], livres: () => 0, agora: TERCA_10H })
+    expect(await despachante.rodada()).toBe(0)
+    expect(reservas).toEqual([])
+    expect(tomadas).toEqual([])
   })
 })

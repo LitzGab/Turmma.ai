@@ -110,13 +110,19 @@ export class DespachoRepository {
    * índice de pendentes. Uma instrução só, que é a transação curta: o `FOR UPDATE SKIP LOCKED` faz dois
    * despachantes pegarem linhas diferentes sem um esperar o outro, e o `UPDATE` repete a condição de
    * origem, então a linha que mudou de estado entre a seleção e a escrita não é reservada.
+   *
+   * Com `soUrgentes`, o não urgente fica de fora (a escola está no horário letivo): nem é reservado nem
+   * chega a tomar vaga. Desce pelo índice de pendentes urgentes, sem atravessar os segurados.
    */
-  async reservarDaEscola(fila: Fila, limite: number): Promise<JobReservado[]> {
+  async reservarDaEscola(fila: Fila, limite: number, { soUrgentes = false }: { soUrgentes?: boolean } = {}): Promise<JobReservado[]> {
     const escopo = escopoDoJobNoContexto()
+    // Literal, e não parâmetro: é o predicado do índice parcial, e um plano genérico de instrução preparada
+    // só o casaria enxergando a condição escrita.
+    const urgencia = soUrgentes ? sql`and not nao_urgente` : sql``
     const resultado = await this.banco.execute<JobReservado>(sql`
       with candidatos as (
         select id from job_registro
-        where estado not in ('concluido', 'falhou') and fila = ${fila} and ${escopo} and ${DISPONIVEL_PARA_RESERVA}
+        where estado not in ('concluido', 'falhou') and fila = ${fila} and ${escopo} and ${DISPONIVEL_PARA_RESERVA} ${urgencia}
         order by criado_em
         limit ${limite}
         for update skip locked

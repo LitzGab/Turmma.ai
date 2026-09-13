@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 9 de 15 concluídas
+**Status:** 10 de 15 concluídas
 
 ## Lista
 
@@ -59,10 +59,10 @@
   - [x] 9.3 `VagasPorEscola` em Lua e rodízio de escolas no despachante
   - [x] 9.4 Testes: prioridade, teto por escola, vaga concorrente, vaga vencida, isolamento
 
-- [ ] **10.0 — Lote não urgente só começa fora do horário letivo da escola**
-  - [ ] 10.1 `JanelaLetiva` com fuso, dias e horário, e relógio injetado
-  - [ ] 10.2 Despachante segura o não urgente sem consumir vaga
-  - [ ] 10.3 Testes: terça 10h, sábado, sábado letivo, feriado, fuso, 17h59 contra 18h00
+- [x] **10.0 — Lote não urgente só começa fora do horário letivo da escola**
+  - [x] 10.1 `JanelaLetiva` com fuso, dias e horário, e relógio injetado
+  - [x] 10.2 Despachante segura o não urgente sem consumir vaga
+  - [x] 10.3 Testes: terça 10h, sábado, sábado letivo, feriado, fuso, 17h59 contra 18h00
 
 - [ ] **11.0 — Uso marcado por escola, com consolidação e expurgo**
   - [ ] 11.1 Contadores de requisição e job por escola e dia

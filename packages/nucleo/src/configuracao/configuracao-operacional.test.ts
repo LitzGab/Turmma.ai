@@ -4,6 +4,7 @@ import { contextoAtual, executarNoContexto } from '../contexto/contexto.js'
 import {
   ConfiguracaoOperacional,
   NOVA_TENTATIVA_DA_CONFIGURACAO_MS,
+  resolverJanela,
   resolverLimites,
   resolverVagas,
   VALIDADE_DA_CONFIGURACAO_MS,
@@ -14,8 +15,9 @@ const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
 const ESCOLA_B = '0190f5a0-0000-7000-8000-00000000000b'
 const VAGAS_PADRAO = { interativa: 5, normal: 5, lote: 2 }
 const LIMITES_PADRAO = { porUsuarioMin: 120, porEscolaMin: 30_000 }
+const JANELA_PADRAO = { fuso: 'America/Sao_Paulo', diasLetivos: [1, 2, 3, 4, 5], inicio: '07:00', fim: '18:00' }
 
-const linha = (parcial: Partial<LinhaOperacional>): LinhaOperacional => ({ limiteReqUsuarioMin: null, limiteReqEscolaMin: null, vagas: null, ...parcial })
+const linha = (parcial: Partial<LinhaOperacional>): LinhaOperacional => ({ fuso: null, diasLetivos: null, inicio: null, fim: null, limiteReqUsuarioMin: null, limiteReqEscolaMin: null, vagas: null, ...parcial })
 const naEscola = <T>(escolaId: string, funcao: () => T): T => executarNoContexto({ requisicaoId: randomUUID(), escolaId }, funcao)
 
 describe('resolverVagas e resolverLimites', () => {
@@ -32,6 +34,39 @@ describe('resolverVagas e resolverLimites', () => {
   it('cada limite nulo cai no padrão, independente do outro', () => {
     expect(resolverLimites(LIMITES_PADRAO, linha({ limiteReqEscolaMin: 3 }))).toEqual({ porUsuarioMin: 120, porEscolaMin: 3 })
     expect(resolverLimites(LIMITES_PADRAO, linha({ limiteReqUsuarioMin: 7 }))).toEqual({ porUsuarioMin: 7, porEscolaMin: 30_000 })
+  })
+})
+
+describe('resolverJanela', () => {
+  function resolver(parcial: Partial<LinhaOperacional> | undefined) {
+    const descartados: string[] = []
+    const janela = resolverJanela(JANELA_PADRAO, parcial === undefined ? undefined : linha(parcial), (campo) => descartados.push(campo))
+    return { janela, descartados }
+  }
+
+  it('configuração nula usa o padrão do ambiente: São Paulo, segunda a sexta, 07:00 às 18:00', () => {
+    expect(resolver(undefined)).toEqual({ janela: JANELA_PADRAO, descartados: [] })
+    expect(resolver({ vagas: { lote: 5 } })).toEqual({ janela: JANELA_PADRAO, descartados: [] })
+  })
+
+  it('cada coluna configurada troca só ela: sábado letivo, fuso de Manaus, horário do Postgres', () => {
+    expect(resolver({ diasLetivos: [1, 2, 3, 4, 5, 6] }).janela).toEqual({ ...JANELA_PADRAO, diasLetivos: [1, 2, 3, 4, 5, 6] })
+    expect(resolver({ fuso: 'America/Manaus' }).janela).toEqual({ ...JANELA_PADRAO, fuso: 'America/Manaus' })
+    expect(resolver({ inicio: '13:00:00', fim: '22:30:00' })).toEqual({ janela: { ...JANELA_PADRAO, inicio: '13:00:00', fim: '22:30:00' }, descartados: [] })
+    expect(resolver({ fim: '12:00:00' }).janela).toEqual({ ...JANELA_PADRAO, fim: '12:00:00' })
+  })
+
+  it('dias letivos vazios são da escola, não nulos: não caem no padrão', () => {
+    expect(resolver({ diasLetivos: [] }).janela.diasLetivos).toEqual([])
+  })
+
+  it('fuso que o runtime não conhece cai no fuso padrão e avisa, em vez de lançar a cada rodada', () => {
+    expect(resolver({ fuso: 'Brasil/Joinville', diasLetivos: [6] })).toEqual({ janela: { ...JANELA_PADRAO, diasLetivos: [6] }, descartados: ['fuso'] })
+  })
+
+  it('só o fim configurado, antes do início padrão, não forma horário: vale o par do padrão, com aviso', () => {
+    expect(resolver({ fim: '06:00:00' })).toEqual({ janela: JANELA_PADRAO, descartados: ['horario'] })
+    expect(resolver({ inicio: '19:00:00' })).toEqual({ janela: JANELA_PADRAO, descartados: ['horario'] })
   })
 })
 

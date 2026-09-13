@@ -10,6 +10,10 @@ const ambienteValido = {
   VAGAS_ESCOLA_INTERATIVA: '5',
   VAGAS_ESCOLA_NORMAL: '5',
   VAGAS_ESCOLA_LOTE: '2',
+  JANELA_LETIVA_FUSO: 'America/Sao_Paulo',
+  JANELA_LETIVA_DIAS: '1,2,3,4,5',
+  JANELA_LETIVA_INICIO: '07:00',
+  JANELA_LETIVA_FIM: '18:00',
 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
@@ -28,7 +32,26 @@ describe('lerConfiguracao do despachante', () => {
       banco: { url: ambienteValido.BANCO_URL, maximoConexoes: 3, timeoutConexaoMs: 2000, timeoutConsultaMs: 2000 },
       redisFilaUrl: 'redis://redis-fila:6379',
       vagasPadrao: { interativa: 5, normal: 5, lote: 2 },
+      janelaPadrao: { fuso: 'America/Sao_Paulo', diasLetivos: [1, 2, 3, 4, 5], inicio: '07:00', fim: '18:00' },
     })
+  })
+
+  it.each([
+    ['JANELA_LETIVA_FUSO', 'Brasil/Joinville'],
+    ['JANELA_LETIVA_FUSO', 'UTC-3'],
+    ['JANELA_LETIVA_DIAS', '0,1'],
+    ['JANELA_LETIVA_DIAS', 'seg-sex'],
+    ['JANELA_LETIVA_DIAS', ''],
+    ['JANELA_LETIVA_INICIO', '7h'],
+    ['JANELA_LETIVA_INICIO', '25:00'],
+    ['JANELA_LETIVA_FIM', '06:00'],
+    ['JANELA_LETIVA_FIM', '07:00'],
+  ])('não sobe com %s=%s: horário letivo que não se aplica seguraria ou soltaria o lote na hora errada', (variavel, valor) => {
+    expect(erroDe({ ...ambienteValido, [variavel]: valor }).variaveis).toEqual([variavel])
+  })
+
+  it('escola com aula aos sábados no padrão: os dias saem em ordem e sem repetição', () => {
+    expect(lerConfiguracao({ ...ambienteValido, JANELA_LETIVA_DIAS: '6,1,2,3,4,5,1' }).janelaPadrao.diasLetivos).toEqual([1, 2, 3, 4, 5, 6])
   })
 
   it.each(['0', '-2', '1.5', 'duas'])('não sobe com VAGAS_ESCOLA_LOTE=%s: vaga zero pararia toda escola sem configuração própria', (valor) => {

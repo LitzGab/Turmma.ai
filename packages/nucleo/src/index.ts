@@ -27,13 +27,19 @@ export { jobRegistro } from './db/schema/job-registro.js'
 export { justificativaSemEscopo, SemEscopo } from './db/sem-escopo.decorator.js'
 export {
   ConfiguracaoOperacional,
+  lerJanelaPadrao,
   lerVagasPadrao,
   NOVA_TENTATIVA_DA_CONFIGURACAO_MS,
+  resolverJanela,
   resolverLimites,
   resolverVagas,
   VALIDADE_DA_CONFIGURACAO_MS,
 } from './configuracao/configuracao-operacional.js'
-export type { LimitesDeRequisicao, OpcoesDaConfiguracaoOperacional, VagasPorFila } from './configuracao/configuracao-operacional.js'
+export type { CampoDaJanelaDescartado, LimitesDeRequisicao, OpcoesDaConfiguracaoOperacional, VagasPorFila } from './configuracao/configuracao-operacional.js'
+export { estaNaJanela, fusoValido, msDoHorario, proximaAbertura } from './fila/janela-letiva.js'
+export type { JanelaLetiva } from './fila/janela-letiva.js'
+export { relogioDoSistema } from './relogio.js'
+export type { Relogio } from './relogio.js'
 export { ConfiguracaoOperacionalRepository } from './configuracao/configuracao-operacional.repository.js'
 export type { LinhaOperacional } from './configuracao/configuracao-operacional.repository.js'
 export { configuracaoOperacionalEscola } from './db/schema/configuracao-operacional-escola.js'

@@ -8,11 +8,16 @@ import {
   DespachoRepository,
   nomeDaFilaBullMQ,
   OuvinteDeJobs,
+  relogioDoSistema,
+  resolverJanela,
   resolverVagas,
   VagasPorEscola,
   type Batimento,
   type DadosDoJobNaFila,
+  type JanelaLetiva,
   type LoggerBase,
+  type Relogio,
+  type VagasPorFila,
 } from '@educa/nucleo'
 import { Queue } from 'bullmq'
 import type { ConfiguracaoDespachante } from './config.js'
@@ -31,6 +36,8 @@ export interface OpcoesDaMontagem {
   embrulharVagas?: (vagas: VagasPorEscola) => Pick<VagasPorEscola, 'membros' | 'manter' | 'livres' | 'tomar' | 'liberar'>
   /** Validade da vaga. Só o teste troca, para ver a vaga vencer sem esperar 60 s. */
   validadeDaVagaMs?: number
+  /** Relógio do horário letivo. Só o teste troca, para ver o lote não urgente de terça às 10h sair às 18h. */
+  relogio?: Relogio
   batimento?: Batimento
 }
 
@@ -64,9 +71,16 @@ export function montarDespachante(config: ConfiguracaoDespachante, logger: Logge
   const repositorio = new DespachoRepository(banco)
   const vagasReais = new VagasPorEscola(redis, opcoes.prefixo, opcoes.validadeDaVagaMs)
   const vagas = opcoes.embrulharVagas?.(vagasReais) ?? vagasReais
-  const vagasDaEscola = new ConfiguracaoOperacional(new ConfiguracaoOperacionalRepository(banco), (linha) => resolverVagas(config.vagasPadrao, linha), {
-    aoFalhar: avisoEspacado(() => logger.warn({ evento: 'despachante.configuracao_indisponivel' })),
-  })
+  // Vagas e horário letivo saem da mesma linha: uma leitura por escola, guardada uma vez. Se a primeira
+  // leitura da escola falha, valem as vagas e o horário padrão até a próxima tentativa, em 5 s.
+  const avisarJanelaDescartada = avisoEspacado(() => logger.warn({ evento: 'despachante.janela_da_escola_invalida' }))
+  const operacao = new ConfiguracaoOperacional<{ vagas: VagasPorFila; janela: JanelaLetiva }>(
+    new ConfiguracaoOperacionalRepository(banco),
+    (linha) => ({ vagas: resolverVagas(config.vagasPadrao, linha), janela: resolverJanela(config.janelaPadrao, linha, avisarJanelaDescartada) }),
+    { aoFalhar: avisoEspacado(() => logger.warn({ evento: 'despachante.configuracao_indisponivel' })) },
+  )
+  const vagasDaEscola = { daEscola: async () => (await operacao.daEscola()).vagas }
+  const janelaDaEscola = { daEscola: async () => (await operacao.daEscola()).janela }
 
   // O aviso só chega depois de o laço abrir a escuta, e o laço só começa com o despachante construído.
   const ouvinte = new OuvinteDeJobs(
@@ -79,6 +93,8 @@ export function montarDespachante(config: ConfiguracaoDespachante, logger: Logge
     fila,
     vagas,
     vagasDaEscola,
+    janelaDaEscola,
+    relogio: opcoes.relogio ?? relogioDoSistema,
     logger,
     ouvinte,
     ...(opcoes.batimento === undefined ? {} : { batimento: opcoes.batimento }),

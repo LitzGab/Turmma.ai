@@ -68,9 +68,11 @@ describe('migrar', () => {
     const { rows: indices } = await administrador.query<{ indexname: string; indexdef: string }>(
       `select indexname, indexdef from pg_indexes where tablename = 'job_registro' order by indexname`,
     )
-    expect(indices.map((indice) => indice.indexname)).toEqual(['job_registro_finalizados_idx', 'job_registro_pendentes_idx', 'job_registro_pkey'])
-    expect(indices[1]?.indexdef).toMatch(/\(fila, escola_id, criado_em\) WHERE \(estado <> ALL \(ARRAY\['concluido'::text, 'falhou'::text\]\)\)/)
+    expect(indices.map((indice) => indice.indexname)).toEqual(['job_registro_finalizados_idx', 'job_registro_pendentes_idx', 'job_registro_pendentes_urgentes_idx', 'job_registro_pkey'])
+    expect(indices[1]?.indexdef).toMatch(/\(fila, escola_id, criado_em\) WHERE \(estado <> ALL \(ARRAY\['concluido'::text, 'falhou'::text\]\)\)$/)
     expect(indices[0]?.indexdef).toMatch(/\(concluido_em\) WHERE \(estado = ANY \(ARRAY\['concluido'::text, 'falhou'::text\]\)\)/)
+    // O da reserva no horário letivo: só os urgentes pendentes.
+    expect(indices[2]?.indexdef).toMatch(/\(fila, escola_id, criado_em\) WHERE \(\(estado <> ALL \(ARRAY\['concluido'::text, 'falhou'::text\]\)\) AND \(NOT nao_urgente\)\)$/)
 
     // Job de escola sem escola é recusado pelo próprio banco, mesmo por fora do repository.
     await expect(

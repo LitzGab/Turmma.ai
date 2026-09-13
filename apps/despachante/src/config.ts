@@ -1,4 +1,4 @@
-import { ConfiguracaoInvalida, lerConfiguracaoBanco, lerVagasPadrao, validarAmbiente, type ConfiguracaoBanco, type VagasPorFila } from '@educa/nucleo'
+import { ConfiguracaoInvalida, lerConfiguracaoBanco, lerJanelaPadrao, lerVagasPadrao, validarAmbiente, type ConfiguracaoBanco, type JanelaLetiva, type VagasPorFila } from '@educa/nucleo'
 import { z } from 'zod'
 
 export { ConfiguracaoInvalida }
@@ -13,6 +13,8 @@ export interface ConfiguracaoDespachante {
   redisFilaUrl: string
   /** Vagas simultâneas por fila da escola que não configurou as próprias (D41). */
   vagasPadrao: VagasPorFila
+  /** Horário letivo da escola que não configurou o próprio, em que o lote não urgente fica segurado (D41). */
+  janelaPadrao: JanelaLetiva
 }
 
 /** Lê e valida o ambiente do despachante. Todos os problemas saem de uma vez, só pelo nome. */
@@ -30,12 +32,14 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const banco = ler(() => lerConfiguracaoBanco(ambiente))
   const proprio = ler(() => validarAmbiente(esquemaAmbiente, ambiente))
   const vagasPadrao = ler(() => lerVagasPadrao(ambiente))
-  if (banco === undefined || proprio === undefined || vagasPadrao === undefined) {
+  const janelaPadrao = ler(() => lerJanelaPadrao(ambiente))
+  if (banco === undefined || proprio === undefined || vagasPadrao === undefined || janelaPadrao === undefined) {
     throw new ConfiguracaoInvalida(problemas.flatMap((erro) => erro.variaveis).sort(), problemas.flatMap((erro) => erro.motivos))
   }
   return {
     banco,
     redisFilaUrl: proprio.REDIS_FILA_URL,
     vagasPadrao,
+    janelaPadrao,
   }
 }

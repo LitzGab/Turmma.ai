@@ -8,12 +8,14 @@ import {
   Enfileirador,
   executarNoContexto,
   JobRegistroRepository,
+  lerJanelaPadrao,
   nomeDaFilaBullMQ,
   resolverVagas,
   VagasPorEscola,
   type Banco,
   type ConfiguracaoBanco,
   type DadosDoJobNaFila,
+  type JanelaLetiva,
   type LoggerBase,
   type PedidoDeJob,
   type PoolBanco,
@@ -46,6 +48,11 @@ export function vagasPadraoDoAmbiente(): VagasPorFila {
     normal: Number(valorObrigatorio(ambiente, 'VAGAS_ESCOLA_NORMAL')),
     lote: Number(valorObrigatorio(ambiente, 'VAGAS_ESCOLA_LOTE')),
   }
+}
+
+/** O horário letivo padrão de `.env.example` (São Paulo, segunda a sexta, 07:00 às 18:00), lido como o despachante lê. */
+export function janelaPadraoDoAmbiente(): JanelaLetiva {
+  return lerJanelaPadrao(ambiente)
 }
 
 export function urlRedisDeFila(): string {
@@ -137,17 +144,40 @@ export class BancadaDeFila {
     return new ConfiguracaoOperacional(new ConfiguracaoOperacionalRepository(this.banco), (linha) => resolverVagas(vagasPadraoDoAmbiente(), linha))
   }
 
-  /** Grava a configuração operacional da escola, como a escola a teria. */
-  async configurarEscola(escolaId: string, configuracao: { vagas?: VagasConfiguradas | null; limiteReqUsuarioMin?: number; limiteReqEscolaMin?: number }): Promise<void> {
+  /** Grava a configuração operacional da escola, como a escola a teria. O que não vier fica nulo: vale o padrão. */
+  async configurarEscola(
+    escolaId: string,
+    configuracao: {
+      vagas?: VagasConfiguradas | null
+      limiteReqUsuarioMin?: number
+      limiteReqEscolaMin?: number
+      fuso?: string
+      diasLetivos?: number[]
+      inicio?: string
+      fim?: string
+    },
+  ): Promise<void> {
     await this.pool.query(
-      `insert into configuracao_operacional_escola (escola_id, vagas, limite_req_usuario_min, limite_req_escola_min) values ($1, $2, $3, $4)
-       on conflict (escola_id) do update set vagas = excluded.vagas, limite_req_usuario_min = excluded.limite_req_usuario_min, limite_req_escola_min = excluded.limite_req_escola_min`,
-      [escolaId, configuracao.vagas === undefined || configuracao.vagas === null ? null : JSON.stringify(configuracao.vagas), configuracao.limiteReqUsuarioMin ?? null, configuracao.limiteReqEscolaMin ?? null],
+      `insert into configuracao_operacional_escola (escola_id, vagas, limite_req_usuario_min, limite_req_escola_min, fuso, dias_letivos, inicio, fim)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
+       on conflict (escola_id) do update set vagas = excluded.vagas, limite_req_usuario_min = excluded.limite_req_usuario_min,
+         limite_req_escola_min = excluded.limite_req_escola_min, fuso = excluded.fuso, dias_letivos = excluded.dias_letivos,
+         inicio = excluded.inicio, fim = excluded.fim`,
+      [
+        escolaId,
+        configuracao.vagas === undefined || configuracao.vagas === null ? null : JSON.stringify(configuracao.vagas),
+        configuracao.limiteReqUsuarioMin ?? null,
+        configuracao.limiteReqEscolaMin ?? null,
+        configuracao.fuso ?? null,
+        configuracao.diasLetivos ?? null,
+        configuracao.inicio ?? null,
+        configuracao.fim ?? null,
+      ],
     )
   }
 
   despachante(log: LogEmMemoria, opcoes: Omit<OpcoesDoDespachante, 'prefixo'> = {}): DespachanteMontado {
-    const montado = montarDespachante({ banco: configuracaoDoBanco(3), redisFilaUrl: urlRedisDeFila(), vagasPadrao: vagasPadraoDoAmbiente() }, log.logger, { prefixo: this.prefixo, ...opcoes })
+    const montado = montarDespachante({ banco: configuracaoDoBanco(3), redisFilaUrl: urlRedisDeFila(), vagasPadrao: vagasPadraoDoAmbiente(), janelaPadrao: janelaPadraoDoAmbiente() }, log.logger, { prefixo: this.prefixo, ...opcoes })
     this.#montados.push(montado)
     return montado
   }

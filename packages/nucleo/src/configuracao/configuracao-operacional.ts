@@ -2,6 +2,7 @@ import { FILAS, type Fila } from '@educa/shared'
 import { z } from 'zod'
 import { validarAmbiente } from '../config/validar-config.js'
 import { contextoAtual } from '../contexto/contexto.js'
+import { fusoValido, msDoHorario, type JanelaLetiva } from '../fila/janela-letiva.js'
 import type { ConfiguracaoOperacionalRepository, LinhaOperacional } from './configuracao-operacional.repository.js'
 
 /** Por quanto tempo a configuração lida de uma escola vale na memória do processo. Mudança leva até isso para valer. */
@@ -35,6 +36,60 @@ export function lerVagasPadrao(ambiente: Record<string, string | undefined>): Va
 /** Vagas da escola: a fila que ela não configurou usa o padrão do ambiente. */
 export function resolverVagas(padrao: VagasPorFila, linha: LinhaOperacional | undefined): VagasPorFila {
   return Object.fromEntries(FILAS.map((fila) => [fila, linha?.vagas?.[fila] ?? padrao[fila]])) as Record<Fila, number>
+}
+
+const esquemaAmbienteJanela = z
+  .object({
+    JANELA_LETIVA_FUSO: z.string().refine(fusoValido, { message: 'JANELA_LETIVA_FUSO precisa ser um fuso IANA, como America/Sao_Paulo' }),
+    JANELA_LETIVA_DIAS: z
+      .string()
+      .regex(/^[1-7](,[1-7])*$/, { message: 'JANELA_LETIVA_DIAS são dias ISO de 1 (segunda) a 7 (domingo), separados por vírgula' })
+      .transform((dias) => [...new Set(dias.split(',').map(Number))].sort((a, b) => a - b)),
+    JANELA_LETIVA_INICIO: z.string().refine((horario) => msDoHorario(horario) !== undefined, { message: 'JANELA_LETIVA_INICIO precisa ser HH:MM' }),
+    JANELA_LETIVA_FIM: z.string().refine((horario) => msDoHorario(horario) !== undefined, { message: 'JANELA_LETIVA_FIM precisa ser HH:MM' }),
+  })
+  .superRefine((valores, contexto) => {
+    const inicio = msDoHorario(valores.JANELA_LETIVA_INICIO) ?? 0
+    const fim = msDoHorario(valores.JANELA_LETIVA_FIM) ?? 0
+    if (inicio >= fim) contexto.addIssue({ code: 'custom', path: ['JANELA_LETIVA_FIM'], message: 'JANELA_LETIVA_FIM precisa ser depois de JANELA_LETIVA_INICIO' })
+  })
+
+/**
+ * Horário letivo de toda escola sem horário próprio (D41, `docs/infra.md` seção 6). No
+ * `.env.example`: `America/Sao_Paulo`, de segunda a sexta, das 07:00 às 18:00.
+ */
+export function lerJanelaPadrao(ambiente: Record<string, string | undefined>): JanelaLetiva {
+  const valores = validarAmbiente(esquemaAmbienteJanela, ambiente)
+  return { fuso: valores.JANELA_LETIVA_FUSO, diasLetivos: valores.JANELA_LETIVA_DIAS, inicio: valores.JANELA_LETIVA_INICIO, fim: valores.JANELA_LETIVA_FIM }
+}
+
+/** O que `resolverJanela` descartou da linha da escola por não ser utilizável. */
+export type CampoDaJanelaDescartado = 'fuso' | 'horario'
+
+/**
+ * Horário letivo da escola. Cada coluna nula cai no padrão do ambiente, independente das outras.
+ *
+ * - Fuso que o runtime não conhece usa o fuso padrão, em vez de fazer a janela lançar a cada rodada.
+ * - Início e fim que, combinados, não formam um intervalo (a escola configurou só o fim, antes do
+ *   início padrão) usam os dois do padrão. O banco já recusa os dois configurados fora de ordem.
+ * - Dias letivos vazios (`{}`) é uma escola sem dia letivo: o lote não urgente nunca é segurado.
+ */
+export function resolverJanela(padrao: JanelaLetiva, linha: LinhaOperacional | undefined, aoDescartar: (campo: CampoDaJanelaDescartado) => void = () => undefined): JanelaLetiva {
+  let fuso = linha?.fuso ?? padrao.fuso
+  if (!fusoValido(fuso)) {
+    aoDescartar('fuso')
+    fuso = padrao.fuso
+  }
+  let inicio = linha?.inicio ?? padrao.inicio
+  let fim = linha?.fim ?? padrao.fim
+  const inicioMs = msDoHorario(inicio)
+  const fimMs = msDoHorario(fim)
+  if (inicioMs === undefined || fimMs === undefined || inicioMs >= fimMs) {
+    aoDescartar('horario')
+    inicio = padrao.inicio
+    fim = padrao.fim
+  }
+  return { fuso, diasLetivos: linha?.diasLetivos ?? padrao.diasLetivos, inicio, fim }
 }
 
 /** Limites de requisição da escola, cada um caindo no padrão do ambiente quando nulo. */

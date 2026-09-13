@@ -1,0 +1,2 @@
+CREATE INDEX "job_registro_pendentes_urgentes_idx" ON "job_registro" USING btree ("fila","escola_id","criado_em") WHERE estado not in ('concluido', 'falhou') and not nao_urgente;--> statement-breakpoint
+ALTER TABLE "configuracao_operacional_escola" ADD CONSTRAINT "configuracao_operacional_horario_valido" CHECK ("configuracao_operacional_escola"."inicio" is null or "configuracao_operacional_escola"."fim" is null or "configuracao_operacional_escola"."inicio" < "configuracao_operacional_escola"."fim");

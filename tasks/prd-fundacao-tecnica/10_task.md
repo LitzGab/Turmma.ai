@@ -23,15 +23,15 @@ afetado.
 
 ## Subtarefas
 
-- [ ] 10.1 — `packages/nucleo/src/fila/janela-letiva.ts`: `estaNaJanela(config, agora)` e
+- [x] 10.1 — `packages/nucleo/src/fila/janela-letiva.ts`: `estaNaJanela(config, agora)` e
   `proximaAbertura(config, agora)`, com relógio injetado.
   - Configuração nula usa o padrão do ambiente: `America/Sao_Paulo`, segunda a sexta,
     07:00–18:00.
   - O fim é exclusivo: 18:00 já está fora.
-- [ ] 10.2 — O despachante pula o job não urgente que está na janela letiva da escola, antes
+- [x] 10.2 — O despachante pula o job não urgente que está na janela letiva da escola, antes
   de reservar e antes de tomar vaga. Job urgente e fila interativa ou normal nunca são
   segurados
-- [ ] 10.3 — Testes
+- [x] 10.3 — Testes
 
 ## Arquivos previstos
 
@@ -66,3 +66,24 @@ afetado.
 ## Fora do escopo desta tarefa
 
 Calendário escolar com feriado (F8). Agendamento recorrente de rotina (11.0).
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-13 12:55:05 | 2026-09-13 12:56:04 | `tenancy-guardian` | 1 | APROVADO | a4b7cecc69a1fb449 |
+| 2026-09-13 12:54:52 | 2026-09-13 12:57:41 | `infra-guardian` | 1 | REPROVADO | ad5a597be01df6140 |
+| 2026-09-13 12:55:19 | 2026-09-13 12:59:46 | `test-engineer` | 1 | APROVADO | a7cfeff7f26d92ee5 |
+| 2026-09-13 13:14:49 | 2026-09-13 13:15:38 | `tenancy-guardian` | 2 | APROVADO | aecf04caeb71025f6 |
+| 2026-09-13 13:14:39 | 2026-09-13 13:16:18 | `infra-guardian` | 2 | APROVADO | a0caa51694f44cf11 |
+| 2026-09-13 13:15:03 | 2026-09-13 13:17:04 | `test-engineer` | 2 | APROVADO | a43a66c0d5ab8ba65 |
+| 2026-09-13 13:18:04 | 2026-09-13 13:18:39 | `infra-guardian` | 3 | APROVADO | a55e4ba993ddaa37a |
+| 2026-09-13 13:18:12 | 2026-09-13 13:19:02 | `tenancy-guardian` | 3 | APROVADO | a021939d0be554a29 |
+| 2026-09-13 13:18:20 | 2026-09-13 13:19:23 | `test-engineer` | 3 | APROVADO | a40d5f01f59d5c8c3 |
+| 2026-09-13 13:34:06 | 2026-09-13 13:34:30 | `tenancy-guardian` | 4 | APROVADO | ad69bc18c88172473 |
+| 2026-09-13 13:34:11 | 2026-09-13 13:34:35 | `test-engineer` | 4 | APROVADO | adf6d3b3a9586a189 |
+| 2026-09-13 13:34:01 | 2026-09-13 13:34:37 | `infra-guardian` | 4 | APROVADO | abfa1a630ef84d85c |

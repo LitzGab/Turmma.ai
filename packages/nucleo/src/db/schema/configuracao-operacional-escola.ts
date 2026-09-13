@@ -14,7 +14,8 @@ export type VagasConfiguradas = Partial<Record<'interativa' | 'normal' | 'lote',
  *
  * - `vagas` só aceita as três filas, cada uma com inteiro positivo: o check garante no banco o que
  *   o despachante lê.
- * - `fuso`, `dias_letivos`, `inicio` e `fim` são o horário letivo que a 10.0 passa a ler.
+ * - `fuso`, `dias_letivos`, `inicio` e `fim` são o horário letivo da escola, em que o lote não
+ *   urgente fica segurado; `inicio` é incluso e `fim`, exclusivo.
  * - Sem FK para `escola`: a tabela de escola nasce no F1, que acrescenta a FK expandindo.
  */
 export const configuracaoOperacionalEscola = pgTable(
@@ -43,5 +44,7 @@ export const configuracaoOperacionalEscola = pgTable(
       )`,
     ),
     check('configuracao_operacional_dias_letivos_validos', sql`${tabela.diasLetivos} <@ array[1, 2, 3, 4, 5, 6, 7]::smallint[]`),
+    // Os dois configurados fora de ordem não formam horário letivo; um só é conferido contra o padrão, na leitura.
+    check('configuracao_operacional_horario_valido', sql`${tabela.inicio} is null or ${tabela.fim} is null or ${tabela.inicio} < ${tabela.fim}`),
   ],
 )

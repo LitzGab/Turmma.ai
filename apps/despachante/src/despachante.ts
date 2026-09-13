@@ -1,5 +1,6 @@
 import {
   avisoEspacado,
+  estaNaJanela,
   executarNoContexto,
   FILAS_POR_PRIORIDADE,
   resumirErro,
@@ -8,8 +9,10 @@ import {
   type ContextoDaRequisicao,
   type DespachoRepository,
   type EscolaComPendentes,
+  type JanelaLetiva,
   type JobReservado,
   type LoggerBase,
+  type Relogio,
   type VagasPorEscola,
   type VagasPorFila,
 } from '@educa/nucleo'
@@ -21,6 +24,11 @@ import type { FilaDePublicacao } from './fila-de-publicacao.js'
 export const INTERVALO_SONDAGEM_MS = 500
 /** Quantos jobs uma rodada publica no máximo. Rodada cheia emenda na seguinte sem esperar. */
 export const LOTE_DE_RESERVA = 100
+/**
+ * A única fila em que o não urgente é segurado no horário letivo (regra 80, item 2). Na interativa e na
+ * normal há alguém esperando, e urgente nunca espera: esses saem na hora, com ou sem a marca.
+ */
+export const FILA_QUE_SEGURA_NAO_URGENTE: Fila = 'lote'
 
 export interface DependenciasDaPublicacao {
   repositorio: Pick<DespachoRepository, 'marcarPublicados' | 'devolverParaAguardando'>
@@ -34,6 +42,10 @@ export interface DependenciasDaPublicacao {
 export interface DependenciasDoDespachante extends DependenciasDaPublicacao {
   repositorio: Pick<DespachoRepository, 'listarEscolasComPendentes' | 'publicadosEntre' | 'reservarDaEscola' | 'devolverParaAguardando' | 'marcarPublicados'>
   vagas: Pick<VagasPorEscola, 'membros' | 'manter' | 'livres' | 'tomar' | 'liberar'>
+  /** Horário letivo da escola do contexto: o da configuração dela, ou o padrão do ambiente. */
+  janelaDaEscola: Pick<ConfiguracaoOperacional<JanelaLetiva>, 'daEscola'>
+  /** De onde vem a hora que decide se a escola está em aula. Só o teste troca. */
+  relogio: Relogio
   /** `LISTEN job`. Sem ele, o despachante só sonda; nada se perde, só demora até 500 ms. */
   ouvinte?: { garantir(): Promise<void> }
   batimento?: Batimento
@@ -53,11 +65,15 @@ export interface OpcoesDoDespachante {
  * Cada rodada percorre as filas em ordem de prioridade e, em cada fila, as escolas com job à espera,
  * em rodízio: a escola que começa a rodada muda a cada rodada. Para cada escola:
  *
+ * 0. se é a fila de lote e a escola está no horário letivo dela (no fuso e nos dias dela), o não urgente
+ *    fica de fora da reserva: não é reservado, não toma vaga, e sai na primeira rodada depois do fim
+ *    do horário. O urgente segue na hora. Na fila de lote o urgente vem antes do não urgente também
+ *    fora do horário: às 18h, o acúmulo do dia liberado não passa na frente do urgente que chega;
  * 1. renova a vaga dos jobs dela já publicados e ainda não iniciados (pool cheio, réplica fora): parados
  *    na fila do BullMQ, eles seguem contando, e a escola não ganha mais publicados acima do teto;
  *    depois estima as vagas livres, com o limite da configuração dela; sem vaga, nem reserva (a escola
  *    com mil lotes na fila não gera escrita no banco a cada 500 ms);
- * 2. reserva no máximo essa quantidade, dos jobs mais antigos dela;
+ * 2. reserva no máximo essa quantidade, dos jobs mais antigos dela (no lote, os urgentes primeiro);
  * 3. só então toma a vaga de cada job reservado, no Lua; reserva sem vaga volta a `aguardando`;
  * 4. publica os que ficaram com vaga; se a publicação falhar, devolve as vagas e a reserva vence.
  *
@@ -136,11 +152,12 @@ export class Despachante {
     return [...escolas.slice(inicio), ...escolas.slice(0, inicio)]
   }
 
-  /** Passos 1 a 4 para uma escola numa fila, no contexto dela: a configuração e a reserva são dela. */
+  /** Passos 0 a 4 para uma escola numa fila, no contexto dela: a configuração, a janela e a reserva são dela. */
   private despacharDaEscola(fila: Fila, escolaId: string | null, maximo: number): Promise<number | 'vaga_indisponivel'> {
     return executarNoContexto(contextoDaEscola(escolaId), async () => {
-      const { repositorio, vagas, vagasDaEscola } = this.dependencias
+      const { repositorio, vagas, vagasDaEscola, janelaDaEscola, relogio } = this.dependencias
       const limite = (await vagasDaEscola.daEscola())[fila]
+      const segurarNaoUrgentes = fila === FILA_QUE_SEGURA_NAO_URGENTE && estaNaJanela(await janelaDaEscola.daEscola(), relogio.agora())
       let comVaga: string[]
       try {
         comVaga = await vagas.membros(fila, escolaId)
@@ -158,9 +175,22 @@ export class Despachante {
         return 'vaga_indisponivel'
       }
       if (livres <= 0) return 0
-      const reservados = await repositorio.reservarDaEscola(fila, Math.min(livres, maximo))
+      const reservados = await this.reservar(fila, Math.min(livres, maximo), segurarNaoUrgentes)
       return (await publicarComVaga(this.dependencias, reservados, 'job.publicado')).length
     })
+  }
+
+  /**
+   * Passo 2. Na interativa e na normal, por ordem de chegada. No lote, em dois passos, cada um uma
+   * reserva curta: os urgentes pelo índice deles; e, só fora do horário letivo e com vaga sobrando,
+   * o resto por ordem de chegada (os urgentes disponíveis já foram, então é o não urgente).
+   */
+  private async reservar(fila: Fila, maximo: number, segurarNaoUrgentes: boolean): Promise<JobReservado[]> {
+    const { repositorio } = this.dependencias
+    if (fila !== FILA_QUE_SEGURA_NAO_URGENTE) return repositorio.reservarDaEscola(fila, maximo)
+    const urgentes = await repositorio.reservarDaEscola(fila, maximo, { soUrgentes: true })
+    if (segurarNaoUrgentes || urgentes.length >= maximo) return urgentes
+    return [...urgentes, ...(await repositorio.reservarDaEscola(fila, maximo - urgentes.length))]
   }
 
   private async lacar(): Promise<void> {

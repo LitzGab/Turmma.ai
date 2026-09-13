@@ -418,7 +418,7 @@ describe('vagas por escola e filas por prioridade', () => {
       const repositorio = new ConfiguracaoOperacionalRepository(bancada.banco)
       const naEscola = (escolaId: string) => executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => repositorio.daEscola())
 
-      expect(await naEscola(ESCOLA_A)).toEqual({ limiteReqUsuarioMin: null, limiteReqEscolaMin: 10, vagas: { lote: 5 } })
+      expect(await naEscola(ESCOLA_A)).toEqual({ fuso: null, diasLetivos: null, inicio: null, fim: null, limiteReqUsuarioMin: null, limiteReqEscolaMin: 10, vagas: { lote: 5 } })
       expect(await naEscola(ESCOLA_B)).toBeUndefined()
       await expect(executarNoContexto({ requisicaoId: randomUUID() }, () => repositorio.daEscola())).rejects.toThrow('sem escola no contexto')
       await expect(executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => repositorio.daEscola())).rejects.toThrow('sem escola no contexto')

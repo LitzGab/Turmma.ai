@@ -15,6 +15,13 @@
       "when": 1789306533346,
       "tag": "0001_configuracao_operacional_escola",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789313739394,
+      "tag": "0002_janela_letiva",
+      "breakpoints": true
     }
   ]
 }
