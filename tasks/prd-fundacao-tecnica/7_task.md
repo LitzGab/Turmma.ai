@@ -97,3 +97,21 @@ mesmo com dois despachantes e com worker morto no meio.
 
 Redis de fila fora e reconciliação (8.0). Três filas, pools e vagas por escola (9.0).
 Janela letiva (10.0). Expurgo (11.0). Processador em sandbox (15.0).
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+> Rodadas reconstruídas em 13/09/2026 a partir dos registros locais das sessões (o transcript de
+> cada revisor), antes de o hook existir. Horário de Brasília.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-13 08:38:46 | 2026-09-13 08:41:47 | `tenancy-guardian` | 1 | REPROVADO | aefd656e338656017 |
+| 2026-09-13 08:39:14 | 2026-09-13 08:41:49 | `privacy-guardian` | 1 | APROVADO | aacb7a3896be493d5 |
+| 2026-09-13 08:39:27 | 2026-09-13 08:43:37 | `test-engineer` | 1 | REPROVADO | a01534304c011ab85 |
+| 2026-09-13 08:39:03 | 2026-09-13 08:43:46 | `infra-guardian` | 1 | APROVADO | a85a7182719d6d3f0 |
+| 2026-09-13 08:53:51 | 2026-09-13 08:55:00 | `tenancy-guardian` | 2 | APROVADO | aefd656e338656017 |
+| 2026-09-13 08:54:02 | 2026-09-13 08:55:02 | `test-engineer` | 2 | APROVADO | a01534304c011ab85 |

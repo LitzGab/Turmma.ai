@@ -70,3 +70,20 @@ nem requisição pendurada.
 
 Proteção de força bruta por conta (escola + matrícula), que vem com o login (F1). Métrica e
 alerta do seguro (12.0 e 13.0). Configuração de limite por escola no banco (9.0).
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+> Rodadas reconstruídas em 13/09/2026 a partir dos registros locais das sessões (o transcript de
+> cada revisor), antes de o hook existir. Horário de Brasília.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-13 07:46:17 | 2026-09-13 07:47:39 | `tenancy-guardian` | 1 | APROVADO | a9bdb9a8d4126bf81 |
+| 2026-09-13 07:46:25 | 2026-09-13 07:48:26 | `privacy-guardian` | 1 | APROVADO | a7873b326c6544a47 |
+| 2026-09-13 07:46:09 | 2026-09-13 07:49:54 | `infra-guardian` | 1 | APROVADO | a2fc731d633be0bdb |
+| 2026-09-13 07:46:37 | 2026-09-13 07:50:45 | `test-engineer` | 1 | REPROVADO | ab94acacf4a005333 |
+| 2026-09-13 07:53:35 | 2026-09-13 07:54:42 | `test-engineer` | 2 | APROVADO | ab94acacf4a005333 |

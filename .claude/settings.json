@@ -9,6 +9,28 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "^(tenancy-guardian|privacy-guardian|conformidade-reviewer|infra-guardian|test-engineer|llm-integrator|pedagogia-reviewer|frontend-reviewer)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" registrar"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao"
+          }
+        ]
+      }
     ]
   }
 }

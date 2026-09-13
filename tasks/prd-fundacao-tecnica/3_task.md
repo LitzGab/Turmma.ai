@@ -75,3 +75,20 @@ A esteira passa a reprovar sozinha, sem depender de revisão humana, quatro viol
 Teto de bundle e axe (14.0). Guarda de alerta sem runbook (13.0). Criar a pasta
 `apps/api/src/ia/adapters` de verdade (F5): aqui ela só existe como caminho permitido na
 regra.
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+> Rodadas reconstruídas em 13/09/2026 a partir dos registros locais das sessões (o transcript de
+> cada revisor), antes de o hook existir. Horário de Brasília.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-13 05:08:00 | 2026-09-13 05:13:47 | `privacy-guardian` | 1 | REPROVADO | a384eaec1e25e8456 |
+| 2026-09-13 05:08:14 | 2026-09-13 05:14:24 | `test-engineer` | 1 | REPROVADO | a66114b27e3353edd |
+| 2026-09-13 05:24:40 | 2026-09-13 05:26:47 | `privacy-guardian` | 2 | REPROVADO | a384eaec1e25e8456 |
+| 2026-09-13 05:29:16 | 2026-09-13 05:30:23 | `privacy-guardian` | 3 | APROVADO | a384eaec1e25e8456 |
+| 2026-09-13 05:24:54 | 2026-09-13 05:32:26 | `test-engineer` | 2 | APROVADO | a66114b27e3353edd |

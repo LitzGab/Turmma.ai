@@ -71,3 +71,30 @@ em qualquer instância, sempre dentro da sala da própria escola.
 
 Rate limit (6.0). Worker e despachante com duas réplicas (7.0 e 9.0). Emissão da API para o
 realtime, e sinais do modo sala (F10). HTTPS, acesso fechado e deploy (`notas-staging.md`).
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+> Rodadas reconstruídas em 13/09/2026 a partir dos registros locais das sessões (o transcript de
+> cada revisor), antes de o hook existir. Horário de Brasília.
+
+> **Ocorrência de processo.** O commit saiu às 07:23:48 sem que a 3ª rodada do `infra-guardian`
+> (APROVADO às 07:23:39) e a 3ª do `test-engineer` (APROVADO às 07:23:43) tivessem chegado ao
+> subagente da tarefa, que tinha anunciado esperar os vereditos, e sem rodar `/executar-review`.
+> Os vereditos foram APROVADO, então o código commitado não muda; o portão por hook existe
+> para isso não se repetir.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-13 06:32:00 | 2026-09-13 06:33:29 | `tenancy-guardian` | 1 | APROVADO | aed92449a6c18717d |
+| 2026-09-13 06:32:13 | 2026-09-13 06:36:58 | `privacy-guardian` | 1 | REPROVADO | a04be80ae623232a8 |
+| 2026-09-13 06:31:45 | 2026-09-13 06:37:12 | `infra-guardian` | 1 | REPROVADO | a1880000d46200303 |
+| 2026-09-13 06:32:32 | 2026-09-13 06:38:14 | `test-engineer` | 1 | REPROVADO | a820ea23f33278d99 |
+| 2026-09-13 06:57:24 | 2026-09-13 06:59:29 | `privacy-guardian` | 2 | APROVADO | a04be80ae623232a8 |
+| 2026-09-13 06:58:02 | 2026-09-13 07:00:05 | `test-engineer` | 2 | APROVADO | a820ea23f33278d99 |
+| 2026-09-13 06:57:45 | 2026-09-13 07:01:15 | `infra-guardian` | 2 | REPROVADO | a1880000d46200303 |
+| 2026-09-13 07:22:40 | 2026-09-13 07:23:39 | `infra-guardian` | 3 | APROVADO | a1880000d46200303 |
+| 2026-09-13 07:22:48 | 2026-09-13 07:23:43 | `test-engineer` | 3 | APROVADO | a820ea23f33278d99 |

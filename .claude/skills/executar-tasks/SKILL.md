@@ -48,11 +48,16 @@ Para cada tarefa pendente:
 1. **Verifique dependências.** Alguma não `[x]` → PARE e reporte.
 2. **Dispare um subagente novo** para ESTA tarefa, com o prompt abaixo.
 3. **Aguarde.** Nada em paralelo.
-4. **Verifique a conclusão** relendo `tasks.md` e o relatório: marcada `[x]`? testes 100%?
-   typecheck limpo? tocou tela e e2e passou? tocou dado de escola e `tenancy-guardian`
-   aprovou? tocou dado pessoal e `privacy-guardian` aprovou? tocou nota, tutor ou autonomia e
-   `conformidade-reviewer` aprovou? tocou caminho quente (login, tutor, sala, prova, fila,
-   IA, migration, deploy) e `infra-guardian` aprovou? revisão aprovada?
+4. **Verifique a conclusão nos arquivos, não só no relatório:**
+   - `tasks.md`: a tarefa está `[x]`?
+   - `git log -1`: o commit `(tarefa N.0)` existe e traz a linha `Revisões:`?
+   - Seção "Revisões" do `N_task.md`, escrita pelo hook: todo revisor da linha
+     "Subagentes obrigatórios" tem rodada registrada, e a última rodada de cada um com veto
+     (`tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer`, `infra-guardian`,
+     `test-engineer`) é APROVADO?
+   - Relatório: testes 100%, typecheck limpo, e2e verde se tocou tela, revisão aprovada?
+
+   Revisor obrigatório sem rodada na seção é falha, mesmo que o relatório diga APROVADO.
 5. **Decisão:** sucesso completo → próxima. Qualquer falha → PARE e reporte.
 
 ### Prompt para cada subagente
@@ -66,15 +71,16 @@ Arquivo de detalhe: `tasks/prd-[funcionalidade]/[N]_task.md`
 
 Regras obrigatórias:
 - Implemente SOMENTE esta tarefa.
-- Acione os subagentes marcados no arquivo da tarefa.
 - Não conclua enquanto todos os testes não passarem e o typecheck não estiver limpo.
 - Tocou tela: rode também o e2e.
-- Veto de tenancy-guardian, privacy-guardian, conformidade-reviewer ou infra-guardian é falha da tarefa
-  até ser corrigido.
+- Chame TODOS os revisores marcados no arquivo da tarefa, cada prompt começando com
+  `Tarefa: tasks/prd-[funcionalidade]/[N]_task.md`, e ESPERE todos terminarem. Reprovou:
+  corrija e chame um revisor novo. Mexeu em código depois de uma aprovação: rodada nova.
+  O hook registra as rodadas no N_task.md e bloqueia o commit sem elas (passo 5 da skill).
 - Execute a revisão. Reprovou, corrija e revise de novo.
-- Ao concluir, marque `[x]` em tasks.md e faça o commit da tarefa.
-- Retorne relatório curto: STATUS, o que foi implementado, testes, typecheck, vetos,
-  revisão e, em caso de falha, o motivo exato.
+- Ao concluir, marque `[x]` em tasks.md e faça o commit da tarefa com a linha `Revisões:`.
+- Retorne relatório curto: STATUS, o que foi implementado, testes, typecheck, a linha
+  `Revisões:`, revisão e, em caso de falha, o motivo exato.
   Sem dump de código, sem histórico de raciocínio.
 ```
 

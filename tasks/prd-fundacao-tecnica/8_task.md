@@ -64,3 +64,19 @@ Sem permissão nem isolamento novos: a tarefa não abre rota nem consulta nova p
 
 Métrica de espera e alerta de job interativo esperando (12.0 e 13.0). Vagas por escola
 (9.0).
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+> Rodadas reconstruídas em 13/09/2026 a partir dos registros locais das sessões (o transcript de
+> cada revisor), antes de o hook existir. Horário de Brasília.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-13 09:47:36 | 2026-09-13 09:52:58 | `infra-guardian` | 1 | REPROVADO | a9355c4478d86ae73 |
+| 2026-09-13 09:47:52 | 2026-09-13 09:55:10 | `test-engineer` | 1 | REPROVADO | a4bb01bb12ed38c58 |
+| 2026-09-13 10:07:35 | 2026-09-13 10:08:41 | `infra-guardian` | 2 | APROVADO | a9355c4478d86ae73 |
+| 2026-09-13 10:07:53 | 2026-09-13 10:10:24 | `test-engineer` | 2 | APROVADO | a4bb01bb12ed38c58 |

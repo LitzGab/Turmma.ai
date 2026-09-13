@@ -41,23 +41,7 @@ está vendo um pedaço.
 - Vocabulário do glossário no código e no banco
 - Descobriu que a Tech Spec está errada: PARE e reporte. Não improvise.
 
-## 4. Subagentes obrigatórios
-
-Acione os marcados no `N_task.md`:
-
-- `tenancy-guardian` — dado de escola. **Veto é falha.**
-- `privacy-guardian` — dado pessoal ou de menor. **Veto é falha.**
-- `conformidade-reviewer` — nota, correção, tutor ou autonomia. **Veto é falha.**
-- `infra-guardian` — login, tutor, modo sala, prova online, fila, gateway de IA, migration
-  em tabela grande, deploy ou ambiente. **Veto é falha.**
-- `llm-integrator` — chamada de modelo ou agente
-- `pedagogia-reviewer` — conteúdo pedagógico gerado
-- `frontend-reviewer` — tela
-- `test-engineer` — sempre, antes da revisão
-
-Os quatro com veto podem rodar em paralelo: não dependem um do outro.
-
-## 5. Portão de verificação
+## 4. Portão de verificação
 
 ```bash
 npm run typecheck   # zero erro
@@ -69,9 +53,50 @@ npm run test:e2e    # se tocou tela
 Falhou algum, conserte. Não prossiga com teste vermelho, não desabilite teste, não use
 `.skip`. Teste vermelho é informação.
 
+Rode o portão antes dos revisores: correção de código depois de uma aprovação faz aquela
+aprovação caducar (passo 5).
+
+## 5. Revisores obrigatórios
+
+<critical>A tarefa não fecha sem os revisores marcados no `N_task.md`. Não é recomendação: o
+hook `tools/processo/revisoes.ts` registra cada rodada na seção "Revisões" do `N_task.md` e
+BLOQUEIA o commit enquanto algum revisor obrigatório não tiver uma rodada iniciada depois da
+última alteração de código, com APROVADO nos que têm veto.</critical>
+
+Acione os marcados no `N_task.md`:
+
+- `tenancy-guardian` — dado de escola. **Veto é falha.**
+- `privacy-guardian` — dado pessoal ou de menor. **Veto é falha.**
+- `conformidade-reviewer` — nota, correção, tutor ou autonomia. **Veto é falha.**
+- `infra-guardian` — login, tutor, modo sala, prova online, fila, gateway de IA, migration
+  em tabela grande, deploy ou ambiente. **Veto é falha.**
+- `test-engineer` — sempre. **REPROVADO bloqueia como veto.**
+- `llm-integrator` — chamada de modelo ou agente
+- `pedagogia-reviewer` — conteúdo pedagógico gerado
+- `frontend-reviewer` — tela
+
+Como chamar, e por quê:
+
+1. **O prompt de todo revisor começa com a linha `Tarefa: tasks/prd-<funcionalidade>/<N>_task.md`.**
+   É por ela que o hook sabe em que tarefa registrar a rodada. Sem a linha, a rodada não é
+   registrada e o commit continua bloqueado.
+2. Os revisores podem rodar em paralelo: não dependem um do outro.
+3. **Espere TODOS terminarem antes de seguir.** Veredito que não chegou não existe. Anunciar
+   que vai esperar e fazer o commit antes (o que aconteceu na 5.0) é falha da tarefa.
+4. **Reprovou: corrija e chame uma rodada nova com um revisor novo** (ferramenta Agent, não
+   mensagem para o anterior), trazendo no prompt as correções exigidas na rodada anterior. O
+   registro depende de o revisor terminar como subagente.
+5. **Mexeu em código depois de uma aprovação, a aprovação caducou.** A revisão vale para o
+   código que o revisor viu. Chame rodada nova de cada revisor cuja rodada começou antes da
+   alteração: o hook compara o início da rodada com a última alteração e diz quais.
+6. **Não edite a seção "Revisões" do `N_task.md`.** Quem escreve é o hook, quando o revisor
+   termina.
+
 ## 6. Revisão
 
-Execute `.claude/skills/executar-review/SKILL.md`. Reprovou, corrija e revise de novo.
+Execute `.claude/skills/executar-review/SKILL.md`, depois que todos os revisores do passo 5
+terminaram. Reprovou, corrija e revise de novo; se a correção mexeu em código, volte ao
+passo 5 para os revisores cuja aprovação caducou.
 
 ## 7. Conclusão
 
@@ -79,10 +104,14 @@ Só depois de tudo verde e revisão aprovada:
 
 - Marque a tarefa `[x]` em `tasks.md`
 - **Faça o commit da tarefa, direto no `main`** (D23). Stage apenas os arquivos desta
-  tarefa, nunca `git add -A`.
+  tarefa, incluindo o `N_task.md` com a seção "Revisões", nunca `git add -A`.
   Mensagem no padrão `<Verbo> <o quê> (tarefa N.0)`, por exemplo
-  `Implementa reivindicação de nome pelo link da sala (tarefa 4.0)`. Um commit por tarefa,
-  nunca `--amend` em commit existente, nunca `--no-verify`
+  `Implementa reivindicação de nome pelo link da sala (tarefa 4.0)`, com a linha
+  `Revisões: <revisor> <veredito> (<n>ª rodada), ...` no corpo. Um commit por tarefa, nunca
+  `--amend` em commit existente, nunca `--no-verify`
+- **Commit bloqueado pelo hook:** a mensagem diz qual revisor falta, reprovou ou caducou.
+  Resolva o que ela aponta. Não contorne: commit fora do padrão `(tarefa N.0)` para escapar
+  do portão é falha da tarefa
 - Retorne o relatório:
 
 ```
@@ -91,11 +120,7 @@ Implementado: <até 5 linhas>
 Testes: <n passando / n total>
 Typecheck: limpo | erros
 E2E: verde | não se aplica
-Tenancy-guardian: APROVADO | não se aplica
-Privacy-guardian: APROVADO | não se aplica
-Conformidade-reviewer: APROVADO | não se aplica
-Infra-guardian: APROVADO | não se aplica
-Outros subagentes: ...
+Revisões: <a mesma linha do commit, com todas as rodadas de cada revisor obrigatório>
 Revisão: aprovada
 Motivo da falha: <se houver>
 ```

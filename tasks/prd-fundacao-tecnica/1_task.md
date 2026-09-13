@@ -86,3 +86,19 @@ commit corrigido fica verde. Registre os dois links de execução na conclusão.
 
 Erro tipado e logger (2.0), guardas (3.0), duas instâncias e Caddy (5.0), observabilidade
 (12.0), a casca de verdade com os quatro estados (14.0). A página da web aqui é só fumaça.
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+> Rodadas reconstruídas em 13/09/2026 a partir dos registros locais das sessões (o transcript de
+> cada revisor), antes de o hook existir. Horário de Brasília.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-13 03:59:08 | 2026-09-13 04:01:42 | `infra-guardian` | 1 | APROVADO | a680b64e1f1e85597 |
+| 2026-09-13 03:59:24 | 2026-09-13 04:03:32 | `test-engineer` | 1 | REPROVADO | a86fad1c29daa47da |
+| 2026-09-13 04:11:23 | 2026-09-13 04:12:51 | `infra-guardian` | 2 | APROVADO | a680b64e1f1e85597 |
+| 2026-09-13 04:11:17 | 2026-09-13 04:13:32 | `test-engineer` | 2 | APROVADO | a86fad1c29daa47da |

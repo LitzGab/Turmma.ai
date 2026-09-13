@@ -49,8 +49,15 @@ turmas usando ao mesmo tempo atrás do IP da própria escola?**
 
 ## 4. Vetos
 
-`tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer` e `infra-guardian` aprovaram, quando
-aplicáveis? Ausência de veredito explícito é reprovação, não presunção de aprovação.
+Leia a seção "Revisões" do `N_task.md`, que o hook escreve quando cada revisor termina. Não
+aceite veredito citado de memória ou no relatório.
+
+- Todo revisor da linha "Subagentes obrigatórios" tem rodada registrada?
+- A última rodada de `tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer`,
+  `infra-guardian` e `test-engineer`, quando obrigatórios, é APROVADO?
+- Algum revisor ainda está rodando? Então espere: revisão não termina antes deles.
+
+Revisor obrigatório sem rodada registrada é reprovação, não presunção de aprovação.
 
 ## 5. Qualidade de código
 

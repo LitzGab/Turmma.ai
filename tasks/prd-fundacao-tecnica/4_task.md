@@ -69,3 +69,18 @@ pode existir em produção.
 
 Login, senha, MFA, papel e entidade `Escola` (F1). Rate limit (6.0). Realtime autenticado
 (5.0 usa este guard).
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+> Rodadas reconstruídas em 13/09/2026 a partir dos registros locais das sessões (o transcript de
+> cada revisor), antes de o hook existir. Horário de Brasília.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-13 05:47:58 | 2026-09-13 05:49:57 | `tenancy-guardian` | 1 | APROVADO | a0cbbba2c2d8d7d89 |
+| 2026-09-13 05:48:21 | 2026-09-13 05:50:11 | `test-engineer` | 1 | APROVADO | a92bbc693fa99f2fc |
+| 2026-09-13 05:48:09 | 2026-09-13 05:50:42 | `privacy-guardian` | 1 | APROVADO | a818804e71fba6813 |

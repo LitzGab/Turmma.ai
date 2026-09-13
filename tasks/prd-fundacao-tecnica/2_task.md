@@ -79,3 +79,21 @@ na 4.0.
 
 Seguir o `requisicaoId` pela fila e pelo worker (7.0). Guarda de lint contra log pessoal
 (3.0). Token e escola vindos do JWT (4.0).
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+> Rodadas reconstruídas em 13/09/2026 a partir dos registros locais das sessões (o transcript de
+> cada revisor), antes de o hook existir. Horário de Brasília.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-13 04:40:03 | 2026-09-13 04:42:11 | `privacy-guardian` | 1 | REPROVADO | a183fb98f19e07cce |
+| 2026-09-13 04:40:21 | 2026-09-13 04:42:56 | `infra-guardian` | 1 | REPROVADO | a2c28d607f7c49944 |
+| 2026-09-13 04:40:12 | 2026-09-13 04:43:06 | `test-engineer` | 1 | REPROVADO | a6a360b4239157848 |
+| 2026-09-13 04:45:08 | 2026-09-13 04:45:50 | `test-engineer` | 2 | APROVADO | a6a360b4239157848 |
+| 2026-09-13 04:44:56 | 2026-09-13 04:45:53 | `privacy-guardian` | 2 | APROVADO | a183fb98f19e07cce |
+| 2026-09-13 04:45:02 | 2026-09-13 04:46:00 | `infra-guardian` | 2 | APROVADO | a2c28d607f7c49944 |

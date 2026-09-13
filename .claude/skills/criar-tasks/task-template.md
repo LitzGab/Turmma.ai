@@ -47,10 +47,15 @@ Definidos com o `test-engineer`. Não improvise aqui.
 - [ ] Testes verdes, 100%
 - [ ] `npm run typecheck` limpo
 - [ ] E2E verde (se tocou tela)
-- [ ] Vetos aprovados (se aplicáveis)
+- [ ] Todos os revisores obrigatórios com rodada na seção "Revisões", iniciada depois da
+  última alteração de código, e APROVADO nos que têm veto
 - [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa
+- [ ] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
 
 ## Fora do escopo desta tarefa
 
 O que pertence a outra tarefa e não deve ser implementado aqui.
+
+<!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
+     quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+
