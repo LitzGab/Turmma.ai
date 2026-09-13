@@ -15,6 +15,7 @@ const ambienteValido = {
   DRENAGEM_ESPERA_BORDA_MS: '4000',
   DRENAGEM_PRAZO_MS: '10000',
   REDIS_CACHE_URL: 'redis://redis-cache:6379',
+  REDIS_FILA_URL: 'redis://redis-fila:6379',
   LIMITE_REQ_USUARIO_MIN: '120',
   LIMITE_REQ_ESCOLA_MIN: '30000',
   LIMITE_REQ_IP_ANONIMO_MIN: '3000',
@@ -38,6 +39,7 @@ describe('lerConfiguracao', () => {
     expect(lerConfiguracao(ambienteValido)).toEqual({
       porta: 3000,
       rotasSinteticas: false,
+      redisFilaUrl: 'redis://redis-fila:6379',
       banco: {
         url: ambienteValido.BANCO_URL,
         maximoConexoes: 10,
@@ -97,13 +99,14 @@ describe('lerConfiguracao', () => {
     ['LIMITE_PROXIES_CONFIAVEIS', ' , '],
     ['LIMITE_PROXIES_CONFIAVEIS', 'http://borda:8080'],
     ['REDIS_CACHE_URL', 'redis-cache:6379'],
+    ['REDIS_FILA_URL', 'http://redis-fila:6379'],
   ])('não sobe com %s=%s: limite sem valor válido não vira "sem limite"', (variavel, valor) => {
     expect(erroDe({ ...ambienteValido, [variavel]: valor }).variaveis).toEqual([variavel])
   })
 
   it('.env.example traz os padrões da Tech Spec: 120/min por usuário, 30.000/min por escola, 3.000/min por IP anônimo, duas instâncias e a borda', () => {
     const exemplo = lerAmbienteExemplo()
-    const { limite } = lerConfiguracao({ ...ambienteValido, ...exemplo, API_PORTA: '3000', BANCO_URL: ambienteValido.BANCO_URL, REDIS_CACHE_URL: ambienteValido.REDIS_CACHE_URL })
+    const { limite } = lerConfiguracao({ ...ambienteValido, ...exemplo, API_PORTA: '3000', BANCO_URL: ambienteValido.BANCO_URL, REDIS_CACHE_URL: ambienteValido.REDIS_CACHE_URL, REDIS_FILA_URL: ambienteValido.REDIS_FILA_URL })
     expect(limite).toMatchObject({ porUsuarioMin: 120, porEscolaMin: 30_000, porIpAnonimoMin: 3_000, instancias: 2, proxiesConfiaveis: ['borda'] })
   })
 

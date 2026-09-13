@@ -218,8 +218,9 @@ export class BancadaDeFila {
       await fila.obliterate({ force: true })
       await fila.close()
     }
-    const vagas = await this.redis.keys(`${this.prefixo}:vaga:*`)
-    if (vagas.length > 0) await this.redis.del(...vagas)
+    // Vagas e contadores de uso no prefixo do teste: nada fica no Redis de fila com AOF depois dele.
+    const chaves = await this.redis.keys(`${this.prefixo}:*`)
+    if (chaves.length > 0) await this.redis.del(...chaves)
     await this.redis.quit()
     await this.pool.end()
   }

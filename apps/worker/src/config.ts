@@ -23,6 +23,23 @@ const esquemaAmbiente = z.object({
   REDIS_FILA_URL: z.string().regex(/^redis:\/\/[^/\s]+(\/\d+)?$/),
 })
 
+const esquemaStorage = z.object({
+  STORAGE_URL: z.url({ protocol: /^https?$/ }),
+  STORAGE_REGIAO: z.string().regex(/^[a-z0-9-]+$/),
+  STORAGE_BUCKET: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/),
+  STORAGE_CHAVE_ACESSO: z.string().min(1),
+  STORAGE_CHAVE_SECRETA: z.string().min(1),
+})
+
+/** Acesso ao storage S3-compatível, só leitura de listagem: a consolidação de uso mede os bytes de cada escola. */
+export interface ConfiguracaoStorage {
+  url: string
+  regiao: string
+  bucket: string
+  chaveAcesso: string
+  chaveSecreta: string
+}
+
 export interface ConfiguracaoWorker {
   /** Pool próprio, com o `statement_timeout` do ambiente. Cabe na soma dos pools das filas: cada job usa uma conexão por vez. */
   banco: ConfiguracaoBanco
@@ -31,6 +48,11 @@ export interface ConfiguracaoWorker {
   pools: Partial<Record<Fila, number>>
   /** Vagas por fila da escola sem vagas próprias: o worker confere a vaga do job ao começar (D41). */
   vagasPadrao: VagasPorFila
+  /**
+   * Só na réplica que atende o lote, onde rodam as rotinas do sistema (consolidação de uso e expurgo).
+   * O worker-interativo não mede storage e não precisa da credencial.
+   */
+  storage?: ConfiguracaoStorage
 }
 
 /** Lê e valida o ambiente do worker. Todos os problemas saem de uma vez, só pelo nome. */
@@ -52,7 +74,16 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const esquemaPools = z.object(Object.fromEntries((filas?.FILAS ?? []).map((fila) => [variavelDoPool(fila), inteiroPositivo])))
   const pools = ler(() => validarAmbiente(esquemaPools, ambiente))
   const vagasPadrao = ler(() => lerVagasPadrao(ambiente))
-  if (banco === undefined || proprio === undefined || filas === undefined || pools === undefined || vagasPadrao === undefined) {
+  const atendeLote = filas?.FILAS.includes('lote') === true
+  const storage = atendeLote ? ler(() => validarAmbiente(esquemaStorage, ambiente)) : undefined
+  if (
+    banco === undefined ||
+    proprio === undefined ||
+    filas === undefined ||
+    pools === undefined ||
+    vagasPadrao === undefined ||
+    (atendeLote && storage === undefined)
+  ) {
     throw new ConfiguracaoInvalida(problemas.flatMap((erro) => erro.variaveis).sort(), problemas.flatMap((erro) => erro.motivos))
   }
   return {
@@ -60,5 +91,16 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     redisFilaUrl: proprio.REDIS_FILA_URL,
     pools: Object.fromEntries(filas.FILAS.map((fila) => [fila, Number(pools[variavelDoPool(fila)])])),
     vagasPadrao,
+    ...(storage === undefined
+      ? {}
+      : {
+          storage: {
+            url: storage.STORAGE_URL,
+            regiao: storage.STORAGE_REGIAO,
+            bucket: storage.STORAGE_BUCKET,
+            chaveAcesso: storage.STORAGE_CHAVE_ACESSO,
+            chaveSecreta: storage.STORAGE_CHAVE_SECRETA,
+          },
+        }),
   }
 }

@@ -132,9 +132,16 @@ tardia não sobrescreve `ativo`, `concluido` ou `falhou`.
 
 **Uso por escola.**
 - **Contagem:** `INCR uso:{dia}:{escola}:req|jobs` no Redis de fila; falha ignorada.
+  A API conta no interceptor (depois das guardas) e o worker, a cada tentativa iniciada,
+  sem esperar resposta. Prazo de 35 dias na chave, para o `noeviction` não acumular (11.0).
 - **Consolidação:** `sistema.consolidar-uso` roda às 2h. Para cada dia fechado faz `GET`,
   upsert com valor absoluto e só então `DEL`, o que torna a repetição idempotente. Soma os
   bytes do prefixo `escolas/{id}/`.
+  O `DEL` só apaga se a chave ainda tem o valor gravado. Os bytes medidos vão para o dia
+  que acabou de fechar, e o mês leva o pico. Cada escola é gravada no contexto dela (11.0).
+- **Agendamento:** `upsertJobScheduler` com `tz` numa fila `agendamentos` do worker-lote,
+  cujo processador só grava o job pelo `Enfileirador` (lote, não urgente). O expurgo roda
+  às 3h30. `npm run ops:uso` consulta o dia e o mês de uma escola (11.0).
 
 **Realtime.** O stream do adaptador fica no Redis de fila, com `maxLen`. O Caddy usa
 `lb_policy cookie` para o polling do socket.io. O cliente reconecta com espalhamento
@@ -172,7 +179,9 @@ Os logs vão para o stdout, em JSON.
   de `job.data`.
 - **Consulta de job:** filtra pela escola do contexto. Id de outra escola e id inexistente
   dão o mesmo 404 `NAO_ENCONTRADO`.
-- **`@SemEscopo`, com justificativa:** despachante e expurgo (`fila`); consolidação (`uso`).
+- **`@SemEscopo`, com justificativa:** despachante (`fila`); expurgo (`retencao`, onde
+  também mora o expurgo por retenção do F3); descoberta das escolas com uso, nos contadores
+  (`uso`) e no storage (worker). Gravação e consulta de uso são com escopo (11.0).
 - **Ano letivo:** nenhuma tabela do F0 varia por ano letivo.
 - **Testes**, que quebram sem a cláusula de escola: A não lê job de B; limite esgotado de A
   não dá 429 a B; A sem vaga não atrasa B; janela de A não vale para B.

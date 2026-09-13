@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 10 de 16 concluídas
+**Status:** 11 de 16 concluídas
 
 ## Lista
 
@@ -64,11 +64,11 @@
   - [x] 10.2 Despachante segura o não urgente sem consumir vaga
   - [x] 10.3 Testes: terça 10h, sábado, sábado letivo, feriado, fuso, 17h59 contra 18h00
 
-- [ ] **11.0 — Uso marcado por escola, com consolidação e expurgo**
-  - [ ] 11.1 Contadores de requisição e job por escola e dia
-  - [ ] 11.2 `uso_infra_diario` e `sistema.consolidar-uso` idempotente, com bytes por prefixo
-  - [ ] 11.3 `sistema.expurgar-jobs` em lotes
-  - [ ] 11.4 Testes: consolidação em dobro, virada de dia em São Paulo, prefixo, expurgo sem tocar job ativo
+- [x] **11.0 — Uso marcado por escola, com consolidação e expurgo**
+  - [x] 11.1 Contadores de requisição e job por escola e dia
+  - [x] 11.2 `uso_infra_diario` e `sistema.consolidar-uso` idempotente, com bytes por prefixo
+  - [x] 11.3 `sistema.expurgar-jobs` em lotes
+  - [x] 11.4 Testes: consolidação em dobro, virada de dia em São Paulo, prefixo, expurgo sem tocar job ativo
 
 - [ ] **12.0 — Painel local por rota, fila e escola**
   - [ ] 12.1 `grafana/otel-lgtm` no compose e OTel em cada processo

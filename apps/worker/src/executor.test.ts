@@ -27,6 +27,8 @@ function montar({
 }) {
   const eventos: string[] = []
   const limites: Array<{ fila: Fila; escolaId: string | null; limite: number }> = []
+  /** Cada marcação de uso, com a escola do contexto em que foi feita. */
+  const marcacoes: string[] = []
   const dependencias: DependenciasDoExecutor = {
     repositorio: {
       localizarParaExecucao: () => {
@@ -61,11 +63,12 @@ function montar({
       },
     },
     vagasDaEscola: { daEscola: () => Promise.resolve({ interativa: 5, normal: 5, lote: 3 }) },
+    uso: { marcar: (metrica) => marcacoes.push(`${metrica}:${contextoAtual()?.escolaId ?? 'sem escola'}`) },
     intervaloRenovacaoMs: 100,
   }
   const moveToDelayed = vi.fn<JobDaFila['moveToDelayed']>(() => Promise.resolve())
   const job = { id: JOB_ID, data: { escolaId: ESCOLA_A, requisicaoId: null }, attemptsMade: 0, opts: { attempts: tentativas }, moveToDelayed } as unknown as JobDaFila
-  return { executor: new ExecutorDeJobs(dependencias), eventos, limites, job, moveToDelayed }
+  return { executor: new ExecutorDeJobs(dependencias), eventos, limites, marcacoes, job, moveToDelayed }
 }
 
 describe('ExecutorDeJobs e a vaga', () => {
@@ -188,5 +191,26 @@ describe('ExecutorDeJobs e a vaga', () => {
     await vi.advanceTimersByTimeAsync(1_000)
     expect(eventos).not.toContain('liberar')
     expect(eventos.filter((evento) => evento === 'renovar')).toHaveLength(1)
+  })
+
+  describe('uso da escola', () => {
+    it('cada tentativa que começa conta um job na escola do job, inclusive a que falha e vai ser tentada de novo', async () => {
+      let falhar = true
+      const { executor, marcacoes, job } = montar({ processador: () => (falhar ? Promise.reject(new Error('instável')) : Promise.resolve()) })
+      await expect(executor.processar(job, 'token')).rejects.toThrow()
+      falhar = false
+      await executor.processar({ ...job, attemptsMade: 1 } as JobDaFila, 'token')
+      expect(marcacoes).toEqual([`jobs:${ESCOLA_A}`, `jobs:${ESCOLA_A}`])
+    })
+
+    it('job que não começa não conta: sem vaga, de outra escola ou já finalizado', async () => {
+      const semVaga = montar({ concede: false })
+      await expect(semVaga.executor.processar(semVaga.job, 'token')).rejects.toBeInstanceOf(DelayedError)
+      const deOutraEscola = montar({ alvo: null })
+      await expect(deOutraEscola.executor.processar(deOutraEscola.job, 'token')).rejects.toThrow(UnrecoverableError)
+      const finalizado = montar({ alvo: { fila: 'lote', escolaId: ESCOLA_A, finalizado: true } })
+      await finalizado.executor.processar(finalizado.job, 'token')
+      expect([...semVaga.marcacoes, ...deOutraEscola.marcacoes, ...finalizado.marcacoes]).toEqual([])
+    })
   })
 })

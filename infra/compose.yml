@@ -127,6 +127,9 @@ services:
       DRENAGEM_PRAZO_MS: ${DRENAGEM_PRAZO_MS:?defina DRENAGEM_PRAZO_MS}
       # Sem depends_on do Redis de cache: a API sobe e atende sem ele, limitando em memória.
       REDIS_CACHE_URL: redis://redis-cache:6379
+      # Nem depends_on do Redis de fila: ele só guarda o contador de uso por escola, que a API marca sem
+      # esperar resposta. Fora do ar, perde-se a contagem, não a requisição.
+      REDIS_FILA_URL: redis://redis-fila:6379
       LIMITE_REQ_USUARIO_MIN: ${LIMITE_REQ_USUARIO_MIN:?defina LIMITE_REQ_USUARIO_MIN}
       LIMITE_REQ_ESCOLA_MIN: ${LIMITE_REQ_ESCOLA_MIN:?defina LIMITE_REQ_ESCOLA_MIN}
       LIMITE_REQ_IP_ANONIMO_MIN: ${LIMITE_REQ_IP_ANONIMO_MIN:?defina LIMITE_REQ_IP_ANONIMO_MIN}
@@ -272,6 +275,13 @@ services:
       REDIS_FILA_URL: redis://redis-fila:6379
       FILAS: lote
       WORKER_POOL_LOTE: ${WORKER_POOL_LOTE:?defina WORKER_POOL_LOTE}
+      # Só o worker-lote, onde rodam as rotinas do sistema: a consolidação de uso lista o storage para
+      # medir os bytes de cada escola. Sem depends_on: storage fora faz a rotina tentar de novo, e só.
+      STORAGE_URL: http://storage:8333
+      STORAGE_REGIAO: ${STORAGE_REGIAO:?defina STORAGE_REGIAO}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:?defina STORAGE_BUCKET}
+      STORAGE_CHAVE_ACESSO: ${STORAGE_CHAVE_ACESSO:?defina STORAGE_CHAVE_ACESSO}
+      STORAGE_CHAVE_SECRETA: ${STORAGE_CHAVE_SECRETA:?defina STORAGE_CHAVE_SECRETA}
       VAGAS_ESCOLA_INTERATIVA: ${VAGAS_ESCOLA_INTERATIVA:?defina VAGAS_ESCOLA_INTERATIVA}
       VAGAS_ESCOLA_NORMAL: ${VAGAS_ESCOLA_NORMAL:?defina VAGAS_ESCOLA_NORMAL}
       VAGAS_ESCOLA_LOTE: ${VAGAS_ESCOLA_LOTE:?defina VAGAS_ESCOLA_LOTE}

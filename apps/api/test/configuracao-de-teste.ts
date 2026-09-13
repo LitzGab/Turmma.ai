@@ -4,7 +4,7 @@ import { lerConfiguracao, type ConfiguracaoApi } from '../src/config.js'
 
 export interface SobreposicaoDeTeste {
   banco?: Partial<ConfiguracaoBanco>
-  /** Variáveis que trocam as de `.env.example`, como `ACEITAR_TOKEN_SINTETICO`. */
+  /** Variáveis que trocam as de `.env.example` e as URLs do compose de teste, como `ACEITAR_TOKEN_SINTETICO` ou `REDIS_FILA_URL`. */
   ambiente?: Record<string, string>
 }
 
@@ -25,6 +25,8 @@ export function configuracaoDeTeste(sobreposicao: SobreposicaoDeTeste = {}): Con
     API_PORTA: '3000',
     BANCO_URL: `postgres://${usuario}:${senha}@127.0.0.1:${porta}/${banco}`,
     REDIS_CACHE_URL: `redis://127.0.0.1:${valorObrigatorio(ambiente, 'REDIS_CACHE_PORTA_HOST')}`,
+    REDIS_FILA_URL: `redis://127.0.0.1:${valorObrigatorio(ambiente, 'REDIS_FILA_PORTA_HOST')}`,
+    ...sobreposicao.ambiente,
   })
   return { ...config, banco: { ...config.banco, ...sobreposicao.banco } }
 }

@@ -4,6 +4,7 @@ import {
   INTERVALO_RENOVACAO_DA_VAGA_MS,
   resumirErro,
   type ConfiguracaoOperacional,
+  type ContadorDeUso,
   type ContextoDaRequisicao,
   type JobRegistroRepository,
   type LoggerBase,
@@ -29,6 +30,8 @@ export interface DependenciasDoExecutor {
   vagas: Pick<VagasPorEscola, 'tomar' | 'renovar' | 'liberar'>
   /** Vagas por fila da escola do contexto: as da configuração dela, ou o padrão do ambiente. */
   vagasDaEscola: Pick<ConfiguracaoOperacional<VagasPorFila>, 'daEscola'>
+  /** Conta cada execução iniciada na escola do job (D30). Disparar e esquecer: nunca atrasa nem falha o job. */
+  uso: Pick<ContadorDeUso, 'marcar'>
   intervaloRenovacaoMs?: number
 }
 
@@ -76,8 +79,8 @@ class RenovacaoDaVaga {
  *    já a tomou ao publicar, e aqui ela só se confirma; sem vaga (publicação ambígua, vaga vencida
  *    numa queda longa), o job volta a esperar sem gastar tentativa nem executar: o teto vale na
  *    execução, e não só na publicação;
- * 4. marca `ativo`, roda o processador do tipo com os dados lidos do Postgres, e renova a vaga
- *    enquanto ele roda;
+ * 4. marca `ativo`, conta a execução no uso da escola, roda o processador do tipo com os dados lidos
+ *    do Postgres, e renova a vaga enquanto ele roda;
  * 5. marca `concluido`, ou, na última tentativa, `falhou` com código tipado, e libera a vaga.
  *
  * Na retentativa, a vaga fica com o job. Job que já terminou não roda de novo, mesmo que a fila o
@@ -141,6 +144,8 @@ export class ExecutorDeJobs {
       return
     }
     const tentativa = job.attemptsMade + 1
+    // Cada tentativa que começa conta: é execução que ocupou worker e banco. Job do sistema não tem escola e não conta.
+    this.dependencias.uso.marcar('jobs')
     logger.info({ evento: 'job.iniciado', jobId, tentativa })
     const renovacao = new RenovacaoDaVaga(() => this.renovarVaga(vaga), this.#intervaloRenovacaoMs)
     try {

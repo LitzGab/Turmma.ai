@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { ConfiguracaoOperacionalRepository } from '../configuracao/configuracao-operacional.repository.js'
 import { DespachoRepository } from '../fila/despacho.repository.js'
 import { JobRegistroRepository } from '../fila/job-registro.repository.js'
+import { ExpurgoDeJobsRepository } from '../retencao/expurgo-de-jobs.repository.js'
+import { ContadorDeUso } from '../uso/contador-uso.js'
+import { UsoRepository } from '../uso/uso.repository.js'
 import { justificativaSemEscopo, SemEscopo } from './sem-escopo.decorator.js'
 
 function metodosDe(classe: { prototype: object }): string[] {
@@ -24,5 +27,17 @@ describe('@SemEscopo', () => {
     for (const classe of [JobRegistroRepository, ConfiguracaoOperacionalRepository]) {
       for (const metodo of metodosDe(classe)) expect(justificativaSemEscopo(classe, metodo), metodo).toBeUndefined()
     }
+  })
+
+  it('uso e retenção: só a descoberta das escolas com uso e o lote do expurgo saem sem escopo; gravar e consultar uso é sempre na escola do contexto', () => {
+    const marcados = (classe: { prototype: object }) =>
+      metodosDe(classe)
+        .filter((metodo) => justificativaSemEscopo(classe as abstract new (...argumentos: never[]) => unknown, metodo) !== undefined)
+        .sort()
+    expect(marcados(ContadorDeUso)).toEqual(['lerDiasFechados'])
+    expect(marcados(ExpurgoDeJobsRepository)).toEqual(['apagarLoteVencido'])
+    expect(marcados(UsoRepository)).toEqual([])
+    expect(justificativaSemEscopo(ContadorDeUso, 'lerDiasFechados')).toMatch(/consolidação/)
+    expect(justificativaSemEscopo(ExpurgoDeJobsRepository, 'apagarLoteVencido')).toMatch(/expurgo/)
   })
 })

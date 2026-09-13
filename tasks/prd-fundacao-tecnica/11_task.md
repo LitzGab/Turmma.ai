@@ -24,21 +24,21 @@ registros de job antigos sem tocar em job ativo.
 
 ## Subtarefas
 
-- [ ] 11.1 — Interceptor da API e hook do worker fazem
+- [x] 11.1 — Interceptor da API e hook do worker fazem
   `INCR uso:{dia}:{escola}:req|jobs` no Redis de fila, sem esperar a resposta.
   - `dia` é calculado em `America/Sao_Paulo`.
   - A falha do contador é ignorada e nunca afeta a requisição.
-- [ ] 11.2 — Schema e migration de `uso_infra_diario`, e job `sistema.consolidar-uso` na fila
+- [x] 11.2 — Schema e migration de `uso_infra_diario`, e job `sistema.consolidar-uso` na fila
   de lote, disparado às 2h por `upsertJobScheduler` com `tz`.
   - O disparo passa pelo `Enfileirador`, que mantém a trilha única.
   - Para cada dia fechado: `GET`, upsert com valor absoluto e só depois `DEL`.
   - Soma os bytes do prefixo `escolas/{id}/` no storage.
   - Leva `@SemEscopo` com justificativa.
-- [ ] 11.3 — Job `sistema.expurgar-jobs`: apaga `job_registro` concluído ou falho há mais
+- [x] 11.3 — Job `sistema.expurgar-jobs`: apaga `job_registro` concluído ou falho há mais
   de 7 dias, em lotes de 5.000, usando o índice parcial de `concluido_em`
-- [ ] 11.4 — Consulta de uso por escola no dia e no mês, pelo repository ou por
+- [x] 11.4 — Consulta de uso por escola no dia e no mês, pelo repository ou por
   `npm run ops:uso`
-- [ ] 11.5 — Testes
+- [x] 11.5 — Testes
 
 ## Arquivos previstos
 
@@ -65,15 +65,35 @@ registros de job antigos sem tocar em job ativo.
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
 - [ ] E2E verde (se tocou tela)
-- [ ] Vetos aprovados (se aplicáveis)
-- [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa
+- [x] Vetos aprovados (se aplicáveis)
+- [x] Revisão aprovada
+- [x] Commit feito, só com os arquivos desta tarefa
 
 ## Fora do escopo desta tarefa
 
 Custo do ambiente e rateio em reais (`notas-staging.md`, quando o staging existir). Expurgo
 de dado pessoal por retenção da escola (F3).
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-13 14:13:27 | 2026-09-13 14:15:16 | `privacy-guardian` | 1 | APROVADO | a59c8f878f61584c9 |
+| 2026-09-13 14:13:13 | 2026-09-13 14:15:44 | `tenancy-guardian` | 1 | APROVADO | a98c6ecb78af48e8c |
+| 2026-09-13 14:12:54 | 2026-09-13 14:16:28 | `infra-guardian` | 1 | APROVADO | a2b10950d66a0a6ba |
+| 2026-09-13 16:42:28 | 2026-09-13 16:42:59 | `privacy-guardian` | 2 | APROVADO | a7beb70c60bd44609 |
+| 2026-09-13 16:42:21 | 2026-09-13 16:43:08 | `tenancy-guardian` | 2 | APROVADO | a3bc93d3840ac0e24 |
+| 2026-09-13 16:42:13 | 2026-09-13 16:43:23 | `infra-guardian` | 2 | APROVADO | a76a361b976e92b39 |
+| 2026-09-13 16:42:45 | 2026-09-13 16:50:52 | `test-engineer` | 1 | REPROVADO | aa0d23847cde9e489 |
+| 2026-09-13 17:23:47 | 2026-09-13 17:25:05 | `infra-guardian` | 3 | APROVADO | a9737f72ac01a395c |
+| 2026-09-13 17:24:01 | 2026-09-13 17:25:12 | `privacy-guardian` | 3 | APROVADO | aab1d2aaa867af402 |
+| 2026-09-13 17:23:54 | 2026-09-13 17:25:35 | `tenancy-guardian` | 3 | APROVADO | a970fc75ea3e45e2f |
+| 2026-09-13 17:24:16 | 2026-09-13 17:25:56 | `test-engineer` | 2 | APROVADO | ab91a5661ca07d213 |

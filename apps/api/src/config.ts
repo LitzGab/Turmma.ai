@@ -30,6 +30,8 @@ const esquemaAmbiente = z
     // Validado pela identidade; aqui só é lido para a trava de produção, sem apontar a falta duas vezes.
     AMBIENTE: z.string().optional(),
     ROTAS_SINTETICAS: z.enum(['true', 'false']),
+    // Só para o contador de uso por escola (D30): a API não depende dele para atender.
+    REDIS_FILA_URL: z.string().regex(/^redis:\/\/[^/\s]+(\/\d+)?$/),
   })
   .superRefine((valores, contexto) => {
     if (valores.AMBIENTE === 'producao' && valores.ROTAS_SINTETICAS === 'true') {
@@ -41,6 +43,8 @@ export interface ConfiguracaoApi {
   porta: number
   /** Liga as rotas que só existem para teste e carga. */
   rotasSinteticas: boolean
+  /** Redis de fila, onde a API marca o uso de cada escola sem esperar resposta. */
+  redisFilaUrl: string
   banco: ConfiguracaoBanco
   identidade: ConfiguracaoIdentidade
   drenagem: ConfiguracaoDrenagem
@@ -77,6 +81,7 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   return {
     porta: api.valor.API_PORTA,
     rotasSinteticas: api.valor.ROTAS_SINTETICAS === 'true',
+    redisFilaUrl: api.valor.REDIS_FILA_URL,
     banco: banco.valor,
     identidade: identidade.valor,
     drenagem: drenagem.valor,

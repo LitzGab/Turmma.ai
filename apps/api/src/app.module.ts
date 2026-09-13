@@ -1,26 +1,34 @@
 import {
   ConfiguracaoOperacional,
+  ContadorDeUso,
   Drenagem,
   GuardaDeAutenticacao,
   GuardaDeLimite,
+  InterceptorDeUso,
   LimitadorDeRequisicoes,
   ProxiesConfiaveis,
   type LimitesDeRequisicao,
 } from '@educa/nucleo'
 import { Module, type DynamicModule } from '@nestjs/common'
-import { APP_GUARD, Reflector } from '@nestjs/core'
+import { APP_GUARD, APP_INTERCEPTOR, Reflector } from '@nestjs/core'
 import { BancoModule } from './banco.module.js'
 import type { ConfiguracaoApi } from './config.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
 import { ProntidaoController } from './sistema/prontidao.controller.js'
 import { SistemaModule } from './sistema/sistema.module.js'
+import { UsoModule } from './uso.module.js'
 
 @Module({})
 export class AppModule {
   static com(config: ConfiguracaoApi): DynamicModule {
     return {
       module: AppModule,
-      imports: [BancoModule.com(config.banco), LimiteModule.com(config.limite), SistemaModule.com({ rotasSinteticas: config.rotasSinteticas })],
+      imports: [
+        BancoModule.com(config.banco),
+        LimiteModule.com(config.limite),
+        UsoModule.com(config.redisFilaUrl),
+        SistemaModule.com({ rotasSinteticas: config.rotasSinteticas }),
+      ],
       // A prontidão é da instância, e a drenagem fica no módulo raiz: o Nest encerra o módulo raiz
       // por último, e o prazo da drenagem só é desarmado depois de o pool do banco fechar.
       controllers: [ProntidaoController],
@@ -40,6 +48,13 @@ export class AppModule {
           useFactory: (reflector: Reflector, limitador: LimitadorDeRequisicoes, proxies: ProxiesConfiaveis, limites: ConfiguracaoOperacional<LimitesDeRequisicao>) =>
             new GuardaDeLimite(reflector, limitador, proxies, limites),
           inject: [Reflector, LimitadorDeRequisicoes, ProxiesConfiaveis, LIMITES_DA_ESCOLA],
+        },
+        {
+          // Interceptor roda depois das guardas: conta só a requisição autenticada e dentro do limite,
+          // na escola que o token gravou no contexto.
+          provide: APP_INTERCEPTOR,
+          useFactory: (contador: ContadorDeUso) => new InterceptorDeUso(contador),
+          inject: [ContadorDeUso],
         },
       ],
     }

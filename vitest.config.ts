@@ -3,10 +3,14 @@ import { defineConfig } from 'vitest/config'
 
 const ignorados = ['**/node_modules/**', '**/dist/**', 'e2e/**', 'tools/ci/fixtures/**']
 
+// Pacotes do monorepo resolvem para `src` nos testes, sem depender de `dist` construído antes. Sem a
+// condição `module` do Vite: o Node do container não a usa, e com ela o teste carregaria outra build da
+// dependência (a `dist-es` do SDK S3, que o Node nem consegue importar) que não a de produção.
+const condicoes = ['source', ...defaultServerConditions.filter((condicao) => condicao !== 'module')]
+
 export default defineConfig({
-  // Pacotes do monorepo resolvem para `src` nos testes, sem depender de `dist` construído antes.
-  resolve: { conditions: ['source', ...defaultServerConditions] },
-  ssr: { resolve: { conditions: ['source', ...defaultServerConditions] } },
+  resolve: { conditions: condicoes },
+  ssr: { resolve: { conditions: condicoes } },
   test: {
     projects: [
       {
