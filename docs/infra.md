@@ -347,10 +347,12 @@ Nenhum dado real de escola entra em produção antes de:
 
 ## 12. Em aberto
 
-- Provedor de hospedagem em região Brasil (D28 fixa só a região)
-- Provedor de modelo principal e de reserva, e a região onde processam. Se processarem fora
-  do Brasil, a transferência internacional precisa constar do contrato com a escola, e rede
-  pública pode não aceitar
+- Provedor de hospedagem em região Brasil: escolhido na Tech Spec do F0, por critério fixo
+  (D42)
+- Provedor de modelo principal e de reserva: sai da avaliação de
+  `docs/avaliacao-de-modelos.md` (D37). Se o escolhido processar fora do Brasil, a
+  transferência internacional precisa constar do contrato com a escola, e rede pública pode
+  não aceitar
 - Solução para concorrência por escola nas filas (seção 5.3)
 - Solução para busca vetorial filtrada por escola (seção 3.6)
 - Ferramenta de observabilidade

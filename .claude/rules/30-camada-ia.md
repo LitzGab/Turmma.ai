@@ -70,7 +70,9 @@ Serviço de domínio → LLMProvider (porta)
    definido. Modelo erra formato, e um JSON quebrado não pode derrubar a correção de uma
    turma inteira.
 
-8. **Timeout, retry com recuo, e orçamento de tokens por aluno e por escola**, com corte
+8. **Timeout, retry com recuo, e orçamento de tokens por aluno, por turma e por escola**
+   (pacote do tutor por turma com freio diário por aluno, D38; valores são configuração por
+   escola e por rede, nunca constante no código, D41), com corte
    suave e aviso ao coordenador antes do limite. Medir não é otimização aqui, é requisito
    de produto: é o número que valida ou destrói a precificação.
 

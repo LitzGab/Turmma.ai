@@ -121,7 +121,8 @@ depender de reconhecimento de nome.
 
 **Agente** — Um especialista de IA com thread própria, nome, escopo e nível de autonomia.
 Trabalha sozinho e avisa. Não é um botão nem um prompt salvo. O nome é a função: Corretor,
-Planejador, Rotina, Monitor de turma, Tutor, Mensageiro da família.
+Planejador, Rotina, Monitor de turma, Tutor, Adaptador, Analista da coordenação e, na fase
+posterior, Mensageiro da família.
 
 **Ferramenta** — Um fluxo guiado que produz um artefato: prova, atividade, plano de aula,
 adaptação, simulado, redação. Funciona como formulário ou como cartão dentro do chat, com
@@ -141,7 +142,15 @@ avisa, propõe e espera aprovação, ou nunca faz. Ver `docs/agentes.md`.
 **Perfil de IA** — A classe de tarefa que define qual modelo será usado: rápido, padrão,
 complexo ou visão.
 
-**Orçamento de IA** — O limite de consumo por aluno e por escola, com aviso antes do corte.
+**Orçamento de IA** — O limite de consumo por aluno, turma e escola, com aviso antes do
+corte. Configuração por escola e por rede, nunca visível ao aluno como crédito.
+
+**Adaptação necessária** — O que precisa mudar numa prova ou atividade para um aluno: fonte
+ampliada, tempo extra, enunciado simplificado. Registrada pela coordenação. Nunca o
+diagnóstico.
+
+**Pacote do tutor** — As trocas com o tutor disponíveis para uma turma no mês, somadas entre
+os alunos, com freio diário por aluno.
 
 **Tutor** — O agente que conversa com o aluno. Conduz por perguntas e não entrega a
 resposta.

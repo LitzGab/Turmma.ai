@@ -35,19 +35,49 @@ Isso vem do CNE (`docs/regulacao.md`), não da nossa preferência. Tecnicamente:
 reunião de pais o que cada IA faz, e "o Corretor" se explica sozinho. Os nomes do desenho da
 call (Pipo, Waz, Maky) não são usados.
 
-## Candidatos iniciais
+## Os agentes (D32)
 
-| Agente | Nível | O que faz |
-|---|---|---|
-| **Rotina** | 1 | Abre o dia do professor: aulas, avaliações e pendências, a partir da grade e das avaliações. Garante que o feed nunca apareça vazio |
-| **Corretor** | 2 para objetiva, 3 para publicar nota | Corrige, monta relatório por questão, propõe notas |
-| **Planejador** | 1 | Plano de aula e sequência didática a partir do material e do calendário |
-| **Monitor de turma** | 2 | Entregas pendentes, quem travou, dúvidas frequentes, queda de desempenho |
-| **Tutor** | 2, sempre supervisionado | Conduz o aluno por perguntas, nunca entrega resposta pronta |
-| **Mensageiro da família** | 3 | Prepara a comunicação; envia só depois da aprovação. Fase posterior |
+| Agente | Para quem | Dispara | Nível | O que faz |
+|---|---|---|---|---|
+| **Rotina** | professor | todo dia letivo, de manhã | 1 | Abre o dia com aulas, avaliações e pendências que já existem na grade e nas avaliações. Não gera conteúdo novo, por isso é barato. Garante que o feed nunca apareça vazio |
+| **Corretor** | professor | fim da avaliação | 2 para corrigir, 3 para nota | Corrige objetivas e propõe nota para discursivas com justificativa e confiança. Monta relatório por questão. Nota só existe depois da aprovação |
+| **Planejador** | professor | **sob pedido**, ou "preparar a semana" ligado pelo professor para uma turma | 1 | Plano de aula e sequência didática a partir do material e do calendário. Não gera plano que ninguém pediu |
+| **Monitor de turma** | professor | diário, de madrugada, e por evento | 2 | Entregas pendentes, quem travou, dúvidas frequentes, queda de desempenho. Aluno nomeado só para o professor da turma |
+| **Tutor** | aluno | aluno pergunta | 2, sempre supervisionado | Conduz por perguntas, nunca entrega resposta pronta, cita a página |
+| **Adaptador** | professor | avaliação ou atividade criada para turma com aluno que tem adaptação registrada | 3 | Propõe a versão adaptada (fonte ampliada, tempo extra, enunciado simplificado). O professor aprova antes de o aluno receber |
+| **Analista da coordenação** | coordenação | toda segunda de manhã, e por evento que passa do limiar | 2 | Resumo semanal e alerta na hora: prova com média fora da curva, turma em queda, consumo de IA alto, alunos em risco **em agregado**. Só avisa: nunca contata professor nem família |
+| **Mensageiro da família** | professor, coordenação | evento | 3 | Prepara a comunicação e envia só depois da aprovação. **Fase posterior** |
 
-Os nomes estão decididos. **A lista final e o nível de cada um ainda são decisão em aberto**:
-feche com `/descobrir agentes` antes do PRD do F11.
+### Detalhes que já estão decididos
+
+**Aprovação de nota de objetiva é em lote** (D33). Um confirmar para a turma, depois de ver
+média, distribuição e os casos destacados: discursiva com baixa confiança, nota muito longe
+do histórico do aluno, prova em branco. Os destacados precisam ser abertos antes de o botão
+de aprovar o lote liberar. Aluno por aluno viraria clique reflexo, que é justamente o que a
+regra 50 quer evitar.
+
+**Aluno em risco chega nomeado só ao professor da turma** (D34). A coordenação vê o
+agregado ("1ºC tem 5 alunos com três entregas faltando") e abre o detalhe só com registro
+em auditoria. É sinal para um humano olhar, nunca decisão sobre o aluno (regra 70).
+
+**A adaptação é registrada pela coordenação, e só a adaptação** (D35). "Fonte ampliada,
+tempo +50%", nunca diagnóstico, laudo ou CID. O professor da turma vê; todo acesso fica em
+auditoria. É dado sensível de menor (`docs/lgpd.md`).
+
+**Assunto pessoal delicado no tutor** (D36). O Tutor não aconselha. Responde com mensagem
+fixa, revisada pela escola, que acolhe e orienta a procurar o professor ou a orientação
+educacional e, se houver menção a risco à vida, o CVV (188). Gera o sinal "precisa de
+atenção humana" para o professor da turma, **sem mostrar o conteúdo por padrão**. O gatilho
+é o que o aluno escreveu explicitamente, nunca inferência de humor ou estado emocional. O
+texto da mensagem e a lista de gatilhos passam pelo `conformidade-reviewer` e pelo
+`pedagogia-reviewer` antes de existir.
+
+### O que nenhum agente faz (nível 4)
+
+- Decidir aprovação, reprovação ou encaminhamento de aluno, nem como sugestão aplicada sozinha
+- Publicar nota ou falar com a família sem aprovação humana registrada
+- Inferir emoção, humor, atenção ou comportamento, ou ranquear alunos por isso
+- Falar de assunto fora do conteúdo escolar da turma
 
 ## Agente e ferramenta não são a mesma coisa
 

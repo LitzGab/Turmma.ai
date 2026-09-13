@@ -41,7 +41,7 @@ if [ -n "$alvo" ]; then
   fi
 fi
 
-abertas=$(awk '/^## Decisões em aberto/{f=1;next} /^## /{f=0} f && /^- /' CLAUDE.md 2>/dev/null | wc -l | tr -d ' ')
+abertas=$(awk '/^## Decisões em aberto/{f=1;next} /^## /{f=0} f && /^\| / && !/^\| Decisão/ && !/^\|---/' CLAUDE.md 2>/dev/null | wc -l | tr -d ' ')
 [ "$abertas" != "0" ] && echo "Decisões em aberto no CLAUDE.md: $abertas (use /descobrir <tema> para fechar uma)"
 
 echo "Visão completa: /status"

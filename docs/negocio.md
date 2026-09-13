@@ -54,7 +54,7 @@ costuma passar por apresentação em assembleia de pais. Se a família não se i
 tem venda. É por isso que o portal da família, mesmo em fase posterior, tem o motor de
 eventos construído agora (D11).
 
-## 4. Preço (tese, cobrança ainda em aberto)
+## 4. Preço e cobrança
 
 **Escola particular: cerca de R$ 30 por aluno por mês**, repassado à família na
 mensalidade. É cerca de 3% de uma mensalidade de R$ 1.000, abaixo do reajuste médio de 9,8%
@@ -64,12 +64,24 @@ O argumento para a assembleia, como saiu na call: "R$ 30 a mais é o que o seu f
 num dia de cantina. Com isso ele tem um tutor que só fala do conteúdo da escola, em vez de
 usar ferramentas que tiram o foco dele."
 
-**Prefeitura / rede:** contrato com uso ilimitado, faixa hipotética de R$ 5 a R$ 10 por
-aluno por mês.
+**Prefeitura / rede:** contrato por aluno, faixa hipotética de R$ 5 a R$ 10 por aluno por
+mês. O orçamento de IA da rede é derivado desse preço, na ordem de R$ 1,50 por aluno, com
+modelo pequeno no tutor e pacote menor por turma (D41).
 
-**Créditos:** a call levantou crédito para uso avulso e contrato ilimitado para escola e
-rede. Como isso vira sistema está em aberto (ver `CLAUDE.md`). Até decidir, o sistema mede
-consumo e não cobra (D14).
+**Cobrança (D40):** a escola paga por aluno, com uso normal incluso. Não existe crédito
+visível para professor ou aluno. Escola que passa do teto de forma recorrente renegocia o
+contrato. A ideia de crédito avulso da call foi descartada: cria a conversa "acabou o
+crédito" no meio do bimestre.
+
+**Como os R$ 30 se dividem (tetos, não medidas):**
+
+| Parte | Teto por aluno/mês | Decisão |
+|---|---|---|
+| IA (tutor, ferramentas, agentes) | R$ 5 | D39 |
+| Infra (servidor, banco, storage) | R$ 2 | D30 |
+| Suporte, imposto e margem | ~R$ 23 | — |
+
+O custo estimado do tutor por modelo está em `docs/avaliacao-de-modelos.md`.
 
 **Referência histórica da call:** R$ 250 por professor + R$ 100 por aluno. Descartada em
 favor do preço por aluno.

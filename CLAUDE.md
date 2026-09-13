@@ -195,6 +195,67 @@ Uns 7% do preço alvo. É medido por escola desde o F0, junto com o custo de IA 
 Staging recebe todo commit do `main`, roda e2e e teste de carga, e só tem seed sintético.
 Com commit direto no `main` (D23), é o staging que segura o erro antes de chegar à escola.
 
+**D32 — Os agentes são sete, mais o Mensageiro da família na fase posterior.**
+Rotina, Corretor, Planejador, Monitor de turma, Tutor, Adaptador e Analista da coordenação.
+O Rotina trabalha sozinho porque só organiza o que já existe; o Planejador trabalha sob
+pedido, porque plano que ninguém pediu é token jogado fora. O Analista existe porque quem
+compra é a coordenação, e ela precisa do próprio "funcionário". O Adaptador existe porque
+inclusão é o tema mais anunciado do mercado e é trabalho que o professor raramente tem tempo
+de fazer. Nível e gatilho de cada um em `docs/agentes.md`.
+
+**D33 — Nota de objetiva é aprovada em lote, com os casos fora da curva abertos antes.**
+Aprovar aluno por aluno vira clique reflexo e esvazia a supervisão que a lei exige. O lote
+com resumo mantém o humano olhando o que importa.
+
+**D34 — Aluno em risco chega nomeado só ao professor da turma. A coordenação vê agregado.**
+Abrir o detalhe como coordenação é possível e fica em auditoria. É o menor caminho de dado
+de menor que ainda faz alguém agir.
+
+**D35 — A coordenação registra a adaptação necessária do aluno, nunca o diagnóstico.**
+É dado sensível (art. 11). "Fonte ampliada, tempo +50%" basta para o Adaptador trabalhar, e
+um vazamento desse campo é muito menos grave que o de um laudo.
+
+**D36 — Assunto pessoal delicado no tutor é encaminhado a um humano.**
+O tutor não aconselha: responde com mensagem fixa, orienta procurar professor ou orientação
+e, com menção a risco à vida, o CVV (188). O professor recebe o sinal "precisa de atenção
+humana" sem o conteúdo por padrão. O gatilho é o que o aluno escreveu, nunca inferência de
+estado emocional. Só recusar o assunto deixaria um aluno em risco sem ninguém saber.
+
+**D37 — O provedor de modelo sai de uma avaliação com amostras sintéticas.**
+Finalistas: Maritaca (Sabiazinho 4 e Sabiá 4, variante processada no Brasil) e Google
+(Gemini Flash-Lite e Flash). Principal e reserva são escolhidos pelo resultado, antes de a
+F5 ficar pronta. Benchmark genérico não mede o que importa aqui: recusar a resposta em
+português de Ensino Médio e citar a página certa. Critérios em `docs/avaliacao-de-modelos.md`.
+
+**D38 — O tutor tem pacote mensal por turma, com freio diário por aluno.**
+Pacote de 300 trocas por aluno por mês, somado na turma: o aluno que precisa mais na véspera
+da prova usa o saldo dos colegas que usaram menos. Freio de 60 trocas por dia por aluno
+contra abuso. Professor e coordenação veem o consumo. Limite individual rígido cortaria
+justamente quem mais precisa; sem teto, uma turma consumiria o mês da escola.
+
+**D39 — IA custa até R$ 5 por aluno por mês na escola particular.**
+Soma tutor, ferramentas do professor e agentes. Com infra de R$ 2 (D30), sobram uns R$ 23
+dos R$ 30 para suporte, imposto e margem. Na prática, modelo pequeno no tutor e médio na
+geração de prova e na correção de discursiva.
+
+**D40 — A escola paga por aluno, com uso normal incluso. Não há crédito visível.**
+Professor e aluno nunca veem "acabou o crédito". O orçamento é interno (D14, D38). Se uma
+escola passar do teto de forma recorrente, renegocia o contrato, não o uso no meio do
+bimestre. Previsível para a escola e fácil de explicar em assembleia de pais.
+
+**D41 — Na rede pública, o orçamento de IA é derivado do preço do contrato.**
+O sistema é o mesmo, mas a rede paga R$ 5 a R$ 10 por aluno, então o orçamento de IA dela é
+configurado menor (ordem de R$ 1,50 por aluno): modelo pequeno no tutor e pacote menor por
+turma. O preço define o orçamento, e não o contrário. Por isso o orçamento é configuração
+por escola e por rede, nunca constante no código.
+
+**D42 — O provedor de hospedagem é escolhido na Tech Spec do F0, por critério fixo.**
+Nada de produção é necessário antes do staging do F0. Critérios: região São Paulo, Postgres
+gerenciado com pgvector e backup contínuo, Redis gerenciado configurável sem expulsão de
+chave, storage S3-compatível, custo dentro de R$ 2 por aluno (D30), preço em real ou
+crédito para startup. Comparar AWS São Paulo, Google São Paulo, Azure Brazil South e Magalu
+Cloud.
+
 ---
 
 ## Conflitos já resolvidos
@@ -228,15 +289,15 @@ atende as duas (D20).
 
 Use `/descobrir <tema>` para fechar uma, e `/registrar-decisao` para escrevê-la.
 
-- Lista final de agentes e nível de autonomia de cada um (os nomes já estão fixos, D17)
-- Teto de uso do tutor por aluno e orçamento de tokens por perfil
-- Modelo de cobrança: só contrato por aluno, contrato mais créditos, ou outro. Até decidir,
-  o sistema **mede** consumo por escola e por aluno e não cobra nada (D14)
-- Quais sistemas de ensino as escolas-alvo usam, o que decide o primeiro adaptador (D22)
-- Identidade visual: cores, tipografia, logo. Depende da marca que o Gabriel está definindo
-- Nome, INPI e domínio
-- Provedor de hospedagem em região Brasil (D28 fixa só a região)
-- Provedor de modelo principal e de reserva, e em que região processam (D29)
+Todas têm dono e momento. Nenhuma trava o F0.
+
+| Decisão | Dono | Quando fecha |
+|---|---|---|
+| Provedor de modelo principal e reserva | Joaquim | avaliação de `docs/avaliacao-de-modelos.md`, antes de a F5 ficar pronta (D37) |
+| Provedor de hospedagem | Joaquim | Tech Spec do F0 (D42) |
+| Identidade visual (paleta, tipografia, logo) | Gabriel | **antes do PRD do F2**, a primeira tela real |
+| Nome, INPI e domínio | Gabriel | antes do material de venda e do piloto |
+| Sistemas de ensino das escolas-alvo e primeiro adaptador | quem conduzir o piloto | no piloto; até lá só upload (D22) |
 
 ---
 
@@ -279,6 +340,7 @@ obrigatória para implementar
 **Para construir:** `docs/arquitetura.md`, `docs/modelo-de-dados.md`, `docs/agentes.md`,
 `docs/ingestao.md`
 **Para não cair no horário de aula:** `docs/infra.md`, `docs/runbook.md`
+**Para escolher modelo e medir custo de IA:** `docs/avaliacao-de-modelos.md`
 **Para trabalhar:** `README.md`, `ROADMAP.md`, `TODO.md`, `.claude/rules/`, `.claude/skills/`
 
 ---

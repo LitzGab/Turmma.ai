@@ -20,6 +20,9 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] Contrato com provedor de modelo: veda treinamento, limite de tokens por minuto
       compatível com o pico (~1,5 mi/min em 10 escolas), e região de processamento (D29)
 - [ ] Provedor de modelo de reserva configurado e testado
+- [ ] Rodar a avaliação de `docs/avaliacao-de-modelos.md` com Maritaca e Gemini (D37)
+- [ ] Perguntar à Maritaca, por escrito, se o contrato cobre dado de aluno menor de idade
+      (a política pública diz que não tratam dado de menor)
 - [ ] Levantar a região de processamento dos provedores e se a rede pública aceita
       transferência internacional de dado minimizado
 - [ ] Escolher ferramenta de observabilidade e de alerta no celular (região Brasil ou
@@ -45,15 +48,19 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 ## Produto
 
-- [ ] Fechar a lista de agentes e o nível de autonomia de cada um (`/descobrir agentes`)
-- [ ] Definir teto de uso do tutor por aluno e orçamento de tokens (`/descobrir teto do tutor`)
-- [ ] Decidir o modelo de cobrança: contrato por aluno, créditos, ou os dois
+- [x] ~~Fechar a lista de agentes e o nível de autonomia de cada um~~ — D32 a D36
+- [ ] Validar com advogado a base legal para guardar a adaptação necessária do aluno (D35)
+- [ ] Texto da mensagem fixa de acolhimento do tutor, revisado por uma orientadora
+      educacional de verdade (D36)
+- [x] ~~Definir teto de uso do tutor por aluno e orçamento de tokens~~ — D38, D39, D41
+- [x] ~~Decidir o modelo de cobrança~~ — por aluno, uso incluso, sem crédito (D40)
 - [x] ~~Decidir se o aluno acessa de casa desde o início~~ — escola decide por turma (D19)
 - [x] ~~Definir o que o coordenador precisa ver na primeira semana~~ — as quatro coisas do D24
 
 ## Marca e interface
 
-- [ ] Identidade visual (cores, tipografia, logo) para o frontend seguir — Gabriel
+- [ ] Identidade visual (paleta, tipografia, logo) para o frontend seguir — Gabriel,
+      **antes do PRD do F2**
 - [ ] Landing page — Gabriel
 
 ## Comercial

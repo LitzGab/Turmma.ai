@@ -82,8 +82,10 @@ Serviço de domínio → LLMProvider (porta)
 Roteamento por perfil: `rapido`, `padrao`, `complexo`, `visao`. O perfil é declarado pelo
 caso de uso; o modelo concreto é configuração.
 
-**Orçamento de tokens** por aluno e por escola é obrigatório, com corte suave e aviso ao
-coordenador antes do limite. O tutor gasta muito mais que geração de prova — a margem do
+**Orçamento de tokens** por aluno, por turma e por escola é obrigatório, com corte suave e
+aviso ao coordenador antes do limite. O tutor tem pacote mensal por turma e freio diário por
+aluno (D38). Teto de R$ 5 por aluno na particular (D39); na rede, derivado do contrato
+(D41). Tudo é configuração, nunca constante. O tutor gasta muito mais que geração de prova — a margem do
 R$ 30/aluno depende de medir isso desde a primeira chamada.
 
 Guardrails: escopo de assunto por turma aplicado no servidor, detecção de pedido de

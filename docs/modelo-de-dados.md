@@ -108,10 +108,22 @@ Entrega          → mensagem*, tipo*, payload*, status (pendente | aprovada | r
 ExecucaoAgente   → agente*, escola*, gatilho*, entrada, saida, perfilIa, modelo, tokens,
                    custo, duracao, status, erro?, enviadoExternamente (bool)
 OrcamentoIa      → escola*, anoLetivo*, limiteMensal, consumoAtual, alertaEm
+PacoteTutor      → escola*, anoLetivo*, turma*, mes*, trocasPorAluno* (padrão 300),
+                   freioDiarioPorAluno* (padrão 60), consumoTrocas
 ConsumoIa        → escola*, usuario*, perfil*, tokens*, custo*, em*
 ```
 
 `autonomia` é visível ao coordenador em tela. Nível 3 e 4 seguem `docs/agentes.md`.
+
+```
+AdaptacaoAluno*  → escola*, anoLetivo*, aluno*, tipos* (fonte_ampliada | tempo_extra |
+                   enunciado_simplificado | leitor_de_tela | outro), detalhe?,
+                   registradaPor* (coordenação), registradaEm*, revisarEm*
+```
+
+`AdaptacaoAluno` guarda **o que adaptar, nunca o porquê**: sem diagnóstico, laudo ou CID
+(D35). `detalhe` é texto curto e revisado; campo livre que vira prontuário é reprovação no
+`privacy-guardian`. Leitura por professor é limitada às turmas dele e fica em auditoria.
 
 ## Tutor, sala e supervisão
 
@@ -120,7 +132,8 @@ PoliticaTutor*   → turma*, modo* (bloqueado | socratico | livre), definidaPor*
                    foraDaSala* (bool, padrão falso), foraDaSalaDefinidoPor?
 SessaoTutor*     → aluno*, turma*, disciplina?, modo (sala | casa), iniciadaEm, encerradaEm
 MensagemTutor*   → sessao*, autor (aluno | tutor), conteudo*, criadaEm*
-SinalAluno       → sessao*, tipo (travado | pediu_resposta | fora_de_escopo | duvida),
+SinalAluno       → sessao*, tipo (travado | pediu_resposta | fora_de_escopo | duvida |
+                   atencao_humana),
                    detalhe, criadoEm*
 SalaAoVivo       → turma*, professor*, abertaEm, fechadaEm
 ```

@@ -94,7 +94,9 @@ provedor de reserva e degradação para modelo menor (D29). Adaptador falso com 
 streaming simulada para teste de carga.
 
 **Pronto quando:** trocar de provedor é variável de ambiente, o consumo aparece por escola,
-e com o limite estourado o pedido interativo espera e degrada em vez de falhar.
+e com o limite estourado o pedido interativo espera e degrada em vez de falhar. Pacote do
+tutor por turma com freio diário (D38). Avaliação de modelos de
+`docs/avaliacao-de-modelos.md` executada e principal e reserva registrados (D37).
 
 ## F6 — `avaliacao-e-correcao` [ ]
 **Depende de:** F4, F5
@@ -152,7 +154,8 @@ duas instâncias de realtime entregando o sinal ao professor certo.
 
 Runtime em fila, thread por agente, não-lidos, autonomia declarada e visível, portão de
 aprovação, limite de passos e de custo. Rotina, Corretor, Planejador, Monitor de turma,
-Tutor (D17). **Antes do PRD:** fechar a lista final e a autonomia com `/descobrir agentes`.
+Tutor, Adaptador e Analista da coordenação, com nível e gatilho de `docs/agentes.md` (D32).
+Aprovação de nota em lote com destaques (D33). Encaminhamento de assunto delicado (D36).
 
 **Pronto quando:** o corretor termina sozinho, avisa, e a nota espera aprovação.
 

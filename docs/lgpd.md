@@ -40,6 +40,8 @@ deveria existir.
 | Nota | aluno | registro escolar | obrigação legal da escola | conforme norma da escola |
 | Conversa com o tutor | aluno | aprendizagem e supervisão docente | legítimo interesse da escola em supervisão pedagógica | 12 meses |
 | Sinais de uso de IA | aluno | supervisão docente | idem | 12 meses |
+| Adaptação pedagógica necessária (ex.: fonte ampliada, tempo extra) — **nunca diagnóstico** | aluno | adaptar prova e atividade (agente Adaptador) | dado sensível (art. 11), via obrigação da escola com inclusão; **a confirmar com advogado** | enquanto houver vínculo; revista a cada ano letivo |
+| Sinal "precisa de atenção humana" (sem conteúdo) | aluno | encaminhar a um humano o aluno que pediu ajuda pessoal | proteção do titular, melhor interesse (art. 14) | 12 meses |
 | Nome, e-mail | professor, coordenador | acesso e responsabilidade | execução de contrato | vigência + 5 anos |
 | Nome, e-mail, telefone | responsável | comunicação escolar | execução de contrato | vigência do vínculo |
 | Logs de acesso | todos | segurança e auditoria | obrigação legal (Marco Civil) | 6 meses a 5 anos |

@@ -85,7 +85,8 @@ calendário, e toda saída cita material e página.
 
 ### 1.3 Seu time: o feed de agentes (F11)
 
-- Agentes com nome de função: Corretor, Planejador, Rotina, Monitor de turma (D17)
+- Agentes com nome de função: Rotina, Corretor, Planejador, Monitor de turma, Adaptador
+  (D17, D32)
 - Cada mensagem de agente diz o que fez e, quando aplicável, **o que está esperando**:
   "Corrigi as 32 provas do 2ºB, média 6,4. Esperando você aprovar"
 - O nível de autonomia do agente fica visível na thread, em português comum
@@ -101,8 +102,8 @@ A ação que não pode virar clique reflexo (regra 50, item 8; regra 70).
   discursiva com baixa confiança da correção, nota muito distante da média do aluno, prova
   em branco
 - Rejeitar pede justificativa
-- *Proposta:* o botão de aprovar o lote fica desabilitado enquanto os destacados não forem
-  abertos
+- O botão de aprovar o lote fica desabilitado enquanto os destacados não forem abertos
+  (D33)
 
 ### 1.5 Modo sala (F10)
 
@@ -147,6 +148,8 @@ Desligado, a tela explica que o tutor funciona em sala, sem parecer erro.
   - desempenho por turma e habilidade
   - alertas acionáveis: prova fácil demais, turma em queda, aluno em risco
   - consumo de IA do mês contra o orçamento
+- **Analista da coordenação**: resumo de segunda de manhã e alertas na hora, em agregado (D32)
+- **Adaptações**: registro da adaptação necessária por aluno, nunca diagnóstico (D35)
 - **Agentes**: cada agente, o que faz sozinho e o que espera aprovação, em português comum
   (D9). É a tela para apontar quando alguém pergunta "o que essa IA faz sozinha?"
 - **Auditoria**: para qualquer item, o que a IA gerou, quem aprovou e quando
