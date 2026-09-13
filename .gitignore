@@ -17,3 +17,7 @@ build/
 
 # Vercel
 .vercel/
+
+# Testes
+playwright-report/
+test-results/

@@ -1,16 +1,16 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 0 de 15 concluídas
+**Status:** 1 de 15 concluídas
 
 ## Lista
 
-- [ ] **1.0 — Monorepo sobe com um comando e a esteira do GitHub roda em todo commit**
-  - [ ] 1.1 Workspaces npm, TypeScript base, ESLint, Vitest e Playwright com os scripts do portão
-  - [ ] 1.2 `infra/compose.yml` com Postgres (pgvector), Redis de fila, Redis de cache e storage S3
-  - [ ] 1.3 Esqueleto de `apps/api` com `/saude` e de `apps/web` exibindo o dado da API
-  - [ ] 1.4 `.github/workflows/ci.yml` com `verificar`, `integracao` e `e2e`, chamando só `npm run ci:*`
-  - [ ] 1.5 Testes: e2e de fumaça, `/saude` com Postgres parado, esteira sem `.env` local e sem segredo
+- [x] **1.0 — Monorepo sobe com um comando e a esteira do GitHub roda em todo commit**
+  - [x] 1.1 Workspaces npm, TypeScript base, ESLint, Vitest e Playwright com os scripts do portão
+  - [x] 1.2 `infra/compose.yml` com Postgres (pgvector), Redis de fila, Redis de cache e storage S3
+  - [x] 1.3 Esqueleto de `apps/api` com `/saude` e de `apps/web` exibindo o dado da API
+  - [x] 1.4 `.github/workflows/ci.yml` com `verificar`, `integracao` e `e2e`, chamando só `npm run ci:*`
+  - [x] 1.5 Testes: e2e de fumaça, `/saude` com Postgres parado, esteira sem `.env` local e sem segredo
 
 - [ ] **2.0 — Erro tipado e log sem dado pessoal**
   - [ ] 2.1 `CodigoDeErro` e mensagens pt-BR em `packages/shared`

@@ -24,27 +24,27 @@ Antes desta tarefa, o repositório não tem código.
 
 ## Subtarefas
 
-- [ ] 1.1 — `package.json` na raiz com workspaces (`apps/*`, `packages/*`) e os scripts
+- [x] 1.1 — `package.json` na raiz com workspaces (`apps/*`, `packages/*`) e os scripts
   `typecheck`, `lint`, `test`, `test:e2e` e `ci:verificar`, `ci:integracao`, `ci:e2e`.
   Criar `tsconfig.base.json` (strict), `eslint.config.mjs` (flat), config do Vitest e
   `playwright.config.ts`
-- [ ] 1.2 — `infra/compose.yml` com os serviços abaixo, todos com healthcheck. O
+- [x] 1.2 — `infra/compose.yml` com os serviços abaixo, todos com healthcheck. O
   `.env.example` precisa ser suficiente para subir tudo
   - Postgres com pgvector
   - `redis-fila` com `maxmemory-policy noeviction` e AOF ligado
   - `redis-cache` com `allkeys-lru`
   - storage S3. ⚠️ Confirme que a imagem do MinIO tem arm64 e amd64 mantidas; se não
     tiver, use SeaweedFS ou Garage e registre a troca na Tech Spec (seção 12)
-- [ ] 1.3 — `packages/shared` e `packages/nucleo` vazios, mas compilando.
+- [x] 1.3 — `packages/shared` e `packages/nucleo` vazios, mas compilando.
   - `apps/api` (NestJS) com `GET /saude`, que responde `{ ok: true }` e 503 quando o
     Postgres não responde, usando um pool de `packages/nucleo/src/db`.
   - `apps/web` (Vite + React + TS) com uma página que chama `/saude` e mostra o resultado.
   - API e web entram no compose.
-- [ ] 1.4 — `.github/workflows/ci.yml` em push no `main`, com `permissions: contents: read`
+- [x] 1.4 — `.github/workflows/ci.yml` em push no `main`, com `permissions: contents: read`
   e sem nenhum `secrets.*`. Os jobs `verificar`, `integracao` (compose com Postgres, Redis
   e storage) e `e2e` (compose completo + Playwright) só chamam `npm run ci:*`, para a lógica
   morar em script e não no YAML
-- [ ] 1.5 — Testes (tabela abaixo) e seção "Rodando local" no `README.md`
+- [x] 1.5 — Testes (tabela abaixo) e seção "Rodando local" no `README.md`
 
 ## Arquivos previstos
 
@@ -74,13 +74,13 @@ commit corrigido fica verde. Registre os dois links de execução na conclusão.
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
-- [ ] E2E verde (se tocou tela)
-- [ ] Vetos aprovados (se aplicáveis)
-- [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
+- [x] E2E verde (se tocou tela)
+- [x] Vetos aprovados (se aplicáveis)
+- [x] Revisão aprovada
+- [x] Commit feito, só com os arquivos desta tarefa
 
 ## Fora do escopo desta tarefa
 

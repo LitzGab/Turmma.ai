@@ -1,6 +1,6 @@
-# Educa.ia — repositório de especificação
+# Educa.ia
 
-Este repositório não tem código. Ele contém o **contexto, as regras e o processo** que
+Este repositório contém o código e, junto dele, o **contexto, as regras e o processo** que
 governam a construção do Educa.ia. A ideia é simples: nada é implementado antes de existir
 um documento que diga o que fazer, outro que diga como fazer, e uma lista de tarefas
 aprovada. É o que se chama de desenvolvimento guiado por especificação.
@@ -9,6 +9,41 @@ O motivo de fazer assim, neste projeto especificamente: estamos lidando com dado
 de idade, com exigência legal de supervisão humana sobre IA, e com um comprador que cancela
 o contrato se algo vazar. Improvisar arquitetura no meio da implementação sai caro aqui de
 um jeito que não sai em um produto comum.
+
+---
+
+## Rodando local
+
+Pré-requisitos: Docker com Compose (v2.20 ou mais novo) e Node 22 (versão em `.nvmrc`).
+Nenhuma conta em serviço externo e nenhum `.env` próprio: tudo sai de `.env.example`, que
+só tem valor sintético.
+
+```bash
+npm ci
+docker compose up        # Postgres (pgvector), Redis de fila, Redis de cache, storage S3, API e web
+```
+
+A web fica em http://127.0.0.1:58080 e mostra o estado da API; a API responde em
+http://127.0.0.1:53000/saude. As portas publicadas escutam só no loopback e estão em
+`.env.example`. Para mudar alguma na sua máquina, crie um `.env` na raiz: ele sobrepõe o
+exemplo no `docker compose up`, mas testes e esteira usam sempre o `.env.example`.
+
+Testes e esteira sobem um projeto compose separado, `educa-teste`, com as portas de
+`infra/teste.env`. Os testes de integração param e pausam o Postgres desse projeto para
+provar a saúde da API, e os `ci:*` apagam os volumes dele no fim, sem tocar no ambiente de
+desenvolvimento.
+
+| Comando | O que faz |
+|---|---|
+| `npm run typecheck` | tipos de todos os pacotes |
+| `npm run lint` | ESLint |
+| `npm run test` | unidade e integração; a integração sobe Postgres, Redis e storage sozinha |
+| `npm run test:e2e` | sobe o compose de teste completo e roda o Playwright, deixando o ambiente de pé |
+| `npm run ci:verificar`, `ci:integracao`, `ci:e2e` | exatamente o que a esteira roda; derrubam o ambiente no fim |
+
+A esteira (`.github/workflows/ci.yml`) roda em todo push no `main` e só chama os `ci:*`.
+Enquanto não existe staging (D31), ela é o portão: commit vermelho no `main` segura a
+próxima tarefa até voltar a verde.
 
 ---
 

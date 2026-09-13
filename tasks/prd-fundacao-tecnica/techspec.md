@@ -244,8 +244,12 @@ Testes usam o `compose.yml`.
 
 ## 12. Premissas não verificadas
 
-- ⚠️ **MinIO:** a distribuição comunitária pode ter mudado. O acesso é só pela API S3;
-  SeaweedFS ou Garage substituem.
+- ✅ **MinIO → SeaweedFS (verificado na tarefa 1.0, 13/09/2026):** a imagem `minio/minio`
+  não está mais disponível publicamente no Docker Hub (acesso negado ao manifesto). O
+  storage local passou a ser `chrislusf/seaweedfs` (Apache 2.0, amd64 e arm64 publicados,
+  release 4.46 de 08/09/2026) em modo `weed mini`, com credencial S3 vinda de `.env.example`
+  e bucket criado na subida. O acesso continua só pela API S3, então a troca não muda
+  nenhum outro ponto desta spec.
 - ⚠️ **`grafana/otel-lgtm`:** o README diz que a imagem é para desenvolvimento e teste, que
   é o uso aqui. Não confirmei o provisionamento de regra de alerta por arquivo nessa imagem.
   Reserva: Grafana e Prometheus separados no compose.

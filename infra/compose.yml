@@ -1,0 +1,134 @@
+# Ambiente local completo. Sobe com `docker compose up` na raiz do repositório.
+# Toda variável vem de `.env.example` e é obrigatória (`:?`): se faltar, o compose falha
+# em vez de subir com valor escondido que só existe numa máquina.
+name: educa
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg18-trixie
+    environment:
+      POSTGRES_USER: ${POSTGRES_USUARIO:?defina POSTGRES_USUARIO}
+      POSTGRES_PASSWORD: ${POSTGRES_SENHA:?defina POSTGRES_SENHA}
+      POSTGRES_DB: ${POSTGRES_BANCO:?defina POSTGRES_BANCO}
+    ports:
+      - 127.0.0.1:${POSTGRES_PORTA_HOST:?defina POSTGRES_PORTA_HOST}:5432
+    volumes:
+      - postgres-dados:/var/lib/postgresql
+    healthcheck:
+      # -h força TCP: pelo socket, o servidor temporário da inicialização responderia antes da hora.
+      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  redis-fila:
+    image: redis:8.8.2-alpine
+    command:
+      - redis-server
+      - --maxmemory
+      - ${REDIS_FILA_MEMORIA_MAXIMA:?defina REDIS_FILA_MEMORIA_MAXIMA}
+      - --maxmemory-policy
+      - noeviction
+      - --appendonly
+      - 'yes'
+      - --appendfsync
+      - everysec
+    ports:
+      - 127.0.0.1:${REDIS_FILA_PORTA_HOST:?defina REDIS_FILA_PORTA_HOST}:6379
+    volumes:
+      - redis-fila-dados:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis-cache:
+    image: redis:8.8.2-alpine
+    command:
+      - redis-server
+      - --maxmemory
+      - ${REDIS_CACHE_MEMORIA_MAXIMA:?defina REDIS_CACHE_MEMORIA_MAXIMA}
+      - --maxmemory-policy
+      - allkeys-lru
+      - --appendonly
+      - 'no'
+      - --save
+      - ''
+    ports:
+      - 127.0.0.1:${REDIS_CACHE_PORTA_HOST:?defina REDIS_CACHE_PORTA_HOST}:6379
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  storage:
+    # MinIO deixou de publicar imagem comunitária; SeaweedFS atende pela API S3 (Tech Spec, seção 12).
+    image: chrislusf/seaweedfs:4.46
+    command:
+      - mini
+      - -dir=/data
+      - -bucket=${STORAGE_BUCKET:?defina STORAGE_BUCKET}
+      - -admin.ui=false
+      - -webdav=false
+    environment:
+      AWS_ACCESS_KEY_ID: ${STORAGE_CHAVE_ACESSO:?defina STORAGE_CHAVE_ACESSO}
+      AWS_SECRET_ACCESS_KEY: ${STORAGE_CHAVE_SECRETA:?defina STORAGE_CHAVE_SECRETA}
+    ports:
+      - 127.0.0.1:${STORAGE_PORTA_HOST:?defina STORAGE_PORTA_HOST}:8333
+    volumes:
+      - storage-dados:/data
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8333/healthz]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/docker/api.Dockerfile
+    environment:
+      AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
+      API_PORTA: '3000'
+      BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
+      BANCO_POOL_MAXIMO: ${BANCO_POOL_MAXIMO:?defina BANCO_POOL_MAXIMO}
+      BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
+      BANCO_TIMEOUT_CONSULTA_MS: ${BANCO_TIMEOUT_CONSULTA_MS:?defina BANCO_TIMEOUT_CONSULTA_MS}
+    ports:
+      - 127.0.0.1:${API_PORTA_HOST:?defina API_PORTA_HOST}:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/saude').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  web:
+    build:
+      context: ..
+      dockerfile: infra/docker/web.Dockerfile
+    environment:
+      API_URL_INTERNA: http://api:3000
+    ports:
+      - 127.0.0.1:${WEB_PORTA_HOST:?defina WEB_PORTA_HOST}:4173
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:4173/]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+volumes:
+  postgres-dados:
+  redis-fila-dados:
+  storage-dados:

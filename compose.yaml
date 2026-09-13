@@ -1,0 +1,7 @@
+# Ponto de entrada do `docker compose up` na raiz. A definição mora em infra/compose.yml,
+# e as variáveis vêm só de .env.example: nada depende de arquivo que exista numa máquina.
+name: educa
+
+include:
+  - path: infra/compose.yml
+    env_file: .env.example

@@ -1,0 +1,59 @@
+# Esteira do Educa.ia. Enquanto não há staging (D31), ela é o portão de todo commit no main.
+# Toda lógica mora em `npm run ci:*` (tools/ci): o YAML só prepara o Node e chama o script.
+# Sem segredo do repositório: nada aqui depende de credencial além do token do próprio GitHub.
+name: esteira
+
+on:
+  push:
+    branches: [main]
+  # Execução manual, usada para reexecutar um commit sem precisar de outro push.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: verificar (tipos, lint, unidade)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run ci:verificar
+
+  integracao:
+    name: integração (Postgres, Redis, storage)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run ci:integracao
+
+  e2e:
+    name: e2e (compose completo e Playwright)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run ci:e2e

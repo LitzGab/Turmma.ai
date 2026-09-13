@@ -1,0 +1,40 @@
+{
+  "name": "educa-ia",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.18.0 <23"
+  },
+  "scripts": {
+    "build": "npm run build -w @educa/shared && npm run build -w @educa/nucleo && npm run build -w @educa/api && npm run build -w @educa/web",
+    "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "test:unidade": "vitest run --project unidade",
+    "test:integracao": "vitest run --project integracao",
+    "test:e2e": "node tools/ci/e2e.ts --manter-ambiente",
+    "ci:verificar": "node tools/ci/verificar.ts",
+    "ci:integracao": "node tools/ci/integracao.ts",
+    "ci:e2e": "node tools/ci/e2e.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "22.20.2",
+    "eslint": "10.10.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.12.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.0",
+    "vite": "8.3.0",
+    "vitest": "5.0.0",
+    "yaml": "2.9.1"
+  },
+  "overrides": {
+    "multer": "2.3.0"
+  }
+}
