@@ -1,0 +1,16 @@
+# Dependências
+node_modules/
+.venv/
+__pycache__/
+
+# Ambiente
+.env
+.env.*
+!.env.example
+
+# Sistema
+.DS_Store
+
+# Builds
+dist/
+build/
