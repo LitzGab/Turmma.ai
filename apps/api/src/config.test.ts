@@ -22,6 +22,8 @@ const ambienteValido = {
   LIMITE_INSTANCIAS_API: '2',
   LIMITE_PROXIES_CONFIAVEIS: 'borda',
   ROTAS_SINTETICAS: 'false',
+  TELEMETRIA_OTLP_URL: 'http://observabilidade:4318/',
+  TELEMETRIA_INTERVALO_MS: '5000',
 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
@@ -60,6 +62,7 @@ describe('lerConfiguracao', () => {
         instancias: 2,
         proxiesConfiaveis: ['borda'],
       },
+      telemetria: { otlpUrl: 'http://observabilidade:4318', intervaloMs: 5000 },
     })
   })
 

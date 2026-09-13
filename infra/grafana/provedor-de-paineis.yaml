@@ -1,0 +1,14 @@
+# Painéis do Educa.ia no Grafana da observabilidade local, lidos de infra/grafana/paineis/ (montado no
+# container). Provisionados por arquivo: mudança no painel é mudança no JSON versionado, e a edição feita
+# na tela não sobrevive ao container.
+apiVersion: 1
+
+providers:
+  - name: educa
+    folder: Educa.ia
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /otel-lgtm/educa/paineis
+      foldersFromFilesStructure: false

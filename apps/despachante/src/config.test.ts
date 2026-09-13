@@ -14,6 +14,8 @@ const ambienteValido = {
   JANELA_LETIVA_DIAS: '1,2,3,4,5',
   JANELA_LETIVA_INICIO: '07:00',
   JANELA_LETIVA_FIM: '18:00',
+  TELEMETRIA_OTLP_URL: 'http://observabilidade:4318/',
+  TELEMETRIA_INTERVALO_MS: '5000',
 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
@@ -33,6 +35,7 @@ describe('lerConfiguracao do despachante', () => {
       redisFilaUrl: 'redis://redis-fila:6379',
       vagasPadrao: { interativa: 5, normal: 5, lote: 2 },
       janelaPadrao: { fuso: 'America/Sao_Paulo', diasLetivos: [1, 2, 3, 4, 5], inicio: '07:00', fim: '18:00' },
+      telemetria: { otlpUrl: 'http://observabilidade:4318', intervaloMs: 5000 },
     })
   })
 

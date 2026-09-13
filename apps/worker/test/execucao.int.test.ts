@@ -1,16 +1,21 @@
 import 'reflect-metadata'
 import {
   executarNoContexto,
+  METRICAS,
+  nomeDaFilaBullMQ,
   OPCOES_DE_JOB_PUBLICADO,
   RETENCAO_JOB_CONCLUIDO_SEGUNDOS,
   RETENCAO_JOB_FALHO_SEGUNDOS,
   TENTATIVAS_DE_JOB,
 } from '@educa/nucleo'
 import { CodigoDeErro, CodigoDeFalhaDeJob } from '@educa/shared'
+import { Worker } from 'bullmq'
+import { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { aguardarSaudavel, compose, composeAssincronoOuFalha, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
-import { BancadaDeFila, ESCOLA_A, ESCOLA_B, LogEmMemoria } from './fila-de-teste.js'
+import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
+import { BancadaDeFila, ESCOLA_A, ESCOLA_B, LogEmMemoria, urlRedisDeFila } from './fila-de-teste.js'
 
 // Despachantes e workers de verdade (a mesma montagem do main.ts), no processo do teste, contra o
 // Postgres e o Redis de fila do compose de teste. Cada bancada usa um prefixo próprio no BullMQ.
@@ -338,6 +343,26 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
       expect(await naFila?.getState()).toBe('completed')
       expect(naFila?.attemptsMade).toBeGreaterThan(1)
     }, 150_000)
+
+    it('réplica que morreu com o job na mão (lock vencido): a outra o devolve pelo stalled, conta fila.jobs_stalled só pela fila, e o job conclui', async () => {
+      const id = await publicado()
+      // A réplica que "morre": pega o job com lock de 1 s e nunca o renova nem processa.
+      const conexao = new Redis(urlRedisDeFila(), { maxRetriesPerRequest: null })
+      const morta = new Worker(nomeDaFilaBullMQ('interativa'), undefined, { connection: conexao, prefix: bancada.prefixo, lockDuration: 1_000, autorun: false })
+      const tomado = await morta.getNextJob(randomUUID())
+      expect(tomado?.id).toBe(id)
+      await morta.close(true)
+      await conexao.quit()
+
+      const medidor = new MedidorDeTeste()
+      try {
+        bancada.worker(new LogEmMemoria('worker'), { medidor: medidor.medidor })
+        await aguardarEstado(bancada, id, 'concluido', 40_000)
+        expect(await medidor.pontos(METRICAS.jobsStalled)).toEqual([{ atributos: { fila: 'interativa' }, valor: 1 }])
+      } finally {
+        await medidor.encerrar()
+      }
+    }, 60_000)
 
     it('SIGTERM com job que passa da graça: o encerramento força a saída no prazo, sem marcar falha, e o job segue na fila para outra réplica', async () => {
       const id = await publicado()

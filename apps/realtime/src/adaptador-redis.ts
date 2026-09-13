@@ -63,6 +63,8 @@ export function prepararServidorRealtime(servidor: Server, cliente: Redis, taman
 
 /** Adaptador Nest: todo gateway da aplicação usa o mesmo servidor, já com Redis e opções fixas. */
 export class AdaptadorSocketIoComRedis extends IoAdapter {
+  #servidor: Server | undefined
+
   constructor(
     app: INestApplicationContext,
     private readonly cliente: Redis,
@@ -79,6 +81,12 @@ export class AdaptadorSocketIoComRedis extends IoAdapter {
   override createIOServer(porta: number): Server {
     if (porta !== 0) throw new Error('gateway do realtime não abre porta própria: use a porta HTTP da aplicação')
     const servidorHttp: ServidorHttp = this.httpServer
-    return prepararServidorRealtime(new Server(servidorHttp, OPCOES_DO_SERVIDOR_REALTIME), this.cliente, this.tamanhoMaximoDoStream)
+    this.#servidor = prepararServidorRealtime(new Server(servidorHttp, OPCOES_DO_SERVIDOR_REALTIME), this.cliente, this.tamanhoMaximoDoStream)
+    return this.#servidor
+  }
+
+  /** Conexões do engine.io abertas nesta instância, autenticadas ou ainda no handshake (métrica `realtime.conexoes`). */
+  conexoesAbertas(): number {
+    return this.#servidor?.engine.clientsCount ?? 0
   }
 }

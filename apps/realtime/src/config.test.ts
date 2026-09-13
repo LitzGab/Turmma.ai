@@ -11,6 +11,8 @@ const ambienteValido = {
   IDENTIDADE_CHAVE_ASSINATURA: 'chave_sintetica_de_teste_com_32_caracteres',
   DRENAGEM_ESPERA_BORDA_MS: '5000',
   DRENAGEM_PRAZO_MS: '10000',
+  TELEMETRIA_OTLP_URL: 'http://observabilidade:4318/',
+  TELEMETRIA_INTERVALO_MS: '5000',
 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
@@ -34,6 +36,7 @@ describe('lerConfiguracao do realtime', () => {
         emissoresAceitos: [EMISSOR_TOKEN_SINTETICO],
       },
       drenagem: { esperaDaBordaMs: 5000, prazoMs: 10000 },
+      telemetria: { otlpUrl: 'http://observabilidade:4318', intervaloMs: 5000 },
     })
   })
 

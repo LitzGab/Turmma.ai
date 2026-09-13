@@ -1,4 +1,4 @@
-import { criarLogger, type LoggerBase } from '@educa/nucleo'
+import { criarLogger, type LoggerBase, type Meter } from '@educa/nucleo'
 import { NAMESPACE_REALTIME_SISTEMA, opcoesDoClienteRealtime } from '@educa/shared'
 import type { INestApplication } from '@nestjs/common'
 import { createServer } from 'node:http'
@@ -26,6 +26,8 @@ export function configuracaoDeTeste(ambiente: Record<string, string> = {}): Conf
     ...ambienteDeTeste,
     REALTIME_PORTA: '3000',
     REDIS_FILA_URL: urlRedisDeFila(),
+    // A do compose. No teste nada é exportado: a métrica é lida pelo medidor em memória, quando há.
+    TELEMETRIA_OTLP_URL: 'http://observabilidade:4318',
     DRENAGEM_ESPERA_BORDA_MS: '10',
     ...ambiente,
   })
@@ -36,8 +38,8 @@ export interface InstanciaDeTeste {
   url: string
 }
 
-export async function subirInstancia(logger: LoggerBase, ambiente: Record<string, string> = {}): Promise<InstanciaDeTeste> {
-  const app = await criarAplicacaoRealtime(configuracaoDeTeste(ambiente), logger)
+export async function subirInstancia(logger: LoggerBase, ambiente: Record<string, string> = {}, medidor?: Meter): Promise<InstanciaDeTeste> {
+  const app = await criarAplicacaoRealtime(configuracaoDeTeste(ambiente), logger, ...(medidor === undefined ? [] : [medidor]))
   await app.listen(0, '127.0.0.1')
   const { port } = app.getHttpServer().address() as AddressInfo
   return { app, url: `http://127.0.0.1:${port}` }

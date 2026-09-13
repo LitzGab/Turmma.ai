@@ -1,4 +1,15 @@
-import { ConfiguracaoInvalida, lerConfiguracaoBanco, lerJanelaPadrao, lerVagasPadrao, validarAmbiente, type ConfiguracaoBanco, type JanelaLetiva, type VagasPorFila } from '@educa/nucleo'
+import {
+  ConfiguracaoInvalida,
+  lerConfiguracaoBanco,
+  lerConfiguracaoTelemetria,
+  lerJanelaPadrao,
+  lerVagasPadrao,
+  validarAmbiente,
+  type ConfiguracaoBanco,
+  type ConfiguracaoTelemetria,
+  type JanelaLetiva,
+  type VagasPorFila,
+} from '@educa/nucleo'
 import { z } from 'zod'
 
 export { ConfiguracaoInvalida }
@@ -15,6 +26,8 @@ export interface ConfiguracaoDespachante {
   vagasPadrao: VagasPorFila
   /** Horário letivo da escola que não configurou o próprio, em que o lote não urgente fica segurado (D41). */
   janelaPadrao: JanelaLetiva
+  /** Para onde e de quanto em quanto tempo as métricas vão. */
+  telemetria: ConfiguracaoTelemetria
 }
 
 /** Lê e valida o ambiente do despachante. Todos os problemas saem de uma vez, só pelo nome. */
@@ -33,7 +46,8 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const proprio = ler(() => validarAmbiente(esquemaAmbiente, ambiente))
   const vagasPadrao = ler(() => lerVagasPadrao(ambiente))
   const janelaPadrao = ler(() => lerJanelaPadrao(ambiente))
-  if (banco === undefined || proprio === undefined || vagasPadrao === undefined || janelaPadrao === undefined) {
+  const telemetria = ler(() => lerConfiguracaoTelemetria(ambiente))
+  if (banco === undefined || proprio === undefined || vagasPadrao === undefined || janelaPadrao === undefined || telemetria === undefined) {
     throw new ConfiguracaoInvalida(problemas.flatMap((erro) => erro.variaveis).sort(), problemas.flatMap((erro) => erro.motivos))
   }
   return {
@@ -41,5 +55,6 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     redisFilaUrl: proprio.REDIS_FILA_URL,
     vagasPadrao,
     janelaPadrao,
+    telemetria,
   }
 }

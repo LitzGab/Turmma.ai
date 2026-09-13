@@ -179,7 +179,8 @@ Os logs vão para o stdout, em JSON.
   de `job.data`.
 - **Consulta de job:** filtra pela escola do contexto. Id de outra escola e id inexistente
   dão o mesmo 404 `NAO_ENCONTRADO`.
-- **`@SemEscopo`, com justificativa:** despachante (`fila`); expurgo (`retencao`, onde
+- **`@SemEscopo`, com justificativa:** despachante (`fila`, inclusive a medição das filas por escola para a
+  observabilidade, 12.0); expurgo (`retencao`, onde
   também mora o expurgo por retenção do F3); descoberta das escolas com uso, nos contadores
   (`uso`) e no storage (worker). Gravação e consulta de uso são com escopo (11.0).
 - **Ano letivo:** nenhuma tabela do F0 varia por ano letivo.
@@ -194,7 +195,7 @@ Os logs vão para o stdout, em JSON.
 | Novos campos (atualizar `docs/lgpd.md`) | nenhum; IP já está em "Logs de acesso" |
 | O que vai para log | ids, rota template, status, duração. Redact do pino em `*.nome, *.matricula, *.email, *.senha, *.resposta, *.nota, *.conversa, *.prompt`, `authorization`, `cookie`. Erro do Postgres sem `detail`. Caddy sem log de acesso |
 | O que entra em auditoria | nada até o F3 |
-| O que é enviado a provedor externo | GitHub: código e dado sintético da esteira. Observabilidade é local |
+| O que é enviado a provedor externo | GitHub: código e dado sintético da esteira. Observabilidade é local: no `grafana/otel-lgtm`, estatística de uso (Grafana, Loki, Tempo, Pyroscope), busca de atualização, download de plugin e snapshot público ficam desligados, e o anônimo só lê (12.0) |
 | Retenção e expurgo | chave de limite 60 s; job 7 dias; observabilidade local sem retenção garantida |
 | Autorização por objeto | job por escola do contexto |
 | DTO de saída | seção 4, zod em `packages/shared` |
@@ -288,8 +289,11 @@ Testes usam o `compose.yml`.
   e bucket criado na subida. O acesso continua só pela API S3, então a troca não muda
   nenhum outro ponto desta spec.
 - ⚠️ **`grafana/otel-lgtm`:** o README diz que a imagem é para desenvolvimento e teste, que
-  é o uso aqui. Não confirmei o provisionamento de regra de alerta por arquivo nessa imagem.
-  Reserva: Grafana e Prometheus separados no compose.
+  é o uso aqui. ✅ Verificado na 12.0 (13/09/2026, `0.33.0`): painel provisionado por arquivo montado em
+  `/otel-lgtm/grafana/conf/provisioning/dashboards/`, e o Prometheus dela recebe OTLP e traduz o nome
+  (ponto vira sublinhado, contador ganha `_total`, unidade `s` ganha `_seconds`). A pasta
+  `provisioning/alerting/` existe na imagem, mas o provisionamento de regra de alerta segue para a 13.0
+  confirmar. Reserva: Grafana e Prometheus separados no compose.
 
 ## 13. Riscos técnicos
 

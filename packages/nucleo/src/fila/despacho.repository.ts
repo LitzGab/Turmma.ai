@@ -23,6 +23,43 @@ export type JobReservado = {
   fila: Fila
 }
 
+/**
+ * Teto da contagem de pendentes por escola e fila na medição: a consulta para de contar aí, e custa no
+ * máximo isso por escola, e não a fila inteira de quem enfileirou cem mil.
+ */
+export const TETO_DA_CONTAGEM_DE_PENDENTES = 10_000
+
+/**
+ * Uma escola (ou a rotina do sistema, sem escola) com job ainda não terminado numa fila, medida para a
+ * observação: o mais antigo que ainda não começou, urgente e não urgente, e quantos ainda não começaram.
+ */
+export type MedicaoDePendentes = {
+  fila: Fila
+  escolaId: string | null
+  /** O `now()` do banco na medição: a espera é contada no mesmo relógio que gravou `criado_em`. */
+  agora: Date
+  /** O urgente mais antigo que ainda não começou. */
+  urgenteCriadoEm: Date | null
+  /**
+   * O não urgente mais antigo que ainda não começou, só quando ele é o mais antigo de todos. Quando há um
+   * urgente mais antigo, ele não muda a espera (o não urgente só sai depois de criado), e a consulta não o
+   * procura: achá-lo atrás de milhares de urgentes custaria a fila da escola.
+   */
+  naoUrgenteCriadoEm: Date | null
+  /** Até `TETO_DA_CONTAGEM_DE_PENDENTES`. */
+  pendentes: number
+}
+
+type LinhaDaMedicao = {
+  fila: Fila
+  escolaId: string | null
+  // `numeric` chega como texto.
+  agoraMs: number | string
+  urgenteCriadoEmMs: number | string | null
+  naoUrgenteCriadoEmMs: number | string | null
+  pendentes: number | string
+}
+
 /** Uma escola (ou a rotina do sistema, sem escola) com job esperando despacho numa fila. */
 export type EscolaComPendentes = {
   fila: Fila
@@ -58,6 +95,10 @@ const CONDICAO_PARA_RECONCILIAR: SQL = sql`estado not in ('concluido', 'falhou')
  * de publicar. Só nomes de coluna de `job_registro`, para valer dentro de uma subconsulta sem alias.
  */
 const DISPONIVEL_PARA_RESERVA: SQL = sql`(estado = 'aguardando' or (estado = 'reservado' and reservado_ate < now()))`
+
+const JUSTIFICATIVA_DA_MEDICAO =
+  'a medição do despachante observa a fila de todas as escolas para o operador; ' +
+  'sai só contagem e instante por fila e escola, para a observabilidade local, e nunca chega a resposta de escola nenhuma'
 
 const JUSTIFICATIVA =
   'o despachante é rotina nossa e distribui a fila de todas as escolas; ' +
@@ -103,6 +144,69 @@ export class DespachoRepository {
       where estado not in ('concluido', 'falhou') and escola_id is null and ${DISPONIVEL_PARA_RESERVA}
     `)
     return resultado.rows
+  }
+
+  /**
+   * Por fila e escola com job não terminado (inclusive só `ativo`, que segura vaga), o urgente mais antigo
+   * que ainda não começou (`aguardando`, `reservado` ou `publicado`), o não urgente mais antigo quando ele é
+   * o primeiro da fila, e quantos ainda não começaram. É a base de `job.espera_mais_antiga_s`,
+   * `job.pendentes` e `fila.vagas_em_uso`, e vem só de `job_registro`: com o Redis de fila fora, a espera
+   * continua medida.
+   *
+   * As escolas saem pelo mesmo salto de índice de `listarEscolasComPendentes` (custa o número de escolas).
+   * O primeiro da fila desce pelo índice de pendentes, pulando só os `ativo` (no máximo as vagas da escola);
+   * o urgente, pelo índice de urgentes, sem atravessar os não urgentes segurados; e a contagem para no teto.
+   */
+  @SemEscopo(JUSTIFICATIVA_DA_MEDICAO)
+  async medirPendentes(): Promise<MedicaoDePendentes[]> {
+    const naoIniciado = sql`job.estado not in ('concluido', 'falhou') and job.estado <> 'ativo'`
+    // Instantes em milissegundos desde a época: o driver devolve timestamptz como texto, e o texto do Postgres não é ISO.
+    const medidas = (daEscola: SQL) => sql`
+      extract(epoch from now()) * 1000 as "agoraMs",
+      (select extract(epoch from job.criado_em) * 1000 from job_registro as job
+        where ${naoIniciado} and job.fila = pares.fila and ${daEscola} and not job.nao_urgente
+        order by job.criado_em limit 1) as "urgenteCriadoEmMs",
+      (select case when job.nao_urgente then extract(epoch from job.criado_em) * 1000 end from job_registro as job
+        where ${naoIniciado} and job.fila = pares.fila and ${daEscola}
+        order by job.criado_em limit 1) as "naoUrgenteCriadoEmMs",
+      (select count(*)::int from (
+        select 1 from job_registro as job
+        where ${naoIniciado} and job.fila = pares.fila and ${daEscola}
+        limit ${TETO_DA_CONTAGEM_DE_PENDENTES}
+      ) as limitados) as pendentes`
+    const resultado = await this.banco.execute<LinhaDaMedicao>(sql`
+      with recursive escolas as (
+        (
+          select fila, escola_id from job_registro
+          where estado not in ('concluido', 'falhou') and escola_id is not null
+          order by fila, escola_id
+          limit 1
+        )
+        union all
+        select proxima.fila, proxima.escola_id
+        from escolas cross join lateral (
+          select job.fila, job.escola_id from job_registro as job
+          where job.estado not in ('concluido', 'falhou') and job.escola_id is not null
+            and (job.fila, job.escola_id) > (escolas.fila, escolas.escola_id)
+          order by job.fila, job.escola_id
+          limit 1
+        ) as proxima
+      )
+      select pares.fila, pares.escola_id as "escolaId", ${medidas(sql`job.escola_id = pares.escola_id`)}
+      from escolas as pares
+      union all
+      select pares.fila, null::uuid as "escolaId", ${medidas(sql`job.escola_id is null`)}
+      from (select distinct fila from job_registro where estado not in ('concluido', 'falhou') and escola_id is null) as pares
+    `)
+    const instante = (ms: number | string | null) => (ms === null ? null : new Date(Number(ms)))
+    return resultado.rows.map((linha) => ({
+      fila: linha.fila,
+      escolaId: linha.escolaId,
+      agora: new Date(Number(linha.agoraMs)),
+      urgenteCriadoEm: instante(linha.urgenteCriadoEmMs),
+      naoUrgenteCriadoEm: instante(linha.naoUrgenteCriadoEmMs),
+      pendentes: Number(linha.pendentes),
+    }))
   }
 
   /**

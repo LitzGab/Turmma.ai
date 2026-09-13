@@ -4,12 +4,16 @@ import {
   ConfiguracaoOperacionalRepository,
   ContadorDeUso,
   criarBanco,
+  DONO_DAS_VAGAS_DO_SISTEMA,
   criarClienteRedisDaFila,
   criarPool,
   Enfileirador,
   ExpurgoDeJobsRepository,
   JobRegistroRepository,
+  METRICAS,
   nomeDaFilaBullMQ,
+  observarPoolDoBanco,
+  observarRedis,
   OPCOES_DO_POOL_POR_FILA,
   RETENCAO_JOB_CONCLUIDO_SEGUNDOS,
   RETENCAO_JOB_FALHO_SEGUNDOS,
@@ -21,6 +25,7 @@ import {
   type Batimento,
   type DadosDoJobNaFila,
   type LoggerBase,
+  type Meter,
   type Relogio,
 } from '@educa/nucleo'
 import type { Fila } from '@educa/shared'
@@ -56,6 +61,11 @@ export interface OpcoesDaMontagem {
   agendamentos?: readonly Agendamento[]
   batimento?: Batimento
   graca?: number
+  /**
+   * Medidor da telemetria. Com ele, o worker mede o pool, o Redis, o stalled e o job que chega sem vaga;
+   * sem ele (os testes que não olham métrica), não mede nada.
+   */
+  medidor?: Meter
 }
 
 export interface WorkerMontado {
@@ -75,7 +85,7 @@ export interface WorkerMontado {
  * O stalled é o do BullMQ, com lock e verificação por fila (`OPCOES_DO_POOL_POR_FILA`): se a réplica
  * morre no meio, o lock vence e outra réplica retoma o job, ainda dono da vaga.
  */
-export function montarWorker(config: ConfiguracaoWorker, logger: LoggerBase, opcoes: OpcoesDaMontagem = {}): WorkerMontado {
+export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, logger: LoggerBase, opcoes: OpcoesDaMontagem = {}): WorkerMontado {
   const pool = criarPool(config.banco, () => logger.warn({ evento: 'banco.conexao_ociosa_perdida' }))
   // O BullMQ exige `maxRetriesPerRequest: null` no worker: o comando bloqueante espera o Redis voltar.
   const redis = new Redis(config.redisFilaUrl, { connectionName: 'worker', maxRetriesPerRequest: null })
@@ -90,12 +100,20 @@ export function montarWorker(config: ConfiguracaoWorker, logger: LoggerBase, opc
     ...(opcoes.prefixo === undefined ? {} : { prefixo: opcoes.prefixo }),
     aoFalhar: avisoEspacado(() => logger.warn({ evento: 'worker.contador_de_uso_indisponivel' })),
   })
+  const { medidor } = opcoes
+  if (medidor !== undefined) {
+    observarPoolDoBanco(medidor, pool)
+    observarRedis(medidor, { fila: [redis, redisDasVagas] })
+  }
+  const aguardandoVaga = medidor?.createCounter(METRICAS.aguardandoVaga, { description: 'Jobs que chegaram ao worker sem vaga e voltaram a esperar' })
+  const stalled = medidor?.createCounter(METRICAS.jobsStalled, { description: 'Jobs devolvidos à espera por lock vencido' })
   const rotinas = config.pools.lote === undefined || config.storage === undefined ? undefined : montarRotinas(config.storage, banco, uso, relogio, logger)
   const executor = new ExecutorDeJobs({
     repositorio: new JobRegistroRepository(banco),
     processadores: opcoes.processadores ?? { ...PROCESSADORES, ...rotinas?.processadores },
     logger,
     uso,
+    ...(aguardandoVaga === undefined ? {} : { aoAguardarVaga: (fila: Fila, escolaId: string | null) => aguardandoVaga.add(1, { fila, escola_id: escolaId ?? DONO_DAS_VAGAS_DO_SISTEMA }) }),
     vagas: new VagasPorEscola(redisDasVagas, opcoes.prefixo, opcoes.validadeDaVagaMs),
     vagasDaEscola: new ConfiguracaoOperacional(new ConfiguracaoOperacionalRepository(banco), (linha) => resolverVagas(config.vagasPadrao, linha), {
       aoFalhar: avisoEspacado(() => logger.warn({ evento: 'worker.configuracao_indisponivel' })),
@@ -115,6 +133,8 @@ export function montarWorker(config: ConfiguracaoWorker, logger: LoggerBase, opc
       ...(opcoes.prefixo === undefined ? {} : { prefix: opcoes.prefixo }),
     })
     worker.on('error', avisarErroDaFila)
+    // Só a fila: a escola do job não está à mão aqui sem ler o `data`, e o stalled é problema do worker, não da escola.
+    if (stalled !== undefined) worker.on('stalled', () => stalled.add(1, { fila }))
     workers.set(fila, worker)
   }
 

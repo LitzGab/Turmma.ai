@@ -3,6 +3,7 @@ import type { Redis } from 'ioredis'
 import { RateLimiterMemory, RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 import { z } from 'zod'
 import { validarAmbiente } from '../config/validar-config.js'
+import { avisoEspacado } from '../log/aviso-espacado.js'
 import type { LimitesDeRequisicao } from '../configuracao/configuracao-operacional.js'
 import type { Identidade } from '../identidade/verificar-token.js'
 import {
@@ -12,6 +13,7 @@ import {
   PREFIXO_LIMITE_IP,
   PREFIXO_LIMITE_USUARIO,
 } from './chaves.js'
+import { ProporcaoEmJanela } from './proporcao-em-janela.js'
 
 export interface ConfiguracaoLimite {
   /** Redis de cache (`allkeys-lru`): toda chave de limite tem TTL da janela. */
@@ -133,23 +135,41 @@ function criarLimite(cliente: Redis, prefixo: string, pontos: number, instancias
  * rota autenticada, por IP só na anônima (regra 80, item 1). Com o Redis fora ou travado, cada
  * instância segue limitando sozinha, em memória, com limite ÷ instâncias, e `seguroAtivo` vira 1.
  * Nunca libera sem limite, nunca devolve erro por causa do Redis.
+ *
+ * A troca entre Redis e seguro vai para o log no máximo uma vez a cada 30 s em cada sentido: com o
+ * Redis oscilando, uma linha por troca seria uma por requisição. O que mostra a oscilação é a métrica
+ * `limite.seguro_ativo`, pela `proporcaoDoSeguro`.
  */
 export class LimitadorDeRequisicoes {
   readonly #logger = new Logger('limite')
   readonly #usuario: LimitesDoPrefixo
   readonly #escola: LimitesDoPrefixo
   readonly #ipAnonimo: Limite
+  readonly #proporcaoDoSeguro: ProporcaoEmJanela
+  readonly #avisarAtivado = avisoEspacado(() => this.#logger.warn('limite.seguro_ativado'))
+  readonly #avisarDesativado = avisoEspacado(() => this.#logger.log('limite.seguro_desativado'))
   #seguroAtivo = false
 
-  constructor(cliente: Redis, config: ConfiguracaoLimite) {
+  /** @param proporcaoDoSeguro só o teste troca, para mover o relógio da janela sem esperar 30 s. */
+  constructor(cliente: Redis, config: ConfiguracaoLimite, proporcaoDoSeguro = new ProporcaoEmJanela()) {
+    this.#proporcaoDoSeguro = proporcaoDoSeguro
     this.#usuario = new LimitesDoPrefixo(cliente, PREFIXO_LIMITE_USUARIO, config.instancias)
     this.#escola = new LimitesDoPrefixo(cliente, PREFIXO_LIMITE_ESCOLA, config.instancias)
     this.#ipAnonimo = criarLimite(cliente, PREFIXO_LIMITE_IP, config.porIpAnonimoMin, config.instancias)
   }
 
-  /** 1 enquanto a última requisição limitada foi contada pelo seguro em memória. Base da métrica `limite.seguro_ativo` (12.0). */
+  /** 1 enquanto a última requisição limitada foi contada pelo seguro em memória. */
   get seguroAtivo(): 0 | 1 {
     return this.#seguroAtivo ? 1 : 0
+  }
+
+  /**
+   * Das requisições limitadas nos últimos 30 s, a proporção contada pelo seguro, de 0 a 1. É a métrica
+   * `limite.seguro_ativo`: com o Redis fora, chega a 1; com ele oscilando, fica entre 0 e 1, sem pular a
+   * cada requisição.
+   */
+  get proporcaoDoSeguro(): number {
+    return this.#proporcaoDoSeguro.valor()
   }
 
   /**
@@ -204,9 +224,10 @@ export class LimitadorDeRequisicoes {
   }
 
   #registrarSeguro(ativo: boolean): void {
+    this.#proporcaoDoSeguro.registrar(ativo)
     if (ativo === this.#seguroAtivo) return
     this.#seguroAtivo = ativo
-    if (ativo) this.#logger.warn('limite.seguro_ativado')
-    else this.#logger.log('limite.seguro_desativado')
+    if (ativo) this.#avisarAtivado()
+    else this.#avisarDesativado()
   }
 }

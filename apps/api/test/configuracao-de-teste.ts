@@ -26,6 +26,8 @@ export function configuracaoDeTeste(sobreposicao: SobreposicaoDeTeste = {}): Con
     BANCO_URL: `postgres://${usuario}:${senha}@127.0.0.1:${porta}/${banco}`,
     REDIS_CACHE_URL: `redis://127.0.0.1:${valorObrigatorio(ambiente, 'REDIS_CACHE_PORTA_HOST')}`,
     REDIS_FILA_URL: `redis://127.0.0.1:${valorObrigatorio(ambiente, 'REDIS_FILA_PORTA_HOST')}`,
+    // A do compose. No teste nada é exportado: a aplicação montada sem telemetria mede num medidor vazio.
+    TELEMETRIA_OTLP_URL: 'http://observabilidade:4318',
     ...sobreposicao.ambiente,
   })
   return { ...config, banco: { ...config.banco, ...sobreposicao.banco } }

@@ -6,6 +6,7 @@ import {
   criarPool,
   DespachoRepository,
   executarNoContexto,
+  METRICAS,
   OPCOES_DE_JOB_PUBLICADO,
   PRIORIDADE_DA_FILA,
   VALIDADE_DA_VAGA_MS,
@@ -16,6 +17,7 @@ import { randomUUID } from 'node:crypto'
 import { setTimeout as esperar } from 'node:timers/promises'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
+import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
 import { FalhaDeJob } from '../../worker/src/falha-de-job.js'
 import type { Processador } from '../../worker/src/executor.js'
 import { BancadaDeFila, configuracaoDoBanco, ESCOLA_A, ESCOLA_B, LogEmMemoria, urlRedisDeFila } from '../../worker/test/fila-de-teste.js'
@@ -317,11 +319,17 @@ describe('vagas por escola e filas por prioridade', () => {
     await executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () => bancada.despacho.marcarPublicados(ids))
     const processador = contado(300)
     const log = new LogEmMemoria('worker-lote')
-    bancada.worker(log, { pools: { lote: 10 }, processadores: { sintetico: processador.processar } })
+    const medidor = new MedidorDeTeste()
+    bancada.worker(log, { pools: { lote: 10 }, processadores: { sintetico: processador.processar }, medidor: medidor.medidor })
 
     for (const id of ids) await aguardarEstado(id, 'concluido', 20_000)
     expect(processador.maximo('A')).toBe(2)
-    expect(log.doEvento('job.aguardando_vaga').length).toBeGreaterThan(0)
+    // A espera por vaga é contada por fila e escola, e não vai ao log a cada volta.
+    const esperasPorVaga = await medidor.pontos(METRICAS.aguardandoVaga)
+    expect(esperasPorVaga.map(({ atributos }) => atributos)).toEqual([{ fila: 'lote', escola_id: ESCOLA_A }])
+    expect(esperasPorVaga[0]?.valor).toBeGreaterThan(0)
+    expect(log.doEvento('job.aguardando_vaga')).toEqual([])
+    await medidor.encerrar()
     for (const id of ids) {
       const naFila = await bancada.filas.lote.getJob(id)
       expect(naFila?.attemptsMade, id).toBe(1)

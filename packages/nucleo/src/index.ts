@@ -44,8 +44,8 @@ export { ConfiguracaoOperacionalRepository } from './configuracao/configuracao-o
 export type { LinhaOperacional } from './configuracao/configuracao-operacional.repository.js'
 export { configuracaoOperacionalEscola } from './db/schema/configuracao-operacional-escola.js'
 export type { VagasConfiguradas } from './db/schema/configuracao-operacional-escola.js'
-export { DespachoRepository, IDADE_PARA_RECONCILIAR_SEGUNDOS, RESERVA_SEGUNDOS } from './fila/despacho.repository.js'
-export type { CursorDaReconciliacao, EscolaComPendentes, JobParaReconciliar, JobReservado } from './fila/despacho.repository.js'
+export { DespachoRepository, IDADE_PARA_RECONCILIAR_SEGUNDOS, RESERVA_SEGUNDOS, TETO_DA_CONTAGEM_DE_PENDENTES } from './fila/despacho.repository.js'
+export type { CursorDaReconciliacao, EscolaComPendentes, JobParaReconciliar, JobReservado, MedicaoDePendentes } from './fila/despacho.repository.js'
 export { FILAS_POR_PRIORIDADE, nomeDaFilaBullMQ, OPCOES_DO_POOL_POR_FILA } from './fila/filas.js'
 export type { OpcoesDoPool } from './fila/filas.js'
 export { DONO_DAS_VAGAS_DO_SISTEMA, INTERVALO_RENOVACAO_DA_VAGA_MS, VagasPorEscola, VALIDADE_DA_VAGA_MS } from './fila/vagas-por-escola.js'
@@ -101,4 +101,24 @@ export type { ContagemDoDia, MetricaDeUso, OpcoesDoContadorDeUso } from './uso/c
 export { InterceptorDeUso } from './uso/interceptor-de-uso.js'
 export { UsoRepository } from './uso/uso.repository.js'
 export type { UsoDoPeriodo } from './uso/uso.repository.js'
+export { iniciarTelemetria, lerConfiguracaoTelemetria, medidorGlobal, NOME_DO_MEDIDOR, PRAZO_DA_EXPORTACAO_MS } from './telemetria/iniciar.js'
+export { temporalidadeDasMetricas } from './telemetria/temporalidade.js'
+export type { ConfiguracaoTelemetria, ServicoInstrumentado, Telemetria } from './telemetria/iniciar.js'
+export {
+  LIMITES_DO_HISTOGRAMA_HTTP_S,
+  METRICAS,
+  METRICAS_COM_ESCOLA,
+  middlewareDeMetricasHttp,
+  observarConexoesRealtime,
+  observarEventLoop,
+  observarPoolDoBanco,
+  observarRedis,
+  observarSeguroDoLimite,
+  ROTA_NAO_ENCONTRADA,
+  rotaDaRequisicao,
+  ROTULO_ESCOLA,
+} from './telemetria/metricas.js'
+export type { InstanciaRedis } from './telemetria/metricas.js'
+export type { Meter } from '@opentelemetry/api'
+export { FATIAS_DA_PROPORCAO_DO_SEGURO, JANELA_DA_PROPORCAO_DO_SEGURO_MS, ProporcaoEmJanela } from './limite/proporcao-em-janela.js'
 export { ExpurgoDeJobsRepository, instrucaoDoLoteVencido, LOTE_DO_EXPURGO, RETENCAO_JOB_REGISTRO_DIAS } from './retencao/expurgo-de-jobs.repository.js'

@@ -17,6 +17,7 @@ import {
   type DadosDoJobNaFila,
   type JanelaLetiva,
   type LoggerBase,
+  type Meter,
   type PedidoDeJob,
   type PoolBanco,
   type VagasConfiguradas,
@@ -192,6 +193,7 @@ export class BancadaDeFila {
       graca?: number
       intervaloRenovacaoDaVagaMs?: number
       validadeDaVagaMs?: number
+      medidor?: Meter
     } = {},
   ): WorkerMontado {
     const pools = opcoes.pools ?? Object.fromEntries(FILAS.map((fila) => [fila, opcoes.concorrencia ?? 5]))
@@ -201,6 +203,7 @@ export class BancadaDeFila {
       ...(opcoes.graca === undefined ? {} : { graca: opcoes.graca }),
       ...(opcoes.intervaloRenovacaoDaVagaMs === undefined ? {} : { intervaloRenovacaoDaVagaMs: opcoes.intervaloRenovacaoDaVagaMs }),
       ...(opcoes.validadeDaVagaMs === undefined ? {} : { validadeDaVagaMs: opcoes.validadeDaVagaMs }),
+      ...(opcoes.medidor === undefined ? {} : { medidor: opcoes.medidor }),
     })
     this.#montados.push(montado)
     return montado

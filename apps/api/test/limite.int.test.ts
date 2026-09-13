@@ -500,6 +500,8 @@ describe('Redis de cache fora: seguro em memória', () => {
     expect((await autenticada(semRedis.url, await token(randomUUID(), randomUUID()))).status).toBe(200)
     expect(performance.now() - inicio).toBeLessThan(150)
     expect(semRedis.limitador.seguroAtivo).toBe(1)
+    // A métrica `limite.seguro_ativo` desta instância: toda requisição limitada da janela foi pelo seguro.
+    expect(semRedis.limitador.proporcaoDoSeguro).toBe(1)
 
     await religarRedisDeCache()
     const tokenDoUsuario = await token(randomUUID(), randomUUID())
@@ -509,6 +511,10 @@ describe('Redis de cache fora: seguro em memória', () => {
         return semRedis.limitador.seguroAtivo
       }, { timeout: 15_000, interval: 250 })
       .toBe(0)
+    // Com o Redis de volta, a proporção da janela desce: a métrica não fica presa em 1.
+    for (let pedido = 0; pedido < 5; pedido++) expect((await autenticada(semRedis.url, tokenDoUsuario)).status).toBe(200)
+    expect(semRedis.limitador.proporcaoDoSeguro).toBeLessThan(1)
+    expect(semRedis.limitador.proporcaoDoSeguro).toBeGreaterThan(0)
   })
 
   it('borda: Redis travado (conectado, sem responder) → o comando corta em 100 ms e o seguro atende, abaixo de 150 ms', async () => {

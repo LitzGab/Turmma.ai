@@ -2,9 +2,11 @@ import {
   ConfiguracaoInvalida,
   lerConfiguracaoDrenagem,
   lerConfiguracaoIdentidade,
+  lerConfiguracaoTelemetria,
   validarAmbiente,
   type ConfiguracaoDrenagem,
   type ConfiguracaoIdentidade,
+  type ConfiguracaoTelemetria,
 } from '@educa/nucleo'
 import { z } from 'zod'
 
@@ -27,6 +29,8 @@ export interface ConfiguracaoRealtime {
   }
   identidade: ConfiguracaoIdentidade
   drenagem: ConfiguracaoDrenagem
+  /** Para onde e de quanto em quanto tempo as métricas vão. */
+  telemetria: ConfiguracaoTelemetria
 }
 
 type Leitura<T> = { valor: T } | { erro: ConfiguracaoInvalida }
@@ -48,8 +52,9 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const realtime = tentar(() => validarAmbiente(esquemaAmbiente, ambiente))
   const identidade = tentar(() => lerConfiguracaoIdentidade(ambiente))
   const drenagem = tentar(() => lerConfiguracaoDrenagem(ambiente))
-  if ('erro' in realtime || 'erro' in identidade || 'erro' in drenagem) {
-    const erros = [realtime, identidade, drenagem].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
+  const telemetria = tentar(() => lerConfiguracaoTelemetria(ambiente))
+  if ('erro' in realtime || 'erro' in identidade || 'erro' in drenagem || 'erro' in telemetria) {
+    const erros = [realtime, identidade, drenagem, telemetria].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
     throw new ConfiguracaoInvalida(
       erros.flatMap((erro) => erro.variaveis).sort(),
       erros.flatMap((erro) => erro.motivos),
@@ -60,5 +65,6 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     redis: { url: realtime.valor.REDIS_FILA_URL, tamanhoMaximoDoStream: realtime.valor.REALTIME_STREAM_TAMANHO_MAXIMO },
     identidade: identidade.valor,
     drenagem: drenagem.valor,
+    telemetria: telemetria.valor,
   }
 }

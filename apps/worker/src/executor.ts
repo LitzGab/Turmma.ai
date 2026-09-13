@@ -32,6 +32,8 @@ export interface DependenciasDoExecutor {
   vagasDaEscola: Pick<ConfiguracaoOperacional<VagasPorFila>, 'daEscola'>
   /** Conta cada execução iniciada na escola do job (D30). Disparar e esquecer: nunca atrasa nem falha o job. */
   uso: Pick<ContadorDeUso, 'marcar'>
+  /** Conta o job que chegou sem vaga e voltou a esperar, na fila e na escola da linha (métrica `job.aguardando_vaga`). */
+  aoAguardarVaga?: (fila: Fila, escolaId: string | null) => void
   intervaloRenovacaoMs?: number
 }
 
@@ -129,7 +131,7 @@ export class ExecutorDeJobs {
     }
     const vaga: VagaDoJob = { fila: alvo.fila, escolaId: alvo.escolaId, jobId }
     if (!(await this.tomarVaga(vaga))) {
-      await this.esperarVaga(job, jobId, token)
+      await this.esperarVaga(job, vaga, token)
       return
     }
     const inicio = await repositorio.iniciarExecucao(jobId)
@@ -186,9 +188,11 @@ export class ExecutorDeJobs {
    * Devolve o job à espera do BullMQ por um instante, sem contar tentativa e sem marcar `ativo`: a
    * linha continua `publicado`, e o despachante segue renovando a vaga de quem a tem.
    */
-  private async esperarVaga(job: JobDaFila, jobId: string, token: string | undefined): Promise<never> {
+  private async esperarVaga(job: JobDaFila, { fila, escolaId }: VagaDoJob, token: string | undefined): Promise<never> {
     if (token === undefined) throw new Error('job sem token do BullMQ não pode voltar à espera')
-    this.dependencias.logger.info({ evento: 'job.aguardando_vaga', jobId })
+    // Métrica, e não log: com a escola no teto, cada job volta aqui a cada segundo, e uma linha por volta
+    // encheria o log sem dizer mais que a contagem por escola.
+    this.dependencias.aoAguardarVaga?.(fila, escolaId)
     const esperaMs = ESPERA_POR_VAGA_MS + Math.floor(Math.random() * (ESPERA_POR_VAGA_MS / 2))
     await job.moveToDelayed(Date.now() + esperaMs, token)
     throw new DelayedError()

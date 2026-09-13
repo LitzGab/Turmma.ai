@@ -51,6 +51,12 @@ export class VagasPorEscola {
     return Number(await this.executar(this.chave(fila, escolaId), 'livres', limite))
   }
 
+  /** Vagas tomadas agora na escola e fila, sem as vencidas. É a métrica `fila.vagas_em_uso`. */
+  async emUso(fila: Fila, escolaId: string | null): Promise<number> {
+    // `livres` com limite 0 devolve menos as vagas em uso, depois de tirar as vencidas, no mesmo script.
+    return 0 - Number(await this.executar(this.chave(fila, escolaId), 'livres', 0))
+  }
+
   /** Toma vaga para cada job, na ordem, até o limite. Devolve os que ficaram com vaga; job que já tinha, mantém. */
   async tomar(fila: Fila, escolaId: string | null, limite: number, jobIds: readonly string[]): Promise<ReadonlySet<string>> {
     if (jobIds.length === 0) return new Set()

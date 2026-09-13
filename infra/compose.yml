@@ -136,6 +136,9 @@ services:
       LIMITE_INSTANCIAS_API: ${LIMITE_INSTANCIAS_API:?defina LIMITE_INSTANCIAS_API}
       LIMITE_PROXIES_CONFIAVEIS: ${LIMITE_PROXIES_CONFIAVEIS:?defina LIMITE_PROXIES_CONFIAVEIS}
       ROTAS_SINTETICAS: ${ROTAS_SINTETICAS:?defina ROTAS_SINTETICAS}
+      # Métricas OTLP para a observabilidade local. Sem depends_on: fora do ar, perde-se a métrica, e só.
+      TELEMETRIA_OTLP_URL: http://observabilidade:4318
+      TELEMETRIA_INTERVALO_MS: ${TELEMETRIA_INTERVALO_MS:?defina TELEMETRIA_INTERVALO_MS}
     # Acima de DRENAGEM_PRAZO_MS: o Docker só manda SIGKILL depois de a drenagem ter tido o prazo inteiro.
     stop_grace_period: 15s
     ports:
@@ -170,6 +173,9 @@ services:
       IDENTIDADE_CHAVE_ASSINATURA: ${IDENTIDADE_CHAVE_ASSINATURA:?defina IDENTIDADE_CHAVE_ASSINATURA}
       DRENAGEM_ESPERA_BORDA_MS: ${DRENAGEM_ESPERA_BORDA_MS:?defina DRENAGEM_ESPERA_BORDA_MS}
       DRENAGEM_PRAZO_MS: ${DRENAGEM_PRAZO_MS:?defina DRENAGEM_PRAZO_MS}
+      # Métricas OTLP para a observabilidade local. Sem depends_on: fora do ar, perde-se a métrica, e só.
+      TELEMETRIA_OTLP_URL: http://observabilidade:4318
+      TELEMETRIA_INTERVALO_MS: ${TELEMETRIA_INTERVALO_MS:?defina TELEMETRIA_INTERVALO_MS}
     stop_grace_period: 15s
     ports:
       - 127.0.0.1:${REALTIME_1_PORTA_HOST:?defina REALTIME_1_PORTA_HOST}:3000
@@ -210,6 +216,9 @@ services:
       JANELA_LETIVA_DIAS: ${JANELA_LETIVA_DIAS:?defina JANELA_LETIVA_DIAS}
       JANELA_LETIVA_INICIO: ${JANELA_LETIVA_INICIO:?defina JANELA_LETIVA_INICIO}
       JANELA_LETIVA_FIM: ${JANELA_LETIVA_FIM:?defina JANELA_LETIVA_FIM}
+      # Métricas OTLP para a observabilidade local. Sem depends_on: fora do ar, perde-se a métrica, e só.
+      TELEMETRIA_OTLP_URL: http://observabilidade:4318
+      TELEMETRIA_INTERVALO_MS: ${TELEMETRIA_INTERVALO_MS:?defina TELEMETRIA_INTERVALO_MS}
     stop_grace_period: 15s
     depends_on:
       migrar:
@@ -248,6 +257,9 @@ services:
       VAGAS_ESCOLA_INTERATIVA: ${VAGAS_ESCOLA_INTERATIVA:?defina VAGAS_ESCOLA_INTERATIVA}
       VAGAS_ESCOLA_NORMAL: ${VAGAS_ESCOLA_NORMAL:?defina VAGAS_ESCOLA_NORMAL}
       VAGAS_ESCOLA_LOTE: ${VAGAS_ESCOLA_LOTE:?defina VAGAS_ESCOLA_LOTE}
+      # Métricas OTLP para a observabilidade local. Sem depends_on: fora do ar, perde-se a métrica, e só.
+      TELEMETRIA_OTLP_URL: http://observabilidade:4318
+      TELEMETRIA_INTERVALO_MS: ${TELEMETRIA_INTERVALO_MS:?defina TELEMETRIA_INTERVALO_MS}
     # Acima dos 30 s de graça do worker.close(): o Docker só manda SIGKILL depois dela.
     stop_grace_period: 35s
     depends_on:
@@ -285,6 +297,9 @@ services:
       VAGAS_ESCOLA_INTERATIVA: ${VAGAS_ESCOLA_INTERATIVA:?defina VAGAS_ESCOLA_INTERATIVA}
       VAGAS_ESCOLA_NORMAL: ${VAGAS_ESCOLA_NORMAL:?defina VAGAS_ESCOLA_NORMAL}
       VAGAS_ESCOLA_LOTE: ${VAGAS_ESCOLA_LOTE:?defina VAGAS_ESCOLA_LOTE}
+      # Métricas OTLP para a observabilidade local. Sem depends_on: fora do ar, perde-se a métrica, e só.
+      TELEMETRIA_OTLP_URL: http://observabilidade:4318
+      TELEMETRIA_INTERVALO_MS: ${TELEMETRIA_INTERVALO_MS:?defina TELEMETRIA_INTERVALO_MS}
 
   worker-lote-2:
     <<: *worker-lote
@@ -311,6 +326,43 @@ services:
       timeout: 3s
       retries: 30
       start_period: 2s
+
+  # Observabilidade local (Tech Spec, seção 5): coletor OTLP, Prometheus e Grafana numa imagem só, feita
+  # para desenvolvimento e teste. API, realtime, despachante e worker exportam métrica para ela, e o painel
+  # vem provisionado de infra/grafana/paineis/. Sem volume: a métrica local não tem retenção garantida.
+  # Ninguém depende dela para subir.
+  observabilidade:
+    image: grafana/otel-lgtm:0.33.0
+    # Nada sai da máquina (Tech Spec, seção 7). Por padrão a imagem manda estatística de uso do Grafana,
+    # do Loki, do Tempo e do Pyroscope para a Grafana Labs, procura atualização, baixa plugins (inclusive um
+    # de LLM) a cada subida e oferece publicar o painel em serviço público de snapshot. Tudo desligado aqui,
+    # e o visitante anônimo só lê (infra/test/painel.test.ts exige cada uma destas linhas).
+    environment:
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+      GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: 'false'
+      GF_ANALYTICS_FEEDBACK_LINKS_ENABLED: 'false'
+      GF_NEWS_NEWS_FEED_ENABLED: 'false'
+      GF_SNAPSHOTS_EXTERNAL_ENABLED: 'false'
+      GF_PLUGINS_PREINSTALL_DISABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      LOKI_EXTRA_ARGS: -reporting.enabled=false
+      TEMPO_EXTRA_ARGS: -reporting.enabled=false
+      PYROSCOPE_EXTRA_ARGS: -usage-stats.enabled=false
+    ports:
+      - 127.0.0.1:${GRAFANA_PORTA_HOST:?defina GRAFANA_PORTA_HOST}:3000
+      - 127.0.0.1:${PROMETHEUS_PORTA_HOST:?defina PROMETHEUS_PORTA_HOST}:9090
+    volumes:
+      - ./grafana/provedor-de-paineis.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/educa.yaml:ro
+      - ./grafana/paineis:/otel-lgtm/educa/paineis:ro
+    stop_grace_period: 10s
+    healthcheck:
+      # O coletor recebe, o Prometheus guarda e o Grafana mostra: pronto só com os três.
+      test: [CMD-SHELL, 'curl -fsS -o /dev/null http://127.0.0.1:13133/ready && curl -fsS -o /dev/null http://127.0.0.1:9090/-/ready && curl -fsS -o /dev/null http://127.0.0.1:3000/api/health']
+      interval: 2s
+      timeout: 3s
+      retries: 60
+      start_period: 20s
 
   web:
     build:

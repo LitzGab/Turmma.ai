@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 11 de 16 concluídas
+**Status:** 12 de 16 concluídas
 
 ## Lista
 
@@ -70,10 +70,10 @@
   - [x] 11.3 `sistema.expurgar-jobs` em lotes
   - [x] 11.4 Testes: consolidação em dobro, virada de dia em São Paulo, prefixo, expurgo sem tocar job ativo
 
-- [ ] **12.0 — Painel local por rota, fila e escola**
-  - [ ] 12.1 `grafana/otel-lgtm` no compose e OTel em cada processo
-  - [ ] 12.2 Métricas da Tech Spec e painel provisionado
-  - [ ] 12.3 Testes: séries por escola, espera com Redis fora, rota como template, sem label de usuário
+- [x] **12.0 — Painel local por rota, fila e escola**
+  - [x] 12.1 `grafana/otel-lgtm` no compose e OTel em cada processo
+  - [x] 12.2 Métricas da Tech Spec e painel provisionado
+  - [x] 12.3 Testes: séries por escola, espera com Redis fora, rota como template, sem label de usuário
 
 - [ ] **13.0 — Alertas locais disparam e têm runbook**
   - [ ] 13.1 Três regras provisionadas em `infra/grafana/alertas/`

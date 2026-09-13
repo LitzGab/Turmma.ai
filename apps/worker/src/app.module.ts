@@ -1,4 +1,4 @@
-import { Batimento, type LoggerBase } from '@educa/nucleo'
+import { Batimento, type LoggerBase, type Meter } from '@educa/nucleo'
 import { Module, type DynamicModule, type OnApplicationShutdown } from '@nestjs/common'
 import type { ConfiguracaoWorker } from './config.js'
 import { montarWorker, type WorkerMontado } from './montagem.js'
@@ -14,8 +14,8 @@ class CicloDoWorker implements OnApplicationShutdown {
 
 @Module({})
 export class AppModule {
-  static com(config: ConfiguracaoWorker, logger: LoggerBase): DynamicModule {
-    const montado = montarWorker(config, logger, { batimento: new Batimento() })
+  static com(config: ConfiguracaoWorker, logger: LoggerBase, medidor: Meter): DynamicModule {
+    const montado = montarWorker(config, logger, { batimento: new Batimento(), medidor })
     return {
       module: AppModule,
       providers: [{ provide: CicloDoWorker, useValue: new CicloDoWorker(montado) }],

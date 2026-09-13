@@ -13,6 +13,8 @@ const ambienteValido = {
   VAGAS_ESCOLA_INTERATIVA: '5',
   VAGAS_ESCOLA_NORMAL: '5',
   VAGAS_ESCOLA_LOTE: '2',
+  TELEMETRIA_OTLP_URL: 'http://observabilidade:4318/',
+  TELEMETRIA_INTERVALO_MS: '5000',
 }
 
 const storageValido = {
@@ -40,6 +42,7 @@ describe('lerConfiguracao do worker', () => {
       redisFilaUrl: 'redis://redis-fila:6379',
       pools: { interativa: 50, normal: 30 },
       vagasPadrao: { interativa: 5, normal: 5, lote: 2 },
+      telemetria: { otlpUrl: 'http://observabilidade:4318', intervaloMs: 5000 },
     })
   })
 

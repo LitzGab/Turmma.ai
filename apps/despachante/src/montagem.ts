@@ -7,6 +7,8 @@ import {
   criarPool,
   DespachoRepository,
   nomeDaFilaBullMQ,
+  observarPoolDoBanco,
+  observarRedis,
   OuvinteDeJobs,
   relogioDoSistema,
   resolverJanela,
@@ -16,6 +18,7 @@ import {
   type DadosDoJobNaFila,
   type JanelaLetiva,
   type LoggerBase,
+  type Meter,
   type Relogio,
   type VagasPorFila,
 } from '@educa/nucleo'
@@ -23,6 +26,7 @@ import { Queue } from 'bullmq'
 import type { ConfiguracaoDespachante } from './config.js'
 import { Despachante } from './despachante.js'
 import { PublicacaoBullMQ } from './fila-de-publicacao.js'
+import { MedicaoDaFila } from './metricas-espera.js'
 import { Reconciliacao } from './reconciliacao.js'
 
 export interface OpcoesDaMontagem {
@@ -39,11 +43,20 @@ export interface OpcoesDaMontagem {
   /** Relógio do horário letivo. Só o teste troca, para ver o lote não urgente de terça às 10h sair às 18h. */
   relogio?: Relogio
   batimento?: Batimento
+  /**
+   * Medidor da telemetria. Com ele, o despachante mede as filas por escola, o pool e o Redis; sem ele (os
+   * testes que não olham métrica), não mede nada.
+   */
+  medidor?: Meter
+  /** Intervalo da medição das filas. Só o teste troca. */
+  intervaloMedicaoMs?: number
 }
 
 export interface DespachanteMontado {
   despachante: Despachante
   reconciliacao: Reconciliacao
+  /** Só com `medidor`: a medição das filas por escola. */
+  medicao?: MedicaoDaFila
   /** Liga o laço de publicação e o de reconciliação. */
   iniciar(): void
   /** Para os laços e fecha fila, Redis e pool, nessa ordem. */
@@ -51,7 +64,7 @@ export interface DespachanteMontado {
 }
 
 /** Liga o despachante ao Postgres (pool próprio e `LISTEN`) e ao Redis de fila (filas e vagas). */
-export function montarDespachante(config: ConfiguracaoDespachante, logger: LoggerBase, opcoes: OpcoesDaMontagem = {}): DespachanteMontado {
+export function montarDespachante(config: Omit<ConfiguracaoDespachante, 'telemetria'>, logger: LoggerBase, opcoes: OpcoesDaMontagem = {}): DespachanteMontado {
   const pool = criarPool(config.banco, () => logger.warn({ evento: 'banco.conexao_ociosa_perdida' }))
   const redis = criarClienteRedisDaFila(
     config.redisFilaUrl,
@@ -104,9 +117,20 @@ export function montarDespachante(config: ConfiguracaoDespachante, logger: Logge
     opcoes.intervaloReconciliacaoMs === undefined ? {} : { intervaloMs: opcoes.intervaloReconciliacaoMs },
   )
 
+  const { medidor } = opcoes
+  let medicao: MedicaoDaFila | undefined
+  if (medidor !== undefined) {
+    observarPoolDoBanco(medidor, pool)
+    observarRedis(medidor, { fila: [redis] })
+    medicao = new MedicaoDaFila(
+      { repositorio, vagas: vagasReais, janelaDaEscola, relogio: opcoes.relogio ?? relogioDoSistema, logger, medidor },
+      opcoes.intervaloMedicaoMs === undefined ? {} : { intervaloMs: opcoes.intervaloMedicaoMs },
+    )
+  }
+
   let encerramento: Promise<void> | undefined
   const encerrar = async (): Promise<void> => {
-    await Promise.all([despachante.parar(), reconciliacao.parar()])
+    await Promise.all([despachante.parar(), reconciliacao.parar(), medicao?.parar()])
     await ouvinte.fechar()
     await fila.fechar()
     await redis.quit().catch(() => redis.disconnect())
@@ -115,9 +139,11 @@ export function montarDespachante(config: ConfiguracaoDespachante, logger: Logge
   return {
     despachante,
     reconciliacao,
+    ...(medicao === undefined ? {} : { medicao }),
     iniciar: () => {
       despachante.iniciar()
       reconciliacao.iniciar()
+      medicao?.iniciar()
     },
     // Uma vez só: o SIGTERM e o fim do teste podem pedir o encerramento juntos.
     encerrar: () => (encerramento ??= encerrar()),

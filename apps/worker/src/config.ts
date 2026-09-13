@@ -1,4 +1,13 @@
-import { ConfiguracaoInvalida, lerConfiguracaoBanco, lerVagasPadrao, validarAmbiente, type ConfiguracaoBanco, type VagasPorFila } from '@educa/nucleo'
+import {
+  ConfiguracaoInvalida,
+  lerConfiguracaoBanco,
+  lerConfiguracaoTelemetria,
+  lerVagasPadrao,
+  validarAmbiente,
+  type ConfiguracaoBanco,
+  type ConfiguracaoTelemetria,
+  type VagasPorFila,
+} from '@educa/nucleo'
 import { FILAS, type Fila } from '@educa/shared'
 import { z } from 'zod'
 
@@ -53,6 +62,8 @@ export interface ConfiguracaoWorker {
    * O worker-interativo não mede storage e não precisa da credencial.
    */
   storage?: ConfiguracaoStorage
+  /** Para onde e de quanto em quanto tempo as métricas vão. */
+  telemetria: ConfiguracaoTelemetria
 }
 
 /** Lê e valida o ambiente do worker. Todos os problemas saem de uma vez, só pelo nome. */
@@ -76,7 +87,9 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const vagasPadrao = ler(() => lerVagasPadrao(ambiente))
   const atendeLote = filas?.FILAS.includes('lote') === true
   const storage = atendeLote ? ler(() => validarAmbiente(esquemaStorage, ambiente)) : undefined
+  const telemetria = ler(() => lerConfiguracaoTelemetria(ambiente))
   if (
+    telemetria === undefined ||
     banco === undefined ||
     proprio === undefined ||
     filas === undefined ||
@@ -91,6 +104,7 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     redisFilaUrl: proprio.REDIS_FILA_URL,
     pools: Object.fromEntries(filas.FILAS.map((fila) => [fila, Number(pools[variavelDoPool(fila)])])),
     vagasPadrao,
+    telemetria,
     ...(storage === undefined
       ? {}
       : {

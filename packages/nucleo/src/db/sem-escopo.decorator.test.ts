@@ -19,8 +19,10 @@ describe('@SemEscopo', () => {
 
   it('só as consultas da fila inteira do despachante saem sem escopo, e cada uma diz por quê', () => {
     const semEscopo = metodosDe(DespachoRepository).filter((metodo) => justificativaSemEscopo(DespachoRepository, metodo) !== undefined)
-    expect(semEscopo.sort()).toEqual(['listarEscolasComPendentes', 'listarParaReconciliar', 'registrarFalhaDaFila', 'reservarParaRepublicar'])
+    expect(semEscopo.sort()).toEqual(['listarEscolasComPendentes', 'listarParaReconciliar', 'medirPendentes', 'registrarFalhaDaFila', 'reservarParaRepublicar'])
     for (const metodo of semEscopo) expect(justificativaSemEscopo(DespachoRepository, metodo), metodo).toMatch(/despachante/)
+    // A medição é só leitura para a observabilidade: diz que nada dela chega a resposta de escola.
+    expect(justificativaSemEscopo(DespachoRepository, 'medirPendentes')).toMatch(/observabilidade local/)
     // Reservar, devolver, listar e marcar publicados são da escola do contexto: a vaga e a configuração lidas junto são dela.
     for (const metodo of ['reservarDaEscola', 'devolverParaAguardando', 'publicadosEntre', 'marcarPublicados']) expect(justificativaSemEscopo(DespachoRepository, metodo), metodo).toBeUndefined()
     // Os repositories que atendem a API e o worker não têm exceção nenhuma.

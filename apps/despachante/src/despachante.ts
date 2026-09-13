@@ -310,7 +310,7 @@ async function publicarReservados(
 }
 
 /** Contexto de uma escola (ou da rotina do sistema, sem escola) para ler a configuração e reservar os jobs dela. */
-function contextoDaEscola(escolaId: string | null): ContextoDaRequisicao {
+export function contextoDaEscola(escolaId: string | null): ContextoDaRequisicao {
   return { requisicaoId: randomUUID(), ...(escolaId === null ? { rotinaDoSistema: true } : { escolaId }) }
 }
 

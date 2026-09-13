@@ -4,11 +4,13 @@ import {
   lerConfiguracaoDrenagem,
   lerConfiguracaoIdentidade,
   lerConfiguracaoLimite,
+  lerConfiguracaoTelemetria,
   validarAmbiente,
   type ConfiguracaoBanco,
   type ConfiguracaoDrenagem,
   type ConfiguracaoIdentidade,
   type ConfiguracaoLimite,
+  type ConfiguracaoTelemetria,
 } from '@educa/nucleo'
 import { z } from 'zod'
 
@@ -49,6 +51,8 @@ export interface ConfiguracaoApi {
   identidade: ConfiguracaoIdentidade
   drenagem: ConfiguracaoDrenagem
   limite: ConfiguracaoLimite
+  /** Para onde e de quanto em quanto tempo as métricas vão. */
+  telemetria: ConfiguracaoTelemetria
 }
 
 /** Executa a leitura e devolve o erro de configuração em vez de lançar, para somar os problemas. */
@@ -71,8 +75,9 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const identidade = tentar(() => lerConfiguracaoIdentidade(ambiente))
   const drenagem = tentar(() => lerConfiguracaoDrenagem(ambiente))
   const limite = tentar(() => lerConfiguracaoLimite(ambiente))
-  if ('erro' in api || 'erro' in banco || 'erro' in identidade || 'erro' in drenagem || 'erro' in limite) {
-    const erros = [api, banco, identidade, drenagem, limite].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
+  const telemetria = tentar(() => lerConfiguracaoTelemetria(ambiente))
+  if ('erro' in api || 'erro' in banco || 'erro' in identidade || 'erro' in drenagem || 'erro' in limite || 'erro' in telemetria) {
+    const erros = [api, banco, identidade, drenagem, limite, telemetria].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
     throw new ConfiguracaoInvalida(
       erros.flatMap((erro) => erro.variaveis).sort(),
       erros.flatMap((erro) => erro.motivos),
@@ -86,5 +91,6 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     identidade: identidade.valor,
     drenagem: drenagem.valor,
     limite: limite.valor,
+    telemetria: telemetria.valor,
   }
 }
