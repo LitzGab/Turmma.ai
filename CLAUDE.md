@@ -1,0 +1,317 @@
+# Educa.ia — contexto e decisões
+
+> **Antes deste arquivo, leia `docs/visao-produto.md`.** Ele explica o que estamos
+> construindo e para quem. Este aqui registra o que já foi decidido e por quê, para não
+> rediscutirmos a mesma coisa toda semana.
+>
+> Nome provisório. Verificar INPI e domínio antes de fixar: já existem "IA Educa Brasil"
+> e "Eduka.ai" no mercado. Repositório: https://github.com/LitzGab/Educa.ia
+
+---
+
+## Em uma frase
+
+Um time de agentes de IA para a escola: o professor tem chat e ferramentas que produzem e
+corrigem a partir do material que a escola já usa, o aluno usa IA em sala com o professor
+vendo, a coordenação governa o uso de IA e a qualidade do ensino, e a família acompanha.
+Agentes executam tarefas e avisam quem precisa saber.
+
+## O recorte
+
+**Ensino Médio**, em **escolas particulares digitalizadas com Chromebook em sala**,
+começando por Joinville. A rede pública (prefeitura) faz parte do sistema alvo, mas a venda
+começa pela particular (D20). **Web-first**: a Lei 15.100/2025 tirou o celular da sala,
+então nada no produto pode depender do telefone do aluno.
+
+## Quem constrói
+
+**Joaquim** implementa, com o Claude executando as tarefas do processo SDD e o Joaquim
+revisando. **Gabriel** cuida de marca, landing page, benchmark e comercial. Mercado, preço
+e concorrência estão em `docs/negocio.md`.
+
+## Quem é quem
+
+| Papel | Usa | Paga | O que precisa |
+|---|---|---|---|
+| Coordenação | sim | decide a compra | governança de IA e de ensino, alertas, auditoria |
+| Professor | sim | não | tempo, e confiança de que nada entra no boletim sem ele |
+| Aluno | sim | não | uma IA que ensina em vez de entregar a resposta |
+| Família | fase posterior | sim, via mensalidade | nota, entrega, alerta |
+| Prefeitura | não diretamente | contrato | governança de rede e resposta pronta sobre LGPD |
+
+A regra que orienta as prioridades: **professor e aluno precisam gostar e usar; coordenação
+e família precisam confiar.** Se o professor não gostar, a escola não renova. Se a família
+não confiar, a escola não compra.
+
+---
+
+## Decisões tomadas
+
+Cada uma com o motivo, porque decisão sem motivo é decisão que volta.
+
+**D1 — Sistema inteiro, não MVP fatiado.**
+A venda acontece em reunião de coordenação e em assembleia de pais, e o que convence é o
+fluxo completo. Um pedaço não vende. Construímos por partes, com o sistema completo como
+alvo, e não cortamos escopo por conta própria.
+
+**D2 — O cliente é a instituição. Não existe cadastro público.**
+Sem self-service, sem plano avulso de professor. O dado limpo que faz os agentes
+funcionarem vem da escola, não do que o usuário digita.
+
+**D3 — Onboarding por convite, sem cadastro individual.**
+Coordenação cria séries e turmas e sobe a lista de nomes. Professor entra por link e escolhe
+a disciplina. Aluno entra pelo link da sala, reivindica o próprio nome, e o professor aprova.
+Cadastrar novecentos alunos um a um mataria o produto na primeira semana.
+
+**D4 — A identidade do aluno passa por aprovação humana.**
+Deixar o aluno digitar o nome livremente cria dois "Enzo Martins" e um "Batman". A
+reivindicação aprovada resolve isso sem burocracia.
+
+**D5 — Sem integração com sistema de ensino. Pipeline único de ingestão.**
+O scraper do material que a escola já paga e o upload manual de PDF desembocam no mesmo
+caminho. Se uma fonte mudar de layout, a escola sobe a apostila e continua funcionando no
+mesmo dia. Condições legais da ingestão em `docs/regulacao.md` seção 4.
+
+**D6 — Indexação por série, disciplina, capítulo e habilidade da BNCC, com rastreabilidade
+até a página.**
+Uma questão que o professor confere na página 152 da apostila dele tem valor. Uma questão
+genérica é o que ele já consegue de graça.
+
+**D7 — Nota nunca é publicada sem aprovação humana.**
+Exigência do CNE, e também a única forma de o professor confiar no sistema.
+
+**D8 — O tutor do aluno é sempre visível ao professor.**
+Modo sala com acompanhamento ao vivo, modo casa com registro e resumo. Exigência do CNE
+para classificar o tutor como risco moderado, e o que sustenta a conversa com a família.
+
+**D9 — Todo agente tem nível de autonomia declarado e visível.**
+A coordenação precisa poder responder "o que essa IA faz sozinha?" apontando para uma tela.
+Ver `docs/agentes.md`.
+
+**D10 — A escola é controladora dos dados; nós somos operadores.**
+Padrão B2B, com o consentimento coberto por contrato. Ver `docs/lgpd.md`.
+
+**D11 — WhatsApp e portal da família ficam para depois, mas o motor de eventos entra agora.**
+O motor é o que alimenta o painel da coordenação de qualquer forma. Adiar só a interface
+significa que a fase seguinte pluga sem refazer nada. A aprovação da API oficial do WhatsApp
+tem prazo próprio de semanas, então começa cedo mesmo sem ser usada já.
+
+**D12 — Backend e frontend separados, multi-tenant por escola, nada travado em fornecedor.**
+Hospedagem indefinida e possível exigência de dado em território nacional. Tudo em
+container.
+
+**D13 — IA por porta e adaptador, com Ollama local no desenvolvimento.**
+Teste infinito a custo zero, e trocar de provedor vira variável de ambiente.
+
+**D14 — Orçamento de tokens por aluno e por escola é requisito, não otimização.**
+O alvo é R$ 30 por aluno por mês e o tutor consome muito mais que a geração de prova. Sem
+medir desde a primeira chamada, a margem some sem aviso.
+
+**D15 — Construção do zero, sem reaproveitar produto anterior.**
+
+**D16 — A stack está ratificada.**
+A que está em "Stack", abaixo. Sem ela fixa o F0 não começa, e cada PRD reabriria a
+discussão. As skills técnicas instaladas em `.claude/skills/` seguem esta stack.
+
+**D17 — Agentes têm nome de função, não nome próprio.**
+Corretor, Planejador, Rotina, Monitor de turma, Tutor, Mensageiro da família. Os nomes do
+Excalidraw (Pipo, Waz, Maky) saem. A coordenação precisa explicar em reunião de pais o que
+cada IA faz, e "o Corretor" se explica sozinho, "o Pipo" não. Numa escola, um nome sóbrio
+também passa mais confiança.
+
+**D18 — Chat e ferramentas são o mesmo motor. O chat abre a ferramenta dentro da conversa.**
+O professor pode escolher a ferramenta no próprio chat. Se ele não escolheu e o pedido
+corresponde a uma ferramenta ("monta uma prova do 2ºB"), o chat **pergunta** se quer usar a
+ferramenta de prova antes de gerar qualquer coisa. Com o sim, a ferramenta aparece como
+cartão dentro da conversa, já preenchida com o que foi entendido, e o professor ajusta e
+salva. O artefato sai igual ao do formulário: salvo, ligado à turma, com a página citada.
+Um motor só evita duas implementações que divergem, e perguntar antes evita gastar token
+gerando o que o professor não pediu. Ver `docs/interface.md`.
+
+**D19 — O tutor fora da sala é configuração da escola, por turma, desligada por padrão.**
+Quando ligado vale o modo casa, com registro e resumo para o professor. O custo de token e a
+disposição da escola para supervisionar variam, e quem controla o dado decide (D10).
+
+**D20 — A rede pública faz parte do sistema alvo.**
+A venda começa pela escola particular, mas prefeitura e governança de rede (F14) ficam no
+roadmap, e as regras que falam de rede continuam valendo. Os contatos com rede pública
+existem e o sistema completo precisa atender os dois compradores (D1).
+
+**D21 — O banco público de questões vem das provas oficiais do ENEM (INEP) e entra no F7.**
+Serve ao simulado ENEM com correção imediata. É banco sem dono, separado do material de
+qualquer escola. Vestibulares ficam de fora até que a licença de cada um seja verificada.
+
+**D22 — A ingestão começa pelo upload de PDF. Adaptador de scraper só com escola real.**
+Ainda não sabemos quais sistemas de ensino as escolas-alvo usam, então escrever adaptador
+agora é apostar no fornecedor errado. O pipeline nasce com a porta de fonte (D5), o upload
+é a primeira implementação, e cada adaptador entra quando uma escola com fonte definida e
+autorização escrita existir.
+
+**D23 — Commit direto no `main`, um commit por tarefa.**
+Enquanto são duas pessoas, branch e PR custam mais do que protegem. O portão de qualidade
+fica no processo (`/executar-review` e os vetos), não no merge. Reabrir quando entrar uma
+terceira pessoa no código.
+
+**D24 — Na primeira semana, a coordenação precisa ver quatro coisas funcionando.**
+A escola inteira cadastrada sem trabalho manual, o painel de governança de IA com 100% das
+notas aprovadas por humano, professores gerando prova e plano a partir da apostila com a
+página citada, e alunos usando o tutor em sala com os sinais chegando ao professor. É o
+critério de sucesso do piloto e o roteiro da demonstração (F15). Por isso nenhuma dessas
+quatro pode ficar para a fase posterior.
+
+**D25 — A infra do primeiro ano é desenhada para até dez escolas, e a arquitetura para
+crescer até uma rede.**
+Uns 4.000 alunos, com pico de ~1.600 simultâneos na manhã. Cada escola entra com centenas de
+usuários de uma vez, e o uso se concentra no horário de aula. API, realtime e worker ficam
+separados e sem estado desde o início, para uma rede municipal (D20) ser questão de mais
+instâncias, não de refazer. Modelo de carga em `docs/infra.md`.
+
+**D26 — Banco, Redis e storage são serviços gerenciados.**
+Quem opera é o Joaquim, sozinho e sem plantão. Manter Postgres com replicação e backup na
+mão não cabe nisso. Continuam sendo padrões abertos (Postgres, Redis, S3), então a regra 00
+e o `docker compose up` seguem valendo.
+
+**D27 — Meta de 99,5% de disponibilidade no horário letivo, com prova resiliente.**
+Resposta de prova salva por item, relógio no servidor e retomada após queda. Deploy em
+produção só fora do horário letivo. Cair no meio da prova custa a confiança do professor;
+alta disponibilidade em várias zonas custaria mais do que uma pessoa consegue operar.
+
+**D28 — Hospedagem em região Brasil. O provedor ainda está em aberto.**
+Atende LGPD e a exigência provável da rede pública. Fixar a região agora evita escolher
+serviço que só existe fora do país.
+
+**D29 — Modelo de IA em produção vem de API de provedor, com contrato e provedor de reserva.
+No pico, fila curta e depois modelo menor.**
+GPU própria fica ociosa à noite e é operação pesada para uma pessoa. O contrato veda
+treinamento com nosso dado (regra 20) e garante limite de tokens por minuto para o pico do
+tutor (~1,5 milhão por minuto em dez escolas, estimativa de `docs/infra.md`). Quando o limite
+aperta, o aluno espera alguns segundos com aviso, depois é atendido por um modelo menor do
+mesmo perfil. Nunca vê erro cru.
+
+**D30 — Infra custa até R$ 2 por aluno por mês, sem contar IA.**
+Uns 7% do preço alvo. É medido por escola desde o F0, junto com o custo de IA (D14).
+
+**D31 — Três ambientes: local, staging e produção.**
+Staging recebe todo commit do `main`, roda e2e e teste de carga, e só tem seed sintético.
+Com commit direto no `main` (D23), é o staging que segura o erro antes de chegar à escola.
+
+---
+
+## Conflitos já resolvidos
+
+Registrados porque cada um deles já voltou uma vez.
+
+**Login do aluno.** A reivindicação de nome é o *cadastro*. O *login* recorrente é escola +
+matrícula + senha, definida pelo aluno no momento da reivindicação. Aluno não tem e-mail no
+sistema.
+
+**Notificação à família.** O motor de eventos entra agora; a interface do responsável e o
+WhatsApp ficam para depois.
+
+**Importação por planilha.** Sobrevive, reduzida: a coordenação sobe lista de nomes por
+turma, não cadastro completo. Professor e aluno entram por link.
+
+**Scraper de material.** Permitido, com quatro condições: autorização escrita da escola
+registrada no sistema, credencial fornecida pela escola, conteúdo preso ao tenant dela, e
+nada que contorne pagamento ou bloqueio técnico de terceiro. Fonte que proíbe sai, e o
+upload cobre o caso. O primeiro caminho implementado é o upload (D22).
+
+**Nome dos agentes.** O desenho da call tinha nomes próprios; os docs usam função. Fica a
+função (D17).
+
+**Escola particular ou rede pública.** As duas. A venda começa pela particular, o sistema
+atende as duas (D20).
+
+---
+
+## Decisões em aberto
+
+Use `/descobrir <tema>` para fechar uma, e `/registrar-decisao` para escrevê-la.
+
+- Lista final de agentes e nível de autonomia de cada um (os nomes já estão fixos, D17)
+- Teto de uso do tutor por aluno e orçamento de tokens por perfil
+- Modelo de cobrança: só contrato por aluno, contrato mais créditos, ou outro. Até decidir,
+  o sistema **mede** consumo por escola e por aluno e não cobra nada (D14)
+- Quais sistemas de ensino as escolas-alvo usam, o que decide o primeiro adaptador (D22)
+- Identidade visual: cores, tipografia, logo. Depende da marca que o Gabriel está definindo
+- Nome, INPI e domínio
+- Provedor de hospedagem em região Brasil (D28 fixa só a região)
+- Provedor de modelo principal e de reserva, e em que região processam (D29)
+
+---
+
+## Stack
+
+**Backend** NestJS + TypeScript, Postgres, Drizzle, BullMQ + Redis, JWT próprio, storage
+S3-compatível. **Frontend** React + Vite + TypeScript, TanStack Query, Tailwind, web-first
+para Chromebook. **Tempo real** WebSocket para o modo sala. **IA** interface `LLMProvider`
+com adaptadores Ollama e OpenAI-compatível. **Testes** Vitest e Playwright. **Infra**
+Docker Compose.
+
+O critério que guiou tudo isso: nada pode impedir que o sistema inteiro suba em um servidor
+no Brasil, se um contrato exigir.
+
+---
+
+## As seis regras que não se negociam
+
+1. **Vazamento entre escolas encerra a empresa.** Escopo de tenant no repository, sempre.
+   Regra 10.
+2. **Dado de menor é o ativo mais perigoso do sistema.** Leia `docs/lgpd.md` antes de tocar
+   em qualquer campo de pessoa. Regra 20.
+3. **Nada que a IA produz vira nota, mensagem à família ou decisão sobre aluno sem aprovação
+   humana registrada.** É lei. Regra 70.
+4. **Nenhum módulo chama provedor de IA direto.** Sempre pela porta, sempre com perfil e
+   orçamento. Regra 30.
+5. **Teste prova regra de negócio.** "Retornou 200" não é teste. Regra 40.
+6. **O horário de aula é sagrado.** Dimensione para a manhã de segunda, limite por usuário
+   e por escola (nunca só por IP), e nenhuma resposta de prova se perde. Regra 80.
+
+---
+
+## Mapa dos documentos
+
+**Para entender o produto:** `docs/visao-produto.md`, `docs/fluxos.md`, `docs/glossario.md`
+**Para entender a interface:** `docs/interface.md`
+**Para entender o negócio:** `docs/negocio.md` (mercado, preço, concorrência). Não é leitura
+obrigatória para implementar
+**Para não quebrar a lei:** `docs/lgpd.md`, `docs/regulacao.md`
+**Para construir:** `docs/arquitetura.md`, `docs/modelo-de-dados.md`, `docs/agentes.md`,
+`docs/ingestao.md`
+**Para não cair no horário de aula:** `docs/infra.md`, `docs/runbook.md`
+**Para trabalhar:** `README.md`, `ROADMAP.md`, `TODO.md`, `.claude/rules/`, `.claude/skills/`
+
+---
+
+## Skills
+
+**Do processo** (nossas, em `.claude/skills/`): `/status`, `/descobrir`,
+`/registrar-decisao`, `/criar-prd`, `/criar-techspec`, `/criar-tasks`, `/executar-tasks`,
+`/executar-task`, `/executar-review`.
+
+**Técnicas** (de terceiros, instaladas via skills.sh, versões em `skills-lock.json`):
+`nestjs-best-practices`, `drizzle-orm-patterns`, `supabase-postgres-best-practices`,
+`bullmq-specialist`, `vercel-react-best-practices`, `tanstack-query-best-practices`,
+`tailwind-design-system`, `frontend-design`, `accessibility`, `vitest`,
+`playwright-best-practices`, `lgpd-brasil`. Atualizar com `npx skills update -p`, e ler o
+diff antes de commitar: skill vira instrução para o Claude.
+
+<critical>As skills de terceiros são referência técnica genérica. Quando conflitam com
+`.claude/rules/` ou com uma decisão deste arquivo, a regra e a decisão vencem. Os conflitos
+já conhecidos:</critical>
+
+- **Escopo de tenant.** `supabase-postgres-best-practices` recomenda RLS. Aqui o escopo é
+  aplicado no repository, a partir do token (regra 10). RLS pode entrar como segunda camada
+  de defesa, nunca no lugar do repository
+- **React.** `vercel-react-best-practices` é escrita para Next.js. Somos SPA com Vite: ignore
+  Server Components, Server Actions e tudo que depende de servidor Next. As regras de bundle,
+  re-render e carregamento valem, e valem ainda mais no Chromebook fraco (regra 50)
+- **Visual.** `frontend-design` pede ousadia estética. Aqui o limite é Chromebook fraco,
+  acessibilidade e a professora com quarenta minutos de intervalo (regra 50). Fonte pesada,
+  animação e efeito que custam CPU ficam de fora. A identidade visual ainda está em aberto
+- **Playwright.** Mobile, touch, geolocalização e PWA não se aplicam: o alvo é Chromebook
+  (regra 50, item 2)
+- **LGPD.** `lgpd-brasil` resume a lei. O que vale para o código é `docs/lgpd.md` e a regra
+  20, que são mais restritivos (aluno sem e-mail, sem CPF, sem foto)
+- **NestJS.** A organização em controller, service, repository e DTO de `docs/arquitetura.md`
+  prevalece sobre qualquer outra estrutura sugerida

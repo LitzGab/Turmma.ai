@@ -1,0 +1,356 @@
+# Infraestrutura, carga e operação
+
+> **Leia isto antes de escrever código que roda no caminho quente:** login, tutor, modo
+> sala, prova online, fila, ou qualquer query em tabela que cresce com o número de alunos.
+>
+> Depois da LGPD, a infra é o segundo jeito de perder uma escola. O vazamento acaba com a
+> confiança da coordenação. A queda no meio da prova acaba com a confiança do professor, e
+> sem ele a escola não renova.
+
+Os números deste documento são **estimativas de desenho**, feitas antes de existir uma
+escola real. Estão aqui para dimensionar e para o teste de carga ter um alvo. O piloto
+substitui cada um por medida real, e quando isso acontecer este arquivo é atualizado.
+
+---
+
+## 1. O que muda quando cada escola traz centenas de usuários
+
+Não importa se o sistema roda numa infra nossa atendendo várias escolas ou numa instalação
+dedicada a uma rede: cada escola que entra traz uns 400 usuários de uma vez. Isso é pouco
+para qualquer servidor web. O difícil está em outro lugar, e são quatro coisas que um
+sistema comum não tem:
+
+**O uso é concentrado.** Quase tudo acontece entre 7h e 18h, de segunda a sexta. Às 7h30
+turmas inteiras fazem login no mesmo minuto, às 10h seis turmas usam o tutor ao mesmo
+tempo, às 22h não tem quase ninguém. A infra é dimensionada para a manhã de segunda, não
+para a média.
+
+**A escola inteira sai por um único IP.** Os Chromebooks passam pelo NAT da rede da escola.
+Para o servidor, 400 alunos parecem um usuário só fazendo 400 vezes mais requisições. Rate
+limit por IP, que é o padrão de qualquer tutorial, derruba a escola inteira na primeira
+aula.
+
+**O gargalo é o provedor de IA, não o banco.** O tutor em sala gera centenas de chamadas de
+modelo simultâneas no pico. O provedor tem limite de tokens por minuto, e quando estoura
+ele não fica mais lento, ele recusa.
+
+**Uma escola não pode prejudicar a outra.** Uma escola que sobe 300 apostilas ou corrige
+900 provas na mesma tarde não pode deixar o tutor das outras nove esperando.
+
+---
+
+## 2. Alvo de escala do primeiro ano (D25)
+
+| Grandeza | Valor de desenho |
+|---|---|
+| Escolas | até 10 |
+| Alunos | ~4.000 (400 por escola) |
+| Professores e coordenação | ~450 |
+| Pico de alunos simultâneos | ~1.600 (40% dos alunos na manhã de pico) |
+| Turmas usando tutor ao mesmo tempo | ~60 (6 por escola) |
+
+A arquitetura precisa **crescer para uma rede municipal sem ser refeita** (D20), mas a
+infra do primeiro ano não é dimensionada para isso. Quando um contrato de rede for fechado,
+este documento é revisado antes da implantação. Isso vale também se a rede exigir uma
+instalação dedicada em vez da infra compartilhada: a topologia da seção 4 é a mesma, só
+muda quem é dono do servidor (D12).
+
+---
+
+## 3. Modelo de carga: a manhã de segunda
+
+O cenário que a infra precisa aguentar, e que o teste de carga reproduz.
+
+### 3.1 Login em rajada (7h30)
+
+Sessenta turmas começam a aula e cerca de 2.100 alunos fazem login em uns cinco minutos:
+**~7 logins por segundo**, com picos maiores no primeiro minuto.
+
+Hash de senha é caro de propósito. Com argon2id configurado para 100–250 ms de CPU, só o
+login ocupa perto de dois núcleos nesse minuto.
+
+**Consequências:**
+- O custo do hash é calibrado medindo a rajada no staging, não copiado de tutorial
+- O login não compete por CPU com o resto da API. Instâncias separadas ou limite de
+  concorrência do hash
+- A sessão dura o dia letivo, com renovação silenciosa. Aluno não refaz login a cada aula
+
+### 3.2 Tutor em sala (10h)
+
+| Suposição | Valor |
+|---|---|
+| Alunos em turmas com tutor liberado | ~1.800 |
+| Ativos no tutor ao mesmo tempo | ~50% |
+| Ritmo | 1 mensagem a cada 2 minutos |
+| **Mensagens por segundo** | **~7,5** |
+| Resposta em streaming | ~6 s |
+| **Streams simultâneos** | **~45** |
+| Tokens por mensagem | ~3.000 de entrada (material, histórico, instrução) + ~250 de saída |
+| **Tokens por minuto no pico** | **~1,5 milhão** |
+
+⚠️ Esse último número é o que decide o contrato com o provedor de modelo. O limite de
+tokens por minuto padrão de uma conta nova é muito menor que isso. Cache de prompt (a parte
+fixa: instrução e material do capítulo) reduz bastante a entrada e precisa ser usado desde
+o início (regra 30, item 8).
+
+### 3.3 Prova online (qualquer horário)
+
+Uma turma de 35 alunos, com resposta salva a cada item. É carga pequena para o banco. O
+risco aqui não é volume, é **perder resposta** quando a rede da escola oscila (seção 6).
+
+### 3.4 Modo sala
+
+Uns 1.800 WebSockets abertos no pico. Um nó aguenta, mas com mais de um nó as mensagens
+precisam de um adaptador em Redis para chegar ao professor certo.
+
+### 3.5 Onboarding de uma escola nova
+
+- Planilha de 400 nomes: um job na fila, não um request
+- Convite de 40 professores: e-mail enviado pela fila, respeitando o limite do provedor
+  de e-mail
+- **Reivindicação em sala:** 35 alunos clicam na lista ao mesmo tempo, e dois podem clicar
+  no mesmo nome. Resolve-se com restrição única no banco e resposta clara para o segundo
+  ("esse nome já foi reivindicado, chame o professor"), não com verificação antes de gravar
+- Ingestão de 300 apostilas: horas de CPU de extração. Vai para a fila de baixa prioridade,
+  com limite de concorrência por escola
+
+### 3.6 Crescimento de dado (primeiro ano)
+
+| Tabela | Ordem de grandeza |
+|---|---|
+| `MensagemTutor` | ~7 milhões de linhas/ano (1.800 alunos × 20 mensagens × 200 dias) |
+| `TrechoIndexado` | ~36 mil trechos por escola (~200 MB de embeddings), ~2 GB para 10 escolas |
+| `Resposta` | centenas de milhares de linhas/ano |
+| Storage de arquivos | apostilas em PDF e fotos de prova: dezenas de GB |
+
+Nenhum desses é grande para Postgres, mas `MensagemTutor` precisa de índice por escola,
+turma e data desde a primeira migration, e de expurgo pela retenção de 12 meses
+(`docs/lgpd.md`).
+
+⚠️ **Busca vetorial com filtro de escola.** Índice HNSW do pgvector com `WHERE escolaId =`
+pode devolver menos resultados que o pedido, porque o filtro é aplicado depois da busca no
+índice. A Tech Spec do F4 precisa escolher e testar a solução: varredura iterativa do
+pgvector, índice parcial ou particionamento por escola. Não verificado.
+
+---
+
+## 4. Topologia
+
+Para dez escolas, operada por uma pessoa (D26):
+
+```
+                  ┌───────────────────── região Brasil (D28) ─────────────────────┐
+Chromebooks ──▶   │  balanceador ─┬─▶ api (2 instâncias, sem estado)              │
+                  │               └─▶ realtime (1–2, adaptador Redis)             │
+                  │                                                               │
+                  │  worker (1–2) ◀── filas por prioridade                        │
+                  │                                                               │
+                  │  Postgres gerenciado + pgvector, backup contínuo              │
+                  │  Redis gerenciado: filas (sem expulsão de chave)              │
+                  │  Redis gerenciado: cache, rate limit, sessão de sala          │
+                  │  storage S3-compatível privado                                │
+                  └───────────────────────────────────────────────────────────────┘
+                                         │ dado minimizado, com contrato (D29)
+                                         ▼
+                           provedor de modelo principal + reserva
+```
+
+Por que assim:
+
+- **Duas instâncias de API desde o início.** Não é pela carga, é para o deploy trocar uma
+  de cada vez e para uma instância travada não derrubar a escola
+- **API, realtime e worker separados.** A correção de 900 provas não pode tirar CPU do
+  login das 7h30. É também o que deixa crescer para rede sem refazer
+- **Serviço gerenciado para banco, Redis e storage.** Uma pessoa sem plantão não mantém
+  Postgres com replicação e backup na mão. Isso não fere a regra 00: Postgres, Redis e S3
+  são padrões abertos, e o sistema continua subindo com `docker compose up`
+- **Dois Redis.** BullMQ exige que o Redis nunca expulse chave. Cache e rate limit precisam
+  expulsar. No mesmo Redis, um dos dois está configurado errado
+
+---
+
+## 5. Limites e justiça entre escolas
+
+### 5.1 Rate limit
+
+- **Por usuário e por escola. Nunca só por IP** (seção 1)
+- IP só entra em rota pública e anônima, com limite alto o bastante para uma escola inteira
+  atrás de um NAT
+- Proteção de força bruta no login é por conta (escola + matrícula), com espera crescente.
+  Bloquear o IP da escola bloqueia 400 alunos por causa de um
+
+### 5.2 Filas por prioridade
+
+| Prioridade | O quê | Regra |
+|---|---|---|
+| interativa | tutor em sala, ferramenta que o professor está esperando na tela | nunca espera trabalho de lote |
+| normal | correção que o professor pediu agora, notificação | minutos |
+| lote | ingestão, correção em massa, agentes noturnos, expurgo, exportação | preferencialmente fora do horário letivo |
+
+Trabalho de lote que não é urgente roda à noite. Isso tira carga do pico, usa a capacidade
+ociosa do provedor e, em provedor que oferece API de lote, custa menos.
+
+### 5.3 Concorrência por escola
+
+Cada escola tem limite de jobs simultâneos por fila, para uma escola barulhenta não ocupar
+todos os workers.
+
+⚠️ O recurso de grupos do BullMQ, que resolve isso direto, faz parte da versão paga (Pro).
+A Tech Spec do F0 decide entre a licença, um limitador próprio em Redis ou fila por escola,
+à luz da regra 00. Não verificado.
+
+### 5.4 Gateway de IA
+
+Toda chamada de modelo já passa pela porta `LLMProvider` (regra 30). É ali que ficam:
+
+- **Limitador global de concorrência e de tokens por minuto**, com margem abaixo do limite
+  contratado
+- **Prioridade:** tutor em sala passa na frente de agente noturno
+- **Degradação no pico (D29):** a mensagem espera na fila por alguns segundos com o aviso
+  "o tutor está pensando". Se passar do limite, cai para um modelo menor do mesmo perfil.
+  Se o provedor principal falhar, vai para o de reserva. O professor vê o sinal de
+  sobrecarga no modo sala
+- **Timeout e circuit breaker:** provedor lento não segura conexão da API
+
+---
+
+## 6. Disponibilidade (D27)
+
+**Meta: 99,5% no horário letivo.** Horário letivo é configurável por escola, com padrão de
+segunda a sexta, das 7h às 18h. São uns 66 minutos de indisponibilidade tolerada por mês,
+contados só dentro desse horário.
+
+### 6.1 Prova resiliente
+
+Queda curta da rede da escola ou do sistema não pode fazer aluno perder resposta nem tempo.
+
+- A resposta é salva no servidor a cada item, e a gravação é idempotente
+- No cliente, a resposta não enviada fica numa fila em memória e é reenviada quando a
+  conexão volta, com indicador visível de "salvo" ou "salvando"
+- O relógio da prova é do servidor. Queda do sistema não conta como tempo do aluno, e o
+  professor pode estender o prazo de um aluno ou da turma
+- Ao reabrir, o aluno volta ao item onde parou
+- Persistir resposta no disco do Chromebook (IndexedDB) só com aprovação do
+  `privacy-guardian`: é dado de menor numa máquina compartilhada (regra 50, item 7)
+
+### 6.2 Deploy
+
+- Todo commit no `main` vai para o staging automaticamente
+- A produção só recebe deploy **fora do horário letivo**, depois de o staging passar no e2e
+- Migration é compatível com a versão anterior do código (expandir, migrar, contrair).
+  Nunca uma migration que obriga API e banco a mudarem no mesmo segundo
+- Rollback é um comando, e foi ensaiado
+
+### 6.3 Backup e recuperação
+
+| Métrica | Meta |
+|---|---|
+| RPO (quanto dado se pode perder) | ≤ 5 minutos, com backup contínuo do Postgres |
+| RTO (quanto tempo para voltar) | ≤ 1 hora |
+
+Backup criptografado, em região Brasil, com restauração **executada** antes de entrar a
+primeira escola real e depois repetida a cada trimestre (`docs/lgpd.md`).
+
+---
+
+## 7. Observabilidade para quem opera sozinho
+
+Uma pessoa sem plantão só consegue operar se o sistema avisar antes da escola ligar.
+
+**Métrica:**
+- Latência e taxa de erro por rota (p95), separando login, tutor e prova
+- Fila: tamanho e idade do job mais antigo, **por escola e por prioridade**
+- IA: tokens por minuto usados contra o limite, latência do provedor, taxa de fallback,
+  custo por escola
+- WebSocket: conexões abertas por turma
+- Banco: conexões do pool, queries lentas, espaço
+- Custo de infra por escola por mês (seção 8)
+
+**Alerta**, só o que exige ação, direto no celular do Joaquim:
+- Check externo de disponibilidade falhando no horário letivo
+- p95 do tutor ou do salvamento de prova acima do limite
+- Tokens por minuto acima de 80% do contratado
+- Job interativo com mais de 30 segundos de idade
+- Backup do dia não concluído
+
+**Log e rastreio** seguem a regra 20: id, nunca nome, resposta, nota ou conversa. A
+instrumentação usa OpenTelemetry como porta, e a ferramenta que recebe os dados é escolhida
+junto com a hospedagem, em região Brasil ou hospedada por nós.
+
+**Runbook:** para cada alerta, um parágrafo em `docs/runbook.md` dizendo o que olhar e o
+que fazer. Escrito quando o alerta é criado, não depois do primeiro incidente.
+
+---
+
+## 8. Custo (D30)
+
+**Teto de infra, sem contar IA: R$ 2 por aluno por mês.** Com 4.000 alunos, uns R$ 8 mil
+por mês, com folga para serviço gerenciado em região Brasil.
+
+O custo de IA é medido à parte (D14), porque varia com o uso e é o que mais ameaça a
+margem. A soma dos dois por escola aparece no painel interno todo mês, e é o número que
+valida os R$ 30 junto com a planilha de `docs/negocio.md`.
+
+---
+
+## 9. Ambientes (D31)
+
+| Ambiente | Para quê | Dado |
+|---|---|---|
+| local | desenvolvimento, `docker compose up`, Ollama | seed sintético |
+| staging | recebe todo commit do `main`, roda e2e e teste de carga, espelha a topologia da produção em tamanho menor | **seed sintético, nunca dado real** (regra 20) |
+| produção | escolas | real |
+
+A demonstração de venda (F15) roda no staging com a seed completa, ou num espaço de escola
+fictícia na produção. Isso se decide no PRD do F15.
+
+---
+
+## 10. Teste de carga
+
+Ferramenta aberta, com script versionado no repositório (sugestão: k6). **Nenhum teste de
+carga chama provedor de IA pago** (regra 30): o adaptador falso simula latência e streaming
+com os tempos da seção 3.2.
+
+**Cenário "manhã de segunda"**, em staging:
+
+1. Dez escolas simuladas com a seed sintética
+2. Rajada de login de 2.100 alunos em cinco minutos
+3. Sessenta turmas no tutor com o ritmo da seção 3.2
+4. Três turmas fazendo prova online, com queda de rede simulada no meio
+5. **Ao mesmo tempo**, uma das escolas subindo 300 apostilas
+
+**Passa quando:**
+- p95 do login abaixo de 1 s
+- p95 do primeiro token do tutor abaixo de 3 s
+- p95 do salvamento de resposta abaixo de 500 ms, e nenhuma resposta perdida
+- **As outras nove escolas não pioram** enquanto a décima ingere apostila
+
+Roda antes da primeira escola real, e de novo sempre que uma funcionalidade mexer no
+caminho quente.
+
+---
+
+## 11. Portão da primeira escola real
+
+Nenhum dado real de escola entra em produção antes de:
+
+- [ ] Teste de carga "manhã de segunda" passando no staging
+- [ ] Restauração de backup executada de verdade
+- [ ] Alertas da seção 7 configurados e testados, com runbook
+- [ ] Deploy e rollback ensaiados
+- [ ] Contrato com o provedor de modelo com limite de tokens compatível com a seção 3.2, e
+      provedor de reserva configurado
+- [ ] Os itens de LGPD do `ROADMAP.md` (F3) e do `TODO.md` concluídos
+
+---
+
+## 12. Em aberto
+
+- Provedor de hospedagem em região Brasil (D28 fixa só a região)
+- Provedor de modelo principal e de reserva, e a região onde processam. Se processarem fora
+  do Brasil, a transferência internacional precisa constar do contrato com a escola, e rede
+  pública pode não aceitar
+- Solução para concorrência por escola nas filas (seção 5.3)
+- Solução para busca vetorial filtrada por escola (seção 3.6)
+- Ferramenta de observabilidade
