@@ -37,12 +37,12 @@ domínio e porque é onde mora a medição de custo que valida a precificação.
 
 Monorepo, Docker Compose (Postgres, Redis de fila e Redis de cache, MinIO), Drizzle, Vitest,
 Playwright, esteira de typecheck/lint/test, log estruturado **sem dado pessoal**, erro
-tipado. API, realtime e worker como processos separados e sem estado. Staging com deploy
-automático do `main` (D31). Filas com prioridade e limite por escola. Rate limit por usuário
-e por escola. Métrica básica e check externo de disponibilidade. Ver `docs/infra.md`.
+tipado. API, realtime e worker como processos separados e sem estado. Filas com prioridade
+e limite por escola. Rate limit por usuário e por escola. Métrica básica. Tudo local: o
+staging nasce depois (D31). Ver `docs/infra.md`.
 
-**Pronto quando:** `docker compose up` sobe tudo, um e2e verde toca API e web, e o mesmo
-commit chega ao staging sozinho.
+**Pronto quando:** `docker compose up` sobe tudo, um e2e verde toca API e web, e a esteira
+do GitHub fica verde no mesmo commit.
 
 ## F1 — `identidade-e-tenancy` [ ]
 **Depende de:** F0
@@ -218,6 +218,10 @@ antes de cumprir a lista de `docs/infra.md` seção 11: teste de carga, restaura
 executada, alertas com runbook, deploy e rollback ensaiados, contrato com provedor de
 modelo com limite compatível com o pico, e os itens de LGPD do F3 e do `TODO.md`. Se o
 piloto vier antes do F16, esses itens são puxados para antes dele.
+
+O **staging** (deploy automático do `main`, check externo, custo do ambiente) é criado antes
+da primeira demonstração a alguém de fora ou do piloto, o que vier primeiro, com o provedor
+escolhido nesse momento (D31, D42).
 
 ---
 

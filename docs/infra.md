@@ -235,7 +235,8 @@ Queda curta da rede da escola ou do sistema não pode fazer aluno perder respost
 
 ### 6.2 Deploy
 
-- Todo commit no `main` vai para o staging automaticamente
+- Todo commit no `main` vai para o staging automaticamente, a partir de quando o staging
+  existir. Até lá, o portão é a esteira do GitHub (D31)
 - A produção só recebe deploy **fora do horário letivo**, depois de o staging passar no e2e
 - Migration é compatível com a versão anterior do código (expandir, migrar, contrair).
   Nunca uma migration que obriga API e banco a mudarem no mesmo segundo
@@ -298,7 +299,7 @@ valida os R$ 30 junto com a planilha de `docs/negocio.md`.
 | Ambiente | Para quê | Dado |
 |---|---|---|
 | local | desenvolvimento, `docker compose up`, Ollama | seed sintético |
-| staging | recebe todo commit do `main`, roda e2e e teste de carga, espelha a topologia da produção em tamanho menor | **seed sintético, nunca dado real** (regra 20) |
+| staging | recebe todo commit do `main`, roda e2e e teste de carga, espelha a topologia da produção em tamanho menor. Criado antes da primeira demonstração externa ou do piloto; até lá, o portão é a esteira do GitHub (D31) | **seed sintético, nunca dado real** (regra 20) |
 | produção | escolas | real |
 
 A demonstração de venda (F15) roda no staging com a seed completa, ou num espaço de escola
@@ -347,8 +348,8 @@ Nenhum dado real de escola entra em produção antes de:
 
 ## 12. Em aberto
 
-- Provedor de hospedagem em região Brasil: escolhido na Tech Spec do F0, por critério fixo
-  (D42)
+- Provedor de hospedagem em região Brasil: escolhido quando o staging for criado, por
+  critério fixo (D42)
 - Provedor de modelo principal e de reserva: sai da avaliação de
   `docs/avaliacao-de-modelos.md` (D37). Se o escolhido processar fora do Brasil, a
   transferência internacional precisa constar do contrato com a escola, e rede pública pode

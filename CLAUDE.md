@@ -190,10 +190,19 @@ mesmo perfil. Nunca vê erro cru.
 
 **D30 — Infra custa até R$ 2 por aluno por mês, sem contar IA.**
 Uns 7% do preço alvo. É medido por escola desde o F0, junto com o custo de IA (D14).
+Revista em 13/09/2026: o uso já nasce marcado por escola no F0; o custo do ambiente passa a
+ser medido quando o staging existir (D31).
 
-**D31 — Três ambientes: local, staging e produção.**
+**D31 — Três ambientes: local, staging e produção. O staging nasce quando houver o que
+mostrar fora da nossa máquina.**
 Staging recebe todo commit do `main`, roda e2e e teste de carga, e só tem seed sintético.
 Com commit direto no `main` (D23), é o staging que segura o erro antes de chegar à escola.
+Revista em 13/09/2026: o F0 e a validação inicial são 100% locais, sem ambiente remoto e
+sem gasto; até o staging existir, o portão é a esteira do GitHub (tipos, lint, testes e
+e2e). O staging é criado antes da primeira demonstração a alguém de fora ou do piloto, o
+que vier primeiro. Validar local não exige máquina ligada nem custo, e o que só um ambiente
+remoto prova (URL pública, check externo, custo do ambiente) não tem valor antes de haver
+quem veja.
 
 **D32 — Os agentes são sete, mais o Mensageiro da família na fase posterior.**
 Rotina, Corretor, Planejador, Monitor de turma, Tutor, Adaptador e Analista da coordenação.
@@ -249,12 +258,15 @@ configurado menor (ordem de R$ 1,50 por aluno): modelo pequeno no tutor e pacote
 turma. O preço define o orçamento, e não o contrário. Por isso o orçamento é configuração
 por escola e por rede, nunca constante no código.
 
-**D42 — O provedor de hospedagem é escolhido na Tech Spec do F0, por critério fixo.**
-Nada de produção é necessário antes do staging do F0. Critérios: região São Paulo, Postgres
+**D42 — O provedor de hospedagem é escolhido quando o staging for criado, por critério fixo.**
+Nada de produção é necessário antes do staging. Critérios: região São Paulo, Postgres
 gerenciado com pgvector e backup contínuo, Redis gerenciado configurável sem expulsão de
 chave, storage S3-compatível, custo dentro de R$ 2 por aluno (D30), preço em real ou
 crédito para startup. Comparar AWS São Paulo, Google São Paulo, Azure Brazil South e Magalu
-Cloud.
+Cloud. Revista em 13/09/2026: saiu da Tech Spec do F0, porque o F0 passou a ser só local
+(D31). A comparação já feita fica como ponto de partida (AWS São Paulo como candidata;
+Azure eliminada por não ter API S3, Magalu por não ter Redis gerenciado), e opção sem custo
+entra na comparação.
 
 ---
 
@@ -294,7 +306,7 @@ Todas têm dono e momento. Nenhuma trava o F0.
 | Decisão | Dono | Quando fecha |
 |---|---|---|
 | Provedor de modelo principal e reserva | Joaquim | avaliação de `docs/avaliacao-de-modelos.md`, antes de a F5 ficar pronta (D37) |
-| Provedor de hospedagem | Joaquim | Tech Spec do F0 (D42) |
+| Provedor de hospedagem | Joaquim | quando o staging for criado, antes da primeira demonstração externa ou do piloto (D42) |
 | Identidade visual (paleta, tipografia, logo) | Gabriel | **antes do PRD do F2**, a primeira tela real |
 | Nome, INPI e domínio | Gabriel | antes do material de venda e do piloto |
 | Sistemas de ensino das escolas-alvo e primeiro adaptador | quem conduzir o piloto | no piloto; até lá só upload (D22) |

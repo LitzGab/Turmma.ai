@@ -16,7 +16,7 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 ## Infra e operação
 
 - [ ] Escolher provedor de hospedagem em região Brasil, com Postgres + pgvector, Redis e
-      storage S3 gerenciados (D26, D28)
+      storage S3 gerenciados (D26, D28), quando for criar o staging (D31, D42)
 - [ ] Contrato com provedor de modelo: veda treinamento, limite de tokens por minuto
       compatível com o pico (~1,5 mi/min em 10 escolas), e região de processamento (D29)
 - [ ] Provedor de modelo de reserva configurado e testado

@@ -30,7 +30,7 @@ Depois: <o que registrar, e se vira tarefa>
 
 ## Sistema fora do ar no horário letivo
 
-*A preencher no F0.*
+*A preencher quando o staging existir (D31).*
 
 ## Tutor lento (p95 do primeiro token acima do limite)
 
