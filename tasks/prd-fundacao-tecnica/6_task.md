@@ -22,18 +22,18 @@ nem requisição pendurada.
 
 ## Subtarefas
 
-- [ ] 6.1 — `packages/nucleo/src/limite`: guard global sobre `rate-limiter-flexible` no
+- [x] 6.1 — `packages/nucleo/src/limite`: guard global sobre `rate-limiter-flexible` no
   Redis de cache
   - chaves `rl:u:{usuario}` e `rl:e:{escola}`
   - `rl:ip:{ip}` só em rotas com o decorator `@RotaAnonima`
   - IP de `X-Forwarded-For` aceito só quando a conexão vem do Caddy
   - padrões do ambiente: 120/min por usuário, 30.000/min por escola, 3.000/min por IP
     anônimo; limites de escola lidos da configuração quando ela existir (9.0)
-- [ ] 6.2 — Cliente Redis da API com `enableOfflineQueue:false` e `commandTimeout` 100 ms.
+- [x] 6.2 — Cliente Redis da API com `enableOfflineQueue:false` e `commandTimeout` 100 ms.
   `insuranceLimiter` em memória com limite ÷ número de instâncias; estado
   `limite.seguro_ativo` exposto para a métrica da 12.0. Excesso responde 429
   `LIMITE_EXCEDIDO` com `Retry-After`
-- [ ] 6.3 — Testes. Nos testes de escola, use um limite configurado baixo, senão o teste não
+- [x] 6.3 — Testes. Nos testes de escola, use um limite configurado baixo, senão o teste não
   quebra
 
 ## Arquivos previstos
@@ -58,13 +58,13 @@ nem requisição pendurada.
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
-- [ ] E2E verde (se tocou tela)
-- [ ] Vetos aprovados (se aplicáveis)
-- [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
+- [x] E2E verde (se tocou tela)
+- [x] Vetos aprovados (se aplicáveis)
+- [x] Revisão aprovada
+- [x] Commit feito, só com os arquivos desta tarefa
 
 ## Fora do escopo desta tarefa
 

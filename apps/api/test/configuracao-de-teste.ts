@@ -10,8 +10,8 @@ export interface SobreposicaoDeTeste {
 
 /**
  * Configuração da API nos testes de integração, lida pelo mesmo `lerConfiguracao` do boot a partir
- * do ambiente de teste (`.env.example` e `infra/teste.env`), com o banco no Postgres do compose de
- * teste. A porta não importa: o teste escuta numa porta livre.
+ * do ambiente de teste (`.env.example` e `infra/teste.env`), com o banco e o Redis de cache do
+ * compose de teste. A porta não importa: o teste escuta numa porta livre.
  */
 export function configuracaoDeTeste(sobreposicao: SobreposicaoDeTeste = {}): ConfiguracaoApi {
   // Espera curta da drenagem: no teste não há borda a avisar, e todo `app.close()` passa por ela.
@@ -24,6 +24,7 @@ export function configuracaoDeTeste(sobreposicao: SobreposicaoDeTeste = {}): Con
     ...ambiente,
     API_PORTA: '3000',
     BANCO_URL: `postgres://${usuario}:${senha}@127.0.0.1:${porta}/${banco}`,
+    REDIS_CACHE_URL: `redis://127.0.0.1:${valorObrigatorio(ambiente, 'REDIS_CACHE_PORTA_HOST')}`,
   })
   return { ...config, banco: { ...config.banco, ...sobreposicao.banco } }
 }

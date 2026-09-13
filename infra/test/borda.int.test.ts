@@ -1,5 +1,6 @@
 import { CodigoDeErro, MENSAGENS_DE_ERRO, NAMESPACE_REALTIME_SISTEMA } from '@educa/shared'
 import { spawnSync } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { setTimeout as esperar } from 'node:timers/promises'
 import type { Socket as SocketCliente } from 'socket.io-client'
@@ -37,34 +38,42 @@ interface Resultado {
 /**
  * Rajada contínua pela borda, com vários pedidos em paralelo, até `parar` ser chamado. O GET é
  * repetido pela borda se a conexão cair; o POST não, e é ele que mostra requisição derrubada.
+ *
+ * A rajada é de uma turma, não de um usuário só: os pedidos se revezam entre os `tokens` (alunos da
+ * mesma escola) e cada trabalhador espera `pausaMs` entre um e outro, para ninguém passar do próprio
+ * rate limit (6.0). A rota anônima fica em um de cada doze pedidos, com folga no limite do IP.
  */
-function rajada(token: string, { paralelos = 12, limitePorRequisicaoMs = 10_000 } = {}): { parar: () => Promise<Resultado[]> } {
+function rajada(
+  tokens: readonly string[],
+  { paralelos = 12, limitePorRequisicaoMs = 10_000, pausaMs = 50 } = {},
+): { parar: () => Promise<Resultado[]> } {
   let ativa = true
+  let proximoToken = 0
+  const tokenDaVez = () => tokens[proximoToken++ % tokens.length] ?? ''
   const resultados: Resultado[] = []
-  const pedidos = [
-    {
-      nome: 'GET /v1/sistema/contexto',
-      executar: (sinal: AbortSignal) => fetch(`${BORDA}/v1/sistema/contexto`, { headers: { Authorization: `Bearer ${token}` }, signal: sinal }),
-      conferir: async (resposta: Response) => resposta.status === 200 && ((await resposta.json()) as { escolaId?: string }).escolaId === ESCOLA_A,
-    },
-    {
-      // Rota que só aceita GET: a API responde 404 tipado. Chegar a ela prova que a instância atendeu.
-      nome: 'POST /v1/sistema/contexto',
-      executar: (sinal: AbortSignal) =>
-        fetch(`${BORDA}/v1/sistema/contexto`, {
-          signal: sinal,
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: '{}',
-        }),
-      conferir: async (resposta: Response) => resposta.status === 404 && ((await resposta.json()) as { erro?: { codigo?: string } }).erro?.codigo === CodigoDeErro.NAO_ENCONTRADO,
-    },
-    {
-      nome: 'GET /saude',
-      executar: (sinal: AbortSignal) => fetch(`${BORDA}/saude`, { signal: sinal }),
-      conferir: async (resposta: Response) => resposta.status === 200,
-    },
-  ]
+  const getContexto = {
+    nome: 'GET /v1/sistema/contexto',
+    executar: (sinal: AbortSignal) => fetch(`${BORDA}/v1/sistema/contexto`, { headers: { Authorization: `Bearer ${tokenDaVez()}` }, signal: sinal }),
+    conferir: async (resposta: Response) => resposta.status === 200 && ((await resposta.json()) as { escolaId?: string }).escolaId === ESCOLA_A,
+  }
+  const postContexto = {
+    // Rota que só aceita GET: a API responde 404 tipado. Chegar a ela prova que a instância atendeu.
+    nome: 'POST /v1/sistema/contexto',
+    executar: (sinal: AbortSignal) =>
+      fetch(`${BORDA}/v1/sistema/contexto`, {
+        signal: sinal,
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tokenDaVez()}`, 'Content-Type': 'application/json' },
+        body: '{}',
+      }),
+    conferir: async (resposta: Response) => resposta.status === 404 && ((await resposta.json()) as { erro?: { codigo?: string } }).erro?.codigo === CodigoDeErro.NAO_ENCONTRADO,
+  }
+  const getSaude = {
+    nome: 'GET /saude',
+    executar: (sinal: AbortSignal) => fetch(`${BORDA}/saude`, { signal: sinal }),
+    conferir: async (resposta: Response) => resposta.status === 200,
+  }
+  const pedidos = [...Array.from({ length: 11 }, (_, indice) => (indice % 2 === 0 ? getContexto : postContexto)), getSaude]
   const trabalhadores = Array.from({ length: paralelos }, async (_, indice) => {
     let rodada = indice
     while (ativa) {
@@ -77,6 +86,7 @@ function rajada(token: string, { paralelos = 12, limitePorRequisicaoMs = 10_000 
         const pendurada = erro instanceof DOMException && erro.name === 'TimeoutError'
         resultados.push({ pedido: pedido.nome, status: pendurada ? 'pendurada' : 'falha-de-rede', esperado: false })
       }
+      await esperar(pausaMs)
     }
   })
   return {
@@ -143,9 +153,12 @@ async function subirBordaDescartavel(servidorDoUpstream: string): Promise<BordaD
 
 describe('borda com duas APIs e dois realtimes', () => {
   let token: string
+  /** Alunos da escola A para as rajadas: cada um fica bem abaixo do próprio limite por minuto. */
+  let turma: string[]
 
   beforeAll(async () => {
     token = await tokenDe(ESCOLA_A, USUARIO)
+    turma = await Promise.all(Array.from({ length: 200 }, () => tokenDe(ESCOLA_A, randomUUID())))
     await composeAssincronoOuFalha('up', '--detach', '--build', '--wait', '--remove-orphans', 'borda')
   }, 900_000)
 
@@ -156,7 +169,7 @@ describe('borda com duas APIs e dois realtimes', () => {
 
   describe('troca de instância da API', () => {
     it('`docker compose restart api-1` no meio de uma rajada contínua dá zero 502 e zero erro cru', async () => {
-      const carga = rajada(token)
+      const carga = rajada(turma)
       await esperar(1_000)
       await composeAssincronoOuFalha('restart', 'api-1')
       await aguardarSaudavel('api-1')
@@ -198,7 +211,7 @@ describe('borda com duas APIs e dois realtimes', () => {
       try {
         // Duas rodadas da sonda com timeout de 3 s, com folga.
         await esperar(10_000)
-        const carga = rajada(token, { paralelos: 6, limitePorRequisicaoMs: 1_500 })
+        const carga = rajada(turma, { paralelos: 6, limitePorRequisicaoMs: 1_500 })
         await esperar(3_000)
         const resultados = await carga.parar()
 
@@ -261,7 +274,7 @@ describe('borda com duas APIs e dois realtimes', () => {
       expect(parados).toEqual(expect.arrayContaining(['realtime-1', 'realtime-2', 'redis-fila', 'redis-cache', 'storage']))
       await composeAssincronoOuFalha('stop', ...parados)
 
-      const carga = rajada(token, { paralelos: 6 })
+      const carga = rajada(turma, { paralelos: 6 })
       await esperar(3_000)
       const resultados = await carga.parar()
 

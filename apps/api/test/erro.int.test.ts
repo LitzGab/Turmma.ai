@@ -1,5 +1,5 @@
 import 'reflect-metadata'
-import { contextoAtual, criarLogger, ErroDeDominio, RotaAnonima, type PoolBanco } from '@educa/nucleo'
+import { contextoAtual, criarLogger, ErroDeDominio, RotaAnonima, TENTE_DE_NOVO_PADRAO_SEGUNDOS, type PoolBanco } from '@educa/nucleo'
 import { CodigoDeErro, MENSAGENS_DE_ERRO } from '@educa/shared'
 import {
   Body,
@@ -154,10 +154,13 @@ describe('erro tipado e log sem dado pessoal', () => {
     const limite = await request(app.getHttpServer()).get('/teste/dominio/limite')
     expect(limite.status).toBe(429)
     esperarEnvelopeSemVazamento(limite.body, CodigoDeErro.LIMITE_EXCEDIDO)
+    // Quem lançou não disse quanto esperar: sai o padrão, e o cliente não repete na hora.
+    expect(limite.headers['retry-after']).toBe(String(TENTE_DE_NOVO_PADRAO_SEGUNDOS))
 
     const conflito = await request(app.getHttpServer()).get('/teste/dominio/conflito-422')
     expect(conflito.status).toBe(422)
     esperarEnvelopeSemVazamento(conflito.body, CodigoDeErro.CONFLITO)
+    expect(conflito.headers['retry-after']).toBeUndefined()
   })
 
   it('violação de unicidade com "Enzo Martins" no detail vira CONFLITO 409, sem o valor na resposta nem no log', async () => {
@@ -184,11 +187,12 @@ describe('erro tipado e log sem dado pessoal', () => {
     expect(bruto).not.toContain('duplicate key')
   })
 
-  it('consulta cortada pelo statement_timeout vira TEMPO_ESGOTADO 503', async () => {
+  it('consulta cortada pelo statement_timeout vira TEMPO_ESGOTADO 503, com Retry-After', async () => {
     const resposta = await request(app.getHttpServer()).get('/teste/lenta')
 
     expect(resposta.status).toBe(503)
     esperarEnvelopeSemVazamento(resposta.body, CodigoDeErro.TEMPO_ESGOTADO)
+    expect(resposta.headers['retry-after']).toBe(String(TENTE_DE_NOVO_PADRAO_SEGUNDOS))
     expect(registros().find((registro) => registro.evento === 'http.erro')).toMatchObject({ erro: { sqlstate: '57014' } })
   })
 

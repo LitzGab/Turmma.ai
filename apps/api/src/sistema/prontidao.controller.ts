@@ -1,4 +1,4 @@
-import { Drenagem, RotaAnonima } from '@educa/nucleo'
+import { Drenagem, RotaAnonima, SemLimite } from '@educa/nucleo'
 import type { RespostaProntidao } from '@educa/shared'
 import { Controller, Get, Header, Res } from '@nestjs/common'
 
@@ -9,9 +9,11 @@ interface RespostaHttp {
 /**
  * Sonda da borda. Responde só o estado da própria instância, sem consultar banco nem Redis: se
  * consultasse, um Postgres lento tiraria as duas instâncias do balanceamento ao mesmo tempo, e o
- * Caddy trocaria o 503 tipado da API por um 502 dele. A borda não expõe esta rota ao cliente.
+ * Caddy trocaria o 503 tipado da API por um 502 dele. A borda não expõe esta rota ao cliente, e
+ * ela fica fora do rate limit: um 429 na sonda tiraria as duas instâncias do balanceamento.
  */
 @RotaAnonima()
+@SemLimite()
 @Controller('prontidao')
 export class ProntidaoController {
   constructor(private readonly drenagem: Drenagem) {}

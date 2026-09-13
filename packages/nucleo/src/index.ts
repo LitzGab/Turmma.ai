@@ -19,16 +19,12 @@ export {
 export type { Ambiente, ConfiguracaoIdentidade } from './config/validar-config.js'
 export { bancoResponde, criarPool, ehErroDeConexao } from './db/pool.js'
 export type { ConfiguracaoBanco, PoolBanco } from './db/pool.js'
-export { ErroDeDominio, STATUS_HTTP_DO_CODIGO } from './erro/erro-de-dominio.js'
+export { ErroDeDominio, STATUS_HTTP_DO_CODIGO, TENTE_DE_NOVO_PADRAO_SEGUNDOS } from './erro/erro-de-dominio.js'
 export { FiltroGlobalDeErro } from './erro/filtro-global.js'
 export { mapearErroPostgres } from './erro/mapear-erro-postgres.js'
 export { ehErroDoPostgres, resumirErro } from './erro/resumir-erro.js'
 export type { ErroDoPostgres, ResumoDeErro } from './erro/resumir-erro.js'
-export {
-  GuardaDeAutenticacao,
-  identidadeDaRequisicao,
-  RotaAnonima,
-} from './identidade/guarda-autenticacao.js'
+export { GuardaDeAutenticacao, identidadeDaRequisicao } from './identidade/guarda-autenticacao.js'
 export { ALGORITMO_TOKEN, TIPO_TOKEN, VALIDADE_MAXIMA_TOKEN_SEGUNDOS, verificarToken } from './identidade/verificar-token.js'
 export type { Identidade } from './identidade/verificar-token.js'
 export { CAMINHOS_REDACT, CHAVES_PESSOAIS, criarLogger, registrarErrosDoProcesso, TEXTO_REMOVIDO } from './log/logger.js'
@@ -36,3 +32,18 @@ export { LoggerDoNest, TEXTO_MENSAGEM_OMITIDA } from './log/logger-do-nest.js'
 export type { LoggerBase, OpcoesDoLogger } from './log/logger.js'
 export { Drenagem, lerConfiguracaoDrenagem, OCIOSIDADE_HTTP_MS } from './instancia/drenagem.js'
 export type { ConfiguracaoDrenagem, RespostaDeProntidao } from './instancia/drenagem.js'
+export {
+  IP_DESCONHECIDO,
+  ipDoCliente,
+  JANELA_LIMITE_SEGUNDOS,
+  limiteDoSeguro,
+  PREFIXO_LIMITE_ESCOLA,
+  PREFIXO_LIMITE_IP,
+  PREFIXO_LIMITE_USUARIO,
+} from './limite/chaves.js'
+export { GuardaDeLimite } from './limite/guarda-limite.js'
+export { LimitadorDeRequisicoes, lerConfiguracaoLimite } from './limite/limitador.js'
+export type { ConfiguracaoLimite, ResultadoDoLimite } from './limite/limitador.js'
+export { ProxiesConfiaveis } from './limite/proxies-confiaveis.js'
+export { RotaAnonima, SemLimite } from './limite/rota-anonima.decorator.js'
+export { criarClienteRedisDaApi, TIMEOUT_COMANDO_REDIS_API_MS } from './redis/clientes.js'

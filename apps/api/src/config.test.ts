@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EMISSOR_TOKEN_SINTETICO, MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO } from '@educa/nucleo'
+import { lerAmbienteExemplo } from '../../../tools/ci/compose.ts'
 import { ConfiguracaoInvalida, lerConfiguracao } from './config.js'
 
 const ambienteValido = {
@@ -13,6 +14,12 @@ const ambienteValido = {
   IDENTIDADE_CHAVE_ASSINATURA: 'chave_sintetica_de_teste_com_32_caracteres',
   DRENAGEM_ESPERA_BORDA_MS: '4000',
   DRENAGEM_PRAZO_MS: '10000',
+  REDIS_CACHE_URL: 'redis://redis-cache:6379',
+  LIMITE_REQ_USUARIO_MIN: '120',
+  LIMITE_REQ_ESCOLA_MIN: '30000',
+  LIMITE_REQ_IP_ANONIMO_MIN: '3000',
+  LIMITE_INSTANCIAS_API: '2',
+  LIMITE_PROXIES_CONFIAVEIS: 'borda',
 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
@@ -41,6 +48,14 @@ describe('lerConfiguracao', () => {
         emissoresAceitos: [EMISSOR_TOKEN_SINTETICO],
       },
       drenagem: { esperaDaBordaMs: 4000, prazoMs: 10000 },
+      limite: {
+        redisCacheUrl: 'redis://redis-cache:6379',
+        porUsuarioMin: 120,
+        porEscolaMin: 30000,
+        porIpAnonimoMin: 3000,
+        instancias: 2,
+        proxiesConfiaveis: ['borda'],
+      },
     })
   })
 
@@ -70,6 +85,29 @@ describe('lerConfiguracao', () => {
   it('não sobe com a espera da borda igual ou maior que o prazo da drenagem: nenhuma requisição terminaria', () => {
     expect(erroDe({ ...ambienteValido, DRENAGEM_ESPERA_BORDA_MS: '10000' }).variaveis).toEqual(['DRENAGEM_ESPERA_BORDA_MS'])
     expect(erroDe({ ...ambienteValido, DRENAGEM_ESPERA_BORDA_MS: '12000' }).variaveis).toEqual(['DRENAGEM_ESPERA_BORDA_MS'])
+  })
+
+  it.each([
+    ['LIMITE_REQ_USUARIO_MIN', '0'],
+    ['LIMITE_REQ_ESCOLA_MIN', '-1'],
+    ['LIMITE_REQ_IP_ANONIMO_MIN', '1.5'],
+    ['LIMITE_INSTANCIAS_API', 'duas'],
+    ['LIMITE_PROXIES_CONFIAVEIS', ' , '],
+    ['LIMITE_PROXIES_CONFIAVEIS', 'http://borda:8080'],
+    ['REDIS_CACHE_URL', 'redis-cache:6379'],
+  ])('não sobe com %s=%s: limite sem valor válido não vira "sem limite"', (variavel, valor) => {
+    expect(erroDe({ ...ambienteValido, [variavel]: valor }).variaveis).toEqual([variavel])
+  })
+
+  it('.env.example traz os padrões da Tech Spec: 120/min por usuário, 30.000/min por escola, 3.000/min por IP anônimo, duas instâncias e a borda', () => {
+    const exemplo = lerAmbienteExemplo()
+    const { limite } = lerConfiguracao({ ...ambienteValido, ...exemplo, API_PORTA: '3000', BANCO_URL: ambienteValido.BANCO_URL, REDIS_CACHE_URL: ambienteValido.REDIS_CACHE_URL })
+    expect(limite).toMatchObject({ porUsuarioMin: 120, porEscolaMin: 30_000, porIpAnonimoMin: 3_000, instancias: 2, proxiesConfiaveis: ['borda'] })
+  })
+
+  it('aceita mais de um proxy confiável, por nome ou IP, separados por vírgula', () => {
+    const config = lerConfiguracao({ ...ambienteValido, LIMITE_PROXIES_CONFIAVEIS: 'borda, 10.0.0.2,fd00::1' })
+    expect(config.limite.proxiesConfiaveis).toEqual(['borda', '10.0.0.2', 'fd00::1'])
   })
 
   it('em produção com a flag desligada, sobe sem aceitar nenhum emissor sintético', () => {

@@ -2,10 +2,12 @@ import {
   ConfiguracaoInvalida,
   lerConfiguracaoDrenagem,
   lerConfiguracaoIdentidade,
+  lerConfiguracaoLimite,
   validarAmbiente,
   type ConfiguracaoBanco,
   type ConfiguracaoDrenagem,
   type ConfiguracaoIdentidade,
+  type ConfiguracaoLimite,
 } from '@educa/nucleo'
 import { z } from 'zod'
 
@@ -26,6 +28,7 @@ export interface ConfiguracaoApi {
   banco: ConfiguracaoBanco
   identidade: ConfiguracaoIdentidade
   drenagem: ConfiguracaoDrenagem
+  limite: ConfiguracaoLimite
 }
 
 /** Executa a leitura e devolve o erro de configuração em vez de lançar, para somar os problemas. */
@@ -46,8 +49,9 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const api = tentar(() => validarAmbiente(esquemaAmbiente, ambiente))
   const identidade = tentar(() => lerConfiguracaoIdentidade(ambiente))
   const drenagem = tentar(() => lerConfiguracaoDrenagem(ambiente))
-  if ('erro' in api || 'erro' in identidade || 'erro' in drenagem) {
-    const erros = [api, identidade, drenagem].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
+  const limite = tentar(() => lerConfiguracaoLimite(ambiente))
+  if ('erro' in api || 'erro' in identidade || 'erro' in drenagem || 'erro' in limite) {
+    const erros = [api, identidade, drenagem, limite].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
     throw new ConfiguracaoInvalida(
       erros.flatMap((erro) => erro.variaveis).sort(),
       erros.flatMap((erro) => erro.motivos),
@@ -64,5 +68,6 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     },
     identidade: identidade.valor,
     drenagem: drenagem.valor,
+    limite: limite.valor,
   }
 }

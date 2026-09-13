@@ -1,21 +1,12 @@
 import { CodigoDeErro } from '@educa/shared'
-import { SetMetadata, type CanActivate, type CustomDecorator, type ExecutionContext } from '@nestjs/common'
+import type { CanActivate, ExecutionContext } from '@nestjs/common'
 import type { Reflector } from '@nestjs/core'
 import type { IncomingMessage } from 'node:http'
 import type { ConfiguracaoIdentidade } from '../config/validar-config.js'
 import { contextoAtual, definirIdentidadeNoContexto } from '../contexto/contexto.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
+import { METADADO_ROTA_ANONIMA } from '../limite/rota-anonima.decorator.js'
 import { extrairTokenBearer, verificarToken, type Identidade } from './verificar-token.js'
-
-export const METADADO_ROTA_ANONIMA = 'educa:rota-anonima'
-
-/**
- * Marca a rota, ou o controller inteiro, como acessível sem token. Toda outra rota exige token:
- * endpoint novo que esquece a marcação nasce fechado, não aberto.
- */
-export function RotaAnonima(): CustomDecorator<string> {
-  return SetMetadata(METADADO_ROTA_ANONIMA, true)
-}
 
 /**
  * Guarda global da API. Verifica o token e grava `escolaId` e `usuarioId` no contexto da

@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 5 de 15 concluídas
+**Status:** 6 de 15 concluídas
 
 ## Lista
 
@@ -36,10 +36,10 @@
   - [x] 5.3 `apps/realtime` com adaptador de streams do Redis e sala por escola
   - [x] 5.4 Testes: restart na rajada sem 502, mensagem entre instâncias, sala isolada por escola
 
-- [ ] **6.0 — Rate limit por usuário e por escola, com seguro em memória**
-  - [ ] 6.1 Guard com chaves de usuário e escola, e de IP só em `@RotaAnonima`
-  - [ ] 6.2 Seguro em memória, clientes Redis sem fila offline e 429 com `Retry-After`
-  - [ ] 6.3 Testes: 400 usuários num IP, limite somado nas duas APIs, Redis de cache fora, isolamento
+- [x] **6.0 — Rate limit por usuário e por escola, com seguro em memória**
+  - [x] 6.1 Guard com chaves de usuário e escola, e de IP só em `@RotaAnonima`
+  - [x] 6.2 Seguro em memória, clientes Redis sem fila offline e 429 com `Retry-After`
+  - [x] 6.3 Testes: 400 usuários num IP, limite somado nas duas APIs, Redis de cache fora, isolamento
 
 - [ ] **7.0 — Job aceito é executado uma única vez e dá para consultar**
   - [ ] 7.1 `job_registro`, serviço `migrar` e `Enfileirador` na transação

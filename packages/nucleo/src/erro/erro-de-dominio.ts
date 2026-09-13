@@ -13,9 +13,15 @@ export const STATUS_HTTP_DO_CODIGO: Readonly<Record<CodigoDeErro, number>> = {
 }
 
 /**
- * Erro esperado do domínio. Carrega só o código e o status: não existe construtor com texto
- * livre, então um erro de domínio não tem onde levar nome, matrícula ou valor de campo para a
- * resposta ou para o log.
+ * Espera sugerida ao cliente (`Retry-After`) quando o erro diz "tente de novo" e quem lançou não
+ * sabe quanto: 503 de indisponibilidade ou de tempo esgotado. Igual à da borda (`infra/Caddyfile`).
+ */
+export const TENTE_DE_NOVO_PADRAO_SEGUNDOS = 5
+
+/**
+ * Erro esperado do domínio. Carrega só o código, o status e, quando o cliente deve esperar, em
+ * quantos segundos tentar de novo: não existe construtor com texto livre, então um erro de
+ * domínio não tem onde levar nome, matrícula ou valor de campo para a resposta ou para o log.
  */
 export class ErroDeDominio extends Error {
   readonly status: number
@@ -23,6 +29,7 @@ export class ErroDeDominio extends Error {
   constructor(
     readonly codigo: CodigoDeErro,
     status?: number,
+    readonly tenteDeNovoEmSegundos?: number,
   ) {
     super(codigo)
     this.name = 'ErroDeDominio'

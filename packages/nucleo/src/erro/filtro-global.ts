@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import type { ServerResponse } from 'node:http'
 import { contextoAtual } from '../contexto/contexto.js'
 import type { LoggerBase } from '../log/logger.js'
-import { ErroDeDominio } from './erro-de-dominio.js'
+import { ErroDeDominio, TENTE_DE_NOVO_PADRAO_SEGUNDOS } from './erro-de-dominio.js'
 import { mapearErroPostgres } from './mapear-erro-postgres.js'
 import { resumirErro } from './resumir-erro.js'
 
@@ -20,6 +20,15 @@ function codigoDoStatusHttp(status: number): CodigoDeErro {
   if (status === 503) return CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO
   if (status >= 400 && status < 500) return CodigoDeErro.ENTRADA_INVALIDA
   return CodigoDeErro.ERRO_INTERNO
+}
+
+/**
+ * `Retry-After` de toda resposta que pede para esperar: 429 com o tempo do limite, 503 com o que
+ * quem lançou informou ou o padrão. Sem ele, o cliente repete na hora e piora a manhã de segunda.
+ */
+function segundosDoRetryAfter(erro: ErroDeDominio): number | undefined {
+  if (erro.status !== 429 && erro.status !== 503) return undefined
+  return erro.tenteDeNovoEmSegundos ?? TENTE_DE_NOVO_PADRAO_SEGUNDOS
 }
 
 function traduzir(excecao: unknown): ErroDeDominio {
@@ -66,6 +75,8 @@ export class FiltroGlobalDeErro implements ExceptionFilter {
     resposta.statusCode = erro.status
     resposta.setHeader('Content-Type', 'application/json; charset=utf-8')
     resposta.setHeader('Cache-Control', 'no-store')
+    const retryAfter = segundosDoRetryAfter(erro)
+    if (retryAfter !== undefined) resposta.setHeader('Retry-After', String(retryAfter))
     resposta.end(JSON.stringify(corpo))
   }
 }
