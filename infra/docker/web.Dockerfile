@@ -8,8 +8,10 @@ COPY --chown=node:node package.json package-lock.json ./
 COPY --chown=node:node packages/shared/package.json packages/shared/
 COPY --chown=node:node packages/nucleo/package.json packages/nucleo/
 COPY --chown=node:node apps/api/package.json apps/api/
+COPY --chown=node:node apps/despachante/package.json apps/despachante/
 COPY --chown=node:node apps/realtime/package.json apps/realtime/
 COPY --chown=node:node apps/web/package.json apps/web/
+COPY --chown=node:node apps/worker/package.json apps/worker/
 RUN npm ci --ignore-scripts && npm cache clean --force
 COPY --chown=node:node tsconfig.base.json ./
 COPY --chown=node:node packages/shared packages/shared

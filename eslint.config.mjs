@@ -32,7 +32,7 @@ export default tseslint.config(
   },
   {
     // Nest injeta dependência pelo tipo do construtor: o import precisa ser de valor.
-    files: ['apps/api/**/*.ts', 'apps/realtime/**/*.ts'],
+    files: ['apps/api/**/*.ts', 'apps/realtime/**/*.ts', 'apps/despachante/**/*.ts', 'apps/worker/**/*.ts'],
     rules: {
       '@typescript-eslint/consistent-type-imports': 'off',
       '@typescript-eslint/no-extraneous-class': 'off',

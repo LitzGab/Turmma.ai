@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 6 de 15 concluídas
+**Status:** 7 de 15 concluídas
 
 ## Lista
 
@@ -41,12 +41,12 @@
   - [x] 6.2 Seguro em memória, clientes Redis sem fila offline e 429 com `Retry-After`
   - [x] 6.3 Testes: 400 usuários num IP, limite somado nas duas APIs, Redis de cache fora, isolamento
 
-- [ ] **7.0 — Job aceito é executado uma única vez e dá para consultar**
-  - [ ] 7.1 `job_registro`, serviço `migrar` e `Enfileirador` na transação
-  - [ ] 7.2 `apps/despachante` com seleção, reserva, publicação e troca de estado condicional
-  - [ ] 7.3 `apps/worker` com ciclo de estado, retentativa, stalled e desligamento gracioso
-  - [ ] 7.4 `POST` e `GET /v1/sistema/jobs-sinteticos`, com escopo de escola
-  - [ ] 7.5 Testes: dois despachantes em paralelo, `kill -9` no worker, falha permanente, isolamento, `requisicaoId` na trilha
+- [x] **7.0 — Job aceito é executado uma única vez e dá para consultar**
+  - [x] 7.1 `job_registro`, serviço `migrar` e `Enfileirador` na transação
+  - [x] 7.2 `apps/despachante` com seleção, reserva, publicação e troca de estado condicional
+  - [x] 7.3 `apps/worker` com ciclo de estado, retentativa, stalled e desligamento gracioso
+  - [x] 7.4 `POST` e `GET /v1/sistema/jobs-sinteticos`, com escopo de escola
+  - [x] 7.5 Testes: dois despachantes em paralelo, `kill -9` no worker, falha permanente, isolamento, `requisicaoId` na trilha
 
 - [ ] **8.0 — Job sobrevive à queda do Redis de fila**
   - [ ] 8.1 Publicação resiliente com o Redis fora

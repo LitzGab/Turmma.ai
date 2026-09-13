@@ -20,13 +20,16 @@ só tem valor sintético.
 
 ```bash
 npm ci
-docker compose up        # Postgres (pgvector), Redis de fila, Redis de cache, storage S3, borda, 2 APIs, 2 realtimes e web
+docker compose up        # Postgres (pgvector), Redis de fila, Redis de cache, storage S3, migrar, borda, 2 APIs, 2 realtimes, 2 despachantes, 2 workers e web
 ```
 
 A web fica em http://127.0.0.1:58080 e mostra o estado da API; a API responde pela borda
 (Caddy, `infra/Caddyfile`) em http://127.0.0.1:53000/saude, e o realtime em
 http://127.0.0.1:53000/socket.io/. A borda balanceia duas instâncias de cada, e
-`docker compose restart api-1` troca uma instância sem derrubar requisição. As portas publicadas escutam só no loopback e estão em
+`docker compose restart api-1` troca uma instância sem derrubar requisição. Antes das
+instâncias, o serviço `migrar` aplica as migrations (`packages/nucleo/drizzle`) e sai. Todo
+job nasce em `job_registro`, os dois despachantes o levam ao Redis de fila e os dois workers
+o executam; `POST /v1/sistema/jobs-sinteticos` (com token) cria um job de teste. As portas publicadas escutam só no loopback e estão em
 `.env.example`. Para mudar alguma na sua máquina, crie um `.env` na raiz: ele sobrepõe o
 exemplo no `docker compose up`, mas testes e esteira usam sempre o `.env.example`.
 
@@ -42,6 +45,7 @@ desenvolvimento.
 | `npm run test` | unidade e integração; a integração sobe Postgres, Redis e storage sozinha |
 | `npm run test:e2e` | sobe o compose de teste completo e roda o Playwright, deixando o ambiente de pé |
 | `npm run ci:verificar`, `ci:integracao`, `ci:e2e` | exatamente o que a esteira roda; derrubam o ambiente no fim |
+| `npm run db:gerar` | gera a migration a partir do schema Drizzle (`packages/nucleo/src/db/schema`); revise o SQL antes de versionar |
 | `npm run -s ops:token-sintetico -- --escola <uuid> [--usuario <uuid>] [--validade 1h]` | imprime um token sintético para chamar a API local (`Authorization: Bearer`); não emite com `AMBIENTE=producao` |
 
 A esteira (`.github/workflows/ci.yml`) roda em todo push no `main` e só chama os `ci:*`.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EMISSOR_TOKEN_SINTETICO, MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO } from '@educa/nucleo'
 import { lerAmbienteExemplo } from '../../../tools/ci/compose.ts'
-import { ConfiguracaoInvalida, lerConfiguracao } from './config.js'
+import { ConfiguracaoInvalida, lerConfiguracao, MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO } from './config.js'
 
 const ambienteValido = {
   API_PORTA: '3000',
@@ -20,6 +20,7 @@ const ambienteValido = {
   LIMITE_REQ_IP_ANONIMO_MIN: '3000',
   LIMITE_INSTANCIAS_API: '2',
   LIMITE_PROXIES_CONFIAVEIS: 'borda',
+  ROTAS_SINTETICAS: 'false',
 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
@@ -36,6 +37,7 @@ describe('lerConfiguracao', () => {
   it('converte o ambiente em configuração tipada', () => {
     expect(lerConfiguracao(ambienteValido)).toEqual({
       porta: 3000,
+      rotasSinteticas: false,
       banco: {
         url: ambienteValido.BANCO_URL,
         maximoConexoes: 10,
@@ -113,5 +115,15 @@ describe('lerConfiguracao', () => {
   it('em produção com a flag desligada, sobe sem aceitar nenhum emissor sintético', () => {
     const config = lerConfiguracao({ ...ambienteValido, AMBIENTE: 'producao', ACEITAR_TOKEN_SINTETICO: 'false' })
     expect(config.identidade.emissoresAceitos).toEqual([])
+  })
+
+  it('ROTAS_SINTETICAS liga a rota de teste só quando é exatamente true, e não sobe ligada em produção', () => {
+    expect(lerConfiguracao({ ...ambienteValido, ROTAS_SINTETICAS: 'true' }).rotasSinteticas).toBe(true)
+    for (const valor of ['1', 'TRUE', '', 'sim']) {
+      expect(erroDe({ ...ambienteValido, ROTAS_SINTETICAS: valor }).variaveis).toEqual(['ROTAS_SINTETICAS'])
+    }
+    const emProducao = erroDe({ ...ambienteValido, AMBIENTE: 'producao', ACEITAR_TOKEN_SINTETICO: 'false', ROTAS_SINTETICAS: 'true' })
+    expect(emProducao.variaveis).toEqual(['ROTAS_SINTETICAS'])
+    expect(emProducao.message).toContain(MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO)
   })
 })

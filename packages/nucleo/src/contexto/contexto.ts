@@ -14,6 +14,12 @@ export interface ContextoDaRequisicao {
   readonly requisicaoId: string
   readonly escolaId?: string
   readonly usuarioId?: string
+  /**
+   * Rotina nossa, sem escola: job `sistema.*` no worker ou no agendador. Nunca nasce de requisição
+   * HTTP (o middleware não o preenche), então um contexto sem escola de uma rota anônima não
+   * alcança nem os jobs de sistema.
+   */
+  readonly rotinaDoSistema?: true
 }
 
 type ContextoGravavel = { -readonly [Campo in keyof ContextoDaRequisicao]: ContextoDaRequisicao[Campo] }

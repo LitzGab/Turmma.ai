@@ -45,7 +45,10 @@ describe('ambiente do compose', () => {
       services: Record<string, { ports?: PortaPublicada[] }>
     }
     const portas = Object.values(configuracao.services).flatMap((servico) => servico.ports ?? [])
-    expect(portas.length).toBe(Object.keys(configuracao.services).length)
+    // Todo serviço com HTTP publica uma porta; migrar, despachante e worker não atendem ninguém e não publicam.
+    const semPorta = ['migrar', 'despachante-1', 'despachante-2', 'worker-1', 'worker-2']
+    expect(portas.length).toBe(Object.keys(configuracao.services).length - semPorta.length)
+    for (const nome of semPorta) expect(configuracao.services[nome]?.ports, nome).toBeUndefined()
     for (const porta of portas) {
       expect(porta.host_ip).toBe('127.0.0.1')
     }
@@ -65,12 +68,13 @@ describe('ambiente do compose', () => {
     const configuracao = JSON.parse(composeOuFalha('config', '--format', 'json')) as {
       services: Record<string, { environment?: Record<string, string | null> }>
     }
-    const pools = Object.values(configuracao.services).flatMap((servico) => {
+    const comPool = Object.entries(configuracao.services).flatMap(([nome, servico]) => {
       const maximo = servico.environment?.['BANCO_POOL_MAXIMO']
-      return maximo === undefined || maximo === null ? [] : [Number(maximo)]
+      return maximo === undefined || maximo === null ? [] : [{ nome, maximo: Number(maximo) }]
     })
-    // As duas APIs, no mínimo. Worker e despachante entram na soma quando existirem.
-    expect(pools.length).toBeGreaterThanOrEqual(2)
+    // Todo processo com pool entra na soma: as duas APIs, os dois despachantes (com o LISTEN dentro do pool) e os dois workers.
+    expect(comPool.map(({ nome }) => nome).sort()).toEqual(['api-1', 'api-2', 'despachante-1', 'despachante-2', 'worker-1', 'worker-2'])
+    const pools = comPool.map(({ maximo }) => maximo)
     const consultar = (sql: string) =>
       Number(
         composeOuFalha(
@@ -79,7 +83,7 @@ describe('ambiente do compose', () => {
         ).trim(),
       )
     const disponiveis = consultar('show max_connections') - consultar('show superuser_reserved_connections')
-    // Migração e psql de operação abrem conexão fora dos pools.
+    // O serviço migrar e o psql de operação abrem conexão fora dos pools.
     const FOLGA_PARA_OPERACAO = 10
     expect(pools.reduce((soma, maximo) => soma + maximo, 0) + FOLGA_PARA_OPERACAO).toBeLessThanOrEqual(disponiveis)
   })

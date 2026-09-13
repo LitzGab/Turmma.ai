@@ -1,0 +1,43 @@
+import type { ExtractTablesWithRelations } from 'drizzle-orm'
+import { drizzle, type NodePgDatabase, type NodePgQueryResultHKT } from 'drizzle-orm/node-postgres'
+import type { PgTransaction } from 'drizzle-orm/pg-core'
+import { z } from 'zod'
+import { validarAmbiente } from '../config/validar-config.js'
+import type { ConfiguracaoBanco, PoolBanco } from './pool.js'
+import { jobRegistro } from './schema/job-registro.js'
+
+export const schema = { jobRegistro }
+export type Schema = typeof schema
+
+export type Banco = NodePgDatabase<Schema>
+
+/** A transação aberta por quem chama. Quem recebe isto grava junto, e desfaz junto. */
+export type TransacaoBanco = PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>>
+
+/** Drizzle sobre o pool do processo, com os nomes do banco em snake_case (Tech Spec, seção 3). */
+export function criarBanco(pool: PoolBanco): Banco {
+  return drizzle({ client: pool, schema, casing: 'snake_case' })
+}
+
+const inteiroPositivo = z.coerce.number().int().positive()
+
+const esquemaAmbienteBanco = z.object({
+  BANCO_URL: z.string().regex(/^postgres(ql)?:\/\/[^/]+\/[^/]+$/),
+  BANCO_POOL_MAXIMO: inteiroPositivo,
+  BANCO_TIMEOUT_CONEXAO_MS: inteiroPositivo,
+  BANCO_TIMEOUT_CONSULTA_MS: inteiroPositivo,
+})
+
+/**
+ * Banco de todo processo que tem pool: API, despachante e worker. Cada um lê o próprio
+ * `BANCO_POOL_MAXIMO`, e todos têm `statement_timeout`: nenhum processo fica com consulta sem prazo.
+ */
+export function lerConfiguracaoBanco(ambiente: Record<string, string | undefined>): ConfiguracaoBanco {
+  const valores = validarAmbiente(esquemaAmbienteBanco, ambiente)
+  return {
+    url: valores.BANCO_URL,
+    maximoConexoes: valores.BANCO_POOL_MAXIMO,
+    timeoutConexaoMs: valores.BANCO_TIMEOUT_CONEXAO_MS,
+    timeoutConsultaMs: valores.BANCO_TIMEOUT_CONSULTA_MS,
+  }
+}

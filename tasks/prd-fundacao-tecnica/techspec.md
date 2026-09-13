@@ -33,7 +33,7 @@ Drizzle `casing: 'snake_case'`, UUIDv7.
 ```
 job_registro     id pk, escola_id?, fila, prioridade smallint, tipo, dados jsonb (só ids),
                  nao_urgente bool, estado (aguardando|reservado|publicado|ativo|concluido|falhou),
-                 reservado_ate?, criado_em, iniciado_em?, concluido_em?, codigo_falha?
+                 requisicao_id?, reservado_ate?, criado_em, iniciado_em?, concluido_em?, codigo_falha?
   parcial (fila, escola_id, criado_em) where estado not in ('concluido','falhou')
   parcial (concluido_em) where estado in ('concluido','falhou')
   check escola_id is not null or tipo like 'sistema.%'
@@ -44,7 +44,9 @@ uso_infra_diario escola_id, dia (America/Sao_Paulo), requisicoes, jobs, bytes_st
                  pk (escola_id, dia)
 ```
 
-Não há FK para `escola`; o F1 a adiciona expandindo. O serviço `migrar` roda antes das
+`requisicao_id` (acrescentado na 7.0) é o da requisição que pediu o job: é por ele que o RF9
+segue a trilha da API ao despachante e ao worker. Não há FK para `escola`; o F1 a adiciona
+expandindo. O serviço `migrar` roda antes das
 instâncias, só expande, e usa `lock_timeout='5s'` com 3 tentativas.
 
 ## 4. API

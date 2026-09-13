@@ -3,6 +3,7 @@ import pg from 'pg'
 import { describe, expect, it } from 'vitest'
 import { ErroDeDominio } from './erro-de-dominio.js'
 import { mapearErroPostgres } from './mapear-erro-postgres.js'
+import { resumirErro } from './resumir-erro.js'
 
 function erroDoPostgres(code: string, campos: Record<string, string> = {}): pg.DatabaseError {
   const erro = new pg.DatabaseError('mensagem do servidor com Enzo Martins', 0, 'error')
@@ -34,5 +35,14 @@ describe('mapearErroPostgres', () => {
     expect(mapearErroPostgres(new Error('qualquer'))).toBeUndefined()
     expect(mapearErroPostgres(Object.assign(new Error('write EPIPE'), { code: 'EPIPE' }))).toBeUndefined()
     expect(mapearErroPostgres('23505')).toBeUndefined()
+  })
+
+  it('reconhece o erro do Postgres embrulhado pelo Drizzle, sem levar a consulta nem os parâmetros', async () => {
+    const { DrizzleQueryError } = await import('drizzle-orm/errors')
+    const embrulhado = new DrizzleQueryError('insert into aluno (nome) values ($1)', ['Enzo Martins'], erroDoPostgres('57014'))
+    const mapeado = mapearErroPostgres(embrulhado)
+    expect(mapeado).toMatchObject({ codigo: CodigoDeErro.TEMPO_ESGOTADO, status: 503 })
+    expect(resumirErro(embrulhado)).toEqual({ tipo: 'ErroDoPostgres', sqlstate: '57014' })
+    expect(JSON.stringify(resumirErro(embrulhado))).not.toContain('Enzo')
   })
 })

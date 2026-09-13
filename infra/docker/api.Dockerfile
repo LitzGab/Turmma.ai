@@ -5,8 +5,10 @@ COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/nucleo/package.json packages/nucleo/
 COPY apps/api/package.json apps/api/
+COPY apps/despachante/package.json apps/despachante/
 COPY apps/realtime/package.json apps/realtime/
 COPY apps/web/package.json apps/web/
+COPY apps/worker/package.json apps/worker/
 RUN npm ci --ignore-scripts
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
@@ -21,11 +23,15 @@ COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/nucleo/package.json packages/nucleo/
 COPY apps/api/package.json apps/api/
+COPY apps/despachante/package.json apps/despachante/
 COPY apps/realtime/package.json apps/realtime/
 COPY apps/web/package.json apps/web/
+COPY apps/worker/package.json apps/worker/
 RUN npm ci --omit=dev --ignore-scripts --workspace @educa/api && npm cache clean --force
 COPY --from=construcao /repo/packages/shared/dist packages/shared/dist
 COPY --from=construcao /repo/packages/nucleo/dist packages/nucleo/dist
+# As migrations, para o serviço `migrar` (mesma imagem, outro comando).
+COPY packages/nucleo/drizzle packages/nucleo/drizzle
 COPY --from=construcao /repo/apps/api/dist apps/api/dist
 USER node
 WORKDIR /repo/apps/api

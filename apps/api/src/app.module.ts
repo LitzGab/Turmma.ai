@@ -12,7 +12,7 @@ export class AppModule {
   static com(config: ConfiguracaoApi): DynamicModule {
     return {
       module: AppModule,
-      imports: [BancoModule.com(config.banco), LimiteModule.com(config.limite), SistemaModule],
+      imports: [BancoModule.com(config.banco), LimiteModule.com(config.limite), SistemaModule.com({ rotasSinteticas: config.rotasSinteticas })],
       // A prontidão é da instância, e a drenagem fica no módulo raiz: o Nest encerra o módulo raiz
       // por último, e o prazo da drenagem só é desarmado depois de o pool do banco fechar.
       controllers: [ProntidaoController],

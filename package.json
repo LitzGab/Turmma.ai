@@ -10,7 +10,7 @@
     "node": ">=22.18.0 <23"
   },
   "scripts": {
-    "build": "npm run build -w @educa/shared && npm run build -w @educa/nucleo && npm run build -w @educa/api && npm run build -w @educa/realtime && npm run build -w @educa/web",
+    "build": "npm run build -w @educa/shared && npm run build -w @educa/nucleo && npm run build -w @educa/api && npm run build -w @educa/realtime && npm run build -w @educa/despachante && npm run build -w @educa/worker && npm run build -w @educa/web",
     "typecheck": "tsc -p tsconfig.json && tsc -p infra/tsconfig.json && npm run typecheck --workspaces --if-present",
     "lint": "eslint . --max-warnings=0 && node tools/guardas/lint.ts",
     "test": "vitest run",
@@ -20,13 +20,15 @@
     "ci:verificar": "node tools/ci/verificar.ts",
     "ci:integracao": "node tools/ci/integracao.ts",
     "ci:e2e": "node tools/ci/e2e.ts",
-    "ops:token-sintetico": "npm run -s build -w @educa/shared && npm run -s build -w @educa/nucleo && npm run -s build -w @educa/api && node --env-file=.env.example apps/api/dist/ops/token-sintetico.js"
+    "ops:token-sintetico": "npm run -s build -w @educa/shared && npm run -s build -w @educa/nucleo && npm run -s build -w @educa/api && node --env-file=.env.example apps/api/dist/ops/token-sintetico.js",
+    "db:gerar": "drizzle-kit generate --config packages/nucleo/drizzle.config.ts"
   },
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "4.8.1",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
     "@types/node": "22.20.2",
+    "drizzle-kit": "0.31.10",
     "eslint": "10.10.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.12.0",

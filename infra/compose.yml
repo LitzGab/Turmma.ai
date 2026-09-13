@@ -87,6 +87,24 @@ services:
       retries: 30
       start_period: 5s
 
+  # Aplica as migrations e sai. Roda antes de toda instância que usa o banco, só expande, e desiste do
+  # lock em 5 s, com 3 tentativas (packages/nucleo/src/db/migrar.ts). Mesma imagem da API.
+  migrar:
+    image: educa-api:local
+    build:
+      context: ..
+      dockerfile: infra/docker/api.Dockerfile
+    command: [node, dist/ops/migrar.js]
+    environment:
+      BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
+      BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
+      MIGRAR_TIMEOUT_CONSULTA_MS: ${MIGRAR_TIMEOUT_CONSULTA_MS:?defina MIGRAR_TIMEOUT_CONSULTA_MS}
+    # Uma conexão só, fora de pool: cabe na folga para operação do teste de max_connections.
+    restart: 'no'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # Duas APIs atrás da borda. Nenhuma guarda estado que a outra precise (regra 80, item 5), e a
   # soma dos pools das duas cabe no `max_connections` do Postgres (teste em tools/ci/compose.int.test.ts).
   api-1: &api
@@ -113,13 +131,14 @@ services:
       LIMITE_REQ_IP_ANONIMO_MIN: ${LIMITE_REQ_IP_ANONIMO_MIN:?defina LIMITE_REQ_IP_ANONIMO_MIN}
       LIMITE_INSTANCIAS_API: ${LIMITE_INSTANCIAS_API:?defina LIMITE_INSTANCIAS_API}
       LIMITE_PROXIES_CONFIAVEIS: ${LIMITE_PROXIES_CONFIAVEIS:?defina LIMITE_PROXIES_CONFIAVEIS}
+      ROTAS_SINTETICAS: ${ROTAS_SINTETICAS:?defina ROTAS_SINTETICAS}
     # Acima de DRENAGEM_PRAZO_MS: o Docker só manda SIGKILL depois de a drenagem ter tido o prazo inteiro.
     stop_grace_period: 15s
     ports:
       - 127.0.0.1:${API_1_PORTA_HOST:?defina API_1_PORTA_HOST}:3000
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrar:
+        condition: service_completed_successfully
     healthcheck:
       test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/saude').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
       interval: 2s
@@ -165,6 +184,68 @@ services:
     <<: *realtime
     ports:
       - 127.0.0.1:${REALTIME_2_PORTA_HOST:?defina REALTIME_2_PORTA_HOST}:3000
+
+  # Dois despachantes: levam o que está em job_registro ao Redis de fila. A reserva no banco
+  # (FOR UPDATE SKIP LOCKED) e o jobId igual ao id da linha evitam publicar ou executar em dobro.
+  despachante-1: &despachante
+    image: educa-despachante:local
+    build:
+      context: ..
+      dockerfile: infra/docker/despachante.Dockerfile
+    environment:
+      BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
+      # A conexão do LISTEN sai deste pool.
+      BANCO_POOL_MAXIMO: ${DESPACHANTE_BANCO_POOL_MAXIMO:?defina DESPACHANTE_BANCO_POOL_MAXIMO}
+      BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
+      BANCO_TIMEOUT_CONSULTA_MS: ${BANCO_TIMEOUT_CONSULTA_MS:?defina BANCO_TIMEOUT_CONSULTA_MS}
+      REDIS_FILA_URL: redis://redis-fila:6379
+    stop_grace_period: 15s
+    depends_on:
+      migrar:
+        condition: service_completed_successfully
+      redis-fila:
+        condition: service_healthy
+    healthcheck:
+      # Sem HTTP: o laço grava o batimento a cada rodada (packages/nucleo/src/instancia/batimento.ts).
+      test: [CMD, node, -e, "const fs=require('fs');try{process.exit(Date.now()-fs.statSync('/tmp/educa-batimento').mtimeMs<10000?0:1)}catch{process.exit(1)}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  despachante-2:
+    <<: *despachante
+
+  # Dois workers. No SIGTERM, worker.close() espera os jobs em andamento por até 30 s; morto no meio
+  # (kill -9), o lock do job vence e a outra réplica o retoma pelo stalled do BullMQ.
+  worker-1: &worker
+    image: educa-worker:local
+    build:
+      context: ..
+      dockerfile: infra/docker/worker.Dockerfile
+    environment:
+      BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
+      BANCO_POOL_MAXIMO: ${WORKER_BANCO_POOL_MAXIMO:?defina WORKER_BANCO_POOL_MAXIMO}
+      BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
+      BANCO_TIMEOUT_CONSULTA_MS: ${BANCO_TIMEOUT_CONSULTA_MS:?defina BANCO_TIMEOUT_CONSULTA_MS}
+      REDIS_FILA_URL: redis://redis-fila:6379
+      WORKER_CONCORRENCIA: ${WORKER_CONCORRENCIA:?defina WORKER_CONCORRENCIA}
+    # Acima dos 30 s de graça do worker.close(): o Docker só manda SIGKILL depois dela.
+    stop_grace_period: 35s
+    depends_on:
+      migrar:
+        condition: service_completed_successfully
+      redis-fila:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "const fs=require('fs');try{process.exit(Date.now()-fs.statSync('/tmp/educa-batimento').mtimeMs<10000?0:1)}catch{process.exit(1)}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  worker-2:
+    <<: *worker
 
   # Borda local (infra/Caddyfile): balanceia as duas APIs e os dois realtimes, sem log de acesso.
   borda:

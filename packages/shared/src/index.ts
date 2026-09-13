@@ -5,6 +5,15 @@ export type { RespostaSaude } from './sistema/saude.js'
 export { esquemaRespostaContexto } from './sistema/contexto.js'
 export type { RespostaContexto } from './sistema/contexto.js'
 export type { RespostaProntidao } from './sistema/prontidao.js'
+export { CODIGOS_DE_FALHA_DE_JOB, CodigoDeFalhaDeJob, ESTADOS_DE_JOB, FILAS } from './sistema/jobs.js'
+export type { EstadoDeJob, Fila } from './sistema/jobs.js'
+export {
+  CPU_MS_MAXIMO_SINTETICO,
+  esquemaPedidoJobSintetico,
+  esquemaRespostaEstadoDeJob,
+  esquemaRespostaJobAceito,
+} from './sistema/jobs-sinteticos.js'
+export type { PedidoJobSintetico, RespostaEstadoDeJob, RespostaJobAceito } from './sistema/jobs-sinteticos.js'
 export {
   CAMINHO_REALTIME,
   NAMESPACE_REALTIME_SISTEMA,

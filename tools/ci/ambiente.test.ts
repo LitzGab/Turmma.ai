@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { parseEnv } from 'node:util'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
+import { COMANDO_HEALTHCHECK_BATIMENTO } from '../../packages/nucleo/src/instancia/batimento.ts'
 import { lerAmbienteExemplo } from './compose.ts'
 import { raizRepositorio } from './executar.ts'
 
@@ -10,6 +11,8 @@ const lerArquivo = (caminho: string) => readFileSync(join(raizRepositorio, camin
 
 interface Servico {
   healthcheck?: { test?: unknown }
+  restart?: string
+  depends_on?: Record<string, { condition?: string }>
 }
 
 describe('.env.example e compose', () => {
@@ -30,8 +33,38 @@ describe('.env.example e compose', () => {
     // `merge`: as réplicas (api-2, realtime-2) herdam o serviço da primeira com `<<: *âncora`, como no compose.
     const { services } = parse(lerArquivo('infra/compose.yml'), { merge: true }) as { services: Record<string, Servico> }
     expect(Object.keys(services).length).toBeGreaterThan(0)
+    // O serviço que roda uma vez e sai (migrar) não tem healthcheck: quem depende dele espera o término com sucesso.
+    const deUmaVez = new Set(
+      Object.values(services).flatMap((servico) =>
+        Object.entries(servico.depends_on ?? {})
+          .filter(([, dependencia]) => dependencia.condition === 'service_completed_successfully')
+          .map(([nome]) => nome),
+      ),
+    )
     for (const [nome, servico] of Object.entries(services)) {
+      if (deUmaVez.has(nome)) {
+        expect(servico.restart, `${nome} roda uma vez e não pode reiniciar`).toBe('no')
+        continue
+      }
       expect(servico.healthcheck?.test, `${nome} sem healthcheck`).toBeDefined()
+    }
+  })
+
+  it('despachante e worker, sem HTTP, usam o healthcheck do batimento com a mesma idade máxima do código', () => {
+    const { services } = parse(lerArquivo('infra/compose.yml'), { merge: true }) as { services: Record<string, Servico> }
+    for (const nome of ['despachante-1', 'despachante-2', 'worker-1', 'worker-2']) {
+      expect(services[nome]?.healthcheck?.test, nome).toEqual(['CMD', 'node', '-e', COMANDO_HEALTHCHECK_BATIMENTO])
+    }
+  })
+
+  it('migrar roda antes de toda instância que usa o banco', () => {
+    const { services } = parse(lerArquivo('infra/compose.yml'), { merge: true }) as {
+      services: Record<string, Servico & { environment?: Record<string, string> }>
+    }
+    const usamOBanco = Object.entries(services).filter(([nome, servico]) => nome !== 'migrar' && servico.environment?.['BANCO_URL'] !== undefined)
+    expect(usamOBanco.map(([nome]) => nome).sort()).toEqual(['api-1', 'api-2', 'despachante-1', 'despachante-2', 'worker-1', 'worker-2'])
+    for (const [nome, servico] of usamOBanco) {
+      expect(servico.depends_on?.['migrar']?.condition, nome).toBe('service_completed_successfully')
     }
   })
 

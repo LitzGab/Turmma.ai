@@ -28,13 +28,13 @@ mesmo com dois despachantes e com worker morto no meio.
 
 ## Subtarefas
 
-- [ ] 7.1 — Schema Drizzle de `job_registro` com os índices parciais e o check da Tech
+- [x] 7.1 — Schema Drizzle de `job_registro` com os índices parciais e o check da Tech
   Spec, a primeira migration e o serviço `migrar` no compose. O serviço roda antes das
   instâncias, com `lock_timeout='5s'` e 3 tentativas
-- [ ] 7.2 — `Enfileirador.enfileirar(tx, job)` insere na transação do chamador e emite
+- [x] 7.2 — `Enfileirador.enfileirar(tx, job)` insere na transação do chamador e emite
   `pg_notify('job')`. O `JobRegistroRepository` aplica escopo de escola. As consultas do
   despachante levam `@SemEscopo` com justificativa
-- [ ] 7.3 — `apps/despachante`, com duas réplicas:
+- [x] 7.3 — `apps/despachante`, com duas réplicas:
   - acordado por LISTEN ou a cada 500 ms
   - seleciona `aguardando` ou reserva vencida
   - reserva com `FOR UPDATE SKIP LOCKED` em transação curta
@@ -42,21 +42,21 @@ mesmo com dois despachantes e com worker morto no meio.
   - toda troca de estado é condicional: `WHERE id=$1 AND estado IN (...)`
 
   Nesta tarefa há uma fila só, sem vaga nem janela.
-- [ ] 7.4 — `apps/worker`, com duas réplicas:
+- [x] 7.4 — `apps/worker`, com duas réplicas:
   - restaura o contexto (`escolaId`, `requisicaoId`) de `job.data`
   - marca `ativo`, depois `concluido` ou `falhou` com `codigo_falha`
   - 5 tentativas com recuo exponencial de 2 s e jitter
   - stalled padrão do BullMQ
   - `worker.close()` no SIGTERM, com 30 s de graça
   - `removeOnComplete` de 1 dia e `removeOnFail` de 7 dias
-- [ ] 7.5 — `POST /v1/sistema/jobs-sinteticos`, só com `ROTAS_SINTETICAS=true` e token:
+- [x] 7.5 — `POST /v1/sistema/jobs-sinteticos`, só com `ROTAS_SINTETICAS=true` e token:
   - corpo `{ fila, cpuMs, naoUrgente, falhar? }` validado por zod
   - o corpo não aceita `tipo` nem `escolaId`
   - responde 202 `{ jobId }`
 
   `GET /v1/sistema/jobs-sinteticos/:id` lê de `job_registro` filtrando pela escola do
   contexto.
-- [ ] 7.6 — Testes
+- [x] 7.6 — Testes
 
 ## Arquivos previstos
 
@@ -75,7 +75,7 @@ mesmo com dois despachantes e com worker morto no meio.
 | Cenário | Tipo | O que prova |
 |---|---|---|
 | caminho feliz: POST dá 202; o GET mostra aguardando → ativo → concluido; o mesmo `requisicaoId` aparece no log da API, do despachante e do worker | integração | trilha completa e RF9 fechado |
-| concorrência: dois despachantes reais em paralelo sobre 500 jobs → cada job executa exatamente uma vez | integração | quebra sem `SKIP LOCKED` ou sem troca condicional |
+| concorrência: dois despachantes reais em paralelo sobre 500 jobs → cada job executa exatamente uma vez | integração | quebra sem a reserva no banco: tirando juntos o `FOR UPDATE SKIP LOCKED` e a condição repetida no `UPDATE` (cada um sozinho é redundante, pela reavaliação do Postgres) |
 | borda: escrita tardia de `reservado` não sobrescreve `concluido` | integração | a troca de estado é condicional |
 | borda: `kill -9` no worker no meio do job → o job é retomado e termina `concluido` | integração | stalled funciona |
 | borda: `falhar: true` → 5 tentativas e `falhou` com `codigoFalha` e escola | integração | a retentativa tem limite e deixa registro |
@@ -85,13 +85,13 @@ mesmo com dois despachantes e com worker morto no meio.
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
-- [ ] E2E verde (se tocou tela)
-- [ ] Vetos aprovados (se aplicáveis)
-- [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
+- [x] E2E verde (se tocou tela)
+- [x] Vetos aprovados (se aplicáveis)
+- [x] Revisão aprovada
+- [x] Commit feito, só com os arquivos desta tarefa
 
 ## Fora do escopo desta tarefa
 

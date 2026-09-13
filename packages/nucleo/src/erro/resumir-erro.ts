@@ -17,6 +17,17 @@ export function ehErroDoPostgres(erro: unknown): erro is ErroDoPostgres {
   return typeof code === 'string' && FORMATO_SQLSTATE.test(code) && typeof severity === 'string'
 }
 
+/**
+ * O erro do Postgres, esteja ele solto ou embrulhado pelo Drizzle. O Drizzle lança
+ * `DrizzleQueryError` com o erro do servidor em `cause`, e com a consulta e os parâmetros na
+ * mensagem e em campos próprios: nada disso sai daqui, só o erro do servidor, para ser resumido.
+ */
+export function erroDoPostgresEm(erro: unknown): ErroDoPostgres | undefined {
+  if (ehErroDoPostgres(erro)) return erro
+  if (erro instanceof Error && ehErroDoPostgres(erro.cause)) return erro.cause
+  return undefined
+}
+
 /** O que um erro pode deixar no log. Nenhum campo carrega texto montado com dado. */
 export interface ResumoDeErro {
   tipo: string
@@ -36,11 +47,12 @@ const LINHA_DE_PILHA = /^\s+at\s/
  * sem a primeira linha, que repete a mensagem.
  */
 export function resumirErro(erro: unknown): ResumoDeErro {
-  if (ehErroDoPostgres(erro)) {
+  const doPostgres = erroDoPostgresEm(erro)
+  if (doPostgres !== undefined) {
     return {
       tipo: 'ErroDoPostgres',
-      sqlstate: erro.code,
-      ...(erro.constraint === undefined ? {} : { constraint: erro.constraint }),
+      sqlstate: doPostgres.code,
+      ...(doPostgres.constraint === undefined ? {} : { constraint: doPostgres.constraint }),
     }
   }
   if (erro instanceof Error) {

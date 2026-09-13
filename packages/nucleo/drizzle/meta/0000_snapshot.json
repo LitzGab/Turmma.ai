@@ -1,0 +1,179 @@
+{
+  "id": "c943a972-9fed-4768-b578-b8a2a3787d61",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.job_registro": {
+      "name": "job_registro",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "escola_id": {
+          "name": "escola_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fila": {
+          "name": "fila",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prioridade": {
+          "name": "prioridade",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dados": {
+          "name": "dados",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "nao_urgente": {
+          "name": "nao_urgente",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "estado": {
+          "name": "estado",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'aguardando'"
+        },
+        "requisicao_id": {
+          "name": "requisicao_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reservado_ate": {
+          "name": "reservado_ate",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "criado_em": {
+          "name": "criado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "iniciado_em": {
+          "name": "iniciado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "concluido_em": {
+          "name": "concluido_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "codigo_falha": {
+          "name": "codigo_falha",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "job_registro_pendentes_idx": {
+          "name": "job_registro_pendentes_idx",
+          "columns": [
+            {
+              "expression": "fila",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "escola_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "criado_em",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "estado not in ('concluido', 'falhou')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "job_registro_finalizados_idx": {
+          "name": "job_registro_finalizados_idx",
+          "columns": [
+            {
+              "expression": "concluido_em",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "estado in ('concluido', 'falhou')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "job_registro_escola_ou_sistema": {
+          "name": "job_registro_escola_ou_sistema",
+          "value": "escola_id is not null or tipo like 'sistema.%'"
+        },
+        "job_registro_estado_valido": {
+          "name": "job_registro_estado_valido",
+          "value": "estado in ('aguardando', 'reservado', 'publicado', 'ativo', 'concluido', 'falhou')"
+        },
+        "job_registro_fila_valida": {
+          "name": "job_registro_fila_valida",
+          "value": "fila in ('interativa', 'normal', 'lote')"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

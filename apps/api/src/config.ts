@@ -1,5 +1,6 @@
 import {
   ConfiguracaoInvalida,
+  lerConfiguracaoBanco,
   lerConfiguracaoDrenagem,
   lerConfiguracaoIdentidade,
   lerConfiguracaoLimite,
@@ -15,16 +16,31 @@ export { ConfiguracaoInvalida }
 
 const inteiroPositivo = z.coerce.number().int().positive()
 
-const esquemaAmbiente = z.object({
-  API_PORTA: inteiroPositivo,
-  BANCO_URL: z.string().regex(/^postgres(ql)?:\/\/[^/]+\/[^/]+$/),
-  BANCO_POOL_MAXIMO: inteiroPositivo,
-  BANCO_TIMEOUT_CONEXAO_MS: inteiroPositivo,
-  BANCO_TIMEOUT_CONSULTA_MS: inteiroPositivo,
-})
+export const MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO =
+  'ROTAS_SINTETICAS=true é proibido com AMBIENTE=producao: rota de teste não existe em produção'
+
+/**
+ * `ROTAS_SINTETICAS` liga o `POST /v1/sistema/jobs-sinteticos`, que só serve a teste e ao cenário de
+ * carga. Como a flag do token sintético, só aceita `true` ou `false` escrito assim, e não sobe ligada
+ * em produção.
+ */
+const esquemaAmbiente = z
+  .object({
+    API_PORTA: inteiroPositivo,
+    // Validado pela identidade; aqui só é lido para a trava de produção, sem apontar a falta duas vezes.
+    AMBIENTE: z.string().optional(),
+    ROTAS_SINTETICAS: z.enum(['true', 'false']),
+  })
+  .superRefine((valores, contexto) => {
+    if (valores.AMBIENTE === 'producao' && valores.ROTAS_SINTETICAS === 'true') {
+      contexto.addIssue({ code: 'custom', path: ['ROTAS_SINTETICAS'], message: MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO })
+    }
+  })
 
 export interface ConfiguracaoApi {
   porta: number
+  /** Liga as rotas que só existem para teste e carga. */
+  rotasSinteticas: boolean
   banco: ConfiguracaoBanco
   identidade: ConfiguracaoIdentidade
   drenagem: ConfiguracaoDrenagem
@@ -47,25 +63,21 @@ function tentar<T>(ler: () => T): { valor: T } | { erro: ConfiguracaoInvalida } 
  */
 export function lerConfiguracao(ambiente: Record<string, string | undefined>): ConfiguracaoApi {
   const api = tentar(() => validarAmbiente(esquemaAmbiente, ambiente))
+  const banco = tentar(() => lerConfiguracaoBanco(ambiente))
   const identidade = tentar(() => lerConfiguracaoIdentidade(ambiente))
   const drenagem = tentar(() => lerConfiguracaoDrenagem(ambiente))
   const limite = tentar(() => lerConfiguracaoLimite(ambiente))
-  if ('erro' in api || 'erro' in identidade || 'erro' in drenagem || 'erro' in limite) {
-    const erros = [api, identidade, drenagem, limite].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
+  if ('erro' in api || 'erro' in banco || 'erro' in identidade || 'erro' in drenagem || 'erro' in limite) {
+    const erros = [api, banco, identidade, drenagem, limite].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
     throw new ConfiguracaoInvalida(
       erros.flatMap((erro) => erro.variaveis).sort(),
       erros.flatMap((erro) => erro.motivos),
     )
   }
-  const valores = api.valor
   return {
-    porta: valores.API_PORTA,
-    banco: {
-      url: valores.BANCO_URL,
-      maximoConexoes: valores.BANCO_POOL_MAXIMO,
-      timeoutConexaoMs: valores.BANCO_TIMEOUT_CONEXAO_MS,
-      timeoutConsultaMs: valores.BANCO_TIMEOUT_CONSULTA_MS,
-    },
+    porta: api.valor.API_PORTA,
+    rotasSinteticas: api.valor.ROTAS_SINTETICAS === 'true',
+    banco: banco.valor,
     identidade: identidade.valor,
     drenagem: drenagem.valor,
     limite: limite.valor,

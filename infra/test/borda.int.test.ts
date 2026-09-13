@@ -20,6 +20,7 @@ const API_2_DIRETA = `http://127.0.0.1:${porta('API_2_PORTA_HOST')}`
 const USUARIO = '0190f5a0-0000-7000-8000-0000000000a1'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const SERVICOS_ATRAS_DA_BORDA = ['api-1', 'api-2', 'realtime-1', 'realtime-2'] as const
+const PROCESSOS_DA_FILA = ['despachante-1', 'despachante-2', 'worker-1', 'worker-2'] as const
 /** Sonda da borda a cada 2 s (infra/Caddyfile), com folga: tempo para uma instância voltar ao balanceamento. */
 const VOLTA_AO_BALANCEAMENTO_MS = 3_000
 
@@ -164,7 +165,7 @@ describe('borda com duas APIs e dois realtimes', () => {
 
   afterAll(async () => {
     // Derruba só o que este arquivo subiu: os outros testes de integração não contam com eles de pé.
-    await composeAssincronoOuFalha('stop', 'borda', ...SERVICOS_ATRAS_DA_BORDA)
+    await composeAssincronoOuFalha('stop', 'borda', ...SERVICOS_ATRAS_DA_BORDA, ...PROCESSOS_DA_FILA)
   }, 120_000)
 
   describe('troca de instância da API', () => {
@@ -265,13 +266,14 @@ describe('borda com duas APIs e dois realtimes', () => {
       await esperar(VOLTA_AO_BALANCEAMENTO_MS)
     }, 180_000)
 
-    it('com worker, realtime, Redis e storage parados, a API segue respondendo pela borda', async () => {
-      // Tudo que não é borda, API ou Postgres: o worker e o despachante entram aqui quando existirem.
+    it('com worker, despachante, realtime, Redis e storage parados, a API segue respondendo pela borda', async () => {
+      await composeAssincronoOuFalha('up', '--detach', '--build', '--wait', ...PROCESSOS_DA_FILA)
+      // Tudo que não é borda, API ou Postgres e está de pé (o migrar já saiu).
       parados = composeOuFalha('config', '--services')
         .trim()
         .split('\n')
         .filter((servico) => !essenciais.has(servico) && compose('ps', '--status', 'running', '--quiet', servico).saida.trim() !== '')
-      expect(parados).toEqual(expect.arrayContaining(['realtime-1', 'realtime-2', 'redis-fila', 'redis-cache', 'storage']))
+      expect(parados).toEqual(expect.arrayContaining([...PROCESSOS_DA_FILA, 'realtime-1', 'realtime-2', 'redis-fila', 'redis-cache', 'storage']))
       await composeAssincronoOuFalha('stop', ...parados)
 
       const carga = rajada(turma, { paralelos: 6 })
