@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 3 de 15 concluídas
+**Status:** 4 de 15 concluídas
 
 ## Lista
 
@@ -24,11 +24,11 @@
   - [x] 3.3 Proibir `eslint-disable` nas guardas
   - [x] 3.4 Testes: fixtures que violam cada guarda e são reprovadas
 
-- [ ] **4.0 — Identidade sintética e contexto de escola**
-  - [ ] 4.1 Verificação de JWT (`sub`, `esc`) e escopo no contexto
-  - [ ] 4.2 `ops:token-sintetico` e trava de boot em `AMBIENTE=producao`
-  - [ ] 4.3 `GET /v1/sistema/contexto`
-  - [ ] 4.4 Testes: token inválido, flag desligada, escola vinda do cliente ignorada
+- [x] **4.0 — Identidade sintética e contexto de escola**
+  - [x] 4.1 Verificação de JWT (`sub`, `esc`) e escopo no contexto
+  - [x] 4.2 `ops:token-sintetico` e trava de boot em `AMBIENTE=producao`
+  - [x] 4.3 `GET /v1/sistema/contexto`
+  - [x] 4.4 Testes: token inválido, flag desligada, escola vinda do cliente ignorada
 
 - [ ] **5.0 — Duas instâncias de API e realtime trocam sem derrubar requisição**
   - [ ] 5.1 Caddy local balanceando, com `health_uri`, sticky no realtime e sem log de acesso

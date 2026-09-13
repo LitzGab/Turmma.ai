@@ -10,7 +10,10 @@ import { resumirErro } from './resumir-erro.js'
 
 /** Exceção HTTP do próprio Nest (rota inexistente, corpo JSON inválido) vira código tipado. */
 function codigoDoStatusHttp(status: number): CodigoDeErro {
-  if (status === 404) return CodigoDeErro.NAO_ENCONTRADO
+  if (status === 401) return CodigoDeErro.NAO_AUTENTICADO
+  // "Sem permissão" responde igual a "não encontrado": um 403 confirmaria que o objeto existe
+  // (regra 10, item 6, e regra 20, item 6).
+  if (status === 403 || status === 404) return CodigoDeErro.NAO_ENCONTRADO
   if (status === 409) return CodigoDeErro.CONFLITO
   if (status === 408 || status === 504) return CodigoDeErro.TEMPO_ESGOTADO
   if (status === 429) return CodigoDeErro.LIMITE_EXCEDIDO

@@ -21,18 +21,18 @@ pode existir em produção.
 
 ## Subtarefas
 
-- [ ] 4.1 — `packages/nucleo/src/identidade`: verificação de JWT
+- [x] 4.1 — `packages/nucleo/src/identidade`: verificação de JWT
   - assinatura com a chave do ambiente
   - claims `sub` e `esc` (UUIDs); `exp` é obrigatório
   - emissor aceito `sintetico`
   - preenche `escolaId` e `usuarioId` no contexto
   - token inválido, expirado ou sem `esc` → 401 tipado
-- [ ] 4.2 — Configuração validada no boot: a API não sobe com `AMBIENTE=producao` e
+- [x] 4.2 — Configuração validada no boot: a API não sobe com `AMBIENTE=producao` e
   `ACEITAR_TOKEN_SINTETICO=true`, e com a flag desligada recusa o emissor `sintetico`
-- [ ] 4.3 — `npm run ops:token-sintetico -- --escola <uuid> [--usuario <uuid>] [--validade 1h]`
-- [ ] 4.4 — `GET /v1/sistema/contexto` devolvendo `{ escolaId, usuarioId }` por DTO zod em
+- [x] 4.3 — `npm run ops:token-sintetico -- --escola <uuid> [--usuario <uuid>] [--validade 1h]`
+- [x] 4.4 — `GET /v1/sistema/contexto` devolvendo `{ escolaId, usuarioId }` por DTO zod em
   `packages/shared`
-- [ ] 4.5 — Testes
+- [x] 4.5 — Testes
 
 ## Arquivos previstos
 
@@ -57,13 +57,13 @@ pode existir em produção.
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
-- [ ] E2E verde (se tocou tela)
-- [ ] Vetos aprovados (se aplicáveis)
-- [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
+- [x] E2E verde (se tocou tela)
+- [x] Vetos aprovados (se aplicáveis)
+- [x] Revisão aprovada
+- [x] Commit feito, só com os arquivos desta tarefa
 
 ## Fora do escopo desta tarefa
 

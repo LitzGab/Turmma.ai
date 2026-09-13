@@ -1,0 +1,28 @@
+import type { ConfiguracaoBanco } from '@educa/nucleo'
+import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
+import { lerConfiguracao, type ConfiguracaoApi } from '../src/config.js'
+
+export interface SobreposicaoDeTeste {
+  banco?: Partial<ConfiguracaoBanco>
+  /** Variáveis que trocam as de `.env.example`, como `ACEITAR_TOKEN_SINTETICO`. */
+  ambiente?: Record<string, string>
+}
+
+/**
+ * Configuração da API nos testes de integração, lida pelo mesmo `lerConfiguracao` do boot a partir
+ * do ambiente de teste (`.env.example` e `infra/teste.env`), com o banco no Postgres do compose de
+ * teste. A porta não importa: o teste escuta numa porta livre.
+ */
+export function configuracaoDeTeste(sobreposicao: SobreposicaoDeTeste = {}): ConfiguracaoApi {
+  const ambiente = { ...lerAmbienteDeTeste(), ...sobreposicao.ambiente }
+  const usuario = valorObrigatorio(ambiente, 'POSTGRES_USUARIO')
+  const senha = valorObrigatorio(ambiente, 'POSTGRES_SENHA')
+  const banco = valorObrigatorio(ambiente, 'POSTGRES_BANCO')
+  const porta = valorObrigatorio(ambiente, 'POSTGRES_PORTA_HOST')
+  const config = lerConfiguracao({
+    ...ambiente,
+    API_PORTA: '3000',
+    BANCO_URL: `postgres://${usuario}:${senha}@127.0.0.1:${porta}/${banco}`,
+  })
+  return { ...config, banco: { ...config.banco, ...sobreposicao.banco } }
+}

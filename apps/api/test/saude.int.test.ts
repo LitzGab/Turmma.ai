@@ -4,29 +4,12 @@ import type { INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import request from 'supertest'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { aguardarSaudavel, compose, composeOuFalha } from '../../../tools/testes/compose.ts'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
+import { configuracaoDeTeste } from './configuracao-de-teste.js'
 
 const TIMEOUT_CONSULTA_MS = 1_000
-
-function configuracaoDeTeste() {
-  const ambiente = lerAmbienteDeTeste()
-  const usuario = valorObrigatorio(ambiente, 'POSTGRES_USUARIO')
-  const senha = valorObrigatorio(ambiente, 'POSTGRES_SENHA')
-  const banco = valorObrigatorio(ambiente, 'POSTGRES_BANCO')
-  const porta = valorObrigatorio(ambiente, 'POSTGRES_PORTA_HOST')
-  return {
-    porta: 0,
-    banco: {
-      url: `postgres://${usuario}:${senha}@127.0.0.1:${porta}/${banco}`,
-      maximoConexoes: 2,
-      timeoutConexaoMs: TIMEOUT_CONSULTA_MS,
-      timeoutConsultaMs: TIMEOUT_CONSULTA_MS,
-    },
-  }
-}
 
 async function religarPostgres(): Promise<void> {
   compose('unpause', 'postgres')
@@ -38,7 +21,10 @@ describe('GET /saude', () => {
   let app: INestApplication
 
   beforeAll(async () => {
-    app = await NestFactory.create(AppModule.com(configuracaoDeTeste()), { logger: false })
+    const config = configuracaoDeTeste({
+      banco: { maximoConexoes: 2, timeoutConexaoMs: TIMEOUT_CONSULTA_MS, timeoutConsultaMs: TIMEOUT_CONSULTA_MS },
+    })
+    app = await NestFactory.create(AppModule.com(config), { logger: false })
     // Com o filtro global ligado, como em produção: o 503 da sonda mantém o corpo `{ ok }`.
     configurarAplicacao(app, criarLogger({ servico: 'api-teste', nivel: 'silent' }))
     await app.init()
@@ -53,7 +39,7 @@ describe('GET /saude', () => {
     await app.close()
   })
 
-  it('responde 200 com { ok: true } quando o Postgres responde', async () => {
+  it('responde 200 com { ok: true } quando o Postgres responde, sem token: a sonda é rota anônima', async () => {
     const resposta = await request(app.getHttpServer()).get('/saude')
     expect(resposta.status).toBe(200)
     expect(resposta.body).toEqual({ ok: true })

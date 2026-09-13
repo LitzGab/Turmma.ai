@@ -6,14 +6,17 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
  * O que identifica a requisição em toda linha de log e em todo erro. Só ids: nada aqui pode
  * ser nome, matrícula ou qualquer outro dado de pessoa (regra 20, item 9).
  *
- * `escolaId` e `usuarioId` vêm do token verificado, e quem os preenche é a autenticação
- * (tarefa 4.0). Nunca do corpo, da query ou de cabeçalho enviado pelo cliente (regra 10).
+ * `escolaId` e `usuarioId` vêm do token verificado, e quem os preenche é a
+ * `GuardaDeAutenticacao` (identidade/guarda-autenticacao.ts). Nunca do corpo, da query ou de
+ * cabeçalho enviado pelo cliente (regra 10).
  */
 export interface ContextoDaRequisicao {
   readonly requisicaoId: string
-  escolaId?: string
-  usuarioId?: string
+  readonly escolaId?: string
+  readonly usuarioId?: string
 }
+
+type ContextoGravavel = { -readonly [Campo in keyof ContextoDaRequisicao]: ContextoDaRequisicao[Campo] }
 
 export const CABECALHO_REQUISICAO_ID = 'x-requisicao-id'
 
@@ -52,4 +55,19 @@ export function middlewareDeContexto(requisicao: IncomingMessage, _resposta: Ser
     requisicaoId: resolverRequisicaoId(requisicao.headers[CABECALHO_REQUISICAO_ID]),
   }
   executarNoContexto(contexto, proximo)
+}
+
+/**
+ * Grava a escola e o usuário do token no contexto da requisição em andamento. É o único jeito de
+ * escrevê-los depois que o contexto existe, e só vale uma vez: nenhum código que rode depois da
+ * autenticação consegue trocar o escopo. Sem contexto, ou com identidade já gravada, falha fechada.
+ */
+export function definirIdentidadeNoContexto(identidade: { escolaId: string; usuarioId: string }): void {
+  const contexto = armazenamento.getStore() as ContextoGravavel | undefined
+  if (contexto === undefined) throw new Error('contexto da requisição ausente')
+  if (contexto.escolaId !== undefined || contexto.usuarioId !== undefined) {
+    throw new Error('identidade do contexto já definida')
+  }
+  contexto.escolaId = identidade.escolaId
+  contexto.usuarioId = identidade.usuarioId
 }

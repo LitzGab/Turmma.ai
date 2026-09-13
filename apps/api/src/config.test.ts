@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { EMISSOR_TOKEN_SINTETICO, MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO } from '@educa/nucleo'
 import { ConfiguracaoInvalida, lerConfiguracao } from './config.js'
 
 const ambienteValido = {
@@ -7,6 +8,9 @@ const ambienteValido = {
   BANCO_POOL_MAXIMO: '10',
   BANCO_TIMEOUT_CONEXAO_MS: '2000',
   BANCO_TIMEOUT_CONSULTA_MS: '1500',
+  AMBIENTE: 'local',
+  ACEITAR_TOKEN_SINTETICO: 'true',
+  IDENTIDADE_CHAVE_ASSINATURA: 'chave_sintetica_de_teste_com_32_caracteres',
 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
@@ -29,6 +33,11 @@ describe('lerConfiguracao', () => {
         timeoutConexaoMs: 2000,
         timeoutConsultaMs: 1500,
       },
+      identidade: {
+        ambiente: 'local',
+        chaveAssinatura: new TextEncoder().encode(ambienteValido.IDENTIDADE_CHAVE_ASSINATURA),
+        emissoresAceitos: [EMISSOR_TOKEN_SINTETICO],
+      },
     })
   })
 
@@ -40,10 +49,23 @@ describe('lerConfiguracao', () => {
     },
   )
 
-  it('aponta todas as variáveis inválidas pelo nome e nunca repete o valor, que pode ter senha', () => {
+  it('aponta todas as variáveis inválidas pelo nome e nunca repete o valor, que pode ter senha ou chave', () => {
     const urlComSenhaInvalida = 'mysql://educa:senha_sintetica_xyz@postgres/educa'
-    const erro = erroDe({ ...ambienteValido, BANCO_URL: urlComSenhaInvalida, API_PORTA: '0' })
-    expect(erro.variaveis).toEqual(['API_PORTA', 'BANCO_URL'])
+    const chaveCurta = 'chave_curta_sintetica'
+    const erro = erroDe({ ...ambienteValido, BANCO_URL: urlComSenhaInvalida, API_PORTA: '0', IDENTIDADE_CHAVE_ASSINATURA: chaveCurta })
+    expect(erro.variaveis).toEqual(['API_PORTA', 'BANCO_URL', 'IDENTIDADE_CHAVE_ASSINATURA'])
     expect(erro.message).not.toContain('senha_sintetica_xyz')
+    expect(erro.message).not.toContain(chaveCurta)
+  })
+
+  it('a API não sobe com AMBIENTE=producao e ACEITAR_TOKEN_SINTETICO=true', () => {
+    const erro = erroDe({ ...ambienteValido, AMBIENTE: 'producao' })
+    expect(erro.variaveis).toEqual(['ACEITAR_TOKEN_SINTETICO'])
+    expect(erro.message).toContain(MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO)
+  })
+
+  it('em produção com a flag desligada, sobe sem aceitar nenhum emissor sintético', () => {
+    const config = lerConfiguracao({ ...ambienteValido, AMBIENTE: 'producao', ACEITAR_TOKEN_SINTETICO: 'false' })
+    expect(config.identidade.emissoresAceitos).toEqual([])
   })
 })

@@ -1,3 +1,4 @@
+import { RotaAnonima } from '@educa/nucleo'
 import type { RespostaSaude } from '@educa/shared'
 import { Controller, Get, Header, HttpStatus, Res } from '@nestjs/common'
 import { SaudeService } from './saude.service.js'
@@ -6,6 +7,8 @@ interface RespostaHttp {
   status(codigo: number): unknown
 }
 
+// A sonda do compose e do balanceador não tem token.
+@RotaAnonima()
 @Controller('saude')
 export class SaudeController {
   constructor(private readonly saude: SaudeService) {}

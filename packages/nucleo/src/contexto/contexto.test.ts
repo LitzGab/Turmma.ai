@@ -1,6 +1,6 @@
 import { setTimeout as esperar } from 'node:timers/promises'
 import { describe, expect, it } from 'vitest'
-import { contextoAtual, executarNoContexto, resolverRequisicaoId } from './contexto.js'
+import { contextoAtual, definirIdentidadeNoContexto, executarNoContexto, resolverRequisicaoId } from './contexto.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
@@ -45,5 +45,28 @@ describe('executarNoContexto', () => {
       expect(depois).toEqual(esperado)
     }
     expect(contextoAtual()).toBeUndefined()
+  })
+})
+
+describe('definirIdentidadeNoContexto', () => {
+  const identidadeA = { escolaId: 'escola-a', usuarioId: 'usuario-a' }
+
+  it('grava a escola e o usuário no contexto da requisição', () => {
+    executarNoContexto({ requisicaoId: 'r-1' }, () => {
+      definirIdentidadeNoContexto(identidadeA)
+      expect(contextoAtual()).toEqual({ requisicaoId: 'r-1', ...identidadeA })
+    })
+  })
+
+  it('só grava uma vez: código que roda depois da autenticação não troca a escola', () => {
+    executarNoContexto({ requisicaoId: 'r-2' }, () => {
+      definirIdentidadeNoContexto(identidadeA)
+      expect(() => definirIdentidadeNoContexto({ escolaId: 'escola-b', usuarioId: 'usuario-b' })).toThrow()
+      expect(contextoAtual()).toMatchObject(identidadeA)
+    })
+  })
+
+  it('falha fora de uma requisição, em vez de seguir sem escopo', () => {
+    expect(() => definirIdentidadeNoContexto(identidadeA)).toThrow()
   })
 })

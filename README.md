@@ -40,6 +40,7 @@ desenvolvimento.
 | `npm run test` | unidade e integração; a integração sobe Postgres, Redis e storage sozinha |
 | `npm run test:e2e` | sobe o compose de teste completo e roda o Playwright, deixando o ambiente de pé |
 | `npm run ci:verificar`, `ci:integracao`, `ci:e2e` | exatamente o que a esteira roda; derrubam o ambiente no fim |
+| `npm run -s ops:token-sintetico -- --escola <uuid> [--usuario <uuid>] [--validade 1h]` | imprime um token sintético para chamar a API local (`Authorization: Bearer`); não emite com `AMBIENTE=producao` |
 
 A esteira (`.github/workflows/ci.yml`) roda em todo push no `main` e só chama os `ci:*`.
 Enquanto não existe staging (D31), ela é o portão: commit vermelho no `main` segura a

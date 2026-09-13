@@ -1,5 +1,13 @@
-import type { ConfiguracaoBanco } from '@educa/nucleo'
+import {
+  ConfiguracaoInvalida,
+  lerConfiguracaoIdentidade,
+  validarAmbiente,
+  type ConfiguracaoBanco,
+  type ConfiguracaoIdentidade,
+} from '@educa/nucleo'
 import { z } from 'zod'
+
+export { ConfiguracaoInvalida }
 
 const inteiroPositivo = z.coerce.number().int().positive()
 
@@ -14,23 +22,34 @@ const esquemaAmbiente = z.object({
 export interface ConfiguracaoApi {
   porta: number
   banco: ConfiguracaoBanco
+  identidade: ConfiguracaoIdentidade
 }
 
-export class ConfiguracaoInvalida extends Error {
-  constructor(readonly variaveis: string[]) {
-    // Só o nome da variável: o valor pode conter senha (BANCO_URL).
-    super(`Configuração inválida ou ausente: ${variaveis.join(', ')}`)
-    this.name = 'ConfiguracaoInvalida'
+/** Executa a leitura e devolve o erro de configuração em vez de lançar, para somar os problemas. */
+function tentar<T>(ler: () => T): { valor: T } | { erro: ConfiguracaoInvalida } {
+  try {
+    return { valor: ler() }
+  } catch (erro) {
+    if (erro instanceof ConfiguracaoInvalida) return { erro }
+    throw erro
   }
 }
 
+/**
+ * Lê e valida o ambiente da API. Não sobe com variável faltando ou inválida, e não sobe com
+ * token sintético ligado em produção. Todos os problemas saem de uma vez, só pelo nome.
+ */
 export function lerConfiguracao(ambiente: Record<string, string | undefined>): ConfiguracaoApi {
-  const resultado = esquemaAmbiente.safeParse(ambiente)
-  if (!resultado.success) {
-    const variaveis = [...new Set(resultado.error.issues.map((problema) => String(problema.path[0])))]
-    throw new ConfiguracaoInvalida(variaveis.sort())
+  const api = tentar(() => validarAmbiente(esquemaAmbiente, ambiente))
+  const identidade = tentar(() => lerConfiguracaoIdentidade(ambiente))
+  if ('erro' in api || 'erro' in identidade) {
+    const erros = [api, identidade].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
+    throw new ConfiguracaoInvalida(
+      erros.flatMap((erro) => erro.variaveis).sort(),
+      erros.flatMap((erro) => erro.motivos),
+    )
   }
-  const valores = resultado.data
+  const valores = api.valor
   return {
     porta: valores.API_PORTA,
     banco: {
@@ -39,5 +58,6 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
       timeoutConexaoMs: valores.BANCO_TIMEOUT_CONEXAO_MS,
       timeoutConsultaMs: valores.BANCO_TIMEOUT_CONSULTA_MS,
     },
+    identidade: identidade.valor,
   }
 }

@@ -4,6 +4,7 @@ import type { CodigoDeErro } from '@educa/shared'
 export const STATUS_HTTP_DO_CODIGO: Readonly<Record<CodigoDeErro, number>> = {
   ERRO_INTERNO: 500,
   ENTRADA_INVALIDA: 400,
+  NAO_AUTENTICADO: 401,
   NAO_ENCONTRADO: 404,
   CONFLITO: 409,
   TEMPO_ESGOTADO: 503,
@@ -25,6 +26,7 @@ export class ErroDeDominio extends Error {
   ) {
     super(codigo)
     this.name = 'ErroDeDominio'
-    this.status = status ?? STATUS_HTTP_DO_CODIGO[codigo]
+    // "Não encontrado" nunca sai com outro status: um 403 confirmaria que o objeto existe (regra 10, item 6).
+    this.status = codigo === 'NAO_ENCONTRADO' ? STATUS_HTTP_DO_CODIGO.NAO_ENCONTRADO : (status ?? STATUS_HTTP_DO_CODIGO[codigo])
   }
 }

@@ -1,22 +1,35 @@
 import 'reflect-metadata'
-import { contextoAtual, criarLogger, ErroDeDominio, type PoolBanco } from '@educa/nucleo'
+import { contextoAtual, criarLogger, ErroDeDominio, RotaAnonima, type PoolBanco } from '@educa/nucleo'
 import { CodigoDeErro, MENSAGENS_DE_ERRO } from '@educa/shared'
-import { Body, Controller, Get, Headers, Inject, Module, Post, Query, type INestApplication } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Inject,
+  Module,
+  Post,
+  Query,
+  UnauthorizedException,
+  type INestApplication,
+} from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as esperar } from 'node:timers/promises'
 import request from 'supertest'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { AppModule } from '../src/app.module.js'
 import { POOL_BANCO } from '../src/banco.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
+import { emitirTokenSintetico } from '../src/ops/token-sintetico.js'
+import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
+import { configuracaoDeTeste } from './configuracao-de-teste.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const TABELA = `teste_erro_${Date.now()}`
 const NOME_SINTETICO = 'Enzo Martins'
 
-// Escolas sintéticas. A escola vem de cabeçalho só neste controlador de teste: o token chega na 4.0.
+// Escolas sintéticas; a escola de cada requisição vem do token.
 const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
 const ESCOLA_B = '0190f5a0-0000-7000-8000-00000000000b'
 
@@ -24,6 +37,8 @@ const linhasDeLog: string[] = []
 const registrador = criarLogger({ servico: 'api-teste', destino: { write: (linha: string) => linhasDeLog.push(linha) } })
 const registros = () => linhasDeLog.map((linha) => JSON.parse(linha) as Record<string, unknown>)
 
+// Anônimo: este arquivo prova o erro e o log; a autenticação é provada em contexto.int.test.ts.
+@RotaAnonima()
 @Controller('teste')
 class ControladorDeTeste {
   constructor(@Inject(POOL_BANCO) private readonly pool: PoolBanco) {}
@@ -43,6 +58,16 @@ class ControladorDeTeste {
     throw new ErroDeDominio(CodigoDeErro.CONFLITO, 422)
   }
 
+  @Get('http/nao-autenticado')
+  naoAutenticado(): never {
+    throw new UnauthorizedException('token de Enzo Martins recusado')
+  }
+
+  @Get('http/proibido')
+  proibido(): never {
+    throw new ForbiddenException('turma de outra escola')
+  }
+
   @Post('aluno')
   async inserir(@Body() corpo: { nome: string }): Promise<{ ok: true }> {
     await this.pool.query(`insert into ${TABELA} (nome) values ($1)`, [corpo.nome])
@@ -54,12 +79,15 @@ class ControladorDeTeste {
     await this.pool.query('select pg_sleep(2)')
     throw new Error('não deveria chegar aqui')
   }
+}
+
+/** Sem `@RotaAnonima()`: a escola de cada requisição vem do token, como em qualquer rota real. */
+@Controller('teste-autenticado')
+class ControladorDeEco {
+  constructor(@Inject(POOL_BANCO) private readonly pool: PoolBanco) {}
 
   @Get('eco')
-  async eco(@Headers('x-escola-teste') escolaId: string, @Query('indice') indice: string): Promise<{ requisicaoId: string }> {
-    const contexto = contextoAtual()
-    if (contexto === undefined) throw new Error('sem contexto')
-    contexto.escolaId = escolaId
+  async eco(@Query('indice') indice: string): Promise<{ requisicaoId: string }> {
     // Esperas desencontradas e fixas por índice: sem isolamento real do contexto, as linhas
     // trocariam de requisição, e sempre do mesmo jeito.
     const posicao = Number(indice)
@@ -69,23 +97,6 @@ class ControladorDeTeste {
     await esperar((posicao * 5) % 11)
     registrador.info({ evento: 'teste.eco', etapa: 2 })
     return { requisicaoId: contextoAtual()?.requisicaoId ?? '' }
-  }
-}
-
-function configuracaoDeTeste() {
-  const ambiente = lerAmbienteDeTeste()
-  const usuario = valorObrigatorio(ambiente, 'POSTGRES_USUARIO')
-  const senha = valorObrigatorio(ambiente, 'POSTGRES_SENHA')
-  const banco = valorObrigatorio(ambiente, 'POSTGRES_BANCO')
-  const porta = valorObrigatorio(ambiente, 'POSTGRES_PORTA_HOST')
-  return {
-    porta: 0,
-    banco: {
-      url: `postgres://${usuario}:${senha}@127.0.0.1:${porta}/${banco}`,
-      maximoConexoes: 10,
-      timeoutConexaoMs: 1_000,
-      timeoutConsultaMs: 300,
-    },
   }
 }
 
@@ -100,7 +111,10 @@ describe('erro tipado e log sem dado pessoal', () => {
   let app: INestApplication
 
   beforeAll(async () => {
-    @Module({ imports: [AppModule.com(configuracaoDeTeste())], controllers: [ControladorDeTeste] })
+    @Module({
+      imports: [AppModule.com(configuracaoDeTeste({ banco: { timeoutConexaoMs: 1_000, timeoutConsultaMs: 300 } }))],
+      controllers: [ControladorDeTeste, ControladorDeEco],
+    })
     class ModuloDeTeste {}
 
     app = await NestFactory.create(ModuloDeTeste, { logger: false })
@@ -197,18 +211,45 @@ describe('erro tipado e log sem dado pessoal', () => {
     expect(linhasDeLog.join('')).not.toContain(NOME_SINTETICO)
   })
 
+  it('401 de exceção HTTP vira NAO_AUTENTICADO, sem o texto da exceção', async () => {
+    const resposta = await request(app.getHttpServer()).get('/teste/http/nao-autenticado')
+    expect(resposta.status).toBe(401)
+    esperarEnvelopeSemVazamento(resposta.body, CodigoDeErro.NAO_AUTENTICADO)
+    expect(resposta.text).not.toContain(NOME_SINTETICO)
+  })
+
+  it('403 responde igual a rota inexistente: 404 NAO_ENCONTRADO, sem confirmar que o objeto existe', async () => {
+    const proibido = await request(app.getHttpServer()).get('/teste/http/proibido')
+    const inexistente = await request(app.getHttpServer()).get('/teste/http/nao-existe')
+
+    expect(proibido.status).toBe(404)
+    esperarEnvelopeSemVazamento(proibido.body, CodigoDeErro.NAO_ENCONTRADO)
+    const semRequisicaoId = (corpo: { erro: Record<string, unknown> }) => ({ ...corpo.erro, requisicaoId: undefined })
+    expect(semRequisicaoId(proibido.body)).toEqual(semRequisicaoId(inexistente.body))
+    expect(proibido.headers['content-type']).toBe(inexistente.headers['content-type'])
+    expect(proibido.text).not.toContain('outra escola')
+  })
+
   it('50 requisições das escolas A e B em paralelo: cada linha de log tem o próprio requisicaoId e a própria escola', async () => {
     const enviadas = Array.from({ length: 50 }, (_, indice) => ({
       requisicaoId: randomUUID(),
       escolaId: indice % 2 === 0 ? ESCOLA_A : ESCOLA_B,
     }))
 
+    const tokenDa = new Map(
+      await Promise.all(
+        [ESCOLA_A, ESCOLA_B].map(async (escolaId) => {
+          const pedido = { escolaId, usuarioId: randomUUID(), validadeSegundos: 600 }
+          return [escolaId, await emitirTokenSintetico(pedido, lerAmbienteDeTeste())] as const
+        }),
+      ),
+    )
     const respostas = await Promise.all(
       enviadas.map(({ requisicaoId, escolaId }, indice) =>
         request(app.getHttpServer())
-          .get(`/teste/eco?indice=${indice}`)
+          .get(`/teste-autenticado/eco?indice=${indice}`)
           .set('X-Requisicao-Id', requisicaoId)
-          .set('X-Escola-Teste', escolaId),
+          .set('Authorization', `Bearer ${tokenDa.get(escolaId) ?? ''}`),
       ),
     )
 
