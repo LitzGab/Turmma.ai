@@ -21,10 +21,32 @@ export const TIMEOUT_COMANDO_REDIS_API_MS = 100
  * console, fora do log JSON.
  */
 export function criarClienteRedisDaApi(url: string, nome: string, aoErrar: (erro: Error) => void): Redis {
+  return criarClienteSemFilaOffline(url, nome, TIMEOUT_COMANDO_REDIS_API_MS, aoErrar)
+}
+
+/**
+ * Tempo máximo de um comando do despachante no Redis de fila (Tech Spec, seção 5, "Publicação").
+ * Maior que o da API: ninguém espera na tela por ele, e um `addBulk` leva até cem jobs de uma vez.
+ */
+export const TIMEOUT_COMANDO_REDIS_FILA_MS = 2_000
+
+/**
+ * Cliente do Redis de fila para o despachante (publicar e consultar no BullMQ), com as mesmas
+ * garantias do da API: com o Redis fora o comando falha na hora, e com ele travado falha em
+ * `TIMEOUT_COMANDO_REDIS_FILA_MS`. Sem fila offline, uma publicação que falhou não é reenviada
+ * sozinha quando o Redis volta: quem publica de novo é a rodada seguinte, depois de a reserva vencer.
+ *
+ * Não serve ao worker: o BullMQ exige fila offline e espera sem limite no comando bloqueante dele.
+ */
+export function criarClienteRedisDaFila(url: string, nome: string, aoErrar: (erro: Error) => void): Redis {
+  return criarClienteSemFilaOffline(url, nome, TIMEOUT_COMANDO_REDIS_FILA_MS, aoErrar)
+}
+
+function criarClienteSemFilaOffline(url: string, nome: string, timeoutMs: number, aoErrar: (erro: Error) => void): Redis {
   const cliente = new Redis(url, {
     connectionName: nome,
     enableOfflineQueue: false,
-    commandTimeout: TIMEOUT_COMANDO_REDIS_API_MS,
+    commandTimeout: timeoutMs,
     // Sem fila offline, a tentativa por comando não se aplica; fica explícito que nada é repetido.
     maxRetriesPerRequest: 0,
     // Reconexão com recuo curto e teto de 2 s: o Redis que volta é usado de novo em segundos.

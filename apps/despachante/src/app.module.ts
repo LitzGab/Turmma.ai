@@ -3,12 +3,12 @@ import { Module, type DynamicModule, type OnApplicationBootstrap, type OnApplica
 import type { ConfiguracaoDespachante } from './config.js'
 import { montarDespachante, type DespachanteMontado } from './montagem.js'
 
-/** Liga o laço ao ciclo do Nest: começa depois do boot, e no SIGTERM termina a rodada antes de sair. */
+/** Liga os laços ao ciclo do Nest: começam depois do boot, e no SIGTERM terminam a rodada antes de sair. */
 class CicloDoDespachante implements OnApplicationBootstrap, OnApplicationShutdown {
   constructor(private readonly montado: DespachanteMontado) {}
 
   onApplicationBootstrap(): void {
-    this.montado.despachante.iniciar()
+    this.montado.iniciar()
   }
 
   onApplicationShutdown(): Promise<void> {

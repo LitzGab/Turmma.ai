@@ -21,13 +21,13 @@ Quando o Redis volta, cada job executa uma vez. Job que o Redis perdeu depois de
 
 ## Subtarefas
 
-- [ ] 8.1 — Publicação resiliente: cliente BullMQ do despachante com `commandTimeout` 2 s.
+- [x] 8.1 — Publicação resiliente: cliente BullMQ do despachante com `commandTimeout` 2 s.
   Na falha, a reserva expira sozinha e a linha volta a ser selecionável. Nenhuma exceção
   derruba o processo do despachante, e a falha é logada só com id
-- [ ] 8.2 — Reconciliação a cada minuto: `publicado` ou `ativo` com mais de 2 min é
+- [x] 8.2 — Reconciliação a cada minuto: `publicado` ou `ativo` com mais de 2 min é
   consultado no BullMQ. Só é publicado de novo, com o mesmo `jobId`, quando o BullMQ
   **confirma** que o job não existe. Erro ou timeout na consulta não republica
-- [ ] 8.3 — Testes com o container do Redis parado e religado
+- [x] 8.3 — Testes com o container do Redis parado e religado
 
 ## Arquivos previstos
 
@@ -52,13 +52,13 @@ Sem permissão nem isolamento novos: a tarefa não abre rota nem consulta nova p
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
-- [ ] E2E verde (se tocou tela)
-- [ ] Vetos aprovados (se aplicáveis)
-- [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
+- [x] E2E verde (se tocou tela)
+- [x] Vetos aprovados (se aplicáveis)
+- [x] Revisão aprovada
+- [x] Commit feito, só com os arquivos desta tarefa
 
 ## Fora do escopo desta tarefa
 

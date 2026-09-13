@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { emitirTokenSintetico } from '../../apps/api/src/ops/token-sintetico.js'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
-import { compose, composeAssincronoOuFalha, composeOuFalha } from '../../tools/testes/compose.ts'
+import { aguardarSaudavel, compose, composeAssincronoOuFalha, composeOuFalha } from '../../tools/testes/compose.ts'
 
 // Contra o compose de teste, com as imagens construídas: migrar, API, dois despachantes e dois
 // workers como processos de verdade. É o que prova a ligação do main.ts, o `kill -9` e o SIGTERM.
@@ -114,4 +114,41 @@ describe('job pela API até o worker, com processos de verdade', () => {
       await composeAssincronoOuFalha('up', '--detach', '--wait', 'worker-1', 'worker-2')
     }
   }, 120_000)
+
+  it('Redis de fila fora por 2 min: a API aceita na hora, despachantes e workers seguem de pé e saudáveis, e ao religar cada job executa uma vez', async () => {
+    const desde = new Date().toISOString()
+    const inicioDaQueda = performance.now()
+    await composeAssincronoOuFalha('stop', 'redis-fila')
+    try {
+      const ids: string[] = []
+      for (let indice = 0; indice < 5; indice++) {
+        const inicio = performance.now()
+        ids.push(await criarJob({ cpuMs: 0 }))
+        expect(performance.now() - inicio).toBeLessThan(1_000)
+      }
+      // Dois minutos inteiros de Redis fora, conferindo os processos a cada 10 s.
+      while (performance.now() - inicioDaQueda < 120_000) {
+        await new Promise((resolver) => setTimeout(resolver, 10_000))
+        for (const servico of PROCESSOS_DA_FILA) {
+          expect(compose('ps', '--all', '--format', '{{.State}} {{.ExitCode}} {{.Health}}', servico).saida.trim(), servico).toBe('running 0 healthy')
+        }
+      }
+      for (const id of ids) expect(await estado(id)).not.toBe('concluido')
+
+      await composeAssincronoOuFalha('start', 'redis-fila')
+      await aguardarSaudavel('redis-fila')
+      // A publicação que falhou na queda volta quando a reserva vence (30 s).
+      for (const id of ids) await expect.poll(() => estado(id), { timeout: 90_000, interval: 500 }).toBe('concluido')
+
+      const registros = logsDesde(desde, ...PROCESSOS_DA_FILA)
+      expect(registros.filter(({ registro }) => String(registro['evento']).startsWith('processo.'))).toEqual([])
+      expect(registros.some(({ registro }) => registro['evento'] === 'despachante.publicacao_falhou')).toBe(true)
+      for (const id of ids) {
+        const inicios = registros.filter(({ registro }) => registro['evento'] === 'job.iniciado' && registro['jobId'] === id)
+        expect(inicios, id).toHaveLength(1)
+      }
+    } finally {
+      await composeAssincronoOuFalha('up', '--detach', '--wait', 'redis-fila')
+    }
+  }, 300_000)
 })

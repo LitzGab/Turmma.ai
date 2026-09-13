@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 7 de 15 concluídas
+**Status:** 8 de 15 concluídas
 
 ## Lista
 
@@ -48,10 +48,10 @@
   - [x] 7.4 `POST` e `GET /v1/sistema/jobs-sinteticos`, com escopo de escola
   - [x] 7.5 Testes: dois despachantes em paralelo, `kill -9` no worker, falha permanente, isolamento, `requisicaoId` na trilha
 
-- [ ] **8.0 — Job sobrevive à queda do Redis de fila**
-  - [ ] 8.1 Publicação resiliente com o Redis fora
-  - [ ] 8.2 Reconciliação de job publicado ou ativo que sumiu do BullMQ
-  - [ ] 8.3 Testes: Redis parado e religado, reconciliação, timeout não republica
+- [x] **8.0 — Job sobrevive à queda do Redis de fila**
+  - [x] 8.1 Publicação resiliente com o Redis fora
+  - [x] 8.2 Reconciliação de job publicado ou ativo que sumiu do BullMQ
+  - [x] 8.3 Testes: Redis parado e religado, reconciliação, timeout não republica
 
 - [ ] **9.0 — Interativo nunca espera lote, e cada escola tem sua vaga**
   - [ ] 9.1 Três filas e pools separados (`worker-interativo`, `worker-lote`)

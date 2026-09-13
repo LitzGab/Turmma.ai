@@ -1,6 +1,7 @@
 import type { RespostaProntidao } from '@educa/shared'
 import { Logger, type BeforeApplicationShutdown, type OnApplicationShutdown } from '@nestjs/common'
 import type { IncomingMessage, Server, ServerResponse } from 'node:http'
+import type { Socket } from 'node:net'
 import { z } from 'zod'
 import { validarAmbiente } from '../config/validar-config.js'
 
@@ -79,6 +80,9 @@ export class Drenagem implements BeforeApplicationShutdown, OnApplicationShutdow
   #prazo: NodeJS.Timeout | undefined
   #servidor: Server | undefined
   #fechaOciosas: NodeJS.Timeout | undefined
+  /** Toda conexão aberta, para achar a que nunca mandou um byte (ver `fecharOciosas`). */
+  readonly #conexoes = new Set<Socket>()
+  #semBytesNaPassadaAnterior = new Set<Socket>()
 
   constructor(
     private readonly config: ConfiguracaoDrenagem,
@@ -94,6 +98,10 @@ export class Drenagem implements BeforeApplicationShutdown, OnApplicationShutdow
    *   long-polling do socket.io) ficaria aberta pela ociosidade inteira e seguraria a saída.
    */
   prepararServidor(servidor: Server): void {
+    servidor.on('connection', (conexao: Socket) => {
+      this.#conexoes.add(conexao)
+      conexao.once('close', () => this.#conexoes.delete(conexao))
+    })
     servidor.keepAliveTimeout = OCIOSIDADE_HTTP_MS
     // O Node exige `headersTimeout` acima do `keepAliveTimeout`.
     servidor.headersTimeout = OCIOSIDADE_HTTP_MS + 1_000
@@ -127,9 +135,31 @@ export class Drenagem implements BeforeApplicationShutdown, OnApplicationShutdow
     await new Promise((resolver) => setTimeout(resolver, this.config.esperaDaBordaMs))
     const servidor = this.#servidor
     if (servidor !== undefined) {
-      this.#fechaOciosas = setInterval(() => servidor.closeIdleConnections(), INTERVALO_FECHAR_OCIOSAS_MS)
+      this.#fechaOciosas = setInterval(() => this.fecharOciosas(servidor), INTERVALO_FECHAR_OCIOSAS_MS)
       this.#fechaOciosas.unref()
     }
+  }
+
+  /**
+   * Fecha o que não tem requisição em andamento. O `closeIdleConnections()` do Node não conta como
+   * ociosa a conexão que nunca recebeu um byte: ele a trata como requisição começando, e quem a
+   * fecharia é o `headersTimeout`, cuja verificação o próprio `server.close()` desliga. A borda
+   * deixa conexões assim no pool (o Go disca uma conexão nova, e o pedido acaba indo por outra que
+   * vagou), e cada uma segurava a saída até a sonda seguinte usá-la, a cada 2 s: com algumas delas,
+   * a drenagem passava do prazo e a instância saía com código 1.
+   *
+   * Só fecha a que segue sem nenhum byte em duas passagens seguidas: a primeira requisição de uma
+   * conexão recém-aberta pode estar a caminho, e depois da espera da borda ela já teria chegado.
+   */
+  private fecharOciosas(servidor: Server): void {
+    servidor.closeIdleConnections()
+    const semBytes = new Set<Socket>()
+    for (const conexao of this.#conexoes) {
+      if (conexao.bytesRead !== 0) continue
+      if (this.#semBytesNaPassadaAnterior.has(conexao)) conexao.destroy()
+      else semBytes.add(conexao)
+    }
+    this.#semBytesNaPassadaAnterior = semBytes
   }
 
   onApplicationShutdown(): void {

@@ -70,6 +70,12 @@ export class BancadaDeFila {
   readonly fila = new Queue<DadosDoJobNaFila>(NOME_DA_FILA_DE_JOBS, { connection: this.redis, prefix: this.prefixo })
   readonly #montados: Array<DespachanteMontado | WorkerMontado> = []
 
+  constructor() {
+    // Os testes param o Redis de fila: sem ouvinte, o ioredis escreve cada reconexão no console.
+    this.redis.on('error', () => undefined)
+    this.fila.on('error', () => undefined)
+  }
+
   /** Enfileira como a API faz: na transação, com a escola e a requisição no contexto. */
   enfileirar(escolaId: string, pedido: Partial<PedidoDeJob> & { dados?: Record<string, unknown> } = {}, requisicaoId = randomUUID()): Promise<string> {
     return executarNoContexto({ requisicaoId, escolaId }, () =>
@@ -93,17 +99,21 @@ export class BancadaDeFila {
     return rows[0]
   }
 
-  despachante(log: LogEmMemoria, opcoes: { intervaloMs?: number } = {}): DespachanteMontado {
+  despachante(log: LogEmMemoria, opcoes: { intervaloMs?: number; intervaloReconciliacaoMs?: number } = {}): DespachanteMontado {
     const montado = montarDespachante({ banco: configuracaoDoBanco(3), redisFilaUrl: urlRedisDeFila() }, log.logger, { prefixo: this.prefixo, ...opcoes })
     this.#montados.push(montado)
     return montado
   }
 
-  worker(log: LogEmMemoria, opcoes: { concorrencia?: number; processadores?: Readonly<Record<string, Processador>> } = {}): WorkerMontado {
+  worker(log: LogEmMemoria, opcoes: { concorrencia?: number; processadores?: Readonly<Record<string, Processador>>; graca?: number } = {}): WorkerMontado {
     const montado = montarWorker(
       { banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), concorrencia: opcoes.concorrencia ?? 5 },
       log.logger,
-      { prefixo: this.prefixo, ...(opcoes.processadores === undefined ? {} : { processadores: opcoes.processadores }) },
+      {
+        prefixo: this.prefixo,
+        ...(opcoes.processadores === undefined ? {} : { processadores: opcoes.processadores }),
+        ...(opcoes.graca === undefined ? {} : { graca: opcoes.graca }),
+      },
     )
     this.#montados.push(montado)
     return montado

@@ -1,6 +1,8 @@
 import 'reflect-metadata'
 import { CodigoDeErro, MENSAGENS_DE_ERRO, NAMESPACE_REALTIME_SISTEMA } from '@educa/shared'
 import { Redis } from 'ioredis'
+import { once } from 'node:events'
+import { connect } from 'node:net'
 import { setTimeout as esperar } from 'node:timers/promises'
 import type { Socket as SocketCliente } from 'socket.io-client'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
@@ -313,6 +315,38 @@ describe('drenagem do realtime', () => {
     // "transport close" reconecta sozinho; "io server disconnect" deixaria o cliente parado.
     expect(await motivo).toBe('transport close')
   })
+
+  it('com clientes conectados e conexões que a borda discou e não usou, o fechamento termina logo depois da espera, sem estourar o prazo', async () => {
+    const esperaDaBordaMs = 500
+    // O prazo encerraria o processo com código 1: aqui ele fica longe, e o teste mede o fechamento.
+    const instancia = await subirInstancia(loggerEmMemoria().logger, { DRENAGEM_ESPERA_BORDA_MS: String(esperaDaBordaMs), DRENAGEM_PRAZO_MS: '60000' })
+    const token = await tokenDe(ESCOLA_A, USUARIO_A1)
+    const conectados = await Promise.all(
+      Array.from({ length: 12 }, async (_, indice) => {
+        // Metade fica no long-polling, metade sobe para websocket, como os alunos atrás da borda.
+        const cliente = registrar(criarCliente(instancia.url, token, indice % 2 === 0 ? { transports: ['polling'] } : {}))
+        await conectar(cliente)
+        return cliente
+      }),
+    )
+    const { port } = new URL(instancia.url)
+    const semUso = await Promise.all(
+      Array.from({ length: 3 }, async () => {
+        const conexao = connect(Number(port), '127.0.0.1')
+        await once(conexao, 'connect')
+        return conexao
+      }),
+    )
+    try {
+      const inicio = performance.now()
+      const fechamento = instancia.app.close().then(() => 'fechou' as const)
+      expect(await Promise.race([fechamento, esperar(esperaDaBordaMs + 2_000, 'segurou')])).toBe('fechou')
+      expect(performance.now() - inicio).toBeLessThan(esperaDaBordaMs + 2_000)
+      await expect.poll(() => conectados.filter((cliente) => cliente.connected).length).toBe(0)
+    } finally {
+      for (const conexao of semUso) conexao.destroy()
+    }
+  }, 90_000)
 
   it('drenando, GET a rota inexistente não derruba a instância, e o long-polling em andamento fecha dentro do prazo', async () => {
     const excecoesSemTratamento: unknown[] = []

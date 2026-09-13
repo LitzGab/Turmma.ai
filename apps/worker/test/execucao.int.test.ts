@@ -9,7 +9,7 @@ import {
 import { CodigoDeErro, CodigoDeFalhaDeJob } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { compose } from '../../../tools/testes/compose.ts'
+import { aguardarSaudavel, compose, composeAssincronoOuFalha } from '../../../tools/testes/compose.ts'
 import { BancadaDeFila, ESCOLA_A, ESCOLA_B, LogEmMemoria } from './fila-de-teste.js'
 
 // Despachantes e workers de verdade (a mesma montagem do main.ts), no processo do teste, contra o
@@ -304,5 +304,59 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
     await new Promise((resolver) => setTimeout(resolver, 1_000))
     expect(logWorker.doEvento('job.iniciado').filter((registro) => registro['jobId'] === id)).toHaveLength(1)
     expect(await bancada.fila.getJobCounts('completed', 'waiting', 'active', 'delayed', 'failed')).toEqual({ completed: 1, waiting: 0, active: 0, delayed: 0, failed: 0 })
+  })
+  describe('dependência fora e desligamento', () => {
+    /** Publica como o despachante, com as opções de retentativa de verdade, ou com mais tentativas. */
+    async function publicado(tentativas: number = TENTATIVAS_DE_JOB): Promise<string> {
+      const id = await bancada.enfileirar(ESCOLA_A)
+      await bancada.despacho.reservar(10)
+      await bancada.fila.add('sintetico', { escolaId: ESCOLA_A, requisicaoId: null }, { ...OPCOES_DE_JOB_PUBLICADO, attempts: tentativas, jobId: id })
+      await bancada.despacho.marcarPublicados([id])
+      return id
+    }
+
+    it('Postgres fora na troca para ativo: a tentativa conta sem executar, e com o Postgres de volta o job executa uma vez e conclui', async () => {
+      // Tentativas de sobra: com o recuo sorteado para baixo, as cinco de verdade podem acabar antes de o Postgres ficar saudável.
+      const id = await publicado(10)
+      const logWorker = new LogEmMemoria('worker')
+      await composeAssincronoOuFalha('stop', 'postgres')
+      try {
+        bancada.worker(logWorker)
+        await expect.poll(() => logWorker.doEvento('job.estado_nao_gravado').length, { timeout: 15_000, interval: 100 }).toBeGreaterThan(0)
+        expect(logWorker.doEvento('job.iniciado')).toEqual([])
+      } finally {
+        await composeAssincronoOuFalha('start', 'postgres')
+        await aguardarSaudavel('postgres')
+      }
+
+      await aguardarEstado(bancada, id, 'concluido', 90_000)
+      expect(logWorker.doEvento('job.iniciado').filter((registro) => registro['jobId'] === id)).toHaveLength(1)
+      expect(logWorker.doEvento('job.concluido').filter((registro) => registro['jobId'] === id)).toHaveLength(1)
+      const naFila = await bancada.fila.getJob(id)
+      expect(await naFila?.getState()).toBe('completed')
+      expect(naFila?.attemptsMade).toBeGreaterThan(1)
+    }, 150_000)
+
+    it('SIGTERM com job que passa da graça: o encerramento força a saída no prazo, sem marcar falha, e o job segue na fila para outra réplica', async () => {
+      const id = await publicado()
+      const logWorker = new LogEmMemoria('worker')
+      const graca = 1_000
+      // Um job que não termina: só a graça encerra o worker.
+      const montado = bancada.worker(logWorker, { graca, processadores: { sintetico: () => new Promise<void>(() => undefined) } })
+      await aguardarEstado(bancada, id, 'ativo')
+
+      const inicio = performance.now()
+      await montado.encerrar()
+      const encerrouEmMs = performance.now() - inicio
+
+      expect(encerrouEmMs).toBeGreaterThanOrEqual(graca - 50)
+      expect(encerrouEmMs).toBeLessThan(graca + 1_500)
+      expect(logWorker.doEvento('worker.desligamento_forcado')).toHaveLength(1)
+      // Nada foi dado como perdido: a linha segue ativa e o job segue ativo na fila, com o lock que
+      // vai vencer para o stalled de outra réplica retomá-lo (provado com `kill -9` em infra/test/jobs).
+      expect(await bancada.estado(id)).toEqual({ estado: 'ativo', escolaId: ESCOLA_A, codigoFalha: null })
+      expect(await (await bancada.fila.getJob(id))?.getState()).toBe('active')
+      expect(logWorker.doEvento('job.falhou')).toEqual([])
+    })
   })
 })
