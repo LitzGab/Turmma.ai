@@ -1,17 +1,22 @@
 import 'reflect-metadata'
-import { TIMEOUT_COMANDO_REDIS_FILA_MS } from '@educa/nucleo'
+import { Batimento, TIMEOUT_COMANDO_REDIS_FILA_MS } from '@educa/nucleo'
 import type { INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { randomUUID } from 'node:crypto'
+import { existsSync, mkdtempSync, statSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
-import { aguardarSaudavel, compose, composeAssincronoOuFalha } from '../../../tools/testes/compose.ts'
+import { aguardarSaudavel, compose, composeAssincronoOuFalha, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { AppModule } from '../../api/src/app.module.js'
 import { configurarAplicacao } from '../../api/src/configurar-app.js'
 import { emitirTokenSintetico } from '../../api/src/ops/token-sintetico.js'
 import { configuracaoDeTeste } from '../../api/test/configuracao-de-teste.js'
-import { BancadaDeFila, ESCOLA_A, LogEmMemoria } from '../../worker/test/fila-de-teste.js'
+import { BancadaDeFila, ESCOLA_A, ESCOLA_B, LogEmMemoria } from '../../worker/test/fila-de-teste.js'
+
+const ESCOLA_C = '0190f5a0-0000-7000-8000-00000000000c'
 
 // API, despachantes e worker de verdade (a mesma montagem do main.ts), no processo do teste, contra o
 // Postgres e o Redis de fila do compose de teste, que este arquivo para, trava e religa.
@@ -36,7 +41,7 @@ function execucoesPorJob(...logs: LogEmMemoria[]): Map<string, number> {
 
 beforeAll(() => {
   // Despachante ou worker do compose de pé disputaria as linhas com os deste arquivo.
-  compose('stop', 'despachante-1', 'despachante-2', 'worker-1', 'worker-2')
+  compose('stop', ...PROCESSOS_DA_FILA)
 })
 
 describe('Redis de fila fora', () => {
@@ -51,7 +56,7 @@ describe('Redis de fila fora', () => {
     await bancada.fechar()
   }, 120_000)
 
-  it('parado: 50 POSTs dão 202 em menos de 1 s cada, a publicação falha sem derrubar o laço, e ao religar cada job executa uma vez', async () => {
+  it('parado: 50 POSTs dão 202 em menos de 1 s cada, a vaga não é consultável e nada é reservado, sem derrubar o laço, e ao religar cada job executa uma vez', async () => {
     bancada = new BancadaDeFila()
     await bancada.limparRegistro()
     const logApi = new LogEmMemoria('api')
@@ -79,61 +84,65 @@ describe('Redis de fila fora', () => {
         ids.push(((await resposta.json()) as { jobId: string }).jobId)
       }
 
-      // Os despachantes reservam, a publicação falha, e a falha fica no log só com os ids.
-      const falhas = () => [...logs.d1.doEvento('despachante.publicacao_falhou'), ...logs.d2.doEvento('despachante.publicacao_falhou')]
-      await expect.poll(() => falhas().length, { timeout: 10_000 }).toBeGreaterThan(0)
-      for (const falha of falhas()) {
-        expect(Object.keys(falha).sort()).toEqual(['erro', 'evento', 'jobIds', 'level', 'servico', 'time'])
-        for (const id of falha['jobIds'] as string[]) expect(ids).toContain(id)
+      // Sem Redis não há vaga: os despachantes avisam, só com ids, e não reservam nada que não possam publicar.
+      const avisos = () => [...logs.d1.doEvento('despachante.vaga_indisponivel'), ...logs.d2.doEvento('despachante.vaga_indisponivel')]
+      await expect.poll(() => avisos().length, { timeout: 10_000 }).toBeGreaterThan(0)
+      for (const aviso of avisos()) {
+        expect(Object.keys(aviso).sort()).toEqual(['erro', 'escolaId', 'evento', 'level', 'requisicaoId', 'servico', 'time'])
       }
-      const reservadosNaQueda = falhas().flatMap((falha) => falha['jobIds'] as string[])
-      // Nada foi publicado nem executado, e o laço seguiu: nenhuma rodada caiu por exceção.
-      const estados = await contarPorEstado(bancada, ids)
-      expect(Object.keys(estados).filter((estado) => estado !== 'aguardando' && estado !== 'reservado')).toEqual([])
-      expect(estados['reservado']).toBeGreaterThan(0)
+      // Nada foi reservado, publicado nem executado, e o laço seguiu: nenhuma rodada caiu por exceção.
+      await new Promise((resolver) => setTimeout(resolver, 1_500))
+      expect(await contarPorEstado(bancada, ids)).toEqual({ aguardando: 50 })
       expect([...logs.d1.doEvento('despachante.rodada_falhou'), ...logs.d2.doEvento('despachante.rodada_falhou')]).toEqual([])
 
       await composeAssincronoOuFalha('start', 'redis-fila')
-      // Os jobs que falharam na publicação só voltam quando a reserva vence (30 s).
-      await expect.poll(async () => (await contarPorEstado(bancada, ids))['concluido'], { timeout: 90_000, interval: 500 }).toBe(50)
+      // Sem reserva a vencer: com o Redis de volta, a próxima rodada já despacha, dentro das vagas da escola.
+      await expect.poll(async () => (await contarPorEstado(bancada, ids))['concluido'], { timeout: 60_000, interval: 500 }).toBe(50)
 
       const execucoes = execucoesPorJob(logs.worker)
       expect(execucoes.size).toBe(50)
       expect([...execucoes.values()].filter((vezes) => vezes !== 1)).toEqual([])
-      for (const id of reservadosNaQueda) expect(execucoes.get(id)).toBe(1)
     } finally {
       await app.close()
     }
   }, 180_000)
 
-  it('travado: a publicação desiste no prazo, o laço segue reservando, e ao destravar cada job executa uma vez', async () => {
+  it('travado: a vaga desiste no prazo, a rodada termina sem tentar as outras escolas e o laço segue batendo; ao destravar cada job executa uma vez', async () => {
     bancada = new BancadaDeFila()
     await bancada.limparRegistro()
-    const antes = [await bancada.enfileirar(ESCOLA_A), await bancada.enfileirar(ESCOLA_A)]
     const logDespachante = new LogEmMemoria('despachante')
     const logWorker = new LogEmMemoria('worker')
+    const arquivoDoBatimento = join(mkdtempSync(join(tmpdir(), 'educa-batimento-')), 'batimento')
+    const idadeDoBatimento = () => (existsSync(arquivoDoBatimento) ? Date.now() - statSync(arquivoDoBatimento).mtimeMs : Number.POSITIVE_INFINITY)
+    // O despachante sobe com o Redis de pé, e o cliente dele conecta: é o Redis que trava depois.
+    bancada.despachante(logDespachante, { batimento: new Batimento(arquivoDoBatimento) }).despachante.iniciar()
+    await new Promise((resolver) => setTimeout(resolver, 1_000))
 
     compose('pause', 'redis-fila')
     const inicio = performance.now()
-    bancada.despachante(logDespachante).despachante.iniciar()
-    const falhasDe = (id: string) => logDespachante.doEvento('despachante.publicacao_falhou').filter((falha) => (falha['jobIds'] as string[]).includes(id))
-    await expect.poll(() => falhasDe(antes[0] ?? '').length, { timeout: 10_000, interval: 50 }).toBe(1)
+    // Três escolas com job: com o Redis travado, tentar a vaga de cada uma custaria o prazo três vezes por rodada.
+    const antes = [await bancada.enfileirar(ESCOLA_A), await bancada.enfileirar(ESCOLA_B), await bancada.enfileirar(ESCOLA_C)]
+    await expect.poll(() => logDespachante.doEvento('despachante.vaga_indisponivel').length, { timeout: 10_000, interval: 50 }).toBe(1)
     const desistiuEmMs = performance.now() - inicio
     expect(desistiuEmMs).toBeGreaterThanOrEqual(TIMEOUT_COMANDO_REDIS_FILA_MS - 100)
     expect(desistiuEmMs).toBeLessThan(TIMEOUT_COMANDO_REDIS_FILA_MS + 2_000)
 
-    // O laço não ficou preso na publicação travada: o job que chega depois também é reservado e tentado.
+    // O laço não ficou preso: bate a cada rodada (uma espera de prazo por rodada, e não uma por escola),
+    // bem abaixo da idade que o healthcheck tolera, e o job que chega depois não trava nada.
     const depois = await bancada.enfileirar(ESCOLA_A)
-    await expect.poll(() => falhasDe(depois).length, { timeout: 10_000, interval: 50 }).toBe(1)
+    for (let conferencia = 0; conferencia < 4; conferencia++) {
+      await new Promise((resolver) => setTimeout(resolver, 1_500))
+      expect(idadeDoBatimento()).toBeLessThan(TIMEOUT_COMANDO_REDIS_FILA_MS + 1_500)
+    }
     const ids = [...antes, depois]
-    expect(await contarPorEstado(bancada, ids)).toEqual({ reservado: 3 })
+    expect(await contarPorEstado(bancada, ids)).toEqual({ aguardando: 4 })
+    expect(logDespachante.doEvento('despachante.rodada_falhou')).toEqual([])
 
     compose('unpause', 'redis-fila')
     bancada.worker(logWorker)
-    await expect.poll(async () => (await contarPorEstado(bancada, ids))['concluido'], { timeout: 60_000, interval: 500 }).toBe(3)
-    // A publicação que o Redis travado recebeu e só executou depois não duplica a republicação, com o mesmo jobId.
+    await expect.poll(async () => (await contarPorEstado(bancada, ids))['concluido'], { timeout: 60_000, interval: 500 }).toBe(4)
     const execucoes = execucoesPorJob(logWorker)
-    expect(ids.map((id) => execucoes.get(id))).toEqual([1, 1, 1])
-    expect(await bancada.fila.getJobCounts('completed', 'waiting', 'active', 'delayed', 'failed')).toEqual({ completed: 3, waiting: 0, active: 0, delayed: 0, failed: 0 })
+    expect(ids.map((id) => execucoes.get(id))).toEqual([1, 1, 1, 1])
+    expect(await bancada.fila.getJobCounts('completed', 'waiting', 'active', 'delayed', 'failed')).toEqual({ completed: 4, waiting: 0, active: 0, delayed: 0, failed: 0 })
   }, 120_000)
 })

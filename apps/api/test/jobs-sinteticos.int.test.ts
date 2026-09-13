@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto'
 import request from 'supertest'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
-import { compose } from '../../../tools/testes/compose.ts'
+import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { BancadaDeFila, LogEmMemoria } from '../../worker/test/fila-de-teste.js'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
@@ -54,7 +54,7 @@ describe('POST e GET /v1/sistema/jobs-sinteticos', () => {
 
   beforeAll(async () => {
     // Um despachante do compose de pé tiraria o job de `aguardando` antes de o teste olhar.
-    compose('stop', 'despachante-1', 'despachante-2', 'worker-1', 'worker-2')
+    compose('stop', ...PROCESSOS_DA_FILA)
     app = await subirApi(log, { ROTAS_SINTETICAS: 'true' })
     pool = criarPool(configuracaoDeTeste().banco, () => undefined)
     tokenA = await token(ESCOLA_A)
@@ -130,7 +130,7 @@ describe('POST e GET /v1/sistema/jobs-sinteticos', () => {
     const bancada = new BancadaDeFila()
     try {
       // O que o worker grava na última tentativa, pelo mesmo repository e no escopo da escola do job.
-      await bancada.despacho.reservar(1_000)
+      await bancada.reservar(ESCOLA_A)
       await executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () =>
         bancada.registro.registrarFalha(jobId, CodigoDeFalhaDeJob.FALHA_SINTETICA),
       )

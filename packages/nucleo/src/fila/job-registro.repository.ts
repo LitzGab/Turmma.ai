@@ -25,6 +25,14 @@ export interface EstadoRegistrado {
   codigoFalha: CodigoDeFalhaDeJob | null
 }
 
+/** Onde o job está antes de começar: a fila e a escola da linha persistida, que definem a vaga dele. */
+export interface JobParaExecutar {
+  fila: Fila
+  escolaId: string | null
+  /** `concluido` ou `falhou`: não roda de novo. */
+  finalizado: boolean
+}
+
 export type ResultadoDoInicio =
   | { situacao: 'iniciado'; tipo: string; dados: Record<string, unknown> }
   /** O job existe na escola, mas não está em estado de executar (já terminou): não roda de novo. */
@@ -86,12 +94,22 @@ export class JobRegistroRepository {
     return { ...linha, estado: linha.estado as EstadoDeJob, codigoFalha: linha.codigoFalha as CodigoDeFalhaDeJob | null }
   }
 
+  /** A fila e a escola do job na escola do contexto, ou `undefined` (inexistente ou de outra escola, sem distinção). */
+  async localizarParaExecucao(id: string): Promise<JobParaExecutar | undefined> {
+    const [linha] = await this.banco
+      .select({ fila: jobRegistro.fila, escolaId: jobRegistro.escolaId, estado: jobRegistro.estado })
+      .from(jobRegistro)
+      .where(and(eq(jobRegistro.id, id), escopoDoJobNoContexto()))
+    if (linha === undefined) return undefined
+    return { fila: linha.fila as Fila, escolaId: linha.escolaId, finalizado: linha.estado === 'concluido' || linha.estado === 'falhou' }
+  }
+
   /**
    * Passa o job a `ativo` e devolve o que executar. A troca é condicional: um job que já concluiu
    * ou falhou não volta a `ativo` e não roda de novo, mesmo que a fila o entregue outra vez.
    */
   async iniciarExecucao(id: string): Promise<ResultadoDoInicio> {
-    const escopo = this.escopo()
+    const escopo = escopoDoJobNoContexto()
     const [iniciada] = await this.banco
       .update(jobRegistro)
       .set({ estado: 'ativo', iniciadoEm: sql`coalesce(${jobRegistro.iniciadoEm}, now())` })
@@ -110,7 +128,7 @@ export class JobRegistroRepository {
     const alteradas = await this.banco
       .update(jobRegistro)
       .set({ estado: 'concluido', concluidoEm: sql`now()`, reservadoAte: null })
-      .where(and(eq(jobRegistro.id, id), this.escopo(), eq(jobRegistro.estado, 'ativo')))
+      .where(and(eq(jobRegistro.id, id), escopoDoJobNoContexto(), eq(jobRegistro.estado, 'ativo')))
       .returning({ id: jobRegistro.id })
     return alteradas.length === 1
   }
@@ -120,21 +138,21 @@ export class JobRegistroRepository {
     const alteradas = await this.banco
       .update(jobRegistro)
       .set({ estado: 'falhou', codigoFalha: codigo, concluidoEm: sql`now()`, reservadoAte: null })
-      .where(and(eq(jobRegistro.id, id), this.escopo(), inArray(jobRegistro.estado, ORIGENS_DA_FALHA)))
+      .where(and(eq(jobRegistro.id, id), escopoDoJobNoContexto(), inArray(jobRegistro.estado, ORIGENS_DA_FALHA)))
       .returning({ id: jobRegistro.id })
     return alteradas.length === 1
   }
+}
 
-  /**
-   * Escola do contexto; rotina do sistema marcada, só os jobs sem escola. Contexto sem escola e sem a
-   * marca (rota anônima) ou sem contexto nenhum falha fechado.
-   */
-  private escopo(): SQL {
-    const contexto = contextoAtual()
-    if (contexto?.escolaId !== undefined) return eq(jobRegistro.escolaId, contexto.escolaId)
-    if (contexto?.rotinaDoSistema === true) {
-      return and(isNull(jobRegistro.escolaId), like(jobRegistro.tipo, `${PREFIXO_TIPO_SISTEMA}%`)) as SQL
-    }
-    throw new Error('job_registro sem escola nem rotina do sistema no contexto não tem escopo')
+/**
+ * Escopo de `job_registro` pelo contexto: a escola do contexto; rotina do sistema marcada, só os jobs
+ * sem escola. Contexto sem escola e sem a marca (rota anônima) ou sem contexto nenhum falha fechado.
+ */
+export function escopoDoJobNoContexto(): SQL {
+  const contexto = contextoAtual()
+  if (contexto?.escolaId !== undefined) return eq(jobRegistro.escolaId, contexto.escolaId)
+  if (contexto?.rotinaDoSistema === true) {
+    return and(isNull(jobRegistro.escolaId), like(jobRegistro.tipo, `${PREFIXO_TIPO_SISTEMA}%`)) as SQL
   }
+  throw new Error('job_registro sem escola nem rotina do sistema no contexto não tem escopo')
 }

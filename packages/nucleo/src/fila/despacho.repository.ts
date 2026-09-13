@@ -3,6 +3,7 @@ import { and, eq, inArray, sql, type SQL } from 'drizzle-orm'
 import type { Banco } from '../db/banco.js'
 import { jobRegistro } from '../db/schema/job-registro.js'
 import { SemEscopo } from '../db/sem-escopo.decorator.js'
+import { escopoDoJobNoContexto } from './job-registro.repository.js'
 
 /** Quanto tempo a reserva de um despachante vale. Vencida, outro despachante pode pegar a linha. */
 export const RESERVA_SEGUNDOS = 30
@@ -20,6 +21,12 @@ export type JobReservado = {
   requisicaoId: string | null
   tipo: string
   fila: Fila
+}
+
+/** Uma escola (ou a rotina do sistema, sem escola) com job esperando despacho numa fila. */
+export type EscolaComPendentes = {
+  fila: Fila
+  escolaId: string | null
 }
 
 /** Um job que a reconciliação confere, com a chave da ordem da varredura. */
@@ -46,31 +53,71 @@ const CONDICAO_PARA_RECONCILIAR: SQL = sql`estado not in ('concluido', 'falhou')
     and greatest(iniciado_em, reservado_ate - make_interval(secs => ${RESERVA_SEGUNDOS})) < now() - make_interval(secs => ${IDADE_PARA_RECONCILIAR_SEGUNDOS}))
 )`
 
+/**
+ * Linha que o despachante pode tomar: `aguardando`, ou `reservado` por um despachante que caiu antes
+ * de publicar. Só nomes de coluna de `job_registro`, para valer dentro de uma subconsulta sem alias.
+ */
+const DISPONIVEL_PARA_RESERVA: SQL = sql`(estado = 'aguardando' or (estado = 'reservado' and reservado_ate < now()))`
+
 const JUSTIFICATIVA =
   'o despachante é rotina nossa e distribui a fila de todas as escolas; ' +
   'nada daqui chega a uma resposta, e o worker volta a aplicar o escopo pela escola do job'
 
 /**
- * O lado da fila inteira de `job_registro`: seleciona, reserva, marca publicado e reconcilia com o
- * que a fila tem. Não atende requisição de escola nenhuma.
+ * O lado do despachante em `job_registro`: lista as escolas com job à espera, reserva e devolve na
+ * escola do contexto, marca publicado e reconcilia com o que a fila tem. Não atende requisição de
+ * escola nenhuma.
  */
 export class DespachoRepository {
   constructor(private readonly banco: Banco) {}
 
   /**
-   * Reserva até `limite` jobs `aguardando` ou com reserva vencida, do mais prioritário e mais
-   * antigo. Uma instrução só, que é a transação curta: o `FOR UPDATE SKIP LOCKED` faz dois
-   * despachantes pegarem linhas diferentes sem um esperar o outro, e o `UPDATE` repete a condição
-   * de origem, então a linha que mudou de estado entre a seleção e a escrita não é reservada.
+   * Por fila, as escolas com job disponível para reserva. É a lista que o despachante percorre em
+   * rodízio. Salta de escola em escola pelo índice de pendentes (`fila, escola_id, criado_em`), uma
+   * descida por escola, sem varrer os mil lotes de quem enfileirou mil: a consulta custa o número de
+   * escolas, não o de jobs. A rotina do sistema (sem escola) entra como `escolaId` nulo.
    */
   @SemEscopo(JUSTIFICATIVA)
-  async reservar(limite: number): Promise<JobReservado[]> {
+  async listarEscolasComPendentes(): Promise<EscolaComPendentes[]> {
+    const resultado = await this.banco.execute<EscolaComPendentes>(sql`
+      with recursive escolas as (
+        (
+          select fila, escola_id from job_registro
+          where estado not in ('concluido', 'falhou') and escola_id is not null and ${DISPONIVEL_PARA_RESERVA}
+          order by fila, escola_id
+          limit 1
+        )
+        union all
+        select proxima.fila, proxima.escola_id
+        from escolas cross join lateral (
+          select job.fila, job.escola_id from job_registro as job
+          where estado not in ('concluido', 'falhou') and job.escola_id is not null and ${DISPONIVEL_PARA_RESERVA}
+            and (job.fila, job.escola_id) > (escolas.fila, escolas.escola_id)
+          order by job.fila, job.escola_id
+          limit 1
+        ) as proxima
+      )
+      select fila, escola_id as "escolaId" from escolas
+      union all
+      select distinct fila, null::uuid as "escolaId" from job_registro
+      where estado not in ('concluido', 'falhou') and escola_id is null and ${DISPONIVEL_PARA_RESERVA}
+    `)
+    return resultado.rows
+  }
+
+  /**
+   * Reserva até `limite` jobs disponíveis da escola do contexto numa fila, do mais antigo, pelo
+   * índice de pendentes. Uma instrução só, que é a transação curta: o `FOR UPDATE SKIP LOCKED` faz dois
+   * despachantes pegarem linhas diferentes sem um esperar o outro, e o `UPDATE` repete a condição de
+   * origem, então a linha que mudou de estado entre a seleção e a escrita não é reservada.
+   */
+  async reservarDaEscola(fila: Fila, limite: number): Promise<JobReservado[]> {
+    const escopo = escopoDoJobNoContexto()
     const resultado = await this.banco.execute<JobReservado>(sql`
       with candidatos as (
         select id from job_registro
-        where estado not in ('concluido', 'falhou')
-          and (estado = 'aguardando' or (estado = 'reservado' and reservado_ate < now()))
-        order by prioridade, criado_em
+        where estado not in ('concluido', 'falhou') and fila = ${fila} and ${escopo} and ${DISPONIVEL_PARA_RESERVA}
+        order by criado_em
         limit ${limite}
         for update skip locked
       )
@@ -82,6 +129,34 @@ export class DespachoRepository {
       returning job.id, job.escola_id as "escolaId", job.requisicao_id as "requisicaoId", job.tipo, job.fila
     `)
     return resultado.rows
+  }
+
+  /**
+   * Dos jobs que seguram vaga (os membros do ZSET da escola), os que estão `publicado` na escola do
+   * contexto: parados na fila do BullMQ, sem worker renovando. Busca pela chave primária, então o
+   * custo acompanha as vagas da escola, e não os milhares de jobs dela à espera.
+   */
+  async publicadosEntre(ids: readonly string[]): Promise<string[]> {
+    if (ids.length === 0) return []
+    const linhas = await this.banco
+      .select({ id: jobRegistro.id })
+      .from(jobRegistro)
+      .where(and(inArray(jobRegistro.id, [...ids]), escopoDoJobNoContexto(), eq(jobRegistro.estado, 'publicado')))
+    return linhas.map((linha) => linha.id)
+  }
+
+  /**
+   * Reserva que não conseguiu vaga volta a `aguardando`, na escola do contexto, para a próxima rodada
+   * (desta ou da outra instância) tentar de novo sem esperar a reserva vencer. Só sai de `reservado`.
+   */
+  async devolverParaAguardando(ids: readonly string[]): Promise<number> {
+    if (ids.length === 0) return 0
+    const alteradas = await this.banco
+      .update(jobRegistro)
+      .set({ estado: 'aguardando', reservadoAte: null })
+      .where(and(inArray(jobRegistro.id, [...ids]), escopoDoJobNoContexto(), eq(jobRegistro.estado, 'reservado')))
+      .returning({ id: jobRegistro.id })
+    return alteradas.length
   }
 
   /**
@@ -139,16 +214,15 @@ export class DespachoRepository {
   }
 
   /**
-   * `reservado` → `publicado`, depois de a fila aceitar o job. Escrita tardia (o worker já marcou
-   * `ativo`, `concluido` ou `falhou`) não muda nada.
+   * `reservado` → `publicado` na escola do contexto, depois de a fila aceitar o job. Escrita tardia (o
+   * worker já marcou `ativo`, `concluido` ou `falhou`) não muda nada.
    */
-  @SemEscopo(JUSTIFICATIVA)
   async marcarPublicados(ids: readonly string[]): Promise<number> {
     if (ids.length === 0) return 0
     const alteradas = await this.banco
       .update(jobRegistro)
       .set({ estado: 'publicado' })
-      .where(and(inArray(jobRegistro.id, [...ids]), eq(jobRegistro.estado, 'reservado')))
+      .where(and(inArray(jobRegistro.id, [...ids]), escopoDoJobNoContexto(), eq(jobRegistro.estado, 'reservado')))
       .returning({ id: jobRegistro.id })
     return alteradas.length
   }

@@ -2,14 +2,15 @@ import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { emitirTokenSintetico } from '../../apps/api/src/ops/token-sintetico.js'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
-import { aguardarSaudavel, compose, composeAssincronoOuFalha, composeOuFalha } from '../../tools/testes/compose.ts'
+import { aguardarSaudavel, compose, composeAssincronoOuFalha, composeOuFalha, PROCESSOS_DA_FILA } from '../../tools/testes/compose.ts'
 
 // Contra o compose de teste, com as imagens construídas: migrar, API, dois despachantes e dois
 // workers como processos de verdade. É o que prova a ligação do main.ts, o `kill -9` e o SIGTERM.
 const ambiente = lerAmbienteDeTeste()
 const API = `http://127.0.0.1:${valorObrigatorio(ambiente, 'API_1_PORTA_HOST')}`
 const ESCOLA = '0190f5a0-0000-7000-8000-0000000000c1'
-const PROCESSOS_DA_FILA = ['despachante-1', 'despachante-2', 'worker-1', 'worker-2'] as const
+const WORKERS_INTERATIVOS = ['worker-interativo-1', 'worker-interativo-2'] as const
+const WORKERS_DE_LOTE = ['worker-lote-1', 'worker-lote-2'] as const
 
 interface LinhaDeLog {
   servico: string
@@ -72,46 +73,67 @@ describe('job pela API até o worker, com processos de verdade', () => {
       daRequisicao.filter(({ servico }) => servico.startsWith(prefixo)).map(({ registro }) => registro['evento'] ?? registro['msg'])
     expect(eventosPorServico('api')).toContain('job.enfileirado')
     expect(eventosPorServico('despachante')).toEqual(['job.publicado'])
-    expect(eventosPorServico('worker')).toEqual(['job.iniciado', 'job.concluido'])
+    expect(eventosPorServico('worker-interativo')).toEqual(['job.iniciado', 'job.concluido'])
     for (const { registro } of daRequisicao) expect(registro['escolaId']).toBe(ESCOLA)
   }, 60_000)
 
-  it('kill -9 no worker no meio do job: o lock vence, a outra réplica retoma, e o job termina concluido', async () => {
-    await composeAssincronoOuFalha('stop', 'worker-2')
+  it('cada fila no seu pool: o lote executa no worker-lote, e o interativo e o normal, no worker-interativo', async () => {
+    const desde = new Date().toISOString()
+    const porFila = { lote: await criarJob({ fila: 'lote', cpuMs: 0 }), normal: await criarJob({ fila: 'normal', cpuMs: 0 }), interativa: await criarJob({ cpuMs: 0 }) }
+    for (const jobId of Object.values(porFila)) await expect.poll(() => estado(jobId), { timeout: 20_000, interval: 200 }).toBe('concluido')
+
+    const iniciadoEm = (jobId: string) =>
+      logsDesde(desde, ...WORKERS_INTERATIVOS, ...WORKERS_DE_LOTE)
+        .filter(({ registro }) => registro['jobId'] === jobId && registro['evento'] === 'job.iniciado')
+        .map(({ servico }) => servico.replace(/-\d$/, ''))
+    expect(iniciadoEm(porFila.lote)).toEqual(['worker-lote'])
+    expect(iniciadoEm(porFila.normal)).toEqual(['worker-interativo'])
+    expect(iniciadoEm(porFila.interativa)).toEqual(['worker-interativo'])
+  }, 60_000)
+
+  it('kill -9 no worker-interativo no meio do job: o lock vence, a outra réplica retoma em menos de 30 s, e o job termina concluido', async () => {
+    const desde = new Date().toISOString()
+    // As duas réplicas de pé: o tempo medido é o da retomada, não o de subir a outra réplica.
+    const jobId = await criarJob({ cpuMs: 20_000 })
+    await expect.poll(() => estado(jobId), { timeout: 20_000, interval: 200 }).toBe('ativo')
+    const iniciosDoJob = () =>
+      logsDesde(desde, ...WORKERS_INTERATIVOS).filter(({ registro }) => registro['jobId'] === jobId && registro['evento'] === 'job.iniciado')
+    await expect.poll(() => iniciosDoJob().length, { timeout: 10_000, interval: 200 }).toBe(1)
+    const [primeiroInicio] = iniciosDoJob()
+    const morto = primeiroInicio?.servico ?? ''
+    const sobrevivente = WORKERS_INTERATIVOS.find((servico) => servico !== morto) ?? ''
     try {
-      const desde = new Date().toISOString()
-      const jobId = await criarJob({ cpuMs: 8_000 })
-      await expect.poll(() => estado(jobId), { timeout: 20_000, interval: 200 }).toBe('ativo')
+      await composeAssincronoOuFalha('kill', '--signal', 'SIGKILL', morto)
+      const mortoEm = performance.now()
+      expect(estadoDoServico(morto)).toBe('exited 137')
 
-      await composeAssincronoOuFalha('kill', '--signal', 'SIGKILL', 'worker-1')
-      expect(estadoDoServico('worker-1')).toBe('exited 137')
-      await composeAssincronoOuFalha('start', 'worker-2')
-
-      // Stalled padrão do BullMQ: o lock vence em até 30 s, e o job só volta na segunda verificação
-      // (a cada 30 s) depois disso. No pior caso, uns 100 s, mais os 8 s do job.
-      await expect.poll(() => estado(jobId), { timeout: 150_000, interval: 1_000 }).toBe('concluido')
-      const doJob = logsDesde(desde, 'worker-1', 'worker-2').filter(({ registro }) => registro['jobId'] === jobId)
-      expect(doJob.filter(({ servico }) => servico === 'worker-1').map(({ registro }) => registro['evento'])).toEqual(['job.iniciado'])
-      expect(doJob.filter(({ servico }) => servico === 'worker-2').map(({ registro }) => registro['evento'])).toEqual(['job.iniciado', 'job.concluido'])
+      // Lock de 10 s e verificação de stalled a cada 5 s na fila interativa: abaixo do alerta de 30 s.
+      await expect.poll(() => iniciosDoJob().some(({ servico }) => servico === sobrevivente), { timeout: 30_000, interval: 500 }).toBe(true)
+      expect(performance.now() - mortoEm).toBeLessThan(30_000)
+      await expect.poll(() => estado(jobId), { timeout: 40_000, interval: 500 }).toBe('concluido')
+      const doJob = logsDesde(desde, morto, sobrevivente).filter(({ registro }) => registro['jobId'] === jobId)
+      expect(doJob.filter(({ servico }) => servico === morto).map(({ registro }) => registro['evento'])).toEqual(['job.iniciado'])
+      expect(doJob.filter(({ servico }) => servico === sobrevivente).map(({ registro }) => registro['evento'])).toEqual(['job.iniciado', 'job.concluido'])
     } finally {
-      await composeAssincronoOuFalha('up', '--detach', '--wait', 'worker-1', 'worker-2')
+      await composeAssincronoOuFalha('up', '--detach', '--wait', ...WORKERS_INTERATIVOS)
     }
-  }, 300_000)
+  }, 180_000)
 
   it('SIGTERM no worker no meio do job: ele termina o job antes de sair, com código 0', async () => {
-    await composeAssincronoOuFalha('stop', 'worker-2')
+    const [primeiro, segundo] = WORKERS_INTERATIVOS
+    await composeAssincronoOuFalha('stop', segundo)
     try {
       const desde = new Date().toISOString()
       const jobId = await criarJob({ cpuMs: 4_000 })
       await expect.poll(() => estado(jobId), { timeout: 20_000, interval: 200 }).toBe('ativo')
 
-      await composeAssincronoOuFalha('stop', 'worker-1')
-      expect(estadoDoServico('worker-1')).toBe('exited 0')
+      await composeAssincronoOuFalha('stop', primeiro)
+      expect(estadoDoServico(primeiro)).toBe('exited 0')
       expect(await estado(jobId)).toBe('concluido')
-      const eventos = logsDesde(desde, 'worker-1').filter(({ registro }) => registro['jobId'] === jobId).map(({ registro }) => registro['evento'])
+      const eventos = logsDesde(desde, primeiro).filter(({ registro }) => registro['jobId'] === jobId).map(({ registro }) => registro['evento'])
       expect(eventos).toEqual(['job.iniciado', 'job.concluido'])
     } finally {
-      await composeAssincronoOuFalha('up', '--detach', '--wait', 'worker-1', 'worker-2')
+      await composeAssincronoOuFalha('up', '--detach', '--wait', ...WORKERS_INTERATIVOS)
     }
   }, 120_000)
 
@@ -137,12 +159,12 @@ describe('job pela API até o worker, com processos de verdade', () => {
 
       await composeAssincronoOuFalha('start', 'redis-fila')
       await aguardarSaudavel('redis-fila')
-      // A publicação que falhou na queda volta quando a reserva vence (30 s).
-      for (const id of ids) await expect.poll(() => estado(id), { timeout: 90_000, interval: 500 }).toBe('concluido')
+      // Nada foi reservado na queda (sem Redis não há vaga): com ele de volta, a rodada seguinte despacha.
+      for (const id of ids) await expect.poll(() => estado(id), { timeout: 60_000, interval: 500 }).toBe('concluido')
 
       const registros = logsDesde(desde, ...PROCESSOS_DA_FILA)
       expect(registros.filter(({ registro }) => String(registro['evento']).startsWith('processo.'))).toEqual([])
-      expect(registros.some(({ registro }) => registro['evento'] === 'despachante.publicacao_falhou')).toBe(true)
+      expect(registros.some(({ registro }) => registro['evento'] === 'despachante.vaga_indisponivel')).toBe(true)
       for (const id of ids) {
         const inicios = registros.filter(({ registro }) => registro['evento'] === 'job.iniciado' && registro['jobId'] === id)
         expect(inicios, id).toHaveLength(1)

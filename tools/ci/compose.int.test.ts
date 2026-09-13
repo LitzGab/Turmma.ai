@@ -46,7 +46,7 @@ describe('ambiente do compose', () => {
     }
     const portas = Object.values(configuracao.services).flatMap((servico) => servico.ports ?? [])
     // Todo serviço com HTTP publica uma porta; migrar, despachante e worker não atendem ninguém e não publicam.
-    const semPorta = ['migrar', 'despachante-1', 'despachante-2', 'worker-1', 'worker-2']
+    const semPorta = ['migrar', 'despachante-1', 'despachante-2', 'worker-interativo-1', 'worker-interativo-2', 'worker-lote-1', 'worker-lote-2']
     expect(portas.length).toBe(Object.keys(configuracao.services).length - semPorta.length)
     for (const nome of semPorta) expect(configuracao.services[nome]?.ports, nome).toBeUndefined()
     for (const porta of portas) {
@@ -72,8 +72,17 @@ describe('ambiente do compose', () => {
       const maximo = servico.environment?.['BANCO_POOL_MAXIMO']
       return maximo === undefined || maximo === null ? [] : [{ nome, maximo: Number(maximo) }]
     })
-    // Todo processo com pool entra na soma: as duas APIs, os dois despachantes (com o LISTEN dentro do pool) e os dois workers.
-    expect(comPool.map(({ nome }) => nome).sort()).toEqual(['api-1', 'api-2', 'despachante-1', 'despachante-2', 'worker-1', 'worker-2'])
+    // Todo processo com pool entra na soma: as duas APIs, os dois despachantes (com o LISTEN dentro do pool) e os quatro workers.
+    expect(comPool.map(({ nome }) => nome).sort()).toEqual([
+      'api-1',
+      'api-2',
+      'despachante-1',
+      'despachante-2',
+      'worker-interativo-1',
+      'worker-interativo-2',
+      'worker-lote-1',
+      'worker-lote-2',
+    ])
     const pools = comPool.map(({ maximo }) => maximo)
     const consultar = (sql: string) =>
       Number(

@@ -2,6 +2,7 @@ import 'reflect-metadata'
 import {
   criarClienteRedisDaApi,
   criarLogger,
+  criarPool,
   JANELA_LIMITE_SEGUNDOS,
   LimitadorDeRequisicoes,
   RotaAnonima,
@@ -288,6 +289,68 @@ describe('rate limit por usuário e por escola, em instâncias no processo', () 
       Array.from({ length: 30 }, () => fetch(`${api1.url}/prontidao`, { headers: { 'X-Forwarded-For': ip } }).then((resposta) => resposta.status)),
     )
     expect(sondas.every((status) => status === 200)).toBe(true)
+  })
+})
+
+describe('limites por escola, da configuracao_operacional_escola', () => {
+  const LIMITES = { LIMITE_REQ_USUARIO_MIN: '20', LIMITE_REQ_ESCOLA_MIN: '30', LIMITE_REQ_IP_ANONIMO_MIN: '10', LIMITE_INSTANCIAS_API: '2', LIMITE_PROXIES_CONFIAVEIS: '127.0.0.1' }
+  const pool = criarPool(configuracaoDeTeste().banco, () => undefined)
+  let api1: Instancia
+  let api2: Instancia
+
+  /** Escola nova, com a configuração gravada antes do primeiro pedido dela (nenhuma instância a guardou ainda). */
+  async function escolaConfigurada(limites: { usuario: number | null; escola: number | null }): Promise<string> {
+    const escola = randomUUID()
+    await pool.query('insert into configuracao_operacional_escola (escola_id, limite_req_usuario_min, limite_req_escola_min) values ($1, $2, $3)', [
+      escola,
+      limites.usuario,
+      limites.escola,
+    ])
+    return escola
+  }
+
+  beforeAll(async () => {
+    api1 = await subirApi(LIMITES)
+    api2 = await subirApi(LIMITES)
+  })
+
+  afterAll(async () => {
+    await fecharInstancias()
+    await pool.end()
+  })
+
+  it('a escola com limite próprio de escola é limitada nele, somado nas duas APIs; a escola sem configuração segue no padrão', async () => {
+    const comLimite = await escolaConfigurada({ usuario: null, escola: 5 })
+    const semConfiguracao = randomUUID()
+    const pedidosDa = async (escola: string) => {
+      const usuarios = await Promise.all(Array.from({ length: 4 }, () => token(escola, randomUUID())))
+      return Promise.all(usuarios.flatMap((usuario) => [autenticada(api1.url, usuario), autenticada(api2.url, usuario)]))
+    }
+
+    const respostas = await pedidosDa(comLimite)
+    expect(contarStatus(respostas)).toEqual({ 200: 5, 429: 3 })
+    esperarRetryAfterDaJanela(respostas)
+    expect(contarStatus(await pedidosDa(semConfiguracao))).toEqual({ 200: 8 })
+  })
+
+  it('limite próprio de usuário vale para os usuários daquela escola, e o nulo cai no padrão do ambiente', async () => {
+    const usuarioLimitado = await escolaConfigurada({ usuario: 3, escola: null })
+    const tokenDoUsuario = await token(usuarioLimitado, randomUUID())
+    const respostas = await Promise.all(Array.from({ length: 6 }, (_, indice) => autenticada(indice % 2 === 0 ? api1.url : api2.url, tokenDoUsuario)))
+    expect(contarStatus(respostas)).toEqual({ 200: 3, 429: 3 })
+
+    // O limite de escola dela é o padrão (30): outros 20 usuários, um pedido cada, passam todos.
+    const colegas = await Promise.all(Array.from({ length: 20 }, () => token(usuarioLimitado, randomUUID())))
+    expect(contarStatus(await Promise.all(colegas.map((colega) => autenticada(api1.url, colega))))).toEqual({ 200: 20 })
+  })
+
+  it('isolamento: o limite configurado da escola A não vale para a B, nem com o mesmo usuário nas duas', async () => {
+    const escolaA = await escolaConfigurada({ usuario: 2, escola: 2 })
+    const escolaB = randomUUID()
+    const usuario = randomUUID()
+    expect(contarStatus(await Promise.all(Array.from({ length: 3 }, async () => autenticada(api1.url, await token(escolaA, usuario)))))).toEqual({ 200: 2, 429: 1 })
+    // Na B, o mesmo sub tem o limite de usuário do padrão (20, somando as escolas: sobram 18), e a B, o de escola do padrão.
+    expect(contarStatus(await Promise.all(Array.from({ length: 10 }, async () => autenticada(api2.url, await token(escolaB, usuario)))))).toEqual({ 200: 10 })
   })
 })
 

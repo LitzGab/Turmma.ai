@@ -1,4 +1,6 @@
 import {
+  ConfiguracaoOperacional,
+  ConfiguracaoOperacionalRepository,
   criarBanco,
   criarLogger,
   criarPool,
@@ -6,21 +8,25 @@ import {
   Enfileirador,
   executarNoContexto,
   JobRegistroRepository,
-  NOME_DA_FILA_DE_JOBS,
+  nomeDaFilaBullMQ,
+  resolverVagas,
+  VagasPorEscola,
   type Banco,
   type ConfiguracaoBanco,
   type DadosDoJobNaFila,
   type LoggerBase,
   type PedidoDeJob,
   type PoolBanco,
+  type VagasConfiguradas,
+  type VagasPorFila,
 } from '@educa/nucleo'
-import type { EstadoDeJob } from '@educa/shared'
+import { FILAS, type EstadoDeJob, type Fila } from '@educa/shared'
 import { Queue } from 'bullmq'
 import { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
-import { montarDespachante, type DespachanteMontado } from '../../despachante/src/montagem.js'
+import { montarDespachante, type DespachanteMontado, type OpcoesDaMontagem as OpcoesDoDespachante } from '../../despachante/src/montagem.js'
 import type { Processador } from '../src/executor.js'
 import { montarWorker, type WorkerMontado } from '../src/montagem.js'
 
@@ -31,6 +37,15 @@ const ambiente = lerAmbienteDeTeste()
 
 export function configuracaoDoBanco(maximoConexoes = 5): ConfiguracaoBanco {
   return { url: urlDoBancoDeTeste(), maximoConexoes, timeoutConexaoMs: 2_000, timeoutConsultaMs: 2_000 }
+}
+
+/** As vagas por fila do padrão do ambiente, as mesmas de `.env.example` com que o despachante sobe. */
+export function vagasPadraoDoAmbiente(): VagasPorFila {
+  return {
+    interativa: Number(valorObrigatorio(ambiente, 'VAGAS_ESCOLA_INTERATIVA')),
+    normal: Number(valorObrigatorio(ambiente, 'VAGAS_ESCOLA_NORMAL')),
+    lote: Number(valorObrigatorio(ambiente, 'VAGAS_ESCOLA_LOTE')),
+  }
 }
 
 export function urlRedisDeFila(): string {
@@ -56,8 +71,8 @@ export class LogEmMemoria {
 }
 
 /**
- * O que o teste usa para olhar o banco e a fila por fora: pool próprio, repositories reais e uma
- * `Queue` no mesmo prefixo dos despachantes e workers do teste.
+ * O que o teste usa para olhar o banco e as filas por fora: pool próprio, repositories reais, uma
+ * `Queue` por fila e as vagas, no mesmo prefixo dos despachantes e workers do teste.
  */
 export class BancadaDeFila {
   readonly prefixo = `teste-${randomUUID()}`
@@ -67,13 +82,21 @@ export class BancadaDeFila {
   readonly despacho = new DespachoRepository(this.banco)
   readonly enfileirador = new Enfileirador(this.registro)
   readonly redis = new Redis(urlRedisDeFila(), { maxRetriesPerRequest: null })
-  readonly fila = new Queue<DadosDoJobNaFila>(NOME_DA_FILA_DE_JOBS, { connection: this.redis, prefix: this.prefixo })
+  readonly filas: Readonly<Record<Fila, Queue<DadosDoJobNaFila>>> = Object.fromEntries(
+    FILAS.map((fila) => [fila, new Queue<DadosDoJobNaFila>(nomeDaFilaBullMQ(fila), { connection: this.redis, prefix: this.prefixo })]),
+  ) as Record<Fila, Queue<DadosDoJobNaFila>>
+  readonly vagas = new VagasPorEscola(this.redis, this.prefixo)
   readonly #montados: Array<DespachanteMontado | WorkerMontado> = []
 
   constructor() {
     // Os testes param o Redis de fila: sem ouvinte, o ioredis escreve cada reconexão no console.
     this.redis.on('error', () => undefined)
-    this.fila.on('error', () => undefined)
+    for (const fila of Object.values(this.filas)) fila.on('error', () => undefined)
+  }
+
+  /** A fila interativa, onde a maior parte dos testes publica. */
+  get fila(): Queue<DadosDoJobNaFila> {
+    return this.filas.interativa
   }
 
   /** Enfileira como a API faz: na transação, com a escola e a requisição no contexto. */
@@ -99,35 +122,74 @@ export class BancadaDeFila {
     return rows[0]
   }
 
-  despachante(log: LogEmMemoria, opcoes: { intervaloMs?: number; intervaloReconciliacaoMs?: number } = {}): DespachanteMontado {
-    const montado = montarDespachante({ banco: configuracaoDoBanco(3), redisFilaUrl: urlRedisDeFila() }, log.logger, { prefixo: this.prefixo, ...opcoes })
-    this.#montados.push(montado)
-    return montado
+  /** Reserva como o despachante faz, na escola do contexto e na fila, sem tomar vaga. */
+  reservar(escolaId: string, fila: Fila = 'interativa', limite = 1_000) {
+    return executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => this.despacho.reservarDaEscola(fila, limite))
   }
 
-  worker(log: LogEmMemoria, opcoes: { concorrencia?: number; processadores?: Readonly<Record<string, Processador>>; graca?: number } = {}): WorkerMontado {
-    const montado = montarWorker(
-      { banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), concorrencia: opcoes.concorrencia ?? 5 },
-      log.logger,
-      {
-        prefixo: this.prefixo,
-        ...(opcoes.processadores === undefined ? {} : { processadores: opcoes.processadores }),
-        ...(opcoes.graca === undefined ? {} : { graca: opcoes.graca }),
-      },
+  /** Vagas no mesmo prefixo, sobre outro cliente: como outra instância as veria. */
+  vagasCom(cliente: Redis): VagasPorEscola {
+    return new VagasPorEscola(cliente, this.prefixo)
+  }
+
+  /** As vagas por fila da escola do contexto, lidas como o despachante lê. */
+  vagasDaEscola(): ConfiguracaoOperacional<VagasPorFila> {
+    return new ConfiguracaoOperacional(new ConfiguracaoOperacionalRepository(this.banco), (linha) => resolverVagas(vagasPadraoDoAmbiente(), linha))
+  }
+
+  /** Grava a configuração operacional da escola, como a escola a teria. */
+  async configurarEscola(escolaId: string, configuracao: { vagas?: VagasConfiguradas | null; limiteReqUsuarioMin?: number; limiteReqEscolaMin?: number }): Promise<void> {
+    await this.pool.query(
+      `insert into configuracao_operacional_escola (escola_id, vagas, limite_req_usuario_min, limite_req_escola_min) values ($1, $2, $3, $4)
+       on conflict (escola_id) do update set vagas = excluded.vagas, limite_req_usuario_min = excluded.limite_req_usuario_min, limite_req_escola_min = excluded.limite_req_escola_min`,
+      [escolaId, configuracao.vagas === undefined || configuracao.vagas === null ? null : JSON.stringify(configuracao.vagas), configuracao.limiteReqUsuarioMin ?? null, configuracao.limiteReqEscolaMin ?? null],
     )
+  }
+
+  despachante(log: LogEmMemoria, opcoes: Omit<OpcoesDoDespachante, 'prefixo'> = {}): DespachanteMontado {
+    const montado = montarDespachante({ banco: configuracaoDoBanco(3), redisFilaUrl: urlRedisDeFila(), vagasPadrao: vagasPadraoDoAmbiente() }, log.logger, { prefixo: this.prefixo, ...opcoes })
     this.#montados.push(montado)
     return montado
   }
 
-  /** Todo job pendente vira histórico: um teste não herda fila de outro. */
+  /** Um worker que atende as três filas, com `concorrencia` em cada uma, salvo `pools` explícito. */
+  worker(
+    log: LogEmMemoria,
+    opcoes: {
+      concorrencia?: number
+      pools?: Partial<Record<Fila, number>>
+      processadores?: Readonly<Record<string, Processador>>
+      graca?: number
+      intervaloRenovacaoDaVagaMs?: number
+      validadeDaVagaMs?: number
+    } = {},
+  ): WorkerMontado {
+    const pools = opcoes.pools ?? Object.fromEntries(FILAS.map((fila) => [fila, opcoes.concorrencia ?? 5]))
+    const montado = montarWorker({ banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), pools, vagasPadrao: vagasPadraoDoAmbiente() }, log.logger, {
+      prefixo: this.prefixo,
+      ...(opcoes.processadores === undefined ? {} : { processadores: opcoes.processadores }),
+      ...(opcoes.graca === undefined ? {} : { graca: opcoes.graca }),
+      ...(opcoes.intervaloRenovacaoDaVagaMs === undefined ? {} : { intervaloRenovacaoDaVagaMs: opcoes.intervaloRenovacaoDaVagaMs }),
+      ...(opcoes.validadeDaVagaMs === undefined ? {} : { validadeDaVagaMs: opcoes.validadeDaVagaMs }),
+    })
+    this.#montados.push(montado)
+    return montado
+  }
+
+  /** Todo job pendente vira histórico, e toda escola volta ao padrão: um teste não herda fila nem configuração de outro. */
   async limparRegistro(): Promise<void> {
     await this.pool.query('delete from job_registro')
+    await this.pool.query('delete from configuracao_operacional_escola')
   }
 
   async fechar(): Promise<void> {
     await Promise.all(this.#montados.splice(0).map((montado) => montado.encerrar()))
-    await this.fila.obliterate({ force: true })
-    await this.fila.close()
+    for (const fila of Object.values(this.filas)) {
+      await fila.obliterate({ force: true })
+      await fila.close()
+    }
+    const vagas = await this.redis.keys(`${this.prefixo}:vaga:*`)
+    if (vagas.length > 0) await this.redis.del(...vagas)
     await this.redis.quit()
     await this.pool.end()
   }

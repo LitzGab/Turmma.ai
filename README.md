@@ -20,7 +20,7 @@ só tem valor sintético.
 
 ```bash
 npm ci
-docker compose up        # Postgres (pgvector), Redis de fila, Redis de cache, storage S3, migrar, borda, 2 APIs, 2 realtimes, 2 despachantes, 2 workers e web
+docker compose up        # Postgres (pgvector), Redis de fila, Redis de cache, storage S3, migrar, borda, 2 APIs, 2 realtimes, 2 despachantes, 2 workers interativos, 2 workers de lote e web
 ```
 
 A web fica em http://127.0.0.1:58080 e mostra o estado da API; a API responde pela borda
@@ -28,8 +28,8 @@ A web fica em http://127.0.0.1:58080 e mostra o estado da API; a API responde pe
 http://127.0.0.1:53000/socket.io/. A borda balanceia duas instâncias de cada, e
 `docker compose restart api-1` troca uma instância sem derrubar requisição. Antes das
 instâncias, o serviço `migrar` aplica as migrations (`packages/nucleo/drizzle`) e sai. Todo
-job nasce em `job_registro`, os dois despachantes o levam ao Redis de fila e os dois workers
-o executam; `POST /v1/sistema/jobs-sinteticos` (com token) cria um job de teste. As portas publicadas escutam só no loopback e estão em
+job nasce em `job_registro`, os dois despachantes o levam à fila dele no Redis (interativa,
+normal ou lote) dentro das vagas da escola, e os workers de cada prioridade o executam; `POST /v1/sistema/jobs-sinteticos` (com token) cria um job de teste. As portas publicadas escutam só no loopback e estão em
 `.env.example`. Para mudar alguma na sua máquina, crie um `.env` na raiz: ele sobrepõe o
 exemplo no `docker compose up`, mas testes e esteira usam sempre o `.env.example`.
 

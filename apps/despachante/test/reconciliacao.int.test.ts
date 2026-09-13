@@ -3,7 +3,7 @@ import {
   criarClienteRedisDaFila,
   executarNoContexto,
   IDADE_PARA_RECONCILIAR_SEGUNDOS,
-  NOME_DA_FILA_DE_JOBS,
+  nomeDaFilaBullMQ,
   TIMEOUT_COMANDO_REDIS_FILA_MS,
   type DadosDoJobNaFila,
 } from '@educa/nucleo'
@@ -12,7 +12,7 @@ import { Queue, UnrecoverableError, Worker } from 'bullmq'
 import { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { aguardarSaudavel, compose, composeAssincronoOuFalha } from '../../../tools/testes/compose.ts'
+import { aguardarSaudavel, compose, composeAssincronoOuFalha, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { FalhaDeJob } from '../../worker/src/falha-de-job.js'
 import { BancadaDeFila, ESCOLA_A, ESCOLA_B, LogEmMemoria, urlRedisDeFila } from '../../worker/test/fila-de-teste.js'
 import type { DespachanteMontado } from '../src/montagem.js'
@@ -23,7 +23,7 @@ import { Reconciliacao } from '../src/reconciliacao.js'
 // compose de teste. A idade de 2 min é simulada recuando as datas da linha no banco.
 
 beforeAll(() => {
-  compose('stop', 'despachante-1', 'despachante-2', 'worker-1', 'worker-2')
+  compose('stop', ...PROCESSOS_DA_FILA)
 })
 
 describe('reconciliação entre job_registro e o BullMQ', () => {
@@ -32,6 +32,9 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
   beforeEach(async () => {
     bancada = new BancadaDeFila()
     await bancada.limparRegistro()
+    // Os jobs publicados aqui não executam (não há worker na maior parte dos testes) e seguram a vaga:
+    // com o padrão, a rodada pararia em 5 interativos e 2 lotes. A vaga tem teste próprio (vagas.int.test.ts).
+    for (const escola of [ESCOLA_A, ESCOLA_B]) await bancada.configurarEscola(escola, { vagas: { interativa: 1_000, normal: 1_000, lote: 1_000 } })
   })
 
   afterEach(async () => {
@@ -64,7 +67,7 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
 
   /** O Redis perdeu o job depois de publicado (AOF sem o último segundo, Redis trocado). */
   async function perderNaFila(...ids: string[]): Promise<void> {
-    for (const id of ids) await (await bancada.fila.getJob(id))?.remove()
+    for (const id of ids) for (const fila of Object.values(bancada.filas)) await (await fila.getJob(id))?.remove()
   }
 
   function comoAtivo(id: string): Promise<unknown> {
@@ -74,12 +77,15 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
   /** Uma reconciliação à parte, com cliente e `Queue` próprios, e a consulta à fila embrulhada pelo teste. */
   function reconciliacaoAParte(nome: string, embrulhar: (consultar: FilaDePublicacao['consultar']) => FilaDePublicacao['consultar'], lote?: number) {
     const redis = criarClienteRedisDaFila(urlRedisDeFila(), nome, () => undefined)
-    const publicacao = new PublicacaoBullMQ(() => new Queue<DadosDoJobNaFila>(NOME_DA_FILA_DE_JOBS, { connection: redis, prefix: bancada.prefixo }))
-    const fila: FilaDePublicacao = { publicar: (jobs) => publicacao.publicar(jobs), consultar: embrulhar((jobId) => publicacao.consultar(jobId)) }
+    const publicacao = new PublicacaoBullMQ((filaDoJob) => new Queue<DadosDoJobNaFila>(nomeDaFilaBullMQ(filaDoJob), { connection: redis, prefix: bancada.prefixo }))
+    const fila: FilaDePublicacao = { publicar: (jobs) => publicacao.publicar(jobs), consultar: embrulhar((job) => publicacao.consultar(job)) }
     const log = new LogEmMemoria(nome)
     return {
       log,
-      reconciliacao: new Reconciliacao({ repositorio: bancada.despacho, fila, logger: log.logger }, lote === undefined ? {} : { lote }),
+      reconciliacao: new Reconciliacao(
+        { repositorio: bancada.despacho, fila, vagas: bancada.vagas, vagasDaEscola: bancada.vagasDaEscola(), logger: log.logger },
+        lote === undefined ? {} : { lote },
+      ),
       fechar: async () => {
         await publicacao.fechar()
         await redis.quit()
@@ -142,7 +148,8 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
     const resultado = await montado.reconciliacao.reconciliar()
 
     expect(resultado).toEqual({ conferidos: 151, republicados: [perdido], falhasRegistradas: [], semConfirmacao: 0 })
-    expect(await bancada.fila.getJob(perdido)).toBeDefined()
+    // Na fila dele, a de lote.
+    expect(await bancada.filas.lote.getJob(perdido)).toBeDefined()
     // Com a volta completa, a próxima começa do início de novo.
     expect((await montado.reconciliacao.reconciliar()).conferidos).toBe(150)
   }, 90_000)
@@ -156,7 +163,7 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
     await envelhecer(interativo, ...lotes)
 
     // Páginas de 2: o ilegível, o lote mais antigo, cai na primeira página, junto com o interativo.
-    const aParte = reconciliacaoAParte('reconciliacao', (consultar) => (jobId) => (jobId === ilegivel ? Promise.reject(new Error('hash do job ilegível')) : consultar(jobId)), 2)
+    const aParte = reconciliacaoAParte('reconciliacao', (consultar) => (job) => (job.id === ilegivel ? Promise.reject(new Error('hash do job ilegível')) : consultar(job)), 2)
     try {
       const resultado = await aParte.reconciliacao.reconciliar()
 
@@ -209,9 +216,9 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
     let liberar: () => void = () => undefined
     const barreira = new Promise<void>((resolver) => (liberar = resolver))
     const instancias = ['reconciliacao-1', 'reconciliacao-2'].map((nome) =>
-      reconciliacaoAParte(nome, (consultar) => async (jobId) => {
+      reconciliacaoAParte(nome, (consultar) => async (job) => {
         try {
-          return await consultar(jobId)
+          return await consultar(job)
         } finally {
           if (++consultas === ids.length * 2) liberar()
           await barreira
@@ -250,8 +257,8 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
     const solta = new Promise<void>((resolver) => (soltar = resolver))
     let consultou: () => void = () => undefined
     const consultada = new Promise<void>((resolver) => (consultou = resolver))
-    const atrasada = reconciliacaoAParte('atrasada', (consultar) => async (jobId) => {
-      const situacao = await consultar(jobId)
+    const atrasada = reconciliacaoAParte('atrasada', (consultar) => async (job) => {
+      const situacao = await consultar(job)
       consultou()
       await solta
       return situacao
@@ -282,10 +289,10 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
       const log = new LogEmMemoria('despachante')
       const requisicaoId = randomUUID()
       const id = await bancada.enfileirar(ESCOLA_A, {}, requisicaoId)
-      await bancada.despacho.reservar(10)
+      await bancada.reservar(ESCOLA_A)
       // Uma tentativa só: esta é a última.
       await bancada.fila.add('sintetico', { escolaId: ESCOLA_A, requisicaoId }, { jobId: id, attempts: 1 })
-      await bancada.despacho.marcarPublicados([id])
+      await executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () => bancada.despacho.marcarPublicados([id]))
 
       const logWorker = new LogEmMemoria('worker')
       bancada.worker(logWorker, {
@@ -326,7 +333,7 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
       // O BullMQ falha o job com esta mensagem quando ele trava mais vezes que o limite. Aqui ela vem
       // de um worker à parte, para não esperar dois ciclos de stalled de 30 s.
       const redisStalled = new Redis(urlRedisDeFila(), { maxRetriesPerRequest: null })
-      const workerStalled = new Worker(NOME_DA_FILA_DE_JOBS, () => Promise.reject(new UnrecoverableError('job stalled more than allowable limit')), {
+      const workerStalled = new Worker(nomeDaFilaBullMQ('interativa'), () => Promise.reject(new UnrecoverableError('job stalled more than allowable limit')), {
         connection: redisStalled,
         prefix: bancada.prefixo,
       })
@@ -345,11 +352,16 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
       expect((await bancada.estado(comDadoInvalido))?.estado).toBe('publicado')
 
       await envelhecer(stalled, comDadoInvalido)
+      // As vagas que a publicação tomou seguem com eles: nenhum worker terminou os dois para liberar.
+      const chaveDaVaga = bancada.vagas.chave('interativa', ESCOLA_A)
+      expect(await bancada.redis.zrange(chaveDaVaga, '0', '-1')).toEqual(expect.arrayContaining([stalled, comDadoInvalido]))
       const resultado = await bancada.despachante(log).reconciliacao.reconciliar()
 
       expect([...resultado.falhasRegistradas].sort()).toEqual([stalled, comDadoInvalido].sort())
       expect(await bancada.estado(stalled)).toEqual({ estado: 'falhou', escolaId: ESCOLA_A, codigoFalha: CodigoDeFalhaDeJob.ERRO_INTERNO })
       expect(await bancada.estado(comDadoInvalido)).toEqual({ estado: 'falhou', escolaId: ESCOLA_A, codigoFalha: CodigoDeFalhaDeJob.DADOS_INVALIDOS })
+      // A falha reconciliada libera a vaga, em vez de deixá-la vencer em 60 s.
+      expect(await bancada.redis.zrange(chaveDaVaga, '0', '-1')).toEqual([])
     }, 60_000)
 
     it('a falha da fila não muda job que já terminou: o worker lento concluiu antes de a falha ser gravada', async () => {

@@ -4,9 +4,10 @@ import type { PgTransaction } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 import { validarAmbiente } from '../config/validar-config.js'
 import type { ConfiguracaoBanco, PoolBanco } from './pool.js'
+import { configuracaoOperacionalEscola } from './schema/configuracao-operacional-escola.js'
 import { jobRegistro } from './schema/job-registro.js'
 
-export const schema = { jobRegistro }
+export const schema = { jobRegistro, configuracaoOperacionalEscola }
 export type Schema = typeof schema
 
 export type Banco = NodePgDatabase<Schema>

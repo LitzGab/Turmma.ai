@@ -1,11 +1,5 @@
 import { z } from 'zod'
 
-/**
- * A fila única do BullMQ até a 9.0, que a divide em `interativa`, `normal` e `lote`. O job leva a
- * fila e a prioridade gravadas em `job_registro` desde já.
- */
-export const NOME_DA_FILA_DE_JOBS = 'jobs'
-
 /** Tentativas antes de o job falhar de vez (Tech Spec, seção 5, "Retentativa"). */
 export const TENTATIVAS_DE_JOB = 5
 /** Recuo exponencial a partir de 2 s: 2, 4, 8 e 16 s entre as cinco tentativas. */

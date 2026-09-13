@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 8 de 15 concluídas
+**Status:** 9 de 15 concluídas
 
 ## Lista
 
@@ -53,11 +53,11 @@
   - [x] 8.2 Reconciliação de job publicado ou ativo que sumiu do BullMQ
   - [x] 8.3 Testes: Redis parado e religado, reconciliação, timeout não republica
 
-- [ ] **9.0 — Interativo nunca espera lote, e cada escola tem sua vaga**
-  - [ ] 9.1 Três filas e pools separados (`worker-interativo`, `worker-lote`)
-  - [ ] 9.2 `configuracao_operacional_escola` com padrão do ambiente
-  - [ ] 9.3 `VagasPorEscola` em Lua e rodízio de escolas no despachante
-  - [ ] 9.4 Testes: prioridade, teto por escola, vaga concorrente, vaga vencida, isolamento
+- [x] **9.0 — Interativo nunca espera lote, e cada escola tem sua vaga**
+  - [x] 9.1 Três filas e pools separados (`worker-interativo`, `worker-lote`)
+  - [x] 9.2 `configuracao_operacional_escola` com padrão do ambiente
+  - [x] 9.3 `VagasPorEscola` em Lua e rodízio de escolas no despachante
+  - [x] 9.4 Testes: prioridade, teto por escola, vaga concorrente, vaga vencida, isolamento
 
 - [ ] **10.0 — Lote não urgente só começa fora do horário letivo da escola**
   - [ ] 10.1 `JanelaLetiva` com fuso, dias e horário, e relógio injetado

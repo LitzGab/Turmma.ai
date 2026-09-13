@@ -6,6 +6,7 @@ name: educa
 services:
   postgres:
     image: pgvector/pgvector:0.8.6-pg18-trixie
+    command: [postgres, -c, 'max_connections=${POSTGRES_CONEXOES_MAXIMAS:?defina POSTGRES_CONEXOES_MAXIMAS}']
     environment:
       POSTGRES_USER: ${POSTGRES_USUARIO:?defina POSTGRES_USUARIO}
       POSTGRES_PASSWORD: ${POSTGRES_SENHA:?defina POSTGRES_SENHA}
@@ -199,6 +200,9 @@ services:
       BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
       BANCO_TIMEOUT_CONSULTA_MS: ${BANCO_TIMEOUT_CONSULTA_MS:?defina BANCO_TIMEOUT_CONSULTA_MS}
       REDIS_FILA_URL: redis://redis-fila:6379
+      VAGAS_ESCOLA_INTERATIVA: ${VAGAS_ESCOLA_INTERATIVA:?defina VAGAS_ESCOLA_INTERATIVA}
+      VAGAS_ESCOLA_NORMAL: ${VAGAS_ESCOLA_NORMAL:?defina VAGAS_ESCOLA_NORMAL}
+      VAGAS_ESCOLA_LOTE: ${VAGAS_ESCOLA_LOTE:?defina VAGAS_ESCOLA_LOTE}
     stop_grace_period: 15s
     depends_on:
       migrar:
@@ -216,20 +220,27 @@ services:
   despachante-2:
     <<: *despachante
 
-  # Dois workers. No SIGTERM, worker.close() espera os jobs em andamento por até 30 s; morto no meio
+  # Workers por prioridade, duas réplicas de cada, com pools separados: o worker-interativo atende as
+  # filas interativa e normal, e o worker-lote só a de lote, então lote nenhum ocupa a vez de um
+  # interativo. No SIGTERM, cada worker espera os jobs em andamento por até 30 s; morto no meio
   # (kill -9), o lock do job vence e a outra réplica o retoma pelo stalled do BullMQ.
-  worker-1: &worker
+  worker-interativo-1: &worker-interativo
     image: educa-worker:local
     build:
       context: ..
       dockerfile: infra/docker/worker.Dockerfile
     environment:
       BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
-      BANCO_POOL_MAXIMO: ${WORKER_BANCO_POOL_MAXIMO:?defina WORKER_BANCO_POOL_MAXIMO}
+      BANCO_POOL_MAXIMO: ${WORKER_INTERATIVO_BANCO_POOL_MAXIMO:?defina WORKER_INTERATIVO_BANCO_POOL_MAXIMO}
       BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
       BANCO_TIMEOUT_CONSULTA_MS: ${BANCO_TIMEOUT_CONSULTA_MS:?defina BANCO_TIMEOUT_CONSULTA_MS}
       REDIS_FILA_URL: redis://redis-fila:6379
-      WORKER_CONCORRENCIA: ${WORKER_CONCORRENCIA:?defina WORKER_CONCORRENCIA}
+      FILAS: interativa,normal
+      WORKER_POOL_INTERATIVA: ${WORKER_POOL_INTERATIVA:?defina WORKER_POOL_INTERATIVA}
+      WORKER_POOL_NORMAL: ${WORKER_POOL_NORMAL:?defina WORKER_POOL_NORMAL}
+      VAGAS_ESCOLA_INTERATIVA: ${VAGAS_ESCOLA_INTERATIVA:?defina VAGAS_ESCOLA_INTERATIVA}
+      VAGAS_ESCOLA_NORMAL: ${VAGAS_ESCOLA_NORMAL:?defina VAGAS_ESCOLA_NORMAL}
+      VAGAS_ESCOLA_LOTE: ${VAGAS_ESCOLA_LOTE:?defina VAGAS_ESCOLA_LOTE}
     # Acima dos 30 s de graça do worker.close(): o Docker só manda SIGKILL depois dela.
     stop_grace_period: 35s
     depends_on:
@@ -244,8 +255,25 @@ services:
       retries: 30
       start_period: 5s
 
-  worker-2:
-    <<: *worker
+  worker-interativo-2:
+    <<: *worker-interativo
+
+  worker-lote-1: &worker-lote
+    <<: *worker-interativo
+    environment:
+      BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
+      BANCO_POOL_MAXIMO: ${WORKER_LOTE_BANCO_POOL_MAXIMO:?defina WORKER_LOTE_BANCO_POOL_MAXIMO}
+      BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
+      BANCO_TIMEOUT_CONSULTA_MS: ${BANCO_TIMEOUT_CONSULTA_MS:?defina BANCO_TIMEOUT_CONSULTA_MS}
+      REDIS_FILA_URL: redis://redis-fila:6379
+      FILAS: lote
+      WORKER_POOL_LOTE: ${WORKER_POOL_LOTE:?defina WORKER_POOL_LOTE}
+      VAGAS_ESCOLA_INTERATIVA: ${VAGAS_ESCOLA_INTERATIVA:?defina VAGAS_ESCOLA_INTERATIVA}
+      VAGAS_ESCOLA_NORMAL: ${VAGAS_ESCOLA_NORMAL:?defina VAGAS_ESCOLA_NORMAL}
+      VAGAS_ESCOLA_LOTE: ${VAGAS_ESCOLA_LOTE:?defina VAGAS_ESCOLA_LOTE}
+
+  worker-lote-2:
+    <<: *worker-lote
 
   # Borda local (infra/Caddyfile): balanceia as duas APIs e os dois realtimes, sem log de acesso.
   borda:

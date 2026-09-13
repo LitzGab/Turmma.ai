@@ -1,5 +1,5 @@
 import { OPCOES_DE_JOB_PUBLICADO, type JobReservado } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob } from '@educa/shared'
+import { CodigoDeFalhaDeJob, type Fila } from '@educa/shared'
 import { describe, expect, it, vi } from 'vitest'
 import { PrazoDaFilaEsgotado, PublicacaoBullMQ, type FilaBullMQ } from './fila-de-publicacao.js'
 
@@ -37,12 +37,40 @@ describe('PublicacaoBullMQ', () => {
     ])
   })
 
+  it('cada job vai à fila dele: uma Queue por fila, e a prioridade é a fila', async () => {
+    const adicionados = new Map<Fila, string[]>()
+    const criar = (fila: Fila) =>
+      filaFalsa({
+        addBulk: (jobs) => {
+          adicionados.set(fila, [...(adicionados.get(fila) ?? []), ...jobs.map((job) => job.opts.jobId)])
+          return Promise.resolve([])
+        },
+      })
+    const lote = { ...JOB, id: '0190f5a0-0000-7000-8000-0000000000f2', fila: 'lote' as const }
+    const normal = { ...JOB, id: '0190f5a0-0000-7000-8000-0000000000f3', fila: 'normal' as const }
+    await new PublicacaoBullMQ(criar).publicar([JOB, lote, normal])
+    expect(Object.fromEntries(adicionados)).toEqual({ interativa: [JOB.id], lote: [lote.id], normal: [normal.id] })
+  })
+
+  it('consulta o job na fila dele', async () => {
+    const consultadas: Fila[] = []
+    const criar = (fila: Fila) =>
+      filaFalsa({
+        getJob: () => {
+          consultadas.push(fila)
+          return Promise.resolve(undefined)
+        },
+      })
+    await new PublicacaoBullMQ(criar).consultar({ id: JOB.id, fila: 'lote' })
+    expect(consultadas).toEqual(['lote'])
+  })
+
   it('Redis fora quando o despachante sobe: a Queue esperaria o Redis sem limite, e a publicação desiste no prazo', async () => {
     const nuncaFicaPronta = filaFalsa({ waitUntilReady: () => new Promise(() => undefined) })
     const publicacao = new PublicacaoBullMQ(() => nuncaFicaPronta, 50)
     const inicio = performance.now()
     await expect(publicacao.publicar([JOB])).rejects.toBeInstanceOf(PrazoDaFilaEsgotado)
-    await expect(publicacao.consultar(JOB.id)).rejects.toBeInstanceOf(PrazoDaFilaEsgotado)
+    await expect(publicacao.consultar(JOB)).rejects.toBeInstanceOf(PrazoDaFilaEsgotado)
     expect(performance.now() - inicio).toBeLessThan(1_000)
   })
 
@@ -55,25 +83,26 @@ describe('PublicacaoBullMQ', () => {
     const quebrada = filaFalsa({ waitUntilReady: () => Promise.reject(new Error('Connection is closed.')), close: vi.fn(() => Promise.resolve()) })
     const addBulkDaNova = vi.fn<FilaBullMQ['addBulk']>(() => Promise.resolve([]))
     const criadas = [quebrada, filaFalsa({ addBulk: addBulkDaNova })]
-    const criar = vi.fn(() => criadas.shift() ?? filaFalsa())
+    const criar = vi.fn((fila: Fila) => (fila === 'interativa' ? (criadas.shift() ?? filaFalsa()) : filaFalsa()))
     const publicacao = new PublicacaoBullMQ(criar)
 
     await expect(publicacao.publicar([JOB])).rejects.toThrow('Connection is closed.')
     expect(quebrada.close).toHaveBeenCalledOnce()
     await publicacao.publicar([JOB])
     expect(addBulkDaNova).toHaveBeenCalledOnce()
-    expect(criar).toHaveBeenCalledTimes(2)
+    // As três da construção e a nova, só da fila que quebrou.
+    expect(criar.mock.calls.map(([fila]) => fila)).toEqual(['interativa', 'normal', 'lote', 'interativa'])
   })
 
   it('esperar o Redis ficar pronto não é falha da preparação: no prazo, a Queue não é trocada', async () => {
     const criar = vi.fn(() => filaFalsa({ waitUntilReady: () => new Promise(() => undefined) }))
     const publicacao = new PublicacaoBullMQ(criar, 20)
     await expect(publicacao.publicar([JOB])).rejects.toBeInstanceOf(PrazoDaFilaEsgotado)
-    expect(criar).toHaveBeenCalledOnce()
+    expect(criar).toHaveBeenCalledTimes(3)
   })
 
   describe('consultar', () => {
-    const consultar = (job: JobNaFila) => new PublicacaoBullMQ(() => filaFalsa({ getJob: () => Promise.resolve(job) })).consultar(JOB.id)
+    const consultar = (job: JobNaFila) => new PublicacaoBullMQ(() => filaFalsa({ getJob: () => Promise.resolve(job) })).consultar(JOB)
 
     it('inexistente só quando a fila não tem o job', async () => {
       expect(await consultar(undefined)).toEqual({ situacao: 'inexistente' })

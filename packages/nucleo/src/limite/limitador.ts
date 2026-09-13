@@ -3,6 +3,7 @@ import type { Redis } from 'ioredis'
 import { RateLimiterMemory, RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 import { z } from 'zod'
 import { validarAmbiente } from '../config/validar-config.js'
+import type { LimitesDeRequisicao } from '../configuracao/configuracao-operacional.js'
 import type { Identidade } from '../identidade/verificar-token.js'
 import {
   JANELA_LIMITE_SEGUNDOS,
@@ -41,8 +42,8 @@ const esquemaAmbienteLimite = z.object({
 })
 
 /**
- * Limites do ambiente. São o padrão de toda escola; a configuração por escola chega com a
- * `configuracao_operacional_escola` (tarefa 9.0). Nenhum valor tem padrão escondido no código (D41).
+ * Limites do ambiente. São o padrão de toda escola que não configurou o próprio em
+ * `configuracao_operacional_escola`. Nenhum valor tem padrão escondido no código (D41).
  */
 export function lerConfiguracaoLimite(ambiente: Record<string, string | undefined>): ConfiguracaoLimite {
   const valores = validarAmbiente(esquemaAmbienteLimite, ambiente)
@@ -88,6 +89,29 @@ interface Limite {
   readonly seguro: SeguroEmMemoria
 }
 
+/**
+ * Os limites de um prefixo, um por valor de pontos. A contagem no Redis é da chave (`rl:e:{escola}`),
+ * não do limitador: a escola com limite próprio conta na mesma chave, e só o teto da recusa muda.
+ */
+class LimitesDoPrefixo {
+  readonly #porPontos = new Map<number, Limite>()
+
+  constructor(
+    private readonly cliente: Redis,
+    private readonly prefixo: string,
+    private readonly instancias: number,
+  ) {}
+
+  com(pontos: number): Limite {
+    let limite = this.#porPontos.get(pontos)
+    if (limite === undefined) {
+      limite = criarLimite(this.cliente, this.prefixo, pontos, this.instancias)
+      this.#porPontos.set(pontos, limite)
+    }
+    return limite
+  }
+}
+
 type Consumo = { aceita: boolean; resposta: RateLimiterRes; doSeguro: boolean }
 
 function criarLimite(cliente: Redis, prefixo: string, pontos: number, instancias: number): Limite {
@@ -112,14 +136,14 @@ function criarLimite(cliente: Redis, prefixo: string, pontos: number, instancias
  */
 export class LimitadorDeRequisicoes {
   readonly #logger = new Logger('limite')
-  readonly #usuario: Limite
-  readonly #escola: Limite
+  readonly #usuario: LimitesDoPrefixo
+  readonly #escola: LimitesDoPrefixo
   readonly #ipAnonimo: Limite
   #seguroAtivo = false
 
   constructor(cliente: Redis, config: ConfiguracaoLimite) {
-    this.#usuario = criarLimite(cliente, PREFIXO_LIMITE_USUARIO, config.porUsuarioMin, config.instancias)
-    this.#escola = criarLimite(cliente, PREFIXO_LIMITE_ESCOLA, config.porEscolaMin, config.instancias)
+    this.#usuario = new LimitesDoPrefixo(cliente, PREFIXO_LIMITE_USUARIO, config.instancias)
+    this.#escola = new LimitesDoPrefixo(cliente, PREFIXO_LIMITE_ESCOLA, config.instancias)
     this.#ipAnonimo = criarLimite(cliente, PREFIXO_LIMITE_IP, config.porIpAnonimoMin, config.instancias)
   }
 
@@ -135,15 +159,18 @@ export class LimitadorDeRequisicoes {
    * O limite de usuário vale entre escolas (o mesmo `sub` em duas escolas é uma pessoa só); o de
    * escola é de cada escola. Requisição recusada pelo limite do usuário é devolvida ao da escola:
    * um aluno com o script em laço não gasta a cota dos outros 399.
+   *
+   * Os `limites` são os da escola do token, lidos da configuração dela por quem chama.
    */
-  async consumirAutenticada(identidade: Identidade): Promise<ResultadoDoLimite> {
+  async consumirAutenticada(identidade: Identidade, limites: LimitesDeRequisicao): Promise<ResultadoDoLimite> {
+    const limiteDaEscola = this.#escola.com(limites.porEscolaMin)
     const [usuario, escola] = await Promise.all([
-      this.#consumir(this.#usuario, identidade.usuarioId),
-      this.#consumir(this.#escola, identidade.escolaId),
+      this.#consumir(this.#usuario.com(limites.porUsuarioMin), identidade.usuarioId),
+      this.#consumir(limiteDaEscola, identidade.escolaId),
     ])
     this.#registrarSeguro(usuario.doSeguro || escola.doSeguro)
     if (!usuario.aceita) {
-      await this.#devolver(this.#escola, identidade.escolaId, escola)
+      await this.#devolver(limiteDaEscola, identidade.escolaId, escola)
       return { aceita: false, msAteLiberar: usuario.resposta.msBeforeNext }
     }
     if (!escola.aceita) return { aceita: false, msAteLiberar: escola.resposta.msBeforeNext }

@@ -1,4 +1,4 @@
-import { ConfiguracaoInvalida, lerConfiguracaoBanco, validarAmbiente, type ConfiguracaoBanco } from '@educa/nucleo'
+import { ConfiguracaoInvalida, lerConfiguracaoBanco, lerVagasPadrao, validarAmbiente, type ConfiguracaoBanco, type VagasPorFila } from '@educa/nucleo'
 import { z } from 'zod'
 
 export { ConfiguracaoInvalida }
@@ -11,6 +11,8 @@ export interface ConfiguracaoDespachante {
   /** Pool próprio, com o `statement_timeout` do ambiente; a conexão do `LISTEN` sai dele. */
   banco: ConfiguracaoBanco
   redisFilaUrl: string
+  /** Vagas simultâneas por fila da escola que não configurou as próprias (D41). */
+  vagasPadrao: VagasPorFila
 }
 
 /** Lê e valida o ambiente do despachante. Todos os problemas saem de uma vez, só pelo nome. */
@@ -27,8 +29,13 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   }
   const banco = ler(() => lerConfiguracaoBanco(ambiente))
   const proprio = ler(() => validarAmbiente(esquemaAmbiente, ambiente))
-  if (banco === undefined || proprio === undefined) {
+  const vagasPadrao = ler(() => lerVagasPadrao(ambiente))
+  if (banco === undefined || proprio === undefined || vagasPadrao === undefined) {
     throw new ConfiguracaoInvalida(problemas.flatMap((erro) => erro.variaveis).sort(), problemas.flatMap((erro) => erro.motivos))
   }
-  return { banco, redisFilaUrl: proprio.REDIS_FILA_URL }
+  return {
+    banco,
+    redisFilaUrl: proprio.REDIS_FILA_URL,
+    vagasPadrao,
+  }
 }

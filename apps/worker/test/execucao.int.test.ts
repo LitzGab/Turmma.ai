@@ -9,7 +9,7 @@ import {
 import { CodigoDeErro, CodigoDeFalhaDeJob } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { aguardarSaudavel, compose, composeAssincronoOuFalha } from '../../../tools/testes/compose.ts'
+import { aguardarSaudavel, compose, composeAssincronoOuFalha, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { BancadaDeFila, ESCOLA_A, ESCOLA_B, LogEmMemoria } from './fila-de-teste.js'
 
 // Despachantes e workers de verdade (a mesma montagem do main.ts), no processo do teste, contra o
@@ -21,7 +21,7 @@ async function aguardarEstado(bancada: BancadaDeFila, id: string, estado: string
 
 beforeAll(() => {
   // Despachante ou worker do compose de pé disputaria as linhas com os deste arquivo.
-  compose('stop', 'despachante-1', 'despachante-2', 'worker-1', 'worker-2')
+  compose('stop', ...PROCESSOS_DA_FILA)
 })
 
 describe('dois despachantes e dois workers sobre a mesma fila', () => {
@@ -86,12 +86,14 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
     const id = await bancada.enfileirar(ESCOLA_B, {}, requisicaoId)
     const logDespachante = new LogEmMemoria('despachante')
     const logWorker = new LogEmMemoria('worker')
-    const { worker } = bancada.worker(logWorker)
+    const { workers } = bancada.worker(logWorker)
     bancada.despachante(logDespachante).despachante.iniciar()
     await aguardarEstado(bancada, id, 'concluido')
     // O BullMQ guarda o concluído por 1 dia e o falho por 7: é o que ainda deduplica um reenvio.
-    expect(worker.opts.removeOnComplete).toEqual({ age: RETENCAO_JOB_CONCLUIDO_SEGUNDOS })
-    expect(worker.opts.removeOnFail).toEqual({ age: RETENCAO_JOB_FALHO_SEGUNDOS })
+    for (const worker of workers.values()) {
+      expect(worker.opts.removeOnComplete).toEqual({ age: RETENCAO_JOB_CONCLUIDO_SEGUNDOS })
+      expect(worker.opts.removeOnFail).toEqual({ age: RETENCAO_JOB_FALHO_SEGUNDOS })
+    }
 
     const sobreOJob = [...logDespachante.registros(), ...logWorker.registros()].filter((registro) => registro['jobId'] === id)
     expect(sobreOJob.map((registro) => registro['evento'])).toEqual(['job.publicado', 'job.iniciado', 'job.concluido'])
@@ -125,7 +127,7 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
     }
     bancada.worker(logWorker, { processadores })
     // Publicado como o despachante faz, com duas tentativas e sem recuo: passa pela falha intermediária e pela definitiva.
-    await bancada.despacho.reservar(10)
+    await bancada.reservar(ESCOLA_A)
     await bancada.fila.add('sintetico', { escolaId: ESCOLA_A, requisicaoId: null }, { jobId: id, attempts: 2 })
 
     await aguardarEstado(bancada, id, 'falhou')
@@ -140,7 +142,7 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
 
   it('escrita tardia: marcar publicado depois de o worker concluir não tira o job de concluido', async () => {
     const id = await bancada.enfileirar(ESCOLA_A)
-    const [reservado] = await bancada.despacho.reservar(10)
+    const [reservado] = await bancada.reservar(ESCOLA_A)
     expect(reservado?.id).toBe(id)
 
     // O worker pega o job antes de o despachante gravar `publicado`, e termina.
@@ -152,11 +154,11 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
       expect(await bancada.registro.concluir(id)).toBe(true)
     })
 
-    expect(await bancada.despacho.marcarPublicados([id])).toBe(0)
+    expect(await executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () => bancada.despacho.marcarPublicados([id]))).toBe(0)
     expect((await bancada.estado(id))?.estado).toBe('concluido')
     // Concluido não volta a reservado nem a ativo, nem com a reserva antiga vencida.
     await bancada.pool.query(`update job_registro set reservado_ate = now() - interval '1 minute' where id = $1`, [id])
-    expect(await bancada.despacho.reservar(10)).toEqual([])
+    expect(await bancada.reservar(ESCOLA_A)).toEqual([])
     await executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, async () => {
       expect((await bancada.registro.iniciarExecucao(id)).situacao).toBe('nao_executavel')
       expect(await bancada.registro.registrarFalha(id, CodigoDeFalhaDeJob.ERRO_INTERNO)).toBe(false)
@@ -167,15 +169,15 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
   it('reserva vencida volta a ser reservada, mas job ativo com reserva vencida não', async () => {
     const parado = await bancada.enfileirar(ESCOLA_A)
     const emExecucao = await bancada.enfileirar(ESCOLA_A)
-    expect((await bancada.despacho.reservar(10)).map((job) => job.id).sort()).toEqual([parado, emExecucao].sort())
+    expect((await bancada.reservar(ESCOLA_A)).map((job) => job.id).sort()).toEqual([parado, emExecucao].sort())
     // Antes de vencer, ninguém mais pega.
-    expect(await bancada.despacho.reservar(10)).toEqual([])
+    expect(await bancada.reservar(ESCOLA_A)).toEqual([])
 
     await executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () => bancada.registro.iniciarExecucao(emExecucao))
     // O despachante que reservou caiu antes de publicar: a reserva vence.
     await bancada.pool.query(`update job_registro set reservado_ate = now() - interval '1 second'`)
 
-    expect((await bancada.despacho.reservar(10)).map((job) => job.id)).toEqual([parado])
+    expect((await bancada.reservar(ESCOLA_A)).map((job) => job.id)).toEqual([parado])
     expect((await bancada.estado(emExecucao))?.estado).toBe('ativo')
   })
 
@@ -199,7 +201,7 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
     it('job da fila com a escola A, ou sem escola, apontando para a linha da B não roda, e dá o mesmo resultado de um id inexistente', async () => {
       const daEscolaB = await bancada.enfileirar(ESCOLA_B)
       const outraDaEscolaB = await bancada.enfileirar(ESCOLA_B)
-      await bancada.despacho.reservar(10)
+      await bancada.reservar(ESCOLA_B)
       const logWorker = new LogEmMemoria('worker')
       bancada.worker(logWorker)
       const inexistente = randomUUID()
@@ -232,7 +234,7 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
 
     it('contexto sem escola e sem a marca de rotina do sistema (rota anônima) não alcança job nenhum', async () => {
       const daEscolaA = await bancada.enfileirar(ESCOLA_A)
-      await bancada.despacho.reservar(10)
+      await bancada.reservar(ESCOLA_A)
       await expect(executarNoContexto({ requisicaoId: randomUUID() }, () => bancada.registro.iniciarExecucao(daEscolaA))).rejects.toThrow(
         'não tem escopo',
       )
@@ -289,7 +291,7 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
   it('despachante que caiu entre publicar e marcar: o job é publicado de novo com o mesmo id e ainda roda uma vez só', async () => {
     const id = await bancada.enfileirar(ESCOLA_A)
     // Primeiro despachante: reserva e publica, e cai antes de marcar `publicado`.
-    await bancada.despacho.reservar(10)
+    await bancada.reservar(ESCOLA_A)
     await bancada.fila.add('sintetico', { escolaId: ESCOLA_A, requisicaoId: null }, { ...OPCOES_DE_JOB_PUBLICADO, jobId: id })
     await bancada.pool.query(`update job_registro set reservado_ate = now() - interval '1 second' where id = $1`, [id])
 
@@ -309,9 +311,9 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
     /** Publica como o despachante, com as opções de retentativa de verdade, ou com mais tentativas. */
     async function publicado(tentativas: number = TENTATIVAS_DE_JOB): Promise<string> {
       const id = await bancada.enfileirar(ESCOLA_A)
-      await bancada.despacho.reservar(10)
+      await bancada.reservar(ESCOLA_A)
       await bancada.fila.add('sintetico', { escolaId: ESCOLA_A, requisicaoId: null }, { ...OPCOES_DE_JOB_PUBLICADO, attempts: tentativas, jobId: id })
-      await bancada.despacho.marcarPublicados([id])
+      await executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () => bancada.despacho.marcarPublicados([id]))
       return id
     }
 

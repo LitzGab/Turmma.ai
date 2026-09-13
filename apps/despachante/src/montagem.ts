@@ -1,11 +1,15 @@
 import {
   avisoEspacado,
+  ConfiguracaoOperacional,
+  ConfiguracaoOperacionalRepository,
   criarBanco,
   criarClienteRedisDaFila,
   criarPool,
   DespachoRepository,
-  NOME_DA_FILA_DE_JOBS,
+  nomeDaFilaBullMQ,
   OuvinteDeJobs,
+  resolverVagas,
+  VagasPorEscola,
   type Batimento,
   type DadosDoJobNaFila,
   type LoggerBase,
@@ -17,12 +21,16 @@ import { PublicacaoBullMQ } from './fila-de-publicacao.js'
 import { Reconciliacao } from './reconciliacao.js'
 
 export interface OpcoesDaMontagem {
-  /** Prefixo das chaves do BullMQ. Só o teste troca, para não disputar a fila com outro teste. */
+  /** Prefixo das chaves do BullMQ e das vagas. Só o teste troca, para não disputar a fila com outro teste. */
   prefixo?: string
   /** Intervalo da sondagem. Só o teste troca, para provar que o `NOTIFY` acorda o despachante antes dela. */
   intervaloMs?: number
   /** Intervalo da reconciliação. Só o teste troca, para provar que ela roda sozinha. */
   intervaloReconciliacaoMs?: number
+  /** Troca as vagas. Só o teste usa, para simular outro despachante tomando a vaga no meio da rodada. */
+  embrulharVagas?: (vagas: VagasPorEscola) => Pick<VagasPorEscola, 'membros' | 'manter' | 'livres' | 'tomar' | 'liberar'>
+  /** Validade da vaga. Só o teste troca, para ver a vaga vencer sem esperar 60 s. */
+  validadeDaVagaMs?: number
   batimento?: Batimento
 }
 
@@ -35,7 +43,7 @@ export interface DespachanteMontado {
   encerrar(): Promise<void>
 }
 
-/** Liga o despachante ao Postgres (pool próprio e `LISTEN`) e ao Redis de fila. */
+/** Liga o despachante ao Postgres (pool próprio e `LISTEN`) e ao Redis de fila (filas e vagas). */
 export function montarDespachante(config: ConfiguracaoDespachante, logger: LoggerBase, opcoes: OpcoesDaMontagem = {}): DespachanteMontado {
   const pool = criarPool(config.banco, () => logger.warn({ evento: 'banco.conexao_ociosa_perdida' }))
   const redis = criarClienteRedisDaFila(
@@ -44,15 +52,21 @@ export function montarDespachante(config: ConfiguracaoDespachante, logger: Logge
     avisoEspacado(() => logger.warn({ evento: 'despachante.redis_indisponivel' })),
   )
   const avisarErroDaFila = avisoEspacado(() => logger.warn({ evento: 'despachante.fila_com_erro' }))
-  const fila = new PublicacaoBullMQ(() => {
-    const queue = new Queue<DadosDoJobNaFila>(NOME_DA_FILA_DE_JOBS, {
+  const fila = new PublicacaoBullMQ((nome) => {
+    const queue = new Queue<DadosDoJobNaFila>(nomeDaFilaBullMQ(nome), {
       connection: redis,
       ...(opcoes.prefixo === undefined ? {} : { prefix: opcoes.prefixo }),
     })
     queue.on('error', avisarErroDaFila)
     return queue
   })
-  const repositorio = new DespachoRepository(criarBanco(pool))
+  const banco = criarBanco(pool)
+  const repositorio = new DespachoRepository(banco)
+  const vagasReais = new VagasPorEscola(redis, opcoes.prefixo, opcoes.validadeDaVagaMs)
+  const vagas = opcoes.embrulharVagas?.(vagasReais) ?? vagasReais
+  const vagasDaEscola = new ConfiguracaoOperacional(new ConfiguracaoOperacionalRepository(banco), (linha) => resolverVagas(config.vagasPadrao, linha), {
+    aoFalhar: avisoEspacado(() => logger.warn({ evento: 'despachante.configuracao_indisponivel' })),
+  })
 
   // O aviso só chega depois de o laço abrir a escuta, e o laço só começa com o despachante construído.
   const ouvinte = new OuvinteDeJobs(
@@ -63,12 +77,14 @@ export function montarDespachante(config: ConfiguracaoDespachante, logger: Logge
   const despachante = new Despachante({
     repositorio,
     fila,
+    vagas,
+    vagasDaEscola,
     logger,
     ouvinte,
     ...(opcoes.batimento === undefined ? {} : { batimento: opcoes.batimento }),
   }, opcoes.intervaloMs === undefined ? {} : { intervaloMs: opcoes.intervaloMs })
   const reconciliacao = new Reconciliacao(
-    { repositorio, fila, logger },
+    { repositorio, fila, vagas, vagasDaEscola, logger },
     opcoes.intervaloReconciliacaoMs === undefined ? {} : { intervaloMs: opcoes.intervaloReconciliacaoMs },
   )
 

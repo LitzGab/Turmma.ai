@@ -4,10 +4,9 @@ import {
   type CursorDaReconciliacao,
   type DespachoRepository,
   type JobParaReconciliar,
-  type LoggerBase,
 } from '@educa/nucleo'
 import type { CodigoDeFalhaDeJob } from '@educa/shared'
-import { contextoDoJob, publicarReservados } from './despachante.js'
+import { contextoDoJob, publicarComVaga, type DependenciasDaPublicacao } from './despachante.js'
 import type { FilaDePublicacao } from './fila-de-publicacao.js'
 
 /** A reconciliação roda a cada minuto (Tech Spec, seção 5, "Reconciliação"). */
@@ -21,10 +20,9 @@ export const LOTE_DE_RECONCILIACAO = 100
  */
 export const DURACAO_MAXIMA_RECONCILIACAO_MS = 30_000
 
-export interface DependenciasDaReconciliacao {
+export interface DependenciasDaReconciliacao extends DependenciasDaPublicacao {
   repositorio: DespachoRepository
   fila: FilaDePublicacao
-  logger: LoggerBase
 }
 
 export interface OpcoesDaReconciliacao {
@@ -44,9 +42,10 @@ export interface ResultadoDaReconciliacao {
  * Confere, a cada minuto, os jobs `publicado` ou `ativo` há mais de 2 min contra o que o BullMQ tem:
  *
  * - a fila **confirma** que não tem o job (o Redis perdeu o que o AOF não gravou): ele é tomado de
- *   volta com a mesma troca condicional da reserva e publicado de novo com o mesmo `jobId`;
+ *   volta com a mesma troca condicional da reserva e publicado de novo com o mesmo `jobId`, pelo
+ *   mesmo caminho da vaga da rodada (sem vaga, volta a `aguardando`);
  * - a fila tem o job como falho, e a linha não sabe (o worker não gravou a falha): a linha passa a
- *   `falhou`, com o código que o worker mandou à fila;
+ *   `falhou`, com o código que o worker mandou à fila, e a vaga do job é liberada;
  * - erro ou prazo na consulta: nada muda. Na dúvida, republicar poderia executar o job duas vezes.
  *
  * A varredura vai por páginas, do interativo ao lote, e guarda onde parou: um job perdido não fica
@@ -108,8 +107,8 @@ export class Reconciliacao {
 
   /** Confere uma página e soma ao resultado. Devolve quantas consultas ficaram sem resposta. */
   private async reconciliarPagina(pagina: readonly JobParaReconciliar[], resultado: ResultadoDaReconciliacao): Promise<number> {
-    const { repositorio, fila, logger } = this.dependencias
-    const consultas = await Promise.allSettled(pagina.map((job) => fila.consultar(job.id)))
+    const { repositorio, fila, vagas, logger } = this.dependencias
+    const consultas = await Promise.allSettled(pagina.map((job) => fila.consultar(job)))
 
     const inexistentes: string[] = []
     const falhos: Array<{ job: JobParaReconciliar; codigo: CodigoDeFalhaDeJob }> = []
@@ -130,12 +129,14 @@ export class Reconciliacao {
       if (!(await repositorio.registrarFalhaDaFila(job.id, codigo))) continue
       resultado.falhasRegistradas.push(job.id)
       executarNoContexto(contextoDoJob(job), () => logger.warn({ evento: 'job.falha_reconciliada', jobId: job.id, codigo }))
+      // O worker que não gravou a falha também não liberou a vaga; sem isto, ela só venceria em 60 s.
+      await vagas.liberar(job.fila, job.escolaId, [job.id]).catch((erro: unknown) =>
+        logger.warn({ evento: 'reconciliacao.vaga_nao_liberada', jobId: job.id, erro: resumirErro(erro) }),
+      )
     }
 
     const tomados = await repositorio.reservarParaRepublicar(inexistentes)
-    if (tomados.length > 0 && (await publicarReservados(this.dependencias, tomados, 'job.republicado'))) {
-      resultado.republicados.push(...tomados.map((job) => job.id))
-    }
+    resultado.republicados.push(...(await publicarComVaga(this.dependencias, tomados, 'job.republicado')))
     resultado.conferidos += pagina.length
     resultado.semConfirmacao += recusadas.length
     return recusadas.length

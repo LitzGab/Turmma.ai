@@ -14,7 +14,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && cp src/fila/vaga.lua dist/fila/vaga.lua",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {

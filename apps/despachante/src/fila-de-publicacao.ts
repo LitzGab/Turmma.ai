@@ -1,5 +1,5 @@
 import { OPCOES_DE_JOB_PUBLICADO, TIMEOUT_COMANDO_REDIS_FILA_MS, type DadosDoJobNaFila, type JobReservado } from '@educa/nucleo'
-import { CODIGOS_DE_FALHA_DE_JOB, CodigoDeFalhaDeJob } from '@educa/shared'
+import { CODIGOS_DE_FALHA_DE_JOB, CodigoDeFalhaDeJob, FILAS, type Fila } from '@educa/shared'
 
 /** O que a consulta à fila diz de um job. Só `inexistente` autoriza publicar de novo. */
 export type SituacaoNaFila =
@@ -10,9 +10,9 @@ export type SituacaoNaFila =
 
 /** O lado do Redis de fila que o despachante usa: publicar e consultar, sempre com prazo. */
 export interface FilaDePublicacao {
-  /** Publica com `jobId` igual ao id da linha: publicar de novo um job que a fila tem não cria outro. */
+  /** Publica cada job na fila dele, com `jobId` igual ao id da linha: publicar de novo um job que a fila tem não cria outro. */
   publicar(jobs: readonly JobReservado[]): Promise<void>
-  consultar(jobId: string): Promise<SituacaoNaFila>
+  consultar(job: Pick<JobReservado, 'id' | 'fila'>): Promise<SituacaoNaFila>
 }
 
 /** A parte da `Queue` do BullMQ que o despachante usa. */
@@ -28,68 +28,86 @@ export class PrazoDaFilaEsgotado extends Error {
 }
 
 /**
- * `FilaDePublicacao` sobre o BullMQ, para o Redis de fila fora ou travado não pendurar o despachante:
+ * `FilaDePublicacao` sobre as três filas do BullMQ, uma `Queue` por fila, para o Redis de fila fora
+ * ou travado não pendurar o despachante:
  *
  * - o cliente Redis não tem fila offline e tem `commandTimeout` (`criarClienteRedisDaFila`);
  * - toda operação tem `prazoMs` também por fora, porque a `Queue` espera o Redis ficar pronto antes
  *   do primeiro comando, e essa espera não tem limite: um despachante que sobe com o Redis fora
  *   ficaria parado nela;
- * - se a preparação da `Queue` falhar (o Redis caiu no meio dela), o BullMQ guarda a falha para
+ * - se a preparação de uma `Queue` falhar (o Redis caiu no meio dela), o BullMQ guarda a falha para
  *   sempre; a `Queue` é trocada por uma nova, e a operação seguinte já usa a nova.
  */
 export class PublicacaoBullMQ implements FilaDePublicacao {
-  #fila: FilaBullMQ
+  readonly #filas: Map<Fila, FilaBullMQ>
 
   constructor(
-    private readonly criarFila: () => FilaBullMQ,
+    private readonly criarFila: (fila: Fila) => FilaBullMQ,
     private readonly prazoMs: number = TIMEOUT_COMANDO_REDIS_FILA_MS,
   ) {
-    this.#fila = criarFila()
+    this.#filas = new Map(FILAS.map((fila) => [fila, criarFila(fila)]))
   }
 
+  /** Um `addBulk` por fila, todos dentro do mesmo prazo. */
   publicar(jobs: readonly JobReservado[]): Promise<void> {
-    return this.comFila(async (fila) => {
-      await fila.addBulk(
-        jobs.map((job) => ({
-          name: job.tipo,
-          data: { escolaId: job.escolaId, requisicaoId: job.requisicaoId },
-          opts: { ...OPCOES_DE_JOB_PUBLICADO, jobId: job.id },
-        })),
-      )
-    })
-  }
-
-  consultar(jobId: string): Promise<SituacaoNaFila> {
-    return this.comFila(async (fila) => {
-      // Sem o hash do job, a fila não o tem. Com o hash e fora de toda lista, ele existe para o
-      // BullMQ, que ignoraria a republicação: não é `inexistente`.
-      const job = await fila.getJob(jobId)
-      if (job === undefined) return { situacao: 'inexistente' }
-      if ((await job.getState()) !== 'failed') return { situacao: 'presente' }
-      return { situacao: 'falhou', codigo: codigoDaFalha(job.failedReason) }
-    })
-  }
-
-  fechar(): Promise<void> {
-    return this.#fila.close()
-  }
-
-  private comFila<T>(operacao: (fila: FilaBullMQ) => Promise<T>): Promise<T> {
-    const fila = this.#fila
+    const porFila = new Map<Fila, JobReservado[]>()
+    for (const job of jobs) porFila.set(job.fila, [...(porFila.get(job.fila) ?? []), job])
     return comPrazo(async () => {
-      try {
-        await fila.waitUntilReady()
-      } catch (erro) {
-        this.trocar(fila)
-        throw erro
-      }
-      return operacao(fila)
+      await Promise.all(
+        [...porFila].map(([fila, daFila]) =>
+          this.comFila(fila, (queue) =>
+            queue.addBulk(
+              daFila.map((job) => ({
+                name: job.tipo,
+                data: { escolaId: job.escolaId, requisicaoId: job.requisicaoId },
+                opts: { ...OPCOES_DE_JOB_PUBLICADO, jobId: job.id },
+              })),
+            ),
+          ),
+        ),
+      )
     }, this.prazoMs)
   }
 
-  private trocar(falhou: FilaBullMQ): void {
-    if (this.#fila !== falhou) return
-    this.#fila = this.criarFila()
+  consultar(job: Pick<JobReservado, 'id' | 'fila'>): Promise<SituacaoNaFila> {
+    return comPrazo(
+      () =>
+        this.comFila(job.fila, async (queue) => {
+          // Sem o hash do job, a fila não o tem. Com o hash e fora de toda lista, ele existe para o
+          // BullMQ, que ignoraria a republicação: não é `inexistente`.
+          const naFila = await queue.getJob(job.id)
+          if (naFila === undefined) return { situacao: 'inexistente' } as const
+          if ((await naFila.getState()) !== 'failed') return { situacao: 'presente' } as const
+          return { situacao: 'falhou', codigo: codigoDaFalha(naFila.failedReason) } as const
+        }),
+      this.prazoMs,
+    )
+  }
+
+  async fechar(): Promise<void> {
+    await Promise.all([...this.#filas.values()].map((queue) => queue.close()))
+  }
+
+  private async comFila<T>(fila: Fila, operacao: (queue: FilaBullMQ) => Promise<T>): Promise<T> {
+    const queue = this.queueDa(fila)
+    try {
+      await queue.waitUntilReady()
+    } catch (erro) {
+      this.trocar(fila, queue)
+      throw erro
+    }
+    return operacao(queue)
+  }
+
+  private queueDa(fila: Fila): FilaBullMQ {
+    const queue = this.#filas.get(fila)
+    if (queue === undefined) throw new Error('fila sem Queue do BullMQ')
+    return queue
+  }
+
+  private trocar(fila: Fila, falhou: FilaBullMQ): void {
+    if (this.#filas.get(fila) !== falhou) return
+    this.#filas.set(fila, this.criarFila(fila))
     falhou.close().catch(() => undefined)
   }
 }

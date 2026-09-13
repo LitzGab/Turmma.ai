@@ -52,7 +52,7 @@ describe('.env.example e compose', () => {
 
   it('despachante e worker, sem HTTP, usam o healthcheck do batimento com a mesma idade máxima do código', () => {
     const { services } = parse(lerArquivo('infra/compose.yml'), { merge: true }) as { services: Record<string, Servico> }
-    for (const nome of ['despachante-1', 'despachante-2', 'worker-1', 'worker-2']) {
+    for (const nome of ['despachante-1', 'despachante-2', 'worker-interativo-1', 'worker-interativo-2', 'worker-lote-1', 'worker-lote-2']) {
       expect(services[nome]?.healthcheck?.test, nome).toEqual(['CMD', 'node', '-e', COMANDO_HEALTHCHECK_BATIMENTO])
     }
   })
@@ -62,9 +62,52 @@ describe('.env.example e compose', () => {
       services: Record<string, Servico & { environment?: Record<string, string> }>
     }
     const usamOBanco = Object.entries(services).filter(([nome, servico]) => nome !== 'migrar' && servico.environment?.['BANCO_URL'] !== undefined)
-    expect(usamOBanco.map(([nome]) => nome).sort()).toEqual(['api-1', 'api-2', 'despachante-1', 'despachante-2', 'worker-1', 'worker-2'])
+    expect(usamOBanco.map(([nome]) => nome).sort()).toEqual([
+      'api-1',
+      'api-2',
+      'despachante-1',
+      'despachante-2',
+      'worker-interativo-1',
+      'worker-interativo-2',
+      'worker-lote-1',
+      'worker-lote-2',
+    ])
     for (const [nome, servico] of usamOBanco) {
       expect(servico.depends_on?.['migrar']?.condition, nome).toBe('service_completed_successfully')
+    }
+  })
+
+  it('worker-interativo atende interativa e normal, worker-lote só lote, com o pool do banco igual à soma dos pools das filas', () => {
+    const ambiente = lerAmbienteExemplo()
+    const { services } = parse(lerArquivo('infra/compose.yml'), { merge: true }) as {
+      services: Record<string, Servico & { environment?: Record<string, string> }>
+    }
+    const esperado = { interativo: 'interativa,normal', lote: 'lote' }
+    for (const [papel, filas] of Object.entries(esperado)) {
+      for (const replica of [1, 2]) {
+        const nome = `worker-${papel}-${replica}`
+        const variaveis = services[nome]?.environment ?? {}
+        expect(variaveis['FILAS'], nome).toBe(filas)
+        const somaDosPools = filas.split(',').reduce((soma, fila) => soma + Number(ambiente[`WORKER_POOL_${fila.toUpperCase()}`]), 0)
+        const poolDoBanco = Number(ambiente[String(variaveis['BANCO_POOL_MAXIMO']).replace(/^\$\{([A-Z_]+):\?.*\}$/, '$1')])
+        expect(poolDoBanco, nome).toBe(somaDosPools)
+      }
+    }
+  })
+
+  it('as vagas padrão de dez escolas (D25) cabem nos pools das duas réplicas, e as de uma escola cabem numa réplica só', () => {
+    const ambiente = lerAmbienteExemplo()
+    const ESCOLAS_DO_PRIMEIRO_ANO = 10
+    const REPLICAS = 2
+    for (const fila of ['INTERATIVA', 'NORMAL', 'LOTE']) {
+      const vagas = Number(ambiente[`VAGAS_ESCOLA_${fila}`])
+      const pool = Number(ambiente[`WORKER_POOL_${fila}`])
+      expect(ESCOLAS_DO_PRIMEIRO_ANO * vagas, fila).toBeLessThanOrEqual(REPLICAS * pool)
+      // Com uma réplica fora, ou somando a vaga da rotina do sistema (que usa o mesmo padrão), a soma
+      // pode passar do pool: aí o job espera a vez na fila, e o teto de cada escola segue valendo,
+      // porque o worker confere a vaga ao começar (vagas.int.test.ts, "publicação ambígua"). O que não
+      // pode é uma escola sozinha não caber no pool de uma réplica.
+      expect(vagas, fila).toBeLessThanOrEqual(pool)
     }
   })
 

@@ -9,7 +9,7 @@ import { salaDaEscola } from '../../apps/realtime/src/sistema.gateway.js'
 import { criarCliente, criarEmissor, ESCOLA_A, tokenDe } from '../../apps/realtime/test/realtime-de-teste.js'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
-import { aguardarSaudavel, compose, composeAssincronoOuFalha, composeOuFalha } from '../../tools/testes/compose.ts'
+import { aguardarSaudavel, compose, composeAssincronoOuFalha, composeOuFalha, PROCESSOS_DA_FILA } from '../../tools/testes/compose.ts'
 
 // Contra o compose de teste, com as imagens construídas: borda (Caddy), duas APIs e dois realtimes.
 const ambiente = lerAmbienteDeTeste()
@@ -20,7 +20,6 @@ const API_2_DIRETA = `http://127.0.0.1:${porta('API_2_PORTA_HOST')}`
 const USUARIO = '0190f5a0-0000-7000-8000-0000000000a1'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const SERVICOS_ATRAS_DA_BORDA = ['api-1', 'api-2', 'realtime-1', 'realtime-2'] as const
-const PROCESSOS_DA_FILA = ['despachante-1', 'despachante-2', 'worker-1', 'worker-2'] as const
 /** Sonda da borda a cada 2 s (infra/Caddyfile), com folga: tempo para uma instância voltar ao balanceamento. */
 const VOLTA_AO_BALANCEAMENTO_MS = 3_000
 

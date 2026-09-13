@@ -25,17 +25,32 @@ export { LOCK_TIMEOUT_MIGRACAO_MS, migrar, MigracaoFalhou, PASTA_MIGRACOES, TENT
 export type { ConfiguracaoMigracao } from './db/migrar.js'
 export { jobRegistro } from './db/schema/job-registro.js'
 export { justificativaSemEscopo, SemEscopo } from './db/sem-escopo.decorator.js'
+export {
+  ConfiguracaoOperacional,
+  lerVagasPadrao,
+  NOVA_TENTATIVA_DA_CONFIGURACAO_MS,
+  resolverLimites,
+  resolverVagas,
+  VALIDADE_DA_CONFIGURACAO_MS,
+} from './configuracao/configuracao-operacional.js'
+export type { LimitesDeRequisicao, OpcoesDaConfiguracaoOperacional, VagasPorFila } from './configuracao/configuracao-operacional.js'
+export { ConfiguracaoOperacionalRepository } from './configuracao/configuracao-operacional.repository.js'
+export type { LinhaOperacional } from './configuracao/configuracao-operacional.repository.js'
+export { configuracaoOperacionalEscola } from './db/schema/configuracao-operacional-escola.js'
+export type { VagasConfiguradas } from './db/schema/configuracao-operacional-escola.js'
 export { DespachoRepository, IDADE_PARA_RECONCILIAR_SEGUNDOS, RESERVA_SEGUNDOS } from './fila/despacho.repository.js'
-export type { CursorDaReconciliacao, JobParaReconciliar, JobReservado } from './fila/despacho.repository.js'
+export type { CursorDaReconciliacao, EscolaComPendentes, JobParaReconciliar, JobReservado } from './fila/despacho.repository.js'
+export { FILAS_POR_PRIORIDADE, nomeDaFilaBullMQ, OPCOES_DO_POOL_POR_FILA } from './fila/filas.js'
+export type { OpcoesDoPool } from './fila/filas.js'
+export { DONO_DAS_VAGAS_DO_SISTEMA, INTERVALO_RENOVACAO_DA_VAGA_MS, VagasPorEscola, VALIDADE_DA_VAGA_MS } from './fila/vagas-por-escola.js'
 export { Enfileirador, PRIORIDADE_DA_FILA } from './fila/enfileirador.js'
 export type { PedidoDeJob } from './fila/enfileirador.js'
 export { CANAL_NOTIFICACAO_JOB, JobRegistroRepository, PREFIXO_TIPO_SISTEMA } from './fila/job-registro.repository.js'
-export type { EstadoRegistrado, ResultadoDoInicio } from './fila/job-registro.repository.js'
+export type { EstadoRegistrado, JobParaExecutar, ResultadoDoInicio } from './fila/job-registro.repository.js'
 export { OuvinteDeJobs } from './fila/ouvinte-de-jobs.js'
 export {
   esquemaDadosDoJobNaFila,
   JITTER_DO_RECUO,
-  NOME_DA_FILA_DE_JOBS,
   OPCOES_DE_JOB_PUBLICADO,
   RECUO_INICIAL_JOB_MS,
   RETENCAO_JOB_CONCLUIDO_SEGUNDOS,

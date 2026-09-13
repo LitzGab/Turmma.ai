@@ -7,6 +7,9 @@ const ambienteValido = {
   BANCO_TIMEOUT_CONEXAO_MS: '2000',
   BANCO_TIMEOUT_CONSULTA_MS: '2000',
   REDIS_FILA_URL: 'redis://redis-fila:6379',
+  VAGAS_ESCOLA_INTERATIVA: '5',
+  VAGAS_ESCOLA_NORMAL: '5',
+  VAGAS_ESCOLA_LOTE: '2',
 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
@@ -20,11 +23,16 @@ function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInval
 }
 
 describe('lerConfiguracao do despachante', () => {
-  it('converte o ambiente, com statement_timeout próprio no pool', () => {
+  it('converte o ambiente, com statement_timeout próprio no pool e as vagas padrão por fila', () => {
     expect(lerConfiguracao(ambienteValido)).toEqual({
       banco: { url: ambienteValido.BANCO_URL, maximoConexoes: 3, timeoutConexaoMs: 2000, timeoutConsultaMs: 2000 },
       redisFilaUrl: 'redis://redis-fila:6379',
+      vagasPadrao: { interativa: 5, normal: 5, lote: 2 },
     })
+  })
+
+  it.each(['0', '-2', '1.5', 'duas'])('não sobe com VAGAS_ESCOLA_LOTE=%s: vaga zero pararia toda escola sem configuração própria', (valor) => {
+    expect(erroDe({ ...ambienteValido, VAGAS_ESCOLA_LOTE: valor }).variaveis).toEqual(['VAGAS_ESCOLA_LOTE'])
   })
 
   it.each(Object.keys(ambienteValido))('não sobe sem %s', (variavel) => {
