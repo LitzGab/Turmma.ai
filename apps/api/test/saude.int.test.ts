@@ -1,4 +1,5 @@
 import 'reflect-metadata'
+import { criarLogger } from '@educa/nucleo'
 import type { INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import request from 'supertest'
@@ -6,6 +7,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { aguardarSaudavel, compose, composeOuFalha } from '../../../tools/testes/compose.ts'
 import { AppModule } from '../src/app.module.js'
+import { configurarAplicacao } from '../src/configurar-app.js'
 
 const TIMEOUT_CONSULTA_MS = 1_000
 
@@ -37,6 +39,8 @@ describe('GET /saude', () => {
 
   beforeAll(async () => {
     app = await NestFactory.create(AppModule.com(configuracaoDeTeste()), { logger: false })
+    // Com o filtro global ligado, como em produção: o 503 da sonda mantém o corpo `{ ok }`.
+    configurarAplicacao(app, criarLogger({ servico: 'api-teste', nivel: 'silent' }))
     await app.init()
   })
 

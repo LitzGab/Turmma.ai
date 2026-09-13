@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 1 de 15 concluídas
+**Status:** 2 de 15 concluídas
 
 ## Lista
 
@@ -12,11 +12,11 @@
   - [x] 1.4 `.github/workflows/ci.yml` com `verificar`, `integracao` e `e2e`, chamando só `npm run ci:*`
   - [x] 1.5 Testes: e2e de fumaça, `/saude` com Postgres parado, esteira sem `.env` local e sem segredo
 
-- [ ] **2.0 — Erro tipado e log sem dado pessoal**
-  - [ ] 2.1 `CodigoDeErro` e mensagens pt-BR em `packages/shared`
-  - [ ] 2.2 Contexto da requisição com `requisicaoId` (AsyncLocalStorage)
-  - [ ] 2.3 Logger pino com redact e filtro global de erro, com mapeamento de erro do Postgres
-  - [ ] 2.4 Testes: exceção sem stack, `detail` do Postgres fora da resposta e do log, contexto sem vazamento em paralelo
+- [x] **2.0 — Erro tipado e log sem dado pessoal**
+  - [x] 2.1 `CodigoDeErro` e mensagens pt-BR em `packages/shared`
+  - [x] 2.2 Contexto da requisição com `requisicaoId` (AsyncLocalStorage)
+  - [x] 2.3 Logger pino com redact e filtro global de erro, com mapeamento de erro do Postgres
+  - [x] 2.4 Testes: exceção sem stack, `detail` do Postgres fora da resposta e do log, contexto sem vazamento em paralelo
 
 - [ ] **3.0 — Guardas da esteira reprovam o que as regras proíbem**
   - [ ] 3.1 Regras ESLint de log (chave pessoal, spread, template) e de import de SDK de IA

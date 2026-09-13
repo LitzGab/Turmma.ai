@@ -1,4 +1,5 @@
 import pg from 'pg'
+import { ehErroDoPostgres } from '../erro/resumir-erro.js'
 
 export interface ConfiguracaoBanco {
   url: string
@@ -9,6 +10,77 @@ export interface ConfiguracaoBanco {
 
 export type PoolBanco = pg.Pool
 
+// SQLSTATE que encerram a sessão ou indicam estado do servidor em que não vale reaproveitá-la:
+// classe 08 (conexão), 57P (servidor desligando, `pg_terminate_backend`, sessão ociosa), XX
+// (erro interno), 25P03 (transação ociosa por tempo demais) e 25P02 (transação abortada, rede de
+// segurança para o caso de o estado da transação não ter sido lido).
+const SQLSTATE_DE_CONEXAO = /^(08|57P|XX|25P0[23])/
+
+/**
+ * `true` quando o erro deixou a conexão inutilizável: queda de socket, timeout do cliente
+ * (a consulta pode seguir rodando no servidor e a resposta chegaria na consulta seguinte) ou
+ * erro do servidor que encerra a sessão.
+ *
+ * Erro de consulta não é de conexão: violação de restrição única (23505), consulta cancelada
+ * pelo `statement_timeout` (57014), sintaxe. O servidor já respondeu ReadyForQuery e a sessão
+ * segue boa. A severidade entra só como reforço, porque o texto dela vem traduzido conforme o
+ * `lc_messages` do servidor; o SQLSTATE não.
+ */
+export function ehErroDeConexao(erro: unknown): boolean {
+  if (!ehErroDoPostgres(erro)) return true
+  return SQLSTATE_DE_CONEXAO.test(erro.code) || erro.severity === 'FATAL' || erro.severity === 'PANIC'
+}
+
+type Consulta = (...argumentos: unknown[]) => unknown
+
+function ehSubmittable(valor: unknown): boolean {
+  return typeof valor === 'object' && valor !== null && typeof (valor as { submit?: unknown }).submit === 'function'
+}
+
+/**
+ * `pg.Pool#query` devolve a conexão com o erro da consulta, e o pool descarta a conexão em
+ * qualquer erro. Às 10h de uma segunda, com unicidade violada e consulta cortada pelo timeout
+ * a toda hora, isso vira abertura de conexão em rajada (TLS e autenticação) justamente quando o
+ * banco está sob carga. Aqui só o erro de conexão descarta; o de consulta devolve a conexão.
+ *
+ * Vale para a forma com promessa, que é a usada no projeto (e a do Drizzle). Callback e
+ * consulta em stream seguem o comportamento original. Transação de verdade não passa por aqui:
+ * usa `pool.connect()` e devolve a conexão explicitamente.
+ */
+function consultaQueDevolveAConexao(pool: pg.Pool): Consulta {
+  const original = pool.query.bind(pool) as Consulta
+  return async function consultar(...argumentos: unknown[]): Promise<unknown> {
+    if (typeof argumentos.at(-1) === 'function' || ehSubmittable(argumentos[0])) {
+      return original(...argumentos)
+    }
+    const [textoOuConfiguracao, valores] = argumentos as [string | pg.QueryConfig, unknown[] | undefined]
+    const conexao = await pool.connect()
+    // Enquanto a conexão está emprestada, o pool não ouve o 'error' dela. Sem ouvinte, a queda
+    // do socket no meio da consulta encerraria o processo.
+    let erroDaConexao: Error | undefined
+    const aoErroDaConexao = (erro: Error): void => {
+      erroDaConexao = erro
+    }
+    conexao.on('error', aoErroDaConexao)
+    let descartarCom: Error | undefined
+    try {
+      return await conexao.query(textoOuConfiguracao, valores)
+    } catch (erro) {
+      if (ehErroDeConexao(erro)) {
+        descartarCom = erro instanceof Error ? erro : new Error('consulta falhou')
+      }
+      throw erro
+    } finally {
+      conexao.off('error', aoErroDaConexao)
+      // Sessão fora de "ociosa" não volta ao pool, com ou sem erro: `begin; ...; commit` que
+      // falhou no meio deixa a transação abortada (E), e `pool.query('begin')` solto a deixa
+      // aberta (T). Devolvida, ela faria toda consulta seguinte falhar com 25P02.
+      const sessaoSuja = conexao.getTransactionStatus() !== 'I'
+      conexao.release(erroDaConexao ?? descartarCom ?? (sessaoSuja ? new Error('sessão com transação pendente') : undefined))
+    }
+  }
+}
+
 /**
  * Pool único por processo. Os timeouts existem para que um Postgres travado vire resposta
  * rápida de indisponível, e não requisição pendurada ocupando o event loop na hora da aula.
@@ -18,9 +90,9 @@ export function criarPool(config: ConfiguracaoBanco, aoPerderConexaoOciosa: () =
     connectionString: config.url,
     max: config.maximoConexoes,
     connectionTimeoutMillis: config.timeoutConexaoMs,
-    // O servidor cancela primeiro (57014) e libera o Postgres; o timeout do cliente é o seguro
-    // para Postgres travado, que nem consegue cancelar. Nos dois casos `pool.query` descarta a
-    // conexão (release com erro) e o pool abre outra na próxima consulta.
+    // O servidor cancela primeiro (57014) e libera o Postgres, e a conexão volta ao pool. O
+    // timeout do cliente é o seguro para Postgres travado, que nem consegue cancelar: nesse
+    // caso a conexão é descartada e o pool abre outra na próxima consulta.
     statement_timeout: config.timeoutConsultaMs,
     query_timeout: config.timeoutConsultaMs + config.timeoutConexaoMs,
     // Sem keepalive, conexão ociosa derrubada em silêncio por NAT só aparece no timeout da próxima consulta.
@@ -28,6 +100,9 @@ export function criarPool(config: ConfiguracaoBanco, aoPerderConexaoOciosa: () =
   })
   // Sem ouvinte, o 'error' de uma conexão ociosa que o Postgres derrubou encerra o processo.
   pool.on('error', aoPerderConexaoOciosa)
+  // A assinatura sobrecarregada de `query` não tem como ser escrita sem `any`; o comportamento
+  // é o mesmo em todas as formas, e os testes de integração cobrem a forma com promessa.
+  pool.query = consultaQueDevolveAConexao(pool) as unknown as typeof pool.query
   return pool
 }
 

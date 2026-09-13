@@ -16,9 +16,15 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "pg": "8.23.0"
+    "@educa/shared": "0.0.0",
+    "pg": "8.23.0",
+    "pino": "10.3.1"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "12.0.1"
   },
   "devDependencies": {
+    "@nestjs/common": "12.0.1",
     "@types/pg": "8.23.1"
   }
 }

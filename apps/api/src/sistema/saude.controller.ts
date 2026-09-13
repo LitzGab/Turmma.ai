@@ -1,18 +1,26 @@
 import type { RespostaSaude } from '@educa/shared'
-import { Controller, Get, Header, HttpException, HttpStatus } from '@nestjs/common'
+import { Controller, Get, Header, HttpStatus, Res } from '@nestjs/common'
 import { SaudeService } from './saude.service.js'
+
+interface RespostaHttp {
+  status(codigo: number): unknown
+}
 
 @Controller('saude')
 export class SaudeController {
   constructor(private readonly saude: SaudeService) {}
 
+  /**
+   * O corpo é sempre `{ ok }`, também no 503: é o contrato da sonda, e por isso não passa pelo
+   * envelope de erro do filtro global.
+   */
   @Get()
   @Header('Cache-Control', 'no-store')
-  async obter(): Promise<RespostaSaude> {
-    const resposta = await this.saude.verificar()
-    if (!resposta.ok) {
-      throw new HttpException(resposta, HttpStatus.SERVICE_UNAVAILABLE)
+  async obter(@Res({ passthrough: true }) resposta: RespostaHttp): Promise<RespostaSaude> {
+    const corpo = await this.saude.verificar()
+    if (!corpo.ok) {
+      resposta.status(HttpStatus.SERVICE_UNAVAILABLE)
     }
-    return resposta
+    return corpo
   }
 }

@@ -2,7 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "allowImportingTsExtensions": true, "types": ["node"]
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
+    "experimentalDecorators": true
   },
   "include": ["src"]
 }

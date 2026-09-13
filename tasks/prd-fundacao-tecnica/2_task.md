@@ -22,24 +22,24 @@ resposta, nota nem conversa.
 
 ## Subtarefas
 
-- [ ] 2.1 — `packages/shared/src/erros`: enum `CodigoDeErro` (`ERRO_INTERNO`,
+- [x] 2.1 — `packages/shared/src/erros`: enum `CodigoDeErro` (`ERRO_INTERNO`,
   `ENTRADA_INVALIDA`, `NAO_ENCONTRADO`, `CONFLITO`, `TEMPO_ESGOTADO`,
   `INDISPONIVEL_TENTE_DE_NOVO`, `LIMITE_EXCEDIDO`) e o catálogo de mensagens em pt-BR que
   dizem o que fazer
-- [ ] 2.2 — `packages/nucleo/src/contexto`: AsyncLocalStorage com `requisicaoId`, e com
+- [x] 2.2 — `packages/nucleo/src/contexto`: AsyncLocalStorage com `requisicaoId`, e com
   `escolaId` e `usuarioId` opcionais, que a 4.0 preenche. Aceita `X-Requisicao-Id` do
   cliente só se for UUID; se não for, gera um
-- [ ] 2.3 — `packages/nucleo/src/log`: pino com redact em `*.nome`, `*.matricula`,
+- [x] 2.3 — `packages/nucleo/src/log`: pino com redact em `*.nome`, `*.matricula`,
   `*.email`, `*.senha`, `*.resposta`, `*.nota`, `*.conversa`, `*.prompt`, `authorization`
   e `cookie`, e com os campos do contexto em toda linha
-- [ ] 2.4 — `packages/nucleo/src/erro`:
+- [x] 2.4 — `packages/nucleo/src/erro`:
   - `ErroDeDominio` com código e status
   - filtro global que devolve `{ erro: { codigo, mensagem, requisicaoId } }`
   - mapeamento do erro do Postgres: 23505 → `CONFLITO`, 57014 → `TEMPO_ESGOTADO`, o resto →
     `ERRO_INTERNO`
   - o log do erro do Postgres leva só o código SQL e o nome da constraint, nunca `detail`
     nem mensagem
-- [ ] 2.5 — Testes
+- [x] 2.5 — Testes
 
 ## Arquivos previstos
 
@@ -67,13 +67,13 @@ na 4.0.
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
-- [ ] E2E verde (se tocou tela)
-- [ ] Vetos aprovados (se aplicáveis)
-- [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
+- [x] E2E verde (não tocou tela; rodado mesmo assim, porque o boot da API mudou)
+- [x] Vetos aprovados (se aplicáveis)
+- [x] Revisão aprovada
+- [x] Commit feito, só com os arquivos desta tarefa
 
 ## Fora do escopo desta tarefa
 
