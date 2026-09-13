@@ -1,0 +1,24 @@
+# Guarda de segredo commitado (RF11), rodada pelo `npm run ci:verificar` sobre todo o histórico.
+#
+# Regras padrão do gitleaks, sem nenhuma allowlist por pasta, extensão ou regra inteira: um
+# segredo de verdade em qualquer arquivo, fixture de teste inclusive, reprova. Cada exceção é
+# um arquivo exato E a linha exata, com o motivo, e o teste de integração das guardas prova que
+# um segredo no mesmo arquivo, fora dessa linha, continua reprovando.
+title = "Educa.ia"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Tech Spec do F0: a linha da rota de jobs sintéticos cita a flag ROTAS_SINTETICAS, que o generic-api-key lê como chave"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^tasks/prd-fundacao-tecnica/techspec\.md$''']
+regexes = ['''\| POST \| `/v1/sistema/jobs-sinteticos` \| token, `ROTAS_SINTETICAS=true` \| `\{ fila, cpuMs, naoUrgente, falhar\? \}` \| 202 `\{ jobId \}` \|\s*$''']
+
+[[allowlists]]
+description = "Skill de terceiros do Playwright: token fictício de exemplo na documentação"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^\.claude/skills/playwright-best-practices/advanced/authentication-flows\.md$''']
+regexes = ['''const mockToken = 'test-verification-abc123';\s*$''']

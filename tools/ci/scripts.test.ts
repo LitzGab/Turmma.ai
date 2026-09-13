@@ -3,6 +3,7 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { argumentosGitleaks, IMAGEM_GITLEAKS } from './etapas-de-guarda.ts'
 import { raizRepositorio } from './executar.ts'
 
 // Os scripts reais da esteira, com `npm`, `npx` e `docker` trocados por imitações que só
@@ -59,14 +60,24 @@ function indiceDe(chamadas: string[], trecho: string): number {
 }
 
 describe('scripts ci:* reais', () => {
-  it('ci:verificar roda tipos, lint e unidade, e sai verde só se todos passarem', () => {
+  it('ci:verificar roda tipos, lint com guardas, gitleaks, npm audit e unidade, e sai verde só se todos passarem', () => {
     const verde = rodarScript('verificar.ts', null)
     expect(verde.codigo).toBe(0)
-    expect(verde.chamadas).toEqual(['npm run typecheck', 'npm run lint', 'npm run test:unidade'])
-
-    const vermelho = rodarScript('verificar.ts', 'npm run test:unidade')
-    expect(vermelho.codigo).not.toBe(0)
+    expect(verde.chamadas).toEqual([
+      'npm run typecheck',
+      'npm run lint',
+      `docker ${argumentosGitleaks(raizRepositorio).join(' ')}`,
+      'npm audit --audit-level=high --omit=dev',
+      'npm run test:unidade',
+    ])
   })
+
+  it.each(['npm run lint', IMAGEM_GITLEAKS, 'npm audit --audit-level=high --omit=dev', 'npm run test:unidade'])(
+    'ci:verificar sai vermelho quando "%s" falha: guarda é portão, não aviso',
+    (etapa) => {
+      expect(rodarScript('verificar.ts', etapa).codigo).not.toBe(0)
+    },
+  )
 
   it('ci:integracao roda a integração, sai vermelho quando ela falha e ainda derruba o compose', () => {
     const verde = rodarScript('integracao.ts', null)

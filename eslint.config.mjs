@@ -2,10 +2,18 @@ import js from '@eslint/js'
 import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
+import { configuracaoDasGuardas } from './tools/guardas/index.mjs'
 
 export default tseslint.config(
   {
-    ignores: ['**/node_modules/**', '**/dist/**', 'playwright-report/**', 'test-results/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'playwright-report/**',
+      'test-results/**',
+      // Violações de propósito: o teste das guardas as passa pelo ESLint com um caminho simulado.
+      'tools/guardas/__fixtures__/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.strict,
@@ -36,4 +44,6 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks },
     rules: reactHooks.configs.recommended.rules,
   },
+  // Por último: nenhum bloco acima sobrescreve as guardas (tools/guardas).
+  ...configuracaoDasGuardas,
 )

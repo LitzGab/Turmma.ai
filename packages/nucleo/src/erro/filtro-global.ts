@@ -43,13 +43,12 @@ export class FiltroGlobalDeErro implements ExceptionFilter {
   catch(excecao: unknown, host: ArgumentsHost): void {
     const erro = traduzir(excecao)
     const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
-    const registro = { evento: 'http.erro', status: erro.status, codigo: erro.codigo }
     if (erro.status >= 500) {
-      this.logger.error({ ...registro, erro: resumirErro(excecao) })
+      this.logger.error({ evento: 'http.erro', status: erro.status, codigo: erro.codigo, erro: resumirErro(excecao) })
     } else {
       // Erro do cliente não precisa de pilha, e numa manhã de 404 ela só engorda o log.
-      const { pilha: _pilha, ...semPilha } = resumirErro(excecao)
-      this.logger.warn({ ...registro, erro: semPilha })
+      const { pilha: _pilha, ...erroSemPilha } = resumirErro(excecao)
+      this.logger.warn({ evento: 'http.erro', status: erro.status, codigo: erro.codigo, erro: erroSemPilha })
     }
 
     if (host.getType() !== 'http') return

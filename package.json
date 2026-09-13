@@ -12,7 +12,7 @@
   "scripts": {
     "build": "npm run build -w @educa/shared && npm run build -w @educa/nucleo && npm run build -w @educa/api && npm run build -w @educa/web",
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
-    "lint": "eslint . --max-warnings=0",
+    "lint": "eslint . --max-warnings=0 && node tools/guardas/lint.ts",
     "test": "vitest run",
     "test:unidade": "vitest run --project unidade",
     "test:integracao": "vitest run --project integracao",
@@ -22,6 +22,7 @@
     "ci:e2e": "node tools/ci/e2e.ts"
   },
   "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "4.8.1",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
     "@types/node": "22.20.2",

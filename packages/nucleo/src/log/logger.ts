@@ -1,4 +1,3 @@
-import type { LoggerService } from '@nestjs/common'
 import { pino, stdTimeFunctions, type DestinationStream, type Logger, type LevelWithSilent } from 'pino'
 import { contextoAtual } from '../contexto/contexto.js'
 import { resumirErro } from '../erro/resumir-erro.js'
@@ -8,10 +7,25 @@ export type LoggerBase = Logger
 /**
  * Chaves que nunca saem no log, até dois níveis abaixo do primeiro (`nome`, `aluno.nome`,
  * `dados.aluno.nome`, `req.headers.authorization`). É a rede de segurança: a regra continua
- * sendo logar só id (regra 20, item 9), e a guarda de lint da tarefa 3.0 pega o que o redact
- * não alcança, como chave em profundidade maior.
+ * sendo logar só id (regra 20, item 9), e a guarda de lint (`tools/guardas`) pega o que o redact
+ * não alcança, como chave composta ou em profundidade maior. As duas listas são comparadas em teste.
  */
-const CHAVES_PESSOAIS = ['nome', 'matricula', 'email', 'senha', 'resposta', 'nota', 'conversa', 'prompt'] as const
+export const CHAVES_PESSOAIS = [
+  'nome',
+  'matricula',
+  'email',
+  'telefone',
+  'cpf',
+  'senha',
+  'resposta',
+  'nota',
+  'conversa',
+  'prompt',
+  'conteudo',
+  'adaptacao',
+  'diagnostico',
+  'laudo',
+] as const
 const CHAVES_DE_CREDENCIAL = ['authorization', 'cookie'] as const
 
 export const CAMINHOS_REDACT: readonly string[] = [...CHAVES_PESSOAIS, ...CHAVES_DE_CREDENCIAL].flatMap((chave) => [
@@ -27,9 +41,20 @@ type MetodoDeLog = (...argumentos: unknown[]) => void
 export const TEXTO_OMITIDO_POR_PROFUNDIDADE = '[omitido: profundo demais]'
 const PROFUNDIDADE_MAXIMA = 6
 
+export const TEXTO_TOJSON_FALHOU = '[toJSON falhou]'
+
+function temToJson(valor: object): valor is { toJSON: () => unknown } {
+  return typeof (valor as { toJSON?: unknown }).toJSON === 'function'
+}
+
 /**
  * Copia o valor trocando todo `Error`, em qualquer nível de objeto ou lista, pelo resumo. Ciclo
  * e nível além do limite viram texto fixo: log leva id, e objeto fundo assim não é id.
+ *
+ * Objeto com `toJSON()` é trocado pelo que ele devolve antes de seguir, porque é isso que o
+ * `JSON.stringify` do pino escreveria: um `toJSON()` que devolve o erro do Postgres levaria o
+ * `detail` para a linha, e um que devolve `{ nome }` passaria ao largo do redact, que só olha as
+ * propriedades do objeto original.
  */
 function resumirErrosEmProfundidade(valor: unknown, profundidade: number, vistos: WeakSet<object>): unknown {
   if (valor instanceof Error) return resumirErro(valor)
@@ -37,6 +62,17 @@ function resumirErrosEmProfundidade(valor: unknown, profundidade: number, vistos
   if (vistos.has(valor)) return '[ciclo]'
   if (profundidade >= PROFUNDIDADE_MAXIMA) return TEXTO_OMITIDO_POR_PROFUNDIDADE
   vistos.add(valor)
+  if (temToJson(valor)) {
+    let serializado: unknown
+    try {
+      serializado = valor.toJSON()
+    } catch {
+      serializado = TEXTO_TOJSON_FALHOU
+    }
+    const resumido = resumirErrosEmProfundidade(serializado, profundidade + 1, vistos)
+    vistos.delete(valor)
+    return resumido
+  }
   const copia = Array.isArray(valor)
     ? valor.map((item) => resumirErrosEmProfundidade(item, profundidade + 1, vistos))
     : Object.fromEntries(
@@ -52,18 +88,14 @@ function resumirErrosEmProfundidade(valor: unknown, profundidade: number, vistos
  * pino vê-lo. Sem isso o pino usa `erro.message` como `msg` da linha e serializa as
  * propriedades do erro, e as do Postgres trazem `detail` com o valor da linha
  * ("Key (nome)=(Enzo Martins) already exists").
+ *
+ * Os argumentos depois da mensagem passam pelo mesmo resumo: `%j` e `%o` os escreveriam no texto.
  */
 function resumirErrosAntesDeLogar(this: unknown, argumentos: unknown[], metodo: MetodoDeLog): void {
-  const [primeiro, ...resto] = argumentos
-  if (primeiro instanceof Error) {
-    metodo.apply(this, [{ erro: resumirErro(primeiro) }, ...resto])
-    return
-  }
-  if (typeof primeiro === 'object' && primeiro !== null) {
-    metodo.apply(this, [resumirErrosEmProfundidade(primeiro, 0, new WeakSet()), ...resto])
-    return
-  }
-  metodo.apply(this, argumentos)
+  const resumidos = argumentos.map((valor, indice) =>
+    indice === 0 && valor instanceof Error ? { erro: resumirErro(valor) } : resumirErrosEmProfundidade(valor, 0, new WeakSet()),
+  )
+  metodo.apply(this, resumidos)
 }
 
 /**
@@ -114,51 +146,4 @@ export function criarLogger(opcoes: OpcoesDoLogger): LoggerBase {
     },
   }
   return opcoes.destino === undefined ? pino(configuracao) : pino(configuracao, opcoes.destino)
-}
-
-/**
- * Faz o log interno do Nest (boot, rotas, `new Logger('banco')`) sair pelo mesmo logger JSON,
- * em vez do texto colorido do console.
- */
-export class LoggerDoNest implements LoggerService {
-  constructor(private readonly logger: LoggerBase) {}
-
-  log(mensagem: unknown, ...parametros: unknown[]): void {
-    this.escrever('info', mensagem, parametros)
-  }
-
-  error(mensagem: unknown, ...parametros: unknown[]): void {
-    this.escrever('error', mensagem, parametros)
-  }
-
-  warn(mensagem: unknown, ...parametros: unknown[]): void {
-    this.escrever('warn', mensagem, parametros)
-  }
-
-  debug(mensagem: unknown, ...parametros: unknown[]): void {
-    this.escrever('debug', mensagem, parametros)
-  }
-
-  verbose(mensagem: unknown, ...parametros: unknown[]): void {
-    this.escrever('trace', mensagem, parametros)
-  }
-
-  fatal(mensagem: unknown, ...parametros: unknown[]): void {
-    this.escrever('fatal', mensagem, parametros)
-  }
-
-  private escrever(nivel: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal', mensagem: unknown, parametros: unknown[]): void {
-    // O Nest passa o nome do contexto ("RoutesResolver", "banco") como último parâmetro. Os
-    // demais, quando existem, são a pilha de um erro: ela não entra, porque repete a mensagem.
-    // Sem contexto, o último é a própria pilha, que tem quebra de linha e fica de fora também.
-    const ultimo = parametros.at(-1)
-    const origem = typeof ultimo === 'string' && !ultimo.includes('\n') ? { origem: ultimo } : {}
-    if (mensagem instanceof Error) {
-      this.logger[nivel]({ ...origem, erro: mensagem })
-    } else if (typeof mensagem === 'string') {
-      this.logger[nivel](origem, mensagem)
-    } else {
-      this.logger[nivel]({ ...origem, dados: mensagem })
-    }
-  }
 }

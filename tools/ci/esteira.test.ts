@@ -70,6 +70,11 @@ describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
     }
   })
 
+  it('o verificar baixa o histórico inteiro, para o gitleaks varrer todo commit e não só o último', () => {
+    const checkout = workflow.jobs['verificar']?.steps.find((passo) => passo.uses?.startsWith('actions/checkout@'))
+    expect(checkout?.with?.['fetch-depth']).toBe(0)
+  })
+
   it('o checkout não deixa o token do GitHub gravado no repositório clonado', () => {
     const checkouts = Object.values(workflow.jobs).flatMap((job) =>
       job.steps.filter((passo) => passo.uses?.startsWith('actions/checkout@')),

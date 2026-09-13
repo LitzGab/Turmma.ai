@@ -24,20 +24,20 @@ A esteira passa a reprovar sozinha, sem depender de revisão humana, quatro viol
 
 ## Subtarefas
 
-- [ ] 3.1 — Em `tools/guardas/`, regras ESLint para chamadas ao logger (`info`, `warn`,
+- [x] 3.1 — Em `tools/guardas/`, regras ESLint para chamadas ao logger (`info`, `warn`,
   `error`, `debug`, `fatal`):
   - reprovam objeto com chave pessoal em qualquer nível de aninhamento (`nome`,
     `matricula`, `email`, `telefone`, `cpf`, `senha`, `resposta`, `nota`, `conversa`,
     `prompt`)
   - reprovam spread de objeto e template string com variável
-- [ ] 3.2 — `no-restricted-imports` bloqueando `openai`, `@anthropic-ai/*`, `@google/genai`,
+- [x] 3.2 — `no-restricted-imports` bloqueando `openai`, `@anthropic-ai/*`, `@google/genai`,
   `@google/generative-ai`, `ollama` e `@mistralai/*` fora de `apps/api/src/ia/adapters/**`.
   Precisa pegar também import com alias
-- [ ] 3.3 — Proibir `eslint-disable` nessas regras (`eslint-comments/no-restricted-disable`)
-- [ ] 3.4 — gitleaks na esteira, com `.gitleaks.toml` em que a fixture de segredo falso
+- [x] 3.3 — Proibir `eslint-disable` nessas regras (`eslint-comments/no-restricted-disable`)
+- [x] 3.4 — gitleaks na esteira, com `.gitleaks.toml` em que a fixture de segredo falso
   fica fora de qualquer allowlist geral. `ci:verificar` roda
   `npm audit --audit-level=high --omit=dev`
-- [ ] 3.5 — Testes com fixtures em `tools/guardas/__fixtures__/`, rodando ESLint e gitleaks
+- [x] 3.5 — Testes com fixtures em `tools/guardas/__fixtures__/`, rodando ESLint e gitleaks
   pela API ou pelo binário
 
 ## Arquivos previstos
@@ -62,13 +62,13 @@ A esteira passa a reprovar sozinha, sem depender de revisão humana, quatro viol
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
-- [ ] E2E verde (se tocou tela)
-- [ ] Vetos aprovados (se aplicáveis)
-- [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
+- [x] E2E verde (não tocou tela; rodado mesmo assim, porque o log do boot da API mudou)
+- [x] Vetos aprovados (se aplicáveis)
+- [x] Revisão aprovada
+- [x] Commit feito, só com os arquivos desta tarefa
 
 ## Fora do escopo desta tarefa
 

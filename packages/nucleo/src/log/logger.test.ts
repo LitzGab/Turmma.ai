@@ -1,7 +1,15 @@
 import pg from 'pg'
 import { describe, expect, it } from 'vitest'
 import { executarNoContexto } from '../contexto/contexto.js'
-import { criarLogger, LoggerDoNest, TEXTO_OMITIDO_POR_PROFUNDIDADE, TEXTO_REMOVIDO, tratadorDeErroDoProcesso } from './logger.js'
+import { LoggerDoNest, TEXTO_MENSAGEM_OMITIDA } from './logger-do-nest.js'
+import {
+  CHAVES_PESSOAIS,
+  criarLogger,
+  TEXTO_OMITIDO_POR_PROFUNDIDADE,
+  TEXTO_REMOVIDO,
+  TEXTO_TOJSON_FALHOU,
+  tratadorDeErroDoProcesso,
+} from './logger.js'
 
 function erroDeUnicidade(): pg.DatabaseError {
   const erro = new pg.DatabaseError('duplicate key value violates unique constraint "aluno_nome_key"', 0, 'error')
@@ -40,7 +48,14 @@ describe('criarLogger', () => {
     }
   })
 
-  it.each(['nome', 'matricula', 'email', 'senha', 'resposta', 'nota', 'conversa', 'prompt'])(
+  // Lista escrita à mão: gerar os casos da própria constante não pegaria chave apagada dela.
+  const chavesEsperadas = ['nome', 'matricula', 'email', 'telefone', 'cpf', 'senha', 'resposta', 'nota', 'conversa', 'prompt', 'conteudo', 'adaptacao', 'diagnostico', 'laudo']
+
+  it('o redact cobre exatamente as chaves pessoais esperadas', () => {
+    expect([...CHAVES_PESSOAIS].sort()).toEqual([...chavesEsperadas].sort())
+  })
+
+  it.each(chavesEsperadas)(
     'remove a chave pessoal "%s" no primeiro nível e até dois níveis abaixo',
     (chave) => {
       const { logger, linhas } = loggerCapturado()
@@ -112,6 +127,52 @@ describe('criarLogger', () => {
     expect(linhas.join('')).not.toContain('Enzo Martins')
   })
 
+  it('troca objeto com toJSON pelo que ele devolve: erro do Postgres vira resumo e chave pessoal passa pelo redact', () => {
+    const { logger, linhas, registros } = loggerCapturado()
+    const embrulhaErro = { toJSON: () => erroDeUnicidade() }
+    const embrulhaAluno = { toJSON: () => ({ id: 'a1', nome: 'Enzo Martins' }) }
+    logger.error({ evento: 'teste', causa: embrulhaErro })
+    logger.info({ evento: 'teste', aluno: embrulhaAluno })
+    logger.error(embrulhaErro)
+    const [comErro, comAluno, direto] = registros()
+    expect(comErro).toMatchObject({ causa: { tipo: 'ErroDoPostgres', sqlstate: '23505' } })
+    expect(comAluno).toMatchObject({ aluno: { id: 'a1', nome: TEXTO_REMOVIDO } })
+    expect(direto).toMatchObject({ tipo: 'ErroDoPostgres', sqlstate: '23505' })
+    const bruto = linhas.join('')
+    expect(bruto).not.toContain('Enzo Martins')
+    expect(bruto).not.toContain('detail')
+  })
+
+  it('resolve o mesmo objeto com toJSON em dois lugares da linha, sem tratá-lo como ciclo', () => {
+    const { logger, registros } = loggerCapturado()
+    const repetido = { toJSON: () => ({ id: 'a1' }) }
+    logger.info({ primeiro: repetido, segundo: repetido })
+    expect(registros()[0]).toMatchObject({ primeiro: { id: 'a1' }, segundo: { id: 'a1' } })
+  })
+
+  it('não cai com toJSON que lança ou que devolve o próprio objeto', () => {
+    const { logger, registros } = loggerCapturado()
+    const quebrado = {
+      toJSON: () => {
+        throw new Error('Enzo Martins')
+      },
+    }
+    const reflexivo: { toJSON: () => unknown } = { toJSON: () => reflexivo }
+    logger.info({ quebrado, reflexivo })
+    expect(registros()[0]).toMatchObject({ quebrado: TEXTO_TOJSON_FALHOU, reflexivo: '[ciclo]' })
+  })
+
+  it('resume erro passado como valor de interpolação da mensagem', () => {
+    const { logger, linhas, registros } = loggerCapturado()
+    logger.error({ evento: 'teste' }, 'falhou %j', erroDeUnicidade())
+    logger.error('falhou %o', { causa: erroDeUnicidade() })
+    expect(registros()).toHaveLength(2)
+    const bruto = linhas.join('')
+    expect(bruto).toContain('23505')
+    expect(bruto).not.toContain('Enzo Martins')
+    expect(bruto).not.toContain('duplicate key')
+  })
+
   it('loga erro comum com tipo e pilha, sem a mensagem', () => {
     const { logger, linhas, registros } = loggerCapturado()
     logger.error({ erro: new SyntaxError('Unexpected token, "Enzo Martins" is not valid JSON') })
@@ -135,18 +196,39 @@ describe('LoggerDoNest', () => {
     expect(inicio).toMatchObject({ level: 'info', origem: 'NestApplication', msg: 'Nest application successfully started' })
     expect(erro).toMatchObject({ level: 'error', origem: 'ExceptionsHandler' })
     expect(semOrigem).not.toHaveProperty('origem')
-    expect(objeto).toMatchObject({ level: 'warn', origem: 'banco', dados: { aluno: { nome: TEXTO_REMOVIDO } } })
-    // A mensagem string do Nest continua saindo; o que não pode sair é a pilha nem objeto com nome.
-    expect(linhas.slice(2).join('')).not.toContain('Enzo Martins')
-    expect(linhas[1]).not.toContain('algum-lugar')
+    expect(objeto).toMatchObject({ level: 'warn', origem: 'banco', msg: TEXTO_MENSAGEM_OMITIDA })
+    expect(objeto).not.toHaveProperty('dados')
+    expect(linhas.join('')).not.toContain('Enzo Martins')
+    expect(linhas.join('')).not.toContain('algum-lugar')
   })
 
-  it('não rebaixa erro do Postgres para dentro de `dados` sem resumir', () => {
+  it('só deixa sair a mensagem em texto que é evento fixo ou do boot do Nest; as outras saem omitidas', () => {
+    const { logger, linhas, registros } = loggerCapturado()
+    const nest = new LoggerDoNest(logger)
+    nest.log('Mapped {/v1/sistema/estado, GET} route', 'RouterExplorer')
+    nest.warn('banco.conexao_ociosa_perdida', 'banco')
+    nest.error('Falha ao corrigir a prova de Enzo Martins', 'ExceptionsHandler')
+    nest.log('conectado como Enzo Martins', 'banco')
+    nest.error('RouterExplorer falhou para Enzo Martins', 'RouterExplorer.extra com espaço')
+    nest.log('valor solto', 'Enzo Martins')
+
+    const [rota, evento, excecao, deOutraOrigem, origemComEspaco, valorComoOrigem] = registros()
+    expect(rota).toMatchObject({ origem: 'RouterExplorer', msg: 'Mapped {/v1/sistema/estado, GET} route' })
+    expect(evento).toMatchObject({ level: 'warn', origem: 'banco', msg: 'banco.conexao_ociosa_perdida' })
+    expect(excecao).toMatchObject({ level: 'error', origem: 'ExceptionsHandler', msg: TEXTO_MENSAGEM_OMITIDA })
+    expect(deOutraOrigem).toMatchObject({ level: 'info', origem: 'banco', msg: TEXTO_MENSAGEM_OMITIDA })
+    expect(origemComEspaco).toMatchObject({ msg: TEXTO_MENSAGEM_OMITIDA })
+    expect(origemComEspaco).not.toHaveProperty('origem')
+    expect(valorComoOrigem).not.toHaveProperty('origem')
+    expect(linhas.join('')).not.toContain('Enzo Martins')
+  })
+
+  it('resume o erro do Postgres passado ao Nest e omite o objeto que não é erro', () => {
     const { logger, linhas, registros } = loggerCapturado()
     const nest = new LoggerDoNest(logger)
     nest.error({ erro: erroDeUnicidade() }, 'banco')
     nest.error(erroDeUnicidade(), 'banco')
-    expect(registros()[0]).toMatchObject({ origem: 'banco', dados: { erro: { tipo: 'ErroDoPostgres', sqlstate: '23505' } } })
+    expect(registros()[0]).toMatchObject({ origem: 'banco', msg: TEXTO_MENSAGEM_OMITIDA })
     expect(registros()[1]).toMatchObject({ origem: 'banco', erro: { tipo: 'ErroDoPostgres', sqlstate: '23505' } })
     expect(linhas.join('')).not.toContain('Enzo Martins')
     expect(linhas.join('')).not.toContain('duplicate key')

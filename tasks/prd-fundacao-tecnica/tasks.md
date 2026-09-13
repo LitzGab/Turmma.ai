@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 2 de 15 concluídas
+**Status:** 3 de 15 concluídas
 
 ## Lista
 
@@ -18,11 +18,11 @@
   - [x] 2.3 Logger pino com redact e filtro global de erro, com mapeamento de erro do Postgres
   - [x] 2.4 Testes: exceção sem stack, `detail` do Postgres fora da resposta e do log, contexto sem vazamento em paralelo
 
-- [ ] **3.0 — Guardas da esteira reprovam o que as regras proíbem**
-  - [ ] 3.1 Regras ESLint de log (chave pessoal, spread, template) e de import de SDK de IA
-  - [ ] 3.2 gitleaks e `npm audit --audit-level=high --omit=dev` na esteira
-  - [ ] 3.3 Proibir `eslint-disable` nas guardas
-  - [ ] 3.4 Testes: fixtures que violam cada guarda e são reprovadas
+- [x] **3.0 — Guardas da esteira reprovam o que as regras proíbem**
+  - [x] 3.1 Regras ESLint de log (chave pessoal, spread, template) e de import de SDK de IA
+  - [x] 3.2 gitleaks e `npm audit --audit-level=high --omit=dev` na esteira
+  - [x] 3.3 Proibir `eslint-disable` nas guardas
+  - [x] 3.4 Testes: fixtures que violam cada guarda e são reprovadas
 
 - [ ] **4.0 — Identidade sintética e contexto de escola**
   - [ ] 4.1 Verificação de JWT (`sub`, `esc`) e escopo no contexto
