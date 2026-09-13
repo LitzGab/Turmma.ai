@@ -1,6 +1,6 @@
 # PRD — Fundação técnica
 
-**Status:** aprovado (revisto em 13/09/2026: F0 só local, D31)
+**Status:** aprovado (revisto em 13/09/2026: F0 só local, D31; D49 e D51)
 **Funcionalidade do roadmap:** F0
 **Depende de:** nada
 
@@ -55,14 +55,14 @@ Nenhum papel da escola usa o F0. Quem toca a funcionalidade é o time.
 | RF4 | Trabalho enfileirado tem prioridade interativa, normal ou lote, e interativo nunca espera lote | Com a fila de lote cheia, um job interativo começa antes de qualquer lote não iniciado |
 | RF5 | Cada escola tem limite configurável de jobs simultâneos por fila | Escola A com 1.000 jobs de lote não passa do limite, e um lote da escola B começa sem esperar os da A |
 | RF6 | Lote não urgente só começa fora do horário letivo da escola, configurável, com padrão de segunda a sexta, das 7h às 18h | Criado às 10h de uma terça, começa depois das 18h; criado num sábado, começa na hora |
-| RF7 | Job aceito sobrevive a reinício do worker; falha é repetida com espera crescente até um limite e depois fica visível como falha | Matar o worker no meio retoma o job; falha permanente fica registrada com escola e motivo tipado |
+| RF7 | Job aceito sobrevive a reinício do worker; falha é repetida com espera crescente até um limite e depois fica visível como falha. A entrega é pelo menos uma vez: a reexecução recebe a mesma chave de idempotência e não duplica efeito (D49) | Matar o worker no meio retoma o job; falha permanente fica registrada com escola e motivo tipado; matar o worker depois do efeito e antes da conclusão não duplica o efeito |
 | RF8 | O rate limit é por usuário e por escola, nunca só por IP. Rota anônima limita por IP com teto que comporta uma escola atrás de um NAT | 400 usuários sintéticos de uma escola num único IP não são bloqueados; um acima do próprio limite recebe espera e os outros 399 seguem |
 | RF9 | Todo log é estruturado e identifica escola, usuário e requisição por id | Uma requisição é seguida pelo id em API, fila e worker |
 | RF10 | Toda resposta de erro tem código tipado e mensagem curta que diz o que fazer; exceção não tratada vira erro genérico, sem stack nem detalhe interno | Teste força exceção não tratada e verifica que a resposta não traz stack, consulta nem valor de campo |
 | RF11 | A esteira reprova: log com campo pessoal (nome, matrícula, e-mail, resposta, nota, conversa); import de SDK de provedor de IA fora dos adaptadores; segredo commitado; dependência com vulnerabilidade grave conhecida | Um caso de teste para cada guarda faz a checagem falhar |
 | RF12 | Todo commit no `main` passa pela esteira do GitHub (tipos, lint, guardas, testes e e2e), sem depender de nada da máquina do desenvolvedor | Um commit com teste quebrado deixa a esteira vermelha; corrigido, fica verde, sem credencial além das do próprio GitHub |
-| RF13 | A casca da web, em pt-BR, busca dado da API e mostra carregando, vazio, erro e com dado | O e2e força os quatro estados; o de erro diz o que fazer, não o código |
-| RF14 | A esteira reprova bundle da web acima do teto declarado e violação grave de acessibilidade; a casca navega por teclado com foco visível | Commit acima do teto fica vermelho; o e2e percorre a casca só com teclado |
+| RF13 | A casca da web, em pt-BR, busca dado da API e mostra carregando, vazio, erro e com dado, no computador da escola e no celular (D51) | O e2e força os quatro estados nos projetos `chromebook` e `celular`; o de erro diz o que fazer, não o código |
+| RF14 | A esteira reprova bundle da web acima do teto declarado, violação grave de acessibilidade (incluindo alvo de toque pequeno) e rolagem horizontal na largura de celular; a casca navega por teclado com foco visível e por toque | Commit acima do teto, com botão pequeno demais ou com página mais larga que 360 px fica vermelho; o e2e percorre a casca só com teclado e só com toque |
 | RF15 | Painel local mostra latência p95 e taxa de erro por rota, tamanho da fila e espera do job mais antigo por escola e prioridade, conexões no realtime e uso do pool do banco | Depois do cenário de carga, a fila da escola A aparece separada da B |
 | RF16 | As regras de alerta ficam versionadas, cada uma com entrada em `docs/runbook.md`: job interativo esperando mais de 30 s, seguro de limite ativo e taxa de erro 5xx | Um ensaio local provoca cada condição e a regra passa a disparada no painel |
 | RF17 | Requisições, jobs e armazenamento ficam marcados com o id da escola | Uma consulta devolve o uso por escola sintética no dia e no mês |
@@ -78,6 +78,9 @@ Nenhum papel da escola usa o F0. Quem toca a funcionalidade é o time.
 - Com commit direto no `main` e sem staging, a esteira é o portão (D23, D31)
 - Alerta novo entra junto com a sua entrada no runbook (regra 80)
 - O uso nasce marcado por escola, para o custo de infra ser medido depois (D30)
+- Job é entregue pelo menos uma vez, e o processador tolera reexecução pela chave de
+  idempotência (D49)
+- Toda tela nasce responsiva e usável no celular, sem que nenhum fluxo dependa dele (D51)
 
 ## 7. Casos de borda
 

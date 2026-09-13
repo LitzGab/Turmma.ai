@@ -1,4 +1,4 @@
-# Tarefa 14.0 — Casca da web com os quatro estados, no limite do Chromebook
+# Tarefa 14.0 — Casca da web com os quatro estados, no limite do Chromebook e do celular
 
 **Funcionalidade:** fundacao-tecnica · **Depende de:** 2.0
 **Subagentes obrigatórios:** `frontend-reviewer`, `test-engineer`
@@ -6,17 +6,25 @@
 ## Objetivo
 
 A web passa a ter uma casca em pt-BR que busca o estado do sistema na API e mostra
-carregando, vazio, erro e com dado. Os componentes de estado ficam prontos para todas as
-telas seguintes, e a esteira reprova bundle acima do teto e violação grave de
-acessibilidade.
+carregando, vazio, erro e com dado. A casca é responsiva desde o primeiro commit e funciona
+igual no Chromebook fraco e no celular (D51). Os componentes de estado ficam prontos para
+todas as telas seguintes, e a esteira reprova:
+- bundle acima do teto
+- violação grave de acessibilidade
+- tela que quebra na largura de celular
+
+Revista em 13/09/2026 (D51): antes desta revisão, a tarefa só olhava o Chromebook.
 
 ## Contexto necessário
 
 - `docs/visao-produto.md` (sempre)
 - `prd.md`: RF13 e RF14; `techspec.md`: seção 4 (`estado` e `avisos`) e seção 9 (Frontend)
-- `.claude/rules/50-frontend.md`: itens 1 (Chromebook fraco), 3 (TanStack Query), 4 (tipos de
+- `.claude/rules/50-frontend.md`: itens 1 (computador fraco), 2 e 2a (sem depender de
+  celular, mas responsiva e usável nele), 3 (TanStack Query), 4 (tipos de
   `packages/shared`), 5 (quatro estados), 11 (acessibilidade) e 12 (pt-BR, erro diz o que
   fazer)
+- `CLAUDE.md`: D51; seção "Skills", conflito do Playwright (viewport de celular e toque se
+  aplicam; PWA e app nativo não)
 - `CLAUDE.md`, seção "Skills": o `frontend-design` não vale aqui; identidade visual ainda em
   aberto, então nada de fonte pesada nem animação
 - `docs/interface.md`: só para não contradizer a navegação futura; esta casca não é uma tela
@@ -34,12 +42,21 @@ acessibilidade.
   para agir) e `EstadoErro` (mensagem do catálogo pelo `codigo`, botão "Tentar de novo",
   nunca o número do status).
   - A casca usa TanStack Query e Tailwind.
+  - Layout mobile-first: coluna única a partir de 360 px, ampliando em telas maiores, sem
+    rolagem horizontal. `<meta name="viewport" content="width=device-width, initial-scale=1">`
+    sem bloquear zoom.
+  - Botão "Tentar de novo" e qualquer ação com alvo de toque de pelo menos 44 × 44 px; nada
+    que dependa de hover.
   - Datas e números passam por `Intl` pt-BR.
   - A remoção da página de fumaça da 1.0 é ajustada.
 - [ ] 14.3 — size-limit com teto de 150 kB em brotli no JS inicial, e `@axe-core/playwright`
-  com as tags `wcag2a`, `wcag2aa`, `wcag21aa`, `wcag22aa`, reprovando `serious` e
-  `critical`. Projeto Playwright `chromebook` com CPU ×4 e Fast 3G via CDP. Tudo entra no
-  `ci:e2e`
+  com as tags `wcag2a`, `wcag2aa`, `wcag21aa`, `wcag22aa`, reprovando `serious` e `critical`
+  (inclui `target-size`). Dois projetos Playwright:
+  - `chromebook`: CPU ×4 e Fast 3G via CDP
+  - `celular`: viewport 360 × 800, `hasTouch` e `isMobile`, CPU ×4 e rede móvel lenta via CDP,
+    no Chromium
+
+  Todo `e2e/*.spec.ts` de tela roda nos dois projetos. Tudo entra no `ci:e2e`
 - [ ] 14.4 — Testes
 
 ## Arquivos previstos
@@ -62,6 +79,8 @@ acessibilidade.
 | borda: vazio (avisos `[]`) mostra convite; carregando aparece com resposta atrasada; erro mostra mensagem pelo `codigo`, botão "Tentar de novo" e nenhum "500" na tela | e2e (rota interceptada) | quebra se faltar um dos quatro estados |
 | borda: "Tentar de novo" com a rede restabelecida mostra o dado | e2e | o erro é recuperável sem recarregar |
 | borda: perfil `chromebook` mostra o dado em até 5 s | e2e | cabe no Chromebook fraco |
+| borda: perfil `celular` mostra o dado em até 5 s, sem rolagem horizontal (`scrollWidth` ≤ largura da janela), e "Tentar de novo" funciona por toque (`tap`) | e2e | quebra se a casca for só para desktop (D51) |
+| guarda: página de fixture mais larga que 360 px faz a verificação de rolagem horizontal falhar; botão de fixture com 16 px faz o axe reprovar `target-size` | e2e | as guardas de celular pegam de fato |
 | acessibilidade: o percurso inteiro só com teclado e foco visível; axe sem violação grave | e2e | a regra 50, item 11 |
 | guarda: página de fixture com violação `serious` faz o axe falhar; bundle de fixture acima de 150 kB faz o size-limit falhar | e2e e unidade | as guardas pegam de fato |
 
@@ -80,4 +99,5 @@ Sem permissão nem isolamento: a casca não mostra dado de escola.
 ## Fora do escopo desta tarefa
 
 Identidade visual, layout por papel, seletor de escola e login (F1, F2). Feed de agentes e
-chat (F7, F11).
+chat (F7, F11). PWA instalável, notificação push e app nativo (fora do produto, D51).
+Navegador além do Chromium no projeto `celular`: a esteira começa só com o Chromium.

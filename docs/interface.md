@@ -4,8 +4,9 @@
 > ferramenta, feed de agentes, aprovação). **Não é design visual:** cores, tipografia e logo
 > estão em aberto até a marca ser definida (ver `CLAUDE.md`).
 >
-> As regras que limitam tudo aqui estão em `.claude/rules/50-frontend.md`: Chromebook fraco,
-> sem celular, quatro estados por tela, ação oficial que mostra o que vai acontecer.
+> As regras que limitam tudo aqui estão em `.claude/rules/50-frontend.md`: computador fraco
+> de escola, responsiva até o celular sem depender dele (D51), quatro estados por tela, ação
+> oficial que mostra o que vai acontecer.
 
 Legenda: **decidido** vem de decisão do `CLAUDE.md` ou do desenho da call.
 *Proposta* é ponto de partida para o PRD da funcionalidade, que pode mudar.
@@ -24,6 +25,7 @@ Veio do desenho da call (Excalidraw), **decidido**:
 │ Ferramentas    │                                                  │
 │ Calendário     │                                                  │
 │ Seu time       │                                                  │
+│ Meu painel     │                                                  │
 │                │                                                  │
 │ Histórico      │                                                  │
 │  · conversa 1  │                                                  │
@@ -41,7 +43,11 @@ Veio do desenho da call (Excalidraw), **decidido**:
   que os agentes concluíram. Deriva da estrutura da escola, o professor não monta a grade
   (regra 60, item 8)
 - **Seu time** é o feed dos agentes. Cada agente é uma thread, com não-lidos
-- **Histórico** lista as conversas do professor
+- **Meu painel** (*proposta*, D45) mostra ao professor o próprio uso e o desempenho das
+  turmas dele por habilidade, com a comparação da série. É dele primeiro: o que a
+  coordenação vê dele é agregado, e o nominal só abre com auditoria. A tela diz isso em
+  português comum
+- **Histórico** lista as conversas do professor, que a coordenação nunca vê
 
 ### 1.1 Chat e ferramenta são o mesmo motor (D18)
 
@@ -76,9 +82,10 @@ Consequências técnicas:
 
 ### 1.2 Ferramentas (F7)
 
-Prova (gabarito, versões, exportação) · Atividade e lista · Correção com devolutiva ·
-Adaptação para necessidade específica · Plano de aula e sequência didática · Simulado ENEM
-a partir do banco público (D21) · Redação por competência.
+Prova (gabarito, versões, exportação) · Atividade e lista · Correção com devolutiva e
+diagnóstico por habilidade · Adaptação para necessidade específica · Plano de aula e
+sequência didática · Simulado ENEM a partir do banco público (D21) · Redação por
+competência, **só com devolutiva, sem nota proposta pela IA** (D46).
 
 Toda ferramenta produz um **artefato** que fica na biblioteca, ligado à turma e ao
 calendário, e toda saída cita material e página.
@@ -95,7 +102,10 @@ calendário, e toda saída cita material e página.
 
 ### 1.4 Aprovar nota
 
-A ação que não pode virar clique reflexo (regra 50, item 8; regra 70).
+A ação que não pode virar clique reflexo (regra 50, item 8; regra 70). Entra quando a nota
+oficial entrar (D46); até lá, o professor aprova devolutiva e diagnóstico com as mesmas
+regras de mostrar antes de confirmar. Em discursiva, a nota é digitada pelo professor, sem
+valor sugerido.
 
 - Aprovação individual mostra **aluno, avaliação e valor** antes de confirmar
 - Aprovação em lote mostra o resumo e **destaca os casos fora da curva** no topo:
@@ -116,7 +126,11 @@ A ação que não pode virar clique reflexo (regra 50, item 8; regra 70).
 
 ## 2. Área do aluno (F9)
 
-Chromebook de sala, sem celular em nenhum ponto. Login por escola + matrícula + senha.
+Computador da escola em sala; fora da sala, também o celular, quando a escola liga o modo
+casa (D19, D51). Nenhum fluxo exige o celular. Login pela conta Google ou Microsoft da
+escola, quando existe, ou por escola + matrícula + senha (D48). A mesma área serve do 6º ano
+ao 3º do Ensino Médio; a linguagem do tutor e os textos precisam funcionar para um aluno de
+11 anos (D43).
 
 *Proposta de navegação:*
 
@@ -138,15 +152,20 @@ Desligado, a tela explica que o tutor funciona em sala, sem parecer erro.
 
 *Proposta de navegação:*
 
-- **Estrutura**: séries, turmas, listas de nomes, convites de professor (F1, F2). É a
-  primeira coisa que a coordenação faz, e precisa ser rápida (D24)
-- **Material**: fontes, upload de apostila, estado da ingestão com o que entrou, o que
-  falhou e o que está pendente (F4)
+- **Estrutura**: séries, turmas, listas de nomes, grade horária e calendário importados,
+  alocação de professor × turma × disciplina, convites de professor e conexão opcional com
+  Google ou Microsoft (F1, F2; D3 revista, D48). É a primeira coisa que a coordenação faz, e
+  precisa ser rápida (D24)
+- **Material**: fontes com titularidade e licença, upload, estado da ingestão com o que
+  entrou, o que falhou, o que está pendente e o que foi recusado por falta de licença (F4,
+  D5 revista)
 - **Governança** (F12), a tela que fecha a venda:
-  - uso de IA por professor e turma
-  - 100% das notas aprovadas por humano, com o número
-  - desempenho por turma e habilidade
-  - alertas acionáveis: prova fácil demais, turma em queda, aluno em risco
+  - uso de IA por série e disciplina; por professor só com abertura auditada (D45)
+  - o que a IA gerou e quem aprovou, com o número; notas aprovadas por humano quando a nota
+    oficial existir (D46)
+  - desempenho por série, turma e habilidade
+  - alertas em agregado, como hipótese com contexto: média fora da curva, habilidade em
+    queda, aluno em risco. Nada de ranking de professor
   - consumo de IA do mês contra o orçamento
 - **Analista da coordenação**: resumo de segunda de manhã e alertas na hora, em agregado (D32)
 - **Adaptações**: registro da adaptação necessária por aluno, nunca diagnóstico (D35)
@@ -177,9 +196,14 @@ Fase posterior (D11). Nota, entrega e alerta, alimentados pelo motor de eventos 
 - Erro diz o que fazer: "não foi possível salvar, tente de novo em instantes"
 - Navegação por teclado, foco visível, contraste, rótulo em campo
 - Lista longa virtualizada. Nada que assuma máquina boa
+- **Responsiva desde a primeira versão** (D51): do computador da escola ao celular, a
+  partir de 360 px. No celular, o menu lateral da área do professor vira navegação
+  recolhível, e o chat, o feed e as ferramentas cabem numa coluna. Toque em vez de hover,
+  alvo de toque de 44 px na ação principal. Nenhum fluxo exige o celular
 
 ## 7. Em aberto
 
 - Identidade visual: cores, tipografia, logo, tom da interface
 - Avatar dos agentes (ícone por função?) — depende da identidade visual
 - Detalhe de navegação do aluno e da coordenação, a fechar nos PRDs de F2, F9 e F12
+- Conteúdo do "Meu painel" do professor e dos indicadores (decisão em aberto no `CLAUDE.md`)

@@ -56,24 +56,40 @@ eventos construído agora (D11).
 
 ## 4. Preço e cobrança
 
-**Escola particular: cerca de R$ 30 por aluno por mês**, repassado à família na
-mensalidade. É cerca de 3% de uma mensalidade de R$ 1.000, abaixo do reajuste médio de 9,8%
-previsto para 2026. Uma escola com Ensino Médio completo fica em torno de R$ 10 mil por mês.
+**Escola particular: por aluno por mês, com faixas de pacote (D50).** Valores são hipótese,
+validados no piloto:
 
-O argumento para a assembleia, como saiu na call: "R$ 30 a mais é o que o seu filho gasta
-num dia de cantina. Com isso ele tem um tutor que só fala do conteúdo da escola, em vez de
-usar ferramentas que tiram o foco dele."
+| Pacote | O que inclui | Hipótese por aluno/mês |
+|---|---|---|
+| Base | assistente do professor, organização da escola, desempenho e governança | R$ 12 a R$ 18 |
+| Completo | o base mais o tutor do aluno | R$ 25 a R$ 30 |
 
-**Prefeitura / rede:** contrato por aluno, faixa hipotética de R$ 5 a R$ 10 por aluno por
-mês. O orçamento de IA da rede é derivado desse preço, na ordem de R$ 1,50 por aluno, com
-modelo pequeno no tutor e pacote menor por turma (D41).
+A referência original era **R$ 30 por aluno por mês**, repassado à família na mensalidade:
+cerca de 3% de uma mensalidade de R$ 1.000. Ela foi para faixas porque R$ 30 numa escola de
+330 alunos dá uns R$ 550 por professor por mês, contra R$ 39,90 da Teachy e o Gemini grátis
+no Classroom (seção 6).
+
+O argumento para a assembleia, como saiu na call, vale para o pacote completo: "R$ 30 a mais
+é o que o seu filho gasta num dia de cantina. Com isso ele tem um tutor que só fala do
+conteúdo da escola, em vez de usar ferramentas que tiram o foco dele."
+
+⚠️ **Repasse na mensalidade tem calendário.** Pela Lei 9.870/1999, até onde se sabe, a
+anuidade é fixada e divulgada antes da matrícula, e a lei não exige assembleia de pais. Se
+isso se confirmar, o preço de 2027 já está sendo fixado agora, e o primeiro repasse realista
+é em 2028. Confirmar com advogado antes de usar em material de venda.
+
+**Rede pública: pacote de rede com piso de preço (D41).** Em torno de R$ 10 por aluno por
+mês, ou um pacote com menos tutor que caiba no preço. A R$ 5, IA (R$ 1,50) mais infra (R$ 2)
+mais imposto dão uns R$ 4,15 e não sobra para suporte nem licitação. Referência de pregão:
+Letrus, R$ 68 a R$ 110 por aluno por ano no Ensino Médio (proposta a Goiás, 2023), ou R$ 5,70
+a R$ 9,20 por mês.
 
 **Cobrança (D40):** a escola paga por aluno, com uso normal incluso. Não existe crédito
 visível para professor ou aluno. Escola que passa do teto de forma recorrente renegocia o
 contrato. A ideia de crédito avulso da call foi descartada: cria a conversa "acabou o
 crédito" no meio do bimestre.
 
-**Como os R$ 30 se dividem (tetos, não medidas):**
+**Como os R$ 30 do pacote completo se dividem (tetos, não medidas):**
 
 | Parte | Teto por aluno/mês | Decisão |
 |---|---|---|
@@ -81,7 +97,21 @@ crédito" no meio do bimestre.
 | Infra (servidor, banco, storage) | R$ 2 | D30 |
 | Suporte, imposto e margem | ~R$ 23 | — |
 
-O custo estimado do tutor por modelo está em `docs/avaliacao-de-modelos.md`.
+O teto de IA do pacote base está em aberto (D39). O custo estimado do tutor por modelo está
+em `docs/avaliacao-de-modelos.md`.
+
+**Conta de uma escola (estimativa de 13/09/2026, premissas da análise daquela data):**
+
+| Item | Pacote completo, 330 alunos a R$ 30 |
+|---|---|
+| Receita | R$ 9.900 por mês |
+| Imposto, IA (~R$ 4 por aluno), comissão, suporte, onboarding amortizado, infra marginal | ~R$ 4.440 |
+| Contribuição | ~R$ 5.460 por mês |
+
+Com custo fixo de uns R$ 30,5 mil por mês (dois sócios, infra fixa em São Paulo, contador,
+jurídico, encarregado de dados), o ponto de equilíbrio fica em ~6 escolas a R$ 30, e sobe
+para 10 a 15 com as faixas (D50). O custo de IA estoura R$ 5 em 2027 se o preço do Gemini
+Flash dobrar e o câmbio subir; o tutor é o componente dominante.
 
 **Referência histórica da call:** R$ 250 por professor + R$ 100 por aluno. Descartada em
 favor do preço por aluno.
@@ -106,10 +136,29 @@ Censo Escolar 2025 e outras fontes, conforme o levantamento de 13/09/2026:
 
 - 46,0 milhões de matrículas na educação básica, 178,8 mil escolas, 2,41 milhões de
   docentes, 94,5% das escolas com internet
-- Rede privada: 9,25 milhões de alunos em 41,7 mil escolas. Ensino Médio privado: 1,03 milhão
+- Rede privada: 9,25 milhões de alunos em 41,7 mil escolas. Anos finais privados: 1,95
+  milhão. Ensino Médio privado: 1,03 milhão (número a reconferir no INEP)
+- 68% das escolas privadas de Ensino Médio têm computador portátil para aluno (Censo 2025,
+  tabela E6; é disponibilidade, não um por aluno)
 - Redes municipais: 23,1 milhões de alunos em 5.570 municípios
-- **Mercado privado a R$ 30 por aluno por mês: R$ 3,3 bilhões por ano.** Municipal a
-  R$ 5–10: R$ 1,4 a 2,8 bilhões por ano
+- Joinville: mensalidade média de R$ 1.042,90, faixa de R$ 580 a R$ 2.242. Santa Catarina:
+  332.822 matrículas privadas
+
+**Mercado por recorte, a R$ 30 por aluno por mês (R$ 360 por ano):**
+
+| Recorte | Alunos | Por ano |
+|---|---|---|
+| Ensino Médio privado | 1,03 mi | R$ 371 milhões |
+| **Anos finais e Ensino Médio privados (recorte atual, D43)** | ~2,98 mi | **~R$ 1,07 bilhão** |
+| Rede privada inteira | 9,25 mi | R$ 3,33 bilhões |
+
+O número de R$ 3,3 bilhões que aparecia aqui usava a rede privada inteira, incluindo
+educação infantil e anos iniciais, que estão fora do produto (regra 70). Com as faixas de
+preço (D50) o valor por aluno é menor, então esses números são teto. Na rede pública, o
+recorte é a parte municipal e estadual dos anos finais mais o Ensino Médio estadual; os
+23,1 milhões municipais incluem infantil e anos iniciais, que ficam fora, e o número do
+recorte ainda não foi levantado. Meta do primeiro ano (D25, 4.000
+alunos): R$ 1,44 milhão por ano, ~0,1% do recorte atual.
 - 79% dos professores e 84% dos alunos já usaram IA (Fundação Itaú, 2025). Professores
   brasileiros lideram a OCDE em uso de IA (56% contra 36%, TALIS 2024). Só 19% dos alunos
   receberam orientação
@@ -122,7 +171,35 @@ Censo Escolar 2025 e outras fontes, conforme o levantamento de 13/09/2026:
 Benchmark completo, com 17 dossiês e radar de 16 emergentes:
 https://educa-ia-benchmark.vercel.app
 
-**O que o mercado mostra:**
+**Atualização de 13/09/2026 (pesquisa com fonte e data):**
+
+- **Google.** Gemini no Classroom sem custo em todas as edições do Workspace for Education,
+  com mais de 30 ferramentas de professor (06/2025). Notebooks do NotebookLM e Gems
+  atribuídos pelo professor a partir do material da turma (09/2025). Marcação de
+  habilidades por currículo, incluindo o Brasil, e resumo de progresso (01/2026). Gemini
+  no Classroom para aluno de qualquer idade, ligado por padrão, com o material da turma
+  (10/08/2026). Simulado ENEM grátis no Gemini (20/08/2026). É concorrente grátis dentro do
+  mesmo ambiente e também canal: a API do Classroom permite importar turmas (D48)
+- **Sistemas de ensino.** Plurall IA (Somos) gera plano e prova por capítulo do livro; o
+  livro digital do Plurall só é lido na plataforma, sem baixar. Geekie One (Arco) corrige
+  dissertativa com IA; a Arco tem parceria com a OpenAI. Bernoulli lançou o Co-crIA com a
+  Teachy (03/2026) para ~15 mil professores. Poliedro lançou o Cosmos. FTD comprou a
+  Estuda.com e dá IA grátis para professor de rede pública. Material preso na plataforma e
+  com IA própria: a licença do conteúdo é o gargalo (D5)
+- **Teachy** já tem tutor de IA com conversa monitorada pelo professor, correção automática
+  de dissertativa e painel de engajamento de professores, a R$ 39,90 por professor por mês.
+  "Tutor supervisionado" deixou de ser diferencial sozinho
+- **Gestão e desempenho com IA:** Plurall (painel de gestão), SAE Digital (relatórios por
+  aluno, turma e disciplina), Geekie One, EducrIA (painéis por habilidade e planos de ação),
+  IA Educa Brasil, EducaPRO, QiProf. Os concorrentes falam em "engajamento" e "adoção" de
+  professor, não em "desempenho"
+- **Medir professor tem reação sindical.** O Sinpro/RS se opõe a câmera em sala como
+  monitoramento do professor. Desenho aceito no mercado: o dado individual fica com o
+  próprio professor, e a gestão vê o agregado (D45)
+- **Ciclo de venda** para escola particular: típico de 6 meses, com 4 a 5 reuniões, até 1,5
+  ano em escola premium
+
+**O que o mercado mostrava no benchmark original:**
 
 - **Ninguém vende agente autônomo.** Toda IA é assistente sob comando, acoplada a material
   didático (Somos/Plurall, Arco, Geekie), banco de questões (Estuda, Super Professor) ou
@@ -152,9 +229,11 @@ https://educa-ia-benchmark.vercel.app
 | Estuda.com | prova adaptada por IA como caso de venda; inclusão é o tema mais anunciado |
 | Layers | neutralidade e integração fazem dela a camada onde os outros plugam |
 
-**Consequência para o produto:** plano de aula e prova não diferenciam, porque já são
-commodity. O que diferencia é o que está em `docs/visao-produto.md` seção 3: agente que
-executa e avisa, loop fechado até a família, e governança de IA pronta para o CNE.
+**Consequência para o produto:** plano de aula, prova, simulado ENEM e tutor básico não
+diferenciam, porque já são commodity ou grátis. O que diferencia é o que está em
+`docs/visao-produto.md` seção 3: governança de IA pronta para o CNE, agentes supervisionados
+que preparam e avisam, loop fechado até a família, desempenho medido sem vigilância, e
+neutralidade em relação ao material.
 
 ## 7. Posicionamento e mídia
 
@@ -181,6 +260,9 @@ assembleia de pais, escolas técnicas.
   Gabriel. Isso não muda prioridade de produto
 - **O que convence é o fluxo completo funcionando** (D1). Por isso a demonstração (F15) tem
   seed sintético de uma escola inteira e o feed de agentes nunca aparece vazio
+- **Uma escola piloto gratuita entra no 1º semestre de 2027** usando o que estiver pronto
+  (D1 revista). Antes dela, entrevistas com escolas de Joinville (`TODO.md`). Com ciclo de
+  6 a 18 meses e o calendário da mensalidade, a primeira receita realista é em 2028
 
 O que a coordenação precisa ver na primeira semana para renovar está em D24.
 
@@ -191,9 +273,11 @@ O que a coordenação precisa ver na primeira semana para renovar está em D24.
 | 1 | Posicionamento de marca e landing page | Gabriel | em andamento |
 | 2 | Mapa do sistema e telas | Joaquim | `docs/interface.md` |
 | 3 | Fluxos-chave detalhados | Joaquim + Gabriel | `docs/fluxos.md` |
-| 4 | Lista de agentes e nível de autonomia | juntos | nomes decididos (D17), lista em aberto |
+| 4 | Lista de agentes e nível de autonomia | juntos | decidido (D17, D32) |
 | 5 | Stack e arquitetura | Joaquim | ratificada (D16) |
-| 6 | Modelo de dados e orçamento de IA por aluno | Joaquim | `docs/modelo-de-dados.md`; orçamento em aberto |
+| 6 | Modelo de dados e orçamento de IA por aluno | Joaquim | `docs/modelo-de-dados.md`; orçamento decidido (D38, D39, D41) |
+| 9 | Valores das faixas de preço e teto de IA do pacote base | juntos | em aberto (D50) |
+| 10 | Entrevistas com escolas e escola piloto | juntos | em aberto; piloto no 1º semestre de 2027 (D1) |
 | 7 | Nome, INPI e domínio | juntos | em aberto |
 | 8 | WhatsApp e portal da família | juntos | fase posterior |
 

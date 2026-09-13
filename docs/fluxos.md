@@ -12,37 +12,52 @@ Use isto para escrever PRD: o fluxo já contém os casos de borda que importam.
 **Como acontece**
 
 Renata, coordenadora, assina o contrato numa terça. Na quarta ela entra no sistema e cria
-as séries do Ensino Médio e as turmas de cada uma: 1ºA, 1ºB, 1ºC, e assim por diante. Para
-cada turma, ela sobe uma lista de nomes — a mesma planilha que ela já tem da secretaria.
+as séries dos anos finais e do Ensino Médio e as turmas de cada uma: 8ºA, 1ºA, 1ºB, e assim
+por diante. Para cada turma, ela sobe uma lista de nomes — a mesma planilha que ela já tem
+da secretaria. Depois importa a grade horária e o calendário do ano, e com isso fica
+definido quem dá aula de quê em qual turma (D3 revista).
 
-Ela convida os professores por e-mail. Camila recebe o link, clica, define senha e escolhe
-que dá Química. O sistema já mostra as turmas para as quais ela foi alocada.
+Ela convida os professores por e-mail. Camila recebe o link, clica, entra e **confirma** o
+que a escola informou: Química no 2ºB e no 3ºA, Ciências no 9ºA. Se algo estiver errado, ela
+avisa a coordenação; ela não se aloca sozinha. Se Camila também dá aula em outra escola
+cliente, o mesmo usuário ganha um segundo vínculo, e o seletor de escola separa as duas.
 
-Na primeira aula, Camila projeta o link da sala no quadro. Os alunos abrem no Chromebook,
-veem a lista de nomes da turma, e cada um reivindica o seu. Camila olha a tela dela, vê os
-31 pedidos, confere e aprova. Só nesse momento cada aluno vira usuário de verdade, com
-matrícula e senha.
+Se a escola usa Google Workspace ou Microsoft, professores e alunos entram com a conta da
+escola, e turmas e vínculos podem vir do Classroom (D48). Senão, na primeira aula Camila
+projeta o link da sala no quadro. Os alunos abrem no computador da escola, veem a lista de
+nomes da turma, e cada um reivindica o seu. Camila olha a tela dela, vê os 31 pedidos,
+confere e aprova. Só nesse momento cada aluno vira usuário de verdade, com matrícula e
+senha.
 
 **Por que é assim**
 
 Cadastrar 900 alunos um a um mata o produto na primeira semana. Mas deixar o aluno digitar
 o próprio nome livremente cria dois "Enzo Martins" e um "Batman". A reivindicação com
 aprovação do professor resolve os dois: rápido para a escola, e ninguém se passa por outro.
+O vínculo vem da escola, e não do professor, porque é ele que dá acesso a dado de aluno. E
+sem a grade o Rotina e o calendário não têm de onde nascer.
 
 **O que isso obriga tecnicamente**
 
 - Convite com token único, validade, uso único e revogação
 - Lista de nomes como entidade própria, com estado: livre, reivindicado, aprovado
 - Importação tolerante a planilha suja, com erro apontado linha a linha, e reimportação que
-  atualiza em vez de duplicar
-- Aluno só existe como usuário depois da aprovação
+  atualiza em vez de duplicar. Vale para lista de nomes, grade e calendário
+- Vínculo professor × turma × disciplina criado pela escola e confirmado pelo professor;
+  vínculo não confirmado não libera acesso a aluno
+- Usuário com vínculo em mais de uma escola, cada vínculo preso ao tenant e ao ano letivo
+- Login pela conta da escola como adaptador opcional, guardando só o identificador opaco;
+  e-mail e foto do aluno descartados antes de gravar (regra 20)
+- Aluno só existe como usuário depois da aprovação ou da importação pela conta da escola
 - Reset de senha do aluno pelo coordenador ou pelo professor, já que o aluno não tem e-mail
 
 **Casos de borda que vão acontecer**
 
 Dois alunos com o mesmo nome na mesma turma. Aluno que chega em maio, depois da turma toda
 já formada. Aluno transferido de turma no meio do ano. Aluno que reivindica o nome errado e
-o professor aprova sem ver. Planilha com a turma escrita de três jeitos diferentes.
+o professor aprova sem ver. Planilha com a turma escrita de três jeitos diferentes. Grade
+com professor que ainda não foi convidado. Professor que discorda da alocação. Turma do
+Classroom que não bate com a turma da secretaria.
 
 ---
 
@@ -50,9 +65,12 @@ o professor aprova sem ver. Planilha com a turma escrita de três jeitos diferen
 
 **Como acontece**
 
-Renata autoriza, por escrito, o uso do material do sistema de ensino que a escola já paga.
-O sistema ingere o conteúdo, ou ela sobe as apostilas em PDF. O conteúdo é quebrado em
-trechos, classificado por série, disciplina, capítulo e habilidade da BNCC, e indexado.
+Renata informa qual material a escola pode ceder e autoriza, por escrito, o uso dele: a
+apostila própria da escola, o material dos professores, um livro com licença para esse uso.
+Se o material é de um sistema de ensino, ele só entra com licença ou parceria com o dono do
+conteúdo (D5 revista). Ela sobe os arquivos, ou, quando houver parceria, o sistema ingere
+pela fonte. O conteúdo é quebrado em trechos, classificado por série, disciplina, capítulo e
+habilidade da BNCC, e indexado.
 
 A partir daí, toda prova, atividade, plano de aula e resposta do tutor nasce desse material,
 citando a página de origem.
@@ -68,14 +86,16 @@ conferir na página 152 da apostila dele tem valor. Uma questão genérica não 
   fonte mudar, a escola sobe o PDF e continua funcionando no mesmo dia
 - Rastreabilidade até a página em cada trecho indexado
 - Versionamento: material muda de edição, e a versão usada numa prova precisa ficar registrada
-- Autorização escrita da escola registrada por fonte, sem a qual o adaptador não roda
+- Autorização escrita da escola registrada por fonte, e licença do dono do conteúdo quando o
+  material não é da escola; sem elas, nem o upload nem o adaptador processam
 - Conteúdo preso ao tenant da escola. Nunca vira banco nosso, nunca cruza para outra escola
 - Ingestão em fila, com estado visível: o que entrou, o que falhou, o que está pendente
 
 **Casos de borda**
 
 PDF escaneado sem camada de texto. Apostila em duas colunas. Fórmula química que a extração
-quebra. Material sem numeração de capítulo. Escola que sobe 300 arquivos de uma vez.
+quebra. Material sem numeração de capítulo. Escola que sobe 300 arquivos de uma vez. Escola
+que tenta subir a apostila de um sistema de ensino sem licença.
 
 ---
 
@@ -88,8 +108,8 @@ Ou abre a ferramenta e preenche um formulário, se preferir não conversar. O si
 material da turma, monta, mostra cada questão com a página de origem.
 
 Ela troca duas questões, ajusta o peso de uma, e escolhe **como a prova vai ser aplicada**:
-online no Chromebook, em papel para depois corrigir por foto, como trabalho de entrega, ou
-presencial com lançamento manual.
+online no computador da escola, em papel para depois corrigir por foto, como trabalho de
+entrega, ou presencial com lançamento manual.
 
 A prova fica salva na biblioteca dela e aparece no calendário da turma.
 
@@ -102,9 +122,10 @@ perde metade dos casos reais.
 **O que isso obriga tecnicamente**
 
 - Avaliação é um objeto genérico com um **modo**; o modo define a trilha de aplicação e de
-  correção, mas o núcleo (questão, item, nota, boletim) é o mesmo
-- Em todos os modos, a nota termina dentro do sistema. Um modo que deixa a nota de fora
-  quebra o painel do coordenador e a notificação da família
+  correção, mas o núcleo (questão, item, diagnóstico, nota, boletim) é o mesmo
+- Em todos os modos, o resultado termina dentro do sistema: primeiro como diagnóstico por
+  habilidade, depois também como nota (D46). Um modo que deixa o resultado de fora quebra o
+  painel do coordenador, a medição de desempenho e a notificação da família
 - Toda questão gerada guarda de qual material e de qual página veio
 
 ---
@@ -128,6 +149,7 @@ escola ensina, a IA de fora entrega.
 
 **O que isso obriga tecnicamente**
 
+- Resposta do tutor supervisionada, não aprovada uma a uma (D47)
 - Política de tutor por turma: bloqueado, socrático ou livre, definida pelo professor dentro
   do padrão da escola, aplicada **no servidor**
 - Trava automática durante avaliação em andamento, independentemente da política
@@ -137,6 +159,8 @@ escola ensina, a IA de fora entrega.
 - Sinal derivado de evento: o professor vê uso e dificuldade, não uma janela sobre o
   comportamento do aluno
 - Conversa do tutor com retenção curta e acesso restrito ao professor da turma
+- Encaminhamento de assunto delicado que chega também a quem notifica o Conselho Tutelar,
+  com acesso ao conteúdo auditado (`docs/regulacao.md` seção 6)
 
 **Casos de borda**
 
@@ -151,23 +175,33 @@ humano e não de resposta de IA.
 
 **Como acontece**
 
-Terminada a prova, o agente Corretor corrige as objetivas automaticamente e propõe nota para
-as discursivas, com justificativa. Ele **não lança nada**. Manda uma entrega para o feed da
-Camila: "corrigi as 32 provas, média 6,4, esperando você aprovar".
+Terminada a atividade ou a prova, o agente Corretor corrige as objetivas, escreve a
+devolutiva das discursivas e monta o diagnóstico por habilidade. Ele **não lança nada** e
+**não sugere nota para as discursivas** (D46). Manda uma entrega para o feed da Camila:
+"corrigi as 32 provas, onze alunos erraram a questão 7, esperando você".
 
-Camila revisa. Discorda de duas correções, ajusta, aprova o lote. Nesse instante a nota
-passa a existir, o aluno vê a devolutiva, e o evento sobe para o painel da coordenação.
+Camila revisa. Ajusta duas devolutivas e aprova. O aluno vê a devolutiva, e o diagnóstico
+sobe para o painel dela e, em agregado, para o da coordenação.
+
+Quando a nota oficial estiver no sistema, o mesmo fluxo continua: Camila dá a nota das
+discursivas, confere as objetivas, e aprova o lote. Nesse instante a nota passa a existir e
+o evento sobe para o painel da coordenação.
 
 **Por que é assim**
 
 Correção automática e atribuição de nota são classificadas como alto risco pelo CNE e
-exigem supervisão humana. Decisão autônoma sobre aprovação do aluno é proibida. Além da
-lei: professor não assina embaixo de nota que não conferiu.
+exigem supervisão humana; segundo a imprensa, a versão final veda sugestão de nota em
+redação e discursiva. Decisão só automatizada sobre promoção do aluno é proibida. Além da
+lei: professor não assina embaixo de nota que não conferiu. E o diagnóstico formativo vem
+primeiro porque tem menos risco e é o que alimenta a medição de desempenho.
 
 **O que isso obriga tecnicamente**
 
 - `Correcao` e `Nota` são entidades separadas. A IA escreve na primeira, nunca na segunda
 - `Nota` só é gravada com autor humano, em **todo** caminho: interface, job, importação, seed
+- Discursiva e redação sem nota proposta pela IA, até a regra 70 mudar
+- Aprovação qualificada e documentada: o lote mostra resumo e destaques antes de liberar
+  (D33), para não virar aprovação automática
 - Entrega de agente nasce pendente, com aprovar e rejeitar com justificativa
 - Auditoria responde "o que a IA gerou, quem aprovou, quando"
 - A justificativa da correção precisa ser boa o bastante para o professor defender a nota
@@ -180,22 +214,29 @@ lei: professor não assina embaixo de nota que não conferiu.
 **Como acontece**
 
 Renata abre o painel e vê quantos professores estão usando, quanto de IA foi gerado, que
-100% das notas passaram por aprovação humana, e quanto do orçamento de IA do mês já foi
-consumido.
+tudo o que chegou aos alunos tem registro de quem aprovou, e o consumo de IA do mês.
 
-Dois alertas esperam por ela: a média do 2ºA em Biologia está em 9,4 contra 6,8 das outras
-turmas da mesma série, e o 1ºC caiu 1,4 ponto em Matemática em duas avaliações seguidas,
-concentrado em funções do primeiro grau.
+Dois alertas em agregado esperam por ela: o 2º ano em Biologia está com média muito acima
+das outras disciplinas da série, e o 1º ano caiu em Matemática em duas avaliações seguidas,
+concentrado em funções do primeiro grau. Cada alerta vem como hipótese, com a distribuição
+e a dificuldade dos itens. Se ela abrir o detalhe por turma, o acesso fica em auditoria.
+
+Camila, no mesmo dia, abre o próprio painel: vê o uso dela, o desempenho das turmas dela por
+habilidade e a comparação com a série, antes de qualquer conversa com a coordenação (D45).
 
 **Por que é assim**
 
 É a tela que decide a renovação do contrato, e é a que nenhum concorrente tem. A escola
-precisa poder responder, em reunião de pais, o que a IA faz ali dentro.
+precisa poder responder, em reunião de pais, o que a IA faz ali dentro. E o professor
+precisa saber que o painel é dele primeiro, ou ele não usa o sistema.
 
 **O que isso obriga tecnicamente**
 
-- Agregação por professor, turma, disciplina e habilidade
-- Detecção de anomalia com limiar configurável
+- Agregação por turma, disciplina, série e habilidade
+- Indicador do professor visível primeiro a ele; coordenação vê agregado e abre o nominal
+  com auditoria; sem ranking de professor e sem ligação com decisão sobre ele (regra 70,
+  item 8)
+- Detecção de anomalia com limiar configurável, formulada como hipótese com contexto
 - Auditoria consultável de saída de IA e de aprovação
 - Nível de autonomia de cada agente exposto em linguagem comum
 - Consumo de tokens por escola e por perfil
@@ -213,12 +254,14 @@ Propõe preparar um aviso às famílias, que fica esperando aprovação.
 
 **Por que é assim**
 
-É o produto. Toda ferramenta do mercado espera o clique; a nossa puxa a conversa.
+Toda ferramenta do mercado espera o clique; a nossa prepara o trabalho e puxa a conversa, e
+a escola aprova o que vale (D44).
 
 **O que isso obriga tecnicamente**
 
 - Runtime de agente em fila, nunca dentro de request
-- Idempotência: rodar duas vezes não duplica aviso
+- Idempotência: a fila entrega pelo menos uma vez, e rodar duas vezes não duplica aviso nem
+  chamada de IA (D49)
 - Limite de passos e de custo por execução. Agente que não sabe parar queima a margem
 - Estado explícito: executado, aguardando aprovação, aprovado, rejeitado
 - Thread por agente, com não-lidos

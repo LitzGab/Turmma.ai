@@ -11,18 +11,34 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] Relatório de impacto (RIPD) — dado de menor, volume alto, IA no fluxo
 - [ ] Definir prazos de retenção com uma escola real (varia por rede)
 - [ ] Escrever e ensaiar o processo de incidente
+- [ ] Parecer sobre o ECA Digital (Lei 15.211/2025) para plataforma contratada pela escola,
+      com a avaliação de impacto que ele exige
+- [ ] Base legal da conversa do tutor e dos sinais, na particular e na pública (Enunciado
+      CD/ANPD 1/2023; teste de balanceamento se for legítimo interesse)
+- [ ] Indicadores de professor com advogado: CLT, convenção coletiva de cada sindicato
+      (SINPRONORTE lida, sem cláusula sobre IA) e estatuto do servidor na rede pública (D45)
+- [ ] Contrato com a escola: responsabilidade civil por resposta errada do tutor e direito
+      de regresso
+- [ ] Protocolo de risco à vida com a escola: quem notifica o Conselho Tutelar (Lei
+      13.819/2019, Lei 15.231/2025) e como o sinal chega a essa pessoa
 - [x] ~~Decidir região de hospedagem~~ — Brasil (D28)
 
 ## Infra e operação
 
 - [ ] Escolher provedor de hospedagem em região Brasil, com Postgres + pgvector, Redis e
       storage S3 gerenciados (D26, D28), quando for criar o staging (D31, D42)
-- [ ] Contrato com provedor de modelo: veda treinamento, limite de tokens por minuto
-      compatível com o pico (~1,5 mi/min em 10 escolas), e região de processamento (D29)
+- [ ] Contrato com provedor de modelo: veda treinamento, permite serviço usado por menor,
+      limite de tokens por minuto compatível com o pico (~1,5 mi/min em 10 escolas pela
+      estimativa do `docs/infra.md`; a análise de 13/09/2026 chegou a ~2,8 mi com premissa
+      mais realista), e região de processamento (D29)
 - [ ] Provedor de modelo de reserva configurado e testado
 - [ ] Rodar a avaliação de `docs/avaliacao-de-modelos.md` com Maritaca e Gemini (D37)
-- [ ] Perguntar à Maritaca, por escrito, se o contrato cobre dado de aluno menor de idade
-      (a política pública diz que não tratam dado de menor)
+- [ ] Perguntar à Maritaca, por escrito, se o contrato cobre dado de aluno menor de idade e
+      se garante processamento só no Brasil (o DPA de agosto/2026 lista Brasil, EUA e UE)
+- [ ] Verificar os termos do Vertex AI para serviço usado por menor e se processa em São
+      Paulo (a Gemini API do AI Studio veda esse uso)
+- [ ] Com contador: tributo sobre IA faturada do exterior contra faturamento local, e regime
+      tributário (Simples com fator R, Lucro Presumido, CBS de 2027)
 - [ ] Levantar a região de processamento dos provedores e se a rede pública aceita
       transferência internacional de dado minimizado
 - [ ] Escolher ferramenta de observabilidade e de alerta no celular (região Brasil ou
@@ -32,14 +48,23 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 ## Regulação educacional
 
-- [ ] Ler as diretrizes do CNE na íntegra e revisar a regra 70 contra o texto oficial
+- [ ] Acompanhar a homologação pelo MEC e a publicação das diretrizes do CNE; ler o texto
+      oficial e revisar a regra 70, principalmente correção de discursiva e redação (D46) e
+      a classificação dos sinais do tutor
+- [ ] Verificar se Santa Catarina tem lei estadual sobre aparelhos na escola além da Lei
+      15.100
 - [ ] Transformar a conformidade em material de venda: "já estamos dentro do prazo de 12 meses"
 - [ ] Confirmar exigências de registro escolar da rede alvo
 
 ## Material didático
 
 - [ ] Modelo de autorização escrita da escola para cada fonte de material
-- [ ] Levantar quais sistemas de ensino as escolas alvo usam (decide o primeiro adaptador, D22)
+- [ ] Parecer sobre direito autoral da ingestão (Lei 9.610, art. 29, IX; termos de Arco/SAS,
+      Positivo, Bernoulli e Somos), incluindo apostila impressa escaneada (D5 revista)
+- [ ] Buscar parceria ou licença com editora ou sistema de ensino para uso do material na
+      base da escola
+- [ ] Levantar quais sistemas de ensino as escolas alvo usam e se elas têm material próprio
+      ou PDF licenciado (decide o primeiro material do piloto e o primeiro adaptador, D22)
 - [x] ~~Decidir: adaptador por fonte ou extração genérica~~ — upload primeiro, adaptador por
       fonte quando houver escola real (D22)
 - [ ] Conjunto fixo de amostras para medir qualidade da extração e da classificação BNCC
@@ -65,10 +90,21 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 ## Comercial
 
-- [ ] Planilha de custo de IA por aluno/mês → validar a margem do R$ 30
-- [ ] Escola piloto (contatos existem, nada decidido com base neles)
+- [ ] Planilha de custo de IA por aluno/mês **por pacote** → validar a margem das faixas
+      (D50) e fixar o teto de IA do pacote base (D39)
+- [ ] Entrevistas com 6 a 8 escolas de Joinville (coordenação e professores, particular e
+      pública): como medem o professor hoje e o que ele aceitaria, onde está a grade, que
+      material usam e com que licença, se têm Google Workspace ou Microsoft, qual sistema de
+      gestão, quem pagaria, quanto e quando
+- [ ] Escola piloto gratuita para o 1º semestre de 2027, com carta de intenção (D1 revista;
+      contatos existem, nada decidido com base neles)
+- [ ] Confirmar com advogado o calendário de repasse na mensalidade (Lei 9.870/1999) antes de
+      prometer preço para 2027
+- [ ] Levantar o número de alunos da rede pública no recorte (anos finais municipais e
+      estaduais, Ensino Médio estadual) e o preço praticado em pregão
 - [ ] Roteiro de demonstração para coordenador e para assembleia de pais
-- [ ] Aproveitar setembro como pico de compra para o ano seguinte
+- [ ] Aproveitar setembro como pico de compra para o ano seguinte (em 2026, para
+      entrevistas e piloto; venda com repasse, realisticamente, para 2028)
 
 ## Marca
 

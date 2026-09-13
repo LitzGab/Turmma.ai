@@ -176,7 +176,7 @@ falha da tarefa, não sugestão.
 | `test-engineer` | Teste que não prova nada | não |
 | `llm-integrator` | Chamada de IA sem perfil, sem orçamento, sem registro | não |
 | `pedagogia-reviewer` | Conteúdo que um professor de verdade rejeitaria | não |
-| `frontend-reviewer` | Tela que não funciona em Chromebook de escola | não |
+| `frontend-reviewer` | Tela que não funciona em Chromebook de escola ou no celular | não |
 | `domain-researcher` | Regra externa inventada em vez de pesquisada | não |
 
 E o portão automático, que roda sempre: `typecheck`, `test`, `lint`, e `test:e2e` quando a

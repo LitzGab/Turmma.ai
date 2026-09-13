@@ -230,7 +230,9 @@ Queda curta da rede da escola ou do sistema não pode fazer aluno perder respost
 - O relógio da prova é do servidor. Queda do sistema não conta como tempo do aluno, e o
   professor pode estender o prazo de um aluno ou da turma
 - Ao reabrir, o aluno volta ao item onde parou
-- Persistir resposta no disco do Chromebook (IndexedDB) só com aprovação do
+- O reenvio vale também para rede móvel instável, quando a prova for feita fora da escola
+  (D51)
+- Persistir resposta no disco do Chromebook ou do celular (IndexedDB) só com aprovação do
   `privacy-guardian`: é dado de menor numa máquina compartilhada (regra 50, item 7)
 
 ### 6.2 Deploy

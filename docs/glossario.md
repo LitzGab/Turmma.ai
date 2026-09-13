@@ -25,7 +25,8 @@ sistema é perpétuo, porque em janeiro tudo vira.
 **Período** — Bimestre, trimestre ou semestre, conforme a escola. Configurável, porque cada
 rede faz diferente.
 
-**Série** — 1º, 2º ou 3º ano do Ensino Médio.
+**Série** — Ano escolar dentro do recorte: 6º ao 9º ano do Ensino Fundamental (anos
+finais) e 1º, 2º ou 3º ano do Ensino Médio (D43).
 
 **Turma** — O agrupamento concreto de alunos dentro de uma série: 2ºB. Existe dentro de um
 ano letivo.
@@ -42,13 +43,15 @@ administrativa, e é quem enxerga a governança.
 
 **Professor** — Quem usa mais e quem pode matar o produto. Não paga nada.
 
-**Aluno** — Usa no Chromebook, em sala. Não tem e-mail nem telefone no sistema.
+**Aluno** — Usa no computador da escola, em sala. Não tem e-mail nem telefone no sistema;
+quando entra pela conta da escola, guardamos só o identificador opaco dela (D48).
 
 **Responsável** — Pai, mãe ou responsável legal. Tem conta própria, vinculada ao aluno. É o
 canal de contato, porque o aluno não é.
 
 **Vínculo** — A ligação de uma pessoa a turma e disciplina, com papel, dentro de um ano
-letivo. É o vínculo que responde "esta turma é dele?".
+letivo. É o vínculo que responde "esta turma é dele?". Criado pela escola e confirmado
+pelo professor, nunca autodeclarado (D3 revista).
 
 **Matrícula** — O identificador do aluno dentro da escola, e o login dele. Única por escola,
 nunca globalmente.
@@ -77,7 +80,11 @@ do professor.
 deu.
 
 **Fonte de material** — De onde o conteúdo vem: um adaptador de scraper ou upload manual.
-Toda fonte tem autorização escrita da escola registrada.
+Toda fonte tem autorização escrita da escola registrada e declara a titularidade do
+material; material de terceiro só entra com licença do dono (D5 revista).
+
+**Licença de material** — A permissão do dono do conteúdo (editora, sistema de ensino) para
+usar o material na base da escola. A autorização da escola sozinha não basta.
 
 **Material** — Apostila, livro ou documento ingerido, com versão.
 
@@ -107,7 +114,14 @@ avaliação.
 **Resposta** — O que o aluno respondeu em um item.
 
 **Correção** — A pontuação de uma resposta, com feedback. Pode vir de correção automática,
-de IA ou do professor. **É aqui que a IA escreve.**
+de IA ou do professor. **É aqui que a IA escreve.** Em discursiva e redação, a IA escreve só
+a devolutiva, sem pontuação (D46).
+
+**Diagnóstico** — O resultado formativo por habilidade de uma atividade ou avaliação.
+Existe antes da nota oficial e não vai para o boletim (D46).
+
+**Devolutiva** — O comentário formativo sobre a resposta do aluno, o que ele acertou e o que
+precisa rever. Não é nota.
 
 **Nota** — O valor oficial, que vai para o boletim. Só existe com autor humano. **A IA nunca
 escreve aqui.**
@@ -120,7 +134,8 @@ depender de reconhecimento de nome.
 ## IA e agentes
 
 **Agente** — Um especialista de IA com thread própria, nome, escopo e nível de autonomia.
-Trabalha sozinho e avisa. Não é um botão nem um prompt salvo. O nome é a função: Corretor,
+Prepara o trabalho quando o evento acontece e avisa; o que vale passa por aprovação ou
+supervisão (D44). Não é um botão nem um prompt salvo. O nome é a função: Corretor,
 Planejador, Rotina, Monitor de turma, Tutor, Adaptador, Analista da coordenação e, na fase
 posterior, Mensageiro da família.
 
@@ -165,6 +180,13 @@ Só existe na turma em que a escola ligou o acesso fora da sala. Desligado por p
 
 **Sinal** — O que o professor vê do uso do tutor: quem travou, quem pediu resposta pronta,
 qual dúvida se repetiu. É uso e dificuldade, não comportamento.
+
+**Indicador do professor** — Medida de uso e do desempenho das turmas de um professor.
+Visível primeiro a ele; a coordenação vê agregado e abre o nominal com auditoria. Nunca é
+nota do professor nem base de decisão sobre ele (D45).
+
+**Pacote** — A faixa contratada pela escola: base (assistente do professor, organização,
+desempenho e governança) ou completo (com tutor). Não confundir com pacote do tutor (D50).
 
 ---
 

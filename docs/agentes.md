@@ -3,10 +3,14 @@
 ## O que é um agente aqui
 
 Um especialista de IA com **thread própria**, nome, avatar, escopo e **nível de autonomia
-declarado**. Ele trabalha sozinho e avisa. Não é um botão, não é um prompt salvo.
+declarado**. Ele prepara o trabalho quando o evento acontece e avisa. Não é um botão, não é
+um prompt salvo.
 
 A diferença que o benchmark mostrou: todos os concorrentes vendem "assistente sob
-comando". Ninguém vende agente que executa e avisa. É esse o produto.
+comando". Os nossos agentes preparam e avisam, e tudo que vale passa por aprovação ou
+supervisão da escola. O produto se apresenta como **assistente com agentes supervisionados**
+(D44), não como "IA que trabalha sozinha": a coordenação compra conformidade, e autonomia
+vendida como promessa contradiz isso.
 
 ## Níveis de autonomia
 
@@ -29,6 +33,13 @@ uma tela.
 Isso vem do CNE (`docs/regulacao.md`), não da nossa preferência. Tecnicamente: toda
 `Entrega` de agente nasce `pendente`, e nada oficial acontece antes de `aprovadaPor`.
 
+**A única exceção é a resposta do Tutor** (D47, regra 70 item 3): ela acontece em tempo real
+e é supervisionada, não aprovada uma a uma. Nenhum outro agente herda essa exceção.
+
+**Nenhum agente produz dado para decidir sobre o professor** (D45, regra 70 item 8). O que
+um agente mostra sobre as turmas de um professor chega primeiro a ele, e à coordenação só
+em agregado.
+
 ## Nome
 
 **O nome do agente é a função** (D17). Sem nome próprio: a coordenação precisa explicar em
@@ -40,17 +51,18 @@ call (Pipo, Waz, Maky) não são usados.
 | Agente | Para quem | Dispara | Nível | O que faz |
 |---|---|---|---|---|
 | **Rotina** | professor | todo dia letivo, de manhã | 1 | Abre o dia com aulas, avaliações e pendências que já existem na grade e nas avaliações. Não gera conteúdo novo, por isso é barato. Garante que o feed nunca apareça vazio |
-| **Corretor** | professor | fim da avaliação | 2 para corrigir, 3 para nota | Corrige objetivas e propõe nota para discursivas com justificativa e confiança. Monta relatório por questão. Nota só existe depois da aprovação |
+| **Corretor** | professor | fim da atividade ou avaliação | 2 para corrigir, 3 para nota | Corrige objetivas, escreve devolutiva formativa das discursivas **sem propor nota** (D46) e monta o diagnóstico por habilidade e o relatório por questão. Primeiro entrega só diagnóstico; quando a nota oficial existir, propõe a nota das objetivas, que só existe depois da aprovação |
 | **Planejador** | professor | **sob pedido**, ou "preparar a semana" ligado pelo professor para uma turma | 1 | Plano de aula e sequência didática a partir do material e do calendário. Não gera plano que ninguém pediu |
-| **Monitor de turma** | professor | diário, de madrugada, e por evento | 2 | Entregas pendentes, quem travou, dúvidas frequentes, queda de desempenho. Aluno nomeado só para o professor da turma |
-| **Tutor** | aluno | aluno pergunta | 2, sempre supervisionado | Conduz por perguntas, nunca entrega resposta pronta, cita a página |
+| **Monitor de turma** | professor | diário, de madrugada, e por evento | 2 | Entregas pendentes, quem travou, dúvidas frequentes, queda de desempenho por habilidade. Aluno nomeado só para o professor da turma. Possível alto risco no CNE (perfilização): explicação e contestação antes de existir (`docs/regulacao.md`) |
+| **Tutor** | aluno | aluno pergunta | 2, sempre supervisionado, sem aprovação prévia por resposta (D47) | Conduz por perguntas, nunca entrega resposta pronta, cita a página |
 | **Adaptador** | professor | avaliação ou atividade criada para turma com aluno que tem adaptação registrada | 3 | Propõe a versão adaptada (fonte ampliada, tempo extra, enunciado simplificado). O professor aprova antes de o aluno receber |
-| **Analista da coordenação** | coordenação | toda segunda de manhã, e por evento que passa do limiar | 2 | Resumo semanal e alerta na hora: prova com média fora da curva, turma em queda, consumo de IA alto, alunos em risco **em agregado**. Só avisa: nunca contata professor nem família |
+| **Analista da coordenação** | coordenação | toda segunda de manhã, e por evento que passa do limiar | 2 | Resumo semanal e alerta na hora, **em agregado** por série e disciplina: média fora da curva, habilidade em queda, consumo de IA alto, alunos em risco. O detalhe por turma ou professor só abre com auditoria (D45). Alerta é hipótese com contexto, nunca veredito sobre o professor. Só avisa: nunca contata professor nem família |
 | **Mensageiro da família** | professor, coordenação | evento | 3 | Prepara a comunicação e envia só depois da aprovação. **Fase posterior** |
 
 ### Detalhes que já estão decididos
 
-**Aprovação de nota de objetiva é em lote** (D33). Um confirmar para a turma, depois de ver
+**Aprovação de nota de objetiva é em lote** (D33), quando a nota oficial entrar (D46). Um
+confirmar para a turma, depois de ver
 média, distribuição e os casos destacados: discursiva com baixa confiança, nota muito longe
 do histórico do aluno, prova em branco. Os destacados precisam ser abertos antes de o botão
 de aprovar o lote liberar. Aluno por aluno viraria clique reflexo, que é justamente o que a
@@ -70,13 +82,18 @@ educacional e, se houver menção a risco à vida, o CVV (188). Gera o sinal "pr
 atenção humana" para o professor da turma, **sem mostrar o conteúdo por padrão**. O gatilho
 é o que o aluno escreveu explicitamente, nunca inferência de humor ou estado emocional. O
 texto da mensagem e a lista de gatilhos passam pelo `conformidade-reviewer` e pelo
-`pedagogia-reviewer` antes de existir.
+`pedagogia-reviewer` antes de existir. A escola tem obrigação de notificar o Conselho
+Tutelar em caso de automutilação ou tentativa de suicídio (Lei 13.819/2019, ampliada pela
+Lei 15.231/2025): o sinal precisa chegar também a quem notifica (orientação ou direção), com
+acesso ao conteúdo auditado. A detalhar no PRD do F9 (`docs/regulacao.md` seção 6).
 
 ### O que nenhum agente faz (nível 4)
 
 - Decidir aprovação, reprovação ou encaminhamento de aluno, nem como sugestão aplicada sozinha
 - Publicar nota ou falar com a família sem aprovação humana registrada
 - Inferir emoção, humor, atenção ou comportamento, ou ranquear alunos por isso
+- Ranquear professores, ou recomendar qualquer decisão sobre um professor
+- Propor nota em redação ou discursiva (D46)
 - Falar de assunto fora do conteúdo escolar da turma
 
 ## Agente e ferramenta não são a mesma coisa
@@ -89,7 +106,9 @@ correção chamam a mesma correção. O que muda é quem dispara e onde o result
 ## Requisitos de runtime
 
 - Roda em fila, nunca dentro de request
-- Idempotente e capaz de sobreviver a reinício do worker
+- Idempotente e capaz de sobreviver a reinício do worker: a fila entrega **pelo menos uma
+  vez**, então o processador recebe chave de idempotência e tolera reexecução sem duplicar
+  aviso nem chamada de IA paga (D49)
 - Limite de passos e de custo por execução — agente que não sabe parar queima a margem
 - Registro completo: gatilho, entrada, saída, modelo, tokens, custo, duração, estado
 - Estados: `executado`, `aguardando aprovação`, `aprovado`, `rejeitado`

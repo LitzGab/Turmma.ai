@@ -36,15 +36,20 @@ deveria existir.
 | Nome | aluno | identificar na turma | execução de contrato educacional | ano letivo + 5 anos (registro escolar) |
 | Matrícula | aluno | login e vínculo | idem | idem |
 | Turma, série, disciplina | aluno | contexto pedagógico | idem | idem |
-| Resposta de avaliação | aluno | correção e devolutiva | idem | ano letivo + 1 ano |
+| Identificador opaco da conta Google ou Microsoft da escola (nunca e-mail nem foto) | aluno, professor | login e importação de turma (D48) | execução de contrato | enquanto houver vínculo |
+| Resposta de avaliação | aluno | correção e devolutiva | execução de contrato educacional | ano letivo + 1 ano |
+| Diagnóstico por habilidade | aluno | acompanhamento pedagógico formativo (D46) | idem | ano letivo + 1 ano (proposta, a confirmar com a escola) |
 | Nota | aluno | registro escolar | obrigação legal da escola | conforme norma da escola |
 | Conversa com o tutor | aluno | aprendizagem e supervisão docente | legítimo interesse da escola em supervisão pedagógica | 12 meses |
 | Sinais de uso de IA | aluno | supervisão docente | idem | 12 meses |
 | Adaptação pedagógica necessária (ex.: fonte ampliada, tempo extra) — **nunca diagnóstico** | aluno | adaptar prova e atividade (agente Adaptador) | dado sensível (art. 11), via obrigação da escola com inclusão; **a confirmar com advogado** | enquanto houver vínculo; revista a cada ano letivo |
 | Sinal "precisa de atenção humana" (sem conteúdo) | aluno | encaminhar a um humano o aluno que pediu ajuda pessoal | proteção do titular, melhor interesse (art. 14) | 12 meses |
 | Nome, e-mail | professor, coordenador | acesso e responsabilidade | execução de contrato | vigência + 5 anos |
+| Indicadores de uso e das turmas do professor | professor | apoio pedagógico ao próprio professor e visão agregada da coordenação; **nunca decisão sobre o professor** (D45) | execução de contrato; **a confirmar com advogado** (CLT, convenção coletiva, estatuto do servidor) | ano letivo + 1 ano (proposta) |
+| Conversa do professor com o chat | professor | produzir o que ele pediu | execução de contrato | 12 meses (proposta); nunca visível à coordenação |
 | Nome, e-mail, telefone | responsável | comunicação escolar | execução de contrato | vigência do vínculo |
-| Logs de acesso | todos | segurança e auditoria | obrigação legal (Marco Civil) | 6 meses a 5 anos |
+| Registro de acesso à aplicação (IP, data e hora) | todos | segurança | obrigação legal (Marco Civil, art. 15) | 6 meses |
+| Auditoria (quem fez o quê, com finalidade) | todos | prestação de contas à escola e ao titular | execução de contrato e obrigação da escola | vigência + 5 anos |
 
 **Aluno não tem e-mail nem telefone no sistema.** Contato é sempre do responsável. Quem
 propuser adicionar precisa justificar por escrito e atualizar esta tabela.
@@ -104,8 +109,9 @@ Esta lista é o que mais aparece em incidente real. Cada linha vira teste.
 
 **Observabilidade sem exposição**
 - Log estruturado com `escolaId` e `usuarioId`. Nunca nome, resposta, nota ou conversa
-- Auditoria obrigatória: leitura de dado de aluno por coordenador ou rede, exportação,
-  alteração de nota, alteração de permissão, aprovação de conteúdo de IA
+- Auditoria obrigatória: leitura de dado de aluno por coordenador ou rede, leitura nominal
+  de indicador de professor pela coordenação, exportação, alteração de nota, alteração de
+  permissão, aprovação de conteúdo de IA
 
 **Ciclo de vida**
 - Rotina de expurgo automática, conforme a tabela da seção 2
@@ -119,6 +125,12 @@ Esta lista é o que mais aparece em incidente real. Cada linha vira teste.
 Este é o ponto em que somos diferentes de um SaaS comum, e onde o risco é maior.
 
 1. **Contrato com provedor vedando treinamento** com nosso dado. Sem isso, só provedor local.
+   O contrato também precisa **permitir serviço usado por menor** e dizer **onde o dado é
+   processado**. Em 13/09/2026: os termos da Gemini API (AI Studio) vedam serviço "provável
+   de ser acessado" por menor de 18, e não valem para o Vertex AI (termos do Vertex a
+   verificar); o DPA da Maritaca proíbe treinamento e descarta o conteúdo após a geração,
+   mas lista processamento no Brasil, nos EUA e na UE, e a variante no Brasil precisa estar
+   escrita no contrato. Transferência internacional exige as cláusulas-padrão da ANPD.
 2. **Envie o mínimo.** O tutor precisa do conteúdo da dúvida e do material da turma, não do
    histórico de notas do aluno.
 3. **Prefira identificador a nome.** O modelo não precisa saber que é a Maria.
@@ -144,7 +156,7 @@ funcionalidade futura:
 | Eliminação | Apaga de verdade, inclusive em backup na próxima rotação, com registro |
 | Portabilidade | Exportação estruturada |
 | Informação sobre compartilhamento | Lista para quais suboperadores o dado foi |
-| Revisão de decisão automatizada | Toda nota tem autor humano; a revisão já é o fluxo |
+| Revisão de decisão automatizada | Toda nota tem autor humano; a revisão já é o fluxo. Sinal ou alerta sobre aluno e indicador de professor têm explicação e caminho de contestação (art. 20; regra 70) |
 
 **Teste de fechamento:** se a secretaria de educação pedisse hoje tudo o que guardamos
 sobre um aluno específico e para onde isso já foi enviado, o sistema responde em minutos?
@@ -173,7 +185,12 @@ administrável de uma crise.
 - [ ] Política de privacidade e termos, com seção de menor de idade
 - [ ] Encarregado (DPO) indicado e canal de contato publicado
 - [ ] Relatório de impacto (RIPD) — obrigatório na prática aqui: dado de menor, volume
-      alto, decisão apoiada por IA
+      alto, decisão apoiada por IA. Inclui a avaliação de impacto do ECA Digital e a
+      avaliação de impacto algorítmico dos sinais do tutor e dos alertas sobre aluno
+- [ ] Parecer sobre o ECA Digital (Lei 15.211/2025) aplicado a plataforma contratada pela
+      escola
+- [ ] Guarda de registro de acesso por 6 meses (Marco Civil), separada da auditoria
+- [ ] Base legal e desenho dos indicadores de professor revisados por advogado (D45)
 - [ ] Rotina de expurgo implementada e testada
 - [ ] Restauração de backup executada de verdade, não documentada
 - [ ] Teste de isolamento entre escolas rodando na esteira

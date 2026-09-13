@@ -5,7 +5,8 @@
 1. **Portabilidade.** Hospedagem e provedor de modelo em aberto; rede pública pode exigir
    dado no Brasil. Tudo em container, nada proprietário no caminho crítico.
 2. **Isolamento por escola acima de tudo.** É a decisão que não pode ser retrabalhada.
-3. **Web-first para Chromebook.** Sem app, sem dependência de celular (Lei 15.100/2025).
+3. **Web-first e responsiva**, do computador fraco de escola (Chromebook como referência)
+   ao celular (D51). Sem app nativo, sem fluxo que dependa de celular (Lei 15.100/2025, D43).
 4. **Aprovação humana no caminho de tudo que vale.** Exigência do CNE.
 
 ## Desenho
@@ -44,10 +45,16 @@ módulo novo. Ver `rules/10`.
 
 - **Coordenador, professor, responsável:** e-mail + senha. Segundo fator para coordenador.
 - **Aluno:** escola + matrícula + senha. Sem e-mail, sem telefone.
-- **Entrada no sistema:** coordenador cria séries e turmas e sobe a lista de nomes →
-  professor entra por link de convite e escolhe disciplina → aluno entra pelo link da sala,
+- **Conta da escola (D48):** onde a escola tem Google Workspace ou Microsoft, professor e
+  aluno entram com essa conta, por adaptador opcional (regra 00, item 7). Guardamos só o
+  identificador opaco da conta; e-mail e foto do aluno são descartados antes de gravar.
+  Importação de turmas e vínculos do Classroom pelo mesmo adaptador.
+- **Entrada no sistema:** coordenador cria séries e turmas, sobe a lista de nomes, importa
+  grade e calendário e aloca professor × turma × disciplina → professor entra por link de
+  convite e **confirma** o vínculo → aluno entra pela conta da escola ou pelo link da sala,
   reivindica o próprio nome e **o professor aprova**. Só depois da aprovação o aluno define
-  senha e existe de verdade.
+  senha e existe de verdade. Vínculo não confirmado não dá acesso a aluno.
+- Um usuário pode ter vínculo em mais de uma escola; o token carrega a escola ativa.
 - Convite é token único, com validade curta, uso único e revogável.
 
 ## Assíncrono
@@ -55,6 +62,11 @@ módulo novo. Ver `rules/10`.
 Nada demorado em request. Filas: `ingestao`, `agentes`, `correcao`, `notificacao`,
 `expurgo`, `exportacao-titular`, com três prioridades (interativa, normal, lote) e limite de
 concorrência por escola. Lote não urgente roda fora do horário letivo.
+
+A entrega é **pelo menos uma vez** (D49): o job nasce no Postgres, o despachante publica no
+BullMQ quando a escola tem vaga, e a reconciliação republica o que o Redis perdeu. Por isso
+todo processador recebe chave de idempotência e precisa tolerar reexecução sem duplicar
+efeito, principalmente chamada de IA paga e aviso.
 
 ## Carga e operação
 
@@ -98,8 +110,9 @@ Ver `docs/ingestao.md`. Pipeline único, adaptador por fonte, rastreabilidade at
 ## Frontend
 
 SPA, TanStack Query para estado de servidor, tipos vindos de `packages/shared`. Alvo de
-desempenho: Chromebook de escola, que é fraco. Lista longa virtualizada, bundle enxuto,
-nada que assuma máquina boa.
+desempenho: computador de escola, que é fraco, com o Chromebook de entrada como referência,
+e celular em rede móvel. Toda tela é responsiva desde a primeira versão (D51). Lista longa
+virtualizada, bundle enxuto, nada que assuma máquina boa.
 
 ## Observabilidade sem exposição
 

@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 10 de 15 concluídas
+**Status:** 10 de 16 concluídas
 
 ## Lista
 
@@ -80,17 +80,27 @@
   - [ ] 13.2 Entradas em `docs/runbook.md` e `npm run ensaio:alertas`
   - [ ] 13.3 Testes: ensaio dispara, condição curta não dispara, alerta sem runbook reprova
 
-- [ ] **14.0 — Casca da web com os quatro estados, no limite do Chromebook**
+- [ ] **14.0 — Casca da web com os quatro estados, no limite do Chromebook e do celular**
   - [ ] 14.1 `GET /v1/sistema/estado` e `/avisos`
-  - [ ] 14.2 Componentes `Estado*`, casca com TanStack Query e Tailwind, pt-BR
-  - [ ] 14.3 size-limit, axe e projeto Playwright `chromebook`
-  - [ ] 14.4 Testes: quatro estados, teclado, Chromebook em 5 s, fixtures que violam axe e teto
+  - [ ] 14.2 Componentes `Estado*`, casca responsiva mobile-first com TanStack Query e Tailwind, pt-BR
+  - [ ] 14.3 size-limit, axe (com `target-size`) e projetos Playwright `chromebook` e `celular`
+  - [ ] 14.4 Testes: quatro estados, teclado, toque, Chromebook e celular em 5 s, sem rolagem horizontal, fixtures que violam axe, largura e teto
 
 - [ ] **15.0 — Cenário "justiça entre escolas" passa local**
   - [ ] 15.1 Processador sintético em sandbox e `infra/compose.carga.yml` com CPU fixa
   - [ ] 15.2 `infra/k6/justica-entre-escolas.js` com as quatro fases e thresholds
   - [ ] 15.3 Controle negativo com a vaga por escola desligada
   - [ ] 15.4 Testes: cenário passa, controle negativo reprova, conferência em `job_registro`
+
+- [ ] **16.0 — Entrega "pelo menos uma vez" declarada, com chave de idempotência no processador**
+  - [ ] 16.1 `Processador` recebe `{ jobId, tentativa, chaveIdempotencia }`; texto de "exatamente uma vez" corrigido
+  - [ ] 16.2 Modo `efeito` no processador sintético, com restrição única na chave
+  - [ ] 16.3 Teste intermitente de `pool.int.test.ts` corrigido
+  - [ ] 16.4 Como reconhecer reexecução no log
+  - [ ] 16.5 Testes: `kill -9` entre efeito e conclusão, reconciliação de job ativo, chave igual entre tentativas, pool 20 vezes, isolamento
+
+> Revisão de 13/09/2026: a 14.0 passou a cobrir o celular (D51) e a 16.0 entrou pela D49. As
+> tarefas 1.0 a 10.0, já concluídas, não foram alteradas.
 
 ## Dependências e paralelismo
 
@@ -111,6 +121,7 @@
 | 13.0 | 6.0, 9.0, 12.0 | 10.0, 11.0 |
 | 14.0 | 2.0 | 3.0 a 13.0 |
 | 15.0 | 6.0, 9.0, 14.0 | 13.0 |
+| 16.0 | 9.0 | 12.0, 13.0, 14.0; de preferência antes da 11.0 |
 
 Com commit direto no `main` (D23), "paralelo" quer dizer que as tarefas não dependem uma
 da outra, e não que dois commits possam ser feitos ao mesmo tempo sem cuidado.
@@ -134,6 +145,7 @@ da outra, e não que dois commits possam ser feitos ao mesmo tempo sem cuidado.
 | 13.0 | `infra-guardian`, `test-engineer` |
 | 14.0 | `frontend-reviewer`, `test-engineer` |
 | 15.0 | `infra-guardian`, `test-engineer` |
+| 16.0 | `infra-guardian`, `test-engineer` |
 
 ## Critério de pronto da funcionalidade
 
@@ -145,6 +157,9 @@ Detalhado:
   API e realtime (duas instâncias cada), despachante, workers, Postgres, os dois Redis,
   storage e observabilidade
 - A esteira do GitHub fica verde no último commit, com todas as guardas ativas
+- O e2e da casca passa nos projetos `chromebook` e `celular` (D51)
+- Todo processador de job recebe chave de idempotência, e a reexecução não duplica efeito
+  (D49)
 - Os RF1 a RF18 do PRD têm teste que falharia se a regra fosse removida
 - O cenário "justiça entre escolas" passa local, e o controle negativo reprova
 - As três regras de alerta disparam no ensaio e têm entrada no runbook

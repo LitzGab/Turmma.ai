@@ -28,11 +28,16 @@ Fonte (scraper por adaptador | upload PDF/apostila)
 3. **Reprocessamento.** Quando a fonte atualiza, reindexa sem perder o histórico.
 4. **Isolamento.** Conteúdo ingerido pertence ao tenant da escola. Nunca cruza para outra
    escola, nunca vira banco nosso. Ver `docs/regulacao.md` seção 4.
+4a. **Licença antes de processar** (D5 revista). A fonte declara a titularidade do material
+    (escola, professor, licenciado, domínio público, ENEM). Material licenciado exige o
+    documento de licença registrado. Sem autorização da escola e, quando couber, sem
+    licença do dono do conteúdo, o pipeline recusa o arquivo antes da extração, com
+    mensagem que diz o que falta. O upload não é atalho para apostila de terceiro.
 5. **Adaptador por fonte.** Cada sistema de ensino é um adaptador isolado, com teste
    próprio. Quebrou um, os outros seguem. **O upload é a primeira implementação da porta
    de fonte** (D22). Adaptador de scraper só entra quando existir uma escola real com a
-   fonte definida e a autorização escrita registrada, porque ainda não sabemos quais
-   sistemas as escolas-alvo usam.
+   fonte definida, a autorização escrita registrada e licença ou parceria com o dono do
+   conteúdo, porque ainda não sabemos quais sistemas as escolas-alvo usam.
 6. **Fila.** Ingestão nunca roda em request. Escola sobe 300 PDFs e a interface continua viva.
 7. **Estado visível.** O coordenador vê o que foi ingerido, o que falhou e o que está
    pendente. Ingestão silenciosa que falha é pior que ingestão que não existe.
@@ -51,4 +56,6 @@ nenhuma escola. Vestibulares ficam de fora até a licença de cada um ser verifi
 `domain-researcher`.
 
 O banco público passa pelo mesmo pipeline, com a fonte marcada como pública, e é o que
-alimenta o simulado ENEM do F7.
+alimenta o simulado ENEM do F7. Desde 20/08/2026 o Google oferece simulado ENEM grátis no
+Gemini, então o banco público vale mais como fonte de questão com origem citada para prova e
+atividade do que como simulado isolado.

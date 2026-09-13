@@ -36,7 +36,7 @@ sido reportado antes, não decidido em silêncio no meio da implementação.
 | `20` | Log sem dado pessoal, campo novo na tabela de `docs/lgpd.md`, auditoria onde exigida, seed sintético |
 | `30` | Sem SDK de provedor fora do adaptador, perfil declarado, orçamento, rastreabilidade da origem |
 | `40` | Teste prova regra, casos de borda do domínio cobertos, nada de `.skip` |
-| `50` | Quatro estados, Chromebook fraco, ação oficial protegida, aluno sem ver dado de colega |
+| `50` | Quatro estados, Chromebook fraco, responsivo e usável no celular, ação oficial protegida, aluno sem ver dado de colega |
 | `60` | Vocabulário do glossário, ano letivo como dimensão, reivindicação aprovada |
 | `70` | Nota com autor humano em todo caminho, sem decisão autônoma, tutor supervisionado |
 | `80` | Rate limit por usuário e escola, fila com prioridade, sem estado em memória, concorrência protegida, índice pelo escopo, migration compatível |

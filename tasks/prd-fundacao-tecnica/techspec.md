@@ -1,7 +1,7 @@
 # Tech Spec — Fundação técnica
 
 **PRD:** `tasks/prd-fundacao-tecnica/prd.md`
-**Status:** rascunho (revisto em 13/09/2026: F0 só local, D31)
+**Status:** rascunho (revisto em 13/09/2026: F0 só local, D31; entrega pelo menos uma vez, D49; casca responsiva até o celular, D51)
 
 ## 1. Resumo da abordagem
 
@@ -73,7 +73,8 @@ só o aceita com `ACEITAR_TOKEN_SINTETICO=true`, e não sobe com essa flag em
 `AMBIENTE=producao`. O F1 troca o emissor e mantém a verificação.
 
 Dois POSTs iguais em `jobs-sinteticos` criam dois jobs distintos: a rota é só de teste e não
-tem chave de idempotência. A idempotência entra nas funcionalidades que precisam dela.
+tem chave de idempotência de pedido. A execução, sim: todo processador recebe a chave de
+idempotência do job (D49, tarefa 16.0).
 
 ## 5. Fluxo
 
@@ -109,6 +110,12 @@ tardia não sobrescreve `ativo`, `concluido` ou `falhou`.
   `falhou` com código e libera a vaga.
 - **Retentativa:** 5 tentativas com recuo exponencial de 2 s e jitter; a vaga fica com o job.
 - **Stalled:** volta para a espera, ainda dono da vaga.
+- **Garantia (D49):** a entrega é **pelo menos uma vez**, não exatamente uma vez. Um job pode
+  rodar de novo por reentrega a partir de `ativo`, por falha em `concluir` depois do
+  processador, por falso stalled ou pela reconciliação. O que é único é a reserva no banco.
+  Por isso o processador recebe `{ jobId, tentativa, chaveIdempotencia }`, com a chave igual
+  ao id do job em toda reexecução, e todo efeito externo (linha gravada, chamada de IA,
+  aviso) usa essa chave para não duplicar.
 - **Retenção:** BullMQ remove concluído com 1 dia e falho com 7. `sistema.expurgar-jobs`
   apaga `job_registro` com mais de 7 dias, em lotes de 5.000.
 
@@ -230,16 +237,22 @@ Não se aplica.
 
 - **Casca:** rota única, sem identidade visual, com `EstadoCarregando`, `EstadoVazio` e
   `EstadoErro` (mensagem pelo `codigo`, com "tentar de novo") reutilizáveis. `Intl` pt-BR.
+- **Responsiva (D51):** mobile-first, coluna única a partir de 360 px, sem rolagem
+  horizontal, viewport sem bloquear zoom, alvo de toque de 44 px na ação, nada que dependa
+  de hover.
 - **Teto:** 150 kB em brotli no JS inicial, pelo size-limit.
 - **Chromebook:** projeto Playwright com CPU ×4 e Fast 3G; dado em até 5 s.
+- **Celular:** projeto Playwright com viewport 360 × 800, toque, CPU ×4 e rede móvel lenta, no
+  Chromium; dado em até 5 s e sem rolagem horizontal. Todo spec de tela roda nos dois
+  projetos.
 
 ## 10. Testes
 
 | Camada | O que será testado |
 |---|---|
 | Unidade | janela letiva (terça 10h, sábado, escola com sábado); erro do Postgres sem `detail` |
-| Integração | Redis de fila religado sem perder nem duplicar e sem pendurar a API; dois despachantes; reserva vencida sem sobrescrever `ativo`/`concluido`; job perdido reconciliado; worker morto; falha permanente; rodízio; não urgente segurado; limite em duas APIs; seguro; realtime em duas instâncias; restart de uma API sem 502; consolidação repetida |
-| E2E | quatro estados; teclado; axe `wcag2a/2aa/21aa/22aa` reprovando `serious`/`critical`; `chromebook`; exceção sem stack |
+| Integração | reexecução do job com a mesma chave de idempotência sem duplicar efeito (D49); Redis de fila religado sem perder nem duplicar e sem pendurar a API; dois despachantes; reserva vencida sem sobrescrever `ativo`/`concluido`; job perdido reconciliado; worker morto; falha permanente; rodízio; não urgente segurado; limite em duas APIs; seguro; realtime em duas instâncias; restart de uma API sem 502; consolidação repetida |
+| E2E | quatro estados; teclado; toque; axe `wcag2a/2aa/21aa/22aa` reprovando `serious`/`critical`, com `target-size`; `chromebook` e `celular`; sem rolagem horizontal a 360 px; exceção sem stack |
 | Isolamento | os quatro da seção 6 |
 | Guardas | fixtures (log com `nome`, spread e template no logger, `import OpenAI` fora de `apps/api/src/ia/adapters/**`, segredo falso) que um teste Vitest passa por ESLint e gitleaks exigindo erro; `npm audit --audit-level=high --omit=dev` |
 | Alertas | `ensaio:alertas` leva as três regras a disparadas |
@@ -255,6 +268,7 @@ Testes usam o `compose.yml`.
 | 20 | redact, guarda de log, nada externo além do GitHub, dado sintético | — |
 | 30, 40, 50, 80 | seções 5, 9 e 10 | alerta sem entrega ao celular até o staging (D31) |
 | D30, D31, D42 | uso marcado por escola; F0 só local; hospedagem escolhida ao criar o staging | — |
+| D49, D51 | entrega pelo menos uma vez com chave de idempotência (16.0); casca responsiva testada em `chromebook` e `celular` (14.0) | — |
 
 ## 12. Premissas não verificadas
 

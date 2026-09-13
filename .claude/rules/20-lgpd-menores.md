@@ -41,7 +41,9 @@ acontece se isso vazar?"**.
 
 2. **Aluno não tem** e-mail, telefone, CPF, foto, endereço, data de nascimento nem
    diagnóstico. O contato é sempre do responsável. Isso não é excesso de zelo: é o que faz
-   um vazamento nosso ser muito menos grave que o de um concorrente.
+   um vazamento nosso ser muito menos grave que o de um concorrente. No login ou na
+   importação pela conta Google ou Microsoft da escola (D48), guardamos só o identificador
+   opaco da conta; e-mail e foto que o provedor devolve são descartados antes de gravar.
 
 3. **Necessidade específica é dado sensível** (art. 11). A ferramenta de adaptação precisa
    saber *que adaptação fazer*, não *qual é o diagnóstico*. Guarde "prova com fonte ampliada
@@ -85,8 +87,15 @@ acontece se isso vazar?"**.
    ```
 
 10. **Auditoria obrigatória** em: leitura de dado de aluno por coordenação ou rede,
-    exportação, alteração de nota, alteração de permissão, aprovação de saída de IA.
-    Auditoria não é log: é registro consultável, com autor, data e finalidade.
+    leitura nominal de indicador de professor pela coordenação (D45), exportação, alteração
+    de nota, alteração de permissão, aprovação de saída de IA. Auditoria não é log: é
+    registro consultável, com autor, data e finalidade. O registro de acesso exigido pelo
+    Marco Civil (art. 15, 6 meses) é outra coisa e tem retenção própria.
+
+10a. **Indicador de professor é dado pessoal do professor.** Entra no mapa de dados de
+     `docs/lgpd.md` com finalidade de apoio pedagógico, nunca de decisão sobre o professor,
+     antes de qualquer migration. Métrica que forma perfil profissional dá ao professor o
+     direito de pedir revisão (art. 20).
 
 11. **Erro para o cliente é curto e tipado.** Stack trace nunca sai da API.
 
@@ -96,7 +105,10 @@ acontece se isso vazar?"**.
     saber que é a Maria; precisa da dúvida e do trecho do material.
 
 13. **Sem contrato vedando treinamento com nosso dado, use o provedor local.** Não existe
-    exceção "só para testar com dado real".
+    exceção "só para testar com dado real". O contrato também precisa permitir serviço
+    usado por menor de idade e dizer onde o dado é processado: os termos da Gemini API
+    (AI Studio) vedam serviço "provável de ser acessado" por menor de 18, e o DPA da
+    Maritaca lista processamento no Brasil, nos EUA e na UE.
 
 14. **Conversa de tutor tem retenção curta e acesso restrito ao professor da turma.** A
     camada de rede nunca alcança conteúdo de conversa, só agregado.

@@ -12,7 +12,9 @@ registros de job antigos sem tocar em job ativo.
 ## Contexto necessário
 
 - `docs/visao-produto.md` (sempre)
-- `prd.md`: RF17; `CLAUDE.md`: D30 (revista: o uso nasce marcado no F0)
+- `prd.md`: RF17; `CLAUDE.md`: D30 (revista: o uso nasce marcado no F0) e D49 (entrega pelo
+  menos uma vez: os dois processadores desta tarefa recebem a chave de idempotência da 16.0,
+  se ela já estiver concluída, e toleram reexecução por desenho)
 - `techspec.md`: seção 3 (`uso_infra_diario`) e seção 5 ("Uso por escola" e "Retenção")
 - `.claude/rules/80-infra-e-carga.md`, itens 2, 7 e 8: lote, idempotência, índice com escopo
 - `.claude/rules/10-multitenancy.md`, item 9: `@SemEscopo` só em rotina nossa, justificado
@@ -57,6 +59,7 @@ registros de job antigos sem tocar em job ativo.
 | borda: requisição às 23h59 e às 00h01 no horário de São Paulo cai em dias diferentes; 31/12 fecha dezembro | integração (relógio injetado) | o dia não é calculado em UTC |
 | borda: bytes de `escolas/{a}/` não somam `escolas/{a}x/` | integração (storage real) | o prefixo termina com barra |
 | borda: expurgo de 12.000 jobs vencidos em lotes de 5.000 não apaga job `ativo` nem job recente | integração | o expurgo só alcança o que venceu |
+| concorrência: `sistema.expurgar-jobs` reexecutado no meio de um lote (worker morto) termina sem erro e sem apagar nada além do vencido | integração | o expurgo tolera a entrega pelo menos uma vez (D49) |
 | borda: Redis de fila fora → a requisição não falha nem demora | integração | o contador é descartável |
 | isolamento: o uso da escola A não soma na B | integração | a chave leva a escola |
 

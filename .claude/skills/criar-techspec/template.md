@@ -85,7 +85,7 @@ Custo estimado por professor/mês ou por aluno/mês. Onde ficam os prompts.
 
 ## 9. Frontend
 
-Telas, estados, componentes reaproveitados. Como fica em Chromebook fraco, com throttling de rede e de CPU.
+Telas, estados, componentes reaproveitados. Como fica em Chromebook fraco, com throttling de rede e de CPU, e no celular a partir de 360 px, com toque e rede móvel (D51).
 
 ## 10. Testes
 

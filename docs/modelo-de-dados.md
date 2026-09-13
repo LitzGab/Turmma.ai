@@ -17,8 +17,10 @@ Disciplina*      → escola*, nome, area
 ## Pessoas e vínculos
 
 ```
-Usuario*         → escola*, nome, papel, email?, matricula?, senhaHash, status, mfa?
-Vinculo*         → usuario*, turma*, disciplina?, papel*, anoLetivo*
+Usuario*         → escola*, nome, papel, email?, matricula?, senhaHash?, contaExternaId?,
+                   provedorConta? (google | microsoft), status, mfa?
+Vinculo*         → usuario*, turma*, disciplina?, papel*, anoLetivo*, origem (coordenacao |
+                   grade | classroom), confirmadoPor?, confirmadoEm?
 Responsavel      → usuario*, aluno*, parentesco
 Convite          → escola*, token*, tipo (professor | sala), turma?, expiraEm, usadoEm,
                    revogadoEm?, criadoPor*
@@ -32,6 +34,17 @@ um nome e só vira `Usuario` com matrícula e senha **depois da aprovação do p
 
 `email` e `matricula` são mutuamente exclusivos por papel: aluno tem matrícula, os demais
 têm e-mail. Unicidade de matrícula é por `(escolaId, matricula)`.
+
+`contaExternaId` é o identificador opaco da conta Google ou Microsoft da escola (D48). Do
+aluno, nunca se grava e-mail nem foto que o provedor devolve. Unicidade por
+`(escolaId, provedorConta, contaExternaId)`.
+
+`Vinculo` é criado pela escola (coordenação, grade importada ou Classroom) e só libera acesso
+a aluno depois de `confirmadoEm` (D3 revista). O professor não cria o próprio vínculo.
+
+Um professor pode ter vínculo em mais de uma escola. Como modelar isso sem ferir a regra 10
+(usuário por escola ligado a uma identidade de login, ou identidade global com vínculos por
+escola) é decisão da Tech Spec do F1.
 
 `papel`: `rede` · `coordenador` · `professor` · `aluno` · `responsavel`
 
@@ -52,7 +65,9 @@ camada onde o professor registra o que deu e é a fonte do agente Rotina.
 
 ```
 FonteMaterial*   → escola*, tipo (scraper | upload), adaptador?, autorizacaoDoc*,
-                   autorizadoPor*, autorizadoEm*, ativo
+                   autorizadoPor*, autorizadoEm*,
+                   titularidade* (escola | professor | licenciado | dominio_publico | enem),
+                   licencaDoc?, licenciante?, licencaValidaAte?, ativo
 Material*        → escola*, fonte*, titulo, versao*, disciplina?, serie?, arquivoUrl,
                    status (pendente | processado | falhou), processadoEm?
 Capitulo         → material*, titulo, ordem, paginaInicio, paginaFim
@@ -65,7 +80,9 @@ Questao*         → escola?|publica, enunciado*, tipo*, alternativas?, gabarito
 
 `escola` nulo significa banco público (ENEM, vestibulares), visível a todos. Material
 ingerido **nunca** cruza de escola. `autorizacaoDoc` registra a autorização escrita da
-escola para a fonte — sem ela, o adaptador não roda (`docs/regulacao.md` seção 4).
+escola para a fonte. Quando `titularidade` é `licenciado`, `licencaDoc` e `licenciante` são
+obrigatórios. Sem autorização e, quando couber, sem licença, nem o upload nem o adaptador
+processam (D5 revista, `docs/regulacao.md` seção 4).
 
 `origemMaterial` e `origemPagina` são a rastreabilidade: o professor confere de onde a
 questão saiu.
@@ -78,10 +95,16 @@ Avaliacao*       → turma*, disciplina*, professor*, periodo*, titulo*, modo*, 
 ItemAvaliacao*   → avaliacao*, questao?, enunciado?, pontos*, ordem*
 Aplicacao        → avaliacao*, aluno*, iniciadoEm, entregueEm, origem
 Resposta         → aplicacao*, item*, conteudo, arquivoUrl?
-Correcao         → resposta*, pontosObtidos, feedback?, origem (auto | ia | professor),
+Correcao         → resposta*, pontosObtidos?, feedback?, origem (auto | ia | professor),
                    aprovadaPor?, aprovadaEm?
+Diagnostico      → escola*, anoLetivo*, aplicacao*, habilidade*, acertos, total,
+                   observacao?, geradoEm*
 Nota*            → aluno*, avaliacao*, valor*, lancadaPor*, lancadaEm*
 ```
+
+`Diagnostico` é o resultado formativo por habilidade, que existe antes da nota oficial (D46).
+Em item discursivo ou de redação, `Correcao` com `origem = ia` tem `feedback` e nunca
+`pontosObtidos`: a IA não propõe nota ali enquanto a regra 70 não mudar.
 
 `modo`: `online_objetiva` · `online_discursiva` · `papel_foto` · `entrega` · `presencial`
 
@@ -161,6 +184,20 @@ Incidente        → escola*, detectadoEm*, descricao, titularesAfetados, comuni
 `Evento` é o motor: nota aprovada, tarefa não entregue, aluno travado. A `Notificacao` é
 uma leitura dele. Isso permite construir o motor agora e ligar o canal da família depois
 sem refazer nada.
+
+## Indicadores de desempenho
+
+```
+IndicadorProfessor → escola*, anoLetivo*, professor*, periodo*, tipo*, valor*, calculadoEm*
+IndicadorTurma     → escola*, anoLetivo*, turma*, disciplina*, habilidade?, periodo*, tipo*,
+                     valor*, calculadoEm*
+```
+
+Os tipos concretos, os limiares e o texto dos alertas estão em aberto e saem do PRD do F12
+(`CLAUDE.md`, decisões em aberto). `IndicadorProfessor` é lido pelo próprio professor; a
+coordenação lê agregado e o nominal com `Auditoria`; a rede só agregado; nenhum caminho o
+liga a decisão sobre o professor (D45, regra 70 item 8). Os dois estão no mapa de dados de
+`docs/lgpd.md`.
 
 ## Regras transversais
 

@@ -4,9 +4,14 @@
 
 Três realidades definem estas regras, e nenhuma delas é preferência estética.
 
-O aluno usa **Chromebook de escola**, que é uma máquina fraca, em rede compartilhada por
-trinta pessoas ao mesmo tempo. A Lei 15.100/2025 tirou o celular da sala, então não existe
-plano B pelo telefone: nem para autenticar, nem para receber código, nem para fotografar.
+O aluno usa **computador de escola** (Chromebook, notebook de carrinho, laboratório), que
+costuma ser máquina fraca, em rede compartilhada por trinta pessoas ao mesmo tempo (D43). A
+Lei 15.100/2025 tirou o aparelho pessoal da sala, então não existe plano B pelo telefone:
+nem para autenticar, nem para receber código, nem para fotografar.
+
+Fora da sala, a mesma web abre no **celular**: o aluno quando a escola liga o modo casa, o
+professor no ônibus, a coordenadora em casa, e depois a família (D51). Tela pequena, toque e
+rede móvel. O produto não depende do celular, mas não pode quebrar nele.
 
 O professor abre o sistema **entre duas aulas**, com quarenta minutos de intervalo e uma
 xícara de café na mão. Ele não vai explorar menu, não vai ler tutorial, e não vai perdoar
@@ -18,11 +23,21 @@ publicada destrói a confiança do professor no sistema inteiro.
 
 ## As regras
 
-1. **Alvo é Chromebook fraco em rede instável.** Bundle enxuto, lista longa virtualizada,
+1. **Alvo é computador fraco de escola em rede instável**, com o Chromebook de entrada
+   como referência de teste. Bundle enxuto, lista longa virtualizada,
    imagem comprimida antes do upload. Teste com throttling de rede e de CPU antes de
    considerar pronto. "Funciona no meu notebook" não é dado.
 
-2. **Web-first, sem dependência de celular** em nenhum ponto do fluxo.
+2. **Web-first, sem dependência de celular** em nenhum ponto do fluxo: nada exige telefone
+   para autenticar, receber código ou fotografar.
+
+2a. **Responsiva e usável no celular desde a primeira versão de cada tela** (D51). Layout a
+    partir de 360 px de largura sem rolagem horizontal; alvo de toque com pelo menos 24 × 24
+    px (WCAG 2.5.8) e, em ação principal, 44 × 44 px; nada que só funcione com hover, clique
+    direito ou atalho de teclado; campo com o `inputmode` e o `autocomplete` certos; tabela
+    longa vira lista ou rola dentro do próprio contêiner. Toda tela é testada nos projetos
+    Playwright `chromebook` e `celular`. Tela entregue só para desktop é tarefa incompleta,
+    não "adaptação para depois".
 
 3. **Estado de servidor é do TanStack Query.** Duplicar em `useState` é onde aparecem as
    telas que mostram nota antiga depois de aprovar.
