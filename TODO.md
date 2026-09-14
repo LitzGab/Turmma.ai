@@ -58,14 +58,11 @@ Pendências herdadas da validação do F0 (`tasks/prd-fundacao-tecnica/validacao
 das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e são lidos pelo
 `/criar-techspec` dela.
 
-- [ ] **Antes da primeira tarefa do F1:** a conferência da esteira em
-      `.claude/skills/executar-task/SKILL.md` só segue com `conclusion == success` **e**
-      `headSha == $(git rev-parse origin/main)`; `cancelled`, `skipped`, execução ainda não
-      registrada ou nenhuma execução param e reportam (menor 1 da rodada 2)
-- [ ] **Antes da primeira tarefa do F1:** rodar `npm ci` (ou falhar com "rode npm ci")
-      quando o `package-lock.json` for mais novo que `node_modules/.package-lock.json`, no
-      passo 4 de `executar-task` e no início do portão do `.claude/agents/validador.md`
-      (menor 4 da rodada 2)
+- [x] ~~Conferência da esteira com `headSha` igual ao `origin/main` e só `success`~~ —
+      passo 7 de `executar-task`, com regra para `cancelled`, execução não registrada e
+      commit sem push (menor 1 da rodada 2)
+- [x] ~~`npm ci` quando o lock é mais novo que o `node_modules`~~ — passo 4 de
+      `executar-task` e portão do `validador` (menor 4 da rodada 2)
 - [ ] Hook que recusa commit `(tarefa N.0)` quando a última execução da esteira no
       `origin/main` não for `success`, como o hook das revisões, com saída clara sem `gh`
       (menor 3 da rodada 2)

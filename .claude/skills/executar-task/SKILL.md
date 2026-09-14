@@ -43,6 +43,14 @@ está vendo um pedaço.
 
 ## 4. Portão de verificação
 
+Antes do portão, confira se as dependências estão em dia com o lock. Com `node_modules`
+anterior ao `package-lock.json` (um `git pull` que trouxe dependência nova), o typecheck
+falha com TS2307 e os testes quebram sem dizer que falta instalar:
+
+```bash
+[ -f node_modules/.package-lock.json ] && [ ! package-lock.json -nt node_modules/.package-lock.json ] || npm ci
+```
+
 ```bash
 npm run typecheck   # zero erro
 npm run test        # 100% verde
@@ -109,11 +117,29 @@ Só depois de tudo verde e revisão aprovada:
 
 - **Confira a esteira do commit anterior.** Com commit direto no `main` e sem staging, a
   esteira é o portão (D23, D31), e um commit em cima de esteira vermelha esconde de quem é o
-  erro. Rode `gh run list --branch main --limit 1 --json databaseId,headSha,status,conclusion`:
-  - `success` no último commit do `main`: siga
-  - ainda rodando: espere com `gh run watch <databaseId> --exit-status`, em primeiro plano
-  - `failure`: **não faça o commit.** Retorne `STATUS: FALHA` com o commit e o job vermelho.
-    Corrigir a esteira não é escopo desta tarefa
+  erro. Rode:
+
+  ```bash
+  git fetch origin main
+  git rev-list --count origin/main..main   # precisa ser 0
+  git rev-parse origin/main
+  gh run list --workflow esteira --branch main --limit 1 --json databaseId,headSha,status,conclusion
+  ```
+
+  Só siga com as três condições juntas: `headSha` igual ao `origin/main`, `status`
+  `completed` e `conclusion` `success`. Qualquer outro caso tem regra:
+  - `main` local à frente do `origin/main`: o commit anterior não foi enviado e não tem
+    esteira. Não faça o commit e reporte
+  - `headSha` igual e `status` diferente de `completed`: espere com
+    `gh run watch <databaseId> --exit-status`, em primeiro plano, e confira de novo
+  - `headSha` diferente do `origin/main`: a execução do último commit ainda não foi
+    registrada, e a lista mostra a do commit anterior. Liste de novo a cada ~30 s; se em
+    2 minutos ela não aparecer, não faça o commit e reporte
+  - lista vazia: não faça o commit e reporte
+  - `conclusion` diferente de `success` (`failure`, `cancelled`, `skipped`, `timed_out`,
+    `startup_failure`, `action_required`): **não faça o commit.** Retorne `STATUS: FALHA`
+    com o commit, a conclusão e o job. Corrigir ou reexecutar a esteira não é escopo desta
+    tarefa
   - sem `gh` ou sem rede: não faça o commit e reporte
 - Marque a tarefa `[x]` em `tasks.md`
 - **Faça o commit da tarefa, direto no `main`** (D23). Stage apenas os arquivos desta

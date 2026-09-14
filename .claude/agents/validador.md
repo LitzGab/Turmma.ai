@@ -73,9 +73,12 @@ Depois dos RF, faça o mesmo, de forma mais curta, para:
 
 ## 4. Portão
 
-Rode, no código do escopo, com a árvore limpa:
+Rode, no código do escopo, com a árvore limpa. Antes, instale as dependências se o
+`node_modules` for anterior ao `package-lock.json`, e registre no relatório que precisou.
+Sem isso, um checkout desatualizado reprova o portão por TS2307 sem culpa do commit:
 
 ```bash
+[ -f node_modules/.package-lock.json ] && [ ! package-lock.json -nt node_modules/.package-lock.json ] || npm ci
 npm run typecheck && npm run lint && npm run test
 npm run test:e2e     # se a funcionalidade tem tela
 npm run test:infra   # se a funcionalidade mexe em infra (regra 40, D52)
