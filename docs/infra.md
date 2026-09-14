@@ -273,7 +273,8 @@ Uma pessoa sem plantão só consegue operar se o sistema avisar antes da escola 
 - Check externo de disponibilidade falhando no horário letivo
 - p95 do tutor ou do salvamento de prova acima do limite
 - Tokens por minuto acima de 80% do contratado
-- Job interativo com mais de 30 segundos de idade
+- Job interativo esperando mais de 30 segundos, por 1 minuto seguido (dispara com uns 90 s de
+  espera; regra em `infra/grafana/alertas/`)
 - Backup do dia não concluído
 
 **Log e rastreio** seguem a regra 20: id, nunca nome, resposta, nota ou conversa. A

@@ -1,0 +1,66 @@
+# Alerta "Job interativo esperando" (Tech Spec, seção 5; runbook: docs/runbook.md#job-interativo-esperando).
+# Provisionado por arquivo no Grafana da observabilidade local (infra/compose.yml monta esta pasta em
+# provisioning/alerting): mudança na regra é mudança neste arquivo, e a edição na tela não vale.
+#
+# Dispara quando o job interativo mais antigo de uma escola espera mais de 30 s por 1 min seguido. A espera
+# vem do despachante, a partir de job_registro.criado_em, e vale com o Redis de fila fora. Os dois
+# despachantes exportam a mesma medição, cada um na sua instância: `max by (fila, escola_id)` junta.
+#
+# Sem dado é normal: a série só existe enquanto a escola tem job pendente, ou nos 10 min em zero depois de a
+# fila esvaziar. Com o Postgres fora (ou os despachantes parados) a medição sai da exportação, mas o Prometheus
+# ainda devolve o último valor por até 5 min, e só então a regra volta a normal; quem avisa do Postgres fora é
+# a regra de 5xx (a `/saude` vai a 503).
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: fila
+    folder: Educa.ia alertas
+    interval: 10s
+    rules:
+      - uid: educa-job-interativo-esperando
+        title: Job interativo esperando
+        condition: C
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          area: fila
+        annotations:
+          summary: Job interativo da escola {{ $labels.escola_id }} esperando há mais de 30 s por 1 min
+          description: A professora ou o aluno está esperando uma ferramenta que não começou. Siga o runbook.
+          runbook_url: https://github.com/LitzGab/Educa.ia/blob/main/docs/runbook.md#job-interativo-esperando
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: max by (fila, escola_id) (job_espera_mais_antiga_s{fila="interativa"})
+              instant: true
+              range: false
+              intervalMs: 10000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - type: query
+                  evaluator:
+                    type: gt
+                    params: [30]

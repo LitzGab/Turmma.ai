@@ -1,0 +1,66 @@
+# Alerta "Seguro de limite ativo" (Tech Spec, seção 5; runbook: docs/runbook.md#seguro-de-limite-ativo).
+# Provisionado por arquivo no Grafana da observabilidade local (infra/compose.yml monta esta pasta em
+# provisioning/alerting).
+#
+# `limite.seguro_ativo` é a proporção, de 0 a 1, das requisições limitadas pelo seguro em memória nos
+# últimos 30 s, em cada instância da API (12.0). A regra vale 1 numa instância quando, por 2 min seguidos:
+#   - metade ou mais das requisições limitadas foram contadas pelo seguro (Redis de cache fora ou oscilando), ou
+#   - o cliente do Redis de cache não está pronto naquela instância, com ou sem tráfego: sem requisição na
+#     janela, a proporção fica em 0, e o Redis fora não pode passar despercebido por falta de tráfego.
+# Abaixo de 0,5 com o Redis no ar é oscilação curta, que o painel mostra e não acorda ninguém.
+#
+# Sem dado é normal: a API não exporta (nem sobe) sem a observabilidade ter o que mostrar.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: limite
+    folder: Educa.ia alertas
+    interval: 10s
+    rules:
+      - uid: educa-seguro-limite-ativo
+        title: Seguro de limite ativo
+        condition: C
+        for: 2m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          area: limite
+        annotations:
+          summary: A instância {{ $labels.instance }} da API limita requisições em memória há mais de 2 min
+          description: O rate limit saiu do Redis de cache e cada instância limita sozinha. Siga o runbook.
+          runbook_url: https://github.com/LitzGab/Educa.ia/blob/main/docs/runbook.md#seguro-de-limite-ativo
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: max by (instance) ((limite_seguro_ativo{job="educa/api"} >= bool 0.5) or (redis_disponivel{job="educa/api", instancia="cache"} == bool 0))
+              instant: true
+              range: false
+              intervalMs: 10000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - type: query
+                  evaluator:
+                    type: gt
+                    params: [0]

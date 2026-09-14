@@ -355,6 +355,10 @@ services:
     volumes:
       - ./grafana/provedor-de-paineis.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/educa.yaml:ro
       - ./grafana/paineis:/otel-lgtm/educa/paineis:ro
+      # As regras de alerta (infra/grafana/alertas/, cada uma com entrada em docs/runbook.md) no lugar da pasta
+      # de exemplo da imagem. Sem ponto de contato configurado nem SMTP: o alerta dispara no Grafana e não sai
+      # da máquina; a entrega ao celular fica para o staging (D31).
+      - ./grafana/alertas:/otel-lgtm/grafana/conf/provisioning/alerting:ro
     stop_grace_period: 10s
     healthcheck:
       # O coletor recebe, o Prometheus guarda e o Grafana mostra: pronto só com os três.

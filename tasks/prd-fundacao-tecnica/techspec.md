@@ -291,9 +291,11 @@ Testes usam o `compose.yml`.
 - ⚠️ **`grafana/otel-lgtm`:** o README diz que a imagem é para desenvolvimento e teste, que
   é o uso aqui. ✅ Verificado na 12.0 (13/09/2026, `0.33.0`): painel provisionado por arquivo montado em
   `/otel-lgtm/grafana/conf/provisioning/dashboards/`, e o Prometheus dela recebe OTLP e traduz o nome
-  (ponto vira sublinhado, contador ganha `_total`, unidade `s` ganha `_seconds`). A pasta
-  `provisioning/alerting/` existe na imagem, mas o provisionamento de regra de alerta segue para a 13.0
-  confirmar. Reserva: Grafana e Prometheus separados no compose.
+  (ponto vira sublinhado, contador ganha `_total`, unidade `s` ganha `_seconds`). ✅ Verificado na 13.0
+  (13/09/2026, Grafana 13.2.1 da imagem): regra de alerta provisionada por arquivo, com a pasta
+  `infra/grafana/alertas/` montada em `/otel-lgtm/grafana/conf/provisioning/alerting/` e o Prometheus da
+  imagem com uid `prometheus`; o estado sai pela API `/api/prometheus/grafana/api/v1/rules`, que o
+  anônimo lê. A reserva (Grafana e Prometheus separados) não foi necessária.
 
 ## 13. Riscos técnicos
 

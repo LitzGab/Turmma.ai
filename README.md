@@ -32,7 +32,9 @@ job nasce em `job_registro`, os dois despachantes o levam à fila dele no Redis 
 normal ou lote) dentro das vagas da escola, e os workers de cada prioridade o executam; `POST /v1/sistema/jobs-sinteticos` (com token) cria um job de teste. O painel "Fundação — rota, fila e escola" fica no Grafana local, em
 http://127.0.0.1:53300 (pasta Educa.ia), com latência e erro por rota, espera e tamanho da fila por
 escola, vagas, realtime, pool e seguro de limite; o Prometheus da mesma imagem responde em
-http://127.0.0.1:59090. As portas publicadas escutam só no loopback e estão em
+http://127.0.0.1:59090. As três regras de alerta (`infra/grafana/alertas/`) ficam na pasta Educa.ia
+alertas do mesmo Grafana, cada uma com a sua entrada em `docs/runbook.md`, e `npm run ensaio:alertas`
+provoca as três condições com o ambiente de pé e confere que disparam e voltam a normal. As portas publicadas escutam só no loopback e estão em
 `.env.example`. Para mudar alguma na sua máquina, crie um `.env` na raiz: ele sobrepõe o
 exemplo no `docker compose up`, mas testes e esteira usam sempre o `.env.example`.
 

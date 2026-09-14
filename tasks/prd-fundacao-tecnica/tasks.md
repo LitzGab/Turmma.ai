@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 12 de 16 concluídas
+**Status:** 13 de 16 concluídas
 
 ## Lista
 
@@ -75,10 +75,10 @@
   - [x] 12.2 Métricas da Tech Spec e painel provisionado
   - [x] 12.3 Testes: séries por escola, espera com Redis fora, rota como template, sem label de usuário
 
-- [ ] **13.0 — Alertas locais disparam e têm runbook**
-  - [ ] 13.1 Três regras provisionadas em `infra/grafana/alertas/`
-  - [ ] 13.2 Entradas em `docs/runbook.md` e `npm run ensaio:alertas`
-  - [ ] 13.3 Testes: ensaio dispara, condição curta não dispara, alerta sem runbook reprova
+- [x] **13.0 — Alertas locais disparam e têm runbook**
+  - [x] 13.1 Três regras provisionadas em `infra/grafana/alertas/`
+  - [x] 13.2 Entradas em `docs/runbook.md` e `npm run ensaio:alertas`
+  - [x] 13.3 Testes: ensaio dispara, condição curta não dispara, alerta sem runbook reprova
 
 - [ ] **14.0 — Casca da web com os quatro estados, no limite do Chromebook e do celular**
   - [ ] 14.1 `GET /v1/sistema/estado` e `/avisos`

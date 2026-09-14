@@ -34,7 +34,9 @@ jobs:
     name: integração (Postgres, Redis, storage)
     runs-on: ubuntu-24.04
     # 15 min até a 11.0; a 12.0 soma o teste de métricas, que baixa a imagem da observabilidade (grafana/otel-lgtm).
-    timeout-minutes: 30
+    # A 13.0 soma o ensaio dos alertas, uns 11 min (a regra de 5xx só dispara depois de 5 min): a suíte local
+    # levou 25 min, e o limite sobe para 45.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

@@ -5,6 +5,7 @@ import { parse } from 'yaml'
 import { METRICAS } from '../../packages/nucleo/src/telemetria/metricas.ts'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
 import { NOMES_NO_PROMETHEUS } from '../../tools/testes/metricas.ts'
+import { metricasDa } from '../../tools/testes/promql.ts'
 
 interface Painel {
   title?: string
@@ -17,16 +18,6 @@ const lerArquivo = (caminho: string) => readFileSync(join(raizRepositorio, camin
 const painel = JSON.parse(lerArquivo('infra/grafana/paineis/fundacao.json')) as { uid: string; panels: Painel[] }
 const graficos = painel.panels.filter((item) => item.type !== 'row')
 const expressoes = graficos.flatMap((item) => (item.targets ?? []).map((alvo) => ({ titulo: item.title ?? '', expr: alvo.expr ?? '' })))
-
-/** Nomes de métrica numa expressão PromQL: identificadores seguidos de `{` ou `[`, ou dentro de uma agregação. */
-function metricasDa(expr: string): string[] {
-  const semRotulos = expr.replace(/\{[^}]*\}/g, '{}').replace(/"[^"]*"/g, '""')
-  const palavrasDoPromql = new Set(['sum', 'max', 'min', 'by', 'rate', 'increase', 'histogram_quantile', 'le', 'avg', 'count', 'without'])
-  const rotulosDeAgrupamento = new Set([...semRotulos.matchAll(/\bby\s*\(([^)]*)\)/g)].flatMap((achado) => (achado[1] ?? '').split(',').map((rotulo) => rotulo.trim())))
-  return [...semRotulos.matchAll(/\b([a-z_][a-z0-9_]*)\b/g)]
-    .map((achado) => achado[1] ?? '')
-    .filter((nome) => !palavrasDoPromql.has(nome) && !rotulosDeAgrupamento.has(nome) && !/^\d/.test(nome))
-}
 
 describe('painel provisionado da fundação', () => {
   it('toda consulta do painel usa uma métrica que o código exporta, com o nome que o Prometheus dá a ela', () => {
