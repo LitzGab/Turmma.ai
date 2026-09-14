@@ -20,6 +20,21 @@ export const esquemaPedidoJobSintetico = z
 
 export type PedidoJobSintetico = z.infer<typeof esquemaPedidoJobSintetico>
 
+/**
+ * Os dados do job sintético em `job_registro`: o que a API grava e o worker lê.
+ *
+ * `efeito` é o modo de referência da entrega pelo menos uma vez (D49): o processador grava uma linha em
+ * `efeito_sintetico` com a chave de idempotência do job, e a reexecução não grava outra. A tabela não
+ * tem migration: só existe no teste de integração que a cria. Por isso o modo não está no corpo do `POST`.
+ */
+export const esquemaDadosJobSintetico = z.object({
+  cpuMs: z.number().int().min(0).max(CPU_MS_MAXIMO_SINTETICO),
+  falhar: z.boolean(),
+  efeito: z.boolean().optional(),
+})
+
+export type DadosJobSintetico = z.infer<typeof esquemaDadosJobSintetico>
+
 /** Resposta 202 do `POST`: o job foi gravado e ainda vai ser executado. */
 export const esquemaRespostaJobAceito = z.object({ jobId: z.uuid() }).strict()
 export type RespostaJobAceito = z.infer<typeof esquemaRespostaJobAceito>

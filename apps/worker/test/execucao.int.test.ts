@@ -41,7 +41,7 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
     await bancada.fechar()
   })
 
-  it('500 jobs: cada um é publicado por um despachante só e executado exatamente uma vez', async () => {
+  it('500 jobs: cada um é reservado e publicado por um despachante só, e, sem falha nem queda, inicia uma vez', async () => {
     const ids = new Set<string>()
     for (let lote = 0; lote < 5; lote++) {
       const criados = await Promise.all(
@@ -77,6 +77,8 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
     expect(new Set([...publicados1, ...publicados2])).toEqual(ids)
     expect(publicados1.length + publicados2.length).toBe(500)
 
+    // Uma reserva por job, e nenhuma queda no caminho: cada um inicia uma vez. Com queda, a entrega é pelo menos uma
+    // vez (D49), e a reexecução tem teste próprio (reexecucao.int.test.ts).
     const execucoes = new Map<string, number>()
     for (const registro of [...logs.w1.doEvento('job.iniciado'), ...logs.w2.doEvento('job.iniciado')]) {
       const id = String(registro['jobId'])
@@ -293,7 +295,7 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
     await expect.poll(() => logDespachante.doEvento('job.publicado').map((registro) => registro['jobId']), { timeout: 5_000 }).toEqual([id])
   })
 
-  it('despachante que caiu entre publicar e marcar: o job é publicado de novo com o mesmo id e ainda roda uma vez só', async () => {
+  it('despachante que caiu entre publicar e marcar: o job é publicado de novo com o mesmo id, a fila não o duplica, e ele inicia uma vez', async () => {
     const id = await bancada.enfileirar(ESCOLA_A)
     // Primeiro despachante: reserva e publica, e cai antes de marcar `publicado`.
     await bancada.reservar(ESCOLA_A)

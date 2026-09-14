@@ -57,6 +57,8 @@ export { Enfileirador, PRIORIDADE_DA_FILA } from './fila/enfileirador.js'
 export type { PedidoDeJob } from './fila/enfileirador.js'
 export { CANAL_NOTIFICACAO_JOB, JobRegistroRepository, PREFIXO_TIPO_SISTEMA } from './fila/job-registro.repository.js'
 export type { EstadoRegistrado, JobParaExecutar, ResultadoDoInicio } from './fila/job-registro.repository.js'
+export { EfeitoSinteticoRepository, TABELA_DO_EFEITO_SINTETICO } from './fila/efeito-sintetico.repository.js'
+export type { EfeitoDaExecucao } from './fila/efeito-sintetico.repository.js'
 export { OuvinteDeJobs } from './fila/ouvinte-de-jobs.js'
 export {
   esquemaDadosDoJobNaFila,

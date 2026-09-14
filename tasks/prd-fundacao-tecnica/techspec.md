@@ -116,7 +116,15 @@ tardia não sobrescreve `ativo`, `concluido` ou `falhou`.
   processador, por falso stalled ou pela reconciliação. O que é único é a reserva no banco.
   Por isso o processador recebe `{ jobId, tentativa, chaveIdempotencia }`, com a chave igual
   ao id do job em toda reexecução, e todo efeito externo (linha gravada, chamada de IA,
-  aviso) usa essa chave para não duplicar.
+  aviso) usa essa chave para não duplicar. Efeito externo pago (IA, aviso) reserva a chave
+  antes de disparar: grava com a chave e só chama se a gravação entrou, ou entrega a chave ao
+  gateway de IA e ao motor de eventos; o `on conflict` depois da chamada protege a linha, não a
+  fatura. O exemplo de referência é o modo `efeito` do job
+  sintético (16.0): `EfeitoSinteticoRepository` grava com a escola do contexto e a chave, com
+  restrição única `(escola_id, chave_idempotencia)` e `on conflict do nothing`, numa tabela que
+  só o teste de integração cria. A `tentativa` é a do BullMQ e serve ao log: sobe na
+  retentativa, e se repete no stalled e na republicação. Reexecução no log é mais de um
+  `job.iniciado` com o mesmo `jobId`.
 - **Retenção:** BullMQ remove concluído com 1 dia e falho com 7. `sistema.expurgar-jobs`
   apaga `job_registro` com mais de 7 dias, em lotes de 5.000.
 

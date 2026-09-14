@@ -43,24 +43,24 @@ só no contrato do processador e no teste do pool.
 
 ## Subtarefas
 
-- [ ] 16.1 — O tipo `Processador` passa a receber, além dos dados, a execução:
+- [x] 16.1 — O tipo `Processador` passa a receber, além dos dados, a execução:
   `{ jobId, tentativa, chaveIdempotencia }`.
   - `chaveIdempotencia` é o id do job em `job_registro`, igual em toda tentativa, em toda
     reentrega pelo stalled e em toda republicação pela reconciliação.
   - O JSDoc do executor e a Tech Spec dizem "pelo menos uma vez", e os comentários e nomes de
     teste que falam em "exatamente uma vez" passam a falar do que o teste prova de fato (uma
     reserva por job, não uma execução).
-- [ ] 16.2 — O processador sintético ganha um modo `efeito`, que grava uma linha numa tabela
+- [x] 16.2 — O processador sintético ganha um modo `efeito`, que grava uma linha numa tabela
   criada pelo próprio teste de integração, com restrição única na chave de idempotência e
   `on conflict do nothing`. É o exemplo de referência para os processadores do F4 em diante.
   Nenhuma migration nova.
-- [ ] 16.3 — Corrigir o teste intermitente de `pool.int.test.ts` ("descarta a conexão
+- [x] 16.3 — Corrigir o teste intermitente de `pool.int.test.ts` ("descarta a conexão
   encerrada pelo servidor no meio da consulta"). Hoje a promessa `consulta` só ganha
   tratador depois do `pg_terminate_backend`, e a rejeição pode chegar antes, gerando
   rejeição não tratada. A asserção `rejects` passa a ser montada antes do encerramento.
-- [ ] 16.4 — `docs/runbook.md` ou comentário do executor explica, em uma linha, como
+- [x] 16.4 — `docs/runbook.md` ou comentário do executor explica, em uma linha, como
   reconhecer uma reexecução no log (mesmo `jobId`, tentativa diferente), sem dado pessoal.
-- [ ] 16.5 — Testes
+- [x] 16.5 — Testes
 
 ## Arquivos previstos
 
@@ -86,13 +86,13 @@ só no contrato do processador e no teste do pool.
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
 - [ ] E2E verde (se tocou tela)
-- [ ] Vetos aprovados (se aplicáveis)
-- [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa
+- [x] Vetos aprovados (se aplicáveis)
+- [x] Revisão aprovada
+- [x] Commit feito, só com os arquivos desta tarefa
 
 ## Fora do escopo desta tarefa
 
@@ -100,3 +100,18 @@ Trocar a fila por uma fila só no Postgres (descartado na D49). Os outros achado
 auditoria que não viraram decisão: renovação da vaga durante o recuo, devolução do ponto do
 usuário no limitador, despachante serial. Idempotência de negócio de cada processador real,
 que cada funcionalidade define no próprio PRD.
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-14 13:24:42 | 2026-09-14 13:26:25 | `infra-guardian` | 1 | APROVADO | a5b8573bda9626924 |
+| 2026-09-14 13:24:58 | 2026-09-14 13:29:31 | `test-engineer` | 1 | REPROVADO | a2b0fe53b8ee9550e |
+| 2026-09-14 13:52:41 | 2026-09-14 13:53:14 | `infra-guardian` | 2 | APROVADO | ab1c4b69d5e9acb53 |
+| 2026-09-14 13:52:55 | 2026-09-14 13:54:46 | `test-engineer` | 2 | APROVADO | a99501633108226df |
+| 2026-09-14 13:55:36 | 2026-09-14 13:56:09 | `infra-guardian` | 3 | APROVADO | a7c112be05121f7d4 |
+| 2026-09-14 13:55:46 | 2026-09-14 13:56:51 | `test-engineer` | 3 | APROVADO | abbc06ef6d080a5d2 |

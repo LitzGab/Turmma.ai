@@ -2,7 +2,7 @@ import { contextoAtual, criarLogger, type JobParaExecutar, type ResultadoDoInici
 import { CodigoDeErro, CodigoDeFalhaDeJob, type Fila } from '@educa/shared'
 import { DelayedError, UnrecoverableError } from 'bullmq'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AvisoDeVagaLivre, ESPERA_POR_VAGA_MS, ExecutorDeJobs, type DependenciasDoExecutor, type JobDaFila } from './executor.js'
+import { AvisoDeVagaLivre, ESPERA_POR_VAGA_MS, ExecutorDeJobs, type DependenciasDoExecutor, type JobDaFila, type Processador } from './executor.js'
 import { FalhaDeJob } from './falha-de-job.js'
 
 const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
@@ -20,7 +20,7 @@ function montar({
   /** `null`: a linha não existe na escola do contexto. */
   alvo?: JobParaExecutar | null
   concede?: boolean
-  processador?: () => Promise<void>
+  processador?: Processador
   liberar?: () => Promise<void>
   renovar?: (eventos: string[]) => Promise<void>
   tentativas?: number
@@ -37,7 +37,7 @@ function montar({
       },
       iniciarExecucao: (): Promise<ResultadoDoInicio> => {
         eventos.push('iniciar')
-        return Promise.resolve({ situacao: 'iniciado', tipo: 'sintetico', dados: {} })
+        return Promise.resolve({ situacao: 'iniciado', tipo: 'sintetico', dados: { cpuMs: 0, falhar: false } })
       },
       concluir: () => {
         eventos.push('concluir')
@@ -86,6 +86,17 @@ describe('ExecutorDeJobs e a vaga', () => {
     await executor.processar(job, 'token')
     expect(eventos).toEqual([`localizar:${ESCOLA_A}`, 'tomar', 'iniciar', 'concluir', 'liberar', 'avisou_vaga_livre'])
     expect(limites).toEqual([{ fila: 'normal', escolaId: ESCOLA_A, limite: 5 }])
+  })
+
+  it('o processador recebe os dados da linha e a execução: a chave de idempotência é o id do job, igual em toda tentativa', async () => {
+    const recebidos: Array<Parameters<Processador>> = []
+    const { executor, job } = montar({ processador: (...argumentos) => (recebidos.push(argumentos), Promise.resolve()) })
+    await executor.processar(job, 'token')
+    await executor.processar({ ...job, attemptsMade: 3 } as JobDaFila, 'token')
+    expect(recebidos).toEqual([
+      [{ cpuMs: 0, falhar: false }, { jobId: JOB_ID, tentativa: 1, chaveIdempotencia: JOB_ID }],
+      [{ cpuMs: 0, falhar: false }, { jobId: JOB_ID, tentativa: 4, chaveIdempotencia: JOB_ID }],
+    ])
   })
 
   it('sem vaga: volta à espera do BullMQ sem executar, sem marcar ativo e sem gastar tentativa', async () => {

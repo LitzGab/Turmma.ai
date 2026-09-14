@@ -16,7 +16,30 @@ import { DelayedError, UnrecoverableError, type Job } from 'bullmq'
 import { randomUUID } from 'node:crypto'
 import { FalhaDeJob } from './falha-de-job.js'
 
-export type Processador = (dados: Record<string, unknown>) => Promise<void>
+/**
+ * A execução que o processador está rodando. A entrega é pelo menos uma vez (D49): o mesmo job pode chegar
+ * ao processador mais de uma vez, e todo efeito dele (linha gravada, chamada de IA, aviso) usa
+ * `chaveIdempotencia` para não duplicar. Efeito externo pago reserva a chave **antes** de disparar (grava com a
+ * chave e só chama se a gravação entrou, ou entrega a chave ao gateway): o `on conflict` depois da chamada
+ * protege a linha, não a fatura.
+ */
+export interface ExecucaoDoJob {
+  /** O id do job em `job_registro`, que é também o `jobId` do BullMQ. */
+  readonly jobId: string
+  /**
+   * A tentativa do BullMQ, a partir de 1: sobe na retentativa depois de falha. O stalled devolve o job sem
+   * contar tentativa, e a republicação pela reconciliação recomeça do 1. Serve ao log, nunca à idempotência.
+   */
+  readonly tentativa: number
+  /** Igual ao id do job em toda tentativa, em toda reentrega pelo stalled e em toda republicação pela reconciliação. */
+  readonly chaveIdempotencia: string
+}
+
+/**
+ * Processa os dados de um tipo de job, lidos do Postgres, no contexto da escola do job. Precisa tolerar
+ * reexecução: pode rodar de novo depois de ter gravado o efeito, e até ao mesmo tempo que outra execução.
+ */
+export type Processador = (dados: Record<string, unknown>, execucao: ExecucaoDoJob) => Promise<void>
 
 export type JobDaFila = Pick<Job, 'id' | 'data' | 'attemptsMade' | 'opts' | 'moveToDelayed'>
 
@@ -118,11 +141,19 @@ class RenovacaoDaVaga {
  *    numa queda longa), o job volta a esperar sem gastar tentativa nem executar: o teto vale na
  *    execução, e não só na publicação;
  * 4. marca `ativo`, conta a execução no uso da escola, roda o processador do tipo com os dados lidos
- *    do Postgres, e renova a vaga enquanto ele roda;
+ *    do Postgres e a execução (`jobId`, `tentativa`, `chaveIdempotencia`), e renova a vaga enquanto ele roda;
  * 5. marca `concluido`, ou, na última tentativa, `falhou` com código tipado, e libera a vaga.
  *
  * Na retentativa, a vaga fica com o job. Job que já terminou não roda de novo, mesmo que a fila o
  * entregue outra vez. Falha do Redis ao tomar, renovar ou liberar não para o job: a vaga vence sozinha.
+ *
+ * **A entrega é pelo menos uma vez, não exatamente uma vez** (D49). O que é único é a reserva no banco; a
+ * execução pode se repetir: reentrega a partir de `ativo`, `concluir` que falha depois de o processador
+ * terminar, falso stalled com o lock vencido, reconciliação que republica um job `ativo` que ainda roda.
+ * Por isso o processador recebe a chave de idempotência, que é o id do job em toda execução.
+ *
+ * Reexecução no log: mais de um `job.iniciado` com o mesmo `jobId`; a `tentativa` sobe na retentativa e se
+ * repete no stalled e na republicação. Só ids, nenhum dado do job.
  */
 export class ExecutorDeJobs {
   readonly #intervaloRenovacaoMs: number
@@ -190,7 +221,7 @@ export class ExecutorDeJobs {
       try {
         const processador = processadores[inicio.tipo]
         if (processador === undefined) throw new FalhaDeJob(CodigoDeFalhaDeJob.TIPO_DESCONHECIDO, true)
-        await processador(inicio.dados)
+        await processador(inicio.dados, { jobId, tentativa, chaveIdempotencia: jobId })
       } catch (erro) {
         const falha = await this.falhar(job, jobId, erro)
         if (falha instanceof UnrecoverableError) {

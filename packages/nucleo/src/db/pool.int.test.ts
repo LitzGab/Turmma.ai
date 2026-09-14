@@ -122,7 +122,9 @@ describe('criarPool', () => {
       abertos.push(administrador)
       await administrador.connect()
 
-      const consulta = pool.query('select pg_sleep(5)')
+      // A asserção entra junto com a consulta, antes do encerramento: a rejeição pode chegar antes da resposta
+      // do `pg_terminate_backend`, e uma promessa ainda sem tratador nesse instante vira rejeição não tratada.
+      const rejeitada = expect(pool.query('select pg_sleep(5)')).rejects.toMatchObject({ code: '57P01' })
       await expect.poll(async () => {
         const { rows } = await administrador.query<{ ativa: boolean }>(
           `select state = 'active' as ativa from pg_stat_activity where pid = $1`,
@@ -132,7 +134,7 @@ describe('criarPool', () => {
       }).toBe(true)
       await administrador.query('select pg_terminate_backend($1)', [pidInicial])
 
-      await expect(consulta).rejects.toMatchObject({ code: '57P01' })
+      await rejeitada
       await expect.poll(() => descartes.length).toBe(1)
       const pidNovo = await pidDa(pool)
       expect(pidNovo).toBeDefined()

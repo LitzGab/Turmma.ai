@@ -67,7 +67,10 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
     criarConsolidacaoDeUso({ contador, repositorio, storage: new MedidorDeStorage(s3, STORAGE.bucket), relogio, logger: log.logger })
 
   /** Roda como o worker roda um job `sistema.*`: no contexto da rotina do sistema, sem escola. */
-  const consolidar = (processador = consolidacao()) => executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}))
+  const consolidar = (processador = consolidacao()) => {
+    const jobId = randomUUID()
+    return executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))
+  }
 
   const usoDoDia = (escolaId: string, dia: string) => executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => repositorio.doDia(dia))
   const usoDoMes = (escolaId: string, mes: string) => executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => repositorio.doMes(mes))
@@ -264,7 +267,8 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
     marcarRequisicoes(escolaA, 2)
     await aguardarContador(escolaA, '2026-09-15', 'req', 2)
     agora = QUARTA_2H
-    await expect(executarNoContexto({ requisicaoId: randomUUID(), escolaId: escolaA }, () => consolidacao()({}))).rejects.toThrow()
+    const jobId = randomUUID()
+    await expect(executarNoContexto({ requisicaoId: randomUUID(), escolaId: escolaA }, () => consolidacao()({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))).rejects.toThrow()
     expect(await usoDoDia(escolaA, '2026-09-15')).toEqual(SEM_USO)
   })
 

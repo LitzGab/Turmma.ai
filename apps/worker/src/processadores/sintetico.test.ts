@@ -103,10 +103,13 @@ describe('SandboxDeCpu: o job sintético queima CPU de verdade, fora do event lo
 })
 
 describe('processador sintético', () => {
+  const EXECUCAO = { jobId: '0190f5a0-0000-7000-8000-0000000000f1', tentativa: 1, chaveIdempotencia: '0190f5a0-0000-7000-8000-0000000000f1' }
+  const semEfeito = { gravar: () => Promise.reject(new Error('sem efeito pedido, nada é gravado')) }
+
   it('dados inválidos falham na hora, definitivos, sem ocupar thread', async () => {
     const cpu = sandbox(1)
-    const processar = criarProcessadorSintetico(cpu)
-    const erro = await processar({ cpuMs: -1, falhar: false }).catch((falha: unknown) => falha)
+    const processar = criarProcessadorSintetico(cpu, semEfeito)
+    const erro = await processar({ cpuMs: -1, falhar: false }, EXECUCAO).catch((falha: unknown) => falha)
     expect(erro).toBeInstanceOf(FalhaDeJob)
     expect(erro).toMatchObject({ codigo: CodigoDeFalhaDeJob.DADOS_INVALIDOS, definitiva: true })
     expect(cpu.threads).toBe(0)
@@ -114,9 +117,27 @@ describe('processador sintético', () => {
 
   it('queima a CPU no sandbox e só então falha, quando pedido', async () => {
     const pedidos: number[] = []
-    const processar = criarProcessadorSintetico({ queimar: async (cpuMs) => void pedidos.push(cpuMs) })
-    await expect(processar({ cpuMs: 120, falhar: false })).resolves.toBeUndefined()
-    expect(await codigoDe(processar({ cpuMs: 80, falhar: true }))).toBe(CodigoDeFalhaDeJob.FALHA_SINTETICA)
+    const processar = criarProcessadorSintetico({ queimar: async (cpuMs) => void pedidos.push(cpuMs) }, semEfeito)
+    await expect(processar({ cpuMs: 120, falhar: false }, EXECUCAO)).resolves.toBeUndefined()
+    expect(await codigoDe(processar({ cpuMs: 80, falhar: true }, EXECUCAO))).toBe(CodigoDeFalhaDeJob.FALHA_SINTETICA)
     expect(pedidos).toEqual([120, 80])
+  })
+
+  it('modo efeito: grava com a chave de idempotência e a tentativa da execução, depois da CPU e antes da falha pedida', async () => {
+    const passos: string[] = []
+    const processar = criarProcessadorSintetico(
+      { queimar: async () => void passos.push('queimou') },
+      {
+        gravar: async (efeito) => {
+          passos.push(`gravou:${efeito.chaveIdempotencia}:${efeito.tentativa}`)
+          return true
+        },
+      },
+    )
+    const chaveIdempotencia = '0190f5a0-0000-7000-8000-0000000000f2'
+    expect(await codigoDe(processar({ cpuMs: 10, falhar: true, efeito: true }, { jobId: chaveIdempotencia, tentativa: 2, chaveIdempotencia }))).toBe(
+      CodigoDeFalhaDeJob.FALHA_SINTETICA,
+    )
+    expect(passos).toEqual(['queimou', `gravou:${chaveIdempotencia}:2`])
   })
 })

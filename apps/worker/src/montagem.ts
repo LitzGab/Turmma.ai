@@ -7,6 +7,7 @@ import {
   DONO_DAS_VAGAS_DO_SISTEMA,
   criarClienteRedisDaFila,
   criarPool,
+  EfeitoSinteticoRepository,
   Enfileirador,
   ExpurgoDeJobsRepository,
   JobRegistroRepository,
@@ -116,7 +117,7 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
   const executor = new ExecutorDeJobs({
     repositorio,
     aoLiberarVaga: avisoDeVagaLivre.avisar,
-    processadores: opcoes.processadores ?? { sintetico: criarProcessadorSintetico(sandbox), ...rotinas?.processadores },
+    processadores: opcoes.processadores ?? { sintetico: criarProcessadorSintetico(sandbox, new EfeitoSinteticoRepository(banco)), ...rotinas?.processadores },
     logger,
     uso,
     ...(aguardandoVaga === undefined ? {} : { aoAguardarVaga: (fila: Fila, escolaId: string | null) => aguardandoVaga.add(1, { fila, escola_id: escolaId ?? DONO_DAS_VAGAS_DO_SISTEMA }) }),

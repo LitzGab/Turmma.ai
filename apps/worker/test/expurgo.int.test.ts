@@ -46,7 +46,8 @@ describe('sistema.expurgar-jobs', () => {
       },
       logger: log.logger,
     })
-    return executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}))
+    const jobId = randomUUID()
+    return executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))
   }
 
   const contar = async (condicao: string): Promise<number> =>
@@ -187,7 +188,8 @@ describe('sistema.expurgar-jobs', () => {
 
   it('só a rotina do sistema expurga: um job de escola com esse tipo falha sem apagar nada', async () => {
     const processador = criarExpurgoDeJobs({ repositorio: new ExpurgoDeJobsRepository(bancada.banco), logger: log.logger })
-    await expect(executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () => processador({}))).rejects.toThrow()
+    const jobId = randomUUID()
+    await expect(executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () => processador({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))).rejects.toThrow()
     expect(await vencidosRestantes()).toBe(VENCIDOS)
   })
 })

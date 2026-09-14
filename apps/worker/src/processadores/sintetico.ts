@@ -1,13 +1,8 @@
-import { CodigoDeFalhaDeJob, CPU_MS_MAXIMO_SINTETICO } from '@educa/shared'
+import type { EfeitoSinteticoRepository } from '@educa/nucleo'
+import { CodigoDeFalhaDeJob, esquemaDadosJobSintetico } from '@educa/shared'
 import { Worker } from 'node:worker_threads'
-import { z } from 'zod'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
-
-const esquemaDados = z.object({
-  cpuMs: z.number().int().min(0).max(CPU_MS_MAXIMO_SINTETICO),
-  falhar: z.boolean(),
-})
 
 /**
  * O arquivo da thread: o `.js` compilado no container e o próprio `.ts` no teste, que o Node carrega sem build.
@@ -121,14 +116,20 @@ export class SandboxDeCpu implements QueimaDeCpu {
 }
 
 /**
- * Job sintético, para teste e carga: queima `cpuMs` de CPU no sandbox, fora do event loop, e falha se pedido.
+ * Job sintético, para teste e carga: queima `cpuMs` de CPU no sandbox, fora do event loop; com `efeito`, grava
+ * o efeito com a chave de idempotência da execução; e falha, se pedido, depois de tudo isso.
  * Com `cpuMs` zero, nem chega a uma thread.
+ *
+ * O modo `efeito` é o exemplo de referência da entrega pelo menos uma vez (D49): o efeito leva a chave, que é a
+ * mesma em toda reexecução, e a gravação com a mesma chave não duplica. Falhar depois de gravar é o caso que
+ * a retentativa precisa aguentar.
  */
-export function criarProcessadorSintetico(cpu: QueimaDeCpu): Processador {
-  return async (dados) => {
-    const leitura = esquemaDados.safeParse(dados)
+export function criarProcessadorSintetico(cpu: QueimaDeCpu, efeitos: Pick<EfeitoSinteticoRepository, 'gravar'>): Processador {
+  return async (dados, { tentativa, chaveIdempotencia }) => {
+    const leitura = esquemaDadosJobSintetico.safeParse(dados)
     if (!leitura.success) throw new FalhaDeJob(CodigoDeFalhaDeJob.DADOS_INVALIDOS, true)
     await cpu.queimar(leitura.data.cpuMs)
+    if (leitura.data.efeito === true) await efeitos.gravar({ chaveIdempotencia, tentativa })
     if (leitura.data.falhar) throw new FalhaDeJob(CodigoDeFalhaDeJob.FALHA_SINTETICA)
   }
 }

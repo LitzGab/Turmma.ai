@@ -57,6 +57,8 @@ e `docker compose logs --since 10m worker-interativo-1 worker-interativo-2 despa
 2. Só esta escola, com "Vagas em uso" no teto dela (`VAGAS_ESCOLA_INTERATIVA`, ou as vagas da
    escola em `configuracao_operacional_escola`) → a escola espera pelos próprios jobs longos, e as
    outras não sentem. Com "Jobs em stalled" subindo, um job travou: siga o `jobId` no log do worker.
+   Um job que rodou de novo aparece com mais de um `job.iniciado` do mesmo `jobId` (a `tentativa`
+   sobe na retentativa e se repete no stalled); é esperado, porque a entrega é pelo menos uma vez (D49).
    Aumentar as vagas da escola é decisão, não correção de madrugada: registre.
 3. Redis de fila fora (`redis_disponivel{instancia="fila"}` em 0, `despachante.vaga_indisponivel`
    no log) → `docker compose up -d redis-fila`. Com ele de volta, o despachante publica o que ficou

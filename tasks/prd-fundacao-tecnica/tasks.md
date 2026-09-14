@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 15 de 16 concluídas
+**Status:** 16 de 16 concluídas
 
 ## Lista
 
@@ -92,12 +92,12 @@
   - [x] 15.3 Controle negativo com a vaga por escola desligada
   - [x] 15.4 Testes: cenário passa, controle negativo reprova, conferência em `job_registro`
 
-- [ ] **16.0 — Entrega "pelo menos uma vez" declarada, com chave de idempotência no processador**
-  - [ ] 16.1 `Processador` recebe `{ jobId, tentativa, chaveIdempotencia }`; texto de "exatamente uma vez" corrigido
-  - [ ] 16.2 Modo `efeito` no processador sintético, com restrição única na chave
-  - [ ] 16.3 Teste intermitente de `pool.int.test.ts` corrigido
-  - [ ] 16.4 Como reconhecer reexecução no log
-  - [ ] 16.5 Testes: `kill -9` entre efeito e conclusão, reconciliação de job ativo, chave igual entre tentativas, pool 20 vezes, isolamento
+- [x] **16.0 — Entrega "pelo menos uma vez" declarada, com chave de idempotência no processador**
+  - [x] 16.1 `Processador` recebe `{ jobId, tentativa, chaveIdempotencia }`; texto de "exatamente uma vez" corrigido
+  - [x] 16.2 Modo `efeito` no processador sintético, com restrição única na chave
+  - [x] 16.3 Teste intermitente de `pool.int.test.ts` corrigido
+  - [x] 16.4 Como reconhecer reexecução no log
+  - [x] 16.5 Testes: `kill -9` entre efeito e conclusão, reconciliação de job ativo, chave igual entre tentativas, pool 20 vezes, isolamento
 
 > Revisão de 13/09/2026: a 14.0 passou a cobrir o celular (D51) e a 16.0 entrou pela D49. As
 > tarefas 1.0 a 10.0, já concluídas, não foram alteradas.
