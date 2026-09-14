@@ -119,10 +119,13 @@ para o F5.
 
 ## 10. Perguntas em aberto
 
-- Concorrência por escola nas filas: licença paga, limitador próprio ou fila por escola, à
-  luz da regra 00 (`docs/infra.md` 5.3)
-- Ferramenta de métrica e alerta local
-- Valores iniciais: limites por usuário, escola e IP anônimo; concorrência por escola; teto
-  do bundle; margem do cenário de carga
-- Se o armazenamento do rate limit cai no horário letivo, a API libera ou segura? Erro cru
-  não é opção (regras 50 e 80)
+Todas fechadas na Tech Spec:
+
+- ~~Concorrência por escola nas filas: licença paga, limitador próprio ou fila por escola~~ —
+  limitador próprio, vaga por escola em Lua (Tech Spec seção 5, `docs/infra.md` 5.3)
+- ~~Ferramenta de métrica e alerta local~~ — `grafana/otel-lgtm` (Tech Spec seções 1 e 5)
+- ~~Valores iniciais~~ — 120/min por usuário, 30.000/min por escola, 3.000/min por IP
+  anônimo; vagas 5/5/2 (Tech Spec seção 5); teto do bundle de 150 kB em brotli (seção 9);
+  margem de 500 ms sobre a base no cenário de carga (seção 7c)
+- ~~Se o armazenamento do rate limit cai, a API libera ou segura?~~ — segura com limite em
+  memória dividido pelas instâncias, e alerta de seguro ativo (Tech Spec seção 5)

@@ -92,3 +92,7 @@ obrigatório, e a que toca `infra/`, Dockerfile, `tools/testes/`, `tools/ci/comp
 métricas, saúde, prontidão ou borda. São os testes que esperam o relógio real (alerta,
 sonda, exportação de métricas), uns 16 min. Fora do portão da tarefa eles não somem: a
 esteira os roda em todo push no `main`, e vermelho lá segura a próxima tarefa.
+
+Cada commit de tarefa vai para o GitHub logo depois de feito, e a tarefa seguinte só commita
+com a esteira do commit anterior verde. Push em grupo e tarefa commitada em cima de esteira
+vermelha foram o que deixou três tarefas do F0 sem portão (validação do F0).

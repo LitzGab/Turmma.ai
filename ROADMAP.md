@@ -43,7 +43,7 @@ domínio e porque é onde mora a medição de custo que valida a precificação.
 ## F0 — `fundacao-tecnica` [ ]
 **Depende de:** nada
 
-Monorepo, Docker Compose (Postgres, Redis de fila e Redis de cache, MinIO), Drizzle, Vitest,
+Monorepo, Docker Compose (Postgres, Redis de fila e Redis de cache, SeaweedFS), Drizzle, Vitest,
 Playwright, esteira de typecheck/lint/test, log estruturado **sem dado pessoal**, erro
 tipado. API, realtime e worker como processos separados e sem estado. Filas com prioridade
 e limite por escola, com entrega pelo menos uma vez e chave de idempotência obrigatória no

@@ -58,7 +58,17 @@ Para cada tarefa pendente:
    - Relatório: testes 100%, typecheck limpo, e2e verde se tocou tela, revisão aprovada?
 
    Revisor obrigatório sem rodada na seção é falha, mesmo que o relatório diga APROVADO.
+   - Push: `git rev-list --count origin/main..main` é zero? Commit de tarefa sem push é
+     falha, porque a próxima não tem esteira para conferir.
 5. **Decisão:** sucesso completo → próxima. Qualquer falha → PARE e reporte.
+
+**A esteira não bloqueia a próxima tarefa, mas bloqueia o commit dela.** A execução leva uns
+20 minutos; esperar por ela entre tarefas dobraria o tempo. Por isso a próxima começa logo, e
+o subagente confere a esteira do commit anterior antes de commitar (passo 7 de
+`executar-task`). Se a esteira ficou vermelha, ele para sem commitar e a execução para aqui.
+
+Depois da última tarefa, espere a esteira do último commit
+(`gh run watch <id> --exit-status`) antes do encerramento. Vermelha é falha da execução.
 
 ### Prompt para cada subagente
 
@@ -78,9 +88,12 @@ Regras obrigatórias:
   corrija e chame um revisor novo. Mexeu em código depois de uma aprovação: rodada nova.
   O hook registra as rodadas no N_task.md e bloqueia o commit sem elas (passo 5 da skill).
 - Execute a revisão. Reprovou, corrija e revise de novo.
-- Ao concluir, marque `[x]` em tasks.md e faça o commit da tarefa com a linha `Revisões:`.
+- Antes do commit, confira a esteira do último commit do `main` (passo 7 da skill):
+  vermelha, não commite e reporte; rodando, espere.
+- Ao concluir, marque `[x]` em tasks.md, faça o commit da tarefa com a linha `Revisões:` e
+  o push.
 - Retorne relatório curto: STATUS, o que foi implementado, testes, typecheck, a linha
-  `Revisões:`, revisão e, em caso de falha, o motivo exato.
+  `Revisões:`, revisão, esteira do commit anterior, push e, em caso de falha, o motivo exato.
   Sem dump de código, sem histórico de raciocínio.
 ```
 
@@ -94,6 +107,7 @@ Execução de tarefas — [funcionalidade]
 Concluídas: [ids desta execução]
 Falhou em: [id ou "nenhuma"]
 Motivo da parada: [todas concluídas | falha na tarefa X: motivo]
+Esteira no último commit: [verde | vermelha: job]
 Pendentes restantes: [lista]
 ```
 

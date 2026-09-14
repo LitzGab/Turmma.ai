@@ -107,6 +107,14 @@ passo 5 para os revisores cuja aprovação caducou.
 
 Só depois de tudo verde e revisão aprovada:
 
+- **Confira a esteira do commit anterior.** Com commit direto no `main` e sem staging, a
+  esteira é o portão (D23, D31), e um commit em cima de esteira vermelha esconde de quem é o
+  erro. Rode `gh run list --branch main --limit 1 --json databaseId,headSha,status,conclusion`:
+  - `success` no último commit do `main`: siga
+  - ainda rodando: espere com `gh run watch <databaseId> --exit-status`, em primeiro plano
+  - `failure`: **não faça o commit.** Retorne `STATUS: FALHA` com o commit e o job vermelho.
+    Corrigir a esteira não é escopo desta tarefa
+  - sem `gh` ou sem rede: não faça o commit e reporte
 - Marque a tarefa `[x]` em `tasks.md`
 - **Faça o commit da tarefa, direto no `main`** (D23). Stage apenas os arquivos desta
   tarefa, incluindo o `N_task.md` com a seção "Revisões", nunca `git add -A`.
@@ -117,6 +125,9 @@ Só depois de tudo verde e revisão aprovada:
 - **Commit bloqueado pelo hook:** a mensagem diz qual revisor falta, reprovou ou caducou.
   Resolva o que ela aponta. Não contorne: commit fora do padrão `(tarefa N.0)` para escapar
   do portão é falha da tarefa
+- **Faça o push logo depois do commit** (`git push origin main`). Cada commit de tarefa tem a
+  sua execução da esteira; push em grupo deixa commit sem execução própria. Não espere a
+  esteira terminar: quem confere é a próxima tarefa, antes do commit dela
 - Retorne o relatório:
 
 ```
@@ -127,6 +138,8 @@ Typecheck: limpo | erros
 E2E: verde | não se aplica
 Revisões: <a mesma linha do commit, com todas as rodadas de cada revisor obrigatório>
 Revisão: aprovada
+Esteira do commit anterior: verde em <hash>
+Push: <hash enviado>
 Motivo da falha: <se houver>
 ```
 

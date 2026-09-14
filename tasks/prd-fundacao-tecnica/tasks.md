@@ -41,7 +41,7 @@
   - [x] 6.2 Seguro em memória, clientes Redis sem fila offline e 429 com `Retry-After`
   - [x] 6.3 Testes: 400 usuários num IP, limite somado nas duas APIs, Redis de cache fora, isolamento
 
-- [x] **7.0 — Job aceito é executado uma única vez e dá para consultar**
+- [x] **7.0 — Job aceito é executado uma única vez e dá para consultar** (promessa revista pela D49 na 16.0: pelo menos uma vez)
   - [x] 7.1 `job_registro`, serviço `migrar` e `Enfileirador` na transação
   - [x] 7.2 `apps/despachante` com seleção, reserva, publicação e troca de estado condicional
   - [x] 7.3 `apps/worker` com ciclo de estado, retentativa, stalled e desligamento gracioso

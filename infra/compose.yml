@@ -198,7 +198,8 @@ services:
       - 127.0.0.1:${REALTIME_2_PORTA_HOST:?defina REALTIME_2_PORTA_HOST}:3000
 
   # Dois despachantes: levam o que está em job_registro ao Redis de fila. A reserva no banco
-  # (FOR UPDATE SKIP LOCKED) e o jobId igual ao id da linha evitam publicar ou executar em dobro.
+  # (FOR UPDATE SKIP LOCKED) e o jobId igual ao id da linha evitam publicar em dobro. A execução é
+  # pelo menos uma vez (D49): o processador tolera reexecução pela chave de idempotência.
   despachante-1: &despachante
     image: educa-despachante:local
     build:

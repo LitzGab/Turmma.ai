@@ -1,5 +1,8 @@
 # Tarefa 7.0 — Job aceito é executado uma única vez e dá para consultar
 
+> Promessa revista pela D49 na tarefa 16.0: a entrega é **pelo menos uma vez**, e o
+> processador tolera reexecução pela chave de idempotência. O texto abaixo é o original.
+
 **Funcionalidade:** fundacao-tecnica · **Depende de:** 4.0
 **Subagentes obrigatórios:** `tenancy-guardian`, `infra-guardian`, `privacy-guardian`, `test-engineer`
 

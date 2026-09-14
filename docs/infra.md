@@ -195,9 +195,25 @@ ociosa do provedor e, em provedor que oferece API de lote, custa menos.
 Cada escola tem limite de jobs simultâneos por fila, para uma escola barulhenta não ocupar
 todos os workers.
 
-⚠️ O recurso de grupos do BullMQ, que resolve isso direto, faz parte da versão paga (Pro).
-A Tech Spec do F0 decide entre a licença, um limitador próprio em Redis ou fila por escola,
-à luz da regra 00. Não verificado.
+O recurso de grupos do BullMQ, que resolveria isso direto, é da versão paga (Pro). O F0
+resolveu com um limitador próprio, sem licença (regra 00). O desenho completo está na seção
+5 da Tech Spec do F0 (`tasks/prd-fundacao-tecnica/techspec.md`):
+
+- **Todo job nasce no Postgres**, em `job_registro`, na transação de quem pediu. O Redis de
+  fila só recebe o que já tem vaga
+- **Dois despachantes** reservam a linha com `FOR UPDATE SKIP LOCKED`, em rodízio de escolas,
+  e só então tomam a vaga
+- **A vaga é um ZSET por fila e escola** (`vaga:{fila}:{escola}`), tomada em Lua
+  (`packages/nucleo/src/fila/vaga.lua`), com validade de 60 s renovada pelo worker a cada
+  15 s. Vaga de worker morto vence sozinha. Liberar a vaga acorda o despachante na hora
+- **Padrões por escola:** interativa 5, normal 5, lote 2, com pools de 50, 30 e 10. É
+  configuração por escola em `configuracao_operacional_escola`, nunca constante (D41)
+- **Lote não urgente** só é reservado fora do horário letivo da escola (seção 5.2)
+- **Entrega pelo menos uma vez** (D49): o processador recebe a chave de idempotência, igual
+  em toda reexecução
+
+O cenário de carga "justiça entre escolas" (`infra/k6/justica-entre-escolas.js`) prova o
+limitador, e o controle negativo, com a vaga desligada, reprova.
 
 ### 5.4 Gateway de IA
 
