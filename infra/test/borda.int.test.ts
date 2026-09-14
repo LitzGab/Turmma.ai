@@ -120,15 +120,21 @@ interface BordaDescartavel {
  * Um Caddy com o mesmo infra/Caddyfile, numa rede descartável, na frente de um upstream Node que
  * responde por `api-1` e `api-2` com o comportamento que o teste precisa (lento, que cai no meio).
  * Prova a configuração da borda sem depender do tempo das instâncias reais.
+ *
+ * `realtime-1` e `realtime-2` resolvem para um container sem nada escutando: a sonda deles falha na
+ * hora, com conexão recusada, e escreve no log a cada ciclo. Sem esses nomes na rede, a consulta DNS sai
+ * do Docker para o resolvedor da máquina e pode passar do `health_timeout` de 3 s: a sonda falha por
+ * timeout, e a primeira linha dela chega ao log só uns 3 s depois do boot.
  */
 async function subirBordaDescartavel(servidorDoUpstream: string): Promise<BordaDescartavel> {
   const sufixo = `${process.pid}-${Date.now()}`
   const rede = `educa-teste-borda-${sufixo}`
   const upstream = `educa-teste-upstream-${sufixo}`
+  const semRealtime = `educa-teste-sem-realtime-${sufixo}`
   const borda = `educa-teste-caddy-${sufixo}`
   const docker = (...argumentos: string[]) => spawnSync('docker', argumentos, { encoding: 'utf8' })
   const remover = () => {
-    docker('rm', '--force', borda, upstream)
+    docker('rm', '--force', borda, upstream, semRealtime)
     docker('network', 'rm', rede)
   }
   const exigir = (resultado: ReturnType<typeof docker>) => {
@@ -141,6 +147,8 @@ async function subirBordaDescartavel(servidorDoUpstream: string): Promise<BordaD
   exigir(docker('network', 'create', rede))
   exigir(docker('run', '--detach', '--name', upstream, '--network', rede, '--network-alias', 'api-1', '--network-alias', 'api-2',
     'node:22.23.2-alpine3.23', 'node', '-e', servidorDoUpstream))
+  exigir(docker('run', '--detach', '--name', semRealtime, '--network', rede, '--network-alias', 'realtime-1', '--network-alias', 'realtime-2',
+    'node:22.23.2-alpine3.23', 'node', '-e', 'setInterval(() => {}, 1 << 30)'))
   exigir(docker('run', '--detach', '--name', borda, '--network', rede, '--publish', '127.0.0.1::8080',
     '--volume', `${join(raizRepositorio, 'infra/Caddyfile')}:/etc/caddy/Caddyfile:ro`, 'caddy:2.11.4-alpine'))
   const endereco = `http://${exigir(docker('port', borda, '8080')).trim().split('\n')[0]}`
@@ -159,12 +167,17 @@ describe('borda com duas APIs e dois realtimes', () => {
   beforeAll(async () => {
     token = await tokenDe(ESCOLA_A, USUARIO)
     turma = await Promise.all(Array.from({ length: 200 }, () => tokenDe(ESCOLA_A, randomUUID())))
-    await composeAssincronoOuFalha('up', '--detach', '--build', '--wait', '--remove-orphans', 'borda')
+    // A observabilidade também, como o compose a configura: as APIs e os realtimes exportam para
+    // `observabilidade`. Com o serviço parado, o nome não existe na rede, a consulta DNS sai do Docker para
+    // o resolvedor da máquina e pode levar uns 3 s, e a consulta pendente atrasa a saída do processo no
+    // SIGTERM. O atraso fica depois da drenagem, na saída do processo, e somava até uns 3 s ao tempo que os
+    // casos de parada medem.
+    await composeAssincronoOuFalha('up', '--detach', '--build', '--wait', '--remove-orphans', 'borda', 'observabilidade')
   }, 900_000)
 
   afterAll(async () => {
     // Derruba só o que este arquivo subiu: os outros testes de integração não contam com eles de pé.
-    await composeAssincronoOuFalha('stop', 'borda', ...SERVICOS_ATRAS_DA_BORDA, ...PROCESSOS_DA_FILA)
+    await composeAssincronoOuFalha('stop', 'borda', 'observabilidade', ...SERVICOS_ATRAS_DA_BORDA, ...PROCESSOS_DA_FILA)
   }, 120_000)
 
   describe('troca de instância da API', () => {
@@ -457,13 +470,23 @@ describe('borda com duas APIs e dois realtimes', () => {
         desistencia.abort()
         const caida = await fetch(`${borda.endereco}/cai?nome=${sentinela}`)
         await expect(caida.text()).rejects.toThrow()
-        await esperar(1_500)
+
+        // O log da sonda continua: é ele que mostra instância fora do balanceamento (aqui, os realtimes).
+        // E serve de marco para ler o log completo: a borda escreve sobre o /cai antes de fechar a conexão
+        // que fez o `caida.text()` rejeitar, então uma linha da sonda com horário posterior chega ao log depois
+        // dela. O /lento, abortado antes, entra com a folga dos 100 ms do /cai e das duas idas e voltas.
+        const interrompidasAteS = Date.now() / 1_000
+        const sondaDepoisDasInterrupcoes = (): boolean =>
+          borda
+            .logs()
+            .split('\n')
+            .some((linha) => linha.includes('"logger":"http.handlers.reverse_proxy.health_checker.active"') && Number(/"ts":([\d.]+)/.exec(linha)?.[1]) > interrompidasAteS)
+        // Sonda a cada 2 s (health_interval), com folga.
+        await expect.poll(sondaDepoisDasInterrupcoes, { timeout: 10_000, interval: 250 }).toBe(true)
 
         const texto = borda.logs()
         expect(texto).not.toContain(sentinela)
         expect(texto).not.toMatch(/"logger":"http\.handlers\.reverse_proxy"/)
-        // O log da sonda continua: é ele que mostra instância fora do balanceamento (aqui, os realtimes).
-        expect(texto).toMatch(/"logger":"http\.handlers\.reverse_proxy\.health_checker\.active"/)
       } finally {
         borda.remover()
       }

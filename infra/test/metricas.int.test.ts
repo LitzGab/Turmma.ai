@@ -121,8 +121,17 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
     expect(await valor(`max(job_pendentes{escola_id="${ESCOLA_A}", fila="lote"})`)).toBe(1)
     // O despachante publicou o job com vaga: sem worker, a vaga fica tomada, e cada escola conta a sua.
     await expect.poll(() => valor(`max(fila_vagas_em_uso{escola_id="${ESCOLA_B}", fila="interativa"})`), { timeout: PRAZO_DA_METRICA_MS, interval: 1_000 }).toBe(1)
-    // Os dois despachantes medem, cada um na sua instância; o painel usa `max`.
-    expect((await consultar(`job_pendentes{escola_id="${ESCOLA_A}", fila="interativa"}`)).map(({ metric }) => metric['job'])).toEqual(['educa/despachante', 'educa/despachante'])
+    // Os dois despachantes medem, cada um na sua instância; o painel usa `max`. Cada um mede a cada 5 s e
+    // exporta a cada 5 s, em fases independentes, então a série do segundo pode chegar até um ciclo de medição
+    // mais um de exportação depois da do primeiro, que é a que satisfez as esperas acima: espera pelas duas
+    // instâncias, com o mesmo prazo das outras métricas.
+    const pendentesPorInstancia = async () => {
+      const series = await consultar(`job_pendentes{escola_id="${ESCOLA_A}", fila="interativa"}`)
+      return { jobs: series.map(({ metric }) => metric['job']), instancias: new Set(series.map(({ metric }) => metric['instance'])).size }
+    }
+    await expect
+      .poll(pendentesPorInstancia, { timeout: PRAZO_DA_METRICA_MS, interval: 1_000 })
+      .toEqual({ jobs: ['educa/despachante', 'educa/despachante'], instancias: 2 })
   }, 120_000)
 
   it('borda: com o Redis de fila parado, a espera continua subindo, e o job criado na queda aparece: a métrica vem de criado_em', async () => {
