@@ -1,0 +1,8 @@
+[
+  {
+    "name": "JS inicial da web (todo o JS do build: a casca não tem import dinâmico)",
+    "path": "apps/web/dist/assets/*.js",
+    "limit": "150 kB",
+    "brotli": true
+  }
+]

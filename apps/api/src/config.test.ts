@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EMISSOR_TOKEN_SINTETICO, MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO } from '@educa/nucleo'
 import { lerAmbienteExemplo } from '../../../tools/ci/compose.ts'
-import { ConfiguracaoInvalida, lerConfiguracao, MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO } from './config.js'
+import { ConfiguracaoInvalida, lerConfiguracao, MOTIVO_AVISOS_SEM_JSON, MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO } from './config.js'
 
 const ambienteValido = {
   API_PORTA: '3000',
@@ -22,6 +22,8 @@ const ambienteValido = {
   LIMITE_INSTANCIAS_API: '2',
   LIMITE_PROXIES_CONFIAVEIS: 'borda',
   ROTAS_SINTETICAS: 'false',
+  VERSAO: 'local',
+  AVISOS_SISTEMA: '[]',
   TELEMETRIA_OTLP_URL: 'http://observabilidade:4318/',
   TELEMETRIA_INTERVALO_MS: '5000',
 }
@@ -41,6 +43,8 @@ describe('lerConfiguracao', () => {
     expect(lerConfiguracao(ambienteValido)).toEqual({
       porta: 3000,
       rotasSinteticas: false,
+      versao: 'local',
+      avisos: [],
       redisFilaUrl: 'redis://redis-fila:6379',
       banco: {
         url: ambienteValido.BANCO_URL,
@@ -131,5 +135,30 @@ describe('lerConfiguracao', () => {
     const emProducao = erroDe({ ...ambienteValido, AMBIENTE: 'producao', ACEITAR_TOKEN_SINTETICO: 'false', ROTAS_SINTETICAS: 'true' })
     expect(emProducao.variaveis).toEqual(['ROTAS_SINTETICAS'])
     expect(emProducao.message).toContain(MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO)
+  })
+
+  it('AVISOS_SISTEMA vira a lista de avisos, e JSON quebrado ou aviso fora do formato não sobe', () => {
+    const aviso = { id: 'manutencao-sabado', texto: 'Manutenção programada no sábado, das 8h às 10h.', publicadoEm: '2026-09-13' }
+    expect(lerConfiguracao({ ...ambienteValido, AVISOS_SISTEMA: JSON.stringify([aviso]) }).avisos).toEqual([aviso])
+
+    const semJson = erroDe({ ...ambienteValido, AVISOS_SISTEMA: '[{"id":' })
+    expect(semJson.variaveis).toEqual(['AVISOS_SISTEMA'])
+    expect(semJson.message).toContain(MOTIVO_AVISOS_SEM_JSON)
+    for (const invalido of [
+      '{}',
+      JSON.stringify([{ ...aviso, publicadoEm: '13/09/2026' }]),
+      JSON.stringify([{ ...aviso, texto: '' }]),
+      JSON.stringify([{ ...aviso, escolaId: '0190f5a0-0000-7000-8000-00000000000a' }]),
+      JSON.stringify(Array.from({ length: 11 }, (_, indice) => ({ ...aviso, id: `aviso-${indice}` }))),
+    ]) {
+      expect(erroDe({ ...ambienteValido, AVISOS_SISTEMA: invalido }).variaveis, invalido).toEqual(['AVISOS_SISTEMA'])
+    }
+  })
+
+  it('VERSAO só aceita um identificador curto, sem espaço nem barra', () => {
+    expect(lerConfiguracao({ ...ambienteValido, VERSAO: '3d4099c' }).versao).toBe('3d4099c')
+    for (const valor of ['', 'v 1', '../etc', 'x'.repeat(65)]) {
+      expect(erroDe({ ...ambienteValido, VERSAO: valor }).variaveis).toEqual(['VERSAO'])
+    }
   })
 })

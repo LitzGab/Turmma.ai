@@ -23,7 +23,9 @@ npm ci
 docker compose up        # Postgres (pgvector), Redis de fila, Redis de cache, storage S3, migrar, borda, 2 APIs, 2 realtimes, 2 despachantes, 2 workers interativos, 2 workers de lote, observabilidade e web
 ```
 
-A web fica em http://127.0.0.1:58080 e mostra o estado da API; a API responde pela borda
+A web fica em http://127.0.0.1:58080: a casca, em pt-BR e responsiva até 360 px, busca
+`GET /v1/sistema/estado` e `/v1/sistema/avisos` (rotas anônimas; os avisos vêm de `AVISOS_SISTEMA`) e
+mostra carregando, vazio, erro e com dado com os componentes de `apps/web/src/componentes/estado/`; a API responde pela borda
 (Caddy, `infra/Caddyfile`) em http://127.0.0.1:53000/saude, e o realtime em
 http://127.0.0.1:53000/socket.io/. A borda balanceia duas instâncias de cada, e
 `docker compose restart api-1` troca uma instância sem derrubar requisição. Antes das
@@ -48,7 +50,7 @@ desenvolvimento.
 | `npm run typecheck` | tipos de todos os pacotes |
 | `npm run lint` | ESLint |
 | `npm run test` | unidade e integração; a integração sobe Postgres, Redis e storage sozinha |
-| `npm run test:e2e` | sobe o compose de teste completo e roda o Playwright, deixando o ambiente de pé |
+| `npm run test:e2e` | mede o teto do bundle da web (size-limit, 150 kB em brotli), sobe o compose de teste completo e roda o Playwright com axe nos projetos `chromebook` (CPU ×4, Fast 3G) e `celular` (360 × 800, toque, CPU ×4, rede móvel lenta), deixando o ambiente de pé |
 | `npm run ci:verificar`, `ci:integracao`, `ci:e2e` | exatamente o que a esteira roda; derrubam o ambiente no fim |
 | `npm run db:gerar` | gera a migration a partir do schema Drizzle (`packages/nucleo/src/db/schema`); revise o SQL antes de versionar |
 | `npm run -s ops:token-sintetico -- --escola <uuid> [--usuario <uuid>] [--validade 1h]` | imprime um token sintético para chamar a API local (`Authorization: Bearer`); não emite com `AMBIENTE=producao` |

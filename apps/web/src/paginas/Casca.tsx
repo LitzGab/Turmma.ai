@@ -1,0 +1,168 @@
+import type { Aviso, ComponenteDoSistema, RespostaEstado } from '@educa/shared'
+import { useQuery, type UseQueryResult } from '@tanstack/react-query'
+import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
+import { consultaAvisos, consultaEstado } from '../api/sistema'
+import { EstadoCarregando, EstadoErro, EstadoVazio } from '../componentes/estado'
+import { formatarData, formatarDataHora, formatarQuantidade } from '../formatar'
+
+const NOME_DO_COMPONENTE: Record<ComponenteDoSistema['nome'], string> = { api: 'API', banco: 'Banco de dados' }
+const NOME_DO_AMBIENTE: Record<RespostaEstado['ambiente'], string> = { local: 'Local', staging: 'Homologação', producao: 'Produção' }
+
+/**
+ * Busca de novo sem cancelar a busca em andamento: em rede lenta, toques repetidos em "Tentar de novo"
+ * reiniciariam a busca a cada toque, e a resposta nunca chegaria.
+ */
+function buscarDeNovo(consulta: UseQueryResult): void {
+  void consulta.refetch({ cancelRefetch: false })
+}
+
+/**
+ * Quando o erro some porque o dado chegou, o botão "Tentar de novo" some junto, e o foco cairia no `body`.
+ * Leva o foco para o título da seção, para quem usa teclado ou leitor de tela continuar de onde estava.
+ */
+function useFocoAoRecuperar(consulta: UseQueryResult, titulo: RefObject<HTMLHeadingElement | null>): void {
+  const estavaComErro = useRef(false)
+  const comErro = consulta.isError
+  useEffect(() => {
+    if (estavaComErro.current && !comErro && (document.activeElement === null || document.activeElement === document.body)) {
+      titulo.current?.focus()
+    }
+    estavaComErro.current = comErro
+  }, [comErro, titulo])
+}
+
+function Secao({ titulo, id, refTitulo, children }: { titulo: string; id: string; refTitulo: RefObject<HTMLHeadingElement | null>; children: ReactNode }) {
+  return (
+    <section aria-labelledby={id} className="flex min-w-0 flex-col gap-3">
+      <h2 id={id} ref={refTitulo} tabIndex={-1} className="text-lg font-semibold text-slate-900">
+        {titulo}
+      </h2>
+      {children}
+    </section>
+  )
+}
+
+function Estado({ estado }: { estado: RespostaEstado }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <p className="text-slate-700">
+        Versão <span className="font-medium break-all text-slate-900">{estado.versao}</span> · Ambiente{' '}
+        <span className="font-medium text-slate-900">{NOME_DO_AMBIENTE[estado.ambiente]}</span>
+      </p>
+      <ul className="mt-3 flex flex-col gap-2">
+        {estado.componentes.map((componente) => (
+          <li key={componente.nome} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <span className="font-medium text-slate-900">{NOME_DO_COMPONENTE[componente.nome]}</span>
+            {/* A situação é texto, não só cor. */}
+            <span className={componente.situacao === 'disponivel' ? 'text-emerald-800' : 'text-red-800'}>
+              {componente.situacao === 'disponivel' ? 'Disponível' : 'Indisponível'}
+            </span>
+            <span className="w-full text-sm text-slate-600">Verificado em {formatarDataHora(componente.verificadoEm)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function Avisos({ itens }: { itens: Aviso[] }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <p className="text-sm text-slate-600">{formatarQuantidade(itens.length, 'aviso', 'avisos')}</p>
+      <ul className="mt-2 flex flex-col gap-3">
+        {itens.map((aviso) => (
+          <li key={aviso.id}>
+            <p className="break-words text-slate-900">{aviso.texto}</p>
+            <p className="text-sm text-slate-600">Publicado em {formatarData(aviso.publicadoEm)}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/**
+ * Os quatro estados de uma consulta. Com dado já na tela, uma falha passageira na rede da escola não o apaga:
+ * o dado fica, com o erro e o "Tentar de novo" acima dele.
+ */
+function ConteudoDaConsulta<T>({
+  consulta,
+  carregando,
+  vazio,
+  comDado,
+}: {
+  consulta: UseQueryResult<T>
+  carregando: string
+  vazio: (dado: T) => ReactNode | null
+  comDado: (dado: T) => ReactNode
+}) {
+  if (consulta.isPending) return <EstadoCarregando rotulo={carregando} />
+  const erro = consulta.isError ? (
+    <EstadoErro erro={consulta.error} tentando={consulta.isFetching} aoTentarDeNovo={() => buscarDeNovo(consulta)} />
+  ) : null
+  if (consulta.data === undefined) return erro
+  return (
+    <>
+      {erro}
+      {vazio(consulta.data) ?? comDado(consulta.data)}
+    </>
+  )
+}
+
+/**
+ * Casca da web do F0: busca o estado do sistema e os avisos na API e mostra os quatro estados de cada um.
+ * Coluna única a partir de 360 px, duas colunas em tela larga (D51).
+ */
+export function Casca() {
+  const estado = useQuery(consultaEstado)
+  const avisos = useQuery(consultaAvisos)
+  const tituloComponentes = useRef<HTMLHeadingElement>(null)
+  const tituloAvisos = useRef<HTMLHeadingElement>(null)
+  useFocoAoRecuperar(estado, tituloComponentes)
+  useFocoAoRecuperar(avisos, tituloAvisos)
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <header className="border-b border-slate-200 bg-white">
+        <p className="mx-auto max-w-5xl px-4 py-3 text-lg font-semibold sm:px-6">Educa.ia</p>
+      </header>
+      <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
+        <h1 className="text-xl font-semibold sm:text-2xl">Estado do sistema</h1>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <Secao titulo="Componentes" id="titulo-componentes" refTitulo={tituloComponentes}>
+            <ConteudoDaConsulta
+              consulta={estado}
+              carregando="Carregando o estado do sistema…"
+              vazio={(dado) =>
+                dado.componentes.length === 0 ? (
+                  <EstadoVazio
+                    titulo="Nenhum componente informado"
+                    descricao="A API respondeu sem a situação dos componentes. Verifique de novo em instantes."
+                    acao={{ rotulo: 'Verificar de novo', aoAcionar: () => buscarDeNovo(estado), emAndamento: estado.isFetching && !estado.isError }}
+                  />
+                ) : null
+              }
+              comDado={(dado) => <Estado estado={dado} />}
+            />
+          </Secao>
+          <Secao titulo="Avisos" id="titulo-avisos" refTitulo={tituloAvisos}>
+            <ConteudoDaConsulta
+              consulta={avisos}
+              carregando="Carregando os avisos…"
+              vazio={(dado) =>
+                dado.itens.length === 0 ? (
+                  <EstadoVazio
+                    titulo="Nenhum aviso por enquanto"
+                    descricao="Manutenção e atualização do sistema são avisadas aqui. Verifique de novo quando quiser."
+                    acao={{ rotulo: 'Verificar de novo', aoAcionar: () => buscarDeNovo(avisos), emAndamento: avisos.isFetching && !avisos.isError }}
+                  />
+                ) : null
+              }
+              comDado={(dado) => <Avisos itens={dado.itens} />}
+            />
+          </Secao>
+        </div>
+      </main>
+    </div>
+  )
+}

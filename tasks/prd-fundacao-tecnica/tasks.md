@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 13 de 16 concluídas
+**Status:** 14 de 16 concluídas
 
 ## Lista
 
@@ -80,11 +80,11 @@
   - [x] 13.2 Entradas em `docs/runbook.md` e `npm run ensaio:alertas`
   - [x] 13.3 Testes: ensaio dispara, condição curta não dispara, alerta sem runbook reprova
 
-- [ ] **14.0 — Casca da web com os quatro estados, no limite do Chromebook e do celular**
-  - [ ] 14.1 `GET /v1/sistema/estado` e `/avisos`
-  - [ ] 14.2 Componentes `Estado*`, casca responsiva mobile-first com TanStack Query e Tailwind, pt-BR
-  - [ ] 14.3 size-limit, axe (com `target-size`) e projetos Playwright `chromebook` e `celular`
-  - [ ] 14.4 Testes: quatro estados, teclado, toque, Chromebook e celular em 5 s, sem rolagem horizontal, fixtures que violam axe, largura e teto
+- [x] **14.0 — Casca da web com os quatro estados, no limite do Chromebook e do celular**
+  - [x] 14.1 `GET /v1/sistema/estado` e `/avisos`
+  - [x] 14.2 Componentes `Estado*`, casca responsiva mobile-first com TanStack Query e Tailwind, pt-BR
+  - [x] 14.3 size-limit, axe (com `target-size`) e projetos Playwright `chromebook` e `celular`
+  - [x] 14.4 Testes: quatro estados, teclado, toque, Chromebook e celular em 5 s, sem rolagem horizontal, fixtures que violam axe, largura e teto
 
 - [ ] **15.0 — Cenário "justiça entre escolas" passa local**
   - [ ] 15.1 Processador sintético em sandbox e `infra/compose.carga.yml` com CPU fixa

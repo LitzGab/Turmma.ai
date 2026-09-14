@@ -229,7 +229,7 @@ describe('configuração das guardas', () => {
   it.each([
     'apps/api/src/main.ts',
     'apps/api/src/sistema/saude.controller.ts',
-    'apps/web/src/Saude.tsx',
+    'apps/web/src/paginas/Casca.tsx',
     'packages/nucleo/src/log/logger.ts',
     'packages/shared/src/index.ts',
     'tools/ci/verificar.ts',

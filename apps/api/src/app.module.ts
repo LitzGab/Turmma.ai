@@ -27,7 +27,12 @@ export class AppModule {
         BancoModule.com(config.banco),
         LimiteModule.com(config.limite),
         UsoModule.com(config.redisFilaUrl),
-        SistemaModule.com({ rotasSinteticas: config.rotasSinteticas }),
+        SistemaModule.com({
+          rotasSinteticas: config.rotasSinteticas,
+          versao: config.versao,
+          ambiente: config.identidade.ambiente,
+          avisos: config.avisos,
+        }),
       ],
       // A prontidão é da instância, e a drenagem fica no módulo raiz: o Nest encerra o módulo raiz
       // por último, e o prazo da drenagem só é desarmado depois de o pool do banco fechar.

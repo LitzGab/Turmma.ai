@@ -1,3 +1,4 @@
+import { AMBIENTES_DO_SISTEMA } from '@educa/shared'
 import { z } from 'zod'
 
 /**
@@ -31,7 +32,8 @@ export function validarAmbiente<Esquema extends z.ZodType>(
   throw new ConfiguracaoInvalida(variaveis, motivos)
 }
 
-export const AMBIENTES = ['local', 'staging', 'producao'] as const
+/** Um só conjunto: a casca recebe o ambiente pelo contrato de `packages/shared`. */
+export const AMBIENTES = AMBIENTES_DO_SISTEMA
 export type Ambiente = (typeof AMBIENTES)[number]
 
 /** Emissor do token de `npm run ops:token-sintetico`. O F1 acrescenta o emissor do login real. */

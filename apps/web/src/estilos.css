@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+
+/*
+ * Sem identidade visual ainda (decisão em aberto): fonte do sistema, cores neutras e nenhuma animação,
+ * para caber no computador fraco da escola (regra 50, item 1).
+ *
+ * A paleta padrão do Tailwind 4 é em oklch(), que só existe a partir do Chrome 111 e do Safari 16.4: num
+ * Chrome 109 de laboratório com Windows 7 ou num Chromebook sem atualização, o botão ficaria branco sobre
+ * branco e sem foco visível. Por isso a paleta é zerada e só as cores usadas voltam, em hex. Classe com cor
+ * fora desta lista não gera CSS nenhum, e o e2e reprova oklch() no CSS servido.
+ */
+@theme {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-slate-50: #f8fafc;
+  --color-slate-200: #e2e8f0;
+  --color-slate-400: #94a3b8;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-900: #0f172a;
+  --color-blue-700: #1d4ed8;
+  --color-blue-900: #1e3a8a;
+  --color-red-50: #fef2f2;
+  --color-red-300: #fca5a5;
+  --color-red-800: #991b1b;
+  --color-red-900: #7f1d1d;
+  --color-emerald-800: #065f46;
+}
+
+@layer base {
+  /* Foco sempre visível, em tudo que recebe foco pelo teclado (regra 50, item 11). */
+  :focus-visible {
+    outline: 3px solid var(--color-blue-700);
+    outline-offset: 2px;
+  }
+}

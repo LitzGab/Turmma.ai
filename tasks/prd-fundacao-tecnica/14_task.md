@@ -35,10 +35,10 @@ Revista em 13/09/2026 (D51): antes desta revisão, a tarefa só olhava o Chromeb
 
 ## Subtarefas
 
-- [ ] 14.1 — `GET /v1/sistema/estado` (`{ versao, ambiente, componentes[] }`) e
+- [x] 14.1 — `GET /v1/sistema/estado` (`{ versao, ambiente, componentes[] }`) e
   `GET /v1/sistema/avisos` (`{ itens[] }`, lido de configuração). As duas são
   `@RotaAnonima` e usam DTO zod em `packages/shared`
-- [ ] 14.2 — Em `apps/web/src/componentes/estado/`: `EstadoCarregando`, `EstadoVazio` (convite
+- [x] 14.2 — Em `apps/web/src/componentes/estado/`: `EstadoCarregando`, `EstadoVazio` (convite
   para agir) e `EstadoErro` (mensagem do catálogo pelo `codigo`, botão "Tentar de novo",
   nunca o número do status).
   - A casca usa TanStack Query e Tailwind.
@@ -49,7 +49,7 @@ Revista em 13/09/2026 (D51): antes desta revisão, a tarefa só olhava o Chromeb
     que dependa de hover.
   - Datas e números passam por `Intl` pt-BR.
   - A remoção da página de fumaça da 1.0 é ajustada.
-- [ ] 14.3 — size-limit com teto de 150 kB em brotli no JS inicial, e `@axe-core/playwright`
+- [x] 14.3 — size-limit com teto de 150 kB em brotli no JS inicial, e `@axe-core/playwright`
   com as tags `wcag2a`, `wcag2aa`, `wcag21aa`, `wcag22aa`, reprovando `serious` e `critical`
   (inclui `target-size`). Dois projetos Playwright:
   - `chromebook`: CPU ×4 e Fast 3G via CDP
@@ -57,7 +57,7 @@ Revista em 13/09/2026 (D51): antes desta revisão, a tarefa só olhava o Chromeb
     no Chromium
 
   Todo `e2e/*.spec.ts` de tela roda nos dois projetos. Tudo entra no `ci:e2e`
-- [ ] 14.4 — Testes
+- [x] 14.4 — Testes
 
 ## Arquivos previstos
 
@@ -88,12 +88,12 @@ Sem permissão nem isolamento: a casca não mostra dado de escola.
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
-- [ ] E2E verde (se tocou tela)
-- [ ] Vetos aprovados (se aplicáveis)
-- [ ] Revisão aprovada
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
+- [x] E2E verde (se tocou tela)
+- [x] Vetos aprovados (se aplicáveis)
+- [x] Revisão aprovada
 - [ ] Commit feito, só com os arquivos desta tarefa
 
 ## Fora do escopo desta tarefa
@@ -101,3 +101,16 @@ Sem permissão nem isolamento: a casca não mostra dado de escola.
 Identidade visual, layout por papel, seletor de escola e login (F1, F2). Feed de agentes e
 chat (F7, F11). PWA instalável, notificação push e app nativo (fora do produto, D51).
 Navegador além do Chromium no projeto `celular`: a esteira começa só com o Chromium.
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-13 23:50:01 | 2026-09-13 23:53:31 | `frontend-reviewer` | 1 | AJUSTES NECESSÁRIOS | a908c2753120f36dc |
+| 2026-09-13 23:50:14 | 2026-09-13 23:53:53 | `test-engineer` | 1 | REPROVADO | a99ea44bd8d87d29e |
+| 2026-09-14 00:29:14 | 2026-09-14 00:31:45 | `frontend-reviewer` | 2 | APROVADO | a7031fdc516a27554 |
+| 2026-09-14 00:29:37 | 2026-09-14 00:31:46 | `test-engineer` | 2 | APROVADO | a3456dfc172549c1e |

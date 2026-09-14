@@ -101,6 +101,19 @@ describe('scripts ci:* reais', () => {
     expect(indiceDe(vermelho.chamadas, ' down ')).toBeGreaterThan(indiceDe(vermelho.chamadas, 'npx playwright test'))
   })
 
+  it('ci:e2e mede o teto do bundle depois do build da web e antes do Playwright, e sai vermelho quando ele estoura', () => {
+    const verde = rodarScript('e2e.ts', null)
+    const build = indiceDe(verde.chamadas, 'npm run build -w @educa/web')
+    const teto = indiceDe(verde.chamadas, 'npx size-limit')
+    expect(build).toBeGreaterThanOrEqual(0)
+    expect(teto).toBeGreaterThan(build)
+    expect(indiceDe(verde.chamadas, 'npx playwright test')).toBeGreaterThan(teto)
+
+    const vermelho = rodarScript('e2e.ts', 'npx size-limit')
+    expect(vermelho.codigo).not.toBe(0)
+    expect(indiceDe(vermelho.chamadas, 'npx playwright test')).toBe(-1)
+  })
+
   it('test:e2e mantém o ambiente de pé para o desenvolvedor, mas não esconde a falha', () => {
     const vermelho = rodarScript('e2e.ts', 'npx playwright test', ['--manter-ambiente'])
     expect(vermelho.codigo).not.toBe(0)

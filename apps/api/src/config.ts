@@ -12,11 +12,30 @@ import {
   type ConfiguracaoLimite,
   type ConfiguracaoTelemetria,
 } from '@educa/nucleo'
+import { esquemaAviso, MAXIMO_DE_AVISOS, type Aviso } from '@educa/shared'
 import { z } from 'zod'
 
 export { ConfiguracaoInvalida }
 
 const inteiroPositivo = z.coerce.number().int().positive()
+
+/**
+ * `AVISOS_SISTEMA` é um JSON com a lista de avisos que a casca mostra, `[]` quando não há nenhum. JSON
+ * quebrado ou aviso fora do formato reprova o boot, como qualquer outra variável.
+ */
+export const MOTIVO_AVISOS_SEM_JSON = 'AVISOS_SISTEMA precisa ser um JSON com a lista de avisos, [] quando não há nenhum'
+
+const avisosEmJson = z
+  .string()
+  .transform((texto, contexto) => {
+    try {
+      return JSON.parse(texto) as unknown
+    } catch {
+      contexto.addIssue({ code: 'custom', message: MOTIVO_AVISOS_SEM_JSON })
+      return z.NEVER
+    }
+  })
+  .pipe(z.array(esquemaAviso).max(MAXIMO_DE_AVISOS))
 
 export const MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO =
   'ROTAS_SINTETICAS=true é proibido com AMBIENTE=producao: rota de teste não existe em produção'
@@ -32,6 +51,9 @@ const esquemaAmbiente = z
     // Validado pela identidade; aqui só é lido para a trava de produção, sem apontar a falta duas vezes.
     AMBIENTE: z.string().optional(),
     ROTAS_SINTETICAS: z.enum(['true', 'false']),
+    // Versão do código que a casca mostra: `local` na máquina, o commit no staging.
+    VERSAO: z.string().regex(/^[A-Za-z0-9._-]{1,64}$/),
+    AVISOS_SISTEMA: avisosEmJson,
     // Só para o contador de uso por escola (D30): a API não depende dele para atender.
     REDIS_FILA_URL: z.string().regex(/^redis:\/\/[^/\s]+(\/\d+)?$/),
   })
@@ -45,6 +67,10 @@ export interface ConfiguracaoApi {
   porta: number
   /** Liga as rotas que só existem para teste e carga. */
   rotasSinteticas: boolean
+  /** Versão do código, mostrada em `GET /v1/sistema/estado`. */
+  versao: string
+  /** Avisos do sistema, lidos da configuração e servidos em `GET /v1/sistema/avisos`. */
+  avisos: readonly Aviso[]
   /** Redis de fila, onde a API marca o uso de cada escola sem esperar resposta. */
   redisFilaUrl: string
   banco: ConfiguracaoBanco
@@ -86,6 +112,8 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   return {
     porta: api.valor.API_PORTA,
     rotasSinteticas: api.valor.ROTAS_SINTETICAS === 'true',
+    versao: api.valor.VERSAO,
+    avisos: api.valor.AVISOS_SISTEMA,
     redisFilaUrl: api.valor.REDIS_FILA_URL,
     banco: banco.valor,
     identidade: identidade.valor,

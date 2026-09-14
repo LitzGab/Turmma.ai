@@ -13,6 +13,9 @@ await encerrarCom(
         comando: 'npx',
         argumentos: ['playwright', 'install', ...(naEsteira ? ['--with-deps'] : []), 'chromium'],
       },
+      // O teto do bundle antes de subir o compose: é barato e reprova cedo (RF14).
+      { nome: 'build da web', comando: 'npm', argumentos: ['run', 'build', '-w', '@educa/web'] },
+      { nome: 'teto do bundle da web', comando: 'npx', argumentos: ['size-limit'] },
       etapaCompose('subir o ambiente completo', 'up', '--detach', '--build', '--wait'),
       { nome: 'testes e2e', comando: 'npx', argumentos: ['playwright', 'test'] },
     ],

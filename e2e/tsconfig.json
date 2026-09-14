@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    // Os specs rodam código no navegador (`page.evaluate`): o DOM só existe aqui, não nas ferramentas de Node.
+    "lib": ["es2023", "dom"]
+  },
+  "include": ["."],
+  "exclude": []
+}

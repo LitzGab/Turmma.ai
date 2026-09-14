@@ -7,6 +7,6 @@
     "allowJs": true,
     "types": ["node"]
   },
-  "include": ["tools", "e2e", "vitest.config.ts", "playwright.config.ts"],
+  "include": ["tools", "vitest.config.ts", "playwright.config.ts"],
   "exclude": ["tools/guardas/__fixtures__"]
 }
