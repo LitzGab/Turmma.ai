@@ -86,3 +86,9 @@ desabilitar teste para "destravar a tarefa". Teste vermelho é informação, nã
 
 `npm run typecheck`, `npm run test` e `npm run lint` limpos. Tocou tela, também
 `npm run test:e2e`.
+
+Mexeu em infra, também `npm run test:infra` (D52): a tarefa com `infra-guardian`
+obrigatório, e a que toca `infra/`, Dockerfile, `tools/testes/`, `tools/ci/compose.ts`,
+métricas, saúde, prontidão ou borda. São os testes que esperam o relógio real (alerta,
+sonda, exportação de métricas), uns 16 min. Fora do portão da tarefa eles não somem: a
+esteira os roda em todo push no `main`, e vermelho lá segura a próxima tarefa.

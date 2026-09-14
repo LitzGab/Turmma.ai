@@ -398,6 +398,15 @@ nativo. Motivo: o aluno usa o tutor fora da escola quando a escola liga o modo c
 professor e coordenação abrem o sistema fora do colégio, e o portal da família será usado
 quase só no celular; adaptar cada tela depois custaria refazer o frontend inteiro.
 
+**D52 — Os testes de integração da infra saem do portão de toda tarefa e ficam na esteira.**
+Os `*.int.test.ts` de `infra/` (borda, métricas, alertas, jobs no compose inteiro) formam o
+projeto `infra` do Vitest, fora do `npm run test`. O portão da tarefa roda
+`npm run test:infra` só quando ela mexe em infra (regra 40); a esteira roda os três
+projetos em todo push no `main`, com um job `infra` próprio. Motivo: esses testes esperam o
+relógio real (o `for:` de 5 min do alerta, a sonda da borda, a exportação de métricas) e
+somam uns 16 min dos ~21 da integração; no F1 em diante, toda tarefa pagaria isso sem tocar
+em infra. A esteira continua segurando o erro antes do staging (D31).
+
 ---
 
 ## Conflitos já resolvidos

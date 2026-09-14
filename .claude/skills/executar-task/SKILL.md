@@ -48,7 +48,12 @@ npm run typecheck   # zero erro
 npm run test        # 100% verde
 npm run lint
 npm run test:e2e    # se tocou tela
+npm run test:infra  # se mexeu em infra (regra 40, D52)
 ```
+
+"Mexeu em infra" é a tarefa com `infra-guardian` obrigatório, ou a que toca `infra/`,
+Dockerfile, `tools/testes/`, `tools/ci/compose.ts`, métricas, saúde, prontidão ou borda. Na
+dúvida, rode.
 
 Falhou algum, conserte. Não prossiga com teste vermelho, não desabilite teste, não use
 `.skip`. Teste vermelho é informação.

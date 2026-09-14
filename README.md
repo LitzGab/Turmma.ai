@@ -50,8 +50,9 @@ desenvolvimento.
 | `npm run typecheck` | tipos de todos os pacotes |
 | `npm run lint` | ESLint |
 | `npm run test` | unidade e integração; a integração sobe Postgres, Redis e storage sozinha |
+| `npm run test:infra` | integração da borda, métricas, alertas e jobs contra o compose inteiro (uns 16 min); fica fora do `test` e roda quando a tarefa mexe em infra (D52) |
 | `npm run test:e2e` | mede o teto do bundle da web (size-limit, 150 kB em brotli), sobe o compose de teste completo e roda o Playwright com axe nos projetos `chromebook` (CPU ×4, Fast 3G) e `celular` (360 × 800, toque, CPU ×4, rede móvel lenta), deixando o ambiente de pé |
-| `npm run ci:verificar`, `ci:integracao`, `ci:e2e` | exatamente o que a esteira roda; derrubam o ambiente no fim |
+| `npm run ci:verificar`, `ci:integracao`, `ci:infra`, `ci:e2e` | exatamente o que a esteira roda; derrubam o ambiente no fim |
 | `npm run db:gerar` | gera a migration a partir do schema Drizzle (`packages/nucleo/src/db/schema`); revise o SQL antes de versionar |
 | `npm run -s ops:token-sintetico -- --escola <uuid> [--usuario <uuid>] [--validade 1h]` | imprime um token sintético para chamar a API local (`Authorization: Bearer`); não emite com `AMBIENTE=producao` |
 

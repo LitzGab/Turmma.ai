@@ -53,8 +53,8 @@ describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
     }
   })
 
-  it('tem os jobs verificar, integracao e e2e, e cada um só chama npm ci e o seu npm run ci:*', () => {
-    expect(Object.keys(workflow.jobs).sort()).toEqual(['e2e', 'integracao', 'verificar'])
+  it('tem os jobs verificar, integracao, infra e e2e, e cada um só chama npm ci e o seu npm run ci:*', () => {
+    expect(Object.keys(workflow.jobs).sort()).toEqual(['e2e', 'infra', 'integracao', 'verificar'])
     for (const [nome, job] of Object.entries(workflow.jobs)) {
       const comandos = job.steps.flatMap((passo) => (passo.run === undefined ? [] : [passo.run.trim()]))
       expect(comandos).toEqual(['npm ci', `npm run ci:${nome}`])

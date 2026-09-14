@@ -69,6 +69,7 @@ a seis meses é alguém sem o contexto de hoje.
 
 ```bash
 npm run typecheck && npm run test && npm run lint
+npm run test:infra   # se a tarefa mexeu em infra (regra 40, D52)
 ```
 
 ## Veredito
@@ -79,7 +80,7 @@ Escopo: respeitado | invadiu tarefa futura | incompleto
 Aderência à techspec: ...
 Regras violadas: <lista ou nenhuma>
 Vetos: ...
-Portão: typecheck / test / lint / e2e
+Portão: typecheck / test / lint / e2e / infra
 Problemas encontrados: <arquivo, linha, o quê>
 Correções exigidas: <lista objetiva>
 ```

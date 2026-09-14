@@ -79,15 +79,32 @@ describe('scripts ci:* reais', () => {
     },
   )
 
-  it('ci:integracao roda a integração, sai vermelho quando ela falha e ainda derruba o compose', () => {
-    const verde = rodarScript('integracao.ts', null)
+  it.each([
+    ['integracao.ts', 'npm run test:integracao'],
+    ['infra.ts', 'npm run test:infra'],
+  ])('%s roda os seus testes, sai vermelho quando eles falham e ainda derruba o compose', (script, teste) => {
+    const verde = rodarScript(script, null)
     expect(verde.codigo).toBe(0)
-    expect(indiceDe(verde.chamadas, 'npm run test:integracao')).toBeGreaterThan(indiceDe(verde.chamadas, ' up '))
-    expect(indiceDe(verde.chamadas, ' down ')).toBeGreaterThan(indiceDe(verde.chamadas, 'npm run test:integracao'))
+    expect(indiceDe(verde.chamadas, teste)).toBeGreaterThan(indiceDe(verde.chamadas, ' up '))
+    expect(indiceDe(verde.chamadas, ' down ')).toBeGreaterThan(indiceDe(verde.chamadas, teste))
 
-    const vermelho = rodarScript('integracao.ts', 'npm run test:integracao')
+    const vermelho = rodarScript(script, teste)
     expect(vermelho.codigo).not.toBe(0)
-    expect(indiceDe(vermelho.chamadas, ' down ')).toBeGreaterThan(indiceDe(vermelho.chamadas, 'npm run test:integracao'))
+    expect(indiceDe(vermelho.chamadas, ' down ')).toBeGreaterThan(indiceDe(vermelho.chamadas, teste))
+  })
+
+  it('a esteira roda todo projeto do Vitest, e o `npm run test` do portão da tarefa só deixa de fora o de infra (D52)', async () => {
+    const { default: configuracao } = await import('../../vitest.config.ts')
+    const projetos = (configuracao.test?.projects ?? []).map((projeto) => (typeof projeto === 'object' && 'test' in projeto ? projeto.test?.name : undefined))
+    expect(projetos).toEqual(['unidade', 'integracao', 'infra'])
+
+    const scripts = (JSON.parse(readFileSync(join(raizRepositorio, 'package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts
+    const chamadasDaEsteira = ['verificar.ts', 'integracao.ts', 'infra.ts'].flatMap((script) => rodarScript(script, null).chamadas)
+    for (const projeto of projetos) {
+      expect(scripts[`test:${String(projeto)}`]).toBe(`vitest run --project ${String(projeto)}`)
+      expect(chamadasDaEsteira).toContain(`npm run test:${String(projeto)}`)
+    }
+    expect(scripts['test']).toBe('vitest run --project unidade --project integracao')
   })
 
   it('ci:e2e roda o Playwright, sai vermelho quando ele falha e ainda derruba o compose', () => {
@@ -120,7 +137,7 @@ describe('scripts ci:* reais', () => {
     expect(indiceDe(vermelho.chamadas, ' down ')).toBe(-1)
   })
 
-  it.each(['integracao.ts', 'e2e.ts'])('todo compose de %s usa o projeto de teste e só os arquivos de ambiente versionados', (script) => {
+  it.each(['integracao.ts', 'infra.ts', 'e2e.ts'])('todo compose de %s usa o projeto de teste e só os arquivos de ambiente versionados', (script) => {
     const { chamadas } = rodarScript(script, null)
     const composes = chamadas.filter((chamada) => chamada.startsWith('docker compose'))
     expect(composes.length).toBeGreaterThan(0)

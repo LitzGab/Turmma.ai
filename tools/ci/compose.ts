@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseEnv } from 'node:util'
-import { raizRepositorio, type Etapa } from './executar.ts'
+import { executarEtapas, raizRepositorio, type Etapa } from './executar.ts'
 
 /**
  * Testes e esteira sobem um projeto compose próprio (`educa-teste`), com os valores de
@@ -24,6 +24,23 @@ export const SERVICOS_INFRA = ['postgres', 'redis-fila', 'redis-cache', 'storage
 
 export function etapaCompose(nome: string, ...argumentos: string[]): Etapa {
   return { nome, comando: 'docker', argumentos: [...ARGUMENTOS_COMPOSE, ...argumentos] }
+}
+
+/**
+ * Sobe Postgres, Redis e storage, roda o `npm run <script>` e derruba o ambiente, com os logs dos serviços
+ * antes quando falha. É o corpo de `ci:integracao` e `ci:infra`.
+ */
+export function executarTestesComInfra(nome: string, script: string): Promise<number> {
+  return executarEtapas(
+    [
+      etapaCompose('subir Postgres, Redis e storage', 'up', '--detach', '--wait', ...SERVICOS_INFRA),
+      { nome, comando: 'npm', argumentos: ['run', script] },
+    ],
+    (codigo) => [
+      ...(codigo === 0 ? [] : [etapaCompose('logs dos serviços', 'logs', '--no-color', '--tail', '200')]),
+      etapaCompose('derrubar o ambiente', 'down', '--volumes', '--remove-orphans'),
+    ],
+  )
 }
 
 function lerArquivoAmbiente(caminho: string): Record<string, string> {
