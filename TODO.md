@@ -49,6 +49,35 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       hospedada por nós)
 - [ ] Levantar com a escola piloto: horário letivo real, banda da rede, se há proxy ou
       filtro de conteúdo que bloqueie WebSocket
+- [ ] Antes do piloto: canal e texto para avisar as escolas de incidente
+      (`docs/runbook.md:198`, pendência da validação do F0)
+
+## Processo e dívida do F0
+
+Pendências herdadas da validação do F0 (`tasks/prd-fundacao-tecnica/validacao.md`, seção 6
+das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e são lidos pelo
+`/criar-techspec` dela.
+
+- [ ] **Antes da primeira tarefa do F1:** a conferência da esteira em
+      `.claude/skills/executar-task/SKILL.md` só segue com `conclusion == success` **e**
+      `headSha == $(git rev-parse origin/main)`; `cancelled`, `skipped`, execução ainda não
+      registrada ou nenhuma execução param e reportam (menor 1 da rodada 2)
+- [ ] **Antes da primeira tarefa do F1:** rodar `npm ci` (ou falhar com "rode npm ci")
+      quando o `package-lock.json` for mais novo que `node_modules/.package-lock.json`, no
+      passo 4 de `executar-task` e no início do portão do `.claude/agents/validador.md`
+      (menor 4 da rodada 2)
+- [ ] Hook que recusa commit `(tarefa N.0)` quando a última execução da esteira no
+      `origin/main` não for `success`, como o hook das revisões, com saída clara sem `gh`
+      (menor 3 da rodada 2)
+- [ ] `tasks/prd-fundacao-tecnica/prd.md:94`: trocar a borda para "a próxima tarefa não
+      commita antes de a esteira do commit anterior ficar verde" (menor 2 da rodada 2)
+- [ ] `docs/infra.md:211`: apontar a janela do lote não urgente para a Tech Spec do F0,
+      seção 5, passo 2, com o padrão segunda a sexta, 7h às 18h, configurável por escola
+      (menor 5 da rodada 2)
+- [ ] Decidir os achados da auditoria da 16.0 fora do escopo: renovação da vaga durante o
+      recuo, devolução do ponto no limitador, despachante serial (`16_task.md`)
+- [ ] Guarda de `npm audit` provada com fixture real de dependência vulnerável, e não só com
+      o `npm` imitado (`tools/ci/scripts.test.ts:75`)
 
 ## Regulação educacional
 

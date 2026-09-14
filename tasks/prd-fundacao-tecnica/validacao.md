@@ -1,5 +1,173 @@
 # Validação — fundacao-tecnica (F0)
 
+## Rodada 2 — 14/09/2026
+
+**Escopo:** funcionalidade completa (revalidação depois da correção das ressalvas da rodada 1)
+**Commit validado:** `dfc5158387db00ef902c183fb00442e4a7850a34`
+**Veredito: APROVADA**
+
+Árvore limpa no início e no fim (conferida depois de cada mutação). Tudo abaixo foi executado nesta
+rodada, neste checkout, no commit validado.
+
+Entre `6cda14e` (rodada 1) e `dfc5158`, o único arquivo de código ou infra alterado é
+`infra/compose.yml` (comentário das linhas 200-202). O resto do commit é doc, skill, regra 40 e textos
+do PRD e das tarefas. Por isso o portão inteiro foi rodado de novo, as provas de mutação desta rodada
+miraram RF que a rodada 1 não mutou (RF6 e o isolamento do realtime), e o cenário de carga não foi
+repetido: o código que ele exercita é o mesmo que passou na rodada 1.
+
+### 0. As ressalvas da rodada 1
+
+| Ressalva da rodada 1 | Situação | Evidência |
+|---|---|---|
+| Maior 1: `docs/infra.md` 5.3 descrevia como aberto o limitador por escola | **resolvida** | `docs/infra.md:195-216` descreve o desenho implementado. Conferido contra o código: `job_registro` na transação (`job-registro.repository.ts:63-76`), `FOR UPDATE SKIP LOCKED` e rodízio (`despachante.ts:146-153`), ZSET `vaga:{fila}:{escola}` em `vaga.lua`, validade 60 s e renovação 15 s (`vagas-por-escola.ts:7,9`, `executor.ts:219`), `pg_notify` ao liberar (`job-registro.repository.ts:142`), padrões 5/5/2 e pools 50/30/10 (`.env.example:83-85,100-102`), flag do controle negativo (`.env.example:89`). Nenhuma frase contradiz o código |
+| Maior 2: tarefas commitadas sem a esteira do commit anterior verde, e push em grupo | **resolvida no processo** | `.claude/skills/executar-task/SKILL.md:110-117` (confere `gh run list` antes do commit; vermelha não commita) e `:128-130` (push logo depois do commit); `.claude/skills/executar-tasks/SKILL.md:61-62` (commit sem push é falha), `:65-71` (espera a esteira do último commit); `.claude/rules/40-testes.md:96-98`. O próprio `dfc5158` foi enviado sozinho e tem execução própria (run 34878392405). Três lacunas pequenas ficam como menores 1 a 3 |
+| Menor: `ROADMAP.md` citava MinIO | resolvida | `ROADMAP.md:46` com SeaweedFS |
+| Menor: comentário do compose contradizia a D49 | resolvida | `infra/compose.yml:200-202` |
+| Menor: perguntas em aberto do PRD | resolvida | `prd.md:120-131`; cada valor conferido: 120/30.000/3.000 (`.env.example:53-55`), vagas 5/5/2, 150 kB (`.size-limit.json:5`), margem de 500 ms (`infra/k6/justica-entre-escolas.js:31`), seguro em memória (Tech Spec seção 5) |
+| Menor: título da 7.0 com a promessa anterior à D49 | resolvida | `tasks.md:44`, `7_task.md:3-4` |
+| Menor: `techspec.md:4` em "rascunho" | aberta, por construção | passo 3 do fechamento do `/validar` |
+| Menor: guarda de `npm audit` só com imitação do comando | aberta | pendência herdada, destino `TODO.md` no fechamento |
+| Menor: RF15 "depois do cenário de carga" provado com jobs no compose de teste | aberta | continua como menor; o comportamento está provado |
+| Menor: `npm run test:e2e` deixa `educa-teste` de pé | aberta, só registro | confirmado de novo nesta rodada |
+| Menor: `docs/runbook.md:198` "a definir antes do piloto" | aberta | já tem destino |
+
+### 1. RF a RF
+
+O código dos RF é o mesmo da rodada 1. A tabela confirma cada um com a execução desta rodada; o
+detalhe de código e teste por RF está na seção 1 da rodada 1, abaixo, e continua válido linha a linha.
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF1 | ATENDIDO | `compose.yaml`, `infra/compose.yml` | `tools/ci/compose.int.test.ts`, `tools/ci/ambiente.test.ts` | `npm run test:e2e` subiu o compose inteiro com `--build` e passou |
+| RF2 | ATENDIDO | `apps/*/src/main.ts`, `packages/nucleo/src/limite/limitador.ts` | `infra/test/borda.int.test.ts`, `apps/api/test/limite.int.test.ts` | verdes em `test:infra` e `test` |
+| RF3 | ATENDIDO | `apps/realtime/src/sistema.gateway.ts:39`, `autenticacao-do-handshake.ts:54-70` | `apps/realtime/test/sistema.int.test.ts` ("clientes da mesma escola em instâncias diferentes…", "isolamento: cliente da escola B não entra na sala da A…") | mutações 2 e 3 |
+| RF4 | ATENDIDO | `apps/despachante/src/despachante.ts`, `infra/compose.yml` (`FILAS`) | `apps/despachante/test/vagas.int.test.ts`, `infra/test/jobs.int.test.ts` | |
+| RF5 | ATENDIDO | `packages/nucleo/src/fila/vaga.lua`, `vagas-por-escola.ts` | `vagas.int.test.ts` | mutado na rodada 1 |
+| RF6 | ATENDIDO | `apps/despachante/src/despachante.ts:160`, `janela-letiva.ts` | `apps/despachante/test/janela.int.test.ts` ("não urgente criado numa terça às 10h fica aguardando…", "…sábado sai na hora") | mutação 1 |
+| RF7 | ATENDIDO | `apps/worker/src/executor.ts:224`, `publicacao.ts` | `infra/test/jobs.int.test.ts`, `apps/worker/test/execucao.int.test.ts`, `reexecucao.int.test.ts` | mutado na rodada 1 |
+| RF8 | ATENDIDO | `packages/nucleo/src/limite/limitador.ts:185-197`, `chaves.ts` | `apps/api/test/limite.int.test.ts` ("caminho feliz: 400 usuários da escola C pelo mesmo IP…", "um usuário acima do próprio limite recebe 429…") | |
+| RF9 | ATENDIDO | `packages/nucleo/src/contexto/contexto.ts`, `executor.ts` | `infra/test/jobs.int.test.ts` ("o mesmo requisicaoId aparece no log da API, de um despachante e de um worker…") | |
+| RF10 | ATENDIDO | `packages/nucleo/src/erro/filtro-global.ts`, `mapear-erro-postgres.ts` | `apps/api/test/erro.int.test.ts` | |
+| RF11 | ATENDIDO | `tools/guardas/*`, `tools/ci/etapas-de-guarda.ts` | `tools/guardas/guardas.test.ts`, `gitleaks.int.test.ts`, `tools/ci/scripts.test.ts` | `npm audit` segue provado por imitação (menor herdado) |
+| RF12 | ATENDIDO | `.github/workflows/ci.yml` | `tools/ci/esteira.test.ts`, `executar.test.ts`; run 34878392405 em `dfc5158` com os quatro jobs `success` | o uso passou a ser exigido por skill e regra (seção 0) |
+| RF13 | ATENDIDO | `apps/web/src/paginas/Casca.tsx`, `componentes/estado/*` | `e2e/casca.spec.ts` em `chromebook` e `celular` | 32 passaram |
+| RF14 | ATENDIDO | `.size-limit.json`, `e2e/__fixtures__/verificacoes.ts` | `e2e/guardas.spec.ts`, `tools/ci/tamanho-web.test.ts` | bundle 89,67 kB de 150 kB |
+| RF15 | ATENDIDO | `packages/nucleo/src/telemetria/metricas.ts`, `infra/grafana/paineis/fundacao.json` | `infra/test/metricas.int.test.ts`, `infra/test/painel.test.ts` | menor herdado sobre o "depois do cenário de carga" |
+| RF16 | ATENDIDO | `infra/grafana/alertas/*.yaml`, `docs/runbook.md` | `infra/test/alertas.int.test.ts` (o ensaio levou as três regras a `firing` e de volta a `inactive` nesta rodada), `tools/guardas/alerta-tem-runbook.test.ts` | |
+| RF17 | ATENDIDO | `packages/nucleo/src/uso/*`, `apps/worker/src/processadores/consolidar-uso.ts` | `apps/api/test/ops-uso.int.test.ts`, `apps/worker/test/uso.int.test.ts` | |
+| RF18 | ATENDIDO | `infra/k6/justica-entre-escolas.js`, `infra/scripts/carga.ts`, `conferir-carga.ts` | `infra/test/carga.test.ts`, `infra/test/conferir-carga.int.test.ts` verdes; execução manual da rodada 1 | não repetida: código idêntico ao da rodada 1 |
+
+Provas de mutação (cada arquivo restaurado com `git checkout --`; `git status` limpo depois de cada uma):
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF6 | `apps/despachante/src/despachante.ts:160`: `segurarNaoUrgentes = fila === FILA_QUE_SEGURA_NAO_URGENTE && estaNaJanela(...)` → `false` | `apps/despachante/test/janela.int.test.ts` "caminho feliz: não urgente criado numa terça às 10h fica aguardando…" (`2026-09-15T13:00:00.000Z: expected 1 to be +0`) |
+| Isolamento do realtime (regra 10) | `apps/realtime/src/sistema.gateway.ts:39`: sala tirada de `socket.handshake.auth.escolaId` em vez da identidade do token | **não ficou vermelho, e está certo**: `autenticacao-do-handshake.ts:62-63` zera `auth` e `query` depois de verificar o token, então a mutação não tinha o que ler. É uma segunda camada de defesa, não um teste fraco. Por isso a mutação 3 |
+| Isolamento do realtime (regra 10) | `apps/realtime/src/sistema.gateway.ts:39`: acrescentado `socket.on('join', sala => socket.join(sala))`, que abre entrada em sala pelo cliente | `apps/realtime/test/sistema.int.test.ts` "isolamento: cliente da escola B não entra na sala da A pedindo por nome, nem no auth, nem na query, nem por evento" (`expected [ { marca: 'nao-e-da-b' } ] to deeply equal []`) |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regras de negócio da seção 6 do PRD | cumpridas | as mesmas evidências da rodada 1; código sem mudança |
+| Regra: a esteira é o portão (D23, D31) | cumprida | antes só no mecanismo; agora também no processo (seção 0, maior 2) |
+| Borda: commit vermelho no `main` | coberta no processo, com texto divergente | a skill bloqueia o commit, não o início da próxima tarefa (menor 2). O efeito que a borda protege, nada commitado em cima de esteira vermelha, está garantido |
+| Demais bordas da seção 7 | cobertas | as mesmas da rodada 1, testes verdes nesta rodada |
+| Pronto: compose sobe tudo em duas instâncias | cumprido | `test:e2e` e `test:infra` nesta rodada |
+| Pronto: esteira verde no último commit, com todas as guardas | cumprido | run 34878392405, `headSha` `dfc5158`, `verificar`, `integração`, `infra` e `e2e` com `success` |
+| Pronto: e2e da casca em `chromebook` e `celular` | cumprido | 32 passaram |
+| Pronto: todo processador recebe chave e a reexecução não duplica (D49) | cumprido | `reexecucao.int.test.ts` verde; mutação da rodada 1 |
+| Pronto: RF1 a RF18 com teste que falharia sem a regra | cumprido | seção 1 e mutações das duas rodadas (seis cláusulas, cinco vermelhas e uma neutralizada por outra camada) |
+| Pronto: cenário passa e controle negativo reprova | cumprido | rodada 1; código sem mudança |
+| Pronto: três alertas disparam no ensaio e têm runbook | cumprido | `alertas.int.test.ts` verde nesta rodada |
+| Pronto: todos os vetos aprovados | cumprido | seção 3 |
+| Pronto: `ROADMAP.md` com o F0 `[x]` | faltando, por construção | é o passo 2 do fechamento do `/validar` depois deste veredito |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck` | ✅ (depois de `npm ci`; ver menor 4) |
+| `npm run lint` | ✅ |
+| `npm run test` | ✅ (69 arquivos, 839 testes; depois de `npm ci`) |
+| `npm run test:e2e` | ✅ (32 passaram; bundle 89,67 kB de 150 kB) |
+| `npm run test:infra` | ✅ (5 arquivos, 33 testes, 1.038 s) |
+| Esteira do GitHub no commit validado | ✅ run 34878392405, `success` em `dfc5158` |
+| Revisões com veto registradas e aprovadas | ✅ as 16 tarefas têm rodada de todo revisor obrigatório do `tasks.md`, com a última APROVADO |
+
+Primeira execução, antes do `npm ci`: `typecheck` vermelho (`e2e/__fixtures__/verificacoes.ts:1`, TS2307
+`Cannot find module '@axe-core/playwright'`) e `test` com 3 de 839 vermelhos, todos em
+`tools/ci/tamanho-web.test.ts` (sem `@size-limit/file`). Causa verificada, e não suposta: o `reflog`
+mostra este checkout parado em `7fdc61d` (13.0) até o `pull` de 14/09 19:15, e o `node_modules` era de
+13/09 17:35, anterior à 14.0, que acrescentou as duas dependências ao `package-lock.json`. Depois de
+`npm ci` (o que o `README.md:22` manda e o que a esteira faz em runner limpo), o portão inteiro ficou
+verde sem nenhuma mudança no repositório. O vermelho não é do commit validado; o fato de o portão
+local não avisar que as dependências estão atrasadas é o menor 4.
+
+### 4. Achados
+
+**Críticos**
+- Nenhum.
+
+**Maiores**
+- Nenhum.
+
+**Menores**
+1. `.claude/skills/executar-task/SKILL.md:112-117`: a conferência pede `headSha` no JSON, mas não manda
+   comparar com o último commit do `main`, e só trata `success`, rodando e `failure`. Execução ainda não
+   registrada (a última da lista é do commit anterior), `cancelled`, `skipped` ou nenhuma execução passam
+   sem regra. Correção: seguir só com `conclusion == success` **e** `headSha == $(git rev-parse origin/main)`;
+   qualquer outro caso, esperar ou não commitar e reportar.
+2. `tasks/prd-fundacao-tecnica/prd.md:94`: a borda diz "a próxima tarefa não começa antes de a esteira voltar
+   a verde"; a correção escolheu, com motivo escrito, que a próxima começa e só o commit dela é bloqueado
+   (`.claude/skills/executar-tasks/SKILL.md:65-68`, `.claude/rules/40-testes.md:96-98`). O comportamento é
+   bom, mas o PRD ficou dizendo outra coisa. Correção: trocar o texto da borda para "a próxima tarefa não
+   commita antes de a esteira do commit anterior ficar verde".
+3. A conferência da esteira é só instrução de skill, enquanto a das revisões tem hook que bloqueia o commit
+   (`81d8ee4`). Correção sugerida, sem urgência: o mesmo hook recusar commit `(tarefa N.0)` quando a última
+   execução do `main` não for `success` no `origin/main`, com saída clara quando o `gh` não estiver disponível.
+4. Portão local sem conferência das dependências: com `node_modules` atrasado em relação ao
+   `package-lock.json`, `npm run typecheck` falha com TS2307 e `tools/ci/tamanho-web.test.ts` falha sem dizer
+   que falta `npm ci`. Correção: no passo 4 de `.claude/skills/executar-task/SKILL.md` e no início do portão do
+   validador, rodar `npm ci` quando `package-lock.json` for mais novo que `node_modules/.package-lock.json`
+   (ou falhar com a mensagem "rode npm ci").
+5. `docs/infra.md:211`: "Lote não urgente só é reservado fora do horário letivo da escola (seção 5.2)"
+   aponta para a tabela que diz "preferencialmente fora do horário letivo" e "roda à noite"; o implementado é
+   a janela letiva configurável por escola (sai às 18h de dia útil e na hora no sábado). Correção: apontar para
+   a Tech Spec seção 5, passo 2, e citar o padrão segunda a sexta, 7h às 18h, configurável.
+6. Herdados da rodada 1 e ainda abertos: `techspec.md:4` em "rascunho" (fechamento), guarda de `npm audit` só
+   por imitação, RF15 sem conferência do painel no cenário de carga, `test:e2e` deixando `educa-teste` de pé,
+   `docs/runbook.md:198`.
+
+**Positivos**
+- A correção das ressalvas veio num commit só, enviado sozinho, com execução própria da esteira: o processo
+  novo foi usado no próprio commit que o criou.
+- O handshake do realtime zera `auth` e `query` depois de verificar o token: uma mutação que lia a sala do
+  cliente não teve efeito. Defesa em duas camadas vale repetir em todo ponto em que o cliente manda dado junto
+  com a credencial.
+
+### 5. Conclusão
+
+Os dois maiores da rodada 1 foram resolvidos: a seção 5.3 do `docs/infra.md` descreve o limitador implementado,
+e cada afirmação dela bate com o código; e o processo passou a exigir push por tarefa e esteira verde antes do
+commit seguinte, na skill e na regra 40. Os 18 RF seguem atendidos, com o portão inteiro (typecheck, lint, test,
+e2e, infra) verde neste checkout depois da instalação das dependências do lock, a esteira verde no commit
+validado, e mais duas provas de mutação vermelhas nesta rodada, uma delas no isolamento do realtime. Não há
+crítico nem maior. Os menores são de texto e de endurecimento do processo e não bloqueiam o fechamento do F0.
+
+### 6. Pendências herdadas
+
+| Pendência | Destino |
+|---|---|
+| Conferir `headSha` e tratar `cancelled`/sem execução na checagem da esteira (menor 1) | `.claude/skills/executar-task/SKILL.md`, antes da primeira tarefa do F1 |
+| Texto da borda "commit vermelho no `main`" (menor 2) | `prd.md:94`, no commit de fechamento ou em `TODO.md` |
+| Hook para a esteira, como o das revisões (menor 3) | `TODO.md` |
+| `npm ci` quando o lock mudou, antes do portão local (menor 4) | `.claude/skills/executar-task/SKILL.md` e `.claude/agents/validador.md` |
+| Referência da janela letiva no `docs/infra.md` 5.3 (menor 5) | correção de texto no fechamento ou `TODO.md` |
+| Todas as pendências da seção 6 da rodada 1 que não foram resolvidas (`CREATE INDEX CONCURRENTLY` no `migrar`, FK de `escola_id` no F1, emissor de token no F1, idempotência de negócio por processador e reserva da chave antes de efeito pago, achados da auditoria da 16.0, itens do staging, aviso às escolas, `npm audit` com fixture real) | os mesmos destinos da rodada 1 |
+
+---
+
 ## Rodada 1 — 14/09/2026
 
 **Escopo:** funcionalidade completa

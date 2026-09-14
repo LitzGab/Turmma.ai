@@ -1,7 +1,7 @@
 # Tech Spec — Fundação técnica
 
 **PRD:** `tasks/prd-fundacao-tecnica/prd.md`
-**Status:** rascunho (revisto em 13/09/2026: F0 só local, D31; entrega pelo menos uma vez, D49; casca responsiva até o celular, D51)
+**Status:** implementada em 14/09/2026 (revista em 13/09/2026: F0 só local, D31; entrega pelo menos uma vez, D49; casca responsiva até o celular, D51)
 
 ## 1. Resumo da abordagem
 

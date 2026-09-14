@@ -40,7 +40,9 @@ domínio e porque é onde mora a medição de custo que valida a precificação.
 
 ---
 
-## F0 — `fundacao-tecnica` [ ]
+## F0 — `fundacao-tecnica` [x]
+Concluída em 14/09/2026, validada em tasks/prd-fundacao-tecnica/validacao.md.
+
 **Depende de:** nada
 
 Monorepo, Docker Compose (Postgres, Redis de fila e Redis de cache, SeaweedFS), Drizzle, Vitest,
