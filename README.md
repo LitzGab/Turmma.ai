@@ -153,6 +153,11 @@ funcionalidade em andamento e o próximo passo.
     Executa todas, uma de cada vez, cada uma em contexto limpo.
         └── /executar-task <N_task.md>   uma tarefa
              └── /executar-review        o portão de qualidade
+
+/validar <funcionalidade> [tarefa]
+    Confere a funcionalidade inteira contra o PRD, RF a RF, com evidência de código e
+    de teste, em contexto limpo. Aprovada e com a esteira verde, fecha no roadmap.
+    Saída: tasks/prd-<func>/validacao.md
 ```
 
 Cada etapa tem um motivo:
@@ -169,6 +174,10 @@ de um dia são melhores que quatro de uma semana, porque cada uma passa por um p
 
 **O contexto limpo por tarefa existe porque contexto acumulado polui.** Um subagente que já
 implementou seis tarefas carrega detalhes irrelevantes e começa a improvisar.
+
+**A validação existe porque "todas as tarefas feitas" não é "funcionalidade pronta".** Cada
+portão de tarefa olhou um pedaço; só a validação confere o PRD inteiro, e é ela que pega o
+RF que nenhuma tarefa cobriu.
 
 ---
 

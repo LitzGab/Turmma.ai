@@ -528,7 +528,7 @@ obrigatória para implementar
 
 **Do processo** (nossas, em `.claude/skills/`): `/status`, `/descobrir`,
 `/registrar-decisao`, `/criar-prd`, `/criar-techspec`, `/criar-tasks`, `/executar-tasks`,
-`/executar-task`, `/executar-review`.
+`/executar-task`, `/executar-review`, `/validar`.
 
 **Técnicas** (de terceiros, instaladas via skills.sh, versões em `skills-lock.json`):
 `nestjs-best-practices`, `drizzle-orm-patterns`, `supabase-postgres-best-practices`,

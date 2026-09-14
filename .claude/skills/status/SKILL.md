@@ -36,7 +36,8 @@ dependências `[x]`):
 | PRD aprovado, sem Tech Spec | `/criar-techspec <func>` |
 | Tech Spec sem `tasks.md` | `/criar-tasks <func>` |
 | `tasks.md` com pendentes | `/executar-tasks <func>` |
-| Todas as tarefas `[x]` | conferir o critério de pronto do roadmap e marcar `[x]` |
+| Todas as tarefas `[x]`, sem `validacao.md` aprovada | `/validar <func>` |
+| `validacao.md` com ressalvas ou reprovada | tratar os achados e `/validar <func>` de novo |
 
 Se uma **decisão em aberto** do `CLAUDE.md` impede o próximo passo (exemplo: o PRD de F11
 precisa da lista final de agentes), o próximo passo é `/descobrir <tema>`, não o PRD.

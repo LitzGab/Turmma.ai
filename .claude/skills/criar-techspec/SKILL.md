@@ -25,6 +25,9 @@ Funcionalidade alvo: `$ARGUMENTS`
 - Contexto: `CLAUDE.md` e `docs/visao-produto.md`
 - Tela: `docs/interface.md`
 - Carga e operação: `docs/infra.md`
+- Pendências herdadas: a seção 6 do `validacao.md` de cada funcionalidade de que esta
+  depende. O que ficou recomendado para "a próxima que mexer nisso" entra aqui ou é
+  descartado com motivo
 - Skills técnicas da stack em `.claude/skills/` (NestJS, Drizzle, Postgres, BullMQ, React,
   TanStack Query, Tailwind, Vitest, Playwright). Use como referência, respeitando os
   conflitos listados na seção "Skills" do `CLAUDE.md`

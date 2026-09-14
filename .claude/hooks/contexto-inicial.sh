@@ -37,7 +37,11 @@ if [ -n "$alvo" ]; then
     feitas=$(grep -cE '^- \[x\] \*\*[0-9]+\.0' "$dir/tasks.md")
     proxima=$(grep -E '^- \[ \] \*\*[0-9]+\.0' "$dir/tasks.md" | head -1 | sed -E 's/^- \[ \] //; s/\*\*//g')
     echo "Tarefas: $feitas de $total concluídas."
-    [ -n "$proxima" ] && echo "Próxima tarefa: $proxima → /executar-tasks $func"
+    if [ -n "$proxima" ]; then
+      echo "Próxima tarefa: $proxima → /executar-tasks $func"
+    elif [ "$total" -gt 0 ]; then
+      echo "Todas as tarefas concluídas. Próximo passo: /validar $func"
+    fi
   fi
 fi
 
