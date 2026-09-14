@@ -54,7 +54,9 @@ desenvolvimento.
 | `npm run test:e2e` | mede o teto do bundle da web (size-limit, 150 kB em brotli), sobe o compose de teste completo e roda o Playwright com axe nos projetos `chromebook` (CPU ×4, Fast 3G) e `celular` (360 × 800, toque, CPU ×4, rede móvel lenta), deixando o ambiente de pé |
 | `npm run ci:verificar`, `ci:integracao`, `ci:infra`, `ci:e2e` | exatamente o que a esteira roda; derrubam o ambiente no fim |
 | `npm run db:gerar` | gera a migration a partir do schema Drizzle (`packages/nucleo/src/db/schema`); revise o SQL antes de versionar |
-| `npm run -s ops:token-sintetico -- --escola <uuid> [--usuario <uuid>] [--validade 1h]` | imprime um token sintético para chamar a API local (`Authorization: Bearer`); não emite com `AMBIENTE=producao` |
+| `npm run -s ops:token-sintetico -- --escola <uuid> [--usuario <uuid> \| --quantidade <n>] [--validade 1h]` | imprime um token sintético para chamar a API local (`Authorization: Bearer`), ou `n` tokens de usuários distintos, um por linha; não emite com `AMBIENTE=producao` |
+| `npm run carga` | cenário de carga "justiça entre escolas": sobe o projeto `educa-carga` (portas de `infra/carga.env`, CPU fixa por serviço em `infra/compose.carga.yml`), roda o k6 (`infra/k6/justica-entre-escolas.js`) na fase base e na de carga, confere `job_registro` e derruba tudo; sai vermelho se um critério falhar (uns 12 min). Manual: roda de novo quando uma tarefa mexe no caminho quente |
+| `npm run carga:controle-negativo` | o mesmo cenário com a vaga por escola desligada (`VAGAS_POR_ESCOLA_DESLIGADAS=true`); sai verde só se o cenário reprovar pela justiça entre escolas |
 
 A esteira (`.github/workflows/ci.yml`) roda em todo push no `main` e só chama os `ci:*`.
 Enquanto não existe staging (D31), ela é o portão: commit vermelho no `main` segura a

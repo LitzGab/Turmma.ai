@@ -1,7 +1,7 @@
 # Tarefas — Fundação técnica
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 14 de 16 concluídas
+**Status:** 15 de 16 concluídas
 
 ## Lista
 
@@ -86,11 +86,11 @@
   - [x] 14.3 size-limit, axe (com `target-size`) e projetos Playwright `chromebook` e `celular`
   - [x] 14.4 Testes: quatro estados, teclado, toque, Chromebook e celular em 5 s, sem rolagem horizontal, fixtures que violam axe, largura e teto
 
-- [ ] **15.0 — Cenário "justiça entre escolas" passa local**
-  - [ ] 15.1 Processador sintético em sandbox e `infra/compose.carga.yml` com CPU fixa
-  - [ ] 15.2 `infra/k6/justica-entre-escolas.js` com as quatro fases e thresholds
-  - [ ] 15.3 Controle negativo com a vaga por escola desligada
-  - [ ] 15.4 Testes: cenário passa, controle negativo reprova, conferência em `job_registro`
+- [x] **15.0 — Cenário "justiça entre escolas" passa local**
+  - [x] 15.1 Processador sintético em sandbox e `infra/compose.carga.yml` com CPU fixa
+  - [x] 15.2 `infra/k6/justica-entre-escolas.js` com as quatro fases e thresholds
+  - [x] 15.3 Controle negativo com a vaga por escola desligada
+  - [x] 15.4 Testes: cenário passa, controle negativo reprova, conferência em `job_registro`
 
 - [ ] **16.0 — Entrega "pelo menos uma vez" declarada, com chave de idempotência no processador**
   - [ ] 16.1 `Processador` recebe `{ jobId, tentativa, chaveIdempotencia }`; texto de "exatamente uma vez" corrigido

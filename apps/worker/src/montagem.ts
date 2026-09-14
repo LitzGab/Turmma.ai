@@ -18,7 +18,7 @@ import {
   RETENCAO_JOB_CONCLUIDO_SEGUNDOS,
   RETENCAO_JOB_FALHO_SEGUNDOS,
   relogioDoSistema,
-  resolverVagas,
+  resolverVagasDaEscola,
   UsoRepository,
   VagasPorEscola,
   type Banco,
@@ -33,21 +33,18 @@ import { Queue, Worker } from 'bullmq'
 import { Redis } from 'ioredis'
 import { AGENDAMENTOS, criarDisparoDeAgendamento, FILA_DOS_AGENDAMENTOS, registrarAgendamentos, type Agendamento } from './agendamentos.js'
 import type { ConfiguracaoStorage, ConfiguracaoWorker } from './config.js'
-import { ExecutorDeJobs, type Processador } from './executor.js'
+import { AvisoDeVagaLivre, ExecutorDeJobs, type Processador } from './executor.js'
 import { criarConsolidacaoDeUso, TIPO_CONSOLIDAR_USO } from './processadores/consolidar-uso.js'
 import { criarExpurgoDeJobs, TIPO_EXPURGAR_JOBS } from './processadores/expurgar-jobs.js'
-import { processarSintetico } from './processadores/sintetico.js'
+import { criarProcessadorSintetico, SandboxDeCpu } from './processadores/sintetico.js'
 import { criarClienteS3, MedidorDeStorage } from './storage/medidor-de-storage.js'
 
 /** Quanto o SIGTERM espera os jobs em andamento terminarem antes de fechar à força (Tech Spec, seção 5). */
 export const GRACA_DO_DESLIGAMENTO_MS = 30_000
 const INTERVALO_BATIMENTO_MS = 2_000
 
-export const PROCESSADORES: Readonly<Record<string, Processador>> = {
-  sintetico: processarSintetico,
-}
-
 export interface OpcoesDaMontagem {
+  /** Troca os processadores da réplica. Sem isto, o sintético (no sandbox de CPU) e, no lote, as rotinas do sistema. */
   processadores?: Readonly<Record<string, Processador>>
   /** Prefixo das chaves do BullMQ e das vagas. Só o teste troca, para não disputar a fila com outro teste. */
   prefixo?: string
@@ -86,6 +83,10 @@ export interface WorkerMontado {
  * morre no meio, o lock vence e outra réplica retoma o job, ainda dono da vaga.
  */
 export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, logger: LoggerBase, opcoes: OpcoesDaMontagem = {}): WorkerMontado {
+  if (config.vagasPorEscolaDesligadas === true) {
+    // Só o controle negativo do cenário de carga chega aqui, e ele precisa ficar visível no log de quem subiu assim.
+    logger.warn({ evento: 'worker.vagas_por_escola_desligadas' })
+  }
   const pool = criarPool(config.banco, () => logger.warn({ evento: 'banco.conexao_ociosa_perdida' }))
   // O BullMQ exige `maxRetriesPerRequest: null` no worker: o comando bloqueante espera o Redis voltar.
   const redis = new Redis(config.redisFilaUrl, { connectionName: 'worker', maxRetriesPerRequest: null })
@@ -108,16 +109,25 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
   const aguardandoVaga = medidor?.createCounter(METRICAS.aguardandoVaga, { description: 'Jobs que chegaram ao worker sem vaga e voltaram a esperar' })
   const stalled = medidor?.createCounter(METRICAS.jobsStalled, { description: 'Jobs devolvidos à espera por lock vencido' })
   const rotinas = config.pools.lote === undefined || config.storage === undefined ? undefined : montarRotinas(config.storage, banco, uso, relogio, logger)
+  const sandbox = new SandboxDeCpu(config.threadsMaximo)
+  const repositorio = new JobRegistroRepository(banco)
+  // Banco fora: o despachante acorda pela sondagem, e só.
+  const avisoDeVagaLivre = new AvisoDeVagaLivre(() => repositorio.avisarVagaLivre(), avisoEspacado(() => logger.warn({ evento: 'worker.aviso_de_vaga_indisponivel' })))
   const executor = new ExecutorDeJobs({
-    repositorio: new JobRegistroRepository(banco),
-    processadores: opcoes.processadores ?? { ...PROCESSADORES, ...rotinas?.processadores },
+    repositorio,
+    aoLiberarVaga: avisoDeVagaLivre.avisar,
+    processadores: opcoes.processadores ?? { sintetico: criarProcessadorSintetico(sandbox), ...rotinas?.processadores },
     logger,
     uso,
     ...(aguardandoVaga === undefined ? {} : { aoAguardarVaga: (fila: Fila, escolaId: string | null) => aguardandoVaga.add(1, { fila, escola_id: escolaId ?? DONO_DAS_VAGAS_DO_SISTEMA }) }),
     vagas: new VagasPorEscola(redisDasVagas, opcoes.prefixo, opcoes.validadeDaVagaMs),
-    vagasDaEscola: new ConfiguracaoOperacional(new ConfiguracaoOperacionalRepository(banco), (linha) => resolverVagas(config.vagasPadrao, linha), {
-      aoFalhar: avisoEspacado(() => logger.warn({ evento: 'worker.configuracao_indisponivel' })),
-    }),
+    vagasDaEscola: new ConfiguracaoOperacional(
+      new ConfiguracaoOperacionalRepository(banco),
+      (linha) => resolverVagasDaEscola(config.vagasPadrao, linha, config.vagasPorEscolaDesligadas === true),
+      {
+        aoFalhar: avisoEspacado(() => logger.warn({ evento: 'worker.configuracao_indisponivel' })),
+      },
+    ),
     ...(opcoes.intervaloRenovacaoDaVagaMs === undefined ? {} : { intervaloRenovacaoMs: opcoes.intervaloRenovacaoDaVagaMs }),
   })
   const avisarErroDaFila = avisoEspacado(() => logger.warn({ evento: 'worker.fila_com_erro' }))
@@ -163,6 +173,8 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
     } else {
       await redis.quit().catch(() => redis.disconnect())
     }
+    // Depois dos workers: com graça, nenhum job ainda queima CPU; forçado, a thread morre com o job, que volta pelo stalled.
+    await sandbox.encerrar()
     redisDasVagas.disconnect()
     rotinas?.encerrar()
     await pool.end()

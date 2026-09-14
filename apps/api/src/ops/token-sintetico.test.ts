@@ -2,7 +2,7 @@ import { EMISSOR_TOKEN_SINTETICO, lerConfiguracaoIdentidade, VALIDADE_MAXIMA_TOK
 import { decodeJwt, decodeProtectedHeader } from 'jose'
 import { describe, expect, it } from 'vitest'
 import { ConfiguracaoInvalida } from '../config.js'
-import { ArgumentoInvalido, emitirTokenSintetico, lerPedido } from './token-sintetico.js'
+import { ArgumentoInvalido, emitirTokenSintetico, lerPedido, lerPedidos, QUANTIDADE_MAXIMA } from './token-sintetico.js'
 
 const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
 const USUARIO = '0190f5a0-0000-7000-8000-0000000000c1'
@@ -47,6 +47,24 @@ describe('lerPedido', () => {
     ['argumento solto', [ESCOLA_A]],
   ])('recusa %s', (_caso, argumentos) => {
     expect(() => lerPedido(argumentos)).toThrow(ArgumentoInvalido)
+  })
+
+  it('--quantidade dá um pedido por token, todos da escola pedida e cada um de um usuário diferente', () => {
+    const pedidos = lerPedidos(['--escola', ESCOLA_A, '--quantidade', '400', '--validade', '2h'])
+    expect(pedidos).toHaveLength(400)
+    expect(new Set(pedidos.map((pedido) => pedido.usuarioId)).size).toBe(400)
+    expect(new Set(pedidos.map((pedido) => `${pedido.escolaId}:${pedido.validadeSegundos}`))).toEqual(new Set([`${ESCOLA_A}:7200`]))
+    expect(lerPedidos(['--escola', ESCOLA_A])).toHaveLength(1)
+  })
+
+  it.each([
+    ['zero', ['--quantidade', '0']],
+    ['negativa', ['--quantidade', '-3']],
+    ['acima do máximo', ['--quantidade', String(QUANTIDADE_MAXIMA + 1)]],
+    ['fora do formato', ['--quantidade', '1e3']],
+    ['com --usuario: vários tokens do mesmo usuário somariam no mesmo limite', ['--quantidade', '2', '--usuario', USUARIO]],
+  ])('recusa quantidade %s', (_caso, argumentos) => {
+    expect(() => lerPedidos(['--escola', ESCOLA_A, ...argumentos])).toThrow(/--quantidade$/)
   })
 
   it('a mensagem de argumento inválido cita a opção, não o valor', () => {

@@ -38,6 +38,22 @@ export function resolverVagas(padrao: VagasPorFila, linha: LinhaOperacional | un
   return Object.fromEntries(FILAS.map((fila) => [fila, linha?.vagas?.[fila] ?? padrao[fila]])) as Record<Fila, number>
 }
 
+/**
+ * O limite de toda escola em toda fila com `VAGAS_POR_ESCOLA_DESLIGADAS=true`, só no controle negativo do
+ * cenário de carga: a vaga continua sendo tomada e liberada pelo mesmo caminho, mas nunca falta. Sobra só o
+ * pool de cada worker, e é exatamente o que o cenário precisa ver reprovar.
+ */
+export const VAGAS_SEM_LIMITE: VagasPorFila = Object.fromEntries(FILAS.map((fila) => [fila, Number.MAX_SAFE_INTEGER])) as Record<Fila, number>
+
+/**
+ * Como `resolverVagas`, a não ser no controle negativo do cenário de carga, em que nenhuma escola tem teto.
+ * Despachante e worker resolvem pela mesma função: ligar a flag só num deles deixaria o outro segurando a
+ * escola, e o controle negativo passaria sem provar nada.
+ */
+export function resolverVagasDaEscola(padrao: VagasPorFila, linha: LinhaOperacional | undefined, vagasPorEscolaDesligadas: boolean): VagasPorFila {
+  return vagasPorEscolaDesligadas ? VAGAS_SEM_LIMITE : resolverVagas(padrao, linha)
+}
+
 const esquemaAmbienteJanela = z
   .object({
     JANELA_LETIVA_FUSO: z.string().refine(fusoValido, { message: 'JANELA_LETIVA_FUSO precisa ser um fuso IANA, como America/Sao_Paulo' }),

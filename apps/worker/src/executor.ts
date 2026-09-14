@@ -20,6 +20,37 @@ export type Processador = (dados: Record<string, unknown>) => Promise<void>
 
 export type JobDaFila = Pick<Job, 'id' | 'data' | 'attemptsMade' | 'opts' | 'moveToDelayed'>
 
+/**
+ * Aviso de vaga livre ao despachante, com no máximo um aviso em andamento: as vagas que se liberam enquanto ele
+ * vai ao banco viram um aviso só, logo em seguida. Com cinquenta jobs terminando por segundo, o worker não
+ * empilha consulta no pool, e o despachante acorda uma vez por rodada, não uma por job.
+ */
+export class AvisoDeVagaLivre {
+  #emAndamento = false
+  #pendente = false
+
+  constructor(
+    private readonly enviar: () => Promise<void>,
+    private readonly aoFalhar: (erro: unknown) => void,
+  ) {}
+
+  readonly avisar = (): void => {
+    if (this.#emAndamento) {
+      this.#pendente = true
+      return
+    }
+    this.#emAndamento = true
+    this.enviar()
+      .catch(this.aoFalhar)
+      .finally(() => {
+        this.#emAndamento = false
+        if (!this.#pendente) return
+        this.#pendente = false
+        this.avisar()
+      })
+  }
+}
+
 /** Espera mínima de um job que chegou ao worker sem vaga, antes de a fila o entregar de novo. */
 export const ESPERA_POR_VAGA_MS = 1_000
 
@@ -32,6 +63,11 @@ export interface DependenciasDoExecutor {
   vagasDaEscola: Pick<ConfiguracaoOperacional<VagasPorFila>, 'daEscola'>
   /** Conta cada execução iniciada na escola do job (D30). Disparar e esquecer: nunca atrasa nem falha o job. */
   uso: Pick<ContadorDeUso, 'marcar'>
+  /**
+   * Chamado depois de cada vaga liberada no Redis, para o despachante publicar o próximo job da escola na hora.
+   * Disparar e esquecer, como o uso: nunca atrasa nem falha o job.
+   */
+  aoLiberarVaga?: () => void
   /** Conta o job que chegou sem vaga e voltou a esperar, na fila e na escola da linha (métrica `job.aguardando_vaga`). */
   aoAguardarVaga?: (fila: Fila, escolaId: string | null) => void
   intervaloRenovacaoMs?: number
@@ -209,6 +245,7 @@ export class ExecutorDeJobs {
   private async liberarVaga({ fila, escolaId, jobId }: VagaDoJob): Promise<void> {
     try {
       await this.dependencias.vagas.liberar(fila, escolaId, [jobId])
+      this.dependencias.aoLiberarVaga?.()
     } catch (erro) {
       this.dependencias.logger.warn({ evento: 'job.vaga_nao_liberada', jobId, erro: resumirErro(erro) })
     }

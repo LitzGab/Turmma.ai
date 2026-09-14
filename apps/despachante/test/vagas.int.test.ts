@@ -174,6 +174,32 @@ describe('vagas por escola e filas por prioridade', () => {
     expect(processador.maximo('A')).toBe(2)
   }, 90_000)
 
+  it('a vaga liberada acorda o despachante: com a escola no teto, o job seguinte começa quando o anterior termina, sem esperar a sondagem', async () => {
+    await bancada.configurarEscola(ESCOLA_A, { vagas: { interativa: 1 } })
+    const processador = contado(200)
+    bancada.worker(new LogEmMemoria('worker-interativo'), { pools: { interativa: 5 }, processadores: { sintetico: processador.processar } })
+    // Sondagem de 30 s: se o próximo job saísse só nela, os cinco levariam dois minutos.
+    bancada.despachante(new LogEmMemoria('despachante'), { intervaloMs: 30_000 }).despachante.iniciar()
+    const ids = await inserirJobs(ESCOLA_A, 'interativa', 5, 'A')
+    const inicio = performance.now()
+    for (const id of ids) await aguardarEstado(id, 'concluido', 15_000)
+    expect(performance.now() - inicio).toBeLessThan(10_000)
+    expect(processador.maximo('A')).toBe(1)
+  }, 60_000)
+
+  it('controle negativo do cenário de carga: com a vaga por escola desligada no despachante e no worker, a escola passa do teto', async () => {
+    const processador = contado()
+    const log = new LogEmMemoria('worker-interativo')
+    bancada.worker(log, { pools: { interativa: 20 }, processadores: { sintetico: processador.processar }, vagasPorEscolaDesligadas: true })
+    bancada.despachante(new LogEmMemoria('despachante'), {}, true).despachante.iniciar()
+    await inserirJobs(ESCOLA_A, 'interativa', 12, 'A')
+    // Com o teto padrão de 5 vagas interativas no despachante, só 5 começariam. O worker confere a vaga que o
+    // despachante já tomou; a flag nele vale para a vaga que venceu no caminho, e o log prova que ela chegou lá.
+    await expect.poll(() => processador.iniciados('A'), { timeout: 10_000, interval: 50 }).toBe(12)
+    expect(processador.maximo('A')).toBe(12)
+    expect(log.doEvento('worker.vagas_por_escola_desligadas')).toHaveLength(1)
+  }, 60_000)
+
   it('concorrência: dois despachantes tomando vaga da mesma escola ao mesmo tempo nunca passam do limite', async () => {
     const clientes = ['despachante-1', 'despachante-2'].map((nome) => criarClienteRedisDaFila(urlRedisDeFila(), nome, () => undefined))
     try {

@@ -17,13 +17,16 @@ import { z } from 'zod'
 /**
  * Emissor do token do F0, para teste local, esteira e cenário de carga:
  *
- *   npm run -s ops:token-sintetico -- --escola <uuid> [--usuario <uuid>] [--validade 1h]
+ *   npm run -s ops:token-sintetico -- --escola <uuid> [--usuario <uuid> | --quantidade <n>] [--validade 1h]
  *
- * Imprime só o token. Assina com `IDENTIDADE_CHAVE_ASSINATURA` e se recusa a emitir com
+ * Imprime só o token, ou `--quantidade` tokens, um por linha, cada um de um usuário novo da mesma escola (o
+ * cenário de carga precisa de centenas de usuários de uma escola). Assina com `IDENTIDADE_CHAVE_ASSINATURA` e se recusa a emitir com
  * `AMBIENTE=producao`. O token leva `sub`, `esc`, `iss`, `iat` e `exp`, e nada da pessoa.
  */
 
 export const VALIDADE_PADRAO = '1h'
+/** Tokens de uma vez, no máximo: o cenário "justiça entre escolas" pede cerca de mil de uma escola. */
+export const QUANTIDADE_MAXIMA = 5_000
 
 const SEGUNDOS_POR_UNIDADE = { s: 1, m: 60, h: 3600 } as const
 
@@ -57,23 +60,41 @@ function lerOpcoes(argumentos: string[]) {
   try {
     return parseArgs({
       args: argumentos,
-      options: { escola: { type: 'string' }, usuario: { type: 'string' }, validade: { type: 'string' } },
+      options: { escola: { type: 'string' }, usuario: { type: 'string' }, validade: { type: 'string' }, quantidade: { type: 'string' } },
       strict: true,
       allowPositionals: false,
     }).values
   } catch {
     // O erro do parseArgs repete o argumento recebido; a mensagem fica só com as opções aceitas.
-    throw new ArgumentoInvalido('escola, --usuario ou --validade')
+    throw new ArgumentoInvalido('escola, --usuario, --validade ou --quantidade')
   }
 }
 
-export function lerPedido(argumentos: string[]): PedidoDeToken {
+function quantidade(texto: string | undefined): number {
+  if (texto === undefined) return 1
+  if (!/^[1-9][0-9]{0,3}$/.test(texto) || Number(texto) > QUANTIDADE_MAXIMA) throw new ArgumentoInvalido('quantidade')
+  return Number(texto)
+}
+
+/** Os pedidos da linha de comando: um por token, cada um com usuário novo quando há mais de um. */
+export function lerPedidos(argumentos: string[]): PedidoDeToken[] {
   const valores = lerOpcoes(argumentos)
-  return {
-    escolaId: uuid(valores.escola, 'escola'),
+  const total = quantidade(valores.quantidade)
+  // Vários tokens do mesmo usuário somariam no mesmo limite: quem pede quantidade quer usuários distintos.
+  if (total > 1 && valores.usuario !== undefined) throw new ArgumentoInvalido('quantidade')
+  const escolaId = uuid(valores.escola, 'escola')
+  const validadeSegundos = validadeEmSegundos(valores.validade ?? VALIDADE_PADRAO)
+  return Array.from({ length: total }, () => ({
+    escolaId,
     usuarioId: valores.usuario === undefined ? randomUUID() : uuid(valores.usuario, 'usuario'),
-    validadeSegundos: validadeEmSegundos(valores.validade ?? VALIDADE_PADRAO),
-  }
+    validadeSegundos,
+  }))
+}
+
+export function lerPedido(argumentos: string[]): PedidoDeToken {
+  const [pedido, ...outros] = lerPedidos(argumentos)
+  if (pedido === undefined || outros.length > 0) throw new ArgumentoInvalido('quantidade')
+  return pedido
 }
 
 const esquemaAmbienteEmissor = z
@@ -105,8 +126,9 @@ export async function emitirTokenSintetico(
 
 async function executar(): Promise<void> {
   try {
-    const token = await emitirTokenSintetico(lerPedido(process.argv.slice(2)), process.env)
-    process.stdout.write(`${token}\n`)
+    const agora = new Date()
+    const tokens = await Promise.all(lerPedidos(process.argv.slice(2)).map((pedido) => emitirTokenSintetico(pedido, process.env, agora)))
+    process.stdout.write(`${tokens.join('\n')}\n`)
   } catch (erro) {
     if (!(erro instanceof ArgumentoInvalido || erro instanceof ConfiguracaoInvalida)) throw erro
     // Mensagem só com o nome da opção ou da variável: nunca o valor, que pode ser a chave.

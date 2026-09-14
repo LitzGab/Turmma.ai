@@ -107,7 +107,8 @@ tardia não sobrescreve `ativo`, `concluido` ou `falhou`.
 - **Filas:** três filas no Redis de fila (`noeviction`, AOF). O `worker-interativo` atende
   interativa e normal, o `worker-lote` atende lote, com duas réplicas cada.
 - **Ciclo do job:** marca `ativo` e renova a vaga a cada 15 s. No fim, marca `concluido` ou
-  `falhou` com código e libera a vaga.
+  `falhou` com código e libera a vaga. Vaga liberada emite `pg_notify('job')`, um aviso por vez
+  (15.0): a escola no teto publica o próximo job na hora, e não na sondagem de 500 ms.
 - **Retentativa:** 5 tentativas com recuo exponencial de 2 s e jitter; a vaga fica com o job.
 - **Stalled:** volta para a espera, ainda dono da vaga.
 - **Garantia (D49):** a entrega é **pelo menos uma vez**, não exatamente uma vez. Um job pode
@@ -222,10 +223,15 @@ Não há IA no caminho do aluno.
 | Storage, observabilidade | nada |
 
 **Cenário.** `npm run carga` sobe o compose com `infra/compose.carga.yml`, que fixa `cpus:`
-por serviço e `maxWorkerThreads` coerente, para o resultado não depender da máquina e o
-lote não roubar CPU do interativo. O k6 roda num container da mesma rede, então todos os
-VUs saem de um IP. Os jobs sintéticos queimam CPU em processador sandbox
-(`useWorkerThreads`), sem travar o event loop.
+por serviço e `WORKER_THREADS_MAXIMO` coerente (uma thread por núcleo inteiro, meio núcleo
+para o event loop), para o resultado não depender da máquina e o lote não roubar CPU do
+interativo. O k6 roda num container da mesma rede, então todos os VUs saem de um IP, em duas
+execuções: a base (fase 1) e a carga (fases 2 a 4 juntas), com o p95 da base no threshold da
+segunda. Os jobs sintéticos queimam CPU num pool próprio de `worker_threads` (15.0, seção 12),
+sem travar o event loop. A espera medida vai de `criado_em` a `iniciado_em`; a duração até
+`concluido_em` sai no resumo, sem threshold. Nenhum job `falhou` vale para os jobs que
+executaram até a conferência: com 2 vagas de lote e jobs de 2 s, a maior parte dos 2.000 lotes
+da escola A ainda espera quando o compose é derrubado.
 
 1. **Base:** por 2 min, a escola B manda 2 jobs interativos/s de 100 ms de CPU.
 2. **Carga:** a escola A enfileira 2.000 lotes urgentes de 2 s de CPU e 500 interativos de
@@ -296,6 +302,15 @@ Testes usam o `compose.yml`.
   `infra/grafana/alertas/` montada em `/otel-lgtm/grafana/conf/provisioning/alerting/` e o Prometheus da
   imagem com uid `prometheus`; o estado sai pela API `/api/prometheus/grafana/api/v1/rules`, que o
   anônimo lê. A reserva (Grafana e Prometheus separados) não foi necessária.
+
+- ✅ **Sandbox do job sintético (verificado na 15.0, 14/09/2026, BullMQ 6.3.4):** o BullMQ não tem
+  `maxWorkerThreads`, e o `useWorkerThreads` dele roda o processador inteiro na thread (o executor, com
+  banco e vaga) e abre uma thread por job concorrente. O sandbox ficou só no trabalho de CPU: um pool de
+  `worker_threads` com teto `WORKER_THREADS_MAXIMO` por réplica, que `infra/compose.carga.yml` fixa junto
+  com o `cpus:` de cada worker. O k6 roda o cenário em duas execuções (base e carga), porque um threshold
+  do k6 não enxerga o p95 medido na mesma execução; a margem continua sendo sobre a base medida na hora.
+  `VAGAS_POR_ESCOLA_DESLIGADAS` é lida por despachante e worker, que tomam a vaga, e os dois recusam
+  subir com ela em produção; a API não toma vaga e não lê a flag.
 
 ## 13. Riscos técnicos
 

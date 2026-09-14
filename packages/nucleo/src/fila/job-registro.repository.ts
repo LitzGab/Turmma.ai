@@ -133,6 +133,15 @@ export class JobRegistroRepository {
     return alteradas.length === 1
   }
 
+  /**
+   * Acorda o despachante porque uma vaga ficou livre, no mesmo canal do job novo. Sem isto, a escola no teto só
+   * publica o próximo job na sondagem seguinte (até 500 ms por vaga): com cinco vagas e jobs de 100 ms, a fila
+   * dela andaria a uns 10 jobs por segundo, e não a 50. Não lê nem grava linha: não tem escopo a aplicar.
+   */
+  async avisarVagaLivre(): Promise<void> {
+    await this.banco.execute(sql`select pg_notify(${CANAL_NOTIFICACAO_JOB}, '')`)
+  }
+
   /** Falha definitiva, com código tipado. Devolve `false` se o job já tinha terminado ou não é desta escola. */
   async registrarFalha(id: string, codigo: CodigoDeFalhaDeJob): Promise<boolean> {
     const alteradas = await this.banco

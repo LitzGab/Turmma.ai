@@ -25,7 +25,12 @@ const API = `http://127.0.0.1:${porta('API_1_PORTA_HOST')}`
 const GRAFANA = `http://127.0.0.1:${porta('GRAFANA_PORTA_HOST')}`
 const PROMETHEUS = `http://127.0.0.1:${porta('PROMETHEUS_PORTA_HOST')}`
 const SERVICOS = ['observabilidade', 'api-1', 'despachante-1', 'despachante-2', 'worker-interativo-1', 'worker-interativo-2'] as const
-const VAGAS_INTERATIVAS = Number(porta('VAGAS_ESCOLA_INTERATIVA'))
+/**
+ * A escola da borda opera com uma vaga interativa só (configuração dela): um job longo a toma inteira. Com as cinco
+ * vagas do padrão seriam cinco jobs longos, e o job sintético queima CPU de verdade no sandbox (15.0): cinco deles
+ * disputariam as threads do worker e esticariam a espera além do `for:` da regra.
+ */
+const VAGAS_INTERATIVAS_DA_ESCOLA = 1
 /** Quanto os jobs que tomam as vagas da escola duram: a espera do seguinte passa de 30 s e fica bem abaixo de 30 s + 1 min. */
 const DURACAO_DOS_JOBS_LONGOS_MS = 50_000
 
@@ -60,6 +65,7 @@ describe('alertas locais: as três regras disparam no ensaio, não disparam com 
     await composeAssincrono('up', '--detach', '--wait', 'redis-cache')
     const pool = new pg.Pool({ connectionString: bancoUrl, max: 1 })
     await pool.query('delete from job_registro where escola_id = any($1)', [escolas])
+    await pool.query('delete from configuracao_operacional_escola where escola_id = any($1)', [escolas])
     await pool.end()
     await composeAssincronoOuFalha('stop', ...SERVICOS)
   }, 180_000)
@@ -117,9 +123,12 @@ describe('alertas locais: as três regras disparam no ensaio, não disparam com 
     const escola = randomUUID()
     escolas.push(escola)
     const apiToken = await token(escola)
+    const pool = new pg.Pool({ connectionString: bancoUrl, max: 1 })
+    await pool.query('insert into configuracao_operacional_escola (escola_id, vagas) values ($1, $2)', [escola, JSON.stringify({ interativa: VAGAS_INTERATIVAS_DA_ESCOLA })])
+    await pool.end()
     // As vagas interativas da escola tomadas por jobs longos: o próximo job espera por elas, com o worker de pé.
     const longos: string[] = []
-    for (let vaga = 0; vaga < VAGAS_INTERATIVAS; vaga++) {
+    for (let vaga = 0; vaga < VAGAS_INTERATIVAS_DA_ESCOLA; vaga++) {
       const resposta = await criarJobSintetico(API, apiToken, { fila: 'interativa', cpuMs: DURACAO_DOS_JOBS_LONGOS_MS })
       expect(resposta.status).toBe(202)
       longos.push(((await resposta.json()) as { jobId: string }).jobId)

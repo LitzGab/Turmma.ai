@@ -12,7 +12,7 @@ import {
   OuvinteDeJobs,
   relogioDoSistema,
   resolverJanela,
-  resolverVagas,
+  resolverVagasDaEscola,
   VagasPorEscola,
   type Batimento,
   type DadosDoJobNaFila,
@@ -65,6 +65,10 @@ export interface DespachanteMontado {
 
 /** Liga o despachante ao Postgres (pool próprio e `LISTEN`) e ao Redis de fila (filas e vagas). */
 export function montarDespachante(config: Omit<ConfiguracaoDespachante, 'telemetria'>, logger: LoggerBase, opcoes: OpcoesDaMontagem = {}): DespachanteMontado {
+  if (config.vagasPorEscolaDesligadas === true) {
+    // Só o controle negativo do cenário de carga chega aqui, e ele precisa ficar visível no log de quem subiu assim.
+    logger.warn({ evento: 'despachante.vagas_por_escola_desligadas' })
+  }
   const pool = criarPool(config.banco, () => logger.warn({ evento: 'banco.conexao_ociosa_perdida' }))
   const redis = criarClienteRedisDaFila(
     config.redisFilaUrl,
@@ -89,7 +93,10 @@ export function montarDespachante(config: Omit<ConfiguracaoDespachante, 'telemet
   const avisarJanelaDescartada = avisoEspacado(() => logger.warn({ evento: 'despachante.janela_da_escola_invalida' }))
   const operacao = new ConfiguracaoOperacional<{ vagas: VagasPorFila; janela: JanelaLetiva }>(
     new ConfiguracaoOperacionalRepository(banco),
-    (linha) => ({ vagas: resolverVagas(config.vagasPadrao, linha), janela: resolverJanela(config.janelaPadrao, linha, avisarJanelaDescartada) }),
+    (linha) => ({
+      vagas: resolverVagasDaEscola(config.vagasPadrao, linha, config.vagasPorEscolaDesligadas === true),
+      janela: resolverJanela(config.janelaPadrao, linha, avisarJanelaDescartada),
+    }),
     { aoFalhar: avisoEspacado(() => logger.warn({ evento: 'despachante.configuracao_indisponivel' })) },
   )
   const vagasDaEscola = { daEscola: async () => (await operacao.daEscola()).vagas }

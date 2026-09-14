@@ -205,6 +205,7 @@ services:
       context: ..
       dockerfile: infra/docker/despachante.Dockerfile
     environment:
+      AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
       BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
       # A conexão do LISTEN sai deste pool.
       BANCO_POOL_MAXIMO: ${DESPACHANTE_BANCO_POOL_MAXIMO:?defina DESPACHANTE_BANCO_POOL_MAXIMO}
@@ -214,6 +215,8 @@ services:
       VAGAS_ESCOLA_INTERATIVA: ${VAGAS_ESCOLA_INTERATIVA:?defina VAGAS_ESCOLA_INTERATIVA}
       VAGAS_ESCOLA_NORMAL: ${VAGAS_ESCOLA_NORMAL:?defina VAGAS_ESCOLA_NORMAL}
       VAGAS_ESCOLA_LOTE: ${VAGAS_ESCOLA_LOTE:?defina VAGAS_ESCOLA_LOTE}
+      # Só o controle negativo do cenário de carga liga (npm run carga:controle-negativo); não sobe em produção.
+      VAGAS_POR_ESCOLA_DESLIGADAS: ${VAGAS_POR_ESCOLA_DESLIGADAS:?defina VAGAS_POR_ESCOLA_DESLIGADAS}
       JANELA_LETIVA_FUSO: ${JANELA_LETIVA_FUSO:?defina JANELA_LETIVA_FUSO}
       JANELA_LETIVA_DIAS: ${JANELA_LETIVA_DIAS:?defina JANELA_LETIVA_DIAS}
       JANELA_LETIVA_INICIO: ${JANELA_LETIVA_INICIO:?defina JANELA_LETIVA_INICIO}
@@ -248,6 +251,7 @@ services:
       context: ..
       dockerfile: infra/docker/worker.Dockerfile
     environment:
+      AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
       BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
       BANCO_POOL_MAXIMO: ${WORKER_INTERATIVO_BANCO_POOL_MAXIMO:?defina WORKER_INTERATIVO_BANCO_POOL_MAXIMO}
       BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
@@ -256,9 +260,11 @@ services:
       FILAS: interativa,normal
       WORKER_POOL_INTERATIVA: ${WORKER_POOL_INTERATIVA:?defina WORKER_POOL_INTERATIVA}
       WORKER_POOL_NORMAL: ${WORKER_POOL_NORMAL:?defina WORKER_POOL_NORMAL}
+      WORKER_THREADS_MAXIMO: ${WORKER_INTERATIVO_THREADS_MAXIMO:?defina WORKER_INTERATIVO_THREADS_MAXIMO}
       VAGAS_ESCOLA_INTERATIVA: ${VAGAS_ESCOLA_INTERATIVA:?defina VAGAS_ESCOLA_INTERATIVA}
       VAGAS_ESCOLA_NORMAL: ${VAGAS_ESCOLA_NORMAL:?defina VAGAS_ESCOLA_NORMAL}
       VAGAS_ESCOLA_LOTE: ${VAGAS_ESCOLA_LOTE:?defina VAGAS_ESCOLA_LOTE}
+      VAGAS_POR_ESCOLA_DESLIGADAS: ${VAGAS_POR_ESCOLA_DESLIGADAS:?defina VAGAS_POR_ESCOLA_DESLIGADAS}
       # Métricas OTLP para a observabilidade local. Sem depends_on: fora do ar, perde-se a métrica, e só.
       TELEMETRIA_OTLP_URL: http://observabilidade:4318
       TELEMETRIA_INTERVALO_MS: ${TELEMETRIA_INTERVALO_MS:?defina TELEMETRIA_INTERVALO_MS}
@@ -282,6 +288,7 @@ services:
   worker-lote-1: &worker-lote
     <<: *worker-interativo
     environment:
+      AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
       BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
       BANCO_POOL_MAXIMO: ${WORKER_LOTE_BANCO_POOL_MAXIMO:?defina WORKER_LOTE_BANCO_POOL_MAXIMO}
       BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
@@ -289,6 +296,7 @@ services:
       REDIS_FILA_URL: redis://redis-fila:6379
       FILAS: lote
       WORKER_POOL_LOTE: ${WORKER_POOL_LOTE:?defina WORKER_POOL_LOTE}
+      WORKER_THREADS_MAXIMO: ${WORKER_LOTE_THREADS_MAXIMO:?defina WORKER_LOTE_THREADS_MAXIMO}
       # Só o worker-lote, onde rodam as rotinas do sistema: a consolidação de uso lista o storage para
       # medir os bytes de cada escola. Sem depends_on: storage fora faz a rotina tentar de novo, e só.
       STORAGE_URL: http://storage:8333
@@ -299,6 +307,7 @@ services:
       VAGAS_ESCOLA_INTERATIVA: ${VAGAS_ESCOLA_INTERATIVA:?defina VAGAS_ESCOLA_INTERATIVA}
       VAGAS_ESCOLA_NORMAL: ${VAGAS_ESCOLA_NORMAL:?defina VAGAS_ESCOLA_NORMAL}
       VAGAS_ESCOLA_LOTE: ${VAGAS_ESCOLA_LOTE:?defina VAGAS_ESCOLA_LOTE}
+      VAGAS_POR_ESCOLA_DESLIGADAS: ${VAGAS_POR_ESCOLA_DESLIGADAS:?defina VAGAS_POR_ESCOLA_DESLIGADAS}
       # Métricas OTLP para a observabilidade local. Sem depends_on: fora do ar, perde-se a métrica, e só.
       TELEMETRIA_OTLP_URL: http://observabilidade:4318
       TELEMETRIA_INTERVALO_MS: ${TELEMETRIA_INTERVALO_MS:?defina TELEMETRIA_INTERVALO_MS}

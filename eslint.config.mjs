@@ -44,6 +44,11 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks },
     rules: reactHooks.configs.recommended.rules,
   },
+  {
+    // O cenário de carga roda no runtime do k6, que dá `__ENV` e `open` ao script (infra/k6).
+    files: ['infra/k6/**/*.js'],
+    languageOptions: { globals: { __ENV: 'readonly', open: 'readonly' } },
+  },
   // Por último: nenhum bloco acima sobrescreve as guardas (tools/guardas).
   ...configuracaoDasGuardas,
 )

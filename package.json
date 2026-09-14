@@ -25,6 +25,8 @@
     "ops:token-sintetico": "npm run -s build -w @educa/shared && npm run -s build -w @educa/nucleo && npm run -s build -w @educa/api && node --env-file=.env.example apps/api/dist/ops/token-sintetico.js",
     "ops:uso": "npm run -s build -w @educa/shared && npm run -s build -w @educa/nucleo && npm run -s build -w @educa/api && node --env-file=.env.example apps/api/dist/ops/uso.js",
     "ensaio:alertas": "npm run -s build -w @educa/shared && npm run -s build -w @educa/nucleo && npm run -s build -w @educa/api && node --env-file=.env.example --env-file-if-exists=.env infra/scripts/ensaio-alertas.ts",
+    "carga": "node infra/scripts/carga.ts",
+    "carga:controle-negativo": "node infra/scripts/carga.ts --controle-negativo",
     "db:gerar": "drizzle-kit generate --config packages/nucleo/drizzle.config.ts"
   },
   "devDependencies": {

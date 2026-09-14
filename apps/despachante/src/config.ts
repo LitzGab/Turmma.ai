@@ -4,6 +4,7 @@ import {
   lerConfiguracaoTelemetria,
   lerJanelaPadrao,
   lerVagasPadrao,
+  lerVagasPorEscolaDesligadas,
   validarAmbiente,
   type ConfiguracaoBanco,
   type ConfiguracaoTelemetria,
@@ -26,6 +27,11 @@ export interface ConfiguracaoDespachante {
   vagasPadrao: VagasPorFila
   /** Horário letivo da escola que não configurou o próprio, em que o lote não urgente fica segurado (D41). */
   janelaPadrao: JanelaLetiva
+  /**
+   * Só no controle negativo do cenário de carga (`VAGAS_POR_ESCOLA_DESLIGADAS=true`): nenhuma escola tem teto
+   * de jobs simultâneos. Ausente é o normal. O boot recusa a flag com `AMBIENTE=producao`.
+   */
+  vagasPorEscolaDesligadas?: true
   /** Para onde e de quanto em quanto tempo as métricas vão. */
   telemetria: ConfiguracaoTelemetria
 }
@@ -46,8 +52,9 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const proprio = ler(() => validarAmbiente(esquemaAmbiente, ambiente))
   const vagasPadrao = ler(() => lerVagasPadrao(ambiente))
   const janelaPadrao = ler(() => lerJanelaPadrao(ambiente))
+  const vagasDesligadas = ler(() => lerVagasPorEscolaDesligadas(ambiente))
   const telemetria = ler(() => lerConfiguracaoTelemetria(ambiente))
-  if (banco === undefined || proprio === undefined || vagasPadrao === undefined || janelaPadrao === undefined || telemetria === undefined) {
+  if (banco === undefined || proprio === undefined || vagasPadrao === undefined || janelaPadrao === undefined || vagasDesligadas === undefined || telemetria === undefined) {
     throw new ConfiguracaoInvalida(problemas.flatMap((erro) => erro.variaveis).sort(), problemas.flatMap((erro) => erro.motivos))
   }
   return {
@@ -55,6 +62,7 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     redisFilaUrl: proprio.REDIS_FILA_URL,
     vagasPadrao,
     janelaPadrao,
+    ...(vagasDesligadas ? { vagasPorEscolaDesligadas: true as const } : {}),
     telemetria,
   }
 }

@@ -2,7 +2,7 @@ import { contextoAtual, criarLogger, type JobParaExecutar, type ResultadoDoInici
 import { CodigoDeErro, CodigoDeFalhaDeJob, type Fila } from '@educa/shared'
 import { DelayedError, UnrecoverableError } from 'bullmq'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ESPERA_POR_VAGA_MS, ExecutorDeJobs, type DependenciasDoExecutor, type JobDaFila } from './executor.js'
+import { AvisoDeVagaLivre, ESPERA_POR_VAGA_MS, ExecutorDeJobs, type DependenciasDoExecutor, type JobDaFila } from './executor.js'
 import { FalhaDeJob } from './falha-de-job.js'
 
 const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
@@ -64,6 +64,7 @@ function montar({
     },
     vagasDaEscola: { daEscola: () => Promise.resolve({ interativa: 5, normal: 5, lote: 3 }) },
     uso: { marcar: (metrica) => marcacoes.push(`${metrica}:${contextoAtual()?.escolaId ?? 'sem escola'}`) },
+    aoLiberarVaga: () => eventos.push('avisou_vaga_livre'),
     intervaloRenovacaoMs: 100,
   }
   const moveToDelayed = vi.fn<JobDaFila['moveToDelayed']>(() => Promise.resolve())
@@ -83,7 +84,7 @@ describe('ExecutorDeJobs e a vaga', () => {
   it('toma a vaga com a fila e a escola da linha e o limite da configuração da escola, antes de marcar ativo', async () => {
     const { executor, eventos, limites, job } = montar({ alvo: { fila: 'normal', escolaId: ESCOLA_A, finalizado: false } })
     await executor.processar(job, 'token')
-    expect(eventos).toEqual([`localizar:${ESCOLA_A}`, 'tomar', 'iniciar', 'concluir', 'liberar'])
+    expect(eventos).toEqual([`localizar:${ESCOLA_A}`, 'tomar', 'iniciar', 'concluir', 'liberar', 'avisou_vaga_livre'])
     expect(limites).toEqual([{ fila: 'normal', escolaId: ESCOLA_A, limite: 5 }])
   })
 
@@ -126,7 +127,7 @@ describe('ExecutorDeJobs e a vaga', () => {
     responderLiberacao()
     await execucao
     await vi.advanceTimersByTimeAsync(1_000)
-    expect(eventos.slice(eventos.indexOf('liberar'))).toEqual(['liberar'])
+    expect(eventos.slice(eventos.indexOf('liberar'))).toEqual(['liberar', 'avisou_vaga_livre'])
   })
 
   it('renovação em andamento quando o job termina: a liberação só sai depois dela', async () => {
@@ -148,7 +149,7 @@ describe('ExecutorDeJobs e a vaga', () => {
     expect(eventos).not.toContain('liberar')
     responderRenovacao()
     await execucao
-    expect(eventos.slice(eventos.indexOf('renovar'))).toEqual(['renovar', 'concluir', 'renovou', 'liberar'])
+    expect(eventos.slice(eventos.indexOf('renovar'))).toEqual(['renovar', 'concluir', 'renovou', 'liberar', 'avisou_vaga_livre'])
   })
 
   /** Processador que falha em 150 ms, com a renovação do primeiro intervalo pendurada até o teste responder. */
@@ -178,7 +179,7 @@ describe('ExecutorDeJobs e a vaga', () => {
     responderRenovacao()
     await rejeitada
     await vi.advanceTimersByTimeAsync(1_000)
-    expect(eventos.slice(eventos.indexOf('renovar'))).toEqual(['renovar', 'renovou', 'liberar'])
+    expect(eventos.slice(eventos.indexOf('renovar'))).toEqual(['renovar', 'renovou', 'liberar', 'avisou_vaga_livre'])
   })
 
   it('falha que ainda vai ser tentada de novo: a vaga fica com o job, e a renovação para ao sair', async () => {
@@ -191,6 +192,16 @@ describe('ExecutorDeJobs e a vaga', () => {
     await vi.advanceTimersByTimeAsync(1_000)
     expect(eventos).not.toContain('liberar')
     expect(eventos.filter((evento) => evento === 'renovar')).toHaveLength(1)
+  })
+
+  it('só avisa o despachante depois de a vaga sair do Redis: liberação que falhou não acorda ninguém', async () => {
+    const { executor, eventos, job } = montar({ liberar: () => Promise.reject(new Error('redis fora')) })
+    await executor.processar(job, 'token')
+    expect(eventos.slice(eventos.indexOf('concluir'))).toEqual(['concluir', 'liberar'])
+    // Sem vaga, o job volta à espera e não libera nada: também não há o que avisar.
+    const semVaga = montar({ concede: false })
+    await expect(semVaga.executor.processar(semVaga.job, 'token')).rejects.toBeInstanceOf(DelayedError)
+    expect(semVaga.eventos).not.toContain('avisou_vaga_livre')
   })
 
   describe('uso da escola', () => {
@@ -212,5 +223,35 @@ describe('ExecutorDeJobs e a vaga', () => {
       await finalizado.executor.processar(finalizado.job, 'token')
       expect([...semVaga.marcacoes, ...deOutraEscola.marcacoes, ...finalizado.marcacoes]).toEqual([])
     })
+  })
+})
+
+describe('AvisoDeVagaLivre', () => {
+  it('um aviso por vez: as vagas liberadas enquanto ele vai ao banco viram um aviso só, logo depois', async () => {
+    const respostas: Array<() => void> = []
+    const enviar = vi.fn(() => new Promise<void>((resolver) => respostas.push(resolver)))
+    const aviso = new AvisoDeVagaLivre(enviar, () => undefined)
+    aviso.avisar()
+    for (let vaga = 0; vaga < 50; vaga++) aviso.avisar()
+    expect(enviar).toHaveBeenCalledTimes(1)
+    respostas.shift()?.()
+    await vi.waitFor(() => expect(enviar).toHaveBeenCalledTimes(2))
+    respostas.shift()?.()
+    await new Promise((resolver) => setTimeout(resolver, 10))
+    expect(enviar).toHaveBeenCalledTimes(2)
+  })
+
+  it('banco fora: a falha vai para o aviso espaçado, e o próximo aviso sai normalmente', async () => {
+    const falhas: unknown[] = []
+    let falhar = true
+    const enviar = vi.fn(() => (falhar ? Promise.reject(new Error('banco fora')) : Promise.resolve()))
+    const aviso = new AvisoDeVagaLivre(enviar, (erro) => falhas.push(erro))
+    aviso.avisar()
+    await vi.waitFor(() => expect(falhas).toHaveLength(1))
+    falhar = false
+    await new Promise((resolver) => setTimeout(resolver, 0))
+    aviso.avisar()
+    await vi.waitFor(() => expect(enviar).toHaveBeenCalledTimes(2))
+    expect(falhas).toHaveLength(1)
   })
 })

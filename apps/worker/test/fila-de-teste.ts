@@ -177,8 +177,19 @@ export class BancadaDeFila {
     )
   }
 
-  despachante(log: LogEmMemoria, opcoes: Omit<OpcoesDoDespachante, 'prefixo'> = {}): DespachanteMontado {
-    const montado = montarDespachante({ banco: configuracaoDoBanco(3), redisFilaUrl: urlRedisDeFila(), vagasPadrao: vagasPadraoDoAmbiente(), janelaPadrao: janelaPadraoDoAmbiente() }, log.logger, { prefixo: this.prefixo, ...opcoes })
+  /** Com `vagasPorEscolaDesligadas`, a montagem do controle negativo do cenário de carga. */
+  despachante(log: LogEmMemoria, opcoes: Omit<OpcoesDoDespachante, 'prefixo'> = {}, vagasPorEscolaDesligadas?: true): DespachanteMontado {
+    const montado = montarDespachante(
+      {
+        banco: configuracaoDoBanco(3),
+        redisFilaUrl: urlRedisDeFila(),
+        vagasPadrao: vagasPadraoDoAmbiente(),
+        janelaPadrao: janelaPadraoDoAmbiente(),
+        ...(vagasPorEscolaDesligadas === undefined ? {} : { vagasPorEscolaDesligadas }),
+      },
+      log.logger,
+      { prefixo: this.prefixo, ...opcoes },
+    )
     this.#montados.push(montado)
     return montado
   }
@@ -194,17 +205,29 @@ export class BancadaDeFila {
       intervaloRenovacaoDaVagaMs?: number
       validadeDaVagaMs?: number
       medidor?: Meter
+      vagasPorEscolaDesligadas?: true
     } = {},
   ): WorkerMontado {
     const pools = opcoes.pools ?? Object.fromEntries(FILAS.map((fila) => [fila, opcoes.concorrencia ?? 5]))
-    const montado = montarWorker({ banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), pools, vagasPadrao: vagasPadraoDoAmbiente() }, log.logger, {
-      prefixo: this.prefixo,
-      ...(opcoes.processadores === undefined ? {} : { processadores: opcoes.processadores }),
-      ...(opcoes.graca === undefined ? {} : { graca: opcoes.graca }),
-      ...(opcoes.intervaloRenovacaoDaVagaMs === undefined ? {} : { intervaloRenovacaoDaVagaMs: opcoes.intervaloRenovacaoDaVagaMs }),
-      ...(opcoes.validadeDaVagaMs === undefined ? {} : { validadeDaVagaMs: opcoes.validadeDaVagaMs }),
-      ...(opcoes.medidor === undefined ? {} : { medidor: opcoes.medidor }),
-    })
+    const montado = montarWorker(
+      {
+        banco: configuracaoDoBanco(),
+        redisFilaUrl: urlRedisDeFila(),
+        pools,
+        vagasPadrao: vagasPadraoDoAmbiente(),
+        threadsMaximo: 2,
+        ...(opcoes.vagasPorEscolaDesligadas === undefined ? {} : { vagasPorEscolaDesligadas: opcoes.vagasPorEscolaDesligadas }),
+      },
+      log.logger,
+      {
+        prefixo: this.prefixo,
+        ...(opcoes.processadores === undefined ? {} : { processadores: opcoes.processadores }),
+        ...(opcoes.graca === undefined ? {} : { graca: opcoes.graca }),
+        ...(opcoes.intervaloRenovacaoDaVagaMs === undefined ? {} : { intervaloRenovacaoDaVagaMs: opcoes.intervaloRenovacaoDaVagaMs }),
+        ...(opcoes.validadeDaVagaMs === undefined ? {} : { validadeDaVagaMs: opcoes.validadeDaVagaMs }),
+        ...(opcoes.medidor === undefined ? {} : { medidor: opcoes.medidor }),
+      },
+    )
     this.#montados.push(montado)
     return montado
   }

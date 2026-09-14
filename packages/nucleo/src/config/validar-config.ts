@@ -62,6 +62,31 @@ export const esquemaAmbienteIdentidade = z
     }
   })
 
+export const MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO =
+  'VAGAS_POR_ESCOLA_DESLIGADAS=true é proibido com AMBIENTE=producao: sem a vaga por escola, uma escola barulhenta ocupa os workers de todas'
+
+/**
+ * Controle negativo do cenário "justiça entre escolas" (`npm run carga:controle-negativo`): com a flag em
+ * `true`, despachante e worker deixam de limitar os jobs simultâneos de cada escola, e o cenário precisa
+ * reprovar. Só aceita `true` ou `false`, escritos assim, e nunca `true` em produção: a flag de teste não
+ * pode virar porta aberta (regra 80, item 3).
+ */
+export const esquemaAmbienteVagasDesligadas = z
+  .object({
+    AMBIENTE: z.enum(AMBIENTES),
+    VAGAS_POR_ESCOLA_DESLIGADAS: z.enum(['true', 'false']),
+  })
+  .superRefine((valores, contexto) => {
+    if (valores.AMBIENTE === 'producao' && valores.VAGAS_POR_ESCOLA_DESLIGADAS === 'true') {
+      contexto.addIssue({ code: 'custom', path: ['VAGAS_POR_ESCOLA_DESLIGADAS'], message: MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO })
+    }
+  })
+
+/** `true` só no controle negativo do cenário de carga, e nunca em produção. */
+export function lerVagasPorEscolaDesligadas(ambiente: Record<string, string | undefined>): boolean {
+  return validarAmbiente(esquemaAmbienteVagasDesligadas, ambiente).VAGAS_POR_ESCOLA_DESLIGADAS === 'true'
+}
+
 export interface ConfiguracaoIdentidade {
   readonly ambiente: Ambiente
   /** Chave HMAC do HS256. Nunca vai para log nem para resposta. */

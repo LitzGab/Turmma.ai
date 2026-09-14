@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO } from '@educa/nucleo'
 import { ConfiguracaoInvalida, lerConfiguracao } from './config.js'
 
 const ambienteValido = {
+  AMBIENTE: 'local',
+  VAGAS_POR_ESCOLA_DESLIGADAS: 'false',
   BANCO_URL: 'postgres://educa:senha_sintetica_xyz@postgres:5432/educa',
   BANCO_POOL_MAXIMO: '3',
   BANCO_TIMEOUT_CONEXAO_MS: '2000',
@@ -59,6 +62,17 @@ describe('lerConfiguracao do despachante', () => {
 
   it.each(['0', '-2', '1.5', 'duas'])('não sobe com VAGAS_ESCOLA_LOTE=%s: vaga zero pararia toda escola sem configuração própria', (valor) => {
     expect(erroDe({ ...ambienteValido, VAGAS_ESCOLA_LOTE: valor }).variaveis).toEqual(['VAGAS_ESCOLA_LOTE'])
+  })
+
+  it('com VAGAS_POR_ESCOLA_DESLIGADAS=true fora de produção, sobe sem teto por escola (controle negativo do cenário de carga)', () => {
+    expect(lerConfiguracao({ ...ambienteValido, VAGAS_POR_ESCOLA_DESLIGADAS: 'true' }).vagasPorEscolaDesligadas).toBe(true)
+  })
+
+  it('recusa subir com VAGAS_POR_ESCOLA_DESLIGADAS=true e AMBIENTE=producao: a flag de teste não vira porta aberta', () => {
+    const erro = erroDe({ ...ambienteValido, AMBIENTE: 'producao', VAGAS_POR_ESCOLA_DESLIGADAS: 'true' })
+    expect(erro.variaveis).toEqual(['VAGAS_POR_ESCOLA_DESLIGADAS'])
+    expect(erro.motivos).toEqual([MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO])
+    expect(lerConfiguracao({ ...ambienteValido, AMBIENTE: 'producao' })).not.toHaveProperty('vagasPorEscolaDesligadas')
   })
 
   it.each(Object.keys(ambienteValido))('não sobe sem %s', (variavel) => {

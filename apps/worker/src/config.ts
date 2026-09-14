@@ -3,6 +3,7 @@ import {
   lerConfiguracaoBanco,
   lerConfiguracaoTelemetria,
   lerVagasPadrao,
+  lerVagasPorEscolaDesligadas,
   validarAmbiente,
   type ConfiguracaoBanco,
   type ConfiguracaoTelemetria,
@@ -30,6 +31,7 @@ const esquemaFilas = z.object({
 
 const esquemaAmbiente = z.object({
   REDIS_FILA_URL: z.string().regex(/^redis:\/\/[^/\s]+(\/\d+)?$/),
+  WORKER_THREADS_MAXIMO: inteiroPositivo,
 })
 
 const esquemaStorage = z.object({
@@ -58,6 +60,17 @@ export interface ConfiguracaoWorker {
   /** Vagas por fila da escola sem vagas próprias: o worker confere a vaga do job ao começar (D41). */
   vagasPadrao: VagasPorFila
   /**
+   * Quantas threads do sandbox de CPU a réplica usa ao mesmo tempo (`processadores/sintetico.sandbox.ts`).
+   * Coerente com a CPU do container: com uma thread por núcleo, e meio núcleo livre para o event loop, o
+   * trabalho de CPU não atrasa a renovação de lock nem a troca de estado dos outros jobs.
+   */
+  threadsMaximo: number
+  /**
+   * Só no controle negativo do cenário de carga (`VAGAS_POR_ESCOLA_DESLIGADAS=true`): o worker não segura job
+   * de escola acima do teto. Ausente é o normal. O boot recusa a flag com `AMBIENTE=producao`.
+   */
+  vagasPorEscolaDesligadas?: true
+  /**
    * Só na réplica que atende o lote, onde rodam as rotinas do sistema (consolidação de uso e expurgo).
    * O worker-interativo não mede storage e não precisa da credencial.
    */
@@ -85,6 +98,7 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const esquemaPools = z.object(Object.fromEntries((filas?.FILAS ?? []).map((fila) => [variavelDoPool(fila), inteiroPositivo])))
   const pools = ler(() => validarAmbiente(esquemaPools, ambiente))
   const vagasPadrao = ler(() => lerVagasPadrao(ambiente))
+  const vagasDesligadas = ler(() => lerVagasPorEscolaDesligadas(ambiente))
   const atendeLote = filas?.FILAS.includes('lote') === true
   const storage = atendeLote ? ler(() => validarAmbiente(esquemaStorage, ambiente)) : undefined
   const telemetria = ler(() => lerConfiguracaoTelemetria(ambiente))
@@ -95,6 +109,7 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     filas === undefined ||
     pools === undefined ||
     vagasPadrao === undefined ||
+    vagasDesligadas === undefined ||
     (atendeLote && storage === undefined)
   ) {
     throw new ConfiguracaoInvalida(problemas.flatMap((erro) => erro.variaveis).sort(), problemas.flatMap((erro) => erro.motivos))
@@ -104,6 +119,8 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     redisFilaUrl: proprio.REDIS_FILA_URL,
     pools: Object.fromEntries(filas.FILAS.map((fila) => [fila, Number(pools[variavelDoPool(fila)])])),
     vagasPadrao,
+    threadsMaximo: proprio.WORKER_THREADS_MAXIMO,
+    ...(vagasDesligadas ? { vagasPorEscolaDesligadas: true as const } : {}),
     telemetria,
     ...(storage === undefined
       ? {}

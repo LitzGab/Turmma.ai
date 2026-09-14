@@ -102,7 +102,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
   it('caminho feliz: N requisições e M jobs da escola A, executados pelo worker de verdade, aparecem no dia e no mês', async () => {
     const [escolaA, escolaB] = [novaEscola(), novaEscola()]
     marcarRequisicoes(escolaA, 5)
-    const worker = montarWorker({ banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), pools: { interativa: 3 }, vagasPadrao: vagasPadraoDoAmbiente() }, log.logger, {
+    const worker = montarWorker({ banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), pools: { interativa: 3 }, vagasPadrao: vagasPadraoDoAmbiente(), threadsMaximo: 1 }, log.logger, {
       prefixo: bancada.prefixo,
       relogio,
     })
@@ -311,7 +311,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
       await aguardarContador(escolaA, '2026-09-15', 'req', 8)
       agora = QUARTA_2H
       const worker = montarWorker(
-        { banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), pools: { lote: 2 }, vagasPadrao: vagasPadraoDoAmbiente(), storage: STORAGE },
+        { banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), pools: { lote: 2 }, vagasPadrao: vagasPadraoDoAmbiente(), threadsMaximo: 1, storage: STORAGE },
         log.logger,
         { prefixo: bancada.prefixo, relogio, agendamentos: AGENDAMENTOS },
       )

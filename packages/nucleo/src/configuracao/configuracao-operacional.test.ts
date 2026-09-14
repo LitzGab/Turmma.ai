@@ -7,6 +7,8 @@ import {
   resolverJanela,
   resolverLimites,
   resolverVagas,
+  resolverVagasDaEscola,
+  VAGAS_SEM_LIMITE,
   VALIDADE_DA_CONFIGURACAO_MS,
 } from './configuracao-operacional.js'
 import type { LinhaOperacional } from './configuracao-operacional.repository.js'
@@ -29,6 +31,12 @@ describe('resolverVagas e resolverLimites', () => {
   it('vagas nulas usam o padrão; a fila configurada troca só ela', () => {
     expect(resolverVagas(VAGAS_PADRAO, linha({ limiteReqEscolaMin: 10 }))).toEqual(VAGAS_PADRAO)
     expect(resolverVagas(VAGAS_PADRAO, linha({ vagas: { lote: 5 } }))).toEqual({ interativa: 5, normal: 5, lote: 5 })
+  })
+
+  it('com a vaga por escola desligada (controle negativo), nenhuma fila tem teto, nem a da escola que configurou o seu', () => {
+    expect(resolverVagasDaEscola(VAGAS_PADRAO, linha({ vagas: { lote: 1 } }), false)).toEqual({ interativa: 5, normal: 5, lote: 1 })
+    expect(resolverVagasDaEscola(VAGAS_PADRAO, linha({ vagas: { lote: 1 } }), true)).toEqual(VAGAS_SEM_LIMITE)
+    expect(Object.values(VAGAS_SEM_LIMITE)).toEqual([Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER])
   })
 
   it('cada limite nulo cai no padrão, independente do outro', () => {

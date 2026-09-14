@@ -12,7 +12,9 @@ export {
   ConfiguracaoInvalida,
   EMISSOR_TOKEN_SINTETICO,
   lerConfiguracaoIdentidade,
+  lerVagasPorEscolaDesligadas,
   MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO,
+  MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO,
   TAMANHO_MINIMO_CHAVE_ASSINATURA,
   validarAmbiente,
 } from './config/validar-config.js'
@@ -33,6 +35,8 @@ export {
   resolverJanela,
   resolverLimites,
   resolverVagas,
+  resolverVagasDaEscola,
+  VAGAS_SEM_LIMITE,
   VALIDADE_DA_CONFIGURACAO_MS,
 } from './configuracao/configuracao-operacional.js'
 export type { CampoDaJanelaDescartado, LimitesDeRequisicao, OpcoesDaConfiguracaoOperacional, VagasPorFila } from './configuracao/configuracao-operacional.js'

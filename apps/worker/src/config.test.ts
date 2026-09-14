@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO } from '@educa/nucleo'
 import { ConfiguracaoInvalida, lerConfiguracao } from './config.js'
 
 const ambienteValido = {
+  AMBIENTE: 'local',
+  VAGAS_POR_ESCOLA_DESLIGADAS: 'false',
+  WORKER_THREADS_MAXIMO: '2',
   BANCO_URL: 'postgres://educa:senha_sintetica_xyz@postgres:5432/educa',
   BANCO_POOL_MAXIMO: '80',
   BANCO_TIMEOUT_CONEXAO_MS: '2000',
@@ -42,6 +46,7 @@ describe('lerConfiguracao do worker', () => {
       redisFilaUrl: 'redis://redis-fila:6379',
       pools: { interativa: 50, normal: 30 },
       vagasPadrao: { interativa: 5, normal: 5, lote: 2 },
+      threadsMaximo: 2,
       telemetria: { otlpUrl: 'http://observabilidade:4318', intervaloMs: 5000 },
     })
   })
@@ -76,6 +81,21 @@ describe('lerConfiguracao do worker', () => {
 
   it.each(Object.keys(ambienteValido))('não sobe sem %s', (variavel) => {
     expect(erroDe({ ...ambienteValido, [variavel]: undefined }).variaveis).toContain(variavel)
+  })
+
+  it.each(['0', '-1', '1.5', 'todas'])('não sobe com WORKER_THREADS_MAXIMO=%s: o sandbox de CPU precisa de um teto inteiro', (valor) => {
+    expect(erroDe({ ...ambienteValido, WORKER_THREADS_MAXIMO: valor }).variaveis).toEqual(['WORKER_THREADS_MAXIMO'])
+  })
+
+  it('com VAGAS_POR_ESCOLA_DESLIGADAS=true fora de produção, sobe sem teto por escola (controle negativo do cenário de carga)', () => {
+    expect(lerConfiguracao({ ...ambienteValido, VAGAS_POR_ESCOLA_DESLIGADAS: 'true' }).vagasPorEscolaDesligadas).toBe(true)
+    expect(lerConfiguracao(ambienteValido)).not.toHaveProperty('vagasPorEscolaDesligadas')
+  })
+
+  it('recusa subir com VAGAS_POR_ESCOLA_DESLIGADAS=true e AMBIENTE=producao: a flag de teste não vira porta aberta', () => {
+    const erro = erroDe({ ...ambienteValido, AMBIENTE: 'producao', VAGAS_POR_ESCOLA_DESLIGADAS: 'true' })
+    expect(erro.variaveis).toEqual(['VAGAS_POR_ESCOLA_DESLIGADAS'])
+    expect(erro.motivos).toEqual([MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO])
   })
 
   it('não sobe sem o pool de uma fila que atende', () => {

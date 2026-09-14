@@ -177,6 +177,22 @@ voltarem a normal. Leva uns 8 minutos, por causa dos 5 min da regra de 5xx. Só 
 `AMBIENTE=local`, e um de cada vez: o gatilho tem nome fixo, e um segundo ensaio no mesmo banco
 remove o gatilho do primeiro. Com o ambiente parado, o ensaio o sobe inteiro e o deixa de pé.
 
+## Rodar o cenário de carga
+
+`npm run carga` roda o cenário "justiça entre escolas" num projeto compose próprio (`educa-carga`),
+que não toca no ambiente de desenvolvimento nem no de teste, e o derruba no fim. Passa quando a
+espera da escola B com a escola A enchendo a fila fica até 500 ms acima da espera sem ela, quando só o
+usuário abusivo recebe 429 e quando `job_registro` mostra nenhum job `falhou` e nenhum interativo
+acima de 30 s. Rode de novo quando uma tarefa mexer no caminho quente (fila, despachante, worker,
+rate limit, borda) e registre o resultado na tarefa.
+
+Se reprovar, a saída diz o critério. Espera da B acima da margem ou interativo acima de 30 s é o
+problema de justiça entre escolas: olhe a vaga por escola e o rodízio do despachante antes de
+qualquer outra coisa, e confirme com `npm run carga:controle-negativo`, que precisa continuar
+reprovando (sem a vaga por escola, o cenário tem de quebrar). 429 fora do usuário abusivo é o rate
+limit tratando escola como IP. `k6_base` ou `k6_carga` é o ambiente que não rodou até o fim: veja os
+logs que o script imprime.
+
 ## Como avisar as escolas
 
 *A definir antes do piloto:* canal (e-mail para a coordenação, aviso na tela), texto padrão
