@@ -79,6 +79,7 @@ Se o agente mexeu em outro arquivo, desfaça essa mudança e reporte.
      `/criar-techspec` daquela funcionalidade precisa lê-la.
 5. Commit direto no `main` (D23): `Valida <funcionalidade> contra o PRD e fecha F? no
    roadmap`, só com `validacao.md`, `ROADMAP.md`, `techspec.md` e `TODO.md`.
+6. Próximo passo: `/retro <funcionalidade>`, antes do PRD da próxima.
 
 ### APROVADA, escopo de tarefa
 
@@ -98,8 +99,8 @@ ela ficar verde.
 ### REPROVADA
 
 Não feche nada. Apresente os críticos e os maiores, e proponha o caminho:
-- correção pequena e localizada: um subagente de correção com o achado exato, o
-  `test-engineer` na revisão, e os revisores com veto que o assunto exigir;
+- correção pequena e localizada: `/corrigir <achado>`, uma execução por achado, com o teste que
+  reproduz, o `test-engineer` e os guardiões que o assunto exigir;
 - correção que muda o desenho: nova tarefa no `tasks.md` via `/criar-tasks`, executada por
   `/executar-tasks`.
 

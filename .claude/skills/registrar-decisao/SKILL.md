@@ -1,6 +1,6 @@
 ---
 name: registrar-decisao
-description: Registra uma decisão tomada como D<n> no CLAUDE.md, com motivo, e propaga para roadmap, docs e decisões em aberto
+description: Registra uma decisão tomada como D<n> em docs/decisoes.md e no índice do CLAUDE.md, com motivo, e propaga para roadmap, docs e decisões em aberto
 argument-hint: <a decisão e o motivo, em texto livre>
 ---
 
@@ -39,7 +39,8 @@ Liste todo arquivo que precisa mudar para ficar coerente com a decisão:
 
 | Onde | O que verificar |
 |---|---|
-| `CLAUDE.md` | D<n> nova ou revista, "Decisões em aberto", "Conflitos já resolvidos" |
+| `docs/decisoes.md` | texto completo da D<n> nova, ou o `Revista em` da D<n> revista |
+| `CLAUDE.md` | linha da D<n> no índice "Decisões tomadas" (nova, ou reescrita se a revisão muda o resumo), "Decisões em aberto", "Conflitos já resolvidos" |
 | `ROADMAP.md` | escopo e critério de pronto das funcionalidades afetadas |
 | `TODO.md` | item fora do código que foi resolvido ou criado |
 | `docs/*.md` | o doc do tema (agentes, ingestão, interface, arquitetura, negócio, lgpd) |
@@ -59,7 +60,10 @@ Formato da decisão, igual às existentes:
 <o que foi decidido, em uma ou duas frases>. <o motivo>.
 ```
 
-Numeração: a próxima depois da maior D existente. Nunca reaproveite número.
+O texto completo vai em `docs/decisoes.md`. No índice do `CLAUDE.md`, uma linha só:
+`| D<n> | <a decisão em uma frase, sem o motivo> |`.
+
+Numeração: a próxima depois da maior D existente em `docs/decisoes.md`. Nunca reaproveite número.
 
 ## 5. Reportar
 

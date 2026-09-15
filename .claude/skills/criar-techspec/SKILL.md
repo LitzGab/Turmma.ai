@@ -21,8 +21,11 @@ Funcionalidade alvo: `$ARGUMENTS`
 - PRD obrigatório: `tasks/prd-$ARGUMENTS/prd.md`
 - Template: `.claude/skills/criar-techspec/template.md`
 - Desenho vigente: `docs/arquitetura.md` e `docs/modelo-de-dados.md`
-- Regras: `.claude/rules/` — cada uma explica por que existe; leia o porquê, não só a lista
-- Contexto: `CLAUDE.md` e `docs/visao-produto.md`
+- Regras: `.claude/rules/` — cada uma explica por que existe; leia o porquê, não só a lista.
+  As regras 30 e 50 só carregam sozinhas ao ler arquivo do caminho delas: leia-as se a
+  funcionalidade tem IA ou tela
+- Contexto: `CLAUDE.md`, `docs/visao-produto.md` e as decisões citadas no PRD, por extenso, em
+  `docs/decisoes.md`
 - Tela: `docs/interface.md`
 - Carga e operação: `docs/infra.md`
 - Pendências herdadas: a seção 6 do `validacao.md` de cada funcionalidade de que esta
@@ -90,9 +93,22 @@ Se a funcionalidade chama modelo, uma quarta: **perfis de IA e custo estimado**.
 Cada decisão contra `.claude/rules/`. Desvio precisa de justificativa escrita e alternativa
 considerada. Desvio silencioso é o que faz a regra perder força.
 
-### 7. Salvar
+### 7. Salvar e medir
 
-`tasks/prd-$ARGUMENTS/techspec.md`. Até 2.000 palavras. Confirme o caminho.
+`tasks/prd-$ARGUMENTS/techspec.md`. Depois meça: `wc -w tasks/prd-$ARGUMENTS/techspec.md`.
+
+**Teto de 2.000 palavras.** A Tech Spec do F1 saiu com 5.393, e cada uma das 20 tarefas manda o
+implementador e os revisores lerem pedaços dela. Acima do teto:
+- tire o que repete o PRD, as regras ou `docs/arquitetura.md` (cite em vez de copiar);
+- detalhe de uma tarefa só (nome de arquivo, assinatura de função menor) vai para o `N_task.md`,
+  não para a Tech Spec;
+- se ainda passar, proponha dividir a funcionalidade e pergunte. Subir o teto só com o usuário
+  aceitando, e o motivo escrito no topo do documento.
+
+### 8. Próximo passo
+
+Reporte o caminho, as palavras e o próximo comando: `/revisar-spec $ARGUMENTS`. As tarefas só são
+geradas com a Tech Spec revisada.
 
 ## Checklist
 
@@ -106,4 +122,6 @@ considerada. Desvio silencioso é o que faz a regra perder força.
 - [ ] Seção de carga e falha preenchida, e `infra-guardian` consultado se toca caminho quente
 - [ ] Perfis de IA e custo estimado, se aplicável
 - [ ] Comportamento em falha definido
+- [ ] Até 2.000 palavras, medido com `wc -w`, ou teto excedido com aceite escrito
 - [ ] Salvo em `tasks/prd-$ARGUMENTS/techspec.md`
+- [ ] Próximo passo apontado: `/revisar-spec $ARGUMENTS`

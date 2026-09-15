@@ -30,8 +30,10 @@ if [ -n "$alvo" ]; then
     echo "Artefatos: nenhum. Próximo passo: /criar-prd $func"
   elif [ ! -f "$dir/techspec.md" ]; then
     echo "Artefatos: PRD. Próximo passo: revisar o PRD ou /criar-techspec $func"
+  elif [ ! -f "$dir/tasks.md" ] && ! grep -q '^\*\*Veredito: APROVADA\*\*' "$dir/revisao-spec.md" 2>/dev/null; then
+    echo "Artefatos: PRD, Tech Spec. Próximo passo: /revisar-spec $func"
   elif [ ! -f "$dir/tasks.md" ]; then
-    echo "Artefatos: PRD, Tech Spec. Próximo passo: /criar-tasks $func"
+    echo "Artefatos: PRD, Tech Spec revisada. Próximo passo: /criar-tasks $func"
   else
     total=$(grep -cE '^- \[[ x]\] \*\*[0-9]+\.0' "$dir/tasks.md")
     feitas=$(grep -cE '^- \[x\] \*\*[0-9]+\.0' "$dir/tasks.md")

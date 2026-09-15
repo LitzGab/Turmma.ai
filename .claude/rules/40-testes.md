@@ -87,6 +87,9 @@ desabilitar teste para "destravar a tarefa". Teste vermelho é informação, nã
 `npm run typecheck`, `npm run test` e `npm run lint` limpos. Tocou tela, também
 `npm run test:e2e`.
 
+Na tarefa e na correção, o portão roda por `node tools/processo/portao-local.ts` (com `--e2e`
+e `--infra` quando se aplicam), que grava o carimbo que o hook exige antes do commit (D53).
+
 Mexeu em infra, também `npm run test:infra` (D52): a tarefa com `infra-guardian`
 obrigatório, e a que toca `infra/`, Dockerfile, `tools/testes/`, `tools/ci/compose.ts`,
 métricas, saúde, prontidão ou borda. São os testes que esperam o relógio real (alerta,

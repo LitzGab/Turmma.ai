@@ -34,10 +34,12 @@ dependências `[x]`):
 | Não existe `tasks/prd-<func>/prd.md` | `/criar-prd <func>` |
 | Existe PRD com status rascunho | revisar e aprovar o PRD |
 | PRD aprovado, sem Tech Spec | `/criar-techspec <func>` |
-| Tech Spec sem `tasks.md` | `/criar-tasks <func>` |
+| Tech Spec sem `revisao-spec.md` aprovada | `/revisar-spec <func>` |
+| Tech Spec revisada, sem `tasks.md` | `/criar-tasks <func>` |
 | `tasks.md` com pendentes | `/executar-tasks <func>` |
 | Todas as tarefas `[x]`, sem `validacao.md` aprovada | `/validar <func>` |
-| `validacao.md` com ressalvas ou reprovada | tratar os achados e `/validar <func>` de novo |
+| `validacao.md` com ressalvas ou reprovada | tratar os achados (`/corrigir`) e `/validar <func>` de novo |
+| `validacao.md` aprovada, sem `retro.md` | `/retro <func>` |
 
 Se uma **decisão em aberto** do `CLAUDE.md` impede o próximo passo (exemplo: o PRD de F11
 precisa da lista final de agentes), o próximo passo é `/descobrir <tema>`, não o PRD.

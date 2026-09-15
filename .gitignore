@@ -21,3 +21,6 @@ build/
 # Testes
 playwright-report/
 test-results/
+
+# Processo (carimbo do portão local, tools/processo/portao-local.ts)
+.processo/

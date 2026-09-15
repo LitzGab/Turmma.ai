@@ -1,3 +1,12 @@
+---
+paths:
+  - "apps/*/src/ia/**"
+  - "packages/*/src/ia/**"
+  - "**/agentes/**"
+  - "**/prompts/**"
+  - "**/tutor/**"
+---
+
 # Regra 30 — Camada de IA
 
 ## Por que esta regra existe

@@ -32,7 +32,7 @@ Leia, nesta ordem:
 4. `tasks.md`: a lista, os subagentes por tarefa e o **critério de pronto da funcionalidade**
 5. O bloco da funcionalidade em `ROADMAP.md`, com o "Pronto quando"
 6. As regras de `.claude/rules/` que o PRD e a Tech Spec citam, e as decisões D do
-   `CLAUDE.md` citadas neles
+   `docs/decisoes.md` citadas neles
 7. Escopo de tarefa: o `N_task.md` e só os RF que ela declara cobrir
 
 ## 2. O que mudou
@@ -98,7 +98,12 @@ npm run test:infra   # se a funcionalidade mexe em infra (regra 40, D52)
 - Divergência da Tech Spec: está registrada na própria Tech Spec (seção 12 ou nota) ou foi
   decidida em silêncio? Silêncio é achado maior.
 - Recomendação de revisor ou pendência de relatório que ficou sem destino: liste como menor,
-  para não se perder.
+  para não se perder. As recomendações estão em `achados-revisoes.md`, na pasta da
+  funcionalidade, escrito pelo hook.
+- A Tech Spec passou por `/revisar-spec` (existe `revisao-spec.md` com veredito APROVADA)?
+  Funcionalidade especificada depois de 15/09/2026 sem isso é achado maior.
+- Commit depois de 15/09/2026 que levou código sem `(tarefa N.0)` nem `(correção <slug>)`
+  é achado maior: código que não passou por revisor.
 
 ## 6. Classificação
 

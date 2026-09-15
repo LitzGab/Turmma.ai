@@ -20,7 +20,7 @@ precisa saber como elas foram implementadas, e é melhor que não saiba.
 implementação entre tarefas. Ao orquestrador cabe saber quais tarefas existem, sua ordem, e
 se cada uma concluiu com sucesso.</critical>
 <critical>Só inicie a próxima depois que a atual concluir COMPLETAMENTE e SEM ERRO:
-marcada `[x]`, testes 100%, typecheck limpo, vetos aprovados e revisão aprovada.</critical>
+marcada `[x]`, portão local carimbado e revisores obrigatórios aprovados.</critical>
 <critical>Se uma tarefa falhar, PARE. Não inicie a próxima. Reporte e aguarde instrução.</critical>
 
 Alvo: `$ARGUMENTS`
@@ -52,10 +52,10 @@ Para cada tarefa pendente:
    - `tasks.md`: a tarefa está `[x]`?
    - `git log -1`: o commit `(tarefa N.0)` existe e traz a linha `Revisões:`?
    - Seção "Revisões" do `N_task.md`, escrita pelo hook: todo revisor da linha
-     "Subagentes obrigatórios" tem rodada registrada, e a última rodada de cada um com veto
-     (`tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer`, `infra-guardian`,
-     `test-engineer`) é APROVADO?
-   - Relatório: testes 100%, typecheck limpo, e2e verde se tocou tela, revisão aprovada?
+     "Subagentes obrigatórios", mais `test-engineer` e `revisor-geral`, tem rodada registrada,
+     e a última rodada de cada um com veto (`tenancy-guardian`, `privacy-guardian`,
+     `conformidade-reviewer`, `infra-guardian`, `test-engineer`, `revisor-geral`) é APROVADO?
+   - Relatório: testes 100%, typecheck limpo, e2e verde se tocou tela, portão local carimbado?
 
    Revisor obrigatório sem rodada na seção é falha, mesmo que o relatório diga APROVADO.
    - Push: `git rev-list --count origin/main..main` é zero? Commit de tarefa sem push é
@@ -83,17 +83,22 @@ Regras obrigatórias:
 - Implemente SOMENTE esta tarefa.
 - Não conclua enquanto todos os testes não passarem e o typecheck não estiver limpo.
 - Tocou tela: rode também o e2e.
-- Chame TODOS os revisores marcados no arquivo da tarefa, cada prompt começando com
-  `Tarefa: tasks/prd-[funcionalidade]/[N]_task.md`, e ESPERE todos terminarem. Reprovou:
-  corrija e chame um revisor novo. Mexeu em código depois de uma aprovação: rodada nova.
-  O hook registra as rodadas no N_task.md e bloqueia o commit sem elas (passo 5 da skill).
-- Execute a revisão. Reprovou, corrija e revise de novo.
+- Leia `tasks/prd-[funcionalidade]/achados-revisoes.md`, se existir, e faça a autoconferência
+  do passo 2 da skill antes de codar.
+- Rode o portão local com carimbo (`node tools/processo/portao-local.ts`, com `--e2e` e
+  `--infra` quando se aplicam).
+- Revisores (passo 5 da skill): `test-engineer` primeiro e sozinho; com ele aprovado,
+  `revisor-geral` e os guardiões marcados em paralelo. Todo prompt começa com
+  `Tarefa: tasks/prd-[funcionalidade]/[N]_task.md`; em rodada nova, traga as correções
+  exigidas e o diff desde a rodada anterior. ESPERE todos terminarem. Reprovou: corrija e
+  chame um revisor novo. O hook registra as rodadas e bloqueia o commit sem elas.
 - Antes do commit, confira a esteira do último commit do `main` (passo 7 da skill):
   vermelha, não commite e reporte; rodando, espere.
 - Ao concluir, marque `[x]` em tasks.md, faça o commit da tarefa com a linha `Revisões:` e
   o push.
 - Retorne relatório curto: STATUS, o que foi implementado, testes, typecheck, a linha
-  `Revisões:`, revisão, esteira do commit anterior, push e, em caso de falha, o motivo exato.
+  `Revisões:`, portão local, esteira do commit anterior, push e, em caso de falha, o motivo
+  exato.
   Sem dump de código, sem histórico de raciocínio.
 ```
 
@@ -110,6 +115,9 @@ Motivo da parada: [todas concluídas | falha na tarefa X: motivo]
 Esteira no último commit: [verde | vermelha: job]
 Pendentes restantes: [lista]
 ```
+
+Com todas as tarefas concluídas, o próximo passo é `/validar <funcionalidade>` e, depois dele,
+`/retro <funcionalidade>`.
 
 ## Notas
 

@@ -1,3 +1,11 @@
+---
+paths:
+  - "apps/web/**"
+  - "e2e/**"
+  - "**/*.tsx"
+  - "playwright.config.ts"
+---
+
 # Regra 50 — Frontend
 
 ## Por que esta regra existe

@@ -1,86 +1,47 @@
 ---
 name: executar-review
-description: Portão de qualidade de uma tarefa, antes da conclusão
+description: Dispara o revisor-geral sobre uma tarefa, em contexto limpo, fora do fluxo do /executar-task
 argument-hint: <caminho do N_task.md>
 ---
 
-Você revisa o que foi implementado e dá um veredito: **APROVADO** ou **REPROVADO**.
+A revisão geral de uma tarefa é feita pelo agente `revisor-geral`, em contexto limpo, e não por
+quem implementou. Quem acompanhou a implementação aceita o que já decidiu; foi por isso que a
+autorrevisão saiu do processo em 15/09/2026.
 
-Reprovar é normal e barato. O custo de deixar passar é outro: neste produto, um erro de
-isolamento ou de dado pessoal não é um bug a ser corrigido na próxima sprint, é o fim de um
-contrato. Revise como quem vai ter que explicar isso a uma coordenadora.
-
-Não escreva elogio e não resuma o que o código faz. Aponte o que está errado e o que
-precisa mudar.
+Dentro do `/executar-task` o `revisor-geral` já é chamado no passo 5. Use este comando para
+rodá-lo à parte: uma tarefa antiga, uma segunda opinião, ou a conferência depois de uma
+correção.
 
 Tarefa: `$ARGUMENTS`
 
-## 1. Escopo
+## 1. Preparar
 
-A tarefa fez o que o `N_task.md` pediu? Fez **mais** do que pediu?
+- Confirme que `$ARGUMENTS` é um `tasks/prd-<func>/<N>_task.md` ou `tasks/correcoes/<slug>.md`
+  que existe. Vazio: liste as tarefas não concluídas em `tasks/` e pergunte.
+- Colete `git status --short` e, se houver rodada anterior do `revisor-geral` na seção
+  "Revisões", o diff desde o início dela e os bloqueantes que ela exigiu (em
+  `achados-revisoes.md`, na mesma pasta).
 
-Implementação que invade tarefa futura é reprovação. Ela quebra o sequenciamento, polui o
-commit, e entrega código que ninguém auditou com o contexto certo.
+## 2. Disparar
 
-## 2. Aderência à Tech Spec
-
-Divergiu da arquitetura definida? Se divergiu e estava certo em divergir, isso deveria ter
-sido reportado antes, não decidido em silêncio no meio da implementação.
-
-## 3. Regras
-
-| Regra | O que olhar |
-|---|---|
-| `00` | Controller sem regra, repository único no banco, nada demorado em request, DTO explícito |
-| `10` | `escolaId` presente, escopo no repository, autorização por objeto, teste de isolamento efetivo |
-| `20` | Log sem dado pessoal, campo novo na tabela de `docs/lgpd.md`, auditoria onde exigida, seed sintético |
-| `30` | Sem SDK de provedor fora do adaptador, perfil declarado, orçamento, rastreabilidade da origem |
-| `40` | Teste prova regra, casos de borda do domínio cobertos, nada de `.skip` |
-| `50` | Quatro estados, Chromebook fraco, responsivo e usável no celular, ação oficial protegida, aluno sem ver dado de colega |
-| `60` | Vocabulário do glossário, ano letivo como dimensão, reivindicação aprovada |
-| `70` | Nota com autor humano em todo caminho, sem decisão autônoma, tutor supervisionado |
-| `80` | Rate limit por usuário e escola, fila com prioridade, sem estado em memória, concorrência protegida, índice pelo escopo, migration compatível |
-
-Para a regra 10 e a 20, faça sempre o mesmo teste mental: **troque o id na URL**. Quem não
-deveria, alcança?
-
-Para a regra 80, a pergunta é outra: **o que acontece com isso às 10h de segunda, com sessenta
-turmas usando ao mesmo tempo atrás do IP da própria escola?**
-
-## 4. Vetos
-
-Leia a seção "Revisões" do `N_task.md`, que o hook escreve quando cada revisor termina. Não
-aceite veredito citado de memória ou no relatório.
-
-- Todo revisor da linha "Subagentes obrigatórios" tem rodada registrada?
-- A última rodada de `tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer`,
-  `infra-guardian` e `test-engineer`, quando obrigatórios, é APROVADO?
-- Algum revisor ainda está rodando? Então espere: revisão não termina antes deles.
-
-Revisor obrigatório sem rodada registrada é reprovação, não presunção de aprovação.
-
-## 5. Qualidade de código
-
-Nomes claros, função com uma responsabilidade, erro tratado, sem código morto, sem `any`,
-sem comentário explicando o óbvio. Legibilidade acima de esperteza: quem vai ler isso daqui
-a seis meses é alguém sem o contexto de hoje.
-
-## 6. Portão automático
-
-```bash
-npm run typecheck && npm run test && npm run lint
-npm run test:infra   # se a tarefa mexeu em infra (regra 40, D52)
-```
-
-## Veredito
+Agente `revisor-geral`, com o prompt:
 
 ```
-VEREDITO: APROVADO | REPROVADO
-Escopo: respeitado | invadiu tarefa futura | incompleto
-Aderência à techspec: ...
-Regras violadas: <lista ou nenhuma>
-Vetos: ...
-Portão: typecheck / test / lint / e2e / infra
-Problemas encontrados: <arquivo, linha, o quê>
-Correções exigidas: <lista objetiva>
+Tarefa: <caminho>
+
+Arquivos alterados nesta tarefa:
+<git status --short>
+
+[Só em rodada nova:]
+Rodada anterior: <n>ª, <veredito>. Correções exigidas:
+<bloqueantes>
+Diff desde a rodada anterior:
+<git diff>
 ```
+
+Espere o veredito. O hook registra a rodada no documento.
+
+## 3. Reportar
+
+O bloco de veredito do `revisor-geral`, sem reescrever. Reprovado: liste as correções exigidas
+e diga que, depois de corrigir, a rodada nova precisa do diff.

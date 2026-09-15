@@ -1,20 +1,34 @@
-// Registro e portão das revisões de tarefa, chamados pelos hooks do Claude Code
-// (.claude/settings.json).
+// Registro e portão das revisões, chamados pelos hooks do Claude Code (.claude/settings.json).
 //
-// `registrar` (SubagentStop): quando um revisor termina, acrescenta a rodada à seção
-// "Revisões" do N_task.md, com início, fim e veredito. Quem escreve é o hook, não quem
-// implementou a tarefa.
+// Documento de trabalho é o arquivo onde as rodadas ficam registradas: o N_task.md de uma tarefa,
+// o revisao-spec.md de uma Tech Spec, ou o tasks/correcoes/<slug>.md de uma correção.
 //
-// `portao` (PreToolUse do Bash): bloqueia `git commit ... (tarefa N.0)` enquanto algum revisor
-// obrigatório do N_task.md não tiver uma rodada iniciada depois da última alteração de código,
-// com APROVADO quando o revisor tem veto, ou enquanto a mensagem não trouxer a linha "Revisões:".
+// `registrar` (SubagentStop): quando um revisor termina, acrescenta a rodada à seção "Revisões" do
+// documento, com início, fim e veredito, e guarda o que ele exigiu em achados-revisoes.md, na mesma
+// pasta, para a retrospectiva. Quem escreve é o hook, não quem implementou.
+//
+// `portao` (PreToolUse do Bash): bloqueia `git commit ... (tarefa N.0)` e `git commit ... (correção
+// <slug>)` enquanto algum revisor obrigatório não tiver uma rodada que ainda valha para o código
+// atual, com APROVADO quando o revisor tem veto, enquanto o portão local (typecheck, lint, testes)
+// não tiver passado depois da última alteração, ou enquanto a mensagem não trouxer a linha
+// "Revisões:". Bloqueia também commit que leva código sem nenhuma das duas marcas.
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
-export const REVISORES_COM_VETO = ['tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'infra-guardian', 'test-engineer']
+export const REVISORES_COM_VETO = ['tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'infra-guardian', 'test-engineer', 'revisor-geral']
 export const REVISORES_SEM_VETO = ['llm-integrator', 'pedagogia-reviewer', 'frontend-reviewer']
 const REVISORES = new Set([...REVISORES_COM_VETO, ...REVISORES_SEM_VETO])
+
+// Quem audita os testes além do código. Para os outros, mudança só em teste não caduca a rodada:
+// o que eles aprovaram não mudou, e quem confere o teste corrigido é o test-engineer.
+const REVISORES_DE_TESTE = ['test-engineer', 'revisor-geral']
+
+// Código só entra no main por tarefa ou por correção, as duas com revisores.
+export const PASTAS_DE_CODIGO = ['apps/', 'packages/', 'infra/', 'e2e/']
+
+export const CAMINHO_CARIMBO = '.processo/portao.json'
+export const NOME_ACHADOS = 'achados-revisoes.md'
 
 export interface Revisao {
   inicio: string
@@ -25,12 +39,24 @@ export interface Revisao {
   agente: string
 }
 
+export interface Alteracao {
+  arquivo: string
+  quando: number
+}
+
+export interface Carimbo {
+  inicio: string
+  suites: string[]
+}
+
+export type TipoDocumento = 'tarefa' | 'spec' | 'correcao'
+
 const TITULO_SECAO = '## Revisões'
 const CABECALHO_TABELA = '| Início | Fim | Revisor | Rodada | Veredito | Agente |\n|---|---|---|---|---|---|'
 const TEXTO_SECAO =
   'Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:\n' +
-  'o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada\n' +
-  'depois da última alteração de código, com APROVADO quando o revisor tem veto.'
+  'o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código\n' +
+  'atual, com APROVADO quando o revisor tem veto.'
 
 export function extrairVeredito(texto: string): string | null {
   const achado = /VEREDITO\**\s*:?\s*\**\s*(APROVADO|REPROVADO|AJUSTES NECESS[ÁA]RIOS|VETO)/.exec(texto)
@@ -39,11 +65,19 @@ export function extrairVeredito(texto: string): string | null {
   return achado[1].replace('NECESSARIOS', 'NECESSÁRIOS')
 }
 
-// A linha "Tarefa: tasks/prd-x/N_task.md" do prompt do revisor vence; sem ela, a primeira menção.
+const DOCUMENTO = /tasks\/(?:prd-[a-z0-9-]+\/(?:\d+_task|revisao-spec)|correcoes\/(?!achados-revisoes)[a-z0-9-]+)\.md/
+
+// A linha "Tarefa: <documento>" do prompt do revisor vence; sem ela, a primeira menção.
 export function caminhoDaTarefa(texto: string): string | null {
-  const declarada = /Tarefa:\s*`?(tasks\/prd-[a-z0-9-]+\/\d+_task\.md)/.exec(texto)
+  const declarada = new RegExp(`Tarefa:\\s*\`?(${DOCUMENTO.source})`).exec(texto)
   if (declarada?.[1]) return declarada[1]
-  return /tasks\/prd-[a-z0-9-]+\/\d+_task\.md/.exec(texto)?.[0] ?? null
+  return DOCUMENTO.exec(texto)?.[0] ?? null
+}
+
+export function tipoDoDocumento(caminho: string): TipoDocumento {
+  if (caminho.startsWith('tasks/correcoes/')) return 'correcao'
+  if (caminho.endsWith('/revisao-spec.md')) return 'spec'
+  return 'tarefa'
 }
 
 export function formatarHora(data: Date): string {
@@ -110,9 +144,12 @@ export function lerRevisoes(conteudoTarefa: string): Revisao[] {
     })
 }
 
-export function revisoresObrigatorios(conteudoTarefa: string): string[] {
+// Os marcados no documento, mais os que toda tarefa e toda correção têm, marcados ou não.
+export function revisoresObrigatorios(conteudoTarefa: string, tipo: TipoDocumento = 'tarefa'): string[] {
   const linha = /\*\*Subagentes obrigatórios:\*\*(.*)/.exec(conteudoTarefa)?.[1] ?? ''
-  return [...linha.matchAll(/`([a-z-]+)`/g)].map((achado) => achado[1] ?? '').filter((nome) => REVISORES.has(nome))
+  const marcados = [...linha.matchAll(/`([a-z-]+)`/g)].map((achado) => achado[1] ?? '').filter((nome) => REVISORES.has(nome))
+  const sempre = tipo === 'tarefa' ? ['test-engineer', 'revisor-geral'] : tipo === 'correcao' ? ['test-engineer'] : []
+  return [...new Set([...marcados, ...sempre])]
 }
 
 export function acrescentarRevisao(conteudoTarefa: string, revisao: Omit<Revisao, 'rodada'>, nota?: string): string {
@@ -122,6 +159,55 @@ export function acrescentarRevisao(conteudoTarefa: string, revisao: Omit<Revisao
   }
   const rodada = lerRevisoes(conteudo).filter((anterior) => anterior.revisor === revisao.revisor).length + 1
   return `${conteudo}| ${revisao.inicio} | ${revisao.fim} | \`${revisao.revisor}\` | ${rodada} | ${revisao.veredito} | ${revisao.agente} |\n`
+}
+
+// O que vale para a retrospectiva: toda rodada que não aprovou, e a aprovada que deixou recomendação.
+export function achadoDaRodada(revisao: Revisao, mensagemFinal: string): string | null {
+  const recomendou = /Recomendações\**\s*:\**\s*(?!nenhuma)\S/i.test(mensagemFinal)
+  if (revisao.veredito === 'APROVADO' && !recomendou) return null
+  const linhas = mensagemFinal.trim().split('\n')
+  const texto = linhas.length > 80 ? [...linhas.slice(0, 80), `[… ${linhas.length - 80} linhas cortadas]`].join('\n') : linhas.join('\n')
+  return `## ${revisao.revisor} · ${revisao.rodada}ª rodada · ${revisao.veredito} · ${revisao.fim}\n\n${texto}\n`
+}
+
+export function acrescentarAchado(conteudoAchados: string, documento: string, achado: string): string {
+  const base = conteudoAchados || '# Achados das revisões\n\nEscrito pelo hook `tools/processo/revisoes.ts`. Lido por `/retro`. Não edite à mão.\n'
+  const [cabecalho = '', ...resto] = achado.split('\n')
+  return `${base.endsWith('\n') ? base : `${base}\n`}\n${cabecalho} · \`${documento}\`\n${resto.join('\n')}`
+}
+
+const ehArquivoDeTeste = (arquivo: string) => /\.(test|spec)\.tsx?$/.test(arquivo) || /(^|\/)(test|e2e|__fixtures__)\//.test(arquivo)
+
+// A alteração mais recente, depois do início da rodada, que o revisor ainda não viu e que importa para ele.
+export function alteracaoQueCaduca(revisor: string, inicioDaRodada: string, alteracoes: Alteracao[]): Alteracao | null {
+  const inicio = Math.floor(lerHora(inicioDaRodada) / 1000)
+  return alteracoes
+    .filter((alteracao) => Math.floor(alteracao.quando / 1000) > inicio)
+    .filter((alteracao) => REVISORES_DE_TESTE.includes(revisor) || !ehArquivoDeTeste(alteracao.arquivo))
+    .reduce<Alteracao | null>((maisRecente, alteracao) => (!maisRecente || alteracao.quando > maisRecente.quando ? alteracao : maisRecente), null)
+}
+
+export function suitesExigidas(obrigatorios: string[]): string[] {
+  return [
+    'typecheck',
+    'lint',
+    'test',
+    ...(obrigatorios.includes('frontend-reviewer') ? ['e2e'] : []),
+    ...(obrigatorios.includes('infra-guardian') ? ['infra'] : []),
+  ]
+}
+
+export function avaliarCarimbo(carimbo: Carimbo | null, exigidas: string[], alteracoes: Alteracao[]): string | null {
+  const comando = `node tools/processo/portao-local.ts${exigidas.includes('e2e') ? ' --e2e' : ''}${exigidas.includes('infra') ? ' --infra' : ''}`
+  if (!carimbo) return `portão local: nunca passou nesta árvore. Rode \`${comando}\`.`
+  const faltando = exigidas.filter((suite) => !carimbo.suites.includes(suite))
+  if (faltando.length > 0) return `portão local: o último não rodou ${faltando.join(', ')}. Rode \`${comando}\`.`
+  const inicio = Math.floor(new Date(carimbo.inicio).getTime() / 1000)
+  const depois = alteracoes.filter((alteracao) => Math.floor(alteracao.quando / 1000) >= inicio).sort((a, b) => b.quando - a.quando)[0]
+  if (depois) {
+    return `portão local: ${depois.arquivo} mudou em ${formatarHora(new Date(depois.quando))}, depois do início do último (${formatarHora(new Date(carimbo.inicio))}). Rode \`${comando}\` de novo.`
+  }
+  return null
 }
 
 export interface ResultadoPortao {
@@ -134,7 +220,8 @@ const ordinal = (n: number) => `${n}ª rodada`
 export function avaliarPortao(entrada: {
   obrigatorios: string[]
   revisoes: Revisao[]
-  ultimaAlteracao: { arquivo: string; quando: number } | null
+  alteracoes: Alteracao[]
+  carimbo: Carimbo | null
   mensagemCommit: string
 }): ResultadoPortao {
   const bloqueios: string[] = []
@@ -142,7 +229,7 @@ export function avaliarPortao(entrada: {
   for (const revisor of entrada.obrigatorios) {
     const ultima = entrada.revisoes.filter((revisao) => revisao.revisor === revisor).at(-1)
     if (!ultima) {
-      bloqueios.push(`${revisor}: nenhuma rodada registrada. Chame o revisor com a linha "Tarefa: <caminho do N_task.md>" no início do prompt.`)
+      bloqueios.push(`${revisor}: nenhuma rodada registrada. Chame o revisor com a linha "Tarefa: <caminho do documento>" no início do prompt.`)
       continue
     }
     resumo.push(`${revisor} ${ultima.veredito} (${ordinal(ultima.rodada)})`)
@@ -151,14 +238,16 @@ export function avaliarPortao(entrada: {
       bloqueios.push(`${revisor}: a última rodada (${ultima.rodada}ª, ${ultima.fim}) terminou ${ultima.veredito}. Corrija e chame uma rodada nova.`)
       continue
     }
-    const alteracao = entrada.ultimaAlteracao
-    if (alteracao && Math.floor(alteracao.quando / 1000) > Math.floor(lerHora(ultima.inicio) / 1000)) {
+    const alteracao = alteracaoQueCaduca(revisor, ultima.inicio, entrada.alteracoes)
+    if (alteracao) {
       bloqueios.push(
         `${revisor}: ${alteracao.arquivo} mudou em ${formatarHora(new Date(alteracao.quando))}, depois do início da ${ultima.rodada}ª rodada (${ultima.inicio}). ` +
-          'A revisão vale para o código que o revisor viu: chame uma rodada nova.',
+          'A revisão vale para o código que o revisor viu: chame uma rodada nova, com o diff desde a rodada aprovada.',
       )
     }
   }
+  const carimbo = avaliarCarimbo(entrada.carimbo, suitesExigidas(entrada.obrigatorios), entrada.alteracoes)
+  if (carimbo) bloqueios.push(carimbo)
   const linhaResumo = `Revisões: ${resumo.join(', ')}`
   // A linha só é cobrada com os revisores em ordem: antes disso, o exemplo sairia incompleto.
   if (bloqueios.length === 0 && entrada.obrigatorios.length > 0 && !/^Revisões:/m.test(entrada.mensagemCommit)) {
@@ -219,6 +308,13 @@ export function registrar(entrada: EntradaHook, raiz: string, agora = new Date()
       agente: entrada.agent_id ?? '',
     })
     writeFileSync(caminho, atualizado)
+    const revisao = lerRevisoes(atualizado).at(-1)
+    const achado = revisao ? achadoDaRodada(revisao, mensagemFinal) : null
+    if (achado) {
+      const caminhoAchados = join(dirname(caminho), NOME_ACHADOS)
+      const anterior = existsSync(caminhoAchados) ? readFileSync(caminhoAchados, 'utf8') : ''
+      writeFileSync(caminhoAchados, acrescentarAchado(anterior, relativo, achado))
+    }
   })
   return relativo
 }
@@ -238,17 +334,27 @@ export function arquivosAlterados(raiz: string): string[] {
   return arquivos
 }
 
-// Registro da tarefa não conta como alteração de código: o próprio hook escreve lá.
-export function ultimaAlteracao(raiz: string, arquivos: string[]): { arquivo: string; quando: number } | null {
-  let maisRecente: { arquivo: string; quando: number } | null = null
-  for (const arquivo of arquivos) {
-    if (arquivo.startsWith('tasks/')) continue
-    const caminho = join(raiz, arquivo)
-    if (!existsSync(caminho)) continue
-    const quando = statSync(caminho).mtimeMs
-    if (!maisRecente || quando > maisRecente.quando) maisRecente = { arquivo, quando }
+// Registro em tasks/ não conta como alteração de código: o próprio hook escreve lá.
+export function alteracoesDeCodigo(raiz: string, arquivos: string[]): Alteracao[] {
+  return arquivos
+    .filter((arquivo) => !arquivo.startsWith('tasks/') && !arquivo.startsWith('.processo/'))
+    .filter((arquivo) => existsSync(join(raiz, arquivo)))
+    .map((arquivo) => ({ arquivo, quando: statSync(join(raiz, arquivo)).mtimeMs }))
+}
+
+export function lerCarimbo(raiz: string): Carimbo | null {
+  const caminho = join(raiz, CAMINHO_CARIMBO)
+  if (!existsSync(caminho)) return null
+  try {
+    return JSON.parse(readFileSync(caminho, 'utf8')) as Carimbo
+  } catch {
+    return null
   }
-  return maisRecente
+}
+
+export function gravarCarimbo(raiz: string, carimbo: Carimbo): void {
+  mkdirSync(join(raiz, dirname(CAMINHO_CARIMBO)), { recursive: true })
+  writeFileSync(join(raiz, CAMINHO_CARIMBO), `${JSON.stringify(carimbo, null, 2)}\n`)
 }
 
 // `git commit` em posição de comando: início, ou depois de ; & | ( ou quebra de linha. Texto
@@ -257,8 +363,40 @@ export function ehCommit(comando: string): boolean {
   return /(?:^|[;&|(\n])\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*git(?:\s+-[Cc]\s+\S+)*\s+commit\b/.test(comando)
 }
 
-export function tarefaDoCommit(comando: string, raiz: string, arquivos: string[]): { caminho: string } | { erro: string } | null {
+const semAspas = (token: string) => token.replace(/^["']|["']$/g, '')
+
+// Os arquivos que o commit vai levar, pelo que o próprio comando prepara: `git add <caminhos>`,
+// `git add -A`, `git commit -a`. O que já estava no índice entra por `preparados`.
+export function arquivosDoCommit(comando: string, raiz: string, alterados: string[], preparados: string[]): string[] {
+  const levados = new Set(preparados)
+  const todos = () => alterados.forEach((arquivo) => levados.add(arquivo))
+  for (const achado of comando.matchAll(/git(?:\s+-[Cc]\s+\S+)*\s+add\b([^;&|\n]*)/g)) {
+    for (const bruto of (achado[1] ?? '').trim().split(/\s+/).filter(Boolean)) {
+      const token = semAspas(bruto)
+      if (['-A', '--all', '.', ':/', '-u', '--update'].includes(token)) todos()
+      if (token.startsWith('-')) continue
+      const relativo = token.startsWith(`${raiz}/`) ? token.slice(raiz.length + 1) : token.replace(/^\.\//, '')
+      const pasta = relativo.replace(/\/$/, '')
+      alterados.filter((arquivo) => arquivo === pasta || arquivo.startsWith(`${pasta}/`)).forEach((arquivo) => levados.add(arquivo))
+    }
+  }
+  for (const achado of comando.matchAll(/git(?:\s+-[Cc]\s+\S+)*\s+commit\b([^;&|\n]*)/g)) {
+    for (const token of (achado[1] ?? '').trim().split(/\s+/)) {
+      if (!token.startsWith('-')) break
+      if (token === '--all' || (/^-[a-zA-Z]+$/.test(token) && token.includes('a'))) todos()
+      if (/^-[a-zA-Z]*[mF]$/.test(token) || token === '--message' || token === '--file' || token.startsWith('--message=')) break
+    }
+  }
+  return [...levados]
+}
+
+export function documentoDoCommit(comando: string, raiz: string, arquivos: string[]): { caminho: string } | { erro: string } | null {
   if (!ehCommit(comando)) return null
+  const correcao = /\(correção ([a-z0-9-]+)\)/.exec(comando)?.[1]
+  if (correcao) {
+    const caminho = join('tasks', 'correcoes', `${correcao}.md`)
+    return existsSync(join(raiz, caminho)) ? { caminho } : { erro: `A correção ${correcao} não tem ${caminho}. Crie o documento com /corrigir.` }
+  }
   const numero = /\(tarefa (\d+)\.0\)/.exec(comando)?.[1]
   if (!numero) return null
   const pastaTasks = join(raiz, 'tasks')
@@ -275,20 +413,34 @@ export function tarefaDoCommit(comando: string, raiz: string, arquivos: string[]
   return { caminho: join('tasks', escolhidas[0], `${numero}_task.md`) }
 }
 
+function arquivosPreparados(raiz: string): string[] {
+  return execFileSync('git', ['diff', '--cached', '--name-only', '-z'], { cwd: raiz, encoding: 'utf8' }).split('\0').filter(Boolean)
+}
+
 export function portao(entrada: EntradaHook, raiz: string): string | null {
   const comando = entrada.tool_input?.command ?? ''
   if (!ehCommit(comando)) return null
   const arquivos = arquivosAlterados(raiz)
-  const tarefa = tarefaDoCommit(comando, raiz, arquivos)
-  if (!tarefa) return null
-  if ('erro' in tarefa) return tarefa.erro
-  const conteudo = readFileSync(join(raiz, tarefa.caminho), 'utf8')
+  const documento = documentoDoCommit(comando, raiz, arquivos)
+  if (!documento) {
+    const codigo = arquivosDoCommit(comando, raiz, arquivos, arquivosPreparados(raiz)).filter((arquivo) =>
+      PASTAS_DE_CODIGO.some((pasta) => arquivo.startsWith(pasta)),
+    )
+    if (codigo.length === 0) return null
+    return (
+      `Commit bloqueado: ele leva código (${codigo.slice(0, 3).join(', ')}${codigo.length > 3 ? ', …' : ''}) sem "(tarefa N.0)" nem "(correção <slug>)". ` +
+      'Código entra por /executar-task ou por /corrigir, que passam pelos revisores.'
+    )
+  }
+  if ('erro' in documento) return documento.erro
+  const conteudo = readFileSync(join(raiz, documento.caminho), 'utf8')
   const { bloqueios } = avaliarPortao({
-    obrigatorios: revisoresObrigatorios(conteudo),
+    obrigatorios: revisoresObrigatorios(conteudo, tipoDoDocumento(documento.caminho)),
     revisoes: lerRevisoes(conteudo),
-    ultimaAlteracao: ultimaAlteracao(raiz, arquivos),
+    alteracoes: alteracoesDeCodigo(raiz, arquivos),
+    carimbo: lerCarimbo(raiz),
     mensagemCommit: comando,
   })
   if (bloqueios.length === 0) return null
-  return `Commit bloqueado: revisões de ${tarefa.caminho} incompletas.\n- ${bloqueios.join('\n- ')}`
+  return `Commit bloqueado: revisões de ${documento.caminho} incompletas.\n- ${bloqueios.join('\n- ')}`
 }

@@ -2,6 +2,7 @@
 
 **Funcionalidade:** [nome] · **Depende de:** [N.0 ou nenhuma]
 **Subagentes obrigatórios:** `...`
+<!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
 
@@ -45,11 +46,10 @@ Definidos com o `test-engineer`. Não improvise aqui.
 
 - [ ] Subtarefas concluídas
 - [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
-- [ ] E2E verde (se tocou tela)
-- [ ] Todos os revisores obrigatórios com rodada na seção "Revisões", iniciada depois da
-  última alteração de código, e APROVADO nos que têm veto
-- [ ] Revisão aprovada
+- [ ] Portão local carimbado depois da última alteração (`node tools/processo/portao-local.ts`,
+  com `--e2e` se tocou tela e `--infra` se mexeu em infra)
+- [ ] `test-engineer` aprovado primeiro; `revisor-geral` e os guardiões marcados com rodada que
+  vale para o código atual, e APROVADO nos que têm veto
 - [ ] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
 
 ## Fora do escopo desta tarefa
@@ -57,5 +57,7 @@ Definidos com o `test-engineer`. Não improvise aqui.
 O que pertence a outra tarefa e não deve ser implementado aqui.
 
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
-     quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+     quando o primeiro revisor termina, e o que os revisores exigem vai para
+     achados-revisoes.md na mesma pasta. Não escreva nenhum dos dois à mão e não acrescente
+     seção depois de "Revisões". -->
 

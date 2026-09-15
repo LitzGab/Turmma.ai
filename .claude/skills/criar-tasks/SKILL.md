@@ -21,6 +21,13 @@ Funcionalidade alvo: `$ARGUMENTS`
 
 `tasks/prd-$ARGUMENTS/prd.md`, `tasks/prd-$ARGUMENTS/techspec.md` e `.claude/rules/`.
 
+`tasks/prd-$ARGUMENTS/revisao-spec.md` com veredito **APROVADA** (`/revisar-spec`). Sem ele, PARE
+e aponte `/revisar-spec $ARGUMENTS`: erro na Tech Spec contamina todas as tarefas, e é o momento
+mais barato de achá-lo.
+
+Leia também o `achados-revisoes.md` e o `retro.md` das funcionalidades anteriores, se
+existirem: o que os revisores exigiram lá vira cenário de teste ou subtarefa aqui.
+
 ## O que é uma boa tarefa
 
 Uma tarefa entrega **comportamento verificável**, não uma camada técnica.
@@ -68,7 +75,7 @@ Cada uma dessas pode ser demonstrada, testada e auditada sozinha.
 | gera ou corrige conteúdo pedagógico | `pedagogia-reviewer` |
 | cria ou altera tela | `frontend-reviewer` |
 | depende de regra externa ou API de terceiro | `domain-researcher` |
-| qualquer tarefa | `test-engineer` antes da revisão |
+| qualquer tarefa | `test-engineer` (primeiro revisor) e `revisor-geral`, implícitos: o hook os exige mesmo sem marca |
 
 Na dúvida, marque. Auditoria a mais custa minutos; auditoria a menos custa o contrato.
 
@@ -81,6 +88,9 @@ Na dúvida, marque. Auditoria a mais custa minutos; auditoria a menos custa o co
   o contexto que ele precisa ler
 - **Máximo 20 tarefas.** Se passar disso, a funcionalidade está grande demais e deveria ser
   dividida no roadmap
+- **Tarefa cabe numa rodada de revisão.** Mira de até ~15 arquivos de código alterados e um
+  `N_task.md` de até 800 palavras. Tarefa que passa disso vira duas: diff grande é onde o
+  revisor deixa passar coisa e onde a rodada nova custa mais
 - Formato `X.0` para tarefa principal, `X.Y` para subtarefa
 - Marque o que pode correr em paralelo
 
@@ -88,5 +98,8 @@ Na dúvida, marque. Auditoria a mais custa minutos; auditoria a menos custa o co
 
 - `tasks/prd-$ARGUMENTS/tasks.md`, seguindo `.claude/skills/criar-tasks/tasks-template.md`
 - `tasks/prd-$ARGUMENTS/[N]_task.md`, seguindo `.claude/skills/criar-tasks/task-template.md`
+
+Antes de reportar, meça: `wc -w tasks/prd-$ARGUMENTS/*_task.md`. `N_task.md` acima de 800
+palavras: corte repetição da Tech Spec (aponte a seção em vez de copiar) ou divida a tarefa.
 
 <critical>NÃO IMPLEMENTE NADA. O FOCO É A LISTA E O DETALHAMENTO.</critical>

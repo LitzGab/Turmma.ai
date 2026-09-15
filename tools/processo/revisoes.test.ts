@@ -5,16 +5,19 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   acrescentarRevisao,
+  arquivosDoCommit,
   avaliarPortao,
   caminhoDaTarefa,
   ehCommit,
   extrairVeredito,
+  gravarCarimbo,
   lerHora,
   lerRevisoes,
   lerTranscript,
   portao,
   registrar,
   revisoresObrigatorios,
+  type Carimbo,
   type Revisao,
 } from './revisoes.ts'
 
@@ -45,13 +48,24 @@ const tudoAprovadoAs10 = tarefaCom(
   rodada('tenancy-guardian', 'APROVADO', '2026-09-13 10:00:00', '2026-09-13 10:04:00'),
   rodada('frontend-reviewer', 'AJUSTES NECESSÁRIOS', '2026-09-13 10:00:00', '2026-09-13 10:03:00'),
   rodada('test-engineer', 'APROVADO', '2026-09-13 10:00:00', '2026-09-13 10:06:00'),
+  rodada('revisor-geral', 'APROVADO', '2026-09-13 10:00:00', '2026-09-13 10:07:00'),
 )
 
-const portaoDe = (conteudo: string, alteradoEm: string | null, mensagem = 'Implementa x (tarefa 9.0)\n\nRevisões: ...') =>
+// O portão local passou às 09:59:30, com o e2e e o infra que o frontend-reviewer e o infra-guardian exigem.
+const carimboVerde: Carimbo = { inicio: new Date(lerHora('2026-09-13 09:59:30')).toISOString(), suites: ['typecheck', 'lint', 'test', 'e2e', 'infra'] }
+
+const portaoDe = (
+  conteudo: string,
+  alteradoEm: string | null,
+  mensagem = 'Implementa x (tarefa 9.0)\n\nRevisões: ...',
+  arquivo = 'apps/worker/src/executor.ts',
+  carimbo: Carimbo | null = carimboVerde,
+) =>
   avaliarPortao({
     obrigatorios: revisoresObrigatorios(conteudo),
     revisoes: lerRevisoes(conteudo),
-    ultimaAlteracao: alteradoEm ? { arquivo: 'apps/worker/src/executor.ts', quando: lerHora(alteradoEm) } : null,
+    alteracoes: alteradoEm ? [{ arquivo, quando: lerHora(alteradoEm) }] : [],
+    carimbo,
     mensagemCommit: mensagem,
   })
 
@@ -98,8 +112,16 @@ describe('seção Revisões', () => {
     ])
   })
 
-  it('obrigatórios são só os revisores, não o pesquisador', () => {
-    expect(revisoresObrigatorios(TAREFA)).toEqual(['infra-guardian', 'tenancy-guardian', 'frontend-reviewer', 'test-engineer'])
+  it('obrigatórios são só os revisores, não o pesquisador, e toda tarefa tem revisor-geral', () => {
+    expect(revisoresObrigatorios(TAREFA)).toEqual(['infra-guardian', 'tenancy-guardian', 'frontend-reviewer', 'test-engineer', 'revisor-geral'])
+    expect(revisoresObrigatorios('**Subagentes obrigatórios:** `tenancy-guardian`')).toEqual(['tenancy-guardian', 'test-engineer', 'revisor-geral'])
+    expect(revisoresObrigatorios('**Subagentes obrigatórios:** `privacy-guardian`', 'correcao')).toEqual(['privacy-guardian', 'test-engineer'])
+  })
+
+  it('reconhece a revisão de spec e a correção como documentos, e não o arquivo de achados', () => {
+    expect(caminhoDaTarefa('Tarefa: tasks/prd-x/revisao-spec.md')).toBe('tasks/prd-x/revisao-spec.md')
+    expect(caminhoDaTarefa('Tarefa: tasks/correcoes/2026-09-15-dns-lento.md')).toBe('tasks/correcoes/2026-09-15-dns-lento.md')
+    expect(caminhoDaTarefa('Veja tasks/correcoes/achados-revisoes.md')).toBeNull()
   })
 })
 
@@ -113,6 +135,7 @@ describe('portão do commit', () => {
       rodada('infra-guardian', 'APROVADO', '2026-09-13 10:00:00'),
       rodada('frontend-reviewer', 'APROVADO', '2026-09-13 10:00:00'),
       rodada('test-engineer', 'APROVADO', '2026-09-13 10:00:00'),
+      rodada('revisor-geral', 'APROVADO', '2026-09-13 10:00:00'),
     )
     const { bloqueios } = portaoDe(semTenancy, '2026-09-13 09:00:00')
     expect(bloqueios).toHaveLength(1)
@@ -128,13 +151,44 @@ describe('portão do commit', () => {
 
   it('bloqueia aprovação anterior a uma correção: a revisão vale para o código que o revisor viu', () => {
     const { bloqueios } = portaoDe(tudoAprovadoAs10, '2026-09-13 10:30:00')
-    expect(bloqueios.map((bloqueio) => bloqueio.split(':')[0])).toEqual(['infra-guardian', 'tenancy-guardian', 'frontend-reviewer', 'test-engineer'])
+    expect(bloqueios.map((bloqueio) => bloqueio.split(':')[0])).toEqual([
+      'infra-guardian',
+      'tenancy-guardian',
+      'frontend-reviewer',
+      'test-engineer',
+      'revisor-geral',
+      'portão local',
+    ])
+  })
+
+  it('correção só em teste caduca test-engineer e revisor-geral, e não os guardiões', () => {
+    const { bloqueios } = portaoDe(tudoAprovadoAs10, '2026-09-13 10:30:00', undefined, 'apps/api/test/sessao-guarda.int.test.ts')
+    expect(bloqueios.map((bloqueio) => bloqueio.split(':')[0])).toEqual(['test-engineer', 'revisor-geral', 'portão local'])
+  })
+
+  it('bloqueia sem carimbo do portão local, com carimbo velho, e com carimbo sem a suíte que a tarefa exige', () => {
+    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, null).bloqueios).toEqual([
+      expect.stringMatching(/^portão local: nunca passou.*--e2e --infra/),
+    ])
+    const velho = { ...carimboVerde, inicio: new Date(lerHora('2026-09-13 09:58:00')).toISOString() }
+    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, velho).bloqueios).toEqual([
+      expect.stringMatching(/^portão local: apps\/worker\/src\/executor.ts mudou/),
+    ])
+    const semE2e = { ...carimboVerde, suites: ['typecheck', 'lint', 'test', 'infra'] }
+    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, semE2e).bloqueios).toEqual([
+      expect.stringMatching(/^portão local: o último não rodou e2e/),
+    ])
   })
 
   it('bloqueia correção feita enquanto a rodada corria, mesmo que o veredito tenha saído depois', () => {
     // infra começou 10:00 e aprovou 10:05; a alteração é de 10:02.
     const { bloqueios } = portaoDe(tudoAprovadoAs10, '2026-09-13 10:02:00')
     expect(bloqueios.some((bloqueio) => bloqueio.startsWith('infra-guardian:'))).toBe(true)
+  })
+
+  it('revisor-geral reprovado bloqueia como veto', () => {
+    const conteudo = acrescentarRevisao(tudoAprovadoAs10, rodada('revisor-geral', 'REPROVADO', '2026-09-13 10:20:00'))
+    expect(portaoDe(conteudo, '2026-09-13 09:59:00').bloqueios).toEqual([expect.stringMatching(/^revisor-geral: a última rodada \(2ª/)])
   })
 
   it('revisor sem veto com AJUSTES NECESSÁRIOS não bloqueia, se rodou sobre o código atual', () => {
@@ -146,7 +200,7 @@ describe('portão do commit', () => {
     const { bloqueios, linhaResumo } = portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', 'Implementa x (tarefa 9.0)')
     expect(bloqueios).toHaveLength(1)
     expect(linhaResumo).toBe(
-      'Revisões: infra-guardian APROVADO (1ª rodada), tenancy-guardian APROVADO (1ª rodada), frontend-reviewer AJUSTES NECESSÁRIOS (1ª rodada), test-engineer APROVADO (1ª rodada)',
+      'Revisões: infra-guardian APROVADO (1ª rodada), tenancy-guardian APROVADO (1ª rodada), frontend-reviewer AJUSTES NECESSÁRIOS (1ª rodada), test-engineer APROVADO (1ª rodada), revisor-geral APROVADO (1ª rodada)',
     )
   })
 })
@@ -184,10 +238,11 @@ describe('hooks sobre um repositório de verdade', () => {
 
     expect(portao(commit, raiz)).toMatch(/nenhuma rodada/)
 
-    for (const revisor of ['infra-guardian', 'tenancy-guardian', 'test-engineer']) {
+    for (const revisor of ['infra-guardian', 'tenancy-guardian', 'test-engineer', 'revisor-geral']) {
       const veredito = revisor === 'tenancy-guardian' ? 'REPROVADO' : 'APROVADO'
+      const mensagem = veredito === 'REPROVADO' ? 'VEREDITO: REPROVADO\nBloqueantes:\n- apps/codigo.ts:1 sem escopo de escola' : `VEREDITO: ${veredito}`
       registrar(
-        { agent_type: revisor, agent_id: `a-${revisor}`, agent_transcript_path: transcript(raiz, revisor, '2026-09-13T10:00:00'), last_assistant_message: `VEREDITO: ${veredito}` },
+        { agent_type: revisor, agent_id: `a-${revisor}`, agent_transcript_path: transcript(raiz, revisor, '2026-09-13T10:00:00'), last_assistant_message: mensagem },
         raiz,
         new Date('2026-09-13T10:05:00'),
       )
@@ -200,8 +255,14 @@ describe('hooks sobre um repositório de verdade', () => {
       'infra-guardian APROVADO 2026-09-13 10:00:00',
       'tenancy-guardian REPROVADO 2026-09-13 10:00:00',
       'test-engineer APROVADO 2026-09-13 10:00:00',
+      'revisor-geral APROVADO 2026-09-13 10:00:00',
     ])
     expect(portao(commit, raiz)).toMatch(/tenancy-guardian: a última rodada/)
+    // Só a rodada que reprovou vai para os achados, com o que o revisor exigiu.
+    const achados = readFileSync(join(raiz, 'tasks/prd-exemplo/achados-revisoes.md'), 'utf8')
+    expect(achados).toMatch(/## tenancy-guardian · 1ª rodada · REPROVADO · 2026-09-13 10:05:00 · `tasks\/prd-exemplo\/9_task.md`/)
+    expect(achados).toMatch(/sem escopo de escola/)
+    expect(achados).not.toMatch(/infra-guardian/)
 
     // Corrige às 10:10 e só o tenancy revisa de novo: infra e test-engineer viram código antigo.
     tocar(raiz, 'apps/codigo.ts', '2026-09-13T10:10:00')
@@ -213,16 +274,50 @@ describe('hooks sobre um repositório de verdade', () => {
     const motivo = portao(commit, raiz)
     expect(motivo).toMatch(/infra-guardian: apps\/codigo.ts mudou/)
     expect(motivo).toMatch(/test-engineer: apps\/codigo.ts mudou/)
+    expect(motivo).toMatch(/revisor-geral: apps\/codigo.ts mudou/)
     expect(motivo).not.toMatch(/tenancy-guardian/)
 
-    for (const revisor of ['infra-guardian', 'test-engineer']) {
+    for (const revisor of ['infra-guardian', 'test-engineer', 'revisor-geral']) {
       registrar(
         { agent_type: revisor, agent_transcript_path: transcript(raiz, `${revisor}-2`, '2026-09-13T10:12:00'), last_assistant_message: 'VEREDITO: APROVADO' },
         raiz,
         new Date('2026-09-13T10:16:00'),
       )
     }
+    expect(portao(commit, raiz)).toMatch(/portão local: nunca passou/)
+    gravarCarimbo(raiz, { inicio: new Date('2026-09-13T10:11:00').toISOString(), suites: ['typecheck', 'lint', 'test', 'infra'] })
     expect(portao(commit, raiz)).toBeNull()
+  })
+
+  it('correção passa pelo mesmo portão, com o documento em tasks/correcoes', () => {
+    const raiz = repositorio()
+    tocar(raiz, 'apps/codigo.ts', '2026-09-13T09:00:00')
+    const commit = { tool_input: { command: 'git add apps/codigo.ts && git commit -m "Corrige x (correção 2026-09-13-x)\n\nRevisões: ok"' } }
+    expect(portao(commit, raiz)).toMatch(/não tem tasks\/correcoes\/2026-09-13-x.md/)
+
+    mkdirSync(join(raiz, 'tasks/correcoes'), { recursive: true })
+    writeFileSync(join(raiz, 'tasks/correcoes/2026-09-13-x.md'), '# Correção\n\n**Subagentes obrigatórios:** `tenancy-guardian`\n')
+    expect(portao(commit, raiz)).toMatch(/tenancy-guardian: nenhuma rodada[\s\S]*test-engineer: nenhuma rodada/)
+    expect(portao(commit, raiz)).not.toMatch(/revisor-geral/)
+  })
+
+  it('bloqueia commit que leva código sem tarefa nem correção, e deixa passar o que não é código', () => {
+    const raiz = repositorio()
+    writeFileSync(join(raiz, 'docs.md'), 'texto\n')
+    expect(portao({ tool_input: { command: 'git add apps/codigo.ts && git commit -m "Ajusta x"' } }, raiz)).toMatch(/leva código \(apps\/codigo.ts\)/)
+    expect(portao({ tool_input: { command: 'git add -A && git commit -m "Ajusta x"' } }, raiz)).toMatch(/leva código/)
+    expect(portao({ tool_input: { command: 'git add docs.md && git commit -m "Ajusta o texto"' } }, raiz)).toBeNull()
+    // Código sujo de outra tarefa na árvore não bloqueia o commit que não o leva.
+    expect(portao({ tool_input: { command: 'git commit -m "Registra decisão D53"' } }, raiz)).toBeNull()
+  })
+
+  it('lê do comando os arquivos que o commit leva', () => {
+    const alterados = ['apps/a.ts', 'apps/b/c.ts', '.claude/x.md', 'tools/y.ts']
+    expect(arquivosDoCommit('git add .claude tools/y.ts && git commit -m "x"', '/r', alterados, [])).toEqual(['.claude/x.md', 'tools/y.ts'])
+    expect(arquivosDoCommit('git add "apps/b/" && git commit -F- <<EOF', '/r', alterados, [])).toEqual(['apps/b/c.ts'])
+    expect(arquivosDoCommit('git commit -am "x -a"', '/r', alterados, [])).toEqual(alterados)
+    expect(arquivosDoCommit('git commit -m "use git commit -a"', '/r', alterados, ['tools/y.ts'])).toEqual(['tools/y.ts'])
+    expect(arquivosDoCommit('git add /r/apps/a.ts && git commit -m x', '/r', alterados, [])).toEqual(['apps/a.ts'])
   })
 
   it('reconhece commit em posição de comando, não texto que só menciona commit', () => {

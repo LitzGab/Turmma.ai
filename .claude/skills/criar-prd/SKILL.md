@@ -23,7 +23,8 @@ Funcionalidade alvo: `$ARGUMENTS`
   requisito genérico de software escolar, e não deste software escolar
 - `docs/fluxos.md` — provavelmente esta funcionalidade é um dos sete fluxos, ou parte de
   um. O fluxo já traz os casos de borda reais
-- `CLAUDE.md` — o que já foi decidido, para você não perguntar de novo
+- `CLAUDE.md` e `docs/decisoes.md` — o que já foi decidido, para você não perguntar de novo.
+  O CLAUDE.md tem uma linha por decisão; leia por extenso as que tocam esta funcionalidade
 - `ROADMAP.md` — confirme que as dependências estão `[x]`. Se não estiverem, PARE e diga
   qual falta
 - `docs/glossario.md` — escreva no vocabulário do domínio
@@ -76,9 +77,15 @@ bom:   RF7 — Quando o aluno pede a resposta de um exercício da lista ativa, o
               do material onde o conceito está.
 ```
 
-### 4. Salvar
+### 4. Salvar e medir
 
-Crie `tasks/prd-$ARGUMENTS/` e salve `prd.md`.
+Crie `tasks/prd-$ARGUMENTS/` e salve `prd.md`. Depois meça: `wc -w tasks/prd-$ARGUMENTS/prd.md`.
+
+Acima de 2.000 palavras, não entregue assim. Corte o que repete `docs/fluxos.md`, o CLAUDE.md ou
+`docs/decisoes.md` (cite a seção em vez de copiar). Se ainda passar, a funcionalidade está grande:
+proponha dividi-la no roadmap e pergunte. Subir o teto só com o usuário aceitando, e o motivo
+escrito no topo do PRD. Documento longo é lido por inteiro em cada tarefa, e o custo se repete
+vinte vezes.
 
 ### 5. Reportar
 
@@ -96,4 +103,5 @@ e que a Tech Spec vai herdar.
 - [ ] Classificação de risco do CNE declarada, se há IA no caminho do aluno
 - [ ] Requisitos numerados e verificáveis
 - [ ] Casos de borda são os do domínio escolar, não genéricos
+- [ ] Até 2.000 palavras, medido com `wc -w`, ou teto excedido com aceite escrito
 - [ ] Salvo em `tasks/prd-$ARGUMENTS/prd.md`
