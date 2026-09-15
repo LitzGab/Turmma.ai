@@ -4,6 +4,7 @@ import { parseEnv } from 'node:util'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 import { COMANDO_HEALTHCHECK_BATIMENTO } from '../../packages/nucleo/src/instancia/batimento.ts'
+import { PROCESSOS_DA_FILA } from '../testes/compose.ts'
 import { lerAmbienteExemplo } from './compose.ts'
 import { raizRepositorio } from './executar.ts'
 
@@ -55,6 +56,19 @@ describe('.env.example e compose', () => {
     for (const nome of ['despachante-1', 'despachante-2', 'worker-interativo-1', 'worker-interativo-2', 'worker-lote-1', 'worker-lote-2']) {
       expect(services[nome]?.healthcheck?.test, nome).toEqual(['CMD', 'node', '-e', COMANDO_HEALTHCHECK_BATIMENTO])
     }
+  })
+
+  it('api, realtime, despachante e worker têm threads do libuv e resolvedor com prazo curto, para nome que não resolve não tirar a vez do Postgres', () => {
+    const { services } = parse(lerArquivo('infra/compose.yml'), { merge: true }) as {
+      services: Record<string, Servico & { dns_opt?: string[]; environment?: Record<string, string> }>
+    }
+    const processosNode = ['api-1', 'api-2', 'realtime-1', 'realtime-2', ...PROCESSOS_DA_FILA]
+    for (const nome of processosNode) {
+      expect(services[nome]?.environment?.['UV_THREADPOOL_SIZE'], nome).toMatch(/^\$\{UV_THREADPOOL_SIZE:\?/)
+      expect(services[nome]?.dns_opt, nome).toEqual(['timeout:1', 'attempts:2'])
+    }
+    // Quatro, o padrão do Node, foi o que deixou a conexão ao Postgres 15 s na fila atrás de nomes parados.
+    expect(Number(lerAmbienteExemplo()['UV_THREADPOOL_SIZE'])).toBeGreaterThanOrEqual(16)
   })
 
   it('migrar roda antes de toda instância que usa o banco', () => {

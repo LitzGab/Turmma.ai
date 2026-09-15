@@ -9,7 +9,7 @@ import { salaDaEscola } from '../../apps/realtime/src/sistema.gateway.js'
 import { criarCliente, criarEmissor, ESCOLA_A, tokenDe } from '../../apps/realtime/test/realtime-de-teste.js'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
-import { aguardarSaudavel, compose, composeAssincronoOuFalha, composeOuFalha, PROCESSOS_DA_FILA } from '../../tools/testes/compose.ts'
+import { aguardarSaudavel, compose, composeAssincrono, composeAssincronoOuFalha, composeOuFalha, PROCESSOS_DA_FILA } from '../../tools/testes/compose.ts'
 
 // Contra o compose de teste, com as imagens construídas: borda (Caddy), duas APIs e dois realtimes.
 const ambiente = lerAmbienteDeTeste()
@@ -22,6 +22,72 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const SERVICOS_ATRAS_DA_BORDA = ['api-1', 'api-2', 'realtime-1', 'realtime-2'] as const
 /** Sonda da borda a cada 2 s (infra/Caddyfile), com folga: tempo para uma instância voltar ao balanceamento. */
 const VOLTA_AO_BALANCEAMENTO_MS = 3_000
+
+/**
+ * Roda num processo Node à parte dentro do contêiner da api-2, com os serviços parados. Não mede as threads
+ * da API (são de outro processo): prova o ambiente do contêiner, que é o mesmo da API.
+ * - O tamanho real das threads do libuv: ocupa 12 com `pbkdf2` de duração conhecida e mede quanto a 13ª
+ *   tarefa, a resolução de `postgres`, espera. Com o padrão do Node (4), ela espera o `pbkdf2` inteiro.
+ * - O prazo do resolvedor (`dns_opt`): nome de serviço parado falha em menos de 2 s, e não nos 5 s padrão.
+ *   Localmente, no Docker Desktop, o nome parado já falha rápido, e só a medida das threads distingue.
+ * Quem prova a API é o `/saude` direto na api-2, no teste (docs/infra.md, "Threads e DNS").
+ */
+const SONDA_DO_CONTEINER = `
+const crypto = require('node:crypto')
+const dns = require('node:dns')
+const agora = () => performance.now()
+const pbkdf2 = (iteracoes) => new Promise((r) => crypto.pbkdf2('sonda', 'sal', iteracoes, 32, 'sha256', () => r()))
+const resolver = (nome) => new Promise((r) => { const t = agora(); dns.lookup(nome, (e) => r({ nome, ms: Math.round(agora() - t), resolveu: !e })) })
+;(async () => {
+  let iteracoes = 100_000
+  let duracaoMs = 0
+  while (duracaoMs < 400 && iteracoes < 50_000_000) {
+    iteracoes *= 2
+    const t = agora()
+    await pbkdf2(iteracoes)
+    duracaoMs = agora() - t
+  }
+  const ocupando = Array.from({ length: 12 }, () => pbkdf2(iteracoes))
+  await new Promise((r) => setTimeout(r, 20))
+  const postgres = await resolver('postgres')
+  await Promise.all(ocupando)
+  const parados = []
+  for (const nome of ['redis-cache', 'redis-fila', 'storage', 'observabilidade']) parados.push(await resolver(nome))
+  console.log(JSON.stringify({ threads: process.env.UV_THREADPOOL_SIZE, pbkdf2Ms: Math.round(duracaoMs), postgres, parados }))
+})()
+`
+
+interface ResultadoDaSonda {
+  threads?: string
+  pbkdf2Ms: number
+  postgres: { ms: number; resolveu: boolean }
+  parados: Array<{ nome: string; ms: number; resolveu: boolean }>
+}
+
+/** `GET /saude` direto numa instância, um de cada vez, até `parar`: a própria API, sem a borda trocar de instância. */
+function saudeContinua(endereco: string): { parar: () => Promise<Array<{ status: number | 'falha'; em: string }>> } {
+  let ativa = true
+  const respostas: Array<{ status: number | 'falha'; em: string }> = []
+  const laco = (async () => {
+    while (ativa) {
+      const em = new Date().toISOString()
+      try {
+        const resposta = await fetch(`${endereco}/saude`, { signal: AbortSignal.timeout(5_000) })
+        respostas.push({ status: resposta.status, em })
+      } catch {
+        respostas.push({ status: 'falha', em })
+      }
+      await esperar(100)
+    }
+  })()
+  return {
+    parar: async () => {
+      ativa = false
+      await laco
+      return respostas
+    },
+  }
+}
 
 async function voltarAoBalanceamento(servico: string): Promise<void> {
   await composeAssincronoOuFalha('start', servico)
@@ -288,12 +354,35 @@ describe('borda com duas APIs e dois realtimes', () => {
       expect(parados).toEqual(expect.arrayContaining([...PROCESSOS_DA_FILA, 'realtime-1', 'realtime-2', 'redis-fila', 'redis-cache', 'storage']))
       await composeAssincronoOuFalha('stop', ...parados)
 
+      // Com os nomes parados sem resolver, as conexões das APIs com o banco caem: a próxima consulta abre
+      // conexão nova e resolve `postgres`, o caminho que esperava 15 s atrás dos nomes parados.
+      const saude = saudeContinua(API_2_DIRETA)
+      const derrubadas = composeOuFalha('exec', '-T', 'postgres', 'psql', '--username', valorObrigatorio(ambiente, 'POSTGRES_USUARIO'), '--dbname', valorObrigatorio(ambiente, 'POSTGRES_BANCO'),
+        '--tuples-only', '--no-align', '--command', 'select count(pg_terminate_backend(pid)) from pg_stat_activity where client_addr is not null and pid <> pg_backend_pid()')
+      const sonda = composeAssincrono('exec', '-T', 'api-2', 'node', '-e', SONDA_DO_CONTEINER)
       const carga = rajada(turma, { paralelos: 6 })
       await esperar(3_000)
       const resultados = await carga.parar()
+      const respostasDaSaude = await saude.parar()
+      const { codigo, saida } = await sonda
 
       expect(resultados.length).toBeGreaterThan(50)
       expect(inesperados(resultados)).toEqual([])
+      expect(Number(derrubadas.trim()), 'nenhuma conexão das APIs com o banco para derrubar').toBeGreaterThan(0)
+      expect(respostasDaSaude.length).toBeGreaterThan(10)
+      expect(respostasDaSaude.filter(({ status }) => status !== 200)).toEqual([])
+
+      expect(codigo, saida).toBe(0)
+      const medido = JSON.parse(saida.trim().split('\n').at(-1) ?? '') as ResultadoDaSonda
+      expect(medido.threads).toBe(ambiente['UV_THREADPOOL_SIZE'])
+      expect(medido.pbkdf2Ms).toBeGreaterThanOrEqual(400)
+      // Com 16 threads, a 13ª tarefa começa na hora; com 4, esperaria um pbkdf2 inteiro.
+      expect(medido.postgres.resolveu).toBe(true)
+      expect(medido.postgres.ms, JSON.stringify(medido)).toBeLessThan(medido.pbkdf2Ms / 2)
+      for (const { nome, ms, resolveu } of medido.parados) {
+        expect(resolveu, nome).toBe(false)
+        expect(ms, nome).toBeLessThan(2_000)
+      }
     }, 180_000)
   })
 

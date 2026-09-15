@@ -114,8 +114,13 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/api.Dockerfile
+    # Nome que não resolve (serviço fora do ar) falha em 1 s, e não nos 5 s padrão, segurando menos uma
+    # thread do libuv (UV_THREADPOOL_SIZE). No musl da imagem alpine, `timeout` é o prazo total e `attempts`
+    # só reenvia dentro dele; em imagem glibc `attempts` multiplica o prazo (docs/infra.md, "Threads e DNS").
+    dns_opt: ['timeout:1', 'attempts:2']
     environment:
       AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
+      UV_THREADPOOL_SIZE: ${UV_THREADPOOL_SIZE:?defina UV_THREADPOOL_SIZE}
       API_PORTA: '3000'
       BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
       BANCO_POOL_MAXIMO: ${BANCO_POOL_MAXIMO:?defina BANCO_POOL_MAXIMO}
@@ -166,8 +171,10 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/realtime.Dockerfile
+    dns_opt: ['timeout:1', 'attempts:2']
     environment:
       AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
+      UV_THREADPOOL_SIZE: ${UV_THREADPOOL_SIZE:?defina UV_THREADPOOL_SIZE}
       REALTIME_PORTA: '3000'
       REDIS_FILA_URL: redis://redis-fila:6379
       REALTIME_STREAM_TAMANHO_MAXIMO: ${REALTIME_STREAM_TAMANHO_MAXIMO:?defina REALTIME_STREAM_TAMANHO_MAXIMO}
@@ -205,8 +212,10 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/despachante.Dockerfile
+    dns_opt: ['timeout:1', 'attempts:2']
     environment:
       AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
+      UV_THREADPOOL_SIZE: ${UV_THREADPOOL_SIZE:?defina UV_THREADPOOL_SIZE}
       BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
       # A conexão do LISTEN sai deste pool.
       BANCO_POOL_MAXIMO: ${DESPACHANTE_BANCO_POOL_MAXIMO:?defina DESPACHANTE_BANCO_POOL_MAXIMO}
@@ -251,8 +260,10 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/worker.Dockerfile
+    dns_opt: ['timeout:1', 'attempts:2']
     environment:
       AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
+      UV_THREADPOOL_SIZE: ${UV_THREADPOOL_SIZE:?defina UV_THREADPOOL_SIZE}
       BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
       BANCO_POOL_MAXIMO: ${WORKER_INTERATIVO_BANCO_POOL_MAXIMO:?defina WORKER_INTERATIVO_BANCO_POOL_MAXIMO}
       BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
@@ -290,6 +301,7 @@ services:
     <<: *worker-interativo
     environment:
       AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
+      UV_THREADPOOL_SIZE: ${UV_THREADPOOL_SIZE:?defina UV_THREADPOOL_SIZE}
       BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
       BANCO_POOL_MAXIMO: ${WORKER_LOTE_BANCO_POOL_MAXIMO:?defina WORKER_LOTE_BANCO_POOL_MAXIMO}
       BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}

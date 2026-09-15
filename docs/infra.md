@@ -167,6 +167,53 @@ Por que assim:
 - **Dois Redis.** BullMQ exige que o Redis nunca expulse chave. Cache e rate limit precisam
   expulsar. No mesmo Redis, um dos dois está configurado errado
 
+### Threads e DNS
+
+Nos processos Node (api, realtime, despachante e worker), a resolução de nome (`dns.lookup`) roda nas
+threads do libuv, que são 4 por padrão. Nome que não resolve segura uma thread até o resolvedor desistir,
+e são 5 s por padrão. Na esteira de 15/09/2026, com Redis, storage e observabilidade parados, os clientes
+Redis e o exportador de métricas reconectando ocuparam as 4 threads. Resolver `postgres` esperou 15 s na
+fila, a conexão nova ao banco estourou `BANCO_TIMEOUT_CONEXAO_MS` e o `/saude` foi a 503 com a API de
+pé. O banco caiu por causa do DNS de outro serviço.
+
+A correção vale em qualquer lugar em que os processos sobem:
+
+- `UV_THREADPOOL_SIZE=16` (`.env.example`, no compose de cada processo Node)
+- resolvedor com `timeout:1` e `attempts:2` (`dns_opt` no compose): nome que não resolve falha em 1 s.
+  No musl da imagem alpine, `timeout` é o prazo total e `attempts` só reenvia dentro dele (aos 500 ms),
+  então um pacote UDP perdido não derruba a consulta. Em imagem glibc `attempts` multiplica o prazo:
+  trocar de imagem exige rever a opção
+- a esteira confere as duas (`tools/ci/ambiente.test.ts`). O teste RF2 da borda
+  (`infra/test/borda.int.test.ts`), com os serviços parados, derruba as conexões das APIs com o
+  Postgres e exige `GET /saude` 200 direto na api-2 durante a janela: é ele que prova a API. Uma sonda
+  num processo à parte no mesmo contêiner prova o ambiente: o tamanho real das threads (12 `pbkdf2`
+  ocupando, e a resolução de `postgres` sem esperar) e o prazo do resolvedor. Localmente, no Docker
+  Desktop, nome parado já falha rápido, e só a medida das threads distingue a correção
+
+Com serviço gerenciado (D26), Postgres, Redis, S3, OTLP e o provedor de IA são nomes externos, e 1 s
+passa a ser o teto de resolução deles. O gateway de IA (F5) trata `EAI_AGAIN` como falha do provedor,
+que cai na degradação declarada (regra 80, item 4), e não como erro cru.
+
+**Orçamento das threads, por processo.** O que ocupa as 16:
+
+- **Cliente que reconecta, até uma thread cada, por até 1 s:** os 2 Redis, o exportador de métricas e,
+  no worker-lote, o storage. São 3 ou 4
+- **Rajada de conexões quando o Postgres volta:** até `BANCO_POOL_MAXIMO` resoluções de `postgres` ao
+  mesmo tempo (10 na API, 80 no worker-interativo). O nome resolve em milissegundos, então a fila
+  passa rápido, mas nesse instante ela disputa as mesmas threads
+- **`jwtVerify` do jose:** usa `crypto.subtle`, que roda nas mesmas threads, em toda requisição
+  autenticada. HS256 é curto, mas no pico de login entra na fila atrás do hash
+- **arquivo** (`fs`), raro no caminho quente
+
+O hash de senha do F1 (tarefa 14.0, `LOGIN_HASH_CONCORRENCIA`) usa as mesmas threads. Por isso ele cabe
+em `UV_THREADPOOL_SIZE − 8`, e não em `− 2`. As 8 de folga cobrem os 4 reconectando mais uma fila
+curta de verificação de token e de conexão nova. Com o Redis fora durante o login das 7h30, o hash não
+tira a vez da conexão ao banco. A Tech Spec do F1 usa concorrência 2, bem abaixo desse teto, e a
+calibração da 16.0 confirma o número.
+
+Em provedor gerenciado, o nome do Redis continua resolvendo quando ele cai. Mas o deploy em um servidor
+só com `docker compose` (regra 00) tem exatamente o comportamento da esteira.
+
 ---
 
 ## 5. Limites e justiça entre escolas

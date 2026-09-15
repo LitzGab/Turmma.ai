@@ -64,5 +64,9 @@ export async function aguardarSaudavel(servico: string, limiteMs = 60_000): Prom
     if (codigo === 0 && saida.trim() === 'healthy') return
     await new Promise((resolver) => setTimeout(resolver, 500))
   }
-  throw new Error(`${servico} não voltou a healthy em ${limiteMs} ms`)
+  // Estado e fim do log junto do erro: na esteira, o log do fim da execução só guarda as últimas linhas de
+  // cada serviço, e o trecho da falha já saiu dele.
+  const estado = compose('ps', '--all', '--format', '{{.State}} {{.Status}} {{.Health}}', servico).saida.trim()
+  const log = compose('logs', '--no-color', '--timestamps', '--tail', '40', servico).saida
+  throw new Error(`${servico} não voltou a healthy em ${limiteMs} ms (${estado})\n${log}`)
 }
