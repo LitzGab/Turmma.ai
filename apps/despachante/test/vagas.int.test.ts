@@ -125,6 +125,22 @@ describe('vagas por escola e filas por prioridade', () => {
   const membrosDaVaga = async (fila: Fila, escolaId: string) => (await bancada.redis.zrange(bancada.vagas.chave(fila, escolaId), '0', '-1')).sort()
   const aguardarEstado = (id: string, estado: string, timeout = 10_000) =>
     expect.poll(async () => (await bancada.estado(id))?.estado, { timeout, interval: 50 }).toBe(estado)
+  /**
+   * Espera a escola ficar sem vaga tomada. O worker conclui no Postgres, para a renovação e só então
+   * libera no Redis (`executar`, em `apps/worker/src/executor.ts`), nessa ordem e de propósito: com o
+   * Postgres fora no meio, o job volta a tentar ainda dono da vaga. Quem esperou o estado `concluido`
+   * esperou só o primeiro passo, e conferir o ZSET no instante seguinte é corrida — perdida no runner
+   * carregado da esteira. A regra provada continua a mesma: a vaga sai no fim do job, ou o prazo estoura.
+   *
+   * Que a chave conferida é mesmo a que o worker ocupa, quem prova são os dois testes que afirmam o
+   * `zscore` dela com o job em execução, antes de esperar o fim: uma chave errada aqui ficaria vazia lá.
+   */
+  const aguardarVagaVazia = (fila: Fila, escolaId: string, timeout = 5_000) => {
+    // O verde tem de vir da liberação, nunca do vencimento: num teste com validade curta (há um com
+    // 1 s), esperar mais que ela deixaria a vaga sumir sozinha e a asserção passar sem o worker.
+    expect(timeout).toBeLessThan(VALIDADE_DA_VAGA_MS / 2)
+    return expect.poll(() => membrosDaVaga(fila, escolaId), { timeout, interval: 20 }).toEqual([])
+  }
 
   it('caminho feliz: com 1.000 lotes na fila, um interativo novo começa antes de qualquer lote não iniciado', async () => {
     // Vagas de lote de sobra para a A: o que segura o interativo aqui só pode ser o pool, não a vaga.
@@ -280,7 +296,7 @@ describe('vagas por escola e filas por prioridade', () => {
     for (const jobId of deWorkerMorto) await bancada.redis.zadd(chave, 'XX', String(agoraMs - 1), jobId)
     await aguardarEstado(id, 'concluido', 5_000)
     // As vencidas saíram na tomada, e o job liberou a própria vaga no fim.
-    expect(await membrosDaVaga('lote', ESCOLA_A)).toEqual([])
+    await aguardarVagaVazia('lote', ESCOLA_A)
   })
 
   it('o worker renova a vaga enquanto o job roda, a vaga fica com o job na retentativa, e sai no fim', async () => {
@@ -312,7 +328,7 @@ describe('vagas por escola e filas por prioridade', () => {
     await expect.poll(() => tentativas, { timeout: 10_000 }).toBe(2)
     terminar()
     await aguardarEstado(id, 'concluido')
-    expect(await membrosDaVaga('normal', ESCOLA_A)).toEqual([])
+    await aguardarVagaVazia('normal', ESCOLA_A)
   })
 
   it('job publicado e parado na fila (pool cheio, réplica fora) segura a vaga além da validade: a escola não ganha publicados acima do teto', async () => {
@@ -361,7 +377,7 @@ describe('vagas por escola e filas por prioridade', () => {
       expect(naFila?.attemptsMade, id).toBe(1)
     }
     expect(log.doEvento('job.tentativa_falhou')).toEqual([])
-    expect(await membrosDaVaga('lote', ESCOLA_A)).toEqual([])
+    await aguardarVagaVazia('lote', ESCOLA_A)
   }, 60_000)
 
   it('a renovação dos publicados custa as vagas da escola, e não a fila dela: com 5.000 lotes à espera, a busca é pela chave primária', async () => {
