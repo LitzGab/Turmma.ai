@@ -52,6 +52,11 @@ test.describe('guardas de celular e acessibilidade pegam de fato', () => {
     expect(idaEVolta).toBeGreaterThanOrEqual(perfil.rede.latenciaMs * 0.9)
 
     // CPU: o mesmo laço com a limitação do perfil e sem ela, trocada por uma sessão CDP própria do teste.
+    // O runner ocupado só aumenta o tempo, nunca diminui: por isso vale o menor tempo de cada lado. Uma
+    // amostra solta chegou a 1,68 na esteira com a limitação aplicada, e um bloco de cinco seguidas, a 1,93,
+    // quando a ocupação pegou o bloco livre inteiro (menor de 30 ms, contra 19 ms no bloco seguinte). O lado
+    // livre, que é o que derruba a razão, sai do menor de três blocos espaçados, mais de 1 s ao todo. Sem a
+    // limitação aplicada, os dois menores ficam iguais e a razão fica perto de 1.
     const laco = () =>
       page.evaluate(() => {
         let acumulado = 0
@@ -59,12 +64,20 @@ test.describe('guardas de celular e acessibilidade pegam de fato', () => {
         for (let indice = 0; indice < 5_000_000; indice++) acumulado = (acumulado + indice * 7) % 1_000_003
         return performance.now() - inicio + acumulado * 0
       })
-    await laco()
-    const limitado = await laco()
+    const menorDeCinco = async () => {
+      await laco()
+      let menor = Number.POSITIVE_INFINITY
+      for (let vez = 0; vez < 5; vez++) menor = Math.min(menor, await laco())
+      return menor
+    }
+    const limitado = await menorDeCinco()
     const cdp = await page.context().newCDPSession(page)
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
-    await laco()
-    const livre = await laco()
+    let livre = Number.POSITIVE_INFINITY
+    for (let bloco = 0; bloco < 3; bloco++) {
+      if (bloco > 0) await page.waitForTimeout(400)
+      livre = Math.min(livre, await menorDeCinco())
+    }
     expect(limitado / livre).toBeGreaterThanOrEqual(2)
   })
 })
