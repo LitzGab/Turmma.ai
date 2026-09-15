@@ -73,6 +73,10 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       (menor 5 da rodada 2)
 - [ ] Decidir os achados da auditoria da 16.0 fora do escopo: renovação da vaga durante o
       recuo, devolução do ponto no limitador, despachante serial (`16_task.md`)
+- [ ] Teste intermitente em `infra/test/borda.int.test.ts:296` ("API não depende do resto"):
+      um único `GET /saude` 503 com worker, Redis e storage parados, na esteira de `d4c8d58`
+      (execução 34907110670), commit que só mexeu em skill e TODO. Achar a causa (sonda da
+      borda ainda mandando para API que marcou `/prontidao` fora?) em vez de reexecutar
 - [ ] Guarda de `npm audit` provada com fixture real de dependência vulnerável, e não só com
       o `npm` imitado (`tools/ci/scripts.test.ts:75`)
 

@@ -48,6 +48,16 @@ deveria existir.
 | Indicadores de uso e das turmas do professor | professor | apoio pedagógico ao próprio professor e visão agregada da coordenação; **nunca decisão sobre o professor** (D45) | execução de contrato; **a confirmar com advogado** (CLT, convenção coletiva, estatuto do servidor) | ano letivo + 1 ano (proposta) |
 | Conversa do professor com o chat | professor | produzir o que ele pediu | execução de contrato | 12 meses (proposta); nunca visível à coordenação |
 | Nome, e-mail, telefone | responsável | comunicação escolar | execução de contrato | vigência do vínculo |
+| Hash de senha (argon2id) | aluno, professor, coordenador | autenticar (F1) | execução de contrato; segurança (art. 46) | até desativar a credencial |
+| E-mail de login na conta global | professor, coordenador | autenticar em uma ou mais escolas (F1) | execução de contrato | enquanto houver `usuario` ativo em alguma escola; a eliminação pedida por uma escola apaga só o `usuario` dela |
+| Segredo TOTP cifrado e HMAC dos códigos de recuperação | coordenador | segundo fator (F1) | execução de contrato; segurança (art. 46) | até desativar a conta ou redefinir o MFA |
+| Sessão (horários de início, uso e fim, método, motivo de encerramento) | todos | manter e encerrar o acesso, inatividade (F1) | execução de contrato | 30 dias após encerrar |
+| Contador de tentativas de login (HMAC do identificador) | todos | proteção contra força bruta (F1) | legítimo interesse, segurança | 15 minutos |
+| Cookie de dispositivo (até 50 HMACs com chave de escola+matrícula ou de e-mail que já entraram naquele navegador, sem nome; o servidor não guarda nem lê identidade a partir dele) | aluno, professor, coordenador | manter a prioridade de login de quem já entrou quando há ataque na rede da escola (F1); nenhum outro uso | legítimo interesse, segurança (art. 46), no melhor interesse do titular (art. 14) | 30 dias por entrada, no navegador |
+| Vínculo, estado e datas | professor, aluno | acesso por objeto (F1) | execução de contrato | vigência + 5 anos |
+| Motivo de contestação de vínculo (código e complemento de até 140 caracteres, sem nome de aluno) | professor | corrigir a alocação (F1) | execução de contrato | fim do ano letivo; nunca em log nem em auditoria |
+| Convite de coordenador (hash do token, datas) | coordenador | primeiro acesso (F1) | execução de contrato | 30 dias após usar, revogar ou expirar |
+| Identificador do operador Educa.ia na auditoria | nossa equipe | prestação de contas à escola | legítimo interesse | vigência + 5 anos |
 | Registro de acesso à aplicação (IP, data e hora) | todos | segurança | obrigação legal (Marco Civil, art. 15) | 6 meses |
 | Auditoria (quem fez o quê, com finalidade) | todos | prestação de contas à escola e ao titular | execução de contrato e obrigação da escola | vigência + 5 anos |
 
