@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import pg from 'pg'
@@ -120,6 +120,42 @@ describe('migrar', () => {
     } finally {
       await bloqueio.query('rollback')
       await bloqueio.end()
+    }
+  }, 30_000)
+
+  it('a migration da 1.0 com um ALTER em job_registro atrás (como a 3.0 no deploy do F1), com job_registro preso, desiste em 3 tentativas sem deixar tabela pela metade', async () => {
+    // A migration real de rede, escola e auditoria, aplicada num schema só do teste: no `public` ela já está.
+    const schemaDoTeste = `teste_migrar_f1_${sufixo}`
+    const nomeDaMigracao = readdirSync(PASTA_MIGRACOES).find((arquivo) => /^0004_.*\.sql$/.test(arquivo))
+    if (nomeDaMigracao === undefined) throw new Error('migration 0004 ausente')
+    const daTarefa = readFileSync(join(PASTA_MIGRACOES, nomeDaMigracao), 'utf8').replaceAll('"public".', `"${schemaDoTeste}".`)
+    const pasta = pastaCom(
+      [`set local search_path to ${schemaDoTeste}`, daTarefa, `alter table public.job_registro add constraint teste_migrar_f1_${sufixo} check (escola_id is not null or tipo like 'sistema.%') not valid`].join(
+        '\n--> statement-breakpoint\n',
+      ),
+    )
+    await administrador.query(`create schema ${schemaDoTeste}`)
+    // Um worker no meio de uma transação que gravou job: segura job_registro contra o ALTER.
+    const worker = new pg.Client({ connectionString: urlDoBancoDeTeste() })
+    await worker.connect()
+    await worker.query('begin')
+    await worker.query(`insert into job_registro (fila, prioridade, tipo) values ('lote', 3, 'sistema.teste-migrar')`)
+    try {
+      await expect(migrar(configuracao({ pasta, schemaDoRegistro: registroDoTeste, lockTimeoutMs: 500 }), logger)).rejects.toEqual(new MigracaoFalhou(TENTATIVAS_MIGRACAO))
+      const falhas = registros().filter((registro) => registro['evento'] === 'migracao.tentativa_falhou')
+      expect(falhas).toHaveLength(TENTATIVAS_MIGRACAO)
+      expect(falhas.every((falha) => (falha['erro'] as { sqlstate?: string }).sqlstate === '55P03')).toBe(true)
+
+      const { rows: tabelas } = await administrador.query('select table_name from information_schema.tables where table_schema = $1', [schemaDoTeste])
+      expect(tabelas).toEqual([])
+      const { rows: restricoes } = await administrador.query('select 1 from pg_constraint where conname = $1', [`teste_migrar_f1_${sufixo}`])
+      expect(restricoes).toEqual([])
+      const { rows: aplicadas } = await administrador.query<{ total: string }>(`select count(*) as total from ${registroDoTeste}.__drizzle_migrations`)
+      expect(Number(aplicadas[0]?.total)).toBe(0)
+    } finally {
+      await worker.query('rollback')
+      await worker.end()
+      await administrador.query(`drop schema if exists ${schemaDoTeste} cascade`)
     }
   }, 30_000)
 

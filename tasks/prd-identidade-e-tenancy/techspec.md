@@ -82,6 +82,10 @@ vínculo vem do seed; no F2, da lista.
 
 **Auditoria.** `antes` e `depois` seguem uma lista fechada por ação: ids, estados e datas. Um
 teste recusa `nome`, `email`, `matricula`, `complemento`, `hash` e `segredo`.
+- A conferência do mapa falha fechada: só aceita objeto estrito, id, data, enum, literal, número e
+  booleano. `finalidade` também é declarada por ação, como `enum` de códigos, nunca texto livre.
+- A escrita tem uma porta só (`RegistroDeAuditoria`), e o banco exige um autor e só um.
+- Sem `unique (escola_id, id)`: nenhuma tabela referencia a auditoria.
 
 **Migrations.**
 
@@ -261,7 +265,9 @@ antes de existir escola ou que toca a conta global.
 O item 9 fala em três exceções por módulo, e aqui são quinze métodos. O motivo: essa classe é a
 própria fronteira da resolução de tenant, a única do sistema, e há teste de que só o módulo
 `sessao` a importa. Fora dela, `@SemEscopo` só aparece em `sistema.expurgar-acesso`
-(`retencao`, como no F0).
+(`retencao`, como no F0) e no `RedeEEscolaRepository` do `ops:escola`, com dois métodos (criar rede,
+que fica acima do tenant, e criar escola, que é o tenant nascendo): só inserem e devolvem o id, e um
+teste prova que nenhum outro código cria rede ou escola (1.0).
 
 `registro_acesso` aceita escola nula só em `login_falho` sem usuário, que é a falha por e-mail.
 

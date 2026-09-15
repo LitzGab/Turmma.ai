@@ -37,7 +37,7 @@ sintético sem tabela.
 
 ## Subtarefas
 
-- [ ] 1.1 — Migration de `rede`, `escola` e `auditoria`
+- [x] 1.1 — Migration de `rede`, `escola` e `auditoria`
   - `rede`: `id`, `nome`, `tipo` (`prefeitura|grupo|independente`) e `ips_saida inet[]`, que só a 15.0 usa
   - `escola`:
     - `rede_id`, `nome`, `slug unique` em minúsculas com hífen;
@@ -46,22 +46,22 @@ sintético sem tabela.
   - `auditoria`:
     - `escola_id?`, `autor_usuario_id?`, `autor_operador?`, `acao`, `entidade`, `entidade_id`, `antes jsonb?`, `depois jsonb?`, `finalidade?`, `requisicao_id`, `em`;
     - check `escola_id is not null or (autor_operador is not null and entidade = 'rede')`;
-    - check de pelo menos um autor;
+    - check de um autor e só um (`auditoria_um_autor`; a revisão pediu mais que "pelo menos um");
     - índice `(escola_id, em)`.
   - `autor_usuario_id` fica sem FK nesta tarefa: `usuario` nasce na 2.0, que acrescenta a FK expandindo
-- [ ] 1.2 — `packages/nucleo/src/auditoria`: `RegistroDeAuditoria.gravar(tx, acao, dados)`
+- [x] 1.2 — `packages/nucleo/src/auditoria`: `RegistroDeAuditoria.gravar(tx, acao, dados)`
   - **Escrita:** grava na transação do chamador.
   - **Ação:** cada `acao` é chave de um mapa de schemas zod `strict` para `antes` e `depois`. Nesta tarefa entram `rede.criada` e `escola.criada`; as tarefas seguintes acrescentam as delas.
   - **Recusa:** ação desconhecida ou campo fora do schema. Os nomes `nome`, `email`, `matricula`, `complemento`, `hash`, `senha` e `segredo` são proibidos em qualquer schema, e um teste confere o mapa inteiro.
   - **Escopo:** a escola vem do contexto. O `autor_operador` só é aceito sem usuário no contexto (rotina de operador).
   - **Leitura:** `AuditoriaRepository.listarDaEscola()` filtra pela escola do contexto. É só para teste e para o F3, sem rota.
-- [ ] 1.3 — `apps/api/src/ops/escola.ts` e script `ops:escola` no `package.json`
+- [x] 1.3 — `apps/api/src/ops/escola.ts` e script `ops:escola` no `package.json`
   - `npm run ops:escola -- rede criar --nome --tipo` e `escola criar --rede <id> --nome --slug`
   - Exige `OPERADOR` (identificador curto da pessoa da equipe, validado por regex) em qualquer ambiente, e grava `autor_operador`
   - Abre o contexto da escola criada para gravar a auditoria dela; a rede é gravada com escola nula
   - Imprime só os ids criados. Slug repetido sai com código tipado (`CONFLITO`) e mensagem sem o valor
   - Nenhum comando do operador lista ou lê pessoa
-- [ ] 1.4 — Testes
+- [x] 1.4 — Testes
 
 ## Arquivos previstos
 
@@ -90,14 +90,14 @@ sintético sem tabela.
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
 - [ ] E2E verde (se tocou tela)
-- [ ] Todos os revisores obrigatórios com rodada na seção "Revisões", iniciada depois da
+- [x] Todos os revisores obrigatórios com rodada na seção "Revisões", iniciada depois da
   última alteração de código, e APROVADO nos que têm veto
-- [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
+- [x] Revisão aprovada
+- [x] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
 
 ## Fora do escopo desta tarefa
 
@@ -109,3 +109,28 @@ sintético sem tabela.
 
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit da tarefa fica bloqueado enquanto um revisor obrigatório não tiver rodada iniciada
+depois da última alteração de código, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-14 23:16:54 | 2026-09-14 23:18:09 | `infra-guardian` | 1 | APROVADO | ab9e7690d89de627d |
+| 2026-09-14 23:16:31 | 2026-09-14 23:18:10 | `tenancy-guardian` | 1 | APROVADO | acab66d6ffa76a465 |
+| 2026-09-14 23:16:44 | 2026-09-14 23:19:22 | `privacy-guardian` | 1 | REPROVADO | a862d208ea726835a |
+| 2026-09-14 23:17:05 | 2026-09-14 23:21:07 | `test-engineer` | 1 | REPROVADO | ab95c0c39356c83ce |
+| 2026-09-14 23:38:20 | 2026-09-14 23:39:29 | `tenancy-guardian` | 2 | APROVADO | a04a58fa5a37421e2 |
+| 2026-09-14 23:38:32 | 2026-09-14 23:39:39 | `infra-guardian` | 2 | APROVADO | adac0a85f1fac553b |
+| 2026-09-14 23:37:54 | 2026-09-14 23:40:35 | `privacy-guardian` | 2 | APROVADO | ac1bf7ab031740d15 |
+| 2026-09-14 23:38:09 | 2026-09-14 23:41:14 | `test-engineer` | 2 | REPROVADO | a2a3a819b34cc8b36 |
+| 2026-09-15 00:01:25 | 2026-09-15 00:02:06 | `infra-guardian` | 3 | APROVADO | aa318d452d7ba58f2 |
+| 2026-09-15 00:01:17 | 2026-09-15 00:02:18 | `tenancy-guardian` | 3 | APROVADO | a4b87f1988e82edda |
+| 2026-09-15 00:01:02 | 2026-09-15 00:02:18 | `test-engineer` | 3 | APROVADO | a81865110c49d7cb8 |
+| 2026-09-15 00:01:10 | 2026-09-15 00:02:59 | `privacy-guardian` | 3 | APROVADO | ad2b10d9fdfa9af27 |
+| 2026-09-15 12:01:02 | 2026-09-15 12:01:52 | `tenancy-guardian` | 4 | APROVADO | a4ebd406738b13ad4 |
+| 2026-09-15 12:01:09 | 2026-09-15 12:01:56 | `privacy-guardian` | 4 | APROVADO | ac823948d9c20d722 |
+| 2026-09-15 12:01:16 | 2026-09-15 12:02:00 | `infra-guardian` | 4 | APROVADO | acfcfa2763da5a5f0 |
+| 2026-09-15 12:01:22 | 2026-09-15 12:02:13 | `test-engineer` | 4 | APROVADO | ae6caf87449050e75 |

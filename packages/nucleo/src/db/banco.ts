@@ -5,10 +5,14 @@ import { z } from 'zod'
 import { validarAmbiente } from '../config/validar-config.js'
 import type { ConfiguracaoBanco, PoolBanco } from './pool.js'
 import { configuracaoOperacionalEscola } from './schema/configuracao-operacional-escola.js'
+import { escola } from './schema/escola.js'
 import { jobRegistro } from './schema/job-registro.js'
+import { rede } from './schema/rede.js'
 import { usoInfraDiario } from './schema/uso-infra-diario.js'
 
-export const schema = { jobRegistro, configuracaoOperacionalEscola, usoInfraDiario }
+// Sem `auditoria`: a tabela só é alcançável pelo módulo de inserção e pela leitura da auditoria, nunca
+// pelo `schema` que o pacote exporta (a escrita tem uma porta só, o RegistroDeAuditoria).
+export const schema = { jobRegistro, configuracaoOperacionalEscola, usoInfraDiario, rede, escola }
 export type Schema = typeof schema
 
 export type Banco = NodePgDatabase<Schema>

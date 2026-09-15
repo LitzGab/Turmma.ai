@@ -19,6 +19,9 @@ não existirem dois fluxos diferentes no código.
 **Escola** — A unidade. É o tenant: todo dado pertence a uma escola e nunca cruza para
 outra.
 
+**Endereço da escola** — O `slug` público da escola (`colegio-horizonte`), único no sistema, em
+minúsculas e com hífen. É por ele que o aluno chega à tela de entrada da escola (`/e/:slug`).
+
 **Ano letivo** — O recorte anual. Turma, vínculo e nota pertencem a um ano letivo. Nada no
 sistema é perpétuo, porque em janeiro tudo vira.
 
@@ -199,6 +202,10 @@ travado. É o que alimenta notificação e painel.
 
 **Auditoria** — O registro consultável de quem fez o quê: leitura de dado de aluno,
 exportação, alteração de nota, aprovação de saída de IA. Diferente de log.
+
+**Operador Educa.ia** — A pessoa da nossa equipe que cria rede, escola e o primeiro coordenador por
+comando `ops:*`, sempre com o próprio identificador gravado na auditoria. Não lê dado de pessoa da
+escola nem entra como usuário dela (D2). Não confundir com "operador" da LGPD, que é a empresa.
 
 **Titular** — A pessoa a quem o dado pessoal se refere, no vocabulário da LGPD. Quase sempre
 um menor de idade, aqui.

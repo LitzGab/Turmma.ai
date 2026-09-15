@@ -1,15 +1,15 @@
 # Tarefas — Identidade e tenancy
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 0 de 20 concluídas
+**Status:** 1 de 20 concluídas
 
 ## Lista
 
-- [ ] **1.0 — Escola nasce por comando do operador, com auditoria de schema fechado**
-  - [ ] 1.1 Migration de `rede`, `escola` e `auditoria`, com o check de escola nula só para rede
-  - [ ] 1.2 `RegistroDeAuditoria.gravar(tx, acao, dados)` com schema zod fechado por ação
-  - [ ] 1.3 `ops:escola` (rede e escola com slug), com `autor_operador` e recusa sem `OPERADOR`
-  - [ ] 1.4 Testes: slug repetido, nenhuma rota cria escola, `ops:*` sem dado de pessoa, auditoria recusando campo pessoal, isolamento do repository de auditoria
+- [x] **1.0 — Escola nasce por comando do operador, com auditoria de schema fechado**
+  - [x] 1.1 Migration de `rede`, `escola` e `auditoria`, com o check de escola nula só para rede
+  - [x] 1.2 `RegistroDeAuditoria.gravar(tx, acao, dados)` com schema zod fechado por ação
+  - [x] 1.3 `ops:escola` (rede e escola com slug), com `autor_operador` e recusa sem `OPERADOR`
+  - [x] 1.4 Testes: slug repetido, nenhuma rota cria escola, `ops:*` sem dado de pessoa, auditoria recusando campo pessoal, isolamento do repository de auditoria
 
 - [ ] **2.0 — Guarda de sessão real, com matriz de permissão**
   - [ ] 2.1 Migration de `ano_letivo`, `conta`, `usuario`, `sessao` e `registro_acesso`
