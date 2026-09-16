@@ -1,24 +1,20 @@
 import 'reflect-metadata'
-import { contextoAtual, criarLogger, EMISSOR_TOKEN_SINTETICO, RotaAnonima } from '@educa/nucleo'
+import { contextoAtual, criarLogger, EMISSOR_TOKEN, EmissorDeToken, Permite, RotaAnonima } from '@educa/nucleo'
 import { CodigoDeErro, MENSAGENS_DE_ERRO } from '@educa/shared'
 import { Controller, Get, Module, type INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { SignJWT } from 'jose'
-import { spawnSync } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import request from 'supertest'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
-import { raizRepositorio } from '../../../tools/ci/executar.ts'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
 import { emitirTokenSintetico } from '../src/ops/token-sintetico.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
+import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
-const ESCOLA_B = '0190f5a0-0000-7000-8000-00000000000b'
-const USUARIO_A = '0190f5a0-0000-7000-8000-0000000000a1'
-const USUARIO_B = '0190f5a0-0000-7000-8000-0000000000b1'
 
 const ambienteDeTeste = lerAmbienteDeTeste()
 
@@ -26,10 +22,11 @@ const linhasDeLog: string[] = []
 const registrador = criarLogger({ servico: 'api-teste', destino: { write: (linha: string) => linhasDeLog.push(linha) } })
 const registros = () => linhasDeLog.map((linha) => JSON.parse(linha) as Record<string, unknown>)
 
-/** Sem `@RotaAnonima()`: prova que rota nova nasce exigindo token. */
+/** Sem `@RotaAnonima()`: prova que rota nova nasce exigindo token. O `@Permite` é obrigatório no boot. */
 @Controller('teste-protegido')
 class ControladorSemMarcacao {
   @Get('eco')
+  @Permite('sistema_contexto', 'ler')
   eco(): { escolaId: string | undefined } {
     registrador.info({ evento: 'teste.protegido' })
     return { escolaId: contextoAtual()?.escolaId }
@@ -56,19 +53,9 @@ async function subirApi(ambiente: Record<string, string> = {}): Promise<INestApp
   return app
 }
 
-/** O token pelo comando que o desenvolvedor e o cenário de carga usam, e não por atalho do teste. */
-function tokenPeloComando(escolaId: string, usuarioId: string): string {
-  const resultado = spawnSync('npm', ['run', '-s', 'ops:token-sintetico', '--', '--escola', escolaId, '--usuario', usuarioId], {
-    cwd: raizRepositorio,
-    encoding: 'utf8',
-  })
-  if (resultado.status !== 0) throw new Error(`ops:token-sintetico falhou (código ${String(resultado.status)})`)
-  return resultado.stdout.trim()
-}
-
 function tokenAssinadoComAChaveDoAmbiente(claims: Record<string, unknown>): Promise<string> {
   const agora = Math.floor(Date.now() / 1000)
-  return new SignJWT({ iss: EMISSOR_TOKEN_SINTETICO, iat: agora, exp: agora + 600, ...claims })
+  return new SignJWT({ iss: EMISSOR_TOKEN, iat: agora, exp: agora + 600, ...claims })
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .sign(new TextEncoder().encode(ambienteDeTeste['IDENTIDADE_CHAVE_ASSINATURA']))
 }
@@ -84,30 +71,37 @@ function esperarNaoAutenticado(resposta: request.Response): void {
   })
 }
 
-describe('identidade pelo token e GET /v1/sistema/contexto', () => {
+describe('identidade pela sessão do token e GET /v1/sistema/contexto', () => {
+  const bancada = new BancadaDeSessoes()
   let app: INestApplication
+  let a: SessaoDeTeste
+  let b: SessaoDeTeste
   let tokenA: string
   let tokenB: string
+  const esperadoDe = (sessao: SessaoDeTeste) => ({ escolaId: sessao.escolaId, usuarioId: sessao.usuarioId, papel: 'aluno', sessaoId: sessao.sessaoId, anoLetivoId: null })
 
   beforeAll(async () => {
-    tokenA = tokenPeloComando(ESCOLA_A, USUARIO_A)
-    tokenB = tokenPeloComando(ESCOLA_B, USUARIO_B)
+    a = await bancada.escolaComSessao()
+    b = await bancada.escolaComSessao()
+    tokenA = a.token
+    tokenB = b.token
     app = await subirApi()
   })
 
   afterAll(async () => {
     await app.close()
+    await bancada.fechar()
   })
 
   beforeEach(() => {
     linhasDeLog.length = 0
   })
 
-  it('o token de ops:token-sintetico chega ao contexto: /contexto devolve a escola e o usuário dele', async () => {
+  it('o token da sessão chega ao contexto: /contexto devolve a escola, o usuário, o papel e a sessão dela', async () => {
     const resposta = await request(app.getHttpServer()).get('/v1/sistema/contexto').set('Authorization', `Bearer ${tokenA}`)
 
     expect(resposta.status).toBe(200)
-    expect(resposta.body).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO_A })
+    expect(resposta.body).toEqual(esperadoDe(a))
     expect(resposta.headers['cache-control']).toBe('no-store')
   })
 
@@ -120,26 +114,22 @@ describe('identidade pelo token e GET /v1/sistema/contexto', () => {
     expect(registros().some((registro) => registro.evento === 'teste.protegido')).toBe(false)
 
     const autenticada = await request(app.getHttpServer()).get('/teste-protegido/eco').set('Authorization', `Bearer ${tokenB}`)
-    expect(autenticada.body).toEqual({ escolaId: ESCOLA_B })
+    expect(autenticada.body).toEqual({ escolaId: b.escolaId })
     expect(registros().find((registro) => registro.evento === 'teste.protegido')).toMatchObject({
-      escolaId: ESCOLA_B,
-      usuarioId: USUARIO_B,
+      escolaId: b.escolaId,
+      usuarioId: b.usuarioId,
     })
   })
 
-  it('assinatura errada, token vencido e token sem esc dão o mesmo 401, sem dizer o que falhou', async () => {
+  it('assinatura errada, token vencido, token sem esc ou sem sid e token sem sessão dão o mesmo 401, sem dizer o que falhou', async () => {
     const [cabecalho, corpo] = tokenA.split('.')
+    const daSessaoA = { escolaId: a.escolaId, usuarioId: a.usuarioId, sessaoId: a.sessaoId }
     const tokens = {
-      assinaturaErrada: await emitirTokenSintetico({ escolaId: ESCOLA_A, usuarioId: USUARIO_A, validadeSegundos: 600 }, {
-        AMBIENTE: 'local',
-        IDENTIDADE_CHAVE_ASSINATURA: 'outra_chave_sintetica_com_32_caracteres',
-      }),
-      vencido: await emitirTokenSintetico(
-        { escolaId: ESCOLA_A, usuarioId: USUARIO_A, validadeSegundos: 60 },
-        ambienteDeTeste,
-        new Date(Date.now() - 61_000),
-      ),
-      semEsc: await tokenAssinadoComAChaveDoAmbiente({ sub: USUARIO_A }),
+      assinaturaErrada: (await new EmissorDeToken(new TextEncoder().encode('outra_chave_sintetica_com_32_caracteres')).emitir(daSessaoA)).token,
+      vencido: (await new EmissorDeToken(new TextEncoder().encode(ambienteDeTeste['IDENTIDADE_CHAVE_ASSINATURA']), { agora: () => new Date(Date.now() - 11 * 60_000) }).emitir(daSessaoA)).token,
+      semEsc: await tokenAssinadoComAChaveDoAmbiente({ sub: a.usuarioId, sid: a.sessaoId }),
+      semSid: await tokenAssinadoComAChaveDoAmbiente({ sub: a.usuarioId, esc: a.escolaId }),
+      semSessao: await tokenAssinadoComAChaveDoAmbiente({ sub: a.usuarioId, esc: a.escolaId, sid: randomUUID() }),
       corpoTrocado: `${cabecalho}.${corpo}.${tokenB.split('.')[2]}`,
     }
 
@@ -157,21 +147,21 @@ describe('identidade pelo token e GET /v1/sistema/contexto', () => {
 
   it('isolamento: token da escola A com x-escola-id e ?escolaId= apontando para B devolve A', async () => {
     const resposta = await request(app.getHttpServer())
-      .get(`/v1/sistema/contexto?escolaId=${ESCOLA_B}&usuarioId=${USUARIO_B}`)
+      .get(`/v1/sistema/contexto?escolaId=${b.escolaId}&usuarioId=${b.usuarioId}&sessaoId=${b.sessaoId}`)
       .set('Authorization', `Bearer ${tokenA}`)
-      .set('X-Escola-Id', ESCOLA_B)
-      .set('X-Usuario-Id', USUARIO_B)
+      .set('X-Escola-Id', b.escolaId)
+      .set('X-Usuario-Id', b.usuarioId)
 
     expect(resposta.status).toBe(200)
-    expect(resposta.body).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO_A })
+    expect(resposta.body).toEqual(esperadoDe(a))
   })
 
   it('isolamento: sem token, escola mandada pelo cliente não autentica ninguém', async () => {
     const resposta = await request(app.getHttpServer())
-      .get(`/teste-protegido/eco?escolaId=${ESCOLA_B}`)
-      .set('X-Escola-Id', ESCOLA_B)
+      .get(`/teste-protegido/eco?escolaId=${b.escolaId}`)
+      .set('X-Escola-Id', b.escolaId)
     esperarNaoAutenticado(resposta)
-    expect(linhasDeLog.join('')).not.toContain(ESCOLA_B)
+    expect(linhasDeLog.join('')).not.toContain(b.escolaId)
   })
 
   it('token fora do cabeçalho Authorization não autentica: nada sensível vem pela URL', async () => {
@@ -199,7 +189,7 @@ describe('identidade pelo token e GET /v1/sistema/contexto', () => {
       ),
     )
     respostas.forEach((resposta, indice) => {
-      const esperado = pedidos[indice] === 'A' ? { escolaId: ESCOLA_A, usuarioId: USUARIO_A } : { escolaId: ESCOLA_B, usuarioId: USUARIO_B }
+      const esperado = pedidos[indice] === 'A' ? esperadoDe(a) : esperadoDe(b)
       expect(resposta.body).toEqual(esperado)
     })
   })
@@ -213,21 +203,24 @@ describe('identidade pelo token e GET /v1/sistema/contexto', () => {
   })
 })
 
-describe('com ACEITAR_TOKEN_SINTETICO=false', () => {
-  let app: INestApplication
-
-  beforeAll(async () => {
-    app = await subirApi({ ACEITAR_TOKEN_SINTETICO: 'false' })
-  })
+describe('token sintético do F0', () => {
+  const bancada = new BancadaDeSessoes()
 
   afterAll(async () => {
-    await app.close()
+    await bancada.fechar()
   })
 
-  it('um token sintético válido dá 401, e a rota anônima segue respondendo', async () => {
-    const token = await emitirTokenSintetico({ escolaId: ESCOLA_A, usuarioId: USUARIO_A, validadeSegundos: 600 }, ambienteDeTeste)
+  it.each(['true', 'false'])('com ACEITAR_TOKEN_SINTETICO=%s, o token sintético válido dá 401 (não há sessão para ele), e a sessão real e a rota anônima seguem respondendo', async (flag) => {
+    const app = await subirApi({ ACEITAR_TOKEN_SINTETICO: flag })
+    try {
+      const sessao = await bancada.escolaComSessao()
+      const sintetico = await emitirTokenSintetico({ escolaId: sessao.escolaId, usuarioId: sessao.usuarioId, validadeSegundos: 600 }, ambienteDeTeste)
 
-    esperarNaoAutenticado(await request(app.getHttpServer()).get('/v1/sistema/contexto').set('Authorization', `Bearer ${token}`))
-    expect((await request(app.getHttpServer()).get('/saude')).status).toBe(200)
+      esperarNaoAutenticado(await request(app.getHttpServer()).get('/v1/sistema/contexto').set('Authorization', `Bearer ${sintetico}`))
+      expect((await request(app.getHttpServer()).get('/v1/sistema/contexto').set('Authorization', `Bearer ${sessao.token}`)).status).toBe(200)
+      expect((await request(app.getHttpServer()).get('/saude')).status).toBe(200)
+    } finally {
+      await app.close()
+    }
   })
 })

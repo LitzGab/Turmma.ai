@@ -176,7 +176,7 @@ describe('travas do ensaio', () => {
         grafanaUrl: 'http://127.0.0.1:1',
         bancoUrl: 'postgres://ninguem@127.0.0.1:1/nada',
         ambiente: { AMBIENTE },
-        emitirToken: () => Promise.reject(new Error('não deveria emitir token')),
+        criarEscolaComSessoes: () => Promise.reject(new Error('não deveria criar escola nem sessão')),
       })
       await expect(ensaio, String(AMBIENTE)).rejects.toThrow('o ensaio de alertas só roda com AMBIENTE=local')
       expect(chamadas, String(AMBIENTE)).toEqual([])

@@ -10,6 +10,22 @@ export interface Identidade {
   readonly usuarioId: string
 }
 
+// Marca só de tipo, sem valor em execução: o objeto tem só os três ids.
+declare const MARCA_DO_TOKEN_VERIFICADO: unique symbol
+
+/**
+ * O que um JWT com assinatura, emissor, tipo e prazo conferidos diz: a escola, o usuário e a sessão. Só o
+ * `verificarToken` produz este tipo, e é só com ele que a guarda lê a sessão: nenhum id que o cliente mande em
+ * query, corpo ou cabeçalho vira escopo (regra 10, item 3).
+ *
+ * Verificado não quer dizer válido: a sessão ainda pode estar encerrada, ou o usuário desativado. Quem decide é a
+ * `GuardaDeSessao`, que lê a sessão por `(escolaId, sessaoId)`.
+ */
+export interface TokenVerificado extends Identidade {
+  readonly sessaoId: string
+  readonly [MARCA_DO_TOKEN_VERIFICADO]: true
+}
+
 export const ALGORITMO_TOKEN = 'HS256'
 export const TIPO_TOKEN = 'JWT'
 
@@ -22,6 +38,7 @@ export const VALIDADE_MAXIMA_TOKEN_SEGUNDOS = 24 * 60 * 60
 const esquemaClaims = z.object({
   sub: z.uuid(),
   esc: z.uuid(),
+  sid: z.uuid(),
   exp: z.number(),
 })
 
@@ -31,15 +48,15 @@ function naoAutenticado(): ErroDeDominio {
 }
 
 /**
- * Verifica o JWT e devolve a identidade dele. Recusa com `NAO_AUTENTICADO` o token com assinatura
- * que não confere, algoritmo diferente de HS256, sem `exp`, vencido ou com mais de 24 h pela frente,
- * de emissor não aceito, ou
- * com `sub` e `esc` ausentes ou fora do formato UUID.
+ * Verifica o JWT de acesso e devolve a escola, o usuário e a sessão dele. Recusa com `NAO_AUTENTICADO` o token
+ * com assinatura que não confere, algoritmo diferente de HS256, `typ` diferente de `JWT` (o desafio de login,
+ * `desafio+jwt`, não passa por aqui), sem `exp`, vencido ou com mais de 24 h pela frente, de emissor não aceito,
+ * ou com `sub`, `esc` e `sid` ausentes ou fora do formato UUID.
  *
  * Os ids saem em minúsculas: a mesma escola escrita com letra maiúscula não pode virar outra
- * chave de limite ou de sala mais adiante.
+ * chave de limite, de sessão ou de sala mais adiante.
  */
-export async function verificarToken(token: string, config: ConfiguracaoIdentidade): Promise<Identidade> {
+export async function verificarToken(token: string, config: ConfiguracaoIdentidade): Promise<TokenVerificado> {
   // Sem emissor aceito, nenhum token vale; não depende de a biblioteca tratar lista vazia.
   if (config.emissoresAceitos.length === 0) throw naoAutenticado()
   let claims: unknown
@@ -48,7 +65,7 @@ export async function verificarToken(token: string, config: ConfiguracaoIdentida
       algorithms: [ALGORITMO_TOKEN],
       typ: TIPO_TOKEN,
       issuer: [...config.emissoresAceitos],
-      requiredClaims: ['exp', 'sub', 'esc'],
+      requiredClaims: ['exp', 'sub', 'esc', 'sid'],
     })
     claims = verificado.payload
   } catch (erro) {
@@ -58,7 +75,12 @@ export async function verificarToken(token: string, config: ConfiguracaoIdentida
   const resultado = esquemaClaims.safeParse(claims)
   if (!resultado.success) throw naoAutenticado()
   if (resultado.data.exp - Date.now() / 1000 > VALIDADE_MAXIMA_TOKEN_SEGUNDOS) throw naoAutenticado()
-  return { escolaId: resultado.data.esc.toLowerCase(), usuarioId: resultado.data.sub.toLowerCase() }
+  const ids = {
+    escolaId: resultado.data.esc.toLowerCase(),
+    usuarioId: resultado.data.sub.toLowerCase(),
+    sessaoId: resultado.data.sid.toLowerCase(),
+  }
+  return ids as TokenVerificado
 }
 
 // Três partes base64url. Nada além disso é lido do cabeçalho.

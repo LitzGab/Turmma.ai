@@ -1,6 +1,8 @@
 export { CodigoDeErro } from './erros/codigo-de-erro.js'
 export type { RespostaDeErro } from './erros/codigo-de-erro.js'
 export { MENSAGENS_DE_ERRO } from './erros/mensagens.js'
+export { ALCANCES, ALCANCES_INDIVIDUAIS, alcanceDe, MATRIZ, PAPEIS, PAPEIS_DE_USUARIO, RECURSOS } from './permissao/matriz.js'
+export type { AcaoDe, Alcance, Papel, PapelDeUsuario, Recurso } from './permissao/matriz.js'
 export type { RespostaSaude } from './sistema/saude.js'
 export { esquemaRespostaContexto } from './sistema/contexto.js'
 export type { RespostaContexto } from './sistema/contexto.js'

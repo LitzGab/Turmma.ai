@@ -1,12 +1,12 @@
 import { CodigoDeErro, MENSAGENS_DE_ERRO, NAMESPACE_REALTIME_SISTEMA } from '@educa/shared'
 import { spawnSync } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { setTimeout as esperar } from 'node:timers/promises'
 import type { Socket as SocketCliente } from 'socket.io-client'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { salaDaEscola } from '../../apps/realtime/src/sistema.gateway.js'
-import { criarCliente, criarEmissor, ESCOLA_A, tokenDe } from '../../apps/realtime/test/realtime-de-teste.js'
+import { BancadaDeSessoes, type SessaoDeTeste } from '../../apps/api/test/sessao-de-teste.js'
+import { criarCliente, criarEmissor } from '../../apps/realtime/test/realtime-de-teste.js'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
 import { aguardarSaudavel, compose, composeAssincrono, composeAssincronoOuFalha, composeOuFalha, PROCESSOS_DA_FILA } from '../../tools/testes/compose.ts'
@@ -17,7 +17,8 @@ const porta = (variavel: string) => valorObrigatorio(ambiente, variavel)
 const BORDA = `http://127.0.0.1:${porta('BORDA_PORTA_HOST')}`
 const API_2_DIRETA = `http://127.0.0.1:${porta('API_2_PORTA_HOST')}`
 
-const USUARIO = '0190f5a0-0000-7000-8000-0000000000a1'
+/** A escola da turma das rajadas, criada no `beforeAll` com sessões reais: a API lê a sessão de cada token. */
+let escolaDaTurma = ''
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const SERVICOS_ATRAS_DA_BORDA = ['api-1', 'api-2', 'realtime-1', 'realtime-2'] as const
 /** Sonda da borda a cada 2 s (infra/Caddyfile), com folga: tempo para uma instância voltar ao balanceamento. */
@@ -120,7 +121,7 @@ function rajada(
   const getContexto = {
     nome: 'GET /v1/sistema/contexto',
     executar: (sinal: AbortSignal) => fetch(`${BORDA}/v1/sistema/contexto`, { headers: { Authorization: `Bearer ${tokenDaVez()}` }, signal: sinal }),
-    conferir: async (resposta: Response) => resposta.status === 200 && ((await resposta.json()) as { escolaId?: string }).escolaId === ESCOLA_A,
+    conferir: async (resposta: Response) => resposta.status === 200 && ((await resposta.json()) as { escolaId?: string }).escolaId === escolaDaTurma,
   }
   const postContexto = {
     // Rota que só aceita GET: a API responde 404 tipado. Chegar a ela prova que a instância atendeu.
@@ -226,24 +227,37 @@ async function subirBordaDescartavel(servidorDoUpstream: string): Promise<BordaD
 }
 
 describe('borda com duas APIs e dois realtimes', () => {
+  const sessoes = new BancadaDeSessoes()
+  let principal: SessaoDeTeste
+  let daTurma: SessaoDeTeste[]
   let token: string
-  /** Alunos da escola A para as rajadas: cada um fica bem abaixo do próprio limite por minuto. */
+  /** Alunos da escola da turma para as rajadas: cada um fica bem abaixo do próprio limite por minuto. */
   let turma: string[]
 
   beforeAll(async () => {
-    token = await tokenDe(ESCOLA_A, USUARIO)
-    turma = await Promise.all(Array.from({ length: 200 }, () => tokenDe(ESCOLA_A, randomUUID())))
     // A observabilidade também, como o compose a configura: as APIs e os realtimes exportam para
     // `observabilidade`. Com o serviço parado, o nome não existe na rede, a consulta DNS sai do Docker para
     // o resolvedor da máquina e pode levar uns 3 s, e a consulta pendente atrasa a saída do processo no
     // SIGTERM. O atraso fica depois da drenagem, na saída do processo, e somava até uns 3 s ao tempo que os
     // casos de parada medem.
     await composeAssincronoOuFalha('up', '--detach', '--build', '--wait', '--remove-orphans', 'borda', 'observabilidade')
+    escolaDaTurma = await sessoes.escola()
+    // Coordenação, com a inatividade da equipe (120 + 5 min): até a tarefa 5.0 nada move `ultimo_uso_em`, e a do aluno
+    // (30 + 5 min) venceria as sessões num runner lento antes de o arquivo acabar.
+    principal = await sessoes.sessao(escolaDaTurma, 'coordenador')
+    daTurma = await sessoes.sessoes(escolaDaTurma, { papel: 'coordenador', quantidade: 200 })
   }, 900_000)
+
+  // O token de acesso vale 10 min, e o arquivo passa disso: cada caso começa com tokens novos das mesmas sessões.
+  beforeEach(async () => {
+    token = await principal.tokenNovo()
+    turma = await Promise.all(daTurma.map((sessao) => sessao.tokenNovo()))
+  })
 
   afterAll(async () => {
     // Derruba só o que este arquivo subiu: os outros testes de integração não contam com eles de pé.
     await composeAssincronoOuFalha('stop', 'borda', 'observabilidade', ...SERVICOS_ATRAS_DA_BORDA, ...PROCESSOS_DA_FILA)
+    await sessoes.fechar()
   }, 120_000)
 
   describe('troca de instância da API', () => {
@@ -451,7 +465,7 @@ describe('borda com duas APIs e dois realtimes', () => {
           await expect.poll(() => clientes.every((cliente) => cliente.connected), { timeout: 30_000 }).toBe(true)
           // Sala tomada de novo depois da reconexão: a emissão só vale depois que todos voltaram.
           await esperar(300)
-          emissor.servidor.of(NAMESPACE_REALTIME_SISTEMA).to(salaDaEscola(ESCOLA_A)).emit('sistema.teste', { marca })
+          emissor.servidor.of(NAMESPACE_REALTIME_SISTEMA).to(salaDaEscola(escolaDaTurma)).emit('sistema.teste', { marca })
           await expect.poll(() => clientes.filter((cliente) => !recebidos.get(cliente)?.includes(marca)).length, { timeout: 10_000 }).toBe(0)
         }
 

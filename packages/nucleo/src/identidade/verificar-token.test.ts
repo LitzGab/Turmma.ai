@@ -1,12 +1,13 @@
 import { CodigoDeErro } from '@educa/shared'
 import { SignJWT, UnsecuredJWT, type JWTPayload } from 'jose'
 import { describe, expect, it } from 'vitest'
-import { EMISSOR_TOKEN_SINTETICO, type ConfiguracaoIdentidade } from '../config/validar-config.js'
+import { EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO, type ConfiguracaoIdentidade } from '../config/validar-config.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
 import { extrairTokenBearer, VALIDADE_MAXIMA_TOKEN_SEGUNDOS, verificarToken } from './verificar-token.js'
 
 const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
 const USUARIO = '0190f5a0-0000-7000-8000-0000000000c1'
+const SESSAO = '0190f5a0-0000-7000-8000-0000000000d1'
 const codificar = (texto: string) => new TextEncoder().encode(texto)
 const CHAVE = codificar('chave_sintetica_de_teste_com_32_caracteres')
 
@@ -24,19 +25,21 @@ interface OpcoesDeToken {
   chave?: Uint8Array
   alg?: string
   semTyp?: boolean
+  typ?: string
 }
 
 async function assinar(opcoes: OpcoesDeToken = {}): Promise<string> {
   const todas: JWTPayload = {
     esc: ESCOLA_A,
     sub: USUARIO,
+    sid: SESSAO,
     iss: EMISSOR_TOKEN_SINTETICO,
     iat: agora(),
     exp: agora() + 3600,
     ...opcoes.claims,
   }
   const claims = Object.fromEntries(Object.entries(todas).filter(([claim]) => !(opcoes.semClaims ?? []).includes(claim)))
-  const cabecalho = { alg: opcoes.alg ?? 'HS256', ...(opcoes.semTyp === true ? {} : { typ: 'JWT' }) }
+  const cabecalho = { alg: opcoes.alg ?? 'HS256', ...(opcoes.semTyp === true ? {} : { typ: opcoes.typ ?? 'JWT' }) }
   return new SignJWT(claims).setProtectedHeader(cabecalho).sign(opcoes.chave ?? CHAVE)
 }
 
@@ -51,22 +54,27 @@ async function recusa(token: string, config: ConfiguracaoIdentidade = configAcei
 }
 
 describe('verificarToken', () => {
-  it('devolve a escola e o usuário do token válido', async () => {
-    expect(await verificarToken(await assinar(), configAceitandoSintetico)).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO })
+  it('devolve a escola, o usuário e a sessão do token válido, e nada além deles', async () => {
+    expect(await verificarToken(await assinar(), configAceitandoSintetico)).toStrictEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO, sessaoId: SESSAO })
   })
 
   it('devolve os ids em minúsculas: a mesma escola não vira outra chave por causa da caixa', async () => {
-    const token = await assinar({ claims: { esc: ESCOLA_A.toUpperCase(), sub: USUARIO.toUpperCase() } })
-    expect(await verificarToken(token, configAceitandoSintetico)).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO })
+    const token = await assinar({ claims: { esc: ESCOLA_A.toUpperCase(), sub: USUARIO.toUpperCase(), sid: SESSAO.toUpperCase() } })
+    expect(await verificarToken(token, configAceitandoSintetico)).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO, sessaoId: SESSAO })
   })
 
   it('aceita o token com a validade máxima de 24 horas pela frente', async () => {
     const token = await assinar({ claims: { exp: agora() + VALIDADE_MAXIMA_TOKEN_SEGUNDOS } })
-    expect(await verificarToken(token, configAceitandoSintetico)).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO })
+    expect(await verificarToken(token, configAceitandoSintetico)).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO, sessaoId: SESSAO })
+  })
+
+  it('aceita o emissor da sessão real sem a flag do sintético', async () => {
+    const token = await assinar({ claims: { iss: EMISSOR_TOKEN } })
+    expect(await verificarToken(token, { ...configAceitandoSintetico, emissoresAceitos: [EMISSOR_TOKEN] })).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO, sessaoId: SESSAO })
   })
 
   it('com a flag desligada, recusa o token sintético mesmo com assinatura e prazo válidos', async () => {
-    const erro = await recusa(await assinar(), { ...configAceitandoSintetico, emissoresAceitos: [] })
+    const erro = await recusa(await assinar(), { ...configAceitandoSintetico, emissoresAceitos: [EMISSOR_TOKEN] })
     expect(erro).toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO, status: 401 })
   })
 
@@ -77,6 +85,9 @@ describe('verificarToken', () => {
     ['sem exp', () => assinar({ semClaims: ['exp'] })],
     ['sem esc', () => assinar({ semClaims: ['esc'] })],
     ['sem sub', () => assinar({ semClaims: ['sub'] })],
+    ['sem sid: token sem sessão não chega à guarda', () => assinar({ semClaims: ['sid'] })],
+    ['sid fora do formato UUID', () => assinar({ claims: { sid: 'sessao-1' } })],
+    ['typ desafio+jwt: o desafio de login não vale como token de acesso', () => assinar({ typ: 'desafio+jwt' })],
     ['sem iss', () => assinar({ semClaims: ['iss'] })],
     ['emissor não aceito', () => assinar({ claims: { iss: 'login-real' } })],
     ['esc fora do formato UUID', () => assinar({ claims: { esc: 'escola-a' } })],
@@ -85,7 +96,7 @@ describe('verificarToken', () => {
     ['nbf no futuro', () => assinar({ claims: { nbf: agora() + 600 } })],
     ['algoritmo HS512 com a mesma chave', () => assinar({ alg: 'HS512' })],
     ['sem typ', () => assinar({ semTyp: true })],
-    ['alg none, sem assinatura', async () => new UnsecuredJWT({ esc: ESCOLA_A, sub: USUARIO, iss: EMISSOR_TOKEN_SINTETICO, exp: agora() + 3600 }).encode()],
+    ['alg none, sem assinatura', async () => new UnsecuredJWT({ esc: ESCOLA_A, sub: USUARIO, sid: SESSAO, iss: EMISSOR_TOKEN_SINTETICO, exp: agora() + 3600 }).encode()],
     ['assinatura de um token colada no corpo de outro', async () => {
       const [cabecalho, , assinatura] = (await assinar()).split('.')
       const [, corpoDeOutraEscola] = (await assinar({ claims: { esc: '0190f5a0-0000-7000-8000-00000000000b' } })).split('.')

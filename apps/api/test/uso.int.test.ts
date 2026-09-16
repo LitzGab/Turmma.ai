@@ -3,15 +3,14 @@ import { criarLogger, diaDeUso } from '@educa/nucleo'
 import type { INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { Redis } from 'ioredis'
-import { randomUUID } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { aguardarSaudavel, compose, composeOuFalha, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
-import { emitirTokenSintetico } from '../src/ops/token-sintetico.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
+import { BancadaDeSessoes } from './sessao-de-teste.js'
 
 const ambienteDeTeste = lerAmbienteDeTeste()
 const URL_REDIS_FILA = `redis://127.0.0.1:${valorObrigatorio(ambienteDeTeste, 'REDIS_FILA_PORTA_HOST')}`
@@ -29,7 +28,9 @@ async function subirApi(ambiente: Record<string, string> = {}): Promise<string> 
   return `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`
 }
 
-const tokenDa = (escolaId: string) => emitirTokenSintetico({ escolaId, usuarioId: randomUUID(), validadeSegundos: 600 }, ambienteDeTeste)
+const sessoes = new BancadaDeSessoes()
+/** Um token de uma sessão nova, de um usuário novo da escola. */
+const tokenDa = async (escolaId: string) => (await sessoes.sessao(escolaId)).token
 
 /**
  * O contador da escola hoje. Lido nos dois dias, o de antes e o de depois das requisições: o teste
@@ -59,8 +60,8 @@ function mediana(valores: number[]): number {
 
 describe('uso por escola marcado pela API', () => {
   const escolasDoTeste: string[] = []
-  const novaEscola = () => {
-    const escolaId = randomUUID()
+  const novaEscola = async () => {
+    const escolaId = await sessoes.escola()
     escolasDoTeste.push(escolaId)
     return escolaId
   }
@@ -82,11 +83,12 @@ describe('uso por escola marcado pela API', () => {
     compose('unpause', 'redis-fila')
     await aguardarSaudavel('redis-fila')
     await redis.quit()
+    await sessoes.fechar()
   })
 
   it('cada requisição autenticada conta na escola do token, no dia de São Paulo, com prazo para a chave não ficar para sempre', async () => {
     const url = await subirApi()
-    const [escolaA, escolaB] = [novaEscola(), novaEscola()]
+    const [escolaA, escolaB] = [await novaEscola(), await novaEscola()]
     const [tokenA, tokenB] = await Promise.all([tokenDa(escolaA), tokenDa(escolaB)])
     const dias = new Set([diaDeUso(new Date())])
 
@@ -105,7 +107,7 @@ describe('uso por escola marcado pela API', () => {
 
   it('isolamento: o uso da escola A não soma na B, e a requisição sem token (anônima ou recusada) não conta em escola nenhuma', async () => {
     const url = await subirApi()
-    const [escolaA, escolaB] = [novaEscola(), novaEscola()]
+    const [escolaA, escolaB] = [await novaEscola(), await novaEscola()]
     const tokenA = await tokenDa(escolaA)
     const dias = new Set([diaDeUso(new Date())])
     const antes = new Set(await redis.keys('uso:*'))
@@ -125,7 +127,7 @@ describe('uso por escola marcado pela API', () => {
   it('Redis de fila inalcançável: a requisição responde 200 na hora, sem esperar o contador', async () => {
     // Porta sem ninguém escutando: o cliente nunca conecta, e o comando falha sem fila offline.
     const url = await subirApi({ REDIS_FILA_URL: 'redis://127.0.0.1:1' })
-    const token = await tokenDa(novaEscola())
+    const token = await tokenDa(await novaEscola())
     const chamadas = []
     for (let indice = 0; indice < 20; indice++) chamadas.push(await chamar(`${url}${ROTA_AUTENTICADA}`, token))
     expect(chamadas.map(({ status }) => status)).toEqual(Array.from({ length: 20 }, () => 200))
@@ -134,7 +136,7 @@ describe('uso por escola marcado pela API', () => {
 
   it('Redis de fila travado (pausado): a requisição não espera o prazo de 100 ms do comando, e a API segue atendendo', async () => {
     const url = await subirApi()
-    const escolaId = novaEscola()
+    const escolaId = await novaEscola()
     const token = await tokenDa(escolaId)
     // Conectado antes da pausa: é o caso de um Redis que para de responder com a conexão aberta.
     await chamar(`${url}${ROTA_AUTENTICADA}`, token)

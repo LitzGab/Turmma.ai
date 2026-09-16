@@ -3,6 +3,7 @@ import {
   criarClienteRedisDaApi,
   criarLogger,
   criarPool,
+  EmissorDeToken,
   JANELA_LIMITE_SEGUNDOS,
   LimitadorDeRequisicoes,
   RotaAnonima,
@@ -12,7 +13,7 @@ import { CodigoDeErro, MENSAGENS_DE_ERRO } from '@educa/shared'
 import { Controller, Get, Module, type INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { Redis } from 'ioredis'
-import { randomInt, randomUUID } from 'node:crypto'
+import { randomInt } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
@@ -20,8 +21,8 @@ import { aguardarSaudavel, compose, composeAssincronoOuFalha, composeOuFalha } f
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
 import { CLIENTE_REDIS_CACHE } from '../src/limite.module.js'
-import { emitirTokenSintetico } from '../src/ops/token-sintetico.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
+import { BancadaDeSessoes } from './sessao-de-teste.js'
 
 const ambienteDeTeste = lerAmbienteDeTeste()
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
@@ -76,8 +77,20 @@ async function fecharInstancias(): Promise<void> {
   await Promise.all(instancias.splice(0).map((instancia) => instancia.app.close()))
 }
 
-const token = (escolaId: string, usuarioId: string) =>
-  emitirTokenSintetico({ escolaId, usuarioId, validadeSegundos: 600 }, ambienteDeTeste)
+/** Escolas e sessões reais: a GuardaDeSessao lê a sessão do token depois do limite. */
+const sessoes = new BancadaDeSessoes()
+afterAll(async () => {
+  await sessoes.fechar()
+})
+
+/** O token de um usuário novo da escola, com sessão gravada. */
+const tokenNovo = async (escolaId: string) => (await sessoes.sessao(escolaId)).token
+/** `quantidade` tokens da escola, cada um de um usuário novo. */
+const tokensNovos = async (escolaId: string, quantidade: number) => (await sessoes.sessoes(escolaId, { quantidade })).map((sessao) => sessao.token)
+/** O token de um usuário novo numa escola nova. */
+const tokenDeEscolaNova = async () => tokenNovo(await sessoes.escola())
+/** O token de um usuário da mesma conta do `usuarioId`, em outra escola. */
+const sessaoDaMesmaConta = (usuarioId: string, escolaId: string) => sessoes.sessaoDaMesmaConta(usuarioId, escolaId)
 
 interface Resposta {
   status: number
@@ -174,7 +187,7 @@ describe('rate limit por usuário e por escola, em instâncias no processo', () 
   })
 
   it('concorrência: rajada do mesmo usuário em paralelo nas duas APIs aceita exatamente o limite, somado no Redis', async () => {
-    const tokenDoUsuario = await token(randomUUID(), randomUUID())
+    const tokenDoUsuario = await tokenDeEscolaNova()
     // Distribuição desigual de propósito: contando em memória, com limite inteiro ou dividido, o total mudaria.
     const pedidos = Array.from({ length: 60 }, (_, indice) => (indice % 12 === 0 ? api2 : api1))
     const respostas = await Promise.all(pedidos.map((instancia) => autenticada(instancia.url, tokenDoUsuario)))
@@ -186,8 +199,9 @@ describe('rate limit por usuário e por escola, em instâncias no processo', () 
   })
 
   it('toda chave de limite expira dentro da janela: nem contador de aluno nem IP ficam guardados', async () => {
-    const [escola, usuario, ip] = [randomUUID(), randomUUID(), ipSorteado()]
-    expect((await autenticada(api1.url, await token(escola, usuario))).status).toBe(200)
+    const ip = ipSorteado()
+    const { escolaId: escola, usuarioId: usuario, token: tokenDoUsuario } = await sessoes.escolaComSessao()
+    expect((await autenticada(api1.url, tokenDoUsuario)).status).toBe(200)
     expect((await pedir(api2.url, ROTA_ANONIMA, { 'X-Forwarded-For': ip })).status).toBe(200)
 
     const redis = redisDeCache()
@@ -204,7 +218,7 @@ describe('rate limit por usuário e por escola, em instâncias no processo', () 
   })
 
   it('o limite gasto numa instância vale na outra: o 21º pedido, na API 2, recebe 429', async () => {
-    const tokenDoUsuario = await token(randomUUID(), randomUUID())
+    const tokenDoUsuario = await tokenDeEscolaNova()
     for (let pedido = 0; pedido < 20; pedido++) expect((await autenticada(api1.url, tokenDoUsuario)).status).toBe(200)
     const naOutra = await autenticada(api2.url, tokenDoUsuario)
     expect(naOutra.status).toBe(429)
@@ -212,9 +226,9 @@ describe('rate limit por usuário e por escola, em instâncias no processo', () 
   })
 
   it('um usuário acima do próprio limite recebe 429, e os outros da mesma escola seguem', async () => {
-    const escola = randomUUID()
-    const abusivo = await token(escola, randomUUID())
-    const colegas = await Promise.all(Array.from({ length: 5 }, () => token(escola, randomUUID())))
+    const escola = await sessoes.escola()
+    const [abusivo, ...colegas] = await tokensNovos(escola, 6)
+    if (abusivo === undefined) throw new Error('sessão não criada')
 
     const doAbusivo = await Promise.all(Array.from({ length: 25 }, () => autenticada(api1.url, abusivo)))
     expect(contarStatus(doAbusivo)).toEqual({ 200: 20, 429: 5 })
@@ -223,56 +237,59 @@ describe('rate limit por usuário e por escola, em instâncias no processo', () 
     expect(contarStatus(dosColegas)).toEqual({ 200: 10 })
   })
 
-  it('borda: o mesmo sub em duas escolas tem um limite de usuário só, e cada escola conta o seu', async () => {
-    const [escolaA, escolaB, usuario] = [randomUUID(), randomUUID(), randomUUID()]
-    const naA = await token(escolaA, usuario)
-    const naB = await token(escolaB, usuario)
+  it('borda: a mesma conta com usuário em duas escolas tem o limite de usuário do sub de cada escola, e cada escola conta o seu', async () => {
+    // Desde o F1 o `sub` é o usuário da escola (Tech Spec, seção 1): a mesma pessoa em duas escolas é um usuário em cada uma.
+    const naA = await sessoes.escolaComSessao('professor')
+    const escolaB = await sessoes.escola()
+    const naB = await sessaoDaMesmaConta(naA.usuarioId, escolaB)
 
-    expect(contarStatus(await Promise.all(Array.from({ length: 10 }, () => autenticada(api1.url, naA))))).toEqual({ 200: 10 })
+    expect(contarStatus(await Promise.all(Array.from({ length: 20 }, () => autenticada(api1.url, naA.token))))).toEqual({ 200: 20 })
+    expect((await autenticada(api2.url, naA.token)).status).toBe(429)
+    // O usuário dela na B tem o próprio limite: o limite do usuário da A não o alcança.
     expect(contarStatus(await Promise.all(Array.from({ length: 10 }, () => autenticada(api2.url, naB))))).toEqual({ 200: 10 })
-    // Usuário: 20 de 20, somando as duas escolas.
-    expect((await autenticada(api1.url, naA)).status).toBe(429)
-    expect((await autenticada(api2.url, naB)).status).toBe(429)
 
-    // Escola: cada uma gastou só 10 de 30. Somadas numa chave só, as duas estariam a 20 e sobrariam 10.
-    for (const escola of [escolaA, escolaB]) {
-      const outros = await Promise.all(Array.from({ length: 2 }, () => token(escola, randomUUID())))
-      const respostas = await Promise.all(outros.flatMap((outro) => Array.from({ length: 10 }, () => autenticada(api1.url, outro))))
-      expect(contarStatus(respostas)).toEqual({ 200: 20 })
-      expect((await autenticada(api2.url, await token(escola, randomUUID()))).status).toBe(429)
-    }
+    // Escola: a A gastou 20 de 30 e a B, 10. Somadas numa chave só, as duas estariam a 30 e já recusariam.
+    const [outroDaA] = await tokensNovos(naA.escolaId, 1)
+    expect(contarStatus(await Promise.all(Array.from({ length: 10 }, () => autenticada(api1.url, outroDaA ?? ''))))).toEqual({ 200: 10 })
+    expect((await autenticada(api2.url, await tokenNovo(naA.escolaId))).status).toBe(429)
+    const outrosDaB = await tokensNovos(escolaB, 2)
+    expect(contarStatus(await Promise.all(outrosDaB.flatMap((outro) => Array.from({ length: 10 }, () => autenticada(api1.url, outro)))))).toEqual({ 200: 20 })
+    expect((await autenticada(api2.url, await tokenNovo(escolaB))).status).toBe(429)
   })
 
   it('isolamento: limite de escola esgotado na escola A não gera 429 para a escola B', async () => {
-    const [escolaA, escolaB] = [randomUUID(), randomUUID()]
-    const daA = await Promise.all(Array.from({ length: 2 }, () => token(escolaA, randomUUID())))
+    const [escolaA, escolaB] = [await sessoes.escola(), await sessoes.escola()]
+    const daA = await tokensNovos(escolaA, 2)
     const esgotando = await Promise.all(daA.flatMap((usuario, indice) => Array.from({ length: indice === 0 ? 20 : 10 }, () => autenticada(api1.url, usuario))))
     expect(contarStatus(esgotando)).toEqual({ 200: 30 })
 
-    const outroDaA = await autenticada(api2.url, await token(escolaA, randomUUID()))
+    const outroDaA = await autenticada(api2.url, await tokenNovo(escolaA))
     expect(outroDaA.status).toBe(429)
     esperarRetryAfterDaJanela([outroDaA])
 
-    const daB = await Promise.all(Array.from({ length: 3 }, () => token(escolaB, randomUUID())))
+    const daB = await tokensNovos(escolaB, 3)
     const respostasDaB = await Promise.all(daB.flatMap((usuario) => [autenticada(api1.url, usuario), autenticada(api2.url, usuario)]))
     expect(contarStatus(respostasDaB)).toEqual({ 200: 6 })
   })
 
   it('isolamento: token da escola A com X-Escola-Id da B conta na A, e a B segue livre', async () => {
-    const [escolaA, escolaB] = [randomUUID(), randomUUID()]
-    const usuarioA = await token(escolaA, randomUUID())
+    const [escolaA, escolaB] = [await sessoes.escola(), await sessoes.escola()]
+    const usuarioA = await tokenNovo(escolaA)
     const respostas = await Promise.all(
       Array.from({ length: 20 }, () => pedir(api1.url, `${ROTA_AUTENTICADA}?escolaId=${escolaB}`, { Authorization: `Bearer ${usuarioA}`, 'X-Escola-Id': escolaB })),
     )
     expect(contarStatus(respostas)).toEqual({ 200: 20 })
-    const segundoDaA = await Promise.all(Array.from({ length: 11 }, async () => autenticada(api2.url, await token(escolaA, randomUUID()))))
+    const outrosDaA = await tokensNovos(escolaA, 11)
+    const segundoDaA = await Promise.all(outrosDaA.map((outro) => autenticada(api2.url, outro)))
     expect(contarStatus(segundoDaA)).toEqual({ 200: 10, 429: 1 })
-    expect((await autenticada(api1.url, await token(escolaB, randomUUID()))).status).toBe(200)
+    expect((await autenticada(api1.url, await tokenNovo(escolaB))).status).toBe(200)
   })
 
   it('turma com token vencido às 7h30: rota autenticada responde 401, nunca 429, e não gasta o limite anônimo do IP', async () => {
     const ip = ipSorteado()
-    const vencido = await emitirTokenSintetico({ escolaId: randomUUID(), usuarioId: randomUUID(), validadeSegundos: 60 }, ambienteDeTeste, new Date(Date.now() - 120_000))
+    const sessao = await sessoes.escolaComSessao()
+    const emissorNoPassado = new EmissorDeToken(new TextEncoder().encode(valorObrigatorio(ambienteDeTeste, 'IDENTIDADE_CHAVE_ASSINATURA')), { agora: () => new Date(Date.now() - 11 * 60_000) })
+    const { token: vencido } = await emissorNoPassado.emitir(sessao)
     const semToken = Array.from({ length: 15 }, () => pedir(api1.url, ROTA_AUTENTICADA, { 'X-Forwarded-For': ip }))
     const comVencido = Array.from({ length: 15 }, () => pedir(api2.url, ROTA_AUTENTICADA, { 'X-Forwarded-For': ip, Authorization: `Bearer ${vencido}` }))
     expect(contarStatus(await Promise.all([...semToken, ...comVencido]))).toEqual({ 401: 30 })
@@ -300,7 +317,7 @@ describe('limites por escola, da configuracao_operacional_escola', () => {
 
   /** Escola nova, com a configuração gravada antes do primeiro pedido dela (nenhuma instância a guardou ainda). */
   async function escolaConfigurada(limites: { usuario: number | null; escola: number | null }): Promise<string> {
-    const escola = randomUUID()
+    const escola = await sessoes.escola()
     await pool.query('insert into configuracao_operacional_escola (escola_id, limite_req_usuario_min, limite_req_escola_min) values ($1, $2, $3)', [
       escola,
       limites.usuario,
@@ -321,9 +338,9 @@ describe('limites por escola, da configuracao_operacional_escola', () => {
 
   it('a escola com limite próprio de escola é limitada nele, somado nas duas APIs; a escola sem configuração segue no padrão', async () => {
     const comLimite = await escolaConfigurada({ usuario: null, escola: 5 })
-    const semConfiguracao = randomUUID()
+    const semConfiguracao = await sessoes.escola()
     const pedidosDa = async (escola: string) => {
-      const usuarios = await Promise.all(Array.from({ length: 4 }, () => token(escola, randomUUID())))
+      const usuarios = await tokensNovos(escola, 4)
       return Promise.all(usuarios.flatMap((usuario) => [autenticada(api1.url, usuario), autenticada(api2.url, usuario)]))
     }
 
@@ -335,22 +352,23 @@ describe('limites por escola, da configuracao_operacional_escola', () => {
 
   it('limite próprio de usuário vale para os usuários daquela escola, e o nulo cai no padrão do ambiente', async () => {
     const usuarioLimitado = await escolaConfigurada({ usuario: 3, escola: null })
-    const tokenDoUsuario = await token(usuarioLimitado, randomUUID())
+    const tokenDoUsuario = await tokenNovo(usuarioLimitado)
     const respostas = await Promise.all(Array.from({ length: 6 }, (_, indice) => autenticada(indice % 2 === 0 ? api1.url : api2.url, tokenDoUsuario)))
     expect(contarStatus(respostas)).toEqual({ 200: 3, 429: 3 })
 
     // O limite de escola dela é o padrão (30): outros 20 usuários, um pedido cada, passam todos.
-    const colegas = await Promise.all(Array.from({ length: 20 }, () => token(usuarioLimitado, randomUUID())))
+    const colegas = await tokensNovos(usuarioLimitado, 20)
     expect(contarStatus(await Promise.all(colegas.map((colega) => autenticada(api1.url, colega))))).toEqual({ 200: 20 })
   })
 
-  it('isolamento: o limite configurado da escola A não vale para a B, nem com o mesmo usuário nas duas', async () => {
+  it('isolamento: o limite configurado da escola A não vale para a B, nem para a mesma conta com usuário nas duas', async () => {
     const escolaA = await escolaConfigurada({ usuario: 2, escola: 2 })
-    const escolaB = randomUUID()
-    const usuario = randomUUID()
-    expect(contarStatus(await Promise.all(Array.from({ length: 3 }, async () => autenticada(api1.url, await token(escolaA, usuario)))))).toEqual({ 200: 2, 429: 1 })
-    // Na B, o mesmo sub tem o limite de usuário do padrão (20, somando as escolas: sobram 18), e a B, o de escola do padrão.
-    expect(contarStatus(await Promise.all(Array.from({ length: 10 }, async () => autenticada(api2.url, await token(escolaB, usuario)))))).toEqual({ 200: 10 })
+    const escolaB = await sessoes.escola()
+    const naA = await sessoes.sessao(escolaA, 'professor')
+    const naB = await sessaoDaMesmaConta(naA.usuarioId, escolaB)
+    expect(contarStatus(await Promise.all(Array.from({ length: 3 }, () => autenticada(api1.url, naA.token))))).toEqual({ 200: 2, 429: 1 })
+    // Na B, o usuário da mesma conta tem o limite de usuário do padrão (20), e a B, o de escola do padrão.
+    expect(contarStatus(await Promise.all(Array.from({ length: 10 }, () => autenticada(api2.url, naB))))).toEqual({ 200: 10 })
   })
 })
 
@@ -417,7 +435,7 @@ describe('Redis de cache fora: seguro em memória', () => {
   })
 
   async function provarSeguro(): Promise<void> {
-    const tokenDoUsuario = await token(randomUUID(), randomUUID())
+    const tokenDoUsuario = await tokenDeEscolaNova()
     const respostas: Resposta[] = []
     for (let pedido = 0; pedido < 14; pedido++) respostas.push(await autenticada(api.url, tokenDoUsuario))
     const anonimas: Resposta[] = []
@@ -434,7 +452,7 @@ describe('Redis de cache fora: seguro em memória', () => {
 
   async function provarVolta(): Promise<void> {
     await religarRedisDeCache()
-    const tokenDoUsuario = await token(randomUUID(), randomUUID())
+    const tokenDoUsuario = await tokenDeEscolaNova()
     await expect
       .poll(async () => {
         await autenticada(api.url, tokenDoUsuario)
@@ -444,7 +462,7 @@ describe('Redis de cache fora: seguro em memória', () => {
   }
 
   it('borda: Redis parado → o seguro limita a limite ÷ instâncias, seguro_ativo=1, abaixo de 150 ms e nenhum 5xx', async () => {
-    expect((await autenticada(api.url, await token(randomUUID(), randomUUID()))).status).toBe(200)
+    expect((await autenticada(api.url, await tokenDeEscolaNova())).status).toBe(200)
     expect(api.limitador.seguroAtivo).toBe(0)
 
     composeOuFalha('stop', 'redis-cache')
@@ -496,15 +514,16 @@ describe('Redis de cache fora: seguro em memória', () => {
   it('borda: a API sobe com o Redis de cache já fora, atende pelo seguro e passa ao Redis quando ele volta', async () => {
     composeOuFalha('stop', 'redis-cache')
     const semRedis = await subirApi(LIMITES, { esperarRedis: false })
+    const primeiroToken = await tokenDeEscolaNova()
     const inicio = performance.now()
-    expect((await autenticada(semRedis.url, await token(randomUUID(), randomUUID()))).status).toBe(200)
+    expect((await autenticada(semRedis.url, primeiroToken)).status).toBe(200)
     expect(performance.now() - inicio).toBeLessThan(150)
     expect(semRedis.limitador.seguroAtivo).toBe(1)
     // A métrica `limite.seguro_ativo` desta instância: toda requisição limitada da janela foi pelo seguro.
     expect(semRedis.limitador.proporcaoDoSeguro).toBe(1)
 
     await religarRedisDeCache()
-    const tokenDoUsuario = await token(randomUUID(), randomUUID())
+    const tokenDoUsuario = await tokenDeEscolaNova()
     await expect
       .poll(async () => {
         expect((await autenticada(semRedis.url, tokenDoUsuario)).status).toBe(200)
@@ -518,7 +537,7 @@ describe('Redis de cache fora: seguro em memória', () => {
   })
 
   it('borda: Redis travado (conectado, sem responder) → o comando corta em 100 ms e o seguro atende, abaixo de 150 ms', async () => {
-    expect((await autenticada(api.url, await token(randomUUID(), randomUUID()))).status).toBe(200)
+    expect((await autenticada(api.url, await tokenDeEscolaNova())).status).toBe(200)
 
     composeOuFalha('pause', 'redis-cache')
     await provarSeguro()
@@ -544,9 +563,9 @@ describe('pela borda (Caddy) com as duas APIs do compose e os limites do ambient
   }, 120_000)
 
   it('caminho feliz: 400 usuários da escola C pelo mesmo IP não recebem 429; um acima do próprio limite recebe, com Retry-After, e os outros seguem', async () => {
-    const escolaC = randomUUID()
-    const alunos = await Promise.all(Array.from({ length: 400 }, () => token(escolaC, randomUUID())))
-    const abusivo = await token(escolaC, randomUUID())
+    const escolaC = await sessoes.escola()
+    const [abusivo, ...alunos] = await tokensNovos(escolaC, 401)
+    if (abusivo === undefined) throw new Error('sessão não criada')
 
     const primeiraRodada = await emParalelo(alunos.flatMap((aluno) => [() => autenticada(BORDA, aluno), () => autenticada(BORDA, aluno)]), 50)
     expect(contarStatus(primeiraRodada)).toEqual({ 200: 800 })

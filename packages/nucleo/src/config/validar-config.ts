@@ -36,8 +36,11 @@ export function validarAmbiente<Esquema extends z.ZodType>(
 export const AMBIENTES = AMBIENTES_DO_SISTEMA
 export type Ambiente = (typeof AMBIENTES)[number]
 
-/** Emissor do token de `npm run ops:token-sintetico`. O F1 acrescenta o emissor do login real. */
+/** Emissor do token de `npm run ops:token-sintetico`, do F0. Sai na tarefa 3.0, junto com a flag. */
 export const EMISSOR_TOKEN_SINTETICO = 'sintetico'
+
+/** Emissor do token de acesso da sessão real (`EmissorDeToken`). Sempre aceito. */
+export const EMISSOR_TOKEN = 'educa'
 
 /** HMAC-SHA256 pede chave de pelo menos 256 bits; abaixo disso a assinatura fica fácil de forjar. */
 export const TAMANHO_MINIMO_CHAVE_ASSINATURA = 32
@@ -91,7 +94,10 @@ export interface ConfiguracaoIdentidade {
   readonly ambiente: Ambiente
   /** Chave HMAC do HS256. Nunca vai para log nem para resposta. */
   readonly chaveAssinatura: Uint8Array
-  /** Com a flag desligada, a lista não tem o emissor sintético, e o token dele é recusado. */
+  /**
+   * Sempre o emissor `educa`, da sessão real. O sintético só com a flag ligada, e mesmo assim o token dele não
+   * passa da `GuardaDeSessao` sem uma sessão gravada.
+   */
   readonly emissoresAceitos: readonly string[]
 }
 
@@ -100,6 +106,6 @@ export function lerConfiguracaoIdentidade(ambiente: Record<string, string | unde
   return {
     ambiente: valores.AMBIENTE,
     chaveAssinatura: new TextEncoder().encode(valores.IDENTIDADE_CHAVE_ASSINATURA),
-    emissoresAceitos: valores.ACEITAR_TOKEN_SINTETICO === 'true' ? [EMISSOR_TOKEN_SINTETICO] : [],
+    emissoresAceitos: valores.ACEITAR_TOKEN_SINTETICO === 'true' ? [EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO] : [EMISSOR_TOKEN],
   }
 }

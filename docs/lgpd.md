@@ -51,7 +51,7 @@ deveria existir.
 | Hash de senha (argon2id) | aluno, professor, coordenador | autenticar (F1) | execução de contrato; segurança (art. 46) | até desativar a credencial |
 | E-mail de login na conta global | professor, coordenador | autenticar em uma ou mais escolas (F1) | execução de contrato | enquanto houver `usuario` ativo em alguma escola; a eliminação pedida por uma escola apaga só o `usuario` dela |
 | Segredo TOTP cifrado e HMAC dos códigos de recuperação | coordenador | segundo fator (F1) | execução de contrato; segurança (art. 46) | até desativar a conta ou redefinir o MFA |
-| Sessão (horários de início, uso e fim, método, motivo de encerramento) | todos | manter e encerrar o acesso, inatividade (F1) | execução de contrato | 30 dias após encerrar |
+| Sessão (horários de início, uso e fim, método, motivo de encerramento, hash do cookie de renovação atual e anterior, família da sessão e conta; sem IP nem nome) | todos | manter e encerrar o acesso, inatividade (F1) | execução de contrato | 30 dias após encerrar |
 | Contador de tentativas de login (HMAC do identificador) | todos | proteção contra força bruta (F1) | legítimo interesse, segurança | 15 minutos |
 | Cookie de dispositivo (até 50 HMACs com chave de escola+matrícula ou de e-mail que já entraram naquele navegador, sem nome; o servidor não guarda nem lê identidade a partir dele) | aluno, professor, coordenador | manter a prioridade de login de quem já entrou quando há ataque na rede da escola (F1); nenhum outro uso | legítimo interesse, segurança (art. 46), no melhor interesse do titular (art. 14) | 30 dias por entrada, no navegador |
 | Vínculo, estado e datas | professor, aluno | acesso por objeto (F1) | execução de contrato | vigência + 5 anos |

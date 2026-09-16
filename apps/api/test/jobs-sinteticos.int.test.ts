@@ -6,23 +6,19 @@ import { NestFactory } from '@nestjs/core'
 import { randomUUID } from 'node:crypto'
 import request from 'supertest'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { BancadaDeFila, LogEmMemoria } from '../../worker/test/fila-de-teste.js'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
-import { emitirTokenSintetico } from '../src/ops/token-sintetico.js'
 import { TIPO_JOB_SINTETICO } from '../src/sistema/jobs-sinteticos.service.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
+import { BancadaDeSessoes } from './sessao-de-teste.js'
 
-const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
-const ESCOLA_B = '0190f5a0-0000-7000-8000-00000000000b'
+/** Uma escola que o corpo tenta impor: não precisa existir, o corpo estrito recusa o campo. */
+const ESCOLA_NO_CORPO = '0190f5a0-0000-7000-8000-00000000000b'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const ROTA = '/v1/sistema/jobs-sinteticos'
 
-const ambienteDeTeste = lerAmbienteDeTeste()
-const token = (escolaId: string, usuarioId: string = randomUUID()) =>
-  emitirTokenSintetico({ escolaId, usuarioId, validadeSegundos: 600 }, ambienteDeTeste)
 
 async function subirApi(log: LogEmMemoria, ambiente: Record<string, string> = {}): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule.com(configuracaoDeTeste({ ambiente })), { logger: false })
@@ -42,8 +38,12 @@ const pedidoValido = { fila: 'interativa', cpuMs: 0, naoUrgente: false }
 
 describe('POST e GET /v1/sistema/jobs-sinteticos', () => {
   const log = new LogEmMemoria('api')
+  const sessoes = new BancadaDeSessoes()
   let app: INestApplication
   let pool: PoolBanco
+  // Escolas e sessões reais: a GuardaDeSessao lê a sessão do token. Coordenação: a rota de job sintético é da unidade.
+  let ESCOLA_A: string
+  let ESCOLA_B: string
   let tokenA: string
   let tokenB: string
 
@@ -57,13 +57,19 @@ describe('POST e GET /v1/sistema/jobs-sinteticos', () => {
     compose('stop', ...PROCESSOS_DA_FILA)
     app = await subirApi(log, { ROTAS_SINTETICAS: 'true' })
     pool = criarPool(configuracaoDeTeste().banco, () => undefined)
-    tokenA = await token(ESCOLA_A)
-    tokenB = await token(ESCOLA_B)
+    const sessaoA = await sessoes.escolaComSessao('coordenador')
+    const sessaoB = await sessoes.escolaComSessao('coordenador')
+    ESCOLA_A = sessaoA.escolaId
+    ESCOLA_B = sessaoB.escolaId
+    tokenA = sessaoA.token
+    tokenB = sessaoB.token
   })
 
   afterAll(async () => {
     await app.close()
+    await pool.query('delete from job_registro where escola_id = any($1::uuid[])', [[ESCOLA_A, ESCOLA_B]])
     await pool.end()
+    await sessoes.fechar()
   })
 
   beforeEach(() => {
@@ -169,7 +175,7 @@ describe('POST e GET /v1/sistema/jobs-sinteticos', () => {
     it.each([
       ['tipo de rotina do sistema', { ...pedidoValido, tipo: 'sistema.expurgar-jobs' }],
       ['tipo qualquer', { ...pedidoValido, tipo: TIPO_JOB_SINTETICO }],
-      ['escolaId de outra escola', { ...pedidoValido, escolaId: ESCOLA_B }],
+      ['escolaId de outra escola', { ...pedidoValido, escolaId: ESCOLA_NO_CORPO }],
       ['fila inexistente', { ...pedidoValido, fila: 'urgentissima' }],
       ['cpuMs acima do teto', { ...pedidoValido, cpuMs: 60_001 }],
       ['sem naoUrgente', { fila: 'normal', cpuMs: 0 }],

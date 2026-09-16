@@ -1,4 +1,4 @@
-import { EMISSOR_TOKEN_SINTETICO, MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO } from '@educa/nucleo'
+import { EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO, MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO } from '@educa/nucleo'
 import { describe, expect, it } from 'vitest'
 import { ConfiguracaoInvalida, lerConfiguracao } from './config.js'
 
@@ -33,7 +33,7 @@ describe('lerConfiguracao do realtime', () => {
       identidade: {
         ambiente: 'local',
         chaveAssinatura: new TextEncoder().encode(ambienteValido.IDENTIDADE_CHAVE_ASSINATURA),
-        emissoresAceitos: [EMISSOR_TOKEN_SINTETICO],
+        emissoresAceitos: [EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO],
       },
       drenagem: { esperaDaBordaMs: 5000, prazoMs: 10000 },
       telemetria: { otlpUrl: 'http://observabilidade:4318', intervaloMs: 5000 },

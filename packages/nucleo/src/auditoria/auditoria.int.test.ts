@@ -41,6 +41,7 @@ describe('auditoria no banco', () => {
 
   afterAll(async () => {
     await pool.query('delete from auditoria where escola_id = any($1::uuid[]) or entidade_id = $2', [[escolaA, escolaB], redeId])
+    await pool.query('delete from usuario where escola_id = any($1::uuid[])', [[escolaA, escolaB]])
     await pool.query('delete from escola where id = any($1::uuid[])', [[escolaA, escolaB]])
     await pool.query('delete from rede where id = $1', [redeId])
     await pool.end()
@@ -81,7 +82,9 @@ describe('auditoria no banco', () => {
   })
 
   it('grava escola e requisição do contexto, e o usuário do contexto como autor, sem operador', async () => {
-    const usuarioId = randomUUID()
+    // O autor é um usuário da escola: a FK composta (escola_id, autor_usuario_id) recusa id solto ou de outra escola.
+    const { rows: usuarios } = await pool.query<{ id: string }>("insert into usuario (escola_id, papel, nome) values ($1, 'aluno', 'Pessoa sintética') returning id", [escolaA])
+    const usuarioId = usuarios[0]?.id ?? ''
     const requisicaoId = randomUUID()
     const entidadeId = randomUUID()
     await executarNoContexto({ requisicaoId, escolaId: escolaA, usuarioId }, () =>

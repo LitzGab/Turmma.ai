@@ -77,15 +77,15 @@ describe('emitirTokenSintetico', () => {
 
   it('emite um token que a verificação da API aceita, com a escola e o usuário pedidos', async () => {
     const token = await emitirTokenSintetico(pedido, ambienteLocal)
-    expect(await verificarToken(token, lerConfiguracaoIdentidade(ambienteLocal))).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO })
+    expect(await verificarToken(token, lerConfiguracaoIdentidade(ambienteLocal))).toMatchObject({ escolaId: ESCOLA_A, usuarioId: USUARIO })
   })
 
-  it('o token leva só sub, esc, iss, iat e exp: nada da pessoa', async () => {
+  it('o token leva só sub, esc, sid, iss, iat e exp: nada da pessoa', async () => {
     const agora = new Date('2026-09-14T10:00:00-03:00')
     const token = await emitirTokenSintetico(pedido, ambienteLocal, agora)
     const emitidoEm = agora.getTime() / 1000
     expect(decodeProtectedHeader(token)).toEqual({ alg: 'HS256', typ: 'JWT' })
-    expect(decodeJwt(token)).toEqual({ sub: USUARIO, esc: ESCOLA_A, iss: EMISSOR_TOKEN_SINTETICO, iat: emitidoEm, exp: emitidoEm + 600 })
+    expect(decodeJwt(token)).toEqual({ sub: USUARIO, esc: ESCOLA_A, sid: expect.stringMatching(UUID), iss: EMISSOR_TOKEN_SINTETICO, iat: emitidoEm, exp: emitidoEm + 600 })
   })
 
   it('o token vencido é recusado pela API', async () => {

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { emitirTokenSintetico } from '../../apps/api/src/ops/token-sintetico.js'
+import { BancadaDeSessoes, type SessaoDeTeste } from '../../apps/api/test/sessao-de-teste.js'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
 import { aguardarSaudavel, compose, composeAssincronoOuFalha, composeOuFalha, PROCESSOS_DA_FILA } from '../../tools/testes/compose.ts'
 
@@ -8,7 +8,6 @@ import { aguardarSaudavel, compose, composeAssincronoOuFalha, composeOuFalha, PR
 // workers como processos de verdade. É o que prova a ligação do main.ts, o `kill -9` e o SIGTERM.
 const ambiente = lerAmbienteDeTeste()
 const API = `http://127.0.0.1:${valorObrigatorio(ambiente, 'API_1_PORTA_HOST')}`
-const ESCOLA = '0190f5a0-0000-7000-8000-0000000000c1'
 const WORKERS_INTERATIVOS = ['worker-interativo-1', 'worker-interativo-2'] as const
 const WORKERS_DE_LOTE = ['worker-lote-1', 'worker-lote-2'] as const
 
@@ -28,12 +27,16 @@ function logsDesde(desde: string, ...servicos: string[]): LinhaDeLog[] {
 }
 
 describe('job pela API até o worker, com processos de verdade', () => {
-  let token: string
+  const sessoes = new BancadaDeSessoes()
+  // Escola e sessão reais, criadas depois de o compose subir. Cada pedido leva um token novo da sessão: o de acesso
+  // vale 10 min, e o arquivo passa disso com a construção das imagens.
+  let sessao: SessaoDeTeste
+  let ESCOLA: string
 
   const criarJob = async (corpo: Record<string, unknown>, requisicaoId = randomUUID()): Promise<string> => {
     const resposta = await fetch(`${API}/v1/sistema/jobs-sinteticos`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'X-Requisicao-Id': requisicaoId },
+      headers: { Authorization: `Bearer ${await sessao.tokenNovo()}`, 'Content-Type': 'application/json', 'X-Requisicao-Id': requisicaoId },
       body: JSON.stringify({ fila: 'interativa', naoUrgente: false, ...corpo }),
     })
     expect(resposta.status).toBe(202)
@@ -41,20 +44,22 @@ describe('job pela API até o worker, com processos de verdade', () => {
   }
 
   const estado = async (jobId: string): Promise<string | undefined> => {
-    const resposta = await fetch(`${API}/v1/sistema/jobs-sinteticos/${jobId}`, { headers: { Authorization: `Bearer ${token}` } })
+    const resposta = await fetch(`${API}/v1/sistema/jobs-sinteticos/${jobId}`, { headers: { Authorization: `Bearer ${await sessao.tokenNovo()}` } })
     return ((await resposta.json()) as { estado?: string }).estado
   }
 
   const estadoDoServico = (servico: string) => compose('ps', '--all', '--format', '{{.State}} {{.ExitCode}}', servico).saida.trim()
 
   beforeAll(async () => {
-    token = await emitirTokenSintetico({ escolaId: ESCOLA, usuarioId: randomUUID(), validadeSegundos: 3_600 }, ambiente)
     await composeAssincronoOuFalha('up', '--detach', '--build', '--wait', 'api-1', ...PROCESSOS_DA_FILA)
+    sessao = await sessoes.escolaComSessao('coordenador')
+    ESCOLA = sessao.escolaId
   }, 900_000)
 
   afterAll(async () => {
     // Derruba só o que este arquivo subiu: um despachante de pé disputaria a fila com os testes em processo.
     await composeAssincronoOuFalha('stop', 'api-1', ...PROCESSOS_DA_FILA)
+    await sessoes.fechar()
   }, 120_000)
 
   it('o migrar rodou e saiu com sucesso antes de API, despachantes e workers', () => {

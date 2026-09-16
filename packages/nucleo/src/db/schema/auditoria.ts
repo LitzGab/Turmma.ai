@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
-import { check, index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { check, foreignKey, index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { escola } from './escola.js'
+import { usuario } from './usuario.js'
 
 /** Identificador curto da pessoa da nossa equipe que rodou um comando `ops:*` (`joaquim`, `gabriel-s`). */
 export const FORMATO_OPERADOR = /^[a-z][a-z0-9-]{1,31}$/
@@ -17,7 +18,8 @@ export const FORMATO_OPERADOR = /^[a-z][a-z0-9-]{1,31}$/
  * - Todo registro tem um autor, e só um: a pessoa da escola (`autor_usuario_id`) ou alguém da nossa
  *   equipe (`autor_operador`).
  * - Sem `unique (escola_id, id)`: nenhuma tabela referencia a auditoria, então não há FK composta a apoiar.
- * - `autor_usuario_id` fica sem FK: `usuario` nasce na tarefa 2.0, que acrescenta a FK expandindo.
+ * - `(escola_id, autor_usuario_id)` é FK composta para `usuario (escola_id, id)`, acrescentada na tarefa 2.0: o autor
+ *   é sempre um usuário da própria escola do registro.
  * - O índice começa pela escola (regra 80, item 8): a consulta do F3 é sempre "a escola, num período".
  */
 export const auditoria = pgTable(
@@ -38,6 +40,7 @@ export const auditoria = pgTable(
   },
   (tabela) => [
     index('auditoria_escola_em_idx').on(tabela.escolaId, tabela.em),
+    foreignKey({ name: 'auditoria_autor_da_escola_fk', columns: [tabela.escolaId, tabela.autorUsuarioId], foreignColumns: [usuario.escolaId, usuario.id] }),
     check('auditoria_escola_ou_rede_pelo_operador', sql`escola_id is not null or (autor_operador is not null and entidade = 'rede')`),
     // Um autor e só um: a pessoa da escola, ou alguém da nossa equipe em rotina de operador.
     check('auditoria_um_autor', sql`(autor_usuario_id is not null) <> (autor_operador is not null)`),

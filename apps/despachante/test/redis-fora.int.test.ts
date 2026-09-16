@@ -2,18 +2,16 @@ import 'reflect-metadata'
 import { Batimento, TIMEOUT_COMANDO_REDIS_FILA_MS } from '@educa/nucleo'
 import type { INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
-import { randomUUID } from 'node:crypto'
 import { existsSync, mkdtempSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
-import { afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
+import { afterEach, beforeAll, describe, expect, it, onTestFinished } from 'vitest'
 import { aguardarSaudavel, compose, composeAssincronoOuFalha, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { AppModule } from '../../api/src/app.module.js'
 import { configurarAplicacao } from '../../api/src/configurar-app.js'
-import { emitirTokenSintetico } from '../../api/src/ops/token-sintetico.js'
 import { configuracaoDeTeste } from '../../api/test/configuracao-de-teste.js'
+import { BancadaDeSessoes } from '../../api/test/sessao-de-teste.js'
 import { BancadaDeFila, ESCOLA_A, ESCOLA_B, LogEmMemoria } from '../../worker/test/fila-de-teste.js'
 
 const ESCOLA_C = '0190f5a0-0000-7000-8000-00000000000c'
@@ -65,7 +63,10 @@ describe('Redis de fila fora', () => {
     await app.listen(0, '127.0.0.1')
     try {
       const { port } = app.getHttpServer().address() as AddressInfo
-      const token = await emitirTokenSintetico({ escolaId: ESCOLA_A, usuarioId: randomUUID(), validadeSegundos: 600 }, lerAmbienteDeTeste())
+      // Sessão real numa escola nova: a GuardaDeSessao lê a sessão antes de o POST gravar o job.
+      const sessoes = new BancadaDeSessoes()
+      onTestFinished(() => sessoes.fechar())
+      const { token } = await sessoes.escolaComSessao('coordenador')
       const logs = { d1: new LogEmMemoria('despachante-1'), d2: new LogEmMemoria('despachante-2'), worker: new LogEmMemoria('worker') }
       bancada.worker(logs.worker, { concorrencia: 10 })
       for (const log of [logs.d1, logs.d2]) bancada.despachante(log).despachante.iniciar()

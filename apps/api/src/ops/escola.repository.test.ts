@@ -25,10 +25,12 @@ function arquivosDeCodigo(): { caminho: string; texto: string }[] {
 const CRIACAO_DE_REDE_OU_ESCOLA = /\binsert\s*\(\s*(?:schema\.)?(?:rede|escola)\b|\binsert\s+into\s+(?:"?public"?\.)?"?(?:rede|escola)"?[\s(]/i
 
 /**
- * Quem, fora de teste, importa o comando `ops:escola` (que exporta `criarRede` e `criarEscola`). Vazia: uma
- * rota que chame a criação, com qualquer nome, entra aqui e a revisão confere.
+ * Quem, fora de arquivo `.test.ts`, importa o comando `ops:escola` (que exporta `criarRede` e `criarEscola`). Só o
+ * que monta escola sintética para a API autenticada, que desde a tarefa 2.0 exige sessão real: a bancada dos testes de
+ * integração e o ensaio de alertas, que só roda com `AMBIENTE=local`. Uma rota que chame a criação, com qualquer nome,
+ * entra aqui e a revisão confere.
  */
-const IMPORTADORES_PERMITIDOS_DO_COMANDO: readonly string[] = []
+const IMPORTADORES_PERMITIDOS_DO_COMANDO: readonly string[] = ['apps/api/test/sessao-de-teste.ts', 'infra/scripts/ensaio-alertas.ts']
 
 /** Os módulos que o arquivo importa por caminho relativo, resolvidos a partir da raiz e com extensão `.ts`. */
 function importacoesRelativas(arquivo: { caminho: string; texto: string }): string[] {

@@ -36,6 +36,13 @@
       "when": 1789439375745,
       "tag": "0004_rede_escola_auditoria",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789507489046,
+      "tag": "0005_ano_letivo_conta_usuario_sessao_registro_acesso",
+      "breakpoints": true
     }
   ]
 }

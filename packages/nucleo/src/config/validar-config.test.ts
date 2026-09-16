@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ConfiguracaoInvalida,
+  EMISSOR_TOKEN,
   EMISSOR_TOKEN_SINTETICO,
   lerConfiguracaoIdentidade,
   lerVagasPorEscolaDesligadas,
@@ -27,14 +28,14 @@ function erroDe(ambiente: Record<string, string | undefined>, ler: (ambiente: Re
 }
 
 describe('lerConfiguracaoIdentidade', () => {
-  it('com a flag ligada fora de produção, aceita só o emissor sintético', () => {
+  it('com a flag ligada fora de produção, aceita o emissor da sessão real e o sintético', () => {
     const config = lerConfiguracaoIdentidade(ambienteLocal)
-    expect(config.emissoresAceitos).toEqual([EMISSOR_TOKEN_SINTETICO])
+    expect(config.emissoresAceitos).toEqual([EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO])
     expect(new TextDecoder().decode(config.chaveAssinatura)).toBe(CHAVE_SINTETICA)
   })
 
-  it('com a flag desligada, nenhum emissor é aceito: o token sintético perde a validade', () => {
-    expect(lerConfiguracaoIdentidade({ ...ambienteLocal, ACEITAR_TOKEN_SINTETICO: 'false' }).emissoresAceitos).toEqual([])
+  it('com a flag desligada, só o emissor da sessão real é aceito: o token sintético perde a validade', () => {
+    expect(lerConfiguracaoIdentidade({ ...ambienteLocal, ACEITAR_TOKEN_SINTETICO: 'false' }).emissoresAceitos).toEqual([EMISSOR_TOKEN])
   })
 
   it('recusa AMBIENTE=producao com ACEITAR_TOKEN_SINTETICO=true, apontando a flag e o motivo', () => {
@@ -46,7 +47,7 @@ describe('lerConfiguracaoIdentidade', () => {
 
   it('aceita produção com a flag desligada', () => {
     const config = lerConfiguracaoIdentidade({ ...ambienteLocal, AMBIENTE: 'producao', ACEITAR_TOKEN_SINTETICO: 'false' })
-    expect(config).toMatchObject({ ambiente: 'producao', emissoresAceitos: [] })
+    expect(config).toMatchObject({ ambiente: 'producao', emissoresAceitos: [EMISSOR_TOKEN] })
   })
 
   it.each(['1', 'TRUE', 'True', 'sim', '', ' true'])('recusa ACEITAR_TOKEN_SINTETICO="%s": só true ou false, escritos assim', (valor) => {

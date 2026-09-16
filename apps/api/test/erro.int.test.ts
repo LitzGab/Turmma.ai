@@ -1,5 +1,5 @@
 import 'reflect-metadata'
-import { contextoAtual, criarLogger, ErroDeDominio, RotaAnonima, TENTE_DE_NOVO_PADRAO_SEGUNDOS, type PoolBanco } from '@educa/nucleo'
+import { contextoAtual, criarLogger, ErroDeDominio, Permite, RotaAnonima, TENTE_DE_NOVO_PADRAO_SEGUNDOS, type PoolBanco } from '@educa/nucleo'
 import { CodigoDeErro, MENSAGENS_DE_ERRO } from '@educa/shared'
 import {
   Body,
@@ -21,17 +21,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { AppModule } from '../src/app.module.js'
 import { POOL_BANCO } from '../src/banco.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
-import { emitirTokenSintetico } from '../src/ops/token-sintetico.js'
-import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
+import { BancadaDeSessoes } from './sessao-de-teste.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const TABELA = `teste_erro_${Date.now()}`
 const NOME_SINTETICO = 'Enzo Martins'
 
-// Escolas sintéticas; a escola de cada requisição vem do token.
-const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
-const ESCOLA_B = '0190f5a0-0000-7000-8000-00000000000b'
+// Escola sintética que o cliente tenta injetar pelo cabeçalho: não precisa existir.
+const ESCOLA_INJETADA = '0190f5a0-0000-7000-8000-00000000000b'
 
 const linhasDeLog: string[] = []
 const registrador = criarLogger({ servico: 'api-teste', destino: { write: (linha: string) => linhasDeLog.push(linha) } })
@@ -81,12 +79,13 @@ class ControladorDeTeste {
   }
 }
 
-/** Sem `@RotaAnonima()`: a escola de cada requisição vem do token, como em qualquer rota real. */
+/** Sem `@RotaAnonima()`: a escola de cada requisição vem da sessão do token, como em qualquer rota real. */
 @Controller('teste-autenticado')
 class ControladorDeEco {
   constructor(@Inject(POOL_BANCO) private readonly pool: PoolBanco) {}
 
   @Get('eco')
+  @Permite('sistema_contexto', 'ler')
   async eco(@Query('indice') indice: string): Promise<{ requisicaoId: string }> {
     // Esperas desencontradas e fixas por índice: sem isolamento real do contexto, as linhas
     // trocariam de requisição, e sempre do mesmo jeito.
@@ -109,6 +108,7 @@ function esperarEnvelopeSemVazamento(corpo: unknown, codigo: CodigoDeErro): stri
 
 describe('erro tipado e log sem dado pessoal', () => {
   let app: INestApplication
+  const bancada = new BancadaDeSessoes()
 
   beforeAll(async () => {
     @Module({
@@ -129,6 +129,7 @@ describe('erro tipado e log sem dado pessoal', () => {
   afterAll(async () => {
     await app.get<PoolBanco>(POOL_BANCO).query(`drop table if exists ${TABELA}`)
     await app.close()
+    await bancada.fechar()
   })
 
   beforeEach(() => {
@@ -235,19 +236,14 @@ describe('erro tipado e log sem dado pessoal', () => {
   })
 
   it('50 requisições das escolas A e B em paralelo: cada linha de log tem o próprio requisicaoId e a própria escola', async () => {
+    const sessaoA = await bancada.escolaComSessao()
+    const sessaoB = await bancada.escolaComSessao()
     const enviadas = Array.from({ length: 50 }, (_, indice) => ({
       requisicaoId: randomUUID(),
-      escolaId: indice % 2 === 0 ? ESCOLA_A : ESCOLA_B,
+      escolaId: indice % 2 === 0 ? sessaoA.escolaId : sessaoB.escolaId,
     }))
 
-    const tokenDa = new Map(
-      await Promise.all(
-        [ESCOLA_A, ESCOLA_B].map(async (escolaId) => {
-          const pedido = { escolaId, usuarioId: randomUUID(), validadeSegundos: 600 }
-          return [escolaId, await emitirTokenSintetico(pedido, lerAmbienteDeTeste())] as const
-        }),
-      ),
-    )
+    const tokenDa = new Map([sessaoA, sessaoB].map((sessao) => [sessao.escolaId, sessao.token] as const))
     const respostas = await Promise.all(
       enviadas.map(({ requisicaoId, escolaId }, indice) =>
         request(app.getHttpServer())
@@ -277,7 +273,7 @@ describe('erro tipado e log sem dado pessoal', () => {
   })
 
   it('X-Requisicao-Id fora do formato UUID é substituído, e o texto enviado não chega ao log nem à resposta', async () => {
-    const injetado = `${randomUUID()}","escolaId":"${ESCOLA_B}`
+    const injetado = `${randomUUID()}","escolaId":"${ESCOLA_INJETADA}`
 
     const resposta = await request(app.getHttpServer()).get('/teste/excecao').set('X-Requisicao-Id', injetado)
 
@@ -286,7 +282,7 @@ describe('erro tipado e log sem dado pessoal', () => {
     expect(injetado).not.toContain(requisicaoId)
     const bruto = linhasDeLog.join('')
     expect(bruto).not.toContain(injetado)
-    expect(bruto).not.toContain(ESCOLA_B)
+    expect(bruto).not.toContain(ESCOLA_INJETADA)
     expect(registros().find((registro) => registro.evento === 'http.erro')).toMatchObject({ requisicaoId })
   })
 })

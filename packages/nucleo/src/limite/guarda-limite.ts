@@ -3,18 +3,20 @@ import type { CanActivate, ExecutionContext } from '@nestjs/common'
 import type { Reflector } from '@nestjs/core'
 import type { IncomingMessage } from 'node:http'
 import type { ConfiguracaoOperacional, LimitesDeRequisicao } from '../configuracao/configuracao-operacional.js'
+import { contextoAtual, executarNoContexto } from '../contexto/contexto.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
-import { identidadeDaRequisicao } from '../identidade/guarda-autenticacao.js'
+import { tokenDaRequisicao } from '../identidade/token-da-requisicao.js'
 import { ipDoCliente, segundosParaTentarDeNovo } from './chaves.js'
 import type { LimitadorDeRequisicoes } from './limitador.js'
 import type { ProxiesConfiaveis } from './proxies-confiaveis.js'
 import { METADADO_ROTA_ANONIMA, METADADO_SEM_LIMITE } from './rota-anonima.decorator.js'
 
 /**
- * Guarda global de rate limit da API. Registre depois da `GuardaDeAutenticacao`: a rota
- * autenticada é limitada pelo usuário e pela escola que a autenticação gravou no contexto, nunca
- * por algo que o cliente mande (regra 10), com os limites da configuração dessa escola. Só a rota
- * `@RotaAnonima()` é limitada por IP, e o IP do `X-Forwarded-For` só vale quando a conexão vem da borda.
+ * Guarda global de rate limit da API. Registre depois da `GuardaDeAutenticacao` e antes da `GuardaDeSessao`: a
+ * rota autenticada é limitada pelo `sub` e pelo `esc` do token que a autenticação verificou, nunca por algo que o
+ * cliente mande (regra 10), com os limites da configuração dessa escola. Assim a rajada acima do limite é recusada
+ * antes de chegar à leitura de sessão no Postgres (regra 80, item 1). Só a rota `@RotaAnonima()` é limitada por
+ * IP, e o IP do `X-Forwarded-For` só vale quando a conexão vem da borda.
  *
  * Excesso responde 429 `LIMITE_EXCEDIDO` com `Retry-After`.
  */
@@ -33,13 +35,30 @@ export class GuardaDeLimite implements CanActivate {
     if (this.reflector.getAllAndOverride<boolean | undefined>(METADADO_SEM_LIMITE, alvos) === true) return true
 
     const anonima = this.reflector.getAllAndOverride<boolean | undefined>(METADADO_ROTA_ANONIMA, alvos) === true
+    const requisicao = execucao.switchToHttp().getRequest<IncomingMessage>()
     const resultado = anonima
-      ? await this.limitador.consumirAnonima(await this.#ipDaRequisicao(execucao.switchToHttp().getRequest<IncomingMessage>()))
-      : await this.limitador.consumirAutenticada(identidadeDaRequisicao(), await this.limitesDaEscola.daEscola())
+      ? await this.limitador.consumirAnonima(await this.#ipDaRequisicao(requisicao))
+      : await this.#consumirAutenticada(requisicao)
     if (!resultado.aceita) {
       throw new ErroDeDominio(CodigoDeErro.LIMITE_EXCEDIDO, undefined, segundosParaTentarDeNovo(resultado.msAteLiberar))
     }
     return true
+  }
+
+  /**
+   * Conta no limite do `sub` e do `esc` do token verificado. Os limites da escola são lidos num contexto que só
+   * leva a escola do token, do qual a configuração tira o escopo: o contexto da requisição continua sem escola até
+   * a `GuardaDeSessao` conferir a sessão.
+   */
+  async #consumirAutenticada(requisicao: IncomingMessage) {
+    const token = tokenDaRequisicao(requisicao)
+    // Sem token verificado (guarda fora de ordem), falha fechada.
+    if (token === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+    const requisicaoId = contextoAtual()?.requisicaoId
+    if (requisicaoId === undefined) throw new Error('contexto da requisição ausente')
+    const identidade = { escolaId: token.escolaId, usuarioId: token.usuarioId }
+    const limites = await executarNoContexto({ requisicaoId, escolaId: token.escolaId }, () => this.limitesDaEscola.daEscola())
+    return this.limitador.consumirAutenticada(identidade, limites)
   }
 
   async #ipDaRequisicao(requisicao: IncomingMessage): Promise<string> {

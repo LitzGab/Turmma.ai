@@ -1,7 +1,7 @@
 # Tarefas — Identidade e tenancy
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 1 de 20 concluídas
+**Status:** 2 de 20 concluídas
 
 ## Lista
 
@@ -11,13 +11,13 @@
   - [x] 1.3 `ops:escola` (rede e escola com slug), com `autor_operador` e recusa sem `OPERADOR`
   - [x] 1.4 Testes: slug repetido, nenhuma rota cria escola, `ops:*` sem dado de pessoa, auditoria recusando campo pessoal, isolamento do repository de auditoria
 
-- [ ] **2.0 — Guarda de sessão real, com matriz de permissão**
-  - [ ] 2.1 Migration de `ano_letivo`, `conta`, `usuario`, `sessao` e `registro_acesso`
-  - [ ] 2.2 `EmissorDeToken` e `GuardaDeSessao` depois da `GuardaDeLimite`, lendo `sessao ⋈ usuario ⋈ ano_letivo em_curso` por `(esc, sid)`, com 503 no erro do banco
-  - [ ] 2.3 `MATRIZ` em `packages/shared`, `@Permite` e arquivo de expectativa, com o indicador de professor
-  - [ ] 2.4 `ResolucaoDeTenantRepository` com os `@SemEscopo` justificados, e o teste de que só o módulo `sessao` o importa
-  - [ ] 2.5 Varredura dos contratos de saída e `ops:sessao-sintetica` só com `AMBIENTE=local`
-  - [ ] 2.6 Testes: sessão encerrada corta na requisição seguinte, `sub` de A com `esc` de B, ordem das guardas sem consulta ao banco, 503 com o Postgres fora, escola sem ano em curso
+- [x] **2.0 — Guarda de sessão real, com matriz de permissão**
+  - [x] 2.1 Migration de `ano_letivo`, `conta`, `usuario`, `sessao` e `registro_acesso`
+  - [x] 2.2 `EmissorDeToken` e `GuardaDeSessao` depois da `GuardaDeLimite`, lendo `sessao ⋈ usuario ⋈ ano_letivo em_curso` por `(esc, sid)`, com 503 no erro do banco
+  - [x] 2.3 `MATRIZ` em `packages/shared`, `@Permite` e arquivo de expectativa, com o indicador de professor
+  - [x] 2.4 `ResolucaoDeTenantRepository` com os `@SemEscopo` justificados, e o teste de que só o módulo `sessao` o importa
+  - [x] 2.5 Varredura dos contratos de saída e `ops:sessao-sintetica` só com `AMBIENTE=local`
+  - [x] 2.6 Testes: sessão encerrada corta na requisição seguinte, `sub` de A com `esc` de B, ordem das guardas sem consulta ao banco, 503 com o Postgres fora, escola sem ano em curso
 
 - [ ] **3.0 — O F0 passa a usar a sessão real e as tabelas do F0 apontam para a escola**
   - [ ] 3.1 Sai `ACEITAR_TOKEN_SINTETICO`, o emissor sintético e `ops:token-sintetico`

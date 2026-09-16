@@ -54,7 +54,9 @@ export function autenticacaoDoHandshake(config: ConfiguracaoIdentidade, logger: 
       const autenticacao = esquemaAutenticacao.safeParse(socket.handshake.auth)
       try {
         if (!autenticacao.success) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
-        const identidade = await verificarToken(autenticacao.data.token, config)
+        // Só escola e usuário: a sala sai da escola. A leitura da sessão no handshake é da tarefa 3.0.
+        const { escolaId, usuarioId } = await verificarToken(autenticacao.data.token, config)
+        const identidade: Identidade = { escolaId, usuarioId }
         definirIdentidadeNoContexto(identidade)
         socket.data.identidade = identidade
         // Verificado, o token não fica na conexão: o handshake é copiado para outras instâncias pelo

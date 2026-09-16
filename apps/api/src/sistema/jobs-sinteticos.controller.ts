@@ -1,4 +1,4 @@
-import { ErroDeDominio } from '@educa/nucleo'
+import { ErroDeDominio, Permite } from '@educa/nucleo'
 import {
   CodigoDeErro,
   esquemaPedidoJobSintetico,
@@ -20,6 +20,7 @@ export class JobsSinteticosController {
   constructor(private readonly jobs: JobsSinteticosService) {}
 
   @Post()
+  @Permite('sistema_job_sintetico', 'criar')
   @HttpCode(HttpStatus.ACCEPTED)
   @Header('Cache-Control', 'no-store')
   criar(@Body() corpo: unknown): Promise<RespostaJobAceito> {
@@ -35,6 +36,7 @@ export class JobsSinteticosConsultaController {
   constructor(private readonly jobs: JobsSinteticosService) {}
 
   @Get(':id')
+  @Permite('sistema_job_sintetico', 'ler')
   @Header('Cache-Control', 'no-store')
   consultar(@Param('id') id: string): Promise<RespostaEstadoDeJob> {
     // Id fora do formato responde como id inexistente: nem o formato confirma nada.

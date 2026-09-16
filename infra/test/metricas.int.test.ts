@@ -1,11 +1,10 @@
 import { Queue } from 'bullmq'
 import { Redis } from 'ioredis'
-import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import pg from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { emitirTokenSintetico } from '../../apps/api/src/ops/token-sintetico.js'
+import { BancadaDeSessoes, type SessaoDeTeste } from '../../apps/api/test/sessao-de-teste.js'
 import { FILAS_POR_PRIORIDADE, nomeDaFilaBullMQ } from '../../packages/nucleo/src/fila/filas.ts'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
@@ -26,11 +25,10 @@ const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
 /** Exportação a cada 5 s e medição da fila a cada 5 s: com folga, o Prometheus vê a mudança nisto. */
 const PRAZO_DA_METRICA_MS = 60_000
 
-// Escolas e usuário novos a cada execução: nenhuma série herda valor de uma execução anterior.
-const ESCOLA_A = randomUUID()
-const ESCOLA_B = randomUUID()
-const ESCOLA_C = randomUUID()
-const USUARIO = randomUUID()
+// Escolas e sessões novas a cada execução, criadas no beforeAll: nenhuma série herda valor de uma execução anterior.
+let ESCOLA_A: string
+let ESCOLA_B: string
+let ESCOLA_C: string
 
 interface Serie {
   metric: Record<string, string>
@@ -55,15 +53,15 @@ async function valoresDoRotulo(rotulo: string): Promise<string[]> {
 }
 
 describe('métricas na observabilidade local, por rota, fila e escola', () => {
-  const tokens = new Map<string, string>()
+  const bancada = new BancadaDeSessoes()
+  const sessoesPorEscola = new Map<string, SessaoDeTeste>()
   const jobs: string[] = []
 
+  /** Um token novo da sessão da escola: o de acesso vale 10 min, e o arquivo passa disso. */
   const token = async (escolaId: string): Promise<string> => {
-    const existente = tokens.get(escolaId)
-    if (existente !== undefined) return existente
-    const novo = await emitirTokenSintetico({ escolaId, usuarioId: USUARIO, validadeSegundos: 3_600 }, ambiente)
-    tokens.set(escolaId, novo)
-    return novo
+    const sessao = sessoesPorEscola.get(escolaId)
+    if (sessao === undefined) throw new Error('escola sem sessão no teste')
+    return sessao.tokenNovo()
   }
 
   const criarJob = async (escolaId: string, fila: string): Promise<string> => {
@@ -91,6 +89,11 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
     await composeAssincronoOuFalha('up', '--detach', '--build', '--wait', ...SERVICOS)
     instanciaDaApi = compose('exec', '-T', 'api-1', 'hostname').saida.trim()
     expect(instanciaDaApi).toMatch(/^[0-9a-f]{12}$/)
+    const [a, b, c] = [await bancada.escolaComSessao('coordenador'), await bancada.escolaComSessao('coordenador'), await bancada.escolaComSessao('coordenador')]
+    for (const sessao of [a, b, c]) sessoesPorEscola.set(sessao.escolaId, sessao)
+    ESCOLA_A = a.escolaId
+    ESCOLA_B = b.escolaId
+    ESCOLA_C = c.escolaId
   }, 900_000)
 
   afterAll(async () => {
@@ -105,6 +108,7 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
       await queue.close()
     }
     await redis.quit()
+    await bancada.fechar()
     await composeAssincronoOuFalha('stop', ...SERVICOS)
   }, 120_000)
 
@@ -215,7 +219,9 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
     const { data: rotulos } = (await (await fetch(`${PROMETHEUS}/api/v1/labels`)).json()) as { data: string[] }
     expect(rotulos.filter((rotulo) => /usuario|user/i.test(rotulo))).toEqual([])
     expect(await consultar('{usuario_id!=""}')).toEqual([])
-    for (const rotulo of rotulos) expect(await valoresDoRotulo(rotulo), rotulo).not.toContain(USUARIO)
+    const usuarios = [...sessoesPorEscola.values()].map((sessao) => sessao.usuarioId)
+    expect(usuarios).toHaveLength(3)
+    for (const rotulo of rotulos) for (const usuario of usuarios) expect(await valoresDoRotulo(rotulo), rotulo).not.toContain(usuario)
 
     const comEscola = (await consultar('count by (__name__) ({escola_id!=""})')).map(({ metric }) => metric['__name__']).sort()
     expect(comEscola).toEqual(expect.arrayContaining(['job_espera_mais_antiga_s', 'job_pendentes', 'fila_vagas_em_uso']))

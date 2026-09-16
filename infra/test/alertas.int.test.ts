@@ -1,7 +1,6 @@
-import { randomUUID } from 'node:crypto'
 import pg from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { emitirTokenSintetico } from '../../apps/api/src/ops/token-sintetico.js'
+import { BancadaDeSessoes } from '../../apps/api/test/sessao-de-teste.js'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
 import { compose, composeAssincrono, composeAssincronoOuFalha } from '../../tools/testes/compose.ts'
 import { urlDoBancoDeTeste } from '../../tools/testes/integracao.setup.ts'
@@ -37,8 +36,11 @@ const DURACAO_DOS_JOBS_LONGOS_MS = 50_000
 const escolas: string[] = []
 const bancoUrl = urlDoBancoDeTeste()
 
+const sessoes = new BancadaDeSessoes()
+
+/** O token de uma sessão nova de coordenação na escola: a rota de job sintético é da unidade. */
 async function token(escolaId: string): Promise<string> {
-  return emitirTokenSintetico({ escolaId, usuarioId: randomUUID(), validadeSegundos: 3_600 }, ambiente)
+  return (await sessoes.sessao(escolaId, 'coordenador')).token
 }
 
 async function esperaNoPrometheus(escolaId: string): Promise<number | undefined> {
@@ -67,6 +69,7 @@ describe('alertas locais: as três regras disparam no ensaio, não disparam com 
     await pool.query('delete from job_registro where escola_id = any($1)', [escolas])
     await pool.query('delete from configuracao_operacional_escola where escola_id = any($1)', [escolas])
     await pool.end()
+    await sessoes.fechar()
     await composeAssincronoOuFalha('stop', ...SERVICOS)
   }, 180_000)
 
@@ -78,7 +81,11 @@ describe('alertas locais: as três regras disparam no ensaio, não disparam com 
       grafanaUrl: GRAFANA,
       bancoUrl,
       ambiente,
-      emitirToken: emitirTokenSintetico,
+      criarEscolaComSessoes: async (quantidade) => {
+        const escolaId = await sessoes.escola()
+        const criadas = await sessoes.sessoes(escolaId, { papel: 'coordenador', quantidade })
+        return { escolaId, tokens: criadas.map((criada) => () => criada.tokenNovo()) }
+      },
       // O andamento do ensaio no log do teste: é o que diz em que regra ele parou, se estourar o prazo.
       registrar: (linha) => process.stdout.write(`ensaio: ${linha}\n`),
     })
@@ -120,7 +127,7 @@ describe('alertas locais: as três regras disparam no ensaio, não disparam com 
   }, 900_000)
 
   it('borda: espera curta não dispara — a 20 s nem fica pendente, e passando de 30 s por menos de 1 min fica pendente e volta a normal sem disparar', async () => {
-    const escola = randomUUID()
+    const escola = await sessoes.escola()
     escolas.push(escola)
     const apiToken = await token(escola)
     const pool = new pg.Pool({ connectionString: bancoUrl, max: 1 })

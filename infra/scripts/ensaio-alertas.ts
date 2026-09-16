@@ -4,7 +4,9 @@ import { join } from 'node:path'
 import { setTimeout as esperar } from 'node:timers/promises'
 import { pathToFileURL } from 'node:url'
 import pg from 'pg'
-import type { emitirTokenSintetico } from '../../apps/api/src/ops/token-sintetico.ts'
+import type { criarEscola, criarRede } from '../../apps/api/src/ops/escola.ts'
+import type { criarSessoesSinteticas, emissorDeTokenSintetico } from '../../apps/api/src/sessao/sessoes-sinteticas.ts'
+import type { criarBanco, criarPool } from '@educa/nucleo'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
 
 /**
@@ -43,6 +45,8 @@ export const GATILHO_DA_FALHA = 'ensaio_alerta_falha_forcada'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const USUARIOS_POR_ESCOLA = 10
+/** Quem a auditoria das escolas sintéticas do ensaio registra como operador. */
+const OPERADOR_DO_ENSAIO = 'ensaio-alertas'
 
 export type EstadoDoAlerta = 'normal' | 'pendente' | 'disparado' | 'erro'
 
@@ -71,7 +75,17 @@ export interface ResultadoDeComando {
   saida: string
 }
 
-export type EmitirToken = typeof emitirTokenSintetico
+/** Uma escola do ensaio com as sessões dela: cada item dá um token novo da sua sessão a cada chamada. */
+export interface EscolaDoEnsaio {
+  escolaId: string
+  tokens: Array<() => Promise<string>>
+}
+
+/**
+ * Cria uma escola com `quantidade` sessões reais: a API só aceita token de sessão gravada. O token de acesso vale
+ * 10 min, e o ensaio passa disso: por isso cada pedido pede um token novo.
+ */
+export type CriarEscolaComSessoes = (quantidade: number) => Promise<EscolaDoEnsaio>
 
 export interface OpcoesDoEnsaio {
   /** `docker compose` já com projeto e arquivos: recebe só o subcomando. */
@@ -82,7 +96,7 @@ export interface OpcoesDoEnsaio {
   grafanaUrl: string
   bancoUrl: string
   ambiente: Record<string, string | undefined>
-  emitirToken: EmitirToken
+  criarEscolaComSessoes: CriarEscolaComSessoes
   registrar?: (linha: string) => void
   sinal?: AbortSignal
   prazoParaDispararMs?: number
@@ -238,8 +252,10 @@ export async function gatilhoDaFalhaExiste(bancoUrl: string): Promise<boolean> {
   })
 }
 
-async function tokensDaEscola(opcoes: OpcoesDoEnsaio, escolaId: string): Promise<string[]> {
-  return Promise.all(Array.from({ length: USUARIOS_POR_ESCOLA }, () => opcoes.emitirToken({ escolaId, usuarioId: randomUUID(), validadeSegundos: 3_600 }, opcoes.ambiente)))
+/** O token da vez, de um usuário por volta: nenhum passa do próprio limite. */
+function tokenDaVez(escola: EscolaDoEnsaio, volta: number): Promise<string> {
+  const gerar = escola.tokens[volta % escola.tokens.length]
+  return gerar === undefined ? Promise.resolve('') : gerar()
 }
 
 /**
@@ -247,16 +263,16 @@ async function tokensDaEscola(opcoes: OpcoesDoEnsaio, escolaId: string): Promise
  * e uma leitura de contexto de outra escola (que o seguro limita). Usuários alternados, para nenhum passar
  * do próprio limite com o seguro dividindo o limite pelas instâncias.
  */
-function iniciarTrafego(opcoes: OpcoesDoEnsaio, tokensDaFalha: string[], tokensDoSeguro: string[], statusDaFalha: Record<string, number>): { parar: () => Promise<void> } {
+function iniciarTrafego(opcoes: OpcoesDoEnsaio, daFalha: EscolaDoEnsaio, doSeguro: EscolaDoEnsaio, statusDaFalha: Record<string, number>): { parar: () => Promise<void> } {
   let ativo = true
   const laco = (async () => {
     for (let volta = 0; ativo; volta++) {
       const inicio = Date.now()
       try {
-        const falha = await criarJobSintetico(opcoes.apiUrl, tokensDaFalha[volta % tokensDaFalha.length] ?? '', { fila: 'normal', cpuMs: 0 })
+        const falha = await criarJobSintetico(opcoes.apiUrl, await tokenDaVez(daFalha, volta), { fila: 'normal', cpuMs: 0 })
         statusDaFalha[String(falha.status)] = (statusDaFalha[String(falha.status)] ?? 0) + 1
         await falha.body?.cancel()
-        const contexto = await fetch(`${opcoes.apiUrl}/v1/sistema/contexto`, { headers: { Authorization: `Bearer ${tokensDoSeguro[volta % tokensDoSeguro.length] ?? ''}` }, signal: AbortSignal.timeout(5_000) })
+        const contexto = await fetch(`${opcoes.apiUrl}/v1/sistema/contexto`, { headers: { Authorization: `Bearer ${await tokenDaVez(doSeguro, volta)}` }, signal: AbortSignal.timeout(5_000) })
         await contexto.body?.cancel()
       } catch {
         statusDaFalha['sem_resposta'] = (statusDaFalha['sem_resposta'] ?? 0) + 1
@@ -304,12 +320,10 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
     return todasNormais(regras) ? regras : undefined
   })
 
-  const escolaDoJob = randomUUID()
-  const escolaDaFalha = randomUUID()
-  const escolaDoSeguro = randomUUID()
-  const [tokenDoJob] = await tokensDaEscola(opcoes, escolaDoJob)
-  const tokensDaFalha = await tokensDaEscola(opcoes, escolaDaFalha)
-  const tokensDoSeguro = await tokensDaEscola(opcoes, escolaDoSeguro)
+  const doJob = await opcoes.criarEscolaComSessoes(1)
+  const daFalha = await opcoes.criarEscolaComSessoes(USUARIOS_POR_ESCOLA)
+  const doSeguro = await opcoes.criarEscolaComSessoes(USUARIOS_POR_ESCOLA)
+  const [escolaDoJob, escolaDaFalha, escolaDoSeguro] = [doJob.escolaId, daFalha.escolaId, doSeguro.escolaId]
   const statusDaFalha: Record<string, number> = {}
   const disparos: Partial<Record<UidDaRegra, DisparoObservado>> = {}
   let jobId = ''
@@ -320,17 +334,17 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
   try {
     registrar('parando o worker-interativo e mandando um job interativo')
     await comandoOuFalha(opcoes, 'stop', ...WORKERS_INTERATIVOS)
-    const resposta = await criarJobSintetico(opcoes.apiUrl, tokenDoJob ?? '', { fila: 'interativa', cpuMs: 0 })
+    const resposta = await criarJobSintetico(opcoes.apiUrl, await tokenDaVez(doJob, 0), { fila: 'interativa', cpuMs: 0 })
     if (resposta.status !== 202) throw new Error(`o job interativo do ensaio não foi aceito (status ${resposta.status})`)
     jobId = ((await resposta.json()) as { jobId: string }).jobId
 
     registrar('parando o Redis de cache e forçando falha na rota sintética')
     await comandoOuFalha(opcoes, 'stop', 'redis-cache')
     await criarGatilhoDaFalha(opcoes.bancoUrl, escolaDaFalha)
-    const outraEscola = await criarJobSintetico(opcoes.apiUrl, tokensDoSeguro[0] ?? '', { fila: 'normal', cpuMs: 0 })
+    const outraEscola = await criarJobSintetico(opcoes.apiUrl, await tokenDaVez(doSeguro, 0), { fila: 'normal', cpuMs: 0 })
     if (outraEscola.status !== 202) throw new Error(`com o gatilho da falha, outra escola também não gravou job (status ${outraEscola.status})`)
     jobDeOutraEscolaNaFalha = ((await outraEscola.json()) as { jobId: string }).jobId
-    trafego = iniciarTrafego(opcoes, tokensDaFalha, tokensDoSeguro, statusDaFalha)
+    trafego = iniciarTrafego(opcoes, daFalha, doSeguro, statusDaFalha)
 
     const esperados: Record<UidDaRegra, Record<string, string>> = {
       [REGRAS_DO_ENSAIO.jobInterativo]: { fila: 'interativa', escola_id: escolaDoJob },
@@ -417,18 +431,33 @@ async function executarPelaLinhaDeComando(): Promise<void> {
   const controle = new AbortController()
   // Ctrl+C interrompe a espera e ainda restaura; o segundo encerra na hora.
   process.once('SIGINT', () => controle.abort())
-  const { emitirTokenSintetico: emitirToken } = (await import(pathToFileURL(join(raizRepositorio, 'apps/api/dist/ops/token-sintetico.js')).href)) as { emitirTokenSintetico: EmitirToken }
+  const importar = <T>(caminho: string) => import(pathToFileURL(join(raizRepositorio, caminho)).href) as Promise<T>
+  const nucleo = await importar<{ criarBanco: typeof criarBanco; criarPool: typeof criarPool }>('packages/nucleo/dist/index.js')
+  const escolas = await importar<{ criarRede: typeof criarRede; criarEscola: typeof criarEscola }>('apps/api/dist/ops/escola.js')
+  const sessoes = await importar<{ criarSessoesSinteticas: typeof criarSessoesSinteticas; emissorDeTokenSintetico: typeof emissorDeTokenSintetico }>('apps/api/dist/sessao/sessoes-sinteticas.js')
   const inicio = Date.now()
   const escrever = (linha: string) => process.stdout.write(`[${Math.round((Date.now() - inicio) / 1_000)} s] ${linha}\n`)
+  const bancoUrl = `postgres://${obrigatoria(ambiente, 'POSTGRES_USUARIO')}:${obrigatoria(ambiente, 'POSTGRES_SENHA')}@127.0.0.1:${obrigatoria(ambiente, 'POSTGRES_PORTA_HOST')}/${obrigatoria(ambiente, 'POSTGRES_BANCO')}`
+  const pool = nucleo.criarPool({ url: bancoUrl, maximoConexoes: 1, timeoutConexaoMs: 5_000, timeoutConsultaMs: 30_000 }, () => undefined)
+  const banco = nucleo.criarBanco(pool)
+  // Escola e sessões sintéticas do ensaio, só no ambiente local (o ensaio e o emissor recusam outro), com o ensaio
+  // como operador na auditoria delas.
+  const criarEscolaComSessoes: CriarEscolaComSessoes = async (quantidade) => {
+    const redeId = await escolas.criarRede(banco, OPERADOR_DO_ENSAIO, { nome: 'Rede sintética do ensaio', tipo: 'independente' })
+    const escolaId = await escolas.criarEscola(banco, OPERADOR_DO_ENSAIO, { redeId, nome: 'Escola sintética do ensaio', slug: `ensaio-${randomUUID()}` })
+    const emissor = sessoes.emissorDeTokenSintetico(ambiente)
+    const criadas = await sessoes.criarSessoesSinteticas(banco, ambiente, { escolaId, papel: 'coordenador', quantidade })
+    return { escolaId, tokens: criadas.map((criada) => async () => (await emissor.emitir({ escolaId, usuarioId: criada.usuarioId, sessaoId: criada.sessaoId })).token) }
+  }
   try {
     await executarEnsaioDeAlertas({
       compose: composeDoAmbienteLocal,
       servicos: [],
       apiUrl: `http://127.0.0.1:${obrigatoria(ambiente, 'BORDA_PORTA_HOST')}`,
       grafanaUrl: `http://127.0.0.1:${obrigatoria(ambiente, 'GRAFANA_PORTA_HOST')}`,
-      bancoUrl: `postgres://${obrigatoria(ambiente, 'POSTGRES_USUARIO')}:${obrigatoria(ambiente, 'POSTGRES_SENHA')}@127.0.0.1:${obrigatoria(ambiente, 'POSTGRES_PORTA_HOST')}/${obrigatoria(ambiente, 'POSTGRES_BANCO')}`,
+      bancoUrl,
       ambiente,
-      emitirToken,
+      criarEscolaComSessoes,
       registrar: escrever,
       sinal: controle.signal,
     })
@@ -436,6 +465,8 @@ async function executarPelaLinhaDeComando(): Promise<void> {
   } catch (erro) {
     escrever(`ensaio falhou: ${erro instanceof Error ? erro.message : String(erro)}`)
     process.exitCode = 1
+  } finally {
+    await pool.end()
   }
 }
 

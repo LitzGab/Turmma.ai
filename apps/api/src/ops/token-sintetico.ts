@@ -21,7 +21,8 @@ import { z } from 'zod'
  *
  * Imprime só o token, ou `--quantidade` tokens, um por linha, cada um de um usuário novo da mesma escola (o
  * cenário de carga precisa de centenas de usuários de uma escola). Assina com `IDENTIDADE_CHAVE_ASSINATURA` e se recusa a emitir com
- * `AMBIENTE=producao`. O token leva `sub`, `esc`, `iss`, `iat` e `exp`, e nada da pessoa.
+ * `AMBIENTE=producao`. O token leva `sub`, `esc`, `sid`, `iss`, `iat` e `exp`, e nada da pessoa. Desde a tarefa 2.0 a API
+ * só aceita token de sessão gravada (`ops:sessao-sintetica`); este emissor sai na 3.0.
  */
 
 export const VALIDADE_PADRAO = '1h'
@@ -115,7 +116,9 @@ export async function emitirTokenSintetico(
 ): Promise<string> {
   const { IDENTIDADE_CHAVE_ASSINATURA: chave } = validarAmbiente(esquemaAmbienteEmissor, ambiente)
   const emitidoEm = Math.floor(agora.getTime() / 1000)
-  return new SignJWT({ esc: pedido.escolaId })
+  // `sid` sorteado: a verificação exige sessão no token, e nenhuma sessão gravada tem este id. O token sintético passa
+  // no handshake do realtime, que ainda não lê a sessão (tarefa 3.0), e é recusado pela GuardaDeSessao da API.
+  return new SignJWT({ esc: pedido.escolaId, sid: randomUUID() })
     .setProtectedHeader({ alg: ALGORITMO_TOKEN, typ: TIPO_TOKEN })
     .setIssuer(EMISSOR_TOKEN_SINTETICO)
     .setSubject(pedido.usuarioId)

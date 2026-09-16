@@ -65,6 +65,24 @@ Cada nome tem estado: livre, reivindicado, aprovado.
 **Reivindicação** — O ato do aluno de dizer "este nome da lista sou eu", pendente de
 aprovação do professor.
 
+**Conta** — A credencial global de quem é da equipe (professor, coordenador): e-mail, senha e segundo fator. Uma
+conta tem um usuário em cada escola onde trabalha. Aluno não tem conta.
+
+**Usuário** — A pessoa numa escola, com um papel ali (coordenador, professor ou aluno). É o `sub` do token: a mesma
+professora em duas escolas é um usuário em cada uma, com a mesma conta.
+
+**Papel** — O que a pessoa é naquela escola: coordenador, professor ou aluno. A rede também é papel na matriz de
+permissão, sem usuário no F1.
+
+**Sessão** — O acesso aberto de um usuário numa escola, gravado no banco, com prazo absoluto e inatividade. Toda
+requisição confere a sessão: encerrada ou com o usuário desativado, o acesso acaba na requisição seguinte.
+
+**Matriz de permissão** — A tabela única de papel × recurso × ação que diz quem chama cada rota, com o alcance:
+nunca, próprio, turma vinculada, unidade, agregado ou nominal com auditoria (`packages/shared`, `MATRIZ`).
+
+**Alcance** — Até onde uma célula da matriz de permissão chega: o que é da própria pessoa, as turmas com vínculo, a
+escola inteira, só números somados, ou a pessoa identificada com registro em auditoria.
+
 **Convite** — Link com token único, validade e uso único. Existe em dois tipos: convite de
 professor e link de sala.
 

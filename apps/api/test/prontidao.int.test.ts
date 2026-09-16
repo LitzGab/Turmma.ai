@@ -5,15 +5,12 @@ import { NestFactory } from '@nestjs/core'
 import type { AddressInfo } from 'node:net'
 import { setTimeout as esperar } from 'node:timers/promises'
 import { afterAll, afterEach, beforeAll, describe, expect, it, onTestFinished } from 'vitest'
-import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { aguardarSaudavel, compose } from '../../../tools/testes/compose.ts'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
-import { emitirTokenSintetico } from '../src/ops/token-sintetico.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
+import { BancadaDeSessoes } from './sessao-de-teste.js'
 
-const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
-const USUARIO_A = '0190f5a0-0000-7000-8000-0000000000a1'
 const DURACAO_DA_REQUISICAO_LENTA_MS = 2_500
 const ESPERA_DA_BORDA_MS = 1_500
 
@@ -79,7 +76,9 @@ describe('GET /prontidao', () => {
 describe('drenagem no desligamento', () => {
   it('põe /prontidao em 503, segue atendendo durante a espera da borda, termina a requisição em andamento e só então fecha', async () => {
     const { app, url } = await subirApi({ DRENAGEM_ESPERA_BORDA_MS: String(ESPERA_DA_BORDA_MS), DRENAGEM_PRAZO_MS: '8000' })
-    const token = await emitirTokenSintetico({ escolaId: ESCOLA_A, usuarioId: USUARIO_A, validadeSegundos: 600 }, lerAmbienteDeTeste())
+    const sessoes = new BancadaDeSessoes()
+    onTestFinished(() => sessoes.fechar())
+    const { token } = await sessoes.escolaComSessao()
 
     const excecoesSemTratamento: unknown[] = []
     const aoExcecao = (erro: unknown) => excecoesSemTratamento.push(erro)

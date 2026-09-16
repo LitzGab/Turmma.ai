@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EMISSOR_TOKEN_SINTETICO, MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO } from '@educa/nucleo'
+import { EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO, MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO } from '@educa/nucleo'
 import { lerAmbienteExemplo } from '../../../tools/ci/compose.ts'
 import { ConfiguracaoInvalida, lerConfiguracao, MOTIVO_AVISOS_SEM_JSON, MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO } from './config.js'
 
@@ -55,7 +55,7 @@ describe('lerConfiguracao', () => {
       identidade: {
         ambiente: 'local',
         chaveAssinatura: new TextEncoder().encode(ambienteValido.IDENTIDADE_CHAVE_ASSINATURA),
-        emissoresAceitos: [EMISSOR_TOKEN_SINTETICO],
+        emissoresAceitos: [EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO],
       },
       drenagem: { esperaDaBordaMs: 4000, prazoMs: 10000 },
       limite: {
@@ -124,7 +124,7 @@ describe('lerConfiguracao', () => {
 
   it('em produção com a flag desligada, sobe sem aceitar nenhum emissor sintético', () => {
     const config = lerConfiguracao({ ...ambienteValido, AMBIENTE: 'producao', ACEITAR_TOKEN_SINTETICO: 'false' })
-    expect(config.identidade.emissoresAceitos).toEqual([])
+    expect(config.identidade.emissoresAceitos).toEqual([EMISSOR_TOKEN])
   })
 
   it('ROTAS_SINTETICAS liga a rota de teste só quando é exatamente true, e não sobe ligada em produção', () => {

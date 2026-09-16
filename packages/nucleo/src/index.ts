@@ -2,14 +2,17 @@ export {
   CABECALHO_REQUISICAO_ID,
   contextoAtual,
   definirIdentidadeNoContexto,
+  definirSessaoNoContexto,
   executarNoContexto,
   middlewareDeContexto,
   resolverRequisicaoId,
 } from './contexto/contexto.js'
-export type { ContextoDaRequisicao } from './contexto/contexto.js'
+export type { ContextoDaRequisicao, SessaoDaRequisicao } from './contexto/contexto.js'
+export { exigirAnoEmCurso } from './contexto/ano-em-curso.js'
 export {
   AMBIENTES,
   ConfiguracaoInvalida,
+  EMISSOR_TOKEN,
   EMISSOR_TOKEN_SINTETICO,
   lerConfiguracaoIdentidade,
   lerVagasPorEscolaDesligadas,
@@ -26,7 +29,7 @@ export type { Banco, Schema, TransacaoBanco } from './db/banco.js'
 export { LOCK_TIMEOUT_MIGRACAO_MS, migrar, MigracaoFalhou, PASTA_MIGRACOES, TENTATIVAS_MIGRACAO } from './db/migrar.js'
 export type { ConfiguracaoMigracao } from './db/migrar.js'
 export { jobRegistro } from './db/schema/job-registro.js'
-export { justificativaSemEscopo, SemEscopo } from './db/sem-escopo.decorator.js'
+export { justificativaSemEscopo, SemEscopo, TAMANHO_MINIMO_JUSTIFICATIVA_SEM_ESCOPO } from './db/sem-escopo.decorator.js'
 export {
   ConfiguracaoOperacional,
   lerJanelaPadrao,
@@ -75,9 +78,20 @@ export { FiltroGlobalDeErro } from './erro/filtro-global.js'
 export { mapearErroPostgres } from './erro/mapear-erro-postgres.js'
 export { ehErroDoPostgres, erroDoPostgresEm, resumirErro } from './erro/resumir-erro.js'
 export type { ErroDoPostgres, ResumoDeErro } from './erro/resumir-erro.js'
-export { GuardaDeAutenticacao, identidadeDaRequisicao } from './identidade/guarda-autenticacao.js'
+export { GuardaDeAutenticacao, identidadeDaRequisicao, sessaoDaRequisicao } from './identidade/guarda-autenticacao.js'
 export { ALGORITMO_TOKEN, TIPO_TOKEN, VALIDADE_MAXIMA_TOKEN_SEGUNDOS, verificarToken } from './identidade/verificar-token.js'
-export type { Identidade } from './identidade/verificar-token.js'
+export type { Identidade, TokenVerificado } from './identidade/verificar-token.js'
+export { EmissorDeToken, VALIDADE_TOKEN_ACESSO_SEGUNDOS } from './identidade/emissor-de-token.js'
+export type { PedidoDeTokenDeAcesso, TokenDeAcesso } from './identidade/emissor-de-token.js'
+export { avaliarSessao, inatividadeDoPapel, TOLERANCIA_DE_INATIVIDADE_MIN } from './identidade/avaliar-sessao.js'
+export { GuardaDeSessao } from './identidade/guarda-sessao.js'
+export type { LeituraDeSessao } from './identidade/guarda-sessao.js'
+export { SessaoRepository } from './identidade/sessao.repository.js'
+export type { LinhaDaSessao } from './identidade/sessao.repository.js'
+export { ConferenciaDasPermissoes, rotasSemPermissao } from './permissao/conferencia-das-permissoes.js'
+export { GuardaDePermissao } from './permissao/guarda-permissao.js'
+export { METADADO_PERMITE, Permite } from './permissao/permite.decorator.js'
+export type { CelulaPermitida } from './permissao/permite.decorator.js'
 export { CAMINHOS_REDACT, CHAVES_PESSOAIS, criarLogger, registrarErrosDoProcesso, TEXTO_REMOVIDO } from './log/logger.js'
 export { avisoEspacado } from './log/aviso-espacado.js'
 export { LoggerDoNest, TEXTO_MENSAGEM_OMITIDA } from './log/logger-do-nest.js'
@@ -132,6 +146,14 @@ export { rede, TIPOS_DE_REDE } from './db/schema/rede.js'
 export type { TipoDeRede } from './db/schema/rede.js'
 export { escola, FORMATO_SLUG, INATIVIDADE_ALUNO_PADRAO_MIN, INATIVIDADE_EQUIPE_PADRAO_MIN, TAMANHO_MAXIMO_SLUG } from './db/schema/escola.js'
 export { FORMATO_OPERADOR } from './db/schema/auditoria.js'
+export { anoLetivo, SITUACOES_DE_ANO_LETIVO } from './db/schema/ano-letivo.js'
+export type { SituacaoDeAnoLetivo } from './db/schema/ano-letivo.js'
+export { conta } from './db/schema/conta.js'
+export { usuario } from './db/schema/usuario.js'
+export { DURACAO_DA_SESSAO_HORAS, METODOS_DE_SESSAO, MOTIVOS_DE_ENCERRAMENTO, sessao } from './db/schema/sessao.js'
+export type { MetodoDeSessao, MotivoDeEncerramento } from './db/schema/sessao.js'
+export { EVENTOS_DE_ACESSO, registroAcesso } from './db/schema/registro-acesso.js'
+export type { EventoDeAcesso } from './db/schema/registro-acesso.js'
 export { ACOES_DE_AUDITORIA, CAMPOS_PROIBIDOS_NA_AUDITORIA, problemasDoMapaDeAcoes } from './auditoria/acoes.js'
 export type { AcaoDeAuditoria, DefinicaoDeAcao, EstadosDaAcao } from './auditoria/acoes.js'
 export { AuditoriaRecusada, MOTIVOS_DE_RECUSA_DA_AUDITORIA } from './auditoria/auditoria-recusada.js'
