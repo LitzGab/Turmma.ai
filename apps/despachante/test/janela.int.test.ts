@@ -119,10 +119,46 @@ describe('lote não urgente segurado no horário letivo da escola', () => {
   it('borda: interativa e normal com a marca de não urgente nunca são seguradas', async () => {
     const interativo = await enfileirar(ESCOLA_A, 'interativa', true)
     const normal = await enfileirar(ESCOLA_A, 'normal', true)
-    const { despachante } = bancada.despachante(new LogEmMemoria('despachante'), { relogio })
-    expect(await despachante.rodada()).toBe(2)
+    const log = new LogEmMemoria('despachante')
+    const { despachante } = bancada.despachante(log, { relogio })
+    const publicados = await despachante.rodada()
+    // Antes do número: o 0 desta rodada já veio do Redis ainda conectando, e não do despacho. A
+    // asserção vem primeiro para a recaída cair com nome, e não como `expected +0 to be 2`.
+    expect(log.doEvento('despachante.vaga_indisponivel')).toEqual([])
+    expect(publicados).toBe(2)
     expect((await linha(interativo))?.estado).toBe('publicado')
     expect((await linha(normal))?.estado).toBe('publicado')
+  })
+
+  it('borda: a rodada cujo primeiro comando de vaga falha não publica nada, e a seguinte publica', async () => {
+    // Sem fila offline, o comando emitido antes da conexão falha na hora. A rodada termina ali e
+    // devolve 0 — em produção o laço tenta de novo, e é por isso que a bancada espera o `pronto`
+    // antes da rodada avulsa do teste.
+    const id = await enfileirar(ESCOLA_A, 'interativa', false)
+    const log = new LogEmMemoria('despachante')
+    let conectando = true
+    const { despachante } = bancada.despachante(log, {
+      relogio,
+      embrulharVagas: (vagas) => ({
+        membros: (fila, escolaId) => {
+          if (!conectando) return vagas.membros(fila, escolaId)
+          conectando = false
+          return Promise.reject(new Error("Stream isn't writeable and enableOfflineQueue options is false"))
+        },
+        manter: vagas.manter.bind(vagas),
+        livres: vagas.livres.bind(vagas),
+        tomar: vagas.tomar.bind(vagas),
+        liberar: vagas.liberar.bind(vagas),
+      }),
+    })
+
+    expect(await despachante.rodada()).toBe(0)
+    expect((await linha(id))?.estado).toBe('aguardando')
+    expect(await membrosDaVaga('interativa', ESCOLA_A)).toEqual([])
+    expect(log.doEvento('despachante.vaga_indisponivel')).toHaveLength(1)
+
+    expect(await despachante.rodada()).toBe(1)
+    expect((await linha(id))?.estado).toBe('publicado')
   })
 
   it('borda: a janela é lida da configuração da escola; horário 13:00–22:30 segura às 20h e solta às 10h', async () => {

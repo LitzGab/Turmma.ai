@@ -57,11 +57,26 @@ export interface DespachanteMontado {
   reconciliacao: Reconciliacao
   /** Só com `medidor`: a medição das filas por escola. */
   medicao?: MedicaoDaFila
+  /**
+   * Resolve quando o cliente de Redis fica de pé, quando ele erra (Redis fora de verdade) ou no teto
+   * de espera, o que vier primeiro. Nunca rejeita.
+   *
+   * Quem liga o laço não precisa disto: uma rodada que sai antes da conexão termina em
+   * `vaga_indisponivel` e a seguinte publica. Quem espera é o teste, que dirige rodada avulsa sem
+   * laço atrás: sem isto, a rodada devolveria 0 por causa da conexão, e não do despacho.
+   */
+  pronto: Promise<void>
   /** Liga o laço de publicação e o de reconciliação. */
   iniciar(): void
   /** Para os laços e fecha fila, Redis e pool, nessa ordem. */
   encerrar(): Promise<void>
 }
+
+/**
+ * Teto da espera de `pronto`: acima disto o Redis não está só conectando, está fora. É guarda contra
+ * travamento, não comportamento esperado — o caminho normal resolve pelo `ready` ou pelo `error`.
+ */
+export const TETO_DA_ESPERA_DO_REDIS_MS = 5_000
 
 /** Liga o despachante ao Postgres (pool próprio e `LISTEN`) e ao Redis de fila (filas e vagas). */
 export function montarDespachante(config: Omit<ConfiguracaoDespachante, 'telemetria'>, logger: LoggerBase, opcoes: OpcoesDaMontagem = {}): DespachanteMontado {
@@ -135,6 +150,27 @@ export function montarDespachante(config: Omit<ConfiguracaoDespachante, 'telemet
     )
   }
 
+  const pronto = new Promise<void>((resolver) => {
+    if (redis.status === 'ready') {
+      resolver()
+      return
+    }
+    const terminar = (): void => {
+      clearTimeout(temporizador)
+      redis.off('ready', terminar)
+      redis.off('error', terminar)
+      resolver()
+    }
+    // `unref`: esperar a conexão nunca segura o processo de pé por conta própria. O aviso é o que
+    // impede este ramo de ser calado: quem espera pelo teto segue como se o Redis estivesse de pé.
+    const temporizador = setTimeout(() => {
+      logger.warn({ evento: 'despachante.redis_sem_resposta_na_montagem', tetoMs: TETO_DA_ESPERA_DO_REDIS_MS })
+      terminar()
+    }, TETO_DA_ESPERA_DO_REDIS_MS).unref()
+    redis.on('ready', terminar)
+    redis.on('error', terminar)
+  })
+
   let encerramento: Promise<void> | undefined
   const encerrar = async (): Promise<void> => {
     await Promise.all([despachante.parar(), reconciliacao.parar(), medicao?.parar()])
@@ -147,6 +183,7 @@ export function montarDespachante(config: Omit<ConfiguracaoDespachante, 'telemet
     despachante,
     reconciliacao,
     ...(medicao === undefined ? {} : { medicao }),
+    pronto,
     iniciar: () => {
       despachante.iniciar()
       reconciliacao.iniciar()

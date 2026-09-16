@@ -79,6 +79,58 @@ export class LogEmMemoria {
 }
 
 /**
+ * O `ioredis` conecta de forma assíncrona, e o cliente do despachante sobe sem fila offline: comando
+ * emitido antes da conexão falha na hora. No laço isso não aparece — a rodada termina em
+ * `vaga_indisponivel` e a seguinte publica —, mas o teste dirige rodada avulsa, sem próxima, e leria
+ * o 0 da conexão como se fosse o resultado do despacho. Era a corrida que deixava a janela
+ * intermitente na esteira (correção `2026-09-16-rodada-antes-do-redis-do-despachante`).
+ *
+ * Por isso toda porta da bancada que lê o Redis logo depois da montagem — `rodada()`, `reconciliar()`
+ * e `medir()` — espera o `pronto` na primeira vez. Com o Redis parado de propósito, `pronto` resolve
+ * no erro do cliente: a degradação continua exercitada, sem pedágio.
+ *
+ * Quem chama `iniciar()` também ganha a espera na primeira volta do laço, já que ela passa por
+ * `rodada()`. É inofensivo: o laço tentaria de novo de qualquer jeito.
+ */
+export interface MontadoQueEspera {
+  pronto: Promise<void>
+  despachante: { rodada: () => Promise<number> }
+  reconciliacao: { reconciliar: () => Promise<unknown> }
+  medicao?: { medir: () => Promise<void> }
+}
+
+export function esperarORedisNaPrimeiraVez(montado: MontadoQueEspera): void {
+  let espera: Promise<void> | undefined = montado.pronto
+  const esperar = async (): Promise<void> => {
+    if (espera === undefined) return
+    await espera
+    // Uma vez de pé, sempre de pé: as chamadas seguintes não pagam nem um tique a mais.
+    espera = undefined
+  }
+
+  const rodada = montado.despachante.rodada.bind(montado.despachante)
+  montado.despachante.rodada = async () => {
+    await esperar()
+    return rodada()
+  }
+
+  const reconciliar = montado.reconciliacao.reconciliar.bind(montado.reconciliacao)
+  montado.reconciliacao.reconciliar = async () => {
+    await esperar()
+    return reconciliar()
+  }
+
+  const { medicao } = montado
+  if (medicao !== undefined) {
+    const medir = medicao.medir.bind(medicao)
+    medicao.medir = async () => {
+      await esperar()
+      return medir()
+    }
+  }
+}
+
+/**
  * O que o teste usa para olhar o banco e as filas por fora: pool próprio, repositories reais, uma
  * `Queue` por fila e as vagas, no mesmo prefixo dos despachantes e workers do teste.
  */
@@ -191,6 +243,7 @@ export class BancadaDeFila {
       { prefixo: this.prefixo, ...opcoes },
     )
     this.#montados.push(montado)
+    esperarORedisNaPrimeiraVez(montado)
     return montado
   }
 
