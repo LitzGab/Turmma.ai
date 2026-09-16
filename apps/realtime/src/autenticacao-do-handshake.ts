@@ -1,10 +1,15 @@
 import {
-  definirIdentidadeNoContexto,
+  avaliarSessao,
+  avisoEspacado,
+  definirSessaoNoContexto,
   ErroDeDominio,
   executarNoContexto,
+  resumirErro,
   verificarToken,
   type ConfiguracaoIdentidade,
   type Identidade,
+  type LeituraDeSessao,
+  type LinhaDaSessao,
   type LoggerBase,
 } from '@educa/nucleo'
 import { CodigoDeErro, MENSAGENS_DE_ERRO } from '@educa/shared'
@@ -23,14 +28,30 @@ export interface ErroDeConexao extends Error {
   data: { codigo: CodigoDeErro; mensagem: string }
 }
 
+type CodigoDeRecusaDeConexao = typeof CodigoDeErro.NAO_AUTENTICADO | typeof CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO
+
+function erroDeConexao(codigo: CodigoDeRecusaDeConexao): ErroDeConexao {
+  const erro = new Error(codigo) as ErroDeConexao
+  erro.data = { codigo, mensagem: MENSAGENS_DE_ERRO[codigo] }
+  return erro
+}
+
 /**
  * Recusa de conexão como o cliente socket.io a recebe (`connect_error`): código tipado e a
- * mensagem do catálogo, sem dizer se o token faltou, venceu ou tinha assinatura errada.
+ * mensagem do catálogo, sem dizer se o token faltou, venceu, tinha assinatura errada ou não tinha
+ * sessão gravada.
  */
 export function erroDeConexaoNaoAutenticada(): ErroDeConexao {
-  const erro = new Error(CodigoDeErro.NAO_AUTENTICADO) as ErroDeConexao
-  erro.data = { codigo: CodigoDeErro.NAO_AUTENTICADO, mensagem: MENSAGENS_DE_ERRO.NAO_AUTENTICADO }
-  return erro
+  return erroDeConexao(CodigoDeErro.NAO_AUTENTICADO)
+}
+
+/**
+ * Recusa por indisponibilidade do Postgres. É outro código de propósito: a queda do banco não pode
+ * virar "não autenticado", que na web deslogaria a escola inteira no meio da aula. O cliente
+ * reconecta com o recuo espalhado de `RECONEXAO_REALTIME` e volta com o mesmo token.
+ */
+export function erroDeConexaoIndisponivel(): ErroDeConexao {
+  return erroDeConexao(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO)
 }
 
 // Três partes base64url, com teto de tamanho: nada além disso é lido do pacote de conexão.
@@ -43,21 +64,48 @@ const esquemaAutenticacao = z.object({
 
 /**
  * Middleware do namespace: verifica o JWT do pacote de conexão (`auth.token`) com a mesma
- * verificação da API e grava a identidade no contexto e no socket. O token só é lido do `auth`:
- * query da URL e cabeçalho não autenticam, porque URL vai parar em log e histórico.
+ * verificação da API, lê a sessão gravada com a mesma consulta da `GuardaDeSessao` e só então grava
+ * a identidade no contexto e no socket. O token só é lido do `auth`: query da URL e cabeçalho não
+ * autenticam, porque URL vai parar em log e histórico.
+ *
+ * A leitura é a do `SessaoRepository`, escopada por `(esc, sid)` do token verificado, e não move
+ * `ultimo_uso_em`: conectar ao realtime não é atividade da pessoa (Tech Spec, seção 5, "Atividade").
+ * Sessão encerrada, expirada, de usuário desativado ou vencida por inatividade recusa o handshake
+ * seguinte, como na API.
  *
  * Nada que o cliente manda além do token entra na identidade. A sala da escola sai daqui.
  */
-export function autenticacaoDoHandshake(config: ConfiguracaoIdentidade, logger: LoggerBase) {
+export function autenticacaoDoHandshake(config: ConfiguracaoIdentidade, leitura: LeituraDeSessao, logger: LoggerBase) {
+  // Com o Postgres fora, a escola inteira reconecta ao mesmo tempo e todo handshake falharia aqui: uma linha a
+  // cada 30 s diz o mesmo que mil (regra 80). O erro que vale, o resumo, sai nessa linha.
+  let ultimoErro: unknown
+  const avisarIndisponivel = avisoEspacado(() => {
+    logger.warn({ evento: 'realtime.sessao_indisponivel', erro: resumirErro(ultimoErro) })
+    ultimoErro = undefined
+  })
   return (socket: SocketRealtime, proximo: (erro?: Error) => void): void => {
     void executarNoContexto({ requisicaoId: randomUUID() }, async () => {
       const autenticacao = esquemaAutenticacao.safeParse(socket.handshake.auth)
       try {
         if (!autenticacao.success) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
-        // Só escola e usuário: a sala sai da escola. A leitura da sessão no handshake é da tarefa 3.0.
-        const { escolaId, usuarioId } = await verificarToken(autenticacao.data.token, config)
-        const identidade: Identidade = { escolaId, usuarioId }
-        definirIdentidadeNoContexto(identidade)
+        const token = await verificarToken(autenticacao.data.token, config)
+        let linha: LinhaDaSessao | undefined
+        try {
+          linha = await leitura.lerParaGuarda(token)
+        } catch (erro) {
+          // Erro do Postgres: `INDISPONIVEL_TENTE_DE_NOVO`, nunca `NAO_AUTENTICADO`. O resumo do erro
+          // fica no log sem a consulta nem a mensagem crua (regra 20, item 9).
+          ultimoErro = erro
+          avisarIndisponivel()
+          socket.handshake.auth = {}
+          proximo(erroDeConexaoIndisponivel())
+          return
+        }
+        const sessao = avaliarSessao(token, linha)
+        if (sessao === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+        definirSessaoNoContexto(sessao)
+        // Só escola e usuário no socket: a sala sai da escola da sessão, nunca de nada que o cliente mande.
+        const identidade: Identidade = { escolaId: sessao.escolaId, usuarioId: sessao.usuarioId }
         socket.data.identidade = identidade
         // Verificado, o token não fica na conexão: o handshake é copiado para outras instâncias pelo
         // Redis (fetchSockets), e a query é texto livre do cliente.

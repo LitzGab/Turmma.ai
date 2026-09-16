@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO, MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO } from '@educa/nucleo'
 import { lerAmbienteExemplo } from '../../../tools/ci/compose.ts'
 import { ConfiguracaoInvalida, lerConfiguracao, MOTIVO_AVISOS_SEM_JSON, MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO } from './config.js'
 
@@ -10,7 +9,6 @@ const ambienteValido = {
   BANCO_TIMEOUT_CONEXAO_MS: '2000',
   BANCO_TIMEOUT_CONSULTA_MS: '1500',
   AMBIENTE: 'local',
-  ACEITAR_TOKEN_SINTETICO: 'true',
   IDENTIDADE_CHAVE_ASSINATURA: 'chave_sintetica_de_teste_com_32_caracteres',
   DRENAGEM_ESPERA_BORDA_MS: '4000',
   DRENAGEM_PRAZO_MS: '10000',
@@ -55,7 +53,6 @@ describe('lerConfiguracao', () => {
       identidade: {
         ambiente: 'local',
         chaveAssinatura: new TextEncoder().encode(ambienteValido.IDENTIDADE_CHAVE_ASSINATURA),
-        emissoresAceitos: [EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO],
       },
       drenagem: { esperaDaBordaMs: 4000, prazoMs: 10000 },
       limite: {
@@ -87,12 +84,6 @@ describe('lerConfiguracao', () => {
     expect(erro.message).not.toContain(chaveCurta)
   })
 
-  it('a API não sobe com AMBIENTE=producao e ACEITAR_TOKEN_SINTETICO=true', () => {
-    const erro = erroDe({ ...ambienteValido, AMBIENTE: 'producao' })
-    expect(erro.variaveis).toEqual(['ACEITAR_TOKEN_SINTETICO'])
-    expect(erro.message).toContain(MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO)
-  })
-
   it('não sobe com a espera da borda igual ou maior que o prazo da drenagem: nenhuma requisição terminaria', () => {
     expect(erroDe({ ...ambienteValido, DRENAGEM_ESPERA_BORDA_MS: '10000' }).variaveis).toEqual(['DRENAGEM_ESPERA_BORDA_MS'])
     expect(erroDe({ ...ambienteValido, DRENAGEM_ESPERA_BORDA_MS: '12000' }).variaveis).toEqual(['DRENAGEM_ESPERA_BORDA_MS'])
@@ -122,9 +113,9 @@ describe('lerConfiguracao', () => {
     expect(config.limite.proxiesConfiaveis).toEqual(['borda', '10.0.0.2', 'fd00::1'])
   })
 
-  it('em produção com a flag desligada, sobe sem aceitar nenhum emissor sintético', () => {
-    const config = lerConfiguracao({ ...ambienteValido, AMBIENTE: 'producao', ACEITAR_TOKEN_SINTETICO: 'false' })
-    expect(config.identidade.emissoresAceitos).toEqual([EMISSOR_TOKEN])
+  it('sobe em produção sem nenhuma variável a mais: a flag do token sintético do F0 não existe mais', () => {
+    const config = lerConfiguracao({ ...ambienteValido, AMBIENTE: 'producao' })
+    expect(config.identidade.ambiente).toBe('producao')
   })
 
   it('ROTAS_SINTETICAS liga a rota de teste só quando é exatamente true, e não sobe ligada em produção', () => {
@@ -132,7 +123,7 @@ describe('lerConfiguracao', () => {
     for (const valor of ['1', 'TRUE', '', 'sim']) {
       expect(erroDe({ ...ambienteValido, ROTAS_SINTETICAS: valor }).variaveis).toEqual(['ROTAS_SINTETICAS'])
     }
-    const emProducao = erroDe({ ...ambienteValido, AMBIENTE: 'producao', ACEITAR_TOKEN_SINTETICO: 'false', ROTAS_SINTETICAS: 'true' })
+    const emProducao = erroDe({ ...ambienteValido, AMBIENTE: 'producao', ROTAS_SINTETICAS: 'true' })
     expect(emProducao.variaveis).toEqual(['ROTAS_SINTETICAS'])
     expect(emProducao.message).toContain(MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO)
   })

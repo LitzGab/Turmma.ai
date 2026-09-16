@@ -1,7 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { boolean, check, index, jsonb, pgTable, smallint, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-
-// Sem import relativo: o drizzle-kit carrega este arquivo com o próprio carregador para gerar a migration.
+import { escola } from './escola.js'
 
 /**
  * Todo job nasce aqui, na transação de quem o pediu, e só depois o despachante o publica na fila
@@ -12,14 +11,15 @@ import { boolean, check, index, jsonb, pgTable, smallint, text, timestamp, uuid 
  * - `dados` leva só id e parâmetro técnico, nunca dado de pessoa (regra 20).
  * - `requisicao_id` é o da requisição que pediu o job, para a trilha seguir de API a despachante e
  *   worker (RF9).
- * - Sem FK para `escola`: a tabela de escola nasce no F1, que acrescenta a FK expandindo.
+ * - A FK de `escola_id` entrou `NOT VALID` na tarefa 3.0 do F1: vale para toda escrita nova, e a
+ *   validação das linhas antigas é uma pendência de deploy (`TODO.md`).
  */
 export const jobRegistro = pgTable(
   'job_registro',
   {
     // UUIDv7 gerado pelo Postgres 18: ordenado no tempo, sem entregar volume como um sequencial.
     id: uuid().primaryKey().default(sql`uuidv7()`),
-    escolaId: uuid(),
+    escolaId: uuid().references(() => escola.id),
     fila: text().notNull(),
     prioridade: smallint().notNull(),
     tipo: text().notNull(),

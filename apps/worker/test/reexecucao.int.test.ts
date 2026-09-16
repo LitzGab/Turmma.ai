@@ -7,7 +7,7 @@ import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import type { ExecucaoDoJob, Processador } from '../src/executor.js'
 import { FalhaDeJob } from '../src/falha-de-job.js'
 import { criarProcessadorSintetico } from '../src/processadores/sintetico.js'
-import { BancadaDeFila, ESCOLA_A, ESCOLA_B, LogEmMemoria } from './fila-de-teste.js'
+import { BancadaDeFila, LogEmMemoria } from './fila-de-teste.js'
 
 // A entrega é pelo menos uma vez (D49): cada caminho em que o mesmo job roda de novo, com despachantes e workers
 // de verdade no processo do teste, contra o Postgres e o Redis de fila do compose de teste. O efeito é o do
@@ -35,12 +35,17 @@ beforeAll(() => {
 
 describe('reexecução do mesmo job: a chave de idempotência é a do job, e o efeito não duplica', () => {
   let bancada: BancadaDeFila
+  // Escolas reais, criadas a cada caso: desde a tarefa 3.0 `job_registro` e
+  // `configuracao_operacional_escola` têm FK para `escola`, e id inventado é recusado pelo banco.
+  let ESCOLA_A: string
+  let ESCOLA_B: string
   /** O processador sintético de verdade, com o repository de verdade: só a CPU é dispensada (os jobs pedem zero). */
   let sintetico: Processador
 
   beforeEach(async () => {
     bancada = new BancadaDeFila()
     await bancada.limparRegistro()
+    ;[ESCOLA_A, ESCOLA_B] = await Promise.all([bancada.escola(), bancada.escola()])
     // A forma de `TABELA_DO_EFEITO_SINTETICO`: a restrição começa pela escola e termina na chave (regra 80, item 8).
     await bancada.pool.query(`drop table if exists ${TABELA_DO_EFEITO_SINTETICO}`)
     await bancada.pool.query(

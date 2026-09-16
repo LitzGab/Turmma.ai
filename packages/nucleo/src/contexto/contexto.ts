@@ -7,9 +7,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
  * O que identifica a requisição em toda linha de log e em todo erro. Só ids: nada aqui pode
  * ser nome, matrícula ou qualquer outro dado de pessoa (regra 20, item 9).
  *
- * Na API, `escolaId`, `usuarioId`, `papel`, `sessaoId` e `anoLetivoId` vêm da sessão gravada, lida pela
- * `GuardaDeSessao` (identidade/guarda-sessao.ts) com o token verificado. Nunca do corpo, da query ou de
- * cabeçalho enviado pelo cliente (regra 10).
+ * `escolaId`, `usuarioId`, `papel`, `sessaoId` e `anoLetivoId` vêm da sessão gravada, lida com o token
+ * verificado: na API pela `GuardaDeSessao` (identidade/guarda-sessao.ts), no realtime pelo handshake, com a
+ * mesma consulta. Nunca do corpo, da query ou de cabeçalho enviado pelo cliente (regra 10).
  */
 export interface ContextoDaRequisicao {
   readonly requisicaoId: string
@@ -76,17 +76,6 @@ function contextoAindaSemIdentidade(): ContextoGravavel {
     throw new Error('identidade do contexto já definida')
   }
   return contexto
-}
-
-/**
- * Grava a escola e o usuário do token no contexto, sem sessão. Só o handshake do realtime ainda usa, até a
- * tarefa 3.0 passar a ler a sessão também lá; a API grava pela `definirSessaoNoContexto`. Só vale uma vez, e
- * sem contexto falha fechada.
- */
-export function definirIdentidadeNoContexto(identidade: { escolaId: string; usuarioId: string }): void {
-  const contexto = contextoAindaSemIdentidade()
-  contexto.escolaId = identidade.escolaId
-  contexto.usuarioId = identidade.usuarioId
 }
 
 /** A sessão válida que a `GuardaDeSessao` leu do banco. */

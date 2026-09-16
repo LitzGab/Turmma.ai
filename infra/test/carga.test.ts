@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseEnv } from 'node:util'
+import { alcanceDe } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
@@ -9,8 +10,8 @@ import {
   argumentosDoK6,
   codigoDeSaida,
   CODIGO_THRESHOLD_CRUZADO,
-  ESCOLAS,
   julgarCenario,
+  NOMES_DAS_ESCOLAS,
   lerResumoDoK6,
   TOKENS_POR_GRUPO,
   type ResumoDoK6,
@@ -105,7 +106,7 @@ describe('execução do cenário', () => {
   })
 
   it('as três escolas são distintas, e há token da C para todo VU do teste: dois VUs com o mesmo usuário somariam no mesmo limite', () => {
-    expect(new Set(Object.values(ESCOLAS)).size).toBe(3)
+    expect(new Set(NOMES_DAS_ESCOLAS).size).toBe(3)
     const script = lerArquivo('infra/k6/justica-entre-escolas.js')
     const constante = (nome: string) => Number(new RegExp(`const ${nome} = ([0-9_]+)`).exec(script)?.[1]?.replaceAll('_', ''))
     const vusNoTeste =
@@ -121,7 +122,25 @@ describe('execução do cenário', () => {
     expect(TOKENS_POR_GRUPO.c.quantidade).toBeGreaterThanOrEqual(vusNoTeste)
     expect(TOKENS_POR_GRUPO.a_lote.quantidade).toBe(constante('USUARIOS_DA_A_NO_LOTE'))
     expect(TOKENS_POR_GRUPO.a_interativo.quantidade).toBe(constante('USUARIOS_DA_A_NO_INTERATIVO'))
-    expect(TOKENS_POR_GRUPO.abusivo.escola).toBe(ESCOLAS.C)
+    expect(TOKENS_POR_GRUPO.abusivo.escola).toBe('C')
+    expect(TOKENS_POR_GRUPO.c.escola).toBe('C')
+  })
+
+  it('cada grupo pede o papel que a MATRIZ deixa chamar a rota dele: equipe no job sintético, aluno no contexto', () => {
+    // Sem isto, a A e a B receberiam 404 em `POST /v1/sistema/jobs-sinteticos` e o cenário mediria fila vazia.
+    for (const grupo of ['a_lote', 'a_interativo', 'b'] as const) {
+      expect(alcanceDe(TOKENS_POR_GRUPO[grupo].papel, 'sistema_job_sintetico', 'criar'), grupo).not.toBe('nunca')
+    }
+    for (const grupo of ['c', 'abusivo'] as const) {
+      expect(alcanceDe(TOKENS_POR_GRUPO[grupo].papel, 'sistema_contexto', 'ler'), grupo).not.toBe('nunca')
+    }
+  })
+
+  it('o token sintético do F0 não é mais emitido em lugar nenhum do cenário', () => {
+    // O resto do caminho (escolas antes das sessões, sessão nova por fase, papel certo) quem prova é a
+    // execução do cenário, registrada no 3_task.md: teste de texto sobre a ordem do script não pega falha real.
+    expect(lerArquivo('infra/scripts/carga.ts')).not.toContain('ops:token-sintetico')
+    expect(lerArquivo('infra/k6/justica-entre-escolas.js')).not.toContain('ops:token-sintetico')
   })
 })
 

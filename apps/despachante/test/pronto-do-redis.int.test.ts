@@ -9,7 +9,7 @@ import { Despachante } from '../src/despachante.js'
 import { MedicaoDaFila } from '../src/metricas-espera.js'
 import { Reconciliacao } from '../src/reconciliacao.js'
 import { montarDespachante, TETO_DA_ESPERA_DO_REDIS_MS } from '../src/montagem.js'
-import { BancadaDeFila, configuracaoDoBanco, ESCOLA_A, janelaPadraoDoAmbiente, LogEmMemoria, vagasPadraoDoAmbiente } from '../../worker/test/fila-de-teste.js'
+import { BancadaDeFila, configuracaoDoBanco, janelaPadraoDoAmbiente, LogEmMemoria, vagasPadraoDoAmbiente } from '../../worker/test/fila-de-teste.js'
 
 // O `pronto` da montagem e o embrulho da bancada, da correção
 // `2026-09-16-rodada-antes-do-redis-do-despachante`. A corrida que causou o defeito (conexão do Redis
@@ -23,10 +23,14 @@ beforeAll(() => {
 
 describe('o `pronto` da montagem do despachante', () => {
   let bancada: BancadaDeFila
+  // Escolas reais, criadas a cada caso: desde a tarefa 3.0 `job_registro` e
+  // `configuracao_operacional_escola` têm FK para `escola`, e id inventado é recusado pelo banco.
+  let ESCOLA_A: string
 
   beforeEach(async () => {
     bancada = new BancadaDeFila()
     await bancada.limparRegistro()
+    ESCOLA_A = await bancada.escola()
   })
 
   afterEach(async () => {

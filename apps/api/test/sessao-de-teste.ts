@@ -18,6 +18,8 @@ export interface SessaoDeTeste {
   readonly token: string
   /** Um token novo da mesma sessão, pelo `EmissorDeToken`. */
   tokenNovo(): Promise<string>
+  /** Um token desta sessão emitido em outro instante, para o caso do token já vencido. */
+  tokenEm(agora: Date): Promise<string>
 }
 
 export interface OpcoesDeSessao {
@@ -58,6 +60,8 @@ export class BancadaDeSessoes {
       escolaId,
       ...criada,
       tokenNovo: async () => (await emissor.emitir({ escolaId, usuarioId: criada.usuarioId, sessaoId: criada.sessaoId })).token,
+      tokenEm: async (agora: Date) =>
+        (await emissorDeTokenSintetico(this.#ambiente, { agora: () => agora }).emitir({ escolaId, usuarioId: criada.usuarioId, sessaoId: criada.sessaoId })).token,
     }))
   }
 
@@ -92,6 +96,11 @@ export class BancadaDeSessoes {
   /** Escola nova com uma sessão. */
   async escolaComSessao(papel: PapelDeUsuario = 'aluno'): Promise<SessaoDeTeste> {
     return this.sessao(await this.escola(), papel)
+  }
+
+  /** Encerra a sessão no banco, como `DELETE /v1/sessao` fará: a requisição (ou o handshake) seguinte é recusada. */
+  async encerrar(sessaoId: string): Promise<void> {
+    await this.pool.query(`update sessao set encerrada_em = now(), motivo = 'saida' where id = $1`, [sessaoId])
   }
 
   /**

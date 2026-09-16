@@ -29,12 +29,13 @@ import { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
+import { criarEscola, criarRede } from '../../api/src/ops/escola.js'
 import { montarDespachante, type DespachanteMontado, type OpcoesDaMontagem as OpcoesDoDespachante } from '../../despachante/src/montagem.js'
 import type { Processador } from '../src/executor.js'
 import { montarWorker, type WorkerMontado } from '../src/montagem.js'
 
-export const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
-export const ESCOLA_B = '0190f5a0-0000-7000-8000-00000000000b'
+/** O operador que a bancada grava na auditoria da rede e da escola que cria. */
+export const OPERADOR_DA_BANCADA = 'teste-fila'
 
 const ambiente = lerAmbienteDeTeste()
 
@@ -157,6 +158,16 @@ export class BancadaDeFila {
   /** A fila interativa, onde a maior parte dos testes publica. */
   get fila(): Queue<DadosDoJobNaFila> {
     return this.filas.interativa
+  }
+
+  /**
+   * Uma escola nova, com rede própria, pelos mesmos serviços de `ops:escola`. Desde a tarefa 3.0
+   * `job_registro`, `configuracao_operacional_escola` e `uso_infra_diario` têm FK para `escola`: id
+   * inventado é recusado pelo banco, e todo teste de fila cria a escola antes de gravar job.
+   */
+  async escola(): Promise<string> {
+    const redeId = await criarRede(this.banco, OPERADOR_DA_BANCADA, { nome: 'Rede sintética da fila', tipo: 'independente' })
+    return criarEscola(this.banco, OPERADOR_DA_BANCADA, { redeId, nome: 'Escola sintética da fila', slug: `fila-${randomUUID()}` })
   }
 
   /** Enfileira como a API faz: na transação, com a escola e a requisição no contexto. */

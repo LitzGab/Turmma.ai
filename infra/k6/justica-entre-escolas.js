@@ -12,7 +12,7 @@
 // resposta soma no contador do seu grupo, com 1 quando é 429 e 0 quando não é, e nenhum grupo passa em branco.
 // Espera é `iniciadoEm - criadoEm` do job, os dois do relógio do Postgres, lidos pela API.
 //
-// Nenhum dado de pessoa: escolas e usuários sintéticos, com tokens de `ops:token-sintetico`.
+// Nenhum dado de pessoa: escolas e usuários sintéticos, com tokens de sessões reais de `ops:sessao-sintetica`.
 
 import { sleep } from 'k6'
 import { SharedArray } from 'k6/data'

@@ -7,6 +7,7 @@ import {
   TAMANHO_MINIMO_CHAVE_ASSINATURA,
   validarAmbiente,
   type Banco,
+  type Relogio,
 } from '@educa/nucleo'
 import { CodigoDeErro, type PapelDeUsuario } from '@educa/shared'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
@@ -47,10 +48,14 @@ export interface SessaoSintetica {
 /**
  * O emissor da chave do ambiente, só com `AMBIENTE=local`. Com `AMBIENTE` ausente ou diferente, recusa com
  * `ConfiguracaoInvalida` antes de qualquer banco: a sessão sintética não vira porta em staging nem em produção.
+ *
+ * O `relogio` só é usado por teste que precisa de um token já vencido de uma sessão que existe; sem ele, vale
+ * o relógio do sistema.
  */
-export function emissorDeTokenSintetico(ambiente: Record<string, string | undefined>): EmissorDeToken {
+export function emissorDeTokenSintetico(ambiente: Record<string, string | undefined>, relogio?: Relogio): EmissorDeToken {
   const { IDENTIDADE_CHAVE_ASSINATURA: chave } = validarAmbiente(esquemaAmbiente, ambiente)
-  return new EmissorDeToken(new TextEncoder().encode(chave))
+  const codificada = new TextEncoder().encode(chave)
+  return relogio === undefined ? new EmissorDeToken(codificada) : new EmissorDeToken(codificada, relogio)
 }
 
 /** Hash de um refresh sorteado que ninguém guarda: a sessão sintética não se renova. */

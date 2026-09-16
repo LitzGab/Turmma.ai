@@ -7,7 +7,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
 import { criarExpurgoDeJobs } from '../src/processadores/expurgar-jobs.js'
-import { BancadaDeFila, ESCOLA_A, ESCOLA_B, LogEmMemoria } from './fila-de-teste.js'
+import { BancadaDeFila, LogEmMemoria } from './fila-de-teste.js'
 
 // `job_registro` do Postgres do compose de teste, com 12.000 jobs vencidos de verdade.
 
@@ -30,6 +30,10 @@ beforeAll(() => {
 
 describe('sistema.expurgar-jobs', () => {
   let bancada: BancadaDeFila
+  // Escolas reais, criadas a cada caso: desde a tarefa 3.0 `job_registro` e
+  // `configuracao_operacional_escola` têm FK para `escola`, e id inventado é recusado pelo banco.
+  let ESCOLA_A: string
+  let ESCOLA_B: string
   const log = new LogEmMemoria('worker-teste')
   let protegidos: Record<string, string>
 
@@ -62,6 +66,7 @@ describe('sistema.expurgar-jobs', () => {
   beforeEach(async () => {
     bancada = new BancadaDeFila()
     await bancada.limparRegistro()
+    ;[ESCOLA_A, ESCOLA_B] = await Promise.all([bancada.escola(), bancada.escola()])
     log.linhas.length = 0
     // Vencidos das duas escolas, concluídos e falhos, entre 8 e 30 dias atrás.
     await bancada.pool.query(

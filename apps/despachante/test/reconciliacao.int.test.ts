@@ -14,7 +14,7 @@ import { randomUUID } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { aguardarSaudavel, compose, composeAssincronoOuFalha, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { FalhaDeJob } from '../../worker/src/falha-de-job.js'
-import { BancadaDeFila, ESCOLA_A, ESCOLA_B, LogEmMemoria, urlRedisDeFila } from '../../worker/test/fila-de-teste.js'
+import { BancadaDeFila, LogEmMemoria, urlRedisDeFila } from '../../worker/test/fila-de-teste.js'
 import type { DespachanteMontado } from '../src/montagem.js'
 import { PublicacaoBullMQ, type FilaDePublicacao } from '../src/fila-de-publicacao.js'
 import { Reconciliacao } from '../src/reconciliacao.js'
@@ -28,10 +28,15 @@ beforeAll(() => {
 
 describe('reconciliação entre job_registro e o BullMQ', () => {
   let bancada: BancadaDeFila
+  // Escolas reais, criadas a cada caso: desde a tarefa 3.0 `job_registro` e
+  // `configuracao_operacional_escola` têm FK para `escola`, e id inventado é recusado pelo banco.
+  let ESCOLA_A: string
+  let ESCOLA_B: string
 
   beforeEach(async () => {
     bancada = new BancadaDeFila()
     await bancada.limparRegistro()
+    ;[ESCOLA_A, ESCOLA_B] = await Promise.all([bancada.escola(), bancada.escola()])
     // Os jobs publicados aqui não executam (não há worker na maior parte dos testes) e seguram a vaga:
     // com o padrão, a rodada pararia em 5 interativos e 2 lotes. A vaga tem teste próprio (vagas.int.test.ts).
     for (const escola of [ESCOLA_A, ESCOLA_B]) await bancada.configurarEscola(escola, { vagas: { interativa: 1_000, normal: 1_000, lote: 1_000 } })

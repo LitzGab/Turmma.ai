@@ -126,7 +126,6 @@ services:
       BANCO_POOL_MAXIMO: ${BANCO_POOL_MAXIMO:?defina BANCO_POOL_MAXIMO}
       BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
       BANCO_TIMEOUT_CONSULTA_MS: ${BANCO_TIMEOUT_CONSULTA_MS:?defina BANCO_TIMEOUT_CONSULTA_MS}
-      ACEITAR_TOKEN_SINTETICO: ${ACEITAR_TOKEN_SINTETICO:?defina ACEITAR_TOKEN_SINTETICO}
       IDENTIDADE_CHAVE_ASSINATURA: ${IDENTIDADE_CHAVE_ASSINATURA:?defina IDENTIDADE_CHAVE_ASSINATURA}
       DRENAGEM_ESPERA_BORDA_MS: ${DRENAGEM_ESPERA_BORDA_MS:?defina DRENAGEM_ESPERA_BORDA_MS}
       DRENAGEM_PRAZO_MS: ${DRENAGEM_PRAZO_MS:?defina DRENAGEM_PRAZO_MS}
@@ -178,7 +177,11 @@ services:
       REALTIME_PORTA: '3000'
       REDIS_FILA_URL: redis://redis-fila:6379
       REALTIME_STREAM_TAMANHO_MAXIMO: ${REALTIME_STREAM_TAMANHO_MAXIMO:?defina REALTIME_STREAM_TAMANHO_MAXIMO}
-      ACEITAR_TOKEN_SINTETICO: ${ACEITAR_TOKEN_SINTETICO:?defina ACEITAR_TOKEN_SINTETICO}
+      # O handshake lê a sessão gravada, com a mesma consulta da API: sem Postgres, ninguém entra.
+      BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
+      BANCO_POOL_MAXIMO: ${REALTIME_BANCO_POOL_MAXIMO:?defina REALTIME_BANCO_POOL_MAXIMO}
+      BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
+      BANCO_TIMEOUT_CONSULTA_MS: ${BANCO_TIMEOUT_CONSULTA_MS:?defina BANCO_TIMEOUT_CONSULTA_MS}
       IDENTIDADE_CHAVE_ASSINATURA: ${IDENTIDADE_CHAVE_ASSINATURA:?defina IDENTIDADE_CHAVE_ASSINATURA}
       DRENAGEM_ESPERA_BORDA_MS: ${DRENAGEM_ESPERA_BORDA_MS:?defina DRENAGEM_ESPERA_BORDA_MS}
       DRENAGEM_PRAZO_MS: ${DRENAGEM_PRAZO_MS:?defina DRENAGEM_PRAZO_MS}
@@ -191,8 +194,11 @@ services:
     depends_on:
       redis-fila:
         condition: service_healthy
+      migrar:
+        condition: service_completed_successfully
     healthcheck:
-      # Sem `/saude` própria: o realtime não tem banco, e a prontidão não consulta o Redis.
+      # Sem `/saude` própria: a prontidão não consulta o Postgres nem o Redis. O handshake que não
+      # alcançar o banco recusa com INDISPONIVEL_TENTE_DE_NOVO, e o cliente reconecta com recuo.
       test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/prontidao').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
       interval: 2s
       timeout: 3s

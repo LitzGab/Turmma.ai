@@ -22,7 +22,6 @@
     "ci:integracao": "node tools/ci/integracao.ts",
     "ci:infra": "node tools/ci/infra.ts",
     "ci:e2e": "node tools/ci/e2e.ts",
-    "ops:token-sintetico": "npm run -s build -w @educa/shared && npm run -s build -w @educa/nucleo && npm run -s build -w @educa/api && node --env-file=.env.example apps/api/dist/ops/token-sintetico.js",
     "ops:sessao-sintetica": "npm run -s build -w @educa/shared && npm run -s build -w @educa/nucleo && npm run -s build -w @educa/api && node --env-file=.env.example apps/api/dist/ops/sessao-sintetica.js",
     "ops:escola": "npm run -s build -w @educa/shared && npm run -s build -w @educa/nucleo && npm run -s build -w @educa/api && node --env-file=.env.example apps/api/dist/ops/escola.js",
     "ops:uso": "npm run -s build -w @educa/shared && npm run -s build -w @educa/nucleo && npm run -s build -w @educa/api && node --env-file=.env.example apps/api/dist/ops/uso.js",

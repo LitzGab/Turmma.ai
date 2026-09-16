@@ -1,7 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { check, integer, jsonb, pgTable, smallint, text, time, uuid } from 'drizzle-orm/pg-core'
-
-// Sem import relativo: o drizzle-kit carrega este arquivo com o próprio carregador para gerar a migration.
+import { escola } from './escola.js'
 
 /** Vagas por fila numa escola. Fila ausente usa o padrão do ambiente. */
 export type VagasConfiguradas = Partial<Record<'interativa' | 'normal' | 'lote', number>>
@@ -16,12 +15,15 @@ export type VagasConfiguradas = Partial<Record<'interativa' | 'normal' | 'lote',
  *   o despachante lê.
  * - `fuso`, `dias_letivos`, `inicio` e `fim` são o horário letivo da escola, em que o lote não
  *   urgente fica segurado; `inicio` é incluso e `fim`, exclusivo.
- * - Sem FK para `escola`: a tabela de escola nasce no F1, que acrescenta a FK expandindo.
+ * - A FK de `escola_id` entrou `NOT VALID` na tarefa 3.0 do F1: configuração de escola que não existe
+ *   é recusada pelo banco.
  */
 export const configuracaoOperacionalEscola = pgTable(
   'configuracao_operacional_escola',
   {
-    escolaId: uuid().primaryKey(),
+    escolaId: uuid()
+      .primaryKey()
+      .references(() => escola.id),
     /** Fuso IANA da escola (`America/Sao_Paulo`). */
     fuso: text(),
     /** Dias letivos da semana, ISO 8601: 1 é segunda, 7 é domingo. */

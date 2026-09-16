@@ -6,13 +6,10 @@ import type { AddressInfo } from 'node:net'
 import { Server } from 'socket.io'
 import { io, type Socket as SocketCliente } from 'socket.io-client'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
-import { emitirTokenSintetico } from '../../api/src/ops/token-sintetico.js'
+import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
 import { criarClienteRedisDoRealtime, prepararServidorRealtime } from '../src/adaptador-redis.js'
 import { lerConfiguracao, type ConfiguracaoRealtime } from '../src/config.js'
 import { criarAplicacaoRealtime } from '../src/configurar-app.js'
-
-export const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
-export const ESCOLA_B = '0190f5a0-0000-7000-8000-00000000000b'
 
 export const ambienteDeTeste = lerAmbienteDeTeste()
 
@@ -20,12 +17,16 @@ export function urlRedisDeFila(): string {
   return `redis://127.0.0.1:${valorObrigatorio(ambienteDeTeste, 'REDIS_FILA_PORTA_HOST')}`
 }
 
-/** Configuração pelo mesmo `lerConfiguracao` do boot, com o Redis de fila do compose de teste. */
+/**
+ * Configuração pelo mesmo `lerConfiguracao` do boot, com o Redis de fila e o Postgres do compose de teste.
+ * O handshake lê a sessão gravada nesse Postgres, com a mesma consulta da API.
+ */
 export function configuracaoDeTeste(ambiente: Record<string, string> = {}): ConfiguracaoRealtime {
   return lerConfiguracao({
     ...ambienteDeTeste,
     REALTIME_PORTA: '3000',
     REDIS_FILA_URL: urlRedisDeFila(),
+    BANCO_URL: urlDoBancoDeTeste(),
     // A do compose. No teste nada é exportado: a métrica é lida pelo medidor em memória, quando há.
     TELEMETRIA_OTLP_URL: 'http://observabilidade:4318',
     DRENAGEM_ESPERA_BORDA_MS: '10',
@@ -49,10 +50,6 @@ export async function subirInstancia(logger: LoggerBase, ambiente: Record<string
 export function loggerEmMemoria(): { logger: LoggerBase; linhas: string[] } {
   const linhas: string[] = []
   return { linhas, logger: criarLogger({ servico: 'realtime-teste', destino: { write: (linha: string) => linhas.push(linha) } }) }
-}
-
-export function tokenDe(escolaId: string, usuarioId: string, agora?: Date, validadeSegundos = 600): Promise<string> {
-  return emitirTokenSintetico({ escolaId, usuarioId, validadeSegundos }, ambienteDeTeste, agora)
 }
 
 export interface OpcoesDeConexao {

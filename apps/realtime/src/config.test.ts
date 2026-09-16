@@ -1,4 +1,3 @@
-import { EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO, MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO } from '@educa/nucleo'
 import { describe, expect, it } from 'vitest'
 import { ConfiguracaoInvalida, lerConfiguracao } from './config.js'
 
@@ -7,8 +6,11 @@ const ambienteValido = {
   REDIS_FILA_URL: 'redis://redis-fila:6379',
   REALTIME_STREAM_TAMANHO_MAXIMO: '10000',
   AMBIENTE: 'local',
-  ACEITAR_TOKEN_SINTETICO: 'true',
   IDENTIDADE_CHAVE_ASSINATURA: 'chave_sintetica_de_teste_com_32_caracteres',
+  BANCO_URL: 'postgres://educa:senha_sintetica_xyz@postgres:5432/educa',
+  BANCO_POOL_MAXIMO: '4',
+  BANCO_TIMEOUT_CONEXAO_MS: '2000',
+  BANCO_TIMEOUT_CONSULTA_MS: '1500',
   DRENAGEM_ESPERA_BORDA_MS: '5000',
   DRENAGEM_PRAZO_MS: '10000',
   TELEMETRIA_OTLP_URL: 'http://observabilidade:4318/',
@@ -33,8 +35,8 @@ describe('lerConfiguracao do realtime', () => {
       identidade: {
         ambiente: 'local',
         chaveAssinatura: new TextEncoder().encode(ambienteValido.IDENTIDADE_CHAVE_ASSINATURA),
-        emissoresAceitos: [EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO],
       },
+      banco: { url: ambienteValido.BANCO_URL, maximoConexoes: 4, timeoutConexaoMs: 2000, timeoutConsultaMs: 1500 },
       drenagem: { esperaDaBordaMs: 5000, prazoMs: 10000 },
       telemetria: { otlpUrl: 'http://observabilidade:4318', intervaloMs: 5000 },
     })
@@ -44,10 +46,10 @@ describe('lerConfiguracao do realtime', () => {
     expect(erroDe({ ...ambienteValido, [variavel]: undefined }).variaveis).toEqual([variavel])
   })
 
-  it('não sobe com AMBIENTE=producao e ACEITAR_TOKEN_SINTETICO=true', () => {
-    const erro = erroDe({ ...ambienteValido, AMBIENTE: 'producao' })
-    expect(erro.variaveis).toEqual(['ACEITAR_TOKEN_SINTETICO'])
-    expect(erro.message).toContain(MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO)
+  it('não sobe com banco inválido: desde a tarefa 3.0 o handshake lê a sessão gravada, e sem Postgres ninguém entra', () => {
+    expect(erroDe({ ...ambienteValido, BANCO_URL: 'postgres://postgres' }).variaveis).toEqual(['BANCO_URL'])
+    expect(erroDe({ ...ambienteValido, BANCO_POOL_MAXIMO: '0' }).variaveis).toEqual(['BANCO_POOL_MAXIMO'])
+    expect(erroDe({ ...ambienteValido, BANCO_TIMEOUT_CONSULTA_MS: 'sem prazo' }).variaveis).toEqual(['BANCO_TIMEOUT_CONSULTA_MS'])
   })
 
   it('aponta de uma vez os problemas de Redis, identidade e drenagem, sem repetir o valor', () => {

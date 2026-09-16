@@ -1,9 +1,11 @@
 import {
   ConfiguracaoInvalida,
+  lerConfiguracaoBanco,
   lerConfiguracaoDrenagem,
   lerConfiguracaoIdentidade,
   lerConfiguracaoTelemetria,
   validarAmbiente,
+  type ConfiguracaoBanco,
   type ConfiguracaoDrenagem,
   type ConfiguracaoIdentidade,
   type ConfiguracaoTelemetria,
@@ -28,6 +30,8 @@ export interface ConfiguracaoRealtime {
     tamanhoMaximoDoStream: number
   }
   identidade: ConfiguracaoIdentidade
+  /** O handshake lê a sessão no Postgres, com a mesma consulta da API (Tech Spec, seção 5, "Requisição"). */
+  banco: ConfiguracaoBanco
   drenagem: ConfiguracaoDrenagem
   /** Para onde e de quanto em quanto tempo as métricas vão. */
   telemetria: ConfiguracaoTelemetria
@@ -45,16 +49,18 @@ function tentar<T>(ler: () => T): Leitura<T> {
 }
 
 /**
- * Lê e valida o ambiente do realtime. Não sobe com variável faltando ou inválida, nem com token
- * sintético ligado em produção. Todos os problemas saem de uma vez, só pelo nome da variável.
+ * Lê e valida o ambiente do realtime, incluindo o banco: desde a tarefa 3.0 o handshake lê a sessão
+ * gravada, e sem Postgres o realtime não autentica ninguém. Não sobe com variável faltando ou
+ * inválida, e todos os problemas saem de uma vez, só pelo nome da variável.
  */
 export function lerConfiguracao(ambiente: Record<string, string | undefined>): ConfiguracaoRealtime {
   const realtime = tentar(() => validarAmbiente(esquemaAmbiente, ambiente))
   const identidade = tentar(() => lerConfiguracaoIdentidade(ambiente))
+  const banco = tentar(() => lerConfiguracaoBanco(ambiente))
   const drenagem = tentar(() => lerConfiguracaoDrenagem(ambiente))
   const telemetria = tentar(() => lerConfiguracaoTelemetria(ambiente))
-  if ('erro' in realtime || 'erro' in identidade || 'erro' in drenagem || 'erro' in telemetria) {
-    const erros = [realtime, identidade, drenagem, telemetria].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
+  if ('erro' in realtime || 'erro' in identidade || 'erro' in banco || 'erro' in drenagem || 'erro' in telemetria) {
+    const erros = [realtime, identidade, banco, drenagem, telemetria].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
     throw new ConfiguracaoInvalida(
       erros.flatMap((erro) => erro.variaveis).sort(),
       erros.flatMap((erro) => erro.motivos),
@@ -64,6 +70,7 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     porta: realtime.valor.REALTIME_PORTA,
     redis: { url: realtime.valor.REDIS_FILA_URL, tamanhoMaximoDoStream: realtime.valor.REALTIME_STREAM_TAMANHO_MAXIMO },
     identidade: identidade.valor,
+    banco: banco.valor,
     drenagem: drenagem.valor,
     telemetria: telemetria.valor,
   }

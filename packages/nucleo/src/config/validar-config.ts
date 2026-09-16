@@ -36,34 +36,21 @@ export function validarAmbiente<Esquema extends z.ZodType>(
 export const AMBIENTES = AMBIENTES_DO_SISTEMA
 export type Ambiente = (typeof AMBIENTES)[number]
 
-/** Emissor do token de `npm run ops:token-sintetico`, do F0. Sai na tarefa 3.0, junto com a flag. */
-export const EMISSOR_TOKEN_SINTETICO = 'sintetico'
-
-/** Emissor do token de acesso da sessão real (`EmissorDeToken`). Sempre aceito. */
+/**
+ * Único emissor de token de acesso do sistema: o da sessão real (`EmissorDeToken`). Não há segundo emissor
+ * nem variável que acrescente um: o token sintético do F0 saiu na tarefa 3.0, e com ele o caminho de
+ * identidade que não passava por `sessao`.
+ */
 export const EMISSOR_TOKEN = 'educa'
 
 /** HMAC-SHA256 pede chave de pelo menos 256 bits; abaixo disso a assinatura fica fácil de forjar. */
 export const TAMANHO_MINIMO_CHAVE_ASSINATURA = 32
 
-export const MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO =
-  'ACEITAR_TOKEN_SINTETICO=true é proibido com AMBIENTE=producao: token sintético não existe em produção'
-
-/**
- * Variáveis da identidade. `ACEITAR_TOKEN_SINTETICO` só aceita `true` ou `false`, escrito assim:
- * `1`, `TRUE` ou vazio reprovam, para ninguém ligar a flag sem querer nem desligá-la achando que
- * desligou.
- */
-export const esquemaAmbienteIdentidade = z
-  .object({
-    AMBIENTE: z.enum(AMBIENTES),
-    ACEITAR_TOKEN_SINTETICO: z.enum(['true', 'false']),
-    IDENTIDADE_CHAVE_ASSINATURA: z.string().min(TAMANHO_MINIMO_CHAVE_ASSINATURA),
-  })
-  .superRefine((valores, contexto) => {
-    if (valores.AMBIENTE === 'producao' && valores.ACEITAR_TOKEN_SINTETICO === 'true') {
-      contexto.addIssue({ code: 'custom', path: ['ACEITAR_TOKEN_SINTETICO'], message: MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO })
-    }
-  })
+/** Variáveis da identidade. O emissor não é configurável: só `educa` vale, em todo ambiente. */
+export const esquemaAmbienteIdentidade = z.object({
+  AMBIENTE: z.enum(AMBIENTES),
+  IDENTIDADE_CHAVE_ASSINATURA: z.string().min(TAMANHO_MINIMO_CHAVE_ASSINATURA),
+})
 
 export const MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO =
   'VAGAS_POR_ESCOLA_DESLIGADAS=true é proibido com AMBIENTE=producao: sem a vaga por escola, uma escola barulhenta ocupa os workers de todas'
@@ -94,11 +81,6 @@ export interface ConfiguracaoIdentidade {
   readonly ambiente: Ambiente
   /** Chave HMAC do HS256. Nunca vai para log nem para resposta. */
   readonly chaveAssinatura: Uint8Array
-  /**
-   * Sempre o emissor `educa`, da sessão real. O sintético só com a flag ligada, e mesmo assim o token dele não
-   * passa da `GuardaDeSessao` sem uma sessão gravada.
-   */
-  readonly emissoresAceitos: readonly string[]
 }
 
 export function lerConfiguracaoIdentidade(ambiente: Record<string, string | undefined>): ConfiguracaoIdentidade {
@@ -106,6 +88,5 @@ export function lerConfiguracaoIdentidade(ambiente: Record<string, string | unde
   return {
     ambiente: valores.AMBIENTE,
     chaveAssinatura: new TextEncoder().encode(valores.IDENTIDADE_CHAVE_ASSINATURA),
-    emissoresAceitos: valores.ACEITAR_TOKEN_SINTETICO === 'true' ? [EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO] : [EMISSOR_TOKEN],
   }
 }

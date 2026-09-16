@@ -1,12 +1,17 @@
 import 'reflect-metadata'
-import { CodigoDeErro, MENSAGENS_DE_ERRO, NAMESPACE_REALTIME_SISTEMA } from '@educa/shared'
+import { ALGORITMO_TOKEN, EMISSOR_TOKEN, TIPO_TOKEN } from '@educa/nucleo'
+import { CodigoDeErro, MENSAGENS_DE_ERRO, NAMESPACE_REALTIME_SISTEMA, RECONEXAO_REALTIME } from '@educa/shared'
 import { Redis } from 'ioredis'
+import { SignJWT } from 'jose'
+import { randomUUID } from 'node:crypto'
 import { once } from 'node:events'
 import { connect } from 'node:net'
 import { setTimeout as esperar } from 'node:timers/promises'
 import type { Socket as SocketCliente } from 'socket.io-client'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { aguardarSaudavel, compose, composeAssincronoOuFalha } from '../../../tools/testes/compose.ts'
+import { BancadaDeSessoes, type SessaoDeTeste } from '../../api/test/sessao-de-teste.js'
 import { PREFIXO_REDIS_REALTIME } from '../src/adaptador-redis.js'
 import { salaDaEscola } from '../src/sistema.gateway.js'
 import {
@@ -14,23 +19,69 @@ import {
   conectar,
   criarCliente,
   criarEmissor,
-  ESCOLA_A,
-  ESCOLA_B,
+  ambienteDeTeste,
   loggerEmMemoria,
   recusaDaConexao,
   subirInstancia,
-  tokenDe,
   urlRedisDeFila,
   type InstanciaDeTeste,
 } from './realtime-de-teste.js'
 
-const USUARIO_A1 = '0190f5a0-0000-7000-8000-0000000000a1'
-const USUARIO_A2 = '0190f5a0-0000-7000-8000-0000000000a2'
-const USUARIO_B1 = '0190f5a0-0000-7000-8000-0000000000b1'
-const USUARIO_B2 = '0190f5a0-0000-7000-8000-0000000000b2'
+// Escolas e sessões reais no Postgres do compose de teste: desde a tarefa 3.0 o handshake lê a sessão
+// gravada, com a mesma consulta da `GuardaDeSessao` da API. Token sem sessão não entra.
+const bancada = new BancadaDeSessoes()
+let ESCOLA_A: string
+let ESCOLA_B: string
+/** Duas sessões em cada escola: A1 e A2 provam a sala compartilhada, B1 e B2 o isolamento. */
+let SESSAO_A1: SessaoDeTeste
+let SESSAO_A2: SessaoDeTeste
+let SESSAO_B1: SessaoDeTeste
+let SESSAO_B2: SessaoDeTeste
+let USUARIO_A1: string
+let USUARIO_A2: string
+let USUARIO_B2: string
+
+beforeAll(async () => {
+  ;[ESCOLA_A, ESCOLA_B] = await Promise.all([bancada.escola(), bancada.escola()])
+  ;[[SESSAO_A1, SESSAO_A2], [SESSAO_B1, SESSAO_B2]] = (await Promise.all([
+    bancada.sessoes(ESCOLA_A, { quantidade: 2 }),
+    bancada.sessoes(ESCOLA_B, { quantidade: 2 }),
+  ])) as [[SessaoDeTeste, SessaoDeTeste], [SessaoDeTeste, SessaoDeTeste]]
+  USUARIO_A1 = SESSAO_A1.usuarioId
+  USUARIO_A2 = SESSAO_A2.usuarioId
+  USUARIO_B2 = SESSAO_B2.usuarioId
+})
+
+afterAll(async () => {
+  await bancada.fechar()
+})
 
 // Tempo para uma emissão que não deveria chegar ter tido a chance de chegar.
 const JANELA_DE_SILENCIO_MS = 600
+
+const chaveDeAssinatura = () => new TextEncoder().encode(valorObrigatorio(ambienteDeTeste, 'IDENTIDADE_CHAVE_ASSINATURA'))
+
+/** Um token assinado à mão, com a chave do ambiente, para o caso que o `EmissorDeToken` não produz. */
+function assinar(claims: { esc: string; sub: string; sid: string }, emissor: string): Promise<string> {
+  const agora = Math.floor(Date.now() / 1000)
+  return new SignJWT({ esc: claims.esc, sid: claims.sid })
+    .setProtectedHeader({ alg: ALGORITMO_TOKEN, typ: TIPO_TOKEN })
+    .setIssuer(emissor)
+    .setSubject(claims.sub)
+    .setIssuedAt(agora)
+    .setExpirationTime(agora + 600)
+    .sign(chaveDeAssinatura())
+}
+
+/** Assinatura e prazo certos, `sid` que nunca foi gravado: é o token sintético do F0, sem sessão. */
+function tokenDeSessaoInexistente(escolaId: string, usuarioId: string): Promise<string> {
+  return assinar({ esc: escolaId, sub: usuarioId, sid: randomUUID() }, EMISSOR_TOKEN)
+}
+
+/** A sessão é real e o `sid` existe: só o emissor é o `sintetico` que saiu na tarefa 3.0. */
+function tokenComEmissorSintetico(sessao: SessaoDeTeste): Promise<string> {
+  return assinar({ esc: sessao.escolaId, sub: sessao.usuarioId, sid: sessao.sessaoId }, 'sintetico')
+}
 
 const clientes: SocketCliente[] = []
 function registrar(cliente: SocketCliente): SocketCliente {
@@ -61,8 +112,8 @@ describe('realtime em duas instâncias, com o adaptador de streams no Redis de f
     await instancia2.app.close()
   })
 
-  async function conectado(instancia: InstanciaDeTeste, escolaId: string, usuarioId: string): Promise<SocketCliente> {
-    const cliente = registrar(criarCliente(instancia.url, await tokenDe(escolaId, usuarioId)))
+  async function conectado(instancia: InstanciaDeTeste, sessao: SessaoDeTeste): Promise<SocketCliente> {
+    const cliente = registrar(criarCliente(instancia.url, await sessao.tokenNovo()))
     await conectar(cliente)
     return cliente
   }
@@ -72,8 +123,8 @@ describe('realtime em duas instâncias, com o adaptador de streams no Redis de f
   }
 
   it('clientes da mesma escola em instâncias diferentes recebem a mesma emissão', async () => {
-    const naInstancia1 = await conectado(instancia1, ESCOLA_A, USUARIO_A1)
-    const naInstancia2 = await conectado(instancia2, ESCOLA_A, USUARIO_A2)
+    const naInstancia1 = await conectado(instancia1, SESSAO_A1)
+    const naInstancia2 = await conectado(instancia2, SESSAO_A2)
     const recebidos1 = coletar(naInstancia1, 'sistema.teste')
     const recebidos2 = coletar(naInstancia2, 'sistema.teste')
 
@@ -88,10 +139,10 @@ describe('realtime em duas instâncias, com o adaptador de streams no Redis de f
   })
 
   it('a sala da escola é a mesma nas duas instâncias: a consulta de sockets atravessa o Redis e só traz a escola A', async () => {
-    const a1 = await conectado(instancia1, ESCOLA_A, USUARIO_A1)
-    const a2 = await conectado(instancia2, ESCOLA_A, USUARIO_A2)
-    await conectado(instancia1, ESCOLA_B, USUARIO_B1)
-    await conectado(instancia2, ESCOLA_B, USUARIO_B2)
+    const a1 = await conectado(instancia1, SESSAO_A1)
+    const a2 = await conectado(instancia2, SESSAO_A2)
+    await conectado(instancia1, SESSAO_B1)
+    await conectado(instancia2, SESSAO_B2)
 
     const naSalaA = await emissor.servidor.of(NAMESPACE_REALTIME_SISTEMA).in(salaDaEscola(ESCOLA_A)).fetchSockets()
 
@@ -110,9 +161,9 @@ describe('realtime em duas instâncias, com o adaptador de streams no Redis de f
   })
 
   it('isolamento: a emissão para a escola A não chega a cliente da escola B, em nenhuma das instâncias', async () => {
-    const a1 = await conectado(instancia1, ESCOLA_A, USUARIO_A1)
-    const b1 = await conectado(instancia1, ESCOLA_B, USUARIO_B1)
-    const b2 = await conectado(instancia2, ESCOLA_B, USUARIO_B2)
+    const a1 = await conectado(instancia1, SESSAO_A1)
+    const b1 = await conectado(instancia1, SESSAO_B1)
+    const b2 = await conectado(instancia2, SESSAO_B2)
     const recebidosA1 = coletar(a1, 'sistema.teste')
     const recebidosB1 = coletar(b1, 'sistema.teste')
     const recebidosB2 = coletar(b2, 'sistema.teste')
@@ -123,10 +174,16 @@ describe('realtime em duas instâncias, com o adaptador de streams no Redis de f
 
     expect(recebidosB1).toEqual([])
     expect(recebidosB2).toEqual([])
+
+    // E na volta: o que é da B não chega a quem entrou com sessão da A.
+    emitirParaEscola(ESCOLA_B, { marca: 'so-da-b' })
+    await expect.poll(() => recebidosB1).toEqual([{ marca: 'so-da-b' }])
+    await esperar(JANELA_DE_SILENCIO_MS)
+    expect(recebidosA1).toEqual([{ marca: 'so-da-a' }])
   })
 
   it('isolamento: cliente da escola B não entra na sala da A pedindo por nome, nem no auth, nem na query, nem por evento', async () => {
-    const tokenB = await tokenDe(ESCOLA_B, USUARIO_B2)
+    const tokenB = await SESSAO_B2.tokenNovo()
     const intruso = registrar(
       criarCliente(instancia2.url, tokenB, {
         auth: { token: tokenB, escolaId: ESCOLA_A, sala: salaDaEscola(ESCOLA_A) },
@@ -135,7 +192,7 @@ describe('realtime em duas instâncias, com o adaptador de streams no Redis de f
     )
     await conectar(intruso)
     for (const evento of ['join', 'entrar', 'subscribe', 'sala']) intruso.emit(evento, salaDaEscola(ESCOLA_A))
-    const a1 = await conectado(instancia1, ESCOLA_A, USUARIO_A1)
+    const a1 = await conectado(instancia1, SESSAO_A1)
     const recebidosIntruso = coletar(intruso, 'sistema.teste')
     const recebidosA1 = coletar(a1, 'sistema.teste')
     await esperar(200)
@@ -160,15 +217,18 @@ describe('realtime em duas instâncias, com o adaptador de streams no Redis de f
     it.each<[string, () => Promise<{ token: string; auth?: Record<string, unknown>; query?: Record<string, string> }>]>([
       ['sem token', async () => ({ token: '', auth: {} })],
       ['token só na query da URL', async () => {
-        const token = await tokenDe(ESCOLA_A, USUARIO_A1)
+        const token = await SESSAO_A1.tokenNovo()
         return { token, auth: {}, query: { token, access_token: token } }
       }],
-      ['token vencido', async () => ({ token: await tokenDe(ESCOLA_A, USUARIO_A1, new Date(Date.now() - 120_000), 60) })],
+      // Token de uma sessão que existe e continua válida: o que vence é o token, e mesmo assim não entra.
+      ['token vencido', async () => ({ token: await SESSAO_A1.tokenEm(new Date(Date.now() - 20 * 60_000)) })],
       ['assinatura de outra escola colada no corpo', async () => {
-        const [cabecalho, corpo] = (await tokenDe(ESCOLA_A, USUARIO_A1)).split('.')
-        const assinaturaDeB = (await tokenDe(ESCOLA_B, USUARIO_B1)).split('.')[2]
+        const [cabecalho, corpo] = (await SESSAO_A1.tokenNovo()).split('.')
+        const assinaturaDeB = (await SESSAO_B1.tokenNovo()).split('.')[2]
         return { token: `${cabecalho}.${corpo}.${assinaturaDeB}` }
       }],
+      // Token bem assinado de uma sessão que nunca existiu: o `sid` sorteado não casa com nenhuma linha.
+      ['token com sessão inexistente', async () => ({ token: await tokenDeSessaoInexistente(ESCOLA_A, USUARIO_A1) })],
       ['token que não é texto', async () => ({ token: '', auth: { token: { esc: ESCOLA_A } } })],
     ])('recusa %s com NAO_AUTENTICADO, sem dizer o que falhou', async (_caso, montar) => {
       const { token, auth, query } = await montar()
@@ -177,7 +237,7 @@ describe('realtime em duas instâncias, com o adaptador de streams no Redis de f
     })
 
     it('token no cabeçalho Authorization não autentica: só o pacote de conexão vale', async () => {
-      const token = await tokenDe(ESCOLA_A, USUARIO_A1)
+      const token = await SESSAO_A1.tokenNovo()
       const cliente = registrar(
         criarCliente(instancia1.url, token, { auth: {}, cabecalhos: { Authorization: `Bearer ${token}` }, transports: ['polling'] }),
       )
@@ -185,26 +245,92 @@ describe('realtime em duas instâncias, com o adaptador de streams no Redis de f
     })
 
     it('o namespace padrão `/` recusa até token válido: não existe entrada sem autenticação e sem sala', async () => {
-      const cliente = registrar(criarCliente(instancia1.url, await tokenDe(ESCOLA_A, USUARIO_A1), { namespace: '/' }))
+      const cliente = registrar(criarCliente(instancia1.url, await SESSAO_A1.tokenNovo(), { namespace: '/' }))
       expect(await recusaDaConexao(cliente)).toEqual(recusaEsperada)
     })
 
-    it('com ACEITAR_TOKEN_SINTETICO=false, o token sintético válido é recusado', async () => {
-      const semSintetico = await subirInstancia(loggerEmMemoria().logger, { ACEITAR_TOKEN_SINTETICO: 'false' })
-      try {
-        const cliente = registrar(criarCliente(semSintetico.url, await tokenDe(ESCOLA_A, USUARIO_A1)))
-        expect(await recusaDaConexao(cliente)).toEqual(recusaEsperada)
-      } finally {
-        await semSintetico.app.close()
+    it('o token do emissor sintético do F0, assinado com a mesma chave e com a sessão real, é recusado', async () => {
+      const cliente = registrar(criarCliente(instancia1.url, await tokenComEmissorSintetico(SESSAO_A1)))
+      expect(await recusaDaConexao(cliente)).toEqual(recusaEsperada)
+      // A mesma sessão, com o emissor `educa`, entra: o que recusou foi o emissor, não a sessão.
+      await conectar(registrar(criarCliente(instancia1.url, await SESSAO_A1.tokenNovo())))
+    })
+
+    it('o handshake não move `ultimo_uso_em`: conectar ao realtime não conta como atividade da pessoa', async () => {
+      const [sessao] = await bancada.sessoes(ESCOLA_A)
+      if (sessao === undefined) throw new Error('sessão de teste não criada')
+      const lerUltimoUso = async (): Promise<string> => {
+        const { rows } = await bancada.pool.query<{ em: string }>('select ultimo_uso_em::text as em from sessao where id = $1', [sessao.sessaoId])
+        if (rows[0] === undefined) throw new Error('sessão não encontrada')
+        return rows[0].em
       }
+      const antes = await lerUltimoUso()
+
+      await conectar(registrar(criarCliente(instancia1.url, await sessao.tokenNovo())))
+      await conectar(registrar(criarCliente(instancia2.url, await sessao.tokenNovo())))
+
+      // Sem isto, a reconexão automática da web renovaria sessão ociosa para sempre, e a inatividade (RF13)
+      // nunca venceria em quem deixa a aba aberta.
+      expect(await lerUltimoUso()).toBe(antes)
+    })
+
+    it('sessão encerrada no banco recusa o handshake seguinte, e a sessão viva da mesma escola segue entrando', async () => {
+      const [viva, encerrada] = await bancada.sessoes(ESCOLA_A, { quantidade: 2 })
+      if (viva === undefined || encerrada === undefined) throw new Error('sessões de teste não criadas')
+      // Conectada antes: o corte vale para o handshake seguinte, não para a conexão já aberta.
+      await conectar(registrar(criarCliente(instancia1.url, await encerrada.tokenNovo())))
+      await bancada.encerrar(encerrada.sessaoId)
+
+      const cliente = registrar(criarCliente(instancia1.url, await encerrada.tokenNovo()))
+      expect(await recusaDaConexao(cliente)).toEqual(recusaEsperada)
+      await conectar(registrar(criarCliente(instancia1.url, await viva.tokenNovo())))
     })
   })
 
+  it('Postgres fora: o handshake é recusado com INDISPONIVEL_TENTE_DE_NOVO, nunca com NAO_AUTENTICADO, e a tentativa seguinte entra com o mesmo token', async () => {
+    const token = await SESSAO_A1.tokenNovo()
+    const cliente = registrar(criarCliente(instancia1.url, token))
+    // O recuo com que o cliente volta: `RECONEXAO_REALTIME` espalha as tentativas em ±50%, para a sala inteira
+    // não tentar no mesmo milissegundo. Recusa de middleware o socket.io não repete sozinho (ele destrói o
+    // socket ao receber CONNECT_ERROR), então quem tenta de novo é a web, com estas opções.
+    expect(cliente.io.opts).toMatchObject(RECONEXAO_REALTIME)
+
+    const indisponivel = {
+      message: CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO,
+      data: { codigo: CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO, mensagem: MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO },
+    }
+    log1.linhas.length = 0
+    compose('pause', 'postgres')
+    try {
+      expect(await recusaDaConexao(cliente, 30_000)).toEqual(indisponivel)
+      // Mais duas tentativas, como a escola inteira reconectando: a recusa é sempre a mesma.
+      for (let tentativa = 0; tentativa < 2; tentativa++) {
+        expect(await recusaDaConexao(registrar(criarCliente(instancia1.url, token)), 30_000)).toEqual(indisponivel)
+      }
+    } finally {
+      compose('unpause', 'postgres')
+      await aguardarSaudavel('postgres')
+    }
+    // Três recusas, uma linha de aviso: sem o espaçamento, a queda do banco encheria o log com uma linha por
+    // cliente reconectando (regra 80). E nela não há token, nem consulta, nem URL de conexão.
+    const avisos = log1.linhas.map((linha) => JSON.parse(linha) as Record<string, unknown>).filter((registro) => registro['evento'] === 'realtime.sessao_indisponivel')
+    expect(avisos).toHaveLength(1)
+    const bruto = JSON.stringify(avisos)
+    for (const parte of token.split('.')) expect(bruto).not.toContain(parte)
+    expect(bruto).not.toContain('postgres://')
+    expect(bruto).not.toContain('select')
+
+    // A queda do banco não encerrou sessão nenhuma: a mesma sessão e o mesmo token entram assim que ele volta.
+    await expect
+      .poll(async () => conectar(registrar(criarCliente(instancia1.url, token)), 10_000).then(() => true, () => false), { timeout: 60_000, interval: 1_000 })
+      .toBe(true)
+  }, 180_000)
+
   it('a reconexão se autentica com o token vigente, lido a cada tentativa, e não com o do primeiro acesso', async () => {
-    let tokenVigente = await tokenDe(ESCOLA_A, USUARIO_A1)
+    let tokenVigente = await SESSAO_A1.tokenNovo()
     const cliente = registrar(criarCliente(instancia1.url, () => tokenVigente))
     await conectar(cliente)
-    tokenVigente = await tokenDe(ESCOLA_A, USUARIO_A2)
+    tokenVigente = await SESSAO_A2.tokenNovo()
 
     const reconectou = new Promise<void>((resolver) => cliente.io.once('reconnect', () => resolver()))
     cliente.io.engine.close()
@@ -232,8 +358,8 @@ describe('realtime em duas instâncias, com o adaptador de streams no Redis de f
   })
 
   it('o Redis de fila reinicia durante a aula: sem os clientes reconectarem, a emissão seguinte chega às duas instâncias', async () => {
-    const a1 = await conectado(instancia1, ESCOLA_A, USUARIO_A1)
-    const a2 = await conectado(instancia2, ESCOLA_A, USUARIO_A2)
+    const a1 = await conectado(instancia1, SESSAO_A1)
+    const a2 = await conectado(instancia2, SESSAO_A2)
     const quedas: string[] = []
     for (const cliente of [a1, a2]) cliente.on('disconnect', (motivo) => quedas.push(motivo))
     const recebidos1 = coletar(a1, 'sistema.teste')
@@ -258,7 +384,7 @@ describe('realtime em duas instâncias, com o adaptador de streams no Redis de f
 
   it('o log da conexão leva escola e usuário por id, e nunca o token nem a query da URL', async () => {
     log1.linhas.length = 0
-    const token = await tokenDe(ESCOLA_A, USUARIO_A1)
+    const token = await SESSAO_A1.tokenNovo()
     await conectar(registrar(criarCliente(instancia1.url, token, { query: { nome: 'Enzo Martins', sentinela: 'valor-da-query' } })))
     await recusaDaConexao(registrar(criarCliente(instancia1.url, `${token}x`, { query: { sentinela: 'valor-da-query' } })))
 
@@ -298,7 +424,7 @@ describe('stream do adaptador no Redis de fila', () => {
 describe('drenagem do realtime', () => {
   it('põe /prontidao em 503 com os clientes ainda conectados e, ao fechar, os derruba com motivo que permite reconectar', async () => {
     const instancia = await subirInstancia(loggerEmMemoria().logger, { DRENAGEM_ESPERA_BORDA_MS: '1000', DRENAGEM_PRAZO_MS: '5000' })
-    const cliente = registrar(criarCliente(instancia.url, await tokenDe(ESCOLA_A, USUARIO_A1)))
+    const cliente = registrar(criarCliente(instancia.url, await SESSAO_A1.tokenNovo()))
     // Sem reconexão aqui: o teste quer ver o motivo da queda, não a volta.
     cliente.io.opts.reconnection = false
     await conectar(cliente)
@@ -320,7 +446,7 @@ describe('drenagem do realtime', () => {
     const esperaDaBordaMs = 500
     // O prazo encerraria o processo com código 1: aqui ele fica longe, e o teste mede o fechamento.
     const instancia = await subirInstancia(loggerEmMemoria().logger, { DRENAGEM_ESPERA_BORDA_MS: String(esperaDaBordaMs), DRENAGEM_PRAZO_MS: '60000' })
-    const token = await tokenDe(ESCOLA_A, USUARIO_A1)
+    const token = await SESSAO_A1.tokenNovo()
     const conectados = await Promise.all(
       Array.from({ length: 12 }, async (_, indice) => {
         // Metade fica no long-polling, metade sobe para websocket, como os alunos atrás da borda.
@@ -354,7 +480,7 @@ describe('drenagem do realtime', () => {
     process.on('uncaughtException', aoExcecao)
     try {
       const instancia = await subirInstancia(loggerEmMemoria().logger, { DRENAGEM_ESPERA_BORDA_MS: '1000', DRENAGEM_PRAZO_MS: '5000' })
-      const cliente = registrar(criarCliente(instancia.url, await tokenDe(ESCOLA_A, USUARIO_A1), { transports: ['polling'] }))
+      const cliente = registrar(criarCliente(instancia.url, await SESSAO_A1.tokenNovo(), { transports: ['polling'] }))
       cliente.io.opts.reconnection = false
       await conectar(cliente)
 

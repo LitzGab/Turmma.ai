@@ -1,7 +1,7 @@
 import { CodigoDeErro } from '@educa/shared'
 import { errors, jwtVerify } from 'jose'
 import { z } from 'zod'
-import type { ConfiguracaoIdentidade } from '../config/validar-config.js'
+import { EMISSOR_TOKEN, type ConfiguracaoIdentidade } from '../config/validar-config.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
 
 /** Quem fez a requisição. Só ids: o token não carrega nome, papel nem nada da pessoa (regra 20). */
@@ -50,21 +50,22 @@ function naoAutenticado(): ErroDeDominio {
 /**
  * Verifica o JWT de acesso e devolve a escola, o usuário e a sessão dele. Recusa com `NAO_AUTENTICADO` o token
  * com assinatura que não confere, algoritmo diferente de HS256, `typ` diferente de `JWT` (o desafio de login,
- * `desafio+jwt`, não passa por aqui), sem `exp`, vencido ou com mais de 24 h pela frente, de emissor não aceito,
- * ou com `sub`, `esc` e `sid` ausentes ou fora do formato UUID.
+ * `desafio+jwt`, não passa por aqui), sem `exp`, vencido ou com mais de 24 h pela frente, de emissor diferente
+ * de `educa`, ou com `sub`, `esc` e `sid` ausentes ou fora do formato UUID.
+ *
+ * O emissor é constante, não configuração: não há variável de ambiente que faça a API aceitar um segundo
+ * emissor. Token assinado com a mesma chave e outro `iss` é recusado em qualquer ambiente.
  *
  * Os ids saem em minúsculas: a mesma escola escrita com letra maiúscula não pode virar outra
  * chave de limite, de sessão ou de sala mais adiante.
  */
 export async function verificarToken(token: string, config: ConfiguracaoIdentidade): Promise<TokenVerificado> {
-  // Sem emissor aceito, nenhum token vale; não depende de a biblioteca tratar lista vazia.
-  if (config.emissoresAceitos.length === 0) throw naoAutenticado()
   let claims: unknown
   try {
     const verificado = await jwtVerify(token, config.chaveAssinatura, {
       algorithms: [ALGORITMO_TOKEN],
       typ: TIPO_TOKEN,
-      issuer: [...config.emissoresAceitos],
+      issuer: EMISSOR_TOKEN,
       requiredClaims: ['exp', 'sub', 'esc', 'sid'],
     })
     claims = verificado.payload

@@ -1,7 +1,6 @@
 export {
   CABECALHO_REQUISICAO_ID,
   contextoAtual,
-  definirIdentidadeNoContexto,
   definirSessaoNoContexto,
   executarNoContexto,
   middlewareDeContexto,
@@ -13,10 +12,8 @@ export {
   AMBIENTES,
   ConfiguracaoInvalida,
   EMISSOR_TOKEN,
-  EMISSOR_TOKEN_SINTETICO,
   lerConfiguracaoIdentidade,
   lerVagasPorEscolaDesligadas,
-  MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO,
   MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO,
   TAMANHO_MINIMO_CHAVE_ASSINATURA,
   validarAmbiente,

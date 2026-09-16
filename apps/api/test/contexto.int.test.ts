@@ -10,7 +10,6 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
-import { emitirTokenSintetico } from '../src/ops/token-sintetico.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 
@@ -203,20 +202,27 @@ describe('identidade pela sessão do token e GET /v1/sistema/contexto', () => {
   })
 })
 
-describe('token sintético do F0', () => {
+describe('o emissor sintético do F0 saiu (tarefa 3.0)', () => {
   const bancada = new BancadaDeSessoes()
 
   afterAll(async () => {
     await bancada.fechar()
   })
 
-  it.each(['true', 'false'])('com ACEITAR_TOKEN_SINTETICO=%s, o token sintético válido dá 401 (não há sessão para ele), e a sessão real e a rota anônima seguem respondendo', async (flag) => {
-    const app = await subirApi({ ACEITAR_TOKEN_SINTETICO: flag })
+  /** O mesmo token da sessão real, só que assinado com o emissor `sintetico` que existia no F0. */
+  const comEmissorSintetico = (sessao: SessaoDeTeste): Promise<string> =>
+    tokenAssinadoComAChaveDoAmbiente({ iss: 'sintetico', esc: sessao.escolaId, sub: sessao.usuarioId, sid: sessao.sessaoId })
+
+  it.each([
+    ['sem a variável, como o .env.example agora é', {}],
+    ['com ACEITAR_TOKEN_SINTETICO=true no ambiente, que já não liga nada', { ACEITAR_TOKEN_SINTETICO: 'true' }],
+  ])('a API sobe %s e recusa o token do emissor sintético, mesmo com a sessão real gravada', async (_caso, ambiente) => {
+    const app = await subirApi(ambiente)
     try {
       const sessao = await bancada.escolaComSessao()
-      const sintetico = await emitirTokenSintetico({ escolaId: sessao.escolaId, usuarioId: sessao.usuarioId, validadeSegundos: 600 }, ambienteDeTeste)
 
-      esperarNaoAutenticado(await request(app.getHttpServer()).get('/v1/sistema/contexto').set('Authorization', `Bearer ${sintetico}`))
+      esperarNaoAutenticado(await request(app.getHttpServer()).get('/v1/sistema/contexto').set('Authorization', `Bearer ${await comEmissorSintetico(sessao)}`))
+      // A mesma sessão, com o emissor `educa`, passa: o que recusou foi o emissor.
       expect((await request(app.getHttpServer()).get('/v1/sistema/contexto').set('Authorization', `Bearer ${sessao.token}`)).status).toBe(200)
       expect((await request(app.getHttpServer()).get('/saude')).status).toBe(200)
     } finally {

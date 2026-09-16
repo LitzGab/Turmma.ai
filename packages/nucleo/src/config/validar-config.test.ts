@@ -1,19 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import {
-  ConfiguracaoInvalida,
-  EMISSOR_TOKEN,
-  EMISSOR_TOKEN_SINTETICO,
-  lerConfiguracaoIdentidade,
-  lerVagasPorEscolaDesligadas,
-  MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO,
-  MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO,
-} from './validar-config.js'
+import { ConfiguracaoInvalida, esquemaAmbienteIdentidade, lerConfiguracaoIdentidade, lerVagasPorEscolaDesligadas, MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO } from './validar-config.js'
 
 const CHAVE_SINTETICA = 'chave_sintetica_de_teste_com_32_caracteres'
 
 const ambienteLocal = {
   AMBIENTE: 'local',
-  ACEITAR_TOKEN_SINTETICO: 'true',
   IDENTIDADE_CHAVE_ASSINATURA: CHAVE_SINTETICA,
 }
 
@@ -28,30 +19,20 @@ function erroDe(ambiente: Record<string, string | undefined>, ler: (ambiente: Re
 }
 
 describe('lerConfiguracaoIdentidade', () => {
-  it('com a flag ligada fora de produção, aceita o emissor da sessão real e o sintético', () => {
+  it('devolve só o ambiente e a chave: não há emissor configurável', () => {
     const config = lerConfiguracaoIdentidade(ambienteLocal)
-    expect(config.emissoresAceitos).toEqual([EMISSOR_TOKEN, EMISSOR_TOKEN_SINTETICO])
+    expect(Object.keys(config).sort()).toEqual(['ambiente', 'chaveAssinatura'])
+    expect(config.ambiente).toBe('local')
     expect(new TextDecoder().decode(config.chaveAssinatura)).toBe(CHAVE_SINTETICA)
   })
 
-  it('com a flag desligada, só o emissor da sessão real é aceito: o token sintético perde a validade', () => {
-    expect(lerConfiguracaoIdentidade({ ...ambienteLocal, ACEITAR_TOKEN_SINTETICO: 'false' }).emissoresAceitos).toEqual([EMISSOR_TOKEN])
+  it('sobe em produção com as mesmas variáveis: não sobrou flag de identidade que produção precise desligar', () => {
+    expect(lerConfiguracaoIdentidade({ ...ambienteLocal, AMBIENTE: 'producao' }).ambiente).toBe('producao')
   })
 
-  it('recusa AMBIENTE=producao com ACEITAR_TOKEN_SINTETICO=true, apontando a flag e o motivo', () => {
-    const erro = erroDe({ ...ambienteLocal, AMBIENTE: 'producao' })
-    expect(erro.variaveis).toEqual(['ACEITAR_TOKEN_SINTETICO'])
-    expect(erro.motivos).toEqual([MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO])
-    expect(erro.message).toContain(MOTIVO_TOKEN_SINTETICO_EM_PRODUCAO)
-  })
-
-  it('aceita produção com a flag desligada', () => {
-    const config = lerConfiguracaoIdentidade({ ...ambienteLocal, AMBIENTE: 'producao', ACEITAR_TOKEN_SINTETICO: 'false' })
-    expect(config).toMatchObject({ ambiente: 'producao', emissoresAceitos: [EMISSOR_TOKEN] })
-  })
-
-  it.each(['1', 'TRUE', 'True', 'sim', '', ' true'])('recusa ACEITAR_TOKEN_SINTETICO="%s": só true ou false, escritos assim', (valor) => {
-    expect(erroDe({ ...ambienteLocal, ACEITAR_TOKEN_SINTETICO: valor }).variaveis).toEqual(['ACEITAR_TOKEN_SINTETICO'])
+  it('a variável ACEITAR_TOKEN_SINTETICO não existe mais: mandá-la não muda nada e não reprova o boot', () => {
+    expect(Object.keys(esquemaAmbienteIdentidade.shape).sort()).toEqual(['AMBIENTE', 'IDENTIDADE_CHAVE_ASSINATURA'])
+    expect(lerConfiguracaoIdentidade({ ...ambienteLocal, ACEITAR_TOKEN_SINTETICO: 'true' })).toEqual(lerConfiguracaoIdentidade(ambienteLocal))
   })
 
   it.each(['prod', 'production', 'PRODUCAO', ''])('recusa AMBIENTE="%s": produção escrita de outro jeito não escapa da trava', (valor) => {

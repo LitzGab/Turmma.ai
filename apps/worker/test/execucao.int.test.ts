@@ -15,7 +15,7 @@ import { randomUUID } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { aguardarSaudavel, compose, composeAssincronoOuFalha, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
-import { BancadaDeFila, ESCOLA_A, ESCOLA_B, LogEmMemoria, urlRedisDeFila } from './fila-de-teste.js'
+import { BancadaDeFila, LogEmMemoria, urlRedisDeFila } from './fila-de-teste.js'
 
 // Despachantes e workers de verdade (a mesma montagem do main.ts), no processo do teste, contra o
 // Postgres e o Redis de fila do compose de teste. Cada bancada usa um prefixo próprio no BullMQ.
@@ -31,10 +31,15 @@ beforeAll(() => {
 
 describe('dois despachantes e dois workers sobre a mesma fila', () => {
   let bancada: BancadaDeFila
+  // Escolas reais, criadas a cada caso: desde a tarefa 3.0 `job_registro` e
+  // `configuracao_operacional_escola` têm FK para `escola`, e id inventado é recusado pelo banco.
+  let ESCOLA_A: string
+  let ESCOLA_B: string
 
   beforeEach(async () => {
     bancada = new BancadaDeFila()
     await bancada.limparRegistro()
+    ;[ESCOLA_A, ESCOLA_B] = await Promise.all([bancada.escola(), bancada.escola()])
   })
 
   afterEach(async () => {

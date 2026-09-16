@@ -27,7 +27,7 @@ A web fica em http://127.0.0.1:58080: a casca, em pt-BR e responsiva até 360 px
 `GET /v1/sistema/estado` e `/v1/sistema/avisos` (rotas anônimas; os avisos vêm de `AVISOS_SISTEMA`) e
 mostra carregando, vazio, erro e com dado com os componentes de `apps/web/src/componentes/estado/`; a API responde pela borda
 (Caddy, `infra/Caddyfile`) em http://127.0.0.1:53000/saude, e o realtime em
-http://127.0.0.1:53000/socket.io/. A borda balanceia duas instâncias de cada, e
+http://127.0.0.1:53000/socket.io/, que autentica o handshake pela mesma sessão gravada da API. A borda balanceia duas instâncias de cada, e
 `docker compose restart api-1` troca uma instância sem derrubar requisição. Antes das
 instâncias, o serviço `migrar` aplica as migrations (`packages/nucleo/drizzle`) e sai. Todo
 job nasce em `job_registro`, os dois despachantes o levam à fila dele no Redis (interativa,
@@ -54,8 +54,8 @@ desenvolvimento.
 | `npm run test:e2e` | mede o teto do bundle da web (size-limit, 150 kB em brotli), sobe o compose de teste completo e roda o Playwright com axe nos projetos `chromebook` (CPU ×4, Fast 3G) e `celular` (360 × 800, toque, CPU ×4, rede móvel lenta), deixando o ambiente de pé |
 | `npm run ci:verificar`, `ci:integracao`, `ci:infra`, `ci:e2e` | exatamente o que a esteira roda; derrubam o ambiente no fim |
 | `npm run db:gerar` | gera a migration a partir do schema Drizzle (`packages/nucleo/src/db/schema`); revise o SQL antes de versionar |
-| `npm run -s ops:token-sintetico -- --escola <uuid> [--usuario <uuid> \| --quantidade <n>] [--validade 1h]` | imprime um token sintético para chamar a API local (`Authorization: Bearer`), ou `n` tokens de usuários distintos, um por linha; não emite com `AMBIENTE=producao`. Desde a tarefa 2.0 a API recusa esse token (não há sessão para ele); ele só vale no handshake do realtime, e sai na tarefa 3.0 |
-| `npm run -s ops:sessao-sintetica -- --escola <uuid> --papel aluno\|professor\|coordenador [--quantidade <n>]` | cria, na escola informada, `n` usuários sintéticos com sessão real e imprime o token de cada um, um por linha (vale 10 min; a sessão, 12 h); só roda com `AMBIENTE=local` |
+| `OPERADOR=<voce> npm run -s ops:escola -- rede criar --nome <nome> --tipo prefeitura\|grupo\|independente` e `escola criar --rede <uuid> --nome <nome> --slug <endereco>` | cria a rede e a escola, imprimindo só o id; é o único caminho de criação, e grava a auditoria com o operador |
+| `npm run -s ops:sessao-sintetica -- --escola <uuid> --papel aluno\|professor\|coordenador [--quantidade <n>]` | cria, na escola informada, `n` usuários sintéticos com sessão real e imprime o token de cada um, um por linha (vale 10 min; a sessão, 12 h); é o único token que a API e o realtime aceitam, e só roda com `AMBIENTE=local` |
 | `npm run carga` | cenário de carga "justiça entre escolas": sobe o projeto `educa-carga` (portas de `infra/carga.env`, CPU fixa por serviço em `infra/compose.carga.yml`), roda o k6 (`infra/k6/justica-entre-escolas.js`) na fase base e na de carga, confere `job_registro` e derruba tudo; sai vermelho se um critério falhar (uns 12 min). Manual: roda de novo quando uma tarefa mexe no caminho quente |
 | `npm run carga:controle-negativo` | o mesmo cenário com a vaga por escola desligada (`VAGAS_POR_ESCOLA_DESLIGADAS=true`); sai verde só se o cenário reprovar pela justiça entre escolas |
 

@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
-import { BancadaDeFila, configuracaoDoBanco, ESCOLA_A, ESCOLA_B, LogEmMemoria } from '../../worker/test/fila-de-teste.js'
+import { BancadaDeFila, configuracaoDoBanco, LogEmMemoria } from '../../worker/test/fila-de-teste.js'
 
 // A medição das filas do despachante de verdade (a mesma montagem do main.ts), contra o Postgres e o Redis
 // de fila do compose de teste, com o horário letivo padrão de `.env.example`. O relógio falso põe a escola
@@ -31,12 +31,17 @@ beforeAll(() => {
 
 describe('medição das filas por escola, no despachante', () => {
   let bancada: BancadaDeFila
+  // Escolas reais, criadas a cada caso: desde a tarefa 3.0 `job_registro` e
+  // `configuracao_operacional_escola` têm FK para `escola`, e id inventado é recusado pelo banco.
+  let ESCOLA_A: string
+  let ESCOLA_B: string
   let medidor: MedidorDeTeste
 
   beforeEach(async () => {
     bancada = new BancadaDeFila()
     medidor = new MedidorDeTeste()
     await bancada.limparRegistro()
+    ;[ESCOLA_A, ESCOLA_B] = await Promise.all([bancada.escola(), bancada.escola()])
   })
 
   afterEach(async () => {
@@ -125,7 +130,9 @@ describe('medição das filas por escola, no despachante', () => {
        select $1, 'lote', 3, 'sintetico', now() - make_interval(secs => g) from generate_series(1, 5000) as g`,
       [ESCOLA_A],
     )
-    for (const escolaId of [ESCOLA_B, randomUUID(), randomUUID()]) await job(escolaId, 'interativa', { haSegundos: 3 })
+    // Mais duas escolas reais: a medição precisa de várias escolas na tabela, e a FK de `escola_id` não aceita id solto.
+    const outras = await Promise.all([bancada.escola(), bancada.escola()])
+    for (const escolaId of [ESCOLA_B, ...outras]) await job(escolaId, 'interativa', { haSegundos: 3 })
     // Uma semana de histórico, como a retenção de 7 dias deixa: é ele que torna a varredura cara.
     await bancada.pool.query(
       `insert into job_registro (escola_id, fila, prioridade, tipo, estado, concluido_em)

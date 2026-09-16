@@ -1,14 +1,16 @@
 import { criarBanco, criarPool, type Banco, type PoolBanco } from '@educa/nucleo'
-import { randomUUID } from 'node:crypto'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
 import { consultarUso } from '../src/ops/uso.js'
+import { BancadaDeSessoes } from './sessao-de-teste.js'
 
 describe('npm run ops:uso: consulta de uso por escola no dia e no mês', () => {
+  const bancada = new BancadaDeSessoes()
   let pool: PoolBanco
   let banco: Banco
-  const escolaA = randomUUID()
-  const escolaB = randomUUID()
+  // Escolas reais: desde a tarefa 3.0 `uso_infra_diario` tem FK para `escola`.
+  let escolaA: string
+  let escolaB: string
 
   const gravar = (escolaId: string, dia: string, requisicoes: number, jobs: number, bytes: number) =>
     pool.query('insert into uso_infra_diario (escola_id, dia, requisicoes, jobs, bytes_storage) values ($1, $2, $3, $4, $5)', [escolaId, dia, requisicoes, jobs, bytes])
@@ -16,6 +18,7 @@ describe('npm run ops:uso: consulta de uso por escola no dia e no mês', () => {
   beforeAll(async () => {
     pool = criarPool({ url: urlDoBancoDeTeste(), maximoConexoes: 2, timeoutConexaoMs: 2_000, timeoutConsultaMs: 2_000 }, () => undefined)
     banco = criarBanco(pool)
+    ;[escolaA, escolaB] = await Promise.all([bancada.escola(), bancada.escola()])
   })
 
   afterEach(async () => {
@@ -24,6 +27,7 @@ describe('npm run ops:uso: consulta de uso por escola no dia e no mês', () => {
 
   afterAll(async () => {
     await pool.end()
+    await bancada.fechar()
   })
 
   it('o dia é o do pedido; o mês soma requisições e jobs dos dias dele e leva o pico de bytes, sem o dia do mês seguinte', async () => {

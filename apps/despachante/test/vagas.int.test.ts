@@ -20,13 +20,11 @@ import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
 import { FalhaDeJob } from '../../worker/src/falha-de-job.js'
 import type { Processador } from '../../worker/src/executor.js'
-import { BancadaDeFila, configuracaoDoBanco, ESCOLA_A, ESCOLA_B, LogEmMemoria, urlRedisDeFila } from '../../worker/test/fila-de-teste.js'
+import { BancadaDeFila, configuracaoDoBanco, LogEmMemoria, urlRedisDeFila } from '../../worker/test/fila-de-teste.js'
 
 // Despachantes e workers de verdade (a mesma montagem do main.ts), no processo do teste, contra o
 // Postgres e o Redis de fila do compose de teste, com as vagas padrão de `.env.example`
 // (interativa 5, normal 5, lote 2).
-
-const ESCOLA_C = '0190f5a0-0000-7000-8000-00000000000c'
 
 interface NoDoPlano {
   'Index Name'?: string
@@ -87,11 +85,17 @@ beforeAll(() => {
 
 describe('vagas por escola e filas por prioridade', () => {
   let bancada: BancadaDeFila
+  // Escolas reais, criadas a cada caso: desde a tarefa 3.0 `job_registro` e
+  // `configuracao_operacional_escola` têm FK para `escola`, e id inventado é recusado pelo banco.
+  let ESCOLA_A: string
+  let ESCOLA_B: string
+  let ESCOLA_C: string
   const processadores: ProcessadorContado[] = []
 
   beforeEach(async () => {
     bancada = new BancadaDeFila()
     await bancada.limparRegistro()
+    ;[ESCOLA_A, ESCOLA_B, ESCOLA_C] = await Promise.all([bancada.escola(), bancada.escola(), bancada.escola()])
   })
 
   afterEach(async () => {

@@ -10,8 +10,19 @@ import { aguardarInterativosIniciados, conferirJobRegistro, ESPERA_MAXIMA_INTERA
 const pool = new pg.Pool({ connectionString: urlDoBancoDeTeste(), max: 2 })
 const escolasDoTeste: string[] = []
 
-function escola(): string {
-  const id = randomUUID()
+/**
+ * Escola de verdade, com rede própria: desde a tarefa 3.0 `job_registro` tem FK para `escola`, e id
+ * inventado seria recusado pelo banco. O cenário cria as dele com `ops:escola`; aqui o insert é direto,
+ * porque a conferência só olha `job_registro` e o banco de teste é descartável.
+ */
+async function escola(): Promise<string> {
+  const { rows } = await pool.query<{ id: string }>(
+    `with nova_rede as (insert into rede (nome, tipo) values ('Rede da conferência', 'independente') returning id)
+     insert into escola (rede_id, nome, slug) select id, 'Escola da conferência', $1 from nova_rede returning id`,
+    [`conferencia-${randomUUID()}`],
+  )
+  const id = rows[0]?.id
+  if (id === undefined) throw new Error('escola de teste não criada')
   escolasDoTeste.push(id)
   return id
 }
@@ -54,8 +65,7 @@ afterAll(async () => {
 
 describe('conferência do cenário de carga em job_registro', () => {
   it('aprova quando todo interativo começou dentro de 30 s e nenhum job falhou, com a espera por escola e fila', async () => {
-    const a = escola()
-    const b = escola()
+    const [a, b] = await Promise.all([escola(), escola()])
     await gravar(
       { escolaId: a, estado: 'concluido', criadoHaMs: 60_000, esperaMs: 12_000 },
       { escolaId: a, estado: 'concluido', criadoHaMs: 50_000, esperaMs: 29_000 },
@@ -73,14 +83,14 @@ describe('conferência do cenário de carga em job_registro', () => {
   })
 
   it('reprova com interativo que esperou mais de 30 s para começar, mesmo que tenha concluído', async () => {
-    const a = escola()
+    const a = await escola()
     await gravar({ escolaId: a, estado: 'concluido', criadoHaMs: 90_000, esperaMs: ESPERA_MAXIMA_INTERATIVO_MS + 1_000 })
     const { reprovacoes } = await conferirJobRegistro(pool, [a])
     expect(reprovacoes).toEqual(['1 job(s) interativo(s) esperaram mais de 30 s para começar'])
   })
 
   it('reprova com interativo que ainda não começou e já passou de 30 s: parado na fila também é espera', async () => {
-    const a = escola()
+    const a = await escola()
     await gravar({ escolaId: a, estado: 'publicado', criadoHaMs: 31_000 }, { escolaId: a, estado: 'aguardando', criadoHaMs: 1_000 })
     const conferencia = await conferirJobRegistro(pool, [a])
     expect(conferencia.reprovacoes).toEqual(['1 job(s) interativo(s) esperaram mais de 30 s para começar'])
@@ -88,14 +98,13 @@ describe('conferência do cenário de carga em job_registro', () => {
   })
 
   it('reprova com job falhou, em qualquer fila', async () => {
-    const a = escola()
+    const a = await escola()
     await gravar({ escolaId: a, fila: 'lote', estado: 'falhou', criadoHaMs: 20_000, esperaMs: 100 })
     expect((await conferirJobRegistro(pool, [a])).reprovacoes).toEqual(['1 job(s) terminaram falhou'])
   })
 
   it('só olha as escolas do cenário: a falha de outra escola no mesmo banco não entra', async () => {
-    const doCenario = escola()
-    const outra = escola()
+    const [doCenario, outra] = await Promise.all([escola(), escola()])
     await gravar({ escolaId: doCenario, estado: 'concluido', criadoHaMs: 5_000, esperaMs: 30 }, { escolaId: outra, estado: 'falhou', criadoHaMs: 5_000, esperaMs: 30 })
     const conferencia = await conferirJobRegistro(pool, [doCenario])
     expect(conferencia.reprovacoes).toEqual([])
@@ -103,11 +112,11 @@ describe('conferência do cenário de carga em job_registro', () => {
   })
 
   it('reprova quando nenhum job das escolas está no banco: cenário que não enfileirou nada não passa', async () => {
-    expect((await conferirJobRegistro(pool, [escola()])).reprovacoes).toEqual(['nenhum job das escolas do cenário em job_registro'])
+    expect((await conferirJobRegistro(pool, [await escola()])).reprovacoes).toEqual(['nenhum job das escolas do cenário em job_registro'])
   })
 
   it('espera os interativos começarem até o prazo, sem esperar o lote', async () => {
-    const a = escola()
+    const a = await escola()
     await gravar({ escolaId: a, fila: 'lote', estado: 'aguardando', criadoHaMs: 1_000 }, { escolaId: a, estado: 'aguardando', criadoHaMs: 1_000 })
     const inicio = performance.now()
     const espera = aguardarInterativosIniciados(pool, [a], 20_000)
@@ -116,7 +125,7 @@ describe('conferência do cenário de carga em job_registro', () => {
     await espera
     expect(performance.now() - inicio).toBeLessThan(5_000)
 
-    const b = escola()
+    const b = await escola()
     await gravar({ escolaId: b, estado: 'aguardando', criadoHaMs: 1_000 })
     const inicioB = performance.now()
     await aguardarInterativosIniciados(pool, [b], 1_500)

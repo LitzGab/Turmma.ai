@@ -1,7 +1,7 @@
 # Tarefas — Identidade e tenancy
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 2 de 20 concluídas
+**Status:** 3 de 20 concluídas
 
 ## Lista
 
@@ -19,12 +19,12 @@
   - [x] 2.5 Varredura dos contratos de saída e `ops:sessao-sintetica` só com `AMBIENTE=local`
   - [x] 2.6 Testes: sessão encerrada corta na requisição seguinte, `sub` de A com `esc` de B, ordem das guardas sem consulta ao banco, 503 com o Postgres fora, escola sem ano em curso
 
-- [ ] **3.0 — O F0 passa a usar a sessão real e as tabelas do F0 apontam para a escola**
-  - [ ] 3.1 Sai `ACEITAR_TOKEN_SINTETICO`, o emissor sintético e `ops:token-sintetico`
-  - [ ] 3.2 Testes de integração do F0, helper de fila e cenário `justica-entre-escolas` montam escola e sessão pelo seed e `ops:sessao-sintetica`
-  - [ ] 3.3 Handshake do realtime com a mesma leitura da guarda
-  - [ ] 3.4 Migration só com a FK `NOT VALID` de `escola_id` em `job_registro`, `configuracao_operacional_escola` e `uso_infra_diario`
-  - [ ] 3.5 Testes: token do emissor antigo recusado, job de escola inexistente recusado, handshake de A fora da sala de B, `npm run carga` verde
+- [x] **3.0 — O F0 passa a usar a sessão real e as tabelas do F0 apontam para a escola**
+  - [x] 3.1 Sai `ACEITAR_TOKEN_SINTETICO`, o emissor sintético e `ops:token-sintetico`
+  - [x] 3.2 Testes de integração do F0, helper de fila e cenário `justica-entre-escolas` montam escola e sessão pelo seed e `ops:sessao-sintetica`
+  - [x] 3.3 Handshake do realtime com a mesma leitura da guarda
+  - [x] 3.4 Migration só com a FK `NOT VALID` de `escola_id` em `job_registro`, `configuracao_operacional_escola` e `uso_infra_diario`
+  - [x] 3.5 Testes: token do emissor antigo recusado, job de escola inexistente recusado, handshake de A fora da sala de B, `npm run carga` verde
 
 - [ ] **4.0 — Equipe entra por e-mail e senha**
   - [ ] 4.1 `POST /v1/sessao/email` com argon2id e hash fixo para inexistente

@@ -75,12 +75,15 @@ describe('ambiente do compose', () => {
       const maximo = servico.environment?.['BANCO_POOL_MAXIMO']
       return maximo === undefined || maximo === null ? [] : [{ nome, maximo: Number(maximo) }]
     })
-    // Todo processo com pool entra na soma: as duas APIs, os dois despachantes (com o LISTEN dentro do pool) e os quatro workers.
+    // Todo processo com pool entra na soma: as duas APIs, os dois realtimes (o handshake lê a sessão), os dois
+    // despachantes (com o LISTEN dentro do pool) e os quatro workers.
     expect(comPool.map(({ nome }) => nome).sort()).toEqual([
       'api-1',
       'api-2',
       'despachante-1',
       'despachante-2',
+      'realtime-1',
+      'realtime-2',
       'worker-interativo-1',
       'worker-interativo-2',
       'worker-lote-1',

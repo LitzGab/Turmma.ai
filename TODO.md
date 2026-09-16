@@ -51,6 +51,22 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       filtro de conteúdo que bloqueie WebSocket
 - [ ] Antes do piloto: canal e texto para avisar as escolas de incidente
       (`docs/runbook.md:198`, pendência da validação do F0)
+- [ ] Validar a FK de `escola_id` das tabelas do F0, numa migration de deploy fora do horário
+      letivo (regra 80, item 9). A migration 0006 acrescentou as três restrições `NOT VALID`:
+      elas já barram escrita nova, mas as linhas anteriores ao F1 nunca foram conferidas.
+      Antes de rodar, esta consulta precisa dar zero em cada tabela:
+
+      ```sql
+      select 'job_registro' as tabela, count(*) from job_registro j
+        where j.escola_id is not null and not exists (select 1 from escola e where e.id = j.escola_id)
+      union all select 'configuracao_operacional_escola', count(*) from configuracao_operacional_escola c
+        where not exists (select 1 from escola e where e.id = c.escola_id)
+      union all select 'uso_infra_diario', count(*) from uso_infra_diario u
+        where not exists (select 1 from escola e where e.id = u.escola_id);
+      ```
+
+      Com zero, a migration é `ALTER TABLE <tabela> VALIDATE CONSTRAINT <nome>_escola_id_escola_id_fk`
+      nas três, uma por vez (dono: Joaquim)
 
 ## Processo e dívida do F0
 
@@ -73,6 +89,24 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       (menor 5 da rodada 2)
 - [ ] Decidir os achados da auditoria da 16.0 fora do escopo: renovação da vaga durante o
       recuo, devolução do ponto no limitador, despachante serial (`16_task.md`)
+- [ ] Descobrir por que o controle negativo do cenário de carga parou de reprovar. Em
+      16/09/2026, em duas execuções seguidas, `npm run carga:controle-negativo` **não reprovou**:
+      sem a vaga por escola, a espera da escola B ficou em 84 ms e 125 ms, contra o limiar de
+      base + 500 ms. Em 14/09/2026 ele reprovava, com a B em p95 2,53 s contra 507 ms
+      (`tasks/prd-fundacao-tecnica/15_task.md`, validação da 15.0). Não é a máquina ter ficado
+      folgada por acaso: entre as duas medições entrou o commit `364049c`
+      (`UV_THREADPOOL_SIZE=16` e `dns_opt` em api, realtime, despachante e worker), e na mesma
+      comparação a espera dos interativos da própria A caiu de p95 10,3 s para 6,1 s — a vazão
+      do worker subiu. A validação do F0 registra o mesmo na rodada dela
+      (`tasks/prd-fundacao-tecnica/validacao.md`, RF18: controle negativo com `espera_b`
+      p95 2,63 s), ou seja, são vinte vezes mais que agora. A pergunta a responder primeiro não
+      é qual limiar mexer, e sim **por que a carga da escola A deixou de saturar o worker** — se
+      ela não satura mais, o `npm run carga` verde também prova menos do que diz. Primeiro passo:
+      repetir o cenário com o `UV_THREADPOOL_SIZE` de antes, para confirmar ou descartar essa
+      causa; só depois decidir se o que muda é o cenário, o limiar ou a CPU de
+      `infra/compose.carga.yml`. Enquanto isso, o controle negativo não está controlando nada.
+      A regra 80, item 3, continua provada por `apps/despachante/test/vagas.int.test.ts`
+      (controle negativo da vaga e "A sem vaga não atrasa B"), que roda no portão (dono: Joaquim)
 - [x] ~~Teste intermitente da borda ("API não depende do resto")~~ — não era o teste: nome de
       serviço parado esgotava as 4 threads do libuv e a conexão ao Postgres esperava 15 s. Corrigido
       com `UV_THREADPOOL_SIZE=16` e resolvedor de 1 s (`docs/infra.md`, "Threads e DNS")

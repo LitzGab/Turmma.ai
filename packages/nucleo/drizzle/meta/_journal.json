@@ -43,6 +43,13 @@
       "when": 1789507489046,
       "tag": "0005_ano_letivo_conta_usuario_sessao_registro_acesso",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789542231308,
+      "tag": "0006_fk_escola_nas_tabelas_do_f0",
+      "breakpoints": true
     }
   ]
 }

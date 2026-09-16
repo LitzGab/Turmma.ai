@@ -12,9 +12,7 @@ import { AppModule } from '../../api/src/app.module.js'
 import { configurarAplicacao } from '../../api/src/configurar-app.js'
 import { configuracaoDeTeste } from '../../api/test/configuracao-de-teste.js'
 import { BancadaDeSessoes } from '../../api/test/sessao-de-teste.js'
-import { BancadaDeFila, ESCOLA_A, ESCOLA_B, LogEmMemoria } from '../../worker/test/fila-de-teste.js'
-
-const ESCOLA_C = '0190f5a0-0000-7000-8000-00000000000c'
+import { BancadaDeFila, LogEmMemoria } from '../../worker/test/fila-de-teste.js'
 
 // API, despachantes e worker de verdade (a mesma montagem do main.ts), no processo do teste, contra o
 // Postgres e o Redis de fila do compose de teste, que este arquivo para, trava e religa.
@@ -119,10 +117,14 @@ describe('Redis de fila fora', () => {
     bancada.despachante(logDespachante, { batimento: new Batimento(arquivoDoBatimento) }).despachante.iniciar()
     await new Promise((resolver) => setTimeout(resolver, 1_000))
 
+    // Escolas reais: desde a tarefa 3.0 `job_registro` tem FK para `escola`. Criadas antes do `pause`,
+    // porque a criação grava auditoria no mesmo Postgres.
+    const [escolaA, escolaB, escolaC] = await Promise.all([bancada.escola(), bancada.escola(), bancada.escola()])
+
     compose('pause', 'redis-fila')
     const inicio = performance.now()
     // Três escolas com job: com o Redis travado, tentar a vaga de cada uma custaria o prazo três vezes por rodada.
-    const antes = [await bancada.enfileirar(ESCOLA_A), await bancada.enfileirar(ESCOLA_B), await bancada.enfileirar(ESCOLA_C)]
+    const antes = [await bancada.enfileirar(escolaA), await bancada.enfileirar(escolaB), await bancada.enfileirar(escolaC)]
     await expect.poll(() => logDespachante.doEvento('despachante.vaga_indisponivel').length, { timeout: 10_000, interval: 50 }).toBe(1)
     const desistiuEmMs = performance.now() - inicio
     expect(desistiuEmMs).toBeGreaterThanOrEqual(TIMEOUT_COMANDO_REDIS_FILA_MS - 100)
@@ -130,7 +132,7 @@ describe('Redis de fila fora', () => {
 
     // O laço não ficou preso: bate a cada rodada (uma espera de prazo por rodada, e não uma por escola),
     // bem abaixo da idade que o healthcheck tolera, e o job que chega depois não trava nada.
-    const depois = await bancada.enfileirar(ESCOLA_A)
+    const depois = await bancada.enfileirar(escolaA)
     for (let conferencia = 0; conferencia < 4; conferencia++) {
       await new Promise((resolver) => setTimeout(resolver, 1_500))
       expect(idadeDoBatimento()).toBeLessThan(TIMEOUT_COMANDO_REDIS_FILA_MS + 1_500)

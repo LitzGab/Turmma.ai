@@ -47,8 +47,10 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
   const montados: WorkerMontado[] = []
   const log = new LogEmMemoria('worker-teste')
 
-  const novaEscola = () => {
-    const escolaId = randomUUID()
+  // Escola real: desde a tarefa 3.0 `uso_infra_diario` tem FK para `escola`, e a consolidação de um id
+  // inventado seria recusada pelo banco.
+  const novaEscola = async (): Promise<string> => {
+    const escolaId = await bancada.escola()
     escolasDoTeste.push(escolaId)
     return escolaId
   }
@@ -103,7 +105,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
   }, 60_000)
 
   it('caminho feliz: N requisições e M jobs da escola A, executados pelo worker de verdade, aparecem no dia e no mês', async () => {
-    const [escolaA, escolaB] = [novaEscola(), novaEscola()]
+    const [escolaA, escolaB] = await Promise.all([novaEscola(), novaEscola()])
     marcarRequisicoes(escolaA, 5)
     const worker = montarWorker({ banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), pools: { interativa: 3 }, vagasPadrao: vagasPadraoDoAmbiente(), threadsMaximo: 1 }, log.logger, {
       prefixo: bancada.prefixo,
@@ -133,7 +135,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
   })
 
   it('isolamento: duas escolas no mesmo dia, cada uma com a própria contagem, e a consulta de uma não enxerga a outra', async () => {
-    const [escolaA, escolaB] = [novaEscola(), novaEscola()]
+    const [escolaA, escolaB] = await Promise.all([novaEscola(), novaEscola()])
     marcarRequisicoes(escolaA, 4)
     marcarRequisicoes(escolaB, 9)
     await aguardarContador(escolaA, '2026-09-15', 'req', 4)
@@ -146,7 +148,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
   })
 
   it('concorrência: duas consolidações em paralelo, e uma terceira depois, não dobram o valor', async () => {
-    const escolaA = novaEscola()
+    const escolaA = await novaEscola()
     marcarRequisicoes(escolaA, 7)
     await aguardarContador(escolaA, '2026-09-15', 'req', 7)
     agora = QUARTA_2H
@@ -158,7 +160,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
   })
 
   it('reexecução depois de gravar e antes de apagar (worker morto): regrava o mesmo valor, sem somar', async () => {
-    const escolaA = novaEscola()
+    const escolaA = await novaEscola()
     marcarRequisicoes(escolaA, 6)
     await aguardarContador(escolaA, '2026-09-15', 'req', 6)
     agora = QUARTA_2H
@@ -181,7 +183,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
   })
 
   it('incremento que chega entre a leitura e a remoção não se perde: a chave fica, e a próxima consolidação grava o valor novo', async () => {
-    const escolaA = novaEscola()
+    const escolaA = await novaEscola()
     marcarRequisicoes(escolaA, 2)
     await aguardarContador(escolaA, '2026-09-15', 'req', 2)
     await executarNoContexto({ requisicaoId: randomUUID(), escolaId: escolaA }, async () => {
@@ -195,7 +197,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
   })
 
   it('incremento atrasado que faz renascer a chave de um dia já consolidado não troca o total do dia pelo valor pequeno', async () => {
-    const escolaA = novaEscola()
+    const escolaA = await novaEscola()
     marcarRequisicoes(escolaA, 6)
     await aguardarContador(escolaA, '2026-09-15', 'req', 6)
     agora = QUARTA_2H
@@ -210,7 +212,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
   })
 
   it('borda: 23h59 e 00h01 de São Paulo caem em dias diferentes, 31/12 fecha dezembro, e o dia aberto não é consolidado', async () => {
-    const escolaA = novaEscola()
+    const escolaA = await novaEscola()
     agora = new Date('2026-12-31T23:59:00-03:00')
     marcarRequisicoes(escolaA, 1)
     agora = new Date('2027-01-01T00:01:00-03:00')
@@ -233,7 +235,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
   })
 
   it('borda: os bytes de escolas/{a}/ não somam escolas/{a}x/, e os de B ficam na B, no dia que fechou', async () => {
-    const [escolaA, escolaB] = [novaEscola(), novaEscola()]
+    const [escolaA, escolaB] = await Promise.all([novaEscola(), novaEscola()])
     await guardar(`escolas/${escolaA}/apostila.pdf`, 100)
     await guardar(`escolas/${escolaA}/provas/2026/p1.png`, 50)
     await guardar(`escolas/${escolaA}x/intruso.pdf`, 1_000)
@@ -263,7 +265,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
   })
 
   it('só a rotina do sistema consolida: um job de escola com o tipo da consolidação falha sem tocar em nada', async () => {
-    const escolaA = novaEscola()
+    const escolaA = await novaEscola()
     marcarRequisicoes(escolaA, 2)
     await aguardarContador(escolaA, '2026-09-15', 'req', 2)
     agora = QUARTA_2H
@@ -310,7 +312,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
     })
 
     it('trilha completa: disparo na fila de agendamentos → job_registro → despachante → worker de lote → uso consolidado e job concluido', async () => {
-      const escolaA = novaEscola()
+      const escolaA = await novaEscola()
       marcarRequisicoes(escolaA, 8)
       await aguardarContador(escolaA, '2026-09-15', 'req', 8)
       agora = QUARTA_2H

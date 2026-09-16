@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -15,7 +16,8 @@ import { aguardarInterativosIniciados, conferirJobRegistro, descreverConferencia
  *   npm run carga:controle-negativo  o mesmo, com VAGAS_POR_ESCOLA_DESLIGADAS=true, e reprova se o cenário passar
  *
  * 1. sobe o projeto `educa-carga` (infra/compose.yml com infra/compose.carga.yml, CPU fixa por serviço);
- * 2. gera os tokens das escolas sintéticas A, B e C com `ops:token-sintetico`;
+ * 2. cria a rede e as escolas sintéticas A, B e C com `ops:escola` e as sessões de cada grupo com
+ *    `ops:sessao-sintetica --quantidade`, no banco do projeto que acabou de subir;
  * 3. roda o k6 na fase `base` (só a escola B) e lê o p95 da espera dela;
  * 4. roda o k6 na fase `carga`, com esse p95 no threshold de espera da B;
  * 5. espera os interativos começarem e confere `job_registro` (nenhum `falhou`, nenhum interativo acima de 30 s);
@@ -30,25 +32,33 @@ export const ARQUIVOS_AMBIENTE_CARGA = ['.env.example', 'infra/carga.env'] as co
 export const ARQUIVOS_COMPOSE_CARGA = ['infra/compose.yml', 'infra/compose.carga.yml'] as const
 export const SCRIPT_DO_K6 = '/cenario/justica-entre-escolas.js'
 
-/** Escolas sintéticas do cenário: A enche a fila, B mede a espera, C prova o rate limit. */
-export const ESCOLAS = {
-  A: '0190f5a0-0000-7000-8000-00000000ca0a',
-  B: '0190f5a0-0000-7000-8000-00000000ca0b',
-  C: '0190f5a0-0000-7000-8000-00000000ca0c',
-} as const
+/**
+ * Escolas sintéticas do cenário: A enche a fila, B mede a espera, C prova o rate limit. Desde a tarefa 3.0 elas
+ * são criadas de verdade pelo `ops:escola` antes do k6, porque `job_registro` tem FK para `escola` e não existe
+ * mais token sem sessão gravada. O id sai do comando; aqui ficam só os nomes.
+ */
+export const NOMES_DAS_ESCOLAS = ['A', 'B', 'C'] as const
+export type NomeDeEscola = (typeof NOMES_DAS_ESCOLAS)[number]
+export type EscolasDoCenario = Record<NomeDeEscola, string>
+
+/** Quem a auditoria da rede e das escolas do cenário registra como operador. */
+export const OPERADOR_DA_CARGA = 'carga-justica'
 
 /**
- * Tokens por grupo do k6. Na A, 50 jobs por usuário na rajada, abaixo dos 120 por minuto; na B, cada usuário cria
+ * Sessões por grupo do k6. Na A, 50 jobs por usuário na rajada, abaixo dos 120 por minuto; na B, cada usuário cria
  * uns 4 jobs por minuto e consulta cada um algumas vezes; na C, um usuário por VU, e há mais tokens que VUs no teste
  * inteiro (400 da C e 2 do abusivo, 400 anônimos, 50 da A e até 60 da B); o abusivo é um usuário só.
+ *
+ * O papel vem da `MATRIZ`: `POST /v1/sistema/jobs-sinteticos` é da equipe (A e B são professores), e
+ * `GET /v1/sistema/contexto` é `proprio` para todo papel (a C é a turma de alunos que o cenário simula).
  */
 export const TOKENS_POR_GRUPO = {
-  a_lote: { escola: ESCOLAS.A, quantidade: 40 },
-  a_interativo: { escola: ESCOLAS.A, quantidade: 10 },
-  b: { escola: ESCOLAS.B, quantidade: 30 },
-  c: { escola: ESCOLAS.C, quantidade: 1_000 },
-  abusivo: { escola: ESCOLAS.C, quantidade: 1 },
-} as const
+  a_lote: { escola: 'A', papel: 'professor', quantidade: 40 },
+  a_interativo: { escola: 'A', papel: 'professor', quantidade: 10 },
+  b: { escola: 'B', papel: 'professor', quantidade: 30 },
+  c: { escola: 'C', papel: 'aluno', quantidade: 1_000 },
+  abusivo: { escola: 'C', papel: 'aluno', quantidade: 1 },
+} as const satisfies Record<string, { escola: NomeDeEscola; papel: 'aluno' | 'professor' | 'coordenador'; quantidade: number }>
 
 /** Os critérios que a vaga por escola sustenta: é por eles, e só por eles, que o controle negativo precisa reprovar. */
 export const CRITERIOS_DE_JUSTICA = ['espera_b', 'interativo_acima_de_30s'] as const
@@ -174,13 +184,39 @@ function lerAmbienteDaCarga(): Record<string, string> {
   return valores
 }
 
-async function gerarTokens(ambiente: NodeJS.ProcessEnv): Promise<Record<string, string[]>> {
+/** Roda o `ops:escola` e devolve o id que ele imprime em JSON, sem ecoar a saída (ela pode trazer o slug). */
+async function idDoOpsEscola(argumentos: readonly string[], ambiente: NodeJS.ProcessEnv, campo: 'redeId' | 'escolaId'): Promise<string> {
+  const { codigo, saida } = await rodar('npm', ['run', '-s', 'ops:escola', '--', ...argumentos], ambiente, true)
+  const linha = saida.trim().split('\n').at(-1) ?? ''
+  const valor = codigo === 0 ? (JSON.parse(linha) as Record<string, unknown>)[campo] : undefined
+  if (typeof valor !== 'string') throw new Error(`ops:escola não devolveu ${campo}`)
+  return valor
+}
+
+/**
+ * Cria a rede e as três escolas do cenário no banco do projeto de carga, que já subiu com as migrations
+ * aplicadas. Endereço sorteado a cada execução: o volume é derrubado no fim, mas duas execuções sobrepostas
+ * não disputam o mesmo slug.
+ */
+async function criarEscolasDoCenario(ambiente: NodeJS.ProcessEnv): Promise<EscolasDoCenario> {
+  const comOperador = { ...ambiente, OPERADOR: OPERADOR_DA_CARGA }
+  const redeId = await idDoOpsEscola(['rede', 'criar', '--nome', 'Rede sintética da carga', '--tipo', 'independente'], comOperador, 'redeId')
+  const entradas: Array<[NomeDeEscola, string]> = []
+  for (const nome of NOMES_DAS_ESCOLAS) {
+    const slug = `carga-${nome.toLowerCase()}-${randomUUID()}`
+    entradas.push([nome, await idDoOpsEscola(['escola', 'criar', '--rede', redeId, '--nome', `Escola sintética ${nome}`, '--slug', slug], comOperador, 'escolaId')])
+  }
+  return Object.fromEntries(entradas) as EscolasDoCenario
+}
+
+/** Uma sessão real por token de cada grupo, pelo `ops:sessao-sintetica`: não existe mais token sem sessão gravada. */
+async function gerarTokens(ambiente: NodeJS.ProcessEnv, escolas: EscolasDoCenario): Promise<Record<string, string[]>> {
   const tokens: Record<string, string[]> = {}
-  for (const [grupo, { escola, quantidade }] of Object.entries(TOKENS_POR_GRUPO)) {
-    const argumentos = ['run', '-s', 'ops:token-sintetico', '--', '--escola', escola, '--quantidade', String(quantidade), '--validade', '1h']
+  for (const [grupo, { escola, papel, quantidade }] of Object.entries(TOKENS_POR_GRUPO)) {
+    const argumentos = ['run', '-s', 'ops:sessao-sintetica', '--', '--escola', escolas[escola], '--papel', papel, '--quantidade', String(quantidade)]
     const { codigo, saida } = await rodar('npm', argumentos, ambiente, true)
     const linhas = saida.split('\n').filter((linha) => linha.startsWith('ey'))
-    if (codigo !== 0 || linhas.length !== quantidade) throw new Error(`ops:token-sintetico não emitiu os ${quantidade} tokens do grupo ${grupo}`)
+    if (codigo !== 0 || linhas.length !== quantidade) throw new Error(`ops:sessao-sintetica não criou as ${quantidade} sessões do grupo ${grupo}`)
     tokens[grupo] = linhas
   }
   return tokens
@@ -207,17 +243,33 @@ async function executar(controleNegativo: boolean): Promise<number> {
   let veredito: Veredito | undefined
   try {
     escrever(`\n▶ cenário "justiça entre escolas"${controleNegativo ? ', controle negativo (VAGAS_POR_ESCOLA_DESLIGADAS=true)' : ''}`)
-    const tokens = await gerarTokens(ambiente)
-    const arquivoDosTokens = join(pasta, 'tokens.json')
-    writeFileSync(arquivoDosTokens, JSON.stringify(tokens))
-    chmodSync(arquivoDosTokens, 0o644)
 
     // Começa do zero: um cenário interrompido antes deixaria jobs e vagas no volume.
     await compose('down', '--volumes', '--remove-orphans')
     const subida = await compose('up', '--detach', '--build', '--wait')
     if (subida.codigo !== 0) throw new Error('o compose de carga não subiu')
 
+    // Só agora: as escolas e as sessões nascem no banco do projeto, já migrado pelo serviço `migrar`. Os
+    // comandos falam com o Postgres do projeto de carga porque o ambiente deles leva o POSTGRES_PORTA_HOST
+    // de `infra/carga.env`, que tem precedência sobre o `--env-file=.env.example` dos scripts `ops:*`.
+    escrever('\n▶ escolas do cenário')
+    const ambienteDosOps: NodeJS.ProcessEnv = { ...ambiente, ...doArquivo }
+    const escolas = await criarEscolasDoCenario(ambienteDosOps)
+    const arquivoDosTokens = join(pasta, 'tokens.json')
+
+    /**
+     * Sessões novas antes de cada fase, e não uma vez no começo: o token de acesso vale 10 min
+     * (`VALIDADE_TOKEN_ACESSO_SEGUNDOS`), e entre criar mil sessões e o fim da segunda fase passa mais que
+     * isso. Cada fase lê o arquivo ao subir o k6, então recebe token recém-emitido.
+     */
+    const escreverTokens = async (fase: 'base' | 'carga'): Promise<void> => {
+      escrever(`\n▶ sessões da fase ${fase}`)
+      writeFileSync(arquivoDosTokens, JSON.stringify(await gerarTokens(ambienteDosOps, escolas)))
+      chmodSync(arquivoDosTokens, 0o644)
+    }
+
     const k6 = async (fase: 'base' | 'carga', esperaBaseP95Ms?: number): Promise<ResumoDoK6> => {
+      await escreverTokens(fase)
       escrever(`\n▶ k6, fase ${fase}`)
       const { codigo } = await compose('run', '--rm', '--no-deps', 'k6', ...argumentosDoK6(fase, esperaBaseP95Ms))
       let resumo: unknown
@@ -237,13 +289,13 @@ async function executar(controleNegativo: boolean): Promise<number> {
     await cliente.connect()
     let conferencia: ConferenciaDaCarga
     try {
-      const escolas = Object.values(ESCOLAS)
-      await aguardarInterativosIniciados(cliente, escolas, PRAZO_PARA_INTERATIVOS_MS)
-      conferencia = await conferirJobRegistro(cliente, escolas)
+      const ids = Object.values(escolas)
+      await aguardarInterativosIniciados(cliente, ids, PRAZO_PARA_INTERATIVOS_MS)
+      conferencia = await conferirJobRegistro(cliente, ids)
     } finally {
       await cliente.end()
     }
-    const nomes = Object.fromEntries(Object.entries(ESCOLAS).map(([nome, id]) => [id, nome]))
+    const nomes = Object.fromEntries(Object.entries(escolas).map(([nome, id]) => [id, nome]))
     for (const linha of descreverConferencia(conferencia, nomes)) escrever(linha)
 
     veredito = julgarCenario(base, carga, conferencia)

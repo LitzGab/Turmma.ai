@@ -2,7 +2,7 @@ import { setTimeout as esperar } from 'node:timers/promises'
 import { describe, expect, it } from 'vitest'
 import { CodigoDeErro } from '@educa/shared'
 import { exigirAnoEmCurso } from './ano-em-curso.js'
-import { contextoAtual, definirIdentidadeNoContexto, definirSessaoNoContexto, executarNoContexto, resolverRequisicaoId } from './contexto.js'
+import { contextoAtual, definirSessaoNoContexto, executarNoContexto, resolverRequisicaoId } from './contexto.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
@@ -50,29 +50,6 @@ describe('executarNoContexto', () => {
   })
 })
 
-describe('definirIdentidadeNoContexto', () => {
-  const identidadeA = { escolaId: 'escola-a', usuarioId: 'usuario-a' }
-
-  it('grava a escola e o usuário no contexto da requisição', () => {
-    executarNoContexto({ requisicaoId: 'r-1' }, () => {
-      definirIdentidadeNoContexto(identidadeA)
-      expect(contextoAtual()).toEqual({ requisicaoId: 'r-1', ...identidadeA })
-    })
-  })
-
-  it('só grava uma vez: código que roda depois da autenticação não troca a escola', () => {
-    executarNoContexto({ requisicaoId: 'r-2' }, () => {
-      definirIdentidadeNoContexto(identidadeA)
-      expect(() => definirIdentidadeNoContexto({ escolaId: 'escola-b', usuarioId: 'usuario-b' })).toThrow()
-      expect(contextoAtual()).toMatchObject(identidadeA)
-    })
-  })
-
-  it('falha fora de uma requisição, em vez de seguir sem escopo', () => {
-    expect(() => definirIdentidadeNoContexto(identidadeA)).toThrow()
-  })
-})
-
 describe('definirSessaoNoContexto e exigirAnoEmCurso', () => {
   const sessaoA = { escolaId: 'escola-a', usuarioId: 'usuario-a', papel: 'professor' as const, sessaoId: 'sessao-a', anoLetivoId: 'ano-a' }
 
@@ -88,12 +65,7 @@ describe('definirSessaoNoContexto e exigirAnoEmCurso', () => {
     executarNoContexto({ requisicaoId: 'r-2' }, () => {
       definirSessaoNoContexto(sessaoA)
       expect(() => definirSessaoNoContexto({ ...sessaoA, escolaId: 'escola-b', sessaoId: 'sessao-b' })).toThrow()
-      expect(() => definirIdentidadeNoContexto({ escolaId: 'escola-b', usuarioId: 'usuario-b' })).toThrow()
       expect(contextoAtual()).toMatchObject(sessaoA)
-    })
-    executarNoContexto({ requisicaoId: 'r-3' }, () => {
-      definirIdentidadeNoContexto({ escolaId: 'escola-a', usuarioId: 'usuario-a' })
-      expect(() => definirSessaoNoContexto({ ...sessaoA, escolaId: 'escola-b' })).toThrow()
     })
   })
 
@@ -108,10 +80,8 @@ describe('definirSessaoNoContexto e exigirAnoEmCurso', () => {
     })
   })
 
-  it('sem sessão no contexto (rota anônima, rotina, realtime sem sessão), exigirAnoEmCurso também falha fechado', () => {
+  it('sem sessão no contexto (rota anônima, rotina), exigirAnoEmCurso também falha fechado', () => {
     executarNoContexto({ requisicaoId: 'r-5' }, () => {
-      expect(() => exigirAnoEmCurso()).toThrow(expect.objectContaining({ codigo: CodigoDeErro.NAO_ENCONTRADO }))
-      definirIdentidadeNoContexto({ escolaId: 'escola-a', usuarioId: 'usuario-a' })
       expect(() => exigirAnoEmCurso()).toThrow(expect.objectContaining({ codigo: CodigoDeErro.NAO_ENCONTRADO }))
     })
     expect(() => exigirAnoEmCurso()).toThrow(expect.objectContaining({ codigo: CodigoDeErro.NAO_ENCONTRADO }))

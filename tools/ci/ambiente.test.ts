@@ -81,6 +81,8 @@ describe('.env.example e compose', () => {
       'api-2',
       'despachante-1',
       'despachante-2',
+      'realtime-1',
+      'realtime-2',
       'worker-interativo-1',
       'worker-interativo-2',
       'worker-lote-1',

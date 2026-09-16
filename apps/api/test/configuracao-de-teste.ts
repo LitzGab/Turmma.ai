@@ -4,7 +4,7 @@ import { lerConfiguracao, type ConfiguracaoApi } from '../src/config.js'
 
 export interface SobreposicaoDeTeste {
   banco?: Partial<ConfiguracaoBanco>
-  /** Variáveis que trocam as de `.env.example` e as URLs do compose de teste, como `ACEITAR_TOKEN_SINTETICO` ou `REDIS_FILA_URL`. */
+  /** Variáveis que trocam as de `.env.example` e as URLs do compose de teste, como `ROTAS_SINTETICAS` ou `REDIS_FILA_URL`. */
   ambiente?: Record<string, string>
 }
 

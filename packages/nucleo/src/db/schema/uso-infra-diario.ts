@@ -1,7 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { bigint, check, date, pgTable, primaryKey, uuid } from 'drizzle-orm/pg-core'
-
-// Sem import relativo: o drizzle-kit carrega este arquivo com o próprio carregador para gerar a migration.
+import { escola } from './escola.js'
 
 /**
  * Uso de infraestrutura de cada escola por dia (D30, RF17): requisições atendidas, execuções de job
@@ -16,12 +15,15 @@ import { bigint, check, date, pgTable, primaryKey, uuid } from 'drizzle-orm/pg-c
  *   que acabou de fechar), não um acumulado. Dia sem medição fica com zero.
  * - Nenhum dado de pessoa: só a escola e contagens.
  * - A chave primária começa pela escola (regra 80, item 8): a consulta do dia e a do mês descem por ela.
- * - Sem FK para `escola`: a tabela de escola nasce no F1, que acrescenta a FK expandindo.
+ * - A FK de `escola_id` entrou `NOT VALID` na tarefa 3.0 do F1, e a validação das linhas antigas é uma
+ *   pendência de deploy (`TODO.md`).
  */
 export const usoInfraDiario = pgTable(
   'uso_infra_diario',
   {
-    escolaId: uuid().notNull(),
+    escolaId: uuid()
+      .notNull()
+      .references(() => escola.id),
     dia: date({ mode: 'string' }).notNull(),
     requisicoes: bigint({ mode: 'number' }).notNull().default(0),
     jobs: bigint({ mode: 'number' }).notNull().default(0),
