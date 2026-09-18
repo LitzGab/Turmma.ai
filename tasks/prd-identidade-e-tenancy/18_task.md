@@ -52,7 +52,7 @@ de rede ou 5xx nunca manda ninguém para o login. Sob pico, o 503 do semáforo a
   - **Renovação única:** `navigator.locks.request('educa-renovacao')`, que vale entre abas.
   - **Recarregar a página:** renova pelo cookie antes da primeira consulta.
 - [ ] 18.2 — Falhas.
-  - **409 `JA_RENOVADO`:** espera a trava e tenta uma vez com o cookie atual.
+  - **409 `JA_RENOVADO`:** espera a trava e **mais de 2 s** desde o 409, e tenta uma vez com o cookie atual. Os 2 s são a janela da 5.0 (`JANELA_DE_RENOVACAO_SIMULTANEA_MS` e Tech Spec seção 5): dentro dela, o hash anterior é tratado como outra aba renovando junto e recebe 409; depois dela, como resposta perdida, e a API rotaciona de novo. Tentar antes dos 2 s depois de uma resposta perdida devolve outro 409, e o aluno cai para o login.
   - **Resposta de renovação perdida (sem rede):** repete, porque o servidor trata o caso (Tech Spec seção 5).
   - **5xx e sem rede:** mantém token, tela e formulário, e tenta de novo com recuo. Só `NAO_AUTENTICADO` depois da renovação manda para o login.
   - **503 do login com `Retry-After`:** o botão mostra "entrando…" e a web tenta sozinha por até 30 s antes de mostrar a mensagem.
@@ -85,6 +85,7 @@ de rede ou 5xx nunca manda ninguém para o login. Sob pico, o 503 do semáforo a
 | privacidade: depois do login, `localStorage`, `sessionStorage`, `document.cookie` e a URL não contêm o token | e2e | regra 50, item 7: o próximo aluno do Chromebook não acha nada |
 | concorrência: duas abas com o token vencido fazem um só `POST /v1/sessao/renovar` de cada vez (contado em `page.route`), e nenhuma cai no login | e2e | Web Locks, sem família encerrada por reuso |
 | borda: 409 `JA_RENOVADO` na segunda renovação espera e repete com o cookie atual, sem mostrar erro | unidade (`sessao.test.ts`) | a janela de 30 s da 5.0 não vira logout |
+| borda: resposta da renovação perdida (o cookie continua o anterior): o 409 é seguido de nova tentativa depois de mais de 2 s, que recebe a rotação, sem logout | unidade (`sessao.test.ts`) | a janela de 2 s da 5.0 não vira logout |
 | falha: com a rede cortada (`context.setOffline`) ou 503 em uma consulta, a tela e o formulário ficam, e a consulta volta ao religar | e2e | regra 80, item 6: 5xx e sem rede não deslogam |
 | borda da rajada: 503 com `Retry-After` no `POST /v1/sessao/email` mostra "entrando…" e entra quando a API aceita, sem mensagem de erro por até 30 s | e2e | o semáforo da 14.0 aparece como atraso |
 | borda: `CONTA_SEGURADA` mostra em português quanto esperar, sem código nem status HTTP na tela | e2e | regra 50, item 12 |
