@@ -39,6 +39,16 @@ export const OPERADOR_DA_BANCADA = 'teste-fila'
 
 const ambiente = lerAmbienteDeTeste()
 
+/** Consulta com prazo próprio do cliente: o `pg` aceita `query_timeout` por consulta, mas o `@types/pg` não o declara. */
+interface ConsultaComPrazoDoCliente {
+  text: string
+  values: unknown[]
+  query_timeout: number
+}
+
+/** Prazo da preparação de volume da bancada (`semear`), nos dois lados: servidor e cliente. */
+export const PRAZO_DA_PREPARACAO_MS = 60_000
+
 export function configuracaoDoBanco(maximoConexoes = 5): ConfiguracaoBanco {
   return { url: urlDoBancoDeTeste(), maximoConexoes, timeoutConexaoMs: 2_000, timeoutConsultaMs: 2_000 }
 }
@@ -294,6 +304,37 @@ export class BancadaDeFila {
     )
     this.#montados.push(montado)
     return montado
+  }
+
+  /**
+   * Prepara dado de teste em volume (histórico, fila cheia) com prazo de 60 s, e não o de 2 s do pool, que
+   * é o do worker em produção. Desde a tarefa 3.0 cada linha de `job_registro` confere a FK de `escola_id`,
+   * e 100 mil linhas numa instrução passam dos 2 s no runner da esteira.
+   *
+   * Só para preparação: a instrução que o teste mede continua pelo pool normal, com os 2 s, ou a lentidão
+   * que o teste deveria pegar passaria em silêncio. O prazo sobe dos dois lados: o `statement_timeout` do
+   * servidor e o `query_timeout` do cliente, que o `pg` herda do pool (2 s + 2 s de conexão) e cortaria sozinho.
+   */
+  async semear(texto: string, valores: unknown[] = []): Promise<void> {
+    const cliente = await this.pool.connect()
+    let conexaoPerdida: Error | undefined
+    try {
+      await cliente.query('begin')
+      await cliente.query(`set local statement_timeout = '${PRAZO_DA_PREPARACAO_MS}ms'`)
+      // O cliente espera um pouco mais que o servidor: quem corta é o Postgres, com o 57014 legível, e a
+      // consulta não fica rodando no servidor depois de o cliente desistir.
+      const consulta: ConsultaComPrazoDoCliente = { text: texto, values: valores, query_timeout: PRAZO_DA_PREPARACAO_MS + 5_000 }
+      await cliente.query(consulta)
+      await cliente.query('commit')
+    } catch (erro) {
+      // Com a conexão perdida o rollback também falharia: o erro que vale é o da preparação, e a conexão sai do pool.
+      await cliente.query('rollback').catch((erroDoRollback: unknown) => {
+        conexaoPerdida = erroDoRollback instanceof Error ? erroDoRollback : new Error('rollback da preparação falhou')
+      })
+      throw erro
+    } finally {
+      cliente.release(conexaoPerdida)
+    }
   }
 
   /** Todo job pendente vira histórico, e toda escola volta ao padrão: um teste não herda fila nem configuração de outro. */

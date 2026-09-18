@@ -125,7 +125,7 @@ describe('medição das filas por escola, no despachante', () => {
   })
 
   it('carga: com 5.000 lotes da A à espera, a medição não varre a tabela, e a contagem para no teto', async () => {
-    await bancada.pool.query(
+    await bancada.semear(
       `insert into job_registro (escola_id, fila, prioridade, tipo, criado_em)
        select $1, 'lote', 3, 'sintetico', now() - make_interval(secs => g) from generate_series(1, 5000) as g`,
       [ESCOLA_A],
@@ -134,12 +134,12 @@ describe('medição das filas por escola, no despachante', () => {
     const outras = await Promise.all([bancada.escola(), bancada.escola()])
     for (const escolaId of [ESCOLA_B, ...outras]) await job(escolaId, 'interativa', { haSegundos: 3 })
     // Uma semana de histórico, como a retenção de 7 dias deixa: é ele que torna a varredura cara.
-    await bancada.pool.query(
+    await bancada.semear(
       `insert into job_registro (escola_id, fila, prioridade, tipo, estado, concluido_em)
        select $1, 'lote', 3, 'sintetico', 'concluido', now() from generate_series(1, 100000)`,
       [ESCOLA_A],
     )
-    await bancada.pool.query('analyze job_registro')
+    await bancada.semear('analyze job_registro')
 
     // O banco do teste registra a instrução que o repository manda, para o EXPLAIN ser da consulta de verdade.
     const pool = criarPool(configuracaoDoBanco(), () => undefined)
@@ -166,7 +166,7 @@ describe('medição das filas por escola, no despachante', () => {
     }
 
     // Acima do teto, a contagem para: o custo da medição não cresce com a fila.
-    await bancada.pool.query(
+    await bancada.semear(
       `insert into job_registro (escola_id, fila, prioridade, tipo) select $1, 'lote', 3, 'sintetico' from generate_series(1, $2::int)`,
       [ESCOLA_A, TETO_DA_CONTAGEM_DE_PENDENTES],
     )
