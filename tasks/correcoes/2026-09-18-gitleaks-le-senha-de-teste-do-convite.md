@@ -97,3 +97,14 @@ montado em tempo de execução (como o `tokenFalso()`); e a prova de uma mudanç
 varredura depois do commit, não os testes com a mudança ainda fora dele.
 | 2026-09-18 08:26:58 | 2026-09-18 08:27:21 | `privacy-guardian` | 3 | APROVADO | ab961ec6dfb0be50f |
 | 2026-09-18 08:26:55 | 2026-09-18 08:27:46 | `test-engineer` | 3 | APROVADO | ace7981292c62b794 |
+
+## Depois do commit: o próprio documento reprovou
+
+A esteira de `c1bceaa` caiu no mesmo teste: este documento cita, na seção "Causa", a linha perdoada
+num bloco de código, e o documento não tinha exceção. A simulação de commit levou só o
+`.gitleaks.toml` e os dois testes, e deixou o documento de fora.
+
+A exceção passou a valer também para este documento, com a mesma linha exata. Esta seção não cita
+a linha. A simulação agora leva todos os arquivos do commit.
+| 2026-09-18 09:15:06 | 2026-09-18 09:15:31 | `privacy-guardian` | 4 | APROVADO | a72964bef5066ac1d |
+| 2026-09-18 09:15:04 | 2026-09-18 09:16:17 | `test-engineer` | 4 | APROVADO | a9a88b9a95ba35b56 |

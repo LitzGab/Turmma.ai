@@ -24,8 +24,8 @@ paths = ['''^\.claude/skills/playwright-best-practices/advanced/authentication-f
 regexes = ['''^\s*const mockToken = 'test-verification-abc123';\s*$''']
 
 [[allowlists]]
-description = "Teste do convite (7.0): a senha sintética passada ao aceite, depois de `deB.token, `, é lida pelo generic-api-key como chave; é texto de teste, não segredo"
+description = "Teste do convite (7.0), e o documento da correção que o cita: a senha sintética passada ao aceite, depois de `deB.token, `, é lida pelo generic-api-key como chave; é texto de teste, não segredo"
 condition = "AND"
 regexTarget = "line"
-paths = ['''^apps/api/test/convite\.int\.test\.ts$''']
+paths = ['''^apps/api/test/convite\.int\.test\.ts$''', '''^tasks/correcoes/2026-09-18-gitleaks-le-senha-de-teste-do-convite\.md$''']
 regexes = ['''^\s*const \[emA, emB\] = await Promise\.all\(\[aceitar\(deA\.token, 'senha-escolhida-em-a-1'\), aceitar\(deB\.token, 'senha-escolhida-em-b-2'\)\]\)\s*$''']
