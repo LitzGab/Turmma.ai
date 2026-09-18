@@ -137,6 +137,8 @@ status", para ver se é uma rota ou todas, e se é 500 ou 503. Log:
    `requisicaoId` no log até o resumo do erro. No horário letivo, volte ao commit anterior antes
    de investigar.
 3. 503 numa instância só → ela está drenando ou travada: `docker compose restart api-1`.
+4. 503 só em `/v1/sessao/matricula` ou `/v1/sessao/email` → é o semáforo do hash recusando quem esperou mais de 2 s,
+   e o "Login recusado pelo semáforo do hash" dispara junto: siga aquela entrada.
 
 **Se nada disso resolver:** com a rota de prova, de login ou de ferramenta falhando no horário
 letivo, avise as escolas (seção "Como avisar as escolas") e anote o horário de início, que decide
@@ -191,6 +193,79 @@ entrar de novo" até a correção.
 **Depois:** registre no `TODO.md` a hora, quantas famílias e de quantas escolas (só números e ids), e a causa.
 Bug de cliente vira tarefa com teste; ataque vira conversa com a escola sobre o computador compartilhado.
 
+## Login lento
+
+**Dispara quando:** o p95 de `login.duracao` no último minuto, somando as instâncias da API e os dois métodos
+(e-mail e matrícula), passa de 1 s por 3 min seguidos (`histogram_quantile(0.95, …login_duracao_seconds_bucket…) > 1`,
+regra `infra/grafana/alertas/login-lento.yaml`). A duração vai do pedido à resposta e conta todo desfecho: entrou,
+senha errada, conta segurada e o 503 do semáforo do hash. O alerta não traz escola nem pessoa.
+
+**Impacto:** alunos e professores esperam para entrar. Às 7h30 é a turma inteira parada na frente do Chromebook,
+com a web mostrando "entrando…" e repetindo sozinha por até 30 s; quem passa disso vê erro.
+
+**Primeiro olhar:** painel, linha "Processos": "Login (p95) por método", "Espera pelo hash por escola (p95)" e
+"Logins recusados pelo semáforo". Espera alta num balde só é uma escola (ou a `equipe`, ou `desconhecida`) lotando o
+login; espera alta em todos os baldes é a instância sem capacidade. Depois "Atraso do event loop (p99)" e "Pool do banco
+em uso", e `docker stats api-1 api-2` para a CPU de cada API.
+
+**Causas prováveis:**
+1. Espera pelo hash alta em todas as escolas, CPU da API no teto, dentro do horário de entrada → falta capacidade de
+   hash: `docker compose ps api-1 api-2` (uma instância fora dobra a fila da outra) e suba a que caiu com
+   `docker compose up -d api-2`. Com as duas de pé e a CPU no teto, suba mais uma instância, se houver onde. Rever
+   `LOGIN_HASH_CONCORRENCIA` e o custo do argon2 (`LOGIN_ARGON2_ITERACOES`) é decisão, fora do horário letivo, com o
+   cenário "login às 7h30" (tarefa 16.0); nunca abaixo da OWASP e nunca acima de `UV_THREADPOOL_SIZE − 8`.
+2. Espera alta só no balde `equipe`, ou só em `desconhecida`, com as escolas normais → ataque de senha ao login por
+   e-mail, ou a endereço que não existe. O rodízio segura o resto: alunos das escolas entram. Siga o "Login recusado
+   pelo semáforo do hash", causa 2.
+3. Espera pelo hash baixa e login lento assim mesmo → o tempo está fora do hash: Postgres (pool no teto, `TEMPO_ESGOTADO`
+   no log) ou Redis de fila lento (`login.contador_no_seguro` no log). Siga "Taxa de erro 5xx", causa 1, ou "Seguro de
+   limite ativo", causa 4.
+
+**Se nada disso resolver:** avise as escolas afetadas (seção "Como avisar as escolas") de que o login está lento e de
+que a tela tenta de novo sozinha: ninguém precisa recarregar a página. Deploy só fora do horário letivo (D27): não
+reinicie as duas APIs juntas no horário de entrada.
+
+**Depois:** registre no `TODO.md` o horário, o p95 que chegou, quantas instâncias estavam de pé e a CPU delas (só
+números). Capacidade que não bastou na entrada vira tarefa de calibração com o cenário de carga.
+
+## Login recusado pelo semáforo do hash
+
+**Dispara quando:** mais de 1% dos logins do último minuto, somando as instâncias da API, saem com 503
+`INDISPONIVEL_TENTE_DE_NOVO` porque esperaram mais de 2 s pela vez no semáforo do hash de senha, por 3 min seguidos
+(`login_hash_recusado_total` sobre `login_duracao_seconds_count`, regra
+`infra/grafana/alertas/login-hash-recusado.yaml`). O semáforo roda no máximo `LOGIN_HASH_CONCORRENCIA` hashes por
+instância e atende os baldes em rodízio: um por escola (matrícula), um `equipe` (todo login por e-mail, com a vez
+rodando por IP) e um `desconhecida` (endereço de escola que não existe). O alerta não traz escola nem pessoa.
+
+**Impacto:** a web recebe o 503 com `Retry-After` de 2 a 6 s e tenta de novo sozinha, mostrando "entrando…". Quem
+não consegue a vez em 30 s vê erro. O 503 não conta como senha errada e não segura conta nenhuma.
+
+**Primeiro olhar:** painel, linha "Processos": "Espera pelo hash por escola (p95)", para ver qual balde está cheio,
+"Logins recusados pelo semáforo" e "Login (p95) por método". Depois a CPU das APIs (`docker stats api-1 api-2`) e
+quantas estão de pé (`docker compose ps api-1 api-2`).
+
+**Causas prováveis:**
+1. Todos os baldes esperando, na entrada da manhã, com uma instância fora ou a CPU no teto → capacidade. Suba a
+   instância que caiu (`docker compose up -d api-1`), ou mais uma. Rever `LOGIN_HASH_CONCORRENCIA` e o custo do hash é
+   decisão fora do horário letivo, com o cenário de carga (tarefa 16.0).
+2. Só o balde `equipe` esperando, com as escolas normais → ataque distribuído ao login por e-mail: muitos IPs tentando
+   senhas. O rodízio por IP e o balde separado seguram os alunos; a equipe de todas as escolas entra mais devagar
+   (risco aceito no F1, Tech Spec da identidade, seção 13). Confira `registro_acesso` com `evento = 'login_falho'` e
+   escola nula no último quarto de hora, contando por IP, só para a investigação: o IP é dado pessoal, não vai para o
+   `TODO.md` nem por e-mail. Um IP só pedindo muito é assunto do limite por IP da rota de e-mail (tarefa 15.0).
+3. Só o balde de uma escola esperando → aquela escola inteira entrando junto (rajada legítima) ou alguém da rede dela
+   errando senha em massa. As outras escolas não sentem. Rajada legítima passa em minutos; falha em massa aparece como
+   `login.conta_segurada` subindo junto.
+4. Só `desconhecida` esperando → alguém tentando endereços de escola que não existem. Não atrasa escola real; registre
+   e acompanhe.
+
+**Se nada disso resolver:** avise as escolas afetadas (seção "Como avisar as escolas") de que o login está demorando
+e de que a tela tenta sozinha. Não desligue o semáforo: sem ele, o hash toma a CPU da API e tudo fica lento, não só o
+login.
+
+**Depois:** registre no `TODO.md` o horário, a duração, qual balde encheu (o id da escola, `equipe` ou `desconhecida`)
+e a causa. Capacidade que não bastou vira tarefa de calibração; ataque vira registro com a escola, sem IP.
+
 ## Rotina do sistema sem rodar (consolidação de uso, expurgo de jobs)
 
 *A preencher antes da primeira escola real* (pendência em `TODO.md`). Hoje nada avisa se
@@ -223,13 +298,20 @@ fila `agendamentos`.
 ## Ensaiar os alertas
 
 `npm run ensaio:alertas`, com o ambiente local de pé (`docker compose up`), provoca as três
-condições do F0 de uma vez: para o `worker-interativo` e manda um job interativo, para o Redis de cache,
+condições do F0 de uma vez, e as duas do login: para o `worker-interativo` e manda um job interativo, para o Redis de cache,
 e força 5xx em `POST /v1/sistema/jobs-sinteticos` para uma escola sintética (um gatilho
 temporário no banco recusa a gravação só dessa escola). Confere pela API do Grafana que as três
 regras chegam a disparadas, e restaura tudo: religa o que parou, remove o gatilho e espera as três
 voltarem a normal. Leva uns 8 minutos, por causa dos 5 min da regra de 5xx. Só roda com
 `AMBIENTE=local`, e um de cada vez: o gatilho tem nome fixo, e um segundo ensaio no mesmo banco
 remove o gatilho do primeiro. Com o ambiente parado, o ensaio o sobe inteiro e o deixa de pé.
+
+O ensaio provoca também os dois alertas de login: recria as APIs com um hash por vez e o argon2 muito mais caro
+(`LOGIN_HASH_CONCORRENCIA=1` e `LOGIN_ARGON2_ITERACOES` alto, só no contêiner do ensaio), manda logins de matrícula a
+um endereço que não existe até o semáforo passar do prazo, e confere que "Login lento" e "Login recusado pelo semáforo
+do hash" disparam depois dos 3 min de cada um. No fim, espera as regras voltarem a normal e só então recria as APIs
+com o `.env` de sempre (a instância que sai deixa o último valor no Prometheus por até 5 min). Se o ensaio for
+interrompido, recrie-as à mão: `docker compose up -d --force-recreate --no-deps api-1 api-2`.
 
 O "Reuso de refresh" não entra no ensaio, porque não nasce de serviço parado: ele tem prova própria em
 `infra/test/alertas.int.test.ts`, que reusa cinco cookies (a regra fica normal) e depois o sexto (dispara), na

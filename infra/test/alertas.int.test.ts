@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { cookieDaResposta, cookieDeRenovacao, renovar } from '../../apps/api/test/api-com-sessao.js'
 import { BancadaDeSessoes } from '../../apps/api/test/sessao-de-teste.js'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
-import { aguardarSaudavel, compose, composeAssincrono, composeAssincronoOuFalha } from '../../tools/testes/compose.ts'
+import { aguardarSaudavel, compose, composeAssincrono, composeAssincronoCom, composeAssincronoOuFalha } from '../../tools/testes/compose.ts'
 import { arquivosDeAlertaDoRepositorio } from '../../tools/guardas/alerta-tem-runbook.ts'
 import { parse } from 'yaml'
 import { urlDoBancoDeTeste } from '../../tools/testes/integracao.setup.ts'
@@ -75,7 +75,7 @@ async function estadoDoJob(apiToken: string, jobId: string): Promise<string> {
   return ((await resposta.json()) as { estado: string }).estado
 }
 
-describe('alertas locais: as três regras disparam no ensaio, não disparam com condição curta e voltam a normal', () => {
+describe('alertas locais: as regras do ensaio disparam, não disparam com condição curta ou abaixo do limiar, e voltam a normal', () => {
   beforeAll(async () => {
     // Observabilidade recriada: nenhum estado de alerta nem série de uma execução anterior.
     await composeAssincronoOuFalha('up', '--detach', '--force-recreate', '--wait', 'observabilidade')
@@ -93,10 +93,13 @@ describe('alertas locais: as três regras disparam no ensaio, não disparam com 
     await composeAssincronoOuFalha('stop', ...SERVICOS)
   }, 180_000)
 
-  it('caminho feliz: `ensaio:alertas` leva as três regras a disparadas, cada uma só depois do próprio `for:`, e a condição cessada as leva de volta a normal', async () => {
+  it('caminho feliz: `ensaio:alertas` leva as regras do ensaio a disparadas, cada uma só depois do próprio `for:`, e a condição cessada as leva de volta a normal', async () => {
     const resultado: ResultadoDoEnsaio = await executarEnsaioDeAlertas({
       compose: composeAssincrono,
+      composeCom: composeAssincronoCom,
       servicos: SERVICOS,
+      // O ensaio fala direto com a api-1: só ela é recriada com o hash lento.
+      apis: ['api-1'],
       apiUrl: API,
       grafanaUrl: GRAFANA,
       bancoUrl,
@@ -114,13 +117,15 @@ describe('alertas locais: as três regras disparam no ensaio, não disparam com 
     const jobInterativo = resultado.disparos[REGRAS_DO_ENSAIO.jobInterativo]
     const seguroDoLimite = resultado.disparos[REGRAS_DO_ENSAIO.seguroDoLimite]
     const taxa5xx = resultado.disparos[REGRAS_DO_ENSAIO.taxa5xx]
+    const loginLento = resultado.disparos[REGRAS_DO_ENSAIO.loginLento]
+    const loginHashRecusado = resultado.disparos[REGRAS_DO_ENSAIO.loginHashRecusado]
     // Cada regra disparou com os rótulos da condição provocada: a escola do job, a rota que falhou.
     expect(jobInterativo.rotulos).toMatchObject({ fila: 'interativa', escola_id: resultado.escolaDoJob })
     expect(taxa5xx.rotulos).toMatchObject({ job: 'educa/api', http_route: '/v1/sistema/jobs-sinteticos' })
     expect(seguroDoLimite.rotulos['instance']).toMatch(/^[0-9a-f]{12}$/)
     // E só depois de pendente pelo `for:` inteiro: início da pendência e do disparo, os dois informados pelo Grafana.
-    expect([jobInterativo.duracaoS, seguroDoLimite.duracaoS, taxa5xx.duracaoS]).toEqual([60, 120, 300])
-    for (const disparo of [jobInterativo, seguroDoLimite, taxa5xx]) {
+    expect([jobInterativo.duracaoS, seguroDoLimite.duracaoS, taxa5xx.duracaoS, loginLento.duracaoS, loginHashRecusado.duracaoS]).toEqual([60, 120, 300, 180, 180])
+    for (const disparo of [jobInterativo, seguroDoLimite, taxa5xx, loginLento, loginHashRecusado]) {
       expect(disparo.disparadoDesdeMs - disparo.pendenteDesdeMs).toBeGreaterThanOrEqual(disparo.duracaoS * 1_000)
     }
     // Isolamento do gatilho: com a falha forçada valendo, outra escola gravou job na mesma rota.
@@ -129,7 +134,15 @@ describe('alertas locais: as três regras disparam no ensaio, não disparam com 
     expect(resultado.statusDaFalha['500'] ?? 0).toBeGreaterThan(200)
     expect(Object.keys(resultado.statusDaFalha)).toEqual(['500'])
 
-    // Restaurado: sem gatilho, a mesma escola grava job; Redis de cache e worker-interativo de pé.
+    // Os alertas de login vieram do semáforo: logins recusados com 503, e nenhum 429 (nem conta segurada, nem IP).
+    expect(resultado.statusDoLogin['503'] ?? 0).toBeGreaterThan(50)
+    expect(resultado.statusDoLogin['429']).toBeUndefined()
+
+    // Restaurado: sem gatilho, a mesma escola grava job; Redis de cache e worker-interativo de pé; a api-1 recriada com o
+    // hash do ambiente, e não o lento do ensaio.
+    for (const variavel of ['LOGIN_HASH_CONCORRENCIA', 'LOGIN_ARGON2_ITERACOES']) {
+      expect(compose('exec', '-T', 'api-1', 'printenv', variavel).saida.trim(), variavel).toBe(ambiente[variavel])
+    }
     expect(await gatilhoDaFalhaExiste(bancoUrl)).toBe(false)
     const depois = await criarJobSintetico(API, await token(resultado.escolaDaFalha), { fila: 'interativa', cpuMs: 0 })
     expect(depois.status).toBe(202)
@@ -200,6 +213,45 @@ describe('alertas locais: as três regras disparam no ensaio, não disparam com 
     expect(estados).not.toContain('disparado')
     expect(estados.at(-1)).toBe('normal')
   }, 300_000)
+
+  it('login abaixo dos limiares: com logins sem fila, o p95 fica abaixo de 1 s e nenhum 503 sai do semáforo, e as duas regras de login ficam normais', async () => {
+    const lento = regraPorUidNoArquivo(REGRAS_DO_ENSAIO.loginLento)
+    const recusado = regraPorUidNoArquivo(REGRAS_DO_ENSAIO.loginHashRecusado)
+    const estadoDe = async (uid: string): Promise<EstadoDoAlerta> => alertaCom((await lerRegrasNoGrafana(GRAFANA)).get(uid), {})?.estado ?? 'normal'
+    // Um login por vez, a cada meio segundo, num endereço que não existe: o semáforo nunca tem fila, e as regras têm
+    // tráfego para avaliar (sem tráfego, a expressão fica sem série e a prova não diria nada).
+    let ativo = true
+    const status: Record<string, number> = {}
+    const lacos = (async () => {
+      while (ativo) {
+        const resposta = await fetch(`${API}/v1/sessao/matricula`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: 'alertas-abaixo-do-limiar', matricula: `ABAIXO${String(Date.now())}`, senha: 'senha-sintetica-abaixo' }),
+        })
+        status[String(resposta.status)] = (status[String(resposta.status)] ?? 0) + 1
+        await resposta.body?.cancel()
+        await new Promise((resolver) => setTimeout(resolver, 500))
+      }
+    })()
+    try {
+      // A janela de 1 min esquece o que um teste anterior deixou; daí em diante, as duas expressões têm série e ficam
+      // abaixo do limiar.
+      await expect.poll(() => valorNoPrometheus(recusado), { timeout: 180_000, interval: 2_000 }).toBe(0)
+      await expect.poll(async () => (await valorNoPrometheus(lento)) ?? Number.POSITIVE_INFINITY, { timeout: 60_000, interval: 2_000 }).toBeLessThan(1)
+      // Quatro avaliações de cada regra com a expressão abaixo do limiar: nem pendente, nem disparada.
+      const estados: EstadoDoAlerta[] = []
+      for (let volta = 0; volta < 4; volta++) {
+        estados.push(await estadoDe(REGRAS_DO_ENSAIO.loginLento), await estadoDe(REGRAS_DO_ENSAIO.loginHashRecusado))
+        await new Promise((resolver) => setTimeout(resolver, 10_000))
+      }
+      expect(estados.every((estado) => estado === 'normal')).toBe(true)
+    } finally {
+      ativo = false
+      await lacos
+    }
+    expect(Object.keys(status)).toEqual(['401'])
+  }, 360_000)
 
   it('o anônimo do Grafana lê as regras, mas não apaga nem pausa uma regra provisionada', async () => {
     const apagar = await fetch(`${GRAFANA}/api/v1/provisioning/alert-rules/${REGRAS_DO_ENSAIO.taxa5xx}`, { method: 'DELETE' })

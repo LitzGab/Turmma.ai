@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
 import { HashDeSenha } from '../src/sessao/hash-de-senha.js'
 import { CLIENTE_REDIS_LOGIN } from '../src/sessao/sessao.module.js'
-import { chamar, subirApi, type ApiDeTeste } from './api-com-sessao.js'
+import { chamar, comoAWebNo503, subirApi, type ApiDeTeste } from './api-com-sessao.js'
 import { alunosNaTurma, montarEscolaComTurma } from './escola-com-turma.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'
 
@@ -52,7 +52,9 @@ describe('POST /v1/sessao/matricula: o aluno entra pelo endereço da escola com 
   let hashDeB: string
 
   beforeAll(async () => {
-    api = await subirApi(medidor.medidor, {}, linhasDeLog)
+    // Quatro hashes ao mesmo tempo, as quatro threads do libuv que o processo do vitest tem: a rajada de 400 roda com a
+    // vazão que tinha antes do semáforo (14.0). O semáforo com teto baixo tem prova própria (semaforo-de-login.int.test.ts).
+    api = await subirApi(medidor.medidor, { ambiente: { LOGIN_HASH_CONCORRENCIA: '4' } }, linhasDeLog)
     hash = api.app.get(HashDeSenha)
     verificacoes = vi.spyOn(hash, 'verificar')
     await clientePronto(api.app.get<Redis>(CLIENTE_REDIS_LOGIN, { strict: false }))
@@ -306,7 +308,10 @@ describe('POST /v1/sessao/matricula: o aluno entra pelo endereço da escola com 
     const inicio = performance.now()
     const respostas: Resposta[] = []
     for (let onda = 0; onda < matriculas.length; onda += LOGINS_POR_ONDA) {
-      respostas.push(...(await Promise.all(matriculas.slice(onda, onda + LOGINS_POR_ONDA).map((matricula) => comSenha(slug, matricula)))))
+      // Como a web: o 503 do semáforo do hash (14.0) é atraso, e o pedido volta depois do `Retry-After`.
+      const tentativas = await Promise.all(matriculas.slice(onda, onda + LOGINS_POR_ONDA).map((matricula) => comoAWebNo503(() => comSenha(slug, matricula))))
+      for (const { recusas } of tentativas) for (const recusa of recusas) expect(recusa.corpo.erro?.codigo).toBe(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO)
+      respostas.push(...tentativas.map(({ resposta }) => resposta))
     }
     expect(performance.now() - inicio).toBeLessThan(60_000)
     const [doEnzoNaRajada, ...dosColegasNaRajada] = respostas

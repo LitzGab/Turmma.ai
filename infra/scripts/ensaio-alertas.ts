@@ -14,14 +14,16 @@ import { raizRepositorio } from '../../tools/ci/executar.ts'
  *
  *   npm run ensaio:alertas
  *
- * Com o ambiente local de pé, provoca as três condições ao mesmo tempo e confere pela API do Grafana que as
- * três regras de `infra/grafana/alertas/` chegam a disparadas:
+ * Com o ambiente local de pé, provoca as condições ao mesmo tempo e confere pela API do Grafana que as regras de
+ * `REGRAS_DO_ENSAIO` chegam a disparadas:
  *   - para o `worker-interativo` e manda um job interativo, que fica esperando;
  *   - para o Redis de cache, e a API passa a limitar com o seguro em memória;
  *   - força 5xx em `POST /v1/sistema/jobs-sinteticos`, com um gatilho temporário no banco que recusa a
- *     gravação só da escola sintética do ensaio, e manda requisição a ela a cada segundo.
- * No fim, com sucesso ou não, restaura tudo: remove o gatilho, religa o Redis de cache e os workers, e
- * espera as três regras voltarem a normal.
+ *     gravação só da escola sintética do ensaio, e manda requisição a ela a cada segundo;
+ *   - recria as APIs com o hash lento (`HASH_LENTO_DO_ENSAIO`) e manda logins em laço até o semáforo do hash passar
+ *     do prazo: o p95 do login passa de 1 s ("Login lento") e os 503 passam de 1% ("Login recusado pelo semáforo").
+ * No fim, com sucesso ou não, restaura tudo: remove o gatilho, religa o Redis de cache e os workers, recria as APIs
+ * com o ambiente de sempre, e espera as regras voltarem a normal.
  *
  * Só roda com `AMBIENTE=local`: ele para serviço e faz a API falhar de propósito.
  */
@@ -30,12 +32,14 @@ export const REGRAS_DO_ENSAIO = {
   jobInterativo: 'educa-job-interativo-esperando',
   seguroDoLimite: 'educa-seguro-limite-ativo',
   taxa5xx: 'educa-taxa-5xx',
+  loginLento: 'educa-login-lento',
+  loginHashRecusado: 'educa-login-hash-recusado',
 } as const
 
 export type UidDaRegra = (typeof REGRAS_DO_ENSAIO)[keyof typeof REGRAS_DO_ENSAIO]
 
 /**
- * Todas as regras de `infra/grafana/alertas/`: as três que o ensaio provoca e as que têm prova própria no teste de
+ * Todas as regras de `infra/grafana/alertas/`: as que o ensaio provoca e as que têm prova própria no teste de
  * alertas (`infra/test/alertas.int.test.ts`), como o reuso de refresh, que precisa de sessões renovadas e não de
  * serviço parado.
  */
@@ -45,6 +49,14 @@ export const REGRAS_PROVISIONADAS = {
 } as const
 
 export const WORKERS_INTERATIVOS = ['worker-interativo-1', 'worker-interativo-2'] as const
+/**
+ * O hash lento com que o ensaio recria as APIs para provocar os alertas de login: um hash por vez e o argon2 dezesseis
+ * vezes mais caro que o mínimo da OWASP (centenas de milissegundos por hash). Uma dúzia de logins esperando por API já
+ * passa do prazo de 2 s do semáforo, com uma CPU só ocupada, e abaixo do limite anônimo por IP.
+ */
+export const HASH_LENTO_DO_ENSAIO = { LOGIN_HASH_CONCORRENCIA: '1', LOGIN_ARGON2_ITERACOES: '32' } as const
+/** Logins em laço, ao mesmo tempo, durante o ensaio: cada um repete assim que o anterior responde. */
+const LOGINS_SIMULTANEOS_DO_ENSAIO = 24
 /** Rota template onde o ensaio força o 5xx, como aparece no rótulo `http_route`. */
 export const ROTA_DA_FALHA = '/v1/sistema/jobs-sinteticos'
 /**
@@ -100,8 +112,12 @@ export type CriarEscolaComSessoes = (quantidade: number) => Promise<EscolaDoEnsa
 export interface OpcoesDoEnsaio {
   /** `docker compose` já com projeto e arquivos: recebe só o subcomando. */
   compose: (...argumentos: string[]) => Promise<ResultadoDeComando>
+  /** O mesmo `docker compose`, com variáveis que sobrepõem as do arquivo de ambiente (o hash lento das APIs). */
+  composeCom: (sobreposicao: Readonly<Record<string, string>>, ...argumentos: string[]) => Promise<ResultadoDeComando>
   /** Serviços que o ensaio sobe antes de começar; vazio sobe o ambiente inteiro. */
   servicos: readonly string[]
+  /** As APIs atrás de `apiUrl`: o ensaio as recria com o hash lento e, no fim, com o ambiente de sempre. */
+  apis: readonly string[]
   apiUrl: string
   grafanaUrl: string
   bancoUrl: string
@@ -135,6 +151,8 @@ export interface ResultadoDoEnsaio {
   normalizadoEmMs: number
   /** Status das requisições à rota da falha, contados durante o ensaio. */
   statusDaFalha: Record<string, number>
+  /** Status dos logins que o ensaio mandou para lotar o semáforo do hash. */
+  statusDoLogin: Record<string, number>
 }
 
 const texto = (valor: unknown): string => (typeof valor === 'string' ? valor : '')
@@ -298,13 +316,52 @@ function iniciarTrafego(opcoes: OpcoesDoEnsaio, daFalha: EscolaDoEnsaio, doSegur
   }
 }
 
+/**
+ * Logins por matrícula num endereço que não existe, em laço, enquanto as condições valem: com o hash lento, a fila do
+ * semáforo passa do prazo, os logins saem com 503 depois de 2 s, e o p95 passa de 1 s. Cada pedido leva uma matrícula
+ * nova: nenhuma conta chega a ser segurada, e o que o ensaio mede é o semáforo, não o contador de tentativas.
+ */
+function iniciarRajadaDeLogin(opcoes: OpcoesDoEnsaio, statusDoLogin: Record<string, number>): { parar: () => Promise<void> } {
+  let ativo = true
+  const slug = `ensaio-login-${randomUUID().slice(0, 8)}`
+  const lacos = Array.from({ length: LOGINS_SIMULTANEOS_DO_ENSAIO }, async () => {
+    while (ativo) {
+      try {
+        const resposta = await fetch(`${opcoes.apiUrl}/v1/sessao/matricula`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, matricula: `ENSAIO${randomUUID().slice(0, 8)}`, senha: 'senha-sintetica-do-ensaio' }),
+          signal: AbortSignal.timeout(15_000),
+        })
+        statusDoLogin[String(resposta.status)] = (statusDoLogin[String(resposta.status)] ?? 0) + 1
+        await resposta.body?.cancel()
+      } catch {
+        statusDoLogin['sem_resposta'] = (statusDoLogin['sem_resposta'] ?? 0) + 1
+        await esperar(1_000)
+      }
+    }
+  })
+  return {
+    parar: async () => {
+      ativo = false
+      await Promise.all(lacos)
+    },
+  }
+}
+
+/** Recria as APIs, com a sobreposição (o hash lento) ou sem ela (o ambiente de sempre), e espera o healthcheck. */
+async function recriarApis(opcoes: OpcoesDoEnsaio, sobreposicao: Readonly<Record<string, string>>): Promise<void> {
+  const resultado = await opcoes.composeCom(sobreposicao, 'up', '--detach', '--wait', '--force-recreate', '--no-deps', ...opcoes.apis)
+  if (resultado.codigo !== 0) throw new Error(`docker compose up --force-recreate ${opcoes.apis.join(' ')} falhou:\n${resultado.saida}`)
+}
+
 function descreverEstados(regras: Map<string, RegraNoGrafana>): string {
   return Object.values(REGRAS_DO_ENSAIO)
     .map((uid) => `${regras.get(uid)?.titulo ?? uid}: ${regras.get(uid)?.estado ?? 'ausente'}`)
     .join(' | ')
 }
 
-/** Nenhum alerta das três regras pendente, disparado ou em erro. */
+/** Nenhum alerta das regras do ensaio pendente, disparado ou em erro. */
 function todasNormais(regras: Map<string, RegraNoGrafana>): boolean {
   return Object.values(REGRAS_DO_ENSAIO).every((uid) => {
     const regra = regras.get(uid)
@@ -324,7 +381,7 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
   // Um ensaio interrompido antes da limpeza não deixa o gatilho para este.
   await removerGatilhoDaFalha(opcoes.bancoUrl)
 
-  await aguardar('as três regras provisionadas e normais antes de começar', prazoParaNormalizar, sinal, async () => {
+  await aguardar('as regras do ensaio provisionadas e normais antes de começar', prazoParaNormalizar, sinal, async () => {
     const regras = await lerRegrasNoGrafana(opcoes.grafanaUrl)
     registrar(`antes: ${descreverEstados(regras)}`)
     return todasNormais(regras) ? regras : undefined
@@ -335,13 +392,20 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
   const doSeguro = await opcoes.criarEscolaComSessoes(USUARIOS_POR_ESCOLA)
   const [escolaDoJob, escolaDaFalha, escolaDoSeguro] = [doJob.escolaId, daFalha.escolaId, doSeguro.escolaId]
   const statusDaFalha: Record<string, number> = {}
+  const statusDoLogin: Record<string, number> = {}
   const disparos: Partial<Record<UidDaRegra, DisparoObservado>> = {}
   let jobId = ''
   let jobDeOutraEscolaNaFalha = ''
   let trafego: { parar: () => Promise<void> } | undefined
+  let rajadaDeLogin: { parar: () => Promise<void> } | undefined
+  let hashLento = false
   let erroDoEnsaio: unknown
 
   try {
+    registrar('recriando as APIs com o hash lento')
+    hashLento = true
+    await recriarApis(opcoes, HASH_LENTO_DO_ENSAIO)
+
     registrar('parando o worker-interativo e mandando um job interativo')
     await comandoOuFalha(opcoes, 'stop', ...WORKERS_INTERATIVOS)
     const resposta = await criarJobSintetico(opcoes.apiUrl, await tokenDaVez(doJob, 0), { fila: 'interativa', cpuMs: 0 })
@@ -355,15 +419,19 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
     if (outraEscola.status !== 202) throw new Error(`com o gatilho da falha, outra escola também não gravou job (status ${outraEscola.status})`)
     jobDeOutraEscolaNaFalha = ((await outraEscola.json()) as { jobId: string }).jobId
     trafego = iniciarTrafego(opcoes, daFalha, doSeguro, statusDaFalha)
+    registrar('lotando o semáforo do hash com logins')
+    rajadaDeLogin = iniciarRajadaDeLogin(opcoes, statusDoLogin)
 
     const esperados: Record<UidDaRegra, Record<string, string>> = {
       [REGRAS_DO_ENSAIO.jobInterativo]: { fila: 'interativa', escola_id: escolaDoJob },
       [REGRAS_DO_ENSAIO.seguroDoLimite]: {},
       [REGRAS_DO_ENSAIO.taxa5xx]: { job: 'educa/api', http_route: ROTA_DA_FALHA },
+      [REGRAS_DO_ENSAIO.loginLento]: {},
+      [REGRAS_DO_ENSAIO.loginHashRecusado]: {},
     }
     // A pendência de cada regra, anotada quando vista: o disparo só vale se veio depois dela e do `for:` inteiro.
     const pendencias: Partial<Record<UidDaRegra, number>> = {}
-    await aguardar('as três regras disparadas', prazoParaDisparar, sinal, async () => {
+    await aguardar('as regras do ensaio disparadas', prazoParaDisparar, sinal, async () => {
       const regras = await lerRegrasNoGrafana(opcoes.grafanaUrl)
       registrar(`provocando: ${descreverEstados(regras)}`)
       for (const [uid, rotulos] of Object.entries(esperados) as Array<[UidDaRegra, Record<string, string>]>) {
@@ -388,22 +456,48 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
   // Com sucesso ou não, restaura tudo, e cada passo tenta mesmo que o anterior tenha falhado.
   registrar('restaurando: gatilho removido, Redis de cache e worker-interativo religados')
   const falhasDaRestauracao: unknown[] = []
-  for (const passo of [() => trafego?.parar() ?? Promise.resolve(), () => removerGatilhoDaFalha(opcoes.bancoUrl), () => subir(opcoes, ['redis-cache', ...WORKERS_INTERATIVOS])]) {
+  for (const passo of [
+    () => trafego?.parar() ?? Promise.resolve(),
+    () => rajadaDeLogin?.parar() ?? Promise.resolve(),
+    () => removerGatilhoDaFalha(opcoes.bancoUrl),
+    () => subir(opcoes, ['redis-cache', ...WORKERS_INTERATIVOS]),
+  ]) {
     try {
       await passo()
     } catch (erro) {
       falhasDaRestauracao.push(erro)
     }
   }
+  const erroAntesDeNormalizar = falhasDaRestauracao.length > 0 || erroDoEnsaio !== undefined
+  try {
+    // As APIs com o hash lento só saem depois de as regras voltarem a normal: a instância que sai deixa no Prometheus o
+    // último valor que exportou por até 5 min (a série empurrada por OTLP não fica obsoleta ao parar). Recriada com o
+    // Redis de cache ainda fora nesse último valor, ela prenderia o "Seguro de limite ativo" disparado.
+    if (!erroAntesDeNormalizar) {
+      await aguardar('as regras do ensaio de volta a normal', prazoParaNormalizar, sinal, async () => {
+        const regras = await lerRegrasNoGrafana(opcoes.grafanaUrl)
+        registrar(`restaurado: ${descreverEstados(regras)}`)
+        return todasNormais(regras) ? true : undefined
+      })
+    }
+  } finally {
+    if (hashLento) {
+      registrar('recriando as APIs com o hash de sempre')
+      try {
+        await recriarApis(opcoes, {})
+      } catch (erro) {
+        falhasDaRestauracao.push(erro)
+      }
+    }
+  }
   if (falhasDaRestauracao.length > 0) {
-    registrar('a restauração falhou em algum passo: confira o gatilho, o Redis de cache e o worker-interativo')
+    registrar('a restauração falhou em algum passo: confira o gatilho, o Redis de cache, o worker-interativo e as APIs (docker compose up -d --force-recreate --no-deps api-1 api-2)')
     throw new AggregateError(erroDoEnsaio === undefined ? falhasDaRestauracao : [erroDoEnsaio, ...falhasDaRestauracao], 'restauração do ensaio de alertas incompleta')
   }
   if (erroDoEnsaio !== undefined) throw erroDoEnsaio
-
-  await aguardar('as três regras de volta a normal', prazoParaNormalizar, sinal, async () => {
+  // Com as APIs recriadas, as regras continuam normais: a instância nova sobe com o Redis de cache de pé.
+  await aguardar('as regras do ensaio normais com as APIs recriadas', prazoParaNormalizar, sinal, async () => {
     const regras = await lerRegrasNoGrafana(opcoes.grafanaUrl)
-    registrar(`restaurado: ${descreverEstados(regras)}`)
     return todasNormais(regras) ? true : undefined
   })
   return {
@@ -415,13 +509,19 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
     disparos: disparos as Record<UidDaRegra, DisparoObservado>,
     normalizadoEmMs: Date.now(),
     statusDaFalha,
+    statusDoLogin,
   }
 }
 
 function composeDoAmbienteLocal(...argumentos: string[]): Promise<ResultadoDeComando> {
+  return composeDoAmbienteLocalCom({}, ...argumentos)
+}
+
+function composeDoAmbienteLocalCom(sobreposicao: Readonly<Record<string, string>>, ...argumentos: string[]): Promise<ResultadoDeComando> {
   return new Promise((resolver) => {
-    // O projeto de desenvolvimento, pelo compose.yaml da raiz, com as variáveis de .env.example.
-    const processo = spawn('docker', ['compose', ...argumentos], { cwd: raizRepositorio })
+    // O projeto de desenvolvimento, pelo compose.yaml da raiz, com as variáveis de .env.example; a sobreposição vence
+    // na interpolação, porque a variável do processo vence a do arquivo.
+    const processo = spawn('docker', ['compose', ...argumentos], { cwd: raizRepositorio, env: { ...process.env, ...sobreposicao } })
     let saida = ''
     processo.stdout.on('data', (parte: Buffer) => (saida += parte.toString()))
     processo.stderr.on('data', (parte: Buffer) => (saida += parte.toString()))
@@ -462,7 +562,10 @@ async function executarPelaLinhaDeComando(): Promise<void> {
   try {
     await executarEnsaioDeAlertas({
       compose: composeDoAmbienteLocal,
+      composeCom: composeDoAmbienteLocalCom,
       servicos: [],
+      // Pela borda, o ensaio chega às duas APIs: as duas são recriadas com o hash lento.
+      apis: ['api-1', 'api-2'],
       apiUrl: `http://127.0.0.1:${obrigatoria(ambiente, 'BORDA_PORTA_HOST')}`,
       grafanaUrl: `http://127.0.0.1:${obrigatoria(ambiente, 'GRAFANA_PORTA_HOST')}`,
       bancoUrl,
@@ -471,7 +574,7 @@ async function executarPelaLinhaDeComando(): Promise<void> {
       registrar: escrever,
       sinal: controle.signal,
     })
-    escrever('ensaio concluído: as três regras dispararam e voltaram a normal')
+    escrever('ensaio concluído: as regras do ensaio dispararam e voltaram a normal')
   } catch (erro) {
     escrever(`ensaio falhou: ${erro instanceof Error ? erro.message : String(erro)}`)
     process.exitCode = 1

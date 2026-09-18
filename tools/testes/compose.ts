@@ -27,8 +27,16 @@ export function compose(...argumentos: string[]): ResultadoComando {
  * compose reinicia ou para um serviço.
  */
 export function composeAssincrono(...argumentos: string[]): Promise<ResultadoComando> {
+  return composeAssincronoCom({}, ...argumentos)
+}
+
+/**
+ * Como `composeAssincrono`, com variáveis que sobrepõem as dos arquivos de ambiente na interpolação do compose (a do
+ * processo vence a do `--env-file`): o ensaio de alertas recria a API com o hash lento assim, sem arquivo a mais.
+ */
+export function composeAssincronoCom(sobreposicao: Readonly<Record<string, string>>, ...argumentos: string[]): Promise<ResultadoComando> {
   return new Promise((resolver) => {
-    const processo = spawn('docker', [...ARGUMENTOS_COMPOSE, ...argumentos], { cwd: raizRepositorio })
+    const processo = spawn('docker', [...ARGUMENTOS_COMPOSE, ...argumentos], { cwd: raizRepositorio, env: { ...process.env, ...sobreposicao } })
     let saida = ''
     processo.stdout.on('data', (parte: Buffer) => (saida += parte.toString()))
     processo.stderr.on('data', (parte: Buffer) => (saida += parte.toString()))

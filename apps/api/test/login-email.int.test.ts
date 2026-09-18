@@ -14,6 +14,7 @@ import { configurarAplicacao } from '../src/configurar-app.js'
 import { ContadorDeTentativas } from '../src/sessao/contador-de-tentativas.js'
 import { HashDeSenha } from '../src/sessao/hash-de-senha.js'
 import { CLIENTE_REDIS_LOGIN } from '../src/sessao/sessao.module.js'
+import { comoAWebNo503 } from './api-com-sessao.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'
 
@@ -316,8 +317,11 @@ describe('POST /v1/sessao/email: a equipe entra por e-mail e senha', () => {
     for (let tentativa = 1; tentativa <= 5; tentativa++) await comSenha(esquecido.email, SENHA_ERRADA)
 
     const inicio = performance.now()
-    const respostas = await Promise.all(professores.map((professor) => comSenha(professor.email)))
+    // Como a web: o 503 do semáforo do hash (14.0) é atraso, e o pedido volta depois do `Retry-After`.
+    const tentativas = await Promise.all(professores.map((professor) => comoAWebNo503(() => comSenha(professor.email))))
+    const respostas = tentativas.map(({ resposta }) => resposta)
     expect(performance.now() - inicio).toBeLessThan(60_000)
+    for (const { recusas } of tentativas) for (const recusa of recusas) expect(recusa.corpo.erro?.codigo).toBe(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO)
     esperarSegurada(respostas[0] ?? ({} as Resposta), 30)
     expect(respostas.slice(1).map((resposta) => resposta.status)).toEqual(Array.from({ length: 34 }, () => 200))
     const { rows } = await bancada.pool.query<{ total: string }>("select count(*) as total from registro_acesso where escola_id = $1 and evento = 'login' and host(ip) = '127.0.0.1'", [escolaId])

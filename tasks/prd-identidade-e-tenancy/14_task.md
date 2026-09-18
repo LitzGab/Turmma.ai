@@ -43,20 +43,20 @@ métricas e dois alertas com runbook.
 
 ## Subtarefas
 
-- [ ] 14.1 — Semáforo com baldes.
+- [x] 14.1 — Semáforo com baldes.
   - **Variáveis:** `LOGIN_HASH_CONCORRENCIA` é obrigatória, sem padrão no código, e o boot recusa valor acima de `UV_THREADPOOL_SIZE − 8`, a folga para DNS e arquivo de `docs/infra.md` ("Threads e DNS"). `UV_THREADPOOL_SIZE` já é explícito no compose de cada processo Node (16) desde a correção da borda.
   - **Algoritmo:** `@node-rs/argon2`, argon2id, p=1, com m=19456 e t=2 como piso (OWASP). O `t` final sai da 16.0.
   - **Baldes:** um por escola (matrícula, pelo slug, exista a matrícula ou não), um de slug inexistente e um "equipe" (todo login por e-mail, exista a conta ou não). Dentro da "equipe", o atendimento roda por IP.
   - **Ordem:** o semáforo atende os baldes em rodízio. A resolução de balde acontece antes do semáforo e não depende de a credencial existir.
-- [ ] 14.2 — Espera e métricas.
+- [x] 14.2 — Espera e métricas.
   - **Espera:** quem espera mais de 2 s sai com 503 `INDISPONIVEL_TENTE_DE_NOVO` e `Retry-After` aleatório entre 2 e 6 s. O hash fixo do inexistente também passa pelo semáforo.
   - **Métricas:** `login.duracao{metodo}`, `login.hash_espera{escola_id}` e `login.hash_recusado`. `METRICAS_COM_ESCOLA` passa a admitir `escola_id` só nas três métricas de login da Tech Spec 7c, e o teste de cardinalidade existente é ajustado para essa lista fechada.
-- [ ] 14.3 — Alertas e runbook.
+- [x] 14.3 — Alertas e runbook.
   - **`login-lento`:** p95 de `login.duracao` acima de 1 s por 3 min.
   - **`login-hash-recusado`:** 503 do semáforo acima de 1% dos logins por 3 min.
   - **Runbook:** cada alerta ganha entrada em `docs/runbook.md` (o que olhar: espera por balde, CPU da API, instâncias; o que fazer: subir instância, rever `LOGIN_HASH_CONCORRENCIA` e o custo do hash, conferir se é ataque ao balde "equipe").
   - **Ensaio:** `ensaio:alertas` passa a provocar os dois.
-- [ ] 14.4 — Testes (tabela abaixo).
+- [x] 14.4 — Testes (tabela abaixo).
 
 ## Arquivos previstos
 
@@ -100,5 +100,62 @@ métricas e dois alertas com runbook.
 - Calibração do custo do argon2 e do valor de `LOGIN_HASH_CONCORRENCIA` no cenário: 16.0
 - "Entrando…" na web repetindo o 503: 18.0
 
+## Notas da implementação
+
+Leituras que tomei onde a tarefa deixava margem, escolhendo a que protege o aluno e a escola:
+
+- **A vez no semáforo vem antes de a tentativa ser contada.** A ordem da 4.0 era reservar no contador, ler a
+  credencial e fazer o hash. Se o semáforo ficasse só em volta do hash, o 503 de quem esperou demais já teria contado
+  como senha errada, e a web, que repete o login no 503 por até 30 s, seguraria a conta do próprio aluno com
+  `CONTA_SEGURADA` no meio da rajada das 7h30. Por isso a vez envolve reservar, ler a credencial e o hash, e é devolvida
+  logo depois do hash (a conclusão do login, com a gravação da sessão, fica fora). O teste de borda da integração prova:
+  seis 503 seguidos e o aluno entra na sétima.
+- **Rodízio pela vez mais antiga, contando a vez sem fila.** "B é a próxima atendida depois do que está em andamento"
+  só vale se o balde com o hash em andamento for para o fim da roda, mesmo tendo pegado a vez sem esperar. O semáforo
+  guarda em que vez cada balde (e cada IP, na equipe) foi atendido e dá a vez ao que foi atendido há mais tempo. Quem
+  entra na roda sem vez anterior entra logo antes da vez atual: na frente de quem acabou de ser atendido, atrás de quem
+  já esperava. Assim, num ataque ao balde da equipe com um IP novo a cada pedido, os IPs novos não passam na frente da
+  professora que já tinha entrado antes (teste de unidade com o controle negativo conferido).
+- **`login.hash_espera{escola_id}`** leva a escola do endereço (matrícula), `equipe` (todo login por e-mail) ou
+  `desconhecida` (endereço que não existe). Nunca IP: o IP da subfila da equipe fica só na memória do semáforo.
+  `METRICAS_COM_ESCOLA` passou a ter as quatro de job e a espera pelo hash; `login.falhas` e
+  `login.prioridade_rebaixada` entram na lista quando nascerem, na 15.3 (a lista não ganha nome de métrica que ainda
+  não existe, porque o teste do painel exige painel para toda métrica do catálogo).
+- **`UV_THREADPOOL_SIZE` também é obrigatória na configuração da API**, sem padrão: o teto só pode ser conferido contra
+  as threads que o processo tem de fato. Sem ela, o padrão do Node (4) não deixaria thread nenhuma para o hash.
+- **`LOGIN_HASH_CONCORRENCIA=2` no `.env.example`**, a conta de capacidade da Tech Spec (dois hashes por instância de
+  1 CPU). O valor final sai do cenário da 16.0. O `infra/compose.carga.yml` não mudou: o cenário usa o valor do
+  `.env.example`, e quem o fixa é a 16.0.
+- **Testes que já existiam e fazem rajada de logins** (400 alunos na matrícula, 35 professores no e-mail) passaram a
+  repetir no 503 como a web faz (`comoAWebNo503`): o 503 do semáforo é comportamento novo e esperado. O de 400 alunos
+  sobe a API com `LOGIN_HASH_CONCORRENCIA=4`, as quatro threads do libuv do processo do vitest, a vazão que ele tinha
+  antes do semáforo.
+- **Teto de 10.000 pedidos esperando por instância:** acima dele o pedido sai com o mesmo 503 na hora. Com o prazo de
+  2 s, só uma inundação muito acima da rajada das 7h30 chega lá; é o que impede a memória de crescer sem limite.
+- **O ensaio provoca os dois alertas de login** recriando as APIs com um hash por vez e o argon2 com 32 iterações
+  (`HASH_LENTO_DO_ENSAIO`, sobreposto na interpolação do compose, sem arquivo a mais) e mandando logins a um endereço
+  que não existe, com matrícula nova a cada pedido. No fim, recria as APIs com o ambiente de sempre. Com o hash de
+  sempre, saturar o semáforo pediria mais logins por segundo que o limite anônimo por IP deixa passar.
+- **"Abaixo do limiar"** está no teste de integração dos alertas: logins sem fila, as duas expressões abaixo do limiar e
+  as duas regras normais por quatro avaliações.
+- **`hash-de-senha.ts` ficou em `apps/api/src/sessao/`**, onde a 4.0 o criou; a pasta `senha/` tem o semáforo, os
+  baldes e a duração do login. Mover o hash só mudaria importações.
+- **O aceite de convite também gera hash e não passa pelo semáforo:** só roda depois de o token de convite ser validado,
+  e é raro. A tarefa pede o semáforo no login por e-mail e por matrícula.
+
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-18 15:43:40 | 2026-09-18 15:44:57 | `test-engineer` | 1 | REPROVADO | a01f7d0f4451a55e1 |
+| 2026-09-18 16:14:38 | 2026-09-18 16:15:01 | `test-engineer` | 2 | APROVADO | a683f439a602e0d6f |
+| 2026-09-18 16:41:15 | 2026-09-18 16:42:15 | `privacy-guardian` | 1 | APROVADO | a85de384f7530f638 |
+| 2026-09-18 16:41:10 | 2026-09-18 16:42:27 | `infra-guardian` | 1 | APROVADO | acbc4c11869f28d3d |
+| 2026-09-18 16:41:04 | 2026-09-18 16:42:49 | `revisor-geral` | 1 | APROVADO | a8d0b640953234244 |

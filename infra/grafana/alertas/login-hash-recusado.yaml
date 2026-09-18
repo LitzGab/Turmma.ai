@@ -1,0 +1,64 @@
+# Alerta "Login recusado pelo semáforo do hash" (Tech Spec da identidade, seção 7c; runbook:
+# docs/runbook.md#login-recusado-pelo-semáforo-do-hash). Provisionado por arquivo no Grafana da observabilidade local
+# (infra/compose.yml monta esta pasta em provisioning/alerting).
+#
+# `login.hash_recusado` conta os logins que esperaram mais de 2 s pela vez no semáforo do hash de senha e saíram com
+# 503 e `Retry-After` (a web repete sozinha por até 30 s). Dispara quando esses 503 passam de 1% dos logins do último
+# minuto (`login.duracao`, que conta todo login por e-mail e matrícula, inclusive os 503), somadas as instâncias da API,
+# por 3 min seguidos. Cada instância nasce com o contador em 0, então o primeiro 503 depois do boot também conta.
+#
+# Sem login no minuto, a expressão fica sem série (e não 0/0): sem tráfego, sem alerta. Sem dado é normal.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: login-semaforo
+    folder: Educa.ia alertas
+    interval: 10s
+    rules:
+      - uid: educa-login-hash-recusado
+        title: Login recusado pelo semáforo do hash
+        condition: C
+        for: 3m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          area: login
+        annotations:
+          summary: Mais de 1% dos logins saiu com 503 do semáforo do hash por 3 min
+          description: A fila do hash de senha passou do prazo de 2 s. A web repete, mas quem espera mais de 30 s vê erro. Siga o runbook.
+          runbook_url: https://github.com/LitzGab/Educa.ia/blob/main/docs/runbook.md#login-recusado-pelo-semáforo-do-hash
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: (sum (rate(login_hash_recusado_total{job="educa/api"}[1m])) / sum (rate(login_duracao_seconds_count{job="educa/api"}[1m]))) and on () (sum (rate(login_duracao_seconds_count{job="educa/api"}[1m])) > 0)
+              instant: true
+              range: false
+              intervalMs: 10000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - type: query
+                  evaluator:
+                    type: gt
+                    params: [0.01]

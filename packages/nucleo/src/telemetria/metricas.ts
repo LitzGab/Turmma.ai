@@ -9,8 +9,8 @@ import type { PoolBanco } from '../db/pool.js'
  * (`infra/grafana/paineis/`) e os alertas (13.0) leem estes nomes, já traduzidos pelo Prometheus:
  * ponto vira sublinhado, contador ganha `_total`, e unidade em segundos ganha `_seconds`.
  *
- * Métrica só leva id e rótulo de estrutura (regra 20, item 9). Nenhuma leva usuário, e só as de job
- * levam escola.
+ * Métrica só leva id e rótulo de estrutura (regra 20, item 9). Nenhuma leva usuário, e só as de job e a espera pelo
+ * hash de senha levam escola (`METRICAS_COM_ESCOLA`).
  */
 export const METRICAS = {
   /** Histograma, em segundos, por rota template, método e status. */
@@ -44,6 +44,19 @@ export const METRICAS = {
    */
   loginExterno: 'login.externo',
   /**
+   * Histograma, em segundos, de cada login por e-mail ou matrícula, do pedido à resposta, por `metodo` (`email`,
+   * `matricula`). Conta toda resposta: entrou, senha errada, conta segurada e o 503 do semáforo do hash.
+   */
+  duracaoDoLogin: 'login.duracao',
+  /**
+   * Histograma, em segundos, de quanto o login esperou a vez no semáforo do hash de senha, por `escola_id`: a escola do
+   * endereço (matrícula), `equipe` (todo login por e-mail) ou `desconhecida` (endereço que não existe). Nunca usuário,
+   * matrícula nem IP.
+   */
+  esperaPeloHash: 'login.hash_espera',
+  /** Logins que esperaram mais que o prazo pela vez no semáforo do hash e saíram com 503, sem rótulo. */
+  hashRecusado: 'login.hash_recusado',
+  /**
    * Renovações de sessão pelo cookie, por `resultado`: `ok`, `ja_renovado` (409 de duas abas), `resposta_perdida`
    * (o anterior voltou sem o atual ter sido usado), `reuso` (família encerrada) e `recusada` (cookie que não vale).
    */
@@ -56,8 +69,12 @@ export const METRICAS = {
   atrasoEventLoop: 'nodejs.eventloop.delay.p99',
 } as const
 
-/** As únicas métricas que levam `escola_id`: as de job. Nenhuma outra pode levar escola, e nenhuma leva usuário. */
-export const METRICAS_COM_ESCOLA: readonly string[] = [METRICAS.esperaMaisAntiga, METRICAS.pendentes, METRICAS.aguardandoVaga, METRICAS.vagasEmUso]
+/**
+ * As únicas métricas que levam `escola_id`: as de job e, fora de job, as de login da Tech Spec da identidade (seção 7c),
+ * com cardinalidade de uma série por escola. Hoje só a espera pelo hash; `login.falhas` e `login.prioridade_rebaixada`
+ * entram aqui quando nascerem (tarefa 15.3). Nenhuma outra pode levar escola, e nenhuma leva usuário.
+ */
+export const METRICAS_COM_ESCOLA: readonly string[] = [METRICAS.esperaMaisAntiga, METRICAS.pendentes, METRICAS.aguardandoVaga, METRICAS.vagasEmUso, METRICAS.esperaPeloHash]
 
 /** O rótulo da escola nas métricas de job. Rotina do sistema, sem escola, aparece como `sistema`, como na chave da vaga. */
 export const ROTULO_ESCOLA = 'escola_id'

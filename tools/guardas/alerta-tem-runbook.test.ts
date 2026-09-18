@@ -26,12 +26,21 @@ describe('guarda: alerta tem runbook', () => {
     const arquivos = arquivosDeAlertaDoRepositorio()
     expect(arquivos.map((arquivo) => arquivo.caminho)).toEqual([
       'infra/grafana/alertas/job-interativo-esperando.yaml',
+      'infra/grafana/alertas/login-hash-recusado.yaml',
+      'infra/grafana/alertas/login-lento.yaml',
       'infra/grafana/alertas/reuso-de-refresh.yaml',
       'infra/grafana/alertas/seguro-limite-ativo.yaml',
       'infra/grafana/alertas/taxa-5xx.yaml',
     ])
     expect(problemasDeRunbook(arquivos, runbookDoRepositorio)).toEqual([])
-    expect(arquivos.flatMap(regrasDoArquivo).map((regra) => regra.titulo)).toEqual(['Job interativo esperando', 'Reuso de refresh', 'Seguro de limite ativo', 'Taxa de erro 5xx'])
+    expect(arquivos.flatMap(regrasDoArquivo).map((regra) => regra.titulo)).toEqual([
+      'Job interativo esperando',
+      'Login recusado pelo semáforo do hash',
+      'Login lento',
+      'Reuso de refresh',
+      'Seguro de limite ativo',
+      'Taxa de erro 5xx',
+    ])
   })
 
   it('reprova: regra nova sem entrada no runbook', () => {
@@ -77,6 +86,7 @@ describe('guarda: alerta tem runbook', () => {
 
   it('a âncora é a do GitHub para os títulos em português', () => {
     expect(ancoraDoTitulo('Taxa de erro 5xx')).toBe('taxa-de-erro-5xx')
+    expect(ancoraDoTitulo('Login recusado pelo semáforo do hash')).toBe('login-recusado-pelo-semáforo-do-hash')
     expect(ancoraDoTitulo('Salvamento de resposta de prova lento ou falhando')).toBe('salvamento-de-resposta-de-prova-lento-ou-falhando')
     expect(ancoraDoTitulo('Rotina do sistema sem rodar (consolidação de uso, expurgo de jobs)')).toBe('rotina-do-sistema-sem-rodar-consolidação-de-uso-expurgo-de-jobs')
   })

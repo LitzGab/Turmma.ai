@@ -991,6 +991,153 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Login (p95) por método",
+      "description": "p95 da duração do login por e-mail e por matrícula, do pedido à resposta, com qualquer desfecho, inclusive o 503 do semáforo do hash. Acima de 1 s por 3 min dispara o alerta \"Login lento\".",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 83
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, metodo) (rate(login_duracao_seconds_bucket[1m])))",
+          "legendFormat": "{{metodo}}",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Espera pelo hash por escola (p95)",
+      "description": "p95 da espera pela vez no semáforo do hash de senha, por balde: a escola (login por matrícula), equipe (todo login por e-mail) ou desconhecida (endereço que não existe). Perto de 2 s, os logins daquele balde começam a sair com 503.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 91
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, escola_id) (rate(login_hash_espera_seconds_bucket[1m])))",
+          "legendFormat": "{{escola_id}}",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Logins recusados pelo semáforo",
+      "description": "Logins por minuto que esperaram mais de 2 s pela vez no hash e saíram com 503 e Retry-After (a web repete sozinha por até 30 s). Acima de 1% dos logins por 3 min dispara o alerta \"Login recusado pelo semáforo do hash\".",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 91
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(login_hash_recusado_total[1m]))",
+          "legendFormat": "recusados",
+          "range": true
+        }
+      ]
     }
   ]
 }

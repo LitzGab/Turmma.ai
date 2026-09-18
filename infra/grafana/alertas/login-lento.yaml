@@ -1,0 +1,65 @@
+# Alerta "Login lento" (Tech Spec da identidade, seção 7c; runbook: docs/runbook.md#login-lento).
+# Provisionado por arquivo no Grafana da observabilidade local (infra/compose.yml monta esta pasta em
+# provisioning/alerting).
+#
+# `login.duracao{metodo}` mede cada login por e-mail ou matrícula, do pedido à resposta, com qualquer desfecho (entrou,
+# senha errada, conta segurada, 503 do semáforo do hash). Dispara quando o p95 do último minuto, somadas as instâncias
+# da API e os dois métodos, passa de 1 s por 3 min seguidos: é a meta do RF21 para a rajada das 7h30. O histograma tem
+# 1 s como fronteira de balde (os limites são os do HTTP), então o p95 acima de 1 s é acima de 1 s de verdade, e não
+# interpolação dentro de um balde que vai de 0,75 a 2,5.
+#
+# Sem login no minuto, a expressão fica sem série (e não NaN): sem tráfego, sem alerta. Sem dado é normal.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: login
+    folder: Educa.ia alertas
+    interval: 10s
+    rules:
+      - uid: educa-login-lento
+        title: Login lento
+        condition: C
+        for: 3m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          area: login
+        annotations:
+          summary: O p95 do login passou de 1 s há mais de 3 min
+          description: Alunos e equipe estão esperando para entrar. Siga o runbook.
+          runbook_url: https://github.com/LitzGab/Educa.ia/blob/main/docs/runbook.md#login-lento
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: histogram_quantile(0.95, sum by (le) (rate(login_duracao_seconds_bucket{job="educa/api"}[1m]))) and on () (sum (rate(login_duracao_seconds_count{job="educa/api"}[1m])) > 0)
+              instant: true
+              range: false
+              intervalMs: 10000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - type: query
+                  evaluator:
+                    type: gt
+                    params: [1]

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
 import type { PoolBanco } from '../db/pool.js'
 import { lerConfiguracaoTelemetria } from './iniciar.js'
-import { METRICAS, middlewareDeMetricasHttp, observarPoolDoBanco, observarRedis, observarSeguroDoLimite, ROTA_NAO_ENCONTRADA, rotaDaRequisicao } from './metricas.js'
+import { METRICAS, METRICAS_COM_ESCOLA, middlewareDeMetricasHttp, observarPoolDoBanco, observarRedis, observarSeguroDoLimite, ROTA_NAO_ENCONTRADA, rotaDaRequisicao } from './metricas.js'
 
 const ID = '0190f5a0-0000-7000-8000-0000000000c1'
 
@@ -128,5 +128,17 @@ describe('configuração da telemetria', () => {
     expect(() => lerConfiguracaoTelemetria({ TELEMETRIA_INTERVALO_MS: '5000' })).toThrow('TELEMETRIA_OTLP_URL')
     expect(() => lerConfiguracaoTelemetria({ TELEMETRIA_OTLP_URL: 'redis://x:1', TELEMETRIA_INTERVALO_MS: '5000' })).toThrow('TELEMETRIA_OTLP_URL')
     expect(() => lerConfiguracaoTelemetria({ TELEMETRIA_OTLP_URL: 'http://observabilidade:4318', TELEMETRIA_INTERVALO_MS: '100' })).toThrow('TELEMETRIA_INTERVALO_MS')
+  })
+})
+
+describe('métricas com escola', () => {
+  it('lista fechada: `escola_id` só nas quatro de job e, fora de job, na espera pelo hash de login (Tech Spec da identidade, 7c)', () => {
+    // Uma métrica nova com escola precisa entrar aqui de propósito: o rótulo multiplica as séries por escola, e fora
+    // desta lista o teste de cardinalidade da observabilidade (infra/test/metricas.int.test.ts) a reprova.
+    expect([...METRICAS_COM_ESCOLA].sort()).toEqual(
+      [METRICAS.esperaMaisAntiga, METRICAS.pendentes, METRICAS.aguardandoVaga, METRICAS.vagasEmUso, METRICAS.esperaPeloHash].sort(),
+    )
+    expect(METRICAS_COM_ESCOLA).not.toContain(METRICAS.duracaoDoLogin)
+    expect(METRICAS_COM_ESCOLA).not.toContain(METRICAS.hashRecusado)
   })
 })

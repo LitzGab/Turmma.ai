@@ -6,7 +6,10 @@ import { raizRepositorio } from '../../tools/ci/executar.ts'
 import { arquivosDeAlertaDoRepositorio } from '../../tools/guardas/alerta-tem-runbook.ts'
 import { NOMES_NO_PROMETHEUS } from '../../tools/testes/metricas.ts'
 import { metricasDa } from '../../tools/testes/promql.ts'
-import { criarGatilhoDaFalha, estadoDoAlerta, executarEnsaioDeAlertas, REGRAS_DO_ENSAIO, REGRAS_PROVISIONADAS, regrasDaResposta } from '../scripts/ensaio-alertas.ts'
+import { ITERACOES_MINIMAS_ARGON2, THREADS_DE_FOLGA_DO_LIBUV } from '../../apps/api/src/sessao/configuracao-de-login.ts'
+import { LIMITES_DO_HISTOGRAMA_HTTP_S } from '../../packages/nucleo/src/telemetria/metricas.ts'
+import { lerAmbienteExemplo } from '../../tools/ci/compose.ts'
+import { criarGatilhoDaFalha, estadoDoAlerta, executarEnsaioDeAlertas, HASH_LENTO_DO_ENSAIO, REGRAS_DO_ENSAIO, REGRAS_PROVISIONADAS, regrasDaResposta } from '../scripts/ensaio-alertas.ts'
 
 interface Consulta {
   refId: string
@@ -77,6 +80,32 @@ describe('regras de alerta provisionadas', () => {
       'sum (((max_over_time(sessao_renovacao_total{job="educa/api", resultado="reuso"}[10m]) - min_over_time(sessao_renovacao_total{job="educa/api", resultado="reuso"}[10m])) and (resets(sessao_renovacao_total{job="educa/api", resultado="reuso"}[10m]) == 0)) or (sessao_renovacao_total{job="educa/api", resultado="reuso"} and (resets(sessao_renovacao_total{job="educa/api", resultado="reuso"}[10m]) > 0)))',
     )
     expect(limiar(reuso)).toEqual({ type: 'gt', params: [5] })
+
+    const lento = regraPorUid(REGRAS_DO_ENSAIO.loginLento).regra
+    expect(lento.for).toBe('3m')
+    // O p95 do último minuto, somadas instâncias e métodos, e só com login no minuto: sem tráfego, sem série.
+    expect(expressao(lento)).toBe(
+      'histogram_quantile(0.95, sum by (le) (rate(login_duracao_seconds_bucket{job="educa/api"}[1m]))) and on () (sum (rate(login_duracao_seconds_count{job="educa/api"}[1m])) > 0)',
+    )
+    expect(limiar(lento)).toEqual({ type: 'gt', params: [1] })
+
+    const recusado = regraPorUid(REGRAS_DO_ENSAIO.loginHashRecusado).regra
+    expect(recusado.for).toBe('3m')
+    // Os 503 do semáforo sobre todos os logins (a razão, e não a taxa absoluta), só com login no minuto.
+    expect(expressao(recusado)).toBe(
+      '(sum (rate(login_hash_recusado_total{job="educa/api"}[1m])) / sum (rate(login_duracao_seconds_count{job="educa/api"}[1m]))) and on () (sum (rate(login_duracao_seconds_count{job="educa/api"}[1m])) > 0)',
+    )
+    expect(limiar(recusado)).toEqual({ type: 'gt', params: [0.01] })
+  })
+
+  it('o limite de 1 s do login lento é fronteira de balde do histograma de login.duracao: o p95 acima de 1 s não é interpolação', () => {
+    expect(LIMITES_DO_HISTOGRAMA_HTTP_S).toContain(1)
+  })
+
+  it('o hash lento do ensaio é uma configuração que a API aceita: acima da OWASP e com a concorrência dentro das threads do compose', () => {
+    const ambiente: Record<string, string | undefined> = { ...lerAmbienteExemplo(), ...HASH_LENTO_DO_ENSAIO }
+    expect(Number(ambiente['LOGIN_ARGON2_ITERACOES'])).toBeGreaterThan(ITERACOES_MINIMAS_ARGON2)
+    expect(Number(ambiente['LOGIN_HASH_CONCORRENCIA'])).toBeLessThanOrEqual(Number(ambiente['UV_THREADPOOL_SIZE']) - THREADS_DE_FOLGA_DO_LIBUV)
   })
 
   it('toda regra consulta o Prometheus da observabilidade por consulta instantânea, avalia a cada 10 s e não nasce pausada', () => {
@@ -182,7 +211,12 @@ describe('travas do ensaio', () => {
           chamadas.push(argumentos)
           return Promise.resolve({ codigo: 0, saida: '' })
         },
+        composeCom: (_sobreposicao, ...argumentos) => {
+          chamadas.push(argumentos)
+          return Promise.resolve({ codigo: 0, saida: '' })
+        },
         servicos: [],
+        apis: ['api-1'],
         apiUrl: 'http://127.0.0.1:1',
         grafanaUrl: 'http://127.0.0.1:1',
         bancoUrl: 'postgres://ninguem@127.0.0.1:1/nada',

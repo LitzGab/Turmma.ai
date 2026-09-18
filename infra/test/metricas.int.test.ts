@@ -6,6 +6,7 @@ import pg from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { BancadaDeSessoes, type SessaoDeTeste } from '../../apps/api/test/sessao-de-teste.js'
 import { FILAS_POR_PRIORIDADE, nomeDaFilaBullMQ } from '../../packages/nucleo/src/fila/filas.ts'
+import { METRICAS, METRICAS_COM_ESCOLA } from '../../packages/nucleo/src/telemetria/metricas.ts'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
 import { aguardarSaudavel, compose, composeAssincronoOuFalha, PROCESSOS_DA_FILA } from '../../tools/testes/compose.ts'
@@ -215,7 +216,7 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
     }
   }, 120_000)
 
-  it('permissão: nenhuma série tem rótulo de usuário nem o id do usuário em rótulo algum, e `escola_id` só aparece em métrica de job', async () => {
+  it('permissão: nenhuma série tem rótulo de usuário nem o id do usuário em rótulo algum, e `escola_id` só aparece nas métricas da lista fechada (job e espera pelo hash)', async () => {
     const { data: rotulos } = (await (await fetch(`${PROMETHEUS}/api/v1/labels`)).json()) as { data: string[] }
     expect(rotulos.filter((rotulo) => /usuario|user/i.test(rotulo))).toEqual([])
     expect(await consultar('{usuario_id!=""}')).toEqual([])
@@ -225,7 +226,13 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
 
     const comEscola = (await consultar('count by (__name__) ({escola_id!=""})')).map(({ metric }) => metric['__name__']).sort()
     expect(comEscola).toEqual(expect.arrayContaining(['job_espera_mais_antiga_s', 'job_pendentes', 'fila_vagas_em_uso']))
-    const deJob = new Set<string>([...NOMES_NO_PROMETHEUS.esperaMaisAntiga, ...NOMES_NO_PROMETHEUS.pendentes, ...NOMES_NO_PROMETHEUS.vagasEmUso, ...NOMES_NO_PROMETHEUS.aguardandoVaga])
-    expect(comEscola.filter((nome) => !deJob.has(nome ?? ''))).toEqual([])
+    // A lista fechada de `METRICAS_COM_ESCOLA` (as de job e a espera pelo hash de login), com o nome do Prometheus.
+    const admitidas = new Set<string>(
+      (Object.keys(METRICAS) as Array<keyof typeof METRICAS>).filter((chave) => METRICAS_COM_ESCOLA.includes(METRICAS[chave])).flatMap((chave) => NOMES_NO_PROMETHEUS[chave]),
+    )
+    expect([...admitidas].sort()).toEqual(
+      [...NOMES_NO_PROMETHEUS.esperaMaisAntiga, ...NOMES_NO_PROMETHEUS.pendentes, ...NOMES_NO_PROMETHEUS.vagasEmUso, ...NOMES_NO_PROMETHEUS.aguardandoVaga, ...NOMES_NO_PROMETHEUS.esperaPeloHash].sort(),
+    )
+    expect(comEscola.filter((nome) => !admitidas.has(nome ?? ''))).toEqual([])
   }, 120_000)
 })

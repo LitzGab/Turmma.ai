@@ -27,6 +27,8 @@ const ambienteValido = {
   TELEMETRIA_INTERVALO_MS: '5000',
   LOGIN_ARGON2_MEMORIA_KIB: '19456',
   LOGIN_ARGON2_ITERACOES: '2',
+  LOGIN_HASH_CONCORRENCIA: '2',
+  UV_THREADPOOL_SIZE: '16',
   LOGIN_CHAVE_CONTADOR: 'chave_sintetica_do_contador_com_32_caracteres',
   LOGIN_CHAVE_DISPOSITIVO_VERSAO: '1',
   LOGIN_CHAVE_DISPOSITIVO_V1: 'chave_sintetica_do_dispositivo_com_32_caracteres',
@@ -80,6 +82,7 @@ describe('lerConfiguracao', () => {
       telemetria: { otlpUrl: 'http://observabilidade:4318', intervaloMs: 5000 },
       login: {
         hash: { memoriaKib: 19_456, iteracoes: 2 },
+        concorrenciaDoHash: 2,
         chaveContador: new TextEncoder().encode(ambienteValido.LOGIN_CHAVE_CONTADOR),
         dispositivo: { versao: 1, chave: new TextEncoder().encode(ambienteValido.LOGIN_CHAVE_DISPOSITIVO_V1) },
         mfa: {
@@ -111,6 +114,24 @@ describe('lerConfiguracao', () => {
     const erro = erroDe({ ...ambienteValido, [variavel]: valor })
     expect(erro.variaveis).toEqual([variavel])
     expect(erro.message).not.toContain(valor)
+  })
+
+  it('semáforo do hash: LOGIN_HASH_CONCORRENCIA e UV_THREADPOOL_SIZE são obrigatórias, sem padrão no código, e a falta aponta só o nome', () => {
+    for (const variavel of ['LOGIN_HASH_CONCORRENCIA', 'UV_THREADPOOL_SIZE']) {
+      expect(erroDe({ ...ambienteValido, [variavel]: undefined }).variaveis, variavel).toEqual([variavel])
+      expect(erroDe({ ...ambienteValido, [variavel]: '' }).variaveis, variavel).toEqual([variavel])
+    }
+    expect(erroDe({ ...ambienteValido, LOGIN_HASH_CONCORRENCIA: '0' }).variaveis).toEqual(['LOGIN_HASH_CONCORRENCIA'])
+  })
+
+  it('semáforo do hash: a concorrência vai até UV_THREADPOOL_SIZE − 8, e um acima derruba o boot apontando só LOGIN_HASH_CONCORRENCIA, sem o valor', () => {
+    // No limite, sobe: 16 threads, 8 de folga para nome e arquivo, 8 para o hash.
+    expect(lerConfiguracao({ ...ambienteValido, UV_THREADPOOL_SIZE: '16', LOGIN_HASH_CONCORRENCIA: '8' }).login.concorrenciaDoHash).toBe(8)
+    const acima = erroDe({ ...ambienteValido, UV_THREADPOOL_SIZE: '16', LOGIN_HASH_CONCORRENCIA: '9' })
+    expect(acima.variaveis).toEqual(['LOGIN_HASH_CONCORRENCIA'])
+    expect(acima.message).not.toMatch(/\b9\b/)
+    // O padrão do Node (4 threads) não deixa nenhuma para o hash: o processo sem UV_THREADPOOL_SIZE de verdade não sobe.
+    expect(erroDe({ ...ambienteValido, UV_THREADPOOL_SIZE: '4', LOGIN_HASH_CONCORRENCIA: '1' }).variaveis).toEqual(['LOGIN_HASH_CONCORRENCIA'])
   })
 
   it('a chave de dispositivo lida é a da versão declarada, e a versão sem chave não sobe', () => {

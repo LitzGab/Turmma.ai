@@ -46,6 +46,7 @@ import { RenovacaoController } from './renovacao.controller.js'
 import { RenovacaoService } from './renovacao.service.js'
 import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
 import { SaidaController } from './saida.controller.js'
+import { SemaforoDeHash } from './senha/semaforo-de-hash.js'
 import { SaidaService } from './saida.service.js'
 import { TrocaDeEscolaController } from './troca-de-escola.controller.js'
 import { TrocaDeEscolaService } from './troca-de-escola.service.js'
@@ -101,6 +102,8 @@ export class SessaoModule implements OnApplicationShutdown {
         { provide: CLIENTE_REDIS_LOGIN, useFactory: () => criarClienteRedisDaApi(opcoes.redisFilaUrl, 'api-login', avisar) },
         { provide: ResolucaoDeTenantRepository, useFactory: (banco: Banco) => new ResolucaoDeTenantRepository(banco), inject: [BANCO] },
         { provide: HashDeSenha, useFactory: () => HashDeSenha.criar(opcoes.login.hash) },
+        // Um semáforo por instância, dividido pelo login por e-mail e pelo por matrícula: o teto é das threads do processo.
+        { provide: SemaforoDeHash, useFactory: () => new SemaforoDeHash(opcoes.login.concorrenciaDoHash, opcoes.medidor ?? medidorGlobal()) },
         { provide: ContadorDeTentativas, useFactory: (cliente: Redis) => new ContadorDeTentativas(cliente, opcoes.login.chaveContador), inject: [CLIENTE_REDIS_LOGIN] },
         { provide: EuRepository, useFactory: (banco: Banco) => new EuRepository(banco), inject: [BANCO] },
         { provide: EuService, useFactory: (eu: EuRepository, resolucao: ResolucaoDeTenantRepository) => new EuService(eu, resolucao), inject: [EuRepository, ResolucaoDeTenantRepository] },
@@ -124,12 +127,13 @@ export class SessaoModule implements OnApplicationShutdown {
           useFactory: (
             resolucao: ResolucaoDeTenantRepository,
             hash: HashDeSenha,
+            semaforo: SemaforoDeHash,
             contador: ContadorDeTentativas,
             dispositivo: CookieDeDispositivo,
             conclusao: ConclusaoDeLogin,
             ativacao: AtivacaoPorConvite,
-          ) => new LoginService({ resolucao, hash, contador, dispositivo, conclusao, ativacao, medidor: opcoes.medidor ?? medidorGlobal() }),
-          inject: [ResolucaoDeTenantRepository, HashDeSenha, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin, AtivacaoPorConvite],
+          ) => new LoginService({ resolucao, hash, semaforo, contador, dispositivo, conclusao, ativacao, medidor: opcoes.medidor ?? medidorGlobal() }),
+          inject: [ResolucaoDeTenantRepository, HashDeSenha, SemaforoDeHash, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin, AtivacaoPorConvite],
         },
         {
           provide: LoginPorMatricula,
@@ -137,11 +141,12 @@ export class SessaoModule implements OnApplicationShutdown {
             banco: Banco,
             resolucao: ResolucaoDeTenantRepository,
             hash: HashDeSenha,
+            semaforo: SemaforoDeHash,
             contador: ContadorDeTentativas,
             dispositivo: CookieDeDispositivo,
             conclusao: ConclusaoDeLogin,
-          ) => new LoginPorMatricula({ banco, resolucao, hash, contador, dispositivo, conclusao, medidor: opcoes.medidor ?? medidorGlobal() }),
-          inject: [BANCO, ResolucaoDeTenantRepository, HashDeSenha, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin],
+          ) => new LoginPorMatricula({ banco, resolucao, hash, semaforo, contador, dispositivo, conclusao, medidor: opcoes.medidor ?? medidorGlobal() }),
+          inject: [BANCO, ResolucaoDeTenantRepository, HashDeSenha, SemaforoDeHash, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin],
         },
         {
           provide: AcessoDaEscolaService,

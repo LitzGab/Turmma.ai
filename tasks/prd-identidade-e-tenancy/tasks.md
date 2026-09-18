@@ -84,11 +84,11 @@
   - [x] 13.3 `iniciar` e `retorno` com `openid-client`, cookie `educa_oidc`, `hd`/`tid`, ligação do professor e recusa igual
   - [x] 13.4 Testes: conta pessoal e domínio errado, aluno sem ligação, `email_verified`, retorno em paralelo, nada no log e no banco, cookie de A com slug de B, provedor fora
 
-- [ ] **14.0 — Semáforo de hash justo entre escolas**
-  - [ ] 14.1 Semáforo com `LOGIN_HASH_CONCORRENCIA` validado contra `UV_THREADPOOL_SIZE`, baldes por escola e "equipe", rodízio
-  - [ ] 14.2 503 com `Retry-After` aleatório; métricas `login.duracao`, `login.hash_espera`, `login.hash_recusado`
-  - [ ] 14.3 Alertas `login-lento` e `login-hash-recusado` com runbook
-  - [ ] 14.4 Testes: boot recusa concorrência alta, B atendida com A cheia, taxa de 503 igual para existente e inexistente
+- [x] **14.0 — Semáforo de hash justo entre escolas**
+  - [x] 14.1 Semáforo com `LOGIN_HASH_CONCORRENCIA` validado contra `UV_THREADPOOL_SIZE`, baldes por escola e "equipe", rodízio
+  - [x] 14.2 503 com `Retry-After` aleatório; métricas `login.duracao`, `login.hash_espera`, `login.hash_recusado`
+  - [x] 14.3 Alertas `login-lento` e `login-hash-recusado` com runbook
+  - [x] 14.4 Testes: boot recusa concorrência alta, B atendida com A cheia, taxa de 503 igual para existente e inexistente
 
 - [ ] **15.0 — Ataque de senha nunca bloqueia a escola**
   - [ ] 15.1 Rebaixamento por IP×escola com limiar pelo tamanho da escola e passagem pelo cookie de dispositivo

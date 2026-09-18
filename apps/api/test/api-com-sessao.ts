@@ -112,3 +112,27 @@ export async function registrosDeAcesso(bancada: BancadaDeSessoes, sessao: Pick<
   ])
   return Number(rows[0]?.total)
 }
+
+/** O que a web lê de uma resposta de login para decidir se tenta de novo: o status e o `Retry-After`. */
+export interface RespostaComEspera {
+  readonly status: number
+  readonly retryAfter: string | null
+}
+
+/** Quanto a web repete o login no 503 antes de mostrar erro (Tech Spec da identidade, seção 5, "Fila"). */
+export const PRAZO_DA_WEB_NO_503_MS = 30_000
+
+/**
+ * Faz o pedido como a web faz no login: no 503 do semáforo do hash, espera o `Retry-After` e tenta de novo, por até
+ * 30 s. Devolve a última resposta e os 503 do caminho, para o teste conferir que eles só atrasaram.
+ */
+export async function comoAWebNo503<R extends RespostaComEspera>(pedir: () => Promise<R>): Promise<{ resposta: R; recusas: R[] }> {
+  const prazo = performance.now() + PRAZO_DA_WEB_NO_503_MS
+  const recusas: R[] = []
+  for (;;) {
+    const resposta = await pedir()
+    if (resposta.status !== 503 || performance.now() > prazo) return { resposta, recusas }
+    recusas.push(resposta)
+    await new Promise((resolver) => setTimeout(resolver, Number(resposta.retryAfter) * 1_000))
+  }
+}

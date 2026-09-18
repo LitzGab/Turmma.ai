@@ -3,11 +3,14 @@ import { CodigoDeErro, type EtapaComDesafio, type PedidoLoginEmail, type Respost
 import { createHash } from 'node:crypto'
 import type { ConclusaoDeLogin } from './conclusao-de-login.js'
 import type { AtivacaoPorConvite } from './convite.service.js'
-import type { ContadorDeTentativas } from './contador-de-tentativas.js'
+import type { ContadorDeTentativas, Reserva } from './contador-de-tentativas.js'
 import type { CookieDeDispositivo } from './cookie-dispositivo.js'
 import { COOKIE_DISPOSITIVO, lerCookie } from './cookies.js'
 import type { HashDeSenha } from './hash-de-senha.js'
 import type { ResolucaoDeTenantRepository, UsuarioAtivoDaConta } from './resolucao-de-tenant.repository.js'
+import { baldeDaEquipe } from './senha/baldes-de-login.js'
+import { DuracaoDoLogin } from './senha/duracao-do-login.js'
+import type { SemaforoDeHash } from './senha/semaforo-de-hash.js'
 
 /** O que o controller tira da requisição HTTP: o IP (o da borda, quando vem dela) e o cabeçalho `Cookie`. */
 export interface OrigemDaRequisicao {
@@ -24,12 +27,25 @@ export interface ResultadoDoLogin {
 export interface DependenciasDoLogin {
   readonly resolucao: ResolucaoDeTenantRepository
   readonly hash: HashDeSenha
+  /** O semáforo do hash (14.0): a vez é pedida antes de contar a tentativa, e devolvida logo depois do hash. */
+  readonly semaforo: SemaforoDeHash
   readonly contador: ContadorDeTentativas
   readonly dispositivo: CookieDeDispositivo
   readonly conclusao: ConclusaoDeLogin
   readonly ativacao: AtivacaoPorConvite
   readonly medidor: Meter
 }
+
+/** A credencial da conta como a resolução a devolve, pelo e-mail. */
+type CredencialDaConta = Awaited<ReturnType<ResolucaoDeTenantRepository['contaPorEmail']>>
+
+/**
+ * O que sai da vez no semáforo do hash: a conta segurada (sem hash), ou a reserva liberada, a credencial lida e se a
+ * senha confere.
+ */
+export type ConferenciaDaSenha<Credencial> =
+  | { readonly seguradaPorMs: number }
+  | { readonly reserva: Extract<Reserva, { liberada: true }>; readonly credencial: Credencial; readonly confere: boolean }
 
 /** O registro de acesso guarda o IP como `inet`: o endereço que não foi lido (socket já fechado) vira o não roteável. */
 const IP_NAO_LIDO = '0.0.0.0'
@@ -63,25 +79,37 @@ export function hashDoRefresh(refresh: string): string {
  *   usuário que espera o convite conta como usuário da conta, e só é ativado com a credencial inteira. Sem MFA, logo
  *   depois da senha certa; com MFA, a resposta é `mfa` com o convite no desafio, e quem ativa é o `MfaService`, depois
  *   do código. Sem o bilhete, o login segue como se não houvesse convite.
+ * - **Semáforo do hash** (14.0): todo login por e-mail, exista a conta ou não, espera a vez no balde `equipe`, com a
+ *   vez rodando por IP. A vez vem antes de a tentativa ser contada: o 503 de quem esperou demais não conta como senha
+ *   errada, e a web que repete o pedido no 503 não segura a conta de ninguém.
  */
 export class LoginService {
   readonly #contaSegurada: ReturnType<Meter['createCounter']>
+  readonly #duracao: DuracaoDoLogin
 
   constructor(private readonly dependencias: DependenciasDoLogin) {
     this.#contaSegurada = dependencias.medidor.createCounter(METRICAS.contaSegurada, { description: 'Tentativas de login respondidas com CONTA_SEGURADA' })
+    this.#duracao = new DuracaoDoLogin(dependencias.medidor, 'email')
   }
 
-  async entrarPorEmail(pedido: PedidoLoginEmail, origem: OrigemDaRequisicao): Promise<ResultadoDoLogin> {
-    const { resolucao, hash, contador, dispositivo } = this.dependencias
+  entrarPorEmail(pedido: PedidoLoginEmail, origem: OrigemDaRequisicao): Promise<ResultadoDoLogin> {
+    return this.#duracao.medir(() => this.#entrarPorEmail(pedido, origem))
+  }
+
+  async #entrarPorEmail(pedido: PedidoLoginEmail, origem: OrigemDaRequisicao): Promise<ResultadoDoLogin> {
+    const { resolucao, hash, semaforo, contador, dispositivo } = this.dependencias
     const email = normalizarEmail(pedido.email)
     const cookieDispositivo = lerCookie(origem.cabecalhoCookie, COOKIE_DISPOSITIVO)
     const chave = contador.chaveDe(email, dispositivo.conhece(cookieDispositivo, email) ? 'conhecido' : 'outro')
 
-    const reserva = await contador.reservar(chave)
-    if (!reserva.liberada) throw this.#segurada(reserva.esperaMs)
-
-    const credencial = await resolucao.contaPorEmail(email)
-    const confere = await hash.verificar(credencial?.senhaHash, pedido.senha)
+    const conferencia = await semaforo.executar(baldeDaEquipe(origem.ip), async (): Promise<ConferenciaDaSenha<CredencialDaConta>> => {
+      const reserva = await contador.reservar(chave)
+      if (!reserva.liberada) return { seguradaPorMs: reserva.esperaMs }
+      const credencial = await resolucao.contaPorEmail(email)
+      return { reserva, credencial, confere: await hash.verificar(credencial?.senhaHash, pedido.senha) }
+    })
+    if ('seguradaPorMs' in conferencia) throw this.#segurada(conferencia.seguradaPorMs)
+    const { reserva, credencial, confere } = conferencia
     // Só com a senha certa há uma consulta a mais (os usuários ativos): o tempo dela só diz algo a quem já tem a
     // senha. Não copie este padrão para antes do hash.
     const { ativacao } = this.dependencias
