@@ -60,6 +60,10 @@ apagados no prazo da retenção por uma rotina noturna idempotente.
   - **O que fazer:** na mesma transação da redefinição, encerrar todas as sessões ativas da conta, em todas as escolas dela, com motivo próprio (ex.: `mfa_redefinido`), pelo mesmo caminho que a 17.1 usa para encerrar sessão na desativação. A requisição seguinte com a sessão encerrada dá 401, como em toda sessão encerrada (2.0).
   - **Escopo:** a conta é global; encerrar em outras escolas da mesma conta segue a regra da 6.0 para a redefinição (só age quando todos os usuários ativos da conta são da escola que pediu, ou pelo operador). Nada de dado de outra escola aparece na resposta nem na auditoria da escola que pediu.
   - **Tech Spec:** acrescentar o encerramento na seção 5 (MFA, redefinição).
+- [ ] 17.5 — A troca de escola grava `saida` no registro de acesso da origem (decidido em 18/09/2026, revertendo uma escolha da 12.0).
+  - **Por quê:** a 12.0 registrou o fim da sessão de origem só pelo motivo `troca_de_escola` na própria sessão. A sessão é expurgada em 30 dias (17.2), e o `registro_acesso` guarda 6 meses (Marco Civil, art. 15): o rastro de que a pessoa saiu de A para B sumiria antes do prazo. O `DELETE /v1/sessao` já grava `saida`; a troca é uma saída da escola de origem.
+  - **O que fazer:** na mesma transação da troca (e do código aceito, quando o destino é a coordenação), gravar `saida` no `registro_acesso` da escola de origem, só com ids, com o motivo `troca_de_escola` se a tabela tiver onde. Nada da escola de destino vai para o registro da origem, e vice-versa.
+  - **Teste:** a troca de A para B deixa `saida` em A e `login` em B; o registro de A não traz a escola B; com o código do MFA recusado, nada é gravado em nenhuma das duas.
 
 ## Arquivos previstos
 

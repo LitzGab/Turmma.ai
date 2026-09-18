@@ -107,6 +107,7 @@
   - [ ] 17.2 `sistema.expurgar-acesso` (registro de acesso, sessão, convite), idempotente
   - [ ] 17.3 Testes: hash apagado, conta mantida com usuário em B, limites de 6 meses e 30 dias, expurgo em paralelo
   - [ ] 17.4 Redefinir o MFA encerra as sessões abertas da conta, com teste
+  - [ ] 17.5 A troca de escola grava `saida` no registro de acesso da origem, com teste
 
 - [ ] **18.0 — A web mantém a sessão, e a equipe entra por `/entrar`**
   - [ ] 18.1 `wouter`, `api/sessao.ts` com token em memória, `Authorization` e renovação única com Web Locks

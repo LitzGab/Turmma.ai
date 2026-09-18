@@ -201,6 +201,7 @@ andamento não vence por inatividade (F6).
 **Troca de escola.**
 - Só vale para sessão de método e-mail e para usuário ativo da mesma conta; senão, 404.
 - Cria outra sessão, com família nova, na escola de destino, e encerra a de origem na mesma transação (motivo `troca_de_escola`). Voltar à escola anterior cria outra sessão.
+- **Ratificado em 18/09/2026 (12.0):** a troca pelo token usa `@AceitaDesafio` só nessa rota; com destino na coordenação o MFA é exigido sempre, mesmo vindo de uma sessão de coordenação; e a origem só é encerrada quando o código é aceito. **Revertido:** a origem grava `saida` (motivo `troca_de_escola`) no `registro_acesso` da escola de origem, para o rastro durar os 6 meses do registro e não os 30 dias da sessão (17.5).
 - Aplica o MFA, se o papel for coordenador, e a inatividade do destino.
 - Sessão de matrícula ou externa leva ao login da outra escola.
 
