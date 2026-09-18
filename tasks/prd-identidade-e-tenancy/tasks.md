@@ -1,7 +1,7 @@
 # Tarefas — Identidade e tenancy
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 5 de 20 concluídas
+**Status:** 6 de 20 concluídas
 
 ## Lista
 
@@ -41,11 +41,11 @@
   - [x] 5.4 Métricas `sessao.renovacao`, `sessao.atividade_falha`, `sessao.leitura.duracao`; alerta `reuso-de-refresh` com runbook
   - [x] 5.5 Testes: renovação dupla, resposta perdida, reuso depois de 31 s, 34 e 35 min de inatividade, 12 h absolutas, saída
 
-- [ ] **6.0 — Coordenador só acessa com MFA**
-  - [ ] 6.1 Migration de `codigo_recuperacao`; `configurar` e `ativar` com AES-256-GCM, AAD e versão da chave
-  - [ ] 6.2 `POST /v1/sessao/mfa` com passo condicional, recuperação de uso único e tentativas consumindo o `jti`
-  - [ ] 6.3 `POST /v1/usuarios/:id/mfa/redefinir` (202 sempre) e `ops:redefinir-mfa`
-  - [ ] 6.4 Testes: coordenador sem MFA barrado, TOTP e recuperação em paralelo, quinto erro, AAD, redefinir em A e B
+- [x] **6.0 — Coordenador só acessa com MFA**
+  - [x] 6.1 Migration de `codigo_recuperacao`; `configurar` e `ativar` com AES-256-GCM, AAD e versão da chave
+  - [x] 6.2 `POST /v1/sessao/mfa` com passo condicional, recuperação de uso único e tentativas consumindo o `jti`
+  - [x] 6.3 `POST /v1/usuarios/:id/mfa/redefinir` (202 sempre) e `ops:redefinir-mfa`
+  - [x] 6.4 Testes: coordenador sem MFA barrado, TOTP e recuperação em paralelo, quinto erro, AAD, redefinir em A e B
 
 - [ ] **7.0 — Primeiro coordenador entra por convite do operador**
   - [ ] 7.1 Migration de `convite`; `ops:convite-coordenador` em arquivo 0600 e `ops:revogar-convite`

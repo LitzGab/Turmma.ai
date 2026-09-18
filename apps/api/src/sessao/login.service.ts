@@ -1,24 +1,11 @@
-import {
-  contextoAtual,
-  DURACAO_DA_SESSAO_HORAS,
-  ErroDeDominio,
-  executarNoContexto,
-  IP_DESCONHECIDO,
-  METRICAS,
-  type Ambiente,
-  type Banco,
-  type EmissorDeToken,
-  type Meter,
-} from '@educa/nucleo'
+import { ErroDeDominio, IP_DESCONHECIDO, METRICAS, type Meter } from '@educa/nucleo'
 import { CodigoDeErro, type EtapaComDesafio, type PedidoLoginEmail, type RespostaLogin } from '@educa/shared'
-import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { createHash } from 'node:crypto'
+import type { ConclusaoDeLogin } from './conclusao-de-login.js'
 import type { ContadorDeTentativas } from './contador-de-tentativas.js'
-import { MAX_AGE_DO_COOKIE_DISPOSITIVO_SEGUNDOS, type CookieDeDispositivo } from './cookie-dispositivo.js'
-import { COOKIE_DISPOSITIVO, COOKIE_SESSAO, lerCookie, serializarCookie } from './cookies.js'
-import { CriacaoDeSessaoRepository } from './criacao-de-sessao.repository.js'
-import type { EmissorDeDesafio } from './desafio.js'
+import type { CookieDeDispositivo } from './cookie-dispositivo.js'
+import { COOKIE_DISPOSITIVO, lerCookie } from './cookies.js'
 import type { HashDeSenha } from './hash-de-senha.js'
-import { RegistroDeAcessoRepository } from './registro-de-acesso.repository.js'
 import type { ResolucaoDeTenantRepository, UsuarioAtivoDaConta } from './resolucao-de-tenant.repository.js'
 
 /** O que o controller tira da requisição HTTP: o IP (o da borda, quando vem dela) e o cabeçalho `Cookie`. */
@@ -34,14 +21,11 @@ export interface ResultadoDoLogin {
 }
 
 export interface DependenciasDoLogin {
-  readonly banco: Banco
   readonly resolucao: ResolucaoDeTenantRepository
   readonly hash: HashDeSenha
   readonly contador: ContadorDeTentativas
   readonly dispositivo: CookieDeDispositivo
-  readonly emissorDeToken: EmissorDeToken
-  readonly emissorDeDesafio: EmissorDeDesafio
-  readonly ambiente: Ambiente
+  readonly conclusao: ConclusaoDeLogin
   readonly medidor: Meter
 }
 
@@ -102,47 +86,7 @@ export class LoginService {
     }
 
     await contador.zerar(chave)
-    const etapa = etapaDoLogin(usuarios, credencial.mfaAtivo)
-    if (etapa !== 'pronta') {
-      // Sem cookie nenhum: o login ainda não terminou. Quem tem só a senha de um coordenador não ganha o
-      // `educa_dispositivo` sem o segundo fator; as rotas que concluem a etapa (6.0 e 12.0) o gravam.
-      const desafio = await this.dependencias.emissorDeDesafio.emitir({ contaId: credencial.id, etapa, mfaCumprido: false })
-      return { resposta: { etapa, desafio }, cookies: [] }
-    }
-    const [unico] = usuarios
-    if (unico === undefined) throw new Error('etapa pronta sem usuário')
-    const { token, expiraEm, refresh } = await this.#criarSessao(unico, credencial.id, origem.ip)
-    return {
-      resposta: { etapa: 'pronta', token, expiraEm: expiraEm.toISOString() },
-      cookies: [
-        serializarCookie(COOKIE_DISPOSITIVO, dispositivo.comEntrada(cookieDispositivo, email), {
-          ambiente: this.dependencias.ambiente,
-          maxAgeSegundos: MAX_AGE_DO_COOKIE_DISPOSITIVO_SEGUNDOS,
-        }),
-        serializarCookie(COOKIE_SESSAO, refresh, { ambiente: this.dependencias.ambiente }),
-      ],
-    }
-  }
-
-  /**
-   * Grava a sessão e o registro de acesso na escola do usuário, numa transação, num contexto que tem só a escola:
-   * a criação lê a escola do contexto, e a FK composta recusa usuário de outra escola.
-   */
-  async #criarSessao(usuario: UsuarioAtivoDaConta, contaId: string, ip: string): Promise<{ token: string; expiraEm: Date; refresh: string }> {
-    const refresh = randomBytes(BYTES_DO_REFRESH).toString('base64url')
-    const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
-    const sessaoId = await executarNoContexto({ requisicaoId, escolaId: usuario.escolaId }, () =>
-      this.dependencias.banco.transaction(async (tx) => {
-        const [criada] = await new CriacaoDeSessaoRepository(tx).criarSessoes([
-          { usuarioId: usuario.usuarioId, contaId, metodo: 'email', refreshHash: hashDoRefresh(refresh), duracaoHoras: DURACAO_DA_SESSAO_HORAS },
-        ])
-        if (criada === undefined) throw new Error('sessão não criada')
-        await new RegistroDeAcessoRepository(tx).gravar('login', usuario.usuarioId, ipParaRegistro(ip))
-        return criada.id
-      }),
-    )
-    const { token, expiraEm } = await this.dependencias.emissorDeToken.emitir({ escolaId: usuario.escolaId, usuarioId: usuario.usuarioId, sessaoId })
-    return { token, expiraEm, refresh }
+    return this.dependencias.conclusao.concluir({ contaId: credencial.id, email, usuarios, mfaAtivo: credencial.mfaAtivo, mfaCumprido: false }, origem)
   }
 
   #segurada(esperaMs: number): ErroDeDominio {
@@ -152,12 +96,13 @@ export class LoginService {
 }
 
 /**
- * A etapa depois da senha certa (Tech Spec, seção 5, "Etapas"): mais de um usuário ativo, `escolher`; um só
- * coordenador, o segundo fator (`mfa`, ou `configurar_mfa` quando ainda não tem); um só professor, `pronta`.
+ * A etapa depois da credencial certa (Tech Spec, seção 5, "Etapas"): mais de um usuário ativo, `escolher`; um só
+ * coordenador, o segundo fator (`mfa`, ou `configurar_mfa` quando ainda não tem), a menos que ele já tenha sido
+ * cumprido nesta entrada; um só professor, `pronta`.
  */
-export function etapaDoLogin(usuarios: readonly Pick<UsuarioAtivoDaConta, 'papel'>[], mfaAtivo: boolean): EtapaComDesafio | 'pronta' {
+export function etapaDoLogin(usuarios: readonly Pick<UsuarioAtivoDaConta, 'papel'>[], mfaAtivo: boolean, mfaCumprido = false): EtapaComDesafio | 'pronta' {
   if (usuarios.length > 1) return 'escolher'
-  if (usuarios[0]?.papel === 'coordenador') return mfaAtivo ? 'mfa' : 'configurar_mfa'
+  if (usuarios[0]?.papel === 'coordenador' && !mfaCumprido) return mfaAtivo ? 'mfa' : 'configurar_mfa'
   return 'pronta'
 }
 

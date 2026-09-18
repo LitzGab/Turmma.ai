@@ -43,3 +43,17 @@ export { esquemaRespostaRenovacao } from './sessao/renovacao.js'
 export type { RespostaRenovacao } from './sessao/renovacao.js'
 export { esquemaPedidoEscolaSessao, esquemaRespostaEscolaSessao, INATIVIDADE_MAXIMA_MIN, INATIVIDADE_MINIMA_MIN } from './sessao/escola-sessao.js'
 export type { PedidoEscolaSessao, RespostaEscolaSessao } from './sessao/escola-sessao.js'
+export {
+  ALFABETO_DO_CODIGO_DE_RECUPERACAO,
+  DIGITOS_DO_CODIGO_MFA,
+  esquemaPedidoAtivarMfa,
+  esquemaPedidoMfa,
+  esquemaPedidoRedefinirMfa,
+  esquemaRespostaAtivarMfa,
+  esquemaRespostaConfigurarMfa,
+  FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR,
+  FINALIDADES_DA_REDEFINICAO_DE_MFA,
+  QUANTIDADE_DE_CODIGOS_DE_RECUPERACAO,
+  TAMANHO_DO_CODIGO_DE_RECUPERACAO,
+} from './sessao/mfa.js'
+export type { FinalidadeDaRedefinicaoDeMfa, PedidoAtivarMfa, PedidoMfa, PedidoRedefinirMfa, RespostaAtivarMfa, RespostaConfigurarMfa } from './sessao/mfa.js'

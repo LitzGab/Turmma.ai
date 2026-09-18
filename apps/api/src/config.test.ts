@@ -1,3 +1,4 @@
+import { hkdfSync } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { lerAmbienteExemplo } from '../../../tools/ci/compose.ts'
 import { ConfiguracaoInvalida, lerConfiguracao, MOTIVO_AVISOS_SEM_JSON, MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO } from './config.js'
@@ -29,6 +30,14 @@ const ambienteValido = {
   LOGIN_CHAVE_CONTADOR: 'chave_sintetica_do_contador_com_32_caracteres',
   LOGIN_CHAVE_DISPOSITIVO_VERSAO: '1',
   LOGIN_CHAVE_DISPOSITIVO_V1: 'chave_sintetica_do_dispositivo_com_32_caracteres',
+  IDENTIDADE_CHAVE_CIFRA_VERSAO: '1',
+  IDENTIDADE_CHAVE_CIFRA_V1: 'chave_sintetica_da_cifra_do_mfa_com_32_caracteres',
+  IDENTIDADE_CHAVE_RECUPERACAO: 'chave_sintetica_da_recuperacao_com_32_caracteres',
+}
+
+/** A chave AES-256 que o HKDF deriva do texto da variável, como a configuração faz. */
+function chaveDerivada(texto: string): Uint8Array {
+  return new Uint8Array(hkdfSync('sha256', texto, new Uint8Array(0), 'educa.mfa.segredo.aes-256-gcm', 32))
 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
@@ -73,6 +82,11 @@ describe('lerConfiguracao', () => {
         hash: { memoriaKib: 19_456, iteracoes: 2 },
         chaveContador: new TextEncoder().encode(ambienteValido.LOGIN_CHAVE_CONTADOR),
         dispositivo: { versao: 1, chave: new TextEncoder().encode(ambienteValido.LOGIN_CHAVE_DISPOSITIVO_V1) },
+        mfa: {
+          versaoCifra: 1,
+          chavesCifra: new Map([[1, chaveDerivada(ambienteValido.IDENTIDADE_CHAVE_CIFRA_V1)]]),
+          chaveRecuperacao: new TextEncoder().encode(ambienteValido.IDENTIDADE_CHAVE_RECUPERACAO),
+        },
       },
     })
   })
@@ -83,6 +97,9 @@ describe('lerConfiguracao', () => {
     ['LOGIN_CHAVE_CONTADOR', 'curta_sintetica'],
     ['LOGIN_CHAVE_DISPOSITIVO_VERSAO', '0'],
     ['LOGIN_CHAVE_DISPOSITIVO_V1', 'curta_sintetica'],
+    ['IDENTIDADE_CHAVE_CIFRA_VERSAO', '0'],
+    ['IDENTIDADE_CHAVE_CIFRA_V1', 'curta_sintetica'],
+    ['IDENTIDADE_CHAVE_RECUPERACAO', 'curta_sintetica'],
   ])('não sobe com %s=%s: o hash nunca abaixo da OWASP e as chaves do login com 256 bits', (variavel, valor) => {
     const erro = erroDe({ ...ambienteValido, [variavel]: valor })
     expect(erro.variaveis).toEqual([variavel])
@@ -100,6 +117,26 @@ describe('lerConfiguracao', () => {
     const erro = erroDe({ ...ambienteValido, LOGIN_CHAVE_DISPOSITIVO_V1: ambienteValido.LOGIN_CHAVE_CONTADOR })
     expect(erro.variaveis).toEqual(['LOGIN_CHAVE_DISPOSITIVO_V1'])
     expect(erro.message).not.toContain(ambienteValido.LOGIN_CHAVE_CONTADOR)
+  })
+
+  it('MFA: a chave de cifra da versão atual é obrigatória; a anterior, se declarada, continua decifrando; e a de recuperação não repete nenhuma outra', () => {
+    const chaveV2 = 'chave_sintetica_da_cifra_v2_com_32_caracteres'
+    const config = lerConfiguracao({ ...ambienteValido, IDENTIDADE_CHAVE_CIFRA_VERSAO: '2', IDENTIDADE_CHAVE_CIFRA_V2: chaveV2 })
+    expect(config.login.mfa.versaoCifra).toBe(2)
+    expect([...config.login.mfa.chavesCifra.entries()]).toEqual([
+      [1, chaveDerivada(ambienteValido.IDENTIDADE_CHAVE_CIFRA_V1)],
+      [2, chaveDerivada(chaveV2)],
+    ])
+    // A versão 1 aposentada pode sair do ambiente; a atual, nunca.
+    expect([...lerConfiguracao({ ...ambienteValido, IDENTIDADE_CHAVE_CIFRA_VERSAO: '2', IDENTIDADE_CHAVE_CIFRA_V1: undefined, IDENTIDADE_CHAVE_CIFRA_V2: chaveV2 }).login.mfa.chavesCifra.keys()]).toEqual([2])
+    expect(erroDe({ ...ambienteValido, IDENTIDADE_CHAVE_CIFRA_VERSAO: '2' }).variaveis).toEqual(['IDENTIDADE_CHAVE_CIFRA_V2'])
+    // A chave derivada tem 256 bits e não é o texto da variável.
+    expect(config.login.mfa.chavesCifra.get(2)?.length).toBe(32)
+    for (const repetida of [ambienteValido.LOGIN_CHAVE_CONTADOR, ambienteValido.LOGIN_CHAVE_DISPOSITIVO_V1, ambienteValido.IDENTIDADE_CHAVE_CIFRA_V1]) {
+      const erro = erroDe({ ...ambienteValido, IDENTIDADE_CHAVE_RECUPERACAO: repetida })
+      expect(erro.variaveis).toEqual(['IDENTIDADE_CHAVE_RECUPERACAO'])
+      expect(erro.message).not.toContain(repetida)
+    }
   })
 
   it('.env.example sobe com o argon2 no mínimo da OWASP (m=19456, t=2)', () => {

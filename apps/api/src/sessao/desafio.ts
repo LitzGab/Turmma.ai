@@ -97,6 +97,21 @@ export class ConsumoDeDesafio {
     private readonly relogio: Relogio = relogioDoSistema,
   ) {}
 
+  /**
+   * Antes de conferir o fator: recusa o desafio já usado (concluído, ou consumido pelo quinto erro), e recusa também
+   * com o Redis fora ou sem resposta, sem esperar: sem a marca, não dá para saber se ele ainda vale. Não consome.
+   */
+  async conferirLivre(desafio: Pick<DesafioVerificado, 'jti'>): Promise<void> {
+    if (this.cliente.status !== 'ready') throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+    let usado: number
+    try {
+      usado = await this.cliente.exists(`${PREFIXO_DESAFIO_USADO}${desafio.jti}`)
+    } catch {
+      throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+    }
+    if (usado !== 0) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+  }
+
   async consumir(desafio: Pick<DesafioVerificado, 'jti' | 'expiraEm'>): Promise<void> {
     const prazoMs = Math.max(1, desafio.expiraEm.getTime() - this.relogio.agora().getTime())
     let marcado: string | null

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR, FINALIDADES_DA_REDEFINICAO_DE_MFA } from '@educa/shared'
 import { TIPOS_DE_REDE } from '../db/schema/rede.js'
 
 /**
@@ -57,6 +58,27 @@ export const ACOES_DE_AUDITORIA = {
     antes: null,
     depois: z.strictObject({ familia: z.uuid(), sessoesEncerradas: z.number().int() }),
     finalidade: null,
+  },
+  /**
+   * O segundo fator de uma conta foi apagado (6.0, RF19): por outro coordenador da escola, ou pelo operador a pedido
+   * formal dela. `entidadeId` é o usuário da escola do registro; `antes` diz se o MFA estava ativo. O operador leva o
+   * número do pedido (`pedidoDoOperador`), nunca texto livre.
+   */
+  'usuario.mfa_redefinido': {
+    entidade: 'usuario',
+    antes: z.strictObject({ mfaAtivo: z.boolean() }),
+    depois: z.strictObject({ mfaAtivo: z.literal(false), pedidoDoOperador: z.number().int().positive().optional() }),
+    finalidade: z.enum([...FINALIDADES_DA_REDEFINICAO_DE_MFA, FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR]),
+  },
+  /**
+   * A coordenação pediu a redefinição, e nada mudou: a conta do usuário também tem usuário ativo em outra escola, e a
+   * credencial é global (Tech Spec, seção 5, "TOTP"). A escola recorre ao operador. O registro não diz qual escola.
+   */
+  'usuario.mfa_redefinicao_recusada': {
+    entidade: 'usuario',
+    antes: null,
+    depois: null,
+    finalidade: z.enum(FINALIDADES_DA_REDEFINICAO_DE_MFA),
   },
 } as const satisfies Record<string, DefinicaoDeAcao>
 

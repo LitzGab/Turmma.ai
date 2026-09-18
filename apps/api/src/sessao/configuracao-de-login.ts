@@ -1,4 +1,5 @@
 import { ConfiguracaoInvalida, validarAmbiente } from '@educa/nucleo'
+import { hkdfSync } from 'node:crypto'
 import { z } from 'zod'
 
 /** Mínimo da OWASP para argon2id com um fio (m=19456 KiB, t=2). A calibração da 16.0 só sobe a partir daqui. */
@@ -20,14 +21,74 @@ export interface ConfiguracaoLogin {
   readonly chaveContador: Uint8Array
   /** A chave do HMAC das entradas do cookie `educa_dispositivo`, com a versão que vai no próprio cookie. */
   readonly dispositivo: { readonly versao: number; readonly chave: Uint8Array }
+  /** As chaves do segundo fator (tarefa 6.0). */
+  readonly mfa: ConfiguracaoMfa
 }
+
+export interface ConfiguracaoMfa {
+  /** A versão da chave que cifra todo segredo novo; vai para `conta.mfa_chave_versao`. */
+  readonly versaoCifra: number
+  /**
+   * As chaves AES-256 de cada versão declarada (`IDENTIDADE_CHAVE_CIFRA_V{n}`, derivadas pelo HKDF): a atual cifra, e as
+   * anteriores continuam decifrando o segredo de quem configurou antes da troca.
+   */
+  readonly chavesCifra: ReadonlyMap<number, Uint8Array>
+  /** A chave do HMAC dos códigos de recuperação, separada das da cifra: quem tem uma não tem a outra. */
+  readonly chaveRecuperacao: Uint8Array
+}
+
+/** AES-256 pede chave de exatamente 256 bits, que o HKDF deriva do texto da variável. */
+export const BYTES_DA_CHAVE_DE_CIFRA = 32
+/** Maior versão de chave de cifra aceita, a mesma faixa da versão do cookie de dispositivo. */
+const MAIOR_VERSAO_DE_CHAVE = 99
+
+/** O nome da variável da chave de cifra do segredo do MFA na versão. */
+export function variavelDaChaveDeCifra(versao: number): string {
+  return `IDENTIDADE_CHAVE_CIFRA_V${String(versao)}`
+}
+
+export const MOTIVO_CHAVE_DE_CIFRA = 'a chave de cifra do MFA da versão atual é obrigatória, com pelo menos 32 caracteres'
+/** O rótulo (`info`) do HKDF que deriva a chave AES-256 do texto da variável. */
+const ROTULO_DA_CHAVE_DE_CIFRA = 'educa.mfa.segredo.aes-256-gcm'
+export const MOTIVO_CHAVE_DE_RECUPERACAO_REPETIDA = 'IDENTIDADE_CHAVE_RECUPERACAO precisa ser diferente das outras chaves: cada HMAC e cada cifra têm a própria chave'
 
 const esquemaAmbienteLogin = z.object({
   LOGIN_ARGON2_MEMORIA_KIB: z.coerce.number().int().min(MEMORIA_MINIMA_ARGON2_KIB),
   LOGIN_ARGON2_ITERACOES: z.coerce.number().int().min(ITERACOES_MINIMAS_ARGON2),
   LOGIN_CHAVE_CONTADOR: z.string().min(TAMANHO_MINIMO_CHAVE_DE_LOGIN),
   LOGIN_CHAVE_DISPOSITIVO_VERSAO: z.coerce.number().int().min(1).max(99),
+  IDENTIDADE_CHAVE_CIFRA_VERSAO: z.coerce.number().int().min(1).max(MAIOR_VERSAO_DE_CHAVE),
+  IDENTIDADE_CHAVE_RECUPERACAO: z.string().min(TAMANHO_MINIMO_CHAVE_DE_LOGIN),
 })
+
+/**
+ * A chave AES-256 da versão: o segredo do ambiente (texto de pelo menos 32 caracteres, como as outras chaves) passa
+ * pelo HKDF-SHA256, com o rótulo do uso, e dá os 32 bytes. Assim a chave de cifra nunca é a mesma sequência de bytes
+ * de nenhum HMAC, mesmo que alguém copie o texto de uma variável para outra.
+ */
+function chaveDeCifra(valor: string | undefined): Uint8Array | undefined {
+  if (valor === undefined || valor.length < TAMANHO_MINIMO_CHAVE_DE_LOGIN) return undefined
+  return new Uint8Array(hkdfSync('sha256', valor, new Uint8Array(0), ROTULO_DA_CHAVE_DE_CIFRA, BYTES_DA_CHAVE_DE_CIFRA))
+}
+
+/**
+ * As chaves de cifra de todas as versões declaradas até a atual. A atual é obrigatória; uma anterior pode faltar (a
+ * versão foi aposentada depois de todo segredo dela ser recifrado), mas, se estiver declarada, precisa ser válida.
+ */
+function lerChavesDeCifra(ambiente: Record<string, string | undefined>, versaoAtual: number): Map<number, Uint8Array> {
+  const chaves = new Map<number, Uint8Array>()
+  const invalidas: string[] = []
+  for (let versao = 1; versao <= versaoAtual; versao++) {
+    const variavel = variavelDaChaveDeCifra(versao)
+    const valor = ambiente[variavel]
+    if (valor === undefined && versao < versaoAtual) continue
+    const chave = chaveDeCifra(valor)
+    if (chave === undefined) invalidas.push(variavel)
+    else chaves.set(versao, chave)
+  }
+  if (invalidas.length > 0) throw new ConfiguracaoInvalida(invalidas, [MOTIVO_CHAVE_DE_CIFRA])
+  return chaves
+}
 
 /** O nome da variável da chave de dispositivo da versão: trocar a versão invalida todo cookie já emitido. */
 export function variavelDaChaveDeDispositivo(versao: number): string {
@@ -35,8 +96,9 @@ export function variavelDaChaveDeDispositivo(versao: number): string {
 }
 
 /**
- * Lê a configuração do login por e-mail. Não sobe com parâmetro do argon2 abaixo da OWASP, com chave curta, nem sem
- * a chave da versão de dispositivo declarada. As mensagens citam só o nome da variável.
+ * Lê a configuração do login por e-mail e do segundo fator. Não sobe com parâmetro do argon2 abaixo da OWASP, com
+ * chave curta, sem a chave da versão de dispositivo declarada, sem a chave de cifra da versão atual do MFA, nem com a
+ * chave dos códigos de recuperação repetindo outra. As mensagens citam só o nome da variável.
  */
 export function lerConfiguracaoLogin(ambiente: Record<string, string | undefined>): ConfiguracaoLogin {
   const valores = validarAmbiente(esquemaAmbienteLogin, ambiente)
@@ -46,10 +108,16 @@ export function lerConfiguracaoLogin(ambiente: Record<string, string | undefined
   if (chaveDispositivo === valores.LOGIN_CHAVE_CONTADOR) {
     throw new ConfiguracaoInvalida([variavel], [`${variavel} precisa ser diferente de LOGIN_CHAVE_CONTADOR: cada HMAC tem a própria chave`])
   }
+  const chavesCifra = lerChavesDeCifra(ambiente, valores.IDENTIDADE_CHAVE_CIFRA_VERSAO)
+  const outrasChaves = [valores.LOGIN_CHAVE_CONTADOR, chaveDispositivo, ambiente[variavelDaChaveDeCifra(valores.IDENTIDADE_CHAVE_CIFRA_VERSAO)]]
+  if (outrasChaves.includes(valores.IDENTIDADE_CHAVE_RECUPERACAO)) {
+    throw new ConfiguracaoInvalida(['IDENTIDADE_CHAVE_RECUPERACAO'], [MOTIVO_CHAVE_DE_RECUPERACAO_REPETIDA])
+  }
   const codificar = (texto: string) => new TextEncoder().encode(texto)
   return {
     hash: { memoriaKib: valores.LOGIN_ARGON2_MEMORIA_KIB, iteracoes: valores.LOGIN_ARGON2_ITERACOES },
     chaveContador: codificar(valores.LOGIN_CHAVE_CONTADOR),
     dispositivo: { versao: valores.LOGIN_CHAVE_DISPOSITIVO_VERSAO, chave: codificar(chaveDispositivo) },
+    mfa: { versaoCifra: valores.IDENTIDADE_CHAVE_CIFRA_VERSAO, chavesCifra, chaveRecuperacao: codificar(valores.IDENTIDADE_CHAVE_RECUPERACAO) },
   }
 }

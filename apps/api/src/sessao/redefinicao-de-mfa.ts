@@ -1,0 +1,84 @@
+import { contextoAtual, ErroDeDominio, executarNoContexto, RegistroDeAuditoria, sessaoDaRequisicao, type Banco } from '@educa/nucleo'
+import { CodigoDeErro, FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR, type FinalidadeDaRedefinicaoDeMfa } from '@educa/shared'
+import { randomUUID } from 'node:crypto'
+import { RedefinicaoDeMfaRepository } from './redefinicao-de-mfa.repository.js'
+import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
+
+const registro = new RegistroDeAuditoria()
+
+/**
+ * A redefinição do segundo fator de quem perdeu o app autenticador e os códigos (RF19; Tech Spec, seção 5, "TOTP").
+ *
+ * **Pela coordenação** (`POST /v1/usuarios/:id/mfa/redefinir`): numa transação, com a conta travada, e sempre com a
+ * mesma resposta (202) para quem chama, tenha agido ou não:
+ * - o alvo é procurado só na escola da sessão, ativo e diferente de quem pede. Id de outra escola, de ninguém, de
+ *   aluno (sem conta) ou o próprio: nada muda e nada é gravado;
+ * - a conta é global. Se ela também tem usuário ativo em outra escola, nada muda: apagar o segundo fator dela a partir
+ *   de A mexeria no acesso dela em B. Grava-se a recusa na auditoria de A, sem dizer qual escola, e a escola recorre ao
+ *   operador;
+ * - todos os usuários ativos da conta são desta escola: apaga segredo, ativação, último passo e códigos de
+ *   recuperação, e grava `usuario.mfa_redefinido` com a finalidade. No login seguinte, a pessoa configura o MFA de
+ *   novo.
+ */
+export class RedefinicaoDeMfa {
+  constructor(private readonly banco: Banco) {}
+
+  async pelaCoordenacao(alvoId: string, finalidade: FinalidadeDaRedefinicaoDeMfa): Promise<void> {
+    const { escolaId, usuarioId } = sessaoDaRequisicao()
+    if (alvoId === usuarioId) return
+    await this.banco.transaction(async (tx) => {
+      const contaId = await new RedefinicaoDeMfaRepository(tx).contaDoUsuarioAtivo(alvoId)
+      if (contaId === undefined) return
+      const resolucao = new ResolucaoDeTenantRepository(tx)
+      const conta = await resolucao.travarContaParaRedefinir(contaId)
+      if (conta === undefined) return
+      if (conta.escolasAtivas.some((outra) => outra !== escolaId)) {
+        await registro.gravar(tx, 'usuario.mfa_redefinicao_recusada', { entidadeId: alvoId, finalidade })
+        return
+      }
+      await resolucao.apagarMfa(contaId)
+      await registro.gravar(tx, 'usuario.mfa_redefinido', { entidadeId: alvoId, antes: { mfaAtivo: conta.mfaAtivo }, depois: { mfaAtivo: false }, finalidade })
+    })
+  }
+}
+
+/**
+ * **Pelo operador** (`ops:redefinir-mfa`), a pedido formal da escola, quando ninguém mais da coordenação pode fazê-lo,
+ * ou quando a conta também está em outra escola. O comando recebe só o id do usuário e o número do pedido.
+ *
+ * - A escola vem do usuário, nunca do argumento, e cada registro é gravado no contexto da escola dele, com
+ *   `autor_operador` e a finalidade `pedido_formal_da_escola`.
+ * - A conta é global: o segundo fator dela vale em toda escola em que ela tem usuário ativo. Por isso cada uma dessas
+ *   escolas recebe o registro, com o usuário dela como entidade: a coordenação de B também fica sabendo que o MFA do
+ *   coordenador dela foi redefinido, sem saber de A.
+ * - Usuário inexistente, desativado ou sem conta: `NAO_ENCONTRADO`, sem nada gravado.
+ * - Devolve nada: o comando imprime só "ok" ou o código do erro.
+ */
+export async function redefinirMfaPeloOperador(banco: Banco, operador: string, usuarioId: string, pedido: number): Promise<void> {
+  const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
+  const alvo = await executarNoContexto({ requisicaoId }, () => new ResolucaoDeTenantRepository(banco).escolaDoUsuarioParaOperador(usuarioId))
+  if (alvo?.contaId === null || alvo === undefined || !alvo.ativo) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+  const { contaId } = alvo
+  await executarNoContexto({ requisicaoId, escolaId: alvo.escolaId }, () =>
+    banco.transaction(async (tx) => {
+      const resolucao = new ResolucaoDeTenantRepository(tx)
+      const conta = await resolucao.travarContaParaRedefinir(contaId)
+      if (conta === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      await resolucao.apagarMfa(contaId)
+      const usuarios = await resolucao.usuariosAtivosDaConta(contaId)
+      const porEscola = new Map<string, string>([[alvo.escolaId, usuarioId]])
+      for (const ativo of usuarios) if (!porEscola.has(ativo.escolaId)) porEscola.set(ativo.escolaId, ativo.usuarioId)
+      for (const [escolaId, entidadeId] of porEscola) {
+        await executarNoContexto({ requisicaoId, escolaId }, () =>
+          registro.gravar(tx, 'usuario.mfa_redefinido', {
+            entidadeId,
+            antes: { mfaAtivo: conta.mfaAtivo },
+            depois: { mfaAtivo: false, pedidoDoOperador: pedido },
+            finalidade: FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR,
+            autorOperador: operador,
+          }),
+        )
+      }
+    }),
+  )
+}

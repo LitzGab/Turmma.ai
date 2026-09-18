@@ -142,4 +142,24 @@ describe('ResolucaoDeTenantRepository: a resolução antes de haver escola devol
     }
     expect(await repositorio.criarContas([])).toEqual([])
   })
+  it('ativarMfa só ativa com o segredo que foi conferido: se outra aba configurou um segredo novo no meio, nada é ativado e nenhum código é gravado', async () => {
+    const { rows } = await bancada.pool.query<{ id: string }>('insert into conta (email) values ($1) returning id', [`ativacao-${randomUUID()}@escola.invalid`])
+    const contaId = rows[0]?.id ?? ''
+    try {
+      const gravado = Buffer.from('segredo-cifrado-sintetico-gravado')
+      await bancada.pool.query('update conta set mfa_segredo_cifrado = $1, mfa_chave_versao = 1 where id = $2', [gravado, contaId])
+      const hmacs = Array.from({ length: 10 }, (_, indice) => `${String(indice).padStart(2, '0')}${'h'.repeat(41)}`)
+      const conferidoAntes = Buffer.from('segredo-cifrado-sintetico-anterior')
+      expect(await bancada.banco.transaction((tx) => new ResolucaoDeTenantRepository(tx).ativarMfa(contaId, conferidoAntes, 100, hmacs))).toBe(false)
+      const { rows: depois } = await bancada.pool.query<{ ativo: boolean; codigos: string }>(
+        'select mfa_ativado_em is not null as ativo, (select count(*) from codigo_recuperacao where conta_id = $1) as codigos from conta where id = $1',
+        [contaId],
+      )
+      expect(depois).toEqual([{ ativo: false, codigos: '0' }])
+      // Com o segredo gravado, ativa.
+      expect(await bancada.banco.transaction((tx) => new ResolucaoDeTenantRepository(tx).ativarMfa(contaId, gravado, 100, hmacs))).toBe(true)
+    } finally {
+      await bancada.pool.query('delete from conta where id = $1', [contaId])
+    }
+  })
 })

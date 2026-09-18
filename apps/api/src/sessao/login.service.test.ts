@@ -11,9 +11,15 @@ describe('etapa do login depois da senha certa', () => {
     expect(etapaDoLogin([{ papel: 'coordenador' }], true)).toBe('mfa')
   })
 
+  it('um coordenador só, com o segundo fator já cumprido nesta entrada: pronta', () => {
+    expect(etapaDoLogin([{ papel: 'coordenador' }], true, true)).toBe('pronta')
+    expect(etapaDoLogin([{ papel: 'coordenador' }], true, false)).toBe('mfa')
+  })
+
   it('usuário ativo em mais de uma escola: escolher, com ou sem coordenação entre elas', () => {
     expect(etapaDoLogin([{ papel: 'professor' }, { papel: 'professor' }], false)).toBe('escolher')
     expect(etapaDoLogin([{ papel: 'professor' }, { papel: 'coordenador' }], true)).toBe('escolher')
+    expect(etapaDoLogin([{ papel: 'coordenador' }, { papel: 'coordenador' }], true, true)).toBe('escolher')
   })
 })
 

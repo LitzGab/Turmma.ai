@@ -1,18 +1,14 @@
 import {
   ConfiguracaoInvalida,
-  criarBanco,
-  criarPool,
   ErroDeDominio,
   erroDoPostgresEm,
   executarNoContexto,
-  FORMATO_OPERADOR,
   FORMATO_SLUG,
   mapearErroPostgres,
   RegistroDeAuditoria,
   resumirErro,
   TAMANHO_MAXIMO_SLUG,
   TIPOS_DE_REDE,
-  validarAmbiente,
   type Banco,
   type TipoDeRede,
 } from '@educa/nucleo'
@@ -21,8 +17,11 @@ import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
+import { abrirBancoDeOperacao, ArgumentoInvalido, lerOperador, type BancoDoComando, type SaidaDoComando } from './comando.js'
 import { RedeEEscolaRepository } from './escola.repository.js'
-import { urlDoBancoDeOperacao } from './uso.js'
+
+// O que é comum aos comandos do operador mora em `comando.ts`; reexportado aqui para quem já o importava daqui.
+export { abrirBancoDeOperacao, ArgumentoInvalido, lerOperador, type BancoDoComando, type SaidaDoComando }
 
 /**
  * Criação de rede e de escola pelo operador (RF1, D2). Não há rota pública de cadastro: a escola nasce
@@ -37,13 +36,6 @@ import { urlDoBancoDeOperacao } from './uso.js'
  *   criada; a da rede, com escola nula.
  * - Imprime só o id criado, em JSON. Nenhum comando do operador lista ou lê pessoa.
  */
-
-export class ArgumentoInvalido extends Error {
-  constructor(readonly opcao: string) {
-    super(`Opção inválida ou ausente: ${opcao}`)
-    this.name = 'ArgumentoInvalido'
-  }
-}
 
 export type PedidoDoOperador = { entidade: 'rede'; nome: string; tipo: TipoDeRede } | { entidade: 'escola'; redeId: string; nome: string; slug: string }
 
@@ -97,13 +89,6 @@ export function lerPedidoDoOperador(argumentos: string[]): PedidoDoOperador {
 
 const registro = new RegistroDeAuditoria()
 
-const esquemaAmbienteOperador = z.object({ OPERADOR: z.string().regex(FORMATO_OPERADOR) })
-
-/** Quem da equipe roda o comando. Ausente ou fora do formato, recusa pelo nome da variável, sem o valor. */
-export function lerOperador(ambiente: Record<string, string | undefined>): string {
-  return validarAmbiente(esquemaAmbienteOperador, ambiente).OPERADOR
-}
-
 /** Cria a rede e grava `rede.criada`, com escola nula e o operador como autor, na mesma transação. */
 export function criarRede(banco: Banco, operador: string, pedido: { nome: string; tipo: TipoDeRede }): Promise<string> {
   return executarNoContexto({ requisicaoId: randomUUID() }, () =>
@@ -142,21 +127,6 @@ export async function criarEscola(banco: Banco, operador: string, pedido: { rede
 const MENSAGEM_DO_OPERADOR: Partial<Record<CodigoDeErro, string>> = {
   CONFLITO: 'já existe escola com este endereço',
   NAO_ENCONTRADO: 'rede não encontrada',
-}
-
-export interface SaidaDoComando {
-  saida: (texto: string) => void
-  erro: (texto: string) => void
-}
-
-export interface BancoDoComando {
-  banco: Banco
-  fechar: () => Promise<void>
-}
-
-export function abrirBancoDeOperacao(ambiente: Record<string, string | undefined>): BancoDoComando {
-  const pool = criarPool({ ...urlDoBancoDeOperacao(ambiente), maximoConexoes: 1 }, () => undefined)
-  return { banco: criarBanco(pool), fechar: () => pool.end() }
 }
 
 /**
