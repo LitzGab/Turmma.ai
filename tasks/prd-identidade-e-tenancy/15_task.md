@@ -63,6 +63,10 @@ Redis de fila fora, métricas e dois alertas com runbook funcionam.
   - **Runbook:** entrada em `docs/runbook.md` para cada um (o que olhar: IP e escola na métrica, se é dentro ou fora da rede da escola; o que fazer: avisar a escola, cadastrar `ips_saida` quando é rede, nunca bloquear o IP da escola).
   - **Ensaio:** `ensaio:alertas` provoca os dois.
 - [ ] 15.4 — Testes (tabela abaixo).
+- [ ] 15.6 — Pontos que a 14.0 deixou para cá (decidido em 18/09/2026).
+  - **Antes de mexer no login:** extrair o bloco repetido três vezes (reserva no contador, leitura da credencial e hash, dentro da vez do semáforo) numa função só; esta tarefa mexe exatamente nesse trecho, e três cópias divergem.
+  - **Runbook:** espera alta em todos os baldes com a CPU da API baixa aponta para Postgres ou Redis lentos, e não para capacidade de hash: dizer o que olhar.
+  - **IP em memória:** registrar em `docs/lgpd.md` que o IP é usado só em memória (vez do login por e-mail no semáforo e limites desta tarefa), e dar prazo às entradas de IP guardadas no semáforo, para elas não crescerem sem fim sob inundação.
 - [ ] 15.5 — Redis de fila travado no login (decidido em 18/09/2026, das revisões da correção `2026-09-18-contador-testado-com-o-prazo-de-producao`).
   - **Desafio recusado sem rastro:** o `catch` de `ConsumoDeDesafio.consumir` (`apps/api/src/sessao/desafio.ts`) recusa com 401 quando o Redis de fila não responde em 100 ms, sem log nem métrica: o coordenador com MFA cai para o login e ninguém vê a causa. Emitir, com espaçamento e só com ids, um aviso (ex.: `login.desafio_sem_redis`) e somá-lo ao sinal de seguro ativo, com a linha no runbook.
   - **Redis travado sem teste:** o ramo `catch` de `ContadorDeTentativas.reservar` (conectado, sem responder: cai no seguro e pode contar em dobro, para o lado de segurar) e o do desafio não têm teste. Provar os dois com `CLIENT PAUSE`, como em `uso.int.test.ts`.

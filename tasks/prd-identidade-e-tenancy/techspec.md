@@ -169,6 +169,7 @@ Envelope de erro do F0. As rotas anônimas levam `@RotaAnonima`.
 - **Algoritmo:** `@node-rs/argon2`, argon2id, p=1. Parte da OWASP (m=19456, t=2) e sobe `t` até 100–250 ms na CPU de referência.
 - **Concorrência:** `LOGIN_HASH_CONCORRENCIA` é obrigatório e vai no máximo até `UV_THREADPOOL_SIZE − 8`, conferido no boot: as 8 threads de folga são da resolução de nome e de arquivo (`docs/infra.md`, "Threads e DNS").
 - **Capacidade:** com 2 hashes de 150 ms, uma instância faz ~13/s e duas ~26/s, contra ~14/s no primeiro minuto. Com uma instância só, o pico passa da capacidade, e o `Retry-After` espalha o excesso. Por isso deploy só fora do horário letivo (D27).
+- **A vez vem antes da tentativa** (decidido na 14.0, ratificado em 18/09/2026): a vez no semáforo cobre a reserva no contador, a leitura da credencial e o hash. Se cobrisse só o hash, o 503 contaria como senha errada, e a web, que repete no 503, seguraria a conta do próprio aluno. Efeito aceito: a conta já segurada espera a fila antes de receber o 429.
 - **Fila:** o semáforo atende os baldes em rodízio. Esperou mais de 2 s, recebe 503 com `Retry-After` aleatório entre 2 e 6 s. Na web isso é atraso, não recusa: o formulário mostra "entrando…" e tenta de novo sozinho por até 30 s antes de mostrar erro.
 - **Inexistente:** passa pelo hash fixo e responde igual a senha errada.
 

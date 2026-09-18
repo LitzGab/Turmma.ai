@@ -68,6 +68,10 @@ tutorial.
   - **Conferência depois:** um script lê o banco e as métricas. Nenhuma família de sessão foi encerrada por reuso na fase 3 (`sessao.renovacao{resultado=reuso}` em 0), e o rebaixamento só apareceu na A durante o ataque.
   - **Controle negativo:** sem o rebaixamento e sem os baldes por escola (flag de teste recusada em `AMBIENTE=producao`, como `VAGAS_POR_ESCOLA_DESLIGADAS` no F0), o cenário precisa reprovar pela B, pela C ou pela conta legítima da A.
   - **Comandos:** `npm run carga:login` e `npm run carga:login:controle-negativo`.
+- [ ] 16.4 — Pontos que a 14.0 deixou para cá (decidido em 18/09/2026).
+  - **Alerta de 5xx às 7h30:** o 503 `INDISPONIVEL_TENTE_DE_NOVO` do semáforo é atraso por desenho, e hoje também entra na "Taxa de erro 5xx". O cenário mostra se ele dispara o alerta na entrada; se disparar, a regra passa a não contar esse código (ou a separar o 503 com `Retry-After` do login), com teste no `ensaio:alertas`. Alerta que dispara toda manhã vira ruído e esconde o 5xx de verdade.
+  - **Inundação de IPs:** medir o custo da roda da equipe com mais de 10.000 IPs distintos esperando.
+  - **Aceite de convite:** gera hash fora do semáforo; confirmar que ele não entra na rajada das 7h30 (é raro e fora do horário de aula), ou colocá-lo na vez.
 - [ ] 16.3 — Calibração e registro.
   - Subir `t` do argon2 a partir do mínimo da OWASP (m=19456, t=2, p=1) até 100 a 250 ms por hash na CPU de referência, e fixar `LOGIN_HASH_CONCORRENCIA` no máximo `UV_THREADPOOL_SIZE − 2`.
   - Registrar os valores na Tech Spec seção 5 e trocar a premissa ⚠️ da seção 12 pelo resultado.
