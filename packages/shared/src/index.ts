@@ -66,3 +66,28 @@ export {
   TAMANHO_DO_CODIGO_DE_RECUPERACAO,
 } from './sessao/mfa.js'
 export type { FinalidadeDaRedefinicaoDeMfa, PedidoAtivarMfa, PedidoMfa, PedidoRedefinirMfa, RespostaAtivarMfa, RespostaConfigurarMfa } from './sessao/mfa.js'
+export { esquemaConsultaPaginada, esquemaDePagina, TAMANHO_MAXIMO_DA_PAGINA, TAMANHO_PADRAO_DA_PAGINA } from './estrutura/paginacao.js'
+export type { ConsultaPaginada } from './estrutura/paginacao.js'
+export {
+  esquemaAnoLetivo,
+  esquemaPedidoCriarAnoLetivo,
+  esquemaRespostaAnoLetivo,
+  esquemaRespostaListaDeAnosLetivos,
+  MAIOR_ANO_LETIVO,
+  MENOR_ANO_LETIVO,
+  SITUACOES_DO_ANO_LETIVO,
+} from './estrutura/ano-letivo.js'
+export type { AnoLetivo, PedidoCriarAnoLetivo, RespostaAnoLetivo, RespostaListaDeAnosLetivos, SituacaoDoAnoLetivo } from './estrutura/ano-letivo.js'
+export { ANOS_DA_ETAPA, esquemaPedidoCriarSerie, esquemaRespostaListaDeSeries, esquemaRespostaSerie, esquemaSerie, ETAPAS } from './estrutura/serie.js'
+export type { Etapa, PedidoCriarSerie, RespostaListaDeSeries, RespostaSerie, Serie } from './estrutura/serie.js'
+export {
+  AREAS_DO_CONHECIMENTO,
+  esquemaDisciplina,
+  esquemaPedidoCriarDisciplina,
+  esquemaRespostaDisciplina,
+  esquemaRespostaListaDeDisciplinas,
+  TAMANHO_MAXIMO_NOME_DISCIPLINA,
+} from './estrutura/disciplina.js'
+export type { AreaDoConhecimento, Disciplina, PedidoCriarDisciplina, RespostaDisciplina, RespostaListaDeDisciplinas } from './estrutura/disciplina.js'
+export { esquemaPedidoCriarTurma, esquemaRespostaListaDeTurmas, esquemaRespostaTurma, esquemaTurma, TAMANHO_MAXIMO_NOME_TURMA, TURNOS } from './estrutura/turma.js'
+export type { PedidoCriarTurma, RespostaListaDeTurmas, RespostaTurma, Turma, Turno } from './estrutura/turma.js'

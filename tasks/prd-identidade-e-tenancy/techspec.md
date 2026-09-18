@@ -49,9 +49,11 @@ ano_letivo_id, id)`, e o vínculo a referencia por `(escola_id, ano_letivo_id, t
 ```
 rede             nome, tipo, ips_saida inet[] (IP público de saída da rede, não é dado de pessoa)
 escola           rede_id, nome, slug unique, inatividade_aluno_min 30, inatividade_equipe_min 120
-ano_letivo    E  ano, inicio, fim, situacao (planejado|em_curso|encerrado); unique parcial (E) em_curso
+ano_letivo    E  ano, inicio, fim, situacao (planejado|em_curso|encerrado); unique parcial (E) em_curso;
+                 unique (E, ano) (8.0)
 serie         E  etapa (ef_anos_finais|em), ano; check 6–9 | 1–3; unique (E, etapa, ano)
-disciplina    E  nome, area;   turma EA serie_id, nome, turno; unique (E, A, lower(nome))
+disciplina    E  nome, area? (área da BNCC); unique (E, lower(nome))
+turma         EA serie_id, nome, turno? (manha|tarde|noite|integral); unique (E, A, lower(nome))
 conta            email citext unique, senha_hash?, mfa_segredo_cifrado?, mfa_chave_versao?,
                  mfa_ativado_em?, mfa_ultimo_passo?
 codigo_recuperacao  conta_id, hmac, usado_em?
@@ -126,7 +128,7 @@ Envelope de erro do F0. As rotas anônimas levam `@RotaAnonima`.
 | POST | `/v1/sessao/renovar`, `/atividade`; DELETE `/v1/sessao` | cookie; token | — | `{ token, expiraEm }`; 204 |
 | GET | `/v1/eu` | token | — | `{ usuarioId, papel, nome, escola:{id,nome,slug}, inatividadeMin, acessos:[{usuarioId, escolaNome, papel}] }` |
 | POST | `/v1/convites/consultar`, `/aceitar` | anônimo | `{ token }`, `{ token, senha? }` | `{ escolaNome }`, `{ etapa: 'configurar_mfa', desafio }` ou `{ etapa: 'entrar', bilhete }` |
-| GET/POST | `/v1/anos-letivos`, `/:id/abrir`, `/:id/encerrar`, `/series`, `/disciplinas`, `/turmas` | coordenador | zod | DTO |
+| GET/POST | `/v1/anos-letivos`, `/:id/abrir`, `/:id/encerrar`, `/series`, `/disciplinas`, `/turmas` | coordenador | zod; listagens com `?pagina&limite`; `anoLetivoId?` no corpo da turma só confere (outro que não o em curso é 404) | DTO; listagens `{ itens, proxima? }`. A listagem de turmas é a célula `turma.listar`, só da coordenação (8.0) |
 | GET | `/v1/turmas/:id`, `/:id/alunos?pagina&finalidade` | coordenador (`finalidade` obrigatória em `/alunos`); professor com vínculo | `?anoLetivoId` | `{ id, nome, serie }`, `{ itens:[{usuarioId, nome}], proxima? }` |
 | GET/POST | `/v1/vinculos?estado`, `/v1/vinculos`, `/:id/encerrar`; `/v1/meus-vinculos`; `/:id/confirmar`, `/contestar` | coordenador; professor dono | `{ usuarioId, turmaId, disciplinaId?, papel }`, `{ motivo }`, `{ contestacao, complemento? }` | `{ id, turma:{id,nome}, disciplina?:{id,nome}, estado, contestacao?, decididoEm? }`; `complemento` só para a coordenação |
 | PUT | `/v1/escola/provedores`, `/sessao` | coordenador | listas, minutos | DTO |

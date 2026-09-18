@@ -64,6 +64,13 @@
       "when": 1789727283176,
       "tag": "0008_convite",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789735829238,
+      "tag": "0009_serie_disciplina_turma",
+      "breakpoints": true
     }
   ]
 }

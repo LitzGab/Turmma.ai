@@ -8,6 +8,7 @@ export {
 } from './contexto/contexto.js'
 export type { ContextoDaRequisicao, SessaoDaRequisicao } from './contexto/contexto.js'
 export { exigirAnoEmCurso } from './contexto/ano-em-curso.js'
+export { exigirEscolaDoContexto } from './contexto/escola-do-contexto.js'
 export {
   AMBIENTES,
   ConfiguracaoInvalida,
@@ -149,6 +150,9 @@ export type { SituacaoDeAnoLetivo } from './db/schema/ano-letivo.js'
 export { conta } from './db/schema/conta.js'
 export { codigoRecuperacao } from './db/schema/codigo-recuperacao.js'
 export { usuario } from './db/schema/usuario.js'
+export { serie } from './db/schema/serie.js'
+export { disciplina } from './db/schema/disciplina.js'
+export { turma } from './db/schema/turma.js'
 export { convite, TIPOS_DE_CONVITE, VALIDADE_DO_CONVITE_HORAS } from './db/schema/convite.js'
 export type { TipoDeConvite } from './db/schema/convite.js'
 export { DURACAO_DA_SESSAO_HORAS, METODOS_DE_SESSAO, MOTIVOS_DE_ENCERRAMENTO, sessao } from './db/schema/sessao.js'

@@ -52,10 +52,10 @@
   - [x] 7.2 `POST /v1/convites/consultar` e `/aceitar` condicional, com os dois caminhos (conta nova e conta existente)
   - [x] 7.3 Testes: aceite em paralelo, expirado, revogado e inexistente iguais, e-mail que já coordena B não troca a senha
 
-- [ ] **8.0 — Coordenação monta o ano letivo, as séries, as disciplinas e as turmas**
-  - [ ] 8.1 Migration de `serie`, `disciplina` e `turma`, com FKs compostas
-  - [ ] 8.2 Rotas de ano letivo (criar, abrir, encerrar sem virada), séries, disciplinas e turmas
-  - [ ] 8.3 Testes: série fora do recorte, dois anos abertos em paralelo, "7ºA" em anos diferentes, permissão, isolamento
+- [x] **8.0 — Coordenação monta o ano letivo, as séries, as disciplinas e as turmas**
+  - [x] 8.1 Migration de `serie`, `disciplina` e `turma`, com FKs compostas
+  - [x] 8.2 Rotas de ano letivo (criar, abrir, encerrar sem virada), séries, disciplinas e turmas
+  - [x] 8.3 Testes: série fora do recorte, dois anos abertos em paralelo, "7ºA" em anos diferentes, permissão, isolamento
 
 - [ ] **9.0 — Vínculo confirmado é o que dá acesso à turma e aos alunos**
   - [ ] 9.1 Migration de `vinculo`; criar e encerrar pela coordenação, `meus-vinculos`, confirmar e contestar

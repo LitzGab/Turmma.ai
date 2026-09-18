@@ -114,6 +114,10 @@ export class BancadaDeSessoes {
         const escolas = this.#escolas
         const { rows } = await this.pool.query<{ conta_id: string }>('select conta_id from usuario where escola_id = any($1::uuid[]) and conta_id is not null', [escolas])
         await this.pool.query('delete from sessao where escola_id = any($1::uuid[])', [escolas])
+        // A estrutura da 8.0 aponta para o ano letivo: sai antes dele.
+        await this.pool.query('delete from turma where escola_id = any($1::uuid[])', [escolas])
+        await this.pool.query('delete from serie where escola_id = any($1::uuid[])', [escolas])
+        await this.pool.query('delete from disciplina where escola_id = any($1::uuid[])', [escolas])
         await this.pool.query('delete from ano_letivo where escola_id = any($1::uuid[])', [escolas])
         // O usuário que é autor de auditoria fica, com a conta dele: a auditoria só se escreve (e não se apaga) pela porta dela.
         await this.pool.query('delete from usuario u where u.escola_id = any($1::uuid[]) and not exists (select 1 from auditoria a where a.escola_id = u.escola_id and a.autor_usuario_id = u.id)', [escolas])
