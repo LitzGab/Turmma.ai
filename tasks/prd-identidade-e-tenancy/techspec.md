@@ -166,6 +166,7 @@ Envelope de erro do F0. As rotas anônimas levam `@RotaAnonima`.
 - **Contador:** `ContadorDeTentativas` (tarefa 4.0), um script Lua atômico no Redis de fila (o `rate-limiter-flexible` não tem o recuo que dobra), com chave `login:{HMAC(LOGIN_CHAVE_CONTADOR, escola_id|matricula ou email)}:{conhecido|outro}`, consultada antes do hash.
 - **Dois contadores por conta:** o sufixo `conhecido` vale para tentativas com o `educa_dispositivo` válido para aquela conta; `outro`, para o resto. Um script em outro navegador segura só o contador `outro`, e o professor no próprio computador continua entrando. No navegador conhecido, as tentativas também têm limite.
 - **Bloqueio:** depois de 5 falhas seguidas, a espera dobra de 30 s até 15 min (429 `CONTA_SEGURADA`), e o acerto zera. `/v1/sessao/mfa` conta no mesmo contador, com `HMAC(conta_id)`: a conta é global e o MFA é dela, então a chave não leva escola. O quinto erro consome o `jti` do desafio.
+- **Slug inexistente na matrícula** (decidido na 11.0, ratificado em 18/09/2026): conta num contador de uma "escola desconhecida" fixa, com o mesmo hash e a mesma resposta da matrícula errada, e não grava `registro_acesso`, porque escola nula só existe na falha por e-mail. A falha com escola conhecida grava `login_falho` na escola, sem usuário, para a linha não dizer se a matrícula existe.
 - **Redis fora:** um contador em memória por instância, com a mesma regra, liga `limite.seguro_ativo`.
 
 **Etapas.**

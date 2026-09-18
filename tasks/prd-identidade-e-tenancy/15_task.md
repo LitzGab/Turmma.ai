@@ -56,7 +56,8 @@ Redis de fila fora, métricas e dois alertas com runbook funcionam.
   - **Métrica:** `login.limite_email_ip` conta as tentativas rebaixadas.
 - [ ] 15.3 — Seguro, métricas e alertas.
   - **Seguro:** com o Redis de fila fora, contadores de tentativa, de IP e de rebaixamento passam para memória em cada instância, com a mesma regra. O limite por IP e o limiar da escola são divididos pelo número de instâncias (`limiteDoSeguro`), e `limite.seguro_ativo` fica em 1.
-  - **Métrica:** `login.falhas{escola_id}`.
+  - **Métrica:** `login.falhas{escola_id}`, contando também a matrícula (a 11.2 pedia essa métrica, e ela ficou para cá, ratificado em 18/09/2026: nasce aqui, e é a 14.2 que libera `escola_id` em métrica de login). Atualizar o comentário de `login.conta_segurada` em `packages/nucleo/src/telemetria/metricas.ts`, que ainda diz que a conta é global.
+  - **Runbook:** o contador comum dos slugs inexistentes (11.0) cresce com varredura de endereço; dizer o que olhar e que ele não segura escola nenhuma.
   - **`login-rebaixado-por-escola`:** métrica em 1 por 2 min.
   - **`login-email-limite-ip`:** mais de 20 tentativas rebaixadas por min por 5 min.
   - **Runbook:** entrada em `docs/runbook.md` para cada um (o que olhar: IP e escola na métrica, se é dentro ou fora da rede da escola; o que fazer: avisar a escola, cadastrar `ips_saida` quando é rede, nunca bloquear o IP da escola).
