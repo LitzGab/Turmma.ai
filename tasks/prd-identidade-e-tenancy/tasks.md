@@ -66,6 +66,7 @@
   - [ ] 10.1 Encerrar o ano leva os vínculos a `fim_do_ano` e apaga o `complemento`, na mesma transação
   - [ ] 10.2 `?anoLetivoId` só em leitura, com as condições de coordenação e professor
   - [ ] 10.3 Testes: falha no meio desfaz, `fim_do_ano` lê e não edita, `desligamento` dá 404, id de B dá 404
+  - [ ] 10.4 `GET /v1/vinculos` lista só vínculo de professor, com teste
 
 - [ ] **11.0 — Aluno entra pelo endereço da escola com matrícula**
   - [ ] 11.1 Migration de `credencial_matricula`; `GET /v1/escolas/:slug/acesso` e `POST /v1/sessao/matricula` no contexto de escola sem usuário

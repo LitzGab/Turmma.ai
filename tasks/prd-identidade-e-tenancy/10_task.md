@@ -53,6 +53,11 @@ e quem saiu não lê nada.
     `NAO_ENCONTRADO`
 - [ ] 10.3 — Testes (tabela abaixo)
 
+
+- [ ] 10.4 — `GET /v1/vinculos` lista só vínculo de professor (decidido em 18/09/2026, da revisão da 9.0).
+  - **Por quê:** a lista da coordenação traz hoje também os vínculos de aluno que vêm do seed, com o `usuarioId` do aluno. A coordenação corrige alocação de professor por essa lista; vínculo de aluno não é assunto dela ali, e no F2 eles chegam em volume. O `privacy-guardian` pediu o filtro antes disso.
+  - **O que fazer:** filtrar `papel = 'professor'` no repository da listagem, com teste que semeia vínculo de aluno e de professor na mesma turma e confere que só o de professor volta. Vínculo de aluno por id continua 404 nas rotas da coordenação sobre vínculo.
+  - **Complemento:** o teste da 10.1 que confere o `complemento` apagado na virada precisa ler a coluna no banco, e não só a resposta da API.
 ## Arquivos previstos
 
 | Arquivo | Novo ou alterado |
