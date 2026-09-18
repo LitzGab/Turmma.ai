@@ -2,6 +2,11 @@ import type { ConfiguracaoBanco } from '@educa/nucleo'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { lerConfiguracao, type ConfiguracaoApi } from '../src/config.js'
 
+/** O `oidc-falso` do compose de teste, visto da máquina. */
+export function urlDoOidcFalso(ambiente: Record<string, string> = lerAmbienteDeTeste()): string {
+  return `http://127.0.0.1:${valorObrigatorio(ambiente, 'OIDC_FALSO_PORTA_HOST')}`
+}
+
 export interface SobreposicaoDeTeste {
   banco?: Partial<ConfiguracaoBanco>
   /** Variáveis que trocam as de `.env.example` e as URLs do compose de teste, como `ROTAS_SINTETICAS` ou `REDIS_FILA_URL`. */
@@ -28,6 +33,9 @@ export function configuracaoDeTeste(sobreposicao: SobreposicaoDeTeste = {}): Con
     REDIS_FILA_URL: `redis://127.0.0.1:${valorObrigatorio(ambiente, 'REDIS_FILA_PORTA_HOST')}`,
     // A do compose. No teste nada é exportado: a aplicação montada sem telemetria mede num medidor vazio.
     TELEMETRIA_OTLP_URL: 'http://observabilidade:4318',
+    // O oidc-falso do compose de teste, visto da máquina: o emissor é o endereço que a API usa, e o ID token sai com ele.
+    LOGIN_EXTERNO_GOOGLE_EMISSOR: `${urlDoOidcFalso(ambiente)}/google`,
+    LOGIN_EXTERNO_MICROSOFT_EMISSOR: `${urlDoOidcFalso(ambiente)}/microsoft`,
     ...sobreposicao.ambiente,
   })
   return { ...config, banco: { ...config.banco, ...sobreposicao.banco } }

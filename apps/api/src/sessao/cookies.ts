@@ -14,15 +14,23 @@ export interface OpcoesDoCookie {
   readonly ambiente: Ambiente
   /** Sem ele, o cookie é de sessão do navegador: some quando o navegador fecha. */
   readonly maxAgeSegundos?: number
+  /**
+   * `Strict` por padrão. Só o `educa_oidc` do login pela conta da escola (13.0) é `Lax`: ele precisa voltar na navegação
+   * que o Google ou a Microsoft iniciam de volta ao retorno, e o `Strict` não iria nela.
+   */
+  readonly sameSite?: 'Strict' | 'Lax'
+  /** `/v1/sessao` por padrão; o `educa_oidc` vai só a `/v1/sessao/externa`. */
+  readonly caminho?: string
 }
 
 /**
  * O `Set-Cookie` dos cookies de sessão: sempre `HttpOnly` (o JavaScript da página não lê), `SameSite=Strict` e só no
- * caminho `/v1/sessao`; `Secure` em todo ambiente menos o local, que roda em `http://127.0.0.1`.
+ * caminho `/v1/sessao`, salvo o que as opções dizem; `Secure` em todo ambiente menos o local, que roda em
+ * `http://127.0.0.1`.
  */
 export function serializarCookie(nome: string, valor: string, opcoes: OpcoesDoCookie): string {
   if (!VALOR_SEGURO.test(nome) || !VALOR_SEGURO.test(valor)) throw new Error('cookie com caractere fora do formato')
-  const atributos = [`${nome}=${valor}`, `Path=${CAMINHO_DOS_COOKIES}`, 'HttpOnly', 'SameSite=Strict']
+  const atributos = [`${nome}=${valor}`, `Path=${opcoes.caminho ?? CAMINHO_DOS_COOKIES}`, 'HttpOnly', `SameSite=${opcoes.sameSite ?? 'Strict'}`]
   if (opcoes.ambiente !== 'local') atributos.push('Secure')
   if (opcoes.maxAgeSegundos !== undefined) atributos.push(`Max-Age=${String(opcoes.maxAgeSegundos)}`)
   return atributos.join('; ')

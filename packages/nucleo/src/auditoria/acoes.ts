@@ -9,6 +9,7 @@ import {
   MOTIVOS_DE_ENCERRAMENTO_PELA_COORDENACAO,
   PAPEIS_DE_VINCULO,
 } from '@educa/shared'
+import { PROVEDORES_EXTERNOS } from '../db/schema/conta-externa.js'
 import { TIPOS_DE_REDE } from '../db/schema/rede.js'
 
 /**
@@ -56,6 +57,29 @@ export const ACOES_DE_AUDITORIA = {
     entidade: 'escola',
     antes: z.strictObject({ inatividadeAlunoMin: z.number().int(), inatividadeEquipeMin: z.number().int() }),
     depois: z.strictObject({ inatividadeAlunoMin: z.number().int(), inatividadeEquipeMin: z.number().int() }),
+    finalidade: null,
+  },
+  /**
+   * A coordenação trocou a lista de domínios Google e tenants Microsoft liberados para o login pela conta da escola
+   * (13.0; regra 20, item 10: alteração de permissão). `antes` e `depois` levam os ids das linhas de `provedor_escola`
+   * liberadas, por provedor: a linha nunca é apagada (sai da lista com `removido_em`), e o id continua dizendo qual
+   * domínio era. Nunca o texto do domínio aqui, que a auditoria só aceita id, data e código.
+   */
+  'escola.provedores_alterados': {
+    entidade: 'escola',
+    antes: z.strictObject({ google: z.array(z.uuid()), microsoft: z.array(z.uuid()) }),
+    depois: z.strictObject({ google: z.array(z.uuid()), microsoft: z.array(z.uuid()) }),
+    finalidade: null,
+  },
+  /**
+   * A conta Google ou Microsoft de um professor foi ligada a ele no primeiro login por ela (13.0, RF9, RF19): o
+   * e-mail verificado batia com o da conta dele na escola. `entidadeId` é a ligação (`conta_externa`); leva o usuário e
+   * o provedor, nunca o e-mail nem o identificador da conta externa.
+   */
+  'conta_externa.ligada': {
+    entidade: 'conta_externa',
+    antes: null,
+    depois: z.strictObject({ usuarioId: z.uuid(), provedor: z.enum(PROVEDORES_EXTERNOS) }),
     finalidade: null,
   },
   /**

@@ -98,6 +98,22 @@ export class BancadaDeSessoes {
     return criarAlunosComMatricula(this.banco, this.#ambiente, escolaId, alunos)
   }
 
+  /**
+   * Um usuário de equipe na escola, ligado à conta global do e-mail (achada, ou criada se não existe), sem sessão. É a
+   * pessoa que o login pela conta da escola (13.0) procura pelo e-mail do provedor: os e-mails do `oidc-falso` são
+   * fixos, e a conta fica entre execuções quando o usuário dela é autor de auditoria, por isso ela é reaproveitada.
+   */
+  async equipeComEmail(escolaId: string, email: string, papel: 'professor' | 'coordenador' = 'professor'): Promise<{ usuarioId: string; contaId: string }> {
+    await this.pool.query('insert into conta (email) values ($1) on conflict (email) do nothing', [email])
+    const { rows: contas } = await this.pool.query<{ id: string }>('select id from conta where email = $1', [email])
+    const contaId = contas[0]?.id
+    if (contaId === undefined) throw new Error('conta de teste não criada')
+    const { rows } = await this.pool.query<{ id: string }>('insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, $3, $4) returning id', [escolaId, contaId, papel, NOME_SINTETICO])
+    const usuarioId = rows[0]?.id
+    if (usuarioId === undefined) throw new Error('usuário de teste não criado')
+    return { usuarioId, contaId }
+  }
+
   /** O endereço (slug) da escola. */
   async slugDe(escolaId: string): Promise<string> {
     const { rows } = await this.pool.query<{ slug: string }>('select slug from escola where id = $1', [escolaId])
@@ -128,6 +144,9 @@ export class BancadaDeSessoes {
         const { rows } = await this.pool.query<{ conta_id: string }>('select conta_id from usuario where escola_id = any($1::uuid[]) and conta_id is not null', [escolas])
         await this.pool.query('delete from sessao where escola_id = any($1::uuid[])', [escolas])
         await this.pool.query('delete from credencial_matricula where escola_id = any($1::uuid[])', [escolas])
+        // O login pela conta da escola (13.0): a ligação aponta para o usuário; o domínio liberado, só para a escola.
+        await this.pool.query('delete from conta_externa where escola_id = any($1::uuid[])', [escolas])
+        await this.pool.query('delete from provedor_escola where escola_id = any($1::uuid[])', [escolas])
         // O vínculo da 9.0 aponta para a turma e o usuário, e a estrutura da 8.0 para o ano letivo: saem antes deles.
         await this.pool.query('delete from vinculo where escola_id = any($1::uuid[])', [escolas])
         await this.pool.query('delete from turma where escola_id = any($1::uuid[])', [escolas])

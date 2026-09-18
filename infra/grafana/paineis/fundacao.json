@@ -942,6 +942,55 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Login pela conta da escola",
+      "description": "Retornos do login pela conta Google ou Microsoft da escola, por minuto e por resultado: entrou, recusado (domínio, tenant ou conta sem ligação) e provedor (erro, prazo de 5 s ou início perdido). Muitos de provedor juntos é o Google ou a Microsoft fora, ou a escola que revogou o app; a matrícula e o e-mail seguem funcionando.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 83
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (resultado) (increase(login_externo_total[1m]))",
+          "legendFormat": "{{resultado}}",
+          "range": true
+        }
+      ]
     }
   ]
 }

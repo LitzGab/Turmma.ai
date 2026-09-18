@@ -35,7 +35,7 @@ describe('GET /v1/escolas/:slug/acesso: o que a tela /e/:slug mostra antes do lo
     return { status: resposta.status, corpo: (await resposta.json()) as Record<string, unknown> & { erro?: { codigo?: string } } }
   }
 
-  it('caminho feliz e privacidade: o slug da escola devolve só o nome e a lista de provedores (vazia até a 13.0), sem domínio, tenant nem id', async () => {
+  it('caminho feliz e privacidade: o slug da escola devolve só o nome e a lista de provedores (vazia sem domínio liberado, 13.0), sem domínio, tenant nem id', async () => {
     const { slug } = await escolaComNome(`Colégio Sintético ${randomUUID()}`)
     const resposta = await acesso(slug)
     expect(resposta.status).toBe(200)
@@ -65,6 +65,21 @@ describe('GET /v1/escolas/:slug/acesso: o que a tela /e/:slug mostra antes do lo
     expect(await executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () => repositorio.nome())).toBe(nomeDeA)
     expect(await executarNoContexto({ requisicaoId: randomUUID(), escolaId: randomUUID() }, () => repositorio.nome())).toBeUndefined()
     await expect(executarNoContexto({ requisicaoId: randomUUID() }, () => repositorio.nome())).rejects.toThrow('consulta com escopo sem escola no contexto')
+  })
+
+  it('isolamento (13.0): os provedores liberados por A aparecem só em A; B, sem nenhum, recebe a lista vazia, pela rota e pelo repository', async () => {
+    const a = await escolaComNome(`Escola A ${randomUUID()}`)
+    const b = await escolaComNome(`Escola B ${randomUUID()}`)
+    await bancada.pool.query(
+      "insert into provedor_escola (escola_id, provedor, valor) values ($1, 'microsoft', 'aaaaaaaa-0000-4000-8000-00000000000a'), ($1, 'google', 'escola-a.educa-sintetica.test')",
+      [a.escolaId],
+    )
+    expect((await acesso(a.slug)).corpo['provedores']).toEqual(['google', 'microsoft'])
+    expect((await acesso(b.slug)).corpo['provedores']).toEqual([])
+    const repositorio = new AcessoDaEscolaRepository(bancada.banco)
+    expect(await executarNoContexto({ requisicaoId: randomUUID(), escolaId: b.escolaId }, () => repositorio.provedoresLiberados())).toEqual([])
+    expect((await executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () => repositorio.provedoresLiberados())).sort()).toEqual(['google', 'microsoft'])
+    await expect(executarNoContexto({ requisicaoId: randomUUID() }, () => repositorio.provedoresLiberados())).rejects.toThrow('consulta com escopo sem escola no contexto')
   })
 
   it('privacidade: o log não traz o slug consultado', async () => {

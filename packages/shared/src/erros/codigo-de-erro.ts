@@ -18,6 +18,11 @@ export const CodigoDeErro = {
    * a renovação em andamento e tenta uma vez com o cookie atual.
    */
   JA_RENOVADO: 'JA_RENOVADO',
+  /**
+   * A conta Google ou Microsoft não entra nesta escola (13.0): não é de um domínio ou tenant que ela liberou, ou não
+   * está ligada a ninguém dela. Uma resposta só para todos os casos. Chega à web como `?falha=conta_externa_nao_ligada`.
+   */
+  CONTA_EXTERNA_NAO_LIGADA: 'CONTA_EXTERNA_NAO_LIGADA',
 } as const
 
 export type CodigoDeErro = (typeof CodigoDeErro)[keyof typeof CodigoDeErro]

@@ -76,27 +76,39 @@ export class ConclusaoDeLogin {
     return this.#pronta(destino, contaId, 'email', email, origem, troca)
   }
 
-  /** Grava a sessão e devolve `pronta` com o token e os dois cookies: a entrada do dispositivo no topo, e o refresh. */
+  /**
+   * Quem entrou pela conta Google ou Microsoft da escola (13.0): o professor ligado, com a conta dele, ou o aluno
+   * ligado, sem conta. Vai direto a `pronta`, com sessão de método `externo`, na escola da ligação: a troca de escola
+   * não vale para ela (12.0). Sem `educa_dispositivo`: ele só dá prioridade ao login por senha, que esta entrada não usa.
+   */
+  entrarPorContaExterna(usuario: Pick<UsuarioAtivoDaConta, 'usuarioId' | 'escolaId'>, contaId: string | null, origem: OrigemDaRequisicao): Promise<ResultadoDoLogin> {
+    return this.#pronta(usuario, contaId, 'externo', undefined, origem)
+  }
+
+  /**
+   * Grava a sessão e devolve `pronta` com o token e os cookies: a entrada do dispositivo no topo (quando a entrada foi
+   * por senha), e o refresh.
+   */
   async #pronta(
     usuario: Pick<UsuarioAtivoDaConta, 'usuarioId' | 'escolaId'>,
     contaId: string | null,
     metodo: MetodoDeSessao,
-    identificadorDoDispositivo: string,
+    identificadorDoDispositivo: string | undefined,
     origem: OrigemDaRequisicao,
     troca?: SessaoDeOrigemDaTroca,
   ): Promise<ResultadoDoLogin> {
     const { token, expiraEm, refresh } = await this.#criarSessao(usuario, contaId, metodo, origem.ip, troca)
     const resposta: RespostaLogin = { etapa: 'pronta', token, expiraEm: expiraEm.toISOString() }
-    return {
-      resposta,
-      cookies: [
-        serializarCookie(COOKIE_DISPOSITIVO, this.dependencias.dispositivo.comEntrada(lerCookie(origem.cabecalhoCookie, COOKIE_DISPOSITIVO), identificadorDoDispositivo), {
-          ambiente: this.dependencias.ambiente,
-          maxAgeSegundos: MAX_AGE_DO_COOKIE_DISPOSITIVO_SEGUNDOS,
-        }),
-        serializarCookie(COOKIE_SESSAO, refresh, { ambiente: this.dependencias.ambiente }),
-      ],
-    }
+    const dispositivo =
+      identificadorDoDispositivo === undefined
+        ? []
+        : [
+            serializarCookie(COOKIE_DISPOSITIVO, this.dependencias.dispositivo.comEntrada(lerCookie(origem.cabecalhoCookie, COOKIE_DISPOSITIVO), identificadorDoDispositivo), {
+              ambiente: this.dependencias.ambiente,
+              maxAgeSegundos: MAX_AGE_DO_COOKIE_DISPOSITIVO_SEGUNDOS,
+            }),
+          ]
+    return { resposta, cookies: [...dispositivo, serializarCookie(COOKIE_SESSAO, refresh, { ambiente: this.dependencias.ambiente })] }
   }
 
   /**

@@ -50,6 +50,16 @@ export { esquemaPedidoLoginMatricula, TAMANHO_MAXIMO_MATRICULA, TAMANHO_MAXIMO_S
 export type { PedidoLoginMatricula } from './sessao/matricula.js'
 export { esquemaRespostaAcessoDaEscola, PROVEDORES_DE_CONTA_DA_ESCOLA } from './sessao/acesso-da-escola.js'
 export type { ProvedorDeContaDaEscola, RespostaAcessoDaEscola } from './sessao/acesso-da-escola.js'
+export { FALHAS_DO_LOGIN_EXTERNO, PARAMETRO_DA_FALHA_DO_LOGIN_EXTERNO } from './sessao/externa.js'
+export type { FalhaDoLoginExterno } from './sessao/externa.js'
+export {
+  esquemaPedidoProvedoresDaEscola,
+  esquemaProvedorDaEscola,
+  esquemaRespostaProvedoresDaEscola,
+  MAXIMO_DE_PROVEDORES_DA_ESCOLA,
+  TENANT_DE_CONTA_PESSOAL_MICROSOFT,
+} from './estrutura/provedores.js'
+export type { PedidoProvedoresDaEscola, ProvedorDaEscola, RespostaProvedoresDaEscola } from './estrutura/provedores.js'
 export { esquemaAcessoDaConta, esquemaRespostaEu } from './sessao/eu.js'
 export type { AcessoDaConta, RespostaEu } from './sessao/eu.js'
 export { esquemaPedidoTrocaDeEscola } from './sessao/troca-de-escola.js'

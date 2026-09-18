@@ -9,8 +9,15 @@ import {
 } from '@educa/nucleo'
 import { Inject, Logger, Module, type DynamicModule, type OnApplicationShutdown } from '@nestjs/common'
 import type { Redis } from 'ioredis'
+import { randomBytes } from 'node:crypto'
 import { BANCO } from '../banco.module.js'
 import type { ConfiguracaoLogin } from './configuracao-de-login.js'
+import type { ConfiguracaoLoginExterno } from './externa/configuracao-externa.js'
+import { CookieOidc } from './externa/cookie-oidc.js'
+import { LoginExternoController } from './externa/externa.controller.js'
+import { LoginExterno } from './externa/externa.service.js'
+import { OpenIdClientAdapter } from './externa/openid-client.adapter.js'
+import type { ProvedorExternoPort } from './externa/provedor-externo.port.js'
 import { AcessoDaEscolaController } from './acesso-da-escola.controller.js'
 import { AcessoDaEscolaService } from './acesso-da-escola.service.js'
 import { AtividadeController } from './atividade.controller.js'
@@ -45,10 +52,14 @@ import { TrocaDeEscolaService } from './troca-de-escola.service.js'
 
 /** Cliente do Redis de fila do login: contador de tentativas e desafio usado, que não podem ser expulsos. */
 export const CLIENTE_REDIS_LOGIN = Symbol('CLIENTE_REDIS_LOGIN')
+/** A porta do login pela conta da escola (13.0): o adaptador `openid-client`. */
+export const PROVEDOR_EXTERNO = Symbol('PROVEDOR_EXTERNO')
 
 export interface OpcoesDoModuloDeSessao {
   readonly identidade: ConfiguracaoIdentidade
   readonly login: ConfiguracaoLogin
+  /** O login pela conta Google ou Microsoft da escola (13.0), desligado sem as variáveis de um provedor. */
+  readonly loginExterno: ConfiguracaoLoginExterno
   readonly redisFilaUrl: string
   /** O medidor da telemetria; sem ele, o global (que o `main.ts` liga antes de montar a aplicação). */
   readonly medidor?: Meter
@@ -84,6 +95,7 @@ export class SessaoModule implements OnApplicationShutdown {
         SaidaController,
         ConviteController,
         TrocaDeEscolaController,
+        LoginExternoController,
       ],
       providers: [
         { provide: CLIENTE_REDIS_LOGIN, useFactory: () => criarClienteRedisDaApi(opcoes.redisFilaUrl, 'api-login', avisar) },
@@ -133,8 +145,24 @@ export class SessaoModule implements OnApplicationShutdown {
         },
         {
           provide: AcessoDaEscolaService,
-          useFactory: (banco: Banco, resolucao: ResolucaoDeTenantRepository) => new AcessoDaEscolaService(banco, resolucao),
-          inject: [BANCO, ResolucaoDeTenantRepository],
+          useFactory: (banco: Banco, resolucao: ResolucaoDeTenantRepository, provedor: ProvedorExternoPort) => new AcessoDaEscolaService(banco, resolucao, provedor.ligados),
+          inject: [BANCO, ResolucaoDeTenantRepository, PROVEDOR_EXTERNO],
+        },
+        { provide: PROVEDOR_EXTERNO, useFactory: () => new OpenIdClientAdapter(opcoes.loginExterno) },
+        {
+          provide: LoginExterno,
+          useFactory: (banco: Banco, resolucao: ResolucaoDeTenantRepository, provedor: ProvedorExternoPort, conclusao: ConclusaoDeLogin) =>
+            new LoginExterno({
+              banco,
+              resolucao,
+              provedor,
+              // Sem provedor ligado não há chave configurada: uma chave sorteada no boot, que nenhum cookie decifra.
+              cookie: new CookieOidc(opcoes.loginExterno.chaveDoCookie ?? new Uint8Array(randomBytes(32)), opcoes.identidade.ambiente),
+              conclusao,
+              retorno: opcoes.loginExterno.retorno,
+              medidor: opcoes.medidor ?? medidorGlobal(),
+            }),
+          inject: [BANCO, ResolucaoDeTenantRepository, PROVEDOR_EXTERNO, ConclusaoDeLogin],
         },
         {
           provide: ConviteService,

@@ -38,6 +38,12 @@ export const METRICAS = {
   /** Tentativas de login respondidas com `CONTA_SEGURADA` (senha errada repetida), sem rótulo: a conta é global. */
   contaSegurada: 'login.conta_segurada',
   /**
+   * Retornos do login pela conta Google ou Microsoft da escola, por `resultado`: `entrou`, `recusado` (domínio, tenant
+   * ou ligação que não valem, a mesma recusa para todos) e `provedor` (erro, prazo ou cookie do início ausente). Sem
+   * escola e sem motivo mais fino: o motivo fino diria, a quem lê o painel, qual conta existe.
+   */
+  loginExterno: 'login.externo',
+  /**
    * Renovações de sessão pelo cookie, por `resultado`: `ok`, `ja_renovado` (409 de duas abas), `resposta_perdida`
    * (o anterior voltou sem o atual ter sido usado), `reuso` (família encerrada) e `recusada` (cookie que não vale).
    */

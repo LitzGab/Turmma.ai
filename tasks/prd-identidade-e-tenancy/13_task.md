@@ -56,7 +56,7 @@ fluxo roda inteiro contra o `oidc-falso` do compose, sem conta em serviço exter
 
 ## Subtarefas
 
-- [ ] 13.1 — Serviço `oidc-falso` (`ghcr.io/navikt/mock-oauth2-server:6.0.2`) no compose e na esteira.
+- [x] 13.1 — Serviço `oidc-falso` (`ghcr.io/navikt/mock-oauth2-server:6.0.2`) no compose e na esteira.
   - **Emissores:** um `google` e um `microsoft`.
   - **Usuários de teste:** `JSON_CONFIG` com `requestMappings` por `subject`, de claims fixas e sintéticas:
     - professor de A com `hd` de A e `email_verified`;
@@ -67,12 +67,12 @@ fluxo roda inteiro contra o `oidc-falso` do compose, sem conta em serviço exter
     - tenant de A e tenant de B.
   - **Variáveis:** URLs de discovery e client id por provedor em `.env.example`, sem segredo real.
   - **Esteira:** os jobs `integracao` e `e2e` sobem o serviço, e nenhum teste chama Google ou Microsoft de verdade.
-- [ ] 13.2 — Migration e rota de cadastro.
+- [x] 13.2 — Migration e rota de cadastro.
   - **Tabela `conta_externa`:** `E usuario_id, provedor (google|microsoft), tenant?, sujeito`, com `unique (escola_id, provedor, coalesce(tenant,''), sujeito)` e FK composta.
   - **Tabela `provedor_escola`:** `E provedor, valor`, com `hd` para Google e `tid` para Microsoft, e mais de um por escola permitido.
   - **`PUT /v1/escola/provedores`:** só coordenador, com `@Permite`. Grava auditoria (alteração de permissão, regra 20, item 10) com `antes` e `depois` na lista fechada de ids e valores de domínio.
   - **`GET /v1/escolas/:slug/acesso`:** passa a listar só o tipo dos provedores.
-- [ ] 13.3 — Porta de provedor externo com adaptador `openid-client`.
+- [x] 13.3 — Porta de provedor externo com adaptador `openid-client`.
   - **`iniciar?slug=`:** resolve a escola e grava `escola_id`, `state`, `nonce` e verificador PKCE no cookie `educa_oidc` (AES-256-GCM, 5 min, `SameSite=Lax`, `HttpOnly`). Escopo `openid email` no Google e `openid email profile` na Microsoft, sem `offline_access`.
   - **Discovery e JWKS:** preguiçosos, com timeout de 5 s, uma busca por vez por provedor e sem guardar falha em cache.
   - **`retorno`:** ignora `slug` na query e usa a escola do cookie. `authorizationCodeGrant` com timeout de 5 s. Confere `hd` ou `tid` contra `provedor_escola` dessa escola, com a chave `sub` ou `oid`+`tid`.
@@ -81,7 +81,7 @@ fluxo roda inteiro contra o `oidc-falso` do compose, sem conta em serviço exter
   - **Recusa:** todo o resto recebe a mesma recusa `CONTA_EXTERNA_NAO_LIGADA`: aluno sem ligação, segundo `sujeito` com o mesmo e-mail, conta de outra escola, domínio ou tenant errado.
   - **Descarte:** `id_token`, `access_token` e claims nunca são gravados, logados nem colocados em exceção.
   - **Erro do provedor:** qualquer `error` no retorno, e o timeout, redirecionam à web com `?falha=provedor`.
-- [ ] 13.4 — Testes (tabela abaixo), contra o `oidc-falso` real do compose, nunca com a lib
+- [x] 13.4 — Testes (tabela abaixo), contra o `oidc-falso` real do compose, nunca com a lib
   mockada.
 
 ## Arquivos previstos
@@ -115,15 +115,15 @@ fluxo roda inteiro contra o `oidc-falso` do compose, sem conta em serviço exter
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] `npm run typecheck` limpo
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] `npm run typecheck` limpo
 - [ ] E2E verde (se tocou tela)
-- [ ] Premissas ⚠️ da Tech Spec seção 12 revistas com o `domain-researcher`, e a Tech Spec atualizada com o que foi confirmado
-- [ ] Todos os revisores obrigatórios com rodada na seção "Revisões", iniciada depois da
+- [x] Premissas ⚠️ da Tech Spec seção 12 revistas com o `domain-researcher`, e a Tech Spec atualizada com o que foi confirmado
+- [x] Todos os revisores obrigatórios com rodada na seção "Revisões", iniciada depois da
   última alteração de código, e APROVADO nos que têm veto
-- [ ] Revisão aprovada
-- [ ] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
+- [x] Revisão aprovada
+- [x] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
 
 ## Fora do escopo desta tarefa
 
@@ -133,5 +133,63 @@ fluxo roda inteiro contra o `oidc-falso` do compose, sem conta em serviço exter
 - Troca de escola a partir de sessão externa (leva ao login da outra escola): 20.0
 - Eliminação de `conta_externa` por escola: 17.0
 
+## Notas da implementação
+
+Leituras que tomei onde a tarefa deixava margem, escolhendo a que protege o aluno e a escola:
+
+- **Uma conta externa por usuário na escola** (`unique (escola_id, usuario_id)` em `conta_externa`, além do único da
+  Tech Spec). É o que torna estrutural o "segundo `sujeito` com o mesmo e-mail é recusado" (RF9), inclusive quando a
+  professora e a pessoa com o e-mail recriado chegam ao mesmo tempo (teste de concorrência). Consequência: a
+  professora ligada ao Google não liga também uma conta Microsoft na mesma escola sem a coordenação; aceito no F1.
+- **Só o professor é ligado pelo e-mail.** Coordenador com o e-mail certo e sem ligação é recusado: a coordenação
+  entra por e-mail, senha e MFA (a pergunta do PRD sobre o segundo fator do provedor segue aberta, e a leitura que
+  protege é não abrir a coordenação por essa porta). Aluno só com ligação (RF10), que no F1 só existe por seed.
+- **Microsoft:** o e-mail vale como verificado quando o `tid` já foi conferido contra a lista da escola (Tech Spec,
+  seção 5); o tenant de conta pessoal nunca vale, nem cadastrado (o contrato de `PUT /v1/escola/provedores` o recusa,
+  e o login o recusa de novo).
+- **Auditoria de `PUT /v1/escola/provedores`** (`escola.provedores_alterados`): `antes` e `depois` levam os ids das
+  linhas de `provedor_escola` por provedor, não o texto do domínio, porque a conferência da auditoria só aceita id,
+  data e código (texto livre é recusado de propósito). Para o id continuar dizendo qual domínio foi, a linha nunca é
+  apagada: sair da lista grava `removido_em`, e o índice único é parcial (`where removido_em is null`).
+- **Ligação:** auditoria `conta_externa.ligada` com o próprio professor como autor (é ele quem provou a conta), com
+  o usuário e o provedor, nunca o e-mail nem o `sujeito`.
+- **Recusa e falha chegam à web por redirecionamento**, não por JSON: `/e/:slug?falha=conta_externa_nao_ligada` (a
+  mesma para todo caso de recusa) e `/e/:slug?falha=provedor` (erro, prazo, estado que não confere). Sem cookie
+  válido não se sabe a escola, e o destino é `/?falha=provedor`. Depois de entrar, `/`, com `educa_sessao`; a web
+  renova e lê `/v1/eu` (18.0). O código `CONTA_EXTERNA_NAO_LIGADA` entrou no contrato para a tela (19.0).
+- **`iniciar` responde 404** para provedor desconhecido ou desligado, slug inexistente e escola que não liberou o
+  provedor: a tela só mostra o botão que funciona (`/acesso` lista só provedor liberado pela escola e ligado na
+  configuração).
+- **Sem `educa_dispositivo` na entrada pela conta da escola:** ele só dá prioridade ao login por senha.
+- **A recusa grava `login_falho`** na escola do cookie, sem usuário, como a matrícula errada; a falha do provedor não.
+- **Métrica** `login.externo{resultado}` (`entrou`, `recusado`, `provedor`), sem escola e sem motivo fino, com painel.
+- **O adaptador é opcional** (regra 00, itens 7 e 8): sem as três variáveis de um provedor, ele fica desligado e a API
+  sobe igual; meio configurado não sobe; fora do local, só `https`.
+- **`oidc-falso`** (mock-oauth2-server 6.0.2, imagem com digest) usa `interactiveLogin: true`: o teste escolhe o
+  usuário sintético pelo nome digitado no formulário (`subject`), e cada um tem claims fixas em
+  `infra/oidc-falso/config.json`. Heap limitado (~90 MB). Sobe nos testes de integração (`SERVICOS_INFRA`) e no
+  compose completo (e2e).
+- **Ponto aberto para a 19.0:** no compose completo, a API fala com o `oidc-falso` por `http://oidc-falso:8080`, e o
+  `authorization_endpoint` que o discovery devolve tem esse nome, que o navegador da máquina não resolve. O e2e do botão
+  vai precisar de um emissor que a API e o navegador alcancem pelo mesmo endereço.
+
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-18 14:08:05 | 2026-09-18 14:09:28 | `test-engineer` | 1 | REPROVADO | ac5a884df0d7c5fc1 |
+| 2026-09-18 14:24:17 | 2026-09-18 14:24:49 | `test-engineer` | 2 | APROVADO | ab4052cab3d2b9a58 |
+| 2026-09-18 14:34:46 | 2026-09-18 14:35:57 | `tenancy-guardian` | 1 | REPROVADO | aae2331e005061d4e |
+| 2026-09-18 14:34:53 | 2026-09-18 14:36:20 | `privacy-guardian` | 1 | APROVADO | acc804b42b1b42803 |
+| 2026-09-18 14:35:01 | 2026-09-18 14:36:56 | `infra-guardian` | 1 | APROVADO | af0c0dbb0b99302b4 |
+| 2026-09-18 14:34:39 | 2026-09-18 14:37:30 | `revisor-geral` | 1 | REPROVADO | aacb9f2019a94f9a6 |
+| 2026-09-18 14:47:01 | 2026-09-18 14:47:25 | `test-engineer` | 3 | APROVADO | ac6381ac5507fa20e |
+| 2026-09-18 14:57:16 | 2026-09-18 14:57:33 | `tenancy-guardian` | 2 | APROVADO | aab8668b70c05da5f |
+| 2026-09-18 15:11:59 | 2026-09-18 15:12:14 | `revisor-geral` | 2 | APROVADO | aeece90f5f52b2223 |

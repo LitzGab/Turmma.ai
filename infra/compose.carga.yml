@@ -32,6 +32,9 @@ services:
     cpus: 0.5
   storage:
     cpus: 0.25
+  # Ninguém entra pela conta da escola no cenário: só o teto, para ele não disputar CPU com as APIs.
+  oidc-falso:
+    cpus: 0.25
   migrar:
     cpus: 0.5
   api-1:

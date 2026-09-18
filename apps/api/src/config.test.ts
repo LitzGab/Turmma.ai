@@ -88,7 +88,14 @@ describe('lerConfiguracao', () => {
           chaveRecuperacao: new TextEncoder().encode(ambienteValido.IDENTIDADE_CHAVE_RECUPERACAO),
         },
       },
+      // Sem as variáveis de provedor, o login pela conta da escola fica desligado, e a API sobe igual (13.0).
+      loginExterno: { provedores: new Map(), retorno: undefined, chaveDoCookie: undefined, aceitaEmissorSemTls: true },
     })
+  })
+
+  it('o login pela conta da escola meio configurado reprova o boot junto com as outras variáveis', () => {
+    const erro = erroDe({ ...ambienteValido, LOGIN_EXTERNO_GOOGLE_EMISSOR: 'https://accounts.google.com' })
+    expect(erro.variaveis).toEqual(['LOGIN_EXTERNO_GOOGLE_CLIENTE', 'LOGIN_EXTERNO_GOOGLE_EMISSOR', 'LOGIN_EXTERNO_GOOGLE_SEGREDO'])
   })
 
   it.each([

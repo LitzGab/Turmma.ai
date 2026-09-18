@@ -60,8 +60,10 @@ codigo_recuperacao  conta_id, hmac, usado_em?
 usuario       E  conta_id? (nulo só para aluno), papel (coordenador|professor|aluno), nome, desativado_em?
                  unique (E, conta_id, papel)
 credencial_matricula E usuario_id, matricula, senha_hash; unique (E, matricula)
-conta_externa E  usuario_id, provedor, tenant?, sujeito; unique (E, provedor, coalesce(tenant,''), sujeito)
-provedor_escola E provedor, valor (hd|tid)
+conta_externa E  usuario_id, provedor, tenant?, sujeito; unique (E, provedor, coalesce(tenant,''), sujeito);
+                 unique (E, usuario_id) (13.0)
+provedor_escola E provedor, valor (hd|tid), removido_em?; unique parcial (E, provedor, valor) where removido_em
+                 is null (13.0)
 vinculo       EA usuario_id, turma_id, disciplina_id?, papel, estado (pendente|confirmado|contestado|
                  encerrado), contestacao (nao_leciono|turma_errada|disciplina_errada|outro)?,
                  complemento varchar(140)?, motivo_encerramento (fim_do_ano|desligamento|realocacao)?,
@@ -81,6 +83,12 @@ auditoria     E  autor_usuario_id?, autor_operador?, acao, entidade, entidade_id
 
 **Aluno.** É `usuario` sem `conta`, com `credencial_matricula` e vínculo confirmado. No F1 esse
 vínculo vem do seed; no F2, da lista.
+
+**Login externo (decidido na 13.0).** Uma conta externa por usuário na escola: é o que barra, também em paralelo, o
+segundo `sujeito` com o mesmo e-mail (RF9); a professora cuja conta Google foi recriada com outro `sub` só liga a nova
+depois que a coordenação desligar a antiga (eliminação da `conta_externa` na 17.0). O domínio retirado não é apagado:
+ganha `removido_em`, e a auditoria `escola.provedores_alterados` guarda os ids das linhas por provedor, não o texto do
+domínio, que a conferência da auditoria recusa como texto livre.
 
 **Auditoria.** `antes` e `depois` seguem uma lista fechada por ação: ids, estados e datas. Um
 teste recusa `nome`, `email`, `matricula`, `complemento`, `hash` e `segredo`.
@@ -416,9 +424,10 @@ migram na mesma tarefa, e o helper cria a escola antes do job, por causa da FK.
 
 ## 12. Premissas não verificadas
 
-- ⚠️ **Retorno do Google e da Microsoft quando a escola não liberou o app:** não se sabe se o redirect volta nem com qual `error`. Todo `error` vira a mesma mensagem, e a tela avisa antes do botão.
-- ⚠️ **`hd` sem o escopo `email`:** não verificado. `email` fica porque a ligação do professor precisa dele.
-- ⚠️ **`nonce` no `mock-oauth2-server`:** conferir no primeiro teste.
+- ⚠️ **Retorno do Google e da Microsoft quando a escola não liberou o app:** revisto na 13.0 com o `domain-researcher` (18/09/2026) e ainda sem confirmação oficial do valor exato. O Google documenta `?error=access_denied` na recusa do usuário, mas não diz se `admin_policy_enforced` volta ao `redirect_uri` ou fica na tela dele; a Microsoft descreve AADSTS65001 e AADSTS90094 como tela própria, e só confirma o retorno com `error=` no fluxo vizinho de consentimento do administrador. O RFC 6749 (4.1.2.1) manda devolver o erro ao `redirect_uri` registrado. Todo `error`, com qualquer valor, vira `?falha=provedor` (implementado), e a tela avisa antes do botão.
+- ✅ **`hd` sem o escopo `email`:** confirmado na 13.0. O Google entrega `hd` sem condição de escopo (documentação do OpenID Connect do Google). `email` fica porque a ligação do professor precisa dele.
+- ✅ **`nonce` no `mock-oauth2-server`:** confirmado na 13.0, observado no `oidc-falso` e exigido pelo OpenID Connect Core (seção 2). Com `interactiveLogin: true`, o nome digitado no formulário é o `subject` dos `requestMappings` (README do projeto).
+- ✅ **Microsoft:** confirmado na 13.0 (referência de claims do ID token): o `oid` exige `profile`; o `email` de conta gerenciada não é garantido e pode faltar (aí a ligação do professor é recusada, como qualquer conta sem e-mail); o `tid` de conta pessoal é `9188040d-6c67-4c5b-b112-36a304b66dad`. O `openid-client` aceita o emissor `{tenantid}` só quando o discovery é `https://login.microsoftonline.com` (`handleEntraId` em `build/index.js`), e a lista de `tid` é nossa.
 - ⚠️ **Custo do argon2 e capacidade da seção 5:** estimados. O cenário mede, e nunca abaixo da OWASP.
 - ⚠️ **Restauração de sessão do Chrome:** o cookie sem `Max-Age` sobrevive a ela. A inatividade no servidor é a garantia.
 

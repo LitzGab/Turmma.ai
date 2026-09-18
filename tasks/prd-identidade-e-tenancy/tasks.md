@@ -78,11 +78,11 @@
   - [x] 12.2 Troca encerra a sessão de origem, aplica MFA e inatividade do destino; `/v1/eu.acessos`
   - [x] 12.3 Testes: MFA ao ir para coordenação, `usuarioId` de outra conta, sessão de matrícula, id de A depois da troca
 
-- [ ] **13.0 — Login pela conta Google ou Microsoft da escola**
-  - [ ] 13.1 Serviço `oidc-falso` (`mock-oauth2-server`) no compose e na esteira
-  - [ ] 13.2 Migration de `conta_externa` e `provedor_escola`; `PUT /v1/escola/provedores`
-  - [ ] 13.3 `iniciar` e `retorno` com `openid-client`, cookie `educa_oidc`, `hd`/`tid`, ligação do professor e recusa igual
-  - [ ] 13.4 Testes: conta pessoal e domínio errado, aluno sem ligação, `email_verified`, retorno em paralelo, nada no log e no banco, cookie de A com slug de B, provedor fora
+- [x] **13.0 — Login pela conta Google ou Microsoft da escola**
+  - [x] 13.1 Serviço `oidc-falso` (`mock-oauth2-server`) no compose e na esteira
+  - [x] 13.2 Migration de `conta_externa` e `provedor_escola`; `PUT /v1/escola/provedores`
+  - [x] 13.3 `iniciar` e `retorno` com `openid-client`, cookie `educa_oidc`, `hd`/`tid`, ligação do professor e recusa igual
+  - [x] 13.4 Testes: conta pessoal e domínio errado, aluno sem ligação, `email_verified`, retorno em paralelo, nada no log e no banco, cookie de A com slug de B, provedor fora
 
 - [ ] **14.0 — Semáforo de hash justo entre escolas**
   - [ ] 14.1 Semáforo com `LOGIN_HASH_CONCORRENCIA` validado contra `UV_THREADPOOL_SIZE`, baldes por escola e "equipe", rodízio

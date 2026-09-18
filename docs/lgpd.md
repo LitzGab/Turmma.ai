@@ -36,7 +36,7 @@ deveria existir.
 | Nome | aluno | identificar na turma | execução de contrato educacional | ano letivo + 5 anos (registro escolar) |
 | Matrícula | aluno | login e vínculo | idem | idem |
 | Turma, série, disciplina | aluno | contexto pedagógico | idem | idem |
-| Identificador opaco da conta Google ou Microsoft da escola (nunca e-mail nem foto) | aluno, professor | login e importação de turma (D48) | execução de contrato | enquanto houver vínculo |
+| Identificador opaco da conta Google ou Microsoft da escola (`conta_externa`: provedor, `sub` no Google, `oid` e `tid` na Microsoft; nunca e-mail, nome nem foto, que o login descarta antes de gravar e nunca loga) | aluno, professor | login e importação de turma (D48) | execução de contrato | enquanto houver vínculo |
 | Resposta de avaliação | aluno | correção e devolutiva | execução de contrato educacional | ano letivo + 1 ano |
 | Diagnóstico por habilidade | aluno | acompanhamento pedagógico formativo (D46) | idem | ano letivo + 1 ano (proposta, a confirmar com a escola) |
 | Nota | aluno | registro escolar | obrigação legal da escola | conforme norma da escola |

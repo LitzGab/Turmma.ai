@@ -38,7 +38,7 @@ export class AppModule {
         BancoModule.com(config.banco),
         LimiteModule.com(config.limite),
         UsoModule.com(config.redisFilaUrl),
-        SessaoModule.com({ identidade: config.identidade, login: config.login, redisFilaUrl: config.redisFilaUrl, ...opcoes }),
+        SessaoModule.com({ identidade: config.identidade, login: config.login, loginExterno: config.loginExterno, redisFilaUrl: config.redisFilaUrl, ...opcoes }),
         EstruturaModule,
         SistemaModule.com({
           rotasSinteticas: config.rotasSinteticas,

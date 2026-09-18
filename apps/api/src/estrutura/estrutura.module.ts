@@ -7,6 +7,8 @@ import { DisciplinaController } from './disciplina.controller.js'
 import { DisciplinaService } from './disciplina.service.js'
 import { EscolaSessaoController } from './escola-sessao.controller.js'
 import { EscolaSessaoService } from './escola-sessao.service.js'
+import { ProvedoresDaEscolaController } from './provedores-da-escola.controller.js'
+import { ProvedoresDaEscolaService } from './provedores-da-escola.service.js'
 import { SerieController } from './serie.controller.js'
 import { SerieService } from './serie.service.js'
 import { TurmaController } from './turma.controller.js'
@@ -15,13 +17,15 @@ import { MeusVinculosController, VinculoController } from './vinculo.controller.
 import { VinculoService } from './vinculo.service.js'
 
 /**
- * A estrutura da escola que a coordenação configura pela API: a inatividade da sessão (5.0), e o ano letivo, as
+ * A estrutura da escola que a coordenação configura pela API: a inatividade da sessão (5.0), os domínios e tenants do
+ * login pela conta da escola (13.0), e o ano letivo, as
  * séries, as disciplinas e as turmas (8.0), e o vínculo, com a turma e os alunos que ele abre (9.0).
  */
 @Module({
-  controllers: [EscolaSessaoController, AnoLetivoController, SerieController, DisciplinaController, TurmaController, VinculoController, MeusVinculosController],
+  controllers: [EscolaSessaoController, ProvedoresDaEscolaController, AnoLetivoController, SerieController, DisciplinaController, TurmaController, VinculoController, MeusVinculosController],
   providers: [
     { provide: EscolaSessaoService, useFactory: (banco: Banco) => new EscolaSessaoService(banco), inject: [BANCO] },
+    { provide: ProvedoresDaEscolaService, useFactory: (banco: Banco) => new ProvedoresDaEscolaService(banco), inject: [BANCO] },
     { provide: AnoLetivoService, useFactory: (banco: Banco) => new AnoLetivoService(banco), inject: [BANCO] },
     { provide: SerieService, useFactory: (banco: Banco) => new SerieService(banco), inject: [BANCO] },
     { provide: DisciplinaService, useFactory: (banco: Banco) => new DisciplinaService(banco), inject: [BANCO] },

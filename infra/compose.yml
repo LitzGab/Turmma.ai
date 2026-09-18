@@ -88,6 +88,27 @@ services:
       retries: 30
       start_period: 5s
 
+  # Provedor OIDC falso (mock-oauth2-server, MIT) no lugar do Google e da Microsoft (tarefa 13.0): o login pela conta da
+  # escola roda inteiro sem conta em serviço externo (regra 00, item 8). Um emissor `google` e um `microsoft`, com
+  # usuários sintéticos fixos em infra/oidc-falso/config.json, escolhidos pelo nome digitado no formulário de login dele
+  # (`subject`). Nada aqui é conta de verdade. JVM com teto de heap: fica abaixo de 100 MB de memória.
+  oidc-falso:
+    image: ghcr.io/navikt/mock-oauth2-server:6.0.2@sha256:b538810afd589d42fbfb856c588c2065eaeed1dc528d6c532972048e67fc2aff
+    environment:
+      JSON_CONFIG_PATH: /config/config.json
+      SERVER_PORT: '8080'
+      JAVA_TOOL_OPTIONS: -Xmx96m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+    volumes:
+      - ./oidc-falso/config.json:/config/config.json:ro
+    ports:
+      - 127.0.0.1:${OIDC_FALSO_PORTA_HOST:?defina OIDC_FALSO_PORTA_HOST}:8080
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/google/.well-known/openid-configuration]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
   # Aplica as migrations e sai. Roda antes de toda instância que usa o banco, só expande, e desiste do
   # lock em 5 s, com 3 tentativas (packages/nucleo/src/db/migrar.ts). Mesma imagem da API.
   migrar:
@@ -135,6 +156,16 @@ services:
       IDENTIDADE_CHAVE_CIFRA_VERSAO: ${IDENTIDADE_CHAVE_CIFRA_VERSAO:?defina IDENTIDADE_CHAVE_CIFRA_VERSAO}
       IDENTIDADE_CHAVE_CIFRA_V1: ${IDENTIDADE_CHAVE_CIFRA_V1:?defina IDENTIDADE_CHAVE_CIFRA_V1}
       IDENTIDADE_CHAVE_RECUPERACAO: ${IDENTIDADE_CHAVE_RECUPERACAO:?defina IDENTIDADE_CHAVE_RECUPERACAO}
+      # Login pela conta da escola contra o oidc-falso. Sem depends_on: fora do ar, só esse botão falha, com
+      # `?falha=provedor`, e a matrícula e o e-mail seguem (regra 80, item 4).
+      LOGIN_EXTERNO_RETORNO_URL: ${LOGIN_EXTERNO_RETORNO_URL:?defina LOGIN_EXTERNO_RETORNO_URL}
+      LOGIN_EXTERNO_CHAVE_COOKIE: ${LOGIN_EXTERNO_CHAVE_COOKIE:?defina LOGIN_EXTERNO_CHAVE_COOKIE}
+      LOGIN_EXTERNO_GOOGLE_EMISSOR: ${LOGIN_EXTERNO_GOOGLE_EMISSOR:?defina LOGIN_EXTERNO_GOOGLE_EMISSOR}
+      LOGIN_EXTERNO_GOOGLE_CLIENTE: ${LOGIN_EXTERNO_GOOGLE_CLIENTE:?defina LOGIN_EXTERNO_GOOGLE_CLIENTE}
+      LOGIN_EXTERNO_GOOGLE_SEGREDO: ${LOGIN_EXTERNO_GOOGLE_SEGREDO:?defina LOGIN_EXTERNO_GOOGLE_SEGREDO}
+      LOGIN_EXTERNO_MICROSOFT_EMISSOR: ${LOGIN_EXTERNO_MICROSOFT_EMISSOR:?defina LOGIN_EXTERNO_MICROSOFT_EMISSOR}
+      LOGIN_EXTERNO_MICROSOFT_CLIENTE: ${LOGIN_EXTERNO_MICROSOFT_CLIENTE:?defina LOGIN_EXTERNO_MICROSOFT_CLIENTE}
+      LOGIN_EXTERNO_MICROSOFT_SEGREDO: ${LOGIN_EXTERNO_MICROSOFT_SEGREDO:?defina LOGIN_EXTERNO_MICROSOFT_SEGREDO}
       DRENAGEM_ESPERA_BORDA_MS: ${DRENAGEM_ESPERA_BORDA_MS:?defina DRENAGEM_ESPERA_BORDA_MS}
       DRENAGEM_PRAZO_MS: ${DRENAGEM_PRAZO_MS:?defina DRENAGEM_PRAZO_MS}
       # Sem depends_on do Redis de cache: a API sobe e atende sem ele, limitando em memória.

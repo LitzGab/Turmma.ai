@@ -20,7 +20,11 @@ export const ARGUMENTOS_COMPOSE = [
   'infra/compose.yml',
 ] as const
 
-export const SERVICOS_INFRA = ['postgres', 'redis-fila', 'redis-cache', 'storage'] as const
+/**
+ * O que os testes de integração sobem: os dados e o `oidc-falso`, no lugar do Google e da Microsoft no login pela conta
+ * da escola (13.0), para nenhum teste chamar provedor de verdade.
+ */
+export const SERVICOS_INFRA = ['postgres', 'redis-fila', 'redis-cache', 'storage', 'oidc-falso'] as const
 
 export function etapaCompose(nome: string, ...argumentos: string[]): Etapa {
   return { nome, comando: 'docker', argumentos: [...ARGUMENTOS_COMPOSE, ...argumentos] }
@@ -33,7 +37,7 @@ export function etapaCompose(nome: string, ...argumentos: string[]): Etapa {
 export function executarTestesComInfra(nome: string, script: string): Promise<number> {
   return executarEtapas(
     [
-      etapaCompose('subir Postgres, Redis e storage', 'up', '--detach', '--wait', ...SERVICOS_INFRA),
+      etapaCompose('subir Postgres, Redis, storage e oidc-falso', 'up', '--detach', '--wait', ...SERVICOS_INFRA),
       { nome, comando: 'npm', argumentos: ['run', script] },
     ],
     (codigo) => [

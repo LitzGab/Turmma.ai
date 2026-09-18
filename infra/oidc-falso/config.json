@@ -1,0 +1,99 @@
+{
+  "interactiveLogin": true,
+  "httpServer": "NettyWrapper",
+  "tokenCallbacks": [
+    {
+      "issuerId": "google",
+      "tokenExpiry": 300,
+      "requestMappings": [
+        {
+          "requestParam": "subject",
+          "match": "google-professora-a",
+          "claims": { "sub": "google-sub-professora-a", "hd": "escola-a.educa-sintetica.test", "email": "professora.a@escola-a.educa-sintetica.test", "email_verified": true }
+        },
+        {
+          "requestParam": "subject",
+          "match": "google-professora-a-recriada",
+          "claims": { "sub": "google-sub-professora-a-recriada", "hd": "escola-a.educa-sintetica.test", "email": "professora.a@escola-a.educa-sintetica.test", "email_verified": true }
+        },
+        {
+          "requestParam": "subject",
+          "match": "google-professor-nao-verificado",
+          "claims": { "sub": "google-sub-professor-nao-verificado", "hd": "escola-a.educa-sintetica.test", "email": "professor.nao.verificado@escola-a.educa-sintetica.test", "email_verified": false }
+        },
+        {
+          "requestParam": "subject",
+          "match": "google-professor-segundo-dominio",
+          "claims": { "sub": "google-sub-professor-segundo-dominio", "hd": "segundo-dominio-a.educa-sintetica.test", "email": "professor.segundo@segundo-dominio-a.educa-sintetica.test", "email_verified": true }
+        },
+        {
+          "requestParam": "subject",
+          "match": "google-aluna-a",
+          "claims": {
+            "sub": "google-sub-aluna-a",
+            "hd": "escola-a.educa-sintetica.test",
+            "email": "aluna.ficticia.a@escola-a.educa-sintetica.test",
+            "email_verified": true,
+            "name": "Aluna Ficticia Sintetica",
+            "given_name": "Aluna Ficticia",
+            "family_name": "Sintetica",
+            "picture": "https://fotos.educa-sintetica.test/aluna-ficticia-a.png"
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "google-professor-escola-b",
+          "claims": { "sub": "google-sub-professor-escola-b", "hd": "escola-b.educa-sintetica.test", "email": "professor.b@escola-b.educa-sintetica.test", "email_verified": true }
+        },
+        {
+          "requestParam": "subject",
+          "match": "google-conta-pessoal",
+          "claims": { "sub": "google-sub-conta-pessoal", "email": "conta.pessoal.ficticia@gmail.com", "email_verified": true }
+        },
+        {
+          "requestParam": "subject",
+          "match": "google-pessoal-com-email-da-professora",
+          "claims": { "sub": "google-sub-pessoal-com-email-da-professora", "email": "professora.a@escola-a.educa-sintetica.test", "email_verified": true }
+        }
+      ]
+    },
+    {
+      "issuerId": "microsoft",
+      "tokenExpiry": 300,
+      "requestMappings": [
+        {
+          "requestParam": "subject",
+          "match": "microsoft-professora-tenant-a",
+          "claims": {
+            "sub": "microsoft-sub-par-professora-tenant-a",
+            "oid": "0a0a0a0a-1111-4111-8111-00000000000a",
+            "tid": "aaaaaaaa-0000-4000-8000-00000000000a",
+            "email": "professora.ms@escola-a.educa-sintetica.test",
+            "preferred_username": "professora.ms@escola-a.educa-sintetica.test",
+            "name": "Professora Ficticia Microsoft"
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "microsoft-conta-pessoal",
+          "claims": {
+            "sub": "microsoft-sub-par-conta-pessoal",
+            "oid": "0c0c0c0c-3333-4333-8333-00000000000c",
+            "tid": "9188040d-6c67-4c5b-b112-36a304b66dad",
+            "email": "professora.ms@escola-a.educa-sintetica.test"
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "microsoft-professor-tenant-b",
+          "claims": {
+            "sub": "microsoft-sub-par-professor-tenant-b",
+            "oid": "0b0b0b0b-2222-4222-8222-00000000000b",
+            "tid": "bbbbbbbb-0000-4000-8000-00000000000b",
+            "email": "professora.ms@escola-a.educa-sintetica.test"
+          }
+        }
+      ]
+    }
+  ]
+}
