@@ -46,6 +46,10 @@ export {
   TAMANHO_MINIMO_SENHA_NOVA,
 } from './sessao/convite.js'
 export type { PedidoAceitarConvite, PedidoConsultarConvite, RespostaAceitarConvite, RespostaConsultarConvite } from './sessao/convite.js'
+export { esquemaPedidoLoginMatricula, TAMANHO_MAXIMO_MATRICULA, TAMANHO_MAXIMO_SLUG_NO_LOGIN } from './sessao/matricula.js'
+export type { PedidoLoginMatricula } from './sessao/matricula.js'
+export { esquemaRespostaAcessoDaEscola, PROVEDORES_DE_CONTA_DA_ESCOLA } from './sessao/acesso-da-escola.js'
+export type { ProvedorDeContaDaEscola, RespostaAcessoDaEscola } from './sessao/acesso-da-escola.js'
 export { esquemaRespostaEu } from './sessao/eu.js'
 export type { RespostaEu } from './sessao/eu.js'
 export { esquemaRespostaRenovacao } from './sessao/renovacao.js'

@@ -11,6 +11,8 @@ import { Inject, Logger, Module, type DynamicModule, type OnApplicationShutdown 
 import type { Redis } from 'ioredis'
 import { BANCO } from '../banco.module.js'
 import type { ConfiguracaoLogin } from './configuracao-de-login.js'
+import { AcessoDaEscolaController } from './acesso-da-escola.controller.js'
+import { AcessoDaEscolaService } from './acesso-da-escola.service.js'
 import { AtividadeController } from './atividade.controller.js'
 import { RegistroDeAtividade } from './atividade.service.js'
 import { ContadorDeTentativas } from './contador-de-tentativas.js'
@@ -27,6 +29,8 @@ import { EuService } from './eu.service.js'
 import { HashDeSenha } from './hash-de-senha.js'
 import { LoginEmailController } from './login-email.controller.js'
 import { LoginService } from './login.service.js'
+import { LoginMatriculaController } from './matricula.controller.js'
+import { LoginPorMatricula } from './matricula.service.js'
 import { ContaMfaController, SessaoMfaController } from './mfa.controller.js'
 import { MfaService } from './mfa.service.js'
 import { RedefinicaoDeMfa } from './redefinicao-de-mfa.js'
@@ -49,7 +53,7 @@ export interface OpcoesDoModuloDeSessao {
 }
 
 /**
- * O módulo de sessão: login, renovação, MFA (com a redefinição pela coordenação), convite do coordenador, troca de
+ * O módulo de sessão: login (por e-mail e, na 11.0, do aluno por matrícula no endereço da escola), renovação, MFA (com a redefinição pela coordenação), convite do coordenador, troca de
  * escola e saída (tarefas 4.0 em diante). É o único que tem a
  * `ResolucaoDeTenantRepository`, e não a exporta: a fronteira da resolução de tenant fica dentro dele (Tech Spec,
  * seção 6).
@@ -67,6 +71,8 @@ export class SessaoModule implements OnApplicationShutdown {
       module: SessaoModule,
       controllers: [
         LoginEmailController,
+        LoginMatriculaController,
+        AcessoDaEscolaController,
         SessaoMfaController,
         ContaMfaController,
         RedefinirMfaController,
@@ -109,6 +115,23 @@ export class SessaoModule implements OnApplicationShutdown {
             ativacao: AtivacaoPorConvite,
           ) => new LoginService({ resolucao, hash, contador, dispositivo, conclusao, ativacao, medidor: opcoes.medidor ?? medidorGlobal() }),
           inject: [ResolucaoDeTenantRepository, HashDeSenha, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin, AtivacaoPorConvite],
+        },
+        {
+          provide: LoginPorMatricula,
+          useFactory: (
+            banco: Banco,
+            resolucao: ResolucaoDeTenantRepository,
+            hash: HashDeSenha,
+            contador: ContadorDeTentativas,
+            dispositivo: CookieDeDispositivo,
+            conclusao: ConclusaoDeLogin,
+          ) => new LoginPorMatricula({ banco, resolucao, hash, contador, dispositivo, conclusao, medidor: opcoes.medidor ?? medidorGlobal() }),
+          inject: [BANCO, ResolucaoDeTenantRepository, HashDeSenha, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin],
+        },
+        {
+          provide: AcessoDaEscolaService,
+          useFactory: (banco: Banco, resolucao: ResolucaoDeTenantRepository) => new AcessoDaEscolaService(banco, resolucao),
+          inject: [BANCO, ResolucaoDeTenantRepository],
         },
         {
           provide: ConviteService,

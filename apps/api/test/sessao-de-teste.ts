@@ -5,7 +5,7 @@ import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
 import { criarEscola, criarRede } from '../src/ops/escola.js'
 import { CriacaoDeSessaoRepository } from '../src/sessao/criacao-de-sessao.repository.js'
-import { criarSessoesSinteticas, emissorDeTokenSintetico, NOME_SINTETICO } from '../src/sessao/sessoes-sinteticas.js'
+import { criarAlunosComMatricula, criarSessoesSinteticas, emissorDeTokenSintetico, NOME_SINTETICO, type AlunoComMatriculaSintetico } from '../src/sessao/sessoes-sinteticas.js'
 
 /** O operador que os testes gravam na auditoria da rede e da escola que criam. */
 export const OPERADOR_DE_TESTE = 'teste-integracao'
@@ -93,6 +93,19 @@ export class BancadaDeSessoes {
     return (await emissorDeTokenSintetico(this.#ambiente).emitir({ escolaId, ...criada })).token
   }
 
+  /** Alunos com credencial por matrícula na escola, pelo seed sintético da 11.0; os ids voltam na ordem pedida. */
+  async alunosComMatricula(escolaId: string, alunos: readonly AlunoComMatriculaSintetico[]): Promise<string[]> {
+    return criarAlunosComMatricula(this.banco, this.#ambiente, escolaId, alunos)
+  }
+
+  /** O endereço (slug) da escola. */
+  async slugDe(escolaId: string): Promise<string> {
+    const { rows } = await this.pool.query<{ slug: string }>('select slug from escola where id = $1', [escolaId])
+    const slug = rows[0]?.slug
+    if (slug === undefined) throw new Error('escola de teste não encontrada')
+    return slug
+  }
+
   /** Escola nova com uma sessão. */
   async escolaComSessao(papel: PapelDeUsuario = 'aluno'): Promise<SessaoDeTeste> {
     return this.sessao(await this.escola(), papel)
@@ -114,6 +127,7 @@ export class BancadaDeSessoes {
         const escolas = this.#escolas
         const { rows } = await this.pool.query<{ conta_id: string }>('select conta_id from usuario where escola_id = any($1::uuid[]) and conta_id is not null', [escolas])
         await this.pool.query('delete from sessao where escola_id = any($1::uuid[])', [escolas])
+        await this.pool.query('delete from credencial_matricula where escola_id = any($1::uuid[])', [escolas])
         // O vínculo da 9.0 aponta para a turma e o usuário, e a estrutura da 8.0 para o ano letivo: saem antes deles.
         await this.pool.query('delete from vinculo where escola_id = any($1::uuid[])', [escolas])
         await this.pool.query('delete from turma where escola_id = any($1::uuid[])', [escolas])

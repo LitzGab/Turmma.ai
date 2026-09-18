@@ -42,19 +42,19 @@ IP. Ao terminar, existe login de aluno com sessão de inatividade própria (padr
 
 ## Subtarefas
 
-- [ ] 11.1 — Migration de `credencial_matricula` e as duas rotas.
+- [x] 11.1 — Migration de `credencial_matricula` e as duas rotas.
   - **Tabela:** `E usuario_id, matricula, senha_hash`, com `unique (escola_id, matricula)` e FK composta `(escola_id, usuario_id)`.
   - **`GET /v1/escolas/:slug/acesso`:** anônima, responde `{ nome, provedores: ('google'|'microsoft')[] }` e nunca devolve `hd` nem `tid`. Aqui a lista vem vazia, porque `provedor_escola` nasce na 13.0.
   - **`POST /v1/sessao/matricula`:** `{ slug, matricula, senha }`. Resolve a escola pelo slug no `ResolucaoDeTenantRepository`, abre o contexto de escola sem usuário e lê a credencial pelo repository com escopo.
   - **Senha:** argon2id, com o hash fixo para slug inexistente, matrícula inexistente e aluno desativado.
   - **Resposta:** segue as etapas da 4.0 (aluno com um usuário vai direto a `pronta`), grava `sessao` com `metodo = matricula` e o `registro_acesso`.
-- [ ] 11.2 — Contador com a escola na chave, e inatividade do aluno.
+- [x] 11.2 — Contador com a escola na chave, e inatividade do aluno.
   - **Contador:** chave `login:{HMAC(LOGIN_CHAVE_CONTADOR, escola_id|matricula)}:{conhecido|outro}`, antes do hash. Slug inexistente usa o mesmo formato, com um id fixo de "escola desconhecida", para a resposta sair igual.
   - **Cookie:** `educa_dispositivo` com a entrada `HMAC(LOGIN_CHAVE_DISPOSITIVO_V{n}, escola_id|matricula)` depois do acerto.
   - **Inatividade:** a sessão do aluno usa `escola.inatividade_aluno_min`, que a 5.0 já expõe em `PUT /v1/escola/sessao`, e a tolerância de 5 min.
   - **Métricas:** `login.falhas{escola_id}` e `login.conta_segurada` também contam a matrícula.
   - **Log:** só `evento`, `escolaId`, `usuarioId` quando houver, e o código. Nunca matrícula nem slug digitado.
-- [ ] 11.3 — Testes (tabela abaixo). Montam alunos com o seed, e todo teste de isolamento
+- [x] 11.3 — Testes (tabela abaixo). Montam alunos com o seed, e todo teste de isolamento
   tem linha real na escola B.
 
 ## Arquivos previstos
@@ -105,5 +105,52 @@ IP. Ao terminar, existe login de aluno com sessão de inatividade própria (padr
 - Reset de senha do aluno pela escola e lista de nomes: F2
 - Desativação do aluno apagando o `senha_hash`: 17.0
 
+## Notas da implementação
+
+Leituras que tomei onde a tarefa deixava margem, escolhendo a que protege o aluno e a escola:
+
+- **`login.falhas{escola_id}` fica para a 15.3.** A 11.2 diz que a métrica "também conta a matrícula", mas ela ainda não
+  existe: nasce na 15.3, e a 14.2 é quem abre `METRICAS_COM_ESCOLA` às métricas de login, com o teste de cardinalidade.
+  Criá-la aqui poria `escola_id` numa métrica fora de job antes da lista fechada da 14.0, contra o teste de hoje
+  (`escola_id` só em job). O que existe, `login.conta_segurada`, conta também a matrícula, com teste.
+- **Slug inexistente** segue o mesmo caminho da matrícula inexistente: contador com a "escola desconhecida"
+  (`00000000-…`) na chave, hash fixo e a mesma resposta, até o `CONTA_SEGURADA`. Não grava `registro_acesso`: sem
+  escola, a linha seria uma segunda exceção ao `escola_id` nulo, que a Tech Spec só admite na falha por e-mail. Slug
+  fora do formato responde como o inexistente, sem ir ao banco. O slug é público (`/acesso`), então a diferença de uma
+  consulta entre slug existente e inexistente não revela nada.
+- **Falha com escola conhecida** grava `login_falho` na escola do slug e **sem usuário**, como a falha por e-mail: a
+  linha não diz se a matrícula existe. O método novo é `RegistroDeAcessoRepository.gravarFalha`, com a escola do
+  contexto.
+- **Aluno desativado** passa pelo hash fixo (a credencial é lida só de aluno ativo). O filtro `papel = 'aluno'` também
+  está na leitura: o banco aceita credencial apontando para usuário de outro papel, e o login não.
+- **Login não exige vínculo confirmado no ano em curso:** em janeiro não há ano em curso, e o aluno ainda lê o próprio
+  histórico (RF16). Quem corta o acesso é a desativação (17.0), já recusada aqui.
+- **Nome da escola no `/acesso`** é lido por `AcessoDaEscolaRepository`, com a escola do contexto aberto pelo slug, e
+  não por um método novo sem escopo: a `ResolucaoDeTenantRepository` continua com os mesmos métodos.
+- **Matrícula** sem espaço nas pontas, com a caixa como digitada, até 40 caracteres (check no banco e contrato).
+- **Seed:** `criarAlunosComMatricula` em `sessoes-sinteticas.ts` (só `AMBIENTE=local`), usado pela bancada de teste.
+- **Mutações conferidas à mão** (cada uma deixou testes vermelhos): tirar a escola da leitura da credencial; tirar a
+  escola da chave do contador.
+- **Arquivos fora da lista prevista:** `acesso-da-escola.service.ts`, `acesso-publico.repository.ts` (o nome evita o padrão `escola.repository` que o teste do operador procura),
+  `escola-sem-usuario.ts`, `conclusao-de-login.ts`, `registro-de-acesso.repository.ts`, `sessao.module.ts`,
+  `sessoes-sinteticas.ts`, `credencial-matricula.repository.int.test.ts`, `test/sessao-de-teste.ts`, `banco.ts` e os
+  índices de `nucleo` e `shared`. `resolucao-de-tenant.repository.ts` não mudou: `escolaPorSlug` já existia (7.0).
+- **Carga:** o cenário `login-7h30` com matrícula é da 16.0.
+
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-18 11:45:39 | 2026-09-18 11:47:19 | `test-engineer` | 1 | APROVADO | a86b9754fc5db5ffd |
+| 2026-09-18 11:52:23 | 2026-09-18 11:52:55 | `test-engineer` | 2 | APROVADO | a9e1ed164596543cb |
+| 2026-09-18 12:16:35 | 2026-09-18 12:17:21 | `tenancy-guardian` | 1 | APROVADO | aafbebe2649650dce |
+| 2026-09-18 12:16:40 | 2026-09-18 12:17:42 | `privacy-guardian` | 1 | APROVADO | a8f434bba8e12c194 |
+| 2026-09-18 12:16:46 | 2026-09-18 12:17:45 | `infra-guardian` | 1 | APROVADO | a20d8452c06b6aff0 |
+| 2026-09-18 12:16:29 | 2026-09-18 12:17:47 | `revisor-geral` | 1 | APROVADO | af1454b4eb92bb1b9 |

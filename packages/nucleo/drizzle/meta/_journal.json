@@ -78,6 +78,13 @@
       "when": 1789737703422,
       "tag": "0010_vinculo",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1789742358128,
+      "tag": "0011_credencial_matricula",
+      "breakpoints": true
     }
   ]
 }

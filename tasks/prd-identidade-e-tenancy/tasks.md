@@ -68,10 +68,10 @@
   - [x] 10.3 Testes: falha no meio desfaz, `fim_do_ano` lê e não edita, `desligamento` dá 404, id de B dá 404
   - [x] 10.4 `GET /v1/vinculos` lista só vínculo de professor, com teste
 
-- [ ] **11.0 — Aluno entra pelo endereço da escola com matrícula**
-  - [ ] 11.1 Migration de `credencial_matricula`; `GET /v1/escolas/:slug/acesso` e `POST /v1/sessao/matricula` no contexto de escola sem usuário
-  - [ ] 11.2 Contador com a escola na chave e inatividade do aluno
-  - [ ] 11.3 Testes: matrícula 1234 em A e B, conta segurada só em A, respostas iguais, 399 alunos do mesmo IP, aluno transferido, dois "Enzo Martins"
+- [x] **11.0 — Aluno entra pelo endereço da escola com matrícula**
+  - [x] 11.1 Migration de `credencial_matricula`; `GET /v1/escolas/:slug/acesso` e `POST /v1/sessao/matricula` no contexto de escola sem usuário
+  - [x] 11.2 Contador com a escola na chave e inatividade do aluno
+  - [x] 11.3 Testes: matrícula 1234 em A e B, conta segurada só em A, respostas iguais, 399 alunos do mesmo IP, aluno transferido, dois "Enzo Martins"
 
 - [ ] **12.0 — Quem trabalha em mais de uma escola escolhe e troca**
   - [ ] 12.1 `POST /v1/sessao/escola` com desafio `escolher` ou token de método e-mail

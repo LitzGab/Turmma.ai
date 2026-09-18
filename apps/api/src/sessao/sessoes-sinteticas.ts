@@ -12,6 +12,7 @@ import {
 import { CodigoDeErro, type PapelDeUsuario } from '@educa/shared'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { z } from 'zod'
+import { CredencialMatriculaRepository } from './credencial-matricula.repository.js'
 import { CriacaoDeSessaoRepository } from './criacao-de-sessao.repository.js'
 import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
 
@@ -116,5 +117,38 @@ export async function criarSessoesSinteticas(
       sessaoId,
       token: (await emissor.emitir({ escolaId: pedido.escolaId, usuarioId, sessaoId })).token,
     })),
+  )
+}
+
+/** Um aluno sintético com credencial: a matrícula e o hash da senha, já gerado por quem chama. */
+export interface AlunoComMatriculaSintetico {
+  readonly matricula: string
+  readonly senhaHash: string
+}
+
+/**
+ * O seed de alunos que entram por matrícula (tarefa 11.0; Tech Spec, seção 3, "Aluno"): na escola pedida, um usuário
+ * aluno sem conta (nome fixo sintético, nunca e-mail) e a `credencial_matricula` dele, numa transação, no contexto da
+ * escola. Só com `AMBIENTE=local`, como as sessões sintéticas. Devolve os ids na ordem pedida.
+ */
+export async function criarAlunosComMatricula(
+  banco: Banco,
+  ambiente: Record<string, string | undefined>,
+  escolaId: string,
+  alunos: readonly AlunoComMatriculaSintetico[],
+): Promise<string[]> {
+  validarAmbiente(esquemaAmbiente, ambiente)
+  if (alunos.length < 1 || alunos.length > QUANTIDADE_MAXIMA_DE_SESSOES_SINTETICAS) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
+  return executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () =>
+    banco.transaction(async (tx) => {
+      const usuarios = await new CriacaoDeSessaoRepository(tx).criarUsuarios(alunos.map(() => ({ contaId: null, papel: 'aluno' as const, nome: NOME_SINTETICO })))
+      const credenciais = alunos.map((aluno, posicao) => {
+        const usuario = usuarios[posicao]
+        if (usuario === undefined) throw new Error('aluno sintético não criado')
+        return { usuarioId: usuario.id, matricula: aluno.matricula, senhaHash: aluno.senhaHash }
+      })
+      await new CredencialMatriculaRepository(tx).criar(credenciais)
+      return credenciais.map((credencial) => credencial.usuarioId)
+    }),
   )
 }
