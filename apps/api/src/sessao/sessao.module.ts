@@ -17,6 +17,9 @@ import { ContadorDeTentativas } from './contador-de-tentativas.js'
 import { CookieDeDispositivo } from './cookie-dispositivo.js'
 import { CifraDoSegredo } from './cifra-do-segredo.js'
 import { ConclusaoDeLogin } from './conclusao-de-login.js'
+import { BilheteDeConvite } from './bilhete-de-convite.js'
+import { ConviteController } from './convite.controller.js'
+import { AtivacaoPorConvite, ConviteService } from './convite.service.js'
 import { ConsumoDeDesafio, EmissorDeDesafio } from './desafio.js'
 import { EuController } from './eu.controller.js'
 import { EuRepository } from './eu.repository.js'
@@ -46,8 +49,8 @@ export interface OpcoesDoModuloDeSessao {
 }
 
 /**
- * O módulo de sessão: login, renovação, MFA (com a redefinição pela coordenação), troca de escola e saída (tarefas 4.0
- * em diante). É o único que tem a
+ * O módulo de sessão: login, renovação, MFA (com a redefinição pela coordenação), convite do coordenador, troca de
+ * escola e saída (tarefas 4.0 em diante). É o único que tem a
  * `ResolucaoDeTenantRepository`, e não a exporta: a fronteira da resolução de tenant fica dentro dele (Tech Spec,
  * seção 6).
  *
@@ -71,6 +74,7 @@ export class SessaoModule implements OnApplicationShutdown {
         RenovacaoController,
         AtividadeController,
         SaidaController,
+        ConviteController,
       ],
       providers: [
         { provide: CLIENTE_REDIS_LOGIN, useFactory: () => criarClienteRedisDaApi(opcoes.redisFilaUrl, 'api-login', avisar) },
@@ -92,28 +96,51 @@ export class SessaoModule implements OnApplicationShutdown {
             }),
           inject: [BANCO, CookieDeDispositivo],
         },
+        { provide: BilheteDeConvite, useFactory: () => new BilheteDeConvite(opcoes.identidade.chaveAssinatura) },
+        { provide: AtivacaoPorConvite, useFactory: (banco: Banco, bilhetes: BilheteDeConvite) => new AtivacaoPorConvite(banco, bilhetes), inject: [BANCO, BilheteDeConvite] },
         {
           provide: LoginService,
-          useFactory: (resolucao: ResolucaoDeTenantRepository, hash: HashDeSenha, contador: ContadorDeTentativas, dispositivo: CookieDeDispositivo, conclusao: ConclusaoDeLogin) =>
-            new LoginService({ resolucao, hash, contador, dispositivo, conclusao, medidor: opcoes.medidor ?? medidorGlobal() }),
-          inject: [ResolucaoDeTenantRepository, HashDeSenha, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin],
+          useFactory: (
+            resolucao: ResolucaoDeTenantRepository,
+            hash: HashDeSenha,
+            contador: ContadorDeTentativas,
+            dispositivo: CookieDeDispositivo,
+            conclusao: ConclusaoDeLogin,
+            ativacao: AtivacaoPorConvite,
+          ) => new LoginService({ resolucao, hash, contador, dispositivo, conclusao, ativacao, medidor: opcoes.medidor ?? medidorGlobal() }),
+          inject: [ResolucaoDeTenantRepository, HashDeSenha, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin, AtivacaoPorConvite],
+        },
+        {
+          provide: ConviteService,
+          useFactory: (banco: Banco, resolucao: ResolucaoDeTenantRepository, hash: HashDeSenha, bilhetes: BilheteDeConvite) =>
+            new ConviteService({ banco, resolucao, hash, bilhetes, emissorDeDesafio: new EmissorDeDesafio(opcoes.identidade.chaveAssinatura) }),
+          inject: [BANCO, ResolucaoDeTenantRepository, HashDeSenha, BilheteDeConvite],
         },
         {
           provide: MfaService,
-          useFactory: (banco: Banco, resolucao: ResolucaoDeTenantRepository, contador: ContadorDeTentativas, dispositivo: CookieDeDispositivo, conclusao: ConclusaoDeLogin, cliente: Redis) =>
+          useFactory: (
+            banco: Banco,
+            resolucao: ResolucaoDeTenantRepository,
+            contador: ContadorDeTentativas,
+            dispositivo: CookieDeDispositivo,
+            conclusao: ConclusaoDeLogin,
+            cliente: Redis,
+            ativacao: AtivacaoPorConvite,
+          ) =>
             new MfaService({
               banco,
               resolucao,
               contador,
               dispositivo,
               conclusao,
+              ativacao,
               cifra: new CifraDoSegredo(opcoes.login.mfa.versaoCifra, opcoes.login.mfa.chavesCifra),
               consumo: new ConsumoDeDesafio(cliente),
               chaveAssinatura: opcoes.identidade.chaveAssinatura,
               chaveRecuperacao: opcoes.login.mfa.chaveRecuperacao,
               medidor: opcoes.medidor ?? medidorGlobal(),
             }),
-          inject: [BANCO, ResolucaoDeTenantRepository, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin, CLIENTE_REDIS_LOGIN],
+          inject: [BANCO, ResolucaoDeTenantRepository, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin, CLIENTE_REDIS_LOGIN, AtivacaoPorConvite],
         },
         { provide: RedefinicaoDeMfa, useFactory: (banco: Banco) => new RedefinicaoDeMfa(banco), inject: [BANCO] },
         {

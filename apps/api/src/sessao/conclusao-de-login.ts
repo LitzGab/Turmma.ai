@@ -61,6 +61,15 @@ export class ConclusaoDeLogin {
   }
 
   /**
+   * A etapa `mfa` para a conta com MFA ativo que trouxe o bilhete de um convite aceito (7.0): o usuário do convite só é
+   * ativado depois do código, e por isso o desafio, com o convite, vem antes de qualquer outra etapa. Sem cookie.
+   */
+  async pedirSegundoFator(contaId: string, conviteId: string): Promise<ResultadoDoLogin> {
+    const desafio = await this.dependencias.emissorDeDesafio.emitir({ contaId, etapa: 'mfa', mfaCumprido: false, conviteId })
+    return { resposta: { etapa: 'mfa', desafio }, cookies: [] }
+  }
+
+  /**
    * Grava a sessão e o registro de acesso na escola do usuário, numa transação, num contexto que tem só a escola:
    * a criação lê a escola do contexto, e a FK composta recusa usuário de outra escola.
    */

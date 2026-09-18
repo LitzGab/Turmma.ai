@@ -47,10 +47,10 @@
   - [x] 6.3 `POST /v1/usuarios/:id/mfa/redefinir` (202 sempre) e `ops:redefinir-mfa`
   - [x] 6.4 Testes: coordenador sem MFA barrado, TOTP e recuperação em paralelo, quinto erro, AAD, redefinir em A e B
 
-- [ ] **7.0 — Primeiro coordenador entra por convite do operador**
-  - [ ] 7.1 Migration de `convite`; `ops:convite-coordenador` em arquivo 0600 e `ops:revogar-convite`
-  - [ ] 7.2 `POST /v1/convites/consultar` e `/aceitar` condicional, com os dois caminhos (conta nova e conta existente)
-  - [ ] 7.3 Testes: aceite em paralelo, expirado, revogado e inexistente iguais, e-mail que já coordena B não troca a senha
+- [x] **7.0 — Primeiro coordenador entra por convite do operador**
+  - [x] 7.1 Migration de `convite`; `ops:convite-coordenador` em arquivo 0600 e `ops:revogar-convite`
+  - [x] 7.2 `POST /v1/convites/consultar` e `/aceitar` condicional, com os dois caminhos (conta nova e conta existente)
+  - [x] 7.3 Testes: aceite em paralelo, expirado, revogado e inexistente iguais, e-mail que já coordena B não troca a senha
 
 - [ ] **8.0 — Coordenação monta o ano letivo, as séries, as disciplinas e as turmas**
   - [ ] 8.1 Migration de `serie`, `disciplina` e `turma`, com FKs compostas

@@ -118,14 +118,14 @@ Envelope de erro do F0. As rotas anônimas levam `@RotaAnonima`.
 | Método | Rota | Papel | Entrada | Saída |
 |---|---|---|---|---|
 | GET | `/v1/escolas/:slug/acesso` | anônimo | — | `{ nome, provedores: ('google'\|'microsoft')[] }` |
-| POST | `/v1/sessao/email`, `/matricula` | anônimo | `{ email, senha }`, `{ slug, matricula, senha }` | `{ etapa, desafio? }`; cookie em `pronta` |
+| POST | `/v1/sessao/email`, `/matricula` | anônimo | `{ email, senha, bilhete? }`, `{ slug, matricula, senha }` | `{ etapa, desafio? }`; cookie em `pronta` |
 | GET | `/v1/sessao/externa/:provedor/iniciar?slug=`, `/retorno` | anônimo | — | 302 |
 | POST | `/v1/sessao/mfa` | desafio `mfa` | `{ codigo }` ou `{ recuperacao }` | etapa |
 | POST | `/v1/conta/mfa/configurar`, `/ativar` | desafio `configurar_mfa`, MFA inativo | —, `{ codigo }` | `{ uri, segredo }`, `{ codigosRecuperacao }`; `no-store` |
 | POST | `/v1/sessao/escola` | desafio `escolher` ou token de método e-mail | `{ usuarioId }` | etapa ou `{ token }` |
 | POST | `/v1/sessao/renovar`, `/atividade`; DELETE `/v1/sessao` | cookie; token | — | `{ token, expiraEm }`; 204 |
 | GET | `/v1/eu` | token | — | `{ usuarioId, papel, nome, escola:{id,nome,slug}, inatividadeMin, acessos:[{usuarioId, escolaNome, papel}] }` |
-| POST | `/v1/convites/consultar`, `/aceitar` | anônimo | `{ token }`, `{ token, senha }` | `{ escolaNome }`, etapa |
+| POST | `/v1/convites/consultar`, `/aceitar` | anônimo | `{ token }`, `{ token, senha? }` | `{ escolaNome }`, `{ etapa: 'configurar_mfa', desafio }` ou `{ etapa: 'entrar', bilhete }` |
 | GET/POST | `/v1/anos-letivos`, `/:id/abrir`, `/:id/encerrar`, `/series`, `/disciplinas`, `/turmas` | coordenador | zod | DTO |
 | GET | `/v1/turmas/:id`, `/:id/alunos?pagina&finalidade` | coordenador (`finalidade` obrigatória em `/alunos`); professor com vínculo | `?anoLetivoId` | `{ id, nome, serie }`, `{ itens:[{usuarioId, nome}], proxima? }` |
 | GET/POST | `/v1/vinculos?estado`, `/v1/vinculos`, `/:id/encerrar`; `/v1/meus-vinculos`; `/:id/confirmar`, `/contestar` | coordenador; professor dono | `{ usuarioId, turmaId, disciplinaId?, papel }`, `{ motivo }`, `{ contestacao, complemento? }` | `{ id, turma:{id,nome}, disciplina?:{id,nome}, estado, contestacao?, decididoEm? }`; `complemento` só para a coordenação |
@@ -168,7 +168,7 @@ Envelope de erro do F0. As rotas anônimas levam `@RotaAnonima`.
 
 **Etapas.**
 - **Rota:** coordenador sem MFA vai a `configurar_mfa`, e com MFA a `mfa`. Mais de um usuário ativo leva a `escolher`. Convite para conta existente responde `entrar`: a web leva ao `/entrar`.
-- **Usuário esperando convite:** o login por e-mail, depois da credencial e do MFA, ativa o usuário com convite válido (não usado, não revogado, dentro do prazo) daquela conta, com auditoria, e marca o convite como usado. Aí conta os usuários ativos.
+- **Usuário esperando convite:** o login por e-mail que traz o `bilhete` do aceite (JWT `convite+jwt` de 30 min, com a conta e o convite), da mesma conta que provou a senha, ativa, depois da credencial e do MFA, o usuário daquele convite: inativo, com o convite usado, não revogado e aceito depois de o usuário ficar inativo, com auditoria (`usuario.ativado_por_convite`). Aí conta os usuários ativos. Com MFA, a senha certa leva a `mfa` com o convite no desafio, e a ativação acontece depois do código. Sem o bilhete, ou com o de outra conta, o login segue sem ativar nada (decidido na 7.0: o aceite marca o convite como usado; a ativação exige quem aceitou o link e a credencial da conta ao mesmo tempo, para um e-mail digitado errado pelo operador não ativar a conta de outra pessoa, nem pelo login rotineiro dela, nem pelo bilhete da pessoa certa na conta dela).
 - **Escolher:** `/v1/sessao/escola` confere que o `usuarioId` está entre os usuários ativos da conta do desafio; senão, 404.
 - **Sessão:** só é gravada em `pronta`.
 - **Cookie `educa_sessao`:** `HttpOnly`, `Secure` fora do local, `SameSite=Strict`, `Path=/v1/sessao`, sem `Max-Age`.
@@ -230,7 +230,7 @@ ano, `confirmado` ou `encerrado` por `fim_do_ano`. Qualquer outro caso é 404.
 **Convite.** `aceitar` é `update … where usado_em is null and revogado_em is null and
 expira_em > now()`.
 - **E-mail sem conta:** o aceite define a senha e leva a `configurar_mfa`.
-- **E-mail que já tem conta com senha:** a pessoa trabalha em outra escola. O aceite não aceita `senha` e responde a etapa `entrar`. Ela entra com a senha e o MFA que já tem, e só depois da credencial verificada o usuário do convite é ativado, com auditoria. O `ops:convite-coordenador` cria o usuário já com o `conta_id` (conta nova sem senha, ou a existente), mas inativo até o aceite. O link do convite nunca troca a senha de uma conta existente. A web lê o token do fragmento `#` e o tira da barra com
+- **E-mail que já tem conta com senha:** a pessoa trabalha em outra escola. O aceite ignora `senha` e responde a etapa `entrar` com o `bilhete`, que a web leva ao login. Ela entra com a senha e o MFA que já tem, e só depois da credencial verificada o usuário do convite é ativado, com auditoria. O `ops:convite-coordenador` cria o usuário já com o `conta_id` (conta nova sem senha, ou a existente), mas inativo até o aceite. O link do convite nunca troca a senha de uma conta existente. A web lê o token do fragmento `#` e o tira da barra com
 `history.replaceState`.
 
 **Operador.** `ops:*` grava `autor_operador` e abre o contexto da escola alvo.
@@ -257,14 +257,16 @@ antes de existir escola ou que toca a conta global.
 | Ler conta por e-mail | a credencial da equipe é global |
 | Ler usuários ativos da conta | login, `/v1/eu.acessos` e troca, depois da credencial; devolve só id, escola e papel |
 | Ler sessão por `refresh_hash` e pelo anterior | o cookie não diz a escola |
-| Ler convite por `token_hash` | idem |
+| Ler convite por `token_hash` (`conviteValidoPorHash`), e marcá-lo como usado no aceite (`usarConvitePorHash`) | idem: o link não diz a escola (7.0) |
+| Ler o usuário da conta que espera o convite do bilhete (`usuarioComConviteAceito`) | login por e-mail com o bilhete, depois da credencial e do MFA; devolve só id, escola, papel e convite (7.0) |
+| Achar ou criar a conta pelo e-mail no `ops:convite-coordenador` (`contaParaConvite`); ler a escola de um convite no `ops:revogar-convite` (`escolaDoConviteParaOperador`) | a credencial é global; rotina do operador, que recebe só o id do convite, e a escola vem do banco (7.0) |
 | Ler conta por `conta_id` (segredo cifrado, códigos de recuperação) | verificar TOTP e recuperação; o `conta_id` vem do desafio |
 | Gravar `registro_acesso` com escola nula | falha de login por e-mail, antes de haver escola |
 | Criar a conta da equipe (e-mail, sem ler conta existente): convite do coordenador (7.0) e `ops:sessao-sintetica` local | a credencial é global e não tem escola; devolve só o id |
 | Ler a escola e a conta de um usuário pelo id (`escolaDoUsuarioParaOperador`), só no `ops:redefinir-mfa` | rotina do operador: o comando recebe só o `usuarioId` do pedido formal, e a escola que vira o contexto vem do banco, nunca do argumento; devolve escola, conta e se está ativo, nunca o nome (6.0) |
 | Escrever na conta, por `conta_id` já verificado: senha no aceite do convite, configurar e ativar MFA, `mfa_ultimo_passo`, consumir código de recuperação, redefinir MFA, limpeza da conta | a credencial é global; o `conta_id` vem do desafio ou da sessão verificados, nunca do cliente |
 
-O item 9 fala em três exceções por módulo, e aqui são mais de dez métodos (13 depois da 6.0; a contagem cresce com as tarefas, e a lista que vale é a própria classe, com uma justificativa em cada `@SemEscopo`). O motivo: essa classe é a
+O item 9 fala em três exceções por módulo, e aqui são mais de dez métodos (13 depois da 6.0 e 20 depois da 7.0; a contagem cresce com as tarefas, e a lista que vale é a própria classe, com uma justificativa em cada `@SemEscopo`). O motivo: essa classe é a
 própria fronteira da resolução de tenant, a única do sistema, e há teste de que só o módulo
 `sessao` a importa. Fora dela, `@SemEscopo` só aparece em `sistema.expurgar-acesso`
 (`retencao`, como no F0) e no `RedeEEscolaRepository` do `ops:escola`, com dois métodos (criar rede,
@@ -392,7 +394,7 @@ migram na mesma tarefa, e o helper cria a escola antes do job, por causa da FK.
 | Regra | Como é atendida | Desvio e justificativa |
 |---|---|---|
 | 00 | controller fino, porta externa, `oidc-falso` no compose | — |
-| 10 | seção 6, FKs compostas, contexto de escola sem usuário | `conta` sem escola; os métodos `@SemEscopo` da fronteira de resolução (13 depois da 6.0); `registro_acesso` com escola nula na falha por e-mail |
+| 10 | seção 6, FKs compostas, contexto de escola sem usuário | `conta` sem escola; os métodos `@SemEscopo` da fronteira de resolução (20 depois da 7.0); `registro_acesso` com escola nula na falha por e-mail |
 | 20 | aluno sem e-mail; claims descartadas; registro de acesso; auditoria fechada; expurgo | — |
 | 40, 50, 60 | seções 9 e 10; token em memória; vínculo só confirmado | — |
 | 80 | guardas em ordem; baldes por escola; 503 no lugar de logout; cenário | sessão no Postgres, e não no Redis (item 5): o Redis de cache é `allkeys-lru` e expulsaria sessão no meio da aula |

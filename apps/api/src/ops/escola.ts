@@ -17,7 +17,7 @@ import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import { abrirBancoDeOperacao, ArgumentoInvalido, lerOperador, type BancoDoComando, type SaidaDoComando } from './comando.js'
+import { abrirBancoDeOperacao, ArgumentoInvalido, esquemaNome, lerOperador, type BancoDoComando, type SaidaDoComando } from './comando.js'
 import { RedeEEscolaRepository } from './escola.repository.js'
 
 // O que é comum aos comandos do operador mora em `comando.ts`; reexportado aqui para quem já o importava daqui.
@@ -38,15 +38,6 @@ export { abrirBancoDeOperacao, ArgumentoInvalido, lerOperador, type BancoDoComan
  */
 
 export type PedidoDoOperador = { entidade: 'rede'; nome: string; tipo: TipoDeRede } | { entidade: 'escola'; redeId: string; nome: string; slug: string }
-
-const TAMANHO_MAXIMO_NOME = 200
-// Nome de rede ou escola: texto de uma linha, sem caractere de controle.
-const esquemaNome = z
-  .string()
-  .trim()
-  .min(1)
-  .max(TAMANHO_MAXIMO_NOME)
-  .regex(/^[^\p{Cc}]+$/u)
 
 function lerOpcoes(argumentos: string[]) {
   try {

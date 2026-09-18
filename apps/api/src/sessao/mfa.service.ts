@@ -3,6 +3,7 @@ import { CodigoDeErro, type EtapaComDesafio, type PedidoMfa, type RespostaAtivar
 import type { CifraDoSegredo } from './cifra-do-segredo.js'
 import type { ConclusaoDeLogin } from './conclusao-de-login.js'
 import type { ContadorDeTentativas } from './contador-de-tentativas.js'
+import type { AtivacaoPorConvite } from './convite.service.js'
 import type { CookieDeDispositivo } from './cookie-dispositivo.js'
 import { COOKIE_DISPOSITIVO, lerCookie } from './cookies.js'
 import { verificarDesafio, type ConsumoDeDesafio, type DesafioVerificado } from './desafio.js'
@@ -18,6 +19,7 @@ export interface DependenciasDoMfa {
   readonly cifra: CifraDoSegredo
   readonly consumo: ConsumoDeDesafio
   readonly conclusao: ConclusaoDeLogin
+  readonly ativacao: AtivacaoPorConvite
   /** Chave de assinatura do desafio, a mesma do token de acesso. */
   readonly chaveAssinatura: Uint8Array
   /** Chave do HMAC dos códigos de recuperação (`IDENTIDADE_CHAVE_RECUPERACAO`). */
@@ -44,7 +46,7 @@ const naoAutenticado = () => new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
  *   o código certo passa com ele; a espera dobra de 30 s a 15 min, como a da senha. O sufixo `conhecido` vale para o
  *   navegador que já concluiu um login desta conta, que só ganha o `educa_dispositivo` depois do segundo fator.
  * - **Redis de fila fora:** o desafio é recusado antes de qualquer código ser conferido, e a pessoa entra de novo.
- * - **Fim:** o acerto consome o desafio e segue como o login da senha, para `escolher` (com o MFA cumprido) ou
+ * - **Fim:** o acerto consome o desafio, ativa o usuário do convite que veio no desafio (7.0) e segue como o login da senha, para `escolher` (com o MFA cumprido) ou
  *   `pronta`, que grava a sessão e os cookies `educa_sessao` e `educa_dispositivo`.
  */
 export class MfaService {
@@ -109,6 +111,9 @@ export class MfaService {
 
     await contador.zerar(chave)
     await this.dependencias.consumo.consumir(verificado)
+    // Com a credencial inteira verificada, o usuário do convite cujo bilhete veio no login é ativado (7.0).
+    const pendente = verificado.conviteId === undefined ? undefined : await this.dependencias.ativacao.pendenteDoConvite(conta.id, verificado.conviteId)
+    if (pendente !== undefined) await this.dependencias.ativacao.ativar(pendente)
     const usuarios = (await resolucao.usuariosAtivosDaConta(conta.id)).filter((ativo) => ativo.papel !== 'aluno')
     if (usuarios.length === 0) throw naoAutenticado()
     return this.dependencias.conclusao.concluir({ contaId: conta.id, email: conta.email, usuarios, mfaAtivo: true, mfaCumprido: true }, origem)

@@ -25,6 +25,15 @@ describe('desafio de login', () => {
     expect(verificado).toMatchObject({ contaId: CONTA, etapa: 'escolher', mfaCumprido: false, jti: claims.jti })
   })
 
+  it('o desafio mfa do convite (7.0) leva o id do convite, e ele volta na verificação; sem convite, a claim não existe', async () => {
+    const conviteId = randomUUID()
+    const desafio = await new EmissorDeDesafio(CHAVE).emitir({ contaId: CONTA, etapa: 'mfa', mfaCumprido: false, conviteId })
+    expect(decodeJwt(desafio)['convite_id']).toBe(conviteId)
+    expect(await verificarDesafio(desafio, CHAVE, ['mfa'])).toMatchObject({ contaId: CONTA, etapa: 'mfa', conviteId })
+    const semConvite = await verificarDesafio(await new EmissorDeDesafio(CHAVE).emitir({ contaId: CONTA, etapa: 'mfa', mfaCumprido: false }), CHAVE, ['mfa'])
+    expect(semConvite).not.toHaveProperty('conviteId')
+  })
+
   it('permissão: o desafio não serve de token de acesso (a guarda recusa o typ)', async () => {
     const desafio = await new EmissorDeDesafio(CHAVE).emitir({ contaId: CONTA, etapa: 'mfa', mfaCumprido: false })
     await recusado(verificarToken(desafio, { ambiente: 'local', chaveAssinatura: CHAVE }))

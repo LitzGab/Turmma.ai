@@ -1,5 +1,6 @@
 import { justificativaSemEscopo, TAMANHO_MINIMO_JUSTIFICATIVA_SEM_ESCOPO } from '@educa/nucleo'
 import { describe, expect, it } from 'vitest'
+import { ConviteRepository } from './convite.repository.js'
 import { CriacaoDeSessaoRepository } from './criacao-de-sessao.repository.js'
 import { EuRepository } from './eu.repository.js'
 import { RegistroDeAcessoRepository } from './registro-de-acesso.repository.js'
@@ -15,15 +16,22 @@ describe('ResolucaoDeTenantRepository: toda operação sem escopo é marcada e j
       'apagarMfa',
       'ativarMfa',
       'avancarPassoDoMfa',
+      'contaParaConvite',
       'contaPorEmail',
+      'conviteValidoPorHash',
       'criarContas',
+      'definirSenhaNoAceite',
+      'escolaDoConviteParaOperador',
       'escolaDoUsuarioParaOperador',
+      'escolaPorSlug',
       'gravarFalhaDeLoginPorEmail',
       'gravarSegredoDeMfa',
       'mfaDaConta',
       'sessaoParaRenovar',
       'travarContaParaRedefinir',
       'usarCodigoDeRecuperacao',
+      'usarConvitePorHash',
+      'usuarioComConviteAceito',
       'usuariosAtivosDaConta',
     ])
     const justificativas = Object.fromEntries(metodosDe(ResolucaoDeTenantRepository).map((metodo) => [metodo, justificativaSemEscopo(ResolucaoDeTenantRepository, metodo)]))
@@ -39,10 +47,15 @@ describe('ResolucaoDeTenantRepository: toda operação sem escopo é marcada e j
       expect(justificativas[metodo], metodo).toMatch(/credencial da equipe é global/)
     }
     expect(justificativas['escolaDoUsuarioParaOperador']).toMatch(/rotina do operador/)
+    expect(justificativas['escolaDoConviteParaOperador']).toMatch(/rotina do operador/)
+    for (const metodo of ['conviteValidoPorHash', 'usarConvitePorHash']) expect(justificativas[metodo], metodo).toMatch(/link do convite não diz a escola/)
+    for (const metodo of ['definirSenhaNoAceite', 'usuarioComConviteAceito']) expect(justificativas[metodo], metodo).toMatch(/credencial da equipe é global/)
+    expect(justificativas['contaParaConvite']).toMatch(/conta é global/)
+    expect(justificativas['escolaPorSlug']).toMatch(/slug é o que dá a escola/)
   })
 
-  it('a criação de usuário e sessão, o registro de acesso, o /v1/eu, as escritas da renovação, da atividade e da saída, e o alvo da redefinição do MFA não saem sem escopo: usam a escola do contexto', () => {
-    for (const classe of [CriacaoDeSessaoRepository, RegistroDeAcessoRepository, EuRepository, EscritaDeSessaoRepository, RedefinicaoDeMfaRepository]) {
+  it('a criação de usuário e sessão, o registro de acesso, o /v1/eu, as escritas da renovação, da atividade e da saída, o alvo da redefinição do MFA e o convite na escola não saem sem escopo: usam a escola do contexto', () => {
+    for (const classe of [CriacaoDeSessaoRepository, RegistroDeAcessoRepository, EuRepository, EscritaDeSessaoRepository, RedefinicaoDeMfaRepository, ConviteRepository]) {
       const metodos = metodosDe(classe)
       expect(metodos.length).toBeGreaterThan(0)
       for (const metodo of metodos) expect(justificativaSemEscopo(classe, metodo), metodo).toBeUndefined()

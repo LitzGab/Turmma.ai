@@ -80,6 +80,44 @@ export const ACOES_DE_AUDITORIA = {
     depois: null,
     finalidade: z.enum(FINALIDADES_DA_REDEFINICAO_DE_MFA),
   },
+  /**
+   * O operador gerou o convite do primeiro coordenador (7.0, RF1, RF19), com `ops:convite-coordenador`: o usuário
+   * convidado, ainda inativo, até quando o convite vale e se a conta do e-mail foi criada agora (`contaNova`) ou já
+   * existia. Nunca o nome, o e-mail nem o token.
+   */
+  'convite.criado': {
+    entidade: 'convite',
+    antes: null,
+    depois: z.strictObject({ usuarioId: z.uuid(), expiraEm: z.iso.datetime(), contaNova: z.boolean() }),
+    finalidade: null,
+  },
+  /** O operador revogou o convite (7.0, RF19), com `ops:revogar-convite`: o link deixa de valer, usado ou não. */
+  'convite.revogado': {
+    entidade: 'convite',
+    antes: null,
+    depois: null,
+    finalidade: null,
+  },
+  /**
+   * A pessoa abriu o link e aceitou o convite (7.0). `usuarioAtivo` diz se o aceite já ativou o usuário (conta nova,
+   * que definiu a senha ali) ou se ele espera o login com a senha que a conta já tem (conta de outra escola).
+   */
+  'convite.aceito': {
+    entidade: 'convite',
+    antes: null,
+    depois: z.strictObject({ usuarioId: z.uuid(), usuarioAtivo: z.boolean() }),
+    finalidade: null,
+  },
+  /**
+   * O usuário que esperava o convite aceito foi ativado no login por e-mail, com o bilhete do convite e depois da senha
+   * e do segundo fator que a conta já tinha (7.0; Tech Spec, seção 5, "Etapas"). Leva o convite que o ativou.
+   */
+  'usuario.ativado_por_convite': {
+    entidade: 'usuario',
+    antes: null,
+    depois: z.strictObject({ conviteId: z.uuid() }),
+    finalidade: null,
+  },
 } as const satisfies Record<string, DefinicaoDeAcao>
 
 export type AcaoDeAuditoria = keyof typeof ACOES_DE_AUDITORIA

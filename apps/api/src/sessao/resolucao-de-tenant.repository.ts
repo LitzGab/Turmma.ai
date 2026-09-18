@@ -1,6 +1,6 @@
-import { codigoRecuperacao, conta, escola, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type TransacaoBanco } from '@educa/nucleo'
+import { codigoRecuperacao, conta, convite, escola, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type TransacaoBanco } from '@educa/nucleo'
 import type { PapelDeUsuario } from '@educa/shared'
-import { and, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm'
+import { and, eq, gt, gte, isNotNull, isNull, lt, or, sql } from 'drizzle-orm'
 
 /**
  * A sessão achada pelo hash do cookie, travada para a renovação decidir (tarefa 5.0): só ids, estado, datas, o papel
@@ -42,6 +42,29 @@ export interface UsuarioAtivoDaConta {
   readonly usuarioId: string
   readonly escolaId: string
   readonly papel: PapelDeUsuario
+}
+
+/**
+ * O convite válido (não usado, não revogado, no prazo) achado pelo hash do token: os ids e se a conta do convidado já
+ * tem senha. Nunca o nome nem o e-mail.
+ */
+export interface ConviteValido {
+  readonly escolaId: string
+  readonly usuarioId: string
+  readonly contaId: string
+  readonly contaTemSenha: boolean
+}
+
+/** O convite que o aceite acabou de marcar como usado: só os ids. */
+export interface ConviteUsado {
+  readonly id: string
+  readonly escolaId: string
+  readonly usuarioId: string
+}
+
+/** O usuário da conta que espera o convite aceito para ser ativado: o usuário, a escola, o papel e o convite. */
+export interface UsuarioComConviteAceito extends UsuarioAtivoDaConta {
+  readonly conviteId: string
 }
 
 /**
@@ -239,5 +262,103 @@ export class ResolucaoDeTenantRepository {
       .where(eq(usuario.id, usuarioId))
       .limit(1)
     return linha === undefined ? undefined : { escolaId: linha.escolaId, contaId: linha.contaId, ativo: linha.desativadoEm === null }
+  }
+
+  /**
+   * O convite que ainda vale, pelo hash do token: expirado, revogado, usado e inexistente dão todos `undefined`, e quem
+   * chama responde o mesmo erro (regra 10, item 6).
+   */
+  @SemEscopo('o link do convite não diz a escola: o convite válido é achado pelo hash do token, e só depois a escola dele vira contexto; devolve só ids e se a conta tem senha')
+  async conviteValidoPorHash(tokenHash: string): Promise<ConviteValido | undefined> {
+    const [linha] = await this.banco
+      .select({ escolaId: convite.escolaId, usuarioId: convite.usuarioId, contaId: conta.id, senhaHash: conta.senhaHash })
+      .from(convite)
+      .innerJoin(usuario, and(eq(usuario.escolaId, convite.escolaId), eq(usuario.id, convite.usuarioId)))
+      .innerJoin(conta, eq(conta.id, usuario.contaId))
+      .where(and(eq(convite.tokenHash, tokenHash), isNull(convite.usadoEm), isNull(convite.revogadoEm), gt(convite.expiraEm, sql`now()`)))
+      .limit(1)
+    return linha === undefined ? undefined : { escolaId: linha.escolaId, usuarioId: linha.usuarioId, contaId: linha.contaId, contaTemSenha: linha.senhaHash !== null }
+  }
+
+  /**
+   * Com o `banco` sendo a transação do aceite: marca o convite como usado, uma vez só (`update … where usado_em is null
+   * and revogado_em is null and expira_em > now()`). Dois aceites com o mesmo token ao mesmo tempo passam um: o segundo
+   * espera a trava da linha e, relendo, já não a acha (regra 80, item 7).
+   */
+  @SemEscopo('o link do convite não diz a escola: o aceite marca como usado o convite do hash do token, uma vez só, e devolve só os ids')
+  async usarConvitePorHash(tokenHash: string): Promise<ConviteUsado | undefined> {
+    const [usado] = await this.banco
+      .update(convite)
+      .set({ usadoEm: sql`now()` })
+      .where(and(eq(convite.tokenHash, tokenHash), isNull(convite.usadoEm), isNull(convite.revogadoEm), gt(convite.expiraEm, sql`now()`)))
+      .returning({ id: convite.id, escolaId: convite.escolaId, usuarioId: convite.usuarioId })
+    return usado
+  }
+
+  /**
+   * Grava a senha da conta só enquanto ela não tem senha (`where senha_hash is null`): o link do convite nunca troca a
+   * senha de uma conta existente, nem na corrida com o aceite de outro convite da mesma conta. Devolve se gravou.
+   */
+  @SemEscopo('a credencial da equipe é global: a senha no aceite do convite é gravada na conta do usuário do convite, e só enquanto ela não tem senha')
+  async definirSenhaNoAceite(contaId: string, senhaHash: string): Promise<boolean> {
+    const gravadas = await this.banco
+      .update(conta)
+      .set({ senhaHash })
+      .where(and(eq(conta.id, contaId), isNull(conta.senhaHash)))
+      .returning({ id: conta.id })
+    return gravadas.length === 1
+  }
+
+  /**
+   * O usuário da conta que espera ativação pelo convite do bilhete: inativo, com esse convite usado, não revogado e
+   * aceito depois de o usuário ficar inativo (`usado_em >= desativado_em`). A última condição separa o usuário que
+   * espera o convite (fica inativo na criação, e o aceite vem depois) do usuário desativado depois de ter entrado: esse
+   * não volta pelo convite antigo. O prazo depois do aceite é o do bilhete (30 min), não o `expira_em`, que valeu no
+   * aceite.
+   */
+  @SemEscopo('a credencial da equipe é global: depois da senha (e do segundo fator) verificados, acha o usuário da conta que espera o convite do bilhete, só com ids, escola e papel')
+  async usuarioComConviteAceito(contaId: string, conviteId: string): Promise<UsuarioComConviteAceito | undefined> {
+    const [linha] = await this.banco
+      .select({ usuarioId: usuario.id, escolaId: usuario.escolaId, papel: usuario.papel, conviteId: convite.id })
+      .from(usuario)
+      .innerJoin(convite, and(eq(convite.escolaId, usuario.escolaId), eq(convite.usuarioId, usuario.id)))
+      .where(
+        and(
+          eq(usuario.contaId, contaId),
+          eq(convite.id, conviteId),
+          isNotNull(usuario.desativadoEm),
+          isNotNull(convite.usadoEm),
+          isNull(convite.revogadoEm),
+          gte(convite.usadoEm, usuario.desativadoEm),
+        ),
+      )
+      .limit(1)
+    return linha
+  }
+
+  @SemEscopo('ler escola por slug: o slug é o que dá a escola, e é público (/acesso); devolve só o id, para a escola virar o contexto')
+  async escolaPorSlug(slug: string): Promise<string | undefined> {
+    const [linha] = await this.banco.select({ id: escola.id }).from(escola).where(eq(escola.slug, slug)).limit(1)
+    return linha?.id
+  }
+
+  /**
+   * Acha ou cria a conta do e-mail, para o convite do coordenador (7.0): conta nova nasce sem senha. Não lê nada da conta
+   * existente além do id, e quem chama não diz ao operador se ela já existia.
+   */
+  @SemEscopo('a conta é global e não tem escola: o convite do coordenador acha ou cria a conta pelo e-mail, sem ler nada dela, e devolve só o id e se ela é nova')
+  async contaParaConvite(email: string): Promise<{ id: string; nova: boolean }> {
+    const [criada] = await this.banco.insert(conta).values({ email }).onConflictDoNothing({ target: conta.email }).returning({ id: conta.id })
+    if (criada !== undefined) return { id: criada.id, nova: true }
+    const [existente] = await this.banco.select({ id: conta.id }).from(conta).where(eq(conta.email, email)).limit(1)
+    if (existente === undefined) throw new Error('conta do convite não achada nem criada')
+    return { id: existente.id, nova: false }
+  }
+
+  /** A escola de um convite, para o `ops:revogar-convite` abrir o contexto dela: o comando recebe só o id do convite. */
+  @SemEscopo('rotina do operador (ops:revogar-convite): o comando recebe só o id do convite, e a escola dele vira o contexto, nunca o argumento')
+  async escolaDoConviteParaOperador(conviteId: string): Promise<string | undefined> {
+    const [linha] = await this.banco.select({ escolaId: convite.escolaId }).from(convite).where(eq(convite.id, conviteId)).limit(1)
+    return linha?.escolaId
   }
 }

@@ -37,6 +37,15 @@ export {
   TAMANHO_MAXIMO_SENHA,
 } from './sessao/login.js'
 export type { EtapaComDesafio, EtapaDeLogin, PedidoLoginEmail, RespostaLogin } from './sessao/login.js'
+export {
+  esquemaPedidoAceitarConvite,
+  esquemaPedidoConsultarConvite,
+  esquemaRespostaAceitarConvite,
+  esquemaRespostaConsultarConvite,
+  TAMANHO_MAXIMO_TOKEN_DE_CONVITE,
+  TAMANHO_MINIMO_SENHA_NOVA,
+} from './sessao/convite.js'
+export type { PedidoAceitarConvite, PedidoConsultarConvite, RespostaAceitarConvite, RespostaConsultarConvite } from './sessao/convite.js'
 export { esquemaRespostaEu } from './sessao/eu.js'
 export type { RespostaEu } from './sessao/eu.js'
 export { esquemaRespostaRenovacao } from './sessao/renovacao.js'

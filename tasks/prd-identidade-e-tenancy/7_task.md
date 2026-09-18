@@ -39,7 +39,7 @@ e o MFA que já tem, e só então o usuário da nova escola é ativado.
 
 ## Subtarefas
 
-- [ ] 7.1 — Migration de `convite` (`escola_id`, `token_hash` único, `tipo` = `coordenador`,
+- [x] 7.1 — Migration de `convite` (`escola_id`, `token_hash` único, `tipo` = `coordenador`,
   `usuario_id`, `expira_em` = 72 h, `usado_em?`, `revogado_em?`)
   - `ops:convite-coordenador --escola <slug> --email <e-mail> --nome <nome>`: numa transação,
     acha ou cria a `conta` pelo e-mail (conta nova sem senha), cria o `usuario` coordenador
@@ -48,7 +48,7 @@ e o MFA que já tem, e só então o usuário da nova escola é ativado.
     `--saida`; o terminal mostra só o caminho do arquivo
   - `ops:revogar-convite --convite <uuid>` preenche `revogado_em`
   - os dois comandos gravam auditoria com `autor_operador`
-- [ ] 7.2 — Rotas anônimas, com o token sempre no corpo
+- [x] 7.2 — Rotas anônimas, com o token sempre no corpo
   - `POST /v1/convites/consultar { token }` devolve só `{ escolaNome }`
   - `POST /v1/convites/aceitar`, com `update … where usado_em is null and revogado_em is null
     and expira_em > now()`
@@ -58,7 +58,7 @@ e o MFA que já tem, e só então o usuário da nova escola é ativado.
     etapa `entrar`; o usuário só é ativado quando a pessoa conclui o login por e-mail (e o
     MFA, se tiver), com auditoria. O link nunca troca a senha de conta existente
   - expirado, revogado, usado e inexistente respondem o mesmo erro tipado
-- [ ] 7.3 — Testes (tabela abaixo)
+- [x] 7.3 — Testes (tabela abaixo)
 
 ## Arquivos previstos
 
@@ -103,5 +103,58 @@ e o MFA que já tem, e só então o usuário da nova escola é ativado.
 - Expurgo do convite 30 dias depois de usado, revogado ou expirado: 17.0
 - Envio do convite por e-mail: F2 (no F1 o operador envia à mão)
 
+## Notas da implementação
+
+- **Aceite com conta existente e ativação no login (contradição resolvida).** A tarefa diz que o aceite marca o convite
+  como usado; a Tech Spec (seção 5, "Etapas") dizia que o login ativa o usuário com convite "não usado". As duas não
+  cabem juntas. Escolhida a leitura que protege a escola: o aceite marca o convite como usado e devolve, com `entrar`,
+  um **bilhete** (JWT `convite+jwt`, 30 min, só com a conta e o convite). O login por e-mail só ativa o usuário do
+  convite quando traz esse bilhete e a conta que provou a senha é a do bilhete. Sem o bilhete (login rotineiro), ou com
+  o bilhete de outra conta, nada é ativado. Assim, um e-mail digitado errado pelo operador não vira acesso de ninguém:
+  a pessoa certa tem o link mas não a senha da conta, e a dona da conta tem a senha mas não o link (exigido pelo
+  `privacy-guardian` na 1ª rodada). O usuário ativado precisa ainda estar inativo com o convite usado, não revogado e
+  aceito depois de ficar inativo (`usado_em >= desativado_em`), o que separa o usuário que espera o convite do usuário
+  desativado depois de ter entrado. O prazo depois do aceite é o do bilhete (30 min), e não mais o `expira_em`, que
+  valeu no aceite. A Tech Spec foi atualizada (seções 4, 5 e 6).
+- **Conta com MFA e bilhete do convite:** a senha certa leva a `mfa` antes de qualquer outra etapa, com o convite no
+  desafio, e o usuário de A é ativado pelo `MfaService`, depois do código. Sem MFA, a ativação vem logo depois da senha
+  certa. Bilhete que não vale (vencido, forjado, de outra chave) é ignorado, sem mudar a resposta do login.
+- **Autor de `convite.aceito`:** é o usuário convidado, também no caminho da conta existente, antes de ele provar a
+  credencial: a auditoria exige um autor, e quem aceitou foi quem tinha o link desse usuário. A ativação, com a
+  credencial, tem o registro próprio (`usuario.ativado_por_convite`). `convite.criado` registra se a conta do e-mail é
+  nova (`contaNova`), sem o e-mail.
+- **Revogar depois da ativação** não desfaz a ativação: aí a escola desativa o usuário (17.0).
+- **Senha no aceite de conta existente:** é ignorada, e a resposta é `entrar` (a leitura do teste da tabela: "aceitar
+  com senha é recusado ... a resposta é a etapa entrar"). Conta sem senha e aceite sem senha: `ENTRADA_INVALIDA`, sem
+  gastar o convite. A senha nova tem no mínimo 12 caracteres (`TAMANHO_MINIMO_SENHA_NOVA`).
+- **Erro do convite inválido:** `NAO_ENCONTRADO` (404) para expirado, revogado, usado e inexistente, nas duas rotas.
+- **Terminal do `ops:convite-coordenador`:** mostra o caminho do arquivo e o id do convite, que o `ops:revogar-convite`
+  recebe. O id não é dado de pessoa; token, nome e e-mail nunca saem. O arquivo é criado antes do banco (`wx`, 0600,
+  sem sobrescrever), e apagado se o banco falhar. Se a escrita do token falhar depois do commit, o convite fica sem
+  token recuperável: o operador gera outro, que revoga o anterior.
+- **Convite de novo para o mesmo coordenador:** se ele está inativo, volta a esperar (desativado agora) e os convites
+  anteriores são revogados; se está ativo, `CONFLITO`.
+- **`acessos` do `/v1/eu`** entra na 12.0, pela leitura de usuários ativos da conta, que já exclui o usuário inativo. O
+  teste de abandono prova pelo banco e pelo login seguinte que A continua inativo; o cenário foi acrescentado à 12.0.
+- **Auditoria nova:** `convite.criado` e `convite.revogado` (operador), `convite.aceito` e `usuario.ativado_por_convite`
+  (o próprio usuário convidado como autor), só com ids, datas e booleanos.
+
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-18 07:44:03 | 2026-09-18 07:45:29 | `test-engineer` | 1 | APROVADO | a80bc8b8cc0f8e4a5 |
+| 2026-09-18 07:49:49 | 2026-09-18 07:50:48 | `revisor-geral` | 1 | REPROVADO | acb6a7a16fb78e481 |
+| 2026-09-18 07:50:00 | 2026-09-18 07:51:13 | `privacy-guardian` | 1 | REPROVADO | a0ab113131fbd6b90 |
+| 2026-09-18 07:49:54 | 2026-09-18 07:51:17 | `tenancy-guardian` | 1 | APROVADO | a9633aaae3ad326e9 |
+| 2026-09-18 07:57:11 | 2026-09-18 07:58:13 | `test-engineer` | 2 | APROVADO | a10bdce87f32c4d86 |
+| 2026-09-18 08:02:48 | 2026-09-18 08:03:31 | `privacy-guardian` | 2 | APROVADO | a02beb2eed942681d |
+| 2026-09-18 08:02:56 | 2026-09-18 08:03:42 | `tenancy-guardian` | 2 | APROVADO | ae286e4fbee086d57 |
+| 2026-09-18 08:03:06 | 2026-09-18 08:03:48 | `revisor-geral` | 2 | APROVADO | a8e64165d0f344c5f |

@@ -57,6 +57,9 @@ aceita o convite sem que o token fique na URL. Tudo funciona no Chromebook e no 
   - **Consulta:** `POST /v1/convites/consultar` mostra o nome da escola. Expirado, revogado ou inexistente têm a mesma mensagem ("peça um convite novo").
   - **Conta nova:** define a senha e segue para `/mfa/configurar`.
   - **Conta existente:** a etapa `entrar` leva a `/entrar`, com a explicação "você já tem acesso em outra escola, entre com a sua senha".
+    - **Bilhete (7.0):** a resposta traz `bilhete` (30 min). A web o guarda só em memória e o manda no corpo do `POST /v1/sessao/email` (`bilhete`), nunca na URL nem em armazenamento do navegador. Sem ele, o login não ativa a escola do convite.
+    - **Senha:** a tela não pede nem manda senha nova para quem cai em `entrar`. O aceite com senha curta responde `ENTRADA_INVALIDA` mesmo nesse caminho; a senha nova (mínimo 12) só é pedida depois de a API responder que a conta é nova. Por isso, a tela chama `aceitar` primeiro sem senha: conta nova responde `ENTRADA_INVALIDA` sem gastar o convite, e aí a tela pede a senha.
+    - **Passou dos 30 min:** o convite já foi usado e o usuário continua inativo; a mensagem pede um convite novo à escola (o operador gera outro).
 - [ ] 19.4 — Testes.
 
 ## Arquivos previstos

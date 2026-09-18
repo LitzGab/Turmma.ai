@@ -76,6 +76,7 @@ funciona e `/v1/eu` lista os acessos da conta.
 | borda: destino com inatividade de 60 min e origem com 120; a sessão nova vence pela regra do destino | integração | inatividade do destino |
 | permissão: sessão de matrícula e sessão externa em `POST /v1/sessao/escola` dão 404 | integração | só sessão de e-mail troca |
 | borda: professor desativado em B (saiu em março) não aparece em `acessos`, e a troca para B dá 404; o acesso a A continua | integração | fim de vínculo numa escola não afeta a outra |
+| borda: coordenador que espera convite aceito em B (conta de outra escola, 7.0) não aparece em `acessos` antes do login que o ativa, e a troca para B dá 404 | integração | ativação só com credencial verificada (adiado da 7.0) |
 | concorrência: duas trocas em paralelo com o mesmo token para B criam uma sessão de B e encerram A uma vez | concorrência | transação com trava na sessão de origem |
 | privacidade: `/v1/eu.acessos` só tem `usuarioId`, `escolaNome` e `papel`; a varredura de DTO da 2.0 passa | integração | RF18 |
 

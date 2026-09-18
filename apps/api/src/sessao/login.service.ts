@@ -2,6 +2,7 @@ import { ErroDeDominio, IP_DESCONHECIDO, METRICAS, type Meter } from '@educa/nuc
 import { CodigoDeErro, type EtapaComDesafio, type PedidoLoginEmail, type RespostaLogin } from '@educa/shared'
 import { createHash } from 'node:crypto'
 import type { ConclusaoDeLogin } from './conclusao-de-login.js'
+import type { AtivacaoPorConvite } from './convite.service.js'
 import type { ContadorDeTentativas } from './contador-de-tentativas.js'
 import type { CookieDeDispositivo } from './cookie-dispositivo.js'
 import { COOKIE_DISPOSITIVO, lerCookie } from './cookies.js'
@@ -26,6 +27,7 @@ export interface DependenciasDoLogin {
   readonly contador: ContadorDeTentativas
   readonly dispositivo: CookieDeDispositivo
   readonly conclusao: ConclusaoDeLogin
+  readonly ativacao: AtivacaoPorConvite
   readonly medidor: Meter
 }
 
@@ -57,6 +59,10 @@ export function hashDoRefresh(refresh: string): string {
  * - **Etapas:** mais de um usuário ativo leva a `escolher`; um coordenador leva a `configurar_mfa` ou `mfa`; um
  *   professor, a `pronta`. Só `pronta` grava sessão e os cookies `educa_sessao` e `educa_dispositivo`; as outras
  *   devolvem só o desafio, sem cookie.
+ * - **Convite aceito por conta que já tinha senha** (7.0): só com o `bilhete` que o aceite devolveu, da mesma conta, o
+ *   usuário que espera o convite conta como usuário da conta, e só é ativado com a credencial inteira. Sem MFA, logo
+ *   depois da senha certa; com MFA, a resposta é `mfa` com o convite no desafio, e quem ativa é o `MfaService`, depois
+ *   do código. Sem o bilhete, o login segue como se não houvesse convite.
  */
 export class LoginService {
   readonly #contaSegurada: ReturnType<Meter['createCounter']>
@@ -78,15 +84,25 @@ export class LoginService {
     const confere = await hash.verificar(credencial?.senhaHash, pedido.senha)
     // Só com a senha certa há uma consulta a mais (os usuários ativos): o tempo dela só diz algo a quem já tem a
     // senha. Não copie este padrão para antes do hash.
-    const usuarios = confere && credencial !== undefined ? (await resolucao.usuariosAtivosDaConta(credencial.id)).filter((ativo) => ativo.papel !== 'aluno') : []
-    if (credencial === undefined || usuarios.length === 0) {
+    const { ativacao } = this.dependencias
+    const pendente = confere && credencial !== undefined ? await ativacao.pendentePeloBilhete(pedido.bilhete, credencial.id) : undefined
+    // Sem MFA, o usuário do convite é ativado já com a senha certa; com MFA, só depois do código (`MfaService`).
+    if (pendente !== undefined && credencial?.mfaAtivo === false) await ativacao.ativar(pendente)
+    const esperaCodigo = pendente !== undefined && credencial?.mfaAtivo === true
+    const usuarios = confere && credencial !== undefined ? await this.#usuariosAtivos(credencial.id) : []
+    if (credencial === undefined || (usuarios.length === 0 && !esperaCodigo)) {
       await resolucao.gravarFalhaDeLoginPorEmail(ipParaRegistro(origem.ip))
       if (reserva.esperaSeFalharMs > 0) throw this.#segurada(reserva.esperaSeFalharMs)
       throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
     }
 
     await contador.zerar(chave)
+    if (esperaCodigo) return this.dependencias.conclusao.pedirSegundoFator(credencial.id, pendente.conviteId)
     return this.dependencias.conclusao.concluir({ contaId: credencial.id, email, usuarios, mfaAtivo: credencial.mfaAtivo, mfaCumprido: false }, origem)
+  }
+
+  async #usuariosAtivos(contaId: string): Promise<UsuarioAtivoDaConta[]> {
+    return (await this.dependencias.resolucao.usuariosAtivosDaConta(contaId)).filter((ativo) => ativo.papel !== 'aluno')
   }
 
   #segurada(esperaMs: number): ErroDeDominio {

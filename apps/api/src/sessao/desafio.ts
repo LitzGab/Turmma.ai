@@ -21,6 +21,11 @@ export interface PedidoDeDesafio {
   readonly etapa: EtapaComDesafio
   /** Se o segundo fator já foi cumprido nesta entrada: a troca para uma escola em que a pessoa é coordenadora o exige. */
   readonly mfaCumprido: boolean
+  /**
+   * O convite cujo bilhete veio no login desta conta (7.0): o usuário que espera por ele só é ativado depois do código.
+   * Só existe no desafio `mfa`, e só quando o bilhete conferia com a conta.
+   */
+  readonly conviteId?: string
 }
 
 export interface DesafioVerificado extends PedidoDeDesafio {
@@ -34,9 +39,10 @@ const esquemaClaims = z.object({
   conta_id: z.uuid(),
   etapa: z.enum(ETAPAS_COM_DESAFIO),
   mfa_cumprido: z.boolean(),
+  convite_id: z.uuid().optional(),
 })
 
-/** Emite o desafio de 5 min. Leva só ids, a etapa e o MFA: nada da pessoa (regra 20). */
+/** Emite o desafio de 5 min. Leva só ids, a etapa, o MFA e, no `mfa` do convite, o id dele: nada da pessoa (regra 20). */
 export class EmissorDeDesafio {
   constructor(
     private readonly chaveAssinatura: Uint8Array,
@@ -45,7 +51,8 @@ export class EmissorDeDesafio {
 
   async emitir(pedido: PedidoDeDesafio): Promise<string> {
     const emitidoEm = Math.floor(this.relogio.agora().getTime() / 1_000)
-    return new SignJWT({ conta_id: pedido.contaId, etapa: pedido.etapa, mfa_cumprido: pedido.mfaCumprido })
+    const convite = pedido.conviteId === undefined ? {} : { convite_id: pedido.conviteId }
+    return new SignJWT({ conta_id: pedido.contaId, etapa: pedido.etapa, mfa_cumprido: pedido.mfaCumprido, ...convite })
       .setProtectedHeader({ alg: 'HS256', typ: TIPO_DESAFIO })
       .setIssuer(EMISSOR_TOKEN)
       .setAudience(AUDIENCIA_DESAFIO)
@@ -79,8 +86,9 @@ export async function verificarDesafio(desafio: string, chaveAssinatura: Uint8Ar
   }
   const resultado = esquemaClaims.safeParse(claims)
   if (!resultado.success || !etapas.includes(resultado.data.etapa)) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
-  const { jti, exp, conta_id: contaId, etapa, mfa_cumprido: mfaCumprido } = resultado.data
-  return { jti, expiraEm: new Date(exp * 1_000), contaId: contaId.toLowerCase(), etapa, mfaCumprido }
+  const { jti, exp, conta_id: contaId, etapa, mfa_cumprido: mfaCumprido, convite_id: conviteId } = resultado.data
+  const convite = conviteId === undefined ? {} : { conviteId: conviteId.toLowerCase() }
+  return { jti, expiraEm: new Date(exp * 1_000), contaId: contaId.toLowerCase(), etapa, mfaCumprido, ...convite }
 }
 
 /**

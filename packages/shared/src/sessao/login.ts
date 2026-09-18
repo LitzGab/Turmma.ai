@@ -21,11 +21,18 @@ export type EtapaDeLogin = (typeof ETAPAS_DE_LOGIN)[number]
 export const ETAPAS_COM_DESAFIO = ['escolher', 'configurar_mfa', 'mfa'] as const satisfies readonly EtapaDeLogin[]
 export type EtapaComDesafio = (typeof ETAPAS_COM_DESAFIO)[number]
 
-/** Corpo de `POST /v1/sessao/email`. Estrito: nada além do e-mail e da senha. */
+/** Maior bilhete de convite aceito no corpo do login: um JWT curto, com a conta e o convite. */
+const TAMANHO_MAXIMO_BILHETE = 1_024
+
+/**
+ * Corpo de `POST /v1/sessao/email`. Estrito: nada além do e-mail, da senha e, logo depois de aceitar um convite com a
+ * conta que já tinha senha, o `bilhete` que o aceite devolveu (7.0). Bilhete que não vale é ignorado.
+ */
 export const esquemaPedidoLoginEmail = z
   .object({
     email: z.string().trim().min(3).max(TAMANHO_MAXIMO_EMAIL),
     senha: z.string().min(1).max(TAMANHO_MAXIMO_SENHA),
+    bilhete: z.string().min(1).max(TAMANHO_MAXIMO_BILHETE).optional(),
   })
   .strict()
 
