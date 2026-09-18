@@ -1,4 +1,4 @@
-import { criarClienteRedisDaApi } from '@educa/nucleo'
+import { criarClienteRedisDaFila } from '@educa/nucleo'
 import type { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -24,7 +24,12 @@ describe('ContadorDeTentativas no Redis de fila', () => {
   let cliente: Redis
 
   beforeAll(async () => {
-    cliente = criarClienteRedisDaApi(`redis://127.0.0.1:${valorObrigatorio(lerAmbienteDeTeste(), 'REDIS_FILA_PORTA_HOST')}`, 'teste-contador', () => undefined)
+    // O cliente de produção da API desiste em 100 ms de propósito, para o login cair no seguro em memória e não
+    // travar. Aqui o que se prova é o script no Redis, e no runner carregado da esteira uma resposta passou dos
+    // 100 ms e caiu no seguro (correção 2026-09-18-contador-testado-com-o-prazo-de-producao). O cliente da fila é o
+    // mesmo, sem fila offline, com prazo de 2 s. A queda com o Redis fora é provada pelos testes que usam o cliente de
+    // produção de propósito; com o Redis travado (conectado, sem responder), ainda não há teste para este caminho.
+    cliente = criarClienteRedisDaFila(`redis://127.0.0.1:${valorObrigatorio(lerAmbienteDeTeste(), 'REDIS_FILA_PORTA_HOST')}`, 'teste-contador', () => undefined)
     await pronto(cliente)
   })
 
