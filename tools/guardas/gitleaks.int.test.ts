@@ -25,6 +25,21 @@ function aleatorio(tamanho: number): string {
   return Array.from({ length: tamanho }, () => CARACTERES[randomInt(CARACTERES.length)]).join('')
 }
 
+const ARQUIVO_DO_CONVITE = 'apps/api/test/convite.int.test.ts'
+
+/**
+ * A linha que o `.gitleaks.toml` perdoa no teste do convite, lida do arquivo real. Escrita aqui como
+ * texto, ela seria um achado neste arquivo, que não tem exceção. Se ela sair do teste do convite, a
+ * exceção ficou velha, e este teste avisa.
+ */
+function linhaPerdoadaDoConvite(): string {
+  const linha = readFileSync(join(raizRepositorio, ARQUIVO_DO_CONVITE), 'utf8')
+    .split('\n')
+    .find((texto) => texto.includes('aceitar(deB.token'))
+  if (linha === undefined) throw new Error(`a linha perdoada saiu de ${ARQUIVO_DO_CONVITE}: a exceção do .gitleaks.toml ficou velha`)
+  return linha
+}
+
 /** Token no formato de um PAT do GitHub, aleatório a cada execução e nunca gravado no repositório. */
 function tokenFalso(): string {
   return `ghp_${aleatorio(36)}`
@@ -85,11 +100,24 @@ describe('gitleaks com o .gitleaks.toml do projeto', () => {
   })
 
   it('reprova o segredo nos arquivos que têm linha na allowlist: a exceção é da linha, não do arquivo', () => {
-    const caminhos = ['tasks/prd-fundacao-tecnica/techspec.md', '.claude/skills/playwright-best-practices/advanced/authentication-flows.md']
+    const caminhos = ['tasks/prd-fundacao-tecnica/techspec.md', '.claude/skills/playwright-best-practices/advanced/authentication-flows.md', 'apps/api/test/convite.int.test.ts']
     const arquivos = Object.fromEntries(caminhos.map((caminho) => [caminho, `token de exemplo: ${tokenFalso()}\n`]))
     const { codigo, saida } = varrer(repositorioCom(arquivos))
     expect(codigo).toBe(1)
     for (const caminho of caminhos) expect(saida).toContain(`File:        ${caminho}`)
+  })
+
+  it('reprova a linha perdoada quando ela aparece em outro arquivo: a exceção é do arquivo e da linha juntos', () => {
+    const { codigo, saida } = varrer(repositorioCom({ 'apps/api/test/outro.int.test.ts': `${linhaPerdoadaDoConvite()}\n` }))
+    expect(codigo).toBe(1)
+    expect(saida).toContain('File:        apps/api/test/outro.int.test.ts')
+  })
+
+  it('reprova o segredo colado antes da linha perdoada, na mesma linha: a exceção é da linha inteira, do começo ao fim', () => {
+    const colada = `${tokenFalso()} ${linhaPerdoadaDoConvite().trimStart()}\n`
+    const { codigo, saida } = varrer(repositorioCom({ [ARQUIVO_DO_CONVITE]: colada }))
+    expect(codigo).toBe(1)
+    expect(saida).toContain(`File:        ${ARQUIVO_DO_CONVITE}`)
   })
 
   it('reprova o segredo que foi commitado e apagado no commit seguinte: a varredura é do histórico', () => {

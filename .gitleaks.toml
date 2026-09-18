@@ -14,11 +14,18 @@ description = "Tech Spec do F0: a linha da rota de jobs sintéticos cita a flag 
 condition = "AND"
 regexTarget = "line"
 paths = ['''^tasks/prd-fundacao-tecnica/techspec\.md$''']
-regexes = ['''\| POST \| `/v1/sistema/jobs-sinteticos` \| token, `ROTAS_SINTETICAS=true` \| `\{ fila, cpuMs, naoUrgente, falhar\? \}` \| 202 `\{ jobId \}` \|\s*$''']
+regexes = ['''^\s*\| POST \| `/v1/sistema/jobs-sinteticos` \| token, `ROTAS_SINTETICAS=true` \| `\{ fila, cpuMs, naoUrgente, falhar\? \}` \| 202 `\{ jobId \}` \|\s*$''']
 
 [[allowlists]]
 description = "Skill de terceiros do Playwright: token fictício de exemplo na documentação"
 condition = "AND"
 regexTarget = "line"
 paths = ['''^\.claude/skills/playwright-best-practices/advanced/authentication-flows\.md$''']
-regexes = ['''const mockToken = 'test-verification-abc123';\s*$''']
+regexes = ['''^\s*const mockToken = 'test-verification-abc123';\s*$''']
+
+[[allowlists]]
+description = "Teste do convite (7.0): a senha sintética passada ao aceite, depois de `deB.token, `, é lida pelo generic-api-key como chave; é texto de teste, não segredo"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^apps/api/test/convite\.int\.test\.ts$''']
+regexes = ['''^\s*const \[emA, emB\] = await Promise\.all\(\[aceitar\(deA\.token, 'senha-escolhida-em-a-1'\), aceitar\(deB\.token, 'senha-escolhida-em-b-2'\)\]\)\s*$''']
