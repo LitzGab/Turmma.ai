@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
 import type { PoolBanco } from '../db/pool.js'
 import { lerConfiguracaoTelemetria } from './iniciar.js'
-import { METRICAS, middlewareDeMetricasHttp, observarPoolDoBanco, observarRedis, ROTA_NAO_ENCONTRADA, rotaDaRequisicao } from './metricas.js'
+import { METRICAS, middlewareDeMetricasHttp, observarPoolDoBanco, observarRedis, observarSeguroDoLimite, ROTA_NAO_ENCONTRADA, rotaDaRequisicao } from './metricas.js'
 
 const ID = '0190f5a0-0000-7000-8000-0000000000c1'
 
@@ -102,6 +102,20 @@ describe('redis.disponivel', () => {
       { atributos: { instancia: 'fila' }, valor: 0 },
       { atributos: { instancia: 'cache' }, valor: 1 },
     ])
+  })
+})
+
+describe('limite.seguro_ativo', () => {
+  it('com o rate limit e o contador de login, vale o maior: qualquer um contando só em memória acende a métrica', async () => {
+    const limite = { proporcaoDoSeguro: 0 }
+    const login = { proporcaoDoSeguro: 0 }
+    observarSeguroDoLimite(medidor.medidor, limite, login)
+    expect((await medidor.pontos(METRICAS.seguroAtivo)).map((ponto) => ponto.valor)).toEqual([0])
+    login.proporcaoDoSeguro = 1
+    expect((await medidor.pontos(METRICAS.seguroAtivo)).map((ponto) => ponto.valor)).toEqual([1])
+    login.proporcaoDoSeguro = 0
+    limite.proporcaoDoSeguro = 0.5
+    expect((await medidor.pontos(METRICAS.seguroAtivo)).map((ponto) => ponto.valor)).toEqual([0.5])
   })
 })
 

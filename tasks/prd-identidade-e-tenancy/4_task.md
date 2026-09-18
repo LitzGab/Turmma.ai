@@ -36,18 +36,18 @@ etapa de MFA.
 
 ## Subtarefas
 
-- [ ] 4.1 — `POST /v1/sessao/email` com `@RotaAnonima`
+- [x] 4.1 — `POST /v1/sessao/email` com `@RotaAnonima`
   - **Hash:** `@node-rs/argon2`, argon2id, p=1, com parâmetros por variável de ambiente validada no boot (mínimo OWASP m=19456, t=2). A calibração fica na 16.0.
   - **Conta inexistente:** verifica contra um hash fixo gerado no boot com os mesmos parâmetros e responde igual à senha errada.
   - **Usuário desativado:** conta sem usuário ativo também responde igual.
   - **Consulta:** conta por e-mail pelo `ResolucaoDeTenantRepository`; depois da credencial, usuários ativos da conta.
-- [ ] 4.2 — Contador de tentativas no Redis de fila
+- [x] 4.2 — Contador de tentativas no Redis de fila
   - **Chave:** `login:{HMAC(LOGIN_CHAVE_CONTADOR, email normalizado)}:{conhecido|outro}`, consultada antes do hash.
   - **Recuo:** depois de 5 falhas seguidas, espera de 30 s que dobra até 15 min, com 429 `CONTA_SEGURADA` e `Retry-After`; o acerto zera o contador daquele sufixo.
   - **Redis fora:** contador em memória por instância com a mesma regra, ligando `limite.seguro_ativo`.
   - **Código novo:** `CONTA_SEGURADA` em `packages/shared`, com mensagem pt-BR que diz quanto esperar.
   - **Métrica:** `login.conta_segurada`.
-- [ ] 4.3 — Cookies
+- [x] 4.3 — Cookies
   - **`educa_dispositivo`:**
     - até 50 entradas `HMAC(LOGIN_CHAVE_DISPOSITIVO_V{n}, email)`, cada uma com a data, e a versão da chave no cookie;
     - validade de 30 dias por entrada, a mais antiga sai primeiro;
@@ -55,17 +55,17 @@ etapa de MFA.
     - gravado só depois de login bem-sucedido; cookie com chave antiga é ignorado;
     - decide o sufixo `conhecido` do contador.
   - **`educa_sessao`:** refresh aleatório de 32 bytes (grava-se o SHA-256), `HttpOnly`, `Secure` fora do local, `SameSite=Strict`, `Path=/v1/sessao`, sem `Max-Age`.
-- [ ] 4.4 — Desafio e etapas
+- [x] 4.4 — Desafio e etapas
   - **Desafio:** JWT de 5 min com `typ: desafio+jwt`, `aud: sessao`, `jti`, `conta_id`, etapa e `mfa_cumprido`. O `jti` é consumido com `SET NX` no Redis de fila quando a etapa conclui.
   - **Etapas:** coordenador sem MFA vai a `configurar_mfa`, e com MFA a `mfa`. Com mais de um usuário ativo, vai a `escolher`. Nos outros casos, `pronta`.
   - **Sessão:** só é gravada em `pronta`, com `metodo=email`, família nova e `expira_em` de 12 h.
   - **Nesta tarefa:** `configurar_mfa`, `mfa` e `escolher` só devolvem o desafio. As rotas que o consomem são da 6.0 e da 12.0.
   - **Registro de acesso:** `login` e `login_falho` em `registro_acesso`, com escola nula na falha e método `@SemEscopo` justificado.
-- [ ] 4.5 — Redact e `/v1/eu`
+- [x] 4.5 — Redact e `/v1/eu`
   - **Redact:** acrescenta ao `CAMINHOS_REDACT` todos os caminhos da seção 7 da Tech Spec, inclusive `set-cookie`, `cookie` e `*.dispositivo`.
   - **`GET /v1/eu`:** `{ usuarioId, papel, nome, escola:{id,nome,slug}, inatividadeMin }`, com contrato zod. `acessos` entra na 12.0.
   - **Auditoria:** nenhuma ação nova aqui; o login fica no `registro_acesso`.
-- [ ] 4.6 — Testes
+- [x] 4.6 — Testes
 
 ## Arquivos previstos
 
@@ -116,5 +116,48 @@ etapa de MFA.
 - Calibração do argon2 (16.0)
 - Tela `/entrar` (18.0)
 
+## Notas da implementação
+
+- **Contador sem `rate-limiter-flexible`.** A Tech Spec (seção 5, "Tentativas") cita a biblioteca, mas ela não tem
+  o recuo que dobra de 30 s a 15 min, e montar o recuo com duas chaves dela faria "lê e depois grava" entre elas.
+  O contador é um script Lua no Redis de fila (`contador-de-tentativas.ts`), atômico, com o mesmo padrão do limitador
+  do F0: seguro em memória com a mesma regra quando o Redis não responde, e a proporção do seguro em
+  `limite.seguro_ativo` (a métrica passa a valer o maior entre o rate limit e o contador).
+- **A tentativa é contada antes do hash.** A reserva conta a falha e, na quinta, já grava a espera; o acerto zera. Por
+  isso dez senhas erradas em paralelo avaliam exatamente cinco hashes, e a quinta falha já responde `CONTA_SEGURADA`.
+- **Senha errada responde `NAO_AUTENTICADO` (401),** igual para e-mail inexistente, conta sem senha e usuário
+  desativado. Nenhum código novo além de `CONTA_SEGURADA`.
+- **`pronta` devolve `{ etapa, token, expiraEm }`;** as outras etapas, `{ etapa, desafio }`.
+- **`educa_dispositivo` só em `pronta`,** junto com `educa_sessao`. Nas etapas com desafio não sai cookie nenhum: quem
+  tem só a senha de um coordenador não ganha a marca de navegador conhecido sem o segundo fator. As rotas que
+  concluem a etapa (6.0 e 12.0) gravam o cookie quando o login termina.
+- **Desafio:** `EmissorDeDesafio`, `verificarDesafio` e `ConsumoDeDesafio` (`SET NX` com prazo até o desafio vencer;
+  Redis fora recusa) ficam prontos para a 6.0 e a 12.0, que têm as rotas que os consomem.
+- **A tentativa segurada (429) não grava `login_falho`:** a senha nem é conferida, e sob ataque seria uma escrita no
+  Postgres por tentativa recusada. O `registro_acesso` fica com as tentativas que chegaram à credencial.
+- **Painel:** `login.conta_segurada` ganhou o gráfico "Logins com conta segurada" em `infra/grafana/paineis/fundacao.json`,
+  porque o teste do painel exige painel para toda métrica.
+
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-18 02:18:41 | 2026-09-18 02:20:15 | `test-engineer` | 1 | REPROVADO | ad9ad48a8f027269a |
+| 2026-09-18 02:42:40 | 2026-09-18 02:43:16 | `test-engineer` | 2 | APROVADO | a2da53c09727a0791 |
+| 2026-09-18 02:53:05 | 2026-09-18 02:53:54 | `tenancy-guardian` | 1 | APROVADO | ac2fa17d6b8db7174 |
+| 2026-09-18 02:53:10 | 2026-09-18 02:54:07 | `privacy-guardian` | 1 | APROVADO | a921c514de8b08326 |
+| 2026-09-18 02:53:16 | 2026-09-18 02:54:32 | `infra-guardian` | 1 | APROVADO | abee1ce606410211a |
+| 2026-09-18 02:53:01 | 2026-09-18 02:54:36 | `revisor-geral` | 1 | REPROVADO | a15c65f5ca4bf629d |
+| 2026-09-18 03:06:11 | 2026-09-18 03:06:38 | `test-engineer` | 3 | APROVADO | a18442632235991a2 |
+| 2026-09-18 03:16:33 | 2026-09-18 03:16:45 | `tenancy-guardian` | 2 | APROVADO | a4324ee86e0f620b8 |
+| 2026-09-18 03:16:29 | 2026-09-18 03:16:49 | `revisor-geral` | 2 | REPROVADO | a711fbcfe320b1a30 |
+| 2026-09-18 03:16:37 | 2026-09-18 03:17:00 | `privacy-guardian` | 2 | APROVADO | acb4fa8158f0b1be7 |
+| 2026-09-18 03:16:43 | 2026-09-18 03:17:02 | `infra-guardian` | 2 | APROVADO | aecfeeb764eb4bb53 |
+| 2026-09-18 03:51:24 | 2026-09-18 03:51:33 | `revisor-geral` | 3 | APROVADO | ab1366a3e14597df1 |

@@ -28,3 +28,14 @@ export {
   RECONEXAO_REALTIME,
 } from './sistema/realtime.js'
 export type { AutenticacaoRealtime, OpcoesDoClienteRealtime } from './sistema/realtime.js'
+export {
+  esquemaPedidoLoginEmail,
+  esquemaRespostaLogin,
+  ETAPAS_COM_DESAFIO,
+  ETAPAS_DE_LOGIN,
+  TAMANHO_MAXIMO_EMAIL,
+  TAMANHO_MAXIMO_SENHA,
+} from './sessao/login.js'
+export type { EtapaComDesafio, EtapaDeLogin, PedidoLoginEmail, RespostaLogin } from './sessao/login.js'
+export { esquemaRespostaEu } from './sessao/eu.js'
+export type { RespostaEu } from './sessao/eu.js'

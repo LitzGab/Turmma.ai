@@ -14,6 +14,7 @@ import {
 } from '@educa/nucleo'
 import { esquemaAviso, MAXIMO_DE_AVISOS, type Aviso } from '@educa/shared'
 import { z } from 'zod'
+import { lerConfiguracaoLogin, type ConfiguracaoLogin } from './sessao/configuracao-de-login.js'
 
 export { ConfiguracaoInvalida }
 
@@ -75,6 +76,8 @@ export interface ConfiguracaoApi {
   redisFilaUrl: string
   banco: ConfiguracaoBanco
   identidade: ConfiguracaoIdentidade
+  /** Hash de senha, chave do contador de tentativas e chave do cookie de dispositivo do login por e-mail. */
+  login: ConfiguracaoLogin
   drenagem: ConfiguracaoDrenagem
   limite: ConfiguracaoLimite
   /** Para onde e de quanto em quanto tempo as métricas vão. */
@@ -99,11 +102,12 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const api = tentar(() => validarAmbiente(esquemaAmbiente, ambiente))
   const banco = tentar(() => lerConfiguracaoBanco(ambiente))
   const identidade = tentar(() => lerConfiguracaoIdentidade(ambiente))
+  const login = tentar(() => lerConfiguracaoLogin(ambiente))
   const drenagem = tentar(() => lerConfiguracaoDrenagem(ambiente))
   const limite = tentar(() => lerConfiguracaoLimite(ambiente))
   const telemetria = tentar(() => lerConfiguracaoTelemetria(ambiente))
-  if ('erro' in api || 'erro' in banco || 'erro' in identidade || 'erro' in drenagem || 'erro' in limite || 'erro' in telemetria) {
-    const erros = [api, banco, identidade, drenagem, limite, telemetria].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
+  if ('erro' in api || 'erro' in banco || 'erro' in identidade || 'erro' in login || 'erro' in drenagem || 'erro' in limite || 'erro' in telemetria) {
+    const erros = [api, banco, identidade, login, drenagem, limite, telemetria].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
     throw new ConfiguracaoInvalida(
       erros.flatMap((erro) => erro.variaveis).sort(),
       erros.flatMap((erro) => erro.motivos),
@@ -117,6 +121,7 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     redisFilaUrl: api.valor.REDIS_FILA_URL,
     banco: banco.valor,
     identidade: identidade.valor,
+    login: login.valor,
     drenagem: drenagem.valor,
     limite: limite.valor,
     telemetria: telemetria.valor,

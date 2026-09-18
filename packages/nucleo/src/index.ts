@@ -89,7 +89,7 @@ export { ConferenciaDasPermissoes, rotasSemPermissao } from './permissao/confere
 export { GuardaDePermissao } from './permissao/guarda-permissao.js'
 export { METADADO_PERMITE, Permite } from './permissao/permite.decorator.js'
 export type { CelulaPermitida } from './permissao/permite.decorator.js'
-export { CAMINHOS_REDACT, CHAVES_PESSOAIS, criarLogger, registrarErrosDoProcesso, TEXTO_REMOVIDO } from './log/logger.js'
+export { CAMINHOS_REDACT, CHAVES_DE_CREDENCIAL, CHAVES_DE_IDENTIDADE, CHAVES_PESSOAIS, criarLogger, registrarErrosDoProcesso, TEXTO_REMOVIDO } from './log/logger.js'
 export { avisoEspacado } from './log/aviso-espacado.js'
 export { LoggerDoNest, TEXTO_MENSAGEM_OMITIDA } from './log/logger-do-nest.js'
 export type { LoggerBase, OpcoesDoLogger } from './log/logger.js'
@@ -105,7 +105,7 @@ export {
   PREFIXO_LIMITE_IP,
   PREFIXO_LIMITE_USUARIO,
 } from './limite/chaves.js'
-export { GuardaDeLimite } from './limite/guarda-limite.js'
+export { GuardaDeLimite, ipDaRequisicao } from './limite/guarda-limite.js'
 export { LimitadorDeRequisicoes, lerConfiguracaoLimite } from './limite/limitador.js'
 export type { ConfiguracaoLimite, ResultadoDoLimite } from './limite/limitador.js'
 export { ProxiesConfiaveis } from './limite/proxies-confiaveis.js'

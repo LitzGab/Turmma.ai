@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { executarNoContexto } from '../contexto/contexto.js'
 import { LoggerDoNest, TEXTO_MENSAGEM_OMITIDA } from './logger-do-nest.js'
 import {
+  CHAVES_DE_CREDENCIAL,
+  CHAVES_DE_IDENTIDADE,
   CHAVES_PESSOAIS,
   criarLogger,
   TEXTO_OMITIDO_POR_PROFUNDIDADE,
@@ -70,6 +72,51 @@ describe('criarLogger', () => {
     logger.info({ headers: { cookie: 'sessao=qwe-sintetico' } })
     const bruto = linhas.join('')
     expect(bruto).not.toContain('sintetico')
+  })
+
+  // Lista escrita à mão, a da Tech Spec do F1, seção 7: tirar uma chave da constante deixa este teste vermelho.
+  const chavesDeIdentidadeEsperadas = [
+    'id_token',
+    'access_token',
+    'claims',
+    'picture',
+    'name',
+    'given_name',
+    'family_name',
+    'preferred_username',
+    'upn',
+    'unique_name',
+    'token',
+    'desafio',
+    'uri',
+    'segredo',
+    'codigo',
+    'recuperacao',
+    'codigosRecuperacao',
+    'refresh',
+    'state',
+    'complemento',
+    'dispositivo',
+  ]
+
+  it('o redact cobre exatamente as chaves de identidade da Tech Spec e as de credencial', () => {
+    expect([...CHAVES_DE_IDENTIDADE].sort()).toEqual([...chavesDeIdentidadeEsperadas].sort())
+    expect([...CHAVES_DE_CREDENCIAL].sort()).toEqual(['authorization', 'cookie', 'set-cookie'])
+  })
+
+  it.each(chavesDeIdentidadeEsperadas)('remove a chave de identidade "%s" um e dois níveis abaixo', (chave) => {
+    const { logger, linhas } = loggerCapturado()
+    logger.info({ evento: 'teste', item: { [chave]: 'valor-secreto-1', sub: { [chave]: 'valor-secreto-2' } } })
+    expect(linhas.join('')).not.toContain('valor-secreto')
+  })
+
+  it('remove set-cookie e cookie em qualquer nível, e deixa o código do erro no primeiro nível', () => {
+    const { logger, linhas } = loggerCapturado()
+    logger.info({ 'set-cookie': 'educa_sessao=a-sintetico', codigo: 'CONTA_SEGURADA', res: { headers: { 'set-cookie': ['educa_dispositivo=b-sintetico'] } } })
+    logger.info({ cookie: 'educa_dispositivo=c-sintetico', headers: { 'set-cookie': 'd-sintetico' } })
+    const bruto = linhas.join('')
+    expect(bruto).not.toContain('sintetico')
+    expect(bruto).toContain('CONTA_SEGURADA')
   })
 
   it('põe requisicaoId, escolaId e usuarioId do contexto em toda linha, e nada fora de uma requisição', () => {

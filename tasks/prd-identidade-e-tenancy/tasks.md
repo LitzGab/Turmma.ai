@@ -1,7 +1,7 @@
 # Tarefas — Identidade e tenancy
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 3 de 20 concluídas
+**Status:** 4 de 20 concluídas
 
 ## Lista
 
@@ -26,13 +26,13 @@
   - [x] 3.4 Migration só com a FK `NOT VALID` de `escola_id` em `job_registro`, `configuracao_operacional_escola` e `uso_infra_diario`
   - [x] 3.5 Testes: token do emissor antigo recusado, job de escola inexistente recusado, handshake de A fora da sala de B, `npm run carga` verde
 
-- [ ] **4.0 — Equipe entra por e-mail e senha**
-  - [ ] 4.1 `POST /v1/sessao/email` com argon2id e hash fixo para inexistente
-  - [ ] 4.2 Contador de tentativas no Redis de fila, com HMAC e sufixo `conhecido`/`outro`, e o seguro em memória
-  - [ ] 4.3 Cookie `educa_dispositivo` e cookie `educa_sessao`
-  - [ ] 4.4 Desafio com `typ`, `aud` e `jti`, etapas `escolher` e `configurar_mfa`/`mfa`, `registro_acesso`
-  - [ ] 4.5 Redact novo do logger e `GET /v1/eu` básico
-  - [ ] 4.6 Testes: respostas iguais, bloqueio com recuo, falhas em paralelo, script em outro navegador, 35 logins do mesmo IP, desafio fora da rota dele
+- [x] **4.0 — Equipe entra por e-mail e senha**
+  - [x] 4.1 `POST /v1/sessao/email` com argon2id e hash fixo para inexistente
+  - [x] 4.2 Contador de tentativas no Redis de fila, com HMAC e sufixo `conhecido`/`outro`, e o seguro em memória
+  - [x] 4.3 Cookie `educa_dispositivo` e cookie `educa_sessao`
+  - [x] 4.4 Desafio com `typ`, `aud` e `jti`, etapas `escolher` e `configurar_mfa`/`mfa`, `registro_acesso`
+  - [x] 4.5 Redact novo do logger e `GET /v1/eu` básico
+  - [x] 4.6 Testes: respostas iguais, bloqueio com recuo, falhas em paralelo, script em outro navegador, 35 logins do mesmo IP, desafio fora da rota dele
 
 - [ ] **5.0 — Renovação, atividade, inatividade e saída**
   - [ ] 5.1 `POST /v1/sessao/renovar` com rotação, anterior, `atual_apresentado`, janela de 30 s e reuso

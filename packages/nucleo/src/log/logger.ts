@@ -26,13 +26,49 @@ export const CHAVES_PESSOAIS = [
   'diagnostico',
   'laudo',
 ] as const
-const CHAVES_DE_CREDENCIAL = ['authorization', 'cookie'] as const
+/** Cabeçalhos de credencial: saem do log em qualquer nível, inclusive no primeiro. Também nunca vão num corpo de resposta. */
+export const CHAVES_DE_CREDENCIAL = ['authorization', 'cookie', 'set-cookie'] as const
 
-export const CAMINHOS_REDACT: readonly string[] = [...CHAVES_PESSOAIS, ...CHAVES_DE_CREDENCIAL].flatMap((chave) => [
-  chave,
-  `*.${chave}`,
-  `*.*.${chave}`,
-])
+/**
+ * O que a identidade manipula e nunca pode sair no log (Tech Spec do F1, seção 7): o que o Google e a Microsoft
+ * devolvem (tokens, claims, nome e foto), o desafio de login, o segredo e os códigos do MFA, o refresh e o `state`
+ * do OAuth, o complemento da contestação e o cookie de dispositivo. Valem aninhadas (`*.chave` e `*.*.chave`): no
+ * primeiro nível, `codigo` e `token` são campos operacionais do próprio log (o código do erro).
+ */
+export const CHAVES_DE_IDENTIDADE = [
+  'id_token',
+  'access_token',
+  'claims',
+  'picture',
+  'name',
+  'given_name',
+  'family_name',
+  'preferred_username',
+  'upn',
+  'unique_name',
+  'token',
+  'desafio',
+  'uri',
+  'segredo',
+  'codigo',
+  'recuperacao',
+  'codigosRecuperacao',
+  'refresh',
+  'state',
+  'complemento',
+  'dispositivo',
+] as const
+
+/** O caminho do redact para a chave abaixo do prefixo, com colchetes quando o nome não é identificador (`set-cookie`). */
+function caminhoDoRedact(prefixo: '' | '*.' | '*.*.', chave: string): string {
+  if (/^[A-Za-z_$][\w$]*$/.test(chave)) return `${prefixo}${chave}`
+  return `${prefixo.replace(/\.$/, '')}["${chave}"]`
+}
+
+export const CAMINHOS_REDACT: readonly string[] = [
+  ...[...CHAVES_PESSOAIS, ...CHAVES_DE_CREDENCIAL].flatMap((chave) => (['', '*.', '*.*.'] as const).map((prefixo) => caminhoDoRedact(prefixo, chave))),
+  ...CHAVES_DE_IDENTIDADE.flatMap((chave) => (['*.', '*.*.'] as const).map((prefixo) => caminhoDoRedact(prefixo, chave))),
+]
 
 export const TEXTO_REMOVIDO = '[removido]'
 

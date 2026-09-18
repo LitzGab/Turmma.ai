@@ -127,12 +127,18 @@ services:
       BANCO_TIMEOUT_CONEXAO_MS: ${BANCO_TIMEOUT_CONEXAO_MS:?defina BANCO_TIMEOUT_CONEXAO_MS}
       BANCO_TIMEOUT_CONSULTA_MS: ${BANCO_TIMEOUT_CONSULTA_MS:?defina BANCO_TIMEOUT_CONSULTA_MS}
       IDENTIDADE_CHAVE_ASSINATURA: ${IDENTIDADE_CHAVE_ASSINATURA:?defina IDENTIDADE_CHAVE_ASSINATURA}
+      LOGIN_ARGON2_MEMORIA_KIB: ${LOGIN_ARGON2_MEMORIA_KIB:?defina LOGIN_ARGON2_MEMORIA_KIB}
+      LOGIN_ARGON2_ITERACOES: ${LOGIN_ARGON2_ITERACOES:?defina LOGIN_ARGON2_ITERACOES}
+      LOGIN_CHAVE_CONTADOR: ${LOGIN_CHAVE_CONTADOR:?defina LOGIN_CHAVE_CONTADOR}
+      LOGIN_CHAVE_DISPOSITIVO_VERSAO: ${LOGIN_CHAVE_DISPOSITIVO_VERSAO:?defina LOGIN_CHAVE_DISPOSITIVO_VERSAO}
+      LOGIN_CHAVE_DISPOSITIVO_V1: ${LOGIN_CHAVE_DISPOSITIVO_V1:?defina LOGIN_CHAVE_DISPOSITIVO_V1}
       DRENAGEM_ESPERA_BORDA_MS: ${DRENAGEM_ESPERA_BORDA_MS:?defina DRENAGEM_ESPERA_BORDA_MS}
       DRENAGEM_PRAZO_MS: ${DRENAGEM_PRAZO_MS:?defina DRENAGEM_PRAZO_MS}
       # Sem depends_on do Redis de cache: a API sobe e atende sem ele, limitando em memória.
       REDIS_CACHE_URL: redis://redis-cache:6379
-      # Nem depends_on do Redis de fila: ele só guarda o contador de uso por escola, que a API marca sem
-      # esperar resposta. Fora do ar, perde-se a contagem, não a requisição.
+      # Nem depends_on do Redis de fila: ele guarda o contador de uso por escola, que a API marca sem esperar
+      # resposta, e o contador de tentativas de login, que fora do ar passa a contar em memória. Nos dois casos
+      # perde-se a contagem compartilhada, não a requisição.
       REDIS_FILA_URL: redis://redis-fila:6379
       LIMITE_REQ_USUARIO_MIN: ${LIMITE_REQ_USUARIO_MIN:?defina LIMITE_REQ_USUARIO_MIN}
       LIMITE_REQ_ESCOLA_MIN: ${LIMITE_REQ_ESCOLA_MIN:?defina LIMITE_REQ_ESCOLA_MIN}

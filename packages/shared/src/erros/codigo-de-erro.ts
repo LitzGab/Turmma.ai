@@ -11,6 +11,8 @@ export const CodigoDeErro = {
   TEMPO_ESGOTADO: 'TEMPO_ESGOTADO',
   INDISPONIVEL_TENTE_DE_NOVO: 'INDISPONIVEL_TENTE_DE_NOVO',
   LIMITE_EXCEDIDO: 'LIMITE_EXCEDIDO',
+  /** Senha errada repetida segurou a conta por um tempo (429 com `Retry-After`): por conta, nunca por IP. */
+  CONTA_SEGURADA: 'CONTA_SEGURADA',
 } as const
 
 export type CodigoDeErro = (typeof CodigoDeErro)[keyof typeof CodigoDeErro]

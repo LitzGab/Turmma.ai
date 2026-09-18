@@ -1,4 +1,4 @@
-import { CAMINHOS_REDACT, CHAVES_PESSOAIS } from '@educa/nucleo'
+import { CHAVES_DE_CREDENCIAL } from '@educa/nucleo'
 import * as shared from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
@@ -13,8 +13,8 @@ import { z } from 'zod'
 /** Nomes que nenhum campo de resposta pode ter, nem como parte do nome (`senhaHash`, `refreshToken`). */
 const CHAVES_PROIBIDAS = ['senha', 'hash', 'segredo', 'sujeito', 'refresh'] as const
 
-/** As chaves de credencial que o redact do log remove (`authorization`, `cookie`): também nunca vão num corpo. */
-const CHAVES_DE_CREDENCIAL_DO_REDACT = CAMINHOS_REDACT.filter((caminho) => !caminho.includes('*') && !(CHAVES_PESSOAIS as readonly string[]).includes(caminho))
+/** As chaves de credencial que o redact do log remove em qualquer nível (`authorization`, `cookie`, `set-cookie`): também nunca vão num corpo. */
+const CHAVES_DE_CREDENCIAL_DO_REDACT: readonly string[] = CHAVES_DE_CREDENCIAL
 
 /**
  * Contratos que só a equipe recebe e que podem levar e-mail. Aluno não tem e-mail (regra 20, item 2): em qualquer
@@ -87,7 +87,7 @@ describe('contratos de saída: nenhuma resposta traz credencial, segredo ou iden
     const nomes = esquemasDeResposta.map(([nome]) => nome)
     expect(nomes).toEqual(expect.arrayContaining(['esquemaRespostaContexto', 'esquemaRespostaEstado', 'esquemaRespostaAvisos', 'esquemaRespostaEstadoDeJob', 'esquemaRespostaJobAceito']))
     expect(camposDoEsquema(shared.esquemaRespostaContexto)).toEqual(['escolaId', 'usuarioId', 'papel', 'sessaoId', 'anoLetivoId'])
-    expect(CHAVES_DE_CREDENCIAL_DO_REDACT).toEqual(['authorization', 'cookie'])
+    expect(CHAVES_DE_CREDENCIAL_DO_REDACT).toEqual(['authorization', 'cookie', 'set-cookie'])
   })
 
   it('nenhum contrato de resposta exportado tem campo proibido', () => {

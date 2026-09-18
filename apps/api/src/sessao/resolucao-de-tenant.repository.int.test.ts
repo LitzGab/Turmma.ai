@@ -60,6 +60,29 @@ describe('ResolucaoDeTenantRepository: a resolução antes de haver escola devol
     }
   })
 
+  it('contaPorEmail acha a conta sem diferença de caixa e devolve só id, hash e se o MFA está ativo; e-mail que não existe dá nada', async () => {
+    const email = `Sintetico-${randomUUID()}@educa.invalid`
+    const [contaId] = await repositorio.criarContas([email])
+    try {
+      expect(await repositorio.contaPorEmail(email.toLowerCase())).toEqual({ id: contaId, senhaHash: null, mfaAtivo: false })
+      await bancada.pool.query("update conta set senha_hash = 'hash-sintetico', mfa_ativado_em = now() where id = $1", [contaId])
+      expect(await repositorio.contaPorEmail(email.toUpperCase())).toEqual({ id: contaId, senhaHash: 'hash-sintetico', mfaAtivo: true })
+      expect(await repositorio.contaPorEmail(`outro-${email}`)).toBeUndefined()
+    } finally {
+      await bancada.pool.query('delete from conta where id = $1', [contaId])
+    }
+  })
+
+  it('gravarFalhaDeLoginPorEmail grava login_falho sem escola e sem usuário, só com o IP', async () => {
+    const ip = `10.${String(Math.floor(Math.random() * 250))}.${String(Math.floor(Math.random() * 250))}.7`
+    await repositorio.gravarFalhaDeLoginPorEmail(ip)
+    const { rows } = await bancada.pool.query<{ escola_id: string | null; usuario_id: string | null; evento: string }>(
+      "select escola_id, usuario_id, evento from registro_acesso where ip = $1::inet and em > now() - interval '1 minute'",
+      [ip],
+    )
+    expect(rows).toEqual([{ escola_id: null, usuario_id: null, evento: 'login_falho' }])
+  })
+
   it('criarContas grava só o e-mail e devolve só os ids; o mesmo e-mail com outra caixa é recusado', async () => {
     const email = `Sintetico-${randomUUID()}@educa.invalid`
     const [contaId] = await repositorio.criarContas([email])

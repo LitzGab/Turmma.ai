@@ -35,6 +35,8 @@ export const METRICAS = {
   redisDisponivel: 'redis.disponivel',
   /** Proporção das requisições limitadas pelo seguro em memória na janela recente, de 0 a 1. */
   seguroAtivo: 'limite.seguro_ativo',
+  /** Tentativas de login respondidas com `CONTA_SEGURADA` (senha errada repetida), sem rótulo: a conta é global. */
+  contaSegurada: 'login.conta_segurada',
   /** p99 do atraso do event loop no intervalo, em segundos. */
   atrasoEventLoop: 'nodejs.eventloop.delay.p99',
 } as const
@@ -124,11 +126,15 @@ export function observarRedis(medidor: Meter, clientes: Partial<Record<Instancia
   })
 }
 
-/** `limite.seguro_ativo`: a proporção das requisições limitadas pelo seguro em memória na janela recente. */
-export function observarSeguroDoLimite(medidor: Meter, limitador: { readonly proporcaoDoSeguro: number }): void {
+/**
+ * `limite.seguro_ativo`: a proporção das requisições limitadas pelo seguro em memória na janela recente. Com mais de
+ * uma fonte (o rate limit no Redis de cache e o contador de tentativas de login no Redis de fila), vale a maior: o
+ * alerta `seguro-limite-ativo` dispara quando qualquer um dos dois conta sozinho em memória.
+ */
+export function observarSeguroDoLimite(medidor: Meter, ...fontes: ReadonlyArray<{ readonly proporcaoDoSeguro: number }>): void {
   medidor
     .createObservableGauge(METRICAS.seguroAtivo, { description: 'Proporção das requisições limitadas pelo seguro em memória, de 0 a 1' })
-    .addCallback((observador) => observador.observe(limitador.proporcaoDoSeguro))
+    .addCallback((observador) => observador.observe(Math.max(0, ...fontes.map((fonte) => fonte.proporcaoDoSeguro))))
 }
 
 /** `realtime.conexoes`: conexões abertas nesta instância, sem rótulo de escola nem de sala. */

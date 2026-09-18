@@ -24,6 +24,11 @@ const ambienteValido = {
   AVISOS_SISTEMA: '[]',
   TELEMETRIA_OTLP_URL: 'http://observabilidade:4318/',
   TELEMETRIA_INTERVALO_MS: '5000',
+  LOGIN_ARGON2_MEMORIA_KIB: '19456',
+  LOGIN_ARGON2_ITERACOES: '2',
+  LOGIN_CHAVE_CONTADOR: 'chave_sintetica_do_contador_com_32_caracteres',
+  LOGIN_CHAVE_DISPOSITIVO_VERSAO: '1',
+  LOGIN_CHAVE_DISPOSITIVO_V1: 'chave_sintetica_do_dispositivo_com_32_caracteres',
 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
@@ -64,7 +69,43 @@ describe('lerConfiguracao', () => {
         proxiesConfiaveis: ['borda'],
       },
       telemetria: { otlpUrl: 'http://observabilidade:4318', intervaloMs: 5000 },
+      login: {
+        hash: { memoriaKib: 19_456, iteracoes: 2 },
+        chaveContador: new TextEncoder().encode(ambienteValido.LOGIN_CHAVE_CONTADOR),
+        dispositivo: { versao: 1, chave: new TextEncoder().encode(ambienteValido.LOGIN_CHAVE_DISPOSITIVO_V1) },
+      },
     })
+  })
+
+  it.each([
+    ['LOGIN_ARGON2_MEMORIA_KIB', '19455'],
+    ['LOGIN_ARGON2_ITERACOES', '1'],
+    ['LOGIN_CHAVE_CONTADOR', 'curta_sintetica'],
+    ['LOGIN_CHAVE_DISPOSITIVO_VERSAO', '0'],
+    ['LOGIN_CHAVE_DISPOSITIVO_V1', 'curta_sintetica'],
+  ])('não sobe com %s=%s: o hash nunca abaixo da OWASP e as chaves do login com 256 bits', (variavel, valor) => {
+    const erro = erroDe({ ...ambienteValido, [variavel]: valor })
+    expect(erro.variaveis).toEqual([variavel])
+    expect(erro.message).not.toContain(valor)
+  })
+
+  it('a chave de dispositivo lida é a da versão declarada, e a versão sem chave não sobe', () => {
+    const chaveV2 = 'chave_sintetica_do_dispositivo_v2_com_32_caracteres'
+    const config = lerConfiguracao({ ...ambienteValido, LOGIN_CHAVE_DISPOSITIVO_VERSAO: '2', LOGIN_CHAVE_DISPOSITIVO_V2: chaveV2 })
+    expect(config.login.dispositivo).toEqual({ versao: 2, chave: new TextEncoder().encode(chaveV2) })
+    expect(erroDe({ ...ambienteValido, LOGIN_CHAVE_DISPOSITIVO_VERSAO: '2' }).variaveis).toEqual(['LOGIN_CHAVE_DISPOSITIVO_V2'])
+  })
+
+  it('não sobe com a mesma chave no contador e no dispositivo: cada HMAC tem a sua', () => {
+    const erro = erroDe({ ...ambienteValido, LOGIN_CHAVE_DISPOSITIVO_V1: ambienteValido.LOGIN_CHAVE_CONTADOR })
+    expect(erro.variaveis).toEqual(['LOGIN_CHAVE_DISPOSITIVO_V1'])
+    expect(erro.message).not.toContain(ambienteValido.LOGIN_CHAVE_CONTADOR)
+  })
+
+  it('.env.example sobe com o argon2 no mínimo da OWASP (m=19456, t=2)', () => {
+    const exemplo = lerAmbienteExemplo()
+    const { login } = lerConfiguracao({ ...ambienteValido, ...exemplo, API_PORTA: '3000', BANCO_URL: ambienteValido.BANCO_URL, REDIS_CACHE_URL: ambienteValido.REDIS_CACHE_URL, REDIS_FILA_URL: ambienteValido.REDIS_FILA_URL })
+    expect(login.hash).toEqual({ memoriaKib: 19_456, iteracoes: 2 })
   })
 
   it.each(Object.keys(ambienteValido))(

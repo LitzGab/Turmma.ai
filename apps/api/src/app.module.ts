@@ -13,6 +13,7 @@ import {
   SessaoRepository,
   type Banco,
   type LimitesDeRequisicao,
+  type Meter,
 } from '@educa/nucleo'
 import { Module, type DynamicModule } from '@nestjs/common'
 import { APP_GUARD, APP_INTERCEPTOR, DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core'
@@ -26,7 +27,8 @@ import { UsoModule } from './uso.module.js'
 
 @Module({})
 export class AppModule {
-  static com(config: ConfiguracaoApi): DynamicModule {
+  /** @param opcoes.medidor só o teste passa, para ler as métricas do login; sem ele, vale o medidor global. */
+  static com(config: ConfiguracaoApi, opcoes: { medidor?: Meter } = {}): DynamicModule {
     return {
       module: AppModule,
       imports: [
@@ -34,7 +36,7 @@ export class AppModule {
         BancoModule.com(config.banco),
         LimiteModule.com(config.limite),
         UsoModule.com(config.redisFilaUrl),
-        SessaoModule,
+        SessaoModule.com({ identidade: config.identidade, login: config.login, redisFilaUrl: config.redisFilaUrl, ...opcoes }),
         SistemaModule.com({
           rotasSinteticas: config.rotasSinteticas,
           versao: config.versao,

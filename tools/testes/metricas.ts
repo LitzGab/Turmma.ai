@@ -72,5 +72,6 @@ export const NOMES_NO_PROMETHEUS = {
   conexoesDescartadas: ['db_pool_conexoes_descartadas_total'],
   redisDisponivel: ['redis_disponivel'],
   seguroAtivo: ['limite_seguro_ativo'],
+  contaSegurada: ['login_conta_segurada_total'],
   atrasoEventLoop: ['nodejs_eventloop_delay_p99_seconds'],
 } as const satisfies Record<keyof typeof METRICAS, readonly string[]>

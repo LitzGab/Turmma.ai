@@ -746,6 +746,55 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Logins com conta segurada",
+      "description": "Tentativas de login respondidas com CONTA_SEGURADA (senha errada repetida), por minuto. Por conta, nunca por IP: um pico aqui é ataque de senha ou uma pessoa esquecida, e ninguém mais é bloqueado por causa dele.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 67
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(login_conta_segurada_total[1m]))",
+          "legendFormat": "contas seguradas",
+          "range": true
+        }
+      ]
     }
   ]
 }

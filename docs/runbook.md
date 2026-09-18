@@ -99,6 +99,12 @@ usuário que cai sempre na mesma recebe 429 mais cedo. Nada é liberado sem limi
    `REDIS_CACHE_MEMORIA_MAXIMA`.
 3. Só uma instância dispara → o cliente daquela instância não reconecta:
    `docker compose restart api-1` (ela drena e a borda manda o tráfego para a outra).
+4. Redis de cache no ar, e o log traz `login.contador_no_seguro` ou `login.redis_indisponivel` → quem
+   está no seguro é o contador de tentativas do login por e-mail, que fica no Redis de fila (a métrica
+   vale o maior dos dois). Com ele fora, a senha errada segura a conta em cada instância, e não no
+   sistema inteiro: um ataque de senha espalhado pelas duas instâncias tem o dobro de tentativas. Ninguém
+   é barrado por isso. `docker compose ps redis-fila`; parado, `docker compose up -d redis-fila`. Ele é
+   o Redis da fila de jobs também: veja se "Job interativo esperando" disparou junto.
 
 **Se nada disso resolver:** não há o que degradar: a API segue atendendo com o seguro. Mantenha o
 Redis de cache como prioridade do dia, porque com ele fora um aluno com script em laço gasta mais

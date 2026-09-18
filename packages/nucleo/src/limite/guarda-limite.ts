@@ -61,11 +61,19 @@ export class GuardaDeLimite implements CanActivate {
     return this.limitador.consumirAutenticada(identidade, limites)
   }
 
-  async #ipDaRequisicao(requisicao: IncomingMessage): Promise<string> {
-    const enderecoDaConexao = requisicao.socket.remoteAddress
-    const encaminhado = requisicao.headers['x-forwarded-for']
-    // Sem cabeçalho, nem precisa perguntar se a conexão é da borda.
-    const daBorda = encaminhado !== undefined && (await this.proxies.ehConfiavel(enderecoDaConexao))
-    return ipDoCliente(enderecoDaConexao, encaminhado, daBorda)
+  #ipDaRequisicao(requisicao: IncomingMessage): Promise<string> {
+    return ipDaRequisicao(requisicao, this.proxies)
   }
+}
+
+/**
+ * O IP do cliente: o da conexão, ou a última entrada do `X-Forwarded-For` quando a conexão vem da borda. É o mesmo
+ * IP da chave de limite anônimo e o que o registro de acesso grava. Pode ser `IP_DESCONHECIDO`.
+ */
+export async function ipDaRequisicao(requisicao: IncomingMessage, proxies: Pick<ProxiesConfiaveis, 'ehConfiavel'>): Promise<string> {
+  const enderecoDaConexao = requisicao.socket.remoteAddress
+  const encaminhado = requisicao.headers['x-forwarded-for']
+  // Sem cabeçalho, nem precisa perguntar se a conexão é da borda.
+  const daBorda = encaminhado !== undefined && (await proxies.ehConfiavel(enderecoDaConexao))
+  return ipDoCliente(enderecoDaConexao, encaminhado, daBorda)
 }
