@@ -114,7 +114,8 @@ export class BancadaDeSessoes {
         const escolas = this.#escolas
         const { rows } = await this.pool.query<{ conta_id: string }>('select conta_id from usuario where escola_id = any($1::uuid[]) and conta_id is not null', [escolas])
         await this.pool.query('delete from sessao where escola_id = any($1::uuid[])', [escolas])
-        // A estrutura da 8.0 aponta para o ano letivo: sai antes dele.
+        // O vínculo da 9.0 aponta para a turma e o usuário, e a estrutura da 8.0 para o ano letivo: saem antes deles.
+        await this.pool.query('delete from vinculo where escola_id = any($1::uuid[])', [escolas])
         await this.pool.query('delete from turma where escola_id = any($1::uuid[])', [escolas])
         await this.pool.query('delete from serie where escola_id = any($1::uuid[])', [escolas])
         await this.pool.query('delete from disciplina where escola_id = any($1::uuid[])', [escolas])

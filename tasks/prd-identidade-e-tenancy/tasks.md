@@ -1,7 +1,7 @@
 # Tarefas — Identidade e tenancy
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 6 de 20 concluídas
+**Status:** 7 de 20 concluídas
 
 ## Lista
 
@@ -57,10 +57,10 @@
   - [x] 8.2 Rotas de ano letivo (criar, abrir, encerrar sem virada), séries, disciplinas e turmas
   - [x] 8.3 Testes: série fora do recorte, dois anos abertos em paralelo, "7ºA" em anos diferentes, permissão, isolamento
 
-- [ ] **9.0 — Vínculo confirmado é o que dá acesso à turma e aos alunos**
-  - [ ] 9.1 Migration de `vinculo`; criar e encerrar pela coordenação, `meus-vinculos`, confirmar e contestar
-  - [ ] 9.2 `GET /v1/turmas/:id` e `/alunos` paginado, com `finalidade` e auditoria na leitura da coordenação
-  - [ ] 9.3 Testes: duas disciplinas na mesma turma, pendente e contestado sem acesso, encerrado corta, clique duplo, turma sem professor, isolamento
+- [x] **9.0 — Vínculo confirmado é o que dá acesso à turma e aos alunos**
+  - [x] 9.1 Migration de `vinculo`; criar e encerrar pela coordenação, `meus-vinculos`, confirmar e contestar
+  - [x] 9.2 `GET /v1/turmas/:id` e `/alunos` paginado, com `finalidade` e auditoria na leitura da coordenação
+  - [x] 9.3 Testes: duas disciplinas na mesma turma, pendente e contestado sem acesso, encerrado corta, clique duplo, turma sem professor, isolamento
 
 - [ ] **10.0 — Virada do ano e leitura do ano encerrado**
   - [ ] 10.1 Encerrar o ano leva os vínculos a `fim_do_ano` e apaga o `complemento`, na mesma transação

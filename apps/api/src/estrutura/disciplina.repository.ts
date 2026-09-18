@@ -29,4 +29,13 @@ export class DisciplinaRepository {
       .orderBy(asc(disciplina.id))
       .limit(limite + 1)
   }
+
+  /** A disciplina da escola com esse id; a de outra escola não é achada. */
+  async porId(id: string): Promise<Disciplina | undefined> {
+    const [linha] = await this.banco
+      .select(colunas)
+      .from(disciplina)
+      .where(and(eq(disciplina.escolaId, exigirEscolaDoContexto()), eq(disciplina.id, id)))
+    return linha
+  }
 }

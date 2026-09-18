@@ -1,5 +1,14 @@
 import { z } from 'zod'
-import { FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR, FINALIDADES_DA_REDEFINICAO_DE_MFA } from '@educa/shared'
+import {
+  CONTESTACOES_DE_VINCULO,
+  ESTADOS_DE_VINCULO,
+  ESTADOS_EM_DECISAO,
+  FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR,
+  FINALIDADES_DA_LEITURA_DE_ALUNOS,
+  FINALIDADES_DA_REDEFINICAO_DE_MFA,
+  MOTIVOS_DE_ENCERRAMENTO_PELA_COORDENACAO,
+  PAPEIS_DE_VINCULO,
+} from '@educa/shared'
 import { TIPOS_DE_REDE } from '../db/schema/rede.js'
 
 /**
@@ -117,6 +126,56 @@ export const ACOES_DE_AUDITORIA = {
     antes: null,
     depois: z.strictObject({ conviteId: z.uuid() }),
     finalidade: null,
+  },
+  /**
+   * A coordenação criou o vínculo (9.0, RF3, RF19): de quem, em que turma e disciplina, com que papel. Nasce pendente.
+   * `entidadeId` é o vínculo.
+   */
+  'vinculo.criado': {
+    entidade: 'vinculo',
+    antes: null,
+    depois: z.strictObject({
+      usuarioId: z.uuid(),
+      turmaId: z.uuid(),
+      disciplinaId: z.uuid().nullable(),
+      papel: z.enum(PAPEIS_DE_VINCULO),
+      estado: z.literal('pendente'),
+    }),
+    finalidade: null,
+  },
+  /** O professor dono confirmou o vínculo (9.0, RF4, RF19): a partir daqui ele alcança a turma. */
+  'vinculo.confirmado': {
+    entidade: 'vinculo',
+    antes: z.strictObject({ estado: z.enum(ESTADOS_EM_DECISAO) }),
+    depois: z.strictObject({ estado: z.literal('confirmado') }),
+    finalidade: null,
+  },
+  /**
+   * O professor dono contestou o vínculo (9.0, RF4, RF19): só o código. O complemento, texto livre do professor, nunca
+   * entra aqui (`docs/lgpd.md`), e nenhum campo pode nem ter o nome dele.
+   */
+  'vinculo.contestado': {
+    entidade: 'vinculo',
+    antes: z.strictObject({ estado: z.enum(ESTADOS_EM_DECISAO) }),
+    depois: z.strictObject({ estado: z.literal('contestado'), contestacao: z.enum(CONTESTACOES_DE_VINCULO) }),
+    finalidade: null,
+  },
+  /** A coordenação encerrou o vínculo (9.0, RF5, RF19): o acesso cai na requisição seguinte. */
+  'vinculo.encerrado': {
+    entidade: 'vinculo',
+    antes: z.strictObject({ estado: z.enum(ESTADOS_DE_VINCULO) }),
+    depois: z.strictObject({ estado: z.literal('encerrado'), motivo: z.enum(MOTIVOS_DE_ENCERRAMENTO_PELA_COORDENACAO) }),
+    finalidade: null,
+  },
+  /**
+   * A coordenação leu a lista de alunos de uma turma (9.0; regra 20, item 10), com a finalidade. `entidadeId` é a
+   * turma; `quantidade`, quantos alunos a página trouxe. Nunca quem.
+   */
+  'turma.alunos_lidos': {
+    entidade: 'turma',
+    antes: null,
+    depois: z.strictObject({ quantidade: z.number().int().nonnegative() }),
+    finalidade: z.enum(FINALIDADES_DA_LEITURA_DE_ALUNOS),
   },
 } as const satisfies Record<string, DefinicaoDeAcao>
 

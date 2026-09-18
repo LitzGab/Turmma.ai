@@ -19,10 +19,11 @@ import { sessao } from './schema/sessao.js'
 import { turma } from './schema/turma.js'
 import { usoInfraDiario } from './schema/uso-infra-diario.js'
 import { usuario } from './schema/usuario.js'
+import { vinculo } from './schema/vinculo.js'
 
 // Sem `auditoria`: a tabela só é alcançável pelo módulo de inserção e pela leitura da auditoria, nunca
 // pelo `schema` que o pacote exporta (a escrita tem uma porta só, o RegistroDeAuditoria).
-export const schema = { jobRegistro, configuracaoOperacionalEscola, usoInfraDiario, rede, escola, anoLetivo, conta, codigoRecuperacao, usuario, sessao, registroAcesso, convite, serie, disciplina, turma }
+export const schema = { jobRegistro, configuracaoOperacionalEscola, usoInfraDiario, rede, escola, anoLetivo, conta, codigoRecuperacao, usuario, sessao, registroAcesso, convite, serie, disciplina, turma, vinculo }
 export type Schema = typeof schema
 
 export type Banco = NodePgDatabase<Schema>

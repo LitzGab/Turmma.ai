@@ -89,5 +89,64 @@ export {
   TAMANHO_MAXIMO_NOME_DISCIPLINA,
 } from './estrutura/disciplina.js'
 export type { AreaDoConhecimento, Disciplina, PedidoCriarDisciplina, RespostaDisciplina, RespostaListaDeDisciplinas } from './estrutura/disciplina.js'
-export { esquemaPedidoCriarTurma, esquemaRespostaListaDeTurmas, esquemaRespostaTurma, esquemaTurma, TAMANHO_MAXIMO_NOME_TURMA, TURNOS } from './estrutura/turma.js'
-export type { PedidoCriarTurma, RespostaListaDeTurmas, RespostaTurma, Turma, Turno } from './estrutura/turma.js'
+export {
+  esquemaAlunoDaTurma,
+  esquemaConsultaAlunosDaTurma,
+  esquemaPedidoCriarTurma,
+  esquemaRespostaAlunosDaTurma,
+  esquemaRespostaListaDeTurmas,
+  esquemaRespostaTurma,
+  esquemaRespostaTurmaAberta,
+  esquemaTurma,
+  FINALIDADES_DA_LEITURA_DE_ALUNOS,
+  TAMANHO_MAXIMO_NOME_TURMA,
+  TURNOS,
+} from './estrutura/turma.js'
+export type {
+  AlunoDaTurma,
+  ConsultaAlunosDaTurma,
+  FinalidadeDaLeituraDeAlunos,
+  PedidoCriarTurma,
+  RespostaAlunosDaTurma,
+  RespostaListaDeTurmas,
+  RespostaTurma,
+  RespostaTurmaAberta,
+  Turma,
+  Turno,
+} from './estrutura/turma.js'
+export {
+  CONTESTACOES_DE_VINCULO,
+  ESTADOS_DE_VINCULO,
+  ESTADOS_EM_DECISAO,
+  esquemaConsultaVinculos,
+  esquemaPedidoContestarVinculo,
+  esquemaPedidoCriarVinculo,
+  esquemaPedidoEncerrarVinculo,
+  esquemaRespostaListaDeVinculos,
+  esquemaRespostaMeusVinculos,
+  esquemaRespostaVinculo,
+  esquemaRespostaVinculoDaCoordenacao,
+  esquemaVinculo,
+  esquemaVinculoDaCoordenacao,
+  MOTIVOS_DE_ENCERRAMENTO_DE_VINCULO,
+  MOTIVOS_DE_ENCERRAMENTO_PELA_COORDENACAO,
+  PAPEIS_DE_VINCULO,
+  PAPEIS_DE_VINCULO_PELA_COORDENACAO,
+  TAMANHO_MAXIMO_DO_COMPLEMENTO,
+} from './estrutura/vinculo.js'
+export type {
+  ConsultaVinculos,
+  ContestacaoDeVinculo,
+  EstadoDeVinculo,
+  MotivoDeEncerramentoDeVinculo,
+  PapelDeVinculo,
+  PedidoContestarVinculo,
+  PedidoCriarVinculo,
+  PedidoEncerrarVinculo,
+  RespostaListaDeVinculos,
+  RespostaMeusVinculos,
+  RespostaVinculo,
+  RespostaVinculoDaCoordenacao,
+  Vinculo,
+  VinculoDaCoordenacao,
+} from './estrutura/vinculo.js'

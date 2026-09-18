@@ -15,9 +15,17 @@ export interface ApiDeTeste {
   readonly url: string
 }
 
-export async function subirApi(medidor: Meter, sobreposicao: SobreposicaoDeTeste = {}): Promise<ApiDeTeste> {
+/**
+ * Sobe a API. Com `linhasDeLog`, o logger escreve tudo, até `trace`, nessa lista, para o teste procurar nela o que
+ * nunca pode ir a log; sem ela, o log fica mudo.
+ */
+export async function subirApi(medidor: Meter, sobreposicao: SobreposicaoDeTeste = {}, linhasDeLog?: string[]): Promise<ApiDeTeste> {
   const app = await NestFactory.create(AppModule.com(configuracaoDeTeste(sobreposicao), { medidor }), { logger: false })
-  configurarAplicacao(app, criarLogger({ servico: 'api-teste', nivel: 'silent' }), medidor)
+  const logger =
+    linhasDeLog === undefined
+      ? criarLogger({ servico: 'api-teste', nivel: 'silent' })
+      : criarLogger({ servico: 'api-teste', nivel: 'trace', destino: { write: (linha: string) => linhasDeLog.push(linha) } })
+  configurarAplicacao(app, logger, medidor)
   await app.listen(0, '127.0.0.1')
   return { app, url: `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}` }
 }

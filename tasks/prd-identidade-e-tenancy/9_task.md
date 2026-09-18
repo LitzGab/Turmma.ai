@@ -47,7 +47,7 @@ o encerramento corta o acesso já na requisição seguinte.
 
 ## Subtarefas
 
-- [ ] 9.1 — Migration de `vinculo` e rotas
+- [x] 9.1 — Migration de `vinculo` e rotas
   - `POST /v1/vinculos` (coordenador): `{ usuarioId, turmaId, disciplinaId?, papel }`, nasce
     `pendente` com `criado_por`; alunos continuam vindo do seed no F1
   - `GET /v1/vinculos?estado` (coordenador), inclusive `contestado`, com `complemento`
@@ -57,13 +57,13 @@ o encerramento corta o acesso já na requisição seguinte.
   - `POST /:id/confirmar` e `/:id/contestar { contestacao, complemento? }` (professor dono):
     `update … where id = $1 and usuario_id = ctx and estado in ('pendente','contestado')`,
     com auditoria na mesma transação; `complemento` até 140 caracteres
-- [ ] 9.2 — Acesso à turma
+- [x] 9.2 — Acesso à turma
   - `GET /v1/turmas/:id`: coordenação da escola, ou professor com vínculo `confirmado` naquela
     turma no ano em curso, juntando `vinculo` no repository
   - `GET /v1/turmas/:id/alunos?pagina`: mesmo critério; `finalidade` obrigatória para a
     coordenação, com auditoria da leitura; devolve `{ itens:[{usuarioId, nome}], proxima? }`
   - qualquer caso sem acesso responde `NAO_ENCONTRADO`
-- [ ] 9.3 — Testes (tabela abaixo)
+- [x] 9.3 — Testes (tabela abaixo)
 
 ## Arquivos previstos
 
@@ -111,5 +111,57 @@ o encerramento corta o acesso já na requisição seguinte.
 - Criação de vínculo de aluno por lista ou reivindicação: F2
 - Troca de escola do professor: 12.0
 
+## Notas da implementação
+
+Leituras que tomei onde a tarefa deixava margem, escolhendo a que protege a escola e o aluno:
+
+- **`papel` no `POST /v1/vinculos` aceita só `professor` no F1.** A coluna aceita `professor` e `aluno`, mas o vínculo
+  de aluno criado pela coordenação nasceria pendente sem ninguém que o confirme (o aluno não confirma vínculo), e a
+  entrada do aluno é o fluxo do F2. `aluno` no corpo dá `ENTRADA_INVALIDA`. A pessoa precisa ser da escola, estar ativa
+  e ter o papel do vínculo: o `usuario` de coordenador ou de aluno não recebe vínculo de professor (404).
+- **DTO da coordenação.** Além do DTO da Tech Spec, a coordenação recebe `usuarioId` (sem nome), `papel`,
+  `complemento?` e `motivoEncerramento?`: sem saber de quem é, a lista de contestados não serve para corrigir a
+  alocação. O professor nunca recebe `complemento`. Tech Spec, seção 4, atualizada.
+- **Confirmar depois de contestar** apaga o código e o `complemento`: a contestação deixou de valer, e o texto livre não
+  fica guardado sem motivo. Contestar de novo um contestado troca o código (`estado in ('pendente','contestado')`).
+- **Segundo clique.** Confirmar o que já está confirmado e encerrar o que já está encerrado respondem o vínculo como
+  está, sem `update` nem auditoria: o `select … for update` faz o segundo esperar o primeiro e reler. Contestar um
+  confirmado e decidir um encerrado dão `CONFLITO`. O repetido na criação dá `CONFLITO` pelo índice único parcial.
+- **Índice único com disciplina ausente.** No índice comum dois nulos não colidem; a disciplina entra como
+  `coalesce(disciplina_id, '0000…'::uuid)`, e o vínculo sem disciplina também não se repete.
+- **Finalidade da leitura de alunos.** Códigos fixos em `FINALIDADES_DA_LEITURA_DE_ALUNOS`
+  (`acompanhamento_pedagogico`, `atendimento_a_familia`, `conferencia_de_cadastro`), conferidos antes de procurar a
+  turma: a falta dela responde igual para qualquer id. A auditoria `turma.alunos_lidos` leva a turma, a quantidade e a
+  finalidade, na mesma transação da leitura; o professor com vínculo confirmado lê sem finalidade e sem registro.
+- **Alcance pela `MATRIZ`.** `GET /v1/turmas/:id` e `/alunos` decidem o critério pela célula do papel: `unidade` e
+  `nominal_auditado` (coordenação) leem a turma do ano em curso; `turma_vinculada` (professor) só com vínculo de
+  professor `confirmado`, lido a cada requisição. A matriz e o arquivo de expectativa não mudaram: as células já
+  existiam desde a 2.0.
+- **Teste de isolamento que quebra sem a cláusula de escola.** Como na 8.0, o ano em curso do contexto é da escola, e
+  tirar só a cláusula de escola das consultas não traria linha de B pela API. Por isso há um teste de repository com
+  contexto forjado (escola A, ano e professor de B): só a cláusula de escola separa, e tirá-la de `aberta`, `alunos`,
+  do escopo do `VinculoRepository` ou de `pessoaAtivaComPapel` deixa o teste vermelho (conferido à mão).
+- **Sem ano em curso**, criar, listar, `meus-vinculos`, confirmar, contestar, encerrar e ler turma falham fechados com
+  `NAO_ENCONTRADO`. A criação trava o ano em `FOR SHARE`, como a turma.
+- **Log.** O serviço registra só o nome do evento (`vinculo.criado`, `.confirmado`, `.contestado`, `.encerrado`); escola,
+  usuário e requisição vêm do contexto. O teste de privacidade lê o log real e a auditoria e não acha o complemento.
+- **Arquivos fora da lista prevista:** `apps/api/test/escola-com-turma.ts` (a escola montada e os alunos do seed, usados
+  pelos dois arquivos de teste), `api-com-sessao.ts` (captura de log opcional) e `sessao-de-teste.ts` (apaga o vínculo
+  antes da turma). `docs/lgpd.md` já tinha as linhas de vínculo e contestação.
+
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-18 10:37:22 | 2026-09-18 10:38:50 | `test-engineer` | 1 | REPROVADO | abed04bf1317ce17e |
+| 2026-09-18 10:47:57 | 2026-09-18 10:48:22 | `test-engineer` | 2 | APROVADO | a280c758c82896d11 |
+| 2026-09-18 10:48:40 | 2026-09-18 10:49:30 | `revisor-geral` | 1 | APROVADO | a4f7024e9ca3eccdd |
+| 2026-09-18 10:48:47 | 2026-09-18 10:49:31 | `tenancy-guardian` | 1 | APROVADO | add752ffd9647a972 |
+| 2026-09-18 10:48:53 | 2026-09-18 10:50:06 | `privacy-guardian` | 1 | APROVADO | a83e861d15e7b663f |
