@@ -261,9 +261,10 @@ antes de existir escola ou que toca a conta global.
 | Ler conta por `conta_id` (segredo cifrado, códigos de recuperação) | verificar TOTP e recuperação; o `conta_id` vem do desafio |
 | Gravar `registro_acesso` com escola nula | falha de login por e-mail, antes de haver escola |
 | Criar a conta da equipe (e-mail, sem ler conta existente): convite do coordenador (7.0) e `ops:sessao-sintetica` local | a credencial é global e não tem escola; devolve só o id |
+| Ler a escola e a conta de um usuário pelo id (`escolaDoUsuarioParaOperador`), só no `ops:redefinir-mfa` | rotina do operador: o comando recebe só o `usuarioId` do pedido formal, e a escola que vira o contexto vem do banco, nunca do argumento; devolve escola, conta e se está ativo, nunca o nome (6.0) |
 | Escrever na conta, por `conta_id` já verificado: senha no aceite do convite, configurar e ativar MFA, `mfa_ultimo_passo`, consumir código de recuperação, redefinir MFA, limpeza da conta | a credencial é global; o `conta_id` vem do desafio ou da sessão verificados, nunca do cliente |
 
-O item 9 fala em três exceções por módulo, e aqui são dezesseis métodos. O motivo: essa classe é a
+O item 9 fala em três exceções por módulo, e aqui são mais de dez métodos (13 depois da 6.0; a contagem cresce com as tarefas, e a lista que vale é a própria classe, com uma justificativa em cada `@SemEscopo`). O motivo: essa classe é a
 própria fronteira da resolução de tenant, a única do sistema, e há teste de que só o módulo
 `sessao` a importa. Fora dela, `@SemEscopo` só aparece em `sistema.expurgar-acesso`
 (`retencao`, como no F0) e no `RedeEEscolaRepository` do `ops:escola`, com dois métodos (criar rede,
@@ -391,7 +392,7 @@ migram na mesma tarefa, e o helper cria a escola antes do job, por causa da FK.
 | Regra | Como é atendida | Desvio e justificativa |
 |---|---|---|
 | 00 | controller fino, porta externa, `oidc-falso` no compose | — |
-| 10 | seção 6, FKs compostas, contexto de escola sem usuário | `conta` sem escola; dezesseis métodos `@SemEscopo` na fronteira de resolução; `registro_acesso` com escola nula na falha por e-mail |
+| 10 | seção 6, FKs compostas, contexto de escola sem usuário | `conta` sem escola; os métodos `@SemEscopo` da fronteira de resolução (13 depois da 6.0); `registro_acesso` com escola nula na falha por e-mail |
 | 20 | aluno sem e-mail; claims descartadas; registro de acesso; auditoria fechada; expurgo | — |
 | 40, 50, 60 | seções 9 e 10; token em memória; vínculo só confirmado | — |
 | 80 | guardas em ordem; baldes por escola; 503 no lugar de logout; cenário | sessão no Postgres, e não no Redis (item 5): o Redis de cache é `allkeys-lru` e expulsaria sessão no meio da aula |

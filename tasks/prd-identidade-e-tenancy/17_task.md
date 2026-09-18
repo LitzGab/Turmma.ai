@@ -55,6 +55,11 @@ apagados no prazo da retenção por uma rotina noturna idempotente.
   - **Idempotência:** rodar de novo não apaga nada além do prazo (D49).
   - **Escopo:** repository em `retencao`, com `@SemEscopo` justificado, como o expurgo de jobs do F0. É a única exceção fora do `ResolucaoDeTenantRepository` (Tech Spec seção 6).
 - [ ] 17.3 — Testes, com relógio injetado nos limites de prazo.
+- [ ] 17.4 — Redefinir o MFA encerra as sessões abertas da conta (decidido em 18/09/2026, a partir da revisão da 6.0).
+  - **Por quê:** a redefinição existe sobretudo para "perdi o celular" e "suspeita de acesso indevido". Nos dois casos, uma sessão aberta em aparelho perdido ou por quem invadiu continua valendo até vencer, e a redefinição sem encerrar não protege nada. A 6.0 implementou a redefinição (`apps/api/src/sessao/redefinicao-de-mfa.ts`, rota da coordenação e `ops:redefinir-mfa`) sem encerrar sessão, porque a tarefa e a Tech Spec não pediam.
+  - **O que fazer:** na mesma transação da redefinição, encerrar todas as sessões ativas da conta, em todas as escolas dela, com motivo próprio (ex.: `mfa_redefinido`), pelo mesmo caminho que a 17.1 usa para encerrar sessão na desativação. A requisição seguinte com a sessão encerrada dá 401, como em toda sessão encerrada (2.0).
+  - **Escopo:** a conta é global; encerrar em outras escolas da mesma conta segue a regra da 6.0 para a redefinição (só age quando todos os usuários ativos da conta são da escola que pediu, ou pelo operador). Nada de dado de outra escola aparece na resposta nem na auditoria da escola que pediu.
+  - **Tech Spec:** acrescentar o encerramento na seção 5 (MFA, redefinição).
 
 ## Arquivos previstos
 
@@ -81,6 +86,8 @@ apagados no prazo da retenção por uma rotina noturna idempotente.
 | borda: limites do expurgo com relógio injetado: registro de acesso com 6 meses menos 1 dia fica e com 6 meses mais 1 dia sai; sessão com 29 e 31 dias; sessão só expirada, sem `encerrada_em`, também sai; convite usado, revogado e expirado | integração | quebra se o `coalesce` ou o prazo estiverem errados |
 | concorrência: `sistema.expurgar-acesso` rodando duas vezes em paralelo termina sem erro e com o mesmo resultado | integração | D49: reexecução não quebra nem duplica efeito |
 | permissão: o processador não apaga sessão viva nem registro dentro do prazo de nenhuma escola | integração | `@SemEscopo` com critério de prazo, e não varredura cega |
+| caminho feliz: coordenador com sessão aberta tem o MFA redefinido pela coordenação e pelo operador, e a requisição seguinte com aquela sessão dá 401 | integração | 17.4: a redefinição tira do ar quem estava com a sessão aberta |
+| isolamento: redefinir o MFA de um usuário de A não encerra nem revela sessão de usuário de B | isolamento | 17.4: o encerramento não atravessa escola |
 
 ## Critério de conclusão
 
