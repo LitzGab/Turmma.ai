@@ -94,6 +94,7 @@
   - [ ] 15.2 Limite por IP em `/v1/sessao/email` com rebaixamento e multiplicador de `rede.ips_saida`
   - [ ] 15.3 Seguro em memória com o Redis de fila fora; métricas e alertas `login-rebaixado-por-escola` e `login-email-limite-ip` com runbook
   - [ ] 15.4 Testes: métrica só em A, erros legítimos sem rebaixar, rede com três escolas, Redis fora, cookie com chave antiga
+  - [ ] 15.5 Redis de fila travado no login: aviso e métrica do desafio recusado, teste com `CLIENT PAUSE`, prazo de teste do cliente de login, nota em `docs/infra.md`
 
 - [ ] **16.0 — Cenário de carga "login às 7h30"**
   - [ ] 16.1 `infra/k6/login-7h30.js` e script, com as fases da Tech Spec 7c

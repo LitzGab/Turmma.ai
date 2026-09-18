@@ -62,6 +62,11 @@ Redis de fila fora, métricas e dois alertas com runbook funcionam.
   - **Runbook:** entrada em `docs/runbook.md` para cada um (o que olhar: IP e escola na métrica, se é dentro ou fora da rede da escola; o que fazer: avisar a escola, cadastrar `ips_saida` quando é rede, nunca bloquear o IP da escola).
   - **Ensaio:** `ensaio:alertas` provoca os dois.
 - [ ] 15.4 — Testes (tabela abaixo).
+- [ ] 15.5 — Redis de fila travado no login (decidido em 18/09/2026, das revisões da correção `2026-09-18-contador-testado-com-o-prazo-de-producao`).
+  - **Desafio recusado sem rastro:** o `catch` de `ConsumoDeDesafio.consumir` (`apps/api/src/sessao/desafio.ts`) recusa com 401 quando o Redis de fila não responde em 100 ms, sem log nem métrica: o coordenador com MFA cai para o login e ninguém vê a causa. Emitir, com espaçamento e só com ids, um aviso (ex.: `login.desafio_sem_redis`) e somá-lo ao sinal de seguro ativo, com a linha no runbook.
+  - **Redis travado sem teste:** o ramo `catch` de `ContadorDeTentativas.reservar` (conectado, sem responder: cai no seguro e pode contar em dobro, para o lado de segurar) e o do desafio não têm teste. Provar os dois com `CLIENT PAUSE`, como em `uso.int.test.ts`.
+  - **Prazo do cliente de login nos testes que sobem a API inteira:** `login-email`, `mfa`, `convite`, uso e limite usam o cliente de 100 ms pela montagem de produção, e no runner carregado uma resposta lenta vira reserva no seguro ou desafio recusado (vermelho falso). Dar ao teste um prazo maior por **opção de montagem** (`AppModule.com(config, { ... })`), que o `main.ts` não passa, e nunca por variável de ambiente que a produção leia. Os testes que provam o corte (`limite.int.test.ts`, "Redis fora" do desafio) continuam com os 100 ms fixados.
+  - **`docs/infra.md`:** registrar que o contador e o desafio dividem o Redis de fila com o BullMQ, e que um `addBulk` grande ou script de fila longo às 7h30 é o que faria os 100 ms cortarem — reforça lote fora do horário letivo.
 
 ## Arquivos previstos
 
