@@ -168,6 +168,21 @@ export const ACOES_DE_AUDITORIA = {
     finalidade: null,
   },
   /**
+   * A coordenação encerrou o ano letivo, e a virada aconteceu na mesma transação (10.0, RF16): os vínculos do ano que
+   * não estavam encerrados foram a `encerrado` por `fim_do_ano`, e o texto livre das contestações do ano foi apagado
+   * (`docs/lgpd.md`, retenção até o fim do ano letivo). `entidadeId` é o ano. Só as contagens: nunca quem, nunca o texto.
+   */
+  'ano_letivo.encerrado': {
+    entidade: 'ano_letivo',
+    antes: z.strictObject({ situacao: z.literal('em_curso') }),
+    depois: z.strictObject({
+      situacao: z.literal('encerrado'),
+      vinculosEncerrados: z.number().int().nonnegative(),
+      textosDeContestacaoApagados: z.number().int().nonnegative(),
+    }),
+    finalidade: null,
+  },
+  /**
    * A coordenação leu a lista de alunos de uma turma (9.0; regra 20, item 10), com a finalidade. `entidadeId` é a
    * turma; `quantidade`, quantos alunos a página trouxe. Nunca quem.
    */

@@ -1,6 +1,6 @@
 import { anoLetivo, exigirAnoEmCurso, exigirEscolaDoContexto, serie, sessaoDaRequisicao, turma, usuario, vinculo, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { AlunoDaTurma, ConsultaPaginada, RespostaTurmaAberta, Turma, Turno } from '@educa/shared'
-import { and, asc, eq, exists, gt, isNull } from 'drizzle-orm'
+import { and, asc, eq, exists, gt, isNotNull, isNull, or, type SQL } from 'drizzle-orm'
 
 export interface NovaTurma {
   readonly serieId: string
@@ -67,28 +67,52 @@ export class TurmaRepository {
   }
 
   /**
-   * A turma do ano em curso com esse id, se quem pede a alcança; senão, nada, e o service responde como inexistente
+   * A turma com esse id no ano da leitura, se quem pede a alcança; senão, nada, e o service responde como inexistente
    * (regra 10, itens 4 e 6).
    *
-   * Com `turma_vinculada`, a turma só aparece se existir vínculo de professor `confirmado` do usuário do contexto nela,
-   * lido a cada requisição, sem cache: pendente, contestado ou encerrado não dão acesso, e o encerramento corta já na
-   * requisição seguinte (RF5). O vínculo é da turma (mesma escola e mesmo ano, pela correlação), e o usuário vem do
-   * contexto, nunca de argumento.
+   * - Sem `anoEncerrado`, o ano da leitura é o em curso do contexto.
+   * - Com `anoEncerrado` (o `?anoLetivoId` do cliente, 10.0, RF16), a turma precisa ser desse ano, e o ano precisa ser
+   *   da escola do contexto e estar `encerrado`. O ano em curso, o planejado, o de outra escola e o inexistente não
+   *   acham nada. O filtro vem do cliente e só restringe: a escola continua vindo do contexto.
+   *
+   * Com `turma_vinculada`, a turma só aparece se existir vínculo de professor do usuário do contexto nela, lido a cada
+   * requisição, sem cache (RF5): no ano em curso, `confirmado`; no ano encerrado, também o que chegou confirmado ao fim
+   * do ano (`#confirmadoAteOFimDoAno`). O vínculo é da turma (mesma escola e mesmo ano, pela correlação), e o usuário vem
+   * do contexto, nunca de argumento.
    */
-  async aberta(id: string, alcance: AlcanceDaTurma): Promise<RespostaTurmaAberta | undefined> {
-    const escolaId = exigirEscolaDoContexto()
-    const anoLetivoId = exigirAnoEmCurso()
+  async aberta(id: string, alcance: AlcanceDaTurma, anoEncerrado?: string): Promise<RespostaTurmaAberta | undefined> {
     const [linha] = await this.banco
       .select({ id: turma.id, nome: turma.nome, serieId: serie.id, etapa: serie.etapa, ano: serie.ano })
       .from(turma)
       .innerJoin(serie, and(eq(serie.escolaId, turma.escolaId), eq(serie.id, turma.serieId)))
-      .where(and(eq(turma.escolaId, escolaId), eq(turma.anoLetivoId, anoLetivoId), eq(turma.id, id), alcance === 'unidade' ? undefined : this.#comVinculoConfirmado()))
+      .where(
+        and(
+          eq(turma.escolaId, exigirEscolaDoContexto()),
+          this.#doAnoDaLeitura(anoEncerrado),
+          eq(turma.id, id),
+          alcance === 'unidade' ? undefined : this.#comVinculoDoProfessor(anoEncerrado),
+        ),
+      )
     if (linha === undefined) return undefined
     const { serieId, etapa, ano, ...resto } = linha
     return { ...resto, serie: { id: serieId, etapa, ano } }
   }
 
-  #comVinculoConfirmado() {
+  /** A turma do ano em curso, ou do ano pedido, se ele for da escola da turma e estiver `encerrado`. */
+  #doAnoDaLeitura(anoEncerrado: string | undefined): SQL | undefined {
+    if (anoEncerrado === undefined) return eq(turma.anoLetivoId, exigirAnoEmCurso())
+    return and(
+      eq(turma.anoLetivoId, anoEncerrado),
+      exists(
+        this.banco
+          .select({ um: anoLetivo.id })
+          .from(anoLetivo)
+          .where(and(eq(anoLetivo.escolaId, turma.escolaId), eq(anoLetivo.id, turma.anoLetivoId), eq(anoLetivo.situacao, 'encerrado'))),
+      ),
+    )
+  }
+
+  #comVinculoDoProfessor(anoEncerrado: string | undefined) {
     const { usuarioId } = sessaoDaRequisicao()
     return exists(
       this.banco
@@ -101,18 +125,32 @@ export class TurmaRepository {
             eq(vinculo.turmaId, turma.id),
             eq(vinculo.usuarioId, usuarioId),
             eq(vinculo.papel, 'professor'),
-            eq(vinculo.estado, 'confirmado'),
+            anoEncerrado === undefined ? eq(vinculo.estado, 'confirmado') : TurmaRepository.#confirmadoAteOFimDoAno(),
           ),
         ),
     )
   }
 
   /**
-   * Uma página dos alunos da turma no ano em curso: quem tem vínculo de aluno `confirmado` nela e está ativo, em ordem de
-   * `usuarioId`, com uma linha a mais que diz se há próxima. Só id e nome (regra 20, item 4). Não confere quem pede:
-   * o service chama depois de `aberta`.
+   * O vínculo que valia quando o ano acabou: `confirmado`, ou encerrado pela virada (`fim_do_ano`) depois de ter sido
+   * confirmado. A virada leva também o pendente e o contestado a `fim_do_ano`, e eles nunca deram acesso: o pendente
+   * não tem `decidido_em`, e o contestado guarda o código da contestação (confirmar apaga o código). Encerrado por
+   * `desligamento` ou `realocacao` não vale: quem saiu não lê (RF16).
    */
-  alunos(turmaId: string, { pagina, limite }: ConsultaPaginada): Promise<AlunoDaTurma[]> {
+  static #confirmadoAteOFimDoAno(): SQL | undefined {
+    return or(
+      eq(vinculo.estado, 'confirmado'),
+      and(eq(vinculo.estado, 'encerrado'), eq(vinculo.motivoEncerramento, 'fim_do_ano'), isNotNull(vinculo.decididoEm), isNull(vinculo.contestacao)),
+    )
+  }
+
+  /**
+   * Uma página dos alunos da turma no ano da leitura (o em curso, ou o `anoEncerrado` que `aberta` já conferiu): quem
+   * tem vínculo de aluno válido nela e está ativo, em ordem de `usuarioId`, com uma linha a mais que diz se há próxima.
+   * Só id e nome (regra 20, item 4). No ano em curso, o vínculo `confirmado`; no encerrado, o que chegou confirmado ao
+   * fim do ano, e não o transferido no meio dele. Não confere quem pede: o service chama depois de `aberta`.
+   */
+  alunos(turmaId: string, { pagina, limite }: ConsultaPaginada, anoEncerrado?: string): Promise<AlunoDaTurma[]> {
     return this.banco
       .selectDistinct({ usuarioId: usuario.id, nome: usuario.nome })
       .from(vinculo)
@@ -120,10 +158,10 @@ export class TurmaRepository {
       .where(
         and(
           eq(vinculo.escolaId, exigirEscolaDoContexto()),
-          eq(vinculo.anoLetivoId, exigirAnoEmCurso()),
+          eq(vinculo.anoLetivoId, anoEncerrado ?? exigirAnoEmCurso()),
           eq(vinculo.turmaId, turmaId),
           eq(vinculo.papel, 'aluno'),
-          eq(vinculo.estado, 'confirmado'),
+          anoEncerrado === undefined ? eq(vinculo.estado, 'confirmado') : TurmaRepository.#confirmadoAteOFimDoAno(),
           isNull(usuario.desativadoEm),
           pagina === undefined ? undefined : gt(usuario.id, pagina),
         ),

@@ -8,6 +8,7 @@ import {
   esquemaRespostaTurmaAberta,
   type ConsultaAlunosDaTurma,
   type ConsultaPaginada,
+  type ConsultaTurma,
   type PedidoCriarTurma,
   type RespostaAlunosDaTurma,
   type RespostaListaDeTurmas,
@@ -66,9 +67,13 @@ export class TurmaService {
    * `GET /v1/turmas/:id` (RF5, RF15): a coordenação abre qualquer turma do ano em curso da escola; o professor, só a
    * turma em que tem vínculo `confirmado`. Pendente, contestado, encerrado, turma de outra escola ou inexistente: o
    * mesmo `NAO_ENCONTRADO`.
+   *
+   * Com `?anoLetivoId` (10.0, RF16), a leitura é de um ano `encerrado` da escola, só leitura: a coordenação abre sem
+   * vínculo; o professor, só a turma em que o vínculo chegou confirmado ao fim do ano (nem `desligamento`, nem
+   * `realocacao`, nem outra turma do mesmo ano). O ano em curso, de outra escola ou inexistente: o mesmo 404.
    */
-  async abrir(id: string): Promise<RespostaTurmaAberta> {
-    const aberta = await new TurmaRepository(this.banco).aberta(id, alcanceDaTurma('turma'))
+  async abrir(id: string, { anoLetivoId }: ConsultaTurma): Promise<RespostaTurmaAberta> {
+    const aberta = await new TurmaRepository(this.banco).aberta(id, alcanceDaTurma('turma'), anoLetivoId?.toLowerCase())
     if (aberta === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
     return esquemaRespostaTurmaAberta.parse(aberta)
   }
@@ -80,16 +85,20 @@ export class TurmaService {
    * A coordenação (`nominal_auditado`) é obrigada a dizer a finalidade, e a leitura grava `turma.alunos_lidos` na mesma
    * transação: sem registro, sem lista. A finalidade é conferida antes de procurar a turma, então a falta dela responde
    * igual para qualquer id. O professor com vínculo confirmado lê a própria turma sem finalidade e sem registro.
+   *
+   * Com `?anoLetivoId`, as mesmas condições de `abrir` para o ano encerrado, e a mesma finalidade e auditoria para a
+   * coordenação.
    */
   async alunos(id: string, consulta: ConsultaAlunosDaTurma): Promise<RespostaAlunosDaTurma> {
     const nominalAuditado = alcanceDe(sessaoDaRequisicao().papel, 'aluno_da_turma', 'ler') === 'nominal_auditado'
     const { finalidade } = consulta
     if (nominalAuditado && finalidade === undefined) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
     const alcance = alcanceDaTurma('aluno_da_turma')
+    const anoEncerrado = consulta.anoLetivoId?.toLowerCase()
     const pagina = await this.banco.transaction(async (tx) => {
       const turmas = new TurmaRepository(tx)
-      if ((await turmas.aberta(id, alcance)) === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-      const cortada = paginarPor(await turmas.alunos(id, consulta), consulta.limite, (aluno) => aluno.usuarioId)
+      if ((await turmas.aberta(id, alcance, anoEncerrado)) === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      const cortada = paginarPor(await turmas.alunos(id, consulta, anoEncerrado), consulta.limite, (aluno) => aluno.usuarioId)
       if (nominalAuditado && finalidade !== undefined) {
         await registro.gravar(tx, 'turma.alunos_lidos', { entidadeId: id, depois: { quantidade: cortada.itens.length }, finalidade })
       }

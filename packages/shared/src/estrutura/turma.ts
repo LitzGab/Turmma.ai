@@ -64,8 +64,21 @@ export type RespostaTurmaAberta = z.infer<typeof esquemaRespostaTurmaAberta>
 export const FINALIDADES_DA_LEITURA_DE_ALUNOS = ['acompanhamento_pedagogico', 'atendimento_a_familia', 'conferencia_de_cadastro'] as const
 export type FinalidadeDaLeituraDeAlunos = (typeof FINALIDADES_DA_LEITURA_DE_ALUNOS)[number]
 
-/** Consulta de `GET /v1/turmas/:id/alunos`: a página e a finalidade, que a coordenação é obrigada a mandar. */
-export const esquemaConsultaAlunosDaTurma = esquemaConsultaPaginada.extend({ finalidade: z.enum(FINALIDADES_DA_LEITURA_DE_ALUNOS).optional() }).strict()
+/**
+ * `?anoLetivoId` de `GET /v1/turmas/:id` e `/alunos` (10.0, RF16): só filtro de leitura, e só de um ano `encerrado` da
+ * escola da sessão. Sem ele, a leitura é do ano em curso. O ano de outra escola, o ainda em curso, o planejado e o
+ * inexistente respondem como a turma inexistente (regra 10, itens 3 e 6). Nenhuma rota de escrita o aceita.
+ */
+const campoAnoDaLeitura = { anoLetivoId: z.uuid().optional() }
+
+/** Consulta de `GET /v1/turmas/:id`: só o ano encerrado que se quer ler, se houver. */
+export const esquemaConsultaTurma = z.object(campoAnoDaLeitura).strict()
+export type ConsultaTurma = z.infer<typeof esquemaConsultaTurma>
+
+/** Consulta de `GET /v1/turmas/:id/alunos`: a página, a finalidade, que a coordenação é obrigada a mandar, e o ano encerrado, se houver. */
+export const esquemaConsultaAlunosDaTurma = esquemaConsultaPaginada
+  .extend({ finalidade: z.enum(FINALIDADES_DA_LEITURA_DE_ALUNOS).optional(), ...campoAnoDaLeitura })
+  .strict()
 export type ConsultaAlunosDaTurma = z.infer<typeof esquemaConsultaAlunosDaTurma>
 
 /** Um aluno da turma: o id e o nome, e nada mais (regra 20, item 4). */

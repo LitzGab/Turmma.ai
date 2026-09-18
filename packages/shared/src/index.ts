@@ -92,6 +92,7 @@ export type { AreaDoConhecimento, Disciplina, PedidoCriarDisciplina, RespostaDis
 export {
   esquemaAlunoDaTurma,
   esquemaConsultaAlunosDaTurma,
+  esquemaConsultaTurma,
   esquemaPedidoCriarTurma,
   esquemaRespostaAlunosDaTurma,
   esquemaRespostaListaDeTurmas,
@@ -105,6 +106,7 @@ export {
 export type {
   AlunoDaTurma,
   ConsultaAlunosDaTurma,
+  ConsultaTurma,
   FinalidadeDaLeituraDeAlunos,
   PedidoCriarTurma,
   RespostaAlunosDaTurma,

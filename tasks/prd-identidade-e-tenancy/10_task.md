@@ -37,13 +37,13 @@ e quem saiu não lê nada.
 
 ## Subtarefas
 
-- [ ] 10.1 — Virada
+- [x] 10.1 — Virada
   - `POST /v1/anos-letivos/:id/encerrar` passa a rodar numa transação só: situação
     `encerrado`; vínculos do ano que não estavam encerrados vão a `encerrado` com
     `motivo_encerramento = fim_do_ano` e `encerrado_em`; `complemento` apagado em todos os
     vínculos do ano; auditoria da virada com contagens, sem `complemento`
   - se a versão do cache de sessão por escola já existir (seção 13 da Tech Spec), avança
-- [ ] 10.2 — Leitura do ano encerrado
+- [x] 10.2 — Leitura do ano encerrado
   - `?anoLetivoId` aceito só em `GET /v1/turmas/:id` e `/alunos`, e só se o ano é da escola do
     contexto e está `encerrado`
   - coordenação lê sem vínculo, com a mesma finalidade e auditoria de `/alunos` da 9.0
@@ -51,10 +51,10 @@ e quem saiu não lê nada.
     `encerrado` com `fim_do_ano`; `desligamento` e `realocacao` não valem
   - qualquer outro caso, e toda rota de escrita que recebesse `anoLetivoId`, responde
     `NAO_ENCONTRADO`
-- [ ] 10.3 — Testes (tabela abaixo)
+- [x] 10.3 — Testes (tabela abaixo)
 
 
-- [ ] 10.4 — `GET /v1/vinculos` lista só vínculo de professor (decidido em 18/09/2026, da revisão da 9.0).
+- [x] 10.4 — `GET /v1/vinculos` lista só vínculo de professor (decidido em 18/09/2026, da revisão da 9.0).
   - **Por quê:** a lista da coordenação traz hoje também os vínculos de aluno que vêm do seed, com o `usuarioId` do aluno. A coordenação corrige alocação de professor por essa lista; vínculo de aluno não é assunto dela ali, e no F2 eles chegam em volume. O `privacy-guardian` pediu o filtro antes disso.
   - **O que fazer:** filtrar `papel = 'professor'` no repository da listagem, com teste que semeia vínculo de aluno e de professor na mesma turma e confere que só o de professor volta. Vínculo de aluno por id continua 404 nas rotas da coordenação sobre vínculo.
   - **Complemento:** o teste da 10.1 que confere o `complemento` apagado na virada precisa ler a coluna no banco, e não só a resposta da API.
@@ -100,5 +100,57 @@ e quem saiu não lê nada.
 - Desativação de usuário e eliminação por escola: 17.0
 - Cache de sessão por escola: só se a 16.0 mostrar a necessidade (seção 13 da Tech Spec)
 
+## Notas da implementação
+
+Leituras que tomei onde a tarefa deixava margem, escolhendo a que protege a escola e o aluno:
+
+- **Virada numa transação só.** `encerrar` passa o ano a `encerrado` (`update` condicional, como na 8.0) e, só quando a
+  transição aconteceu nesta chamada, roda `VinculoRepository.virarAno` e grava `ano_letivo.encerrado`, tudo em `tx`. O
+  segundo clique, também em paralelo, relê o ano e responde como está, sem virada nem auditoria. A auditoria leva só
+  `situacao`, `vinculosEncerrados` e `textosDeContestacaoApagados` (o nome não pode conter `complemento`, que é campo
+  proibido). O vínculo encerrado antes (`desligamento`, `realocacao`) mantém motivo e data, e perde só o texto.
+- **O ano da virada** é o que o `AnoLetivoRepository` acabou de encerrar com a escola do contexto, não o
+  `exigirAnoEmCurso()`: numa corrida com outro encerrar e abrir, o ano em curso lido pela guarda pode não ser o que
+  mudou. A escola continua vindo do contexto em `virarAno`; o teste com contexto forjado prova que o ano de B num
+  contexto de A não muda nada.
+- **`fim_do_ano` só abre o histórico se o vínculo tinha sido confirmado.** A tarefa manda a virada levar pendente e
+  contestado a `fim_do_ano`, e a Tech Spec dá acesso a `fim_do_ano`; lido ao pé da letra, o professor que contestou
+  ("não leciono") ou nunca respondeu passaria a ler os alunos da turma em janeiro (contra RF5 e regra 60, item 8a).
+  Vale o `fim_do_ano` com `decidido_em` e sem código de contestação (confirmar apaga o código). O mesmo critério escolhe
+  os alunos da lista do ano encerrado: quem chegou confirmado ao fim do ano, e não o transferido em maio. Tech Spec,
+  seção 5, "Histórico", atualizada.
+- **O código da contestação fica; o `complemento` sai.** O código é enum, já está na auditoria `vinculo.contestado` e é
+  o que separa o contestado do confirmado depois da virada. `docs/lgpd.md` atualizado na linha do motivo de
+  contestação.
+- **Escrita com `anoLetivoId`.** A única rota de escrita que recebe o campo é `POST /v1/turmas`, que já respondia 404
+  para ano que não é o em curso (8.0). As demais não o aceitam: no corpo de `POST /v1/vinculos` ele é campo a mais
+  (`ENTRADA_INVALIDA`, igual para qualquer valor, sem revelar nada), e na query das rotas de vínculo é ignorado; o
+  vínculo e a turma de 2026 não são do ano em curso, e a resposta é 404. O teste cobre cada uma.
+- **`GET /v1/turmas/:id` passa a ler a query** com esquema estrito (`?anoLetivoId` e nada mais).
+- **10.4.** O filtro `papel = 'professor'` entrou no escopo comum do `VinculoRepository`: a listagem da coordenação, o
+  `porId` e o `travar`/`encerrar` por id tratam só vínculo de professor, e o de aluno responde como inexistente. A
+  virada tem o próprio filtro, sem papel, porque encerra também o vínculo de aluno.
+- **Cache de sessão por escola** (seção 13): não existe; a 16.0 não o criou. O comentário do `AnoLetivoService` marca o
+  ponto onde a versão avança quando existir.
+- **Mutações conferidas à mão** (cada uma deixou pelo menos um teste vermelho): tirar o papel do escopo do vínculo; a
+  escola de `virarAno`; `decidido_em` ou o código de contestação do critério do histórico; `turma.ano_letivo_id =
+  anoLetivoId`; a situação `encerrado`; a escola de `aberta`; e rodar `virarAno` fora da transação.
+- **Arquivos fora da lista prevista:** `turma.service.ts`, `vinculo.int.test.ts` (10.4), `packages/shared/src/index.ts`,
+  `docs/lgpd.md` e `techspec.md`.
+
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-18 11:06:43 | 2026-09-18 11:08:02 | `test-engineer` | 1 | REPROVADO | ac7a7776791688c25 |
+| 2026-09-18 11:22:50 | 2026-09-18 11:23:27 | `test-engineer` | 2 | APROVADO | a3ade29c7846453a9 |
+| 2026-09-18 11:33:11 | 2026-09-18 11:33:47 | `tenancy-guardian` | 1 | APROVADO | a3e755e8d4ecc894f |
+| 2026-09-18 11:33:16 | 2026-09-18 11:34:01 | `privacy-guardian` | 1 | APROVADO | aa1f37659fcc71dd8 |
+| 2026-09-18 11:33:06 | 2026-09-18 11:34:03 | `revisor-geral` | 1 | APROVADO | aca7472a151f15d97 |

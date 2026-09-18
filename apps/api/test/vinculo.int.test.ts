@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
 import { chamar, subirApi, type ApiDeTeste, type RespostaHttp } from './api-com-sessao.js'
-import { montarEscolaComTurma, type EscolaComTurma } from './escola-com-turma.js'
+import { alunosNaTurma, montarEscolaComTurma, type EscolaComTurma } from './escola-com-turma.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
@@ -326,6 +326,30 @@ describe('vínculo: a coordenação cria, o professor confirma ou contesta, a co
       const segunda = await get(escola.coordenacao, `/v1/vinculos?limite=2&pagina=${String(primeira.corpo['proxima'])}`)
       expect(segunda.corpo).toEqual({ itens: [expect.objectContaining({ id: ids[2] })] })
       expect((await get(escola.coordenacao, '/v1/vinculos?estado=nenhum')).status).toBe(400)
+    })
+
+    it('`GET /v1/vinculos` traz só vínculo de professor; o de aluno da mesma turma não aparece e, por id, é o 404 do inexistente (10.4)', async () => {
+      const escola = await montarEscolaComTurma(api, bancada)
+      const [aluno] = await alunosNaTurma(bancada, escola, escola.turma, 1)
+      const professor = await professorDe(escola)
+      const doProfessor = await vincular(escola, professor, escola.quimica)
+      expect((await post(professor, `/v1/vinculos/${doProfessor}/confirmar`)).status).toBe(200)
+      const { rows } = await bancada.pool.query<{ id: string }>("select id from vinculo where usuario_id = $1 and papel = 'aluno'", [aluno])
+      const doAluno = rows[0]?.id ?? ''
+      expect(doAluno).toMatch(UUID)
+
+      for (const consulta of ['', '?estado=confirmado']) {
+        const lista = await get(escola.coordenacao, `/v1/vinculos${consulta}`)
+        expect(lista.status).toBe(200)
+        expect((lista.corpo['itens'] as Array<{ id: string; usuarioId: string }>).map((item) => item.id), consulta).toEqual([doProfessor])
+        expect(JSON.stringify(lista.corpo)).not.toContain(aluno)
+      }
+      const statusECodigo = (resposta: RespostaHttp) => ({ status: resposta.status, codigo: resposta.corpo.erro?.codigo })
+      const encerrarDoAluno = await post(escola.coordenacao, `/v1/vinculos/${doAluno}/encerrar`, { motivo: 'realocacao' })
+      expect(statusECodigo(encerrarDoAluno)).toEqual({ status: 404, codigo: CodigoDeErro.NAO_ENCONTRADO })
+      expect(statusECodigo(encerrarDoAluno)).toEqual(statusECodigo(await post(escola.coordenacao, `/v1/vinculos/${randomUUID()}/encerrar`, { motivo: 'realocacao' })))
+      expect(await linhaDoVinculo(doAluno)).toEqual(expect.objectContaining({ estado: 'confirmado', motivo_encerramento: null }))
+      expect(await auditoriaDe(doAluno)).toEqual([])
     })
   })
 

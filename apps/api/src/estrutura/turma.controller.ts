@@ -2,6 +2,7 @@ import { ErroDeDominio, Permite } from '@educa/nucleo'
 import {
   CodigoDeErro,
   esquemaConsultaAlunosDaTurma,
+  esquemaConsultaTurma,
   esquemaPedidoCriarTurma,
   type RespostaAlunosDaTurma,
   type RespostaListaDeTurmas,
@@ -14,7 +15,8 @@ import { TurmaService } from './turma.service.js'
 
 /**
  * `/v1/turmas`: a coordenação cria e lista as turmas do ano letivo em curso da escola da sessão; a coordenação e o
- * professor com vínculo confirmado abrem uma turma e a lista de alunos dela.
+ * professor com vínculo confirmado abrem uma turma e a lista de alunos dela, do ano em curso ou, com `?anoLetivoId`, de
+ * um ano encerrado da escola, só em leitura (10.0, RF16).
  */
 @Controller('v1/turmas')
 export class TurmaController {
@@ -36,8 +38,9 @@ export class TurmaController {
 
   @Get(':id')
   @Permite('turma', 'ler')
-  abrir(@Param('id') id: string): Promise<RespostaTurmaAberta> {
-    return this.turmas.abrir(idDoCaminho(id))
+  abrir(@Param('id') id: string, @Query() consulta: unknown): Promise<RespostaTurmaAberta> {
+    const alvo = idDoCaminho(id)
+    return this.turmas.abrir(alvo, lerEntrada(esquemaConsultaTurma, consulta))
   }
 
   @Get(':id/alunos')

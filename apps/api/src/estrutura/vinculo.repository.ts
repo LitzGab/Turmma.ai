@@ -6,7 +6,7 @@ import type {
   MotivoDeEncerramentoDeVinculo,
   PapelDeVinculo,
 } from '@educa/shared'
-import { and, asc, eq, gt, inArray, isNull, ne, sql, type SQL } from 'drizzle-orm'
+import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql, type SQL } from 'drizzle-orm'
 
 export interface NovoVinculo {
   readonly usuarioId: string
@@ -155,8 +155,37 @@ export class VinculoRepository {
     return mudados.length === 1
   }
 
+  /**
+   * A virada do ano (10.0; Tech Spec, seção 5, "Vínculo"): os vínculos do ano, de professor e de aluno, que não estavam
+   * encerrados vão a `encerrado` por `fim_do_ano`; depois, o `complemento` sai de todo vínculo do ano, inclusive do
+   * encerrado antes por `desligamento` ou `realocacao`. Roda na transação do encerramento do ano, e devolve as contagens
+   * para a auditoria.
+   *
+   * O ano é o que o `AnoLetivoRepository` acabou de passar a `encerrado` na mesma transação, com a escola do contexto,
+   * nunca o id do cliente. A escola vem do contexto aqui também: um ano de outra escola não acha vínculo nenhum.
+   */
+  async virarAno(anoLetivoId: string): Promise<{ readonly vinculosEncerrados: number; readonly textosDeContestacaoApagados: number }> {
+    const doAno = and(eq(vinculo.escolaId, exigirEscolaDoContexto()), eq(vinculo.anoLetivoId, anoLetivoId))
+    const encerrados = await this.banco
+      .update(vinculo)
+      .set({ estado: 'encerrado', motivoEncerramento: 'fim_do_ano', encerradoEm: sql`now()` })
+      .where(and(doAno, ne(vinculo.estado, 'encerrado')))
+      .returning({ id: vinculo.id })
+    const apagados = await this.banco
+      .update(vinculo)
+      .set({ complemento: null })
+      .where(and(doAno, isNotNull(vinculo.complemento)))
+      .returning({ id: vinculo.id })
+    return { vinculosEncerrados: encerrados.length, textosDeContestacaoApagados: apagados.length }
+  }
+
+  /**
+   * Escola e ano do contexto, e só vínculo de professor: é o que a coordenação aloca e corrige, e o que o professor
+   * confirma. O vínculo de aluno (do seed no F1, da lista no F2) não aparece na lista da coordenação e responde como
+   * inexistente nas rotas de vínculo (10.4, decidido em 18/09/2026).
+   */
   #escopo(): SQL | undefined {
-    return and(eq(vinculo.escolaId, exigirEscolaDoContexto()), eq(vinculo.anoLetivoId, exigirAnoEmCurso()))
+    return and(eq(vinculo.escolaId, exigirEscolaDoContexto()), eq(vinculo.anoLetivoId, exigirAnoEmCurso()), eq(vinculo.papel, 'professor'))
   }
 
   #doUsuario(): SQL {

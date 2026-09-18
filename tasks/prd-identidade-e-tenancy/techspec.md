@@ -228,6 +228,15 @@ escreva nome de aluno". Ao encerrar o ano letivo, na mesma transação, os vínc
 **Histórico.** `anoLetivoId` só em leitura e só de ano `encerrado` da escola do contexto. A
 coordenação lê sem vínculo. O professor, ativo, precisa de vínculo com aquela turma naquele
 ano, `confirmado` ou `encerrado` por `fim_do_ano`. Qualquer outro caso é 404.
+- **O `fim_do_ano` precisa ter sido confirmado** (decidido na 10.0): a virada leva também o pendente e o contestado a
+  `fim_do_ano`, e eles nunca deram acesso. Vale o que tem `decidido_em` e não tem código de contestação (confirmar apaga
+  o código). O mesmo critério escolhe os alunos da lista do ano encerrado: quem chegou confirmado ao fim do ano, e não o
+  transferido no meio dele.
+- **A virada** apaga o `complemento`, texto livre, e mantém o código da contestação, que é enum, já está na auditoria
+  `vinculo.contestado` e é o que separa o contestado do confirmado. A auditoria `ano_letivo.encerrado` leva só as
+  contagens.
+- **Lista de vínculos da coordenação** (10.4): `GET /v1/vinculos` e as rotas de vínculo por id tratam só vínculo de
+  professor; o de aluno não aparece e, por id, responde como inexistente.
 
 **Convite.** `aceitar` é `update … where usado_em is null and revogado_em is null and
 expira_em > now()`.

@@ -62,11 +62,11 @@
   - [x] 9.2 `GET /v1/turmas/:id` e `/alunos` paginado, com `finalidade` e auditoria na leitura da coordenação
   - [x] 9.3 Testes: duas disciplinas na mesma turma, pendente e contestado sem acesso, encerrado corta, clique duplo, turma sem professor, isolamento
 
-- [ ] **10.0 — Virada do ano e leitura do ano encerrado**
-  - [ ] 10.1 Encerrar o ano leva os vínculos a `fim_do_ano` e apaga o `complemento`, na mesma transação
-  - [ ] 10.2 `?anoLetivoId` só em leitura, com as condições de coordenação e professor
-  - [ ] 10.3 Testes: falha no meio desfaz, `fim_do_ano` lê e não edita, `desligamento` dá 404, id de B dá 404
-  - [ ] 10.4 `GET /v1/vinculos` lista só vínculo de professor, com teste
+- [x] **10.0 — Virada do ano e leitura do ano encerrado**
+  - [x] 10.1 Encerrar o ano leva os vínculos a `fim_do_ano` e apaga o `complemento`, na mesma transação
+  - [x] 10.2 `?anoLetivoId` só em leitura, com as condições de coordenação e professor
+  - [x] 10.3 Testes: falha no meio desfaz, `fim_do_ano` lê e não edita, `desligamento` dá 404, id de B dá 404
+  - [x] 10.4 `GET /v1/vinculos` lista só vínculo de professor, com teste
 
 - [ ] **11.0 — Aluno entra pelo endereço da escola com matrícula**
   - [ ] 11.1 Migration de `credencial_matricula`; `GET /v1/escolas/:slug/acesso` e `POST /v1/sessao/matricula` no contexto de escola sem usuário
