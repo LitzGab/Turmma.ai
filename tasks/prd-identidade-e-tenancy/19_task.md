@@ -39,6 +39,7 @@ aceita o convite sem que o token fique na URL. Tudo funciona no Chromebook e no 
   - convite e `ops:convite-coordenador` (7.0);
   - matrícula e `/acesso` (11.0);
   - `oidc-falso` no compose e na esteira, com o cookie `educa_oidc` (13.0).
+  - **Atenção (revisão da 13.0):** no compose completo, o endereço de login que o `oidc-falso` devolve é `http://oidc-falso:8080`, que o navegador do Playwright, na máquina, não alcança. Antes do e2e do botão da conta da escola, fazer o emissor anunciar um endereço que o navegador e a API alcancem juntos (porta publicada no host e `issuer` configurado para ela, ou o e2e resolvendo o nome), sem mudar o que a API valida.
 
 ## Subtarefas
 
