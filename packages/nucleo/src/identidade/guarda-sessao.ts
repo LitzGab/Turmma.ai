@@ -4,10 +4,10 @@ import type { Reflector } from '@nestjs/core'
 import type { Histogram, Meter } from '@opentelemetry/api'
 import { definirSessaoNoContexto } from '../contexto/contexto.js'
 import { ErroDeDominio, TENTE_DE_NOVO_PADRAO_SEGUNDOS } from '../erro/erro-de-dominio.js'
-import { METADADO_ROTA_ANONIMA } from '../limite/rota-anonima.decorator.js'
 import { avisoEspacado } from '../log/aviso-espacado.js'
 import { LIMITES_DO_HISTOGRAMA_HTTP_S, METRICAS } from '../telemetria/metricas.js'
 import { avaliarSessao, tokenDaUltimaRenovacao } from './avaliar-sessao.js'
+import { rotaSemSessao } from './rota-sem-sessao.js'
 import type { LinhaDaSessao } from './sessao.repository.js'
 import { tokenDaRequisicao } from './token-da-requisicao.js'
 import type { TokenVerificado } from './verificar-token.js'
@@ -60,8 +60,7 @@ export class GuardaDeSessao implements CanActivate {
   }
 
   async canActivate(execucao: ExecutionContext): Promise<boolean> {
-    const anonima = this.reflector.getAllAndOverride<boolean | undefined>(METADADO_ROTA_ANONIMA, [execucao.getHandler(), execucao.getClass()])
-    if (anonima === true) return true
+    if (rotaSemSessao(this.reflector, execucao)) return true
     if (execucao.getType() !== 'http') throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
 
     // Sem token verificado nesta requisição (guarda fora de ordem), falha fechada.

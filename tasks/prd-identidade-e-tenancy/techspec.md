@@ -113,6 +113,8 @@ entra numa migration de deploy posterior, fora do horário letivo, depois de con
 Envelope de erro do F0. As rotas anônimas levam `@RotaAnonima`.
 
 **Desafio.** JWT de 5 min com `typ: desafio+jwt`, `aud: sessao`, `jti`, `conta_id` ou `usuario_id`, escola, etapa e `mfa_cumprido`.
+- No `mfa` da escolha ou da troca de escola com destino coordenador, leva também o `usuario_id` do destino e, na troca, `origem_esc` e `origem_sid`: a origem só é encerrada quando o código é aceito (12.0).
+- `POST /v1/sessao/escola` leva `@AceitaDesafio`: só nela, e só com `typ: desafio+jwt` no cabeçalho, as guardas a tratam como anônima, e o service verifica o desafio (12.0).
 - A guarda de acesso recusa esse `typ`, e as rotas de sessão recusam o token de acesso.
 - O `jti` é consumido (`SET NX` no Redis de fila) quando a etapa é concluída ou no quinto código errado. Os quatro primeiros erros não consomem.
 - Com o Redis fora, o desafio é recusado e a pessoa entra de novo. Só afeta quem tem MFA ou mais de uma escola.
@@ -278,7 +280,7 @@ antes de existir escola ou que toca a conta global.
 | Ler a escola e a conta de um usuário pelo id (`escolaDoUsuarioParaOperador`), só no `ops:redefinir-mfa` | rotina do operador: o comando recebe só o `usuarioId` do pedido formal, e a escola que vira o contexto vem do banco, nunca do argumento; devolve escola, conta e se está ativo, nunca o nome (6.0) |
 | Escrever na conta, por `conta_id` já verificado: senha no aceite do convite, configurar e ativar MFA, `mfa_ultimo_passo`, consumir código de recuperação, redefinir MFA, limpeza da conta | a credencial é global; o `conta_id` vem do desafio ou da sessão verificados, nunca do cliente |
 
-O item 9 fala em três exceções por módulo, e aqui são mais de dez métodos (13 depois da 6.0 e 20 depois da 7.0; a contagem cresce com as tarefas, e a lista que vale é a própria classe, com uma justificativa em cada `@SemEscopo`). O motivo: essa classe é a
+O item 9 fala em três exceções por módulo, e aqui são mais de dez métodos (13 depois da 6.0, 20 depois da 7.0 e 21 depois da 12.0; a contagem cresce com as tarefas, e a lista que vale é a própria classe, com uma justificativa em cada `@SemEscopo`). O motivo: essa classe é a
 própria fronteira da resolução de tenant, a única do sistema, e há teste de que só o módulo
 `sessao` a importa. Fora dela, `@SemEscopo` só aparece em `sistema.expurgar-acesso`
 (`retencao`, como no F0) e no `RedeEEscolaRepository` do `ops:escola`, com dois métodos (criar rede,
@@ -406,7 +408,7 @@ migram na mesma tarefa, e o helper cria a escola antes do job, por causa da FK.
 | Regra | Como é atendida | Desvio e justificativa |
 |---|---|---|
 | 00 | controller fino, porta externa, `oidc-falso` no compose | — |
-| 10 | seção 6, FKs compostas, contexto de escola sem usuário | `conta` sem escola; os métodos `@SemEscopo` da fronteira de resolução (20 depois da 7.0); `registro_acesso` com escola nula na falha por e-mail |
+| 10 | seção 6, FKs compostas, contexto de escola sem usuário | `conta` sem escola; os métodos `@SemEscopo` da fronteira de resolução (21 depois da 12.0); `registro_acesso` com escola nula na falha por e-mail |
 | 20 | aluno sem e-mail; claims descartadas; registro de acesso; auditoria fechada; expurgo | — |
 | 40, 50, 60 | seções 9 e 10; token em memória; vínculo só confirmado | — |
 | 80 | guardas em ordem; baldes por escola; 503 no lugar de logout; cenário | sessão no Postgres, e não no Redis (item 5): o Redis de cache é `allkeys-lru` e expulsaria sessão no meio da aula |

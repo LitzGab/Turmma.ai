@@ -34,6 +34,29 @@ describe('desafio de login', () => {
     expect(semConvite).not.toHaveProperty('conviteId')
   })
 
+  it('o desafio mfa da troca de escola (12.0) leva o destino e a sessão de origem, e os dois voltam na verificação', async () => {
+    const destinoUsuarioId = randomUUID()
+    const origem = { escolaId: randomUUID(), sessaoId: randomUUID() }
+    const desafio = await new EmissorDeDesafio(CHAVE).emitir({ contaId: CONTA, etapa: 'mfa', mfaCumprido: false, destinoUsuarioId, origem })
+    expect(decodeJwt(desafio)).toMatchObject({ usuario_id: destinoUsuarioId, origem_esc: origem.escolaId, origem_sid: origem.sessaoId })
+    expect(await verificarDesafio(desafio, CHAVE, ['mfa'])).toMatchObject({ destinoUsuarioId, origem })
+    const semOrigem = await verificarDesafio(await new EmissorDeDesafio(CHAVE).emitir({ contaId: CONTA, etapa: 'mfa', mfaCumprido: false, destinoUsuarioId }), CHAVE, ['mfa'])
+    expect(semOrigem).not.toHaveProperty('origem')
+    expect(semOrigem.destinoUsuarioId).toBe(destinoUsuarioId)
+  })
+
+  it('borda: desafio assinado com só metade da origem (escola sem sessão) é recusado', async () => {
+    const metade = await new SignJWT({ conta_id: CONTA, etapa: 'mfa', mfa_cumprido: false, usuario_id: randomUUID(), origem_esc: randomUUID() })
+      .setProtectedHeader({ alg: 'HS256', typ: TIPO_DESAFIO })
+      .setIssuer('educa')
+      .setAudience(AUDIENCIA_DESAFIO)
+      .setJti(randomUUID())
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .sign(CHAVE)
+    await recusado(verificarDesafio(metade, CHAVE, ['mfa']))
+  })
+
   it('permissão: o desafio não serve de token de acesso (a guarda recusa o typ)', async () => {
     const desafio = await new EmissorDeDesafio(CHAVE).emitir({ contaId: CONTA, etapa: 'mfa', mfaCumprido: false })
     await recusado(verificarToken(desafio, { ambiente: 'local', chaveAssinatura: CHAVE }))

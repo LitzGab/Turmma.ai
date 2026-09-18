@@ -3,7 +3,7 @@ import type { CanActivate, ExecutionContext } from '@nestjs/common'
 import type { Reflector } from '@nestjs/core'
 import { contextoAtual } from '../contexto/contexto.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
-import { METADADO_ROTA_ANONIMA } from '../limite/rota-anonima.decorator.js'
+import { rotaSemSessao } from '../identidade/rota-sem-sessao.js'
 import { METADADO_PERMITE, type CelulaPermitida } from './permite.decorator.js'
 
 /**
@@ -21,7 +21,7 @@ export class GuardaDePermissao implements CanActivate {
 
   canActivate(execucao: ExecutionContext): boolean {
     const alvos = [execucao.getHandler(), execucao.getClass()]
-    if (this.reflector.getAllAndOverride<boolean | undefined>(METADADO_ROTA_ANONIMA, alvos) === true) return true
+    if (rotaSemSessao(this.reflector, execucao)) return true
     const papel = contextoAtual()?.papel
     if (papel === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
     const celula = this.reflector.getAllAndOverride<CelulaPermitida | undefined>(METADADO_PERMITE, alvos)

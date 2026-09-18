@@ -47,7 +47,9 @@ const naoAutenticado = () => new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
  *   navegador que já concluiu um login desta conta, que só ganha o `educa_dispositivo` depois do segundo fator.
  * - **Redis de fila fora:** o desafio é recusado antes de qualquer código ser conferido, e a pessoa entra de novo.
  * - **Fim:** o acerto consome o desafio, ativa o usuário do convite que veio no desafio (7.0) e segue como o login da senha, para `escolher` (com o MFA cumprido) ou
- *   `pronta`, que grava a sessão e os cookies `educa_sessao` e `educa_dispositivo`.
+ *   `pronta`, que grava a sessão e os cookies `educa_sessao` e `educa_dispositivo`. O desafio que veio da escolha ou
+ *   da troca de escola (12.0) leva o destino: o acerto entra direto nele e, na troca, encerra só agora a sessão de
+ *   origem, na mesma transação.
  */
 export class MfaService {
   readonly #relogio: Relogio
@@ -116,6 +118,13 @@ export class MfaService {
     if (pendente !== undefined) await this.dependencias.ativacao.ativar(pendente)
     const usuarios = (await resolucao.usuariosAtivosDaConta(conta.id)).filter((ativo) => ativo.papel !== 'aluno')
     if (usuarios.length === 0) throw naoAutenticado()
+    if (verificado.destinoUsuarioId !== undefined) {
+      // O segundo fator pedido na escolha ou na troca de escola (12.0): entra direto no usuário escolhido, que ainda
+      // precisa ser ativo desta conta, e encerra a sessão de origem só agora.
+      const destino = usuarios.find((ativo) => ativo.usuarioId === verificado.destinoUsuarioId)
+      if (destino === undefined) throw naoAutenticado()
+      return this.dependencias.conclusao.entrarNoDestino(destino, conta.id, conta.email, verificado.origem, origem)
+    }
     return this.dependencias.conclusao.concluir({ contaId: conta.id, email: conta.email, usuarios, mfaAtivo: true, mfaCumprido: true }, origem)
   }
 

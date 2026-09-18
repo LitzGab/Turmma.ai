@@ -22,3 +22,19 @@ export function RotaAnonima(): CustomDecorator<string> {
 export function SemLimite(): CustomDecorator<string> {
   return SetMetadata(METADADO_SEM_LIMITE, true)
 }
+
+export const METADADO_ACEITA_DESAFIO = 'educa:aceita-desafio'
+
+/**
+ * A rota autenticada que também aceita o desafio de login no `Authorization`, no lugar do token de acesso: só
+ * `POST /v1/sessao/escola` (tarefa 12.0), que recebe o desafio `escolher` ou o token de uma sessão de e-mail
+ * (Tech Spec, seção 4).
+ *
+ * Com o desafio (`typ: desafio+jwt` no cabeçalho do JWT), as guardas tratam a requisição como anônima: limite por IP,
+ * sem sessão no contexto e sem célula da matriz, e quem verifica o desafio inteiro (assinatura, `aud`, prazo, etapa e
+ * uso único) é o service da rota. Qualquer outro bearer segue o caminho de toda rota autenticada, com `@Permite`.
+ * Um cabeçalho que só diz ser desafio não abre nada: sem o desafio verificado, o service recusa.
+ */
+export function AceitaDesafio(): CustomDecorator<string> {
+  return SetMetadata(METADADO_ACEITA_DESAFIO, true)
+}

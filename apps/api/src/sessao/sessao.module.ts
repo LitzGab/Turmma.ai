@@ -40,6 +40,8 @@ import { RenovacaoService } from './renovacao.service.js'
 import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
 import { SaidaController } from './saida.controller.js'
 import { SaidaService } from './saida.service.js'
+import { TrocaDeEscolaController } from './troca-de-escola.controller.js'
+import { TrocaDeEscolaService } from './troca-de-escola.service.js'
 
 /** Cliente do Redis de fila do login: contador de tentativas e desafio usado, que não podem ser expulsos. */
 export const CLIENTE_REDIS_LOGIN = Symbol('CLIENTE_REDIS_LOGIN')
@@ -81,6 +83,7 @@ export class SessaoModule implements OnApplicationShutdown {
         AtividadeController,
         SaidaController,
         ConviteController,
+        TrocaDeEscolaController,
       ],
       providers: [
         { provide: CLIENTE_REDIS_LOGIN, useFactory: () => criarClienteRedisDaApi(opcoes.redisFilaUrl, 'api-login', avisar) },
@@ -88,7 +91,7 @@ export class SessaoModule implements OnApplicationShutdown {
         { provide: HashDeSenha, useFactory: () => HashDeSenha.criar(opcoes.login.hash) },
         { provide: ContadorDeTentativas, useFactory: (cliente: Redis) => new ContadorDeTentativas(cliente, opcoes.login.chaveContador), inject: [CLIENTE_REDIS_LOGIN] },
         { provide: EuRepository, useFactory: (banco: Banco) => new EuRepository(banco), inject: [BANCO] },
-        { provide: EuService, useFactory: (eu: EuRepository) => new EuService(eu), inject: [EuRepository] },
+        { provide: EuService, useFactory: (eu: EuRepository, resolucao: ResolucaoDeTenantRepository) => new EuService(eu, resolucao), inject: [EuRepository, ResolucaoDeTenantRepository] },
         { provide: CookieDeDispositivo, useFactory: () => new CookieDeDispositivo(opcoes.login.dispositivo.versao, opcoes.login.dispositivo.chave) },
         {
           provide: ConclusaoDeLogin,
@@ -164,6 +167,19 @@ export class SessaoModule implements OnApplicationShutdown {
               medidor: opcoes.medidor ?? medidorGlobal(),
             }),
           inject: [BANCO, ResolucaoDeTenantRepository, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin, CLIENTE_REDIS_LOGIN, AtivacaoPorConvite],
+        },
+        {
+          provide: TrocaDeEscolaService,
+          useFactory: (banco: Banco, resolucao: ResolucaoDeTenantRepository, conclusao: ConclusaoDeLogin, cliente: Redis) =>
+            new TrocaDeEscolaService({
+              banco,
+              resolucao,
+              conclusao,
+              consumo: new ConsumoDeDesafio(cliente),
+              emissorDeDesafio: new EmissorDeDesafio(opcoes.identidade.chaveAssinatura),
+              chaveAssinatura: opcoes.identidade.chaveAssinatura,
+            }),
+          inject: [BANCO, ResolucaoDeTenantRepository, ConclusaoDeLogin, CLIENTE_REDIS_LOGIN],
         },
         { provide: RedefinicaoDeMfa, useFactory: (banco: Banco) => new RedefinicaoDeMfa(banco), inject: [BANCO] },
         {

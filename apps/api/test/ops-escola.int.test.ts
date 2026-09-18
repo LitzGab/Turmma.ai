@@ -160,8 +160,10 @@ interface RotaRegistrada {
  * Rotas de escrita com `rede(s)` ou `escola(s)` em qualquer segmento fixo que já foram conferidas e não criam
  * rede nem escola. Quem acrescentar uma rota dessas a declara aqui, e a revisão confere:
  * - `PUT /v1/escola/sessao` (5.0): muda a inatividade da escola da sessão, que já existe; não recebe escola nenhuma.
+ * - `POST /v1/sessao/escola` (12.0): escolhe ou troca a escola da sessão entre os usuários ativos da conta; recebe só o
+ *   `usuarioId`, e a escola vem do banco. Não cria escola nem rede.
  */
-const ROTAS_PERMITIDAS: readonly string[] = ['PUT /v1/escola/sessao']
+const ROTAS_PERMITIDAS: readonly string[] = ['PUT /v1/escola/sessao', 'POST /v1/sessao/escola']
 
 /** Rota que escreve e tem rede ou escola em algum segmento fixo: `POST /v1/escolas`, `POST /v1/escolas/criar`. */
 function criaRedeOuEscola(rota: RotaRegistrada): boolean {

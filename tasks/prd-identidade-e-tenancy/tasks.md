@@ -73,10 +73,10 @@
   - [x] 11.2 Contador com a escola na chave e inatividade do aluno
   - [x] 11.3 Testes: matrícula 1234 em A e B, conta segurada só em A, respostas iguais, 399 alunos do mesmo IP, aluno transferido, dois "Enzo Martins"
 
-- [ ] **12.0 — Quem trabalha em mais de uma escola escolhe e troca**
-  - [ ] 12.1 `POST /v1/sessao/escola` com desafio `escolher` ou token de método e-mail
-  - [ ] 12.2 Troca encerra a sessão de origem, aplica MFA e inatividade do destino; `/v1/eu.acessos`
-  - [ ] 12.3 Testes: MFA ao ir para coordenação, `usuarioId` de outra conta, sessão de matrícula, id de A depois da troca
+- [x] **12.0 — Quem trabalha em mais de uma escola escolhe e troca**
+  - [x] 12.1 `POST /v1/sessao/escola` com desafio `escolher` ou token de método e-mail
+  - [x] 12.2 Troca encerra a sessão de origem, aplica MFA e inatividade do destino; `/v1/eu.acessos`
+  - [x] 12.3 Testes: MFA ao ir para coordenação, `usuarioId` de outra conta, sessão de matrícula, id de A depois da troca
 
 - [ ] **13.0 — Login pela conta Google ou Microsoft da escola**
   - [ ] 13.1 Serviço `oidc-falso` (`mock-oauth2-server`) no compose e na esteira

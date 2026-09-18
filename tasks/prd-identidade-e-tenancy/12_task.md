@@ -41,17 +41,17 @@ funciona e `/v1/eu` lista os acessos da conta.
 
 ## Subtarefas
 
-- [ ] 12.1 — `POST /v1/sessao/escola` com `{ usuarioId }`.
+- [x] 12.1 — `POST /v1/sessao/escola` com `{ usuarioId }`.
   - **Com desafio `escolher`:** o `usuarioId` precisa estar entre os usuários ativos da `conta_id` do desafio, pelo `ResolucaoDeTenantRepository`. Aí grava a sessão (etapa `pronta`) ou leva a `configurar_mfa`/`mfa` quando o destino é coordenador. O `jti` é consumido só na conclusão.
   - **Com token de acesso:** só vale se `sessao.metodo = email`. Sessão de matrícula ou externa recebe 404.
   - **`usuarioId` de outra conta, desativado ou inexistente:** o mesmo 404.
-- [ ] 12.2 — Troca, numa transação.
+- [x] 12.2 — Troca, numa transação.
   - **Sessão:** cria a nova na escola de destino (família nova, `conta_id` igual) e encerra a de origem com motivo `troca_de_escola`.
   - **Destino:** aplica a inatividade dele (`inatividade_equipe_min` ou de aluno) e o MFA quando o papel de destino é coordenador. Nesse caso a resposta é um desafio `mfa` ou `configurar_mfa`, e a sessão de origem só encerra quando o MFA é concluído.
   - **Registro:** grava `registro_acesso` (`login` na escola de destino).
   - **`GET /v1/eu`:** passa a devolver `acessos:[{ usuarioId, escolaNome, papel }]` só com os usuários ativos da conta, sem ids de turma, vínculo nem nada da outra escola.
   - **Aluno:** não tem conta, então `acessos` vem vazio.
-- [ ] 12.3 — Testes (tabela abaixo). A web limpa o cache ao trocar na 20.0; aqui a prova é
+- [x] 12.3 — Testes (tabela abaixo). A web limpa o cache ao trocar na 20.0; aqui a prova é
   no servidor.
 
 ## Arquivos previstos
@@ -82,7 +82,7 @@ funciona e `/v1/eu` lista os acessos da conta.
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
+- [x] Subtarefas concluídas
 - [ ] Testes verdes, 100%
 - [ ] `npm run typecheck` limpo
 - [ ] E2E verde (se tocou tela)
@@ -98,5 +98,51 @@ funciona e `/v1/eu` lista os acessos da conta.
   comportamento da web é da 20.0, e o login externo é da 13.0
 - Redefinição de MFA entre escolas: 6.0
 
+## Notas da implementação
+
+Leituras que tomei onde a tarefa deixava margem, escolhendo a que protege a escola:
+
+- **Uma rota, duas credenciais.** `POST /v1/sessao/escola` aceita o desafio `escolher` e o token de acesso (Tech Spec,
+  seção 4). As guardas globais recusariam o desafio, então a rota leva `@AceitaDesafio()` (novo, em `@educa/nucleo`)
+  além de `@Permite('sessao', 'trocar_escola')`. `rotaSemSessao` decide, pelo `typ` do cabeçalho do JWT, se as quatro
+  guardas tratam a requisição como anônima: só com `typ: desafio+jwt` e só nessa rota. O cabeçalho não é confiado: o
+  service verifica o desafio inteiro (assinatura, `aud`, prazo, etapa, `jti`). Com o token, a rota segue a guarda de
+  sessão, o limite por usuário e escola e a célula da matriz (aluno recebe 404).
+- **MFA na troca pelo token é pedido sempre** que o destino é coordenador, mesmo que a origem seja uma sessão de
+  coordenação. A sessão não guarda se o segundo fator foi cumprido, e sem isso um token de acesso de 10 min viraria
+  uma sessão de 12 h da coordenação de outra escola sem o código. Na `escolher`, vale o `mfa_cumprido` do desafio.
+- **Destino e origem no desafio `mfa`.** A Tech Spec já prevê `usuario_id` no desafio; acrescentei `origem_esc` e
+  `origem_sid` (só ids, os dois ou nenhum). O código conclui direto no usuário escolhido, sem voltar a `escolher`, e só
+  então encerra a sessão de origem, na mesma transação da sessão nova. Se a origem já não estiver aberta (saída entre
+  a troca e o código), o código responde `NAO_AUTENTICADO` e nada é gravado.
+- **Destino coordenador sem MFA configurado** responde `configurar_mfa`, como o login; a origem não é encerrada, e a
+  pessoa entra de novo depois de ativar (a ativação não abre sessão, 6.0).
+- **Corrida.** A transação encerra a origem primeiro, com `update … where encerrada_em is null and conta_id and
+  metodo = 'email'`, e só depois cria a sessão nova: a segunda troca com o mesmo token espera a trava da linha, não a
+  acha aberta e desfaz tudo (401).
+- **`educa_dispositivo`** (pendência da 4.0): sai só em `pronta`, depois da escolha ou do código, e nunca nas etapas
+  com desafio. Provado no caminho feliz e nos testes de MFA.
+- **Usuário que espera convite** (pendência da 7.0): está inativo até o login que o ativa, e `acessosDaConta` e a troca
+  leem só usuários ativos, então não aparece nem é alcançado. Provado no teste do convite.
+- **`/v1/eu.acessos`** vem de `ResolucaoDeTenantRepository.acessosDaConta` (um `@SemEscopo` a mais, agora 21), pela
+  conta do usuário da sessão, e inclui o próprio acesso atual. Só usuários de equipe; aluno recebe `[]`.
+- **`registro_acesso`:** a troca grava `login` na escola de destino; a origem não ganha `saida` (a tarefa não pede, e o
+  motivo `troca_de_escola` na sessão já registra o encerramento).
+
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-18 12:55:11 | 2026-09-18 12:56:34 | `test-engineer` | 1 | REPROVADO | a2c97d0565aa7b6a0 |
+| 2026-09-18 13:01:46 | 2026-09-18 13:02:13 | `test-engineer` | 2 | APROVADO | ae61320707891b7b1 |
+| 2026-09-18 13:26:18 | 2026-09-18 13:27:15 | `tenancy-guardian` | 1 | APROVADO | ac6ae51e42fc28c2f |
+| 2026-09-18 13:26:24 | 2026-09-18 13:27:22 | `privacy-guardian` | 1 | APROVADO | a26e468e9170eddb9 |
+| 2026-09-18 13:26:31 | 2026-09-18 13:27:27 | `infra-guardian` | 1 | APROVADO | a00f84375044be073 |
+| 2026-09-18 13:26:12 | 2026-09-18 13:27:34 | `revisor-geral` | 1 | APROVADO | a81bbed078c09d029 |

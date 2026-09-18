@@ -33,6 +33,11 @@ export interface TokenVerificado extends Identidade {
 
 export const ALGORITMO_TOKEN = 'HS256'
 export const TIPO_TOKEN = 'JWT'
+/**
+ * O `typ` do desafio de login (Tech Spec, seção 4): o JWT de 5 min que leva de uma etapa do login à seguinte, sem
+ * sessão. A verificação deste arquivo o recusa; só as rotas de etapa, na API, o aceitam.
+ */
+export const TIPO_DESAFIO = 'desafio+jwt'
 
 /**
  * Prazo máximo que um token pode ter pela frente. Vale na verificação, e não só no emissor: um

@@ -5,7 +5,7 @@ import type { IncomingMessage } from 'node:http'
 import type { ConfiguracaoIdentidade } from '../config/validar-config.js'
 import { contextoAtual, type SessaoDaRequisicao } from '../contexto/contexto.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
-import { METADADO_ROTA_ANONIMA } from '../limite/rota-anonima.decorator.js'
+import { rotaSemSessao } from './rota-sem-sessao.js'
 import { guardarTokenDaRequisicao } from './token-da-requisicao.js'
 import { extrairTokenBearer, verificarToken, type Identidade } from './verificar-token.js'
 
@@ -22,11 +22,7 @@ export class GuardaDeAutenticacao implements CanActivate {
   ) {}
 
   async canActivate(execucao: ExecutionContext): Promise<boolean> {
-    const anonima = this.reflector.getAllAndOverride<boolean | undefined>(METADADO_ROTA_ANONIMA, [
-      execucao.getHandler(),
-      execucao.getClass(),
-    ])
-    if (anonima === true) return true
+    if (rotaSemSessao(this.reflector, execucao)) return true
     // Só HTTP; o realtime autentica no handshake. Outro tipo não passa sem token.
     if (execucao.getType() !== 'http') throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
 

@@ -4,6 +4,8 @@ import { and, eq } from 'drizzle-orm'
 
 export interface LinhaDoEu {
   readonly usuarioId: string
+  /** A conta da equipe, só para listar os acessos dela; nula no aluno. Não sai na resposta. */
+  readonly contaId: string | null
   readonly papel: PapelDeUsuario
   readonly nome: string
   readonly escola: { readonly id: string; readonly nome: string; readonly slug: string }
@@ -23,6 +25,7 @@ export class EuRepository {
     const [linha] = await this.banco
       .select({
         usuarioId: usuario.id,
+        contaId: usuario.contaId,
         papel: usuario.papel,
         nome: usuario.nome,
         escola: { id: escola.id, nome: escola.nome, slug: escola.slug },

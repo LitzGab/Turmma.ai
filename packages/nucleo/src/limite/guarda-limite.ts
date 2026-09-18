@@ -5,11 +5,12 @@ import type { IncomingMessage } from 'node:http'
 import type { ConfiguracaoOperacional, LimitesDeRequisicao } from '../configuracao/configuracao-operacional.js'
 import { contextoAtual, executarNoContexto } from '../contexto/contexto.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
+import { rotaSemSessao } from '../identidade/rota-sem-sessao.js'
 import { tokenDaRequisicao } from '../identidade/token-da-requisicao.js'
 import { ipDoCliente, segundosParaTentarDeNovo } from './chaves.js'
 import type { LimitadorDeRequisicoes } from './limitador.js'
 import type { ProxiesConfiaveis } from './proxies-confiaveis.js'
-import { METADADO_ROTA_ANONIMA, METADADO_SEM_LIMITE } from './rota-anonima.decorator.js'
+import { METADADO_SEM_LIMITE } from './rota-anonima.decorator.js'
 
 /**
  * Guarda global de rate limit da API. Registre depois da `GuardaDeAutenticacao` e antes da `GuardaDeSessao`: a
@@ -34,7 +35,7 @@ export class GuardaDeLimite implements CanActivate {
     const alvos = [execucao.getHandler(), execucao.getClass()]
     if (this.reflector.getAllAndOverride<boolean | undefined>(METADADO_SEM_LIMITE, alvos) === true) return true
 
-    const anonima = this.reflector.getAllAndOverride<boolean | undefined>(METADADO_ROTA_ANONIMA, alvos) === true
+    const anonima = rotaSemSessao(this.reflector, execucao)
     const requisicao = execucao.switchToHttp().getRequest<IncomingMessage>()
     const resultado = anonima
       ? await this.limitador.consumirAnonima(await this.#ipDaRequisicao(requisicao))

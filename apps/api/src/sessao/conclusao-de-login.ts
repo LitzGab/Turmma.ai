@@ -1,13 +1,14 @@
-import { contextoAtual, DURACAO_DA_SESSAO_HORAS, executarNoContexto, type Ambiente, type Banco, type EmissorDeToken, type MetodoDeSessao } from '@educa/nucleo'
-import type { RespostaLogin } from '@educa/shared'
+import { contextoAtual, DURACAO_DA_SESSAO_HORAS, ErroDeDominio, executarNoContexto, type Ambiente, type Banco, type EmissorDeToken, type MetodoDeSessao } from '@educa/nucleo'
+import { CodigoDeErro, type RespostaLogin } from '@educa/shared'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { MAX_AGE_DO_COOKIE_DISPOSITIVO_SEGUNDOS, type CookieDeDispositivo } from './cookie-dispositivo.js'
 import { COOKIE_DISPOSITIVO, COOKIE_SESSAO, lerCookie, serializarCookie } from './cookies.js'
 import { CriacaoDeSessaoRepository } from './criacao-de-sessao.repository.js'
-import type { EmissorDeDesafio } from './desafio.js'
+import type { EmissorDeDesafio, SessaoDeOrigemDaTroca } from './desafio.js'
 import { BYTES_DO_REFRESH, etapaDoLogin, hashDoRefresh, ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from './login.service.js'
 import { RegistroDeAcessoRepository } from './registro-de-acesso.repository.js'
 import type { UsuarioAtivoDaConta } from './resolucao-de-tenant.repository.js'
+import { SessaoDeOrigemRepository } from './sessao-de-origem.repository.js'
 
 export interface DependenciasDaConclusao {
   readonly banco: Banco
@@ -58,6 +59,23 @@ export class ConclusaoDeLogin {
     return this.#pronta(aluno, null, 'matricula', identificadorDoDispositivo, origem)
   }
 
+  /**
+   * A entrada no usuário escolhido de uma conta, depois de `escolher` ou na troca de escola (12.0), já com o segundo
+   * fator cumprido quando o destino é a coordenação: grava a sessão de e-mail no destino, com família nova, e devolve
+   * `pronta` com os dois cookies. Com `troca`, encerra a sessão de origem na mesma transação, com motivo
+   * `troca_de_escola`; se ela já não estava aberta (saída, outra troca que chegou antes), nada é gravado e a resposta é
+   * `NAO_AUTENTICADO`.
+   */
+  entrarNoDestino(
+    destino: Pick<UsuarioAtivoDaConta, 'usuarioId' | 'escolaId'>,
+    contaId: string,
+    email: string,
+    troca: SessaoDeOrigemDaTroca | undefined,
+    origem: OrigemDaRequisicao,
+  ): Promise<ResultadoDoLogin> {
+    return this.#pronta(destino, contaId, 'email', email, origem, troca)
+  }
+
   /** Grava a sessão e devolve `pronta` com o token e os dois cookies: a entrada do dispositivo no topo, e o refresh. */
   async #pronta(
     usuario: Pick<UsuarioAtivoDaConta, 'usuarioId' | 'escolaId'>,
@@ -65,8 +83,9 @@ export class ConclusaoDeLogin {
     metodo: MetodoDeSessao,
     identificadorDoDispositivo: string,
     origem: OrigemDaRequisicao,
+    troca?: SessaoDeOrigemDaTroca,
   ): Promise<ResultadoDoLogin> {
-    const { token, expiraEm, refresh } = await this.#criarSessao(usuario, contaId, metodo, origem.ip)
+    const { token, expiraEm, refresh } = await this.#criarSessao(usuario, contaId, metodo, origem.ip, troca)
     const resposta: RespostaLogin = { etapa: 'pronta', token, expiraEm: expiraEm.toISOString() }
     return {
       resposta,
@@ -92,17 +111,27 @@ export class ConclusaoDeLogin {
   /**
    * Grava a sessão e o registro de acesso na escola do usuário, numa transação, num contexto que tem só a escola:
    * a criação lê a escola do contexto, e a FK composta recusa usuário de outra escola.
+   *
+   * Na troca de escola, a sessão de origem é encerrada primeiro, na mesma transação e num contexto com a escola dela: o
+   * `update` condicional trava a linha, e a segunda troca com a mesma origem, relendo, não a acha aberta e desfaz tudo.
    */
   async #criarSessao(
     usuario: Pick<UsuarioAtivoDaConta, 'usuarioId' | 'escolaId'>,
     contaId: string | null,
     metodo: MetodoDeSessao,
     ip: string,
+    troca?: SessaoDeOrigemDaTroca,
   ): Promise<{ token: string; expiraEm: Date; refresh: string }> {
     const refresh = randomBytes(BYTES_DO_REFRESH).toString('base64url')
     const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
     const sessaoId = await executarNoContexto({ requisicaoId, escolaId: usuario.escolaId }, () =>
       this.dependencias.banco.transaction(async (tx) => {
+        if (troca !== undefined) {
+          const encerrou =
+            contaId !== null &&
+            (await executarNoContexto({ requisicaoId, escolaId: troca.escolaId }, () => new SessaoDeOrigemRepository(tx).encerrarParaTroca(troca.sessaoId, contaId)))
+          if (!encerrou) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+        }
         const [criada] = await new CriacaoDeSessaoRepository(tx).criarSessoes([
           { usuarioId: usuario.usuarioId, contaId, metodo, refreshHash: hashDoRefresh(refresh), duracaoHoras: DURACAO_DA_SESSAO_HORAS },
         ])
