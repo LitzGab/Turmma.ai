@@ -11,6 +11,7 @@ export const STATUS_HTTP_DO_CODIGO: Readonly<Record<CodigoDeErro, number>> = {
   INDISPONIVEL_TENTE_DE_NOVO: 503,
   LIMITE_EXCEDIDO: 429,
   CONTA_SEGURADA: 429,
+  JA_RENOVADO: 409,
 }
 
 /**

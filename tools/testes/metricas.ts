@@ -73,5 +73,8 @@ export const NOMES_NO_PROMETHEUS = {
   redisDisponivel: ['redis_disponivel'],
   seguroAtivo: ['limite_seguro_ativo'],
   contaSegurada: ['login_conta_segurada_total'],
+  renovacaoDeSessao: ['sessao_renovacao_total'],
+  atividadeFalha: ['sessao_atividade_falha_total'],
+  leituraDeSessao: ['sessao_leitura_duracao_seconds_bucket', 'sessao_leitura_duracao_seconds_count', 'sessao_leitura_duracao_seconds_sum'],
   atrasoEventLoop: ['nodejs_eventloop_delay_p99_seconds'],
 } as const satisfies Record<keyof typeof METRICAS, readonly string[]>

@@ -1,5 +1,5 @@
 import type { PapelDeUsuario } from '@educa/shared'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, isNotNull, lte, sql } from 'drizzle-orm'
 import type { Banco } from '../db/banco.js'
 import { anoLetivo } from '../db/schema/ano-letivo.js'
 import { escola } from '../db/schema/escola.js'
@@ -18,6 +18,10 @@ export interface LinhaDaSessao {
   readonly inatividadeAlunoMin: number
   readonly inatividadeEquipeMin: number
   readonly anoLetivoId: string | null
+  /** Quando a última renovação trocou o cookie; `null` numa sessão nunca renovada. */
+  readonly rotacionadoEm: Date | null
+  /** Se o token da última renovação já chegou numa requisição (Tech Spec, seção 5, "Renovar"). */
+  readonly atualApresentado: boolean
   /** A hora do banco na leitura: a inatividade e o prazo comparam com o mesmo relógio que gravou as datas. */
   readonly agora: Date
 }
@@ -45,6 +49,8 @@ export class SessaoRepository {
         inatividadeAlunoMin: escola.inatividadeAlunoMin,
         inatividadeEquipeMin: escola.inatividadeEquipeMin,
         anoLetivoId: anoLetivo.id,
+        rotacionadoEm: sessao.rotacionadoEm,
+        atualApresentado: sessao.atualApresentado,
         agora: sql<Date>`now()`.mapWith(sessao.expiraEm),
       })
       .from(sessao)
@@ -54,5 +60,33 @@ export class SessaoRepository {
       .where(and(eq(sessao.escolaId, token.escolaId), eq(sessao.id, token.sessaoId)))
       .limit(1)
     return linha
+  }
+
+  /**
+   * Marca que o token da última renovação chegou: é o que separa a resposta de renovação perdida (o cookie anterior
+   * volta sem o token novo ter sido usado) do cookie roubado (volta depois de o token novo ter sido usado).
+   *
+   * Condicional: só muda a sessão do token, na escola e do usuário do token, que ainda não foi marcada e cuja última rotação é
+   * anterior ao `iat` dele. Um token de antes da rotação não marca nada, e duas requisições juntas gravam uma vez.
+   * Devolve se marcou.
+   */
+  async marcarAtualApresentado(token: TokenVerificado): Promise<boolean> {
+    if (token.emitidoEm === undefined) return false
+    const marcadas = await this.banco
+      .update(sessao)
+      .set({ atualApresentado: true })
+      .where(
+        and(
+          eq(sessao.escolaId, token.escolaId),
+          eq(sessao.id, token.sessaoId),
+          // A guarda já conferiu o usuário; a condição repete, para a marcação nunca depender só dela.
+          eq(sessao.usuarioId, token.usuarioId),
+          eq(sessao.atualApresentado, false),
+          isNotNull(sessao.rotacionadoEm),
+          lte(sessao.rotacionadoEm, sql`to_timestamp(${token.emitidoEm})`),
+        ),
+      )
+      .returning({ id: sessao.id })
+    return marcadas.length > 0
   }
 }

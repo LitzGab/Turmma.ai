@@ -11,6 +11,8 @@ import { Inject, Logger, Module, type DynamicModule, type OnApplicationShutdown 
 import type { Redis } from 'ioredis'
 import { BANCO } from '../banco.module.js'
 import type { ConfiguracaoLogin } from './configuracao-de-login.js'
+import { AtividadeController } from './atividade.controller.js'
+import { RegistroDeAtividade } from './atividade.service.js'
 import { ContadorDeTentativas } from './contador-de-tentativas.js'
 import { CookieDeDispositivo } from './cookie-dispositivo.js'
 import { EmissorDeDesafio } from './desafio.js'
@@ -20,7 +22,11 @@ import { EuService } from './eu.service.js'
 import { HashDeSenha } from './hash-de-senha.js'
 import { LoginEmailController } from './login-email.controller.js'
 import { LoginService } from './login.service.js'
+import { RenovacaoController } from './renovacao.controller.js'
+import { RenovacaoService } from './renovacao.service.js'
 import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
+import { SaidaController } from './saida.controller.js'
+import { SaidaService } from './saida.service.js'
 
 /** Cliente do Redis de fila do login: contador de tentativas e desafio usado, que não podem ser expulsos. */
 export const CLIENTE_REDIS_LOGIN = Symbol('CLIENTE_REDIS_LOGIN')
@@ -49,7 +55,7 @@ export class SessaoModule implements OnApplicationShutdown {
     const avisar = avisoEspacado(() => SessaoModule.logger.warn('login.redis_indisponivel'))
     return {
       module: SessaoModule,
-      controllers: [LoginEmailController, EuController],
+      controllers: [LoginEmailController, EuController, RenovacaoController, AtividadeController, SaidaController],
       providers: [
         { provide: CLIENTE_REDIS_LOGIN, useFactory: () => criarClienteRedisDaApi(opcoes.redisFilaUrl, 'api-login', avisar) },
         { provide: ResolucaoDeTenantRepository, useFactory: (banco: Banco) => new ResolucaoDeTenantRepository(banco), inject: [BANCO] },
@@ -73,8 +79,22 @@ export class SessaoModule implements OnApplicationShutdown {
             }),
           inject: [BANCO, ResolucaoDeTenantRepository, HashDeSenha, ContadorDeTentativas],
         },
+        {
+          provide: RenovacaoService,
+          useFactory: (banco: Banco) =>
+            new RenovacaoService({
+              banco,
+              emissorDeToken: new EmissorDeToken(opcoes.identidade.chaveAssinatura),
+              ambiente: opcoes.identidade.ambiente,
+              medidor: opcoes.medidor ?? medidorGlobal(),
+            }),
+          inject: [BANCO],
+        },
+        { provide: RegistroDeAtividade, useFactory: (banco: Banco) => new RegistroDeAtividade(banco, opcoes.medidor ?? medidorGlobal()), inject: [BANCO] },
+        { provide: SaidaService, useFactory: (banco: Banco) => new SaidaService(banco, opcoes.identidade.ambiente), inject: [BANCO] },
       ],
-      exports: [CLIENTE_REDIS_LOGIN, ContadorDeTentativas],
+      // `RegistroDeAtividade` é o contrato para o F6: a gravação de resposta de avaliação também conta como uso.
+      exports: [CLIENTE_REDIS_LOGIN, ContadorDeTentativas, RegistroDeAtividade],
     }
   }
 

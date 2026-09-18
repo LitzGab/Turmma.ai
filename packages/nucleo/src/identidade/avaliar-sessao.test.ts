@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { avaliarSessao, TOLERANCIA_DE_INATIVIDADE_MIN } from './avaliar-sessao.js'
+import { avaliarSessao, sessaoAindaVale, tokenDaUltimaRenovacao, TOLERANCIA_DE_INATIVIDADE_MIN } from './avaliar-sessao.js'
 import type { LinhaDaSessao } from './sessao.repository.js'
 import type { TokenVerificado } from './verificar-token.js'
 
@@ -23,6 +23,8 @@ function linha(ajuste: Partial<LinhaDaSessao> = {}): LinhaDaSessao {
     inatividadeAlunoMin: 30,
     inatividadeEquipeMin: 120,
     anoLetivoId: '0190f5a0-0000-7000-8000-0000000000e1',
+    rotacionadoEm: null,
+    atualApresentado: false,
     agora: AGORA,
     ...ajuste,
   }
@@ -72,5 +74,34 @@ describe('avaliarSessao', () => {
   it('compara com a hora do banco, não com a da máquina: uma linha lida de outro relógio segue a hora dela', () => {
     const noFuturo = new Date(AGORA.getTime() + 36 * 60_000)
     expect(avaliarSessao(token, linha({ ultimoUsoEm: AGORA, agora: noFuturo, expiraEm: new Date(noFuturo.getTime() + 60_000) }))).toBeUndefined()
+  })
+})
+
+describe('sessaoAindaVale: o que a renovação confere, igual à guarda', () => {
+  it('vale com uso recente; não vale encerrada, desativada, depois das 12 h ou além da inatividade do papel mais a tolerância', () => {
+    expect(sessaoAindaVale(linha())).toBe(true)
+    expect(sessaoAindaVale(linha({ encerradaEm: minutosAntes(1) }))).toBe(false)
+    expect(sessaoAindaVale(linha({ desativadoEm: minutosAntes(1) }))).toBe(false)
+    expect(sessaoAindaVale(linha({ expiraEm: AGORA }))).toBe(false)
+    expect(sessaoAindaVale(linha({ ultimoUsoEm: minutosAntes(30 + TOLERANCIA_DE_INATIVIDADE_MIN - 1) }))).toBe(true)
+    expect(sessaoAindaVale(linha({ ultimoUsoEm: minutosAntes(30 + TOLERANCIA_DE_INATIVIDADE_MIN) }))).toBe(false)
+    expect(sessaoAindaVale(linha({ papel: 'professor', ultimoUsoEm: minutosAntes(120 + TOLERANCIA_DE_INATIVIDADE_MIN - 1) }))).toBe(true)
+  })
+})
+
+describe('tokenDaUltimaRenovacao: só o token emitido depois da rotação marca a sessão', () => {
+  const rotacionadoEm = new Date('2026-09-15T10:00:00.400-03:00')
+  const iat = (data: Date) => ({ ...token, emitidoEm: Math.floor(data.getTime() / 1_000) }) as TokenVerificado
+
+  it('o token do segundo seguinte à rotação marca; o de antes dela, do mesmo segundo arredondado para baixo, não', () => {
+    expect(tokenDaUltimaRenovacao(iat(new Date(rotacionadoEm.getTime() + 1_000)), linha({ rotacionadoEm }))).toBe(true)
+    expect(tokenDaUltimaRenovacao(iat(new Date(rotacionadoEm.getTime() - 100)), linha({ rotacionadoEm }))).toBe(false)
+  })
+
+  it('sessão nunca renovada, já marcada, ou token sem iat: nada a marcar', () => {
+    const depois = iat(new Date(rotacionadoEm.getTime() + 5_000))
+    expect(tokenDaUltimaRenovacao(depois, linha({ rotacionadoEm: null }))).toBe(false)
+    expect(tokenDaUltimaRenovacao(depois, linha({ rotacionadoEm, atualApresentado: true }))).toBe(false)
+    expect(tokenDaUltimaRenovacao(token, linha({ rotacionadoEm }))).toBe(false)
   })
 })

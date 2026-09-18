@@ -30,14 +30,18 @@ export class EmissorDeToken {
     private readonly relogio: Relogio = relogioDoSistema,
   ) {}
 
-  async emitir(pedido: PedidoDeTokenDeAcesso): Promise<TokenDeAcesso> {
-    const emitidoEm = Math.floor(this.relogio.agora().getTime() / 1000)
-    const expiraEm = emitidoEm + VALIDADE_TOKEN_ACESSO_SEGUNDOS
+  /**
+   * @param emitidoEm o instante do `iat`, quando quem chama precisa de um mínimo: a renovação emite o token no segundo
+   *   seguinte ao da rotação, para a guarda reconhecer o token dela. Sem ele, vale o relógio.
+   */
+  async emitir(pedido: PedidoDeTokenDeAcesso, emitidoEm: Date = this.relogio.agora()): Promise<TokenDeAcesso> {
+    const iat = Math.floor(emitidoEm.getTime() / 1000)
+    const expiraEm = iat + VALIDADE_TOKEN_ACESSO_SEGUNDOS
     const token = await new SignJWT({ esc: pedido.escolaId, sid: pedido.sessaoId })
       .setProtectedHeader({ alg: ALGORITMO_TOKEN, typ: TIPO_TOKEN })
       .setIssuer(EMISSOR_TOKEN)
       .setSubject(pedido.usuarioId)
-      .setIssuedAt(emitidoEm)
+      .setIssuedAt(iat)
       .setExpirationTime(expiraEm)
       .sign(this.chaveAssinatura)
     return { token, expiraEm: new Date(expiraEm * 1000) }

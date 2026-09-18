@@ -23,6 +23,11 @@ declare const MARCA_DO_TOKEN_VERIFICADO: unique symbol
  */
 export interface TokenVerificado extends Identidade {
   readonly sessaoId: string
+  /**
+   * O `iat` do token, em segundos. A `GuardaDeSessao` o compara com `sessao.rotacionado_em` para saber se o token é o
+   * que a última renovação emitiu (Tech Spec, seção 5, "Renovar"). Ausente num token sem `iat`, que nunca conta.
+   */
+  readonly emitidoEm?: number
   readonly [MARCA_DO_TOKEN_VERIFICADO]: true
 }
 
@@ -40,6 +45,7 @@ const esquemaClaims = z.object({
   esc: z.uuid(),
   sid: z.uuid(),
   exp: z.number(),
+  iat: z.number().optional(),
 })
 
 /** Toda recusa é a mesma: quem manda um token meio válido não descobre qual parte falhou. */
@@ -80,6 +86,7 @@ export async function verificarToken(token: string, config: ConfiguracaoIdentida
     escolaId: resultado.data.esc.toLowerCase(),
     usuarioId: resultado.data.sub.toLowerCase(),
     sessaoId: resultado.data.sid.toLowerCase(),
+    ...(resultado.data.iat === undefined ? {} : { emitidoEm: resultado.data.iat }),
   }
   return ids as TokenVerificado
 }

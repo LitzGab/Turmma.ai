@@ -1,0 +1,70 @@
+# Alerta "Reuso de refresh" (Tech Spec da identidade, seção 7c; runbook: docs/runbook.md#reuso-de-refresh).
+# Provisionado por arquivo no Grafana da observabilidade local (infra/compose.yml monta esta pasta em
+# provisioning/alerting).
+#
+# `sessao.renovacao{resultado="reuso"}` conta as renovações em que o cookie anterior voltou depois de o token novo já
+# ter sido usado e da janela de 30 s: alguém guardou um cookie velho, e a família de sessões foi encerrada. Dispara
+# quando mais de 5 acontecem em 10 min, somadas as instâncias da API.
+#
+# A conta é o máximo menos o mínimo do contador na janela, por instância, e não `increase()`: a extrapolação do
+# `increase()` passaria de 5 com 5 reusos. Cada instância nasce com a série em 0 (a API conta 0 em cada resultado no
+# boot), então o primeiro reuso depois do boot também conta. A instância que reiniciou na janela (o contêiner mantém o
+# hostname, e a série volta a 0 com o mesmo `instance`) não entra pelo máximo menos o mínimo, que contaria o acumulado
+# de antes do reinício: entra com o valor atual, que são os reusos desde o reinício, todos dentro da janela. Um reuso
+# isolado é bug de cliente ou aba esquecida; seis em dez minutos é padrão.
+#
+# Sem `for:`: cada reuso já encerrou uma família, e a janela de 10 min é a espera. Sem dado é normal.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: sessao
+    folder: Educa.ia alertas
+    interval: 10s
+    rules:
+      - uid: educa-reuso-de-refresh
+        title: Reuso de refresh
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          area: sessao
+        annotations:
+          summary: Mais de 5 cookies de renovação reusados em 10 min
+          description: Cookies de sessão velhos estão voltando, e cada um encerrou uma família de sessões. Siga o runbook.
+          runbook_url: https://github.com/LitzGab/Educa.ia/blob/main/docs/runbook.md#reuso-de-refresh
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: sum (((max_over_time(sessao_renovacao_total{job="educa/api", resultado="reuso"}[10m]) - min_over_time(sessao_renovacao_total{job="educa/api", resultado="reuso"}[10m])) and (resets(sessao_renovacao_total{job="educa/api", resultado="reuso"}[10m]) == 0)) or (sessao_renovacao_total{job="educa/api", resultado="reuso"} and (resets(sessao_renovacao_total{job="educa/api", resultado="reuso"}[10m]) > 0)))
+              instant: true
+              range: false
+              intervalMs: 10000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - type: query
+                  evaluator:
+                    type: gt
+                    params: [5]

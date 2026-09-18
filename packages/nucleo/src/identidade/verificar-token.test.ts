@@ -53,18 +53,23 @@ async function recusa(token: string, configuracao: ConfiguracaoIdentidade = conf
 }
 
 describe('verificarToken', () => {
-  it('devolve a escola, o usuário e a sessão do token válido, e nada além deles', async () => {
-    expect(await verificarToken(await assinar(), config)).toStrictEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO, sessaoId: SESSAO })
+  it('devolve a escola, o usuário, a sessão e o `iat` do token válido, e nada além deles', async () => {
+    const emitidoEm = agora() - 7
+    expect(await verificarToken(await assinar({ claims: { iat: emitidoEm } }), config)).toStrictEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO, sessaoId: SESSAO, emitidoEm })
+  })
+
+  it('token sem `iat` passa sem `emitidoEm`: ele nunca conta como o token da última renovação', async () => {
+    expect(await verificarToken(await assinar({ semClaims: ['iat'] }), config)).toStrictEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO, sessaoId: SESSAO })
   })
 
   it('devolve os ids em minúsculas: a mesma escola não vira outra chave por causa da caixa', async () => {
     const token = await assinar({ claims: { esc: ESCOLA_A.toUpperCase(), sub: USUARIO.toUpperCase(), sid: SESSAO.toUpperCase() } })
-    expect(await verificarToken(token, config)).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO, sessaoId: SESSAO })
+    expect(await verificarToken(token, config)).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO, sessaoId: SESSAO, emitidoEm: expect.any(Number) })
   })
 
   it('aceita o token com a validade máxima de 24 horas pela frente', async () => {
     const token = await assinar({ claims: { exp: agora() + VALIDADE_MAXIMA_TOKEN_SEGUNDOS } })
-    expect(await verificarToken(token, config)).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO, sessaoId: SESSAO })
+    expect(await verificarToken(token, config)).toEqual({ escolaId: ESCOLA_A, usuarioId: USUARIO, sessaoId: SESSAO, emitidoEm: expect.any(Number) })
   })
 
   it('recusa o token do emissor sintético do F0, assinado com a mesma chave e no prazo: o emissor é constante, não configuração', async () => {

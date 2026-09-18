@@ -14,4 +14,5 @@ export const MENSAGENS_DE_ERRO: Readonly<Record<CodigoDeErro, string>> = {
   INDISPONIVEL_TENTE_DE_NOVO: 'O sistema está indisponível no momento. Tente de novo em instantes.',
   LIMITE_EXCEDIDO: 'Muitas tentativas em pouco tempo. Aguarde um pouco e tente de novo.',
   CONTA_SEGURADA: 'Muitas tentativas com senha errada nesta conta. Aguarde de 30 segundos a 15 minutos, como indicado, e tente de novo.',
+  JA_RENOVADO: 'Sua sessão acabou de ser renovada em outra aba. Tente de novo.',
 }

@@ -39,3 +39,7 @@ export {
 export type { EtapaComDesafio, EtapaDeLogin, PedidoLoginEmail, RespostaLogin } from './sessao/login.js'
 export { esquemaRespostaEu } from './sessao/eu.js'
 export type { RespostaEu } from './sessao/eu.js'
+export { esquemaRespostaRenovacao } from './sessao/renovacao.js'
+export type { RespostaRenovacao } from './sessao/renovacao.js'
+export { esquemaPedidoEscolaSessao, esquemaRespostaEscolaSessao, INATIVIDADE_MAXIMA_MIN, INATIVIDADE_MINIMA_MIN } from './sessao/escola-sessao.js'
+export type { PedidoEscolaSessao, RespostaEscolaSessao } from './sessao/escola-sessao.js'

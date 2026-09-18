@@ -9,6 +9,7 @@ import {
   GuardaDeSessao,
   InterceptorDeUso,
   LimitadorDeRequisicoes,
+  medidorGlobal,
   ProxiesConfiaveis,
   SessaoRepository,
   type Banco,
@@ -19,6 +20,7 @@ import { Module, type DynamicModule } from '@nestjs/common'
 import { APP_GUARD, APP_INTERCEPTOR, DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core'
 import { BANCO, BancoModule } from './banco.module.js'
 import type { ConfiguracaoApi } from './config.js'
+import { EstruturaModule } from './estrutura/estrutura.module.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
 import { SessaoModule } from './sessao/sessao.module.js'
 import { ProntidaoController } from './sistema/prontidao.controller.js'
@@ -27,7 +29,7 @@ import { UsoModule } from './uso.module.js'
 
 @Module({})
 export class AppModule {
-  /** @param opcoes.medidor só o teste passa, para ler as métricas do login; sem ele, vale o medidor global. */
+  /** @param opcoes.medidor só o teste passa, para ler as métricas do login e da sessão; sem ele, vale o medidor global. */
   static com(config: ConfiguracaoApi, opcoes: { medidor?: Meter } = {}): DynamicModule {
     return {
       module: AppModule,
@@ -37,6 +39,7 @@ export class AppModule {
         LimiteModule.com(config.limite),
         UsoModule.com(config.redisFilaUrl),
         SessaoModule.com({ identidade: config.identidade, login: config.login, redisFilaUrl: config.redisFilaUrl, ...opcoes }),
+        EstruturaModule,
         SistemaModule.com({
           rotasSinteticas: config.rotasSinteticas,
           versao: config.versao,
@@ -74,7 +77,7 @@ export class AppModule {
         {
           // 3. A sessão no Postgres, sem cache: grava escola, usuário, papel, sessão e ano letivo no contexto.
           provide: APP_GUARD,
-          useFactory: (reflector: Reflector, sessoes: SessaoRepository) => new GuardaDeSessao(reflector, sessoes),
+          useFactory: (reflector: Reflector, sessoes: SessaoRepository) => new GuardaDeSessao(reflector, sessoes, opcoes.medidor ?? medidorGlobal()),
           inject: [Reflector, SessaoRepository],
         },
         {

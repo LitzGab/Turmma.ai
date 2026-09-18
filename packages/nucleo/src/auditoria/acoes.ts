@@ -41,6 +41,23 @@ export const ACOES_DE_AUDITORIA = {
     depois: z.strictObject({ redeId: z.uuid() }),
     finalidade: null,
   },
+  /** A coordenação mudou os minutos sem uso até a sessão vencer (5.0): só os dois números, antes e depois. */
+  'escola.sessao_alterada': {
+    entidade: 'escola',
+    antes: z.strictObject({ inatividadeAlunoMin: z.number().int(), inatividadeEquipeMin: z.number().int() }),
+    depois: z.strictObject({ inatividadeAlunoMin: z.number().int(), inatividadeEquipeMin: z.number().int() }),
+    finalidade: null,
+  },
+  /**
+   * O cookie de renovação anterior voltou depois de o atual já ter sido usado e da janela de 30 s (5.0): alguém
+   * guardou um cookie velho. A família inteira foi encerrada; o registro leva a família e quantas sessões caíram.
+   */
+  'sessao.reuso_de_refresh': {
+    entidade: 'sessao',
+    antes: null,
+    depois: z.strictObject({ familia: z.uuid(), sessoesEncerradas: z.number().int() }),
+    finalidade: null,
+  },
 } as const satisfies Record<string, DefinicaoDeAcao>
 
 export type AcaoDeAuditoria = keyof typeof ACOES_DE_AUDITORIA

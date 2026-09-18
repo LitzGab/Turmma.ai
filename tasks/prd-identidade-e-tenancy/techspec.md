@@ -176,7 +176,7 @@ Envelope de erro do F0. As rotas anônimas levam `@RotaAnonima`.
 
 **Renovar.** Transação com `FOR UPDATE`.
 - **Hash atual:** rotaciona, guarda o anterior e zera `atual_apresentado`. O token de acesso novo sai com `iat` depois de `rotacionado_em`. A primeira requisição autenticada com ele marca `atual_apresentado` (`update … where not atual_apresentado`, sem segurar a resposta), porque token e cookie chegaram juntos. É uma escrita por renovação, ~7/s no pico.
-- **Hash anterior, com o atual nunca apresentado:** a resposta anterior se perdeu. Rotaciona de novo, sem encerrar nada.
+- **Hash anterior, com o atual nunca apresentado:** a resposta anterior se perdeu. Rotaciona de novo, sem encerrar nada. Até 2 s depois da rotação, é a renovação simultânea de outra aba (a segunda esperou o `FOR UPDATE` da primeira): 409 `JA_RENOVADO`, sem rotacionar (5.0; a confirmar).
 - **Hash anterior, com o atual já apresentado:** até 30 s, 409 `JA_RENOVADO`; depois disso, conta como reuso, encerra a família, grava auditoria e dispara alerta.
 - **Uso:** renovar não conta como uso.
 

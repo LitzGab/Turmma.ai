@@ -49,7 +49,7 @@ export interface DependenciasDoLogin {
 const IP_NAO_LIDO = '0.0.0.0'
 
 /** Bytes do refresh: 256 bits sorteados. O banco guarda só o SHA-256, e o cookie leva o valor. */
-const BYTES_DO_REFRESH = 32
+export const BYTES_DO_REFRESH = 32
 
 /** O e-mail como a conta o guarda (`citext`): sem espaço nas pontas e sem diferença de caixa. */
 export function normalizarEmail(email: string): string {
@@ -161,6 +161,7 @@ export function etapaDoLogin(usuarios: readonly Pick<UsuarioAtivoDaConta, 'papel
   return 'pronta'
 }
 
-function ipParaRegistro(ip: string): string {
+/** O IP como o registro de acesso o grava: o que não foi lido vira o não roteável. */
+export function ipParaRegistro(ip: string): string {
   return ip === IP_DESCONHECIDO ? IP_NAO_LIDO : ip
 }

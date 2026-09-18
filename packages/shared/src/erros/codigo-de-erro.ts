@@ -13,6 +13,11 @@ export const CodigoDeErro = {
   LIMITE_EXCEDIDO: 'LIMITE_EXCEDIDO',
   /** Senha errada repetida segurou a conta por um tempo (429 com `Retry-After`): por conta, nunca por IP. */
   CONTA_SEGURADA: 'CONTA_SEGURADA',
+  /**
+   * O cookie de renovação acabou de ser trocado por outra aba ou requisição (409): a sessão continua, e a web espera
+   * a renovação em andamento e tenta uma vez com o cookie atual.
+   */
+  JA_RENOVADO: 'JA_RENOVADO',
 } as const
 
 export type CodigoDeErro = (typeof CodigoDeErro)[keyof typeof CodigoDeErro]

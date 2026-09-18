@@ -1,18 +1,21 @@
 import { CodigoDeErro } from '@educa/shared'
 import { Logger, type CanActivate, type ExecutionContext } from '@nestjs/common'
 import type { Reflector } from '@nestjs/core'
+import type { Histogram, Meter } from '@opentelemetry/api'
 import { definirSessaoNoContexto } from '../contexto/contexto.js'
 import { ErroDeDominio, TENTE_DE_NOVO_PADRAO_SEGUNDOS } from '../erro/erro-de-dominio.js'
 import { METADADO_ROTA_ANONIMA } from '../limite/rota-anonima.decorator.js'
 import { avisoEspacado } from '../log/aviso-espacado.js'
-import { avaliarSessao } from './avaliar-sessao.js'
+import { LIMITES_DO_HISTOGRAMA_HTTP_S, METRICAS } from '../telemetria/metricas.js'
+import { avaliarSessao, tokenDaUltimaRenovacao } from './avaliar-sessao.js'
 import type { LinhaDaSessao } from './sessao.repository.js'
 import { tokenDaRequisicao } from './token-da-requisicao.js'
 import type { TokenVerificado } from './verificar-token.js'
 
-/** A leitura que a guarda faz. É a do `SessaoRepository`; o teste conta as chamadas. */
+/** A leitura que a guarda faz, e a marcação do token renovado. É o `SessaoRepository`; o teste conta as chamadas. */
 export interface LeituraDeSessao {
   lerParaGuarda(token: TokenVerificado): Promise<LinhaDaSessao | undefined>
+  marcarAtualApresentado(token: TokenVerificado): Promise<boolean>
 }
 
 /**
@@ -26,6 +29,10 @@ export interface LeituraDeSessao {
  *
  * Com o Postgres com erro ou fora do prazo, responde 503 `INDISPONIVEL_TENTE_DE_NOVO` com `Retry-After`, nunca 401:
  * a queda do banco não desloga a escola inteira, e a web tenta de novo com o token e o formulário que já tem.
+ *
+ * Mede a leitura em `sessao.leitura.duracao` (regra 80, item 10), com ou sem erro. Quando a requisição traz o token
+ * que a última renovação emitiu, marca a sessão como apresentada sem segurar a resposta (Tech Spec, seção 5,
+ * "Renovar"): a marcação que falhar é refeita pela requisição seguinte com o mesmo token.
  */
 export class GuardaDeSessao implements CanActivate {
   readonly #logger = new Logger('sessao')
@@ -36,10 +43,21 @@ export class GuardaDeSessao implements CanActivate {
     this.#avisoLiberado = true
   })
 
+  readonly #duracaoDaLeitura: Histogram | undefined
+  // A marcação que falha não derruba nada: uma linha a cada 30 s, sem o erro inteiro.
+  readonly #avisarMarcacao = avisoEspacado(() => this.#logger.warn('sessao.marcacao_indisponivel'))
+
   constructor(
     private readonly reflector: Reflector,
     private readonly leitura: LeituraDeSessao,
-  ) {}
+    medidor?: Meter,
+  ) {
+    this.#duracaoDaLeitura = medidor?.createHistogram(METRICAS.leituraDeSessao, {
+      unit: 's',
+      description: 'Duração da leitura de sessão da guarda, por requisição autenticada',
+      advice: { explicitBucketBoundaries: LIMITES_DO_HISTOGRAMA_HTTP_S },
+    })
+  }
 
   async canActivate(execucao: ExecutionContext): Promise<boolean> {
     const anonima = this.reflector.getAllAndOverride<boolean | undefined>(METADADO_ROTA_ANONIMA, [execucao.getHandler(), execucao.getClass()])
@@ -51,6 +69,7 @@ export class GuardaDeSessao implements CanActivate {
     if (token === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
 
     let linha: LinhaDaSessao | undefined
+    const inicio = performance.now()
     try {
       linha = await this.leitura.lerParaGuarda(token)
     } catch (erro) {
@@ -62,10 +81,17 @@ export class GuardaDeSessao implements CanActivate {
         else this.#logger.warn('sessao.leitura_indisponivel')
       }
       throw new ErroDeDominio(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO, undefined, TENTE_DE_NOVO_PADRAO_SEGUNDOS)
+    } finally {
+      this.#duracaoDaLeitura?.record((performance.now() - inicio) / 1_000)
     }
     const sessao = avaliarSessao(token, linha)
-    if (sessao === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+    if (sessao === undefined || linha === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
     definirSessaoNoContexto(sessao)
+    if (tokenDaUltimaRenovacao(token, linha)) {
+      this.leitura.marcarAtualApresentado(token).catch(() => {
+        this.#avisarMarcacao()
+      })
+    }
     return true
   }
 }

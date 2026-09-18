@@ -1,17 +1,19 @@
-import { conta, registroAcesso, SemEscopo, sessao, usuario, type Banco, type TransacaoBanco } from '@educa/nucleo'
+import { conta, escola, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type TransacaoBanco } from '@educa/nucleo'
 import type { PapelDeUsuario } from '@educa/shared'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, or, sql } from 'drizzle-orm'
 
-/** A sessão achada pelo hash do cookie: só ids, estado e datas, para a renovação decidir (tarefa 5.0). */
-export interface SessaoPeloRefresh {
+/**
+ * A sessão achada pelo hash do cookie, travada para a renovação decidir (tarefa 5.0): só ids, estado, datas, o papel
+ * e a inatividade da escola, sem nada da pessoa. `pelo` diz se o cookie é o atual ou o anterior.
+ */
+export interface SessaoParaRenovar extends EstadoDaSessao {
   readonly id: string
   readonly escolaId: string
   readonly usuarioId: string
   readonly familia: string
+  readonly pelo: 'atual' | 'anterior'
   readonly atualApresentado: boolean
   readonly rotacionadoEm: Date | null
-  readonly expiraEm: Date
-  readonly encerradaEm: Date | null
 }
 
 /** A credencial achada pelo e-mail: o id, o hash (nulo enquanto a conta não tem senha) e se o MFA está ativo. Nunca o e-mail. */
@@ -28,17 +30,6 @@ export interface UsuarioAtivoDaConta {
   readonly papel: PapelDeUsuario
 }
 
-const colunasDaSessao = {
-  id: sessao.id,
-  escolaId: sessao.escolaId,
-  usuarioId: sessao.usuarioId,
-  familia: sessao.familia,
-  atualApresentado: sessao.atualApresentado,
-  rotacionadoEm: sessao.rotacionadoEm,
-  expiraEm: sessao.expiraEm,
-  encerradaEm: sessao.encerradaEm,
-}
-
 /**
  * A fronteira da resolução de tenant, e a única do sistema (Tech Spec, seção 6): toda operação que acontece antes de
  * existir escola no contexto, ou que toca a `conta` global, que não tem escola. Cada método leva `@SemEscopo` com a
@@ -51,16 +42,40 @@ const colunasDaSessao = {
 export class ResolucaoDeTenantRepository {
   constructor(private readonly banco: Banco | TransacaoBanco) {}
 
-  @SemEscopo('o cookie de renovação não diz a escola: a sessão é achada pelo hash atual do refresh, e só depois a escola dela vira contexto')
-  async sessaoPorRefreshHash(refreshHash: string): Promise<SessaoPeloRefresh | undefined> {
-    const [linha] = await this.banco.select(colunasDaSessao).from(sessao).where(eq(sessao.refreshHash, refreshHash)).limit(1)
-    return linha
-  }
-
-  @SemEscopo('o cookie de renovação não diz a escola: o hash anterior do refresh acha a sessão para distinguir resposta perdida de reuso')
-  async sessaoPorRefreshHashAnterior(refreshHash: string): Promise<SessaoPeloRefresh | undefined> {
-    const [linha] = await this.banco.select(colunasDaSessao).from(sessao).where(eq(sessao.refreshHashAnterior, refreshHash)).limit(1)
-    return linha
+  /**
+   * Com o `banco` sendo a transação da renovação: acha a sessão cujo hash atual ou anterior é o do cookie e a trava
+   * (`FOR UPDATE OF sessao`, sem travar o usuário nem a escola). Duas renovações do mesmo cookie esperam uma pela
+   * outra, e a segunda relê a linha já rotacionada: o hash que era atual passa a ser o anterior.
+   */
+  @SemEscopo('o cookie de renovação não diz a escola: a sessão é achada pelo hash atual ou anterior do refresh, e só depois a escola dela vira contexto')
+  async sessaoParaRenovar(refreshHash: string): Promise<SessaoParaRenovar | undefined> {
+    const [linha] = await this.banco
+      .select({
+        id: sessao.id,
+        escolaId: sessao.escolaId,
+        usuarioId: sessao.usuarioId,
+        familia: sessao.familia,
+        refreshHash: sessao.refreshHash,
+        atualApresentado: sessao.atualApresentado,
+        rotacionadoEm: sessao.rotacionadoEm,
+        encerradaEm: sessao.encerradaEm,
+        expiraEm: sessao.expiraEm,
+        ultimoUsoEm: sessao.ultimoUsoEm,
+        papel: usuario.papel,
+        desativadoEm: usuario.desativadoEm,
+        inatividadeAlunoMin: escola.inatividadeAlunoMin,
+        inatividadeEquipeMin: escola.inatividadeEquipeMin,
+        agora: sql<Date>`now()`.mapWith(sessao.expiraEm),
+      })
+      .from(sessao)
+      .innerJoin(usuario, and(eq(usuario.escolaId, sessao.escolaId), eq(usuario.id, sessao.usuarioId)))
+      .innerJoin(escola, eq(escola.id, sessao.escolaId))
+      .where(or(eq(sessao.refreshHash, refreshHash), eq(sessao.refreshHashAnterior, refreshHash)))
+      .limit(1)
+      .for('update', { of: sessao })
+    if (linha === undefined) return undefined
+    const { refreshHash: atual, ...resto } = linha
+    return { ...resto, pelo: atual === refreshHash ? 'atual' : 'anterior' }
   }
 
   @SemEscopo('a credencial da equipe é global: depois da senha verificada, lista em que escolas a conta tem usuário ativo, só com id, escola e papel')

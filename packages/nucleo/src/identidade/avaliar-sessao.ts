@@ -15,6 +15,34 @@ export function inatividadeDoPapel(linha: Pick<LinhaDaSessao, 'papel' | 'inativi
   return linha.papel === 'aluno' ? linha.inatividadeAlunoMin : linha.inatividadeEquipeMin
 }
 
+/** O que decide se uma sessão ainda vale, sem olhar o token: a guarda e a renovação conferem o mesmo. */
+export type EstadoDaSessao = Pick<
+  LinhaDaSessao,
+  'papel' | 'desativadoEm' | 'encerradaEm' | 'expiraEm' | 'ultimoUsoEm' | 'inatividadeAlunoMin' | 'inatividadeEquipeMin' | 'agora'
+>
+
+/**
+ * Se a sessão ainda vale agora (a hora do banco): não encerrada, usuário ativo, dentro das 12 h absolutas, e com o
+ * último uso dentro da inatividade do papel mais a tolerância. A renovação confere o mesmo que a guarda: um cookie
+ * de sessão vencida por inatividade não renova (o Chromebook do carrinho não entrega a conta anterior).
+ */
+export function sessaoAindaVale(linha: EstadoDaSessao): boolean {
+  if (linha.encerradaEm !== null || linha.desativadoEm !== null) return false
+  const agora = linha.agora.getTime()
+  if (linha.expiraEm.getTime() <= agora) return false
+  const limiteDeInatividadeMs = (inatividadeDoPapel(linha) + TOLERANCIA_DE_INATIVIDADE_MIN) * MS_POR_MINUTO
+  return agora - linha.ultimoUsoEm.getTime() < limiteDeInatividadeMs
+}
+
+/**
+ * Se a requisição traz o token que a última renovação emitiu, e a sessão ainda não foi marcada: o `iat` dele não é
+ * anterior a `rotacionado_em`. O banco confere de novo, com a hora exata, na marcação.
+ */
+export function tokenDaUltimaRenovacao(token: TokenVerificado, linha: Pick<LinhaDaSessao, 'rotacionadoEm' | 'atualApresentado'>): boolean {
+  if (linha.atualApresentado || linha.rotacionadoEm === null || token.emitidoEm === undefined) return false
+  return token.emitidoEm * 1_000 >= linha.rotacionadoEm.getTime()
+}
+
 /**
  * Confere a sessão lida para o token e devolve o que vai para o contexto, ou `undefined` quando ela não vale. Toda
  * recusa é a mesma para quem chamou (`NAO_AUTENTICADO`):
@@ -27,11 +55,7 @@ export function inatividadeDoPapel(linha: Pick<LinhaDaSessao, 'papel' | 'inativi
 export function avaliarSessao(token: TokenVerificado, linha: LinhaDaSessao | undefined): SessaoDaRequisicao | undefined {
   if (linha === undefined) return undefined
   if (linha.usuarioId !== token.usuarioId) return undefined
-  if (linha.encerradaEm !== null || linha.desativadoEm !== null) return undefined
-  const agora = linha.agora.getTime()
-  if (linha.expiraEm.getTime() <= agora) return undefined
-  const limiteDeInatividadeMs = (inatividadeDoPapel(linha) + TOLERANCIA_DE_INATIVIDADE_MIN) * MS_POR_MINUTO
-  if (agora - linha.ultimoUsoEm.getTime() >= limiteDeInatividadeMs) return undefined
+  if (!sessaoAindaVale(linha)) return undefined
   return {
     escolaId: token.escolaId,
     usuarioId: token.usuarioId,

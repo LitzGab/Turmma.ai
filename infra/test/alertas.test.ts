@@ -6,7 +6,7 @@ import { raizRepositorio } from '../../tools/ci/executar.ts'
 import { arquivosDeAlertaDoRepositorio } from '../../tools/guardas/alerta-tem-runbook.ts'
 import { NOMES_NO_PROMETHEUS } from '../../tools/testes/metricas.ts'
 import { metricasDa } from '../../tools/testes/promql.ts'
-import { criarGatilhoDaFalha, estadoDoAlerta, executarEnsaioDeAlertas, REGRAS_DO_ENSAIO, regrasDaResposta } from '../scripts/ensaio-alertas.ts'
+import { criarGatilhoDaFalha, estadoDoAlerta, executarEnsaioDeAlertas, REGRAS_DO_ENSAIO, REGRAS_PROVISIONADAS, regrasDaResposta } from '../scripts/ensaio-alertas.ts'
 
 interface Consulta {
   refId: string
@@ -45,8 +45,8 @@ const expressao = (regra: Regra) => regra.data.find((consulta) => consulta.refId
 const limiar = (regra: Regra) => regra.data.find((consulta) => consulta.refId === regra.condition)?.model.conditions?.[0]?.evaluator
 
 describe('regras de alerta provisionadas', () => {
-  it('são as três da Tech Spec, com o `for:` e o limiar declarados (RF16)', () => {
-    expect(regras.map(({ regra }) => regra.uid).sort()).toEqual(Object.values(REGRAS_DO_ENSAIO).sort())
+  it('são as das Tech Specs, com o `for:` e o limiar declarados (RF16 do F0; seção 7c da identidade)', () => {
+    expect(regras.map(({ regra }) => regra.uid).sort()).toEqual(Object.values(REGRAS_PROVISIONADAS).sort())
 
     const job = regraPorUid(REGRAS_DO_ENSAIO.jobInterativo).regra
     expect(job.for).toBe('1m')
@@ -66,6 +66,17 @@ describe('regras de alerta provisionadas', () => {
       '(sum by (job, http_route) (rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[1m])) / sum by (job, http_route) (rate(http_server_request_duration_seconds_count[1m]))) and (sum by (job, http_route) (rate(http_server_request_duration_seconds_count[1m])) > 0)',
     )
     expect(limiar(erro)).toEqual({ type: 'gt', params: [0.05] })
+
+    const reuso = regraPorUid(REGRAS_PROVISIONADAS.reusoDeRefresh).regra
+    // Sem espera: cada reuso já encerrou uma família, e a janela de 10 min está na expressão.
+    expect(reuso.for).toBe('0s')
+    // O máximo menos o mínimo do contador na janela, por instância e somado: exato, sem a extrapolação do `increase()`,
+    // que passaria de 5 com 5 reusos. A instância que reiniciou na janela entra só com o valor atual (os reusos desde o
+    // reinício), e não com o acumulado de antes dele.
+    expect(expressao(reuso)).toBe(
+      'sum (((max_over_time(sessao_renovacao_total{job="educa/api", resultado="reuso"}[10m]) - min_over_time(sessao_renovacao_total{job="educa/api", resultado="reuso"}[10m])) and (resets(sessao_renovacao_total{job="educa/api", resultado="reuso"}[10m]) == 0)) or (sessao_renovacao_total{job="educa/api", resultado="reuso"} and (resets(sessao_renovacao_total{job="educa/api", resultado="reuso"}[10m]) > 0)))',
+    )
+    expect(limiar(reuso)).toEqual({ type: 'gt', params: [5] })
   })
 
   it('toda regra consulta o Prometheus da observabilidade por consulta instantânea, avalia a cada 10 s e não nasce pausada', () => {

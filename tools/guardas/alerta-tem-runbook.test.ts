@@ -26,11 +26,12 @@ describe('guarda: alerta tem runbook', () => {
     const arquivos = arquivosDeAlertaDoRepositorio()
     expect(arquivos.map((arquivo) => arquivo.caminho)).toEqual([
       'infra/grafana/alertas/job-interativo-esperando.yaml',
+      'infra/grafana/alertas/reuso-de-refresh.yaml',
       'infra/grafana/alertas/seguro-limite-ativo.yaml',
       'infra/grafana/alertas/taxa-5xx.yaml',
     ])
     expect(problemasDeRunbook(arquivos, runbookDoRepositorio)).toEqual([])
-    expect(arquivos.flatMap(regrasDoArquivo).map((regra) => regra.titulo)).toEqual(['Job interativo esperando', 'Seguro de limite ativo', 'Taxa de erro 5xx'])
+    expect(arquivos.flatMap(regrasDoArquivo).map((regra) => regra.titulo)).toEqual(['Job interativo esperando', 'Reuso de refresh', 'Seguro de limite ativo', 'Taxa de erro 5xx'])
   })
 
   it('reprova: regra nova sem entrada no runbook', () => {

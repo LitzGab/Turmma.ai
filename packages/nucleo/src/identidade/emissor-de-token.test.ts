@@ -31,9 +31,18 @@ describe('EmissorDeToken', () => {
     expect(expiraEm).toEqual(new Date(agora.getTime() + 600_000))
   })
 
-  it('a verificação da API aceita o token emitido e devolve a escola, o usuário e a sessão pedidos', async () => {
+  it('a verificação da API aceita o token emitido e devolve a escola, o usuário, a sessão pedidos e o iat', async () => {
     const { token } = await new EmissorDeToken(CHAVE).emitir(pedido)
-    expect(await verificarToken(token, config)).toEqual(pedido)
+    expect(await verificarToken(token, config)).toEqual({ ...pedido, emitidoEm: decodeJwt(token).iat })
+  })
+
+  it('com o instante pedido, o iat e o exp saem dele e não do relógio: a renovação emite o token no segundo depois da rotação', async () => {
+    const depoisDaRotacao = new Date((Math.floor(Date.now() / 1000) + 1) * 1000)
+    const relogio = new Date(depoisDaRotacao.getTime() - 300)
+    const { token, expiraEm } = await new EmissorDeToken(CHAVE, { agora: () => relogio }).emitir(pedido, depoisDaRotacao)
+    expect(decodeJwt(token)).toMatchObject({ iat: depoisDaRotacao.getTime() / 1000, exp: depoisDaRotacao.getTime() / 1000 + VALIDADE_TOKEN_ACESSO_SEGUNDOS })
+    expect(expiraEm).toEqual(new Date(depoisDaRotacao.getTime() + 600_000))
+    expect((await verificarToken(token, config)).emitidoEm).toBe(depoisDaRotacao.getTime() / 1000)
   })
 
   it('passados os 10 min, o token é recusado', async () => {

@@ -15,19 +15,67 @@ describe('ResolucaoDeTenantRepository: a resolução antes de haver escola devol
     await bancada.fechar()
   })
 
-  it('sessão pelo hash atual e pelo anterior: acha a sessão e a escola dela, só com ids, estado e datas', async () => {
+  it('sessão pelo hash atual ou pelo anterior: acha a sessão e a escola dela, diz por qual achou, e traz só ids, estado, datas, papel e a inatividade', async () => {
     const professorEmA = await bancada.escolaComSessao('professor')
     const [atual, anterior] = [randomUUID(), randomUUID()]
-    await bancada.pool.query('update sessao set refresh_hash = $1, refresh_hash_anterior = $2 where id = $3', [atual, anterior, professorEmA.sessaoId])
+    await bancada.pool.query('update sessao set refresh_hash = $1, refresh_hash_anterior = $2 where escola_id = $3 and id = $4', [atual, anterior, professorEmA.escolaId, professorEmA.sessaoId])
 
-    const pelaAtual = await repositorio.sessaoPorRefreshHash(atual)
-    expect(pelaAtual).toMatchObject({ id: professorEmA.sessaoId, escolaId: professorEmA.escolaId, usuarioId: professorEmA.usuarioId, atualApresentado: false, encerradaEm: null })
-    expect(Object.keys(pelaAtual ?? {}).sort()).toEqual(['atualApresentado', 'encerradaEm', 'escolaId', 'expiraEm', 'familia', 'id', 'rotacionadoEm', 'usuarioId'])
-    expect(await repositorio.sessaoPorRefreshHashAnterior(anterior)).toEqual(pelaAtual)
-    // O hash atual não acha pela coluna do anterior, nem o contrário.
-    expect(await repositorio.sessaoPorRefreshHashAnterior(atual)).toBeUndefined()
-    expect(await repositorio.sessaoPorRefreshHash(anterior)).toBeUndefined()
-    expect(await repositorio.sessaoPorRefreshHash(randomUUID())).toBeUndefined()
+    const pelaAtual = await repositorio.sessaoParaRenovar(atual)
+    expect(pelaAtual).toMatchObject({
+      id: professorEmA.sessaoId,
+      escolaId: professorEmA.escolaId,
+      usuarioId: professorEmA.usuarioId,
+      pelo: 'atual',
+      papel: 'professor',
+      atualApresentado: false,
+      encerradaEm: null,
+      desativadoEm: null,
+      inatividadeAlunoMin: 30,
+      inatividadeEquipeMin: 120,
+    })
+    expect(Object.keys(pelaAtual ?? {}).sort()).toEqual([
+      'agora',
+      'atualApresentado',
+      'desativadoEm',
+      'encerradaEm',
+      'escolaId',
+      'expiraEm',
+      'familia',
+      'id',
+      'inatividadeAlunoMin',
+      'inatividadeEquipeMin',
+      'papel',
+      'pelo',
+      'rotacionadoEm',
+      'ultimoUsoEm',
+      'usuarioId',
+    ])
+    expect(await repositorio.sessaoParaRenovar(anterior)).toMatchObject({ id: professorEmA.sessaoId, pelo: 'anterior' })
+    expect(await repositorio.sessaoParaRenovar(randomUUID())).toBeUndefined()
+  })
+
+  it('concorrência: a sessão fica travada até o fim da transação de quem a achou, e a segunda leitura espera', async () => {
+    const aluno = await bancada.escolaComSessao()
+    const atual = randomUUID()
+    await bancada.pool.query('update sessao set refresh_hash = $1 where escola_id = $2 and id = $3', [atual, aluno.escolaId, aluno.sessaoId])
+    const ordem: string[] = []
+    let liberar: () => void = () => undefined
+    const travada = new Promise<void>((resolver) => (liberar = resolver))
+    const primeira = bancada.banco.transaction(async (tx) => {
+      await new ResolucaoDeTenantRepository(tx).sessaoParaRenovar(atual)
+      ordem.push('primeira travou')
+      await travada
+      ordem.push('primeira terminou')
+    })
+    await expect.poll(() => ordem.length).toBe(1)
+    const segunda = bancada.banco.transaction(async (tx) => {
+      await new ResolucaoDeTenantRepository(tx).sessaoParaRenovar(atual)
+      ordem.push('segunda leu')
+    })
+    await new Promise((resolver) => setTimeout(resolver, 300))
+    liberar()
+    await Promise.all([primeira, segunda])
+    expect(ordem).toEqual(['primeira travou', 'primeira terminou', 'segunda leu'])
   })
 
   it('usuários ativos da conta: os de cada escola, só id, escola e papel, e nunca o desativado nem o de outra conta', async () => {

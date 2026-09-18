@@ -1,8 +1,11 @@
 import pg from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { cookieDaResposta, cookieDeRenovacao, renovar } from '../../apps/api/test/api-com-sessao.js'
 import { BancadaDeSessoes } from '../../apps/api/test/sessao-de-teste.js'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
-import { compose, composeAssincrono, composeAssincronoOuFalha } from '../../tools/testes/compose.ts'
+import { aguardarSaudavel, compose, composeAssincrono, composeAssincronoOuFalha } from '../../tools/testes/compose.ts'
+import { arquivosDeAlertaDoRepositorio } from '../../tools/guardas/alerta-tem-runbook.ts'
+import { parse } from 'yaml'
 import { urlDoBancoDeTeste } from '../../tools/testes/integracao.setup.ts'
 import {
   alertaCom,
@@ -11,6 +14,7 @@ import {
   gatilhoDaFalhaExiste,
   lerRegrasNoGrafana,
   REGRAS_DO_ENSAIO,
+  REGRAS_PROVISIONADAS,
   type EstadoDoAlerta,
   type ResultadoDoEnsaio,
 } from '../scripts/ensaio-alertas.ts'
@@ -46,6 +50,22 @@ async function token(escolaId: string): Promise<string> {
 async function esperaNoPrometheus(escolaId: string): Promise<number | undefined> {
   const consulta = new URLSearchParams({ query: `max(job_espera_mais_antiga_s{escola_id="${escolaId}", fila="interativa"})` })
   const corpo = (await (await fetch(`${PROMETHEUS}/api/v1/query?${consulta}`)).json()) as { data: { result: Array<{ value: [number, string] }> } }
+  const [serie] = corpo.data.result
+  return serie === undefined ? undefined : Number(serie.value[1])
+}
+
+/** A expressão da regra como está no arquivo provisionado: o teste consulta a mesma que o Grafana avalia. */
+function regraPorUidNoArquivo(uid: string): string {
+  for (const arquivo of arquivosDeAlertaDoRepositorio()) {
+    const documento = parse(arquivo.conteudo) as { groups: Array<{ rules: Array<{ uid: string; data: Array<{ refId: string; model: { expr?: string } }> }> }> }
+    for (const grupo of documento.groups) for (const regra of grupo.rules) if (regra.uid === uid) return regra.data.find((consulta) => consulta.refId === 'A')?.model.expr ?? ''
+  }
+  throw new Error(`regra ${uid} não provisionada`)
+}
+
+/** O valor de uma expressão instantânea no Prometheus da observabilidade, ou `undefined` se ela não tem série. */
+async function valorNoPrometheus(expr: string): Promise<number | undefined> {
+  const corpo = (await (await fetch(`${PROMETHEUS}/api/v1/query?${new URLSearchParams({ query: expr })}`)).json()) as { data: { result: Array<{ value: [number, string] }> } }
   const [serie] = corpo.data.result
   return serie === undefined ? undefined : Number(serie.value[1])
 }
@@ -185,6 +205,58 @@ describe('alertas locais: as três regras disparam no ensaio, não disparam com 
     const apagar = await fetch(`${GRAFANA}/api/v1/provisioning/alert-rules/${REGRAS_DO_ENSAIO.taxa5xx}`, { method: 'DELETE' })
     expect(apagar.status).toBe(403)
     const regras = await lerRegrasNoGrafana(GRAFANA)
-    expect([...regras.keys()].sort()).toEqual(Object.values(REGRAS_DO_ENSAIO).sort())
+    expect([...regras.keys()].sort()).toEqual(Object.values(REGRAS_PROVISIONADAS).sort())
   }, 60_000)
+
+  it('reuso de refresh: 5 reusos em 10 min não disparam, o sexto dispara, e o reinício da API com o acumulado não dispara', async () => {
+    const escola = await sessoes.escola()
+    const alunos = await sessoes.sessoes(escola, { quantidade: 6 })
+    const reusos = `sum(sessao_renovacao_total{job="educa/api", resultado="reuso"})`
+    const daRegra = regraPorUidNoArquivo(REGRAS_PROVISIONADAS.reusoDeRefresh)
+    const estadoDoReuso = async (): Promise<EstadoDoAlerta> => alertaCom((await lerRegrasNoGrafana(GRAFANA)).get(REGRAS_PROVISIONADAS.reusoDeRefresh), {})?.estado ?? 'normal'
+    // A série nasce em 0 no boot da API: o Prometheus precisa tê-la antes do primeiro reuso, senão ele não conta.
+    await expect.poll(() => valorNoPrometheus(reusos), { timeout: 60_000, interval: 1_000 }).toBeDefined()
+    const base = (await valorNoPrometheus(reusos)) ?? 0
+
+    /** O cookie antigo de volta 31 s depois da rotação, com o token novo já usado: a família cai. */
+    async function reusar(aluno: (typeof alunos)[number]): Promise<void> {
+      const cookie = await cookieDeRenovacao(sessoes, aluno)
+      const legitima = await renovar(API, cookie)
+      expect(legitima.status).toBe(200)
+      const eu = await fetch(`${API}/v1/eu`, { headers: { Authorization: `Bearer ${String(legitima.corpo['token'])}` } })
+      expect(eu.status).toBe(200)
+      await expect
+        .poll(async () => (await sessoes.pool.query<{ atual_apresentado: boolean }>('select atual_apresentado from sessao where escola_id = $1 and id = $2', [escola, aluno.sessaoId])).rows[0]?.atual_apresentado, { timeout: 10_000 })
+        .toBe(true)
+      await sessoes.pool.query("update sessao set rotacionado_em = now() - interval '31 seconds' where escola_id = $1 and id = $2", [escola, aluno.sessaoId])
+      expect((await renovar(API, cookie)).status).toBe(401)
+      expect((await renovar(API, cookieDaResposta(legitima))).status).toBe(401)
+    }
+
+    for (const aluno of alunos.slice(0, 5)) await reusar(aluno)
+    await expect.poll(() => valorNoPrometheus(reusos), { timeout: 60_000, interval: 1_000 }).toBe(base + 5)
+    await expect.poll(() => valorNoPrometheus(daRegra), { timeout: 60_000, interval: 1_000 }).toBeGreaterThanOrEqual(5)
+    expect(await valorNoPrometheus(daRegra)).toBeLessThanOrEqual(5)
+    // Três avaliações da regra com os 5 na janela: nem pendente, nem disparada.
+    const estados: EstadoDoAlerta[] = []
+    for (let volta = 0; volta < 4; volta++) {
+      estados.push(await estadoDoReuso())
+      await new Promise((resolver) => setTimeout(resolver, 10_000))
+    }
+    expect(estados.every((estado) => estado === 'normal')).toBe(true)
+
+    const sexto = alunos[5]
+    if (sexto === undefined) throw new Error('sessão de teste não criada')
+    await reusar(sexto)
+    await expect.poll(() => valorNoPrometheus(reusos), { timeout: 60_000, interval: 1_000 }).toBe(base + 6)
+    await expect.poll(estadoDoReuso, { timeout: 60_000, interval: 2_000 }).toBe('disparado')
+
+    // Borda: a API reinicia no mesmo contêiner (mesmo hostname, mesma série) com os reusos acumulados, e nenhum reuso
+    // novo acontece. O contador volta a 0 e a regra volta a normal: o acumulado de antes do reinício não conta.
+    await composeAssincronoOuFalha('restart', 'api-1')
+    await aguardarSaudavel('api-1')
+    await expect.poll(() => valorNoPrometheus(reusos), { timeout: 60_000, interval: 1_000 }).toBe(0)
+    await expect.poll(() => valorNoPrometheus(daRegra), { timeout: 60_000, interval: 1_000 }).toBe(0)
+    await expect.poll(estadoDoReuso, { timeout: 60_000, interval: 2_000 }).toBe('normal')
+  }, 420_000)
 })

@@ -145,6 +145,52 @@ se um prazo de prova precisa ser estendido.
 **Depois:** todo 500 vira tarefa, com o `requisicaoId` e um teste que reproduz. 503 por Postgres
 fora entra no `TODO.md` com duração e causa.
 
+## Reuso de refresh
+
+**Dispara quando:** mais de 5 renovações de sessão, somadas as instâncias da API, terminam em reuso nos
+últimos 10 min (`sessao_renovacao_total{resultado="reuso"}`, o máximo menos o mínimo da janela; a instância que
+reiniciou na janela entra só com os reusos desde o reinício; regra `infra/grafana/alertas/reuso-de-refresh.yaml`,
+sem `for:`). Reuso é o cookie `educa_sessao` anterior voltando
+depois de o token novo já ter sido usado e de passada a janela de 30 s: alguém guardou um cookie velho. Cada
+reuso já encerrou a família de sessões dele (motivo `reuso_de_refresh`) e gravou a auditoria
+`sessao.reuso_de_refresh`. O alerta não traz escola nem pessoa: a métrica não leva nenhuma das duas.
+
+**Impacto:** a pessoa de cada família encerrada volta para a tela de entrada no meio do que fazia, e entra de
+novo. Se é ataque, quem guardou o cookie perdeu o acesso na hora; se é bug de cliente, gente legítima está sendo
+deslogada sem motivo.
+
+**Primeiro olhar:** painel, linha "Processos": "Renovações de sessão por resultado", para ver se o reuso vem
+sozinho ou junto de `ja_renovado` e `resposta_perdida`. Depois as famílias afetadas, só por ids:
+
+```sql
+select escola_id, entidade_id as sessao_id, depois->>'familia' as familia, depois->>'sessoesEncerradas' as encerradas, em
+from auditoria where acao = 'sessao.reuso_de_refresh' and em > now() - interval '30 minutes' order by em;
+```
+
+e, para uma família, `select escola_id, usuario_id, metodo, rotacionado_em, encerrada_em from sessao where
+familia = '<familia>'`. Não copie nome nem matrícula para lugar nenhum: para investigar, os ids bastam.
+
+**Causas prováveis:**
+1. Os reusos vêm de uma escola só, de poucos usuários, e cada família tem uma sessão → cookie copiado de um
+   Chromebook compartilhado, ou extensão/script guardando cookie. É o que o reuso existe para cortar: nada a
+   desfazer. Avise a coordenação daquela escola (seção "Como avisar as escolas") para ver quem usou o computador,
+   sem mandar id de aluno por e-mail.
+2. Os reusos vêm de várias escolas, começaram depois de um deploy da web, e `ja_renovado` subiu junto → bug do
+   cliente: duas abas renovando sem a trava (Web Locks), ou a web repetindo a renovação com o cookie velho depois
+   de um 409. Volte a web ao commit anterior no próximo intervalo fora do horário letivo e abra tarefa com o
+   caso reproduzido; até lá, cada família derrubada é uma pessoa que entra de novo.
+3. Os reusos vêm de um mesmo IP de saída de rede, em várias contas, em sequência → alguém testando cookies
+   roubados. Confira `registro_acesso` pelo IP (`evento = 'renovacao'`) e registre; o bloqueio já aconteceu, porque
+   a família caiu no primeiro uso. O IP é dado pessoal: fica na investigação, não vai para o `TODO.md` nem por
+   e-mail para a escola.
+
+**Se nada disso resolver:** o reuso não tem degradação a ligar: ele encerra só a família afetada, e nenhuma escola
+para por ele. Se for bug de cliente em massa no horário letivo, avise as escolas de que "a sessão pode pedir para
+entrar de novo" até a correção.
+
+**Depois:** registre no `TODO.md` a hora, quantas famílias e de quantas escolas (só números e ids), e a causa.
+Bug de cliente vira tarefa com teste; ataque vira conversa com a escola sobre o computador compartilhado.
+
 ## Rotina do sistema sem rodar (consolidação de uso, expurgo de jobs)
 
 *A preencher antes da primeira escola real* (pendência em `TODO.md`). Hoje nada avisa se
@@ -177,13 +223,17 @@ fila `agendamentos`.
 ## Ensaiar os alertas
 
 `npm run ensaio:alertas`, com o ambiente local de pé (`docker compose up`), provoca as três
-condições de uma vez: para o `worker-interativo` e manda um job interativo, para o Redis de cache,
+condições do F0 de uma vez: para o `worker-interativo` e manda um job interativo, para o Redis de cache,
 e força 5xx em `POST /v1/sistema/jobs-sinteticos` para uma escola sintética (um gatilho
 temporário no banco recusa a gravação só dessa escola). Confere pela API do Grafana que as três
 regras chegam a disparadas, e restaura tudo: religa o que parou, remove o gatilho e espera as três
 voltarem a normal. Leva uns 8 minutos, por causa dos 5 min da regra de 5xx. Só roda com
 `AMBIENTE=local`, e um de cada vez: o gatilho tem nome fixo, e um segundo ensaio no mesmo banco
 remove o gatilho do primeiro. Com o ambiente parado, o ensaio o sobe inteiro e o deixa de pé.
+
+O "Reuso de refresh" não entra no ensaio, porque não nasce de serviço parado: ele tem prova própria em
+`infra/test/alertas.int.test.ts`, que reusa cinco cookies (a regra fica normal) e depois o sexto (dispara), na
+esteira.
 
 ## Rodar o cenário de carga
 

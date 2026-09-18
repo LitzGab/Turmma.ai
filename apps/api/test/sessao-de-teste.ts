@@ -105,7 +105,8 @@ export class BancadaDeSessoes {
 
   /**
    * Apaga as sessões, os usuários e as contas que esta bancada criou, e fecha o pool. A escola, a rede e a auditoria
-   * delas ficam: a auditoria só se escreve pela porta dela, e o banco de teste é descartável.
+   * delas ficam, e com a auditoria o usuário que é autor dela: a auditoria só se escreve pela porta dela, e o banco de
+   * teste é descartável.
    */
   async fechar(): Promise<void> {
     try {
@@ -114,8 +115,9 @@ export class BancadaDeSessoes {
         const { rows } = await this.pool.query<{ conta_id: string }>('select conta_id from usuario where escola_id = any($1::uuid[]) and conta_id is not null', [escolas])
         await this.pool.query('delete from sessao where escola_id = any($1::uuid[])', [escolas])
         await this.pool.query('delete from ano_letivo where escola_id = any($1::uuid[])', [escolas])
-        await this.pool.query('delete from usuario where escola_id = any($1::uuid[])', [escolas])
-        await this.pool.query('delete from conta where id = any($1::uuid[])', [rows.map((linha) => linha.conta_id)])
+        // O usuário que é autor de auditoria fica, com a conta dele: a auditoria só se escreve (e não se apaga) pela porta dela.
+        await this.pool.query('delete from usuario u where u.escola_id = any($1::uuid[]) and not exists (select 1 from auditoria a where a.escola_id = u.escola_id and a.autor_usuario_id = u.id)', [escolas])
+        await this.pool.query('delete from conta c where c.id = any($1::uuid[]) and not exists (select 1 from usuario u where u.conta_id = c.id)', [rows.map((linha) => linha.conta_id)])
       }
     } finally {
       await this.pool.end()

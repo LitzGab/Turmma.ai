@@ -1,7 +1,7 @@
 # Tarefas — Identidade e tenancy
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 4 de 20 concluídas
+**Status:** 5 de 20 concluídas
 
 ## Lista
 
@@ -34,12 +34,12 @@
   - [x] 4.5 Redact novo do logger e `GET /v1/eu` básico
   - [x] 4.6 Testes: respostas iguais, bloqueio com recuo, falhas em paralelo, script em outro navegador, 35 logins do mesmo IP, desafio fora da rota dele
 
-- [ ] **5.0 — Renovação, atividade, inatividade e saída**
-  - [ ] 5.1 `POST /v1/sessao/renovar` com rotação, anterior, `atual_apresentado`, janela de 30 s e reuso
-  - [ ] 5.2 `POST /v1/sessao/atividade` e inatividade por papel com tolerância de 5 min
-  - [ ] 5.3 `DELETE /v1/sessao` e `PUT /v1/escola/sessao`
-  - [ ] 5.4 Métricas `sessao.renovacao`, `sessao.atividade_falha`, `sessao.leitura.duracao`; alerta `reuso-de-refresh` com runbook
-  - [ ] 5.5 Testes: renovação dupla, resposta perdida, reuso depois de 31 s, 34 e 35 min de inatividade, 12 h absolutas, saída
+- [x] **5.0 — Renovação, atividade, inatividade e saída**
+  - [x] 5.1 `POST /v1/sessao/renovar` com rotação, anterior, `atual_apresentado`, janela de 30 s e reuso
+  - [x] 5.2 `POST /v1/sessao/atividade` e inatividade por papel com tolerância de 5 min
+  - [x] 5.3 `DELETE /v1/sessao` e `PUT /v1/escola/sessao`
+  - [x] 5.4 Métricas `sessao.renovacao`, `sessao.atividade_falha`, `sessao.leitura.duracao`; alerta `reuso-de-refresh` com runbook
+  - [x] 5.5 Testes: renovação dupla, resposta perdida, reuso depois de 31 s, 34 e 35 min de inatividade, 12 h absolutas, saída
 
 - [ ] **6.0 — Coordenador só acessa com MFA**
   - [ ] 6.1 Migration de `codigo_recuperacao`; `configurar` e `ativar` com AES-256-GCM, AAD e versão da chave

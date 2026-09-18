@@ -158,10 +158,10 @@ interface RotaRegistrada {
 
 /**
  * Rotas de escrita com `rede(s)` ou `escola(s)` em qualquer segmento fixo que já foram conferidas e não criam
- * rede nem escola. Vazia nesta tarefa; quem acrescentar uma rota dessas (`PUT /v1/escola/sessao`, na 5.0)
- * a declara aqui, e a revisão confere.
+ * rede nem escola. Quem acrescentar uma rota dessas a declara aqui, e a revisão confere:
+ * - `PUT /v1/escola/sessao` (5.0): muda a inatividade da escola da sessão, que já existe; não recebe escola nenhuma.
  */
-const ROTAS_PERMITIDAS: readonly string[] = []
+const ROTAS_PERMITIDAS: readonly string[] = ['PUT /v1/escola/sessao']
 
 /** Rota que escreve e tem rede ou escola em algum segmento fixo: `POST /v1/escolas`, `POST /v1/escolas/criar`. */
 function criaRedeOuEscola(rota: RotaRegistrada): boolean {
@@ -193,7 +193,10 @@ describe('permissão: nenhuma rota da API cria rede nem escola', () => {
     expect(criaRedeOuEscola({ metodo: 'POST', caminho: '/v1/instituicoes' })).toBe(true)
     expect(criaRedeOuEscola({ metodo: 'POST', caminho: '/v1/onboarding/nova-escola' })).toBe(true)
     expect(criaRedeOuEscola({ metodo: 'POST', caminho: '/v1/sessao/renovar' })).toBe(false)
-    expect(criaRedeOuEscola({ metodo: 'PUT', caminho: '/v1/escola/sessao' })).toBe(true)
+    expect(criaRedeOuEscola({ metodo: 'PUT', caminho: '/v1/escola/configurar' })).toBe(true)
+    // A conferida passa, e só com o método conferido.
+    expect(criaRedeOuEscola({ metodo: 'PUT', caminho: '/v1/escola/sessao' })).toBe(false)
+    expect(criaRedeOuEscola({ metodo: 'POST', caminho: '/v1/escola/sessao' })).toBe(true)
     expect(criaRedeOuEscola({ metodo: 'GET', caminho: '/v1/escolas/:slug/acesso' })).toBe(false)
     expect(criaRedeOuEscola({ metodo: 'POST', caminho: '/v1/sistema/jobs-sinteticos' })).toBe(false)
   })

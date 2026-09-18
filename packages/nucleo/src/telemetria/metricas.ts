@@ -37,6 +37,15 @@ export const METRICAS = {
   seguroAtivo: 'limite.seguro_ativo',
   /** Tentativas de login respondidas com `CONTA_SEGURADA` (senha errada repetida), sem rótulo: a conta é global. */
   contaSegurada: 'login.conta_segurada',
+  /**
+   * Renovações de sessão pelo cookie, por `resultado`: `ok`, `ja_renovado` (409 de duas abas), `resposta_perdida`
+   * (o anterior voltou sem o atual ter sido usado), `reuso` (família encerrada) e `recusada` (cookie que não vale).
+   */
+  renovacaoDeSessao: 'sessao.renovacao',
+  /** Gravações de atividade que falharam depois de a resposta sair: a sessão só vence pela tolerância. */
+  atividadeFalha: 'sessao.atividade_falha',
+  /** Histograma, em segundos, da leitura de sessão da `GuardaDeSessao`, uma por requisição autenticada. */
+  leituraDeSessao: 'sessao.leitura.duracao',
   /** p99 do atraso do event loop no intervalo, em segundos. */
   atrasoEventLoop: 'nodejs.eventloop.delay.p99',
 } as const

@@ -34,6 +34,16 @@ export const REGRAS_DO_ENSAIO = {
 
 export type UidDaRegra = (typeof REGRAS_DO_ENSAIO)[keyof typeof REGRAS_DO_ENSAIO]
 
+/**
+ * Todas as regras de `infra/grafana/alertas/`: as três que o ensaio provoca e as que têm prova própria no teste de
+ * alertas (`infra/test/alertas.int.test.ts`), como o reuso de refresh, que precisa de sessões renovadas e não de
+ * serviço parado.
+ */
+export const REGRAS_PROVISIONADAS = {
+  ...REGRAS_DO_ENSAIO,
+  reusoDeRefresh: 'educa-reuso-de-refresh',
+} as const
+
 export const WORKERS_INTERATIVOS = ['worker-interativo-1', 'worker-interativo-2'] as const
 /** Rota template onde o ensaio força o 5xx, como aparece no rótulo `http_route`. */
 export const ROTA_DA_FALHA = '/v1/sistema/jobs-sinteticos'
