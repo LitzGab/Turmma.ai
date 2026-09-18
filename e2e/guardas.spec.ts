@@ -38,9 +38,25 @@ test.describe('guardas de celular e acessibilidade pegam de fato', () => {
     await page.setContent(PAGINA_COM_CONTRASTE)
     expect(await violacoesGraves(page)).toEqual([])
   })
+})
 
-  test('o perfil do projeto está aplicado: a rede tem a latência do perfil e a CPU fica mais lenta', async ({ page, perfil }) => {
+/**
+ * Separação mínima entre a aba limitada e a livre, medidas agora, para a medição da CPU decidir alguma coisa.
+ * Abaixo dela a máquina está ocupada demais: a limitação quase não aparece, e o teste tenta de novo.
+ */
+const SEPARACAO_MINIMA = 1.5
+
+test.describe('o perfil do projeto está aplicado', () => {
+  // Só este teste do e2e tem nova tentativa. Ela existe para o runner ocupado demais para medir a CPU (a
+  // separação abaixo do mínimo), mas o Playwright repete qualquer falha, e o que passa na segunda tentativa sai
+  // como "flaky", sem ficar vermelho. O que segura isso é o defeito que a guarda vigia ser determinístico: uma
+  // fixture sem a limitação reprova em toda tentativa (três de três, nos dois projetos, na correção de
+  // 2026-09-18). Cada nova tentativa fica anotada no relatório, para a retrospectiva contar quantas houve.
+  test.describe.configure({ retries: 2 })
+
+  test('a rede tem a latência do perfil e a CPU fica mais lenta', async ({ page, perfil }, testInfo) => {
     if (!perfil) throw new Error('projeto sem perfil')
+    if (testInfo.retry > 0) testInfo.annotations.push({ type: 'nova-tentativa', description: `tentativa ${testInfo.retry + 1} da medição de CPU` })
     await page.goto('/')
 
     // Rede: a ida e volta de um pedido pequeno à web leva pelo menos a latência declarada.
@@ -51,12 +67,15 @@ test.describe('guardas de celular e acessibilidade pegam de fato', () => {
     })
     expect(idaEVolta).toBeGreaterThanOrEqual(perfil.rede.latenciaMs * 0.9)
 
-    // CPU: o mesmo laço com a limitação do perfil e sem ela, trocada por uma sessão CDP própria do teste.
-    // O runner ocupado só aumenta o tempo, nunca diminui: por isso vale o menor tempo de cada lado. Uma
-    // amostra solta chegou a 1,68 na esteira com a limitação aplicada, e um bloco de cinco seguidas, a 1,93,
-    // quando a ocupação pegou o bloco livre inteiro (menor de 30 ms, contra 19 ms no bloco seguinte). O lado
-    // livre, que é o que derruba a razão, sai do menor de três blocos espaçados, mais de 1 s ao todo. Sem a
-    // limitação aplicada, os dois menores ficam iguais e a razão fica perto de 1.
+    // CPU. A limitação do Chromium é um teto na fatia de CPU da aba (1/cpuMaisLenta), e não um atraso fixo.
+    // Com o runner disputado, a aba já recebe menos CPU que o teto, e a razão contra a aba livre cai junto:
+    // na esteira ela chegou a 1,32 e 1,35 com a limitação aplicada, abaixo dos 2 que o teste exigia. Um número
+    // fixo reprova a máquina, e não a configuração.
+    //
+    // Por isso a comparação é com referências medidas agora, na mesma máquina e na mesma carga: o estado que a
+    // fixture deixou, medido antes de qualquer outra coisa, tem de parecer com a aba limitada por esta sessão
+    // e não com a aba livre, isto é, ficar acima da média geométrica das duas. Sem a limitação da fixture, ele
+    // fica igual ao livre e reprova. Vale o menor de cinco de cada lado: a ocupação só aumenta o tempo.
     const laco = () =>
       page.evaluate(() => {
         let acumulado = 0
@@ -70,14 +89,16 @@ test.describe('guardas de celular e acessibilidade pegam de fato', () => {
       for (let vez = 0; vez < 5; vez++) menor = Math.min(menor, await laco())
       return menor
     }
-    const limitado = await menorDeCinco()
+    const doPerfil = await menorDeCinco()
     const cdp = await page.context().newCDPSession(page)
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
-    let livre = Number.POSITIVE_INFINITY
-    for (let bloco = 0; bloco < 3; bloco++) {
-      if (bloco > 0) await page.waitForTimeout(400)
-      livre = Math.min(livre, await menorDeCinco())
-    }
-    expect(limitado / livre).toBeGreaterThanOrEqual(2)
+    const livre = await menorDeCinco()
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: perfil.cpuMaisLenta })
+    const limitadoAgora = await menorDeCinco()
+
+    const separacao = limitadoAgora / livre
+    expect(separacao, `máquina ocupada demais para medir a CPU: separação de ${separacao.toFixed(2)}`).toBeGreaterThanOrEqual(SEPARACAO_MINIMA)
+    const medida = `perfil ${doPerfil.toFixed(1)} ms, livre ${livre.toFixed(1)} ms, limitado agora ${limitadoAgora.toFixed(1)} ms`
+    expect(doPerfil, `a página não está com a CPU do perfil (${medida})`).toBeGreaterThanOrEqual(Math.sqrt(livre * limitadoAgora))
   })
 })
