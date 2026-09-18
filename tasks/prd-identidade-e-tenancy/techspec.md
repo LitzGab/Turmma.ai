@@ -228,7 +228,7 @@ escreva nome de aluno". Ao encerrar o ano letivo, na mesma transação, os vínc
 **Histórico.** `anoLetivoId` só em leitura e só de ano `encerrado` da escola do contexto. A
 coordenação lê sem vínculo. O professor, ativo, precisa de vínculo com aquela turma naquele
 ano, `confirmado` ou `encerrado` por `fim_do_ano`. Qualquer outro caso é 404.
-- **O `fim_do_ano` precisa ter sido confirmado** (decidido na 10.0): a virada leva também o pendente e o contestado a
+- **O `fim_do_ano` precisa ter sido confirmado** (decidido na 10.0 e ratificado em 18/09/2026: o professor que contestou ou nunca respondeu não passa a ler os alunos em janeiro): a virada leva também o pendente e o contestado a
   `fim_do_ano`, e eles nunca deram acesso. Vale o que tem `decidido_em` e não tem código de contestação (confirmar apaga
   o código). O mesmo critério escolhe os alunos da lista do ano encerrado: quem chegou confirmado ao fim do ano, e não o
   transferido no meio dele.

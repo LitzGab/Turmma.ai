@@ -140,6 +140,8 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
 
 ## Produto
 
+- [ ] F2: o vínculo de aluno criado pela importação precisa nascer com `decidido_em` preenchido. A lista de alunos do ano encerrado (10.0) só traz quem chegou confirmado ao fim do ano, e hoje só a fixture de teste grava esse campo: sem ele, o aluno some do histórico da turma
+
 - [x] ~~Fechar a lista de agentes e o nível de autonomia de cada um~~ — D32 a D36
 - [ ] Validar com advogado a base legal para guardar a adaptação necessária do aluno (D35)
 - [ ] Texto da mensagem fixa de acolhimento do tutor, revisado por uma orientadora
