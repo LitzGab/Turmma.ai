@@ -1,11 +1,14 @@
-# Educa.ia — contexto e decisões
+# Turmma — contexto e decisões
 
 > **Antes deste arquivo, leia `docs/visao-produto.md`.** Ele explica o que estamos
 > construindo e para quem. Este aqui registra o que já foi decidido e por quê, para não
 > rediscutirmos a mesma coisa toda semana.
 >
-> Nome provisório. Verificar INPI e domínio antes de fixar: já existem "IA Educa Brasil"
-> e "Eduka.ai" no mercado. Repositório: https://github.com/LitzGab/Educa.ia
+> **O produto se chama Turmma** (D54). A marca, a paleta e a landing page existem em
+> `turmma.com`; o registro no INPI e o do domínio seguem pendentes (`TODO.md`). O
+> repositório, os pacotes, o banco, o compose e os comandos continuam `educa`: a renomeação
+> técnica é trabalho próprio e não vale o risco no meio do F1.
+> Repositório: https://github.com/LitzGab/Educa.ia
 
 ---
 
@@ -109,6 +112,22 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D51 | Toda tela nasce responsiva e usável no celular, sem que nenhum fluxo dependa dele |
 | D52 | Testes de integração da infra fora do portão de toda tarefa, na esteira |
 | D53 | Processo enxugado onde repetia trabalho: `test-engineer` primeiro, caducidade pelo que o revisor audita, portão com carimbo, `revisor-geral`, `/revisar-spec`, `/corrigir` e `/retro` |
+| D54 | O nome do produto é Turmma; o código continua `educa` até uma renomeação própria — *a ratificar* |
+| D55 | Em discursiva e redação a IA não corrige, não avalia, não dá nota nem conceito, e não pré-corrige nem sugere nota ao professor (revisão da D46) — *a ratificar* |
+| D56 | Na objetiva, a validação humana é registrada: o que foi mostrado, o que foi aberto e quem confirmou (complementa a D33) — *a ratificar* |
+| D57 | Usos vedados, escritos e testados: sem inferência de emoção, perfil comportamental, pontuação social, biometria ou uso comercial de dado educacional — *a ratificar* |
+| D58 | O Tutor se declara sistema automatizado, e a declaração não é configurável (Decreto 12.880, art. 11) — *a ratificar* |
+| D59 | Nada induz uso excessivo, e sair nunca é mais difícil que entrar (Decreto 12.880, arts. 9º e 10) — *a ratificar* |
+| D60 | Avaliação de Impacto Algorítmico por funcionalidade de alto risco, em seis etapas, antes de ela existir — *a ratificar* |
+| D61 | O dossiê de conformidade é entregável de produto, com canal de denúncia e material de consulta à comunidade — *a ratificar* |
+| D62 | Conversa de aluno só em provedor de modelo com processamento no Brasil — *a ratificar* |
+| D63 | O que a escola e o professor produzem é deles, e sai em formato aberto a qualquer momento — *a ratificar* |
+| D64 | Recusar a ferramenta não gera indicador: sem medição nominal de adoção por professor (afina a D45) — *a ratificar* |
+| D65 | Letramento em IA entra por três portas pequenas e não vira fase de roadmap — *a ratificar* |
+
+> **D54 a D65 são propostas de 19/09/2026**, saídas da leitura das fontes primárias de
+> regulação e dos dois documentos do MEC, e **ainda não ratificadas**. O texto completo, com
+> quem precisa concordar em cada uma, está em `docs/decisoes.md`.
 
 ---
 
@@ -135,8 +154,14 @@ terceiro. Fonte que proíbe sai, e **o upload não cobre o caso**: apostila de t
 licença não entra por nenhum caminho (D5 revista). O primeiro caminho implementado é o
 upload de material com licença (D22).
 
-**Correção de discursiva e redação.** A IA não propõe nota nelas enquanto o texto final do
-CNE não for publicado e lido; entrega só devolutiva (D46).
+**Correção de discursiva e redação.** Voltou em 19/09/2026 e ficou mais restrita: a IA não
+corrige, não avalia, não dá nota nem conceito, e **não faz pré-correção nem sugere nota ao
+professor** — o que derruba a devolutiva rascunho de discursiva como estava desenhada (D55,
+revisão da D46). Rubrica, organização do lote e correção cega continuam. A devolutiva
+formativa volta à mesa quando o texto oficial do CNE for publicado e lido com advogado.
+
+**Nome do produto.** Fechado: Turmma (D54). Não é mais "nome provisório". O que continua
+aberto é registro no INPI e domínio, e o código segue com `educa`.
 
 **Tutor e aprovação prévia.** O tutor é supervisionado, não aprovado resposta por resposta.
 A regra 70, item 3, declara essa exceção (D47).
@@ -176,12 +201,15 @@ Todas têm dono e momento. Nenhuma trava o F0.
 | Provedor de modelo principal e reserva | Joaquim | avaliação de `docs/avaliacao-de-modelos.md`, antes de a F5 ficar pronta (D37) |
 | Provedor de hospedagem | Joaquim | quando o staging for criado, antes da primeira demonstração externa ou do piloto (D42) |
 | Identidade visual (paleta, tipografia, logo) | Gabriel | **antes do PRD do F2**, a primeira tela real |
-| Nome, INPI e domínio | Gabriel | antes do material de venda e do piloto |
+| Registro no INPI e do domínio `turmma.com` (o nome já está fechado, D54) | Gabriel | antes do material de venda e do piloto |
+| Se o art. 24 do ECA Digital exige conta de responsável vinculada para aluno de até 16 anos — e, se exigir, se o portal da família sai da fase posterior | Joaquim e Gabriel, com advogado | **antes do PRD do F9**; o vínculo já nasce no modelo de dados do F1 (`docs/regulacao.md` 2.2) |
+| Como os arts. 17 e 18 do ECA Digital (supervisão parental) se modulam pelo art. 39 no nosso caso | advogado | junto com o parecer do ECA Digital |
+| Evidência independente de eficácia pedagógica: desenho da medição com a escola piloto | Gabriel e Joaquim | ao fechar o piloto (`docs/conformidade-mec.md` 12) |
 | Sistemas de ensino das escolas-alvo, licença do material e primeiro adaptador | quem conduzir o piloto | nas entrevistas com escolas; até lá só upload de material com licença (D5, D22) |
 | Quais funcionalidades formam a fatia do piloto, e quais das quatro coisas da D24 ele precisa ter | Joaquim e Gabriel | antes do PRD da primeira funcionalidade depois do F1 (D1 revista) |
 | Valores das faixas de preço e teto de IA do pacote base | Gabriel e Joaquim | com a planilha de custo por pacote, validados no piloto (D50, D39) |
 | Indicadores de desempenho do professor e do aluno (quais, limiar, texto do alerta) | Joaquim e Gabriel | antes do PRD do F12 (D45, D46) |
-| Texto final das diretrizes do CNE e o que muda na correção e nos sinais do tutor | Joaquim, com advogado | quando a resolução for publicada pelo MEC (D46) |
+| Texto final das diretrizes do CNE e o que muda na correção, na devolutiva de discursiva e nos sinais do tutor | Joaquim, com advogado | quando a resolução for homologada e publicada pelo MEC (D46, D55) |
 
 ---
 
@@ -205,7 +233,8 @@ no Brasil, se um contrato exigir.
 2. **Dado de menor é o ativo mais perigoso do sistema.** Leia `docs/lgpd.md` antes de tocar
    em qualquer campo de pessoa. Regra 20.
 3. **Nada que a IA produz vira nota, mensagem à família ou decisão sobre aluno sem aprovação
-   humana registrada.** É lei. Regra 70.
+   humana registrada.** É lei. Regra 70. E em discursiva e redação a IA não chega nem a
+   propor: não corrige, não avalia, não pré-corrige (D55).
 4. **Nenhum módulo chama provedor de IA direto.** Sempre pela porta, sempre com perfil e
    orçamento. Regra 30.
 5. **Teste prova regra de negócio.** "Retornou 200" não é teste. Regra 40.
@@ -221,6 +250,8 @@ no Brasil, se um contrato exigir.
 **Para entender o negócio:** `docs/negocio.md` (mercado, preço, concorrência). Não é leitura
 obrigatória para implementar
 **Para não quebrar a lei:** `docs/lgpd.md`, `docs/regulacao.md`
+**Para responder ao que a escola pergunta na compra:** `docs/conformidade-mec.md` (os dois
+documentos do MEC virados em requisito, o dossiê de conformidade e a AIA)
 **Para construir:** `docs/arquitetura.md`, `docs/modelo-de-dados.md`, `docs/agentes.md`,
 `docs/ingestao.md`
 **Para não cair no horário de aula:** `docs/infra.md`, `docs/runbook.md`

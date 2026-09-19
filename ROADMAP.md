@@ -1,4 +1,4 @@
-# Roadmap — Educa.ia
+# Roadmap — Turmma
 
 ## Como ler isto
 
@@ -17,6 +17,11 @@ contexto que a base fornece. Não é ordem de lançamento, é ordem de construç
 **Toda tela nasce responsiva** (D51): funciona do computador da escola ao celular, e é
 testada nos projetos `chromebook` e `celular`. Nenhuma fase tem "adaptar para celular" como
 trabalho posterior.
+
+**Conformidade também não é fase** (revisão de 19/09/2026). Cada funcionalidade de alto risco
+nasce com a sua Avaliação de Impacto Algorítmico (D60), e o que a escola exige por documento
+é a governança do F12 exportada mais três textos (D61). O que virou requisito novo em cada
+fase está em `docs/conformidade-mec.md` seção 11; o que é lei está em `docs/regulacao.md`.
 
 Cada funcionalidade tem um **critério de pronto verificável**. "Pronto" não é "o código
 está escrito": é um comportamento que alguém consegue demonstrar.
@@ -66,6 +71,12 @@ da escola guardando só o identificador (D48). MFA do coordenador. Escopo no rep
 Matriz de permissão, incluindo indicador de professor (regra 60, item 11). DTO de saída
 explícito.
 
+**`responsavel` e o vínculo responsável × aluno nascem aqui, sem interface.** Se o art. 24 do
+ECA Digital alcançar serviço contratado pela escola, conta de aluno de até 16 anos precisa
+estar vinculada à de um responsável legal — e descobrir isso depois do F9 vira migration em
+quase todas as tabelas. O parecer está no `TODO.md`; a estrutura custa pouco agora
+(`docs/regulacao.md` 2.2).
+
 **Pronto quando:** teste prova que a escola A não lê, não escreve e não descobre nada da B,
 e que um professor com vínculo nas duas não leva dado de uma para a outra.
 
@@ -89,10 +100,15 @@ duplicidade nem erro cru, e o Rotina tem de onde abrir o dia do professor.
 Auditoria, tabela de retenção por escola, rotina de expurgo, exportação e eliminação por
 titular, registro de suboperadores, registro de incidente, guarda de registro de acesso por
 6 meses separada da auditoria (Marco Civil), obrigações do ECA Digital conforme parecer.
-Seed sintético.
+Seed sintético. Entram também: **exportação em formato aberto** de dado, artefato e histórico
+de uso, feita pela própria coordenação (D63); **canal de notificação de violação** com
+retirada de conteúdo e recurso, dizendo se a análise foi humana ou automatizada (D61, ECA
+arts. 28 a 30); e o **registro da validação humana** como entidade de auditoria, que o F6 e o
+F17 vão preencher (D56).
 
 **Pronto quando:** um pedido de acesso e um de eliminação são atendidos por comando, com
-rastro. Ver `docs/lgpd.md` seção 7.
+rastro; a coordenação exporta tudo em formato aberto sem depender de nós; e uma notificação de
+violação percorre o caminho até a resposta, com recurso. Ver `docs/lgpd.md` seção 7.
 
 > Esta funcionalidade parece burocracia e é a que protege o negócio. Não empurre para o fim.
 
@@ -118,30 +134,42 @@ limitador de tokens por minuto, prioridade (tutor em sala na frente de lote), ti
 provedor de reserva e degradação para modelo menor (D29). Adaptador falso com latência de
 streaming simulada para teste de carga.
 
+Roteamento por soberania: chamada que carrega texto escrito por aluno vai para provedor com
+processamento no Brasil; tarefa sem dado pessoal pode ir para provedor fora (D62).
+
 **Pronto quando:** trocar de provedor é variável de ambiente, o consumo aparece por escola,
 e com o limite estourado o pedido interativo espera e degrada em vez de falhar. Pacote do
 tutor por turma com freio diário (D38). Avaliação de modelos de
-`docs/avaliacao-de-modelos.md` executada e principal e reserva registrados (D37).
+`docs/avaliacao-de-modelos.md` executada, com os critérios eliminatórios da seção 3.1
+(processamento no Brasil para conversa de aluno, uso por menor permitido em contrato,
+treinamento vedado, equidade em português brasileiro real), e principal e reserva registrados
+(D37, D62). Teste prova que prompt com texto de aluno não sai para provedor fora do Brasil.
 
 ## F6 — `avaliacao-e-correcao` [ ]
 **Depende de:** F4, F5
 
 Criar atividade e avaliação a partir do material, versões, gabarito, aplicação, correção
-objetiva, devolutiva formativa de discursiva **sem nota proposta pela IA**, diagnóstico por
-habilidade, relatório por questão, aprovação da devolutiva pelo professor (D46). Prova
-online resiliente: resposta salva por item, relógio no servidor, retomada após queda (D27).
-A nota oficial e o boletim ficam no F17.
+objetiva, diagnóstico por habilidade, relatório por questão, aprovação do que chega ao aluno
+pelo professor (D46). **Em discursiva e redação a IA não corrige, não avalia, não dá nota nem
+conceito e não escreve devolutiva, nem como rascunho para o professor** (D55): o que a
+ferramenta entrega é rubrica e critérios antes da aplicação, organização do lote e correção
+cega. **A validação humana da objetiva é registrada** (D56). Prova online resiliente: resposta
+salva por item, relógio no servidor, retomada após queda (D27). A nota oficial e o boletim
+ficam no F17. AIA da correção e do diagnóstico escritas antes (D60).
 
-**Pronto quando:** a IA corrige e diagnostica, o professor aprova a devolutiva antes de o
-aluno ver, nenhuma saída de IA sugere nota em discursiva, e uma queda de rede no meio da
-prova não perde resposta nem tempo do aluno.
+**Pronto quando:** a IA corrige objetiva e diagnostica, o professor aprova o que chega ao
+aluno, **nenhum campo do sistema guarda nota, conceito ou devolutiva de discursiva gerada por
+IA**, o registro da validação mostra o que foi apresentado e aberto, e uma queda de rede no
+meio da prova não perde resposta nem tempo do aluno.
 
 ## F7 — `chat-e-ferramentas-professor` [ ]
 **Depende de:** F6
 
 Home em chat com contexto de papel, turma e material. Ferramentas: prova, atividade, lista,
-plano de aula e sequência didática, adaptação/PEI, simulado ENEM, redação por competência
-só com devolutiva (D46).
+plano de aula e sequência didática, adaptação/PEI, simulado ENEM, e **rubrica por competência
+para redação e discursiva — sem correção, sem nota e sem devolutiva gerada por IA** (D55).
+Sob pedido do professor, o Planejador também monta atividade de letramento em IA, alinhada às
+12 aprendizagens do MEC e às habilidades de Computação da BNCC (D65).
 Chat e formulário são o mesmo motor: o chat pergunta se quer usar a ferramenta e a abre
 como cartão na conversa (D18). Banco público de questões do ENEM a partir das provas
 oficiais do INEP (D21). Artefato salvo e ligado à turma. Biblioteca. Histórico.
@@ -163,14 +191,18 @@ os agentes concluíram.
 
 Tutor socrático que não entrega resposta, escopo restrito ao conteúdo da turma, atividades
 e provas na plataforma, política por turma, trava durante avaliação, desempenho próprio.
-Resposta do tutor supervisionada, não aprovada uma a uma (D47). Linguagem adequada do 6º ano
+Resposta do tutor supervisionada, não aprovada uma a uma (D47). **Declaração de caráter
+sintético em cada sessão, não desligável** (D58); **nenhum mecanismo de uso excessivo e nenhum
+padrão manipulativo** (D59); filtro de conteúdo inadequado; aviso de privacidade em linguagem
+de faixa etária; e o canal para o aluno avisar um adulto (D61). Linguagem adequada do 6º ano
 ao Ensino Médio (D43). Encaminhamento de assunto delicado que chega a quem notifica o
-Conselho Tutelar (`docs/regulacao.md` seção 6). Avaliação de impacto dos sinais antes de
+Conselho Tutelar (`docs/regulacao.md` seção 7). Avaliação de impacto dos sinais antes de
 existirem. Acesso fora da sala configurado pela escola por turma, desligado por padrão
 (D19). Web para computador da escola em sala e celular fora dela (D51).
 
 **Pronto quando:** três tentativas diferentes de arrancar a resposta pronta falham no teste,
-e o encaminhamento de risco à vida chega a quem notifica, com o acesso ao conteúdo auditado.
+o tutor se declara sistema automatizado em toda sessão, a AIA do Tutor existe escrita, e o
+encaminhamento de risco à vida chega a quem notifica, com o acesso ao conteúdo auditado.
 
 ## F10 — `modo-sala-tempo-real` [ ]
 **Depende de:** F9
@@ -189,8 +221,12 @@ aprovação, limite de passos e de custo. Rotina, Corretor, Planejador, Monitor 
 Tutor, Adaptador e Analista da coordenação, com nível e gatilho de `docs/agentes.md` (D32).
 Encaminhamento de assunto delicado (D36). Processador idempotente (D49).
 
-**Pronto quando:** o Corretor termina, avisa, e a devolutiva e o diagnóstico esperam
-aprovação; rodar o mesmo agente duas vezes não duplica aviso nem chamada de IA.
+Cada agente de alto risco entra com a AIA escrita e com **procedimento de suspensão** — como
+desligar o agente numa escola, quem decide, o que acontece com o que ele já produziu (D60).
+
+**Pronto quando:** o Corretor termina, avisa, e o diagnóstico espera aprovação; rodar o mesmo
+agente duas vezes não duplica aviso nem chamada de IA; e um agente pode ser suspenso numa
+escola sem desligar o sistema.
 
 ## F12 — `governanca-do-coordenador` [ ]
 **Depende de:** F6, F10, F11
@@ -201,9 +237,16 @@ risco), **auditoria do que a IA gerou e quem aprovou**, autonomia de cada agente
 tokens. **Painel do professor** com o próprio uso e o desempenho das turmas dele; a
 coordenação vê agregado e abre o nominal com auditoria; sem ranking de professor (D45).
 Indicadores, limiares e texto dos alertas definidos antes do PRD (decisão em aberto).
+**Sem ranking, sem lista nominal de adoção e sem alerta de professor que não usa** (D64).
+Entram as telas de **Conformidade** (o dossiê da escola num lugar: propósito, faixas etárias,
+funcionamento em linguagem simples, LGPD e ECA artigo por artigo, relatório de uso exportável,
+material de comunicação), **Denúncias** e **Exportar** (D61, D63), e o resumo da AIA em cada
+agente de alto risco (D60).
 
-**Pronto quando:** a escola responde "o que a IA faz aqui e quem aprovou" em uma tela, e
-teste prova que a coordenação não vê indicador nominal de professor sem deixar auditoria.
+**Pronto quando:** a escola responde "o que a IA faz aqui e quem aprovou" em uma tela,
+**imprime o dossiê que a secretaria pede** a partir dela, e teste prova que a coordenação não
+vê indicador nominal de professor sem deixar auditoria nem enxerga adoção nominal em lugar
+nenhum.
 
 > É o que nenhum concorrente entrega. Não trate como painel secundário.
 
@@ -257,9 +300,13 @@ os destaques, e as notas aprovadas saem num arquivo que o sistema de gestão imp
 Revisão de segurança, teste de autorização por objeto, verificação de log sem dado pessoal,
 backup criptografado com restauração testada, RIPD, processo de incidente ensaiado. Teste
 de carga "manhã de segunda" passando, alertas com runbook, deploy e rollback ensaiados.
+Entram também: **AIA de cada funcionalidade de alto risco** revista e assinada (D60), **dossiê
+de conformidade** fechado (D61) e **teste adversário do tutor** — tentativa de desativar
+salvaguarda, de arrancar conteúdo inadequado e de sair do escopo.
 
-**Pronto quando:** a restauração foi executada de verdade, o RIPD existe assinado e o teste
-de carga de `docs/infra.md` seção 10 passa no staging.
+**Pronto quando:** a restauração foi executada de verdade, o RIPD e as AIA existem assinados,
+o dossiê está pronto para entregar a uma escola, e o teste de carga de `docs/infra.md`
+seção 10 passa no staging.
 
 ---
 
@@ -268,8 +315,12 @@ de carga de `docs/infra.md` seção 10 passa no staging.
 Independente de onde o roadmap estiver, **nenhum dado real de escola entra em produção**
 antes de cumprir a lista de `docs/infra.md` seção 11: teste de carga, restauração de backup
 executada, alertas com runbook, deploy e rollback ensaiados, contrato com provedor de
-modelo com limite compatível com o pico, que permita serviço usado por menor e diga onde o
-dado é processado, e os itens de LGPD do F3 e do `TODO.md`. O piloto do 1º semestre de 2027
+modelo com limite compatível com o pico, que permita serviço usado por menor, vede treinamento
+e garanta **processamento no Brasil para conversa de aluno** (D62), e os itens de LGPD do F3 e
+do `TODO.md`. Somam-se: **RIPD**, **AIA das funcionalidades de alto risco** que o piloto usar,
+**aviso de privacidade em linguagem de faixa etária**, **canal de notificação** funcionando, e
+o **parecer sobre o art. 24 do ECA Digital** — se a leitura ampla prevalecer, aluno de até 16
+anos só entra com conta de responsável vinculada (`docs/regulacao.md` 2.2). O piloto do 1º semestre de 2027
 vem antes do F16 (D1 revista), então esses itens são puxados para antes dele.
 
 O **staging** (deploy automático do `main`, check externo, custo do ambiente) é criado antes

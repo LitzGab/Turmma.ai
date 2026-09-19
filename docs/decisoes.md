@@ -40,7 +40,7 @@ reivindicação aprovada resolve isso sem burocracia.
 **D5 — Sem integração com sistema de ensino. Pipeline único de ingestão.**
 O scraper do material que a escola já paga e o upload manual de PDF desembocam no mesmo
 caminho. Se uma fonte mudar de layout, a escola sobe a apostila e continua funcionando no
-mesmo dia. Condições legais da ingestão em `docs/regulacao.md` seção 4.
+mesmo dia. Condições legais da ingestão em `docs/regulacao.md` seção 5.
 Revista em 13/09/2026: só entra material cuja licença permita o uso: apostila e material
 próprios da escola, material do professor, livro licenciado para esse uso, domínio público
 e provas oficiais do ENEM. Buscamos parceria com editora e sistema de ensino. Apostila de
@@ -382,3 +382,171 @@ execuções de revisor, com `tenancy-guardian` e `infra-guardian` aprovando as q
 rodava três vezes na mesma árvore; três commits de correção entraram sem revisor; e a Tech Spec do F1
 saiu com 5.393 palavras para um teto de 2.000. Os vetos, o commit direto no `main` (D23) e a esteira
 como portão (D31) continuam.
+
+---
+
+> **D54 a D65 — propostas de 19/09/2026, a ratificar.** Saíram da leitura das fontes
+> primárias de regulação e dos dois documentos do MEC (`docs/regulacao.md`,
+> `docs/conformidade-mec.md`), no branch `docs/direcionamento-regulatorio`. Estão escritas no
+> formato de decisão para poderem ser implementadas sem reinterpretação, mas **nenhuma delas
+> foi ratificada pelo Joaquim**. Cada uma diz quem precisa concordar. Ratificar é apagar esta
+> nota da decisão; recusar é apagar a decisão e registrar o motivo.
+
+**D54 — O nome do produto é Turmma.** *(a ratificar: Gabriel decide, Joaquim é informado)*
+A marca está pronta: manual, logo, paleta (caramelo #E8732E, azul-noite #16233E, creme
+#FFF3E2, papel #FDFBF7) e landing page em `turmma.com`. Documentação, material de venda e
+interface passam a dizer Turmma. O repositório, os pacotes, o banco, o compose e os comandos
+continuam `educa` até uma renomeação técnica própria, que não vale o risco agora: renomear
+pacote e projeto compose no meio do F1 custa mais do que ganha. Motivo: "nome provisório" nos
+docs mantinha viva uma discussão já resolvida fora do repositório, e o material de venda e a
+primeira tela real precisam de um nome. INPI e registro de domínio continuam pendentes
+(`TODO.md`), e é o único risco que sobra: se o INPI negar, a troca é de marca, não de código.
+
+**D55 — Em discursiva e redação, a IA não corrige, não avalia, não dá nota, não atribui
+conceito nem mérito, e não faz pré-correção nem sugere nota ao professor.** *(a ratificar:
+Joaquim e Gabriel; depende do parecer sobre o texto oficial)*
+Revisão da D46, que dizia "sem nota proposta, só devolutiva". A cobertura do ato do CNE de
+01/09/2026 é explícita: a IA não pode ser usada para corrigir, avaliar, dar nota, conceito ou
+mérito em redação e questão dissertativa, **nem para pré-corrigir, nem para apresentar ao
+professor uma sugestão de nota**. Isso alcança a "devolutiva rascunho de discursiva" do F6 e
+a ferramenta de redação por competência do F7 como estavam desenhadas. O que continua
+permitido: gerar rubrica e critérios antes da aplicação (são sobre a atividade, não sobre o
+texto do aluno), organizar o lote, conferir entrega e anonimizar para correção cega.
+Consequência técnica: nenhum campo, nem interno, nem rascunho, nem log, guarda nota, conceito
+ou pontuação sugerida pela IA para discursiva ou redação. Motivo: é a proibição mais dura do
+ato e a mais fácil de violar sem perceber, porque "só um rascunho para o professor" é
+exatamente o que o texto chama de pré-correção. A devolutiva formativa em discursiva volta a
+ser discutida quando o texto oficial for publicado e lido com advogado (`TODO.md`); até lá o
+produto não a entrega. Custo aceito: perdemos uma funcionalidade que a Teachy e a Geekie
+anunciam — e ganhamos o argumento de que elas estão do lado errado da norma.
+
+**D56 — Na objetiva, a validação humana é registrada: o sistema guarda o que foi mostrado, o
+que foi aberto e quem confirmou.** *(a ratificar: Joaquim)*
+Complementa a D33, que fica de pé. O ato do CNE classifica correção de objetiva como alto
+risco e exige validação humana "efetiva, prévia, qualificada e documentada", dizendo que o
+professor não pode apenas clicar em "aprovar". Então a aprovação em lote passa a gravar o
+registro da validação: a distribuição apresentada, quais casos destacados foram abertos
+(discursiva com baixa confiança, nota distante do histórico do aluno, prova em branco), quem
+confirmou e quando. O botão do lote continua travado até os destacados serem abertos. Motivo:
+"documentada" não é satisfeito por um booleano `aprovado`; a escola precisa poder mostrar à
+fiscalização *como* o humano validou. E é o mesmo registro que alimenta a governança do F12.
+
+**D57 — Usos vedados, escritos e testados: sem inferência de emoção, sem perfil comportamental
+ou psicológico, sem pontuação social, sem biometria, e nenhum dado educacional para
+publicidade ou fim comercial.** *(a ratificar: Joaquim)*
+Estava implícito na regra 70, item 7, como ausência de funcionalidade. Passa a ser proibição
+escrita, com teste, porque agora tem três fundamentos independentes: o ato do CNE classifica
+essas práticas como risco excessivo ou incompatível; o ECA Digital veda perfilamento e análise
+emocional para publicidade (art. 22) e criação de perfil comportamental de menor (art. 26); e
+o Decreto 12.880 veda inferência emocional como prática manipulativa (art. 10, II). O sinal de
+aluno em risco continua existindo, derivado de fato declarado — entrega, desempenho, o que o
+aluno escreveu de forma explícita —, nunca de leitura de estado emocional, e sempre com
+explicação e caminho de contestação (D60). Motivo: é a fronteira que, atravessada uma vez,
+tira o produto da categoria "supervisão" e o põe na de "vigilância", que é o que a família
+recusa e a ANPD multa.
+
+**D58 — O Tutor se declara sistema automatizado, e a declaração não é configurável.** *(a
+ratificar: Joaquim)*
+O art. 11, I, do Decreto 12.880/2026 exige transparência quanto ao caráter sintético e
+automatizado na interação com criança e adolescente. O Tutor se identifica como sistema
+automatizado no início de cada sessão e em qualquer tela onde um aluno possa confundi-lo com
+uma pessoa; a escola não pode desligar isso. Junto vêm os outros três incisos do mesmo artigo:
+prevenir manipulação comportamental (sem persona que simule vínculo afetivo, sem linguagem que
+crie obrigação de continuar), avaliar o risco algorítmico (D60) e implementar salvaguardas ao
+desenvolvimento físico, mental e psicossocial (escopo escolar, recusa, encaminhamento a humano,
+teto diário). Motivo: é o único dispositivo em vigor no Brasil que fala diretamente de agente
+conversacional com menor de idade, a ANPD vai regulamentá-lo, e a exigência é trivial de
+cumprir agora e caríssima de retroagir depois que a linguagem do produto já criou persona.
+
+**D59 — Nada no produto induz uso excessivo, e nenhum caminho de saída é mais difícil que o de
+entrada.** *(a ratificar: Joaquim e Gabriel)*
+Do art. 9º do Decreto 12.880 (uso excessivo, problemático ou compulsivo) e do art. 10 (práticas
+manipulativas), com o art. 8º, IV, e o art. 17, § 4º, II, do ECA Digital. Proibido: recompensa
+por tempo de uso, sequência de dias, conteúdo que se inicia sozinho, rolagem infinita,
+notificação fora do horário útil da escola, e ocultar ponto de parada. Obrigatório: o teto
+diário do tutor (D38) é mostrado ao aluno como salvaguarda, não como punição; e revogar
+consentimento, sair, ou mudar configuração de privacidade tem caminho tão curto quanto o de
+aceitar. Motivo: o caminho fácil de engajamento em produto para adolescente é exatamente o que
+a lei chama de manipulativo, e o princípio 8 do MEC manda a escola **rejeitar** plataforma com
+design persuasivo. Isso vira item de checklist do `frontend-reviewer`, não recomendação.
+
+**D60 — Avaliação de Impacto Algorítmico por funcionalidade de alto risco, no roteiro de seis
+etapas do MEC, antes de a funcionalidade existir.** *(a ratificar: Joaquim)*
+Alto risco aqui é: Tutor, correção de objetiva, diagnóstico por habilidade, sinais do tutor e
+alertas sobre aluno, e adaptação por necessidade específica. Cada um tem uma AIA escrita,
+versionada no repositório, com as seis etapas do Referencial do MEC: justificação e escopo
+(inclusive o escopo negativo, o que a ferramenta não deve fazer), análise dos dados e do modelo,
+identificação e avaliação de riscos, estratégias de mitigação, validação e auditoria da equidade,
+e monitoramento contínuo com procedimento de suspensão. O RIPD do `TODO.md` continua, e a AIA é
+a camada que o RIPD não cobre: viés, equidade e impacto pedagógico. A AIA é revista a cada troca
+de modelo ou mudança relevante de prompt. Motivo: o ECA Digital já obriga gerenciamento de risco
+e relatório de impacto (art. 8º, I, e art. 16), a AIA é o formato que o MEC espera ver, e é
+documento que a escola vai pedir (`docs/conformidade-mec.md` seção 5). Fazer depois é reescrever
+o PRD com outro nome.
+
+**D61 — O dossiê de conformidade é entregável de produto, não material de marketing.** *(a
+ratificar: Gabriel e Joaquim)*
+A escola compra por checklist (os quatro critérios do MEC) e exige documento do desenvolvedor.
+Entregamos, versionado no repositório e gerado por escola: declaração de propósito com as faixas
+etárias para as quais o produto foi projetado; documentação do funcionamento em linguagem
+simples, com fluxograma do algoritmo, do uso de dados e do modelo pedagógico; relatório de
+conformidade com LGPD e ECA Digital, artigo por artigo; RIPD e AIA; relatório de uso legível por
+não especialista (que é a tela de governança do F12 exportada); e material de apoio para a escola
+comunicar a adoção a professores e famílias. Junto entram duas peças de produto: **canal de
+notificação de violação** acessível a aluno, professor, coordenação e família, com retirada de
+conteúdo e direito de recurso informando se a análise foi humana ou automatizada (ECA arts. 28 a
+30, Decreto art. 41); e o material da **consulta prévia à comunidade escolar**, que o MEC pede
+pelo princípio da gestão democrática. Motivo: 78% das escolas não têm política de IA e agora têm
+prazo para se adequar; quem entrega o documento pronto entra na reunião como parceiro. E é o
+mesmo trabalho da tela que já íamos construir.
+
+**D62 — Conversa de aluno só em provedor de modelo com processamento no Brasil.** *(a ratificar:
+Joaquim, junto com a D37)*
+Roteamento por soberania, não por custo: o que carrega conversa de aluno — Tutor, sinais,
+qualquer prompt com texto escrito por menor de idade — vai para provedor com processamento em
+território nacional, escrito em contrato. Tarefa sem dado pessoal, como gerar questão a partir de
+trecho de material ou resumir conteúdo público, pode usar provedor fora, com as cláusulas-padrão
+da ANPD e informação à escola. Na prática isso favorece a Maritaca (Sabiá) como principal do
+Tutor e deixa o Gemini como reserva e como modelo de tarefa sem dado pessoal, e passa a ser
+critério da avaliação de modelos (D37) com peso maior que preço. Motivo: o capítulo de soberania
+do Referencial do MEC trata dado educacional de menor fora do país como risco de Estado, citando
+o Cloud Act, e a rede pública vai perguntar isso na primeira reunião. É também a única vantagem
+competitiva que nenhum concorrente estrangeiro pode copiar. Custo aceito: se o modelo brasileiro
+for pior no tutor, perdemos qualidade onde ela mais aparece — por isso a avaliação da D37 decide
+com amostra real, e o resultado pode derrubar esta decisão.
+
+**D63 — O que a escola e o professor produzem é deles, e sai em formato aberto a qualquer
+momento.** *(a ratificar: Joaquim e Gabriel)*
+Material ingerido, artefato gerado, histórico de uso e dado de desempenho são exportáveis em
+formato aberto pela própria coordenação, a qualquer momento, sem pedir a nós, e integralmente no
+fim do contrato. Nada do que o professor produz vira nosso: sem reaproveitamento entre escolas,
+sem treinamento de modelo, sem licença nossa sobre a produção docente. Motivo: o documento da SEB
+lista "perda da propriedade intelectual da produção docente" e dependência de fornecedor como
+riscos de contratação, e pergunta em checklist se o recurso permite baixar dado e histórico em
+formato aberto. Era a pergunta que respondíamos pior. Além disso, exportação fácil é o que torna
+o piloto reversível, e reversibilidade é requisito do princípio 10 do MEC.
+
+**D64 — Recusar a ferramenta não gera indicador: não existe medição nominal de adoção por
+professor.** *(a ratificar: Joaquim e Gabriel)*
+Afina a D45. O MEC exige que a rede garanta que nenhum professor seja penalizado por optar por
+não usar uma ferramenta, e que a autonomia didático-pedagógica seja preservada. Então não existe,
+em nenhuma tela: ranking de uso por professor, alerta de "professor que não usa", lista nominal de
+adoção, nem meta de uso por professor. Adoção é agregada por série e disciplina, e é métrica
+nossa de produto, não instrumento de cobrança da coordenação. O painel do professor continua
+sendo dele primeiro (D45). Motivo: "se o professor não gostar, a escola não renova" é a regra que
+orienta prioridade, e medir adoção nominal é o jeito mais rápido de transformar o produto em
+instrumento de cobrança — além de atrair art. 20 da LGPD, convenção coletiva e estatuto do
+servidor.
+
+**D65 — Letramento em IA entra por três portas pequenas, e não vira fase de roadmap.** *(a
+ratificar: Gabriel e Joaquim)*
+As diretrizes do CNE exigem ensino sobre IA progressivo e transversal, e o MEC exige que a
+adoção de recurso com IA venha acompanhada de ensino crítico sobre a tecnologia. Não vendemos
+currículo. O que entra: (1) o Tutor, perguntado sobre si, explica o que é, como funciona, o que
+não sabe e que pode errar, em linguagem da faixa etária — que é a transparência do art. 11, I, do
+Decreto 12.880 sendo útil; (2) o Planejador gera, sob pedido do professor, atividade alinhada às
+12 aprendizagens do documento da SEB e às habilidades de Computação da BNCC, como qualquer outro
+conteúdo; (3) o material de comunicação e formação do dossiê (D61) cobre o lado dos adultos.
+Motivo: é exigência da norma que atendemos com três itens pequenos, e transformá-la em módulo de
+currículo seria escopo novo sem comprador. Se uma rede pedir currículo de IA, isso é conversa de
+produto, não de conformidade.

@@ -1,4 +1,4 @@
-# LGPD — documento de referência do Educa.ia
+# LGPD — documento de referência do Turmma
 
 > **Leia isto antes de escrever qualquer código que toque dado de pessoa.**
 > Não é anexo jurídico. É especificação técnica.
@@ -18,7 +18,15 @@ SaaS de educação não costuma morrer por falta de funcionalidade. Morre por va
 |---|---|---|
 | **Controladora** | A escola (ou a rede) | Decide por que e como os dados são tratados. Responde pelo consentimento dos responsáveis. |
 | **Operador** | Nós | Tratamos **apenas** conforme instrução da escola, registrada em contrato. |
-| **Suboperador** | Provedor de IA, hospedagem, e-mail | Só entram com contrato que replique nossas obrigações. |
+| **Suboperador** | Provedor de IA, hospedagem, e-mail | Só entram com contrato que replique nossas obrigações. Conversa de aluno só em provedor com processamento no Brasil (D62). |
+
+**Ser operador não nos tira do ECA Digital.** A LGPD distribui responsabilidade entre
+controlador e operador; a Lei 15.211/2025 fala de "fornecedor de produto ou serviço de
+tecnologia da informação direcionado a crianças e adolescentes", e isso somos nós,
+independente de quem contrata. As obrigações da seção 2 de `docs/regulacao.md` — privacidade
+máxima por padrão, gerenciamento de risco, relatório de impacto, canal de denúncia,
+transparência do caráter sintético da IA — recaem sobre nós **diretamente**, e nenhuma
+cláusula de contrato com a escola as transfere.
 
 Consequência prática: **não inventamos finalidade nova.** Usar dado de aluno para algo que
 não está no contrato com a escola — inclusive melhorar nosso produto ou treinar modelo —
@@ -58,7 +66,9 @@ deveria existir.
 | Vínculo, estado e datas | professor, aluno | acesso por objeto (F1) | execução de contrato | vigência + 5 anos |
 | Motivo de contestação de vínculo (código e complemento de até 140 caracteres, sem nome de aluno) | professor | corrigir a alocação (F1) | execução de contrato | complemento: apagado na virada do ano letivo, na mesma transação do encerramento (10.0); código: fica com o vínculo, como já fica na auditoria `vinculo.contestado`, porque é o que impede o vínculo nunca aceito de abrir o ano encerrado; o complemento nunca em log nem em auditoria |
 | Convite de coordenador (hash do token, datas) | coordenador | primeiro acesso (F1) | execução de contrato | 30 dias após usar, revogar ou expirar |
-| Identificador do operador Educa.ia na auditoria | nossa equipe | prestação de contas à escola | legítimo interesse | vigência + 5 anos |
+| Registro da validação humana de correção (o que foi apresentado ao professor, quais destaques ele abriu, quem confirmou e quando) | professor | provar validação efetiva, prévia, qualificada e documentada, exigida pelo CNE (D56) | execução de contrato e obrigação da escola | igual à auditoria: vigência + 5 anos |
+| Notificação de violação de direito de criança ou adolescente (quem notificou, o que apontou, o que foi feito) | quem notifica e quem é citado | canal exigido pelo ECA Digital, art. 28, e Decreto 12.880, art. 41 (D61) | obrigação legal | 5 anos; nunca anônima (ECA art. 29, § 2º) |
+| Identificador do operador Turmma na auditoria | nossa equipe | prestação de contas à escola | legítimo interesse | vigência + 5 anos |
 | Registro de acesso à aplicação (IP, data e hora) | todos | segurança | obrigação legal (Marco Civil, art. 15) | 6 meses |
 | Auditoria (quem fez o quê, com finalidade) | todos | prestação de contas à escola e ao titular | execução de contrato e obrigação da escola | vigência + 5 anos |
 
@@ -92,7 +102,10 @@ A pergunta certa não é "esse campo é útil?", é "**o que acontece se ele vaz
 - Não colete endereço, renda, raça, religião, saúde
 - **Dado de PEI e necessidade específica é dado sensível** (art. 11). Se a ferramenta de
   adaptação precisar dele, guarde a *adaptação necessária*, não o diagnóstico
-- Resposta de prova não precisa virar perfil comportamental
+- Resposta de prova não precisa virar perfil comportamental. Mais do que "não precisa":
+  **perfil comportamental de menor é vedado** (ECA Digital, art. 26; Decreto 12.880, art. 10;
+  e uso de risco excessivo pelo CNE). Vale para qualquer agregação que classifique o aluno por
+  comportamento, humor, atenção ou personalidade, inclusive rótulo interno (D57)
 
 ---
 
@@ -167,6 +180,16 @@ Este é o ponto em que somos diferentes de um SaaS comum, e onde o risco é maio
 6. **Conversa do tutor é dado sensível na prática**, mesmo que a lei não a classifique
    assim: aluno escreve coisas que não escreveria em prova. Retenção curta, acesso
    restrito ao professor da turma, nunca exposta à rede.
+7. **Conversa de aluno só em provedor com processamento no Brasil** (D62). Vale para o Tutor,
+   para a classificação de sinais e para qualquer prompt que carregue texto escrito por menor
+   de idade. Tarefa sem dado pessoal pode usar provedor fora, com as cláusulas-padrão da ANPD
+   (Resolução CD/ANPD 19/2024) e informação à escola. O Referencial do MEC trata dado
+   educacional de menor sob jurisdição estrangeira como risco de soberania, citando o Cloud
+   Act, e a rede pública pergunta isso na primeira reunião.
+8. **A interação com IA se declara automatizada** (Decreto 12.880, art. 11, I; D58), e o
+   risco algorítmico de cada funcionalidade de alto risco tem avaliação escrita antes de ela
+   existir (D60). Não é cosmético: é o único artigo em vigor no Brasil que trata de agente
+   conversacional com menor de idade, e a ANPD vai regulamentá-lo.
 
 ---
 
@@ -183,6 +206,8 @@ funcionalidade futura:
 | Portabilidade | Exportação estruturada |
 | Informação sobre compartilhamento | Lista para quais suboperadores o dado foi |
 | Revisão de decisão automatizada | Toda nota tem autor humano; a revisão já é o fluxo. Sinal ou alerta sobre aluno e indicador de professor têm explicação e caminho de contestação (art. 20; regra 70) |
+| Notificar violação de direito de criança ou adolescente | Canal no produto, gratuito e divulgado, para aluno, professor, coordenação e família; retirada de conteúdo com motivo, informando se a análise foi humana ou automatizada, e direito de recurso (ECA arts. 28 a 30; Decreto art. 41; D61) |
+| Levar o próprio dado embora | A coordenação exporta dado, artefato e histórico de uso em formato aberto a qualquer momento, sem depender de nós (D63) |
 
 **Teste de fechamento:** se a secretaria de educação pedisse hoje tudo o que guardamos
 sobre um aluno específico e para onde isso já foi enviado, o sistema responde em minutos?
@@ -211,8 +236,18 @@ administrável de uma crise.
 - [ ] Política de privacidade e termos, com seção de menor de idade
 - [ ] Encarregado (DPO) indicado e canal de contato publicado
 - [ ] Relatório de impacto (RIPD) — obrigatório na prática aqui: dado de menor, volume
-      alto, decisão apoiada por IA. Inclui a avaliação de impacto do ECA Digital e a
-      avaliação de impacto algorítmico dos sinais do tutor e dos alertas sobre aluno
+      alto, decisão apoiada por IA. Exigido pelo ECA Digital, art. 16, parágrafo único
+- [ ] **Avaliação de Impacto Algorítmico** de cada funcionalidade de alto risco — Tutor,
+      correção de objetiva, diagnóstico por habilidade, sinais e alertas, adaptação —, no
+      roteiro de seis etapas de `docs/conformidade-mec.md` seção 7 (D60)
+- [ ] **Dossiê de conformidade** entregue à escola: declaração de propósito com faixas
+      etárias, documentação do funcionamento em linguagem simples, relatório de conformidade
+      LGPD + ECA artigo por artigo, RIPD, AIA e relatório de uso legível (D61)
+- [ ] **Aviso de privacidade em linguagem de faixa etária**, para aluno de 11 anos, exigido
+      pelo ECA Digital (art. 16) e pelas cláusulas sugeridas pelo MEC. Não existe hoje
+- [ ] **Canal de notificação de violação** no produto, com retirada e recurso (D61)
+- [ ] **Exportação em formato aberto** de dado, artefato e histórico de uso pela própria
+      coordenação (D63)
 - [ ] Parecer sobre o ECA Digital (Lei 15.211/2025) aplicado a plataforma contratada pela
       escola
 - [ ] Guarda de registro de acesso por 6 meses (Marco Civil), separada da auditoria

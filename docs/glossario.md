@@ -135,8 +135,9 @@ avaliação.
 **Resposta** — O que o aluno respondeu em um item.
 
 **Correção** — A pontuação de uma resposta, com feedback. Pode vir de correção automática,
-de IA ou do professor. **É aqui que a IA escreve.** Em discursiva e redação, a IA escreve só
-a devolutiva, sem pontuação (D46).
+de IA ou do professor. **É aqui que a IA escreve — e só em item objetivo.** Em discursiva e
+redação a correção é sempre do professor: a IA não corrige, não pontua e não escreve
+devolutiva sobre o texto do aluno, nem como rascunho (D55).
 
 **Diagnóstico** — O resultado formativo por habilidade de uma atividade ou avaliação.
 Existe antes da nota oficial e não vai para o boletim (D46).
@@ -221,9 +222,54 @@ travado. É o que alimenta notificação e painel.
 **Auditoria** — O registro consultável de quem fez o quê: leitura de dado de aluno,
 exportação, alteração de nota, aprovação de saída de IA. Diferente de log.
 
-**Operador Educa.ia** — A pessoa da nossa equipe que cria rede, escola e o primeiro coordenador por
+**Operador Turmma** — A pessoa da nossa equipe que cria rede, escola e o primeiro coordenador por
 comando `ops:*`, sempre com o próprio identificador gravado na auditoria. Não lê dado de pessoa da
 escola nem entra como usuário dela (D2). Não confundir com "operador" da LGPD, que é a empresa.
 
 **Titular** — A pessoa a quem o dado pessoal se refere, no vocabulário da LGPD. Quase sempre
 um menor de idade, aqui.
+
+---
+
+## Conformidade
+
+**ECA Digital** — A Lei 15.211/2025, que protege criança e adolescente em ambiente digital,
+em vigor desde 17/03/2026, regulamentada pelo Decreto 12.880/2026. Recai sobre nós
+diretamente, como fornecedor, independente de a escola ser a controladora do dado.
+
+**RIPD** — Relatório de Impacto à Proteção de Dados Pessoais, da LGPD, exigido também pelo
+art. 16 do ECA Digital. Descreve o tratamento e avalia o risco.
+
+**AIA** — Avaliação de Impacto Algorítmico. Mais ampla que o RIPD: além do risco de
+tratamento de dado, olha viés, equidade e impacto pedagógico da decisão automatizada. Seis
+etapas, uma por funcionalidade de alto risco (D60, `docs/conformidade-mec.md` seção 7).
+
+**Alto risco** — Na classificação do CNE, o uso de IA que interfere em avaliação, decisão
+acadêmica ou dado sensível. Aqui: correção de objetiva, diagnóstico por habilidade, sinais do
+tutor, alertas sobre aluno e adaptação. Exige validação humana qualificada e documentada.
+
+**Validação qualificada e documentada** — A exigência do CNE para correção com apoio de IA: o
+professor precisa ver o que está validando, e o sistema precisa guardar o que mostrou, o que
+ele abriu e quem confirmou (D56). Um clique em "aprovar" não satisfaz.
+
+**Dossiê de conformidade** — O conjunto de documentos que a escola exige do desenvolvedor:
+declaração de propósito e faixas etárias, funcionamento em linguagem simples, conformidade com
+LGPD e ECA Digital, RIPD, AIA, relatório de uso legível e material de comunicação com a
+comunidade (D61).
+
+**Child Rights by Design** — Marco da 5Rights Foundation (2023), com onze princípios, que o
+MEC adapta como checklist de contratação de tecnologia educacional
+(`docs/conformidade-mec.md` seção 4).
+
+**Descarregamento cognitivo** — O efeito de o aluno delegar o raciocínio à IA e não aprender.
+É o risco que o tutor socrático e a reflexão obrigatória existem para evitar, e que o MEC
+manda a escola prevenir.
+
+**Letramento em IA** — Aprender **sobre** IA, não só **com** IA: como funciona, quais os
+limites e riscos, como avaliar criticamente o que ela produz. Exigência curricular do CNE,
+articulada à Educação Digital e Midiática (Resolução CNE/CEB 2/2025) e atendida por nós em
+três pontos pequenos (D65).
+
+**Sandbox regulatório** — Ambiente controlado de testagem, iniciado por chamamento público,
+que o MEC recomenda às redes para experimentar IA com segurança jurídica. É o formato natural
+do nosso piloto na rede pública (`docs/conformidade-mec.md` seção 10).

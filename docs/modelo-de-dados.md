@@ -82,7 +82,7 @@ Questao*         → escola?|publica, enunciado*, tipo*, alternativas?, gabarito
 ingerido **nunca** cruza de escola. `autorizacaoDoc` registra a autorização escrita da
 escola para a fonte. Quando `titularidade` é `licenciado`, `licencaDoc` e `licenciante` são
 obrigatórios. Sem autorização e, quando couber, sem licença, nem o upload nem o adaptador
-processam (D5 revista, `docs/regulacao.md` seção 4).
+processam (D5 revista, `docs/regulacao.md` seção 5).
 
 `origemMaterial` e `origemPagina` são a rastreabilidade: o professor confere de onde a
 questão saiu.
@@ -103,8 +103,12 @@ Nota*            → aluno*, avaliacao*, valor*, lancadaPor*, lancadaEm*
 ```
 
 `Diagnostico` é o resultado formativo por habilidade, que existe antes da nota oficial (D46).
-Em item discursivo ou de redação, `Correcao` com `origem = ia` tem `feedback` e nunca
-`pontosObtidos`: a IA não propõe nota ali enquanto a regra 70 não mudar.
+Em item discursivo ou de redação **não existe `Correcao` com `origem = ia`**: a IA não
+corrige, não avalia, não pontua e não escreve `feedback` sobre o texto do aluno nessas
+modalidades, nem como rascunho para o professor ver (D55, revisão da D46 — proposta de
+19/09/2026, a ratificar). Ali a `Correcao` nasce com `origem = professor`. O que a IA produz
+para discursiva e redação é a **rubrica da avaliação**, que pertence ao item e não à resposta
+de ninguém.
 
 `modo`: `online_objetiva` · `online_discursiva` · `papel_foto` · `entrega` · `presencial`
 

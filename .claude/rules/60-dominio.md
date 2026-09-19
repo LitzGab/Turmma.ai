@@ -57,7 +57,7 @@ Contexto completo do domínio: `docs/visao-produto.md` e `docs/fluxos.md`. Vocab
    pendente sempre que houver nota, comunicação com família ou decisão sobre o aluno.
 
 10. **Material ingerido pertence ao tenant da escola** e nunca cruza para outra, nem vira
-    banco nosso. Ver `docs/regulacao.md` seção 4.
+    banco nosso. Ver `docs/regulacao.md` seção 5.
 
 11. **A matriz de visibilidade é esta, e exceção se discute antes:** rede vê agregado;
     coordenação vê a unidade; professor vê suas turmas; aluno vê a si; responsável vê o

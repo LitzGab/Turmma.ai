@@ -12,7 +12,26 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] Definir prazos de retenção com uma escola real (varia por rede)
 - [ ] Escrever e ensaiar o processo de incidente
 - [ ] Parecer sobre o ECA Digital (Lei 15.211/2025) para plataforma contratada pela escola,
-      com a avaliação de impacto que ele exige
+      com a avaliação de impacto que ele exige. Três perguntas precisam sair dele, nomeadas:
+      **(a)** o art. 24 alcança serviço educacional contratado pela escola? Se sim, conta de
+      aluno de até 16 anos precisa estar vinculada à de um responsável legal, e o portal da
+      família sai da fase posterior (**bloqueia o PRD do F9**, `docs/regulacao.md` 2.2);
+      **(b)** como os arts. 17 e 18 (supervisão parental) se modulam pelo art. 39 no nosso
+      caso; **(c)** a aferição de idade pela série informada pela escola basta, com o art. 24
+      do Decreto 12.880 como fundamento de proporcionalidade?
+- [ ] **Avaliação de Impacto Algorítmico** escrita para cada funcionalidade de alto risco —
+      Tutor, correção de objetiva, diagnóstico por habilidade, sinais e alertas, adaptação —
+      no roteiro de seis etapas de `docs/conformidade-mec.md` seção 7 (D60). Cada uma antes do
+      PRD da sua funcionalidade, não no F16
+- [ ] **Dossiê de conformidade** da escola (D61): declaração de propósito com faixas etárias,
+      funcionamento em linguagem simples com fluxograma, conformidade LGPD e ECA artigo por
+      artigo, RIPD, AIA, relatório de uso legível, material de comunicação com a comunidade
+- [ ] **Aviso de privacidade em linguagem de faixa etária**, para aluno de 11 anos (exigido
+      pelo art. 16 do ECA Digital e pelas cláusulas sugeridas pelo MEC). Não existe hoje
+- [ ] Cláusulas do contrato com a escola que o MEC sugere e que ainda não temos:
+      responsabilização por incidente, alerta em tempo real ao supervisor quando conteúdo
+      proibido for gerado, teste de segurança antes de atualização
+      (`docs/conformidade-mec.md` seção 6)
 - [ ] Base legal da conversa do tutor e dos sinais, na particular e na pública (Enunciado
       CD/ANPD 1/2023; teste de balanceamento se for legítimo interesse)
 - [ ] Indicadores de professor com advogado: CLT, convenção coletiva de cada sindicato
@@ -30,7 +49,8 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 - [ ] Escolher provedor de hospedagem em região Brasil, com Postgres + pgvector, Redis e
       storage S3 gerenciados (D26, D28), quando for criar o staging (D31, D42)
-- [ ] Contrato com provedor de modelo: veda treinamento, permite serviço usado por menor,
+- [ ] Contrato com provedor de modelo: **garante processamento no Brasil para conversa de
+      aluno** (D62), veda treinamento, permite serviço usado por menor,
       limite de tokens por minuto compatível com o pico (~1,5 mi/min em 10 escolas pela
       estimativa do `docs/infra.md`; a análise de 13/09/2026 chegou a ~2,8 mi com premissa
       mais realista), e região de processamento (D29)
@@ -119,8 +139,15 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
 ## Regulação educacional
 
 - [ ] Acompanhar a homologação pelo MEC e a publicação das diretrizes do CNE; ler o texto
-      oficial e revisar a regra 70, principalmente correção de discursiva e redação (D46) e
-      a classificação dos sinais do tutor
+      oficial e revisar a regra 70, principalmente correção de discursiva e redação (D46, D55)
+      e a classificação dos sinais do tutor. **É o que decide se a devolutiva formativa de
+      discursiva volta a existir no produto**
+- [ ] Acompanhar a **regulamentação da ANPD sobre o art. 11 do Decreto 12.880/2026** (IA
+      conversacional com criança e adolescente): pode trazer requisito técnico novo para o
+      Tutor (D58)
+- [ ] Ler e destrinchar em requisito: **Guia de Classificação Indicativa do MJ (out/2025),
+      capítulo Interatividade** — o MEC manda o desenvolvedor segui-lo; **Resolução CNE/CEB
+      2/2025** (Educação Digital e Midiática); **Children & AI Design Code** (5Rights, 2025)
 - [ ] Verificar se Santa Catarina tem lei estadual sobre aparelhos na escola além da Lei
       15.100
 - [ ] Transformar a conformidade em material de venda: "já estamos dentro do prazo de 12 meses"
@@ -156,9 +183,12 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
 
 ## Marca e interface
 
-- [ ] Identidade visual (paleta, tipografia, logo) para o frontend seguir — Gabriel,
-      **antes do PRD do F2**
-- [ ] Landing page — Gabriel
+- [x] ~~Identidade visual (paleta, tipografia, logo)~~ — existe e está fora deste repositório:
+      manual da marca Turmma, com caramelo `#E8732E`, azul-noite `#16233E`, creme `#FFF3E2` e
+      papel `#FDFBF7` (D54). **Falta trazer os tokens e os SVGs para cá, antes do PRD do F2**
+- [x] ~~Landing page~~ — existe em `turmma.com` (fora deste repositório)
+- [ ] Trazer para o repositório: paleta em tokens, tipografia, logo em SVG e o avatar de cada
+      agente por função (`docs/interface.md` seção 7)
 
 ## Comercial
 
@@ -174,14 +204,27 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       prometer preço para 2027
 - [ ] Levantar o número de alunos da rede pública no recorte (anos finais municipais e
       estaduais, Ensino Médio estadual) e o preço praticado em pregão
-- [ ] Roteiro de demonstração para coordenador e para assembleia de pais
+- [ ] Roteiro de demonstração para coordenador e para assembleia de pais, com o checklist do
+      MEC respondido na mão (`docs/conformidade-mec.md` seção 2)
+- [ ] **Evidência independente de eficácia pedagógica**: desenhar com a escola piloto uma
+      medição simples e pré-registrada (tempo de preparação e correção do professor antes e
+      depois; desempenho por habilidade com e sem uso), com alguém de fora assinando o
+      desenho. O MEC pede pesquisa **não financiada pelo desenvolvedor**, e sem isso o
+      primeiro critério de avaliação de qualquer secretaria fica em branco
+- [ ] **Material de formação do professor**, exigido pelo princípio 4 e pelo critério 3 do
+      MEC. Não temos nada, e é a isca comercial mais barata que existe
+- [ ] Perguntar à secretaria de Joinville se existe ou pode existir **chamamento público para
+      sandbox regulatório** — é o formato natural do piloto gratuito de 2027 e não passa por
+      licitação (`docs/conformidade-mec.md` seção 10)
 - [ ] Aproveitar setembro como pico de compra para o ano seguinte (em 2026, para
       entrevistas e piloto; venda com repasse, realisticamente, para 2028)
 
 ## Marca
 
-- [ ] Nome definitivo, busca no INPI, domínio. "Educa.ia" é provisório e há vizinhos
-      próximos no mercado ("IA Educa Brasil", "Eduka.ai")
+- [x] ~~Nome definitivo~~ — **Turmma** (D54)
+- [ ] Busca e depósito no INPI da marca Turmma, e registro do domínio `turmma.com` (e do
+      `@turmma.ai`). É o único risco que sobra do nome: se o INPI negar, a troca é de marca,
+      não de código
 
 ## Fase posterior
 

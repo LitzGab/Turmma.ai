@@ -134,8 +134,9 @@ perde metade dos casos reais.
 
 **Como acontece**
 
-Enzo trava no exercício 14 e pergunta ao tutor qual é o reagente limitante. O tutor recusa
-dar a resposta e pergunta se ele já converteu as massas em mol. Enzo diz que só uma. O tutor
+Enzo abre o tutor e a primeira coisa que aparece é que ele está falando com um sistema
+automatizado, não com uma pessoa. Trava no exercício 14 e pergunta qual é o reagente
+limitante. O tutor recusa dar a resposta e pergunta se ele já converteu as massas em mol. Enzo diz que só uma. O tutor
 confirma que está certo e indica o próximo passo, citando a página 152.
 
 Na tela da Camila, ao vivo, aparece que oito alunos travaram no mesmo ponto e que dois
@@ -143,13 +144,22 @@ pediram resposta pronta.
 
 **Por que é assim**
 
-O CNE classifica tutor digital como risco moderado, permitido **desde que supervisionado**.
-E do ponto de vista de produto, é a demonstração que ganha a assembleia de pais: a IA da
-escola ensina, a IA de fora entrega.
+O CNE classifica tutor digital como uso que exige cuidados adicionais, permitido **desde que
+supervisionado**. O art. 11 do Decreto 12.880/2026 acrescenta quatro obrigações a qualquer IA
+conversacional usada por criança e adolescente: transparência sobre o caráter sintético,
+prevenção de manipulação comportamental, avaliação de risco algorítmico e salvaguardas ao
+desenvolvimento. E do ponto de vista de produto, é a demonstração que ganha a assembleia de
+pais: a IA da escola ensina, a IA de fora entrega.
 
 **O que isso obriga tecnicamente**
 
 - Resposta do tutor supervisionada, não aprovada uma a uma (D47)
+- **Declaração de que é sistema automatizado**, no início de cada sessão e em qualquer tela
+  onde caiba confusão, sem opção de desligar (D58)
+- Sem persona que simule vínculo afetivo, sem linguagem que crie obrigação de continuar, sem
+  recompensa por tempo de uso e sem notificação fora do horário útil (D59)
+- Teto diário visível ao aluno como salvaguarda de bem-estar, não como punição (D38, D59)
+- AIA do Tutor escrita antes de ele existir, revista a cada troca de modelo (D60)
 - Política de tutor por turma: bloqueado, socrático ou livre, definida pelo professor dentro
   do padrão da escola, aplicada **no servidor**
 - Trava automática durante avaliação em andamento, independentemente da política
@@ -160,7 +170,7 @@ escola ensina, a IA de fora entrega.
   comportamento do aluno
 - Conversa do tutor com retenção curta e acesso restrito ao professor da turma
 - Encaminhamento de assunto delicado que chega também a quem notifica o Conselho Tutelar,
-  com acesso ao conteúdo auditado (`docs/regulacao.md` seção 6)
+  com acesso ao conteúdo auditado (`docs/regulacao.md` seção 7)
 
 **Casos de borda**
 
@@ -175,33 +185,40 @@ humano e não de resposta de IA.
 
 **Como acontece**
 
-Terminada a atividade ou a prova, o agente Corretor corrige as objetivas, escreve a
-devolutiva das discursivas e monta o diagnóstico por habilidade. Ele **não lança nada** e
-**não sugere nota para as discursivas** (D46). Manda uma entrega para o feed da Camila:
-"corrigi as 32 provas, onze alunos erraram a questão 7, esperando você".
+Terminada a atividade ou a prova, o agente Corretor corrige as objetivas e monta o
+diagnóstico por habilidade. Nas discursivas ele **não toca no texto do aluno**: organiza o
+lote, confere entrega e prepara a correção cega, sem nota, sem conceito e sem devolutiva
+rascunho (D55). Manda uma entrega para o feed da Camila: "corrigi as 32 objetivas, onze alunos
+erraram a questão 7, as 32 discursivas estão prontas para você corrigir".
 
-Camila revisa. Ajusta duas devolutivas e aprova. O aluno vê a devolutiva, e o diagnóstico
-sobe para o painel dela e, em agregado, para o da coordenação.
+Camila vê a distribuição, abre os casos destacados, escreve ela mesma a devolutiva das
+discursivas e aprova. O sistema registra o que apresentou, o que ela abriu e quem confirmou
+(D56). O aluno vê a devolutiva, e o diagnóstico sobe para o painel dela e, em agregado, para
+o da coordenação.
 
 Quando a nota oficial estiver no sistema, o mesmo fluxo continua: Camila dá a nota das
-discursivas, confere as objetivas, e aprova o lote. Nesse instante a nota passa a existir e
-o evento sobe para o painel da coordenação.
+discursivas, confere as objetivas, e aprova o lote com o registro da validação. Nesse instante
+a nota passa a existir e o evento sobe para o painel da coordenação.
 
 **Por que é assim**
 
-Correção automática e atribuição de nota são classificadas como alto risco pelo CNE e
-exigem supervisão humana; segundo a imprensa, a versão final veda sugestão de nota em
-redação e discursiva. Decisão só automatizada sobre promoção do aluno é proibida. Além da
-lei: professor não assina embaixo de nota que não conferiu. E o diagnóstico formativo vem
-primeiro porque tem menos risco e é o que alimenta a medição de desempenho.
+Correção de objetiva e atribuição de nota são alto risco pelo CNE e exigem validação humana
+**efetiva, prévia, qualificada e documentada** — com a frase explícita de que o professor não
+pode apenas clicar em "aprovar". Em redação e discursiva a IA não corrige, não avalia, não dá
+nota nem conceito e **não pré-corrige para o professor** (D55). Decisão só automatizada sobre
+promoção do aluno é proibida. Além da lei: professor não assina embaixo de nota que não
+conferiu. E o diagnóstico formativo vem primeiro porque tem menos risco e é o que alimenta a
+medição de desempenho.
 
 **O que isso obriga tecnicamente**
 
 - `Correcao` e `Nota` são entidades separadas. A IA escreve na primeira, nunca na segunda
 - `Nota` só é gravada com autor humano, em **todo** caminho: interface, job, importação, seed
-- Discursiva e redação sem nota proposta pela IA, até a regra 70 mudar
-- Aprovação qualificada e documentada: o lote mostra resumo e destaques antes de liberar
-  (D33), para não virar aprovação automática
+- Discursiva e redação **sem correção, sem nota, sem conceito e sem devolutiva gerada por IA**,
+  em nenhum campo, nem interno, nem rascunho, nem log, até a regra 70 mudar (D55)
+- Aprovação qualificada e **documentada**: o lote mostra resumo e destaques antes de liberar
+  (D33) e grava o registro da validação — o que foi mostrado, o que foi aberto, quem confirmou
+  e quando (D56)
 - Entrega de agente nasce pendente, com aprovar e rejeitar com justificativa
 - Auditoria responde "o que a IA gerou, quem aprovou, quando"
 - A justificativa da correção precisa ser boa o bastante para o professor defender a nota

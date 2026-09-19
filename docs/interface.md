@@ -82,10 +82,12 @@ Consequências técnicas:
 
 ### 1.2 Ferramentas (F7)
 
-Prova (gabarito, versões, exportação) · Atividade e lista · Correção com devolutiva e
-diagnóstico por habilidade · Adaptação para necessidade específica · Plano de aula e
-sequência didática · Simulado ENEM a partir do banco público (D21) · Redação por
-competência, **só com devolutiva, sem nota proposta pela IA** (D46).
+Prova (gabarito, versões, exportação) · Atividade e lista · Correção de objetiva com
+diagnóstico por habilidade · Adaptação para necessidade específica · Plano de aula e sequência
+didática · Simulado ENEM a partir do banco público (D21) · Redação e discursiva: a ferramenta
+gera **rubrica e critérios** antes da aplicação, organiza o lote e apoia a correção cega, e
+**a IA não corrige, não avalia, não dá nota nem conceito e não escreve devolutiva** sobre o
+texto do aluno (D55). Quem escreve a devolutiva é o professor, na tela, com a rubrica ao lado.
 
 Toda ferramenta produz um **artefato** que fica na biblioteca, ligado à turma e ao
 calendário, e toda saída cita material e página.
@@ -104,16 +106,17 @@ calendário, e toda saída cita material e página.
 
 A ação que não pode virar clique reflexo (regra 50, item 8; regra 70). Entra quando a nota
 oficial entrar (D46); até lá, o professor aprova devolutiva e diagnóstico com as mesmas
-regras de mostrar antes de confirmar. Em discursiva, a nota é digitada pelo professor, sem
-valor sugerido.
+regras de mostrar antes de confirmar. Em discursiva, a nota e a devolutiva são escritas pelo
+professor, sem valor nem texto sugerido pela IA (D55).
 
 - Aprovação individual mostra **aluno, avaliação e valor** antes de confirmar
-- Aprovação em lote mostra o resumo e **destaca os casos fora da curva** no topo:
-  discursiva com baixa confiança da correção, nota muito distante da média do aluno, prova
-  em branco
+- Aprovação em lote mostra o resumo e **destaca os casos fora da curva** no topo: nota muito
+  distante da média do aluno, prova em branco, item com padrão de erro suspeito
 - Rejeitar pede justificativa
-- O botão de aprovar o lote fica desabilitado enquanto os destacados não forem abertos
-  (D33)
+- O botão de aprovar o lote fica desabilitado enquanto os destacados não forem abertos (D33)
+- A tela **grava o registro da validação**: o que foi apresentado, quais destaques foram
+  abertos, quem confirmou e quando (D56). É esse registro que prova, para a escola e para a
+  fiscalização, que houve validação qualificada — e não um clique
 
 ### 1.5 Modo sala (F10)
 
@@ -135,13 +138,22 @@ ao 3º do Ensino Médio; a linguagem do tutor e os textos precisam funcionar par
 *Proposta de navegação:*
 
 - **Tutor**, restrito ao conteúdo da turma, citando a página do material. Travado durante
-  avaliação em andamento
+  avaliação em andamento. **Declara ser um sistema automatizado** ao abrir cada sessão, em
+  linguagem da faixa etária, sem que a escola possa desligar isso (D58). Perguntado sobre si,
+  explica o que é e que pode errar (D65)
+- **Quanto ainda dá para usar hoje**, do pacote do tutor (D38), mostrado como salvaguarda e
+  não como punição, com o ponto de parada visível (D59)
+- **Aviso de privacidade em linguagem de faixa etária** e caminho para **avisar um adulto**
+  sobre algo errado no sistema — o canal de notificação do ECA Digital, art. 28 (D61)
 - **Atividades e provas** atribuídas pelo professor
 - **Meu desempenho**, só do próprio aluno
 - Aviso visível e permanente de que o professor acompanha o uso do tutor (D8)
 
 Proibido na tela do aluno: ranking, média da turma que permita deduzir nota de colega, lista
-de quem entregou (regra 50, item 9).
+de quem entregou (regra 50, item 9). Proibido também, por lei (Decreto 12.880, arts. 9º e 10;
+D59): recompensa por tempo de uso, sequência de dias, conteúdo que começa sozinho, rolagem
+infinita, notificação fora do horário útil, esconder o ponto de parada, e qualquer caminho de
+sair, revogar ou ajustar privacidade que seja mais longo que o de aceitar.
 
 Fora da sala, o tutor só aparece se a escola ligou o modo casa para aquela turma (D19).
 Desligado, a tela explica que o tutor funciona em sala, sem parecer erro.
@@ -160,7 +172,8 @@ Desligado, a tela explica que o tutor funciona em sala, sem parecer erro.
   entrou, o que falhou, o que está pendente e o que foi recusado por falta de licença (F4,
   D5 revista)
 - **Governança** (F12), a tela que fecha a venda:
-  - uso de IA por série e disciplina; por professor só com abertura auditada (D45)
+  - uso de IA por série e disciplina; por professor só com abertura auditada (D45). **Sem
+    ranking, sem lista nominal de adoção e sem alerta de professor que não usa** (D64)
   - o que a IA gerou e quem aprovou, com o número; notas aprovadas por humano quando a nota
     oficial existir (D46)
   - desempenho por série, turma e habilidade
@@ -170,7 +183,16 @@ Desligado, a tela explica que o tutor funciona em sala, sem parecer erro.
 - **Analista da coordenação**: resumo de segunda de manhã e alertas na hora, em agregado (D32)
 - **Adaptações**: registro da adaptação necessária por aluno, nunca diagnóstico (D35)
 - **Agentes**: cada agente, o que faz sozinho e o que espera aprovação, em português comum
-  (D9). É a tela para apontar quando alguém pergunta "o que essa IA faz sozinha?"
+  (D9). É a tela para apontar quando alguém pergunta "o que essa IA faz sozinha?". Cada agente
+  de alto risco mostra o **resumo da avaliação de impacto** e o que ele **não** faz (D60)
+- **Conformidade**: o dossiê da escola em um lugar — declaração de propósito e faixas etárias,
+  como o sistema funciona em linguagem simples, conformidade com LGPD e ECA Digital, relatório
+  de uso exportável, e o material para conversar com professores e famílias (D61). É a tela
+  que a coordenação abre na reunião, e a que responde ao checklist do MEC
+- **Denúncias**: o canal de notificação de violação, com o que foi apontado, o que foi feito e
+  o recurso, dizendo se a análise foi humana ou automatizada (D61)
+- **Exportar**: dado, artefato e histórico de uso em formato aberto, a qualquer momento, sem
+  depender de nós (D63)
 - **Auditoria**: para qualquer item, o que a IA gerou, quem aprovou e quando
 - **Configurações da escola**: política de tutor, modo casa por turma (D19), retenção
 
@@ -196,6 +218,10 @@ Fase posterior (D11). Nota, entrega e alerta, alimentados pelo motor de eventos 
 - Erro diz o que fazer: "não foi possível salvar, tente de novo em instantes"
 - Navegação por teclado, foco visível, contraste, rótulo em campo
 - Lista longa virtualizada. Nada que assuma máquina boa
+- **Toda saída de IA é rotulada como tal**, com a fonte e a página quando vem do material, e
+  com quem aprovou quando já passou por aprovação
+- **Sem padrão manipulativo** (D59): nenhuma urgência fabricada, nenhum botão que esconde a
+  ação menos lucrativa para nós, e o caminho de recusar do mesmo tamanho do de aceitar
 - **Responsiva desde a primeira versão** (D51): do computador da escola ao celular, a
   partir de 360 px. No celular, o menu lateral da área do professor vira navegação
   recolhível, e o chat, o feed e as ferramentas cabem numa coluna. Toque em vez de hover,

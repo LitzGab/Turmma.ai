@@ -51,22 +51,24 @@ call (Pipo, Waz, Maky) não são usados.
 | Agente | Para quem | Dispara | Nível | O que faz |
 |---|---|---|---|---|
 | **Rotina** | professor | todo dia letivo, de manhã | 1 | Abre o dia com aulas, avaliações e pendências que já existem na grade e nas avaliações. Não gera conteúdo novo, por isso é barato. Garante que o feed nunca apareça vazio |
-| **Corretor** | professor | fim da atividade ou avaliação | 2 para corrigir, 3 para nota | Corrige objetivas, escreve devolutiva formativa das discursivas **sem propor nota** (D46) e monta o diagnóstico por habilidade e o relatório por questão. Primeiro entrega só diagnóstico; quando a nota oficial existir, propõe a nota das objetivas, que só existe depois da aprovação |
+| **Corretor** | professor | fim da atividade ou avaliação | 2 para corrigir objetiva, 3 para nota | Corrige objetivas, monta o diagnóstico por habilidade e o relatório por questão. **Em discursiva e redação não faz nada sobre o texto do aluno**: nem correção, nem nota, nem conceito, nem devolutiva rascunho, nem pré-correção para o professor ver (D55). Nelas ele organiza o lote, confere entrega e prepara a correção cega. Quando a nota oficial existir, propõe a nota das objetivas, que só passa a existir com a validação registrada do professor (D56) |
 | **Planejador** | professor | **sob pedido**, ou "preparar a semana" ligado pelo professor para uma turma | 1 | Plano de aula e sequência didática a partir do material e do calendário. Não gera plano que ninguém pediu |
-| **Monitor de turma** | professor | diário, de madrugada, e por evento | 2 | Entregas pendentes, quem travou, dúvidas frequentes, queda de desempenho por habilidade. Aluno nomeado só para o professor da turma. Possível alto risco no CNE (perfilização): explicação e contestação antes de existir (`docs/regulacao.md`) |
-| **Tutor** | aluno | aluno pergunta | 2, sempre supervisionado, sem aprovação prévia por resposta (D47) | Conduz por perguntas, nunca entrega resposta pronta, cita a página |
+| **Monitor de turma** | professor | diário, de madrugada, e por evento | 2 | Entregas pendentes, quem travou, dúvidas frequentes, queda de desempenho por habilidade. Aluno nomeado só para o professor da turma. **Alto risco** no CNE: AIA antes de existir, explicação em linguagem comum na tela e caminho de contestação (D60). O sinal deriva de fato declarado — entrega, desempenho, o que o aluno escreveu —, nunca de inferência de emoção ou comportamento (D57) |
+| **Tutor** | aluno | aluno pergunta | 2, sempre supervisionado, sem aprovação prévia por resposta (D47) | Conduz por perguntas, nunca entrega resposta pronta, cita a página. **Se declara sistema automatizado** no início de cada sessão, e a escola não pode desligar essa declaração (D58, Decreto 12.880 art. 11, I). Sem persona que simule vínculo afetivo e sem linguagem que crie obrigação de continuar. Perguntado sobre si, explica o que é, como funciona e que pode errar (D65) |
 | **Adaptador** | professor | avaliação ou atividade criada para turma com aluno que tem adaptação registrada | 3 | Propõe a versão adaptada (fonte ampliada, tempo extra, enunciado simplificado). O professor aprova antes de o aluno receber |
 | **Analista da coordenação** | coordenação | toda segunda de manhã, e por evento que passa do limiar | 2 | Resumo semanal e alerta na hora, **em agregado** por série e disciplina: média fora da curva, habilidade em queda, consumo de IA alto, alunos em risco. O detalhe por turma ou professor só abre com auditoria (D45). Alerta é hipótese com contexto, nunca veredito sobre o professor. Só avisa: nunca contata professor nem família |
 | **Mensageiro da família** | professor, coordenação | evento | 3 | Prepara a comunicação e envia só depois da aprovação. **Fase posterior** |
 
 ### Detalhes que já estão decididos
 
-**Aprovação de nota de objetiva é em lote** (D33), quando a nota oficial entrar (D46). Um
-confirmar para a turma, depois de ver
-média, distribuição e os casos destacados: discursiva com baixa confiança, nota muito longe
-do histórico do aluno, prova em branco. Os destacados precisam ser abertos antes de o botão
-de aprovar o lote liberar. Aluno por aluno viraria clique reflexo, que é justamente o que a
-regra 50 quer evitar.
+**Aprovação de nota de objetiva é em lote, e a validação fica registrada** (D33, D56), quando
+a nota oficial entrar (D46). Um confirmar para a turma, depois de ver média, distribuição e os
+casos destacados: nota muito longe do histórico do aluno, prova em branco, item com padrão de
+erro suspeito. Os destacados precisam ser abertos antes de o botão de aprovar o lote liberar, e
+o sistema guarda **o que foi apresentado, o que foi aberto, quem confirmou e quando** — porque
+o CNE exige validação humana "efetiva, prévia, qualificada e documentada" e diz, com essas
+palavras, que o professor não pode apenas clicar em aprovar. Aluno por aluno viraria clique
+reflexo, que é justamente o que a regra 50 quer evitar; lote sem registro não prova nada.
 
 **Aluno em risco chega nomeado só ao professor da turma** (D34). A coordenação vê o
 agregado ("1ºC tem 5 alunos com três entregas faltando") e abre o detalhe só com registro
@@ -85,16 +87,30 @@ texto da mensagem e a lista de gatilhos passam pelo `conformidade-reviewer` e pe
 `pedagogia-reviewer` antes de existir. A escola tem obrigação de notificar o Conselho
 Tutelar em caso de automutilação ou tentativa de suicídio (Lei 13.819/2019, ampliada pela
 Lei 15.231/2025): o sinal precisa chegar também a quem notifica (orientação ou direção), com
-acesso ao conteúdo auditado. A detalhar no PRD do F9 (`docs/regulacao.md` seção 6).
+acesso ao conteúdo auditado. A detalhar no PRD do F9 (`docs/regulacao.md` seção 7).
 
 ### O que nenhum agente faz (nível 4)
 
 - Decidir aprovação, reprovação ou encaminhamento de aluno, nem como sugestão aplicada sozinha
 - Publicar nota ou falar com a família sem aprovação humana registrada
 - Inferir emoção, humor, atenção ou comportamento, ou ranquear alunos por isso
-- Ranquear professores, ou recomendar qualquer decisão sobre um professor
-- Propor nota em redação ou discursiva (D46)
+- Criar perfil comportamental ou psicológico de aluno, ainda que só como rótulo interno, e
+  pontuar pessoa por comportamento (D57; ECA Digital art. 26; Decreto 12.880 art. 10)
+- Ranquear professores, medir adoção nominal por professor ou recomendar qualquer decisão
+  sobre um professor (D45, D64)
+- **Corrigir, avaliar, dar nota ou conceito, pré-corrigir ou sugerir nota em redação e
+  discursiva** (D55)
 - Falar de assunto fora do conteúdo escolar da turma
+- Usar dado educacional para publicidade ou qualquer fim comercial (D57)
+
+### Antes de um agente de alto risco existir
+
+Alto risco aqui é Tutor, Corretor, Monitor de turma, Analista e Adaptador — todos menos o
+Rotina e o Planejador. Nenhum deles entra em PRD sem a **Avaliação de Impacto Algorítmico**
+das seis etapas de `docs/conformidade-mec.md` seção 7 (D60), que inclui o **escopo negativo**
+(o que aquele agente não deve fazer) e o **procedimento de suspensão**: como desligar o agente
+numa escola, quem decide e o que acontece com o que ele já produziu. A AIA é revista quando o
+modelo ou o prompt principal mudam.
 
 ## Agente e ferramenta não são a mesma coisa
 
@@ -112,4 +128,6 @@ correção chamam a mesma correção. O que muda é quem dispara e onde o result
 - Limite de passos e de custo por execução — agente que não sabe parar queima a margem
 - Registro completo: gatilho, entrada, saída, modelo, tokens, custo, duração, estado
 - Estados: `executado`, `aguardando aprovação`, `aprovado`, `rejeitado`
-- Notificação roteada para quem precisa saber, no canal disponível na fase atual
+- Notificação roteada para quem precisa saber, no canal disponível na fase atual, **dentro do
+  horário útil da escola**: notificação fora de hora e recompensa por tempo de uso contam como
+  incentivo a uso excessivo, vedado pelo art. 9º do Decreto 12.880/2026 (D59)

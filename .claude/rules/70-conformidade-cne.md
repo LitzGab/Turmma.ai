@@ -3,16 +3,23 @@
 ## Por que esta regra existe
 
 Em 1º de setembro de 2026 o Conselho Nacional de Educação aprovou diretrizes para o uso de
-inteligência artificial na educação. Até 13/09/2026 o texto ainda aguardava homologação do
+inteligência artificial na educação. Em 19/09/2026 o texto ainda aguardava homologação do
 MEC e publicação como resolução, e os doze meses de adequação contam da publicação. Isso
 muda nosso projeto de duas formas.
 
 A primeira é óbvia: algumas coisas que seriam tecnicamente fáceis passaram a ser proibidas,
-e outras passaram a exigir um humano no caminho. Correção automática e atribuição de nota
-são classificadas como alto risco e exigem supervisão. Decisão só automatizada sobre
-promoção ou retenção de aluno é proibida. Segundo a imprensa, a versão final proíbe também
-a IA de corrigir ou sugerir nota em redação e prova discursiva; até lermos o texto
-publicado, tratamos isso como proibido (D46).
+e outras passaram a exigir um humano no caminho. Correção de objetiva e atribuição de nota
+são classificadas como alto risco e exigem validação humana **efetiva, prévia, qualificada e
+documentada** — com a frase explícita de que o professor não pode apenas clicar em "aprovar".
+Decisão só automatizada sobre promoção ou retenção de aluno é proibida. Em redação e prova
+discursiva a IA não corrige, não avalia, não dá nota nem conceito e **não faz pré-correção nem
+sugere nota ao professor** (D55).
+
+Desde 17/03/2026 há um segundo bloco, com sanção contra nós: o **ECA Digital (Lei
+15.211/2025)** e o **Decreto 12.880/2026**, fiscalizados pela ANPD, que valem para qualquer
+fornecedor de serviço direcionado a criança e adolescente — independente de a escola ser a
+controladora do dado. O art. 11 do decreto trata diretamente de IA conversacional com menor de
+idade. Está tudo traduzido em requisito em `docs/regulacao.md` seção 2.
 
 A segunda é comercial e vale mais: praticamente nenhuma escola sabe como se adequar, e só
 22% delas têm qualquer política de uso de IA. Um sistema que já nasce em conformidade, com
@@ -21,16 +28,18 @@ solução de um problema que o coordenador tem e não sabe resolver.
 
 Por isso estas regras não são burocracia a ser minimizada. São parte do produto.
 
-O detalhamento está em `docs/regulacao.md`.
+O detalhamento está em `docs/regulacao.md` (o que a lei exige) e em
+`docs/conformidade-mec.md` (o que a escola exige na compra, e o que entregamos por escrito).
 
 ## A classificação, traduzida
 
 | O que o CNE diz | O que isso significa no código |
 |---|---|
-| Tutor e personalização são risco moderado, permitidos | O ambiente do aluno é legítimo, desde que supervisionado pelo professor |
-| Correção e atribuição de nota são alto risco, exigem supervisão | Em objetiva, a IA corrige, mas nota só existe com aprovação humana registrada, qualificada e documentada |
-| Correção e sugestão de nota em redação e discursiva (versão final, segundo a imprensa; texto a confirmar) | A IA entrega só devolutiva formativa, sem nota proposta (D46) |
-| Perfilização acadêmica individual e inferência comportamental relevante são alto risco (texto de consulta) | Sinais do tutor e alertas sobre aluno exigem avaliação de impacto, explicação acessível e caminho de contestação. A confirmar no texto final |
+| Tutor e personalização exigem cuidados adicionais, e são permitidos | O ambiente do aluno é legítimo, desde que supervisionado pelo professor, com revisão humana e monitoramento periódico |
+| Correção e atribuição de nota são alto risco, exigem supervisão | Em objetiva, a IA corrige, mas nota só existe com aprovação humana registrada, qualificada e documentada — e o **registro da validação** guarda o que foi mostrado, o que o professor abriu e quem confirmou (D56) |
+| Correção, avaliação, nota, conceito, mérito, **pré-correção** e **sugestão de nota** em redação e discursiva | Proibido. A IA não produz nada sobre o texto do aluno nessas modalidades: nem devolutiva, nem rascunho para o professor. Sobram rubrica, organização do lote e correção cega (D55) |
+| Perfilização acadêmica individual e inferência comportamental relevante são alto risco | Sinais do tutor e alertas sobre aluno exigem avaliação de impacto algorítmico (D60), explicação acessível e caminho de contestação |
+| Reconhecimento de emoções, pontuação social, vigilância biométrica, perfil psicológico ou comportamental classificatório, e uso comercial de dado educacional são **risco excessivo** | Não existem no produto, e não podem ser propostos. Proibição escrita e testada, não ausência de funcionalidade (D57) |
 | Decisão só automatizada sobre promoção ou retenção é proibida | O sistema não implementa isso nem como sugestão aplicada sozinha |
 | IA generativa sem supervisão é vedada na infantil e anos iniciais | Nosso recorte é anos finais e Ensino Médio (D43); descer de faixa reabre esta regra |
 
@@ -53,6 +62,13 @@ O detalhamento está em `docs/regulacao.md`.
    como recomendação automática aplicada sem alguém confirmar. Se aparecer um pedido desse
    tipo, ele é recusado e a conversa sobe para produto.
 
+2a. **Em redação e discursiva, a IA não chega nem a propor.** Nenhum campo, nem interno, nem
+   rascunho, nem log, guarda nota, conceito, pontuação ou devolutiva gerada por IA sobre o
+   texto de um aluno nessas modalidades (D55). O que a ferramenta entrega é rubrica e
+   critérios antes da aplicação, organização do lote e apoio à correção cega. Se aparecer um
+   pedido de "só um rascunho para o professor ver", ele é recusado: é exatamente o que a
+   diretriz chama de pré-correção.
+
 3. **Toda saída de IA que chega ao aluno passa por aprovação registrada**, com autor, data,
    e possibilidade de rejeitar com justificativa. A entrega do agente nasce pendente. Vale
    para material, atividade, devolutiva e adaptação.
@@ -63,12 +79,28 @@ O detalhamento está em `docs/regulacao.md`.
 4. **O tutor é sempre supervisionado.** Não existe uso invisível ao professor. Em sala, o
    professor acompanha ao vivo; em casa, fica registro e resumo.
 
+4a. **O tutor se declara sistema automatizado**, no início de cada sessão e em qualquer tela
+   onde caiba confusão, e a escola não pode desligar isso (D58; Decreto 12.880, art. 11, I).
+   Sem persona que simule vínculo afetivo e sem linguagem que crie obrigação de continuar
+   (art. 11, II).
+
+4b. **Nada induz uso excessivo, e sair nunca é mais difícil que entrar** (D59; Decreto 12.880,
+   arts. 9º e 10). Proibido: recompensa por tempo de uso, sequência de dias, conteúdo que
+   começa sozinho, rolagem infinita, notificação fora do horário útil da escola, esconder o
+   ponto de parada, e caminho de recusar, sair ou revogar mais longo que o de aceitar.
+
 5. **A autonomia de cada agente é declarada em código e visível ao coordenador**, em
    português comum, não em jargão. A escola precisa poder responder "o que essa IA faz
    sozinha?" apontando para uma tela. Ver `docs/agentes.md`.
 
 6. **A auditoria responde "o que a IA gerou, quem aprovou e quando"** para qualquer item,
-   a qualquer momento. É essa consulta que ganha a reunião com a coordenação.
+   a qualquer momento. É essa consulta que ganha a reunião com a coordenação, e é ela que o
+   dossiê de conformidade exporta (D61, `docs/conformidade-mec.md` seção 5).
+
+6a. **Funcionalidade de alto risco não entra sem Avaliação de Impacto Algorítmico escrita**
+   (D60): Tutor, correção de objetiva, diagnóstico por habilidade, sinais e alertas,
+   adaptação. Seis etapas, incluindo o escopo negativo e o procedimento de suspensão do
+   agente. Roteiro em `docs/conformidade-mec.md` seção 7.
 
 7. **Supervisão não é vigilância.** O professor vê uso e dificuldade de aprendizagem: quem
    travou, quem pediu resposta pronta, qual dúvida se repetiu. Não vê uma janela permanente
@@ -81,6 +113,12 @@ O detalhamento está em `docs/regulacao.md`.
    (avaliação funcional, sanção, dispensa), nem como sugestão. A conversa do professor com
    o chat nunca é visível à coordenação. É o que mantém a confiança do professor, sem a qual
    a escola não renova.
+
+9. **Recusar a ferramenta não gera indicador** (D64). Não existe, em nenhuma tela, ranking de
+   uso por professor, lista nominal de adoção, alerta de "professor que não usa" nem meta de
+   uso por professor. Adoção é agregada. O MEC exige que a rede garanta que nenhum professor
+   seja penalizado por não usar uma ferramenta, e a autonomia didático-pedagógica dele vem
+   antes da nossa métrica de produto.
 
 ## Como isso é checado
 
