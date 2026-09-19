@@ -72,6 +72,11 @@ tutorial.
   - **Alerta de 5xx às 7h30:** o 503 `INDISPONIVEL_TENTE_DE_NOVO` do semáforo é atraso por desenho, e hoje também entra na "Taxa de erro 5xx". O cenário mostra se ele dispara o alerta na entrada; se disparar, a regra passa a não contar esse código (ou a separar o 503 com `Retry-After` do login), com teste no `ensaio:alertas`. Alerta que dispara toda manhã vira ruído e esconde o 5xx de verdade.
   - **Inundação de IPs:** medir o custo da roda da equipe com mais de 10.000 IPs distintos esperando.
   - **Aceite de convite:** gera hash fora do semáforo; confirmar que ele não entra na rajada das 7h30 (é raro e fora do horário de aula), ou colocá-lo na vez.
+- [ ] 16.5 — Despejo com a fila cheia sai de quem foi rebaixado (decidido em 19/09/2026, da revisão da 15.0).
+  - **O defeito:** com a fila do semáforo cheia, o despejo escolhe a maior subfila, e não o balde com mais rebaixados, como diz o comentário. No balde da equipe (login por e-mail), um ataque espalhado por muitos IPs pode despejar um professor legítimo com 503. Isso contraria o objetivo da 15.0: o ataque rebaixa a si mesmo, nunca empurra quem entra de verdade.
+  - **O que fazer:** o despejo sai primeiro de uma tentativa rebaixada (a mais antiga, ou a de IP com mais rebaixadas); só sem rebaixada na fila ele volta à regra atual. Evitar percorrer todas as subfilas a cada pedido no pico: manter o índice dos rebaixados junto da fila.
+  - **Métrica e runbook:** `login.rebaixado_ip` para o rebaixamento pelo limite por IP do login (hoje sem métrica própria), e a entrada "Login rebaixado numa escola" do runbook passa a citá-lo.
+  - **Prova:** teste de unidade do semáforo com a fila cheia de rebaixados de muitos IPs e um pedido normal chegando: o normal fica, sai um rebaixado. E a fase de ataque do `login-7h30` confere que nenhuma conta legítima recebe 503 de despejo.
 - [ ] 16.3 — Calibração e registro.
   - Subir `t` do argon2 a partir do mínimo da OWASP (m=19456, t=2, p=1) até 100 a 250 ms por hash na CPU de referência, e fixar `LOGIN_HASH_CONCORRENCIA` no máximo `UV_THREADPOOL_SIZE − 2`.
   - Registrar os valores na Tech Spec seção 5 e trocar a premissa ⚠️ da seção 12 pelo resultado.

@@ -103,6 +103,7 @@
   - [ ] 16.2 Critérios como `thresholds` do k6 que mudam o código de saída, e conferência de família encerrada por engano
   - [ ] 16.3 Calibração do argon2 e de `LOGIN_HASH_CONCORRENCIA` registrada na Tech Spec
   - [ ] 16.4 Pontos da 14.0: 503 do semáforo fora do alerta de 5xx, inundação de IPs, aceite de convite
+  - [ ] 16.5 Despejo com a fila cheia sai de quem foi rebaixado, com `login.rebaixado_ip` e teste
 
 - [ ] **17.0 — Ciclo de vida da conta e expurgo**
   - [ ] 17.1 Desativação de aluno e de usuário; limpeza da conta sem usuário ativo; eliminação por escola
