@@ -304,7 +304,7 @@ com métrica, cronograma e reversibilidade).
 | **F3 — LGPD e titular** | exportação em formato aberto de dado e histórico de uso (D63); canal de denúncia e retirada com recurso (D61); registro da validação humana |
 | **F5 — camada de IA** | critério de equidade e de português brasileiro na avaliação de modelos; roteamento por soberania: conversa de aluno em provedor no Brasil (D62) |
 | **F6 — avaliação e correção** | fim da devolutiva de discursiva por IA até parecer (D55); registro de validação qualificada na objetiva (D56) |
-| **F9 — ambiente do aluno** | declaração de caráter sintético (D58); sem design de uso excessivo (D59); filtro de conteúdo; AIA do Tutor antes de existir |
+| **F9 — ambiente do aluno** | agente com identidade que nunca se passa por pessoa (D58); sem design de uso excessivo (D59); filtro de conteúdo; AIA do Tutor antes de existir |
 | **F11 — agentes** | AIA por agente de alto risco; procedimento de suspensão de agente |
 | **F12 — governança** | o dossiê é esta tela exportada; explicação e contestação em linguagem comum; adoção só agregada (D64) |
 | **F16 — hardening e conformidade** | RIPD + AIA assinados; teste adversário; revisão do dossiê |

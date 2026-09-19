@@ -191,8 +191,8 @@ os agentes concluíram.
 
 Tutor socrático que não entrega resposta, escopo restrito ao conteúdo da turma, atividades
 e provas na plataforma, política por turma, trava durante avaliação, desempenho próprio.
-Resposta do tutor supervisionada, não aprovada uma a uma (D47). **Declaração de caráter
-sintético em cada sessão, não desligável** (D58); **nenhum mecanismo de uso excessivo e nenhum
+Resposta do tutor supervisionada, não aprovada uma a uma (D47). O Tutor mantém identidade de
+agente e **nunca se passa por pessoa** (D58); **nenhum mecanismo de uso excessivo e nenhum
 padrão manipulativo** (D59); filtro de conteúdo inadequado; aviso de privacidade em linguagem
 de faixa etária; e o canal para o aluno avisar um adulto (D61). Linguagem adequada do 6º ano
 ao Ensino Médio (D43). Encaminhamento de assunto delicado que chega a quem notifica o
@@ -201,8 +201,9 @@ existirem. Acesso fora da sala configurado pela escola por turma, desligado por 
 (D19). Web para computador da escola em sala e celular fora dela (D51).
 
 **Pronto quando:** três tentativas diferentes de arrancar a resposta pronta falham no teste,
-o tutor se declara sistema automatizado em toda sessão, a AIA do Tutor existe escrita, e o
-encaminhamento de risco à vida chega a quem notifica, com o acesso ao conteúdo auditado.
+o Tutor responde o que é quando o aluno pergunta se ele é uma pessoa, a AIA do Tutor existe
+escrita, e o encaminhamento de risco à vida chega a quem notifica, com o acesso ao conteúdo
+auditado.
 
 ## F10 — `modo-sala-tempo-real` [ ]
 **Depende de:** F9

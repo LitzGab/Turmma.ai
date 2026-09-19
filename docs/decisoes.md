@@ -445,18 +445,29 @@ explicação e caminho de contestação (D60). Motivo: é a fronteira que, atrav
 tira o produto da categoria "supervisão" e o põe na de "vigilância", que é o que a família
 recusa e a ANPD multa.
 
-**D58 — O Tutor se declara sistema automatizado, e a declaração não é configurável.** *(a
-ratificar: Joaquim)*
-O art. 11, I, do Decreto 12.880/2026 exige transparência quanto ao caráter sintético e
-automatizado na interação com criança e adolescente. O Tutor se identifica como sistema
-automatizado no início de cada sessão e em qualquer tela onde um aluno possa confundi-lo com
-uma pessoa; a escola não pode desligar isso. Junto vêm os outros três incisos do mesmo artigo:
-prevenir manipulação comportamental (sem persona que simule vínculo afetivo, sem linguagem que
-crie obrigação de continuar), avaliar o risco algorítmico (D60) e implementar salvaguardas ao
-desenvolvimento físico, mental e psicossocial (escopo escolar, recusa, encaminhamento a humano,
-teto diário). Motivo: é o único dispositivo em vigor no Brasil que fala diretamente de agente
-conversacional com menor de idade, a ANPD vai regulamentá-lo, e a exigência é trivial de
-cumprir agora e caríssima de retroagir depois que a linguagem do produto já criou persona.
+**D58 — Os agentes continuam agentes: identidade de função, sem se passar por pessoa.** *(a
+ratificar: Gabriel e Joaquim)*
+O agente mantém nome, avatar, thread e jeito próprio — o time de IA é o produto (D32, D44), e
+o nome é o da função (D17). A transparência que o art. 11, I, do Decreto 12.880/2026 exige
+("caráter sintético e automatizado" da interação) é cumprida pelo que o produto já é de ponta
+a ponta: a escola contrata um time de IA, a família ouve isso na assembleia, a área do aluno
+se chama "Seu time", o agente se apresenta pela função e **toda saída de IA é rotulada como
+tal**, com a fonte. Nenhum aluno tem como achar que o Tutor é a professora dele.
+
+O que fica proibido é estreito e não custa produto: dizer que é humano quando o aluno
+pergunta; usar nome de pessoa que sugira uma pessoa real; simular vínculo afetivo ou
+dependência ("senti sua falta", "não me deixe agora"); e qualquer manipulação de
+comportamento, que é o inciso II do mesmo artigo. Perguntado sobre si, o agente explica o que
+é, como funciona e que pode errar (D65).
+
+Motivo: o decreto pede que a criança não seja **enganada**, não que o produto seja sem graça.
+Persona que esconde ser IA é o problema que a norma mira — produto de companhia artificial,
+não tutor escolar. Agente que diz o que é e o que faz é a solução, e é justamente o que torna
+a supervisão explicável em reunião de pais: "o Corretor corrigiu, a professora aprovou". A
+versão anterior desta decisão, de 19/09/2026, exigia um aviso não desligável no início de cada
+sessão e proibia persona; foi revertida no mesmo dia, a pedido do Gabriel, porque descaracteriza
+o conceito central do produto e não decorre do texto do decreto. Nada impede que a escola, no
+material dela, explique que são agentes de IA — isso já está no dossiê (D61).
 
 **D59 — Nada no produto induz uso excessivo, e nenhum caminho de saída é mais difícil que o de
 entrada.** *(a ratificar: Joaquim e Gabriel)*

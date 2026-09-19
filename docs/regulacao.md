@@ -176,8 +176,8 @@ similares", e a ANPD regulamenta e fiscaliza:
 
 | Inciso | Obrigação | Requisito no produto |
 |---|---|---|
-| **I** | Ser **transparente quanto ao caráter sintético e automatizado** da interação | O Tutor se identifica como sistema automatizado no início de cada sessão e em qualquer tela onde um aluno possa confundi-lo com uma pessoa; a identificação não é removível por configuração da escola (D58) |
-| **II** | **Prevenir a manipulação comportamental** | Sem persona que simule vínculo afetivo, sem linguagem que crie obrigação de continuar, sem incentivo a voltar. O Tutor conduz por perguntas sobre o conteúdo e encerra |
+| **I** | Ser **transparente quanto ao caráter sintético e automatizado** da interação | Cumprido pelo que o produto já é: a escola contrata um time de IA, a área do aluno se chama "Seu time", cada agente se apresenta pela função (D17) e toda saída de IA é rotulada como tal, com a fonte. Os agentes continuam agentes, com identidade; o que é vedado é **se passar por pessoa** — dizer que é humano quando perguntado, usar nome que sugira uma pessoa real (D58) |
+| **II** | **Prevenir a manipulação comportamental** | Sem simular vínculo afetivo ou dependência ("senti sua falta", "não me deixe"), sem linguagem que crie obrigação de continuar. Ter jeito próprio e ser simpático não é manipulação: o alvo da norma é produto de companhia artificial, não tutor escolar (D58) |
 | **III** | **Avaliar o risco algorítmico** à segurança e à saúde | AIA específica do Tutor antes de ele existir, revista a cada mudança de modelo ou de prompt (D60) |
 | **IV** | Implementar **salvaguardas ao desenvolvimento físico, mental e psicossocial** | Escopo escolar, recusa de assunto fora do escopo, encaminhamento a humano em assunto delicado (D36), teto diário (D38), e o texto de acolhimento revisado por orientação educacional |
 

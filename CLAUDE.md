@@ -116,7 +116,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D55 | Em discursiva e redação a IA não corrige, não avalia, não dá nota nem conceito, e não pré-corrige nem sugere nota ao professor (revisão da D46) — *a ratificar* |
 | D56 | Na objetiva, a validação humana é registrada: o que foi mostrado, o que foi aberto e quem confirmou (complementa a D33) — *a ratificar* |
 | D57 | Usos vedados, escritos e testados: sem inferência de emoção, perfil comportamental, pontuação social, biometria ou uso comercial de dado educacional — *a ratificar* |
-| D58 | O Tutor se declara sistema automatizado, e a declaração não é configurável (Decreto 12.880, art. 11) — *a ratificar* |
+| D58 | Os agentes continuam agentes, com identidade de função; proibido só se passar por pessoa ou simular vínculo afetivo (Decreto 12.880, art. 11) — *a ratificar* |
 | D59 | Nada induz uso excessivo, e sair nunca é mais difícil que entrar (Decreto 12.880, arts. 9º e 10) — *a ratificar* |
 | D60 | Avaliação de Impacto Algorítmico por funcionalidade de alto risco, em seis etapas, antes de ela existir — *a ratificar* |
 | D61 | O dossiê de conformidade é entregável de produto, com canal de denúncia e material de consulta à comunidade — *a ratificar* |

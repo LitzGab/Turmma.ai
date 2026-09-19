@@ -134,9 +134,8 @@ perde metade dos casos reais.
 
 **Como acontece**
 
-Enzo abre o tutor e a primeira coisa que aparece é que ele está falando com um sistema
-automatizado, não com uma pessoa. Trava no exercício 14 e pergunta qual é o reagente
-limitante. O tutor recusa dar a resposta e pergunta se ele já converteu as massas em mol. Enzo diz que só uma. O tutor
+Enzo abre o Tutor — que é um dos agentes do time da escola, e se apresenta como tal. Trava no
+exercício 14 e pergunta qual é o reagente limitante. O tutor recusa dar a resposta e pergunta se ele já converteu as massas em mol. Enzo diz que só uma. O tutor
 confirma que está certo e indica o próximo passo, citando a página 152.
 
 Na tela da Camila, ao vivo, aparece que oito alunos travaram no mesmo ponto e que dois
@@ -146,18 +145,19 @@ pediram resposta pronta.
 
 O CNE classifica tutor digital como uso que exige cuidados adicionais, permitido **desde que
 supervisionado**. O art. 11 do Decreto 12.880/2026 acrescenta quatro obrigações a qualquer IA
-conversacional usada por criança e adolescente: transparência sobre o caráter sintético,
-prevenção de manipulação comportamental, avaliação de risco algorítmico e salvaguardas ao
-desenvolvimento. E do ponto de vista de produto, é a demonstração que ganha a assembleia de
+conversacional usada por criança e adolescente: transparência sobre o caráter automatizado da
+interação — que o produto cumpre por ser vendido e apresentado como time de IA, sem precisar
+descaracterizar os agentes (D58) —, prevenção de manipulação comportamental, avaliação de
+risco algorítmico e salvaguardas ao desenvolvimento. E do ponto de vista de produto, é a demonstração que ganha a assembleia de
 pais: a IA da escola ensina, a IA de fora entrega.
 
 **O que isso obriga tecnicamente**
 
 - Resposta do tutor supervisionada, não aprovada uma a uma (D47)
-- **Declaração de que é sistema automatizado**, no início de cada sessão e em qualquer tela
-  onde caiba confusão, sem opção de desligar (D58)
-- Sem persona que simule vínculo afetivo, sem linguagem que crie obrigação de continuar, sem
-  recompensa por tempo de uso e sem notificação fora do horário útil (D59)
+- O agente se apresenta pela função e **nunca afirma ser humano**; perguntado, diz o que é
+  (D58, D65)
+- Sem simular vínculo afetivo ou dependência, sem linguagem que crie obrigação de continuar,
+  sem recompensa por tempo de uso e sem notificação fora do horário útil (D58, D59)
 - Teto diário visível ao aluno como salvaguarda de bem-estar, não como punição (D38, D59)
 - AIA do Tutor escrita antes de ele existir, revista a cada troca de modelo (D60)
 - Política de tutor por turma: bloqueado, socrático ou livre, definida pelo professor dentro

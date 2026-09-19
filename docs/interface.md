@@ -138,9 +138,9 @@ ao 3º do Ensino Médio; a linguagem do tutor e os textos precisam funcionar par
 *Proposta de navegação:*
 
 - **Tutor**, restrito ao conteúdo da turma, citando a página do material. Travado durante
-  avaliação em andamento. **Declara ser um sistema automatizado** ao abrir cada sessão, em
-  linguagem da faixa etária, sem que a escola possa desligar isso (D58). Perguntado sobre si,
-  explica o que é e que pode errar (D65)
+  avaliação em andamento. Se apresenta pela função, como os outros agentes do time (D17, D58);
+  **nunca afirma ser uma pessoa** e, perguntado sobre si, explica o que é, como funciona e que
+  pode errar, em linguagem da faixa etária (D65)
 - **Quanto ainda dá para usar hoje**, do pacote do tutor (D38), mostrado como salvaguarda e
   não como punição, com o ponto de parada visível (D59)
 - **Aviso de privacidade em linguagem de faixa etária** e caminho para **avisar um adulto**

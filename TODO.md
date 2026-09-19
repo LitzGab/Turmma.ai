@@ -144,7 +144,7 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       discursiva volta a existir no produto**
 - [ ] Acompanhar a **regulamentação da ANPD sobre o art. 11 do Decreto 12.880/2026** (IA
       conversacional com criança e adolescente): pode trazer requisito técnico novo para o
-      Tutor (D58)
+      Tutor (D58, D59)
 - [ ] Ler e destrinchar em requisito: **Guia de Classificação Indicativa do MJ (out/2025),
       capítulo Interatividade** — o MEC manda o desenvolvedor segui-lo; **Resolução CNE/CEB
       2/2025** (Educação Digital e Midiática); **Children & AI Design Code** (5Rights, 2025)

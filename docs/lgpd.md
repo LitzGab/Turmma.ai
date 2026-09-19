@@ -186,9 +186,10 @@ Este é o ponto em que somos diferentes de um SaaS comum, e onde o risco é maio
    (Resolução CD/ANPD 19/2024) e informação à escola. O Referencial do MEC trata dado
    educacional de menor sob jurisdição estrangeira como risco de soberania, citando o Cloud
    Act, e a rede pública pergunta isso na primeira reunião.
-8. **A interação com IA se declara automatizada** (Decreto 12.880, art. 11, I; D58), e o
-   risco algorítmico de cada funcionalidade de alto risco tem avaliação escrita antes de ela
-   existir (D60). Não é cosmético: é o único artigo em vigor no Brasil que trata de agente
+8. **O aluno nunca é enganado sobre estar falando com IA** (Decreto 12.880, art. 11, I; D58):
+   os agentes mantêm identidade de função, toda saída de IA é rotulada como tal, e nenhum
+   agente afirma ser pessoa. E o risco algorítmico de cada funcionalidade de alto risco tem
+   avaliação escrita antes de ela existir (D60). Não é cosmético: é o único artigo em vigor no Brasil que trata de agente
    conversacional com menor de idade, e a ANPD vai regulamentá-lo.
 
 ---

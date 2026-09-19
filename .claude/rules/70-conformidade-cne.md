@@ -79,10 +79,11 @@ O detalhamento está em `docs/regulacao.md` (o que a lei exige) e em
 4. **O tutor é sempre supervisionado.** Não existe uso invisível ao professor. Em sala, o
    professor acompanha ao vivo; em casa, fica registro e resumo.
 
-4a. **O tutor se declara sistema automatizado**, no início de cada sessão e em qualquer tela
-   onde caiba confusão, e a escola não pode desligar isso (D58; Decreto 12.880, art. 11, I).
-   Sem persona que simule vínculo afetivo e sem linguagem que crie obrigação de continuar
-   (art. 11, II).
+4a. **O agente tem identidade, e nunca se passa por pessoa** (D58; Decreto 12.880, art. 11, I
+   e II). O time de IA é o produto: nome de função (D17), avatar e jeito próprio continuam. O
+   que é proibido é afirmar ser humano quando o aluno pergunta, usar nome que sugira uma pessoa
+   real, e simular vínculo afetivo ou dependência. A transparência exigida pela norma vem do
+   produto inteiro se apresentar como IA e de toda saída de IA ser rotulada como tal.
 
 4b. **Nada induz uso excessivo, e sair nunca é mais difícil que entrar** (D59; Decreto 12.880,
    arts. 9º e 10). Proibido: recompensa por tempo de uso, sequência de dias, conteúdo que
