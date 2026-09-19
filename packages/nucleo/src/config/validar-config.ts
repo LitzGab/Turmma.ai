@@ -77,6 +77,31 @@ export function lerVagasPorEscolaDesligadas(ambiente: Record<string, string | un
   return validarAmbiente(esquemaAmbienteVagasDesligadas, ambiente).VAGAS_POR_ESCOLA_DESLIGADAS === 'true'
 }
 
+export const MOTIVO_PROTECAO_DO_LOGIN_DESLIGADA_EM_PRODUCAO =
+  'LOGIN_PROTECAO_DESLIGADA=true é proibido com AMBIENTE=producao: sem os baldes por escola e o rebaixamento, um ataque de senha atrasa o login de todas as escolas'
+
+/**
+ * Controle negativo do cenário "login às 7h30" (`npm run carga:login:controle-negativo`, tarefa 16.0): com a flag em
+ * `true`, o semáforo do hash da API atende todo login numa fila só, sem baldes por escola, sem subfila por IP e sem
+ * rebaixamento, e o cenário precisa reprovar. Como a `VAGAS_POR_ESCOLA_DESLIGADAS`, só aceita `true` ou `false`,
+ * escritos assim, e nunca `true` em produção: a flag de teste não pode virar porta aberta (regra 80, itens 1 e 3).
+ */
+export const esquemaAmbienteProtecaoDoLogin = z
+  .object({
+    AMBIENTE: z.enum(AMBIENTES),
+    LOGIN_PROTECAO_DESLIGADA: z.enum(['true', 'false']),
+  })
+  .superRefine((valores, contexto) => {
+    if (valores.AMBIENTE === 'producao' && valores.LOGIN_PROTECAO_DESLIGADA === 'true') {
+      contexto.addIssue({ code: 'custom', path: ['LOGIN_PROTECAO_DESLIGADA'], message: MOTIVO_PROTECAO_DO_LOGIN_DESLIGADA_EM_PRODUCAO })
+    }
+  })
+
+/** `true` só no controle negativo do cenário de login, e nunca em produção. */
+export function lerProtecaoDoLoginDesligada(ambiente: Record<string, string | undefined>): boolean {
+  return validarAmbiente(esquemaAmbienteProtecaoDoLogin, ambiente).LOGIN_PROTECAO_DESLIGADA === 'true'
+}
+
 export interface ConfiguracaoIdentidade {
   readonly ambiente: Ambiente
   /** Chave HMAC do HS256. Nunca vai para log nem para resposta. */

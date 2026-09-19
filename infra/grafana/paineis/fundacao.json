@@ -1285,6 +1285,55 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 29,
+      "type": "timeseries",
+      "title": "Login rebaixado pelo limite por IP das rotas de login",
+      "description": "Tentativas por minuto de login (matrícula e e-mail) que passaram do limite por IP das rotas de login (LIMITE_REQ_IP_ANONIMO_MIN, no balde próprio rl:ip-login) e foram para o fim do balde, sem cookie de dispositivo da conta. Nada é recusado por isso. Sobe junto de login.hash_espera numa escola quando o NAT dela lota o login: ver o runbook \"Login rebaixado numa escola\".",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 107
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(login_rebaixado_ip_total[1m]))",
+          "legendFormat": "rebaixadas",
+          "range": true
+        }
+      ]
     }
   ]
 }

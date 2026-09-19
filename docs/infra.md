@@ -66,8 +66,11 @@ O cenário que a infra precisa aguentar, e que o teste de carga reproduz.
 Sessenta turmas começam a aula e cerca de 2.100 alunos fazem login em uns cinco minutos:
 **~7 logins por segundo**, com picos maiores no primeiro minuto.
 
-Hash de senha é caro de propósito. Com argon2id configurado para 100–250 ms de CPU, só o
-login ocupa perto de dois núcleos nesse minuto.
+Hash de senha é caro de propósito. A estimativa era argon2id de 100–250 ms de CPU, com o login
+ocupando perto de dois núcleos nesse minuto. A calibração do cenário "login às 7h30" (F1, tarefa
+16.0) fixou 30 ms (`t=12`) com 1 CPU por instância da API, porque o hash mais caro não sustentava
+a rajada com ataque de dentro da escola; o motivo e a medida estão na Tech Spec da identidade,
+seção 5, "Calibração", e o staging recalibra.
 
 **Consequências:**
 - O custo do hash é calibrado medindo a rajada no staging, não copiado de tutorial

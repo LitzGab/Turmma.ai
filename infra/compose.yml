@@ -152,6 +152,8 @@ services:
       LOGIN_ARGON2_ITERACOES: ${LOGIN_ARGON2_ITERACOES:?defina LOGIN_ARGON2_ITERACOES}
       # Teto do semáforo do hash, conferido no boot contra o UV_THREADPOOL_SIZE acima.
       LOGIN_HASH_CONCORRENCIA: ${LOGIN_HASH_CONCORRENCIA:?defina LOGIN_HASH_CONCORRENCIA}
+      # Só o controle negativo do cenário de login (16.0) põe true; a API recusa true em produção.
+      LOGIN_PROTECAO_DESLIGADA: ${LOGIN_PROTECAO_DESLIGADA:?defina LOGIN_PROTECAO_DESLIGADA}
       # Tentativas por minuto de um IP no login por e-mail antes de rebaixar (15.0); nunca recusa.
       LIMITE_LOGIN_EMAIL_IP_MIN: ${LIMITE_LOGIN_EMAIL_IP_MIN:?defina LIMITE_LOGIN_EMAIL_IP_MIN}
       LOGIN_CHAVE_CONTADOR: ${LOGIN_CHAVE_CONTADOR:?defina LOGIN_CHAVE_CONTADOR}

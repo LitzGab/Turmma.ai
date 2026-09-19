@@ -28,6 +28,7 @@ const ambienteValido = {
   LOGIN_ARGON2_MEMORIA_KIB: '19456',
   LOGIN_ARGON2_ITERACOES: '2',
   LOGIN_HASH_CONCORRENCIA: '2',
+  LOGIN_PROTECAO_DESLIGADA: 'false',
   UV_THREADPOOL_SIZE: '16',
   LIMITE_LOGIN_EMAIL_IP_MIN: '60',
   LOGIN_CHAVE_CONTADOR: 'chave_sintetica_do_contador_com_32_caracteres',
@@ -84,6 +85,7 @@ describe('lerConfiguracao', () => {
       login: {
         hash: { memoriaKib: 19_456, iteracoes: 2 },
         concorrenciaDoHash: 2,
+        protecaoDesligada: false,
         limiteEmailPorIpMin: 60,
         chaveContador: new TextEncoder().encode(ambienteValido.LOGIN_CHAVE_CONTADOR),
         dispositivo: { versao: 1, chave: new TextEncoder().encode(ambienteValido.LOGIN_CHAVE_DISPOSITIVO_V1) },
@@ -142,6 +144,12 @@ describe('lerConfiguracao', () => {
     expect(acima.message).not.toMatch(/\b9\b/)
     // O padrão do Node (4 threads) não deixa nenhuma para o hash: o processo sem UV_THREADPOOL_SIZE de verdade não sobe.
     expect(erroDe({ ...ambienteValido, UV_THREADPOOL_SIZE: '4', LOGIN_HASH_CONCORRENCIA: '1' }).variaveis).toEqual(['LOGIN_HASH_CONCORRENCIA'])
+  })
+
+  it('permissão (16.0): LOGIN_PROTECAO_DESLIGADA=true liga o controle negativo fora de produção, e a API não sobe com ela em produção', () => {
+    expect(lerConfiguracao({ ...ambienteValido, LOGIN_PROTECAO_DESLIGADA: 'true' }).login.protecaoDesligada).toBe(true)
+    expect(erroDe({ ...ambienteValido, AMBIENTE: 'producao', ROTAS_SINTETICAS: 'false', LOGIN_PROTECAO_DESLIGADA: 'true' }).variaveis).toEqual(['LOGIN_PROTECAO_DESLIGADA'])
+    expect(erroDe({ ...ambienteValido, LOGIN_PROTECAO_DESLIGADA: undefined }).variaveis).toEqual(['LOGIN_PROTECAO_DESLIGADA'])
   })
 
   it('a chave de dispositivo lida é a da versão declarada, e a versão sem chave não sobe', () => {

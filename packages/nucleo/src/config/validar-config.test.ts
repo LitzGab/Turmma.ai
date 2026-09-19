@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { ConfiguracaoInvalida, esquemaAmbienteIdentidade, lerConfiguracaoIdentidade, lerVagasPorEscolaDesligadas, MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO } from './validar-config.js'
+import {
+  ConfiguracaoInvalida,
+  esquemaAmbienteIdentidade,
+  lerConfiguracaoIdentidade,
+  lerProtecaoDoLoginDesligada,
+  lerVagasPorEscolaDesligadas,
+  MOTIVO_PROTECAO_DO_LOGIN_DESLIGADA_EM_PRODUCAO,
+  MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO,
+} from './validar-config.js'
 
 const CHAVE_SINTETICA = 'chave_sintetica_de_teste_com_32_caracteres'
 
@@ -76,5 +84,32 @@ describe('lerVagasPorEscolaDesligadas (controle negativo do cenário de carga)',
 
   it.each(Object.keys(ambiente))('não sobe sem %s', (variavel) => {
     expect(erroDe({ ...ambiente, [variavel]: undefined }, lerVagasPorEscolaDesligadas).variaveis).toEqual([variavel])
+  })
+})
+
+describe('lerProtecaoDoLoginDesligada (controle negativo do cenário "login às 7h30", tarefa 16.0)', () => {
+  const ambiente = { AMBIENTE: 'local', LOGIN_PROTECAO_DESLIGADA: 'false' }
+
+  it('desligada por padrão do .env.example, e ligada só quando pedida escrita assim', () => {
+    expect(lerProtecaoDoLoginDesligada(ambiente)).toBe(false)
+    expect(lerProtecaoDoLoginDesligada({ ...ambiente, LOGIN_PROTECAO_DESLIGADA: 'true' })).toBe(true)
+  })
+
+  it('permissão: recusa AMBIENTE=producao com a proteção do login desligada, apontando a flag e o motivo', () => {
+    const erro = erroDe({ AMBIENTE: 'producao', LOGIN_PROTECAO_DESLIGADA: 'true' }, lerProtecaoDoLoginDesligada)
+    expect(erro.variaveis).toEqual(['LOGIN_PROTECAO_DESLIGADA'])
+    expect(erro.motivos).toEqual([MOTIVO_PROTECAO_DO_LOGIN_DESLIGADA_EM_PRODUCAO])
+  })
+
+  it('aceita produção com a proteção ligada', () => {
+    expect(lerProtecaoDoLoginDesligada({ AMBIENTE: 'producao', LOGIN_PROTECAO_DESLIGADA: 'false' })).toBe(false)
+  })
+
+  it.each(['1', 'TRUE', 'sim', '', ' true'])('recusa LOGIN_PROTECAO_DESLIGADA="%s": ninguém desliga a proteção do login sem querer', (valor) => {
+    expect(erroDe({ ...ambiente, LOGIN_PROTECAO_DESLIGADA: valor }, lerProtecaoDoLoginDesligada).variaveis).toEqual(['LOGIN_PROTECAO_DESLIGADA'])
+  })
+
+  it.each(Object.keys(ambiente))('não sobe sem %s', (variavel) => {
+    expect(erroDe({ ...ambiente, [variavel]: undefined }, lerProtecaoDoLoginDesligada).variaveis).toEqual([variavel])
   })
 })

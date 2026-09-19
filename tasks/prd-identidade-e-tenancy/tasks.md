@@ -98,12 +98,12 @@
   - [x] 15.6 Pontos da 14.0: bloco de login extraído, runbook de espera com CPU baixa, prazo e nota LGPD do IP em memória
   - [x] 15.5 Redis de fila travado no login: aviso e métrica do desafio recusado, teste com `CLIENT PAUSE`, prazo de teste do cliente de login, nota em `docs/infra.md`
 
-- [ ] **16.0 — Cenário de carga "login às 7h30"**
-  - [ ] 16.1 `infra/k6/login-7h30.js` e script, com as fases da Tech Spec 7c
-  - [ ] 16.2 Critérios como `thresholds` do k6 que mudam o código de saída, e conferência de família encerrada por engano
-  - [ ] 16.3 Calibração do argon2 e de `LOGIN_HASH_CONCORRENCIA` registrada na Tech Spec
-  - [ ] 16.4 Pontos da 14.0: 503 do semáforo fora do alerta de 5xx, inundação de IPs, aceite de convite
-  - [ ] 16.5 Despejo com a fila cheia sai de quem foi rebaixado, com `login.rebaixado_ip` e teste
+- [x] **16.0 — Cenário de carga "login às 7h30"**
+  - [x] 16.1 `infra/k6/login-7h30.js` e script, com as fases da Tech Spec 7c
+  - [x] 16.2 Critérios como `thresholds` do k6 que mudam o código de saída, e conferência de família encerrada por engano
+  - [x] 16.3 Calibração do argon2 e de `LOGIN_HASH_CONCORRENCIA` registrada na Tech Spec
+  - [x] 16.4 Pontos da 14.0: 503 do semáforo fora do alerta de 5xx, inundação de IPs, aceite de convite
+  - [x] 16.5 Despejo com a fila cheia sai de quem foi rebaixado, com `login.rebaixado_ip` e teste
 
 - [ ] **17.0 — Ciclo de vida da conta e expurgo**
   - [ ] 17.1 Desativação de aluno e de usuário; limpeza da conta sem usuário ativo; eliminação por escola

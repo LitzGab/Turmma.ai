@@ -143,7 +143,9 @@ status", para ver se é uma rota ou todas, e se é 500 ou 503. Log:
    de investigar.
 3. 503 numa instância só → ela está drenando ou travada: `docker compose restart api-1`.
 4. 503 só em `/v1/sessao/matricula` ou `/v1/sessao/email` → é o semáforo do hash recusando quem esperou mais de 2 s,
-   e o "Login recusado pelo semáforo do hash" dispara junto: siga aquela entrada.
+   e o "Login recusado pelo semáforo do hash" dispara junto: siga aquela entrada. A rajada das 7h30 não gera esse
+   503: no cenário de login (16.0) ela teve zero. Ele aparece sob ataque de senha (de 1% a 22% das tentativas por
+   minuto na rota, no cenário) e só dispara este alerta se o ataque durar mais de 5 min, o que vale o aviso.
 
 **Se nada disso resolver:** com a rota de prova, de login ou de ferramenta falhando no horário
 letivo, avise as escolas (seção "Como avisar as escolas") e anote o horário de início, que decide
@@ -310,6 +312,17 @@ não vai para o `TODO.md`, para e-mail nem para chat.
 4. Muitas falhas legítimas numa escola pequena na primeira semana → o limiar tem piso de 100 por minuto justamente
    para isso; se ainda assim disparar, é senha trocada em massa (reset da escola) e passa sozinho em minutos.
 
+**Rebaixado pelo volume, e não pelas falhas:** a espera pelo hash de uma escola pode subir sem este alerta. É o outro
+rebaixamento, o do limite por IP das rotas de login (`LIMITE_REQ_IP_ANONIMO_MIN` por minuto, num balde próprio): o IP
+que manda mais tentativas que isso, certas ou erradas, vai para o fim da fila, com a mesma passagem pelo cookie. Ele
+aparece em `login.rebaixado_ip` (painel "Login rebaixado pelo limite por IP das rotas de login"), sem escola e sem
+IP. Subiu junto com a espera de uma escola e sem falhas dela: é volume, não senha errada (um script ou uma rede
+inteira atrás de um IP só). O que fazer é o mesmo: ninguém é recusado, não bloqueie o IP. Se for uma rede municipal,
+confira o `rede.ips_saida` (causa 3). Com a fila cheia (10.000 esperando numa instância), quem sai com 503 para dar
+lugar a quem não foi rebaixado é o rebaixado mais antigo da fila com mais rebaixados, nunca quem traz o cookie.
+Esse rebaixado pode ser alguém de verdade sem o cookie (um professor atrás do NAT da escola): a web repete o 503 e
+ele entra depois.
+
 **Se nada disso resolver:** não há o que desligar: o rebaixamento não recusa ninguém. Nunca bloqueie o IP da escola na
 borda, nem por "só uns minutos" (regra 80, item 1). Se a escola reclamar de lentidão para entrar, oriente a entrar
 pelo navegador de sempre, que guarda a prioridade.
@@ -419,6 +432,34 @@ qualquer outra coisa, e confirme com `npm run carga:controle-negativo`, que prec
 reprovando (sem a vaga por escola, o cenário tem de quebrar). 429 fora do usuário abusivo é o rate
 limit tratando escola como IP. `k6_base` ou `k6_carga` é o ambiente que não rodou até o fim: veja os
 logs que o script imprime.
+
+## Rodar o cenário de login
+
+`npm run carga:login` roda o cenário "login às 7h30" (tarefa 16.0) no mesmo projeto compose próprio (`educa-carga`) do
+cenário de carga, e o derruba no fim. Leva uns 20 min. Não rode junto com o portão, com os testes nem com o outro
+cenário: os dois sobem o mesmo projeto, e a medição depende da CPU livre. As fases, em ordem: base (B e C sem ataque),
+rajada (2.100 contas em 5 min, 40% no primeiro minuto, 30% errando a senha uma vez), renovação em duas abas, ataque de
+fora (um segundo container k6), ataque de dentro (do IP da escola) e o Redis de fila derrubado no meio de um ataque.
+
+Passa quando o p95 do login fica abaixo de 1 s na rajada, e na B, na C e nas contas com cookie da A e da equipe durante os ataques, as autenticadas da B e da C
+ficam até 250 ms acima da base, nenhuma conta legítima com o cookie de dispositivo recebe 429, nenhuma conta legítima
+termina em erro (a web repete o 503 por até 30 s), nenhuma família de sessão é encerrada por reuso, o rebaixamento
+aparece só na A e só durante os ataques, e `limite.seguro_ativo` chega a 1 com o Redis de fila fora. Rode de novo quando
+uma tarefa mexer no login, no semáforo, no rebaixamento, na renovação ou no hash, e registre o resultado na tarefa.
+
+Para depurar uma fase sem esperar o cenário inteiro: `npm run carga:login -- --fases rajada` (a base roda sempre). O
+resultado parcial não vale como registro.
+
+Se reprovar, a saída diz a fase e o critério:
+- **p95 do login na rajada acima de 1 s, ou conta que não entrou:** o hash custa mais do que a CPU de referência aguenta.
+  Confira `LOGIN_ARGON2_ITERACOES` em `infra/carga.env` contra a calibração da Tech Spec da identidade (seção 5, "Hash").
+  Não baixe abaixo do mínimo da OWASP (a API não sobe); a saída é mais CPU por instância, não hash mais fraco.
+- **B ou C degradadas num ataque:** o rodízio entre baldes do semáforo não está separando as escolas. Confirme com
+  `npm run carga:login:controle-negativo`, que precisa continuar reprovando (sem os baldes e o rebaixamento, o cenário
+  tem de quebrar).
+- **429 para conta com cookie:** o contador `conhecido`/`outro` (4.0) não está separando o dono do script.
+- **família encerrada por reuso:** a janela de 2 s do `JA_RENOVADO` (5.0) não está cobrindo as duas abas.
+- **`k6` da fase:** o ambiente não rodou até o fim; veja os logs que o script imprime.
 
 ## Como avisar as escolas
 

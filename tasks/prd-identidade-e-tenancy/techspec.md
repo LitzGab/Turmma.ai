@@ -152,7 +152,7 @@ Envelope de erro do F0. As rotas anônimas levam `@RotaAnonima`.
   - O `/v1/sessao/email` tem limite próprio por IP: 60/min por padrão, pela variável `LIMITE_LOGIN_EMAIL_IP_MIN`. Acima dele, nada é recusado: as tentativas desse IP vão para o fim do balde, e quem traz no `educa_dispositivo` a conta já conhecida mantém a vez.
   - IP de saída cadastrado numa rede (`rede.ips_saida`) recebe esse limite vezes o número de escolas da rede, porque a rede municipal sai por um IP só.
   - A regra 80, item 1 trata da rajada de alunos. A equipe atrás de um NAT é dezenas de pessoas.
-- **Limite anônimo por IP nas rotas de login** (decidido na 15.0, pelo veto do `infra-guardian`): `/v1/sessao/email` e `/v1/sessao/matricula` não recebem 429 `LIMITE_EXCEDIDO` do limite anônimo por IP do F0. Elas contam num balde próprio (`rl:ip-login`, mesmo teto `LIMITE_REQ_IP_ANONIMO_MIN`), e acima dele a tentativa vai para o fim do balde do semáforo, com a mesma passagem pelo cookie. Assim um script lotando o login não recusa os alunos atrás do NAT nem gasta o limite das outras rotas anônimas (a página de acesso da escola). Com 10.000 esperando no semáforo, o pedido não rebaixado toma o lugar do rebaixado mais antigo, que sai com 503: o ataque rebaixado de uma escola não vira 503 imediato em outra.
+- **Limite anônimo por IP nas rotas de login** (decidido na 15.0, pelo veto do `infra-guardian`): `/v1/sessao/email` e `/v1/sessao/matricula` não recebem 429 `LIMITE_EXCEDIDO` do limite anônimo por IP do F0. Elas contam num balde próprio (`rl:ip-login`, mesmo teto `LIMITE_REQ_IP_ANONIMO_MIN`), e acima dele a tentativa vai para o fim do balde do semáforo, com a mesma passagem pelo cookie. Assim um script lotando o login não recusa os alunos atrás do NAT nem gasta o limite das outras rotas anônimas (a página de acesso da escola). Com 10.000 esperando no semáforo, o pedido não rebaixado toma o lugar do rebaixado mais antigo do balde com mais rebaixados, somadas as subfilas, que sai com 503 (corrigido na 16.5: antes era a maior subfila, e no balde da equipe um ataque espalhado por muitos IPs podia despejar o professor atrás do NAT). O ataque rebaixado de uma escola não vira 503 imediato em outra, nem para o professor. Esse rebaixamento conta em `login.rebaixado_ip`, sem rótulo.
 - **Rajada de falhas na matrícula:** nunca bloqueia, só rebaixa a prioridade.
   - **Limiar:** `max(100, 25% dos alunos ativos da escola)` falhas por minuto de um IP naquela escola.
   - **Acima do limiar:** as tentativas desse IP para essa escola vão para o fim do balde da escola, e a métrica `login.prioridade_rebaixada{escola_id}` fica em 1.
@@ -167,9 +167,22 @@ Envelope de erro do F0. As rotas anônimas levam `@RotaAnonima`.
 - **Teste:** sob saturação, a taxa de 503 de identificador existente e inexistente é a mesma.
 
 **Hash.**
-- **Algoritmo:** `@node-rs/argon2`, argon2id, p=1. Parte da OWASP (m=19456, t=2) e sobe `t` até 100–250 ms na CPU de referência.
+- **Algoritmo:** `@node-rs/argon2`, argon2id, p=1. Parte da OWASP (m=19456, t=2) e sobe `t` na CPU de referência. A meta era 100–250 ms; a calibração da 16.0, abaixo, fixou 30 ms (`t=12`), com o desvio registrado.
 - **Concorrência:** `LOGIN_HASH_CONCORRENCIA` é obrigatório e vai no máximo até `UV_THREADPOOL_SIZE − 8`, conferido no boot: as 8 threads de folga são da resolução de nome e de arquivo (`docs/infra.md`, "Threads e DNS").
-- **Capacidade:** com 2 hashes de 150 ms, uma instância faz ~13/s e duas ~26/s, contra ~14/s no primeiro minuto. Com uma instância só, o pico passa da capacidade, e o `Retry-After` espalha o excesso. Por isso deploy só fora do horário letivo (D27).
+- **Capacidade:** a estimativa era de 2 hashes de 150 ms, ~13/s por instância e ~26/s com duas, contra ~14/s no primeiro minuto; a medida da 16.0, com 30 ms por hash e 1 CPU, é ~31/s por instância (abaixo). Com uma instância só, o pico passa da capacidade, e o `Retry-After` espalha o excesso. Por isso deploy só fora do horário letivo (D27).
+- **Calibração (16.0, 19/09/2026):** medida nesta máquina de desenvolvimento (AMD Ryzen 5 7600), com as APIs em `cpus: 1` do `infra/compose.carga.yml`; não é o staging, que recalibra quando existir (D31, D42). Com 1 CPU, dois hashes ao mesmo tempo não rendem mais que um: a vazão é a do núcleo.
+
+  | `t` (m=19456, p=1) | 1 hash, 1 CPU | vazão com 2 juntos | Cenário "login às 7h30" |
+  |---|---|---|---|
+  | 2 (OWASP) | 5 ms | 160/s | — |
+  | 12 | 30 ms | 31/s | passa: rajada, ataques e controle negativo reprovando |
+  | 20 | 52 ms | 20/s | rajada passa; ataque de dentro reprova (30 de 151 alunos da A sem cookie e 3 de 16 da equipe sem cookie não entram em 30 s) |
+  | 36 | 82 ms | 11/s | rajada reprova (p95 2,26 s, 26 contas sem entrar em 30 s) |
+
+  **Fixado:** `LOGIN_ARGON2_ITERACOES=12` e `LOGIN_ARGON2_MEMORIA_KIB=19456` (30 ms por hash na CPU de referência, 6× as iterações da OWASP), `LOGIN_HASH_CONCORRENCIA=2` e `UV_THREADPOOL_SIZE=16`, em `infra/carga.env`. O `.env.example` fica no mínimo da OWASP, para o desenvolvimento e a esteira não pagarem o hash em cada teste.
+
+  **Desvio da faixa de 100–250 ms, registrado:** com 1 CPU por instância, 100 ms de hash dá ~10 logins/s por instância, abaixo do primeiro minuto da rajada (~14/s, ~18 hashes/s com os 30% que erram) e muito abaixo das 3.000 tentativas/min do ataque, que então empurra os alunos sem cookie da própria escola para além dos 30 s. Entre o custo do hash e o RF21 com ataque de dentro, vale o RF21 (quem protege o aluno às 7h30), sem descer do mínimo da OWASP. Subir para a faixa exige mais CPU por instância da API (2 núcleos dão o dobro), e essa é uma pergunta para o staging e a hospedagem (D42), não um valor a copiar de tutorial.
+- **Teto do `LOGIN_HASH_CONCORRENCIA`:** fica em `UV_THREADPOOL_SIZE − 8`, como a 14.0 fixou, e não em `− 2`, como o texto da tarefa 16.0 dizia: as 8 de folga são da resolução de nome e de arquivo (`docs/infra.md`, "Threads e DNS"), e a leitura mais restrita protege a conexão nova ao Postgres no pico.
 - **A vez vem antes da tentativa** (decidido na 14.0, ratificado em 18/09/2026): a vez no semáforo cobre a reserva no contador, a leitura da credencial e o hash. Se cobrisse só o hash, o 503 contaria como senha errada, e a web, que repete no 503, seguraria a conta do próprio aluno. Efeito aceito: a conta já segurada espera a fila antes de receber o 429.
 - **Fila:** o semáforo atende os baldes em rodízio. Esperou mais de 2 s, recebe 503 com `Retry-After` aleatório entre 2 e 6 s. Na web isso é atraso, não recusa: o formulário mostra "entrando…" e tenta de novo sozinho por até 30 s antes de mostrar erro.
 - **Inexistente:** passa pelo hash fixo e responde igual a senha errada.
@@ -430,7 +443,7 @@ migram na mesma tarefa, e o helper cria a escola antes do job, por causa da FK.
 - ✅ **`hd` sem o escopo `email`:** confirmado na 13.0. O Google entrega `hd` sem condição de escopo (documentação do OpenID Connect do Google). `email` fica porque a ligação do professor precisa dele.
 - ✅ **`nonce` no `mock-oauth2-server`:** confirmado na 13.0, observado no `oidc-falso` e exigido pelo OpenID Connect Core (seção 2). Com `interactiveLogin: true`, o nome digitado no formulário é o `subject` dos `requestMappings` (README do projeto).
 - ✅ **Microsoft:** confirmado na 13.0 (referência de claims do ID token): o `oid` exige `profile`; o `email` de conta gerenciada não é garantido e pode faltar (aí a ligação do professor é recusada, como qualquer conta sem e-mail); o `tid` de conta pessoal é `9188040d-6c67-4c5b-b112-36a304b66dad`. O `openid-client` aceita o emissor `{tenantid}` só quando o discovery é `https://login.microsoftonline.com` (`handleEntraId` em `build/index.js`), e a lista de `tid` é nossa.
-- ⚠️ **Custo do argon2 e capacidade da seção 5:** estimados. O cenário mede, e nunca abaixo da OWASP.
+- ✅ **Custo do argon2 e capacidade da seção 5:** medidos na 16.0 (seção 5, "Calibração"), nesta máquina e não no staging. O hash ficou em 30 ms (`t=12`), abaixo da faixa de 100–250 ms, porque 1 CPU por instância não sustenta o RF21 sob ataque de dentro com o hash mais caro; nunca abaixo da OWASP. A premissa que continua aberta é a CPU do staging, que recalibra pelo mesmo cenário.
 - ⚠️ **Restauração de sessão do Chrome:** o cookie sem `Max-Age` sobrevive a ela. A inatividade no servidor é a garantia.
 
 ## 13. Riscos técnicos

@@ -7,7 +7,7 @@ import type { ContadorDeTentativas } from './contador-de-tentativas.js'
 import type { CookieDeDispositivo } from './cookie-dispositivo.js'
 import { COOKIE_DISPOSITIVO, lerCookie } from './cookies.js'
 import type { ResolucaoDeTenantRepository, UsuarioAtivoDaConta } from './resolucao-de-tenant.repository.js'
-import { baldeDaEquipe } from './senha/baldes-de-login.js'
+import { baldeDaEquipe, contadorDoRebaixamentoPorIp } from './senha/baldes-de-login.js'
 import type { ConferenciaNaVez, TentativaDeSenha } from './senha/conferencia-na-vez.js'
 import { DuracaoDoLogin } from './senha/duracao-do-login.js'
 import type { LimiteDoEmailPorIp } from './senha/limite-email-ip.js'
@@ -86,9 +86,11 @@ export function hashDoRefresh(refresh: string): string {
  */
 export class LoginService {
   readonly #duracao: DuracaoDoLogin
+  readonly #rebaixadasPeloIp: { contar: () => void }
 
   constructor(private readonly dependencias: DependenciasDoLogin) {
     this.#duracao = new DuracaoDoLogin(dependencias.medidor, 'email')
+    this.#rebaixadasPeloIp = contadorDoRebaixamentoPorIp(dependencias.medidor)
   }
 
   entrarPorEmail(pedido: PedidoLoginEmail, origem: OrigemDaRequisicao): Promise<ResultadoDoLogin> {
@@ -102,7 +104,9 @@ export class LoginService {
     const chave = contador.chaveDe(email, conhecido ? 'conhecido' : 'outro')
     // As duas contagens andam sempre: a do limite da rota de e-mail e, na guarda, a do limite por IP do login.
     const acimaDoLimiteDaRota = await limitePorIp.rebaixar(origem.ip, conhecido)
-    const rebaixado = acimaDoLimiteDaRota || (!conhecido && origem.acimaDoLimiteDoIp === true)
+    const peloIp = !conhecido && origem.acimaDoLimiteDoIp === true
+    if (peloIp) this.#rebaixadasPeloIp.contar()
+    const rebaixado = acimaDoLimiteDaRota || peloIp
     const tentativa: TentativaDeSenha<CredencialDaConta> = {
       balde: baldeDaEquipe(origem.ip, rebaixado),
       chave,

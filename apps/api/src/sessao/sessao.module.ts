@@ -51,7 +51,7 @@ import { ConferenciaNaVez } from './senha/conferencia-na-vez.js'
 import { ContadorEmJanela } from './senha/contador-em-janela.js'
 import { LimiteDoEmailPorIp } from './senha/limite-email-ip.js'
 import { RebaixamentoPorEscola } from './senha/rebaixamento.js'
-import { SemaforoDeHash } from './senha/semaforo-de-hash.js'
+import { SemaforoDeHash, SemaforoSemProtecao } from './senha/semaforo-de-hash.js'
 import { SaidaService } from './saida.service.js'
 import { SeguroDoLogin } from './seguro-do-login.js'
 import { TrocaDeEscolaController } from './troca-de-escola.controller.js'
@@ -117,7 +117,15 @@ export class SessaoModule implements OnApplicationShutdown {
         { provide: ResolucaoDeTenantRepository, useFactory: (banco: Banco) => new ResolucaoDeTenantRepository(banco), inject: [BANCO] },
         { provide: HashDeSenha, useFactory: () => HashDeSenha.criar(opcoes.login.hash) },
         // Um semáforo por instância, dividido pelo login por e-mail e pelo por matrícula: o teto é das threads do processo.
-        { provide: SemaforoDeHash, useFactory: () => new SemaforoDeHash(opcoes.login.concorrenciaDoHash, opcoes.medidor ?? medidorGlobal()) },
+        // Sem proteção só no controle negativo do cenário "login às 7h30" (16.0), nunca em produção (a configuração recusa).
+        {
+          provide: SemaforoDeHash,
+          useFactory: () => {
+            if (!opcoes.login.protecaoDesligada) return new SemaforoDeHash(opcoes.login.concorrenciaDoHash, opcoes.medidor ?? medidorGlobal())
+            SessaoModule.logger.warn('login.protecao_desligada')
+            return new SemaforoSemProtecao(opcoes.login.concorrenciaDoHash, opcoes.medidor ?? medidorGlobal())
+          },
+        },
         { provide: ContadorDeTentativas, useFactory: (cliente: Redis) => new ContadorDeTentativas(cliente, opcoes.login.chaveContador), inject: [CLIENTE_REDIS_LOGIN] },
         // Os contadores por IP da 15.0 usam a mesma chave de HMAC do contador de tentativas: o Redis nunca vê o IP.
         { provide: ContadorEmJanela, useFactory: (cliente: Redis) => new ContadorEmJanela(cliente, opcoes.login.chaveContador), inject: [CLIENTE_REDIS_LOGIN] },

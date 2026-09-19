@@ -9,7 +9,7 @@ import { naEscolaSemUsuario } from './escola-sem-usuario.js'
 import { ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from './login.service.js'
 import { RegistroDeAcessoRepository } from './registro-de-acesso.repository.js'
 import type { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
-import { baldeDaEscola, baldeDaEscolaDesconhecida } from './senha/baldes-de-login.js'
+import { baldeDaEscola, baldeDaEscolaDesconhecida, contadorDoRebaixamentoPorIp } from './senha/baldes-de-login.js'
 import type { ConferenciaNaVez, TentativaDeSenha } from './senha/conferencia-na-vez.js'
 import { DuracaoDoLogin } from './senha/duracao-do-login.js'
 import type { RebaixamentoPorEscola } from './senha/rebaixamento.js'
@@ -74,9 +74,11 @@ export function identificadorDoAluno(escolaId: string, matricula: string): strin
  */
 export class LoginPorMatricula {
   readonly #duracao: DuracaoDoLogin
+  readonly #rebaixadasPeloIp: { contar: () => void }
 
   constructor(private readonly dependencias: DependenciasDoLoginPorMatricula) {
     this.#duracao = new DuracaoDoLogin(dependencias.medidor, 'matricula')
+    this.#rebaixadasPeloIp = contadorDoRebaixamentoPorIp(dependencias.medidor)
   }
 
   entrar(pedido: PedidoLoginMatricula, origem: OrigemDaRequisicao): Promise<ResultadoDoLogin> {
@@ -89,7 +91,9 @@ export class LoginPorMatricula {
     return naEscolaSemUsuario(escolaId, async () => {
       const { banco, conferencia, contador, conclusao, rebaixamento } = this.dependencias
       const { chave, identificador, conhecido } = this.#chave(escolaId, pedido.matricula, origem)
-      const rebaixado = (await rebaixamento.rebaixar(origem.ip, escolaId, conhecido)) || (!conhecido && origem.acimaDoLimiteDoIp === true)
+      const peloIp = !conhecido && origem.acimaDoLimiteDoIp === true
+      if (peloIp) this.#rebaixadasPeloIp.contar()
+      const rebaixado = (await rebaixamento.rebaixar(origem.ip, escolaId, conhecido)) || peloIp
       const tentativa: TentativaDeSenha<CredencialDoAluno> = {
         balde: baldeDaEscola(escolaId, rebaixado),
         chave,
@@ -120,6 +124,7 @@ export class LoginPorMatricula {
    */
   async #recusar(escolaId: string, pedido: PedidoLoginMatricula, origem: OrigemDaRequisicao): Promise<never> {
     const { conferencia } = this.dependencias
+    if (origem.acimaDoLimiteDoIp === true) this.#rebaixadasPeloIp.contar()
     const tentativa: TentativaDeSenha<undefined> = {
       // O IP acima do limite por IP do login também vai para o fim deste balde, que não tem conta de verdade.
       balde: baldeDaEscolaDesconhecida(origem.acimaDoLimiteDoIp === true),

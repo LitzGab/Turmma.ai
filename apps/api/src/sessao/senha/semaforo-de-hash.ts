@@ -62,8 +62,11 @@ function filasDe(filas: FilasDoBalde, rebaixado: boolean): Map<string, Espera[]>
  * - **Métricas:** `login.hash_espera{escola_id}` a cada vez concedida, `login.hash_recusado` a cada 503.
  * - **IP em memória** (15.6): a roda lembra a subfila (o IP, na equipe) de quem já foi atendido, e esquece quem não está
  *   esperando nem foi visto no último `INTERVALO_PARA_ESQUECER_MS`, ou todos que não esperam, se passar de 10.000.
- * - **Fila cheia** (15.0): com 10.000 esperando, o pedido não rebaixado entra no lugar do rebaixado mais antigo do balde
- *   com mais rebaixados, que sai com o 503; o rebaixado que chega com a fila cheia sai ele mesmo.
+ * - **Fila cheia** (15.0, corrigido na 16.5): com 10.000 esperando, o pedido não rebaixado entra no lugar do rebaixado
+ *   mais antigo do balde com mais rebaixados, somadas as subfilas, que sai com o 503; o rebaixado que chega com a fila
+ *   cheia sai ele mesmo. Somar o balde, e não olhar a maior subfila: no balde da equipe, um ataque espalhado por muitos
+ *   IPs deixa subfilas curtas, e a maior subfila podia ser a do professor atrás do NAT da escola. O índice dos
+ *   rebaixados por balde anda junto da fila, e o despejo não percorre as subfilas.
  *
  * Estado só desta instância, e de propósito: o que ele protege é a CPU e as threads do processo, que não se somam
  * entre instâncias (regra 80, item 5, trata de estado que outra instância precise; este não é).
@@ -85,6 +88,12 @@ export class SemaforoDeHash {
   readonly #ultimaVez = new Map<string, number>()
   /** Quando cada entrada da roda foi vista pela última vez (entrou na fila ou recebeu a vez): é o prazo de esquecer. */
   readonly #vistoEm = new Map<string, number>()
+  /**
+   * Balde → os rebaixados esperando nele, em ordem de chegada (16.5): o primeiro é o mais antigo, e o tamanho é quantos
+   * o balde tem. Anda junto da fila, em `#enfileirar`, `#proxima` e `#retirar`, para o despejo não percorrer as
+   * subfilas no pico.
+   */
+  readonly #rebaixadosPorBalde = new Map<string, Set<Espera>>()
   #vez = 0
   #emUso = 0
   #esperando = 0
@@ -143,9 +152,9 @@ export class SemaforoDeHash {
       this.#conceder(balde, inicio)
       return Promise.resolve()
     }
-    // Fila cheia: o pedido que não foi rebaixado toma o lugar do rebaixado que espera há mais tempo, que sai com o 503
-    // (15.0). Um ataque rebaixado nunca faz a outra escola receber 503 na hora. Sem rebaixado na fila, ou com o próprio
-    // pedido rebaixado, quem sai é ele.
+    // Fila cheia: o pedido que não foi rebaixado toma o lugar do rebaixado mais antigo do balde com mais rebaixados, que
+    // sai com o 503 (15.0 e 16.5). Um ataque rebaixado nunca faz a outra escola, nem o professor de verdade, receber 503
+    // na hora. Sem rebaixado na fila, ou com o próprio pedido rebaixado, quem sai é ele.
     if (this.#esperando >= MAXIMO_ESPERANDO && (balde.rebaixado || !this.#despejarUmRebaixado())) return Promise.reject(this.#recusar())
     return new Promise<void>((resolver, rejeitar) => {
       const espera: Espera = {
@@ -162,13 +171,14 @@ export class SemaforoDeHash {
     })
   }
 
-  /** Tira da fila o rebaixado que chegou primeiro, no balde com mais rebaixados, com o 503. Diz se havia algum. */
+  /**
+   * Tira da fila, com o 503, o rebaixado mais antigo do balde com mais rebaixados (somadas as subfilas). Diz se havia
+   * algum. Percorre só os baldes (as escolas, `equipe` e `desconhecida`), nunca as subfilas.
+   */
   #despejarUmRebaixado(): boolean {
-    let maior: Espera[] | undefined
-    for (const filas of this.#baldes.values()) {
-      for (const fila of filas.rebaixada.values()) if (fila.length > (maior?.length ?? 0)) maior = fila
-    }
-    const despejado = maior?.[0]
+    let maior: Set<Espera> | undefined
+    for (const rebaixados of this.#rebaixadosPorBalde.values()) if (rebaixados.size > (maior?.size ?? 0)) maior = rebaixados
+    const despejado = maior?.values().next().value
     if (despejado === undefined) return false
     clearTimeout(despejado.timer)
     this.#retirar(despejado)
@@ -235,7 +245,20 @@ export class SemaforoDeHash {
     fila.push(espera)
     subfilas.set(espera.balde.subfila, fila)
     this.#baldes.set(espera.balde.id, filas)
+    if (espera.balde.rebaixado) {
+      const rebaixados = this.#rebaixadosPorBalde.get(espera.balde.id) ?? new Set<Espera>()
+      rebaixados.add(espera)
+      this.#rebaixadosPorBalde.set(espera.balde.id, rebaixados)
+    }
     this.#esperando++
+  }
+
+  /** Tira o pedido do índice dos rebaixados do balde, se ele era rebaixado. */
+  #esquecerRebaixado(espera: Espera): void {
+    if (!espera.balde.rebaixado) return
+    const rebaixados = this.#rebaixadosPorBalde.get(espera.balde.id)
+    rebaixados?.delete(espera)
+    if (rebaixados?.size === 0) this.#rebaixadosPorBalde.delete(espera.balde.id)
   }
 
   /**
@@ -252,6 +275,7 @@ export class SemaforoDeHash {
     const fila = subfila === undefined ? undefined : subfilas.get(subfila)
     const espera = fila?.shift()
     if (subfila === undefined || fila === undefined || espera === undefined) return undefined
+    this.#esquecerRebaixado(espera)
     this.#esperando--
     if (fila.length === 0) subfilas.delete(subfila)
     if (filas.normal.size === 0 && filas.rebaixada.size === 0) this.#baldes.delete(id)
@@ -279,6 +303,7 @@ export class SemaforoDeHash {
     const posicao = fila?.indexOf(espera) ?? -1
     if (filas === undefined || subfilas === undefined || fila === undefined || posicao < 0) return
     fila.splice(posicao, 1)
+    this.#esquecerRebaixado(espera)
     this.#esperando--
     if (fila.length === 0) subfilas.delete(espera.balde.subfila)
     if (filas.normal.size === 0 && filas.rebaixada.size === 0) this.#baldes.delete(espera.balde.id)
@@ -291,5 +316,20 @@ export class SemaforoDeHash {
 
   #medirEspera(balde: BaldeDeLogin, inicio: number): void {
     this.#esperaPeloHash.record((this.agora() - inicio) / 1_000, { [ROTULO_ESCOLA]: balde.rotulo })
+  }
+}
+
+/** O balde único do semáforo sem proteção: todo pedido na mesma fila, por ordem de chegada, e ninguém rebaixado. */
+const BALDE_UNICO = 'unico'
+
+/**
+ * O semáforo do controle negativo do cenário "login às 7h30" (`LOGIN_PROTECAO_DESLIGADA=true`, tarefa 16.0): o mesmo teto
+ * e o mesmo prazo, mas sem baldes por escola, sem subfila por IP e sem rebaixamento. Todo login espera numa fila só, por
+ * ordem de chegada. Existe para o cenário provar que reprova sem a proteção; a flag é recusada com `AMBIENTE=producao`.
+ * A métrica de espera continua com o rótulo do balde de verdade.
+ */
+export class SemaforoSemProtecao extends SemaforoDeHash {
+  override executar<T>(balde: BaldeDeLogin, tarefa: () => Promise<T>): Promise<T> {
+    return super.executar({ id: BALDE_UNICO, subfila: '', rotulo: balde.rotulo, rebaixado: false }, tarefa)
   }
 }

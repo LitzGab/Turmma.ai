@@ -164,7 +164,7 @@ export function argumentosDoK6(fase: 'base' | 'carga', esperaBaseP95Ms?: number)
   ]
 }
 
-function rodar(comando: string, argumentos: readonly string[], ambiente: NodeJS.ProcessEnv, capturar = false): Promise<{ codigo: number; saida: string }> {
+export function rodar(comando: string, argumentos: readonly string[], ambiente: NodeJS.ProcessEnv, capturar = false): Promise<{ codigo: number; saida: string }> {
   return new Promise((resolver) => {
     const processo = spawn(comando, argumentos, { cwd: raizRepositorio, env: ambiente, stdio: ['ignore', capturar ? 'pipe' : 'inherit', 'inherit'] })
     let saida = ''
@@ -174,7 +174,7 @@ function rodar(comando: string, argumentos: readonly string[], ambiente: NodeJS.
   })
 }
 
-function lerAmbienteDaCarga(): Record<string, string> {
+export function lerAmbienteDaCarga(): Record<string, string> {
   const valores: Record<string, string> = {}
   for (const arquivo of ARQUIVOS_AMBIENTE_CARGA) {
     for (const [chave, valor] of Object.entries(parseEnv(readFileSync(join(raizRepositorio, arquivo), 'utf8')))) {

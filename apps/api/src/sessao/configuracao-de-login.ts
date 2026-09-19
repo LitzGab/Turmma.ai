@@ -1,4 +1,4 @@
-import { ConfiguracaoInvalida, validarAmbiente } from '@educa/nucleo'
+import { AMBIENTES, ConfiguracaoInvalida, lerProtecaoDoLoginDesligada, validarAmbiente } from '@educa/nucleo'
 import { hkdfSync } from 'node:crypto'
 import { z } from 'zod'
 
@@ -28,6 +28,11 @@ export interface ConfiguracaoLogin {
   readonly hash: ParametrosDoHash
   /** Quantos hashes de senha rodam ao mesmo tempo nesta instância (o semáforo do hash, tarefa 14.0). */
   readonly concorrenciaDoHash: number
+  /**
+   * Só no controle negativo do cenário "login às 7h30" (`LOGIN_PROTECAO_DESLIGADA=true`, tarefa 16.0): o semáforo atende
+   * todo login numa fila só, sem baldes por escola nem rebaixamento. Recusada com `AMBIENTE=producao`.
+   */
+  readonly protecaoDesligada: boolean
   /**
    * Tentativas por minuto de um IP em `/v1/sessao/email` antes de ele ir para o fim do balde da equipe (15.2): vezes as
    * escolas da rede, se o IP é de saída de uma (`rede.ips_saida`). Acima dele nada é recusado.
@@ -124,6 +129,10 @@ export function variavelDaChaveDeDispositivo(versao: number): string {
  */
 export function lerConfiguracaoLogin(ambiente: Record<string, string | undefined>): ConfiguracaoLogin {
   const valores = validarAmbiente(esquemaAmbienteLogin, ambiente)
+  // O AMBIENTE é validado pela identidade: aqui, ausente ou inválido vale como produção, a leitura mais restrita, sem
+  // apontar a falta duas vezes.
+  const doAmbiente = AMBIENTES.find((valor) => valor === ambiente['AMBIENTE']) ?? 'producao'
+  const protecaoDesligada = lerProtecaoDoLoginDesligada({ ...ambiente, AMBIENTE: doAmbiente })
   if (valores.LOGIN_HASH_CONCORRENCIA > valores.UV_THREADPOOL_SIZE - THREADS_DE_FOLGA_DO_LIBUV) {
     throw new ConfiguracaoInvalida(['LOGIN_HASH_CONCORRENCIA'], [MOTIVO_CONCORRENCIA_DO_HASH])
   }
@@ -142,6 +151,7 @@ export function lerConfiguracaoLogin(ambiente: Record<string, string | undefined
   return {
     hash: { memoriaKib: valores.LOGIN_ARGON2_MEMORIA_KIB, iteracoes: valores.LOGIN_ARGON2_ITERACOES },
     concorrenciaDoHash: valores.LOGIN_HASH_CONCORRENCIA,
+    protecaoDesligada,
     limiteEmailPorIpMin: valores.LIMITE_LOGIN_EMAIL_IP_MIN,
     chaveContador: codificar(valores.LOGIN_CHAVE_CONTADOR),
     dispositivo: { versao: valores.LOGIN_CHAVE_DISPOSITIVO_VERSAO, chave: codificar(chaveDispositivo) },

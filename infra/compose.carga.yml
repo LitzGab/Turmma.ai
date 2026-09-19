@@ -1,6 +1,10 @@
-# Sobreposição do cenário "justiça entre escolas" (Tech Spec, seção 7c), sobre infra/compose.yml:
+# Sobreposição dos cenários de carga, sobre infra/compose.yml: "justiça entre escolas" (Tech Spec do F0, seção 7c) e
+# "login às 7h30" (Tech Spec da identidade, seção 7c, tarefa 16.0):
 #
 #   npm run carga
+#   npm run carga:login
+#
+# As duas APIs com `cpus: 1` são a CPU de referência do login: o argon2 de infra/carga.env é calibrado nelas.
 #
 # Fixa a CPU de cada serviço, para o resultado não depender de quantos núcleos a máquina tem livres, e o número
 # de threads do sandbox de CPU de cada worker coerente com ela: uma thread por núcleo inteiro, e pelo menos meio
@@ -72,5 +76,18 @@ services:
     volumes:
       - ./k6:/cenario:ro
       # Tokens sintéticos de entrada e resumo de saída, numa pasta temporária que o script apaga no fim.
+      - ${CARGA_PASTA_DA_EXECUCAO:?rode pelo npm run carga}:/execucao
+    restart: 'no'
+
+  # O segundo gerador do cenário "login às 7h30" (tarefa 16.0): o ataque "de fora", de um container com IP próprio, ao
+  # mesmo tempo que o k6 da escola. Mesmo script, `FASE=atacante`, chamado por infra/scripts/carga-login.ts.
+  k6-atacante:
+    image: grafana/k6:2.2.0
+    profiles: [carga]
+    cpus: 1
+    environment:
+      K6_NO_USAGE_REPORT: 'true'
+    volumes:
+      - ./k6:/cenario:ro
       - ${CARGA_PASTA_DA_EXECUCAO:?rode pelo npm run carga}:/execucao
     restart: 'no'

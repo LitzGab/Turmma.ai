@@ -233,6 +233,14 @@ describe('ataque de senha nunca bloqueia a escola: rebaixa, por IP e escola, e q
     return typeof ponto?.valor === 'number' ? ponto.valor : Number.NaN
   }
 
+  /** `login.rebaixado_ip` (16.5): as tentativas rebaixadas pelo limite por IP das rotas de login, sem rótulo. */
+  async function rebaixadasPeloIp(): Promise<number> {
+    const pontos = await medidor.pontos(METRICAS.rebaixadoPorIp)
+    expect(pontos.map((ponto) => ponto.atributos)).toEqual([{}])
+    const [ponto] = pontos
+    return typeof ponto?.valor === 'number' ? ponto.valor : Number.NaN
+  }
+
   it('caminho feliz sob ataque (regra 80, item 1): um IP passa o limiar na A com matrículas diferentes; a série da A vai a 1, as falhas contam na A, e nenhum pedido desse IP recebe 429', async () => {
     const a = await escola()
     const ip = ipSorteado()
@@ -322,6 +330,7 @@ describe('ataque de senha nunca bloqueia a escola: rebaixa, por IP e escola, e q
     for (let entrada = 0; entrada < LIMITE_ANONIMO_POR_IP; entrada++) entradas.push(await porMatricula(a.slug, aluna, senhaDaAluna, { ip }))
     expect(new Set(entradas.map(({ status }) => status))).toEqual(new Set([200]))
     const cookie = cookieDeDispositivo(entradas.at(-1) ?? { status: 0, corpo: {}, retryAfter: null, setCookie: [] })
+    const rebaixadasPeloIpAntes = await rebaixadasPeloIp()
 
     // A página de acesso da escola, anônima e pelo mesmo IP, não perdeu nada: o login conta num balde próprio.
     const acesso = await fetch(`${api.url}/v1/escolas/${a.slug}/acesso`, { headers: { 'X-Forwarded-For': ip } })
@@ -338,8 +347,10 @@ describe('ataque de senha nunca bloqueia a escola: rebaixa, por IP e escola, e q
     // O colega, sem cookie e acima do limite do IP, foi para o fim; a aluna, com o cookie, chegou depois e passou.
     expect(ordemDoHash()).toEqual([senhaDaAluna, SENHA])
     expect(respostas.map(({ status }) => status)).toEqual([200, 200])
-    // E não foi o rebaixamento por falhas: a escola não tem série.
+    // E não foi o rebaixamento por falhas: a escola não tem série. O limite do IP tem a série dele (16.5), que contou só o
+    // colega: a aluna com o cookie não foi rebaixada.
     expect(await serieRebaixadaDa(a.escolaId)).toBeUndefined()
+    expect(await rebaixadasPeloIp()).toBe(rebaixadasPeloIpAntes + 1)
   }, 60_000)
 
   it('borda (rede municipal acima do limite do IP do login): no e-mail, o IP de saída da rede passa do limite por IP das rotas de login antes do limite da rota vezes as escolas; a tentativa sem cookie vai para o fim, o professor com o cookie passa na frente, e nada recebe 429', async () => {
@@ -356,6 +367,7 @@ describe('ataque de senha nunca bloqueia a escola: rebaixa, por IP e escola, e q
     for (let tentativa = 1; tentativa < LIMITE_ANONIMO_POR_IP; tentativa++) daEquipe.push((await porEmail(`equipe-${randomUUID()}@escola.invalid`, SENHA_ERRADA, { ip: daRede })).status)
     expect(new Set(daEquipe)).toEqual(new Set([401]))
     const rebaixadasAntes = await rebaixadasNoEmail()
+    const rebaixadasPeloIpAntes = await rebaixadasPeloIp()
 
     const vez = await segurarAVez()
     const semCookie = porEmail(`equipe-${randomUUID()}@escola.invalid`, 'senha-sintetica-da-equipe-sem-cookie', { ip: daRede })
@@ -370,6 +382,8 @@ describe('ataque de senha nunca bloqueia a escola: rebaixa, por IP e escola, e q
     expect(ordemDoHash()).toEqual([SENHA, 'senha-sintetica-da-equipe-sem-cookie'])
     expect([doProfessorRespondeu.status, semCookieRespondeu.status]).toEqual([200, 401])
     expect(await rebaixadasNoEmail()).toBe(rebaixadasAntes)
+    // Quem conta é a série do limite por IP do login (16.5), uma vez, pela tentativa sem cookie.
+    expect(await rebaixadasPeloIp()).toBe(rebaixadasPeloIpAntes + 1)
   }, 60_000)
 
   it('borda (primeiros dias de aula): numa escola de 400 alunos, 160 logins no primeiro minuto pelo IP da escola, com 30% errando a senha uma vez, não passam do limiar; a série fica em 0 e todos entram', async () => {

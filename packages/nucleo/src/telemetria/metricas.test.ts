@@ -139,6 +139,7 @@ describe('métricas com escola', () => {
       [METRICAS.esperaMaisAntiga, METRICAS.pendentes, METRICAS.aguardandoVaga, METRICAS.vagasEmUso, METRICAS.esperaPeloHash, METRICAS.falhasDeLogin, METRICAS.prioridadeRebaixada].sort(),
     )
     expect(METRICAS_COM_ESCOLA).not.toContain(METRICAS.limiteEmailIp)
+    expect(METRICAS_COM_ESCOLA).not.toContain(METRICAS.rebaixadoPorIp)
     expect(METRICAS_COM_ESCOLA).not.toContain(METRICAS.duracaoDoLogin)
     expect(METRICAS_COM_ESCOLA).not.toContain(METRICAS.hashRecusado)
   })

@@ -55,6 +55,12 @@ export const METRICAS = {
   /** Tentativas de login por e-mail rebaixadas por passar do limite por IP da rota, sem rótulo: o IP nunca vira rótulo. */
   limiteEmailIp: 'login.limite_email_ip',
   /**
+   * Tentativas de login (matrícula ou e-mail) rebaixadas por passar do limite por IP das rotas de login (`rl:ip-login`,
+   * 15.0), sem o cookie de dispositivo da conta, sem rótulo (16.5): o IP nunca vira rótulo, e a escola que sofre aparece
+   * em `login.hash_espera`.
+   */
+  rebaixadoPorIp: 'login.rebaixado_ip',
+  /**
    * Retornos do login pela conta Google ou Microsoft da escola, por `resultado`: `entrou`, `recusado` (domínio, tenant
    * ou ligação que não valem, a mesma recusa para todos) e `provedor` (erro, prazo ou cookie do início ausente). Sem
    * escola e sem motivo mais fino: o motivo fino diria, a quem lê o painel, qual conta existe.
