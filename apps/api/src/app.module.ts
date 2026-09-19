@@ -27,10 +27,20 @@ import { ProntidaoController } from './sistema/prontidao.controller.js'
 import { SistemaModule } from './sistema/sistema.module.js'
 import { UsoModule } from './uso.module.js'
 
+/** O que só a montagem de teste passa ao `AppModule`. */
+export interface OpcoesDeMontagem {
+  readonly medidor?: Meter
+  readonly prazoDoRedisDeLoginMs?: number
+}
+
 @Module({})
 export class AppModule {
-  /** @param opcoes.medidor só o teste passa, para ler as métricas do login e da sessão; sem ele, vale o medidor global. */
-  static com(config: ConfiguracaoApi, opcoes: { medidor?: Meter } = {}): DynamicModule {
+  /**
+   * @param opcoes só o teste passa: `medidor`, para ler as métricas do login e da sessão (sem ele, vale o medidor
+   * global); `prazoDoRedisDeLoginMs`, o prazo do cliente Redis do login no runner carregado (sem ele, os 100 ms de
+   * produção). Nenhuma das duas vem do ambiente: o `main.ts` monta sem opção.
+   */
+  static com(config: ConfiguracaoApi, opcoes: OpcoesDeMontagem = {}): DynamicModule {
     return {
       module: AppModule,
       imports: [
@@ -38,7 +48,15 @@ export class AppModule {
         BancoModule.com(config.banco),
         LimiteModule.com(config.limite),
         UsoModule.com(config.redisFilaUrl),
-        SessaoModule.com({ identidade: config.identidade, login: config.login, loginExterno: config.loginExterno, redisFilaUrl: config.redisFilaUrl, ...opcoes }),
+        SessaoModule.com({
+          identidade: config.identidade,
+          login: config.login,
+          loginExterno: config.loginExterno,
+          redisFilaUrl: config.redisFilaUrl,
+          instancias: config.limite.instancias,
+          ...(opcoes.medidor === undefined ? {} : { medidor: opcoes.medidor }),
+          ...(opcoes.prazoDoRedisDeLoginMs === undefined ? {} : { prazoDoRedisMs: opcoes.prazoDoRedisDeLoginMs }),
+        }),
         EstruturaModule,
         SistemaModule.com({
           rotasSinteticas: config.rotasSinteticas,

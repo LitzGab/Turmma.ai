@@ -162,4 +162,20 @@ describe('ResolucaoDeTenantRepository: a resolução antes de haver escola devol
       await bancada.pool.query('delete from conta where id = $1', [contaId])
     }
   })
+
+  it('rede por IP de saída (15.2): devolve só o número de escolas da rede daquele IP; IP de rede nenhuma dá 0; o mesmo IP em duas redes fica com a maior', async () => {
+    // IPs da faixa de documentação, sorteados: a rede de uma execução anterior não responde por esta.
+    const sorteado = () => `2001:db8:15:${randomUUID().slice(0, 4)}::${randomUUID().slice(0, 4)}`
+    const [daRede, deOutroEndereco, deNinguem, deDuasRedes] = [sorteado(), sorteado(), sorteado(), sorteado()]
+    await bancada.redeComEscolas(3, [deOutroEndereco, daRede])
+    await bancada.redeComEscolas(1, [deDuasRedes])
+    await bancada.redeComEscolas(2, [deDuasRedes])
+    expect(await repositorio.escolasDaRedeDoIpDeSaida(daRede)).toBe(3)
+    expect(await repositorio.escolasDaRedeDoIpDeSaida(deOutroEndereco)).toBe(3)
+    expect(await repositorio.escolasDaRedeDoIpDeSaida(deNinguem)).toBe(0)
+    expect(await repositorio.escolasDaRedeDoIpDeSaida(deDuasRedes)).toBe(2)
+    // A escola avulsa da bancada, numa rede sem IP de saída, não empresta escola a IP nenhum.
+    await bancada.escola()
+    expect(await repositorio.escolasDaRedeDoIpDeSaida('192.0.2.77')).toBe(0)
+  })
 })

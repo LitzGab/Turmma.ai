@@ -4,9 +4,9 @@ import type { INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { createHash, randomBytes } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
-import { AppModule } from '../src/app.module.js'
+import { AppModule, type OpcoesDeMontagem } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
-import { configuracaoDeTeste, type SobreposicaoDeTeste } from './configuracao-de-teste.js'
+import { configuracaoDeTeste, MONTAGEM_DE_TESTE, type SobreposicaoDeTeste } from './configuracao-de-teste.js'
 import type { BancadaDeSessoes, SessaoDeTeste } from './sessao-de-teste.js'
 
 /** A API de verdade, montada pelo mesmo `AppModule` e `configurarAplicacao` do boot, numa porta livre. */
@@ -16,11 +16,12 @@ export interface ApiDeTeste {
 }
 
 /**
- * Sobe a API. Com `linhasDeLog`, o logger escreve tudo, até `trace`, nessa lista, para o teste procurar nela o que
+ * Sobe a API, com a montagem de teste (o prazo maior do cliente Redis do login, `MONTAGEM_DE_TESTE`), ou com a de
+ * produção (`montagem` vazia), no teste que prova o corte dos 100 ms. Com `linhasDeLog`, o logger escreve tudo, até `trace`, nessa lista, para o teste procurar nela o que
  * nunca pode ir a log; sem ela, o log fica mudo.
  */
-export async function subirApi(medidor: Meter, sobreposicao: SobreposicaoDeTeste = {}, linhasDeLog?: string[]): Promise<ApiDeTeste> {
-  const app = await NestFactory.create(AppModule.com(configuracaoDeTeste(sobreposicao), { medidor }), { logger: false })
+export async function subirApi(medidor: Meter, sobreposicao: SobreposicaoDeTeste = {}, linhasDeLog?: string[], montagem: OpcoesDeMontagem = MONTAGEM_DE_TESTE): Promise<ApiDeTeste> {
+  const app = await NestFactory.create(AppModule.com(configuracaoDeTeste(sobreposicao), { ...montagem, medidor }), { logger: false })
   const logger =
     linhasDeLog === undefined
       ? criarLogger({ servico: 'api-teste', nivel: 'silent' })

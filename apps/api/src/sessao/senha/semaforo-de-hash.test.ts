@@ -3,10 +3,11 @@ import { CodigoDeErro } from '@educa/shared'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MedidorDeTeste } from '../../../../../tools/testes/metricas.ts'
 import { baldeDaEquipe, baldeDaEscola, baldeDaEscolaDesconhecida, type BaldeDeLogin } from './baldes-de-login.js'
-import { ESPERA_MAXIMA_PELO_HASH_MS, MAXIMO_ESPERANDO, RETRY_AFTER_MAXIMO_S, RETRY_AFTER_MINIMO_S, SemaforoDeHash } from './semaforo-de-hash.js'
+import { ESPERA_MAXIMA_PELO_HASH_MS, INTERVALO_PARA_ESQUECER_MS, MAXIMO_ESPERANDO, RETRY_AFTER_MAXIMO_S, RETRY_AFTER_MINIMO_S, SemaforoDeHash } from './semaforo-de-hash.js'
 
 const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
 const ESCOLA_B = '0190f5a0-0000-7000-8000-00000000000b'
+const ESCOLA_C = '0190f5a0-0000-7000-8000-00000000000c'
 const IP_DA_ESCOLA = '203.0.113.10'
 const IP_DE_FORA = '198.51.100.20'
 
@@ -129,6 +130,114 @@ describe('SemaforoDeHash: rodízio entre escolas e, na equipe, entre IPs', () =>
   })
 })
 
+describe('SemaforoDeHash: rebaixamento (15.0), fim do balde e nunca recusa', () => {
+  /** Um pedido que anota o nome quando recebe a vez. */
+  function pedidoQueAnota(semaforo: SemaforoDeHash, atendidos: string[]) {
+    return (balde: BaldeDeLogin, nome: string) =>
+      semaforo.executar(balde, () => {
+        atendidos.push(nome)
+        return Promise.resolve()
+      })
+  }
+
+  it('na escola: o pedido rebaixado vai para o fim do balde, e o normal que chegou depois dele é atendido antes', async () => {
+    const semaforo = new SemaforoDeHash(1, medidor.medidor)
+    const atendidos: string[] = []
+    const pedido = pedidoQueAnota(semaforo, atendidos)
+    const emAndamento = tarefaSegura()
+    const primeiro = semaforo.executar(baldeDaEscola(ESCOLA_A), emAndamento.tarefa)
+    const pedidos = [pedido(baldeDaEscola(ESCOLA_A, true), 'rebaixado-1'), pedido(baldeDaEscola(ESCOLA_A, true), 'rebaixado-2'), pedido(baldeDaEscola(ESCOLA_A), 'normal')]
+    emAndamento.soltar()
+    await Promise.all([primeiro, ...pedidos])
+    // Os rebaixados não foram recusados: foram atendidos, na ordem deles, depois do normal.
+    expect(atendidos).toEqual(['normal', 'rebaixado-1', 'rebaixado-2'])
+  })
+
+  it('isolamento: o rebaixamento na A não tira vez da B; a roda entre baldes segue igual, e a A rebaixada ainda anda quando é a vez dela', async () => {
+    const semaforo = new SemaforoDeHash(1, medidor.medidor)
+    const atendidos: string[] = []
+    const pedido = pedidoQueAnota(semaforo, atendidos)
+    const emAndamento = tarefaSegura()
+    const primeiro = semaforo.executar(baldeDaEscola(ESCOLA_A), emAndamento.tarefa)
+    const pedidos = [
+      pedido(baldeDaEscola(ESCOLA_A, true), 'A-rebaixado-1'),
+      pedido(baldeDaEscola(ESCOLA_A, true), 'A-rebaixado-2'),
+      pedido(baldeDaEscola(ESCOLA_A, true), 'A-rebaixado-3'),
+      pedido(baldeDaEscola(ESCOLA_B), 'B-1'),
+      pedido(baldeDaEscola(ESCOLA_B), 'B-2'),
+    ]
+    emAndamento.soltar()
+    await Promise.all([primeiro, ...pedidos])
+    expect(atendidos).toEqual(['B-1', 'A-rebaixado-1', 'B-2', 'A-rebaixado-2', 'A-rebaixado-3'])
+  })
+
+  it('na equipe: do mesmo IP, quem traz o cookie de dispositivo (não rebaixado) é atendido antes das tentativas rebaixadas desse IP', async () => {
+    const semaforo = new SemaforoDeHash(1, medidor.medidor)
+    const atendidos: string[] = []
+    const pedido = pedidoQueAnota(semaforo, atendidos)
+    const emAndamento = tarefaSegura()
+    const primeiro = semaforo.executar(baldeDaEquipe(IP_DE_FORA), emAndamento.tarefa)
+    const pedidos = [
+      pedido(baldeDaEquipe(IP_DA_ESCOLA, true), 'script-1'),
+      pedido(baldeDaEquipe(IP_DA_ESCOLA, true), 'script-2'),
+      pedido(baldeDaEquipe(IP_DA_ESCOLA), 'professora-com-cookie'),
+    ]
+    emAndamento.soltar()
+    await Promise.all([primeiro, ...pedidos])
+    expect(atendidos).toEqual(['professora-com-cookie', 'script-1', 'script-2'])
+  })
+
+  it('o pedido rebaixado com o semáforo livre entra na hora: rebaixar é ir para o fim da fila, não esperar sem fila', async () => {
+    const semaforo = new SemaforoDeHash(1, medidor.medidor)
+    await expect(semaforo.executar(baldeDaEscola(ESCOLA_A, true), () => Promise.resolve('entrou'))).resolves.toBe('entrou')
+    await expect(semaforo.executar(baldeDaEquipe(IP_DA_ESCOLA, true), () => Promise.resolve('entrou'))).resolves.toBe('entrou')
+  })
+
+  it('o rebaixado que desiste pelo prazo sai da fila rebaixada, e a vez seguinte vai a quem ainda espera', async () => {
+    vi.useFakeTimers()
+    const semaforo = new SemaforoDeHash(1, medidor.medidor)
+    const atendidos: string[] = []
+    const emAndamento = tarefaSegura()
+    const primeiro = semaforo.executar(baldeDaEscola(ESCOLA_A), emAndamento.tarefa)
+    const desistente = semaforo.executar(baldeDaEscola(ESCOLA_A, true), () => Promise.resolve()).catch((erro: unknown) => erro)
+    await vi.advanceTimersByTimeAsync(ESPERA_MAXIMA_PELO_HASH_MS)
+    expect(await desistente).toMatchObject({ codigo: CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO })
+    expect(semaforo.esperando).toBe(0)
+    const depois = pedidoQueAnota(semaforo, atendidos)(baldeDaEscola(ESCOLA_A, true), 'rebaixado-que-chegou-depois')
+    emAndamento.soltar()
+    await Promise.all([primeiro, depois])
+    expect(atendidos).toEqual(['rebaixado-que-chegou-depois'])
+  })
+})
+
+describe('SemaforoDeHash: IP em memória com prazo (15.6)', () => {
+  it('a roda esquece, a cada minuto, o IP de quem não está esperando, e guarda o de quem espera', async () => {
+    let agora = 0
+    const semaforo = new SemaforoDeHash(1, medidor.medidor, ESPERA_MAXIMA_PELO_HASH_MS, () => agora)
+    for (let posicao = 1; posicao <= 20; posicao++) await semaforo.executar(baldeDaEquipe(`198.18.1.${String(posicao)}`), () => Promise.resolve())
+    // O balde da equipe e os vinte IPs.
+    expect(semaforo.naRoda).toBe(21)
+
+    agora += INTERVALO_PARA_ESQUECER_MS - 1
+    await semaforo.executar(baldeDaEquipe('198.18.2.1'), () => Promise.resolve())
+    expect(semaforo.naRoda).toBe(22)
+
+    // Passado o intervalo, a próxima vez concedida esquece quem não espera: sobra só quem está com a vez ou na fila.
+    agora += 1
+    const emAndamento = tarefaSegura()
+    const comAVez = semaforo.executar(baldeDaEquipe('198.18.3.1'), emAndamento.tarefa)
+    const naFila = semaforo.executar(baldeDaEquipe('198.18.3.2'), () => Promise.resolve())
+    // Os vinte IPs de antes, vistos há um intervalo, foram esquecidos. Ficam o balde da equipe e o IP de 59,999 s (vistos
+    // agora há pouco), o IP com a vez e o IP na fila.
+    expect(semaforo.naRoda).toBe(4)
+    emAndamento.soltar()
+    await Promise.all([comAVez, naFila])
+    // A fila andou, e o que foi esquecido volta à roda como novo, sem erro.
+    await semaforo.executar(baldeDaEquipe('198.18.1.1'), () => Promise.resolve())
+    expect(semaforo.esperando).toBe(0)
+  })
+})
+
 describe('SemaforoDeHash: teto de concorrência', () => {
   it('nunca roda mais tarefas que o teto ao mesmo tempo, e as que esperam entram conforme as de antes terminam', async () => {
     const semaforo = new SemaforoDeHash(3, medidor.medidor)
@@ -219,6 +328,44 @@ describe('SemaforoDeHash: prazo de 2 s', () => {
     expect(new Set(esperas).size).toBeGreaterThan(1)
     emAndamento.soltar()
     await primeiro
+  })
+
+  it('carga (15.0): com a fila cheia, o pedido não rebaixado toma o lugar do rebaixado mais antigo da fila com mais rebaixados, que sai com o 503; o rebaixado que chega com a fila cheia sai ele mesmo', async () => {
+    vi.useFakeTimers()
+    const semaforo = new SemaforoDeHash(1, medidor.medidor)
+    const emAndamento = tarefaSegura()
+    const primeiro = semaforo.executar(baldeDaEscola(ESCOLA_A), emAndamento.tarefa)
+    const desfechos: string[] = []
+    const anotar = (nome: string) => [() => desfechos.push(`entrou-${nome}`), () => desfechos.push(`503-${nome}`)] as const
+    // A escola C tem um aluno legítimo rebaixado, que chegou antes de todos; a A, o ataque que enche a fila.
+    const daC = semaforo.executar(baldeDaEscola(ESCOLA_C, true), () => Promise.resolve()).then(...anotar('C'))
+    const rebaixados = Array.from({ length: MAXIMO_ESPERANDO - 1 }, (_, posicao) =>
+      semaforo.executar(baldeDaEscola(ESCOLA_A, true), () => Promise.resolve()).then(...anotar(`A${String(posicao)}`)),
+    )
+    expect(semaforo.esperando).toBe(MAXIMO_ESPERANDO)
+
+    const tarefaDaB = vi.fn(() => Promise.resolve())
+    const daB = semaforo.executar(baldeDaEscola(ESCOLA_B), tarefaDaB)
+    await vi.advanceTimersByTimeAsync(0)
+    // Saiu com o 503 o rebaixado mais antigo da fila com mais rebaixados (a A), e não o da C, que era o mais antigo de
+    // todos: o ataque da A não despeja o aluno da escola vizinha. A fila não cresceu.
+    expect(desfechos).toEqual(['503-A0'])
+    expect(semaforo.esperando).toBe(MAXIMO_ESPERANDO)
+
+    const rebaixadoNovo = vi.fn(() => Promise.resolve())
+    await expect(semaforo.executar(baldeDaEscola(ESCOLA_A, true), rebaixadoNovo)).rejects.toMatchObject({ codigo: CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO, status: 503 })
+    expect(rebaixadoNovo).not.toHaveBeenCalled()
+    expect(semaforo.esperando).toBe(MAXIMO_ESPERANDO)
+
+    // A vez que abre vai à B, que não foi rebaixada; na roda, a seguinte vai à C, que continuava esperando.
+    emAndamento.soltar()
+    await primeiro
+    await daB
+    expect(tarefaDaB).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(desfechos).toContain('entrou-C')
+    await vi.advanceTimersByTimeAsync(ESPERA_MAXIMA_PELO_HASH_MS)
+    await Promise.all([daC, ...rebaixados])
   })
 
   it('carga: acima de 10.000 esperando, o pedido novo sai na hora com o mesmo 503, e a fila não cresce', async () => {

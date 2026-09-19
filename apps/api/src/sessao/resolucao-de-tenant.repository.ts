@@ -1,4 +1,4 @@
-import { codigoRecuperacao, conta, convite, escola, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type TransacaoBanco } from '@educa/nucleo'
+import { codigoRecuperacao, conta, convite, escola, rede, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type TransacaoBanco } from '@educa/nucleo'
 import type { PapelDeUsuario } from '@educa/shared'
 import { and, eq, gt, gte, isNotNull, isNull, lt, ne, or, sql } from 'drizzle-orm'
 
@@ -349,6 +349,24 @@ export class ResolucaoDeTenantRepository {
       )
       .limit(1)
     return linha
+  }
+
+  /**
+   * Quantas escolas tem a rede cujo IP público de saída (`rede.ips_saida`) é este (15.2): o limite por IP da rota de
+   * e-mail é multiplicado por elas, porque a rede municipal sai por um IP só. Devolve só o número, 0 quando o IP não é de
+   * rede nenhuma; com o mesmo IP em duas redes, vale a maior. O IP vem normalizado da borda (`ipDaRequisicao`).
+   */
+  @SemEscopo('ler rede por IP de saída: o limite por IP da rota de e-mail acontece antes de haver escola; devolve só o número de escolas da rede, nunca id nem nome')
+  async escolasDaRedeDoIpDeSaida(ip: string): Promise<number> {
+    const porRede = this.banco
+      .select({ escolas: sql<number>`count(${escola.id})::int`.as('escolas') })
+      .from(rede)
+      .innerJoin(escola, eq(escola.redeId, rede.id))
+      .where(sql`${ip}::inet = any(${rede.ipsSaida})`)
+      .groupBy(rede.id)
+      .as('por_rede')
+    const [linha] = await this.banco.select({ maior: sql<number>`coalesce(max(${porRede.escolas}), 0)::int` }).from(porRede)
+    return linha?.maior ?? 0
   }
 
   @SemEscopo('ler escola por slug: o slug é o que dá a escola, e é público (/acesso); devolve só o id, para a escola virar o contexto')

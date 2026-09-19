@@ -74,10 +74,21 @@ interface EstadoEmMemoria {
  * O mesmo contador, em memória, para quando o Redis de fila não responde: a mesma regra, contada por instância
  * (Tech Spec, seção 5). Nunca libera sem contar. Varre as entradas vencidas quando cresce, para um ataque com
  * milhares de e-mails diferentes não crescer sem limite.
+ *
+ * Com o Redis de pé, guarda também a espera de toda conta que ele segurou (15.3): se o Redis cair no meio do ataque, a
+ * conta segurada continua segurada nesta instância, em vez de recomeçar do zero em memória.
  */
 class SeguroEmMemoria {
   readonly #estados = new Map<string, EstadoEmMemoria>()
   #ultimaVarredura = Number.NEGATIVE_INFINITY
+
+  /** A conta que o Redis segurou até `ate`: a quinta falha já foi, e a próxima, depois da espera, dobra. */
+  espelhar(chave: string, ate: number, agora: number): void {
+    const atual = this.#estados.get(chave)
+    const falhas = Math.max(atual !== undefined && atual.venceEm > agora ? atual.falhas : 0, FALHAS_ANTES_DE_SEGURAR)
+    this.#estados.set(chave, { falhas, ate, venceEm: Math.max(ate, agora + VALIDADE_DO_CONTADOR_MS) })
+    this.#varrerSeCresceu(agora)
+  }
 
   reservar(chave: string, agora: number): Reserva {
     const atual = this.#estados.get(chave)
@@ -86,8 +97,12 @@ class SeguroEmMemoria {
     const falhas = vivo.falhas + 1
     const espera = esperaDaFalha(falhas)
     this.#estados.set(chave, { falhas, ate: espera > 0 ? agora + espera : vivo.ate, venceEm: agora + Math.max(VALIDADE_DO_CONTADOR_MS, espera) })
-    if (this.#estados.size > TAMANHO_PARA_VARRER_O_SEGURO && agora - this.#ultimaVarredura >= INTERVALO_ENTRE_VARREDURAS_MS) this.#varrer(agora)
+    this.#varrerSeCresceu(agora)
     return { liberada: true, esperaSeFalharMs: espera }
+  }
+
+  #varrerSeCresceu(agora: number): void {
+    if (this.#estados.size > TAMANHO_PARA_VARRER_O_SEGURO && agora - this.#ultimaVarredura >= INTERVALO_ENTRE_VARREDURAS_MS) this.#varrer(agora)
   }
 
   zerar(chave: string): void {
@@ -109,7 +124,8 @@ class SeguroEmMemoria {
  * - **Antes do hash:** a tentativa é reservada, e contada, antes de a senha ser conferida.
  * - **Por conta, nunca por IP** (regra 80, item 1): a escola inteira sai por um IP só.
  * - **Redis fora ou lento:** o seguro em memória atende com a mesma regra, e `proporcaoDoSeguro` alimenta
- *   `limite.seguro_ativo`, como no rate limit do F0.
+ *   `limite.seguro_ativo`, como no rate limit do F0. A conta que o Redis já tinha segurado continua segurada nesta
+ *   instância (15.3).
  */
 export class ContadorDeTentativas {
   readonly #logger = new Logger('login')
@@ -145,6 +161,8 @@ export class ContadorDeTentativas {
         const [liberada, espera] = Array.isArray(resposta) ? resposta.map(Number) : []
         if (espera === undefined || !Number.isFinite(espera)) throw new Error('resposta do contador fora do formato')
         this.#proporcaoDoSeguro.registrar(false)
+        // A conta que o Redis segurou (agora, ou por esta falha) fica também no seguro desta instância.
+        if (espera > 0) this.#seguro.espelhar(chave, agora + espera, agora)
         return liberada === 1 ? { liberada: true, esperaSeFalharMs: espera } : { liberada: false, esperaMs: espera }
       } catch {
         // Redis travado ou caindo no meio: o seguro conta esta tentativa. Se o script rodou e só a resposta passou

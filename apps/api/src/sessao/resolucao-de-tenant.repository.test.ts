@@ -26,6 +26,7 @@ describe('ResolucaoDeTenantRepository: toda operação sem escopo é marcada e j
       'escolaDoConviteParaOperador',
       'escolaDoUsuarioParaOperador',
       'escolaPorSlug',
+      'escolasDaRedeDoIpDeSaida',
       'gravarFalhaDeLoginPorEmail',
       'gravarSegredoDeMfa',
       'mfaDaConta',
@@ -55,6 +56,7 @@ describe('ResolucaoDeTenantRepository: toda operação sem escopo é marcada e j
     for (const metodo of ['definirSenhaNoAceite', 'usuarioComConviteAceito']) expect(justificativas[metodo], metodo).toMatch(/credencial da equipe é global/)
     expect(justificativas['contaParaConvite']).toMatch(/conta é global/)
     expect(justificativas['escolaPorSlug']).toMatch(/slug é o que dá a escola/)
+    expect(justificativas['escolasDaRedeDoIpDeSaida']).toMatch(/antes de haver escola/)
   })
 
   it('a criação de usuário e sessão, o registro de acesso, o /v1/eu, as escritas da renovação, da atividade e da saída, o alvo da redefinição do MFA, o convite na escola e a sessão de origem da troca não saem sem escopo: usam a escola do contexto', () => {

@@ -52,6 +52,22 @@ export class BancadaDeSessoes {
     return escolaId
   }
 
+  /**
+   * Uma rede municipal com `quantidade` escolas, saindo pela internet pelos IPs de `ipsDeSaida` (`rede.ips_saida`, que no
+   * F1 só se grava por comando ou seed: a tela é do F14). As escolas voltam na ordem em que nasceram.
+   */
+  async redeComEscolas(quantidade: number, ipsDeSaida: readonly string[]): Promise<string[]> {
+    const redeId = await criarRede(this.banco, OPERADOR_DE_TESTE, { nome: 'Rede municipal sintética de teste', tipo: 'prefeitura' })
+    await this.pool.query('update rede set ips_saida = $1::inet[] where id = $2', [ipsDeSaida, redeId])
+    const escolas: string[] = []
+    for (let posicao = 0; posicao < quantidade; posicao++) {
+      const escolaId = await criarEscola(this.banco, OPERADOR_DE_TESTE, { redeId, nome: 'Escola municipal sintética de teste', slug: `teste-${randomUUID()}` })
+      this.#escolas.push(escolaId)
+      escolas.push(escolaId)
+    }
+    return escolas
+  }
+
   /** `quantidade` sessões na escola, cada uma de um usuário novo com o papel pedido (aluno, se nada for dito). */
   async sessoes(escolaId: string, { papel = 'aluno', quantidade = 1 }: OpcoesDeSessao = {}): Promise<SessaoDeTeste[]> {
     const emissor = emissorDeTokenSintetico(this.#ambiente)

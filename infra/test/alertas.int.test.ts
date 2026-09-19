@@ -107,25 +107,32 @@ describe('alertas locais: as regras do ensaio disparam, não disparam com condi�
       criarEscolaComSessoes: async (quantidade) => {
         const escolaId = await sessoes.escola()
         const criadas = await sessoes.sessoes(escolaId, { papel: 'coordenador', quantidade })
-        return { escolaId, tokens: criadas.map((criada) => () => criada.tokenNovo()) }
+        return { escolaId, slug: await sessoes.slugDe(escolaId), tokens: criadas.map((criada) => () => criada.tokenNovo()) }
       },
       // O andamento do ensaio no log do teste: é o que diz em que regra ele parou, se estourar o prazo.
       registrar: (linha) => process.stdout.write(`ensaio: ${linha}\n`),
     })
-    escolas.push(resultado.escolaDoJob, resultado.escolaDaFalha, resultado.escolaDoSeguro)
+    escolas.push(resultado.escolaDoJob, resultado.escolaDaFalha, resultado.escolaDoSeguro, resultado.escolaDoLogin)
 
     const jobInterativo = resultado.disparos[REGRAS_DO_ENSAIO.jobInterativo]
     const seguroDoLimite = resultado.disparos[REGRAS_DO_ENSAIO.seguroDoLimite]
     const taxa5xx = resultado.disparos[REGRAS_DO_ENSAIO.taxa5xx]
     const loginLento = resultado.disparos[REGRAS_DO_ENSAIO.loginLento]
     const loginHashRecusado = resultado.disparos[REGRAS_DO_ENSAIO.loginHashRecusado]
+    const loginRebaixado = resultado.disparos[REGRAS_DO_ENSAIO.loginRebaixado]
+    const loginEmailLimiteIp = resultado.disparos[REGRAS_DO_ENSAIO.loginEmailLimiteIp]
     // Cada regra disparou com os rótulos da condição provocada: a escola do job, a rota que falhou.
     expect(jobInterativo.rotulos).toMatchObject({ fila: 'interativa', escola_id: resultado.escolaDoJob })
     expect(taxa5xx.rotulos).toMatchObject({ job: 'educa/api', http_route: '/v1/sistema/jobs-sinteticos' })
     expect(seguroDoLimite.rotulos['instance']).toMatch(/^[0-9a-f]{12}$/)
+    // O rebaixamento traz a escola dos logins do ensaio, e nenhum dos dois de login traz IP.
+    expect(loginRebaixado.rotulos).toMatchObject({ escola_id: resultado.escolaDoLogin })
+    for (const disparo of [loginRebaixado, loginEmailLimiteIp]) expect(Object.values(disparo.rotulos).join(' ')).not.toMatch(/\d+\.\d+\.\d+\.\d+|::/)
     // E só depois de pendente pelo `for:` inteiro: início da pendência e do disparo, os dois informados pelo Grafana.
-    expect([jobInterativo.duracaoS, seguroDoLimite.duracaoS, taxa5xx.duracaoS, loginLento.duracaoS, loginHashRecusado.duracaoS]).toEqual([60, 120, 300, 180, 180])
-    for (const disparo of [jobInterativo, seguroDoLimite, taxa5xx, loginLento, loginHashRecusado]) {
+    expect([jobInterativo.duracaoS, seguroDoLimite.duracaoS, taxa5xx.duracaoS, loginLento.duracaoS, loginHashRecusado.duracaoS, loginRebaixado.duracaoS, loginEmailLimiteIp.duracaoS]).toEqual([
+      60, 120, 300, 180, 180, 120, 300,
+    ])
+    for (const disparo of [jobInterativo, seguroDoLimite, taxa5xx, loginLento, loginHashRecusado, loginRebaixado, loginEmailLimiteIp]) {
       expect(disparo.disparadoDesdeMs - disparo.pendenteDesdeMs).toBeGreaterThanOrEqual(disparo.duracaoS * 1_000)
     }
     // Isolamento do gatilho: com a falha forçada valendo, outra escola gravou job na mesma rota.
@@ -134,9 +141,12 @@ describe('alertas locais: as regras do ensaio disparam, não disparam com condi�
     expect(resultado.statusDaFalha['500'] ?? 0).toBeGreaterThan(200)
     expect(Object.keys(resultado.statusDaFalha)).toEqual(['500'])
 
-    // Os alertas de login vieram do semáforo: logins recusados com 503, e nenhum 429 (nem conta segurada, nem IP).
+    // Os alertas de login vieram do semáforo: logins recusados com 503, e nenhum 429 (nem conta segurada, nem IP). O
+    // rebaixamento da escola e o limite por IP do e-mail não recusam ninguém: só 401 e 503 (regra 80, item 1).
     expect(resultado.statusDoLogin['503'] ?? 0).toBeGreaterThan(50)
     expect(resultado.statusDoLogin['429']).toBeUndefined()
+    expect(Object.keys(resultado.statusDoLogin).sort()).toEqual(['401', '503'])
+    expect(Object.keys(resultado.statusDoEmail).filter((status) => !['401', '503'].includes(status))).toEqual([])
 
     // Restaurado: sem gatilho, a mesma escola grava job; Redis de cache e worker-interativo de pé; a api-1 recriada com o
     // hash do ambiente, e não o lento do ensaio.

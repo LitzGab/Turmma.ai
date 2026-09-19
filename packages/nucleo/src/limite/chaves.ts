@@ -8,6 +8,11 @@ import { isIP } from 'node:net'
 export const PREFIXO_LIMITE_USUARIO = 'rl:u'
 export const PREFIXO_LIMITE_ESCOLA = 'rl:e'
 export const PREFIXO_LIMITE_IP = 'rl:ip'
+/**
+ * O limite por IP das rotas de login por senha (identidade, 15.0), num balde próprio: um script lotando o login não
+ * gasta o limite anônimo do IP da escola, e a página de acesso e as outras rotas anônimas seguem respondendo.
+ */
+export const PREFIXO_LIMITE_IP_LOGIN = 'rl:ip-login'
 
 /** Janela de todo limite. Os limites da configuração são "por minuto". */
 export const JANELA_LIMITE_SEGUNDOS = 60

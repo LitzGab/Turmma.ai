@@ -99,12 +99,17 @@ usuário que cai sempre na mesma recebe 429 mais cedo. Nada é liberado sem limi
    `REDIS_CACHE_MEMORIA_MAXIMA`.
 3. Só uma instância dispara → o cliente daquela instância não reconecta:
    `docker compose restart api-1` (ela drena e a borda manda o tráfego para a outra).
-4. Redis de cache no ar, e o log traz `login.contador_no_seguro` ou `login.redis_indisponivel` → quem
-   está no seguro é o contador de tentativas do login por e-mail, que fica no Redis de fila (a métrica
-   vale o maior dos dois). Com ele fora, a senha errada segura a conta em cada instância, e não no
-   sistema inteiro: um ataque de senha espalhado pelas duas instâncias tem o dobro de tentativas. Ninguém
-   é barrado por isso. `docker compose ps redis-fila`; parado, `docker compose up -d redis-fila`. Ele é
-   o Redis da fila de jobs também: veja se "Job interativo esperando" disparou junto.
+4. Redis de cache no ar, e o log traz `login.contador_no_seguro`, `login.limite_por_ip_no_seguro`,
+   `login.desafio_sem_redis` ou `login.redis_indisponivel` → quem está no seguro é o login, que guarda no Redis de fila
+   o contador de tentativas, os contadores por IP (rebaixamento da escola e limite da rota de e-mail) e a marca do
+   desafio (a métrica vale o maior de todos). Com ele fora, a senha errada segura a conta em cada instância, e não no
+   sistema inteiro: um ataque espalhado pelas duas instâncias tem o dobro de tentativas; o limiar do rebaixamento e o
+   limite por IP ficam divididos pelas instâncias. A conta que o Redis já tinha segurado continua segurada na instância
+   que a viu. Ninguém é barrado por isso. `login.desafio_sem_redis` é outra coisa: o coordenador com MFA, ou quem tem
+   mais de uma escola, volta ao login depois da senha, porque sem a marca o desafio não vale; com o Redis no ar e esse
+   aviso, é o Redis de fila travado (resposta acima de 100 ms): `docker compose exec redis-fila redis-cli --latency`.
+   `docker compose ps redis-fila`; parado, `docker compose up -d redis-fila`. Ele é o Redis da fila de jobs também:
+   veja se "Job interativo esperando" disparou junto.
 
 **Se nada disso resolver:** não há o que degradar: a API segue atendendo com o seguro. Mantenha o
 Redis de cache como prioridade do dia, porque com ele fora um aluno com script em laço gasta mais
@@ -220,6 +225,12 @@ em uso", e `docker stats api-1 api-2` para a CPU de cada API.
 3. Espera pelo hash baixa e login lento assim mesmo → o tempo está fora do hash: Postgres (pool no teto, `TEMPO_ESGOTADO`
    no log) ou Redis de fila lento (`login.contador_no_seguro` no log). Siga "Taxa de erro 5xx", causa 1, ou "Seguro de
    limite ativo", causa 4.
+4. Espera pelo hash alta em todos os baldes, com a CPU das APIs baixa → não é falta de capacidade de hash, e subir
+   instância não resolve: a vez no semáforo cobre também a reserva no contador de tentativas (Redis de fila) e a leitura
+   da credencial (Postgres), e com um dos dois lento cada vez demora mais para voltar. Olhe "Pool do banco em uso" e o
+   log (`TEMPO_ESGOTADO`, `login.contador_no_seguro`, `login.limite_por_ip_no_seguro`), e
+   `docker compose exec redis-fila redis-cli --latency`. Um `addBulk` grande ou um script de fila longo no Redis de fila
+   às 7h30 é o suspeito de sempre: lote fica fora do horário letivo (`docs/infra.md`, seção 5.2).
 
 **Se nada disso resolver:** avise as escolas afetadas (seção "Como avisar as escolas") de que o login está lento e de
 que a tela tenta de novo sozinha: ninguém precisa recarregar a página. Deploy só fora do horário letivo (D27): não
@@ -257,7 +268,10 @@ quantas estão de pé (`docker compose ps api-1 api-2`).
    errando senha em massa. As outras escolas não sentem. Rajada legítima passa em minutos; falha em massa aparece como
    `login.conta_segurada` subindo junto.
 4. Só `desconhecida` esperando → alguém tentando endereços de escola que não existem. Não atrasa escola real; registre
-   e acompanhe.
+   e acompanhe. O mesmo aparece em "Falhas de login por escola", na série `desconhecida`: todos os endereços que não
+   existem contam num contador comum (11.0), que cresce com varredura de endereço e não segura nem rebaixa escola
+   nenhuma, porque não é de escola nenhuma. Para ver de onde vem, `registro_acesso` não ajuda (endereço que não existe
+   não grava registro): olhe a borda (`docker compose logs --since 10m borda`).
 
 **Se nada disso resolver:** avise as escolas afetadas (seção "Como avisar as escolas") de que o login está demorando
 e de que a tela tenta sozinha. Não desligue o semáforo: sem ele, o hash toma a CPU da API e tudo fica lento, não só o
@@ -265,6 +279,77 @@ login.
 
 **Depois:** registre no `TODO.md` o horário, a duração, qual balde encheu (o id da escola, `equipe` ou `desconhecida`)
 e a causa. Capacidade que não bastou vira tarefa de calibração; ataque vira registro com a escola, sem IP.
+
+## Login rebaixado numa escola
+
+**Dispara quando:** numa instância da API, a série `login.prioridade_rebaixada` de uma escola fica em 1 por 2 min
+seguidos (`max by (escola_id) (login_prioridade_rebaixada)`, regra `infra/grafana/alertas/login-rebaixado-por-escola.yaml`).
+Ela vai a 1 quando um IP passa de `max(100, 25% dos alunos ativos da escola)` falhas de login por matrícula em um
+minuto naquela escola, e as tentativas desse IP para essa escola passam a ir para o fim da fila dela. O alerta traz a
+escola, nunca o IP.
+
+**Impacto:** ninguém é bloqueado, e nenhuma outra escola sente. Quem entra pelo mesmo IP e já entrou naquele navegador
+nos últimos 30 dias (cookie `educa_dispositivo`) mantém a vez. Quem nunca entrou naquele navegador espera o fim da fila
+da escola, e sob ataque forte pode ver "entrando…" por mais tempo; a web repete sozinha por até 30 s.
+
+**Primeiro olhar:** painel, linha "Processos": "Escola com login rebaixado", "Falhas de login por escola" (quantas por
+minuto) e "Espera pelo hash por escola (p95)" daquela escola. Para saber o IP, e só para a investigação:
+`registro_acesso` com `evento = 'login_falho'` daquela escola nos últimos 15 min, contando por IP. O IP é dado pessoal:
+não vai para o `TODO.md`, para e-mail nem para chat.
+
+**Causas prováveis:**
+1. O IP que falha em massa é o IP de saída da própria escola → ataque de dentro da rede: um aluno com script tentando
+   matrículas. É o caso que o rebaixamento existe para aguentar. Avise a coordenação da escola (seção "Como avisar as
+   escolas") de que alguém na rede dela está testando senhas, com o horário; ela sabe onde procurar. Não bloqueie o IP
+   da escola: são 400 alunos atrás dele.
+2. O IP é de fora (não é o da escola, nem de uma rede cadastrada) → ataque de fora, contra matrículas daquela escola. Os
+   alunos da escola, que saem por outro IP, nem são rebaixados. Registre e acompanhe; se durar, avise a escola.
+3. O IP é o de saída de uma rede municipal, e a escola é da rede → várias escolas saindo pelo mesmo IP e uma delas com
+   muitas senhas erradas de verdade (primeiro dia de aula). Confira se a rede tem `rede.ips_saida` cadastrado (no F1,
+   por comando; a tela é do F14): sem ele, a rota de e-mail da equipe dessa rede também fica limitada como IP comum.
+4. Muitas falhas legítimas numa escola pequena na primeira semana → o limiar tem piso de 100 por minuto justamente
+   para isso; se ainda assim disparar, é senha trocada em massa (reset da escola) e passa sozinho em minutos.
+
+**Se nada disso resolver:** não há o que desligar: o rebaixamento não recusa ninguém. Nunca bloqueie o IP da escola na
+borda, nem por "só uns minutos" (regra 80, item 1). Se a escola reclamar de lentidão para entrar, oriente a entrar
+pelo navegador de sempre, que guarda a prioridade.
+
+**Depois:** registre no `TODO.md` o horário, a duração e a escola (o id), se o ataque veio de dentro ou de fora da rede
+dela, e o que a escola fez. Sem IP.
+
+## Login por e-mail acima do limite por IP
+
+**Dispara quando:** mais de 20 tentativas de login por e-mail por minuto, somando as instâncias da API, são rebaixadas
+pelo limite por IP da rota, por 5 min seguidos (`login_limite_email_ip_total`, regra
+`infra/grafana/alertas/login-email-limite-ip.yaml`). O limite é `LIMITE_LOGIN_EMAIL_IP_MIN` (60) tentativas por minuto de
+um IP, vezes o número de escolas da rede quando o IP é o de saída dela (`rede.ips_saida`). O alerta não traz IP nem
+escola.
+
+**Impacto:** ninguém é bloqueado. As tentativas do IP acima do limite vão para o fim da fila da equipe; quem traz no
+cookie `educa_dispositivo` a própria conta mantém a vez. A equipe atrás desse IP que entra num navegador novo espera
+mais. As escolas e os alunos (matrícula) não sentem: a equipe tem fila própria.
+
+**Primeiro olhar:** painel, linha "Processos": "Login por e-mail rebaixado pelo limite por IP", "Falhas de login por
+escola" na série `equipe` e "Espera pelo hash por escola (p95)" na `equipe`. Para saber o IP, e só para a investigação:
+`registro_acesso` com `evento = 'login_falho'` e escola nula nos últimos 15 min, contando por IP. O IP é dado pessoal: não
+vai para o `TODO.md`, para e-mail nem para chat.
+
+**Causas prováveis:**
+1. Um IP de fora tentando e-mails e senhas (lista vazada, varredura) → é o que o limite existe para conter. Registre e
+   acompanhe; o contador por conta segura cada e-mail atacado no navegador do atacante, e o professor no próprio
+   computador continua entrando.
+2. O IP é o de saída de uma rede municipal que não tem `rede.ips_saida` cadastrado → a equipe de várias escolas atrás
+   de um IP só passa de 60 por minuto no começo do turno. Cadastre o IP na rede (no F1, por comando; a tela é do F14):
+   o limite vira 60 vezes as escolas dela. Confirme com a rede qual é o IP público de saída antes de cadastrar.
+3. O IP é o de uma escola, e a equipe dela não passa de algumas dezenas de pessoas → alguém na rede da escola testando
+   e-mails. Avise a coordenação da escola, com o horário. Não bloqueie o IP da escola.
+
+**Se nada disso resolver:** não há o que desligar: o limite não recusa ninguém. Nunca bloqueie o IP de uma escola ou
+rede na borda (regra 80, item 1). Se o ataque vier de muitos IPs, o que avisa é "Login recusado pelo semáforo do hash"
+(causa 2), e é risco aceito no F1 (Tech Spec da identidade, seção 13).
+
+**Depois:** registre no `TODO.md` o horário, a duração, se era rede sem `ips_saida` (e se ela foi cadastrada) ou
+ataque, sem IP.
 
 ## Rotina do sistema sem rodar (consolidação de uso, expurgo de jobs)
 
@@ -306,10 +391,12 @@ voltarem a normal. Leva uns 8 minutos, por causa dos 5 min da regra de 5xx. Só 
 `AMBIENTE=local`, e um de cada vez: o gatilho tem nome fixo, e um segundo ensaio no mesmo banco
 remove o gatilho do primeiro. Com o ambiente parado, o ensaio o sobe inteiro e o deixa de pé.
 
-O ensaio provoca também os dois alertas de login: recria as APIs com um hash por vez e o argon2 muito mais caro
-(`LOGIN_HASH_CONCORRENCIA=1` e `LOGIN_ARGON2_ITERACOES` alto, só no contêiner do ensaio), manda logins de matrícula a
-um endereço que não existe até o semáforo passar do prazo, e confere que "Login lento" e "Login recusado pelo semáforo
-do hash" disparam depois dos 3 min de cada um. No fim, espera as regras voltarem a normal e só então recria as APIs
+O ensaio provoca também os quatro alertas de login: recria as APIs com um hash por vez e o argon2 muito mais caro
+(`LOGIN_HASH_CONCORRENCIA=1` e `LOGIN_ARGON2_ITERACOES` alto, só no contêiner do ensaio), manda logins de matrícula que
+não existem ao endereço de uma escola sintética até o semáforo passar do prazo, e em paralelo logins por e-mail sem
+conta acima do limite por IP. Confere que "Login lento" e "Login recusado pelo semáforo do hash" disparam depois dos
+3 min de cada um, "Login rebaixado numa escola" (as falhas do IP do ensaio passam do limiar daquela escola) depois dos
+2 min, e "Login por e-mail acima do limite por IP" depois dos 5 min. Nenhum login do ensaio recebe 429. No fim, espera as regras voltarem a normal e só então recria as APIs
 com o `.env` de sempre (a instância que sai deixa o último valor no Prometheus por até 5 min). Se o ensaio for
 interrompido, recrie-as à mão: `docker compose up -d --force-recreate --no-deps api-1 api-2`.
 

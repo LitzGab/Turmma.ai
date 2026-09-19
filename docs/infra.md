@@ -237,6 +237,12 @@ só com `docker compose` (regra 00) tem exatamente o comportamento da esteira.
 Trabalho de lote que não é urgente roda à noite. Isso tira carga do pico, usa a capacidade
 ociosa do provedor e, em provedor que oferece API de lote, custa menos.
 
+O login também mora no Redis de fila (identidade, tarefa 15.0): o contador de tentativas, os contadores por IP
+(rebaixamento da escola e limite da rota de e-mail) e a marca de desafio usado ficam nele, porque ele não expulsa
+chave. O cliente do login desiste em 100 ms por comando, de propósito, e aí o contador cai no seguro em memória e o
+desafio é recusado. Um `addBulk` grande ou um script de fila longo às 7h30 é exatamente o que faria esses 100 ms
+cortarem no meio da entrada dos alunos. Mais um motivo para lote ficar fora do horário letivo.
+
 ### 5.3 Concorrência por escola
 
 Cada escola tem limite de jobs simultâneos por fila, para uma escola barulhenta não ocupar

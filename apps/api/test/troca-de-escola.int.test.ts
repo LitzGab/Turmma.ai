@@ -17,7 +17,7 @@ import { AUDIENCIA_DESAFIO, EmissorDeDesafio, TIPO_DESAFIO, VALIDADE_DESAFIO_SEG
 import { gerarSegredo } from '../src/sessao/segundo-fator.js'
 import { HashDeSenha } from '../src/sessao/hash-de-senha.js'
 import { CLIENTE_REDIS_LOGIN } from '../src/sessao/sessao.module.js'
-import { configuracaoDeTeste } from './configuracao-de-teste.js'
+import { configuracaoDeTeste, MONTAGEM_DE_TESTE } from './configuracao-de-teste.js'
 import { montarEscolaComTurma } from './escola-com-turma.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'
 
@@ -82,7 +82,7 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
   let hash: HashDeSenha
 
   beforeAll(async () => {
-    app = await NestFactory.create(AppModule.com(configuracao, { medidor: medidor.medidor }), { logger: false })
+    app = await NestFactory.create(AppModule.com(configuracao, { medidor: medidor.medidor, ...MONTAGEM_DE_TESTE }), { logger: false })
     configurarAplicacao(app, criarLogger({ servico: 'api-teste', nivel: 'trace', destino: { write: (linha: string) => linhasDeLog.push(linha) } }), medidor.medidor)
     await app.listen(0, '127.0.0.1')
     url = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`

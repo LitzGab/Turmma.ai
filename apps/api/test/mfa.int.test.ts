@@ -19,7 +19,7 @@ import { EmissorDeDesafio } from '../src/sessao/desafio.js'
 import { HashDeSenha } from '../src/sessao/hash-de-senha.js'
 import { gerarCodigosDeRecuperacao, gerarSegredo, hmacDaRecuperacao } from '../src/sessao/segundo-fator.js'
 import { CLIENTE_REDIS_LOGIN } from '../src/sessao/sessao.module.js'
-import { configuracaoDeTeste } from './configuracao-de-teste.js'
+import { configuracaoDeTeste, MONTAGEM_DE_TESTE } from './configuracao-de-teste.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'
 
 const SENHA = 'senha-sintetica-correta-1'
@@ -75,7 +75,7 @@ describe('MFA do coordenador: configurar, ativar, entrar com o código e redefin
   let cliente: Redis
 
   beforeAll(async () => {
-    app = await NestFactory.create(AppModule.com(configuracao, { medidor: medidor.medidor }), { logger: false })
+    app = await NestFactory.create(AppModule.com(configuracao, { medidor: medidor.medidor, ...MONTAGEM_DE_TESTE }), { logger: false })
     configurarAplicacao(app, criarLogger({ servico: 'api-teste', nivel: 'trace', destino: { write: (linha: string) => linhasDeLog.push(linha) } }), medidor.medidor)
     await app.listen(0, '127.0.0.1')
     url = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`

@@ -15,7 +15,7 @@ import { ContadorDeTentativas } from '../src/sessao/contador-de-tentativas.js'
 import { HashDeSenha } from '../src/sessao/hash-de-senha.js'
 import { CLIENTE_REDIS_LOGIN } from '../src/sessao/sessao.module.js'
 import { comoAWebNo503 } from './api-com-sessao.js'
-import { configuracaoDeTeste } from './configuracao-de-teste.js'
+import { configuracaoDeTeste, MONTAGEM_DE_TESTE } from './configuracao-de-teste.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
@@ -56,7 +56,7 @@ describe('POST /v1/sessao/email: a equipe entra por e-mail e senha', () => {
   let verificacoes: ReturnType<typeof vi.spyOn>
 
   beforeAll(async () => {
-    app = await NestFactory.create(AppModule.com(configuracaoDeTeste(), { medidor: medidor.medidor }), { logger: false })
+    app = await NestFactory.create(AppModule.com(configuracaoDeTeste(), { medidor: medidor.medidor, ...MONTAGEM_DE_TESTE }), { logger: false })
     configurarAplicacao(app, criarLogger({ servico: 'api-teste', nivel: 'trace', destino: { write: (linha: string) => linhasDeLog.push(linha) } }), medidor.medidor)
     await app.listen(0, '127.0.0.1')
     url = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`

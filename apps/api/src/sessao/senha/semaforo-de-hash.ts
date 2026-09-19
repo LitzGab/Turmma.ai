@@ -15,6 +15,13 @@ export const RETRY_AFTER_MAXIMO_S = 6
 export const MAXIMO_ESPERANDO = 10_000
 /** Quantos baldes e subfilas a roda lembra antes de esquecer os que não têm ninguém esperando. */
 const MAXIMO_NA_RODA = 10_000
+/**
+ * De quanto em quanto tempo a roda esquece quem não está esperando nem foi visto no último intervalo, mesmo abaixo do
+ * teto (15.6): a subfila da equipe é o IP de quem pediu, e ele fica na memória da instância no máximo dois intervalos
+ * depois da última vez, ou até o login seguinte, se a instância ficar sem login (a varredura roda na vez concedida).
+ * Esquecer só muda a posição de quem voltar: entra logo antes da vez atual, como um balde novo.
+ */
+export const INTERVALO_PARA_ESQUECER_MS = 60_000
 
 /** A chave da subfila na roda: o balde e a subfila, separados por um caractere que não aparece em id nem em IP. */
 function chaveDaSubfila(balde: Pick<BaldeDeLogin, 'id' | 'subfila'>): string {
@@ -25,7 +32,18 @@ interface Espera {
   readonly balde: BaldeDeLogin
   readonly inicio: number
   readonly entrar: () => void
+  readonly sair: (erro: ErroDeDominio) => void
   readonly timer: ReturnType<typeof setTimeout>
+}
+
+/** As subfilas de um balde, separadas por prioridade: a rebaixada só anda quando a normal está vazia (15.0). */
+interface FilasDoBalde {
+  readonly normal: Map<string, Espera[]>
+  readonly rebaixada: Map<string, Espera[]>
+}
+
+function filasDe(filas: FilasDoBalde, rebaixado: boolean): Map<string, Espera[]> {
+  return rebaixado ? filas.rebaixada : filas.normal
 }
 
 /**
@@ -39,7 +57,13 @@ interface Espera {
  * - **Prazo:** quem espera mais de 2 s sai com 503 `INDISPONIVEL_TENTE_DE_NOVO` e `Retry-After` sorteado entre 2 e 6 s,
  *   sem chegar à tarefa. O prazo e o balde não dependem de a credencial existir: sob saturação, a matrícula ou o e-mail
  *   que existe e o que não existe recebem o 503 na mesma proporção (regra 20, item 6).
+ * - **Rebaixado** (15.0): dentro do balde, a tentativa rebaixada só recebe a vez quando ninguém não rebaixado espera
+ *   naquele balde. O balde continua na roda com a mesma vez: o ataque na A não tira vez da B.
  * - **Métricas:** `login.hash_espera{escola_id}` a cada vez concedida, `login.hash_recusado` a cada 503.
+ * - **IP em memória** (15.6): a roda lembra a subfila (o IP, na equipe) de quem já foi atendido, e esquece quem não está
+ *   esperando nem foi visto no último `INTERVALO_PARA_ESQUECER_MS`, ou todos que não esperam, se passar de 10.000.
+ * - **Fila cheia** (15.0): com 10.000 esperando, o pedido não rebaixado entra no lugar do rebaixado mais antigo do balde
+ *   com mais rebaixados, que sai com o 503; o rebaixado que chega com a fila cheia sai ele mesmo.
  *
  * Estado só desta instância, e de propósito: o que ele protege é a CPU e as threads do processo, que não se somam
  * entre instâncias (regra 80, item 5, trata de estado que outra instância precise; este não é).
@@ -47,8 +71,11 @@ interface Espera {
 export class SemaforoDeHash {
   readonly #esperaPeloHash: ReturnType<Meter['createHistogram']>
   readonly #recusados: ReturnType<Meter['createCounter']>
-  /** Balde → subfila → pedidos esperando, em ordem de chegada. Balde e subfila sem ninguém esperando saem do mapa. */
-  readonly #baldes = new Map<string, Map<string, Espera[]>>()
+  /**
+   * Balde → prioridade → subfila → pedidos esperando, em ordem de chegada. Balde e subfila sem ninguém esperando saem do
+   * mapa.
+   */
+  readonly #baldes = new Map<string, FilasDoBalde>()
   /**
    * A roda: em que vez cada balde, e cada subfila dentro dele, foi atendido por último (ou entrou na roda, se ainda
    * não foi). A vez que abre vai ao balde esperando há mais tempo sem ser atendido, contando também a vez que ele pegou
@@ -56,14 +83,19 @@ export class SemaforoDeHash {
    * seguintes dele chegam.
    */
   readonly #ultimaVez = new Map<string, number>()
+  /** Quando cada entrada da roda foi vista pela última vez (entrou na fila ou recebeu a vez): é o prazo de esquecer. */
+  readonly #vistoEm = new Map<string, number>()
   #vez = 0
   #emUso = 0
   #esperando = 0
+  #esquecidoEm: number
 
+  /** @param agora só o teste troca, para passar o intervalo de esquecer sem esperar. */
   constructor(
     private readonly concorrencia: number,
     medidor: Meter,
     private readonly esperaMaximaMs = ESPERA_MAXIMA_PELO_HASH_MS,
+    private readonly agora: () => number = () => performance.now(),
   ) {
     if (!Number.isInteger(concorrencia) || concorrencia < 1) throw new RangeError('a concorrência do semáforo do hash precisa ser um inteiro positivo')
     this.#esperaPeloHash = medidor.createHistogram(METRICAS.esperaPeloHash, {
@@ -74,6 +106,7 @@ export class SemaforoDeHash {
     this.#recusados = medidor.createCounter(METRICAS.hashRecusado, { description: 'Logins que esperaram mais que o prazo pelo hash e saíram com 503' })
     // A série nasce em 0 no boot: a taxa do alerta `login-hash-recusado` conta o primeiro 503 desde o boot.
     this.#recusados.add(0)
+    this.#esquecidoEm = this.agora()
   }
 
   /** Hashes rodando agora. */
@@ -84,6 +117,11 @@ export class SemaforoDeHash {
   /** Pedidos esperando a vez agora, somados os baldes. */
   get esperando(): number {
     return this.#esperando
+  }
+
+  /** Quantos baldes e subfilas (IPs, na equipe) a roda lembra agora: é o que o prazo de esquecer limita. */
+  get naRoda(): number {
+    return this.#ultimaVez.size
   }
 
   /**
@@ -100,17 +138,21 @@ export class SemaforoDeHash {
   }
 
   #aguardarVez(balde: BaldeDeLogin): Promise<void> {
-    const inicio = performance.now()
+    const inicio = this.agora()
     if (this.#emUso < this.concorrencia && this.#esperando === 0) {
       this.#conceder(balde, inicio)
       return Promise.resolve()
     }
-    if (this.#esperando >= MAXIMO_ESPERANDO) return Promise.reject(this.#recusar())
+    // Fila cheia: o pedido que não foi rebaixado toma o lugar do rebaixado que espera há mais tempo, que sai com o 503
+    // (15.0). Um ataque rebaixado nunca faz a outra escola receber 503 na hora. Sem rebaixado na fila, ou com o próprio
+    // pedido rebaixado, quem sai é ele.
+    if (this.#esperando >= MAXIMO_ESPERANDO && (balde.rebaixado || !this.#despejarUmRebaixado())) return Promise.reject(this.#recusar())
     return new Promise<void>((resolver, rejeitar) => {
       const espera: Espera = {
         balde,
         inicio,
         entrar: resolver,
+        sair: rejeitar,
         timer: setTimeout(() => {
           this.#retirar(espera)
           rejeitar(this.#recusar())
@@ -118,6 +160,20 @@ export class SemaforoDeHash {
       }
       this.#enfileirar(espera)
     })
+  }
+
+  /** Tira da fila o rebaixado que chegou primeiro, no balde com mais rebaixados, com o 503. Diz se havia algum. */
+  #despejarUmRebaixado(): boolean {
+    let maior: Espera[] | undefined
+    for (const filas of this.#baldes.values()) {
+      for (const fila of filas.rebaixada.values()) if (fila.length > (maior?.length ?? 0)) maior = fila
+    }
+    const despejado = maior?.[0]
+    if (despejado === undefined) return false
+    clearTimeout(despejado.timer)
+    this.#retirar(despejado)
+    despejado.sair(this.#recusar())
+    return true
   }
 
   #devolverVez(): void {
@@ -132,52 +188,73 @@ export class SemaforoDeHash {
   }
 
   #conceder(balde: BaldeDeLogin, inicio: number): void {
+    // Sob ataque com muitos IPs, a roda não cresce sem limite, e nenhum IP fica nela sem prazo: esquece quem não está
+    // esperando, antes de anotar a vez de quem acabou de recebê-la.
+    const agora = this.agora()
+    if (this.#ultimaVez.size >= MAXIMO_NA_RODA) this.#esquecerQuemNaoEspera(agora, true)
+    else if (agora - this.#esquecidoEm >= INTERVALO_PARA_ESQUECER_MS) this.#esquecerQuemNaoEspera(agora, false)
     this.#emUso++
     this.#vez++
-    this.#ultimaVez.set(balde.id, this.#vez)
-    this.#ultimaVez.set(chaveDaSubfila(balde), this.#vez)
-    // Sob ataque com muitos IPs, a roda não cresce sem limite: esquece quem não está esperando.
-    if (this.#ultimaVez.size > MAXIMO_NA_RODA) this.#esquecerQuemNaoEspera()
+    for (const chave of [balde.id, chaveDaSubfila(balde)]) {
+      this.#ultimaVez.set(chave, this.#vez)
+      this.#vistoEm.set(chave, agora)
+    }
     this.#medirEspera(balde, inicio)
   }
 
-  #esquecerQuemNaoEspera(): void {
+  /**
+   * Esquece quem não está esperando: pelo prazo, só quem não foi visto no último intervalo (o balde com o hash em
+   * andamento continua com a vez dele na roda); pelo teto, todos que não esperam.
+   */
+  #esquecerQuemNaoEspera(agora: number, peloTeto: boolean): void {
+    this.#esquecidoEm = agora
     const esperando = new Set<string>()
-    for (const [id, subfilas] of this.#baldes) {
+    for (const [id, filas] of this.#baldes) {
       esperando.add(id)
-      for (const subfila of subfilas.keys()) esperando.add(chaveDaSubfila({ id, subfila }))
+      for (const subfila of [...filas.normal.keys(), ...filas.rebaixada.keys()]) esperando.add(chaveDaSubfila({ id, subfila }))
     }
-    for (const chave of this.#ultimaVez.keys()) if (!esperando.has(chave)) this.#ultimaVez.delete(chave)
+    for (const chave of this.#ultimaVez.keys()) {
+      if (esperando.has(chave)) continue
+      if (!peloTeto && agora - (this.#vistoEm.get(chave) ?? Number.NEGATIVE_INFINITY) < INTERVALO_PARA_ESQUECER_MS) continue
+      this.#ultimaVez.delete(chave)
+      this.#vistoEm.delete(chave)
+    }
   }
 
   #enfileirar(espera: Espera): void {
     // Quem entra na roda sem vez anterior entra logo antes da vez atual: na frente de quem acabou de ser atendido (o
     // balde com o hash em andamento), atrás de quem espera desde antes. Um IP novo a cada pedido, num ataque ao balde
     // da equipe, não passa na frente de quem já esperava.
-    for (const chave of [espera.balde.id, chaveDaSubfila(espera.balde)]) if (!this.#ultimaVez.has(chave)) this.#ultimaVez.set(chave, this.#vez - 0.5)
-    const subfilas = this.#baldes.get(espera.balde.id) ?? new Map<string, Espera[]>()
+    for (const chave of [espera.balde.id, chaveDaSubfila(espera.balde)]) {
+      if (!this.#ultimaVez.has(chave)) this.#ultimaVez.set(chave, this.#vez - 0.5)
+      this.#vistoEm.set(chave, espera.inicio)
+    }
+    const filas = this.#baldes.get(espera.balde.id) ?? { normal: new Map<string, Espera[]>(), rebaixada: new Map<string, Espera[]>() }
+    const subfilas = filasDe(filas, espera.balde.rebaixado)
     const fila = subfilas.get(espera.balde.subfila) ?? []
     fila.push(espera)
     subfilas.set(espera.balde.subfila, fila)
-    this.#baldes.set(espera.balde.id, subfilas)
+    this.#baldes.set(espera.balde.id, filas)
     this.#esperando++
   }
 
   /**
-   * O primeiro pedido da subfila atendida há mais tempo, dentro do balde atendido há mais tempo. Empate (os dois
-   * entraram na roda na mesma vez) fica com quem chegou primeiro à fila.
+   * O primeiro pedido da subfila atendida há mais tempo, dentro do balde atendido há mais tempo; no balde, as subfilas
+   * rebaixadas só quando não há normal esperando. Empate (os dois entraram na roda na mesma vez) fica com quem chegou
+   * primeiro à fila.
    */
   #proxima(): Espera | undefined {
     const id = this.#maisAntigo(this.#baldes.keys(), (candidato) => candidato)
-    const subfilas = id === undefined ? undefined : this.#baldes.get(id)
-    if (id === undefined || subfilas === undefined) return undefined
+    const filas = id === undefined ? undefined : this.#baldes.get(id)
+    if (id === undefined || filas === undefined) return undefined
+    const subfilas = filas.normal.size > 0 ? filas.normal : filas.rebaixada
     const subfila = this.#maisAntigo(subfilas.keys(), (candidata) => chaveDaSubfila({ id, subfila: candidata }))
     const fila = subfila === undefined ? undefined : subfilas.get(subfila)
     const espera = fila?.shift()
     if (subfila === undefined || fila === undefined || espera === undefined) return undefined
     this.#esperando--
     if (fila.length === 0) subfilas.delete(subfila)
-    if (subfilas.size === 0) this.#baldes.delete(id)
+    if (filas.normal.size === 0 && filas.rebaixada.size === 0) this.#baldes.delete(id)
     return espera
   }
 
@@ -196,14 +273,15 @@ export class SemaforoDeHash {
 
   /** Tira da fila quem desistiu pelo prazo, sem mexer na ordem da roda. */
   #retirar(espera: Espera): void {
-    const subfilas = this.#baldes.get(espera.balde.id)
+    const filas = this.#baldes.get(espera.balde.id)
+    const subfilas = filas === undefined ? undefined : filasDe(filas, espera.balde.rebaixado)
     const fila = subfilas?.get(espera.balde.subfila)
     const posicao = fila?.indexOf(espera) ?? -1
-    if (subfilas === undefined || fila === undefined || posicao < 0) return
+    if (filas === undefined || subfilas === undefined || fila === undefined || posicao < 0) return
     fila.splice(posicao, 1)
     this.#esperando--
     if (fila.length === 0) subfilas.delete(espera.balde.subfila)
-    if (subfilas.size === 0) this.#baldes.delete(espera.balde.id)
+    if (filas.normal.size === 0 && filas.rebaixada.size === 0) this.#baldes.delete(espera.balde.id)
   }
 
   #recusar(): ErroDeDominio {
@@ -212,6 +290,6 @@ export class SemaforoDeHash {
   }
 
   #medirEspera(balde: BaldeDeLogin, inicio: number): void {
-    this.#esperaPeloHash.record((performance.now() - inicio) / 1_000, { [ROTULO_ESCOLA]: balde.rotulo })
+    this.#esperaPeloHash.record((this.agora() - inicio) / 1_000, { [ROTULO_ESCOLA]: balde.rotulo })
   }
 }

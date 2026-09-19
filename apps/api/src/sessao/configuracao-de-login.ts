@@ -28,6 +28,11 @@ export interface ConfiguracaoLogin {
   readonly hash: ParametrosDoHash
   /** Quantos hashes de senha rodam ao mesmo tempo nesta instância (o semáforo do hash, tarefa 14.0). */
   readonly concorrenciaDoHash: number
+  /**
+   * Tentativas por minuto de um IP em `/v1/sessao/email` antes de ele ir para o fim do balde da equipe (15.2): vezes as
+   * escolas da rede, se o IP é de saída de uma (`rede.ips_saida`). Acima dele nada é recusado.
+   */
+  readonly limiteEmailPorIpMin: number
   /** Chave do HMAC do identificador na chave do contador de tentativas: o Redis nunca vê o e-mail. */
   readonly chaveContador: Uint8Array
   /** A chave do HMAC das entradas do cookie `educa_dispositivo`, com a versão que vai no próprio cookie. */
@@ -69,6 +74,8 @@ const esquemaAmbienteLogin = z.object({
   // Obrigatórias e sem padrão no código: o teto do semáforo é conferido contra as threads que o processo tem de fato.
   LOGIN_HASH_CONCORRENCIA: z.coerce.number().int().min(1),
   UV_THREADPOOL_SIZE: z.coerce.number().int().min(1),
+  // Obrigatória e sem padrão no código: o valor de referência (60) fica no `.env.example` (15.2).
+  LIMITE_LOGIN_EMAIL_IP_MIN: z.coerce.number().int().min(1),
   LOGIN_CHAVE_CONTADOR: z.string().min(TAMANHO_MINIMO_CHAVE_DE_LOGIN),
   LOGIN_CHAVE_DISPOSITIVO_VERSAO: z.coerce.number().int().min(1).max(99),
   IDENTIDADE_CHAVE_CIFRA_VERSAO: z.coerce.number().int().min(1).max(MAIOR_VERSAO_DE_CHAVE),
@@ -135,6 +142,7 @@ export function lerConfiguracaoLogin(ambiente: Record<string, string | undefined
   return {
     hash: { memoriaKib: valores.LOGIN_ARGON2_MEMORIA_KIB, iteracoes: valores.LOGIN_ARGON2_ITERACOES },
     concorrenciaDoHash: valores.LOGIN_HASH_CONCORRENCIA,
+    limiteEmailPorIpMin: valores.LIMITE_LOGIN_EMAIL_IP_MIN,
     chaveContador: codificar(valores.LOGIN_CHAVE_CONTADOR),
     dispositivo: { versao: valores.LOGIN_CHAVE_DISPOSITIVO_VERSAO, chave: codificar(chaveDispositivo) },
     mfa: { versaoCifra: valores.IDENTIDADE_CHAVE_CIFRA_VERSAO, chavesCifra, chaveRecuperacao: codificar(valores.IDENTIDADE_CHAVE_RECUPERACAO) },

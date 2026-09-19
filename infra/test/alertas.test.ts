@@ -96,6 +96,18 @@ describe('regras de alerta provisionadas', () => {
       '(sum (rate(login_hash_recusado_total{job="educa/api"}[1m])) / sum (rate(login_duracao_seconds_count{job="educa/api"}[1m]))) and on () (sum (rate(login_duracao_seconds_count{job="educa/api"}[1m])) > 0)',
     )
     expect(limiar(recusado)).toEqual({ type: 'gt', params: [0.01] })
+
+    const rebaixado = regraPorUid(REGRAS_DO_ENSAIO.loginRebaixado).regra
+    expect(rebaixado.for).toBe('2m')
+    // Por escola, e basta uma instância com a série em 1: o rebaixamento é de cada instância, e o alerta nunca leva IP.
+    expect(expressao(rebaixado)).toBe('max by (escola_id) (login_prioridade_rebaixada{job="educa/api"})')
+    expect(limiar(rebaixado)).toEqual({ type: 'gt', params: [0] })
+
+    const limiteEmail = regraPorUid(REGRAS_DO_ENSAIO.loginEmailLimiteIp).regra
+    expect(limiteEmail.for).toBe('5m')
+    // As rebaixadas por minuto, somadas as instâncias, sem rótulo nenhum.
+    expect(expressao(limiteEmail)).toBe('sum (rate(login_limite_email_ip_total{job="educa/api"}[1m])) * 60')
+    expect(limiar(limiteEmail)).toEqual({ type: 'gt', params: [20] })
   })
 
   it('o limite de 1 s do login lento é fronteira de balde do histograma de login.duracao: o p95 acima de 1 s não é interpolação', () => {

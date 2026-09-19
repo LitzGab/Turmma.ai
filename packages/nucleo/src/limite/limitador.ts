@@ -11,6 +11,7 @@ import {
   limiteDoSeguro,
   PREFIXO_LIMITE_ESCOLA,
   PREFIXO_LIMITE_IP,
+  PREFIXO_LIMITE_IP_LOGIN,
   PREFIXO_LIMITE_USUARIO,
 } from './chaves.js'
 import { ProporcaoEmJanela } from './proporcao-em-janela.js'
@@ -145,6 +146,7 @@ export class LimitadorDeRequisicoes {
   readonly #usuario: LimitesDoPrefixo
   readonly #escola: LimitesDoPrefixo
   readonly #ipAnonimo: Limite
+  readonly #ipDoLogin: Limite
   readonly #proporcaoDoSeguro: ProporcaoEmJanela
   readonly #avisarAtivado = avisoEspacado(() => this.#logger.warn('limite.seguro_ativado'))
   readonly #avisarDesativado = avisoEspacado(() => this.#logger.log('limite.seguro_desativado'))
@@ -156,6 +158,7 @@ export class LimitadorDeRequisicoes {
     this.#usuario = new LimitesDoPrefixo(cliente, PREFIXO_LIMITE_USUARIO, config.instancias)
     this.#escola = new LimitesDoPrefixo(cliente, PREFIXO_LIMITE_ESCOLA, config.instancias)
     this.#ipAnonimo = criarLimite(cliente, PREFIXO_LIMITE_IP, config.porIpAnonimoMin, config.instancias)
+    this.#ipDoLogin = criarLimite(cliente, PREFIXO_LIMITE_IP_LOGIN, config.porIpAnonimoMin, config.instancias)
   }
 
   /** 1 enquanto a última requisição limitada foi contada pelo seguro em memória. */
@@ -198,7 +201,19 @@ export class LimitadorDeRequisicoes {
   }
 
   async consumirAnonima(ip: string): Promise<ResultadoDoLimite> {
-    const consumo = await this.#consumir(this.#ipAnonimo, ip)
+    return this.#consumirPorIp(this.#ipAnonimo, ip)
+  }
+
+  /**
+   * O limite por IP das rotas de login por senha (`@LimiteQueRebaixa()`), com o mesmo teto do anônimo e balde próprio.
+   * Quem chama não recusa acima dele: só rebaixa a tentativa.
+   */
+  async consumirDoLogin(ip: string): Promise<ResultadoDoLimite> {
+    return this.#consumirPorIp(this.#ipDoLogin, ip)
+  }
+
+  async #consumirPorIp(limite: Limite, ip: string): Promise<ResultadoDoLimite> {
+    const consumo = await this.#consumir(limite, ip)
     this.#registrarSeguro(consumo.doSeguro)
     return consumo.aceita ? { aceita: true } : { aceita: false, msAteLiberar: consumo.resposta.msBeforeNext }
   }

@@ -22,6 +22,7 @@ import { AcessoDaEscolaController } from './acesso-da-escola.controller.js'
 import { AcessoDaEscolaService } from './acesso-da-escola.service.js'
 import { AtividadeController } from './atividade.controller.js'
 import { RegistroDeAtividade } from './atividade.service.js'
+import { AlunosAtivosRepository } from './alunos-ativos.repository.js'
 import { ContadorDeTentativas } from './contador-de-tentativas.js'
 import { CookieDeDispositivo } from './cookie-dispositivo.js'
 import { CifraDoSegredo } from './cifra-do-segredo.js'
@@ -46,8 +47,13 @@ import { RenovacaoController } from './renovacao.controller.js'
 import { RenovacaoService } from './renovacao.service.js'
 import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
 import { SaidaController } from './saida.controller.js'
+import { ConferenciaNaVez } from './senha/conferencia-na-vez.js'
+import { ContadorEmJanela } from './senha/contador-em-janela.js'
+import { LimiteDoEmailPorIp } from './senha/limite-email-ip.js'
+import { RebaixamentoPorEscola } from './senha/rebaixamento.js'
 import { SemaforoDeHash } from './senha/semaforo-de-hash.js'
 import { SaidaService } from './saida.service.js'
+import { SeguroDoLogin } from './seguro-do-login.js'
 import { TrocaDeEscolaController } from './troca-de-escola.controller.js'
 import { TrocaDeEscolaService } from './troca-de-escola.service.js'
 
@@ -62,8 +68,15 @@ export interface OpcoesDoModuloDeSessao {
   /** O login pela conta Google ou Microsoft da escola (13.0), desligado sem as variáveis de um provedor. */
   readonly loginExterno: ConfiguracaoLoginExterno
   readonly redisFilaUrl: string
+  /** Quantas instâncias da API dividem os limites de login quando o Redis de fila está fora (`LIMITE_INSTANCIAS_API`). */
+  readonly instancias: number
   /** O medidor da telemetria; sem ele, o global (que o `main.ts` liga antes de montar a aplicação). */
   readonly medidor?: Meter
+  /**
+   * O prazo de cada comando do cliente Redis do login. Só a montagem de teste passa (15.5): produção fica nos 100 ms de
+   * `TIMEOUT_COMANDO_REDIS_API_MS`, e o `main.ts` não conhece esta opção.
+   */
+  readonly prazoDoRedisMs?: number
 }
 
 /**
@@ -72,8 +85,9 @@ export interface OpcoesDoModuloDeSessao {
  * `ResolucaoDeTenantRepository`, e não a exporta: a fronteira da resolução de tenant fica dentro dele (Tech Spec,
  * seção 6).
  *
- * O contador de tentativas usa o Redis de fila, com o cliente da API (sem fila offline, 100 ms por comando): fora do
- * ar ou travado, o contador segue em memória, e o login não para.
+ * O contador de tentativas, os contadores por IP da 15.0 e o desafio usam o Redis de fila, com o cliente da API (sem
+ * fila offline, 100 ms por comando): fora do ar ou travado, os contadores seguem em memória, o desafio é recusado com
+ * rastro, e o login não para.
  */
 @Module({})
 export class SessaoModule implements OnApplicationShutdown {
@@ -99,12 +113,44 @@ export class SessaoModule implements OnApplicationShutdown {
         LoginExternoController,
       ],
       providers: [
-        { provide: CLIENTE_REDIS_LOGIN, useFactory: () => criarClienteRedisDaApi(opcoes.redisFilaUrl, 'api-login', avisar) },
+        { provide: CLIENTE_REDIS_LOGIN, useFactory: () => criarClienteRedisDaApi(opcoes.redisFilaUrl, 'api-login', avisar, opcoes.prazoDoRedisMs) },
         { provide: ResolucaoDeTenantRepository, useFactory: (banco: Banco) => new ResolucaoDeTenantRepository(banco), inject: [BANCO] },
         { provide: HashDeSenha, useFactory: () => HashDeSenha.criar(opcoes.login.hash) },
         // Um semáforo por instância, dividido pelo login por e-mail e pelo por matrícula: o teto é das threads do processo.
         { provide: SemaforoDeHash, useFactory: () => new SemaforoDeHash(opcoes.login.concorrenciaDoHash, opcoes.medidor ?? medidorGlobal()) },
         { provide: ContadorDeTentativas, useFactory: (cliente: Redis) => new ContadorDeTentativas(cliente, opcoes.login.chaveContador), inject: [CLIENTE_REDIS_LOGIN] },
+        // Os contadores por IP da 15.0 usam a mesma chave de HMAC do contador de tentativas: o Redis nunca vê o IP.
+        { provide: ContadorEmJanela, useFactory: (cliente: Redis) => new ContadorEmJanela(cliente, opcoes.login.chaveContador), inject: [CLIENTE_REDIS_LOGIN] },
+        {
+          provide: RebaixamentoPorEscola,
+          useFactory: (banco: Banco, janela: ContadorEmJanela) =>
+            new RebaixamentoPorEscola({ janela, alunosAtivos: () => new AlunosAtivosRepository(banco).contar(), instancias: opcoes.instancias, medidor: opcoes.medidor ?? medidorGlobal() }),
+          inject: [BANCO, ContadorEmJanela],
+        },
+        {
+          provide: LimiteDoEmailPorIp,
+          useFactory: (janela: ContadorEmJanela, resolucao: ResolucaoDeTenantRepository) =>
+            new LimiteDoEmailPorIp({
+              janela,
+              limitePorMinuto: opcoes.login.limiteEmailPorIpMin,
+              escolasDaRede: (ip) => resolucao.escolasDaRedeDoIpDeSaida(ip),
+              instancias: opcoes.instancias,
+              medidor: opcoes.medidor ?? medidorGlobal(),
+            }),
+          inject: [ContadorEmJanela, ResolucaoDeTenantRepository],
+        },
+        {
+          provide: ConferenciaNaVez,
+          useFactory: (semaforo: SemaforoDeHash, contador: ContadorDeTentativas, hash: HashDeSenha) => new ConferenciaNaVez({ semaforo, contador, hash, medidor: opcoes.medidor ?? medidorGlobal() }),
+          inject: [SemaforoDeHash, ContadorDeTentativas, HashDeSenha],
+        },
+        // Um consumo de desafio só, dividido pelo MFA e pela troca de escola: a proporção do seguro dele é uma.
+        { provide: ConsumoDeDesafio, useFactory: (cliente: Redis) => new ConsumoDeDesafio(cliente), inject: [CLIENTE_REDIS_LOGIN] },
+        {
+          provide: SeguroDoLogin,
+          useFactory: (contador: ContadorDeTentativas, janela: ContadorEmJanela, consumo: ConsumoDeDesafio) => new SeguroDoLogin(contador, janela, consumo),
+          inject: [ContadorDeTentativas, ContadorEmJanela, ConsumoDeDesafio],
+        },
         { provide: EuRepository, useFactory: (banco: Banco) => new EuRepository(banco), inject: [BANCO] },
         { provide: EuService, useFactory: (eu: EuRepository, resolucao: ResolucaoDeTenantRepository) => new EuService(eu, resolucao), inject: [EuRepository, ResolucaoDeTenantRepository] },
         { provide: CookieDeDispositivo, useFactory: () => new CookieDeDispositivo(opcoes.login.dispositivo.versao, opcoes.login.dispositivo.chave) },
@@ -126,27 +172,27 @@ export class SessaoModule implements OnApplicationShutdown {
           provide: LoginService,
           useFactory: (
             resolucao: ResolucaoDeTenantRepository,
-            hash: HashDeSenha,
-            semaforo: SemaforoDeHash,
+            conferencia: ConferenciaNaVez,
             contador: ContadorDeTentativas,
+            limitePorIp: LimiteDoEmailPorIp,
             dispositivo: CookieDeDispositivo,
             conclusao: ConclusaoDeLogin,
             ativacao: AtivacaoPorConvite,
-          ) => new LoginService({ resolucao, hash, semaforo, contador, dispositivo, conclusao, ativacao, medidor: opcoes.medidor ?? medidorGlobal() }),
-          inject: [ResolucaoDeTenantRepository, HashDeSenha, SemaforoDeHash, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin, AtivacaoPorConvite],
+          ) => new LoginService({ resolucao, conferencia, contador, limitePorIp, dispositivo, conclusao, ativacao, medidor: opcoes.medidor ?? medidorGlobal() }),
+          inject: [ResolucaoDeTenantRepository, ConferenciaNaVez, ContadorDeTentativas, LimiteDoEmailPorIp, CookieDeDispositivo, ConclusaoDeLogin, AtivacaoPorConvite],
         },
         {
           provide: LoginPorMatricula,
           useFactory: (
             banco: Banco,
             resolucao: ResolucaoDeTenantRepository,
-            hash: HashDeSenha,
-            semaforo: SemaforoDeHash,
+            conferencia: ConferenciaNaVez,
             contador: ContadorDeTentativas,
+            rebaixamento: RebaixamentoPorEscola,
             dispositivo: CookieDeDispositivo,
             conclusao: ConclusaoDeLogin,
-          ) => new LoginPorMatricula({ banco, resolucao, hash, semaforo, contador, dispositivo, conclusao, medidor: opcoes.medidor ?? medidorGlobal() }),
-          inject: [BANCO, ResolucaoDeTenantRepository, HashDeSenha, SemaforoDeHash, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin],
+          ) => new LoginPorMatricula({ banco, resolucao, conferencia, contador, rebaixamento, dispositivo, conclusao, medidor: opcoes.medidor ?? medidorGlobal() }),
+          inject: [BANCO, ResolucaoDeTenantRepository, ConferenciaNaVez, ContadorDeTentativas, RebaixamentoPorEscola, CookieDeDispositivo, ConclusaoDeLogin],
         },
         {
           provide: AcessoDaEscolaService,
@@ -183,7 +229,7 @@ export class SessaoModule implements OnApplicationShutdown {
             contador: ContadorDeTentativas,
             dispositivo: CookieDeDispositivo,
             conclusao: ConclusaoDeLogin,
-            cliente: Redis,
+            consumo: ConsumoDeDesafio,
             ativacao: AtivacaoPorConvite,
           ) =>
             new MfaService({
@@ -194,25 +240,25 @@ export class SessaoModule implements OnApplicationShutdown {
               conclusao,
               ativacao,
               cifra: new CifraDoSegredo(opcoes.login.mfa.versaoCifra, opcoes.login.mfa.chavesCifra),
-              consumo: new ConsumoDeDesafio(cliente),
+              consumo,
               chaveAssinatura: opcoes.identidade.chaveAssinatura,
               chaveRecuperacao: opcoes.login.mfa.chaveRecuperacao,
               medidor: opcoes.medidor ?? medidorGlobal(),
             }),
-          inject: [BANCO, ResolucaoDeTenantRepository, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin, CLIENTE_REDIS_LOGIN, AtivacaoPorConvite],
+          inject: [BANCO, ResolucaoDeTenantRepository, ContadorDeTentativas, CookieDeDispositivo, ConclusaoDeLogin, ConsumoDeDesafio, AtivacaoPorConvite],
         },
         {
           provide: TrocaDeEscolaService,
-          useFactory: (banco: Banco, resolucao: ResolucaoDeTenantRepository, conclusao: ConclusaoDeLogin, cliente: Redis) =>
+          useFactory: (banco: Banco, resolucao: ResolucaoDeTenantRepository, conclusao: ConclusaoDeLogin, consumo: ConsumoDeDesafio) =>
             new TrocaDeEscolaService({
               banco,
               resolucao,
               conclusao,
-              consumo: new ConsumoDeDesafio(cliente),
+              consumo,
               emissorDeDesafio: new EmissorDeDesafio(opcoes.identidade.chaveAssinatura),
               chaveAssinatura: opcoes.identidade.chaveAssinatura,
             }),
-          inject: [BANCO, ResolucaoDeTenantRepository, ConclusaoDeLogin, CLIENTE_REDIS_LOGIN],
+          inject: [BANCO, ResolucaoDeTenantRepository, ConclusaoDeLogin, ConsumoDeDesafio],
         },
         { provide: RedefinicaoDeMfa, useFactory: (banco: Banco) => new RedefinicaoDeMfa(banco), inject: [BANCO] },
         {
@@ -230,7 +276,7 @@ export class SessaoModule implements OnApplicationShutdown {
         { provide: SaidaService, useFactory: (banco: Banco) => new SaidaService(banco, opcoes.identidade.ambiente), inject: [BANCO] },
       ],
       // `RegistroDeAtividade` é o contrato para o F6: a gravação de resposta de avaliação também conta como uso.
-      exports: [CLIENTE_REDIS_LOGIN, ContadorDeTentativas, RegistroDeAtividade],
+      exports: [CLIENTE_REDIS_LOGIN, ContadorDeTentativas, SeguroDoLogin, RegistroDeAtividade],
     }
   }
 

@@ -1,9 +1,17 @@
-import { criarClienteRedisDaFila } from '@educa/nucleo'
+import { criarClienteRedisDaApi, criarClienteRedisDaFila, TIMEOUT_COMANDO_REDIS_API_MS } from '@educa/nucleo'
 import type { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../../tools/ci/compose.ts'
-import { ContadorDeTentativas, FALHAS_ANTES_DE_SEGURAR, VALIDADE_DO_CONTADOR_MS } from './contador-de-tentativas.js'
+import { travarRedis } from '../../../../tools/testes/redis-travado.ts'
+import { ContadorDeTentativas, ESPERA_INICIAL_MS, FALHAS_ANTES_DE_SEGURAR, VALIDADE_DO_CONTADOR_MS } from './contador-de-tentativas.js'
+
+const URL_REDIS_FILA = `redis://127.0.0.1:${valorObrigatorio(lerAmbienteDeTeste(), 'REDIS_FILA_PORTA_HOST')}`
+/**
+ * Quanto o Redis fica travado nos testes de corte: cinco comandos de 100 ms cabem com folga larga, e o fim da pausa é
+ * esperado pelo teste, não adivinhado. O que se prova é por contagem e estado, não por tempo.
+ */
+const PAUSA_MS = 3_000
 
 const CHAVE = new TextEncoder().encode('chave-de-teste-do-contador-com-32-bytes')
 
@@ -28,8 +36,8 @@ describe('ContadorDeTentativas no Redis de fila', () => {
     // travar. Aqui o que se prova é o script no Redis, e no runner carregado da esteira uma resposta passou dos
     // 100 ms e caiu no seguro (correção 2026-09-18-contador-testado-com-o-prazo-de-producao). O cliente da fila é o
     // mesmo, sem fila offline, com prazo de 2 s. A queda com o Redis fora é provada pelos testes que usam o cliente de
-    // produção de propósito; com o Redis travado (conectado, sem responder), ainda não há teste para este caminho.
-    cliente = criarClienteRedisDaFila(`redis://127.0.0.1:${valorObrigatorio(lerAmbienteDeTeste(), 'REDIS_FILA_PORTA_HOST')}`, 'teste-contador', () => undefined)
+    // produção de propósito, e o Redis travado (conectado, sem responder) pelo teste de `CLIENT PAUSE` no fim do arquivo.
+    cliente = criarClienteRedisDaFila(URL_REDIS_FILA, 'teste-contador', () => undefined)
     await pronto(cliente)
   })
 
@@ -92,5 +100,53 @@ describe('ContadorDeTentativas no Redis de fila', () => {
     expect(await cliente.exists(conhecido)).toBe(0)
     expect((await contador.reservar(outro)).liberada).toBe(false)
     for (let tentativa = 1; tentativa < FALHAS_ANTES_DE_SEGURAR; tentativa++) expect(await contador.reservar(conhecido)).toEqual({ liberada: true, esperaSeFalharMs: 0 })
+  })
+
+  it('falha (15.5): Redis de fila travado, com a conexão aberta; cada reserva corta nos 100 ms do cliente de produção e cai no seguro, que conta e segura a conta na quinta; quando o Redis volta, as cinco também estão lá, para o lado de segurar', async () => {
+    // O cliente de produção da API, de propósito: o que se prova é o corte dos 100 ms.
+    const producao = criarClienteRedisDaApi(URL_REDIS_FILA, 'teste-contador-travado', () => undefined)
+    try {
+      await pronto(producao)
+      const contador = new ContadorDeTentativas(producao, CHAVE)
+      const chave = contador.chaveDe(emailNovo(), 'outro')
+      expect(TIMEOUT_COMANDO_REDIS_API_MS).toBe(100)
+
+      const travado = await travarRedis(URL_REDIS_FILA, PAUSA_MS)
+      const reservas = []
+      for (let tentativa = 1; tentativa <= FALHAS_ANTES_DE_SEGURAR; tentativa++) reservas.push(await contador.reservar(chave))
+      // Conectado o tempo todo: não é o caminho do Redis fora, é o `catch` do comando que não voltou.
+      expect(producao.status).toBe('ready')
+      // Nenhuma liberou sem contar: o seguro contou as cinco, e a quinta já segura a conta em memória.
+      expect(reservas).toEqual([...Array.from({ length: FALHAS_ANTES_DE_SEGURAR - 1 }, () => ({ liberada: true, esperaSeFalharMs: 0 })), { liberada: true, esperaSeFalharMs: ESPERA_INICIAL_MS }])
+      expect(await contador.reservar(chave)).toMatchObject({ liberada: false })
+      expect(contador.proporcaoDoSeguro).toBe(1)
+
+      await travado.fim
+      // Os scripts que passaram do prazo rodaram quando a pausa acabou: as cinco falhas foram contadas no Redis também
+      // (o erro é para o lado de segurar; a sexta já achou a conta segurada lá), e a próxima reserva, já pelo Redis,
+      // encontra a conta segurada.
+      await expect.poll(() => cliente.hget(chave, 'falhas'), { timeout: 5_000 }).toBe(String(FALHAS_ANTES_DE_SEGURAR))
+      expect(await contador.reservar(chave)).toMatchObject({ liberada: false })
+    } finally {
+      producao.disconnect()
+    }
+  })
+
+  it('falha (15.3): a conta que o Redis segurou continua segurada no seguro desta instância quando o Redis some', async () => {
+    const producao = criarClienteRedisDaApi(URL_REDIS_FILA, 'teste-contador-espelho', () => undefined)
+    try {
+      await pronto(producao)
+      const contador = new ContadorDeTentativas(producao, CHAVE)
+      const chave = contador.chaveDe(emailNovo(), 'outro')
+      for (let tentativa = 1; tentativa <= FALHAS_ANTES_DE_SEGURAR; tentativa++) await contador.reservar(chave)
+      expect(await contador.reservar(chave)).toMatchObject({ liberada: false })
+      expect(contador.proporcaoDoSeguro).toBe(0)
+      // O Redis sai da vista desta instância (a conexão cai): o seguro atende, e a conta segue segurada, sem recomeçar.
+      producao.disconnect()
+      expect(await contador.reservar(chave)).toMatchObject({ liberada: false })
+      expect(contador.proporcaoDoSeguro).toBeGreaterThan(0)
+    } finally {
+      producao.disconnect()
+    }
   })
 })

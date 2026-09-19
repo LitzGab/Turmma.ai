@@ -106,13 +106,14 @@ export {
   limiteDoSeguro,
   PREFIXO_LIMITE_ESCOLA,
   PREFIXO_LIMITE_IP,
+  PREFIXO_LIMITE_IP_LOGIN,
   PREFIXO_LIMITE_USUARIO,
 } from './limite/chaves.js'
-export { GuardaDeLimite, ipDaRequisicao } from './limite/guarda-limite.js'
+export { acimaDoLimiteDoIp, GuardaDeLimite, ipDaRequisicao } from './limite/guarda-limite.js'
 export { LimitadorDeRequisicoes, lerConfiguracaoLimite } from './limite/limitador.js'
 export type { ConfiguracaoLimite, ResultadoDoLimite } from './limite/limitador.js'
 export { ProxiesConfiaveis } from './limite/proxies-confiaveis.js'
-export { AceitaDesafio, RotaAnonima, SemLimite } from './limite/rota-anonima.decorator.js'
+export { AceitaDesafio, LimiteQueRebaixa, RotaAnonima, SemLimite } from './limite/rota-anonima.decorator.js'
 export { criarClienteRedisDaApi, criarClienteRedisDaFila, TIMEOUT_COMANDO_REDIS_API_MS, TIMEOUT_COMANDO_REDIS_FILA_MS } from './redis/clientes.js'
 export { usoInfraDiario } from './db/schema/uso-infra-diario.js'
 export { diaAnterior, diaDeUso, diaValido, FORMATO_DIA, FORMATO_MES, FUSO_DO_USO, limitesDoMes } from './uso/dia-de-uso.js'

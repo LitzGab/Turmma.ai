@@ -1138,6 +1138,153 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Falhas de login por escola",
+      "description": "Logins por minuto que falharam (senha errada, identificador que não existe ou conta segurada), por escola do endereço, `equipe` (e-mail) ou `desconhecida` (endereço que não existe). O 503 do semáforo não entra: é atraso, não falha. Subida em `desconhecida` é varredura de endereço, e não segura escola nenhuma.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 99
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (escola_id) (increase(login_falhas_total[1m]))",
+          "legendFormat": "{{escola_id}}",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Escola com login rebaixado",
+      "description": "1 enquanto alguma instância rebaixou, no último minuto, as tentativas de um IP com falhas demais na escola (mais de max(100, 25% dos alunos ativos) por minuto). Ninguém é recusado: o IP vai para o fim do balde, e quem já entrou naquele navegador mantém a vez. Em 1 por 2 min dispara o alerta \"Login rebaixado numa escola\".",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 99
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (escola_id) (login_prioridade_rebaixada)",
+          "legendFormat": "{{escola_id}}",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "Login por e-mail rebaixado pelo limite por IP",
+      "description": "Tentativas por minuto de login por e-mail que passaram do limite por IP da rota (LIMITE_LOGIN_EMAIL_IP_MIN, vezes as escolas da rede no IP de saída dela) e foram para o fim do balde da equipe. Acima de 20 por minuto por 5 min dispara o alerta \"Login por e-mail acima do limite por IP\".",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 99
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(login_limite_email_ip_total[1m]))",
+          "legendFormat": "rebaixadas",
+          "range": true
+        }
+      ]
     }
   ]
 }

@@ -2,6 +2,7 @@ import { SetMetadata, type CustomDecorator } from '@nestjs/common'
 
 export const METADADO_ROTA_ANONIMA = 'educa:rota-anonima'
 export const METADADO_SEM_LIMITE = 'educa:sem-limite'
+export const METADADO_LIMITE_QUE_REBAIXA = 'educa:limite-que-rebaixa'
 
 /**
  * Marca a rota, ou o controller inteiro, como acessível sem token. Toda outra rota exige token:
@@ -21,6 +22,16 @@ export function RotaAnonima(): CustomDecorator<string> {
  */
 export function SemLimite(): CustomDecorator<string> {
   return SetMetadata(METADADO_SEM_LIMITE, true)
+}
+
+/**
+ * A rota anônima de login por senha (e-mail e matrícula, identidade 15.0): o limite por IP dela não recusa. Acima dele,
+ * a guarda só marca a requisição (`acimaDoLimiteDoIp`), e o login manda a tentativa para o fim do balde dela no semáforo
+ * do hash. A escola inteira sai por um IP: recusar ali seria bloquear os 400 alunos por causa de um script (regra 80,
+ * item 1). O balde de contagem é próprio (`rl:ip-login`), e o login lotado não gasta o limite das outras rotas anônimas.
+ */
+export function LimiteQueRebaixa(): CustomDecorator<string> {
+  return SetMetadata(METADADO_LIMITE_QUE_REBAIXA, true)
 }
 
 export const METADADO_ACEITA_DESAFIO = 'educa:aceita-desafio'

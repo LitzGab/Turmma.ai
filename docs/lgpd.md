@@ -53,6 +53,7 @@ deveria existir.
 | Segredo TOTP cifrado e HMAC dos códigos de recuperação | coordenador | segundo fator (F1) | execução de contrato; segurança (art. 46) | até desativar a conta ou redefinir o MFA |
 | Sessão (horários de início, uso e fim, método, motivo de encerramento, hash do cookie de renovação atual e anterior, família da sessão e conta; sem IP nem nome) | todos | manter e encerrar o acesso, inatividade (F1) | execução de contrato | 30 dias após encerrar |
 | Contador de tentativas de login (HMAC do identificador) | todos | proteção contra força bruta (F1) | legítimo interesse, segurança | 15 minutos |
+| Contadores por IP do login (HMAC do IP, e da escola na matrícula; só o número de tentativas ou falhas no minuto) | todos | rebaixar, sem recusar, a prioridade de login de um IP com falhas demais numa escola ou acima do limite da rota de e-mail (F1, tarefa 15.0) | legítimo interesse, segurança (art. 46) | 1 minuto |
 | Cookie de dispositivo (até 50 HMACs com chave de escola+matrícula ou de e-mail que já entraram naquele navegador, sem nome; o servidor não guarda nem lê identidade a partir dele) | aluno, professor, coordenador | manter a prioridade de login de quem já entrou quando há ataque na rede da escola (F1); nenhum outro uso | legítimo interesse, segurança (art. 46), no melhor interesse do titular (art. 14) | 30 dias por entrada, no navegador |
 | Vínculo, estado e datas | professor, aluno | acesso por objeto (F1) | execução de contrato | vigência + 5 anos |
 | Motivo de contestação de vínculo (código e complemento de até 140 caracteres, sem nome de aluno) | professor | corrigir a alocação (F1) | execução de contrato | complemento: apagado na virada do ano letivo, na mesma transação do encerramento (10.0); código: fica com o vínculo, como já fica na auditoria `vinculo.contestado`, porque é o que impede o vínculo nunca aceito de abrir o ano encerrado; o complemento nunca em log nem em auditoria |
@@ -60,6 +61,21 @@ deveria existir.
 | Identificador do operador Educa.ia na auditoria | nossa equipe | prestação de contas à escola | legítimo interesse | vigência + 5 anos |
 | Registro de acesso à aplicação (IP, data e hora) | todos | segurança | obrigação legal (Marco Civil, art. 15) | 6 meses |
 | Auditoria (quem fez o quê, com finalidade) | todos | prestação de contas à escola e ao titular | execução de contrato e obrigação da escola | vigência + 5 anos |
+
+**IP só em memória, no login** (F1, tarefas 14.0 e 15.0). Além do registro de acesso, o IP de quem pede é usado sem ser
+gravado, com a finalidade de segurança, e esquecido por instância:
+- na vez do login por e-mail no semáforo do hash, que roda por IP no balde da equipe: fica na memória da instância até
+  dois minutos depois da última vez daquele IP (a roda esquece, a cada minuto, quem não esperou nem foi atendido no
+  minuto anterior, e todos que não esperam, se passar de 10.000 entradas), ou até o login seguinte, se a instância
+  ficar sem login;
+- no número de escolas da rede do IP de saída (`rede.ips_saida`), lido só quando um IP passa do limite da rota de
+  e-mail: vale por um minuto e sai da memória na varredura do minuto seguinte, ou no login seguinte, se a instância
+  ficar sem login;
+- nos contadores por IP, o Redis de fila e o seguro em memória recebem só o HMAC do IP, com prazo de um minuto (o
+  limite por IP das rotas de login, do rate limit do F0, no Redis de cache, também vive só a janela de um minuto).
+
+Nenhum desses vira rótulo de métrica, linha de log, auditoria ou tabela: o alerta traz a escola, e o IP de um ataque,
+quando preciso, é consultado no registro de acesso, só para a investigação.
 
 **Aluno não tem e-mail nem telefone no sistema.** Contato é sempre do responsável. Quem
 propuser adicionar precisa justificar por escrito e atualizar esta tabela.

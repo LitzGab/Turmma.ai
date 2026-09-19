@@ -1,0 +1,65 @@
+# Alerta "Login rebaixado numa escola" (Tech Spec da identidade, seção 7c; runbook:
+# docs/runbook.md#login-rebaixado-numa-escola). Provisionado por arquivo no Grafana da observabilidade local
+# (infra/compose.yml monta esta pasta em provisioning/alerting).
+#
+# `login.prioridade_rebaixada{escola_id}` fica em 1 numa instância da API enquanto ela rebaixou, no último minuto, as
+# tentativas de login por matrícula de um IP com mais falhas que o limiar da escola (`max(100, 25% dos alunos ativos)`
+# por minuto), e cai a 0 depois. Nada é recusado: as tentativas desse IP vão para o fim do balde da escola, e quem já
+# entrou naquele navegador mantém a vez. Dispara por escola quando a série fica em 1 por 2 min seguidos, em qualquer
+# instância. O alerta traz a escola, nunca o IP.
+#
+# Sem dado é normal: a série só nasce no primeiro rebaixamento.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: login-rebaixamento
+    folder: Educa.ia alertas
+    interval: 10s
+    rules:
+      - uid: educa-login-rebaixado-por-escola
+        title: Login rebaixado numa escola
+        condition: C
+        for: 2m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          area: login
+        annotations:
+          summary: 'Um IP erra senha em massa na escola {{ $labels.escola_id }} há mais de 2 min: as tentativas dele vão para o fim da fila'
+          description: Ataque de senha, de dentro ou de fora da rede da escola. Ninguém é bloqueado, mas quem ainda não entrou naquele navegador espera mais. Siga o runbook.
+          runbook_url: https://github.com/LitzGab/Educa.ia/blob/main/docs/runbook.md#login-rebaixado-numa-escola
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: max by (escola_id) (login_prioridade_rebaixada{job="educa/api"})
+              instant: true
+              range: false
+              intervalMs: 10000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - type: query
+                  evaluator:
+                    type: gt
+                    params: [0]

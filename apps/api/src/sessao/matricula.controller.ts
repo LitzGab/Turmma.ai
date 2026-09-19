@@ -1,15 +1,16 @@
-import { ErroDeDominio, ipDaRequisicao, ProxiesConfiaveis, RotaAnonima } from '@educa/nucleo'
+import { acimaDoLimiteDoIp, ErroDeDominio, ipDaRequisicao, LimiteQueRebaixa, ProxiesConfiaveis, RotaAnonima } from '@educa/nucleo'
 import { CodigoDeErro, esquemaPedidoLoginMatricula, esquemaRespostaLogin, type RespostaLogin } from '@educa/shared'
 import { Body, Controller, Header, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { LoginPorMatricula } from './matricula.service.js'
 
 /**
- * `POST /v1/sessao/matricula`: o aluno entra pelo endereço da escola com matrícula e senha. Anônima, e por isso
- * limitada só pelo IP da rota anônima, com teto de uma escola inteira atrás de um NAT; o que segura a senha errada é o
+ * `POST /v1/sessao/matricula`: o aluno entra pelo endereço da escola com matrícula e senha. Anônima; o limite por IP dela
+ * (`@LimiteQueRebaixa()`, 15.0) nunca recusa, só rebaixa a tentativa no semáforo; o que segura a senha errada é o
  * contador por escola e matrícula, no service.
  */
 @RotaAnonima()
+@LimiteQueRebaixa()
 @Controller('v1/sessao')
 export class LoginMatriculaController {
   constructor(
@@ -26,6 +27,7 @@ export class LoginMatriculaController {
     const { resposta: corpoDaResposta, cookies } = await this.login.entrar(pedido.data, {
       ip: await ipDaRequisicao(requisicao, this.proxies),
       cabecalhoCookie: requisicao.headers.cookie,
+      acimaDoLimiteDoIp: acimaDoLimiteDoIp(requisicao),
     })
     resposta.setHeader('Set-Cookie', [...cookies])
     return esquemaRespostaLogin.parse(corpoDaResposta)

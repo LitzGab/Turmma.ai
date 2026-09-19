@@ -136,8 +136,9 @@ describe('métricas com escola', () => {
     // Uma métrica nova com escola precisa entrar aqui de propósito: o rótulo multiplica as séries por escola, e fora
     // desta lista o teste de cardinalidade da observabilidade (infra/test/metricas.int.test.ts) a reprova.
     expect([...METRICAS_COM_ESCOLA].sort()).toEqual(
-      [METRICAS.esperaMaisAntiga, METRICAS.pendentes, METRICAS.aguardandoVaga, METRICAS.vagasEmUso, METRICAS.esperaPeloHash].sort(),
+      [METRICAS.esperaMaisAntiga, METRICAS.pendentes, METRICAS.aguardandoVaga, METRICAS.vagasEmUso, METRICAS.esperaPeloHash, METRICAS.falhasDeLogin, METRICAS.prioridadeRebaixada].sort(),
     )
+    expect(METRICAS_COM_ESCOLA).not.toContain(METRICAS.limiteEmailIp)
     expect(METRICAS_COM_ESCOLA).not.toContain(METRICAS.duracaoDoLogin)
     expect(METRICAS_COM_ESCOLA).not.toContain(METRICAS.hashRecusado)
   })

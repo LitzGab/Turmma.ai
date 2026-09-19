@@ -1,0 +1,64 @@
+# Alerta "Login por e-mail acima do limite por IP" (Tech Spec da identidade, seção 7c; runbook:
+# docs/runbook.md#login-por-e-mail-acima-do-limite-por-ip). Provisionado por arquivo no Grafana da observabilidade local
+# (infra/compose.yml monta esta pasta em provisioning/alerting).
+#
+# `login.limite_email_ip` conta as tentativas de login por e-mail rebaixadas porque o IP passou de
+# `LIMITE_LOGIN_EMAIL_IP_MIN` tentativas no minuto (vezes as escolas da rede, se é o IP de saída dela). Nada é
+# recusado: elas vão para o fim do balde da equipe. Dispara quando, somadas as instâncias da API, passam de 20 por
+# minuto por 5 min seguidos. Cada instância nasce com o contador em 0. O alerta não traz IP nem escola.
+#
+# Sem dado é normal: a API não exporta sem a observabilidade de pé.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: login-limite-email
+    folder: Educa.ia alertas
+    interval: 10s
+    rules:
+      - uid: educa-login-email-limite-ip
+        title: Login por e-mail acima do limite por IP
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          area: login
+        annotations:
+          summary: Mais de 20 tentativas de login por e-mail por minuto rebaixadas pelo limite por IP, por 5 min
+          description: Um IP tenta e-mails e senhas em quantidade. Ninguém é bloqueado, mas a equipe atrás desse IP sem o cookie do navegador espera mais. Siga o runbook.
+          runbook_url: https://github.com/LitzGab/Educa.ia/blob/main/docs/runbook.md#login-por-e-mail-acima-do-limite-por-ip
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: sum (rate(login_limite_email_ip_total{job="educa/api"}[1m])) * 60
+              instant: true
+              range: false
+              intervalMs: 10000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - type: query
+                  evaluator:
+                    type: gt
+                    params: [20]

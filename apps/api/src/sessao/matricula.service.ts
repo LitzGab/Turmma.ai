@@ -1,18 +1,18 @@
-import { ErroDeDominio, FORMATO_SLUG, METRICAS, TAMANHO_MAXIMO_SLUG, type Banco, type Meter } from '@educa/nucleo'
-import { CodigoDeErro, type PedidoLoginMatricula } from '@educa/shared'
+import { FORMATO_SLUG, TAMANHO_MAXIMO_SLUG, type Banco, type Meter } from '@educa/nucleo'
+import type { PedidoLoginMatricula } from '@educa/shared'
 import type { ConclusaoDeLogin } from './conclusao-de-login.js'
 import type { ContadorDeTentativas } from './contador-de-tentativas.js'
 import type { CookieDeDispositivo } from './cookie-dispositivo.js'
 import { COOKIE_DISPOSITIVO, lerCookie } from './cookies.js'
 import { CredencialMatriculaRepository } from './credencial-matricula.repository.js'
 import { naEscolaSemUsuario } from './escola-sem-usuario.js'
-import type { HashDeSenha } from './hash-de-senha.js'
-import { ipParaRegistro, type ConferenciaDaSenha, type OrigemDaRequisicao, type ResultadoDoLogin } from './login.service.js'
+import { ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from './login.service.js'
 import { RegistroDeAcessoRepository } from './registro-de-acesso.repository.js'
 import type { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
 import { baldeDaEscola, baldeDaEscolaDesconhecida } from './senha/baldes-de-login.js'
+import type { ConferenciaNaVez, TentativaDeSenha } from './senha/conferencia-na-vez.js'
 import { DuracaoDoLogin } from './senha/duracao-do-login.js'
-import type { SemaforoDeHash } from './senha/semaforo-de-hash.js'
+import type { RebaixamentoPorEscola } from './senha/rebaixamento.js'
 
 /**
  * A "escola desconhecida" do slug que não existe: entra no lugar do `escola_id` na chave do contador e na entrada do
@@ -24,16 +24,24 @@ export const ESCOLA_DESCONHECIDA = '00000000-0000-0000-0000-000000000000'
 export interface DependenciasDoLoginPorMatricula {
   readonly banco: Banco
   readonly resolucao: ResolucaoDeTenantRepository
-  readonly hash: HashDeSenha
-  /** O semáforo do hash (14.0), com o balde da escola do endereço, ou o da escola desconhecida. */
-  readonly semaforo: SemaforoDeHash
+  /** A vez no semáforo do hash (14.0), no balde da escola do endereço ou no da escola desconhecida, o contador e o hash. */
+  readonly conferencia: ConferenciaNaVez
   readonly contador: ContadorDeTentativas
+  /** O rebaixamento por IP e escola (15.1): o IP com falhas demais na escola vai para o fim do balde dela. */
+  readonly rebaixamento: RebaixamentoPorEscola
   readonly dispositivo: CookieDeDispositivo
   readonly conclusao: ConclusaoDeLogin
   readonly medidor: Meter
 }
 
 type CredencialDoAluno = Awaited<ReturnType<CredencialMatriculaRepository['doAlunoAtivo']>>
+
+/** A chave do contador de uma tentativa, o identificador do cookie e se o navegador já conhece a conta. */
+interface ChaveDaTentativa {
+  readonly chave: string
+  readonly identificador: string
+  readonly conhecido: boolean
+}
 
 /** O identificador da conta do aluno no contador e no cookie: a escola e a matrícula, nunca a matrícula sozinha. */
 export function identificadorDoAluno(escolaId: string, matricula: string): string {
@@ -58,13 +66,16 @@ export function identificadorDoAluno(escolaId: string, matricula: string): strin
  * - **Semáforo do hash** (14.0): a vez é pedida no balde da escola do endereço, exista a matrícula ou não (o endereço
  *   que não existe tem o balde dele), e antes de a tentativa ser contada: o 503 de quem esperou demais não conta como
  *   senha errada, e a rajada da escola vira fila, nunca `CONTA_SEGURADA`.
+ * - **Rebaixamento** (15.1): o IP com mais falhas que o limiar da escola no último minuto vai para o fim do balde dela,
+ *   sem recusa; quem traz o `educa_dispositivo` daquela matrícula mantém a vez. Toda falha na escola conta para o IP.
+ *   O endereço que não existe não conta falha por IP: o balde dele não tem aluno de verdade a proteger.
+ * - **Limite por IP do login** (15.0): o IP acima do limite por IP das rotas de login (`@LimiteQueRebaixa()`) também vai
+ *   para o fim do balde, com a mesma passagem pelo cookie, e nunca recebe 429.
  */
 export class LoginPorMatricula {
-  readonly #contaSegurada: ReturnType<Meter['createCounter']>
   readonly #duracao: DuracaoDoLogin
 
   constructor(private readonly dependencias: DependenciasDoLoginPorMatricula) {
-    this.#contaSegurada = dependencias.medidor.createCounter(METRICAS.contaSegurada, { description: 'Tentativas de login respondidas com CONTA_SEGURADA' })
     this.#duracao = new DuracaoDoLogin(dependencias.medidor, 'matricula')
   }
 
@@ -76,20 +87,20 @@ export class LoginPorMatricula {
     const escolaId = await this.#escolaDoSlug(pedido.slug)
     if (escolaId === undefined) return this.#recusar(ESCOLA_DESCONHECIDA, pedido, origem)
     return naEscolaSemUsuario(escolaId, async () => {
-      const { banco, hash, semaforo, contador, conclusao } = this.dependencias
-      const { chave, identificador } = this.#chave(escolaId, pedido.matricula, origem)
-      const conferencia = await semaforo.executar(baldeDaEscola(escolaId), async (): Promise<ConferenciaDaSenha<CredencialDoAluno>> => {
-        const reserva = await contador.reservar(chave)
-        if (!reserva.liberada) return { seguradaPorMs: reserva.esperaMs }
-        const credencial = await new CredencialMatriculaRepository(banco).doAlunoAtivo(pedido.matricula)
-        return { reserva, credencial, confere: await hash.verificar(credencial?.senhaHash, pedido.senha) }
-      })
-      if ('seguradaPorMs' in conferencia) throw this.#segurada(conferencia.seguradaPorMs)
-      const { reserva, credencial, confere } = conferencia
+      const { banco, conferencia, contador, conclusao, rebaixamento } = this.dependencias
+      const { chave, identificador, conhecido } = this.#chave(escolaId, pedido.matricula, origem)
+      const rebaixado = (await rebaixamento.rebaixar(origem.ip, escolaId, conhecido)) || (!conhecido && origem.acimaDoLimiteDoIp === true)
+      const tentativa: TentativaDeSenha<CredencialDoAluno> = {
+        balde: baldeDaEscola(escolaId, rebaixado),
+        chave,
+        senha: pedido.senha,
+        lerCredencial: () => new CredencialMatriculaRepository(banco).doAlunoAtivo(pedido.matricula),
+        aoFalhar: () => rebaixamento.contarFalha(origem.ip, escolaId),
+      }
+      const { reserva, credencial, confere } = await conferencia.conferir(tentativa)
       if (credencial === undefined || !confere) {
         await new RegistroDeAcessoRepository(banco).gravarFalha(ipParaRegistro(origem.ip))
-        if (reserva.esperaSeFalharMs > 0) throw this.#segurada(reserva.esperaSeFalharMs)
-        throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+        return conferencia.recusar(tentativa, reserva)
       }
 
       await contador.zerar(chave)
@@ -108,28 +119,22 @@ export class LoginPorMatricula {
    * como a matrícula que não existe. Sem escola, não grava `registro_acesso`: não há de quem seja o registro.
    */
   async #recusar(escolaId: string, pedido: PedidoLoginMatricula, origem: OrigemDaRequisicao): Promise<never> {
-    const { chave } = this.#chave(escolaId, pedido.matricula, origem)
-    const { contador, hash, semaforo } = this.dependencias
-    const conferencia = await semaforo.executar(baldeDaEscolaDesconhecida(), async (): Promise<ConferenciaDaSenha<undefined>> => {
-      const reserva = await contador.reservar(chave)
-      if (!reserva.liberada) return { seguradaPorMs: reserva.esperaMs }
-      return { reserva, credencial: undefined, confere: await hash.verificar(undefined, pedido.senha) }
-    })
-    if ('seguradaPorMs' in conferencia) throw this.#segurada(conferencia.seguradaPorMs)
-    const { reserva } = conferencia
-    if (reserva.esperaSeFalharMs > 0) throw this.#segurada(reserva.esperaSeFalharMs)
-    throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+    const { conferencia } = this.dependencias
+    const tentativa: TentativaDeSenha<undefined> = {
+      // O IP acima do limite por IP do login também vai para o fim deste balde, que não tem conta de verdade.
+      balde: baldeDaEscolaDesconhecida(origem.acimaDoLimiteDoIp === true),
+      chave: this.#chave(escolaId, pedido.matricula, origem).chave,
+      senha: pedido.senha,
+      lerCredencial: () => Promise.resolve(undefined),
+    }
+    const { reserva } = await conferencia.conferir(tentativa)
+    return conferencia.recusar(tentativa, reserva)
   }
 
-  #chave(escolaId: string, matricula: string, origem: OrigemDaRequisicao): { chave: string; identificador: string } {
+  #chave(escolaId: string, matricula: string, origem: OrigemDaRequisicao): ChaveDaTentativa {
     const { contador, dispositivo } = this.dependencias
     const identificador = identificadorDoAluno(escolaId, matricula)
     const conhecido = dispositivo.conhece(lerCookie(origem.cabecalhoCookie, COOKIE_DISPOSITIVO), identificador)
-    return { chave: contador.chaveDe(identificador, conhecido ? 'conhecido' : 'outro'), identificador }
-  }
-
-  #segurada(esperaMs: number): ErroDeDominio {
-    this.#contaSegurada.add(1)
-    return new ErroDeDominio(CodigoDeErro.CONTA_SEGURADA, undefined, Math.max(1, Math.ceil(esperaMs / 1_000)))
+    return { chave: contador.chaveDe(identificador, conhecido ? 'conhecido' : 'outro'), identificador, conhecido }
   }
 }

@@ -19,9 +19,13 @@ export const TIMEOUT_COMANDO_REDIS_API_MS = 100
  *
  * O ouvinte de erro é obrigatório: sem ele, o ioredis escreve cada tentativa de reconexão no
  * console, fora do log JSON.
+ *
+ * `timeoutMs` só muda na montagem de teste (a opção `prazoDoRedisDeLoginMs` do `AppModule`, que o `main.ts` não
+ * passa): no runner carregado, uma resposta lenta do Redis viraria seguro em memória e um vermelho falso. Produção usa
+ * sempre os 100 ms, e os testes que provam o corte também.
  */
-export function criarClienteRedisDaApi(url: string, nome: string, aoErrar: (erro: Error) => void): Redis {
-  return criarClienteSemFilaOffline(url, nome, TIMEOUT_COMANDO_REDIS_API_MS, aoErrar)
+export function criarClienteRedisDaApi(url: string, nome: string, aoErrar: (erro: Error) => void, timeoutMs = TIMEOUT_COMANDO_REDIS_API_MS): Redis {
+  return criarClienteSemFilaOffline(url, nome, timeoutMs, aoErrar)
 }
 
 /**

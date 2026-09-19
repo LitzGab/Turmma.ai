@@ -10,7 +10,18 @@ import { tokenDaRequisicao } from '../identidade/token-da-requisicao.js'
 import { ipDoCliente, segundosParaTentarDeNovo } from './chaves.js'
 import type { LimitadorDeRequisicoes } from './limitador.js'
 import type { ProxiesConfiaveis } from './proxies-confiaveis.js'
-import { METADADO_SEM_LIMITE } from './rota-anonima.decorator.js'
+import { METADADO_LIMITE_QUE_REBAIXA, METADADO_SEM_LIMITE } from './rota-anonima.decorator.js'
+
+/** As requisições de login que passaram do limite por IP: marcadas pela guarda, lidas pelo controller. */
+const ACIMA_DO_LIMITE_DO_IP = new WeakSet<IncomingMessage>()
+
+/**
+ * Se a requisição de login (`@LimiteQueRebaixa()`) passou do limite por IP: ela não foi recusada, e o login a manda
+ * para o fim do balde dela no semáforo do hash.
+ */
+export function acimaDoLimiteDoIp(requisicao: IncomingMessage): boolean {
+  return ACIMA_DO_LIMITE_DO_IP.has(requisicao)
+}
 
 /**
  * Guarda global de rate limit da API. Registre depois da `GuardaDeAutenticacao` e antes da `GuardaDeSessao`: a
@@ -19,7 +30,8 @@ import { METADADO_SEM_LIMITE } from './rota-anonima.decorator.js'
  * antes de chegar à leitura de sessão no Postgres (regra 80, item 1). Só a rota `@RotaAnonima()` é limitada por
  * IP, e o IP do `X-Forwarded-For` só vale quando a conexão vem da borda.
  *
- * Excesso responde 429 `LIMITE_EXCEDIDO` com `Retry-After`.
+ * Excesso responde 429 `LIMITE_EXCEDIDO` com `Retry-After`, menos nas rotas de login por senha (`@LimiteQueRebaixa()`):
+ * nelas o excesso do IP só marca a requisição, que o login rebaixa, e o balde é próprio (identidade, 15.0).
  */
 export class GuardaDeLimite implements CanActivate {
   constructor(
@@ -37,6 +49,11 @@ export class GuardaDeLimite implements CanActivate {
 
     const anonima = rotaSemSessao(this.reflector, execucao)
     const requisicao = execucao.switchToHttp().getRequest<IncomingMessage>()
+    if (anonima && this.reflector.getAllAndOverride<boolean | undefined>(METADADO_LIMITE_QUE_REBAIXA, alvos) === true) {
+      const doLogin = await this.limitador.consumirDoLogin(await this.#ipDaRequisicao(requisicao))
+      if (!doLogin.aceita) ACIMA_DO_LIMITE_DO_IP.add(requisicao)
+      return true
+    }
     const resultado = anonima
       ? await this.limitador.consumirAnonima(await this.#ipDaRequisicao(requisicao))
       : await this.#consumirAutenticada(requisicao)

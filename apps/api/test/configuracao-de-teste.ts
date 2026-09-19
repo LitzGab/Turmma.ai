@@ -1,4 +1,4 @@
-import type { ConfiguracaoBanco } from '@educa/nucleo'
+import { TIMEOUT_COMANDO_REDIS_FILA_MS, type ConfiguracaoBanco } from '@educa/nucleo'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { lerConfiguracao, type ConfiguracaoApi } from '../src/config.js'
 
@@ -6,6 +6,15 @@ import { lerConfiguracao, type ConfiguracaoApi } from '../src/config.js'
 export function urlDoOidcFalso(ambiente: Record<string, string> = lerAmbienteDeTeste()): string {
   return `http://127.0.0.1:${valorObrigatorio(ambiente, 'OIDC_FALSO_PORTA_HOST')}`
 }
+
+/**
+ * A montagem da API nos testes que sobem a aplicação inteira e não provam o corte do Redis (15.5): o cliente Redis do
+ * login espera até 2 s por comando, como o do despachante, em vez dos 100 ms de produção. No runner carregado da
+ * esteira, uma resposta acima de 100 ms viraria reserva no seguro ou desafio recusado, e um vermelho falso. É opção de
+ * montagem, e não variável de ambiente: a produção não tem como ler. Os testes que provam o corte (`limite.int.test.ts`,
+ * o "Redis fora" e o "Redis travado" do contador e do desafio) montam sem ela.
+ */
+export const MONTAGEM_DE_TESTE = { prazoDoRedisDeLoginMs: TIMEOUT_COMANDO_REDIS_FILA_MS } as const
 
 export interface SobreposicaoDeTeste {
   banco?: Partial<ConfiguracaoBanco>

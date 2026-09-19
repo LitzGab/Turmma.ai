@@ -152,6 +152,7 @@ Envelope de erro do F0. As rotas anônimas levam `@RotaAnonima`.
   - O `/v1/sessao/email` tem limite próprio por IP: 60/min por padrão, pela variável `LIMITE_LOGIN_EMAIL_IP_MIN`. Acima dele, nada é recusado: as tentativas desse IP vão para o fim do balde, e quem traz no `educa_dispositivo` a conta já conhecida mantém a vez.
   - IP de saída cadastrado numa rede (`rede.ips_saida`) recebe esse limite vezes o número de escolas da rede, porque a rede municipal sai por um IP só.
   - A regra 80, item 1 trata da rajada de alunos. A equipe atrás de um NAT é dezenas de pessoas.
+- **Limite anônimo por IP nas rotas de login** (decidido na 15.0, pelo veto do `infra-guardian`): `/v1/sessao/email` e `/v1/sessao/matricula` não recebem 429 `LIMITE_EXCEDIDO` do limite anônimo por IP do F0. Elas contam num balde próprio (`rl:ip-login`, mesmo teto `LIMITE_REQ_IP_ANONIMO_MIN`), e acima dele a tentativa vai para o fim do balde do semáforo, com a mesma passagem pelo cookie. Assim um script lotando o login não recusa os alunos atrás do NAT nem gasta o limite das outras rotas anônimas (a página de acesso da escola). Com 10.000 esperando no semáforo, o pedido não rebaixado toma o lugar do rebaixado mais antigo, que sai com 503: o ataque rebaixado de uma escola não vira 503 imediato em outra.
 - **Rajada de falhas na matrícula:** nunca bloqueia, só rebaixa a prioridade.
   - **Limiar:** `max(100, 25% dos alunos ativos da escola)` falhas por minuto de um IP naquela escola.
   - **Acima do limiar:** as tentativas desse IP para essa escola vão para o fim do balde da escola, e a métrica `login.prioridade_rebaixada{escola_id}` fica em 1.
@@ -290,7 +291,7 @@ antes de existir escola ou que toca a conta global.
 | Ler a escola e a conta de um usuário pelo id (`escolaDoUsuarioParaOperador`), só no `ops:redefinir-mfa` | rotina do operador: o comando recebe só o `usuarioId` do pedido formal, e a escola que vira o contexto vem do banco, nunca do argumento; devolve escola, conta e se está ativo, nunca o nome (6.0) |
 | Escrever na conta, por `conta_id` já verificado: senha no aceite do convite, configurar e ativar MFA, `mfa_ultimo_passo`, consumir código de recuperação, redefinir MFA, limpeza da conta | a credencial é global; o `conta_id` vem do desafio ou da sessão verificados, nunca do cliente |
 
-O item 9 fala em três exceções por módulo, e aqui são mais de dez métodos (13 depois da 6.0, 20 depois da 7.0 e 21 depois da 12.0; a contagem cresce com as tarefas, e a lista que vale é a própria classe, com uma justificativa em cada `@SemEscopo`). O motivo: essa classe é a
+O item 9 fala em três exceções por módulo, e aqui são mais de dez métodos (13 depois da 6.0, 20 depois da 7.0, 21 depois da 12.0 e 22 depois da 15.0; a contagem cresce com as tarefas, e a lista que vale é a própria classe, com uma justificativa em cada `@SemEscopo`). O motivo: essa classe é a
 própria fronteira da resolução de tenant, a única do sistema, e há teste de que só o módulo
 `sessao` a importa. Fora dela, `@SemEscopo` só aparece em `sistema.expurgar-acesso`
 (`retencao`, como no F0) e no `RedeEEscolaRepository` do `ops:escola`, com dois métodos (criar rede,
@@ -418,7 +419,7 @@ migram na mesma tarefa, e o helper cria a escola antes do job, por causa da FK.
 | Regra | Como é atendida | Desvio e justificativa |
 |---|---|---|
 | 00 | controller fino, porta externa, `oidc-falso` no compose | — |
-| 10 | seção 6, FKs compostas, contexto de escola sem usuário | `conta` sem escola; os métodos `@SemEscopo` da fronteira de resolução (21 depois da 12.0); `registro_acesso` com escola nula na falha por e-mail |
+| 10 | seção 6, FKs compostas, contexto de escola sem usuário | `conta` sem escola; os métodos `@SemEscopo` da fronteira de resolução (22 depois da 15.0); `registro_acesso` com escola nula na falha por e-mail |
 | 20 | aluno sem e-mail; claims descartadas; registro de acesso; auditoria fechada; expurgo | — |
 | 40, 50, 60 | seções 9 e 10; token em memória; vínculo só confirmado | — |
 | 80 | guardas em ordem; baldes por escola; 503 no lugar de logout; cenário | sessão no Postgres, e não no Redis (item 5): o Redis de cache é `allkeys-lru` e expulsaria sessão no meio da aula |
@@ -439,6 +440,7 @@ migram na mesma tarefa, e o helper cria a escola antes do job, por causa da FK.
   - É invalidado ao encerrar sessão ou desativar usuário.
   - Abrir ou encerrar ano letivo e mudar a inatividade da escola avançam uma versão por escola (`sessao:v:{esc}`), que entra na chave.
 - **Ataque de dentro da rede da escola:** o rebaixamento atrasa os alunos da própria escola que ainda não entraram naquele navegador, mas não recusa ninguém nem degrada outra escola. O alerta `login-rebaixado-por-escola` avisa.
+- **IPv6:** os contadores por IP contam o endereço inteiro. Quem controla um /64 troca de endereço e escapa do rebaixamento por IP e do limite do e-mail. Aceito no F1: o contador por conta continua segurando cada conta, e o ataque espalhado cai no rodízio por IP da equipe; contar por /64 fica para quando houver escola com IPv6 de saída (a rede da escola sai por um IPv4 de NAT hoje).
 - **Ataque distribuído ao balde "equipe":** muitos IPs podem lotar o balde e atrasar o login da equipe de todas as escolas. O rodízio por IP e o limite por IP reduzem o efeito, e o alerta `login-hash-recusado` avisa. Aceito no F1: a equipe tem sessão de 12 h e entra poucas vezes por dia.
 - **Consulta do titular:** a seção 7 lista as tabelas. A execução por código (acesso e exportação) é do F3, como está no roadmap.
 - **Testes do F0 presos ao token sintético:** migram na tarefa que tira a flag.

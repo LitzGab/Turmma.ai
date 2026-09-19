@@ -9,8 +9,8 @@ import type { PoolBanco } from '../db/pool.js'
  * (`infra/grafana/paineis/`) e os alertas (13.0) leem estes nomes, já traduzidos pelo Prometheus:
  * ponto vira sublinhado, contador ganha `_total`, e unidade em segundos ganha `_seconds`.
  *
- * Métrica só leva id e rótulo de estrutura (regra 20, item 9). Nenhuma leva usuário, e só as de job e a espera pelo
- * hash de senha levam escola (`METRICAS_COM_ESCOLA`).
+ * Métrica só leva id e rótulo de estrutura (regra 20, item 9). Nenhuma leva usuário nem IP, e só as de job e as três de
+ * login da seção 7c da identidade levam escola (`METRICAS_COM_ESCOLA`).
  */
 export const METRICAS = {
   /** Histograma, em segundos, por rota template, método e status. */
@@ -35,8 +35,25 @@ export const METRICAS = {
   redisDisponivel: 'redis.disponivel',
   /** Proporção das requisições limitadas pelo seguro em memória na janela recente, de 0 a 1. */
   seguroAtivo: 'limite.seguro_ativo',
-  /** Tentativas de login respondidas com `CONTA_SEGURADA` (senha errada repetida), sem rótulo: a conta é global. */
+  /**
+   * Tentativas de login respondidas com `CONTA_SEGURADA` (senha errada repetida), sem rótulo. A conta da equipe é
+   * global, mas a do aluno é da escola (`escola_id|matricula`, 11.0): a métrica não leva escola porque a série por
+   * escola das falhas é `login.falhas`, e esta só diz quantas contas estão sendo seguradas no sistema.
+   */
   contaSegurada: 'login.conta_segurada',
+  /**
+   * Logins por e-mail ou matrícula que falharam (`NAO_AUTENTICADO` ou `CONTA_SEGURADA`), por `escola_id`: a escola do
+   * endereço (matrícula), `equipe` (e-mail) ou `desconhecida` (endereço que não existe). Não conta o 503 do semáforo,
+   * que é atraso e não falha.
+   */
+  falhasDeLogin: 'login.falhas',
+  /**
+   * 1 enquanto esta instância rebaixou, no último minuto, tentativas de um IP com mais falhas que o limiar naquela escola
+   * (tarefa 15.0), por `escola_id`; 0 depois, até a série ser esquecida. Nunca o IP.
+   */
+  prioridadeRebaixada: 'login.prioridade_rebaixada',
+  /** Tentativas de login por e-mail rebaixadas por passar do limite por IP da rota, sem rótulo: o IP nunca vira rótulo. */
+  limiteEmailIp: 'login.limite_email_ip',
   /**
    * Retornos do login pela conta Google ou Microsoft da escola, por `resultado`: `entrou`, `recusado` (domínio, tenant
    * ou ligação que não valem, a mesma recusa para todos) e `provedor` (erro, prazo ou cookie do início ausente). Sem
@@ -70,11 +87,19 @@ export const METRICAS = {
 } as const
 
 /**
- * As únicas métricas que levam `escola_id`: as de job e, fora de job, as de login da Tech Spec da identidade (seção 7c),
- * com cardinalidade de uma série por escola. Hoje só a espera pelo hash; `login.falhas` e `login.prioridade_rebaixada`
- * entram aqui quando nascerem (tarefa 15.3). Nenhuma outra pode levar escola, e nenhuma leva usuário.
+ * As únicas métricas que levam `escola_id`: as de job e, fora de job, as três de login da Tech Spec da identidade (seção
+ * 7c), com cardinalidade de uma série por escola: a espera pelo hash, as falhas e o rebaixamento. Nenhuma outra pode
+ * levar escola, e nenhuma leva usuário.
  */
-export const METRICAS_COM_ESCOLA: readonly string[] = [METRICAS.esperaMaisAntiga, METRICAS.pendentes, METRICAS.aguardandoVaga, METRICAS.vagasEmUso, METRICAS.esperaPeloHash]
+export const METRICAS_COM_ESCOLA: readonly string[] = [
+  METRICAS.esperaMaisAntiga,
+  METRICAS.pendentes,
+  METRICAS.aguardandoVaga,
+  METRICAS.vagasEmUso,
+  METRICAS.esperaPeloHash,
+  METRICAS.falhasDeLogin,
+  METRICAS.prioridadeRebaixada,
+]
 
 /** O rótulo da escola nas métricas de job. Rotina do sistema, sem escola, aparece como `sistema`, como na chave da vaga. */
 export const ROTULO_ESCOLA = 'escola_id'
@@ -160,8 +185,8 @@ export function observarRedis(medidor: Meter, clientes: Partial<Record<Instancia
 
 /**
  * `limite.seguro_ativo`: a proporção das requisições limitadas pelo seguro em memória na janela recente. Com mais de
- * uma fonte (o rate limit no Redis de cache e o contador de tentativas de login no Redis de fila), vale a maior: o
- * alerta `seguro-limite-ativo` dispara quando qualquer um dos dois conta sozinho em memória.
+ * uma fonte (o rate limit no Redis de cache e, no Redis de fila, o contador de tentativas, os contadores por IP e o
+ * desafio do login), vale a maior: o alerta `seguro-limite-ativo` dispara quando qualquer uma conta sozinha em memória.
  */
 export function observarSeguroDoLimite(medidor: Meter, ...fontes: ReadonlyArray<{ readonly proporcaoDoSeguro: number }>): void {
   medidor

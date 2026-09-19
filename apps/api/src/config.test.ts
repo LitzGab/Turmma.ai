@@ -29,6 +29,7 @@ const ambienteValido = {
   LOGIN_ARGON2_ITERACOES: '2',
   LOGIN_HASH_CONCORRENCIA: '2',
   UV_THREADPOOL_SIZE: '16',
+  LIMITE_LOGIN_EMAIL_IP_MIN: '60',
   LOGIN_CHAVE_CONTADOR: 'chave_sintetica_do_contador_com_32_caracteres',
   LOGIN_CHAVE_DISPOSITIVO_VERSAO: '1',
   LOGIN_CHAVE_DISPOSITIVO_V1: 'chave_sintetica_do_dispositivo_com_32_caracteres',
@@ -83,6 +84,7 @@ describe('lerConfiguracao', () => {
       login: {
         hash: { memoriaKib: 19_456, iteracoes: 2 },
         concorrenciaDoHash: 2,
+        limiteEmailPorIpMin: 60,
         chaveContador: new TextEncoder().encode(ambienteValido.LOGIN_CHAVE_CONTADOR),
         dispositivo: { versao: 1, chave: new TextEncoder().encode(ambienteValido.LOGIN_CHAVE_DISPOSITIVO_V1) },
         mfa: {
@@ -122,6 +124,14 @@ describe('lerConfiguracao', () => {
       expect(erroDe({ ...ambienteValido, [variavel]: '' }).variaveis, variavel).toEqual([variavel])
     }
     expect(erroDe({ ...ambienteValido, LOGIN_HASH_CONCORRENCIA: '0' }).variaveis).toEqual(['LOGIN_HASH_CONCORRENCIA'])
+  })
+
+  it('limite por IP do login por e-mail (15.2): LIMITE_LOGIN_EMAIL_IP_MIN é obrigatória, inteira e positiva, sem padrão no código', () => {
+    expect(lerConfiguracao(ambienteValido).login.limiteEmailPorIpMin).toBe(60)
+    expect(lerConfiguracao({ ...ambienteValido, LIMITE_LOGIN_EMAIL_IP_MIN: '180' }).login.limiteEmailPorIpMin).toBe(180)
+    for (const valor of [undefined, '', '0', '-1', '1.5', 'sessenta']) {
+      expect(erroDe({ ...ambienteValido, LIMITE_LOGIN_EMAIL_IP_MIN: valor }).variaveis, String(valor)).toEqual(['LIMITE_LOGIN_EMAIL_IP_MIN'])
+    }
   })
 
   it('semáforo do hash: a concorrência vai até UV_THREADPOOL_SIZE − 8, e um acima derruba o boot apontando só LOGIN_HASH_CONCORRENCIA, sem o valor', () => {

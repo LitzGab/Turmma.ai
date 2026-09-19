@@ -26,8 +26,10 @@ describe('guarda: alerta tem runbook', () => {
     const arquivos = arquivosDeAlertaDoRepositorio()
     expect(arquivos.map((arquivo) => arquivo.caminho)).toEqual([
       'infra/grafana/alertas/job-interativo-esperando.yaml',
+      'infra/grafana/alertas/login-email-limite-ip.yaml',
       'infra/grafana/alertas/login-hash-recusado.yaml',
       'infra/grafana/alertas/login-lento.yaml',
+      'infra/grafana/alertas/login-rebaixado-por-escola.yaml',
       'infra/grafana/alertas/reuso-de-refresh.yaml',
       'infra/grafana/alertas/seguro-limite-ativo.yaml',
       'infra/grafana/alertas/taxa-5xx.yaml',
@@ -35,8 +37,10 @@ describe('guarda: alerta tem runbook', () => {
     expect(problemasDeRunbook(arquivos, runbookDoRepositorio)).toEqual([])
     expect(arquivos.flatMap(regrasDoArquivo).map((regra) => regra.titulo)).toEqual([
       'Job interativo esperando',
+      'Login por e-mail acima do limite por IP',
       'Login recusado pelo semáforo do hash',
       'Login lento',
+      'Login rebaixado numa escola',
       'Reuso de refresh',
       'Seguro de limite ativo',
       'Taxa de erro 5xx',

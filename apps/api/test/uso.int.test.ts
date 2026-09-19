@@ -9,7 +9,7 @@ import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.
 import { aguardarSaudavel, compose, composeOuFalha, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
-import { configuracaoDeTeste } from './configuracao-de-teste.js'
+import { configuracaoDeTeste, MONTAGEM_DE_TESTE } from './configuracao-de-teste.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'
 
 const ambienteDeTeste = lerAmbienteDeTeste()
@@ -21,7 +21,7 @@ const redis = new Redis(URL_REDIS_FILA, { maxRetriesPerRequest: null })
 redis.on('error', () => undefined)
 
 async function subirApi(ambiente: Record<string, string> = {}): Promise<string> {
-  const app = await NestFactory.create(AppModule.com(configuracaoDeTeste({ ambiente })), { logger: false })
+  const app = await NestFactory.create(AppModule.com(configuracaoDeTeste({ ambiente }), MONTAGEM_DE_TESTE), { logger: false })
   configurarAplicacao(app, criarLogger({ servico: 'api-teste', nivel: 'silent' }))
   await app.listen(0, '127.0.0.1')
   apps.push(app)

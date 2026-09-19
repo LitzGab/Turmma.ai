@@ -1,12 +1,15 @@
 import { criarClienteRedisDaApi, criarClienteRedisDaFila, ErroDeDominio } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
+import { Logger } from '@nestjs/common'
 import type { Redis } from 'ioredis'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../../tools/ci/compose.ts'
+import { travarRedis } from '../../../../tools/testes/redis-travado.ts'
 import { ConsumoDeDesafio, EmissorDeDesafio, PREFIXO_DESAFIO_USADO, verificarDesafio } from './desafio.js'
 
 const CHAVE = new TextEncoder().encode('chave-de-teste-da-assinatura-com-32-bytes')
 const CONTA = '0190f5a0-0000-7000-8000-0000000000c1'
+const URL_REDIS_FILA = `redis://127.0.0.1:${valorObrigatorio(lerAmbienteDeTeste(), 'REDIS_FILA_PORTA_HOST')}`
 
 async function pronto(cliente: Redis): Promise<void> {
   const prazo = performance.now() + 10_000
@@ -24,8 +27,8 @@ describe('ConsumoDeDesafio: o jti vale uma vez só, no Redis de fila', () => {
     // travar. Aqui o que se prova é o script no Redis, e no runner carregado da esteira uma resposta passou dos
     // 100 ms e caiu no seguro (correção 2026-09-18-contador-testado-com-o-prazo-de-producao). O cliente da fila é o
     // mesmo, sem fila offline, com prazo de 2 s. A queda com o Redis fora é provada pelos testes que usam o cliente de
-    // produção de propósito; com o Redis travado (conectado, sem responder), ainda não há teste para este caminho.
-    cliente = criarClienteRedisDaFila(`redis://127.0.0.1:${valorObrigatorio(lerAmbienteDeTeste(), 'REDIS_FILA_PORTA_HOST')}`, 'teste-desafio', () => undefined)
+    // produção de propósito, e o Redis travado (conectado, sem responder) pelo teste de `CLIENT PAUSE` no fim do arquivo.
+    cliente = criarClienteRedisDaFila(URL_REDIS_FILA, 'teste-desafio', () => undefined)
     await pronto(cliente)
   })
 
@@ -51,9 +54,42 @@ describe('ConsumoDeDesafio: o jti vale uma vez só, no Redis de fila', () => {
     const fora = criarClienteRedisDaApi('redis://127.0.0.1:9', 'teste-desafio-fora', () => undefined)
     try {
       const desafio = await verificarDesafio(await new EmissorDeDesafio(CHAVE).emitir({ contaId: CONTA, etapa: 'escolher', mfaCumprido: false }), CHAVE, ['escolher'])
-      await expect(new ConsumoDeDesafio(fora).consumir(desafio)).rejects.toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO })
+      const consumo = new ConsumoDeDesafio(fora)
+      await expect(consumo.consumir(desafio)).rejects.toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO })
+      await expect(consumo.conferirLivre(desafio)).rejects.toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO })
+      // A recusa pelo Redis entra no sinal do seguro (15.5).
+      expect(consumo.proporcaoDoSeguro).toBe(1)
     } finally {
       fora.disconnect()
+    }
+  })
+
+  it('falha (15.5): Redis de fila travado, com a conexão aberta; o desafio é recusado no corte dos 100 ms, com o aviso `login.desafio_sem_redis` uma vez só e o sinal de seguro em 1, e o desafio bom continua valendo depois', async () => {
+    // O cliente de produção da API, de propósito: o que se prova é o corte dos 100 ms.
+    const producao = criarClienteRedisDaApi(URL_REDIS_FILA, 'teste-desafio-travado', () => undefined)
+    const avisos = vi.spyOn(Logger.prototype, 'warn')
+    try {
+      await pronto(producao)
+      const consumo = new ConsumoDeDesafio(producao)
+      const emitir = async () => verificarDesafio(await new EmissorDeDesafio(CHAVE).emitir({ contaId: CONTA, etapa: 'mfa', mfaCumprido: false }), CHAVE, ['mfa'])
+      const noTravamento = await emitir()
+      avisos.mockClear()
+
+      const travado = await travarRedis(URL_REDIS_FILA, 3_000)
+      await expect(consumo.conferirLivre(noTravamento)).rejects.toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO })
+      await expect(consumo.consumir(noTravamento)).rejects.toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO })
+      expect(producao.status).toBe('ready')
+      expect(consumo.proporcaoDoSeguro).toBe(1)
+      // Uma linha só para as duas recusas, e só o evento: nada do desafio, da conta ou da pessoa.
+      expect(avisos.mock.calls).toEqual([['login.desafio_sem_redis']])
+
+      await travado.fim
+      // Com o Redis de volta, um desafio novo é aceito uma vez, e o sinal passa a contar as que o Redis respondeu.
+      await expect(consumo.consumir(await emitir())).resolves.toBeUndefined()
+      expect(consumo.proporcaoDoSeguro).toBeLessThan(1)
+    } finally {
+      avisos.mockRestore()
+      producao.disconnect()
     }
   })
 })

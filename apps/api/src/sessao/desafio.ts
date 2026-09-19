@@ -1,5 +1,6 @@
-import { EMISSOR_TOKEN, ErroDeDominio, relogioDoSistema, TIPO_DESAFIO, type Relogio } from '@educa/nucleo'
+import { avisoEspacado, EMISSOR_TOKEN, ErroDeDominio, ProporcaoEmJanela, relogioDoSistema, TIPO_DESAFIO, type Relogio } from '@educa/nucleo'
 import { CodigoDeErro, ETAPAS_COM_DESAFIO, type EtapaComDesafio } from '@educa/shared'
+import { Logger } from '@nestjs/common'
 import type { Redis } from 'ioredis'
 import { errors, jwtVerify, SignJWT } from 'jose'
 import { randomUUID } from 'node:crypto'
@@ -126,25 +127,44 @@ export async function verificarDesafio(desafio: string, chaveAssinatura: Uint8Ar
  *
  * Com o Redis fora, recusa: sem a marca, o desafio poderia ser reusado, e quem perde é só quem tem MFA ou mais de uma
  * escola, que entra de novo (Tech Spec, seção 4).
+ *
+ * **Recusa pelo Redis com rastro** (15.5): a recusa porque o Redis de fila está fora, ou não respondeu no prazo do
+ * cliente (100 ms), vai para o log como `login.desafio_sem_redis`, no máximo uma linha a cada 30 s e sem nada da pessoa,
+ * e entra em `proporcaoDoSeguro`, que soma no `limite.seguro_ativo`: o coordenador que cai de volta ao login deixa a
+ * causa à vista, e o alerta "Seguro de limite ativo" avisa.
  */
 export class ConsumoDeDesafio {
+  readonly #logger = new Logger('login')
+  readonly #proporcaoDoSeguro: ProporcaoEmJanela
+  readonly #avisarSemRedis = avisoEspacado(() => this.#logger.warn('login.desafio_sem_redis'))
+
+  /** @param proporcaoDoSeguro só o teste troca, para mover a janela sem esperar 30 s. */
   constructor(
     private readonly cliente: Redis,
     private readonly relogio: Relogio = relogioDoSistema,
-  ) {}
+    proporcaoDoSeguro = new ProporcaoEmJanela(),
+  ) {
+    this.#proporcaoDoSeguro = proporcaoDoSeguro
+  }
+
+  /** Das conferências e consumos dos últimos 30 s, a proporção recusada porque o Redis de fila não respondeu, de 0 a 1. */
+  get proporcaoDoSeguro(): number {
+    return this.#proporcaoDoSeguro.valor()
+  }
 
   /**
    * Antes de conferir o fator: recusa o desafio já usado (concluído, ou consumido pelo quinto erro), e recusa também
    * com o Redis fora ou sem resposta, sem esperar: sem a marca, não dá para saber se ele ainda vale. Não consome.
    */
   async conferirLivre(desafio: Pick<DesafioVerificado, 'jti'>): Promise<void> {
-    if (this.cliente.status !== 'ready') throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+    if (this.cliente.status !== 'ready') throw this.#semRedis()
     let usado: number
     try {
       usado = await this.cliente.exists(`${PREFIXO_DESAFIO_USADO}${desafio.jti}`)
     } catch {
-      throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+      throw this.#semRedis()
     }
+    this.#proporcaoDoSeguro.registrar(false)
     if (usado !== 0) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
   }
 
@@ -154,8 +174,16 @@ export class ConsumoDeDesafio {
     try {
       marcado = await this.cliente.set(`${PREFIXO_DESAFIO_USADO}${desafio.jti}`, '1', 'PX', prazoMs, 'NX')
     } catch {
-      throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+      throw this.#semRedis()
     }
+    this.#proporcaoDoSeguro.registrar(false)
     if (marcado !== 'OK') throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+  }
+
+  /** A recusa porque o Redis de fila não respondeu: a mesma resposta ao cliente, com rastro para quem opera. */
+  #semRedis(): ErroDeDominio {
+    this.#proporcaoDoSeguro.registrar(true)
+    this.#avisarSemRedis()
+    return new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
   }
 }

@@ -20,8 +20,12 @@ import { raizRepositorio } from '../../tools/ci/executar.ts'
  *   - para o Redis de cache, e a API passa a limitar com o seguro em memória;
  *   - força 5xx em `POST /v1/sistema/jobs-sinteticos`, com um gatilho temporário no banco que recusa a
  *     gravação só da escola sintética do ensaio, e manda requisição a ela a cada segundo;
- *   - recria as APIs com o hash lento (`HASH_LENTO_DO_ENSAIO`) e manda logins em laço até o semáforo do hash passar
- *     do prazo: o p95 do login passa de 1 s ("Login lento") e os 503 passam de 1% ("Login recusado pelo semáforo").
+ *   - recria as APIs com o hash lento (`HASH_LENTO_DO_ENSAIO`) e manda logins em laço, com matrículas que não existem,
+ *     ao endereço de uma escola sintética, até o semáforo do hash passar do prazo: o p95 do login passa de 1 s ("Login
+ *     lento"), os 503 passam de 1% ("Login recusado pelo semáforo") e as falhas do IP do ensaio naquela escola passam
+ *     do limiar, e ela fica rebaixada ("Login rebaixado numa escola");
+ *   - manda, em paralelo, logins por e-mail sem conta, acima do limite por IP da rota ("Login por e-mail acima do
+ *     limite por IP").
  * No fim, com sucesso ou não, restaura tudo: remove o gatilho, religa o Redis de cache e os workers, recria as APIs
  * com o ambiente de sempre, e espera as regras voltarem a normal.
  *
@@ -34,6 +38,8 @@ export const REGRAS_DO_ENSAIO = {
   taxa5xx: 'educa-taxa-5xx',
   loginLento: 'educa-login-lento',
   loginHashRecusado: 'educa-login-hash-recusado',
+  loginRebaixado: 'educa-login-rebaixado-por-escola',
+  loginEmailLimiteIp: 'educa-login-email-limite-ip',
 } as const
 
 export type UidDaRegra = (typeof REGRAS_DO_ENSAIO)[keyof typeof REGRAS_DO_ENSAIO]
@@ -57,6 +63,13 @@ export const WORKERS_INTERATIVOS = ['worker-interativo-1', 'worker-interativo-2'
 export const HASH_LENTO_DO_ENSAIO = { LOGIN_HASH_CONCORRENCIA: '1', LOGIN_ARGON2_ITERACOES: '32' } as const
 /** Logins em laço, ao mesmo tempo, durante o ensaio: cada um repete assim que o anterior responde. */
 const LOGINS_SIMULTANEOS_DO_ENSAIO = 24
+/**
+ * Logins por e-mail em laço, cada um com uma pausa depois da resposta: juntos passam de 60 por minuto do IP do ensaio
+ * (o limite da rota) mesmo quando cada resposta leva os 2 s do 503, e passam de 20 rebaixadas por minuto; e, com a
+ * pausa, não tiram do balde da escola a vez que as falhas dela precisam para passar do limiar.
+ */
+const LOGINS_POR_EMAIL_DO_ENSAIO = 10
+const PAUSA_ENTRE_LOGINS_POR_EMAIL_MS = 3_000
 /** Rota template onde o ensaio força o 5xx, como aparece no rótulo `http_route`. */
 export const ROTA_DA_FALHA = '/v1/sistema/jobs-sinteticos'
 /**
@@ -100,6 +113,8 @@ export interface ResultadoDeComando {
 /** Uma escola do ensaio com as sessões dela: cada item dá um token novo da sua sessão a cada chamada. */
 export interface EscolaDoEnsaio {
   escolaId: string
+  /** O endereço da escola: os logins por matrícula do ensaio vão a ele. */
+  slug: string
   tokens: Array<() => Promise<string>>
 }
 
@@ -147,12 +162,16 @@ export interface ResultadoDoEnsaio {
   jobId: string
   /** Job que outra escola gravou na rota da falha, com o gatilho valendo: a falha forçada é só da escola do ensaio. */
   jobDeOutraEscolaNaFalha: string
+  /** A escola cujo endereço recebeu os logins do ensaio, e que fica rebaixada para o IP dele. */
+  escolaDoLogin: string
   disparos: Record<UidDaRegra, DisparoObservado>
   normalizadoEmMs: number
   /** Status das requisições à rota da falha, contados durante o ensaio. */
   statusDaFalha: Record<string, number>
-  /** Status dos logins que o ensaio mandou para lotar o semáforo do hash. */
+  /** Status dos logins por matrícula que o ensaio mandou para lotar o semáforo do hash. */
   statusDoLogin: Record<string, number>
+  /** Status dos logins por e-mail que o ensaio mandou acima do limite por IP. */
+  statusDoEmail: Record<string, number>
 }
 
 const texto = (valor: unknown): string => (typeof valor === 'string' ? valor : '')
@@ -317,13 +336,13 @@ function iniciarTrafego(opcoes: OpcoesDoEnsaio, daFalha: EscolaDoEnsaio, doSegur
 }
 
 /**
- * Logins por matrícula num endereço que não existe, em laço, enquanto as condições valem: com o hash lento, a fila do
+ * Logins por matrícula no endereço da escola do login, em laço, enquanto as condições valem: com o hash lento, a fila do
  * semáforo passa do prazo, os logins saem com 503 depois de 2 s, e o p95 passa de 1 s. Cada pedido leva uma matrícula
- * nova: nenhuma conta chega a ser segurada, e o que o ensaio mede é o semáforo, não o contador de tentativas.
+ * que não existe: nenhuma conta chega a ser segurada, e as falhas do IP do ensaio naquela escola passam do limiar de
+ * 100 por minuto, e ela fica rebaixada. Nenhum pedido é recusado com 429 por isso.
  */
-function iniciarRajadaDeLogin(opcoes: OpcoesDoEnsaio, statusDoLogin: Record<string, number>): { parar: () => Promise<void> } {
+function iniciarRajadaDeLogin(opcoes: OpcoesDoEnsaio, slug: string, statusDoLogin: Record<string, number>): { parar: () => Promise<void> } {
   let ativo = true
-  const slug = `ensaio-login-${randomUUID().slice(0, 8)}`
   const lacos = Array.from({ length: LOGINS_SIMULTANEOS_DO_ENSAIO }, async () => {
     while (ativo) {
       try {
@@ -339,6 +358,37 @@ function iniciarRajadaDeLogin(opcoes: OpcoesDoEnsaio, statusDoLogin: Record<stri
         statusDoLogin['sem_resposta'] = (statusDoLogin['sem_resposta'] ?? 0) + 1
         await esperar(1_000)
       }
+    }
+  })
+  return {
+    parar: async () => {
+      ativo = false
+      await Promise.all(lacos)
+    },
+  }
+}
+
+/**
+ * Logins por e-mail sem conta, em laço, com pausa entre um e outro: o IP do ensaio passa do limite por minuto da rota, e
+ * as tentativas acima dele vão para o fim do balde da equipe, sem recusa.
+ */
+function iniciarRajadaDeEmail(opcoes: OpcoesDoEnsaio, statusDoEmail: Record<string, number>): { parar: () => Promise<void> } {
+  let ativo = true
+  const lacos = Array.from({ length: LOGINS_POR_EMAIL_DO_ENSAIO }, async () => {
+    while (ativo) {
+      try {
+        const resposta = await fetch(`${opcoes.apiUrl}/v1/sessao/email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: `ensaio-${randomUUID()}@escola.invalid`, senha: 'senha-sintetica-do-ensaio' }),
+          signal: AbortSignal.timeout(15_000),
+        })
+        statusDoEmail[String(resposta.status)] = (statusDoEmail[String(resposta.status)] ?? 0) + 1
+        await resposta.body?.cancel()
+      } catch {
+        statusDoEmail['sem_resposta'] = (statusDoEmail['sem_resposta'] ?? 0) + 1
+      }
+      await esperar(PAUSA_ENTRE_LOGINS_POR_EMAIL_MS)
     }
   })
   return {
@@ -390,14 +440,17 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
   const doJob = await opcoes.criarEscolaComSessoes(1)
   const daFalha = await opcoes.criarEscolaComSessoes(USUARIOS_POR_ESCOLA)
   const doSeguro = await opcoes.criarEscolaComSessoes(USUARIOS_POR_ESCOLA)
-  const [escolaDoJob, escolaDaFalha, escolaDoSeguro] = [doJob.escolaId, daFalha.escolaId, doSeguro.escolaId]
+  const doLogin = await opcoes.criarEscolaComSessoes(1)
+  const [escolaDoJob, escolaDaFalha, escolaDoSeguro, escolaDoLogin] = [doJob.escolaId, daFalha.escolaId, doSeguro.escolaId, doLogin.escolaId]
   const statusDaFalha: Record<string, number> = {}
   const statusDoLogin: Record<string, number> = {}
+  const statusDoEmail: Record<string, number> = {}
   const disparos: Partial<Record<UidDaRegra, DisparoObservado>> = {}
   let jobId = ''
   let jobDeOutraEscolaNaFalha = ''
   let trafego: { parar: () => Promise<void> } | undefined
   let rajadaDeLogin: { parar: () => Promise<void> } | undefined
+  let rajadaDeEmail: { parar: () => Promise<void> } | undefined
   let hashLento = false
   let erroDoEnsaio: unknown
 
@@ -419,8 +472,9 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
     if (outraEscola.status !== 202) throw new Error(`com o gatilho da falha, outra escola também não gravou job (status ${outraEscola.status})`)
     jobDeOutraEscolaNaFalha = ((await outraEscola.json()) as { jobId: string }).jobId
     trafego = iniciarTrafego(opcoes, daFalha, doSeguro, statusDaFalha)
-    registrar('lotando o semáforo do hash com logins')
-    rajadaDeLogin = iniciarRajadaDeLogin(opcoes, statusDoLogin)
+    registrar('lotando o semáforo do hash com logins que falham numa escola, e passando do limite por IP do e-mail')
+    rajadaDeLogin = iniciarRajadaDeLogin(opcoes, doLogin.slug, statusDoLogin)
+    rajadaDeEmail = iniciarRajadaDeEmail(opcoes, statusDoEmail)
 
     const esperados: Record<UidDaRegra, Record<string, string>> = {
       [REGRAS_DO_ENSAIO.jobInterativo]: { fila: 'interativa', escola_id: escolaDoJob },
@@ -428,6 +482,8 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
       [REGRAS_DO_ENSAIO.taxa5xx]: { job: 'educa/api', http_route: ROTA_DA_FALHA },
       [REGRAS_DO_ENSAIO.loginLento]: {},
       [REGRAS_DO_ENSAIO.loginHashRecusado]: {},
+      [REGRAS_DO_ENSAIO.loginRebaixado]: { escola_id: escolaDoLogin },
+      [REGRAS_DO_ENSAIO.loginEmailLimiteIp]: {},
     }
     // A pendência de cada regra, anotada quando vista: o disparo só vale se veio depois dela e do `for:` inteiro.
     const pendencias: Partial<Record<UidDaRegra, number>> = {}
@@ -459,6 +515,7 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
   for (const passo of [
     () => trafego?.parar() ?? Promise.resolve(),
     () => rajadaDeLogin?.parar() ?? Promise.resolve(),
+    () => rajadaDeEmail?.parar() ?? Promise.resolve(),
     () => removerGatilhoDaFalha(opcoes.bancoUrl),
     () => subir(opcoes, ['redis-cache', ...WORKERS_INTERATIVOS]),
   ]) {
@@ -506,10 +563,12 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
     escolaDoSeguro,
     jobId,
     jobDeOutraEscolaNaFalha,
+    escolaDoLogin,
     disparos: disparos as Record<UidDaRegra, DisparoObservado>,
     normalizadoEmMs: Date.now(),
     statusDaFalha,
     statusDoLogin,
+    statusDoEmail,
   }
 }
 
@@ -554,10 +613,11 @@ async function executarPelaLinhaDeComando(): Promise<void> {
   // como operador na auditoria delas.
   const criarEscolaComSessoes: CriarEscolaComSessoes = async (quantidade) => {
     const redeId = await escolas.criarRede(banco, OPERADOR_DO_ENSAIO, { nome: 'Rede sintética do ensaio', tipo: 'independente' })
-    const escolaId = await escolas.criarEscola(banco, OPERADOR_DO_ENSAIO, { redeId, nome: 'Escola sintética do ensaio', slug: `ensaio-${randomUUID()}` })
+    const slug = `ensaio-${randomUUID()}`
+    const escolaId = await escolas.criarEscola(banco, OPERADOR_DO_ENSAIO, { redeId, nome: 'Escola sintética do ensaio', slug })
     const emissor = sessoes.emissorDeTokenSintetico(ambiente)
     const criadas = await sessoes.criarSessoesSinteticas(banco, ambiente, { escolaId, papel: 'coordenador', quantidade })
-    return { escolaId, tokens: criadas.map((criada) => async () => (await emissor.emitir({ escolaId, usuarioId: criada.usuarioId, sessaoId: criada.sessaoId })).token) }
+    return { escolaId, slug, tokens: criadas.map((criada) => async () => (await emissor.emitir({ escolaId, usuarioId: criada.usuarioId, sessaoId: criada.sessaoId })).token) }
   }
   try {
     await executarEnsaioDeAlertas({
