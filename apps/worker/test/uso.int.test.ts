@@ -10,6 +10,7 @@ import { AGENDAMENTOS, criarDisparoDeAgendamento, FILA_DOS_AGENDAMENTOS, FUSO_DO
 import type { ConfiguracaoStorage } from '../src/config.js'
 import { montarWorker, type WorkerMontado } from '../src/montagem.js'
 import { criarConsolidacaoDeUso, TIPO_CONSOLIDAR_USO } from '../src/processadores/consolidar-uso.js'
+import { TIPO_EXPURGAR_ACESSO } from '../src/processadores/expurgar-acesso.js'
 import { TIPO_EXPURGAR_JOBS } from '../src/processadores/expurgar-jobs.js'
 import { criarClienteS3, MedidorDeStorage } from '../src/storage/medidor-de-storage.js'
 import { BancadaDeFila, configuracaoDoBanco, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
@@ -286,12 +287,13 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
       await fila.close()
     })
 
-    it('as rotinas são agendadas às 2h e às 3h30 de São Paulo, e registrar de novo (a outra réplica) não duplica o agendador', async () => {
+    it('as rotinas são agendadas às 2h, às 3h30 e às 4h30 de São Paulo, e registrar de novo (a outra réplica) não duplica o agendador', async () => {
       await registrarAgendamentos(fila)
       await registrarAgendamentos(fila)
       const agendadores = await fila.getJobSchedulers()
       expect(agendadores.map(({ key, pattern, tz }) => ({ key, pattern, tz })).sort((a, b) => a.key.localeCompare(b.key))).toEqual([
         { key: TIPO_CONSOLIDAR_USO, pattern: '0 2 * * *', tz: FUSO_DOS_AGENDAMENTOS },
+        { key: TIPO_EXPURGAR_ACESSO, pattern: '30 4 * * *', tz: FUSO_DOS_AGENDAMENTOS },
         { key: TIPO_EXPURGAR_JOBS, pattern: '30 3 * * *', tz: FUSO_DOS_AGENDAMENTOS },
       ])
       const proximaConsolidacao = agendadores.find(({ key }) => key === TIPO_CONSOLIDAR_USO)?.next

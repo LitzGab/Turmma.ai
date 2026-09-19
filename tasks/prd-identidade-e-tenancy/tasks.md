@@ -105,12 +105,12 @@
   - [x] 16.4 Pontos da 14.0: 503 do semáforo fora do alerta de 5xx, inundação de IPs, aceite de convite
   - [x] 16.5 Despejo com a fila cheia sai de quem foi rebaixado, com `login.rebaixado_ip` e teste
 
-- [ ] **17.0 — Ciclo de vida da conta e expurgo**
-  - [ ] 17.1 Desativação de aluno e de usuário; limpeza da conta sem usuário ativo; eliminação por escola
-  - [ ] 17.2 `sistema.expurgar-acesso` (registro de acesso, sessão, convite), idempotente
-  - [ ] 17.3 Testes: hash apagado, conta mantida com usuário em B, limites de 6 meses e 30 dias, expurgo em paralelo
-  - [ ] 17.4 Redefinir o MFA encerra as sessões abertas da conta, com teste
-  - [ ] 17.5 A troca de escola grava `saida` no registro de acesso da origem, com teste
+- [x] **17.0 — Ciclo de vida da conta e expurgo**
+  - [x] 17.1 Desativação de aluno e de usuário; limpeza da conta sem usuário ativo; eliminação por escola
+  - [x] 17.2 `sistema.expurgar-acesso` (registro de acesso, sessão, convite), idempotente
+  - [x] 17.3 Testes: hash apagado, conta mantida com usuário em B, limites de 6 meses e 30 dias, expurgo em paralelo
+  - [x] 17.4 Redefinir o MFA encerra as sessões abertas da conta, com teste
+  - [x] 17.5 A troca de escola grava `saida` no registro de acesso da origem, com teste
 
 - [ ] **18.0 — A web mantém a sessão, e a equipe entra por `/entrar`**
   - [ ] 18.1 `wouter`, `api/sessao.ts` com token em memória, `Authorization` e renovação única com Web Locks

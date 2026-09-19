@@ -364,12 +364,16 @@ rede na borda (regra 80, item 1). Se o ataque vier de muitos IPs, o que avisa é
 **Depois:** registre no `TODO.md` o horário, a duração, se era rede sem `ips_saida` (e se ela foi cadastrada) ou
 ataque, sem IP.
 
-## Rotina do sistema sem rodar (consolidação de uso, expurgo de jobs)
+## Rotina do sistema sem rodar (consolidação de uso, expurgo de jobs, expurgo do acesso)
 
 *A preencher antes da primeira escola real* (pendência em `TODO.md`). Hoje nada avisa se
-`sistema.consolidar-uso` (2h) ou `sistema.expurgar-jobs` (3h30) param de rodar: o uso por escola
-deixa de ser consolidado e `job_registro` cresce sem expurgo. Primeira suspeita: o worker-lote ou a
-fila `agendamentos`.
+`sistema.consolidar-uso` (2h), `sistema.expurgar-jobs` (3h30) ou `sistema.expurgar-acesso` (4h30) param de
+rodar: o uso por escola deixa de ser consolidado, `job_registro` cresce sem expurgo, e registro de acesso
+com mais de 6 meses, sessão e convite vencidos há mais de 30 dias ficam no banco além da retenção de
+`docs/lgpd.md`, o que é descumprimento da LGPD, e não só espaço. Primeira suspeita: o worker-lote ou a
+fila `agendamentos`. A última execução de cada uma aparece em `job_registro` (tipo e estado) e no log
+(`job_registro.expurgado`, `acesso.expurgado`, só com as contagens). Rodar de novo à mão é seguro: as
+três toleram reexecução (D49), e o expurgo do acesso não apaga nada dentro do prazo.
 
 ## Sistema fora do ar no horário letivo
 

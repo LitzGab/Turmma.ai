@@ -2,6 +2,7 @@ import { executarNoContexto, type Banco, type Enfileirador, type LoggerBase } fr
 import { UnrecoverableError, type Job, type Queue } from 'bullmq'
 import { randomUUID } from 'node:crypto'
 import { TIPO_CONSOLIDAR_USO } from './processadores/consolidar-uso.js'
+import { TIPO_EXPURGAR_ACESSO } from './processadores/expurgar-acesso.js'
 import { TIPO_EXPURGAR_JOBS } from './processadores/expurgar-jobs.js'
 
 /**
@@ -24,11 +25,13 @@ export interface Agendamento {
 /**
  * As rotinas noturnas do sistema, fora do horário letivo e longe uma da outra. O job nasce não urgente
  * na fila de lote: se o disparo atrasar até a manhã, ele fica segurado pela janela letiva padrão até
- * a aula acabar (regra 80, item 2).
+ * a aula acabar (regra 80, item 2). O expurgo do acesso (17.0) fica às 4h30: uma hora depois do de jobs e duas e meia
+ * antes do primeiro turno.
  */
 export const AGENDAMENTOS: readonly Agendamento[] = [
   { tipo: TIPO_CONSOLIDAR_USO, padrao: '0 2 * * *' },
   { tipo: TIPO_EXPURGAR_JOBS, padrao: '30 3 * * *' },
+  { tipo: TIPO_EXPURGAR_ACESSO, padrao: '30 4 * * *' },
 ]
 
 /**

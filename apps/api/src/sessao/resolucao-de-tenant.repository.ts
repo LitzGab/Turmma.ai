@@ -1,6 +1,6 @@
-import { codigoRecuperacao, conta, convite, escola, rede, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type TransacaoBanco } from '@educa/nucleo'
-import type { PapelDeUsuario } from '@educa/shared'
-import { and, eq, gt, gte, isNotNull, isNull, lt, ne, or, sql } from 'drizzle-orm'
+import { codigoRecuperacao, conta, convite, ErroDeDominio, escola, rede, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type MotivoDeEncerramento, type TransacaoBanco } from '@educa/nucleo'
+import { CodigoDeErro, type PapelDeUsuario } from '@educa/shared'
+import { and, eq, exists, gt, gte, isNotNull, isNull, lt, ne, or, sql } from 'drizzle-orm'
 
 /**
  * A sessão achada pelo hash do cookie, travada para a renovação decidir (tarefa 5.0): só ids, estado, datas, o papel
@@ -163,6 +163,10 @@ export class ResolucaoDeTenantRepository {
       .returning({ id: conta.id })
     return criadas.map((criada) => criada.id)
   }
+  /**
+   * A conta limpa (17.0), sem e-mail, não é achada: um desafio emitido antes da limpeza não conclui nada e responde como
+   * credencial inválida.
+   */
   @SemEscopo('a credencial da equipe é global: verificar o TOTP e a recuperação lê a conta pelo conta_id do desafio ou da sessão verificados, nunca pelo do cliente')
   async mfaDaConta(contaId: string): Promise<MfaDaConta | undefined> {
     const [linha] = await this.banco
@@ -177,7 +181,8 @@ export class ResolucaoDeTenantRepository {
       .from(conta)
       .where(eq(conta.id, contaId))
       .limit(1)
-    return linha
+    if (linha?.email === null || linha === undefined) return undefined
+    return { ...linha, email: linha.email }
   }
 
   /**
@@ -263,6 +268,62 @@ export class ResolucaoDeTenantRepository {
   async apagarMfa(contaId: string): Promise<void> {
     await this.banco.update(conta).set({ mfaSegredoCifrado: null, mfaChaveVersao: null, mfaAtivadoEm: null, mfaUltimoPasso: null }).where(eq(conta.id, contaId))
     await this.banco.delete(codigoRecuperacao).where(eq(codigoRecuperacao.contaId, contaId))
+  }
+
+  /**
+   * Encerra todas as sessões ainda abertas da conta, em todas as escolas dela, com o motivo dado: a redefinição do MFA
+   * (17.4) e a limpeza da conta sem usuário ativo (17.1). A sessão de aluno não tem conta e nunca é alcançada. Devolve
+   * só quantas, e quem chama não as põe em resposta nem em auditoria de escola nenhuma: seriam também de outra escola.
+   */
+  @SemEscopo('a credencial da equipe é global: redefinir o segundo fator ou limpar a conta encerra as sessões dela em todas as escolas, pelo conta_id já verificado, e devolve só a quantidade')
+  async encerrarSessoesDaConta(contaId: string, motivo: MotivoDeEncerramento): Promise<number> {
+    const encerradas = await this.banco
+      .update(sessao)
+      .set({ encerradaEm: sql`now()`, motivo })
+      .where(and(eq(sessao.contaId, contaId), isNull(sessao.encerradaEm)))
+      .returning({ id: sessao.id })
+    return encerradas.length
+  }
+
+  /**
+   * Trava a conta (`FOR UPDATE`) na transação da desativação ou da eliminação (17.0), antes de mexer no usuário ou na
+   * sessão: duas desativações de usuários da mesma conta, em A e em B, esperam uma pela outra, e a segunda, relendo,
+   * vê a primeira. É a mesma trava da redefinição do MFA, e na mesma ordem (conta, depois sessão).
+   */
+  @SemEscopo('a credencial da equipe é global: a desativação e a eliminação travam a conta do usuário da escola do contexto, pelo conta_id lido nela, e não devolvem nada')
+  async travarConta(contaId: string): Promise<void> {
+    await this.banco.select({ id: conta.id }).from(conta).where(eq(conta.id, contaId)).for('update')
+  }
+
+  /**
+   * Com a conta já travada (`travarConta`), limpa a conta que deixou de servir a qualquer escola (17.0; regra 20, item
+   * 18): apaga e-mail, senha, segredo e passo do TOTP e os códigos de recuperação, e encerra as sessões ainda abertas
+   * dela (motivo `conta_limpa`), que saem com o expurgo de 30 dias. A linha fica só com o id, que os usuários desativados ainda apontam.
+   *
+   * A conta serve enquanto tem um usuário ativo em alguma escola, ou um usuário que espera um convite ainda válido (não
+   * usado, não revogado e no prazo): apagar o e-mail agora deixaria o aceite desse convite sem login. Quando esse convite
+   * deixa de valer, o `sistema.expurgar-acesso` limpa a conta de madrugada, pelo mesmo critério. Devolve se limpou.
+   */
+  @SemEscopo('a credencial da equipe é global: depois de desativar ou eliminar um usuário, confere se a conta ainda tem usuário ativo ou convite válido em alguma escola e, se não tem, apaga a credencial dela; devolve só se limpou')
+  async limparContaSemUso(contaId: string): Promise<boolean> {
+    const conviteValido = this.banco
+      .select({ um: sql`1` })
+      .from(convite)
+      .where(and(eq(convite.escolaId, usuario.escolaId), eq(convite.usuarioId, usuario.id), isNull(convite.usadoEm), isNull(convite.revogadoEm), gt(convite.expiraEm, sql`now()`)))
+    const [emUso] = await this.banco
+      .select({ id: usuario.id })
+      .from(usuario)
+      .where(and(eq(usuario.contaId, contaId), or(isNull(usuario.desativadoEm), exists(conviteValido))))
+      .limit(1)
+    if (emUso !== undefined) return false
+    const limpas = await this.banco
+      .update(conta)
+      .set({ email: null, senhaHash: null, mfaSegredoCifrado: null, mfaChaveVersao: null, mfaAtivadoEm: null, mfaUltimoPasso: null })
+      .where(and(eq(conta.id, contaId), isNotNull(conta.email)))
+      .returning({ id: conta.id })
+    await this.banco.delete(codigoRecuperacao).where(eq(codigoRecuperacao.contaId, contaId))
+    await this.encerrarSessoesDaConta(contaId, 'conta_limpa')
+    return limpas.length === 1
   }
 
   /**
@@ -378,14 +439,22 @@ export class ResolucaoDeTenantRepository {
   /**
    * Acha ou cria a conta do e-mail, para o convite do coordenador (7.0): conta nova nasce sem senha. Não lê nada da conta
    * existente além do id, e quem chama não diz ao operador se ela já existia.
+   *
+   * A conta existente fica travada (`FOR NO KEY UPDATE`) até o fim da transação do convite (17.0): a limpeza da conta
+   * sem uso, na desativação ou no expurgo da madrugada, não apaga o e-mail de uma conta que está recebendo convite (o
+   * expurgo a pula, com `skip locked`, e a desativação espera). Se a limpeza travou antes, esta leitura espera o commit
+   * dela, relê a linha, e a conta sem e-mail não é achada: o convite cria outra conta, com o e-mail.
    */
-  @SemEscopo('a conta é global e não tem escola: o convite do coordenador acha ou cria a conta pelo e-mail, sem ler nada dela, e devolve só o id e se ela é nova')
+  @SemEscopo('a conta é global e não tem escola: o convite do coordenador acha ou cria a conta pelo e-mail, travando a existente, sem ler nada dela, e devolve só o id e se ela é nova')
   async contaParaConvite(email: string): Promise<{ id: string; nova: boolean }> {
-    const [criada] = await this.banco.insert(conta).values({ email }).onConflictDoNothing({ target: conta.email }).returning({ id: conta.id })
-    if (criada !== undefined) return { id: criada.id, nova: true }
-    const [existente] = await this.banco.select({ id: conta.id }).from(conta).where(eq(conta.email, email)).limit(1)
-    if (existente === undefined) throw new Error('conta do convite não achada nem criada')
-    return { id: existente.id, nova: false }
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      const [criada] = await this.banco.insert(conta).values({ email }).onConflictDoNothing({ target: conta.email }).returning({ id: conta.id })
+      if (criada !== undefined) return { id: criada.id, nova: true }
+      const [existente] = await this.banco.select({ id: conta.id }).from(conta).where(eq(conta.email, email)).limit(1).for('no key update')
+      if (existente !== undefined) return { id: existente.id, nova: false }
+    }
+    // Três limpezas seguidas da mesma conta no meio de um convite não acontecem: se acontecer, o operador tenta de novo.
+    throw new ErroDeDominio(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO)
   }
 
   /** A escola de um convite, para o `ops:revogar-convite` abrir o contexto dela: o comando recebe só o id do convite. */

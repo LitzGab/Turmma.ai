@@ -126,6 +126,8 @@ export class ConclusaoDeLogin {
    *
    * Na troca de escola, a sessão de origem é encerrada primeiro, na mesma transação e num contexto com a escola dela: o
    * `update` condicional trava a linha, e a segunda troca com a mesma origem, relendo, não a acha aberta e desfaz tudo.
+   * A `saida` da origem vai ao registro de acesso da escola de origem, e o `login` ao do destino, cada um só com o
+   * usuário da própria escola.
    */
   async #criarSessao(
     usuario: Pick<UsuarioAtivoDaConta, 'usuarioId' | 'escolaId'>,
@@ -139,10 +141,17 @@ export class ConclusaoDeLogin {
     const sessaoId = await executarNoContexto({ requisicaoId, escolaId: usuario.escolaId }, () =>
       this.dependencias.banco.transaction(async (tx) => {
         if (troca !== undefined) {
-          const encerrou =
+          // A saída da origem fica no registro de acesso da escola de origem, só com o usuário de lá (17.5): a sessão
+          // sai em 30 dias pelo expurgo, e o registro dura os 6 meses do Marco Civil.
+          const saiu =
             contaId !== null &&
-            (await executarNoContexto({ requisicaoId, escolaId: troca.escolaId }, () => new SessaoDeOrigemRepository(tx).encerrarParaTroca(troca.sessaoId, contaId)))
-          if (!encerrou) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+            (await executarNoContexto({ requisicaoId, escolaId: troca.escolaId }, async () => {
+              const usuarioDaOrigem = await new SessaoDeOrigemRepository(tx).encerrarParaTroca(troca.sessaoId, contaId)
+              if (usuarioDaOrigem === undefined) return false
+              await new RegistroDeAcessoRepository(tx).gravar('saida', usuarioDaOrigem, ipParaRegistro(ip))
+              return true
+            }))
+          if (!saiu) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
         }
         const [criada] = await new CriacaoDeSessaoRepository(tx).criarSessoes([
           { usuarioId: usuario.usuarioId, contaId, metodo, refreshHash: hashDoRefresh(refresh), duracaoHoras: DURACAO_DA_SESSAO_HORAS },

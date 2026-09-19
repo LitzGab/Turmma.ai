@@ -92,6 +92,13 @@
       "when": 1789749342482,
       "tag": "0012_conta_externa_provedor_escola",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789847548646,
+      "tag": "0013_ciclo_de_vida",
+      "breakpoints": true
     }
   ]
 }

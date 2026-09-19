@@ -1,7 +1,21 @@
+import { executarNoContexto, ExpurgoDeAcessoRepository, sessao } from '@educa/nucleo'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
+import pg from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { urlDoBancoDeTeste } from '../../../../tools/testes/integracao.setup.ts'
 import { BancadaDeSessoes } from '../../test/sessao-de-teste.js'
 import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
+
+interface NoDoPlano {
+  'Index Name'?: string
+  'Node Type'?: string
+  Plans?: NoDoPlano[]
+}
+
+function nosDoPlano(no: NoDoPlano | undefined): NoDoPlano[] {
+  return no === undefined ? [] : [no, ...(no.Plans ?? []).flatMap(nosDoPlano)]
+}
 
 describe('ResolucaoDeTenantRepository: a resolução antes de haver escola devolve só o mínimo', () => {
   const bancada = new BancadaDeSessoes()
@@ -177,5 +191,100 @@ describe('ResolucaoDeTenantRepository: a resolução antes de haver escola devol
     // A escola avulsa da bancada, numa rede sem IP de saída, não empresta escola a IP nenhum.
     await bancada.escola()
     expect(await repositorio.escolasDaRedeDoIpDeSaida('192.0.2.77')).toBe(0)
+  })
+
+  it('encerrar as sessões abertas de uma conta desce pelo índice parcial de conta, sem varrer a tabela, e só encerra as dela', async () => {
+    const professor = await bancada.escolaComSessao('professor')
+    const outro = await bancada.escolaComSessao('professor')
+    const { rows } = await bancada.pool.query<{ conta_id: string }>('select conta_id from usuario where id = $1', [professor.usuarioId])
+    const contaId = rows[0]?.conta_id ?? ''
+    await bancada.pool.query('update sessao set conta_id = $1 where id = $2', [contaId, professor.sessaoId])
+
+    const { sql: texto, params } = bancada.banco
+      .update(sessao)
+      .set({ encerradaEm: sql`now()`, motivo: 'mfa_redefinido' })
+      .where(and(eq(sessao.contaId, contaId), isNull(sessao.encerradaEm)))
+      .toSQL()
+    const cliente = await bancada.pool.connect()
+    try {
+      await cliente.query('begin')
+      await cliente.query('analyze sessao')
+      await cliente.query('set local enable_seqscan = off')
+      const { rows: plano } = await cliente.query<{ 'QUERY PLAN': Array<{ Plan: NoDoPlano }> }>(`explain (format json) ${texto}`, params)
+      const nos = nosDoPlano(plano[0]?.['QUERY PLAN'][0]?.Plan)
+      expect(nos.map((no) => no['Index Name']).filter(Boolean)).toContain('sessao_conta_aberta_idx')
+      expect(nos.map((no) => no['Node Type'])).not.toContain('Seq Scan')
+    } finally {
+      await cliente.query('rollback')
+      cliente.release()
+    }
+
+    expect(await repositorio.encerrarSessoesDaConta(contaId, 'mfa_redefinido')).toBe(1)
+    const { rows: sessoes } = await bancada.pool.query<{ id: string; motivo: string | null }>('select id, motivo from sessao where id = any($1::uuid[]) order by id', [[professor.sessaoId, outro.sessaoId]])
+    expect(sessoes).toEqual(expect.arrayContaining([{ id: professor.sessaoId, motivo: 'mfa_redefinido' }, { id: outro.sessaoId, motivo: null }]))
+    expect(await repositorio.encerrarSessoesDaConta(contaId, 'mfa_redefinido')).toBe(0)
+  })
+
+  describe('concorrência (17.0): a limpeza da conta sem uso e o convite para o mesmo e-mail ao mesmo tempo', () => {
+    /** Uma conta com e-mail e senha cujo único usuário, professor em A, já foi desativado: é o que a limpeza procura. */
+    async function contaSemUso(): Promise<{ contaId: string; email: string; escolaId: string }> {
+      const escolaId = await bancada.escola()
+      const email = `equipe-${randomUUID()}@escola.invalid`
+      const { rows } = await bancada.pool.query<{ id: string }>("insert into conta (email, senha_hash) values ($1, 'hash-sintetico') returning id", [email])
+      const contaId = rows[0]?.id ?? ''
+      await bancada.pool.query("insert into usuario (escola_id, conta_id, papel, nome, desativado_em) values ($1, $2, 'professor', 'Pessoa sintética', now())", [escolaId, contaId])
+      return { contaId, email, escolaId }
+    }
+
+    const emailDaConta = async (contaId: string) => (await bancada.pool.query<{ email: string | null }>('select email from conta where id = $1', [contaId])).rows[0]?.email
+
+    it('o convite trava a conta primeiro: o lote da madrugada, rodando no meio, pula a conta e não apaga o e-mail', async () => {
+      const { contaId, email, escolaId } = await contaSemUso()
+      let liberar = (): void => undefined
+      const segura = new Promise<void>((resolver) => {
+        liberar = resolver
+      })
+      let travou = (): void => undefined
+      const travada = new Promise<void>((resolver) => {
+        travou = resolver
+      })
+      const convite = executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () =>
+        bancada.banco.transaction(async (tx) => {
+          const achada = await new ResolucaoDeTenantRepository(tx).contaParaConvite(email)
+          travou()
+          await segura
+          return achada
+        }),
+      )
+      await travada
+      await new ExpurgoDeAcessoRepository(bancada.banco).limparLoteDeContasSemUso(new Date(), 5_000)
+      expect(await emailDaConta(contaId)).toBe(email)
+      liberar()
+      expect(await convite).toEqual({ id: contaId, nova: false })
+      expect(await emailDaConta(contaId)).toBe(email)
+    })
+
+    it('a limpeza trava a conta primeiro: o convite espera o commit dela, não acha mais o e-mail e cria outra conta com ele', async () => {
+      const { contaId, email } = await contaSemUso()
+      const limpeza = new pg.Client({ connectionString: urlDoBancoDeTeste() })
+      await limpeza.connect()
+      try {
+        // A limpeza no meio da transação: a conta travada e o e-mail já apagado, sem commit.
+        await limpeza.query('begin')
+        await limpeza.query('select id from conta where id = $1 for update', [contaId])
+        await limpeza.query('update conta set email = null, senha_hash = null where id = $1', [contaId])
+        const convite = executarNoContexto({ requisicaoId: randomUUID() }, () => bancada.banco.transaction((tx) => new ResolucaoDeTenantRepository(tx).contaParaConvite(email)))
+        const antesDoCommit = await Promise.race([convite.then(() => 'terminou'), new Promise<string>((resolver) => setTimeout(() => resolver('esperando'), 300))])
+        expect(antesDoCommit).toBe('esperando')
+        await limpeza.query('commit')
+        const achada = await convite
+        expect(achada.nova).toBe(true)
+        expect(achada.id).not.toBe(contaId)
+        expect(await emailDaConta(achada.id)).toBe(email)
+        expect(await emailDaConta(contaId)).toBeNull()
+      } finally {
+        await limpeza.end()
+      }
+    })
   })
 })

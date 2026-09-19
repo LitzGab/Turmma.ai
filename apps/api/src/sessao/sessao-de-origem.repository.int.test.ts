@@ -41,12 +41,12 @@ describe('SessaoDeOrigemRepository: a sessão de onde a troca parte, só na esco
     const contaId = await contaDe(professorEmA.usuarioId)
     const repositorio = new SessaoDeOrigemRepository(bancada.banco)
 
-    expect(await naEscola(escolaB, () => repositorio.encerrarParaTroca(professorEmA.sessaoId, contaId))).toBe(false)
+    expect(await naEscola(escolaB, () => repositorio.encerrarParaTroca(professorEmA.sessaoId, contaId))).toBeUndefined()
     expect(await estado(professorEmA.sessaoId)).toEqual({ encerrada_em: null, motivo: null })
 
-    expect(await naEscola(professorEmA.escolaId, () => repositorio.encerrarParaTroca(professorEmA.sessaoId, contaId))).toBe(true)
+    expect(await naEscola(professorEmA.escolaId, () => repositorio.encerrarParaTroca(professorEmA.sessaoId, contaId))).toBe(professorEmA.usuarioId)
     expect(await estado(professorEmA.sessaoId)).toMatchObject({ motivo: 'troca_de_escola' })
-    expect(await naEscola(professorEmA.escolaId, () => repositorio.encerrarParaTroca(professorEmA.sessaoId, contaId))).toBe(false)
+    expect(await naEscola(professorEmA.escolaId, () => repositorio.encerrarParaTroca(professorEmA.sessaoId, contaId))).toBeUndefined()
   })
 
   it('borda: não encerra a sessão de outra conta nem a que não é de e-mail', async () => {
@@ -57,9 +57,9 @@ describe('SessaoDeOrigemRepository: a sessão de onde a troca parte, só na esco
     const contaDoUm = await contaDe(umProfessor.usuarioId)
     const contaDoOutro = await contaDe(outroProfessor.usuarioId)
 
-    expect(await naEscola(umProfessor.escolaId, () => repositorio.encerrarParaTroca(umProfessor.sessaoId, contaDoOutro))).toBe(false)
+    expect(await naEscola(umProfessor.escolaId, () => repositorio.encerrarParaTroca(umProfessor.sessaoId, contaDoOutro))).toBeUndefined()
     await bancada.pool.query("update sessao set metodo = 'externo' where id = $1", [umProfessor.sessaoId])
-    expect(await naEscola(umProfessor.escolaId, () => repositorio.encerrarParaTroca(umProfessor.sessaoId, contaDoUm))).toBe(false)
+    expect(await naEscola(umProfessor.escolaId, () => repositorio.encerrarParaTroca(umProfessor.sessaoId, contaDoUm))).toBeUndefined()
     expect(await estado(umProfessor.sessaoId)).toEqual({ encerrada_em: null, motivo: null })
   })
 })

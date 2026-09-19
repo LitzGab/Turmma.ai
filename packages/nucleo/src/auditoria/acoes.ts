@@ -7,6 +7,7 @@ import {
   FINALIDADES_DA_LEITURA_DE_ALUNOS,
   FINALIDADES_DA_REDEFINICAO_DE_MFA,
   MOTIVOS_DE_ENCERRAMENTO_PELA_COORDENACAO,
+  PAPEIS_DE_USUARIO,
   PAPEIS_DE_VINCULO,
 } from '@educa/shared'
 import { PROVEDORES_EXTERNOS } from '../db/schema/conta-externa.js'
@@ -149,6 +150,52 @@ export const ACOES_DE_AUDITORIA = {
     entidade: 'usuario',
     antes: null,
     depois: z.strictObject({ conviteId: z.uuid() }),
+    finalidade: null,
+  },
+  /**
+   * A escola desativou o usuário (17.0; regra 20, item 18): ele deixa de entrar na requisição seguinte, e o que era
+   * credencial dele nesta escola sai. Só contagens e sim ou não: quantas sessões desta escola foram encerradas, se o hash
+   * da senha da matrícula foi apagado, se a conta Google ou Microsoft ligada foi desligada, e se a conta global ficou
+   * sem usuário ativo em escola nenhuma e foi limpa (e-mail, senha e segundo fator). Nunca quem, nunca a outra escola.
+   */
+  'usuario.desativado': {
+    entidade: 'usuario',
+    antes: z.strictObject({ papel: z.enum(PAPEIS_DE_USUARIO) }),
+    depois: z.strictObject({
+      desativadoEm: z.iso.datetime(),
+      sessoesEncerradas: z.number().int().nonnegative(),
+      credencialApagada: z.boolean(),
+      contaExternaDesligada: z.boolean(),
+      contaLimpa: z.boolean(),
+    }),
+    finalidade: null,
+  },
+  /**
+   * A escola pediu a eliminação do usuário (17.0; Tech Spec, seção 5, "Ciclo de vida"): o usuário, a credencial por
+   * matrícula, a conta externa, os vínculos e as sessões dele nesta escola saíram de fato. O registro de acesso e a
+   * auditoria ficam, pela retenção legal. `entidadeId` é o id que o usuário tinha; só contagens e sim ou não.
+   */
+  'usuario.eliminado': {
+    entidade: 'usuario',
+    antes: z.strictObject({ papel: z.enum(PAPEIS_DE_USUARIO), desativadoEm: z.iso.datetime().nullable() }),
+    depois: z.strictObject({
+      sessoesApagadas: z.number().int().nonnegative(),
+      vinculosApagados: z.number().int().nonnegative(),
+      credencialApagada: z.boolean(),
+      contaExternaApagada: z.boolean(),
+      contaLimpa: z.boolean(),
+    }),
+    finalidade: null,
+  },
+  /**
+   * A coordenação desligou a conta Google ou Microsoft de um usuário ativo (17.0; decidido na 13.0): a professora cuja
+   * conta foi recriada com outro identificador liga a nova no login seguinte. `entidadeId` é a ligação que saiu; leva o
+   * usuário e o provedor, nunca o e-mail nem o identificador da conta externa.
+   */
+  'conta_externa.desligada': {
+    entidade: 'conta_externa',
+    antes: z.strictObject({ usuarioId: z.uuid(), provedor: z.enum(PROVEDORES_EXTERNOS) }),
+    depois: null,
     finalidade: null,
   },
   /**

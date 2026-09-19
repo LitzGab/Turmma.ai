@@ -17,8 +17,10 @@ const registro = new RegistroDeAuditoria()
  *   de A mexeria no acesso dela em B. Grava-se a recusa na auditoria de A, sem dizer qual escola, e a escola recorre ao
  *   operador;
  * - todos os usuários ativos da conta são desta escola: apaga segredo, ativação, último passo e códigos de
- *   recuperação, e grava `usuario.mfa_redefinido` com a finalidade. No login seguinte, a pessoa configura o MFA de
- *   novo.
+ *   recuperação, encerra as sessões abertas da conta (motivo `mfa_redefinido`, 17.4) e grava `usuario.mfa_redefinido`
+ *   com a finalidade. A redefinição existe para "perdi o celular" e "suspeita de acesso indevido": a sessão aberta no
+ *   aparelho perdido, ou por quem invadiu, cai na requisição seguinte. No login seguinte, a pessoa configura o MFA de
+ *   novo. A resposta e a auditoria não dizem quantas sessões caíram, que podiam ser também de outra escola.
  */
 export class RedefinicaoDeMfa {
   constructor(private readonly banco: Banco) {}
@@ -37,6 +39,7 @@ export class RedefinicaoDeMfa {
         return
       }
       await resolucao.apagarMfa(contaId)
+      await resolucao.encerrarSessoesDaConta(contaId, 'mfa_redefinido')
       await registro.gravar(tx, 'usuario.mfa_redefinido', { entidadeId: alvoId, antes: { mfaAtivo: conta.mfaAtivo }, depois: { mfaAtivo: false }, finalidade })
     })
   }
@@ -48,6 +51,8 @@ export class RedefinicaoDeMfa {
  *
  * - A escola vem do usuário, nunca do argumento, e cada registro é gravado no contexto da escola dele, com
  *   `autor_operador` e a finalidade `pedido_formal_da_escola`.
+ * - As sessões abertas da conta, em todas as escolas, são encerradas na mesma transação (17.4), como na redefinição
+ *   pela coordenação.
  * - A conta é global: o segundo fator dela vale em toda escola em que ela tem usuário ativo. Por isso cada uma dessas
  *   escolas recebe o registro, com o usuário dela como entidade: a coordenação de B também fica sabendo que o MFA do
  *   coordenador dela foi redefinido, sem saber de A.
@@ -65,6 +70,7 @@ export async function redefinirMfaPeloOperador(banco: Banco, operador: string, u
       const conta = await resolucao.travarContaParaRedefinir(contaId)
       if (conta === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
       await resolucao.apagarMfa(contaId)
+      await resolucao.encerrarSessoesDaConta(contaId, 'mfa_redefinido')
       const usuarios = await resolucao.usuariosAtivosDaConta(contaId)
       const porEscola = new Map<string, string>([[alvo.escolaId, usuarioId]])
       for (const ativo of usuarios) if (!porEscola.has(ativo.escolaId)) porEscola.set(ativo.escolaId, ativo.usuarioId)

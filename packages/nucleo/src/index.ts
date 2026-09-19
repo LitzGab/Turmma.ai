@@ -145,6 +145,15 @@ export type { InstanciaRedis } from './telemetria/metricas.js'
 export type { Meter } from '@opentelemetry/api'
 export { FATIAS_DA_PROPORCAO_DO_SEGURO, JANELA_DA_PROPORCAO_DO_SEGURO_MS, ProporcaoEmJanela } from './limite/proporcao-em-janela.js'
 export { ExpurgoDeJobsRepository, instrucaoDoLoteVencido, LOTE_DO_EXPURGO, RETENCAO_JOB_REGISTRO_DIAS } from './retencao/expurgo-de-jobs.repository.js'
+export {
+  ALVOS_DO_EXPURGO_DE_ACESSO,
+  ExpurgoDeAcessoRepository,
+  instrucaoDoLoteDeAcesso,
+  RETENCAO_CONVITE_DIAS,
+  RETENCAO_REGISTRO_ACESSO_MESES,
+  RETENCAO_SESSAO_DIAS,
+} from './retencao/expurgo-de-acesso.repository.js'
+export type { AlvoDoExpurgoDeAcesso } from './retencao/expurgo-de-acesso.repository.js'
 export { rede, TIPOS_DE_REDE } from './db/schema/rede.js'
 export type { TipoDeRede } from './db/schema/rede.js'
 export { escola, FORMATO_SLUG, INATIVIDADE_ALUNO_PADRAO_MIN, INATIVIDADE_EQUIPE_PADRAO_MIN, TAMANHO_MAXIMO_SLUG } from './db/schema/escola.js'

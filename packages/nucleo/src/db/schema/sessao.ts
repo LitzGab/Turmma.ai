@@ -8,7 +8,7 @@ export const METODOS_DE_SESSAO = ['email', 'matricula', 'externo'] as const
 export type MetodoDeSessao = (typeof METODOS_DE_SESSAO)[number]
 
 /** Por que a sessão terminou antes de expirar. As tarefas de saída, troca e desativação acrescentam os delas. */
-export const MOTIVOS_DE_ENCERRAMENTO = ['saida', 'troca_de_escola', 'reuso_de_refresh', 'desativacao'] as const
+export const MOTIVOS_DE_ENCERRAMENTO = ['saida', 'troca_de_escola', 'reuso_de_refresh', 'desativacao', 'mfa_redefinido', 'conta_limpa'] as const
 export type MotivoDeEncerramento = (typeof MOTIVOS_DE_ENCERRAMENTO)[number]
 
 /** Duração absoluta de uma sessão, renovada ou não (Tech Spec, seção 3). */
@@ -51,8 +51,14 @@ export const sessao = pgTable(
     index('sessao_refresh_hash_anterior_idx').on(tabela.refreshHashAnterior),
     // Encerrar as sessões de um usuário (saída de todas, desativação) e a FK composta descem por aqui.
     index('sessao_escola_usuario_idx').on(tabela.escolaId, tabela.usuarioId),
+    // O expurgo de 30 dias (17.0) desce pelo fim da sessão: encerrada, ou só expirada. Encerrar deixa de ser HOT, uma vez
+    // por sessão; a atividade (`ultimo_uso_em`), que é a escrita frequente, continua HOT.
+    index('sessao_fim_idx').on(sql`coalesce(${tabela.encerradaEm}, ${tabela.expiraEm})`),
+    // Encerrar as sessões abertas de uma conta, em todas as escolas (a redefinição do MFA e a limpeza da conta, 17.0),
+    // desce por aqui: só as abertas e só as que têm conta, então o índice fica pequeno.
+    index('sessao_conta_aberta_idx').on(tabela.contaId).where(sql`conta_id is not null and encerrada_em is null`),
     check('sessao_metodo_valido', sql`${tabela.metodo} in ('email', 'matricula', 'externo')`),
-    check('sessao_motivo_valido', sql`${tabela.motivo} is null or ${tabela.motivo} in ('saida', 'troca_de_escola', 'reuso_de_refresh', 'desativacao')`),
+    check('sessao_motivo_valido', sql`${tabela.motivo} is null or ${tabela.motivo} in ('saida', 'troca_de_escola', 'reuso_de_refresh', 'desativacao', 'mfa_redefinido', 'conta_limpa')`),
     check('sessao_motivo_so_encerrada', sql`${tabela.motivo} is null or ${tabela.encerradaEm} is not null`),
   ],
 )

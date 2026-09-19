@@ -47,6 +47,19 @@ export class EscritaDeSessaoRepository {
     return encerradas.length
   }
 
+  /**
+   * Encerra todas as sessões ainda abertas do usuário, só na escola do contexto (a desativação, 17.0): o usuário da
+   * mesma conta em outra escola é outro `usuario_id`, e a sessão dele lá não é alcançada. Devolve quantas encerrou.
+   */
+  async encerrarDoUsuario(usuarioId: string, motivo: MotivoDeEncerramento): Promise<number> {
+    const encerradas = await this.banco
+      .update(sessao)
+      .set({ encerradaEm: sql`now()`, motivo })
+      .where(and(eq(sessao.escolaId, escolaDoContexto()), eq(sessao.usuarioId, usuarioId), isNull(sessao.encerradaEm)))
+      .returning({ id: sessao.id })
+    return encerradas.length
+  }
+
   /** Encerra uma sessão ainda aberta da escola do contexto. Devolve se encerrou. */
   async encerrar(sessaoId: string, motivo: MotivoDeEncerramento): Promise<boolean> {
     const encerradas = await this.banco

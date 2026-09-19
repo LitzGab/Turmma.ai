@@ -1,10 +1,10 @@
 import 'reflect-metadata'
-import { criarLogger } from '@educa/nucleo'
+import { criarLogger, EmissorDeToken } from '@educa/nucleo'
 import { CodigoDeErro, type PapelDeUsuario } from '@educa/shared'
 import type { INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import type { Redis } from 'ioredis'
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 import { Secret, TOTP } from 'otpauth'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -192,6 +192,32 @@ describe('MFA do coordenador: configurar, ativar, entrar com o código e redefin
     const [linha] = rows
     if (linha === undefined) throw new Error('conta não encontrada')
     return { ativo: linha.ativo, segredo: linha.segredo, passo: linha.passo, codigos: Number(linha.codigos) }
+  }
+
+  /**
+   * Uma sessão de e-mail aberta do usuário da conta, como o login a deixa, e o token dela: é a sessão no aparelho que se
+   * perdeu. Devolve o id e o token.
+   */
+  async function sessaoAberta(contaId: string, escolaId: string, usuarioId: string): Promise<{ sessaoId: string; token: string }> {
+    const { rows } = await bancada.pool.query<{ id: string }>(
+      "insert into sessao (escola_id, conta_id, usuario_id, metodo, familia, refresh_hash, expira_em) values ($1, $2, $3, 'email', uuidv7(), $4, now() + interval '12 hours') returning id",
+      [escolaId, contaId, usuarioId, randomBytes(32).toString('hex')],
+    )
+    const sessaoId = rows[0]?.id ?? ''
+    const { token } = await new EmissorDeToken(configuracao.identidade.chaveAssinatura).emitir({ escolaId, usuarioId, sessaoId })
+    return { sessaoId, token }
+  }
+
+  /** A situação da sessão no banco: se foi encerrada, e com que motivo. */
+  async function situacaoDaSessao(sessaoId: string): Promise<{ encerrada: boolean; motivo: string | null }> {
+    const { rows } = await bancada.pool.query<{ encerrada: boolean; motivo: string | null }>('select encerrada_em is not null as encerrada, motivo from sessao where id = $1', [sessaoId])
+    const [linha] = rows
+    if (linha === undefined) throw new Error('sessão não encontrada')
+    return linha
+  }
+
+  async function obterEu(token: string): Promise<number> {
+    return (await fetch(`${url}/v1/eu`, { headers: { Authorization: `Bearer ${token}` } })).status
   }
 
   async function auditoriaDeMfa(escolaId: string): Promise<Array<Record<string, unknown>>> {
@@ -476,6 +502,54 @@ describe('MFA do coordenador: configurar, ativar, entrar com o código e redefin
       await desafioDoLogin(soDeB, 'mfa')
     })
 
+    it('caminho feliz (17.4): o coordenador com sessão aberta tem o MFA redefinido pela coordenação, e a requisição seguinte com aquela sessão dá 401; quem pediu segue entrando', async () => {
+      const escolaA = await bancada.escola()
+      const coordenacaoDeA = await bancada.sessao(escolaA, 'coordenador')
+      const alvo = await pessoa(escolaA)
+      await comMfaAtivo(alvo)
+      // Duas sessões abertas da conta: o computador da escola e o aparelho que se perdeu.
+      const [noComputador, noAparelho] = [await sessaoAberta(alvo.contaId, escolaA, alvo.usuarioId), await sessaoAberta(alvo.contaId, escolaA, alvo.usuarioId)]
+      for (const aberta of [noComputador, noAparelho]) expect(await obterEu(aberta.token)).toBe(200)
+
+      const resposta = await comDesafio(`/v1/usuarios/${alvo.usuarioId}/mfa/redefinir`, coordenacaoDeA.token, { finalidade: 'autenticador_perdido' })
+      expect(resposta.status).toBe(202)
+      expect(resposta.corpo).toEqual({})
+
+      for (const aberta of [noComputador, noAparelho]) {
+        expect(await obterEu(aberta.token)).toBe(401)
+        expect(await situacaoDaSessao(aberta.sessaoId)).toEqual({ encerrada: true, motivo: 'mfa_redefinido' })
+      }
+      expect(await obterEu(coordenacaoDeA.token)).toBe(200)
+      // A auditoria da escola não diz quantas sessões caíram: podiam ser também de outra escola.
+      expect((await auditoriaDeMfa(escolaA)).map((linha) => linha['depois'])).toEqual([{ mfaAtivo: false }])
+    })
+
+    it('isolamento (17.4): redefinir o MFA de um usuário de A não encerra a sessão de um usuário de B, nem as da conta que também está em B e teve a redefinição recusada', async () => {
+      const escolaA = await bancada.escola()
+      const escolaB = await bancada.escola()
+      const coordenacaoDeA = await bancada.sessao(escolaA, 'coordenador')
+      const soDeA = await pessoa(escolaA)
+      const soDeB = await pessoa(escolaB)
+      const emAeB = await pessoa(escolaA)
+      const emAeBnaB = await naOutraEscola(emAeB, escolaB)
+      for (const quem of [soDeA, soDeB, emAeB]) await comMfaAtivo(quem)
+      const deA = await sessaoAberta(soDeA.contaId, escolaA, soDeA.usuarioId)
+      const deB = await sessaoAberta(soDeB.contaId, escolaB, soDeB.usuarioId)
+      const recusadaEmA = await sessaoAberta(emAeB.contaId, escolaA, emAeB.usuarioId)
+      const recusadaEmB = await sessaoAberta(emAeB.contaId, escolaB, emAeBnaB)
+
+      for (const id of [soDeA.usuarioId, soDeB.usuarioId, emAeB.usuarioId]) {
+        expect((await comDesafio(`/v1/usuarios/${id}/mfa/redefinir`, coordenacaoDeA.token, { finalidade: 'autenticador_perdido' })).status).toBe(202)
+      }
+
+      expect(await situacaoDaSessao(deA.sessaoId)).toEqual({ encerrada: true, motivo: 'mfa_redefinido' })
+      for (const aberta of [deB, recusadaEmA, recusadaEmB]) {
+        expect(await situacaoDaSessao(aberta.sessaoId)).toEqual({ encerrada: false, motivo: null })
+        expect(await obterEu(aberta.token)).toBe(200)
+      }
+      expect(await auditoriaDeMfa(escolaB)).toEqual([])
+    })
+
     it('borda: o próprio coordenador, o alvo desativado e o aluno sem conta dão 202 sem efeito e sem registro', async () => {
       const escolaId = await bancada.escola()
       const coordenacao = await bancada.sessao(escolaId, 'coordenador')
@@ -549,6 +623,25 @@ describe('MFA do coordenador: configurar, ativar, entrar com o código e redefin
           },
         ])
       }
+    })
+
+    it('caminho feliz (17.4): a redefinição pelo operador encerra as sessões abertas da conta em A e em B, e as duas dão 401; a sessão de outra pessoa continua', async () => {
+      const escolaA = await bancada.escola()
+      const escolaB = await bancada.escola()
+      const coordenador = await pessoa(escolaA)
+      const usuarioEmB = await naOutraEscola(coordenador, escolaB)
+      await comMfaAtivo(coordenador)
+      const emA = await sessaoAberta(coordenador.contaId, escolaA, coordenador.usuarioId)
+      const emB = await sessaoAberta(coordenador.contaId, escolaB, usuarioEmB)
+      const outraPessoa = await pessoa(escolaA)
+      const daOutra = await sessaoAberta(outraPessoa.contaId, escolaA, outraPessoa.usuarioId)
+
+      expect(await rodar(['--usuario', coordenador.usuarioId, '--pedido', '88'])).toEqual({ codigo: 0, saida: 'ok\n', erro: '' })
+      for (const aberta of [emA, emB]) {
+        expect(await obterEu(aberta.token)).toBe(401)
+        expect(await situacaoDaSessao(aberta.sessaoId)).toEqual({ encerrada: true, motivo: 'mfa_redefinido' })
+      }
+      expect(await obterEu(daOutra.token)).toBe(200)
     })
 
     it('usuário desativado e aluno sem conta saem com NAO_ENCONTRADO, e o MFA do desativado não muda', async () => {

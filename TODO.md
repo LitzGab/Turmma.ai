@@ -36,7 +36,7 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       mais realista), e região de processamento (D29)
 - [ ] Provedor de modelo de reserva configurado e testado
 - [ ] Antes da primeira escola real: alerta para rotina do sistema que parou de rodar
-      (`sistema.consolidar-uso`, `sistema.expurgar-jobs`), por exemplo métrica com o horário do
+      (`sistema.consolidar-uso`, `sistema.expurgar-jobs`, `sistema.expurgar-acesso` da 17.0), por exemplo métrica com o horário do
       último sucesso e regra `time() - x > 26h`, com entrada no `docs/runbook.md` (pendência da 11.0
       registrada na 13.0; dono: Joaquim)
 - [ ] Rodar a avaliação de `docs/avaliacao-de-modelos.md` com Maritaca e Gemini (D37)

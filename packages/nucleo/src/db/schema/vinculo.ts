@@ -15,7 +15,9 @@ const SEM_DISCIPLINA = '00000000-0000-0000-0000-000000000000'
  *
  * - A escola cria (`criado_por`), e nasce `pendente`. O professor confirma ou contesta; a coordenação encerra.
  * - FK composta `(escola_id, ano_letivo_id, turma_id)` para a turma: o vínculo é do ano da turma, e nunca aponta para a
- *   turma de outra escola nem de outro ano. Usuário, disciplina e autor também vão por FK composta com a escola.
+ *   turma de outra escola nem de outro ano. Usuário e disciplina também vão por FK composta com a escola. O autor
+ *   (`criado_por`) é conferido na gravação pelo gatilho `vinculo_criado_por_da_escola_fk` (migration 0013), e não por
+ *   FK: a eliminação do coordenador que criou o vínculo não apaga o vínculo de outra pessoa (17.0).
  * - Índice único parcial `(escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id)` fora do `encerrado`: o mesmo
  *   vínculo criado duas vezes ao mesmo tempo resulta em um só (regra 80, item 7). A disciplina ausente conta como uma
  *   só (`coalesce`), porque no índice comum dois nulos não colidem.
@@ -54,7 +56,6 @@ export const vinculo = pgTable(
     }),
     foreignKey({ name: 'vinculo_usuario_da_escola_fk', columns: [tabela.escolaId, tabela.usuarioId], foreignColumns: [usuario.escolaId, usuario.id] }),
     foreignKey({ name: 'vinculo_disciplina_da_escola_fk', columns: [tabela.escolaId, tabela.disciplinaId], foreignColumns: [disciplina.escolaId, disciplina.id] }),
-    foreignKey({ name: 'vinculo_criado_por_da_escola_fk', columns: [tabela.escolaId, tabela.criadoPor], foreignColumns: [usuario.escolaId, usuario.id] }),
     uniqueIndex('vinculo_ativo_unico')
       .on(tabela.escolaId, tabela.anoLetivoId, tabela.usuarioId, tabela.turmaId, sql`coalesce(${tabela.disciplinaId}, ${sql.raw(`'${SEM_DISCIPLINA}'::uuid`)})`)
       .where(sql`${tabela.estado} <> 'encerrado'`),

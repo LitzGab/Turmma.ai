@@ -29,9 +29,10 @@ export class SessaoDeOrigemRepository {
   /**
    * Encerra a sessão de origem com motivo `troca_de_escola`, só se ela ainda está aberta, é de e-mail e é da conta que
    * troca. É o `update` condicional que decide a corrida: duas trocas com a mesma sessão esperam uma pela outra na
-   * trava da linha, e a segunda, relendo, já a acha encerrada (regra 80, item 7). Devolve se encerrou.
+   * trava da linha, e a segunda, relendo, já a acha encerrada (regra 80, item 7). Devolve o usuário da sessão encerrada,
+   * para a `saida` do registro de acesso da origem (17.5), ou `undefined` se não encerrou.
    */
-  async encerrarParaTroca(sessaoId: string, contaId: string): Promise<boolean> {
+  async encerrarParaTroca(sessaoId: string, contaId: string): Promise<string | undefined> {
     const encerradas = await this.banco
       .update(sessao)
       .set({ encerradaEm: sql`now()`, motivo: 'troca_de_escola' })
@@ -44,7 +45,7 @@ export class SessaoDeOrigemRepository {
           isNull(sessao.encerradaEm),
         ),
       )
-      .returning({ id: sessao.id })
-    return encerradas.length === 1
+      .returning({ usuarioId: sessao.usuarioId })
+    return encerradas[0]?.usuarioId
   }
 }

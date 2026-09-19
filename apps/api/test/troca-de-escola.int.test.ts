@@ -196,6 +196,12 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
     return unica
   }
 
+  /** O registro de acesso da escola, em ordem: só evento e usuário. */
+  async function registroDe(escolaId: string): Promise<Array<{ evento: string; usuario_id: string | null }>> {
+    const { rows } = await bancada.pool.query<{ evento: string; usuario_id: string | null }>('select evento, usuario_id from registro_acesso where escola_id = $1 order by em, id', [escolaId])
+    return rows
+  }
+
   function esperarNaoEncontrado(resposta: Resposta): void {
     expect(resposta.status).toBe(404)
     expect(resposta.corpo.erro?.codigo).toBe(CodigoDeErro.NAO_ENCONTRADO)
@@ -249,6 +255,11 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
 
     const { rows: registroB } = await bancada.pool.query<{ evento: string; usuario_id: string }>('select evento, usuario_id from registro_acesso where escola_id = $1', [b.id])
     expect(registroB).toEqual([{ evento: 'login', usuario_id: emB }])
+    // A saída de A fica no registro de acesso de A (17.5), só com o usuário de A: a sessão sai em 30 dias, o registro fica 6 meses.
+    expect(await registroDe(a.id)).toEqual([
+      { evento: 'login', usuario_id: professora.usuarioId },
+      { evento: 'saida', usuario_id: professora.usuarioId },
+    ])
 
     // Nada do fluxo foi para o log: nem o e-mail, nem o desafio, nem os tokens, nem os cookies.
     const log = linhasDeLog.join('\n')
@@ -386,6 +397,30 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
     expect(await sessaoUnica(b.id, coordenadoraEmB)).toMatchObject({ metodo: 'email', encerrada_em: null })
     const { rows: registroB } = await bancada.pool.query<{ evento: string; usuario_id: string }>('select evento, usuario_id from registro_acesso where escola_id = $1', [b.id])
     expect(registroB).toEqual([{ evento: 'login', usuario_id: coordenadoraEmB }])
+  })
+
+  it('borda (17.5): com o código do MFA recusado na troca para a coordenação de B, nada é gravado em A nem em B; com o código certo, saida em A e login em B, cada um só com o usuário da própria escola', async () => {
+    const a = await escola('Colégio')
+    const b = await escola('Escola da rede')
+    const professora = await pessoa(a.id)
+    const coordenadoraEmB = await naOutraEscola(professora, b.id, 'coordenador')
+    const segredo = await comMfaAtivo(professora)
+    const tokenA = await entrarComo(professora, professora.usuarioId)
+    const antesDaTroca = await registroDe(a.id)
+    expect(antesDaTroca).toEqual([{ evento: 'login', usuario_id: professora.usuarioId }])
+
+    const troca = await escolherEscola(tokenA, coordenadoraEmB)
+    expect(troca.corpo['etapa']).toBe('mfa')
+    const codigoCerto = codigoDeAgora(segredo)
+    const recusado = await segundoFator(texto(troca.corpo['desafio']), codigoCerto === '000000' ? '111111' : '000000')
+    expect(recusado.status).toBe(401)
+    expect(await registroDe(a.id)).toEqual(antesDaTroca)
+    expect(await registroDe(b.id)).toEqual([])
+    expect((await sessaoUnica(a.id, professora.usuarioId)).encerrada_em).toBeNull()
+
+    expect((await segundoFator(texto(troca.corpo['desafio']), codigoCerto)).corpo['etapa']).toBe('pronta')
+    expect(await registroDe(a.id)).toEqual([...antesDaTroca, { evento: 'saida', usuario_id: professora.usuarioId }])
+    expect(await registroDe(b.id)).toEqual([{ evento: 'login', usuario_id: coordenadoraEmB }])
   })
 
   it('borda: coordenadora em A trocando para a coordenação de B também informa o código; sem MFA configurado, a troca leva a configurar_mfa e não encerra A', async () => {
@@ -598,6 +633,8 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
     expect(origem.motivo).toBe('troca_de_escola')
     const { rows } = await bancada.pool.query<{ total: string }>("select count(*) as total from registro_acesso where escola_id = $1 and evento = 'login'", [b.id])
     expect(Number(rows[0]?.total)).toBe(1)
+    // A saída da origem também uma vez só (17.5): a troca que perdeu a corrida desfaz tudo o que gravou.
+    expect((await registroDe(a.id)).filter((linha) => linha.evento === 'saida')).toEqual([{ evento: 'saida', usuario_id: professora.usuarioId }])
   })
 
   it('concorrência: duas escolhas em paralelo com o mesmo desafio escolher abrem uma sessão só', async () => {

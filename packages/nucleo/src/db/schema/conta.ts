@@ -18,12 +18,15 @@ const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' })
  * - Aluno não tem conta: não tem e-mail no sistema (regra 20, item 2).
  * - Hash, segredo e passo do TOTP nunca saem em DTO nem em log (`docs/lgpd.md`); as colunas de MFA ficam vazias
  *   até a tarefa 6.0.
+ * - `email` só é nulo na conta limpa (tarefa 17.0): quando ela deixa de ter usuário ativo em escola nenhuma, e-mail,
+ *   senha e segundo fator saem, e fica só o id, que os usuários desativados dela ainda apontam. O `unique` aceita
+ *   vários nulos, e o check de formato passa com nulo.
  */
 export const conta = pgTable(
   'conta',
   {
     id: uuid().primaryKey().default(sql`uuidv7()`),
-    email: citext().notNull().unique('conta_email_unico'),
+    email: citext().unique('conta_email_unico'),
     senhaHash: text(),
     mfaSegredoCifrado: bytea(),
     mfaChaveVersao: smallint(),

@@ -54,8 +54,8 @@ ano_letivo    E  ano, inicio, fim, situacao (planejado|em_curso|encerrado); uniq
 serie         E  etapa (ef_anos_finais|em), ano; check 6–9 | 1–3; unique (E, etapa, ano)
 disciplina    E  nome, area? (área da BNCC); unique (E, lower(nome))
 turma         EA serie_id, nome, turno? (manha|tarde|noite|integral); unique (E, A, lower(nome))
-conta            email citext unique, senha_hash?, mfa_segredo_cifrado?, mfa_chave_versao?,
-                 mfa_ativado_em?, mfa_ultimo_passo?
+conta            email citext? unique (nulo só na conta limpa, 17.0), senha_hash?, mfa_segredo_cifrado?,
+                 mfa_chave_versao?, mfa_ativado_em?, mfa_ultimo_passo?
 codigo_recuperacao  conta_id, hmac, usado_em?
 usuario       E  conta_id? (nulo só para aluno), papel (coordenador|professor|aluno), nome, desativado_em?
                  unique (E, conta_id, papel)
@@ -72,9 +72,13 @@ vinculo       EA usuario_id, turma_id, disciplina_id?, papel, estado (pendente|c
                  índices (E, A, usuario_id, estado), (E, A, turma_id, estado)
 sessao        E  conta_id?, usuario_id, metodo (email|matricula|externo), familia, refresh_hash unique,
                  refresh_hash_anterior? (índice), atual_apresentado bool, rotacionado_em?,
-                 ultimo_uso_em, expira_em (12 h), encerrada_em?, motivo?; fillfactor 70
+                 ultimo_uso_em, expira_em (12 h), encerrada_em?, motivo? (saida|troca_de_escola|reuso_de_refresh|
+                 desativacao|mfa_redefinido|conta_limpa); índices (coalesce(encerrada_em, expira_em)) do expurgo e
+                 parcial (conta_id) where conta_id is not null and encerrada_em is null, das sessões da conta (17.0);
+                 fillfactor 70
 convite       E  token_hash unique, tipo (coordenador), usuario_id, expira_em (72 h), usado_em?, revogado_em?
-registro_acesso E? usuario_id?, evento (login|login_falho|renovacao|saida), ip, em; índice (E, em)
+registro_acesso E? usuario_id?, evento (login|login_falho|renovacao|saida), ip, em; índices (E, em) e (em), este do
+                 expurgo (17.0)
                  check (escola_id is not null or (evento = 'login_falho' and usuario_id is null))
 auditoria     E  autor_usuario_id?, autor_operador?, acao, entidade, entidade_id, antes?, depois?,
                  finalidade?, requisicao_id, em
@@ -89,6 +93,13 @@ segundo `sujeito` com o mesmo e-mail (RF9); a professora cuja conta Google foi r
 depois que a coordenação desligar a antiga (eliminação da `conta_externa` na 17.0). O domínio retirado não é apagado:
 ganha `removido_em`, e a auditoria `escola.provedores_alterados` guarda os ids das linhas por provedor, não o texto do
 domínio, que a conferência da auditoria recusa como texto livre.
+
+**Autor da auditoria e do vínculo (decidido na 17.0).** `auditoria.autor_usuario_id` e `vinculo.criado_por` deixaram de
+ser FK composta e passaram a ser conferidos na gravação por gatilho (`exigir_usuario_da_escola`, migration 0013), com o
+mesmo erro e o mesmo nome de restrição (`auditoria_autor_da_escola_fk`, `vinculo_criado_por_da_escola_fk`) e a linha do
+autor travada com `for key share`, como a FK faz. Motivo: a eliminação pedida pela escola apaga o usuário, e a auditoria
+fica pela retenção legal com o id de quem fez; a FK barraria a eliminação de quem já confirmou um vínculo, e o `set null`
+apagaria o autor que a auditoria precisa mostrar. A garantia na escrita (autor existe e é da mesma escola) continua.
 
 **Auditoria.** `antes` e `depois` seguem uma lista fechada por ação: ids, estados e datas. Um
 teste recusa `nome`, `email`, `matricula`, `complemento`, `hash` e `segredo`.
@@ -110,6 +121,7 @@ A numeração segue a ordem das tarefas (`tasks.md`), uma migration por tarefa q
 | 8.0 | `serie`, `disciplina`, `turma` |
 | 9.0 | `vinculo` |
 | 11.0, 13.0 | `credencial_matricula`; `conta_externa`, `provedor_escola` |
+| 17.0 | não cria tabela: `conta.email` aceita nulo, o motivo `mfa_redefinido`, os índices do expurgo e o gatilho do autor |
 
 No deploy do F1 inteiro, todas rodam numa transação só, e a trava de `job_registro` fica do
 `ALTER` da 3.0 até o commit, depois de DDL de tabelas vazias (milissegundos). Vale o `lock_timeout` de 5 s com 3 tentativas do F0. O `VALIDATE`
@@ -246,6 +258,7 @@ andamento não vence por inatividade (F6).
 - O passo precisa ser maior que `mfa_ultimo_passo`, num `update` condicional.
 - 10 códigos de recuperação, com HMAC de chave própria.
 - `redefinir` responde 202 sempre. Só age se todos os usuários ativos da conta forem da escola do contexto; senão, grava a recusa em auditoria e a escola recorre a `ops:redefinir-mfa`.
+- **A redefinição encerra as sessões abertas da conta** (decidido em 18/09/2026, feito na 17.4), pela coordenação e pelo operador, em todas as escolas da conta, na mesma transação e com motivo `mfa_redefinido`: a redefinição existe para "perdi o celular" e "suspeita de acesso indevido", e a sessão aberta no aparelho perdido cai na requisição seguinte (401). Pela coordenação, isso só acontece quando todos os usuários ativos da conta são da escola que pediu; a resposta e a auditoria não dizem quantas sessões caíram.
 
 **Vínculo.** Confirmar e contestar são `update … where id and usuario_id=ctx and estado in
 ('pendente','contestado')`, com auditoria na transação. A tela do `complemento` avisa "não
@@ -276,11 +289,14 @@ expira_em > now()`.
 - O convite vai para um arquivo 0600.
 - `ops:redefinir-mfa` recebe `usuarioId` e a referência do pedido, e responde ok ou erro.
 
-**Ciclo de vida.**
-- **Desativar aluno:** apaga o `senha_hash` da `credencial_matricula` e as sessões.
-- **Desativar o último usuário de uma conta:** apaga e-mail, senha, segredo, códigos e sessões, com auditoria.
-- **Eliminação pedida pela escola A:** apaga só o que é de A (usuário, `credencial_matricula`, `conta_externa`, vínculos, sessões). Se era o último usuário da conta, dispara a mesma limpeza da conta, com auditoria. `registro_acesso` e `auditoria` ficam pela retenção legal.
-- **`sistema.expurgar-acesso`, de madrugada:** apaga `registro_acesso` com mais de 6 meses, sessão com `coalesce(encerrada_em, expira_em)` de mais de 30 dias e convite 30 dias depois de usado, revogado ou expirado.
+**Ciclo de vida.** Serviço de domínio `CicloDeVidaService` (17.0), sem rota no F1: a tela é do F2 e o pedido do titular do F3. Cada ação é uma transação, com a auditoria dentro, na escola do contexto; o autor é a pessoa da sessão ou o operador. Id de outra escola, de ninguém, o próprio ou, na desativação, já desativado: `NAO_ENCONTRADO`. As travas vão na ordem usuário, conta, sessões.
+- **Desativar (aluno ou equipe):** `usuario.desativado_em`, encerra as sessões dele nesta escola (motivo `desativacao`), apaga o `senha_hash` da `credencial_matricula` (a linha e a matrícula ficam) e desliga a `conta_externa` dele nesta escola (a retenção do identificador é "enquanto houver vínculo", `docs/lgpd.md`). Auditoria `usuario.desativado`, só com contagens e sim ou não.
+- **Limpeza da conta:** com a conta travada (`FOR UPDATE`), se ela não tem usuário ativo em escola nenhuma nem usuário esperando convite ainda válido, apaga e-mail, senha, segredo, passo e códigos, e encerra as sessões que restarem com motivo `conta_limpa` (saem pelo expurgo de 30 dias, a retenção da sessão; o encerramento desce pelo índice parcial de `conta_id`). Se um convite segurava a conta, o `sistema.expurgar-acesso` a limpa pelo mesmo critério na madrugada depois de o convite vencer ou ser revogado. A linha fica só com o id, que os usuários desativados ainda apontam. O convite válido segura a conta porque, sem o e-mail, o aceite dele deixaria alguém com senha e sem login. Duas desativações da mesma conta, em A e em B, esperam uma pela outra na conta, e a segunda limpa.
+- **Eliminação pedida pela escola A:** apaga só o que é de A (usuário, `credencial_matricula`, `conta_externa`, vínculos, sessões; o convite sai em cascata). Se era o último usuário da conta, a mesma limpeza da conta. `registro_acesso` e `auditoria` ficam pela retenção legal, com o id; o vínculo de outra pessoa que o eliminado criou também fica (seção 3, "Autor"). Auditoria `usuario.eliminado`.
+- **Desligar a conta externa** de um usuário ativo (decidido na 13.0, feito na 17.0): apaga a `conta_externa`, e o professor liga a nova no login seguinte. Auditoria `conta_externa.desligada`.
+- **Desafio emitido antes da limpeza:** a conta sem e-mail não é achada por `mfaDaConta`, e o código certo responde `NAO_AUTENTICADO`.
+- **`sistema.expurgar-acesso`, às 4h30 de São Paulo** (uma hora depois de `expurgar-jobs` e duas e meia antes do primeiro turno), na fila de lote e não urgente: apaga `registro_acesso` com mais de 6 meses (inclusive a falha sem escola), sessão com `coalesce(encerrada_em, expira_em)` de mais de 30 dias e convite 30 dias depois do primeiro entre usado, revogado ou expirado (`least`). Depois, limpa em lotes as contas da equipe sem usuário ativo e sem convite válido (as que um convite segurava na desativação), em duas instruções numa transação: a primeira trava as candidatas (`for update skip locked`), a segunda reconfere o critério com a visão de depois da trava e só então limpa (numa instrução só, um convite com commit entre o começo dela e a trava não seria visto). O convite trava a conta existente (`contaParaConvite`, `FOR NO KEY UPDATE`): o lote a pula, e o convite que chega depois da trava do lote cria outra conta. Lotes de 5.000 com `for update skip locked`, como o expurgo de jobs do F0; o corte vem do relógio do worker, lido uma vez por execução. Registro e sessão descem pelos índices `registro_acesso_em_idx` e `sessao_fim_idx`; o convite, um por coordenador convidado, não tem índice próprio.
+- **Troca de escola:** grava `saida` no registro de acesso da origem, com o usuário da origem (17.5).
 
 ## 6. Isolamento (obrigatório)
 
@@ -303,11 +319,12 @@ antes de existir escola ou que toca a conta global.
 | Criar a conta da equipe (e-mail, sem ler conta existente): convite do coordenador (7.0) e `ops:sessao-sintetica` local | a credencial é global e não tem escola; devolve só o id |
 | Ler a escola e a conta de um usuário pelo id (`escolaDoUsuarioParaOperador`), só no `ops:redefinir-mfa` | rotina do operador: o comando recebe só o `usuarioId` do pedido formal, e a escola que vira o contexto vem do banco, nunca do argumento; devolve escola, conta e se está ativo, nunca o nome (6.0) |
 | Escrever na conta, por `conta_id` já verificado: senha no aceite do convite, configurar e ativar MFA, `mfa_ultimo_passo`, consumir código de recuperação, redefinir MFA, limpeza da conta | a credencial é global; o `conta_id` vem do desafio ou da sessão verificados, nunca do cliente |
+| Travar a conta, conferir se ela ainda serve a alguma escola e limpá-la (`travarConta`, `limparContaSemUso`), e encerrar as sessões dela em todas as escolas (`encerrarSessoesDaConta`) | a credencial é global: o `conta_id` vem do usuário da escola do contexto (desativação e eliminação) ou da conta já travada na redefinição do MFA; devolvem só se limpou ou quantas (17.0) |
 
-O item 9 fala em três exceções por módulo, e aqui são mais de dez métodos (13 depois da 6.0, 20 depois da 7.0, 21 depois da 12.0 e 22 depois da 15.0; a contagem cresce com as tarefas, e a lista que vale é a própria classe, com uma justificativa em cada `@SemEscopo`). O motivo: essa classe é a
+O item 9 fala em três exceções por módulo, e aqui são mais de dez métodos (13 depois da 6.0, 20 depois da 7.0, 21 depois da 12.0, 22 depois da 15.0 e 25 depois da 17.0; a contagem cresce com as tarefas, e a lista que vale é a própria classe, com uma justificativa em cada `@SemEscopo`). O motivo: essa classe é a
 própria fronteira da resolução de tenant, a única do sistema, e há teste de que só o módulo
 `sessao` a importa. Fora dela, `@SemEscopo` só aparece em `sistema.expurgar-acesso`
-(`retencao`, como no F0) e no `RedeEEscolaRepository` do `ops:escola`, com dois métodos (criar rede,
+(`retencao`, como no F0: o lote vencido de cada tabela e a limpeza das contas sem uso, 17.0; com o expurgo de jobs, são três métodos no módulo, todos rotina nossa sem requisição de escola, e por isso a terceira exceção do item 9 não aponta desenho errado) e no `RedeEEscolaRepository` do `ops:escola`, com dois métodos (criar rede,
 que fica acima do tenant, e criar escola, que é o tenant nascendo): só inserem e devolvem o id, e um
 teste prova que nenhum outro código cria rede ou escola (1.0).
 
@@ -432,7 +449,7 @@ migram na mesma tarefa, e o helper cria a escola antes do job, por causa da FK.
 | Regra | Como é atendida | Desvio e justificativa |
 |---|---|---|
 | 00 | controller fino, porta externa, `oidc-falso` no compose | — |
-| 10 | seção 6, FKs compostas, contexto de escola sem usuário | `conta` sem escola; os métodos `@SemEscopo` da fronteira de resolução (22 depois da 15.0); `registro_acesso` com escola nula na falha por e-mail |
+| 10 | seção 6, FKs compostas, contexto de escola sem usuário | `conta` sem escola; os métodos `@SemEscopo` da fronteira de resolução (25 depois da 17.0); `registro_acesso` com escola nula na falha por e-mail |
 | 20 | aluno sem e-mail; claims descartadas; registro de acesso; auditoria fechada; expurgo | — |
 | 40, 50, 60 | seções 9 e 10; token em memória; vínculo só confirmado | — |
 | 80 | guardas em ordem; baldes por escola; 503 no lugar de logout; cenário | sessão no Postgres, e não no Redis (item 5): o Redis de cache é `allkeys-lru` e expulsaria sessão no meio da aula |

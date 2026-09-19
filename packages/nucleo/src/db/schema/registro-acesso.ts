@@ -13,7 +13,8 @@ export type EventoDeAcesso = (typeof EVENTOS_DE_ACESSO)[number]
  *   o check garante no banco.
  * - `usuario_id` fica sem FK: o registro fica pela retenção legal mesmo depois de a escola eliminar o usuário
  *   (Tech Spec, seção 5, "Ciclo de vida").
- * - O índice começa pela escola (regra 80, item 8): o expurgo e a consulta são "a escola, num período".
+ * - O índice `(escola_id, em)` começa pela escola (regra 80, item 8): a consulta é "a escola, num período". O
+ *   `(em)` é do expurgo de 6 meses (17.0), que vale para todas as escolas e para a falha sem escola.
  */
 export const registroAcesso = pgTable(
   'registro_acesso',
@@ -27,6 +28,7 @@ export const registroAcesso = pgTable(
   },
   (tabela) => [
     index('registro_acesso_escola_em_idx').on(tabela.escolaId, tabela.em),
+    index('registro_acesso_em_idx').on(tabela.em),
     check('registro_acesso_evento_valido', sql`${tabela.evento} in ('login', 'login_falho', 'renovacao', 'saida')`),
     check('registro_acesso_escola_so_falta_na_falha_sem_usuario', sql`escola_id is not null or (evento = 'login_falho' and usuario_id is null)`),
   ],

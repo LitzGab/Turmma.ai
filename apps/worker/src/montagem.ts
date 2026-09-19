@@ -9,6 +9,7 @@ import {
   criarPool,
   EfeitoSinteticoRepository,
   Enfileirador,
+  ExpurgoDeAcessoRepository,
   ExpurgoDeJobsRepository,
   JobRegistroRepository,
   METRICAS,
@@ -36,6 +37,7 @@ import { AGENDAMENTOS, criarDisparoDeAgendamento, FILA_DOS_AGENDAMENTOS, registr
 import type { ConfiguracaoStorage, ConfiguracaoWorker } from './config.js'
 import { AvisoDeVagaLivre, ExecutorDeJobs, type Processador } from './executor.js'
 import { criarConsolidacaoDeUso, TIPO_CONSOLIDAR_USO } from './processadores/consolidar-uso.js'
+import { criarExpurgoDeAcesso, TIPO_EXPURGAR_ACESSO } from './processadores/expurgar-acesso.js'
 import { criarExpurgoDeJobs, TIPO_EXPURGAR_JOBS } from './processadores/expurgar-jobs.js'
 import { criarProcessadorSintetico, SandboxDeCpu } from './processadores/sintetico.js'
 import { criarClienteS3, MedidorDeStorage } from './storage/medidor-de-storage.js'
@@ -53,7 +55,7 @@ export interface OpcoesDaMontagem {
   intervaloRenovacaoDaVagaMs?: number
   /** Validade da vaga. Só o teste troca, para ver a vaga vencer sem esperar 60 s. */
   validadeDaVagaMs?: number
-  /** Relógio do dia de uso (contador e consolidação). Só o teste troca, para marcar às 23h59 e consolidar às 2h. */
+  /** Relógio do dia de uso (contador e consolidação) e do corte do expurgo do acesso. Só o teste troca, para marcar às 23h59 e consolidar às 2h. */
   relogio?: Relogio
   /** Agendamentos registrados na réplica de lote. Só o teste troca, para não esperar as 2h. */
   agendamentos?: readonly Agendamento[]
@@ -191,8 +193,8 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
 }
 
 /**
- * As rotinas do sistema, que só a réplica de lote executa: consolidação de uso (com o storage) e
- * expurgo de `job_registro`.
+ * As rotinas do sistema, que só a réplica de lote executa: consolidação de uso (com o storage),
+ * expurgo de `job_registro` e expurgo do acesso (registro de acesso, sessão e convite, 17.0).
  */
 function montarRotinas(
   storage: ConfiguracaoStorage,
@@ -212,6 +214,7 @@ function montarRotinas(
         logger,
       }),
       [TIPO_EXPURGAR_JOBS]: criarExpurgoDeJobs({ repositorio: new ExpurgoDeJobsRepository(banco), logger }),
+      [TIPO_EXPURGAR_ACESSO]: criarExpurgoDeAcesso({ repositorio: new ExpurgoDeAcessoRepository(banco), relogio, logger }),
     },
     encerrar: () => s3.destroy(),
   }
