@@ -18,11 +18,15 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       família sai da fase posterior (**bloqueia o PRD do F9**, `docs/regulacao.md` 2.2);
       **(b)** como os arts. 17 e 18 (supervisão parental) se modulam pelo art. 39 no nosso
       caso; **(c)** a aferição de idade pela série informada pela escola basta, com o art. 24
-      do Decreto 12.880 como fundamento de proporcionalidade?
+      do Decreto 12.880 como fundamento de proporcionalidade? **(d)** ligar a busca do Tutor em
+      fontes aprovadas para aluno de até 16 anos, sem conta de responsável vinculada, conta
+      como rebaixar a proteção (art. 24, § 5º; D68)? **(e)** a contagem de saídas da aba
+      durante avaliação é proporcional, e algo parecido pode existir fora de avaliação (D70)?
 - [ ] **Avaliação de Impacto Algorítmico** escrita para cada funcionalidade de alto risco —
       Tutor, correção de objetiva, diagnóstico por habilidade, sinais e alertas, adaptação —
       no roteiro de seis etapas de `docs/conformidade-mec.md` seção 7 (D60). Cada uma antes do
-      PRD da sua funcionalidade, não no F16
+      PRD da sua funcionalidade, não no F16. Ficam em `docs/aia/` (índice no `README.md` de
+      lá); o Joaquim escreve o rascunho da etapa 1 e o Gabriel revisa
 - [ ] **Dossiê de conformidade** da escola (D61): declaração de propósito com faixas etárias,
       funcionamento em linguagem simples com fluxograma, conformidade LGPD e ECA artigo por
       artigo, RIPD, AIA, relatório de uso legível, material de comunicação com a comunidade
@@ -93,6 +97,22 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 ## Processo e dívida do F0
 
+- [ ] **Quando o F1 fechar: criar `release` e `develop`** (D23 revista). Ordem combinada: o
+      branch de documentação entra no `main` quando o Joaquim avisar, depois `main` → `release`
+      e `release` → `develop`. Atenção: o `docs/direcionamento-regulatorio` já conflita com a
+      tarefa 17.0 em `docs/lgpd.md`, e o conflito precisa ser resolvido nesse merge
+- [ ] **Ajustar o processo à D23 revista** (dono: Joaquim): a esteira do GitHub só roda no push
+      do `main` (`.github/workflows`), e precisa rodar em `develop`, `release` e nos PRs; o hook
+      de commit, o `/executar-task`, o `/corrigir` e a regra 40 ainda descrevem commit direto no
+      `main` e esteira verde antes da tarefa seguinte; definir de qual branch sai o staging
+- [ ] **MVP de apresentação (D71):** aceitar ou recusar os três afrouxamentos enquanto o dado
+      for sintético (AIA só com a etapa 1, provedor de modelo livre, carga sem crescer), antes
+      do PRD da A1; e escrever a etapa 1 das AIAs de correção, diagnóstico, Tutor e sinais antes
+      dos PRDs da A3, da A4 e da A5 (`docs/aia/`)
+- [ ] Ratificar ou recusar as D55 a D71 que esperam o Joaquim, e as revisões da D1, da D32 e
+      da D45 (`docs/decisoes.md`). O branch `docs/estrutura-de-agentes` está empilhado sobre o
+      `docs/direcionamento-regulatorio`
+
 Pendências herdadas da validação do F0 (`tasks/prd-fundacao-tecnica/validacao.md`, seção 6
 das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e são lidos pelo
 `/criar-techspec` dela.
@@ -155,6 +175,10 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
 
 ## Material didático
 
+- [ ] **Material de exemplo da escola sintética** do MVP de apresentação: nosso ou de domínio
+      público, com a licença declarada, de uma disciplina que renda boa demonstração. Antes do
+      PRD da A2 (D71, D5)
+
 - [ ] Modelo de autorização escrita da escola para cada fonte de material
 - [ ] Parecer sobre direito autoral da ingestão (Lei 9.610, art. 29, IX; termos de Arco/SAS,
       Positivo, Bernoulli e Somos), incluindo apostila impressa escaneada (D5 revista)
@@ -172,8 +196,21 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
 
 - [ ] F2: o vínculo de aluno criado pela importação precisa nascer com `decidido_em` preenchido. A lista de alunos do ano encerrado (10.0) só traz quem chegou confirmado ao fim do ano, e hoje só a fixture de teste grava esse campo: sem ele, o aluno some do histórico da turma
 
-- [x] ~~Fechar a lista de agentes e o nível de autonomia de cada um~~ — D32 a D36
-- [ ] Validar com advogado a base legal para guardar a adaptação necessária do aluno (D35)
+- [x] ~~Fechar a lista de agentes e o nível de autonomia de cada um~~ — D32 a D36; lista
+      revista em 19/09/2026 para seis agentes (D32 revista, a ratificar pelo Joaquim)
+- [ ] Validar com advogado a base legal para guardar a adaptação necessária do aluno (D35),
+      agora lida também pelo Tutor para ajustar a forma da conversa (D66)
+- [ ] **Lista padrão de fontes aprovadas** da busca do Tutor, por faixa etária (anos finais e
+      Ensino Médio), com critério escrito de entrada e de saída; e escolher o provedor de busca,
+      que entra como suboperador (D68). Antes do PRD do F9
+- [ ] Decidir de onde vêm as imagens da ferramenta de apresentação, e com que licença (D67, D5).
+      Antes do PRD do F7
+- [ ] Fechar os indicadores de turma e aluno de "Minhas turmas" **antes do PRD do F6** (D69).
+      Ponto de partida: percentual de erro e acerto por habilidade, e "concluiu o que foi
+      atribuído". Tempo ocioso e navegação não entram
+- [ ] **Guia para a TI da escola** bloquear outras IAs no computador do aluno (Google Admin,
+      filtro da rede). É a resposta ao pedido de "avisar quando o aluno usa outra IA", que o
+      produto não faz (D70). Entra no dossiê (D61)
 - [ ] Texto da mensagem fixa de acolhimento do tutor, revisado por uma orientadora
       educacional de verdade (D36)
 - [x] ~~Definir teto de uso do tutor por aluno e orçamento de tokens~~ — D38, D39, D41
@@ -187,8 +224,9 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       manual da marca Turmma, com caramelo `#E8732E`, azul-noite `#16233E`, creme `#FFF3E2` e
       papel `#FDFBF7` (D54). **Falta trazer os tokens e os SVGs para cá, antes do PRD do F2**
 - [x] ~~Landing page~~ — existe em `turmma.com` (fora deste repositório)
-- [ ] Trazer para o repositório: paleta em tokens, tipografia, logo em SVG e o avatar de cada
-      agente por função (`docs/interface.md` seção 7)
+- [ ] **Antes do PRD da A1 (D71):** trazer para o repositório: paleta em tokens, tipografia, logo em SVG e o avatar de cada
+      um dos **seis agentes**, por função: Assistente de ensino, Tutor, Corretor, Planejador,
+      Adaptador e Analista de desempenho escolar (D32 revista; `docs/interface.md` seção 7)
 
 ## Comercial
 

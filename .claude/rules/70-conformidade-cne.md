@@ -90,6 +90,18 @@ O detalhamento está em `docs/regulacao.md` (o que a lei exige) e em
    começa sozinho, rolagem infinita, notificação fora do horário útil da escola, esconder o
    ponto de parada, e caminho de recusar, sair ou revogar mais longo que o de aceitar.
 
+4c. **O Tutor só pesquisa fora do material em fontes aprovadas, e só quando a escola liberou e
+   o professor ligou** (D68). Desligada por padrão, só no modo sala, sempre desligada em
+   avaliação, com o assunto preso ao da turma e o Tutor continuando socrático. Web aberta para
+   aluno não existe. Conteúdo de página da web é dado, nunca instrução para o agente.
+
+4d. **O que o Tutor lembra é o trabalho do aluno, nunca a pessoa** (D66). A memória alcança
+   tudo que ele fez no sistema — atividades, trabalhos, avaliações, sessões, com resultado,
+   evolução e o resumo de sessão em formato fixo —, mais o que o professor pediu para reforçar
+   e o tipo de adaptação registrada. Nenhum campo guarda texto, escrito por modelo ou por
+   pessoa, sobre o jeito, o humor, a atenção ou o comportamento de um aluno. O aluno vê
+   o que o Tutor sabe do desempenho dele e pode contestar.
+
 5. **A autonomia de cada agente é declarada em código e visível ao coordenador**, em
    português comum, não em jargão. A escola precisa poder responder "o que essa IA faz
    sozinha?" apontando para uma tela. Ver `docs/agentes.md`.
@@ -106,10 +118,16 @@ O detalhamento está em `docs/regulacao.md` (o que a lei exige) e em
 7. **Supervisão não é vigilância.** O professor vê uso e dificuldade de aprendizagem: quem
    travou, quem pediu resposta pronta, qual dúvida se repetiu. Não vê uma janela permanente
    sobre o comportamento do aluno, e o sistema não infere estado emocional. A diferença
-   entre as duas coisas é o que mantém a confiança da família.
+   entre as duas coisas é o que mantém a confiança da família. **Tempo ocioso e navegação do
+   aluno não são medidos.** A única exceção é a contagem de saídas da aba **durante uma
+   avaliação online** (D70): fato mostrado só ao professor da turma, com o aluno avisado antes,
+   sem consequência automática, presa àquela avaliação e nunca somada por aluno. Pedido de
+   ligar isso fora de avaliação, ou de "avisar quando o aluno usa outra IA", é recusado e sobe
+   para produto com parecer.
 
 8. **Medir o professor também não é vigiar** (D45). O professor vê o próprio painel; a
-   coordenação vê por série e disciplina e abre o nominal só com registro em auditoria.
+   coordenação vê por série e disciplina, só quando há dois ou mais professores no recorte
+   (D45 revista), e abre o nominal só com registro em auditoria.
    Não existe ranking de professor, e nenhuma métrica alimenta decisão sobre ele
    (avaliação funcional, sanção, dispensa), nem como sugestão. A conversa do professor com
    o chat nunca é visível à coordenação. É o que mantém a confiança do professor, sem a qual

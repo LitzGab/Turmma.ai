@@ -44,19 +44,22 @@ em agregado.
 
 **O nome do agente é a função** (D17). Sem nome próprio: a coordenação precisa explicar em
 reunião de pais o que cada IA faz, e "o Corretor" se explica sozinho. Os nomes do desenho da
-call (Pipo, Waz, Maky) não são usados.
+call (Pipo, Waz, Maky) não são usados. "Monitor" também não: servia a duas coisas diferentes.
 
-## Os agentes (D32)
+## Os agentes (D32, revista em 19/09/2026)
+
+São seis, um por necessidade de cada papel: o aluno tem o Tutor; o professor tem o Assistente
+de ensino, o Tutor (o mesmo do aluno, avisando o que viu), o Corretor, o Planejador e o
+Adaptador; a coordenação tem o Analista de desempenho escolar.
 
 | Agente | Para quem | Dispara | Nível | O que faz |
 |---|---|---|---|---|
-| **Rotina** | professor | todo dia letivo, de manhã | 1 | Abre o dia com aulas, avaliações e pendências que já existem na grade e nas avaliações. Não gera conteúdo novo, por isso é barato. Garante que o feed nunca apareça vazio |
+| **Assistente de ensino** | professor | professor conversa ou abre uma ferramenta | 1 | É a identidade do chat da Home e a cara das ferramentas (D18): atividade, material, apresentação, plano, avaliação, correção de objetiva e adaptação saem por ele, a partir do material da escola e com a página citada. Tudo que ele produz é rascunho do professor até o professor usar. Com a busca na web ligada pelo professor naquela conversa, traz fonte de fora rotulada como "da web" (D68) |
 | **Corretor** | professor | fim da atividade ou avaliação | 2 para corrigir objetiva, 3 para nota | Corrige objetivas, monta o diagnóstico por habilidade e o relatório por questão. **Em discursiva e redação não faz nada sobre o texto do aluno**: nem correção, nem nota, nem conceito, nem devolutiva rascunho, nem pré-correção para o professor ver (D55). Nelas ele organiza o lote, confere entrega e prepara a correção cega. Quando a nota oficial existir, propõe a nota das objetivas, que só passa a existir com a validação registrada do professor (D56) |
-| **Planejador** | professor | **sob pedido**, ou "preparar a semana" ligado pelo professor para uma turma | 1 | Plano de aula e sequência didática a partir do material e do calendário. Não gera plano que ninguém pediu |
-| **Monitor de turma** | professor | diário, de madrugada, e por evento | 2 | Entregas pendentes, quem travou, dúvidas frequentes, queda de desempenho por habilidade. Aluno nomeado só para o professor da turma. **Alto risco** no CNE: AIA antes de existir, explicação em linguagem comum na tela e caminho de contestação (D60). O sinal deriva de fato declarado — entrega, desempenho, o que o aluno escreveu —, nunca de inferência de emoção ou comportamento (D57) |
-| **Tutor** | aluno | aluno pergunta | 2, sempre supervisionado, sem aprovação prévia por resposta (D47) | Conduz por perguntas, nunca entrega resposta pronta, cita a página. Tem identidade de agente, como os outros (D17, D58): o que é vedado é **se passar por pessoa** — afirmar ser humano quando o aluno pergunta, ou simular vínculo afetivo e dependência (Decreto 12.880, art. 11, I e II). Perguntado sobre si, explica o que é, como funciona e que pode errar (D65) |
-| **Adaptador** | professor | avaliação ou atividade criada para turma com aluno que tem adaptação registrada | 3 | Propõe a versão adaptada (fonte ampliada, tempo extra, enunciado simplificado). O professor aprova antes de o aluno receber |
-| **Analista da coordenação** | coordenação | toda segunda de manhã, e por evento que passa do limiar | 2 | Resumo semanal e alerta na hora, **em agregado** por série e disciplina: média fora da curva, habilidade em queda, consumo de IA alto, alunos em risco. O detalhe por turma ou professor só abre com auditoria (D45). Alerta é hipótese com contexto, nunca veredito sobre o professor. Só avisa: nunca contata professor nem família |
+| **Planejador** | professor | todo dia letivo, de manhã; e **sob pedido**, ou "preparar a semana" ligado pelo professor para uma turma | 1 | Dois trabalhos, uma thread (D32 revista, absorveu o Rotina). **Abre o dia e a semana** com aulas, avaliações, pendências e entregas em atraso que já existem na grade e nas avaliações: não gera conteúdo novo, por isso é barato, e é o que garante que o feed nunca apareça vazio. **Gera plano de aula e sequência didática** a partir do material e do calendário só quando o professor pede. Não gera plano que ninguém pediu |
+| **Tutor** | aluno, e o professor da turma | aluno pergunta; para o professor, por evento e em resumo diário | 2, sempre supervisionado, sem aprovação prévia por resposta (D47) | **Com o aluno:** conduz por perguntas, nunca entrega resposta pronta, cita a página. Lembra de **tudo que o aluno fez no sistema** — atividades, trabalhos, avaliações, práticas e sessões, com resultado e evolução —, pelo registro do trabalho e nunca por texto sobre a pessoa, usa o contexto que o professor informou e ajusta a forma à adaptação registrada (D66). Com a busca ligada pelo professor, pesquisa além do material só em fontes aprovadas, continuando socrático (D68). Tem identidade de agente, como os outros (D17, D58): o que é vedado é **se passar por pessoa** — afirmar ser humano quando o aluno pergunta, ou simular vínculo afetivo e dependência (Decreto 12.880, art. 11, I e II). Perguntado sobre si, explica o que é, como funciona e que pode errar (D65). **Com o professor:** é o mesmo Tutor que avisa, na thread dele em "Seu time", o que viu no uso — quem travou e onde, quem errou muito, quem pediu resposta pronta, qual a principal dificuldade, qual dúvida se repetiu (D32 revista). Aluno nomeado só para o professor da turma (D34). **Alto risco** no CNE: AIA antes de existir, explicação em linguagem comum na tela e caminho de contestação (D60). O sinal deriva de fato declarado — entrega, desempenho, o que o aluno escreveu —, nunca de inferência de emoção, atenção ou comportamento (D57) |
+| **Adaptador** | professor | avaliação ou atividade criada para turma com aluno que tem adaptação registrada; material didático, quando o professor pede | 3 | Faz uma coisa simples: propõe a versão adaptada da prova ou da atividade — linguagem direta para o aluno surdo, resposta escrita no lugar da oral, fonte ampliada, tempo extra, enunciado mais fácil. Recebe o **tipo de adaptação**, nunca a condição do aluno nem texto livre sobre ele (D35, D67). O professor aprova antes de o aluno receber |
+| **Analista de desempenho escolar** | coordenação | toda segunda de manhã, e por evento que passa do limiar | 2 | Resumo semanal e alerta na hora, **em agregado** por série e disciplina: média fora da curva, habilidade em queda, consumo de IA alto, alunos em risco. O desempenho de cada professor é o das turmas dele, em espelho: ele vê primeiro, e o recorte com um professor só conta como nominal (D45 revista). O detalhe por turma, professor ou aluno só abre com auditoria (D45, D34). Alerta é hipótese com contexto, nunca veredito sobre o professor. Só avisa: nunca contata professor nem família |
 | **Mensageiro da família** | professor, coordenação | evento | 3 | Prepara a comunicação e envia só depois da aprovação. **Fase posterior** |
 
 ### Detalhes que já estão decididos
@@ -89,11 +92,37 @@ Tutelar em caso de automutilação ou tentativa de suicídio (Lei 13.819/2019, a
 Lei 15.231/2025): o sinal precisa chegar também a quem notifica (orientação ou direção), com
 acesso ao conteúdo auditado. A detalhar no PRD do F9 (`docs/regulacao.md` seção 7).
 
+**A memória do Tutor cobre a trajetória inteira, e é sobre o trabalho, não sobre a pessoa**
+(D66). Não é um retrato pontual: o Tutor alcança todas as atividades, trabalhos, avaliações,
+práticas e sessões do aluno no sistema, com o resultado por habilidade, a devolutiva que o
+professor escreveu e o resumo de cada sessão em formato fixo (assunto, habilidade, exercício,
+onde travou, como terminou). A cada conversa ele busca o que importa para aquela dúvida, em vez
+de carregar tudo. Soma a isso o que o professor informou de forma estruturada: por turma, o que está
+sendo dado, a lista ativa e o foco da semana; por aluno, as habilidades a reforçar. Não existe
+texto sobre o jeito, o humor, a atenção ou o comportamento do aluno, escrito por modelo ou por
+professor. Em discursiva e redação, a memória guarda a devolutiva do professor; o Tutor não
+avalia o texto (D55). A adaptação registrada muda a forma da conversa, nunca o que é cobrado.
+
+**Busca na web só por ativação do professor** (D68). No Assistente de ensino, por conversa,
+para o próprio professor. No Tutor, para a turma, com duas chaves (a coordenação libera na
+escola, o professor ativa por turma e com prazo), só em **fontes aprovadas**, só no modo sala,
+sempre desligada em avaliação, com teto diário, e com a consulta escrita pelo modelo sem texto
+nem identificador do aluno. O Tutor continua socrático: traz a fonte e pergunta, não escreve o
+trabalho. O professor vê o que foi pesquisado e as fontes abertas.
+
+**Sair da aba da prova é fato, não veredito** (D70). Só durante avaliação, só para o professor,
+com o aluno avisado antes, sem consequência automática e sem histórico por aluno. Fora de
+avaliação nenhum agente acompanha a navegação do aluno.
+
 ### O que nenhum agente faz (nível 4)
 
 - Decidir aprovação, reprovação ou encaminhamento de aluno, nem como sugestão aplicada sozinha
 - Publicar nota ou falar com a família sem aprovação humana registrada
 - Inferir emoção, humor, atenção ou comportamento, ou ranquear alunos por isso
+- Medir tempo ocioso do aluno, ou acompanhar a navegação dele fora de uma avaliação (D69, D70)
+- Guardar texto, escrito por modelo ou por pessoa, sobre o jeito, o humor ou o comportamento de
+  um aluno. A memória é sobre o trabalho dele, não sobre ele (D66)
+- Buscar na web aberta para o aluno, ou fora das fontes aprovadas pela escola (D68)
 - Criar perfil comportamental ou psicológico de aluno, ainda que só como rótulo interno, e
   pontuar pessoa por comportamento (D57; ECA Digital art. 26; Decreto 12.880 art. 10)
 - Ranquear professores, medir adoção nominal por professor ou recomendar qualquer decisão
@@ -105,8 +134,8 @@ acesso ao conteúdo auditado. A detalhar no PRD do F9 (`docs/regulacao.md` seç�
 
 ### Antes de um agente de alto risco existir
 
-Alto risco aqui é Tutor, Corretor, Monitor de turma, Analista e Adaptador — todos menos o
-Rotina e o Planejador. Nenhum deles entra em PRD sem a **Avaliação de Impacto Algorítmico**
+Alto risco aqui é Tutor, Corretor, Analista de desempenho escolar e Adaptador — todos menos o
+Assistente de ensino e o Planejador. As AIAs ficam em `docs/aia/`. Nenhum deles entra em PRD sem a **Avaliação de Impacto Algorítmico**
 das seis etapas de `docs/conformidade-mec.md` seção 7 (D60), que inclui o **escopo negativo**
 (o que aquele agente não deve fazer) e o **procedimento de suspensão**: como desligar o agente
 numa escola, quem decide e o que acontece com o que ele já produziu. A AIA é revista quando o
@@ -115,7 +144,7 @@ modelo ou o prompt principal mudam.
 ## Agente e ferramenta não são a mesma coisa
 
 A **ferramenta** espera o professor pedir e produz um artefato na hora (pelo formulário ou
-pelo chat, D18). O **agente** trabalha sem pedido, disparado por evento ou horário, e avisa
+pelo chat com o Assistente de ensino, D18). O **agente** trabalha sem pedido, disparado por evento ou horário, e avisa
 no feed. Os dois podem usar o mesmo caso de uso por baixo: o Corretor e a ferramenta de
 correção chamam a mesma correção. O que muda é quem dispara e onde o resultado aparece.
 

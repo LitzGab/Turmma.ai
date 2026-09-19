@@ -59,7 +59,7 @@ Aula             → alocacao*, data*, conteudo?, status, observacao?
 ```
 
 `Aula` é a instância concreta gerada a partir de `Alocacao` mais o calendário escolar. É a
-camada onde o professor registra o que deu e é a fonte do agente Rotina.
+camada onde o professor registra o que deu e é a fonte do agente Planejador.
 
 ## Conteúdo
 
@@ -93,7 +93,7 @@ questão saiu.
 Avaliacao*       → turma*, disciplina*, professor*, periodo*, titulo*, modo*, peso,
                    dataAplicacao, status
 ItemAvaliacao*   → avaliacao*, questao?, enunciado?, pontos*, ordem*
-Aplicacao        → avaliacao*, aluno*, iniciadoEm, entregueEm, origem
+Aplicacao        → avaliacao*, aluno*, iniciadoEm, entregueEm, origem, saidasDaAba?
 Resposta         → aplicacao*, item*, conteudo, arquivoUrl?
 Correcao         → resposta*, pontosObtidos?, feedback?, origem (auto | ia | professor),
                    aprovadaPor?, aprovadaEm?
@@ -111,6 +111,10 @@ para discursiva e redação é a **rubrica da avaliação**, que pertence ao ite
 de ninguém.
 
 `modo`: `online_objetiva` · `online_discursiva` · `papel_foto` · `entrega` · `presencial`
+
+`saidasDaAba` é a contagem de vezes em que a aba da prova perdeu o foco, **só em avaliação
+online**. Fica na `Aplicacao`, nunca no aluno: não é somada entre avaliações, não vira
+indicador, e só o professor da turma lê (D70).
 
 <critical>`Nota` só existe com `lancadaPor` preenchido por um humano. Correção de IA
 preenche `Correcao`, nunca `Nota` diretamente.</critical>
@@ -143,20 +147,31 @@ ConsumoIa        → escola*, usuario*, perfil*, tokens*, custo*, em*
 `autonomia` é visível ao coordenador em tela. Nível 3 e 4 seguem `docs/agentes.md`.
 
 ```
-AdaptacaoAluno*  → escola*, anoLetivo*, aluno*, tipos* (fonte_ampliada | tempo_extra |
-                   enunciado_simplificado | leitor_de_tela | outro), detalhe?,
+AdaptacaoAluno*  → escola*, anoLetivo*, aluno*, tipos* (linguagem_direta | resposta_escrita |
+                   fonte_ampliada | tempo_extra | enunciado_simplificado | leitor_de_tela |
+                   outro), detalhe?,
                    registradaPor* (coordenação), registradaEm*, revisarEm*
 ```
 
 `AdaptacaoAluno` guarda **o que adaptar, nunca o porquê**: sem diagnóstico, laudo ou CID
 (D35). `detalhe` é texto curto e revisado; campo livre que vira prontuário é reprovação no
-`privacy-guardian`. Leitura por professor é limitada às turmas dele e fica em auditoria.
+`privacy-guardian`. Leitura por professor é limitada às turmas dele e fica em auditoria. A
+ferramenta Adaptação e o Tutor recebem só os `tipos` (D66, D67). A lista de tipos fecha no PRD;
+precisa cobrir pelo menos o aluno surdo e o que não fala.
 
 ## Tutor, sala e supervisão
 
 ```
 PoliticaTutor*   → turma*, modo* (bloqueado | socratico | livre), definidaPor*,
-                   foraDaSala* (bool, padrão falso), foraDaSalaDefinidoPor?
+                   foraDaSala* (bool, padrão falso), foraDaSalaDefinidoPor?,
+                   busca* (bool, padrão falso), buscaAte?, buscaDefinidaPor?
+BuscaEscola*     → escola*, liberada* (bool, padrão falso), liberadaPor?, tetoDiarioPorAluno*
+FonteAprovada*   → escola?, dominio*, faixa* (anos_finais | medio | ambas), ativa*
+BuscaTutor       → sessao*, consulta* (escrita pelo modelo), fontesAbertas, criadaEm*
+ContextoTurma*   → turma*, disciplina*, conteudoAtual, listaAtiva?, focoDaSemana,
+                   definidoPor*, validoAte
+ReforcoAluno*    → turma*, disciplina*, aluno*, habilidades* (códigos da lista),
+                   definidoPor*, revisarEm*
 SessaoTutor*     → aluno*, turma*, disciplina?, modo (sala | casa), iniciadaEm, encerradaEm
 MensagemTutor*   → sessao*, autor (aluno | tutor), conteudo*, criadaEm*
 SinalAluno       → sessao*, tipo (travado | pediu_resposta | fora_de_escopo | duvida |
@@ -167,6 +182,22 @@ SalaAoVivo       → turma*, professor*, abertaEm, fechadaEm
 
 `MensagemTutor` tem retenção de 12 meses e acesso restrito ao professor da turma. A rede
 nunca alcança conteúdo de conversa — apenas agregado.
+
+A **memória do Tutor cobre a trajetória inteira do aluno**, e é quase toda leitura: `Aplicacao`,
+`Resposta`, `Correcao` (com a devolutiva do professor), `Diagnostico`, `SinalAluno`,
+`ContextoTurma`, `ReforcoAluno` e os `tipos` de `AdaptacaoAluno`. O que é novo é o resumo da
+sessão, em formato fixo, e o índice para recuperar por relevância:
+
+```
+ResumoSessaoTutor → sessao*, assunto*, habilidades, exercicio?, ondeTravou?, comoTerminou*
+```
+
+Não existe campo de texto livre sobre o aluno, escrito por modelo ou por professor (D66).
+
+A busca tem **duas chaves**: `BuscaEscola.liberada` é da coordenação, `PoliticaTutor.busca` é do
+professor, com prazo; sem as duas, e sempre durante avaliação e no modo casa, a busca é
+recusada no servidor. `FonteAprovada` sem `escola` é a lista padrão nossa. `BuscaTutor.consulta`
+é a que o modelo escreveu, sem o texto do aluno (D68).
 
 `foraDaSala` é decisão da escola, por turma, e nasce desligado (D19). O `modo` é do
 professor; o `foraDaSala` é da coordenação. Sem ele ligado, `SessaoTutor` com modo `casa` é
@@ -197,8 +228,10 @@ IndicadorTurma     → escola*, anoLetivo*, turma*, disciplina*, habilidade?, pe
                      valor*, calculadoEm*
 ```
 
-Os tipos concretos, os limiares e o texto dos alertas estão em aberto e saem do PRD do F12
-(`CLAUDE.md`, decisões em aberto). `IndicadorProfessor` é lido pelo próprio professor; a
+Os tipos concretos, os limiares e o texto dos alertas estão em aberto (`CLAUDE.md`, decisões em
+aberto): os de turma e aluno fecham antes do PRD do F6, porque "Minhas turmas" nasce lá (D69);
+os de professor, antes do PRD do F12. A coordenação só lê agregado de recorte com dois ou mais
+professores (D45 revista). Tempo ocioso do aluno não é tipo de indicador. `IndicadorProfessor` é lido pelo próprio professor; a
 coordenação lê agregado e o nominal com `Auditoria`; a rede só agregado; nenhum caminho o
 liga a decisão sobre o professor (D45, regra 70 item 8). Os dois estão no mapa de dados de
 `docs/lgpd.md`.

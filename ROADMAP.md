@@ -10,6 +10,11 @@ vende.
 usando o que já estiver pronto, antes do F16. O portão da primeira escola real (abaixo) vale
 antes dela. Quais funcionalidades formam a fatia do piloto está em aberto no `CLAUDE.md`.
 
+**MVP de apresentação (D71).** Logo depois do F1 entram cinco specs, A1 a A5: fatias finas e
+reais do fluxo completo, numa escola sintética, para começarmos a demonstrar. Não é MVP de
+venda e não recebe dado real. Depois dele as fases seguem na ordem de antes, e cada uma
+**completa** a fatia que já existir em vez de começar do zero.
+
 A ordem abaixo existe por um motivo diferente: reduzir retrabalho. Construir a base
 institucional depois dos agentes significaria refazer os agentes, porque eles dependem do
 contexto que a base fornece. Não é ordem de lançamento, é ordem de construção.
@@ -80,6 +85,114 @@ quase todas as tabelas. O parecer está no `TODO.md`; a estrutura custa pouco ag
 **Pronto quando:** teste prova que a escola A não lê, não escreve e não descobre nada da B,
 e que um professor com vínculo nas duas não leva dado de uma para a outra.
 
+## MVP de apresentação — A1 a A5 (D71)
+
+> **Proposta de 19/09/2026.** A direção está dada: depois do F1, construímos o mínimo que
+> demonstra o fluxo completo. A composição de cada spec é ponto de partida e fecha no PRD dela.
+
+**O roteiro define o escopo.** Uns quinze minutos, numa escola sintética, com as três áreas e as
+quatro coisas da D24:
+
+1. **Coordenação** entra com MFA e mostra a escola montada e o material com licença ingerido.
+2. **Professora** pede uma atividade ao Assistente de ensino; o chat pergunta se quer a
+   ferramenta, abre o cartão, gera com a página citada, salva e exporta em PDF. Pede a versão
+   adaptada escolhendo o tipo de adaptação, e aprova. Em "Seu time", o Planejador abriu o dia.
+3. **Aluno** responde a atividade e abre o Tutor: tenta arrancar a resposta, o Tutor recusa,
+   conduz, cita a página e lembra do que ele errou.
+4. **Professora** recebe do Tutor que oito travaram no mesmo ponto; o Corretor avisa que
+   corrigiu e espera; ela abre os destaques e aprova, com o registro da validação; vê o acerto
+   por habilidade em "Minhas turmas".
+5. **Coordenação** abre a governança: o que a IA gerou e quem aprovou, o que cada agente faz
+   sozinho, o consumo, e o resumo do Analista de desempenho escolar, em agregado.
+
+**Regras da fatia** (D71): dado 100% sintético; código do produto, não protótipo — mesmas
+regras 00 a 80 e mesmo processo; regra 70 inteira; fora tudo que não aparece no roteiro. Só
+enquanto o dado for sintético: AIA com a etapa 1 antes do PRD da fatia, provedor de modelo
+qualquer pela porta, e cenário de carga sem crescer. A apresentação roda na nossa máquina; o
+staging nasce quando alguém de fora precisar usar sozinho (D31).
+
+## A1 — `apresentacao-base` [ ]
+**Depende de:** F1
+
+Casca da web com a marca Turmma e a navegação dos três papéis. Camada de IA mínima: porta
+`LLMProvider`, adaptadores Ollama, OpenAI-compatível e falso, perfis, registro de consumo por
+escola, validação de schema. Runtime mínimo de agente: thread por agente, entrega que nasce
+pendente, execução registrada, processador idempotente (D49). Seed sintético da escola de
+demonstração e o comando que sobe tudo.
+
+**Pronto quando:** um comando sobe a escola sintética; professor, aluno e coordenação entram e
+veem a própria navegação com a marca; uma chamada de IA passa pela porta e aparece no consumo da
+escola; e o teste de isolamento do F1 continua verde com as tabelas novas.
+
+## A2 — `apresentacao-professor` [ ]
+**Depende de:** A1
+
+Ingestão mínima: upload de PDF com titularidade e licença declaradas, extração, trechos com
+página, busca; sem licença, recusa antes de extrair (D5). Home com o **Assistente de ensino**,
+com contexto de turma e material, que pergunta antes de abrir a ferramenta (D18). Ferramentas:
+atividade e prova objetiva, plano de aula, e **Adaptação** por tipo, sem texto livre sobre o
+aluno (D67). Artefato salvo, ligado à turma, com a página citada, exportável em PDF. Em "Seu
+time", o **Planejador** abre o dia com o que vem do seed.
+
+**Pronto quando:** a professora gera o mesmo artefato pelo chat e pelo formulário, com a página
+citada; arquivo sem licença é recusado; a Adaptação não tem campo em que caiba um diagnóstico, e
+a versão adaptada nasce pendente.
+
+## A3 — `apresentacao-atividade-e-correcao` [ ]
+**Depende de:** A2 · **pode correr em paralelo com A4**
+
+O aluno responde a atividade objetiva no navegador. O **Corretor** corrige, monta o diagnóstico
+por habilidade e o relatório por questão, e a entrega espera o professor. Aprovação com os
+destaques abertos e o **registro da validação** (D33, D56). Sem `Nota`: é diagnóstico formativo
+(D46). Aba **"Minhas turmas"** com o acerto por habilidade (D69).
+
+**Pronto quando:** o diagnóstico só chega ao aluno depois de aprovado; o lote não libera sem os
+destaques abertos, e o registro mostra o que foi apresentado e aberto; a correção roda duas
+vezes sem duplicar aviso nem chamada de IA; e nada é gerado por IA sobre resposta discursiva.
+
+## A4 — `apresentacao-tutor-e-sinais` [ ]
+**Depende de:** A2 · **pode correr em paralelo com A3**
+
+**Tutor** socrático restrito ao material da turma, citando a página, com identidade de agente
+(D58), mensagem fixa para assunto delicado (D36) e trava durante atividade avaliativa. Memória
+lendo o que o aluno já fez no sistema, sem texto sobre a pessoa (D66). Sinais — travou, pediu
+resposta pronta, dúvida que se repetiu — chegando à **thread do Tutor** do professor da turma
+(D32 revista, D34).
+
+**Pronto quando:** três tentativas diferentes de arrancar a resposta pronta falham no teste; o
+Tutor diz o que é quando o aluno pergunta se é uma pessoa; o sinal chega ao professor certo e a
+nenhum outro; e nenhum campo guarda texto livre sobre o aluno.
+
+## A5 — `apresentacao-coordenacao` [ ]
+**Depende de:** A3, A4
+
+**Governança**: o que a IA gerou e quem aprovou, com o número; cada agente, o que faz sozinho e
+o que espera aprovação, em português comum (D9); consumo de IA da escola. **Analista de
+desempenho escolar** com o resumo semanal em agregado, alerta como hipótese e a regra do grupo
+mínimo; o nominal só abre com auditoria (D45 revista, D34). Seed com histórico suficiente para
+o feed nunca aparecer vazio, e o **roteiro de demonstração** escrito.
+
+**Pronto quando:** as quatro coisas da D24 aparecem no roteiro, de ponta a ponta, com um
+comando; e teste prova que a coordenação não vê indicador nominal de professor sem deixar
+auditoria, nem adoção nominal em lugar nenhum.
+
+### O que cada fase empresta ao MVP, e o que fica para quando ela for completada
+
+| Fase | Entra no MVP | Fica para depois |
+|---|---|---|
+| F2 | nada: o seed sintético faz o papel do onboarding | tudo. É a primeira depois do MVP, junto do F3: sem elas nenhuma escola real entra |
+| F3 | nada, porque o dado é sintético | tudo. Continua sem poder ser a última |
+| F4 | upload com licença, extração, trechos com página, busca, recusa sem licença | classificação BNCC completa, versionamento, reprocessamento, painel, adaptadores |
+| F5 | porta, três adaptadores, perfis, consumo, validação de schema | gateway com limitador, prioridade, reserva e degradação; orçamento e pacote do tutor; soberania (D62); avaliação de modelos |
+| F6 | atividade objetiva online, correção, diagnóstico, aprovação com registro, "Minhas turmas" | prova resiliente, outros modos, rubrica e correção cega de discursiva, saída da aba (D70) |
+| F7 | Assistente de ensino, atividade e prova objetiva, plano de aula, Adaptação, artefato salvo, PDF | simulado ENEM, rubrica, apresentação, material didático, PPTX e XLSX, biblioteca e histórico completos, busca na web (D68) |
+| F9 | Tutor socrático, página citada, identidade, mensagem fixa, trava, memória | modo casa, busca em fontes aprovadas (D68), aviso etário, encaminhamento a quem notifica, teste adversário completo |
+| F10 | sinal chegando à thread do Tutor do professor certo | WebSocket em duas instâncias, modo casa com resumo |
+| F11 | thread, entrega pendente, execução registrada, idempotência; Planejador, Corretor, Tutor e Adaptador | limite de passos e de custo, suspensão por escola, Analista por evento |
+| F12 | governança de IA, agentes e autonomia, consumo, Analista semanal, nominal com auditoria | painel completo, Conformidade, Denúncias, Exportar, dossiê |
+| F15 | seed sintético, roteiro, um comando | demonstração completa, com um bimestre e notas |
+| F8, F13, F14, F17, F16 | nada | tudo |
+
 ## F2 — `onboarding-por-convite` [ ]
 **Depende de:** F1
 
@@ -92,7 +205,7 @@ coordenador.
 
 **Pronto quando:** uma escola inteira entra sem ninguém ser cadastrado individualmente, com
 grade e calendário importados, 35 alunos reivindicando nomes no mesmo minuto não geram
-duplicidade nem erro cru, e o Rotina tem de onde abrir o dia do professor.
+duplicidade nem erro cru, e o Planejador tem de onde abrir o dia do professor.
 
 ## F3 — `lgpd-e-titular` [ ]
 **Depende de:** F1 · **pode correr em paralelo com F4 e F5**
@@ -157,26 +270,38 @@ cega. **A validação humana da objetiva é registrada** (D56). Prova online res
 salva por item, relógio no servidor, retomada após queda (D27). A nota oficial e o boletim
 ficam no F17. AIA da correção e do diagnóstico escritas antes (D60).
 
+Nasce aqui a aba **"Minhas turmas"** de "Meu painel": desempenho, dificuldades, evolução e
+alunos que precisam de atenção, a partir do diagnóstico por habilidade (D69); os indicadores
+de turma e aluno fecham antes deste PRD. Na prova online, **sair da aba é fato mostrado só ao
+professor**, com o aluno avisado e sem consequência automática (D70).
+
 **Pronto quando:** a IA corrige objetiva e diagnostica, o professor aprova o que chega ao
 aluno, **nenhum campo do sistema guarda nota, conceito ou devolutiva de discursiva gerada por
 IA**, o registro da validação mostra o que foi apresentado e aberto, e uma queda de rede no
-meio da prova não perde resposta nem tempo do aluno.
+meio da prova não perde resposta nem tempo do aluno. O professor vê a turma em "Minhas turmas"
+sem esperar o F12, e teste prova que a contagem de saídas da aba não existe fora de avaliação
+nem somada por aluno.
 
 ## F7 — `chat-e-ferramentas-professor` [ ]
 **Depende de:** F6
 
-Home em chat com contexto de papel, turma e material. Ferramentas: prova, atividade, lista,
-plano de aula e sequência didática, adaptação/PEI, simulado ENEM, e **rubrica por competência
+Home em chat com o **Assistente de ensino** (D32 revista), com contexto de papel, turma e
+material. Ferramentas: prova, atividade, lista, **material didático** (fora da primeira
+entrega), **apresentação**, plano de aula e sequência didática, **Adaptação** — que recebe o
+tipo de adaptação, nunca texto livre sobre o aluno, e não gera PEI (D67) —, simulado ENEM, e **rubrica por competência
 para redação e discursiva — sem correção, sem nota e sem devolutiva gerada por IA** (D55).
 Sob pedido do professor, o Planejador também monta atividade de letramento em IA, alinhada às
 12 aprendizagens do MEC e às habilidades de Computação da BNCC (D65).
 Chat e formulário são o mesmo motor: o chat pergunta se quer usar a ferramenta e a abre
 como cartão na conversa (D18). Banco público de questões do ENEM a partir das provas
-oficiais do INEP (D21). Artefato salvo e ligado à turma. Biblioteca. Histórico.
+oficiais do INEP (D21). Artefato salvo e ligado à turma, **exportável em PDF, PPTX e XLSX**
+(D67). **Busca na web ligada pelo professor, por conversa**, com a fonte rotulada (D68).
+Biblioteca. Histórico.
 Navegação em `docs/interface.md`.
 
 **Pronto quando:** o professor faz o mesmo pelo chat e pelo formulário, o chat pergunta
-antes de usar a ferramenta quando ela não foi escolhida, e o artefato fica salvo.
+antes de usar a ferramenta quando ela não foi escolhida, o artefato fica salvo e sai nos três
+formatos, e a Adaptação não tem campo em que caiba um diagnóstico.
 
 ## F8 — `calendario-do-professor` [ ]
 **Depende de:** F7
@@ -191,7 +316,11 @@ os agentes concluíram.
 
 Tutor socrático que não entrega resposta, escopo restrito ao conteúdo da turma, atividades
 e provas na plataforma, política por turma, trava durante avaliação, desempenho próprio.
-Resposta do tutor supervisionada, não aprovada uma a uma (D47). O Tutor mantém identidade de
+Resposta do tutor supervisionada, não aprovada uma a uma (D47). **Memória de tudo que o aluno
+fez no sistema**, feita do registro do trabalho e nunca de texto sobre a pessoa, com o contexto
+estruturado do professor e o tipo de adaptação registrada,
+que o aluno vê e contesta (D66). **Busca em fontes aprovadas**, com as duas chaves, só em sala
+e continuando socrático (D68). O Tutor mantém identidade de
 agente e **nunca se passa por pessoa** (D58); **nenhum mecanismo de uso excessivo e nenhum
 padrão manipulativo** (D59); filtro de conteúdo inadequado; aviso de privacidade em linguagem
 de faixa etária; e o canal para o aluno avisar um adulto (D61). Linguagem adequada do 6º ano
@@ -200,7 +329,10 @@ Conselho Tutelar (`docs/regulacao.md` seção 7). Avaliação de impacto dos sin
 existirem. Acesso fora da sala configurado pela escola por turma, desligado por padrão
 (D19). Web para computador da escola em sala e celular fora dela (D51).
 
-**Pronto quando:** três tentativas diferentes de arrancar a resposta pronta falham no teste,
+**Pronto quando:** três tentativas diferentes de arrancar a resposta pronta falham no teste —
+inclusive "pesquisa e resume para mim" —, uma página da web com instrução escondida não muda o
+comportamento do Tutor, a busca é recusada no servidor sem as duas chaves, nenhum campo guarda
+texto livre sobre o aluno,
 o Tutor responde o que é quando o aluno pergunta se ele é uma pessoa, a AIA do Tutor existe
 escrita, e o encaminhamento de risco à vida chega a quem notifica, com o acesso ao conteúdo
 auditado.
@@ -209,7 +341,8 @@ auditado.
 **Depende de:** F9
 
 WebSocket por turma, professor vê quem travou, quem pediu resposta pronta, dúvidas
-frequentes. Modo casa com registro e resumo. Sinal derivado de evento, não vigilância.
+frequentes, e o que a turma pesquisou — avisado pelo próprio Tutor, na thread dele (D32
+revista). Modo casa com registro e resumo. Sinal derivado de evento, não vigilância.
 
 **Pronto quando:** o professor acompanha a turma ao vivo sem ler conversa por padrão, com
 duas instâncias de realtime entregando o sinal ao professor certo.
@@ -218,8 +351,9 @@ duas instâncias de realtime entregando o sinal ao professor certo.
 **Depende de:** F7, F9
 
 Runtime em fila, thread por agente, não-lidos, autonomia declarada e visível, portão de
-aprovação, limite de passos e de custo. Rotina, Corretor, Planejador, Monitor de turma,
-Tutor, Adaptador e Analista da coordenação, com nível e gatilho de `docs/agentes.md` (D32).
+aprovação, limite de passos e de custo. Assistente de ensino, Tutor, Corretor, Planejador,
+Adaptador e Analista de desempenho escolar, com nível e gatilho de `docs/agentes.md` (D32
+revista).
 Encaminhamento de assunto delicado (D36). Processador idempotente (D49).
 
 Cada agente de alto risco entra com a AIA escrita e com **procedimento de suspensão** — como
@@ -236,7 +370,9 @@ Uso de IA por série e disciplina, desempenho por série, turma e habilidade, al
 agregado formulados como hipótese (média fora da curva, habilidade em queda, aluno em
 risco), **auditoria do que a IA gerou e quem aprovou**, autonomia de cada agente, consumo de
 tokens. **Painel do professor** com o próprio uso e o desempenho das turmas dele; a
-coordenação vê agregado e abre o nominal com auditoria; sem ranking de professor (D45).
+coordenação vê agregado, só com dois ou mais professores no recorte, e abre o nominal com
+auditoria; sem ranking de professor (D45 revista). A aba "Minhas turmas" já existe desde o F6
+(D69) e ganha aqui a comparação com a série.
 Indicadores, limiares e texto dos alertas definidos antes do PRD (decisão em aberto).
 **Sem ranking, sem lista nominal de adoção e sem alerta de professor que não usa** (D64).
 Entram as telas de **Conformidade** (o dossiê da escola num lugar: propósito, faixas etárias,
@@ -303,7 +439,8 @@ backup criptografado com restauração testada, RIPD, processo de incidente ensa
 de carga "manhã de segunda" passando, alertas com runbook, deploy e rollback ensaiados.
 Entram também: **AIA de cada funcionalidade de alto risco** revista e assinada (D60), **dossiê
 de conformidade** fechado (D61) e **teste adversário do tutor** — tentativa de desativar
-salvaguarda, de arrancar conteúdo inadequado e de sair do escopo.
+salvaguarda, de arrancar conteúdo inadequado e de sair do escopo. O teste de página da web com
+instrução escondida não espera até aqui: nasce no F9, junto da busca (D68).
 
 **Pronto quando:** a restauração foi executada de verdade, o RIPD e as AIA existem assinados,
 o dossiê está pronto para entregar a uma escola, e o teste de carga de `docs/infra.md`
@@ -339,7 +476,9 @@ escolhido nesse momento (D31, D42).
 
 ## Paralelismo
 
-- F5 corre desde o início, independente do domínio
+- O MVP de apresentação (A1 a A5) vem logo depois do F1; A3 e A4 correm em paralelo, cada uma
+  no seu branch (D23 revista). F2 e F3 são as primeiras depois dele
+- F5 corre desde o início, independente do domínio; a fatia mínima dela nasce na A1
 - F3 corre em paralelo com F4 e F5, e **não pode ser a última**
 - F10 depende só de F9; F13 pode correr junto de F12
 - F17 (nota oficial) corre depois de F6 e F11, em paralelo com F12 a F15

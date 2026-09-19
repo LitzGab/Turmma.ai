@@ -140,11 +140,11 @@ Entra numa fase posterior.
 
 ## 5. Um dia dentro do sistema
 
-7h00 — O agente **Rotina** abre a manhã da Camila: três aulas hoje, a prova do 2ºB às 10h,
+7h00 — O agente **Planejador** abre a manhã da Camila: três aulas hoje, a prova do 2ºB às 10h,
 catorze atividades esperando devolutiva. Ela não configurou nada disso: veio da grade
 horária que a Renata importou e das avaliações que a própria Camila criou.
 
-7h40 — Ela pede no chat: "monta uma revisão de trinta minutos sobre reagente limitante para
+7h40 — Ela pede ao **Assistente de ensino**, no chat: "monta uma revisão de trinta minutos sobre reagente limitante para
 o 2ºB". O sistema busca no capítulo 7 do material da escola, monta, e salva na biblioteca
 dela. A saída cita a página de origem, para ela conferir.
 
@@ -165,9 +165,10 @@ precisa ser documentada, não só existir (D56). Só nesse momento a nota existe
 11h16 — O evento "nota aprovada" dispara. Vai para o painel da Renata e, na fase posterior,
 para a família.
 
-14h00 — Na aula seguinte, Enzo pergunta ao tutor qual é o reagente limitante do exercício
-14. O tutor recusa e conduz por perguntas. Camila, na tela dela, vê que oito alunos
-travaram no mesmo ponto.
+14h00 — Na aula seguinte, Enzo pergunta ao **Tutor** qual é o reagente limitante do exercício
+14. O Tutor recusa e conduz por perguntas, lembrando que ele já tinha travado na conversão de
+massa (D66). Camila, na tela dela, recebe do próprio Tutor o aviso de que oito alunos travaram
+no mesmo ponto.
 
 Fim do dia — Camila abre o próprio painel: a turma dela do 2ºB está abaixo das outras em
 estequiometria, e a sugestão é uma revisão. Renata abre a governança: 39 professores

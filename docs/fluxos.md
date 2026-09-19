@@ -35,7 +35,7 @@ Cadastrar 900 alunos um a um mata o produto na primeira semana. Mas deixar o alu
 o próprio nome livremente cria dois "Enzo Martins" e um "Batman". A reivindicação com
 aprovação do professor resolve os dois: rápido para a escola, e ninguém se passa por outro.
 O vínculo vem da escola, e não do professor, porque é ele que dá acesso a dado de aluno. E
-sem a grade o Rotina e o calendário não têm de onde nascer.
+sem a grade o Planejador e o calendário não têm de onde nascer.
 
 **O que isso obriga tecnicamente**
 
@@ -138,8 +138,19 @@ Enzo abre o Tutor — que é um dos agentes do time da escola, e se apresenta co
 exercício 14 e pergunta qual é o reagente limitante. O tutor recusa dar a resposta e pergunta se ele já converteu as massas em mol. Enzo diz que só uma. O tutor
 confirma que está certo e indica o próximo passo, citando a página 152.
 
+O Tutor lembra de tudo que o Enzo já fez no sistema — a lista de duas semanas atrás, a prova do
+bimestre, as sessões anteriores —, e por isso sabe que ele já tinha travado em conversão de
+massa, e que melhorou em balanceamento desde março. Sabe que a turma está no capítulo 7, porque
+a Camila informou (D66). Não sabe, nem guarda, nada sobre o jeito do Enzo.
+
 Na tela da Camila, ao vivo, aparece que oito alunos travaram no mesmo ponto e que dois
-pediram resposta pronta.
+pediram resposta pronta. É o próprio Tutor que avisa, na thread dele em "Seu time" (D32
+revista).
+
+Na semana do trabalho sobre a indústria química, a Camila liga a pesquisa para o 1ºC. Enzo
+pergunta onde se usa reagente limitante fora da escola; o Tutor traz duas fontes da lista
+aprovada pela escola, pede que ele compare o que cada uma diz, e não escreve o parágrafo por
+ele (D68).
 
 **Por que é assim**
 
@@ -169,13 +180,25 @@ pais: a IA da escola ensina, a IA de fora entrega.
 - Sinal derivado de evento: o professor vê uso e dificuldade, não uma janela sobre o
   comportamento do aluno
 - Conversa do tutor com retenção curta e acesso restrito ao professor da turma
+- Memória do Tutor sobre **toda a trajetória** do aluno no sistema — atividades, trabalhos,
+  avaliações, práticas e sessões, com resultado e evolução —, mais o contexto estruturado do
+  professor e o tipo de adaptação registrada; recuperada por relevância a cada conversa, não
+  despejada inteira no prompt. É registro do trabalho: nenhum texto sobre o jeito do aluno,
+  e o aluno vê e contesta o que o Tutor sabe do desempenho dele (D66)
+- Busca só em fontes aprovadas, com duas chaves (escola libera, professor ativa por turma e
+  com prazo), só no modo sala, desligada em avaliação, com teto diário; consulta escrita pelo
+  modelo sem texto nem identificador do aluno; resposta rotulada "da web" com o link; o
+  professor vê o que foi pesquisado (D68)
+- Conteúdo de página da web é dado, nunca instrução: teste adversário com página que tenta
+  mandar no Tutor, antes de a busca existir (D68)
 - Encaminhamento de assunto delicado que chega também a quem notifica o Conselho Tutelar,
   com acesso ao conteúdo auditado (`docs/regulacao.md` seção 7)
 
 **Casos de borda**
 
-Aluno tentando arrancar a resposta de três formas diferentes. Aluno perguntando sobre
-assunto fora da matéria. Aluno usando o tutor durante a prova. Internet caindo no meio da
+Aluno tentando arrancar a resposta de três formas diferentes, inclusive pedindo que o Tutor
+"pesquise e resuma" o trabalho. Aluno perguntando sobre assunto fora da matéria. Fonte aprovada
+que saiu do ar ou mudou de conteúdo. Aluno usando o tutor durante a prova. Internet caindo no meio da
 aula. Aluno pedindo ajuda sobre algo pessoal e delicado, que precisa de encaminhamento
 humano e não de resposta de IA.
 
@@ -265,9 +288,10 @@ precisa saber que o painel é dele primeiro, ou ele não usa o sistema.
 
 **Como acontece**
 
-O Monitor de turma roda de madrugada, cruza as entregas com os prazos, e de manhã avisa:
-cinco alunos do 1ºC não entregaram a lista, e quatro deles também não entregaram a anterior.
-Propõe preparar um aviso às famílias, que fica esperando aprovação.
+O Planejador roda de madrugada, cruza as entregas com os prazos, e de manhã abre o dia da
+Camila: três aulas, a prova do 2ºB às 10h, e cinco alunos do 1ºC que não entregaram a lista,
+quatro deles também sem a anterior. Não gerou conteúdo nenhum para isso. Na fase posterior, o
+Mensageiro da família propõe o aviso às famílias, que fica esperando aprovação.
 
 **Por que é assim**
 

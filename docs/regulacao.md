@@ -62,8 +62,8 @@ como valendo desde já, porque construir contra elas e corrigir depois custa mai
 
 | Classificação | O que significa para o produto |
 |---|---|
-| **Baixo risco** | Organizar material, revisão textual, e qualquer uso **sem efeito sobre a avaliação**. Cabem aqui o Rotina, o calendário e a busca no material |
-| **Cuidados adicionais** | Sistema que **acompanha** o estudante, faz recomendação acadêmica ou **interage continuamente** com ele. É o Tutor e o Monitor de turma: permitidos, com supervisão, revisão humana, monitoramento periódico e vedação de uso do dado para treinar modelo de terceiro |
+| **Baixo risco** | Organizar material, revisão textual, e qualquer uso **sem efeito sobre a avaliação**. Cabem aqui o Planejador abrindo o dia, o Assistente de ensino ajudando o professor a preparar aula, o calendário e a busca no material |
+| **Cuidados adicionais** | Sistema que **acompanha** o estudante, faz recomendação acadêmica ou **interage continuamente** com ele. É o Tutor, com o aluno e avisando o professor do que viu, com a memória da trajetória do aluno no sistema (D66): permitido, com supervisão, revisão humana, monitoramento periódico e vedação de uso do dado para treinar modelo de terceiro |
 | **Alto risco** | O que **interfere em avaliação, decisão acadêmica ou dado sensível**. É a correção de objetiva, o diagnóstico por habilidade e a adaptação por necessidade específica. Exige avaliação de impacto, explicação acessível, caminho de contestação e **validação humana efetiva, prévia, qualificada e documentada** |
 | **Excessivo ou incompatível** | Pontuação social, **reconhecimento de emoções** de aluno ou de professor, vigilância biométrica contínua, **perfilização psicológica ou comportamental para fins classificatórios**, e uso de dado educacional para **publicidade direcionada ou exploração comercial**. Nada disso existe no produto, e nada disso pode ser proposto (nível 4 em `docs/agentes.md`) |
 | **Vedado por etapa** | Acesso direto, autônomo ou não supervisionado a IA generativa ou conversacional na **educação infantil e nos anos iniciais, até o 5º ano**. Nosso recorte é 6º ao 9º e Ensino Médio (D43); descer de faixa reabre este item |
@@ -104,11 +104,16 @@ aprova tudo sem essa tela é exatamente o que a diretriz proíbe.
 - O tutor é sempre visível ao professor: modo sala em tempo real, modo casa com registro e
   resumo
 - Nenhuma funcionalidade decide aprovação, reprovação ou encaminhamento
-- Diagnóstico por habilidade, sinais do tutor, Monitor de turma e alertas sobre aluno são
-  tratados como **alto risco**: avaliação de impacto algorítmico antes de existirem,
+- Diagnóstico por habilidade, memória e sinais do Tutor, "Minhas turmas" e alertas sobre aluno
+  são tratados como **alto risco**: avaliação de impacto algorítmico antes de existirem,
   explicação em linguagem comum na tela e caminho de contestação (D60)
 - Nenhuma inferência de emoção, humor, atenção ou comportamento, nem pontuação de aluno ou
   de professor por isso; nenhum dado educacional para publicidade ou fim comercial (D57)
+- **Tempo ocioso e navegação do aluno não são medidos.** A única exceção é a contagem de
+  saídas da aba **durante uma avaliação online**, mostrada como fato só ao professor, com o
+  aluno avisado, sem consequência automática e sem histórico por aluno (D70). É integridade da
+  prova, não perfil de comportamento; ligada o tempo todo, seria a perfilização comportamental
+  que o ato classifica como risco excessivo
 - **A escola precisa fiscalizar o fornecedor.** A diretriz manda a escola adotar medidas de
   proteção e fiscalizar quem fornece tecnologia. Na prática, ela vai nos pedir documento: é
   o dossiê de conformidade de `docs/conformidade-mec.md` (D61)
@@ -130,8 +135,8 @@ ANPD. É o bloco de obrigação **direta nossa**, independente do contrato com a
 
 | Artigo | Obrigação | Como cumprimos |
 |---|---|---|
-| **art. 3º e 7º** | Configuração **mais protetiva por padrão**, e proibição de tratar dado de menor de forma que viole direito dele | Modo casa desligado por padrão (D19); tutor restrito ao conteúdo da turma; aluno sem e-mail, CPF nem foto; nenhuma configuração nasce no nível menos protetivo |
-| **art. 8º, I e II** | **Gerenciamento de risco** dos recursos e avaliação do conteúdo por faixa etária, compatível com a classificação indicativa | A AIA da D60 cobre o gerenciamento de risco; a faixa etária do recorte (11 a 18) é declarada no dossiê, e a linguagem do tutor é testada para 11 anos |
+| **art. 3º e 7º** | Configuração **mais protetiva por padrão**, e proibição de tratar dado de menor de forma que viole direito dele | Modo casa desligado por padrão (D19); tutor restrito ao material da turma por padrão, com a **busca em fontes aprovadas desligada e atrás de duas chaves**, a da escola e a do professor (D68); aluno sem e-mail, CPF nem foto; nenhuma configuração nasce no nível menos protetivo |
+| **art. 8º, I e II** | **Gerenciamento de risco** dos recursos e avaliação do conteúdo por faixa etária, compatível com a classificação indicativa | A AIA da D60 cobre o gerenciamento de risco; a faixa etária do recorte (11 a 18) é declarada no dossiê, a linguagem do tutor é testada para 11 anos, e a busca do Tutor só alcança **lista de fontes aprovadas por faixa etária** — web aberta não (D68) |
 | **art. 8º, IV** | Configuração, por padrão, que **evite uso compulsivo** | D59: sem recompensa por tempo de uso, sem sequência de dias, sem conteúdo que se inicia sozinho, notificação só em horário útil da escola, teto do tutor visível ao aluno (D38) |
 | **art. 16, parágrafo único** | Mapear riscos e **elaborar relatório de impacto** quando há tratamento de dado de menor | RIPD + AIA antes do piloto (D60), compartilhável com a ANPD |
 | **art. 17 e 18** | Ferramentas de supervisão parental, com aviso de que estão ativas | Ver 2.2: **a confirmar**, modulado pelo art. 39 |
@@ -179,7 +184,7 @@ similares", e a ANPD regulamenta e fiscaliza:
 | **I** | Ser **transparente quanto ao caráter sintético e automatizado** da interação | Cumprido pelo que o produto já é: a escola contrata um time de IA, a área do aluno se chama "Seu time", cada agente se apresenta pela função (D17) e toda saída de IA é rotulada como tal, com a fonte. Os agentes continuam agentes, com identidade; o que é vedado é **se passar por pessoa** — dizer que é humano quando perguntado, usar nome que sugira uma pessoa real (D58) |
 | **II** | **Prevenir a manipulação comportamental** | Sem simular vínculo afetivo ou dependência ("senti sua falta", "não me deixe"), sem linguagem que crie obrigação de continuar. Ter jeito próprio e ser simpático não é manipulação: o alvo da norma é produto de companhia artificial, não tutor escolar (D58) |
 | **III** | **Avaliar o risco algorítmico** à segurança e à saúde | AIA específica do Tutor antes de ele existir, revista a cada mudança de modelo ou de prompt (D60) |
-| **IV** | Implementar **salvaguardas ao desenvolvimento físico, mental e psicossocial** | Escopo escolar, recusa de assunto fora do escopo, encaminhamento a humano em assunto delicado (D36), teto diário (D38), e o texto de acolhimento revisado por orientação educacional |
+| **IV** | Implementar **salvaguardas ao desenvolvimento físico, mental e psicossocial** | Escopo escolar, recusa de assunto fora do escopo, encaminhamento a humano em assunto delicado (D36), teto diário (D38), o texto de acolhimento revisado por orientação educacional, e busca só em fontes aprovadas, com o assunto preso ao da turma e conteúdo de página tratado como dado, nunca como instrução (D68) |
 
 Os arts. 9º e 10 do mesmo decreto completam o desenho, e são requisitos de interface:
 
@@ -313,6 +318,23 @@ Duas obrigações somadas nesta revisão:
 
 **A detalhar** no PRD do F9, com advogado e orientação educacional.
 
+### 7.1 Inclusão: o que a lei exige da escola, e o que isso não exige de nós
+
+- **O plano individual é obrigação da escola.** A LBI (Lei 13.146/2015, art. 28, VII, que o
+  § 1º estende à escola particular) manda planejar estudo de caso e elaborar o plano de
+  atendimento educacional especializado; o Decreto 12.686/2025 trata o estudo de caso e o PAEE
+  como documento pedagógico, **sem exigir laudo**. Quem faz é a equipe da escola, com a família
+- **O que a lei pune é recusar.** Recusar ou dificultar matrícula por causa da deficiência é
+  crime (Lei 7.853/1989, art. 8º, I: reclusão de 2 a 5 anos), e **recusar adaptação razoável**
+  é discriminação (LBI, art. 4º, § 1º, e art. 88). Adaptar prova e atividade é o que a lei
+  quer; nenhuma norma condiciona a adaptação a o software gerar o documento do plano
+- **O que fazemos:** a escola faz o plano do jeito dela, a coordenação registra no Turmma só o
+  **tipo de adaptação** (D35), e o Adaptador aplica (D67). Não gerar o PEI é escolha nossa de
+  minimização — o documento descreve a condição do aluno, dado sensível de menor —, não
+  proibição legal. **A confirmar** com advogado, junto da base legal da adaptação
+- O registro de quais avaliações foram adaptadas, e quem aprovou, é também a prova de que a
+  escola ofereceu a adaptação
+
 ---
 
 ## 8. O professor como titular e como empregado
@@ -380,3 +402,5 @@ Cada item aqui é um risco aberto, com dono no `TODO.md`:
 | 7 | Termos de Arco/SAS, Positivo e Bernoulli, e apostila impressa escaneada | Define o primeiro material do piloto (seção 5) |
 | 8 | Base legal da conversa do tutor e dos sinais, na particular e na pública | Sustenta o F9 e o F10 |
 | 9 | Contrato do provedor de modelo: menor de idade, treinamento vedado, processamento no Brasil | Sustenta a D62 e o portão da primeira escola real |
+| 10 | Se ligar a busca em fontes aprovadas para aluno de até 16 anos, sem conta de responsável vinculada, conta como rebaixar a proteção (ECA Digital, art. 24, § 5º) | Define se a busca do Tutor (D68) pode existir para o 6º ao 9º ano antes do portal da família |
+| 11 | Base legal e proporcionalidade da contagem de saídas da aba durante avaliação (D70), e se algo parecido pode existir fora de avaliação | Hoje só existe em avaliação; fora dela bate na regra 70, item 7, e só um parecer reabre |

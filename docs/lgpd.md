@@ -18,7 +18,7 @@ SaaS de educação não costuma morrer por falta de funcionalidade. Morre por va
 |---|---|---|
 | **Controladora** | A escola (ou a rede) | Decide por que e como os dados são tratados. Responde pelo consentimento dos responsáveis. |
 | **Operador** | Nós | Tratamos **apenas** conforme instrução da escola, registrada em contrato. |
-| **Suboperador** | Provedor de IA, hospedagem, e-mail | Só entram com contrato que replique nossas obrigações. Conversa de aluno só em provedor com processamento no Brasil (D62). |
+| **Suboperador** | Provedor de IA, hospedagem, e-mail, provedor de busca (D68) | Só entram com contrato que replique nossas obrigações. Conversa de aluno só em provedor com processamento no Brasil (D62). |
 
 **Ser operador não nos tira do ECA Digital.** A LGPD distribui responsabilidade entre
 controlador e operador; a Lei 15.211/2025 fala de "fornecedor de produto ou serviço de
@@ -50,7 +50,11 @@ deveria existir.
 | Nota | aluno | registro escolar | obrigação legal da escola | conforme norma da escola |
 | Conversa com o tutor | aluno | aprendizagem e supervisão docente | legítimo interesse da escola em supervisão pedagógica | 12 meses |
 | Sinais de uso de IA | aluno | supervisão docente | idem | 12 meses |
-| Adaptação pedagógica necessária (ex.: fonte ampliada, tempo extra) — **nunca diagnóstico** | aluno | adaptar prova e atividade (agente Adaptador) | dado sensível (art. 11), via obrigação da escola com inclusão; **a confirmar com advogado** | enquanto houver vínculo; revista a cada ano letivo |
+| Adaptação pedagógica necessária (ex.: linguagem direta, fonte ampliada, tempo extra), sempre como **tipo de adaptação** — **nunca diagnóstico nem texto livre sobre o aluno** (D35, D67) | aluno | adaptar prova, atividade e material (agente Adaptador) e ajustar a forma da conversa do Tutor, nunca o que é cobrado (D66) | dado sensível (art. 11), via obrigação da escola com inclusão; **a confirmar com advogado** | enquanto houver vínculo; revista a cada ano letivo |
+| Memória do Tutor: alcança **toda a trajetória do aluno no sistema** (respostas, diagnóstico, devolutiva do professor, sinais e o resumo de cada sessão em formato fixo: assunto, habilidade, exercício, onde travou, como terminou). É leitura de dados que já estão neste mapa, mais o resumo de sessão; **não existe texto sobre o jeito, o humor ou o comportamento do aluno**, escrito por modelo ou por pessoa (D66) | aluno | orientar o estudo de forma individual; o aluno vê e contesta | legítimo interesse da escola em supervisão pedagógica; perfil acadêmico individual é alto risco no CNE: AIA antes de existir | cada dado segue a própria retenção; o resumo de sessão segue a conversa (12 meses) |
+| Contexto do Tutor informado pelo professor: por turma (conteúdo atual, lista ativa, foco da semana) e por aluno (**habilidades a reforçar, escolhidas da lista; sem texto livre**) (D66) | aluno | direcionar o Tutor | execução de contrato educacional | ano letivo |
+| Busca do Tutor: a consulta **escrita pelo modelo** e as fontes que o aluno abriu (D68) | aluno | supervisão docente e letramento em pesquisa | legítimo interesse da escola em supervisão pedagógica | 12 meses, como a conversa |
+| Saída da aba durante avaliação: contagem **por avaliação**, nunca somada por aluno (D70) | aluno | integridade da avaliação, mostrada só ao professor da turma, com o aluno avisado antes | execução de contrato educacional; **a confirmar com advogado** | segue a resposta da avaliação (ano letivo + 1 ano); no registro da validação entra só que o destaque foi apresentado e aberto |
 | Sinal "precisa de atenção humana" (sem conteúdo) | aluno | encaminhar a um humano o aluno que pediu ajuda pessoal | proteção do titular, melhor interesse (art. 14) | 12 meses |
 | Nome, e-mail | professor, coordenador | acesso e responsabilidade | execução de contrato | vigência + 5 anos |
 | Indicadores de uso e das turmas do professor | professor | apoio pedagógico ao próprio professor e visão agregada da coordenação; **nunca decisão sobre o professor** (D45) | execução de contrato; **a confirmar com advogado** (CLT, convenção coletiva, estatuto do servidor) | ano letivo + 1 ano (proposta) |
@@ -101,7 +105,11 @@ A pergunta certa não é "esse campo é útil?", é "**o que acontece se ele vaz
 - Não colete foto de aluno. Se um dia precisar, vira projeto próprio com avaliação de impacto
 - Não colete endereço, renda, raça, religião, saúde
 - **Dado de PEI e necessidade específica é dado sensível** (art. 11). Se a ferramenta de
-  adaptação precisar dele, guarde a *adaptação necessária*, não o diagnóstico
+  adaptação precisar dele, guarde a *adaptação necessária*, não o diagnóstico. A ferramenta
+  Adaptação recebe o **tipo de adaptação**; campo de texto livre sobre o aluno é onde o
+  diagnóstico acaba escrito, e por isso não existe (D67)
+- Não meça tempo ocioso nem acompanhe a navegação do aluno. A única exceção é a contagem de
+  saídas da aba **durante uma avaliação** (D70)
 - Resposta de prova não precisa virar perfil comportamental. Mais do que "não precisa":
   **perfil comportamental de menor é vedado** (ECA Digital, art. 26; Decreto 12.880, art. 10;
   e uso de risco excessivo pelo CNE). Vale para qualquer agregação que classifique o aluno por
@@ -170,8 +178,10 @@ Este é o ponto em que somos diferentes de um SaaS comum, e onde o risco é maio
    verificar); o DPA da Maritaca proíbe treinamento e descarta o conteúdo após a geração,
    mas lista processamento no Brasil, nos EUA e na UE, e a variante no Brasil precisa estar
    escrita no contrato. Transferência internacional exige as cláusulas-padrão da ANPD.
-2. **Envie o mínimo.** O tutor precisa do conteúdo da dúvida e do material da turma, não do
-   histórico de notas do aluno.
+2. **Envie o mínimo.** A memória do Tutor alcança tudo que o aluno fez no sistema (D66), mas
+   cada chamada leva só o que importa para aquela dúvida — o trecho do histórico recuperado por
+   relevância, as habilidades em jogo e o tipo de adaptação registrada —, nunca o histórico
+   inteiro, nunca o nome, nunca o motivo da adaptação.
 3. **Prefira identificador a nome.** O modelo não precisa saber que é a Maria.
 4. **Registre todo envio externo** em `ExecucaoAgente`: o que foi enviado, para qual
    modelo, quanto custou, quem aprovou o resultado.
@@ -191,6 +201,10 @@ Este é o ponto em que somos diferentes de um SaaS comum, e onde o risco é maio
    agente afirma ser pessoa. E o risco algorítmico de cada funcionalidade de alto risco tem
    avaliação escrita antes de ela existir (D60). Não é cosmético: é o único artigo em vigor no Brasil que trata de agente
    conversacional com menor de idade, e a ANPD vai regulamentá-lo.
+9. **O buscador é um terceiro fora do País** (D68). A consulta da busca do Tutor é escrita pelo
+   modelo, sem o texto que o aluno digitou e sem identificador; sai do nosso servidor, nunca do
+   navegador do aluno; e o provedor de busca entra no registro de suboperadores. Conteúdo de
+   página da web é dado, nunca instrução para o agente.
 
 ---
 

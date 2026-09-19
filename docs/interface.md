@@ -35,16 +35,18 @@ Veio do desenho da call (Excalidraw), **decidido**:
 
 - **Seletor de escola no topo**, filtrando tudo abaixo. Professor dá aula em mais de uma
   escola (regra 50, item 13)
-- **Home é o chat.** Com contexto de papel, turma e material. Tudo que existe em Ferramentas
-  pode ser feito por aqui
+- **Home é o chat com o Assistente de ensino** (D32 revista), com contexto de papel, turma e
+  material. Tudo que existe em Ferramentas pode ser feito por aqui
 - **Ferramentas** são os mesmos fluxos em formato de formulário, para quem não quer
   conversar com chat
 - **Calendário** mostra a semana e o dia por escola e turma: aulas, avaliações, entregas e o
   que os agentes concluíram. Deriva da estrutura da escola, o professor não monta a grade
   (regra 60, item 8)
 - **Seu time** é o feed dos agentes. Cada agente é uma thread, com não-lidos
-- **Meu painel** (*proposta*, D45) mostra ao professor o próprio uso e o desempenho das
-  turmas dele por habilidade, com a comparação da série. É dele primeiro: o que a
+- **Meu painel** (D45, D69) tem duas abas. **Minhas turmas**: desempenho, principais
+  dificuldades, evolução, conteúdo com mais erro e alunos que precisam de atenção, por
+  habilidade; nasce no F6 com o diagnóstico, ganha os sinais do Tutor no F10 e a comparação da
+  série no F12. **Meu uso**: o próprio uso do professor. É dele primeiro: o que a
   coordenação vê dele é agregado, e o nominal só abre com auditoria. A tela diz isso em
   português comum
 - **Histórico** lista as conversas do professor, que a coordenação nunca vê
@@ -80,27 +82,39 @@ Consequências técnicas:
 - Detectar a intenção usa perfil `rapido` (regra 30). Gerar a prova usa o perfil da ferramenta
 - A pergunta existe para não gastar token gerando o que o professor não pediu
 
+**Busca na web** (D68): desligada por padrão. O professor liga por conversa, num controle ao
+lado do campo de mensagem; a resposta que usa fonte de fora vem rotulada "da web", com o
+link, separada de "material da escola, página X". Nada que vem da web entra na base da
+escola.
+
 ### 1.2 Ferramentas (F7)
 
-Prova (gabarito, versões, exportação) · Atividade e lista · Correção de objetiva com
-diagnóstico por habilidade · Adaptação para necessidade específica · Plano de aula e sequência
-didática · Simulado ENEM a partir do banco público (D21) · Redação e discursiva: a ferramenta
+Prova (gabarito, versões) · Atividade e lista · **Material didático** (resumo, texto de apoio,
+revisão; fora da primeira entrega) · **Apresentação** (roteiro e slides a partir do material) ·
+Correção de objetiva com diagnóstico por habilidade · **Adaptação**, em que o professor escolhe
+o **tipo de adaptação** e nunca descreve o aluno em texto livre (D35, D67) · Plano de aula e
+sequência didática · Simulado ENEM a partir do banco público (D21) · Redação e discursiva: a ferramenta
 gera **rubrica e critérios** antes da aplicação, organiza o lote e apoia a correção cega, e
 **a IA não corrige, não avalia, não dá nota nem conceito e não escreve devolutiva** sobre o
 texto do aluno (D55). Quem escreve a devolutiva é o professor, na tela, com a rubrica ao lado.
 
 Toda ferramenta produz um **artefato** que fica na biblioteca, ligado à turma e ao
-calendário, e toda saída cita material e página.
+calendário, e toda saída cita material e página. O artefato **exporta em PDF, PowerPoint
+(PPTX) e Excel (XLSX)**, conforme o tipo e o que o professor pedir, além da impressão (D67). De
+onde vêm as imagens da apresentação está em aberto.
 
 ### 1.3 Seu time: o feed de agentes (F11)
 
-- Agentes com nome de função: Rotina, Corretor, Planejador, Monitor de turma, Adaptador
-  (D17, D32)
+- Agentes com nome de função: Tutor, Corretor, Planejador, Adaptador (D17, D32 revista). O
+  Assistente de ensino é o chat da Home, não uma thread do feed
+- **A thread do Tutor** é onde o professor recebe o que o Tutor viu no uso da turma: quem
+  travou e onde, quem errou muito, quem pediu resposta pronta, a principal dificuldade, a
+  dúvida que se repetiu. Dentro do horário útil da escola (D59)
 - Cada mensagem de agente diz o que fez e, quando aplicável, **o que está esperando**:
   "Corrigi as 32 provas do 2ºB, média 6,4. Esperando você aprovar"
 - O nível de autonomia do agente fica visível na thread, em português comum
 - **O feed nunca aparece vazio** para professor com turma (regra 50, item 6). Sem atividade
-  ainda, o agente Rotina abre o dia com o que vem da grade e das avaliações
+  ainda, o Planejador abre o dia com o que vem da grade e das avaliações
 
 ### 1.4 Aprovar nota
 
@@ -124,6 +138,15 @@ professor, sem valor nem texto sugerido pela IA (D55).
   repetiu (regra 50, item 10)
 - Abrir a conversa de um aluno é ação explícita e fica em auditoria
 - Sem inferência de estado emocional (regra 70, item 7)
+- Com a busca do Tutor ligada, o professor vê o que a turma pesquisou e quais fontes foram
+  abertas (D68)
+
+### 1.6 Prova online: saída da aba (D70)
+
+- Antes de começar, o aluno lê que sair da aba da prova é mostrado ao professor
+- O professor vê o fato ("saiu da aba 3 vezes"), junto dos outros destaques do lote. Nada
+  acontece sozinho com a prova nem com a nota
+- Não existe fora de avaliação, não vira histórico do aluno e não aparece para a coordenação
 
 ---
 
@@ -141,6 +164,11 @@ ao 3º do Ensino Médio; a linguagem do tutor e os textos precisam funcionar par
   avaliação em andamento. Se apresenta pela função, como os outros agentes do time (D17, D58);
   **nunca afirma ser uma pessoa** e, perguntado sobre si, explica o que é, como funciona e que
   pode errar, em linguagem da faixa etária (D65)
+- **Pesquisa em fontes aprovadas**, quando a escola liberou e o professor ligou para a turma
+  (D68): o Tutor traz a fonte, pede para comparar, pergunta de volta, e não escreve o trabalho.
+  A tela diz de onde veio cada informação, e que a pesquisa é vista pelo professor
+- **O Tutor lembra de tudo que o aluno já fez no sistema** — atividades, trabalhos, avaliações
+  e sessões (D66) —, e o aluno consegue ver o que o Tutor sabe sobre o trabalho dele e contestar
 - **Quanto ainda dá para usar hoje**, do pacote do tutor (D38), mostrado como salvaguarda e
   não como punição, com o ponto de parada visível (D59)
 - **Aviso de privacidade em linguagem de faixa etária** e caminho para **avisar um adulto**
@@ -180,7 +208,8 @@ Desligado, a tela explica que o tutor funciona em sala, sem parecer erro.
   - alertas em agregado, como hipótese com contexto: média fora da curva, habilidade em
     queda, aluno em risco. Nada de ranking de professor
   - consumo de IA do mês contra o orçamento
-- **Analista da coordenação**: resumo de segunda de manhã e alertas na hora, em agregado (D32)
+- **Analista de desempenho escolar**: resumo de segunda de manhã e alertas na hora, em
+  agregado; recorte com um professor só conta como nominal (D32 e D45 revistas)
 - **Adaptações**: registro da adaptação necessária por aluno, nunca diagnóstico (D35)
 - **Agentes**: cada agente, o que faz sozinho e o que espera aprovação, em português comum
   (D9). É a tela para apontar quando alguém pergunta "o que essa IA faz sozinha?". Cada agente
@@ -194,7 +223,8 @@ Desligado, a tela explica que o tutor funciona em sala, sem parecer erro.
 - **Exportar**: dado, artefato e histórico de uso em formato aberto, a qualquer momento, sem
   depender de nós (D63)
 - **Auditoria**: para qualquer item, o que a IA gerou, quem aprovou e quando
-- **Configurações da escola**: política de tutor, modo casa por turma (D19), retenção
+- **Configurações da escola**: política de tutor, modo casa por turma (D19), busca do Tutor em
+  fontes aprovadas — liberar na escola e ajustar a lista de fontes (D68) —, retenção
 
 MFA obrigatório para coordenação (F1).
 
@@ -230,6 +260,8 @@ Fase posterior (D11). Nota, entrega e alerta, alimentados pelo motor de eventos 
 ## 7. Em aberto
 
 - Identidade visual: cores, tipografia, logo, tom da interface
-- Avatar dos agentes (ícone por função?) — depende da identidade visual
+- Avatar dos seis agentes (ícone por função?) — a marca existe (D54); falta desenhar
 - Detalhe de navegação do aluno e da coordenação, a fechar nos PRDs de F2, F9 e F12
-- Conteúdo do "Meu painel" do professor e dos indicadores (decisão em aberto no `CLAUDE.md`)
+- Indicadores de "Minhas turmas" e do painel do professor: quais, limiar e texto do alerta
+  (decisão em aberto no `CLAUDE.md`; a estrutura das abas está fechada, D69)
+- Imagens da ferramenta de apresentação (D67)

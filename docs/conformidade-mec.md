@@ -205,7 +205,8 @@ impacto pedagógico** de decisão automatizada. O ECA Digital (art. 8º, I, e ar
 gerenciamento de risco e relatório de impacto; a AIA é como o MEC espera ver isso feito.
 
 Adotamos o roteiro dele, com um documento por funcionalidade de alto risco — Tutor,
-correção de objetiva, diagnóstico por habilidade, sinais e alertas, adaptação (D60):
+correção de objetiva, diagnóstico por habilidade, sinais e alertas, adaptação (D60) —,
+versionado em `docs/aia/`:
 
 | Etapa | O que produz | Nosso gancho |
 |---|---|---|
