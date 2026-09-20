@@ -169,6 +169,13 @@ Conselho Tutelar (`docs/regulacao.md` seção 6). Avaliação de impacto dos sin
 existirem. Acesso fora da sala configurado pela escola por turma, desligado por padrão
 (D19). Web para computador da escola em sala e celular fora dela (D51).
 
+Herdado do F1: **a leitura do próprio histórico pelo aluno** (turmas de anos encerrados) ficou
+para cá. No F1 ela seria só a lista de turmas passadas, sem nota nem entrega, e o valor aparece
+junto do desempenho próprio. Hoje o aluno tem `turma.ler`, `turma.listar`, `aluno_da_turma.ler`
+e `vinculo.ler_proprios` em `nunca` na `MATRIZ`, e `?anoLetivoId` com token de aluno é 404: a
+tarefa que abrir isso muda a célula, cria rota e DTO próprios, e traz o teste que quebra sem a
+cláusula de `usuario_id` do contexto (validação do F1, 20/09/2026).
+
 **Pronto quando:** três tentativas diferentes de arrancar a resposta pronta falham no teste,
 e o encaminhamento de risco à vida chega a quem notifica, com o acesso ao conteúdo auditado.
 

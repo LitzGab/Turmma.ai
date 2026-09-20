@@ -29,6 +29,10 @@ permite, na escola e no ano letivo ativos, e nada de uma escola chega a outra.
 - Reset de senha do aluno pela escola e recuperação de senha por e-mail: F2
 - Ligar conta Google ou Microsoft de aluno: F2 (importação ou reivindicação)
 - Auditoria consultável, exportação e eliminação por titular: F3. O F1 só grava o registro
+- Leitura do próprio histórico pelo aluno (turmas de anos encerrados): F9. Decidido na 10.0 e
+  ratificado na validação de 20/09/2026: no F1 esse histórico seria só a lista de turmas
+  passadas, sem nota nem entrega, e o valor aparece com o desempenho do F9. No F1 o aluno vê de
+  si a escola e o papel de agora, por `/v1/eu`, e `?anoLetivoId` é recusado para ele
 - Telas da rede e do responsável: F14 e fase posterior. O F1 só declara a permissão deles
 - Suporte nosso entrando como a escola
 - Identidade visual: as telas usam a casca neutra do F0
@@ -41,7 +45,7 @@ permite, na escola e no ano letivo ativos, e nada de uma escola chega a outra.
 | Rede | ter o papel declarado na matriz | alcançar dado individual de aluno ou professor |
 | Coordenador | entrar com senha e MFA; criar ano letivo, série, turma, disciplina e vínculo pela API; encerrar vínculo; cadastrar domínio Google ou tenant Microsoft; redefinir MFA de outro coordenador; ver a unidade | entrar sem MFA; ver indicador nominal de professor sem auditoria |
 | Professor | entrar por e-mail e senha ou pela conta da escola; confirmar ou contestar cada vínculo; trocar de escola; ler as próprias turmas de anos encerrados | criar ou alterar vínculo; alcançar aluno por vínculo não confirmado; editar ano encerrado |
-| Aluno | entrar pelo endereço da escola com matrícula e senha, ou pela conta da escola já ligada; ver a si e o próprio histórico | ver colega; entrar por conta externa não ligada |
+| Aluno | entrar pelo endereço da escola com matrícula e senha, ou pela conta da escola já ligada; ver a si (escola e papel de agora, por `/v1/eu`) | ver colega; entrar por conta externa não ligada; ler o próprio histórico de anos encerrados, que é do F9 (seção 3) |
 
 ## 5. Requisitos funcionais
 
@@ -62,7 +66,7 @@ permite, na escola e no ano letivo ativos, e nada de uma escola chega a outra.
 | RF13 | A sessão do aluno termina ao fechar o navegador ou após inatividade configurável por escola (padrão 30 min); Sair está em toda tela | Após o tempo sem uso, ou ao reabrir o navegador, a próxima ação pede login |
 | RF14 | Um mesmo login tem vínculos em mais de uma escola; o seletor mostra só as dele, e tudo abaixo é da escola ativa | Com A ativa, só dado de A; trocar para B não leva nada de A |
 | RF15 | Toda leitura e escrita alcança só a escola ativa e o ano letivo em curso; id de outra escola responde igual a id inexistente | Teste de isolamento por módulo: A não lê, não escreve e não descobre existência de nada de B |
-| RF16 | O professor lê, sem editar, as próprias turmas de anos encerrados; o aluno lê o próprio histórico; sem vínculo na escola, nada | Professor que saiu em março não alcança a turma em outubro; o que ficou lê e não altera |
+| RF16 | O professor lê, sem editar, as próprias turmas de anos encerrados; sem vínculo na escola, nada. A leitura do próprio histórico pelo aluno é do F9 (seção 3) | Professor que saiu em março não alcança a turma em outubro; o que ficou lê e não altera |
 | RF17 | A matriz de permissão por papel e recurso é declarada num lugar só e inclui indicador de professor: próprio para ele, agregado para coordenação e rede, nominal para a coordenação só com auditoria | Um teste por célula da matriz; mudar uma célula sem mudar o teste deixa a esteira vermelha |
 | RF18 | Nenhuma resposta traz senha, segredo de MFA, código de recuperação, identificador externo ou campo fora do contrato de saída | Teste percorre as rotas do F1 procurando esses campos |
 | RF19 | Ficam registrados com autor, data e escola: ações do operador, criação, confirmação, contestação e encerramento de vínculo, mudança de papel, redefinição de MFA e ligação de conta externa | Cada ação gera um registro consultável por teste |

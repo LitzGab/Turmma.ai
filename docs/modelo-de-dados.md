@@ -5,48 +5,86 @@ Notação: `→` referência, `*` obrigatório.
 ## Estrutura institucional
 
 ```
-Rede*            nome, cnpj, tipo (prefeitura | grupo | independente)
-Escola*          → rede*, nome, inep, endereco, config, retencaoConfig
-AnoLetivo*       → escola*, ano, inicio, fim, ativo
-Periodo          → anoLetivo*, nome (1º bimestre), inicio, fim
-Serie*           → escola*, nome (1º ano), etapa
-Turma*           → escola*, anoLetivo*, serie*, nome (2ºB), turno
-Disciplina*      → escola*, nome, area
+Rede*            nome, tipo (prefeitura | grupo | independente), ipsSaida (IP público de saída
+                 da rede, não é dado de pessoa)
+Escola*          → rede*, nome, slug*, inatividadeAlunoMin (30), inatividadeEquipeMin (120)
+AnoLetivo*       → escola*, ano, inicio, fim, situacao (planejado | em_curso | encerrado)
+Serie*           → escola*, etapa (ef_anos_finais | em), ano (6–9 | 1–3)
+Turma*           → escola*, anoLetivo*, serie*, nome (2ºB), turno?
+Disciplina*      → escola*, nome, area? (área da BNCC)
 ```
+
+Tudo isso existe desde o F1. `slug` é o endereço de entrada da escola (`/e/:slug`), e a
+inatividade da sessão é configurável por escola, com padrão diferente para aluno e equipe.
+`situacao` tem unicidade parcial: um `em_curso` por escola. `Periodo` (bimestre), `inep`,
+`endereco` e a configuração de retenção entram quando a funcionalidade que os usa chegar.
 
 ## Pessoas e vínculos
 
+Implementado no F1. A forma exata das tabelas, com unicidades, índices e checks, está na
+seção 3 da Tech Spec do F1 (`tasks/prd-identidade-e-tenancy/techspec.md`); aqui fica o desenho.
+
 ```
-Usuario*         → escola*, nome, papel, email?, matricula?, senhaHash?, contaExternaId?,
-                   provedorConta? (google | microsoft), status, mfa?
-Vinculo*         → usuario*, turma*, disciplina?, papel*, anoLetivo*, origem (coordenacao |
-                   grade | classroom), confirmadoPor?, confirmadoEm?
+Conta            email?, senhaHash?, mfaSegredoCifrado?, mfaAtivadoEm?, mfaUltimoPasso?
+                 (global, sem escola: é a identidade de login da equipe)
+CodigoRecuperacao* → conta*, hmac*, usadoEm?
+Usuario*         → escola*, conta? (nulo no aluno), papel*, nome*, desativadoEm?
+CredencialMatricula* → escola*, usuario*, matricula*, senhaHash*
+ContaExterna*    → escola*, usuario*, provedor* (google | microsoft), tenant?, sujeito*
+ProvedorEscola*  → escola*, provedor*, valor* (hd | tid), removidoEm?
+Vinculo*         → escola*, anoLetivo*, usuario*, turma*, disciplina?, papel*,
+                   estado* (pendente | confirmado | contestado | encerrado),
+                   contestacao? (nao_leciono | turma_errada | disciplina_errada | outro),
+                   complemento?, motivoEncerramento? (fim_do_ano | desligamento | realocacao),
+                   criadoPor*, decididoEm?, encerradoEm?
+Sessao*          → escola*, conta?, usuario*, metodo* (email | matricula | externo), familia*,
+                   refreshHash*, ultimoUsoEm*, expiraEm*, encerradaEm?, motivo?
+RegistroAcesso*  → escola?, usuario?, evento* (login | login_falho | renovacao | saida), ip*, em*
+Convite          → escola*, tokenHash*, tipo (coordenador), usuario*, expiraEm, usadoEm?,
+                   revogadoEm?
+```
+
+**A identidade é global, os vínculos são por escola** (decidido na Tech Spec do F1). `Conta`
+não tem `escolaId` porque é o login; `Usuario` é a pessoa *naquela* escola, com o papel dela.
+Um professor em duas escolas é uma `Conta` com dois `Usuario`, e o escopo de tenant continua
+inteiro na regra 10: toda tabela de domínio tem `escolaId`, e quem resolve a fronteira é o
+único módulo autorizado a consultar sem escopo (`ResolucaoDeTenantRepository`, com
+`@SemEscopo` e teste de arquitetura que prova que só `sessao` a importa).
+
+**O aluno é `Usuario` sem `Conta`**, com `CredencialMatricula`. Não tem e-mail (regra 20).
+Matrícula é única por `(escolaId, matricula)`, nunca globalmente: dois alunos em escolas
+diferentes podem ter a mesma.
+
+`ContaExterna.sujeito` é o identificador opaco da conta Google ou Microsoft da escola (D48);
+e-mail, nome e foto que o provedor devolve são descartados antes de gravar. Uma conta externa
+por usuário na escola. `ProvedorEscola` é a lista de domínios Google (`hd`) e tenants
+Microsoft (`tid`) que a escola cadastrou: o que não está nela não entra, e o domínio retirado
+ganha `removidoEm` em vez de ser apagado.
+
+`Vinculo` é criado pela escola (coordenação, grade importada ou Classroom), nasce `pendente` e
+só dá acesso quando o professor o confirma (D3 revista, regra 60 item 8a). O professor não cria
+o próprio vínculo: confirma ou contesta. `complemento` é texto livre de até 140 caracteres, com
+aviso de não escrever nome de aluno, e é apagado na virada do ano, quando o vínculo passa a
+`encerrado` com motivo `fim_do_ano`.
+
+`papel`: `rede` · `coordenador` · `professor` · `aluno` · `responsavel`. A matriz de quem
+alcança o quê é declarada num lugar só, em `packages/shared/src/permissao/matriz.ts`.
+
+### Ainda não existe — F2
+
+```
 Responsavel      → usuario*, aluno*, parentesco
-Convite          → escola*, token*, tipo (professor | sala), turma?, expiraEm, usadoEm,
-                   revogadoEm?, criadoPor*
 ListaNome*       → turma*, nome*, status (livre | reivindicado | aprovado), origem
 Reivindicacao*   → listaNome*, dispositivo, solicitadoEm*, aprovadoPor?, aprovadoEm?,
                    rejeitadoEm?
 ```
 
-`ListaNome` é a lista que o coordenador sobe. O aluno entra pelo link da sala, reivindica
-um nome e só vira `Usuario` com matrícula e senha **depois da aprovação do professor**.
+`ListaNome` é a lista que o coordenador sobe. O aluno entra pelo link da sala, reivindica um
+nome e só vira `Usuario` com matrícula e senha **depois da aprovação do professor**. No F1 o
+aluno e o vínculo dele vêm do seed sintético.
 
-`email` e `matricula` são mutuamente exclusivos por papel: aluno tem matrícula, os demais
-têm e-mail. Unicidade de matrícula é por `(escolaId, matricula)`.
-
-`contaExternaId` é o identificador opaco da conta Google ou Microsoft da escola (D48). Do
-aluno, nunca se grava e-mail nem foto que o provedor devolve. Unicidade por
-`(escolaId, provedorConta, contaExternaId)`.
-
-`Vinculo` é criado pela escola (coordenação, grade importada ou Classroom) e só libera acesso
-a aluno depois de `confirmadoEm` (D3 revista). O professor não cria o próprio vínculo.
-
-Um professor pode ter vínculo em mais de uma escola. Como modelar isso sem ferir a regra 10
-(usuário por escola ligado a uma identidade de login, ou identidade global com vínculos por
-escola) é decisão da Tech Spec do F1.
-
-`papel`: `rede` · `coordenador` · `professor` · `aluno` · `responsavel`
+`Convite` no F1 é só de coordenador, criado por comando do operador. Os tipos `professor` e
+`sala`, e o vínculo do aluno vindo da lista, entram no F2.
 
 ## Grade horária e calendário
 
@@ -174,8 +212,8 @@ recusada no servidor.
 Evento*          → escola*, tipo*, entidade*, entidadeId*, payload, em*
 Notificacao      → usuario*, evento*, titulo*, corpo*, canal*, lidaEm?, enviadaEm?
 Contrato         → rede*|escola*, inicio, fim, licencas, valor, docTratamentoDados*
-Auditoria*       → usuario*, escola*, acao*, entidade*, entidadeId, antes?, depois?, em*,
-                   ip?, finalidade?
+Auditoria*       → escola*, autorUsuario? | autorOperador?, acao*, entidade*, entidadeId,
+                   antes?, depois?, finalidade?, requisicaoId*, em*    (F1)
 SolicitacaoTitular → escola*, titular*, tipo (acesso | correcao | eliminacao |
                    portabilidade | compartilhamento), status, solicitadaEm*, atendidaEm?
 Incidente        → escola*, detectadoEm*, descricao, titularesAfetados, comunicadoEm?
@@ -201,7 +239,10 @@ liga a decisão sobre o professor (D45, regra 70 item 8). Os dois estão no mapa
 
 ## Regras transversais
 
-1. Toda tabela de domínio tem `escolaId`. As que variam por período têm `anoLetivoId`.
+1. Toda tabela de domínio tem `escolaId`. As que variam por período têm `anoLetivoId`. As
+   exceções são curtas e fixas: tabela pública sem dono (habilidades da BNCC, banco de questões
+   público) e a identidade de login (`Conta`, `CodigoRecuperacao`), que é global por desenho e
+   só é alcançada pelo módulo `sessao` — ver "Pessoas e vínculos".
 2. Id é UUID. Nunca sequencial.
 3. Nada é apagado de verdade: exclusão é lógica, com data e autor — exceto em pedido de
    eliminação do titular, que apaga de fato e propaga para backup na próxima rotação.

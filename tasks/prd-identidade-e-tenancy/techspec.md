@@ -142,7 +142,7 @@ Envelope de erro do F0. As rotas anônimas levam `@RotaAnonima`.
 | Método | Rota | Papel | Entrada | Saída |
 |---|---|---|---|---|
 | GET | `/v1/escolas/:slug/acesso` | anônimo | — | `{ nome, provedores: ('google'\|'microsoft')[] }` |
-| POST | `/v1/sessao/email`, `/matricula` | anônimo | `{ email, senha, bilhete? }`, `{ slug, matricula, senha }` | `{ etapa, desafio? }`; cookie em `pronta` |
+| POST | `/v1/sessao/email`, `/matricula` | anônimo | `{ email, senha, bilhete? }`, `{ slug, matricula, senha }` | `{ etapa, desafio?, acessos? }`; cookie em `pronta`. Na etapa `escolher`, `acessos` com os mesmos campos de `/v1/eu.acessos` (20.0): o desafio é opaco para o cliente, e sem isso a tela `/escolher-escola` não teria escola, papel nem o `usuarioId` que `POST /v1/sessao/escola` exige (RF14). Vai só para a conta que acabou de provar a senha |
 | GET | `/v1/sessao/externa/:provedor/iniciar?slug=`, `/retorno` | anônimo | — | 302 |
 | POST | `/v1/sessao/mfa` | desafio `mfa` | `{ codigo }` ou `{ recuperacao }` | etapa |
 | POST | `/v1/conta/mfa/configurar`, `/ativar` | desafio `configurar_mfa`, MFA inativo | —, `{ codigo }` | `{ uri, segredo }`, `{ codigosRecuperacao }`; `no-store` |
@@ -268,6 +268,12 @@ escreva nome de aluno". Ao encerrar o ano letivo, na mesma transação, os vínc
 **Histórico.** `anoLetivoId` só em leitura e só de ano `encerrado` da escola do contexto. A
 coordenação lê sem vínculo. O professor, ativo, precisa de vínculo com aquela turma naquele
 ano, `confirmado` ou `encerrado` por `fim_do_ano`. Qualquer outro caso é 404.
+- **O aluno não lê histórico no F1** (decidido na 10.0, ratificado na validação de 20/09/2026 e
+  registrado na seção 3 do PRD): é do F9. Na `MATRIZ`, o aluno tem `turma.ler`, `turma.listar`,
+  `aluno_da_turma.ler` e `vinculo.ler_proprios` em `nunca`, e `?anoLetivoId` com token de aluno é
+  404. De si, o aluno vê a escola e o papel de agora, por `/v1/eu`. A tarefa do F9 que abrir essa
+  leitura muda a célula da `MATRIZ`, cria rota e DTO próprios, e traz o teste que quebra sem a
+  cláusula de `usuario_id` do contexto.
 - **O `fim_do_ano` precisa ter sido confirmado** (decidido na 10.0 e ratificado em 18/09/2026: o professor que contestou ou nunca respondeu não passa a ler os alunos em janeiro): a virada leva também o pendente e o contestado a
   `fim_do_ano`, e eles nunca deram acesso. Vale o que tem `decidido_em` e não tem código de contestação (confirmar apaga
   o código). O mesmo critério escolhe os alunos da lista do ano encerrado: quem chegou confirmado ao fim do ano, e não o
@@ -424,8 +430,20 @@ Não se aplica.
   - **Decidido na 18.0:** `/` é a área autenticada (sem sessão, leva a `/entrar`), e a casca do estado do sistema, que
     era a raiz no F0, passou a `/sistema`, pública: é a tela que se abre justamente quando não se consegue entrar.
   - **Estado da sessão fora do TanStack Query** (18.0): ele vive no módulo `api/sessao.ts` e chega à tela por
-    `useSyncExternalStore`. A sessão não é dado de servidor para guardar em cache, e o `queryClient.clear()` da troca
+    `useSyncExternalStore`. A sessão não é dado de servidor para guardar em cache, e o esvaziamento do cache na troca
     de escola (20.0) apagaria justamente o que diz se a pessoa ainda está dentro.
+  - **O esvaziamento do cache na troca é `resetQueries()` dentro de `guardarToken`, com o token do destino já em
+    memória** (20.0, no lugar do `queryClient.clear()` antes do token que esta seção pedia). São duas razões: o `clear`
+    tira a consulta do cache mas a tela montada segue mostrando o último dado que recebeu, porque o observador fica
+    preso à consulta removida — e é a tela montada, a que fica atrás do login por cima, que não pode continuar com o
+    nome e a escola da pessoa anterior (regra 20, itens 4 e 5); e o `resetQueries` refaz as buscas, então refazê-las
+    antes do token novo traria o dado da escola de origem de volta, porque na troca que passa pelo segundo fator a
+    sessão de origem ainda vale. Só quando a sessão é nova (entrada, escolha de escola, troca concluída), nunca na
+    rotação de rotina, e a troca que para no segundo fator não esvazia nada.
+  - **O seletor não leva ao endereço da outra escola: explica e manda entrar por lá** (20.0). Os `acessos` levam o nome
+    da escola e mais nada dela (seção 7), e pôr o `slug` da outra ali alargaria o que uma escola sabe da outra. A troca
+    recusada mostra `AVISO_DA_TROCA_RECUSADA`, que manda sair e entrar pela escola de destino. A sessão de matrícula
+    nunca chega ao seletor: o aluno não tem conta, `acessos` vem vazio e o cabeçalho mostra só a escola dele.
 - **Token:** fica em memória, no módulo `api/sessao.ts`. Quem manda `Authorization` e, no 401, renova uma vez e repete
   é `chamarComSessao`/`buscarComSessao` desse módulo; o `buscarDaApi` de `api/cliente.ts` continua sendo a chamada
   anônima, sem token e sem renovação (18.0).
