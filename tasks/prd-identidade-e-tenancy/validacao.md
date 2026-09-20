@@ -1,5 +1,253 @@
 # Validação — identidade-e-tenancy (F1)
 
+## Rodada 2 — 20/09/2026
+
+**Escopo:** funcionalidade completa (tarefas 1.0 a 20.0)
+**Commit validado:** `38ce1954acf40d679ed07cbc4e23510faa658bb8`
+**Veredito: REPROVADA**
+
+O que a rodada 1 reprovou está resolvido: o crítico do RF16 virou uma decisão registrada nos
+cinco lugares onde a próxima pessoa lê, `docs/modelo-de-dados.md` agora corresponde ao que foi
+construído, e as três divergências da 18.0 e da 20.0 subiram para a Tech Spec. Confirmei cada
+um dos três contra o código, e não contra o texto que o commit escreveu sobre si.
+
+O que reprova agora é outra coisa, e ela é nova: **a esteira do commit validado está vermelha**.
+Duas das quatro tarefas falharam — integração e e2e —, com dois casos que passam aqui e falharam
+lá. O commit `38ce195` não leva uma linha de código (só `.md`), então não há regressão possível
+vinda dele: o que a esteira mostrou é fragilidade que já estava no repositório e apareceu na
+primeira execução em que o tempo não ajudou. Pela regra 40 e pela D52, vermelho na esteira é
+achado, não desculpa, e segura a próxima funcionalidade.
+
+---
+
+### 1. RF a RF
+
+Nenhuma linha de código mudou entre `6f69754` e `38ce195` (`git diff --stat` = `ROADMAP.md`,
+`docs/modelo-de-dados.md`, `prd.md`, `techspec.md`, `validacao.md`), e o portão local inteiro
+repetiu aqui os mesmos números da rodada 1. As evidências RF a RF da rodada 1 continuam
+valendo; não as repito. O que mudou é o RF16, reescrito no PRD, e é o que auditei de novo.
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF1–RF15, RF17–RF21 | ATENDIDO | inalterados desde `6f69754` | suíte inteira verde aqui (146 arquivos, 1.672 casos; 132 e2e; 35 de infra) | ver a tabela da rodada 1 |
+| RF16 | **ATENDIDO** (era PARCIAL) | `apps/api/src/estrutura/turma.repository.ts:83-145` (`aberta`, `#doAnoDaLeitura`, `#comVinculoDoProfessor`, `#confirmadoAteOFimDoAno`) | `apps/api/test/historico.int.test.ts` — 10 casos, entre eles "o professor desligado em março e o realocado dão o 404 da turma inexistente em outubro, na turma e nos alunos" e "só leitura: em janeiro, com 2027 já em curso, toda escrita sobre 2026 é recusada" | O texto do RF passou a cobrir só o professor; a metade do aluno virou escopo do F9, registrada (abaixo). Prova de mutação nova |
+
+**O adiamento do histórico do aluno está registrado onde a próxima pessoa lê.** Confronto dos
+cinco lugares que o commit alega ter escrito, com o código ao lado:
+
+| Onde | Linha | Confere com o código? |
+|---|---|---|
+| PRD, seção 3 (fora de escopo) | `prd.md:32-35` | sim: destino F9, motivo, e o que o aluno vê no F1 |
+| PRD, RF16 | `prd.md:69` | sim: a cláusula do aluno saiu do requisito e aponta a seção 3 |
+| PRD, tabela de papéis | `prd.md:48` | sim: "ver a si (escola e papel de agora, por `/v1/eu`)", e o histórico na coluna do que ele não pode |
+| Tech Spec, seção 5, "Histórico" | `techspec.md:271-276` | sim, e cada afirmação dela é verdadeira: `MATRIZ.aluno` tem `turma.ler`, `turma.listar`, `aluno_da_turma.ler` e `vinculo.ler_proprios` em `nunca` (`packages/shared/src/permissao/matriz.ts:109-123`); `?anoLetivoId` com token de aluno responde `NAO_ENCONTRADO` (`apps/api/test/historico.int.test.ts:204-225`); `/v1/eu` devolve escola e papel (`packages/shared/src/sessao/eu.ts:17-27`) |
+| `ROADMAP.md`, bloco do F9 | `ROADMAP.md:172-178`, dentro de `## F9 — ambiente-do-aluno` | sim, e diz o que a tarefa do F9 terá de fazer (célula, rota, DTO e o teste que quebra sem a cláusula de `usuario_id`) |
+
+Não sobrou promessa solta: a varredura por "histórico" no PRD, na Tech Spec, no `tasks.md` e em
+`docs/` não acha nenhuma outra linha dizendo que o aluno lê o dele no F1.
+
+Prova de mutação (uma nova nesta rodada, sobre o RF16, que a rodada 1 não tinha mutado; as três
+da rodada 1 continuam valendo e não foram repetidas):
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF16 | `eq(vinculo.motivoEncerramento, 'fim_do_ano')` de `#confirmadoAteOFimDoAno` (`apps/api/src/estrutura/turma.repository.ts:143`) | 5 de 10 em `apps/api/test/historico.int.test.ts`, entre eles o caso que é o critério de aceite do RF16: "borda: o professor desligado em março e o realocado dão o 404 da turma inexistente em outubro, na turma e nos alunos". Restaurado com `git checkout --`; a árvore terminou limpa e o arquivo voltou a 10 verdes |
+
+**Contagem:** 21 atendidos, 0 parciais, 0 não atendidos, 0 não verificáveis.
+
+---
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+As tabelas da rodada 1 valem inteiras: nenhum código mudou e a suíte repetiu os mesmos números.
+Reconferi só o que o commit tocou.
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regra: matriz de visibilidade e papéis (regra 60, item 11) | cumprida | `matriz.ts:18-22` (`PAPEIS`, `PAPEIS_DE_USUARIO`), `matriz.test.ts` |
+| Borda: virada de ano letivo e o que o professor lê depois | coberta | `historico.int.test.ts` (10 casos) + mutação acima |
+| Pronto: os 21 RF do PRD têm código e teste que falharia sem a regra | **cumprido** | RF16 fechado com o texto novo do PRD e a mutação acima |
+| Pronto: isolamento da Tech Spec seção 6 verde, e cada teste quebra sem a cláusula de escola | cumprido | suíte verde + mutações (rodada 1, e a de agora derrubou também "o escopo de escola vale sozinho no histórico") |
+| Pronto: nenhum caminho de login recusa um aluno por causa de outro no mesmo IP; `login-7h30` passa | cumprido | rodada 1 |
+| Pronto: nenhum e-mail, nome, foto ou claim de aluno no banco nem no log | cumprido | rodada 1 |
+| Pronto: token sintético não existe mais | cumprido | rodada 1 |
+| Pronto: `docs/lgpd.md` e `docs/runbook.md` completos | cumprido | rodada 1 |
+| Pronto: **portão inteiro verde e esteira verde no commit final** | **faltando** | esteira vermelha em `38ce195` (crítico 1) |
+| Roadmap: "A não lê, não escreve e não descobre nada da B…" | cumprido | rodada 1 |
+
+`docs/modelo-de-dados.md` (maior 1 da rodada 1) — conferido tabela a tabela contra
+`packages/nucleo/src/db/schema/`:
+
+| Bloco do documento | Confere? |
+|---|---|
+| `Rede`, `Escola`, `AnoLetivo`, `Serie`, `Turma`, `Disciplina` | sim: `ipsSaida` (`rede.ts:24`), `slug` + `inatividadeAlunoMin` 30 + `inatividadeEquipeMin` 120 (`escola.ts:6-32`), `situacao` com único `em_curso` por escola (`ano-letivo.ts:31-36`), `etapa`/`ano` (`serie.ts`), `turno?` (`turma.ts:30`), `area?` (`disciplina.ts:22`) |
+| `Conta`, `CodigoRecuperacao`, `Usuario`, `CredencialMatricula`, `ContaExterna`, `ProvedorEscola`, `Vinculo`, `Sessao`, `RegistroAcesso`, `Convite` | sim, campo a campo; o documento diz que a forma exata está na seção 3 da Tech Spec e aqui fica o desenho, o que é honesto: o que ele omite (`mfaChaveVersao`, `refreshHashAnterior`, `atualApresentado`) é detalhe de implementação, não contradição |
+| Identidade global × vínculo por escola, aluno sem conta, `sujeito` opaco, `ProvedorEscola` com `removidoEm` | sim (`usuario.ts:36`, `credencial-matricula.ts:32`, `conta-externa.ts:39-44`, `provedor-escola.ts:32`) |
+| `Auditoria` | sim (`auditoria.ts:30-42`: `autorUsuarioId` ou `autorOperador`, `requisicaoId`, sem `ip`) |
+| "Ainda não existe — F2" (`Responsavel`, `ListaNome`, `Reivindicacao`, convite de professor e de sala) | sim: `convite.ts:6` só aceita `coordenador`; as outras três tabelas não existem |
+| Regra transversal 1, com a exceção da identidade de login | sim: `conta` e `codigo_recuperacao` são as únicas sem `escolaId`, e o acesso sem escopo está cercado pela `ResolucaoDeTenantRepository` |
+
+As três divergências da 20.0 (maior 2 da rodada 1) subiram e batem com o código:
+`techspec.md:145` (a etapa `escolher` leva `acessos` — `packages/shared/src/sessao/login.ts:56`),
+`techspec.md:435-442` (`resetQueries()` dentro de `guardarToken` — `apps/web/src/main.tsx:21-27`,
+`apps/web/src/api/sessao.ts:253`), e `techspec.md:443-446` (o seletor explica em vez de levar ao
+endereço da outra escola — `AVISO_DA_TROCA_RECUSADA` em `packages/shared/src/erros/mensagens.ts:100`,
+usado em `apps/web/src/componentes/SeletorDeEscola.tsx:15` e provado em
+`e2e/escola-e-vinculos.spec.ts:258`).
+
+---
+
+### 3. Portão
+
+Não foi preciso `npm ci`: `node_modules/.package-lock.json` está na mesma data do
+`package-lock.json`. Tudo rodado com a árvore limpa, no commit `38ce195`.
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck` | ✅ |
+| `npm run lint` | ✅ (ESLint + guardas) |
+| `npm run test` | ✅ 146 arquivos, 1.672 casos |
+| `npm run test:e2e` | ✅ 132 casos, `chromebook` e `celular` |
+| `npm run test:infra` | ✅ 5 arquivos, 35 casos |
+| **Esteira do GitHub no commit validado** | ❌ execução 35517746419, `headSha` `38ce195…`: `verificar` ✅, `infra` ✅, **`integração` ❌**, **`e2e` ❌** |
+| Revisões com veto registradas e aprovadas | ✅ (conferido de novo nas 20 tarefas: em todas, a última rodada de cada revisor com veto é APROVADO; as duas ressalvas de rastro da rodada 1 seguem, menores 5 e 6 de lá) |
+
+Nenhum `.skip`, `.todo` ou teste comentado no repositório.
+
+---
+
+### 4. Achados
+
+**Críticos**
+
+1. **Esteira vermelha no commit validado** — execução `35517746419`, `headSha` `38ce195`, duas
+   das quatro tarefas falharam. O commit não leva código, então não é regressão dele; é
+   fragilidade que a execução expôs. Os dois casos, com a saída:
+   - `apps/despachante/test/reconciliacao.int.test.ts` › "reconciliação entre job_registro e o
+     BullMQ" › **"consulta sem resposta (Redis de fila travado, e depois parado) não republica;
+     com o Redis de volta, republica"** — `AssertionError: expected [] to deeply equal [ Array(1) ]`,
+     36.863 s. Único vermelho da tarefa (`Test Files 1 failed | 62 passed`).
+   - `e2e/escola-e-vinculos.spec.ts:185` `[celular]` › **"isolamento: a troca que passa pelo
+     segundo fator também não leva nada da escola de origem para a de destino"** —
+     `expect(locator).toBeVisible() failed`, `getByRole('heading', { name: 'Olá, Professora
+     sintética 6d728d84' })`, `Timeout: 20000ms`, em `esperarEscola` (`e2e/escola-e-vinculos.spec.ts:57`),
+     caso de 27.4 s. `playwright.config.ts:29` tem `retries: 0`, então não houve repetição que
+     mascarasse nada — e também não houve segunda chance que confirmasse a intermitência.
+   **Correção:** fechar os dois pela `/corrigir` (um `slug` por causa), cada um com o teste que
+   reproduz a condição, e só então repetir a validação. Enquanto a esteira do último commit
+   estiver vermelha, a regra 40 (portão) e a D52 seguram a primeira tarefa do F2.
+
+**Maiores**
+
+1. `apps/despachante/test/reconciliacao.int.test.ts` — **teste dependente de tempo real.** Ele
+   congela e para o Redis da fila e espera a republicação; o caso levou 36,9 s na esteira e
+   falhou com a lista vazia, ou seja, a republicação não tinha acontecido ainda quando ele
+   olhou. Aqui ele passou duas vezes seguidas (11 casos verdes em cada), o que confirma a
+   dependência de máquina. É código do F0, não do F1.
+   **Correção:** trocar a espera por condição observável (sondar até o registro aparecer, com
+   teto) em vez de um instante, ou declarar o prazo em função do intervalo de reconciliação.
+2. `e2e/escola-e-vinculos.spec.ts:185-232` — **o caso mais pesado do e2e está no limite do prazo
+   dele no perfil `celular`.** Ele faz, num único teste: login por e-mail, escolha de escola,
+   configuração e ativação do segundo fator, volta à entrada, segundo login, escolha de novo,
+   leitura dos vínculos, troca de escola e mais um segundo fator — tudo com CPU ×4 e rede lenta
+   (`playwright.config.ts:44-55`), com `PRAZO_DA_ENTRADA_MS = 20_000` (`:21`) dentro do prazo de
+   30 s do teste. Na esteira ele estourou no `esperarEscola` do segundo login. Tentei reproduzir
+   aqui e a tentativa não vale como evidência: rodei o spec isolado com o compose sem as APIs de
+   pé (`educa-teste-api-*` saem depois do `test:infra`), e a tela mostrou "O sistema está
+   indisponível" — erro meu, registrado para não virar conclusão errada de ninguém. No `npm run
+   test:e2e` completo, com o ambiente que o `tools/ci/e2e.ts` levanta, ele passou.
+   **Correção:** partir o caso em dois (configurar o segundo fator uma vez, reaproveitar o
+   estado) ou preparar o MFA pelo seed, e revisar o prazo da entrada contra o tempo real do
+   argon2 na esteira. Teste de isolamento que falha por tempo deixa de proteger o que ele existe
+   para proteger.
+
+**Menores**
+
+1. `docs/modelo-de-dados.md:70` — a linha `papel`: `rede · coordenador · professor · aluno ·
+   responsavel` ficou como estava enquanto o resto da seção foi reescrito. No código há dois
+   níveis: `PAPEIS` (`rede`, `coordenador`, `professor`, `aluno` — `matriz.ts:18`) e
+   `PAPEIS_DE_USUARIO` (os três que a tabela aceita, `matriz.ts:22`, com o check
+   `usuario_papel_valido` em `usuario.ts:35`). `responsavel` não existe em nenhum dos dois, e
+   `Responsavel` já foi para o bloco "Ainda não existe — F2" logo abaixo.
+   **Correção:** citar os dois níveis e levar `responsavel` para o bloco do F2, junto da entidade.
+2. `docs/modelo-de-dados.md:7-20` — a seção diz "Tudo isso existe desde o F1", e as tabelas do F0
+   que existem no banco não estão em lugar nenhum do documento:
+   `configuracao_operacional_escola`, `uso_infra_diario` e `job_registro`. Herança do F0, não
+   deste commit, mas o documento se apresenta como o mapa do que existe.
+3. `tasks/prd-identidade-e-tenancy/prd.md:3` — **Status: rascunho** num PRD cuja funcionalidade
+   está construída e cujo texto acabou de ser revisto; o F0 usa "aprovado (revisto em …)"
+   (`tasks/prd-fundacao-tecnica/prd.md:3`). **Correção:** marcar aprovado com a data da revisão.
+4. `tasks/prd-identidade-e-tenancy/achados-revisoes.md:5260` — recomendação do `privacy-guardian`
+   (4ª rodada da 20.0) sem destino: `saidaConfirmada` compartilhado entre a saída pedida e a
+   inatividade (`apps/web/src/api/sessao.ts:88` e `:261`), dois fins de sessão com semânticas
+   distintas num sinalizador só. Junta-se aos menores 1 e 2 da rodada 1.
+5. `CLAUDE.md:8` diz que o repositório é `https://github.com/LitzGab/Educa.ia`, e o `origin`
+   aponta para `https://github.com/LitzGab/Turmma.ai`. Não afeta código; afeta quem procura o
+   repositório pelo documento.
+6. Os menores 1 a 6 da rodada 1 seguem abertos e sem destino registrado (`BroadcastChannel` por
+   sessão, `details` do seletor, passkey, auditoria de mudança de papel, rastro do
+   `domain-researcher`, `revisor-geral` ausente na 1.0). Nenhum bloqueia.
+
+**Positivos**
+
+- O adiamento foi registrado do jeito certo: nos cinco lugares, com o motivo, com o que o F1
+  entrega no lugar, e com a instrução do que a tarefa do F9 terá de fazer. É o modelo para todo
+  recorte que sobrar de uma funcionalidade.
+- `docs/modelo-de-dados.md` passou a separar "existe" de "ainda não existe — F2", em vez de
+  descrever tudo no presente. Isso é o que impede a próxima Tech Spec de especificar em cima de
+  uma tabela que não existe.
+- A Tech Spec ganhou as três divergências com o **motivo** de cada uma, não só o que ficou. A de
+  `resetQueries` explica por que o `clear` antes do token traria o dado da escola de origem de
+  volta: é uma armadilha que a próxima pessoa evitaria de novo.
+
+---
+
+### 5. Conclusão
+
+A escrita que a rodada 1 pediu está feita e está correta: conferi cada afirmação nova contra o
+código, e todas se sustentam. Com o RF16 reescrito, os 21 RF do PRD estão atendidos, e a prova
+de mutação nova mostra que o teste do histórico morre quando a regra morre.
+
+O que impede a aprovação é o portão: a esteira do commit validado está vermelha em duas das
+quatro tarefas. O portão local aqui está inteiro verde, e os dois casos vermelhos são de tempo —
+um espera o Redis voltar, o outro espera uma tela no perfil `celular`. Isso não os torna menos
+sérios: um deles é justamente um teste de isolamento entre escolas, e teste de isolamento que
+falha por tempo não protege nada. Pelo processo, vermelho na esteira reprova e segura a próxima
+tarefa.
+
+**Caminho até a aprovação:**
+
+1. `/corrigir` para `apps/despachante/test/reconciliacao.int.test.ts` (espera por condição, não
+   por instante).
+2. `/corrigir` para `e2e/escola-e-vinculos.spec.ts:185` (partir o caso ou preparar o MFA pelo
+   seed, e rever o prazo da entrada contra o argon2 da esteira).
+3. Empurrar, esperar a esteira verde no commit da segunda correção, e revalidar. Os menores não
+   bloqueiam.
+
+Se a decisão for que os dois casos são de ambiente e não de teste, ela precisa ser escrita — no
+`TODO.md` ou numa decisão —, com o que muda na esteira para não se repetir. O que não vale é
+revalidar em cima da mesma esteira vermelha.
+
+---
+
+### 6. Pendências herdadas
+
+| Pendência | Destino |
+|---|---|
+| Histórico próprio do aluno | **fechado**: F9, registrado no PRD (seção 3), na Tech Spec (seção 5) e no `ROADMAP.md` |
+| `docs/modelo-de-dados.md` desatualizado | **fechado** neste commit; sobraram os menores 1 e 2 |
+| Divergências da 18.0 e da 20.0 fora da Tech Spec | **fechado** neste commit |
+| Dois testes frágeis (maiores 1 e 2) | `/corrigir`, antes da primeira tarefa do F2 |
+| `BroadcastChannel` por sessão, `details` do seletor, `saidaConfirmada` | `TODO.md` ou a primeira tarefa de web do F2 |
+| Passkey | `/registrar-decisao`, ou a pergunta em aberto do PRD do F2 |
+| Auditoria de mudança de papel | a tarefa do F2/F3 que criar o caminho de mudar papel |
+| Rastro do `domain-researcher` na tabela de revisões | `/retro` do F1 |
+| Status do PRD do F1 ainda "rascunho" | quem fizer a próxima edição do PRD |
+| Endereço do repositório no `CLAUDE.md` | junto da decisão de nome e domínio (Gabriel) |
+| Demais pendências do F0 (alertas, `VALIDATE` das FKs, controle negativo do `npm run carga`, calibração do argon2) | já em `TODO.md` e na Tech Spec, seção 12 |
+
+---
+
 ## Rodada 1 — 20/09/2026
 
 **Escopo:** funcionalidade completa (tarefas 1.0 a 20.0)
