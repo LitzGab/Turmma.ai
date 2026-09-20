@@ -138,7 +138,9 @@ test.describe('entrada da equipe por e-mail e senha', () => {
 
     await expect(page.getByRole('heading', { name: 'Escolher a escola' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page).toHaveURL(/\/escolher-escola$/)
-    await expect(page.getByRole('main')).toContainText('ainda está sendo construída')
+    // A tela da escolha chegou na 20.0: o que ela mostra e o que faz está em `escola-e-vinculos.spec.ts`; aqui vale
+    // que a etapa leva a ela e que nenhuma sessão foi gravada antes de a escola ser escolhida.
+    await expect(page.getByRole('main')).toContainText('Escolha por onde quer entrar agora')
     await nadaGuardado(page)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])

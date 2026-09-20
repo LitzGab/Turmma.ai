@@ -39,6 +39,39 @@ export const MOTIVOS_DE_ENCERRAMENTO_PELA_COORDENACAO = ['desligamento', 'realoc
  */
 export const TAMANHO_MAXIMO_DO_COMPLEMENTO = 140
 
+/**
+ * O estado do vínculo em português, para a tela dizer em texto o que hoje só a cor diria (regra 50, item 11): o
+ * professor daltônico e o leitor de tela precisam da mesma informação que a cor dá.
+ */
+export const NOME_DO_ESTADO_DE_VINCULO: Readonly<Record<EstadoDeVinculo, string>> = {
+  pendente: 'Aguardando a sua confirmação',
+  confirmado: 'Confirmado por você',
+  contestado: 'Contestado por você',
+  encerrado: 'Encerrado pela escola',
+}
+
+/** Por que o professor contesta, em português, na ordem em que a tela oferece as opções. */
+export const NOME_DA_CONTESTACAO: Readonly<Record<ContestacaoDeVinculo, string>> = {
+  nao_leciono: 'Não dou aula nesta turma',
+  turma_errada: 'A turma está errada',
+  disciplina_errada: 'A disciplina está errada',
+  outro: 'Outro motivo',
+}
+
+/**
+ * O aviso que a tela mostra ao lado do complemento da contestação (Tech Spec, seção 5, "Vínculo"; regra 20): o texto
+ * livre é lido pela coordenação e guardado até a virada do ano, e nome de aluno ali é dado pessoal de menor sem
+ * finalidade nenhuma.
+ */
+export const AVISO_DO_COMPLEMENTO = 'Não escreva nome de aluno aqui.'
+
+/**
+ * O que acontece ao contestar, mostrado antes de enviar (regra 50, item 8): é ação oficial, a coordenação vê, e o
+ * vínculo contestado não dá acesso à turma até ser corrigido (RF5).
+ */
+export const EFEITO_DA_CONTESTACAO =
+  'A coordenação vê a sua contestação e corrige a alocação. Até lá, este vínculo não dá acesso à turma nem aos alunos dela.'
+
 /** Corpo de `POST /v1/vinculos`. Estrito: nada de escola, de ano letivo nem de estado, que vêm da sessão e nascem `pendente`. */
 export const esquemaPedidoCriarVinculo = z
   .object({

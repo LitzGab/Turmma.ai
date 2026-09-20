@@ -403,7 +403,7 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
     expect(comBilhete.corpo).toEqual({ etapa: 'mfa', desafio: expect.any(String) })
     expect(await usuarioAtivo(convite.usuarioId)).toBe(false)
     const depoisDoCodigo = await post('/v1/sessao/mfa', { codigo: codigoDoApp(pessoa.base32, 1) }, { Authorization: `Bearer ${String(comBilhete.corpo['desafio'])}` })
-    expect(depoisDoCodigo.corpo).toEqual({ etapa: 'escolher', desafio: expect.any(String) })
+    expect(depoisDoCodigo.corpo).toEqual({ etapa: 'escolher', desafio: expect.any(String), acessos: expect.any(Array) })
     expect(await usuarioAtivo(convite.usuarioId)).toBe(true)
     expect(await auditoriaDoConvite(escolaA)).toEqual([
       expect.objectContaining({ acao: 'convite.criado', autor_operador: OPERADOR, depois: { usuarioId: convite.usuarioId, expiraEm: expect.any(String), contaNova: false } }),
@@ -453,7 +453,7 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
     const bilhete = await aceitarComConta(convite.token)
 
     const logins = await Promise.all([entrar(pessoa.email, SENHA_DE_B, bilhete), entrar(pessoa.email, SENHA_DE_B, bilhete)])
-    for (const login of logins) expect(login.corpo).toEqual({ etapa: 'escolher', desafio: expect.any(String) })
+    for (const login of logins) expect(login.corpo).toEqual({ etapa: 'escolher', desafio: expect.any(String), acessos: expect.any(Array) })
     expect(await usuarioAtivo(convite.usuarioId)).toBe(true)
     expect((await auditoriaDoConvite(escolaA)).filter((linha) => linha['acao'] === 'usuario.ativado_por_convite')).toHaveLength(1)
   })

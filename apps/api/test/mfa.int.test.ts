@@ -451,7 +451,7 @@ describe('MFA do coordenador: configurar, ativar, entrar com o código e redefin
     await naOutraEscola(coordenador, await bancada.escola(), 'professor')
     const resposta = await comDesafio('/v1/sessao/mfa', desafio, { recuperacao: codigosRecuperacao[0] })
     expect(resposta.status).toBe(200)
-    expect(resposta.corpo).toEqual({ etapa: 'escolher', desafio: expect.any(String) })
+    expect(resposta.corpo).toEqual({ etapa: 'escolher', desafio: expect.any(String), acessos: expect.any(Array) })
     expect(resposta.setCookie).toEqual([])
     const [, carga] = String(resposta.corpo['desafio']).split('.')
     expect(JSON.parse(Buffer.from(carga ?? '', 'base64url').toString())).toMatchObject({ etapa: 'escolher', mfa_cumprido: true, conta_id: coordenador.contaId })

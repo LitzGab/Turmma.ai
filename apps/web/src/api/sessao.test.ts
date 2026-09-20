@@ -262,7 +262,7 @@ describe('chamada com sessão', () => {
     expect(chamadas.filter((chamada) => chamada.caminho === sessao.CAMINHO_DA_RENOVACAO)).toHaveLength(0)
   })
 
-  it('só o NAO_AUTENTICADO que persiste depois da renovação encerra a sessão', async () => {
+  it('só o NAO_AUTENTICADO que persiste depois da renovação encerra a sessão, e ela fica vencida, não anônima', async () => {
     await comSessaoAberta()
     responderCom(
       { status: 401, corpo: envelope(CodigoDeErro.NAO_AUTENTICADO) },
@@ -273,7 +273,20 @@ describe('chamada com sessão', () => {
     const esquema = { safeParse: (valor: unknown) => ({ success: true as const, data: valor }) }
     expect((await erroDe(sessao.buscarComSessao('/v1/eu', esquema))).codigo).toBe(CodigoDeErro.NAO_AUTENTICADO)
     expect(sessao.tokenDeAcesso()).toBeUndefined()
-    expect(sessao.estadoDaSessao()).toBe('anonima')
+    // `vencida`, e não `anonima`: a tela continua montada e o login abre por cima dela (20.0). Anônima só pelo
+    // "Sair" ou pela aba que abriu sem sessão nenhuma — nos dois a pessoa vai para a entrada e não perde nada.
+    expect(sessao.estadoDaSessao()).toBe('vencida')
+  })
+
+  it('sem sessão nesta aba, a chamada nem sai: às 10h a inatividade vence em muitas abas ao mesmo tempo', async () => {
+    await comSessaoAberta()
+    responderCom({ status: 204 })
+    await sessao.sair()
+    chamadas.length = 0
+
+    const esquema = { safeParse: (valor: unknown) => ({ success: true as const, data: valor }) }
+    expect((await erroDe(sessao.buscarComSessao('/v1/eu', esquema))).codigo).toBe(CodigoDeErro.NAO_AUTENTICADO)
+    expect(chamadas, 'consulta de tela sem sessão não pode virar requisição à API').toEqual([])
   })
 
   it('token já vencido renova antes de sair, em vez de gastar uma requisição que receberia 401', async () => {
@@ -514,12 +527,13 @@ describe('sair', () => {
     chamadas.length = 0
 
     // A tela que ainda estava montada busca de novo depois da limpeza do cache. Sem a guarda, o 401 dessa busca
-    // renovaria pelo cookie ainda válido, reabriria a sessão e apagaria o aviso da saída não confirmada.
-    responderCom({ status: 401, corpo: envelope(CodigoDeErro.NAO_AUTENTICADO) })
+    // renovaria pelo cookie ainda válido, reabriria a sessão e apagaria o aviso da saída não confirmada. Desde a
+    // 20.0 a busca nem chega a sair da aba, o que fecha o mesmo furo antes: sem sessão, nada vai à API — e por isso
+    // nenhuma resposta é preparada aqui: se alguma requisição saísse, ela não teria o que consumir.
     const esquema = { safeParse: (valor: unknown) => ({ success: true as const, data: valor }) }
     expect((await erroDe(sessao.buscarComSessao('/v1/eu', esquema))).codigo).toBe(CodigoDeErro.NAO_AUTENTICADO)
 
-    expect(chamadas.map((chamada) => chamada.caminho)).toEqual(['/v1/eu'])
+    expect(chamadas.map((chamada) => chamada.caminho), 'nenhuma requisição depois do "Sair", muito menos uma renovação').toEqual([])
     expect(sessao.estadoDaSessao()).toBe('anonima')
     expect(sessao.saidaPendente()).toBe(true)
   })
@@ -540,18 +554,19 @@ describe('sair', () => {
 })
 
 describe('fim de sessão', () => {
-  it('limpa o que vive fora do módulo (o cache de consultas) em todo caminho que encerra a sessão', async () => {
+  it('limpa o que vive fora do módulo (o cache de consultas) em todo caminho que muda o dono da aba', async () => {
     const limpezas: string[] = []
-    sessao.aoEncerrarSessao(() => limpezas.push(sessao.estadoDaSessao()))
+    sessao.aoTrocarDeSessao(() => limpezas.push(sessao.estadoDaSessao()))
 
+    // Entrar também é troca de dono: o que estava no cache é de quem usou este computador antes (20.0).
     await comSessaoAberta()
-    expect(limpezas, 'entrar não é fim de sessão').toEqual([])
+    expect(limpezas).toEqual(['aberta'])
 
     responderCom({ status: 204 })
     await sessao.sair()
     // Sem esta limpeza, a pessoa seguinte no Chromebook do carrinho entra e a tela mostra o nome e a escola da
     // anterior, que continuam no cache de `/v1/eu`.
-    expect(limpezas).toEqual(['anonima'])
+    expect(limpezas).toEqual(['aberta', 'anonima'])
 
     // O outro caminho: o `NAO_AUTENTICADO` que persiste depois da renovação.
     await comSessaoAberta('token-3')
@@ -562,18 +577,73 @@ describe('fim de sessão', () => {
     )
     const esquema = { safeParse: (valor: unknown) => ({ success: true as const, data: valor }) }
     await erroDe(sessao.buscarComSessao('/v1/eu', esquema))
-    expect(limpezas).toEqual(['anonima', 'anonima'])
+    // O último fim é o da sessão que venceu sozinha: o cache sai do mesmo jeito, e só a tela continua de pé.
+    expect(limpezas).toEqual(['aberta', 'anonima', 'aberta', 'vencida'])
+  })
+
+  it('a renovação de rotina não esvazia nada: é a mesma sessão, e a tela perderia o que está mostrando', async () => {
+    vi.useFakeTimers({ now: new Date('2026-09-19T12:00:00.000Z') })
+    responderCom({ status: 200, corpo: { etapa: 'pronta', ...tokenDe('token-1', '2026-09-19T12:10:00.000Z') } })
+    await sessao.entrarPorEmail({ email: 'camila@escola.test', senha: 'segredo-da-camila' })
+    let limpezas = 0
+    sessao.aoTrocarDeSessao(() => limpezas++)
+
+    vi.setSystemTime(new Date('2026-09-19T12:11:00.000Z'))
+    responderCom({ status: 200, corpo: TOKEN_NOVO }, { status: 200, corpo: { nome: 'Camila' } })
+    const esquema = { safeParse: (valor: unknown) => ({ success: true as const, data: valor }) }
+    await sessao.buscarComSessao('/v1/eu', esquema)
+
+    // A cada 10 min de aula a professora perderia a tela inteira, e a escola somaria uma busca por consulta aberta.
+    expect(limpezas).toBe(0)
+  })
+
+  it('o pedido que volta recusado depois do "Sair" não é repetido sem credencial, e a aba continua anônima', async () => {
+    await comSessaoAberta()
+    const esquema = { safeParse: (valor: unknown) => ({ success: true as const, data: valor }) }
+    // A consulta da tela sai antes do clique em "Sair" e só volta depois dele, recusada: é a recarga da lista que a
+    // professora tinha acabado de pedir.
+    responderCom({ status: 401, corpo: envelope(CodigoDeErro.NAO_AUTENTICADO) }, { status: 204 })
+    const emVoo = erroDe(sessao.buscarComSessao('/v1/vinculos', esquema))
+    await sessao.sair()
+    expect((await emVoo).codigo).toBe(CodigoDeErro.NAO_AUTENTICADO)
+
+    // Vencida, a rota protegida remontaria a tela da pessoa que acabou de sair, com o login por cima, em vez de
+    // levar à entrada — e o Voltar do navegador a traria de volta.
+    expect(sessao.estadoDaSessao()).toBe('anonima')
+    // E o pedido recusado não foi repetido sem credencial nenhuma depois da saída.
+    expect(chamadas.filter((chamada) => chamada.caminho === '/v1/vinculos')).toHaveLength(1)
+  })
+
+  it('o "Sair" é final: a inatividade que vence enquanto o DELETE dele está no ar não devolve a aba ao estado vencido', async () => {
+    vi.useFakeTimers()
+    await comSessaoAberta()
+    // Fim de aula, rede da escola oscilando: a professora clica em "Sair" e, no mesmo segundo, o relógio de
+    // inatividade vence. A saída é confirmada; o encerramento por inatividade falha, repete uma vez e só então
+    // termina — depois de a aba já estar anônima (regra 80, item 7).
+    responderCom(
+      { status: 204 },
+      { status: 503, corpo: envelope(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO) },
+      { status: 503, corpo: envelope(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO) },
+    )
+    const saida = sessao.sair()
+    const inatividade = sessao.encerrarPorInatividade()
+    await vi.advanceTimersByTimeAsync(sessao.ESPERA_ENTRE_TENTATIVAS_DE_SAIDA_MS)
+    await Promise.all([saida, inatividade])
+
+    // Vencida, a rota protegida remontaria a área autenticada da pessoa que acabou de sair, com o login por cima, e
+    // o Voltar do navegador a traria de volta no Chromebook do carrinho. A saída pedida pela pessoa é final.
+    expect(sessao.estadoDaSessao()).toBe('anonima')
+    expect(sessao.quemEstaNaSessao()).toBeUndefined()
   })
 
   it('encerrar de novo não reinicia a limpeza: a tela que ainda estava montada recebe outro NAO_AUTENTICADO', async () => {
-    let limpezas = 0
-    sessao.aoEncerrarSessao(() => limpezas++)
     await comSessaoAberta()
+    let limpezas = 0
+    sessao.aoTrocarDeSessao(() => limpezas++)
     responderCom({ status: 204 })
     await sessao.sair()
     expect(limpezas).toBe(1)
 
-    responderCom({ status: 401, corpo: envelope(CodigoDeErro.NAO_AUTENTICADO) })
     const esquema = { safeParse: (valor: unknown) => ({ success: true as const, data: valor }) }
     await erroDe(sessao.buscarComSessao('/v1/eu', esquema))
     expect(limpezas).toBe(1)

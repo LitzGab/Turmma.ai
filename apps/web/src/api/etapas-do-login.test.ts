@@ -233,3 +233,159 @@ describe('meia credencial não sobrevive à sessão', () => {
     expect(sessao.avisoDaEntrada()).toBeUndefined()
   })
 })
+
+describe('escolha e troca de escola', () => {
+  const ACESSOS = [
+    { usuarioId: '0190f5a0-0000-7000-8000-00000000000a', escolaNome: 'Colégio Vista Alegre', papel: 'professor' as const },
+    { usuarioId: '0190f5a0-0000-7000-8000-00000000000b', escolaNome: 'Escola Municipal Sete', papel: 'coordenador' as const },
+  ]
+  const ESCOLHER = { etapa: 'escolher', desafio: 'desafio.escolher.jwt', acessos: ACESSOS }
+
+  /** Uma sessão aberta nesta aba, como depois do login por e-mail. */
+  async function comSessaoAberta(): Promise<void> {
+    responderCom({ status: 200, corpo: PRONTA })
+    await sessao.entrarPorEmail({ email: 'camila@escola.test', senha: 'segredo-da-camila' })
+    chamadas.length = 0
+  }
+
+  it('a etapa escolher guarda os acessos que a tela lista, e eles somem quando a sessão abre', async () => {
+    responderCom({ status: 200, corpo: ESCOLHER })
+    await sessao.entrarPorEmail({ email: 'camila@escola.test', senha: 'segredo-da-camila' })
+    // Sem isto a tela da escolha não teria o que listar: o desafio é opaco, e não há sessão para consultar `/v1/eu`.
+    expect(sessao.acessosParaEscolher()).toEqual(ACESSOS)
+
+    responderCom({ status: 200, corpo: PRONTA })
+    await sessao.escolherEscola(ACESSOS[0]?.usuarioId ?? '')
+    expect(chamadas.at(-1)).toMatchObject({
+      caminho: sessao.CAMINHO_DA_ESCOLA_DA_SESSAO,
+      metodo: 'POST',
+      autorizacao: 'Bearer desafio.escolher.jwt',
+      corpo: { usuarioId: ACESSOS[0]?.usuarioId },
+    })
+    expect(sessao.tokenDeAcesso()).toBe('token-1')
+    // Meia credencial não sobrevive à sessão aberta (regra 50, item 7), e a lista de escolas vai junto com ela.
+    expect(sessao.acessosParaEscolher()).toEqual([])
+  })
+
+  it('sem o desafio nesta aba, escolher não manda pedido nenhum: um F5 na tela da escolha manda refazer a senha', async () => {
+    expect((await erroDe(sessao.escolherEscola(ACESSOS[0]?.usuarioId ?? ''))).codigo).toBe(CodigoDeErro.NAO_AUTENTICADO)
+    expect(chamadas).toEqual([])
+  })
+
+  it('a troca esvazia o cache da escola anterior com o token do destino já em memória, e nunca antes', async () => {
+    await comSessaoAberta()
+    const limpezas: (string | undefined)[] = []
+    sessao.aoTrocarDeSessao(() => limpezas.push(sessao.tokenDeAcesso()))
+
+    responderCom({ status: 200, corpo: { etapa: 'pronta', token: 'token-da-escola-b', expiraEm: DAQUI_A_MUITO } })
+    await sessao.trocarDeEscola(ACESSOS[1]?.usuarioId ?? '')
+
+    expect(chamadas.at(-1)).toMatchObject({ caminho: sessao.CAMINHO_DA_ESCOLA_DA_SESSAO, metodo: 'POST', autorizacao: 'Bearer token-1' })
+    // Esvaziar o cache refaz as buscas que estão na tela. Com o token da escola de origem ainda em memória — e na
+    // troca que passa pelo segundo fator ele ainda vale —, essas buscas voltariam com o dado dela e o regravariam no
+    // cliente, dentro da escola de destino (regra 10, item 1). E sem limpeza nenhuma a turma de A simplesmente ficaria.
+    expect(limpezas, 'o cache precisa ser esvaziado já com o token do destino').toEqual(['token-da-escola-b'])
+    expect(sessao.tokenDeAcesso()).toBe('token-da-escola-b')
+  })
+
+  it('a troca para a coordenação para no segundo fator: nada é esvaziado, porque a pessoa continua na escola de origem', async () => {
+    await comSessaoAberta()
+    let limpezas = 0
+    sessao.aoTrocarDeSessao(() => limpezas++)
+    responderCom({ status: 200, corpo: { etapa: 'mfa', desafio: 'desafio.mfa.jwt' } })
+    await sessao.trocarDeEscola(ACESSOS[1]?.usuarioId ?? '')
+
+    expect(sessao.desafioDaEtapa('mfa')).toBe('desafio.mfa.jwt')
+    // A sessão de origem continua valendo até o código ser aceito (Tech Spec, seção 5, "Troca de escola"): a tela
+    // dela continua servindo, e desistir do código devolve a pessoa à escola em que ela está.
+    expect(sessao.tokenDeAcesso()).toBe('token-1')
+    expect(sessao.estadoDaSessao()).toBe('aberta')
+    expect(limpezas, 'nada mudou de escola ainda').toBe(0)
+
+    // O código aceito grava a sessão do destino: é aí que o cache da escola de origem sai, com o token novo já valendo.
+    responderCom({ status: 200, corpo: { etapa: 'pronta', token: 'token-da-escola-b', expiraEm: DAQUI_A_MUITO } })
+    await sessao.entrarComSegundoFator({ codigo: '123456' })
+    expect(limpezas).toBe(1)
+    expect(sessao.tokenDeAcesso()).toBe('token-da-escola-b')
+  })
+
+  it('a troca recusada não esvazia o cache nem derruba a sessão em que a pessoa está', async () => {
+    await comSessaoAberta()
+    let limpezas = 0
+    sessao.aoTrocarDeSessao(() => limpezas++)
+
+    responderCom({ status: 404, corpo: envelope(CodigoDeErro.NAO_ENCONTRADO) })
+    expect((await erroDe(sessao.trocarDeEscola(ACESSOS[1]?.usuarioId ?? ''))).codigo).toBe(CodigoDeErro.NAO_ENCONTRADO)
+
+    // A sessão de matrícula e a da conta da escola recebem 404 aqui: a pessoa continua onde estava, com a tela dela.
+    expect(limpezas).toBe(0)
+    expect(sessao.tokenDeAcesso()).toBe('token-1')
+    expect(sessao.estadoDaSessao()).toBe('aberta')
+  })
+
+  it('o aviso de atividade vai à rota da sessão com o token, e não a nenhuma tela', async () => {
+    await comSessaoAberta()
+    responderCom({ status: 204 })
+    await sessao.registrarAtividade()
+    expect(chamadas).toEqual([expect.objectContaining({ caminho: sessao.CAMINHO_DA_ATIVIDADE, metodo: 'POST', autorizacao: 'Bearer token-1' })])
+  })
+})
+
+describe('quem está na aba, para o login por cima da tela', () => {
+  const RENATA = { usuarioId: '0190f5a0-0000-7000-8000-00000000000a', papel: 'coordenador' as const, escola: { slug: 'colegio-vista-alegre' } }
+  const CAMILA = { usuarioId: '0190f5a0-0000-7000-8000-00000000000c', papel: 'professor' as const, escola: { slug: 'colegio-vista-alegre' } }
+
+  /** Abre a sessão, guarda quem está e deixa a sessão vencer com um `NAO_AUTENTICADO` que persiste. */
+  async function comSessaoVencida(quem: typeof RENATA): Promise<void> {
+    responderCom({ status: 200, corpo: PRONTA })
+    await sessao.entrarPorEmail({ email: 'renata@escola.test', senha: 'segredo-da-renata' })
+    sessao.lembrarQuemEsta(quem)
+    responderCom(
+      { status: 401, corpo: envelope(CodigoDeErro.NAO_AUTENTICADO) },
+      { status: 401, corpo: envelope(CodigoDeErro.NAO_AUTENTICADO) },
+    )
+    const esquema = { safeParse: (valor: unknown) => ({ success: true as const, data: valor }) }
+    await erroDe(sessao.buscarComSessao('/v1/eu', esquema))
+    expect(sessao.estadoDaSessao()).toBe('vencida')
+    chamadas.length = 0
+  }
+
+  it('a sessão vencida guarda o caminho de volta: o papel diz o formulário, e o slug, o endereço da escola', async () => {
+    await comSessaoVencida(RENATA)
+    // É o mínimo para o diálogo: nem nome, nem e-mail, nem matrícula — o resto morreu junto com o cache.
+    expect(sessao.quemEstaNaSessao()).toEqual({ usuarioId: RENATA.usuarioId, papel: 'coordenador', escolaSlug: 'colegio-vista-alegre' })
+  })
+
+  it('a mesma pessoa voltando não descarta a tela; outra pessoa no mesmo computador, sim', async () => {
+    await comSessaoVencida(RENATA)
+    responderCom({ status: 200, corpo: PRONTA })
+    await sessao.entrarPorEmail({ email: 'renata@escola.test', senha: 'segredo-da-renata' })
+    expect(sessao.lembrarQuemEsta(RENATA), 'a mesma pessoa continua de onde estava').toBe(false)
+
+    await comSessaoVencida(RENATA)
+    responderCom({ status: 200, corpo: PRONTA })
+    await sessao.entrarPorEmail({ email: 'camila@escola.test', senha: 'segredo-da-camila' })
+    expect(sessao.lembrarQuemEsta(CAMILA), 'o Chromebook do carrinho passou de mão').toBe(true)
+    // E a pergunta não se repete: a tela já foi descartada uma vez.
+    expect(sessao.lembrarQuemEsta(CAMILA)).toBe(false)
+  })
+
+  it('"Entrar com outra conta" descarta a sessão vencida: a tela de trás sai, e o Voltar não a traz', async () => {
+    await comSessaoVencida(RENATA)
+    sessao.descartarSessaoVencida()
+
+    // `anonima`, e não `vencida`: é o que faz a rota protegida levar à entrada em vez de remontar a tela da pessoa
+    // anterior com o diálogo por cima.
+    expect(sessao.estadoDaSessao()).toBe('anonima')
+    expect(sessao.quemEstaNaSessao()).toBeUndefined()
+  })
+
+  it('o "Sair" apaga quem estava: a entrada não tem por que saber quem usou este computador', async () => {
+    responderCom({ status: 200, corpo: PRONTA })
+    await sessao.entrarPorEmail({ email: 'renata@escola.test', senha: 'segredo-da-renata' })
+    sessao.lembrarQuemEsta(RENATA)
+    responderCom({ status: 204 })
+    await sessao.sair()
+    expect(sessao.quemEstaNaSessao()).toBeUndefined()
+  })
+})

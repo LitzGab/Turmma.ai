@@ -2,6 +2,7 @@ export { CodigoDeErro } from './erros/codigo-de-erro.js'
 export type { RespostaDeErro } from './erros/codigo-de-erro.js'
 export {
   avisoDoSegundoFatorConsumido,
+  AVISO_DA_TROCA_RECUSADA,
   AVISO_DO_CONVITE_PARA_CONTA_EXISTENTE,
   AVISO_DO_SEGUNDO_FATOR_CONSUMIDO,
   formatarEspera,
@@ -146,7 +147,9 @@ export type {
   Turno,
 } from './estrutura/turma.js'
 export {
+  AVISO_DO_COMPLEMENTO,
   CONTESTACOES_DE_VINCULO,
+  EFEITO_DA_CONTESTACAO,
   ESTADOS_DE_VINCULO,
   ESTADOS_EM_DECISAO,
   esquemaConsultaVinculos,
@@ -161,6 +164,8 @@ export {
   esquemaVinculoDaCoordenacao,
   MOTIVOS_DE_ENCERRAMENTO_DE_VINCULO,
   MOTIVOS_DE_ENCERRAMENTO_PELA_COORDENACAO,
+  NOME_DA_CONTESTACAO,
+  NOME_DO_ESTADO_DE_VINCULO,
   PAPEIS_DE_VINCULO,
   PAPEIS_DE_VINCULO_PELA_COORDENACAO,
   TAMANHO_MAXIMO_DO_COMPLEMENTO,

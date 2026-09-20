@@ -1,7 +1,7 @@
 # Tarefas — Identidade e tenancy
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 19 de 20 concluídas
+**Status:** 20 de 20 concluídas
 
 ## Lista
 
@@ -124,11 +124,11 @@
   - [x] 19.3 `/convite#token` com `replaceState` e os dois caminhos
   - [x] 19.4 Testes: e2e de matrícula, conta da escola pelo `oidc-falso`, MFA e convite, com `CONTA_SEGURADA` em português
 
-- [ ] **20.0 — Telas depois de entrar: escola, vínculos, saída e inatividade**
-  - [ ] 20.1 `/escolher-escola` e seletor no cabeçalho, limpando o cache do TanStack Query
-  - [ ] 20.2 `/vinculos` com confirmar e contestar (código e complemento, com aviso)
-  - [ ] 20.3 "Sair", timer de inatividade e login por cima da tela sem perder o que foi digitado
-  - [ ] 20.4 Testes: e2e de inatividade com relógio, troca sem dado de A, clique duplo, Chromebook compartilhado entre dois alunos
+- [x] **20.0 — Telas depois de entrar: escola, vínculos, saída e inatividade**
+  - [x] 20.1 `/escolher-escola` e seletor no cabeçalho, limpando o cache do TanStack Query
+  - [x] 20.2 `/vinculos` com confirmar e contestar (código e complemento, com aviso)
+  - [x] 20.3 "Sair", timer de inatividade e login por cima da tela sem perder o que foi digitado
+  - [x] 20.4 Testes: e2e de inatividade com relógio, troca sem dado de A, clique duplo, Chromebook compartilhado entre dois alunos
 
 ## Dependências e paralelismo
 

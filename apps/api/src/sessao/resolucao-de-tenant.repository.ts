@@ -125,11 +125,11 @@ export class ResolucaoDeTenantRepository {
   }
 
   /**
-   * Os acessos da conta para o `/v1/eu` (12.0): cada usuário ativo de equipe, com o nome da escola e o papel. O usuário
-   * desativado (saiu da escola) e o que ainda espera o convite (inativo até o login que o ativa, 7.0) não aparecem.
-   * Nada da outra escola além do nome dela: nem id, nem turma, nem vínculo.
+   * Os acessos da conta para o `/v1/eu` (12.0) e para a etapa `escolher` do login (20.0): cada usuário ativo de equipe,
+   * com o nome da escola e o papel. O usuário desativado (saiu da escola) e o que ainda espera o convite (inativo até o
+   * login que o ativa, 7.0) não aparecem. Nada da outra escola além do nome dela: nem id, nem turma, nem vínculo.
    */
-  @SemEscopo('a credencial da equipe é global: o /v1/eu lista, pela conta da sessão verificada, em que escolas ela tem usuário ativo, só com id, nome da escola e papel')
+  @SemEscopo('a credencial da equipe é global: o /v1/eu e a etapa escolher listam, pela conta já verificada, em que escolas ela tem usuário ativo, só com id, nome da escola e papel')
   acessosDaConta(contaId: string): Promise<Array<{ usuarioId: string; escolaNome: string; papel: PapelDeUsuario }>> {
     return this.banco
       .select({ usuarioId: usuario.id, escolaNome: escola.nome, papel: usuario.papel })

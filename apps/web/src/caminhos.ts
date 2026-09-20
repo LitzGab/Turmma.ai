@@ -1,9 +1,6 @@
 import type { EtapaDeLogin } from '@educa/shared'
 
-/**
- * Os endereços da web, num lugar só. A escolha de escola e os vínculos chegam na tarefa 20.0; a rota já existe para
- * o login levar a ela sem quebrar.
- */
+/** Os endereços da web, num lugar só. */
 export const ROTAS = {
   inicio: '/',
   entrar: '/entrar',
@@ -12,6 +9,8 @@ export const ROTAS = {
   mfa: '/mfa',
   configurarMfa: '/mfa/configurar',
   escolherEscola: '/escolher-escola',
+  /** Os vínculos do professor na escola ativa: confirmar ou contestar cada turma e disciplina (RF4). */
+  vinculos: '/vinculos',
   /** O convite do primeiro coordenador. O token vai no fragmento `#`, e nunca no caminho nem na consulta. */
   convite: '/convite',
   /** Estado do sistema, público: é a tela que se abre justamente quando não se consegue entrar. */

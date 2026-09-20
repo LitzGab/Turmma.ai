@@ -4,14 +4,16 @@ import { abrirSessaoPeloCookie, assinarSessao, erroDaSessao, estadoDaSessao } fr
 import { ROTAS } from './caminhos'
 import { Cabecalho } from './componentes/Cabecalho'
 import { EstadoCarregando, EstadoErro } from './componentes/estado'
+import { LoginPorCima } from './componentes/LoginPorCima'
 import { Casca } from './paginas/Casca'
 import { ConfigurarMfa } from './paginas/ConfigurarMfa'
 import { Convite } from './paginas/Convite'
-import { EmConstrucao } from './paginas/EmConstrucao'
 import { Entrar } from './paginas/Entrar'
 import { EntrarNaEscola } from './paginas/EntrarNaEscola'
+import { EscolherEscola } from './paginas/EscolherEscola'
 import { Inicio } from './paginas/Inicio'
 import { Mfa } from './paginas/Mfa'
+import { Vinculos } from './paginas/Vinculos'
 
 /**
  * A área que exige sessão. O estado vem do módulo de sessão, não do cache de consultas: a sessão não é dado de
@@ -19,6 +21,10 @@ import { Mfa } from './paginas/Mfa'
  *
  * Sem sessão, leva à entrada. Com a API fora do ar, mostra o erro e o "Tentar de novo" — 5xx e queda de rede nunca
  * mandam ninguém para o login (regra 80, item 6).
+ *
+ * Com a sessão vencida, a tela continua montada e o login abre por cima dela: a professora pode estar no meio de uma
+ * contestação, e o relógio não pode apagar o que ela escreveu (regra 80, item 6). Só o "Sair" e a aba que abriu sem
+ * sessão levam à entrada.
  */
 function Protegida({ children }: { children: ReactNode }) {
   const estado = useSyncExternalStore(assinarSessao, estadoDaSessao)
@@ -28,6 +34,13 @@ function Protegida({ children }: { children: ReactNode }) {
   }, [estado])
 
   if (estado === 'aberta') return children
+  if (estado === 'vencida')
+    return (
+      <>
+        {children}
+        <LoginPorCima />
+      </>
+    )
   if (estado === 'anonima') return <Redirect to={ROTAS.entrar} replace />
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-6 sm:px-6">
@@ -75,12 +88,15 @@ export function Rotas() {
       <Route path={ROTAS.sistema} component={Casca} />
       {/* O endereço da escola, por onde o aluno entra (RF7). Fica antes das rotas fixas por ser a única com parâmetro. */}
       <Route path={ROTAS.escola}>{(parametros) => <EntrarNaEscola slug={parametros.slug} />}</Route>
-      {/* Etapas do login, sem sessão ainda. A escolha de escola chega na 20.0. */}
+      {/* Etapas do login, sem sessão ainda. */}
       <Route path={ROTAS.mfa} component={Mfa} />
       <Route path={ROTAS.configurarMfa} component={ConfigurarMfa} />
       <Route path={ROTAS.convite} component={Convite} />
-      <Route path={ROTAS.escolherEscola}>
-        <EmConstrucao titulo="Escolher a escola" />
+      <Route path={ROTAS.escolherEscola} component={EscolherEscola} />
+      <Route path={ROTAS.vinculos}>
+        <AreaAutenticada>
+          <Vinculos />
+        </AreaAutenticada>
       </Route>
       <Route path={ROTAS.inicio}>
         <AreaAutenticada>

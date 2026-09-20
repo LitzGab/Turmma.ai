@@ -3,7 +3,9 @@ import {
   esquemaRespostaLogin,
   esquemaRespostaRenovacao,
   JANELA_DE_RENOVACAO_SIMULTANEA_MS,
+  type AcessoDaConta,
   type EtapaComDesafio,
+  type PapelDeUsuario,
   type PedidoLoginEmail,
   type PedidoLoginMatricula,
   type PedidoMfa,
@@ -17,6 +19,8 @@ export const CAMINHO_DA_RENOVACAO = `${CAMINHO_DA_SESSAO}/renovar`
 export const CAMINHO_DA_ENTRADA_POR_EMAIL = `${CAMINHO_DA_SESSAO}/email`
 export const CAMINHO_DA_ENTRADA_POR_MATRICULA = `${CAMINHO_DA_SESSAO}/matricula`
 export const CAMINHO_DO_SEGUNDO_FATOR = `${CAMINHO_DA_SESSAO}/mfa`
+export const CAMINHO_DA_ESCOLA_DA_SESSAO = `${CAMINHO_DA_SESSAO}/escola`
+export const CAMINHO_DA_ATIVIDADE = `${CAMINHO_DA_SESSAO}/atividade`
 
 /** A trava das Web Locks: uma renovação por vez no navegador inteiro, contando todas as abas abertas na escola. */
 export const NOME_DA_TRAVA_DE_RENOVACAO = 'educa-renovacao'
@@ -52,9 +56,12 @@ export const ESPERA_ENTRE_TENTATIVAS_DE_SAIDA_MS = 1_000
  * - `abrindo`: a renovação pelo cookie está em andamento;
  * - `aberta`: há token de acesso em memória;
  * - `anonima`: não há sessão, e a tela de entrada é o caminho;
+ * - `vencida`: havia sessão nesta aba e ela acabou (inatividade, ou `NAO_AUTENTICADO` que persistiu depois da
+ *   renovação). A tela continua montada e o login abre por cima dela, para ninguém perder o que estava escrevendo
+ *   (regra 80, item 6);
  * - `indisponivel`: a API não respondeu (5xx ou sem rede). Não é logout: o caminho é tentar de novo.
  */
-export type EstadoDaSessao = 'desconhecida' | 'abrindo' | 'aberta' | 'anonima' | 'indisponivel'
+export type EstadoDaSessao = 'desconhecida' | 'abrindo' | 'aberta' | 'anonima' | 'vencida' | 'indisponivel'
 
 /**
  * O token de acesso vive só aqui, em variável de módulo, e some quando a aba fecha ou recarrega (regra 50, item 7):
@@ -81,7 +88,7 @@ let saidaConfirmada = true
  * URL, nem `localStorage`, nem cookie legível (regra 50, item 7). Recarregar a tela do segundo fator o perde de
  * propósito: a pessoa refaz a senha, e é assim que o Chromebook do carrinho não guarda meia credencial de ninguém.
  */
-let desafio: { readonly etapa: EtapaComDesafio; readonly valor: string } | undefined
+let desafio: { readonly etapa: EtapaComDesafio; readonly valor: string; readonly acessos: readonly AcessoDaConta[] } | undefined
 
 /**
  * O bilhete que o aceite de convite devolve quando a conta já existe (7.0). Vai no corpo do login por e-mail, nunca na
@@ -93,20 +100,53 @@ let bilheteDeConvite: string | undefined
 /** O que a tela de entrada precisa explicar por ter vindo de outra tela (segundo fator gasto, convite aceito). */
 let avisoParaAEntrada: string | undefined
 
+/**
+ * O mínimo sobre quem está nesta aba, para o login por cima da tela saber o que oferecer e reconhecer quem volta
+ * (20.0): o papel diz se o caminho de volta é a matrícula ou o e-mail, o `escolaSlug` é o endereço público da escola,
+ * e o `usuarioId` é o identificador opaco que separa "a mesma pessoa voltou" de "sentou outra pessoa no Chromebook".
+ * Nome e escola não entram: quem os mostra é a tela, a partir do cache de consultas, que o fim de sessão esvazia.
+ *
+ * Vive só em memória, morre com a aba e sai junto com a sessão quando ela é encerrada de vez.
+ */
+let quemEstaNaAba: { readonly usuarioId: string; readonly papel: PapelDeUsuario; readonly escolaSlug: string } | undefined
+
+/**
+ * Quem estava aqui quando a sessão venceu, enquanto não se sabe quem entrou no lugar. É só o identificador opaco, e
+ * serve para uma pergunta: quem acabou de entrar é a mesma pessoa, e a tela continua de onde estava, ou sentou outra
+ * pessoa no Chromebook, e o que estava aberto tem de sair da frente dela (RF13).
+ */
+let usuarioAntesDeVencer: string | undefined
+
 const ouvintes = new Set<() => void>()
 
 /**
- * O que precisa ser esquecido junto com a sessão, fora deste módulo: hoje, o cache do TanStack Query (`main.tsx`).
- * Sem isso, a pessoa seguinte no Chromebook do carrinho entraria e veria o nome e a escola da anterior, que ficam no
- * cache de `/v1/eu` por minutos depois da saída (regra 20, itens 4 e 5; regra 10, item 1).
+ * O que precisa ser esquecido quando a sessão desta aba deixa de ser a mesma — ela acabou, ou outra entrou no lugar
+ * dela (outra pessoa, ou a mesma pessoa em outra escola). Fora deste módulo, hoje, é o cache do TanStack Query
+ * (`main.tsx`): sem esvaziá-lo, a pessoa seguinte no Chromebook do carrinho entra e vê o nome e a escola da anterior,
+ * que ficam no cache de `/v1/eu` (regra 20, itens 4 e 5; regra 10, item 1).
  */
-const aoEncerrar = new Set<() => void>()
+const aoTrocar = new Set<() => void>()
 
-/** Registra o que limpar em todo fim de sessão, em qualquer caminho. Devolve o cancelamento. */
-export function aoEncerrarSessao(ouvinte: () => void): () => void {
-  aoEncerrar.add(ouvinte)
+/**
+ * O que precisa acontecer quando uma sessão passa a valer nesta aba: hoje, mandar o cache de consultas buscar de novo
+ * o que falhou enquanto não havia sessão. É o que faz a tela voltar sozinha depois do login por cima (20.0), em vez
+ * de ficar no erro de uma busca que morreu com a sessão anterior.
+ */
+const aoAbrir = new Set<() => void>()
+
+/** Registra o que refazer quando a sessão abre, em qualquer caminho (login, renovação, troca). Devolve o cancelamento. */
+export function aoAbrirSessao(ouvinte: () => void): () => void {
+  aoAbrir.add(ouvinte)
   return () => {
-    aoEncerrar.delete(ouvinte)
+    aoAbrir.delete(ouvinte)
+  }
+}
+
+/** Registra o que esvaziar quando a sessão desta aba muda de dono ou acaba. Devolve o cancelamento. */
+export function aoTrocarDeSessao(ouvinte: () => void): () => void {
+  aoTrocar.add(ouvinte)
+  return () => {
+    aoTrocar.delete(ouvinte)
   }
 }
 
@@ -153,7 +193,15 @@ export function desafioDaEtapa(etapa: EtapaComDesafio): string | undefined {
  * desafio de `configurar_mfa` sem passar por nenhuma etapa de senha.
  */
 export function guardarDesafio(etapa: EtapaComDesafio, valor: string): void {
-  desafio = { etapa, valor }
+  desafio = { etapa, valor, acessos: [] }
+}
+
+/**
+ * Os acessos que vieram com o desafio `escolher` (20.0): o nome da escola e o papel de cada usuário ativo da conta,
+ * que é o que a tela da escolha lista. Some com o desafio, num F5, porque sem ele não há como escolher nada.
+ */
+export function acessosParaEscolher(): readonly AcessoDaConta[] {
+  return desafio?.etapa === 'escolher' ? desafio.acessos : []
 }
 
 /** Esquece o desafio: ele foi consumido pela API, ou gasto pelo quinto código errado (6.0). */
@@ -193,7 +241,19 @@ function definirEstado(novo: EstadoDaSessao): void {
   anunciar()
 }
 
-function guardarToken(resposta: RespostaRenovacao): void {
+/**
+ * Guarda o token que passa a valer nesta aba.
+ *
+ * `sessaoNova` distingue a sessão recém-gravada pela API (entrada, escolha de escola, troca) da rotação de rotina da
+ * mesma sessão. Só a primeira troca o mundo que a tela mostra, e é ela que esvazia o cache — **depois** de o token
+ * novo entrar, nunca antes: a limpeza refaz as buscas que estão na tela, e refazê-las com o token da escola de
+ * origem é o que traria o dado dela para dentro da escola de destino (regra 10, item 1). Na troca que passa pelo
+ * segundo fator, a sessão de origem continua valendo até o código ser aceito, e aquele token funcionaria.
+ */
+function guardarToken(resposta: RespostaRenovacao, sessaoNova = false): void {
+  // Só quando a sessão volta a existir: a renovação de rotina, com a tela aberta, não pode mandar a tela inteira
+  // buscar tudo de novo a cada 10 min (regra 80). Quem está na aba é lido de novo do `/v1/eu` desta sessão.
+  const voltouAValer = estado !== 'aberta'
   token = resposta.token
   expiraEm = new Date(resposta.expiraEm).getTime()
   estado = 'aberta'
@@ -204,24 +264,91 @@ function guardarToken(resposta: RespostaRenovacao): void {
   bilheteDeConvite = undefined
   avisoParaAEntrada = undefined
   anunciar()
+  if (sessaoNova) limparDadosDaEscola()
+  else if (voltouAValer) for (const ouvinte of aoAbrir) ouvinte()
 }
 
 /**
- * Esquece a sessão desta aba, em qualquer caminho: "Sair", `NAO_AUTENTICADO` que persiste depois da renovação, ou
- * cookie que não vale mais. O cookie de renovação é apagado pela API, em `DELETE /v1/sessao`.
- *
- * Idempotente de propósito: o cache limpo faz a tela que ainda estava montada buscar de novo e receber outro
- * `NAO_AUTENTICADO`, e um segundo encerramento não pode reiniciar a limpeza.
+ * Esvazia o que guarda dado da escola fora deste módulo — hoje, o cache de consultas. Acontece em todo fim de sessão
+ * e em toda sessão nova, inclusive a da troca de escola, que não encerra nada nesta aba mas muda o mundo inteiro que
+ * a tela mostra (RF14).
  */
-function esquecerSessao(): void {
-  if (token === undefined && estado === 'anonima') return
+function limparDadosDaEscola(): void {
+  for (const ouvinte of aoTrocar) ouvinte()
+}
+
+/**
+ * Esquece a sessão desta aba, em qualquer caminho: "Sair", `NAO_AUTENTICADO` que persiste depois da renovação,
+ * inatividade vencida, ou cookie que não vale mais. O cookie de renovação é apagado pela API, em `DELETE /v1/sessao`.
+ *
+ * O destino separa os dois fins possíveis:
+ * - `anonima` é o fim pedido pela pessoa ("Sair") ou a aba que abriu sem sessão nenhuma: a rota protegida leva à
+ *   entrada, e nada desta aba continua;
+ * - `vencida` é o fim que chegou sozinho (inatividade, sessão encerrada no servidor): a tela continua montada e o
+ *   login abre por cima dela, porque a professora pode estar no meio de uma contestação e perder o que escreveu por
+ *   causa do relógio é o mesmo erro de perder resposta de prova (regra 80, item 6).
+ *
+ * Ir para `anonima` vale de qualquer estado: é a saída pedida pela pessoa, e ela chega tanto da sessão aberta quanto
+ * da vencida ("Entrar com outra conta") ou da aba que nem abriu direito. **O único destino barrado é `vencida`
+ * quando a sessão não está aberta:** a saída é final, e um pedido atrasado que volta 401 depois dela devolveria a
+ * aba ao estado vencido — com o Voltar do navegador remontando a tela da pessoa anterior com o diálogo por cima, em
+ * vez da entrada.
+ *
+ * Idempotente por destino: o cache limpo faz a tela que ainda estava montada buscar de novo e receber outro
+ * `NAO_AUTENTICADO`, e um segundo encerramento no mesmo destino não pode reiniciar a limpeza.
+ */
+function encerrarLocalmente(destino: 'anonima' | 'vencida'): void {
+  // Só a sessão aberta vence sozinha: depois do "Sair", nada mais devolve esta aba à área autenticada.
+  if (destino === 'vencida' && estado !== 'aberta') return
+  // Idempotente por destino: o segundo `NAO_AUTENTICADO` de uma tela ainda montada não reinicia a limpeza.
+  if (token === undefined && estado === destino) return
   token = undefined
   expiraEm = undefined
-  estado = 'anonima'
+  estado = destino
+  usuarioAntesDeVencer = destino === 'vencida' ? quemEstaNaAba?.usuarioId : undefined
+  if (destino === 'anonima') quemEstaNaAba = undefined
   // Avisa antes de limpar: assim o React já tem o desmonte da área autenticada agendado quando o cache esvazia, e
   // nenhum observador ainda montado recria a consulta que acabou de sair.
   anunciar()
-  for (const ouvinte of aoEncerrar) ouvinte()
+  limparDadosDaEscola()
+}
+
+/** O fim de sessão pedido pela pessoa: a entrada é o caminho, e nada desta aba continua. */
+function esquecerSessao(): void {
+  encerrarLocalmente('anonima')
+}
+
+/** O fim de sessão que chegou sozinho: o login abre por cima da tela, que continua montada. */
+function vencerSessao(): void {
+  encerrarLocalmente('vencida')
+}
+
+/**
+ * Desiste da sessão vencida: quem sentou no computador é outra pessoa, ou quer entrar por outro caminho. A tela sai
+ * junto com o estado dela, e a entrada passa a ser o lugar.
+ */
+export function descartarSessaoVencida(): void {
+  if (estado === 'vencida') esquecerSessao()
+}
+
+/** O mínimo sobre quem está nesta aba, para o login por cima saber o que oferecer e reconhecer quem volta (20.0). */
+export function quemEstaNaSessao(): { usuarioId: string; papel: PapelDeUsuario; escolaSlug: string } | undefined {
+  return quemEstaNaAba
+}
+
+/**
+ * Guarda quem está, a partir do `/v1/eu` da sessão aberta. Chamado pela área autenticada a cada resposta: o que fica é
+ * sempre a pessoa da sessão atual.
+ *
+ * Devolve `true` quando esta sessão é de **outra pessoa** que entrou depois de a anterior vencer — é o Chromebook do
+ * carrinho passando de mão —, e aí a tela que estava aberta não pode continuar com o que a pessoa anterior escreveu
+ * nela. Entrar de novo com a mesma pessoa devolve `false`, e nada da tela se perde.
+ */
+export function lembrarQuemEsta(eu: { usuarioId: string; papel: PapelDeUsuario; escola: { slug: string } }): boolean {
+  quemEstaNaAba = { usuarioId: eu.usuarioId, papel: eu.papel, escolaSlug: eu.escola.slug }
+  const outraPessoa = usuarioAntesDeVencer !== undefined && usuarioAntesDeVencer !== eu.usuarioId
+  usuarioAntesDeVencer = undefined
+  return outraPessoa
 }
 
 function esperar(ms: number): Promise<void> {
@@ -281,9 +408,10 @@ let renovacaoEmAndamento: Promise<void> | undefined
  */
 export function renovarSessao(): Promise<void> {
   // Sessão já encerrada nesta aba: renovar aqui ressuscitaria, pelo cookie que pode ter sobrevivido a um "Sair" que
-  // a API não confirmou, justamente a sessão que a pessoa acabou de encerrar — e apagaria o aviso disso. Quem abre a
-  // aba de novo passa por `abrirSessaoPeloCookie`, que sai de `desconhecida`, e o login passa por `guardarToken`.
-  if (estado === 'anonima') return Promise.reject(new ErroDaApi(CodigoDeErro.NAO_AUTENTICADO))
+  // a API não confirmou, justamente a sessão que a pessoa acabou de encerrar — e apagaria o aviso disso. Na sessão
+  // `vencida`, renovar devolveria a área autenticada por baixo do diálogo de login sem ninguém ter entrado. Quem abre
+  // a aba de novo passa por `abrirSessaoPeloCookie`, que sai de `desconhecida`, e o login passa por `guardarToken`.
+  if (estado === 'anonima' || estado === 'vencida') return Promise.reject(new ErroDaApi(CodigoDeErro.NAO_AUTENTICADO))
   renovacaoEmAndamento ??= comTravaDeRenovacao(pedirRenovacao)
     .then(guardarToken)
     .finally(() => {
@@ -320,6 +448,10 @@ export type OpcoesComSessao = Omit<OpcoesDaChamada, 'token'>
  * a chamada. Só o `NAO_AUTENTICADO` que persiste depois da renovação encerra a sessão.
  */
 export async function chamarComSessao<T>(caminho: string, esquema: EsquemaDeResposta<T>, opcoes: OpcoesComSessao = {}): Promise<T> {
+  // Sem sessão, a chamada nem sai: às 10h a inatividade vence em muitas abas ao mesmo tempo, e cada tela ainda
+  // montada mandaria as consultas dela à API só para ouvir 401 (regra 80). Quem entra de novo passa pelo login, que
+  // não usa este caminho.
+  if (estado === 'anonima' || estado === 'vencida') throw new ErroDaApi(CodigoDeErro.NAO_AUTENTICADO)
   // O token já vencido é renovado antes: a requisição que só serviria para receber 401 não chega a sair.
   if (token !== undefined && expiraEm !== undefined && expiraEm <= Date.now()) await renovarComTokenVencido(token)
   const usado = token
@@ -327,12 +459,17 @@ export async function chamarComSessao<T>(caminho: string, esquema: EsquemaDeResp
     return await chamarApi(caminho, esquema, { ...opcoes, token: usado })
   } catch (erro) {
     if (!ehCodigo(erro, CodigoDeErro.NAO_AUTENTICADO)) throw erro
+    // A sessão acabou enquanto esta chamada estava no ar (o "Sair" da pessoa, por exemplo): repetir agora só mandaria
+    // uma requisição sem credencial nenhuma à API, para ouvir o mesmo 401. Lido por `estadoDaSessao()` de propósito:
+    // o estado pode ter mudado durante o `await`, e a variável já estava restringida pela guarda do começo.
+    const durante = estadoDaSessao()
+    if (durante === 'anonima' || durante === 'vencida') throw erro
     await renovarComTokenVencido(usado)
     try {
       return await chamarApi(caminho, esquema, { ...opcoes, token })
     } catch (segundoErro) {
       // Recusada com o token recém-emitido: a sessão acabou mesmo (encerrada, inatividade, usuário desativado).
-      if (ehCodigo(segundoErro, CodigoDeErro.NAO_AUTENTICADO)) esquecerSessao()
+      if (ehCodigo(segundoErro, CodigoDeErro.NAO_AUTENTICADO)) vencerSessao()
       throw segundoErro
     }
   }
@@ -352,7 +489,7 @@ async function renovarComTokenVencido(usado: string | undefined): Promise<void> 
   try {
     await renovarSessao()
   } catch (erro) {
-    if (ehCodigo(erro, CodigoDeErro.NAO_AUTENTICADO)) esquecerSessao()
+    if (ehCodigo(erro, CodigoDeErro.NAO_AUTENTICADO)) vencerSessao()
     throw erro
   }
 }
@@ -365,10 +502,17 @@ async function renovarComTokenVencido(usado: string | undefined): Promise<void> 
  * Em `pronta`, o token fica em memória e a sessão passa a `aberta`; nas outras etapas, o desafio fica guardado aqui
  * para a tela da etapa, e nenhuma sessão foi gravada.
  */
+function guardarEtapa(resposta: RespostaLogin): void {
+  // Toda etapa `pronta` é uma sessão que a API acabou de gravar: entrada, escolha de escola, ou a troca concluída
+  // depois do segundo fator. O cache do que havia antes não é dela.
+  if (resposta.etapa === 'pronta') guardarToken(resposta, true)
+  else if (resposta.etapa === 'escolher') desafio = { etapa: 'escolher', valor: resposta.desafio, acessos: resposta.acessos }
+  else guardarDesafio(resposta.etapa, resposta.desafio)
+}
+
 async function enviarEtapa(caminho: string, pedido: unknown, desafioAtual?: string): Promise<RespostaLogin> {
   const resposta = await chamarApi(caminho, esquemaRespostaLogin, { metodo: 'POST', corpo: pedido, token: desafioAtual })
-  if (resposta.etapa === 'pronta') guardarToken(resposta)
-  else guardarDesafio(resposta.etapa, resposta.desafio)
+  guardarEtapa(resposta)
   return resposta
 }
 
@@ -472,5 +616,62 @@ export async function sair(): Promise<void> {
     saidaConfirmada = false
   } finally {
     esquecerSessao()
+  }
+}
+
+/**
+ * `POST /v1/sessao/escola` com o desafio `escolher` (RF14): conclui o login na escola escolhida. Sem o desafio nesta
+ * aba — um F5 na tela da escolha —, responde como sessão que não vale, e a pessoa refaz a senha.
+ *
+ * Não passa pelo semáforo do hash: esta rota não confere senha nenhuma.
+ */
+export function escolherEscola(usuarioId: string): Promise<RespostaLogin> {
+  const emAndamento = desafioDaEtapa('escolher')
+  if (emAndamento === undefined) return Promise.reject(new ErroDaApi(CodigoDeErro.NAO_AUTENTICADO))
+  return enviarEtapa(CAMINHO_DA_ESCOLA_DA_SESSAO, { usuarioId }, emAndamento)
+}
+
+/**
+ * `POST /v1/sessao/escola` com o token da sessão aberta (RF14): a troca pelo seletor do cabeçalho. A API cria a
+ * sessão na escola de destino e encerra a de origem.
+ *
+ * Quem esvazia o cache é `guardarToken`, quando o token do destino entra: o dado da escola de origem sai do cliente
+ * sem que nenhuma busca saia com a credencial dela (regra 10, item 1).
+ *
+ * Com a coordenação no destino, a resposta é o desafio do segundo fator e nenhuma sessão muda: a de origem continua
+ * valendo até o código ser aceito (Tech Spec, seção 5, "Troca de escola"). Aí o cache **não** é esvaziado agora —
+ * a pessoa continua na escola de origem, e pode desistir do código e voltar para a tela dela —, e sim quando a
+ * sessão do destino for gravada, pela tela do segundo fator.
+ */
+export function trocarDeEscola(usuarioId: string): Promise<RespostaLogin> {
+  return chamarComSessao(CAMINHO_DA_ESCOLA_DA_SESSAO, esquemaRespostaLogin, { metodo: 'POST', corpo: { usuarioId } }).then((resposta) => {
+    guardarEtapa(resposta)
+    return resposta
+  })
+}
+
+/**
+ * `POST /v1/sessao/atividade`: houve ponteiro ou teclado nesta aba. Quem decide quando chamar é o relógio de
+ * inatividade (`sessao/inatividade.ts`), no máximo uma vez a cada 5 min — nenhuma tela fica batendo na API sozinha.
+ */
+export function registrarAtividade(): Promise<void> {
+  return chamarComSessao(CAMINHO_DA_ATIVIDADE, SEM_CORPO, { metodo: 'POST' })
+}
+
+/**
+ * A inatividade venceu nesta aba (RF13): encerra a sessão na API, esvazia o cache e deixa o login por cima da tela.
+ *
+ * Encerrar na API é o que apaga o cookie de renovação; sem isso, um F5 devolveria a sessão inteira à pessoa seguinte
+ * no Chromebook do carrinho. A falha do `DELETE` não muda o que acontece aqui: esta aba esquece a sessão de qualquer
+ * jeito, como no "Sair".
+ */
+export async function encerrarPorInatividade(): Promise<void> {
+  try {
+    await encerrarNaApi()
+    saidaConfirmada = true
+  } catch {
+    saidaConfirmada = false
+  } finally {
+    vencerSessao()
   }
 }

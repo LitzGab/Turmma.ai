@@ -7,7 +7,7 @@ import { CriacaoDeSessaoRepository } from './criacao-de-sessao.repository.js'
 import type { EmissorDeDesafio, SessaoDeOrigemDaTroca } from './desafio.js'
 import { BYTES_DO_REFRESH, etapaDoLogin, hashDoRefresh, ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from './login.service.js'
 import { RegistroDeAcessoRepository } from './registro-de-acesso.repository.js'
-import type { UsuarioAtivoDaConta } from './resolucao-de-tenant.repository.js'
+import type { ResolucaoDeTenantRepository, UsuarioAtivoDaConta } from './resolucao-de-tenant.repository.js'
 import { SessaoDeOrigemRepository } from './sessao-de-origem.repository.js'
 
 export interface DependenciasDaConclusao {
@@ -16,6 +16,8 @@ export interface DependenciasDaConclusao {
   readonly emissorDeToken: EmissorDeToken
   readonly emissorDeDesafio: EmissorDeDesafio
   readonly ambiente: Ambiente
+  /** Só para a etapa `escolher`: os acessos da conta que a tela lista (20.0). */
+  readonly resolucao: ResolucaoDeTenantRepository
 }
 
 /** O que a etapa que acabou de passar sabe da pessoa: a conta, o e-mail dela (só para o HMAC do cookie) e os usuários ativos. */
@@ -44,6 +46,10 @@ export class ConclusaoDeLogin {
     const etapa = etapaDoLogin(credencial.usuarios, credencial.mfaAtivo, credencial.mfaCumprido)
     if (etapa !== 'pronta') {
       const desafio = await this.dependencias.emissorDeDesafio.emitir({ contaId: credencial.contaId, etapa, mfaCumprido: credencial.mfaCumprido })
+      // `escolher` leva a lista de acessos (20.0): é o que a tela mostra, e o `usuarioId` que ela devolve a
+      // `POST /v1/sessao/escola` não existe em nenhum outro lugar ao alcance do cliente. São os mesmos campos do
+      // `/v1/eu.acessos`, da mesma conta que acabou de provar a senha.
+      if (etapa === 'escolher') return { resposta: { etapa, desafio, acessos: await this.dependencias.resolucao.acessosDaConta(credencial.contaId) }, cookies: [] }
       return { resposta: { etapa, desafio }, cookies: [] }
     }
     const [unico] = credencial.usuarios

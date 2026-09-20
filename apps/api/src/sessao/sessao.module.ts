@@ -164,15 +164,16 @@ export class SessaoModule implements OnApplicationShutdown {
         { provide: CookieDeDispositivo, useFactory: () => new CookieDeDispositivo(opcoes.login.dispositivo.versao, opcoes.login.dispositivo.chave) },
         {
           provide: ConclusaoDeLogin,
-          useFactory: (banco: Banco, dispositivo: CookieDeDispositivo) =>
+          useFactory: (banco: Banco, dispositivo: CookieDeDispositivo, resolucao: ResolucaoDeTenantRepository) =>
             new ConclusaoDeLogin({
               banco,
               dispositivo,
               emissorDeToken: new EmissorDeToken(opcoes.identidade.chaveAssinatura),
               emissorDeDesafio: new EmissorDeDesafio(opcoes.identidade.chaveAssinatura),
               ambiente: opcoes.identidade.ambiente,
+              resolucao,
             }),
-          inject: [BANCO, CookieDeDispositivo],
+          inject: [BANCO, CookieDeDispositivo, ResolucaoDeTenantRepository],
         },
         { provide: BilheteDeConvite, useFactory: () => new BilheteDeConvite(opcoes.identidade.chaveAssinatura) },
         { provide: AtivacaoPorConvite, useFactory: (banco: Banco, bilhetes: BilheteDeConvite) => new AtivacaoPorConvite(banco, bilhetes), inject: [BANCO, BilheteDeConvite] },

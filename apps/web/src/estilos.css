@@ -41,4 +41,17 @@
     outline: 3px solid var(--color-blue-700);
     outline-offset: 2px;
   }
+
+  /*
+   * O login por cima da tela (sessão vencida) é um `dialog` modal: o navegador prende o foco nele e deixa o resto
+   * inerte. O fundo escurecido vem em hex de 8 dígitos, e não em `color-mix()` nem em `oklch()`, pelo mesmo motivo da
+   * paleta acima; a centralização é explícita porque o `margin` do `dialog` é zerado pelo reset.
+   */
+  dialog::backdrop {
+    background-color: #0f172abf;
+  }
+
+  dialog[open] {
+    margin: auto;
+  }
 }

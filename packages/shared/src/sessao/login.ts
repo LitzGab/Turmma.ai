@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { esquemaAcessoDaConta } from './eu.js'
 
 /** Maior e-mail aceito, o mesmo teto do check de `conta` no banco. */
 export const TAMANHO_MAXIMO_EMAIL = 254
@@ -38,13 +39,22 @@ export const esquemaPedidoLoginEmail = z
 
 export type PedidoLoginEmail = z.infer<typeof esquemaPedidoLoginEmail>
 
+/** As etapas com desafio que não escolhem escola: o segundo fator, que não precisa de lista nenhuma. */
+const ETAPAS_DO_SEGUNDO_FATOR = ['configurar_mfa', 'mfa'] as const satisfies readonly EtapaComDesafio[]
+
 /**
  * Resposta 200 do login. Em `pronta`, o token de acesso de 10 min, que a web guarda só em memória, e o cookie
  * `educa_sessao` de renovação no cabeçalho. Nas outras etapas, só o desafio de 5 min e nenhuma sessão.
+ *
+ * Em `escolher`, junto com o desafio vão os acessos da conta (20.0): sem eles a tela não teria o que listar, porque o
+ * desafio é opaco para o cliente e o `usuarioId` que `POST /v1/sessao/escola` exige só existe aqui. São os mesmos
+ * campos que `/v1/eu.acessos` devolve depois da sessão — nome da escola e papel, nada mais de outra escola —, e quem
+ * os recebe já provou a senha daquela conta.
  */
 export const esquemaRespostaLogin = z.discriminatedUnion('etapa', [
   z.object({ etapa: z.literal('pronta'), token: z.string().min(1), expiraEm: z.iso.datetime() }).strict(),
-  z.object({ etapa: z.enum(ETAPAS_COM_DESAFIO), desafio: z.string().min(1) }).strict(),
+  z.object({ etapa: z.literal('escolher'), desafio: z.string().min(1), acessos: z.array(esquemaAcessoDaConta) }).strict(),
+  z.object({ etapa: z.enum(ETAPAS_DO_SEGUNDO_FATOR), desafio: z.string().min(1) }).strict(),
 ])
 
 export type RespostaLogin = z.infer<typeof esquemaRespostaLogin>

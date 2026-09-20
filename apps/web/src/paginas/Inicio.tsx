@@ -1,9 +1,7 @@
-import type { RespostaEu } from '@educa/shared'
 import { useQuery } from '@tanstack/react-query'
 import { consultaEu } from '../api/eu'
 import { EstadoCarregando, EstadoErro } from '../componentes/estado'
-
-const NOME_DO_PAPEL: Record<RespostaEu['papel'], string> = { coordenador: 'coordenação', professor: 'professor', aluno: 'aluno' }
+import { NOME_DO_PAPEL } from '../papeis'
 
 /**
  * A primeira tela de quem entrou. No F1 ela mostra quem está na sessão e em qual escola, que é o que prova, para a

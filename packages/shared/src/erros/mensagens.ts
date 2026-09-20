@@ -88,6 +88,19 @@ export const AVISO_DO_CONVITE_PARA_CONTA_EXISTENTE =
   'Você já tem acesso em outra escola: entre com a sua senha para concluir o convite. Se passar de 30 minutos, peça um convite novo à escola.'
 
 /**
+ * O que o seletor de escola diz quando a troca é recusada (Tech Spec, seção 5, "Troca de escola"). A API responde o
+ * mesmo `NAO_ENCONTRADO` para os dois casos — a sessão que não é de e-mail (matrícula ou conta da escola), que só
+ * abre a outra escola pelo login dela; e o usuário que deixou de existir naquela escola entre a lista e o clique —,
+ * e a mensagem vale para os dois sem dizer qual foi (regra 10, item 6).
+ *
+ * O caminho que ela oferece é sair e entrar pela escola de destino, que serve a quem entrou pela conta da escola (e
+ * pode não ter senha nenhuma) e a quem entrou por e-mail. O endereço daquela escola não é dito aqui porque a web não
+ * o tem: `acessos` leva o nome da escola e nada mais dela (Tech Spec, seção 7).
+ */
+export const AVISO_DA_TROCA_RECUSADA =
+  'Não foi possível abrir esta escola por aqui. Saia e entre de novo pelo endereço dela, ou com o seu e-mail e a sua senha; se precisar do endereço, procure a coordenação.'
+
+/**
  * O que a tela `/e/:slug` diz quando a volta do Google ou da Microsoft traz falha (Tech Spec, seção 12). Todo `error`
  * do provedor vira a mesma mensagem, porque não sabemos qual valor eles devolvem quando a escola não liberou o
  * aplicativo, e a tela sempre oferece a matrícula como caminho.

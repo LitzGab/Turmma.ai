@@ -344,7 +344,9 @@ describe('POST /v1/sessao/email: a equipe entra por e-mail e senha', () => {
     ] as const) {
       const resposta = await comSenha(email)
       expect(resposta.status, etapa).toBe(200)
-      expect(resposta.corpo, etapa).toEqual({ etapa, desafio: expect.any(String) })
+      // Só `escolher` leva a lista de acessos: é ela que a tela da escolha mostra (20.0), e o segundo fator não
+      // precisa de lista nenhuma.
+      expect(resposta.corpo, etapa).toEqual(etapa === 'escolher' ? { etapa, desafio: expect.any(String), acessos: expect.any(Array) } : { etapa, desafio: expect.any(String) })
       // O login ainda não terminou: nem sessão, nem a marca de navegador conhecido (quem tem só a senha do
       // coordenador não ganha o `educa_dispositivo` sem o segundo fator).
       expect(resposta.setCookie, etapa).toEqual([])

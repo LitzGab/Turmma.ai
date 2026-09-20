@@ -15,6 +15,8 @@ import { lerAmbienteDeTeste, urlDoBancoDeTeste, valorObrigatorio } from '../../t
 export interface EquipeDeTeste {
   readonly escolaId: string
   readonly escolaNome: string
+  /** O endereço da escola, por onde entram o aluno e quem usa a conta da escola (RF7, RF8). */
+  readonly slug: string
   /** A conta é global e vale em todas as escolas da pessoa: é por ela que se cria o segundo vínculo. */
   readonly contaId: string
   readonly usuarioId: string
@@ -71,6 +73,7 @@ export async function criarEquipeComSenha(papel: 'professor' | 'coordenador' = '
   // Nome de escola e de pessoa únicos: é o que deixa um teste afirmar que a tela não mostra a pessoa do teste ao lado,
   // nem a anterior no mesmo Chromebook.
   const escolaNome = `Colégio sintético ${marca.slice(0, 8)}`
+  const slug = `e2e-${marca}`
   const nome = `${papel === 'professor' ? 'Professora' : 'Coordenadora'} sintética ${marca.slice(0, 8)}`
   const email = `${papel}-${marca}@educa.invalid`
   const senha = `senha-sintetica-${marca}`
@@ -78,11 +81,11 @@ export async function criarEquipeComSenha(papel: 'professor' | 'coordenador' = '
 
   return comBanco(async (banco) => {
     const redeId = await id(banco, "insert into rede (nome, tipo) values ('Rede sintética do e2e', 'independente') returning id", [])
-    const escolaId = await id(banco, 'insert into escola (rede_id, nome, slug) values ($1, $2, $3) returning id', [redeId, escolaNome, `e2e-${marca}`])
+    const escolaId = await id(banco, 'insert into escola (rede_id, nome, slug) values ($1, $2, $3) returning id', [redeId, escolaNome, slug])
     await banco.query("insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, 2026, '2026-02-01', '2026-12-18', 'em_curso')", [escolaId])
     const contaId = await id(banco, 'insert into conta (email, senha_hash) values ($1, $2) returning id', [email, senhaHash])
     const usuarioId = await id(banco, 'insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, $3, $4) returning id', [escolaId, contaId, papel, nome])
-    return { escolaId, escolaNome, contaId, usuarioId, nome, email, senha }
+    return { escolaId, escolaNome, slug, contaId, usuarioId, nome, email, senha }
   })
 }
 
@@ -161,6 +164,21 @@ export async function criarAlunoComMatricula(opcoes: { escola?: EscolaDeTeste; m
   })
 }
 
+/**
+ * A inatividade que a escola configurou (`PUT /v1/escola/sessao`, Tech Spec, seção 3), gravada direto no banco: é ela
+ * que o `/v1/eu` devolve e que o relógio da aba usa. Cada escola escolhe a sua, e é por isso que o teste precisa de
+ * uma diferente do padrão para provar que a tela lê o valor do servidor, e não um número fixo.
+ */
+export async function definirInatividadeDaEscola(escolaId: string, minutos: { equipe?: number; aluno?: number }): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('update escola set inatividade_equipe_min = coalesce($2, inatividade_equipe_min), inatividade_aluno_min = coalesce($3, inatividade_aluno_min) where id = $1', [
+      escolaId,
+      minutos.equipe ?? null,
+      minutos.aluno ?? null,
+    ])
+  })
+}
+
 /** O domínio Google ou o tenant Microsoft que a escola liberou (13.0): é dado da instituição, não de pessoa. */
 export async function liberarProvedorDaEscola(escolaId: string, provedor: 'google' | 'microsoft', valor: string): Promise<void> {
   await comBanco(async (banco) => {
@@ -228,4 +246,55 @@ export async function criarConviteDeCoordenador(opcoes: { conta?: EquipeDeTeste;
  */
 export function codigoDoAutenticador(segredoBase32: string, deslocamentoSegundos = 0): string {
   return new TOTP({ secret: Secret.fromBase32(segredoBase32) }).generate({ timestamp: Date.now() + deslocamentoSegundos * 1_000 })
+}
+
+/** A turma com os vínculos que a coordenação alocou para o professor, como a tela `/vinculos` os recebe (RF4). */
+export interface AlocacaoDeTeste {
+  readonly turmaNome: string
+  /** Um vínculo por disciplina, todos `pendente`: é o professor com duas disciplinas na mesma turma. */
+  readonly disciplinas: readonly string[]
+}
+
+/**
+ * Uma turma no ano em curso da escola, com um vínculo pendente por disciplina para aquele professor (RF3, RF4).
+ *
+ * Quem cria vínculo é a coordenação (regra 60, item 8a), e o banco exige que o autor seja usuário da mesma escola:
+ * por isso a fixture cria também a coordenadora sintética que assina a alocação, como no onboarding de verdade.
+ *
+ * O nome da turma leva uma marca única: é com ele que o teste de isolamento afirma que nada da escola A aparece
+ * depois da troca para a B.
+ */
+export async function criarAlocacaoDoProfessor(escolaId: string, usuarioId: string, disciplinas: readonly string[] = ['Matemática']): Promise<AlocacaoDeTeste> {
+  const marca = randomUUID().slice(0, 8)
+  const turmaNome = `7ºA sintética ${marca}`
+  return comBanco(async (banco) => {
+    const { rows: anos } = await banco.query<{ id: string }>("select id from ano_letivo where escola_id = $1 and situacao = 'em_curso'", [escolaId])
+    const anoLetivoId = anos[0]?.id
+    if (anoLetivoId === undefined) throw new Error('a escola do e2e não tem ano letivo em curso')
+    const contaDaCoordenacao = await id(banco, 'insert into conta (email) values ($1) returning id', [`coordenacao-${randomUUID()}@educa.invalid`])
+    const coordenacaoId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, 'coordenador', 'Coordenação sintética') returning id", [
+      escolaId,
+      contaDaCoordenacao,
+    ])
+    const serieId = await id(banco, "insert into serie (escola_id, etapa, ano) values ($1, 'ef_anos_finais', 7) returning id", [escolaId])
+    const turmaId = await id(banco, 'insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, $4) returning id', [escolaId, anoLetivoId, serieId, turmaNome])
+    for (const disciplina of disciplinas) {
+      const disciplinaId = await id(banco, 'insert into disciplina (escola_id, nome) values ($1, $2) returning id', [escolaId, disciplina])
+      await banco.query(
+        "insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, criado_por) values ($1, $2, $3, $4, $5, 'professor', $6)",
+        [escolaId, anoLetivoId, usuarioId, turmaId, disciplinaId, coordenacaoId],
+      )
+    }
+    return { turmaNome, disciplinas }
+  })
+}
+
+/**
+ * Encerra as sessões abertas de uma pessoa, como a coordenação faz ao desativar alguém ou como o expurgo faz com a
+ * sessão vencida: a requisição seguinte da aba já não vale (RF5, Tech Spec, seção 5, "Requisição").
+ */
+export async function encerrarSessoesDoUsuario(usuarioId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query("update sessao set encerrada_em = now(), motivo = 'desativacao' where usuario_id = $1 and encerrada_em is null", [usuarioId])
+  })
 }

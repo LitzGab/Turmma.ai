@@ -213,9 +213,21 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
     const b = await escola('Escola da rede')
     const professora = await pessoa(a.id)
     const emB = await naOutraEscola(professora, b.id)
+    // Outra conta, com usuário ativo nas mesmas duas escolas: nada dela pode entrar na lista da professora.
+    const outra = await pessoa(a.id)
+    await naOutraEscola(outra, b.id)
 
     const login = await entrar(professora.email)
-    expect(login.corpo).toEqual({ etapa: 'escolher', desafio: expect.any(String) })
+    // A tela da escolha não tem outra fonte para a lista: o desafio é opaco para o cliente (20.0). Vêm as duas
+    // escolas da conta, com nome e papel, em ordem de nome, e nada mais de nenhuma delas.
+    expect(login.corpo).toEqual({
+      etapa: 'escolher',
+      desafio: expect.any(String),
+      acessos: [
+        { usuarioId: professora.usuarioId, escolaNome: a.nome, papel: 'professor' },
+        { usuarioId: emB, escolaNome: b.nome, papel: 'professor' },
+      ].sort((um, outro) => um.escolaNome.localeCompare(outro.escolaNome)),
+    })
     expect(login.setCookie).toEqual([])
     expect(await sessoesDe(a.id, professora.usuarioId)).toEqual([])
 
