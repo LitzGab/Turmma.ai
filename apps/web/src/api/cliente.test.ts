@@ -1,10 +1,21 @@
 import { CodigoDeErro, esquemaRespostaAvisos, MENSAGENS_DE_ERRO } from '@educa/shared'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { deveTentarDeNovo } from './cliente-de-consultas'
-import { buscarDaApi, ErroDaApi, mensagemDoErro } from './cliente'
+import { buscarDaApi, chamarApi, ErroDaApi, mensagemDoErro, SEM_CORPO } from './cliente'
 
-function responder(status: number, corpo: unknown): void {
-  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(typeof corpo === 'string' ? corpo : JSON.stringify(corpo), { status }))))
+function responder(status: number, corpo: unknown, cabecalhos?: Record<string, string>): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() => Promise.resolve(new Response(typeof corpo === 'string' ? corpo : JSON.stringify(corpo), { status, headers: cabecalhos ?? {} }))),
+  )
+}
+
+/** O que o `fetch` recebeu na última chamada. */
+function ultimoPedido(): { caminho: string; opcoes: RequestInit } {
+  const espiao = vi.mocked(fetch)
+  const chamada = espiao.mock.calls.at(-1)
+  expect(chamada, 'nenhuma chamada ao fetch').toBeDefined()
+  return { caminho: chamada?.[0] as string, opcoes: (chamada?.[1] ?? {}) as RequestInit }
 }
 
 async function erroDe(promessa: Promise<unknown>): Promise<ErroDaApi> {
@@ -64,6 +75,52 @@ describe('buscarDaApi', () => {
   it('200 fora do contrato vira erro interno, e não dado quebrado na tela', async () => {
     responder(200, { itens: [{ id: 'x', texto: 'sem data' }] })
     expect((await erroDe(buscarDaApi('/x', esquemaRespostaAvisos))).codigo).toBe(CodigoDeErro.ERRO_INTERNO)
+  })
+})
+
+describe('chamarApi', () => {
+  it('manda o token no cabeçalho Authorization, e nunca na URL nem no corpo (regra 50, item 7)', async () => {
+    responder(200, { itens: [] })
+    await chamarApi('/v1/eu', esquemaRespostaAvisos, { token: 'token-da-camila' })
+    const { caminho, opcoes } = ultimoPedido()
+    expect(new Headers(opcoes.headers).get('Authorization')).toBe('Bearer token-da-camila')
+    expect(caminho).toBe('/v1/eu')
+    expect(caminho).not.toContain('token-da-camila')
+    expect(opcoes.body ?? '').not.toContain('token-da-camila')
+  })
+
+  it('sem token, não manda cabeçalho de autorização nenhum', async () => {
+    responder(200, { itens: [] })
+    await buscarDaApi('/v1/sistema/avisos', esquemaRespostaAvisos)
+    expect(new Headers(ultimoPedido().opcoes.headers).has('Authorization')).toBe(false)
+  })
+
+  it('POST com corpo vai como JSON, e o método chega à API', async () => {
+    responder(200, { itens: [] })
+    await chamarApi('/v1/sessao/email', esquemaRespostaAvisos, { metodo: 'POST', corpo: { email: 'camila@escola.test', senha: 'segredo' } })
+    const { opcoes } = ultimoPedido()
+    expect(opcoes.method).toBe('POST')
+    expect(new Headers(opcoes.headers).get('Content-Type')).toBe('application/json')
+    expect(opcoes.body).toBe(JSON.stringify({ email: 'camila@escola.test', senha: 'segredo' }))
+  })
+
+  it('o Retry-After chega ao erro em segundos: é dele que a tela tira quanto esperar', async () => {
+    responder(429, envelope('CONTA_SEGURADA'), { 'Retry-After': '90' })
+    const erro = await erroDe(chamarApi('/v1/sessao/email', esquemaRespostaAvisos, { metodo: 'POST' }))
+    expect(erro.codigo).toBe(CodigoDeErro.CONTA_SEGURADA)
+    expect(erro.esperaSegundos).toBe(90)
+  })
+
+  it('Retry-After ausente ou em formato de data não vira espera inventada', async () => {
+    responder(503, envelope('INDISPONIVEL_TENTE_DE_NOVO'))
+    expect((await erroDe(chamarApi('/x', esquemaRespostaAvisos))).esperaSegundos).toBeUndefined()
+    responder(503, envelope('INDISPONIVEL_TENTE_DE_NOVO'), { 'Retry-After': 'Wed, 21 Oct 2026 07:28:00 GMT' })
+    expect((await erroDe(chamarApi('/x', esquemaRespostaAvisos))).esperaSegundos).toBeUndefined()
+  })
+
+  it('resposta sem corpo (204 de DELETE /v1/sessao) não é erro de contrato', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(null, { status: 204 }))))
+    await expect(chamarApi('/v1/sessao', SEM_CORPO, { metodo: 'DELETE' })).resolves.toBeUndefined()
   })
 })
 

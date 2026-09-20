@@ -12,7 +12,8 @@
     "@educa/shared": "0.0.0",
     "@tanstack/react-query": "5.102.8",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "wouter": "3.11.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",

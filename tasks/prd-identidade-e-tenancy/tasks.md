@@ -112,11 +112,11 @@
   - [x] 17.4 Redefinir o MFA encerra as sessões abertas da conta, com teste
   - [x] 17.5 A troca de escola grava `saida` no registro de acesso da origem, com teste
 
-- [ ] **18.0 — A web mantém a sessão, e a equipe entra por `/entrar`**
-  - [ ] 18.1 `wouter`, `api/sessao.ts` com token em memória, `Authorization` e renovação única com Web Locks
-  - [ ] 18.2 409 `JA_RENOVADO`, 503 repetido como "entrando…", 5xx sem logout
-  - [ ] 18.3 Tela `/entrar` com os quatro estados
-  - [ ] 18.4 Testes: e2e por teclado e toque nos dois projetos, duas abas, nada em storage nem URL, bundle no teto
+- [x] **18.0 — A web mantém a sessão, e a equipe entra por `/entrar`**
+  - [x] 18.1 `wouter`, `api/sessao.ts` com token em memória, `Authorization` e renovação única com Web Locks
+  - [x] 18.2 409 `JA_RENOVADO`, 503 repetido como "entrando…", 5xx sem logout
+  - [x] 18.3 Tela `/entrar` com os quatro estados
+  - [x] 18.4 Testes: e2e por teclado e toque nos dois projetos, duas abas, nada em storage nem URL, bundle no teto
 
 - [ ] **19.0 — Telas de entrada da escola, do MFA e do convite**
   - [ ] 19.1 `/e/:slug` com matrícula e botão da conta da escola, com aviso da TI e `?falha=provedor`

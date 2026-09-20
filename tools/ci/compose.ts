@@ -64,6 +64,15 @@ export function lerAmbienteDeTeste(): Record<string, string> {
   return Object.assign({}, ...ARQUIVOS_AMBIENTE_TESTE.map(lerArquivoAmbiente)) as Record<string, string>
 }
 
+/** URL do Postgres do compose de teste, vista da máquina: a mesma para a integração e para o seed do e2e. */
+export function urlDoBancoDeTeste(): string {
+  const ambiente = lerAmbienteDeTeste()
+  const usuario = valorObrigatorio(ambiente, 'POSTGRES_USUARIO')
+  const senha = valorObrigatorio(ambiente, 'POSTGRES_SENHA')
+  const banco = valorObrigatorio(ambiente, 'POSTGRES_BANCO')
+  return `postgres://${usuario}:${senha}@127.0.0.1:${valorObrigatorio(ambiente, 'POSTGRES_PORTA_HOST')}/${banco}`
+}
+
 export function valorObrigatorio(ambiente: Record<string, string>, chave: string): string {
   const valor = ambiente[chave]
   if (valor === undefined || valor === '') {

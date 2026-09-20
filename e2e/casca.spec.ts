@@ -59,11 +59,13 @@ async function esperarAlvoDeToque(page: Page, nome: string): Promise<void> {
   expect(caixa?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
 }
 
+// A casca do estado do sistema mora em `/sistema` desde a 18.0: com rotas e sessão, `/` passou a ser a área de
+// quem entrou. Ela continua pública, porque é a tela que se abre justamente quando não se consegue entrar.
 test.describe('casca da web', () => {
   test('com dado: versão e componentes vindos da API real, em até 5 s, sem rolagem horizontal e sem violação grave', async ({ page }) => {
     const respostaEstado = page.waitForResponse((resposta) => new URL(resposta.url()).pathname === '/v1/sistema/estado')
     const inicio = Date.now()
-    await page.goto('/')
+    await page.goto('/sistema')
     await esperarEstadoComDado(page)
     const decorrido = Date.now() - inicio
     expect(decorrido, `dado na tela em ${decorrido} ms`).toBeLessThanOrEqual(PRAZO_DO_DADO_MS)
@@ -82,7 +84,7 @@ test.describe('casca da web', () => {
   })
 
   test('vazio: sem avisos na configuração, a seção convida a verificar de novo, e o botão busca de novo', async ({ page, hasTouch }) => {
-    await page.goto('/')
+    await page.goto('/sistema')
     const avisos = secaoAvisos(page)
     await expect(avisos).toContainText('Nenhum aviso por enquanto', { timeout: PRAZO_DO_DADO_MS })
     await expect(avisos).toContainText('Manutenção e atualização do sistema são avisadas aqui.')
@@ -117,7 +119,7 @@ test.describe('casca da web', () => {
         }),
       }),
     )
-    await page.goto('/')
+    await page.goto('/sistema')
     const avisos = secaoAvisos(page)
     await expect(avisos).toContainText('2 avisos', { timeout: PRAZO_DO_DADO_MS })
     await expect(avisos).toContainText('Manutenção programada no sábado, das 8h às 10h.')
@@ -133,7 +135,7 @@ test.describe('casca da web', () => {
       await segurada.aberta
       await rota.continue()
     })
-    await page.goto('/')
+    await page.goto('/sistema')
 
     const carregando = secaoComponentes(page).getByRole('status')
     await expect(carregando).toHaveText('Carregando o estado do sistema…')
@@ -147,7 +149,7 @@ test.describe('casca da web', () => {
   test('erro: a mensagem vem do catálogo pelo código, com "Tentar de novo", e nenhum status HTTP na tela', async ({ page }) => {
     await page.route(ROTA_ESTADO, falharCom(500, 'INDISPONIVEL_TENTE_DE_NOVO'))
     await page.route(ROTA_AVISOS, falharCom(429, 'LIMITE_EXCEDIDO'))
-    await page.goto('/')
+    await page.goto('/sistema')
 
     const erroEstado = secaoComponentes(page).getByRole('alert')
     const erroAvisos = secaoAvisos(page).getByRole('alert')
@@ -167,7 +169,7 @@ test.describe('casca da web', () => {
 
   test('erro: sem rede até a API, a tela diz para tentar de novo em instantes', async ({ page }) => {
     await page.route(ROTA_ESTADO, (rota) => rota.abort('internetdisconnected'))
-    await page.goto('/')
+    await page.goto('/sistema')
     await expect(secaoComponentes(page).getByRole('alert')).toContainText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, {
       timeout: PRAZO_DO_DADO_MS,
     })
@@ -181,7 +183,7 @@ test.describe('casca da web', () => {
       await segurada.aberta
       return rota.continue()
     })
-    await page.goto('/')
+    await page.goto('/sistema')
     await expect(secaoComponentes(page).getByRole('alert')).toBeVisible({ timeout: PRAZO_DO_DADO_MS })
     await esperarAlvoDeToque(page, 'Tentar de novo')
 
@@ -200,7 +202,7 @@ test.describe('casca da web', () => {
   test('teclado: o percurso inteiro só com Tab, Enter e espaço, com foco visível em cada parada', async ({ page }) => {
     let falhar = true
     await page.route(ROTA_ESTADO, (rota) => (falhar ? falharCom(503, 'INDISPONIVEL_TENTE_DE_NOVO')(rota) : rota.continue()))
-    await page.goto('/')
+    await page.goto('/sistema')
     await expect(secaoComponentes(page).getByRole('alert')).toBeVisible({ timeout: PRAZO_DO_DADO_MS })
     await expect(secaoAvisos(page)).toContainText('Nenhum aviso por enquanto')
 
@@ -228,7 +230,7 @@ test.describe('casca da web', () => {
     await page.route(ROTA_ESTADO, (rota) =>
       rota.fulfill({ contentType: 'application/json', body: JSON.stringify(estadoFalso({ banco: 'indisponivel', ambiente: 'producao' })) }),
     )
-    await page.goto('/')
+    await page.goto('/sistema')
     const banco = secaoComponentes(page).getByRole('listitem').filter({ hasText: 'Banco de dados' })
     await expect(banco).toContainText('Indisponível', { timeout: PRAZO_DO_DADO_MS })
     await expect(banco).not.toContainText(/Disponível/)
@@ -244,7 +246,7 @@ test.describe('casca da web', () => {
     await page.route(ROTA_AVISOS, (rota) =>
       rota.fulfill({ contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'longo', texto, publicadoEm: '2026-09-13' }] }) }),
     )
-    await page.goto('/')
+    await page.goto('/sistema')
     await expect(secaoComponentes(page)).toContainText(versao, { timeout: PRAZO_DO_DADO_MS })
     await expect(secaoComponentes(page)).toContainText('Ambiente Homologação')
     await expect(secaoAvisos(page)).toContainText(texto)
@@ -252,7 +254,7 @@ test.describe('casca da web', () => {
   })
 
   test('falha passageira depois do dado não apaga o dado: o erro aparece junto, com "Tentar de novo"', async ({ page, hasTouch }) => {
-    await page.goto('/')
+    await page.goto('/sistema')
     const avisos = secaoAvisos(page)
     await expect(avisos).toContainText('Nenhum aviso por enquanto', { timeout: PRAZO_DO_DADO_MS })
 
@@ -282,7 +284,7 @@ test.describe('casca da web', () => {
   })
 
   test('o CSS servido não usa oklch(), que o Chrome anterior ao 111 não entende', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/sistema')
     const folhas = await page.locator('link[rel="stylesheet"]').evaluateAll((links) => links.map((link) => (link as HTMLLinkElement).href))
     expect(folhas.length).toBeGreaterThan(0)
     for (const folha of folhas) {

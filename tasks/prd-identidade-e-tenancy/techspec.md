@@ -421,11 +421,38 @@ Não se aplica.
 ## 9. Frontend
 
 - **Rotas:** `/entrar`, `/e/:slug`, `/mfa`, `/mfa/configurar`, `/escolher-escola`, `/vinculos`, `/convite#token`.
-- **Token:** fica em memória. `buscarDaApi` manda `Authorization` e, no 401, renova uma vez.
+  - **Decidido na 18.0:** `/` é a área autenticada (sem sessão, leva a `/entrar`), e a casca do estado do sistema, que
+    era a raiz no F0, passou a `/sistema`, pública: é a tela que se abre justamente quando não se consegue entrar.
+  - **Estado da sessão fora do TanStack Query** (18.0): ele vive no módulo `api/sessao.ts` e chega à tela por
+    `useSyncExternalStore`. A sessão não é dado de servidor para guardar em cache, e o `queryClient.clear()` da troca
+    de escola (20.0) apagaria justamente o que diz se a pessoa ainda está dentro.
+- **Token:** fica em memória, no módulo `api/sessao.ts`. Quem manda `Authorization` e, no 401, renova uma vez e repete
+  é `chamarComSessao`/`buscarComSessao` desse módulo; o `buscarDaApi` de `api/cliente.ts` continua sendo a chamada
+  anônima, sem token e sem renovação (18.0).
+- **Sair** (18.0): `DELETE /v1/sessao`, com uma repetição. O token vencido é renovado **antes** do `DELETE`, porque a
+  guarda exige JWT válido: sem isso, a tela parada mais de 10 min sairia com 401, e a web contaria como sessão já
+  encerrada enquanto ela seguia viva no servidor. Com o token em dia, o 401 é sessão que já não existe, e o 401 da
+  repetição é a resposta perdida da primeira. Encerrar não passa por `chamarComSessao`: depois dessa renovação, não há
+  por que rotacionar o cookie de novo a cada tentativa. Esta aba esquece o token de qualquer jeito, porque o computador é
+  compartilhado, e **todo fim de sessão limpa o cache do TanStack Query**: sem isso, a pessoa seguinte no Chromebook
+  do carrinho abriria a área autenticada com o nome e a escola da anterior ainda em cache (regra 20, itens 4 e 5).
+  Quando a API não confirma o encerramento, o cookie de renovação continua valendo no servidor: a tela de entrada
+  avisa, em vez de apresentar a saída como concluída. O aviso vive em memória, e um F5 na entrada o apaga — risco
+  residual aceito no F1, porque o cookie é de sessão do navegador e fechar o navegador resolve. **Sessão esquecida
+  nesta aba não renova mais:** sem isso, um pedido perdido da tela que ainda estava montada reabriria pelo cookie
+  sobrevivente a sessão que a pessoa acabou de encerrar.
 - **Renovação:**
   - uma por vez, entre abas também (Web Locks);
-  - com 409 `JA_RENOVADO`, espera a trava e tenta uma vez com o cookie atual;
+  - com 409 `JA_RENOVADO`, espera a trava e tenta uma vez com o cookie atual, passada a janela de
+    `JANELA_DE_RENOVACAO_SIMULTANEA_MS`, que mora em `packages/shared` desde a 18.0 para os dois lados usarem o
+    mesmo número;
   - com resposta perdida, repete; o servidor trata o caso (seção 5).
+- **Entrada por e-mail:** o 503 do semáforo com `Retry-After` é repetido sozinho por até 30 s, com o botão em
+  "Entrando…". 503 ou falha de rede **sem** `Retry-After` não é a fila do login: sobe como erro na hora, para a
+  pessoa não ficar trinta segundos olhando "Entrando…" com a rede da escola fora (18.0).
+  - **A espera do cabeçalho é limitada** ao intervalo de 1 s até o que resta dos 30 s (18.0). `Retry-After` zerado
+    viraria repetição sem intervalo contra a rota que o semáforo está protegendo, com a escola inteira atrás do mesmo
+    IP; maior que o orçamento deixaria a pessoa em "Entrando…" além do prazo que a tela promete, e sobe como erro.
 - **Sessão vencida:** o login abre por cima da tela, sem perder o estado. Com 5xx ou sem rede, não desloga.
 - **Inatividade:** timer de ponteiro e teclado. Nenhuma tela faz polling, e "Sair" fica no cabeçalho.
 - **Troca de escola:** limpa o cache do TanStack Query.

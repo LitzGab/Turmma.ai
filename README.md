@@ -23,7 +23,9 @@ npm ci
 docker compose up        # Postgres (pgvector), Redis de fila, Redis de cache, storage S3, migrar, borda, 2 APIs, 2 realtimes, 2 despachantes, 2 workers interativos, 2 workers de lote, observabilidade e web
 ```
 
-A web fica em http://127.0.0.1:58080: a casca, em pt-BR e responsiva até 360 px, busca
+A web fica em http://127.0.0.1:58080, em pt-BR e responsiva até 360 px: `/entrar` é a entrada da
+equipe por e-mail e senha, `/` é a área de quem entrou (o token fica só em memória, e a sessão volta
+pelo cookie `HttpOnly` da renovação), e `/sistema` é a casca do estado do sistema, pública, que busca
 `GET /v1/sistema/estado` e `/v1/sistema/avisos` (rotas anônimas; os avisos vêm de `AVISOS_SISTEMA`) e
 mostra carregando, vazio, erro e com dado com os componentes de `apps/web/src/componentes/estado/`; a API responde pela borda
 (Caddy, `infra/Caddyfile`) em http://127.0.0.1:53000/saude, e o realtime em

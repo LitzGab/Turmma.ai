@@ -45,25 +45,25 @@ de rede ou 5xx nunca manda ninguém para o login. Sob pico, o 503 do semáforo a
 
 ## Subtarefas
 
-- [ ] 18.1 — Rotas e sessão no cliente.
+- [x] 18.1 — Rotas e sessão no cliente.
   - **Roteador:** `wouter` (+2,8 kB), com as rotas `/entrar` e a área autenticada. As rotas de 19.0 e 20.0 entram nelas.
   - **`api/sessao.ts`:** guarda o token só em variável de módulo (nunca `localStorage`, `sessionStorage` nem URL) e o `expiraEm`.
   - **`buscarDaApi`:** manda `Authorization`. No 401, renova uma vez e repete a chamada.
   - **Renovação única:** `navigator.locks.request('educa-renovacao')`, que vale entre abas.
   - **Recarregar a página:** renova pelo cookie antes da primeira consulta.
-- [ ] 18.2 — Falhas.
+- [x] 18.2 — Falhas.
   - **409 `JA_RENOVADO`:** espera a trava e **mais de 2 s** desde o 409, e tenta uma vez com o cookie atual. Os 2 s são a janela da 5.0 (`JANELA_DE_RENOVACAO_SIMULTANEA_MS` e Tech Spec seção 5): dentro dela, o hash anterior é tratado como outra aba renovando junto e recebe 409; depois dela, como resposta perdida, e a API rotaciona de novo. Tentar antes dos 2 s depois de uma resposta perdida devolve outro 409, e o aluno cai para o login.
   - **Resposta de renovação perdida (sem rede):** repete, porque o servidor trata o caso (Tech Spec seção 5).
   - **5xx e sem rede:** mantém token, tela e formulário, e tenta de novo com recuo. Só `NAO_AUTENTICADO` depois da renovação manda para o login.
   - **503 do login com `Retry-After`:** o botão mostra "entrando…" e a web tenta sozinha por até 30 s antes de mostrar a mensagem.
   - **`CONTA_SEGURADA`:** diz em português quanto tempo esperar, a partir do `Retry-After`.
   - **Catálogo:** mensagens novas em `MENSAGENS_DE_ERRO`, em `packages/shared`.
-- [ ] 18.3 — Tela `/entrar`.
+- [x] 18.3 — Tela `/entrar`.
   - **Campos:** e-mail (`type="email"`, `autocomplete="username"`) e senha (`autocomplete="current-password"`), com rótulo visível.
   - **Estados:** carregando, erro com o que fazer, e o vazio que não se aplica ao formulário. O cabeçalho da área autenticada mostra "Sair" (`DELETE /v1/sessao`).
   - **Etapas seguintes:** `pronta` vai para a área autenticada. `mfa`, `configurar_mfa` e `escolher` levam às rotas de 19.0 e 20.0, que por enquanto mostram "em construção" sem quebrar.
   - **Tamanho:** coluna única a partir de 360 px e botão principal de 44 px.
-- [ ] 18.4 — Testes.
+- [x] 18.4 — Testes.
 
 ## Arquivos previstos
 
@@ -112,3 +112,28 @@ de rede ou 5xx nunca manda ninguém para o login. Sob pico, o 503 do semáforo a
 
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-19 20:31:21 | 2026-09-19 20:36:14 | `test-engineer` | 1 | REPROVADO | a0ef2a8cbd9bf1de8 |
+| 2026-09-19 21:16:50 | 2026-09-19 21:18:16 | `test-engineer` | 2 | APROVADO | ad0d7564582681545 |
+| 2026-09-19 21:18:53 | 2026-09-19 21:21:19 | `privacy-guardian` | 1 | REPROVADO | a3d9eff2e8adb4d86 |
+| 2026-09-19 21:18:45 | 2026-09-19 21:21:45 | `frontend-reviewer` | 1 | APROVADO | a7d2336c89334cfa3 |
+| 2026-09-19 21:19:03 | 2026-09-19 21:22:46 | `infra-guardian` | 1 | REPROVADO | aa7964b4a4ce1e29d |
+| 2026-09-19 21:18:37 | 2026-09-19 21:23:42 | `revisor-geral` | 1 | REPROVADO | aa1d626a1604ffd4f |
+| 2026-09-19 21:59:09 | 2026-09-19 22:02:16 | `test-engineer` | 3 | APROVADO | a7df391abe0fcf9d0 |
+| 2026-09-19 22:03:46 | 2026-09-19 22:05:49 | `frontend-reviewer` | 2 | APROVADO | aab205169bee64584 |
+| 2026-09-19 22:03:17 | 2026-09-19 22:05:50 | `privacy-guardian` | 2 | APROVADO | a84e2b63005ccc47b |
+| 2026-09-19 22:03:31 | 2026-09-19 22:08:13 | `infra-guardian` | 2 | APROVADO | ab498eb32cdecd004 |
+| 2026-09-19 22:02:59 | 2026-09-19 22:08:54 | `revisor-geral` | 2 | REPROVADO | aa9acbfe2b02e5337 |
+| 2026-09-19 22:41:59 | 2026-09-19 22:44:53 | `test-engineer` | 4 | APROVADO | a400ce6e93cc53c23 |
+| 2026-09-19 22:45:33 | 2026-09-19 22:47:13 | `privacy-guardian` | 3 | APROVADO | a8575b6d73661b7c8 |
+| 2026-09-19 22:45:59 | 2026-09-19 22:47:37 | `frontend-reviewer` | 3 | APROVADO | a2f289a5126aa5590 |
+| 2026-09-19 22:45:47 | 2026-09-19 22:47:52 | `infra-guardian` | 3 | APROVADO | a7629362890d56fe2 |
+| 2026-09-19 22:45:21 | 2026-09-19 22:48:58 | `revisor-geral` | 3 | APROVADO | a3102d6fdbc94b660 |

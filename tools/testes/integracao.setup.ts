@@ -1,17 +1,12 @@
 import { spawnSync } from 'node:child_process'
 import { criarLogger } from '../../packages/nucleo/src/log/logger.ts'
 import { migrar } from '../../packages/nucleo/src/db/migrar.ts'
-import { ARGUMENTOS_COMPOSE, lerAmbienteDeTeste, SERVICOS_INFRA, valorObrigatorio } from '../ci/compose.ts'
+import { ARGUMENTOS_COMPOSE, SERVICOS_INFRA, urlDoBancoDeTeste } from '../ci/compose.ts'
 import { raizRepositorio } from '../ci/executar.ts'
 
-/** URL do Postgres do compose de teste, vista da máquina. */
-export function urlDoBancoDeTeste(): string {
-  const ambiente = lerAmbienteDeTeste()
-  const usuario = valorObrigatorio(ambiente, 'POSTGRES_USUARIO')
-  const senha = valorObrigatorio(ambiente, 'POSTGRES_SENHA')
-  const banco = valorObrigatorio(ambiente, 'POSTGRES_BANCO')
-  return `postgres://${usuario}:${senha}@127.0.0.1:${valorObrigatorio(ambiente, 'POSTGRES_PORTA_HOST')}/${banco}`
-}
+// A URL do banco de teste mora em `tools/ci/compose.ts` desde a 18.0: o seed do e2e também precisa dela, e o
+// Playwright não carrega este arquivo, que sobe o compose.
+export { urlDoBancoDeTeste }
 
 /**
  * Garante Postgres, Redis e storage de pé antes da integração, e o banco com as migrations

@@ -10,7 +10,7 @@ import {
   type EmissorDeToken,
   type Meter,
 } from '@educa/nucleo'
-import { CodigoDeErro, type RespostaRenovacao } from '@educa/shared'
+import { CodigoDeErro, JANELA_DE_RENOVACAO_SIMULTANEA_MS, type RespostaRenovacao } from '@educa/shared'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { COOKIE_SESSAO, lerCookie, serializarCookie } from './cookies.js'
 import { BYTES_DO_REFRESH, hashDoRefresh, ipParaRegistro, type OrigemDaRequisicao } from './login.service.js'
@@ -29,8 +29,11 @@ export const JANELA_DE_JA_RENOVADO_SEGUNDOS = 30
  * simultânea à que acabou de rotacionar (duas abas, duas requisições no mesmo instante), e não uma resposta perdida:
  * a segunda esperou o `FOR UPDATE` da primeira e recebe 409, e a família continua viva. Uma resposta perdida só volta
  * depois de o cliente notar a falha, e aí rotaciona de novo.
+ *
+ * Mora no contrato (`packages/shared`) desde a 18.0: a web espera mais que esta janela antes de repetir a renovação
+ * depois de um 409, e dois valores diferentes deslogariam a pessoa.
  */
-export const JANELA_DE_RENOVACAO_SIMULTANEA_MS = 2_000
+export { JANELA_DE_RENOVACAO_SIMULTANEA_MS }
 
 /** O que a renovação decidiu, rótulo de `sessao.renovacao`. */
 export const RESULTADOS_DA_RENOVACAO = ['ok', 'ja_renovado', 'resposta_perdida', 'reuso', 'recusada'] as const
