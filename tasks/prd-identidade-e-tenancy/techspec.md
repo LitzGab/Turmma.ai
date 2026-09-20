@@ -458,6 +458,28 @@ Não se aplica.
 - **Troca de escola:** limpa o cache do TanStack Query.
 - **Campos:** matrícula com `inputmode="numeric"` e `autocomplete="username"`; TOTP com `one-time-code`; segredo com botão copiar; aviso da TI no botão da conta.
 - **Estados:** os quatro do F0. Coluna única a partir de 360 px, alvo de 44 px, projetos `chromebook` e `celular`.
+- **Desafio e bilhete em memória** (19.0): o desafio da etapa (`mfa`, `configurar_mfa`, `escolher`) e o bilhete do
+  convite vivem no mesmo módulo do token, em variável de módulo, com a etapa conferida na leitura. São meia
+  credencial — quem os tem já provou a senha, ou o link do convite —, e no computador compartilhado da escola nada
+  disso pode sobreviver à aba. Um F5 na tela do segundo fator os perde de propósito, e a tela manda refazer a senha
+  em vez de mostrar um formulário que só responderia erro. A sessão aberta apaga os dois.
+- **Segundo fator na tela** (19.0): o 503 **não** é repetido sozinho em `/v1/sessao/mfa`, ao contrário das duas
+  entradas por senha — a rota não faz hash, e repetir gastaria tentativa do contador da conta com um código que vale
+  30 s. O `CONTA_SEGURADA` do quinto código errado leva de volta à entrada com a explicação, porque ali o desafio já
+  foi consumido pela API. Segredo e códigos de recuperação ficam só no estado do componente, nunca no cache de
+  consultas, e o QR é conveniência ao lado do segredo em texto, nunca o único caminho (regra 50, item 2).
+- **Convite na tela** (19.0): o token vem do fragmento `#` e sai da barra antes da primeira chamada. A tela chama
+  `aceitar` **sem senha** primeiro: a conta nova recebe `ENTRADA_INVALIDA` sem gastar o convite, e só então a senha é
+  pedida; a conta que já existe responde `entrar` e nunca vê campo de senha nova.
+- **Mensagem por tela** (19.0): `packages/shared/src/erros/mensagens.ts` tem um texto por tela para os códigos que
+  precisam dizer outra coisa ali (matrícula em vez de e-mail, código do segundo fator, convite, endereço da escola) e
+  a mensagem única de qualquer `?falha=` do provedor. Não foi criado código de erro novo: nenhuma resposta da API traz
+  `MFA_NECESSARIO` — a etapa `mfa` é resposta 200, e quem a trata é a rota da etapa.
+- **`oidc-falso` no e2e** (19.0, ponto aberto na 13.0): o emissor anuncia `http://oidc-falso:8080`, que é como a API
+  o alcança na rede do compose e o que ela validou no discovery. O navegador do Playwright roda na máquina, onde esse
+  nome não existe, e por isso a configuração do Playwright manda o resolvedor do Chromium mapear esse nome e porta
+  para a porta publicada no host (`--host-resolver-rules`). O `Host` continua o mesmo, e nada muda no que a API
+  confere. O `LOGIN_EXTERNO_RETORNO_URL` do ambiente de teste aponta para a porta da web dele (`infra/teste.env`).
 
 ## 10. Testes
 

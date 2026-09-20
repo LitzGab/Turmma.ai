@@ -43,17 +43,17 @@ aceita o convite sem que o token fique na URL. Tudo funciona no Chromebook e no 
 
 ## Subtarefas
 
-- [ ] 19.1 — `/e/:slug`.
+- [x] 19.1 — `/e/:slug`.
   - **Topo:** o nome da escola, vindo de `GET /v1/escolas/:slug/acesso`. Slug inexistente mostra "endereço não encontrado, confira com o professor", sem listar escolas.
   - **Formulário de matrícula:** `inputmode="numeric"`, `autocomplete="username"`, senha com `current-password`.
   - **Botões da conta da escola:** um por provedor devolvido, cada um com o aviso fixo de que a TI da escola precisa liberar o app para alunos.
   - **Retorno com `?falha=provedor`:** a mesma mensagem para qualquer `error`, com a matrícula como alternativa. O parâmetro sai da barra com `history.replaceState`.
   - **`CONTA_EXTERNA_NAO_LIGADA`:** orienta a entrar com a matrícula ou procurar o professor.
-- [ ] 19.2 — MFA.
+- [x] 19.2 — MFA.
   - **`/mfa`:** código de 6 dígitos (`inputmode="numeric"`, `autocomplete="one-time-code"`), com o link "usar código de recuperação". Depois de 5 erros, o desafio é consumido e a tela leva de volta à entrada com a explicação.
   - **`/mfa/configurar`:** QR e segredo em texto, com botão copiar e a indicação de apps de computador. Ao ativar, mostra os 10 códigos de recuperação uma vez só, com botão copiar e o aviso de guardar.
   - **Cache:** respostas com `no-store` nunca vão para o cache do TanStack Query. Segredo e códigos ficam só no estado do componente e somem ao sair da tela.
-- [ ] 19.3 — `/convite#token`.
+- [x] 19.3 — `/convite#token`.
   - **Leitura:** o token vem do fragmento e sai da barra com `history.replaceState` antes de qualquer chamada.
   - **Consulta:** `POST /v1/convites/consultar` mostra o nome da escola. Expirado, revogado ou inexistente têm a mesma mensagem ("peça um convite novo").
   - **Conta nova:** define a senha e segue para `/mfa/configurar`.
@@ -61,7 +61,7 @@ aceita o convite sem que o token fique na URL. Tudo funciona no Chromebook e no 
     - **Bilhete (7.0):** a resposta traz `bilhete` (30 min). A web o guarda só em memória e o manda no corpo do `POST /v1/sessao/email` (`bilhete`), nunca na URL nem em armazenamento do navegador. Sem ele, o login não ativa a escola do convite.
     - **Senha:** a tela não pede nem manda senha nova para quem cai em `entrar`. O aceite com senha curta responde `ENTRADA_INVALIDA` mesmo nesse caminho; a senha nova (mínimo 12) só é pedida depois de a API responder que a conta é nova. Por isso, a tela chama `aceitar` primeiro sem senha: conta nova responde `ENTRADA_INVALIDA` sem gastar o convite, e aí a tela pede a senha.
     - **Passou dos 30 min:** o convite já foi usado e o usuário continua inativo; a mensagem pede um convite novo à escola (o operador gera outro).
-- [ ] 19.4 — Testes.
+- [x] 19.4 — Testes.
 
 ## Arquivos previstos
 
@@ -110,3 +110,22 @@ aceita o convite sem que o token fique na URL. Tudo funciona no Chromebook e no 
 
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina. Não a escreva à mão e não acrescente seção depois dela. -->
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-19 23:34:20 | 2026-09-19 23:40:04 | `test-engineer` | 1 | REPROVADO | a408a8ad8f5eb023a |
+| 2026-09-20 01:45:26 | 2026-09-20 01:48:00 | `test-engineer` | 2 | APROVADO | a9514605151eb7128 |
+| 2026-09-20 01:48:47 | 2026-09-20 01:52:28 | `privacy-guardian` | 1 | APROVADO | ad16e84e41a237ae9 |
+| 2026-09-20 01:48:36 | 2026-09-20 01:52:34 | `frontend-reviewer` | 1 | AJUSTES NECESSÁRIOS | ae30429aefc3f5cda |
+| 2026-09-20 01:48:25 | 2026-09-20 01:54:10 | `revisor-geral` | 1 | APROVADO | a21fab0931c7441b7 |
+| 2026-09-20 02:31:46 | 2026-09-20 02:34:19 | `test-engineer` | 3 | APROVADO | a43447a52f10e4045 |
+| 2026-09-20 03:04:42 | 2026-09-20 03:05:58 | `test-engineer` | 4 | APROVADO | a384f797f33917cef |
+| 2026-09-20 03:06:48 | 2026-09-20 03:08:32 | `privacy-guardian` | 2 | APROVADO | a5b2c291a32350f88 |
+| 2026-09-20 03:06:20 | 2026-09-20 03:09:20 | `frontend-reviewer` | 2 | APROVADO | ac1516be8d43d9a0d |
+| 2026-09-20 03:06:36 | 2026-09-20 03:09:48 | `revisor-geral` | 2 | APROVADO | a27257f1eae3d4d0e |

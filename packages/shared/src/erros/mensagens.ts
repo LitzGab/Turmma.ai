@@ -1,3 +1,4 @@
+import type { FalhaDoLoginExterno } from '../sessao/externa.js'
 import type { CodigoDeErro } from './codigo-de-erro.js'
 
 /**
@@ -30,6 +31,81 @@ export const MENSAGENS_DA_ENTRADA: Readonly<Partial<Record<CodigoDeErro, string>
 }
 
 /**
+ * O que a tela do endereço da escola diz ao aluno (RF7, tarefa 19.0). A matrícula errada, a matrícula que não existe
+ * e o aluno desativado chegam no mesmo `NAO_AUTENTICADO`, e o texto vale para os três: a tela não diz se a matrícula
+ * existe (regra 10, item 6).
+ */
+export const MENSAGENS_DA_ENTRADA_POR_MATRICULA: Readonly<Partial<Record<CodigoDeErro, string>>> = {
+  NAO_AUTENTICADO: 'Matrícula ou senha incorretas. Confira as duas e tente de novo.',
+}
+
+/**
+ * O que a tela do endereço da escola diz quando o endereço não abre. `NAO_ENCONTRADO` é o slug que não existe ou está
+ * fora do formato: a tela diz o que fazer e nunca lista escola nenhuma, que entregaria a base de clientes.
+ */
+export const MENSAGENS_DO_ACESSO_DA_ESCOLA: Readonly<Partial<Record<CodigoDeErro, string>>> = {
+  NAO_ENCONTRADO: 'Endereço não encontrado. Confira o endereço da escola com o professor ou a coordenação.',
+}
+
+/**
+ * O que a tela do segundo fator diz (RF12). `NAO_AUTENTICADO` cobre o código errado, o código já usado e o desafio
+ * vencido, que chegam iguais de propósito, e o texto vale para os três.
+ */
+export const MENSAGENS_DO_SEGUNDO_FATOR: Readonly<Partial<Record<CodigoDeErro, string>>> = {
+  NAO_AUTENTICADO: 'Código incorreto ou já usado. Confira o código que o aplicativo mostra agora e tente de novo.',
+  ENTRADA_INVALIDA: 'O código do aplicativo tem 6 dígitos, e o de recuperação tem 12 letras e números. Confira e tente de novo.',
+}
+
+/**
+ * O que a tela do convite diz. Expirado, revogado, já usado e inexistente chegam no mesmo `NAO_ENCONTRADO`, e a tela
+ * não diz qual deles foi (regra 10, item 6): pede um convite novo, que é o que resolve os quatro.
+ */
+export const MENSAGENS_DO_CONVITE: Readonly<Partial<Record<CodigoDeErro, string>>> = {
+  NAO_ENCONTRADO: 'Este convite não vale mais. Peça um convite novo à sua escola.',
+}
+
+/**
+ * O aviso que a tela de entrada mostra quando o segundo fator gastou o desafio no quinto código errado (6.0): a pessoa
+ * precisa refazer a senha, e não só digitar outro código.
+ */
+export const AVISO_DO_SEGUNDO_FATOR_CONSUMIDO =
+  'Muitas tentativas com o código do segundo fator. Entre de novo com o e-mail e a senha, e use o código que o aplicativo mostrar então.'
+
+/**
+ * O mesmo aviso, com a espera que a API informou no `Retry-After`: sem ela a pessoa tenta de novo na hora e estica o
+ * bloqueio da própria conta.
+ */
+export function avisoDoSegundoFatorConsumido(esperaSegundos?: number): string {
+  if (esperaSegundos === undefined || !Number.isFinite(esperaSegundos)) return AVISO_DO_SEGUNDO_FATOR_CONSUMIDO
+  return `${AVISO_DO_SEGUNDO_FATOR_CONSUMIDO} Espere ${formatarEspera(esperaSegundos)} antes de tentar.`
+}
+
+/**
+ * O aviso que a tela de entrada mostra a quem aceitou um convite com uma conta que já existe (Tech Spec, seção 5,
+ * "Convite"): o link nunca troca a senha de uma conta existente, e o convite só se completa no login.
+ */
+export const AVISO_DO_CONVITE_PARA_CONTA_EXISTENTE =
+  'Você já tem acesso em outra escola: entre com a sua senha para concluir o convite. Se passar de 30 minutos, peça um convite novo à escola.'
+
+/**
+ * O que a tela `/e/:slug` diz quando a volta do Google ou da Microsoft traz falha (Tech Spec, seção 12). Todo `error`
+ * do provedor vira a mesma mensagem, porque não sabemos qual valor eles devolvem quando a escola não liberou o
+ * aplicativo, e a tela sempre oferece a matrícula como caminho.
+ */
+export const MENSAGENS_DA_FALHA_EXTERNA: Readonly<Record<FalhaDoLoginExterno, string>> = {
+  provedor: 'Não foi possível entrar com a conta da escola. Pode ser que a escola ainda não tenha liberado o aplicativo. Entre com a sua matrícula ou procure o professor.',
+  conta_externa_nao_ligada: MENSAGENS_DE_ERRO.CONTA_EXTERNA_NAO_LIGADA,
+}
+
+/**
+ * A mensagem do parâmetro `?falha=` do endereço da escola. Valor desconhecido é tratado como falha do provedor: a
+ * tela nunca fica sem explicação porque alguém digitou outra coisa na barra.
+ */
+export function mensagemDaFalhaExterna(valor: string): string {
+  return valor === 'conta_externa_nao_ligada' ? MENSAGENS_DA_FALHA_EXTERNA.conta_externa_nao_ligada : MENSAGENS_DA_FALHA_EXTERNA.provedor
+}
+
+/**
  * Quanto esperar, por extenso em pt-BR, a partir dos segundos do `Retry-After`. Arredonda para cima, e para o minuto
  * inteiro acima de um minuto: dizer "2 minutos" quando faltam 90 s atrasa um pouco a pessoa, e dizer "1 minuto" a
  * faria tentar cedo e esticar o bloqueio.
@@ -49,8 +125,36 @@ export function formatarEspera(segundos: number): string {
  * Sem o `Retry-After`, fica o texto fixo do catálogo, que já diz a faixa de espera.
  */
 export function mensagemDaEntrada(codigo: CodigoDeErro, esperaSegundos?: number): string {
+  return mensagemDaTela(MENSAGENS_DA_ENTRADA, codigo, esperaSegundos)
+}
+
+/** A mesma coisa na tela do endereço da escola, onde o identificador é a matrícula e não o e-mail (RF7, RF11). */
+export function mensagemDaEntradaPorMatricula(codigo: CodigoDeErro, esperaSegundos?: number): string {
+  return mensagemDaTela(MENSAGENS_DA_ENTRADA_POR_MATRICULA, codigo, esperaSegundos)
+}
+
+/** A mensagem da tela do segundo fator, com a espera da conta segurada quando a API a informou (RF12). */
+export function mensagemDoSegundoFator(codigo: CodigoDeErro, esperaSegundos?: number): string {
+  return mensagemDaTela(MENSAGENS_DO_SEGUNDO_FATOR, codigo, esperaSegundos)
+}
+
+/** A mensagem da tela do convite do primeiro coordenador. */
+export function mensagemDoConvite(codigo: CodigoDeErro): string {
+  return mensagemDaTela(MENSAGENS_DO_CONVITE, codigo)
+}
+
+/** A mensagem da tela do endereço da escola quando o próprio endereço não abre. */
+export function mensagemDoAcessoDaEscola(codigo: CodigoDeErro): string {
+  return mensagemDaTela(MENSAGENS_DO_ACESSO_DA_ESCOLA, codigo)
+}
+
+/**
+ * O texto da tela para um código: o da própria tela, se houver, e o do catálogo geral no resto. A conta segurada diz
+ * quanto esperar quando a API mandou o `Retry-After`; o número vem da nossa resposta, nunca do que foi digitado.
+ */
+function mensagemDaTela(textos: Readonly<Partial<Record<CodigoDeErro, string>>>, codigo: CodigoDeErro, esperaSegundos?: number): string {
   if (codigo === 'CONTA_SEGURADA' && esperaSegundos !== undefined && Number.isFinite(esperaSegundos)) {
     return `Muitas tentativas com senha errada nesta conta. Espere ${formatarEspera(esperaSegundos)} e tente de novo.`
   }
-  return MENSAGENS_DA_ENTRADA[codigo] ?? MENSAGENS_DE_ERRO[codigo]
+  return textos[codigo] ?? MENSAGENS_DE_ERRO[codigo]
 }

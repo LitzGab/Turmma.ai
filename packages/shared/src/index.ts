@@ -1,6 +1,19 @@
 export { CodigoDeErro } from './erros/codigo-de-erro.js'
 export type { RespostaDeErro } from './erros/codigo-de-erro.js'
-export { formatarEspera, MENSAGENS_DA_ENTRADA, MENSAGENS_DE_ERRO, mensagemDaEntrada } from './erros/mensagens.js'
+export {
+  avisoDoSegundoFatorConsumido,
+  AVISO_DO_CONVITE_PARA_CONTA_EXISTENTE,
+  AVISO_DO_SEGUNDO_FATOR_CONSUMIDO,
+  formatarEspera,
+  MENSAGENS_DA_ENTRADA,
+  MENSAGENS_DE_ERRO,
+  mensagemDaEntrada,
+  mensagemDaEntradaPorMatricula,
+  mensagemDaFalhaExterna,
+  mensagemDoAcessoDaEscola,
+  mensagemDoConvite,
+  mensagemDoSegundoFator,
+} from './erros/mensagens.js'
 export { ALCANCES, ALCANCES_INDIVIDUAIS, alcanceDe, MATRIZ, PAPEIS, PAPEIS_DE_USUARIO, RECURSOS } from './permissao/matriz.js'
 export type { AcaoDe, Alcance, Papel, PapelDeUsuario, Recurso } from './permissao/matriz.js'
 export type { RespostaSaude } from './sistema/saude.js'

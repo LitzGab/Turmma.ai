@@ -283,7 +283,7 @@ test.describe('casca da web', () => {
     expect(pedidos).toBe(1)
   })
 
-  test('o CSS servido não usa oklch(), que o Chrome anterior ao 111 não entende', async ({ page }) => {
+  test('o CSS servido não usa oklch(), que o Chrome anterior ao 111 não entende, e pinta o aviso de atenção', async ({ page }) => {
     await page.goto('/sistema')
     const folhas = await page.locator('link[rel="stylesheet"]').evaluateAll((links) => links.map((link) => (link as HTMLLinkElement).href))
     expect(folhas.length).toBeGreaterThan(0)
@@ -291,6 +291,10 @@ test.describe('casca da web', () => {
       const css = await (await page.request.get(folha)).text()
       expect(css).toContain('#1d4ed8')
       expect(css).not.toContain('oklch(')
+      // A paleta zerada do `@theme` faz classe com cor fora da lista não gerar regra nenhuma, caladamente: a caixa
+      // de aviso fica sem fundo e sem borda, e o axe não vê, porque o texto herda o contraste da página. O teste de
+      // unidade `apps/web/src/estilos.test.ts` cobre o fonte; esta linha cobre o que o navegador recebe.
+      for (const classe of ['.bg-amber-50', '.border-amber-300', '.text-amber-900']) expect(css, `${classe} sem regra no CSS servido`).toContain(classe)
     }
   })
 })

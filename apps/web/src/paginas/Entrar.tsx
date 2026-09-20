@@ -2,7 +2,7 @@ import { CodigoDeErro, mensagemDaEntrada, TAMANHO_MAXIMO_EMAIL, TAMANHO_MAXIMO_S
 import { useId, useState, type FormEvent } from 'react'
 import { useLocation } from 'wouter'
 import { ErroDaApi } from '../api/cliente'
-import { entrarPorEmail, saidaPendente } from '../api/sessao'
+import { avisoDaEntrada, entrarPorEmail, saidaPendente } from '../api/sessao'
 import { Botao } from '../componentes/Botao'
 import { ROTA_DA_ETAPA } from '../caminhos'
 
@@ -59,6 +59,13 @@ export function Entrar() {
           <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
             Não foi possível encerrar a sessão anterior neste computador. Entre e saia de novo, ou feche o navegador
             antes de deixar a máquina.
+          </p>
+        )}
+        {/* O que trouxe a pessoa de volta para cá: o segundo fator que gastou o desafio, ou o convite aceito por uma
+            conta que já existe. Vive só em memória, como o aviso de saída não confirmada. */}
+        {avisoDaEntrada() !== undefined && (
+          <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+            {avisoDaEntrada()}
           </p>
         )}
         <p className="text-slate-700">Use o e-mail e a senha que a sua escola cadastrou.</p>

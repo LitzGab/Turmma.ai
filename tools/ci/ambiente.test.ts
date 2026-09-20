@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 import { COMANDO_HEALTHCHECK_BATIMENTO } from '../../packages/nucleo/src/instancia/batimento.ts'
 import { PROCESSOS_DA_FILA } from '../testes/compose.ts'
-import { lerAmbienteExemplo } from './compose.ts'
+import { lerAmbienteDeTeste, lerAmbienteExemplo, valorObrigatorio } from './compose.ts'
 import { raizRepositorio } from './executar.ts'
 
 const lerArquivo = (caminho: string) => readFileSync(join(raizRepositorio, caminho), 'utf8')
@@ -127,14 +127,26 @@ describe('.env.example e compose', () => {
     }
   })
 
-  it('o compose de teste só troca portas, e nenhuma coincide com a do ambiente de desenvolvimento', () => {
+  it('o compose de teste só troca portas e o que depende delas, e nada coincide com o ambiente de desenvolvimento', () => {
     const exemplo = lerAmbienteExemplo()
     const teste = parseEnv(lerArquivo('infra/teste.env'))
     expect(Object.keys(teste).length).toBeGreaterThan(0)
-    for (const [chave, porta] of Object.entries(teste)) {
-      expect(chave).toMatch(/_PORTA_HOST$/)
+    for (const [chave, valor] of Object.entries(teste)) {
+      expect(chave, 'a sobreposição de teste é só de porta, e do endereço que carrega uma').toMatch(/(_PORTA_HOST|_URL)$/)
       expect(exemplo[chave], `${chave} não existe em .env.example`).toBeDefined()
-      expect(porta).not.toBe(exemplo[chave])
+      expect(valor).not.toBe(exemplo[chave])
+    }
+  })
+
+  it('o retorno do login pela conta da escola aponta para a web do próprio ambiente', () => {
+    // O provedor devolve o navegador a este endereço (13.0, 19.0): apontado para a porta do outro ambiente, o
+    // e2e cairia na web do desenvolvimento, ou em porta nenhuma.
+    for (const [nome, ambiente] of [
+      ['.env.example', lerAmbienteExemplo()],
+      ['infra/teste.env', lerAmbienteDeTeste()],
+    ] as const) {
+      const retorno = new URL(valorObrigatorio(ambiente, 'LOGIN_EXTERNO_RETORNO_URL'))
+      expect(retorno.port, nome).toBe(valorObrigatorio(ambiente, 'WEB_PORTA_HOST'))
     }
   })
 

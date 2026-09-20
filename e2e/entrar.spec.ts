@@ -120,7 +120,9 @@ test.describe('entrada da equipe por e-mail e senha', () => {
     // Quem decide a compra é ela, e é ela que passa por esta etapa no primeiro acesso (RF12).
     await expect(page.getByRole('heading', { name: 'Configurar o segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page).toHaveURL(/\/mfa\/configurar$/)
-    await expect(page.getByRole('main')).toContainText('ainda está sendo construída')
+    // A tela da etapa chegou na 19.0: o que ela mostra e o que faz está em `mfa.spec.ts`; aqui vale que a etapa leva
+    // a ela, e que nada da escola aparece antes da sessão existir.
+    await expect(page.getByRole('main')).toContainText('1. Guarde o segredo no seu aplicativo', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('body')).not.toContainText(equipe.escolaNome)
     // Nenhuma sessão foi gravada nesta etapa: nem token, nem cookie de renovação.
     await nadaGuardado(page)

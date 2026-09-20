@@ -5,9 +5,13 @@ import { ROTAS } from './caminhos'
 import { Cabecalho } from './componentes/Cabecalho'
 import { EstadoCarregando, EstadoErro } from './componentes/estado'
 import { Casca } from './paginas/Casca'
+import { ConfigurarMfa } from './paginas/ConfigurarMfa'
+import { Convite } from './paginas/Convite'
 import { EmConstrucao } from './paginas/EmConstrucao'
 import { Entrar } from './paginas/Entrar'
+import { EntrarNaEscola } from './paginas/EntrarNaEscola'
 import { Inicio } from './paginas/Inicio'
+import { Mfa } from './paginas/Mfa'
 
 /**
  * A área que exige sessão. O estado vem do módulo de sessão, não do cache de consultas: a sessão não é dado de
@@ -69,13 +73,12 @@ export function Rotas() {
     <Switch>
       <Route path={ROTAS.entrar} component={Entrada} />
       <Route path={ROTAS.sistema} component={Casca} />
-      {/* Etapas do login sem sessão ainda: as telas chegam na 19.0 (MFA) e na 20.0 (escolha de escola). */}
-      <Route path={ROTAS.mfa}>
-        <EmConstrucao titulo="Segundo fator" />
-      </Route>
-      <Route path={ROTAS.configurarMfa}>
-        <EmConstrucao titulo="Configurar o segundo fator" />
-      </Route>
+      {/* O endereço da escola, por onde o aluno entra (RF7). Fica antes das rotas fixas por ser a única com parâmetro. */}
+      <Route path={ROTAS.escola}>{(parametros) => <EntrarNaEscola slug={parametros.slug} />}</Route>
+      {/* Etapas do login, sem sessão ainda. A escolha de escola chega na 20.0. */}
+      <Route path={ROTAS.mfa} component={Mfa} />
+      <Route path={ROTAS.configurarMfa} component={ConfigurarMfa} />
+      <Route path={ROTAS.convite} component={Convite} />
       <Route path={ROTAS.escolherEscola}>
         <EmConstrucao titulo="Escolher a escola" />
       </Route>

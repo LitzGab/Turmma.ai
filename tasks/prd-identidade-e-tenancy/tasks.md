@@ -1,7 +1,7 @@
 # Tarefas — Identidade e tenancy
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** 7 de 20 concluídas
+**Status:** 19 de 20 concluídas
 
 ## Lista
 
@@ -118,11 +118,11 @@
   - [x] 18.3 Tela `/entrar` com os quatro estados
   - [x] 18.4 Testes: e2e por teclado e toque nos dois projetos, duas abas, nada em storage nem URL, bundle no teto
 
-- [ ] **19.0 — Telas de entrada da escola, do MFA e do convite**
-  - [ ] 19.1 `/e/:slug` com matrícula e botão da conta da escola, com aviso da TI e `?falha=provedor`
-  - [ ] 19.2 `/mfa` e `/mfa/configurar` com segredo em texto, copiar e códigos de recuperação
-  - [ ] 19.3 `/convite#token` com `replaceState` e os dois caminhos
-  - [ ] 19.4 Testes: e2e de matrícula, conta da escola pelo `oidc-falso`, MFA e convite, com `CONTA_SEGURADA` em português
+- [x] **19.0 — Telas de entrada da escola, do MFA e do convite**
+  - [x] 19.1 `/e/:slug` com matrícula e botão da conta da escola, com aviso da TI e `?falha=provedor`
+  - [x] 19.2 `/mfa` e `/mfa/configurar` com segredo em texto, copiar e códigos de recuperação
+  - [x] 19.3 `/convite#token` com `replaceState` e os dois caminhos
+  - [x] 19.4 Testes: e2e de matrícula, conta da escola pelo `oidc-falso`, MFA e convite, com `CONTA_SEGURADA` em português
 
 - [ ] **20.0 — Telas depois de entrar: escola, vínculos, saída e inatividade**
   - [ ] 20.1 `/escolher-escola` e seletor no cabeçalho, limpando o cache do TanStack Query

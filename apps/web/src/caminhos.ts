@@ -1,15 +1,19 @@
 import type { EtapaDeLogin } from '@educa/shared'
 
 /**
- * Os endereços da web, num lugar só. As telas de MFA, escolha de escola e vínculos chegam nas tarefas 19.0 e 20.0;
- * as rotas já existem para o login levar a elas sem quebrar.
+ * Os endereços da web, num lugar só. A escolha de escola e os vínculos chegam na tarefa 20.0; a rota já existe para
+ * o login levar a ela sem quebrar.
  */
 export const ROTAS = {
   inicio: '/',
   entrar: '/entrar',
+  /** O endereço da escola, por onde o aluno entra (RF7). O slug vem do parâmetro da rota. */
+  escola: '/e/:slug',
   mfa: '/mfa',
   configurarMfa: '/mfa/configurar',
   escolherEscola: '/escolher-escola',
+  /** O convite do primeiro coordenador. O token vai no fragmento `#`, e nunca no caminho nem na consulta. */
+  convite: '/convite',
   /** Estado do sistema, público: é a tela que se abre justamente quando não se consegue entrar. */
   sistema: '/sistema',
 } as const

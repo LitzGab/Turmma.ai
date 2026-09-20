@@ -3,7 +3,10 @@ import {
   esquemaRespostaLogin,
   esquemaRespostaRenovacao,
   JANELA_DE_RENOVACAO_SIMULTANEA_MS,
+  type EtapaComDesafio,
   type PedidoLoginEmail,
+  type PedidoLoginMatricula,
+  type PedidoMfa,
   type RespostaLogin,
   type RespostaRenovacao,
 } from '@educa/shared'
@@ -12,6 +15,8 @@ import { chamarApi, ErroDaApi, SEM_CORPO, type EsquemaDeResposta, type OpcoesDaC
 export const CAMINHO_DA_SESSAO = '/v1/sessao'
 export const CAMINHO_DA_RENOVACAO = `${CAMINHO_DA_SESSAO}/renovar`
 export const CAMINHO_DA_ENTRADA_POR_EMAIL = `${CAMINHO_DA_SESSAO}/email`
+export const CAMINHO_DA_ENTRADA_POR_MATRICULA = `${CAMINHO_DA_SESSAO}/matricula`
+export const CAMINHO_DO_SEGUNDO_FATOR = `${CAMINHO_DA_SESSAO}/mfa`
 
 /** A trava das Web Locks: uma renovação por vez no navegador inteiro, contando todas as abas abertas na escola. */
 export const NOME_DA_TRAVA_DE_RENOVACAO = 'educa-renovacao'
@@ -70,6 +75,24 @@ let ultimoErro: unknown
  */
 let saidaConfirmada = true
 
+/**
+ * O desafio da etapa que o login devolveu (Tech Spec, seção 4): um JWT de 5 min que vale só na rota daquela etapa. Ele
+ * é credencial parcial — quem o tem já provou a senha — e por isso mora aqui, em memória, como o token de acesso: nem
+ * URL, nem `localStorage`, nem cookie legível (regra 50, item 7). Recarregar a tela do segundo fator o perde de
+ * propósito: a pessoa refaz a senha, e é assim que o Chromebook do carrinho não guarda meia credencial de ninguém.
+ */
+let desafio: { readonly etapa: EtapaComDesafio; readonly valor: string } | undefined
+
+/**
+ * O bilhete que o aceite de convite devolve quando a conta já existe (7.0). Vai no corpo do login por e-mail, nunca na
+ * URL nem em armazenamento do navegador, e some assim que o login responde: a partir daí quem carrega o convite é o
+ * desafio assinado pela API.
+ */
+let bilheteDeConvite: string | undefined
+
+/** O que a tela de entrada precisa explicar por ter vindo de outra tela (segundo fator gasto, convite aceito). */
+let avisoParaAEntrada: string | undefined
+
 const ouvintes = new Set<() => void>()
 
 /**
@@ -117,6 +140,53 @@ export function tokenDeAcesso(): string | undefined {
   return token
 }
 
+/**
+ * O desafio guardado, se ele for o daquela etapa. A etapa é conferida aqui porque cada rota só aceita a sua: mandar o
+ * desafio de `configurar_mfa` para `/v1/sessao/mfa` só renderia um `NAO_AUTENTICADO` confuso na tela.
+ */
+export function desafioDaEtapa(etapa: EtapaComDesafio): string | undefined {
+  return desafio?.etapa === etapa ? desafio.valor : undefined
+}
+
+/**
+ * Guarda o desafio de uma etapa. Além do login, quem chama é o aceite de convite de conta nova (7.0), que devolve o
+ * desafio de `configurar_mfa` sem passar por nenhuma etapa de senha.
+ */
+export function guardarDesafio(etapa: EtapaComDesafio, valor: string): void {
+  desafio = { etapa, valor }
+}
+
+/** Esquece o desafio: ele foi consumido pela API, ou gasto pelo quinto código errado (6.0). */
+export function esquecerDesafio(): void {
+  desafio = undefined
+}
+
+/** Guarda o bilhete do convite aceito por conta que já existe, para o próximo login por e-mail levá-lo (7.0). */
+export function guardarBilheteDeConvite(bilhete: string): void {
+  bilheteDeConvite = bilhete
+}
+
+/**
+ * Se esta aba aceitou um convite e ainda não concluiu o login dele. Quem explica o que falta à pessoa é o aviso de
+ * `avisoDaEntrada`; esta função é a janela para o bilhete, que não pode ser lido de fora, e é por ela que o teste
+ * prova que ele sobrevive à senha errada e some depois do login.
+ */
+export function convitePendente(): boolean {
+  return bilheteDeConvite !== undefined
+}
+
+/**
+ * O aviso que a entrada mostra por ter vindo de outra tela. Vive só em memória, como o aviso de saída não confirmada
+ * (18.0): some quando a sessão abre e um F5 na entrada o apaga.
+ */
+export function avisoDaEntrada(): string | undefined {
+  return avisoParaAEntrada
+}
+
+export function definirAvisoDaEntrada(aviso: string | undefined): void {
+  avisoParaAEntrada = aviso
+}
+
 function definirEstado(novo: EstadoDaSessao): void {
   if (estado === novo) return
   estado = novo
@@ -129,6 +199,10 @@ function guardarToken(resposta: RespostaRenovacao): void {
   estado = 'aberta'
   ultimoErro = undefined
   saidaConfirmada = true
+  // Com a sessão aberta, o que levava até ela já foi consumido pela API e não pode sobreviver nesta aba.
+  desafio = undefined
+  bilheteDeConvite = undefined
+  avisoParaAEntrada = undefined
   anunciar()
 }
 
@@ -284,20 +358,30 @@ async function renovarComTokenVencido(usado: string | undefined): Promise<void> 
 }
 
 /**
- * `POST /v1/sessao/email` (RF6). O 503 do semáforo do hash é atraso, não recusa: a web espera o `Retry-After` e
- * tenta sozinha por até 30 s, enquanto o botão mostra "Entrando…" (Tech Spec, seção 5, "Fila"). Qualquer outro erro
- * sobe na hora, para a tela dizer o que fazer.
+ * Uma etapa do login, com a repetição do 503 do semáforo do hash, que é atraso e não recusa: a web espera o
+ * `Retry-After` e tenta sozinha por até 30 s, enquanto o botão mostra "Entrando…" (Tech Spec, seção 5, "Fila").
+ * Qualquer outro erro sobe na hora, para a tela dizer o que fazer.
  *
- * Em `pronta`, o token fica em memória e a sessão passa a `aberta`; nas outras etapas, quem continua é a tela da
- * etapa (19.0 e 20.0), e nenhuma sessão foi gravada.
+ * Em `pronta`, o token fica em memória e a sessão passa a `aberta`; nas outras etapas, o desafio fica guardado aqui
+ * para a tela da etapa, e nenhuma sessão foi gravada.
  */
-export async function entrarPorEmail(pedido: PedidoLoginEmail): Promise<RespostaLogin> {
+async function enviarEtapa(caminho: string, pedido: unknown, desafioAtual?: string): Promise<RespostaLogin> {
+  const resposta = await chamarApi(caminho, esquemaRespostaLogin, { metodo: 'POST', corpo: pedido, token: desafioAtual })
+  if (resposta.etapa === 'pronta') guardarToken(resposta)
+  else guardarDesafio(resposta.etapa, resposta.desafio)
+  return resposta
+}
+
+/**
+ * A etapa que passa pelo semáforo do hash de senha, com a fila das 7h30 (Tech Spec, seção 5, "Fila"). Só as duas
+ * entradas por senha entram aqui: o segundo fator não faz hash de senha, e repetir sozinho um código de 30 s gastaria
+ * tentativa do contador da conta por causa de uma instância caindo.
+ */
+async function etapaComFilaDoSemaforo(caminho: string, pedido: unknown): Promise<RespostaLogin> {
   const limite = Date.now() + PRAZO_DA_ENTRADA_NO_503_MS
   for (;;) {
     try {
-      const resposta = await chamarApi(CAMINHO_DA_ENTRADA_POR_EMAIL, esquemaRespostaLogin, { metodo: 'POST', corpo: pedido })
-      if (resposta.etapa === 'pronta') guardarToken(resposta)
-      return resposta
+      return await enviarEtapa(caminho, pedido)
     } catch (erro) {
       // Só o 503 do semáforo é atraso, e ele vem sempre com `Retry-After`. Sem o cabeçalho é queda de rede ou de
       // instância: aí a pessoa precisa saber na hora, em vez de ver "Entrando…" por trinta segundos.
@@ -310,6 +394,33 @@ export async function entrarPorEmail(pedido: PedidoLoginEmail): Promise<Resposta
       await esperar(atraso)
     }
   }
+}
+
+/**
+ * `POST /v1/sessao/email` (RF6). Leva o bilhete do convite aceito nesta aba, quando existe (7.0): é ele, junto com a
+ * senha e o segundo fator, que ativa o usuário da escola que convidou. Ele sai da memória assim que a API responde,
+ * porque daí em diante quem carrega o convite é o desafio assinado por ela.
+ */
+export async function entrarPorEmail(pedido: PedidoLoginEmail): Promise<RespostaLogin> {
+  const resposta = await etapaComFilaDoSemaforo(CAMINHO_DA_ENTRADA_POR_EMAIL, bilheteDeConvite === undefined ? pedido : { ...pedido, bilhete: bilheteDeConvite })
+  bilheteDeConvite = undefined
+  return resposta
+}
+
+/** `POST /v1/sessao/matricula` (RF7): o aluno entra pelo endereço da escola, que vai no corpo e nunca no token. */
+export function entrarPorMatricula(pedido: PedidoLoginMatricula): Promise<RespostaLogin> {
+  return etapaComFilaDoSemaforo(CAMINHO_DA_ENTRADA_POR_MATRICULA, pedido)
+}
+
+/**
+ * `POST /v1/sessao/mfa` (RF12): o código do aplicativo autenticador ou um de recuperação, com o desafio `mfa` no
+ * `Authorization`. Sem o desafio nesta aba (um F5 na tela, ou o quinto código errado, que o gasta), a resposta é a
+ * mesma da sessão que não vale: a pessoa refaz a senha.
+ */
+export function entrarComSegundoFator(pedido: PedidoMfa): Promise<RespostaLogin> {
+  const emAndamento = desafioDaEtapa('mfa')
+  if (emAndamento === undefined) return Promise.reject(new ErroDaApi(CodigoDeErro.NAO_AUTENTICADO))
+  return enviarEtapa(CAMINHO_DO_SEGUNDO_FATOR, pedido, emAndamento)
 }
 
 /**

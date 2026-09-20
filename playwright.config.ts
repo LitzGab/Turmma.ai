@@ -3,7 +3,20 @@ import { PERFIL_CELULAR, PERFIL_CHROMEBOOK, type OpcoesDoPerfil } from './e2e/__
 import { lerAmbienteDeTeste, valorObrigatorio } from './tools/ci/compose.ts'
 
 // O e2e roda contra o compose de teste (`npm run test:e2e` ou `npm run ci:e2e`), nunca contra servidor de dev.
-const urlBase = `http://127.0.0.1:${valorObrigatorio(lerAmbienteDeTeste(), 'WEB_PORTA_HOST')}`
+const ambienteDeTeste = lerAmbienteDeTeste()
+const urlBase = `http://127.0.0.1:${valorObrigatorio(ambienteDeTeste, 'WEB_PORTA_HOST')}`
+
+/**
+ * O `oidc-falso` do compose (13.0) anuncia os endereços dele com o nome do serviço, `oidc-falso:8080`, que é como a
+ * API o alcança dentro da rede do compose. O navegador do Playwright roda na máquina, onde esse nome não existe: sem
+ * isto, o botão da conta da escola levaria a um endereço que o navegador não resolve.
+ *
+ * A regra do resolvedor do Chromium manda esse nome e porta para a porta publicada no host. O cabeçalho `Host`
+ * continua sendo `oidc-falso:8080`, e por isso o emissor que o provedor falso anuncia continua o mesmo que a API
+ * validou no discovery: nada muda no que a API confere.
+ */
+const emissorDoOidcFalso = new URL(valorObrigatorio(ambienteDeTeste, 'LOGIN_EXTERNO_GOOGLE_EMISSOR'))
+const regraDeNomeDoOidcFalso = `MAP ${emissorDoOidcFalso.host} 127.0.0.1:${valorObrigatorio(ambienteDeTeste, 'OIDC_FALSO_PORTA_HOST')}`
 
 /**
  * Todo spec de tela roda nos dois projetos (D51), sem `testMatch` nem `testIgnore` por projeto. Os dois são
@@ -20,6 +33,7 @@ export default defineConfig<OpcoesDoPerfil>({
     locale: 'pt-BR',
     timezoneId: 'America/Sao_Paulo',
     trace: 'retain-on-failure',
+    launchOptions: { args: [`--host-resolver-rules=${regraDeNomeDoOidcFalso}`] },
   },
   projects: [
     {
