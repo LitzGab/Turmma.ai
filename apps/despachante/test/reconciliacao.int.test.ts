@@ -206,9 +206,18 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
     expect(log.doEvento('job.republicado')).toEqual([])
 
     await composeAssincronoOuFalha('start', 'redis-fila')
-    // Só faltava a confirmação: a mesma linha, com a fila respondendo, volta.
-    await expect.poll(async () => (await montado.reconciliacao.reconciliar()).republicados, { timeout: 30_000, interval: 500 }).toEqual([id])
-  }, 90_000)
+    // O `start` devolve quando o Docker aceitou o comando, não quando o Redis responde, e essa subida cresce com a
+    // carga da máquina: numa esteira com quatro tarefas em paralelo ela sozinha passa do prazo abaixo. Esperar o
+    // serviço aqui (teto próprio, e erro com o estado e o log do container) tira o tempo de container do orçamento da
+    // recuperação, como o caso do Postgres abaixo já faz.
+    await aguardarSaudavel('redis-fila')
+    // Só faltava a confirmação: a mesma linha, com a fila respondendo, volta. O prazo mede só a recuperação, que é de
+    // milissegundos com a máquina livre e de ~1,5 s sob contenção total: é a garantia do `criarClienteRedisDaFila`,
+    // "o Redis que volta é usado de novo em segundos".
+    await expect.poll(async () => (await montado.reconciliacao.reconciliar()).republicados, { timeout: 20_000, interval: 500 }).toEqual([id])
+    // 120 s como o caso do Postgres: com 90 s o prefixo, o teto da espera e o prazo do poll cabiam justo, e no pior
+    // caso o vitest expiraria antes de `aguardarSaudavel` erguer o erro que diz o que houve com o container.
+  }, 120_000)
 
   it('duas reconciliações que confirmaram juntas a perda dos mesmos 20 jobs: cada um é tomado e publicado por uma só, e executa uma vez', async () => {
     const { ids } = await publicados(new LogEmMemoria('despachante'), 20)
