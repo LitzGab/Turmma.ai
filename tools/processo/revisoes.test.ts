@@ -1,11 +1,14 @@
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   acrescentarRevisao,
+  alteracaoQueCaduca,
+  alteracoesDeCodigo,
   arquivosDoCommit,
+  avaliarCarimbo,
   avaliarPortao,
   caminhoDaTarefa,
   ehCommit,
@@ -64,7 +67,7 @@ const portaoDe = (
   avaliarPortao({
     obrigatorios: revisoresObrigatorios(conteudo),
     revisoes: lerRevisoes(conteudo),
-    alteracoes: alteradoEm ? [{ arquivo, quando: lerHora(alteradoEm) }] : [],
+    alteracoes: alteradoEm ? [{ arquivo, quando: lerHora(alteradoEm), hash: 'hash-do-conteudo-atual' }] : [],
     carimbo,
     mensagemCommit: mensagem,
   })
@@ -332,5 +335,47 @@ describe('hooks sobre um repositório de verdade', () => {
     const raiz = repositorio()
     expect(portao({ tool_input: { command: 'npm run test' } }, raiz)).toBeNull()
     expect(portao({ tool_input: { command: 'git commit -m "Registra decisão D43"' } }, raiz)).toBeNull()
+  })
+})
+
+describe('o que conta como alteração depois do portão e da rodada', () => {
+  // As três correções vieram da retrospectiva do F1: 10 reprovações por carimbo, 6 delas sem nenhum
+  // bloqueante de código, e 63 das 200 rodadas caducadas sem reprovação.
+
+  const carimbo: Carimbo = { inicio: '2026-09-20T10:00:00.000Z', suites: ['typecheck', 'lint', 'test'] }
+  const exigidas = ['typecheck', 'lint', 'test']
+
+  it('arquivo salvo no mesmo segundo, mas antes do início do portão, não invalida o carimbo', () => {
+    // O caso real das tarefas 7.0 e 16.0: 39 ms antes do início, recusado porque a comparação
+    // truncava para segundo inteiro. Duas rodadas de revisão gastas por arredondamento.
+    const antes = [{ arquivo: 'apps/api/src/ops/comando.ts', quando: Date.parse('2026-09-20T10:00:00.000Z') - 39, hash: 'a' }]
+    expect(avaliarCarimbo(carimbo, exigidas, antes)).toBeNull()
+    const depois = [{ arquivo: 'apps/api/src/ops/comando.ts', quando: Date.parse('2026-09-20T10:00:00.000Z') + 1, hash: 'a' }]
+    expect(avaliarCarimbo(carimbo, exigidas, depois)).toContain('mudou em')
+  })
+
+  it('arquivo que voltou ao mesmo conteúdo não invalida o carimbo nem a rodada', () => {
+    // O revisor prova a guarda mutando o arquivo e restaurando. O mtime anda, o conteúdo não.
+    const alteracao = { arquivo: '.github/workflows/ci.yml', quando: Date.parse('2026-09-20T11:00:00.000Z'), hash: 'mesmo-conteudo' }
+    const alteracoes = [alteracao]
+    const instantaneo = { '.github/workflows/ci.yml': 'mesmo-conteudo' }
+    expect(avaliarCarimbo(carimbo, exigidas, alteracoes, instantaneo)).toBeNull()
+    expect(alteracaoQueCaduca('test-engineer', '2026-09-20 07:00:00', alteracoes, instantaneo)).toBeNull()
+
+    // E continua pegando a mudança de verdade.
+    const outroConteudo = [{ ...alteracao, hash: 'conteudo-novo' }]
+    expect(avaliarCarimbo(carimbo, exigidas, outroConteudo, instantaneo)).toContain('mudou em')
+    expect(alteracaoQueCaduca('test-engineer', '2026-09-20 07:00:00', outroConteudo, instantaneo)?.arquivo).toBe('.github/workflows/ci.yml')
+  })
+
+  it('documento que nenhuma suíte lê não é código; o runbook, que uma guarda lê, é', () => {
+    const raiz = mkdtempSync(join(tmpdir(), 'retro-'))
+    for (const arquivo of ['TODO.md', 'docs/runbook.md', 'apps/api/src/x.ts']) {
+      mkdirSync(join(raiz, dirname(arquivo)), { recursive: true })
+      writeFileSync(join(raiz, arquivo), 'conteúdo')
+    }
+    const alteracoes = alteracoesDeCodigo(raiz, ['TODO.md', 'docs/runbook.md', 'apps/api/src/x.ts'])
+    expect(alteracoes.map(({ arquivo }) => arquivo).sort()).toEqual(['apps/api/src/x.ts', 'docs/runbook.md'])
+    expect(alteracoes.every(({ hash }) => hash.length === 64)).toBe(true)
   })
 })

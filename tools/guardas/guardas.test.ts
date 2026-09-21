@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { raizRepositorio } from '../ci/executar.ts'
 import { criarEslintDasGuardas, violacoesDasGuardas } from './eslint-das-guardas.ts'
-import { EXCECOES_DAS_GUARDAS, REGRAS_DAS_GUARDAS, REGRAS_DE_LOG, REGRAS_DE_SDK_DE_IA } from './index.mjs'
+import { EXCECOES_DAS_GUARDAS, REGRAS_DAS_GUARDAS, REGRAS_DE_LOG, REGRAS_DE_SDK_DE_IA, REGRAS_DE_TESTE, REGRAS_EM_TODO_ARQUIVO } from './index.mjs'
 import { CHAVES_PESSOAIS, ehChaveOperacional, ehNomePessoal } from './regras-log.mjs'
 
 // Cada fixture em __fixtures__ traz, na própria linha, a marca "reprova: <regra>". O teste passa
@@ -50,6 +50,26 @@ async function lintar(motor: ESLint, fixture: string, caminhoSimulado: string): 
     .map((mensagem) => `${mensagem.line} ${mensagem.ruleId}`)
     .sort()
 }
+
+describe('guarda de espera do serviço do compose', () => {
+  it('reprova subir serviço e medir sem esperar, e deixa passar quem espera ou usa --wait', async () => {
+    expect(await lintar(eslint, 'esperar-servico.ts', 'apps/despachante/test/fila.int.test.ts')).toEqual(marcasDeViolacao('esperar-servico.ts'))
+  })
+
+  it('não vale fora de teste: cenário de carga derruba e religa serviço de propósito', async () => {
+    expect(await lintar(eslint, 'esperar-servico.ts', 'infra/scripts/carga-login.ts')).toEqual([])
+  })
+
+  it('fica ligada como erro em teste, e desligada fora dele', async () => {
+    const configuracaoDe = async (caminho: string) =>
+      (await eslint.calculateConfigForFile(join(raizRepositorio, caminho))) as { rules: Record<string, [number, ...unknown[]]> }
+    for (const regra of REGRAS_DE_TESTE) {
+      expect((await configuracaoDe('apps/despachante/test/fila.int.test.ts')).rules[regra]?.[0], `${regra} em teste`).toBe(2)
+      expect((await configuracaoDe('e2e/entrar.spec.ts')).rules[regra]?.[0], `${regra} em e2e`).toBe(2)
+      expect((await configuracaoDe('apps/api/src/main.ts')).rules[regra]?.[0] ?? 0, `${regra} fora de teste`).toBe(0)
+    }
+  })
+})
 
 describe('guarda de log com dado pessoal', () => {
   it.each([
@@ -238,7 +258,7 @@ describe('configuração das guardas', () => {
     const configuracao = (await eslint.calculateConfigForFile(join(raizRepositorio, caminho))) as {
       rules: Record<string, [number, ...unknown[]]>
     }
-    for (const regra of [...REGRAS_DAS_GUARDAS, REGRA_DAS_DIRETIVAS]) {
+    for (const regra of [...REGRAS_EM_TODO_ARQUIVO, REGRA_DAS_DIRETIVAS]) {
       expect(configuracao.rules[regra]?.[0], `${regra} em ${caminho}`).toBe(2)
     }
   })

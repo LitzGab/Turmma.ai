@@ -115,10 +115,12 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       com `UV_THREADPOOL_SIZE=16` e resolvedor de 1 s (`docs/infra.md`, "Threads e DNS")
 - [ ] Guarda de `npm audit` provada com fixture real de dependência vulnerável, e não só com
       o `npm` imitado (`tools/ci/scripts.test.ts:75`)
-- [ ] `apps/despachante/test/redis-fora.int.test.ts:97` tem o mesmo defeito da correção
-      `2026-09-20-reconciliacao-espera-o-redis-subir-dentro-do-orcamento`: `start` do container sem
-      `aguardarSaudavel`, com o poll de 60 s absorvendo a subida. A folga é 3× maior, mas quando
-      falhar virá com a mesma mensagem ilegível (`test-engineer` e `infra-guardian`, 20/09/2026)
+- [x] ~~`redis-fora.int.test.ts:97` com `start` sem `aguardarSaudavel`~~ — corrigido em 21/09/2026
+      (`tasks/correcoes/2026-09-21-redis-fora-mede-a-subida-do-container.md`), e a guarda de lint
+      `guardas/esperar-servico-do-compose` impede a próxima ocorrência da classe
+- [ ] Medir uma vez a recuperação do despachante depois do `healthy` em `redis-fora.int.test.ts` e
+      registrar o número, para o poll de 60 s passar a ser dimensionado em vez de herdado
+      (`test-engineer`, três rodadas da correção de 21/09)
 - [ ] **Esteira instável: tratar como desenho, não como três bugs soltos.** Em 20/09/2026, depois de
       nove execuções verdes seguidas, três testes **diferentes** falharam em três execuções, cada um
       passando na seguinte sem mudança nenhuma (reconciliação do despachante, e2e do `celular`,
@@ -163,10 +165,9 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       **todas** as rodadas do `privacy-guardian` da correção de 20/09 — justamente o revisor cujo
       texto sustenta uma decisão de regra 20. O texto exigido se perde e a rodada seguinte audita sem
       ele. Uma asserção exigindo um bloco por linha da tabela fecha a classe
-- [ ] Guarda de lint: teste que dá `start`/`up` num serviço do compose precisa de
-      `aguardarSaudavel` do mesmo serviço em seguida. É a terceira correção de prazo de teste no mês
-      (16/09, 18/09 e 20/09) e o padrão já apareceu em dois arquivos do despachante. Mecanismo pronto
-      em `tools/guardas/eslint-das-guardas.ts`
+- [x] ~~Guarda de lint para `start`/`up` sem `aguardarSaudavel`~~ — feita na retrospectiva do F1
+      (`guardas/esperar-servico-do-compose`), com fixture e teste. Vale só em teste, deixa passar
+      `up --wait`, e ao ser ligada apontou a última ocorrência aberta do repositório
 - [ ] `aguardarSaudavel` depende do healthcheck de `interval: 2s` (`infra/compose.yml:44`), então o
       portão de saúde tende a chegar depois de o cliente já ter reconectado. Se algum teste precisar
       medir a latência de reconexão de fato, o ponto de partida honesto é o `ready` do cliente, não o

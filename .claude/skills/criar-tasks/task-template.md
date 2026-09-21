@@ -41,6 +41,12 @@ Definidos com o `test-engineer`. Não improvise aqui.
 | borda: [caso do domínio] | integração | |
 | permissão: quem não pode | integração | |
 | isolamento entre escolas | integração | |
+| concorrência: [as duas chamadas ao mesmo tempo, com `Promise.all`] | integração | |
+
+A linha de concorrência diz **em paralelo**, com as transações abertas juntas, e não "clique duplo".
+Foram três reprovações no F1 por prova sequencial: a segunda chamada era recusada por uma leitura
+que o service faz antes, e não pela restrição do banco que o teste dizia provar. Se a operação não
+pode acontecer duas vezes ao mesmo tempo, apague a linha; se pode, ela é obrigatória.
 
 ## Critério de conclusão
 

@@ -32,6 +32,13 @@ Se o plano contradisser a Tech Spec, **PARE e reporte a divergência**. Não dec
 arquitetura sozinho: a Tech Spec foi escrita por alguém que olhou o sistema inteiro, e você
 está vendo um pedaço.
 
+<critical>Divergência se registra; critério de aceite não se baixa. Seis reprovações no F1 foram
+implementação que se afastou da spec ou da subtarefa sem dizer — e em duas delas a saída foi
+**editar o documento para acomodar o resultado**: a linha do cenário de carga reescrita depois da
+medição, e o limite de dois grupos do k6 desligado. Baixar a régua é decisão de quem é dono da
+tarefa, nunca de quem implementa. O que diverge vai para a seção "Divergências resolvidas nesta
+tarefa" do `N_task.md`, com o motivo, e sobe para a Tech Spec quando o commit entra.</critical>
+
 ### Autoconferência antes de codar
 
 O `test-engineer` é quem mais reprova (38% das rodadas no F0 e no começo do F1), e cada
@@ -40,6 +47,21 @@ fazer, e as dos guardiões marcados:
 
 - Para cada teste da tabela "Testes que provam a regra": **qual linha de código, se apagada,
   deixa este teste vermelho?** Se não há resposta, o teste não prova nada.
+- **O cenário tem o segundo dado que torna a cláusula observável?** Foi a maior causa técnica de
+  reprovação no F1, catorze vezes: a regra está no código, mas o teste tem uma turma só, uma escola
+  só, um estado só, ou o valor padrão só — e apagar a cláusula não deixa nada vermelho. Se o
+  repository filtra por turma, o teste precisa de aluno em **duas** turmas; se filtra por estado,
+  de vínculo em cada estado; se lê `inatividadeMin`, de escola com valor **diferente** do padrão.
+- **Alguma checagem anterior responde antes da regra sob teste?** Cinco reprovações no F1 foram
+  teste verde pelo motivo errado: a rota caía em `exigirAnoEmCurso()`, ou o e-mail não achava
+  ninguém, e a cláusula que o teste dizia provar nunca era alcançada. Percorra o caminho até a
+  linha que interessa e confirme que o cenário chega nela.
+- **A asserção olha o resultado, ou a forma do código?** Asserção sobre texto de arquivo, nome de
+  função ou lista vazia passa igual se a regra ler o campo errado. Compare o que o usuário obtém.
+- **Algum comentário, docblock ou nota da tarefa afirma o que o código não faz?** Quatro
+  reprovações no F1, três delas no mesmo docblock em rodadas seguidas. Neste repositório a regra
+  do módulo mora no comentário: quem lê "e só elas" conclui que o caso está barrado, e o próximo a
+  mexer "corrige" o código pelo comentário.
 - Toda operação que pode acontecer duas vezes ao mesmo tempo tem teste com as duas chamadas
   **em paralelo** (`Promise.all`), não em sequência?
 - O teste de isolamento quebraria sem a cláusula de escopo do repository?

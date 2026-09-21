@@ -12,8 +12,11 @@ import {
   alteracoesDeCodigo,
   arquivosAlterados,
   avaliarCarimbo,
+  CHAVE_DO_PORTAO,
   gravarCarimbo,
+  gravarInstantaneo,
   lerCarimbo,
+  lerInstantaneos,
   revisoresObrigatorios,
   suitesExigidas,
   tipoDoDocumento,
@@ -34,7 +37,7 @@ if (argumentos[0] === 'conferir') {
     process.exit(2)
   }
   const obrigatorios = revisoresObrigatorios(readFileSync(join(raiz, documento), 'utf8'), tipoDoDocumento(documento))
-  const motivo = avaliarCarimbo(lerCarimbo(raiz), suitesExigidas(obrigatorios), alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
+  const motivo = avaliarCarimbo(lerCarimbo(raiz), suitesExigidas(obrigatorios), alteracoesDeCodigo(raiz, arquivosAlterados(raiz)), lerInstantaneos(raiz)[CHAVE_DO_PORTAO])
   process.stdout.write(motivo ? `${motivo}\n` : `portão local válido para o código atual (${lerCarimbo(raiz)?.suites.join(', ')})\n`)
   process.exit(motivo ? 1 : 0)
 }
@@ -52,4 +55,6 @@ if (falhou) {
   process.exit(1)
 }
 gravarCarimbo(raiz, { inicio, suites })
+// O conteúdo que estas suítes provaram. Arquivo que volta ao mesmo conteúdo não invalida o carimbo.
+gravarInstantaneo(raiz, CHAVE_DO_PORTAO, alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
 process.stdout.write(`\n✓ portão local verde (${suites.join(', ')}). Carimbo em .processo/portao.json, início ${inicio}.\n`)

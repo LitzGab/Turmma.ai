@@ -1,6 +1,7 @@
 import comentarios from '@eslint-community/eslint-plugin-eslint-comments'
 import { logSemConteudoMontado, logSemDadoPessoal } from './regras-log.mjs'
 import { MENSAGEM_SDK_DE_IA, PASTA_DOS_ADAPTADORES, REGEX_SDK_DE_IA, sdkDeIaSoNoAdaptador } from './regras-ia.mjs'
+import { esperarServicoDoCompose } from './regras-teste.mjs'
 
 /**
  * Guardas da esteira (RF11): o que as regras 20 e 30 proíbem reprova no lint, sem depender de
@@ -13,12 +14,18 @@ export const guardas = {
     'log-sem-dado-pessoal': logSemDadoPessoal,
     'log-sem-conteudo-montado': logSemConteudoMontado,
     'sdk-de-ia-so-no-adaptador': sdkDeIaSoNoAdaptador,
+    'esperar-servico-do-compose': esperarServicoDoCompose,
   },
 }
 
 export const REGRAS_DE_LOG = ['guardas/log-sem-dado-pessoal', 'guardas/log-sem-conteudo-montado']
 export const REGRAS_DE_SDK_DE_IA = ['@typescript-eslint/no-restricted-imports', 'guardas/sdk-de-ia-so-no-adaptador']
-export const REGRAS_DAS_GUARDAS = [...REGRAS_DE_LOG, ...REGRAS_DE_SDK_DE_IA]
+/** Guardas que valem em todo arquivo do repositório. */
+export const REGRAS_EM_TODO_ARQUIVO = [...REGRAS_DE_LOG, ...REGRAS_DE_SDK_DE_IA]
+export const REGRAS_DE_TESTE = ['guardas/esperar-servico-do-compose']
+/** Só em teste: a justificativa é o orçamento do teste. Cenário de carga derruba serviço de propósito. */
+export const ARQUIVOS_DE_TESTE = ['**/*.test.ts', 'e2e/**/*.spec.ts']
+export const REGRAS_DAS_GUARDAS = [...REGRAS_DE_LOG, ...REGRAS_DE_SDK_DE_IA, ...REGRAS_DE_TESTE]
 
 const TODOS_OS_ARQUIVOS = ['**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}']
 
@@ -67,6 +74,10 @@ export const configuracaoDasGuardas = [
         '@typescript-eslint/no-restricted-imports',
       ],
     },
+  },
+  {
+    files: ARQUIVOS_DE_TESTE,
+    rules: { 'guardas/esperar-servico-do-compose': 'error' },
   },
   ...EXCECOES_DAS_GUARDAS.map(({ files, regras }) => ({
     files,

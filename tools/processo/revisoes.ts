@@ -13,6 +13,7 @@
 // não tiver passado depois da última alteração, ou enquanto a mensagem não trouxer a linha
 // "Revisões:". Bloqueia também commit que leva código sem nenhuma das duas marcas.
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
@@ -42,11 +43,34 @@ export interface Revisao {
 export interface Alteracao {
   arquivo: string
   quando: number
+  /** Hash do conteúdo atual. É ele que decide se o arquivo mudou de fato; ver `mudouDeVerdade`. */
+  hash: string
 }
 
 export interface Carimbo {
   inicio: string
   suites: string[]
+}
+
+/**
+ * O conteúdo dos arquivos de código no momento de cada referência: o carimbo do portão e cada rodada
+ * de revisor. Chave `portao`, ou `<documento>|<revisor>|<rodada>`.
+ *
+ * Existe porque `mtime` não é evidência de mudança. O `test-engineer` prova as guardas mutando um
+ * arquivo e restaurando, que é o trabalho que se pede dele: isso move o `mtime` sem trocar uma linha,
+ * e o portão lia como alteração — o revisor invalidava a própria rodada. Na retrospectiva do F1, 63
+ * das 200 rodadas das tarefas e 27 das 50 das correções caducaram sem nenhuma reprovação.
+ */
+export type Instantaneos = Record<string, Record<string, string>>
+
+export const CAMINHO_CONTEUDO = '.processo/conteudo.json'
+/** A chave do instantâneo do portão local. */
+export const CHAVE_DO_PORTAO = 'portao'
+
+/** Só conta como alteração o arquivo cujo conteúdo difere do que a referência viu. */
+function mudouDeVerdade(alteracao: Alteracao, instantaneo: Record<string, string> | undefined): boolean {
+  const anterior = instantaneo?.[alteracao.arquivo]
+  return anterior === undefined || anterior !== alteracao.hash
 }
 
 export type TipoDocumento = 'tarefa' | 'spec' | 'correcao'
@@ -179,10 +203,11 @@ export function acrescentarAchado(conteudoAchados: string, documento: string, ac
 const ehArquivoDeTeste = (arquivo: string) => /\.(test|spec)\.tsx?$/.test(arquivo) || /(^|\/)(test|e2e|__fixtures__)\//.test(arquivo)
 
 // A alteração mais recente, depois do início da rodada, que o revisor ainda não viu e que importa para ele.
-export function alteracaoQueCaduca(revisor: string, inicioDaRodada: string, alteracoes: Alteracao[]): Alteracao | null {
+export function alteracaoQueCaduca(revisor: string, inicioDaRodada: string, alteracoes: Alteracao[], instantaneo?: Record<string, string>): Alteracao | null {
   const inicio = Math.floor(lerHora(inicioDaRodada) / 1000)
   return alteracoes
     .filter((alteracao) => Math.floor(alteracao.quando / 1000) > inicio)
+    .filter((alteracao) => mudouDeVerdade(alteracao, instantaneo))
     .filter((alteracao) => REVISORES_DE_TESTE.includes(revisor) || !ehArquivoDeTeste(alteracao.arquivo))
     .reduce<Alteracao | null>((maisRecente, alteracao) => (!maisRecente || alteracao.quando > maisRecente.quando ? alteracao : maisRecente), null)
 }
@@ -197,13 +222,19 @@ export function suitesExigidas(obrigatorios: string[]): string[] {
   ]
 }
 
-export function avaliarCarimbo(carimbo: Carimbo | null, exigidas: string[], alteracoes: Alteracao[]): string | null {
+export function avaliarCarimbo(carimbo: Carimbo | null, exigidas: string[], alteracoes: Alteracao[], instantaneo?: Record<string, string>): string | null {
   const comando = `node tools/processo/portao-local.ts${exigidas.includes('e2e') ? ' --e2e' : ''}${exigidas.includes('infra') ? ' --infra' : ''}`
   if (!carimbo) return `portão local: nunca passou nesta árvore. Rode \`${comando}\`.`
   const faltando = exigidas.filter((suite) => !carimbo.suites.includes(suite))
   if (faltando.length > 0) return `portão local: o último não rodou ${faltando.join(', ')}. Rode \`${comando}\`.`
-  const inicio = Math.floor(new Date(carimbo.inicio).getTime() / 1000)
-  const depois = alteracoes.filter((alteracao) => Math.floor(alteracao.quando / 1000) >= inicio).sort((a, b) => b.quando - a.quando)[0]
+  // Em milissegundos, não em segundo inteiro: o carimbo guarda o instante com precisão de ms, e
+  // truncar fazia o arquivo salvo no mesmo segundo — inclusive 39 ms **antes** do portão começar —
+  // contar como alteração posterior. Custou duas rodadas de revisão no F1 (tarefas 7.0 e 16.0).
+  const inicio = new Date(carimbo.inicio).getTime()
+  const depois = alteracoes
+    .filter((alteracao) => alteracao.quando >= inicio)
+    .filter((alteracao) => mudouDeVerdade(alteracao, instantaneo))
+    .sort((a, b) => b.quando - a.quando)[0]
   if (depois) {
     return `portão local: ${depois.arquivo} mudou em ${formatarHora(new Date(depois.quando))}, depois do início do último (${formatarHora(new Date(carimbo.inicio))}). Rode \`${comando}\` de novo.`
   }
@@ -309,6 +340,9 @@ export function registrar(entrada: EntradaHook, raiz: string, agora = new Date()
     })
     writeFileSync(caminho, atualizado)
     const revisao = lerRevisoes(atualizado).at(-1)
+    // O conteúdo que esta rodada viu. Mutação com restauração (o teste de mutação que se pede ao
+    // `test-engineer`) deixa o conteúdo igual, e a rodada não caduca por causa dele.
+    if (revisao) gravarInstantaneo(raiz, chaveDaRodada(relativo, revisao.revisor, revisao.rodada), alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
     const achado = revisao ? achadoDaRodada(revisao, mensagemFinal) : null
     if (achado) {
       const caminhoAchados = join(dirname(caminho), NOME_ACHADOS)
@@ -335,11 +369,52 @@ export function arquivosAlterados(raiz: string): string[] {
 }
 
 // Registro em tasks/ não conta como alteração de código: o próprio hook escreve lá.
+/**
+ * Documento que nenhuma suíte lê não é código: editá-lo não muda o que o portão provou. A exceção é
+ * o runbook, que a guarda `alerta-tem-runbook` lê de verdade.
+ *
+ * Sem isto, uma linha no `TODO.md` custava rodar `test:infra` de novo — uns 16 min — e derrubava as
+ * revisões já aprovadas junto.
+ */
+export const DOCUMENTO_QUE_UMA_SUITE_LE = 'docs/runbook.md'
+
+function ehDocumentoSemSuite(arquivo: string): boolean {
+  return arquivo.endsWith('.md') && arquivo !== DOCUMENTO_QUE_UMA_SUITE_LE
+}
+
 export function alteracoesDeCodigo(raiz: string, arquivos: string[]): Alteracao[] {
   return arquivos
     .filter((arquivo) => !arquivo.startsWith('tasks/') && !arquivo.startsWith('.processo/'))
+    .filter((arquivo) => !ehDocumentoSemSuite(arquivo))
     .filter((arquivo) => existsSync(join(raiz, arquivo)))
-    .map((arquivo) => ({ arquivo, quando: statSync(join(raiz, arquivo)).mtimeMs }))
+    .map((arquivo) => ({
+      arquivo,
+      quando: statSync(join(raiz, arquivo)).mtimeMs,
+      hash: createHash('sha256').update(readFileSync(join(raiz, arquivo))).digest('hex'),
+    }))
+}
+
+export function lerInstantaneos(raiz: string): Instantaneos {
+  const caminho = join(raiz, CAMINHO_CONTEUDO)
+  if (!existsSync(caminho)) return {}
+  try {
+    return JSON.parse(readFileSync(caminho, 'utf8')) as Instantaneos
+  } catch {
+    return {}
+  }
+}
+
+/** Guarda o conteúdo visto por uma referência (o carimbo, ou uma rodada de revisor). */
+export function gravarInstantaneo(raiz: string, chave: string, alteracoes: Alteracao[]): void {
+  const instantaneos = lerInstantaneos(raiz)
+  instantaneos[chave] = Object.fromEntries(alteracoes.map(({ arquivo, hash }) => [arquivo, hash]))
+  mkdirSync(join(raiz, dirname(CAMINHO_CONTEUDO)), { recursive: true })
+  writeFileSync(join(raiz, CAMINHO_CONTEUDO), `${JSON.stringify(instantaneos, null, 2)}\n`)
+}
+
+/** A chave do instantâneo de uma rodada. O documento identifica a tarefa, a spec ou a correção. */
+export function chaveDaRodada(documento: string, revisor: string, rodada: number): string {
+  return `${documento}|${revisor}|${String(rodada)}`
 }
 
 export function lerCarimbo(raiz: string): Carimbo | null {
