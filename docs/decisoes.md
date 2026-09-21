@@ -156,10 +156,15 @@ branch de documentação entra no `main` quando o Joaquim avisar, o `main` vai p
 e o `release` para o `develop`. Motivo: com três pessoas, commit direto no `main` arrisca
 conflito e código sem um segundo par de olhos, e o MVP de apresentação (D71) pede duas frentes
 andando ao mesmo tempo. Os vetos dos revisores e o portão local continuam valendo dentro do
-branch. **A definir pelo Joaquim:** o caminho de volta (branch → `develop` → `release` →
-`main`), quem faz cada merge e com que revisão, em que branches a esteira roda (hoje só no push
-do `main`), de qual branch sai o staging (a D31 dizia `main`), e o ajuste do hook de commit, do
-`/executar-task`, do `/corrigir` e da regra 40, que ainda descrevem commit direto no `main`.
+branch.
+
+**Fixado em 21/09/2026, pelo Joaquim:** o trabalho acontece **direto na `develop`** — código e
+docs —, sem branch por tarefa. `release` e `main` recebem por merge, e o Joaquim gerencia esse
+caminho. O Gabriel abre branch própria, para não mexer no que está em andamento, e integra na
+`develop`. A esteira roda nas três branches (`develop`, `release`, `main`), e é na `develop` que
+ela vale como portão do dia a dia: o `/executar-task`, o `/corrigir`, o `/validar`, o
+`/revisar-spec`, o `/retro` e a regra 40 passaram a apontar para lá. De onde sai o staging fica com
+a D31, quando o staging existir.
 
 **D24 — Na primeira semana, a coordenação precisa ver quatro coisas funcionando.**
 A escola inteira cadastrada sem trabalho manual, o painel de governança de IA com 100% das

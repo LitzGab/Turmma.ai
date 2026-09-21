@@ -183,24 +183,24 @@ volte ao passo 5 para os revisores que o hook apontar.
 
 Só depois de tudo verde e todos os revisores obrigatórios aprovados:
 
-- **Confira a esteira do commit anterior.** Com commit direto no `main` e sem staging, a
-  esteira é o portão (D23, D31), e um commit em cima de esteira vermelha esconde de quem é o
-  erro. Rode:
+- **Confira a esteira do commit anterior.** O trabalho acontece na `develop` (D23 revista) e
+  não há staging, então a esteira é o portão (D31), e um commit em cima de esteira vermelha
+  esconde de quem é o erro. Rode:
 
   ```bash
-  git fetch origin main
-  git rev-list --count origin/main..main   # precisa ser 0
-  git rev-parse origin/main
-  gh run list --workflow esteira --branch main --limit 1 --json databaseId,headSha,status,conclusion
+  git fetch origin develop
+  git rev-list --count origin/develop..develop   # precisa ser 0
+  git rev-parse origin/develop
+  gh run list --workflow esteira --branch develop --limit 1 --json databaseId,headSha,status,conclusion
   ```
 
-  Só siga com as três condições juntas: `headSha` igual ao `origin/main`, `status`
+  Só siga com as três condições juntas: `headSha` igual ao `origin/develop`, `status`
   `completed` e `conclusion` `success`. Qualquer outro caso tem regra:
-  - `main` local à frente do `origin/main`: o commit anterior não foi enviado e não tem
+  - `develop` local à frente do `origin/develop`: o commit anterior não foi enviado e não tem
     esteira. Não faça o commit e reporte
   - `headSha` igual e `status` diferente de `completed`: espere com
     `gh run watch <databaseId> --exit-status`, em primeiro plano, e confira de novo
-  - `headSha` diferente do `origin/main`: a execução do último commit ainda não foi
+  - `headSha` diferente do `origin/develop`: a execução do último commit ainda não foi
     registrada, e a lista mostra a do commit anterior. Liste de novo a cada ~30 s; se em
     2 minutos ela não aparecer, não faça o commit e reporte
   - lista vazia: não faça o commit e reporte
@@ -210,7 +210,7 @@ Só depois de tudo verde e todos os revisores obrigatórios aprovados:
     tarefa
   - sem `gh` ou sem rede: não faça o commit e reporte
 - Marque a tarefa `[x]` em `tasks.md`
-- **Faça o commit da tarefa, direto no `main`** (D23). Stage apenas os arquivos desta
+- **Faça o commit da tarefa, direto na `develop`** (D23 revista). Stage apenas os arquivos desta
   tarefa, incluindo o `N_task.md` com a seção "Revisões" e o `achados-revisoes.md` da pasta,
   se o hook o escreveu, nunca `git add -A`.
   Mensagem no padrão `<Verbo> <o quê> (tarefa N.0)`, por exemplo
@@ -220,7 +220,7 @@ Só depois de tudo verde e todos os revisores obrigatórios aprovados:
 - **Commit bloqueado pelo hook:** a mensagem diz qual revisor falta, reprovou ou caducou.
   Resolva o que ela aponta. Não contorne: o hook também bloqueia commit que leva código de
   `apps/`, `packages/`, `infra/` ou `e2e/` sem `(tarefa N.0)` nem `(correção <slug>)`
-- **Faça o push logo depois do commit** (`git push origin main`). Cada commit de tarefa tem a
+- **Faça o push logo depois do commit** (`git push origin develop`). Cada commit de tarefa tem a
   sua execução da esteira; push em grupo deixa commit sem execução própria. Não espere a
   esteira terminar: quem confere é a próxima tarefa, antes do commit dela
 - Retorne o relatório:

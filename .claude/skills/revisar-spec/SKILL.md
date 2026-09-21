@@ -95,7 +95,7 @@ correção exigida também: aqui corrigir custa pouco.
 - **APROVADA:** próximo passo `/criar-tasks $ARGUMENTS`. As recomendações entram como subtarefa
   ou cenário de teste lá.
 
-Commit direto no `main` (D23), só com `revisao-spec.md`, `techspec.md`, `prd.md` e o
+Commit direto na `develop` (D23 revista), só com `revisao-spec.md`, `techspec.md`, `prd.md` e o
 `achados-revisoes.md` da pasta: `Revisa a spec de <funcionalidade> com os guardiões`.
 
 ## 6. Relatório

@@ -54,8 +54,10 @@ const scripts = (JSON.parse(readFileSync(join(raizRepositorio, 'package.json'), 
   .scripts
 
 describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
-  it('roda em todo push no main, e só em push ou execução manual', () => {
-    expect(workflow.on.push?.branches).toEqual(['main'])
+  it('roda em todo push nas branches integradoras, e só em push ou execução manual', () => {
+    // O trabalho acontece na `develop` (D23 revista). Sem ela aqui, nada do que se constrói é
+    // testado até o merge — e a D52 e a regra 40 dependem de a esteira rodar onde se trabalha.
+    expect(workflow.on.push?.branches).toEqual(['develop', 'release', 'main'])
     expect(Object.keys(workflow.on).sort()).toEqual(['push', 'workflow_dispatch'])
   })
 

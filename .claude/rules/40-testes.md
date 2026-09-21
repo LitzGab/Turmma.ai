@@ -94,8 +94,9 @@ Mexeu em infra, também `npm run test:infra` (D52): a tarefa com `infra-guardian
 obrigatório, e a que toca `infra/`, Dockerfile, `tools/testes/`, `tools/ci/compose.ts`,
 métricas, saúde, prontidão ou borda. São os testes que esperam o relógio real (alerta,
 sonda, exportação de métricas), uns 16 min. Fora do portão da tarefa eles não somem: a
-esteira os roda em todo push no `main`, e vermelho lá segura a próxima tarefa.
+esteira os roda em todo push na `develop`, na `release` e no `main`, e vermelho lá segura a próxima
+tarefa.
 
-Cada commit de tarefa vai para o GitHub logo depois de feito, e a tarefa seguinte só commita
-com a esteira do commit anterior verde. Push em grupo e tarefa commitada em cima de esteira
+Cada commit de tarefa vai para o GitHub logo depois de feito, na `develop`, e a tarefa seguinte só
+commita com a esteira do commit anterior verde. Push em grupo e tarefa commitada em cima de esteira
 vermelha foram o que deixou três tarefas do F0 sem portão (validação do F0).

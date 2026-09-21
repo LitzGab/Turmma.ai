@@ -77,7 +77,7 @@ Se o agente mexeu em outro arquivo, desfaça essa mudança e reporte.
    - item fora do código: `TODO.md`;
    - recomendação para uma funcionalidade futura: fica na seção 6 do `validacao.md`, e
      `/criar-techspec` daquela funcionalidade precisa lê-la.
-5. Commit direto no `main` (D23): `Valida <funcionalidade> contra o PRD e fecha F? no
+5. Commit direto na `develop` (D23 revista): `Valida <funcionalidade> contra o PRD e fecha F? no
    roadmap`, só com `validacao.md`, `ROADMAP.md`, `techspec.md` e `TODO.md`.
 6. Próximo passo: `/retro <funcionalidade>`, antes do PRD da próxima.
 

@@ -78,7 +78,7 @@ Mostre as propostas e pergunte quais aplicar. Aplique só as aceitas.
 `tasks/prd-$ARGUMENTS/retro.md`, com as medidas, os grupos, as propostas e o que foi aceito ou
 recusado (com o motivo). O `/criar-tasks` da próxima funcionalidade lê esse arquivo.
 
-Commit direto no `main` (D23): `Faz a retrospectiva de <funcionalidade> e ajusta o processo`,
+Commit direto na `develop` (D23 revista): `Faz a retrospectiva de <funcionalidade> e ajusta o processo`,
 só com `retro.md` e os arquivos de processo alterados.
 
 ## 7. Relatório

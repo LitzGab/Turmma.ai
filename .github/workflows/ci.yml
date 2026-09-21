@@ -1,11 +1,13 @@
-# Esteira do Educa.ia. Enquanto não há staging (D31), ela é o portão de todo commit no main.
+# Esteira da Turmma. Enquanto não há staging (D31), ela é o portão de todo commit nas branches
+# integradoras. O trabalho acontece na `develop` (D23 revista); `release` e `main` recebem por
+# merge, e o Joaquim gerencia esse caminho.
 # Toda lógica mora em `npm run ci:*` (tools/ci): o YAML só prepara o Node e chama o script.
 # Sem segredo do repositório: nada aqui depende de credencial além do token do próprio GitHub.
 name: esteira
 
 on:
   push:
-    branches: [main]
+    branches: [develop, release, main]
   # Execução manual, usada para reexecutar um commit sem precisar de outro push.
   workflow_dispatch:
 

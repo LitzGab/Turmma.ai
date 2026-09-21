@@ -81,7 +81,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D20 | Escola particular e rede pública são alvo juntas desde o início |
 | D21 | O banco público de questões vem das provas oficiais do ENEM e entra no F7 |
 | D22 | A ingestão começa pelo upload de PDF licenciado; adaptador de scraper só com escola real e licença |
-| D23 | Fim do commit direto: quando o F1 fechar, o `main` congela e o trabalho, código e docs, passa a ser por branch, com `develop` e `release`; o portão de qualidade continua no processo (revista pela D53 e em 19/09/2026; caminho de volta, esteira e staging a definir pelo Joaquim) |
+| D23 | O trabalho acontece na `develop`; `release` e `main` recebem por merge, que o Joaquim gerencia. O Gabriel abre branch própria e integra na `develop`. A esteira roda nas três branches. O portão de qualidade continua no processo (revista pela D53, em 19/09/2026 e em 21/09/2026) |
 | D24 | Na primeira semana a coordenação vê quatro coisas: escola cadastrada sem trabalho manual, governança de IA, prova e plano com página citada, tutor em sala com sinais |
 | D25 | Infra do primeiro ano para até dez escolas; API, realtime e worker separados e sem estado |
 | D26 | Banco, Redis e storage são serviços gerenciados |
@@ -181,8 +181,10 @@ como está, com entrega pelo menos uma vez e idempotência obrigatória (D49).
 
 **Processo de construção.** A mesma auditoria propôs teto de tamanho por tarefa, assinatura
 humana no portão e revisor de simplicidade. Os vetos e o portão de qualidade no processo
-ficaram (D23). O commit direto no `main` caiu em 19/09/2026, com a terceira pessoa no código:
-branch próprio, `develop` e `release` (D23 revista). Em 15/09/2026 o processo foi enxugado onde repetia trabalho, sem tirar revisão:
+ficaram (D23). O commit direto no `main` caiu em 19/09/2026, com a terceira pessoa no código, e em
+21/09/2026 o fluxo foi fixado: **o trabalho acontece na `develop`**, `release` e `main` recebem por
+merge que o Joaquim gerencia, o Gabriel abre branch própria e integra na `develop`, e a esteira roda
+nas três (D23 revista). Em 15/09/2026 o processo foi enxugado onde repetia trabalho, sem tirar revisão:
 `test-engineer` primeiro, caducidade pelo que o revisor audita, portão local com carimbo,
 `revisor-geral` no lugar da autorrevisão, `/revisar-spec`, `/corrigir` e `/retro` (D53).
 
@@ -242,7 +244,6 @@ Todas têm dono e momento. Nenhuma trava o F0.
 | Trazer a marca para o repositório: tokens de cor, tipografia, logo e o avatar dos seis agentes (a marca existe, D54) | Gabriel | **antes do PRD da A1**, que é a primeira tela com a marca (D71) |
 | Material de exemplo da escola sintética do MVP: precisa ser nosso ou de domínio público, com a licença declarada (D5, D71) | Gabriel | antes do PRD da A2 |
 | Composição final de cada spec do MVP de apresentação (A1 a A5) e os três afrouxamentos enquanto o dado for sintético: AIA só com a etapa 1, provedor de modelo livre, carga sem crescer (D71) | Joaquim e Gabriel | no PRD de cada spec; os afrouxamentos antes do PRD da A1 |
-| Fluxo de branches: caminho de volta para o `main`, quem faz cada merge e com que revisão, em que branches a esteira roda, de onde sai o staging, e o ajuste do hook e das skills (D23 revista) | Joaquim | ao criar `release` e `develop`, quando o F1 fechar |
 | Registro no INPI e do domínio `turmma.com` (o nome já está fechado, D54) | Gabriel | antes do material de venda e do piloto |
 | Se o art. 24 do ECA Digital exige conta de responsável vinculada para aluno de até 16 anos — e, se exigir, se o portal da família sai da fase posterior | Joaquim e Gabriel, com advogado | **antes do PRD do F9**; o vínculo já nasce no modelo de dados do F1 (`docs/regulacao.md` 2.2) |
 | Como os arts. 17 e 18 do ECA Digital (supervisão parental) se modulam pelo art. 39 no nosso caso | advogado | junto com o parecer do ECA Digital |

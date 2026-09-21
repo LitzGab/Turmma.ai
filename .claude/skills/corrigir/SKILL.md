@@ -77,7 +77,7 @@ Com a esteira do commit anterior verde (passo 7 da `executar-task`):
 - stage só os arquivos da correção, o documento e o `achados-revisoes.md` de `tasks/correcoes/`
   se o hook o escreveu;
 - mensagem `Corrige <o quê> (correção <AAAA-MM-DD>-<slug>)`, com a linha `Revisões:` no corpo;
-- `git push origin main`.
+- `git push origin develop`.
 
 ## 7. Relatório
 
