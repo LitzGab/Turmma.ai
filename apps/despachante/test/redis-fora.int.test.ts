@@ -95,6 +95,9 @@ describe('Redis de fila fora', () => {
       expect([...logs.d1.doEvento('despachante.rodada_falhou'), ...logs.d2.doEvento('despachante.rodada_falhou')]).toEqual([])
 
       await composeAssincronoOuFalha('start', 'redis-fila')
+      // A subida do container fica fora do orçamento abaixo: `start` devolve quando o Docker aceitou o comando, não
+      // quando o Redis responde, e numa máquina carregada essa diferença come o prazo que deveria medir só a regra.
+      await aguardarSaudavel('redis-fila')
       // Sem reserva a vencer: com o Redis de volta, a próxima rodada já despacha, dentro das vagas da escola.
       await expect.poll(async () => (await contarPorEstado(bancada, ids))['concluido'], { timeout: 60_000, interval: 500 }).toBe(50)
 
@@ -104,7 +107,10 @@ describe('Redis de fila fora', () => {
     } finally {
       await app.close()
     }
-  }, 180_000)
+    // 240 s, não 180: a espera pelo serviço entrou no caso, e com o teto padrão dela (60 s) o pior caso
+    // encostava no prazo. Alargar aqui é melhor que apertar a espera — um teto de espera curto demais
+    // nasceria vermelho num runner lento, que é justamente a máquina que esta classe de teste precisa tolerar.
+  }, 240_000)
 
   it('travado: a vaga desiste no prazo, a rodada termina sem tentar as outras escolas e o laço segue batendo; ao destravar cada job executa uma vez', async () => {
     bancada = new BancadaDeFila()
