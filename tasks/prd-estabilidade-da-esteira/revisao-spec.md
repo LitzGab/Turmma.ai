@@ -264,6 +264,73 @@ instância — regra 80, item 6 —, com gravação idempotente e reenvio no cli
 retentativa na borda (item 7). Isso é tarefa de produto, com PRD próprio.
 
 
+## Rodada 5 — 21/09/2026, sobre o escopo recortado
+
+**Veredito: REPROVADA.** `test-engineer` 6 bloqueantes, `infra-guardian` 7.
+
+Bloqueantes por rodada: 17 · 9 · 3 · 5 · **13**. Subiu. E a razão de ter subido é o achado
+principal desta rodada.
+
+### O padrão, que agora é o dado mais importante deste arquivo
+
+Cinco rodadas, dez execuções de revisor. Em **todas** elas, uma afirmação minha sobre este
+subsistema foi invertida pela leitura do código:
+
+| Rodada | O que eu afirmei | O que o código diz |
+|---|---|---|
+| 1 | `:445` contamina o handshake | roda **depois** dele |
+| 2 | readmissão lenta explica o 503 | `lb_try_duration 5s` e a sonda no mesmo `/prontidao` contradizem |
+| 3 | a asserção positiva discrimina | `lb_policy cookie` só existe no realtime |
+| 4 | `alertas` e `metricas` sobem `observabilidade` sem parar | os dois param (repeti um revisor sem conferir) |
+| 5 | `alertas:87` vaza `redis-cache` | ele **restaura** — está em `SERVICOS_INFRA`, e `borda:367` exige o serviço de pé |
+
+Não é falta de cuidado pontual: é que **eu não consigo escrever uma spec correta deste subsistema
+por leitura**. Cada rodada encontra uma inversão nova, e não uma correção da anterior — o modelo não
+está convergindo.
+
+### Os dois achados que mudam o plano
+
+**O 503 da aplicação é indistinguível do 503 da borda, e é uma quinta candidata.**
+`erro-de-dominio.ts:23` fixa `TENTE_DE_NOVO_PADRAO_SEGUNDOS = 5`, que é exatamente o `Retry-After 5`
+do `Caddyfile:78`; o `filtro-global.ts` devolve o mesmo código, a mesma mensagem e os mesmos
+cabeçalhos. E o caso de `borda:361` derruba **todas** as conexões das APIs com o Postgres, que é a
+condição em que `guarda-sessao.ts:82` devolve 503. A premissa 3 da Tech Spec descartava isso por
+afirmação.
+
+**A evidência é destruída antes de chegar ao artefato.** `tools/ci/compose.ts:43-46`: em falha o job
+roda `logs --tail 200` — 200 linhas **no total**, para 19 serviços — e em seguida
+`down --volumes --remove-orphans`. O log `sonda` da janela do caso não sobrevive. Ou seja: **a fonte
+que a etapa 3 pretende correlacionar não existe quando o vermelho acontece na esteira**, que é
+justamente onde os quatro vermelhos aconteceram.
+
+### Conclusão: parar de especificar e começar a preservar evidência
+
+O segundo achado dá o caminho, e ele é pequeno. Antes de qualquer spec, o barato é **parar de jogar
+fora o que explicaria o vermelho** — do mesmo jeito que a correção de 21/09 fez para o e2e com o
+artefato `traco-do-e2e`. Com a evidência preservada, o próximo vermelho entrega dado real, e a spec
+passa a ser escrita contra medição em vez de contra a minha leitura, que já errou cinco vezes.
+
+**Recomendação registrada:** uma correção curta que publique, na falha dos jobs `infra` e
+`integração`, a janela de log que interessa (`sonda` da borda e `http.erro` das APIs, que carrega
+status e código e é correlacionável por instante). Sem spec, sem tarefa, sem esperar decisão de
+roadmap. Depois disso, retomar esta spec com dado.
+
+### Os 13 bloqueantes, para quem retomar
+
+`test-engineer`: (1) a etapa 1 não produz o estado do pool que o RF1 exige — o admin do Caddy só
+escuta dentro do contêiner; (2) o `compose logs --since` da etapa 3 lê log que já foi embora; (3) o
+503 da aplicação é indistinguível e é a quinta candidata; (4) a ordem das etapas destrói a linha de
+base, porque a etapa 2 muda o ambiente do caso medido; (5) o `globalSetup` é compartilhado com o
+projeto `integracao`; (6) a prova do RF5 passa por construção sob a própria saída preferida.
+
+`infra-guardian`: (1) trocar `borda:364` por lista fixa torna `:367` tautológica; (2) `alertas:87`
+não vaza, restaura; (3) instante da **resposta** não correlaciona — precisa de início e duração,
+porque o POST tem prazo de 10 s e a borda repete por 5 s; (4) o canal do estado do pool não é
+nomeado; (5) o `globalSetup` é dos dois projetos; (6) o estado de entrada não cobre contêineres fora
+do projeto (`educa-teste-caddy-*` e afins) nem conteúdo em serviço com estado; (7) o RF2 não tem
+número de execuções nem regra de parada — o achado G da rodada 1, que sumiu na reescrita.
+
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -280,3 +347,5 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-09-21 12:53:50 | 2026-09-21 12:58:15 | `infra-guardian` | 3 | REPROVADO | ab008ee7e81ccc463 |
 | 2026-09-21 13:02:39 | 2026-09-21 13:06:04 | `infra-guardian` | 4 | REPROVADO | afcb0455df6d69dda |
 | 2026-09-21 13:02:52 | 2026-09-21 13:07:30 | `test-engineer` | 4 | REPROVADO | ae2d82b88d358d72c |
+| 2026-09-21 14:03:04 | 2026-09-21 14:08:11 | `test-engineer` | 5 | REPROVADO | adec63aaf894927a2 |
+| 2026-09-21 14:03:16 | 2026-09-21 14:08:14 | `infra-guardian` | 5 | REPROVADO | ac5872aa6fbf5186e |

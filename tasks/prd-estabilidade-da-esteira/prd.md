@@ -41,9 +41,14 @@ borda registra transição, não estado contínuo. Sem instante não há contra 
 
 O portão roda `e2e` **antes** de `infra`, e `test:e2e` usa `--manter-ambiente`, que pula o `down`: os
 testes de infra herdam os 19 serviços de pé, e `borda.int.test.ts:363-367` monta o que parar a partir
-do que está rodando. Some a isso o que muda **durante** o projeto — `alertas.int.test.ts:87` sobe
-`redis-cache` e não para, `metricas.int.test.ts:87` para os processos da fila e nunca religa — e a
-ordem dos arquivos, que `vitest.config.ts` não fixa.
+do que está rodando. Some a isso o que muda **durante** o projeto: `metricas.int.test.ts:87` para os processos da fila e
+nunca religa. E a ordem dos arquivos, que `vitest.config.ts` não fixa.
+
+**Correção de rota, registrada porque quase virou tarefa errada:** eu havia escrito aqui que
+`alertas.int.test.ts:87` também vazava, subindo `redis-cache` sem parar. É falso, e o contrário: o
+`redis-cache` está em `SERVICOS_INFRA`, ou seja, ele **restaura** a linha de base — e
+`borda.int.test.ts:367` **exige** o `redis-cache` de pé. Uma tarefa escrita contra a versão anterior
+mandaria `alertas` parar o serviço e quebraria o `borda`.
 
 ## 2. Objetivo
 
@@ -78,7 +83,7 @@ mecanismo que esta medir.
 | RF2 | A taxa de vermelho falso é medida por job (`verificar`, `integração`, `infra`, `e2e`) e no portão local, e vira linha de base | Documento commitado com execuções, vermelhos e a taxa; separa o 503 da aplicação (guarda de sessão, semáforo de hash), que usa o mesmo envelope |
 | RF3 | A medição **separa as quatro candidatas**, ou declara por escrito que não conseguiu e por quê | Correlação entre o instante do 503, o método e a transição do log `sonda`, com a conclusão escrita |
 | RF4 | O projeto `infra` **declara e impõe o estado de entrada**, em vez de herdar o que estiver de pé | A prova **fabrica o estado sujo**: sobe serviço fora do conjunto declarado, roda a imposição, afirma que ele foi parado e que não entra no conjunto de `borda.int.test.ts:363-367` |
-| RF5 | O que muda **durante** o projeto `infra` deixa de contaminar o arquivo seguinte | `alertas.int.test.ts:87` e `metricas.int.test.ts:87` devolvem o ambiente ao conjunto declarado, ou `:363-367` para de montar `parados` a partir de `ps --status running` |
+| RF5 | O que muda **durante** o projeto `infra` deixa de contaminar o arquivo seguinte | `metricas.int.test.ts:87` devolve os processos da fila ao conjunto declarado. **Não** trocar `borda.int.test.ts:364` por lista fixa: a asserção de `:367` viraria constante contendo constante, e o caso perderia o que prova |
 | RF6 | Ficam medidos, sem mudar nada: custo do `observabilidade` no e2e, e efeito de fixar `workers` | Tempo de job, pico de CPU e **saída dos processos no SIGTERM**; e se `workers` muda a **estabilidade** ou só a duração |
 
 ## 6. Regras de negócio
