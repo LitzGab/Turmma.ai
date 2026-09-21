@@ -55,7 +55,8 @@ staging nasce depois (D31). Ver `docs/infra.md`.
 **Pronto quando:** `docker compose up` sobe tudo, um e2e verde toca API e web, e a esteira
 do GitHub fica verde no mesmo commit.
 
-## F1 — `identidade-e-tenancy` [ ]
+## F1 — `identidade-e-tenancy` [x]
+Concluída em 21/09/2026, validada em tasks/prd-identidade-e-tenancy/validacao.md.
 **Depende de:** F0
 
 Escola, ano letivo, série (anos finais e Ensino Médio, D43), turma, disciplina, usuário,

@@ -1,5 +1,271 @@
 # Validação — identidade-e-tenancy (F1)
 
+## Rodada 3 — 21/09/2026
+
+**Escopo:** funcionalidade completa (tarefas 1.0 a 20.0)
+**Commit validado:** `249cd290b834677183833650c682baffc9fc75c4`
+**Veredito: APROVADA COM RESSALVAS** — as quatro ressalvas maiores foram **aceitas por Joaquim em
+21/09/2026** (seção 7), e com isso a funcionalidade está fechada.
+
+O crítico único da rodada 2 — esteira vermelha no commit validado — está resolvido, e conferi isso
+na fonte, não no relatório: execução `35565654568`, `headSha` `249cd290b834677183833650c682baffc9fc75c4`,
+os quatro jobs `success` (`verificar`, `integração`, `infra`, `e2e`). O portão local inteiro repetiu
+verde aqui, com a árvore limpa.
+
+As duas correções fizeram o que dizem, e verifiquei cada uma por execução própria, não pelo texto do
+commit:
+
+- **`6cbb3b6` (reconciliação).** Reproduzi o vermelho e o verde eu mesmo, com a condição da esteira
+  (container que demora mais que o orçamento). Detalhe em "Provas de mutação" abaixo: sem
+  `aguardarSaudavel`, a mensagem que sai é **exatamente** a da esteira; com ela, passa.
+- **`349fd55` (traço do e2e).** A guarda nova existe, se amarra ao `playwright.config.ts` **por
+  projeto** e roda no `npm run test`; o passo do `ci.yml` publica `test-results/` só em `failure()`
+  ou `cancelled()`, com `if-no-files-found: warn` e 7 dias. O caso de e2e que ficou vermelho na
+  esteira **não foi reestruturado**, e essa escolha está fundamentada: a causa não se sustenta em dez
+  observações verdes (oito da correção, mais as duas desta rodada).
+
+O que impede a aprovação sem ressalvas é o que sobrou dessa segunda correção: **a esteira é instável
+por desenho**, e isso está registrado como tarefa, não corrigido. Três testes diferentes falharam em
+três execuções seguidas, um deles novo e que eu levantei nesta rodada (`infra/test/borda.int.test.ts`,
+execução `35525902277`). Nenhum deles é regressão do F1, e nenhum bloqueia o F2 por si; mas a primeira
+tarefa do F2 vai commitar em cima dessa esteira.
+
+---
+
+### 1. RF a RF
+
+**Nenhuma linha de código de produção mudou desde o commit da rodada 2.** `git diff --stat
+38ce195..249cd29` dá nove arquivos: `.github/workflows/ci.yml`, `TODO.md`,
+`apps/despachante/test/reconciliacao.int.test.ts` (teste), `docs/runbook.md`, os dois documentos de
+correção, `tasks/correcoes/achados-revisoes.md`, `tools/ci/esteira.test.ts` (guarda de esteira) e este
+arquivo. Não há caminho por onde um RF tenha mudado de situação, e a suíte repetiu aqui os mesmos
+números da rodada 2 mais os dois casos novos da guarda.
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF1–RF21 | **ATENDIDO** (21 de 21) | inalterados desde `6f69754` | `npm run test` 146 arquivos / **1.674** casos (1.672 na rodada 2, + os 2 casos novos de `tools/ci/esteira.test.ts`); `npm run test:e2e` 132; `npm run test:infra` 35 | evidência RF a RF nas rodadas 1 e 2, não repetida aqui |
+
+**Contagem:** 21 atendidos, 0 parciais, 0 não atendidos, 0 não verificáveis.
+
+Provas de mutação (duas nesta rodada; as quatro das rodadas 1 e 2 continuam valendo e não foram
+repetidas). A árvore terminou limpa nas duas, restaurada com `git checkout --`:
+
+| O que mutei | O que removi | Resultado |
+|---|---|---|
+| **Escopo de tenant da leitura de turma** (RF15, RF16, regra 10, itens 3 e 5) — prova nova, para não aceitar o isolamento pela palavra da rodada 2 | `eq(turma.escolaId, exigirEscolaDoContexto())` de `aberta` (`apps/api/src/estrutura/turma.repository.ts:90`) **e** `eq(turma.anoLetivoId, exigirAnoEmCurso())` de `#doAnoDaLeitura` (`:103`), isto é, o escopo inteiro | ❌ **4 casos vermelhos** em `apps/api/test/estrutura-isolamento.int.test.ts`, entre eles "o escopo de escola vale sozinho: com o ano e o usuário de B num contexto de A, nenhum repository alcança B" e "`vinculos/:id/*` e `turmas/:id` com id de B dão o mesmo 404 do inexistente, e nada muda em B" (`expected { status: 500 } to deeply equal { status: 404 }` e três `AssertionError` de DTO). Restaurado: verde |
+| **A correção da reconciliação** (`6cbb3b6`) | `await aguardarSaudavel('redis-fila')` de `apps/despachante/test/reconciliacao.int.test.ts:214`, com a subida do container segurada por 25 s (`setTimeout(() => void composeAssincronoOuFalha('start', 'redis-fila'), 25_000)`), que é a condição da esteira | ❌ `AssertionError: expected [] to deeply equal [ Array(1) ]` em 24.980 ms — **a mensagem exata da execução `35517746419`**. Com a linha de volta e o mesmo adiamento de 25 s: ✅ verde. Arquivo inteiro restaurado: 11 casos verdes |
+
+A segunda linha é a que fecha o maior 1 da rodada 2: a correção não é um prazo maior nem uma espera a
+mais, é a separação do orçamento, e ela é o que faz o caso sobreviver ao runner carregado.
+
+**Registro de uma tentativa que não serviu de prova, para ninguém repetir o caminho:** retirar
+**só** `eq(turma.escolaId, …)` de `aberta` deixa `estrutura-isolamento.int.test.ts` **verde**. Não é
+teste fraco: `eq(turma.anoLetivoId, exigirAnoEmCurso())` carrega o isolamento sozinho, porque o id do
+ano em curso é um UUID de uma escola só e vem do mesmo contexto. É defesa em profundidade funcionando
+(mais as FKs compostas, a terceira camada). Quem for mutar esse repository tem de tirar o par, como na
+tabela acima.
+
+---
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+As tabelas das rodadas 1 e 2 valem inteiras: nenhuma regra, nenhuma borda e nenhum caminho de produção
+mudou. Reconferi só o que o critério de pronto ainda tinha aberto.
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Pronto: os 21 RF do PRD têm código e teste que falharia sem a regra | cumprido | rodadas 1 e 2, mais a mutação nova do escopo de tenant acima |
+| Pronto: testes de isolamento da Tech Spec seção 6 verdes, e cada um quebra sem a cláusula de escola | cumprido | `estrutura-isolamento.int.test.ts` vermelho com o escopo removido, verde restaurado (mutação 1) |
+| Pronto: nenhum caminho de login recusa um aluno por causa de outro no mesmo IP; `login-7h30` passa | cumprido | rodada 1 |
+| Pronto: nenhum e-mail, nome, foto ou claim de aluno no banco nem no log | cumprido | rodada 1; conferi de novo que as quatro linhas "não" da seção 8 do PRD estão em `docs/lgpd.md:51,53,55-56,58` (hash argon2id, segredo TOTP e HMAC dos códigos, contador de tentativas e contadores por IP, vínculo) |
+| Pronto: token sintético não existe mais | cumprido | rodada 1 |
+| Pronto: `docs/lgpd.md` e `docs/runbook.md` completos | cumprido, e ampliado: `docs/runbook.md` ganhou a seção "Esteira vermelha no e2e", com como baixar e abrir o traço e o que o vazio significa |
+| Pronto: **portão inteiro verde e esteira verde no commit final** | **cumprido** | tabela da seção 3; execução `35565654568` nos quatro jobs |
+| Roadmap, "Pronto quando": "a escola A não lê, não escreve e não descobre nada da B, e um professor com vínculo nas duas não leva dado de uma para a outra" | cumprido | mutação 1 (a parte da escola A × B) e `e2e/escola-e-vinculos.spec.ts:185` verde nos dois perfis aqui (`chromebook` 10,5 s, `celular` 11,2 s) |
+
+Critério de pronto: **cumprido, os sete itens.**
+
+---
+
+### 3. Portão
+
+Não foi preciso `npm ci`: `node_modules/.package-lock.json` e `package-lock.json` estão na mesma data
+(20/09 01:14). Tudo rodado com a árvore limpa, no commit `249cd29`.
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck` | ✅ |
+| `npm run lint` | ✅ (ESLint + guardas) |
+| `npm run test` | ✅ 146 arquivos, **1.674** casos (406,7 s) |
+| `npm run test:e2e` | ✅ **132** casos, `chromebook` e `celular` (2,3 min) |
+| `npm run test:infra` | ✅ 5 arquivos, **35** casos (1.209,6 s), `infra/test/borda.int.test.ts` incluído e verde |
+| **Esteira do GitHub no commit validado** | ✅ execução `35565654568`, `headSha` `249cd29…`: `verificar` ✅ 1m51s, `integração` ✅ 8m12s, `infra` ✅ 23m9s, `e2e` ✅ 11m4s (132 passed) |
+| Revisões com veto registradas e aprovadas | ✅ nas 20 tarefas e nas duas correções: a última rodada de cada revisor com veto é APROVADO (ver menor 1 sobre o rastro) |
+
+Nenhum `.skip`, `.todo` ou teste comentado. Carimbo do portão local do último commit
+(`.processo/portao.json`): `typecheck`, `lint`, `test`, `infra` — sem `e2e`, o que está correto: a
+correção `349fd55` não toca tela nem spec de e2e, só a esteira e a guarda dela.
+
+---
+
+### 4. Achados
+
+**Críticos**
+
+Nenhum.
+
+**Maiores**
+
+1. **A esteira é instável por desenho, e isso continua aberto** (registrado em `TODO.md` por
+   `249cd29`, com causa provável e remédios, para virar tarefa por `/criar-tasks`). O que levantei
+   nesta rodada, na fonte: depois de nove execuções verdes, **três testes diferentes** falharam em
+   três execuções seguidas, cada um passando na seguinte sem mudança nenhuma:
+   - `35517746419` (`38ce195`): `apps/despachante/test/reconciliacao.int.test.ts` e
+     `e2e/escola-e-vinculos.spec.ts:185` `[celular]` — os dois da rodada 2;
+   - `35525902277` (`ec0aa38`): **novo**, job `106117874183`, `infra/test/borda.int.test.ts` ›
+     "handshake por polling fica na mesma instância pelo cookie da borda, e autentica no pacote de
+     conexão" — `AssertionError: expected [ 200, 200, 503, 400, 400, 400, …(14) ] to deeply equal
+     [ 200, 200, 200, 200, 200, 200, …(14) ]`, com o log da borda mostrando `api-1`/`api-2` e
+     `realtime-1`/`realtime-2` sem responder ao healthcheck;
+   - `35565654568` (`249cd29`): verde inteira, sem mudança em nenhum dos três testes.
+   Causa provável nomeada pelo `infra-guardian` (compose inteiro, ~18 contêineres sem limite de CPU
+   em `infra/compose.yml`, no mesmo runner do Playwright com CPU ×4; `workers` não fixado e
+   `retries: 0` em `playwright.config.ts:29`). **Correção:** a tarefa que fixa `workers`, tira
+   `observabilidade` do job do e2e e decide entre folga de `expect` no `celular` ou retentativa com o
+   flake registrado — antes ou junto da primeira tarefa do F2, porque é ela que vai commitar em cima
+   desta esteira.
+2. **`infra/test/borda.int.test.ts` — vermelho sem causa estabelecida e sem `/corrigir`.** Um único
+   503 da borda invalida a sessão socket.io e as 17 requisições seguintes viram 400 em cascata; o
+   arquivo tem um caso que mata um realtime de propósito, o que aponta contaminação de ordem entre
+   casos. Passou aqui (35 de 35) e na execução do commit validado, o que o torna intermitente, não
+   ausente. Está no `TODO.md` com a instrução certa ("precisa de `/corrigir` próprio, com a causa
+   achada antes da correção"), e é isso que falta. **Correção:** `/corrigir` com a causa, não com um
+   prazo maior.
+3. **`e2e/escola-e-vinculos.spec.ts:185-232` — a causa do vermelho nunca foi estabelecida.** A
+   correção `349fd55` diz isso com todas as letras e compra **diagnóstico**, não imunidade; a decisão
+   de não reestruturar um caso de isolamento que passa está bem fundamentada (dez observações verdes,
+   contando as duas desta rodada: 10,5 s no `chromebook` e 11,2 s no `celular`). Mas o caso segue
+   sendo o mais pesado da suíte no perfil mais lento, com `PRAZO_DA_ENTRADA_MS = 20_000` dentro de um
+   prazo de 30 s, e teste de isolamento que falha por tempo não protege o que existe para proteger.
+   **Correção:** fica amarrado ao maior 1; se a próxima falha vier, o artefato `traco-do-e2e` agora
+   existe e diz para onde o prazo foi.
+4. **Commit em cima de esteira vermelha, e push em grupo** (regra 40, último parágrafo). `349fd55`
+   foi feito e empurrado com a esteira do commit anterior (`ec0aa38`, execução `35525902277`)
+   **vermelha** no job de infra, e o vermelho da borda não virou `/corrigir` — virou linha de
+   `TODO.md`. As duas correções também não tiveram execução própria: `6cbb3b6` foi ao GitHub junto de
+   `ec0aa38`, e `349fd55` junto de `249cd29`. **Mitigação real:** os dois commits de `TODO.md` não
+   levam código, então a execução de cada par cobriu a árvore da correção, e nenhuma linha de código
+   ficou sem esteira — é o que impede isto de ser crítico. **Correção:** um push por commit, e o
+   vermelho da borda pela `/corrigir` antes da primeira tarefa do F2, como o próprio `TODO.md` pede.
+
+**Menores**
+
+1. **Rodada de revisor com veto sem bloco em `tasks/correcoes/achados-revisoes.md`.** A tabela do
+   documento de correção (escrita pelo hook) registra `privacy-guardian` nas rodadas 1, 2, 3 e 4, mas
+   só a **3ª** tem bloco no `achados-revisoes.md` — inclusive a 4ª, que é a que vale como aprovação
+   final da regra 20. Falta também o bloco do `test-engineer` rodada 1 da correção da reconciliação.
+   O que existe é substantivo (a rodada 3 do `privacy-guardian` refez as mutações por conta própria),
+   mas o veredito final de um revisor com veto ficou sem conteúdo auditável. Defeito do hook já
+   registrado no `TODO.md` por `249cd29`. **Correção:** junto do outro defeito do hook (caducidade
+   por `mtime`), na tarefa que mexer em `tools/processo/revisoes.ts`.
+2. Os menores 1 a 6 da rodada 2 seguem abertos, todos conferidos de novo aqui: `prd.md:3` ainda
+   **"Status: rascunho"**; `docs/modelo-de-dados.md:70` ainda lista `responsavel` como papel;
+   as tabelas do F0 (`configuracao_operacional_escola`, `uso_infra_diario`, `job_registro`) ainda
+   ausentes do modelo de dados; `saidaConfirmada` compartilhado entre saída pedida e inatividade;
+   `CLAUDE.md:8` ainda aponta para `LitzGab/Educa.ia` enquanto o `origin` é `LitzGab/Turmma.ai`.
+3. Os menores 1 a 6 da rodada 1 seguem abertos e sem destino registrado (`BroadcastChannel` por
+   sessão, `details` do seletor, passkey, auditoria de mudança de papel, rastro do
+   `domain-researcher`, `revisor-geral` ausente na 1.0 — confirmei: `1_task.md` não tem nenhuma
+   rodada dele). Nenhum bloqueia.
+4. Recomendações dos revisores das duas correções que ficaram com destino no `TODO.md` e não foram
+   perdidas: guarda de `video`/`screenshot` no mesmo laço da guarda de `trace`; guarda sobre
+   `ARQUIVOS_AMBIENTE_TESTE` e a ausência de `process.env` em `tools/ci/compose.ts` (a primeira da
+   fila, porque o runbook agora **afirma por escrito** uma propriedade de segurança que nenhum teste
+   sustenta); linha de furo conhecido em `docs/lgpd.md` seção 4 sobre artefato público de esteira.
+   Ficam listadas aqui só para não se perderem.
+
+**Positivos**
+
+- A correção da reconciliação é o modelo de como se fecha um vermelho de tempo: causa **medida** com
+  números nos dois regimes (ocioso e sob contenção), hipóteses alternativas descartadas com evidência
+  (AOF, recuo do ioredis), vermelho determinístico com a mensagem exata da esteira, e zero linha de
+  produção tocada. Reproduzi e confirmei aqui.
+- A correção do traço fez a coisa mais difícil: **não** reescreveu o teste. Diante de um vermelho que
+  não reproduz, atacou o que impedia o diagnóstico e disse explicitamente o que não compra
+  ("diagnóstico, não imunidade"). É o oposto de mexer no teste até ele ficar verde.
+- A guarda nova se amarra ao `playwright.config.ts` **resolvendo o valor efetivo por projeto**, não
+  só no `use` de topo. Sem isso, uma linha dentro do projeto `celular` reabriria o furo com a esteira
+  verde. É o padrão para toda guarda que afirma uma configuração.
+- A 3ª rodada do `privacy-guardian` refez as mutações por conta própria em vez de aceitar a tabela do
+  documento, e declarou que a aprovação da rodada 1 — dada sobre a premissa errada de repositório
+  privado — não cobria o fato corrigido. Revisor que invalida a própria rodada anterior é exatamente
+  o que o processo quer comprar.
+- A instabilidade foi nomeada como **desenho**, com causa provável e três remédios, em vez de virar
+  três correções soltas perseguindo sintomas. É o achado mais valioso que sai do F1.
+
+---
+
+### 5. Conclusão
+
+O único crítico da rodada 2 caiu, e caiu com evidência: a esteira do commit validado está verde nos
+quatro jobs, o portão local repetiu verde inteiro, e as duas correções fazem o que dizem — a da
+reconciliação eu reproduzi vermelha e verde aqui, com a condição da esteira e a mensagem exata dela.
+Os 21 RF seguem atendidos, agora com uma prova de mutação nova sobre o escopo de tenant, feita nesta
+rodada para não herdar o isolamento pela palavra da rodada anterior. O critério de pronto está
+cumprido nos sete itens, inclusive o último, que era o que faltava.
+
+Não é APROVADA sem ressalvas porque sobram maiores, e o principal deles é o que a segunda correção
+deliberadamente **não** resolveu: a esteira falha por contenção do runner, três testes diferentes em
+três execuções, e um desses vermelhos (`infra/test/borda.int.test.ts`) é novo e ainda não tem causa
+nem `/corrigir`. Nenhum é regressão do F1 — todos são fragilidade de ambiente de teste, herdada do F0
+e exposta pela carga —, nenhum indica furo de isolamento, de dado pessoal ou de conformidade, e por
+isso nenhum impede o F2 de começar. Mas a primeira tarefa do F2 commita em cima desta esteira, então
+a ressalva tem endereço e ordem:
+
+1. A tarefa da instabilidade da esteira (`/criar-tasks`): fixar `workers`, tirar `observabilidade` do
+   job do e2e, e decidir entre folga no `celular` ou retentativa com o flake **registrado**.
+2. `/corrigir` para `infra/test/borda.int.test.ts`, com a causa achada antes da correção.
+3. Um push por commit, para cada correção ter execução própria.
+
+Os menores não bloqueiam nada e estão todos com destino.
+
+---
+
+### 6. Pendências herdadas
+
+| Pendência | Destino |
+|---|---|
+| Esteira instável por desenho (maior 1) | tarefa por `/criar-tasks`, antes ou junto da primeira tarefa do F2; já em `TODO.md` |
+| `infra/test/borda.int.test.ts` intermitente (maior 2) | `/corrigir` próprio, com a causa; já em `TODO.md` |
+| Causa do vermelho de `escola-e-vinculos.spec.ts:185` (maior 3) | amarrada ao maior 1; na próxima falha, o artefato `traco-do-e2e` dá a linha de tempo |
+| Push em grupo e commit sobre esteira vermelha (maior 4) | prática, a partir da primeira tarefa do F2 |
+| Rodada de revisor sem bloco em `achados-revisoes.md` (menor 1) | junto do defeito de caducidade por `mtime`, na tarefa que mexer em `tools/processo/revisoes.ts`; já em `TODO.md` |
+| Guarda de `video`/`screenshot`; guarda de `ARQUIVOS_AMBIENTE_TESTE`; furo conhecido em `docs/lgpd.md` seção 4 | já em `TODO.md`, a segunda como primeira da fila |
+| Histórico próprio do aluno | **fechado** na rodada 2: F9, registrado no PRD, na Tech Spec e no `ROADMAP.md` |
+| Status do PRD do F1 ainda "rascunho"; `responsavel` em `docs/modelo-de-dados.md:70`; tabelas do F0 fora do modelo de dados | quem fizer a próxima edição desses documentos |
+| `BroadcastChannel` por sessão, `details` do seletor, `saidaConfirmada` | `TODO.md` ou a primeira tarefa de web do F2 |
+| Passkey | `/registrar-decisao`, ou a pergunta em aberto do PRD do F2 |
+| Auditoria de mudança de papel | a tarefa do F2/F3 que criar o caminho de mudar papel |
+| Rastro do `domain-researcher` e `revisor-geral` ausente na 1.0 | `/retro` do F1 |
+| Endereço do repositório no `CLAUDE.md` | junto da decisão de nome e domínio (Gabriel) |
+| Demais pendências do F0 (alertas, `VALIDATE` das FKs, controle negativo do `npm run carga`, calibração do argon2) | já em `TODO.md` e na Tech Spec, seção 12 |
+
+---
+
+### 7. Aceitação das ressalvas
+
+**Quem aceitou:** Joaquim, em 21/09/2026, apresentadas as quatro ressalvas maiores com a correção
+sugerida de cada uma. Com a aceitação, o F1 é fechado como no caso APROVADA.
+
+| Ressalva | Decisão e motivo |
+|---|---|
+| **1. Esteira instável por desenho** | **Aceita, e vira tarefa.** Não é defeito do F1: as nove execuções anteriores foram verdes, e o que mudou foi a folga do runner, não o código. Não fica como linha de `TODO.md`: entra por `/criar-tasks` como a primeira tarefa antes do F2, com o escopo que o `infra-guardian` nomeou — fixar `workers` na esteira, não subir `observabilidade` no job do e2e, e decidir entre folga de `expect` no perfil `celular` ou retentativa com o flake **registrado**, nunca mascarado |
+| **2. `borda.int.test.ts` intermitente** | **Aceita, e vira tarefa junto da 1.** É da mesma classe, e corrigi-la isolada repetiria o padrão de tratar sintoma. A causa provável (um 503 invalidando a sessão socket.io, com contaminação de ordem a partir do caso que mata um realtime de propósito) fica registrada para quem pegar a tarefa |
+| **3. Causa do vermelho do e2e nunca estabelecida** | **Aceita.** Não há o que corrigir sem reprodução: oito observações locais verdes (isolado, suíte com 6 e com 12 trabalhadores) e a execução seguinte da esteira passou inteira. Reestruturar um teste de isolamento que passa, por causa que não se sustenta, trocaria cobertura real por palpite. A correção `349fd55` entrega o diagnóstico para a próxima ocorrência, e o `traco-do-e2e` é o que vai decidir a hipótese |
+| **4. Push em grupo e commit sobre esteira vermelha** | **Aceita, como falha de prática já ocorrida.** O commit `349fd55` foi feito com a esteira de `ec0aa38` vermelha, contra a regra 40. Mitigado no caso concreto — `ec0aa38` e `249cd29` só levam `TODO.md`, e o vermelho que seguravam era justamente a instabilidade que as correções atacavam —, mas a prática correta é esperar, e vale a partir da primeira tarefa do F2 |
+
+---
+
 ## Rodada 2 — 20/09/2026
 
 **Escopo:** funcionalidade completa (tarefas 1.0 a 20.0)

@@ -1,7 +1,7 @@
 # Tech Spec — Identidade e tenancy
 
 **PRD:** `tasks/prd-identidade-e-tenancy/prd.md`
-**Status:** rascunho (revisto após duas rodadas de `tenancy-guardian`, `privacy-guardian` e `infra-guardian`, 14/09/2026)
+**Status:** implementada em 21/09/2026 (revisto após duas rodadas de `tenancy-guardian`, `privacy-guardian` e `infra-guardian`, 14/09/2026; alinhada ao construído nas rodadas 1 e 2 da validação, 20/09/2026)
 
 ## 1. Resumo da abordagem
 
