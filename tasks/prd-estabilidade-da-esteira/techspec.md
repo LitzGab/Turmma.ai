@@ -117,6 +117,11 @@ sintético, e o que se grava não é dado de requisição. **D52**: a engrenagem
    e depois responde.
 3. **Que as quatro candidatas cobrem o espaço.** Quatro rodadas de revisão chegaram a elas; a quinta
    pode achar a quinta.
+4. **Que a esteira continua disparando só no push do `main`.** É o que vale hoje
+   (`.github/workflows/ci.yml`), mas a D23 revista prevê branches, com ajuste do hook, do
+   `/executar-task`, do `/corrigir` e da regra 40. Se essa decisão vier primeiro, o recorte "por
+   job" do RF2 precisa incluir **onde** a esteira roda, e a linha de base medida antes não compara
+   com a de depois.
 
 ## 13. Riscos técnicos
 

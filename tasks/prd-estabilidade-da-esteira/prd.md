@@ -14,6 +14,10 @@ com o que ele mexeu. Roda de novo, sem mudar uma linha: passa.
 (`retro.md` do F1). Isso trava a fila (regra 40, D52: a próxima tarefa só commita com a esteira
 verde), ensina a ignorar vermelho, e esconde o que o teste prova.
 
+**E o custo disso acabou de subir.** A D71 põe o MVP de apresentação (A1 a A5) logo depois do F1, e a
+D23 revista fala em **duas frentes andando ao mesmo tempo**. Esteira instável com uma frente atrasa
+uma pessoa; com duas, atrasa as duas e ainda confunde de quem é o vermelho.
+
 ### Por que esta fase é só medir
 
 Quatro rodadas de revisão desta spec (`revisao-spec.md`) derrubaram **três** explicações minhas para
@@ -114,7 +118,8 @@ Nenhum.
 
 | Pergunta | Quem decide | Quando |
 |---|---|---|
-| Qual número do roadmap, e se entra antes do F2 | Joaquim | antes de começar |
+| Qual número do roadmap, e se entra antes do **A1** — o que vem depois do F1 agora é o MVP de apresentação, A1 a A5 (D71) | Joaquim | antes de começar |
+| Se o **fluxo de branches** (D23 revista) entra antes desta fase. Ele muda onde a esteira roda (hoje, só no push do `main`) e, com isso, o recorte "por job" do RF2 | Joaquim | está em aberto e venceu com o F1 fechado |
 | Qual das quatro candidatas produz o 503 | medição (RF3) | é o objetivo desta fase |
 | Tirar `observabilidade`, fixar `workers`, retentativa registrada | Joaquim, com os números do RF6 e do RF2 | na fase 2 |
 | Se o RF4 e o RF5 sozinhos já zeram os vermelhos do portão local | medição | no fim desta fase |
