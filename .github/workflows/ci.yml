@@ -77,3 +77,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run ci:e2e
+      # O `trace: 'retain-on-failure'` do `playwright.config.ts` já escreve o traço e o contexto do erro
+      # em `test-results/`; sem este passo eles morriam com o runner, e todo vermelho de e2e ficava sem
+      # a linha de tempo das requisições que diz para onde o prazo foi. Só na falha, e por 7 dias: o
+      # artefato serve para diagnosticar a execução, não para arquivo. Todo dado do e2e é sintético
+      # (regra 20, item 17).
+      # `cancelled()` também: com `timeout-minutes: 30`, um e2e travado é cancelado, não "failure", e
+      # é justamente na lentidão que o traço mais serve.
+      - if: failure() || cancelled()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: traco-do-e2e
+          path: test-results/
+          retention-days: 7
+          # `warn`, não `ignore`: o job já falhou, e diretório vazio aqui é sinal de que algo mudou —
+          # configuração do traço, diretório de saída, ou o compose que não subiu. O aviso não
+          # distingue a causa, mas qualquer uma delas tem de aparecer no log em vez de sumir.
+          if-no-files-found: warn

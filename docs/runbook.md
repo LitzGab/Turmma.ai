@@ -465,6 +465,31 @@ Se reprovar, a saída diz a fase e o critério:
 - **família encerrada por reuso:** a janela de 2 s do `JA_RENOVADO` (5.0) não está cobrindo as duas abas.
 - **`k6` da fase:** o ambiente não rodou até o fim; veja os logs que o script imprime.
 
+## Esteira vermelha no e2e
+
+O job de e2e publica o diretório de saída do Playwright quando falha ou é cancelado: artefato
+**`traco-do-e2e`** da execução, com `trace.zip` e `error-context.md` do caso que falhou, por 7 dias.
+(O nome, o prazo e o caminho são afirmados em `tools/ci/esteira.test.ts`; se renomearem o artefato, é
+lá que o vermelho aparece, e esta seção precisa acompanhar.)
+Baixe com `gh run download <id> --name traco-do-e2e` e abra com `npx playwright show-trace <arquivo>`:
+é ele que tem a linha de tempo das requisições e diz se o prazo foi numa resposta lenta da API, numa
+tentativa rebaixada na fila do login ou na tela que não chegou a montar.
+
+Sem artefato na execução falha, o vazio é sinal por si: ou a configuração do traço mudou
+(`playwright.config.ts`), ou o compose não subiu — o passo avisa com `if-no-files-found: warn`.
+O caso morto pelo estouro de `timeout-minutes` não deixa traço finalizado; aí o que resta é o log dos
+serviços no próprio job.
+
+Vermelho de e2e que não reproduz na máquina segura a tarefa seguinte (regra 40, D52): trate como
+defeito por `/corrigir`, com a causa achada no traço, e não repetindo a execução até passar.
+
+**O artefato é público**, porque o repositório é. Ele é inofensivo hoje por construção: todo dado do
+e2e é sintético, e o ambiente do compose de teste sai só de `.env.example` e `infra/teste.env`, os dois
+versionados, sem ler nada do runner (`tools/ci/compose.ts`). Por isso, **nada além da saída do
+Playwright deve ser escrito em `test-results/`** — despejo de log de serviço, dump ou material
+licenciado de fixture mudariam a classe do que se publica, e aí a decisão de publicar precisa ser
+tomada de novo, com o `privacy-guardian`.
+
 ## Como avisar as escolas
 
 *A definir antes do piloto:* canal (e-mail para a coordenação, aviso na tela), texto padrão
