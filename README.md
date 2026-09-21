@@ -1,7 +1,7 @@
-# Educa.ia
+# Turmma
 
 Este repositório contém o código e, junto dele, o **contexto, as regras e o processo** que
-governam a construção do Educa.ia. A ideia é simples: nada é implementado antes de existir
+governam a construção do Turmma. A ideia é simples: nada é implementado antes de existir
 um documento que diga o que fazer, outro que diga como fazer, e uma lista de tarefas
 aprovada. É o que se chama de desenvolvimento guiado por especificação.
 
@@ -9,6 +9,11 @@ O motivo de fazer assim, neste projeto especificamente: estamos lidando com dado
 de idade, com exigência legal de supervisão humana sobre IA, e com um comprador que cancela
 o contrato se algo vazar. Improvisar arquitetura no meio da implementação sai caro aqui de
 um jeito que não sai em um produto comum.
+
+> **O produto se chama Turmma** (D54). O repositório, os pacotes, o banco, o compose e os
+> comandos continuam `educa`: a renomeação técnica é trabalho próprio e não vale o risco no
+> meio do F1. Quando você ler "Educa.ia" em nome de pasta, de imagem ou de projeto compose, é
+> isso — o nome do produto, em texto, é Turmma.
 
 ---
 
@@ -79,11 +84,15 @@ sentido.
    com um dia real de uma professora. Se você só puder ler um arquivo, leia este.
 2. **`docs/fluxos.md`** — os sete caminhos que o sistema precisa fazer funcionar, narrados
    como acontecem na escola.
-3. **`CLAUDE.md`** — as decisões já tomadas, com o motivo de cada uma. É o que evita
-   rediscutir a mesma coisa toda semana.
+3. **`CLAUDE.md`** — o índice das decisões e o que está em aberto; o texto completo de cada
+   decisão está em `docs/decisoes.md`. É o que evita rediscutir a mesma coisa toda semana.
 4. **`docs/lgpd.md`** — o documento mais importante do repositório. Leia antes de tocar em
    qualquer campo que guarde dado de pessoa.
-5. **`ROADMAP.md`** — a ordem de construção e o que significa "pronto" em cada etapa.
+5. **`docs/regulacao.md`** — o que a lei exige, virado em requisito: diretrizes do CNE, ECA
+   Digital, Decreto 12.880/2026, direito autoral do material, risco à vida.
+6. **`docs/conformidade-mec.md`** — o que a escola pergunta na hora de comprar, e o que
+   entregamos por escrito. Leia antes de PRD de governança, tutor, correção ou venda.
+7. **`ROADMAP.md`** — a ordem de construção e o que significa "pronto" em cada etapa.
 
 Os demais documentos são de consulta, não de leitura corrida. Para saber onde o projeto
 está agora, rode `/status`. Ao abrir uma sessão do Claude Code, um hook já mostra a
@@ -101,7 +110,8 @@ funcionalidade em andamento e o próximo passo.
 | `docs/glossario.md` | O vocabulário do domínio escolar que usamos no código |
 | `docs/interface.md` | As telas por papel, o chat que abre ferramenta, o feed de agentes |
 | `docs/negocio.md` | Mercado, preço, concorrência e como a venda acontece |
-| `CLAUDE.md` | Decisões tomadas, decisões em aberto, conflitos já resolvidos |
+| `CLAUDE.md` | Índice das decisões, decisões em aberto, conflitos já resolvidos |
+| `docs/decisoes.md` | O texto completo de cada decisão, com o motivo e as revisões |
 | `TODO.md` | O que trava o projeto e não se resolve programando |
 
 ### Restrições
@@ -109,6 +119,7 @@ funcionalidade em andamento e o próximo passo.
 |---|---|
 | `docs/lgpd.md` | Como tratamos dado pessoal e por onde SaaS de educação vaza |
 | `docs/regulacao.md` | O que o CNE e a lei exigem, traduzido em requisito |
+| `docs/conformidade-mec.md` | O checklist de compra do MEC virado em requisito, o dossiê que a escola exige e a avaliação de impacto algorítmico |
 | `docs/infra.md` | Modelo de carga, topologia, limites, disponibilidade e operação |
 | `docs/runbook.md` | O que fazer quando cada alerta dispara |
 | `.claude/rules/` | As regras que toda implementação respeita, com o porquê de cada uma |
@@ -232,8 +243,12 @@ Suponha que a próxima funcionalidade seja `onboarding-por-convite`.
 
 ## Regras de convivência com este repositório
 
-- **Decisão nova vai para o `CLAUDE.md`**, com o motivo, via `/registrar-decisao`. Decisão
-  que não está escrita será rediscutida daqui a duas semanas.
+- **Decisão nova vai para `docs/decisoes.md`**, com o motivo, e uma linha no índice do
+  `CLAUDE.md`, via `/registrar-decisao`. Decisão que não está escrita será rediscutida daqui a
+  duas semanas.
+- **Requisito que vem de lei cita a fonte.** `docs/regulacao.md` separa o que foi lido no
+  texto oficial do que veio de imprensa, e marca o que está "a confirmar". Requisito legal sem
+  fonte é achismo com cara de obrigação.
 - **Campo pessoal novo vai para a tabela de `docs/lgpd.md`** na mesma tarefa em que é criado.
 - **Termo novo vai para o glossário.** Metade dos bugs de domínio vem de duas pessoas
   chamando a mesma coisa de nomes diferentes.
@@ -243,8 +258,19 @@ Suponha que a próxima funcionalidade seja `onboarding-por-convite`.
 
 ## Começando agora
 
-Rode `/criar-prd fundacao-tecnica`. É a primeira do roadmap e não depende de nada.
+O F0 está concluído e o F1 está em andamento: rode `/status` para ver onde parou.
 
 E não pule a `F3 — lgpd-e-titular` para o fim. Ela parece burocracia e é o que protege o
 negócio: exportação e eliminação por titular construídas depois viram retrabalho em todas
 as tabelas do sistema.
+
+Três coisas que valem saber antes de escrever a primeira linha de qualquer funcionalidade:
+
+**Nota nunca existe sem autor humano**, e em redação e discursiva a IA não chega nem a propor:
+não corrige, não avalia, não pré-corrige (D55, regra 70).
+
+**Cada funcionalidade de alto risco nasce com a avaliação de impacto escrita** — Tutor,
+correção, diagnóstico, sinais, adaptação (D60, `docs/conformidade-mec.md` seção 7).
+
+**A escola compra por documento, não por demonstração.** O que ela exige está listado em
+`docs/conformidade-mec.md` seção 5, e boa parte disso é a tela de governança exportada.

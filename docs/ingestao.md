@@ -27,7 +27,15 @@ Fonte (scraper por adaptador | upload PDF/apostila)
    registrada.
 3. **Reprocessamento.** Quando a fonte atualiza, reindexa sem perder o histórico.
 4. **Isolamento.** Conteúdo ingerido pertence ao tenant da escola. Nunca cruza para outra
-   escola, nunca vira banco nosso. Ver `docs/regulacao.md` seção 4.
+   escola, nunca vira banco nosso. Ver `docs/regulacao.md` seção 5.
+4b. **Propriedade e saída** (D63). O material da escola e o que o professor produz continuam
+    deles: não reaproveitamos entre escolas, não treinamos modelo e não adquirimos licença
+    sobre a produção docente. A coordenação exporta material, artefato e histórico em formato
+    aberto a qualquer momento, sem depender de nós, e integralmente no fim do contrato. O
+    documento do MEC lista "perda da propriedade intelectual da produção docente" e
+    dependência de fornecedor como riscos de contratação, e pergunta em checklist se o
+    recurso permite baixar dado e histórico em formato aberto
+    (`docs/conformidade-mec.md` seção 2).
 4a. **Licença antes de processar** (D5 revista). A fonte declara a titularidade do material
     (escola, professor, licenciado, domínio público, ENEM). Material licenciado exige o
     documento de licença registrado. Sem autorização da escola e, quando couber, sem

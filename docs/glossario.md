@@ -135,8 +135,9 @@ avaliação.
 **Resposta** — O que o aluno respondeu em um item.
 
 **Correção** — A pontuação de uma resposta, com feedback. Pode vir de correção automática,
-de IA ou do professor. **É aqui que a IA escreve.** Em discursiva e redação, a IA escreve só
-a devolutiva, sem pontuação (D46).
+de IA ou do professor. **É aqui que a IA escreve — e só em item objetivo.** Em discursiva e
+redação a correção é sempre do professor: a IA não corrige, não pontua e não escreve
+devolutiva sobre o texto do aluno, nem como rascunho (D55).
 
 **Diagnóstico** — O resultado formativo por habilidade de uma atividade ou avaliação.
 Existe antes da nota oficial e não vai para o boletim (D46).
@@ -156,16 +157,25 @@ depender de reconhecimento de nome.
 
 **Agente** — Um especialista de IA com thread própria, nome, escopo e nível de autonomia.
 Prepara o trabalho quando o evento acontece e avisa; o que vale passa por aprovação ou
-supervisão (D44). Não é um botão nem um prompt salvo. O nome é a função: Corretor,
-Planejador, Rotina, Monitor de turma, Tutor, Adaptador, Analista da coordenação e, na fase
-posterior, Mensageiro da família.
+supervisão (D44). Não é um botão nem um prompt salvo. O nome é a função, e são seis (D32
+revista): Assistente de ensino, Tutor, Corretor, Planejador, Adaptador, Analista de desempenho
+escolar e, na fase posterior, Mensageiro da família.
 
-**Ferramenta** — Um fluxo guiado que produz um artefato: prova, atividade, plano de aula,
-adaptação, simulado, redação. Funciona como formulário ou como cartão dentro do chat, com
+**Assistente de ensino** — A identidade do chat da Home do professor e a cara das ferramentas.
+Não é "Monitor": essa palavra não nomeia agente nenhum.
+
+**Planejador** — O agente que abre o dia e a semana do professor com o que já existe, sem gerar
+conteúdo, e que gera plano de aula só sob pedido. Absorveu o antigo Rotina.
+
+**Analista de desempenho escolar** — O agente da coordenação: resumo semanal e alertas em
+agregado, como hipótese. Antes, "Analista da coordenação".
+
+**Ferramenta** — Um fluxo guiado que produz um artefato: prova, atividade, material didático,
+apresentação, plano de aula, adaptação, simulado, rubrica de redação. Funciona como formulário ou como cartão dentro do chat, com
 o mesmo motor nos dois.
 
 **Artefato** — O que uma ferramenta produz e salva na biblioteca, ligado à turma e ao
-calendário, citando material e página.
+calendário, citando material e página. Exporta em PDF, PowerPoint e Excel (D67).
 
 **Feed de agentes** — A seção "Seu time" do professor, onde cada agente é uma thread com
 não-lidos. Nunca aparece vazia para professor com turma.
@@ -181,15 +191,25 @@ complexo ou visão.
 **Orçamento de IA** — O limite de consumo por aluno, turma e escola, com aviso antes do
 corte. Configuração por escola e por rede, nunca visível ao aluno como crédito.
 
-**Adaptação necessária** — O que precisa mudar numa prova ou atividade para um aluno: fonte
-ampliada, tempo extra, enunciado simplificado. Registrada pela coordenação. Nunca o
-diagnóstico.
+**Adaptação necessária** — O que precisa mudar numa prova ou atividade para um aluno:
+linguagem direta, resposta escrita no lugar da oral, fonte ampliada, tempo extra, enunciado
+simplificado. Registrada pela coordenação, sempre como tipo de adaptação. Nunca o diagnóstico,
+nunca texto livre sobre o aluno (D35, D67).
 
 **Pacote do tutor** — As trocas com o tutor disponíveis para uma turma no mês, somadas entre
 os alunos, com freio diário por aluno.
 
 **Tutor** — O agente que conversa com o aluno. Conduz por perguntas e não entrega a
-resposta.
+resposta. É o mesmo agente que avisa o professor, na thread dele, o que viu no uso da turma.
+
+**Memória do Tutor** — O que o Tutor sabe do aluno ao longo do ano: tudo que ele fez no sistema
+— atividades, trabalhos, avaliações, práticas e sessões —, com resultado por habilidade,
+evolução e o que o professor pediu para reforçar. É registro do trabalho, que o aluno vê e
+contesta. Nunca texto sobre o jeito do aluno (D66).
+
+**Fontes aprovadas** — A lista de sites em que o Tutor pode pesquisar para o aluno quando a
+escola liberou e o professor ligou a busca para a turma. Lista padrão nossa, por faixa etária,
+que a escola ajusta. Web aberta não entra (D68).
 
 **Política de tutor** — A regra da turma sobre o que o tutor pode responder: bloqueado,
 socrático ou livre. Definida pelo professor, aplicada no servidor.
@@ -200,10 +220,19 @@ socrático ou livre. Definida pelo professor, aplicada no servidor.
 Só existe na turma em que a escola ligou o acesso fora da sala. Desligado por padrão.
 
 **Sinal** — O que o professor vê do uso do tutor: quem travou, quem pediu resposta pronta,
-qual dúvida se repetiu. É uso e dificuldade, não comportamento.
+qual dúvida se repetiu, quem concluiu o que foi atribuído. É uso e dificuldade, não
+comportamento: tempo ocioso e navegação do aluno não são sinal (D69).
+
+**Saída da aba** — Durante uma avaliação online, o fato de a aba da prova ter perdido o foco,
+contado por avaliação e mostrado só ao professor. Não diz para onde o aluno foi, não tem
+consequência automática, não existe fora de avaliação e não vira histórico do aluno (D70).
+
+**Minhas turmas** — A aba de "Meu painel" em que o professor vê desempenho, dificuldades,
+evolução e alunos que precisam de atenção nas turmas dele. Nasce no F6 (D69).
 
 **Indicador do professor** — Medida de uso e do desempenho das turmas de um professor.
-Visível primeiro a ele; a coordenação vê agregado e abre o nominal com auditoria. Nunca é
+Visível primeiro a ele; a coordenação vê agregado, só quando há dois ou mais professores no
+recorte, e abre o nominal com auditoria. Nunca é
 nota do professor nem base de decisão sobre ele (D45).
 
 **Pacote** — A faixa contratada pela escola: base (assistente do professor, organização,
@@ -221,9 +250,54 @@ travado. É o que alimenta notificação e painel.
 **Auditoria** — O registro consultável de quem fez o quê: leitura de dado de aluno,
 exportação, alteração de nota, aprovação de saída de IA. Diferente de log.
 
-**Operador Educa.ia** — A pessoa da nossa equipe que cria rede, escola e o primeiro coordenador por
+**Operador Turmma** — A pessoa da nossa equipe que cria rede, escola e o primeiro coordenador por
 comando `ops:*`, sempre com o próprio identificador gravado na auditoria. Não lê dado de pessoa da
 escola nem entra como usuário dela (D2). Não confundir com "operador" da LGPD, que é a empresa.
 
 **Titular** — A pessoa a quem o dado pessoal se refere, no vocabulário da LGPD. Quase sempre
 um menor de idade, aqui.
+
+---
+
+## Conformidade
+
+**ECA Digital** — A Lei 15.211/2025, que protege criança e adolescente em ambiente digital,
+em vigor desde 17/03/2026, regulamentada pelo Decreto 12.880/2026. Recai sobre nós
+diretamente, como fornecedor, independente de a escola ser a controladora do dado.
+
+**RIPD** — Relatório de Impacto à Proteção de Dados Pessoais, da LGPD, exigido também pelo
+art. 16 do ECA Digital. Descreve o tratamento e avalia o risco.
+
+**AIA** — Avaliação de Impacto Algorítmico. Mais ampla que o RIPD: além do risco de
+tratamento de dado, olha viés, equidade e impacto pedagógico da decisão automatizada. Seis
+etapas, uma por funcionalidade de alto risco (D60, `docs/conformidade-mec.md` seção 7).
+
+**Alto risco** — Na classificação do CNE, o uso de IA que interfere em avaliação, decisão
+acadêmica ou dado sensível. Aqui: correção de objetiva, diagnóstico por habilidade, sinais do
+tutor, alertas sobre aluno e adaptação. Exige validação humana qualificada e documentada.
+
+**Validação qualificada e documentada** — A exigência do CNE para correção com apoio de IA: o
+professor precisa ver o que está validando, e o sistema precisa guardar o que mostrou, o que
+ele abriu e quem confirmou (D56). Um clique em "aprovar" não satisfaz.
+
+**Dossiê de conformidade** — O conjunto de documentos que a escola exige do desenvolvedor:
+declaração de propósito e faixas etárias, funcionamento em linguagem simples, conformidade com
+LGPD e ECA Digital, RIPD, AIA, relatório de uso legível e material de comunicação com a
+comunidade (D61).
+
+**Child Rights by Design** — Marco da 5Rights Foundation (2023), com onze princípios, que o
+MEC adapta como checklist de contratação de tecnologia educacional
+(`docs/conformidade-mec.md` seção 4).
+
+**Descarregamento cognitivo** — O efeito de o aluno delegar o raciocínio à IA e não aprender.
+É o risco que o tutor socrático e a reflexão obrigatória existem para evitar, e que o MEC
+manda a escola prevenir.
+
+**Letramento em IA** — Aprender **sobre** IA, não só **com** IA: como funciona, quais os
+limites e riscos, como avaliar criticamente o que ela produz. Exigência curricular do CNE,
+articulada à Educação Digital e Midiática (Resolução CNE/CEB 2/2025) e atendida por nós em
+três pontos pequenos (D65).
+
+**Sandbox regulatório** — Ambiente controlado de testagem, iniciado por chamamento público,
+que o MEC recomenda às redes para experimentar IA com segurança jurídica. É o formato natural
+do nosso piloto na rede pública (`docs/conformidade-mec.md` seção 10).

@@ -15,6 +15,12 @@ gratuita entra no 1º semestre de 2027 usando o que já estiver pronto, antes do
 portão da primeira escola real (LGPD e infra) vale antes dela, não só no fim. Motivo:
 nenhuma escola usou o produto ainda, e construir as 17 fases antes de ver uso real é o
 maior risco de construir o que a escola não quer. Piloto gratuito não é vender pedaço.
+Revista em 19/09/2026: entra um **MVP de apresentação** logo depois do F1 (D71). O alvo
+continua sendo o sistema inteiro; o que muda é que, antes de completar cada fase, construímos
+uma fatia fina e real do fluxo de ponta a ponta, com dado sintético, para demonstrar. Motivo:
+é a própria razão desta decisão — o que convence é o fluxo completo —, e pela ordem antiga o
+fluxo completo só existiria no F15. MVP de apresentação não é MVP de venda: ninguém usa de
+verdade antes do F2, do F3 e do portão da primeira escola real.
 
 **D2 — O cliente é a instituição. Não existe cadastro público.**
 Sem self-service, sem plano avulso de professor. O dado limpo que faz os agentes
@@ -40,7 +46,7 @@ reivindicação aprovada resolve isso sem burocracia.
 **D5 — Sem integração com sistema de ensino. Pipeline único de ingestão.**
 O scraper do material que a escola já paga e o upload manual de PDF desembocam no mesmo
 caminho. Se uma fonte mudar de layout, a escola sobe a apostila e continua funcionando no
-mesmo dia. Condições legais da ingestão em `docs/regulacao.md` seção 4.
+mesmo dia. Condições legais da ingestão em `docs/regulacao.md` seção 5.
 Revista em 13/09/2026: só entra material cuja licença permita o uso: apostila e material
 próprios da escola, material do professor, livro licenciado para esse uso, domínio público
 e provas oficiais do ENEM. Buscamos parceria com editora e sistema de ensino. Apostila de
@@ -96,6 +102,9 @@ Corretor, Planejador, Rotina, Monitor de turma, Tutor, Mensageiro da família. O
 Excalidraw (Pipo, Waz, Maky) saem. A coordenação precisa explicar em reunião de pais o que
 cada IA faz, e "o Corretor" se explica sozinho, "o Pipo" não. Numa escola, um nome sóbrio
 também passa mais confiança.
+Revista em 19/09/2026: a regra do nome de função continua; a lista de nomes passa a ser a da
+D32 revista (Assistente de ensino, Tutor, Corretor, Planejador, Adaptador e Analista de
+desempenho escolar).
 
 **D18 — Chat e ferramentas são o mesmo motor. O chat abre a ferramenta dentro da conversa.**
 O professor pode escolher a ferramenta no próprio chat. Se ele não escolheu e o pedido
@@ -139,6 +148,18 @@ terceira pessoa no código.
 Revista em 15/09/2026: o portão continua no processo, mas a autorrevisão do
 `/executar-review` foi substituída pelo agente `revisor-geral`, e código só entra por tarefa ou
 por `/corrigir` (D53).
+Revista em 19/09/2026: a terceira pessoa entrou no código, que era a condição para reabrir, e
+o Joaquim mandou desconsiderar a regra do commit direto. Quando o F1 fechar, o `main` deixa de
+receber trabalho direto e nascem os branches **`release`** e **`develop`**; todo trabalho,
+código e documentação, passa a ser feito em branch próprio. O ponto de partida é um só: o
+branch de documentação entra no `main` quando o Joaquim avisar, o `main` vai para o `release`,
+e o `release` para o `develop`. Motivo: com três pessoas, commit direto no `main` arrisca
+conflito e código sem um segundo par de olhos, e o MVP de apresentação (D71) pede duas frentes
+andando ao mesmo tempo. Os vetos dos revisores e o portão local continuam valendo dentro do
+branch. **A definir pelo Joaquim:** o caminho de volta (branch → `develop` → `release` →
+`main`), quem faz cada merge e com que revisão, em que branches a esteira roda (hoje só no push
+do `main`), de qual branch sai o staging (a D31 dizia `main`), e o ajuste do hook de commit, do
+`/executar-task`, do `/corrigir` e da regra 40, que ainda descrevem commit direto no `main`.
 
 **D24 — Na primeira semana, a coordenação precisa ver quatro coisas funcionando.**
 A escola inteira cadastrada sem trabalho manual, o painel de governança de IA com 100% das
@@ -204,6 +225,23 @@ pedido, porque plano que ninguém pediu é token jogado fora. O Analista existe 
 compra é a coordenação, e ela precisa do próprio "funcionário". O Adaptador existe porque
 inclusão é o tema mais anunciado do mercado e é trabalho que o professor raramente tem tempo
 de fazer. Nível e gatilho de cada um em `docs/agentes.md`.
+Revista em 19/09/2026 *(a ratificar: Joaquim)*: os agentes passam a ser **seis**, um por
+necessidade de cada papel — **Assistente de ensino, Tutor, Corretor, Planejador, Adaptador e
+Analista de desempenho escolar** —, mais o Mensageiro da família na fase posterior. O que
+mudou: (1) o chat do professor ganha identidade de agente, o **Assistente de ensino**, que é a
+cara das ferramentas (D18); (2) o **Monitor de turma se dissolve**: o que o aluno mostra no
+uso do Tutor — travou, errou muito, pediu resposta pronta, principal dificuldade — chega ao
+professor pela thread do próprio **Tutor**, as entregas pendentes vão para o Planejador, e a
+queda por habilidade aparece em "Minhas turmas" (D69); (3) o **Planejador absorve o Rotina**,
+mantendo os dois gatilhos: abre o dia e a semana com o que já existe, sem gerar conteúdo, e
+gera plano só sob pedido; (4) o Analista da coordenação passa a se chamar **Analista de
+desempenho escolar**. Motivo: a estrutura fechada pelo Gabriel com o time em 19/09/2026 pede
+uma voz por assunto para cada papel; "Monitor" servia a duas coisas diferentes (o assistente
+do professor e o agente que olhava a turma); e Rotina e Planejador eram, para o professor, a
+mesma conversa sobre o que vem pela frente. O custo continua protegido: abrir o dia não chama
+modelo para gerar conteúdo, e plano que ninguém pediu continua não sendo gerado. O aluno segue
+nomeado só para o professor da turma (D34) e a notificação só sai no horário útil da escola
+(D59).
 
 **D33 — Nota de objetiva é aprovada em lote, com os casos fora da curva abertos antes.**
 Aprovar aluno por aluno vira clique reflexo e esvazia a supervisão que a lei exige. O lote
@@ -299,6 +337,14 @@ vigiado, ele não usa, e "se o professor não gostar, a escola não renova". Mé
 perfil profissional atrai o art. 20 da LGPD, a convenção coletiva na particular e o
 estatuto do servidor na pública. Os indicadores do professor entram no mapa de dados de
 `docs/lgpd.md` antes de qualquer migration.
+Revista em 19/09/2026 *(a ratificar: Joaquim; indicadores com advogado, `TODO.md`)*: o
+indicador do professor deriva do desempenho das turmas dele — dificuldade, acertos e evolução
+por habilidade —, continua em espelho e continua sem alimentar decisão sobre ele. Entra a
+**regra do grupo mínimo**: a coordenação só vê agregado de um recorte (série × disciplina)
+quando há **dois ou mais professores** nele. Com um só, o agregado é nominal na prática, e vale
+a regra do nominal: o professor vê primeiro, e a coordenação abre com registro em auditoria.
+Motivo: em escola de 300 alunos, "2º ano × Química" é uma professora, e chamar isso de
+agregado seria cumprir a D45 só no papel.
 
 **D46 — Primeiro o diagnóstico formativo, depois a nota oficial.**
 No início a IA entrega devolutiva e diagnóstico por habilidade em atividade e avaliação,
@@ -382,3 +428,339 @@ execuções de revisor, com `tenancy-guardian` e `infra-guardian` aprovando as q
 rodava três vezes na mesma árvore; três commits de correção entraram sem revisor; e a Tech Spec do F1
 saiu com 5.393 palavras para um teto de 2.000. Os vetos, o commit direto no `main` (D23) e a esteira
 como portão (D31) continuam.
+
+---
+
+> **D54 a D65 — propostas de 19/09/2026, a ratificar.** Saíram da leitura das fontes
+> primárias de regulação e dos dois documentos do MEC (`docs/regulacao.md`,
+> `docs/conformidade-mec.md`), no branch `docs/direcionamento-regulatorio`. Estão escritas no
+> formato de decisão para poderem ser implementadas sem reinterpretação, mas **nenhuma delas
+> foi ratificada pelo Joaquim**. Cada uma diz quem precisa concordar. Ratificar é apagar esta
+> nota da decisão; recusar é apagar a decisão e registrar o motivo.
+>
+> Em 19/09/2026 o Gabriel ratificou todas as que dependiam dele: a D54 está fechada, e nas
+> demais falta o Joaquim, como cada uma indica.
+
+**D54 — O nome do produto é Turmma.** *(ratificada pelo Gabriel em 19/09/2026)*
+A marca está pronta: manual, logo, paleta (caramelo #E8732E, azul-noite #16233E, creme
+#FFF3E2, papel #FDFBF7) e landing page em `turmma.com`. Documentação, material de venda e
+interface passam a dizer Turmma. O repositório, os pacotes, o banco, o compose e os comandos
+continuam `educa` até uma renomeação técnica própria, que não vale o risco agora: renomear
+pacote e projeto compose no meio do F1 custa mais do que ganha. Motivo: "nome provisório" nos
+docs mantinha viva uma discussão já resolvida fora do repositório, e o material de venda e a
+primeira tela real precisam de um nome. INPI e registro de domínio continuam pendentes
+(`TODO.md`), e é o único risco que sobra: se o INPI negar, a troca é de marca, não de código.
+
+**D55 — Em discursiva e redação, a IA não corrige, não avalia, não dá nota, não atribui
+conceito nem mérito, e não faz pré-correção nem sugere nota ao professor.** *(ratificada pelo
+Gabriel em 19/09/2026; a ratificar: Joaquim; depende do parecer sobre o texto oficial)*
+Revisão da D46, que dizia "sem nota proposta, só devolutiva". A cobertura do ato do CNE de
+01/09/2026 é explícita: a IA não pode ser usada para corrigir, avaliar, dar nota, conceito ou
+mérito em redação e questão dissertativa, **nem para pré-corrigir, nem para apresentar ao
+professor uma sugestão de nota**. Isso alcança a "devolutiva rascunho de discursiva" do F6 e
+a ferramenta de redação por competência do F7 como estavam desenhadas. O que continua
+permitido: gerar rubrica e critérios antes da aplicação (são sobre a atividade, não sobre o
+texto do aluno), organizar o lote, conferir entrega e anonimizar para correção cega.
+Consequência técnica: nenhum campo, nem interno, nem rascunho, nem log, guarda nota, conceito
+ou pontuação sugerida pela IA para discursiva ou redação. Motivo: é a proibição mais dura do
+ato e a mais fácil de violar sem perceber, porque "só um rascunho para o professor" é
+exatamente o que o texto chama de pré-correção. A devolutiva formativa em discursiva volta a
+ser discutida quando o texto oficial for publicado e lido com advogado (`TODO.md`); até lá o
+produto não a entrega. Custo aceito: perdemos uma funcionalidade que a Teachy e a Geekie
+anunciam — e ganhamos o argumento de que elas estão do lado errado da norma.
+
+**D56 — Na objetiva, a validação humana é registrada: o sistema guarda o que foi mostrado, o
+que foi aberto e quem confirmou.** *(a ratificar: Joaquim)*
+Complementa a D33, que fica de pé. O ato do CNE classifica correção de objetiva como alto
+risco e exige validação humana "efetiva, prévia, qualificada e documentada", dizendo que o
+professor não pode apenas clicar em "aprovar". Então a aprovação em lote passa a gravar o
+registro da validação: a distribuição apresentada, quais casos destacados foram abertos
+(discursiva com baixa confiança, nota distante do histórico do aluno, prova em branco), quem
+confirmou e quando. O botão do lote continua travado até os destacados serem abertos. Motivo:
+"documentada" não é satisfeito por um booleano `aprovado`; a escola precisa poder mostrar à
+fiscalização *como* o humano validou. E é o mesmo registro que alimenta a governança do F12.
+
+**D57 — Usos vedados, escritos e testados: sem inferência de emoção, sem perfil comportamental
+ou psicológico, sem pontuação social, sem biometria, e nenhum dado educacional para
+publicidade ou fim comercial.** *(a ratificar: Joaquim)*
+Estava implícito na regra 70, item 7, como ausência de funcionalidade. Passa a ser proibição
+escrita, com teste, porque agora tem três fundamentos independentes: o ato do CNE classifica
+essas práticas como risco excessivo ou incompatível; o ECA Digital veda perfilamento e análise
+emocional para publicidade (art. 22) e criação de perfil comportamental de menor (art. 26); e
+o Decreto 12.880 veda inferência emocional como prática manipulativa (art. 10, II). O sinal de
+aluno em risco continua existindo, derivado de fato declarado — entrega, desempenho, o que o
+aluno escreveu de forma explícita —, nunca de leitura de estado emocional, e sempre com
+explicação e caminho de contestação (D60). Motivo: é a fronteira que, atravessada uma vez,
+tira o produto da categoria "supervisão" e o põe na de "vigilância", que é o que a família
+recusa e a ANPD multa.
+
+**D58 — Os agentes continuam agentes: identidade de função, sem se passar por pessoa.** *(ratificada
+pelo Gabriel em 19/09/2026; a ratificar: Joaquim)*
+O agente mantém nome, avatar, thread e jeito próprio — o time de IA é o produto (D32, D44), e
+o nome é o da função (D17). A transparência que o art. 11, I, do Decreto 12.880/2026 exige
+("caráter sintético e automatizado" da interação) é cumprida pelo que o produto já é de ponta
+a ponta: a escola contrata um time de IA, a família ouve isso na assembleia, a área do aluno
+se chama "Seu time", o agente se apresenta pela função e **toda saída de IA é rotulada como
+tal**, com a fonte. Nenhum aluno tem como achar que o Tutor é a professora dele.
+
+O que fica proibido é estreito e não custa produto: dizer que é humano quando o aluno
+pergunta; usar nome de pessoa que sugira uma pessoa real; simular vínculo afetivo ou
+dependência ("senti sua falta", "não me deixe agora"); e qualquer manipulação de
+comportamento, que é o inciso II do mesmo artigo. Perguntado sobre si, o agente explica o que
+é, como funciona e que pode errar (D65).
+
+Motivo: o decreto pede que a criança não seja **enganada**, não que o produto seja sem graça.
+Persona que esconde ser IA é o problema que a norma mira — produto de companhia artificial,
+não tutor escolar. Agente que diz o que é e o que faz é a solução, e é justamente o que torna
+a supervisão explicável em reunião de pais: "o Corretor corrigiu, a professora aprovou". A
+versão anterior desta decisão, de 19/09/2026, exigia um aviso não desligável no início de cada
+sessão e proibia persona; foi revertida no mesmo dia, a pedido do Gabriel, porque descaracteriza
+o conceito central do produto e não decorre do texto do decreto. Nada impede que a escola, no
+material dela, explique que são agentes de IA — isso já está no dossiê (D61).
+
+**D59 — Nada no produto induz uso excessivo, e nenhum caminho de saída é mais difícil que o de
+entrada.** *(ratificada pelo Gabriel em 19/09/2026; a ratificar: Joaquim)*
+Do art. 9º do Decreto 12.880 (uso excessivo, problemático ou compulsivo) e do art. 10 (práticas
+manipulativas), com o art. 8º, IV, e o art. 17, § 4º, II, do ECA Digital. Proibido: recompensa
+por tempo de uso, sequência de dias, conteúdo que se inicia sozinho, rolagem infinita,
+notificação fora do horário útil da escola, e ocultar ponto de parada. Obrigatório: o teto
+diário do tutor (D38) é mostrado ao aluno como salvaguarda, não como punição; e revogar
+consentimento, sair, ou mudar configuração de privacidade tem caminho tão curto quanto o de
+aceitar. Motivo: o caminho fácil de engajamento em produto para adolescente é exatamente o que
+a lei chama de manipulativo, e o princípio 8 do MEC manda a escola **rejeitar** plataforma com
+design persuasivo. Isso vira item de checklist do `frontend-reviewer`, não recomendação.
+
+**D60 — Avaliação de Impacto Algorítmico por funcionalidade de alto risco, no roteiro de seis
+etapas do MEC, antes de a funcionalidade existir.** *(a ratificar: Joaquim)*
+Alto risco aqui é: Tutor, correção de objetiva, diagnóstico por habilidade, sinais do tutor e
+alertas sobre aluno, e adaptação por necessidade específica. Cada um tem uma AIA escrita,
+versionada no repositório, com as seis etapas do Referencial do MEC: justificação e escopo
+(inclusive o escopo negativo, o que a ferramenta não deve fazer), análise dos dados e do modelo,
+identificação e avaliação de riscos, estratégias de mitigação, validação e auditoria da equidade,
+e monitoramento contínuo com procedimento de suspensão. O RIPD do `TODO.md` continua, e a AIA é
+a camada que o RIPD não cobre: viés, equidade e impacto pedagógico. A AIA é revista a cada troca
+de modelo ou mudança relevante de prompt. Motivo: o ECA Digital já obriga gerenciamento de risco
+e relatório de impacto (art. 8º, I, e art. 16), a AIA é o formato que o MEC espera ver, e é
+documento que a escola vai pedir (`docs/conformidade-mec.md` seção 5). Fazer depois é reescrever
+o PRD com outro nome.
+Revista em 19/09/2026: as AIAs ficam versionadas em `docs/aia/`, um arquivo por avaliação. O
+Joaquim escreve o rascunho da etapa 1 (justificação e escopo, com o escopo negativo) e o
+Gabriel revisa. A lista acompanha a D32 revista e está em `docs/aia/README.md`.
+
+**D61 — O dossiê de conformidade é entregável de produto, não material de marketing.** *(ratificada
+pelo Gabriel em 19/09/2026; a ratificar: Joaquim)*
+A escola compra por checklist (os quatro critérios do MEC) e exige documento do desenvolvedor.
+Entregamos, versionado no repositório e gerado por escola: declaração de propósito com as faixas
+etárias para as quais o produto foi projetado; documentação do funcionamento em linguagem
+simples, com fluxograma do algoritmo, do uso de dados e do modelo pedagógico; relatório de
+conformidade com LGPD e ECA Digital, artigo por artigo; RIPD e AIA; relatório de uso legível por
+não especialista (que é a tela de governança do F12 exportada); e material de apoio para a escola
+comunicar a adoção a professores e famílias. Junto entram duas peças de produto: **canal de
+notificação de violação** acessível a aluno, professor, coordenação e família, com retirada de
+conteúdo e direito de recurso informando se a análise foi humana ou automatizada (ECA arts. 28 a
+30, Decreto art. 41); e o material da **consulta prévia à comunidade escolar**, que o MEC pede
+pelo princípio da gestão democrática. Motivo: 78% das escolas não têm política de IA e agora têm
+prazo para se adequar; quem entrega o documento pronto entra na reunião como parceiro. E é o
+mesmo trabalho da tela que já íamos construir.
+
+**D62 — Conversa de aluno só em provedor de modelo com processamento no Brasil.** *(a ratificar:
+Joaquim, junto com a D37)*
+Roteamento por soberania, não por custo: o que carrega conversa de aluno — Tutor, sinais,
+qualquer prompt com texto escrito por menor de idade — vai para provedor com processamento em
+território nacional, escrito em contrato. Tarefa sem dado pessoal, como gerar questão a partir de
+trecho de material ou resumir conteúdo público, pode usar provedor fora, com as cláusulas-padrão
+da ANPD e informação à escola. Na prática isso favorece a Maritaca (Sabiá) como principal do
+Tutor e deixa o Gemini como reserva e como modelo de tarefa sem dado pessoal, e passa a ser
+critério da avaliação de modelos (D37) com peso maior que preço. Motivo: o capítulo de soberania
+do Referencial do MEC trata dado educacional de menor fora do país como risco de Estado, citando
+o Cloud Act, e a rede pública vai perguntar isso na primeira reunião. É também a única vantagem
+competitiva que nenhum concorrente estrangeiro pode copiar. Custo aceito: se o modelo brasileiro
+for pior no tutor, perdemos qualidade onde ela mais aparece — por isso a avaliação da D37 decide
+com amostra real, e o resultado pode derrubar esta decisão.
+
+**D63 — O que a escola e o professor produzem é deles, e sai em formato aberto a qualquer
+momento.** *(ratificada pelo Gabriel em 19/09/2026; a ratificar: Joaquim)*
+Material ingerido, artefato gerado, histórico de uso e dado de desempenho são exportáveis em
+formato aberto pela própria coordenação, a qualquer momento, sem pedir a nós, e integralmente no
+fim do contrato. Nada do que o professor produz vira nosso: sem reaproveitamento entre escolas,
+sem treinamento de modelo, sem licença nossa sobre a produção docente. Motivo: o documento da SEB
+lista "perda da propriedade intelectual da produção docente" e dependência de fornecedor como
+riscos de contratação, e pergunta em checklist se o recurso permite baixar dado e histórico em
+formato aberto. Era a pergunta que respondíamos pior. Além disso, exportação fácil é o que torna
+o piloto reversível, e reversibilidade é requisito do princípio 10 do MEC.
+
+**D64 — Recusar a ferramenta não gera indicador: não existe medição nominal de adoção por
+professor.** *(ratificada pelo Gabriel em 19/09/2026; a ratificar: Joaquim)*
+Afina a D45. O MEC exige que a rede garanta que nenhum professor seja penalizado por optar por
+não usar uma ferramenta, e que a autonomia didático-pedagógica seja preservada. Então não existe,
+em nenhuma tela: ranking de uso por professor, alerta de "professor que não usa", lista nominal de
+adoção, nem meta de uso por professor. Adoção é agregada por série e disciplina, e é métrica
+nossa de produto, não instrumento de cobrança da coordenação. O painel do professor continua
+sendo dele primeiro (D45). Motivo: "se o professor não gostar, a escola não renova" é a regra que
+orienta prioridade, e medir adoção nominal é o jeito mais rápido de transformar o produto em
+instrumento de cobrança — além de atrair art. 20 da LGPD, convenção coletiva e estatuto do
+servidor.
+
+**D65 — Letramento em IA entra por três portas pequenas, e não vira fase de roadmap.** *(ratificada
+pelo Gabriel em 19/09/2026; a ratificar: Joaquim)*
+As diretrizes do CNE exigem ensino sobre IA progressivo e transversal, e o MEC exige que a
+adoção de recurso com IA venha acompanhada de ensino crítico sobre a tecnologia. Não vendemos
+currículo. O que entra: (1) o Tutor, perguntado sobre si, explica o que é, como funciona, o que
+não sabe e que pode errar, em linguagem da faixa etária — que é a transparência do art. 11, I, do
+Decreto 12.880 sendo útil; (2) o Planejador gera, sob pedido do professor, atividade alinhada às
+12 aprendizagens do documento da SEB e às habilidades de Computação da BNCC, como qualquer outro
+conteúdo; (3) o material de comunicação e formação do dossiê (D61) cobre o lado dos adultos.
+Motivo: é exigência da norma que atendemos com três itens pequenos, e transformá-la em módulo de
+currículo seria escopo novo sem comprador. Se uma rede pedir currículo de IA, isso é conversa de
+produto, não de conformidade.
+
+---
+
+> **D66 a D70 — propostas de 19/09/2026, a ratificar.** Saíram da estrutura de agentes por
+> papel que o Gabriel fechou com o time (aluno, professor, coordenação), conferida contra as
+> decisões e as regras, no branch `docs/estrutura-de-agentes`, empilhado sobre o
+> `docs/direcionamento-regulatorio`. No mesmo passo foram revistas a D17, a D23, a D32, a D45
+> e a D60. O Gabriel decidiu; falta o Joaquim, como cada uma indica.
+
+**D66 — O Tutor tem memória de tudo que o aluno fez no sistema, feita do registro do trabalho
+e nunca de texto sobre a pessoa, e recebe contexto estruturado do professor.** *(a ratificar:
+Joaquim)*
+O Tutor acompanha o aluno ao longo do ano, e a memória é **obrigatória**. Ela cobre **toda a
+trajetória do aluno no sistema** — todas as atividades, trabalhos, avaliações, práticas e
+sessões com o Tutor, com o que foi feito, o resultado por habilidade e a evolução no tempo —, e
+não um retrato pontual de onde ele travou na última vez. É feita do que o sistema registra
+sobre **o trabalho**: o que foi feito e quando, o resultado, a devolutiva que o professor
+escreveu, e o resumo de cada sessão com o Tutor em formato fixo (assunto, habilidade,
+exercício, onde travou, como terminou) — o mesmo registro e resumo que o professor já vê (D8).
+O que não existe é texto sobre **a pessoa**: jeito, humor, atenção, comportamento ou rótulo,
+escrito por modelo ou por gente (D57). A cada conversa o Tutor busca na memória o que importa
+para aquela dúvida; o histórico inteiro não vai no prompt, por minimização (regra 20, item 12)
+e por custo (D14). Em discursiva e redação a memória guarda que o trabalho foi feito e a
+devolutiva que o professor escreveu; o Tutor não avalia o texto (D55). A memória segue a
+retenção de cada dado que a compõe (`docs/lgpd.md`). O professor alimenta o Tutor
+de duas formas, as duas estruturadas: **por turma** (o que está sendo dado, a lista ativa, o
+foco da semana) e **por aluno** (as habilidades a reforçar, escolhidas da lista; sem texto
+livre sobre a pessoa). O Tutor também lê a **adaptação registrada** do aluno (D35) para ajustar
+a forma — frases mais curtas, passos menores, resposta compatível com leitor de tela —, nunca
+o que é cobrado. Motivo: tutor que não lembra onde o aluno travou ontem é um chat genérico, e é
+a memória que permite direcionar de forma individual; mas perfil acadêmico individual é alto
+risco no CNE, e texto livre sobre menor vira prontuário (regra 20, item 3). Registro do
+trabalho é auditável, explicável ao aluno e contestável; opinião sobre a pessoa não é. Consequências: entra na
+AIA do Tutor (D60), com explicação em linguagem comum e caminho de contestação; o que for campo
+novo entra no mapa de dados de `docs/lgpd.md` antes de qualquer migration; e a adaptação viaja
+para o modelo como tipo de adaptação, sem nome e sem motivo (regra 20, item 12), só em provedor
+com processamento no Brasil (D62).
+
+**D67 — O professor ganha as ferramentas de apresentação e de material didático, e o artefato
+sai no formato que ele pedir.** *(a ratificar: Joaquim)*
+Entram no F7: **apresentação** (roteiro e slides a partir do material, com a página citada) e
+**material didático** (resumo, texto de apoio, revisão), este fora da primeira entrega. O
+artefato exporta em **PDF, PowerPoint (PPTX) e Excel (XLSX)**, conforme o tipo e o pedido do
+professor, além da impressão. A ferramenta de adaptação passa a se chamar só **Adaptação**, e a
+entrada dela é a **escolha do tipo de adaptação** (linguagem direta, fonte ampliada, tempo
+extra, compatível com leitor de tela…), nunca texto livre descrevendo o aluno. O Adaptador faz
+uma coisa simples: adapta prova e atividade — e material didático, quando o professor pedir —
+para o aluno surdo, para o que não fala, para quem precisa de enunciado mais fácil, sem o
+sistema saber nem guardar a condição (D35). Não geramos o documento formal de PEI, que descreve
+o aluno e é da equipe da escola. **Isso não deixa a escola irregular**: o plano individual
+(estudo de caso e Plano de AEE; LBI, art. 28, VII; Decreto 12.686/2025) é obrigação da escola,
+feito pela equipe pedagógica com a família, do jeito que ela já faz hoje; o que a lei pune é
+recusar matrícula ou **recusar adaptação** (Lei 7.853/1989, art. 8º, I; LBI, art. 4º, § 1º, e
+art. 88), e adaptar é justamente o que a ferramenta faz. O fluxo fica coerente: o plano da
+escola define as adaptações, a coordenação registra só as adaptações (D35), e o Adaptador as
+aplica. Não gerar o PEI é escolha nossa de minimização de dado sensível de menor, não proibição
+legal; pode ser revista com advogado se uma escola pedir. Motivo: o professor entrega em formatos diferentes conforme a
+escola e a aula, e ferramenta que só exporta num formato devolve o professor ao copiar e colar;
+PDF, PPTX e XLSX são padrões ISO abertos, o que mantém a D63. Na adaptação, o risco nunca esteve
+no nome da ferramenta, e sim no campo de texto livre onde alguém escreve o diagnóstico.
+**Continua em aberto:** de onde vêm as imagens da apresentação (licença, D5).
+
+**D68 — Busca na web existe por ativação do professor: para ele no Assistente de ensino, e para
+o aluno no Tutor, só em fontes aprovadas.** *(a ratificar: Joaquim; com pergunta nova ao parecer
+do ECA Digital)*
+Por padrão, tudo nasce do material da escola. O professor pode ligar a busca em dois lugares.
+**No Assistente de ensino**, por conversa, para ele próprio. **No Tutor**, para a turma
+pesquisar além do material didático, com estas condições: (1) a busca do aluno só alcança uma
+**lista de fontes aprovadas** — órgãos públicos, IBGE, INEP, universidades, museus,
+enciclopédias —, com lista padrão nossa, por faixa etária, que a escola ajusta; web aberta não;
+(2) **duas chaves**: a coordenação libera o recurso na escola, desligado por padrão como o modo
+casa (D19), e o professor ativa por turma, com prazo; em avaliação em andamento fica sempre
+desligada; (3) o Tutor **continua socrático**: traz a fonte, pede para comparar duas, pergunta
+de volta, e não escreve o trabalho — é letramento em pesquisa, junto da D65; (4) o **assunto
+continua sendo o da turma**: muda de onde vem a informação, não sobre o que o Tutor fala; (5) a
+**consulta é escrita pelo modelo**, sem o texto nem o identificador do aluno, porque o buscador
+é terceiro fora do País (D62), e ele entra no registro de suboperadores; (6) o professor vê o
+que foi pesquisado e quais fontes foram abertas, e a resposta vem rotulada "da web", com o
+link, separada de "material da escola, página X"; (7) há teto de buscas por aluno por dia,
+dentro do pacote do Tutor (D38, D39); (8) começa **só no modo sala**. Motivo: pesquisar além da
+apostila é parte de estudar, e o aluno que não pode fazer isso no Turmma faz no ChatGPT, sem
+ninguém vendo. As condições não são preferência nossa: o ECA Digital exige a configuração mais
+protetiva por padrão (arts. 3º e 7º) e conteúdo compatível com a faixa etária (art. 8º) — temos
+aluno de 11 anos —, e o Decreto 12.880 exige salvaguardas ao desenvolvimento (art. 11, IV).
+Lista de fontes aprovadas é o que torna a busca defensável. Consequências: entra na AIA do
+Tutor; o teste adversário do Tutor passa a cobrir **página da web com instrução escondida**, e
+vem do F16 para o F9; e o parecer do ECA Digital ganha uma pergunta: ligar a busca para aluno de
+até 16 anos sem conta de responsável vinculada conta como rebaixar a proteção (art. 24, § 5º)?
+
+**D69 — "Minhas turmas" é aba do "Meu painel" do professor, e nasce no F6.** *(a ratificar:
+Joaquim)*
+A análise da turma — desempenho, principais dificuldades, evolução, conteúdo com mais erro,
+alunos que precisam de atenção — não é item novo de menu: é a aba **Minhas turmas** de "Meu
+painel", ao lado de **Meu uso**. Nasce no F6, com o diagnóstico por habilidade e o relatório
+por questão; ganha os sinais do Tutor no F10 e a comparação com a série no F12. Motivo: o menu
+do professor veio fechado do desenho da call, e esperar o F12 para o professor enxergar a
+própria turma deixaria o diagnóstico do F6 sem tela. "Aluno que precisa de atenção" sai de fato
+declarado — acerto por habilidade, entrega, onde travou —, com a explicação na tela e caminho
+de contestação (D57, D60), e aparece nomeado só para o professor da turma (D34). **Continua em
+aberto** a lista de indicadores, os limiares e o texto dos alertas (`CLAUDE.md`). Ponto de
+partida do Gabriel: percentual de erro e acerto, e o sinal **"concluiu o que foi atribuído"**,
+para o professor liberar a próxima lista. Medir tempo ocioso do aluno não entra: é medir
+atenção e comportamento (regra 70, item 7), e o mesmo objetivo sai do fato "concluiu".
+
+**D70 — Sair da aba durante a prova é fato mostrado ao professor, e só durante a avaliação.**
+*(a ratificar: Joaquim; AIA e `conformidade-reviewer` antes de existir)*
+Em prova e atividade avaliativa online, o sistema registra quando a aba da avaliação perde o
+foco e mostra ao professor como fato: "saiu da aba da prova 3 vezes". **Só notifica o
+professor.** Não tenta saber para onde o aluno foi — uma página web não enxerga isso —, não tem
+consequência automática sobre a prova nem sobre a nota, o aluno é **avisado antes** de começar,
+e o registro fica preso àquela avaliação, junto do registro da validação (D56), nunca como
+atributo ou histórico do aluno. **Fora de avaliação não existe**: aluno estudando com o Tutor
+não tem a navegação acompanhada, porque aí deixa de ser integridade da prova e vira a janela
+sobre o comportamento que a regra 70, item 7, proíbe. Esse caso fica como pergunta para a AIA
+de sinais e para o parecer, não como funcionalidade. Motivo: o professor precisa saber quando a
+prova online pode ter sido feita com outra aba aberta, e esse é um fato simples e verificável;
+o mesmo mecanismo ligado o tempo todo é vigilância, que a família recusa e a ANPD multa (D57).
+Risco a escrever na AIA: leitor de tela, teclado virtual e notificação do sistema também tiram
+o foco da aba, e o falso positivo cai justamente no aluno com adaptação registrada — por isso é
+fato para o professor olhar, nunca evidência automática. Bloquear outras IAs no computador da
+escola é configuração do Google Admin ou do filtro da rede: entregamos o guia no dossiê (D61).
+
+**D71 — Depois do F1 vem um MVP de apresentação: fatias finas e reais do fluxo completo, com
+dado sintético.** *(direção dada pelo Gabriel e pelo time em 19/09/2026; a composição é
+proposta, a ratificar pelo Joaquim, e fecha no PRD de cada spec)*
+Em vez de seguir F2, F3, F4… até o F15 para só então ter o que mostrar, a próxima construção
+depois do F1 é o MVP de apresentação: o mínimo que demonstra as três áreas — aluno, professor e
+coordenação, com os seis agentes da D32 revista — e as quatro coisas da D24, numa escola
+sintética. São cinco specs, A1 a A5 (`ROADMAP.md`): **base** (casca com a marca, camada de IA
+mínima, runtime mínimo de agente, seed), **professor** (ingestão mínima, Assistente de ensino,
+atividade, plano de aula, Adaptação, Planejador), **atividade e correção** (aluno responde,
+Corretor, diagnóstico, aprovação com registro, "Minhas turmas"), **tutor e sinais** (Tutor
+socrático com memória, thread do Tutor para o professor) e **coordenação** (governança de IA,
+agentes e autonomia, Analista de desempenho escolar, roteiro). Depois dele o roadmap continua
+na ordem de antes, e cada fase **completa** a fatia que já existe em vez de começar do zero.
+Regras da fatia: (1) dado 100% sintético — nenhum aluno, professor ou escola real, e o portão
+da primeira escola real continua intocado; (2) é código do produto, não protótipo: mesma
+arquitetura, mesmas regras 00 a 80, mesmo processo (PRD, Tech Spec, tarefas, revisores) — fatia
+fina não é atalho; (3) a regra 70 vale inteira: entrega nasce pendente, nada de discursiva
+corrigida por IA, saída de IA rotulada; (4) fica de fora tudo que não aparece no roteiro.
+Três afrouxamentos, que valem **só enquanto o dado for sintético** e precisam do aceite do
+Joaquim: a AIA entra com a etapa 1 (escopo e escopo negativo) antes do PRD da fatia, e as seis
+etapas antes do primeiro aluno real (D60); o provedor de modelo é o que tivermos pela porta,
+porque não há texto de aluno real, e a D62 volta a valer antes de aluno real; e o cenário de
+carga não cresce com as fatias, cresce quando a fase for completada (regra 80). Motivo:
+precisamos começar a demonstrar, e a D1 já dizia que o que convence é o fluxo completo. O risco
+que o roadmap apontava — refazer os agentes por construí-los antes da base — é menor agora: F0
+e F1 já são a base, e a fatia nasce sobre ela, no desenho final. Custo aceito: F2 e F3 atrasam,
+e nenhuma escola real entra antes deles e do portão. A apresentação roda primeiro na nossa
+máquina (`docker compose up` e seed); o staging nasce quando alguém de fora precisar usar
+sozinho (D31, D42).

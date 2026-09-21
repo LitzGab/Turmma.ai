@@ -38,7 +38,7 @@ de nada.
 
 ---
 
-## 2. O que o Educa.ia faz
+## 2. O que o Turmma faz
 
 Um assistente com agentes de IA supervisionados para a escola inteira. A IA prepara o
 trabalho e avisa; a escola aprova (D44). Quatro coisas, que vendem juntas (D1):
@@ -71,11 +71,21 @@ junto com o material que vendem. Gerar plano e prova virou commodity (`docs/nego
 
 O que continua sem dono:
 
-**Governança de IA pronta para o CNE.** O CNE aprovou em setembro de 2026 diretrizes que
-exigem supervisão humana em correção e nota e proíbem decisão só automatizada sobre o aluno.
-Só 22% das escolas brasileiras têm qualquer política de uso de IA. A tela que responde "o
-que a IA gerou, quem aprovou e quando" não existe no mercado. Isso é argumento de venda, não
-só obrigação.
+**Governança de IA pronta para o CNE, com documento na mão.** O CNE aprovou em 01/09/2026
+diretrizes que exigem supervisão humana em correção e nota, proíbem decisão só automatizada
+sobre o aluno e proíbem a IA de corrigir, pré-corrigir ou sugerir nota em redação e
+discursiva. As escolas têm doze meses da homologação para se adequar e só 22% delas têm
+qualquer política de uso de IA. A tela que responde "o que a IA gerou, quem aprovou e quando"
+não existe no mercado — e, junto dela, o **dossiê de conformidade** que a escola precisa
+mostrar à secretaria e à família (D61, `docs/conformidade-mec.md`). Concorrente que hoje
+anuncia correção de dissertativa por IA está do lado errado da norma: a nossa restrição é
+argumento de venda.
+
+**Dado e modelo no Brasil.** Hospedagem em região Brasil (D28) e conversa de aluno só em
+provedor de modelo com processamento em território nacional (D62). O Referencial do MEC trata
+dado educacional de criança sob jurisdição estrangeira como risco de soberania e cita o Cloud
+Act; a rede pública pergunta isso na primeira reunião. É a única vantagem que um concorrente
+estrangeiro não copia.
 
 **Agentes que preparam e avisam, com a escola no comando.** As ferramentas do mercado
 esperam o professor clicar. Os nossos agentes preparam o trabalho quando o evento acontece e
@@ -108,7 +118,11 @@ para a turma dele, abre o tutor no celular. Ele vai tentar arrancar a resposta
 pronta do tutor, de várias formas. Isso é esperado, não é falha. O produto precisa segurar.
 
 **Lara, aluna do 8º ano.** Tem 13 anos. Tudo que vale para o Enzo vale para ela, com mais
-cuidado: a linguagem do tutor, o que ela vê de si mesma e o que é guardado sobre ela.
+cuidado: a linguagem do tutor, o que ela vê de si mesma e o que é guardado sobre ela. Ela
+também é o motivo de uma pergunta jurídica aberta que pode mudar a ordem do roadmap: o art. 24
+do ECA Digital exige que a conta de quem tem até 16 anos esteja vinculada à de um responsável
+legal, e ainda não sabemos se isso alcança serviço contratado pela escola
+(`docs/regulacao.md` 2.2).
 
 **Renata, coordenadora.** É quem decide a compra e quem administra o sistema. Ela cria as
 turmas, importa a lista de alunos, a grade e o calendário, e define quem dá aula em qual
@@ -126,31 +140,35 @@ Entra numa fase posterior.
 
 ## 5. Um dia dentro do sistema
 
-7h00 — O agente **Rotina** abre a manhã da Camila: três aulas hoje, a prova do 2ºB às 10h,
+7h00 — O agente **Planejador** abre a manhã da Camila: três aulas hoje, a prova do 2ºB às 10h,
 catorze atividades esperando devolutiva. Ela não configurou nada disso: veio da grade
 horária que a Renata importou e das avaliações que a própria Camila criou.
 
-7h40 — Ela pede no chat: "monta uma revisão de trinta minutos sobre reagente limitante para
+7h40 — Ela pede ao **Assistente de ensino**, no chat: "monta uma revisão de trinta minutos sobre reagente limitante para
 o 2ºB". O sistema busca no capítulo 7 do material da escola, monta, e salva na biblioteca
 dela. A saída cita a página de origem, para ela conferir.
 
 10h00 — A prova é aplicada. Alguns alunos respondem no computador da escola. Como a turma
 do 3ºA fará em papel, a Camila escolheu outro modo para aquela avaliação.
 
-10h50 — O agente **Corretor** corrige as objetivas, escreve a devolutiva das discursivas e
-monta o diagnóstico por habilidade. **Ele não lança nada, e não sugere nota para as
-discursivas** (D46). Manda a entrega para o feed: "esperando você".
+10h50 — O agente **Corretor** corrige as objetivas e monta o diagnóstico por habilidade. Nas
+discursivas ele **não faz nada sobre o texto do aluno**: organiza o lote e apresenta as
+respostas para a Camila corrigir, sem nota, sem conceito, sem rascunho de devolutiva. É
+proibição do CNE, e alcança até a pré-correção "só para o professor" (D55). Manda a entrega
+para o feed: "esperando você".
 
-11h15 — Camila revisa as correções das objetivas, ajusta duas devolutivas, dá ela mesma a
-nota das discursivas e aprova. Só nesse momento a nota existe. É lei, e é também o que faz
-ela confiar.
+11h15 — Camila vê a distribuição das objetivas, abre os casos que o sistema destacou — prova
+em branco, nota longe do histórico do aluno —, corrige as discursivas ela mesma e aprova. O
+sistema registra o que mostrou, o que ela abriu e quem confirmou, porque a validação humana
+precisa ser documentada, não só existir (D56). Só nesse momento a nota existe.
 
 11h16 — O evento "nota aprovada" dispara. Vai para o painel da Renata e, na fase posterior,
 para a família.
 
-14h00 — Na aula seguinte, Enzo pergunta ao tutor qual é o reagente limitante do exercício
-14. O tutor recusa e conduz por perguntas. Camila, na tela dela, vê que oito alunos
-travaram no mesmo ponto.
+14h00 — Na aula seguinte, Enzo pergunta ao **Tutor** qual é o reagente limitante do exercício
+14. O Tutor recusa e conduz por perguntas, lembrando que ele já tinha travado na conversão de
+massa (D66). Camila, na tela dela, recebe do próprio Tutor o aviso de que oito alunos travaram
+no mesmo ponto.
 
 Fim do dia — Camila abre o próprio painel: a turma dela do 2ºB está abaixo das outras em
 estequiometria, e a sugestão é uma revisão. Renata abre a governança: 39 professores
@@ -180,11 +198,18 @@ um dia, e ninguém se passa por outro.
 para o 2ºB porque a escola informou, não porque ela contou no chat. É daí que vem tudo que
 faz um agente parecer um funcionário e não um chatbot.
 
-**A IA propõe, o humano decide.** Nota, mensagem à família e qualquer decisão sobre o aluno
-passam por aprovação registrada; o tutor, que responde em tempo real, é supervisionado
-(D47). Nenhuma métrica decide nada sobre o professor (D45). Isso é exigência do CNE, mas
-seria a decisão certa mesmo sem lei: é o que separa "confio nisso" de "não deixo isso perto
-do meu boletim".
+**A IA propõe, o humano decide — e em redação ela não propõe.** Nota, mensagem à família e
+qualquer decisão sobre o aluno passam por aprovação registrada; o tutor, que responde em tempo
+real, é supervisionado (D47). Em discursiva e redação a IA não corrige, não avalia e não
+pré-corrige (D55). Nenhuma métrica decide nada sobre o professor, e recusar a ferramenta não
+gera indicador nenhum sobre ele (D45, D64). Isso é exigência do CNE, mas seria a decisão certa
+mesmo sem lei: é o que separa "confio nisso" de "não deixo isso perto do meu boletim".
+
+**O produto se explica por escrito.** A escola não compra por demonstração: compra por
+checklist, e vai exigir declaração de propósito, documentação do funcionamento em linguagem
+simples, relatório de conformidade, relatório de impacto e relatório de uso legível. Isso é
+entregável de produto, não folheto (D61). Quem entrega o documento pronto resolve um problema
+que a coordenação tem e não sabe resolver.
 
 **A saída da IA nasce do material que a escola pode usar e aponta de onde veio.** Se a
 questão não pode ser conferida na página 152 do material, ela é indistinguível do que o
@@ -204,6 +229,12 @@ material licenciado (D5).
 - Não é aplicativo nativo. É uma web só, que funciona no computador da escola e, fora da
   sala, no celular (D51). Nenhum fluxo exige o celular.
 - Não é para educação infantil nem anos iniciais (regra 70).
+- **Não corrige redação nem discursiva**, nem como rascunho para o professor (D55).
+- Não infere emoção, humor ou comportamento, não faz perfil comportamental e não pontua
+  ninguém por isso (D57).
+- Não usa design que prenda o aluno na tela, e não dificulta sair (D59).
+- Não é plataforma que prende o dado: material, artefato e histórico saem em formato aberto
+  quando a escola quiser (D63).
 
 ---
 
@@ -236,3 +267,15 @@ antes de ver qualquer valor.
 
 **Construir sem ninguém usar.** O sistema inteiro é o alvo, mas uma escola piloto usa o que
 estiver pronto antes do fim (D1).
+
+**A norma mexer de novo.** O texto oficial do CNE ainda não foi publicado, a ANPD vai
+regulamentar o art. 11 do Decreto 12.880/2026, e o art. 24 do ECA Digital tem duas leituras
+possíveis, uma delas capaz de antecipar o portal da família. Por isso a conformidade mora em
+dois documentos vivos (`docs/regulacao.md`, `docs/conformidade-mec.md`) com o que está "a
+confirmar" marcado como tal, em vez de espalhada em afirmações soltas.
+
+**Não ter evidência quando pedirem.** O MEC recomenda adotar recurso com IA só se houver ganho
+significativo contra a alternativa não digital, e pede evidência de eficácia **não financiada
+pelo desenvolvedor**. Não temos nenhuma. Sem uma medição simples desenhada junto com a escola
+piloto, esse campo fica em branco na avaliação de qualquer secretaria
+(`docs/conformidade-mec.md` 12).

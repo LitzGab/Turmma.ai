@@ -35,7 +35,7 @@ Cadastrar 900 alunos um a um mata o produto na primeira semana. Mas deixar o alu
 o próprio nome livremente cria dois "Enzo Martins" e um "Batman". A reivindicação com
 aprovação do professor resolve os dois: rápido para a escola, e ninguém se passa por outro.
 O vínculo vem da escola, e não do professor, porque é ele que dá acesso a dado de aluno. E
-sem a grade o Rotina e o calendário não têm de onde nascer.
+sem a grade o Planejador e o calendário não têm de onde nascer.
 
 **O que isso obriga tecnicamente**
 
@@ -134,22 +134,43 @@ perde metade dos casos reais.
 
 **Como acontece**
 
-Enzo trava no exercício 14 e pergunta ao tutor qual é o reagente limitante. O tutor recusa
-dar a resposta e pergunta se ele já converteu as massas em mol. Enzo diz que só uma. O tutor
+Enzo abre o Tutor — que é um dos agentes do time da escola, e se apresenta como tal. Trava no
+exercício 14 e pergunta qual é o reagente limitante. O tutor recusa dar a resposta e pergunta se ele já converteu as massas em mol. Enzo diz que só uma. O tutor
 confirma que está certo e indica o próximo passo, citando a página 152.
 
+O Tutor lembra de tudo que o Enzo já fez no sistema — a lista de duas semanas atrás, a prova do
+bimestre, as sessões anteriores —, e por isso sabe que ele já tinha travado em conversão de
+massa, e que melhorou em balanceamento desde março. Sabe que a turma está no capítulo 7, porque
+a Camila informou (D66). Não sabe, nem guarda, nada sobre o jeito do Enzo.
+
 Na tela da Camila, ao vivo, aparece que oito alunos travaram no mesmo ponto e que dois
-pediram resposta pronta.
+pediram resposta pronta. É o próprio Tutor que avisa, na thread dele em "Seu time" (D32
+revista).
+
+Na semana do trabalho sobre a indústria química, a Camila liga a pesquisa para o 1ºC. Enzo
+pergunta onde se usa reagente limitante fora da escola; o Tutor traz duas fontes da lista
+aprovada pela escola, pede que ele compare o que cada uma diz, e não escreve o parágrafo por
+ele (D68).
 
 **Por que é assim**
 
-O CNE classifica tutor digital como risco moderado, permitido **desde que supervisionado**.
-E do ponto de vista de produto, é a demonstração que ganha a assembleia de pais: a IA da
-escola ensina, a IA de fora entrega.
+O CNE classifica tutor digital como uso que exige cuidados adicionais, permitido **desde que
+supervisionado**. O art. 11 do Decreto 12.880/2026 acrescenta quatro obrigações a qualquer IA
+conversacional usada por criança e adolescente: transparência sobre o caráter automatizado da
+interação — que o produto cumpre por ser vendido e apresentado como time de IA, sem precisar
+descaracterizar os agentes (D58) —, prevenção de manipulação comportamental, avaliação de
+risco algorítmico e salvaguardas ao desenvolvimento. E do ponto de vista de produto, é a demonstração que ganha a assembleia de
+pais: a IA da escola ensina, a IA de fora entrega.
 
 **O que isso obriga tecnicamente**
 
 - Resposta do tutor supervisionada, não aprovada uma a uma (D47)
+- O agente se apresenta pela função e **nunca afirma ser humano**; perguntado, diz o que é
+  (D58, D65)
+- Sem simular vínculo afetivo ou dependência, sem linguagem que crie obrigação de continuar,
+  sem recompensa por tempo de uso e sem notificação fora do horário útil (D58, D59)
+- Teto diário visível ao aluno como salvaguarda de bem-estar, não como punição (D38, D59)
+- AIA do Tutor escrita antes de ele existir, revista a cada troca de modelo (D60)
 - Política de tutor por turma: bloqueado, socrático ou livre, definida pelo professor dentro
   do padrão da escola, aplicada **no servidor**
 - Trava automática durante avaliação em andamento, independentemente da política
@@ -159,13 +180,25 @@ escola ensina, a IA de fora entrega.
 - Sinal derivado de evento: o professor vê uso e dificuldade, não uma janela sobre o
   comportamento do aluno
 - Conversa do tutor com retenção curta e acesso restrito ao professor da turma
+- Memória do Tutor sobre **toda a trajetória** do aluno no sistema — atividades, trabalhos,
+  avaliações, práticas e sessões, com resultado e evolução —, mais o contexto estruturado do
+  professor e o tipo de adaptação registrada; recuperada por relevância a cada conversa, não
+  despejada inteira no prompt. É registro do trabalho: nenhum texto sobre o jeito do aluno,
+  e o aluno vê e contesta o que o Tutor sabe do desempenho dele (D66)
+- Busca só em fontes aprovadas, com duas chaves (escola libera, professor ativa por turma e
+  com prazo), só no modo sala, desligada em avaliação, com teto diário; consulta escrita pelo
+  modelo sem texto nem identificador do aluno; resposta rotulada "da web" com o link; o
+  professor vê o que foi pesquisado (D68)
+- Conteúdo de página da web é dado, nunca instrução: teste adversário com página que tenta
+  mandar no Tutor, antes de a busca existir (D68)
 - Encaminhamento de assunto delicado que chega também a quem notifica o Conselho Tutelar,
-  com acesso ao conteúdo auditado (`docs/regulacao.md` seção 6)
+  com acesso ao conteúdo auditado (`docs/regulacao.md` seção 7)
 
 **Casos de borda**
 
-Aluno tentando arrancar a resposta de três formas diferentes. Aluno perguntando sobre
-assunto fora da matéria. Aluno usando o tutor durante a prova. Internet caindo no meio da
+Aluno tentando arrancar a resposta de três formas diferentes, inclusive pedindo que o Tutor
+"pesquise e resuma" o trabalho. Aluno perguntando sobre assunto fora da matéria. Fonte aprovada
+que saiu do ar ou mudou de conteúdo. Aluno usando o tutor durante a prova. Internet caindo no meio da
 aula. Aluno pedindo ajuda sobre algo pessoal e delicado, que precisa de encaminhamento
 humano e não de resposta de IA.
 
@@ -175,33 +208,40 @@ humano e não de resposta de IA.
 
 **Como acontece**
 
-Terminada a atividade ou a prova, o agente Corretor corrige as objetivas, escreve a
-devolutiva das discursivas e monta o diagnóstico por habilidade. Ele **não lança nada** e
-**não sugere nota para as discursivas** (D46). Manda uma entrega para o feed da Camila:
-"corrigi as 32 provas, onze alunos erraram a questão 7, esperando você".
+Terminada a atividade ou a prova, o agente Corretor corrige as objetivas e monta o
+diagnóstico por habilidade. Nas discursivas ele **não toca no texto do aluno**: organiza o
+lote, confere entrega e prepara a correção cega, sem nota, sem conceito e sem devolutiva
+rascunho (D55). Manda uma entrega para o feed da Camila: "corrigi as 32 objetivas, onze alunos
+erraram a questão 7, as 32 discursivas estão prontas para você corrigir".
 
-Camila revisa. Ajusta duas devolutivas e aprova. O aluno vê a devolutiva, e o diagnóstico
-sobe para o painel dela e, em agregado, para o da coordenação.
+Camila vê a distribuição, abre os casos destacados, escreve ela mesma a devolutiva das
+discursivas e aprova. O sistema registra o que apresentou, o que ela abriu e quem confirmou
+(D56). O aluno vê a devolutiva, e o diagnóstico sobe para o painel dela e, em agregado, para
+o da coordenação.
 
 Quando a nota oficial estiver no sistema, o mesmo fluxo continua: Camila dá a nota das
-discursivas, confere as objetivas, e aprova o lote. Nesse instante a nota passa a existir e
-o evento sobe para o painel da coordenação.
+discursivas, confere as objetivas, e aprova o lote com o registro da validação. Nesse instante
+a nota passa a existir e o evento sobe para o painel da coordenação.
 
 **Por que é assim**
 
-Correção automática e atribuição de nota são classificadas como alto risco pelo CNE e
-exigem supervisão humana; segundo a imprensa, a versão final veda sugestão de nota em
-redação e discursiva. Decisão só automatizada sobre promoção do aluno é proibida. Além da
-lei: professor não assina embaixo de nota que não conferiu. E o diagnóstico formativo vem
-primeiro porque tem menos risco e é o que alimenta a medição de desempenho.
+Correção de objetiva e atribuição de nota são alto risco pelo CNE e exigem validação humana
+**efetiva, prévia, qualificada e documentada** — com a frase explícita de que o professor não
+pode apenas clicar em "aprovar". Em redação e discursiva a IA não corrige, não avalia, não dá
+nota nem conceito e **não pré-corrige para o professor** (D55). Decisão só automatizada sobre
+promoção do aluno é proibida. Além da lei: professor não assina embaixo de nota que não
+conferiu. E o diagnóstico formativo vem primeiro porque tem menos risco e é o que alimenta a
+medição de desempenho.
 
 **O que isso obriga tecnicamente**
 
 - `Correcao` e `Nota` são entidades separadas. A IA escreve na primeira, nunca na segunda
 - `Nota` só é gravada com autor humano, em **todo** caminho: interface, job, importação, seed
-- Discursiva e redação sem nota proposta pela IA, até a regra 70 mudar
-- Aprovação qualificada e documentada: o lote mostra resumo e destaques antes de liberar
-  (D33), para não virar aprovação automática
+- Discursiva e redação **sem correção, sem nota, sem conceito e sem devolutiva gerada por IA**,
+  em nenhum campo, nem interno, nem rascunho, nem log, até a regra 70 mudar (D55)
+- Aprovação qualificada e **documentada**: o lote mostra resumo e destaques antes de liberar
+  (D33) e grava o registro da validação — o que foi mostrado, o que foi aberto, quem confirmou
+  e quando (D56)
 - Entrega de agente nasce pendente, com aprovar e rejeitar com justificativa
 - Auditoria responde "o que a IA gerou, quem aprovou, quando"
 - A justificativa da correção precisa ser boa o bastante para o professor defender a nota
@@ -248,9 +288,10 @@ precisa saber que o painel é dele primeiro, ou ele não usa o sistema.
 
 **Como acontece**
 
-O Monitor de turma roda de madrugada, cruza as entregas com os prazos, e de manhã avisa:
-cinco alunos do 1ºC não entregaram a lista, e quatro deles também não entregaram a anterior.
-Propõe preparar um aviso às famílias, que fica esperando aprovação.
+O Planejador roda de madrugada, cruza as entregas com os prazos, e de manhã abre o dia da
+Camila: três aulas, a prova do 2ºB às 10h, e cinco alunos do 1ºC que não entregaram a lista,
+quatro deles também sem a anterior. Não gerou conteúdo nenhum para isso. Na fase posterior, o
+Mensageiro da família propõe o aviso às famílias, que fica esperando aprovação.
 
 **Por que é assim**
 

@@ -235,6 +235,42 @@ diferenciam, porque já são commodity ou grátis. O que diferencia é o que est
 que preparam e avisam, loop fechado até a família, desempenho medido sem vigilância, e
 neutralidade em relação ao material.
 
+### 6.1 A regulação virou eixo competitivo (19/09/2026)
+
+Leitura das fontes primárias em `docs/regulacao.md` e `docs/conformidade-mec.md`. Três
+movimentos de mercado saem daí:
+
+**Metade do que o concorrente anuncia hoje ficou do lado errado da norma.** O ato do CNE de
+01/09/2026 proíbe a IA de corrigir, avaliar, dar nota ou conceito em redação e questão
+dissertativa — **inclusive como pré-correção ou sugestão apresentada ao professor**. Geekie One
+(Arco) anuncia correção de dissertativa com IA; a Teachy anuncia correção automática de
+dissertativa. Quem comprou isso em 2026 tem doze meses da homologação para se adequar, e quem
+vende tem de reconstruir a funcionalidade. Nós perdemos a mesma funcionalidade (D55) — a
+diferença é que perdemos antes de vendê-la, o que vira argumento em vez de passivo. O material
+de venda diz isso sem citar nome: "nenhuma linha do nosso produto corrige redação, porque a
+norma não permite; se a sua escola usa algo que corrige, vale conferir a data da adequação".
+
+**A escola passou a comprar por checklist.** O documento da SEB dá ao gestor quatro blocos de
+perguntas, a lista de documentos a exigir do fornecedor e as cláusulas de contrato. Isso muda o
+material de venda: não é folheto de funcionalidade, é **dossiê** (D61) — declaração de propósito
+com faixas etárias, funcionamento em linguagem simples, conformidade LGPD e ECA artigo por
+artigo, RIPD, avaliação de impacto algorítmico, relatório de uso legível e material para a
+escola conversar com professores e famílias. Nenhum concorrente brasileiro publica isso hoje.
+
+**Soberania é a vantagem que o estrangeiro não copia.** O capítulo 10.3 do Referencial trata
+dado educacional de criança fora do país como risco de Estado, cita o Cloud Act e recomenda
+compra pública que fortaleça solução nacional. Produto brasileiro, dado no Brasil (D28) e
+**conversa de aluno em modelo processado no Brasil** (D62) é resposta pronta a uma exigência
+que Google e Khanmigo não têm como dar. Vale mais na rede pública, e vale também na
+particular quando o jurídico da mantenedora entra na conversa.
+
+**O que a conformidade custa.** Honestamente: perdemos a correção de discursiva e de redação
+(D55), que era uma das ferramentas mais pedidas; ganhamos trabalho de documento (D61) e de
+avaliação de impacto (D60); e possivelmente antecipamos o vínculo com o responsável, se o
+art. 24 do ECA Digital nos alcançar (`docs/regulacao.md` 2.2). Em troca: somos vendáveis a
+uma escola que está com prazo correndo e sem saber o que fazer, e sem risco de sanção da ANPD
+em cima de dado de menor.
+
 ## 7. Posicionamento e mídia
 
 - Termos sem anunciante B2B hoje: **"agentes de IA"**, **"WhatsApp"**, **"plano de aula
@@ -244,8 +280,13 @@ neutralidade em relação ao material.
 - Táticas replicáveis: cargo no título ("PARA COORDENADORES"), isca ("guia de uso de IA da
   sua escola"), webinar com data, ondas de 20–30 variações de criativo no mesmo dia
 - **Setembro é o pico de compra para o ano seguinte**
-- Conformidade com o CNE vira material de venda: as escolas têm doze meses para se adequar
-  e quase nenhuma sabe como
+- Conformidade com o CNE vira material de venda: as escolas têm **doze meses contados da
+  homologação do MEC** para se adequar, e 78% delas não têm política de IA nenhuma
+- A isca mais barata que temos é o que a escola precisa e não sabe escrever: **a política de
+  uso de IA da escola**, o material de consulta a professores e famílias, e o checklist do MEC
+  respondido. Sai do dossiê (D61), não de esforço novo
+- Termos de posicionamento que ninguém ocupa e que agora têm lastro: "conforme ao CNE",
+  "dado no Brasil", "modelo processado no Brasil", "nenhuma nota sem professor"
 
 ## 8. Como a venda acontece
 
@@ -255,6 +296,17 @@ assembleia de pais, escolas técnicas.
 
 - Existem contatos possíveis (SENAI, prefeitura de Joinville). **Nenhum é certo e nenhuma
   decisão de produto é tomada com base neles**
+- **Sandbox regulatório** é um caminho de entrada na rede pública que não passa por
+  licitação: o Referencial do MEC recomenda às redes usar ambiente controlado de testagem,
+  iniciado por chamamento público, para experimentar IA com segurança jurídica. Perguntar à
+  secretaria de Joinville se existe ou pode existir chamamento nesse formato, e escrever a
+  proposta do piloto na linguagem do princípio 10 do MEC: piloto declarado, com métrica,
+  cronograma e reversibilidade (`docs/conformidade-mec.md` seção 10)
+- **A pergunta que hoje não temos como responder** é a de evidência: o MEC pede eficácia
+  pedagógica demonstrada por pesquisa **não financiada pelo desenvolvedor**, e a Letrus
+  mostrou que estudo de impacto abre porta de secretaria. Desenhar com a escola piloto uma
+  medição simples e pré-registrada — tempo de preparação e correção do professor, antes e
+  depois; desempenho por habilidade com e sem uso — com alguém de fora assinando o desenho
 - O argumento "sistema feito por alunos do SENAI" foi levantado para a apresentação no SENAI
 - Investimento é considerado viável a partir de uma primeira venda, por relacionamentos do
   Gabriel. Isso não muda prioridade de produto
@@ -278,7 +330,9 @@ O que a coordenação precisa ver na primeira semana para renovar está em D24.
 | 6 | Modelo de dados e orçamento de IA por aluno | Joaquim | `docs/modelo-de-dados.md`; orçamento decidido (D38, D39, D41) |
 | 9 | Valores das faixas de preço e teto de IA do pacote base | juntos | em aberto (D50) |
 | 10 | Entrevistas com escolas e escola piloto | juntos | em aberto; piloto no 1º semestre de 2027 (D1) |
-| 7 | Nome, INPI e domínio | juntos | em aberto |
+| 7 | Nome, INPI e domínio | Gabriel | **nome fechado: Turmma** (D54); INPI e domínio em aberto |
+| 11 | Dossiê de conformidade e checklist do MEC respondido | Gabriel e Joaquim | novo, 19/09/2026 (D61) |
+| 12 | Evidência independente de eficácia pedagógica, desenhada com o piloto | juntos | em aberto (`docs/conformidade-mec.md` 12) |
 | 8 | WhatsApp e portal da família | juntos | fase posterior |
 
 ## 10. Referências
@@ -286,7 +340,11 @@ O que a coordenação precisa ver na primeira semana para renovar está em D24.
 - Repositório: https://github.com/LitzGab/Educa.ia
 - Benchmark de concorrentes: https://educa-ia-benchmark.vercel.app
 - Diretrizes do CNE sobre IA (cobertura Porvir): https://porvir.org/cne-diretrizes-inteligencia-artificial-escola-universidade/
-- Referencial do MEC sobre IA na educação básica: https://www.gov.br/mec/pt-br/escolas-conectadas/arquivos/ia-basica.pdf
+- Diretrizes do CNE (cobertura G1, 01/09/2026): https://g1.globo.com/educacao/noticia/2026/09/01/cne-para-uso-de-ia-em-escolas-e-universidades.ghtml
+- Referencial do MEC para uso e desenvolvimento responsáveis de IA na educação: https://www.gov.br/mec/pt-br/referencial-de-ia-na-educacao
+- IA na Educação Básica (MEC/SEB + UNESCO): https://www.gov.br/mec/pt-br/escolas-conectadas/arquivos/ia-basica.pdf
+- ECA Digital (Lei 15.211/2025): https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2025/lei/l15211.htm
+- Decreto 12.880/2026, que regulamenta o ECA Digital: https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2026/decreto/d12880.htm
 - Censo Escolar 2025 (INEP): https://download.inep.gov.br/publicacoes/institucionais/estatisticas_e_indicadores/notas_estatisticas_censo_escolar_da_educacao_basica_2025.pdf
 - Fundação Itaú, adoção de IA: https://www.fundacaoitau.org.br/noticias/educacao/84-dos-alunos-e-79-dos-professores-ja-utilizaram-ferramentas-de-ia-diz-estudo
 - Cetic, TIC Educação 2025: https://cetic.br/media/pdf/analises/20260804094932_pt_br_tic_educacao_2025_coletiva_de_imprensa.pdf
