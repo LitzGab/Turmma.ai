@@ -119,6 +119,50 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       `2026-09-20-reconciliacao-espera-o-redis-subir-dentro-do-orcamento`: `start` do container sem
       `aguardarSaudavel`, com o poll de 60 s absorvendo a subida. A folga é 3× maior, mas quando
       falhar virá com a mesma mensagem ilegível (`test-engineer` e `infra-guardian`, 20/09/2026)
+- [ ] **Esteira instável: tratar como desenho, não como três bugs soltos.** Em 20/09/2026, depois de
+      nove execuções verdes seguidas, três testes **diferentes** falharam em três execuções, cada um
+      passando na seguinte sem mudança nenhuma (reconciliação do despachante, e2e do `celular`,
+      `infra/test/borda.int.test.ts` com 503 seguido de 400 em cascata), e um quarto vermelho
+      intermitente aconteceu no portão local. Diagnóstico do `infra-guardian`: o job do e2e sobe o
+      compose **inteiro** (~18 contêineres, incluindo `observabilidade`, sem limite de CPU em
+      `infra/compose.yml`) no mesmo runner onde o Playwright roda com CPU ×4 e, no `celular`, 600 ms
+      de RTT; `workers` não está fixado em `playwright.config.ts` e `retries: 0`. Nesse arranjo o
+      orçamento de tempo não tem folga e contenção do runner vira vermelho que não reproduz na
+      máquina. O que decidir: fixar `workers` na esteira, não subir `observabilidade` no job do e2e,
+      e escolher entre folga de `expect` no perfil `celular` ou retentativa com o flake **registrado**
+      (nunca mascarado). É tarefa, não correção — vale `/criar-tasks`. É o achado mais valioso da
+      validação do F1
+- [ ] `infra/test/borda.int.test.ts` — "handshake por polling fica na mesma instância pelo cookie da
+      borda": um único 503 da borda invalida a sessão socket.io e as 17 requisições seguintes viram
+      400 em cascata (esteira run 35525902277). O arquivo tem um caso que mata um realtime de
+      propósito, o que aponta para contaminação de ordem entre casos. Precisa de `/corrigir` próprio,
+      com a causa achada antes da correção
+- [ ] Guarda de `video`/`screenshot` no mesmo laço de `tools/ci/esteira.test.ts` que já resolve
+      `trace` e `outputDir` por projeto. Hoje os dois estão em `off` por padrão e não há furo, mas
+      `video: 'on'` reabriria a evasão que a correção de 20/09 fechou, e a linha do runbook não cobre
+      porque vídeo **é** saída do Playwright (`privacy-guardian`)
+- [ ] **Primeira da fila** (`privacy-guardian`): guarda sobre `ARQUIVOS_AMBIENTE_TESTE` e a ausência
+      de `process.env` em `tools/ci/compose.ts`. O runbook agora afirma **por escrito** que o artefato
+      público do e2e é inofensivo porque o ambiente de teste sai só de `.env.example` e
+      `infra/teste.env`, versionados. Afirmação de segurança em documento sem teste que a sustente é a
+      mesma forma de furo que a correção de 20/09 fechou no `trace`
+- [ ] `docs/lgpd.md` seção 4 — linha de furo conhecido: artefato de esteira em repositório público
+      (traço do e2e, conteúdo sintético, 7 dias), para a próxima publicação de artefato encontrar a
+      decisão escrita onde se procura (`privacy-guardian`)
+- [ ] Logs dos serviços dentro de `test-results/` antes da publicação, para o artefato ter a ponta do
+      servidor da linha de tempo (`infra-guardian`). **Atenção:** log de serviço não tem a garantia de
+      sinteticidade que o traço do Playwright tem por construção, e o repositório é público — fazer
+      isso muda a classe do que se publica e exige decidir de novo com o `privacy-guardian`
+- [ ] **Defeito do hook de revisões:** `tools/processo/revisoes.ts:342` decide caducidade por
+      `statSync(...).mtimeMs`, não por conteúdo. Revisor que faz teste de mutação (mutar e restaurar)
+      move o `mtime` sem mudar uma linha, e **invalida a própria rodada ao fazer o trabalho que se
+      espera dele** — custou duas rodadas na correção de 20/09. Comparar hash de conteúdo
+      (`git hash-object`) encerra a classe
+- [ ] **Defeito do hook de revisões:** rodada registrada na tabela do documento sem bloco
+      correspondente em `achados-revisoes.md`. Aconteceu com a rodada 2 do `test-engineer` e com
+      **todas** as rodadas do `privacy-guardian` da correção de 20/09 — justamente o revisor cujo
+      texto sustenta uma decisão de regra 20. O texto exigido se perde e a rodada seguinte audita sem
+      ele. Uma asserção exigindo um bloco por linha da tabela fecha a classe
 - [ ] Guarda de lint: teste que dá `start`/`up` num serviço do compose precisa de
       `aguardarSaudavel` do mesmo serviço em seguida. É a terceira correção de prazo de teste no mês
       (16/09, 18/09 e 20/09) e o padrão já apareceu em dois arquivos do despachante. Mecanismo pronto
