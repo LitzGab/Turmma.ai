@@ -228,6 +228,42 @@ começar. Não gere tarefas sem fechar o bloqueante 4 — sem instante no 503, a
 candidatas, e a tarefa 1.0 não entrega o número de que todas as outras dependem.
 
 
+## Recorte — 21/09/2026, depois da rodada 4
+
+**A funcionalidade foi partida em duas, e esta passa a ser só a fase 1: medir e isolar.**
+
+Motivo, que é a conclusão das quatro rodadas: os bloqueantes que sobravam não eram erro de redação —
+eram o desenho de uma asserção para provar um conserto **cuja causa não se conhece**. Três
+explicações minhas foram derrubadas com evidência no código, e a quarta rodada mostrou que nem a
+asserção corrigida discrimina, porque `lb_try_duration` mascara "atendido na primeira tentativa".
+
+Aprovar aquela spec teria produzido tarefas mandando consertar a espera fixa com asserções
+elaboradas, para um mecanismo que a medição pode mostrar que não é a causa. Tarefa que conserta a
+coisa errada é pior que tarefa nenhuma.
+
+**O que ficou nesta fase:** instrumentar o 503 (instante, método, estado do pool), medir a linha de
+base por job, separar as quatro candidatas, e isolar o projeto `infra` do que ele mesmo deixa de pé.
+Nada disso depende de saber a causa, e o isolamento pode sozinho zerar os vermelhos do portão local.
+
+**O que foi para a fase 2:** a espera fixa, a condição de readmissão e as asserções do
+`borda.int.test.ts`. Escrita depois, contra o mecanismo medido. Os bloqueantes 1, 2 e 3 da rodada 4
+são o roteiro dela, e seguem válidos:
+
+1. a positiva precisa de **prazo de cliente bem abaixo de 5 s** (ou asserção sobre tempo medido
+   contra limiar escrito), senão `lb_try_duration` a mascara;
+2. a positiva do realtime precisa ser **conjunção** — handshake bem-sucedido **e** ausência de
+   reescrita do cookie —, porque `handle_errors` responde sem `Set-Cookie` e "não reescreveu" é
+   verdade num 503;
+3. são **seis** sítios de chamada do helper, `:547` é um segundo sítio de pool vazio, e a prova "da
+   lacuna" é tautológica na segunda metade.
+
+**E a pergunta de produto que apareceu no caminho** fica registrada para a fase 2: a borda repete GET
+e **não repete POST** (`borda.int.test.ts:105-106`), e o que falhou foram 20 POSTs. Se a medição
+confirmar a candidata 4, o mesmo caminho é o POST do aluno salvando resposta de prova numa rolagem de
+instância — regra 80, item 6 —, com gravação idempotente e reenvio no cliente como alavanca, não
+retentativa na borda (item 7). Isso é tarefa de produto, com PRD próprio.
+
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
