@@ -81,19 +81,27 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       scripts da esteira; o padrão certo já existia em `tools/testes/compose.ts:78`. Sem carimbo
       uniforme, o log de um ensaio de carga não cruza com o instante do que falhou
 
-- [ ] **Ao ligar HTTPS na borda do staging, na mesma tarefa: acrescentar `http.stdlib` ao `exclude`
-      do `log default` em `infra/Caddyfile`.** É o único caminho restante para endereço de cliente
-      chegar ao log da borda, e ele vai **dentro do `msg`**
-      (`"http: TLS handshake error from <ip>:<porta>"`), sem chave nenhuma — cego às negativas por nome
-      **e** à negativa por forma de `infra/test/borda.int.test.ts`. Em HTTP/1 sem TLS ele não dispara
-      (medido pelo `privacy-guardian`); com TLS, dispara — e no staging o log do Docker vai para o
-      Alloy e o Grafana Cloud, o que torna essa linha dado retido e pesquisável. Na mesma tarefa:
-      converter a negativa por forma em asserção **positiva** sobre os campos mantidos (apagá-la reabre
-      a família de armadilhas que a correção fechou em cinco rodadas), somar `user_id` e `resp_headers`
-      à lista, e trocar o guarda de texto de `tools/ci/borda.test.ts` por um `toEqual` sobre
-      `logging.logs` do `caddy adapt`, que é imune à formatação do arquivo. Tudo detalhado em
-      `tasks/correcoes/2026-09-22-log-da-borda-afogado-pela-sonda-do-proprio-container.md`, seção "O que
-      fica para o staging"
+**Ao ligar HTTPS na borda do staging, as quatro coisas abaixo são da mesma tarefa.** Estão separadas
+porque item único vira execução parcial. Motivo e medição de cada uma em
+`tasks/correcoes/2026-09-22-log-da-borda-afogado-pela-sonda-do-proprio-container.md`, seção "O que fica
+para o staging".
+
+- [ ] Acrescentar **`http.stdlib`** ao `exclude` do `log default` em `infra/Caddyfile`. É o único vetor
+      restante de endereço de cliente no log da borda, e ele vai **dentro do `msg`**
+      (`"http: TLS handshake error from <ip>:<porta>"`), sem chave — cego às negativas por nome **e** à
+      negativa por forma. Em HTTP/1 sem TLS não dispara (medido); com TLS, dispara. E no staging o log
+      do Docker vai para o Alloy e o Grafana Cloud (`notas-staging.md:53,55`), o que torna a linha dado
+      retido e pesquisável. **Não** excluir o logger pai `http` no lugar dele: a exclusão por prefixo
+      não arrasta filho (medido com `admin`/`admin.api`), e excluir `http` seria pior
+- [ ] **Converter** a negativa por forma de `infra/test/borda.int.test.ts` em asserção **positiva**
+      sobre os campos que o log de acesso passa a guardar. Apagá-la reabre a família de cinco
+      armadilhas que a correção fechou
+- [ ] Somar **`user_id`** e **`resp_headers`** à lista de chaves proibidas nesse momento. A âncora atual
+      (`"(remote_ip|...)":`) não pega `resp_headers`, porque exige que o grupo comece logo depois da aspa
+- [ ] Trocar o guarda de texto de `tools/ci/borda.test.ts` por um `toEqual` sobre `logging.logs` do
+      `caddy adapt`, que é imune à formatação do arquivo (espaço, tabulação, coluna 0, CRLF, bloco
+      aninhado) e mostra a configuração **efetiva** — inclusive o `health_checker` que o próprio Caddy
+      acrescenta ao `exclude`. Roda em `test:infra`, não no portão rápido: custa o binário do Caddy
 
 - [ ] Escolher provedor de hospedagem em região Brasil, com Postgres + pgvector, Redis e
       storage S3 gerenciados (D26, D28), quando for criar o staging (D31, D42)
