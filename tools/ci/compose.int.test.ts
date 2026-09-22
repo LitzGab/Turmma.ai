@@ -132,9 +132,12 @@ describe('ambiente do compose', () => {
   it('nenhum serviço declara `logging`: teto ou driver sem leitura fazem o despejo da falha sair curto ou vazio', () => {
     // O caminho **de configuração do compose** que mata a evidência da falha sem ficar vermelho, com
     // duas portas. Não é o único caminho de configuração que existe — o serviço também decide o que
-    // escreve, e o `infra/Caddyfile` usa esse botão —, mas aquele já tem guarda: `borda.test.ts:88`
-    // pega tirar o `health_checker` do logger `sonda`, e `borda.int.test.ts:586` pega trocar
-    // `output stderr` por `output file`. Aqui é o do compose, que não tinha nenhum.
+    // escreve, e o `infra/Caddyfile` usa esse botão —, mas aquele já tem guarda. Por âncora e não por
+    // número de linha, que envelheceu três vezes seguidas nesta correção: em `tools/ci/borda.test.ts`,
+    // o caso "nada de requisição no log" afirma os dois blocos `log` por inteiro (pega `output`,
+    // `format`, `level`, `exclude` e a quantidade de blocos); em `infra/test/borda.int.test.ts`, o caso
+    // "a borda não registra acesso nem a URL de requisição que falhou" afirma o resultado no
+    // `docker logs`, com controle positivo contra vacuidade. Aqui é o do compose, que não tinha nenhum.
     // O argv continua intacto e o despejo sai com exit 0 nas duas, então nada mais no repositório
     // percebe. É o edit plausível de quem for enxugar as 24,5 mil linhas do job vermelho — e a seção
     // de evidência da correção registra que 88% do log da borda é ruído de healthcheck, o que torna

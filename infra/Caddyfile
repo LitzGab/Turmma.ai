@@ -8,11 +8,14 @@
 
 	# Nada de requisição no log (regra 20, item 9): nem acesso, nem o log de erro por requisição,
 	# nem o do proxy, que registra URL com query, IP e User-Agent quando a resposta é interrompida
-	# (upstream que cai no meio, aluno que fecha a aba). Fica o log do próprio Caddy (boot).
+	# (upstream que cai no meio, aluno que fecha a aba), nem o da API de administração, que registra
+	# `uri`, `remote_ip` e `headers` de cada sonda do healthcheck do próprio container — 88% do log
+	# desta borda, afogando as linhas que diagnosticam um 503. Fica o log do próprio Caddy (boot),
+	# inclusive o `admin endpoint started`, que vem do logger `admin` e não do `admin.api`.
 	log default {
 		output stderr
 		format json
-		exclude http.log.access http.log.error http.handlers.reverse_proxy
+		exclude http.log.access http.log.error http.handlers.reverse_proxy admin.api
 	}
 	# A sonda da borda à parte: só host e caminho da sonda, e é o que mostra instância fora do balanceamento.
 	log sonda {

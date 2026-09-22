@@ -14,6 +14,21 @@ const lerArquivo = (caminho: string) => readFileSync(join(raizRepositorio, camin
 const caddyfile = lerArquivo('infra/Caddyfile')
 const blocoDaSonda = caddyfile.slice(caddyfile.indexOf('(sonda_e_troca) {'), caddyfile.indexOf(':8080 {'))
 
+/**
+ * As diretivas de um bloco `log <nome> { ... }` do Caddyfile, sem indentação nem comentário, na ordem
+ * em que estão. Serve para afirmar o bloco **inteiro** em vez de uma diretiva por regex: é o que fecha
+ * a classe de edit que esvazia as negativas de `infra/test/borda.int.test.ts` sem nenhum guarda ver.
+ * Tolerante a espaço ou tabulação, para reformatação do arquivo não virar vermelho sem explicação.
+ */
+function diretivasDoBloco(nome: string): string[] {
+  const partida = new RegExp(String.raw`^[ \t]*log ${nome} \{$([\s\S]*?)^[ \t]*\}$`, 'm').exec(caddyfile)
+  expect(partida, `bloco \`log ${nome}\` não encontrado no Caddyfile`).not.toBeNull()
+  return (partida?.[1] ?? '')
+    .split('\n')
+    .map((linha) => linha.trim())
+    .filter((linha) => linha !== '' && !linha.startsWith('#'))
+}
+
 function segundos(texto: string): number {
   const partes = /^(\d+)(ms|s|m)$/.exec(texto)
   if (partes === null) throw new Error(`duração fora do formato: ${texto}`)
@@ -82,9 +97,34 @@ describe('borda (infra/Caddyfile) e drenagem das instâncias', () => {
     expect(/header Retry-After (\d+)/.exec(caddyfile)?.[1]).toBe(daApi)
   })
 
-  it('nada de requisição no log: acesso, erro por requisição e proxy fora do log padrão; só a sonda à parte', () => {
+  it('nada de requisição no log: acesso, erro por requisição, proxy e API de administração fora do log padrão; só a sonda à parte', () => {
     expect(caddyfile).not.toMatch(/^\s*log\s*\{/m)
-    expect(caddyfile).toMatch(/log default \{[^}]*exclude http\.log\.access http\.log\.error http\.handlers\.reverse_proxy\n/)
-    expect(caddyfile).toMatch(/log sonda \{[^}]*include http\.handlers\.reverse_proxy\.health_checker\n/)
+    // Os dois blocos **por inteiro**, e não um regex por diretiva.
+    //
+    // Esta correção tropeçou cinco vezes na mesma armadilha — asserção negativa cuja entrada pode ser
+    // esvaziada por um edit que nenhum guarda enxerga —, e cada conserto por diretiva abria a próxima:
+    // `exclude` trocado, `output` trocado (`file`, `discard`), `format console` (que muda o encoder e
+    // cega qualquer negativa por **nome** de logger), `level ERROR`. A família é aberta por construção:
+    // toda diretiva do bloco é um jeito de mudar a entrada das negativas de `borda.int.test.ts`, e a
+    // próxima versão do Caddy pode acrescentar outra.
+    //
+    // Fixar o bloco fecha a classe: pega `output`, `format`, `level`, `exclude`, `include`, a ordem
+    // entre elas e o que vier depois, com mensagem de falha que mostra exatamente o que mudou.
+    expect(diretivasDoBloco('default')).toEqual([
+      'output stderr',
+      'format json',
+      'exclude http.log.access http.log.error http.handlers.reverse_proxy admin.api',
+    ])
+    expect(diretivasDoBloco('sonda')).toEqual([
+      'output stderr',
+      'format json',
+      'include http.handlers.reverse_proxy.health_checker',
+    ])
+    // E são só esses dois: um terceiro bloco poderia religar o que os dois de cima desligam.
+    // `[ \t]*` e não tabulação literal nem `+`: medido nas duas pontas — um terceiro bloco indentado
+    // com espaços passava verde com tabulação literal, e um `log acesso { }` na **coluna 0** dentro do
+    // bloco `:8080 {` passava verde com `+`. O `not.toMatch(/^\s*log\s*\{/m)` acima não pega, porque é
+    // bloco nomeado.
+    expect([...caddyfile.matchAll(/^[ \t]*log (\S+) \{$/gm)].map(([, nome]) => nome)).toEqual(['default', 'sonda'])
   })
 })

@@ -51,11 +51,49 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] Alerta para muitos `login.externo{resultado="provedor"}` (erro, prazo ou discovery do Google ou da Microsoft), com linha no runbook: hoje a métrica existe, mas nada avisa quando o login pela conta da escola começa a falhar em massa (revisão da 13.0)
 - [ ] Login pela Microsoft: passar a exigir a claim `xms_edov` (e-mail de domínio verificado) para ligar professor pelo e-mail. Hoje o e-mail vale como verificado porque o tenant já foi conferido, como a Tech Spec define; com a claim, um administrador do tenant da escola não consegue pôr o e-mail de outra professora num usuário e ligá-lo à conta dela (revisão da 13.0)
 
+- [ ] **Reescrever o passo de `docs/runbook.md:276`, que é impossível de seguir.** Ele manda "olhe a
+      borda (`docker compose logs --since 10m borda`)" para descobrir de onde vem uma varredura de
+      endereço de escola — mas o log da borda não tem, e **por desenho não pode ter**, IP nem URL de
+      requisição (regra 20, item 9; `infra/Caddyfile` exclui `http.log.access`, `http.log.error`,
+      `reverse_proxy` e `admin.api`). Quem opera chega num beco. O conserto é dizer onde a informação
+      está de verdade (o registro de acesso da aplicação, `docs/lgpd.md:76`), **nunca** religar log de
+      requisição na borda. Achado pelo `infra-guardian` na correção
+      `2026-09-22-log-da-borda-afogado-pela-sonda-do-proprio-container`
+
+- [ ] **Corrida de porta na observabilidade, nos dois arquivos.** `infra/test/alertas.int.test.ts:81` e
+      `infra/test/metricas.int.test.ts:89` fazem `up --detach --force-recreate --wait observabilidade`
+      com o contêiner anterior ainda segurando `127.0.0.1:59100`, e o bind do novo falha com
+      `address already in use`. Dois portões vermelhos em 22/09/2026 por isso. **Não** basta tirar o
+      `--force-recreate`: o ensaio de alertas passaria a herdar série e estado de execução anterior. A
+      preferência do `infra-guardian`, em ordem: `rm --force --stop observabilidade` e depois
+      `up --detach --wait`; nova tentativa limitada só em `address already in use`; ou tirar a porta
+      publicada e falar com o Prometheus por dentro da rede. Precisa cobrir os dois arquivos, de
+      preferência por helper em `tools/testes/compose.ts`, senão o vermelho migra
+
+- [ ] **Recontar o número de linhas do docstring de `tools/ci/compose.ts`** quando a correção do
+      `--tail` for aberta. Ele diz que os cinco logs de terceiro truncados somam 149.322 linhas; com o
+      ruído do `admin.api` fora, cai para algo em torno de 115 mil — mas isso é **subtração, não
+      medição**, e o `infra-guardian` exigiu recontagem numa execução real antes de mexer na régua
+
 - [ ] Pôr `--timestamps` no despejo de log de `infra/scripts/carga.ts:304` e
       `infra/scripts/carga-login.ts:444`, que ainda usam `logs --no-color --tail 100`. É o mesmo
       defeito da correção `2026-09-21-log-da-falha-sem-carimbo-de-hora`, que consertou só os dois
       scripts da esteira; o padrão certo já existia em `tools/testes/compose.ts:78`. Sem carimbo
       uniforme, o log de um ensaio de carga não cruza com o instante do que falhou
+
+- [ ] **Ao ligar HTTPS na borda do staging, na mesma tarefa: acrescentar `http.stdlib` ao `exclude`
+      do `log default` em `infra/Caddyfile`.** É o único caminho restante para endereço de cliente
+      chegar ao log da borda, e ele vai **dentro do `msg`**
+      (`"http: TLS handshake error from <ip>:<porta>"`), sem chave nenhuma — cego às negativas por nome
+      **e** à negativa por forma de `infra/test/borda.int.test.ts`. Em HTTP/1 sem TLS ele não dispara
+      (medido pelo `privacy-guardian`); com TLS, dispara — e no staging o log do Docker vai para o
+      Alloy e o Grafana Cloud, o que torna essa linha dado retido e pesquisável. Na mesma tarefa:
+      converter a negativa por forma em asserção **positiva** sobre os campos mantidos (apagá-la reabre
+      a família de armadilhas que a correção fechou em cinco rodadas), somar `user_id` e `resp_headers`
+      à lista, e trocar o guarda de texto de `tools/ci/borda.test.ts` por um `toEqual` sobre
+      `logging.logs` do `caddy adapt`, que é imune à formatação do arquivo. Tudo detalhado em
+      `tasks/correcoes/2026-09-22-log-da-borda-afogado-pela-sonda-do-proprio-container.md`, seção "O que
+      fica para o staging"
 
 - [ ] Escolher provedor de hospedagem em região Brasil, com Postgres + pgvector, Redis e
       storage S3 gerenciados (D26, D28), quando for criar o staging (D31, D42)

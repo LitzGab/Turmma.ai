@@ -529,6 +529,11 @@ describe('borda com duas APIs e dois realtimes', () => {
 
       // Com os dois realtimes fora, a borda devolve erro dela mesma para o /socket.io: o caso que
       // o log de erro por requisição do Caddy registraria com a URL inteira.
+      //
+      // **O controle positivo do log da borda, mais abaixo, depende desta parada.** A sonda do Caddy
+      // só escreve em falha e na volta ao balanceamento — em regime saudável ela não emite nada. Quem
+      // reescrever este caso sem parar upstream deixa aquele controle vermelho; o conserto é reproduzir
+      // a parada, nunca apagar o controle, que é o que impede as três negativas de passarem vazias.
       await composeAssincronoOuFalha('stop', 'realtime-1', 'realtime-2')
       try {
         const semRealtime = await fetch(`${BORDA}/socket.io/?EIO=4&transport=polling&token=${sentinela}`)
@@ -551,7 +556,24 @@ describe('borda com duas APIs e dois realtimes', () => {
       const logs = composeOuFalha('logs', '--no-color', '--since', desde, 'borda', ...SERVICOS_ATRAS_DA_BORDA)
       expect(logs.length).toBeGreaterThan(0)
       expect(logs).not.toContain(sentinela)
-      expect(composeOuFalha('logs', '--no-color', '--since', desde, 'borda')).not.toMatch(/"logger":"http\.(log\.(access|error)|handlers\.reverse_proxy")/)
+      const logDaBorda = composeOuFalha('logs', '--no-color', '--since', desde, 'borda')
+      // Controle positivo, antes das negativas: sem ele, log da borda vazio faria as três passarem
+      // **vazias**. O `expect(logs.length)` acima não serve para isso, porque é do log combinado e
+      // pode ser satisfeito só por linha da API. A linha da sonda é garantida nesta janela, já que os
+      // dois realtimes foram parados e voltaram — e de quebra isto pega `output file` ou
+      // `logging: {driver: none}` na borda **do compose**, que nenhum outro caso alcança.
+      expect(logDaBorda).toMatch(/"logger":"http\.handlers\.reverse_proxy\.health_checker/)
+      expect(logDaBorda).not.toMatch(/"logger":"http\.(log\.(access|error)|handlers\.reverse_proxy")/)
+      // A API de administração também não loga requisição. Ela precisa ser afirmada **aqui**, no
+      // resultado, e não só no texto do Caddyfile (`tools/ci/borda.test.ts`): o token `admin.api` do
+      // `exclude` **não é validado pelo Caddy** — escrito errado, ele sobe com exit 0, sem um aviso, e
+      // as 34 mil linhas de sonda do próprio container voltam ao log. Só esta asserção fica vermelha
+      // se um bump de imagem renomear ou reaninhar o logger.
+      expect(logDaBorda).not.toMatch(/"logger":"admin\.api/)
+      // E a forma que o item 9 proíbe, independente de nome de logger: nenhuma linha leva URL, IP de
+      // cliente nem cabeçalho. Medido numa execução com a sonda falhando — o log da borda usa só
+      // `host`, `status_code`, `error` e afins, e nenhuma destas chaves aparece.
+      expect(logDaBorda).not.toMatch(/"(remote_ip|client_ip|headers|uri)":/)
     }, 180_000)
 
     it('resposta interrompida no meio (upstream que cai, cliente que desiste) não leva URL, IP nem User-Agent ao log da borda', async () => {
