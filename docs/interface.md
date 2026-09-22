@@ -288,6 +288,21 @@ Fase posterior (D11). Nota, entrega e alerta, alimentados pelo motor de eventos 
 
 ## 7. Em aberto
 
+- **A revisão do Gabriel aconteceu, em mockup, em 19 e 20/09/2026 (oito rodadas), e mudou mais que a
+  Parte B.** O mockup está no branch `mockups/interface`, pasta `mockups/`, só para consulta: não se faz
+  merge dele e nada de lá é copiado para o `apps/web`.
+  Ele rejeitou a pele da landing page dentro do produto (ficou o sistema do ChatGPT em branco,
+  preto e laranja), mudou a navegação do professor que a seção 1 dá como decidida, trocou o
+  painel de "Minhas turmas" por uma sala de aula, reformou a área de Ferramentas (catálogo de 17 em
+  quatro categorias, oito delas fora da lista da seção 1.2, e a Biblioteca no desenho do Google
+  Docs: P13 e P22 a P25), e pediu coisas que não existem em fase nenhuma (projetos, anexo na
+  conversa, faltas, configurações). Nas duas últimas rodadas, Ferramentas e Turmas foram copiadas
+  da Teachy (turma aberta com nove abas, ranking de participação, convite por link, uma segunda
+  pele: P26 a P31). **Está tudo listado, item por item, em
+  `docs/pendencias-dos-mockups.md`**, com o que cada um pede de tela, API, dado, regra e teste.
+  Até aquilo virar decisão registrada, **as seções 1, 8, 9 e 11 deste documento descrevem a versão
+  anterior**: quem for escrever o PRD da A1 lê as pendências P01 a P04 antes, e quem for escrever o
+  da A2 lê as P13, P17 e P22 a P25, e o da A3 lê as P10, P11 e P28
 - **Revisão do Gabriel sobre a Parte B** (seções 8 a 12). Aprovada, a direção vira decisão
   registrada, e saem do `CLAUDE.md` e do `TODO.md` as linhas que ainda dizem "identidade visual
   em aberto" e "trazer a marca para o repositório"

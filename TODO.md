@@ -194,6 +194,24 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
 
 ## Produto
 
+- [ ] **Fechar o que saiu da revisão dos mockups (19 e 20/09/2026)**, item por item, em
+      `docs/pendencias-dos-mockups.md`. Os que travam o PRD da A1: **um agente por pessoa**
+      (revisão da D32, da D9 e da D60; o Gabriel decidiu a direção, falta o Joaquim), a pele do
+      produto (vira a D72), o padrão de espaço e a navegação do professor. Os que pedem
+      `/descobrir` antes de qualquer PRD: **projetos**, **anexo na conversa** (abre a porta para
+      correção de discursiva por IA: D55) e **faltas** (não existe no roadmap nem na tabela da LGPD)
+- [ ] **Catálogo de ferramentas (P22 a P25).** Registrar a regra "ferramenta é o que entrega um output
+      próprio; o resto é pedido ao chat" e as quatro categorias (Planejar, Preparar a aula, Avaliar,
+      Corrigir) antes do PRD da A2. Passar por `/descobrir` as oito ferramentas que a D67 não lista
+      (planejamento do período, projeto, plano de recuperação, mapa mental, roteiro de experimento,
+      avaliação diagnóstica, proposta de redação, importar prova), uma a uma, antes de entrarem no F7.
+      Na Tech Spec da A2: ferramenta como dado, com o formulário derivado do schema do contrato (P23)
+- [ ] **Sétima e oitava rodadas dos mockups (P26 a P31).** Antes do PRD da A1: escolher **uma pele**
+      (a da Teachy em Ferramentas e Turmas ou a do P02 em tudo) e levar ao advogado a cópia fiel de
+      concorrente (P31); seletor de escola que troca o token (P30). Antes do PRD da A3: a turma aberta
+      com nove abas (P28). Por `/descobrir`: **ranking de participação** (P26, bate na 10.2 do
+      `docs/interface.md` e na D57), **Recursos** e **Mural** (P28). No PRD do F2: o convite por link,
+      WhatsApp e código (P27)
 - [ ] F2: o vínculo de aluno criado pela importação precisa nascer com `decidido_em` preenchido. A lista de alunos do ano encerrado (10.0) só traz quem chegou confirmado ao fim do ano, e hoje só a fixture de teste grava esse campo: sem ele, o aluno some do histórico da turma
 
 - [x] ~~Fechar a lista de agentes e o nível de autonomia de cada um~~ — D32 a D36; lista
@@ -226,7 +244,13 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
 - [x] ~~Landing page~~ — existe em `turmma.com` (fora deste repositório)
 - [ ] **Antes do PRD da A1 (D71):** trazer para o repositório: paleta em tokens, tipografia, logo em SVG e o avatar de cada
       um dos **seis agentes**, por função: Assistente de ensino, Tutor, Corretor, Planejador,
-      Adaptador e Analista de desempenho escolar (D32 revista; `docs/interface.md` seção 7)
+      Adaptador e Analista de desempenho escolar (D32 revista; `docs/interface.md` seção 7).
+      **Se a pendência P01 for ratificada, são três avatares** (Assistente, Tutor, Analista), e a
+      paleta é a da P02: branco, preto e o laranja da pinta (`docs/pendencias-dos-mockups.md`)
+- [ ] Identificar no 21st.dev o autor e a licença das peças que o Gabriel colou direto no
+      mockup (área de soltar arquivo, miniatura de arquivo, pasta animada, `leaderboard-*` e as duas
+      da HextaUI) e conferir a do calendário `vaib215/event-manager`, antes de qualquer uma entrar no
+      código (P20)
 
 ## Comercial
 
