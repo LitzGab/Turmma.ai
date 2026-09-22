@@ -51,6 +51,12 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] Alerta para muitos `login.externo{resultado="provedor"}` (erro, prazo ou discovery do Google ou da Microsoft), com linha no runbook: hoje a métrica existe, mas nada avisa quando o login pela conta da escola começa a falhar em massa (revisão da 13.0)
 - [ ] Login pela Microsoft: passar a exigir a claim `xms_edov` (e-mail de domínio verificado) para ligar professor pelo e-mail. Hoje o e-mail vale como verificado porque o tenant já foi conferido, como a Tech Spec define; com a claim, um administrador do tenant da escola não consegue pôr o e-mail de outra professora num usuário e ligá-lo à conta dela (revisão da 13.0)
 
+- [ ] Pôr `--timestamps` no despejo de log de `infra/scripts/carga.ts:304` e
+      `infra/scripts/carga-login.ts:444`, que ainda usam `logs --no-color --tail 100`. É o mesmo
+      defeito da correção `2026-09-21-log-da-falha-sem-carimbo-de-hora`, que consertou só os dois
+      scripts da esteira; o padrão certo já existia em `tools/testes/compose.ts:78`. Sem carimbo
+      uniforme, o log de um ensaio de carga não cruza com o instante do que falhou
+
 - [ ] Escolher provedor de hospedagem em região Brasil, com Postgres + pgvector, Redis e
       storage S3 gerenciados (D26, D28), quando for criar o staging (D31, D42)
 - [ ] Contrato com provedor de modelo: **garante processamento no Brasil para conversa de

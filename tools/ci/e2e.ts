@@ -1,4 +1,4 @@
-import { etapaCompose } from './compose.ts'
+import { etapaCompose, etapasDeEncerramento } from './compose.ts'
 import { encerrarCom, executarEtapas } from './executar.ts'
 
 // `npm run test:e2e` mantém o ambiente de pé para o desenvolvedor; a esteira sempre derruba.
@@ -19,9 +19,6 @@ await encerrarCom(
       etapaCompose('subir o ambiente completo', 'up', '--detach', '--build', '--wait'),
       { nome: 'testes e2e', comando: 'npx', argumentos: ['playwright', 'test'] },
     ],
-    (codigo) => [
-      ...(codigo === 0 ? [] : [etapaCompose('logs dos serviços', 'logs', '--no-color', '--tail', '200')]),
-      ...(manterAmbiente ? [] : [etapaCompose('derrubar o ambiente', 'down', '--volumes', '--remove-orphans')]),
-    ],
+    (codigo) => etapasDeEncerramento(codigo, !manterAmbiente),
   ),
 )

@@ -31,6 +31,31 @@ export function etapaCompose(nome: string, ...argumentos: string[]): Etapa {
 }
 
 /**
+ * O despejo de log da falha, que é o que sobra para diagnosticar um vermelho que não reproduz.
+ *
+ * `--timestamps` é o que o torna cruzável: sem ele cada linha vem com o carimbo que o próprio serviço
+ * imprime — o Caddy com `ts` no JSON, o Postgres e o Redis cada um no seu formato —, e correlacionar o
+ * instante de uma requisição com o instante em que a borda mexeu no balanceamento vira adivinhação.
+ *
+ * `--tail` é por contêiner, não no total, e 4.000 é medido, não estimado: numa execução de
+ * `test:infra` de 20 min, o maior log de serviço nosso foi o da `api-2`, com 3.899 linhas. Em 4.000
+ * o despejo leva **o log inteiro dos doze serviços que escrevemos**. Vão truncados de propósito
+ * cinco de terceiro — postgres, borda, redis-fila, redis-cache e storage —, que somam 149.322
+ * linhas; neles o que serve para diagnosticar é o carimbo, não o começo. (Os outros dois de
+ * terceiro, oidc-falso e observabilidade, saem completos.) Medição em
+ * tasks/correcoes/2026-09-21-log-da-falha-sem-carimbo-de-hora.md.
+ */
+export const ETAPA_DO_LOG_DA_FALHA = ['logs', '--no-color', '--timestamps', '--tail', '4000'] as const
+
+/** Os passos de encerramento, em função do código de saída. Separado para o caminho de falha ter teste. */
+export function etapasDeEncerramento(codigo: number, derrubar = true): Etapa[] {
+  return [
+    ...(codigo === 0 ? [] : [etapaCompose('logs dos serviços', ...ETAPA_DO_LOG_DA_FALHA)]),
+    ...(derrubar ? [etapaCompose('derrubar o ambiente', 'down', '--volumes', '--remove-orphans')] : []),
+  ]
+}
+
+/**
  * Sobe Postgres, Redis e storage, roda o `npm run <script>` e derruba o ambiente, com os logs dos serviços
  * antes quando falha. É o corpo de `ci:integracao` e `ci:infra`.
  */
@@ -40,10 +65,7 @@ export function executarTestesComInfra(nome: string, script: string): Promise<nu
       etapaCompose('subir Postgres, Redis, storage e oidc-falso', 'up', '--detach', '--wait', ...SERVICOS_INFRA),
       { nome, comando: 'npm', argumentos: ['run', script] },
     ],
-    (codigo) => [
-      ...(codigo === 0 ? [] : [etapaCompose('logs dos serviços', 'logs', '--no-color', '--tail', '200')]),
-      etapaCompose('derrubar o ambiente', 'down', '--volumes', '--remove-orphans'),
-    ],
+    (codigo) => etapasDeEncerramento(codigo),
   )
 }
 

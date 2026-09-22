@@ -59,6 +59,36 @@ function indiceDe(chamadas: string[], trecho: string): number {
   return chamadas.findIndex((chamada) => chamada.includes(trecho))
 }
 
+/**
+ * A linha inteira que o despejo da falha tem de ser, e não uma lista de propriedades dela. Afirmar
+ * propriedades deixa passar tudo que as satisfaz e ainda destrói a evidência: `--since 1m` corta o
+ * despejo para o último minuto, e a falha aos 15 min desaparece. Assim afirmado, morrem de uma vez
+ * `--since`, `--no-color` sumido, `--tail` duplicado (o Docker usa o último), lista de serviços no
+ * fim (que some com o log dos doze serviços nossos), projeto trocado, arquivo de compose trocado e
+ * ordem dos argumentos.
+ *
+ * O `4000` está escrito à mão, e não importado de `compose.ts`: lido de lá, baixar a régua deixaria
+ * o teste verde. É medido — 21/09/2026, `test:infra`, maior log de serviço nosso `api-2` com 3.899
+ * linhas. Ver `tasks/correcoes/2026-09-21-log-da-falha-sem-carimbo-de-hora.md`.
+ */
+const DESPEJO_DA_FALHA =
+  'docker compose --project-name educa-teste --env-file .env.example --env-file infra/teste.env' +
+  ' -f infra/compose.yml logs --no-color --timestamps --tail 4000'
+
+/**
+ * O despejo carimbado é a única evidência que sobra de um vermelho que não reproduz na máquina de
+ * quem escreveu o teste. Afirmado aqui, no script real, e não só na função que o monta: sem isto,
+ * um script que voltasse a montar os argumentos por conta própria — que é como estava antes de
+ * `etapasDeEncerramento` existir — manteria a suíte verde sem carimbo nenhum no log.
+ */
+function afirmarDespejoCarimbado(chamadas: string[], derrubou = true): void {
+  // `toContain` e não `indexOf >= 0`: quem acrescentar um `--env-file` legítimo recebe o diff pronto
+  // entre o esperado e o que saiu, em vez de "esperava >= 0, recebi -1" com a lista crua ao lado.
+  expect(chamadas).toContain(DESPEJO_DA_FALHA)
+  // E antes do `down --volumes`: depois dele os contêineres já não existem e o despejo sai vazio.
+  if (derrubou) expect(indiceDe(chamadas, ' down ')).toBeGreaterThan(chamadas.indexOf(DESPEJO_DA_FALHA))
+}
+
 describe('scripts ci:* reais', () => {
   it('ci:verificar roda tipos, lint com guardas, gitleaks, npm audit e unidade, e sai verde só se todos passarem', () => {
     const verde = rodarScript('verificar.ts', null)
@@ -91,6 +121,10 @@ describe('scripts ci:* reais', () => {
     const vermelho = rodarScript(script, teste)
     expect(vermelho.codigo).not.toBe(0)
     expect(indiceDe(vermelho.chamadas, ' down ')).toBeGreaterThan(indiceDe(vermelho.chamadas, teste))
+    afirmarDespejoCarimbado(vermelho.chamadas)
+
+    // E não despeja quando passou: log de execução verde é ruído no log do job.
+    expect(verde.chamadas.some((chamada) => / logs /.test(chamada))).toBe(false)
   })
 
   it('a esteira roda todo projeto do Vitest, e o `npm run test` do portão da tarefa só deixa de fora o de infra (D52)', async () => {
@@ -116,6 +150,8 @@ describe('scripts ci:* reais', () => {
     const vermelho = rodarScript('e2e.ts', 'npx playwright test')
     expect(vermelho.codigo).not.toBe(0)
     expect(indiceDe(vermelho.chamadas, ' down ')).toBeGreaterThan(indiceDe(vermelho.chamadas, 'npx playwright test'))
+    afirmarDespejoCarimbado(vermelho.chamadas)
+    expect(verde.chamadas.some((chamada) => / logs /.test(chamada))).toBe(false)
   })
 
   it('ci:e2e mede o teto do bundle depois do build da web e antes do Playwright, e sai vermelho quando ele estoura', () => {
@@ -135,6 +171,8 @@ describe('scripts ci:* reais', () => {
     const vermelho = rodarScript('e2e.ts', 'npx playwright test', ['--manter-ambiente'])
     expect(vermelho.codigo).not.toBe(0)
     expect(indiceDe(vermelho.chamadas, ' down ')).toBe(-1)
+    // Mantendo o ambiente, o despejo continua: quem depura tem o log carimbado e os contêineres de pé.
+    afirmarDespejoCarimbado(vermelho.chamadas, false)
   })
 
   it.each(['integracao.ts', 'infra.ts', 'e2e.ts'])('todo compose de %s usa o projeto de teste e só os arquivos de ambiente versionados', (script) => {
