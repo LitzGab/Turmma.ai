@@ -1,5 +1,5 @@
 import pg from 'pg'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { executarNoContexto } from '../contexto/contexto.js'
 import { LoggerDoNest, TEXTO_MENSAGEM_OMITIDA } from './logger-do-nest.js'
 import {
@@ -23,16 +23,56 @@ function erroDeUnicidade(): pg.DatabaseError {
   })
 }
 
+/**
+ * O instante em que o defeito apareceu: `37.569` contém `7.5`, que é a nota logada no caso de
+ * redação. Preso no relógio de propósito, para a colisão ser certa em vez de 1% provável.
+ */
+const INSTANTE_COLIDENTE = '2026-09-22T01:45:37.569Z'
+
 function loggerCapturado() {
   const linhas: string[] = []
   const logger = criarLogger({ servico: 'teste', nivel: 'trace', destino: { write: (linha: string) => linhas.push(linha) } })
   const registros = () => linhas.map((linha) => JSON.parse(linha) as Record<string, unknown>)
-  return { logger, linhas, registros }
+  /**
+   * As linhas cruas com o **valor** de `time` substituído, e só ele.
+   *
+   * Afirmar negativa sobre a linha inteira é mais forte de propósito: pega o valor vazando em
+   * qualquer chave, inclusive uma que o `toMatchObject` não enumera. Mas o carimbo de hora entra
+   * nessa conta sem ser carga, e colide: `nota: 7.5` casa com `"time":"...T01:45:37.569Z"` sempre
+   * que o segundo termina em 7 e o milissegundo começa em 5 — 1% dos instantes, medido. O vermelho
+   * então acusa vazamento de dado pessoal que não existe.
+   *
+   * Sem `/g` de propósito: troca a **primeira** ocorrência, que é sempre o carimbo do pino (ele
+   * escreve `level` e depois `time`). Com `/g`, uma chave `time` vinda do payload também seria
+   * apagada — e `time` não está em `CHAVES_PESSOAIS` nem em `CHAVES_DE_IDENTIDADE`, então o redact
+   * não a cobre e a asserção ficaria cega para ela.
+   *
+   * Quem usa isto afirma também que o carimbo continua no registro, senão a substituição passaria
+   * a esconder o `time` desaparecendo do log.
+   */
+  const semCarimbo = () => linhas.map((linha) => linha.replace(/("time":)"[^"]*"/, '$1"[hora]"')).join('')
+  return { logger, linhas, registros, semCarimbo }
 }
+
+// Devolve o relógio real mesmo quando o caso falha no meio, e no nível do arquivo para valer também
+// para `LoggerDoNest` e `tratadorDeErroDoProcesso`: relógio parado vazando entre casos seria defeito
+// bem pior que o que esta correção conserta.
+//
+// O `afterEach` de arquivo é o **último** a rodar (o Vitest recorre ao pai depois do filho). Se algum
+// `describe` daqui ganhar `afterEach` próprio e ele **lançar**, este não roda e o relógio falso vaza.
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 describe('criarLogger', () => {
   it('remove nome de aluno aninhado, nota aninhada e authorization, mantendo os ids', () => {
-    const { logger, linhas, registros } = loggerCapturado()
+    // Relógio preso no instante que expôs o defeito: `37.569` contém `7.5`, que é a nota logada
+    // abaixo. Fixado de propósito — sem isto o caso volta a passar em 99% das execuções, e quem
+    // apagar o `semCarimbo()` não descobre pelo vermelho. Só o `Date` é falseado: o `isoTime` do
+    // pino lê `Date.now()`, e nada mais aqui depende de temporizador.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(INSTANTE_COLIDENTE))
+    const { logger, linhas, registros, semCarimbo } = loggerCapturado()
     logger.info({
       aluno: { id: 'a1', nome: 'Enzo Martins', matricula: '2026001' },
       correcao: { avaliacaoId: 'v1', nota: 7.5, resposta: 'letra C' },
@@ -44,10 +84,22 @@ describe('criarLogger', () => {
       correcao: { avaliacaoId: 'v1', nota: TEXTO_REMOVIDO, resposta: TEXTO_REMOVIDO },
       authorization: TEXTO_REMOVIDO,
     })
-    const bruto = linhas.join('')
+    // O carimbo continua no log, e é o instante colidente: sem esta asserção, o `semCarimbo()`
+    // abaixo esconderia o `time` desaparecendo, e o relógio falso poderia não ter pegado sem ninguém
+    // notar — os dois deixariam o caso verde guardando nada.
+    expect(registro?.['time']).toBe(INSTANTE_COLIDENTE)
+    const bruto = semCarimbo()
     for (const valor of ['Enzo Martins', '2026001', '7.5', 'letra C', 'segredo-sintetico']) {
       expect(bruto).not.toContain(valor)
     }
+    // Dupla função, e a segunda não é óbvia. Uma: provar que a substituição não é atalho — a linha
+    // crua desta execução **contém** `7.5`, no carimbo, e é isso que fazia o caso reprovar 1% das
+    // vezes. Duas: é a única que **resiste à troca de formato feita com o `INSTANTE_COLIDENTE`
+    // atualizado junto**. Se o `isoTime` virar `epochTime`, o `toBe` acima também fica vermelho — mas
+    // volta ao verde se a constante virar o número; esta não, porque epoch em ms é inteiro e nenhum
+    // valor dele pode conter `7.5`. Não apague por parecer redundante: apagá-la é o único jeito de
+    // silenciar essa troca.
+    expect(linhas.join('')).toContain('7.5')
   })
 
   // Lista escrita à mão: gerar os casos da própria constante não pegaria chave apagada dela.
