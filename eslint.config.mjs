@@ -13,6 +13,8 @@ export default tseslint.config(
       'test-results/**',
       // Violações de propósito: o teste das guardas as passa pelo ESLint com um caminho simulado.
       'tools/guardas/__fixtures__/**',
+      // Protótipo só de front-end, com projeto e lint próprios (mockups/LEIAME.md); não é código do produto.
+      'mockups/**',
     ],
   },
   js.configs.recommended,

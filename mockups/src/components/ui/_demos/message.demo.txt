@@ -1,0 +1,62 @@
+import {
+  Message,
+  MessageAvatar,
+  MessageContent,
+  MessageFooter,
+  MessageHeader,
+} from "@/components/ui/message"
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar"
+
+export default function MessageDemo() {
+  return (
+    <div className="mx-auto flex w-full max-w-md flex-col gap-8 p-6">
+      <Message>
+        <MessageAvatar className="size-8">
+          <Avatar className="size-8">
+            <AvatarImage src="https://cdn.21st.dev/assets/mirror/51/513d06f542692036ff0bb17938f04b3efd60567ba2cae08049469d21f18e0524.jpg" alt="@shadcn" />
+            <AvatarFallback>CN</AvatarFallback>
+          </Avatar>
+        </MessageAvatar>
+        <MessageContent className="ml-2 gap-1">
+          <MessageHeader className="text-sm font-medium">shadcn</MessageHeader>
+          <div className="w-fit rounded-2xl rounded-bl-md bg-muted px-4 py-2 text-sm text-foreground">
+            Deploying to prod real quick.
+          </div>
+        </MessageContent>
+      </Message>
+
+      <Message align="end">
+        <MessageContent className="mr-2 items-end gap-1">
+          <div className="w-fit rounded-2xl rounded-br-md bg-primary px-4 py-2 text-sm text-primary-foreground">
+            It&apos;s 4:55 PM. On a Friday.
+          </div>
+          <MessageFooter className="text-xs text-muted-foreground">
+            Delivered
+          </MessageFooter>
+        </MessageContent>
+      </Message>
+
+      <Message>
+        <MessageAvatar className="size-8">
+          <Avatar className="size-8">
+            <AvatarImage
+              src="https://cdn.21st.dev/assets/mirror/ef/ef407ec862dd072b8624fad7a331df80f56694e98bc1d89b0feb0ea0185e8954.png"
+              alt="@evilrabbit"
+            />
+            <AvatarFallback>ER</AvatarFallback>
+          </Avatar>
+        </MessageAvatar>
+        <MessageContent className="ml-2 gap-1">
+          <MessageHeader className="text-sm font-medium">evilrabbit</MessageHeader>
+          <div className="w-fit rounded-2xl rounded-bl-md bg-muted px-4 py-2 text-sm text-foreground">
+            It&apos;s always a one-line change 😭.
+          </div>
+        </MessageContent>
+      </Message>
+    </div>
+  )
+}
