@@ -60,6 +60,17 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       requisição na borda. Achado pelo `infra-guardian` na correção
       `2026-09-22-log-da-borda-afogado-pela-sonda-do-proprio-container`
 
+- [ ] **Intermitente com assinatura: `401` em `POST /v1/sessao/escola` depois do segundo fator.** Na
+      esteira 35705342652 (commit 64cba89), `e2e/escola-e-vinculos.spec.ts:185` no projeto `celular`
+      falhou com a tela "Escolher a escola" e o alerta *"Sua sessão não é válida ou expirou"*. O traço
+      publicado deu a sequência exata: `POST /v1/sessao/email` 200 → `/v1/sessao/escola` 200 →
+      `/v1/conta/mfa/configurar` 200 → `/v1/conta/mfa/ativar` 200 → `/v1/sessao/email` 200 →
+      **`/v1/sessao/escola` 401**. Ou seja: depois de ativar o segundo fator e entrar de novo, escolher
+      a escola é rejeitado. **Passa localmente**, 132 de 132 nos dois projetos, então é intermitência —
+      mas é a primeira das onze com assinatura precisa, e a hipótese a investigar é a interação entre
+      ativar MFA e a validade do token da sessão nova. O traço está no artefato `traco-do-e2e` daquela
+      execução (retenção de 7 dias — **baixar antes de 29/09/2026** se for investigar depois)
+
 - [ ] **Corrida de porta na observabilidade, nos dois arquivos.** `infra/test/alertas.int.test.ts:81` e
       `infra/test/metricas.int.test.ts:89` fazem `up --detach --force-recreate --wait observabilidade`
       com o contêiner anterior ainda segurando `127.0.0.1:59100`, e o bind do novo falha com
