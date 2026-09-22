@@ -14,7 +14,7 @@ sem servidor, todo dado é sintético.
 - O que vale é o **desenho**. O que for aprovado volta para o `docs/interface.md`, vira decisão em
   `docs/decisoes.md` e é construído no produto pelo processo normal (`/descobrir` → PRD → tarefas).
 - O que as telas pedem ao produto e ainda não existe (modelo de dados, regras, riscos) está em
-  `docs/pendencias-dos-mockups.md` (ainda não publicado; chega junto com o próximo commit de docs).
+  `docs/pendencias-dos-mockups.md`, no branch `docs/estrutura-de-agentes`: 31 itens, P01 a P31.
 
 ## Rodar
 

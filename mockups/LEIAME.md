@@ -17,7 +17,7 @@ npm run dev        # abre em http://127.0.0.1:5190
 ```
 
 Comece pelo **mapa das telas** em `/`: ele lista tudo por papel, marca o que é do MVP de apresentação (A1–A5)
-e traz o roteiro dos cinco passos da D71 na ordem. O botão **Mockup**, no canto, pula entre os papéis.
+e traz o roteiro dos cinco passos da D71 na ordem. Para trocar de papel, volte ao mapa.
 
 ## De onde vem cada coisa
 
@@ -140,8 +140,9 @@ botão tem canto de 8 px, a página rola como documento, e as fontes são Quicks
 
 ## Tarefas futuras
 
-**O registro completo está no repositório do produto: `Educa.ia/docs/pendencias-dos-mockups.md`** — 25 itens (P01 a
-P25), cada um com o que o produto precisa de tela, API, dado, regra e teste, e por onde entra no processo. O resumo:
+**O registro completo está em `docs/pendencias-dos-mockups.md`, no branch `docs/estrutura-de-agentes`** — 31 itens
+(P01 a P31), cada um com o que o produto precisa de tela, API, dado, regra e teste, e por onde entra no processo.
+As duas últimas rodadas estão nos itens P26 a P31. O resumo:
 
 - **Projetos**, como no Claude e no ChatGPT (pedido do Gabriel, 20/09/2026). Hoje é só desenho: o grupo "Projetos" na
   lateral e a tela `src/areas/professor/Projeto.tsx`. Um projeto junta conversas, arquivos e instruções que valem só
