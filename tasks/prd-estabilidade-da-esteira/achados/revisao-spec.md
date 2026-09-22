@@ -1,6 +1,6 @@
-# Achados das revisões
+# Achados das revisões — `tasks/prd-estabilidade-da-esteira/revisao-spec.md`
 
-Escrito pelo hook `tools/processo/revisoes.ts`. Lido por `/retro`. Não edite à mão.
+Escrito pelo hook `tools/processo/revisoes.ts`. O resumo de cada rodada está em `indice.md`, nesta pasta. Não edite à mão.
 
 ## test-engineer · 1ª rodada · REPROVADO · 2026-09-21 12:39:42 · `tasks/prd-estabilidade-da-esteira/revisao-spec.md`
 

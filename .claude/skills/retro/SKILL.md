@@ -21,7 +21,8 @@ Funcionalidade: `$ARGUMENTS`
 ## 1. Ler
 
 - `tasks/prd-$ARGUMENTS/*_task.md`: a seção "Revisões" de cada um
-- `tasks/prd-$ARGUMENTS/achados-revisoes.md`: o que cada revisor exigiu
+- `tasks/prd-$ARGUMENTS/achados/indice.md`: uma linha por rodada com o que cada revisor exigiu.
+  Agrupe pelo índice e abra `achados/<documento>.md` só onde precisar do texto inteiro
 - `tasks/prd-$ARGUMENTS/revisao-spec.md` e `validacao.md`, se existirem
 - `tasks/correcoes/*.md` com data dentro do período da funcionalidade
 - `git log --format='%h %ad %s' --date=iso` dos commits da funcionalidade

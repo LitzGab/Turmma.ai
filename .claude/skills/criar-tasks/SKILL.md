@@ -25,8 +25,9 @@ Funcionalidade alvo: `$ARGUMENTS`
 e aponte `/revisar-spec $ARGUMENTS`: erro na Tech Spec contamina todas as tarefas, e é o momento
 mais barato de achá-lo.
 
-Leia também o `achados-revisoes.md` e o `retro.md` das funcionalidades anteriores, se
-existirem: o que os revisores exigiram lá vira cenário de teste ou subtarefa aqui.
+Leia também o `achados/indice.md` e o `retro.md` das funcionalidades anteriores, se existirem: o
+que os revisores exigiram lá vira cenário de teste ou subtarefa aqui. O índice é uma linha por
+rodada; abra o bloco inteiro só das que interessam a esta funcionalidade.
 
 ## O que é uma boa tarefa
 

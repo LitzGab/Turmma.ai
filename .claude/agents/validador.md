@@ -98,8 +98,9 @@ npm run test:infra   # se a funcionalidade mexe em infra (regra 40, D52)
 - Divergência da Tech Spec: está registrada na própria Tech Spec (seção 12 ou nota) ou foi
   decidida em silêncio? Silêncio é achado maior.
 - Recomendação de revisor ou pendência de relatório que ficou sem destino: liste como menor,
-  para não se perder. As recomendações estão em `achados-revisoes.md`, na pasta da
-  funcionalidade, escrito pelo hook.
+  para não se perder. As recomendações estão resumidas em `achados/indice.md`, na pasta da
+  funcionalidade, uma linha por rodada, com o texto inteiro em `achados/<documento>.md`. Escrito
+  pelo hook.
 - A Tech Spec passou por `/revisar-spec` (existe `revisao-spec.md` com veredito APROVADA)?
   Funcionalidade especificada depois de 15/09/2026 sem isso é achado maior.
 - Commit depois de 15/09/2026 que levou código sem `(tarefa N.0)` nem `(correção <slug>)`

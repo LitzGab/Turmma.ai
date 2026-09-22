@@ -68,8 +68,10 @@ fazer, e as dos guardiões marcados:
 - Os casos de borda do `N_task.md` têm cada um o seu teste?
 - Leia a seção "O que verificar" de cada guardião marcado (`.claude/agents/<nome>.md`) e diga
   onde o plano atende cada item que se aplica.
-- Se `tasks/prd-<func>/achados-revisoes.md` existe, leia: é o que os revisores já exigiram nas
-  tarefas anteriores. Não repita o mesmo erro.
+- Se `tasks/prd-<func>/achados/indice.md` existe, leia: é uma linha por rodada com o que os
+  revisores já exigiram nas tarefas anteriores. Não repita o mesmo erro. Abra o bloco inteiro
+  (`achados/<N>_task.md`, no cabeçalho com o mesmo fim) só das linhas que tocam o que você vai
+  mexer — o corpo todo passa de 600 KB por funcionalidade e não cabe na janela.
 
 ## 3. Implementar
 
@@ -158,15 +160,16 @@ mudou, em vez de refazer a tarefa inteira.
 
 - **Reprovou: corrija e chame uma rodada nova com um revisor novo** (ferramenta Agent, não
   mensagem para o anterior). O registro depende de o revisor terminar como subagente.
-- **Recomendação não reprova.** Fica em `achados-revisoes.md`, escrito pelo hook, e o
-  `/validar` e o `/retro` leem de lá. Aplique agora só a que custa pouco e não mexe em código
-  já aprovado por outro revisor.
+- **Recomendação não reprova.** Fica em `achados/<documento>.md`, resumida em
+  `achados/indice.md`, escrito pelo hook, e o `/validar` e o `/retro` leem de lá. Aplique agora só
+  a que custa pouco **e antes de o revisor aprovar**: recomendação aplicada depois da aprovação
+  caduca a rodada, e custa uma rodada nova.
 - **Mexeu em código depois de uma aprovação, a aprovação caducou**, e o hook diz de quem.
   A caducidade segue o que o revisor audita: mudança **só em arquivo de teste** (`*.test.ts`,
   `*.spec.ts`, `test/`, `e2e/`, `__fixtures__/`) caduca só `test-engineer` e `revisor-geral`;
   mudança em qualquer outro arquivo caduca todos. Por isso, na correção pedida pelo
   `test-engineer`, mexa só no teste sempre que der.
-- **Não edite a seção "Revisões" nem o `achados-revisoes.md`.** Quem escreve é o hook.
+- **Não edite a seção "Revisões" nem nada dentro de `achados/`.** Quem escreve é o hook.
 
 ## 6. Conferência final
 
@@ -211,8 +214,16 @@ Só depois de tudo verde e todos os revisores obrigatórios aprovados:
   - sem `gh` ou sem rede: não faça o commit e reporte
 - Marque a tarefa `[x]` em `tasks.md`
 - **Faça o commit da tarefa, direto na `develop`** (D23 revista). Stage apenas os arquivos desta
-  tarefa, incluindo o `N_task.md` com a seção "Revisões" e o `achados-revisoes.md` da pasta,
-  se o hook o escreveu, nunca `git add -A`.
+  tarefa, incluindo o `N_task.md` com a seção "Revisões" e, se o hook os escreveu,
+  `achados/<N>_task.md` e `achados/indice.md`, nunca `git add -A`.
+  O `achados/indice.md` é da pasta, não da tarefa: se outro trabalho registrou rodada enquanto esta
+  corria, a linha dele vem junto. **Leve assim.** O arquivo é só acrescentado, então a linha extra
+  entra um commit mais cedo e nada se perde; tirá-la à mão perderia o registro dela.
+  Veio um `achados-revisoes.md` de volta num merge (branch aberta antes de 22/09/2026)? Rode
+  `node tools/processo/separar-achados.ts` antes do commit: ele separa e acumula, sem apagar o que
+  já está em `achados/`. Ele mexe em mais coisa que a sua tarefa, e o stage acompanha: prepare a
+  **deleção** do `achados-revisoes.md` e a pasta `achados/` **inteira**, não só o arquivo da tarefa
+  — sem isso o commit vai sem a deleção e sem os blocos dos outros documentos.
   Mensagem no padrão `<Verbo> <o quê> (tarefa N.0)`, por exemplo
   `Implementa reivindicação de nome pelo link da sala (tarefa 4.0)`, com a linha
   `Revisões: <revisor> <veredito> (<n>ª rodada), ...` no corpo. Um commit por tarefa, nunca

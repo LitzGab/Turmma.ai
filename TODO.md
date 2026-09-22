@@ -263,11 +263,28 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       move o `mtime` sem mudar uma linha, e **invalida a própria rodada ao fazer o trabalho que se
       espera dele** — custou duas rodadas na correção de 20/09. Comparar hash de conteúdo
       (`git hash-object`) encerra a classe
-- [ ] **Defeito do hook de revisões:** rodada registrada na tabela do documento sem bloco
-      correspondente em `achados-revisoes.md`. Aconteceu com a rodada 2 do `test-engineer` e com
-      **todas** as rodadas do `privacy-guardian` da correção de 20/09 — justamente o revisor cujo
-      texto sustenta uma decisão de regra 20. O texto exigido se perde e a rodada seguinte audita sem
-      ele. Uma asserção exigindo um bloco por linha da tabela fecha a classe
+- [x] ~~**Defeito do hook de revisões:** rodada registrada na tabela do documento sem bloco de
+      achado~~ — fechado na correção `2026-09-22-achado-de-revisao-nao-cabe-na-janela`. A causa era o
+      regex que decidia guardar a rodada aprovada: exigia `Recomendações:` com dois pontos, e
+      `## Recomendações (não bloqueiam)` seguido dos itens não casava. Agora quem decide é
+      `exigenciaDaRodada`, que lê as sete formas que os revisores usam
+- [ ] **Defeito do carimbo do portão local:** `portao-local.ts` grava o instantâneo de conteúdo no
+      **fim** da execução (`gravarInstantaneo(raiz, CHAVE_DO_PORTAO, ...)`), então arquivo editado
+      **durante** a corrida entra no instantâneo como se as suítes o tivessem rodado, e o `conferir`
+      responde "válido" para código que nunca passou pelo portão. Achado em 21/09 na correção dos
+      achados: editei `revisoes.ts` às 15:16 com o portão rodando desde 14:55, e ele deu válido. É a
+      mesma classe das correções de `mtime`, na direção oposta: antes invalidava sem motivo, agora
+      valida sem prova. Gravar o instantâneo no **início**, e conferir no fim que nada mudou, encerra
+      a classe. **Contorno até lá:** rodar o portão depois da última edição, e conferir à mão que o
+      mtime dos arquivos de código é anterior ao `inicio` do carimbo. **Vai junto na mesma correção:**
+      `avaliarPortao` chama `alteracaoQueCaduca` e `avaliarCarimbo` **sem** passar o instantâneo
+      (`tools/processo/revisoes.ts`), enquanto o `conferir` do `portao-local.ts` passa — dois critérios
+      para a mesma pergunta, na direção oposta do defeito
+- [ ] **Duas sessões na mesma árvore não passam pelo portão.** O portão é de árvore inteira e o
+      carimbo é um arquivo só (`.processo/portao.json`). Em 21/09, com duas sessões abertas: um
+      portão saiu vermelho em 5 testes de integração que passavam sozinhos (disputa de container),
+      e um `git reset --hard HEAD` de uma sessão apagou o trabalho não commitado da outra. Decidir o
+      combinado — uma sessão por vez, ou worktree separada por sessão
 - [x] ~~Guarda de lint para `start`/`up` sem `aguardarSaudavel`~~ — feita na retrospectiva do F1
       (`guardas/esperar-servico-do-compose`), com fixture e teste. Vale só em teste, deixa passar
       `up --wait`, e ao ser ligada apontou a última ocorrência aberta do repositório

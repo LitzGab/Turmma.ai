@@ -64,6 +64,6 @@ O que pertence a outra tarefa e não deve ser implementado aqui.
 
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina, e o que os revisores exigem vai para
-     achados-revisoes.md na mesma pasta. Não escreva nenhum dos dois à mão e não acrescente
-     seção depois de "Revisões". -->
+     achados/<este arquivo>, resumido em achados/indice.md. Não escreva nenhum dos três à mão
+     e não acrescente seção depois de "Revisões". -->
 

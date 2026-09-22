@@ -424,8 +424,11 @@ correções exigidas. O portão local grava um carimbo que o hook exige antes do
 agente `revisor-geral`, em contexto limpo e com veto. Revisores ficam sem ferramenta de edição e
 separam bloqueante de recomendação: só bloqueante reprova. A Tech Spec passa por `/revisar-spec`
 antes de virar tarefa. Código só entra no `main` por tarefa ou por `/corrigir`, e o hook bloqueia o
-resto. O hook guarda o que os revisores exigiram em `achados-revisoes.md`, que o `/retro` usa depois
-do `/validar` para mudar templates, agentes e regras. O texto completo das decisões sai do
+resto. O hook guarda o que os revisores exigiram em `achados/<documento>.md`, com resumo de uma
+linha por rodada em `achados/indice.md`, que o `/retro` usa depois do `/validar` para mudar
+templates, agentes e regras (a separação por documento e o índice entraram em 22/09/2026, na
+correção `2026-09-22-achado-de-revisao-nao-cabe-na-janela`: o arquivo único da pasta chegou a 646 KB
+e o passo que manda lê-lo antes de cada tarefa não cabia na janela). O texto completo das decisões sai do
 `CLAUDE.md` para este arquivo, as regras 30 e 50 passam a carregar por caminho, e PRD, Tech Spec e
 `N_task.md` têm o tamanho medido. Motivo: a avaliação do processo de 15/09/2026 achou 119 rodadas de
 revisor no F0 e na 1.0 do F1, com 31 reprovações, 16 delas do `test-engineer`; a 1.0 teve 16

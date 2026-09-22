@@ -323,7 +323,8 @@ a regra explicitamente.
 
 **Revisores** (em `.claude/agents/`): em toda tarefa, `test-engineer` primeiro e depois
 `revisor-geral` com os guardiões marcados, em paralelo. O hook `tools/processo/revisoes.ts`
-registra as rodadas, guarda o que foi exigido em `achados-revisoes.md` e bloqueia o commit sem
+registra as rodadas, guarda o que foi exigido em `achados/<documento>.md` com resumo de uma linha
+em `achados/indice.md` (leia o índice, abra o bloco), e bloqueia o commit sem
 revisão válida, sem portão local carimbado (`node tools/processo/portao-local.ts`), ou que leve
 código sem `(tarefa N.0)` nem `(correção <slug>)` (D53).
 

@@ -4,8 +4,12 @@
 // o revisao-spec.md de uma Tech Spec, ou o tasks/correcoes/<slug>.md de uma correção.
 //
 // `registrar` (SubagentStop): quando um revisor termina, acrescenta a rodada à seção "Revisões" do
-// documento, com início, fim e veredito, e guarda o que ele exigiu em achados-revisoes.md, na mesma
-// pasta, para a retrospectiva. Quem escreve é o hook, não quem implementou.
+// documento, com início, fim e veredito, e guarda o que ele exigiu em `achados/<documento>.md`, com
+// uma linha de resumo em `achados/indice.md`. Quem escreve é o hook, não quem implementou.
+//
+// A separação existe porque o arquivo único por pasta chegou a 646 KB e 158 rodadas no F1, e o
+// passo 2 do `/executar-task` manda lê-lo antes de cada tarefa: o índice é o que cabe na janela,
+// e o bloco inteiro se abre por ele.
 //
 // `portao` (PreToolUse do Bash): bloqueia `git commit ... (tarefa N.0)` e `git commit ... (correção
 // <slug>)` enquanto algum revisor obrigatório não tiver uma rodada que ainda valha para o código
@@ -15,7 +19,7 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 
 export const REVISORES_COM_VETO = ['tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'infra-guardian', 'test-engineer', 'revisor-geral']
 export const REVISORES_SEM_VETO = ['llm-integrator', 'pedagogia-reviewer', 'frontend-reviewer']
@@ -29,7 +33,11 @@ const REVISORES_DE_TESTE = ['test-engineer', 'revisor-geral']
 export const PASTAS_DE_CODIGO = ['apps/', 'packages/', 'infra/', 'e2e/']
 
 export const CAMINHO_CARIMBO = '.processo/portao.json'
+/** O arquivo único por pasta, de antes da separação. Só a migração o lê. */
 export const NOME_ACHADOS = 'achados-revisoes.md'
+/** Os achados ficam em `<pasta do documento>/achados/`: um arquivo por documento, mais o índice. */
+export const PASTA_ACHADOS = 'achados'
+export const NOME_INDICE = 'indice.md'
 
 export interface Revisao {
   inicio: string
@@ -186,18 +194,167 @@ export function acrescentarRevisao(conteudoTarefa: string, revisao: Omit<Revisao
 }
 
 // O que vale para a retrospectiva: toda rodada que não aprovou, e a aprovada que deixou recomendação.
+//
+// Guardar usa só `exigenciaDaRodada`; o resumo do índice tem, além dela, o recuo da primeira linha
+// substantiva. A assimetria é de propósito. Revisor que declara "Bloqueantes: nenhum / Recomendações:
+// nenhuma" não exigiu nada, e a prosa que ele escreve depois é justificativa, não pedido: guardá-la
+// devolveria ao corpus as 172 rodadas aprovadas de 237, que é o peso que esta correção tirou. O recuo
+// serve à rodada que **já vai ser guardada** por ter reprovado, para a célula do índice não sair vazia.
+//
+// A terceira possibilidade é onde se erra: seção **vazia** não é declaração. `Recomendações:` seguido
+// de nada aproveitável quer dizer que o conteúdo está fora da seção, e aí a rodada é guardada mesmo
+// aprovada — ver `temSecaoSemDeclaracao`. Um bloco real do corpus, com cinco recomendações, se perdeu
+// assim quando o filtro de cerca entrou sozinho.
+//
+// Quem decide é `exigenciaDaRodada`, e não um regex de `Recomendações:`, porque o regex pedia os dois
+// pontos: `## Recomendações (não bloqueiam)` seguido dos itens não casava, e a rodada ia para a
+// tabela do documento sem bloco nenhum aqui. É o defeito que o `TODO.md` registra desde 20/09/2026.
 export function achadoDaRodada(revisao: Revisao, mensagemFinal: string): string | null {
-  const recomendou = /Recomendações\**\s*:\**\s*(?!nenhuma)\S/i.test(mensagemFinal)
-  if (revisao.veredito === 'APROVADO' && !recomendou) return null
+  if (revisao.veredito === 'APROVADO' && !exigenciaDaRodada(mensagemFinal) && !temSecaoSemDeclaracao(mensagemFinal)) return null
+  // O corte guarda 80 linhas, mas `resumoDoAchado` lê a mensagem inteira: exigência abaixo da linha
+  // 80 vira célula de índice apontando um bloco que não a contém. Disparou uma vez em 214 blocos.
   const linhas = mensagemFinal.trim().split('\n')
   const texto = linhas.length > 80 ? [...linhas.slice(0, 80), `[… ${linhas.length - 80} linhas cortadas]`].join('\n') : linhas.join('\n')
   return `## ${revisao.revisor} · ${revisao.rodada}ª rodada · ${revisao.veredito} · ${revisao.fim}\n\n${texto}\n`
 }
 
+/** O arquivo dos achados de um documento. Um por tarefa, spec ou correção — nunca um por pasta. */
+export function caminhoDoAchado(documento: string): string {
+  return join(dirname(documento), PASTA_ACHADOS, basename(documento))
+}
+
+/** O índice da pasta: uma linha por rodada, que é o que se lê antes de codar. */
+export function caminhoDoIndice(documento: string): string {
+  return join(dirname(documento), PASTA_ACHADOS, NOME_INDICE)
+}
+
 export function acrescentarAchado(conteudoAchados: string, documento: string, achado: string): string {
-  const base = conteudoAchados || '# Achados das revisões\n\nEscrito pelo hook `tools/processo/revisoes.ts`. Lido por `/retro`. Não edite à mão.\n'
+  const base =
+    conteudoAchados ||
+    `# Achados das revisões — \`${documento}\`\n\nEscrito pelo hook \`tools/processo/revisoes.ts\`. O resumo de cada rodada está em ` +
+      `\`${NOME_INDICE}\`, nesta pasta. Não edite à mão.\n`
   const [cabecalho = '', ...resto] = achado.split('\n')
   return `${base.endsWith('\n') ? base : `${base}\n`}\n${cabecalho} · \`${documento}\`\n${resto.join('\n')}`
+}
+
+// O que o revisor exigiu, para caber numa linha do índice. As formas abaixo são as que eles de fato
+// escrevem nos 214 blocos do F1: `Bloqueantes:`, `**Bloqueantes:**`, `## Bloqueantes`, com ou sem
+// `(não bloqueiam)`, e o item na mesma linha ou na linha de baixo.
+const CABECALHO_DE_SECAO = /^\s*#{0,4}\s*\**\s*(Bloqueantes|Recomendações)\s*\**\s*(?:\([^)]*\))?\s*\**\s*:?\s*(.*)$/i
+const SEM_CONTEUDO = /^(nenhum[ao]?|n\/a|nada)\b[\s.,;:]*$/i
+// `Bloqueantes: nenhum. A correção exigida na 1ª rodada foi feita:` — o revisor responde e segue
+// falando. O ponto é o que separa a resposta do resto; sem ele, `nenhuma das rotas` é conteúdo.
+const COMECA_SEM_NADA = /^(nenhum[ao]?|n\/a|nada)\s*[.;]/i
+const nadaExigido = (texto: string) => SEM_CONTEUDO.test(texto) || COMECA_SEM_NADA.test(texto)
+const ITEM = /^\s*(?:[-*•]|\d+[.)])\s+/
+const CERCA = /^\s*(?:```|~~~)/
+const LIMITE_DO_RESUMO = 160
+// Quanto o corte pode recuar para não partir palavra. Além disso, corta seco: recuar demais devolve
+// um resumo curto demais para dizer alguma coisa.
+const RECUO_MAXIMO_DO_CORTE = 40
+
+// Metade dos revisores cita o arquivo pelo caminho absoluto da máquina. Num resumo de 160 caracteres
+// o prefixo até a raiz do repositório come a informação, e é igual em todas as linhas.
+const ATE_A_RAIZ = /\/\S*?\/(?=(?:apps|packages|infra|e2e|tools|tasks|docs)\/|(?:CLAUDE|TODO|README|ROADMAP)\.md\b)/g
+
+// Negrito antes do marcador de lista: `**texto**` não é item, e tirar o `*` primeiro o quebraria.
+function limpar(linha: string): string {
+  return linha.replaceAll('**', '').replace(ITEM, '').replaceAll('|', '\\|').replace(ATE_A_RAIZ, '').replace(/\s+/g, ' ').trim()
+}
+
+function encurtar(texto: string): string {
+  if (texto.length <= LIMITE_DO_RESUMO) return texto
+  const corte = texto.slice(0, LIMITE_DO_RESUMO)
+  const espaco = corte.lastIndexOf(' ')
+  return `${(espaco > LIMITE_DO_RESUMO - RECUO_MAXIMO_DO_CORTE ? corte.slice(0, espaco) : corte).trimEnd()}…`
+}
+
+/**
+ * Três desfechos, não dois, e confundi-los custou um achado real do corpus:
+ *
+ * - **ausente**: o revisor não escreveu a seção;
+ * - **declarou nada**: escreveu `nenhum`, `nenhuma`, `n/a` — não exigiu, e descartar está certo;
+ * - **vazia**: escreveu o cabeçalho e não há texto aproveitável debaixo dele (só cerca de código).
+ *   O conteúdo está **fora** da seção, e tratar isso como "nada exigido" apaga o bloco inteiro.
+ *
+ * O caso real: `test-engineer · 2ª rodada · APROVADO · 2026-09-21 17:26:58`, que tem `Recomendações:`
+ * como última linha dentro da cerca e R1 a R5 em prosa depois dela.
+ */
+interface LeituraDaSecao {
+  presente: boolean
+  item: string | null
+  declarouNada: boolean
+}
+
+const AUSENTE: LeituraDaSecao = { presente: false, item: null, declarouNada: false }
+const comTexto = (texto: string): LeituraDaSecao =>
+  nadaExigido(texto) ? { presente: true, item: null, declarouNada: true } : { presente: true, item: texto, declarouNada: false }
+
+function lerSecao(linhas: string[], nome: RegExp): LeituraDaSecao {
+  for (let i = 0; i < linhas.length; i++) {
+    const achado = CABECALHO_DE_SECAO.exec(linhas[i] ?? '')
+    if (!achado?.[1] || !nome.test(achado[1])) continue
+    const naMesmaLinha = limpar(achado[2] ?? '')
+    if (naMesmaLinha) return comTexto(naMesmaLinha)
+    const corpo: string[] = []
+    for (const proxima of linhas.slice(i + 1)) {
+      if (CABECALHO_DE_SECAO.test(proxima)) break
+      if (proxima.trim()) corpo.push(proxima)
+      // Linha em branco encerra só o parágrafo solto; a lista pode ter itens separados por branco.
+      else if (corpo.length > 0 && !ITEM.test(corpo[0] ?? '')) break
+    }
+    const util = corpo.filter((linha) => !CERCA.test(linha))
+    const escolhida = limpar(util.find((linha) => ITEM.test(linha)) ?? util[0] ?? '')
+    return escolhida ? comTexto(escolhida) : { presente: true, item: null, declarouNada: false }
+  }
+  return AUSENTE
+}
+
+function lerAsDuasSecoes(mensagemFinal: string): { bloqueantes: LeituraDaSecao; recomendacoes: LeituraDaSecao } {
+  const linhas = mensagemFinal.split('\n')
+  return { bloqueantes: lerSecao(linhas, /^Bloqueantes/i), recomendacoes: lerSecao(linhas, /^Recomenda/i) }
+}
+
+/** O primeiro bloqueante, ou a primeira recomendação. `nenhum` conta como nada exigido. */
+export function exigenciaDaRodada(mensagemFinal: string): string | null {
+  const { bloqueantes, recomendacoes } = lerAsDuasSecoes(mensagemFinal)
+  return bloqueantes.item ?? recomendacoes.item
+}
+
+/** Seção escrita e sem texto debaixo dela: o que o revisor exigiu está fora, e some se descartarmos. */
+export function temSecaoSemDeclaracao(mensagemFinal: string): boolean {
+  const { bloqueantes, recomendacoes } = lerAsDuasSecoes(mensagemFinal)
+  return [bloqueantes, recomendacoes].some((secao) => secao.presente && !secao.declarouNada && secao.item === null)
+}
+
+/** A célula "O que exigiu" do índice. */
+export function resumoDoAchado(mensagemFinal: string): string {
+  const exigencia = exigenciaDaRodada(mensagemFinal)
+  if (exigencia) return encurtar(exigencia)
+  // Revisor que não usou nenhuma das duas seções: o `test-engineer` escreve "Cenários exigidos".
+  // Cabeçalho de seção não é conteúdo: `Bloqueantes: nenhum. Os dois da rodada 1 estão fechados` é
+  // a declaração, e o que o revisor exigiu está nas linhas abaixo dela.
+  const linha = mensagemFinal
+    .split('\n')
+    .filter((texto) => !CABECALHO_DE_SECAO.test(texto))
+    .map((texto) => limpar(texto))
+    .filter((texto) => !CERCA.test(texto))
+    .find((texto) => texto.length >= 40 && !texto.startsWith('VEREDITO') && !nadaExigido(texto))
+  return encurtar(linha ?? 'ver o bloco')
+}
+
+const CABECALHO_DO_INDICE =
+  '# Índice dos achados das revisões\n\n' +
+  'Uma linha por rodada que exigiu alguma coisa. O texto inteiro está no arquivo do documento, nesta\n' +
+  'pasta (`<documento>.md`), no bloco com o mesmo fim. Escrito pelo hook `tools/processo/revisoes.ts`.\n' +
+  'Não edite à mão.\n\n' +
+  'Leia este índice antes de codar, e abra só os blocos que interessam à tarefa de agora.\n\n' +
+  '| Fim | Revisor | Rodada | Veredito | Documento | O que exigiu |\n|---|---|---|---|---|---|\n'
+
+export function acrescentarNoIndice(conteudoIndice: string, revisao: Revisao, documento: string, resumo: string): string {
+  const base = conteudoIndice || CABECALHO_DO_INDICE
+  const linha = `| ${revisao.fim} | \`${revisao.revisor}\` | ${String(revisao.rodada)}ª | ${revisao.veredito} | \`${basename(documento, '.md')}\` | ${resumo} |`
+  return `${base.endsWith('\n') ? base : `${base}\n`}${linha}\n`
 }
 
 const ehArquivoDeTeste = (arquivo: string) => /\.(test|spec)\.tsx?$/.test(arquivo) || /(^|\/)(test|e2e|__fixtures__)\//.test(arquivo)
@@ -344,10 +501,18 @@ export function registrar(entrada: EntradaHook, raiz: string, agora = new Date()
     // `test-engineer`) deixa o conteúdo igual, e a rodada não caduca por causa dele.
     if (revisao) gravarInstantaneo(raiz, chaveDaRodada(relativo, revisao.revisor, revisao.rodada), alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
     const achado = revisao ? achadoDaRodada(revisao, mensagemFinal) : null
-    if (achado) {
-      const caminhoAchados = join(dirname(caminho), NOME_ACHADOS)
-      const anterior = existsSync(caminhoAchados) ? readFileSync(caminhoAchados, 'utf8') : ''
-      writeFileSync(caminhoAchados, acrescentarAchado(anterior, relativo, achado))
+    if (achado && revisao) {
+      const caminhoAchado = join(raiz, caminhoDoAchado(relativo))
+      mkdirSync(dirname(caminhoAchado), { recursive: true })
+      const anterior = existsSync(caminhoAchado) ? readFileSync(caminhoAchado, 'utf8') : ''
+      writeFileSync(caminhoAchado, acrescentarAchado(anterior, relativo, achado))
+      // Trava própria, dentro da do documento: o índice é da pasta, e dois documentos a compartilham.
+      // A ordem é sempre documento e depois índice, então não há ciclo.
+      const caminhoIndice = join(raiz, caminhoDoIndice(relativo))
+      comTrava(caminhoIndice, () => {
+        const indice = existsSync(caminhoIndice) ? readFileSync(caminhoIndice, 'utf8') : ''
+        writeFileSync(caminhoIndice, acrescentarNoIndice(indice, revisao, relativo, resumoDoAchado(mensagemFinal)))
+      })
     }
   })
   return relativo

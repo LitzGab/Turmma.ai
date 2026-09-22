@@ -83,8 +83,8 @@ Regras obrigatórias:
 - Implemente SOMENTE esta tarefa.
 - Não conclua enquanto todos os testes não passarem e o typecheck não estiver limpo.
 - Tocou tela: rode também o e2e.
-- Leia `tasks/prd-[funcionalidade]/achados-revisoes.md`, se existir, e faça a autoconferência
-  do passo 2 da skill antes de codar.
+- Leia `tasks/prd-[funcionalidade]/achados/indice.md`, se existir, abra só os blocos que
+  interessam, e faça a autoconferência do passo 2 da skill antes de codar.
 - Rode o portão local com carimbo (`node tools/processo/portao-local.ts`, com `--e2e` e
   `--infra` quando se aplicam).
 - Revisores (passo 5 da skill): `test-engineer` primeiro e sozinho; com ele aprovado,

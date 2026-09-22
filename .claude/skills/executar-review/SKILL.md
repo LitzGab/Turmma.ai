@@ -20,7 +20,7 @@ Tarefa: `$ARGUMENTS`
   que existe. Vazio: liste as tarefas não concluídas em `tasks/` e pergunte.
 - Colete `git status --short` e, se houver rodada anterior do `revisor-geral` na seção
   "Revisões", o diff desde o início dela e os bloqueantes que ela exigiu (em
-  `achados-revisoes.md`, na mesma pasta).
+  `achados/<documento>.md`, e resumidos em `achados/indice.md`).
 
 ## 2. Disparar
 

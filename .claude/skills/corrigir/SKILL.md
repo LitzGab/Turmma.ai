@@ -74,8 +74,13 @@ paralelo. `revisor-geral` não é obrigatório aqui; chame-o se a correção pas
 
 Com a esteira do commit anterior verde (passo 7 da `executar-task`):
 
-- stage só os arquivos da correção, o documento e o `achados-revisoes.md` de `tasks/correcoes/`
-  se o hook o escreveu;
+- stage só os arquivos da correção, o documento e, se o hook os escreveu,
+  `tasks/correcoes/achados/<slug>.md` e `tasks/correcoes/achados/indice.md`. O índice é da pasta:
+  linha de outro documento que tenha entrado enquanto esta correção corria vai junto, e é assim
+  mesmo — ele só é acrescentado, e tirar a linha à mão perderia o registro dela;
+- veio um `achados-revisoes.md` de volta num merge? `node tools/processo/separar-achados.ts` antes
+  do commit, e então prepare a deleção dele e a pasta `achados/` inteira, que é mais do que os
+  arquivos desta correção;
 - mensagem `Corrige <o quê> (correção <AAAA-MM-DD>-<slug>)`, com a linha `Revisões:` no corpo;
 - `git push origin develop`.
 
