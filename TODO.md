@@ -71,15 +71,15 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       ativar MFA e a validade do token da sessão nova. O traço está no artefato `traco-do-e2e` daquela
       execução (retenção de 7 dias — **baixar antes de 29/09/2026** se for investigar depois)
 
-- [ ] **Corrida de porta na observabilidade, nos dois arquivos.** `infra/test/alertas.int.test.ts:81` e
-      `infra/test/metricas.int.test.ts:89` fazem `up --detach --force-recreate --wait observabilidade`
-      com o contêiner anterior ainda segurando `127.0.0.1:59100`, e o bind do novo falha com
-      `address already in use`. Dois portões vermelhos em 22/09/2026 por isso. **Não** basta tirar o
-      `--force-recreate`: o ensaio de alertas passaria a herdar série e estado de execução anterior. A
-      preferência do `infra-guardian`, em ordem: `rm --force --stop observabilidade` e depois
-      `up --detach --wait`; nova tentativa limitada só em `address already in use`; ou tirar a porta
-      publicada e falar com o Prometheus por dentro da rede. Precisa cobrir os dois arquivos, de
-      preferência por helper em `tools/testes/compose.ts`, senão o vermelho migra
+- [ ] **`infra/scripts/ensaio-alertas.ts:404` recria `api-1` e `api-2` com `--force-recreate`**, e as duas
+      publicam porta (`infra/compose.yml:197,211`). É a mesma classe da corrida de porta corrigida em
+      22/09/2026 (`tasks/correcoes/2026-09-22-corrida-de-porta-na-observabilidade.md`), e o que segura o
+      item é só isto: **não há vermelho medido** ali. Nenhuma atenuante de desenho o distingue — o
+      `up --force-recreate` do ensaio sobe o novo sem esperar o anterior soltar a porta, exatamente como
+      o que foi consertado. Se aparecer, o conserto é o mesmo `recriarDoZero` de
+      `tools/testes/compose.ts`, com um invólucro para a assinatura do ensaio, que leva a sobreposição
+      de ambiente na frente (`(...argumentos) => composeCom(sobreposicao, ...argumentos)`). Apontado
+      pelo `test-engineer` na correção
 
 - [ ] **Recontar o número de linhas do docstring de `tools/ci/compose.ts`** quando a correção do
       `--tail` for aberta. Ele diz que os cinco logs de terceiro truncados somam 149.322 linhas; com o
@@ -89,7 +89,8 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] Pôr `--timestamps` no despejo de log de `infra/scripts/carga.ts:304` e
       `infra/scripts/carga-login.ts:444`, que ainda usam `logs --no-color --tail 100`. É o mesmo
       defeito da correção `2026-09-21-log-da-falha-sem-carimbo-de-hora`, que consertou só os dois
-      scripts da esteira; o padrão certo já existia em `tools/testes/compose.ts:78`. Sem carimbo
+      scripts da esteira; o padrão certo já existia no despejo de
+      `aguardarSaudavel` (`tools/testes/compose.ts`). Sem carimbo
       uniforme, o log de um ensaio de carga não cruza com o instante do que falhou
 
 **Ao ligar HTTPS na borda do staging, as quatro coisas abaixo são da mesma tarefa.** Estão separadas

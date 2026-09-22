@@ -1,8 +1,9 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { createServer, type Server } from 'node:net'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
-import { composeOuFalha } from '../testes/compose.ts'
+import { afterAll, describe, expect, it } from 'vitest'
+import { compose, composeOuFalha, recriarDoZero } from '../testes/compose.ts'
 import { ARGUMENTOS_COMPOSE, ETAPA_DO_LOG_DA_FALHA, lerAmbienteDeTeste, valorObrigatorio } from './compose.ts'
 import { raizRepositorio } from './executar.ts'
 
@@ -228,4 +229,105 @@ describe('ambiente do compose', () => {
     expect(Math.max(...todos)).toBeLessThanOrEqual(agora + 60_000)
     expect(Math.min(...todos)).toBeGreaterThan(agora - 30 * 24 * 60 * 60 * 1_000)
   })
+})
+
+describe('recriar serviço do compose', () => {
+  const SERVICO = 'oidc-falso'
+
+  // O caso deixa o serviço recriado e saudável; se ele falhar no meio, o ambiente não pode ficar sem o
+  // `oidc-falso`, que os arquivos seguintes da integração usam no login pela conta da escola.
+  afterAll(() => {
+    composeOuFalha('up', '--detach', '--wait', SERVICO)
+  }, 120_000)
+
+  /**
+   * As linhas úteis da saída do compose. `saida` junta stdout e stderr, então um WARN do compose entra
+   * na conta: comparar a saída inteira com `'healthy'` daria vermelho por um aviso que não tem nada a
+   * ver com o caso — e esta correção existe justamente para tirar vermelho que não é regra.
+   */
+  const linhas = (...argumentos: string[]): string[] =>
+    compose(...argumentos)
+      .saida.split('\n')
+      .map((linha) => linha.trim())
+      .filter((linha) => linha !== '')
+
+  /** O id do contêiner do serviço no projeto, ou vazio quando ele não existe. */
+  const id = (): string => linhas('ps', '--all', '--format', '{{.ID}}', SERVICO).join(' ')
+
+  /** `toContain` num array de linhas, e não `toBe` na saída: `'unhealthy'` contém `'healthy'`. */
+  const saude = (): string[] => linhas('ps', '--format', '{{.Health}}', SERVICO)
+
+  /**
+   * Segura a porta publicada do lado de fora do Docker, no papel do proxy do contêiner que ainda está
+   * saindo. Com nova tentativa: logo depois do `stop` a porta pode ainda não estar livre nem para nós —
+   * que é exatamente o defeito sob teste, visto do outro lado.
+   */
+  async function segurarPorta(porta: number, limiteMs = 15_000): Promise<Server> {
+    const prazo = Date.now() + limiteMs
+    for (;;) {
+      const servidor = createServer()
+      const erro = await new Promise<NodeJS.ErrnoException | undefined>((resolver) => {
+        servidor.once('error', resolver)
+        servidor.listen(porta, '127.0.0.1', () => resolver(undefined))
+      })
+      if (erro === undefined) {
+        // Depois do `listen`, o `once` do laço já foi gasto: sem um ouvinte permanente, um erro de
+        // socket na janela em que a porta está presa subiria como `unhandled error` e derrubaria o
+        // worker do Vitest, em vez de reprovar o caso.
+        servidor.on('error', () => {})
+        return servidor
+      }
+      if (erro.code !== 'EADDRINUSE' || Date.now() > prazo) throw erro
+      await new Promise((resolver) => setTimeout(resolver, 200))
+    }
+  }
+
+  it('recria o serviço em contêiner novo e não desiste enquanto a porta publicada ainda está presa', async () => {
+    const porta = Number(valorObrigatorio(lerAmbienteDeTeste(), 'OIDC_FALSO_PORTA_HOST'))
+    const antes = id()
+    expect(antes).not.toBe('')
+
+    // O contêiner parado, e não removido, é o estado que os `afterAll` do compose deixam: é dele que a
+    // corrida nasce. A porta presa por 2 s é o proxy que ainda não soltou, encenado de forma
+    // determinística — na máquina a janela real é de fração de segundo, e a intermitência custou dois
+    // portões vermelhos em 22/09/2026.
+    composeOuFalha('stop', SERVICO)
+    const servidor = await segurarPorta(porta)
+    const soltar = () => {
+      if (servidor.listening) servidor.close()
+    }
+    const solta = setTimeout(soltar, 2_000)
+    try {
+      await recriarDoZero(SERVICO)
+    } finally {
+      clearTimeout(solta)
+      soltar()
+    }
+
+    // Contêiner novo: quem trocar a recriação por `up`/`start` simples para fugir da corrida religa o
+    // antigo, com a série do Prometheus e o estado de alerta da execução anterior dentro dele.
+    const depois = id()
+    expect(depois).not.toBe(antes)
+    expect(depois).not.toBe('')
+    expect(saude()).toContain('healthy')
+  }, 120_000)
+
+  it('recria tanto o serviço que está rodando quanto o que não tem contêiner no projeto', async () => {
+    // Os dois estados em que os `beforeAll` de `infra/test/` chamam isto: a observabilidade de pé de um
+    // arquivo anterior, e o ambiente recém-derrubado, sem contêiner nenhum. O caso acima cobre o
+    // terceiro, que é o da corrida — o contêiner parado.
+    const rodando = id()
+    expect(saude()).toContain('healthy')
+    await recriarDoZero(SERVICO)
+    const recriado = id()
+    expect(recriado).not.toBe(rodando)
+    expect(saude()).toContain('healthy')
+
+    composeOuFalha('rm', '--force', '--stop', SERVICO)
+    expect(id()).toBe('')
+    await recriarDoZero(SERVICO)
+    expect(id()).not.toBe('')
+    expect(id()).not.toBe(recriado)
+    expect(saude()).toContain('healthy')
+  }, 120_000)
 })

@@ -9,7 +9,7 @@ import { FILAS_POR_PRIORIDADE, nomeDaFilaBullMQ } from '../../packages/nucleo/sr
 import { METRICAS, METRICAS_COM_ESCOLA } from '../../packages/nucleo/src/telemetria/metricas.ts'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
-import { aguardarSaudavel, compose, composeAssincronoOuFalha, PROCESSOS_DA_FILA } from '../../tools/testes/compose.ts'
+import { aguardarSaudavel, compose, composeAssincronoOuFalha, PROCESSOS_DA_FILA, recriarDoZero } from '../../tools/testes/compose.ts'
 import { urlDoBancoDeTeste } from '../../tools/testes/integracao.setup.ts'
 import { NOMES_NO_PROMETHEUS } from '../../tools/testes/metricas.ts'
 
@@ -86,7 +86,7 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
     // Worker nenhum: o job criado não começa, e a espera dele sobe.
     compose('stop', ...PROCESSOS_DA_FILA)
     // Observabilidade recriada, sem volume: nenhuma série de uma execução anterior.
-    await composeAssincronoOuFalha('up', '--detach', '--force-recreate', '--wait', 'observabilidade')
+    await recriarDoZero('observabilidade')
     await composeAssincronoOuFalha('up', '--detach', '--build', '--wait', ...SERVICOS)
     instanciaDaApi = compose('exec', '-T', 'api-1', 'hostname').saida.trim()
     expect(instanciaDaApi).toMatch(/^[0-9a-f]{12}$/)

@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { cookieDaResposta, cookieDeRenovacao, renovar } from '../../apps/api/test/api-com-sessao.js'
 import { BancadaDeSessoes } from '../../apps/api/test/sessao-de-teste.js'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
-import { aguardarSaudavel, compose, composeAssincrono, composeAssincronoCom, composeAssincronoOuFalha } from '../../tools/testes/compose.ts'
+import { aguardarSaudavel, compose, composeAssincrono, composeAssincronoCom, composeAssincronoOuFalha, recriarDoZero } from '../../tools/testes/compose.ts'
 import { arquivosDeAlertaDoRepositorio } from '../../tools/guardas/alerta-tem-runbook.ts'
 import { parse } from 'yaml'
 import { urlDoBancoDeTeste } from '../../tools/testes/integracao.setup.ts'
@@ -78,7 +78,7 @@ async function estadoDoJob(apiToken: string, jobId: string): Promise<string> {
 describe('alertas locais: as regras do ensaio disparam, não disparam com condição curta ou abaixo do limiar, e voltam a normal', () => {
   beforeAll(async () => {
     // Observabilidade recriada: nenhum estado de alerta nem série de uma execução anterior.
-    await composeAssincronoOuFalha('up', '--detach', '--force-recreate', '--wait', 'observabilidade')
+    await recriarDoZero('observabilidade')
     await composeAssincronoOuFalha('up', '--detach', '--build', '--wait', ...SERVICOS)
   }, 900_000)
 
