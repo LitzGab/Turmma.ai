@@ -816,6 +816,8 @@ primeira das quatro coisas da D24 é a escola cadastrada sem trabalho manual, e 
 escola montada escondia exatamente isso; é também a primeira coisa que uma escola real vai
 fazer, então é a que precisa estar de pé desde já. Os fixtures de teste continuam existindo,
 dentro dos testes: o que sai é a escola pronta na demonstração.
+Revista de novo em 23/09/2026 (D76): antes da A1 entra a **A0**, o painel da operação, e a
+escola passa a nascer nele em vez de no `ops:escola`, que continua existindo.
 
 **D72 — A pele do produto é o sistema do ChatGPT, em branco, preto e laranja, e é uma só.**
 *(decidida pelo Joaquim em 23/09/2026, entre a pele do P02, que o Gabriel escolheu em
@@ -879,3 +881,24 @@ material é a titularidade que ela declara. O anexo numa conversa (P07) é outra
 naquela conversa, e continua em aberto. Motivo: a licença é da escola, que é a controladora
 (D10); com uma porta só de entrada, a D5 é conferida num lugar só, por quem responde por ela; e
 é o fluxo que a escola já tem, em que a coordenação distribui o material.
+
+**D76 — A equipe Turmma tem um painel de operação: cria rede e escola, convida a coordenação e
+acompanha uso e custo por escola, sem ver dado de pessoa.** *(decidida pelo Joaquim em
+23/09/2026)*
+Quem entra é só o **operador Turmma**, com conta separada das contas de escola: a primeira nasce
+por comando, porque alguém precisa existir antes da tela, e o segundo fator é obrigatório. O
+painel cria rede e escola; gera, revoga e refaz o convite da primeira coordenação; lista as
+escolas com o estado e com contagens — turmas, alunos e professores ativos —; e mostra o uso de
+infra de cada escola no dia e no mês, que já é medido desde o F0 (D30). Com a A2, a mesma tela
+passa a mostrar o consumo de IA por escola, em tokens e em reais estimados pelo preço de cada
+perfil, contra o teto por aluno (D39); o custo de infra em reais espera o provedor de hospedagem
+(D42). O painel **não vê** nome, matrícula, nota, conversa nem material de ninguém: a escola é a
+controladora do dado (D10), e nenhuma ação do operador devolve dado de pessoa (RF1 do F1). A
+leitura entre escolas é a exceção da regra 10, item 9: um módulo só, com a justificativa escrita
+em cada consulta sem escopo, e teste provando que usuário de escola não alcança o painel e que o
+painel não devolve dado de pessoa. Toda ação do operador vai para a auditoria com o identificador
+dele. Os comandos `ops:*` continuam existindo, e a D2 continua valendo: não é cadastro público.
+Motivo: a validação do MVP começa com a escola nascendo numa tela, e as metas de custo (D30,
+D39) só se conferem olhando escola por escola; comando no terminal com o token num arquivo não
+serve à equipe inteira. Fica numa spec própria, a A0, antes da A1, porque é outra superfície de
+segurança, com revisores próprios, e a A1 já estava no teto do PRD.

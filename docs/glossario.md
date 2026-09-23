@@ -265,9 +265,11 @@ travado. É o que alimenta notificação e painel.
 **Auditoria** — O registro consultável de quem fez o quê: leitura de dado de aluno,
 exportação, alteração de nota, aprovação de saída de IA. Diferente de log.
 
-**Operador Turmma** — A pessoa da nossa equipe que cria rede, escola e o primeiro coordenador por
-comando `ops:*`, sempre com o próprio identificador gravado na auditoria. Não lê dado de pessoa da
-escola nem entra como usuário dela (D2). Não confundir com "operador" da LGPD, que é a empresa.
+**Operador Turmma** — A pessoa da nossa equipe que cria rede, escola e o primeiro coordenador,
+pelo painel da operação (A0, D76) ou pelos comandos `ops:*`, sempre com o próprio identificador
+gravado na auditoria. Tem conta própria, separada das escolas, e vê uso e custo por escola, mas não
+lê dado de pessoa da escola nem entra como usuário dela (D2, D10). Não confundir com "operador" da
+LGPD, que é a empresa.
 
 **Titular** — A pessoa a quem o dado pessoal se refere, no vocabulário da LGPD. Quase sempre
 um menor de idade, aqui.

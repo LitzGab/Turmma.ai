@@ -73,6 +73,7 @@ deveria existir.
 | Registro da validação humana de correção (o que foi apresentado ao professor, quais destaques ele abriu, quem confirmou e quando) | professor | provar validação efetiva, prévia, qualificada e documentada, exigida pelo CNE (D56) | execução de contrato e obrigação da escola | igual à auditoria: vigência + 5 anos |
 | Notificação de violação de direito de criança ou adolescente (quem notificou, o que apontou, o que foi feito) | quem notifica e quem é citado | canal exigido pelo ECA Digital, art. 28, e Decreto 12.880, art. 41 (D61) | obrigação legal | 5 anos; nunca anônima (ECA art. 29, § 2º) |
 | Identificador do operador Turmma na auditoria | nossa equipe | prestação de contas à escola | legítimo interesse | vigência + 5 anos |
+| Conta de operador Turmma (nome, e-mail de login, hash de senha, segredo do segundo fator cifrado) | nossa equipe | entrar no painel da operação (A0, D76) | execução do contrato de trabalho; segurança (art. 46) | enquanto a pessoa for da equipe; o segredo, até redefinir o segundo fator |
 | Registro de acesso à aplicação (IP, data e hora) | todos | segurança | obrigação legal (Marco Civil, art. 15) | 6 meses, inclusive a falha de login sem escola; apagado pelo `sistema.expurgar-acesso` (17.0); fica depois da eliminação do usuário, com o id |
 | Auditoria (quem fez o quê, com finalidade) | todos | prestação de contas à escola e ao titular | execução de contrato e obrigação da escola | vigência + 5 anos |
 

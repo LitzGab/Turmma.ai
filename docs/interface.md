@@ -317,6 +317,21 @@ conversa de tutor (regra 10, item 8).
 
 Fase posterior (D11). Nota, entrega e alerta, alimentados pelo motor de eventos do F13.
 
+## 5a. Painel da operação Turmma (A0, D76)
+
+Não é área da escola: é a nossa. Só o operador Turmma entra, com conta própria e segundo fator
+obrigatório, e nenhuma pessoa de escola alcança estas telas.
+
+- **Escolas**: a lista de redes e escolas, com o estado (convite pendente, ativa) e contagens de
+  turmas, alunos e professores ativos. Só número, nunca nome
+- **Nova rede** e **nova escola**: nome, tipo de rede e o endereço da escola
+- **Convite da coordenação**: cadastrar a primeira coordenadora, copiar o link, revogar e refazer
+- **Uso e custo**: por escola, no dia e no mês — o uso de infra desde já (D30), o consumo de IA
+  com a A2, contra o teto por aluno (D39)
+
+A pele e a casca são as mesmas do produto (D72), com a marca de que ali é a operação, para
+ninguém confundir com a tela de uma escola.
+
 ---
 
 ## 6. Em toda tela

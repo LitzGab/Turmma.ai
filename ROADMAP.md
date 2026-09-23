@@ -95,6 +95,8 @@ e que um professor com vínculo nas duas não leva dado de uma para a outra.
 Nada vem pronto: a escola nasce na frente de quem assiste, e tudo o que aparece foi digitado ou
 enviado pelo próprio produto, com nomes inventados.
 
+0. **Operação Turmma** cria a rede e a escola no painel e gera o convite da coordenação, que
+   copia e manda (A0, D76).
 1. **Coordenação** aceita o convite, entra com MFA e **monta a escola**: disciplinas, turmas, a
    lista de nomes de cada turma e a alocação dos professores. Sobe o material com a licença
    declarada (D75). O professor recebe o convite e confirma o vínculo; o aluno entra pelo link
@@ -112,7 +114,7 @@ enviado pelo próprio produto, com nomes inventados.
 
 **Regras da fatia** (D71): dado 100% sintético; código do produto, não protótipo — mesmas
 regras 00 a 80 e mesmo processo; regra 70 inteira; fora tudo que não aparece no roteiro. **Sem
-seed de escola pronta**: a escola é criada por nós pelo `ops:escola` e montada pela coordenação
+seed de escola pronta**: a escola é criada por nós no painel da operação (A0) e montada pela coordenação
 na tela; os fixtures ficam dentro dos testes. Os três afrouxamentos estão aceitos e valem só
 enquanto o dado for sintético: AIA com a etapa 1 antes do PRD da fatia, provedor de modelo
 qualquer pela porta, e cenário de carga sem crescer. A apresentação roda na nossa máquina; o
@@ -121,8 +123,24 @@ staging nasce quando alguém de fora precisar usar sozinho (D31).
 Os agentes são os três da D32 revista — Assistente de ensino, Tutor e Analista de desempenho
 escolar —, e a pele é uma só, a da D72, com a navegação da D73.
 
-## A1 — `apresentacao-escola` [ ]
+## A0 — `apresentacao-operacao` [ ]
 **Depende de:** F1
+
+O painel da equipe Turmma (D76). Conta de operador separada das escolas, criada por comando, com
+segundo fator obrigatório. Cria rede e escola; gera, revoga e refaz o convite da primeira
+coordenação; lista as escolas com estado e contagens (turmas, alunos e professores ativos); e
+mostra o uso de infra por escola no dia e no mês, que já é medido desde o F0 (D30). O consumo de
+IA por escola entra na mesma tela com a A2. Nada de dado de pessoa da escola (D10), e a leitura
+entre escolas é a exceção declarada da regra 10, item 9.
+
+**Pronto quando:** o operador entra com MFA, cria rede e escola e copia o convite da coordenação,
+que abre e ativa a conta dela; a lista mostra a escola nova com as contagens e o uso do dia; teste
+prova que usuário de escola não alcança nenhuma rota do painel e que nenhuma resposta do painel
+traz nome, e-mail de pessoa da escola, matrícula ou conteúdo; e toda ação fica na auditoria com o
+operador.
+
+## A1 — `apresentacao-escola` [ ]
+**Depende de:** A0
 
 A escola montada pela coordenação, com o núcleo do F2 em fatia fina. Casca da web com a marca
 (D72: tokens e logotipo de `mockups/`, avatares dos três agentes) e a navegação dos três papéis
@@ -131,8 +149,8 @@ turmas na tela, sobe a lista de nomes de cada turma (colada ou em planilha simpl
 e aloca professor × turma × disciplina. O **professor** entra pelo convite e confirma o vínculo
 (regra 60, item 8a). O **aluno** entra pelo link da sala, reivindica o nome da lista, define a
 senha, e **o professor aprova** (D4). Convite com validade, revogação e reivindicação única
-(regra 20, item 8; regra 80, item 7; P27). A escola em si nasce do `ops:escola`, e a coordenação
-recebe o convite pelo `ops:convite-coordenador` (D2).
+(regra 20, item 8; regra 80, item 7; P27). A escola em si nasce no painel da operação (A0), que
+também gera o convite da coordenação (D2, D76).
 
 **Pronto quando:** a partir de uma escola vazia, a coordenação monta duas turmas com lista de
 nomes e professor alocado sem ninguém ser cadastrado individualmente; o professor confirma o
@@ -155,7 +173,8 @@ material, que pergunta antes de abrir a ferramenta (D18) e distingue ferramenta 
 texto livre sobre o aluno (D67). Artefato salvo, ligado à turma, com a página citada,
 exportável em PDF.
 
-**Pronto quando:** uma chamada de IA passa pela porta e aparece no consumo da escola; o
+**Pronto quando:** uma chamada de IA passa pela porta e aparece no consumo da escola e no painel
+da operação, em tokens e em reais estimados contra o teto por aluno (D39, D76); o
 material que a coordenação subiu com licença vira trechos com página, e o sem licença é
 recusado; a professora gera o mesmo artefato pelo chat e pelo formulário, com a página citada;
 a Adaptação não tem campo em que caiba um diagnóstico, e a versão adaptada nasce pendente.
@@ -213,7 +232,7 @@ deixar auditoria, nem adoção nominal em lugar nenhum.
 | F9 | Tutor socrático, página citada, identidade, mensagem fixa, trava, memória | modo casa, busca em fontes aprovadas (D68), aviso etário, encaminhamento a quem notifica, teste adversário completo |
 | F10 | sinal chegando à conversa do Tutor do professor certo | WebSocket em duas instâncias, modo casa com resumo |
 | F11 | thread, função com autonomia declarada, entrega pendente, execução registrada, idempotência; Assistente (correção e adaptação) e Tutor | limite de passos e de custo, suspensão por função numa escola, "seu dia e sua semana", Analista por evento |
-| F12 | governança de IA, agentes e funções com autonomia, consumo, Analista semanal, nominal com auditoria | painel completo, Conformidade, Denúncias, Exportar, dossiê |
+| F12 | governança de IA, agentes e funções com autonomia, consumo, Analista semanal, nominal com auditoria; do lado nosso, o painel da operação (A0) | painel completo, Conformidade, Denúncias, Exportar, dossiê |
 | F15 | roteiro, um comando que sobe o ambiente vazio | demonstração completa, com um bimestre e notas |
 | F8, F13, F14, F17, F16 | nada | tudo |
 
