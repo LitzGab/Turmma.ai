@@ -1,5 +1,7 @@
 import { CodigoDeErro, MENSAGENS_DE_ERRO, NAMESPACE_REALTIME_SISTEMA } from '@educa/shared'
 import { spawnSync } from 'node:child_process'
+import { once } from 'node:events'
+import { connect } from 'node:net'
 import { join } from 'node:path'
 import { setTimeout as esperar } from 'node:timers/promises'
 import type { Socket as SocketCliente } from 'socket.io-client'
@@ -431,8 +433,46 @@ describe('borda com duas APIs e dois realtimes', () => {
       const conexao = await fetch(`${BORDA}/socket.io/?EIO=4&transport=polling&sid=${sid}`, { headers: { Cookie: cookie ?? '' } })
       expect(await conexao.text()).toMatch(new RegExp(`^40${NAMESPACE_REALTIME_SISTEMA},\\{"sid":"[^"]+"\\}`))
 
-      const comCookie = await Promise.all(Array.from({ length: 20 }, () => enviarPacote(sid, '42/sistema,["qualquer"]', cookie)))
-      expect(comCookie.map((resposta) => resposta.status)).toEqual(Array.from({ length: 20 }, () => 200))
+      // Em sequência, como o engine.io-client faz: POST sobreposto no mesmo `sid` é recusado pelo protocolo
+      // (teste seguinte), e em paralelo o verde dependia da ordem de chegada no Caddy.
+      const comCookie = []
+      for (let pacote = 0; pacote < 20; pacote++) comCookie.push((await enviarPacote(sid, '42/sistema,["qualquer"]', cookie)).status)
+      expect(comCookie).toEqual(Array.from({ length: 20 }, () => 200))
+    })
+
+    // Por isso nenhum caso aqui manda pacotes do mesmo `sid` em paralelo.
+    it('o engine.io recusa POST sobreposto no mesmo sid e fecha o transporte', async () => {
+      const { sid, cookie } = await pollingPelaBorda()
+      // Sem o cookie a sessão pode cair na outra instância, e o 400 seria o de sessão desconhecida.
+      expect(cookie).toMatch(/^educa_realtime=[0-9a-f]+$/)
+      const { hostname, port, host } = new URL(BORDA)
+      const corpo = '42/sistema,["qualquer"]'
+      const primeiro = connect({ host: hostname, port: Number(port) })
+      // A borda fecha esta conexão quando a sobreposição fecha o transporte: o reset não pode derrubar o worker.
+      primeiro.on('error', () => undefined)
+      await once(primeiro, 'connect')
+      // O cabeçalho vai, o corpo fica retido: o primeiro POST fica em andamento no realtime.
+      primeiro.write(
+        `POST /socket.io/?EIO=4&transport=polling&sid=${sid} HTTP/1.1\r\nHost: ${host}\r\n` +
+          `Content-Type: text/plain;charset=UTF-8\r\nCookie: ${String(cookie)}\r\n` +
+          `Content-Length: ${String(Buffer.byteLength(corpo))}\r\nConnection: close\r\n\r\n`,
+      )
+      try {
+        // Espera por condição, não por tempo: até o primeiro chegar ao realtime, o segundo ainda passa.
+        let sobreposto: { status: number; corpo: string } = { status: 0, corpo: '' }
+        for (let tentativa = 0; tentativa < 50 && sobreposto.status !== 400; tentativa++) {
+          const resposta = await enviarPacote(sid, '6', cookie)
+          sobreposto = { status: resposta.status, corpo: await resposta.text() }
+          if (sobreposto.status !== 400) await esperar(100)
+        }
+        // O 400 da sobreposição vem de corpo vazio (engine.io, polling.js); o de sessão desconhecida, não.
+        expect(sobreposto).toEqual({ status: 400, corpo: '' })
+        // Foi a sobreposição que fechou o transporte: o seguinte no mesmo `sid` é o de sessão desconhecida.
+        const depois = await enviarPacote(sid, '6', cookie)
+        expect({ status: depois.status, corpo: await depois.text() }).toEqual({ status: 400, corpo: '{"code":1,"message":"Session ID unknown"}' })
+      } finally {
+        primeiro.destroy()
+      }
     })
 
     it('sem o cookie, a mesma sessão cai na outra instância: a borda tem as duas, e é o cookie que prende', async () => {

@@ -264,11 +264,10 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       execuções. Visto em 22/09/2026 no portão local (o cookie do log terminava em `Aq`); passa 4 de
       4 isolado. O conserto é olhar o caractere que se troca — e vale conferir se a mesma inversão
       existe em outros "altera um caractere" da suíte
-- [ ] `infra/test/borda.int.test.ts` — "handshake por polling fica na mesma instância pelo cookie da
-      borda": um único 503 da borda invalida a sessão socket.io e as 17 requisições seguintes viram
-      400 em cascata (esteira run 35525902277). O arquivo tem um caso que mata um realtime de
-      propósito, o que aponta para contaminação de ordem entre casos. Precisa de `/corrigir` próprio,
-      com a causa achada antes da correção
+- [x] ~~`infra/test/borda.int.test.ts` — "handshake por polling": 503 seguido de 400 em cascata~~ —
+      a causa não era ordem entre casos: o teste mandava 20 POSTs em paralelo no mesmo `sid`, e o
+      engine.io recusa POST sobreposto
+      (`tasks/correcoes/2026-09-23-borda-manda-polling-sobreposto.md`)
 - [ ] Guarda de `video`/`screenshot` no mesmo laço de `tools/ci/esteira.test.ts` que já resolve
       `trace` e `outputDir` por projeto. Hoje os dois estão em `off` por padrão e não há furo, mas
       `video: 'on'` reabriria a evasão que a correção de 20/09 fechou, e a linha do runbook não cobre
