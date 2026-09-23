@@ -1,7 +1,7 @@
 import { defaultServerConditions } from 'vite'
 import { defineConfig } from 'vitest/config'
 
-const ignorados = ['**/node_modules/**', '**/dist/**', 'e2e/**', 'tools/ci/fixtures/**']
+const ignorados = ['**/node_modules/**', '**/dist/**', 'e2e/**', 'tools/ci/fixtures/**', 'mockups/**']
 
 // Os de `infra/` provam a borda, as métricas, os alertas e os jobs contra o compose inteiro, e esperam o
 // relógio real (o `for:` de 5 min do alerta, a sonda da borda, a exportação de métricas): uns 16 min dos

@@ -1,7 +1,7 @@
 import { ESLint, type Linter } from 'eslint'
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, matchesGlob } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { raizRepositorio } from '../ci/executar.ts'
 import { criarEslintDasGuardas, violacoesDasGuardas } from './eslint-das-guardas.ts'
@@ -234,9 +234,15 @@ describe('configuração das guardas', () => {
     expect(configuracoes).toEqual(['eslint.config.mjs'])
   })
 
-  it('nenhum código versionado fica fora do lint, exceto as fixtures de violação', async () => {
+  // O protótipo de interface do Gabriel: só front-end, dado sintético, projeto e lint próprios
+  // (mockups/README.md). Fica fora do lint da raiz porque quebra regra de propósito para ver como
+  // fica; o que impede isso de virar buraco são os dois testes abaixo, que o prendem na pasta.
+  const PROTOTIPO = 'mockups/'
+  const ehCodigo = (arquivo: string) => /\.(?:[cm]?[jt]s|[jt]sx)$/.test(arquivo)
+
+  it('nenhum código versionado fica fora do lint, exceto as fixtures de violação e o protótipo de mockups/', async () => {
     const codigo = arquivosDoRepositorio().filter(
-      (arquivo) => /\.(?:[cm]?[jt]s|[jt]sx)$/.test(arquivo) && !arquivo.startsWith('tools/guardas/__fixtures__/'),
+      (arquivo) => ehCodigo(arquivo) && !arquivo.startsWith('tools/guardas/__fixtures__/') && !arquivo.startsWith(PROTOTIPO),
     )
     expect(codigo.length).toBeGreaterThan(20)
     const ignorados: string[] = []
@@ -244,6 +250,31 @@ describe('configuração das guardas', () => {
       if (await eslint.isPathIgnored(join(raizRepositorio, arquivo))) ignorados.push(arquivo)
     }
     expect(ignorados).toEqual([])
+  })
+
+  it('o protótipo de mockups/ não é workspace do monorepo', () => {
+    const { workspaces } = JSON.parse(readFileSync(join(raizRepositorio, 'package.json'), 'utf8')) as { workspaces: string[] }
+    expect(workspaces.length).toBeGreaterThan(0)
+    expect(workspaces.filter((glob) => matchesGlob('mockups', glob))).toEqual([])
+  })
+
+  // Pela palavra, e não por um padrão de import: alias do Vite, `paths` do tsconfig, `import.meta.glob`,
+  // `new URL(...)` e template literal chegam ao protótipo sem escrever `from '.../mockups/'`. Documento
+  // (`.md`) pode citar a pasta; os três arquivos abaixo são os que declaram a exceção.
+  const CITAM_O_PROTOTIPO = ['eslint.config.mjs', 'vitest.config.ts', 'tools/guardas/guardas.test.ts']
+
+  it('nada fora de mockups/ aponta para o protótipo: o que não passa pelo lint não entra no produto', () => {
+    const citam = arquivosDoRepositorio()
+      .filter((arquivo) => !arquivo.startsWith(PROTOTIPO) && !arquivo.endsWith('.md') && !CITAM_O_PROTOTIPO.includes(arquivo))
+      .filter((arquivo) => readFileSync(join(raizRepositorio, arquivo), 'utf8').includes('mockups'))
+    expect(citam).toEqual([])
+  })
+
+  it('não existe symlink versionado: por um deles o protótipo entraria sem aparecer no caminho', () => {
+    const resultado = spawnSync('git', ['ls-files', '--stage'], { cwd: raizRepositorio, encoding: 'utf8' })
+    expect(resultado.status).toBe(0)
+    const links = resultado.stdout.split('\n').filter((linha) => linha.startsWith('120000 '))
+    expect(links).toEqual([])
   })
 
   it.each([
