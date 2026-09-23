@@ -1,7 +1,7 @@
 # Tech Spec — Identidade do operador Turmma
 
 **PRD:** `tasks/prd-apresentacao-operacao/prd.md`
-**Status:** rascunho (5ª versão, depois da rodada 4 do `/revisar-spec`; o painel foi para a A0b)
+**Status:** rascunho (6ª versão, depois da rodada 5 do `/revisar-spec`; o painel foi para a A0b)
 
 ## 1. Resumo da abordagem
 
@@ -19,7 +19,7 @@ inteiro numa tarefa própria, antes das telas do operador.
 | `apps/api/src/operacao/` | novo | controllers de sessão e convite, `GuardaDeOperador`, `OperadorRepository`, os dois marcadores |
 | `apps/api/src/ops/` | novo e alterado | `ops:operador -- criar`, `desativar`, `convite`; `comando.ts` confere `OPERADOR` contra operador ativo |
 | `packages/nucleo/src/identidade/`, `limite/guarda-limite.ts` | alterado | `rotaSemSessao` e limite reconhecem os marcadores; `verificarTokenDeOperador`; bearer de operador em rota de escola → 404 |
-| `apps/api/src/sessao/contador-de-tentativas.ts` | alterado | prefixo por parâmetro (`login:`, `login-op:`) |
+| `apps/api/src/sessao/contador-de-tentativas.ts` | alterado | prefixo por parâmetro |
 | `packages/nucleo/src/` | alterado e novo | `conferencia-das-permissoes.ts` aceita os marcadores; schema das seis tabelas; expurgo (seção 7) |
 | `apps/web/` e `tools/ci/tamanho-web.test.ts` | alterado e novo | tokens da D72 nas telas do F1; `src/operacao/`; orçamento (seção 9) |
 
@@ -71,11 +71,12 @@ pendente na mesma transação; `desativar` apaga o dado pessoal, revoga o convit
 numa transação só. O autor da `AuditoriaOperacao` é o `OPERADOR` do comando; o da entrada e do MFA,
 o operador da sessão.
 
-**Etapas.** O desafio leva a etapa (`configurar_mfa` ou `mfa`), e cada rota só aceita a sua.
-`/sessao/email` só devolve `configurar_mfa` se o convite foi aceito há menos de 72 h e o segundo
-fator não está ativo; fora disso responde igual a senha errada, e o caminho é um convite novo.
+**Etapas.** O desafio leva a etapa, e cada rota só aceita a sua.
+`/sessao/email` só devolve `configurar_mfa` até 72 h depois do aceite e sem segundo fator ativo;
+fora disso, igual a senha errada, e o caminho é um convite novo.
 
-**Travas no banco**, todas com `returning` e resposta tipada para quem perde:
+**Travas no banco**, todas com `returning`, resposta tipada para quem perde e `desativado_em is null`
+(desafio emitido antes do `desativar` não grava nem ativa nada):
 - aceite: `update convite_operador set usado_em = now() where id = $1 and usado_em is null and
   revogado_em is null and expira_em > now()`
 - código de recuperação: `delete ... where operador_id = $1 and hmac = $2 returning`
@@ -85,15 +86,14 @@ fator não está ativo; fora disso responde igual a senha errada, e o caminho é
   mfa_segredo_cifrado = $s, mfa_versao = mfa_versao + 1 where id = $1 and mfa_ativado_em is null
   returning mfa_versao` (a linha fica travada), depois apaga e insere os códigos; devolve um desafio
   de etapa `mfa` com essa versão. A ativação é no primeiro `/sessao/mfa` válido, com `where
-  mfa_ativado_em is null and mfa_versao = $versao_do_desafio`: a aba de versão antiga recebe
-  "configure de novo", e nunca se ativa um segredo diferente do conferido
+  mfa_ativado_em is null and mfa_versao = $versao_do_desafio`; a versão é lida com o segredo e,
+  diferente, dá "configure de novo" sem conferir o código nem contar tentativa
 - renovação: `update ... set refresh_hash = $novo, refresh_hash_anterior = $atual where id = $1 and
   refresh_hash = $atual`; o anterior vale 30 s, e reusado depois encerra a sessão (padrão do F1)
-- desafio: `jti` consumido com `SET NX` no Redis por 5 min; Redis fora recusa com 503
+- desafio: `jti` com `SET NX` no Redis por 5 min; Redis fora, 503
 
 **Entrada.** O `ContadorDeTentativas` usa `login-op:`, pelo e-mail e pelo `operador.id`, com a
-origem `conhecido`/`outro` do cookie de dispositivo do F1, com chave própria. `entrada_falha` não
-grava o e-mail.
+origem do cookie de dispositivo do F1 com chave própria. `entrada_falha` não grava o e-mail.
 
 **Conferência da sessão**, pela `GuardaDeOperador`, que põe no contexto só o `operadorId`, nunca
 `escolaId` (repository de escola chamado por engano falha com erro):
@@ -193,7 +193,7 @@ que a entrada da escola não importa nada de `apps/web/src/operacao/`.
 
 | Camada | O que será testado |
 |---|---|
-| Integração, e2e, unidade e build | os cenários enumerados de `cenarios.md`, parte desta spec: C1 a C49 (com C18b e C36b), E1 a E5, U1 a U3, B1 e B2, um teste cada |
+| Integração, e2e, unidade e build | os cenários enumerados de `cenarios.md`, parte desta spec: C1 a C49 (com C6b, C18b e C36b), E1 a E5, U1 a U3, B1 e B2, um teste cada |
 | Isolamento e arquitetura | seção 6 |
 
 ## 11. Conformidade com as regras

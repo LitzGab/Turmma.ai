@@ -13,10 +13,14 @@ identificador. A lista é fechada; mudar exige revisar a spec. Saiu das rodadas 
 - **C4** `criar`, `desativar` e `convite` gravam `AuditoriaOperacao` com autor igual ao `OPERADOR` e o
   operador alvo certo
 - **C5** `desativar` de apelido inexistente dá erro tipado; desativar a si mesmo e o último ativo é
-  recusado; A desativa B e B desativa A em paralelo: um passa, e resta um operador ativo
+  recusado; com exatamente dois ativos, A desativa B e B desativa A em paralelo: um passa, e resta
+  um operador ativo
 - **C6** Depois de `desativar`, a linha do operador tem só id, apelido e datas; os códigos somem; o
   convite pendente fica revogado; as sessões, encerradas. Falha injetada no meio não deixa estado
   parcial. A sessão aberta recebe `SESSAO_ENCERRADA` na requisição seguinte
+- **C6b** Desafio `configurar_mfa` ou `mfa` emitido antes do `desativar` e usado depois, em sequência
+  e em `Promise.all` com o próprio `desativar`: recusado; a linha continua só com id, apelido e
+  datas, sem código de recuperação e sem sessão criada
 - **C7** `convite` com um pendente revoga o anterior: o link antigo responde igual a revogado, e o
   único parcial impede dois pendentes
 - **C8** O arquivo do token nasce com modo 0600
@@ -40,11 +44,11 @@ identificador. A lista é fechada; mudar exige revisar a spec. Saiu das rodadas 
 - **C16** Conta com segundo fator ativo: `/mfa/configurar` não muda segredo nem códigos
 - **C17** `configurar` consome o desafio (o mesmo desafio reenviado é recusado) e devolve um de etapa
   `mfa` com a versão do segredo; a ativação só acontece no primeiro `/sessao/mfa` com código válido
-- **C18** Dois `configurar` em `Promise.all`: o segredo gravado e os códigos válidos são da mesma
-  aba, e nenhum código da outra vale; o código da aba vencedora ativa, e o da outra recebe
-  "configure de novo"
-- **C18b** O `/sessao/mfa` da aba A em paralelo com o `configurar` da aba B nunca ativa um segredo
-  diferente do conferido
+- **C18** Dois `configurar` em paralelo, com barreira que force as duas ordens: o segredo gravado e
+  os códigos válidos são da mesma aba, e nenhum código da outra vale; o código da aba vencedora
+  ativa, e o da outra recebe "configure de novo" sem somar tentativa no contador
+- **C18b** O `/sessao/mfa` da aba A e o `configurar` da aba B, com barreira nas duas ordens: nunca se
+  ativa um segredo diferente do conferido
 - **C19** O mesmo TOTP duas vezes, em sequência e em paralelo: a segunda é recusada
 - **C20** O mesmo código de recuperação duas vezes, em sequência e em paralelo: a segunda é recusada;
   antes da ativação, código de recuperação não vale

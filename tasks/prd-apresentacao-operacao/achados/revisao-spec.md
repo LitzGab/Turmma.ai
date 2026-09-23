@@ -898,3 +898,32 @@ Arquivos auditados:
 - `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/cenarios.md`
 - `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/revisao-spec.md`
 - `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/achados/revisao-spec.md`
+
+## test-engineer · 5ª rodada · REPROVADO · 2026-09-23 14:00:37 · `tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+Cenários exigidos: os mesmos de antes nesta parte. Dois `configurar` em paralelo. `/sessao/mfa` em paralelo com `configurar`. Desafio reusado. Janela de 72 h. Dois `desativar` cruzados. Banco fora no `/renovar`. Redis fora no limite. Além deles, entra um que só aparece com a trava nova: `desativar` que acontece enquanto um desafio `configurar_mfa` ou `mfa` ainda está valendo.
+
+Cobertos:
+- **Correção exigida na rodada 4, feita.** O `update ... where mfa_ativado_em is null returning mfa_versao` trava a linha antes de apagar e inserir os códigos, então o segredo e os códigos saem sempre da mesma aba. A ativação agora exige `mfa_versao = $versao_do_desafio`, e isso fecha a mistura entre `/sessao/mfa` e `configurar` (techspec.md:84-89). C18 virou `Promise.all` com a asserção de mesma aba, e o C18b entrou.
+- **Recomendações da rodada 4, feitas.** C5 com o desativar cruzado, sob o mesmo `pg_advisory_xact_lock` do bootstrap. C15 com relógio controlado nas 71h59 e 72h01. C17 com o desafio reenviado. C31 com o `/renovar`. Seção 6 alinhada ao C45. C36 e C36b. `mfaVersao` no modelo.
+
+Bloqueantes:
+1. **Falta a condição de operador ativo nas travas de `configurar` e da ativação.** Em techspec.md:84-89 as travas não exigem `desativado_em is null`. O mesmo vale para as de TOTP e código de recuperação, e cenarios.md:17 (C6) não traz o caso.
+   - **O caminho.** O `desativar` encerra as sessões e revoga o convite. Mas um desafio já emitido continua valendo 5 min no Redis (techspec.md:92), e não é sessão. A conferência da sessão só barra o operador desativado depois que a sessão existe.
+   - **O que acontece.** Com um desafio `configurar_mfa` emitido antes do `desativar` e usado depois, o `update ... where mfa_ativado_em is null` volta a gravar segredo, versão e códigos na linha que o C6 promete limpa ("só id, apelido e datas"). Isso vale se o `desativar` zera `mfa_ativado_em` ou se o segredo nunca foi ativado. Em seguida, o `/sessao/mfa` pode ativar o segundo fator e criar uma sessão para um operador desativado. A trava nova de versão não pega o caso, porque a versão do desafio continua batendo.
+   - **Correção exigida.**
+     - Pôr `and desativado_em is null` no `update` do `configurar`, no da ativação e nos de TOTP e código de recuperação (ou declarar que a conferência do desafio lê o operador ativo na mesma transação da trava).
+     - Criar um cenário, C6b: um desafio emitido antes do `desativar` e usado depois, em sequência e em `Promise.all` com o próprio `desativar`, é recusado. A linha continua só com id, apelido e datas, não há código de recuperação e nenhuma `SessaoOperacao` é criada.
+
+Recomendações:
+- **Ordem da conferência na ativação** (techspec.md:86-89). A spec não diz se a versão é comparada antes do código. Se o TOTP da aba vencida for conferido contra o segredo novo, ele falha como "código inválido" e soma no contador por `operador.id`. Aí o C18 ("recebe 'configure de novo'") passa a depender de um detalhe que a spec não fixa. Declarar: ler a versão junto do segredo e, se ela não bater com a do desafio, responder "configure de novo" sem conferir o código e sem contar tentativa.
+- **C18b e C18 com a ordem forçada.** Um `Promise.all` sozinho quase sempre cai na mesma ordem. Pedir uma barreira (ou uma transação segurada no teste) que force as duas ordens: `configurar` de B antes da ativação de A, e depois dela. A asserção precisa valer nas duas.
+- **C5, deixar explícito.** A asserção de "resta um operador ativo" deve partir de exatamente dois ativos, que é o caso em que a regra do último ativo morde.
+
+Resumo: a correção que a rodada 4 pediu foi feita. Sobra um bloqueante, que é o operador desativado ainda conseguir voltar a gravar segredo e abrir sessão com um desafio que já estava emitido.
+
+Arquivos:
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/cenarios.md

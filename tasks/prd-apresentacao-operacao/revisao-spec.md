@@ -151,6 +151,19 @@ resolvidos; os de agora são novos e pontuais.
   `/renovar` (C31) (`test-engineer`)
 - `rl:op` em toda rota `@RotaDeOperacao` (C36) e limites com o Redis fora (C36b) (`infra-guardian`)
 
+## Rodada 5 — 23/09/2026
+
+**Veredito: REPROVADA** — `test-engineer`, um bloqueante; a correção da rodada 4 foi confirmada.
+
+### Correções exigidas na Tech Spec
+- Seção 5: todas as travas (configurar, ativação, TOTP, recuperação) exigem `desativado_em is null`,
+  para um desafio emitido antes do `desativar` não gravar nem ativar nada; cenário C6b
+  (`test-engineer`)
+
+### Recomendações aplicadas junto
+- A versão é lida com o segredo e, diferente, dá "configure de novo" sem conferir o código nem
+  contar tentativa; C18 e C18b com barreira nas duas ordens; C5 partindo de exatamente dois ativos
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -176,3 +189,4 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-09-23 13:54:21 | 2026-09-23 13:55:28 | `test-engineer` | 3 | REPROVADO | a505e4dc839d70264 |
 | 2026-09-23 13:57:16 | 2026-09-23 13:57:35 | `infra-guardian` | 4 | APROVADO | a8577d76d33145d26 |
 | 2026-09-23 13:57:12 | 2026-09-23 13:58:40 | `test-engineer` | 4 | REPROVADO | a2b0d3db1050c5a22 |
+| 2026-09-23 13:59:45 | 2026-09-23 14:00:37 | `test-engineer` | 5 | REPROVADO | a7bccf90a0ade5a5f |
