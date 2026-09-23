@@ -27,3 +27,4 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-23 13:58:40 | `test-engineer` | 4ª | REPROVADO | `revisao-spec` | `cenarios.md:41-42` (C18) e `techspec.md:85-88`: o "configurar em duas abas" continua sem teste de concorrência, e o desenho deixa estado misturado. |
 | 2026-09-23 14:00:37 | `test-engineer` | 5ª | REPROVADO | `revisao-spec` | Falta a condição de operador ativo nas travas de `configurar` e da ativação. Em techspec.md:84-89 as travas não exigem `desativado_em is null`. O mesmo vale… |
 | 2026-09-23 14:02:04 | `test-engineer` | 6ª | REPROVADO | `revisao-spec` | Seção 5, "Travas no banco", itens TOTP e código de recuperação (techspec.md:80-82). Criar a sessão não está preso à trava, e o C6b exige "sem sessão criada". |
+| 2026-09-23 14:03:20 | `test-engineer` | 7ª | REPROVADO | `revisao-spec` | `cenarios.md:21-25` (C6b): a correção 2 foi escrita de um jeito que o teste não consegue passar. |

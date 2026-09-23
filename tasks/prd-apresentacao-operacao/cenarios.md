@@ -18,11 +18,19 @@ identificador. A lista é fechada; mudar exige revisar a spec. Saiu das rodadas 
 - **C6** Depois de `desativar`, a linha do operador tem só id, apelido e datas; os códigos somem; o
   convite pendente fica revogado; as sessões, encerradas. Falha injetada no meio não deixa estado
   parcial. A sessão aberta recebe `SESSAO_ENCERRADA` na requisição seguinte
-- **C6b** Desafio `configurar_mfa` ou `mfa` emitido antes do `desativar` e usado depois, em sequência
-  e com barreira nas duas ordens (o `desativar` confirma entre a trava e o insert da sessão, e depois
-  da transação do `/sessao/mfa`): recusado com a mesma resposta de desafio inválido; a linha fica
-  só com id, apelido e datas, sem código de recuperação, sem segredo gravado e com zero sessões
-  ativas
+- **C6b** Desafio emitido antes do `desativar`, nas ordens que a trava produz:
+  - (a) o `desativar` ganha: barreira no `/sessao/mfa` depois de validar o `jti` e antes do
+    `for update`; o `desativar` confirma e a barreira solta. O `/sessao/mfa` é recusado com resposta
+    idêntica à de desafio inválido; zero sessões do operador; `mfa_ultimo_passo` e códigos intactos;
+    nada ativado
+  - (b) o `/sessao/mfa` ganha: barreira depois do `for update` e antes do insert; o `desativar`,
+    já disparado, fica bloqueado (promessa pendente ou espera em `pg_locks`) até a barreira soltar.
+    O `/sessao/mfa` confirma com sessão; o `desativar` confirma em seguida e a encerra; zero sessões
+    ativas no fim; a requisição seguinte recebe `SESSAO_ENCERRADA`; a linha fica só com id, apelido
+    e datas
+  - (c) o mesmo par para `configurar_mfa`, com a barreira antes e depois do `update ... returning
+    mfa_versao`: no fim, nenhum segredo nem código de recuperação gravado
+  - (d) em sequência: desafio usado depois do `desativar` é recusado como inválido
 - **C7** `convite` com um pendente revoga o anterior: o link antigo responde igual a revogado, e o
   único parcial impede dois pendentes
 - **C8** O arquivo do token nasce com modo 0600

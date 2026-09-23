@@ -955,3 +955,37 @@ Recomendações:
 - C6b: afirmar também que a recusa é a mesma resposta tipada de desafio inválido, para não confirmar ao cliente que o operador foi desativado.
 
 Arquivos: `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md`, `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/cenarios.md`
+
+## test-engineer · 7ª rodada · REPROVADO · 2026-09-23 14:03:20 · `tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+**VEREDITO: REPROVADO**
+
+**Cenários exigidos:** a rodada 6 pediu duas correções.
+- Correção 1: o `/sessao/mfa` roda numa transação só. Ela começa travando a linha do operador ativo, e o consumo do código, a ativação e o insert da sessão ficam dentro dela.
+- Correção 2: o C6b ganha barreira nas duas ordens, afirma zero sessões ativas e devolve a mesma resposta de desafio inválido.
+- Também auditei o que essas mudanças afetam: C18 e C18b, o fluxo do configurar e o `desativar`.
+
+**Cobertos:**
+- **Correção 1: feita** (`techspec.md` §5, "Travas no banco", linhas 81-85). O `select ... for update where id = $1 and desativado_em is null` vem primeiro. O TOTP por passo ou o `delete ... returning` do código de recuperação, a ativação e o insert da sessão ficam dentro da mesma transação. O `desativar` trava a mesma linha e por isso corre em série com o `/sessao/mfa`. O desenho está certo.
+- A condição `desativado_em is null` do cabeçalho vale também para o configurar, e a trava da linha continua na primeira instrução dele (linhas 86-90). C18 e C18b continuam coerentes com o desenho.
+- A origem `conhecido`/`outro` voltou ao texto (linha 96).
+- A lista de testes na linha 197 continua citando o C6b.
+
+**Bloqueantes:**
+- **`cenarios.md:21-25` (C6b): a correção 2 foi escrita de um jeito que o teste não consegue passar.**
+  - **Primeira ordem.** O texto diz que o `desativar` confirma "entre a trava e o insert da sessão". Com o `for update` da linha 81, isso não acontece: enquanto o `/sessao/mfa` segura a trava, o `desativar` fica esperando e só confirma depois. Se a barreira segura o `/sessao/mfa` nesse ponto à espera do `desativar`, o teste trava.
+  - **Segunda ordem.** O texto diz que o `desativar` confirma "depois da transação do `/sessao/mfa`". Nessa ordem o `/sessao/mfa` já teve sucesso e criou a sessão. Não tem como ele ser "recusado com a mesma resposta de desafio inválido".
+  - **O risco.** Quem implementar vai ter de enfraquecer a trava para o teste ficar verde, ou afrouxar a asserção sem avisar. As duas saídas tiram do C6b a prova da regra.
+  - **Correção exigida: reescrever o C6b com as duas ordens que o desenho de fato produz.**
+    - **(a) O `desativar` ganha.** A barreira fica no `/sessao/mfa` depois de validar o `jti` e antes do `for update`. O `desativar` confirma, e só então a barreira solta. Asserções: o `/sessao/mfa` é recusado com resposta idêntica à de desafio inválido; zero linhas em `SessaoOperador` para o operador; `mfa_ultimo_passo` e os códigos não mudam; nenhuma ativação.
+    - **(b) O `/sessao/mfa` ganha.** A barreira fica dentro da transação, depois do `for update` e antes do insert. Com o `desativar` já disparado, o teste prova que ele está bloqueado (promessa ainda pendente, ou a espera aparecendo em `pg_locks`), e depois a barreira solta. Asserções: o `/sessao/mfa` confirma com sessão; o `desativar` confirma em seguida e encerra a sessão; zero sessões ativas no fim; a requisição seguinte com aquela sessão recebe `SESSAO_ENCERRADA`; a linha fica só com id, apelido e datas.
+    - **(c) A variante `configurar_mfa`.** Vale o mesmo par de ordens. A barreira fica antes e depois do `update operador ... returning mfa_versao`. No fim não fica segredo gravado nem código de recuperação.
+    - **(d) Em sequência.** O caso sem paralelo continua como está.
+
+**Recomendações:**
+- A linha 84 diz que o `desativar` "também trava a linha". Vale nomear a instrução exata que trava, por exemplo um `select ... for update` no início da transação do `desativar`, antes de apagar o dado pessoal. Assim a ordem das travas fica escrita, e a revisão de código não precisa deduzir de onde vem a serialização.
+- A reserva do `jti` com `SET NX` no Redis acontece fora da transação do Postgres. Convém dizer em uma linha que o desafio queimado numa transação que depois volta atrás não é devolvido (o operador pede outro) e que isso é o comportamento aceito.
+
+Arquivos auditados:
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md`
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/cenarios.md`

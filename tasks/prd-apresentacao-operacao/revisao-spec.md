@@ -178,6 +178,19 @@ foi confirmada.
 ### Recomendações aplicadas junto
 - Origem `conhecido`/`outro` de volta ao texto da entrada
 
+## Rodada 7 — 23/09/2026
+
+**Veredito: REPROVADA** — o desenho da rodada 6 foi confirmado; o C6b estava escrito com ordens que
+a trava não produz.
+
+### Correções exigidas
+- C6b reescrito com as ordens reais: (a) o `desativar` ganha, com barreira antes do `for update`;
+  (b) o `/sessao/mfa` ganha, com o `desativar` bloqueado até a barreira soltar e a sessão encerrada
+  em seguida; (c) o mesmo par para `configurar_mfa`; (d) em sequência (`test-engineer`)
+
+### Recomendações aplicadas junto
+- O `desativar` começa pelo mesmo `for update`; o `jti` queimado fora da transação não volta
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -205,3 +218,4 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-09-23 13:57:12 | 2026-09-23 13:58:40 | `test-engineer` | 4 | REPROVADO | a2b0d3db1050c5a22 |
 | 2026-09-23 13:59:45 | 2026-09-23 14:00:37 | `test-engineer` | 5 | REPROVADO | a7bccf90a0ade5a5f |
 | 2026-09-23 14:01:21 | 2026-09-23 14:02:04 | `test-engineer` | 6 | REPROVADO | ab7c531f6f152ab5e |
+| 2026-09-23 14:02:37 | 2026-09-23 14:03:20 | `test-engineer` | 7 | REPROVADO | a1a865cdff5068dd3 |

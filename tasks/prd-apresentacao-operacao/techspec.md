@@ -1,7 +1,7 @@
 # Tech Spec — Identidade do operador Turmma
 
 **PRD:** `tasks/prd-apresentacao-operacao/prd.md`
-**Status:** rascunho (7ª versão, depois da rodada 6 do `/revisar-spec`; o painel foi para a A0b)
+**Status:** rascunho (8ª versão, depois da rodada 7 do `/revisar-spec`; o painel foi para a A0b)
 
 ## 1. Resumo da abordagem
 
@@ -17,7 +17,7 @@ inteiro numa tarefa própria, antes das telas do operador.
 | Módulo | Novo ou alterado | O quê |
 |---|---|---|
 | `apps/api/src/operacao/` | novo | controllers de sessão e convite, `GuardaDeOperador`, `OperadorRepository`, os dois marcadores |
-| `apps/api/src/ops/` | novo e alterado | `ops:operador -- criar`, `desativar`, `convite`; `comando.ts` confere `OPERADOR` contra operador ativo |
+| `apps/api/src/ops/` | novo e alterado | `ops:operador` (`criar`, `desativar`, `convite`); `comando.ts` confere o `OPERADOR` |
 | `packages/nucleo/src/identidade/`, `limite/guarda-limite.ts` | alterado | `rotaSemSessao` e limite reconhecem os marcadores; `verificarTokenDeOperador`; bearer de operador em rota de escola → 404 |
 | `apps/api/src/sessao/contador-de-tentativas.ts` | alterado | prefixo por parâmetro |
 | `packages/nucleo/src/` | alterado e novo | `conferencia-das-permissoes.ts` aceita os marcadores; schema das seis tabelas; expurgo (seção 7) |
@@ -71,7 +71,7 @@ pendente na mesma transação; `desativar` apaga o dado pessoal, revoga o convit
 numa transação só. O autor da `AuditoriaOperacao` é o `OPERADOR` do comando; o da entrada e do MFA,
 o operador da sessão.
 
-**Etapas.** O desafio leva a etapa, e cada rota só aceita a sua.
+**Etapas.** Cada rota só aceita o desafio da sua etapa.
 `/sessao/email` só devolve `configurar_mfa` até 72 h depois do aceite e sem segundo fator ativo;
 fora disso, igual a senha errada, e o caminho é um convite novo.
 
@@ -81,8 +81,8 @@ fora disso, igual a senha errada, e o caminho é um convite novo.
 - `/sessao/mfa`, numa transação só: trava a linha (`select ... for update where id = $1 and
   desativado_em is null`), consome o código (TOTP: `set mfa_ultimo_passo = $p where
   mfa_ultimo_passo is null or mfa_ultimo_passo < $p`; recuperação: `delete ... returning`), ativa se
-  for o caso e insere a sessão; o `desativar`, que também trava a linha, espera por ela ou a vê
-  desativada
+  for o caso e insere a sessão; o `desativar` começa pelo mesmo `for update`, e por isso espera por
+  ela ou a vê desativada
 - configurar: consome o desafio e, numa transação, começa por `update operador set
   mfa_segredo_cifrado = $s, mfa_versao = mfa_versao + 1 where id = $1 and mfa_ativado_em is null
   returning mfa_versao`, depois apaga e insere os códigos; devolve desafio de etapa `mfa` com a
@@ -90,7 +90,8 @@ fora disso, igual a senha errada, e o caminho é um convite novo.
   conferir o código nem contar tentativa
 - renovação: `update ... set refresh_hash = $novo, refresh_hash_anterior = $atual where id = $1 and
   refresh_hash = $atual`; o anterior vale 30 s, e reusado depois encerra a sessão (padrão do F1)
-- desafio: `jti` com `SET NX` no Redis por 5 min; Redis fora, 503
+- desafio: `jti` com `SET NX` no Redis por 5 min, fora da transação (queimado não volta; o operador
+  pede outro); Redis fora, 503
 
 **Entrada.** O `ContadorDeTentativas` usa `login-op:`, pelo e-mail e pelo `operador.id`, com a
 origem `conhecido`/`outro` do cookie de dispositivo do F1, com chave própria. `entrada_falha` não
@@ -113,8 +114,7 @@ grava o e-mail.
 conta; `sessao/mfa` recusa pelo contador por `operador.id`; `convite/consultar`, `mfa/configurar`,
 `renovar` e `sair` usam o limite anônimo por IP recusável (`rl:ip`), como as rotas iguais do F1.
 
-**Borda.** No MVP local, pela mesma borda (tudo é sintético); antes do staging, restrita
-(`tasks/prd-fundacao-tecnica/notas-staging.md`).
+**Borda.** MVP local pela mesma borda; restrita antes do staging (`notas-staging.md` do F0).
 
 ## 6. Isolamento
 
