@@ -5,7 +5,8 @@ sem servidor, todo dado é sintético.
 
 **Para não misturar:**
 
-- **Não fazer merge** do branch `mockups/interface` no `main`, `release` ou `develop`. Ele existe só para consulta.
+- **Só para consulta.** A pasta entrou na `develop` em 23/09/2026 (merge do branch `mockups/interface`), isolada
+  do produto pelas regras abaixo.
 - **Não copiar código daqui para o `apps/web`** nem para os `packages/`. Aqui valem atalhos que o produto não aceita
   (sem teste, sem orçamento de JS, peças do 21st.dev coladas sem revisão de licença, regras do `docs/interface.md`
   quebradas de propósito para ver como fica).
@@ -14,7 +15,7 @@ sem servidor, todo dado é sintético.
 - O que vale é o **desenho**. O que for aprovado volta para o `docs/interface.md`, vira decisão em
   `docs/decisoes.md` e é construído no produto pelo processo normal (`/descobrir` → PRD → tarefas).
 - O que as telas pedem ao produto e ainda não existe (modelo de dados, regras, riscos) está em
-  `docs/pendencias-dos-mockups.md`, no branch `docs/estrutura-de-agentes`: 31 itens, P01 a P31.
+  `docs/pendencias-dos-mockups.md`: 31 itens, P01 a P31.
 
 ## Rodar
 

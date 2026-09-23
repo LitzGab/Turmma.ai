@@ -289,8 +289,8 @@ Fase posterior (D11). Nota, entrega e alerta, alimentados pelo motor de eventos 
 ## 7. Em aberto
 
 - **A revisão do Gabriel aconteceu, em mockup, em 19 e 20/09/2026 (oito rodadas), e mudou mais que a
-  Parte B.** O mockup está no branch `mockups/interface`, pasta `mockups/`, só para consulta: não se faz
-  merge dele e nada de lá é copiado para o `apps/web`.
+  Parte B.** O mockup está na pasta `mockups/` (entrou na `develop` em 23/09/2026, vindo do branch
+  `mockups/interface`), só para consulta: nada de lá é copiado para o `apps/web`.
   Ele rejeitou a pele da landing page dentro do produto (ficou o sistema do ChatGPT em branco,
   preto e laranja), mudou a navegação do professor que a seção 1 dá como decidida, trocou o
   painel de "Minhas turmas" por uma sala de aula, reformou a área de Ferramentas (catálogo de 17 em

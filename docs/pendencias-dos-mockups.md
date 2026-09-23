@@ -1,9 +1,9 @@
 # Pendências que saíram dos mockups
 
 > Em 19 e 20/09/2026 o Gabriel revisou, em oito rodadas, os mockups da interface inteira. Eles
-> estão no branch **`mockups/interface`**, na pasta `mockups/` (como rodar: `mockups/README.md`
-> daquele branch). **O branch é só para consulta: não se faz merge dele e nada de lá é copiado
-> para o `apps/web`** — o que vale é o desenho, que entra no produto pelos itens abaixo. Ele
+> estão na pasta **`mockups/`** (como rodar: `mockups/README.md`), que entrou na `develop` em
+> 23/09/2026 vinda do branch `mockups/interface`. **A pasta é só para consulta: nada de lá é
+> copiado para o `apps/web`** — o que vale é o desenho, que entra no produto pelos itens abaixo. Ele
 > decide vendo, e do que ele viu saíram mudanças que **este repositório ainda não conhece**: uma
 > revisão da lista de agentes, funcionalidades que não existem em nenhuma fase, e ajustes de
 > escopo em fases que existem.

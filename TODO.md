@@ -183,8 +183,8 @@ para o staging".
       do PRD da A1; e escrever a etapa 1 das AIAs de correção, diagnóstico, Tutor e sinais antes
       dos PRDs da A3, da A4 e da A5 (`docs/aia/`)
 - [ ] Ratificar ou recusar as D55 a D71 que esperam o Joaquim, e as revisões da D1, da D32 e
-      da D45 (`docs/decisoes.md`). O branch `docs/estrutura-de-agentes` está empilhado sobre o
-      `docs/direcionamento-regulatorio`
+      da D45 (`docs/decisoes.md`). Os branches `docs/direcionamento-regulatorio` e
+      `docs/estrutura-de-agentes` já estão na `develop`
 
 Pendências herdadas da validação do F0 (`tasks/prd-fundacao-tecnica/validacao.md`, seção 6
 das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e são lidos pelo

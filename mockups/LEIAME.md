@@ -1,10 +1,11 @@
 # Turmma — mockups da interface
 
-> **Não é código do produto.** Não fazer merge deste branch nem copiar código daqui para o `apps/web`: ver o
+> **Não é código do produto.** Não copiar código daqui para o `apps/web` nem para os `packages/`: ver o
 > [README.md](README.md).
 
 Só front-end, para **ver o sistema antes de construir**. Não fala com servidor, não tem backend e todo dado é
-sintético. Vive no branch `mockups/interface` do repositório, na pasta `mockups/`, com `package.json` próprio:
+sintético. Vive na pasta `mockups/` do repositório (veio do branch `mockups/interface` para a `develop` em
+23/09/2026), com `package.json` próprio:
 **não é workspace** do monorepo, não entra no `npm run build`, no lint nem nos testes da raiz, e nada daqui vai
 para o `apps/web`. O que for aprovado aqui volta para o `docs/interface.md` e é construído no produto pelo processo.
 
@@ -23,7 +24,7 @@ e traz o roteiro dos cinco passos da D71 na ordem. Para trocar de papel, volte a
 
 | Fonte | O que dá |
 |---|---|
-| `docs/interface.md` (clone `Educa.ia`, branch `docs/estrutura-de-agentes`) | O planejamento: navegação por papel, as telas-chave, as regras, o mapa de peças da 10.2 |
+| `docs/interface.md` (neste repositório) | O planejamento: navegação por papel, as telas-chave, as regras, o mapa de peças da 10.2 |
 | ChatGPT (tema claro de `chatgpt.com`, medido em 19/09/2026) | O sistema de design: superfícies, cinzas, bordas, a fonte do sistema, item de 36 px com canto de 10, botão em pílula, caixa de pedido com canto de 28 px e sombra suave, pergunta centralizada |
 | A marca (`~/Code/turmma-marca`) | Três cores e mais nenhuma: branco, preto e o laranja da pinta `#E8732E`. A Fustat fica só no logotipo |
 | 21st.dev | As peças, em `src/components/ui` e `src/components/blocks`, vestidas com os tokens |
@@ -140,7 +141,7 @@ botão tem canto de 8 px, a página rola como documento, e as fontes são Quicks
 
 ## Tarefas futuras
 
-**O registro completo está em `docs/pendencias-dos-mockups.md`, no branch `docs/estrutura-de-agentes`** — 31 itens
+**O registro completo está em `docs/pendencias-dos-mockups.md`** — 31 itens
 (P01 a P31), cada um com o que o produto precisa de tela, API, dado, regra e teste, e por onde entra no processo.
 As duas últimas rodadas estão nos itens P26 a P31. O resumo:
 

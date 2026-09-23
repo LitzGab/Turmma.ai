@@ -300,8 +300,9 @@ no Brasil, se um contrato exigir.
 
 **Para entender o produto:** `docs/visao-produto.md`, `docs/fluxos.md`, `docs/glossario.md`
 **Para entender a interface:** `docs/interface.md`
-**Para ver a interface desenhada:** o branch `mockups/interface`, pasta `mockups/` (protótipo só de
-front-end, com dado sintético). **Não se faz merge dele e nada de lá é copiado para o `apps/web`**
+**Para ver a interface desenhada:** a pasta `mockups/` (protótipo só de front-end, com dado sintético e
+projeto próprio, fora do build, do lint e dos testes da raiz; veio do branch `mockups/interface` para a
+`develop` em 23/09/2026). **Nada de lá é copiado para o `apps/web`** nem para os `packages/`
 **Para saber o que a revisão dos mockups mudou e ainda não virou decisão:**
 `docs/pendencias-dos-mockups.md` (31 itens, com o que cada um pede de tela, API, dado, regra e teste)
 **Para entender o negócio:** `docs/negocio.md` (mercado, preço, concorrência). Não é leitura
