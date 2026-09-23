@@ -149,7 +149,7 @@ function FormularioDaMatricula({ slug }: { slug: string }) {
           {falha instanceof ErroDaApi ? mensagemDaEntradaPorMatricula(falha.codigo, falha.esperaSegundos) : mensagemDaEntradaPorMatricula(CodigoDeErro.ERRO_INTERNO)}
         </p>
       )}
-      <Botao type="submit" disabled={entrando} className="w-full disabled:bg-slate-600">
+      <Botao type="submit" disabled={entrando} className="w-full">
         {entrando ? 'Entrando…' : 'Entrar'}
       </Botao>
       {/* Às 7h30 o 503 do semáforo faz a espera passar de um segundo: quem usa leitor de tela precisa ouvir isso. */}

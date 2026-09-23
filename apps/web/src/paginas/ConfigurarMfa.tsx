@@ -144,7 +144,7 @@ function Segredo({ segredo, aoAtivar }: { segredo: RespostaConfigurarMfa; aoAtiv
             {falha instanceof ErroDaApi ? mensagemDoSegundoFator(falha.codigo, falha.esperaSegundos) : mensagemDoSegundoFator(CodigoDeErro.ERRO_INTERNO)}
           </p>
         )}
-        <Botao type="submit" disabled={ativando} className="w-full disabled:bg-slate-600">
+        <Botao type="submit" disabled={ativando} className="w-full">
           {ativando ? 'Ativando…' : 'Ativar o segundo fator'}
         </Botao>
         <span role="status" className="sr-only">

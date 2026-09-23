@@ -134,7 +134,7 @@ export function Convite() {
       )}
       {etapa.nome === 'confirmar' ? (
         <>
-          <Botao onClick={() => void aceitar(etapa.token, etapa.escolaNome)} disabled={aceitando} className="w-full disabled:bg-slate-600">
+          <Botao onClick={() => void aceitar(etapa.token, etapa.escolaNome)} disabled={aceitando} className="w-full">
             {aceitando ? 'Aceitando…' : 'Aceitar o convite'}
           </Botao>
           <span role="status" className="sr-only">
@@ -176,7 +176,7 @@ function SenhaNova({ escolaNome, aceitando, aoEnviar }: { escolaNome: string; ac
         value={senha}
         onChange={(evento) => definirSenha(evento.target.value)}
       />
-      <Botao type="submit" disabled={aceitando} className="w-full disabled:bg-slate-600">
+      <Botao type="submit" disabled={aceitando} className="w-full">
         {aceitando ? 'Salvando…' : 'Definir a senha e continuar'}
       </Botao>
       <span role="status" className="sr-only">

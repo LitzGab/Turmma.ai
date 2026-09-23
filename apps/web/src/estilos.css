@@ -1,8 +1,8 @@
 @import 'tailwindcss';
 
 /*
- * Sem identidade visual ainda (decisão em aberto): fonte do sistema, cores neutras e nenhuma animação,
- * para caber no computador fraco da escola (regra 50, item 1).
+ * A pele é a da D72 (`docs/interface.md` 9.1 e 9.9): branco, preto e o laranja da pinta, fonte do sistema e nenhuma
+ * animação que custe quadro no computador fraco da escola (regra 50, item 1).
  *
  * A paleta padrão do Tailwind 4 é em oklch(), que só existe a partir do Chrome 111 e do Safari 16.4: num
  * Chrome 109 de laboratório com Windows 7 ou num Chromebook sem atualização, o botão ficaria branco sobre
@@ -11,7 +11,11 @@
  */
 @theme {
   --color-*: initial;
-  --color-white: #ffffff;
+
+  /*
+   * A paleta anterior, que as telas de `paginas/` ainda usam. Sai inteira na tarefa 2.0 da A0, junto com a troca
+   * das telas; até lá nenhuma tela perde cor no meio do caminho.
+   */
   --color-slate-50: #f8fafc;
   --color-slate-200: #e2e8f0;
   --color-slate-400: #94a3b8;
@@ -35,20 +39,94 @@
   --color-emerald-800: #065f46;
 }
 
+/*
+ * Os tokens da D72, copiados da 9.9 do `docs/interface.md`; os componentes de `componentes/` já usam só estes. A
+ * `--font-marca` da 9.9 não entra: o logotipo vem em curvas, de `public/marca/`, e a Fustat não é baixada.
+ *
+ * `static` faz o Tailwind emitir todas as variáveis, e não só as que alguma classe usa: o CSS servido carrega a paleta
+ * inteira da D72, e o e2e confere nele que cada token existe de fato, e não só no fonte.
+ */
+@theme static {
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* chão e estrutura: a rampa de cinzas do ChatGPT */
+  --color-fundo: #ffffff;
+  --color-superficie: #ffffff;
+  --color-lateral: #f9f9f9;
+  --color-realce: #ececec;
+  --color-realce-suave: #f4f4f4;
+  --color-linha: #e8e8e8;
+  --color-borda-campo: #8f8f8f;
+  /* texto */
+  --color-tinta: #0d0d0d;
+  --color-apoio: #424242;
+  --color-sutil: #5d5d5d;
+  --color-inativo: #8f8f8f;
+  /* a única cor: o laranja da pinta */
+  --color-caramelo: #e8732e;
+  --color-caramelo-claro: #ee8747;
+  --color-caramelo-fundo: #d4651f;
+  --color-caramelo-texto: #b4520f;
+  --color-caramelo-noite: #f2a25b;
+  /* o preto da decisão oficial */
+  --color-noite: #0d0d0d;
+  --color-noite-alto: #2f2f2f;
+  --color-noite-baixo: #000000;
+  --color-creme: #f4f4f4;
+  --color-papel: #f4f3f0;
+  /* estado: fundo e texto */
+  --color-pendente-cx: #fdf0e8;
+  --color-pendente: #8a3e0c;
+  --color-ok-cx: #e9f5ee;
+  --color-ok: #0b6b47;
+  --color-erro-cx: #fdecec;
+  --color-erro: #b42318;
+  --color-info-cx: #f4f4f4;
+  --color-info: #0d0d0d;
+  --color-ia-cx: #f0f0f0;
+  --color-ia: #424242;
+
+  --font-corpo: ui-sans-serif, -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-titulo: ui-sans-serif, -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif;
+
+  --radius-linha: 10px;
+  --radius-controle: 12px;
+  --radius-cartao: 16px;
+  --radius-caixa: 28px;
+
+  --shadow-caixa: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 80px 8px rgba(0, 0, 0, 0.024);
+  --shadow-flutua: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 8px 28px -6px rgba(0, 0, 0, 0.16);
+
+  --t-estado: 150ms;
+  --t-gesto: 260ms;
+  --t-entrada: 420ms;
+  --curva-estado: cubic-bezier(0.2, 0, 0, 1);
+  --curva-entrada: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @layer base {
-  /* Foco sempre visível, em tudo que recebe foco pelo teclado (regra 50, item 11). */
+  /*
+   * Foco sempre visível, em tudo que recebe foco pelo teclado (regra 50, item 11): 2 px em `noite` com 2 px de
+   * afastamento (9.1). Sobre o preto, o anel preto some; ali ele é `caramelo-noite` (9,3:1).
+   */
   :focus-visible {
-    outline: 3px solid var(--color-blue-700);
+    outline: 2px solid var(--color-noite);
     outline-offset: 2px;
+  }
+
+  .bg-noite :focus-visible {
+    outline-color: var(--color-caramelo-noite);
   }
 
   /*
    * O login por cima da tela (sessão vencida) é um `dialog` modal: o navegador prende o foco nele e deixa o resto
-   * inerte. O fundo escurecido vem em hex de 8 dígitos, e não em `color-mix()` nem em `oklch()`, pelo mesmo motivo da
-   * paleta acima; a centralização é explícita porque o `margin` do `dialog` é zerado pelo reset.
+   * inerte. O fundo escurecido é a `tinta` com transparência em `rgba()` literal, e não em `color-mix()` nem em
+   * `oklch()`, pelo mesmo motivo da paleta acima; a centralização é explícita porque o `margin` do `dialog` é zerado
+   * pelo reset.
    */
   dialog::backdrop {
-    background-color: #0f172abf;
+    background-color: rgba(13, 13, 13, 0.75);
   }
 
   dialog[open] {

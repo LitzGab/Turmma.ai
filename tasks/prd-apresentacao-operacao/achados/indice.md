@@ -30,3 +30,6 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-23 14:03:20 | `test-engineer` | 7ª | REPROVADO | `revisao-spec` | `cenarios.md:21-25` (C6b): a correção 2 foi escrita de um jeito que o teste não consegue passar. |
 | 2026-09-23 14:04:27 | `test-engineer` | 8ª | APROVADO | `revisao-spec` | C6b(a), linha 23: "`mfa_ultimo_passo` e códigos intactos" contradiz o C6. Com o `desativar` confirmado, os códigos somem e a linha fica só com id, apelido e… |
 | 2026-09-23 14:15:49 | `test-engineer` | 9ª | REPROVADO | `revisao-spec` | C33: a 5.0 leva só a parte do `aceitar`. A parte do `sessao/email` não está em tarefa nenhuma; ela vai para a 6.0. |
+| 2026-09-23 20:41:23 | `test-engineer` | 1ª | APROVADO | `1_task` | O pressionado (`caramelo-fundo`) da subtarefa 1.2 não tem teste. É ele que dá o sinal no toque, onde não há hover. Um `mouse.down()` sem soltar, seguido da cor… |
+| 2026-09-23 20:42:14 | `frontend-reviewer` | 1ª | APROVADO | `1_task` | `apps/web/src/componentes/SeletorDeEscola.tsx:86`: o `disabled:text-inativo` (#8F8F8F, 3,3:1) também pinta o texto "Abrindo <escola>…", que é informação de… |
+| 2026-09-23 20:42:15 | `revisor-geral` | 1ª | APROVADO | `1_task` | As sete telas de `paginas/` mudaram, e o "Fora do escopo" do próprio documento deixa as telas para a 2.0. A mudança é mínima e necessária: sem ela, o… |

@@ -1,15 +1,15 @@
 # Tarefas — Identidade do operador Turmma (A0)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 0 de 11 concluídas
+**Status:** 1 de 11 concluídas
 
 ## Lista
 
-- [ ] **1.0 — Tokens da D72 no tema do `apps/web` e os componentes compartilhados na pele nova**
-  - [ ] 1.1 Tokens da seção 9.9 no `@theme`, ao lado da paleta atual
-  - [ ] 1.2 Os 10 componentes de `apps/web/src/componentes/` migrados (botão primário, foco, link)
-  - [ ] 1.3 Logotipo pelos SVGs de `mockups/public/marca/`
-  - [ ] 1.4 Testes: os hex dos tokens no CSS servido; o e2e do F1 continua verde
+- [x] **1.0 — Tokens da D72 no tema do `apps/web` e os componentes compartilhados na pele nova**
+  - [x] 1.1 Tokens da seção 9.9 no `@theme`, ao lado da paleta atual
+  - [x] 1.2 Os 10 componentes de `apps/web/src/componentes/` migrados (botão primário, foco, link)
+  - [x] 1.3 Logotipo pelos SVGs de `mockups/public/marca/`
+  - [x] 1.4 Testes: os hex dos tokens no CSS servido; o e2e do F1 continua verde
 
 - [ ] **2.0 — As telas do F1 na pele da D72, com as guardas de estilo estritas**
   - [ ] 2.1 As 12 telas do F1 migradas e a paleta antiga removida

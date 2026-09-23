@@ -72,11 +72,11 @@ export function LoginPorCima() {
   }
 
   return (
-    <dialog ref={dialogo} aria-labelledby={titulo} onCancel={(evento) => evento.preventDefault()} className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-4 text-slate-900">
+    <dialog ref={dialogo} aria-labelledby={titulo} onCancel={(evento) => evento.preventDefault()} className="w-full max-w-md rounded-caixa border border-linha bg-superficie p-6 text-tinta shadow-flutua">
       <h2 id={titulo} className="text-lg font-semibold">
         Sua sessão expirou
       </h2>
-      <p className="mt-2 text-slate-700">
+      <p className="mt-2 text-apoio">
         {porMatricula
           ? 'Entre de novo com a sua matrícula e a sua senha para continuar de onde você parou. O que você escreveu continua aqui.'
           : 'Entre de novo com o seu e-mail e a sua senha para continuar de onde você parou. O que você escreveu continua aqui.'}
@@ -98,7 +98,7 @@ export function LoginPorCima() {
             maxLength={porMatricula ? TAMANHO_MAXIMO_MATRICULA : TAMANHO_MAXIMO_EMAIL}
             value={identificador}
             onChange={(evento) => definirIdentificador(evento.target.value)}
-            className="min-h-11 rounded-md border border-slate-400 bg-white px-3 py-2 text-base"
+            className="min-h-11 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -114,15 +114,15 @@ export function LoginPorCima() {
             maxLength={TAMANHO_MAXIMO_SENHA}
             value={senha}
             onChange={(evento) => definirSenha(evento.target.value)}
-            className="min-h-11 rounded-md border border-slate-400 bg-white px-3 py-2 text-base"
+            className="min-h-11 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta"
           />
         </div>
         {falha !== undefined && (
-          <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-red-900">
+          <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-3 text-erro">
             {mensagem(falha)}
           </p>
         )}
-        <Botao type="submit" disabled={entrando} className="w-full disabled:bg-slate-600">
+        <Botao type="submit" disabled={entrando} className="w-full">
           {entrando ? 'Entrando…' : 'Entrar'}
         </Botao>
         <span role="status" className="sr-only">
@@ -130,7 +130,7 @@ export function LoginPorCima() {
         </span>
       </form>
       {/* Quem sentou no computador é outra pessoa, ou quer entrar por outro caminho: a tela de trás sai junto. */}
-      <button type="button" onClick={irParaAEntrada} className="mt-3 min-h-11 text-blue-800 underline">
+      <button type="button" onClick={irParaAEntrada} className="mt-3 min-h-11 text-caramelo-texto underline">
         Entrar com outra conta
       </button>
     </dialog>

@@ -21,7 +21,7 @@ export function Campo({ rotulo, dica, ...props }: Props) {
         {rotulo}
       </label>
       {dica !== undefined && (
-        <p id={descricao} className="text-sm text-slate-700">
+        <p id={descricao} className="text-sm text-apoio">
           {dica}
         </p>
       )}
@@ -29,7 +29,7 @@ export function Campo({ rotulo, dica, ...props }: Props) {
         id={campo}
         {...(dica === undefined ? {} : { 'aria-describedby': descricao })}
         {...props}
-        className="min-h-11 rounded-md border border-slate-400 bg-white px-3 py-2 text-base"
+        className="min-h-11 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta"
       />
     </div>
   )

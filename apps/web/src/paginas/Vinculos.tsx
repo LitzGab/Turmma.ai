@@ -122,7 +122,7 @@ export function Vinculos() {
                   />
                 ) : (
                   <div className="mt-3 flex flex-wrap gap-3">
-                    <Botao onClick={() => aoConfirmar(vinculo.id)} disabled={decidindo} className="disabled:bg-slate-600">
+                    <Botao onClick={() => aoConfirmar(vinculo.id)} disabled={decidindo}>
                       {confirmar.isPending && confirmar.variables === vinculo.id ? 'Confirmando…' : 'Confirmar'}
                     </Botao>
                     <button
@@ -141,7 +141,7 @@ export function Vinculos() {
       )}
 
       {vinculos.hasNextPage && (
-        <Botao onClick={() => void vinculos.fetchNextPage()} disabled={vinculos.isFetchingNextPage} className="self-start disabled:bg-slate-600">
+        <Botao onClick={() => void vinculos.fetchNextPage()} disabled={vinculos.isFetchingNextPage} className="self-start">
           {vinculos.isFetchingNextPage ? 'Carregando…' : 'Ver mais vínculos'}
         </Botao>
       )}
@@ -210,7 +210,7 @@ function FormularioDeContestacao({ contestacao, enviando, falha, aoMudar, aoEnvi
         </p>
       )}
       <div className="flex flex-wrap gap-3">
-        <Botao type="submit" disabled={enviando} className="disabled:bg-slate-600">
+        <Botao type="submit" disabled={enviando}>
           {enviando ? 'Enviando…' : 'Enviar a contestação'}
         </Botao>
         <button

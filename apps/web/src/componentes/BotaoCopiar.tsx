@@ -31,7 +31,7 @@ export function BotaoCopiar({ texto, rotulo, avisoDeCopiado }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <Botao onClick={() => void copiar()}>{rotulo}</Botao>
-      <span role="status" className="text-slate-700">
+      <span role="status" className="text-apoio">
         {situacao === 'copiado' ? avisoDeCopiado : ''}
         {situacao === 'falhou' ? 'Não foi possível copiar. Selecione o texto ao lado e copie pelo seu computador.' : ''}
       </span>

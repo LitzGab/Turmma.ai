@@ -112,7 +112,7 @@ export function Mfa() {
             {falha instanceof ErroDaApi ? mensagemDoSegundoFator(falha.codigo, falha.esperaSegundos) : mensagemDoSegundoFator(CodigoDeErro.ERRO_INTERNO)}
           </p>
         )}
-        <Botao type="submit" disabled={entrando} className="w-full disabled:bg-slate-600">
+        <Botao type="submit" disabled={entrando} className="w-full">
           {entrando ? 'Entrando…' : 'Entrar'}
         </Botao>
         <span role="status" className="sr-only">

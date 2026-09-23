@@ -110,7 +110,7 @@ export function Entrar() {
               {mensagemDaFalha(falha)}
             </p>
           )}
-          <Botao type="submit" disabled={entrando} className="w-full disabled:bg-slate-600">
+          <Botao type="submit" disabled={entrando} className="w-full">
             {entrando ? 'Entrando…' : 'Entrar'}
           </Botao>
           {/* O "Entrando…" também é anunciado a quem usa leitor de tela: no 503 da rajada das 7h30 a espera passa de um segundo. */}

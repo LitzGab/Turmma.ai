@@ -26,18 +26,18 @@ na paleta antiga até a 2.0: nada quebra no meio.
 
 ## Subtarefas
 
-- [ ] 1.1 — Acrescentar ao `@theme` do `estilos.css` os tokens da 9.9, sem remover os atuais; a lista de
+- [x] 1.1 — Acrescentar ao `@theme` do `estilos.css` os tokens da 9.9, sem remover os atuais; a lista de
   cores declaradas do `estilos.test.ts` ganha os nomes novos
-- [ ] 1.2 — Migrar `Botao`: `caramelo` com texto `tinta` (6,4:1), hover `caramelo-claro`, pressionado
+- [x] 1.2 — Migrar `Botao`: `caramelo` com texto `tinta` (6,4:1), hover `caramelo-claro`, pressionado
   `caramelo-fundo`, desligado `inativo`. A variante que hoje é "oficial" em preto continua preta (9.1)
-- [ ] 1.3 — Foco global de 2 px em `noite` com 2 px de afastamento (`caramelo-noite` sobre preto); link
+- [x] 1.3 — Foco global de 2 px em `noite` com 2 px de afastamento (`caramelo-noite` sobre preto); link
   em `caramelo-texto` sublinhado
-- [ ] 1.4 — Migrar os outros nove componentes pela tabela da seção 9 da techspec: `slate` → `tinta`,
+- [x] 1.4 — Migrar os outros nove componentes pela tabela da seção 9 da techspec: `slate` → `tinta`,
   `apoio`, `sutil`, `inativo`, `linha`, `borda-campo`, `realce`; `amber` → `pendente`/`pendente-cx`;
   `red` → `erro`/`erro-cx`; `emerald` → `ok`/`ok-cx`; modificador `/NN` → token opaco
-- [ ] 1.5 — Logotipo: os SVGs de `mockups/public/marca/` copiados para `apps/web/public/marca/` e usados
+- [x] 1.5 — Logotipo: os SVGs de `mockups/public/marca/` copiados para `apps/web/public/marca/` e usados
   no `Cabecalho` e na `CascaPublica`, com `alt` e sem baixar fonte
-- [ ] 1.6 — Testes (tabela abaixo)
+- [x] 1.6 — Testes (tabela abaixo)
 
 ## Arquivos previstos
 
@@ -79,6 +79,25 @@ Não há concorrência nesta tarefa.
   vale para o código atual, e APROVADO nos que têm veto
 - [ ] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
 
+## Divergências resolvidas nesta tarefa
+
+- **`--font-marca` fora do `@theme`.** A 9.9 declara a Fustat, mas o logotipo entra em curvas e a fonte não é
+  baixada (1.5); declarar a família sem o arquivo seria um token que aponta para nada
+- **O bloco da D72 é `@theme static`.** O Tailwind 4.3 só emite a variável que alguma classe usa: sem o `static`, os
+  tokens de estado (`pendente`, `ok`) e os que as telas só usam na 2.0 não chegariam ao CSS servido, e o e2e dos hex
+  não teria o que conferir. Custa cerca de 0,3 kB gzip. A paleta anterior continua num `@theme` comum, ao lado
+- **`disabled:bg-slate-600` saiu das sete telas que o passavam ao `Botao`.** O botão agora tem o desligado próprio
+  (`inativo`), e com o texto em `tinta` o `slate-600` que a tela sobrepunha daria 2,6:1. É só a remoção da classe; o
+  resto das telas continua na paleta anterior até a 2.0
+- **`componentes/Marca.tsx` e o ícone no `index.html`.** O lockup (pinta do `public/marca/` e o nome na fonte do
+  sistema) é um componente só, usado pelo `Cabecalho` e pela `CascaPublica`, e o `favicon` é o `turmma-icone.svg`
+  (9.6)
+- **Não havia variante "oficial" preta no `Botao`.** Nada a manter; o anel `caramelo-noite` sobre o preto fica no
+  `estilos.css` (`.bg-noite :focus-visible`) e o e2e o prova com uma faixa preta montada na página, até a casca da
+  operação (10.0) trazer a faixa de verdade
+- **Hover e pressionado do `Botao` só com ele ligado** (`enabled:`): com o ponteiro parado em cima do botão que
+  acabou de ser clicado, o hover não repinta o desligado
+
 ## Fora do escopo desta tarefa
 
 - As telas de `apps/web/src/paginas/` e o `rotas.tsx`, a remoção da paleta antiga e as guardas estritas:
@@ -86,3 +105,15 @@ Não há concorrência nesta tarefa.
 - O orçamento separado da entrada: 2.0
 - Qualquer tela do operador: 10.0 e 11.0
 - Avatar dos agentes: A1
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-23 20:40:29 | 2026-09-23 20:41:23 | `test-engineer` | 1 | APROVADO | a37b7a64f7c76cc3a |
+| 2026-09-23 20:41:36 | 2026-09-23 20:42:14 | `frontend-reviewer` | 1 | APROVADO | aa11b1bb2f6619c7b |
+| 2026-09-23 20:41:32 | 2026-09-23 20:42:15 | `revisor-geral` | 1 | APROVADO | a9655b2ed2cd1cc00 |

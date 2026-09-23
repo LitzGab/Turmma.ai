@@ -12,13 +12,13 @@ interface Props {
 /** O alerta é só a mensagem; o botão fica fora dele, e o "tentando" é anunciado como status. */
 export function EstadoErro({ erro, aoTentarDeNovo, tentando = false }: Props) {
   return (
-    <div className="rounded-lg border border-red-300 bg-red-50 p-4">
-      <p role="alert" className="text-red-900">
+    <div className="rounded-cartao border border-erro bg-erro-cx p-4">
+      <p role="alert" className="text-erro">
         {mensagemDoErro(erro)}
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <Botao onClick={aoTentarDeNovo}>Tentar de novo</Botao>
-        <span role="status" className="text-red-900">
+        <span role="status" className="text-erro">
           {tentando ? 'Tentando de novo…' : ''}
         </span>
       </div>

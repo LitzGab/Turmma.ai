@@ -60,7 +60,7 @@ export function SeletorDeEscola({ escolaAtual, acessos, usuarioAtual }: Props) {
   if (outras.length === 0) {
     return (
       <p className="min-w-0 break-words">
-        <span className="text-slate-700">Escola: </span>
+        <span className="text-apoio">Escola: </span>
         <span className="font-medium">{escolaAtual}</span>
       </p>
     )
@@ -71,19 +71,19 @@ export function SeletorDeEscola({ escolaAtual, acessos, usuarioAtual }: Props) {
       {/* `details` em vez de menu montado à mão: abre por teclado e por toque sem depender de hover nem de atalho
           (regra 50, item 2a), e não custa JavaScript nenhum no Chromebook fraco. */}
       <details className="min-w-0">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md border border-slate-400 bg-white px-3 py-2">
-          <span className="text-slate-700">Escola:</span>
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-borda-campo bg-superficie px-3 py-2 hover:bg-realce-suave">
+          <span className="text-apoio">Escola:</span>
           <span className="min-w-0 break-words font-medium">{escolaAtual}</span>
           <span aria-hidden="true">▾</span>
         </summary>
-        <ul className="mt-2 flex flex-col gap-2 rounded-md border border-slate-200 bg-white p-2">
+        <ul className="mt-2 flex flex-col gap-2 rounded-cartao border border-linha bg-superficie p-2 shadow-flutua">
           {outras.map((acesso) => (
             <li key={acesso.usuarioId}>
               <button
                 type="button"
                 onClick={() => void trocar(acesso.usuarioId)}
                 disabled={trocando !== undefined}
-                className="flex min-h-11 w-full items-center rounded-md px-3 py-2 text-left break-words active:bg-slate-100 disabled:text-slate-600"
+                className="flex min-h-11 w-full items-center rounded-linha px-3 py-2 text-left break-words hover:bg-realce-suave active:bg-realce disabled:text-inativo"
               >
                 {trocando === acesso.usuarioId ? `Abrindo ${acesso.escolaNome}…` : `${acesso.escolaNome} · ${NOME_DO_PAPEL[acesso.papel]}`}
               </button>
@@ -92,7 +92,7 @@ export function SeletorDeEscola({ escolaAtual, acessos, usuarioAtual }: Props) {
         </ul>
       </details>
       {falha !== undefined && (
-        <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-red-900">
+        <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-3 text-erro">
           {mensagemDaTroca(falha)}
         </p>
       )}

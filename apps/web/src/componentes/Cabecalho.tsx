@@ -6,6 +6,7 @@ import { assinarSessao, estadoDaSessao, lembrarQuemEsta, sair } from '../api/ses
 import { ROTAS } from '../caminhos'
 import { useInatividade } from '../sessao/inatividade'
 import { Botao } from './Botao'
+import { Marca } from './Marca'
 import { SeletorDeEscola } from './SeletorDeEscola'
 
 /**
@@ -45,21 +46,21 @@ export function Cabecalho() {
   }
 
   return (
-    <header className="border-b border-slate-200 bg-white">
+    <header className="border-b border-linha bg-fundo">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-        <p className="text-lg font-semibold">Educa.ia</p>
+        <Marca />
         {dados !== undefined && <SeletorDeEscola escolaAtual={dados.escola.nome} acessos={dados.acessos} usuarioAtual={dados.usuarioId} />}
         {dados?.papel === 'professor' && (
           <nav aria-label="Seções">
             <Link
               to={caminho === ROTAS.vinculos ? ROTAS.inicio : ROTAS.vinculos}
-              className="inline-flex min-h-11 items-center rounded-md px-3 py-2 text-blue-800 underline active:bg-slate-100"
+              className="inline-flex min-h-11 items-center rounded-linha px-3 py-2 text-caramelo-texto underline hover:bg-realce-suave active:bg-realce"
             >
               {caminho === ROTAS.vinculos ? 'Início' : 'Meus vínculos'}
             </Link>
           </nav>
         )}
-        <Botao onClick={() => void encerrar()} disabled={saindo} className="disabled:bg-slate-600">
+        <Botao onClick={() => void encerrar()} disabled={saindo}>
           {saindo ? 'Saindo…' : 'Sair'}
         </Botao>
       </div>
