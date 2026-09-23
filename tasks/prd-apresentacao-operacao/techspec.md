@@ -1,7 +1,7 @@
 # Tech Spec — Identidade do operador Turmma
 
 **PRD:** `tasks/prd-apresentacao-operacao/prd.md`
-**Status:** rascunho (3ª versão, depois da rodada 2 do `/revisar-spec`; o painel foi para a A0b)
+**Status:** rascunho (4ª versão, depois da rodada 3 do `/revisar-spec`; o painel foi para a A0b)
 
 ## 1. Resumo da abordagem
 
@@ -66,7 +66,8 @@ com `sub` e `sid`, sem `esc`. Respostas com segredo, códigos ou desafio levam
 
 **Nascimento.** `ops:operador criar` grava o operador e um convite, com o token em arquivo 0600
 (dívida aceita: uma vez por pessoa da equipe). Sem operador ativo, aceita o `OPERADOR` do ambiente
-com autor `bootstrap`; com um, todo `ops:*` exige `OPERADOR` de operador ativo. `convite` revoga o
+com autor `bootstrap`, sob `pg_advisory_xact_lock`; com um, todo `ops:*` exige `OPERADOR` de
+operador ativo. Ninguém desativa a si mesmo. `convite` revoga o
 pendente na mesma transação; `desativar` apaga o dado pessoal, revoga o convite e encerra as sessões
 numa transação só. O autor da `AuditoriaOperacao` é o `OPERADOR` do comando; o da entrada e do MFA,
 o operador da sessão.
@@ -81,9 +82,10 @@ fator não está ativo; fora disso responde igual a senha errada, e o caminho é
 - código de recuperação: `delete ... where operador_id = $1 and hmac = $2 returning`
 - TOTP: `update operador set mfa_ultimo_passo = $p where id = $1 and (mfa_ultimo_passo is null or
   mfa_ultimo_passo < $p)`
-- configurar: grava segredo e códigos (apaga e insere) na mesma transação, e ativa, os dois
-  `where mfa_ativado_em is null`; com duas abas vale o último gravado, e a outra falha com
-  "configure de novo"
+- configurar: consome o desafio, grava segredo e códigos (apaga e insere) numa transação
+  `where mfa_ativado_em is null` e devolve um desafio de etapa `mfa`; com duas abas vale o último
+  gravado. A ativação é no primeiro `/sessao/mfa` válido (`set mfa_ativado_em = now() where
+  mfa_ativado_em is null`), e o código da aba vencida falha com "configure de novo"
 - renovação: `update ... set refresh_hash = $novo, refresh_hash_anterior = $atual where id = $1 and
   refresh_hash = $atual`; o anterior vale 30 s para a aba irmã, e reusado depois disso encerra a
   sessão (padrão do F1)
@@ -153,7 +155,8 @@ Não se aplica.
 
 Fora do caminho quente, mas mexe no código do login da escola (guardas e contador) sem somar carga a
 ele. Limite, corridas e o que acontece quando o banco ou o Redis caem estão na seção 5. Métrica: a
-contagem de `entrada_falha` por minuto; sem alerta novo, e o cenário de carga não muda.
+contagem de `entrada_falha` por minuto; sem alerta novo, e o cenário de carga não muda. O
+`docs/runbook.md` ganha uma linha: com o Redis fora, o operador não entra, e o caminho é `ops:*`.
 
 ## 9. Frontend
 
@@ -164,7 +167,7 @@ telas do F1:
 | Hoje | Vira |
 |---|---|
 | `slate-*` | `tinta`, `apoio`, `sutil`, `inativo`, `linha`, `borda-campo`, `realce` |
-| `blue-700` de foco e link | `noite`; foco de 2 px com 2 px de afastamento (`caramelo-noite` sobre preto) |
+| `blue-700` de foco e link | foco: `noite`, 2 px com 2 px de afastamento (`caramelo-noite` sobre preto); link: `caramelo-texto` sublinhado (9.1) |
 | botão primário `blue-700` / `text-white` | `caramelo` com texto `tinta` (6,4:1); hover `caramelo-claro`, pressionado `caramelo-fundo`, desligado `inativo`. O preto fica para a ação oficial (9.1) |
 | `amber`, `red`, `emerald` | `pendente`, `erro`, `ok`, com os `-cx` de fundo |
 | modificador `/NN`; fundo do diálogo | token opaco; `rgba()` literal |
@@ -190,9 +193,7 @@ que a entrada da escola não importa nada de `apps/web/src/operacao/`.
 
 | Camada | O que será testado |
 |---|---|
-| Unidade | `FORMATO_OPERADOR` no comando; chave do contador com os dois prefixos; resposta da guarda por tipo de credencial |
-| Integração | a lista mínima são os cenários exigidos pelo `test-engineer` e pelo `privacy-guardian` nas rodadas 1 e 2 (`revisao-spec.md`), um teste cada, com `Promise.all` onde há corrida e relógio controlado onde há prazo |
-| E2E | convite, senha, segundo fator, entrada e casca; sessão encerrada volta com a mensagem; `chromebook` e `celular`, com axe; o e2e do F1 verde na pele nova |
+| Integração, e2e, unidade e build | os cenários enumerados de `cenarios.md`, parte desta spec: C1 a C49, E1 a E5, U1 a U3, B1 e B2, um teste cada |
 | Isolamento e arquitetura | seção 6 |
 
 ## 11. Conformidade com as regras

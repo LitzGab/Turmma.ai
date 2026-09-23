@@ -101,6 +101,34 @@ resolvidos; os de agora são novos e pontuais.
 - `ops:operador convite` com pendente; quatro estados em `consultar` e `aceitar`; `ultimoUsoEm` aos 29/31 min (`test-engineer`)
 - Texto do 503; aviso antes dos 30 min; teto do chunk; chave em texto e `otpauth://` além do QR; `docs/interface.md` linhas 268, 376 e 1262 (`frontend-reviewer`)
 
+## Rodada 3 — 23/09/2026
+
+**Veredito: REPROVADA** — três aprovações; o que falta é a lista de testes e uma frase do MFA.
+
+| Revisor | Veredito | Bloqueantes |
+|---|---|---|
+| `test-engineer` | REPROVADO | 2 |
+| `tenancy-guardian` | APROVADO | 0 |
+| `privacy-guardian` | APROVADO | 0 |
+| `infra-guardian` | REPROVADO | 1 |
+| `frontend-reviewer` | APROVADO | 0 |
+
+### Correções exigidas na Tech Spec
+- Seção 10: lista fechada e enumerada dos cenários da A0, com os do `infra-guardian` e do
+  `tenancy-guardian` e sem os da A0b, num anexo fixo que faz parte da spec (`test-engineer` 1,
+  `infra-guardian`) → `cenarios.md`
+- Seção 5: "configurar em duas abas" coerente com a cláusula do banco, e o passo depois de
+  configurar até a sessão (`test-engineer` 2) → configurar consome o desafio, devolve um de etapa
+  `mfa`, vale o último gravado, e a ativação é no primeiro código válido
+
+### Recomendações
+- Testes de arquitetura procurando também o nome físico das tabelas em SQL cru; o comando fora da
+  lista de quem importa as tabelas; justificativa do `apagarLoteVencido` reescrita (`tenancy-guardian`)
+- Link em `caramelo-texto` sublinhado, e `noite` só para o foco; cenários de tela copiados para a
+  tarefa (`frontend-reviewer`)
+- Bootstrap com o último operador desativado, autodesativação e dois bootstrap em paralelo; runbook
+  com o caminho `ops:*` quando o Redis cai (`test-engineer`, `infra-guardian`)
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -119,3 +147,8 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-09-23 13:48:59 | 2026-09-23 13:50:24 | `infra-guardian` | 2 | REPROVADO | a168a3c7b8a2ddb56 |
 | 2026-09-23 13:49:03 | 2026-09-23 13:50:46 | `frontend-reviewer` | 2 | AJUSTES NECESSÁRIOS | afe2c42872cd409bb |
 | 2026-09-23 13:48:50 | 2026-09-23 13:50:47 | `tenancy-guardian` | 2 | REPROVADO | ae19f88b9c728d238 |
+| 2026-09-23 13:54:25 | 2026-09-23 13:55:00 | `tenancy-guardian` | 3 | APROVADO | ab39cc89bb941af28 |
+| 2026-09-23 13:54:32 | 2026-09-23 13:55:10 | `infra-guardian` | 3 | REPROVADO | aedf1650d9b524be6 |
+| 2026-09-23 13:54:35 | 2026-09-23 13:55:13 | `frontend-reviewer` | 3 | APROVADO | a17aab2b3182ce7c3 |
+| 2026-09-23 13:54:28 | 2026-09-23 13:55:15 | `privacy-guardian` | 3 | APROVADO | ac9238c2ba2653b47 |
+| 2026-09-23 13:54:21 | 2026-09-23 13:55:28 | `test-engineer` | 3 | REPROVADO | a505e4dc839d70264 |

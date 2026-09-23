@@ -623,3 +623,196 @@ Arquivos:
 - `/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/retencao/expurgo-de-acesso.repository.ts`
 - `/home/joaquimdp/Documentos/git/Educa.ia/apps/api/src/sessao/resolucao-de-tenant.repository.ts`
 - `/home/joaquimdp/Documentos/git/Educa.ia/apps/api/test/arquitetura.test.ts`
+
+## tenancy-guardian · 3ª rodada · APROVADO · 2026-09-23 13:55:00 · `tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+VEREDITO: APROVADO
+
+Tabelas verificadas: `Operador`, `CodigoRecuperacaoOperador`, `ConviteOperador`, `SessaoOperador`, `AcessoOperacao` e `AuditoriaOperacao` (seção 3). Nenhuma tem `escolaId`, e isso está declarado como o único desvio na seção 11, com a alternativa recusada. Os ids são UUID gerados no banco. `CodigoRecuperacaoOperador` tem chave composta `(operador_id, hmac)`, o que está certo. As tabelas de escola não mudam.
+
+Queries verificadas:
+- As travas da seção 5: aceite, código de recuperação, TOTP, configurar, renovação e desafio.
+- A `GuardaDeOperador`, que põe no contexto só o `operadorId`, nunca o `escolaId`, e trata toda credencial que não é de operador com 404 igual ao de rota inexistente.
+- O expurgo, que só acrescenta alvos ao `apagarLoteVencido` que já existe. Não nasce método `@SemEscopo` novo.
+- O `comando.ts`, que confere o `OPERADOR` passando pelo `OperadorRepository`.
+- A correção exigida na rodada 2 foi feita. A seção 6 traz o critério (as seis tabelas ficam fora do modelo de tenant) e os dois testes de arquitetura, e a seção 11 remete a ele. As recomendações da rodada 2 também foram aplicadas: expurgo sem `@SemEscopo` novo, `operadorId` sozinho no contexto, e o sentido operador → rotas anônimas da escola (nunca produz sessão nem desafio de escola).
+
+Teste de isolamento: presente e efetivo. As rotas testadas são geradas da lista registrada, a comparação é nos dois sentidos, e a seção 6 declara que tirar a guarda de um handler deixa os dois testes vermelhos.
+
+Bloqueantes: nenhum
+
+Recomendações:
+1. **Seção 6, os dois testes de arquitetura.** Os testes olham só o `import`, mas o expurgo que já existe (`/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/retencao/expurgo-de-acesso.repository.ts:34-60`) escreve SQL cru com o nome da tabela (`delete from sessao`) e não importa tabela nenhuma. Sugestão: os dois testes procurarem também os nomes físicos das tabelas (`operador`, `sessao_operador`, `convite_operador` etc.) em `sql\`...\``. No primeiro teste, a mesma busca pelos nomes das tabelas de escola dentro do `OperadorRepository`. No segundo, deixar fora da busca a definição do schema, o barrel e as migrations.
+2. **Seção 6, a lista de quem pode importar.** "pelo `comando.ts` (via o repository)" se contradiz. Se o comando passa pelo repository, ele não importa tabela e deve sair da lista de quem pode importar. Assim o segundo teste fica mais apertado.
+3. **Seção 7, o `apagarLoteVencido`.** A justificativa do `@SemEscopo` (linha 134 do mesmo arquivo) cita só "registro de acesso, sessão e convite a todas as escolas". Ao acrescentar os alvos da operação ao `ALVOS_DO_EXPURGO_DE_ACESSO`, a tarefa deve reescrever esse texto para cobrir as tabelas da equipe, que não têm escola. O teste de que os alvos da operação são apagados nos prazos deve rodar pelo mesmo método.
+
+## infra-guardian · 3ª rodada · REPROVADO · 2026-09-23 13:55:10 · `tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+VEREDITO: REPROVADO
+Caminho quente tocado: login (a spec mexe no código das guardas e do contador da escola, mas não acrescenta carga)
+Rate limit: ok
+Fila e prioridade: ok (nada vai para fila, e nada demorado roda dentro do request)
+Concorrência: protegida (as seis travas da seção 5 usam gravação condicional com `returning`; o `configurar` agora troca o segredo e os códigos na mesma transação)
+Índice e paginação: ok (não há tabela que cresça com aluno nem listagem nesta spec; o painel foi para a A0b)
+Degradação de IA: não se aplica
+Migration: compatível (a migration só cria tabelas novas)
+Métrica e alerta: ok (a contagem de `entrada_falha` por minuto fica e não há alerta novo)
+
+Bloqueantes:
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md:194` (seção 10, linha de Integração). A rodada 2 exigiu duas coisas: o novo roteamento do limite e um teste de 429 para ele. O roteamento está feito nas linhas 105 a 111. O teste não está.
+  - A seção 10 agora define a lista mínima só como "os cenários exigidos pelo `test-engineer` e pelo `privacy-guardian` nas rodadas 1 e 2".
+  - O teste de 429 foi exigido pelo `infra-guardian`, então fica fora dessa lista.
+  - O cenário "`rl:op` recusa com o IP igual", que a 2ª versão listava explicitamente, também sumiu da tabela.
+  - Com isso, nenhuma parte da regra 80, item 1, fica provada por teste nesta spec.
+  - **Correção exigida:** incluir os cenários do `infra-guardian` na lista mínima de integração, ou escrevê-los na própria seção 10. São quatro:
+    1. `convite/consultar`, `mfa/configurar`, `renovar` e `sair` passam do `rl:ip` e respondem 429 `LIMITE_EXCEDIDO` com `Retry-After`.
+    2. `sessao/email` e `convite/aceitar` acima do limite do IP não respondem 429: rebaixam no semáforo do hash, e quem recusa é o contador da conta.
+    3. `sessao/mfa` é recusado pelo contador do `operador.id`, e não pelo IP.
+    4. `/eu` recusa por `rl:op:{sub}` com dois operadores atrás do mesmo IP, e o outro operador continua entrando.
+
+Recomendações:
+- `techspec.md:107`: o texto responde à recomendação anterior. Numa rota `@RotaDeOperacao` sem token de operador válido, nada é contado, e isso mantém o 404 idêntico ao de rota inexistente. Vale deixar isso escrito como decisão consciente e declarar que a verificação é só do JWT, sem banco, para o custo do flood ficar explícito.
+- Continua em aberto da rodada 2: uma linha no `docs/runbook.md` dizendo que, com o Redis fora, o caminho do operador é `ops:*`, porque o desafio recusa com 503.
+- `techspec.md:154`: a seção 7c agora remete à seção 5. Um teste de arquitetura que confira que as rotas `@EntradaDeOperacao` caem nos três grupos de limite da linha 108 (rebaixa, contador e `rl:ip`) impediria que uma oitava rota entre sem limite.
+
+## frontend-reviewer · 3ª rodada · APROVADO · 2026-09-23 13:55:13 · `tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+VEREDITO: APROVADO
+
+Esta é a rodada 3. Auditei o diff `4d6321a..b233c2f` da `techspec.md` e do `docs/interface.md`. O que não mudou desde a rodada 2 não foi reauditado.
+
+**Correção exigida na rodada 2: feita** (`techspec.md` seção 9, tabela "Hoje | Vira").
+- **Botão primário do F1** (`bg-blue-700` / `text-white` / `active:bg-blue-900`, que hoje estão em `Botao.tsx:11`, `ConfigurarMfa.tsx:178` e `SemDesafio.tsx:19`): passa a `caramelo` com texto `tinta` (6,4:1). O hover vira `caramelo-claro`, o pressionado `caramelo-fundo` e o desligado `inativo`. O preto fica reservado à ação oficial. Confere com as linhas 512–514 e 1007 do `docs/interface.md`.
+- **`white` e `black`**: ficam, porque existem no `@theme` da 9.9 (linha 704 do `docs/interface.md`).
+- **Modificador `/NN`**: vira token opaco, e o fundo do diálogo vira `rgba()` literal.
+- **Guarda**: `estilos.test.ts` aceita só os nomes que estão no `@theme` e reprova modificador de opacidade. O `e2e/casca.spec.ts` reprova `oklch(` e `color-mix(`. Isso segura inclusive as duas telas que montam o botão direto, sem passar pelo `Botao`.
+
+**Recomendações da rodada 2: todas atendidas.**
+- Texto do 503: "O Turmma está indisponível agora. Tente de novo em instantes", e a tela não muda.
+- Aviso 2 min antes dos 30 min de inatividade, como no `inatividade.ts`.
+- O chunk `operacao-*.js` tem teto de 60 kB e sai separado por `manualChunks`.
+- O QR vem acompanhado da chave em texto e do `otpauth://`.
+- O `docs/interface.md` foi corrigido nas linhas 265–269, 371–374 e na tabela do roteiro (1262).
+
+Estados: ok. Carregando é o fallback `EstadoCarregando`; erro é a fronteira com "Tente de novo" e o 503 com mensagem que diz o que fazer; sessão encerrada tem mensagem própria; o dado é a casca. Não há lista, então não há estado vazio a avaliar.
+
+Acessibilidade: o foco passa a 2 px em `noite` com 2 px de afastamento, e `caramelo-noite` sobre preto. Há `<h1>` e `document.title` por rota, e o "Copiar" é anunciado em região viva. A chave em texto dá ao leitor de tela o que o QR sozinho não dava. O e2e roda com axe nos dois projetos.
+
+Chromebook fraco: `color-mix(` e `oklch(` são reprovados no CSS servido, o que protege o Chrome 109. A operação sai num chunk sob demanda de até 60 kB, e há teste de que a entrada da escola não importa nada de `src/operacao/`. Os 150 kB brotli da entrada continuam.
+
+Celular: as telas rodam no projeto `celular`, e nenhum fluxo exige o celular. O código TOTP pode ser configurado sem câmera, pela chave em texto e pelo `otpauth://`. O hover do botão é só um enfeite: o pressionado tem token próprio, então nada depende de hover.
+
+Ação oficial protegida: não se aplica nesta spec. Nenhuma ação oficial de escola, e o preto fica reservado para a variante `oficial` da 9.1.
+
+Bloqueantes: nenhum.
+
+Recomendações:
+- **Seção 9, linha "`blue-700` de foco e link → `noite`"**: o `docs/interface.md` (linha 515) põe link em `caramelo-texto`, não em `noite`. E `noite` tem o mesmo hex que `tinta` (#0D0D0D), então um link nessa cor só se distingue do texto pelo sublinhado (WCAG 1.4.1). No F1 de hoje o `blue-700` só aparece no foco e no botão, então isso não quebra nada agora. Vale alinhar a linha com a 9.9: link em `caramelo-texto` com sublinhado, e `noite` só para o foco.
+- **Seção 10**: a lista de integração agora só aponta para os cenários de `revisao-spec.md`. Na hora do `/criar-tasks`, vale copiar para a tarefa os cenários que tocam a tela (sessão encerrada, 503, duas abas no configurar), para o e2e não depender de ler outro arquivo.
+
+Arquivos:
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md`
+- `/home/joaquimdp/Documentos/git/Educa.ia/docs/interface.md`
+
+## privacy-guardian · 3ª rodada · APROVADO · 2026-09-23 13:55:15 · `tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+VEREDITO: APROVADO
+
+As duas correções da rodada 2 estão feitas. A segunda foi feita por referência a outro arquivo, e não escrita na seção 10; isso fica como recomendação.
+
+**Correções da rodada 2**
+
+| Correção exigida | Situação |
+|---|---|
+| Prazo do convite vencido | Feita. Seção 7 da Tech Spec: 30 dias após usar, revogar ou vencer. `docs/lgpd.md`, linha 77, diz o mesmo. |
+| Prazo da sessão só expirada | Feita. Seção 7: 30 dias após encerrar ou, sem encerramento, após `expiraEm`. `docs/lgpd.md`, linha 78, foi corrigida igual. |
+| Tabelas do expurgo pelo nome | Feita. Seção 7: o expurgo apaga `ConviteOperador`, `SessaoOperador` e `AcessoOperacao`. `AuditoriaOperacao` e `Operador` nunca passam por ele. |
+| Desativar revoga o convite e encerra as sessões na mesma transação | Feita. Seção 5, "Nascimento": dado pessoal, convite e sessões saem numa transação só. A seção 3 lista o que é apagado e mantém o apelido. |
+| Testes da desativação e do expurgo prazo a prazo, com a auditoria intacta | Feita por referência. A seção 10 torna obrigatórios, um teste cada, os cenários exigidos nas rodadas 1 e 2. Para a privacidade são estes: desativação sem estado parcial, apelido mantido, prazos de 29 e 31 dias, 6 meses mais e menos um dia, e `AuditoriaOperacao` intacta depois do expurgo. O texto completo está no bloco `privacy-guardian`, 2ª rodada, bloqueante 2, de `tasks/prd-apresentacao-operacao/achados/revisao-spec.md`. |
+
+Três recomendações da rodada 2 também foram atendidas:
+- O cookie de dispositivo do operador entrou no mapa (`docs/lgpd.md`, linha 69).
+- A seção 8 do PRD foi alinhada ao mapa.
+- A spec diz qual comando revoga o convite (`convite` revoga o pendente) e de onde vem o autor da `AuditoriaOperacao` (o `OPERADOR` do comando).
+
+**Formato de resposta**
+
+Campos pessoais tocados: a conta do operador (apelido, nome, e-mail, hash de senha, segredo do segundo fator cifrado, HMAC dos códigos de recuperação), o convite de operador, a sessão de operador, `AcessoOperacao` (com IP), `AuditoriaOperacao` e o cookie de dispositivo do operador. Nenhum dado de aluno.
+Fora da tabela de dados do docs/lgpd.md: nenhum. As linhas 69 e 76 a 80 cobrem tudo, com finalidade e retenção iguais às da seção 7.
+Autorização por objeto: ok. Não há objeto de escola. A seção 6 faz credencial de escola na operação, e de operador na escola, responder igual a rota inexistente. A lista de rotas é gerada e a efetividade é testada.
+Logs: limpos no desenho (seção 7: evento e ids; `entrada_falha` sem o e-mail).
+Auditoria: presente. `AuditoriaOperacao` guarda criar e desativar operador, configurar o segundo fator e gerar ou revogar convite, e fica fora do expurgo. `AcessoOperacao` guarda o acesso por 6 meses.
+Envio externo: nenhum.
+Seed/fixture: sintético (MVP local, borda restrita antes do staging).
+Bloqueantes: nenhum.
+Recomendações:
+- **Caminho da referência na seção 10.** A seção 10 aponta `revisao-spec.md`, mas lá o item da privacidade é uma linha só ("testes da desativação e do expurgo prazo a prazo"). Os casos concretos estão em `achados/revisao-spec.md`. Cite esse caminho, ou escreva na seção 10 os casos da privacidade, para o `/criar-tasks` não depender de ler o bloco certo.
+- **Recomendações da rodada 2 ainda fora da seção 10.** Por ela, só os "cenários exigidos" são obrigatórios. Ficaram de fora três testes recomendados na rodada 2: o e-mail sentinela em `AcessoOperacao` e no log, o `no-store` nas respostas com segredo, e a recusa de campo a mais pelo contrato estrito. Vale incluí-los.
+- **A pergunta de fechamento não se aplica.** A spec não guarda nem envia dado de aluno. Para o operador, o desenho diz o que guarda, onde e por quanto tempo.
+
+Arquivos auditados:
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/prd.md
+- /home/joaquimdp/Documentos/git/Educa.ia/docs/lgpd.md (linhas 66 a 80)
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/revisao-spec.md
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/achados/revisao-spec.md
+
+## test-engineer · 3ª rodada · REPROVADO · 2026-09-23 13:55:28 · `tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Cenários exigidos:**
+Esta rodada confere as seis correções da rodada 2, a nova redação da seção 10 e o que elas afetam.
+
+1. Um desafio só pode ser usado uma vez, mesmo com duas chamadas em paralelo, e com o Redis fora a resposta é 503.
+2. Cada etapa do desafio só vale na sua rota. O `configurar_mfa` só sai de `/sessao/email` dentro das 72 h do convite aceito. Configurar numa conta que já tem MFA ativo não muda nada.
+3. A renovação respeita os 30 min parado, as 8 h, a saída e a desativação. Acesso vencido com a sessão viva dá 401 `ACESSO_VENCIDO` e a web renova.
+4. Nas rotas de entrada da escola, credencial de operador nunca produz sessão nem desafio de escola.
+5. O marcador e o prefixo `/v1/operacao` são conferidos nos dois sentidos.
+6. Todo `ops:*` exige `OPERADOR` de um operador ativo.
+
+**Cobertos no desenho:**
+- (1) está na seção 5, linha 90: `SET NX` no `jti`, e 503 com o Redis fora.
+- (2) está nas linhas 74-76, e o "MFA ativo não muda nada" nas linhas 84-85 (`where mfa_ativado_em is null`).
+- (3) está nas linhas 100-102.
+- (4) está nas linhas 135-136.
+- (5) está na linha 127.
+- (6) está na linha 69.
+
+As seis correções foram feitas no texto do desenho. Os bloqueantes abaixo estão na seção 10 e numa contradição que a rodada 3 introduziu na seção 5.
+
+**Bloqueantes:**
+
+1. **`techspec.md` seção 10, linha 194: apontar para a revisão não basta como especificação.** A pergunta era se a referência a `revisao-spec.md` serve. Não serve, por três motivos:
+   - **Mistura a A0 com a A0b.** A lista de testes da rodada 1 no `revisao-spec.md` ainda traz RF5 a RF9, contagem e estado, sentinelas e 30 escolas. Tudo isso foi para a A0b. "Um teste cada" dos cenários da rodada 1 cobra da A0 testes do painel, ou deixa quem executa decidir o que fica de fora.
+   - **Perde cenários que a spec já tinha.** A referência cita só o `test-engineer` e o `privacy-guardian`. Com isso somem cenários exigidos por outros revisores, que a versão 2 da seção 10 listava:
+     - "banco fora dá 503" (`infra-guardian`, rodada 1);
+     - "`rl:op` recusa com o IP igual";
+     - o 429 do `rl:ip` em `convite/consultar`, `mfa/configurar`, `renovar` e `sair` (`infra-guardian`, rodada 2, "com teste de 429");
+     - o desafio e o cookie cruzados nos dois sentidos (`tenancy-guardian`, rodada 1).
+
+     O desenho continua nas seções 5 e 6, mas nenhuma linha de teste os exige mais.
+   - **Aponta para um alvo que muda.** O `revisao-spec.md` é um registro do processo que continua crescendo (rodada 3, notas da A0b, tabela do hook). O `/criar-tasks` e a auditoria da tarefa precisam de uma lista fechada, com um identificador por cenário.
+
+   **Correção exigida:** a seção 10 traz a lista enumerada dos cenários de integração da A0, uma linha curta cada, incluindo os do `infra-guardian` e do `tenancy-guardian` e excluindo os que foram para a A0b. Se o teto de 2.000 palavras não comportar, a lista pode ir para um anexo fixo (`tasks/prd-apresentacao-operacao/cenarios.md`), citado pela seção 10 como parte da spec. Não pode ficar no registro de revisão.
+
+2. **`techspec.md` seção 5, linhas 84-86: a regra do "configurar em duas abas" se contradiz, e falta o passo seguinte.**
+   - **A contradição.** A trava diz que segredo, códigos e ativação gravam `where mfa_ativado_em is null`. Nesse caso vence o **primeiro** a gravar, e o segundo não acha linha. A mesma frase diz "vale o último gravado". O teste de `Promise.all` exigido na rodada 1 não tem resultado esperado definido. Se valesse o último, a primeira aba ficaria com um QR que não funciona.
+   - **O passo seguinte.** A saída de `mfa/configurar` (seção 4, linha 56) é "segredo e códigos", sem desafio novo. O `jti` é de uso único (linha 90), e `/sessao/mfa` só aceita a etapa `mfa` (linha 74). A spec não diz como quem acabou de configurar chega à sessão. O E2E "convite, senha, segundo fator, entrada" depende disso.
+
+   **Correção exigida:**
+   - dizer qual aba vence e o que a outra recebe, alinhado com a cláusula `where`;
+   - dizer se o `configurar` consome o desafio e devolve um de etapa `mfa`, ou se manda de volta para `/sessao/email`;
+   - um teste para cada ponto.
+
+**Recomendações:**
+- `ops:operador criar` sem operador ativo aceita o bootstrap. Declarar o que acontece:
+  - quando o último operador ativo é desativado (o bootstrap reabre?);
+  - quando um operador desativa a si mesmo;
+  - quando dois `criar` de bootstrap rodam em paralelo (regra 80, item 7).
+- A ativação acontece no `configurar`, antes de o operador provar com um TOTP que leu o QR. Pense em ativar só no primeiro `/sessao/mfa` válido, para não trancar quem fechou a aba antes de escanear.
+- Ficam valendo as recomendações da rodada 2 que não viraram texto: `ultimoUsoEm` aos 29 e 31 min, e o convite em `ops:operador convite` quando já há um pendente.
+
+Arquivos auditados:
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md`
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/revisao-spec.md`
