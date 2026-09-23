@@ -2,7 +2,7 @@
 
 **Status:** aprovado (23/09/2026, Joaquim)
 **Funcionalidade do roadmap:** A1 — `apresentacao-escola` (MVP de apresentação, D71 revista)
-**Depende de:** A0 (painel da operação, D76)
+**Depende de:** A0b (painel da operação, D76)
 
 ## 1. Problema
 
@@ -19,7 +19,7 @@ com a aprovação dele — na tela, com a marca do Turmma, sem cadastro um a um.
 
 ## 3. Fora de escopo
 
-- Criar a escola e convidar a primeira coordenadora: é o painel da operação, A0 (D2, D76)
+- Criar a escola e convidar a primeira coordenadora: é o painel da operação, A0b (D2, D76)
 - Grade horária, calendário e o "seu dia e sua semana"; XLSX, Classroom (D48) e reset de senha
   do aluno: F2 e F8
 - Transferir, desligar ou desativar aluno aprovado (regra 20, item 18): F2 e F3

@@ -901,4 +901,6 @@ dele. Os comandos `ops:*` continuam existindo, e a D2 continua valendo: não é 
 Motivo: a validação do MVP começa com a escola nascendo numa tela, e as metas de custo (D30,
 D39) só se conferem olhando escola por escola; comando no terminal com o token num arquivo não
 serve à equipe inteira. Fica numa spec própria, a A0, antes da A1, porque é outra superfície de
-segurança, com revisores próprios, e a A1 já estava no teto do PRD.
+segurança, com revisores próprios, e a A1 já estava no teto do PRD. Na revisão da spec, no mesmo
+dia, a A0 foi dividida em duas: a **A0**, identidade do operador e a pele da D72, e a **A0b**, o
+painel.

@@ -65,3 +65,7 @@
   `uso_infra_diario`.
 - **Suboperadores a registrar no F3:** provedor de hospedagem, Grafana Cloud, UptimeRobot e
   ntfy.sh, todos só com id ou dado sintético.
+- **Painel da operação (A0, D76):** antes do staging, a borda restringe `/operacao` e
+  `/v1/operacao/*` — lista de IPs da equipe, host separado ou rede interna, a decidir com o
+  provedor (D42) —, com teste em `tools/ci/borda.test.ts`. No MVP local os dois caminhos saem pela
+  mesma borda, porque tudo é sintético e roda na nossa máquina.

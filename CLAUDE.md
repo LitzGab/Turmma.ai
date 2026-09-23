@@ -134,7 +134,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D73 | Navegação do professor: Nova conversa, Ferramentas, Calendário e Turmas, com Seu time e Histórico na lateral; cada item só aparece com a fase dele |
 | D74 | É ferramenta o que entrega um output próprio; o resto é pedido ao Assistente. Quatro categorias: Planejar, Preparar a aula, Avaliar, Corrigir |
 | D75 | O material da escola entra pela coordenação, com titularidade e licença declaradas; professor e aluno não sobem material para a base |
-| D76 | A equipe Turmma tem um painel de operação (A0): cria rede e escola, convida a coordenação e acompanha uso e custo por escola, sem ver dado de pessoa |
+| D76 | A equipe Turmma tem um painel de operação (A0 e A0b): cria rede e escola, convida a coordenação e acompanha uso e custo por escola, sem ver dado de pessoa |
 
 > **D54 a D71 estão ratificadas.** Saíram em 19/09/2026 da leitura das fontes de regulação e
 > da estrutura de agentes por papel; o Gabriel ratificou as dele no mesmo dia, e o Joaquim

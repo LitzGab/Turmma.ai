@@ -1,106 +1,91 @@
-# PRD — Painel da operação Turmma
+# PRD — Identidade do operador Turmma
 
-**Status:** aprovado (23/09/2026, Joaquim)
+**Status:** aprovado (23/09/2026, Joaquim). Dividido no mesmo dia do PRD do painel da operação,
+que passou do teto depois da revisão da spec: a identidade do operador e a pele da D72 ficaram
+aqui (A0), e o painel foi para `tasks/prd-apresentacao-painel/prd.md` (A0b)
 **Funcionalidade do roadmap:** A0 — `apresentacao-operacao` (MVP de apresentação, D76)
 **Depende de:** F1
 
 ## 1. Problema
 
-Hoje a escola nasce no terminal: o operador roda `ops:escola` e `ops:convite-coordenador`, e o
-token do convite fica num arquivo que ele precisa lembrar de apagar. Só quem tem o repositório na
-máquina consegue, a demonstração começa numa tela preta, e o uso de cada escola, que o sistema
-mede desde o F0, só se lê escola por escola pelo `ops:uso`. Sem ver uso e custo por escola, não há
-como conferir durante o MVP as metas de R$ 2 de infra (D30) e R$ 5 de IA (D39) por aluno.
+O operador Turmma hoje é uma string numa variável de ambiente: roda `ops:*` na própria máquina e
+o nome dele vai para a auditoria sem nenhuma conta por trás. Para existir um painel da operação
+(A0b), precisa existir antes uma pessoa que entra nele com senha e segundo fator, e que nenhuma
+sessão de escola consiga imitar. E o painel é a primeira tela com a marca do Turmma: a pele da
+D72 precisa estar no `apps/web` antes dele.
 
 ## 2. Objetivo
 
-A equipe Turmma cria rede e escola, convida a primeira coordenadora e acompanha o uso de cada
-escola numa tela própria, sem nunca ver dado de pessoa da escola.
+A equipe Turmma tem conta própria, com segundo fator, separada de qualquer escola, e o `apps/web`
+passa a ter a pele da D72 em todas as telas.
 
 ## 3. Fora de escopo
 
-- Consumo de IA por escola: entra nesta mesma tela com a A2, que traz o registro de consumo
-- Custo de infra em reais: espera o provedor de hospedagem (D42); aqui é contagem
-- Editar, suspender ou encerrar escola e rede; fim de contrato e exportação (D63): F16
+- O painel em si (redes, escolas, convite da coordenação, contagens, uso): A0b
 - Criar e desativar operador pela tela: é por comando
-- Qualquer leitura de dentro da escola: turma por nome, pessoa, nota, conversa, material (D10)
-- Painel da rede para a secretaria (F14): é outra coisa, do cliente
-- Cadastro público de escola (D2)
+- Papéis diferentes entre operadores: todos podem o mesmo
+- Recuperar senha de operador pela tela: por comando, com novo convite
+- A casca da área da escola na D72 (navegação por papel): A1
 
 ## 4. Papéis envolvidos
 
 | Papel | O que pode fazer | O que não pode |
 |---|---|---|
-| Operador Turmma | Entrar com senha e segundo fator; criar rede e escola; gerar, revogar e refazer o convite da primeira coordenação; ver a lista de escolas com estado, contagens e uso | Ver nome, e-mail, matrícula ou qualquer conteúdo de pessoa da escola; entrar numa escola como usuário dela; criar outro operador |
-| Coordenador, professor, aluno, rede | Nada aqui | Alcançar qualquer rota ou tela do painel, nem saber que ela existe |
+| Operador Turmma | Aceitar o convite, criar a senha e configurar o segundo fator; entrar e sair; ver a casca da operação | Criar outro operador; entrar numa escola como usuário dela |
+| Coordenador, professor, aluno | Nada aqui | Alcançar qualquer rota da operação, com sessão, desafio ou cookie de escola |
 
 ## 5. Requisitos funcionais
 
 | # | Requisito | Como se prova |
 |---|---|---|
-| RF1 | A conta de operador é separada das contas de escola e nasce por comando, com o registro de quem a criou. Não há rota que crie operador | Nenhuma rota cria operador; o comando grava a auditoria com quem rodou |
-| RF2 | O operador entra por e-mail e senha e só alcança o painel depois de configurar o segundo fator (app autenticador, com códigos de recuperação), no mesmo mecanismo da coordenação (F1, RF12) | Sem segundo fator, só a tela de configurá-lo responde; código de recuperação usado não vale de novo |
-| RF3 | Senha errada repetida segura a conta de operador com espera crescente, por conta; e-mail inexistente e senha errada respondem igual | Teste compara as duas respostas; 10 erros seguram só aquela conta |
-| RF4 | Sessão de escola não alcança nenhuma rota do painel, e sessão de operador não alcança nenhuma rota de escola: as duas respondem igual a rota inexistente | Com sessão de coordenador, professor e aluno, toda rota do painel responde como inexistente; com a de operador, as rotas de escola também |
-| RF5 | O operador cria rede (nome, tipo: prefeitura, grupo ou independente) e escola (rede, nome, endereço), com as regras do `ops:escola` | Endereço repetido é recusado com erro tipado; escola criada aparece na lista |
-| RF6 | O operador cadastra a primeira coordenadora da escola (nome e e-mail) e o link do convite aparece **uma vez** na tela, para copiar; depois disso o token não é mais mostrado nem guardado em claro. Convite de uso único, 72 h, revogável; refazer gera outro e invalida o anterior | Recarregar a tela não mostra o link de novo; usado, vencido, revogado e inexistente respondem igual |
-| RF7 | A lista de escolas mostra, por escola: rede, nome, endereço, estado (convite pendente, convite vencido, ativa) e as contagens de turmas, professores ativos e alunos ativos do ano letivo em curso. **Só número**: nome e e-mail da coordenadora não aparecem depois do cadastro | Teste percorre as respostas do painel procurando nome, e-mail, matrícula e texto de pessoa da escola, e não encontra |
-| RF8 | A tela de uso mostra, por escola, requisições, jobs e bytes de storage do último dia fechado e do mês, lidos do uso diário medido desde o F0 (D30); o dia de hoje aparece depois da consolidação | Com uso sintético gravado em duas escolas, cada uma mostra o seu, e a soma do mês bate com os dias |
-| RF9 | A lista e o uso comparam as escolas lado a lado, ordenáveis por nome e por uso, e paginados | Com 30 escolas sintéticas, a lista pagina e ordena sem trazer tudo de uma vez |
-| RF10 | Toda ação do operador fica na auditoria com o identificador dele: entrada, criação de rede e escola, convite gerado, revogado e refeito | Cada ação gera registro consultável por teste, com o operador certo |
-| RF11 | A leitura entre escolas fica num módulo só, marcado como consulta sem escopo com a justificativa escrita em cada uma (regra 10, item 9), e nenhum outro módulo o importa | Teste de arquitetura: só o módulo do painel usa as consultas sem escopo dele |
-| RF12 | As telas têm a pele da D72, com a marca de que ali é a operação, os quatro estados, teclado e toque, e funcionam em `chromebook` e `celular` | e2e nos dois projetos, com verificação de acessibilidade |
+| RF1 | A conta de operador nasce por comando (`criar`), com quem a criou registrado; `desativar` encerra o acesso na requisição seguinte. Nenhuma rota cria operador | Teste de arquitetura sem rota de criação; o comando grava a auditoria da operação com quem rodou; desativado não alcança nada |
+| RF2 | O comando gera um convite de uso único, válido por 72 h, que leva a criar a senha e configurar o segundo fator (app autenticador, com códigos de recuperação) | Usado, vencido, revogado e inexistente respondem igual; dois aceites simultâneos gravam uma senha só |
+| RF3 | O operador entra por e-mail, senha e segundo fator, sempre; código TOTP e código de recuperação valem uma vez | O mesmo código duas vezes, em sequência ou em paralelo, é recusado na segunda |
+| RF4 | Senha errada repetida segura aquela conta com espera crescente, por conta, sem colidir com o login de escola; e-mail inexistente e senha errada respondem igual | Status e corpo iguais; 10 erros na conta X não seguram a Y do mesmo IP; errar como operador não segura o mesmo e-mail na escola |
+| RF5 | A sessão dura até 8 h e termina após 30 min sem uso. Sessão que terminou é dita como tal na tela, com o que fazer, sem confundir com "não encontrado" | Depois de 30 min parado, a próxima ação pede entrar de novo com a mensagem de sessão encerrada |
+| RF6 | Nenhuma credencial de escola (sessão, desafio de login, cookie de renovação) alcança rota da operação, e nenhuma credencial de operador alcança rota de escola; as duas respondem igual a rota inexistente | Varredura das rotas registradas nos dois sentidos, comparando status e corpo com uma rota que não existe |
+| RF7 | Entradas, falhas de entrada e saídas ficam no registro de acesso da operação, com IP e data (Marco Civil); criar e desativar operador, configurar segundo fator e gerar convite de operador ficam na auditoria da operação, com o autor | Cada evento consultável por teste, no registro certo e com o operador certo |
+| RF8 | O `apps/web` inteiro passa à pele da D72 (tokens da seção 9.9 do `docs/interface.md`, logotipo de `mockups/public/marca/`), inclusive as telas do F1, sem nenhuma cor que o Chrome 109 descarte | Guarda de estilo reprova cor fora dos tokens, `oklch(` e `color-mix(` no CSS servido; o e2e do F1 continua verde |
+| RF9 | As telas do operador (convite, entrar, segundo fator, casca da operação com Sair) têm os quatro estados, teclado e toque, e funcionam em `chromebook` e `celular` | e2e nos dois projetos, com verificação de acessibilidade |
 
 ## 6. Regras de negócio
 
-- **A escola é a controladora; nós somos operadores** (D10): o painel vê o que é nosso ver — que
-  a escola existe, se foi ativada, quanto usa —, nunca quem está nela
-- **Não é cadastro público** (D2): criar escola continua sendo ato nosso, auditado
-- **Os comandos `ops:*` continuam**, com as mesmas regras e a mesma auditoria; a tela e o
-  comando são dois caminhos para o mesmo caso de uso
-- **Dado sintético** no MVP (D71): as escolas criadas na demonstração têm nome inventado
-- **Contagem não é ranking**: o painel compara uso de escolas para operar custo, e não mostra
-  nada por professor nem por aluno (D45, D64)
+- O operador não é usuário de escola e não tem papel na matriz de permissão da escola (D10, D76)
+- Toda ação do operador tem autor rastreável; o registro de acesso é obrigação legal (Marco
+  Civil, art. 15) e a auditoria da operação é prestação de contas
+- Nenhuma senha passa pelo terminal: o convite leva à tela
+- Sair está a um clique, em toda tela (D59)
 
 ## 7. Casos de borda
 
 | Caso | Comportamento esperado |
 |---|---|
-| Operador fecha a aba antes de copiar o link do convite | Refaz o convite; o anterior deixa de valer |
-| A coordenadora não abriu o convite em 72 h | A escola aparece como "convite vencido", e o operador refaz |
-| Dois operadores refazem o mesmo convite no mesmo segundo | Só um convite fica valendo, sem erro cru (regra 80, item 7) |
-| Escola sem nenhum uso ainda | Aparece com zero, não some da lista |
-| Operador que saiu da equipe | A conta é desativada por comando e a próxima requisição dele já não alcança nada |
-| Operador tenta abrir uma turma ou um aluno pelo id | Responde igual a inexistente |
-| Escola criada no fim do dia | O uso de hoje só aparece depois da consolidação, com o aviso de qual foi o último dia fechado |
+| Operador perde o app autenticador | Usa um código de recuperação; sem eles, novo convite por comando |
+| Operador que saiu da equipe, com a sessão aberta | `desativar` corta na requisição seguinte |
+| Convite de operador aberto duas vezes, em duas abas | Só um aceite grava senha |
+| Mesma pessoa é coordenadora numa escola e operadora | Contas separadas, com logins que não se misturam |
+| Duas abas renovando a sessão ao mesmo tempo | Uma renova; a outra continua válida pelo token anterior dentro da janela de rotação |
+| Banco fora durante a conferência da sessão | Erro de indisponibilidade, e não "sessão encerrada" |
 
 ## 8. Dado pessoal envolvido
 
 | Dado | Titular | Finalidade | Retenção | Em `docs/lgpd.md`? |
 |---|---|---|---|---|
-| Conta de operador (nome, e-mail, hash de senha, segundo fator cifrado) | nossa equipe | entrar no painel | enquanto for da equipe | sim (D76) |
-| Nome e e-mail da primeira coordenadora, digitados pelo operador | coordenador | enviar o convite | os do convite e da conta, já definidos | sim |
-| Identificador do operador na auditoria | nossa equipe | prestação de contas à escola | vigência + 5 anos | sim |
-
-As contagens e o uso não são dado pessoal: não identificam ninguém. Nada vai a provedor externo.
+| Conta de operador (nome, e-mail, hash de senha, segundo fator cifrado, HMAC dos códigos de recuperação) | nossa equipe | entrar no painel | até desativar; o apelido fica na auditoria | a ajustar nesta spec |
+| Convite e sessão de operador | nossa equipe | primeiro acesso; manter o acesso | 30 dias após usar ou encerrar | sim |
+| Registro de acesso da operação (IP, data, evento) | nossa equipe | segurança, Marco Civil | 6 meses | a ajustar |
+| Auditoria da operação (autor, ação, data) | nossa equipe | prestação de contas | vigência + 5 anos | **não** |
 
 ## 8b. Risco regulatório
 
-Não há IA nem dado de aluno. O risco é de isolamento e de privacidade (regras 10 e 20), coberto
-pelos RF4, RF7 e RF11.
+Não há IA nem dado de aluno.
 
 ## 9. Métricas
 
-- Da escola vazia ao convite copiado em até 2 minutos, sem terminal
-- Durante o MVP, o uso de cada escola sintética é lido no painel, sem rodar `ops:uso`
-- Zero dado de pessoa da escola em qualquer resposta do painel (teste do RF7)
+- Do convite ao primeiro login com segundo fator em até 3 minutos
+- Zero rota da operação alcançável por credencial de escola (teste do RF6)
 
 ## 10. Perguntas em aberto
 
-1. Onde o painel mora: mesmo endereço da web com rota própria, ou endereço separado; e, em
-   produção, se fica atrás de rede interna. Tech Spec, com o `infra-guardian`, junto da D42
-2. Tempo de inatividade da sessão do operador (mais curto que o da coordenação?): Tech Spec
-3. A tabela da conta de operador não tem escola: é a exceção "tabela sem dono" da regra 10, item
-   1, e precisa estar escrita assim na Tech Spec, com o `tenancy-guardian`
-4. A contagem de "alunos ativos" é o número de alunos com vínculo confirmado no ano em curso?
-   Fecha na Tech Spec, junto da definição que a A1 usa
+1. Em produção, a borda restringe `/operacao` e `/v1/operacao/*` a quê: IP da equipe, host
+   separado ou rede interna? Decide com a hospedagem (D42), antes do staging
