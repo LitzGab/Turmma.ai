@@ -268,6 +268,12 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       a causa não era ordem entre casos: o teste mandava 20 POSTs em paralelo no mesmo `sid`, e o
       engine.io recusa POST sobreposto
       (`tasks/correcoes/2026-09-23-borda-manda-polling-sobreposto.md`)
+- [ ] Depois da correção `2026-09-23-porta-do-teste-na-faixa-efemera`: uma linha no cabeçalho de
+      `infra/teste.env` e `infra/carga.env` dizendo que porta nova fica entre 23000 e 29999; o teste
+      de ambiente conferir também o piso de 1024 e que teste e carga não repetem porta
+      (`infra-guardian`); e, no `/retro`, reabrir a correção
+      `2026-09-22-corrida-de-porta-na-observabilidade`, cujo 59100 também estava na faixa efêmera
+      (`test-engineer`)
 - [ ] Guarda de `video`/`screenshot` no mesmo laço de `tools/ci/esteira.test.ts` que já resolve
       `trace` e `outputDir` por projeto. Hoje os dois estão em `off` por padrão e não há furo, mas
       `video: 'on'` reabriria a evasão que a correção de 20/09 fechou, e a linha do runbook não cobre

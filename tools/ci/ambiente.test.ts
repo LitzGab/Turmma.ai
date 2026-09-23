@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 import { COMANDO_HEALTHCHECK_BATIMENTO } from '../../packages/nucleo/src/instancia/batimento.ts'
 import { PROCESSOS_DA_FILA } from '../testes/compose.ts'
-import { lerAmbienteDeTeste, lerAmbienteExemplo, valorObrigatorio } from './compose.ts'
+import { lerAmbienteDeCarga, lerAmbienteDeTeste, lerAmbienteExemplo, valorObrigatorio } from './compose.ts'
 import { raizRepositorio } from './executar.ts'
 
 const lerArquivo = (caminho: string) => readFileSync(join(raizRepositorio, caminho), 'utf8')
@@ -135,6 +135,31 @@ describe('.env.example e compose', () => {
       expect(chave, 'a sobreposição de teste é só de porta, e do endereço que carrega uma').toMatch(/(_PORTA_HOST|_URL)$/)
       expect(exemplo[chave], `${chave} não existe em .env.example`).toBeDefined()
       expect(valor).not.toBe(exemplo[chave])
+    }
+  })
+
+  it('as portas publicadas dos ambientes de teste e de carga ficam abaixo da faixa efêmera do Linux', () => {
+    // A faixa padrão do `ip_local_port_range` é 32768–60999, no runner e na máquina. Porta publicada dentro dela
+    // pode ser sorteada como origem de uma conexão de saída do próprio teste enquanto o serviço está parado, e o
+    // `compose start` falha com "address already in use" (correção 2026-09-23-porta-do-teste-na-faixa-efemera).
+    // Confere o ambiente que o compose de fato sobe (`.env.example` com a sobreposição por cima), com as portas
+    // tiradas do `ports:` de cada serviço: porta nova que a sobreposição esqueceu herda a do desenvolvimento, que
+    // está dentro da faixa, e falha aqui com o nome dela.
+    const INICIO_DA_FAIXA_EFEMERA = 32_768
+    const servicos = ['infra/compose.yml', 'infra/compose.carga.yml'].flatMap(
+      (arquivo) => Object.values((parse(lerArquivo(arquivo)) as { services?: Record<string, { ports?: string[] }> }).services ?? {}),
+    )
+    const publicadas = servicos
+      .flatMap((servico) => servico.ports ?? [])
+      .flatMap((porta) => [...porta.matchAll(/\$\{([A-Z0-9_]+)/g)].map((achado) => achado[1] ?? ''))
+    expect(publicadas.length).toBeGreaterThan(10)
+    for (const [nome, ambiente] of [
+      ['teste', lerAmbienteDeTeste()],
+      ['carga', lerAmbienteDeCarga()],
+    ] as const) {
+      for (const variavel of publicadas) {
+        expect(Number(valorObrigatorio(ambiente, variavel)), `${nome}: ${variavel}`).toBeLessThan(INICIO_DA_FAIXA_EFEMERA)
+      }
     }
   })
 
