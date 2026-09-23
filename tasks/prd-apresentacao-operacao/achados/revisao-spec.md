@@ -927,3 +927,31 @@ Resumo: a correção que a rodada 4 pediu foi feita. Sobra um bloqueante, que é
 Arquivos:
 - /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md
 - /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/cenarios.md
+
+## test-engineer · 6ª rodada · REPROVADO · 2026-09-23 14:02:04 · `tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+Cenários exigidos: do diff desde a rodada 5, travas com `desativado_em is null` (seção 5), C6b (desafio emitido antes do `desativar`, em sequência e em paralelo), versão divergente dá "configure de novo" sem conferir código nem contar tentativa, C18 e C18b com barreira nas duas ordens, C5 com exatamente dois ativos, e a tabela da seção 10 contando o C6b.
+
+Cobertos: a correção da rodada 5 foi feita no texto. Todas as travas da seção 5 levam `desativado_em is null`, e o C6b existe e entra na seção 10. As recomendações também foram aplicadas: a versão é lida com o segredo e divergente não confere código nem soma no contador (seção 5, trava de configurar, e C18). C18 e C18b têm barreira nas duas ordens, e o C5 parte de exatamente dois ativos.
+
+Bloqueantes:
+1. **Seção 5, "Travas no banco", itens TOTP e código de recuperação (techspec.md:80-82). Criar a sessão não está preso à trava, e o C6b exige "sem sessão criada".**
+   - **O que está errado:** o `configurar` diz "numa transação" e trava a linha. Já o `/sessao/mfa` só descreve a trava isolada: `update ... mfa_ultimo_passo` ou `delete` do código de recuperação. Em seguida vêm a ativação e o insert da sessão, e a spec não diz que as três coisas acontecem na mesma transação com a linha do operador travada.
+   - **O caminho que quebra:** a trava do TOTP passa, depois o `desativar` confirma, e só então a sessão é inserida. Nessa ordem sobra uma sessão de operador desativado, porque o `desativar` já rodou o "encerra as sessões". A guarda recusa essa sessão na requisição seguinte, então não há acesso. Mesmo assim, o estado contradiz o C6b e o próprio texto ("não grava nem ativa nada").
+   - **Um detalhe:** a tabela de códigos de recuperação não tem `desativado_em`. O `delete` só respeita a condição se fizer join com o operador ou se, antes, travar a linha do operador com `desativado_em is null`.
+   - **Correção exigida:** escrever na seção 5 que o `/sessao/mfa` abre uma transação só. Ela começa travando a linha do operador (`... where id = $1 and desativado_em is null`, pelo `update` do TOTP ou por `for update`), e dentro dela fazem consumo do código, ativação e insert da sessão. Com isso o `desativar` espera por ela ou ela vê o operador desativado.
+2. **cenarios.md:21-23 (C6b). O cenário paralelo não tem barreira, então o teste passaria com o bug acima.**
+   - **O que está errado:** um `Promise.all` sem barreira quase nunca cai na janela entre a trava e o insert da sessão, então o teste fica verde mesmo sem a transação.
+   - **Correção exigida:** usar barreira que force as duas ordens, como no C18 e no C18b. Numa, o `desativar` confirma entre o consumo do desafio (ou a trava do TOTP) e o insert da sessão. Na outra, confirma depois da transação do `/sessao/mfa`. As asserções:
+     - a linha fica só com id, apelido e datas;
+     - não sobra código de recuperação;
+     - `sessao_operador` fica com zero linhas ativas nas duas ordens.
+   - **Para o `configurar_mfa`:** na primeira ordem, nenhum segredo fica gravado.
+
+Recomendações:
+- Seção 5, "Entrada": o texto perdeu `conhecido`/`outro`. Vale manter os dois valores da origem, para quem implementar não ter de voltar ao F1.
+- C6b: afirmar também que a recusa é a mesma resposta tipada de desafio inválido, para não confirmar ao cliente que o operador foi desativado.
+
+Arquivos: `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md`, `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/cenarios.md`

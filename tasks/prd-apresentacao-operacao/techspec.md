@@ -1,7 +1,7 @@
 # Tech Spec — Identidade do operador Turmma
 
 **PRD:** `tasks/prd-apresentacao-operacao/prd.md`
-**Status:** rascunho (6ª versão, depois da rodada 5 do `/revisar-spec`; o painel foi para a A0b)
+**Status:** rascunho (7ª versão, depois da rodada 6 do `/revisar-spec`; o painel foi para a A0b)
 
 ## 1. Resumo da abordagem
 
@@ -75,25 +75,26 @@ o operador da sessão.
 `/sessao/email` só devolve `configurar_mfa` até 72 h depois do aceite e sem segundo fator ativo;
 fora disso, igual a senha errada, e o caminho é um convite novo.
 
-**Travas no banco**, todas com `returning`, resposta tipada para quem perde e `desativado_em is null`
-(desafio emitido antes do `desativar` não grava nem ativa nada):
+**Travas no banco**, com `returning`, resposta tipada para quem perde e `desativado_em is null`:
 - aceite: `update convite_operador set usado_em = now() where id = $1 and usado_em is null and
   revogado_em is null and expira_em > now()`
-- código de recuperação: `delete ... where operador_id = $1 and hmac = $2 returning`
-- TOTP: `update operador set mfa_ultimo_passo = $p where id = $1 and (mfa_ultimo_passo is null or
-  mfa_ultimo_passo < $p)`
+- `/sessao/mfa`, numa transação só: trava a linha (`select ... for update where id = $1 and
+  desativado_em is null`), consome o código (TOTP: `set mfa_ultimo_passo = $p where
+  mfa_ultimo_passo is null or mfa_ultimo_passo < $p`; recuperação: `delete ... returning`), ativa se
+  for o caso e insere a sessão; o `desativar`, que também trava a linha, espera por ela ou a vê
+  desativada
 - configurar: consome o desafio e, numa transação, começa por `update operador set
   mfa_segredo_cifrado = $s, mfa_versao = mfa_versao + 1 where id = $1 and mfa_ativado_em is null
-  returning mfa_versao` (a linha fica travada), depois apaga e insere os códigos; devolve um desafio
-  de etapa `mfa` com essa versão. A ativação é no primeiro `/sessao/mfa` válido, com `where
-  mfa_ativado_em is null and mfa_versao = $versao_do_desafio`; a versão é lida com o segredo e,
-  diferente, dá "configure de novo" sem conferir o código nem contar tentativa
+  returning mfa_versao`, depois apaga e insere os códigos; devolve desafio de etapa `mfa` com a
+  versão. Ativar exige `mfa_versao = $versao_do_desafio`: diferente, "configure de novo", sem
+  conferir o código nem contar tentativa
 - renovação: `update ... set refresh_hash = $novo, refresh_hash_anterior = $atual where id = $1 and
   refresh_hash = $atual`; o anterior vale 30 s, e reusado depois encerra a sessão (padrão do F1)
 - desafio: `jti` com `SET NX` no Redis por 5 min; Redis fora, 503
 
 **Entrada.** O `ContadorDeTentativas` usa `login-op:`, pelo e-mail e pelo `operador.id`, com a
-origem do cookie de dispositivo do F1 com chave própria. `entrada_falha` não grava o e-mail.
+origem `conhecido`/`outro` do cookie de dispositivo do F1, com chave própria. `entrada_falha` não
+grava o e-mail.
 
 **Conferência da sessão**, pela `GuardaDeOperador`, que põe no contexto só o `operadorId`, nunca
 `escolaId` (repository de escola chamado por engano falha com erro):

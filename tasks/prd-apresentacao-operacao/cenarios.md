@@ -19,8 +19,10 @@ identificador. A lista é fechada; mudar exige revisar a spec. Saiu das rodadas 
   convite pendente fica revogado; as sessões, encerradas. Falha injetada no meio não deixa estado
   parcial. A sessão aberta recebe `SESSAO_ENCERRADA` na requisição seguinte
 - **C6b** Desafio `configurar_mfa` ou `mfa` emitido antes do `desativar` e usado depois, em sequência
-  e em `Promise.all` com o próprio `desativar`: recusado; a linha continua só com id, apelido e
-  datas, sem código de recuperação e sem sessão criada
+  e com barreira nas duas ordens (o `desativar` confirma entre a trava e o insert da sessão, e depois
+  da transação do `/sessao/mfa`): recusado com a mesma resposta de desafio inválido; a linha fica
+  só com id, apelido e datas, sem código de recuperação, sem segredo gravado e com zero sessões
+  ativas
 - **C7** `convite` com um pendente revoga o anterior: o link antigo responde igual a revogado, e o
   único parcial impede dois pendentes
 - **C8** O arquivo do token nasce com modo 0600
