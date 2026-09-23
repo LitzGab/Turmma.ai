@@ -1,0 +1,14 @@
+import { ErrorMessage } from "@/components/ui/error-message";
+
+export default function NetworkDemo() {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center p-6 bg-white dark:bg-neutral-950">
+      <div className="w-full max-w-md">
+        <ErrorMessage
+          title="Network error"
+          message="Failed to reach the server. Check your connection and retry."
+        />
+      </div>
+    </div>
+  );
+}

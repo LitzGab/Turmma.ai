@@ -1,0 +1,16 @@
+import { UserMessage } from "@/components/ui/user-message";
+
+export default function Demo() {
+  return (
+    <div className="flex items-center justify-center w-full min-h-screen bg-background p-8 overflow-hidden">
+      <div className="w-full max-w-md">
+        <UserMessage
+          message={{
+            id: "msg-1",
+            parts: [{ type: "text", text: "Share the latest status." }],
+          }}
+        />
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,20 @@
+import { Suggestions } from "@/components/ui/suggestions";
+
+const items = [
+  { id: "write", label: "Write" },
+  { id: "learn", label: "Learn" },
+  { id: "code", label: "Code" },
+  { id: "calendar", label: "From Calendar" },
+];
+
+export default function Demo() {
+  return (
+    <div className="flex h-full w-full items-center justify-center p-8">
+      <Suggestions
+        items={items}
+        onSelect={(item) => console.log(item)}
+        className="justify-center"
+      />
+    </div>
+  );
+}

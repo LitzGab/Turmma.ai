@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1032 172" role="img" aria-label="Turmma">
+  <title>Turmma</title>
+  <rect x="0" y="0" width="1032" height="172" fill="#16233E"/><g transform="translate(86, 86) scale(2.5294117647058822)"><g fill="#E8732E"><ellipse cx="-1.8" cy="-20.9" rx="11.0" ry="7.5" transform="rotate(-5.0 -1.8 -20.9)"/><ellipse cx="15.3" cy="-12.9" rx="9.0" ry="7.0" transform="rotate(50.0 15.3 -12.9)"/><ellipse cx="21.3" cy="5.7" rx="11.5" ry="8.0" transform="rotate(105.0 21.3 5.7)"/><ellipse cx="6.5" cy="17.9" rx="8.5" ry="6.5" transform="rotate(160.0 6.5 17.9)"/><ellipse cx="-12.0" cy="17.2" rx="10.5" ry="7.5" transform="rotate(215.0 -12.0 17.2)"/><ellipse cx="-19.9" cy="-1.7" rx="9.5" ry="7.0" transform="rotate(275.0 -19.9 -1.7)"/><circle cx="-2" cy="3" r="5.5"/><circle cx="6" cy="-5" r="3"/></g></g>
+  <g transform="translate(249, 156)"><g fill="none" stroke="#FFF3E2" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15,-140 L15,-24 C15,-8 27,0 45,0"/>
+    <path d="M-5,-100 L45,-100"/>
+    <path d="M103,-100 L103,-28 C103,-11 117,0 134,0 C151,0 165,-11 165,-28 L165,-100"/>
+    <path d="M223,0 L223,-72 C223,-89 237,-100 263,-100"/>
+    <path d="M321,0 L321,-72 C321,-89 335,-100 353,-100 C371,-100 385,-89 385,-72 L385,0"/>
+    <path d="M385,-72 C385,-89 399,-100 417,-100 C435,-100 449,-89 449,-72 L449,0"/>
+    <path d="M507,0 L507,-72 C507,-89 521,-100 539,-100 C557,-100 571,-89 571,-72 L571,0"/>
+    <path d="M571,-72 C571,-89 585,-100 603,-100 C621,-100 635,-89 635,-72 L635,0"/>
+    <path d="M767,-100 L767,0"/>
+    <path d="M767,-88 C752,-98 733,-100 716,-92 C700,-84 693,-68 693,-50 C693,-32 700,-16 716,-8 C733,0 752,-2 767,-12"/>
+  </g></g>
+</svg>
