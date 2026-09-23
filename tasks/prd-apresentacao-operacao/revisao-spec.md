@@ -129,6 +129,28 @@ resolvidos; os de agora são novos e pontuais.
 - Bootstrap com o último operador desativado, autodesativação e dois bootstrap em paralelo; runbook
   com o caminho `ops:*` quando o Redis cai (`test-engineer`, `infra-guardian`)
 
+## Rodada 4 — 23/09/2026
+
+**Veredito: REPROVADA** — só o `test-engineer`, com um bloqueante; os outros quatro aprovaram.
+
+| Revisor | Veredito | Bloqueantes |
+|---|---|---|
+| `test-engineer` | REPROVADO | 1 |
+| `infra-guardian` | APROVADO | 0 |
+| `tenancy-guardian`, `privacy-guardian`, `frontend-reviewer` | APROVADO na rodada 3 | — |
+
+### Correções exigidas na Tech Spec
+- Seção 5 e C18: dois `configurar` em paralelo podiam misturar o segredo de uma aba com os códigos
+  das duas, e a ativação podia pegar um segredo diferente do conferido → o `configurar` começa pelo
+  `update operador ... returning mfa_versao` (trava a linha), o desafio leva a versão, e a ativação
+  exige a versão; C18 em `Promise.all` e C18b novo (`test-engineer`)
+
+### Recomendações aplicadas junto
+- Seção 6 alinhada ao C45; `desativar` sob o mesmo lock do bootstrap e sem desativar o último ativo
+  (C5); bordas de 71h59 e 72h01 (C15); desafio reenviado ao `configurar` (C17); 503 também no
+  `/renovar` (C31) (`test-engineer`)
+- `rl:op` em toda rota `@RotaDeOperacao` (C36) e limites com o Redis fora (C36b) (`infra-guardian`)
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -152,3 +174,5 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-09-23 13:54:35 | 2026-09-23 13:55:13 | `frontend-reviewer` | 3 | APROVADO | a17aab2b3182ce7c3 |
 | 2026-09-23 13:54:28 | 2026-09-23 13:55:15 | `privacy-guardian` | 3 | APROVADO | ac9238c2ba2653b47 |
 | 2026-09-23 13:54:21 | 2026-09-23 13:55:28 | `test-engineer` | 3 | REPROVADO | a505e4dc839d70264 |
+| 2026-09-23 13:57:16 | 2026-09-23 13:57:35 | `infra-guardian` | 4 | APROVADO | a8577d76d33145d26 |
+| 2026-09-23 13:57:12 | 2026-09-23 13:58:40 | `test-engineer` | 4 | REPROVADO | a2b0d3db1050c5a22 |

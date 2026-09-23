@@ -1,7 +1,7 @@
 # Tech Spec — Identidade do operador Turmma
 
 **PRD:** `tasks/prd-apresentacao-operacao/prd.md`
-**Status:** rascunho (4ª versão, depois da rodada 3 do `/revisar-spec`; o painel foi para a A0b)
+**Status:** rascunho (5ª versão, depois da rodada 4 do `/revisar-spec`; o painel foi para a A0b)
 
 ## 1. Resumo da abordagem
 
@@ -19,18 +19,18 @@ inteiro numa tarefa própria, antes das telas do operador.
 | `apps/api/src/operacao/` | novo | controllers de sessão e convite, `GuardaDeOperador`, `OperadorRepository`, os dois marcadores |
 | `apps/api/src/ops/` | novo e alterado | `ops:operador -- criar`, `desativar`, `convite`; `comando.ts` confere `OPERADOR` contra operador ativo |
 | `packages/nucleo/src/identidade/`, `limite/guarda-limite.ts` | alterado | `rotaSemSessao` e limite reconhecem os marcadores; `verificarTokenDeOperador`; bearer de operador em rota de escola → 404 |
-| `apps/api/src/sessao/contador-de-tentativas.ts` | alterado | prefixo da chave por parâmetro (`login:`, `login-op:`) |
+| `apps/api/src/sessao/contador-de-tentativas.ts` | alterado | prefixo por parâmetro (`login:`, `login-op:`) |
 | `packages/nucleo/src/` | alterado e novo | `conferencia-das-permissoes.ts` aceita os marcadores; schema das seis tabelas; expurgo (seção 7) |
 | `apps/web/` e `tools/ci/tamanho-web.test.ts` | alterado e novo | tokens da D72 nas telas do F1; `src/operacao/`; orçamento (seção 9) |
 
 ## 3. Modelo de dados
 
-Ids UUID do banco. **Nenhuma tabela tem `escolaId`** (seção 11).
+Ids UUID. **Sem `escolaId`** (seção 11).
 
 ```
 Operador                  id, apelido* (FORMATO_OPERADOR, único), nome?, email? (citext, único),
-                          senhaHash?, mfaSegredoCifrado?, mfaChaveVersao?, mfaAtivadoEm?,
-                          mfaUltimoPasso?, criadoEm*, desativadoEm?
+                          senhaHash?, mfaSegredoCifrado?, mfaChaveVersao?, mfaVersao* (0),
+                          mfaAtivadoEm?, mfaUltimoPasso?, criadoEm*, desativadoEm?
 CodigoRecuperacaoOperador operadorId*, hmac* — PK (operador_id, hmac)
 ConviteOperador           id, operadorId*, tokenHash*, expiraEm* (72 h), usadoEm?, revogadoEm?
                           — único parcial (operador_id) where usado_em is null and revogado_em is null
@@ -42,9 +42,8 @@ AuditoriaOperacao         id, autor* (apelido ou "bootstrap"), acao* (operador.c
                           convite_operador.revogado), operadorAlvoId*, em*
 ```
 
-`apelido` é o valor que já vai para `auditoria.autor_operador` (texto, com o check de hoje). Desativar
-apaga nome, e-mail, senha, segredo e códigos na mesma transação; o apelido fica, porque a auditoria
-precisa dele. Uma migration, só de tabelas novas.
+`apelido` é o que já vai para `auditoria.autor_operador`. Desativar apaga nome, e-mail, senha,
+segredo e códigos; o apelido fica. Uma migration, só de tabelas novas.
 
 ## 4. API
 
@@ -58,16 +57,16 @@ precisa dele. Uma migration, só de tabelas novas.
 | POST | `/v1/operacao/sessao/renovar`, `/sair` | entrada | cookie | acesso / nada |
 | GET | `/v1/operacao/eu` | operação | — | apelido, nome |
 
-Cookie `turmma_operacao`, HttpOnly, `SameSite=Strict`, `Path=/v1/operacao/sessao`. Acesso de 10 min
-com `sub` e `sid`, sem `esc`. Respostas com segredo, códigos ou desafio levam
-`Cache-Control: no-store`. Saída sempre por contrato estrito de `packages/shared/src/operacao/`.
+Cookie `turmma_operacao`, HttpOnly, `SameSite=Strict`, `Path=/v1/operacao/sessao`. Acesso de 10 min,
+sem `esc`. Segredo, códigos e desafio saem com `no-store`, por contrato estrito de `packages/shared`.
 
 ## 5. Fluxo
 
 **Nascimento.** `ops:operador criar` grava o operador e um convite, com o token em arquivo 0600
 (dívida aceita: uma vez por pessoa da equipe). Sem operador ativo, aceita o `OPERADOR` do ambiente
-com autor `bootstrap`, sob `pg_advisory_xact_lock`; com um, todo `ops:*` exige `OPERADOR` de
-operador ativo. Ninguém desativa a si mesmo. `convite` revoga o
+com autor `bootstrap`; com um, todo `ops:*` exige `OPERADOR` de operador ativo. `criar` de bootstrap
+e `desativar` rodam sob o mesmo `pg_advisory_xact_lock`, e ninguém desativa a si mesmo nem o último
+ativo. `convite` revoga o
 pendente na mesma transação; `desativar` apaga o dado pessoal, revoga o convite e encerra as sessões
 numa transação só. O autor da `AuditoriaOperacao` é o `OPERADOR` do comando; o da entrada e do MFA,
 o operador da sessão.
@@ -82,13 +81,14 @@ fator não está ativo; fora disso responde igual a senha errada, e o caminho é
 - código de recuperação: `delete ... where operador_id = $1 and hmac = $2 returning`
 - TOTP: `update operador set mfa_ultimo_passo = $p where id = $1 and (mfa_ultimo_passo is null or
   mfa_ultimo_passo < $p)`
-- configurar: consome o desafio, grava segredo e códigos (apaga e insere) numa transação
-  `where mfa_ativado_em is null` e devolve um desafio de etapa `mfa`; com duas abas vale o último
-  gravado. A ativação é no primeiro `/sessao/mfa` válido (`set mfa_ativado_em = now() where
-  mfa_ativado_em is null`), e o código da aba vencida falha com "configure de novo"
+- configurar: consome o desafio e, numa transação, começa por `update operador set
+  mfa_segredo_cifrado = $s, mfa_versao = mfa_versao + 1 where id = $1 and mfa_ativado_em is null
+  returning mfa_versao` (a linha fica travada), depois apaga e insere os códigos; devolve um desafio
+  de etapa `mfa` com essa versão. A ativação é no primeiro `/sessao/mfa` válido, com `where
+  mfa_ativado_em is null and mfa_versao = $versao_do_desafio`: a aba de versão antiga recebe
+  "configure de novo", e nunca se ativa um segredo diferente do conferido
 - renovação: `update ... set refresh_hash = $novo, refresh_hash_anterior = $atual where id = $1 and
-  refresh_hash = $atual`; o anterior vale 30 s para a aba irmã, e reusado depois disso encerra a
-  sessão (padrão do F1)
+  refresh_hash = $atual`; o anterior vale 30 s, e reusado depois encerra a sessão (padrão do F1)
 - desafio: `jti` consumido com `SET NX` no Redis por 5 min; Redis fora recusa com 503
 
 **Entrada.** O `ContadorDeTentativas` usa `login-op:`, pelo e-mail e pelo `operador.id`, com a
@@ -119,8 +119,8 @@ conta; `sessao/mfa` recusa pelo contador por `operador.id`; `convite/consultar`,
 
 As tabelas da seção 3 ficam **fora do modelo de tenant**: não são de escola, e por isso as
 consultas a elas não levam `@SemEscopo`. O que prova que isso não vira atalho para dado de escola:
-o `OperadorRepository` só importa as seis tabelas da operação, e elas só são importadas por ele,
-pelo `comando.ts` (via o repository) e pelo expurgo — dois testes de arquitetura. E nenhuma rota escapa das
+o `OperadorRepository` só toca as seis tabelas da operação, e elas só são tocadas por ele e pelo
+expurgo — o `comando.ts` passa pelo repository (C45). E nenhuma rota escapa das
 guardas de escola sem cair na de operador.
 
 Testes de arquitetura:
@@ -193,7 +193,7 @@ que a entrada da escola não importa nada de `apps/web/src/operacao/`.
 
 | Camada | O que será testado |
 |---|---|
-| Integração, e2e, unidade e build | os cenários enumerados de `cenarios.md`, parte desta spec: C1 a C49, E1 a E5, U1 a U3, B1 e B2, um teste cada |
+| Integração, e2e, unidade e build | os cenários enumerados de `cenarios.md`, parte desta spec: C1 a C49 (com C18b e C36b), E1 a E5, U1 a U3, B1 e B2, um teste cada |
 | Isolamento e arquitetura | seção 6 |
 
 ## 11. Conformidade com as regras

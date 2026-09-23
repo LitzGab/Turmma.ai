@@ -12,7 +12,8 @@ identificador. A lista é fechada; mudar exige revisar a spec. Saiu das rodadas 
 - **C3** Dois `criar` de bootstrap em paralelo: um cria, o outro é recusado
 - **C4** `criar`, `desativar` e `convite` gravam `AuditoriaOperacao` com autor igual ao `OPERADOR` e o
   operador alvo certo
-- **C5** `desativar` de apelido inexistente dá erro tipado; desativar a si mesmo é recusado
+- **C5** `desativar` de apelido inexistente dá erro tipado; desativar a si mesmo e o último ativo é
+  recusado; A desativa B e B desativa A em paralelo: um passa, e resta um operador ativo
 - **C6** Depois de `desativar`, a linha do operador tem só id, apelido e datas; os códigos somem; o
   convite pendente fica revogado; as sessões, encerradas. Falha injetada no meio não deixa estado
   parcial. A sessão aberta recebe `SESSAO_ENCERRADA` na requisição seguinte
@@ -34,12 +35,16 @@ identificador. A lista é fechada; mudar exige revisar a spec. Saiu das rodadas 
 - **C13** Com o Redis fora, o desafio é recusado com 503, nunca aceito
 - **C14** Desafio `configurar_mfa` em `/sessao/mfa`, e `mfa` em `/mfa/configurar`: recusados
 - **C15** `/sessao/email` devolve `configurar_mfa` só dentro das 72 h do convite aceito e sem
-  segundo fator ativo; depois, responde igual a senha errada
+  segundo fator ativo, com relógio controlado: às 71h59 devolve, às 72h01 responde igual a senha
+  errada
 - **C16** Conta com segundo fator ativo: `/mfa/configurar` não muda segredo nem códigos
-- **C17** `configurar` consome o desafio e devolve um de etapa `mfa`; a ativação só acontece no
-  primeiro `/sessao/mfa` com código válido
-- **C18** `configurar` em duas abas: vale o último gravado; o código da primeira aba falha em
-  `/sessao/mfa` com "configure de novo", e o da segunda ativa
+- **C17** `configurar` consome o desafio (o mesmo desafio reenviado é recusado) e devolve um de etapa
+  `mfa` com a versão do segredo; a ativação só acontece no primeiro `/sessao/mfa` com código válido
+- **C18** Dois `configurar` em `Promise.all`: o segredo gravado e os códigos válidos são da mesma
+  aba, e nenhum código da outra vale; o código da aba vencedora ativa, e o da outra recebe
+  "configure de novo"
+- **C18b** O `/sessao/mfa` da aba A em paralelo com o `configurar` da aba B nunca ativa um segredo
+  diferente do conferido
 - **C19** O mesmo TOTP duas vezes, em sequência e em paralelo: a segunda é recusada
 - **C20** O mesmo código de recuperação duas vezes, em sequência e em paralelo: a segunda é recusada;
   antes da ativação, código de recuperação não vale
@@ -62,7 +67,8 @@ identificador. A lista é fechada; mudar exige revisar a spec. Saiu das rodadas 
 - **C29** Acesso vencido com a sessão viva dá `ACESSO_VENCIDO`; renova, e a ação seguinte passa
 - **C30** Duas renovações em paralelo: uma rotaciona e a outra vale pelo anterior por 30 s; o
   anterior reusado depois disso encerra a sessão
-- **C31** Banco fora na conferência da sessão dá 503 `INDISPONIVEL_TENTE_DE_NOVO`, nunca 401 nem 404
+- **C31** Banco fora na conferência da sessão e no `/renovar` dá 503 `INDISPONIVEL_TENTE_DE_NOVO`,
+  nunca 401 nem 404
 
 ## Limite (integração e arquitetura)
 
@@ -72,7 +78,9 @@ identificador. A lista é fechada; mudar exige revisar a spec. Saiu das rodadas 
   semáforo do hash, e quem recusa é o contador da conta
 - **C34** `sessao/mfa` é recusado pelo contador do `operador.id`, não pelo IP
 - **C35** Com dois operadores atrás do mesmo IP, `rl:op:{sub}` recusa um em `/eu` e o outro continua
-- **C36** Arquitetura: toda rota `@EntradaDeOperacao` está num dos três grupos de limite da seção 5
+- **C36** Arquitetura: toda rota `@EntradaDeOperacao` está num dos três grupos de limite da seção 5,
+  e toda rota `@RotaDeOperacao` conta pelo `rl:op:{sub}`
+- **C36b** Com o Redis fora, `rl:ip` e `rl:op` seguem o seguro em memória do F1, sem erro cru
 
 ## Registros e retenção (integração)
 

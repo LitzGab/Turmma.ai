@@ -816,3 +816,85 @@ As seis correções foram feitas no texto do desenho. Os bloqueantes abaixo est�
 Arquivos auditados:
 - `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md`
 - `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+## infra-guardian · 4ª rodada · APROVADO · 2026-09-23 13:57:35 · `tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+VEREDITO: APROVADO
+Caminho quente tocado: login (o operador reaproveita as guardas e o contador de tentativas do login da escola, sem somar carga a ele)
+Rate limit: ok
+Fila e prioridade: ok (a spec não cria job; o expurgo só ganha alvos novos no `apagarLoteVencido`, que já existe)
+Concorrência: protegida
+Índice e paginação: ok (a A0 não tem listagem nova; a listagem e o `EXPLAIN` com 30 escolas ficaram na A0b)
+Degradação de IA: não se aplica
+Migration: compatível (só cria tabelas novas, fora do modelo de tenant)
+Métrica e alerta: ok (a contagem de `entrada_falha` por minuto, sem alerta novo; o runbook ganha a linha de Redis fora, na seção 7c)
+Bloqueantes: nenhum. A correção exigida na rodada 3 foi feita, conferida contra a seção 5 da spec:
+- C32 cobre o 429 `LIMITE_EXCEDIDO` com `Retry-After` do `rl:ip` em `convite/consultar`, `mfa/configurar`, `renovar` e `sair`.
+- C33 cobre o rebaixamento sem 429 em `sessao/email` e `convite/aceitar`, onde quem recusa é o contador da conta.
+- C34 cobre a recusa em `sessao/mfa` pelo contador do `operador.id`.
+- C35 cobre dois operadores no mesmo IP: o `rl:op:{sub}` segura um e o outro continua.
+- C36 exige que toda rota de entrada esteja num dos três grupos de limite da seção 5. Os três grupos somam as sete rotas que C43 fixa.
+- C31 cobre o banco fora na conferência da sessão: 503 `INDISPONIVEL_TENTE_DE_NOVO`, nunca 401 nem 404.
+- A mudança em `configurar` (consome o desafio e ativa só no primeiro `/sessao/mfa` válido, com `where mfa_ativado_em is null`) está protegida e testada por C17 e C18.
+- O bootstrap sob `pg_advisory_xact_lock` é testado por C3.
+Recomendações:
+- `cenarios.md`, C36: exigir também que toda rota `@RotaDeOperacao` conte pelo `rl:op:{sub}`. Hoje C35 prova isso só em `/eu`.
+- `cenarios.md`, seção Limite: incluir um cenário do que o `rl:ip` e o `rl:op` fazem com o Redis fora. A seção 7c descreve o comportamento, e C13 só cobre o desafio.
+
+Arquivos auditados:
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/cenarios.md
+
+## test-engineer · 4ª rodada · REPROVADO · 2026-09-23 13:58:40 · `tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Cenários exigidos:** nesta rodada confiro as duas correções da rodada 3 e o que elas afetam. Primeiro, a lista da A0 precisa ser fechada, com identificador por cenário, incluir os cenários do `infra-guardian` e do `tenancy-guardian`, e deixar de fora os da A0b. Segundo, o "configurar" precisa ser coerente com a cláusula do banco, e o caminho até a sessão precisa estar descrito. Também confiro as recomendações que entraram: bootstrap, `ultimoUsoEm` aos 29 e 31 min, e convite pendente.
+
+**Cobertos:**
+- **Correção 1, feita.** O `cenarios.md` é um anexo fixo e a seção 10 o cita como parte da spec.
+  - Os quatro cenários de limite do `infra-guardian` estão em C32 a C35, e o teste de arquitetura dos grupos de limite em C36.
+  - Banco fora dá 503 em C31.
+  - Desafio, token e cookie cruzados nos dois sentidos estão em C46 e C47, com efetividade em C48.
+  - Os bloqueantes 1 a 6 da rodada 2 estão em C12 a C16, C26 a C29, C47, C42 e C2.
+  - Os da rodada 1 que ficaram na A0 estão em C44, C1, C4, C5, C19 a C24.
+  - Os do `privacy-guardian` estão em C6, C25, C38 e C39. As recomendações do `tenancy-guardian` estão em C45 e C38.
+  - Nada da A0b entrou na lista.
+- **Correção 2, feita no texto.** O "configurar" consome o desafio, devolve outro de etapa `mfa`, e a ativação acontece no primeiro `/sessao/mfa` válido (seção 5, `techspec.md:85-88`). C17, C18 e C20 cobrem isso.
+- **Recomendações que entraram:**
+  - bootstrap sob advisory lock (C1, C3);
+  - ninguém desativa a si mesmo (C5). Assim o último ativo nunca é desativado e o bootstrap não reabre;
+  - `ultimoUsoEm` aos 29 e 31 min (C26);
+  - convite pendente (C7);
+  - linha no runbook para o Redis fora (seção 7c).
+- Não há IA envolvida, logo não há provedor pago. Nenhum `.skip` e nenhum mock de coisa nossa.
+
+**Bloqueantes:**
+
+1. **`cenarios.md:41-42` (C18) e `techspec.md:85-88`: o "configurar em duas abas" continua sem teste de concorrência, e o desenho deixa estado misturado.**
+   - C18 está escrito em sequência. A rodada 1 exigiu `Promise.all` para o "`mfa/configurar` duplo", e todas as outras travas da seção 5 têm cenário paralelo (C10, C12, C19, C20, C30). Esta é a única sem.
+   - O risco é real com o desenho atual. A frase "apaga e insere códigos, grava segredo, numa transação `where mfa_ativado_em is null`" não diz em que ordem a linha do `operador` é travada. Em read committed, duas transações paralelas podem fazer o seguinte:
+     - as duas apagam códigos sem ver o que a outra inseriu;
+     - as duas inserem os seus;
+     - a segunda espera o lock do `update operador` e grava o segredo dela.
+     - O resultado é o segredo da aba B com os códigos de recuperação de A e de B valendo juntos.
+   - Há uma segunda corrida. O `/sessao/mfa` da aba A confere o código contra o segredo A, o `configurar` da aba B grava o segredo B, e só então o `set mfa_ativado_em = now() where mfa_ativado_em is null` ativa. Fica ativado o segredo B, que o autenticador de A não tem, e o operador fica trancado.
+   - **Correção exigida na seção 5:**
+     - o `configurar` trava a linha do operador antes de mexer nos códigos: começa pelo `update operador ... where mfa_ativado_em is null returning`, ou por `select ... for update`;
+     - o desafio de etapa `mfa` devolvido leva a versão do segredo gravado;
+     - a ativação acontece com `where mfa_ativado_em is null and <versão> = <versão do desafio>`, e é essa diferença de versão que produz o "configure de novo".
+   - **Correção exigida no C18:** dois `configurar` em `Promise.all`. O teste confere que o segredo gravado e os códigos válidos são da mesma aba, e que nenhum código da outra aba vale. O código da aba vencedora ativa e o da outra recebe "configure de novo".
+   - **Cenário novo:** o `/sessao/mfa` da aba A em paralelo com o `configurar` da aba B nunca ativa um segredo diferente do que foi conferido.
+
+**Recomendações:**
+- **`techspec.md:123` contra `cenarios.md:95-96` (C45).** A seção 6 ainda diz que as tabelas são importadas "pelo `comando.ts` (via o repository)", e o C45 exclui o comando. Alinhar a seção 6 ao C45, que é o mais estrito e o que o `tenancy-guardian` recomendou.
+- **Duas `desativar` cruzadas em paralelo** (A desativa B enquanto B desativa A). As duas passam pela conferência do `OPERADOR` ativo e zeram os ativos, o que reabre o bootstrap. Vale pôr o `desativar` sob o mesmo `pg_advisory_xact_lock` do bootstrap, ou gravar com "e resta outro ativo". Vale também um cenário junto do C5.
+- **C15 (`cenarios.md:36-37`).** Escrever as duas bordas com relógio controlado (71h59 e 72h01), como o C26 fez com os 29 e 31 min.
+- **C17.** Dizer explicitamente que o mesmo desafio `configurar_mfa` reenviado a `/mfa/configurar` é recusado. "Consome" está no desenho, mas não está na asserção.
+- **C31.** Estender o 503 do banco fora ao `/renovar`, e não só à conferência da `GuardaDeOperador`, já que o `/renovar` confere as mesmas quatro condições.
+
+Arquivos auditados:
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md`
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/cenarios.md`
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/revisao-spec.md`
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/achados/revisao-spec.md`

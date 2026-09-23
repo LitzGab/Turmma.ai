@@ -23,3 +23,5 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-23 13:55:13 | `frontend-reviewer` | 3ª | APROVADO | `revisao-spec` | da rodada 2: todas atendidas. |
 | 2026-09-23 13:55:15 | `privacy-guardian` | 3ª | APROVADO | `revisao-spec` | Caminho da referência na seção 10. A seção 10 aponta `revisao-spec.md`, mas lá o item da privacidade é uma linha só ("testes da desativação e do expurgo prazo… |
 | 2026-09-23 13:55:28 | `test-engineer` | 3ª | REPROVADO | `revisao-spec` | `techspec.md` seção 10, linha 194: apontar para a revisão não basta como especificação. A pergunta era se a referência a `revisao-spec.md` serve. Não serve,… |
+| 2026-09-23 13:57:35 | `infra-guardian` | 4ª | APROVADO | `revisao-spec` | `cenarios.md`, C36: exigir também que toda rota `@RotaDeOperacao` conte pelo `rl:op:{sub}`. Hoje C35 prova isso só em `/eu`. |
+| 2026-09-23 13:58:40 | `test-engineer` | 4ª | REPROVADO | `revisao-spec` | `cenarios.md:41-42` (C18) e `techspec.md:85-88`: o "configurar em duas abas" continua sem teste de concorrência, e o desenho deixa estado misturado. |
