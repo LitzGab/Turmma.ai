@@ -67,7 +67,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D6 | Indexação por série, disciplina, capítulo e habilidade da BNCC, com rastreio até a página |
 | D7 | Nota nunca é publicada sem aprovação humana |
 | D8 | O tutor é sempre visível ao professor: sala ao vivo, casa com registro e resumo |
-| D9 | Todo agente tem nível de autonomia declarado e visível à coordenação |
+| D9 | Todo agente tem nível de autonomia declarado e visível à coordenação, por função (revista em 23/09/2026) |
 | D10 | A escola é controladora dos dados; nós somos operadores |
 | D11 | WhatsApp e portal da família depois; o motor de eventos entra agora |
 | D12 | Backend e frontend separados, multi-tenant por escola, tudo em container, sem trava de fornecedor |
@@ -75,7 +75,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D14 | Orçamento de tokens por aluno e por escola é requisito, medido desde a primeira chamada |
 | D15 | Construção do zero, sem reaproveitar produto anterior |
 | D16 | A stack está ratificada (seção "Stack") |
-| D17 | Agentes têm nome de função, não nome próprio |
+| D17 | Agentes têm nome de função, não nome próprio; as funções do Assistente também |
 | D18 | Chat e ferramentas são o mesmo motor; o chat pergunta antes de abrir a ferramenta como cartão |
 | D19 | Tutor fora da sala é configuração da escola por turma, desligada por padrão |
 | D20 | Escola particular e rede pública são alvo juntas desde o início |
@@ -90,7 +90,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D29 | Modelo em produção por API com contrato e reserva; no pico, fila curta e depois modelo menor |
 | D30 | Infra custa até R$ 2 por aluno por mês, sem contar IA |
 | D31 | Três ambientes; F0 e validação inicial 100% locais; staging antes da primeira demonstração externa ou do piloto |
-| D32 | Seis agentes: Assistente de ensino, Tutor, Corretor, Planejador, Adaptador e Analista de desempenho escolar; Mensageiro da família depois (revista em 19/09/2026: o Monitor de turma se dissolve e o Planejador absorve o Rotina) — *revisão a ratificar* |
+| D32 | Três agentes, um por pessoa da escola: Assistente de ensino, Tutor e Analista de desempenho escolar; Corretor, Planejador e Adaptador são funções do Assistente; Mensageiro da família depois (revista em 23/09/2026) |
 | D33 | Nota de objetiva aprovada em lote, com os casos fora da curva abertos antes |
 | D34 | Aluno em risco nomeado só ao professor da turma; coordenação vê agregado, nominal com auditoria |
 | D35 | A coordenação registra a adaptação necessária, nunca o diagnóstico |
@@ -103,7 +103,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D42 | O provedor de hospedagem é escolhido quando o staging for criado, por critério fixo |
 | D43 | Recorte: 6º ao 9º ano e Ensino Médio, em qualquer computador da escola |
 | D44 | O produto se apresenta como assistente com agentes supervisionados |
-| D45 | O professor é medido em espelho, pelo desempenho das turmas dele: vê o próprio dado; coordenação vê agregado só com dois ou mais professores no recorte; sem ranking nem decisão sobre ele — *grupo mínimo a ratificar* |
+| D45 | O professor é medido em espelho, pelo desempenho das turmas dele: vê o próprio dado; coordenação vê agregado só com dois ou mais professores no recorte; sem ranking nem decisão sobre ele |
 | D46 | Primeiro o diagnóstico formativo, depois a nota oficial; sem nota proposta em discursiva e redação |
 | D47 | O tutor é supervisionado, não aprovado resposta por resposta |
 | D48 | Login pela conta Google ou Microsoft da escola quando existe, matrícula quando não; só o identificador opaco |
@@ -113,31 +113,34 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D52 | Testes de integração da infra fora do portão de toda tarefa, na esteira |
 | D53 | Processo enxugado onde repetia trabalho: `test-engineer` primeiro, caducidade pelo que o revisor audita, portão com carimbo, `revisor-geral`, `/revisar-spec`, `/corrigir` e `/retro` |
 | D54 | O nome do produto é Turmma; o código continua `educa` até uma renomeação própria |
-| D55 | Em discursiva e redação a IA não corrige, não avalia, não dá nota nem conceito, e não pré-corrige nem sugere nota ao professor (revisão da D46) — *a ratificar* |
-| D56 | Na objetiva, a validação humana é registrada: o que foi mostrado, o que foi aberto e quem confirmou (complementa a D33) — *a ratificar* |
-| D57 | Usos vedados, escritos e testados: sem inferência de emoção, perfil comportamental, pontuação social, biometria ou uso comercial de dado educacional — *a ratificar* |
-| D58 | Os agentes continuam agentes, com identidade de função; proibido só se passar por pessoa ou simular vínculo afetivo (Decreto 12.880, art. 11) — *a ratificar* |
-| D59 | Nada induz uso excessivo, e sair nunca é mais difícil que entrar (Decreto 12.880, arts. 9º e 10) — *a ratificar* |
-| D60 | Avaliação de Impacto Algorítmico por funcionalidade de alto risco, em seis etapas, antes de ela existir, versionada em `docs/aia/` — *a ratificar* |
-| D61 | O dossiê de conformidade é entregável de produto, com canal de denúncia e material de consulta à comunidade — *a ratificar* |
-| D62 | Conversa de aluno só em provedor de modelo com processamento no Brasil — *a ratificar* |
-| D63 | O que a escola e o professor produzem é deles, e sai em formato aberto a qualquer momento — *a ratificar* |
-| D64 | Recusar a ferramenta não gera indicador: sem medição nominal de adoção por professor (afina a D45) — *a ratificar* |
-| D65 | Letramento em IA entra por três portas pequenas e não vira fase de roadmap — *a ratificar* |
-| D66 | O Tutor tem memória de tudo que o aluno fez no sistema (atividades, trabalhos, avaliações, sessões), feita do registro do trabalho e nunca de texto sobre a pessoa; recebe contexto estruturado do professor e lê a adaptação registrada — *a ratificar* |
-| D67 | Entram as ferramentas de apresentação e de material didático; o artefato exporta em PDF, PPTX e XLSX; a ferramenta se chama Adaptação e recebe o tipo de adaptação, nunca texto livre sobre o aluno — *a ratificar* |
-| D68 | Busca na web por ativação do professor: para ele no Assistente de ensino, e para o aluno no Tutor só em fontes aprovadas, com duas chaves, socrático, só em sala — *a ratificar* |
-| D69 | "Minhas turmas" é aba do "Meu painel" do professor e nasce no F6; tempo ocioso do aluno não é indicador — *a ratificar* |
-| D70 | Sair da aba durante a prova é fato mostrado só ao professor, com o aluno avisado, sem consequência automática nem histórico; fora de avaliação não existe — *a ratificar* |
-| D71 | Depois do F1 vem o MVP de apresentação: cinco specs (A1 a A5) com fatias finas e reais do fluxo completo, dado 100% sintético, mesmas regras e mesmo processo; depois as fases seguem e completam as fatias — *composição a ratificar* |
+| D55 | Em discursiva e redação a IA não corrige, não avalia, não dá nota nem conceito, e não pré-corrige nem sugere nota ao professor (revisão da D46) |
+| D56 | Na objetiva, a validação humana é registrada: o que foi mostrado, o que foi aberto e quem confirmou (complementa a D33) |
+| D57 | Usos vedados, escritos e testados: sem inferência de emoção, perfil comportamental, pontuação social, biometria ou uso comercial de dado educacional |
+| D58 | Os agentes continuam agentes, com identidade de função; proibido só se passar por pessoa ou simular vínculo afetivo (Decreto 12.880, art. 11) |
+| D59 | Nada induz uso excessivo, e sair nunca é mais difícil que entrar (Decreto 12.880, arts. 9º e 10) |
+| D60 | Avaliação de Impacto Algorítmico por funcionalidade de alto risco, em seis etapas, antes de ela existir, versionada em `docs/aia/`; suspensão por função numa escola |
+| D61 | O dossiê de conformidade é entregável de produto, com canal de denúncia e material de consulta à comunidade |
+| D62 | Conversa de aluno só em provedor de modelo com processamento no Brasil |
+| D63 | O que a escola e o professor produzem é deles, e sai em formato aberto a qualquer momento |
+| D64 | Recusar a ferramenta não gera indicador: sem medição nominal de adoção por professor (afina a D45) |
+| D65 | Letramento em IA entra por três portas pequenas e não vira fase de roadmap |
+| D66 | O Tutor tem memória de tudo que o aluno fez no sistema (atividades, trabalhos, avaliações, sessões), feita do registro do trabalho e nunca de texto sobre a pessoa; recebe contexto estruturado do professor e lê a adaptação registrada |
+| D67 | Entram as ferramentas de apresentação e de material didático; o artefato exporta em PDF, PPTX e XLSX; a ferramenta se chama Adaptação e recebe o tipo de adaptação, nunca texto livre sobre o aluno |
+| D68 | Busca na web por ativação do professor: para ele no Assistente de ensino, e para o aluno no Tutor só em fontes aprovadas, com duas chaves, socrático, só em sala |
+| D69 | "Turmas" é item da navegação do professor, com "Meu uso" dentro, e nasce no F6; tempo ocioso do aluno não é indicador (revista pela D73) |
+| D70 | Sair da aba durante a prova é fato mostrado só ao professor, com o aluno avisado, sem consequência automática nem histórico; fora de avaliação não existe |
+| D71 | Depois do F1 vem o MVP de apresentação: cinco specs (A1 a A5), fatias finas e reais do fluxo completo, dado 100% sintético, mesmas regras e mesmo processo. A A1 é a escola montada pela coordenação, sem seed de escola pronta; os três afrouxamentos valem só enquanto o dado for sintético (revista em 23/09/2026) |
+| D72 | A pele do produto é o sistema do ChatGPT em branco, preto e laranja, uma só em todas as telas, com o padrão de espaço do P03; tokens e logotipo vêm de `mockups/` |
+| D73 | Navegação do professor: Nova conversa, Ferramentas, Calendário e Turmas, com Seu time e Histórico na lateral; cada item só aparece com a fase dele |
+| D74 | É ferramenta o que entrega um output próprio; o resto é pedido ao Assistente. Quatro categorias: Planejar, Preparar a aula, Avaliar, Corrigir |
+| D75 | O material da escola entra pela coordenação, com titularidade e licença declaradas; professor e aluno não sobem material para a base |
 
-> **D54 a D65 são propostas de 19/09/2026**, saídas da leitura das fontes primárias de
-> regulação e dos dois documentos do MEC. O Gabriel ratificou as que dependiam dele (a D54
-> está fechada); **nas demais falta o Joaquim**. **D66 a D70**, e as revisões da D23, da D32 e
-> da D45, saíram no mesmo dia da estrutura de agentes por papel, decididas pelo Gabriel, e
-> também esperam o Joaquim. A **D71** (MVP de apresentação) tem a direção dada e a composição
-> como proposta. O texto completo, com quem precisa concordar em cada uma, está em
-> `docs/decisoes.md`.
+> **D54 a D71 estão ratificadas.** Saíram em 19/09/2026 da leitura das fontes de regulação e
+> da estrutura de agentes por papel; o Gabriel ratificou as dele no mesmo dia, e o Joaquim
+> ratificou todas em bloco em 23/09/2026. No mesmo dia entraram a D72 a D75, que fecham o que a
+> revisão dos mockups pedia antes do PRD da A1, e a D32, a D9, a D60, a D69 e a D71 foram
+> revistas. O que ainda depende de parecer (D55, D68, D70) ou de outra decisão (D62 com a D37)
+> está dito em cada uma, em `docs/decisoes.md`.
 
 ---
 
@@ -192,8 +195,11 @@ nas três (D23 revista). Em 15/09/2026 o processo foi enxugado onde repetia trab
 função (D17).
 
 **Lista de agentes.** Eram sete; em 19/09/2026 viraram seis (D32 revista): o chat do professor
-ganhou identidade, o **Assistente de ensino**; o Monitor de turma se dissolveu entre a thread
-do Tutor, o Planejador e a aba "Minhas turmas" (D69); e o Planejador absorveu o Rotina.
+ganhou identidade, o **Assistente de ensino**; o Monitor de turma se dissolveu; e o Planejador
+absorveu o Rotina. Em 23/09/2026 viraram **três, um por pessoa da escola** (D32 revista de
+novo): Assistente de ensino, Tutor e Analista de desempenho escolar. Corretor, Planejador e
+Adaptador viraram **funções do Assistente**, porque cada um tinha uma ferramenta gêmea que
+chamava o mesmo caso de uso; a autonomia e a suspensão passaram a ser por função (D9, D60).
 "Monitor" não é nome de agente: servia a duas coisas diferentes.
 
 **Medir o professor pela turma.** A estrutura de 19/09/2026 pedia que o Analista analisasse o
@@ -212,7 +218,15 @@ com advogado junto da base legal da adaptação (`TODO.md`).
 **MVP.** Não existe MVP de venda (D1). Existem duas coisas diferentes: o **MVP de apresentação**
 (D71), logo depois do F1, com dado sintético, para demonstrar o fluxo completo; e a **fatia do
 piloto**, com escola real em 2027, que só entra depois do F2, do F3 e do portão da primeira
-escola real.
+escola real. **Sem seed de escola pronta** (D71 revista em 23/09/2026): a demonstração começa
+com a escola criada por nós pelo `ops:escola` e montada pela coordenação na tela, com nomes
+inventados. Sintético é o dado, não o caminho.
+
+**Pele do produto.** Voltou três vezes: a da landing page (rejeitada vendo), a do ChatGPT (P02) e
+a cópia da Teachy em Ferramentas e Turmas (P31). Fica **uma só**, a do ChatGPT, em todas as
+telas (D72): duas peles dobram o trabalho, duas fontes a mais pesam no Chromebook, e copiar
+medida de concorrente é risco de trade dress. A estrutura que a Teachy inspirou pode ficar; a
+pele dela, não.
 
 **Vigiar a navegação do aluno.** Pedido em 19/09/2026: alertar o professor quando o aluno sai
 do sistema para usar outra IA, e medir tempo ocioso. Ficou: saída da aba só durante a prova,
@@ -239,17 +253,15 @@ Todas têm dono e momento. Nenhuma trava o F0.
 
 | Decisão | Dono | Quando fecha |
 |---|---|---|
-| **Um agente por pessoa da escola** (Assistente, Tutor, Analista) no lugar dos seis da D32: os agentes do professor viram funções do Assistente, e autonomia (D9) e suspensão (D60) passam a ser por função. Direção dada pelo Gabriel em 20/09/2026, vista em mockup (`docs/pendencias-dos-mockups.md`, P01) | Gabriel decidiu; Joaquim ratifica | **antes do PRD da A1**, por `/registrar-decisao` como revisão da D32, da D9 e da D60 |
-| Pele do produto (ChatGPT em branco, preto e laranja, no lugar da pele da landing page), padrão de espaço e navegação do professor, que a seção 1 do `docs/interface.md` dá como decidida (P02, P03, P04). **Em aberto dentro dela:** Ferramentas e Turmas foram copiadas da Teachy, com outra fonte, outro botão e ícones fora da paleta. O produto precisa de uma pele só, e a cópia fiel de concorrente vai ao advogado (P31) | Gabriel decidiu; Joaquim ratifica | antes do PRD da A1; vira a D72 |
 | **Projetos** do professor, **anexo de documento na conversa** e **faltas** por aluno: pedidos do Gabriel que não existem em nenhuma fase (P05, P07, P08). O anexo esbarra na D5 e abre a porta para correção de discursiva por IA (D55); faltas não tem origem de dado nem linha na tabela da LGPD | Gabriel e Joaquim | `/descobrir` de cada um, antes de entrar em qualquer PRD; fora do MVP de apresentação até lá |
-| A **turma aberta com nove abas**, no modelo da Teachy, com a sala de carteiras como subaba de Alunos: revisa o conteúdo da D69 e depende dos limiares dos indicadores (P11, P28); e se o calendário e o seletor de turma juntam as duas escolas do professor ou mostram só a escola ativa (P12, P30, regra 10) | Joaquim e Gabriel | a turma, antes do PRD da A3; o seletor, na A1; o calendário, no PRD do F8 |
+| A **turma aberta com nove abas**, no modelo da Teachy, com a sala de carteiras como subaba de Alunos: revisa o conteúdo da D69 e depende dos limiares dos indicadores (P11, P28); e se o calendário e o seletor de turma juntam as duas escolas do professor ou mostram só a escola ativa (P12, P30, regra 10) | Joaquim e Gabriel | a turma, antes do PRD da A3; o seletor, no PRD da A1 (troca o token, P30); o calendário, no PRD do F8 |
 | **Ranking de participação** (presença e entrega, com pódio), **Recursos** (enviar artefato à turma) e **Mural** da turma: pedidos do Gabriel que não existem em fase nenhuma. O ranking bate na proibição de placar e pódio do `docs/interface.md` 10.2 (D59) e chega perto de pontuação social (D57) (P26, P28) | Gabriel e Joaquim | `/descobrir` de cada um; fora do MVP de apresentação até lá |
-| **Catálogo de ferramentas**: a regra "é ferramenta o que entrega um output próprio; o que o chat responde é pedido", as quatro categorias e **oito ferramentas que a D67 não lista** — planejamento do período, projeto, plano de recuperação, mapa mental, roteiro de experimento, avaliação diagnóstica, proposta de redação e importar prova (P22). O planejamento e o projeto dependem do F8; o plano de recuperação, do F6 | Gabriel decidiu a regra; Joaquim ratifica e estima | a regra, antes do PRD da A2; as oito, por `/descobrir`, antes do F7 |
+| As **oito ferramentas que a D67 não lista** — planejamento do período, projeto, plano de recuperação, mapa mental, roteiro de experimento, avaliação diagnóstica, proposta de redação e importar prova (P22). A regra e as categorias já estão na D74. O planejamento e o projeto dependem do F8; o plano de recuperação, do F6 | Gabriel propõe; Joaquim decide e estima | por `/descobrir`, uma a uma, antes do F7 |
 | Provedor de modelo principal e reserva | Joaquim | avaliação de `docs/avaliacao-de-modelos.md`, antes de a F5 ficar pronta (D37) |
 | Provedor de hospedagem | Joaquim | quando o staging for criado, antes da primeira demonstração externa ou do piloto (D42) |
-| Trazer a marca para o repositório: tokens de cor, tipografia, logo e o avatar dos seis agentes (a marca existe, D54) | Gabriel | **antes do PRD da A1**, que é a primeira tela com a marca (D71) |
-| Material de exemplo da escola sintética do MVP: precisa ser nosso ou de domínio público, com a licença declarada (D5, D71) | Gabriel | antes do PRD da A2 |
-| Composição final de cada spec do MVP de apresentação (A1 a A5) e os três afrouxamentos enquanto o dado for sintético: AIA só com a etapa 1, provedor de modelo livre, carga sem crescer (D71) | Joaquim e Gabriel | no PRD de cada spec; os afrouxamentos antes do PRD da A1 |
+| Os avatares dos **três agentes** (Assistente de ensino, Tutor, Analista de desempenho escolar), em SVG. Tokens e logotipo já vêm de `mockups/` (D72) | Gabriel | antes da Tech Spec da A1 |
+| O documento que a coordenação sobe na demonstração (D75): precisa ser nosso ou de domínio público, com a licença declarada (D5). Não há escola nem material pré-carregados (D71 revista) | Gabriel | antes do PRD da A2 |
+| Composição final de cada spec do MVP de apresentação (A1 a A5). A direção de cada uma está no `ROADMAP.md`, e os três afrouxamentos estão aceitos (D71 revista) | Joaquim e Gabriel | no PRD de cada spec |
 | Registro no INPI e do domínio `turmma.com` (o nome já está fechado, D54) | Gabriel | antes do material de venda e do piloto |
 | Se o art. 24 do ECA Digital exige conta de responsável vinculada para aluno de até 16 anos — e, se exigir, se o portal da família sai da fase posterior | Joaquim e Gabriel, com advogado | **antes do PRD do F9**; o vínculo já nasce no modelo de dados do F1 (`docs/regulacao.md` 2.2) |
 | Como os arts. 17 e 18 do ECA Digital (supervisão parental) se modulam pelo art. 39 no nosso caso | advogado | junto com o parecer do ECA Digital |
@@ -257,7 +269,7 @@ Todas têm dono e momento. Nenhuma trava o F0.
 | Sistemas de ensino das escolas-alvo, licença do material e primeiro adaptador | quem conduzir o piloto | nas entrevistas com escolas; até lá só upload de material com licença (D5, D22) |
 | Quais funcionalidades formam a fatia do piloto, e quais das quatro coisas da D24 ele precisa ter. Não confundir com o MVP de apresentação, que é sintético (D71) | Joaquim e Gabriel | com o MVP de apresentação de pé, antes de completar a primeira fase para escola real (D1 revista) |
 | Valores das faixas de preço e teto de IA do pacote base | Gabriel e Joaquim | com a planilha de custo por pacote, validados no piloto (D50, D39) |
-| Indicadores de desempenho do professor e do aluno (quais, limiar, texto do alerta). Ponto de partida: percentual de erro e acerto por habilidade e o sinal "concluiu o que foi atribuído"; tempo ocioso não entra (D69) | Joaquim e Gabriel | os de turma e aluno **antes do PRD do F6**, porque "Minhas turmas" nasce lá (D69); os de professor antes do PRD do F12 (D45, D46) |
+| Indicadores de desempenho do professor e do aluno (quais, limiar, texto do alerta). Ponto de partida: percentual de erro e acerto por habilidade e o sinal "concluiu o que foi atribuído"; tempo ocioso não entra (D69) | Joaquim e Gabriel | os de turma e aluno **antes do PRD do F6**, porque "Turmas" nasce lá (D69, D73); os de professor antes do PRD do F12 (D45, D46) |
 | Imagens da ferramenta de apresentação: de onde vêm e com que licença (D67, D5) | Gabriel e Joaquim | antes do PRD do F7 |
 | Lista padrão de fontes aprovadas da busca do Tutor, por faixa etária, e o provedor de busca (D68) | Gabriel (lista) e Joaquim (provedor) | antes do PRD do F9 |
 | Se ligar a busca para aluno de até 16 anos sem conta de responsável vinculada conta como rebaixar a proteção (ECA Digital, art. 24, § 5º; D68) | advogado | junto com o parecer do ECA Digital, antes do PRD do F9 |

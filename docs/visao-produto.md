@@ -140,7 +140,7 @@ Entra numa fase posterior.
 
 ## 5. Um dia dentro do sistema
 
-7h00 — O agente **Planejador** abre a manhã da Camila: três aulas hoje, a prova do 2ºB às 10h,
+7h00 — O **Assistente de ensino** abre a manhã da Camila, na função "seu dia e sua semana": três aulas hoje, a prova do 2ºB às 10h,
 catorze atividades esperando devolutiva. Ela não configurou nada disso: veio da grade
 horária que a Renata importou e das avaliações que a própria Camila criou.
 
@@ -151,8 +151,8 @@ dela. A saída cita a página de origem, para ela conferir.
 10h00 — A prova é aplicada. Alguns alunos respondem no computador da escola. Como a turma
 do 3ºA fará em papel, a Camila escolheu outro modo para aquela avaliação.
 
-10h50 — O agente **Corretor** corrige as objetivas e monta o diagnóstico por habilidade. Nas
-discursivas ele **não faz nada sobre o texto do aluno**: organiza o lote e apresenta as
+10h50 — O **Assistente de ensino**, na função de correção de objetiva, corrige as objetivas e
+monta o diagnóstico por habilidade. Nas discursivas ele **não faz nada sobre o texto do aluno**: organiza o lote e apresenta as
 respostas para a Camila corrigir, sem nota, sem conceito, sem rascunho de devolutiva. É
 proibição do CNE, e alcança até a pré-correção "só para o professor" (D55). Manda a entrega
 para o feed: "esperando você".

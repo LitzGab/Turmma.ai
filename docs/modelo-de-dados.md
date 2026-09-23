@@ -97,7 +97,8 @@ Aula             → alocacao*, data*, conteudo?, status, observacao?
 ```
 
 `Aula` é a instância concreta gerada a partir de `Alocacao` mais o calendário escolar. É a
-camada onde o professor registra o que deu e é a fonte do agente Planejador.
+camada onde o professor registra o que deu e é a fonte do "seu dia e sua semana", função do
+Assistente de ensino (`docs/agentes.md`).
 
 ## Conteúdo
 
@@ -120,7 +121,10 @@ Questao*         → escola?|publica, enunciado*, tipo*, alternativas?, gabarito
 ingerido **nunca** cruza de escola. `autorizacaoDoc` registra a autorização escrita da
 escola para a fonte. Quando `titularidade` é `licenciado`, `licencaDoc` e `licenciante` são
 obrigatórios. Sem autorização e, quando couber, sem licença, nem o upload nem o adaptador
-processam (D5 revista, `docs/regulacao.md` seção 5).
+processam (D5 revista, `docs/regulacao.md` seção 5). **Quem sobe é a coordenação** (D75):
+`autorizadoPor` é sempre alguém com papel de coordenação na escola, e professor e aluno não
+criam `FonteMaterial` nem `Material`. `titularidade` diz de quem é o material — `professor`
+é o material de autoria do professor, que entra pelas mãos da coordenação —, não quem subiu.
 
 `origemMaterial` e `origemPagina` são a rastreabilidade: o professor confere de onde a
 questão saiu.
@@ -143,8 +147,8 @@ Nota*            → aluno*, avaliacao*, valor*, lancadaPor*, lancadaEm*
 `Diagnostico` é o resultado formativo por habilidade, que existe antes da nota oficial (D46).
 Em item discursivo ou de redação **não existe `Correcao` com `origem = ia`**: a IA não
 corrige, não avalia, não pontua e não escreve `feedback` sobre o texto do aluno nessas
-modalidades, nem como rascunho para o professor ver (D55, revisão da D46 — proposta de
-19/09/2026, a ratificar). Ali a `Correcao` nasce com `origem = professor`. O que a IA produz
+modalidades, nem como rascunho para o professor ver (D55, revisão da D46, ratificada em
+23/09/2026). Ali a `Correcao` nasce com `origem = professor`. O que a IA produz
 para discursiva e redação é a **rubrica da avaliação**, que pertence ao item e não à resposta
 de ninguém.
 
@@ -183,6 +187,15 @@ ConsumoIa        → escola*, usuario*, perfil*, tokens*, custo*, em*
 ```
 
 `autonomia` é visível ao coordenador em tela. Nível 3 e 4 seguem `docs/agentes.md`.
+
+**Autonomia e suspensão por função** (D9, D32 e D60 revistas em 23/09/2026). Com três agentes,
+um por pessoa da escola, a autonomia deixa de caber num campo do `Agente`: ela é declarada por
+**função** (correção de objetiva, adaptação, seu dia e sua semana…). O P01 de
+`docs/pendencias-dos-mockups.md` pede `FuncaoAgente → agente*, chave*, nome*, autonomia*,
+altoRisco*, ativo`; `funcao*` em `Entrega` e em `ExecucaoAgente`, que também filtra a thread do
+Assistente; e a suspensão como registro próprio, `escola*, funcao*, suspensaPor*, em*, motivo`,
+com auditoria. **A detalhar na Tech Spec da A2**, que traz o runtime mínimo de agente; o bloco
+acima continua sendo o desenho do F1 até lá.
 
 ```
 AdaptacaoAluno*  → escola*, anoLetivo*, aluno*, tipos* (linguagem_direta | resposta_escrita |
@@ -267,7 +280,7 @@ IndicadorTurma     → escola*, anoLetivo*, turma*, disciplina*, habilidade?, pe
 ```
 
 Os tipos concretos, os limiares e o texto dos alertas estão em aberto (`CLAUDE.md`, decisões em
-aberto): os de turma e aluno fecham antes do PRD do F6, porque "Minhas turmas" nasce lá (D69);
+aberto): os de turma e aluno fecham antes do PRD do F6, porque "Turmas" nasce lá (D69, D73);
 os de professor, antes do PRD do F12. A coordenação só lê agregado de recorte com dois ou mais
 professores (D45 revista). Tempo ocioso do aluno não é tipo de indicador. `IndicadorProfessor` é lido pelo próprio professor; a
 coordenação lê agregado e o nominal com `Auditoria`; a rede só agregado; nenhum caminho o

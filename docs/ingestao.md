@@ -41,6 +41,11 @@ Fonte (scraper por adaptador | upload PDF/apostila)
     documento de licença registrado. Sem autorização da escola e, quando couber, sem
     licença do dono do conteúdo, o pipeline recusa o arquivo antes da extração, com
     mensagem que diz o que falta. O upload não é atalho para apostila de terceiro.
+    **Quem sobe é a coordenação** (D75): ela cria as disciplinas e manda os documentos.
+    Professor e aluno não sobem material para a base da escola; a titularidade declarada diz
+    de quem é o material (o do professor entra pelas mãos dela), não quem subiu. O anexo numa
+    conversa é outra coisa, não entra na base e continua em aberto (P07 de
+    `docs/pendencias-dos-mockups.md`).
 5. **Adaptador por fonte.** Cada sistema de ensino é um adaptador isolado, com teste
    próprio. Quebrou um, os outros seguem. **O upload é a primeira implementação da porta
    de fonte** (D22). Adaptador de scraper só entra quando existir uma escola real com a

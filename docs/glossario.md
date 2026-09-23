@@ -155,17 +155,30 @@ depender de reconhecimento de nome.
 
 ## IA e agentes
 
-**Agente** — Um especialista de IA com thread própria, nome, escopo e nível de autonomia.
-Prepara o trabalho quando o evento acontece e avisa; o que vale passa por aprovação ou
-supervisão (D44). Não é um botão nem um prompt salvo. O nome é a função, e são seis (D32
-revista): Assistente de ensino, Tutor, Corretor, Planejador, Adaptador, Analista de desempenho
-escolar e, na fase posterior, Mensageiro da família.
+**Agente** — Um especialista de IA com thread própria, nome e escopo, que atende uma pessoa da
+escola. Prepara o trabalho quando o evento acontece e avisa; o que vale passa por aprovação ou
+supervisão (D44). Não é um botão nem um prompt salvo. O nome é a função, e são três (D32
+revista em 23/09/2026): Assistente de ensino, Tutor e Analista de desempenho escolar e, na fase
+posterior, Mensageiro da família.
 
-**Assistente de ensino** — A identidade do chat da Home do professor e a cara das ferramentas.
-Não é "Monitor": essa palavra não nomeia agente nenhum.
+**Função do agente** — O que um agente faz, com o nível de autonomia e o selo de alto risco
+declarados um a um (D9 e D60 revistas). A escola suspende uma função sem desligar o agente.
+Lista em `docs/agentes.md`.
 
-**Planejador** — O agente que abre o dia e a semana do professor com o que já existe, sem gerar
-conteúdo, e que gera plano de aula só sob pedido. Absorveu o antigo Rotina.
+**Assistente de ensino** — O agente do professor: a identidade do chat da Home e a cara das
+ferramentas. Trabalha pelas funções de conversa e ferramentas, seu dia e sua semana, correção de
+objetiva e adaptação. Não é "Monitor": essa palavra não nomeia agente nenhum.
+
+**Seu dia e sua semana** — A função do Assistente de ensino que abre o dia e a semana do
+professor com o que já existe, sem gerar conteúdo; plano de aula só sob pedido. Antes era o
+agente Planejador, que tinha absorvido o Rotina.
+
+**Correção de objetiva** — A função do Assistente de ensino que corrige objetivas e monta o
+diagnóstico por habilidade; a entrega espera o professor. Antes era o agente Corretor.
+
+**Adaptação (função)** — A função do Assistente de ensino que propõe a versão adaptada de prova,
+atividade ou material a partir do tipo de adaptação registrado; espera o professor aprovar.
+Antes era o agente Adaptador. A ferramenta de mesmo nome é o pedido feito pelo professor (D67).
 
 **Analista de desempenho escolar** — O agente da coordenação: resumo semanal e alertas em
 agregado, como hipótese. Antes, "Analista da coordenação".
@@ -227,8 +240,10 @@ comportamento: tempo ocioso e navegação do aluno não são sinal (D69).
 contado por avaliação e mostrado só ao professor. Não diz para onde o aluno foi, não tem
 consequência automática, não existe fora de avaliação e não vira histórico do aluno (D70).
 
-**Minhas turmas** — A aba de "Meu painel" em que o professor vê desempenho, dificuldades,
-evolução e alunos que precisam de atenção nas turmas dele. Nasce no F6 (D69).
+**Turmas** — O item do menu do professor em que ele vê as turmas dele: desempenho,
+dificuldades e alunos que precisam de atenção, e "Meu uso", o espelho dele (D45). Antes era a aba
+"Minhas turmas" de "Meu painel", que deixou de existir (D73). As abas da turma aberta fecham no
+PRD da A3. Nasce no F6 (D69).
 
 **Indicador do professor** — Medida de uso e do desempenho das turmas de um professor.
 Visível primeiro a ele; a coordenação vê agregado, só quando há dois ou mais professores no

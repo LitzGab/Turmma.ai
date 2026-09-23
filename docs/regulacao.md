@@ -62,7 +62,7 @@ como valendo desde já, porque construir contra elas e corrigir depois custa mai
 
 | Classificação | O que significa para o produto |
 |---|---|
-| **Baixo risco** | Organizar material, revisão textual, e qualquer uso **sem efeito sobre a avaliação**. Cabem aqui o Planejador abrindo o dia, o Assistente de ensino ajudando o professor a preparar aula, o calendário e a busca no material |
+| **Baixo risco** | Organizar material, revisão textual, e qualquer uso **sem efeito sobre a avaliação**. Cabem aqui o Assistente de ensino abrindo o dia ("seu dia e sua semana") e ajudando o professor a preparar aula, o calendário e a busca no material |
 | **Cuidados adicionais** | Sistema que **acompanha** o estudante, faz recomendação acadêmica ou **interage continuamente** com ele. É o Tutor, com o aluno e avisando o professor do que viu, com a memória da trajetória do aluno no sistema (D66): permitido, com supervisão, revisão humana, monitoramento periódico e vedação de uso do dado para treinar modelo de terceiro |
 | **Alto risco** | O que **interfere em avaliação, decisão acadêmica ou dado sensível**. É a correção de objetiva, o diagnóstico por habilidade e a adaptação por necessidade específica. Exige avaliação de impacto, explicação acessível, caminho de contestação e **validação humana efetiva, prévia, qualificada e documentada** |
 | **Excessivo ou incompatível** | Pontuação social, **reconhecimento de emoções** de aluno ou de professor, vigilância biométrica contínua, **perfilização psicológica ou comportamental para fins classificatórios**, e uso de dado educacional para **publicidade direcionada ou exploração comercial**. Nada disso existe no produto, e nada disso pode ser proposto (nível 4 em `docs/agentes.md`) |
@@ -104,7 +104,7 @@ aprova tudo sem essa tela é exatamente o que a diretriz proíbe.
 - O tutor é sempre visível ao professor: modo sala em tempo real, modo casa com registro e
   resumo
 - Nenhuma funcionalidade decide aprovação, reprovação ou encaminhamento
-- Diagnóstico por habilidade, memória e sinais do Tutor, "Minhas turmas" e alertas sobre aluno
+- Diagnóstico por habilidade, memória e sinais do Tutor, "Turmas" e alertas sobre aluno
   são tratados como **alto risco**: avaliação de impacto algorítmico antes de existirem,
   explicação em linguagem comum na tela e caminho de contestação (D60)
 - Nenhuma inferência de emoção, humor, atenção ou comportamento, nem pontuação de aluno ou
@@ -329,7 +329,7 @@ Duas obrigações somadas nesta revisão:
   é discriminação (LBI, art. 4º, § 1º, e art. 88). Adaptar prova e atividade é o que a lei
   quer; nenhuma norma condiciona a adaptação a o software gerar o documento do plano
 - **O que fazemos:** a escola faz o plano do jeito dela, a coordenação registra no Turmma só o
-  **tipo de adaptação** (D35), e o Adaptador aplica (D67). Não gerar o PEI é escolha nossa de
+  **tipo de adaptação** (D35), e a função de adaptação do Assistente de ensino aplica (D67). Não gerar o PEI é escolha nossa de
   minimização — o documento descreve a condição do aluno, dado sensível de menor —, não
   proibição legal. **A confirmar** com advogado, junto da base legal da adaptação
 - O registro de quais avaliações foram adaptadas, e quem aprovou, é também a prova de que a
@@ -369,7 +369,7 @@ Não vendemos currículo, e isso não vira fase de roadmap agora. O que vira req
 - o Tutor, quando o aluno pergunta sobre ele mesmo, **explica o que é, como funciona, o que
   não sabe e que pode errar**, em linguagem da faixa etária — é obrigação de transparência
   (Decreto art. 11, I) e letramento ao mesmo tempo;
-- o Planejador gera, **sob pedido do professor**, atividade alinhada às 12 aprendizagens e às
+- o Assistente de ensino gera, **sob pedido do professor**, atividade alinhada às 12 aprendizagens e às
   habilidades de Computação da BNCC, como qualquer outro conteúdo do material;
 - o dossiê (`docs/conformidade-mec.md`) inclui o material que a escola usa para conversar com
   professores e famílias sobre o uso de IA — a "política de IA da escola" que 78% delas não

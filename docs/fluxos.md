@@ -35,7 +35,8 @@ Cadastrar 900 alunos um a um mata o produto na primeira semana. Mas deixar o alu
 o próprio nome livremente cria dois "Enzo Martins" e um "Batman". A reivindicação com
 aprovação do professor resolve os dois: rápido para a escola, e ninguém se passa por outro.
 O vínculo vem da escola, e não do professor, porque é ele que dá acesso a dado de aluno. E
-sem a grade o Planejador e o calendário não têm de onde nascer.
+sem a grade o "seu dia e sua semana" do Assistente de ensino e o calendário não têm de onde
+nascer.
 
 **O que isso obriga tecnicamente**
 
@@ -68,9 +69,11 @@ Classroom que não bate com a turma da secretaria.
 Renata informa qual material a escola pode ceder e autoriza, por escrito, o uso dele: a
 apostila própria da escola, o material dos professores, um livro com licença para esse uso.
 Se o material é de um sistema de ensino, ele só entra com licença ou parceria com o dono do
-conteúdo (D5 revista). Ela sobe os arquivos, ou, quando houver parceria, o sistema ingere
-pela fonte. O conteúdo é quebrado em trechos, classificado por série, disciplina, capítulo e
-habilidade da BNCC, e indexado.
+conteúdo (D5 revista). Ela cria as disciplinas e sobe os arquivos, ou, quando houver parceria,
+o sistema ingere pela fonte. **Quem sobe material para a base da escola é só a coordenação**
+(D75): o professor e o aluno não sobem, e o material dos professores entra pelas mãos dela, com o
+professor como titular declarado. O conteúdo é quebrado em trechos, classificado por série,
+disciplina, capítulo e habilidade da BNCC, e indexado.
 
 A partir daí, toda prova, atividade, plano de aula e resposta do tutor nasce desse material,
 citando a página de origem.
@@ -88,6 +91,8 @@ conferir na página 152 da apostila dele tem valor. Uma questão genérica não 
 - Versionamento: material muda de edição, e a versão usada numa prova precisa ficar registrada
 - Autorização escrita da escola registrada por fonte, e licença do dono do conteúdo quando o
   material não é da escola; sem elas, nem o upload nem o adaptador processam
+- O upload para a base é permissão da coordenação, não do professor nem do aluno (D75). A
+  titularidade declarada diz de quem é o material; quem sobe é sempre a escola
 - Conteúdo preso ao tenant da escola. Nunca vira banco nosso, nunca cruza para outra escola
 - Ingestão em fila, com estado visível: o que entrou, o que falhou, o que está pendente
 
@@ -208,10 +213,10 @@ humano e não de resposta de IA.
 
 **Como acontece**
 
-Terminada a atividade ou a prova, o agente Corretor corrige as objetivas e monta o
-diagnóstico por habilidade. Nas discursivas ele **não toca no texto do aluno**: organiza o
-lote, confere entrega e prepara a correção cega, sem nota, sem conceito e sem devolutiva
-rascunho (D55). Manda uma entrega para o feed da Camila: "corrigi as 32 objetivas, onze alunos
+Terminada a atividade ou a prova, a função de correção de objetiva do Assistente de ensino
+corrige as objetivas e monta o diagnóstico por habilidade. Nas discursivas ela **não toca no
+texto do aluno**: organiza o lote, confere entrega e prepara a correção cega, sem nota, sem
+conceito e sem devolutiva rascunho (D55). Manda uma entrega para o feed da Camila: "corrigi as 32 objetivas, onze alunos
 erraram a questão 7, as 32 discursivas estão prontas para você corrigir".
 
 Camila vê a distribuição, abre os casos destacados, escreve ela mesma a devolutiva das
@@ -288,8 +293,8 @@ precisa saber que o painel é dele primeiro, ou ele não usa o sistema.
 
 **Como acontece**
 
-O Planejador roda de madrugada, cruza as entregas com os prazos, e de manhã abre o dia da
-Camila: três aulas, a prova do 2ºB às 10h, e cinco alunos do 1ºC que não entregaram a lista,
+O "seu dia e sua semana" do Assistente de ensino roda de madrugada, cruza as entregas com os
+prazos, e de manhã abre o dia da Camila: três aulas, a prova do 2ºB às 10h, e cinco alunos do 1ºC que não entregaram a lista,
 quatro deles também sem a anterior. Não gerou conteúdo nenhum para isso. Na fase posterior, o
 Mensageiro da família propõe o aviso às famílias, que fica esperando aprovação.
 

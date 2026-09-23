@@ -75,7 +75,7 @@ hoje — inclusive onde ela é ruim.
 
 | A pergunta da escola | Nossa resposta | Estado |
 |---|---|---|
-| Respeita a autonomia didático-pedagógica do professor? | O Planejador só age sob pedido (D32); nada é publicado sem ele; e a D64 garante que **recusar a ferramenta não gera indicador nem alerta** | por desenho |
+| Respeita a autonomia didático-pedagógica do professor? | O Assistente de ensino só gera conteúdo sob pedido (D32); o que ele faz sozinho é organizar o dia com o que já existe; nada é publicado sem ele; e a D64 garante que **recusar a ferramenta não gera indicador nem alerta** | por desenho |
 | O professor tem acesso aos critérios da avaliação automática e às fontes usadas? | Sim: gabarito, critério e página de origem em toda saída | por desenho |
 | O professor consegue alterar nota, avaliação e devolutiva automáticas? | Sim, e em discursiva a nota é **sempre** dele, sem valor sugerido (D55) | por desenho |
 | Os dados coletados, e o uso deles pela gestão, comprometem a autonomia docente? | Painel do professor é dele primeiro; a coordenação vê agregado e abre nominal só com auditoria (D45); sem ranking (D64) | por desenho |
@@ -95,7 +95,7 @@ hoje — inclusive onde ela é ruim.
 | O contrato prevê responsabilização por incidente? | No `TODO.md`, com advogado | pendente |
 | Há documentação acessível sobre o funcionamento do algoritmo, em linguagem simples, para a comunidade escolar? | **Passa a existir** (D61): o dossiê da seção 5 | decidido, a produzir |
 | Há mecanismos para identificar e corrigir discriminação algorítmica? | A AIA da seção 7, com equidade como critério decisório (seção 8) | decidido, a implementar |
-| Oferece recursos para estudantes com necessidades específicas? | O agente Adaptador (D32, D35) | por desenho, F11 |
+| Oferece recursos para estudantes com necessidades específicas? | A função de adaptação do Assistente de ensino, a partir do tipo de adaptação registrado (D32, D35, D67) | por desenho, F11 |
 
 ---
 
@@ -255,7 +255,7 @@ Consequências que já cabem no nosso processo:
    na AIA, com a limitação declarada — o MEC admite "quando viável e juridicamente
    justificado".
 3. Acessibilidade sai de "boa prática de frontend" e entra como requisito de equidade: leitor
-   de tela, contraste, teclado, e o agente Adaptador como funcionalidade de inclusão, não de
+   de tela, contraste, teclado, e a função de adaptação do Assistente de ensino como funcionalidade de inclusão, não de
    marketing.
 
 ---

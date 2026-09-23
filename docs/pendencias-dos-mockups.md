@@ -12,6 +12,14 @@
 > tela, API e domínio, dado, regra, teste, e por onde ela entra no processo. Nada aqui é decisão
 > registrada. O que for decisão entra por `/registrar-decisao`, com o aceite do Joaquim; o que for
 > funcionalidade nova entra por `/descobrir`, não por PRD (`CLAUDE.md`, "Decisões em aberto").
+>
+> **Em 23/09/2026 fecharam os itens que travavam a A1 e a A2** (`docs/decisoes.md`): P01 (D32,
+> D9 e D60 revistas), P02, P03 e P31 (D72), P04 (D73) e a regra e as categorias do P22 (D74). No
+> mesmo dia a D71 foi revista: **a A1 passou a ser "a escola"** — a coordenação monta a escola, o
+> professor entra por convite e o aluno reivindica o nome —, com o núcleo do F2 dentro dela. Por
+> isso o convite da turma (P27) e o seletor de escola (P30) são assunto do PRD da A1, não do F2. A
+> D75 (material só pela coordenação) responde parte da pergunta do P05 e do P07. Os itens fechados
+> continuam aqui, marcados, pelo que ainda pedem de tela, dado e teste.
 
 **Como ler.** Cada item tem um tipo:
 
@@ -28,12 +36,14 @@ a tela do produto é escrita de novo, a partir do desenho e deste documento.
 
 ## Resumo
 
+Os itens marcados **fechado** viraram decisão em 23/09/2026; os outros continuam como estavam.
+
 | # | Item | Tipo | Mexe em | Precisa fechar antes de |
 |---|---|---|---|---|
-| P01 | Um agente por pessoa: Assistente, Tutor, Analista | DECISÃO | D32, D9, D60, D71, `agentes.md`, modelo de dados | PRD da A1 |
-| P02 | Pele do produto: ChatGPT em branco, preto e laranja | DECISÃO | `interface.md` seções 8 e 9 (vira a D72) | PRD da A1 |
-| P03 | Padrão de espaço: aba sem título, tela que cabe na janela | FRONT | `interface.md` 6, 9.3 e 11 | PRD da A1 |
-| P04 | Navegação do professor | DECISÃO | `interface.md` seção 1 (marcada "decidido"), D69 | PRD da A1 |
+| P01 | Um agente por pessoa: Assistente, Tutor, Analista | DECISÃO | D32, D9, D60, D71, `agentes.md`, modelo de dados | **fechado** (D32, D9 e D60 revistas) |
+| P02 | Pele do produto: ChatGPT em branco, preto e laranja | DECISÃO | `interface.md` seções 8 e 9 | **fechado** (D72) |
+| P03 | Padrão de espaço: aba sem título, tela que cabe na janela | FRONT | `interface.md` 6, 9.3 e 11 | **fechado** (D72) |
+| P04 | Navegação do professor | DECISÃO | `interface.md` seção 1, D69 | **fechado** (D73) |
 | P05 | Projetos | NOVO | modelo de dados, LGPD, D5, F7 | `/descobrir` |
 | P06 | Histórico real de conversas | AJUSTE | F7, modelo de dados (entidade que falta), LGPD | PRD da A2 |
 | P07 | Anexar documento na conversa | NOVO | D5, D55, D62, F4, F7 | `/descobrir` |
@@ -51,22 +61,22 @@ a tela do produto é escrita de novo, a partir do desenho e deste documento.
 | P19 | Coordenação › Agentes por função | AJUSTE | F12, A5 | PRD da A5 |
 | P20 | Peças novas do 21st.dev e licenças a conferir | FRONT | `interface.md` 10.1 e 10.2 | antes de o código entrar |
 | P21 | O que o mockup faz e o produto não pode copiar | FRONT | regras 10, 20, 40, 50 | sempre |
-| P22 | Catálogo de ferramentas: a regra "ferramenta ou chat" e oito ferramentas novas | NOVO + DECISÃO | D67, F7, `interface.md` 1.2, regra 60 item 8, D5, D55, D57, D66 | `/descobrir`; a regra, antes do PRD da A2 |
+| P22 | Catálogo de ferramentas: a regra "ferramenta ou chat" e oito ferramentas novas | NOVO + DECISÃO | D67, F7, `interface.md` 1.2, regra 60 item 8, D5, D55, D57, D66 | a regra e as categorias: **fechado** (D74); as oito, `/descobrir` |
 | P23 | Ferramenta é dado: um motor de formulário, não uma tela por ferramenta | FRONT + arquitetura | D18, F7, Tech Spec da A2, regra 30 | Tech Spec da A2 |
 | P24 | "O resto é só pedir": o que o chat faz sem ferramenta | AJUSTE | D18, F7, regra 20 item 12, D68 | PRD da A2 |
 | P25 | Página da ferramenta em duas colunas: formulário e "o que sai" | FRONT | `interface.md` 1.2 e 11 | PRD da A2 |
 | P26 | Ranking de participação na turma | DECISÃO | `interface.md` 10.2, D57, D59, D66, P08 | `/descobrir`; fora do MVP até lá |
-| P27 | Convidar alunos: link, WhatsApp e código da turma | AJUSTE | D3, D4, F2, regra 20 item 8, regra 80 item 1 | PRD do F2 |
+| P27 | Convidar alunos: link, WhatsApp e código da turma | AJUSTE | D3, D4, F2, regra 20 item 8, regra 80 item 1 | PRD da A1 (D71 revista) |
 | P28 | A turma aberta com nove abas, no modelo da Teachy; Recursos e Mural | DECISÃO + NOVO | D69, D8, D45, D64, regra 70 item 3, F6, F7 | PRD da A3; Recursos e Mural por `/descobrir` |
 | P29 | Seu time em formato de conversa | AJUSTE | F11, D14, P14 | PRD da A1 |
 | P30 | Seletor de escola como espaço de trabalho | FRONT + tenancy | regra 10, P12 | PRD da A1 |
-| P31 | Segunda pele: Ferramentas e Turmas copiadas da Teachy | DECISÃO | P02, P03, P17, `interface.md` 9, regra 50 | PRD da A1 |
+| P31 | Segunda pele: Ferramentas e Turmas copiadas da Teachy | DECISÃO | P02, P03, P17, `interface.md` 9, regra 50 | **fechado** (D72: a pele do P02 em tudo) |
 
 ---
 
 ## A. Decisões a revisar
 
-### P01 — Um agente por pessoa da escola · DECISÃO
+### P01 — Um agente por pessoa da escola · DECISÃO · fechado em 23/09/2026
 
 **O que mudou.** A D32 (revista em 19/09) tem seis agentes, quatro deles do professor:
 Assistente de ensino, Corretor, Planejador e Adaptador. No mockup o Gabriel achou que "alguns não
@@ -107,7 +117,10 @@ que não vê impacto. A apresentação passa a ser "um agente para cada pessoa d
 **Dono:** Gabriel decidiu a direção; Joaquim ratifica. **Antes do PRD da A1**, que tem o runtime
 mínimo de agente e a casca com o time.
 
-### P02 — A pele do produto é a do ChatGPT, em branco, preto e laranja · DECISÃO
+**Fechado em 23/09/2026:** o Joaquim ratificou, e a D32, a D9 e a D60 foram revistas. Com a D71
+revista, o runtime mínimo de agente passou da A1 para o começo da A2.
+
+### P02 — A pele do produto é a do ChatGPT, em branco, preto e laranja · DECISÃO · fechado em 23/09/2026
 
 **O que mudou.** A Parte B do `docs/interface.md` (seções 8 e 9) descreve a pele da landing page:
 papel, creme, azul-noite, Fustat nos títulos, rótulo em caixa-alta. O Gabriel viu e rejeitou
@@ -127,7 +140,12 @@ page; a linha do `TODO.md` que fala em azul-noite e creme descreve a marca, não
 
 **Dono:** Gabriel (já decidiu). **Antes do PRD da A1.**
 
-### P03 — Padrão de espaço: aba sem título, tela que cabe na janela · FRONT
+**Fechado em 23/09/2026:** registrado como **D72**, junto com o P03 e o P31 — uma pele só, esta, em
+todas as telas. As seções 8 e 9 do `docs/interface.md` foram reescritas. Uma troca em relação ao
+mockup: a `borda-campo` passa de `#D9D9D9` (1,4:1) para `#8F8F8F` (3,2:1), porque campo de
+formulário precisa de 3:1 de contraste.
+
+### P03 — Padrão de espaço: aba sem título, tela que cabe na janela · FRONT · fechado em 23/09/2026
 
 **O que mudou.** O Gabriel reprovou "aproveitamento horrível de espaço" e "toda aba com título e
 descrição". O padrão está em `mockups/src/components/turmma/tela.tsx`:
@@ -150,7 +168,10 @@ continuam legíveis — se não couber, a grade rola por dentro em vez de esprem
 
 **Dono:** Joaquim, na Tech Spec da A1.
 
-### P04 — Navegação do professor · DECISÃO
+**Fechado em 23/09/2026:** entrou na **D72** e nas seções 6 e 9.3 do `docs/interface.md`. A prova
+no Chromebook continua sendo da Tech Spec da A1.
+
+### P04 — Navegação do professor · DECISÃO · fechado em 23/09/2026
 
 **O que mudou.** A seção 1 do `docs/interface.md` está marcada **decidido** (desenho da call):
 Home, Ferramentas, Calendário, Seu time, Meu painel, Histórico. No mockup ficou:
@@ -174,6 +195,10 @@ mostra só ícone e avatar, com um ponto no agente que tem pendência (o mockup 
 o rótulo sobrava cortado). Projetos (P05) só aparece no menu quando existir.
 
 **Dono:** Gabriel decidiu; Joaquim ratifica. **Antes do PRD da A1.**
+
+**Fechado em 23/09/2026:** registrado como **D73**, com o nome da oitava rodada (P28): o item é
+**Turmas**, com "Meu uso" dentro, e "Meu painel" deixa de existir. Cada item do menu só aparece
+quando a fase dele existir. As abas da turma aberta continuam em aberto até o PRD da A3.
 
 ---
 
@@ -201,7 +226,9 @@ instruções e os arquivos. No mockup funciona criar, fixar, conversar dentro e 
   à escola (regra 10): professor de duas escolas não leva arquivo de uma para a outra. O modelo já
   prevê `FonteMaterial.titularidade = professor`, mas hoje exige `autorizacaoDoc` e
   `autorizadoPor` da escola. **Pergunta para o `/descobrir`:** o professor sobe material próprio
-  sem a coordenação autorizar fonte por fonte? A mesma pergunta vale para o anexo (P07)
+  sem a coordenação autorizar fonte por fonte? A mesma pergunta vale para o anexo (P07).
+  **23/09/2026:** para a base de material da escola, a D75 respondeu que não — ela só recebe o que
+  a coordenação sobe. Se o arquivo de projeto fica fora dessa base, é pergunta do `/descobrir`
 - **IA.** Instruções e arquivos entram no contexto de toda conversa do projeto: recuperação por
   trecho, nunca o arquivo inteiro; limite de tamanho nas instruções; tudo pela porta, com perfil e
   orçamento (regra 30, D14). **Instrução é texto livre do professor**: pode conter nome de aluno,
@@ -261,7 +288,8 @@ anexo vale só para aquela conversa e **não entra na base de material da escola
 
 - **D5.** "Apostila de terceiro sem licença não entra por nenhum caminho" — o anexo é um caminho.
   A declaração da professora basta, ou a coordenação precisa ter autorizado? É a mesma pergunta
-  do P05
+  do P05. A D75 (23/09/2026) fechou a base da escola: só a coordenação sobe. O anexo, que vive só
+  na conversa, continua sendo a pergunta deste item
 - **O risco maior: o anexo abre a porta para a correção de discursiva por IA.** A professora
   anexa as redações da turma e pede "corrige". A **D55** e a regra 70, item 2a, proíbem até o
   rascunho. Precisa de recusa testada no servidor, não só de aviso na tela; e texto de aluno só
@@ -499,7 +527,7 @@ função**. No registro da governança, a linha passa a dizer "Assistente · cor
 
 ---
 
-### P22 — Catálogo de ferramentas: a regra "ferramenta ou chat", e oito ferramentas novas · NOVO + DECISÃO
+### P22 — Catálogo de ferramentas: a regra "ferramenta ou chat", e oito ferramentas novas · NOVO + DECISÃO · a regra, fechada em 23/09/2026
 
 **O que mudou.** Em 20/09 o Gabriel deu a regra para decidir o que é ferramenta: **é ferramenta a ação
 específica que entrega um output próprio** — coisa com formato, que fica na biblioteca, sai em arquivo
@@ -546,6 +574,9 @@ perfil de modelo na regra 30; fonte citada com página; teste de regra de negóc
 demonstração). As oito novas: `/descobrir ferramentas-novas`, uma a uma, e só então entram no F7 — **nenhuma
 entra no MVP de apresentação sem decisão**; na A2 a tela pode mostrar só as que existem. **Dono:**
 Gabriel decide o catálogo; Joaquim ratifica e estima.
+
+**Fechado em 23/09/2026, em parte:** a regra e as quatro categorias viraram a **D74**. As oito
+ferramentas novas continuam em `/descobrir`, uma a uma, antes do F7.
 
 ### P23 — Ferramenta é dado: um motor de formulário, não uma tela por ferramenta · FRONT + arquitetura
 
@@ -696,7 +727,9 @@ aluno não digita nada sobre si (D3, D4).
 - **Teste.** Link vencido ou revogado não abre; dois alunos reivindicando o mesmo nome no mesmo
   segundo (regra 40); o pedido de uma turma não aparece para o professor de outra
 
-**Onde entra.** PRD do F2, onde o aluno entra no sistema. Na A1, só o desenho. **Dono:** Joaquim.
+**Onde entra.** PRD da A1, que passou a ter o núcleo do F2 (D71 revista, 23/09/2026): é lá que o
+aluno entra no sistema. O F2 completa depois o que ficou de fora (grade, calendário, Classroom,
+reset de senha). **Dono:** Joaquim.
 
 ### P28 — A turma aberta com nove abas, no modelo da Teachy · DECISÃO + NOVO
 
@@ -773,7 +806,7 @@ nenhuma tela mostra dado da escola anterior.
 
 **Onde entra.** A1, que é a casca. **Dono:** Joaquim, com o `tenancy-guardian`.
 
-### P31 — Segunda pele: Ferramentas e Turmas copiadas da Teachy · DECISÃO
+### P31 — Segunda pele: Ferramentas e Turmas copiadas da Teachy · DECISÃO · fechado em 23/09/2026
 
 **O que mudou.** Nessas duas áreas o desenho da Teachy ganha do nosso. A página tem título (contra
 o P03), rola como documento (contra o "cabe na janela"), o botão tem canto de 8 px (contra a pílula
@@ -794,20 +827,26 @@ são nossos. **Conferir com o advogado antes do material de venda.**
 **Onde entra.** Antes do PRD da A1, junto do P02 (vira a D72). **Dono:** Gabriel decide; Joaquim
 estima.
 
+**Fechado em 23/09/2026 (D72):** uma pele só, a do P02. Da Teachy fica só a **estrutura** — o
+catálogo em categorias e a turma aberta com abas —, sem Quicksand e Inter, sem o canto de 8 px, sem
+as medidas tiradas da tela deles e sem os acentos fora da paleta. Isso tira a pergunta de trade
+dress do caminho. O Gabriel precisa ser avisado: a oitava rodada pedia o contrário.
+
 ---
 
 ## F. O que trava o quê
 
-1. **Antes do PRD da A1:** P01, P02, P03, P04 e P31 (uma pele só) — a casca da A1 mostra a marca,
-   a navegação e o time; e o avatar passa a ser de **três** agentes. P14, P18, P29 e P30 entram na
-   Tech Spec dela
-2. **Antes do PRD da A2:** P06 (fatia mínima), P13, P15, P16, P17, P23, P24, P25 — e a **regra** do P22 (o
-   que é ferramenta), porque o catálogo aparece na demonstração
+1. **Antes do PRD da A1:** P01, P02, P03, P04 e P31 — **fechados em 23/09/2026** (D32, D9 e D60
+   revistas; D72; D73). O avatar é de **três** agentes, e o Gabriel entrega o desenho antes da
+   Tech Spec. A A1 passou a ser "a escola" (D71 revista): entram no PRD dela o P27 (convite da
+   turma) e o P30 (seletor de escola); P14, P18 e P29 entram na Tech Spec, na parte da casca
+2. **Antes do PRD da A2:** P06 (fatia mínima), P13, P15, P16, P17, P23, P24, P25. A **regra** do P22 (o que é
+   ferramenta) já é a D74
 3. **Antes do PRD da A3:** P10, P11, P28 (a estrutura da turma aberta) e os limiares dos indicadores
 4. **Antes do PRD da A5:** P19
 5. **Só depois de `/descobrir`:** P05, P07, P08, P26, Recursos e Mural (P28) e as **oito ferramentas
    novas** do P22. Nada disso entra no
    MVP de apresentação sem decisão; o Planejamento do período e o Projeto ainda dependem do F8, e o
    Plano de recuperação, do F6
-6. **Com a fase de cada um:** P09 (seção por seção), P12 (F8) e P27 (F2)
+6. **Com a fase de cada um:** P09 (seção por seção) e P12 (F8)
 7. **Antes de qualquer código vindo do 21st.dev:** P20

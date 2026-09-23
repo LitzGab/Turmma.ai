@@ -71,6 +71,12 @@ para classificar o tutor como risco moderado, e o que sustenta a conversa com a 
 **D9 — Todo agente tem nível de autonomia declarado e visível.**
 A coordenação precisa poder responder "o que essa IA faz sozinha?" apontando para uma tela.
 Ver `docs/agentes.md`.
+Revista em 23/09/2026: a autonomia é declarada **por função** do agente, não por agente
+("corrigir objetiva: faz e avisa, a nota espera você"; "adaptar: prepara e espera você
+aprovar"), com o selo de alto risco quando a função tem AIA (D60), e aparece assim na tela da
+coordenação. Motivo: com a D32 revista, o Assistente de ensino faz coisas de risco muito
+diferente, e um rótulo único por agente esconderia justamente a que o CNE classifica como alto
+risco.
 
 **D10 — A escola é controladora dos dados; nós somos operadores.**
 Padrão B2B, com o consentimento coberto por contrato. Ver `docs/lgpd.md`.
@@ -105,6 +111,10 @@ também passa mais confiança.
 Revista em 19/09/2026: a regra do nome de função continua; a lista de nomes passa a ser a da
 D32 revista (Assistente de ensino, Tutor, Corretor, Planejador, Adaptador e Analista de
 desempenho escolar).
+Revista em 23/09/2026: a lista passa a ser a da D32 revista no mesmo dia — **Assistente de
+ensino, Tutor e Analista de desempenho escolar**, mais o Mensageiro da família depois. As
+funções do Assistente também têm nome de função: correção de objetiva, adaptação, "seu dia e
+sua semana".
 
 **D18 — Chat e ferramentas são o mesmo motor. O chat abre a ferramenta dentro da conversa.**
 O professor pode escolher a ferramenta no próprio chat. Se ele não escolheu e o pedido
@@ -230,7 +240,8 @@ pedido, porque plano que ninguém pediu é token jogado fora. O Analista existe 
 compra é a coordenação, e ela precisa do próprio "funcionário". O Adaptador existe porque
 inclusão é o tema mais anunciado do mercado e é trabalho que o professor raramente tem tempo
 de fazer. Nível e gatilho de cada um em `docs/agentes.md`.
-Revista em 19/09/2026 *(a ratificar: Joaquim)*: os agentes passam a ser **seis**, um por
+Revista em 19/09/2026 *(ratificada pelo Joaquim em 23/09/2026, e superada pela revisão de 23/09/2026 logo abaixo)*: os
+agentes passam a ser **seis**, um por
 necessidade de cada papel — **Assistente de ensino, Tutor, Corretor, Planejador, Adaptador e
 Analista de desempenho escolar** —, mais o Mensageiro da família na fase posterior. O que
 mudou: (1) o chat do professor ganha identidade de agente, o **Assistente de ensino**, que é a
@@ -247,6 +258,19 @@ mesma conversa sobre o que vem pela frente. O custo continua protegido: abrir o 
 modelo para gerar conteúdo, e plano que ninguém pediu continua não sendo gerado. O aluno segue
 nomeado só para o professor da turma (D34) e a notificação só sai no horário útil da escola
 (D59).
+Revista em 23/09/2026 *(decidida pelo Gabriel em 20/09/2026, vista em mockup; ratificada pelo
+Joaquim)*: **um agente para cada pessoa da escola**. O professor tem o **Assistente de
+ensino**, o aluno tem o **Tutor**, a coordenação tem o **Analista de desempenho escolar**, e a
+família terá o Mensageiro na fase posterior. Corretor, Planejador e Adaptador deixam de ser
+agentes e viram **funções do Assistente de ensino**: **correção de objetiva** (corrige, monta
+o diagnóstico e espera o professor), **adaptação** (aplica o tipo de adaptação registrado e
+espera aprovação, D35 e D67) e **seu dia e sua semana** (organiza o que já existe, sem gerar
+conteúdo; plano só sob pedido). O professor continua vendo o Tutor em "Seu time", como segunda
+voz, porque é ele quem supervisiona o agente dos alunos (D8, D47). Motivo: cada um dos três
+tinha uma ferramenta gêmea que chamava o mesmo caso de uso — mudava só quem disparava e onde o
+resultado aparecia —, e o risco que o CNE classifica é da funcionalidade, não da persona. A
+autonomia passa a ser declarada por função (D9) e a suspensão também (D60). A apresentação
+passa a ser "um agente para cada pessoa da escola", e a frase da D44 continua valendo.
 
 **D33 — Nota de objetiva é aprovada em lote, com os casos fora da curva abertos antes.**
 Aprovar aluno por aluno vira clique reflexo e esvazia a supervisão que a lei exige. O lote
@@ -342,7 +366,7 @@ vigiado, ele não usa, e "se o professor não gostar, a escola não renova". Mé
 perfil profissional atrai o art. 20 da LGPD, a convenção coletiva na particular e o
 estatuto do servidor na pública. Os indicadores do professor entram no mapa de dados de
 `docs/lgpd.md` antes de qualquer migration.
-Revista em 19/09/2026 *(a ratificar: Joaquim; indicadores com advogado, `TODO.md`)*: o
+Revista em 19/09/2026 *(ratificada pelo Joaquim em 23/09/2026; indicadores com advogado, `TODO.md`)*: o
 indicador do professor deriva do desempenho das turmas dele — dificuldade, acertos e evolução
 por habilidade —, continua em espelho e continua sem alimentar decisão sobre ele. Entra a
 **regra do grupo mínimo**: a coordenação só vê agregado de um recorte (série × disciplina)
@@ -439,15 +463,12 @@ como portão (D31) continuam.
 
 ---
 
-> **D54 a D65 — propostas de 19/09/2026, a ratificar.** Saíram da leitura das fontes
+> **D54 a D65 — propostas de 19/09/2026, ratificadas.** Saíram da leitura das fontes
 > primárias de regulação e dos dois documentos do MEC (`docs/regulacao.md`,
-> `docs/conformidade-mec.md`), no branch `docs/direcionamento-regulatorio`. Estão escritas no
-> formato de decisão para poderem ser implementadas sem reinterpretação, mas **nenhuma delas
-> foi ratificada pelo Joaquim**. Cada uma diz quem precisa concordar. Ratificar é apagar esta
-> nota da decisão; recusar é apagar a decisão e registrar o motivo.
->
-> Em 19/09/2026 o Gabriel ratificou todas as que dependiam dele: a D54 está fechada, e nas
-> demais falta o Joaquim, como cada uma indica.
+> `docs/conformidade-mec.md`), no branch `docs/direcionamento-regulatorio`, e estão escritas no
+> formato de decisão para poderem ser implementadas sem reinterpretação. O Gabriel ratificou as
+> que dependiam dele em 19/09/2026, e o Joaquim ratificou todas em bloco em 23/09/2026. O que
+> ainda depende de parecer ou de outra decisão está dito em cada uma.
 
 **D54 — O nome do produto é Turmma.** *(ratificada pelo Gabriel em 19/09/2026)*
 A marca está pronta: manual, logo, paleta (caramelo #E8732E, azul-noite #16233E, creme
@@ -461,7 +482,7 @@ primeira tela real precisam de um nome. INPI e registro de domínio continuam pe
 
 **D55 — Em discursiva e redação, a IA não corrige, não avalia, não dá nota, não atribui
 conceito nem mérito, e não faz pré-correção nem sugere nota ao professor.** *(ratificada pelo
-Gabriel em 19/09/2026; a ratificar: Joaquim; depende do parecer sobre o texto oficial)*
+Gabriel em 19/09/2026 e pelo Joaquim em 23/09/2026; depende do parecer sobre o texto oficial)*
 Revisão da D46, que dizia "sem nota proposta, só devolutiva". A cobertura do ato do CNE de
 01/09/2026 é explícita: a IA não pode ser usada para corrigir, avaliar, dar nota, conceito ou
 mérito em redação e questão dissertativa, **nem para pré-corrigir, nem para apresentar ao
@@ -478,7 +499,7 @@ produto não a entrega. Custo aceito: perdemos uma funcionalidade que a Teachy e
 anunciam — e ganhamos o argumento de que elas estão do lado errado da norma.
 
 **D56 — Na objetiva, a validação humana é registrada: o sistema guarda o que foi mostrado, o
-que foi aberto e quem confirmou.** *(a ratificar: Joaquim)*
+que foi aberto e quem confirmou.** *(ratificada pelo Joaquim em 23/09/2026)*
 Complementa a D33, que fica de pé. O ato do CNE classifica correção de objetiva como alto
 risco e exige validação humana "efetiva, prévia, qualificada e documentada", dizendo que o
 professor não pode apenas clicar em "aprovar". Então a aprovação em lote passa a gravar o
@@ -490,7 +511,7 @@ fiscalização *como* o humano validou. E é o mesmo registro que alimenta a gov
 
 **D57 — Usos vedados, escritos e testados: sem inferência de emoção, sem perfil comportamental
 ou psicológico, sem pontuação social, sem biometria, e nenhum dado educacional para
-publicidade ou fim comercial.** *(a ratificar: Joaquim)*
+publicidade ou fim comercial.** *(ratificada pelo Joaquim em 23/09/2026)*
 Estava implícito na regra 70, item 7, como ausência de funcionalidade. Passa a ser proibição
 escrita, com teste, porque agora tem três fundamentos independentes: o ato do CNE classifica
 essas práticas como risco excessivo ou incompatível; o ECA Digital veda perfilamento e análise
@@ -503,7 +524,7 @@ tira o produto da categoria "supervisão" e o põe na de "vigilância", que é o
 recusa e a ANPD multa.
 
 **D58 — Os agentes continuam agentes: identidade de função, sem se passar por pessoa.** *(ratificada
-pelo Gabriel em 19/09/2026; a ratificar: Joaquim)*
+pelo Gabriel em 19/09/2026 e pelo Joaquim em 23/09/2026)*
 O agente mantém nome, avatar, thread e jeito próprio — o time de IA é o produto (D32, D44), e
 o nome é o da função (D17). A transparência que o art. 11, I, do Decreto 12.880/2026 exige
 ("caráter sintético e automatizado" da interação) é cumprida pelo que o produto já é de ponta
@@ -520,14 +541,14 @@ comportamento, que é o inciso II do mesmo artigo. Perguntado sobre si, o agente
 Motivo: o decreto pede que a criança não seja **enganada**, não que o produto seja sem graça.
 Persona que esconde ser IA é o problema que a norma mira — produto de companhia artificial,
 não tutor escolar. Agente que diz o que é e o que faz é a solução, e é justamente o que torna
-a supervisão explicável em reunião de pais: "o Corretor corrigiu, a professora aprovou". A
+a supervisão explicável em reunião de pais: "o Assistente corrigiu, a professora aprovou". A
 versão anterior desta decisão, de 19/09/2026, exigia um aviso não desligável no início de cada
 sessão e proibia persona; foi revertida no mesmo dia, a pedido do Gabriel, porque descaracteriza
 o conceito central do produto e não decorre do texto do decreto. Nada impede que a escola, no
 material dela, explique que são agentes de IA — isso já está no dossiê (D61).
 
 **D59 — Nada no produto induz uso excessivo, e nenhum caminho de saída é mais difícil que o de
-entrada.** *(ratificada pelo Gabriel em 19/09/2026; a ratificar: Joaquim)*
+entrada.** *(ratificada pelo Gabriel em 19/09/2026 e pelo Joaquim em 23/09/2026)*
 Do art. 9º do Decreto 12.880 (uso excessivo, problemático ou compulsivo) e do art. 10 (práticas
 manipulativas), com o art. 8º, IV, e o art. 17, § 4º, II, do ECA Digital. Proibido: recompensa
 por tempo de uso, sequência de dias, conteúdo que se inicia sozinho, rolagem infinita,
@@ -539,7 +560,7 @@ a lei chama de manipulativo, e o princípio 8 do MEC manda a escola **rejeitar**
 design persuasivo. Isso vira item de checklist do `frontend-reviewer`, não recomendação.
 
 **D60 — Avaliação de Impacto Algorítmico por funcionalidade de alto risco, no roteiro de seis
-etapas do MEC, antes de a funcionalidade existir.** *(a ratificar: Joaquim)*
+etapas do MEC, antes de a funcionalidade existir.** *(ratificada pelo Joaquim em 23/09/2026)*
 Alto risco aqui é: Tutor, correção de objetiva, diagnóstico por habilidade, sinais do tutor e
 alertas sobre aluno, e adaptação por necessidade específica. Cada um tem uma AIA escrita,
 versionada no repositório, com as seis etapas do Referencial do MEC: justificação e escopo
@@ -554,9 +575,13 @@ o PRD com outro nome.
 Revista em 19/09/2026: as AIAs ficam versionadas em `docs/aia/`, um arquivo por avaliação. O
 Joaquim escreve o rascunho da etapa 1 (justificação e escopo, com o escopo negativo) e o
 Gabriel revisa. A lista acompanha a D32 revista e está em `docs/aia/README.md`.
+Revista em 23/09/2026: com a D32 revista, o procedimento de suspensão é **por função numa
+escola** — a coordenação desliga a correção automática sem desligar o chat do professor —, com
+registro próprio e auditoria. A AIA continua por funcionalidade, que já era o recorte da regra
+70, item 6a.
 
 **D61 — O dossiê de conformidade é entregável de produto, não material de marketing.** *(ratificada
-pelo Gabriel em 19/09/2026; a ratificar: Joaquim)*
+pelo Gabriel em 19/09/2026 e pelo Joaquim em 23/09/2026)*
 A escola compra por checklist (os quatro critérios do MEC) e exige documento do desenvolvedor.
 Entregamos, versionado no repositório e gerado por escola: declaração de propósito com as faixas
 etárias para as quais o produto foi projetado; documentação do funcionamento em linguagem
@@ -571,8 +596,8 @@ pelo princípio da gestão democrática. Motivo: 78% das escolas não têm polí
 prazo para se adequar; quem entrega o documento pronto entra na reunião como parceiro. E é o
 mesmo trabalho da tela que já íamos construir.
 
-**D62 — Conversa de aluno só em provedor de modelo com processamento no Brasil.** *(a ratificar:
-Joaquim, junto com a D37)*
+**D62 — Conversa de aluno só em provedor de modelo com processamento no Brasil.** *(ratificada pelo Joaquim em 23/09/2026;
+o provedor fecha com a D37, e o afrouxamento 2 da D71 vale enquanto o dado for sintético)*
 Roteamento por soberania, não por custo: o que carrega conversa de aluno — Tutor, sinais,
 qualquer prompt com texto escrito por menor de idade — vai para provedor com processamento em
 território nacional, escrito em contrato. Tarefa sem dado pessoal, como gerar questão a partir de
@@ -587,7 +612,7 @@ for pior no tutor, perdemos qualidade onde ela mais aparece — por isso a avali
 com amostra real, e o resultado pode derrubar esta decisão.
 
 **D63 — O que a escola e o professor produzem é deles, e sai em formato aberto a qualquer
-momento.** *(ratificada pelo Gabriel em 19/09/2026; a ratificar: Joaquim)*
+momento.** *(ratificada pelo Gabriel em 19/09/2026 e pelo Joaquim em 23/09/2026)*
 Material ingerido, artefato gerado, histórico de uso e dado de desempenho são exportáveis em
 formato aberto pela própria coordenação, a qualquer momento, sem pedir a nós, e integralmente no
 fim do contrato. Nada do que o professor produz vira nosso: sem reaproveitamento entre escolas,
@@ -598,7 +623,7 @@ formato aberto. Era a pergunta que respondíamos pior. Além disso, exportação
 o piloto reversível, e reversibilidade é requisito do princípio 10 do MEC.
 
 **D64 — Recusar a ferramenta não gera indicador: não existe medição nominal de adoção por
-professor.** *(ratificada pelo Gabriel em 19/09/2026; a ratificar: Joaquim)*
+professor.** *(ratificada pelo Gabriel em 19/09/2026 e pelo Joaquim em 23/09/2026)*
 Afina a D45. O MEC exige que a rede garanta que nenhum professor seja penalizado por optar por
 não usar uma ferramenta, e que a autonomia didático-pedagógica seja preservada. Então não existe,
 em nenhuma tela: ranking de uso por professor, alerta de "professor que não usa", lista nominal de
@@ -610,12 +635,12 @@ instrumento de cobrança — além de atrair art. 20 da LGPD, convenção coleti
 servidor.
 
 **D65 — Letramento em IA entra por três portas pequenas, e não vira fase de roadmap.** *(ratificada
-pelo Gabriel em 19/09/2026; a ratificar: Joaquim)*
+pelo Gabriel em 19/09/2026 e pelo Joaquim em 23/09/2026)*
 As diretrizes do CNE exigem ensino sobre IA progressivo e transversal, e o MEC exige que a
 adoção de recurso com IA venha acompanhada de ensino crítico sobre a tecnologia. Não vendemos
 currículo. O que entra: (1) o Tutor, perguntado sobre si, explica o que é, como funciona, o que
 não sabe e que pode errar, em linguagem da faixa etária — que é a transparência do art. 11, I, do
-Decreto 12.880 sendo útil; (2) o Planejador gera, sob pedido do professor, atividade alinhada às
+Decreto 12.880 sendo útil; (2) o Assistente de ensino gera, sob pedido do professor, atividade alinhada às
 12 aprendizagens do documento da SEB e às habilidades de Computação da BNCC, como qualquer outro
 conteúdo; (3) o material de comunicação e formação do dossiê (D61) cobre o lado dos adultos.
 Motivo: é exigência da norma que atendemos com três itens pequenos, e transformá-la em módulo de
@@ -624,15 +649,15 @@ produto, não de conformidade.
 
 ---
 
-> **D66 a D70 — propostas de 19/09/2026, a ratificar.** Saíram da estrutura de agentes por
+> **D66 a D70 — propostas de 19/09/2026, ratificadas.** Saíram da estrutura de agentes por
 > papel que o Gabriel fechou com o time (aluno, professor, coordenação), conferida contra as
-> decisões e as regras, no branch `docs/estrutura-de-agentes`, empilhado sobre o
-> `docs/direcionamento-regulatorio`. No mesmo passo foram revistas a D17, a D23, a D32, a D45
-> e a D60. O Gabriel decidiu; falta o Joaquim, como cada uma indica.
+> decisões e as regras, no branch `docs/estrutura-de-agentes`. No mesmo passo foram revistas a
+> D17, a D23, a D32, a D45 e a D60. O Gabriel decidiu, e o Joaquim ratificou em bloco em
+> 23/09/2026. A lista de agentes que elas citam foi revista no mesmo dia (D32): onde o texto diz
+> Corretor, Planejador ou Adaptador, leia a função correspondente do Assistente de ensino.
 
 **D66 — O Tutor tem memória de tudo que o aluno fez no sistema, feita do registro do trabalho
-e nunca de texto sobre a pessoa, e recebe contexto estruturado do professor.** *(a ratificar:
-Joaquim)*
+e nunca de texto sobre a pessoa, e recebe contexto estruturado do professor.** *(ratificada pelo Joaquim em 23/09/2026)*
 O Tutor acompanha o aluno ao longo do ano, e a memória é **obrigatória**. Ela cobre **toda a
 trajetória do aluno no sistema** — todas as atividades, trabalhos, avaliações, práticas e
 sessões com o Tutor, com o que foi feito, o resultado por habilidade e a evolução no tempo —, e
@@ -660,14 +685,14 @@ para o modelo como tipo de adaptação, sem nome e sem motivo (regra 20, item 12
 com processamento no Brasil (D62).
 
 **D67 — O professor ganha as ferramentas de apresentação e de material didático, e o artefato
-sai no formato que ele pedir.** *(a ratificar: Joaquim)*
+sai no formato que ele pedir.** *(ratificada pelo Joaquim em 23/09/2026)*
 Entram no F7: **apresentação** (roteiro e slides a partir do material, com a página citada) e
 **material didático** (resumo, texto de apoio, revisão), este fora da primeira entrega. O
 artefato exporta em **PDF, PowerPoint (PPTX) e Excel (XLSX)**, conforme o tipo e o pedido do
 professor, além da impressão. A ferramenta de adaptação passa a se chamar só **Adaptação**, e a
 entrada dela é a **escolha do tipo de adaptação** (linguagem direta, fonte ampliada, tempo
-extra, compatível com leitor de tela…), nunca texto livre descrevendo o aluno. O Adaptador faz
-uma coisa simples: adapta prova e atividade — e material didático, quando o professor pedir —
+extra, compatível com leitor de tela…), nunca texto livre descrevendo o aluno. A adaptação, função do Assistente de ensino (D32
+revista), faz uma coisa simples: adapta prova e atividade — e material didático, quando o professor pedir —
 para o aluno surdo, para o que não fala, para quem precisa de enunciado mais fácil, sem o
 sistema saber nem guardar a condição (D35). Não geramos o documento formal de PEI, que descreve
 o aluno e é da equipe da escola. **Isso não deixa a escola irregular**: o plano individual
@@ -675,8 +700,8 @@ o aluno e é da equipe da escola. **Isso não deixa a escola irregular**: o plan
 feito pela equipe pedagógica com a família, do jeito que ela já faz hoje; o que a lei pune é
 recusar matrícula ou **recusar adaptação** (Lei 7.853/1989, art. 8º, I; LBI, art. 4º, § 1º, e
 art. 88), e adaptar é justamente o que a ferramenta faz. O fluxo fica coerente: o plano da
-escola define as adaptações, a coordenação registra só as adaptações (D35), e o Adaptador as
-aplica. Não gerar o PEI é escolha nossa de minimização de dado sensível de menor, não proibição
+escola define as adaptações, a coordenação registra só as adaptações (D35), e a função de
+adaptação as aplica. Não gerar o PEI é escolha nossa de minimização de dado sensível de menor, não proibição
 legal; pode ser revista com advogado se uma escola pedir. Motivo: o professor entrega em formatos diferentes conforme a
 escola e a aula, e ferramenta que só exporta num formato devolve o professor ao copiar e colar;
 PDF, PPTX e XLSX são padrões ISO abertos, o que mantém a D63. Na adaptação, o risco nunca esteve
@@ -684,8 +709,8 @@ no nome da ferramenta, e sim no campo de texto livre onde alguém escreve o diag
 **Continua em aberto:** de onde vêm as imagens da apresentação (licença, D5).
 
 **D68 — Busca na web existe por ativação do professor: para ele no Assistente de ensino, e para
-o aluno no Tutor, só em fontes aprovadas.** *(a ratificar: Joaquim; com pergunta nova ao parecer
-do ECA Digital)*
+o aluno no Tutor, só em fontes aprovadas.** *(ratificada pelo Joaquim em 23/09/2026; com pergunta nova
+ao parecer do ECA Digital)*
 Por padrão, tudo nasce do material da escola. O professor pode ligar a busca em dois lugares.
 **No Assistente de ensino**, por conversa, para ele próprio. **No Tutor**, para a turma
 pesquisar além do material didático, com estas condições: (1) a busca do aluno só alcança uma
@@ -710,8 +735,7 @@ Tutor; o teste adversário do Tutor passa a cobrir **página da web com instruç
 vem do F16 para o F9; e o parecer do ECA Digital ganha uma pergunta: ligar a busca para aluno de
 até 16 anos sem conta de responsável vinculada conta como rebaixar a proteção (art. 24, § 5º)?
 
-**D69 — "Minhas turmas" é aba do "Meu painel" do professor, e nasce no F6.** *(a ratificar:
-Joaquim)*
+**D69 — "Minhas turmas" é aba do "Meu painel" do professor, e nasce no F6.** *(ratificada pelo Joaquim em 23/09/2026)*
 A análise da turma — desempenho, principais dificuldades, evolução, conteúdo com mais erro,
 alunos que precisam de atenção — não é item novo de menu: é a aba **Minhas turmas** de "Meu
 painel", ao lado de **Meu uso**. Nasce no F6, com o diagnóstico por habilidade e o relatório
@@ -724,9 +748,13 @@ aberto** a lista de indicadores, os limiares e o texto dos alertas (`CLAUDE.md`)
 partida do Gabriel: percentual de erro e acerto, e o sinal **"concluiu o que foi atribuído"**,
 para o professor liberar a próxima lista. Medir tempo ocioso do aluno não entra: é medir
 atenção e comportamento (regra 70, item 7), e o mesmo objetivo sai do fato "concluiu".
+Revista em 23/09/2026 (D73): "Meu painel" deixa de existir. "Minhas turmas" vira o item
+**Turmas** da navegação do professor, com a lista das turmas dele e o **Meu uso** (o espelho da
+D45) ali dentro. O que a turma aberta mostra — as abas desenhadas no mockup — fecha no PRD da
+A3 (`docs/pendencias-dos-mockups.md`, P11 e P28). Continua nascendo no F6, com uma fatia na A3.
 
 **D70 — Sair da aba durante a prova é fato mostrado ao professor, e só durante a avaliação.**
-*(a ratificar: Joaquim; AIA e `conformidade-reviewer` antes de existir)*
+*(ratificada pelo Joaquim em 23/09/2026; AIA e `conformidade-reviewer` antes de existir)*
 Em prova e atividade avaliativa online, o sistema registra quando a aba da avaliação perde o
 foco e mostra ao professor como fato: "saiu da aba da prova 3 vezes". **Só notifica o
 professor.** Não tenta saber para onde o aluno foi — uma página web não enxerga isso —, não tem
@@ -744,8 +772,8 @@ fato para o professor olhar, nunca evidência automática. Bloquear outras IAs n
 escola é configuração do Google Admin ou do filtro da rede: entregamos o guia no dossiê (D61).
 
 **D71 — Depois do F1 vem um MVP de apresentação: fatias finas e reais do fluxo completo, com
-dado sintético.** *(direção dada pelo Gabriel e pelo time em 19/09/2026; a composição é
-proposta, a ratificar pelo Joaquim, e fecha no PRD de cada spec)*
+dado sintético.** *(direção dada pelo Gabriel e pelo time em 19/09/2026; ratificada pelo Joaquim
+em 23/09/2026, com a composição revista abaixo, e o detalhe de cada spec fecha no PRD dela)*
 Em vez de seguir F2, F3, F4… até o F15 para só então ter o que mostrar, a próxima construção
 depois do F1 é o MVP de apresentação: o mínimo que demonstra as três áreas — aluno, professor e
 coordenação, com os seis agentes da D32 revista — e as quatro coisas da D24, numa escola
@@ -772,3 +800,82 @@ e F1 já são a base, e a fatia nasce sobre ela, no desenho final. Custo aceito:
 e nenhuma escola real entra antes deles e do portão. A apresentação roda primeiro na nossa
 máquina (`docker compose up` e seed); o staging nasce quando alguém de fora precisar usar
 sozinho (D31, D42).
+Revista em 23/09/2026, pelo Joaquim: os **três afrouxamentos estão aceitos**, e a composição
+muda no começo. A **A1 passa a ser a escola** (`apresentacao-escola`): a casca com a marca, a
+coordenação montando a escola na tela — disciplinas, turmas, lista de nomes por turma e
+alocação professor × turma × disciplina —, o professor entrando por convite e confirmando o
+vínculo, e o aluno reivindicando o nome com a aprovação do professor. É o núcleo do F2, fino.
+A escola em si é criada por nós, pelo `ops:escola`, e a coordenação recebe o convite pelo
+`ops:convite-coordenador`, que já existem desde o F1 (D2). **Não existe seed com escola
+pronta**: o que a demonstração mostra entra pelo próprio produto, digitado por nós, e continua
+100% sintético — nomes inventados, nenhuma pessoa real (regra 20, item 17). A camada de IA
+mínima e o runtime de agente passam para o começo da A2, junto da ingestão, que é feita pela
+coordenação (D75). Grade horária e calendário ficam para o F2 e o F8, e o "seu dia" do
+Assistente sai do roteiro até lá. Os agentes do roteiro são os três da D32 revista. Motivo: a
+primeira das quatro coisas da D24 é a escola cadastrada sem trabalho manual, e um seed com a
+escola montada escondia exatamente isso; é também a primeira coisa que uma escola real vai
+fazer, então é a que precisa estar de pé desde já. Os fixtures de teste continuam existindo,
+dentro dos testes: o que sai é a escola pronta na demonstração.
+
+**D72 — A pele do produto é o sistema do ChatGPT, em branco, preto e laranja, e é uma só.**
+*(decidida pelo Joaquim em 23/09/2026, entre a pele do P02, que o Gabriel escolheu em
+19/09/2026, e a cópia da Teachy da oitava rodada, P31; o Gabriel é avisado)*
+Três cores e mais nenhuma: branco, preto (`#0D0D0D`) e o laranja da pinta (`#E8732E`); verde e
+vermelho só em estado. Fonte do sistema, com a Fustat só no logotipo. Botão em pílula, item de
+menu de 36 px com canto de 10, caixa de pedido com canto de 28 e sombra suave, rótulo de grupo
+cinza sem caixa-alta, e o laranja aparecendo pouco: a pinta, o enviar, o contador e o que
+espera a pessoa. Vale em **todas** as telas: Ferramentas e Turmas mantêm a estrutura que o
+Gabriel desenhou na oitava rodada (o catálogo, a turma aberta), mas sem Quicksand e Inter, sem
+o canto de 8 px, sem as medidas tiradas da Teachy e com os ícones de ferramenta dentro da
+paleta. Junto vem o **padrão de espaço** do P03: aba de navegação sem título nem descrição (o
+`<h1>` existe só para leitor de tela, e cada rota tem o próprio `document.title`), margem de 16
+px no celular e 24 px a partir de 768, uma barra de 36 px com os controles da página, largura
+de até 1480 px em grade e tabela, 1040 em formulário e 760 em leitura e conversa, e tela de
+trabalho que cabe na janela e rola por dentro. Os nomes dos tokens da seção 9.9 do
+`docs/interface.md` ficam; os valores e os SVGs do logotipo vêm de `mockups/` (`src/index.css`
+e `public/marca/`), que são da marca e não código de terceiro. Os avatares dos três agentes o
+Gabriel entrega antes da Tech Spec da A1. A pele da landing page — papel, creme, azul-noite —
+continua sendo da landing page. Motivo: o Gabriel rejeitou a pele da landing vendo o produto;
+duas peles dobram o trabalho da A1 e da A2; sem fonte web além do logotipo, o primeiro
+carregamento fica menor no Chromebook (regra 50); e copiar fonte, medida e canto de um
+concorrente direto abre o risco de concorrência desleal (trade dress) sem ganho que o
+compense.
+
+**D73 — A navegação do professor é a do mockup: a caixa de pedido em primeiro lugar, o time e o
+histórico na lateral.** *(decidida pelo Gabriel em 20/09/2026, vista em mockup; ratificada pelo
+Joaquim em 23/09/2026)*
+Revisa a seção 1 do `docs/interface.md`, que estava marcada como decidida pelo desenho da call,
+sem renumerar a Parte A. A lateral do professor tem **Nova conversa · Ferramentas · Calendário ·
+Turmas**, e dois grupos: **Seu time** (Assistente de ensino e Tutor, cada um abrindo a própria
+conversa em tela cheia) e **Histórico** (as conversas de verdade, por data). Cada item só
+aparece quando a fase dele existir: Calendário nasce no F8, e Projetos e Fixados só entram se o
+P05 for aprovado. "Meu painel" deixa de existir, e "Minhas turmas" vira **Turmas**, com o **Meu
+uso** dentro (revisão do nome na D69). O menu da pessoa segue o P18, com "Sair" a um clique e do
+mesmo tamanho dos outros (D59). Motivo: o professor abre o produto para pedir alguma coisa, e a
+navegação da call punha na frente páginas que ele raramente abre; o Gabriel reprovou o desenho
+antigo vendo, e o novo tem menos itens e nenhum que exista sem fase.
+
+**D74 — É ferramenta o que entrega um output próprio; o resto é pedido ao Assistente.**
+*(decidida pelo Gabriel em 20/09/2026; ratificada pelo Joaquim em 23/09/2026)*
+Ferramenta é a ação específica que entrega uma coisa com formato, que fica na biblioteca, sai em
+arquivo e pode ser aplicada — um plano completo, uma apresentação, uma prova. O que o chat já
+responde — e-mail, ideia de atividade, resumo de um texto, pergunta sobre um conteúdo — não é
+ferramenta: é pedido ao Assistente de ensino, sem contrato próprio (D18). As ferramentas se
+organizam em quatro categorias, com estes nomes na tela e na busca: **Planejar**, **Preparar a
+aula**, **Avaliar** e **Corrigir**. As oito ferramentas novas que o mockup propôs (planejamento
+do período, projeto, plano de recuperação, mapa mental, roteiro de experimento, avaliação
+diagnóstica, proposta de redação e importar prova) **não** entram por esta decisão: cada uma
+passa por `/descobrir` antes do F7, e na A2 a tela mostra só as que existem. Motivo: sem um
+critério, cada pedido vira ferramenta, e o catálogo incha como os de "60 ferramentas" do mercado;
+com ele, recusar um pedido de ferramenta tem resposta escrita, e o detector de intenção da D18
+ganha os dois lados que precisa distinguir.
+
+**D75 — O material da escola entra pela coordenação.** *(decidida pelo Joaquim em 23/09/2026)*
+A base de material da escola é montada só pela coordenação: ela cria as disciplinas e sobe os
+documentos, com a titularidade e a licença declaradas (D5, D22). Professor e aluno não sobem
+material para a base. A titularidade continua sendo declarada (material da escola, do professor
+autor, de terceiro com licença, de domínio aberto): quem sobe é a coordenação, de quem é o
+material é a titularidade que ela declara. O anexo numa conversa (P07) é outra coisa, vale só
+naquela conversa, e continua em aberto. Motivo: a licença é da escola, que é a controladora
+(D10); com uma porta só de entrada, a D5 é conferida num lugar só, por quem responde por ela; e
+é o fluxo que a escola já tem, em que a coordenação distribui o material.

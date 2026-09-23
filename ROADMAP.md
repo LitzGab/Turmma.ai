@@ -88,64 +88,86 @@ e que um professor com vínculo nas duas não leva dado de uma para a outra.
 
 ## MVP de apresentação — A1 a A5 (D71)
 
-> **Proposta de 19/09/2026.** A direção está dada: depois do F1, construímos o mínimo que
-> demonstra o fluxo completo. A composição de cada spec é ponto de partida e fecha no PRD dela.
+> **Ratificado em 23/09/2026** (D71 revista). A direção de cada spec está abaixo; o detalhe
+> fecha no PRD dela.
 
-**O roteiro define o escopo.** Uns quinze minutos, numa escola sintética, com as três áreas e as
-quatro coisas da D24:
+**O roteiro define o escopo.** Uns quinze minutos, com as três áreas e as quatro coisas da D24.
+Nada vem pronto: a escola nasce na frente de quem assiste, e tudo o que aparece foi digitado ou
+enviado pelo próprio produto, com nomes inventados.
 
-1. **Coordenação** entra com MFA e mostra a escola montada e o material com licença ingerido.
-2. **Professora** pede uma atividade ao Assistente de ensino; o chat pergunta se quer a
-   ferramenta, abre o cartão, gera com a página citada, salva e exporta em PDF. Pede a versão
-   adaptada escolhendo o tipo de adaptação, e aprova. Em "Seu time", o Planejador abriu o dia.
-3. **Aluno** responde a atividade e abre o Tutor: tenta arrancar a resposta, o Tutor recusa,
+1. **Coordenação** aceita o convite, entra com MFA e **monta a escola**: disciplinas, turmas, a
+   lista de nomes de cada turma e a alocação dos professores. Sobe o material com a licença
+   declarada (D75). O professor recebe o convite e confirma o vínculo; o aluno entra pelo link
+   da sala, reivindica o nome, e a professora aprova.
+2. **Professora** pede uma atividade ao **Assistente de ensino**; ele pergunta se ela quer a
+   ferramenta, abre o cartão, gera com a página citada, salva e exporta em PDF. Ela pede a
+   versão adaptada escolhendo o tipo de adaptação, e aprova.
+3. **Aluno** responde a atividade e abre o **Tutor**: tenta arrancar a resposta, o Tutor recusa,
    conduz, cita a página e lembra do que ele errou.
-4. **Professora** recebe do Tutor que oito travaram no mesmo ponto; o Corretor avisa que
-   corrigiu e espera; ela abre os destaques e aprova, com o registro da validação; vê o acerto
-   por habilidade em "Minhas turmas".
-5. **Coordenação** abre a governança: o que a IA gerou e quem aprovou, o que cada agente faz
-   sozinho, o consumo, e o resumo do Analista de desempenho escolar, em agregado.
+4. **Professora** recebe do Tutor que oito travaram no mesmo ponto; o Assistente avisa que
+   corrigiu e espera; ela abre os destaques e aprova, com o registro da validação, e vê o
+   acerto por habilidade em **Turmas**.
+5. **Coordenação** abre a governança: o que a IA gerou e quem aprovou, o que cada função faz
+   sozinha, o consumo, e o resumo do **Analista de desempenho escolar**, em agregado.
 
 **Regras da fatia** (D71): dado 100% sintético; código do produto, não protótipo — mesmas
-regras 00 a 80 e mesmo processo; regra 70 inteira; fora tudo que não aparece no roteiro. Só
+regras 00 a 80 e mesmo processo; regra 70 inteira; fora tudo que não aparece no roteiro. **Sem
+seed de escola pronta**: a escola é criada por nós pelo `ops:escola` e montada pela coordenação
+na tela; os fixtures ficam dentro dos testes. Os três afrouxamentos estão aceitos e valem só
 enquanto o dado for sintético: AIA com a etapa 1 antes do PRD da fatia, provedor de modelo
 qualquer pela porta, e cenário de carga sem crescer. A apresentação roda na nossa máquina; o
 staging nasce quando alguém de fora precisar usar sozinho (D31).
 
-## A1 — `apresentacao-base` [ ]
+Os agentes são os três da D32 revista — Assistente de ensino, Tutor e Analista de desempenho
+escolar —, e a pele é uma só, a da D72, com a navegação da D73.
+
+## A1 — `apresentacao-escola` [ ]
 **Depende de:** F1
 
-Casca da web com a marca Turmma e a navegação dos três papéis. Camada de IA mínima: porta
-`LLMProvider`, adaptadores Ollama, OpenAI-compatível e falso, perfis, registro de consumo por
-escola, validação de schema. Runtime mínimo de agente: thread por agente, entrega que nasce
-pendente, execução registrada, processador idempotente (D49). Seed sintético da escola de
-demonstração e o comando que sobe tudo.
+A escola montada pela coordenação, com o núcleo do F2 em fatia fina. Casca da web com a marca
+(D72: tokens e logotipo de `mockups/`, avatares dos três agentes) e a navegação dos três papéis
+(D73), com o seletor de escola que troca o token (P30). A **coordenação** cria disciplinas e
+turmas na tela, sobe a lista de nomes de cada turma (colada ou em planilha simples, D3 revista)
+e aloca professor × turma × disciplina. O **professor** entra pelo convite e confirma o vínculo
+(regra 60, item 8a). O **aluno** entra pelo link da sala, reivindica o nome da lista, define a
+senha, e **o professor aprova** (D4). Convite com validade, revogação e reivindicação única
+(regra 20, item 8; regra 80, item 7; P27). A escola em si nasce do `ops:escola`, e a coordenação
+recebe o convite pelo `ops:convite-coordenador` (D2).
 
-**Pronto quando:** um comando sobe a escola sintética; professor, aluno e coordenação entram e
-veem a própria navegação com a marca; uma chamada de IA passa pela porta e aparece no consumo da
-escola; e o teste de isolamento do F1 continua verde com as tabelas novas.
+**Pronto quando:** a partir de uma escola vazia, a coordenação monta duas turmas com lista de
+nomes e professor alocado sem ninguém ser cadastrado individualmente; o professor confirma o
+vínculo pelo convite; os alunos reivindicam os nomes e o professor aprova; dois alunos
+reivindicando o mesmo nome no mesmo segundo não geram duplicidade nem erro cru; cada papel vê a
+própria navegação com a marca; e o teste de isolamento do F1 continua verde com as tabelas
+novas.
 
 ## A2 — `apresentacao-professor` [ ]
 **Depende de:** A1
 
-Ingestão mínima: upload de PDF com titularidade e licença declaradas, extração, trechos com
-página, busca; sem licença, recusa antes de extrair (D5). Home com o **Assistente de ensino**,
-com contexto de turma e material, que pergunta antes de abrir a ferramenta (D18). Ferramentas:
-atividade e prova objetiva, plano de aula, e **Adaptação** por tipo, sem texto livre sobre o
-aluno (D67). Artefato salvo, ligado à turma, com a página citada, exportável em PDF. Em "Seu
-time", o **Planejador** abre o dia com o que vem do seed.
+Camada de IA mínima: porta `LLMProvider`, adaptadores Ollama, OpenAI-compatível e falso,
+perfis, registro de consumo por escola, validação de schema. Runtime mínimo de agente: thread
+por agente, função declarada com a autonomia dela (D9), entrega que nasce pendente, execução
+registrada, processador idempotente (D49). Ingestão mínima **pela coordenação** (D75): upload de
+PDF com titularidade e licença declaradas, extração, trechos com página, busca; sem licença,
+recusa antes de extrair (D5). Home com o **Assistente de ensino**, com contexto de turma e
+material, que pergunta antes de abrir a ferramenta (D18) e distingue ferramenta de pedido
+(D74). Ferramentas: atividade e prova objetiva, plano de aula, e **Adaptação** por tipo, sem
+texto livre sobre o aluno (D67). Artefato salvo, ligado à turma, com a página citada,
+exportável em PDF.
 
-**Pronto quando:** a professora gera o mesmo artefato pelo chat e pelo formulário, com a página
-citada; arquivo sem licença é recusado; a Adaptação não tem campo em que caiba um diagnóstico, e
-a versão adaptada nasce pendente.
+**Pronto quando:** uma chamada de IA passa pela porta e aparece no consumo da escola; o
+material que a coordenação subiu com licença vira trechos com página, e o sem licença é
+recusado; a professora gera o mesmo artefato pelo chat e pelo formulário, com a página citada;
+a Adaptação não tem campo em que caiba um diagnóstico, e a versão adaptada nasce pendente.
 
 ## A3 — `apresentacao-atividade-e-correcao` [ ]
 **Depende de:** A2 · **pode correr em paralelo com A4**
 
-O aluno responde a atividade objetiva no navegador. O **Corretor** corrige, monta o diagnóstico
-por habilidade e o relatório por questão, e a entrega espera o professor. Aprovação com os
-destaques abertos e o **registro da validação** (D33, D56). Sem `Nota`: é diagnóstico formativo
-(D46). Aba **"Minhas turmas"** com o acerto por habilidade (D69).
+O aluno responde a atividade objetiva no navegador. A **função de correção do Assistente**
+corrige, monta o diagnóstico por habilidade e o relatório por questão, e a entrega espera o
+professor. Aprovação com os destaques abertos e o **registro da validação** (D33, D56). Sem
+`Nota`: é diagnóstico formativo (D46). **Turmas** com o acerto por habilidade (D69, D73); as
+abas da turma aberta fecham neste PRD (P11, P28).
 
 **Pronto quando:** o diagnóstico só chega ao aluno depois de aprovado; o lote não libera sem os
 destaques abertos, e o registro mostra o que foi apresentado e aberto; a correção roda duas
@@ -157,8 +179,8 @@ vezes sem duplicar aviso nem chamada de IA; e nada é gerado por IA sobre respos
 **Tutor** socrático restrito ao material da turma, citando a página, com identidade de agente
 (D58), mensagem fixa para assunto delicado (D36) e trava durante atividade avaliativa. Memória
 lendo o que o aluno já fez no sistema, sem texto sobre a pessoa (D66). Sinais — travou, pediu
-resposta pronta, dúvida que se repetiu — chegando à **thread do Tutor** do professor da turma
-(D32 revista, D34).
+resposta pronta, dúvida que se repetiu — chegando à **conversa do Tutor** em "Seu time", para
+o professor da turma (D32 revista, D34).
 
 **Pronto quando:** três tentativas diferentes de arrancar a resposta pronta falham no teste; o
 Tutor diz o que é quando o aluno pergunta se é uma pessoa; o sinal chega ao professor certo e a
@@ -167,31 +189,32 @@ nenhum outro; e nenhum campo guarda texto livre sobre o aluno.
 ## A5 — `apresentacao-coordenacao` [ ]
 **Depende de:** A3, A4
 
-**Governança**: o que a IA gerou e quem aprovou, com o número; cada agente, o que faz sozinho e
-o que espera aprovação, em português comum (D9); consumo de IA da escola. **Analista de
-desempenho escolar** com o resumo semanal em agregado, alerta como hipótese e a regra do grupo
-mínimo; o nominal só abre com auditoria (D45 revista, D34). Seed com histórico suficiente para
-o feed nunca aparecer vazio, e o **roteiro de demonstração** escrito.
+**Governança**: o que a IA gerou e quem aprovou, com o número; cada agente e cada função, o que
+faz sozinho e o que espera aprovação, em português comum, com a suspensão por função (D9, D60,
+P19); consumo de IA da escola. **Analista de desempenho escolar** com o resumo semanal em
+agregado, alerta como hipótese e a regra do grupo mínimo; o nominal só abre com auditoria (D45
+revista, D34). O histórico que o feed precisa nasce do próprio roteiro, não de seed, e o
+**roteiro de demonstração** fica escrito.
 
-**Pronto quando:** as quatro coisas da D24 aparecem no roteiro, de ponta a ponta, com um
-comando; e teste prova que a coordenação não vê indicador nominal de professor sem deixar
-auditoria, nem adoção nominal em lugar nenhum.
+**Pronto quando:** as quatro coisas da D24 aparecem no roteiro, de ponta a ponta, começando de
+uma escola vazia; e teste prova que a coordenação não vê indicador nominal de professor sem
+deixar auditoria, nem adoção nominal em lugar nenhum.
 
 ### O que cada fase empresta ao MVP, e o que fica para quando ela for completada
 
 | Fase | Entra no MVP | Fica para depois |
 |---|---|---|
-| F2 | nada: o seed sintético faz o papel do onboarding | tudo. É a primeira depois do MVP, junto do F3: sem elas nenhuma escola real entra |
+| F2 | disciplinas e turmas na tela, lista de nomes por turma, alocação, convite do professor, reivindicação com aprovação | grade horária e calendário importados, Classroom (D48), reset de senha pelo coordenador, planilha suja em escala |
 | F3 | nada, porque o dado é sintético | tudo. Continua sem poder ser a última |
-| F4 | upload com licença, extração, trechos com página, busca, recusa sem licença | classificação BNCC completa, versionamento, reprocessamento, painel, adaptadores |
+| F4 | upload pela coordenação com licença, extração, trechos com página, busca, recusa sem licença | classificação BNCC completa, versionamento, reprocessamento, painel, adaptadores |
 | F5 | porta, três adaptadores, perfis, consumo, validação de schema | gateway com limitador, prioridade, reserva e degradação; orçamento e pacote do tutor; soberania (D62); avaliação de modelos |
-| F6 | atividade objetiva online, correção, diagnóstico, aprovação com registro, "Minhas turmas" | prova resiliente, outros modos, rubrica e correção cega de discursiva, saída da aba (D70) |
+| F6 | atividade objetiva online, correção, diagnóstico, aprovação com registro, Turmas | prova resiliente, outros modos, rubrica e correção cega de discursiva, saída da aba (D70) |
 | F7 | Assistente de ensino, atividade e prova objetiva, plano de aula, Adaptação, artefato salvo, PDF | simulado ENEM, rubrica, apresentação, material didático, PPTX e XLSX, biblioteca e histórico completos, busca na web (D68) |
 | F9 | Tutor socrático, página citada, identidade, mensagem fixa, trava, memória | modo casa, busca em fontes aprovadas (D68), aviso etário, encaminhamento a quem notifica, teste adversário completo |
-| F10 | sinal chegando à thread do Tutor do professor certo | WebSocket em duas instâncias, modo casa com resumo |
-| F11 | thread, entrega pendente, execução registrada, idempotência; Planejador, Corretor, Tutor e Adaptador | limite de passos e de custo, suspensão por escola, Analista por evento |
-| F12 | governança de IA, agentes e autonomia, consumo, Analista semanal, nominal com auditoria | painel completo, Conformidade, Denúncias, Exportar, dossiê |
-| F15 | seed sintético, roteiro, um comando | demonstração completa, com um bimestre e notas |
+| F10 | sinal chegando à conversa do Tutor do professor certo | WebSocket em duas instâncias, modo casa com resumo |
+| F11 | thread, função com autonomia declarada, entrega pendente, execução registrada, idempotência; Assistente (correção e adaptação) e Tutor | limite de passos e de custo, suspensão por função numa escola, "seu dia e sua semana", Analista por evento |
+| F12 | governança de IA, agentes e funções com autonomia, consumo, Analista semanal, nominal com auditoria | painel completo, Conformidade, Denúncias, Exportar, dossiê |
+| F15 | roteiro, um comando que sobe o ambiente vazio | demonstração completa, com um bimestre e notas |
 | F8, F13, F14, F17, F16 | nada | tudo |
 
 ## F2 — `onboarding-por-convite` [ ]
@@ -202,11 +225,13 @@ calendário**, que definem a alocação professor × turma × disciplina (D3 rev
 entra por link e confirma o vínculo. Aluno entra pela conta da escola ou pelo link da sala,
 reivindica o nome e **o professor aprova**. Importação de turmas do Classroom como adaptador
 opcional (D48). Token com validade, uso único, revogação. Reset de senha do aluno pelo
-coordenador.
+coordenador. **O núcleo nasce na A1** (D71 revista): turmas na tela, lista de nomes, convite e
+reivindicação; o F2 completa com a grade, o calendário, o Classroom, o reset de senha e a escala.
 
 **Pronto quando:** uma escola inteira entra sem ninguém ser cadastrado individualmente, com
 grade e calendário importados, 35 alunos reivindicando nomes no mesmo minuto não geram
-duplicidade nem erro cru, e o Planejador tem de onde abrir o dia do professor.
+duplicidade nem erro cru, e o Assistente tem de onde abrir o dia do professor ("seu dia e sua
+semana", D32 revista).
 
 ## F3 — `lgpd-e-titular` [ ]
 **Depende de:** F1 · **pode correr em paralelo com F4 e F5**
@@ -271,7 +296,7 @@ cega. **A validação humana da objetiva é registrada** (D56). Prova online res
 salva por item, relógio no servidor, retomada após queda (D27). A nota oficial e o boletim
 ficam no F17. AIA da correção e do diagnóstico escritas antes (D60).
 
-Nasce aqui a aba **"Minhas turmas"** de "Meu painel": desempenho, dificuldades, evolução e
+Nasce aqui **Turmas**, na navegação do professor (D73): desempenho, dificuldades, evolução e
 alunos que precisam de atenção, a partir do diagnóstico por habilidade (D69); os indicadores
 de turma e aluno fecham antes deste PRD. Na prova online, **sair da aba é fato mostrado só ao
 professor**, com o aluno avisado e sem consequência automática (D70).
@@ -279,7 +304,7 @@ professor**, com o aluno avisado e sem consequência automática (D70).
 **Pronto quando:** a IA corrige objetiva e diagnostica, o professor aprova o que chega ao
 aluno, **nenhum campo do sistema guarda nota, conceito ou devolutiva de discursiva gerada por
 IA**, o registro da validação mostra o que foi apresentado e aberto, e uma queda de rede no
-meio da prova não perde resposta nem tempo do aluno. O professor vê a turma em "Minhas turmas"
+meio da prova não perde resposta nem tempo do aluno. O professor vê a turma em Turmas
 sem esperar o F12, e teste prova que a contagem de saídas da aba não existe fora de avaliação
 nem somada por aluno.
 
@@ -291,7 +316,7 @@ material. Ferramentas: prova, atividade, lista, **material didático** (fora da 
 entrega), **apresentação**, plano de aula e sequência didática, **Adaptação** — que recebe o
 tipo de adaptação, nunca texto livre sobre o aluno, e não gera PEI (D67) —, simulado ENEM, e **rubrica por competência
 para redação e discursiva — sem correção, sem nota e sem devolutiva gerada por IA** (D55).
-Sob pedido do professor, o Planejador também monta atividade de letramento em IA, alinhada às
+Sob pedido do professor, o Assistente também monta atividade de letramento em IA, alinhada às
 12 aprendizagens do MEC e às habilidades de Computação da BNCC (D65).
 Chat e formulário são o mesmo motor: o chat pergunta se quer usar a ferramenta e a abre
 como cartão na conversa (D18). Banco público de questões do ENEM a partir das provas
@@ -358,35 +383,36 @@ duas instâncias de realtime entregando o sinal ao professor certo.
 ## F11 — `agentes` [ ]
 **Depende de:** F7, F9
 
-Runtime em fila, thread por agente, não-lidos, autonomia declarada e visível, portão de
-aprovação, limite de passos e de custo. Assistente de ensino, Tutor, Corretor, Planejador,
-Adaptador e Analista de desempenho escolar, com nível e gatilho de `docs/agentes.md` (D32
-revista).
+Runtime em fila, thread por agente, não-lidos, autonomia declarada **por função** e visível
+(D9), portão de aprovação, limite de passos e de custo. Os três agentes da D32 revista —
+Assistente de ensino, Tutor e Analista de desempenho escolar — com as funções do Assistente
+(correção de objetiva, adaptação, "seu dia e sua semana"), cada uma com nível e gatilho de
+`docs/agentes.md`.
 Encaminhamento de assunto delicado (D36). Processador idempotente (D49).
 
-Cada agente de alto risco entra com a AIA escrita e com **procedimento de suspensão** — como
-desligar o agente numa escola, quem decide, o que acontece com o que ele já produziu (D60).
+Cada função de alto risco entra com a AIA escrita e com **procedimento de suspensão** — como
+desligar a função numa escola, quem decide, o que acontece com o que ela já produziu (D60).
 
-**Pronto quando:** o Corretor termina, avisa, e o diagnóstico espera aprovação; rodar o mesmo
-agente duas vezes não duplica aviso nem chamada de IA; e um agente pode ser suspenso numa
-escola sem desligar o sistema.
+**Pronto quando:** a correção de objetiva termina, avisa, e o diagnóstico espera aprovação;
+rodar a mesma função duas vezes não duplica aviso nem chamada de IA; e uma função pode ser
+suspensa numa escola sem desligar o chat do professor nem o resto do sistema.
 
 ## F12 — `governanca-do-coordenador` [ ]
 **Depende de:** F6, F10, F11
 
 Uso de IA por série e disciplina, desempenho por série, turma e habilidade, alertas em
 agregado formulados como hipótese (média fora da curva, habilidade em queda, aluno em
-risco), **auditoria do que a IA gerou e quem aprovou**, autonomia de cada agente, consumo de
+risco), **auditoria do que a IA gerou e quem aprovou**, autonomia de cada agente e de cada função, consumo de
 tokens. **Painel do professor** com o próprio uso e o desempenho das turmas dele; a
 coordenação vê agregado, só com dois ou mais professores no recorte, e abre o nominal com
-auditoria; sem ranking de professor (D45 revista). A aba "Minhas turmas" já existe desde o F6
-(D69) e ganha aqui a comparação com a série.
+auditoria; sem ranking de professor (D45 revista). Turmas já existe desde o F6
+(D69, D73) e ganha aqui a comparação com a série.
 Indicadores, limiares e texto dos alertas definidos antes do PRD (decisão em aberto).
 **Sem ranking, sem lista nominal de adoção e sem alerta de professor que não usa** (D64).
 Entram as telas de **Conformidade** (o dossiê da escola num lugar: propósito, faixas etárias,
 funcionamento em linguagem simples, LGPD e ECA artigo por artigo, relatório de uso exportável,
 material de comunicação), **Denúncias** e **Exportar** (D61, D63), e o resumo da AIA em cada
-agente de alto risco (D60).
+função de alto risco (D60).
 
 **Pronto quando:** a escola responde "o que a IA faz aqui e quem aprovou" em uma tela,
 **imprime o dossiê que a secretaria pede** a partir dela, e teste prova que a coordenação não
@@ -430,7 +456,7 @@ nela, e o feed nunca aparece vazio.
 ## F17 — `nota-oficial-e-boletim` [ ]
 **Depende de:** F6, F11
 
-Nota oficial das objetivas proposta pelo Corretor e aprovada em lote com destaques (D33),
+Nota oficial das objetivas proposta pela correção do Assistente e aprovada em lote com destaques (D33),
 nota das discursivas dada pelo professor sem valor sugerido (D46), boletim, evento "nota
 aprovada" no motor do F13, exportação das notas aprovadas no formato de importação do
 sistema de gestão da escola. Entra depois do diagnóstico formativo (D46), e revisita a
@@ -484,9 +510,10 @@ escolhido nesse momento (D31, D42).
 
 ## Paralelismo
 
-- O MVP de apresentação (A1 a A5) vem logo depois do F1; A3 e A4 correm em paralelo, cada uma
-  no seu branch (D23 revista). F2 e F3 são as primeiras depois dele
-- F5 corre desde o início, independente do domínio; a fatia mínima dela nasce na A1
+- O MVP de apresentação (A1 a A5) vem logo depois do F1; A3 e A4 podem correr em paralelo,
+  na `develop` (D23 revista). F2 e F3 são as primeiras depois dele, e o F2 completa o que a A1
+  começou
+- F5 corre desde o início, independente do domínio; a fatia mínima dela nasce na A2
 - F3 corre em paralelo com F4 e F5, e **não pode ser a última**
 - F10 depende só de F9; F13 pode correr junto de F12
 - F17 (nota oficial) corre depois de F6 e F11, em paralelo com F12 a F15

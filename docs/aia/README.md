@@ -6,17 +6,19 @@
 > o Gabriel revisa. A AIA é revista a cada troca de modelo ou mudança relevante de prompt.
 
 No MVP de apresentação (D71), enquanto o dado for sintético, basta a **etapa 1** antes do PRD da
-fatia; as seis etapas vêm antes do primeiro aluno real. A lista acompanha os seis agentes da D32
-revista. Rotina de abrir o dia (Planejador) e apoio ao
-preparo de aula (Assistente de ensino) não são alto risco e não têm AIA.
+fatia; as seis etapas vêm antes do primeiro aluno real. A lista é **por funcionalidade**, e
+acompanha as funções dos agentes da D32 revista em 23/09/2026 (`docs/agentes.md`): a AIA cobre a
+função, e o procedimento de suspensão desliga aquela função numa escola, sem desligar as outras
+(D60 revista). "Seu dia e sua semana" e a conversa com ferramentas, as duas do Assistente de
+ensino, não são alto risco e não têm AIA.
 
 | Arquivo | Cobre | Antes do PRD de | Estado |
 |---|---|---|---|
 | `tutor.md` | Tutor com o aluno: conversa socrática, **memória de toda a trajetória do aluno no sistema**, feita do registro do trabalho, e leitura do tipo de adaptação (D66), **busca em fontes aprovadas** (D68), encaminhamento de assunto delicado (D36) | F9 | a escrever |
-| `sinais-e-alertas.md` | O que o Tutor avisa ao professor, "aluno que precisa de atenção" em "Minhas turmas" (D69) e os alertas do Analista de desempenho escolar. Carrega a pergunta aberta: acompanhar saída da aba **fora** de avaliação (hoje não existe) | F6 (a parte de "Minhas turmas"), F10 e F12 | a escrever |
-| `correcao-de-objetiva.md` | Corretor nas objetivas, registro da validação (D56) e **saída da aba durante a prova** (D70), com o risco de falso positivo em quem usa leitor de tela ou teclado virtual | F6 | a escrever |
-| `diagnostico-por-habilidade.md` | Diagnóstico formativo por habilidade (D46), que alimenta a memória do Tutor e "Minhas turmas" | F6 | a escrever |
-| `adaptacao.md` | Adaptador e a ferramenta Adaptação: recebe o tipo de adaptação, nunca a condição nem texto livre sobre o aluno (D35, D67) | F7 | a escrever |
+| `sinais-e-alertas.md` | O que o Tutor avisa ao professor, "aluno que precisa de atenção" em "Turmas" (D69, D73) e os alertas do Analista de desempenho escolar. Carrega a pergunta aberta: acompanhar saída da aba **fora** de avaliação (hoje não existe) | F6 (a parte de "Turmas"), F10 e F12 | a escrever |
+| `correcao-de-objetiva.md` | A função de correção de objetiva do Assistente de ensino, registro da validação (D56) e **saída da aba durante a prova** (D70), com o risco de falso positivo em quem usa leitor de tela ou teclado virtual | F6 | a escrever |
+| `diagnostico-por-habilidade.md` | Diagnóstico formativo por habilidade (D46), que alimenta a memória do Tutor e "Turmas" | F6 | a escrever |
+| `adaptacao.md` | A função de adaptação do Assistente de ensino e a ferramenta Adaptação: recebe o tipo de adaptação, nunca a condição nem texto livre sobre o aluno (D35, D67) | F7 | a escrever |
 
 ## O que toda AIA daqui precisa ter
 

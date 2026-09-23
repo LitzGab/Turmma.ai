@@ -178,13 +178,17 @@ para o staging".
       do `main` (`.github/workflows`), e precisa rodar em `develop`, `release` e nos PRs; o hook
       de commit, o `/executar-task`, o `/corrigir` e a regra 40 ainda descrevem commit direto no
       `main` e esteira verde antes da tarefa seguinte; definir de qual branch sai o staging
-- [ ] **MVP de apresentação (D71):** aceitar ou recusar os três afrouxamentos enquanto o dado
-      for sintético (AIA só com a etapa 1, provedor de modelo livre, carga sem crescer), antes
-      do PRD da A1; e escrever a etapa 1 das AIAs de correção, diagnóstico, Tutor e sinais antes
-      dos PRDs da A3, da A4 e da A5 (`docs/aia/`)
-- [ ] Ratificar ou recusar as D55 a D71 que esperam o Joaquim, e as revisões da D1, da D32 e
-      da D45 (`docs/decisoes.md`). Os branches `docs/direcionamento-regulatorio` e
-      `docs/estrutura-de-agentes` já estão na `develop`
+- [x] ~~MVP de apresentação (D71): aceitar ou recusar os três afrouxamentos~~ — aceitos em
+      23/09/2026 (D71 revista)
+- [ ] **AIAs do MVP:** escrever a etapa 1 das AIAs de correção, diagnóstico, Tutor e sinais antes
+      dos PRDs da A3, da A4 e da A5 (`docs/aia/`). A A1 e a A2 não têm função de alto risco além
+      da adaptação, cuja etapa 1 entra antes do PRD da A2
+- [x] ~~Ratificar ou recusar as D55 a D71~~ — ratificadas em bloco pelo Joaquim em 23/09/2026,
+      com as revisões da D1, D17, D23, D32, D45 e D60
+- [ ] **Avisar o Gabriel do que foi decidido em 23/09/2026:** a pele é uma só, a do ChatGPT, e
+      Ferramentas e Turmas deixam a pele da Teachy (D72); três agentes (D32 revista); a A1 é a
+      escola montada pela coordenação, sem seed (D71 revista); o material entra pela coordenação
+      (D75). O mockup pode seguir com a pele da Teachy como estudo, mas o produto não
 
 Pendências herdadas da validação do F0 (`tasks/prd-fundacao-tecnica/validacao.md`, seção 6
 das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e são lidos pelo
@@ -328,9 +332,10 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
 
 ## Material didático
 
-- [ ] **Material de exemplo da escola sintética** do MVP de apresentação: nosso ou de domínio
-      público, com a licença declarada, de uma disciplina que renda boa demonstração. Antes do
-      PRD da A2 (D71, D5)
+- [ ] **O documento que a coordenação sobe na demonstração** (D75): nosso ou de domínio
+      público, com a licença declarada, de uma disciplina que renda boa demonstração. Não é
+      material pré-carregado: não há seed de escola nem de material (D71 revista). Antes do PRD
+      da A2 (D5)
 
 - [ ] Modelo de autorização escrita da escola para cada fonte de material
 - [ ] Parecer sobre direito autoral da ingestão (Lei 9.610, art. 29, IX; termos de Arco/SAS,
@@ -347,28 +352,27 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
 
 ## Produto
 
-- [ ] **Fechar o que saiu da revisão dos mockups (19 e 20/09/2026)**, item por item, em
-      `docs/pendencias-dos-mockups.md`. Os que travam o PRD da A1: **um agente por pessoa**
-      (revisão da D32, da D9 e da D60; o Gabriel decidiu a direção, falta o Joaquim), a pele do
-      produto (vira a D72), o padrão de espaço e a navegação do professor. Os que pedem
-      `/descobrir` antes de qualquer PRD: **projetos**, **anexo na conversa** (abre a porta para
-      correção de discursiva por IA: D55) e **faltas** (não existe no roadmap nem na tabela da LGPD)
-- [ ] **Catálogo de ferramentas (P22 a P25).** Registrar a regra "ferramenta é o que entrega um output
-      próprio; o resto é pedido ao chat" e as quatro categorias (Planejar, Preparar a aula, Avaliar,
-      Corrigir) antes do PRD da A2. Passar por `/descobrir` as oito ferramentas que a D67 não lista
-      (planejamento do período, projeto, plano de recuperação, mapa mental, roteiro de experimento,
-      avaliação diagnóstica, proposta de redação, importar prova), uma a uma, antes de entrarem no F7.
-      Na Tech Spec da A2: ferramenta como dado, com o formulário derivado do schema do contrato (P23)
-- [ ] **Sétima e oitava rodadas dos mockups (P26 a P31).** Antes do PRD da A1: escolher **uma pele**
-      (a da Teachy em Ferramentas e Turmas ou a do P02 em tudo) e levar ao advogado a cópia fiel de
-      concorrente (P31); seletor de escola que troca o token (P30). Antes do PRD da A3: a turma aberta
-      com nove abas (P28). Por `/descobrir`: **ranking de participação** (P26, bate na 10.2 do
-      `docs/interface.md` e na D57), **Recursos** e **Mural** (P28). No PRD do F2: o convite por link,
-      WhatsApp e código (P27)
-- [ ] F2: o vínculo de aluno criado pela importação precisa nascer com `decidido_em` preenchido. A lista de alunos do ano encerrado (10.0) só traz quem chegou confirmado ao fim do ano, e hoje só a fixture de teste grava esse campo: sem ele, o aluno some do histórico da turma
+- [x] ~~Fechar o que da revisão dos mockups trava o PRD da A1~~ — em 23/09/2026: um agente por
+      pessoa (D32, D9 e D60 revistas), a pele e o padrão de espaço (D72), a navegação do professor
+      (D73). Continuam em `docs/pendencias-dos-mockups.md` os que pedem `/descobrir` antes de
+      qualquer PRD: **projetos**, **anexo na conversa** (abre a porta para correção de discursiva
+      por IA: D55) e **faltas** (não existe no roadmap nem na tabela da LGPD)
+- [ ] **Catálogo de ferramentas (P22 a P25).** A regra e as quatro categorias estão na D74. Falta
+      passar por `/descobrir` as oito ferramentas que a D67 não lista (planejamento do período,
+      projeto, plano de recuperação, mapa mental, roteiro de experimento, avaliação diagnóstica,
+      proposta de redação, importar prova), uma a uma, antes de entrarem no F7. Na Tech Spec da A2:
+      ferramenta como dado, com o formulário derivado do schema do contrato (P23)
+- [ ] **Sétima e oitava rodadas dos mockups (P26 a P31).** A pele ficou uma só (D72), e como a do
+      produto não copia a Teachy, a consulta ao advogado sobre cópia fiel (P31) só volta se alguém
+      propuser copiar de novo. No PRD da A1: o seletor de escola que troca o token (P30) e o
+      convite por link, WhatsApp e código (P27), que saíram do F2 para a A1 (D71 revista). Antes do
+      PRD da A3: a turma aberta com nove abas (P28). Por `/descobrir`: **ranking de participação**
+      (P26, bate na 10.2 do `docs/interface.md` e na D57), **Recursos** e **Mural** (P28)
+- [ ] A1 (antes era o F2): o vínculo de aluno criado pela lista de nomes precisa nascer com `decidido_em` preenchido. A lista de alunos do ano encerrado (10.0) só traz quem chegou confirmado ao fim do ano, e hoje só a fixture de teste grava esse campo: sem ele, o aluno some do histórico da turma
 
 - [x] ~~Fechar a lista de agentes e o nível de autonomia de cada um~~ — D32 a D36; lista
-      revista em 19/09/2026 para seis agentes (D32 revista, a ratificar pelo Joaquim)
+      revista em 19/09/2026 para seis agentes e em 23/09/2026 para três, um por pessoa da escola,
+      com a autonomia por função (D32, D9)
 - [ ] Validar com advogado a base legal para guardar a adaptação necessária do aluno (D35),
       agora lida também pelo Tutor para ajustar a forma da conversa (D66)
 - [ ] **Lista padrão de fontes aprovadas** da busca do Tutor, por faixa etária (anos finais e
@@ -376,7 +380,8 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       que entra como suboperador (D68). Antes do PRD do F9
 - [ ] Decidir de onde vêm as imagens da ferramenta de apresentação, e com que licença (D67, D5).
       Antes do PRD do F7
-- [ ] Fechar os indicadores de turma e aluno de "Minhas turmas" **antes do PRD do F6** (D69).
+- [ ] Fechar os indicadores de turma e aluno de Turmas **antes do PRD do F6** (D69, D73), e os
+      limiares que a A3 mostra antes do PRD dela.
       Ponto de partida: percentual de erro e acerto por habilidade, e "concluiu o que foi
       atribuído". Tempo ocioso e navegação não entram
 - [ ] **Guia para a TI da escola** bloquear outras IAs no computador do aluno (Google Admin,
@@ -393,13 +398,12 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
 
 - [x] ~~Identidade visual (paleta, tipografia, logo)~~ — existe e está fora deste repositório:
       manual da marca Turmma, com caramelo `#E8732E`, azul-noite `#16233E`, creme `#FFF3E2` e
-      papel `#FDFBF7` (D54). **Falta trazer os tokens e os SVGs para cá, antes do PRD do F2**
+      papel `#FDFBF7` (D54). É a pele da landing page; a do produto é a da D72
 - [x] ~~Landing page~~ — existe em `turmma.com` (fora deste repositório)
-- [ ] **Antes do PRD da A1 (D71):** trazer para o repositório: paleta em tokens, tipografia, logo em SVG e o avatar de cada
-      um dos **seis agentes**, por função: Assistente de ensino, Tutor, Corretor, Planejador,
-      Adaptador e Analista de desempenho escolar (D32 revista; `docs/interface.md` seção 7).
-      **Se a pendência P01 for ratificada, são três avatares** (Assistente, Tutor, Analista), e a
-      paleta é a da P02: branco, preto e o laranja da pinta (`docs/pendencias-dos-mockups.md`)
+- [x] ~~Trazer a paleta, a tipografia e o logo para o repositório~~ — já estão em `mockups/`
+      (`src/index.css` e `public/marca/`), e a A1 leva de lá para o `apps/web` (D72)
+- [ ] **Antes da Tech Spec da A1:** o avatar de cada um dos **três agentes**, em SVG, por função:
+      Assistente de ensino, Tutor e Analista de desempenho escolar (D32 revista, D72)
 - [ ] Identificar no 21st.dev o autor e a licença das peças que o Gabriel colou direto no
       mockup (área de soltar arquivo, miniatura de arquivo, pasta animada, `leaderboard-*` e as duas
       da HextaUI) e conferir a do calendário `vaib215/event-manager`, antes de qualquer uma entrar no
