@@ -8,7 +8,7 @@
 > `turmma.com`; o registro no INPI e o do domínio seguem pendentes (`TODO.md`). O
 > repositório, os pacotes, o banco, o compose e os comandos continuam `educa`: a renomeação
 > técnica é trabalho próprio e não vale o risco no meio do F1.
-> Repositório: https://github.com/LitzGab/Educa.ia
+> Repositório: https://github.com/LitzGab/Turmma.ai (renomeado de `Educa.ia` em 19/09/2026; é **público**)
 
 ---
 
@@ -239,6 +239,12 @@ Todas têm dono e momento. Nenhuma trava o F0.
 
 | Decisão | Dono | Quando fecha |
 |---|---|---|
+| **Um agente por pessoa da escola** (Assistente, Tutor, Analista) no lugar dos seis da D32: os agentes do professor viram funções do Assistente, e autonomia (D9) e suspensão (D60) passam a ser por função. Direção dada pelo Gabriel em 20/09/2026, vista em mockup (`docs/pendencias-dos-mockups.md`, P01) | Gabriel decidiu; Joaquim ratifica | **antes do PRD da A1**, por `/registrar-decisao` como revisão da D32, da D9 e da D60 |
+| Pele do produto (ChatGPT em branco, preto e laranja, no lugar da pele da landing page), padrão de espaço e navegação do professor, que a seção 1 do `docs/interface.md` dá como decidida (P02, P03, P04). **Em aberto dentro dela:** Ferramentas e Turmas foram copiadas da Teachy, com outra fonte, outro botão e ícones fora da paleta. O produto precisa de uma pele só, e a cópia fiel de concorrente vai ao advogado (P31) | Gabriel decidiu; Joaquim ratifica | antes do PRD da A1; vira a D72 |
+| **Projetos** do professor, **anexo de documento na conversa** e **faltas** por aluno: pedidos do Gabriel que não existem em nenhuma fase (P05, P07, P08). O anexo esbarra na D5 e abre a porta para correção de discursiva por IA (D55); faltas não tem origem de dado nem linha na tabela da LGPD | Gabriel e Joaquim | `/descobrir` de cada um, antes de entrar em qualquer PRD; fora do MVP de apresentação até lá |
+| A **turma aberta com nove abas**, no modelo da Teachy, com a sala de carteiras como subaba de Alunos: revisa o conteúdo da D69 e depende dos limiares dos indicadores (P11, P28); e se o calendário e o seletor de turma juntam as duas escolas do professor ou mostram só a escola ativa (P12, P30, regra 10) | Joaquim e Gabriel | a turma, antes do PRD da A3; o seletor, na A1; o calendário, no PRD do F8 |
+| **Ranking de participação** (presença e entrega, com pódio), **Recursos** (enviar artefato à turma) e **Mural** da turma: pedidos do Gabriel que não existem em fase nenhuma. O ranking bate na proibição de placar e pódio do `docs/interface.md` 10.2 (D59) e chega perto de pontuação social (D57) (P26, P28) | Gabriel e Joaquim | `/descobrir` de cada um; fora do MVP de apresentação até lá |
+| **Catálogo de ferramentas**: a regra "é ferramenta o que entrega um output próprio; o que o chat responde é pedido", as quatro categorias e **oito ferramentas que a D67 não lista** — planejamento do período, projeto, plano de recuperação, mapa mental, roteiro de experimento, avaliação diagnóstica, proposta de redação e importar prova (P22). O planejamento e o projeto dependem do F8; o plano de recuperação, do F6 | Gabriel decidiu a regra; Joaquim ratifica e estima | a regra, antes do PRD da A2; as oito, por `/descobrir`, antes do F7 |
 | Provedor de modelo principal e reserva | Joaquim | avaliação de `docs/avaliacao-de-modelos.md`, antes de a F5 ficar pronta (D37) |
 | Provedor de hospedagem | Joaquim | quando o staging for criado, antes da primeira demonstração externa ou do piloto (D42) |
 | Trazer a marca para o repositório: tokens de cor, tipografia, logo e o avatar dos seis agentes (a marca existe, D54) | Gabriel | **antes do PRD da A1**, que é a primeira tela com a marca (D71) |
@@ -294,6 +300,10 @@ no Brasil, se um contrato exigir.
 
 **Para entender o produto:** `docs/visao-produto.md`, `docs/fluxos.md`, `docs/glossario.md`
 **Para entender a interface:** `docs/interface.md`
+**Para ver a interface desenhada:** o branch `mockups/interface`, pasta `mockups/` (protótipo só de
+front-end, com dado sintético). **Não se faz merge dele e nada de lá é copiado para o `apps/web`**
+**Para saber o que a revisão dos mockups mudou e ainda não virou decisão:**
+`docs/pendencias-dos-mockups.md` (31 itens, com o que cada um pede de tela, API, dado, regra e teste)
 **Para entender o negócio:** `docs/negocio.md` (mercado, preço, concorrência). Não é leitura
 obrigatória para implementar
 **Para não quebrar a lei:** `docs/lgpd.md`, `docs/regulacao.md`
