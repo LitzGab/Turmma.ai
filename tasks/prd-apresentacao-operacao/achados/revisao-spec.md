@@ -989,3 +989,24 @@ Arquivos: `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operac
 Arquivos auditados:
 - `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md`
 - `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/cenarios.md`
+
+## test-engineer · 8ª rodada · APROVADO · 2026-09-23 14:04:27 · `tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+VEREDITO: APROVADO
+
+Cenários exigidos (correção da rodada 7, C6b): (a) o `desativar` ganha; (b) o `/sessao/mfa` ganha com o `desativar` bloqueado; (c) o mesmo par para `configurar_mfa`; (d) em sequência. Todos com as asserções sobre o estado final.
+
+Cobertos:
+- **C6b(a)** (`/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/cenarios.md`, linhas 21 a 24): a barreira fica entre o `jti` e o `for update`. Pede recusa idêntica à de desafio inválido, zero sessões e nada ativado. Falha se o `desativado_em is null` sair do `for update` da seção 5.
+- **C6b(b)** (linhas 25 a 29): a barreira fica depois do `for update` e antes do insert. Pede o `desativar` bloqueado, comprovado por promessa pendente ou por espera em `pg_locks`, o que é paralelo de verdade e não sequência. Depois, sessão encerrada, `SESSAO_ENCERRADA` na requisição seguinte e a linha só com id, apelido e datas. Falha se o `desativar` não começar pelo mesmo `for update`, e a seção 5 (linha 84 da techspec) agora diz que começa.
+- **C6b(c)** (linhas 30 e 31): barreira antes e depois do `update ... returning mfa_versao`. No fim, nenhum segredo nem código gravado. Nas duas ordens o resultado depende do `desativado_em is null`, que o cabeçalho das travas estende a todas, e do bloqueio de linha que o `update` segura.
+- **C6b(d)** (linha 32): o caso em sequência.
+- Recomendações da rodada 7 aplicadas: o `for update` no `desativar` e o `jti` queimado fora da transação, que não volta (techspec, seção 5, linhas 84 e 93).
+- O resto do diff na techspec é só texto (tabela de módulos, etapas, borda) e não muda o desenho.
+
+Bloqueantes: nenhum.
+
+Recomendações (entram como subtarefa no `/criar-tasks`):
+1. **C6b(a), linha 23: "`mfa_ultimo_passo` e códigos intactos" contradiz o C6.** Com o `desativar` confirmado, os códigos somem e a linha fica só com id, apelido e datas, então a asserção não pode ser escrita como está. O que se quer provar é que o `/sessao/mfa` não consumiu nada. Troque pelo estado final do C6: linha só com id, apelido e datas, nenhum código de recuperação e zero sessões. O "não consumiu" já está provado pela recusa somada às zero sessões.
+2. **C6b(c): declarar a resposta de quem perde na ordem em que o `desativar` ganha.** O `/mfa/configurar` deve ser recusado com a mesma resposta de desafio inválido, como no (a). Declarar também que o desafio de etapa `mfa` já devolvido na outra ordem, se usado depois, cai no (d).
+3. **C6b(b): fixar um só jeito de provar o bloqueio.** A espera em `pg_locks` é a mais forte, porque a "promessa pendente" sozinha também passa se o `desativar` estiver só lento. Com ela, o teste falha se o `for update` sair do `desativar`.

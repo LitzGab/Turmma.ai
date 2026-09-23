@@ -191,6 +191,26 @@ a trava não produz.
 ### Recomendações aplicadas junto
 - O `desativar` começa pelo mesmo `for update`; o `jti` queimado fora da transação não volta
 
+## Rodada 8 — 23/09/2026
+
+**Veredito: APROVADA**
+
+| Revisor | Veredito | Rodada da aprovação |
+|---|---|---|
+| `test-engineer` | APROVADO | 8ª |
+| `infra-guardian` | APROVADO | 4ª |
+| `tenancy-guardian` | APROVADO | 3ª |
+| `privacy-guardian` | APROVADO | 3ª |
+| `frontend-reviewer` | APROVADO | 3ª |
+
+### Recomendações que entram no `/criar-tasks`
+- C6b(a): trocar "`mfa_ultimo_passo` e códigos intactos" pelo estado final do C6 (linha só com id,
+  apelido e datas, nenhum código, zero sessões), que é o que a asserção consegue provar
+- C6b(c): na ordem em que o `desativar` ganha, o `/mfa/configurar` é recusado como desafio inválido;
+  o desafio `mfa` já devolvido na outra ordem cai no (d)
+- C6b(b): provar o bloqueio pela espera em `pg_locks`, não pela promessa pendente
+- As recomendações das rodadas 1 a 7 que não viraram cenário estão em `achados/revisao-spec.md`
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -219,3 +239,4 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-09-23 13:59:45 | 2026-09-23 14:00:37 | `test-engineer` | 5 | REPROVADO | a7bccf90a0ade5a5f |
 | 2026-09-23 14:01:21 | 2026-09-23 14:02:04 | `test-engineer` | 6 | REPROVADO | ab7c531f6f152ab5e |
 | 2026-09-23 14:02:37 | 2026-09-23 14:03:20 | `test-engineer` | 7 | REPROVADO | a1a865cdff5068dd3 |
+| 2026-09-23 14:03:53 | 2026-09-23 14:04:27 | `test-engineer` | 8 | APROVADO | a1ce490397edbe84f |

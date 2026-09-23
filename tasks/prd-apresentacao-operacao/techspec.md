@@ -1,7 +1,7 @@
 # Tech Spec — Identidade do operador Turmma
 
 **PRD:** `tasks/prd-apresentacao-operacao/prd.md`
-**Status:** rascunho (8ª versão, depois da rodada 7 do `/revisar-spec`; o painel foi para a A0b)
+**Status:** aprovado (23/09/2026, `/revisar-spec` rodada 8; o painel foi para a A0b)
 
 ## 1. Resumo da abordagem
 
