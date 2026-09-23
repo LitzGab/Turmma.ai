@@ -13,8 +13,7 @@ import {
   arquivosAlterados,
   avaliarCarimbo,
   CHAVE_DO_PORTAO,
-  gravarCarimbo,
-  gravarInstantaneo,
+  carimbarSeNadaMudou,
   lerCarimbo,
   lerInstantaneos,
   revisoresObrigatorios,
@@ -43,6 +42,10 @@ if (argumentos[0] === 'conferir') {
 }
 
 const inicio = new Date().toISOString()
+// O conteúdo de agora é o que as suítes vão rodar, e é ele que vai para o instantâneo. Ler no fim faria arquivo
+// editado no meio da corrida entrar como se tivesse sido testado, e o commit passaria por código que nenhuma suíte
+// viu (correção `2026-09-22-hook-do-commit-ignora-o-instantaneo-de-conteudo`).
+const noInicio = alteracoesDeCodigo(raiz, arquivosAlterados(raiz))
 const suites = ['typecheck', 'lint', 'test', ...(argumentos.includes('--e2e') ? ['e2e'] : []), ...(argumentos.includes('--infra') ? ['infra'] : [])]
 
 // Com node_modules anterior ao lock (um pull que trouxe dependência nova), o typecheck falha com TS2307
@@ -54,7 +57,12 @@ if (falhou) {
   process.stdout.write(`\n✗ portão local vermelho em ${falhou}. Nenhum carimbo gravado.\n`)
   process.exit(1)
 }
-gravarCarimbo(raiz, { inicio, suites })
-// O conteúdo que estas suítes provaram. Arquivo que volta ao mesmo conteúdo não invalida o carimbo.
-gravarInstantaneo(raiz, CHAVE_DO_PORTAO, alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
+// Carimba o conteúdo do início, que é o que as suítes provaram, ou recusa se alguém editou no meio da corrida.
+const recusa = carimbarSeNadaMudou(raiz, { inicio, suites }, noInicio)
+if (recusa) {
+  // O comando sai daqui, e não da função: quem sabe as flags é o script. Quem lê esta linha acabou de perder os
+  // ~20 min das suítes, e precisa saber que é só rodar de novo.
+  process.stdout.write(`\n✗ ${recusa} Rode \`node ${['tools/processo/portao-local.ts', ...argumentos].join(' ')}\` de novo.\n`)
+  process.exit(1)
+}
 process.stdout.write(`\n✓ portão local verde (${suites.join(', ')}). Carimbo em .processo/portao.json, início ${inicio}.\n`)

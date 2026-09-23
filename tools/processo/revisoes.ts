@@ -75,6 +75,22 @@ export const CAMINHO_CONTEUDO = '.processo/conteudo.json'
 /** A chave do instantâneo do portão local. */
 export const CHAVE_DO_PORTAO = 'portao'
 
+/** O instantâneo que corresponde a estas alterações: arquivo e hash, sem o `mtime`. */
+export function instantaneoDe(alteracoes: Alteracao[]): Record<string, string> {
+  return Object.fromEntries(alteracoes.map(({ arquivo, hash }) => [arquivo, hash]))
+}
+
+/**
+ * Arquivos cujo conteúdo difere entre dois instantâneos, incluindo os que entraram e os que saíram.
+ *
+ * É como o portão local confere, no fim, que nada mudou enquanto ele rodava: o instantâneo é gravado com o conteúdo
+ * do **início**, que é o que as suítes rodaram. Sem essa conferência, arquivo editado no meio da corrida entraria no
+ * instantâneo como se tivesse sido testado, e o commit passaria por código que nenhuma suíte viu.
+ */
+export function arquivosQueMudaram(antes: Record<string, string>, depois: Record<string, string>): string[] {
+  return [...new Set([...Object.keys(antes), ...Object.keys(depois)])].filter((arquivo) => antes[arquivo] !== depois[arquivo]).sort()
+}
+
 /** Só conta como alteração o arquivo cujo conteúdo difere do que a referência viu. */
 function mudouDeVerdade(alteracao: Alteracao, instantaneo: Record<string, string> | undefined): boolean {
   const anterior = instantaneo?.[alteracao.arquivo]
@@ -405,12 +421,23 @@ export interface ResultadoPortao {
 
 const ordinal = (n: number) => `${n}ª rodada`
 
+/**
+ * O veredito do portão do commit. Recebe os instantâneos de conteúdo (`.processo/conteudo.json`) porque a alteração
+ * que interessa é a de conteúdo, não a de `mtime`: os revisores provam a guarda mutando o arquivo e restaurando, e sem
+ * eles o commit ficava bloqueado para sempre depois do primeiro teste de mutação — a guarda empurrava para a revisão
+ * pior (correção `2026-09-22-hook-do-commit-ignora-o-instantaneo-de-conteudo`). Sem instantâneo, de rodada antiga,
+ * vale o `mtime`, que é a leitura restrita e caduca na primeira rodada nova.
+ */
 export function avaliarPortao(entrada: {
   obrigatorios: string[]
   revisoes: Revisao[]
   alteracoes: Alteracao[]
   carimbo: Carimbo | null
   mensagemCommit: string
+  /** O documento da tarefa ou da correção, relativo à raiz: é ele que dá a chave do instantâneo de cada rodada. */
+  documento: string
+  /** Obrigatório de propósito: foi o parâmetro opcional, esquecido na chamada, que criou o defeito que esta assinatura fecha. */
+  instantaneos: Instantaneos
 }): ResultadoPortao {
   const bloqueios: string[] = []
   const resumo: string[] = []
@@ -426,7 +453,7 @@ export function avaliarPortao(entrada: {
       bloqueios.push(`${revisor}: a última rodada (${ultima.rodada}ª, ${ultima.fim}) terminou ${ultima.veredito}. Corrija e chame uma rodada nova.`)
       continue
     }
-    const alteracao = alteracaoQueCaduca(revisor, ultima.inicio, entrada.alteracoes)
+    const alteracao = alteracaoQueCaduca(revisor, ultima.inicio, entrada.alteracoes, entrada.instantaneos[chaveDaRodada(entrada.documento, revisor, ultima.rodada)])
     if (alteracao) {
       bloqueios.push(
         `${revisor}: ${alteracao.arquivo} mudou em ${formatarHora(new Date(alteracao.quando))}, depois do início da ${ultima.rodada}ª rodada (${ultima.inicio}). ` +
@@ -434,7 +461,7 @@ export function avaliarPortao(entrada: {
       )
     }
   }
-  const carimbo = avaliarCarimbo(entrada.carimbo, suitesExigidas(entrada.obrigatorios), entrada.alteracoes)
+  const carimbo = avaliarCarimbo(entrada.carimbo, suitesExigidas(entrada.obrigatorios), entrada.alteracoes, entrada.instantaneos[CHAVE_DO_PORTAO])
   if (carimbo) bloqueios.push(carimbo)
   const linhaResumo = `Revisões: ${resumo.join(', ')}`
   // A linha só é cobrada com os revisores em ordem: antes disso, o exemplo sairia incompleto.
@@ -570,16 +597,46 @@ export function lerInstantaneos(raiz: string): Instantaneos {
 }
 
 /** Guarda o conteúdo visto por uma referência (o carimbo, ou uma rodada de revisor). */
+/**
+ * Grava o instantâneo de uma chave, com trava própria no arquivo: ele é de todos os documentos, e o ler-modificar-gravar
+ * sem trava perde a chave de quem escreveu junto.
+ *
+ * Não é hipótese: os guardiões rodam em paralelo com o `revisor-geral`, e medindo com seis revisores em seis documentos
+ * da mesma árvore, 4 de 6 execuções perderam o instantâneo de um deles (`test-engineer`). A rodada que fica sem
+ * instantâneo cai no `mtime` e volta a bloquear o commit de quem fez teste de mutação — o defeito que esta correção
+ * existe para matar (regra 80, item 7). A ordem é documento e depois conteúdo, a mesma do índice, então não há ciclo.
+ */
 export function gravarInstantaneo(raiz: string, chave: string, alteracoes: Alteracao[]): void {
-  const instantaneos = lerInstantaneos(raiz)
-  instantaneos[chave] = Object.fromEntries(alteracoes.map(({ arquivo, hash }) => [arquivo, hash]))
+  const caminho = join(raiz, CAMINHO_CONTEUDO)
+  // Antes da trava: ela é um diretório irmão, e precisa da pasta de pé.
   mkdirSync(join(raiz, dirname(CAMINHO_CONTEUDO)), { recursive: true })
-  writeFileSync(join(raiz, CAMINHO_CONTEUDO), `${JSON.stringify(instantaneos, null, 2)}\n`)
+  comTrava(caminho, () => {
+    const instantaneos = lerInstantaneos(raiz)
+    instantaneos[chave] = instantaneoDe(alteracoes)
+    writeFileSync(caminho, `${JSON.stringify(instantaneos, null, 2)}\n`)
+  })
 }
 
 /** A chave do instantâneo de uma rodada. O documento identifica a tarefa, a spec ou a correção. */
 export function chaveDaRodada(documento: string, revisor: string, rodada: number): string {
   return `${documento}|${revisor}|${String(rodada)}`
+}
+
+/**
+ * O fim do portão local: carimba, ou recusa dizendo o que mudou. Devolve o motivo da recusa, ou `null` quando
+ * carimbou.
+ *
+ * A recusa é o que fecha a classe "valida sem prova": o instantâneo guarda o conteúdo do **início**, que é o que as
+ * suítes rodaram, e arquivo editado no meio da corrida não pode entrar nele como testado. A decisão mora aqui para
+ * ter teste de unidade; **onde** o conteúdo é lido é do `portao-local.ts`, e está provado pelo caso que roda o script
+ * como processo contra um repositório de fixture ("o portão local, rodado como processo…", em `revisoes.test.ts`).
+ */
+export function carimbarSeNadaMudou(raiz: string, carimbo: Carimbo, noInicio: Alteracao[]): string | null {
+  const mudaram = arquivosQueMudaram(instantaneoDe(noInicio), instantaneoDe(alteracoesDeCodigo(raiz, arquivosAlterados(raiz))))
+  if (mudaram.length > 0) return `${mudaram.join(', ')} mudou enquanto o portão rodava: as suítes não provaram este conteúdo. Nenhum carimbo gravado.`
+  gravarCarimbo(raiz, carimbo)
+  gravarInstantaneo(raiz, CHAVE_DO_PORTAO, noInicio)
+  return null
 }
 
 export function lerCarimbo(raiz: string): Carimbo | null {
@@ -680,6 +737,8 @@ export function portao(entrada: EntradaHook, raiz: string): string | null {
     alteracoes: alteracoesDeCodigo(raiz, arquivos),
     carimbo: lerCarimbo(raiz),
     mensagemCommit: comando,
+    documento: documento.caminho,
+    instantaneos: lerInstantaneos(raiz),
   })
   if (bloqueios.length === 0) return null
   return `Commit bloqueado: revisões de ${documento.caminho} incompletas.\n- ${bloqueios.join('\n- ')}`

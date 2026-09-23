@@ -1,4 +1,4 @@
-import { execFileSync, spawn } from 'node:child_process'
+import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -7,14 +7,23 @@ import {
   acrescentarRevisao,
   alteracaoQueCaduca,
   alteracoesDeCodigo,
+  arquivosAlterados,
   arquivosDoCommit,
   avaliarCarimbo,
   avaliarPortao,
+  arquivosQueMudaram,
   caminhoDaTarefa,
+  carimbarSeNadaMudou,
+  chaveDaRodada,
+  CHAVE_DO_PORTAO,
+  instantaneoDe,
   ehCommit,
   extrairVeredito,
   gravarCarimbo,
+  gravarInstantaneo,
+  lerCarimbo,
   lerHora,
+  lerInstantaneos,
   lerRevisoes,
   lerTranscript,
   portao,
@@ -70,6 +79,8 @@ const portaoDe = (
     alteracoes: alteradoEm ? [{ arquivo, quando: lerHora(alteradoEm), hash: 'hash-do-conteudo-atual' }] : [],
     carimbo,
     mensagemCommit: mensagem,
+    documento: 'tasks/prd-exemplo/9_task.md',
+    instantaneos: {},
   })
 
 describe('veredito e tarefa do revisor', () => {
@@ -229,9 +240,22 @@ describe('hooks sobre um repositório de verdade', () => {
     return caminho
   }
 
+  /** A mesma mensagem dos outros casos deste describe, numa constante para o comando não repetir a marca. */
+  const COMMIT_DA_TAREFA = 'git add -A && git commit -m "Implementa x (tarefa 9.0)\n\nRevisões: ok"'
+
   const tocar = (raiz: string, arquivo: string, quando: string) => {
     const data = new Date(quando)
     utimesSync(join(raiz, arquivo), data, data)
+  }
+
+  /**
+   * Uma correção de verdade: conteúdo novo e o `mtime` no instante pedido. `tocar` sozinho não serve para representar
+   * uma correção desde que o portão passou a olhar o conteúdo — e é esse o ponto: o revisor que muta e restaura move
+   * só o `mtime`, e isso não pode caducar rodada nenhuma.
+   */
+  const corrigir = (raiz: string, arquivo: string, quando: string, conteudo: string) => {
+    writeFileSync(join(raiz, arquivo), conteudo)
+    tocar(raiz, arquivo, quando)
   }
 
   it('o revisor registra a própria rodada, e o commit só passa quando todos aprovaram depois da correção', () => {
@@ -268,7 +292,7 @@ describe('hooks sobre um repositório de verdade', () => {
     expect(achados).not.toMatch(/infra-guardian/)
 
     // Corrige às 10:10 e só o tenancy revisa de novo: infra e test-engineer viram código antigo.
-    tocar(raiz, 'apps/codigo.ts', '2026-09-13T10:10:00')
+    corrigir(raiz, 'apps/codigo.ts', '2026-09-13T10:10:00', 'export const corrigido = true\n')
     registrar(
       { agent_type: 'tenancy-guardian', agent_transcript_path: transcript(raiz, 'tenancy-2', '2026-09-13T10:11:00'), last_assistant_message: 'VEREDITO: APROVADO' },
       raiz,
@@ -291,6 +315,90 @@ describe('hooks sobre um repositório de verdade', () => {
     gravarCarimbo(raiz, { inicio: new Date('2026-09-13T10:11:00').toISOString(), suites: ['typecheck', 'lint', 'test', 'infra'] })
     expect(portao(commit, raiz)).toBeNull()
   })
+
+  it('o hook, no repositório de verdade, deixa passar o arquivo mutado e restaurado, e barra o editado durante o portão', () => {
+    // É o caminho que roda de verdade: `portao()`, com os instantâneos em disco. O caso de unidade prova o repasse
+    // dentro do `avaliarPortao`; este prova que a fiação do hook o alcança. Sem ele, tirar o repasse — exatamente a
+    // linha que causou a correção 2026-09-22-hook-do-commit-ignora-o-instantaneo-de-conteudo — não deixa nada vermelho.
+    const raiz = repositorio()
+    const commit = { tool_input: { command: COMMIT_DA_TAREFA } }
+    corrigir(raiz, 'apps/codigo.ts', '2026-09-13T09:00:00', 'export const original = true\n')
+    for (const revisor of ['infra-guardian', 'tenancy-guardian', 'test-engineer', 'revisor-geral']) {
+      registrar(
+        { agent_type: revisor, agent_transcript_path: transcript(raiz, revisor, '2026-09-13T10:00:00'), last_assistant_message: 'VEREDITO: APROVADO' },
+        raiz,
+        new Date('2026-09-13T10:05:00'),
+      )
+    }
+    gravarCarimbo(raiz, { inicio: new Date('2026-09-13T10:06:00').toISOString(), suites: ['typecheck', 'lint', 'test', 'infra'] })
+    gravarInstantaneo(raiz, CHAVE_DO_PORTAO, alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
+    expect(portao(commit, raiz)).toBeNull()
+
+    // O revisor prova a guarda mutando e restaurando: o mtime anda muito depois de tudo, o conteúdo volta ao mesmo.
+    corrigir(raiz, 'apps/codigo.ts', '2026-09-13T11:00:00', 'export const original = true\n')
+    expect(portao(commit, raiz)).toBeNull()
+
+    // E o conteúdo que nenhuma suíte rodou continua barrado, nas rodadas e no carimbo.
+    corrigir(raiz, 'apps/codigo.ts', '2026-09-13T11:10:00', 'export const editado_durante = true\n')
+    const motivo = portao(commit, raiz)
+    expect(motivo).toMatch(/infra-guardian: apps\/codigo.ts mudou/)
+    expect(motivo).toMatch(/portão local: apps\/codigo.ts mudou/)
+  })
+
+  it('o portão recusa o carimbo quando o código muda enquanto ele roda, e carimba o conteúdo do início', () => {
+    // A classe oposta à do mtime: antes invalidava sem motivo, e o instantâneo gravado no fim validava sem prova.
+    // Editar com o portão rodando fazia o arquivo entrar no instantâneo como se as suítes o tivessem visto.
+    const raiz = repositorio()
+    corrigir(raiz, 'apps/codigo.ts', '2026-09-13T09:00:00', 'export const original = true\n')
+    const noInicio = alteracoesDeCodigo(raiz, arquivosAlterados(raiz))
+    const carimbo = { inicio: new Date('2026-09-13T10:00:00').toISOString(), suites: ['typecheck', 'lint', 'test'] }
+
+    corrigir(raiz, 'apps/codigo.ts', '2026-09-13T10:00:30', 'export const editado_no_meio = true\n')
+    expect(carimbarSeNadaMudou(raiz, carimbo, noInicio)).toMatch(/apps\/codigo.ts mudou enquanto o portão rodava/)
+    expect(lerCarimbo(raiz)).toBeNull()
+    expect(lerInstantaneos(raiz)[CHAVE_DO_PORTAO]).toBeUndefined()
+
+    // De volta ao conteúdo que as suítes rodaram, carimba — e o instantâneo é o do início, não o de agora.
+    corrigir(raiz, 'apps/codigo.ts', '2026-09-13T10:00:40', 'export const original = true\n')
+    expect(carimbarSeNadaMudou(raiz, carimbo, noInicio)).toBeNull()
+    expect(lerCarimbo(raiz)?.inicio).toBe(carimbo.inicio)
+    expect(lerInstantaneos(raiz)[CHAVE_DO_PORTAO]).toEqual(instantaneoDe(noInicio))
+  })
+
+  it('o portão local, rodado como processo, não carimba o que a suíte editou no meio da corrida', () => {
+    // O caso acima prova a decisão; este prova **onde** o conteúdo é lido. Mover a leitura do início para o fim
+    // mantinha tudo verde e trazia o defeito inteiro de volta (`test-engineer`, 2ª rodada). O portão do fixture roda
+    // em menos de um segundo: quem decide as suítes é o package.json que o script recebe.
+    const script = join(import.meta.dirname, 'portao-local.ts')
+
+    const comSuiteDeTeste = (comandoDoTeste: string) => {
+      const raiz = repositorio()
+      writeFileSync(join(raiz, 'package.json'), JSON.stringify({ scripts: { typecheck: 'true', lint: 'true', test: comandoDoTeste } }))
+      // O portão só pula o `npm ci` com o lock do node_modules presente e não mais velho que o da raiz.
+      writeFileSync(join(raiz, 'package-lock.json'), '{}\n')
+      mkdirSync(join(raiz, 'node_modules'), { recursive: true })
+      writeFileSync(join(raiz, 'node_modules/.package-lock.json'), '{}\n')
+      // Sem isto, `node_modules` entra no instantâneo do início: no dia em que o npm escrever lá durante a corrida,
+      // o controle negativo viraria recusa e o vermelho pareceria do produto (`test-engineer`).
+      writeFileSync(join(raiz, '.gitignore'), 'node_modules/\n')
+      const noInicio = instantaneoDe(alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
+      const saida = spawnSync('node', [script], { env: { ...process.env, CLAUDE_PROJECT_DIR: raiz }, encoding: 'utf8' })
+      return { raiz, noInicio, saida }
+    }
+
+    // A suíte edita o código enquanto roda: não há o que carimbar, e nada do `.processo` é escrito.
+    const editou = comSuiteDeTeste("printf 'export const editado_pela_suite = true\\n' > apps/codigo.ts")
+    expect(editou.saida.status).not.toBe(0)
+    expect(editou.saida.stdout).toMatch(/apps\/codigo.ts mudou enquanto o portão rodava/)
+    expect(lerCarimbo(editou.raiz)).toBeNull()
+    expect(lerInstantaneos(editou.raiz)[CHAVE_DO_PORTAO]).toBeUndefined()
+
+    // Sem edição, carimba — e o instantâneo é o conteúdo que as suítes rodaram.
+    const limpo = comSuiteDeTeste('true')
+    expect(limpo.saida.status).toBe(0)
+    expect(lerCarimbo(limpo.raiz)?.suites).toEqual(['typecheck', 'lint', 'test'])
+    expect(lerInstantaneos(limpo.raiz)[CHAVE_DO_PORTAO]).toEqual(limpo.noInicio)
+  }, 60_000)
 
   it('correção passa pelo mesmo portão, com o documento em tasks/correcoes', () => {
     const raiz = repositorio()
@@ -366,6 +474,55 @@ describe('o que conta como alteração depois do portão e da rodada', () => {
     const outroConteudo = [{ ...alteracao, hash: 'conteudo-novo' }]
     expect(avaliarCarimbo(carimbo, exigidas, outroConteudo, instantaneo)).toContain('mudou em')
     expect(alteracaoQueCaduca('test-engineer', '2026-09-20 07:00:00', outroConteudo, instantaneo)?.arquivo).toBe('.github/workflows/ci.yml')
+  })
+
+  it('arquivo que o revisor não viu caduca a rodada, mesmo com instantâneo gravado', () => {
+    // O `anterior === undefined` de `mudouDeVerdade` é o que garante isto: arquivo criado depois da rodada não está
+    // no instantâneo dela, e não pode contar como inalterado só por não estar lá. Sem essa leitura, uma rodada
+    // valeria para código que o revisor nunca abriu.
+    const novo = { arquivo: 'apps/worker/src/novo.ts', quando: Date.parse('2026-09-20T11:00:00.000Z'), hash: 'conteudo-do-arquivo-novo' }
+    const instantaneo = { 'apps/worker/src/antigo.ts': 'outro-conteudo' }
+    expect(alteracaoQueCaduca('test-engineer', '2026-09-20 07:00:00', [novo], instantaneo)?.arquivo).toBe('apps/worker/src/novo.ts')
+    expect(avaliarCarimbo(carimbo, exigidas, [novo], instantaneo)).toContain('mudou em')
+  })
+
+  it('arquivo editado enquanto o portão rodava não entra no instantâneo como provado', () => {
+    // O instantâneo do portão é o conteúdo do início, que é o que as suítes rodaram. `arquivosQueMudaram` é o que o
+    // `portao-local.ts` usa para recusar o carimbo quando alguém edita no meio da corrida.
+    const noInicio = { 'apps/api/src/a.ts': 'hash-a', 'apps/api/src/b.ts': 'hash-b' }
+    expect(arquivosQueMudaram(noInicio, { ...noInicio })).toEqual([])
+    expect(arquivosQueMudaram(noInicio, { ...noInicio, 'apps/api/src/b.ts': 'hash-b-editado' })).toEqual(['apps/api/src/b.ts'])
+    // Arquivo que entrou e arquivo que saiu no meio da corrida também contam.
+    expect(arquivosQueMudaram(noInicio, { ...noInicio, 'apps/api/src/c.ts': 'hash-c' })).toEqual(['apps/api/src/c.ts'])
+    expect(arquivosQueMudaram(noInicio, { 'apps/api/src/a.ts': 'hash-a' })).toEqual(['apps/api/src/b.ts'])
+    expect(instantaneoDe([{ arquivo: 'apps/api/src/a.ts', quando: 1, hash: 'hash-a' }])).toEqual({ 'apps/api/src/a.ts': 'hash-a' })
+  })
+
+  it('o hook não caduca revisão nem carimbo por arquivo restaurado ao mesmo conteúdo', () => {
+    // O caso acima prova a regra nos dois avaliadores. Este prova que ela chega ao `avaliarPortao`, que é o que o
+    // hook do commit chama: os dois revisores desta casa provam a guarda mutando o arquivo e restaurando, e sem o
+    // instantâneo o `mtime` sozinho bloqueava o commit para sempre, empurrando para a revisão sem mutação.
+    const documento = 'tasks/correcoes/2026-09-22-exemplo.md'
+    const arquivo = 'apps/worker/src/executor.ts'
+    const depoisDaRodada = { arquivo, quando: lerHora('2026-09-13 10:30:00'), hash: 'mesmo-conteudo' }
+    const aprovada = tarefaCom(rodada('infra-guardian', 'APROVADO', '2026-09-13 10:00:00', '2026-09-13 10:05:00'), rodada('test-engineer', 'APROVADO', '2026-09-13 10:00:00', '2026-09-13 10:06:00'))
+    const comum = {
+      obrigatorios: ['infra-guardian', 'test-engineer'],
+      revisoes: lerRevisoes(aprovada),
+      carimbo: carimboVerde,
+      mensagemCommit: 'Corrige x (correção 2026-09-22-exemplo)\n\nRevisões: ...',
+      documento,
+    }
+    const instantaneos = {
+      [CHAVE_DO_PORTAO]: { [arquivo]: 'mesmo-conteudo' },
+      [chaveDaRodada(documento, 'infra-guardian', 1)]: { [arquivo]: 'mesmo-conteudo' },
+      [chaveDaRodada(documento, 'test-engineer', 1)]: { [arquivo]: 'mesmo-conteudo' },
+    }
+    expect(avaliarPortao({ ...comum, alteracoes: [depoisDaRodada], instantaneos }).bloqueios).toEqual([])
+    // E continua pegando a mudança de verdade, nos três: as duas rodadas e o carimbo.
+    const mudou = avaliarPortao({ ...comum, alteracoes: [{ ...depoisDaRodada, hash: 'conteudo-novo' }], instantaneos }).bloqueios
+    expect(mudou).toHaveLength(3)
+    for (const bloqueio of mudou) expect(bloqueio).toContain('mudou em')
   })
 
   it('documento que nenhuma suíte lê não é código; o runbook, que uma guarda lê, é', () => {
@@ -644,6 +801,9 @@ describe('achados separados por documento, com índice', () => {
     for (let numero = 1; numero <= quantos; numero++) {
       expect(existsSync(join(raiz, `tasks/prd-exemplo/achados/${String(numero)}_task.md`))).toBe(true)
     }
+    // O instantâneo de conteúdo é do mesmo tipo: um arquivo só, escrito por todas as rodadas. Perder a chave de uma
+    // delas faz aquela rodada cair no `mtime` e voltar a bloquear o commit de quem fez teste de mutação.
+    expect(Object.keys(lerInstantaneos(raiz))).toHaveLength(quantos)
   })
 
   it('o índice de uma funcionalidade inteira cabe no que se lê antes de cada tarefa', () => {
