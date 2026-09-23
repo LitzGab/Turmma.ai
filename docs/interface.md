@@ -265,8 +265,8 @@ O desenho da área, e o que o design do aluno **não** herda do professor, está
 - **Estrutura**: séries, turmas, listas de nomes, grade horária e calendário importados,
   alocação de professor × turma × disciplina, convites de professor e conexão opcional com
   Google ou Microsoft (F1, F2; D3 revista, D48). É a primeira coisa que a coordenação faz, e
-  precisa ser rápida (D24). A escola em si é criada por nós (`ops:escola`), e a coordenação chega
-  por convite (D2). Na A1 entra a parte fina: disciplinas e turmas criadas na tela, lista de nomes
+  precisa ser rápida (D24). A escola em si é criada por nós, no painel da operação (A0b, D76) ou
+  pelo `ops:escola`, e a coordenação chega por convite (D2). Na A1 entra a parte fina: disciplinas e turmas criadas na tela, lista de nomes
   por turma, alocação e convite ao professor; grade horária e calendário vêm com o F2 (D71
   revista)
 - **Material**: **só a coordenação sobe material para a base da escola**; professor e aluno não
@@ -371,9 +371,9 @@ ninguém confundir com a tela de uma escola.
   aba Frequência (P08), ranking de participação (P26, que bate na 10.3), as abas da turma aberta
   com Recursos e Mural (P28, antes do PRD da A3), as oito ferramentas novas do catálogo (P22) e a
   licença das peças coladas no mockup (P20)
-- **Trazer para `apps/web`** os tokens da seção 9.9, a Fustat do logotipo e os SVGs da marca, que
-  vêm de `mockups/` (`src/index.css` e `public/marca/`), e o avatar dos três agentes — é a
-  primeira tarefa de tela da A1 (D71 revista). Hoje a casca do F0 ainda usa a paleta `slate`
+- **Trazer para `apps/web`** os tokens da seção 9.9 e os SVGs da marca (`mockups/public/marca/`, em
+  curvas, sem baixar a Fustat) — é a primeira tarefa de tela da A0 (D76), que migra também as telas
+  do F1; o avatar dos três agentes entra na A1. Hoje a casca do F0 ainda usa a paleta `slate`
 - **Avatar dos três agentes**: há proposta na seção 9.7, tirada do mockup; o Gabriel fecha o
   desenho antes da Tech Spec da A1. A landing page ainda lista os agentes antigos: alinhar junto
 - **Licença das duas peças marcadas "a conferir"** na seção 10.2 (`shadcn/item` e
@@ -1259,7 +1259,7 @@ demonstração mostra entra pelo próprio produto, com dado inventado (D71 revis
 
 | Passo do roteiro | Tela | Desenho | Spec |
 |---|---|---|---|
-| Nós criamos a escola (`ops:escola`) e convidamos a coordenação (`ops:convite-coordenador`) | Nenhuma: é comando nosso (D2) | — | A1 |
+| Nós criamos a escola e convidamos a coordenação, no painel da operação | Painel da operação (5a) | — | A0b |
 | 1. A coordenação aceita o convite, entra com MFA e monta a escola: disciplinas, turmas, lista de nomes por turma, alocação e convite ao professor | Entrada e Estrutura | 11.8, 3, 11.1 | A1 |
 | 1. O professor aceita o convite e confirma o vínculo; o aluno reivindica o nome pelo convite da turma, e o professor aprova | Entrada, Turmas e o convite da turma (P27) | 11.8, 1 | A1 |
 | 1. A coordenação sobe o material com licença (D75) | Material | 3 | A2 |

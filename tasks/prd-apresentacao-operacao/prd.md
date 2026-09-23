@@ -71,10 +71,10 @@ passa a ter a pele da D72 em todas as telas.
 
 | Dado | Titular | Finalidade | Retenção | Em `docs/lgpd.md`? |
 |---|---|---|---|---|
-| Conta de operador (nome, e-mail, hash de senha, segundo fator cifrado, HMAC dos códigos de recuperação) | nossa equipe | entrar no painel | até desativar; o apelido fica na auditoria | a ajustar nesta spec |
+| Conta de operador (nome, e-mail, hash de senha, segundo fator cifrado, HMAC dos códigos de recuperação) | nossa equipe | entrar no painel | até desativar; o apelido fica na auditoria | sim |
 | Convite e sessão de operador | nossa equipe | primeiro acesso; manter o acesso | 30 dias após usar ou encerrar | sim |
-| Registro de acesso da operação (IP, data, evento) | nossa equipe | segurança, Marco Civil | 6 meses | a ajustar |
-| Auditoria da operação (autor, ação, data) | nossa equipe | prestação de contas | vigência + 5 anos | **não** |
+| Registro de acesso da operação (IP, data, evento) | nossa equipe | segurança, Marco Civil | 6 meses | sim |
+| Auditoria da operação (autor, ação, data) | nossa equipe | prestação de contas | vigência + 5 anos | sim |
 
 ## 8b. Risco regulatório
 

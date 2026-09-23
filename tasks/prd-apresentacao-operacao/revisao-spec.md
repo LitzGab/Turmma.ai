@@ -72,6 +72,35 @@ rodada 1 dela as cobra:
 - confirmação antes de gerar, revogar e refazer; tabela a 360 px; texto dos vazios; formato local
   (`frontend-reviewer`)
 
+## Rodada 2 — 23/09/2026
+
+**Veredito: REPROVADA** — os bloqueantes da rodada 1 que ficaram na A0 foram todos confirmados como
+resolvidos; os de agora são novos e pontuais.
+
+| Revisor | Veredito | Bloqueantes |
+|---|---|---|
+| `test-engineer` | REPROVADO | 6 |
+| `tenancy-guardian` | REPROVADO | 1 |
+| `privacy-guardian` | REPROVADO | 2 |
+| `infra-guardian` | REPROVADO | 1 |
+| `frontend-reviewer` | AJUSTES NECESSÁRIOS | 1 |
+
+### Correções exigidas na Tech Spec
+- Seção 5: `configurar_mfa` por `/sessao/email` só dentro das 72 h do convite aceito; desafio de uma etapa recusado na outra; `mfa/configurar` de conta com MFA ativo não muda nada; teste de cada um (`test-engineer` 2)
+- Seção 10: desafio de uso único em paralelo e com Redis fora (`test-engineer` 1); renovação que respeita 30 min, 8 h, saída e desativação, e acesso vencido com sessão viva que dá 401 e renova (`test-engineer` 3); regra do `OPERADOR` em todo `ops:*` (`test-engineer` 6)
+- Seção 6: operador → rotas anônimas da escola nunca produzem sessão nem desafio de escola, em vez de "igual a inexistente" (`test-engineer` 4, `tenancy-guardian`); marcador e prefixo `/v1/operacao` conferidos nos dois sentidos (`test-engineer` 5)
+- Seção 6 e 11: critério pelo qual as consultas às tabelas do operador não levam `@SemEscopo`, com dois testes de arquitetura (repository só importa as tabelas da operação; as tabelas só são importadas por ele, pelo comando e pelo expurgo) (`tenancy-guardian`)
+- Seção 5 e 7c: rebaixamento por IP só em `sessao/email` e `convite/aceitar`; `sessao/mfa` pelo contador por operador; `convite/consultar`, `mfa/configurar`, `renovar` e `sair` com o limite anônimo por IP recusável, como no F1, com teste de 429 (`infra-guardian`)
+- Seção 7 e `docs/lgpd.md`: prazo do convite vencido e da sessão só expirada; tabelas do expurgo pelo nome; desativar revoga convite e encerra sessões na mesma transação; testes da desativação e do expurgo prazo a prazo (`privacy-guardian` 1 e 2)
+- Seção 9: botão primário, `white` e modificador de opacidade na tabela de troca, com a guarda (`frontend-reviewer`)
+
+### Recomendações
+- Expurgo pelo `apagarLoteVencido` existente, sem método `@SemEscopo` novo; `GuardaDeOperador` põe só `operadorId` no contexto (`tenancy-guardian`)
+- `configurar` troca segredo e códigos na mesma transação; o que a `GuardaDeLimite` faz com credencial que não é de operador; runbook: com o Redis fora, `ops:*` é o caminho (`infra-guardian`)
+- Cookie de dispositivo do operador no mapa; `no-store` e contrato estrito com teste; e-mail sentinela em `AcessoOperacao`; autor da `AuditoriaOperacao` vem do comando (`privacy-guardian`)
+- `ops:operador convite` com pendente; quatro estados em `consultar` e `aceitar`; `ultimoUsoEm` aos 29/31 min (`test-engineer`)
+- Texto do 503; aviso antes dos 30 min; teto do chunk; chave em texto e `otpauth://` além do QR; `docs/interface.md` linhas 268, 376 e 1262 (`frontend-reviewer`)
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -85,3 +114,8 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-09-23 13:39:47 | 2026-09-23 13:42:17 | `test-engineer` | 1 | REPROVADO | a1454ae96aa4b5610 |
 | 2026-09-23 13:39:50 | 2026-09-23 13:42:19 | `tenancy-guardian` | 1 | REPROVADO | ab652f290facfa6fc |
 | 2026-09-23 13:40:00 | 2026-09-23 13:42:22 | `frontend-reviewer` | 1 | AJUSTES NECESSÁRIOS | a1904d4cf1ec16e32 |
+| 2026-09-23 13:48:55 | 2026-09-23 13:49:54 | `privacy-guardian` | 2 | REPROVADO | a3777b6efe8225c12 |
+| 2026-09-23 13:48:45 | 2026-09-23 13:50:11 | `test-engineer` | 2 | REPROVADO | ae5e31610b3b00c02 |
+| 2026-09-23 13:48:59 | 2026-09-23 13:50:24 | `infra-guardian` | 2 | REPROVADO | a168a3c7b8a2ddb56 |
+| 2026-09-23 13:49:03 | 2026-09-23 13:50:46 | `frontend-reviewer` | 2 | AJUSTES NECESSÁRIOS | afe2c42872cd409bb |
+| 2026-09-23 13:48:50 | 2026-09-23 13:50:47 | `tenancy-guardian` | 2 | REPROVADO | ae19f88b9c728d238 |

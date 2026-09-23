@@ -1,18 +1,16 @@
 # Tech Spec — Identidade do operador Turmma
 
 **PRD:** `tasks/prd-apresentacao-operacao/prd.md`
-**Status:** rascunho (2ª versão, depois da rodada 1 do `/revisar-spec`; o painel foi para a A0b)
+**Status:** rascunho (3ª versão, depois da rodada 2 do `/revisar-spec`; o painel foi para a A0b)
 
 ## 1. Resumo da abordagem
 
-O operador ganha identidade fora do modelo de escola: tabelas sem `escolaId`, sessão e tokens com
-`typ` próprio (`operador+jwt` para acesso, `desafio-operador+jwt` para as etapas do
-login). As rotas vivem em `/v1/operacao/*` e usam um de dois marcadores, que só existem em
-`apps/api/src/operacao/`: `@RotaDeOperacao()`, que aplica a `GuardaDeOperador` por
-`applyDecorators`, e `@EntradaDeOperacao()`, numa lista fechada de rotas sem sessão. As guardas
-globais de escola os tratam como sem sessão. Do F1 vêm só as peças puras: `segundo-fator.ts`,
-`cifra-do-segredo.ts`, o hash de senha e o `ContadorDeTentativas`. A pele da D72 entra no `apps/web` inteiro numa tarefa própria, antes das
-telas do operador.
+O operador ganha identidade fora do modelo de escola: tabelas, sessão e tokens próprios
+(`operador+jwt`, `desafio-operador+jwt`). As rotas `/v1/operacao/*` usam `@RotaDeOperacao()`, que
+aplica a `GuardaDeOperador` por `applyDecorators`, ou `@EntradaDeOperacao()`, numa lista fechada; as
+guardas de escola tratam as duas como sem sessão. Do F1 vêm só as peças puras (`segundo-fator.ts`,
+`cifra-do-segredo.ts`, hash de senha, `ContadorDeTentativas`). A pele da D72 entra no `apps/web`
+inteiro numa tarefa própria, antes das telas do operador.
 
 ## 2. Módulos afetados
 
@@ -20,19 +18,14 @@ telas do operador.
 |---|---|---|
 | `apps/api/src/operacao/` | novo | controllers de sessão e convite, `GuardaDeOperador`, `OperadorRepository`, os dois marcadores |
 | `apps/api/src/ops/` | novo e alterado | `ops:operador -- criar`, `desativar`, `convite`; `comando.ts` confere `OPERADOR` contra operador ativo |
-| `packages/nucleo/src/identidade/` | alterado | `rotaSemSessao` reconhece os marcadores; `verificarTokenDeOperador`; a `guarda-autenticacao.ts` responde 404 a bearer de operador em rota de escola |
-| `packages/nucleo/src/limite/guarda-limite.ts` | alterado | conta `rl:op:{sub}` nas rotas de operador e rebaixa por IP nas de entrada |
-| `apps/api/src/sessao/contador-de-tentativas.ts` | alterado | prefixo da chave por parâmetro (`login:` da escola, `login-op:` da operação) |
-| `packages/nucleo/src/permissao/conferencia-das-permissoes.ts` | alterado | aceita os marcadores no lugar de `@Permite` |
-| `packages/nucleo/src/db/schema/` | novo | seis tabelas da seção 3 |
-| `packages/nucleo/src/retencao/` | alterado | o `sistema.expurgar-acesso` apaga também as tabelas de acesso da operação |
-| `apps/web/src/estilos.css` e telas do F1 | alterado | tokens da D72 (seção 9) |
-| `apps/web/src/operacao/` | novo | rotas sob demanda, sessão própria, telas de convite, entrada, segundo fator e casca |
-| `tools/ci/tamanho-web.test.ts` | alterado | orçamento da entrada separado do dos chunks |
+| `packages/nucleo/src/identidade/`, `limite/guarda-limite.ts` | alterado | `rotaSemSessao` e limite reconhecem os marcadores; `verificarTokenDeOperador`; bearer de operador em rota de escola → 404 |
+| `apps/api/src/sessao/contador-de-tentativas.ts` | alterado | prefixo da chave por parâmetro (`login:`, `login-op:`) |
+| `packages/nucleo/src/` | alterado e novo | `conferencia-das-permissoes.ts` aceita os marcadores; schema das seis tabelas; expurgo (seção 7) |
+| `apps/web/` e `tools/ci/tamanho-web.test.ts` | alterado e novo | tokens da D72 nas telas do F1; `src/operacao/`; orçamento (seção 9) |
 
 ## 3. Modelo de dados
 
-Ids UUID gerados no banco. **Nenhuma tabela tem `escolaId`**: é dado da equipe (seção 11).
+Ids UUID do banco. **Nenhuma tabela tem `escolaId`** (seção 11).
 
 ```
 Operador                  id, apelido* (FORMATO_OPERADOR, único), nome?, email? (citext, único),
@@ -71,10 +64,16 @@ com `sub` e `sid`, sem `esc`. Respostas com segredo, códigos ou desafio levam
 
 ## 5. Fluxo
 
-**Nascimento.** `ops:operador criar --apelido --nome --email --saida` grava o operador e um convite,
-com o token em arquivo 0600 (dívida aceita: uma vez por pessoa da equipe). Se não há operador ativo,
-o `criar` aceita o `OPERADOR` do ambiente e grava autor `bootstrap`; havendo, `OPERADOR` precisa ser
-apelido de operador ativo, e a mesma conferência passa a valer em todo `ops:*`.
+**Nascimento.** `ops:operador criar` grava o operador e um convite, com o token em arquivo 0600
+(dívida aceita: uma vez por pessoa da equipe). Sem operador ativo, aceita o `OPERADOR` do ambiente
+com autor `bootstrap`; com um, todo `ops:*` exige `OPERADOR` de operador ativo. `convite` revoga o
+pendente na mesma transação; `desativar` apaga o dado pessoal, revoga o convite e encerra as sessões
+numa transação só. O autor da `AuditoriaOperacao` é o `OPERADOR` do comando; o da entrada e do MFA,
+o operador da sessão.
+
+**Etapas.** O desafio leva a etapa (`configurar_mfa` ou `mfa`), e cada rota só aceita a sua.
+`/sessao/email` só devolve `configurar_mfa` se o convite foi aceito há menos de 72 h e o segundo
+fator não está ativo; fora disso responde igual a senha errada, e o caminho é um convite novo.
 
 **Travas no banco**, todas com `returning` e resposta tipada para quem perde:
 - aceite: `update convite_operador set usado_em = now() where id = $1 and usado_em is null and
@@ -82,41 +81,50 @@ apelido de operador ativo, e a mesma conferência passa a valer em todo `ops:*`.
 - código de recuperação: `delete ... where operador_id = $1 and hmac = $2 returning`
 - TOTP: `update operador set mfa_ultimo_passo = $p where id = $1 and (mfa_ultimo_passo is null or
   mfa_ultimo_passo < $p)`
-- configurar: grava o segredo e ativa, os dois `where mfa_ativado_em is null`; com duas abas vale o
-  último segredo gravado, e o código da outra aba falha com "configure de novo"
+- configurar: grava segredo e códigos (apaga e insere) na mesma transação, e ativa, os dois
+  `where mfa_ativado_em is null`; com duas abas vale o último gravado, e a outra falha com
+  "configure de novo"
 - renovação: `update ... set refresh_hash = $novo, refresh_hash_anterior = $atual where id = $1 and
   refresh_hash = $atual`; o anterior vale 30 s para a aba irmã, e reusado depois disso encerra a
   sessão (padrão do F1)
 - desafio: `jti` consumido com `SET NX` no Redis por 5 min; Redis fora recusa com 503
 
-**Entrada.** O `ContadorDeTentativas` conta com o prefixo `login-op:`, pelo e-mail e pelo
-`operador.id`, com a origem `conhecido`/`outro` pelo cookie de dispositivo do F1 com chave própria:
-saber o e-mail não segura a conta no aparelho de sempre. `entrada_falha` não grava o e-mail.
+**Entrada.** O `ContadorDeTentativas` usa `login-op:`, pelo e-mail e pelo `operador.id`, com a
+origem `conhecido`/`outro` do cookie de dispositivo do F1, com chave própria. `entrada_falha` não
+grava o e-mail.
 
-**Conferência da sessão**, pela `GuardaDeOperador`, em toda rota `@RotaDeOperacao`:
+**Conferência da sessão**, pela `GuardaDeOperador`, que põe no contexto só o `operadorId`, nunca
+`escolaId` (repository de escola chamado por engano falha com erro):
 - credencial que não é de operador (sessão, desafio ou cookie de escola, ou nenhuma): **404**, pelo
   mesmo filtro de exceção de uma rota inexistente
-- token de operador válido com sessão que terminou (30 min parado, 8 h, saída, operador
-  desativado): **401 `SESSAO_ENCERRADA`**
+- acesso de operador vencido com a sessão viva: **401 `ACESSO_VENCIDO`**, e a web renova
+- sessão que terminou (30 min parado, 8 h, saída, operador desativado): **401
+  `SESSAO_ENCERRADA`**; o `/renovar` confere as mesmas quatro condições e recusa igual
 - banco fora: **503 `INDISPONIVEL_TENTE_DE_NOVO`**
 - `ultimoUsoEm` gravado no máximo uma vez por minuto
 
-**Limite.** A `GuardaDeLimite` verifica o token de operador nas rotas `@RotaDeOperacao` e conta
-`rl:op:{sub}`; nas `@EntradaDeOperacao`, rebaixa por IP (como o `@LimiteQueRebaixa`), e quem recusa
-é o contador por conta.
+**Limite.** Nas rotas `@RotaDeOperacao`, a `GuardaDeLimite` verifica o token de operador e conta
+`rl:op:{sub}` (valor na configuração operacional); sem token de operador válido não conta nada, e a
+`GuardaDeOperador` responde 404, como rota inexistente. Nas de entrada: `sessao/email` e
+`convite/aceitar` rebaixam por IP no mesmo semáforo do hash do F1, e quem recusa é o contador por
+conta; `sessao/mfa` recusa pelo contador por `operador.id`; `convite/consultar`, `mfa/configurar`,
+`renovar` e `sair` usam o limite anônimo por IP recusável (`rl:ip`), como as rotas iguais do F1.
 
-**Borda.** No MVP local, `/operacao` e `/v1/operacao/*` saem pela mesma borda: tudo é sintético.
-Antes do staging a borda os restringe (pendência em `tasks/prd-fundacao-tecnica/notas-staging.md`).
+**Borda.** No MVP local, pela mesma borda (tudo é sintético); antes do staging, restrita
+(`tasks/prd-fundacao-tecnica/notas-staging.md`).
 
 ## 6. Isolamento
 
-O módulo não consulta dado de escola. O que precisa ser impossível é uma rota escapar das guardas
-de escola sem cair na de operador.
+As tabelas da seção 3 ficam **fora do modelo de tenant**: não são de escola, e por isso as
+consultas a elas não levam `@SemEscopo`. O que prova que isso não vira atalho para dado de escola:
+o `OperadorRepository` só importa as seis tabelas da operação, e elas só são importadas por ele,
+pelo `comando.ts` (via o repository) e pelo expurgo — dois testes de arquitetura. E nenhuma rota escapa das
+guardas de escola sem cair na de operador.
 
 Testes de arquitetura:
 - os dois marcadores só aparecem em `apps/api/src/operacao/`, varrendo método e classe
-- toda rota com `@RotaDeOperacao` tem a `GuardaDeOperador` no handler resolvido, e todo caminho
-  `/v1/operacao` tem um dos dois marcadores
+- toda rota com `@RotaDeOperacao` tem a `GuardaDeOperador` no handler resolvido; todo caminho
+  `/v1/operacao` tem um dos dois marcadores, e toda rota com marcador está sob `/v1/operacao`
 - as rotas `@EntradaDeOperacao` são exatamente as sete da seção 4, escritas no teste
 - nenhuma rota registrada cria operador
 
@@ -124,18 +132,17 @@ Teste de isolamento, com a lista gerada das rotas registradas:
 - sessão de coordenador, professor e aluno, desafio de escola e cookie `educa_sessao`: toda rota
   `/v1/operacao/*` responde igual, em status e corpo, a uma rota inexistente; as de entrada nunca
   produzem sessão de operador a partir deles
-- token, desafio e cookie de operador em toda rota de escola: o mesmo
+- token, desafio e cookie de operador: nas rotas de escola com sessão, igual a rota inexistente;
+  nas de entrada da escola, nunca produzem sessão nem desafio de escola
 - efetividade: tirar a guarda de um handler deixa os dois vermelhos
 
 ## 7. Dado pessoal
 
 | Item | Resposta |
 |---|---|
-| Novos campos | as seis tabelas da seção 3; `docs/lgpd.md` ganha a auditoria da operação e o HMAC dos códigos, e alinha a retenção da conta |
-| Log | evento e ids (`operacao.entrada_falha`, `operadorId?`); nunca e-mail, senha, token nem código |
-| Auditoria | `AuditoriaOperacao` para o que muda permissão; `AcessoOperacao` para o acesso |
-| Provedor externo | nenhum |
-| Retenção | conta: dado pessoal apagado ao desativar, apelido fica; convite e sessão: 30 dias após usar, revogar ou encerrar; `AcessoOperacao`: 6 meses; `AuditoriaOperacao`: vigência + 5 anos. O `sistema.expurgar-acesso` apaga as três primeiras, numa consulta sem escopo declarada com justificativa |
+| Novos campos | seção 3, já no mapa de `docs/lgpd.md` |
+| Log | evento e ids; nunca e-mail, senha, token nem código. Provedor externo: nenhum |
+| Retenção | pelo `sistema.expurgar-acesso`, acrescentando alvos ao `apagarLoteVencido` que já existe (sem método `@SemEscopo` novo): `ConviteOperador` 30 dias após usar, revogar ou vencer; `SessaoOperador` 30 dias após encerrar ou, sem encerramento, após `expiraEm`; `AcessoOperacao` 6 meses. Nunca passam pelo expurgo: `AuditoriaOperacao` (vigência + 5 anos) e `Operador`, cujo dado pessoal sai no `desativar` |
 | DTO de saída | `eu`: apelido e nome; nada mais sai do módulo |
 
 ## 7b. Conformidade CNE
@@ -144,54 +151,56 @@ Não se aplica.
 
 ## 7c. Carga e falha
 
-| Item | Resposta |
-|---|---|
-| Caminho quente? | toca o código do login da escola (guardas, contador), sem somar carga a ele |
-| Rate limit | `rl:op:{sub}`; entrada por conta, com IP que rebaixa |
-| Corridas | as seis travas da seção 5 e o único parcial do convite |
-| Quando cai | banco: 503 tipado; Redis: login segue o seguro do F1, desafio recusa com 503 |
-| Métrica | contagem de `entrada_falha` por minuto; sem alerta novo; carga não muda |
+Fora do caminho quente, mas mexe no código do login da escola (guardas e contador) sem somar carga a
+ele. Limite, corridas e o que acontece quando o banco ou o Redis caem estão na seção 5. Métrica: a
+contagem de `entrada_falha` por minuto; sem alerta novo, e o cenário de carga não muda.
 
 ## 9. Frontend
 
 **Pele da D72, primeira tarefa de web.** O `@theme` do `estilos.css` passa a ser o bloco da 9.9 do
-`docs/interface.md`, e não o `mockups/src/index.css` inteiro (sem rampa `neutral`, Inter nem
-Quicksand). Nas telas do F1: `slate` → `tinta`, `apoio`, `sutil`, `inativo`, `linha`,
-`borda-campo`, `realce`; `blue-700` de foco e link → `noite`, com foco de 2 px e 2 px de afastamento
-(`caramelo-noite` sobre preto); `amber` → `pendente`/`pendente-cx`; `red` → `erro`/`erro-cx`;
-`emerald` → `ok`/`ok-cx`; fundo do diálogo `#0f172abf` → `rgba()` literal. O logotipo entra pelos
-SVGs de `mockups/public/marca/`, em curvas, sem baixar a Fustat. Guardas: `estilos.test.ts` reprova
-família de fábrica; `e2e/casca.spec.ts` confere os hex dos tokens no CSS servido e reprova `oklch(`
-e `color-mix(`.
+`docs/interface.md` (não o `mockups/src/index.css`: sem `neutral`, Inter nem Quicksand). Troca nas
+telas do F1:
 
-**Área do operador.** Rotas `/operacao/convite`, `/operacao/entrar`, `/operacao/mfa`,
-`/operacao/mfa/configurar` e `/operacao`, num chunk com `import()`, fallback `EstadoCarregando` e
-fronteira de erro ("Não foi possível abrir o painel. Tente de novo", com botão). Sessão numa
-variável de módulo própria, separada da `api/sessao.ts`, com `BroadcastChannel` próprio. 401
-`SESSAO_ENCERRADA` tenta renovar; falhando, vai à entrada com "Sua sessão terminou. Entre de novo
-para continuar." Casca: faixa "Operação Turmma" em `noite` com texto branco, Sair a um clique,
-`document.title` por rota e `<h1>` para leitor de tela. Os códigos de recuperação aparecem uma vez,
-com "Copiar" anunciado em região viva e campo selecionável.
+| Hoje | Vira |
+|---|---|
+| `slate-*` | `tinta`, `apoio`, `sutil`, `inativo`, `linha`, `borda-campo`, `realce` |
+| `blue-700` de foco e link | `noite`; foco de 2 px com 2 px de afastamento (`caramelo-noite` sobre preto) |
+| botão primário `blue-700` / `text-white` | `caramelo` com texto `tinta` (6,4:1); hover `caramelo-claro`, pressionado `caramelo-fundo`, desligado `inativo`. O preto fica para a ação oficial (9.1) |
+| `amber`, `red`, `emerald` | `pendente`, `erro`, `ok`, com os `-cx` de fundo |
+| modificador `/NN`; fundo do diálogo | token opaco; `rgba()` literal |
 
-**Orçamento.** 150 kB brotli só para a entrada; o chunk da operação com teto próprio; teste de que
-nada importado pela entrada da escola vem de `apps/web/src/operacao/`.
+`white` e `black` ficam: estão no `@theme`. Logotipo pelos SVGs de `mockups/public/marca/`, em
+curvas, sem a Fustat. Guardas: `estilos.test.ts` aceita só os nomes do `@theme` e reprova
+modificador de opacidade; `e2e/casca.spec.ts` confere os hex no CSS servido e reprova `oklch(` e
+`color-mix(`.
+
+**Área do operador.** `/operacao/convite`, `/entrar`, `/mfa`, `/mfa/configurar` e `/operacao`, num
+chunk com `import()`, fallback `EstadoCarregando` e fronteira de erro com "Tente de novo". Sessão
+em variável de módulo própria, com `BroadcastChannel` próprio. `ACESSO_VENCIDO` renova;
+`SESSAO_ENCERRADA` vai à entrada com "Sua sessão terminou. Entre de novo para continuar."; o 503
+diz "O Turmma está indisponível agora. Tente de novo em instantes" e fica na tela; aviso 2 min antes
+dos 30 min, como o `inatividade.ts`. Casca com a faixa "Operação Turmma" em `noite`, Sair a um
+clique, `document.title` por rota e `<h1>` para leitor de tela. Códigos de recuperação uma vez, com
+"Copiar" em região viva; o QR vem com a chave em texto e o `otpauth://`.
+
+**Orçamento.** 150 kB brotli para a entrada; 60 kB para `operacao-*.js` (`manualChunks`); teste de
+que a entrada da escola não importa nada de `apps/web/src/operacao/`.
 
 ## 10. Testes
 
 | Camada | O que será testado |
 |---|---|
 | Unidade | `FORMATO_OPERADOR` no comando; chave do contador com os dois prefixos; resposta da guarda por tipo de credencial |
-| Integração | comando: bootstrap, autor, desativar inexistente com erro tipado, desativar que corta a sessão; convite: quatro estados iguais, dois aceites em `Promise.all`, operador desativado não aceita, arquivo 0600; MFA: recuperação e TOTP duas vezes, em sequência e em paralelo, configurar em duas abas, desafio que não serve de bearer; login: status e corpo iguais para e-mail inexistente e senha errada, conta Y entra depois de 10 erros na X, errar como operador não segura o mesmo e-mail na escola e o contrário; sessão: 30 min, 8 h, rotação em paralelo, reuso do anterior encerra, banco fora dá 503; limite: `rl:op` recusa com o IP igual; registros: cada evento na tabela certa, com o operador da sessão; expurgo nos prazos |
+| Integração | a lista mínima são os cenários exigidos pelo `test-engineer` e pelo `privacy-guardian` nas rodadas 1 e 2 (`revisao-spec.md`), um teste cada, com `Promise.all` onde há corrida e relógio controlado onde há prazo |
 | E2E | convite, senha, segundo fator, entrada e casca; sessão encerrada volta com a mensagem; `chromebook` e `celular`, com axe; o e2e do F1 verde na pele nova |
 | Isolamento e arquitetura | seção 6 |
 
 ## 11. Conformidade com as regras
 
-| Regra | Como é atendida | Desvio e justificativa |
-|---|---|---|
-| 10, item 1 | tabelas de escola intactas | tabelas do operador sem `escolaId`: são da equipe; alternativa recusada: operador como usuário de uma "escola Turmma", que o poria em consulta de escola |
-| 10, item 9 | uma consulta sem escopo nova, no expurgo, com justificativa | nenhum |
-| 20, 50, 80 | log por id, dado apagado ao desativar, `no-store`; quatro estados, token em memória; limite por operador e por conta, travas no banco | nenhum |
+Único desvio: as tabelas do operador não têm `escolaId` (regra 10, item 1), porque são da equipe e
+não de escola; a alternativa recusada foi fazer do operador um usuário de uma "escola Turmma", que o
+poria em consulta de escola. A regra 10, item 9, não ganha método `@SemEscopo` novo (seção 6). As
+regras 20, 50 e 80 são atendidas pelas seções 5, 7 e 9, sem desvio.
 
 ## 12. Premissas não verificadas
 
@@ -199,7 +208,6 @@ Nenhuma dependência externa.
 
 ## 13. Riscos técnicos
 
-- `rotaSemSessao` passa a abrir caminho sem guarda de escola: os testes da seção 6 o prendem
-- A pele nova quebra o F1 onde o axe não vê: as guardas de estilo mudam antes das telas
-- Herdadas do F1: esteira instável segue vigiada; `BroadcastChannel`, `details` do seletor e
-  `saidaConfirmada` vão para a primeira tarefa de web da A1
+- Caminho sem guarda de escola pelo `rotaSemSessao`: preso pela seção 6
+- Pele nova quebrando o F1 onde o axe não vê: as guardas de estilo mudam antes das telas
+- Herdadas do F1: esteira vigiada; `BroadcastChannel`, `details` e `saidaConfirmada` vão para a A1
