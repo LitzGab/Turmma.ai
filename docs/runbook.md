@@ -109,7 +109,15 @@ usuário que cai sempre na mesma recebe 429 mais cedo. Nada é liberado sem limi
    mais de uma escola, volta ao login depois da senha, porque sem a marca o desafio não vale; com o Redis no ar e esse
    aviso, é o Redis de fila travado (resposta acima de 100 ms): `docker compose exec redis-fila redis-cli --latency`.
    `docker compose ps redis-fila`; parado, `docker compose up -d redis-fila`. Ele é o Redis da fila de jobs também:
-   veja se "Job interativo esperando" disparou junto.
+   veja se "Job interativo esperando" disparou junto. O corte de 100 ms vale em produção e no **staging**
+   (`LOGIN_REDIS_PRAZO_MS`, que a API recusa acima disso nesses ambientes); na máquina de desenvolvimento são 2 s
+   (`docs/infra.md` 5.2). No staging, num host fraco, o sintoma é este aviso com 401 em `POST /v1/sessao/escola` ou
+   `/v1/sessao/mfa` e o Redis sadio — é a máquina, não o Redis. Na máquina de desenvolvimento, com o `redis-fila`
+   pausado, o sintoma é outro: o login fica **lento** antes da mesma mensagem de sessão inválida, porque são seis a dez
+   idas sequenciais ao Redis esperando 2 s cada. No cenário de carga local (`npm run carga:login`) o corte volta a ser
+   o de produção, de propósito (`infra/carga.env`): 401 no login lá é o cenário medindo o que deve medir. E se o aviso
+   aparece em **todo** login, confira `LOGIN_REDIS_PRAZO_MS` antes de procurar o Redis: um prazo mal posto, perto do
+   piso, dá exatamente esse sintoma com o Redis sadio.
 
 **Se nada disso resolver:** não há o que degradar: a API segue atendendo com o seguro. Mantenha o
 Redis de cache como prioridade do dia, porque com ele fora um aluno com script em laço gasta mais

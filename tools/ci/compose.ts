@@ -11,6 +11,15 @@ import { executarEtapas, raizRepositorio, type Etapa } from './executar.ts'
 export const PROJETO_TESTE = 'educa-teste'
 export const ARQUIVOS_AMBIENTE_TESTE = ['.env.example', 'infra/teste.env'] as const
 
+/**
+ * Os arquivos com que o cenário de carga sobe o projeto `educa-carga`. Mora aqui, e não em
+ * `infra/scripts/carga.ts`, porque quem precisa deles são os dois: o cenário, para subir, e o teste
+ * da configuração, para afirmar o que a carga dá às APIs. Duplicar a lista já custou caro uma vez —
+ * o cenário mediria o prazo de desenvolvimento com o teste verde
+ * (`tasks/correcoes/2026-09-22-corte-de-100-ms-do-redis-recusa-o-desafio-no-e2e.md`).
+ */
+export const ARQUIVOS_AMBIENTE_CARGA = ['.env.example', 'infra/carga.env'] as const
+
 export const ARGUMENTOS_COMPOSE = [
   'compose',
   '--project-name',
@@ -84,6 +93,15 @@ export function lerAmbienteExemplo(): Record<string, string> {
 /** Valores com que o compose de teste sobe: o último arquivo sobrepõe o anterior, como no compose. */
 export function lerAmbienteDeTeste(): Record<string, string> {
   return Object.assign({}, ...ARQUIVOS_AMBIENTE_TESTE.map(lerArquivoAmbiente)) as Record<string, string>
+}
+
+/**
+ * Valores com que o cenário de carga sobe, do mesmo jeito. O teste da configuração confere aqui o que o projeto
+ * `educa-carga` dá às APIs, que não é o do `.env.example`: o hash calibrado e o corte de produção do Redis do login.
+ * Não enxerga `infra/compose.carga.yml`: um `environment:` de lá passaria despercebido (`test-engineer`).
+ */
+export function lerAmbienteDeCarga(): Record<string, string> {
+  return Object.assign({}, ...ARQUIVOS_AMBIENTE_CARGA.map(lerArquivoAmbiente)) as Record<string, string>
 }
 
 /** URL do Postgres do compose de teste, vista da máquina: a mesma para a integração e para o seed do e2e. */

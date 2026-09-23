@@ -60,17 +60,6 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       requisição na borda. Achado pelo `infra-guardian` na correção
       `2026-09-22-log-da-borda-afogado-pela-sonda-do-proprio-container`
 
-- [ ] **Intermitente com assinatura: `401` em `POST /v1/sessao/escola` depois do segundo fator.** Na
-      esteira 35705342652 (commit 64cba89), `e2e/escola-e-vinculos.spec.ts:185` no projeto `celular`
-      falhou com a tela "Escolher a escola" e o alerta *"Sua sessão não é válida ou expirou"*. O traço
-      publicado deu a sequência exata: `POST /v1/sessao/email` 200 → `/v1/sessao/escola` 200 →
-      `/v1/conta/mfa/configurar` 200 → `/v1/conta/mfa/ativar` 200 → `/v1/sessao/email` 200 →
-      **`/v1/sessao/escola` 401**. Ou seja: depois de ativar o segundo fator e entrar de novo, escolher
-      a escola é rejeitado. **Passa localmente**, 132 de 132 nos dois projetos, então é intermitência —
-      mas é a primeira das onze com assinatura precisa, e a hipótese a investigar é a interação entre
-      ativar MFA e a validade do token da sessão nova. O traço está no artefato `traco-do-e2e` daquela
-      execução (retenção de 7 dias — **baixar antes de 29/09/2026** se for investigar depois)
-
 - [ ] **`infra/scripts/ensaio-alertas.ts:404` recria `api-1` e `api-2` com `--force-recreate`**, e as duas
       publicam porta (`infra/compose.yml:197,211`). É a mesma classe da corrida de porta corrigida em
       22/09/2026 (`tasks/correcoes/2026-09-22-corrida-de-porta-na-observabilidade.md`), e o que segura o
@@ -116,7 +105,27 @@ para o staging".
       acrescenta ao `exclude`. Roda em `test:infra`, não no portão rápido: custa o binário do Caddy
 
 - [ ] Escolher provedor de hospedagem em região Brasil, com Postgres + pgvector, Redis e
-      storage S3 gerenciados (D26, D28), quando for criar o staging (D31, D42)
+      storage S3 gerenciados (D26, D28), quando for criar o staging (D31, D42). O Redis do staging
+      precisa ser gerenciado **na mesma região**: com o corte de 100 ms do cliente do login, o
+      staging passou a ser o único ensaio desse corte fora de produção (`infra-guardian`)
+- [ ] **Valores que o staging e a produção não herdam do `.env.example`**, e que fazem o boot falhar
+      de propósito se forem copiados. Hoje são três, e a lista é executável em `apps/api/src/config.test.ts`
+      ("o .env.example não sobe em produção"), que falha quando outra variável entra na mesma classe:
+      `LOGIN_REDIS_PRAZO_MS` (no máximo 100; o exemplo tem 2000, que só vale em `local`) e os dois
+      emissores do login pela conta da escola, `LOGIN_EXTERNO_GOOGLE_EMISSOR` e
+      `LOGIN_EXTERNO_MICROSOFT_EMISSOR`, que apontam para o `oidc-falso` em http e precisam de https.
+      Em produção soma a quarta, `ROTAS_SINTETICAS`, que o exemplo deixa ligada.
+      **A lista é do que o boot recusa, e é a parte fácil.** A perigosa é o que ele *aceita*:
+      `IDENTIDADE_CHAVE_ASSINATURA`, `LOGIN_CHAVE_CONTADOR`, `IDENTIDADE_CHAVE_CIFRA_V1` e os segredos
+      do login externo têm 32+ caracteres e sobem em produção sem reclamar, sintéticos como estão. A
+      lista de criação do staging precisa das duas metades (`test-engineer`).
+      E, sob pressão, a saída errada é baixar o `AMBIENTE` para `local`, que destravaria junto
+      `LOGIN_PROTECAO_DESLIGADA` e `ROTAS_SINTETICAS`: escrever isso na lista antes de alguém
+      precisar dela (`infra-guardian`)
+- [ ] Tirar `MONTAGEM_DE_TESTE.prazoDoRedisDeLoginMs`, que ficou quase redundante com
+      `LOGIN_REDIS_PRAZO_MS`: os dois valem 2 s no compose de teste, e por isso a precedência do `??`
+      em `sessao.module.ts` não tem teste que a prove. São sete arquivos de teste, mecânicos — era
+      limpeza fora do escopo da correção de 22/09 (`test-engineer`, rodadas 3 e 4)
 - [ ] Contrato com provedor de modelo: **garante processamento no Brasil para conversa de
       aluno** (D62), veda treinamento, permite serviço usado por menor,
       limite de tokens por minuto compatível com o pico (~1,5 mi/min em 10 escolas pela
@@ -237,7 +246,20 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       máquina. O que decidir: fixar `workers` na esteira, não subir `observabilidade` no job do e2e,
       e escolher entre folga de `expect` no perfil `celular` ou retentativa com o flake **registrado**
       (nunca mascarado). É tarefa, não correção — vale `/criar-tasks`. É o achado mais valioso da
-      validação do F1
+      validação do F1. **Um dos vermelhos do `celular` já tem causa achada e corrigida**: o cliente
+      Redis do login cortava em 100 ms e recusava o desafio no runner carregado
+      (`tasks/correcoes/2026-09-22-corte-de-100-ms-do-redis-recusa-o-desafio-no-e2e.md`). Isso não
+      fecha o item — a contenção do runner continua —, mas tira um caso da lista e mostra o padrão:
+      prazo de produção medido num runner que não é produção
+- [ ] **Intermitente com causa fechada, pronto para `/corrigir`: o "cookie alterado" de
+      `apps/api/test/sessao-externa.int.test.ts:433` às vezes não altera nada.** A linha é
+      `` `${valor.slice(0, -2)}${valor.endsWith('A') ? 'B' : 'A'}${valor.slice(-1)}` ``: a condição
+      olha o **último** caractere e a troca escreve no **penúltimo**. Com o penúltimo já `A` e o
+      último diferente de `A`, o cookie "alterado" sai idêntico ao original, o retorno é aceito e a
+      asserção da linha 443 recebe `/` em vez de `/?falha=provedor`. Em base64url é ~1 em 64
+      execuções. Visto em 22/09/2026 no portão local (o cookie do log terminava em `Aq`); passa 4 de
+      4 isolado. O conserto é olhar o caractere que se troca — e vale conferir se a mesma inversão
+      existe em outros "altera um caractere" da suíte
 - [ ] `infra/test/borda.int.test.ts` — "handshake por polling fica na mesma instância pelo cookie da
       borda": um único 503 da borda invalida a sessão socket.io e as 17 requisições seguintes viram
       400 em cascata (esteira run 35525902277). O arquivo tem um caso que mata um realtime de
@@ -269,18 +291,11 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       regex que decidia guardar a rodada aprovada: exigia `Recomendações:` com dois pontos, e
       `## Recomendações (não bloqueiam)` seguido dos itens não casava. Agora quem decide é
       `exigenciaDaRodada`, que lê as sete formas que os revisores usam
-- [ ] **Defeito do carimbo do portão local:** `portao-local.ts` grava o instantâneo de conteúdo no
-      **fim** da execução (`gravarInstantaneo(raiz, CHAVE_DO_PORTAO, ...)`), então arquivo editado
-      **durante** a corrida entra no instantâneo como se as suítes o tivessem rodado, e o `conferir`
-      responde "válido" para código que nunca passou pelo portão. Achado em 21/09 na correção dos
-      achados: editei `revisoes.ts` às 15:16 com o portão rodando desde 14:55, e ele deu válido. É a
-      mesma classe das correções de `mtime`, na direção oposta: antes invalidava sem motivo, agora
-      valida sem prova. Gravar o instantâneo no **início**, e conferir no fim que nada mudou, encerra
-      a classe. **Contorno até lá:** rodar o portão depois da última edição, e conferir à mão que o
-      mtime dos arquivos de código é anterior ao `inicio` do carimbo. **Vai junto na mesma correção:**
-      `avaliarPortao` chama `alteracaoQueCaduca` e `avaliarCarimbo` **sem** passar o instantâneo
-      (`tools/processo/revisoes.ts`), enquanto o `conferir` do `portao-local.ts` passa — dois critérios
-      para a mesma pergunta, na direção oposta do defeito
+- [x] ~~**Defeito do carimbo do portão local**, nas duas metades~~ — corrigido em 22/09/2026
+      (`tasks/correcoes/2026-09-22-hook-do-commit-ignora-o-instantaneo-de-conteudo.md`): o instantâneo
+      do portão passou a ser gravado com o conteúdo do **início** da corrida, e o portão recusa o
+      carimbo se algo mudou enquanto ele rodava; e `avaliarPortao` passou a receber os instantâneos,
+      com `documento` e `instantaneos` obrigatórios na assinatura, para esquecer o repasse não compilar
 - [ ] **Duas sessões na mesma árvore não passam pelo portão.** O portão é de árvore inteira e o
       carimbo é um arquivo só (`.processo/portao.json`). Em 21/09, com duas sessões abertas: um
       portão saiu vermelho em 5 testes de integração que passavam sozinhos (disputa de container),

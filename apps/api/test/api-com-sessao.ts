@@ -16,9 +16,12 @@ export interface ApiDeTeste {
 }
 
 /**
- * Sobe a API, com a montagem de teste (o prazo maior do cliente Redis do login, `MONTAGEM_DE_TESTE`), ou com a de
- * produção (`montagem` vazia), no teste que prova o corte dos 100 ms. Com `linhasDeLog`, o logger escreve tudo, até `trace`, nessa lista, para o teste procurar nela o que
- * nunca pode ir a log; sem ela, o log fica mudo.
+ * Sobe a API com a montagem de teste (`MONTAGEM_DE_TESTE`, que fixa o prazo maior do cliente Redis do login qualquer
+ * que seja a configuração). Com `montagem` vazia, o prazo passa a sair da configuração, como no contêiner, e o do
+ * compose de teste é o de 2 s. **Quem quer o corte de 100 ms pede o prazo na configuração**, com
+ * `{ login: { prazoDoRedisMs: TIMEOUT_COMANDO_REDIS_API_MS } }`, e não a montagem vazia
+ * (`ataque-de-senha.int.test.ts`, "falha (15.5)"). Com `linhasDeLog`, o logger escreve tudo, até `trace`, nessa
+ * lista, para o teste procurar nela o que nunca pode ir a log; sem ela, o log fica mudo.
  */
 export async function subirApi(medidor: Meter, sobreposicao: SobreposicaoDeTeste = {}, linhasDeLog?: string[], montagem: OpcoesDeMontagem = MONTAGEM_DE_TESTE): Promise<ApiDeTeste> {
   const app = await NestFactory.create(AppModule.com(configuracaoDeTeste(sobreposicao), { ...montagem, medidor }), { logger: false })

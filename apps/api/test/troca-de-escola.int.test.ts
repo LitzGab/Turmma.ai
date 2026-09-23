@@ -10,6 +10,7 @@ import { SignJWT } from 'jose'
 import { Secret, TOTP } from 'otpauth'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
+import { travarRedis } from '../../../tools/testes/redis-travado.ts'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
 import { CifraDoSegredo } from '../src/sessao/cifra-do-segredo.js'
@@ -24,6 +25,13 @@ import { BancadaDeSessoes } from './sessao-de-teste.js'
 /** Senha sintética das contas deste teste: nenhuma é de pessoa real. */
 const SENHA_SINTETICA = 'senha-sintetica-correta-1'
 const PERIODO_MS = 30_000
+/**
+ * Quanto o Redis de fila fica conectado e sem responder no teste do prazo do login: dez vezes os 100 ms do cliente de
+ * produção, e metade dos 2 s do cliente da fila. É o que o runner carregado da esteira produz sozinho. A folga para
+ * cima é de propósito: com margem curta, o `conferirLivre` que saísse depois da pausa deixaria o teste verde sem ter
+ * provado nada, justamente na máquina para a qual ele foi escrito.
+ */
+const PAUSA_DO_RUNNER_CARREGADO_MS = 1_000
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 interface Resposta {
@@ -689,5 +697,54 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
     expect(doAluno.status).toBe(200)
     expect(doAluno.corpo['acessos']).toEqual([])
     expect(typeof doAluno.corpo['usuarioId'] === 'string' && UUID.test(doAluno.corpo['usuarioId'])).toBe(true)
+  })
+
+  it('esteira: com o Redis de fila respondendo acima dos 100 ms, a escolha da escola continua entrando (correção 2026-09-22-corte-de-100-ms-do-redis-recusa-o-desafio-no-e2e)', async () => {
+    // Esta instância monta **sem** `MONTAGEM_DE_TESTE`, de propósito: é a API como o contêiner do compose a sobe, com
+    // o prazo do cliente Redis do login vindo só da configuração. É a montagem que o e2e usa, e a única que tinha
+    // ficado presa aos 100 ms de produção.
+    const medidorDoCompose = new MedidorDeTeste()
+    const logDoCompose: string[] = []
+    const instancia = await NestFactory.create(AppModule.com(configuracaoDeTeste(), { medidor: medidorDoCompose.medidor }), { logger: false })
+    configurarAplicacao(instancia, criarLogger({ servico: 'api-teste', nivel: 'trace', destino: { write: (linha: string) => logDoCompose.push(linha) } }), medidorDoCompose.medidor)
+    await instancia.listen(0, '127.0.0.1')
+    const urlDoCompose = `http://127.0.0.1:${String((instancia.getHttpServer().address() as AddressInfo).port)}`
+    let travado: Awaited<ReturnType<typeof travarRedis>> | undefined
+    try {
+      const cliente = instancia.get<Redis>(CLIENTE_REDIS_LOGIN, { strict: false })
+      await clientePronto(cliente)
+      const a = await escola('Colégio')
+      const b = await escola('Escola da rede')
+      const professora = await pessoa(a.id)
+      await naOutraEscola(professora, b.id)
+      const login = await lerResposta(
+        await fetch(`${urlDoCompose}/v1/sessao/email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: professora.email, senha: SENHA_SINTETICA }),
+        }),
+      )
+      expect(login.corpo['etapa']).toBe('escolher')
+
+      travado = await travarRedis(configuracao.redisFilaUrl, PAUSA_DO_RUNNER_CARREGADO_MS)
+      const escolhido = await lerResposta(
+        await fetch(`${urlDoCompose}/v1/sessao/escola`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${texto(login.corpo['desafio'])}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuarioId: professora.usuarioId }),
+        }),
+      )
+      // Com o corte de 100 ms nesta montagem, era 401 `NAO_AUTENTICADO` e `login.desafio_sem_redis` no log: a recusa
+      // que derrubou `e2e/escola-e-vinculos.spec.ts:185` na esteira, com a conexão do Redis aberta o tempo todo.
+      expect(cliente.status).toBe('ready')
+      expect(escolhido.status).toBe(200)
+      expect(escolhido.corpo['etapa']).toBe('pronta')
+      expect(logDoCompose.join('\n')).not.toContain('login.desafio_sem_redis')
+    } finally {
+      // No `finally`: com uma asserção vermelha acima, a pausa seguiria viva para o arquivo seguinte.
+      await travado?.fim
+      await instancia.close()
+      await medidorDoCompose.encerrar()
+    }
   })
 })

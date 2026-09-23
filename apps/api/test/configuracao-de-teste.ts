@@ -1,4 +1,5 @@
 import { TIMEOUT_COMANDO_REDIS_FILA_MS, type ConfiguracaoBanco } from '@educa/nucleo'
+import type { ConfiguracaoLogin } from '../src/sessao/configuracao-de-login.js'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { lerConfiguracao, type ConfiguracaoApi } from '../src/config.js'
 
@@ -11,13 +12,28 @@ export function urlDoOidcFalso(ambiente: Record<string, string> = lerAmbienteDeT
  * A montagem da API nos testes que sobem a aplicação inteira e não provam o corte do Redis (15.5): o cliente Redis do
  * login espera até 2 s por comando, como o do despachante, em vez dos 100 ms de produção. No runner carregado da
  * esteira, uma resposta acima de 100 ms viraria reserva no seguro ou desafio recusado, e um vermelho falso. É opção de
- * montagem, e não variável de ambiente: a produção não tem como ler. Os testes que provam o corte (`limite.int.test.ts`,
- * o "Redis fora" e o "Redis travado" do contador e do desafio) montam sem ela.
+ * montagem, e não variável de ambiente: a produção não tem como ler.
+ *
+ * Ela **fixa** o prazo qualquer que seja a configuração. Desde a correção
+ * `2026-09-22-corte-de-100-ms-do-redis-recusa-o-desafio-no-e2e`, montar *sem* ela não é mais montar como produção: aí
+ * quem decide é `LOGIN_REDIS_PRAZO_MS`, e o do compose de teste é o de 2 s. Quem quer provar o corte de 100 ms pela
+ * aplicação montada pede o prazo na configuração, com `{ login: { prazoDoRedisMs: TIMEOUT_COMANDO_REDIS_API_MS } }`
+ * (`ataque-de-senha.int.test.ts`, "falha (15.5)"); quem o prova pelo cliente monta o cliente direto com
+ * `criarClienteRedisDaApi` (`limite.int.test.ts`, e o "Redis fora" e o "Redis travado" do contador e do desafio).
  */
 export const MONTAGEM_DE_TESTE = { prazoDoRedisDeLoginMs: TIMEOUT_COMANDO_REDIS_FILA_MS } as const
 
 export interface SobreposicaoDeTeste {
   banco?: Partial<ConfiguracaoBanco>
+  /**
+   * O prazo do Redis do login que o teste quer, depois da leitura da configuração. O caso é o teste que prova o corte
+   * de 100 ms **pela aplicação montada**: ele precisa do valor de produção sem trocar o `AMBIENTE` para `staging`, que
+   * exigiria https no emissor do login pela conta da escola (o `oidc-falso` é http). Assim o prazo entra pelo mesmo
+   * caminho do contêiner — `config.login.prazoDoRedisMs`, que o `SessaoModule` lê —, e trocar essa leitura por um
+   * valor fixo deixa o teste vermelho. Só este campo: `Partial<ConfiguracaoLogin>` alcançaria `protecaoDesligada`, que
+   * a configuração recusa em produção de propósito.
+   */
+  login?: Pick<ConfiguracaoLogin, 'prazoDoRedisMs'>
   /** Variáveis que trocam as de `.env.example` e as URLs do compose de teste, como `ROTAS_SINTETICAS` ou `REDIS_FILA_URL`. */
   ambiente?: Record<string, string>
 }
@@ -47,5 +63,5 @@ export function configuracaoDeTeste(sobreposicao: SobreposicaoDeTeste = {}): Con
     LOGIN_EXTERNO_MICROSOFT_EMISSOR: `${urlDoOidcFalso(ambiente)}/microsoft`,
     ...sobreposicao.ambiente,
   })
-  return { ...config, banco: { ...config.banco, ...sobreposicao.banco } }
+  return { ...config, banco: { ...config.banco, ...sobreposicao.banco }, login: { ...config.login, ...sobreposicao.login } }
 }

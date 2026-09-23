@@ -1,7 +1,9 @@
 import { hkdfSync } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { lerAmbienteExemplo } from '../../../tools/ci/compose.ts'
+import { lerAmbienteDeCarga, lerAmbienteDeTeste, lerAmbienteExemplo } from '../../../tools/ci/compose.ts'
+import { TIMEOUT_COMANDO_REDIS_API_MS, TIMEOUT_COMANDO_REDIS_FILA_MS } from '@educa/nucleo'
 import { ConfiguracaoInvalida, lerConfiguracao, MOTIVO_AVISOS_SEM_JSON, MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO } from './config.js'
+import { lerConfiguracaoLogin, MOTIVO_PRAZO_DO_REDIS_DO_LOGIN, PRAZO_MINIMO_DO_REDIS_DO_LOGIN_MS } from './sessao/configuracao-de-login.js'
 
 const ambienteValido = {
   API_PORTA: '3000',
@@ -31,6 +33,7 @@ const ambienteValido = {
   LOGIN_PROTECAO_DESLIGADA: 'false',
   UV_THREADPOOL_SIZE: '16',
   LIMITE_LOGIN_EMAIL_IP_MIN: '60',
+  LOGIN_REDIS_PRAZO_MS: '100',
   LOGIN_CHAVE_CONTADOR: 'chave_sintetica_do_contador_com_32_caracteres',
   LOGIN_CHAVE_DISPOSITIVO_VERSAO: '1',
   LOGIN_CHAVE_DISPOSITIVO_V1: 'chave_sintetica_do_dispositivo_com_32_caracteres',
@@ -42,6 +45,17 @@ const ambienteValido = {
 /** A chave AES-256 que o HKDF deriva do texto da variável, como a configuração faz. */
 function chaveDerivada(texto: string): Uint8Array {
   return new Uint8Array(hkdfSync('sha256', texto, new Uint8Array(0), 'educa.mfa.segredo.aes-256-gcm', 32))
+}
+
+/** O erro de `lerConfiguracaoLogin` chamada direto, para o que `lerConfiguracao` não alcança. */
+function erroDeLogin(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
+  try {
+    lerConfiguracaoLogin(ambiente)
+  } catch (erro) {
+    if (erro instanceof ConfiguracaoInvalida) return erro
+    throw erro
+  }
+  throw new Error('a configuração do login deveria ter sido recusada')
 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
@@ -86,6 +100,7 @@ describe('lerConfiguracao', () => {
         hash: { memoriaKib: 19_456, iteracoes: 2 },
         concorrenciaDoHash: 2,
         protecaoDesligada: false,
+        prazoDoRedisMs: TIMEOUT_COMANDO_REDIS_API_MS,
         limiteEmailPorIpMin: 60,
         chaveContador: new TextEncoder().encode(ambienteValido.LOGIN_CHAVE_CONTADOR),
         dispositivo: { versao: 1, chave: new TextEncoder().encode(ambienteValido.LOGIN_CHAVE_DISPOSITIVO_V1) },
@@ -150,6 +165,76 @@ describe('lerConfiguracao', () => {
     expect(lerConfiguracao({ ...ambienteValido, LOGIN_PROTECAO_DESLIGADA: 'true' }).login.protecaoDesligada).toBe(true)
     expect(erroDe({ ...ambienteValido, AMBIENTE: 'producao', ROTAS_SINTETICAS: 'false', LOGIN_PROTECAO_DESLIGADA: 'true' }).variaveis).toEqual(['LOGIN_PROTECAO_DESLIGADA'])
     expect(erroDe({ ...ambienteValido, LOGIN_PROTECAO_DESLIGADA: undefined }).variaveis).toEqual(['LOGIN_PROTECAO_DESLIGADA'])
+  })
+
+  it('LOGIN_REDIS_PRAZO_MS só aperta: acima do corte de 100 ms a API não sobe em produção nem no staging, e sobe em local', () => {
+    // O corte é o desenho (regra 80): o Redis que não responde não segura a requisição do aluno. Em `local` — a
+    // máquina de desenvolvimento e o compose de teste, que é o que o e2e sobe — 100 ms é o tempo normal de uma
+    // máquina ocupada, e cortar nele recusava o desafio no meio do login, sem defeito nenhum de produção (correção
+    // 2026-09-22-corte-de-100-ms-do-redis-recusa-o-desafio-no-e2e).
+    expect(TIMEOUT_COMANDO_REDIS_FILA_MS).toBeGreaterThan(TIMEOUT_COMANDO_REDIS_API_MS)
+    const acimaDoCorte = String(TIMEOUT_COMANDO_REDIS_FILA_MS)
+    // Até o corte, passa em todo ambiente: é o valor de `ambienteValido`, e é o que o cenário de carga fixa.
+    for (const ambiente of ['local', 'staging', 'producao'] as const) {
+      expect(lerConfiguracao({ ...ambienteValido, AMBIENTE: ambiente }).login.prazoDoRedisMs).toBe(TIMEOUT_COMANDO_REDIS_API_MS)
+    }
+    // Acima dele, só em `local`.
+    expect(lerConfiguracao({ ...ambienteValido, LOGIN_REDIS_PRAZO_MS: acimaDoCorte }).login.prazoDoRedisMs).toBe(TIMEOUT_COMANDO_REDIS_FILA_MS)
+    const emProducao = erroDe({ ...ambienteValido, AMBIENTE: 'producao', LOGIN_REDIS_PRAZO_MS: acimaDoCorte })
+    expect(emProducao.variaveis).toEqual(['LOGIN_REDIS_PRAZO_MS'])
+    expect(emProducao.message).toContain(MOTIVO_PRAZO_DO_REDIS_DO_LOGIN)
+    expect(erroDe({ ...ambienteValido, AMBIENTE: 'staging', LOGIN_REDIS_PRAZO_MS: acimaDoCorte }).variaveis).toEqual(['LOGIN_REDIS_PRAZO_MS'])
+    // Um a mais que o corte já não passa, nos dois: o limite é o valor, não uma faixa.
+    for (const ambiente of ['staging', 'producao'] as const) {
+      expect(erroDe({ ...ambienteValido, AMBIENTE: ambiente, LOGIN_REDIS_PRAZO_MS: String(TIMEOUT_COMANDO_REDIS_API_MS + 1) }).variaveis, ambiente).toEqual(['LOGIN_REDIS_PRAZO_MS'])
+    }
+    // O piso é a única defesa contra o prazo que não espera nada: zero passaria pelo teto (0 ≤ 100) e a API subiria
+    // em produção, mas o ioredis corta todo comando no tick seguinte — desafio recusado e contador no seguro a cada
+    // login, com a escola inteira às 7h30 (regra 80). Negativo faz o mesmo.
+    for (const valor of [undefined, '', '0', '-1', '1.5', 'cem', String(PRAZO_MINIMO_DO_REDIS_DO_LOGIN_MS - 1)]) {
+      expect(erroDe({ ...ambienteValido, LOGIN_REDIS_PRAZO_MS: valor }).variaveis, String(valor)).toEqual(['LOGIN_REDIS_PRAZO_MS'])
+    }
+    // O piso é inteiro: ele alimenta um `.int()`, e fracionário faria o caso acima passar pelo motivo errado.
+    expect(Number.isInteger(PRAZO_MINIMO_DO_REDIS_DO_LOGIN_MS)).toBe(true)
+    // No piso, passa: é apertar, não sumir.
+    expect(lerConfiguracao({ ...ambienteValido, LOGIN_REDIS_PRAZO_MS: String(PRAZO_MINIMO_DO_REDIS_DO_LOGIN_MS) }).login.prazoDoRedisMs).toBe(PRAZO_MINIMO_DO_REDIS_DO_LOGIN_MS)
+    // O que o contêiner do compose de teste vê é `.env.example` mais `infra/teste.env`, e não só o exemplo; o do
+    // cenário de carga é `.env.example` mais `infra/carga.env`, que fixa o corte de produção.
+    expect(lerAmbienteDeTeste()['AMBIENTE']).toBe('local')
+    const comoNoProjeto = (doProjeto: Record<string, string>) =>
+      lerConfiguracao({ ...ambienteValido, ...doProjeto, BANCO_URL: ambienteValido.BANCO_URL, REDIS_CACHE_URL: ambienteValido.REDIS_CACHE_URL, REDIS_FILA_URL: ambienteValido.REDIS_FILA_URL })
+        .login.prazoDoRedisMs
+    expect(comoNoProjeto(lerAmbienteDeTeste())).toBe(TIMEOUT_COMANDO_REDIS_FILA_MS)
+    expect(comoNoProjeto(lerAmbienteDeCarga())).toBe(TIMEOUT_COMANDO_REDIS_API_MS)
+  })
+
+  it('o .env.example não sobe em produção, e aponta exatamente as variáveis que o staging e a produção precisam trocar', () => {
+    // O item do TODO.md "valores que o staging e a produção não herdam do .env.example" mora aqui, executável: quem
+    // copiar o exemplo para lá recebe esta lista no primeiro boot, antes de qualquer escola. Uma variável nova na
+    // mesma classe entra aqui **se estiver em outro leitor**, porque `lerConfiguracao` soma os oito e ordena;
+    // `lerConfiguracaoLogin` lança no primeiro `if`, então uma segunda recusa dentro dela não apareceria na lista
+    // (`test-engineer`). E a lista é do que o boot **recusa**: chave sintética do exemplo sobe em produção sem
+    // reclamar, e é por isso que o item do TODO.md separa as duas coisas.
+    // `API_PORTA` e `TELEMETRIA_OTLP_URL` vêm do `environment:` do compose, não do arquivo; as URLs, do serviço.
+    const exemplo = { ...ambienteValido, ...lerAmbienteExemplo(), API_PORTA: '3000', BANCO_URL: ambienteValido.BANCO_URL, REDIS_CACHE_URL: ambienteValido.REDIS_CACHE_URL, REDIS_FILA_URL: ambienteValido.REDIS_FILA_URL, TELEMETRIA_OTLP_URL: ambienteValido.TELEMETRIA_OTLP_URL }
+    expect(lerConfiguracao(exemplo).identidade.ambiente).toBe('local')
+    // O prazo do Redis do login, que aqui é o de desenvolvimento, e os dois emissores do login pela conta da escola,
+    // que apontam para o `oidc-falso` em http. Em produção soma a rota sintética, que o exemplo deixa ligada.
+    const semTls = ['LOGIN_EXTERNO_GOOGLE_EMISSOR', 'LOGIN_EXTERNO_MICROSOFT_EMISSOR', 'LOGIN_REDIS_PRAZO_MS']
+    expect(erroDe({ ...exemplo, AMBIENTE: 'staging' }).variaveis).toEqual(semTls)
+    expect(erroDe({ ...exemplo, AMBIENTE: 'producao' }).variaveis).toEqual([...semTls, 'ROTAS_SINTETICAS'])
+  })
+
+  it('AMBIENTE ausente ou inválido vale como produção na leitura do login, e o prazo acima do corte cai junto', () => {
+    // `lerConfiguracao` nunca chega aqui: `esquemaAmbienteIdentidade` exige o enum e derruba o boot antes. A leitura
+    // restrita é defesa em profundidade de `lerConfiguracaoLogin`, e só se prova chamando-a direto.
+    const acimaDoCorte = { ...ambienteValido, LOGIN_REDIS_PRAZO_MS: String(TIMEOUT_COMANDO_REDIS_FILA_MS) }
+    expect(lerConfiguracaoLogin(acimaDoCorte).prazoDoRedisMs).toBe(TIMEOUT_COMANDO_REDIS_FILA_MS)
+    for (const ambiente of [undefined, 'homologacao']) {
+      const erro = erroDeLogin({ ...acimaDoCorte, AMBIENTE: ambiente })
+      expect(erro.variaveis, String(ambiente)).toEqual(['LOGIN_REDIS_PRAZO_MS'])
+      expect(erro.message).toContain(MOTIVO_PRAZO_DO_REDIS_DO_LOGIN)
+    }
   })
 
   it('a chave de dispositivo lida é a da versão declarada, e a versão sem chave não sobe', () => {

@@ -10,7 +10,7 @@ import type { HashDeSenha } from '../../apps/api/src/sessao/hash-de-senha.ts'
 import type { criarAlunosComMatricula, criarSessoesSinteticas } from '../../apps/api/src/sessao/sessoes-sinteticas.ts'
 import type { criarBanco, criarPool } from '@educa/nucleo'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
-import { argumentosDoCompose, CODIGO_THRESHOLD_CRUZADO, lerAmbienteDaCarga, NOMES_DAS_ESCOLAS, rodar, type NomeDeEscola } from './carga.ts'
+import { argumentosDoCompose, CODIGO_THRESHOLD_CRUZADO, lerAmbienteDeCarga, NOMES_DAS_ESCOLAS, rodar, type NomeDeEscola } from './carga.ts'
 import { urlDoBancoDoAmbiente } from './conferir-carga.ts'
 import { conferirCenarioDeLogin, descreverConferenciaDeLogin, type ConferenciaDoLogin, type JanelaDaFase } from './conferir-carga-login.ts'
 
@@ -373,7 +373,7 @@ async function executar(controleNegativo: boolean, fases: readonly FaseDoCenario
   const pasta = mkdtempSync(join(tmpdir(), 'educa-carga-login-'))
   // O k6 do container roda com outro usuário: ele lê as contas e grava o resumo nesta pasta.
   chmodSync(pasta, 0o777)
-  const doArquivo = lerAmbienteDaCarga()
+  const doArquivo = lerAmbienteDeCarga()
   const ambiente: NodeJS.ProcessEnv = {
     ...Object.fromEntries(Object.entries(process.env).filter(([chave]) => !(chave in doArquivo))),
     CARGA_PASTA_DA_EXECUCAO: pasta,

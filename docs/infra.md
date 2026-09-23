@@ -246,6 +246,12 @@ chave. O cliente do login desiste em 100 ms por comando, de propósito, e aí o 
 desafio é recusado. Um `addBulk` grande ou um script de fila longo às 7h30 é exatamente o que faria esses 100 ms
 cortarem no meio da entrada dos alunos. Mais um motivo para lote ficar fora do horário letivo.
 
+Quem diz o prazo é `LOGIN_REDIS_PRAZO_MS`, e **ela só aperta**: em produção e no staging a API não sobe com mais que
+os 100 ms. Na máquina de desenvolvimento e no compose de teste, que é o que o e2e sobe, são 2 s — ali o Postgres, os
+dois Redis, a observabilidade, os nossos contêineres e a suíte dividem a mesma CPU, e uma resposta acima de 100 ms é
+rotina da máquina, não sinal de Redis travado. O cenário de carga é a exceção: `infra/carga.env` fixa os 100 ms,
+porque é nele que o corte é medido com a rajada das 7h30 descrita acima.
+
 ### 5.3 Concorrência por escola
 
 Cada escola tem limite de jobs simultâneos por fila, para uma escola barulhenta não ocupar

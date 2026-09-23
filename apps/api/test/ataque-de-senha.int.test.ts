@@ -1,4 +1,4 @@
-import { LimitadorDeRequisicoes, METRICAS, observarSeguroDoLimite } from '@educa/nucleo'
+import { LimitadorDeRequisicoes, METRICAS, observarSeguroDoLimite, TIMEOUT_COMANDO_REDIS_API_MS, TIMEOUT_COMANDO_REDIS_FILA_MS } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
 import type { Redis } from 'ioredis'
 import { randomBytes, randomUUID } from 'node:crypto'
@@ -581,15 +581,23 @@ describe('ataque de senha nunca bloqueia a escola: rebaixa, por IP e escola, e q
 
   it('falha (15.5): com a aplicação montada como em produção e o Redis de fila travado, o desafio recusado sozinho leva o seguro do login e limite.seguro_ativo a 1, com os contadores em 0', async () => {
     const medidorDoDesafio = new MedidorDeTeste()
-    // A montagem de produção (sem o prazo maior do teste): o corte dos 100 ms é o que se prova.
-    const instancia = await subirApi(medidorDoDesafio.medidor, {}, undefined, {})
+    // O prazo de produção entra pela configuração, que é por onde o contêiner o recebe desde a correção
+    // 2026-09-22-corte-de-100-ms-do-redis-recusa-o-desafio-no-e2e: montar sem a opção de teste já não significa
+    // "produção", porque aí quem decide é o `AMBIENTE`, e o do compose de teste é `local`, com os 2 s da fila. A opção
+    // de montagem (`MONTAGEM_DE_TESTE`) também não serviria: ela pula justamente a leitura que se quer provar. Quem
+    // diz que `staging` vale 100 ms é `config.test.ts`; aqui se prova que esse valor chega ao cliente.
+    const instancia = await subirApi(medidorDoDesafio.medidor, { login: { prazoDoRedisMs: TIMEOUT_COMANDO_REDIS_API_MS } }, undefined, {})
     try {
       await clientePronto(instancia.app.get<Redis>(CLIENTE_REDIS_LOGIN, { strict: false }))
       observarSeguroDoLimite(medidorDoDesafio.medidor, instancia.app.get(LimitadorDeRequisicoes), instancia.app.get(SeguroDoLogin))
       const chave = configuracaoDeTeste().identidade.chaveAssinatura
       const desafio = await verificarDesafio(await new EmissorDeDesafio(chave).emitir({ contaId: randomUUID(), etapa: 'mfa', mfaCumprido: false }), chave, ['mfa'])
       const travado = await travarRedis(configuracaoDeTeste().redisFilaUrl, 3_000)
+      const comecou = performance.now()
       await expect(instancia.app.get(ConsumoDeDesafio).consumir(desafio)).rejects.toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO })
+      // O corte é curto, e é isso que separa esta montagem da do compose: com o prazo da fila chegando até aqui, a
+      // recusa só viria depois de 2 s, e a asserção acima continuaria verde sem provar nada.
+      expect(performance.now() - comecou).toBeLessThan(TIMEOUT_COMANDO_REDIS_FILA_MS / 2)
       expect(instancia.app.get(ConsumoDeDesafio).proporcaoDoSeguro).toBe(1)
       expect([instancia.app.get(ContadorDeTentativas).proporcaoDoSeguro, instancia.app.get(ContadorEmJanela).proporcaoDoSeguro]).toEqual([0, 0])
       expect(instancia.app.get(SeguroDoLogin).proporcaoDoSeguro).toBe(1)

@@ -1,4 +1,4 @@
-import { AMBIENTES, ConfiguracaoInvalida, lerProtecaoDoLoginDesligada, validarAmbiente } from '@educa/nucleo'
+import { AMBIENTES, ConfiguracaoInvalida, lerProtecaoDoLoginDesligada, TIMEOUT_COMANDO_REDIS_API_MS, validarAmbiente, type Ambiente } from '@educa/nucleo'
 import { hkdfSync } from 'node:crypto'
 import { z } from 'zod'
 
@@ -14,6 +14,42 @@ export const THREADS_DE_FOLGA_DO_LIBUV = 8
 
 export const MOTIVO_CONCORRENCIA_DO_HASH =
   'LOGIN_HASH_CONCORRENCIA vai no máximo até UV_THREADPOOL_SIZE − 8: as 8 threads de folga do libuv são da resolução de nome e de arquivo'
+
+/**
+ * Piso de `LOGIN_REDIS_PRAZO_MS`, um décimo do corte. Abaixo dele o prazo deixa de ser "desistir cedo" e vira
+ * "desistir sempre": o comando estoura no tick seguinte, e todo login cai no seguro com o Redis sadio. A variável só
+ * aperta, mas apertar até sumir não é apertar (`test-engineer`). De 10 a 99 ms continua aceito de propósito: 10 ms
+ * ainda é espera de verdade contra um `EXISTS` de poucos milissegundos.
+ *
+ * `Math.round` porque o piso alimenta um `z.coerce.number().int()`: um corte que não fosse múltiplo de 10 daria um
+ * piso fracionário, e o valor logo abaixo dele passaria a ser recusado pelo `.int()`, não pelo piso — o teste seguiria
+ * verde pelo motivo errado (`test-engineer` e `infra-guardian`).
+ */
+export const PRAZO_MINIMO_DO_REDIS_DO_LOGIN_MS = Math.round(TIMEOUT_COMANDO_REDIS_API_MS / 10)
+
+/**
+ * `LOGIN_REDIS_PRAZO_MS` acima do corte só existe fora de produção e de staging: lá o Redis que não responde não pode
+ * segurar a requisição do aluno (regra 80), e o staging ensaia a produção.
+ */
+export const MOTIVO_PRAZO_DO_REDIS_DO_LOGIN = `LOGIN_REDIS_PRAZO_MS não passa de ${String(TIMEOUT_COMANDO_REDIS_API_MS)} ms com AMBIENTE=producao nem staging: um Redis que não responde não pode segurar a requisição do aluno`
+
+/**
+ * Se este prazo do cliente Redis do login vale no ambiente. A variável **só aperta**: qualquer valor até o corte de
+ * `TIMEOUT_COMANDO_REDIS_API_MS` passa em qualquer ambiente, e acima dele só em `local`.
+ *
+ * Os 100 ms do corte são o desenho em produção: com o Redis lento ou travado, o contador cai no seguro em memória e o
+ * desafio é recusado (`docs/infra.md` 5.2). Redis gerenciado na mesma região responde um `EXISTS` ou um `SET NX` em
+ * poucos milissegundos no p99, e 100 ms dão dezenas de vezes de folga.
+ *
+ * Em `local` o valor sobe para os 2 s do cliente da fila, porque ali o Postgres, os dois Redis, a observabilidade, os
+ * nossos contêineres e a suíte dividem a mesma CPU: uma resposta acima de 100 ms é rotina da máquina, e cortar nela
+ * recusava o desafio e derrubava o login no meio do e2e, sem defeito nenhum de produção (correção
+ * `2026-09-22-corte-de-100-ms-do-redis-recusa-o-desafio-no-e2e`). O cenário de carga é a exceção dentro de `local`:
+ * `infra/carga.env` fixa o corte de produção, porque é lá que ele é medido com a rajada das 7h30.
+ */
+function prazoDoRedisDoLoginVale(prazoMs: number, ambiente: Ambiente): boolean {
+  return prazoMs <= TIMEOUT_COMANDO_REDIS_API_MS || ambiente === 'local'
+}
 
 /** Chave de HMAC com pelo menos 256 bits, como a de assinatura do token. */
 export const TAMANHO_MINIMO_CHAVE_DE_LOGIN = 32
@@ -33,6 +69,8 @@ export interface ConfiguracaoLogin {
    * todo login numa fila só, sem baldes por escola nem rebaixamento. Recusada com `AMBIENTE=producao`.
    */
   readonly protecaoDesligada: boolean
+  /** Quanto o cliente Redis do login espera por comando antes de desistir (`LOGIN_REDIS_PRAZO_MS`). */
+  readonly prazoDoRedisMs: number
   /**
    * Tentativas por minuto de um IP em `/v1/sessao/email` antes de ele ir para o fim do balde da equipe (15.2): vezes as
    * escolas da rede, se o IP é de saída de uma (`rede.ips_saida`). Acima dele nada é recusado.
@@ -81,6 +119,10 @@ const esquemaAmbienteLogin = z.object({
   UV_THREADPOOL_SIZE: z.coerce.number().int().min(1),
   // Obrigatória e sem padrão no código: o valor de referência (60) fica no `.env.example` (15.2).
   LIMITE_LOGIN_EMAIL_IP_MIN: z.coerce.number().int().min(1),
+  // Obrigatória e sem padrão no código: o prazo com que a API sobe é sempre o do ambiente, à vista. O piso não é 1:
+  // um prazo de poucos milissegundos estoura no tick seguinte, como o zero, e viraria desafio recusado e contador no
+  // seguro em todo login.
+  LOGIN_REDIS_PRAZO_MS: z.coerce.number().int().min(PRAZO_MINIMO_DO_REDIS_DO_LOGIN_MS),
   LOGIN_CHAVE_CONTADOR: z.string().min(TAMANHO_MINIMO_CHAVE_DE_LOGIN),
   LOGIN_CHAVE_DISPOSITIVO_VERSAO: z.coerce.number().int().min(1).max(99),
   IDENTIDADE_CHAVE_CIFRA_VERSAO: z.coerce.number().int().min(1).max(MAIOR_VERSAO_DE_CHAVE),
@@ -130,9 +172,13 @@ export function variavelDaChaveDeDispositivo(versao: number): string {
 export function lerConfiguracaoLogin(ambiente: Record<string, string | undefined>): ConfiguracaoLogin {
   const valores = validarAmbiente(esquemaAmbienteLogin, ambiente)
   // O AMBIENTE é validado pela identidade: aqui, ausente ou inválido vale como produção, a leitura mais restrita, sem
-  // apontar a falta duas vezes.
+  // apontar a falta duas vezes. É defesa em profundidade, e não a garantia: `esquemaAmbienteIdentidade` exige o enum e
+  // derruba o boot antes de este ramo ser alcançado por `lerConfiguracao`.
   const doAmbiente = AMBIENTES.find((valor) => valor === ambiente['AMBIENTE']) ?? 'producao'
   const protecaoDesligada = lerProtecaoDoLoginDesligada({ ...ambiente, AMBIENTE: doAmbiente })
+  if (!prazoDoRedisDoLoginVale(valores.LOGIN_REDIS_PRAZO_MS, doAmbiente)) {
+    throw new ConfiguracaoInvalida(['LOGIN_REDIS_PRAZO_MS'], [MOTIVO_PRAZO_DO_REDIS_DO_LOGIN])
+  }
   if (valores.LOGIN_HASH_CONCORRENCIA > valores.UV_THREADPOOL_SIZE - THREADS_DE_FOLGA_DO_LIBUV) {
     throw new ConfiguracaoInvalida(['LOGIN_HASH_CONCORRENCIA'], [MOTIVO_CONCORRENCIA_DO_HASH])
   }
@@ -152,6 +198,7 @@ export function lerConfiguracaoLogin(ambiente: Record<string, string | undefined
     hash: { memoriaKib: valores.LOGIN_ARGON2_MEMORIA_KIB, iteracoes: valores.LOGIN_ARGON2_ITERACOES },
     concorrenciaDoHash: valores.LOGIN_HASH_CONCORRENCIA,
     protecaoDesligada,
+    prazoDoRedisMs: valores.LOGIN_REDIS_PRAZO_MS,
     limiteEmailPorIpMin: valores.LIMITE_LOGIN_EMAIL_IP_MIN,
     chaveContador: codificar(valores.LOGIN_CHAVE_CONTADOR),
     dispositivo: { versao: valores.LOGIN_CHAVE_DISPOSITIVO_VERSAO, chave: codificar(chaveDispositivo) },

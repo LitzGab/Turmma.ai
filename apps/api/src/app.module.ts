@@ -37,8 +37,9 @@ export interface OpcoesDeMontagem {
 export class AppModule {
   /**
    * @param opcoes só o teste passa: `medidor`, para ler as métricas do login e da sessão (sem ele, vale o medidor
-   * global); `prazoDoRedisDeLoginMs`, o prazo do cliente Redis do login no runner carregado (sem ele, os 100 ms de
-   * produção). Nenhuma das duas vem do ambiente: o `main.ts` monta sem opção.
+   * global); `prazoDoRedisDeLoginMs`, que fixa o prazo do cliente Redis do login qualquer que seja a configuração. Sem
+   * ela, quem decide é `LOGIN_REDIS_PRAZO_MS`, por `config.login.prazoDoRedisMs`. Nenhuma das duas opções vem do
+   * ambiente: o `main.ts` monta sem opção.
    */
   static com(config: ConfiguracaoApi, opcoes: OpcoesDeMontagem = {}): DynamicModule {
     return {

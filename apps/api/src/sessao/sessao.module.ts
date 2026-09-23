@@ -73,8 +73,9 @@ export interface OpcoesDoModuloDeSessao {
   /** O medidor da telemetria; sem ele, o global (que o `main.ts` liga antes de montar a aplicação). */
   readonly medidor?: Meter
   /**
-   * O prazo de cada comando do cliente Redis do login. Só a montagem de teste passa (15.5): produção fica nos 100 ms de
-   * `TIMEOUT_COMANDO_REDIS_API_MS`, e o `main.ts` não conhece esta opção.
+   * O prazo de cada comando do cliente Redis do login, quando o teste precisa fixá-lo qualquer que seja o `AMBIENTE`
+   * (15.5). Sem ela, quem decide é `opcoes.login.prazoDoRedisMs`, que a configuração lê do ambiente: 100 ms em produção
+   * e no staging, 2 s em `local`. O `main.ts` não conhece esta opção.
    */
   readonly prazoDoRedisMs?: number
 }
@@ -86,8 +87,8 @@ export interface OpcoesDoModuloDeSessao {
  * seção 6).
  *
  * O contador de tentativas, os contadores por IP da 15.0 e o desafio usam o Redis de fila, com o cliente da API (sem
- * fila offline, 100 ms por comando): fora do ar ou travado, os contadores seguem em memória, o desafio é recusado com
- * rastro, e o login não para.
+ * fila offline, e o prazo por comando que `LOGIN_REDIS_PRAZO_MS` dá: 100 ms em produção e no staging, 2 s em `local`):
+ * fora do ar ou travado, os contadores seguem em memória, o desafio é recusado com rastro, e o login não para.
  */
 @Module({})
 export class SessaoModule implements OnApplicationShutdown {
@@ -113,7 +114,7 @@ export class SessaoModule implements OnApplicationShutdown {
         LoginExternoController,
       ],
       providers: [
-        { provide: CLIENTE_REDIS_LOGIN, useFactory: () => criarClienteRedisDaApi(opcoes.redisFilaUrl, 'api-login', avisar, opcoes.prazoDoRedisMs) },
+        { provide: CLIENTE_REDIS_LOGIN, useFactory: () => criarClienteRedisDaApi(opcoes.redisFilaUrl, 'api-login', avisar, opcoes.prazoDoRedisMs ?? opcoes.login.prazoDoRedisMs) },
         { provide: ResolucaoDeTenantRepository, useFactory: (banco: Banco) => new ResolucaoDeTenantRepository(banco), inject: [BANCO] },
         { provide: HashDeSenha, useFactory: () => HashDeSenha.criar(opcoes.login.hash) },
         // Um semáforo por instância, dividido pelo login por e-mail e pelo por matrícula: o teto é das threads do processo.

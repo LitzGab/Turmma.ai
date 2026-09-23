@@ -4,8 +4,8 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { parseEnv } from 'node:util'
 import pg from 'pg'
+import { ARQUIVOS_AMBIENTE_CARGA, lerAmbienteDeCarga } from '../../tools/ci/compose.ts'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
 import { aguardarInterativosIniciados, conferirJobRegistro, descreverConferencia, urlDoBancoDoAmbiente, type ConferenciaDaCarga } from './conferir-carga.ts'
 
@@ -28,7 +28,7 @@ import { aguardarInterativosIniciados, conferirJobRegistro, descreverConferencia
  */
 
 export const PROJETO_CARGA = 'educa-carga'
-export const ARQUIVOS_AMBIENTE_CARGA = ['.env.example', 'infra/carga.env'] as const
+export { ARQUIVOS_AMBIENTE_CARGA, lerAmbienteDeCarga }
 export const ARQUIVOS_COMPOSE_CARGA = ['infra/compose.yml', 'infra/compose.carga.yml'] as const
 export const SCRIPT_DO_K6 = '/cenario/justica-entre-escolas.js'
 
@@ -174,16 +174,6 @@ export function rodar(comando: string, argumentos: readonly string[], ambiente: 
   })
 }
 
-export function lerAmbienteDaCarga(): Record<string, string> {
-  const valores: Record<string, string> = {}
-  for (const arquivo of ARQUIVOS_AMBIENTE_CARGA) {
-    for (const [chave, valor] of Object.entries(parseEnv(readFileSync(join(raizRepositorio, arquivo), 'utf8')))) {
-      if (valor !== undefined) valores[chave] = valor
-    }
-  }
-  return valores
-}
-
 /** Roda o `ops:escola` e devolve o id que ele imprime em JSON, sem ecoar a saída (ela pode trazer o slug). */
 async function idDoOpsEscola(argumentos: readonly string[], ambiente: NodeJS.ProcessEnv, campo: 'redeId' | 'escolaId'): Promise<string> {
   const { codigo, saida } = await rodar('npm', ['run', '-s', 'ops:escola', '--', ...argumentos], ambiente, true)
@@ -232,7 +222,7 @@ async function executar(controleNegativo: boolean): Promise<number> {
   chmodSync(pasta, 0o777)
   // As variáveis dos arquivos de ambiente não vêm do shell: no compose, o shell passaria na frente do arquivo, e
   // uma porta exportada para o ambiente de desenvolvimento faria o cenário disputar a porta dele.
-  const doArquivo = lerAmbienteDaCarga()
+  const doArquivo = lerAmbienteDeCarga()
   const ambiente: NodeJS.ProcessEnv = {
     ...Object.fromEntries(Object.entries(process.env).filter(([chave]) => !(chave in doArquivo))),
     CARGA_PASTA_DA_EXECUCAO: pasta,

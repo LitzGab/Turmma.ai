@@ -129,7 +129,8 @@ export async function verificarDesafio(desafio: string, chaveAssinatura: Uint8Ar
  * escola, que entra de novo (Tech Spec, seção 4).
  *
  * **Recusa pelo Redis com rastro** (15.5): a recusa porque o Redis de fila está fora, ou não respondeu no prazo do
- * cliente (100 ms), vai para o log como `login.desafio_sem_redis`, no máximo uma linha a cada 30 s e sem nada da pessoa,
+ * cliente (`LOGIN_REDIS_PRAZO_MS`: 100 ms em produção e no staging, 2 s em `local`, onde uma resposta mais lenta é da
+ * máquina), vai para o log como `login.desafio_sem_redis`, no máximo uma linha a cada 30 s e sem nada da pessoa,
  * e entra em `proporcaoDoSeguro`, que soma no `limite.seguro_ativo`: o coordenador que cai de volta ao login deixa a
  * causa à vista, e o alerta "Seguro de limite ativo" avisa.
  */
