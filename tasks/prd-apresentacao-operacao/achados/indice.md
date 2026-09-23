@@ -29,3 +29,4 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-23 14:02:04 | `test-engineer` | 6ª | REPROVADO | `revisao-spec` | Seção 5, "Travas no banco", itens TOTP e código de recuperação (techspec.md:80-82). Criar a sessão não está preso à trava, e o C6b exige "sem sessão criada". |
 | 2026-09-23 14:03:20 | `test-engineer` | 7ª | REPROVADO | `revisao-spec` | `cenarios.md:21-25` (C6b): a correção 2 foi escrita de um jeito que o teste não consegue passar. |
 | 2026-09-23 14:04:27 | `test-engineer` | 8ª | APROVADO | `revisao-spec` | C6b(a), linha 23: "`mfa_ultimo_passo` e códigos intactos" contradiz o C6. Com o `desativar` confirmado, os códigos somem e a linha fica só com id, apelido e… |
+| 2026-09-23 14:15:49 | `test-engineer` | 9ª | REPROVADO | `revisao-spec` | C33: a 5.0 leva só a parte do `aceitar`. A parte do `sessao/email` não está em tarefa nenhuma; ela vai para a 6.0. |

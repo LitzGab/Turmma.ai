@@ -1010,3 +1010,53 @@ Recomendações (entram como subtarefa no `/criar-tasks`):
 1. **C6b(a), linha 23: "`mfa_ultimo_passo` e códigos intactos" contradiz o C6.** Com o `desativar` confirmado, os códigos somem e a linha fica só com id, apelido e datas, então a asserção não pode ser escrita como está. O que se quer provar é que o `/sessao/mfa` não consumiu nada. Troque pelo estado final do C6: linha só com id, apelido e datas, nenhum código de recuperação e zero sessões. O "não consumiu" já está provado pela recusa somada às zero sessões.
 2. **C6b(c): declarar a resposta de quem perde na ordem em que o `desativar` ganha.** O `/mfa/configurar` deve ser recusado com a mesma resposta de desafio inválido, como no (a). Declarar também que o desafio de etapa `mfa` já devolvido na outra ordem, se usado depois, cai no (d).
 3. **C6b(b): fixar um só jeito de provar o bloqueio.** A espera em `pg_locks` é a mais forte, porque a "promessa pendente" sozinha também passa se o `desativar` estiver só lento. Com ela, o teste falha se o `for update` sair do `desativar`.
+
+## test-engineer · 9ª rodada · REPROVADO · 2026-09-23 14:15:49 · `tasks/prd-apresentacao-operacao/revisao-spec.md`
+
+VEREDITO: REPROVADO. A divisão precisa ser ajustada antes de ir para o arquivo de tarefas.
+
+Cenários exigidos: C1–C49 (com C6b, C18b e C36b), E1–E5, U1–U3, B1 e B2, mais as três recomendações da rodada 8 para o C6b.
+
+Cobertos: todos têm tarefa, menos a parte do `sessao/email` no C33.
+
+Bloqueantes:
+
+(1) Cenário sem tarefa ou em duas
+- **C33:** a 5.0 leva só a parte do `aceitar`. A parte do `sessao/email` não está em tarefa nenhuma; ela vai para a 6.0.
+- **C37:** está dividido entre a 3.0 e a 7.0, mas a parte do `operador.mfa_configurado`, com o autor vindo da sessão, fica sem tarefa. Além disso, a parte que você deu à 3.0 repete o C4. A correção é pôr o C37 inteiro na 7.0, que é a última tarefa de rota.
+- **U3 e E5:** estão como "parcial" na 1.0 e completos na 2.0. Os dois ficam só na 2.0. A 1.0 prova o que fez com um teste próprio (os hex dos tokens no CSS servido) e com o e2e do F1 verde.
+
+(2) Dependência errada
+- **C6 na 3.0:** a parte "a sessão aberta recebe `SESSAO_ENCERRADA`" precisa da `GuardaDeOperador`, que só nasce na 4.0. Essa parte vai para a 4.0, ou para a 7.0 junto do C28.
+- **C7 na 3.0:** a parte "o link antigo responde igual a revogado" precisa do `convite/consultar`, que nasce na 5.0. O único parcial fica na 3.0; a resposta do link vai para a 5.0.
+- **C13 na 5.0:** o `jti` só é consumido no `/mfa/configurar` e no `/sessao/mfa`, os dois da 6.0. O C13 vai para a 6.0.
+- **C43 na 4.0:** o teste confere que as rotas de entrada são "exatamente as sete", mas na 4.0 não existe nenhuma, e ele nasceria vermelho. Vai para a 7.0.
+- **C36, C36b (parte do `rl:ip`) e C46 (parte "as de entrada nunca produzem sessão"):** na 4.0 passam no vazio, porque ainda não há rota de entrada. Essas partes vão para a 7.0, com uma asserção de que a lista gerada tem as sete.
+- **C44 na 3.0:** pelo mesmo motivo passa no vazio, sem nenhuma rota registrada. Vai para a 7.0.
+
+(3) O que falta de domínio e de concorrência
+- **C6b:** a tarefa precisa carregar as três recomendações da rodada 8, escritas nela:
+  - na ordem (a), a asserção é o estado final do C6, e não "intactos";
+  - na ordem (c), quando o `desativar` ganha, o `configurar` é recusado como desafio inválido;
+  - na ordem (b), o bloqueio se prova pela espera em `pg_locks`.
+- **C2 na 3.0:** a tarefa lista os cinco `ops:*` por nome. Cada um vira um caso, para que o teste falhe se o `comando.ts` pular um deles.
+- Fora isso, a concorrência já está coberta: C3, C5, C10, C12, C18, C18b, C19, C20 e C30.
+
+(4) Tamanho
+- **6.0 grande demais:** junta a entrada, o configurar, o `/sessao/mfa` e o cookie, com cerca de 20 cenários, seis deles de corrida com barreira. Dividir em duas:
+  - **6a, entrada:** `/sessao/email`, contador e origem. Cenários C15, C22–C25, C33 (`sessao/email`) e U2.
+  - **6b, segundo fator:** configurar, `/sessao/mfa` e cookie. Cenários C6b, C12, C13, C14, C16–C20, C18b, C34, C32 (`mfa/configurar`) e C39 (configurar e mfa).
+- **9.0 grande demais:** cinco telas, a sessão, o `BroadcastChannel`, o roteamento, a fronteira de erro, o `vite.config` e o e2e passam de 15 arquivos. Dividir em duas:
+  - **9a:** chunk, sessão, casca, entrar e mfa, com E2, E3, E4, B1 (chunk) e B2.
+  - **9b:** convite e configurar (QR e códigos), com o E1.
+- **1.0, 2.0 e 3.0 cabem numa rodada.** Contei 22 arquivos do `apps/web` com a paleta antiga: 10 em `componentes/` (1.0) e 12 telas (2.0). A 3.0 fica no limite, com migration, schema, repository, comando e mapa LGPD.
+
+Recomendações:
+- Na 4.0, o C47 usa desafio e cookie de operador feitos por fixture. A tarefa deve dizer que a fixture assina com a mesma chave e o mesmo `typ` do código real, e na 6b o C47 roda de novo com o cookie de verdade.
+- No C45, a lista de quem pode tocar as tabelas já inclui o expurgo desde a 3.0. A 8.0 confere que a entrada do expurgo nessa lista corresponde ao arquivo real.
+- A 8.0 depende só da 3.0 (tabelas) e da 7.0 (sessão encerrada), e pode andar em paralelo com a 9a e a 9b.
+
+Arquivos lidos:
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/techspec.md
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/cenarios.md
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/revisao-spec.md

@@ -240,3 +240,4 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-09-23 14:01:21 | 2026-09-23 14:02:04 | `test-engineer` | 6 | REPROVADO | ab7c531f6f152ab5e |
 | 2026-09-23 14:02:37 | 2026-09-23 14:03:20 | `test-engineer` | 7 | REPROVADO | a1a865cdff5068dd3 |
 | 2026-09-23 14:03:53 | 2026-09-23 14:04:27 | `test-engineer` | 8 | APROVADO | a1ce490397edbe84f |
+| 2026-09-23 14:14:31 | 2026-09-23 14:15:49 | `test-engineer` | 9 | REPROVADO | ad614edee9e98a0ec |
