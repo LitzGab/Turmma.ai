@@ -45,7 +45,9 @@ describe('reexecução do mesmo job: a chave de idempotência é a do job, e o e
   beforeEach(async () => {
     bancada = new BancadaDeFila()
     await bancada.limparRegistro()
-    ;[ESCOLA_A, ESCOLA_B] = await Promise.all([bancada.escola(), bancada.escola()])
+    // O id da escola é sorteado e não cresce com a criação (o `ops:escola` e o painel mandam UUID v4). A ordem ruim fica
+    // fixa: a A com o id maior, para que asserção que dependa da ordem dos ids falhe sempre, e não em metade das vezes.
+    ;[ESCOLA_B, ESCOLA_A] = (await Promise.all([bancada.escola(), bancada.escola()])).sort()
     // A forma de `TABELA_DO_EFEITO_SINTETICO`: a restrição começa pela escola e termina na chave (regra 80, item 8).
     await bancada.pool.query(`drop table if exists ${TABELA_DO_EFEITO_SINTETICO}`)
     await bancada.pool.query(
@@ -280,11 +282,16 @@ describe('reexecução do mesmo job: a chave de idempotência é a do job, e o e
           [daEscolaB, ESCOLA_B],
         ]),
       )
-      // Com o escopo da execução anterior, a reexecução gravaria uma linha a mais, na escola errada.
-      expect(await efeitos()).toEqual([
-        { escolaId: ESCOLA_A, chaveIdempotencia: daEscolaA, tentativa: 1 },
-        { escolaId: ESCOLA_B, chaveIdempotencia: daEscolaB, tentativa: 1 },
-      ])
+      // Com o escopo da execução anterior, a reexecução gravaria uma linha a mais, na escola errada. Sem supor ordem entre
+      // as escolas: as duas linhas, e só elas.
+      const gravadas = await efeitos()
+      expect(gravadas).toHaveLength(2)
+      expect(gravadas).toEqual(
+        expect.arrayContaining([
+          { escolaId: ESCOLA_A, chaveIdempotencia: daEscolaA, tentativa: 1 },
+          { escolaId: ESCOLA_B, chaveIdempotencia: daEscolaB, tentativa: 1 },
+        ]),
+      )
     }, 90_000)
   })
 })

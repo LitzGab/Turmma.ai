@@ -174,6 +174,9 @@ export class BancadaDeFila {
    * Uma escola nova, com rede própria, pelos mesmos serviços de `ops:escola`. Desde a tarefa 3.0
    * `job_registro`, `configuracao_operacional_escola` e `uso_infra_diario` têm FK para `escola`: id
    * inventado é recusado pelo banco, e todo teste de fila cria a escola antes de gravar job.
+   *
+   * O id é sorteado (UUID v4), como o `ops:escola` e o painel fazem: não cresce com a criação, e o teste que compara
+   * duas escolas não supõe ordem entre elas (correção `2026-09-24-escola-da-bancada-fora-de-ordem`).
    */
   async escola(): Promise<string> {
     // A bancada não é o comando nem o painel: o autor é fixo, sem conferir operador ativo.

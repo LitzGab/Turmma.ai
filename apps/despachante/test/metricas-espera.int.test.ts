@@ -41,7 +41,9 @@ describe('medição das filas por escola, no despachante', () => {
     bancada = new BancadaDeFila()
     medidor = new MedidorDeTeste()
     await bancada.limparRegistro()
-    ;[ESCOLA_A, ESCOLA_B] = await Promise.all([bancada.escola(), bancada.escola()])
+    // O id da escola é sorteado e não cresce com a criação (o `ops:escola` e o painel mandam UUID v4). A ordem ruim fica
+    // fixa: a A com o id maior, para que asserção que dependa da ordem dos ids falhe sempre, e não em metade das vezes.
+    ;[ESCOLA_B, ESCOLA_A] = (await Promise.all([bancada.escola(), bancada.escola()])).sort()
   })
 
   afterEach(async () => {
@@ -81,7 +83,7 @@ describe('medição das filas por escola, no despachante', () => {
     await medir()
 
     const espera = await porSerie(METRICAS.esperaMaisAntiga)
-    expect(Object.keys(espera).sort()).toEqual([`interativa:${ESCOLA_A}`, `interativa:${ESCOLA_B}`, `lote:${ESCOLA_A}`])
+    expect(Object.keys(espera).sort()).toEqual([`interativa:${ESCOLA_A}`, `interativa:${ESCOLA_B}`, `lote:${ESCOLA_A}`].sort())
     // O ativo de 300 s já começou: não espera. O mais antigo que não começou é o de 40 s. Concluído e falho não aparecem.
     expect(espera[`interativa:${ESCOLA_A}`]).toBeGreaterThanOrEqual(40)
     expect(espera[`interativa:${ESCOLA_A}`]).toBeLessThan(45)
