@@ -153,6 +153,13 @@ As correções da rodada 4 foram conferidas como feitas. O `infra-guardian` conf
 - A1: o teste de "outro tipo de convite responde `NAO_ENCONTRADO`" (alarme na I7)
 - 22 rodadas na revisão da spec da A0 e 16 aqui (8 não aprovadas): a trava da ativação e a regra da senha certa só apareceram na terceira e na quinta rodada, de novo desenho por partes (causa 1 da retro da A0)
 
+## Conferência do mapa de tarefas — 24/09/2026
+
+`test-engineer`, rodada 7 REPROVADO (dependências 4.0, 5.0 e 8.0; ordem forçada da E8; autor nos cinco
+`ops:*`; donos da W6 com ações e da parte e2e da W10) e rodada 8 **APROVADO**. As recomendações da
+rodada 8 (cabeçalhos da 2.0 e da 3.0, o e2e da 4.0, a E6 de login no `tasks.md`, a espera visível na
+E11 pelo comando) foram aplicadas antes do commit das tarefas.
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -177,3 +184,5 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-09-24 12:46:55 | 2026-09-24 12:48:21 | `test-engineer` | 5 | REPROVADO | a00930f6c0f9b5403 |
 | 2026-09-24 12:49:10 | 2026-09-24 12:49:43 | `privacy-guardian` | 3 | APROVADO | ae0c3207ee8f2e796 |
 | 2026-09-24 12:49:05 | 2026-09-24 12:49:50 | `test-engineer` | 6 | APROVADO | a223ef5885c9962b9 |
+| 2026-09-24 12:55:05 | 2026-09-24 12:57:42 | `test-engineer` | 7 | REPROVADO | a1616610af97f0b78 |
+| 2026-09-24 12:59:05 | 2026-09-24 12:59:46 | `test-engineer` | 8 | APROVADO | ae5abc8313d2606d4 |

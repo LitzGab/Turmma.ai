@@ -774,3 +774,103 @@ Arquivos auditados:
 - /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-painel/techspec.md
 - /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-painel/cenarios.md
 - /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-painel/revisao-spec.md
+
+## test-engineer · 7ª rodada · REPROVADO · 2026-09-24 12:57:42 · `tasks/prd-apresentacao-painel/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Cenários exigidos:** todos os de `cenarios.md` (I1–I7, E1–E16, L1–L4, A1–A4, W1–W10), mais as 19 linhas de "Pendências para a A0b" em `tasks/prd-apresentacao-operacao/retro.md`.
+
+**Cobertos:** todo cenário tem ao menos uma tarefa. A divisão está certa em E6, E8, E11, A2 e A3 (entre 1.0, 2.0 e 3.0), em W7 e W8 (entre 6.0 e 7.0) e em W6 e W10, salvo as partes dos bloqueantes 6 e 7.
+
+Das pendências da A0, 17 das 19 têm destino e teste:
+- **9.0:** aceite auditado, `convite_aceito`, `zerar` da senha certa, `zerar` que falha, renovar e sair juntos, log do reuso, balde de IP próprio, lote do expurgo.
+- **10.0:** título da fronteira, senha fora do estado, `hashchange`, renovações em paralelo, clique duplo, seed pelo hash, `tabelasSemEscola`.
+- **1.0:** o formato do apelido e o `throw new Error`.
+
+A métrica do convite ao primeiro acesso foi decidida por escrito na seção 13 da Tech Spec. Do conferir fora da transação, os dois `ops:*` de convite ficam com a 2.0 e os outros três estão no bloqueante 5.
+
+**Bloqueantes:**
+
+1. **A 4.0 roda a E15(d) sem o refazer existir** (`tasks.md:82`, `4_task.md:3` e `4_task.md:66`). A E15(d) põe o aceite contra o refazer, mas a 4.0 depende só da 2.0 e roda em paralelo com a 3.0.
+   Correção: a 4.0 passa a depender de 2.0 e 3.0, e sai "Paralelo com: 3.0".
+
+2. **A 5.0 prova a I6 sem o refazer existir** (`tasks.md:83`, `5_task.md:3` e `5_task.md:60`). A I6 cobre "as oito rotas", e o `POST /convites/:id/refazer` nasce na 3.0, que roda em paralelo com a 5.0.
+   Correção: a 5.0 passa a depender da 3.0. A outra saída é dividir a I6: a 5.0 cobre as sete rotas e a 3.0 cobre as sentinelas no refazer, inclusive em 409 e 503.
+
+3. **A 8.0 roda em paralelo com a 6.0, mas precisa dela** (`tasks.md:86` e `8_task.md:3`). A 8.0 usa a navegação da casca e o `api/painel.ts`, os dois criados na 6.0 (`6_task.md:28` e `6_task.md:45`). Os arquivos da 8.0 não criam o `painel.ts`, e o vazio da W7 em Uso tem link para Escolas. Rodando antes da 6.0, a W7 (Uso) não roda. As duas também mexem em `rotas.tsx` e `caminhos.ts`.
+   Correção: a 8.0 depende de 5.0 e 6.0.
+
+4. **Na 2.0, a E8 não fica vermelha sem a trava** (`2_task.md:72`, e o mesmo em `3_task.md:49`).
+   - Com `Promise.all` puro e a trava de gerar e revogar removida, "dois gerar com e-mails diferentes" passa sempre que as chamadas se serializam por acaso. O índice é por `(escola_id, usuario_id)` e não segura dois usuários diferentes.
+   - A única prova determinística de que o gerar pega a trava é a E15(c), na 4.0, commitada depois da 2.0.
+   - Correção: a linha da E8 diz como a corrida é forçada. O teste segura `pg_advisory_lock(7_000_003, hashtext(escola))`, dispara as duas chamadas, confere as duas com `wait_event = 'advisory'` em `pg_stat_activity` e só então solta. Sem a trava no gerar e no revogar (na 3.0, também no refazer), elas terminam antes e o teste falha.
+
+5. **Três dos cinco `ops:*` não têm teste da conferência do autor** (`1_task.md:74` e `2_task.md:74`). A pendência da A0 fala em "nos cinco `ops:*` de escola", e a 1.1 altera os cinco. Só o `ops:escola` (E11, na 1.0) e o `ops:convite-coordenador` (E13, na 2.0) provam o autor conferido dentro da transação. Nenhum teste cobre `ops:redefinir-mfa` e `ops:uso`. O `ops:revogar-convite` só fica coberto se usar o mesmo caso de uso do painel, e a tabela não diz isso.
+   Correção: a E11 pelo comando vira parametrizada nos cinco `ops:*`, cada um com a ordem forçada pelo `for update` do `desativar`. O resultado esperado é código 2, sem gravar nada.
+
+6. **Os botões de ação do cartão ficam sem a W6** (`7_task.md:47-57`). Os 44 × 44 px e a largura a 360 px valem para os botões de ação do cartão, mas esses botões (convidar, refazer, revogar) só nascem na 7.1. Na 6.0 o cartão ainda não tem ação, então a W6 (Escolas) não mede o que o cenário pede.
+   Correção: a 7.0 ganha a linha "W6 (cartão com ações)", nos projetos `chromebook` e `celular`, com `scrollWidth <= clientWidth` e os 44 × 44 px.
+
+7. **A parte e2e da W10 não tem dono** (`4_task.md:69`, `6_task.md:56` e `7_task.md:55`). O cenário diz "(unidade e e2e)", mas as três divisões são só de unidade.
+   Correção: cada tarefa declara o e2e que confere o texto na tela:
+   - **6.0:** os textos de estado na W6 e na W7.
+   - **7.0:** o texto exato do `CONFLITO` na W2 e "Ativa" na W1.
+   - **4.0:** o texto de convite inválido na entrada da escola.
+
+**Recomendações:**
+- **1.0:**
+  - Pôr na tabela o teste que compara os checks do banco com `FORMATO_OPERADOR` (1.2) e o erro tipado que troca o `throw new Error` (1.1).
+  - Dizer que o gatilho de teste usado na E11 nasce ali e depois é reaproveitado na E15.
+- **Última tarefa de API:** conferir que as varreduras da I3 enxergam exatamente as oito rotas.
+- **2.0:**
+  - Pôr na E6 as partes de login ("o aceite anterior não ativa", "reusa o usuário e reativa").
+  - Pôr na E8 "dois revogar: um 204, um `NAO_ENCONTRADO`, uma auditoria".
+  - Pôr na E13 a E11 pelo comando.
+  - Dizer o que torna a E10 vermelha.
+- **3.0:** citar a I7 (refazer em escola `ativa`).
+- **4.0:** pôr na E16 o último ponto (em `sem_coordenacao`, o `revogado_em` gravado só como registro).
+- **5.0:**
+  - Separar na L1 "aluno desativado" de "professor `confirmado` com usuário desativado".
+  - Pôr na L3 o `total` e o desempate por `id` entre páginas.
+- **9.0:**
+  - No "lote ordenado", semear fora da ordem do prazo, com o lote menor que o total. Sem isso, o teste passa mesmo sem o `order by`.
+  - Dizer que o `{} as Record` se prova no typecheck, por exemplo com um `@ts-expect-error` para alvo faltando.
+  - Registrar que o log `operacao.desafio_sem_redis` já está coberto, com conteúdo, em `apps/api/src/operacao/desafio-de-operador.test.ts:104-120`.
+  - Forçar a ordem em "renovar e sair juntos".
+- **Divergências e conflitos:**
+  - `tasks.md:63-64` diz "`zerar` antes do commit" e "`rl:ip` avaliado e decidido". Já a `9_task.md:38-41` diz "falha do `zerar` depois do commit vira log" e cria um `rl:ip:op`. Alinhar as duas.
+  - `apps/api/test/arquitetura.test.ts` é alterado pela 1.0, pela 5.0 e pela 10.0, que a tabela deixa correr em paralelo. Vale uma nota sobre conflito de merge.
+
+Arquivos auditados, em `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-painel/`: `cenarios.md`, `tasks.md` e de `1_task.md` a `10_task.md`. Também `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-operacao/retro.md`.
+
+## test-engineer · 8ª rodada · APROVADO · 2026-09-24 12:59:46 · `tasks/prd-apresentacao-painel/revisao-spec.md`
+
+**VEREDITO: APROVADO**
+
+**Cenários exigidos:** todos os de `cenarios.md` (I1–I7, E1–E16, L1–L4, A1–A4, W1–W10) e as 19 pendências da A0 em `tasks/prd-apresentacao-operacao/retro.md`, com as sete correções da 7ª rodada.
+
+**Cobertos:** as sete correções exigidas foram feitas.
+
+1. **E15(d) na 4.0.** A 4.0 depende de 2.0 e 3.0 e roda em paralelo só com a 5.0 (`4_task.md:3`, `tasks.md:82`).
+2. **I6 na 5.0.** A 5.0 depende da 3.0. A 3.0 ganhou a linha "I6 (refazer)", inclusive em 409 e 503, e a 5.0 cobre as oito rotas.
+3. **8.0 depois da 6.0.** A 8.0 depende de 5.0 e 6.0, e a tabela registra o motivo (casca e `api/painel.ts`).
+4. **Ordem da E8.** Na 2.0 e na 3.0, o teste segura `pg_advisory_lock(7_000_003, hashtext(escola))`, confere as duas chamadas em `wait_event = 'advisory'` e só então solta. Sem a trava, as chamadas terminam antes e o teste fica vermelho. Isso vale também para "dois refazer", que o índice sozinho seguraria (E9).
+5. **Autor nos `ops:*`.** A E11 da 1.0 é parametrizada nos cinco `ops:*` e espera código 2 sem gravar nada. A espera no `for share` segurado pelo `desativar` vale para a escrita em geral, e é ela que separa a conferência dentro da transação da conferência antiga, feita fora dela.
+6. **W6 do cartão.** A 7.0 tem a linha "W6 (cartão com ações)", com 360 px e 44 × 44 px nos dois projetos.
+7. **Parte e2e da W10.** Cada tarefa declara a sua:
+   - **4.0:** o texto de convite inválido na entrada da escola.
+   - **6.0:** os textos de estado na W6 e na W7.
+   - **7.0:** o `CONFLITO` exato na W2 e "Ativa" na W1.
+
+As recomendações que você listou também entraram. Conferi na 1.0, na 2.0, na 3.0, na 4.0 (E6 de login e o `revogado_em` da E16), na 5.0 (I3, L1 e L3), na 9.0 e no `tasks.md` (9.2 alinhada e nota do `arquitetura.test.ts`).
+
+**Bloqueantes:** nenhum.
+
+**Recomendações:**
+- **Cabeçalhos desatualizados:** `2_task.md:3` diz "Paralelo com: 5.0" e `3_task.md:3` diz "Paralelo com: 4.0, 5.0", mas a 5.0 e a 4.0 agora dependem da 3.0. A tabela do `tasks.md` está certa, e o `/executar-tasks` roda uma tarefa por vez, então não chega a bloquear. Corrigir para "nenhuma" nos dois, para bater com `tasks.md:80-81`.
+- **Arquivo e2e da 4.0:** `4_task.md` promete o e2e da W10 na entrada da escola, mas a tabela "Arquivos previstos" não lista nenhum arquivo `e2e/*.spec.ts`. Incluir o arquivo que vai receber esse teste.
+- **Item 4.4 do `tasks.md`:** hoje traz "E15, E16, W10" e deixa de fora a "E6 (login)", que a `4_task.md` assumiu. Acrescentar, para o `/validar` achar o dono.
+- **E11 pelo comando (1.0):** vale escrever por extenso que cada `ops:*` aparece em `pg_stat_activity` esperando o `for share` antes de o `desativar` confirmar. Sem isso, quem implementar pode desativar antes e chamar o comando depois. Esse teste passaria até com a conferência antiga, fora da transação.
+
+Arquivos auditados, em `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-apresentacao-painel/`: `cenarios.md`, `tasks.md` e de `1_task.md` a `10_task.md`. Também li o bloco da 7ª rodada em `achados/revisao-spec.md`.
