@@ -85,6 +85,9 @@ Na dúvida, marque. Auditoria a mais custa minutos; auditoria a menos custa o co
 - Ordene dependência antes de dependente: migration antes de repository, backend antes de
   frontend, ambos antes de e2e
 - Testes são subtarefas dentro da tarefa, nunca uma tarefa separada no fim
+- Cada desvio da seção 11 da Tech Spec vira subtarefa de documento na tarefa que o cria: a exceção ao
+  `escolaId` no `docs/modelo-de-dados.md`, o módulo global no `docs/arquitetura.md`. Na A0 os dois
+  ficaram de fora, e um deles foi o único achado maior do `/validar`
 - O leitor é um desenvolvedor júnior que não participou das conversas. Seja explícito sobre
   o contexto que ele precisa ler
 - **Máximo 20 tarefas.** Se passar disso, a funcionalidade está grande demais e deveria ser

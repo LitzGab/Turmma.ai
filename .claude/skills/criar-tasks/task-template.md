@@ -42,11 +42,20 @@ Definidos com o `test-engineer`. Não improvise aqui.
 | permissão: quem não pode | integração | |
 | isolamento entre escolas | integração | |
 | concorrência: [as duas chamadas ao mesmo tempo, com `Promise.all`] | integração | |
+| recomeço da tela: [a segunda pessoa na mesma aba, sem reload; a mesma entrada de novo — mesmo link, mesmo token; a resposta atrasada da entrada anterior] | e2e | |
+| log novo: [a linha capturada] | integração | não leva nome, e-mail, matrícula, token, senha nem código (regra 20, item 9) |
 
 A linha de concorrência diz **em paralelo**, com as transações abertas juntas, e não "clique duplo".
 Foram três reprovações no F1 por prova sequencial: a segunda chamada era recusada por uma leitura
 que o service faz antes, e não pela restrição do banco que o teste dizia provar. Se a operação não
 pode acontecer duas vezes ao mesmo tempo, apague a linha; se pode, ela é obrigatória.
+
+A linha de recomeço vale para tarefa com tela que tem sessão, link ou formulário; sem isso, apague.
+Foram nove achados no F1 e três reprovações na A0 (10.0 e 11.0): o cache da pessoa anterior que
+nenhum teste provava esvaziar, e o mesmo link colado de novo na aba, que não mudava o estado e
+deixava a tela presa com o token na barra. A linha de log vale para toda linha de log nova, e sai
+quando a tarefa não escreve nenhuma: três recomendações na A0 (7.0, 8.0, 9.0) foram log sem teste
+do conteúdo.
 
 ## Critério de conclusão
 

@@ -62,6 +62,17 @@ fazer, e as dos guardiões marcados:
   reprovações no F1, três delas no mesmo docblock em rodadas seguidas. Neste repositório a regra
   do módulo mora no comentário: quem lê "e só elas" conclui que o caso está barrado, e o próximo a
   mexer "corrige" o código pelo comentário.
+- **A divergência que você vai registrar cria ou muda uma regra?** Uma trava nova, um subcomando a
+  mais sob a mesma conferência, uma gravação nova numa rota sem sessão. Três reprovações na A0 (3.0,
+  5.0, 6.0) foram divergência registrada sem o cenário que a prova, e numa delas sem a pergunta de
+  carga: a tentativa segurada passou a gravar no banco a cada requisição anônima. Antes do código, a
+  divergência ganha a sua linha na tabela de testes e a resposta do guardião que ela toca (quem chama
+  sem autenticação, quantas vezes por segundo, o que grava a cada vez).
+- **Qual peça que já existe faz isto?** Sete recomendações entre o F1 e a A0 foram código que refazia
+  o que o repositório já tinha: o hash do token de convite, o formato do apelido, a conferência de
+  senha na vez, um módulo importando o service de outro. Procure em `apps/api/src/sessao/` e em
+  `packages/nucleo/` antes de escrever. Reaproveite importando; se a peça está no lugar errado para
+  dois módulos, mova-a para arquivo próprio ou para o `nucleo`, nesta tarefa, e não copie.
 - Toda operação que pode acontecer duas vezes ao mesmo tempo tem teste com as duas chamadas
   **em paralelo** (`Promise.all`), não em sequência?
 - O teste de isolamento quebraria sem a cláusula de escopo do repository?
