@@ -11,6 +11,7 @@ import { ContaExternaRepository } from '../src/sessao/externa/conta-externa.repo
 import { COOKIE_OIDC, CookieOidc } from '../src/sessao/externa/cookie-oidc.js'
 import { chamar, renovar, subirApi, type ApiDeTeste } from './api-com-sessao.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'
+import { adulterarPenultimo } from './texto-adulterado.js'
 
 // Os usuários sintéticos do oidc-falso (infra/oidc-falso/config.json), escolhidos pelo nome digitado no login dele.
 const PROFESSORA_A = 'google-professora-a'
@@ -430,7 +431,8 @@ describe('login pela conta Google ou Microsoft da escola, contra o oidc-falso do
     if (bom === undefined || outro === undefined) throw new Error('início não feito')
     const consulta = await autorizar(bom, PROFESSORA_A)
     const valor = bom.cookie.slice(`${COOKIE_OIDC}=`.length)
-    const alterado = `${valor.slice(0, -2)}${valor.endsWith('A') ? 'B' : 'A'}${valor.slice(-1)}`
+    const alterado = adulterarPenultimo(valor)
+    expect(alterado).not.toBe(valor)
     const { chaveDoCookie } = lerConfiguracaoLoginExterno(lerAmbienteDeTeste())
     if (chaveDoCookie === undefined) throw new Error('ambiente de teste sem chave do cookie')
     const emAndamento = { escolaId, slug, provedor: 'google' as const, state: new URL(bom.location).searchParams.get('state') ?? '', nonce: 'nonce-sintetico-0123456789', verificador: 'verificador-sintetico-0123456789' }
