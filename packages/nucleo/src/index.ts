@@ -86,6 +86,7 @@ export {
   bearerDeOperador,
   extrairTokenBearer,
   TIPO_DESAFIO,
+  TIPO_DESAFIO_DE_OPERADOR,
   TIPO_TOKEN,
   TIPO_TOKEN_DE_OPERADOR,
   VALIDADE_MAXIMA_TOKEN_SEGUNDOS,

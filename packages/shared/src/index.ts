@@ -188,3 +188,15 @@ export type {
 } from './estrutura/vinculo.js'
 export { esquemaRespostaEuDoOperador } from './operacao/eu.js'
 export type { RespostaEuDoOperador } from './operacao/eu.js'
+export {
+  esquemaPedidoAceitarConviteDeOperador,
+  esquemaPedidoConsultarConviteDeOperador,
+  esquemaRespostaAceitarConviteDeOperador,
+  esquemaRespostaConsultarConviteDeOperador,
+} from './operacao/convite.js'
+export type {
+  PedidoAceitarConviteDeOperador,
+  PedidoConsultarConviteDeOperador,
+  RespostaAceitarConviteDeOperador,
+  RespostaConsultarConviteDeOperador,
+} from './operacao/convite.js'

@@ -539,7 +539,13 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
       )
       // A lista não pode sair vazia por mudança de versão do Express: aí o teste passaria sem olhar nada.
       expect(rotas).toContain('GET /saude')
-      expect(rotas.filter((rota) => /convite/i.test(rota)).sort()).toEqual(['POST /v1/convites/aceitar', 'POST /v1/convites/consultar'])
+      // As do operador (A0, tarefa 5.0) também só consultam e aceitam: o convite dele nasce só pelo `ops:operador`.
+      expect(rotas.filter((rota) => /convite/i.test(rota)).sort()).toEqual([
+        'POST /v1/convites/aceitar',
+        'POST /v1/convites/consultar',
+        'POST /v1/operacao/convite/aceitar',
+        'POST /v1/operacao/convite/consultar',
+      ])
 
       const coordenacao = await bancada.escolaComSessao('coordenador')
       for (const caminho of ['/v1/convites', '/v1/convites/criar']) {

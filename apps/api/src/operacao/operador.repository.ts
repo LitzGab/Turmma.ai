@@ -46,6 +46,12 @@ export interface SessaoDeOperadorParaGuarda {
   readonly agora: Date
 }
 
+/** O convite que ainda vale, pelo hash do token: os dois ids, e nada do operador. */
+export interface ConviteValido {
+  readonly conviteId: string
+  readonly operadorId: string
+}
+
 /** O que `GET /v1/operacao/eu` devolve do operador: o apelido e o nome, e nada mais. */
 export interface OperadorDaSessao {
   readonly apelido: string
@@ -202,6 +208,71 @@ export class OperadorRepository {
       .limit(1)
     if (linha?.nome === null || linha === undefined) return undefined
     return { apelido: linha.apelido, nome: linha.nome }
+  }
+
+  /**
+   * O convite pendente deste hash, que ainda vale: nem usado, nem revogado, nem vencido, e de operador ativo. Devolve só
+   * os dois ids; o que não vale volta `undefined`, qualquer que seja o motivo (C9).
+   */
+  async conviteValidoPorHash(tokenHash: string): Promise<ConviteValido | undefined> {
+    const [linha] = await this.banco
+      .select({ conviteId: conviteOperador.id, operadorId: conviteOperador.operadorId })
+      .from(conviteOperador)
+      .innerJoin(operador, eq(operador.id, conviteOperador.operadorId))
+      .where(
+        and(
+          eq(conviteOperador.tokenHash, tokenHash),
+          isNull(conviteOperador.usadoEm),
+          isNull(conviteOperador.revogadoEm),
+          sql`${conviteOperador.expiraEm} > now()`,
+          isNull(operador.desativadoEm),
+        ),
+      )
+      .limit(1)
+    return linha
+  }
+
+  /**
+   * O aceite do convite (Tech Spec da A0, seção 5, "Travas no banco"), dentro da transação de quem chama:
+   * 1. trava a linha do operador ativo (`for update … where desativado_em is null`), a mesma que o `desativar` trava
+   *    primeiro: um espera o outro, e o aceite que chega depois do `desativar` não acha o operador;
+   * 2. usa o convite: `update … set usado_em = now() where … usado_em is null and revogado_em is null and expira_em >
+   *    now()`, com `returning`. Dois aceites juntos: um usa, o outro não casa;
+   * 3. grava a senha e zera o segundo fator (segredo, chave, ativação, último passo e códigos de recuperação): o convite
+   *    novo é o caminho de recuperar a conta (PRD da A0, seções 3 e 7), e leva a configurar o segundo fator de novo.
+   *
+   * Devolve se aceitou. Quem perde não grava nada.
+   */
+  async aceitarConvite(dados: { conviteId: string; operadorId: string; senhaHash: string }): Promise<boolean> {
+    const [ativo] = await this.banco
+      .select({ id: operador.id })
+      .from(operador)
+      .where(and(eq(operador.id, dados.operadorId), isNull(operador.desativadoEm)))
+      .for('update')
+    if (ativo === undefined) return false
+    const usados = await this.banco
+      .update(conviteOperador)
+      .set({ usadoEm: sql`now()` })
+      .where(
+        and(
+          eq(conviteOperador.id, dados.conviteId),
+          eq(conviteOperador.operadorId, dados.operadorId),
+          isNull(conviteOperador.usadoEm),
+          isNull(conviteOperador.revogadoEm),
+          sql`${conviteOperador.expiraEm} > now()`,
+        ),
+      )
+      .returning({ id: conviteOperador.id })
+    if (usados.length === 0) return false
+    const gravados = await this.banco
+      .update(operador)
+      .set({ senhaHash: dados.senhaHash, mfaSegredoCifrado: null, mfaChaveVersao: null, mfaAtivadoEm: null, mfaUltimoPasso: null })
+      .where(and(eq(operador.id, dados.operadorId), isNull(operador.desativadoEm)))
+      .returning({ id: operador.id })
+    // A linha está travada desde o passo 1: só não casa se alguém mudou a trava; aí nada do aceite fica.
+    if (gravados.length === 0) throw new Error('operador do aceite não gravado')
+    await this.apagarCodigosDeRecuperacao(dados.operadorId)
+    return true
   }
 
   /** A auditoria da operação: autor (apelido ou `bootstrap`), ação da lista fechada e operador alvo. Nada mais. */

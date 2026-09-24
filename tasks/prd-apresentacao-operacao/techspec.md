@@ -81,7 +81,8 @@ fora disso, igual a senha errada, e o caminho é um convite novo.
 
 **Travas no banco**, com `returning`, resposta tipada para quem perde e `desativado_em is null`:
 - aceite: `update convite_operador set usado_em = now() where id = $1 and usado_em is null and
-  revogado_em is null and expira_em > now()`
+  revogado_em is null and expira_em > now()`, depois do `for update` da linha do operador ativo; na mesma transação, grava a senha
+  e zera o segundo fator e os códigos (tarefa 5.0: o convite novo é o caminho de recuperar a conta)
 - `/sessao/mfa`, numa transação só: trava a linha (`select ... for update where id = $1 and
   desativado_em is null`), consome o código (TOTP: `set mfa_ultimo_passo = $p where
   mfa_ultimo_passo is null or mfa_ultimo_passo < $p`; recuperação: `delete ... returning`), ativa se

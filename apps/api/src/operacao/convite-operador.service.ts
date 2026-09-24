@@ -1,0 +1,56 @@
+import { ErroDeDominio, type Banco } from '@educa/nucleo'
+import { CodigoDeErro, type PedidoAceitarConviteDeOperador, type RespostaAceitarConviteDeOperador, type RespostaConsultarConviteDeOperador } from '@educa/shared'
+import type { HashDeSenha } from '../sessao/hash-de-senha.js'
+import { baldeDaEquipe } from '../sessao/senha/baldes-de-login.js'
+import type { SemaforoDeHash } from '../sessao/senha/semaforo-de-hash.js'
+import type { EmissorDeDesafioDeOperador } from './desafio-de-operador.js'
+import { OperadorRepository } from './operador.repository.js'
+import { hashDoTokenDeConvite } from './token-do-convite.js'
+
+/** Usado, vencido, revogado, de operador desativado e inexistente: a mesma resposta, que não diz qual (C9; regra 20, item 6). */
+const conviteInvalido = () => new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+
+export interface DependenciasDoConviteDeOperador {
+  readonly banco: Banco
+  readonly hash: Pick<HashDeSenha, 'gerar'>
+  /** O semáforo do hash do F1, o mesmo do login: o argon2 do aceite divide o teto de CPU da instância com ele. */
+  readonly semaforo: Pick<SemaforoDeHash, 'executar'>
+  readonly emissorDeDesafio: Pick<EmissorDeDesafioDeOperador, 'emitir'>
+}
+
+/** O que o controller tira da requisição: o IP e se ele passou do limite por IP das rotas de senha. */
+export interface OrigemDoAceite {
+  readonly ip: string
+  readonly acimaDoLimiteDoIp: boolean
+}
+
+/**
+ * As duas rotas do convite do operador (Tech Spec da A0, seções 4 e 5), sem sessão, com o token sempre no corpo.
+ *
+ * - **Consultar:** diz só que o convite vale.
+ * - **Aceitar:** grava a senha, zera o segundo fator e devolve o desafio `configurar_mfa`, sem sessão e sem cookie: o
+ *   aceite não pula o segundo fator. A trava é do banco (`OperadorRepository.aceitarConvite`): dois aceites juntos
+ *   gravam uma senha só, e o operador desativado não aceita.
+ * - **Hash:** o argon2 roda no semáforo do F1, no balde da equipe com a vez por IP, antes da transação (ela não segura a
+ *   linha do operador durante o hash). Acima do limite por IP (`@LimiteQueRebaixa`), o aceite não é recusado: vai para
+ *   o fim do balde. O convite que não vale sai antes do hash, sem gastar a vez.
+ */
+export class ConviteDeOperadorService {
+  constructor(private readonly dependencias: DependenciasDoConviteDeOperador) {}
+
+  async consultar(token: string): Promise<RespostaConsultarConviteDeOperador> {
+    const valido = await new OperadorRepository(this.dependencias.banco).conviteValidoPorHash(hashDoTokenDeConvite(token))
+    if (valido === undefined) throw conviteInvalido()
+    return { valido: true }
+  }
+
+  async aceitar(pedido: PedidoAceitarConviteDeOperador, origem: OrigemDoAceite): Promise<RespostaAceitarConviteDeOperador> {
+    const { banco, hash, semaforo, emissorDeDesafio } = this.dependencias
+    const valido = await new OperadorRepository(banco).conviteValidoPorHash(hashDoTokenDeConvite(pedido.token))
+    if (valido === undefined) throw conviteInvalido()
+    const senhaHash = await semaforo.executar(baldeDaEquipe(origem.ip, origem.acimaDoLimiteDoIp), () => hash.gerar(pedido.senha))
+    const aceito = await banco.transaction((tx) => new OperadorRepository(tx).aceitarConvite({ ...valido, senhaHash }))
+    if (!aceito) throw conviteInvalido()
+    return { etapa: 'configurar_mfa', desafio: await emissorDeDesafio.emitir({ operadorId: valido.operadorId, etapa: 'configurar_mfa' }) }
+  }
+}

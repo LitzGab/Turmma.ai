@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { EMISSOR_TOKEN, type ConfiguracaoIdentidade } from '../config/validar-config.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
 import { EmissorDeToken, EmissorDeTokenDeOperador, VALIDADE_TOKEN_ACESSO_SEGUNDOS } from './emissor-de-token.js'
-import { bearerDeOperador, TIPO_TOKEN_DE_OPERADOR, VALIDADE_MAXIMA_TOKEN_SEGUNDOS, verificarToken, verificarTokenDeOperador } from './verificar-token.js'
+import { bearerDeOperador, TIPO_DESAFIO, TIPO_DESAFIO_DE_OPERADOR, TIPO_TOKEN_DE_OPERADOR, VALIDADE_MAXIMA_TOKEN_SEGUNDOS, verificarToken, verificarTokenDeOperador } from './verificar-token.js'
 
 const OPERADOR = '0190f5a0-0000-7000-8000-0000000000e1'
 const SESSAO = '0190f5a0-0000-7000-8000-0000000000f1'
@@ -95,6 +95,10 @@ describe('bearerDeOperador', () => {
   it('só lê o typ do cabeçalho do JWT, sem verificar a assinatura', async () => {
     expect(bearerDeOperador(`Bearer ${await assinar({ chave: OUTRA_CHAVE })}`)).toBe(true)
     expect(bearerDeOperador(`Bearer ${await assinar({ typ: 'JWT' })}`)).toBe(false)
+    // O desafio do operador também é da operação (C21): numa rota de escola, igual a uma rota inexistente.
+    expect(bearerDeOperador(`Bearer ${await assinar({ typ: TIPO_DESAFIO_DE_OPERADOR })}`)).toBe(true)
+    // O desafio de login da escola não é: segue o caminho dele.
+    expect(bearerDeOperador(`Bearer ${await assinar({ typ: TIPO_DESAFIO })}`)).toBe(false)
     expect(bearerDeOperador('Bearer a.b.c')).toBe(false)
     expect(bearerDeOperador(undefined)).toBe(false)
   })

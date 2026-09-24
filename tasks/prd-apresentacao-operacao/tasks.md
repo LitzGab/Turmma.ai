@@ -1,7 +1,7 @@
 # Tarefas — Identidade do operador Turmma (A0)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 4 de 11 concluídas
+**Status:** 5 de 11 concluídas
 
 ## Lista
 
@@ -32,10 +32,10 @@
   - [x] 4.4 Testes: C6 (sessão encerrada), C35, C36 (`rl:op`), C40–C42, C46 (com sessão), C47 (fixture),
     C48, C49
 
-- [ ] **5.0 — Convite do operador: consultar e aceitar**
-  - [ ] 5.1 `convite/consultar` e `convite/aceitar`, com a senha
-  - [ ] 5.2 Desafio `configurar_mfa` com `typ` próprio; limite e rebaixamento
-  - [ ] 5.3 Testes: C7 (link antigo), C9–C11, C21, C32 (consultar), C33 (aceitar), C39 (aceitar)
+- [x] **5.0 — Convite do operador: consultar e aceitar**
+  - [x] 5.1 `convite/consultar` e `convite/aceitar`, com a senha
+  - [x] 5.2 Desafio `configurar_mfa` com `typ` próprio; limite e rebaixamento
+  - [x] 5.3 Testes: C7 (link antigo), C9–C11, C21, C32 (consultar), C33 (aceitar), C39 (aceitar)
 
 - [ ] **6.0 — Entrada por e-mail e senha**
   - [ ] 6.1 `sessao/email`, com o contador `login-op:` e a origem

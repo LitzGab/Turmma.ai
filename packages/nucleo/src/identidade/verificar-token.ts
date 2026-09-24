@@ -113,6 +113,14 @@ export function extrairTokenBearer(cabecalho: string | string[] | undefined): st
  */
 export const TIPO_TOKEN_DE_OPERADOR = 'operador+jwt'
 
+/**
+ * O `typ` do desafio do operador (Tech Spec da A0, seção 4): o JWT de 5 min que leva do aceite do convite, e da entrada
+ * por e-mail, ao segundo fator, sem sessão. Só as rotas de entrada da operação o aceitam, e só no corpo da etapa dela;
+ * como bearer, ele não vale em rota nenhuma: o `verificarToken` da escola e o `verificarTokenDeOperador` o recusam pelo
+ * `typ`, e a `GuardaDeAutenticacao` responde a ele, numa rota de escola, igual a uma rota inexistente (C21, C47).
+ */
+export const TIPO_DESAFIO_DE_OPERADOR = 'desafio-operador+jwt'
+
 // Marca só de tipo, como a do token da escola.
 declare const MARCA_DO_TOKEN_DE_OPERADOR: unique symbol
 
@@ -187,10 +195,16 @@ export async function verificarTokenDeOperador(token: string, config: Configurac
   return verificado as TokenDeOperadorVerificado
 }
 
-/** Se o bearer do cabeçalho diz, no cabeçalho do JWT, ser um token de operador. Não verifica nada: só separa o caminho. */
+/** Os `typ` da área da operação: o token de acesso e o desafio do operador. */
+const TIPOS_DA_OPERACAO: readonly unknown[] = [TIPO_TOKEN_DE_OPERADOR, TIPO_DESAFIO_DE_OPERADOR]
+
+/**
+ * Se o bearer do cabeçalho diz, no cabeçalho do JWT, ser uma credencial da operação: o token de acesso ou o desafio do
+ * operador. Não verifica nada: só separa o caminho.
+ */
 export function bearerDeOperador(cabecalho: string | string[] | undefined): boolean {
   try {
-    return decodeProtectedHeader(extrairTokenBearer(cabecalho)).typ === TIPO_TOKEN_DE_OPERADOR
+    return TIPOS_DA_OPERACAO.includes(decodeProtectedHeader(extrairTokenBearer(cabecalho)).typ)
   } catch {
     return false
   }

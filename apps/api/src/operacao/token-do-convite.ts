@@ -1,14 +1,15 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
+import { BYTES_DO_TOKEN_DE_CONVITE, hashDoToken } from '../sessao/convite.service.js'
 
-/** Bytes do token do convite de operador: 256 bits sorteados. O banco guarda só o SHA-256; o valor vai para o arquivo. */
-const BYTES_DO_TOKEN = 32
+/**
+ * O token do convite de operador é a mesma peça do convite do coordenador (F1): 256 bits sorteados, em base64url, e o
+ * banco guarda só o SHA-256 em hex. Uma implementação só, para o comando que gera e o aceite que procura não divergirem.
+ */
 
-/** Um token novo, em base64url, para o link do convite de operador. */
+/** Um token novo, em base64url, para o link do convite de operador. O valor vai para o arquivo 0600 do comando. */
 export function sortearTokenDeConvite(): string {
-  return randomBytes(BYTES_DO_TOKEN).toString('base64url')
+  return randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')
 }
 
-/** O SHA-256 do token, em hex: é o que `convite_operador.token_hash` guarda e o aceite (tarefa 5.0) procura. */
-export function hashDoTokenDeConvite(token: string): string {
-  return createHash('sha256').update(token).digest('hex')
-}
+/** O SHA-256 do token, em hex: é o que `convite_operador.token_hash` guarda e o aceite procura. */
+export const hashDoTokenDeConvite: (token: string) => string = hashDoToken

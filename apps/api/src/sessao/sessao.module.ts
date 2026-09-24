@@ -285,8 +285,12 @@ export class SessaoModule implements OnApplicationShutdown {
         { provide: RegistroDeAtividade, useFactory: (banco: Banco) => new RegistroDeAtividade(banco, opcoes.medidor ?? medidorGlobal()), inject: [BANCO] },
         { provide: SaidaService, useFactory: (banco: Banco) => new SaidaService(banco, opcoes.identidade.ambiente), inject: [BANCO] },
       ],
-      // `RegistroDeAtividade` é o contrato para o F6: a gravação de resposta de avaliação também conta como uso.
-      exports: [CLIENTE_REDIS_LOGIN, ContadorDeTentativas, SeguroDoLogin, RegistroDeAtividade],
+      // `RegistroDeAtividade` é o contrato para o F6: a gravação de resposta de avaliação também conta como uso. O
+      // `SemaforoDeHash` e o `HashDeSenha` vão ao aceite do convite do operador (A0, tarefa 5.0): o semáforo é um só por
+      // instância, porque o teto que ele guarda é o das threads do processo. Global, como o `BancoModule` e o
+      // `LimiteModule`, para o `OperacaoModule` receber a mesma instância sem montar outra.
+      global: true,
+      exports: [CLIENTE_REDIS_LOGIN, ContadorDeTentativas, SeguroDoLogin, RegistroDeAtividade, SemaforoDeHash, HashDeSenha],
     }
   }
 

@@ -28,16 +28,16 @@ desafio de etapa `configurar_mfa`. O segundo fator em si é da 7.0.
 
 ## Subtarefas
 
-- [ ] 5.1 — `POST /v1/operacao/convite/consultar` com `@EntradaDeOperacao`: diz se o convite vale;
+- [x] 5.1 — `POST /v1/operacao/convite/consultar` com `@EntradaDeOperacao`: diz se o convite vale;
   usado, vencido, revogado e inexistente respondem igual; limite anônimo `rl:ip` recusável
-- [ ] 5.2 — `POST /v1/operacao/convite/aceitar` com `@EntradaDeOperacao`: senha com as regras do F1,
+- [x] 5.2 — `POST /v1/operacao/convite/aceitar` com `@EntradaDeOperacao`: senha com as regras do F1,
   `update ... set usado_em = now() where ... usado_em is null and revogado_em is null and expira_em >
   now()` junto de `desativado_em is null`; devolve desafio `configurar_mfa`; rebaixa por IP no
   semáforo do hash
-- [ ] 5.3 — Desafio `desafio-operador+jwt` com `jti` (o consumo do `jti` é da 7.0) e
+- [x] 5.3 — Desafio `desafio-operador+jwt` com `jti` (o consumo do `jti` é da 7.0) e
   `Cache-Control: no-store` nas respostas com desafio
-- [ ] 5.4 — Contratos estritos em `packages/shared/src/operacao/convite.ts`
-- [ ] 5.5 — Testes (tabela abaixo)
+- [x] 5.4 — Contratos estritos em `packages/shared/src/operacao/convite.ts`
+- [x] 5.5 — Testes (tabela abaixo)
 
 ## Arquivos previstos
 
@@ -68,16 +68,68 @@ desafio de etapa `configurar_mfa`. O segundo fator em si é da 7.0.
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] Portão local carimbado depois da última alteração (`node tools/processo/portao-local.ts`,
+- [x] Subtarefas concluídas
+- [x] Testes verdes, 100%
+- [x] Portão local carimbado depois da última alteração (`node tools/processo/portao-local.ts`,
   com `--e2e` se tocou tela e `--infra` se mexeu em infra)
-- [ ] `test-engineer` aprovado primeiro; `revisor-geral` e os guardiões marcados com rodada que
+- [x] `test-engineer` aprovado primeiro; `revisor-geral` e os guardiões marcados com rodada que
   vale para o código atual, e APROVADO nos que têm veto
-- [ ] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
+- [x] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
+
+## Divergências resolvidas nesta tarefa
+
+- **O aceite troca a senha que houver e zera o segundo fator** (segredo, chave, ativação, último passo e códigos de
+  recuperação), na mesma transação da trava. O F1 nunca troca a senha de uma conta existente pelo link; aqui é o
+  contrário, porque o convite novo é o caminho de recuperar a conta (PRD da A0, seção 3, "Recuperar senha … por comando,
+  com novo convite", e seção 7, "Operador perde o app autenticador … novo convite por comando"), e a resposta é sempre
+  `configurar_mfa`: sem zerar, o `configurar` (trava `where mfa_ativado_em is null`) nunca aceitaria. As sessões abertas
+  do operador não são encerradas no aceite: o `motivo` de encerramento é uma lista fechada por check (3.0), sem motivo
+  para isso, e cada sessão termina sozinha em 8 h. Quem perdeu a conta para outra pessoa é desativado (`ops:operador
+  desativar`), que encerra tudo.
+- **A trava do aceite começa pelo `for update` da linha do operador ativo**, a mesma que o `desativar` trava primeiro, e
+  só então usa o convite com o `update` condicional da Tech Spec. A consulta do convite, antes do hash, também exige o
+  operador ativo; a trava repete as condições porque entre as duas o convite pode ser revogado, vencer ou o operador ser
+  desativado (três testes com barreira no hash), e o `for update` põe o aceite na fila do `desativar` que travou a linha
+  antes (teste com a transação do `desativar` aberta, sem deadlock). O `update` da senha repete `desativado_em is null`.
+- **`consultar` devolve só `{ valido: true }`**: a Tech Spec diz "se o convite vale", e nem o apelido nem o nome saem
+  para quem só tem o link.
+- **O `SessaoModule` fica global e exporta o `SemaforoDeHash` e o `HashDeSenha`**, como o `BancoModule` e o
+  `LimiteModule` já são: o semáforo tem de ser o mesmo do login (o teto é das threads da instância), e o `OperacaoModule`
+  não pode montar outro.
+- **O convite que não vale sai antes do hash**, sem pedir vez no semáforo, como no F1. Com o token de 256 bits não há
+  conta a contar: o que o `@LimiteQueRebaixa` faz no aceite é só rebaixar a vez no balde da equipe, com a subfila pelo
+  IP. O contador `login.rebaixado_ip` não conta o aceite: ele é do login por senha.
+- **`bearerDeOperador` reconhece também o `desafio-operador+jwt`**: numa rota de escola com sessão, o desafio do operador
+  responde igual a uma rota inexistente (C21 e a parte "desafio" do C47), e não o 401 do token recusado.
+- **O desafio do operador tem `aud: operacao`**, além do `typ` próprio, e `verificarDesafioDeOperador` nasce aqui, com
+  teste de unidade, sem consumir o `jti` (7.0). As etapas (`configurar_mfa`, `mfa`) ficam em
+  `apps/api/src/operacao/desafio-de-operador.ts`, e não em `packages/shared`: a web não lê o desafio.
+- **O `token-do-convite.ts` usa o `hashDoToken` e o `BYTES_DO_TOKEN_DE_CONVITE` do F1** (recomendação do revisor-geral
+  na 3.0): uma implementação só do hash do token.
+- **Arquivos a mais que a lista previa:** `apps/api/src/operacao/desafio-de-operador.test.ts`,
+  `apps/api/src/operacao/token-do-convite.ts`, `apps/api/src/sessao/sessao.module.ts`,
+  `packages/nucleo/src/identidade/token-de-operador.test.ts`, os barrels de `packages/shared` e `packages/nucleo`, e
+  `apps/api/test/convite.int.test.ts`, cuja lista das rotas com "convite" (RF1 do F1) passa a trazer as duas do operador,
+  que também só consultam e aceitam.
 
 ## Fora do escopo desta tarefa
 
 - Consumir o `jti` e configurar o segundo fator (7.0); o C13 é de lá
 - Entrar por e-mail e senha (6.0)
 - A tela do convite (11.0)
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-23 23:14:55 | 2026-09-23 23:16:30 | `test-engineer` | 1 | REPROVADO | a7f12a9e2fba13a8b |
+| 2026-09-23 23:17:50 | 2026-09-23 23:18:13 | `test-engineer` | 2 | APROVADO | a9f3d02c26a12fdb0 |
+| 2026-09-23 23:18:19 | 2026-09-23 23:18:57 | `revisor-geral` | 1 | REPROVADO | adbec612882d02011 |
+| 2026-09-23 23:18:22 | 2026-09-23 23:19:04 | `privacy-guardian` | 1 | APROVADO | aaccc6583c6ff758b |
+| 2026-09-23 23:18:25 | 2026-09-23 23:19:10 | `infra-guardian` | 1 | APROVADO | a0bf8cbcfab99a275 |
+| 2026-09-23 23:18:29 | 2026-09-23 23:19:11 | `tenancy-guardian` | 1 | APROVADO | a4ad20ab7020dab6a |
+| 2026-09-23 23:46:02 | 2026-09-23 23:46:10 | `revisor-geral` | 2 | APROVADO | ab5b3a5827cbf62b1 |
