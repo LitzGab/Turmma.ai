@@ -13,10 +13,10 @@ import { CascaPublica } from '../componentes/CascaPublica'
 export function SemDesafio({ titulo, explicacao }: { titulo: string; explicacao: string }) {
   return (
     <CascaPublica titulo={titulo}>
-      <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+      <p role="alert" className="rounded-controle border border-pendente bg-pendente-cx p-4 text-pendente">
         {explicacao}
       </p>
-      <Link to={ROTAS.entrar} className="inline-flex min-h-11 items-center justify-center self-start rounded-md bg-blue-700 px-4 py-2 text-base font-medium text-white active:bg-blue-900">
+      <Link to={ROTAS.entrar} className="inline-flex min-h-11 items-center justify-center self-start rounded-full bg-caramelo px-4 py-2 text-base font-medium text-tinta hover:bg-caramelo-claro active:bg-caramelo-fundo">
         Ir para a entrada
       </Link>
     </CascaPublica>

@@ -60,14 +60,14 @@ export function ConfigurarMfa() {
     <CascaPublica titulo="Configurar o segundo fator">
       {codigosDeRecuperacao === undefined ? (
         <>
-          <p className="text-slate-700">
+          <p className="text-apoio">
             A coordenação entra com senha e com um código que muda a cada 30 segundos. Use um aplicativo autenticador no
             computador — KeePassXC, Bitwarden ou 1Password, por exemplo. Nenhum passo pede celular.
           </p>
           {segredo === undefined && falhaDoPreparo === undefined && <EstadoCarregando rotulo="Preparando o segundo fator…" />}
           {falhaDoPreparo !== undefined && (
-            <div className="rounded-lg border border-red-300 bg-red-50 p-4">
-              <p role="alert" className="text-red-900">
+            <div className="rounded-controle border border-erro bg-erro-cx p-4">
+              <p role="alert" className="text-erro">
                 {mensagemDoErro(falhaDoPreparo)} Se continuar assim, entre de novo com a sua senha.
               </p>
               <div className="mt-3">
@@ -114,15 +114,15 @@ function Segredo({ segredo, aoAtivar }: { segredo: RespostaConfigurarMfa; aoAtiv
 
   return (
     <>
-      <section aria-labelledby="titulo-segredo" className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4">
+      <section aria-labelledby="titulo-segredo" className="flex flex-col gap-3 rounded-cartao border border-linha bg-superficie p-4">
         <h2 id="titulo-segredo" className="font-medium">
           1. Guarde o segredo no seu aplicativo
         </h2>
-        <p className="break-all font-mono text-base text-slate-900">{segredo.segredo}</p>
+        <p className="break-all font-mono text-base text-tinta">{segredo.segredo}</p>
         <BotaoCopiar texto={segredo.segredo} rotulo="Copiar o segredo" avisoDeCopiado="Segredo copiado." />
         <div className="flex flex-wrap items-center gap-3">
           <CodigoQr conteudo={segredo.uri} descricao="Código QR com o segredo do segundo fator" />
-          <p className="min-w-0 flex-1 text-slate-700">Se você usa um aplicativo de celular, leia o código ao lado. No computador, cole o segredo.</p>
+          <p className="min-w-0 flex-1 text-apoio">Se você usa um aplicativo de celular, leia o código ao lado. No computador, cole o segredo.</p>
         </div>
       </section>
       <form className="flex flex-col gap-4" onSubmit={(evento) => void enviar(evento)}>
@@ -140,7 +140,7 @@ function Segredo({ segredo, aoAtivar }: { segredo: RespostaConfigurarMfa; aoAtiv
           onChange={(evento) => definirCodigo(evento.target.value)}
         />
         {falha !== undefined && (
-          <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-900">
+          <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-4 text-erro">
             {falha instanceof ErroDaApi ? mensagemDoSegundoFator(falha.codigo, falha.esperaSegundos) : mensagemDoSegundoFator(CodigoDeErro.ERRO_INTERNO)}
           </p>
         )}
@@ -162,20 +162,20 @@ function Segredo({ segredo, aoAtivar }: { segredo: RespostaConfigurarMfa; aoAtiv
 function CodigosDeRecuperacao({ codigos }: { codigos: readonly string[] }) {
   return (
     <>
-      <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+      <p role="alert" className="rounded-controle border border-pendente bg-pendente-cx p-4 text-pendente">
         Guarde estes códigos agora, fora do computador da escola. Eles não aparecem de novo, e cada um vale uma vez só,
         quando você não tiver o aplicativo à mão.
       </p>
-      <ul className="grid grid-cols-1 gap-1 rounded-lg border border-slate-200 bg-white p-4 font-mono text-base sm:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-1 rounded-cartao border border-linha bg-superficie p-4 font-mono text-base sm:grid-cols-2">
         {codigos.map((codigo) => (
           <li key={codigo}>{codigo}</li>
         ))}
       </ul>
       <BotaoCopiar texto={codigos.join('\n')} rotulo="Copiar os códigos" avisoDeCopiado="Códigos copiados." />
-      <p className="text-slate-700">O segundo fator está ativo. Entre de novo com a sua senha e com o código do aplicativo.</p>
+      <p className="text-apoio">O segundo fator está ativo. Entre de novo com a sua senha e com o código do aplicativo.</p>
       <Link
         to={ROTAS.entrar}
-        className="inline-flex min-h-11 items-center justify-center self-start rounded-md bg-blue-700 px-4 py-2 text-base font-medium text-white active:bg-blue-900"
+        className="inline-flex min-h-11 items-center justify-center self-start rounded-full bg-caramelo px-4 py-2 text-base font-medium text-tinta hover:bg-caramelo-claro active:bg-caramelo-fundo"
       >
         Ir para a entrada
       </Link>

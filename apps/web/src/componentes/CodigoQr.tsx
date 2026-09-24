@@ -30,7 +30,7 @@ export function CodigoQr({ conteudo, descricao }: Props) {
       className="h-44 w-44 shrink-0 rounded-md bg-white p-1"
       shapeRendering="crispEdges"
     >
-      <path d={caminho} fill="#0f172a" />
+      <path d={caminho} fill="#0d0d0d" />
     </svg>
   )
 }

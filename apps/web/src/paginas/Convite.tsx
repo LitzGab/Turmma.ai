@@ -113,7 +113,7 @@ export function Convite() {
   if (etapa.nome === 'sem-token' || etapa.nome === 'invalido') {
     return (
       <CascaPublica titulo="Convite">
-        <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+        <p role="alert" className="rounded-controle border border-pendente bg-pendente-cx p-4 text-pendente">
           {etapa.nome === 'sem-token'
             ? 'O endereço do convite está incompleto. Abra o link inteiro que a escola enviou, ou peça um convite novo.'
             : mensagemDoConvite(etapa.codigo)}
@@ -124,11 +124,11 @@ export function Convite() {
 
   return (
     <CascaPublica titulo="Convite">
-      <p className="text-slate-700">
-        Você foi convidado para a coordenação de <span className="font-medium text-slate-900">{etapa.escolaNome}</span>.
+      <p className="text-apoio">
+        Você foi convidado para a coordenação de <span className="font-medium text-tinta">{etapa.escolaNome}</span>.
       </p>
       {falha !== undefined && (
-        <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-900">
+        <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-4 text-erro">
           {falha instanceof ErroDaApi ? mensagemDoConvite(falha.codigo) : mensagemDoConvite(CodigoDeErro.ERRO_INTERNO)}
         </p>
       )}
@@ -163,7 +163,7 @@ function SenhaNova({ escolaNome, aceitando, aoEnviar }: { escolaNome: string; ac
 
   return (
     <form className="flex flex-col gap-4" onSubmit={enviar}>
-      <p className="text-slate-700">Defina a senha que você vai usar em {escolaNome}. Depois dela, você configura o segundo fator.</p>
+      <p className="text-apoio">Defina a senha que você vai usar em {escolaNome}. Depois dela, você configura o segundo fator.</p>
       <Campo
         rotulo="Senha nova"
         dica={`Pelo menos ${String(TAMANHO_MINIMO_SENHA_NOVA)} caracteres. Use uma frase que só você saiba.`}

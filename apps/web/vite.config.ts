@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defaultClientConditions, defineConfig } from 'vite'
+import { pluginRebaixarCor } from './rebaixar-cor'
 
 // Dentro do compose a API fica atrás da borda, `http://borda:8080`. A web chama caminho relativo e o proxy
 // encaminha, então o navegador nunca precisa conhecer o endereço da API nem de CORS.
@@ -15,7 +16,7 @@ const proxy = { '/v1': { target: destinoApi, changeOrigin: false } }
 const NAVEGADORES_MINIMOS = ['chrome99', 'edge99', 'firefox97', 'safari15.4']
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), pluginRebaixarCor()],
   resolve: { conditions: ['source', ...defaultClientConditions] },
   build: { target: NAVEGADORES_MINIMOS },
   server: { proxy },

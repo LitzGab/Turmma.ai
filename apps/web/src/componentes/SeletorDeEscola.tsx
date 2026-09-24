@@ -83,7 +83,7 @@ export function SeletorDeEscola({ escolaAtual, acessos, usuarioAtual }: Props) {
                 type="button"
                 onClick={() => void trocar(acesso.usuarioId)}
                 disabled={trocando !== undefined}
-                className="flex min-h-11 w-full items-center rounded-linha px-3 py-2 text-left break-words hover:bg-realce-suave active:bg-realce disabled:text-inativo"
+                className="flex min-h-11 w-full items-center rounded-linha px-3 py-2 text-left break-words hover:bg-realce-suave active:bg-realce disabled:text-sutil"
               >
                 {trocando === acesso.usuarioId ? `Abrindo ${acesso.escolaNome}…` : `${acesso.escolaNome} · ${NOME_DO_PAPEL[acesso.papel]}`}
               </button>

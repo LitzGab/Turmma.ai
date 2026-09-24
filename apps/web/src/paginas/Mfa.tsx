@@ -70,7 +70,7 @@ export function Mfa() {
 
   return (
     <CascaPublica titulo="Segundo fator">
-      <p className="text-slate-700">
+      <p className="text-apoio">
         {recuperacao
           ? 'Digite um dos códigos de recuperação que você guardou quando configurou o segundo fator. Cada código vale uma vez só.'
           : 'Digite o código que o seu aplicativo autenticador mostra agora. Ele muda a cada 30 segundos.'}
@@ -108,7 +108,7 @@ export function Mfa() {
           />
         )}
         {falha !== undefined && (
-          <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-900">
+          <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-4 text-erro">
             {falha instanceof ErroDaApi ? mensagemDoSegundoFator(falha.codigo, falha.esperaSegundos) : mensagemDoSegundoFator(CodigoDeErro.ERRO_INTERNO)}
           </p>
         )}
@@ -120,7 +120,7 @@ export function Mfa() {
         </span>
       </form>
       {/* Botão, e não link: não é navegação, é o mesmo formulário com o outro código. */}
-      <button type="button" onClick={trocarDeCodigo} className="min-h-11 self-start text-blue-800 underline">
+      <button type="button" onClick={trocarDeCodigo} className="min-h-11 self-start text-caramelo-texto underline">
         {recuperacao ? 'Usar o código do aplicativo' : 'Usar um código de recuperação'}
       </button>
     </CascaPublica>

@@ -57,7 +57,7 @@ function Protegida({ children }: { children: ReactNode }) {
 function AreaAutenticada({ children }: { children: ReactNode }) {
   return (
     <Protegida>
-      <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="min-h-screen bg-fundo text-tinta">
         <Cabecalho />
         <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">{children}</main>
       </div>
@@ -113,11 +113,11 @@ export function Rotas() {
 /** Endereço que não existe: diz o que fazer, sem código nem status (regra 50, item 12). */
 function NaoEncontrada() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-3 bg-slate-50 px-4 py-6 text-slate-900 sm:px-6">
+    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-3 bg-fundo px-4 py-6 text-tinta sm:px-6">
       <h1 className="text-xl font-semibold sm:text-2xl">Página não encontrada</h1>
-      <p className="text-slate-700">
+      <p className="text-apoio">
         Confira o endereço digitado ou volte à{' '}
-        <Link className="underline" to={ROTAS.inicio}>
+        <Link className="text-caramelo-texto underline" to={ROTAS.inicio}>
           página inicial
         </Link>
         .

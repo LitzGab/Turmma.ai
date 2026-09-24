@@ -3,6 +3,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { consultaAvisos, consultaEstado } from '../api/sistema'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../componentes/estado'
+import { Marca } from '../componentes/Marca'
 import { formatarData, formatarDataHora, formatarQuantidade } from '../formatar'
 
 const NOME_DO_COMPONENTE: Record<ComponenteDoSistema['nome'], string> = { api: 'API', banco: 'Banco de dados' }
@@ -34,7 +35,7 @@ function useFocoAoRecuperar(consulta: UseQueryResult, titulo: RefObject<HTMLHead
 function Secao({ titulo, id, refTitulo, children }: { titulo: string; id: string; refTitulo: RefObject<HTMLHeadingElement | null>; children: ReactNode }) {
   return (
     <section aria-labelledby={id} className="flex min-w-0 flex-col gap-3">
-      <h2 id={id} ref={refTitulo} tabIndex={-1} className="text-lg font-semibold text-slate-900">
+      <h2 id={id} ref={refTitulo} tabIndex={-1} className="text-lg font-semibold text-tinta">
         {titulo}
       </h2>
       {children}
@@ -44,20 +45,20 @@ function Secao({ titulo, id, refTitulo, children }: { titulo: string; id: string
 
 function Estado({ estado }: { estado: RespostaEstado }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <p className="text-slate-700">
-        Versão <span className="font-medium break-all text-slate-900">{estado.versao}</span> · Ambiente{' '}
-        <span className="font-medium text-slate-900">{NOME_DO_AMBIENTE[estado.ambiente]}</span>
+    <div className="rounded-cartao border border-linha bg-superficie p-4">
+      <p className="text-apoio">
+        Versão <span className="font-medium break-all text-tinta">{estado.versao}</span> · Ambiente{' '}
+        <span className="font-medium text-tinta">{NOME_DO_AMBIENTE[estado.ambiente]}</span>
       </p>
       <ul className="mt-3 flex flex-col gap-2">
         {estado.componentes.map((componente) => (
           <li key={componente.nome} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <span className="font-medium text-slate-900">{NOME_DO_COMPONENTE[componente.nome]}</span>
+            <span className="font-medium text-tinta">{NOME_DO_COMPONENTE[componente.nome]}</span>
             {/* A situação é texto, não só cor. */}
-            <span className={componente.situacao === 'disponivel' ? 'text-emerald-800' : 'text-red-800'}>
+            <span className={componente.situacao === 'disponivel' ? 'text-ok' : 'text-erro'}>
               {componente.situacao === 'disponivel' ? 'Disponível' : 'Indisponível'}
             </span>
-            <span className="w-full text-sm text-slate-600">Verificado em {formatarDataHora(componente.verificadoEm)}</span>
+            <span className="w-full text-sm text-sutil">Verificado em {formatarDataHora(componente.verificadoEm)}</span>
           </li>
         ))}
       </ul>
@@ -67,13 +68,13 @@ function Estado({ estado }: { estado: RespostaEstado }) {
 
 function Avisos({ itens }: { itens: Aviso[] }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <p className="text-sm text-slate-600">{formatarQuantidade(itens.length, 'aviso', 'avisos')}</p>
+    <div className="rounded-cartao border border-linha bg-superficie p-4">
+      <p className="text-sm text-sutil">{formatarQuantidade(itens.length, 'aviso', 'avisos')}</p>
       <ul className="mt-2 flex flex-col gap-3">
         {itens.map((aviso) => (
           <li key={aviso.id}>
-            <p className="break-words text-slate-900">{aviso.texto}</p>
-            <p className="text-sm text-slate-600">Publicado em {formatarData(aviso.publicadoEm)}</p>
+            <p className="break-words text-tinta">{aviso.texto}</p>
+            <p className="text-sm text-sutil">Publicado em {formatarData(aviso.publicadoEm)}</p>
           </li>
         ))}
       </ul>
@@ -122,9 +123,11 @@ export function Casca() {
   useFocoAoRecuperar(avisos, tituloAvisos)
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <p className="mx-auto max-w-5xl px-4 py-3 text-lg font-semibold sm:px-6">Educa.ia</p>
+    <div className="min-h-screen bg-fundo text-tinta">
+      <header className="border-b border-linha bg-fundo">
+        <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6">
+          <Marca />
+        </div>
       </header>
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
         <h1 className="text-xl font-semibold sm:text-2xl">Estado do sistema</h1>

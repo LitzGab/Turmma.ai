@@ -4,6 +4,7 @@ import { useLocation } from 'wouter'
 import { ErroDaApi } from '../api/cliente'
 import { avisoDaEntrada, entrarPorEmail, saidaPendente } from '../api/sessao'
 import { Botao } from '../componentes/Botao'
+import { Marca } from '../componentes/Marca'
 import { ROTA_DA_ETAPA } from '../caminhos'
 
 /** A mensagem que a tela mostra para uma falha da entrada, sempre pelo código e nunca pelo status (regra 50, item 12). */
@@ -47,16 +48,18 @@ export function Entrar() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <p className="mx-auto max-w-5xl px-4 py-3 text-lg font-semibold sm:px-6">Educa.ia</p>
+    <div className="min-h-screen bg-fundo text-tinta">
+      <header className="border-b border-linha bg-fundo">
+        <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6">
+          <Marca />
+        </div>
       </header>
       <main className="mx-auto flex max-w-md flex-col gap-6 px-4 py-6 sm:px-6">
         <h1 className="text-xl font-semibold sm:text-2xl">Entrar</h1>
         {/* A saída que a API não confirmou não pode passar por saída feita: o cookie de renovação ainda vale, e quem
             ficar neste computador volta à sessão anterior. */}
         {saidaPendente() && (
-          <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+          <p role="alert" className="rounded-controle border border-pendente bg-pendente-cx p-4 text-pendente">
             Não foi possível encerrar a sessão anterior neste computador. Entre e saia de novo, ou feche o navegador
             antes de deixar a máquina.
           </p>
@@ -64,11 +67,11 @@ export function Entrar() {
         {/* O que trouxe a pessoa de volta para cá: o segundo fator que gastou o desafio, ou o convite aceito por uma
             conta que já existe. Vive só em memória, como o aviso de saída não confirmada. */}
         {avisoDaEntrada() !== undefined && (
-          <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+          <p role="alert" className="rounded-controle border border-pendente bg-pendente-cx p-4 text-pendente">
             {avisoDaEntrada()}
           </p>
         )}
-        <p className="text-slate-700">Use o e-mail e a senha que a sua escola cadastrou.</p>
+        <p className="text-apoio">Use o e-mail e a senha que a sua escola cadastrou.</p>
         <form className="flex flex-col gap-4" onSubmit={(evento) => void enviar(evento)}>
           <div className="flex flex-col gap-1">
             <label htmlFor={campoEmail} className="font-medium">
@@ -86,7 +89,7 @@ export function Entrar() {
               maxLength={TAMANHO_MAXIMO_EMAIL}
               value={email}
               onChange={(evento) => definirEmail(evento.target.value)}
-              className="min-h-11 rounded-md border border-slate-400 bg-white px-3 py-2 text-base"
+              className="min-h-11 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -102,11 +105,11 @@ export function Entrar() {
               maxLength={TAMANHO_MAXIMO_SENHA}
               value={senha}
               onChange={(evento) => definirSenha(evento.target.value)}
-              className="min-h-11 rounded-md border border-slate-400 bg-white px-3 py-2 text-base"
+              className="min-h-11 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta"
             />
           </div>
           {falha !== undefined && (
-            <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-900">
+            <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-4 text-erro">
               {mensagemDaFalha(falha)}
             </p>
           )}

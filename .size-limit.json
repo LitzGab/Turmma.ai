@@ -1,7 +1,7 @@
 [
   {
-    "name": "JS inicial da web (todo o JS do build: a casca não tem import dinâmico)",
-    "path": "apps/web/dist/assets/*.js",
+    "name": "JS de entrada da web (o chunk index-*.js que toda tela da escola baixa; chunk carregado por import() fica de fora)",
+    "path": "apps/web/dist/assets/index-*.js",
     "limit": "150 kB",
     "brotli": true
   }

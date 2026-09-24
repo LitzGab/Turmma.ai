@@ -22,12 +22,12 @@ export function Inicio() {
       </h1>
       {eu.isError && <EstadoErro erro={eu.error} tentando={eu.isFetching} aoTentarDeNovo={() => void eu.refetch({ cancelRefetch: false })} />}
       {eu.data && (
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="break-words text-slate-700">
-            Você está em <span className="font-medium text-slate-900">{eu.data.escola.nome}</span> como{' '}
-            <span className="font-medium text-slate-900">{NOME_DO_PAPEL[eu.data.papel]}</span>.
+        <div className="rounded-cartao border border-linha bg-superficie p-4">
+          <p className="break-words text-apoio">
+            Você está em <span className="font-medium text-tinta">{eu.data.escola.nome}</span> como{' '}
+            <span className="font-medium text-tinta">{NOME_DO_PAPEL[eu.data.papel]}</span>.
           </p>
-          <p className="mt-2 text-slate-700">As suas turmas, o calendário e as ferramentas aparecem aqui nas próximas versões.</p>
+          <p className="mt-2 text-apoio">As suas turmas, o calendário e as ferramentas aparecem aqui nas próximas versões.</p>
         </div>
       )}
     </section>

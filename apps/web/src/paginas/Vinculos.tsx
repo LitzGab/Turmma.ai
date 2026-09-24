@@ -84,7 +84,7 @@ export function Vinculos() {
       <h1 id="titulo-vinculos" className="text-xl font-semibold sm:text-2xl">
         Meus vínculos
       </h1>
-      <p className="text-slate-700">Confira as turmas e disciplinas que a coordenação alocou para você neste ano letivo.</p>
+      <p className="text-apoio">Confira as turmas e disciplinas que a coordenação alocou para você neste ano letivo.</p>
 
       {vinculos.isPending && <EstadoCarregando rotulo="Carregando os seus vínculos…" />}
       {vinculos.isError && <EstadoErro erro={vinculos.error} tentando={vinculos.isFetching} aoTentarDeNovo={() => void vinculos.refetch({ cancelRefetch: false })} />}
@@ -98,15 +98,15 @@ export function Vinculos() {
       {itens.length > 0 && (
         <ul className="flex flex-col gap-3">
           {itens.map((vinculo) => (
-            <li key={vinculo.id} className="rounded-lg border border-slate-200 bg-white p-4">
-              <p className="font-medium break-words text-slate-900">{nomeDoVinculo(vinculo)}</p>
+            <li key={vinculo.id} className="rounded-cartao border border-linha bg-superficie p-4">
+              <p className="font-medium break-words text-tinta">{nomeDoVinculo(vinculo)}</p>
               {/* O estado em texto: a cor sozinha não chega a quem não a distingue nem ao leitor de tela. */}
-              <p className="mt-1 text-slate-700">
+              <p className="mt-1 text-apoio">
                 {NOME_DO_ESTADO_DE_VINCULO[vinculo.estado]}
                 {vinculo.contestacao !== undefined && ` · ${NOME_DA_CONTESTACAO[vinculo.contestacao]}`}
               </p>
               {confirmar.isError && confirmar.variables === vinculo.id && (
-                <p role="alert" className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3 text-red-900">
+                <p role="alert" className="mt-3 rounded-controle border border-erro bg-erro-cx p-3 text-erro">
                   {mensagemDoErro(confirmar.error)}
                 </p>
               )}
@@ -129,7 +129,7 @@ export function Vinculos() {
                       type="button"
                       onClick={() => definirContestacao({ vinculoId: vinculo.id, codigo: '', complemento: '' })}
                       disabled={decidindo}
-                      className="inline-flex min-h-11 items-center rounded-md border border-slate-400 px-4 py-2 text-base font-medium text-blue-800 active:bg-slate-100 disabled:text-slate-600"
+                      className="inline-flex min-h-11 items-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-tinta enabled:hover:bg-realce-suave enabled:active:bg-realce disabled:text-inativo"
                     >
                       Contestar
                     </button>
@@ -189,7 +189,7 @@ function FormularioDeContestacao({ contestacao, enviando, falha, aoMudar, aoEnvi
         <label htmlFor={campoComplemento} className="font-medium">
           Quer explicar? (opcional)
         </label>
-        <p id={aviso} className="text-sm text-slate-700">
+        <p id={aviso} className="text-sm text-apoio">
           {AVISO_DO_COMPLEMENTO} Até {TAMANHO_MAXIMO_DO_COMPLEMENTO} caracteres.
         </p>
         <textarea
@@ -199,13 +199,13 @@ function FormularioDeContestacao({ contestacao, enviando, falha, aoMudar, aoEnvi
           rows={3}
           value={contestacao.complemento}
           onChange={(evento) => aoMudar({ ...contestacao, complemento: evento.target.value })}
-          className="rounded-md border border-slate-400 bg-white px-3 py-2 text-base"
+          className="rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta"
         />
       </div>
       {/* Ação oficial: a professora vê o efeito antes de confirmar (regra 50, item 8). */}
-      <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-900">{EFEITO_DA_CONTESTACAO}</p>
+      <p className="rounded-controle border border-pendente bg-pendente-cx p-3 text-pendente">{EFEITO_DA_CONTESTACAO}</p>
       {falha !== undefined && (
-        <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-red-900">
+        <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-3 text-erro">
           {mensagemDoErro(falha)}
         </p>
       )}
@@ -217,7 +217,7 @@ function FormularioDeContestacao({ contestacao, enviando, falha, aoMudar, aoEnvi
           type="button"
           onClick={aoCancelar}
           disabled={enviando}
-          className="inline-flex min-h-11 items-center rounded-md border border-slate-400 px-4 py-2 text-base font-medium text-blue-800 active:bg-slate-100 disabled:text-slate-600"
+          className="inline-flex min-h-11 items-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-tinta enabled:hover:bg-realce-suave enabled:active:bg-realce disabled:text-inativo"
         >
           Cancelar
         </button>

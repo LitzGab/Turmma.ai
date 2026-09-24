@@ -1,52 +1,30 @@
 @import 'tailwindcss';
 
 /*
+ * O Tailwind gera classe de tudo que parece classe nos arquivos que ele varre. Os testes trazem de propósito as classes
+ * que a guarda reprova (`bg-tinta/40`, `bg-amber-50`), e elas não podem virar CSS servido: ficam fora da varredura.
+ */
+@source not './**/*.test.ts';
+@source not './**/*.test.tsx';
+
+/*
  * A pele é a da D72 (`docs/interface.md` 9.1 e 9.9): branco, preto e o laranja da pinta, fonte do sistema e nenhuma
  * animação que custe quadro no computador fraco da escola (regra 50, item 1).
  *
  * A paleta padrão do Tailwind 4 é em oklch(), que só existe a partir do Chrome 111 e do Safari 16.4: num
  * Chrome 109 de laboratório com Windows 7 ou num Chromebook sem atualização, o botão ficaria branco sobre
- * branco e sem foco visível. Por isso a paleta é zerada e só as cores usadas voltam, em hex. Classe com cor
- * fora desta lista não gera CSS nenhum, e o e2e reprova oklch() no CSS servido.
- */
-@theme {
-  --color-*: initial;
-
-  /*
-   * A paleta anterior, que as telas de `paginas/` ainda usam. Sai inteira na tarefa 2.0 da A0, junto com a troca
-   * das telas; até lá nenhuma tela perde cor no meio do caminho.
-   */
-  --color-slate-50: #f8fafc;
-  --color-slate-200: #e2e8f0;
-  --color-slate-400: #94a3b8;
-  --color-slate-600: #475569;
-  --color-slate-700: #334155;
-  --color-slate-900: #0f172a;
-  --color-slate-100: #f1f5f9;
-  --color-blue-700: #1d4ed8;
-  --color-blue-800: #1e40af;
-  --color-blue-900: #1e3a8a;
-  /* Âmbar é o aviso de atenção: convite que não vale mais, códigos de recuperação que só aparecem uma vez,
-     segundo fator gasto, saída não confirmada no computador compartilhado. Sem estas três, a caixa sai sem
-     fundo e sem borda, indistinguível de um painel neutro. */
-  --color-amber-50: #fffbeb;
-  --color-amber-300: #fcd34d;
-  --color-amber-900: #78350f;
-  --color-red-50: #fef2f2;
-  --color-red-300: #fca5a5;
-  --color-red-800: #991b1b;
-  --color-red-900: #7f1d1d;
-  --color-emerald-800: #065f46;
-}
-
-/*
- * Os tokens da D72, copiados da 9.9 do `docs/interface.md`; os componentes de `componentes/` já usam só estes. A
- * `--font-marca` da 9.9 não entra: o logotipo vem em curvas, de `public/marca/`, e a Fustat não é baixada.
+ * branco e sem foco visível. Por isso a paleta é zerada e só voltam, em hex, os tokens da 9.9, e mais nenhum: classe
+ * com cor fora desta lista não gera CSS nenhum, e `estilos.test.ts` reprova o nome que não está aqui. O modificador de
+ * opacidade (`bg-tinta/40`) também não entra: vira `color-mix()`, que só existe a partir do Chrome 111, e o e2e
+ * reprova `oklch(` e `color-mix(` no CSS servido.
+ *
+ * A `--font-marca` da 9.9 não entra: o logotipo vem em curvas, de `public/marca/`, e a Fustat não é baixada.
  *
  * `static` faz o Tailwind emitir todas as variáveis, e não só as que alguma classe usa: o CSS servido carrega a paleta
  * inteira da D72, e o e2e confere nele que cada token existe de fato, e não só no fonte.
  */
 @theme static {
+  --color-*: initial;
   --color-white: #ffffff;
   --color-black: #000000;
 
@@ -117,6 +95,14 @@
 
   .bg-noite :focus-visible {
     outline-color: var(--color-caramelo-noite);
+  }
+
+  /*
+   * O texto de exemplo do campo é `sutil`, o piso de texto da 9.1 (6,6:1). O preflight o pinta com `color-mix()`, que o
+   * build tira (`rebaixar-cor.ts`); sem esta regra ele ficaria na cor do texto digitado, e o exemplo pareceria resposta.
+   */
+  ::placeholder {
+    color: var(--color-sutil);
   }
 
   /*

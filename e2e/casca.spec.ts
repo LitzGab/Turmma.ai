@@ -283,18 +283,37 @@ test.describe('casca da web', () => {
     expect(pedidos).toBe(1)
   })
 
-  test('o CSS servido não usa oklch(), que o Chrome anterior ao 111 não entende, e pinta o aviso de atenção', async ({ page }) => {
+  test('o CSS servido tem os hex da D72, não usa oklch() nem color-mix(), e pinta o aviso de atenção', async ({ page }) => {
     await page.goto('/sistema')
     const folhas = await page.locator('link[rel="stylesheet"]').evaluateAll((links) => links.map((link) => (link as HTMLLinkElement).href))
     expect(folhas.length).toBeGreaterThan(0)
-    for (const folha of folhas) {
-      const css = await (await page.request.get(folha)).text()
-      expect(css).toContain('#1d4ed8')
-      expect(css).not.toContain('oklch(')
-      // A paleta zerada do `@theme` faz classe com cor fora da lista não gerar regra nenhuma, caladamente: a caixa
-      // de aviso fica sem fundo e sem borda, e o axe não vê, porque o texto herda o contraste da página. O teste de
-      // unidade `apps/web/src/estilos.test.ts` cobre o fonte; esta linha cobre o que o navegador recebe.
-      for (const classe of ['.bg-amber-50', '.border-amber-300', '.text-amber-900']) expect(css, `${classe} sem regra no CSS servido`).toContain(classe)
-    }
+    const css = (await Promise.all(folhas.map(async (folha) => (await page.request.get(folha)).text()))).join('\n')
+    // Os hex que as telas do F1 pintam: o laranja do botão, o texto, a borda de campo e as duas famílias de aviso.
+    for (const hex of ['#e8732e', '#0d0d0d', '#8f8f8f', '#fdf0e8', '#8a3e0c', '#fdecec', '#b42318']) expect(css, `${hex} fora do CSS servido`).toContain(hex)
+    // O Chrome 109 do laboratório descarta a declaração inteira com qualquer um dos dois: `oklch()` é a paleta de
+    // fábrica do Tailwind 4, e `color-mix()` é o que o modificador de opacidade (`bg-tinta/40`) vira (9.9).
+    expect(css).not.toContain('oklch(')
+    expect(css).not.toContain('color-mix(')
+    // A paleta anterior saiu inteira do `@theme`, e nenhuma fonte é baixada: o logotipo vem em curvas (9.6).
+    expect(css).not.toMatch(/--color-(?:slate|blue|amber|red|emerald)-/)
+    expect(css).not.toContain('@font-face')
+    // A paleta zerada do `@theme` faz classe com cor fora da lista não gerar regra nenhuma, caladamente: a caixa
+    // de aviso fica sem fundo e sem borda, e o axe não vê, porque o texto herda o contraste da página. O teste de
+    // unidade `apps/web/src/estilos.test.ts` cobre o fonte; esta linha cobre o que o navegador recebe.
+    for (const classe of ['.bg-pendente-cx', '.border-pendente', '.text-pendente', '.bg-erro-cx', '.border-erro', '.text-erro']) expect(css, `${classe} sem regra no CSS servido`).toContain(classe)
+  })
+
+  test('o aviso de atenção aparece com fundo e borda, na cor da D72 e com contraste AA', async ({ page }) => {
+    // O segundo fator aberto sem desafio: "entre de novo", o aviso que sumiu calado no F0 quando a cor não tinha regra.
+    await page.goto('/mfa')
+    const aviso = page.getByRole('alert').filter({ hasText: 'entre de novo' })
+    await expect(aviso).toBeVisible()
+    const pintura = await aviso.evaluate((elemento) => {
+      const estilo = getComputedStyle(elemento)
+      return { fundo: estilo.backgroundColor, borda: estilo.borderTopColor, larguraDaBorda: estilo.borderTopWidth, estiloDaBorda: estilo.borderTopStyle, texto: estilo.color }
+    })
+    // `pendente-cx` de fundo, `pendente` na borda e no texto (6,8:1 na 9.1): sem a regra, o fundo seria transparente.
+    expect(pintura).toEqual({ fundo: 'rgb(253, 240, 232)', borda: 'rgb(138, 62, 12)', larguraDaBorda: '1px', estiloDaBorda: 'solid', texto: 'rgb(138, 62, 12)' })
+    expect(await violacoesGraves(page)).toEqual([])
   })
 })

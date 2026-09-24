@@ -26,16 +26,16 @@ entrada, abrindo lugar para o chunk do operador (10.0).
 
 ## Subtarefas
 
-- [ ] 2.1 — Migrar as dez telas de `paginas/` e o `rotas.tsx` pela tabela da seção 9 da techspec; o fundo
+- [x] 2.1 — Migrar as dez telas de `paginas/` e o `rotas.tsx` pela tabela da seção 9 da techspec; o fundo
   do diálogo `#0f172abf` vira `rgba()` literal
-- [ ] 2.2 — Remover do `@theme` do `estilos.css` a paleta antiga, deixando exatamente o bloco da 9.9
-- [ ] 2.3 — `estilos.test.ts`: aceitar só os nomes do `@theme` da 9.9 (inclui `white` e `black`) e
+- [x] 2.2 — Remover do `@theme` do `estilos.css` a paleta antiga, deixando exatamente o bloco da 9.9
+- [x] 2.3 — `estilos.test.ts`: aceitar só os nomes do `@theme` da 9.9 (inclui `white` e `black`) e
   reprovar modificador de opacidade em classe de cor (`bg-x/80`, `text-x/50`)
-- [ ] 2.4 — `e2e/casca.spec.ts`: trocar `#1d4ed8` e as classes `amber` pelos hex e classes dos tokens
+- [x] 2.4 — `e2e/casca.spec.ts`: trocar `#1d4ed8` e as classes `amber` pelos hex e classes dos tokens
   novos; reprovar `oklch(` e `color-mix(` no CSS servido
-- [ ] 2.5 — Orçamento: `.size-limit.json` com 150 kB brotli só para o chunk de entrada; o teste em
+- [x] 2.5 — Orçamento: `.size-limit.json` com 150 kB brotli só para o chunk de entrada; o teste em
   `tools/ci/tamanho-web.test.ts` passa a provar que o limite mede a entrada e não a soma dos chunks
-- [ ] 2.6 — Testes (tabela abaixo); portão com `--e2e`
+- [x] 2.6 — Testes (tabela abaixo); portão com `--e2e`
 
 ## Arquivos previstos
 
@@ -73,6 +73,30 @@ Não há concorrência nesta tarefa.
   vale para o código atual, e APROVADO nos que têm veto
 - [ ] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
 
+## Divergências resolvidas nesta tarefa
+
+- **O preflight do Tailwind traz `color-mix()`, e o build o tira.** Com as telas migradas, o único `color-mix(` que
+  sobrava no CSS servido era o do `::placeholder` do preflight, dentro de `@supports (color: color-mix(...))`, com a cor
+  fixa antes. Para o e2e reprovar `color-mix(` sem exceção, como a tarefa pede, o `vite.config.ts` ganhou o plugin
+  `apps/web/rebaixar-cor.ts`: no build ele tira os blocos `@supports (color: color-mix(...))`, deixando a cor fixa que já
+  vem antes, e para o build se sobrar `color-mix()` ou `oklch()` fora de um bloco desses. É o "build rebaixar para cor
+  fixa" que a 9.9 do `docs/interface.md` prevê. O texto de exemplo do campo passa a ser `sutil` (9.1), no `estilos.css`
+- **Os testes ficam fora da varredura do Tailwind** (`@source not`). O fixture da guarda (`bg-tinta/40`, `bg-amber-50`)
+  virava regra no CSS servido, com `color-mix()`
+- **O `@theme` é um bloco só, `static`.** A 9.9 é um `@theme` com o `--color-*: initial`; a 1.0 deixou o bloco da D72
+  `static` para o e2e dos hex (divergência registrada lá), e agora o `initial` entra nele. Sem `--font-marca`, como na 1.0
+- **A marca no lugar de "Educa.ia"** no cabeçalho de `Entrar.tsx` e de `Casca.tsx`, e o `<title>` do `index.html` passa a
+  ser "Turmma" (D54). É o logotipo da 1.3 que faltava nessas duas telas, apontado pelo `revisor-geral` e pelo
+  `frontend-reviewer` da 1.0; nenhum outro texto mudou
+- **Recomendações da 1.0 aplicadas:** o desligado do item do seletor de escola em `sutil` (o texto "Abrindo…" é
+  informação), o link "Meus vínculos" sem o `active:bg-realce` (4,3:1 com `caramelo-texto`), o QR em `#0d0d0d`, e o
+  e2e reprova `@font-face` no CSS servido
+- **Botão secundário** (Contestar, Cancelar, entrar com a conta da escola): a tabela da seção 9 não o nomeia. Fica
+  `superficie` com `borda-campo` (9.1: "borda de campo e de botão secundário") e texto `tinta`, hover `realce-suave`,
+  pressionado `realce`, desligado `inativo`; o `text-blue-800` de antes era cor de link num botão
+- **Raio:** alerta e campo em `rounded-controle`, cartão em `rounded-cartao`, botão em `rounded-full` como o `Botao` da
+  1.0, no lugar do `rounded-md`/`rounded-lg` de fábrica
+
 ## Fora do escopo desta tarefa
 
 - Mudar o texto, o fluxo ou a navegação das telas do F1: só a cor muda
@@ -80,3 +104,15 @@ Não há concorrência nesta tarefa.
 - O chunk e as telas do operador e o teto de 60 kB: 10.0
 - As pendências de web do F1 (`BroadcastChannel`, `details` do seletor, `saidaConfirmada`): primeira
   tarefa de web da A1
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-23 21:00:17 | 2026-09-23 21:01:12 | `test-engineer` | 1 | APROVADO | a87b2e4e67b3beb36 |
+| 2026-09-23 21:01:18 | 2026-09-23 21:02:04 | `revisor-geral` | 1 | APROVADO | aa79e8a1365030b7d |
+| 2026-09-23 21:01:22 | 2026-09-23 21:02:18 | `frontend-reviewer` | 1 | APROVADO | aa9c423e4ee9d068d |

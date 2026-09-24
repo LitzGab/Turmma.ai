@@ -1,7 +1,7 @@
 # Tarefas — Identidade do operador Turmma (A0)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 1 de 11 concluídas
+**Status:** 2 de 11 concluídas
 
 ## Lista
 
@@ -11,12 +11,12 @@
   - [x] 1.3 Logotipo pelos SVGs de `mockups/public/marca/`
   - [x] 1.4 Testes: os hex dos tokens no CSS servido; o e2e do F1 continua verde
 
-- [ ] **2.0 — As telas do F1 na pele da D72, com as guardas de estilo estritas**
-  - [ ] 2.1 As 12 telas do F1 migradas e a paleta antiga removida
-  - [ ] 2.2 `estilos.test.ts` só com os nomes do `@theme` e sem modificador de opacidade
-  - [ ] 2.3 `e2e/casca.spec.ts` confere os hex e reprova `oklch(` e `color-mix(`
-  - [ ] 2.4 Orçamento de 150 kB brotli só para a entrada
-  - [ ] 2.5 Testes: U3, E5, B1 (entrada)
+- [x] **2.0 — As telas do F1 na pele da D72, com as guardas de estilo estritas**
+  - [x] 2.1 As 12 telas do F1 migradas e a paleta antiga removida
+  - [x] 2.2 `estilos.test.ts` só com os nomes do `@theme` e sem modificador de opacidade
+  - [x] 2.3 `e2e/casca.spec.ts` confere os hex e reprova `oklch(` e `color-mix(`
+  - [x] 2.4 Orçamento de 150 kB brotli só para a entrada
+  - [x] 2.5 Testes: U3, E5, B1 (entrada)
 
 - [ ] **3.0 — O operador nasce por comando**
   - [ ] 3.1 Migration das seis tabelas da seção 3 da Tech Spec

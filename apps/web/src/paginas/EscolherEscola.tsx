@@ -51,7 +51,7 @@ export function EscolherEscola() {
         />
       ) : (
         <>
-          <p className="text-slate-700">Você tem acesso em mais de uma escola. Escolha por onde quer entrar agora; dá para trocar depois, no topo da tela.</p>
+          <p className="text-apoio">Você tem acesso em mais de uma escola. Escolha por onde quer entrar agora; dá para trocar depois, no topo da tela.</p>
           <ul className="flex flex-col gap-3">
             {acessos.map((acesso) => (
               <li key={acesso.usuarioId}>
@@ -59,7 +59,7 @@ export function EscolherEscola() {
                   type="button"
                   onClick={() => void entrar(acesso.usuarioId)}
                   disabled={entrando !== undefined}
-                  className="flex min-h-11 w-full items-center rounded-md border border-slate-400 bg-white px-4 py-3 text-left break-words active:bg-slate-100 disabled:text-slate-600"
+                  className="flex min-h-11 w-full items-center rounded-controle border border-borda-campo bg-superficie px-4 py-3 text-left break-words enabled:hover:bg-realce-suave enabled:active:bg-realce disabled:text-sutil"
                 >
                   {entrando === acesso.usuarioId ? `Entrando em ${acesso.escolaNome}…` : `${acesso.escolaNome} · ${NOME_DO_PAPEL[acesso.papel]}`}
                 </button>
@@ -69,7 +69,7 @@ export function EscolherEscola() {
         </>
       )}
       {falha !== undefined && (
-        <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-900">
+        <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-4 text-erro">
           {mensagemDoErro(falha)}
         </p>
       )}

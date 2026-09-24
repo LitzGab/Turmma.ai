@@ -54,7 +54,7 @@ export function Cabecalho() {
           <nav aria-label="Seções">
             <Link
               to={caminho === ROTAS.vinculos ? ROTAS.inicio : ROTAS.vinculos}
-              className="inline-flex min-h-11 items-center rounded-linha px-3 py-2 text-caramelo-texto underline hover:bg-realce-suave active:bg-realce"
+              className="inline-flex min-h-11 items-center rounded-linha px-3 py-2 text-caramelo-texto underline hover:bg-realce-suave"
             >
               {caminho === ROTAS.vinculos ? 'Início' : 'Meus vínculos'}
             </Link>

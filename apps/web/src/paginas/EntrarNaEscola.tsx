@@ -46,7 +46,7 @@ export function EntrarNaEscola({ slug }: { slug: string }) {
       {acesso.isPending && <EstadoCarregando rotulo="Abrindo o endereço da escola…" />}
       {acesso.isError && <ErroDoEndereco erro={acesso.error} aoTentarDeNovo={() => void acesso.refetch({ cancelRefetch: false })} tentando={acesso.isFetching} />}
       {falha !== undefined && (
-        <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+        <p role="alert" className="rounded-controle border border-pendente bg-pendente-cx p-4 text-pendente">
           {mensagemDaFalhaExterna(falha)}
         </p>
       )}
@@ -78,14 +78,14 @@ function useFalhaDaContaDaEscola(): string | undefined {
 function ErroDoEndereco({ erro, aoTentarDeNovo, tentando }: { erro: unknown; aoTentarDeNovo: () => void; tentando: boolean }) {
   const codigo = erro instanceof ErroDaApi ? erro.codigo : CodigoDeErro.ERRO_INTERNO
   return (
-    <div className="rounded-lg border border-red-300 bg-red-50 p-4">
-      <p role="alert" className="text-red-900">
+    <div className="rounded-controle border border-erro bg-erro-cx p-4">
+      <p role="alert" className="text-erro">
         {mensagemDoAcessoDaEscola(codigo)}
       </p>
       {codigo !== CodigoDeErro.NAO_ENCONTRADO && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Botao onClick={aoTentarDeNovo}>Tentar de novo</Botao>
-          <span role="status" className="text-red-900">
+          <span role="status" className="text-erro">
             {tentando ? 'Tentando de novo…' : ''}
           </span>
         </div>
@@ -145,7 +145,7 @@ function FormularioDaMatricula({ slug }: { slug: string }) {
         onChange={(evento) => definirSenha(evento.target.value)}
       />
       {falha !== undefined && (
-        <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-900">
+        <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-4 text-erro">
           {falha instanceof ErroDaApi ? mensagemDaEntradaPorMatricula(falha.codigo, falha.esperaSegundos) : mensagemDaEntradaPorMatricula(CodigoDeErro.ERRO_INTERNO)}
         </p>
       )}
@@ -167,16 +167,16 @@ function FormularioDaMatricula({ slug }: { slug: string }) {
 function ContasDaEscola({ slug, provedores }: { slug: string; provedores: RespostaAcessoDaEscola['provedores'] }) {
   if (provedores.length === 0) return null
   return (
-    <section aria-labelledby="titulo-contas" className="flex flex-col gap-3 border-t border-slate-200 pt-6">
+    <section aria-labelledby="titulo-contas" className="flex flex-col gap-3 border-t border-linha pt-6">
       <h2 id="titulo-contas" className="font-medium">
         Ou entre com a conta da escola
       </h2>
-      <p className="text-slate-700">{AVISO_DA_TI}</p>
+      <p className="text-apoio">{AVISO_DA_TI}</p>
       {provedores.map((provedor) => (
         <a
           key={provedor}
           href={enderecoDoLoginExterno(provedor, slug)}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-slate-400 bg-white px-4 py-2 text-base font-medium text-slate-900 active:bg-slate-100"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-tinta hover:bg-realce-suave active:bg-realce"
         >
           Entrar com a conta {NOME_DO_PROVEDOR[provedor]} da escola
         </a>
