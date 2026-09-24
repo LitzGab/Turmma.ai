@@ -101,6 +101,10 @@ fora disso, igual a senha errada, e o caminho é um convite novo.
 **Entrada.** O `ContadorDeTentativas` usa `login-op:`, pelo e-mail e pelo `operador.id`, com a
 origem `conhecido`/`outro` do cookie de dispositivo do F1, com chave própria. `entrada_falha` não
 grava o e-mail.
+Da tarefa 6.0: nesta rota o contador é só pelo e-mail (o do `operador.id` é o do `/sessao/mfa`); o cookie é
+`turmma_operacao_dispositivo`, em `/v1/operacao/sessao`, com a chave derivada por HMAC da do F1 e gravado pela 7.0 ao abrir
+a sessão; `entrada_falha` nunca leva `operador_id` e só é gravada na falha que passou pelo hash (a tentativa segurada
+só soma em `operacao.entrada_falha`, que conta toda falha).
 
 **Conferência da sessão**, pela `GuardaDeOperador`, que põe no contexto só o `operadorId`, nunca
 `escolaId` (repository de escola chamado por engano falha com erro):

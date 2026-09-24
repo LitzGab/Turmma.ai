@@ -1334,6 +1334,55 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Entradas do operador Turmma que falharam",
+      "description": "Entradas por minuto em /v1/operacao/sessao/email que falharam (senha errada, e-mail que não existe, prazo do segundo fator vencido ou conta segurada), da nossa equipe, nunca de escola. Cada uma também fica em acesso_operacao (entrada_falha), sem o e-mail. Separada de login.falhas para não somar com as escolas. Sem alerta: o volume esperado é de uma pessoa da equipe errando a senha.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 107
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(operacao_entrada_falha_total[1m]))",
+          "legendFormat": "falhas",
+          "range": true
+        }
+      ]
     }
   ]
 }

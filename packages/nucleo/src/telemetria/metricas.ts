@@ -86,6 +86,12 @@ export const METRICAS = {
   renovacaoDeSessao: 'sessao.renovacao',
   /** Gravações de atividade que falharam depois de a resposta sair: a sessão só vence pela tolerância. */
   atividadeFalha: 'sessao.atividade_falha',
+  /**
+   * Entradas do operador Turmma que falharam em `/v1/operacao/sessao/email` (`NAO_AUTENTICADO` ou `CONTA_SEGURADA`), sem
+   * rótulo: a contagem de `entrada_falha` por minuto da Tech Spec da A0 (seção 7c). Separada de `login.falhas`, para o
+   * painel das escolas não contar a nossa equipe.
+   */
+  entradaFalhaDaOperacao: 'operacao.entrada_falha',
   /** Histograma, em segundos, da leitura de sessão da `GuardaDeSessao`, uma por requisição autenticada. */
   leituraDeSessao: 'sessao.leitura.duracao',
   /** p99 do atraso do event loop no intervalo, em segundos. */

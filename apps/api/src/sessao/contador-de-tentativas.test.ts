@@ -1,5 +1,6 @@
 import { ProporcaoEmJanela } from '@educa/nucleo'
 import type { Redis } from 'ioredis'
+import { createHmac } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { ContadorDeTentativas, ESPERA_INICIAL_MS, ESPERA_MAXIMA_MS, esperaDaFalha, VALIDADE_DO_CONTADOR_MS } from './contador-de-tentativas.js'
 
@@ -97,5 +98,24 @@ describe('ContadorDeTentativas no seguro em memória (Redis de fila fora): a mes
     expect(contador.chaveDe('camila@escola.invalid', 'conhecido')).toBe(chave.replace(':outro', ':conhecido'))
     const comOutraChave = new ContadorDeTentativas(redisFora, new TextEncoder().encode('outra-chave-de-teste-do-contador-32b'))
     expect(comOutraChave.chaveDe('camila@escola.invalid', 'outro')).not.toBe(chave)
+  })
+
+  it('U2: a chave da escola é a de antes (`login:` + HMAC-SHA256 em base64url), com ou sem o prefixo explícito, e a do operador muda só o prefixo', () => {
+    const contador = new ContadorDeTentativas(redisFora, CHAVE)
+    const hmac = createHmac('sha256', CHAVE).update('camila@escola.invalid').digest('base64url')
+    // A da escola, escrita à mão: o formato de antes da A0, que os contadores vivos no Redis usam.
+    expect(contador.chaveDe('camila@escola.invalid', 'outro')).toBe(`login:${hmac}:outro`)
+    expect(contador.chaveDe('camila@escola.invalid', 'conhecido', 'login')).toBe(`login:${hmac}:conhecido`)
+    expect(contador.chaveDe('camila@escola.invalid', 'outro', 'login-op')).toBe(`login-op:${hmac}:outro`)
+    expect(contador.chaveDe('camila@escola.invalid', 'conhecido', 'login-op')).toBe(`login-op:${hmac}:conhecido`)
+  })
+
+  it('U2: o mesmo e-mail com os dois prefixos são contadores independentes: segurar um não segura o outro', async () => {
+    const contador = new ContadorDeTentativas(redisFora, CHAVE, relogioParado())
+    const daEscola = contador.chaveDe('camila@escola.invalid', 'outro')
+    const doOperador = contador.chaveDe('camila@escola.invalid', 'outro', 'login-op')
+    for (let falha = 1; falha <= 5; falha++) await contador.reservar(doOperador)
+    expect((await contador.reservar(doOperador)).liberada).toBe(false)
+    expect(await contador.reservar(daEscola)).toEqual({ liberada: true, esperaSeFalharMs: 0 })
   })
 })

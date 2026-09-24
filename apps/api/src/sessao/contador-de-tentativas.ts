@@ -20,6 +20,13 @@ export const INTERVALO_ENTRE_VARREDURAS_MS = 60_000
 export type OrigemDaTentativa = 'conhecido' | 'outro'
 
 /**
+ * O prefixo da chave do contador: `login` para as contas da escola (F1) e `login-op` para o operador Turmma (A0, Tech
+ * Spec, seção 5, "Entrada"). Com prefixos diferentes, o mesmo e-mail como coordenador e como operador tem dois
+ * contadores: errar a senha num não segura o outro (C24).
+ */
+export type PrefixoDoContador = 'login' | 'login-op'
+
+/**
  * A espera que a falha de número `falhas` impõe: nada até a quarta, 30 s na quinta, e o dobro a cada falha seguinte,
  * até 15 min.
  */
@@ -119,8 +126,9 @@ class SeguroEmMemoria {
  * O contador de tentativas de login (Tech Spec, seção 5, "Tentativas"), no Redis de fila, que não expulsa chave:
  * no Redis de cache (`allkeys-lru`), a expulsão zeraria o contador no meio de um ataque.
  *
- * - **Chave:** `login:{HMAC(chave, identificador)}:{conhecido|outro}`. O Redis nunca vê o e-mail, e o script que
- *   erra a senha de outro navegador segura só o contador `outro`: a professora no computador dela continua entrando.
+ * - **Chave:** `{prefixo}:{HMAC(chave, identificador)}:{conhecido|outro}`, com o prefixo `login` da escola ou o
+ *   `login-op` do operador. O Redis nunca vê o e-mail, e o script que erra a senha de outro navegador segura só o
+ *   contador `outro`: a professora no computador dela continua entrando.
  * - **Antes do hash:** a tentativa é reservada, e contada, antes de a senha ser conferida.
  * - **Por conta, nunca por IP** (regra 80, item 1): a escola inteira sai por um IP só.
  * - **Redis fora ou lento:** o seguro em memória atende com a mesma regra, e `proporcaoDoSeguro` alimenta
@@ -148,9 +156,9 @@ export class ContadorDeTentativas {
     return this.#proporcaoDoSeguro.valor()
   }
 
-  /** A chave de uma conta, pelo HMAC do identificador já normalizado. */
-  chaveDe(identificador: string, origem: OrigemDaTentativa): string {
-    return `login:${createHmac('sha256', this.chave).update(identificador).digest('base64url')}:${origem}`
+  /** A chave de uma conta, pelo HMAC do identificador já normalizado; sem prefixo, a da escola (`login`). */
+  chaveDe(identificador: string, origem: OrigemDaTentativa, prefixo: PrefixoDoContador = 'login'): string {
+    return `${prefixo}:${createHmac('sha256', this.chave).update(identificador).digest('base64url')}:${origem}`
   }
 
   async reservar(chave: string): Promise<Reserva> {

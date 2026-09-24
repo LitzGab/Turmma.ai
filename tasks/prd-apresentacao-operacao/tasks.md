@@ -1,7 +1,7 @@
 # Tarefas — Identidade do operador Turmma (A0)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 5 de 11 concluídas
+**Status:** 6 de 11 concluídas
 
 ## Lista
 
@@ -37,10 +37,10 @@
   - [x] 5.2 Desafio `configurar_mfa` com `typ` próprio; limite e rebaixamento
   - [x] 5.3 Testes: C7 (link antigo), C9–C11, C21, C32 (consultar), C33 (aceitar), C39 (aceitar)
 
-- [ ] **6.0 — Entrada por e-mail e senha**
-  - [ ] 6.1 `sessao/email`, com o contador `login-op:` e a origem
-  - [ ] 6.2 Regra das 72 h do `configurar_mfa`; `entrada_falha` sem e-mail
-  - [ ] 6.3 Testes: C15, C22–C25, C33 (e-mail), U2
+- [x] **6.0 — Entrada por e-mail e senha**
+  - [x] 6.1 `sessao/email`, com o contador `login-op:` e a origem
+  - [x] 6.2 Regra das 72 h do `configurar_mfa`; `entrada_falha` sem e-mail
+  - [x] 6.3 Testes: C15, C22–C25, C33 (e-mail), U2
 
 - [ ] **7.0 — Segundo fator do operador**
   - [ ] 7.1 `mfa/configurar` com a trava da linha e a versão do segredo

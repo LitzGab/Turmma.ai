@@ -1,4 +1,5 @@
 import {
+  acessoOperacao,
   auditoriaOperacao,
   codigoRecuperacaoOperador,
   conviteOperador,
@@ -9,7 +10,7 @@ import {
   type MotivoDeEncerramentoDeOperador,
   type TransacaoBanco,
 } from '@educa/nucleo'
-import { and, count, eq, isNull, sql } from 'drizzle-orm'
+import { and, count, eq, exists, isNull, sql } from 'drizzle-orm'
 
 /**
  * Chave do `pg_advisory_xact_lock` que põe em fila o `criar` e o `desativar` do `ops:operador` (Tech Spec da A0, seção
@@ -20,6 +21,24 @@ export const CHAVE_DA_TRAVA_DOS_OPERADORES = 7_000_002
 
 /** De quanto em quanto tempo, no máximo, a sessão do operador tem o uso gravado (Tech Spec da A0, seção 5). */
 export const INTERVALO_DE_GRAVACAO_DO_USO_SEGUNDOS = 60
+
+/**
+ * Até quantas horas depois do aceite do convite a entrada por e-mail ainda leva a configurar o segundo fator (Tech Spec
+ * da A0, seção 5, "Etapas"). Depois disso, sem segundo fator ativo, a senha certa responde igual à errada, e o caminho
+ * é um convite novo.
+ */
+export const PRAZO_PARA_CONFIGURAR_O_SEGUNDO_FATOR_HORAS = 72
+
+/**
+ * O que a entrada por e-mail lê do operador ativo, numa consulta: o id, o hash da senha, se o segundo fator está ativo e
+ * se o último aceite de convite ainda está nas 72 h. Nada de nome, e-mail nem segredo.
+ */
+export interface CredencialDeEntrada {
+  readonly operadorId: string
+  readonly senhaHash: string | null
+  readonly mfaAtivo: boolean
+  readonly aceiteRecente: boolean
+}
 
 /**
  * Quem roda o comando, pelo `OPERADOR` do ambiente:
@@ -273,6 +292,40 @@ export class OperadorRepository {
     if (gravados.length === 0) throw new Error('operador do aceite não gravado')
     await this.apagarCodigosDeRecuperacao(dados.operadorId)
     return true
+  }
+
+  /**
+   * A credencial do operador **ativo** com este e-mail (já normalizado; a coluna é `citext`), para a entrada por e-mail.
+   * O desativado não tem e-mail, e o filtro repete a condição: ele responde igual ao e-mail que não existe. O prazo do
+   * aceite é medido no relógio do banco, o mesmo que gravou `usado_em`.
+   */
+  async credencialDeEntrada(email: string): Promise<CredencialDeEntrada | undefined> {
+    const [linha] = await this.banco
+      .select({
+        operadorId: operador.id,
+        senhaHash: operador.senhaHash,
+        mfaAtivo: sql<boolean>`${operador.mfaAtivadoEm} is not null`,
+        aceiteRecente: sql<boolean>`${exists(
+          this.banco
+            .select({ um: sql`1` })
+            .from(conviteOperador)
+            .where(
+              and(
+                eq(conviteOperador.operadorId, operador.id),
+                sql`${conviteOperador.usadoEm} > now() - make_interval(hours => ${PRAZO_PARA_CONFIGURAR_O_SEGUNDO_FATOR_HORAS})`,
+              ),
+            ),
+        )}`,
+      })
+      .from(operador)
+      .where(and(eq(operador.email, email), isNull(operador.desativadoEm)))
+      .limit(1)
+    return linha
+  }
+
+  /** A entrada que falhou, em `acesso_operacao`: evento, IP e data. Sem operador e sem o e-mail digitado (C25). */
+  async registrarFalhaDeEntrada(ip: string): Promise<void> {
+    await this.banco.insert(acessoOperacao).values({ operadorId: null, evento: 'entrada_falha', ip })
   }
 
   /** A auditoria da operação: autor (apelido ou `bootstrap`), ação da lista fechada e operador alvo. Nada mais. */
