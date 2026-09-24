@@ -539,3 +539,71 @@ describe('arquitetura: nenhuma rota registrada cria operador (C44)', () => {
     expect(quemCriaOperadorForaDoComando([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho))
   })
 })
+
+/**
+ * Regra 10, item 1: toda tabela de domínio tem `escola_id`, e as exceções são curtas, fixas e escritas no item 1 das
+ * "Regras transversais" do `docs/modelo-de-dados.md`. A exceção que entra numa migration sem entrar no documento deixa
+ * o desenho mentindo sobre o isolamento (validação da A0, correção 2026-09-24-modelo-de-dados-tabelas-da-operacao).
+ */
+const DOC_MODELO = 'docs/modelo-de-dados.md'
+
+/** Toda tabela das migrations que termina sem `escola_id`, na ordem das migrations. */
+function tabelasSemEscola(sqls: readonly string[]): string[] {
+  const temEscola = new Map<string, boolean>()
+  for (const sql of sqls) {
+    for (const criacao of sql.matchAll(/CREATE TABLE "(\w+)" \(([\s\S]*?)\n\);/g)) temEscola.set(criacao[1] ?? '', /"escola_id"/.test(criacao[2] ?? ''))
+    for (const coluna of sql.matchAll(/ALTER TABLE "(\w+)" ADD COLUMN "escola_id"/g)) temEscola.set(coluna[1] ?? '', true)
+    for (const remocao of sql.matchAll(/DROP TABLE (?:IF EXISTS )?"(\w+)"/g)) temEscola.delete(remocao[1] ?? '')
+  }
+  return [...temEscola].filter(([, tem]) => !tem).map(([tabela]) => tabela)
+}
+
+/** `codigo_recuperacao_operador` → `CodigoRecuperacaoOperador`, o nome com que o documento desenha a tabela. */
+function nomeNoDocumento(tabela: string): string {
+  return tabela
+    .split('_')
+    .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
+    .join('')
+}
+
+/** O texto do item 1 das "Regras transversais", até o item 2. */
+function excecoesDoDocumento(doc: string): string {
+  const secao = doc.split(/^## Regras transversais$/m)[1] ?? ''
+  return (secao.split(/^2\. /m)[0] ?? '').split(/^1\. /m)[1] ?? ''
+}
+
+/** As tabelas sem `escola_id` que o item 1 não nomeia, pelo nome entre crases. */
+function excecoesNaoDeclaradas(tabelas: readonly string[], doc: string): string[] {
+  const item = excecoesDoDocumento(doc)
+  return tabelas.filter((tabela) => !item.includes(`\`${nomeNoDocumento(tabela)}\``))
+}
+
+describe('arquitetura: toda tabela sem escola_id está nas exceções do modelo de dados (regra 10, item 1)', () => {
+  const sqls = readdirSync(join(RAIZ, 'packages/nucleo/drizzle'))
+    .filter((arquivo) => arquivo.endsWith('.sql'))
+    .sort()
+    .map((arquivo) => readFileSync(join(RAIZ, 'packages/nucleo/drizzle', arquivo), 'utf8'))
+  const doc = readFileSync(join(RAIZ, DOC_MODELO), 'utf8')
+
+  it('a varredura enxerga as migrations: acha a identidade de login e as seis da operação, e não acha tabela com escola', () => {
+    const sem = tabelasSemEscola(sqls)
+    for (const tabela of ['conta', 'codigo_recuperacao', ...FISICOS_DA_OPERACAO]) expect(sem).toContain(tabela)
+    for (const tabela of ['usuario', 'turma', 'auditoria', 'job_registro']) expect(sem).not.toContain(tabela)
+    expect(excecoesDoDocumento(doc)).not.toBe('')
+  })
+
+  it(`o item 1 das Regras transversais do ${DOC_MODELO} nomeia cada uma`, () => {
+    expect(excecoesNaoDeclaradas(tabelasSemEscola(sqls), doc)).toEqual([])
+  })
+
+  it('reprova a tabela nova sem escola_id que o documento não nomeia, e aceita a que ganhou escola_id depois', () => {
+    const migrations = [
+      'CREATE TABLE "conta" (\n\t"id" uuid\n);',
+      'CREATE TABLE "nova" (\n\t"id" uuid\n);\nCREATE TABLE "tardia" (\n\t"id" uuid\n);\nCREATE TABLE "de_escola" (\n\t"escola_id" uuid\n);',
+      'ALTER TABLE "tardia" ADD COLUMN "escola_id" uuid;',
+    ]
+    const documento = '## Regras transversais\n\n1. Exceções: `Conta`.\n2. Id é UUID. `Nova` aparece aqui, fora do item 1.\n'
+    expect(tabelasSemEscola(migrations)).toEqual(['conta', 'nova'])
+    expect(excecoesNaoDeclaradas(tabelasSemEscola(migrations), documento)).toEqual(['nova'])
+  })
+})

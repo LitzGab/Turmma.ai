@@ -86,6 +86,30 @@ aluno e o vínculo dele vêm do seed sintético.
 `Convite` no F1 é só de coordenador, criado por comando do operador. Os tipos `professor` e
 `sala`, e o vínculo do aluno vindo da lista, entram no F2.
 
+## Operação Turmma
+
+Implementado na A0 (D76). A forma exata das tabelas, com unicidades, índices e checks, está na
+seção 3 da Tech Spec da A0 (`tasks/prd-apresentacao-operacao/techspec.md`); aqui fica o desenho.
+
+```
+Operador                  apelido* (único), nome?, email? (único), senhaHash?, mfaSegredoCifrado?,
+                          mfaChaveVersao?, mfaVersao*, mfaAtivadoEm?, mfaUltimoPasso?, criadoEm*,
+                          desativadoEm?
+CodigoRecuperacaoOperador → operador*, hmac*
+ConviteOperador           → operador*, tokenHash*, expiraEm* (72 h), usadoEm?, revogadoEm?
+SessaoOperador            → operador*, refreshHash*, refreshHashAnterior?, rotacionadoEm?, criadaEm*,
+                            ultimoUsoEm*, expiraEm* (8 h), encerradaEm?, motivo?
+AcessoOperacao            → operador?, evento* (entrada | entrada_falha | saida), ip*, em*
+AuditoriaOperacao         autor* (apelido ou bootstrap), acao*, → operadorAlvo*, em*
+```
+
+**São da nossa equipe, não de escola**, e por isso não têm `escolaId` (Tech Spec da A0, seção 11).
+O que impede que isso vire atalho para dado de escola é a cerca, provada por teste de arquitetura
+(C45): só o `OperadorRepository` as toca, e ele não toca outra tabela; o expurgo só apaga, pelo
+prazo, `AcessoOperacao`, `SessaoOperador` e `ConviteOperador`. O operador desativado não guarda
+dado pessoal, por check no banco: fica o apelido, que é o que vai para `Auditoria.autorOperador`.
+Um convite pendente por operador, por único parcial.
+
 ## Grade horária e calendário
 
 ```
@@ -290,9 +314,15 @@ liga a decisão sobre o professor (D45, regra 70 item 8). Os dois estão no mapa
 ## Regras transversais
 
 1. Toda tabela de domínio tem `escolaId`. As que variam por período têm `anoLetivoId`. As
-   exceções são curtas e fixas: tabela pública sem dono (habilidades da BNCC, banco de questões
-   público) e a identidade de login (`Conta`, `CodigoRecuperacao`), que é global por desenho e
-   só é alcançada pelo módulo `sessao` — ver "Pessoas e vínculos".
+   exceções são curtas e fixas, e esta lista é conferida contra as migrations por teste de
+   arquitetura (`apps/api/test/arquitetura.test.ts`):
+   - o próprio tenant: `Escola` e a `Rede` acima dela — ver "Estrutura institucional";
+   - tabela pública sem dono (habilidades da BNCC, banco de questões público);
+   - a identidade de login (`Conta`, `CodigoRecuperacao`), que é global por desenho e só é
+     alcançada pelo módulo `sessao` — ver "Pessoas e vínculos";
+   - as tabelas da operação Turmma (`Operador`, `CodigoRecuperacaoOperador`, `ConviteOperador`,
+     `SessaoOperador`, `AcessoOperacao`, `AuditoriaOperacao`), da nossa equipe e não de escola,
+     só alcançadas pelo `OperadorRepository` e pelo expurgo — ver "Operação Turmma".
 2. Id é UUID. Nunca sequencial.
 3. Nada é apagado de verdade: exclusão é lógica, com data e autor — exceto em pedido de
    eliminação do titular, que apaga de fato e propaga para backup na próxima rotação.
