@@ -8,10 +8,12 @@ export const BASE_DA_OPERACAO = '/operacao'
 export const ROTAS_DA_OPERACAO = {
   /** A casca da operação, com a sessão aberta. */
   inicio: '/',
+  /** O link do `ops:operador convite`, com o token no `#`, que a tela tira da barra antes de qualquer chamada. */
+  convite: '/convite',
   entrar: '/entrar',
   /** O código do aplicativo ou de recuperação, com o desafio `mfa` em memória. */
   mfa: '/mfa',
-  /** Configurar o segundo fator: a tela é da tarefa 11.0; a entrada já leva para cá o desafio `configurar_mfa`. */
+  /** Configurar o segundo fator, com o desafio `configurar_mfa` do aceite do convite ou da entrada por e-mail. */
   configurarMfa: '/mfa/configurar',
 } as const
 

@@ -220,7 +220,7 @@ export function desafioDeOperador(etapa: EtapaDoDesafioDeOperador): string | und
   return desafio?.etapa === etapa ? desafio.valor : undefined
 }
 
-/** Guarda o desafio de uma etapa: além da entrada, quem chama é o aceite do convite (tarefa 11.0). */
+/** Guarda o desafio de uma etapa: quem chama é o aceite do convite (`configurar_mfa`) e a configuração (`mfa`). */
 export function guardarDesafioDeOperador(etapa: EtapaDoDesafioDeOperador, valor: string): void {
   desafio = { etapa, valor }
 }

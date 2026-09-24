@@ -8,7 +8,8 @@ import { codigoDoAutenticador } from './sessao.ts'
  *
  * Nasce como o `ops:operador criar` o faria (a linha e o convite no banco, o token só aqui) e passa pelas rotas de
  * verdade da API: aceitar o convite com a senha, configurar o segundo fator e ativá-lo com o primeiro código. As telas
- * do convite e do configurar são da tarefa 11.0; aqui elas são só o caminho até o operador que entra.
+ * do convite e do configurar têm o spec delas (`operacao-convite.spec.ts`); aqui elas são só o caminho até o operador
+ * que entra.
  *
  * Tudo sintético: apelido e nome inventados, e-mail no domínio reservado `.invalid` (regra 20, item 17).
  */
@@ -47,6 +48,47 @@ async function pedirNaApi<T>(caminho: string, corpo: unknown, cookie?: string): 
   if (!resposta.ok) throw new Error(`o seed do operador falhou em ${caminho}: ${String(resposta.status)}`)
   const texto = await resposta.text()
   return { corpo: (texto === '' ? undefined : JSON.parse(texto)) as T, cookies: resposta.headers.getSetCookie() }
+}
+
+/** O operador que acabou de ser criado pelo comando: a linha e o convite, sem senha nem segundo fator. */
+export interface OperadorConvidado {
+  readonly operadorId: string
+  readonly apelido: string
+  readonly nome: string
+  readonly email: string
+  /** O token do link, que o `ops:operador` escreve no arquivo 0600 e que a pessoa recebe no `#` do endereço. */
+  readonly token: string
+}
+
+/** O convite como o comando o deixou, ou num dos três estados em que ele não vale mais (C9). */
+export type EstadoDoConviteDeTeste = 'pendente' | 'usado' | 'vencido' | 'revogado'
+
+/**
+ * O operador como o `ops:operador criar` o deixa: a linha com apelido, nome e e-mail, e um convite de 72 h cujo banco
+ * guarda só o SHA-256 do token. Os outros estados são o mesmo convite depois de usado, vencido ou revogado.
+ */
+export async function criarOperadorConvidado(estado: EstadoDoConviteDeTeste = 'pendente'): Promise<OperadorConvidado> {
+  const marca = randomUUID().replaceAll('-', '').slice(0, 12)
+  const apelido = `e2e-${marca}`
+  const nome = `Operadora sintética ${marca.slice(0, 6)}`
+  const email = `${apelido}@turmma.invalid`
+  // 32 bytes em base64url, como o `ops:operador`; o banco guarda só o SHA-256 em hex.
+  const token = randomBytes(32).toString('base64url')
+  const expira = estado === 'vencido' ? "now() - interval '1 minute'" : "now() + interval '72 hours'"
+  const usado = estado === 'usado' ? 'now()' : 'null'
+  const revogado = estado === 'revogado' ? 'now()' : 'null'
+
+  const operadorId = await comBanco(async (banco) => {
+    const { rows } = await banco.query<{ id: string }>('insert into operador (apelido, nome, email) values ($1, $2, $3) returning id', [apelido, nome, email])
+    const id = rows[0]?.id
+    if (id === undefined) throw new Error('o seed do e2e não criou o operador')
+    await banco.query(`insert into convite_operador (operador_id, token_hash, expira_em, usado_em, revogado_em) values ($1, $2, ${expira}, ${usado}, ${revogado})`, [
+      id,
+      createHash('sha256').update(token).digest('hex'),
+    ])
+    return id
+  })
+  return { operadorId, apelido, nome, email, token }
 }
 
 export async function criarOperadorComSegundoFator(): Promise<OperadorDeTeste> {

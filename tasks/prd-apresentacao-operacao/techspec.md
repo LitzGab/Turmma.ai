@@ -217,6 +217,11 @@ próprio; o relógio de inatividade conta do último uso aceito pela API, com o 
 (a API grava `ultimoUsoEm` uma vez por minuto); código do segundo fator recusado volta à entrada, porque a API gasta o
 desafio; abrir a aba sem sessão vai à entrada sem a mensagem de sessão encerrada.
 
+Da tarefa 11.0: "configure de novo" (409) e o código recusado ao configurar voltam à entrada, com texto próprio, porque a
+API gastou o desafio e só o e-mail e a senha devolvem outro `configurar_mfa`; os códigos de recuperação aparecem junto do
+QR (vêm do `configurar`), com `beforeunload` enquanto estão na tela; o convite que não vale e o link sem token mostram
+"Este convite não vale mais. Peça um novo à equipe."; a tela do convite ouve o `hashchange`.
+
 ## 10. Testes
 
 | Camada | O que será testado |

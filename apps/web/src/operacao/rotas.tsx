@@ -16,6 +16,8 @@ import {
 import { ROTAS_DA_OPERACAO } from './caminhos'
 import { CascaDaOperacao, CascaPublicaDaOperacao, ErroDaOperacao } from './componentes/CascaDaOperacao'
 import { useInatividadeDaOperacao } from './inatividade'
+import { ConfigurarMfa } from './paginas/ConfigurarMfa'
+import { Convite } from './paginas/Convite'
 import { Entrar } from './paginas/Entrar'
 import { Mfa } from './paginas/Mfa'
 import { useTituloDaPagina } from './titulo'
@@ -119,8 +121,10 @@ export default function RotasDaOperacao() {
   return (
     <QueryClientProvider client={clienteDaOperacao}>
       <Switch>
+        <Route path={ROTAS_DA_OPERACAO.convite} component={Convite} />
         <Route path={ROTAS_DA_OPERACAO.entrar} component={Entrar} />
         <Route path={ROTAS_DA_OPERACAO.mfa} component={Mfa} />
+        <Route path={ROTAS_DA_OPERACAO.configurarMfa} component={ConfigurarMfa} />
         <Route path={ROTAS_DA_OPERACAO.inicio}>
           <Protegida>
             <Inicio />

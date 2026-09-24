@@ -1,7 +1,7 @@
 # Tarefas — Identidade do operador Turmma (A0)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 10 de 11 concluídas
+**Status:** 11 de 11 concluídas
 
 ## Lista
 
@@ -66,10 +66,10 @@
   - [x] 10.3 Casca da operação e as telas de entrar e de código
   - [x] 10.4 Testes: E2–E4, B1 (chunk), B2
 
-- [ ] **11.0 — Web do operador: convite e configurar o segundo fator**
-  - [ ] 11.1 Tela do convite, com o token do `#`
-  - [ ] 11.2 Configurar: QR, chave em texto, `otpauth://`, códigos uma vez
-  - [ ] 11.3 Testes: E1
+- [x] **11.0 — Web do operador: convite e configurar o segundo fator**
+  - [x] 11.1 Tela do convite, com o token do `#`
+  - [x] 11.2 Configurar: QR, chave em texto, `otpauth://`, códigos uma vez
+  - [x] 11.3 Testes: E1
 
 ## Dependências e paralelismo
 
