@@ -38,7 +38,7 @@ numa tela própria, sem nunca ver dado de pessoa da escola.
 
 | # | Requisito | Como se prova |
 |---|---|---|
-| RF1 | O operador cria rede (nome, tipo: prefeitura, grupo ou independente) e escola (rede, nome, endereço), com as regras do `ops:escola`; clique duplo não cria duas | Endereço repetido dá erro tipado; dois pedidos iguais em paralelo criam uma só |
+| RF1 | O operador cria rede (nome, tipo: prefeitura, grupo ou independente) e escola (rede, nome, endereço de entrada — o `slug` de `/e/<slug>`, não o endereço postal), com as regras do `ops:escola`; clique duplo não cria duas | Endereço repetido dá erro tipado; dois pedidos iguais em paralelo criam uma só |
 | RF2 | O operador cadastra a primeira coordenadora (nome e e-mail); a tela mostra antes o que vai acontecer, e o link do convite aparece **uma vez**, para copiar. Convite de uso único, 72 h; revogar e refazer pedem confirmação, e refazer invalida o anterior | Recarregar não mostra o link; o banco guarda só o hash; dois gerar ou gerar e refazer em paralelo deixam um só convite valendo |
 | RF3 | A lista de escolas mostra, por escola: rede, nome, endereço, estado (convite pendente, convite vencido, convite revogado, ativa) e as contagens de turmas, professores ativos e alunos ativos do ano letivo em curso. **Só número** | Valores sentinela de nome, e-mail e matrícula semeados na escola não aparecem em nenhuma resposta do painel, inclusive de erro |
 | RF4 | A tela de uso mostra, por escola, requisições, jobs e bytes de storage do último dia fechado e do mês (D30); o dia de hoje aparece depois da consolidação | Com uso sintético em duas escolas, cada uma mostra o seu; o mês soma requisições e jobs e pega o pico de bytes |
