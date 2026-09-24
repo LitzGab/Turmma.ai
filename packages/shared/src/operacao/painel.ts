@@ -102,8 +102,10 @@ export type PedidoConviteDaCoordenacao = z.infer<typeof esquemaPedidoConviteDaCo
 const FORMATO_DO_TOKEN_DE_CONVITE = /^[A-Za-z0-9_-]{43}$/
 
 /**
- * Resposta do gerar: o id do convite (que o refazer e o revogar recebem) e o token, que só existe nesta resposta (o banco
- * guarda o SHA-256). A web monta o link `/convite#<token>`. Sai com `no-store`. Estrito: nada da pessoa.
+ * Resposta do gerar (`POST /v1/operacao/escolas/:id/convite-coordenacao`) e do refazer
+ * (`POST /v1/operacao/convites/:id/refazer`): o id do convite novo (que o refazer e o revogar recebem) e o token, que só
+ * existe nesta resposta (o banco guarda o SHA-256). A web monta o link `/convite#<token>`. Sai com `no-store`. Estrito:
+ * nada da pessoa.
  */
 export const esquemaRespostaConviteDaCoordenacao = z.strictObject({
   conviteId: z.uuid(),

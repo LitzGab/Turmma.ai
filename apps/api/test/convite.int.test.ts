@@ -547,12 +547,13 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
       // A lista não pode sair vazia por mudança de versão do Express: aí o teste passaria sem olhar nada.
       expect(rotas).toContain('GET /saude')
       // As do convite do operador (A0, tarefa 5.0) também só consultam e aceitam: o convite dele nasce só pelo
-      // `ops:operador`. As do painel (A0b) geram e revogam o convite da coordenação, e são `@RotaDeOperacao` (C41, C46).
+      // `ops:operador`. As do painel (A0b) geram, refazem e revogam o convite da coordenação, e são `@RotaDeOperacao` (C41, C46).
       expect(rotas.filter((rota) => /convite/i.test(rota)).sort()).toEqual([
         'POST /v1/convites/aceitar',
         'POST /v1/convites/consultar',
         'POST /v1/operacao/convite/aceitar',
         'POST /v1/operacao/convite/consultar',
+        'POST /v1/operacao/convites/:id/refazer',
         'POST /v1/operacao/convites/:id/revogar',
         'POST /v1/operacao/escolas/:id/convite-coordenacao',
       ])

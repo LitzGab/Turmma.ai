@@ -190,6 +190,28 @@ describe('ConviteRepository: o convite e o usuário convidado só na escola do c
     expect(await convitesDe(usuarioId)).toEqual([primeiro, segundo, terceiro].sort())
   })
 
+  it('revogarParaRefazer (A0b, 3.0): só o convite em aberto (pendente ou vencido) da escola do contexto, uma vez; no contexto de B, o de A fica como está', async () => {
+    const revogadoEm = async (conviteId: string) => (await bancada.pool.query<{ revogado: boolean }>('select revogado_em is not null as revogado from convite where id = $1', [conviteId])).rows[0]?.revogado
+    const pendente = await convidado({ aceitoHaS: null })
+    // Em B, o convite de A não é achado: sem a escola no `where`, seria revogado e o usuário de A voltaria.
+    expect(await naEscola(escolaB, (repositorio) => repositorio.revogarParaRefazer(pendente.conviteId))).toBeUndefined()
+    expect(await revogadoEm(pendente.conviteId)).toBe(false)
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(pendente.conviteId))).toBe(pendente.usuarioId)
+    expect(await revogadoEm(pendente.conviteId)).toBe(true)
+    // Já revogado: não revoga de novo, e não devolve usuário para outro convite.
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(pendente.conviteId))).toBeUndefined()
+
+    const vencido = await convidado({ aceitoHaS: null })
+    await bancada.pool.query("update convite set expira_em = now() - interval '1 hour' where id = $1", [vencido.conviteId])
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(vencido.conviteId))).toBe(vencido.usuarioId)
+    expect(await revogadoEm(vencido.conviteId)).toBe(true)
+
+    // Usado (aceito): não é mais refeito, e continua sem revogação.
+    const usado = await convidado({ aceitoHaS: 10 })
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(usado.conviteId))).toBeUndefined()
+    expect(await revogadoEm(usado.conviteId)).toBe(false)
+  })
+
   it('sem escola no contexto, falha fechada', async () => {
     const alvo = await convidado()
     await expect(executarNoContexto({ requisicaoId: randomUUID() }, () => new ConviteRepository(bancada.banco).ativarPorConvite(alvo.usuarioId, alvo.conviteId))).rejects.toThrow(

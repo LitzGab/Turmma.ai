@@ -93,11 +93,13 @@ aluno e o vínculo dele vêm do seed sintético.
 `sala`, e o vínculo do aluno vindo da lista, entram no F2.
 
 Na A0b o convite da primeira coordenação também nasce pelo painel da operação, pelo mesmo caso de
-uso do comando. Gerar e revogar pegam uma trava por escola (`pg_advisory_xact_lock(7_000_003,
+uso do comando, e o painel também o refaz. Gerar, refazer e revogar pegam uma trava por escola (`pg_advisory_xact_lock(7_000_003,
 hashtext(escola_id))`) e só então leem o estado da coordenação (`estadoDaCoordenacao`), que decide
 pela matriz da Tech Spec da A0b (seção 5): no máximo um convite em aberto por escola. O índice
 único parcial `convite_pendente_unico (escola_id, usuario_id) where usado_em is null and
-revogado_em is null` é a rede de segurança da trava, e a recusa dele sai como `CONFLITO`.
+revogado_em is null` é a rede de segurança da trava, e a recusa dele sai como `CONFLITO`. O refazer
+revoga o convite de origem por um `update` condicional (só em aberto) e cria outro para o mesmo
+usuário, com `convite.refeito` na auditoria (a origem, o usuário e a validade).
 
 ## Operação Turmma
 

@@ -157,6 +157,20 @@ const REVOGAR: Readonly<Record<EstadoDaCoordenacao, 'revogar' | 'conflito' | 'na
 }
 
 /**
+ * O que refazer (do último convite) faz em cada estado da coordenação (a mesma matriz): só o convite em aberto, pendente
+ * ou vencido, é refeito. `sem_convite` não chega aqui: não há convite a passar, e o id é o de um inexistente.
+ */
+const REFAZER: Readonly<Record<EstadoDaCoordenacao, 'refazer' | 'conflito'>> = {
+  pendente: 'refazer',
+  vencido: 'refazer',
+  sem_convite: 'conflito',
+  revogado: 'conflito',
+  aceito: 'conflito',
+  sem_coordenacao: 'conflito',
+  ativa: 'conflito',
+}
+
+/**
  * Pega a trava do convite da escola do contexto e só então lê o estado da coordenação (seção 7c, "Convite da escola").
  * Escola inexistente: `NAO_ENCONTRADO`, antes de qualquer escrita.
  */
@@ -215,6 +229,50 @@ export async function criarConviteDeCoordenador(banco: Banco, autor: Conferencia
     }),
   )
   return { conviteId, token }
+}
+
+/**
+ * O refazer do convite da coordenação pelo operador, pelo painel (`POST /v1/operacao/convites/:id/refazer`; RF2; Tech
+ * Spec da A0b, seção 5). A escola vem do convite, nunca do argumento, e só convite `tipo = 'coordenador'` é achado. Numa
+ * transação, com o autor conferido como primeira instrução, no contexto da escola, com a trava dela, e só então o estado:
+ * - convite inexistente ou de outro tipo: `NAO_ENCONTRADO`;
+ * - `revogado`, `aceito`, `sem_coordenacao`, `ativa`: `CONFLITO`, sem gravar nada;
+ * - convite que não é o último da escola (já refeito, ou em aberto de antes da trava): `CONFLITO` (o convite mudou);
+ * - `pendente`, `vencido`: revoga o convite pelo `update` condicional (só em aberto: não usado e não revogado) e cria
+ *   outro, válido por 72 h, para o **mesmo usuário**, com `convite.refeito` (a origem, o usuário e a validade). Nome e
+ *   e-mail não mudam aqui: corrigem-se revogando e gerando. Se o `update` não revoga (o convite deixou de estar em aberto
+ *   no meio), `CONFLITO`.
+ *
+ * Devolve o convite novo, o token (só nesta resposta; o banco guarda o SHA-256) e a escola, para o log de quem chamou.
+ * Nunca o token, o nome ou o e-mail em log.
+ */
+export async function refazerConviteDaCoordenacao(
+  banco: Banco,
+  autor: ConferenciaDoAutor,
+  conviteId: string,
+  relogio: Relogio = relogioDoSistema,
+): Promise<{ conviteId: string; token: string; escolaId: string }> {
+  const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
+  const token = randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')
+  const expiraEm = new Date(relogio.agora().getTime() + VALIDADE_DO_CONVITE_HORAS * 60 * 60 * 1_000)
+  return executarNoContexto({ requisicaoId }, () =>
+    banco.transaction(async (tx) => {
+      const autorOperador = await autor(tx)
+      const escolaId = await new ResolucaoDeTenantRepository(tx).escolaDoConviteParaOperador(conviteId)
+      if (escolaId === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      const novo = await executarNoContexto({ requisicaoId, escolaId }, async () => {
+        const convites = new ConviteRepository(tx)
+        const { estado, ultimoConviteId } = await coordenacaoSobATrava(convites)
+        if (REFAZER[estado] === 'conflito' || conviteId !== ultimoConviteId) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
+        const usuarioId = await convites.revogarParaRefazer(conviteId)
+        if (usuarioId === undefined) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
+        const criado = await convites.criarConvite({ tokenHash: hashDoToken(token), usuarioId, expiraEm })
+        await registro.gravar(tx, 'convite.refeito', { entidadeId: criado, depois: { origemId: conviteId, usuarioId, expiraEm: expiraEm.toISOString() }, autorOperador })
+        return criado
+      })
+      return { conviteId: novo, token, escolaId }
+    }),
+  )
 }
 
 /**

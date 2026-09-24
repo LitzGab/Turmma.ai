@@ -137,6 +137,17 @@ export const ACOES_DE_AUDITORIA = {
     finalidade: null,
   },
   /**
+   * O operador refez o convite da coordenação pelo painel da operação (A0b, tarefa 3.0): o convite de origem
+   * (`origemId`, em `pendente` ou `vencido`) deixou de valer, e `entidadeId` é o convite novo, para o mesmo usuário
+   * (`usuarioId`), válido até `expiraEm`. Nunca o nome, o e-mail nem o token.
+   */
+  'convite.refeito': {
+    entidade: 'convite',
+    antes: null,
+    depois: z.strictObject({ origemId: z.uuid(), usuarioId: z.uuid(), expiraEm: z.iso.datetime() }),
+    finalidade: null,
+  },
+  /**
    * A pessoa abriu o link e aceitou o convite (7.0). `usuarioAtivo` diz se o aceite já ativou o usuário (conta nova,
    * que definiu a senha ali) ou se ele espera o login com a senha que a conta já tem (conta de outra escola).
    */

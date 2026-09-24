@@ -1,6 +1,8 @@
-import { criarBanco, criarPool, estadoDaCoordenacao, executarNoContexto, type Banco, type PoolBanco } from '@educa/nucleo'
+import { criarBanco, criarPool, ErroDeDominio, estadoDaCoordenacao, executarNoContexto, type Banco, type PoolBanco, type TransacaoBanco } from '@educa/nucleo'
 import { CodigoDeErro, esquemaRespostaConviteDaCoordenacao, ESTADOS_DA_COORDENACAO, type EstadoDaCoordenacao, type RespostaConviteDaCoordenacao } from '@educa/shared'
 import type { INestApplication } from '@nestjs/common'
+import { is, SQL } from 'drizzle-orm'
+import { PgDialect } from 'drizzle-orm/pg-core'
 import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -13,18 +15,18 @@ import { executarOpsConviteCoordenador } from '../src/ops/convite-coordenador.js
 import { desativarOperador } from '../src/ops/operador.js'
 import { executarOpsRevogarConvite } from '../src/ops/revogar-convite.js'
 import { CHAVE_DA_TRAVA_DO_CONVITE_DA_ESCOLA, ConviteRepository } from '../src/sessao/convite.repository.js'
-import { criarConviteDeCoordenador } from '../src/sessao/convite.service.js'
+import { criarConviteDeCoordenador, refazerConviteDaCoordenacao } from '../src/sessao/convite.service.js'
 import { aguardar, esperarNaTrava, GatilhoDeParada } from './gatilho-de-parada.js'
 import { ESPERA_DO_AUTOR, esperarErro, pedir, PRAZO_DAS_CONSULTAS_MS, segurarODesativar, subirApiDoPainel, type Resposta } from './painel-de-teste.js'
 import { BancadaDeOperadores } from './sessao-de-operador.js'
 import { autorDaBancada, BancadaDeSessoes } from './sessao-de-teste.js'
 
 /**
- * O convite da primeira coordenação pelo painel da operação (A0b, tarefa 2.0): `POST /v1/operacao/escolas/:id/convite-
- * coordenacao` e `POST /v1/operacao/convites/:id/revogar`, e os `ops:*` de convite pelo mesmo caso de uso. Cenários de
- * `tasks/prd-apresentacao-painel/cenarios.md`: E6 (gerar e revogar), E7, E8 (sem refazer), E10, E11 e E13 (convite),
- * E12 (as duas rotas), I7, A2 e A3 (gerar e revogar). As partes de login da E6 são da 4.0, e o refazer, da 3.0. Postgres
- * e Redis reais do compose de teste.
+ * O convite da primeira coordenação pelo painel da operação (A0b, tarefas 2.0 e 3.0): `POST /v1/operacao/escolas/:id/
+ * convite-coordenacao`, `POST /v1/operacao/convites/:id/refazer` e `POST /v1/operacao/convites/:id/revogar`, e os `ops:*`
+ * de convite pelo mesmo caso de uso. Cenários de `tasks/prd-apresentacao-painel/cenarios.md`: E6 (gerar, refazer e
+ * revogar), E7, E8, E9, E10, E11 e E13 (convite), E12 (as três rotas), I6 (refazer), I7, A1, A2 e A3 (gerar, refazer e
+ * revogar). As partes de login da E6 são da 4.0. Postgres e Redis reais do compose de teste.
  */
 
 const HORA_MS = 60 * 60 * 1_000
@@ -52,7 +54,38 @@ const REVOGAR: Readonly<Record<EstadoDaCoordenacao, 204 | 404 | 409>> = {
   sem_coordenacao: 409,
   ativa: 409,
 }
+/** O que refazer (do último convite) faz em cada estado. `sem_convite`: o id é inexistente, como no revogar. */
+const REFAZER: Readonly<Record<EstadoDaCoordenacao, 201 | 404 | 409>> = {
+  sem_convite: 404,
+  pendente: 201,
+  vencido: 201,
+  revogado: 409,
+  aceito: 409,
+  sem_coordenacao: 409,
+  ativa: 409,
+}
 const CODIGO: Readonly<Record<404 | 409, CodigoDeErro>> = { 404: CodigoDeErro.NAO_ENCONTRADO, 409: CodigoDeErro.CONFLITO }
+/** O prazo das consultas da API da I6 que deixa o `statement_timeout` estourar na trava segura pelo teste. */
+const PRAZO_CURTO_MS = 1_000
+
+/**
+ * A mutação da E9, só no teste: o mesmo banco, com a trava do convite da escola desligada. Toda transação que ele abre
+ * recebe um `execute` que devolve na hora a consulta do `pg_advisory_xact_lock` e passa as outras adiante; nada muda no
+ * código de produção, que chama o caso de uso com este banco no lugar do de verdade.
+ */
+function semATravaDaEscola(banco: Banco): Banco {
+  const dialeto = new PgDialect()
+  const ehATrava = (consulta: unknown): boolean => is(consulta, SQL) && dialeto.sqlToQuery(consulta).sql.includes('pg_advisory_xact_lock')
+  const transacaoSemATrava = (tx: TransacaoBanco): TransacaoBanco =>
+    new Proxy(tx, {
+      get: (alvo, chave, receptor) =>
+        chave === 'execute' ? (consulta: SQL) => (ehATrava(consulta) ? Promise.resolve({ rows: [] }) : alvo.execute(consulta)) : Reflect.get(alvo, chave, receptor),
+    })
+  return new Proxy(banco, {
+    get: (alvo, chave, receptor) =>
+      chave === 'transaction' ? <T>(corpo: (tx: TransacaoBanco) => Promise<T>) => alvo.transaction((tx) => corpo(transacaoSemATrava(tx))) : Reflect.get(alvo, chave, receptor),
+  })
+}
 
 interface Pessoa {
   readonly nome: string
@@ -65,6 +98,8 @@ interface EscolaPreparada {
   readonly quem: Pessoa
   /** O último convite de coordenação da escola; nenhum em `sem_convite`. */
   readonly conviteId: string | undefined
+  /** O token do último convite (o do link); nenhum em `sem_convite`. */
+  readonly link: string | undefined
 }
 
 describe('painel da operação: o convite da coordenação, gerar e revogar (tarefa 2.0)', () => {
@@ -80,6 +115,8 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
   const pessoa = (): Pessoa => ({ nome: `Coordenação Sintética ${randomUUID().slice(0, 8)}`, email: `coordenacao-${randomUUID()}@escola.invalid` })
   const gerar = (token: string, escolaId: string, corpo: unknown = pessoa()) => pedir(url, 'POST', `/v1/operacao/escolas/${escolaId}/convite-coordenacao`, token, corpo)
   const revogar = (token: string, conviteId: string, corpo?: unknown) => pedir(url, 'POST', `/v1/operacao/convites/${conviteId}/revogar`, token, corpo)
+  const refazer = (token: string, conviteId: string, corpo?: unknown, naApi = url) => pedir(naApi, 'POST', `/v1/operacao/convites/${conviteId}/refazer`, token, corpo)
+  const consultar = (link: string) => pedir(url, 'POST', '/v1/convites/consultar', undefined, { token: link })
   const aceitar = (token: string, senha?: string) => pedir(url, 'POST', '/v1/convites/aceitar', undefined, senha === undefined ? { token } : { token, senha })
   const gerado = (resposta: Resposta): RespostaConviteDaCoordenacao => esquemaRespostaConviteDaCoordenacao.parse(resposta.corpo)
 
@@ -121,11 +158,11 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
   async function escolaEm(estado: EstadoDaCoordenacao, token: string): Promise<EscolaPreparada> {
     const escolaId = await escolas.escola()
     const quem = pessoa()
-    if (estado === 'sem_convite') return { escolaId, quem, conviteId: undefined }
+    if (estado === 'sem_convite') return { escolaId, quem, conviteId: undefined, link: undefined }
     if (estado === 'vencido') {
-      const { conviteId } = await criarConviteDeCoordenador(banco, autorDaBancada, { escolaId, ...quem }, { agora: () => new Date(Date.now() - 73 * HORA_MS) })
+      const { conviteId, token: link } = await criarConviteDeCoordenador(banco, autorDaBancada, { escolaId, ...quem }, { agora: () => new Date(Date.now() - 73 * HORA_MS) })
       expect(await estadoDe(escolaId)).toBe('vencido')
-      return { escolaId, quem, conviteId }
+      return { escolaId, quem, conviteId, link }
     }
     // A pessoa que já trabalha em outra escola cliente: o aceite não troca a senha dela e espera o login.
     if (estado === 'aceito') await pool.query("insert into conta (email, senha_hash) values ($1, 'hash-sintetico')", [quem.email])
@@ -137,7 +174,7 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
     if (estado === 'ativa' || estado === 'sem_coordenacao') expect((await aceitar(link, SENHA)).corpo).toEqual({ etapa: 'configurar_mfa', desafio: expect.any(String) })
     if (estado === 'sem_coordenacao') await pool.query("update usuario set desativado_em = now() where escola_id = $1 and papel = 'coordenador'", [escolaId])
     expect(await estadoDe(escolaId)).toBe(estado)
-    return { escolaId, quem, conviteId }
+    return { escolaId, quem, conviteId, link }
   }
 
   /** Segura a trava do convite da escola por fora, numa conexão do teste; `soltar` pode ser chamado mais de uma vez. */
@@ -168,6 +205,33 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
       return (rows[0]?.total ?? 0) >= quantas
     }, `${quantas} na trava do convite da escola`)
   }
+
+  /**
+   * Dispara as duas chamadas com a trava da escola segura pelo teste, uma depois da outra: a segunda só sai quando a
+   * primeira já espera na trava, e o Postgres entrega a trava na ordem da fila. Solta com as duas esperando.
+   */
+  async function emOrdemNaTrava(escolaId: string, primeira: () => Promise<Resposta>, segunda: () => Promise<Resposta>): Promise<[Resposta, Resposta]> {
+    const soltar = await segurarTravaDaEscola(escolaId)
+    try {
+      const daPrimeira = primeira()
+      await esperarNaTravaDaEscola(escolaId, 1)
+      const daSegunda = segunda()
+      await esperarNaTravaDaEscola(escolaId, 2)
+      await soltar()
+      return [await daPrimeira, await daSegunda]
+    } finally {
+      await soltar()
+    }
+  }
+
+  /** Os convites da escola, com o usuário, e se cada um está em aberto ou revogado. */
+  const convitesDa = async (escolaId: string) =>
+    (
+      await pool.query<{ id: string; usuario_id: string; expira_em: Date; aberto: boolean; revogado: boolean }>(
+        'select id, usuario_id, expira_em, usado_em is null and revogado_em is null as aberto, revogado_em is not null as revogado from convite where escola_id = $1 order by id',
+        [escolaId],
+      )
+    ).rows
 
   /** Dispara as chamadas com a trava da escola segura pelo teste, confere que todas esperam nela, e só então solta. */
   async function naFilaDaTrava(escolaId: string, chamadas: () => Promise<Resposta>[]): Promise<Resposta[]> {
@@ -333,9 +397,9 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
   })
 
   describe('E12: o corpo não escolhe o autor nem a escola', () => {
-    it('gerar com autor, escolaId ou qualquer campo a mais, e revogar com corpo, são 400 ENTRADA_INVALIDA, sem gravar nada', async () => {
+    it('gerar com autor, escolaId ou qualquer campo a mais, e refazer e revogar com corpo, são 400 ENTRADA_INVALIDA, sem gravar nada', async () => {
       const sessao = await operadores.operadorComSessao()
-      // Sem convite, o gerar criaria; com o convite pendente, o revogar revogaria: só o corpo os segura.
+      // Sem convite, o gerar criaria; com o convite pendente, o refazer refaria e o revogar revogaria: só o corpo os segura.
       const livre = await escolas.escola()
       const escola = await escolaEm('pendente', sessao.token)
       const quem = pessoa()
@@ -343,7 +407,10 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
       for (const aMais of [{ autor: 'outra-pessoa' }, { autorOperador: 'outra-pessoa' }, { escolaId: escola.escolaId }]) {
         esperarErro(await gerar(sessao.token, livre, { ...quem, ...aMais }), 400, CodigoDeErro.ENTRADA_INVALIDA)
       }
-      for (const corpo of [{ autor: 'outra-pessoa' }, { conviteId: escola.conviteId }]) esperarErro(await revogar(sessao.token, escola.conviteId ?? '', corpo), 400, CodigoDeErro.ENTRADA_INVALIDA)
+      for (const corpo of [{ autor: 'outra-pessoa' }, { conviteId: escola.conviteId }]) {
+        esperarErro(await revogar(sessao.token, escola.conviteId ?? '', corpo), 400, CodigoDeErro.ENTRADA_INVALIDA)
+        esperarErro(await refazer(sessao.token, escola.conviteId ?? '', corpo), 400, CodigoDeErro.ENTRADA_INVALIDA)
+      }
       expect(await retrato(livre, quem.email)).toEqual(livreAntes)
       expect(await retrato(escola.escolaId, quem.email)).toEqual(antes)
       expect((await pool.query('select id from conta where email = $1', [quem.email])).rows).toEqual([])
@@ -474,8 +541,32 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
       expect(await abertos(escola.escolaId)).toBe(1)
     })
 
+    it('refazer, com o desativar segurando a linha: o mesmo, e o convite continua em aberto, sem outro', async () => {
+      const [sessao, quemPrepara] = await Promise.all([operadores.operadorComSessao(), operadores.operadorComSessao()])
+      const escola = await escolaEm('pendente', quemPrepara.token)
+      const antes = await retrato(escola.escolaId, escola.quem.email)
+      const desativar = await segurarODesativar(pool, sessao.operadorId)
+      try {
+        const escrita = refazer(sessao.token, escola.conviteId ?? '')
+        await esperarNaTrava(pool, ESPERA_DO_AUTOR)
+        await desativar.confirmar()
+        esperarErro(await escrita, 401, CodigoDeErro.SESSAO_ENCERRADA)
+      } finally {
+        await desativar.desfazer()
+      }
+      expect(await retrato(escola.escolaId, escola.quem.email)).toEqual(antes)
+      expect(await abertos(escola.escolaId)).toBe(1)
+    })
+
+    const ESCRITA = {
+      gerar: { status: 201, acao: 'convite.criado' },
+      refazer: { status: 201, acao: 'convite.refeito' },
+      revogar: { status: 204, acao: 'convite.revogado' },
+    } as const
+
     it.each([
       ['gerar', 'insert'],
+      ['refazer', 'update'],
       ['revogar', 'update'],
     ] as const)('%s segurando o for share (parado no %s de convite): o desativar espera, e a escrita entra com a auditoria', async (acao, evento) => {
       const [sessao, quemDesativa] = await Promise.all([operadores.operadorComSessao(), operadores.operador()])
@@ -483,14 +574,14 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
       const gatilho = new GatilhoDeParada(pool, { tabela: 'convite', evento, quando: `new.escola_id = '${escola.escolaId}'::uuid` })
       await gatilho.armar()
       try {
-        const escrita = acao === 'gerar' ? gerar(sessao.token, escola.escolaId) : revogar(sessao.token, escola.conviteId ?? '')
+        const escrita = acao === 'gerar' ? gerar(sessao.token, escola.escolaId) : acao === 'refazer' ? refazer(sessao.token, escola.conviteId ?? '') : revogar(sessao.token, escola.conviteId ?? '')
         await gatilho.esperarParadas()
         const desativacao = desativarOperador(banco, quemDesativa.apelido, sessao.apelido)
         await esperarNaTrava(pool, '%from "operador"%for update%')
         await gatilho.soltar()
-        expect((await escrita).status).toBe(acao === 'gerar' ? 201 : 204)
+        expect((await escrita).status).toBe(ESCRITA[acao].status)
         await desativacao
-        const registrada = await auditoriaDe(escola.escolaId, acao === 'gerar' ? 'convite.criado' : 'convite.revogado')
+        const registrada = await auditoriaDe(escola.escolaId, ESCRITA[acao].acao)
         expect(registrada).toEqual([expect.objectContaining({ autor_operador: sessao.apelido, autor_usuario_id: null })])
         expect((await pool.query('select desativado_em is not null as desativado from operador where id = $1', [sessao.operadorId])).rows).toEqual([{ desativado: true }])
       } finally {
@@ -543,6 +634,24 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
       expect(await retrato(escola.escolaId, escola.quem.email)).toEqual(antes)
     })
 
+    it('refazer pelo id do convite de uma escola ativa não grava nada, nem quando o último convite ainda está em aberto (dado de antes da trava)', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const ativa = await escolaEm('ativa', sessao.token)
+      const antes = await retrato(ativa.escolaId, ativa.quem.email)
+      esperarErro(await refazer(sessao.token, ativa.conviteId ?? ''), 409, CodigoDeErro.CONFLITO)
+      expect(await retrato(ativa.escolaId, ativa.quem.email)).toEqual(antes)
+
+      // O convite pendente continua o último, e em aberto; com uma coordenadora ativa semeada, a escola está `ativa`. Sem
+      // a linha `ativa` da matriz do refazer, o update condicional passaria e um convite novo nasceria.
+      const pendente = await escolaEm('pendente', sessao.token)
+      await escolas.equipeComEmail(pendente.escolaId, `coordenacao-ativa-${randomUUID()}@escola.invalid`, 'coordenador')
+      expect(await estadoDe(pendente.escolaId)).toBe('ativa')
+      const antesDaPendente = await retrato(pendente.escolaId, pendente.quem.email)
+      esperarErro(await refazer(sessao.token, pendente.conviteId ?? ''), 409, CodigoDeErro.CONFLITO)
+      expect(await retrato(pendente.escolaId, pendente.quem.email)).toEqual(antesDaPendente)
+      expect(await abertos(pendente.escolaId)).toBe(1)
+    })
+
     it('alarme: convite de outro tipo não entra (23514). Quando a A1 afrouxar o check, este teste quebra e pede o de "outro tipo responde NAO_ENCONTRADO"', async () => {
       const sessao = await operadores.operadorComSessao()
       const escola = await escolaEm('revogado', sessao.token)
@@ -554,6 +663,229 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
           rows[0]?.usuario_id,
         ]),
       ).rejects.toMatchObject({ code: '23514', constraint: 'convite_tipo_valido' })
+    })
+  })
+
+  describe('E6 e A1: refazer, em cada estado, dá o resultado da matriz, e o que não é permitido não grava nada', () => {
+    it.each(ESTADOS_DA_COORDENACAO)('refazer o último convite em %s', async (estado) => {
+      const sessao = await operadores.operadorComSessao()
+      const escola = await escolaEm(estado, sessao.token)
+      const alvo = escola.conviteId ?? randomUUID()
+      // O pendente abre antes do refazer; o vencido já não abria pelo prazo, e sai revogado.
+      if (estado === 'pendente') expect((await consultar(escola.link ?? '')).status).toBe(200)
+      const antes = await retrato(escola.escolaId, escola.quem.email)
+      const convitesAntes = await convitesDa(escola.escolaId)
+      const resposta = await refazer(sessao.token, alvo)
+      expect(resposta.cacheControl).toBe('no-store')
+
+      const esperado = REFAZER[estado]
+      if (esperado !== 201) {
+        esperarErro(resposta, esperado, CODIGO[esperado])
+        expect(await retrato(escola.escolaId, escola.quem.email)).toEqual(antes)
+        expect(await estadoDe(escola.escolaId)).toBe(estado)
+        return
+      }
+      expect(resposta.status).toBe(201)
+      const { conviteId: novo, token } = gerado(resposta)
+      const usuarioId = convitesAntes.find((convite) => convite.id === alvo)?.usuario_id
+      expect(usuarioId).toEqual(expect.any(String))
+      // O de origem sai revogado, e o novo, em aberto, é do mesmo usuário; nada mais muda (usuário, nome, conta).
+      const depois = await convitesDa(escola.escolaId)
+      expect(depois.find((convite) => convite.id === alvo)).toMatchObject({ aberto: false, revogado: true })
+      expect(depois.filter((convite) => convite.aberto)).toEqual([expect.objectContaining({ id: novo, usuario_id: usuarioId })])
+      expect(new Set(depois.map((convite) => convite.id))).toEqual(new Set([...convitesAntes.map((convite) => convite.id), novo]))
+      const { usuarios, contas } = await retrato(escola.escolaId, escola.quem.email)
+      expect({ usuarios, contas }).toEqual({ usuarios: antes.usuarios, contas: antes.contas })
+      expect(await estadoDe(escola.escolaId)).toBe('pendente')
+      // O link de origem não abre mais, e o novo abre.
+      esperarErro(await consultar(escola.link ?? ''), 404, CodigoDeErro.NAO_ENCONTRADO)
+      expect((await consultar(token)).status).toBe(200)
+
+      // A1: uma linha nova de auditoria, `convite.refeito` do convite novo, com a origem, o usuário e a validade gravada.
+      const novas = (
+        await pool.query<{ acao: string; entidade_id: string; autor_operador: string | null; autor_usuario_id: string | null; antes: unknown; depois: unknown }>(
+          'select acao, entidade_id, autor_operador, autor_usuario_id, antes, depois from auditoria where escola_id = $1 and not (id = any($2::uuid[]))',
+          [escola.escolaId, antes.auditoria.map((linha: { id: string }) => linha.id)],
+        )
+      ).rows
+      const expiraEm = depois.find((convite) => convite.id === novo)?.expira_em
+      expect(novas).toEqual([
+        { acao: 'convite.refeito', entidade_id: novo, autor_operador: sessao.apelido, autor_usuario_id: null, antes: null, depois: { origemId: alvo, usuarioId, expiraEm: expiraEm?.toISOString() } },
+      ])
+      const validadeH = ((expiraEm?.getTime() ?? 0) - Date.now()) / HORA_MS
+      expect(validadeH).toBeGreaterThan(71.9)
+      expect(validadeH).toBeLessThanOrEqual(72)
+      const texto = JSON.stringify(novas)
+      for (const proibido of [escola.quem.nome, escola.quem.email, token, escola.link ?? '']) expect(texto).not.toContain(proibido)
+    })
+
+    it('refazer de convite que não é o último é CONFLITO sem gravar nada: o de origem de um refazer, e um em aberto de antes da trava', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const escola = await escolaEm('pendente', sessao.token)
+      expect((await refazer(sessao.token, escola.conviteId ?? '')).status).toBe(201)
+      const antes = await retrato(escola.escolaId, escola.quem.email)
+      esperarErro(await refazer(sessao.token, escola.conviteId ?? ''), 409, CodigoDeErro.CONFLITO)
+      expect(await retrato(escola.escolaId, escola.quem.email)).toEqual(antes)
+
+      // Um convite em aberto de outro usuário, que vence antes do último: só dado de antes da trava chega a isso. O update
+      // condicional o revogaria, e um convite novo nasceria para esse usuário: quem segura é "não é o último".
+      const outraConta = pessoa()
+      const { rows: contas } = await pool.query<{ id: string }>('insert into conta (email) values ($1) returning id', [outraConta.email])
+      const { rows: antigos } = await pool.query<{ id: string }>(
+        "insert into usuario (escola_id, conta_id, papel, nome, desativado_em) values ($1, $2, 'coordenador', 'Pessoa sintética', now()) returning id",
+        [escola.escolaId, contas[0]?.id],
+      )
+      const { rows: convites } = await pool.query<{ id: string }>(
+        "insert into convite (escola_id, token_hash, tipo, usuario_id, expira_em) values ($1, $2, 'coordenador', $3, now() + interval '1 hour') returning id",
+        [escola.escolaId, createHash('sha256').update(randomUUID()).digest('hex'), antigos[0]?.id],
+      )
+      const antesDoAntigo = await retrato(escola.escolaId, outraConta.email)
+      esperarErro(await refazer(sessao.token, convites[0]?.id ?? ''), 409, CodigoDeErro.CONFLITO)
+      expect(await retrato(escola.escolaId, outraConta.email)).toEqual(antesDoAntigo)
+    })
+  })
+
+  describe('E8 (refazer): em paralelo na mesma escola, com a ordem forçada pela trava, no fim há no máximo um convite em aberto', () => {
+    it('dois refazer do mesmo convite: o primeiro refaz, o segundo recebe CONFLITO; um convite novo e um convite.refeito', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const escola = await escolaEm('pendente', sessao.token)
+      const alvo = escola.conviteId ?? ''
+      const [primeiro, segundo] = await emOrdemNaTrava(escola.escolaId, () => refazer(sessao.token, alvo), () => refazer(sessao.token, alvo))
+      expect(primeiro.status).toBe(201)
+      esperarErro(segundo, 409, CodigoDeErro.CONFLITO)
+      expect((await convitesDa(escola.escolaId)).filter((convite) => convite.aberto).map((convite) => convite.id)).toEqual([gerado(primeiro).conviteId])
+      expect(await auditoriaDe(escola.escolaId, 'convite.refeito')).toHaveLength(1)
+    })
+
+    it('refazer e depois revogar o mesmo convite: o refazer refaz, e o revogar acha o de origem já revogado (NAO_ENCONTRADO); o novo segue em aberto', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const escola = await escolaEm('pendente', sessao.token)
+      const alvo = escola.conviteId ?? ''
+      const [doRefazer, doRevogar] = await emOrdemNaTrava(escola.escolaId, () => refazer(sessao.token, alvo), () => revogar(sessao.token, alvo))
+      expect(doRefazer.status).toBe(201)
+      esperarErro(doRevogar, 404, CodigoDeErro.NAO_ENCONTRADO)
+      expect((await convitesDa(escola.escolaId)).filter((convite) => convite.aberto).map((convite) => convite.id)).toEqual([gerado(doRefazer).conviteId])
+      expect(await auditoriaDe(escola.escolaId, 'convite.refeito')).toHaveLength(1)
+      expect(await auditoriaDe(escola.escolaId, 'convite.revogado')).toEqual([])
+    })
+
+    it('revogar e depois refazer o mesmo convite: o revogar revoga, e o refazer recebe o CONFLITO da matriz em revogado; nenhum em aberto', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const escola = await escolaEm('pendente', sessao.token)
+      const alvo = escola.conviteId ?? ''
+      const [doRevogar, doRefazer] = await emOrdemNaTrava(escola.escolaId, () => revogar(sessao.token, alvo), () => refazer(sessao.token, alvo))
+      expect(doRevogar.status).toBe(204)
+      esperarErro(doRefazer, 409, CodigoDeErro.CONFLITO)
+      expect(await abertos(escola.escolaId)).toBe(0)
+      expect((await convitesDa(escola.escolaId)).map((convite) => convite.id)).toEqual([alvo])
+      expect(await auditoriaDe(escola.escolaId, 'convite.refeito')).toEqual([])
+      expect(await estadoDe(escola.escolaId)).toBe('revogado')
+    })
+  })
+
+  describe('E9: sem a trava da escola, o refazer continua deixando um só convite em aberto', () => {
+    it('dois refazer do mesmo convite, os dois já depois da leitura do estado: o segundo espera a linha no update condicional e recebe CONFLITO', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const escola = await escolaEm('pendente', sessao.token)
+      const alvo = escola.conviteId ?? ''
+      const semTrava = semATravaDaEscola(banco)
+      const gatilho = new GatilhoDeParada(pool, { tabela: 'convite', evento: 'update', quando: `new.id = '${alvo}'::uuid` })
+      await gatilho.armar()
+      try {
+        const primeiro = refazerConviteDaCoordenacao(semTrava, autorDaBancada, alvo).catch((erro: unknown) => erro)
+        // O primeiro já revogou a origem e está parado antes de criar o novo, com a linha dela presa.
+        await gatilho.esperarParadas()
+        const segundo = refazerConviteDaCoordenacao(semTrava, autorDaBancada, alvo).catch((erro: unknown) => erro)
+        // Com a trava, o segundo esperaria nela (no `select pg_advisory_xact_lock`); sem ela, passa pela leitura do estado
+        // (o primeiro não confirmou: ainda `pendente`, e a origem é a última) e para no update da mesma linha. São dois
+        // parados em `update "convite"`: o primeiro no gatilho, o segundo na linha.
+        await esperarNaTrava(pool, '%update "convite"%', 2)
+        await gatilho.soltar()
+        expect(await primeiro).toEqual({ conviteId: expect.any(String), token: expect.any(String), escolaId: escola.escolaId })
+        expect(await segundo).toBeInstanceOf(ErroDeDominio)
+        expect(await segundo).toMatchObject({ codigo: CodigoDeErro.CONFLITO })
+      } finally {
+        await gatilho.desarmar()
+      }
+      expect(await abertos(escola.escolaId)).toBe(1)
+      expect(await auditoriaDe(escola.escolaId, 'convite.refeito')).toHaveLength(1)
+    })
+
+    it('o aceite, que ainda não pega a trava (4.0), no meio do refazer: o update condicional vê o convite usado, e o refazer recebe CONFLITO sem convite novo', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const escola = await escolaEm('pendente', sessao.token)
+      const alvo = escola.conviteId ?? ''
+      const gatilho = new GatilhoDeParada(pool, { tabela: 'convite', evento: 'update', quando: `new.id = '${alvo}'::uuid and new.usado_em is not null` })
+      await gatilho.armar()
+      try {
+        const aceite = aceitar(escola.link ?? '', SENHA)
+        await gatilho.esperarParadas()
+        const doRefazer = refazer(sessao.token, alvo)
+        // O refazer lê `pendente` (o aceite não confirmou) e para no update da linha que o aceite segura. Com a trava no
+        // aceite (4.0), ele para antes, na trava; o resultado é o mesmo.
+        await aguardar(async () => {
+          const { rows } = await pool.query<{ total: number }>(
+            `select count(*)::int as total from pg_stat_activity
+              where datname = current_database() and wait_event_type = 'Lock' and (query ilike '%set "revogado_em"%' or query ilike '%pg_advisory_xact_lock%')`,
+          )
+          return (rows[0]?.total ?? 0) >= 1
+        }, 'o refazer esperando o aceite')
+        await gatilho.soltar()
+        expect((await aceite).corpo).toEqual({ etapa: 'configurar_mfa', desafio: expect.any(String) })
+        esperarErro(await doRefazer, 409, CodigoDeErro.CONFLITO)
+      } finally {
+        await gatilho.desarmar()
+      }
+      expect((await convitesDa(escola.escolaId)).map((convite) => convite.id)).toEqual([alvo])
+      expect(await auditoriaDe(escola.escolaId, 'convite.refeito')).toEqual([])
+      expect(await estadoDe(escola.escolaId)).toBe('ativa')
+    })
+  })
+
+  describe('I6 (refazer): nenhuma resposta do refazer traz o que é da escola, nem em 400, 404, 409 e 503', () => {
+    it('com sentinelas de coordenação, aluno e turma semeadas na escola', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const escolaId = await escolas.escola()
+      const sufixo = randomUUID().slice(0, 8)
+      const coordenacao = { nome: `Coordenação Sentinela ${sufixo}`, email: `sentinela-${randomUUID()}@escola.invalid` }
+      const aluno = { nome: `Aluno Sentinela ${sufixo}`, matricula: `MAT-SENTINELA-${sufixo}` }
+      const turma = `Turma Sentinela ${sufixo}`
+      const [alunoId] = await escolas.alunosComMatricula(escolaId, [{ matricula: aluno.matricula, senhaHash: 'hash-sintetico' }])
+      await pool.query('update usuario set nome = $1 where id = $2', [aluno.nome, alunoId])
+      const { rows: anos } = await pool.query<{ id: string }>("insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, 2026, '2026-02-01', '2026-12-15', 'em_curso') returning id", [escolaId])
+      const { rows: series } = await pool.query<{ id: string }>("insert into serie (escola_id, etapa, ano) values ($1, 'em', 2) returning id", [escolaId])
+      await pool.query('insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, $4)', [escolaId, anos[0]?.id, series[0]?.id, turma])
+      const deOrigem = gerado(await gerar(sessao.token, escolaId, coordenacao)).conviteId
+
+      const respostas: Resposta[] = []
+      const guardar = (resposta: Resposta) => {
+        respostas.push(resposta)
+        return resposta
+      }
+      esperarErro(guardar(await refazer(sessao.token, deOrigem, { autor: coordenacao.nome })), 400, CodigoDeErro.ENTRADA_INVALIDA)
+      esperarErro(guardar(await refazer(sessao.token, randomUUID())), 404, CodigoDeErro.NAO_ENCONTRADO)
+      const refeito = guardar(await refazer(sessao.token, deOrigem))
+      expect(refeito.status).toBe(201)
+      esperarErro(guardar(await refazer(sessao.token, deOrigem)), 409, CodigoDeErro.CONFLITO)
+
+      // 503: numa API com o prazo das consultas curto, o refazer espera a trava que o teste segura até o
+      // `statement_timeout` cortar; nada é gravado.
+      const antes = await retrato(escolaId, coordenacao.email)
+      // O logger da API é do processo: a segunda escreve no mesmo destino, e o log dos outros testes continua capturado.
+      const curta = await subirApiDoPainel(linhasDeLog, {}, PRAZO_CURTO_MS)
+      const soltar = await segurarTravaDaEscola(escolaId)
+      try {
+        const esgotado = guardar(await refazer(sessao.token, gerado(refeito).conviteId, undefined, curta.url))
+        esperarErro(esgotado, 503, CodigoDeErro.TEMPO_ESGOTADO)
+        expect(esgotado.retryAfter).not.toBeNull()
+      } finally {
+        await soltar()
+        await curta.app.close()
+      }
+      expect(await retrato(escolaId, coordenacao.email)).toEqual(antes)
+
+      expect(respostas.map((resposta) => resposta.status)).toEqual([400, 404, 201, 409, 503])
+      for (const { texto } of respostas) for (const sentinela of [coordenacao.nome, coordenacao.email, aluno.nome, aluno.matricula, turma]) expect(texto).not.toContain(sentinela)
     })
   })
 
@@ -570,6 +902,35 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
       const { rows: auditoria } = await pool.query<{ linha: string }>('select to_jsonb(a)::text as linha from auditoria a where a.escola_id = $1', [escola.escolaId])
       expect(auditoria.length).toBeGreaterThanOrEqual(3)
       for (const { linha } of auditoria) expect(linha).not.toContain(token)
+    })
+
+    it('depois de refazer, o token novo não está em coluna de convite nem na auditoria, e o token_hash é o SHA-256 dele', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const escola = await escolaEm('pendente', sessao.token)
+      const { conviteId, token } = gerado(await refazer(sessao.token, escola.conviteId ?? ''))
+      const { rows: convites } = await pool.query<{ linha: string }>('select to_jsonb(c)::text as linha from convite c where c.escola_id = $1', [escola.escolaId])
+      expect(convites).toHaveLength(2)
+      for (const { linha } of convites) for (const link of [token, escola.link ?? '']) expect(linha).not.toContain(link)
+      expect((await pool.query('select token_hash from convite where id = $1', [conviteId])).rows).toEqual([{ token_hash: createHash('sha256').update(token).digest('hex') }])
+      const { rows: auditoria } = await pool.query<{ linha: string }>('select to_jsonb(a)::text as linha from auditoria a where a.escola_id = $1', [escola.escolaId])
+      expect(auditoria.length).toBeGreaterThanOrEqual(2)
+      for (const { linha } of auditoria) for (const link of [token, escola.link ?? '']) expect(linha).not.toContain(link)
+    })
+
+    it('as linhas de log do refazer, e das recusas dele, levam só ids: nada de nome, e-mail, endereço nem token', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const escolaId = await escolas.escola()
+      const slug = await escolas.slugDe(escolaId)
+      const quem = { nome: `Coordenadora Sentinela ${randomUUID().slice(0, 8)}`, email: `sentinela-${randomUUID()}@escola.invalid` }
+      const { conviteId, token: deOrigem } = gerado(await gerar(sessao.token, escolaId, quem))
+      linhasDeLog.length = 0
+      const { token } = gerado(await refazer(sessao.token, conviteId))
+      esperarErro(await refazer(sessao.token, conviteId), 409, CodigoDeErro.CONFLITO)
+      esperarErro(await refazer(sessao.token, randomUUID()), 404, CodigoDeErro.NAO_ENCONTRADO)
+
+      expect(linhasComEvento('operacao.convite.refeito')).toEqual([expect.objectContaining({ escolaId })])
+      const todoOLog = linhasDeLog.join('\n')
+      for (const sentinela of [quem.nome, quem.email, slug, token, deOrigem, sessao.nome]) expect(todoOLog).not.toContain(sentinela)
     })
 
     it('as linhas de log do gerar e do revogar, e das recusas, levam só ids: nada de nome, e-mail, endereço nem token', async () => {

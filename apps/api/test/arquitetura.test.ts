@@ -341,6 +341,7 @@ const ROTAS_DO_PAINEL = [
   'POST /v1/operacao/redes',
   'POST /v1/operacao/escolas',
   'POST /v1/operacao/escolas/:id/convite-coordenacao',
+  'POST /v1/operacao/convites/:id/refazer',
   'POST /v1/operacao/convites/:id/revogar',
 ]
 

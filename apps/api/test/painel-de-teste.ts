@@ -52,9 +52,12 @@ export function esperarErro(resposta: Resposta, status: number, codigo: CodigoDe
   expect(resposta.corpo).toEqual({ erro: { codigo, mensagem: MENSAGENS_DE_ERRO[codigo], requisicaoId: expect.stringMatching(UUID) } })
 }
 
-/** A API inteira, com o prazo das consultas folgado e cada linha de log em `linhasDeLog`. */
-export async function subirApiDoPainel(linhasDeLog: string[], ambiente: Record<string, string> = {}): Promise<{ app: INestApplication; url: string }> {
-  const app = await NestFactory.create(AppModule.com(configuracaoDeTeste({ banco: { timeoutConsultaMs: PRAZO_DAS_CONSULTAS_MS }, ambiente }), MONTAGEM_DE_TESTE), { logger: false })
+/**
+ * A API inteira, com cada linha de log em `linhasDeLog` e o prazo das consultas folgado; um prazo curto
+ * (`prazoDasConsultasMs`) é para o teste que quer o `statement_timeout` estourando numa trava segura.
+ */
+export async function subirApiDoPainel(linhasDeLog: string[], ambiente: Record<string, string> = {}, prazoDasConsultasMs = PRAZO_DAS_CONSULTAS_MS): Promise<{ app: INestApplication; url: string }> {
+  const app = await NestFactory.create(AppModule.com(configuracaoDeTeste({ banco: { timeoutConsultaMs: prazoDasConsultasMs }, ambiente }), MONTAGEM_DE_TESTE), { logger: false })
   configurarAplicacao(app, criarLogger({ servico: 'api-teste', nivel: 'info', destino: { write: (linha: string) => linhasDeLog.push(linha) } }))
   await app.listen(0, '127.0.0.1')
   return { app, url: `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}` }

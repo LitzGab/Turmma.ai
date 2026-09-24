@@ -1,7 +1,7 @@
 # Tarefas — Painel da operação Turmma (A0b)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 2 de 10 concluídas
+**Status:** 3 de 10 concluídas
 
 Aprovadas por delegação do Joaquim em 24/09/2026 ("faça tudo e aprove até criar as tasks"). As 9.0 e
 10.0 levam as pendências da A0 (`tasks/prd-apresentacao-operacao/retro.md`, "Pendências para a A0b")
@@ -25,10 +25,10 @@ que não cabem numa tarefa que já mexe no mesmo código.
   - [x] 2.4 Testes: A4, E6 (gerar e revogar), E7, E8 (sem refazer), E10, E11 e E13 (convite), I7, A2 e A3
     (gerar e revogar)
 
-- [ ] **3.0 — Refazer o convite da coordenação**
-  - [ ] 3.1 `refazer` com o `update` condicional, `convite.refeito`
-  - [ ] 3.2 `POST /convites/:id/refazer`
-  - [ ] 3.3 Testes: E6 (refazer), E8 (pares com refazer), E9, E11 (refazer), A1, A2 e A3 (refazer)
+- [x] **3.0 — Refazer o convite da coordenação**
+  - [x] 3.1 `refazer` com o `update` condicional, `convite.refeito`
+  - [x] 3.2 `POST /convites/:id/refazer`
+  - [x] 3.3 Testes: E6 (refazer), E8 (pares com refazer), E9, E11 (refazer), A1, A2 e A3 (refazer)
 
 - [ ] **4.0 — Ativação por convite sob a trava da escola, e a senha certa que não conta**
   - [ ] 4.1 A trava como primeira instrução no aceite e em `AtivacaoPorConvite.ativar`

@@ -14,7 +14,7 @@ import {
 import { Logger } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
 import { criarEscola, criarRede } from '../ops/escola.js'
-import { criarConviteDeCoordenador, revogarConvitePeloOperador } from '../sessao/convite.service.js'
+import { criarConviteDeCoordenador, refazerConviteDaCoordenacao, revogarConvitePeloOperador } from '../sessao/convite.service.js'
 import { OperadorRepository, type ConferenciaDoAutor } from './operador.repository.js'
 import { PainelRepository } from './painel.repository.js'
 
@@ -39,13 +39,14 @@ function naEscola(escolaId: string, logar: () => void): void {
 /**
  * O painel da operação (A0b, D76): o operador cria rede e escola pelos mesmos casos de uso do `ops:escola`, com o id
  * sorteado pela web (o clique duplo devolve o mesmo id, sem criar outra), lê as redes, e gera e revoga o convite da
- * coordenação pelos mesmos casos de uso do `ops:convite-coordenador` e do `ops:revogar-convite`.
+ * coordenação pelos mesmos casos de uso do `ops:convite-coordenador` e do `ops:revogar-convite`, e o refaz (só pelo
+ * painel).
  *
- * - A auditoria (`rede.criada`, `escola.criada`, `convite.criado`, `convite.revogado`) leva o apelido do operador da
- *   sessão, conferido na transação.
+ * - A auditoria (`rede.criada`, `escola.criada`, `convite.criado`, `convite.refeito`, `convite.revogado`) leva o apelido
+ *   do operador da sessão, conferido na transação.
  * - O log leva só o evento e os ids do contexto (`operacao.rede.criada`, `operacao.escola.criada`,
- *   `operacao.convite.gerado` e `operacao.convite.revogado`, com a escola): nunca nome, e-mail, endereço nem token. O
- *   pedido repetido não loga de novo, como não audita de novo.
+ *   `operacao.convite.gerado`, `operacao.convite.refeito` e `operacao.convite.revogado`, com a escola): nunca nome,
+ *   e-mail, endereço nem token. O pedido repetido não loga de novo, como não audita de novo.
  * - A escola do `:id` do caminho (que o controller só confere como UUID) vai só ao caso de uso do gerar, que abre o
  *   contexto dela depois de conferir o autor (Tech Spec da A0b, seção 6).
  */
@@ -78,6 +79,14 @@ export class PainelService {
     const gerado = await criarConviteDeCoordenador(this.banco, autor, { escolaId, email: pedido.email, nome: pedido.nome })
     naEscola(escolaId, () => this.#logger.log('operacao.convite.gerado'))
     return esquemaRespostaConviteDaCoordenacao.parse(gerado)
+  }
+
+  /** Refaz o convite da coordenação pelo id, pela matriz da seção 5; a escola vem do convite. O token sai só nesta resposta. */
+  async refazerConvite(conviteId: string): Promise<RespostaConviteDaCoordenacao> {
+    const autor = autorDaSessao(exigirOperadorDoContexto())
+    const refeito = await refazerConviteDaCoordenacao(this.banco, autor, conviteId)
+    naEscola(refeito.escolaId, () => this.#logger.log('operacao.convite.refeito'))
+    return esquemaRespostaConviteDaCoordenacao.parse({ conviteId: refeito.conviteId, token: refeito.token })
   }
 
   /** Revoga o convite da coordenação pelo id, pela matriz da seção 5; a escola vem do convite. */

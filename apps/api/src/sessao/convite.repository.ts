@@ -145,6 +145,21 @@ export class ConviteRepository {
     return ativados.length === 1
   }
 
+  /**
+   * Revoga o convite desta escola para o refazer, só se ele ainda está em aberto (não usado e não revogado; vencido
+   * também), e devolve o usuário dele, para o convite novo; `undefined` quando não revogou. O `update` espera a linha de
+   * quem a mexe ao mesmo tempo e confere as condições de novo depois: dois refazer, ou o refazer e o aceite, revogam no
+   * máximo uma vez, e só o que ainda estava em aberto (Tech Spec da A0b, seção 7c).
+   */
+  async revogarParaRefazer(conviteId: string): Promise<string | undefined> {
+    const [revogado] = await this.banco
+      .update(convite)
+      .set({ revogadoEm: sql`now()` })
+      .where(and(eq(convite.escolaId, escolaDoContexto()), eq(convite.id, conviteId), isNull(convite.usadoEm), isNull(convite.revogadoEm)))
+      .returning({ usuarioId: convite.usuarioId })
+    return revogado?.usuarioId
+  }
+
   /** Revoga o convite, usado ou não, se ainda não foi revogado. Devolve se revogou. */
   async revogar(conviteId: string): Promise<boolean> {
     const revogados = await this.banco

@@ -75,8 +75,9 @@ estado. O servidor decide pela matriz; a tela a espelha:
 | `ativa` | `CONFLITO` | `CONFLITO` | `CONFLITO` |
 
 Refazer de convite que não é o último: `CONFLITO`; revogar também (tarefa 2.0), depois de responder `NAO_ENCONTRADO` ao convite já revogado. Gerar em escola inexistente: `NAO_ENCONTRADO`,
-antes de criar conta. Refazer grava `convite.refeito`, para o mesmo usuário (nome e e-mail se corrigem
-revogando e gerando). Revogar em `revogado` fica `NAO_ENCONTRADO`, como no F1.
+antes de criar conta. Refazer grava só `convite.refeito`, no convite novo, com o `origemId`, para o mesmo usuário (nome e e-mail se corrigem
+revogando e gerando); a origem sai pelo `update` condicional (só em aberto), e o que ele não revoga é `CONFLITO`; em
+`sem_convite` não há convite a passar, e o id inexistente é `NAO_ENCONTRADO` (tarefa 3.0). Revogar em `revogado` fica `NAO_ENCONTRADO`, como no F1.
 
 Gerar em `aceito` e `sem_coordenacao` revoga o último convite na mesma transação, com `convite.revogado`
 dele na auditoria; com o mesmo e-mail, o F1 reusa o usuário, e só o convite novo o ativa. **A ativação por convite (aceite, ou login com o
@@ -151,7 +152,7 @@ Não se aplica: não há IA nem dado de aluno.
 | Rede ou escola repetida | `insert … on conflict do nothing returning id` (sem alvo: com o alvo no id, dois pedidos iguais podiam levantar 23505 no índice do slug; tarefa 1.0), e sem linha, `select` pelo id na mesma chamada; slug pela restrição única | a auditoria | mesmo id e dados: o mesmo id, sem segunda auditoria; outros dados, ou outro id com o mesmo slug: `CONFLITO` (23505 mapeado, nunca 500) | dois POST iguais; mesmo id com outros dados; ids diferentes com o mesmo slug |
 | Convite da escola | `pg_advisory_xact_lock(7_000_003, hashtext(escola_id::text))`, estado lido depois | conta, usuário, revogação, convite, auditoria | a matriz da seção 5 | E8: no fim, no máximo um convite em aberto |
 | Ativação por convite | a mesma trava, primeira instrução; depois o `update` do F1 | uso do convite, ativação, auditoria | seção 5 (`NAO_ENCONTRADO`, sem `login_falho`) | E15 |
-| Convite em aberto | índice `convite_pendente_unico` | — | 23505 vira `CONFLITO` | sem a trava (mutação), só entre convites do mesmo usuário |
+| Convite em aberto | índice `convite_pendente_unico`; no refazer, antes dele, o `update` condicional da origem (tarefa 3.0) | — | 23505 vira `CONFLITO`; o `update` que não revoga, também | sem a trava (mutação), só entre convites do mesmo usuário; no refazer, o segundo para na linha da origem |
 
 ## 9. Frontend
 

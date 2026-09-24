@@ -166,6 +166,7 @@ describe('área da operação: as cercas entre a operação e a escola (tarefa 4
           'POST /v1/operacao/redes',
           'POST /v1/operacao/escolas',
           'POST /v1/operacao/escolas/:id/convite-coordenacao',
+          'POST /v1/operacao/convites/:id/refazer',
           'POST /v1/operacao/convites/:id/revogar',
         ]),
       )
