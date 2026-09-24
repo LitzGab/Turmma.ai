@@ -23,6 +23,16 @@ export const CodigoDeErro = {
    * está ligada a ninguém dela. Uma resposta só para todos os casos. Chega à web como `?falha=conta_externa_nao_ligada`.
    */
   CONTA_EXTERNA_NAO_LIGADA: 'CONTA_EXTERNA_NAO_LIGADA',
+  /**
+   * Área da operação (A0): o acesso de 10 min do operador venceu, e a sessão dele continua viva (401). A web renova e
+   * repete, sem mandar a pessoa entrar de novo.
+   */
+  ACESSO_VENCIDO: 'ACESSO_VENCIDO',
+  /**
+   * Área da operação (A0): a sessão do operador terminou — 30 min sem uso, 8 h, saída ou operador desativado (401). A
+   * web leva à entrada dizendo que a sessão terminou, sem confundir com "não encontrado".
+   */
+  SESSAO_ENCERRADA: 'SESSAO_ENCERRADA',
 } as const
 
 export type CodigoDeErro = (typeof CodigoDeErro)[keyof typeof CodigoDeErro]

@@ -1,10 +1,19 @@
+import 'reflect-metadata'
 import * as nucleo from '@educa/nucleo'
+import { CodigoDeErro } from '@educa/shared'
+import { Controller, Get, SetMetadata, type ExecutionContext, type Type } from '@nestjs/common'
+import { Reflector } from '@nestjs/core'
 import { getTableName, is } from 'drizzle-orm'
 import { PgTable } from 'drizzle-orm/pg-core'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { AppModule } from '../src/app.module.js'
+import { EntradaDeOperacao, RotaDeOperacao } from '../src/operacao/marcadores.js'
+import { OperacaoModule } from '../src/operacao/operacao.module.js'
+import { configuracaoDeTeste } from './configuracao-de-teste.js'
+import { controladoresDoModulo, rotasDe, rotasDeOperacaoSemGuarda, rotasForaDaCerca, type RotaRegistrada } from './rotas-registradas.js'
 
 const RAIZ = fileURLToPath(new URL('../../../', import.meta.url))
 const MODULO_SESSAO = 'apps/api/src/sessao/'
@@ -112,9 +121,14 @@ function usosDaOperacao(texto: string): string[] {
   return [...porImport, ...porNamespace, ...peloArquivo, ...porSql]
 }
 
+/** Teste e apoio de teste (`*.test.ts`, e o que mora numa pasta `test/`, como a bancada de operadores da tarefa 4.0). */
+function deTeste(caminho: string): boolean {
+  return /\.test\.ts$/.test(caminho) || /(^|\/)test\//.test(caminho)
+}
+
 function quemTocaAOperacao(arquivos: readonly Arquivo[]): string[] {
   return arquivos
-    .filter((arquivo) => !/\.test\.ts$/.test(arquivo.caminho) && !FORA_DA_VARREDURA.includes(arquivo.caminho))
+    .filter((arquivo) => !deTeste(arquivo.caminho) && !FORA_DA_VARREDURA.includes(arquivo.caminho))
     .filter((arquivo) => usosDaOperacao(arquivo.texto).length > 0)
     .map((arquivo) => arquivo.caminho)
 }
@@ -158,6 +172,7 @@ describe('arquitetura: as seis tabelas da operação só pelo OperadorRepository
       { caminho: 'apps/api/src/ops/escola.ts', texto: "const operador = lerOperador(ambiente)\nimport { FORMATO_OPERADOR } from '@educa/nucleo'\n// o operador da equipe" },
       { caminho: 'apps/api/src/sessao/x.repository.ts', texto: "pool.query('select 1 from sessao where escola_id = $1')" },
       { caminho: 'apps/api/src/ops/operador.test.ts', texto: "pool.query('delete from operador')" },
+      { caminho: 'apps/api/test/sessao-de-operador.ts', texto: "pool.query('insert into sessao_operador (operador_id) values ($1)')" },
       { caminho: 'packages/nucleo/src/index.ts', texto: "export { operador } from './db/schema/operador.js'" },
     ]
     expect(quemTocaAOperacao([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho))
@@ -166,5 +181,205 @@ describe('arquitetura: as seis tabelas da operação só pelo OperadorRepository
   it('reprova o repository que importa outra tabela do pacote ou cita outra tabela em SQL', () => {
     expect(tabelasDeForaNoRepository("import { conta, operador } from '@educa/nucleo'")).toEqual(['conta'])
     expect(tabelasDeForaNoRepository("sql`select 1 from escola`; sql`insert into auditoria (x)`; sql`update operador set x = 1`")).toEqual(['escola', 'auditoria'])
+  })
+})
+
+/**
+ * C40 a C42 e C36 (parte) (Tech Spec da A0, seção 6): as rotas `/v1/operacao/*` escapam das guardas de escola pelo
+ * `rotaSemSessao`, e o que impede que isso vire atalho é que os marcadores só existem na pasta da operação, que a rota
+ * `@RotaDeOperacao` sempre leva a `GuardaDeOperador`, que marcador e caminho andam juntos, e que o limite conta o
+ * operador. A lista de rotas é a que o `AppModule` registra, lida dos metadados, sem subir a aplicação.
+ */
+const PASTA_DA_OPERACAO = 'apps/api/src/operacao/'
+const NOMES_DOS_MARCADORES = /\b(?:RotaDeOperacao|EntradaDeOperacao)\b/
+const CHAVES_DOS_MARCADORES = /\bMETADADO_(?:ROTA|ENTRADA)_DE_OPERACAO\b/
+/** Quem pode citar as chaves: onde nascem, o barrel, a conferência do boot, e os decoradores. */
+const QUEM_PODE_CITAR_AS_CHAVES = [
+  'packages/nucleo/src/identidade/marcadores-de-operacao.ts',
+  'packages/nucleo/src/index.ts',
+  'packages/nucleo/src/permissao/conferencia-das-permissoes.ts',
+  'apps/api/src/operacao/marcadores.ts',
+]
+
+/** O texto sem comentário de bloco nem de linha: citar o marcador num comentário não é usá-lo. */
+function semComentarios(texto: string): string {
+  return texto.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1')
+}
+
+/** Os arquivos de código de produção que usam um marcador fora da pasta da operação, ou citam as chaves fora da lista. */
+function marcadoresForaDaOperacao(arquivos: readonly Arquivo[]): string[] {
+  return arquivos
+    .filter((arquivo) => /^(apps|packages)\/[^/]+\/src\//.test(arquivo.caminho) && !deTeste(arquivo.caminho))
+    .filter((arquivo) => {
+      const codigo = semComentarios(arquivo.texto)
+      const usaMarcador = NOMES_DOS_MARCADORES.test(codigo) && !arquivo.caminho.startsWith(PASTA_DA_OPERACAO)
+      const citaChave = CHAVES_DOS_MARCADORES.test(codigo) && !QUEM_PODE_CITAR_AS_CHAVES.includes(arquivo.caminho)
+      return usaMarcador || citaChave
+    })
+    .map((arquivo) => arquivo.caminho)
+}
+
+const rotasDaApi = (): RotaRegistrada[] => rotasDe(controladoresDoModulo(AppModule.com(configuracaoDeTeste())))
+const nomeDaRota = (rota: RotaRegistrada) => `${rota.verbo} ${rota.caminho}`
+
+// Controllers de mentira, para provar que as conferências reprovam o que deveriam.
+@Controller('v1/operacao/so-metadado')
+class SoMetadadoController {
+  @Get()
+  @SetMetadata(nucleo.METADADO_ROTA_DE_OPERACAO, true)
+  obter(): void {}
+}
+
+@RotaDeOperacao()
+@Controller('v1/operacao/na-classe')
+class NaClasseController {
+  @Get()
+  obter(): void {}
+}
+
+@Controller('v1/operacao/no-metodo')
+class NoMetodoController {
+  @Get()
+  @RotaDeOperacao()
+  obter(): void {}
+
+  @Get('entrar')
+  @EntradaDeOperacao()
+  entrar(): void {}
+}
+
+@Controller('v1/operacao/esquecida')
+class SemMarcadorController {
+  @Get()
+  obter(): void {}
+}
+
+@Controller('v1/escola/marcada')
+class EscolaMarcadaController {
+  @Get()
+  @RotaDeOperacao()
+  obter(): void {}
+}
+
+@Controller('v1/operacaox')
+class PrefixoParecidoController {
+  @Get()
+  @EntradaDeOperacao()
+  obter(): void {}
+}
+
+describe('arquitetura: os marcadores da operação só na pasta da operação (C40)', () => {
+  it('nenhum código de produção fora de apps/api/src/operacao/ usa os marcadores, e as chaves só onde é preciso', () => {
+    const arquivos = arquivosDoRepositorio()
+    // A varredura enxerga o código: os decoradores e o controller do /eu usam os marcadores.
+    expect(arquivos.filter((arquivo) => NOMES_DOS_MARCADORES.test(semComentarios(arquivo.texto))).map((arquivo) => arquivo.caminho)).toEqual(
+      expect.arrayContaining(['apps/api/src/operacao/marcadores.ts', 'apps/api/src/operacao/eu.controller.ts']),
+    )
+    expect(marcadoresForaDaOperacao(arquivos)).toEqual([])
+  })
+
+  it('em método e em classe: todo controller registrado com marcador é um controller do OperacaoModule', () => {
+    const daOperacao = new Set(controladoresDoModulo(OperacaoModule.com(configuracaoDeTeste().identidade)))
+    const marcados = new Set(rotasDaApi().filter((rota) => rota.marcador !== undefined).map((rota) => rota.controlador))
+    expect(marcados.size).toBeGreaterThan(0)
+    expect([...marcados].filter((controlador) => !daOperacao.has(controlador)).map((controlador) => controlador.name)).toEqual([])
+    // E o OperacaoModule só registra controller da própria pasta.
+    const modulo = readFileSync(join(RAIZ, PASTA_DA_OPERACAO, 'operacao.module.ts'), 'utf8')
+    expect([...modulo.matchAll(/import\s+\{[^}]*Controller[^}]*\}\s+from\s+'([^']+)'/g)].map((importacao) => importacao[1]).every((origem) => origem?.startsWith('./'))).toBe(true)
+  })
+
+  it('a varredura reprova o marcador fora da pasta, na classe, no método ou pela chave, e não confunde comentário com uso', () => {
+    const fora = [
+      { caminho: 'apps/api/src/estrutura/turma.controller.ts', texto: "import { RotaDeOperacao } from '../operacao/marcadores.js'\n@RotaDeOperacao()\n@Controller('v1/turmas')\nexport class TurmaController {}" },
+      { caminho: 'apps/api/src/sessao/atalho.controller.ts', texto: 'export class Atalho {\n  @Get()\n  @EntradaDeOperacao()\n  obter() {}\n}' },
+      { caminho: 'apps/api/src/sessao/chave.ts', texto: "import { METADADO_ROTA_DE_OPERACAO } from '@educa/nucleo'\nSetMetadata(METADADO_ROTA_DE_OPERACAO, true)" },
+      { caminho: 'packages/nucleo/src/limite/outro.ts', texto: 'reflector.get(METADADO_ENTRADA_DE_OPERACAO, alvo)' },
+    ]
+    const inocentes = [
+      { caminho: 'apps/api/src/operacao/painel.controller.ts', texto: '@RotaDeOperacao()\nexport class PainelController {}' },
+      { caminho: 'packages/nucleo/src/limite/guarda-limite.ts', texto: '/** A rota `@RotaDeOperacao()` conta no rl:op. */\n// e a @EntradaDeOperacao não\nconst x = 1' },
+      { caminho: 'apps/api/test/qualquer.int.test.ts', texto: '@RotaDeOperacao()\nclass X {}' },
+      { caminho: 'apps/api/test/rotas-registradas.ts', texto: "import { METADADO_ROTA_DE_OPERACAO } from '@educa/nucleo'" },
+    ]
+    expect(marcadoresForaDaOperacao([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho))
+  })
+})
+
+describe('arquitetura: a rota @RotaDeOperacao tem a GuardaDeOperador no handler resolvido (C41)', () => {
+  it('toda rota @RotaDeOperacao registrada tem a guarda', () => {
+    const rotas = rotasDaApi().filter((rota) => rota.marcador === 'rota')
+    expect(rotas.map(nomeDaRota)).toContain('GET /v1/operacao/eu')
+    expect(rotasDeOperacaoSemGuarda(rotas)).toEqual([])
+  })
+
+  it('reprova a rota com o marcador e sem a guarda, e aceita o marcador no método e na classe', () => {
+    expect(rotasDeOperacaoSemGuarda(rotasDe([SoMetadadoController, NaClasseController, NoMetodoController]))).toEqual(['SoMetadadoController.obter'])
+  })
+})
+
+describe('arquitetura: marcador e caminho /v1/operacao andam juntos (C42)', () => {
+  it('todo caminho /v1/operacao tem marcador, e todo marcador está sob /v1/operacao', () => {
+    const rotas = rotasDaApi()
+    expect(rotas.length).toBeGreaterThan(30)
+    expect(rotasForaDaCerca(rotas)).toEqual([])
+  })
+
+  it('reprova o caminho da operação sem marcador, o marcador fora dela, e não se engana com prefixo parecido', () => {
+    const rotas = rotasDe([NaClasseController, NoMetodoController, SemMarcadorController, EscolaMarcadaController, PrefixoParecidoController])
+    expect(rotasForaDaCerca(rotas)).toEqual(['GET /v1/operacao/esquecida', 'GET /v1/escola/marcada', 'GET /v1/operacaox'])
+  })
+})
+
+describe('arquitetura: toda rota @RotaDeOperacao conta pelo rl:op:{sub} (C36, parte)', () => {
+  const identidade = configuracaoDeTeste().identidade
+  const OPERADOR = '0190f5a0-0000-7000-8000-0000000000e1'
+  const SESSAO = '0190f5a0-0000-7000-8000-0000000000f1'
+
+  function guardaComLimitador(resultado: nucleo.ResultadoDoLimite = { aceita: true }) {
+    const limitador = {
+      consumirDeOperador: vi.fn(async (_operadorId: string) => resultado),
+      consumirAnonima: vi.fn(async () => ({ aceita: true }) as const),
+      consumirDoLogin: vi.fn(async () => ({ aceita: true }) as const),
+      consumirAutenticada: vi.fn(async () => ({ aceita: true }) as const),
+    }
+    const guarda = new nucleo.GuardaDeLimite(new Reflector(), limitador as unknown as nucleo.LimitadorDeRequisicoes, new nucleo.ProxiesConfiaveis(['127.0.0.1']), { daEscola: async () => ({ porUsuarioMin: 1, porEscolaMin: 1 }) }, identidade)
+    return { guarda, limitador }
+  }
+
+  function execucao(rota: Pick<RotaRegistrada, 'handler' | 'controlador'>, authorization?: string): ExecutionContext {
+    const requisicao = { headers: authorization === undefined ? {} : { authorization }, socket: { remoteAddress: '127.0.0.1' } }
+    return {
+      getHandler: () => rota.handler,
+      getClass: () => rota.controlador as Type,
+      getType: () => 'http',
+      switchToHttp: () => ({ getRequest: () => requisicao }),
+    } as unknown as ExecutionContext
+  }
+
+  const tokenDeOperador = async () => `Bearer ${(await new nucleo.EmissorDeTokenDeOperador(identidade.chaveAssinatura).emitir({ operadorId: OPERADOR, sessaoId: SESSAO })).token}`
+
+  it('em cada rota @RotaDeOperacao registrada, o token de operador conta no rl:op do sub, e em nenhum outro limite', async () => {
+    const rotas = rotasDaApi().filter((rota) => rota.marcador === 'rota')
+    expect(rotas.length).toBeGreaterThan(0)
+    for (const rota of rotas) {
+      const { guarda, limitador } = guardaComLimitador()
+      expect(await guarda.canActivate(execucao(rota, await tokenDeOperador())), nomeDaRota(rota)).toBe(true)
+      expect(limitador.consumirDeOperador.mock.calls, nomeDaRota(rota)).toEqual([[OPERADOR]])
+      expect([limitador.consumirAnonima, limitador.consumirDoLogin, limitador.consumirAutenticada].map((consumo) => consumo.mock.calls.length), nomeDaRota(rota)).toEqual([0, 0, 0])
+    }
+  })
+
+  it('acima do limite, 429 LIMITE_EXCEDIDO com a espera; sem token de operador que confira, não conta nada e deixa a GuardaDeOperador responder', async () => {
+    const [rota] = rotasDaApi().filter((candidata) => candidata.marcador === 'rota')
+    if (rota === undefined) throw new Error('nenhuma rota @RotaDeOperacao')
+    const recusada = guardaComLimitador({ aceita: false, msAteLiberar: 1_500 })
+    await expect(recusada.guarda.canActivate(execucao(rota, await tokenDeOperador()))).rejects.toMatchObject({ codigo: CodigoDeErro.LIMITE_EXCEDIDO, status: 429, tenteDeNovoEmSegundos: 2 })
+
+    const tokenDeEscola = (await new nucleo.EmissorDeToken(identidade.chaveAssinatura).emitir({ escolaId: SESSAO, usuarioId: OPERADOR, sessaoId: SESSAO })).token
+    for (const authorization of [undefined, `Bearer ${tokenDeEscola}`, 'Bearer a.b.c']) {
+      const { guarda, limitador } = guardaComLimitador()
+      expect(await guarda.canActivate(execucao(rota, authorization))).toBe(true)
+      expect(Object.values(limitador).map((consumo) => consumo.mock.calls.length)).toEqual([0, 0, 0, 0])
+    }
   })
 })

@@ -2,11 +2,14 @@ import { CodigoDeErro } from '@educa/shared'
 import type { CanActivate, ExecutionContext } from '@nestjs/common'
 import type { Reflector } from '@nestjs/core'
 import type { IncomingMessage } from 'node:http'
+import type { ConfiguracaoIdentidade } from '../config/validar-config.js'
 import type { ConfiguracaoOperacional, LimitesDeRequisicao } from '../configuracao/configuracao-operacional.js'
 import { contextoAtual, executarNoContexto } from '../contexto/contexto.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
+import { marcadorDeOperacao } from '../identidade/marcadores-de-operacao.js'
 import { rotaSemSessao } from '../identidade/rota-sem-sessao.js'
 import { tokenDaRequisicao } from '../identidade/token-da-requisicao.js'
+import { extrairTokenBearer, verificarTokenDeOperador, type TokenDeOperadorVerificado } from '../identidade/verificar-token.js'
 import { ipDoCliente, segundosParaTentarDeNovo } from './chaves.js'
 import type { LimitadorDeRequisicoes } from './limitador.js'
 import type { ProxiesConfiaveis } from './proxies-confiaveis.js'
@@ -32,6 +35,11 @@ export function acimaDoLimiteDoIp(requisicao: IncomingMessage): boolean {
  *
  * Excesso responde 429 `LIMITE_EXCEDIDO` com `Retry-After`, menos nas rotas de login por senha (`@LimiteQueRebaixa()`):
  * nelas o excesso do IP só marca a requisição, que o login rebaixa, e o balde é próprio (identidade, 15.0).
+ *
+ * A rota `@RotaDeOperacao()` conta no limite do operador (`rl:op:{sub}`, Tech Spec da A0, seção 5), pelo token de
+ * operador que esta guarda verifica. Sem token de operador que confira, não conta nada e deixa passar: quem responde é
+ * a `GuardaDeOperador`, com o 404 de uma rota inexistente, sem banco nem Redis. Contar ali daria um 429 que a rota
+ * inexistente não dá, e diria que a rota existe. O token vencido conta: ele também chega ao Postgres.
  */
 export class GuardaDeLimite implements CanActivate {
   constructor(
@@ -39,6 +47,7 @@ export class GuardaDeLimite implements CanActivate {
     private readonly limitador: LimitadorDeRequisicoes,
     private readonly proxies: ProxiesConfiaveis,
     private readonly limitesDaEscola: Pick<ConfiguracaoOperacional<LimitesDeRequisicao>, 'daEscola'>,
+    private readonly identidade: ConfiguracaoIdentidade,
   ) {}
 
   async canActivate(execucao: ExecutionContext): Promise<boolean> {
@@ -47,8 +56,9 @@ export class GuardaDeLimite implements CanActivate {
     const alvos = [execucao.getHandler(), execucao.getClass()]
     if (this.reflector.getAllAndOverride<boolean | undefined>(METADADO_SEM_LIMITE, alvos) === true) return true
 
-    const anonima = rotaSemSessao(this.reflector, execucao)
     const requisicao = execucao.switchToHttp().getRequest<IncomingMessage>()
+    if (marcadorDeOperacao(this.reflector, execucao) === 'rota') return this.#consumirDeOperador(requisicao)
+    const anonima = rotaSemSessao(this.reflector, execucao)
     if (anonima && this.reflector.getAllAndOverride<boolean | undefined>(METADADO_LIMITE_QUE_REBAIXA, alvos) === true) {
       const doLogin = await this.limitador.consumirDoLogin(await this.#ipDaRequisicao(requisicao))
       if (!doLogin.aceita) ACIMA_DO_LIMITE_DO_IP.add(requisicao)
@@ -57,6 +67,16 @@ export class GuardaDeLimite implements CanActivate {
     const resultado = anonima
       ? await this.limitador.consumirAnonima(await this.#ipDaRequisicao(requisicao))
       : await this.#consumirAutenticada(requisicao)
+    if (!resultado.aceita) {
+      throw new ErroDeDominio(CodigoDeErro.LIMITE_EXCEDIDO, undefined, segundosParaTentarDeNovo(resultado.msAteLiberar))
+    }
+    return true
+  }
+
+  async #consumirDeOperador(requisicao: IncomingMessage): Promise<true> {
+    const token = await tokenDeOperadorOuNada(requisicao.headers.authorization, this.identidade)
+    if (token === undefined) return true
+    const resultado = await this.limitador.consumirDeOperador(token.operadorId)
     if (!resultado.aceita) {
       throw new ErroDeDominio(CodigoDeErro.LIMITE_EXCEDIDO, undefined, segundosParaTentarDeNovo(resultado.msAteLiberar))
     }
@@ -94,4 +114,14 @@ export async function ipDaRequisicao(requisicao: IncomingMessage, proxies: Pick<
   // Sem cabeçalho, nem precisa perguntar se a conexão é da borda.
   const daBorda = encaminhado !== undefined && (await proxies.ehConfiavel(enderecoDaConexao))
   return ipDoCliente(enderecoDaConexao, encaminhado, daBorda)
+}
+
+/** O token de operador do `Authorization`, verificado, ou `undefined` quando não há um que confira. */
+async function tokenDeOperadorOuNada(cabecalho: string | string[] | undefined, identidade: ConfiguracaoIdentidade): Promise<TokenDeOperadorVerificado | undefined> {
+  try {
+    return await verificarTokenDeOperador(extrairTokenBearer(cabecalho), identidade)
+  } catch (erro) {
+    if (erro instanceof ErroDeDominio) return undefined
+    throw erro
+  }
 }

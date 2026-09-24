@@ -1,8 +1,10 @@
 export {
   CABECALHO_REQUISICAO_ID,
   contextoAtual,
+  definirOperadorNoContexto,
   definirSessaoNoContexto,
   executarNoContexto,
+  exigirOperadorDoContexto,
   middlewareDeContexto,
   resolverRequisicaoId,
 } from './contexto/contexto.js'
@@ -79,11 +81,23 @@ export { mapearErroPostgres } from './erro/mapear-erro-postgres.js'
 export { ehErroDoPostgres, erroDoPostgresEm, resumirErro } from './erro/resumir-erro.js'
 export type { ErroDoPostgres, ResumoDeErro } from './erro/resumir-erro.js'
 export { GuardaDeAutenticacao, identidadeDaRequisicao, sessaoDaRequisicao } from './identidade/guarda-autenticacao.js'
-export { ALGORITMO_TOKEN, extrairTokenBearer, TIPO_DESAFIO, TIPO_TOKEN, VALIDADE_MAXIMA_TOKEN_SEGUNDOS, verificarToken } from './identidade/verificar-token.js'
+export {
+  ALGORITMO_TOKEN,
+  bearerDeOperador,
+  extrairTokenBearer,
+  TIPO_DESAFIO,
+  TIPO_TOKEN,
+  TIPO_TOKEN_DE_OPERADOR,
+  VALIDADE_MAXIMA_TOKEN_SEGUNDOS,
+  verificarToken,
+  verificarTokenDeOperador,
+} from './identidade/verificar-token.js'
+export { marcadorDeOperacao, METADADO_ENTRADA_DE_OPERACAO, METADADO_ROTA_DE_OPERACAO } from './identidade/marcadores-de-operacao.js'
+export type { MarcadorDeOperacao } from './identidade/marcadores-de-operacao.js'
 export { bearerDeDesafio, rotaSemSessao } from './identidade/rota-sem-sessao.js'
-export type { Identidade, TokenVerificado } from './identidade/verificar-token.js'
-export { EmissorDeToken, VALIDADE_TOKEN_ACESSO_SEGUNDOS } from './identidade/emissor-de-token.js'
-export type { PedidoDeTokenDeAcesso, TokenDeAcesso } from './identidade/emissor-de-token.js'
+export type { Identidade, TokenDeOperadorVerificado, TokenVerificado } from './identidade/verificar-token.js'
+export { EmissorDeToken, EmissorDeTokenDeOperador, VALIDADE_TOKEN_ACESSO_SEGUNDOS } from './identidade/emissor-de-token.js'
+export type { PedidoDeTokenDeAcesso, PedidoDeTokenDeOperador, TokenDeAcesso } from './identidade/emissor-de-token.js'
 export { avaliarSessao, inatividadeDoPapel, sessaoAindaVale, tokenDaUltimaRenovacao, TOLERANCIA_DE_INATIVIDADE_MIN } from './identidade/avaliar-sessao.js'
 export type { EstadoDaSessao } from './identidade/avaliar-sessao.js'
 export { GuardaDeSessao } from './identidade/guarda-sessao.js'
@@ -109,13 +123,14 @@ export {
   PREFIXO_LIMITE_ESCOLA,
   PREFIXO_LIMITE_IP,
   PREFIXO_LIMITE_IP_LOGIN,
+  PREFIXO_LIMITE_OPERADOR,
   PREFIXO_LIMITE_USUARIO,
 } from './limite/chaves.js'
 export { acimaDoLimiteDoIp, GuardaDeLimite, ipDaRequisicao } from './limite/guarda-limite.js'
 export { LimitadorDeRequisicoes, lerConfiguracaoLimite } from './limite/limitador.js'
 export type { ConfiguracaoLimite, ResultadoDoLimite } from './limite/limitador.js'
 export { ProxiesConfiaveis } from './limite/proxies-confiaveis.js'
-export { AceitaDesafio, LimiteQueRebaixa, RotaAnonima, SemLimite } from './limite/rota-anonima.decorator.js'
+export { AceitaDesafio, LimiteQueRebaixa, METADADO_ROTA_ANONIMA, RotaAnonima, SemLimite } from './limite/rota-anonima.decorator.js'
 export { criarClienteRedisDaApi, criarClienteRedisDaFila, TIMEOUT_COMANDO_REDIS_API_MS, TIMEOUT_COMANDO_REDIS_FILA_MS } from './redis/clientes.js'
 export { usoInfraDiario } from './db/schema/uso-infra-diario.js'
 export { diaAnterior, diaDeUso, diaValido, FORMATO_DIA, FORMATO_MES, FUSO_DO_USO, limitesDoMes } from './uso/dia-de-uso.js'

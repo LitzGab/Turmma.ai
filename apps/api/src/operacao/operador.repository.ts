@@ -18,6 +18,9 @@ import { and, count, eq, isNull, sql } from 'drizzle-orm'
  */
 export const CHAVE_DA_TRAVA_DOS_OPERADORES = 7_000_002
 
+/** De quanto em quanto tempo, no máximo, a sessão do operador tem o uso gravado (Tech Spec da A0, seção 5). */
+export const INTERVALO_DE_GRAVACAO_DO_USO_SEGUNDOS = 60
+
 /**
  * Quem roda o comando, pelo `OPERADOR` do ambiente:
  * - `bootstrap`: não há operador ativo, e qualquer `OPERADOR` no formato é aceito (o nascimento);
@@ -32,13 +35,31 @@ export interface OperadorAlvo {
 }
 
 /**
+ * O que a `GuardaDeOperador` lê da sessão do token, numa consulta: os prazos, o encerramento, se o operador está
+ * desativado, e a hora do banco, contra a qual os prazos se comparam (a mesma régua do `ultimo_uso_em`, que o banco grava).
+ */
+export interface SessaoDeOperadorParaGuarda {
+  readonly encerradaEm: Date | null
+  readonly expiraEm: Date
+  readonly ultimoUsoEm: Date
+  readonly operadorDesativadoEm: Date | null
+  readonly agora: Date
+}
+
+/** O que `GET /v1/operacao/eu` devolve do operador: o apelido e o nome, e nada mais. */
+export interface OperadorDaSessao {
+  readonly apelido: string
+  readonly nome: string
+}
+
+/**
  * O único código que toca as seis tabelas da operação (Tech Spec da A0, seção 6; o expurgo entra na tarefa 9.0). As
  * tabelas são da nossa equipe e não têm `escola_id`, então nenhum método leva escopo de escola nem `@SemEscopo`; o
  * contrapeso é que este repository não toca nenhuma outra tabela, e nenhuma outra classe toca estas (C45, em
  * `apps/api/test/arquitetura.test.ts`).
  *
  * Recebe o banco ou a transação de quem chama: o `ops:operador` grava tudo de uma operação numa transação só.
- * Devolve só id e apelido: nome, e-mail, hash e segredo nunca saem daqui.
+ * Devolve id e apelido, e o nome só ao `eu` do próprio operador (`daSessao`): e-mail, hash e segredo nunca saem daqui.
  */
 export class OperadorRepository {
   constructor(private readonly banco: Banco | TransacaoBanco) {}
@@ -129,6 +150,58 @@ export class OperadorRepository {
       .update(sessaoOperador)
       .set({ encerradaEm: sql`now()`, motivo })
       .where(and(eq(sessaoOperador.operadorId, operadorId), isNull(sessaoOperador.encerradaEm)))
+  }
+
+  /**
+   * A sessão do token de operador, com o operador dela, para a `GuardaDeOperador`. Só casa a sessão **deste** operador:
+   * um `sid` de outro operador no token não lê nada.
+   */
+  async lerSessaoParaGuarda(sessaoId: string, operadorId: string): Promise<SessaoDeOperadorParaGuarda | undefined> {
+    const [linha] = await this.banco
+      .select({
+        encerradaEm: sessaoOperador.encerradaEm,
+        expiraEm: sessaoOperador.expiraEm,
+        ultimoUsoEm: sessaoOperador.ultimoUsoEm,
+        operadorDesativadoEm: operador.desativadoEm,
+        agora: sql<Date>`now()`.mapWith(sessaoOperador.expiraEm),
+      })
+      .from(sessaoOperador)
+      .innerJoin(operador, eq(operador.id, sessaoOperador.operadorId))
+      .where(and(eq(sessaoOperador.id, sessaoId), eq(sessaoOperador.operadorId, operadorId)))
+      .limit(1)
+    return linha
+  }
+
+  /**
+   * Grava o uso da sessão, no máximo uma vez por minuto: a condição está no próprio `update`, e por isso vinte
+   * requisições juntas gravam uma vez só (a primeira trava a linha; as outras, liberadas, releem a condição e não casam).
+   * Sessão encerrada não é tocada. Devolve se gravou.
+   */
+  async marcarUsoDaSessao(sessaoId: string, operadorId: string): Promise<boolean> {
+    const marcadas = await this.banco
+      .update(sessaoOperador)
+      .set({ ultimoUsoEm: sql`now()` })
+      .where(
+        and(
+          eq(sessaoOperador.id, sessaoId),
+          eq(sessaoOperador.operadorId, operadorId),
+          isNull(sessaoOperador.encerradaEm),
+          sql`${sessaoOperador.ultimoUsoEm} <= now() - make_interval(secs => ${INTERVALO_DE_GRAVACAO_DO_USO_SEGUNDOS})`,
+        ),
+      )
+      .returning({ id: sessaoOperador.id })
+    return marcadas.length > 0
+  }
+
+  /** O apelido e o nome do operador ativo, para `GET /v1/operacao/eu`. Desativado não tem nome, e não volta. */
+  async daSessao(operadorId: string): Promise<OperadorDaSessao | undefined> {
+    const [linha] = await this.banco
+      .select({ apelido: operador.apelido, nome: operador.nome })
+      .from(operador)
+      .where(and(eq(operador.id, operadorId), isNull(operador.desativadoEm)))
+      .limit(1)
+    if (linha?.nome === null || linha === undefined) return undefined
+    return { apelido: linha.apelido, nome: linha.nome }
   }
 
   /** A auditoria da operação: autor (apelido ou `bootstrap`), ação da lista fechada e operador alvo. Nada mais. */

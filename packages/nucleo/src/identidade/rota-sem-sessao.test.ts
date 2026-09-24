@@ -2,7 +2,9 @@ import type { ExecutionContext } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { SignJWT } from 'jose'
 import { describe, expect, it } from 'vitest'
+import { SetMetadata } from '@nestjs/common'
 import { AceitaDesafio, RotaAnonima } from '../limite/rota-anonima.decorator.js'
+import { marcadorDeOperacao, METADADO_ENTRADA_DE_OPERACAO, METADADO_ROTA_DE_OPERACAO } from './marcadores-de-operacao.js'
 import { bearerDeDesafio, rotaSemSessao } from './rota-sem-sessao.js'
 import { TIPO_DESAFIO, TIPO_TOKEN } from './verificar-token.js'
 
@@ -16,6 +18,19 @@ class Rotas {
 
   @RotaAnonima()
   anonima(): void {}
+
+  // Os marcadores da operação, pelas chaves que os decoradores de `apps/api/src/operacao/marcadores.ts` gravam.
+  @SetMetadata(METADADO_ROTA_DE_OPERACAO, true)
+  daOperacao(): void {}
+
+  @SetMetadata(METADADO_ENTRADA_DE_OPERACAO, true)
+  entradaDaOperacao(): void {}
+}
+
+/** Controller inteiro marcado na classe: o método herda o marcador. */
+@SetMetadata(METADADO_ROTA_DE_OPERACAO, true)
+class RotasDaOperacao {
+  qualquer(): void {}
 }
 
 function execucao(metodo: keyof Rotas, authorization?: string, tipo = 'http'): ExecutionContext {
@@ -56,6 +71,22 @@ describe('rotaSemSessao: quando as guardas tratam a requisição como anônima',
 
   it('rota @RotaAnonima continua anônima, com ou sem token', () => {
     expect(rotaSemSessao(reflector, execucao('anonima'))).toBe(true)
+  })
+
+  it('rota da operação, no método ou na classe, e entrada da operação: sem sessão de escola, com ou sem bearer de escola', async () => {
+    expect(rotaSemSessao(reflector, execucao('daOperacao'))).toBe(true)
+    expect(rotaSemSessao(reflector, execucao('daOperacao', `Bearer ${await jwt(TIPO_TOKEN)}`))).toBe(true)
+    expect(rotaSemSessao(reflector, execucao('entradaDaOperacao', `Bearer ${await jwt(TIPO_TOKEN)}`))).toBe(true)
+    const naClasse = { getHandler: () => RotasDaOperacao.prototype.qualquer, getClass: () => RotasDaOperacao, getType: () => 'http' } as unknown as ExecutionContext
+    expect(rotaSemSessao(reflector, naClasse)).toBe(true)
+    expect(marcadorDeOperacao(reflector, naClasse)).toBe('rota')
+  })
+
+  it('marcadorDeOperacao separa a rota da entrada, e a rota da escola não tem marcador', () => {
+    expect(marcadorDeOperacao(reflector, execucao('daOperacao'))).toBe('rota')
+    expect(marcadorDeOperacao(reflector, execucao('entradaDaOperacao'))).toBe('entrada')
+    expect(marcadorDeOperacao(reflector, execucao('comum'))).toBeUndefined()
+    expect(marcadorDeOperacao(reflector, execucao('anonima'))).toBeUndefined()
   })
 
   it('bearerDeDesafio só lê o typ do cabeçalho do JWT, sem verificar a assinatura', async () => {

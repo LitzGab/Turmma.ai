@@ -29,17 +29,17 @@ as duas respondem como rota inexistente. A primeira rota é `GET /v1/operacao/eu
 
 ## Subtarefas
 
-- [ ] 4.1 — `@RotaDeOperacao()` (`applyDecorators` com a `GuardaDeOperador`) e `@EntradaDeOperacao()`,
+- [x] 4.1 — `@RotaDeOperacao()` (`applyDecorators` com a `GuardaDeOperador`) e `@EntradaDeOperacao()`,
   ambos em `apps/api/src/operacao/`; `rotaSemSessao` e a conferência de permissões os reconhecem
-- [ ] 4.2 — `verificarTokenDeOperador` e a emissão do acesso de 10 min, sem `esc`; bearer com `typ` de
+- [x] 4.2 — `verificarTokenDeOperador` e a emissão do acesso de 10 min, sem `esc`; bearer com `typ` de
   operador em rota de escola → 404 pelo mesmo filtro de rota inexistente
-- [ ] 4.3 — `GuardaDeOperador`: credencial que não é de operador → 404; acesso vencido com sessão viva →
+- [x] 4.3 — `GuardaDeOperador`: credencial que não é de operador → 404; acesso vencido com sessão viva →
   401 `ACESSO_VENCIDO`; sessão terminada (30 min, 8 h, saída, desativado) → 401 `SESSAO_ENCERRADA`;
   banco fora → 503; contexto só com `operadorId`; `ultimoUsoEm` gravado no máximo uma vez por minuto
-- [ ] 4.4 — `GuardaDeLimite` conta `rl:op:{sub}` nas rotas `@RotaDeOperacao`, com valor na
+- [x] 4.4 — `GuardaDeLimite` conta `rl:op:{sub}` nas rotas `@RotaDeOperacao`, com valor na
   configuração operacional; sem token de operador válido, não conta
-- [ ] 4.5 — `GET /v1/operacao/eu` (apelido e nome), com contrato estrito em `packages/shared`
-- [ ] 4.6 — Testes (tabela abaixo)
+- [x] 4.5 — `GET /v1/operacao/eu` (apelido e nome), com contrato estrito em `packages/shared`
+- [x] 4.6 — Testes (tabela abaixo)
 
 ## Arquivos previstos
 
@@ -91,3 +91,51 @@ repete o C47 com o cookie de verdade.
 - As rotas `@EntradaDeOperacao` (5.0 a 8.0); por isso C43, C44 e a parte de entrada de C36 e C46
   ficam para a 8.0, quando as sete existem
 - Emitir sessão de verdade pelo login (7.0): aqui a sessão nasce pela fixture
+
+## Divergências resolvidas nesta tarefa
+
+- **O valor do `rl:op` é a variável `LIMITE_REQ_OPERADOR_MIN`** (120/min no `.env.example`, também no `infra/compose.yml`),
+  lida com os outros limites em `lerConfiguracaoLimite`. A Tech Spec diz "valor na configuração operacional", e a
+  `ConfiguracaoOperacional` é por escola: o operador não tem escola, então o valor é da configuração do ambiente, sem
+  padrão escondido no código (D41).
+- **Arquivos a mais que a lista previa:** `apps/api/src/operacao/prazos-da-sessao.ts` (os 30 min e as 8 h, função pura
+  testada em unidade), `eu.service.ts` (regra 00: o controller não lê o repository), `apps/api/test/rotas-registradas.ts`
+  (a lista gerada das rotas, com as conferências do C41 e do C42, usada pelo teste de arquitetura e pelo de isolamento),
+  e, no núcleo, `identidade/marcadores-de-operacao.ts` (as chaves dos marcadores: as guardas globais e a conferência do
+  boot as leem sem depender da API), `emissor-de-token.ts` (`EmissorDeTokenDeOperador`) e `contexto/contexto.ts`
+  (`operadorId`, `definirOperadorNoContexto`, `exigirOperadorDoContexto`). O `OperadorRepository` ganha
+  `lerSessaoParaGuarda`, `marcarUsoDaSessao` e `daSessao`.
+- **Dois códigos de erro novos em `packages/shared`:** `ACESSO_VENCIDO` e `SESSAO_ENCERRADA`, 401, com mensagem no catálogo
+  (regra 00, item 9, e a recomendação da 3.0).
+- **Bearer de operador em rota de escola → 404 pelo `typ` do cabeçalho**, sem verificar a assinatura, como o
+  `bearerDeDesafio`: o token não passaria de qualquer jeito, e quem forja o `typ` ganha só o 404 que teria numa rota que
+  não existe.
+- **Ordem da conferência:** a sessão que terminou responde `SESSAO_ENCERRADA` mesmo com o acesso vencido (a web não tenta
+  renovar o que não renova); a sessão que não existe mais (expurgada) ou que é de outro operador também é
+  `SESSAO_ENCERRADA`. O `ultimoUsoEm` não é gravado na requisição com o acesso vencido.
+- **O `rl:op` conta o token de operador vencido**, com assinatura conferida: ele também chega ao Postgres. Sem token de
+  operador que confira, nada conta, e a `GuardaDeOperador` responde o 404.
+- **C46 vai além da linha da tabela:** além das sessões de coordenador, professor e aluno, varre o desafio de escola, o
+  cookie `educa_sessao` e a requisição sem credencial (a parte das rotas de entrada fica com a 8.0). E os prazos que a
+  guarda aplica (encerrada, 8 h, 30 min parada contra 29 min) têm um teste de integração aqui, porque a guarda nasce aqui;
+  o C26 a o C31, com o `/renovar`, continuam na 8.0.
+- **C45 exclui apoio de teste**: a varredura já deixava de fora os `*.test.ts`; agora deixa também o que mora numa pasta
+  `test/` (a bancada `apps/api/test/sessao-de-operador.ts` grava operador e sessão por SQL), com o caso no teste da
+  própria varredura.
+- **A mensagem da conferência do boot** passa a ser "rota sem @Permite, @RotaAnonima nem marcador da operação", e o
+  `METADADO_ROTA_ANONIMA` passa a sair do barrel do núcleo, para a lista de rotas do teste o ler.
+
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-23 22:24:26 | 2026-09-23 22:25:30 | `test-engineer` | 1 | APROVADO | ac6b47f775779b508 |
+| 2026-09-23 22:25:52 | 2026-09-23 22:26:20 | `infra-guardian` | 1 | APROVADO | ae198f5666e0d92be |
+| 2026-09-23 22:25:58 | 2026-09-23 22:26:27 | `privacy-guardian` | 1 | APROVADO | a6e67fb864b6500d1 |
+| 2026-09-23 22:25:46 | 2026-09-23 22:26:29 | `tenancy-guardian` | 1 | APROVADO | a8aaf6e49dde73ed4 |
+| 2026-09-23 22:25:39 | 2026-09-23 22:27:08 | `revisor-geral` | 1 | APROVADO | ab46e689e2e464567 |

@@ -26,6 +26,12 @@ export interface ContextoDaRequisicao {
    * alcança nem os jobs de sistema.
    */
   readonly rotinaDoSistema?: true
+  /**
+   * O operador Turmma da sessão de operador que a `GuardaDeOperador` conferiu (Tech Spec da A0, seção 5). É a única
+   * identidade da área da operação: nunca vem junto de escola, usuário, papel, sessão de escola nem ano letivo, e por
+   * isso todo repository de escola chamado numa rota de operador falha com erro (`exigirEscolaDoContexto`).
+   */
+  readonly operadorId?: string
 }
 
 type ContextoGravavel = { -readonly [Campo in keyof ContextoDaRequisicao]: ContextoDaRequisicao[Campo] }
@@ -72,7 +78,7 @@ export function middlewareDeContexto(requisicao: IncomingMessage, _resposta: Ser
 function contextoAindaSemIdentidade(): ContextoGravavel {
   const contexto = armazenamento.getStore() as ContextoGravavel | undefined
   if (contexto === undefined) throw new Error('contexto da requisição ausente')
-  if (contexto.escolaId !== undefined || contexto.usuarioId !== undefined || contexto.sessaoId !== undefined) {
+  if (contexto.escolaId !== undefined || contexto.usuarioId !== undefined || contexto.sessaoId !== undefined || contexto.operadorId !== undefined) {
     throw new Error('identidade do contexto já definida')
   }
   return contexto
@@ -101,3 +107,23 @@ export function definirSessaoNoContexto(sessao: SessaoDaRequisicao): void {
   contexto.anoLetivoId = sessao.anoLetivoId
 }
 
+
+/**
+ * Grava no contexto o operador da sessão de operador que a `GuardaDeOperador` conferiu, e só ele: sem escola, usuário,
+ * papel, sessão nem ano letivo. Vale uma vez, como a sessão de escola, e nunca depois dela: sem contexto, ou com
+ * qualquer identidade já gravada, falha fechada.
+ */
+export function definirOperadorNoContexto(operadorId: string): void {
+  const contexto = contextoAindaSemIdentidade()
+  contexto.operadorId = operadorId
+}
+
+/**
+ * O operador da requisição em andamento, gravado pela `GuardaDeOperador`. Sem ele, falha fechada: é erro de programação
+ * (rota da operação sem a guarda), e nunca vira consulta sem operador.
+ */
+export function exigirOperadorDoContexto(): string {
+  const operadorId = contextoAtual()?.operadorId
+  if (operadorId === undefined) throw new Error('rota da operação sem operador no contexto')
+  return operadorId
+}

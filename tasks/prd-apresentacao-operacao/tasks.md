@@ -1,7 +1,7 @@
 # Tarefas — Identidade do operador Turmma (A0)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 3 de 11 concluídas
+**Status:** 4 de 11 concluídas
 
 ## Lista
 
@@ -25,11 +25,11 @@
   - [x] 3.4 `comando.ts` confere o `OPERADOR` em todo `ops:*`
   - [x] 3.5 Testes: C1–C5, C6 (sem sessão), C7 (único parcial), C8, C45, U1
 
-- [ ] **4.0 — Marcadores e cercas entre a operação e a escola**
-  - [ ] 4.1 `@RotaDeOperacao`, `@EntradaDeOperacao` e o `rotaSemSessao`
-  - [ ] 4.2 `GuardaDeOperador` e `verificarTokenDeOperador`; token de operador em rota de escola → 404
-  - [ ] 4.3 `rl:op` na `GuardaDeLimite`; `GET /v1/operacao/eu`
-  - [ ] 4.4 Testes: C6 (sessão encerrada), C35, C36 (`rl:op`), C40–C42, C46 (com sessão), C47 (fixture),
+- [x] **4.0 — Marcadores e cercas entre a operação e a escola**
+  - [x] 4.1 `@RotaDeOperacao`, `@EntradaDeOperacao` e o `rotaSemSessao`
+  - [x] 4.2 `GuardaDeOperador` e `verificarTokenDeOperador`; token de operador em rota de escola → 404
+  - [x] 4.3 `rl:op` na `GuardaDeLimite`; `GET /v1/operacao/eu`
+  - [x] 4.4 Testes: C6 (sessão encerrada), C35, C36 (`rl:op`), C40–C42, C46 (com sessão), C47 (fixture),
     C48, C49
 
 - [ ] **5.0 — Convite do operador: consultar e aceitar**

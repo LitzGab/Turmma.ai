@@ -12,6 +12,7 @@ import {
   PREFIXO_LIMITE_ESCOLA,
   PREFIXO_LIMITE_IP,
   PREFIXO_LIMITE_IP_LOGIN,
+  PREFIXO_LIMITE_OPERADOR,
   PREFIXO_LIMITE_USUARIO,
 } from './chaves.js'
 import { ProporcaoEmJanela } from './proporcao-em-janela.js'
@@ -22,6 +23,8 @@ export interface ConfiguracaoLimite {
   readonly porUsuarioMin: number
   readonly porEscolaMin: number
   readonly porIpAnonimoMin: number
+  /** Requisições por minuto de cada operador Turmma nas rotas `@RotaDeOperacao` (`rl:op`, Tech Spec da A0, seção 5). */
+  readonly porOperadorMin: number
   /** Quantas instâncias da API dividem o limite. O seguro em memória de cada uma usa limite ÷ instâncias. */
   readonly instancias: number
   /** Nome ou IP dos proxies cujo `X-Forwarded-For` vale (a borda). */
@@ -37,6 +40,7 @@ const esquemaAmbienteLimite = z.object({
   LIMITE_REQ_USUARIO_MIN: inteiroPositivo,
   LIMITE_REQ_ESCOLA_MIN: inteiroPositivo,
   LIMITE_REQ_IP_ANONIMO_MIN: inteiroPositivo,
+  LIMITE_REQ_OPERADOR_MIN: inteiroPositivo,
   LIMITE_INSTANCIAS_API: inteiroPositivo,
   LIMITE_PROXIES_CONFIAVEIS: z
     .string()
@@ -55,6 +59,7 @@ export function lerConfiguracaoLimite(ambiente: Record<string, string | undefine
     porUsuarioMin: valores.LIMITE_REQ_USUARIO_MIN,
     porEscolaMin: valores.LIMITE_REQ_ESCOLA_MIN,
     porIpAnonimoMin: valores.LIMITE_REQ_IP_ANONIMO_MIN,
+    porOperadorMin: valores.LIMITE_REQ_OPERADOR_MIN,
     instancias: valores.LIMITE_INSTANCIAS_API,
     proxiesConfiaveis: valores.LIMITE_PROXIES_CONFIAVEIS,
   }
@@ -147,6 +152,7 @@ export class LimitadorDeRequisicoes {
   readonly #escola: LimitesDoPrefixo
   readonly #ipAnonimo: Limite
   readonly #ipDoLogin: Limite
+  readonly #operador: Limite
   readonly #proporcaoDoSeguro: ProporcaoEmJanela
   readonly #avisarAtivado = avisoEspacado(() => this.#logger.warn('limite.seguro_ativado'))
   readonly #avisarDesativado = avisoEspacado(() => this.#logger.log('limite.seguro_desativado'))
@@ -159,6 +165,7 @@ export class LimitadorDeRequisicoes {
     this.#escola = new LimitesDoPrefixo(cliente, PREFIXO_LIMITE_ESCOLA, config.instancias)
     this.#ipAnonimo = criarLimite(cliente, PREFIXO_LIMITE_IP, config.porIpAnonimoMin, config.instancias)
     this.#ipDoLogin = criarLimite(cliente, PREFIXO_LIMITE_IP_LOGIN, config.porIpAnonimoMin, config.instancias)
+    this.#operador = criarLimite(cliente, PREFIXO_LIMITE_OPERADOR, config.porOperadorMin, config.instancias)
   }
 
   /** 1 enquanto a última requisição limitada foi contada pelo seguro em memória. */
@@ -201,7 +208,7 @@ export class LimitadorDeRequisicoes {
   }
 
   async consumirAnonima(ip: string): Promise<ResultadoDoLimite> {
-    return this.#consumirPorIp(this.#ipAnonimo, ip)
+    return this.#consumirUmaChave(this.#ipAnonimo, ip)
   }
 
   /**
@@ -209,11 +216,19 @@ export class LimitadorDeRequisicoes {
    * Quem chama não recusa acima dele: só rebaixa a tentativa.
    */
   async consumirDoLogin(ip: string): Promise<ResultadoDoLimite> {
-    return this.#consumirPorIp(this.#ipDoLogin, ip)
+    return this.#consumirUmaChave(this.#ipDoLogin, ip)
   }
 
-  async #consumirPorIp(limite: Limite, ip: string): Promise<ResultadoDoLimite> {
-    const consumo = await this.#consumir(limite, ip)
+  /**
+   * O limite do operador Turmma nas rotas `@RotaDeOperacao` (`rl:op:{operadorId}`), pelo `sub` do token de operador
+   * verificado. Com o Redis fora, o mesmo seguro em memória dos outros limites.
+   */
+  async consumirDeOperador(operadorId: string): Promise<ResultadoDoLimite> {
+    return this.#consumirUmaChave(this.#operador, operadorId)
+  }
+
+  async #consumirUmaChave(limite: Limite, chave: string): Promise<ResultadoDoLimite> {
+    const consumo = await this.#consumir(limite, chave)
     this.#registrarSeguro(consumo.doSeguro)
     return consumo.aceita ? { aceita: true } : { aceita: false, msAteLiberar: consumo.resposta.msBeforeNext }
   }

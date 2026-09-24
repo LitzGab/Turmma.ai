@@ -20,6 +20,7 @@ const ambienteValido = {
   LIMITE_REQ_USUARIO_MIN: '120',
   LIMITE_REQ_ESCOLA_MIN: '30000',
   LIMITE_REQ_IP_ANONIMO_MIN: '3000',
+  LIMITE_REQ_OPERADOR_MIN: '120',
   LIMITE_INSTANCIAS_API: '2',
   LIMITE_PROXIES_CONFIAVEIS: 'borda',
   ROTAS_SINTETICAS: 'false',
@@ -92,6 +93,7 @@ describe('lerConfiguracao', () => {
         porUsuarioMin: 120,
         porEscolaMin: 30000,
         porIpAnonimoMin: 3000,
+        porOperadorMin: 120,
         instancias: 2,
         proxiesConfiaveis: ['borda'],
       },
@@ -302,6 +304,7 @@ describe('lerConfiguracao', () => {
     ['LIMITE_REQ_USUARIO_MIN', '0'],
     ['LIMITE_REQ_ESCOLA_MIN', '-1'],
     ['LIMITE_REQ_IP_ANONIMO_MIN', '1.5'],
+    ['LIMITE_REQ_OPERADOR_MIN', '0'],
     ['LIMITE_INSTANCIAS_API', 'duas'],
     ['LIMITE_PROXIES_CONFIAVEIS', ' , '],
     ['LIMITE_PROXIES_CONFIAVEIS', 'http://borda:8080'],
@@ -314,7 +317,7 @@ describe('lerConfiguracao', () => {
   it('.env.example traz os padrões da Tech Spec: 120/min por usuário, 30.000/min por escola, 3.000/min por IP anônimo, duas instâncias e a borda', () => {
     const exemplo = lerAmbienteExemplo()
     const { limite } = lerConfiguracao({ ...ambienteValido, ...exemplo, API_PORTA: '3000', BANCO_URL: ambienteValido.BANCO_URL, REDIS_CACHE_URL: ambienteValido.REDIS_CACHE_URL, REDIS_FILA_URL: ambienteValido.REDIS_FILA_URL })
-    expect(limite).toMatchObject({ porUsuarioMin: 120, porEscolaMin: 30_000, porIpAnonimoMin: 3_000, instancias: 2, proxiesConfiaveis: ['borda'] })
+    expect(limite).toMatchObject({ porUsuarioMin: 120, porEscolaMin: 30_000, porIpAnonimoMin: 3_000, porOperadorMin: 120, instancias: 2, proxiesConfiaveis: ['borda'] })
   })
 
   it('aceita mais de um proxy confiável, por nome ou IP, separados por vírgula', () => {

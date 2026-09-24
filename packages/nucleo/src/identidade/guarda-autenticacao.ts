@@ -7,7 +7,7 @@ import { contextoAtual, type SessaoDaRequisicao } from '../contexto/contexto.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
 import { rotaSemSessao } from './rota-sem-sessao.js'
 import { guardarTokenDaRequisicao } from './token-da-requisicao.js'
-import { extrairTokenBearer, verificarToken, type Identidade } from './verificar-token.js'
+import { bearerDeOperador, extrairTokenBearer, verificarToken, type Identidade } from './verificar-token.js'
 
 /**
  * Primeira guarda global da API: só verifica o JWT (assinatura, emissor, tipo, prazo e os ids) e o prende à
@@ -27,6 +27,10 @@ export class GuardaDeAutenticacao implements CanActivate {
     if (execucao.getType() !== 'http') throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
 
     const requisicao = execucao.switchToHttp().getRequest<IncomingMessage>()
+    // Credencial de operador em rota de escola responde igual a uma rota inexistente (Tech Spec da A0, seção 5; C47): um
+    // 401 diria que a rota existe e só faltou a credencial certa. Basta o `typ` do cabeçalho, sem verificar nada: o
+    // token não passaria de qualquer jeito, e quem forja o `typ` só ganha o 404 que já teria numa rota que não existe.
+    if (bearerDeOperador(requisicao.headers.authorization)) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
     const token = await verificarToken(extrairTokenBearer(requisicao.headers.authorization), this.config)
     guardarTokenDaRequisicao(requisicao, token)
     return true

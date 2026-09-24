@@ -22,6 +22,7 @@ import { BANCO, BancoModule } from './banco.module.js'
 import type { ConfiguracaoApi } from './config.js'
 import { EstruturaModule } from './estrutura/estrutura.module.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
+import { OperacaoModule } from './operacao/operacao.module.js'
 import { SessaoModule } from './sessao/sessao.module.js'
 import { ProntidaoController } from './sistema/prontidao.controller.js'
 import { SistemaModule } from './sistema/sistema.module.js'
@@ -59,6 +60,7 @@ export class AppModule {
           ...(opcoes.prazoDoRedisDeLoginMs === undefined ? {} : { prazoDoRedisMs: opcoes.prazoDoRedisDeLoginMs }),
         }),
         EstruturaModule,
+        OperacaoModule.com(config.identidade),
         SistemaModule.com({
           rotasSinteticas: config.rotasSinteticas,
           versao: config.versao,
@@ -77,7 +79,9 @@ export class AppModule {
           useFactory: (descoberta: DiscoveryService) => new ConferenciaDasPermissoes(descoberta),
           inject: [DiscoveryService],
         },
-        // As guardas globais rodam na ordem de registro (Tech Spec, seção 1): JWT, limite, sessão, permissão.
+        // As guardas globais rodam na ordem de registro (Tech Spec, seção 1): JWT, limite, sessão, permissão. A rota
+        // `@RotaDeOperacao` passa pelas quatro como sem sessão de escola e só então pela `GuardaDeOperador`, que o
+        // marcador aplica no handler (Tech Spec da A0, seção 1).
         {
           // 1. Só o JWT, sem banco nem Redis: toda rota exige token, salvo as marcadas com `@RotaAnonima()`.
           provide: APP_GUARD,
@@ -86,10 +90,10 @@ export class AppModule {
         },
         {
           // 2. O limite pelo `sub` e pelo `esc` do token verificado, com os limites da escola: rajada acima do
-          // limite é recusada antes de chegar ao Postgres.
+          // limite é recusada antes de chegar ao Postgres. Na rota `@RotaDeOperacao`, pelo `sub` do token de operador.
           provide: APP_GUARD,
           useFactory: (reflector: Reflector, limitador: LimitadorDeRequisicoes, proxies: ProxiesConfiaveis, limites: ConfiguracaoOperacional<LimitesDeRequisicao>) =>
-            new GuardaDeLimite(reflector, limitador, proxies, limites),
+            new GuardaDeLimite(reflector, limitador, proxies, limites, config.identidade),
           inject: [Reflector, LimitadorDeRequisicoes, ProxiesConfiaveis, LIMITES_DA_ESCOLA],
         },
         { provide: SessaoRepository, useFactory: (banco: Banco) => new SessaoRepository(banco), inject: [BANCO] },

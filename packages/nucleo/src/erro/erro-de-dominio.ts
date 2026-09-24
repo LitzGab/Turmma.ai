@@ -14,6 +14,8 @@ export const STATUS_HTTP_DO_CODIGO: Readonly<Record<CodigoDeErro, number>> = {
   JA_RENOVADO: 409,
   // O retorno do login externo responde com redirecionamento; o código só aparece se alguma rota JSON o lançar.
   CONTA_EXTERNA_NAO_LIGADA: 401,
+  ACESSO_VENCIDO: 401,
+  SESSAO_ENCERRADA: 401,
 }
 
 /**

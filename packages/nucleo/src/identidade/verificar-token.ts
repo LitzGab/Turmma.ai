@@ -1,5 +1,5 @@
 import { CodigoDeErro } from '@educa/shared'
-import { errors, jwtVerify } from 'jose'
+import { decodeProtectedHeader, errors, jwtVerify } from 'jose'
 import { z } from 'zod'
 import { EMISSOR_TOKEN, type ConfiguracaoIdentidade } from '../config/validar-config.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
@@ -104,4 +104,94 @@ export function extrairTokenBearer(cabecalho: string | string[] | undefined): st
   const token = typeof cabecalho === 'string' ? FORMATO_BEARER.exec(cabecalho)?.[1] : undefined
   if (token === undefined) throw naoAutenticado()
   return token
+}
+
+/**
+ * O `typ` do token de acesso do operador Turmma (Tech Spec da A0, seção 1): o JWT de 10 min da área da operação, sem
+ * `esc`. O `verificarToken` da escola o recusa pelo `typ`, e a `GuardaDeAutenticacao` responde a ele, numa rota de
+ * escola, igual a uma rota inexistente.
+ */
+export const TIPO_TOKEN_DE_OPERADOR = 'operador+jwt'
+
+// Marca só de tipo, como a do token da escola.
+declare const MARCA_DO_TOKEN_DE_OPERADOR: unique symbol
+
+/**
+ * O que um token de operador com assinatura, emissor, `typ` e claims conferidos diz: o operador e a sessão dele, e se
+ * o prazo de 10 min já passou. Só o `verificarTokenDeOperador` produz este tipo.
+ *
+ * Vencido não quer dizer recusado: a `GuardaDeOperador` lê a sessão e responde `ACESSO_VENCIDO` quando ela está viva
+ * (a web renova) e `SESSAO_ENCERRADA` quando não está. O limite `rl:op` também conta o vencido, porque ele também
+ * chega ao Postgres.
+ */
+export interface TokenDeOperadorVerificado {
+  readonly operadorId: string
+  readonly sessaoId: string
+  readonly vencido: boolean
+  readonly [MARCA_DO_TOKEN_DE_OPERADOR]: true
+}
+
+const esquemaClaimsDeOperador = z.object({
+  sub: z.uuid(),
+  sid: z.uuid(),
+  exp: z.number(),
+  iat: z.number().optional(),
+  // Token de operador não tem escola: um `esc` nele é token forjado ou de outro emissor, e é recusado.
+  esc: z.never().optional(),
+})
+
+async function claimsDeOperador(token: string, config: ConfiguracaoIdentidade, currentDate?: Date): Promise<unknown> {
+  const verificado = await jwtVerify(token, config.chaveAssinatura, {
+    algorithms: [ALGORITMO_TOKEN],
+    typ: TIPO_TOKEN_DE_OPERADOR,
+    issuer: EMISSOR_TOKEN,
+    requiredClaims: ['exp', 'sub', 'sid'],
+    ...(currentDate === undefined ? {} : { currentDate }),
+  })
+  return verificado.payload
+}
+
+/**
+ * Verifica o token de acesso do operador e devolve o operador e a sessão, com `vencido` quando só o prazo passou.
+ * Recusa com `NAO_AUTENTICADO` o token com assinatura que não confere, algoritmo diferente de HS256, `typ` diferente
+ * de `operador+jwt` (o da escola, `JWT`, e os desafios não passam), sem `exp`, com mais de 24 h pela frente, de
+ * emissor diferente de `educa`, com `esc`, ou com `sub` e `sid` ausentes ou fora do formato UUID.
+ *
+ * O vencido é conferido de novo inteiro na véspera do `exp`: só é "vencido" o token em que **tudo o mais** confere, e
+ * nenhuma outra falha se esconde atrás do prazo.
+ */
+export async function verificarTokenDeOperador(token: string, config: ConfiguracaoIdentidade): Promise<TokenDeOperadorVerificado> {
+  let claims: unknown
+  let vencido = false
+  try {
+    claims = await claimsDeOperador(token, config)
+  } catch (erro) {
+    if (erro instanceof errors.JWTExpired && typeof erro.payload.exp === 'number') {
+      try {
+        claims = await claimsDeOperador(token, config, new Date((erro.payload.exp - 1) * 1_000))
+        vencido = true
+      } catch (novoErro) {
+        if (novoErro instanceof errors.JOSEError) throw naoAutenticado()
+        throw novoErro
+      }
+    } else if (erro instanceof errors.JOSEError) {
+      throw naoAutenticado()
+    } else {
+      throw erro
+    }
+  }
+  const resultado = esquemaClaimsDeOperador.safeParse(claims)
+  if (!resultado.success) throw naoAutenticado()
+  if (resultado.data.exp - Date.now() / 1000 > VALIDADE_MAXIMA_TOKEN_SEGUNDOS) throw naoAutenticado()
+  const verificado = { operadorId: resultado.data.sub.toLowerCase(), sessaoId: resultado.data.sid.toLowerCase(), vencido }
+  return verificado as TokenDeOperadorVerificado
+}
+
+/** Se o bearer do cabeçalho diz, no cabeçalho do JWT, ser um token de operador. Não verifica nada: só separa o caminho. */
+export function bearerDeOperador(cabecalho: string | string[] | undefined): boolean {
+  try {
+    return decodeProtectedHeader(extrairTokenBearer(cabecalho)).typ === TIPO_TOKEN_DE_OPERADOR
+  } catch {
+    return false
+  }
 }

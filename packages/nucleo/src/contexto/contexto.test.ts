@@ -2,7 +2,8 @@ import { setTimeout as esperar } from 'node:timers/promises'
 import { describe, expect, it } from 'vitest'
 import { CodigoDeErro } from '@educa/shared'
 import { exigirAnoEmCurso } from './ano-em-curso.js'
-import { contextoAtual, definirSessaoNoContexto, executarNoContexto, resolverRequisicaoId } from './contexto.js'
+import { contextoAtual, definirOperadorNoContexto, definirSessaoNoContexto, executarNoContexto, exigirOperadorDoContexto, resolverRequisicaoId } from './contexto.js'
+import { exigirEscolaDoContexto } from './escola-do-contexto.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
@@ -85,5 +86,40 @@ describe('definirSessaoNoContexto e exigirAnoEmCurso', () => {
       expect(() => exigirAnoEmCurso()).toThrow(expect.objectContaining({ codigo: CodigoDeErro.NAO_ENCONTRADO }))
     })
     expect(() => exigirAnoEmCurso()).toThrow(expect.objectContaining({ codigo: CodigoDeErro.NAO_ENCONTRADO }))
+  })
+})
+
+describe('definirOperadorNoContexto', () => {
+  const sessaoDeEscola = { escolaId: 'escola-a', usuarioId: 'usuario-a', papel: 'professor', sessaoId: 'sessao-a', anoLetivoId: 'ano-a' } as const
+
+  it('grava só o operador: sem escola, usuário, papel, sessão nem ano, e o escopo de escola falha fechado', () => {
+    executarNoContexto({ requisicaoId: 'r' }, () => {
+      definirOperadorNoContexto('operador-a')
+      expect(contextoAtual()).toStrictEqual({ requisicaoId: 'r', operadorId: 'operador-a' })
+      expect(exigirOperadorDoContexto()).toBe('operador-a')
+      expect(() => exigirEscolaDoContexto()).toThrow('consulta com escopo sem escola no contexto')
+    })
+  })
+
+  it('só grava uma vez, e nunca junto de uma sessão de escola, em nenhuma ordem', () => {
+    executarNoContexto({ requisicaoId: 'r' }, () => {
+      definirOperadorNoContexto('operador-a')
+      expect(() => definirOperadorNoContexto('operador-b')).toThrow()
+      expect(() => definirSessaoNoContexto(sessaoDeEscola)).toThrow()
+      expect(contextoAtual()).toStrictEqual({ requisicaoId: 'r', operadorId: 'operador-a' })
+    })
+    executarNoContexto({ requisicaoId: 'r' }, () => {
+      definirSessaoNoContexto(sessaoDeEscola)
+      expect(() => definirOperadorNoContexto('operador-a')).toThrow()
+      expect(contextoAtual()?.operadorId).toBeUndefined()
+    })
+  })
+
+  it('sem operador no contexto (rota de escola, rota anônima), exigirOperadorDoContexto falha fechado', () => {
+    expect(() => exigirOperadorDoContexto()).toThrow()
+    executarNoContexto({ requisicaoId: 'r' }, () => {
+      definirSessaoNoContexto(sessaoDeEscola)
+      expect(() => exigirOperadorDoContexto()).toThrow('rota da operação sem operador no contexto')
+    })
   })
 })

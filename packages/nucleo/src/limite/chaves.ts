@@ -14,6 +14,13 @@ export const PREFIXO_LIMITE_IP = 'rl:ip'
  */
 export const PREFIXO_LIMITE_IP_LOGIN = 'rl:ip-login'
 
+/**
+ * O limite por operador Turmma nas rotas `@RotaDeOperacao` (Tech Spec da A0, seção 5, "Limite"), pelo `sub` do token de
+ * operador verificado. Balde próprio: dois operadores atrás do mesmo IP não dividem nada, e o operador não gasta o limite
+ * de usuário de escola nenhuma.
+ */
+export const PREFIXO_LIMITE_OPERADOR = 'rl:op'
+
 /** Janela de todo limite. Os limites da configuração são "por minuto". */
 export const JANELA_LIMITE_SEGUNDOS = 60
 

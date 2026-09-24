@@ -186,3 +186,5 @@ export type {
   Vinculo,
   VinculoDaCoordenacao,
 } from './estrutura/vinculo.js'
+export { esquemaRespostaEuDoOperador } from './operacao/eu.js'
+export type { RespostaEuDoOperador } from './operacao/eu.js'

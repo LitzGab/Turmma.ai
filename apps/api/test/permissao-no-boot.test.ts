@@ -1,6 +1,6 @@
 import 'reflect-metadata'
-import { ConferenciaDasPermissoes, Permite, RotaAnonima } from '@educa/nucleo'
-import { Controller, Get, Module } from '@nestjs/common'
+import { ConferenciaDasPermissoes, METADADO_ENTRADA_DE_OPERACAO, METADADO_ROTA_DE_OPERACAO, Permite, RotaAnonima } from '@educa/nucleo'
+import { Controller, Get, Module, SetMetadata } from '@nestjs/common'
 import { DiscoveryModule, DiscoveryService, NestFactory } from '@nestjs/core'
 import { describe, expect, it } from 'vitest'
 
@@ -14,6 +14,25 @@ class ComPermissaoController {
 @RotaAnonima()
 @Controller('anonimo')
 class AnonimoController {
+  @Get()
+  obter(): void {}
+}
+
+/** Os marcadores da operação, pelas chaves que `@RotaDeOperacao()` e `@EntradaDeOperacao()` gravam, no método e na classe. */
+@Controller('v1/operacao/metodo')
+class OperacaoNoMetodoController {
+  @Get('eu')
+  @SetMetadata(METADADO_ROTA_DE_OPERACAO, true)
+  eu(): void {}
+
+  @Get('entrar')
+  @SetMetadata(METADADO_ENTRADA_DE_OPERACAO, true)
+  entrar(): void {}
+}
+
+@SetMetadata(METADADO_ROTA_DE_OPERACAO, true)
+@Controller('v1/operacao/classe')
+class OperacaoNaClasseController {
   @Get()
   obter(): void {}
 }
@@ -48,7 +67,13 @@ describe('boot da API: toda rota declara quem pode chamá-la', () => {
     await expect(subir([ComPermissaoController, AnonimoController])).resolves.toBeUndefined()
   })
 
-  it('rota sem @Permite e sem @RotaAnonima derruba o boot, com o nome do controller e do método', async () => {
-    await expect(subir([ComPermissaoController, EsquecidoController])).rejects.toThrow('rota sem @Permite nem @RotaAnonima: EsquecidoController.rotaNova')
+  it('sobe com rotas marcadas com um dos dois marcadores da operação, no método ou na classe', async () => {
+    await expect(subir([OperacaoNoMetodoController, OperacaoNaClasseController])).resolves.toBeUndefined()
+  })
+
+  it('rota sem @Permite, sem @RotaAnonima e sem marcador da operação derruba o boot, com o nome do controller e do método', async () => {
+    await expect(subir([ComPermissaoController, OperacaoNoMetodoController, EsquecidoController])).rejects.toThrow(
+      'rota sem @Permite, @RotaAnonima nem marcador da operação: EsquecidoController.rotaNova',
+    )
   })
 })
