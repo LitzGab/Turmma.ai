@@ -1,5 +1,5 @@
 import 'reflect-metadata'
-import { executarNoContexto, ExpurgoDeAcessoRepository, instrucaoDoLoteDeAcesso, LOTE_DO_EXPURGO, type AlvoDoExpurgoDeAcesso } from '@educa/nucleo'
+import { ALVOS_DO_EXPURGO_DE_ACESSO, executarNoContexto, ExpurgoDeAcessoRepository, instrucaoDoLoteDeAcesso, LOTE_DO_EXPURGO, type AlvoDoExpurgoDeAcesso } from '@educa/nucleo'
 import { CodigoDeFalhaDeJob } from '@educa/shared'
 import { Queue } from 'bullmq'
 import { PgDialect } from 'drizzle-orm/pg-core'
@@ -14,7 +14,8 @@ import { criarExpurgoDeAcesso, TIPO_EXPURGAR_ACESSO } from '../src/processadores
 import { BancadaDeFila, configuracaoDoBanco, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
 
 // `registro_acesso`, `sessao` e `convite` do Postgres do compose de teste, com linhas de duas escolas (e a falha de
-// login sem escola) dos dois lados de cada prazo. Só o relógio é injetado: 4h30 de amanhã em São Paulo, fora do horário
+// login sem escola) dos dois lados de cada prazo, e `acesso_operacao`, `sessao_operador` e `convite_operador` da
+// operação Turmma (A0, tarefa 9.0, C38), de um operador ativo e de desativados, também dos dois lados. Só o relógio é injetado: 4h30 de amanhã em São Paulo, fora do horário
 // letivo (o job não urgente passa pela janela) e de 4h30 a 29h depois do `now()` do banco. As linhas "1 hora além do
 // prazo" só saem se o corte vier do relógio injetado, e não do banco.
 
@@ -44,15 +45,45 @@ function nosDoPlano(no: NoDoPlano | undefined): NoDoPlano[] {
 /** Cada passo da rotina: as três tabelas por prazo, e a limpeza das contas. */
 type Passo = AlvoDoExpurgoDeAcesso | 'conta'
 
-/** O que cada caso semeia: os ids que precisam sair e os que precisam ficar, por tabela. */
+/** As três tabelas da operação que o expurgo apaga (A0, tarefa 9.0). */
+const ALVOS_DA_OPERACAO = ['acesso_operacao', 'sessao_operador', 'convite_operador'] as const
+
+/** O que cada caso semeia: os ids que precisam sair e os que precisam ficar, por tabela, e o que nunca sai. */
 interface Semeado {
   sai: Record<AlvoDoExpurgoDeAcesso, string[]>
   fica: Record<AlvoDoExpurgoDeAcesso, string[]>
+  /** Os operadores semeados, o ativo e os desativados: nunca passam pelo expurgo. */
+  operadores: string[]
+  /** A auditoria da operação, de qualquer idade: nunca passa pelo expurgo. */
+  auditorias: string[]
 }
 
-beforeAll(() => {
+/** Os operadores deste arquivo têm este prefixo no apelido, para a limpeza achar o que um portão interrompido deixou. */
+const PREFIXO_DO_OPERADOR = 'expurgo-'
+
+/** Apaga os operadores deste arquivo (pelo prefixo) e tudo que aponta para eles. */
+async function limparOperadores(pool: BancadaDeFila['pool']): Promise<void> {
+  const ids = (await pool.query<{ id: string }>('select id from operador where apelido like $1', [`${PREFIXO_DO_OPERADOR}%`])).rows.map(({ id }) => id)
+  if (ids.length === 0) return
+  await pool.query('delete from auditoria_operacao where operador_alvo_id = any($1::uuid[])', [ids])
+  await pool.query('delete from acesso_operacao where operador_id = any($1::uuid[])', [ids])
+  await pool.query('delete from sessao_operador where operador_id = any($1::uuid[])', [ids])
+  await pool.query('delete from convite_operador where operador_id = any($1::uuid[])', [ids])
+  await pool.query('delete from codigo_recuperacao_operador where operador_id = any($1::uuid[])', [ids])
+  await pool.query('delete from operador where id = any($1::uuid[])', [ids])
+}
+
+beforeAll(async () => {
   // Worker do compose de pé poderia rodar um expurgo agendado no meio da contagem.
   compose('stop', ...PROCESSOS_DA_FILA)
+  // Um operador ativo que um portão interrompido tivesse deixado faria todo `ops:*` de outro arquivo exigir um
+  // `OPERADOR` que ele não conhece.
+  const bancada = new BancadaDeFila()
+  try {
+    await limparOperadores(bancada.pool)
+  } finally {
+    await bancada.fechar()
+  }
 })
 
 describe('sistema.expurgar-acesso', () => {
@@ -100,9 +131,116 @@ describe('sistema.expurgar-acesso', () => {
       [escolaId, randomBytes(32).toString('hex'), usuarioId, AGORA.toISOString(), datas.expiraHa, datas.usadoHa ?? null, datas.revogadoHa ?? null],
     )
 
-  /** Duas escolas, cada uma com as linhas dos dois lados de cada prazo, e a falha de login sem escola. */
+  /**
+   * Um operador sintético, criado há 10 anos: ativo (com nome e e-mail em `.invalid`) ou desativado há 5 anos, já sem
+   * dado pessoal, como o `desativar` o deixa.
+   */
+  const operador = (ativo: boolean) => {
+    const apelido = `${PREFIXO_DO_OPERADOR}${randomBytes(6).toString('hex')}`
+    return ativo
+      ? inserir(`insert into operador (apelido, nome, email, criado_em) values ($1, 'Pessoa Sintética da Operação', $2, $3::timestamptz - interval '10 years') returning id`, [
+          apelido,
+          `${apelido}@turmma.invalid`,
+          AGORA.toISOString(),
+        ])
+      : inserir(`insert into operador (apelido, criado_em, desativado_em) values ($1, $2::timestamptz - interval '10 years', $2::timestamptz - interval '5 years') returning id`, [
+          apelido,
+          AGORA.toISOString(),
+        ])
+  }
+
+  const acessoOperacao = (operadorId: string | null, evento: string, ha: string) =>
+    inserir(`insert into acesso_operacao (operador_id, evento, ip, em) values ($1, $2, '198.51.100.9', $3::timestamptz - $4::interval) returning id`, [
+      operadorId,
+      evento,
+      AGORA.toISOString(),
+      ha,
+    ])
+
+  /** Como a `sessao`: `encerradaHa` nulo é a sessão nunca encerrada; `expiraHa` negativo é futuro. */
+  const sessaoOperador = (operadorId: string, encerradaHa: string | null, expiraHa: string) =>
+    inserir(
+      `insert into sessao_operador (operador_id, refresh_hash, criada_em, ultimo_uso_em, expira_em, encerrada_em, motivo)
+       values ($1, $2, $3::timestamptz - $5::interval - interval '8 hours', $3::timestamptz - $5::interval - interval '8 hours', $3::timestamptz - $5::interval,
+               case when $4::interval is null then null else $3::timestamptz - $4::interval end,
+               case when $4::interval is null then null else 'saida' end)
+       returning id`,
+      [operadorId, randomBytes(32).toString('hex'), AGORA.toISOString(), encerradaHa, expiraHa],
+    )
+
+  /** Como o `convite`. Um pendente por operador (único parcial): o pendente vai para um operador desativado novo. */
+  const conviteOperador = async (datas: { usadoHa?: string; revogadoHa?: string; expiraHa: string }, operadorId?: string) =>
+    inserir(
+      `insert into convite_operador (operador_id, token_hash, expira_em, usado_em, revogado_em)
+       values ($1, $2, $3::timestamptz - $4::interval,
+               case when $5::interval is null then null else $3::timestamptz - $5::interval end,
+               case when $6::interval is null then null else $3::timestamptz - $6::interval end)
+       returning id`,
+      [operadorId ?? (await novoDesativado()), randomBytes(32).toString('hex'), AGORA.toISOString(), datas.expiraHa, datas.usadoHa ?? null, datas.revogadoHa ?? null],
+    )
+
+  const auditoriaOperacao = (operadorId: string, acao: string, ha: string) =>
+    inserir(`insert into auditoria_operacao (autor, acao, operador_alvo_id, em) values ('bootstrap', $1, $2, $3::timestamptz - $4::interval) returning id`, [
+      acao,
+      operadorId,
+      AGORA.toISOString(),
+      ha,
+    ])
+
+  let operadoresDoCaso: string[] = []
+  const novoDesativado = async () => {
+    const id = await operador(false)
+    operadoresDoCaso.push(id)
+    return id
+  }
+
+  /** O lado da operação: cada prazo dos dois lados, de um operador ativo e de desativados, e a auditoria de toda idade. */
+  async function semearOperacao(resultado: Semeado): Promise<void> {
+    operadoresDoCaso = []
+    const ativo = await operador(true)
+    const desativado = await novoDesativado()
+    operadoresDoCaso.push(ativo)
+    const { sai, fica } = resultado
+    for (const operadorId of [ativo, desativado]) {
+      // Acesso à operação: 6 meses, como o registro de acesso.
+      fica.acesso_operacao.push(await acessoOperacao(operadorId, 'entrada', '6 months -1 day'), await acessoOperacao(operadorId, 'saida', '1 day'))
+      sai.acesso_operacao.push(await acessoOperacao(operadorId, 'entrada', '6 months 1 day'), await acessoOperacao(operadorId, 'saida', '6 months 1 hour'))
+      // Sessão de operador: 30 dias depois de encerrada ou, sem encerramento, de expirada.
+      fica.sessao_operador.push(
+        await sessaoOperador(operadorId, '29 days', '29 days'),
+        await sessaoOperador(operadorId, null, '29 days'),
+        await sessaoOperador(operadorId, '29 days', '45 days'),
+      )
+      sai.sessao_operador.push(
+        await sessaoOperador(operadorId, '31 days', '31 days'),
+        await sessaoOperador(operadorId, null, '31 days'),
+        await sessaoOperador(operadorId, '30 days 1 hour', '30 days'),
+      )
+      // Convite de operador usado ou revogado, deste operador: 30 dias depois do que veio primeiro.
+      fica.convite_operador.push(await conviteOperador({ usadoHa: '29 days', expiraHa: '27 days' }, operadorId), await conviteOperador({ revogadoHa: '29 days', expiraHa: '28 days' }, operadorId))
+      sai.convite_operador.push(await conviteOperador({ usadoHa: '31 days', expiraHa: '29 days' }, operadorId), await conviteOperador({ revogadoHa: '31 days', expiraHa: '29 days' }, operadorId))
+      // A auditoria: muito além de todo prazo do expurgo, além dos 6 meses do acesso, e recente.
+      resultado.auditorias.push(
+        await auditoriaOperacao(operadorId, 'operador.criado', '10 years'),
+        await auditoriaOperacao(operadorId, 'convite_operador.gerado', '7 months'),
+        await auditoriaOperacao(operadorId, 'convite_operador.revogado', '31 days'),
+      )
+    }
+    // Viva: nunca encerrada, expira daqui a 10 horas (só o ativo tem sessão aberta).
+    fica.sessao_operador.push(await sessaoOperador(ativo, null, '-10 hours'))
+    // Pendentes, um por operador: vencido há 29 dias, ainda válido, e vencido há 31 dias.
+    fica.convite_operador.push(await conviteOperador({ expiraHa: '29 days' }), await conviteOperador({ expiraHa: '-2 days' }))
+    sai.convite_operador.push(await conviteOperador({ expiraHa: '31 days' }))
+    // A falha de entrada sem operador reconhecido: sai pelo mesmo prazo.
+    fica.acesso_operacao.push(await acessoOperacao(null, 'entrada_falha', '6 months -1 day'))
+    sai.acesso_operacao.push(await acessoOperacao(null, 'entrada_falha', '6 months 1 day'), await acessoOperacao(null, 'entrada_falha', '7 months'))
+    resultado.operadores.push(...operadoresDoCaso)
+  }
+
+  /** Duas escolas, cada uma com as linhas dos dois lados de cada prazo, a falha de login sem escola, e a operação. */
   async function semear(): Promise<Semeado> {
-    const resultado: Semeado = { sai: { registro_acesso: [], sessao: [], convite: [] }, fica: { registro_acesso: [], sessao: [], convite: [] } }
+    const vazio = () => Object.fromEntries(ALVOS_DO_EXPURGO_DE_ACESSO.map((alvo) => [alvo, [] as string[]])) as Record<AlvoDoExpurgoDeAcesso, string[]>
+    const resultado: Semeado = { sai: vazio(), fica: vazio(), operadores: [], auditorias: [] }
     for (const escolaId of [await bancada.escola(), await bancada.escola()]) {
       const aluno = await usuario(escolaId)
       const { sai, fica } = resultado
@@ -145,6 +283,7 @@ describe('sistema.expurgar-acesso', () => {
     // A falha por e-mail, antes de haver escola: sem escola onde aplicar retenção própria, sai pelo mesmo prazo.
     resultado.sai.registro_acesso.push(await registro(null, null, 'login_falho', '6 months 1 day'))
     resultado.fica.registro_acesso.push(await registro(null, null, 'login_falho', '6 months -1 day'))
+    await semearOperacao(resultado)
     return resultado
   }
 
@@ -155,10 +294,25 @@ describe('sistema.expurgar-acesso', () => {
 
   /** Confere, por tabela, que todo "sai" saiu e todo "fica" ficou. */
   async function conferir(): Promise<void> {
-    for (const alvo of ['registro_acesso', 'sessao', 'convite'] as const) {
+    for (const alvo of ALVOS_DO_EXPURGO_DE_ACESSO) {
       expect(await restantes(alvo, semeado.sai[alvo]), `${alvo}: vencidos`).toEqual([])
       expect(await restantes(alvo, semeado.fica[alvo]), `${alvo}: no prazo`).toEqual([...semeado.fica[alvo]].sort())
     }
+  }
+
+  /** Só o lado da operação do `conferir`. */
+  async function conferirOperacao(): Promise<void> {
+    for (const alvo of ALVOS_DA_OPERACAO) {
+      expect(await restantes(alvo, semeado.sai[alvo]), `${alvo}: vencidos`).toEqual([])
+      expect(await restantes(alvo, semeado.fica[alvo]), `${alvo}: no prazo`).toEqual([...semeado.fica[alvo]].sort())
+    }
+  }
+
+  /** O operador e a auditoria semeados, linha inteira: o expurgo não pode apagar nem mudar nada neles. */
+  async function retrato(): Promise<{ operadores: unknown[]; auditorias: unknown[] }> {
+    const operadores = await bancada.pool.query('select * from operador where id = any($1::uuid[]) order by id', [semeado.operadores])
+    const auditorias = await bancada.pool.query('select * from auditoria_operacao where id = any($1::uuid[]) order by id', [semeado.auditorias])
+    return { operadores: operadores.rows, auditorias: auditorias.rows }
   }
 
   /** Roda como o worker roda um job `sistema.*`: no contexto da rotina do sistema. */
@@ -195,9 +349,9 @@ describe('sistema.expurgar-acesso', () => {
   afterEach(async () => {
     await Promise.all(montados.splice(0).map((montado) => montado.encerrar()))
     const todos = (alvo: AlvoDoExpurgoDeAcesso) => [...semeado.sai[alvo], ...semeado.fica[alvo]]
-    await bancada.pool.query('delete from registro_acesso where id = any($1::uuid[])', [todos('registro_acesso')])
-    await bancada.pool.query('delete from sessao where id = any($1::uuid[])', [todos('sessao')])
-    await bancada.pool.query('delete from convite where id = any($1::uuid[])', [todos('convite')])
+    // As tabelas do expurgo, pelo nome do alvo; a falha de entrada sem operador só sai por aqui.
+    for (const alvo of ALVOS_DO_EXPURGO_DE_ACESSO) await bancada.pool.query(`delete from ${alvo} where id = any($1::uuid[])`, [todos(alvo)])
+    await limparOperadores(bancada.pool)
     await bancada.limparRegistro()
     await bancada.fechar()
   }, 60_000)
@@ -209,10 +363,34 @@ describe('sistema.expurgar-acesso', () => {
     const eventos = log.doEvento('acesso.expurgado')
     expect(eventos).toHaveLength(1)
     const [linha] = eventos
-    for (const chave of ['registrosDeAcessoTotal', 'sessoesTotal', 'convitesTotal']) expect(linha?.[chave], chave).toEqual(expect.any(Number))
+    for (const chave of ['registrosDeAcessoTotal', 'sessoesTotal', 'convitesTotal', 'acessosDaOperacaoTotal', 'sessoesDeOperadorTotal', 'convitesDeOperadorTotal']) {
+      expect(linha?.[chave], chave).toEqual(expect.any(Number))
+    }
     const texto = log.linhas.join('\n')
-    for (const id of Object.values(semeado.sai).flat()) expect(texto.includes(id)).toBe(false)
-    expect(texto.includes('203.0.113.7')).toBe(false)
+    for (const id of [...Object.values(semeado.sai).flat(), ...semeado.operadores]) expect(texto.includes(id)).toBe(false)
+    for (const ip of ['203.0.113.7', '198.51.100.9']) expect(texto.includes(ip)).toBe(false)
+    expect(texto.includes(PREFIXO_DO_OPERADOR)).toBe(false)
+  })
+
+  it('log: cada contagem da linha acesso.expurgado é a da sua tabela, nunca a de outra', async () => {
+    // Uma contagem diferente por tabela, menor que o lote: a troca de duas chaves no log fica visível.
+    const porAlvo = Object.fromEntries(ALVOS_DO_EXPURGO_DE_ACESSO.map((alvo, posicao) => [alvo, posicao + 11])) as Record<AlvoDoExpurgoDeAcesso, number>
+    const processador = criarExpurgoDeAcesso({
+      repositorio: { apagarLoteVencido: async (alvo) => porAlvo[alvo], limparLoteDeContasSemUso: async () => 7 },
+      relogio,
+      logger: log.logger,
+    })
+    const jobId = randomUUID()
+    await executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))
+    expect(log.doEvento('acesso.expurgado')[0]).toMatchObject({
+      registrosDeAcessoTotal: porAlvo.registro_acesso,
+      sessoesTotal: porAlvo.sessao,
+      convitesTotal: porAlvo.convite,
+      acessosDaOperacaoTotal: porAlvo.acesso_operacao,
+      sessoesDeOperadorTotal: porAlvo.sessao_operador,
+      convitesDeOperadorTotal: porAlvo.convite_operador,
+      contasLimpasTotal: 7,
+    })
   })
 
   it('idempotência (D49): rodar de novo depois do fim não apaga nada além do prazo', async () => {
@@ -223,6 +401,9 @@ describe('sistema.expurgar-acesso', () => {
       ['registro_acesso', 0],
       ['sessao', 0],
       ['convite', 0],
+      ['acesso_operacao', 0],
+      ['sessao_operador', 0],
+      ['convite_operador', 0],
       ['conta', 0],
     ])
     await conferir()
@@ -240,6 +421,55 @@ describe('sistema.expurgar-acesso', () => {
     }
   })
 
+  it('concorrência (C38): dois expurgos em paralelo apagam cada linha vencida da operação uma vez só, e a soma das duas contagens é o que havia vencido', async () => {
+    /** Quantas linhas da tabela estão vencidas no `AGORA`, pelo prazo da `docs/lgpd.md`, escrito aqui à parte da instrução. */
+    const PRAZO: Record<(typeof ALVOS_DA_OPERACAO)[number], string> = {
+      acesso_operacao: "em < $1::timestamptz - interval '6 months'",
+      sessao_operador: "coalesce(encerrada_em, expira_em) < $1::timestamptz - interval '30 days'",
+      convite_operador: "least(usado_em, revogado_em, expira_em) < $1::timestamptz - interval '30 days'",
+    }
+    const vencidas = async (alvo: (typeof ALVOS_DA_OPERACAO)[number]) =>
+      (await bancada.pool.query<{ n: number }>(`select count(*)::int as n from ${alvo} where ${PRAZO[alvo]}`, [AGORA.toISOString()])).rows[0]?.n ?? -1
+    const antes = Object.fromEntries(await Promise.all(ALVOS_DA_OPERACAO.map(async (alvo) => [alvo, await vencidas(alvo)] as const)))
+    for (const alvo of ALVOS_DA_OPERACAO) expect(antes[alvo], alvo).toBeGreaterThanOrEqual(semeado.sai[alvo].length)
+
+    const repositorio = new ExpurgoDeAcessoRepository(bancada.banco)
+    for (const alvo of ALVOS_DA_OPERACAO) {
+      // Lote de 1: as duas execuções disputam linha a linha. Prova que cada linha sai uma vez só e que a soma bate; que
+      // uma não espera a outra (o `skip locked`) não é o que este teste mede.
+      const execucao = async () => {
+        let total = 0
+        for (;;) {
+          const doLote = await repositorio.apagarLoteVencido(alvo, AGORA, 1)
+          total += doLote
+          if (doLote < 1) return total
+        }
+      }
+      const [uma, outra] = await Promise.all([execucao(), execucao()])
+      expect(uma + outra, alvo).toBe(antes[alvo])
+      expect(await vencidas(alvo), alvo).toBe(0)
+    }
+    await conferirOperacao()
+  })
+
+  it('o que nunca sai (C38): a auditoria da operação, de qualquer idade, e o operador, ativo ou desativado, mesmo sem mais nada que aponte para ele', async () => {
+    const antes = await retrato()
+    await expurgar()
+    await expurgar()
+    await conferir()
+    expect(await retrato()).toEqual(antes)
+    expect(antes.auditorias).toHaveLength(semeado.auditorias.length)
+    expect(antes.operadores).toHaveLength(semeado.operadores.length)
+    // Os desativados que só tinham o convite pendente vencido ficaram sem sessão, convite nem acesso: e continuam.
+    const { rows } = await bancada.pool.query<{ n: number }>(
+      `select count(*)::int as n from operador o where o.id = any($1::uuid[]) and o.desativado_em is not null
+         and not exists (select 1 from convite_operador c where c.operador_id = o.id)
+         and not exists (select 1 from sessao_operador s where s.operador_id = o.id)`,
+      [semeado.operadores],
+    )
+    expect(rows[0]?.n).toBeGreaterThanOrEqual(1)
+  })
+
   it('lotes: cada instrução apaga no máximo um lote, e a rotina segue tabela por tabela até sobrar lote incompleto', async () => {
     const repositorio = new ExpurgoDeAcessoRepository(bancada.banco)
     expect(await repositorio.apagarLoteVencido('sessao', AGORA, 2)).toBe(2)
@@ -247,12 +477,20 @@ describe('sistema.expurgar-acesso', () => {
     const lotes: Array<[Passo, number]> = []
     await expurgar(lotes, 2)
     // Toda instrução cheia é seguida de outra, e a última de cada tabela vem incompleta.
-    for (const alvo of ['registro_acesso', 'sessao', 'convite', 'conta'] as const) {
+    for (const alvo of [...ALVOS_DO_EXPURGO_DE_ACESSO, 'conta'] as const) {
       const daTabela = lotes.filter(([deQual]) => deQual === alvo).map(([, apagadas]) => apagadas)
       expect(daTabela.slice(0, -1).every((apagadas) => apagadas === 2), alvo).toBe(true)
       expect(daTabela.at(-1), alvo).toBeLessThan(2)
     }
-    expect(lotes.map(([alvo]) => alvo).filter((alvo, posicao, todos) => todos.indexOf(alvo) === posicao)).toEqual(['registro_acesso', 'sessao', 'convite', 'conta'])
+    expect(lotes.map(([alvo]) => alvo).filter((alvo, posicao, todos) => todos.indexOf(alvo) === posicao)).toEqual([
+      'registro_acesso',
+      'sessao',
+      'convite',
+      'acesso_operacao',
+      'sessao_operador',
+      'convite_operador',
+      'conta',
+    ])
     await conferir()
   })
 
@@ -340,20 +578,24 @@ describe('sistema.expurgar-acesso', () => {
       codigo: CodigoDeFalhaDeJob.DADOS_INVALIDOS,
       definitiva: true,
     })
-    for (const alvo of ['registro_acesso', 'sessao', 'convite'] as const) expect(await restantes(alvo, semeado.sai[alvo]), alvo).toHaveLength(semeado.sai[alvo].length)
+    for (const alvo of ALVOS_DO_EXPURGO_DE_ACESSO) expect(await restantes(alvo, semeado.sai[alvo]), alvo).toHaveLength(semeado.sai[alvo].length)
   })
 
-  it('o lote do registro de acesso e o da sessão descem pelos índices de prazo, sem varrer a tabela', async () => {
+  it('o lote do registro de acesso e o da sessão, da escola e da operação, descem pelos índices de prazo, sem varrer a tabela', async () => {
     const cliente = await bancada.pool.connect()
     try {
       await cliente.query('begin')
       await cliente.query('analyze registro_acesso')
       await cliente.query('analyze sessao')
+      await cliente.query('analyze acesso_operacao')
+      await cliente.query('analyze sessao_operador')
       // Com a varredura sequencial proibida, o plano só usa o índice se a expressão dele casar com a da instrução.
       await cliente.query('set local enable_seqscan = off')
       for (const [alvo, indice] of [
         ['registro_acesso', 'registro_acesso_em_idx'],
         ['sessao', 'sessao_fim_idx'],
+        ['acesso_operacao', 'acesso_operacao_em_idx'],
+        ['sessao_operador', 'sessao_operador_fim_idx'],
       ] as const) {
         const { sql: texto, params } = new PgDialect({ casing: 'snake_case' }).sqlToQuery(instrucaoDoLoteDeAcesso(alvo, AGORA, LOTE_DO_EXPURGO))
         const { rows } = await cliente.query<{ 'QUERY PLAN': Array<{ Plan: NoDoPlano }> }>(`explain (format json) ${texto}`, params)

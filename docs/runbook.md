@@ -381,7 +381,22 @@ com mais de 6 meses, sessão e convite vencidos há mais de 30 dias ficam no ban
 `docs/lgpd.md`, o que é descumprimento da LGPD, e não só espaço. Primeira suspeita: o worker-lote ou a
 fila `agendamentos`. A última execução de cada uma aparece em `job_registro` (tipo e estado) e no log
 (`job_registro.expurgado`, `acesso.expurgado`, só com as contagens). Rodar de novo à mão é seguro: as
-três toleram reexecução (D49), e o expurgo do acesso não apaga nada dentro do prazo.
+três toleram reexecução (D49), e o expurgo do acesso não apaga nada dentro do prazo. O mesmo job apaga também o
+acesso à operação (6 meses), a sessão e o convite de operador (30 dias): parado, eles também passam da retenção.
+A auditoria da operação e a conta do operador nunca passam por ele.
+
+## Operador não entra no painel da operação (Redis de fila fora)
+
+Sem alerta próprio: aparece como o 503 `INDISPONIVEL_TENTE_DE_NOVO` ao concluir o segundo fator
+(`POST /v1/operacao/sessao/mfa` e `/sessao/mfa/configurar`) e como `operacao.desafio_sem_redis` no log da API, no
+máximo uma linha a cada 30 s e sem nada da pessoa. A marca de desafio usado mora no Redis de fila; sem ela não dá para
+saber se o desafio já foi usado, e o painel recusa em vez de aceitar. Do lado das escolas, o mesmo Redis fora é o
+"Seguro de limite ativo", causa 4. A sessão de operador já aberta não usa a marca de desafio e segue até vencer.
+**O que fazer:** o Redis de fila é o mesmo da fila de jobs; siga "Seguro de limite ativo", causa 4
+(`docker compose ps redis-fila`; parado, `docker compose up -d redis-fila`). **Enquanto ele não volta, o caminho da
+equipe são os comandos `ops:*`**, que falam direto com o banco e não passam pelo desafio: `ops:escola`,
+`ops:convite-coordenador`, `ops:revogar-convite`, `ops:redefinir-mfa`, `ops:uso` e `ops:operador` (README, "Rodando local"). Não há o que liberar à mão: com o Redis de volta, o
+operador entra de novo com e-mail e senha.
 
 ## Sistema fora do ar no horário letivo
 

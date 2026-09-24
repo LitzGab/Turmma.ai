@@ -55,7 +55,7 @@
   - [x] 8.3 `AcessoOperacao` e os registros da seção 5
   - [x] 8.4 Testes: C26–C31, C32 e C39 (sessão), C36 e C36b (`rl:ip`), C37, C43, C44, C46 (entrada)
 
-- [ ] **9.0 — Expurgo das tabelas da operação e a linha do runbook**
+- [x] **9.0 — Expurgo das tabelas da operação e a linha do runbook**
   - [ ] 9.1 Alvos novos no `apagarLoteVencido`, com a justificativa reescrita
   - [ ] 9.2 Linha no `docs/runbook.md`: com o Redis fora, o caminho é `ops:*`
   - [ ] 9.3 Testes: C38, e a entrada do expurgo no C45

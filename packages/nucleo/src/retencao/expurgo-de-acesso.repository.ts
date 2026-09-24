@@ -12,8 +12,12 @@ export const RETENCAO_SESSAO_DIAS = 30
 /** Por quantos dias o convite fica depois de usado, revogado ou expirado (`docs/lgpd.md`, "Convite de coordenador"). */
 export const RETENCAO_CONVITE_DIAS = 30
 
-/** As três tabelas que o `sistema.expurgar-acesso` apaga por prazo, na ordem em que ele passa; a conta vem depois. */
-export const ALVOS_DO_EXPURGO_DE_ACESSO = ['registro_acesso', 'sessao', 'convite'] as const
+/**
+ * As seis tabelas que o `sistema.expurgar-acesso` apaga por prazo, na ordem em que ele passa; a conta vem depois. As
+ * três primeiras são das escolas (tarefa 17.0); as três últimas, da operação Turmma (A0, tarefa 9.0), com os mesmos
+ * prazos. A `auditoria_operacao` (vigência + 5 anos) e o `operador` (o dado pessoal sai no `desativar`) nunca são alvo.
+ */
+export const ALVOS_DO_EXPURGO_DE_ACESSO = ['registro_acesso', 'sessao', 'convite', 'acesso_operacao', 'sessao_operador', 'convite_operador'] as const
 export type AlvoDoExpurgoDeAcesso = (typeof ALVOS_DO_EXPURGO_DE_ACESSO)[number]
 
 /**
@@ -29,6 +33,12 @@ export type AlvoDoExpurgoDeAcesso = (typeof ALVOS_DO_EXPURGO_DE_ACESSO)[number]
  *   prazo tem `coalesce` no futuro e nunca sai.
  * - **Convite:** o prazo conta do primeiro que aconteceu entre usar, revogar e expirar (`least` ignora os nulos). A
  *   tabela tem um convite por coordenador convidado, e fica sem índice próprio.
+ * - **Acesso à operação:** entrada, falha de entrada e saída do painel da equipe, com 6 meses como o registro de acesso
+ *   (Marco Civil, art. 15), inclusive a falha sem operador reconhecido. Desce por `acesso_operacao_em_idx`.
+ * - **Sessão de operador:** 30 dias depois de encerrada ou, sem encerramento, de expirada, pela expressão do índice
+ *   `sessao_operador_fim_idx`.
+ * - **Convite de operador:** 30 dias depois de usado, revogado ou vencido, pelo mesmo `least` do convite. Um por
+ *   operador de cada vez, dezenas no total: sem índice próprio.
  */
 const APAGAR_LOTE: Record<AlvoDoExpurgoDeAcesso, (agora: Date, limite: number) => SQL> = {
   registro_acesso: (agora, limite) => sql`
@@ -55,6 +65,35 @@ const APAGAR_LOTE: Record<AlvoDoExpurgoDeAcesso, (agora: Date, limite: number) =
     delete from convite
     where id = any(array(
       select id from convite
+      where least(usado_em, revogado_em, expira_em) < ${agora.toISOString()}::timestamptz - make_interval(days => ${RETENCAO_CONVITE_DIAS})
+      limit ${limite}
+      for update skip locked
+    ))
+  `,
+  acesso_operacao: (agora, limite) => sql`
+    delete from acesso_operacao
+    where id = any(array(
+      select id from acesso_operacao
+      where em < ${agora.toISOString()}::timestamptz - make_interval(months => ${RETENCAO_REGISTRO_ACESSO_MESES})
+      order by em
+      limit ${limite}
+      for update skip locked
+    ))
+  `,
+  sessao_operador: (agora, limite) => sql`
+    delete from sessao_operador
+    where id = any(array(
+      select id from sessao_operador
+      where coalesce(encerrada_em, expira_em) < ${agora.toISOString()}::timestamptz - make_interval(days => ${RETENCAO_SESSAO_DIAS})
+      order by coalesce(encerrada_em, expira_em)
+      limit ${limite}
+      for update skip locked
+    ))
+  `,
+  convite_operador: (agora, limite) => sql`
+    delete from convite_operador
+    where id = any(array(
+      select id from convite_operador
       where least(usado_em, revogado_em, expira_em) < ${agora.toISOString()}::timestamptz - make_interval(days => ${RETENCAO_CONVITE_DIAS})
       limit ${limite}
       for update skip locked
@@ -119,7 +158,8 @@ const LIMPAR_TRAVADAS = (ids: readonly string[], agora: Date) => sql`
 /**
  * A retenção do acesso (tarefa 17.0; Tech Spec, seção 5, "Ciclo de vida"): registro de acesso com mais de 6 meses,
  * sessão encerrada ou expirada há mais de 30 dias e convite usado, revogado ou expirado há mais de 30 dias saem do
- * banco; depois, a conta da equipe sem uso perde a credencial. Mora em `retencao`, como o expurgo de jobs do F0, e seus
+ * banco, e com os mesmos prazos o acesso, a sessão e o convite da operação Turmma (A0, tarefa 9.0); depois, a conta da
+ * equipe sem uso perde a credencial. Mora em `retencao`, como o expurgo de jobs do F0, e seus
  * dois métodos são, com o dele, as exceções ao escopo fora da resolução de tenant (Tech Spec, seção 6): rotinas nossas,
  * sem requisição de escola.
  */
@@ -127,12 +167,13 @@ export class ExpurgoDeAcessoRepository {
   constructor(private readonly banco: Banco) {}
 
   /**
-   * Apaga até `limite` linhas vencidas de `alvo`, de qualquer escola, e diz quantas saíram. O critério é só o prazo:
-   * nada no prazo sai, de escola nenhuma.
+   * Apaga até `limite` linhas vencidas de `alvo`, de qualquer escola ou da operação, e diz quantas saíram. O critério é
+   * só o prazo: nada no prazo sai, de escola nenhuma nem da equipe.
    */
   @SemEscopo(
     'o expurgo é rotina nossa e aplica o mesmo prazo legal de registro de acesso, sessão e convite a todas as escolas (e à ' +
-      'falha de login sem escola); não devolve linha, só a quantidade apagada, e não atende requisição de escola nenhuma',
+      'falha de login sem escola), e às tabelas de acesso, sessão e convite da operação Turmma, que são da equipe e não têm ' +
+      'escola; não devolve linha, só a quantidade apagada, e não atende requisição de escola nenhuma',
   )
   async apagarLoteVencido(alvo: AlvoDoExpurgoDeAcesso, agora: Date, limite: number = LOTE_DO_EXPURGO): Promise<number> {
     const resultado = await this.banco.execute(APAGAR_LOTE[alvo](agora, limite))

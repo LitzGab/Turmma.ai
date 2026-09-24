@@ -27,16 +27,16 @@ de acesso da operação, sem nunca tocar a auditoria da operação nem a conta d
 
 ## Subtarefas
 
-- [ ] 9.1 — `ALVOS_DO_EXPURGO_DE_ACESSO` ganha `convite_operador`, `sessao_operador` e
+- [x] 9.1 — `ALVOS_DO_EXPURGO_DE_ACESSO` ganha `convite_operador`, `sessao_operador` e
   `acesso_operacao`, cada um com o seu `APAGAR_LOTE`: convite 30 dias após usar, revogar ou vencer;
   sessão 30 dias após encerrar ou, sem encerramento, após `expira_em`; acesso 6 meses
-- [ ] 9.2 — Justificativa do `@SemEscopo` de `apagarLoteVencido` reescrita para cobrir as tabelas da
+- [x] 9.2 — Justificativa do `@SemEscopo` de `apagarLoteVencido` reescrita para cobrir as tabelas da
   equipe, que não têm escola
-- [ ] 9.3 — O teste de arquitetura do C45 confere que a entrada do expurgo na lista de quem pode
+- [x] 9.3 — O teste de arquitetura do C45 confere que a entrada do expurgo na lista de quem pode
   tocar as tabelas da operação corresponde ao arquivo real
-- [ ] 9.4 — `docs/runbook.md`: com o Redis fora, o operador não entra (o desafio recusa com 503), e o
+- [x] 9.4 — `docs/runbook.md`: com o Redis fora, o operador não entra (o desafio recusa com 503), e o
   caminho enquanto ele não volta é `ops:*`
-- [ ] 9.5 — Testes
+- [x] 9.5 — Testes
 
 ## Arquivos previstos
 
@@ -62,7 +62,7 @@ de acesso da operação, sem nunca tocar a auditoria da operação nem a conta d
 
 ## Critério de conclusão
 
-- [ ] Subtarefas concluídas
+- [x] Subtarefas concluídas
 - [ ] Testes verdes, 100%
 - [ ] Portão local carimbado depois da última alteração (`node tools/processo/portao-local.ts`,
   com `--infra`, porque toca o `docs/runbook.md` e o job)
@@ -70,6 +70,38 @@ de acesso da operação, sem nunca tocar a auditoria da operação nem a conta d
   vale para o código atual, e APROVADO nos que têm veto
 - [ ] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
 
+## Divergências resolvidas nesta tarefa
+
+- **O teste de arquitetura mora em `apps/api/test/arquitetura.test.ts`**, e não em `apps/api/test/operacao/`, que não
+  existe: é onde o C45 está desde a 3.0. A lista `QUEM_PODE_TOCAR_A_OPERACAO` ganhou o expurgo, com a conferência de
+  que cada entrada é um arquivo que existe, de que o expurgo cita da operação só `acesso_operacao`, `sessao_operador` e
+  `convite_operador` (nunca `operador`, `codigo_recuperacao_operador` nem `auditoria_operacao`), e de que o
+  `ExpurgoDeAcessoRepository` continua com dois métodos `@SemEscopo`.
+- **O job passou a percorrer `ALVOS_DO_EXPURGO_DE_ACESSO`** em vez de citar as três tabelas da escola uma a uma, e a
+  linha `acesso.expurgado` ganhou `acessosDaOperacaoTotal`, `sessoesDeOperadorTotal` e `convitesDeOperadorTotal`, só
+  contagens. A ordem é a das escolas e depois a da operação, e a conta continua por último.
+- **Convite de operador pendente** tem um só por operador (único parcial): no teste, cada convite pendente (vencido há
+  29 e 31 dias, e ainda válido) é de um operador desativado próprio.
+- **Os operadores do teste têm o prefixo `expurgo-` no apelido**, e o `beforeAll` e o `afterEach` apagam todos os com
+  esse prefixo e o que aponta para eles: um portão interrompido não deixa operador ativo para as outras suítes.
+- **A linha do runbook virou uma entrada curta**, "Operador não entra no painel da operação (Redis de fila fora)", logo
+  depois de "Rotina do sistema sem rodar", sem alerta próprio (a Tech Spec, seção 7c, não cria alerta novo).
+
 ## Fora do escopo desta tarefa
 
 Apagar o dado pessoal do operador desativado (já é do `desativar`, 3.0); qualquer tabela de escola.
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-24 04:20:04 | 2026-09-24 04:21:19 | `test-engineer` | 1 | APROVADO | a1f5a2dcbb2bb205e |
+| 2026-09-24 04:50:48 | 2026-09-24 04:51:11 | `test-engineer` | 2 | APROVADO | a9931c8c721cf1169 |
+| 2026-09-24 04:51:29 | 2026-09-24 04:51:56 | `tenancy-guardian` | 1 | APROVADO | a543634c00c75f962 |
+| 2026-09-24 04:51:31 | 2026-09-24 04:51:57 | `infra-guardian` | 1 | APROVADO | ae719119fba725c71 |
+| 2026-09-24 04:51:27 | 2026-09-24 04:51:58 | `privacy-guardian` | 1 | APROVADO | a4d46111ee55c3692 |
+| 2026-09-24 04:51:25 | 2026-09-24 04:52:04 | `revisor-geral` | 1 | APROVADO | ac7425bcda58200f8 |

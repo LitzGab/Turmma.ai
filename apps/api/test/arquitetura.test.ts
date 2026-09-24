@@ -5,7 +5,7 @@ import { Controller, Get, SetMetadata, type ExecutionContext, type Type } from '
 import { Reflector } from '@nestjs/core'
 import { getTableName, is } from 'drizzle-orm'
 import { PgTable } from 'drizzle-orm/pg-core'
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
@@ -76,11 +76,15 @@ describe('arquitetura: a resolução de tenant fica dentro do módulo de sessão
 
 /**
  * C45 (Tech Spec da A0, seção 6): as seis tabelas da operação não têm `escola_id`, e o que impede que isso vire atalho
- * é que só o `OperadorRepository` as toca, e ele não toca outra tabela. O expurgo (tarefa 9.0) entra nesta lista quando
- * existir. Ficam de fora o schema delas, o barrel do pacote, as migrations (`.sql`, que não são varridas) e os testes.
+ * é que só o `OperadorRepository` as toca, e ele não toca outra tabela; e o expurgo (tarefa 9.0), que só apaga, pelo
+ * prazo, o acesso, a sessão e o convite da operação. Ficam de fora o schema delas, o barrel do pacote, as migrations
+ * (`.sql`, que não são varridas) e os testes.
  */
 const REPOSITORY_DA_OPERACAO = 'apps/api/src/operacao/operador.repository.ts'
-const QUEM_PODE_TOCAR_A_OPERACAO = [REPOSITORY_DA_OPERACAO]
+const EXPURGO_DA_OPERACAO = 'packages/nucleo/src/retencao/expurgo-de-acesso.repository.ts'
+const QUEM_PODE_TOCAR_A_OPERACAO = [REPOSITORY_DA_OPERACAO, EXPURGO_DA_OPERACAO]
+/** O que o expurgo pode tocar da operação: nunca `operador`, `codigo_recuperacao_operador` nem `auditoria_operacao`. */
+const EXPURGAVEIS_DA_OPERACAO = ['acesso_operacao', 'convite_operador', 'sessao_operador']
 const FORA_DA_VARREDURA = ['packages/nucleo/src/db/schema/operador.ts', 'packages/nucleo/src/index.ts']
 const TABELAS_DA_OPERACAO = [nucleo.operador, nucleo.codigoRecuperacaoOperador, nucleo.conviteOperador, nucleo.sessaoOperador, nucleo.acessoOperacao, nucleo.auditoriaOperacao]
 
@@ -147,8 +151,31 @@ describe('arquitetura: as seis tabelas da operação só pelo OperadorRepository
     for (const tabela of [...FISICOS_DA_OPERACAO, 'auditoria', 'conta', 'escola', 'sessao']) expect(TABELAS_FISICAS).toContain(tabela)
   })
 
-  it('só o OperadorRepository toca as seis tabelas, por import, por namespace, pelo arquivo do schema ou pelo nome em SQL', () => {
-    expect(quemTocaAOperacao(arquivosDoRepositorio())).toEqual(QUEM_PODE_TOCAR_A_OPERACAO)
+  it('só o OperadorRepository e o expurgo tocam as seis tabelas, por import, por namespace, pelo arquivo do schema ou pelo nome em SQL', () => {
+    // Cada entrada da lista é um arquivo que existe: um caminho que mudasse de lugar deixaria a lista valendo para nada.
+    for (const caminho of QUEM_PODE_TOCAR_A_OPERACAO) expect(existsSync(join(RAIZ, caminho)), caminho).toBe(true)
+    expect(quemTocaAOperacao(arquivosDoRepositorio()).sort()).toEqual([...QUEM_PODE_TOCAR_A_OPERACAO].sort())
+  })
+
+  it('o expurgo toca da operação só o acesso, a sessão e o convite, e continua com dois métodos @SemEscopo (C45, tarefa 9.0)', () => {
+    const expurgo = arquivosDoRepositorio().find((arquivo) => arquivo.caminho === EXPURGO_DA_OPERACAO)
+    expect(expurgo && [...new Set(usosDaOperacao(expurgo.texto))].sort()).toEqual(EXPURGAVEIS_DA_OPERACAO)
+    // Os alvos do job são exatamente as tabelas que o arquivo cita: nenhuma a mais passa pelo `apagarLoteVencido`.
+    expect(nucleo.ALVOS_DO_EXPURGO_DE_ACESSO.filter((alvo) => FISICOS_DA_OPERACAO.has(alvo)).sort()).toEqual(EXPURGAVEIS_DA_OPERACAO)
+    const metodos = Object.getOwnPropertyNames(nucleo.ExpurgoDeAcessoRepository.prototype).filter((metodo) => metodo !== 'constructor')
+    const marcados = metodos.filter((metodo) => nucleo.justificativaSemEscopo(nucleo.ExpurgoDeAcessoRepository, metodo) !== undefined)
+    expect(marcados.sort()).toEqual(['apagarLoteVencido', 'limparLoteDeContasSemUso'])
+    // A justificativa do `apagarLoteVencido` cobre as tabelas da equipe, que não têm escola (9.2).
+    expect(nucleo.justificativaSemEscopo(nucleo.ExpurgoDeAcessoRepository, 'apagarLoteVencido')).toMatch(/operação Turmma.*não têm escola/)
+  })
+
+  it('a checagem do expurgo reprova o que apaga operador, código de recuperação ou auditoria da operação', () => {
+    const tocadas = (texto: string) => [...new Set(usosDaOperacao(texto))].sort()
+    const permitido = 'sql`delete from acesso_operacao`; sql`delete from convite_operador`; sql`delete from sessao_operador`'
+    expect(tocadas(permitido)).toEqual(EXPURGAVEIS_DA_OPERACAO)
+    for (const proibida of ['operador', 'codigo_recuperacao_operador', 'auditoria_operacao']) {
+      expect(tocadas(`${permitido}; sql\`delete from ${proibida} where em < now()\``), proibida).toEqual([...EXPURGAVEIS_DA_OPERACAO, proibida].sort())
+    }
   })
 
   it('o OperadorRepository não toca nenhuma outra tabela', () => {

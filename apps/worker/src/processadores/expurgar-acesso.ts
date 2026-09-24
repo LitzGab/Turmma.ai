@@ -1,4 +1,4 @@
-import { contextoAtual, LOTE_DO_EXPURGO, type AlvoDoExpurgoDeAcesso, type ExpurgoDeAcessoRepository, type LoggerBase, type Relogio } from '@educa/nucleo'
+import { ALVOS_DO_EXPURGO_DE_ACESSO, contextoAtual, LOTE_DO_EXPURGO, type AlvoDoExpurgoDeAcesso, type ExpurgoDeAcessoRepository, type LoggerBase, type Relogio } from '@educa/nucleo'
 import { CodigoDeFalhaDeJob } from '@educa/shared'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
@@ -15,7 +15,8 @@ export interface DependenciasDoExpurgoDeAcesso {
 
 /**
  * `sistema.expurgar-acesso` (tarefa 17.0): apaga o registro de acesso com mais de 6 meses, a sessão encerrada ou
- * expirada há mais de 30 dias e o convite usado, revogado ou expirado há mais de 30 dias, um lote de 5.000 por
+ * expirada há mais de 30 dias e o convite usado, revogado ou expirado há mais de 30 dias, e, com os mesmos prazos, o
+ * acesso, a sessão e o convite da operação Turmma (tarefa 9.0), um lote de 5.000 por
  * instrução, tabela por tabela, até sobrar lote incompleto. Depois limpa a conta da equipe que ficou sem usuário ativo
  * e sem convite válido, que a desativação deixou para quando o convite vencesse. Cada lote é uma transação curta: a sessão é lida pela
  * guarda em toda requisição, e o expurgo não pode segurar lock nela.
@@ -49,8 +50,27 @@ export function criarExpurgoDeAcesso({ repositorio, relogio, logger, lote = LOTE
     }
     // Uma tabela depois da outra, na ordem de `ALVOS_DO_EXPURGO_DE_ACESSO`, e a conta por último: nunca dois lotes do
     // mesmo job ao mesmo tempo.
-    const [registrosDeAcessoTotal, sessoesTotal, convitesTotal] = [await apagar('registro_acesso'), await apagar('sessao'), await apagar('convite')]
+    const totais = {} as Record<AlvoDoExpurgoDeAcesso, number>
+    for (const alvo of ALVOS_DO_EXPURGO_DE_ACESSO) totais[alvo] = await apagar(alvo)
     const contasLimpasTotal = await limparContas()
-    logger.info({ evento: 'acesso.expurgado', registrosDeAcessoTotal, sessoesTotal, convitesTotal, contasLimpasTotal })
+    const {
+      registro_acesso: registrosDeAcessoTotal,
+      sessao: sessoesTotal,
+      convite: convitesTotal,
+      acesso_operacao: acessosDaOperacaoTotal,
+      sessao_operador: sessoesDeOperadorTotal,
+      convite_operador: convitesDeOperadorTotal,
+    } = totais
+    // Só contagens, uma chave fixa por tabela.
+    logger.info({
+      evento: 'acesso.expurgado',
+      registrosDeAcessoTotal,
+      sessoesTotal,
+      convitesTotal,
+      acessosDaOperacaoTotal,
+      sessoesDeOperadorTotal,
+      convitesDeOperadorTotal,
+      contasLimpasTotal,
+    })
   }
 }
