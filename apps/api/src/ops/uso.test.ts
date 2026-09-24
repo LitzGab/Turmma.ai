@@ -1,6 +1,6 @@
 import { ConfiguracaoInvalida } from '@educa/nucleo'
-import { describe, expect, it } from 'vitest'
-import { ArgumentoInvalido, lerPedidoDeUso, urlDoBancoDeOperacao } from './uso.js'
+import { describe, expect, it, vi } from 'vitest'
+import { ArgumentoInvalido, executarOpsUso, lerPedidoDeUso, urlDoBancoDeOperacao } from './uso.js'
 
 const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
 // 01h de 01/01/2027 em São Paulo; em UTC já são 04h.
@@ -50,5 +50,19 @@ describe('urlDoBancoDeOperacao', () => {
   it('sem nenhum dos dois, recusa pelo nome da variável, sem valor', () => {
     expect(() => urlDoBancoDeOperacao({ ...prazos, POSTGRES_SENHA: 'segredo_sintetico' })).toThrow(ConfiguracaoInvalida)
     expect(() => urlDoBancoDeOperacao({ ...prazos, POSTGRES_SENHA: 'segredo_sintetico' })).not.toThrow(/segredo_sintetico/)
+  })
+})
+
+describe('executarOpsUso: desde a A0 lê o OPERADOR, conferido antes de abrir o banco', () => {
+  it.each([
+    ['sem OPERADOR', {}],
+    ['OPERADOR fora do formato', { OPERADOR: 'Joaquim Paes' }],
+  ])('%s: sai com 2 pelo nome da variável, sem abrir o banco', async (_caso, ambiente) => {
+    const abrirBanco = vi.fn()
+    let erro = ''
+    const codigo = await executarOpsUso(['--escola', ESCOLA_A], ambiente, { saida: () => undefined, erro: (texto) => (erro += texto) }, abrirBanco)
+    expect(codigo).toBe(2)
+    expect(erro).toBe(`${new ConfiguracaoInvalida(['OPERADOR']).message}\n`)
+    expect(abrirBanco).not.toHaveBeenCalled()
   })
 })

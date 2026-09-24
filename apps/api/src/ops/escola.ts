@@ -17,7 +17,7 @@ import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import { abrirBancoDeOperacao, ArgumentoInvalido, esquemaNome, lerOperador, type BancoDoComando, type SaidaDoComando } from './comando.js'
+import { abrirBancoDeOperacao, ArgumentoInvalido, conferirOperador, esquemaNome, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 import { RedeEEscolaRepository } from './escola.repository.js'
 
 // O que é comum aos comandos do operador mora em `comando.ts`; reexportado aqui para quem já o importava daqui.
@@ -31,7 +31,7 @@ export { abrirBancoDeOperacao, ArgumentoInvalido, lerOperador, type BancoDoComan
  *   OPERADOR=<pessoa da equipe> npm run -s ops:escola -- escola criar --rede <uuid> --nome <nome> --slug <endereco>
  *
  * - `OPERADOR` é obrigatório em qualquer ambiente e vai para `autor_operador` da auditoria. Sem ele, o
- *   comando recusa antes de abrir conexão com o banco.
+ *   comando recusa antes de abrir conexão com o banco. Com operador ativo (A0), só o apelido de um deles passa.
  * - A criação e a auditoria dela são uma transação só. A da escola é gravada no contexto da escola
  *   criada; a da rede, com escola nula.
  * - Imprime só o id criado, em JSON. Nenhum comando do operador lista ou lê pessoa.
@@ -136,6 +136,7 @@ export async function executarOpsEscola(
     const operador = lerOperador(ambiente)
     const { banco, fechar } = abrirBanco(ambiente)
     try {
+      await conferirOperador(banco, operador)
       const resposta =
         pedido.entidade === 'rede'
           ? { redeId: await criarRede(banco, operador, pedido) }
@@ -146,7 +147,7 @@ export async function executarOpsEscola(
       await fechar()
     }
   } catch (erro) {
-    if (erro instanceof ArgumentoInvalido || erro instanceof ConfiguracaoInvalida) {
+    if (erro instanceof ArgumentoInvalido || erro instanceof ConfiguracaoInvalida || erro instanceof OperadorRecusado) {
       // Só o nome da opção ou da variável: nunca o valor.
       terminal.erro(`${erro.message}\n`)
       return 2

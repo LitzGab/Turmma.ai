@@ -25,7 +25,9 @@ import { usuario } from './schema/usuario.js'
 import { vinculo } from './schema/vinculo.js'
 
 // Sem `auditoria`: a tabela só é alcançável pelo módulo de inserção e pela leitura da auditoria, nunca
-// pelo `schema` que o pacote exporta (a escrita tem uma porta só, o RegistroDeAuditoria).
+// pelo `schema` que o pacote exporta (a escrita tem uma porta só, o RegistroDeAuditoria). Sem as seis tabelas da
+// operação (`db/schema/operador.ts`), pelo mesmo motivo: só o `OperadorRepository` as toca, e a consulta relacional
+// (`banco.query.*`) não as alcançaria de fora sem passar por um `import` que o teste de arquitetura vê.
 export const schema = { jobRegistro, configuracaoOperacionalEscola, usoInfraDiario, rede, escola, anoLetivo, conta, codigoRecuperacao, usuario, sessao, registroAcesso, convite, serie, disciplina, turma, vinculo, credencialMatricula, contaExterna, provedorEscola }
 export type Schema = typeof schema
 

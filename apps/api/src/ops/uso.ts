@@ -1,7 +1,5 @@
 import {
   ConfiguracaoInvalida,
-  criarBanco,
-  criarPool,
   diaAnterior,
   diaDeUso,
   diaValido,
@@ -9,7 +7,6 @@ import {
   FORMATO_MES,
   relogioDoSistema,
   UsoRepository,
-  validarAmbiente,
   type Banco,
   type Relogio,
   type UsoDoPeriodo,
@@ -18,17 +15,22 @@ import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
+import { abrirBancoDeOperacao, conferirOperador, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
+
+// Mora em `comando.ts` desde a A0; reexportado para quem já o importava daqui (`ops:sessao-sintetica`).
+export { urlDoBancoDeOperacao } from './comando.js'
 
 /**
  * Consulta de operação do uso de infra de uma escola (D30, RF17), lida de `uso_infra_diario`:
  *
- *   npm run -s ops:uso -- --escola <uuid> [--dia AAAA-MM-DD] [--mes AAAA-MM]
+ *   OPERADOR=<pessoa da equipe> npm run -s ops:uso -- --escola <uuid> [--dia AAAA-MM-DD] [--mes AAAA-MM]
  *
  * Sem `--dia`, vale o último dia fechado (ontem, em São Paulo); sem `--mes`, o mês desse dia. Imprime
  * JSON com contagens e bytes, e nada de pessoa. O dia de hoje só aparece depois da consolidação das 2h.
  *
  * É ferramenta nossa, rodada por quem opera, e não rota: a escola vem da opção, e a consulta roda no
- * contexto dela, pelo mesmo repository com escopo que qualquer outro código usaria.
+ * contexto dela, pelo mesmo repository com escopo que qualquer outro código usaria. Desde a A0 lê o `OPERADOR`, como os
+ * outros `ops:*`: com operador ativo, só um deles consulta.
  */
 
 export class ArgumentoInvalido extends Error {
@@ -84,48 +86,39 @@ export function consultarUso(banco: Banco, pedido: PedidoDeUso): Promise<Respost
   }))
 }
 
-const inteiroPositivo = z.coerce.number().int().positive()
-
-const esquemaAmbiente = z.object({
-  BANCO_TIMEOUT_CONEXAO_MS: inteiroPositivo,
-  BANCO_TIMEOUT_CONSULTA_MS: inteiroPositivo,
-  // No container, o BANCO_URL do serviço; na máquina, com `.env.example`, o Postgres do compose local.
-  BANCO_URL: z.string().regex(/^postgres(ql)?:\/\/[^/]+\/[^/]+$/).optional(),
-  POSTGRES_USUARIO: z.string().optional(),
-  POSTGRES_SENHA: z.string().optional(),
-  POSTGRES_BANCO: z.string().optional(),
-  POSTGRES_PORTA_HOST: inteiroPositivo.optional(),
-})
-
-export function urlDoBancoDeOperacao(ambiente: Record<string, string | undefined>): { url: string; timeoutConexaoMs: number; timeoutConsultaMs: number } {
-  const valores = validarAmbiente(esquemaAmbiente, ambiente)
-  const { POSTGRES_USUARIO: usuario, POSTGRES_SENHA: senha, POSTGRES_BANCO: nome, POSTGRES_PORTA_HOST: porta } = valores
-  const url =
-    valores.BANCO_URL ??
-    (usuario === undefined || senha === undefined || nome === undefined || porta === undefined
-      ? undefined
-      : `postgres://${encodeURIComponent(usuario)}:${encodeURIComponent(senha)}@127.0.0.1:${porta}/${nome}`)
-  if (url === undefined) throw new ConfiguracaoInvalida(['BANCO_URL'])
-  return { url, timeoutConexaoMs: valores.BANCO_TIMEOUT_CONEXAO_MS, timeoutConsultaMs: valores.BANCO_TIMEOUT_CONSULTA_MS }
-}
-
-async function executar(): Promise<void> {
+/**
+ * Executa o comando e devolve o código de saída: 0 consultado, 2 argumento ou ambiente inválido, ou `OPERADOR` que não é
+ * operador ativo. Argumento e `OPERADOR` são conferidos antes de abrir o banco; o `OPERADOR`, contra os operadores
+ * ativos, antes da consulta.
+ */
+export async function executarOpsUso(
+  argumentos: string[],
+  ambiente: Record<string, string | undefined>,
+  terminal: SaidaDoComando,
+  abrirBanco: (ambiente: Record<string, string | undefined>) => BancoDoComando = abrirBancoDeOperacao,
+): Promise<number> {
   try {
-    const pedido = lerPedidoDeUso(process.argv.slice(2))
-    const pool = criarPool({ ...urlDoBancoDeOperacao(process.env), maximoConexoes: 1 }, () => undefined)
+    const pedido = lerPedidoDeUso(argumentos)
+    const operador = lerOperador(ambiente)
+    const { banco, fechar } = abrirBanco(ambiente)
     try {
-      process.stdout.write(`${JSON.stringify(await consultarUso(criarBanco(pool), pedido), null, 2)}\n`)
+      await conferirOperador(banco, operador)
+      terminal.saida(`${JSON.stringify(await consultarUso(banco, pedido), null, 2)}\n`)
+      return 0
     } finally {
-      await pool.end()
+      await fechar()
     }
   } catch (erro) {
-    if (!(erro instanceof ArgumentoInvalido || erro instanceof ConfiguracaoInvalida)) throw erro
+    if (!(erro instanceof ArgumentoInvalido || erro instanceof ConfiguracaoInvalida || erro instanceof OperadorRecusado)) throw erro
     // Só o nome da opção ou da variável: nunca o valor, que pode ser a senha do banco.
-    process.stderr.write(`${erro.message}\n`)
-    process.exitCode = 2
+    terminal.erro(`${erro.message}\n`)
+    return 2
   }
 }
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  await executar()
+  process.exitCode = await executarOpsUso(process.argv.slice(2), process.env, {
+    saida: (texto) => process.stdout.write(texto),
+    erro: (texto) => process.stderr.write(texto),
+  })
 }

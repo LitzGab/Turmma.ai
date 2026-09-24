@@ -45,6 +45,10 @@ AuditoriaOperacao         id, autor* (apelido ou "bootstrap"), acao* (operador.c
 `apelido` é o que já vai para `auditoria.autor_operador`. Desativar apaga nome, e-mail, senha,
 segredo e códigos; o apelido fica. Uma migration, só de tabelas novas.
 
+Da tarefa 3.0: o apelido `bootstrap` é reservado (check no banco); `SessaoOperador.motivo` é `saida`,
+`reuso_de_refresh` ou `desativacao`; o operador desativado não guarda dado pessoal, por check; e as seis tabelas ficam
+fora do `schema` do `criarBanco`, como a `auditoria`, para a consulta relacional não as alcançar sem `import`.
+
 ## 4. API
 
 | Método | Rota | Marcador | Entrada | Saída |

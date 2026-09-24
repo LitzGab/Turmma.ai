@@ -1,7 +1,7 @@
 # Tarefas — Identidade do operador Turmma (A0)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 2 de 11 concluídas
+**Status:** 3 de 11 concluídas
 
 ## Lista
 
@@ -18,12 +18,12 @@
   - [x] 2.4 Orçamento de 150 kB brotli só para a entrada
   - [x] 2.5 Testes: U3, E5, B1 (entrada)
 
-- [ ] **3.0 — O operador nasce por comando**
-  - [ ] 3.1 Migration das seis tabelas da seção 3 da Tech Spec
-  - [ ] 3.2 `OperadorRepository`
-  - [ ] 3.3 `ops:operador` (`criar`, `desativar`, `convite`), com bootstrap e lock
-  - [ ] 3.4 `comando.ts` confere o `OPERADOR` em todo `ops:*`
-  - [ ] 3.5 Testes: C1–C5, C6 (sem sessão), C7 (único parcial), C8, C45, U1
+- [x] **3.0 — O operador nasce por comando**
+  - [x] 3.1 Migration das seis tabelas da seção 3 da Tech Spec
+  - [x] 3.2 `OperadorRepository`
+  - [x] 3.3 `ops:operador` (`criar`, `desativar`, `convite`), com bootstrap e lock
+  - [x] 3.4 `comando.ts` confere o `OPERADOR` em todo `ops:*`
+  - [x] 3.5 Testes: C1–C5, C6 (sem sessão), C7 (único parcial), C8, C45, U1
 
 - [ ] **4.0 — Marcadores e cercas entre a operação e a escola**
   - [ ] 4.1 `@RotaDeOperacao`, `@EntradaDeOperacao` e o `rotaSemSessao`

@@ -99,6 +99,13 @@
       "when": 1789847548646,
       "tag": "0013_ciclo_de_vida",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790208611279,
+      "tag": "0014_operador",
+      "breakpoints": true
     }
   ]
 }

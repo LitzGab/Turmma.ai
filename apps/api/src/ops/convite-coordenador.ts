@@ -1,12 +1,12 @@
 import { ConfiguracaoInvalida, ErroDeDominio, FORMATO_SLUG, resumirErro, TAMANHO_MAXIMO_SLUG } from '@educa/nucleo'
 import { CodigoDeErro, TAMANHO_MAXIMO_EMAIL } from '@educa/shared'
-import { open, rm, type FileHandle } from 'node:fs/promises'
+import { rm } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
 import { criarConviteDeCoordenador, type PedidoDeConvite } from '../sessao/convite.service.js'
-import { abrirBancoDeOperacao, ArgumentoInvalido, esquemaNome, lerOperador, type BancoDoComando, type SaidaDoComando } from './comando.js'
+import { abrirBancoDeOperacao, ArgumentoInvalido, conferirOperador, criarArquivoDoToken, esquemaNome, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 
 /**
  * O convite do primeiro coordenador, pelo operador, depois do contrato (RF1; Tech Spec, seção 5, "Operador"):
@@ -15,6 +15,8 @@ import { abrirBancoDeOperacao, ArgumentoInvalido, esquemaNome, lerOperador, type
  *
  * - `OPERADOR` e os argumentos são conferidos antes de abrir o banco. O arquivo de `--saida` é criado antes também, com
  *   modo 0600 e sem sobrescrever um que já exista: se ele não pode ser criado, nada é gravado no banco.
+ * - Com operador ativo (A0), o `OPERADOR` precisa ser um deles, conferido antes de qualquer escrita; recusado, o
+ *   arquivo é apagado.
  * - O token (32 bytes sorteados) vai só para o arquivo. O terminal mostra o id do convite (que o `ops:revogar-convite`
  *   recebe) e o caminho do arquivo: nunca o token, o nome nem o e-mail. Se o banco falha, o arquivo é apagado.
  * - Escola inexistente sai com `NAO_ENCONTRADO`, e coordenador já ativo com `CONFLITO`, sem o valor recebido.
@@ -56,15 +58,6 @@ const MENSAGEM_DO_OPERADOR: Partial<Record<CodigoDeErro, string>> = {
   CONFLITO: 'esta pessoa já é coordenadora ativa desta escola',
 }
 
-/** Cria o arquivo do token só se ele não existe, com modo 0600: só o dono lê. */
-async function criarArquivoDoToken(caminho: string): Promise<FileHandle> {
-  try {
-    return await open(caminho, 'wx', 0o600)
-  } catch {
-    throw new ArgumentoInvalido('--saida (o arquivo já existe ou a pasta não aceita escrita)')
-  }
-}
-
 /**
  * Executa o comando e devolve o código de saída: 0 criado, 1 erro (`NAO_ENCONTRADO`, `CONFLITO` ou `ERRO_INTERNO`
  * resumido), 2 argumento, arquivo ou ambiente inválido.
@@ -78,11 +71,12 @@ export async function executarOpsConviteCoordenador(
   try {
     const pedido = lerPedidoDoConvite(argumentos)
     const operador = lerOperador(ambiente)
-    const arquivo = await criarArquivoDoToken(pedido.saida)
+    const arquivo = await criarArquivoDoToken(pedido.saida, () => new ArgumentoInvalido('--saida (o arquivo já existe ou a pasta não aceita escrita)'))
     let gravado = false
     try {
       const { banco, fechar } = abrirBanco(ambiente)
       try {
+        await conferirOperador(banco, operador)
         const { conviteId, token } = await criarConviteDeCoordenador(banco, operador, pedido)
         await arquivo.writeFile(`${token}\n`)
         gravado = true
@@ -96,7 +90,7 @@ export async function executarOpsConviteCoordenador(
       if (!gravado) await rm(pedido.saida, { force: true })
     }
   } catch (erro) {
-    if (erro instanceof ArgumentoInvalido || erro instanceof ConfiguracaoInvalida) {
+    if (erro instanceof ArgumentoInvalido || erro instanceof ConfiguracaoInvalida || erro instanceof OperadorRecusado) {
       // Só o nome da opção ou da variável: nunca o valor.
       terminal.erro(`${erro.message}\n`)
       return 2

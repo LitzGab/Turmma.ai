@@ -177,6 +177,20 @@ export { DURACAO_DA_SESSAO_HORAS, METODOS_DE_SESSAO, MOTIVOS_DE_ENCERRAMENTO, se
 export type { MetodoDeSessao, MotivoDeEncerramento } from './db/schema/sessao.js'
 export { EVENTOS_DE_ACESSO, registroAcesso } from './db/schema/registro-acesso.js'
 export type { EventoDeAcesso } from './db/schema/registro-acesso.js'
+export {
+  ACOES_DA_AUDITORIA_DA_OPERACAO,
+  acessoOperacao,
+  auditoriaOperacao,
+  AUTOR_BOOTSTRAP,
+  codigoRecuperacaoOperador,
+  conviteOperador,
+  EVENTOS_DE_ACESSO_DA_OPERACAO,
+  MOTIVOS_DE_ENCERRAMENTO_DE_OPERADOR,
+  operador,
+  sessaoOperador,
+  VALIDADE_DO_CONVITE_DE_OPERADOR_HORAS,
+} from './db/schema/operador.js'
+export type { AcaoDaAuditoriaDaOperacao, EventoDeAcessoDaOperacao, MotivoDeEncerramentoDeOperador } from './db/schema/operador.js'
 export { ACOES_DE_AUDITORIA, CAMPOS_PROIBIDOS_NA_AUDITORIA, problemasDoMapaDeAcoes } from './auditoria/acoes.js'
 export type { AcaoDeAuditoria, DefinicaoDeAcao, EstadosDaAcao } from './auditoria/acoes.js'
 export { AuditoriaRecusada, MOTIVOS_DE_RECUSA_DA_AUDITORIA } from './auditoria/auditoria-recusada.js'
