@@ -16,10 +16,13 @@ import { EntradaDoOperadorController } from './entrada.controller.js'
 import { EntradaDoOperadorService } from './entrada.service.js'
 import { EuDoOperadorController } from './eu.controller.js'
 import { EuDoOperadorService } from './eu.service.js'
+import { FalhasDeEntradaDaOperacao } from './falhas-de-entrada.js'
 import { provedoresDaGuardaDeOperador } from './guarda-de-operador.js'
 import { OperadorRepository } from './operador.repository.js'
 import { SegundoFatorDoOperadorController } from './segundo-fator.controller.js'
 import { SegundoFatorDoOperadorService } from './segundo-fator.service.js'
+import { SessaoDoOperadorController } from './sessao.controller.js'
+import { SessaoDoOperadorService } from './sessao.service.js'
 
 /** O que a área da operação lê da configuração, além da identidade. */
 export interface OpcoesDoModuloDaOperacao {
@@ -33,7 +36,7 @@ export interface OpcoesDoModuloDaOperacao {
 
 /**
  * A área da operação na API (Tech Spec da A0): as rotas `/v1/operacao/*`, com a `GuardaDeOperador`, e as de entrada: o
- * convite (5.0), a entrada por e-mail (6.0) e o segundo fator (7.0); renovar e sair chegam na 8.0. O semáforo, o hash de
+ * convite (5.0), a entrada por e-mail (6.0), o segundo fator (7.0), renovar e sair (8.0). O semáforo, o hash de
  * senha, o contador de tentativas e o cliente do Redis de fila do login vêm do `SessaoModule`, que os exporta como
  * global: a mesma instância do login.
  */
@@ -42,9 +45,11 @@ export class OperacaoModule {
   static com(identidade: ConfiguracaoIdentidade, opcoes: OpcoesDoModuloDaOperacao): DynamicModule {
     return {
       module: OperacaoModule,
-      controllers: [EuDoOperadorController, ConviteDeOperadorController, EntradaDoOperadorController, SegundoFatorDoOperadorController],
+      controllers: [EuDoOperadorController, ConviteDeOperadorController, EntradaDoOperadorController, SegundoFatorDoOperadorController, SessaoDoOperadorController],
       providers: [
         ...provedoresDaGuardaDeOperador(identidade),
+        // Uma série só para as duas etapas da entrada, criada uma vez.
+        { provide: FalhasDeEntradaDaOperacao, useFactory: () => new FalhasDeEntradaDaOperacao(opcoes.medidor ?? medidorGlobal()) },
         {
           provide: ConviteDeOperadorService,
           useFactory: (banco: Banco, hash: HashDeSenha, semaforo: SemaforoDeHash) =>
@@ -53,7 +58,7 @@ export class OperacaoModule {
         },
         {
           provide: EntradaDoOperadorService,
-          useFactory: (banco: Banco, hash: HashDeSenha, semaforo: SemaforoDeHash, contador: ContadorDeTentativas) =>
+          useFactory: (banco: Banco, hash: HashDeSenha, semaforo: SemaforoDeHash, contador: ContadorDeTentativas, falhas: FalhasDeEntradaDaOperacao) =>
             new EntradaDoOperadorService({
               banco,
               hash,
@@ -61,15 +66,15 @@ export class OperacaoModule {
               contador,
               dispositivo: cookieDeDispositivoDeOperador(opcoes.dispositivo),
               emissorDeDesafio: new EmissorDeDesafioDeOperador(identidade.chaveAssinatura),
-              medidor: opcoes.medidor ?? medidorGlobal(),
+              falhas,
             }),
-          inject: [BANCO, HashDeSenha, SemaforoDeHash, ContadorDeTentativas],
+          inject: [BANCO, HashDeSenha, SemaforoDeHash, ContadorDeTentativas, FalhasDeEntradaDaOperacao],
         },
         // O `jti` do desafio do operador no Redis de fila do login, que não expulsa chave, com prefixo próprio.
         { provide: ConsumoDeDesafioDeOperador, useFactory: (cliente: Redis) => new ConsumoDeDesafioDeOperador(cliente), inject: [CLIENTE_REDIS_LOGIN] },
         {
           provide: SegundoFatorDoOperadorService,
-          useFactory: (banco: Banco, contador: ContadorDeTentativas, consumo: ConsumoDeDesafioDeOperador) =>
+          useFactory: (banco: Banco, contador: ContadorDeTentativas, consumo: ConsumoDeDesafioDeOperador, falhas: FalhasDeEntradaDaOperacao) =>
             new SegundoFatorDoOperadorService({
               banco,
               cifra: new CifraDoSegredo(opcoes.mfa.versaoCifra, opcoes.mfa.chavesCifra),
@@ -81,8 +86,14 @@ export class OperacaoModule {
               emissorDeDesafio: new EmissorDeDesafioDeOperador(identidade.chaveAssinatura),
               emissorDeToken: new EmissorDeTokenDeOperador(identidade.chaveAssinatura),
               ambiente: identidade.ambiente,
+              falhas,
             }),
-          inject: [BANCO, ContadorDeTentativas, ConsumoDeDesafioDeOperador],
+          inject: [BANCO, ContadorDeTentativas, ConsumoDeDesafioDeOperador, FalhasDeEntradaDaOperacao],
+        },
+        {
+          provide: SessaoDoOperadorService,
+          useFactory: (banco: Banco) => new SessaoDoOperadorService({ banco, emissorDeToken: new EmissorDeTokenDeOperador(identidade.chaveAssinatura), ambiente: identidade.ambiente }),
+          inject: [BANCO],
         },
         { provide: EuDoOperadorService, useFactory: (banco: Banco) => new EuDoOperadorService(new OperadorRepository(banco)), inject: [BANCO] },
       ],

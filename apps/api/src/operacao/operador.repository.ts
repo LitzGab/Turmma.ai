@@ -7,6 +7,7 @@ import {
   sessaoOperador,
   type AcaoDaAuditoriaDaOperacao,
   type Banco,
+  type EventoDeAcessoDaOperacao,
   type MotivoDeEncerramentoDeOperador,
   type TransacaoBanco,
 } from '@educa/nucleo'
@@ -66,6 +67,17 @@ export interface SessaoDeOperadorParaGuarda {
   readonly agora: Date
 }
 
+/**
+ * O que a renovação lê da sessão do cookie, numa consulta: o que a guarda lê (os prazos, o encerramento, o operador e a
+ * hora do banco), mais os ids, se o cookie é o refresh atual ou o anterior, e quando a sessão rotacionou.
+ */
+export interface SessaoDeOperadorParaRenovar extends SessaoDeOperadorParaGuarda {
+  readonly id: string
+  readonly operadorId: string
+  readonly pelo: 'atual' | 'anterior'
+  readonly rotacionadoEm: Date | null
+}
+
 /** O convite que ainda vale, pelo hash do token: os dois ids, e nada do operador. */
 export interface ConviteValido {
   readonly conviteId: string
@@ -78,6 +90,8 @@ export interface ConviteValido {
  */
 export interface OperadorParaSegundoFator {
   readonly id: string
+  /** O apelido: o autor da auditoria `operador.mfa_configurado`, que é o operador da sessão que se abre. */
+  readonly apelido: string
   readonly email: string
   readonly segredoCifrado: Buffer | null
   readonly chaveVersao: number | null
@@ -232,6 +246,67 @@ export class OperadorRepository {
     return marcadas.length > 0
   }
 
+  /**
+   * A sessão do cookie de renovação, pelo hash do refresh atual **ou** do anterior, com o operador dela e a hora do
+   * banco. Sem trava: quem decide a corrida é a condição do `rotacionarSessao`.
+   */
+  async sessaoParaRenovar(refreshHash: string): Promise<SessaoDeOperadorParaRenovar | undefined> {
+    const [linha] = await this.banco
+      .select({
+        id: sessaoOperador.id,
+        operadorId: sessaoOperador.operadorId,
+        pelo: sql<'atual' | 'anterior'>`case when ${sessaoOperador.refreshHash} = ${refreshHash} then 'atual' else 'anterior' end`,
+        rotacionadoEm: sessaoOperador.rotacionadoEm,
+        encerradaEm: sessaoOperador.encerradaEm,
+        expiraEm: sessaoOperador.expiraEm,
+        ultimoUsoEm: sessaoOperador.ultimoUsoEm,
+        operadorDesativadoEm: operador.desativadoEm,
+        agora: sql<Date>`now()`.mapWith(sessaoOperador.expiraEm),
+      })
+      .from(sessaoOperador)
+      .innerJoin(operador, eq(operador.id, sessaoOperador.operadorId))
+      .where(or(eq(sessaoOperador.refreshHash, refreshHash), eq(sessaoOperador.refreshHashAnterior, refreshHash)))
+      .limit(1)
+    return linha
+  }
+
+  /**
+   * A trava da renovação (Tech Spec da A0, seção 5): `update … set refresh_hash = $novo, refresh_hash_anterior = $atual,
+   * rotacionado_em = now() where id = $1 and refresh_hash = $atual and encerrada_em is null`. Duas renovações com o
+   * mesmo cookie: a primeira rotaciona; a segunda espera a linha, relê a condição e não casa. Devolve se rotacionou.
+   */
+  async rotacionarSessao(dados: { sessaoId: string; refreshHashAtual: string; refreshHashNovo: string }): Promise<boolean> {
+    const rotacionadas = await this.banco
+      .update(sessaoOperador)
+      .set({ refreshHash: dados.refreshHashNovo, refreshHashAnterior: dados.refreshHashAtual, rotacionadoEm: sql`now()` })
+      .where(and(eq(sessaoOperador.id, dados.sessaoId), eq(sessaoOperador.refreshHash, dados.refreshHashAtual), isNull(sessaoOperador.encerradaEm)))
+      .returning({ id: sessaoOperador.id })
+    return rotacionadas.length > 0
+  }
+
+  /** Encerra uma sessão aberta, com o motivo. Devolve se encerrou (a já encerrada não muda de motivo). */
+  async encerrarSessao(sessaoId: string, motivo: MotivoDeEncerramentoDeOperador): Promise<boolean> {
+    const encerradas = await this.banco
+      .update(sessaoOperador)
+      .set({ encerradaEm: sql`now()`, motivo })
+      .where(and(eq(sessaoOperador.id, sessaoId), isNull(sessaoOperador.encerradaEm)))
+      .returning({ id: sessaoOperador.id })
+    return encerradas.length > 0
+  }
+
+  /**
+   * A saída: encerra a sessão aberta do cookie, pelo refresh atual ou pelo anterior, com motivo `saida`. Devolve o
+   * operador da sessão encerrada, ou `undefined` se não havia sessão aberta com esse cookie.
+   */
+  async encerrarSessaoPelaSaida(refreshHash: string): Promise<string | undefined> {
+    const [encerrada] = await this.banco
+      .update(sessaoOperador)
+      .set({ encerradaEm: sql`now()`, motivo: 'saida' })
+      .where(and(or(eq(sessaoOperador.refreshHash, refreshHash), eq(sessaoOperador.refreshHashAnterior, refreshHash)), isNull(sessaoOperador.encerradaEm)))
+      .returning({ operadorId: sessaoOperador.operadorId })
+    return encerrada?.operadorId
+  }
+
   /** O apelido e o nome do operador ativo, para `GET /v1/operacao/eu`. Desativado não tem nome, e não volta. */
   async daSessao(operadorId: string): Promise<OperadorDaSessao | undefined> {
     const [linha] = await this.banco
@@ -349,6 +424,7 @@ export class OperadorRepository {
         chaveVersao: operador.mfaChaveVersao,
         mfaVersao: operador.mfaVersao,
         mfaAtivadoEm: operador.mfaAtivadoEm,
+        apelido: operador.apelido,
       })
       .from(operador)
       .where(and(eq(operador.id, operadorId), isNull(operador.desativadoEm)))
@@ -436,6 +512,11 @@ export class OperadorRepository {
   /** A entrada que falhou, em `acesso_operacao`: evento, IP e data. Sem operador e sem o e-mail digitado (C25). */
   async registrarFalhaDeEntrada(ip: string): Promise<void> {
     await this.banco.insert(acessoOperacao).values({ operadorId: null, evento: 'entrada_falha', ip })
+  }
+
+  /** A entrada ou a saída do operador, em `acesso_operacao`: evento, operador, IP e data (Marco Civil, art. 15). */
+  async registrarAcesso(evento: Exclude<EventoDeAcessoDaOperacao, 'entrada_falha'>, operadorId: string, ip: string): Promise<void> {
+    await this.banco.insert(acessoOperacao).values({ operadorId, evento, ip })
   }
 
   /** A auditoria da operação: autor (apelido ou `bootstrap`), ação da lista fechada e operador alvo. Nada mais. */

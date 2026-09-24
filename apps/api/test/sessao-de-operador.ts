@@ -12,6 +12,8 @@ export interface SessaoDeOperadorDeTeste {
   readonly sessaoId: string
   /** Token de acesso emitido na criação: vale 10 min. */
   readonly token: string
+  /** O refresh da sessão, o valor do cookie `turmma_operacao` (o banco guarda só o SHA-256). */
+  readonly refresh: string
   /** Um token desta sessão emitido em outro instante, para o caso do acesso já vencido. */
   tokenEm(agora: Date): Promise<string>
 }
@@ -52,7 +54,8 @@ export class BancadaDeOperadores {
 
   /** Uma sessão aberta agora, de 8 h, para o operador, e o token de acesso dela. */
   async sessao(operador: { operadorId: string; apelido: string; nome: string }): Promise<SessaoDeOperadorDeTeste> {
-    const refreshHash = createHash('sha256').update(randomBytes(32)).digest('hex')
+    const refresh = randomBytes(32).toString('base64url')
+    const refreshHash = createHash('sha256').update(refresh).digest('hex')
     const { rows } = await this.pool.query<{ id: string }>(
       `insert into sessao_operador (operador_id, refresh_hash, expira_em) values ($1, $2, now() + make_interval(hours => $3)) returning id`,
       [operador.operadorId, refreshHash, DURACAO_DA_SESSAO_DE_OPERADOR_HORAS],
@@ -63,6 +66,7 @@ export class BancadaDeOperadores {
     return {
       ...operador,
       sessaoId,
+      refresh,
       token: (await this.#emissor.emitir(pedido)).token,
       tokenEm: async (agora: Date) => (await new EmissorDeTokenDeOperador(this.#chave, { agora: () => agora }).emitir(pedido)).token,
     }

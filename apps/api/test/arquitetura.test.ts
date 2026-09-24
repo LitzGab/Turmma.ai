@@ -383,3 +383,129 @@ describe('arquitetura: toda rota @RotaDeOperacao conta pelo rl:op:{sub} (C36, pa
     }
   })
 })
+
+/**
+ * C43 (Tech Spec da A0, seções 4 e 6): as rotas `@EntradaDeOperacao` pulam as guardas de escola sem a `GuardaDeOperador`,
+ * e por isso são uma lista fechada, escrita aqui. Rota de entrada nova é mudança da spec, não do código.
+ */
+const AS_SETE_ENTRADAS = [
+  'POST /v1/operacao/convite/consultar',
+  'POST /v1/operacao/convite/aceitar',
+  'POST /v1/operacao/sessao/email',
+  'POST /v1/operacao/sessao/mfa/configurar',
+  'POST /v1/operacao/sessao/mfa',
+  'POST /v1/operacao/sessao/renovar',
+  'POST /v1/operacao/sessao/sair',
+]
+
+describe('arquitetura: as rotas @EntradaDeOperacao são exatamente as sete da seção 4 (C43)', () => {
+  it('a lista registrada é a da spec, nem uma a mais, nem uma a menos', () => {
+    expect(rotasDaApi().filter((rota) => rota.marcador === 'entrada').map(nomeDaRota).sort()).toEqual([...AS_SETE_ENTRADAS].sort())
+  })
+})
+
+describe('arquitetura: toda rota @EntradaDeOperacao está num dos três grupos de limite (C36, parte)', () => {
+  const identidade = configuracaoDeTeste().identidade
+  /**
+   * O grupo de cada entrada (Tech Spec da A0, seção 5, "Limite"): rebaixa no semáforo do hash (quem recusa é o contador
+   * por conta), recusa pelo contador do `operador.id` no service (a rota também não responde 429 pelo IP), ou o limite
+   * anônimo por IP que recusa (`rl:ip`).
+   */
+  const GRUPOS: Record<string, 'rebaixa_no_hash' | 'contador_do_operador' | 'rl_ip'> = {
+    'POST /v1/operacao/convite/consultar': 'rl_ip',
+    'POST /v1/operacao/convite/aceitar': 'rebaixa_no_hash',
+    'POST /v1/operacao/sessao/email': 'rebaixa_no_hash',
+    'POST /v1/operacao/sessao/mfa/configurar': 'rl_ip',
+    'POST /v1/operacao/sessao/mfa': 'contador_do_operador',
+    'POST /v1/operacao/sessao/renovar': 'rl_ip',
+    'POST /v1/operacao/sessao/sair': 'rl_ip',
+  }
+
+  /** O que a `GuardaDeLimite` faz com a rota, com o IP acima do limite: qual limite ela conta, e se responde 429. */
+  async function acimaDoLimite(rota: RotaRegistrada): Promise<{ contou: string[]; recusou: boolean }> {
+    const recusa = { aceita: false, msAteLiberar: 1_000 } as const
+    const limitador = {
+      consumirDeOperador: vi.fn(async () => recusa),
+      consumirAnonima: vi.fn(async () => recusa),
+      consumirDoLogin: vi.fn(async () => recusa),
+      consumirAutenticada: vi.fn(async () => recusa),
+    }
+    const guarda = new nucleo.GuardaDeLimite(new Reflector(), limitador as unknown as nucleo.LimitadorDeRequisicoes, new nucleo.ProxiesConfiaveis(['127.0.0.1']), { daEscola: async () => ({ porUsuarioMin: 1, porEscolaMin: 1 }) }, identidade)
+    const requisicao = { headers: {}, socket: { remoteAddress: '127.0.0.1' } }
+    const execucao = {
+      getHandler: () => rota.handler,
+      getClass: () => rota.controlador,
+      getType: () => 'http',
+      switchToHttp: () => ({ getRequest: () => requisicao }),
+    } as unknown as ExecutionContext
+    let recusou = false
+    try {
+      await guarda.canActivate(execucao)
+    } catch (erro) {
+      expect(erro).toMatchObject({ codigo: CodigoDeErro.LIMITE_EXCEDIDO, status: 429 })
+      recusou = true
+    }
+    const contou = Object.entries(limitador)
+      .filter(([, consumo]) => consumo.mock.calls.length > 0)
+      .map(([nome]) => nome)
+    return { contou, recusou }
+  }
+
+  it('cada entrada conta no limite do seu grupo: rl:ip recusa com 429; rebaixar e o contador do operador nunca recusam pelo IP', async () => {
+    const entradas = rotasDaApi().filter((rota) => rota.marcador === 'entrada')
+    expect(entradas.map(nomeDaRota).sort()).toEqual(Object.keys(GRUPOS).sort())
+    const esperado = { rl_ip: { contou: ['consumirAnonima'], recusou: true }, rebaixa_no_hash: { contou: ['consumirDoLogin'], recusou: false }, contador_do_operador: { contou: ['consumirDoLogin'], recusou: false } }
+    for (const rota of entradas) {
+      const grupo = GRUPOS[nomeDaRota(rota)]
+      if (grupo === undefined) throw new Error(`entrada sem grupo: ${nomeDaRota(rota)}`)
+      expect(await acimaDoLimite(rota), nomeDaRota(rota)).toEqual(esperado[grupo])
+    }
+  })
+})
+
+/**
+ * C44 (Tech Spec da A0, seção 6; PRD, RF1): o operador e o convite dele nascem só pelo `ops:operador`. Os únicos
+ * métodos que os inserem são o `criar` e o `criarConvite` do `OperadorRepository` (e só ele toca as tabelas, C45); aqui
+ * se prova que só o comando os chama, e que nenhum módulo da API importa o código dos comandos.
+ */
+const COMANDO_DO_OPERADOR = 'apps/api/src/ops/operador.ts'
+const PASTA_DOS_COMANDOS = 'apps/api/src/ops/'
+
+/** Os arquivos de produção que criam operador ou convite de operador fora do comando, ou que importam os comandos na API. */
+function quemCriaOperadorForaDoComando(arquivos: readonly Arquivo[]): string[] {
+  return arquivos
+    .filter((arquivo) => /^(apps|packages)\/[^/]+\/src\//.test(arquivo.caminho) && !deTeste(arquivo.caminho))
+    .filter((arquivo) => {
+      const codigo = semComentarios(arquivo.texto)
+      const chamaORepository = /\bOperadorRepository\b/.test(codigo) && /\.(?:criar|criarConvite)\s*\(/.test(codigo) && arquivo.caminho !== COMANDO_DO_OPERADOR
+      const chamaOComando = /\b(?:criarOperador|gerarConviteDeOperador|executarOpsOperador)\s*\(/.test(codigo) && !arquivo.caminho.startsWith(PASTA_DOS_COMANDOS)
+      const importaOsComandos = arquivo.caminho.startsWith('apps/api/src/') && !arquivo.caminho.startsWith(PASTA_DOS_COMANDOS) && /from\s+['"](?:\.\.?\/)+(?:[^'"]*\/)?ops\//.test(codigo)
+      return chamaORepository || chamaOComando || importaOsComandos
+    })
+    .map((arquivo) => arquivo.caminho)
+}
+
+describe('arquitetura: nenhuma rota registrada cria operador (C44)', () => {
+  it('só o comando cria operador e convite de operador, e nenhum módulo da API importa os comandos', () => {
+    const arquivos = arquivosDoRepositorio()
+    // A varredura enxerga o código: o comando cria pelo repository.
+    expect(arquivos.find((arquivo) => arquivo.caminho === COMANDO_DO_OPERADOR)?.texto).toMatch(/repositorio\.criar\(/)
+    expect(quemCriaOperadorForaDoComando(arquivos)).toEqual([])
+  })
+
+  it('a varredura reprova a rota que cria pelo repository ou pelo comando, e o módulo que importa os comandos; não confunde comentário, teste nem outro repository', () => {
+    const fora = [
+      { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { OperadorRepository } from './operador.repository.js'\nawait new OperadorRepository(tx).criar(dados)" },
+      { caminho: 'apps/api/src/operacao/convite.service.ts', texto: "import { OperadorRepository } from './operador.repository.js'\nawait repositorio.criarConvite({ operadorId })" },
+      { caminho: 'apps/api/src/operacao/atalho.controller.ts', texto: "import { criarOperador } from '../ops/operador.js'\nawait criarOperador(banco, autor, dados)" },
+      { caminho: 'apps/api/src/app.module.ts', texto: "import { algo } from './ops/uso.js'" },
+    ]
+    const inocentes = [
+      { caminho: COMANDO_DO_OPERADOR, texto: "import { OperadorRepository } from '../operacao/operador.repository.js'\nawait repositorio.criar(dados)" },
+      { caminho: 'apps/api/src/estrutura/turma.service.ts', texto: 'await turmas.criar({ nome })' },
+      { caminho: 'apps/api/src/operacao/eu.service.ts', texto: "import type { OperadorRepository } from './operador.repository.js'\n// nunca chama .criar( daqui" },
+      { caminho: 'apps/api/test/registros-operador.int.test.ts', texto: "import { criarOperador } from '../src/ops/operador.js'\nawait criarOperador(banco, autor, dados)" },
+    ]
+    expect(quemCriaOperadorForaDoComando([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho))
+  })
+})

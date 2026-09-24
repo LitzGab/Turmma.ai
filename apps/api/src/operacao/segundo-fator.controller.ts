@@ -1,4 +1,4 @@
-import { ErroDeDominio, LimiteQueRebaixa } from '@educa/nucleo'
+import { ErroDeDominio, ipDaRequisicao, LimiteQueRebaixa, ProxiesConfiaveis } from '@educa/nucleo'
 import {
   CodigoDeErro,
   esquemaPedidoConfigurarSegundoFatorDeOperador,
@@ -27,7 +27,10 @@ import { SegundoFatorDoOperadorService } from './segundo-fator.service.js'
  */
 @Controller('v1/operacao/sessao')
 export class SegundoFatorDoOperadorController {
-  constructor(@Inject(SegundoFatorDoOperadorService) private readonly segundoFator: SegundoFatorDoOperadorService) {}
+  constructor(
+    @Inject(SegundoFatorDoOperadorService) private readonly segundoFator: SegundoFatorDoOperadorService,
+    @Inject(ProxiesConfiaveis) private readonly proxies: ProxiesConfiaveis,
+  ) {}
 
   @Post('mfa/configurar')
   @EntradaDeOperacao()
@@ -47,7 +50,7 @@ export class SegundoFatorDoOperadorController {
   async entrar(@Body() corpo: unknown, @Req() requisicao: IncomingMessage, @Res({ passthrough: true }) resposta: ServerResponse): Promise<RespostaSegundoFatorDeOperador> {
     const pedido = esquemaPedidoSegundoFatorDeOperador.safeParse(corpo)
     if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-    const aberta = await this.segundoFator.entrar(pedido.data, { cabecalhoCookie: requisicao.headers.cookie })
+    const aberta = await this.segundoFator.entrar(pedido.data, { cabecalhoCookie: requisicao.headers.cookie, ip: await ipDaRequisicao(requisicao, this.proxies) })
     const corpoDaResposta = esquemaRespostaSegundoFatorDeOperador.parse(aberta.resposta)
     resposta.setHeader('Set-Cookie', [...aberta.cookies])
     return corpoDaResposta

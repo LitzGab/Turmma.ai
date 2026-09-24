@@ -6,6 +6,13 @@ export const DURACAO_DA_SESSAO_DE_OPERADOR_HORAS = 8
 /** A sessão do operador termina depois de 30 min sem uso (PRD da A0, RF5), sem tolerância nem configuração. */
 export const INATIVIDADE_DO_OPERADOR_MIN = 30
 
+/**
+ * Por quantos segundos depois de uma rotação o cookie anterior ainda renova (Tech Spec da A0, seção 5, "Travas no
+ * banco", renovação; PRD, "duas abas renovando ao mesmo tempo"): é a outra aba, que mandou o mesmo cookie junto. Depois
+ * disso, o cookie anterior é reuso, e encerra a sessão. O mesmo prazo do F1 (`JANELA_DE_JA_RENOVADO_SEGUNDOS`).
+ */
+export const JANELA_DO_REFRESH_ANTERIOR_SEGUNDOS = 30
+
 const MS_POR_MINUTO = 60_000
 
 /**

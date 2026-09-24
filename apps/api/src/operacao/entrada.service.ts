@@ -1,4 +1,4 @@
-import { ErroDeDominio, METRICAS, type Banco, type Meter } from '@educa/nucleo'
+import { ErroDeDominio, type Banco } from '@educa/nucleo'
 import { CodigoDeErro, type PedidoEntradaDeOperador, type RespostaEntradaDeOperador } from '@educa/shared'
 import type { ContadorDeTentativas, PrefixoDoContador } from '../sessao/contador-de-tentativas.js'
 import type { CookieDeDispositivo } from '../sessao/cookie-dispositivo.js'
@@ -9,6 +9,7 @@ import { baldeDaEquipe } from '../sessao/senha/baldes-de-login.js'
 import type { SemaforoDeHash } from '../sessao/senha/semaforo-de-hash.js'
 import type { EmissorDeDesafioDeOperador, EtapaDoDesafioDeOperador } from './desafio-de-operador.js'
 import { COOKIE_DISPOSITIVO_DE_OPERADOR } from './dispositivo-de-operador.js'
+import type { FalhasDeEntradaDaOperacao } from './falhas-de-entrada.js'
 import { OperadorRepository, type CredencialDeEntrada } from './operador.repository.js'
 
 /** O prefixo do contador de tentativas do operador: separado do `login` da escola (C24). */
@@ -24,7 +25,8 @@ export interface DependenciasDaEntrada {
   /** O cookie de dispositivo do operador, com a chave própria (`dispositivo-de-operador.ts`). */
   readonly dispositivo: Pick<CookieDeDispositivo, 'conhece'>
   readonly emissorDeDesafio: Pick<EmissorDeDesafioDeOperador, 'emitir'>
-  readonly medidor: Meter
+  /** A série `operacao.entrada_falha`, a mesma do `/sessao/mfa`. */
+  readonly falhas: Pick<FalhasDeEntradaDaOperacao, 'somar'>
 }
 
 /** O que o controller tira da requisição: o IP, o cabeçalho `Cookie` e se o IP passou do limite das rotas de senha. */
@@ -59,7 +61,7 @@ export function etapaDaEntrada(credencial: Pick<CredencialDeEntrada, 'mfaAtivo' 
  *   semáforo, nunca 429; quem traz o cookie de dispositivo daquela conta mantém a vez.
  * - **Registro:** a falha que passou pelo hash grava `entrada_falha` em `acesso_operacao`, com IP e data, sem o e-mail
  *   e sem operador; a tentativa com a conta já segurada não grava (o hash é o que freia o ritmo das gravações). Toda
- *   falha soma em `operacao.entrada_falha`. A entrada que dá certo só é registrada quando abre a sessão (tarefa 7.0).
+ *   falha soma em `operacao.entrada_falha`. A entrada que dá certo só é registrada quando abre a sessão, no `/sessao/mfa`.
  * - **Semáforo:** a vez é a do balde `equipe`, e por isso a espera do operador soma em `login.hash_espera{equipe}` com a
  *   da equipe das escolas; o volume da nossa equipe não muda a leitura dessa série.
  *
@@ -67,13 +69,7 @@ export function etapaDaEntrada(credencial: Pick<CredencialDeEntrada, 'mfaAtivo' 
  * a falha do operador ficaria contada como falha da equipe de uma escola no painel.
  */
 export class EntradaDoOperadorService {
-  readonly #falhas: ReturnType<Meter['createCounter']>
-
-  constructor(private readonly dependencias: DependenciasDaEntrada) {
-    this.#falhas = dependencias.medidor.createCounter(METRICAS.entradaFalhaDaOperacao, { description: 'Entradas do operador Turmma por e-mail e senha que falharam' })
-    // A série nasce em 0 no boot, como as do login do F1: o painel mostra 0, e não "sem dado", até a primeira falha.
-    this.#falhas.add(0)
-  }
+  constructor(private readonly dependencias: DependenciasDaEntrada) {}
 
   async entrar(pedido: PedidoEntradaDeOperador, origem: OrigemDaEntrada): Promise<RespostaEntradaDeOperador> {
     const { banco, semaforo, contador, hash, dispositivo, emissorDeDesafio } = this.dependencias
@@ -106,7 +102,7 @@ export class EntradaDoOperadorService {
 
   /** `NAO_AUTENTICADO`, ou `CONTA_SEGURADA` com a espera se a conta está ou ficou segurada; antes, a métrica. */
   #falhar(esperaMs: number): never {
-    this.#falhas.add(1)
+    this.dependencias.falhas.somar()
     if (esperaMs <= 0) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
     throw new ErroDeDominio(CodigoDeErro.CONTA_SEGURADA, undefined, Math.max(1, Math.ceil(esperaMs / 1_000)))
   }

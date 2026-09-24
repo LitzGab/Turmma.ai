@@ -11,12 +11,13 @@ import { SegredoNaoDecifra, type CifraDoSegredo } from '../sessao/cifra-do-segre
 import type { ContadorDeTentativas } from '../sessao/contador-de-tentativas.js'
 import type { CookieDeDispositivo } from '../sessao/cookie-dispositivo.js'
 import { lerCookie } from '../sessao/cookies.js'
-import { BYTES_DO_REFRESH, hashDoRefresh, normalizarEmail } from '../sessao/login.service.js'
+import { BYTES_DO_REFRESH, hashDoRefresh, ipParaRegistro, normalizarEmail } from '../sessao/login.service.js'
 import { gerarCodigosDeRecuperacao, gerarSegredo, hmacDaRecuperacao, normalizarRecuperacao, passoDoCodigo, ROTULO_TOTP_DA_OPERACAO } from '../sessao/segundo-fator.js'
 import { cookiesDaSessaoDeOperador } from './cookie-de-operador.js'
 import { verificarDesafioDeOperador, type ConsumoDeDesafioDeOperador, type DesafioDeOperadorVerificado, type EmissorDeDesafioDeOperador } from './desafio-de-operador.js'
 import { COOKIE_DISPOSITIVO_DE_OPERADOR } from './dispositivo-de-operador.js'
 import { PREFIXO_DO_CONTADOR_DA_OPERACAO } from './entrada.service.js'
+import type { FalhasDeEntradaDaOperacao } from './falhas-de-entrada.js'
 import { OperadorRepository, type OperadorParaSegundoFator } from './operador.repository.js'
 
 export interface DependenciasDoSegundoFator {
@@ -35,12 +36,18 @@ export interface DependenciasDoSegundoFator {
   readonly emissorDeDesafio: Pick<EmissorDeDesafioDeOperador, 'emitir'>
   readonly emissorDeToken: Pick<EmissorDeTokenDeOperador, 'emitir'>
   readonly ambiente: Ambiente
+  /** A série `operacao.entrada_falha`, a mesma da entrada por e-mail. */
+  readonly falhas: Pick<FalhasDeEntradaDaOperacao, 'somar'>
   readonly relogio?: Relogio
 }
 
-/** O que o controller tira da requisição: o cabeçalho `Cookie`, para a origem do contador e o cookie de dispositivo. */
+/**
+ * O que o controller tira da requisição: o cabeçalho `Cookie`, para a origem do contador e o cookie de dispositivo, e o
+ * IP, para o registro da entrada e da falha em `acesso_operacao`.
+ */
 export interface OrigemDoSegundoFator {
   readonly cabecalhoCookie: string | undefined
+  readonly ip: string
 }
 
 /** A sessão aberta: o corpo da resposta e os dois `Set-Cookie`. */
@@ -77,13 +84,15 @@ type Desfecho =
  *      por IP; segurada, 429 `CONTA_SEGURADA` sem conferir o código;
  *   3. o código é gasto no banco: o do app pelo passo (`mfa_ultimo_passo`), o de recuperação por `delete … returning`,
  *      e este só depois da ativação;
- *   4. o primeiro código válido ativa o segredo da versão conferida, e a sessão de 8 h é inserida.
+ *   4. o primeiro código válido ativa o segredo da versão conferida, com a auditoria `operador.mfa_configurado` (o
+ *      autor é o próprio operador, o da sessão que se abre), e a sessão de 8 h é inserida, com a `entrada` em
+ *      `acesso_operacao` (operador, IP e data).
+ *   O código que não confere grava `entrada_falha` em `acesso_operacao`, com IP e sem operador, como a senha errada da
+ *   entrada por e-mail; ele e a conta segurada somam em `operacao.entrada_falha`.
  *   O `desativar` começa pelo mesmo `for update`: ou esta transação não acha o operador, ou ele espera por ela e encerra
  *   a sessão que ela abriu.
  * - **Fim:** zera o contador, emite o acesso de 10 min (`operador+jwt`, sem `esc`) e grava os cookies
  *   `turmma_operacao` e `turmma_operacao_dispositivo`, em `/v1/operacao/sessao`.
- *
- * O registro da entrada em `acesso_operacao` e a auditoria `operador.mfa_configurado` são da tarefa 8.0 (8.4, C37).
  */
 export class SegundoFatorDoOperadorService {
   readonly #relogio: Relogio
@@ -131,10 +140,19 @@ export class SegundoFatorDoOperadorService {
       const reserva = await contador.reservar(chave)
       if (!reserva.liberada) return { tipo: 'segurada', esperaMs: reserva.esperaMs }
 
-      if (!(await this.#codigoConfere(repositorio, linha, segredo, pedido))) return { tipo: 'codigo_recusado', esperaMs: reserva.esperaSeFalharMs }
-      // A linha está travada desde o `for update`, com a versão conferida acima: a ativação não tem como não casar.
-      if (!linha.mfaAtivo && !(await repositorio.ativarSegundoFator(linha.id, linha.mfaVersao))) throw new Error('segundo fator do operador não ativado com a linha travada')
-      return { tipo: 'aberta', sessaoId: await repositorio.abrirSessao(linha.id, hashDoRefresh(refresh)), email, chave }
+      if (!(await this.#codigoConfere(repositorio, linha, segredo, pedido))) {
+        // Só depois de conferir o código, como a senha errada: o desafio (que só a senha dá) freia o ritmo das gravações.
+        await repositorio.registrarFalhaDeEntrada(ipParaRegistro(origem.ip))
+        return { tipo: 'codigo_recusado', esperaMs: reserva.esperaSeFalharMs }
+      }
+      if (!linha.mfaAtivo) {
+        // A linha está travada desde o `for update`, com a versão conferida acima: a ativação não tem como não casar.
+        if (!(await repositorio.ativarSegundoFator(linha.id, linha.mfaVersao))) throw new Error('segundo fator do operador não ativado com a linha travada')
+        await repositorio.auditar({ autor: linha.apelido, acao: 'operador.mfa_configurado', operadorAlvoId: linha.id })
+      }
+      const sessaoId = await repositorio.abrirSessao(linha.id, hashDoRefresh(refresh))
+      await repositorio.registrarAcesso('entrada', linha.id, ipParaRegistro(origem.ip))
+      return { tipo: 'aberta', sessaoId, email, chave }
     })
 
     switch (desfecho.tipo) {
@@ -143,8 +161,10 @@ export class SegundoFatorDoOperadorService {
       case 'configure_de_novo':
         throw new ErroDeDominio(CodigoDeErro.CONFLITO)
       case 'segurada':
+        this.dependencias.falhas.somar()
         throw contaSegurada(desfecho.esperaMs)
       case 'codigo_recusado':
+        this.dependencias.falhas.somar()
         throw desfecho.esperaMs > 0 ? contaSegurada(desfecho.esperaMs) : new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
       case 'aberta': {
         await contador.zerar(desfecho.chave)

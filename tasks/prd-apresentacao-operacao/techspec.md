@@ -111,6 +111,12 @@ queima; "configure de novo" é 409 `CONFLITO`; a reserva no contador pelo `opera
 `for update` e da versão; `sessao/mfa` leva `@LimiteQueRebaixa`; o cookie `turmma_operacao` (8 h) e o de dispositivo saem
 em `/v1/operacao/sessao`, e a `GuardaDeAutenticacao` responde 404 também ao `turmma_operacao` numa rota de escola.
 
+Da tarefa 8.0: a renovação lê a sessão sem trava e rotaciona pelo `update … where refresh_hash = $atual and encerrada_em is
+null`; o anterior, até 30 s, devolve acesso sem `Set-Cookie`, e depois disso encerra por reuso; toda recusa é 401
+`SESSAO_ENCERRADA` com o cookie apagado, e renovar não é uso. `sair` encerra pelo cookie atual ou anterior e responde 204
+sempre. `operador.mfa_configurado` é gravado na ativação (primeiro código), com o próprio operador como autor; a falha do
+código no `/sessao/mfa` grava `entrada_falha` e soma em `operacao.entrada_falha`, a mesma série da entrada por e-mail.
+
 **Conferência da sessão**, pela `GuardaDeOperador`, que põe no contexto só o `operadorId`, nunca
 `escolaId` (repository de escola chamado por engano falha com erro):
 - credencial que não é de operador (sessão, desafio ou cookie de escola, ou nenhuma): **404**, pelo

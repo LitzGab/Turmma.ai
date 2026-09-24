@@ -2,9 +2,11 @@ import { EMISSOR_TOKEN, ErroDeDominio, TIPO_DESAFIO_DE_OPERADOR, verificarToken,
 import { CodigoDeErro } from '@educa/shared'
 import { decodeJwt, decodeProtectedHeader, SignJWT, type JWTPayload } from 'jose'
 import { randomUUID } from 'node:crypto'
-import { describe, expect, it } from 'vitest'
+import { Logger } from '@nestjs/common'
+import type { Redis } from 'ioredis'
+import { describe, expect, it, vi } from 'vitest'
 import { EmissorDeDesafio, verificarDesafio } from '../sessao/desafio.js'
-import { AUDIENCIA_DESAFIO_DE_OPERADOR, EmissorDeDesafioDeOperador, VALIDADE_DESAFIO_DE_OPERADOR_SEGUNDOS, verificarDesafioDeOperador } from './desafio-de-operador.js'
+import { AUDIENCIA_DESAFIO_DE_OPERADOR, ConsumoDeDesafioDeOperador, EmissorDeDesafioDeOperador, VALIDADE_DESAFIO_DE_OPERADOR_SEGUNDOS, verificarDesafioDeOperador } from './desafio-de-operador.js'
 
 const OPERADOR = '0190f5a0-0000-7000-8000-0000000000e1'
 const CHAVE = new TextEncoder().encode('chave_sintetica_de_teste_com_32_caracteres')
@@ -92,6 +94,38 @@ describe('desafio do operador (tarefa 5.0)', () => {
     expect(await recusa(verificarDesafioDeOperador(await assinar({ claims: { ver: 1 } }), CHAVE, 'configurar_mfa'))).toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO })
     for (const ver of [0, -1, 1.5, '2']) {
       expect(await recusa(verificarDesafioDeOperador(await assinar({ claims: { etapa: 'mfa', ver } }), CHAVE, 'mfa')), String(ver)).toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO })
+    }
+  })
+})
+
+describe('ConsumoDeDesafioDeOperador com o Redis fora (tarefa 7.0, recomendação levada à 8.0)', () => {
+  const desafio = { jti: randomUUID(), expiraEm: new Date(Date.now() + 60_000) }
+
+  it('Redis desconectado e Redis que recusa o comando: 503 com Retry-After, e o aviso `operacao.desafio_sem_redis` sai uma vez só, sem nada do desafio', async () => {
+    const avisos = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    try {
+      const fora = new ConsumoDeDesafioDeOperador({ status: 'end' } as unknown as Redis)
+      const travado = new ConsumoDeDesafioDeOperador({ status: 'ready', set: vi.fn(async () => Promise.reject(new Error('Command timed out'))) } as unknown as Redis)
+      for (const consumo of [fora, travado]) {
+        for (let vez = 0; vez < 2; vez++) {
+          await expect(consumo.consumir(desafio)).rejects.toMatchObject({ codigo: CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO, status: 503, tenteDeNovoEmSegundos: expect.any(Number) as number })
+        }
+      }
+      // Uma linha por instância do consumo nas duas recusas seguidas, e só o evento.
+      expect(avisos.mock.calls).toEqual([['operacao.desafio_sem_redis'], ['operacao.desafio_sem_redis']])
+    } finally {
+      avisos.mockRestore()
+    }
+  })
+
+  it('com o Redis de pé, a marca já existente é NAO_AUTENTICADO, e nenhum aviso sai', async () => {
+    const avisos = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    try {
+      const usado = new ConsumoDeDesafioDeOperador({ status: 'ready', set: vi.fn(async () => null) } as unknown as Redis)
+      await expect(usado.consumir(desafio)).rejects.toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO })
+      expect(avisos).not.toHaveBeenCalled()
+    } finally {
+      avisos.mockRestore()
     }
   })
 })

@@ -184,6 +184,79 @@ describe('área da operação: as cercas entre a operação e a escola (tarefa 4
     })
   })
 
+  describe('C46 (entradas): nenhuma credencial de escola produz sessão de operador pelas sete rotas de entrada', () => {
+    /** O corpo que cada entrada aceita, com a credencial de escola no lugar do token, do desafio e da senha. */
+    function corpoCom(caminho: string, valor: string): unknown {
+      switch (caminho) {
+        case '/v1/operacao/convite/consultar':
+          return { token: valor }
+        case '/v1/operacao/convite/aceitar':
+          return { token: valor, senha: `senha-${valor.slice(0, 20)}` }
+        case '/v1/operacao/sessao/email':
+          return { email: 'coordenacao@escola-sintetica.invalid', senha: valor.slice(0, 100) }
+        case '/v1/operacao/sessao/mfa/configurar':
+          return { desafio: valor }
+        case '/v1/operacao/sessao/mfa':
+          return { desafio: valor, codigo: '123456' }
+        default:
+          return undefined
+      }
+    }
+
+    it('sessão de coordenador, professor e aluno, desafio e cookie de escola, no cabeçalho e no corpo: nenhuma resposta traz acesso, desafio ou cookie de operador, e nenhuma sessão de operador nasce', async () => {
+      const entradas = rotas.filter((rota) => rota.marcador === 'entrada')
+      // A lista é a gerada das rotas registradas, e tem as sete de entrada.
+      expect(entradas.map((rota) => `${rota.verbo} ${rota.caminho}`).sort()).toEqual(
+        [
+          'POST /v1/operacao/convite/aceitar',
+          'POST /v1/operacao/convite/consultar',
+          'POST /v1/operacao/sessao/email',
+          'POST /v1/operacao/sessao/mfa',
+          'POST /v1/operacao/sessao/mfa/configurar',
+          'POST /v1/operacao/sessao/renovar',
+          'POST /v1/operacao/sessao/sair',
+        ].sort(),
+      )
+      const escolaId = await escolas.escola()
+      const [coordenador, professor, aluno] = await Promise.all([escolas.sessao(escolaId, 'coordenador'), escolas.sessao(escolaId, 'professor'), escolas.sessao(escolaId, 'aluno')])
+      if (coordenador === undefined || professor === undefined || aluno === undefined) throw new Error('sessões não criadas')
+      const desafio = await new EmissorDeDesafio(CHAVE).emitir({ contaId: randomUUID(), etapa: 'mfa', mfaCumprido: false })
+      const cookie = await cookieDeRenovacao(escolas, coordenador)
+      const valorDoCookieDeEscola = cookie.slice(cookie.indexOf('=') + 1)
+      const credenciais: Array<{ nome: string; valor: string; cabecalhos: Cabecalhos }> = [
+        { nome: 'coordenador', valor: coordenador.token, cabecalhos: bearer(coordenador.token) },
+        { nome: 'professor', valor: professor.token, cabecalhos: bearer(professor.token) },
+        { nome: 'aluno', valor: aluno.token, cabecalhos: bearer(aluno.token) },
+        { nome: 'desafio', valor: desafio, cabecalhos: bearer(desafio) },
+        { nome: 'cookie', valor: valorDoCookieDeEscola, cabecalhos: { Cookie: cookie } },
+        // O refresh da escola com o nome do cookie do operador: o hash não casa com sessão de operador nenhuma.
+        { nome: 'cookie como operador', valor: valorDoCookieDeEscola, cabecalhos: { Cookie: `turmma_operacao=${valorDoCookieDeEscola}` } },
+      ]
+      const sessoesDeOperador = async () => (await operadores.pool.query<{ total: number }>('select count(*)::int as total from sessao_operador')).rows[0]?.total
+      const antes = await sessoesDeOperador()
+
+      const produziram: string[] = []
+      for (const credencial of credenciais) {
+        for (const rota of entradas) {
+          const corpo = corpoCom(rota.caminho, credencial.valor)
+          const resposta = await fetch(`${url}${rota.caminho}`, {
+            method: rota.verbo,
+            headers: { ...credencial.cabecalhos, ...(corpo === undefined ? {} : { 'Content-Type': 'application/json' }) },
+            ...(corpo === undefined ? {} : { body: JSON.stringify(corpo) }),
+          })
+          const texto = await resposta.text()
+          const cookieDeOperador = resposta.headers.getSetCookie().some((linha) => /^turmma_operacao=[^;]/.test(linha))
+          if (resposta.ok && resposta.status !== 204) produziram.push(`${credencial.nome} ${rota.caminho} ${String(resposta.status)}`)
+          if (/"(?:token|desafio)"/.test(texto) || cookieDeOperador) produziram.push(`${credencial.nome} ${rota.caminho}: ${texto}`)
+        }
+      }
+      expect(produziram).toEqual([])
+      expect(await sessoesDeOperador()).toBe(antes)
+      // A sessão de escola cujo cookie foi usado continua viva: a saída do operador não a encerra.
+      expect((await pedir(url, 'GET', '/v1/eu', bearer(coordenador.token))).status).toBe(200)
+    })
+  })
+
   describe('C47: credencial de operador não alcança rota de escola com sessão', () => {
     it('o token de operador, em toda rota de escola que exige sessão, responde igual a rota inexistente', async () => {
       const sessao = await operadores.operadorComSessao()

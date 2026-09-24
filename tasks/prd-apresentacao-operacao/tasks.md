@@ -1,7 +1,7 @@
 # Tarefas — Identidade do operador Turmma (A0)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 7 de 11 concluídas
+**Status:** 8 de 11 concluídas
 
 ## Lista
 
@@ -49,11 +49,11 @@
   - [x] 7.4 Testes: C6b (com as recomendações da rodada 8), C12–C14, C16–C20, C18b, C34, C32 e C39
     (MFA), C47 com o cookie de verdade
 
-- [ ] **8.0 — Sessão do operador: renovar, sair e os prazos**
-  - [ ] 8.1 `sessao/renovar` e `sessao/sair`; 30 min e 8 h; `ultimoUsoEm`
-  - [ ] 8.2 401 `ACESSO_VENCIDO` e `SESSAO_ENCERRADA`; 503 com o banco fora
-  - [ ] 8.3 `AcessoOperacao` e os registros da seção 5
-  - [ ] 8.4 Testes: C26–C31, C32 e C39 (sessão), C36 e C36b (`rl:ip`), C37, C43, C44, C46 (entrada)
+- [x] **8.0 — Sessão do operador: renovar, sair e os prazos**
+  - [x] 8.1 `sessao/renovar` e `sessao/sair`; 30 min e 8 h; `ultimoUsoEm`
+  - [x] 8.2 401 `ACESSO_VENCIDO` e `SESSAO_ENCERRADA`; 503 com o banco fora
+  - [x] 8.3 `AcessoOperacao` e os registros da seção 5
+  - [x] 8.4 Testes: C26–C31, C32 e C39 (sessão), C36 e C36b (`rl:ip`), C37, C43, C44, C46 (entrada)
 
 - [ ] **9.0 — Expurgo das tabelas da operação e a linha do runbook**
   - [ ] 9.1 Alvos novos no `apagarLoteVencido`, com a justificativa reescrita

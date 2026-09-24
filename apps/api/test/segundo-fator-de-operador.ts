@@ -1,4 +1,4 @@
-import { criarLogger, type PoolBanco } from '@educa/nucleo'
+import { criarLogger, type Meter, type PoolBanco } from '@educa/nucleo'
 import { CodigoDeErro, esquemaRespostaConfigurarSegundoFatorDeOperador, MENSAGENS_DE_ERRO, type RespostaConfigurarSegundoFatorDeOperador } from '@educa/shared'
 import type { INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
@@ -69,13 +69,17 @@ export function esperarErro(resposta: Resposta, status: number, codigo: CodigoDe
 export const ipSorteado = () => `10.${[...randomBytes(3)].join('.')}`
 export const doIp = (ip = ipSorteado()): Cabecalhos => ({ 'X-Forwarded-For': ip })
 
-export async function subir(config: ConfiguracaoApi = configuracaoDeTeste({ ambiente: { LIMITE_PROXIES_CONFIAVEIS: '127.0.0.1' } }), linhasDeLog?: string[]): Promise<{ app: INestApplication; url: string }> {
-  const app = await NestFactory.create(AppModule.com(config, MONTAGEM_DE_TESTE), { logger: false })
+export async function subir(
+  config: ConfiguracaoApi = configuracaoDeTeste({ ambiente: { LIMITE_PROXIES_CONFIAVEIS: '127.0.0.1' } }),
+  linhasDeLog?: string[],
+  medidor?: Meter,
+): Promise<{ app: INestApplication; url: string }> {
+  const app = await NestFactory.create(AppModule.com(config, { ...MONTAGEM_DE_TESTE, ...(medidor === undefined ? {} : { medidor }) }), { logger: false })
   const logger =
     linhasDeLog === undefined
       ? criarLogger({ servico: 'api-teste', nivel: 'silent' })
       : criarLogger({ servico: 'api-teste', nivel: 'trace', destino: { write: (linha: string) => linhasDeLog.push(linha) } })
-  configurarAplicacao(app, logger)
+  configurarAplicacao(app, logger, medidor)
   await app.listen(0, '127.0.0.1')
   return { app, url: `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}` }
 }
