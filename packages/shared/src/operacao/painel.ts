@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { FORMATO_SLUG, TAMANHO_MAXIMO_SLUG, TIPOS_DE_REDE } from '../estrutura/rede-e-escola.js'
+import { TAMANHO_MAXIMO_EMAIL } from '../sessao/login.js'
 
 /** O maior nome de rede, de escola ou de pessoa convidada: o teto do check de `usuario.nome`, `rede.nome` e `escola.nome`. */
 export const TAMANHO_MAXIMO_NOME_DIGITADO = 200
@@ -70,3 +71,43 @@ export const esquemaRespostaRedesDoPainel = z.strictObject({
 })
 
 export type RespostaRedesDoPainel = z.infer<typeof esquemaRespostaRedesDoPainel>
+
+/**
+ * O estado da primeira coordenação de uma escola (Tech Spec da A0b, seção 5), que decide o que gerar, refazer e revogar
+ * fazem, e que a lista mostra. Calculado só por `estadoDaCoordenacao`, em `@educa/nucleo`: a escrita e a lista usam a
+ * mesma função.
+ */
+export const ESTADOS_DA_COORDENACAO = ['sem_convite', 'pendente', 'vencido', 'revogado', 'aceito', 'sem_coordenacao', 'ativa'] as const
+
+export type EstadoDaCoordenacao = (typeof ESTADOS_DA_COORDENACAO)[number]
+
+/**
+ * O e-mail da pessoa convidada, digitado no painel ou no `ops:convite-coordenador`: sem espaço nas pontas, em minúsculas
+ * (como o login o procura), no formato de e-mail e até 254.
+ */
+export const esquemaEmailConvidado = z.string().trim().toLowerCase().pipe(z.email().max(TAMANHO_MAXIMO_EMAIL))
+
+/**
+ * Corpo de `POST /v1/operacao/escolas/:id/convite-coordenacao`: o nome e o e-mail da primeira coordenadora. Estrito: campo
+ * a mais, como `autor` ou `escolaId`, é `ENTRADA_INVALIDA`. A escola vem do caminho; o autor, da sessão.
+ */
+export const esquemaPedidoConviteDaCoordenacao = z.strictObject({
+  nome: esquemaNomeDigitado,
+  email: esquemaEmailConvidado,
+})
+
+export type PedidoConviteDaCoordenacao = z.infer<typeof esquemaPedidoConviteDaCoordenacao>
+
+/** O token do convite: 32 bytes sorteados, em base64url sem preenchimento. */
+const FORMATO_DO_TOKEN_DE_CONVITE = /^[A-Za-z0-9_-]{43}$/
+
+/**
+ * Resposta do gerar: o id do convite (que o refazer e o revogar recebem) e o token, que só existe nesta resposta (o banco
+ * guarda o SHA-256). A web monta o link `/convite#<token>`. Sai com `no-store`. Estrito: nada da pessoa.
+ */
+export const esquemaRespostaConviteDaCoordenacao = z.strictObject({
+  conviteId: z.uuid(),
+  token: z.string().regex(FORMATO_DO_TOKEN_DE_CONVITE),
+})
+
+export type RespostaConviteDaCoordenacao = z.infer<typeof esquemaRespostaConviteDaCoordenacao>

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { esquemaPedidoCriarEscola, esquemaPedidoCriarRede, esquemaRespostaCriadoNoPainel, esquemaRespostaRedesDoPainel, MAXIMO_DE_REDES_DO_PAINEL } from './painel.js'
+import {
+  esquemaPedidoConviteDaCoordenacao,
+  esquemaPedidoCriarEscola,
+  esquemaPedidoCriarRede,
+  esquemaRespostaConviteDaCoordenacao,
+  esquemaRespostaCriadoNoPainel,
+  esquemaRespostaRedesDoPainel,
+  MAXIMO_DE_REDES_DO_PAINEL,
+} from './painel.js'
 
 const V4 = '3f1c8a52-6b0e-4d7a-9c21-5e8f0a1b2c3d'
 const V7 = '0192a4c0-5b1e-7c3d-8e4f-a0b1c2d3e4f5'
@@ -43,5 +51,22 @@ describe('contratos do painel da operação (Tech Spec da A0b, seção 4)', () =
     const muitas = Array.from({ length: MAXIMO_DE_REDES_DO_PAINEL + 1 }, () => rede)
     expect(esquemaRespostaRedesDoPainel.safeParse({ itens: muitas }).success).toBe(false)
     expect(esquemaRespostaRedesDoPainel.safeParse({ itens: muitas.slice(1) }).success).toBe(true)
+  })
+
+  it('o pedido do convite da coordenação é estrito: só nome e e-mail, e o e-mail sai sem espaço e em minúsculas', () => {
+    const pedido = { nome: 'Coordenação Sintética', email: '  Coordenacao@Escola.Invalid ' }
+    expect(esquemaPedidoConviteDaCoordenacao.parse(pedido)).toStrictEqual({ nome: 'Coordenação Sintética', email: 'coordenacao@escola.invalid' })
+    for (const aMais of [{ autor: 'outra-pessoa' }, { escolaId: V4 }, { token: 'x' }]) expect(esquemaPedidoConviteDaCoordenacao.safeParse({ ...pedido, ...aMais }).success).toBe(false)
+    for (const email of ['', 'sem-arroba', '@escola.invalid', `${'a'.repeat(250)}@x.io`]) expect(esquemaPedidoConviteDaCoordenacao.safeParse({ ...pedido, email }).success, email).toBe(false)
+    for (const nome of ['', 'Linha\nDupla', 'x'.repeat(201)]) expect(esquemaPedidoConviteDaCoordenacao.safeParse({ ...pedido, nome }).success, nome).toBe(false)
+  })
+
+  it('a resposta do convite é estrita: o id e o token de 32 bytes em base64url, e nada da pessoa', () => {
+    const token = 'A'.repeat(42) + '_'
+    expect(esquemaRespostaConviteDaCoordenacao.safeParse({ conviteId: V7, token }).success).toBe(true)
+    expect(esquemaRespostaConviteDaCoordenacao.safeParse({ conviteId: V7, token, email: 'coordenacao@escola.invalid' }).success).toBe(false)
+    for (const invalido of ['A'.repeat(42), 'A'.repeat(44), `${'A'.repeat(42)}=`, `${'A'.repeat(42)}+`]) {
+      expect(esquemaRespostaConviteDaCoordenacao.safeParse({ conviteId: V7, token: invalido }).success, invalido).toBe(false)
+    }
   })
 })

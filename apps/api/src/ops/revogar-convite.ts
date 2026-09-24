@@ -13,7 +13,9 @@ import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, lerOperador, O
  *
  * - A escola vem do convite, nunca do argumento, e o registro `convite.revogado` vai para a auditoria dela, com
  *   `autor_operador`.
- * - Imprime só "ok" ou o código do erro. Convite inexistente ou já revogado: `NAO_ENCONTRADO`.
+ * - É o mesmo caso de uso do revogar do painel da operação (A0b), com a trava da escola e a matriz estado × ação.
+ * - Imprime só "ok" ou o código do erro. Convite inexistente, de outro tipo ou já revogado: `NAO_ENCONTRADO`. Convite que
+ *   não é o último da escola, ou escola com coordenação ativa ou desativada depois do aceite: `CONFLITO`.
  */
 
 export function lerConviteARevogar(argumentos: string[]): string {
@@ -52,8 +54,8 @@ export async function executarOpsRevogarConvite(
       terminal.erro(`${erro.message}\n`)
       return 2
     }
-    if (erro instanceof ErroDeDominio && erro.codigo === CodigoDeErro.NAO_ENCONTRADO) {
-      terminal.erro(`${CodigoDeErro.NAO_ENCONTRADO}\n`)
+    if (erro instanceof ErroDeDominio && (erro.codigo === CodigoDeErro.NAO_ENCONTRADO || erro.codigo === CodigoDeErro.CONFLITO)) {
+      terminal.erro(`${erro.codigo}\n`)
       return 1
     }
     terminal.erro(`${CodigoDeErro.ERRO_INTERNO}: ${JSON.stringify(resumirErro(erro))}\n`)

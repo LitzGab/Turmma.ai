@@ -168,13 +168,22 @@ interface RotaRegistrada {
  *   responde como rota inexistente (C41 e C46). Não é cadastro público (D2).
  *
  * As outras não criam rede nem escola:
+ * - `POST /v1/operacao/escolas/:id/convite-coordenacao` (A0b, tarefa 2.0): gera o convite da primeira coordenação de uma
+ *   escola que já existe (escola inexistente é `NAO_ENCONTRADO`, sem gravar nada); `@RotaDeOperacao`, como as duas acima.
  * - `PUT /v1/escola/sessao` (5.0): muda a inatividade da escola da sessão, que já existe; não recebe escola nenhuma.
  * - `POST /v1/sessao/escola` (12.0): escolhe ou troca a escola da sessão entre os usuários ativos da conta; recebe só o
  *   `usuarioId`, e a escola vem do banco. Não cria escola nem rede.
  * - `PUT /v1/escola/provedores` (13.0): troca a lista de domínios e tenants do login pela conta da escola da sessão,
  *   que já existe; não recebe escola nenhuma.
  */
-const ROTAS_PERMITIDAS: readonly string[] = ['POST /v1/operacao/redes', 'POST /v1/operacao/escolas', 'PUT /v1/escola/sessao', 'POST /v1/sessao/escola', 'PUT /v1/escola/provedores']
+const ROTAS_PERMITIDAS: readonly string[] = [
+  'POST /v1/operacao/redes',
+  'POST /v1/operacao/escolas',
+  'POST /v1/operacao/escolas/:id/convite-coordenacao',
+  'PUT /v1/escola/sessao',
+  'POST /v1/sessao/escola',
+  'PUT /v1/escola/provedores',
+]
 
 /** Rota que escreve e tem rede ou escola em algum segmento fixo: `POST /v1/escolas`, `POST /v1/escolas/criar`. */
 function criaRedeOuEscola(rota: RotaRegistrada): boolean {

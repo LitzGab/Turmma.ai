@@ -74,7 +74,7 @@ estado. O servidor decide pela matriz; a tela a espelha:
 | `aceito` | cria, e o aceite anterior deixa de ativar | `CONFLITO` | revoga |
 | `ativa` | `CONFLITO` | `CONFLITO` | `CONFLITO` |
 
-Refazer de convite que não é o último: `CONFLITO`. Gerar em escola inexistente: `NAO_ENCONTRADO`,
+Refazer de convite que não é o último: `CONFLITO`; revogar também (tarefa 2.0), depois de responder `NAO_ENCONTRADO` ao convite já revogado. Gerar em escola inexistente: `NAO_ENCONTRADO`,
 antes de criar conta. Refazer grava `convite.refeito`, para o mesmo usuário (nome e e-mail se corrigem
 revogando e gerando). Revogar em `revogado` fica `NAO_ENCONTRADO`, como no F1.
 
@@ -119,7 +119,7 @@ referência aparece, e zero sem linha.
 | `ResolucaoDeTenantRepository.contaParaConvite` | conta pelo e-mail | a conta é global; comando ou painel |
 | `ResolucaoDeTenantRepository.escolaDoConviteParaOperador` | escola do convite | comando ou painel; vira contexto |
 
-O resto roda no contexto da escola, com escopo; só `painel.service.ts` abre o contexto pelo `:id`.
+O resto roda no contexto da escola, com escopo; só `painel.service.ts` recebe a escola pelo `:id`, e a passa ao caso de uso do gerar, que abre o contexto dela depois de conferir o autor (tarefa 2.0).
 
 Testes: `cenarios.md`, grupo I.
 

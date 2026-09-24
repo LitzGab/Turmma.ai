@@ -266,18 +266,19 @@ describe('sistema.expurgar-acesso', () => {
         await sessao(escolaId, aluno, null, '31 days'),
         await sessao(escolaId, aluno, '30 days 1 hour', '30 days'),
       )
-      // Convite: 30 dias depois de usado, revogado ou expirado, o que veio primeiro.
+      // Convite: 30 dias depois de usado, revogado ou expirado, o que veio primeiro. O que não foi usado nem revogado
+      // tem um usuário só dele: um convite em aberto por usuário na escola (`convite_pendente_unico`, A0b).
       fica.convite.push(
         await convite(escolaId, aluno, { usadoHa: '29 days', expiraHa: '27 days' }),
         await convite(escolaId, aluno, { revogadoHa: '29 days', expiraHa: '28 days' }),
-        await convite(escolaId, aluno, { expiraHa: '29 days' }),
+        await convite(escolaId, await usuario(escolaId), { expiraHa: '29 days' }),
         // Ainda válido: expira daqui a 2 dias.
-        await convite(escolaId, aluno, { expiraHa: '-2 days' }),
+        await convite(escolaId, await usuario(escolaId), { expiraHa: '-2 days' }),
       )
       sai.convite.push(
         await convite(escolaId, aluno, { usadoHa: '31 days', expiraHa: '29 days' }),
         await convite(escolaId, aluno, { revogadoHa: '31 days', expiraHa: '29 days' }),
-        await convite(escolaId, aluno, { expiraHa: '31 days' }),
+        await convite(escolaId, await usuario(escolaId), { expiraHa: '31 days' }),
       )
     }
     // A falha por e-mail, antes de haver escola: sem escola onde aplicar retenção própria, sai pelo mesmo prazo.
@@ -559,8 +560,10 @@ describe('sistema.expurgar-acesso', () => {
     const emailDe = async (contaId: string) => (await bancada.pool.query<{ email: boolean }>('select email is not null as email from conta where id = $1', [contaId])).rows[0]?.email
 
     // A janela entre a trava e a reconferência: o reconvite (novo convite para o mesmo usuário inativo, que não muda a
-    // conta) faz commit noutra conexão com as duas contas já travadas pelo lote.
+    // conta) faz commit noutra conexão com as duas contas já travadas pelo lote. Como o refazer do painel, ele revoga o
+    // vencido antes: um convite em aberto por usuário (`convite_pendente_unico`, A0b).
     const limpas = await new ExpurgoDeAcessoRepository(bancada.banco).limparLoteDeContasSemUso(AGORA, LOTE_DO_EXPURGO, async () => {
+      await bancada.pool.query('update convite set revogado_em = now() where escola_id = $1 and usuario_id = $2 and revogado_em is null', [escolaId, reconvidada.usuarioId])
       await convite(escolaId, reconvidada.usuarioId, { expiraHa: '-3 days' })
     })
 

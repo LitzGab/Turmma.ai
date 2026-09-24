@@ -445,7 +445,7 @@ export class ResolucaoDeTenantRepository {
    * expurgo a pula, com `skip locked`, e a desativação espera). Se a limpeza travou antes, esta leitura espera o commit
    * dela, relê a linha, e a conta sem e-mail não é achada: o convite cria outra conta, com o e-mail.
    */
-  @SemEscopo('a conta é global e não tem escola: o convite do coordenador acha ou cria a conta pelo e-mail, travando a existente, sem ler nada dela, e devolve só o id e se ela é nova')
+  @SemEscopo('a conta é global e não tem escola: o convite da coordenação, pelo comando ou pelo painel, acha ou cria a conta pelo e-mail, travando a existente, sem ler nada dela, e devolve só o id e se ela é nova')
   async contaParaConvite(email: string): Promise<{ id: string; nova: boolean }> {
     for (let tentativa = 0; tentativa < 3; tentativa++) {
       const [criada] = await this.banco.insert(conta).values({ email }).onConflictDoNothing({ target: conta.email }).returning({ id: conta.id })
@@ -457,10 +457,17 @@ export class ResolucaoDeTenantRepository {
     throw new ErroDeDominio(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO)
   }
 
-  /** A escola de um convite, para o `ops:revogar-convite` abrir o contexto dela: o comando recebe só o id do convite. */
-  @SemEscopo('rotina do operador (ops:revogar-convite): o comando recebe só o id do convite, e a escola dele vira o contexto, nunca o argumento')
+  /**
+   * A escola de um convite de coordenação, para o revogar (e o refazer) do operador abrir o contexto dela: o comando e o
+   * painel recebem só o id do convite. Só convite `tipo = 'coordenador'`: o de outro tipo não é achado, como o inexistente.
+   */
+  @SemEscopo('rotina do operador, pelo comando ou pelo painel: recebe só o id do convite de coordenação, e a escola dele vira o contexto, nunca o argumento')
   async escolaDoConviteParaOperador(conviteId: string): Promise<string | undefined> {
-    const [linha] = await this.banco.select({ escolaId: convite.escolaId }).from(convite).where(eq(convite.id, conviteId)).limit(1)
+    const [linha] = await this.banco
+      .select({ escolaId: convite.escolaId })
+      .from(convite)
+      .where(and(eq(convite.id, conviteId), eq(convite.tipo, 'coordenador')))
+      .limit(1)
     return linha?.escolaId
   }
 }

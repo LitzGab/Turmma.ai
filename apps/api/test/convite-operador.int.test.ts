@@ -441,7 +441,8 @@ describe('convite do operador: consultar e aceitar (tarefa 5.0)', () => {
       const escolaId = await escolas.escola()
       const coordenador = await escolas.sessao(escolaId, 'coordenador')
       const cookie = await cookieDeRenovacao(escolas, coordenador)
-      const daEscola = await criarConviteDeCoordenador(banco, async () => autor, { slug: await escolas.slugDe(escolaId), email: `coord-${randomUUID()}@escola.invalid`, nome: 'Coordenação Sintética' })
+      // O convite é de outra escola: a do coordenador já tem coordenação ativa, e não recebe convite (A0b, seção 5).
+      const daEscola = await criarConviteDeCoordenador(banco, async () => autor, { slug: await escolas.slugDe(await escolas.escola()), email: `coord-${randomUUID()}@escola.invalid`, nome: 'Coordenação Sintética' })
       const credenciais = { Authorization: `Bearer ${coordenador.token}`, Cookie: cookie }
       const esperado = forma(await consultar(randomBytes(32).toString('base64url')))
 

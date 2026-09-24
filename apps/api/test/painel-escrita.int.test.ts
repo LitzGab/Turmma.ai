@@ -1,18 +1,13 @@
-import 'reflect-metadata'
-import { criarBanco, criarLogger, criarPool, type Banco, type PoolBanco } from '@educa/nucleo'
-import { CodigoDeErro, esquemaRespostaCriadoNoPainel, esquemaRespostaRedesDoPainel, MAXIMO_DE_REDES_DO_PAINEL, MENSAGENS_DE_ERRO } from '@educa/shared'
+import { criarBanco, criarPool, type Banco, type PoolBanco } from '@educa/nucleo'
+import { CodigoDeErro, esquemaRespostaCriadoNoPainel, esquemaRespostaRedesDoPainel, MAXIMO_DE_REDES_DO_PAINEL } from '@educa/shared'
 import type { INestApplication } from '@nestjs/common'
-import { NestFactory } from '@nestjs/core'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import type { AddressInfo } from 'node:net'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
-import { AppModule } from '../src/app.module.js'
-import { configurarAplicacao } from '../src/configurar-app.js'
 import type { BancoDoComando, SaidaDoComando } from '../src/ops/comando.js'
 import { executarOpsConviteCoordenador } from '../src/ops/convite-coordenador.js'
 import { executarOpsEscola } from '../src/ops/escola.js'
@@ -21,8 +16,8 @@ import { executarOpsRedefinirMfa } from '../src/ops/redefinir-mfa.js'
 import { executarOpsRevogarConvite } from '../src/ops/revogar-convite.js'
 import { executarOpsUso } from '../src/ops/uso.js'
 import { criarConviteDeCoordenador } from '../src/sessao/convite.service.js'
-import { configuracaoDeTeste } from './configuracao-de-teste.js'
 import { esperarNaTrava, GatilhoDeParada } from './gatilho-de-parada.js'
+import { ESPERA_DO_AUTOR, esperarErro, pedir, PRAZO_DAS_CONSULTAS_MS, segurarODesativar as segurarODesativarNoBanco, subirApiDoPainel as subir } from './painel-de-teste.js'
 import { BancadaDeOperadores, type SessaoDeOperadorDeTeste } from './sessao-de-operador.js'
 import { autorDaBancada, BancadaDeSessoes } from './sessao-de-teste.js'
 
@@ -32,41 +27,7 @@ import { autorDaBancada, BancadaDeSessoes } from './sessao-de-teste.js'
  * E11 (criar escola e os cinco comandos), E12, E14 e A3 (rede e escola). Postgres e Redis reais do compose de teste.
  */
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-/** A espera das travas cabe folgada no prazo das consultas: o `statement_timeout` conta a espera de trava. */
-const PRAZO_DAS_CONSULTAS_MS = 15_000
 const RECUSA_DO_OPERADOR = 'OPERADOR não é um operador ativo da equipe\n'
-/** A consulta do autor ativo, parada no `for share` (7c, "Autor ativo"). */
-const ESPERA_DO_AUTOR = '%from "operador"%for share%'
-
-interface Resposta {
-  readonly status: number
-  readonly corpo: unknown
-  readonly retryAfter: string | null
-  readonly cacheControl: string | null
-}
-
-async function pedir(url: string, verbo: 'GET' | 'POST', caminho: string, token: string, corpo?: unknown): Promise<Resposta> {
-  const resposta = await fetch(`${url}${caminho}`, {
-    method: verbo,
-    headers: { Authorization: `Bearer ${token}`, ...(corpo === undefined ? {} : { 'Content-Type': 'application/json' }) },
-    ...(corpo === undefined ? {} : { body: JSON.stringify(corpo) }),
-  })
-  const texto = await resposta.text()
-  return { status: resposta.status, corpo: texto === '' ? undefined : (JSON.parse(texto) as unknown), retryAfter: resposta.headers.get('retry-after'), cacheControl: resposta.headers.get('cache-control') }
-}
-
-function esperarErro(resposta: Resposta, status: number, codigo: CodigoDeErro): void {
-  expect(resposta.status).toBe(status)
-  expect(resposta.corpo).toEqual({ erro: { codigo, mensagem: MENSAGENS_DE_ERRO[codigo], requisicaoId: expect.stringMatching(UUID) } })
-}
-
-async function subir(linhasDeLog: string[], ambiente: Record<string, string> = {}): Promise<{ app: INestApplication; url: string }> {
-  const app = await NestFactory.create(AppModule.com(configuracaoDeTeste({ banco: { timeoutConsultaMs: PRAZO_DAS_CONSULTAS_MS }, ambiente })), { logger: false })
-  configurarAplicacao(app, criarLogger({ servico: 'api-teste', nivel: 'info', destino: { write: (linha: string) => linhasDeLog.push(linha) } }))
-  await app.listen(0, '127.0.0.1')
-  return { app, url: `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}` }
-}
 
 describe('painel da operação: rede e escola, com o autor conferido na transação (tarefa 1.0)', () => {
   const operadores = new BancadaDeOperadores()
@@ -102,31 +63,7 @@ describe('painel da operação: rede e escola, com o autor conferido na transaç
     )
   const linhasComEvento = (evento: string) => linhasDeLog.map((linha) => JSON.parse(linha) as Record<string, unknown>).filter((linha) => linha['msg'] === evento)
 
-  /** O que o `desativar` faz na linha do operador, numa transação que o teste abre e segura com o `for update`. */
-  async function segurarODesativar(operadorId: string): Promise<{ confirmar: () => Promise<void>; desfazer: () => Promise<void> }> {
-    const conexao = await pool.connect()
-    await conexao.query('begin')
-    await conexao.query('select id from operador where id = $1 for update', [operadorId])
-    let terminou = false
-    return {
-      confirmar: async () => {
-        await conexao.query(
-          `update operador set nome = null, email = null, senha_hash = null, mfa_segredo_cifrado = null, mfa_chave_versao = null,
-             mfa_ativado_em = null, mfa_ultimo_passo = null, desativado_em = now() where id = $1`,
-          [operadorId],
-        )
-        await conexao.query('commit')
-        terminou = true
-        conexao.release()
-      },
-      desfazer: async () => {
-        if (terminou) return
-        terminou = true
-        await conexao.query('rollback')
-        conexao.release()
-      },
-    }
-  }
+  const segurarODesativar = (operadorId: string) => segurarODesativarNoBanco(pool, operadorId)
 
   beforeAll(async () => {
     pool = criarPool({ url: urlDoBancoDeTeste(), maximoConexoes: 6, timeoutConexaoMs: 5_000, timeoutConsultaMs: PRAZO_DAS_CONSULTAS_MS }, () => undefined)

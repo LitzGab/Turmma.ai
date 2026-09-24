@@ -66,10 +66,11 @@ describe('ResolucaoDeTenantRepository: toda operação sem escopo é marcada e j
       expect(justificativas[metodo], metodo).toMatch(/credencial da equipe é global/)
     }
     expect(justificativas['escolaDoUsuarioParaOperador']).toMatch(/rotina do operador/)
-    expect(justificativas['escolaDoConviteParaOperador']).toMatch(/rotina do operador/)
+    // Tech Spec da A0b, seção 6: as duas que o painel também alcança dizem "comando ou painel".
+    expect(justificativas['escolaDoConviteParaOperador']).toMatch(/rotina do operador, pelo comando ou pelo painel/)
     for (const metodo of ['conviteValidoPorHash', 'usarConvitePorHash']) expect(justificativas[metodo], metodo).toMatch(/link do convite não diz a escola/)
     for (const metodo of ['definirSenhaNoAceite', 'usuarioComConviteAceito']) expect(justificativas[metodo], metodo).toMatch(/credencial da equipe é global/)
-    expect(justificativas['contaParaConvite']).toMatch(/conta é global/)
+    expect(justificativas['contaParaConvite']).toMatch(/conta é global.*pelo comando ou pelo painel/)
     expect(justificativas['escolaPorSlug']).toMatch(/slug é o que dá a escola/)
     expect(justificativas['escolasDaRedeDoIpDeSaida']).toMatch(/antes de haver escola/)
   })

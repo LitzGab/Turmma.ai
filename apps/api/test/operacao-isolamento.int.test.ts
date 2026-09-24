@@ -160,7 +160,14 @@ describe('área da operação: as cercas entre a operação e a escola (tarefa 4
       const daOperacaoComSessao = rotas.filter((rota) => rota.marcador === 'rota')
       // I3 (A0b): as rotas do painel entram na varredura, com o corpo que for: a guarda responde antes dele.
       expect(daOperacaoComSessao.map((rota) => `${rota.verbo} ${rota.caminho}`)).toEqual(
-        expect.arrayContaining(['GET /v1/operacao/eu', 'GET /v1/operacao/redes', 'POST /v1/operacao/redes', 'POST /v1/operacao/escolas']),
+        expect.arrayContaining([
+          'GET /v1/operacao/eu',
+          'GET /v1/operacao/redes',
+          'POST /v1/operacao/redes',
+          'POST /v1/operacao/escolas',
+          'POST /v1/operacao/escolas/:id/convite-coordenacao',
+          'POST /v1/operacao/convites/:id/revogar',
+        ]),
       )
       expect(daOperacaoComSessao.every(daOperacao)).toBe(true)
 

@@ -92,6 +92,13 @@ aluno e o vínculo dele vêm do seed sintético.
 `Convite` no F1 é só de coordenador, criado por comando do operador. Os tipos `professor` e
 `sala`, e o vínculo do aluno vindo da lista, entram no F2.
 
+Na A0b o convite da primeira coordenação também nasce pelo painel da operação, pelo mesmo caso de
+uso do comando. Gerar e revogar pegam uma trava por escola (`pg_advisory_xact_lock(7_000_003,
+hashtext(escola_id))`) e só então leem o estado da coordenação (`estadoDaCoordenacao`), que decide
+pela matriz da Tech Spec da A0b (seção 5): no máximo um convite em aberto por escola. O índice
+único parcial `convite_pendente_unico (escola_id, usuario_id) where usado_em is null and
+revogado_em is null` é a rede de segurança da trava, e a recusa dele sai como `CONFLITO`.
+
 ## Operação Turmma
 
 Implementado na A0 (D76). A forma exata das tabelas, com unicidades, índices e checks, está na

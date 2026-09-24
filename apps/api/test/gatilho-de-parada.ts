@@ -6,7 +6,8 @@ const CLASSE_DA_PARADA = 8_000_001
 
 const PRAZO_DA_ESPERA_MS = 15_000
 
-async function aguardar(condicao: () => Promise<boolean>, descricao: string): Promise<void> {
+/** Espera `condicao` ficar verdadeira, conferindo a cada 20 ms, por até 15 s; senão falha com a `descricao`. */
+export async function aguardar(condicao: () => Promise<boolean>, descricao: string): Promise<void> {
   const prazo = Date.now() + PRAZO_DA_ESPERA_MS
   while (!(await condicao())) {
     if (Date.now() > prazo) throw new Error(`não aconteceu a tempo: ${descricao}`)

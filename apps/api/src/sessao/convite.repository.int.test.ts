@@ -1,4 +1,5 @@
-import { executarNoContexto } from '@educa/nucleo'
+import { ErroDeDominio, executarNoContexto } from '@educa/nucleo'
+import { CodigoDeErro } from '@educa/shared'
 import { createHash, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { BancadaDeSessoes } from '../../test/sessao-de-teste.js'
@@ -59,7 +60,7 @@ describe('ConviteRepository: o convite e o usuário convidado só na escola do c
     expect(await naEscola(escolaB, (repositorio) => repositorio.ativarPorConvite(alvo.usuarioId, alvo.conviteId))).toBe(false)
     expect(await ativo(alvo.usuarioId)).toBe(false)
     expect(await naEscola(escolaB, (repositorio) => repositorio.revogar(alvo.conviteId))).toBe(false)
-    await naEscola(escolaB, (repositorio) => repositorio.revogarConvitesDoUsuario(alvo.usuarioId))
+    expect(await naEscola(escolaB, (repositorio) => repositorio.revogado(alvo.conviteId))).toBeUndefined()
     const { rows } = await bancada.pool.query<{ revogado: boolean }>('select revogado_em is not null as revogado from convite where id = $1', [alvo.conviteId])
     expect(rows).toEqual([{ revogado: false }])
     expect(await naEscola(escolaB, (repositorio) => repositorio.nomeDaEscola())).toBe('Colégio B sintético')
@@ -101,12 +102,92 @@ describe('ConviteRepository: o convite e o usuário convidado só na escola do c
     expect(usuarioId).toEqual(expect.any(String))
     expect(await ativo(usuarioId ?? '')).toBe(false)
     await bancada.pool.query('update usuario set desativado_em = null where id = $1', [usuarioId])
-    expect(await naEscola(escolaA, (repositorio) => repositorio.usuarioConvidado(contaId, 'Pessoa sintética'))).toBeUndefined()
+    // Ativo: nada muda, nem o nome.
+    expect(await naEscola(escolaA, (repositorio) => repositorio.usuarioConvidado(contaId, 'Pessoa sintética Outra'))).toBeUndefined()
     expect(await ativo(usuarioId ?? '')).toBe(true)
+    expect((await bancada.pool.query('select nome from usuario where id = $1', [usuarioId])).rows).toEqual([{ nome: 'Pessoa sintética' }])
     await bancada.pool.query("update usuario set desativado_em = now() - interval '1 day' where id = $1", [usuarioId])
-    expect(await naEscola(escolaA, (repositorio) => repositorio.usuarioConvidado(contaId, 'Pessoa sintética'))).toBe(usuarioId)
-    const { rows } = await bancada.pool.query<{ recente: boolean }>("select desativado_em > now() - interval '1 minute' as recente from usuario where id = $1", [usuarioId])
-    expect(rows).toEqual([{ recente: true }])
+    // Inativo: volta a esperar, com o nome digitado agora.
+    expect(await naEscola(escolaA, (repositorio) => repositorio.usuarioConvidado(contaId, 'Pessoa sintética Corrigida'))).toBe(usuarioId)
+    const { rows } = await bancada.pool.query<{ recente: boolean; nome: string }>("select desativado_em > now() - interval '1 minute' as recente, nome from usuario where id = $1", [usuarioId])
+    expect(rows).toEqual([{ recente: true, nome: 'Pessoa sintética Corrigida' }])
+  })
+
+  it('isolamento (A0b, 2.3): o estado da coordenação só enxerga a escola do contexto; o último convite é o de maior expira_em, depois o de maior id', async () => {
+    const [escolaC, escolaD] = [await bancada.escola(), await bancada.escola()]
+    const coordenadorEm = async (escolaId: string, desativado: boolean) => {
+      const { rows: contas } = await bancada.pool.query<{ id: string }>('insert into conta (email) values ($1) returning id', [`convidada-${randomUUID()}@escola.invalid`])
+      const { rows } = await bancada.pool.query<{ id: string }>(
+        "insert into usuario (escola_id, conta_id, papel, nome, desativado_em) values ($1, $2, 'coordenador', 'Pessoa sintética', case when $3 then now() end) returning id",
+        [escolaId, contas[0]?.id, desativado],
+      )
+      return rows[0]?.id ?? ''
+    }
+    const conviteEm = async (escolaId: string, usuarioId: string, expiraEm: string, id: string) => {
+      await bancada.pool.query("insert into convite (id, escola_id, token_hash, tipo, usuario_id, expira_em) values ($1, $2, $3, 'coordenador', $4, $5)", [
+        id,
+        escolaId,
+        createHash('sha256').update(randomUUID()).digest('hex'),
+        usuarioId,
+        expiraEm,
+      ])
+    }
+    // Em C: três convites de três usuários inativos; o de maior expira_em empata com outro, e o de maior id vence.
+    const prefixo = randomUUID().slice(0, 8)
+    const [menor, meio, maior] = [1, 2, 3].map((n) => `${prefixo}-0000-7000-8000-00000000000${n}`)
+    const daqui3Dias = new Date(Date.now() + 72 * 60 * 60 * 1_000).toISOString()
+    await conviteEm(escolaC, await coordenadorEm(escolaC, true), daqui3Dias, maior ?? '')
+    await conviteEm(escolaC, await coordenadorEm(escolaC, true), daqui3Dias, menor ?? '')
+    await conviteEm(escolaC, await coordenadorEm(escolaC, true), new Date(Date.now() + 60 * 60 * 1_000).toISOString(), meio ?? '')
+
+    const deC = await naEscola(escolaC, (repositorio) => repositorio.dadosDaCoordenacao())
+    expect(deC).toMatchObject({ coordenadorAtivo: false, ultimoConvite: { id: maior, usadoEm: null, revogadoEm: null, usuarioDesativadoEm: expect.any(Date) }, agora: expect.any(Date) })
+    // D não vê nada de C: sem a escola nas duas consultas, veria o convite e o coordenador ativo de C.
+    await coordenadorEm(escolaC, false)
+    expect((await naEscola(escolaC, (repositorio) => repositorio.dadosDaCoordenacao()))?.coordenadorAtivo).toBe(true)
+    expect(await naEscola(escolaD, (repositorio) => repositorio.dadosDaCoordenacao())).toMatchObject({ coordenadorAtivo: false, ultimoConvite: undefined })
+    expect(await naEscola(escolaD, (repositorio) => repositorio.revogado(maior ?? ''))).toBeUndefined()
+    expect(await naEscola(escolaC, (repositorio) => repositorio.revogado(maior ?? ''))).toBe(false)
+    // Escola que não existe: nada, nem a hora.
+    expect(await naEscola(randomUUID(), (repositorio) => repositorio.dadosDaCoordenacao())).toBeUndefined()
+  })
+
+  it('convite_pendente_unico (A0b, 2.2): sem a trava, o segundo convite em aberto do mesmo usuário é CONFLITO; usado ou revogado o anterior, ou outro usuário, passa', async () => {
+    const escolaE = await bancada.escola()
+    const coordenadorEm = async () => {
+      const { rows: contas } = await bancada.pool.query<{ id: string }>('insert into conta (email) values ($1) returning id', [`convidada-${randomUUID()}@escola.invalid`])
+      const { rows } = await bancada.pool.query<{ id: string }>(
+        "insert into usuario (escola_id, conta_id, papel, nome, desativado_em) values ($1, $2, 'coordenador', 'Pessoa sintética', now()) returning id",
+        [escolaE, contas[0]?.id],
+      )
+      return rows[0]?.id ?? ''
+    }
+    const criar = (usuarioId: string) =>
+      naEscola(escolaE, (repositorio) =>
+        repositorio.criarConvite({ tokenHash: createHash('sha256').update(randomUUID()).digest('hex'), usuarioId, expiraEm: new Date(Date.now() + 72 * 60 * 60 * 1_000) }),
+      )
+    const convitesDe = async (usuarioId: string) => (await bancada.pool.query<{ id: string }>('select id from convite where usuario_id = $1 order by id', [usuarioId])).rows.map((linha) => linha.id)
+
+    const usuarioId = await coordenadorEm()
+    const primeiro = await criar(usuarioId)
+    // O erro do índice sai tipado, e não como o erro cru do Postgres (que traria o valor da linha no `detail`).
+    const recusa = await criar(usuarioId).catch((erro: unknown) => erro)
+    expect(recusa).toBeInstanceOf(ErroDeDominio)
+    expect(recusa).toMatchObject({ codigo: CodigoDeErro.CONFLITO })
+    expect(await convitesDe(usuarioId)).toEqual([primeiro])
+
+    // Outro usuário na mesma escola não é bloqueado: a chave é (escola_id, usuario_id).
+    const outro = await coordenadorEm()
+    expect(await convitesDe(outro)).toEqual([])
+    const doOutro = await criar(outro)
+    expect(await convitesDe(outro)).toEqual([doOutro])
+
+    // Usado o anterior, o mesmo usuário recebe outro; revogado esse, recebe mais um: só o em aberto conta.
+    await bancada.pool.query('update convite set usado_em = now() where id = $1', [primeiro])
+    const segundo = await criar(usuarioId)
+    await bancada.pool.query('update convite set revogado_em = now() where id = $1', [segundo])
+    const terceiro = await criar(usuarioId)
+    expect(await convitesDe(usuarioId)).toEqual([primeiro, segundo, terceiro].sort())
   })
 
   it('sem escola no contexto, falha fechada', async () => {

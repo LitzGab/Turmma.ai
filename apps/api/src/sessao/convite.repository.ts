@@ -1,5 +1,14 @@
-import { contextoAtual, convite, escola, usuario, type Banco, type TransacaoBanco } from '@educa/nucleo'
-import { and, eq, exists, gte, isNotNull, isNull, sql } from 'drizzle-orm'
+import { contextoAtual, convite, ErroDeDominio, erroDoPostgresEm, escola, usuario, type Banco, type DadosDaCoordenacao, type TransacaoBanco } from '@educa/nucleo'
+import { CodigoDeErro } from '@educa/shared'
+import { and, desc, eq, exists, gte, isNotNull, isNull, sql } from 'drizzle-orm'
+
+/**
+ * A primeira metade da chave do `pg_advisory_xact_lock` que põe em fila, por escola, o que mexe no convite da coordenação
+ * dela (Tech Spec da A0b, seção 7c, "Convite da escola"): gerar, refazer e revogar pelo painel e pelo `ops:*`. A segunda
+ * metade é `hashtext` do id da escola, e escolas diferentes não esperam uma pela outra. As outras chaves do código são
+ * 7_000_001 (migração) e 7_000_002 (operadores).
+ */
+export const CHAVE_DA_TRAVA_DO_CONVITE_DA_ESCOLA = 7_000_003
 
 /** A escola do contexto, ou falha fechada: o convite é sempre lido e escrito na escola do contexto (regra 10, item 3). */
 function escolaDoContexto(): string {
@@ -23,8 +32,10 @@ export class ConviteRepository {
 
   /**
    * O coordenador convidado, inativo até o aceite (`desativado_em = now()`). Se a conta já tem coordenador inativo
-   * nesta escola (convite vencido, ou coordenador desativado que a escola chama de volta), ele volta a esperar o convite
-   * novo, com `desativado_em` de agora. Se o coordenador está ativo, não devolve nada: não há o que convidar.
+   * nesta escola (convite revogado ou aceito sem a primeira entrada, ou coordenador desativado que a escola chama de
+   * volta), ele volta a esperar o convite novo, com `desativado_em` de agora e o nome digitado agora: revogar e gerar
+   * com o mesmo e-mail é como o operador corrige o nome (Tech Spec da A0b, seção 5). Se o coordenador está ativo, não
+   * devolve nada e não muda nada, nem o nome: não há o que convidar.
    */
   async usuarioConvidado(contaId: string, nome: string): Promise<string | undefined> {
     const [linha] = await this.banco
@@ -32,28 +43,77 @@ export class ConviteRepository {
       .values({ escolaId: escolaDoContexto(), contaId, papel: 'coordenador', nome, desativadoEm: sql`now()` })
       .onConflictDoUpdate({
         target: [usuario.escolaId, usuario.contaId, usuario.papel],
-        set: { desativadoEm: sql`now()` },
+        set: { desativadoEm: sql`now()`, nome },
         setWhere: isNotNull(usuario.desativadoEm),
       })
       .returning({ id: usuario.id })
     return linha?.id
   }
 
-  /** Revoga os convites ainda não revogados do usuário: só o convite novo vale. */
-  async revogarConvitesDoUsuario(usuarioId: string): Promise<void> {
-    await this.banco
-      .update(convite)
-      .set({ revogadoEm: sql`now()` })
-      .where(and(eq(convite.escolaId, escolaDoContexto()), eq(convite.usuarioId, usuarioId), isNull(convite.revogadoEm)))
-  }
-
+  /**
+   * Grava o convite de coordenação. Se o usuário já tem convite em aberto nesta escola, o índice
+   * `convite_pendente_unico` recusa, e a recusa sai como `CONFLITO`: é a rede de segurança da trava da escola.
+   */
   async criarConvite(dados: { tokenHash: string; usuarioId: string; expiraEm: Date }): Promise<string> {
-    const [criado] = await this.banco
-      .insert(convite)
-      .values({ escolaId: escolaDoContexto(), tokenHash: dados.tokenHash, tipo: 'coordenador', usuarioId: dados.usuarioId, expiraEm: dados.expiraEm })
-      .returning({ id: convite.id })
+    let criado: { id: string } | undefined
+    try {
+      ;[criado] = await this.banco
+        .insert(convite)
+        .values({ escolaId: escolaDoContexto(), tokenHash: dados.tokenHash, tipo: 'coordenador', usuarioId: dados.usuarioId, expiraEm: dados.expiraEm })
+        .returning({ id: convite.id })
+    } catch (erro) {
+      const doPostgres = erroDoPostgresEm(erro)
+      if (doPostgres?.code === '23505' && doPostgres.constraint === 'convite_pendente_unico') throw new ErroDeDominio(CodigoDeErro.CONFLITO)
+      throw erro
+    }
     if (criado === undefined) throw new Error('convite não devolvido pelo insert')
     return criado.id
+  }
+
+  /**
+   * Põe a transação na fila da trava do convite da escola do contexto (`pg_advisory_xact_lock(7_000_003,
+   * hashtext(escola_id::text))`); solta sozinha no commit ou no rollback. Quem gera, refaz ou revoga pega a trava antes
+   * de ler o estado da coordenação: dois pedidos na mesma escola decidem um depois do outro, cada um vendo o que o
+   * anterior gravou.
+   */
+  async travarEscola(): Promise<void> {
+    await this.banco.execute(sql`select pg_advisory_xact_lock(${CHAVE_DA_TRAVA_DO_CONVITE_DA_ESCOLA}, hashtext(${escolaDoContexto()}::uuid::text))`)
+  }
+
+  /**
+   * O que decide o estado da coordenação da escola do contexto (`estadoDaCoordenacao`): se há coordenador ativo, o
+   * último convite de coordenação (maior `expira_em`, depois maior `id`) com o `desativado_em` do usuário dele, e a
+   * hora do banco. Só convite `tipo = 'coordenador'`. Escola inexistente: `undefined`.
+   */
+  async dadosDaCoordenacao(): Promise<DadosDaCoordenacao | undefined> {
+    const escolaId = escolaDoContexto()
+    const coordenadorAtivo = this.banco
+      .select({ um: sql`1` })
+      .from(usuario)
+      .where(and(eq(usuario.escolaId, escolaId), eq(usuario.papel, 'coordenador'), isNull(usuario.desativadoEm)))
+    const [daEscola] = await this.banco
+      .select({ coordenadorAtivo: sql<boolean>`exists(${coordenadorAtivo})`, agora: sql<Date>`now()`.mapWith(convite.expiraEm) })
+      .from(escola)
+      .where(eq(escola.id, escolaId))
+    if (daEscola === undefined) return undefined
+    const [ultimoConvite] = await this.banco
+      .select({ id: convite.id, expiraEm: convite.expiraEm, usadoEm: convite.usadoEm, revogadoEm: convite.revogadoEm, usuarioDesativadoEm: usuario.desativadoEm })
+      .from(convite)
+      .innerJoin(usuario, and(eq(usuario.escolaId, convite.escolaId), eq(usuario.id, convite.usuarioId)))
+      .where(and(eq(convite.escolaId, escolaId), eq(convite.tipo, 'coordenador')))
+      .orderBy(desc(convite.expiraEm), desc(convite.id))
+      .limit(1)
+    return { coordenadorAtivo: daEscola.coordenadorAtivo, ultimoConvite, agora: daEscola.agora }
+  }
+
+  /** Se o convite desta escola já foi revogado; `undefined` quando não há convite de coordenação com esse id nela. */
+  async revogado(conviteId: string): Promise<boolean | undefined> {
+    const [linha] = await this.banco
+      .select({ revogadoEm: convite.revogadoEm })
+      .from(convite)
+      .where(and(eq(convite.escolaId, escolaDoContexto()), eq(convite.id, conviteId), eq(convite.tipo, 'coordenador')))
+      .limit(1)
+    return linha === undefined ? undefined : linha.revogadoEm !== null
   }
 
   /**

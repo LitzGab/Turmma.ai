@@ -115,7 +115,8 @@ export const ACOES_DE_AUDITORIA = {
     finalidade: z.enum(FINALIDADES_DA_REDEFINICAO_DE_MFA),
   },
   /**
-   * O operador gerou o convite do primeiro coordenador (7.0, RF1, RF19), com `ops:convite-coordenador`: o usuário
+   * O operador gerou o convite do primeiro coordenador (7.0, RF1, RF19), com `ops:convite-coordenador` ou pelo painel
+   * da operação (A0b): o usuário
    * convidado, ainda inativo, até quando o convite vale e se a conta do e-mail foi criada agora (`contaNova`) ou já
    * existia. Nunca o nome, o e-mail nem o token.
    */
@@ -125,7 +126,10 @@ export const ACOES_DE_AUDITORIA = {
     depois: z.strictObject({ usuarioId: z.uuid(), expiraEm: z.iso.datetime(), contaNova: z.boolean() }),
     finalidade: null,
   },
-  /** O operador revogou o convite (7.0, RF19), com `ops:revogar-convite`: o link deixa de valer, usado ou não. */
+  /**
+   * O operador revogou o convite (7.0, RF19), com `ops:revogar-convite` ou pelo painel da operação (A0b), ou o gerar
+   * revogou o anterior (A0b, estados `aceito` e `sem_coordenacao`): o link deixa de valer, usado ou não.
+   */
   'convite.revogado': {
     entidade: 'convite',
     antes: null,

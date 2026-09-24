@@ -341,12 +341,13 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
   })
 
   it('borda: expirado (72 h + 1 s), revogado, já usado e inexistente dão a mesma resposta em consultar e em aceitar; 72 h menos um minuto ainda vale', async () => {
-    const escolaId = await bancada.escola()
+    // Uma escola por convite: com convite em aberto, a escola não recebe outro (A0b, a matriz da seção 5).
     const agora = Date.now()
-    const expirado = await convidarEm(escolaId, new Date(agora - 72 * HORA_MS - 1_000))
-    const quaseVencido = await convidarEm(escolaId, new Date(agora - 72 * HORA_MS + 60_000))
+    const expirado = await convidarEm(await bancada.escola(), new Date(agora - 72 * HORA_MS - 1_000))
+    const quaseVencido = await convidarEm(await bancada.escola(), new Date(agora - 72 * HORA_MS + 60_000))
+    const escolaId = await bancada.escola()
     const revogado = await convidarEm(escolaId, new Date(agora))
-    const usado = await convidarEm(escolaId, new Date(agora))
+    const usado = await convidarEm(await bancada.escola(), new Date(agora))
 
     expect(await rodarRevogacao(revogado.conviteId)).toEqual({ codigo: 0, saida: 'ok\n', erro: '' })
     expect((await aceitar(usado.token, SENHA_NOVA)).status).toBe(200)
@@ -482,7 +483,7 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
     expect(eu.escola.id).toBe(escolaB)
   })
 
-  it('borda: coordenador desativado depois de entrar não volta pelo convite antigo; o operador o convida de novo, o convite anterior é revogado e o coordenador ativo dá CONFLITO', async () => {
+  it('borda: coordenador desativado depois de entrar não volta pelo convite antigo; o coordenador ativo dá CONFLITO; o operador o convida de novo, e com esse convite em aberto a escola não recebe outro', async () => {
     const [escolaA, escolaB] = [await bancada.escola(), await bancada.escola()]
     const pessoa = await professoraDeB(escolaB)
     const primeiro = await convidarEm(escolaA, new Date(), pessoa.email)
@@ -493,7 +494,7 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
     // Ativo: um convite novo para a mesma pessoa em A é recusado, sem nome nem e-mail no terminal.
     const arquivo = join(pasta, `convite-${randomUUID()}.txt`)
     const ativo = await rodarConvite(['--escola', await slugDe(escolaA), '--email', pessoa.email, '--nome', NOME_DO_CONVIDADO, '--saida', arquivo])
-    expect(ativo).toEqual({ codigo: 1, saida: '', erro: 'CONFLITO: esta pessoa já é coordenadora ativa desta escola\n' })
+    expect(ativo).toEqual({ codigo: 1, saida: '', erro: 'CONFLITO: a escola já tem coordenação ativa ou convite em aberto; revogue o convite antes de gerar outro\n' })
     await expect(stat(arquivo)).rejects.toThrow()
 
     // Desativado depois de ter entrado: o convite antigo, usado, não o reativa no login, nem com o bilhete dele.
@@ -501,11 +502,17 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
     expect((await entrar(pessoa.email, SENHA_DE_B, bilhete)).corpo['etapa']).toBe('pronta')
     expect(await usuarioAtivo(primeiro.usuarioId)).toBe(false)
 
-    // A escola chama de volta: o mesmo usuário espera o convite novo, e um convite anterior ainda aberto é revogado.
+    // A escola chama de volta (sem coordenação ativa): o mesmo usuário espera o convite novo, e o antigo, já usado, é
+    // revogado. Com o convite novo em aberto, outro é recusado sem gravar nada; revogado ele, a escola recebe outro.
     const aberto = await convidarEm(escolaA, new Date(), pessoa.email)
+    expect(aberto.usuarioId).toBe(primeiro.usuarioId)
+    const recusado = await rodarConvite(['--escola', await slugDe(escolaA), '--email', pessoa.email, '--nome', NOME_DO_CONVIDADO, '--saida', join(pasta, `convite-${randomUUID()}.txt`)])
+    expect(recusado.codigo).toBe(1)
+    expect(recusado.erro).toMatch(/^CONFLITO: /)
+    expect((await consultar(aberto.token)).status).toBe(200)
+    expect(await rodarRevogacao(aberto.conviteId)).toEqual({ codigo: 0, saida: 'ok\n', erro: '' })
     const novo = await convidarEm(escolaA, new Date(), pessoa.email)
     expect(novo.usuarioId).toBe(primeiro.usuarioId)
-    expect(aberto.usuarioId).toBe(primeiro.usuarioId)
     expect((await consultar(aberto.token)).status).toBe(404)
     const bilheteNovo = await aceitarComConta(novo.token)
     expect((await entrar(pessoa.email, SENHA_DE_B, bilheteNovo)).corpo['etapa']).toBe('escolher')
@@ -531,20 +538,23 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
     for (const proibido of [convite.email, NOME_DO_CONVIDADO, convite.usuarioId, convite.token, SENHA_NOVA]) expect(aceite.texto).not.toContain(proibido)
   })
 
-  describe('permissão (RF1): o convite nasce só pelo comando do operador', () => {
-    it('não existe rota que crie convite: as únicas rotas com convite são consultar e aceitar, e POST /v1/convites responde 404 também ao coordenador', async () => {
+  describe('permissão (RF1): o convite nasce só pelo operador, pelo comando ou pelo painel da operação', () => {
+    it('fora do painel da operação, não existe rota que crie convite: as outras rotas com convite só consultam e aceitam, e POST /v1/convites responde 404 também ao coordenador', async () => {
       const express = app.getHttpAdapter().getInstance() as { router: { stack: { route?: { path: string; methods: Record<string, boolean> } }[] } }
       const rotas = express.router.stack.flatMap((camada) =>
         camada.route === undefined ? [] : Object.keys(camada.route.methods).map((metodo) => `${metodo.toUpperCase()} ${camada.route?.path ?? ''}`),
       )
       // A lista não pode sair vazia por mudança de versão do Express: aí o teste passaria sem olhar nada.
       expect(rotas).toContain('GET /saude')
-      // As do operador (A0, tarefa 5.0) também só consultam e aceitam: o convite dele nasce só pelo `ops:operador`.
+      // As do convite do operador (A0, tarefa 5.0) também só consultam e aceitam: o convite dele nasce só pelo
+      // `ops:operador`. As do painel (A0b) geram e revogam o convite da coordenação, e são `@RotaDeOperacao` (C41, C46).
       expect(rotas.filter((rota) => /convite/i.test(rota)).sort()).toEqual([
         'POST /v1/convites/aceitar',
         'POST /v1/convites/consultar',
         'POST /v1/operacao/convite/aceitar',
         'POST /v1/operacao/convite/consultar',
+        'POST /v1/operacao/convites/:id/revogar',
+        'POST /v1/operacao/escolas/:id/convite-coordenacao',
       ])
 
       const coordenacao = await bancada.escolaComSessao('coordenador')

@@ -1,7 +1,7 @@
 # Tarefas — Painel da operação Turmma (A0b)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 1 de 10 concluídas
+**Status:** 2 de 10 concluídas
 
 Aprovadas por delegação do Joaquim em 24/09/2026 ("faça tudo e aprove até criar as tasks"). As 9.0 e
 10.0 levam as pendências da A0 (`tasks/prd-apresentacao-operacao/retro.md`, "Pendências para a A0b")
@@ -17,12 +17,12 @@ que não cabem numa tarefa que já mexe no mesmo código.
   - [x] 1.4 Documentos do desvio: `docs/arquitetura.md` (`operacao`) e `docs/modelo-de-dados.md`
   - [x] 1.5 Testes: E1–E5, E11 (criar escola, e pelo comando), E12, E14, I2, I3, A3 (rede e escola)
 
-- [ ] **2.0 — Convite da coordenação pelo painel: estado, trava, gerar e revogar**
-  - [ ] 2.1 `estadoDaCoordenacao`; índice `convite_pendente_unico`
-  - [ ] 2.2 Trava da escola; gerar por `escolaId` e revogar pela matriz; filtro `tipo = 'coordenador'`
-  - [ ] 2.3 `POST /escolas/:id/convite-coordenacao` e `POST /convites/:id/revogar`; os `ops:*` de convite
+- [x] **2.0 — Convite da coordenação pelo painel: estado, trava, gerar e revogar**
+  - [x] 2.1 `estadoDaCoordenacao`; índice `convite_pendente_unico`
+  - [x] 2.2 Trava da escola; gerar por `escolaId` e revogar pela matriz; filtro `tipo = 'coordenador'`
+  - [x] 2.3 `POST /escolas/:id/convite-coordenacao` e `POST /convites/:id/revogar`; os `ops:*` de convite
     na mesma regra
-  - [ ] 2.4 Testes: A4, E6 (gerar e revogar), E7, E8 (sem refazer), E10, E11 e E13 (convite), I7, A2 e A3
+  - [x] 2.4 Testes: A4, E6 (gerar e revogar), E7, E8 (sem refazer), E10, E11 e E13 (convite), I7, A2 e A3
     (gerar e revogar)
 
 - [ ] **3.0 — Refazer o convite da coordenação**

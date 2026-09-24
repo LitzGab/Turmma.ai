@@ -336,7 +336,13 @@ describe('arquitetura: os marcadores da operação só na pasta da operação (C
 })
 
 /** As rotas do painel da operação (A0b) que já existem: a I3 prova que as varreduras C36, C41 e C46 as enxergam. */
-const ROTAS_DO_PAINEL = ['GET /v1/operacao/redes', 'POST /v1/operacao/redes', 'POST /v1/operacao/escolas']
+const ROTAS_DO_PAINEL = [
+  'GET /v1/operacao/redes',
+  'POST /v1/operacao/redes',
+  'POST /v1/operacao/escolas',
+  'POST /v1/operacao/escolas/:id/convite-coordenacao',
+  'POST /v1/operacao/convites/:id/revogar',
+]
 
 describe('arquitetura: a rota @RotaDeOperacao tem a GuardaDeOperador no handler resolvido (C41)', () => {
   it('toda rota @RotaDeOperacao registrada tem a guarda', () => {

@@ -1,10 +1,9 @@
 import { ConfiguracaoInvalida, ErroDeDominio, FORMATO_SLUG, resumirErro, TAMANHO_MAXIMO_SLUG } from '@educa/nucleo'
-import { CodigoDeErro, TAMANHO_MAXIMO_EMAIL } from '@educa/shared'
+import { CodigoDeErro, esquemaEmailConvidado } from '@educa/shared'
 import { rm } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
-import { z } from 'zod'
 import { criarConviteDeCoordenador, type PedidoDeConvite } from '../sessao/convite.service.js'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, criarArquivoDoToken, esquemaNome, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 
@@ -17,17 +16,19 @@ import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, criarArquivoDo
  *   modo 0600 e sem sobrescrever um que já exista: se ele não pode ser criado, nada é gravado no banco.
  * - Com operador ativo (A0), o `OPERADOR` precisa ser um deles, conferido como primeira instrução da transação,
  *   antes de ler a escola; recusado, o arquivo é apagado.
+ * - É o mesmo caso de uso do gerar do painel da operação (A0b), com a mesma trava da escola e a mesma matriz estado ×
+ *   ação: **com convite em aberto (pendente ou vencido), ou com coordenação ativa, ele recusa com `CONFLITO`** e não
+ *   grava nada. Não refaz sozinho: o caminho é revogar o convite (`ops:revogar-convite`) e gerar de novo, ou refazer
+ *   pelo painel. Com o convite anterior aceito e sem primeira entrada, ou com a coordenação desativada, ele revoga o
+ *   anterior (`convite.revogado` na auditoria) e gera.
  * - O token (32 bytes sorteados) vai só para o arquivo. O terminal mostra o id do convite (que o `ops:revogar-convite`
  *   recebe) e o caminho do arquivo: nunca o token, o nome nem o e-mail. Se o banco falha, o arquivo é apagado.
- * - Escola inexistente sai com `NAO_ENCONTRADO`, e coordenador já ativo com `CONFLITO`, sem o valor recebido.
+ * - Escola inexistente sai com `NAO_ENCONTRADO`, e a recusa da matriz com `CONFLITO`, sem o valor recebido.
  * - O operador manda o link à pessoa à mão no F1 (o envio por e-mail é do F2).
  */
 
-const esquemaEmail = z.email().max(TAMANHO_MAXIMO_EMAIL)
-
-export interface PedidoDoConvite extends PedidoDeConvite {
-  readonly saida: string
-}
+/** O pedido do comando: a escola sempre pelo endereço, e o arquivo do token. */
+export type PedidoDoConvite = Extract<PedidoDeConvite, { readonly slug: string }> & { readonly saida: string }
 
 export function lerPedidoDoConvite(argumentos: string[]): PedidoDoConvite {
   let valores: { escola?: string | undefined; email?: string | undefined; nome?: string | undefined; saida?: string | undefined }
@@ -44,7 +45,7 @@ export function lerPedidoDoConvite(argumentos: string[]): PedidoDoConvite {
   }
   const slug = valores.escola
   if (slug === undefined || slug.length > TAMANHO_MAXIMO_SLUG || !FORMATO_SLUG.test(slug)) throw new ArgumentoInvalido('--escola')
-  const email = esquemaEmail.safeParse(valores.email?.trim().toLowerCase())
+  const email = esquemaEmailConvidado.safeParse(valores.email)
   if (!email.success) throw new ArgumentoInvalido('--email')
   const nome = esquemaNome.safeParse(valores.nome)
   if (!nome.success) throw new ArgumentoInvalido('--nome')
@@ -55,7 +56,7 @@ export function lerPedidoDoConvite(argumentos: string[]): PedidoDoConvite {
 /** Texto fixo por código, sem nada do pedido: o e-mail, o nome e o endereço nunca voltam na mensagem. */
 const MENSAGEM_DO_OPERADOR: Partial<Record<CodigoDeErro, string>> = {
   NAO_ENCONTRADO: 'escola não encontrada',
-  CONFLITO: 'esta pessoa já é coordenadora ativa desta escola',
+  CONFLITO: 'a escola já tem coordenação ativa ou convite em aberto; revogue o convite antes de gerar outro',
 }
 
 /**
