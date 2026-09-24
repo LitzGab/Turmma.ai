@@ -195,6 +195,18 @@ export {
   esquemaRespostaConsultarConviteDeOperador,
 } from './operacao/convite.js'
 export { esquemaPedidoEntradaDeOperador, esquemaRespostaEntradaDeOperador } from './operacao/entrada.js'
+export {
+  esquemaPedidoConfigurarSegundoFatorDeOperador,
+  esquemaPedidoSegundoFatorDeOperador,
+  esquemaRespostaConfigurarSegundoFatorDeOperador,
+  esquemaRespostaSegundoFatorDeOperador,
+} from './operacao/segundo-fator.js'
+export type {
+  PedidoConfigurarSegundoFatorDeOperador,
+  PedidoSegundoFatorDeOperador,
+  RespostaConfigurarSegundoFatorDeOperador,
+  RespostaSegundoFatorDeOperador,
+} from './operacao/segundo-fator.js'
 export type { PedidoEntradaDeOperador, RespostaEntradaDeOperador } from './operacao/entrada.js'
 export type {
   PedidoAceitarConviteDeOperador,

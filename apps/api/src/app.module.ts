@@ -60,7 +60,7 @@ export class AppModule {
           ...(opcoes.prazoDoRedisDeLoginMs === undefined ? {} : { prazoDoRedisMs: opcoes.prazoDoRedisDeLoginMs }),
         }),
         EstruturaModule,
-        OperacaoModule.com(config.identidade, { dispositivo: config.login.dispositivo, ...(opcoes.medidor === undefined ? {} : { medidor: opcoes.medidor }) }),
+        OperacaoModule.com(config.identidade, { dispositivo: config.login.dispositivo, mfa: config.login.mfa, ...(opcoes.medidor === undefined ? {} : { medidor: opcoes.medidor }) }),
         SistemaModule.com({
           rotasSinteticas: config.rotasSinteticas,
           versao: config.versao,

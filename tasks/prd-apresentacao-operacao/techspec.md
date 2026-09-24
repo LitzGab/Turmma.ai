@@ -106,6 +106,11 @@ Da tarefa 6.0: nesta rota o contador é só pelo e-mail (o do `operador.id` é o
 a sessão; `entrada_falha` nunca leva `operador_id` e só é gravada na falha que passou pelo hash (a tentativa segurada
 só soma em `operacao.entrada_falha`, que conta toda falha).
 
+Da tarefa 7.0: o desafio vai no corpo; o `jti` é consumido antes de tudo (`desafio-op:usado:`), e o código errado também o
+queima; "configure de novo" é 409 `CONFLITO`; a reserva no contador pelo `operador.id` fica dentro da transação, depois do
+`for update` e da versão; `sessao/mfa` leva `@LimiteQueRebaixa`; o cookie `turmma_operacao` (8 h) e o de dispositivo saem
+em `/v1/operacao/sessao`, e a `GuardaDeAutenticacao` responde 404 também ao `turmma_operacao` numa rota de escola.
+
 **Conferência da sessão**, pela `GuardaDeOperador`, que põe no contexto só o `operadorId`, nunca
 `escolaId` (repository de escola chamado por engano falha com erro):
 - credencial que não é de operador (sessão, desafio ou cookie de escola, ou nenhuma): **404**, pelo

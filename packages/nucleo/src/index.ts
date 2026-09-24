@@ -84,6 +84,8 @@ export { GuardaDeAutenticacao, identidadeDaRequisicao, sessaoDaRequisicao } from
 export {
   ALGORITMO_TOKEN,
   bearerDeOperador,
+  COOKIE_SESSAO_DE_OPERADOR,
+  cookieDeOperador,
   extrairTokenBearer,
   TIPO_DESAFIO,
   TIPO_DESAFIO_DE_OPERADOR,

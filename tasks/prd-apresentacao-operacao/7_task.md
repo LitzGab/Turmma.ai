@@ -27,15 +27,15 @@ recuperação), e só então existe uma sessão de operador com o cookie `turmma
 
 ## Subtarefas
 
-- [ ] 7.1 — `POST /v1/operacao/sessao/mfa/configurar`: a trava "configurar" da seção 5 (consome o
+- [x] 7.1 — `POST /v1/operacao/sessao/mfa/configurar`: a trava "configurar" da seção 5 (consome o
   desafio, `update ... returning mfa_versao`, códigos na mesma transação, desafio `mfa` com a versão)
-- [ ] 7.2 — `POST /v1/operacao/sessao/mfa`: a trava "`/sessao/mfa`" da seção 5 (uma transação a
+- [x] 7.2 — `POST /v1/operacao/sessao/mfa`: a trava "`/sessao/mfa`" da seção 5 (uma transação a
   partir do `for update` do operador ativo; versão divergente dá "configure de novo" sem conferir o
   código nem contar tentativa); insere a `SessaoOperador` e emite acesso e cookie `turmma_operacao`
-- [ ] 7.3 — Falha de código conta no contador por `operador.id` (C34); desafio recusado sempre com a
+- [x] 7.3 — Falha de código conta no contador por `operador.id` (C34); desafio recusado sempre com a
   mesma resposta de desafio inválido
-- [ ] 7.4 — `Cache-Control: no-store` nas duas respostas; contrato estrito de `packages/shared`
-- [ ] 7.5 — Testes
+- [x] 7.4 — `Cache-Control: no-store` nas duas respostas; contrato estrito de `packages/shared`
+- [x] 7.5 — Testes
 
 ## Arquivos previstos
 
@@ -77,7 +77,65 @@ recuperação), e só então existe uma sessão de operador com o cookie `turmma
   vale para o código atual, e APROVADO nos que têm veto
 - [ ] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
 
+## Divergências resolvidas nesta tarefa
+
+- **O desafio vai no corpo** (`{ desafio }`, `{ desafio, codigo }` ou `{ desafio, recuperacao }`), e não no `Authorization`
+  como no F1: o desafio do operador não serve de bearer em rota nenhuma (C21). Contrato em
+  `packages/shared/src/operacao/segundo-fator.ts`.
+- **"Configure de novo" é 409 `CONFLITO`**, sem código de erro novo: a mensagem geral ("acabou de ser alterado") vale, e a
+  tela da 11.0 decide o texto pela rota. Desafio inválido, usado, de outra etapa, de operador desativado e `mfa` sem versão
+  com o segundo fator inativo respondem `NAO_AUTENTICADO`, iguais.
+- **A reserva no contador pelo `operador.id` fica dentro da transação**, depois do `for update` e da conferência da versão:
+  é o único jeito de a versão divergente não contar tentativa (C18) sem uma leitura fora da trava. A linha fica travada
+  durante o `eval` no Redis, que tem o prazo do cliente do login (100 ms em produção), e o volume é o da nossa equipe.
+- **O desafio é consumido antes de tudo** (`ConsumoDeDesafioDeOperador`, `SET NX` em `desafio-op:usado:{jti}`), e por
+  isso o código errado também o queima: o operador pede outro, como a Tech Spec diz ("queimado não volta"). O consumo do
+  F1 não serve: com o Redis fora ele responde 401, e aqui a resposta é 503 `INDISPONIVEL_TENTE_DE_NOVO` (C13), com a linha
+  `operacao.desafio_sem_redis` espaçada no log.
+- **`sessao/mfa` leva `@LimiteQueRebaixa`**: o grupo "recusa pelo contador por `operador.id`" não pode responder 429 pelo
+  IP (C34), e esta é a marcação que conta no balde do login sem recusar. Sem hash na rota, o rebaixamento não tem efeito.
+- **A `GuardaDeAutenticacao` responde 404 também ao cookie `turmma_operacao`** numa rota de escola com sessão
+  (`cookieDeOperador`, com o nome no núcleo), como já fazia com o bearer de operador: sem isso, o cookie sozinho dava o
+  401 de "falta credencial", diferente da rota inexistente (Tech Spec, seção 6; C47). O cookie de dispositivo do operador
+  não é credencial e não entra.
+- **O cookie `turmma_operacao` sai com `Max-Age` de 8 h**, a duração da sessão; o de dispositivo, com o do F1 (30 dias).
+- **O rótulo do TOTP do operador é `operação`**: `gerarSegredo` do F1 ganha o rótulo opcional, e o app autenticador não
+  confunde a conta da operação com a da coordenação.
+- **O registro `entrada` em `acesso_operacao` e a auditoria `operador.mfa_configurado` ficam para a 8.0** (8.4 e C37 são
+  dela: "gravados pelas rotas de 6.0, 7.0 e 8.0").
+- **C6b (a) termina no estado do C6** (linha só com id, apelido e datas, sem código, sem sessão), como a tabela desta
+  tarefa diz, e não com "códigos intactos" do `cenarios.md`, que a rodada 8 da revisão da spec já apontou como
+  contraditório.
+- **O filtro `desativado_em is null` do `for update` do `/sessao/mfa` não tem teste que o isole**: o check
+  `operador_desativado_sem_dado_pessoal` apaga o segredo na desativação, e o operador desativado já cai por não ter
+  segredo. Fica como a Tech Spec escreve a trava. O do `update` do configurar é observável: sem ele, o `update` violaria o
+  check e responderia 500 no C6b (c).
+- **C13 derruba o Redis desta instância** (`disconnect` do cliente do login), e não o contêiner: parar o `redis-fila` do
+  compose já derrubou em cascata outra suíte na esteira.
+- **Os testes ficam em `apps/api/test/`, sem a subpasta `operacao/`**, como os da 5.0 e da 6.0:
+  `segundo-fator-operador.int.test.ts`, `segundo-fator-operador-concorrencia.int.test.ts` e o apoio
+  `segundo-fator-de-operador.ts`.
+- **Arquivos a mais que a lista previa:** `packages/shared/src/index.ts`; `apps/api/src/app.module.ts`,
+  `operacao.module.ts` e `dispositivo-de-operador.ts` (comentário); `apps/api/src/sessao/segundo-fator.ts` (rótulo);
+  `packages/nucleo/src/identidade/verificar-token.ts`, `guarda-autenticacao.ts`, `token-de-operador.test.ts` e o barrel;
+  `apps/api/src/operacao/desafio-de-operador.test.ts`; `apps/api/test/contratos.test.ts` (a exceção nominal do segredo no
+  configurar do operador) e `arquitetura.test.ts` (a assinatura nova do `OperacaoModule.com`).
+
 ## Fora do escopo desta tarefa
 
 Renovar, sair, 30 min e 8 h, `ACESSO_VENCIDO` e o `AcessoOperacao` (8.0); expurgo (9.0); as telas
 (10.0 e 11.0); a entrada por e-mail (6.0, já feita).
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-09-24 02:22:28 | 2026-09-24 02:24:16 | `test-engineer` | 1 | APROVADO | aa36ad7d25e9760bb |
+| 2026-09-24 02:24:37 | 2026-09-24 02:25:09 | `tenancy-guardian` | 1 | APROVADO | a8abd37cd8fdd905f |
+| 2026-09-24 02:24:28 | 2026-09-24 02:25:11 | `privacy-guardian` | 1 | APROVADO | a7ca310809fe5eb89 |
+| 2026-09-24 02:24:32 | 2026-09-24 02:25:25 | `infra-guardian` | 1 | APROVADO | a6f4f3194ac9ab5eb |
+| 2026-09-24 02:24:23 | 2026-09-24 02:25:38 | `revisor-geral` | 1 | APROVADO | a8da3b1397a1d5f79 |

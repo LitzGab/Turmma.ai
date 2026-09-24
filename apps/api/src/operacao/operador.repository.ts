@@ -10,7 +10,8 @@ import {
   type MotivoDeEncerramentoDeOperador,
   type TransacaoBanco,
 } from '@educa/nucleo'
-import { and, count, eq, exists, isNull, sql } from 'drizzle-orm'
+import { and, count, eq, exists, isNull, lt, or, sql } from 'drizzle-orm'
+import { DURACAO_DA_SESSAO_DE_OPERADOR_HORAS } from './prazos-da-sessao.js'
 
 /**
  * Chave do `pg_advisory_xact_lock` que põe em fila o `criar` e o `desativar` do `ops:operador` (Tech Spec da A0, seção
@@ -69,6 +70,19 @@ export interface SessaoDeOperadorParaGuarda {
 export interface ConviteValido {
   readonly conviteId: string
   readonly operadorId: string
+}
+
+/**
+ * O que o `/sessao/mfa` lê do operador ativo, com a linha travada: o e-mail (só para o cookie de dispositivo, nunca
+ * sai do service), o segredo cifrado com a versão da chave, a versão do segredo e se o segundo fator está ativo.
+ */
+export interface OperadorParaSegundoFator {
+  readonly id: string
+  readonly email: string
+  readonly segredoCifrado: Buffer | null
+  readonly chaveVersao: number | null
+  readonly mfaVersao: number
+  readonly mfaAtivo: boolean
 }
 
 /** O que `GET /v1/operacao/eu` devolve do operador: o apelido e o nome, e nada mais. */
@@ -292,6 +306,102 @@ export class OperadorRepository {
     if (gravados.length === 0) throw new Error('operador do aceite não gravado')
     await this.apagarCodigosDeRecuperacao(dados.operadorId)
     return true
+  }
+
+  /**
+   * A trava "configurar" (Tech Spec da A0, seção 5, "Travas no banco"), o primeiro passo da transação de quem chama:
+   * `update operador set mfa_segredo_cifrado = $s, mfa_versao = mfa_versao + 1 … where id = $1 and mfa_ativado_em is
+   * null and desativado_em is null returning mfa_versao`. O `update` trava a linha, a mesma que o `desativar` e o
+   * `/sessao/mfa` travam primeiro: o que chega depois espera. O passo usado volta a nulo, porque o segredo é outro.
+   *
+   * Devolve a versão nova, ou `undefined` quando o segundo fator já está ativo ou o operador foi desativado: aí nada
+   * foi gravado, e quem chama recusa como desafio inválido.
+   */
+  async gravarSegredoParaConfigurar(dados: { operadorId: string; segredoCifrado: Buffer; chaveVersao: number }): Promise<number | undefined> {
+    const [gravado] = await this.banco
+      .update(operador)
+      .set({ mfaSegredoCifrado: dados.segredoCifrado, mfaChaveVersao: dados.chaveVersao, mfaVersao: sql`${operador.mfaVersao} + 1`, mfaUltimoPasso: null })
+      .where(and(eq(operador.id, dados.operadorId), isNull(operador.mfaAtivadoEm), isNull(operador.desativadoEm)))
+      .returning({ versao: operador.mfaVersao })
+    return gravado?.versao
+  }
+
+  /**
+   * Troca os códigos de recuperação do operador pelos deste segredo: apaga os que houver e insere os novos, na mesma
+   * transação da `gravarSegredoParaConfigurar` (com a linha do operador já travada por ela).
+   */
+  async trocarCodigosDeRecuperacao(operadorId: string, hmacs: readonly string[]): Promise<void> {
+    await this.apagarCodigosDeRecuperacao(operadorId)
+    if (hmacs.length > 0) await this.banco.insert(codigoRecuperacaoOperador).values(hmacs.map((hmac) => ({ operadorId, hmac })))
+  }
+
+  /**
+   * O primeiro passo da transação do `/sessao/mfa` (Tech Spec da A0, seção 5): `select … for update where id = $1 and
+   * desativado_em is null`. É a mesma linha que o `desativar` trava primeiro: se ele confirmou antes, o operador não é
+   * achado; se chegou depois, espera esta transação terminar e encerra a sessão que ela abriu.
+   */
+  async ativoParaSegundoFator(operadorId: string): Promise<OperadorParaSegundoFator | undefined> {
+    const [linha] = await this.banco
+      .select({
+        id: operador.id,
+        email: operador.email,
+        segredoCifrado: operador.mfaSegredoCifrado,
+        chaveVersao: operador.mfaChaveVersao,
+        mfaVersao: operador.mfaVersao,
+        mfaAtivadoEm: operador.mfaAtivadoEm,
+      })
+      .from(operador)
+      .where(and(eq(operador.id, operadorId), isNull(operador.desativadoEm)))
+      .for('update')
+    // O ativo sempre tem e-mail (check `operador_ativo_com_nome_e_email`).
+    if (linha === undefined || linha.email === null) return undefined
+    const { mfaAtivadoEm, email, ...resto } = linha
+    return { ...resto, email, mfaAtivo: mfaAtivadoEm !== null }
+  }
+
+  /**
+   * Gasta o passo do código do app: `set mfa_ultimo_passo = $p where mfa_ultimo_passo is null or mfa_ultimo_passo <
+   * $p`. O mesmo código, ou o de um passo já usado, não casa. Devolve se gastou.
+   */
+  async avancarPassoDoSegundoFator(operadorId: string, passo: number): Promise<boolean> {
+    const avancados = await this.banco
+      .update(operador)
+      .set({ mfaUltimoPasso: passo })
+      .where(and(eq(operador.id, operadorId), isNull(operador.desativadoEm), or(isNull(operador.mfaUltimoPasso), lt(operador.mfaUltimoPasso, passo))))
+      .returning({ id: operador.id })
+    return avancados.length > 0
+  }
+
+  /** Gasta um código de recuperação: `delete … returning`. O mesmo código duas vezes: a segunda não acha nada. */
+  async usarCodigoDeRecuperacao(operadorId: string, hmac: string): Promise<boolean> {
+    const usados = await this.banco
+      .delete(codigoRecuperacaoOperador)
+      .where(and(eq(codigoRecuperacaoOperador.operadorId, operadorId), eq(codigoRecuperacaoOperador.hmac, hmac)))
+      .returning({ hmac: codigoRecuperacaoOperador.hmac })
+    return usados.length > 0
+  }
+
+  /**
+   * Ativa o segundo fator no primeiro código válido, só com o segredo da versão conferida: `where mfa_versao = $v and
+   * mfa_ativado_em is null`. Devolve se ativou.
+   */
+  async ativarSegundoFator(operadorId: string, versao: number): Promise<boolean> {
+    const ativados = await this.banco
+      .update(operador)
+      .set({ mfaAtivadoEm: sql`now()` })
+      .where(and(eq(operador.id, operadorId), eq(operador.mfaVersao, versao), isNull(operador.mfaAtivadoEm), isNull(operador.desativadoEm)))
+      .returning({ id: operador.id })
+    return ativados.length > 0
+  }
+
+  /** A sessão nova do operador, de 8 h, com o hash do refresh. Devolve o id. */
+  async abrirSessao(operadorId: string, refreshHash: string): Promise<string> {
+    const [criada] = await this.banco
+      .insert(sessaoOperador)
+      .values({ operadorId, refreshHash, expiraEm: sql`now() + make_interval(hours => ${DURACAO_DA_SESSAO_DE_OPERADOR_HORAS})` })
+      .returning({ id: sessaoOperador.id })
+    if (criada === undefined) throw new Error('sessão de operador não devolvida pelo insert')
+    return criada.id
   }
 
   /**

@@ -1,5 +1,7 @@
-import { EMISSOR_TOKEN, ErroDeDominio, relogioDoSistema, TIPO_DESAFIO_DE_OPERADOR, type Relogio } from '@educa/nucleo'
+import { avisoEspacado, EMISSOR_TOKEN, ErroDeDominio, relogioDoSistema, TENTE_DE_NOVO_PADRAO_SEGUNDOS, TIPO_DESAFIO_DE_OPERADOR, type Relogio } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
+import { Logger } from '@nestjs/common'
+import type { Redis } from 'ioredis'
 import { errors, jwtVerify, SignJWT } from 'jose'
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
@@ -10,8 +12,9 @@ import { z } from 'zod'
  * mais: o desafio de login da escola (`desafio+jwt`, `aud: sessao`) não passa aqui, e este não passa lá; como bearer,
  * nenhuma rota o aceita (C21).
  *
- * Leva só o id do operador, a etapa e o `jti`. O `jti` vale uma vez: quem conclui a etapa o consome (`SET NX` no
- * Redis, tarefa 7.0); até lá, este arquivo só emite e confere.
+ * Leva só o id do operador, a etapa, o `jti` e, no desafio `mfa` que o `configurar` devolve, a versão do segredo que
+ * ele gravou (`ver`): a ativação só aceita o código com o segredo daquela versão. O `jti` vale uma vez: a rota da etapa
+ * o consome antes de qualquer outra coisa (`ConsumoDeDesafioDeOperador`).
  */
 export const AUDIENCIA_DESAFIO_DE_OPERADOR = 'operacao'
 export const VALIDADE_DESAFIO_DE_OPERADOR_SEGUNDOS = 5 * 60
@@ -23,6 +26,11 @@ export type EtapaDoDesafioDeOperador = (typeof ETAPAS_DO_DESAFIO_DE_OPERADOR)[nu
 export interface PedidoDeDesafioDeOperador {
   readonly operadorId: string
   readonly etapa: EtapaDoDesafioDeOperador
+  /**
+   * Só no desafio `mfa` que o `configurar` devolve: o `mfa_versao` do segredo gravado. O `mfa` da entrada por e-mail
+   * (segundo fator já ativo) não leva versão.
+   */
+  readonly versao?: number
 }
 
 export interface DesafioDeOperadorVerificado extends PedidoDeDesafioDeOperador {
@@ -35,6 +43,7 @@ const esquemaClaims = z.object({
   exp: z.number().int(),
   sub: z.uuid(),
   etapa: z.enum(ETAPAS_DO_DESAFIO_DE_OPERADOR),
+  ver: z.number().int().positive().optional(),
 })
 
 export class EmissorDeDesafioDeOperador {
@@ -45,7 +54,8 @@ export class EmissorDeDesafioDeOperador {
 
   async emitir(pedido: PedidoDeDesafioDeOperador): Promise<string> {
     const emitidoEm = Math.floor(this.relogio.agora().getTime() / 1_000)
-    return new SignJWT({ etapa: pedido.etapa })
+    if (pedido.versao !== undefined && pedido.etapa !== 'mfa') throw new Error('só o desafio mfa leva a versão do segredo')
+    return new SignJWT({ etapa: pedido.etapa, ...(pedido.versao === undefined ? {} : { ver: pedido.versao }) })
       .setProtectedHeader({ alg: 'HS256', typ: TIPO_DESAFIO_DE_OPERADOR })
       .setIssuer(EMISSOR_TOKEN)
       .setAudience(AUDIENCIA_DESAFIO_DE_OPERADOR)
@@ -60,7 +70,7 @@ export class EmissorDeDesafioDeOperador {
 /**
  * Confere o desafio do operador para a etapa da rota. Toda recusa é `NAO_AUTENTICADO`, sem dizer o que falhou: outro
  * `typ` (o token de acesso, o desafio da escola), outra audiência, vencido, de outra etapa ou com assinatura que não
- * confere. Não consome o `jti` (tarefa 7.0).
+ * confere. Não consome o `jti`: quem conclui a etapa chama `ConsumoDeDesafioDeOperador.consumir`.
  */
 export async function verificarDesafioDeOperador(desafio: string, chaveAssinatura: Uint8Array, etapa: EtapaDoDesafioDeOperador): Promise<DesafioDeOperadorVerificado> {
   let claims: unknown
@@ -80,5 +90,51 @@ export async function verificarDesafioDeOperador(desafio: string, chaveAssinatur
   }
   const resultado = esquemaClaims.safeParse(claims)
   if (!resultado.success || resultado.data.etapa !== etapa) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
-  return { jti: resultado.data.jti, expiraEm: new Date(resultado.data.exp * 1_000), operadorId: resultado.data.sub.toLowerCase(), etapa: resultado.data.etapa }
+  const { jti, exp, sub, ver } = resultado.data
+  // A versão só existe no desafio `mfa`: um `configurar_mfa` com versão não saiu do emissor.
+  if (ver !== undefined && etapa !== 'mfa') throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+  return { jti, expiraEm: new Date(exp * 1_000), operadorId: sub.toLowerCase(), etapa, ...(ver === undefined ? {} : { versao: ver }) }
+}
+
+/** Prefixo da marca de desafio de operador já usado, no Redis de fila (que não expulsa chave); separado do da escola. */
+export const PREFIXO_DESAFIO_DE_OPERADOR_USADO = 'desafio-op:usado:'
+
+/**
+ * Marca o desafio do operador como usado, uma vez só (Tech Spec da A0, seção 5, "Travas no banco", desafio): `SET NX`
+ * no Redis de fila, com prazo até o desafio vencer, **antes** da transação e fora dela. Duas conclusões com o mesmo
+ * desafio (clique duplo, reenvio, cópia) nunca passam juntas; a segunda recebe `NAO_AUTENTICADO`, a mesma resposta do
+ * desafio inválido.
+ *
+ * Queimado não volta: o desafio consumido por um código errado, por uma versão que não confere ou por um operador
+ * desativado no meio não vale de novo, e o operador pede outro (entra de novo com e-mail e senha).
+ *
+ * **Redis fora ou sem resposta: 503 `INDISPONIVEL_TENTE_DE_NOVO`**, nunca aceito (C13): sem a marca, não dá para saber
+ * se o desafio já foi usado. O rastro vai ao log como `operacao.desafio_sem_redis`, no máximo uma linha a cada 30 s e
+ * sem nada da pessoa, e o `docs/runbook.md` diz que, com o Redis fora, o caminho do operador é o `ops:*` (tarefa 9.0).
+ */
+export class ConsumoDeDesafioDeOperador {
+  readonly #logger = new Logger('operacao')
+  readonly #avisarSemRedis = avisoEspacado(() => this.#logger.warn('operacao.desafio_sem_redis'))
+
+  constructor(
+    private readonly cliente: Redis,
+    private readonly relogio: Relogio = relogioDoSistema,
+  ) {}
+
+  async consumir(desafio: Pick<DesafioDeOperadorVerificado, 'jti' | 'expiraEm'>): Promise<void> {
+    if (this.cliente.status !== 'ready') throw this.#semRedis()
+    const prazoMs = Math.max(1, desafio.expiraEm.getTime() - this.relogio.agora().getTime())
+    let marcado: string | null
+    try {
+      marcado = await this.cliente.set(`${PREFIXO_DESAFIO_DE_OPERADOR_USADO}${desafio.jti}`, '1', 'PX', prazoMs, 'NX')
+    } catch {
+      throw this.#semRedis()
+    }
+    if (marcado !== 'OK') throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+  }
+
+  #semRedis(): ErroDeDominio {
+    this.#avisarSemRedis()
+    return new ErroDeDominio(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO, undefined, TENTE_DE_NOVO_PADRAO_SEGUNDOS)
+  }
 }

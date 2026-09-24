@@ -17,6 +17,8 @@ export const BYTES_DO_SEGREDO = 20
 /** Quem emite, como o app autenticador mostra. Nada da pessoa: nem nome, nem e-mail, nem escola. */
 const EMISSOR_TOTP = 'Educa.ia'
 const ROTULO_TOTP = 'coordenação'
+/** O rótulo do segredo do operador Turmma (A0): no app autenticador, a conta da operação não se confunde com a da escola. */
+export const ROTULO_TOTP_DA_OPERACAO = 'operação'
 
 /** O segredo recém-gerado: os bytes (que só vão para a cifra), o base32 e a URI que a pessoa leva ao app. */
 export interface SegredoNovo {
@@ -25,13 +27,14 @@ export interface SegredoNovo {
   readonly uri: string
 }
 
-function totp(segredo: Secret): TOTP {
-  return new TOTP({ issuer: EMISSOR_TOTP, label: ROTULO_TOTP, secret: segredo, algorithm: ALGORITMO_TOTP, digits: DIGITOS_DO_CODIGO_MFA, period: PERIODO_TOTP_SEGUNDOS })
+function totp(segredo: Secret, rotulo = ROTULO_TOTP): TOTP {
+  return new TOTP({ issuer: EMISSOR_TOTP, label: rotulo, secret: segredo, algorithm: ALGORITMO_TOTP, digits: DIGITOS_DO_CODIGO_MFA, period: PERIODO_TOTP_SEGUNDOS })
 }
 
-export function gerarSegredo(): SegredoNovo {
+/** O segredo novo; o rótulo só muda o que o app autenticador mostra (o da escola, sem ele; o do operador, `operação`). */
+export function gerarSegredo(rotulo = ROTULO_TOTP): SegredoNovo {
   const segredo = new Secret({ size: BYTES_DO_SEGREDO })
-  return { bytes: new Uint8Array(segredo.bytes), base32: segredo.base32, uri: totp(segredo).toString() }
+  return { bytes: new Uint8Array(segredo.bytes), base32: segredo.base32, uri: totp(segredo, rotulo).toString() }
 }
 
 /**

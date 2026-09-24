@@ -279,7 +279,7 @@ describe('arquitetura: os marcadores da operação só na pasta da operação (C
   })
 
   it('em método e em classe: todo controller registrado com marcador é um controller do OperacaoModule', () => {
-    const daOperacao = new Set(controladoresDoModulo(OperacaoModule.com(configuracaoDeTeste().identidade, { dispositivo: configuracaoDeTeste().login.dispositivo })))
+    const daOperacao = new Set(controladoresDoModulo(OperacaoModule.com(configuracaoDeTeste().identidade, { dispositivo: configuracaoDeTeste().login.dispositivo, mfa: configuracaoDeTeste().login.mfa })))
     const marcados = new Set(rotasDaApi().filter((rota) => rota.marcador !== undefined).map((rota) => rota.controlador))
     expect(marcados.size).toBeGreaterThan(0)
     expect([...marcados].filter((controlador) => !daOperacao.has(controlador)).map((controlador) => controlador.name)).toEqual([])

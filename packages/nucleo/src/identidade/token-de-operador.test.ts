@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { EMISSOR_TOKEN, type ConfiguracaoIdentidade } from '../config/validar-config.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
 import { EmissorDeToken, EmissorDeTokenDeOperador, VALIDADE_TOKEN_ACESSO_SEGUNDOS } from './emissor-de-token.js'
-import { bearerDeOperador, TIPO_DESAFIO, TIPO_DESAFIO_DE_OPERADOR, TIPO_TOKEN_DE_OPERADOR, VALIDADE_MAXIMA_TOKEN_SEGUNDOS, verificarToken, verificarTokenDeOperador } from './verificar-token.js'
+import { bearerDeOperador, COOKIE_SESSAO_DE_OPERADOR, cookieDeOperador, TIPO_DESAFIO, TIPO_DESAFIO_DE_OPERADOR, TIPO_TOKEN_DE_OPERADOR, VALIDADE_MAXIMA_TOKEN_SEGUNDOS, verificarToken, verificarTokenDeOperador } from './verificar-token.js'
 
 const OPERADOR = '0190f5a0-0000-7000-8000-0000000000e1'
 const SESSAO = '0190f5a0-0000-7000-8000-0000000000f1'
@@ -101,5 +101,19 @@ describe('bearerDeOperador', () => {
     expect(bearerDeOperador(`Bearer ${await assinar({ typ: TIPO_DESAFIO })}`)).toBe(false)
     expect(bearerDeOperador('Bearer a.b.c')).toBe(false)
     expect(bearerDeOperador(undefined)).toBe(false)
+  })
+})
+
+describe('cookieDeOperador (tarefa 7.0)', () => {
+  it('reconhece o cookie de sessão do operador pelo nome, em qualquer posição, e só ele', () => {
+    expect(COOKIE_SESSAO_DE_OPERADOR).toBe('turmma_operacao')
+    expect(cookieDeOperador('turmma_operacao=abc')).toBe(true)
+    expect(cookieDeOperador('educa_dispositivo=x; turmma_operacao=abc')).toBe(true)
+    expect(cookieDeOperador(' turmma_operacao =abc')).toBe(true)
+    // O de dispositivo do operador não é credencial, e o da escola segue o caminho dele.
+    expect(cookieDeOperador('turmma_operacao_dispositivo=abc')).toBe(false)
+    expect(cookieDeOperador('educa_sessao=abc; xturmma_operacao=abc')).toBe(false)
+    expect(cookieDeOperador('turmma_operacao')).toBe(false)
+    expect(cookieDeOperador(undefined)).toBe(false)
   })
 })

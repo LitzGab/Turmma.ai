@@ -1,7 +1,7 @@
 # Tarefas — Identidade do operador Turmma (A0)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 6 de 11 concluídas
+**Status:** 7 de 11 concluídas
 
 ## Lista
 
@@ -42,11 +42,11 @@
   - [x] 6.2 Regra das 72 h do `configurar_mfa`; `entrada_falha` sem e-mail
   - [x] 6.3 Testes: C15, C22–C25, C33 (e-mail), U2
 
-- [ ] **7.0 — Segundo fator do operador**
-  - [ ] 7.1 `mfa/configurar` com a trava da linha e a versão do segredo
-  - [ ] 7.2 `sessao/mfa` numa transação só, com ativação, códigos e a sessão
-  - [ ] 7.3 `jti` de uso único e cookie `turmma_operacao`
-  - [ ] 7.4 Testes: C6b (com as recomendações da rodada 8), C12–C14, C16–C20, C18b, C34, C32 e C39
+- [x] **7.0 — Segundo fator do operador**
+  - [x] 7.1 `mfa/configurar` com a trava da linha e a versão do segredo
+  - [x] 7.2 `sessao/mfa` numa transação só, com ativação, códigos e a sessão
+  - [x] 7.3 `jti` de uso único e cookie `turmma_operacao`
+  - [x] 7.4 Testes: C6b (com as recomendações da rodada 8), C12–C14, C16–C20, C18b, C34, C32 e C39
     (MFA), C47 com o cookie de verdade
 
 - [ ] **8.0 — Sessão do operador: renovar, sair e os prazos**

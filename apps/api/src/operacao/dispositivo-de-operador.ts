@@ -8,8 +8,8 @@ import { CookieDeDispositivo } from '../sessao/cookie-dispositivo.js'
  * no semáforo quando o IP passou do limite; não dá acesso nem identifica ninguém (`docs/lgpd.md`, "Cookie de
  * dispositivo").
  *
- * Quem o grava é a entrada completa, depois do segundo fator (tarefa 7.0), no caminho `/v1/operacao/sessao`, o mesmo do
- * `turmma_operacao`; a 6.0 só o lê.
+ * Quem o grava é a entrada completa, depois do segundo fator (`cookiesDaSessaoDeOperador`, em `cookie-de-operador.ts`),
+ * no caminho `/v1/operacao/sessao`, o mesmo do `turmma_operacao`; a entrada por e-mail só o lê.
  */
 export const COOKIE_DISPOSITIVO_DE_OPERADOR = 'turmma_operacao_dispositivo'
 

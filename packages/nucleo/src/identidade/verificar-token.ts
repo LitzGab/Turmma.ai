@@ -209,3 +209,22 @@ export function bearerDeOperador(cabecalho: string | string[] | undefined): bool
     return false
   }
 }
+
+/**
+ * O cookie de renovação da sessão do operador Turmma (Tech Spec da A0, seção 4). Ele vive em `/v1/operacao/sessao`, e
+ * o navegador não o manda a rota de escola; quem o manda assim montou a requisição à mão.
+ */
+export const COOKIE_SESSAO_DE_OPERADOR = 'turmma_operacao'
+
+/**
+ * Se o cabeçalho `Cookie` traz o cookie de sessão do operador. Não confere o valor: só separa o caminho, como o
+ * `bearerDeOperador`. O cookie de dispositivo do operador (`turmma_operacao_dispositivo`) não conta: ele não é
+ * credencial de nada.
+ */
+export function cookieDeOperador(cabecalho: string | undefined): boolean {
+  if (cabecalho === undefined) return false
+  return cabecalho.split(';').some((parte) => {
+    const igual = parte.indexOf('=')
+    return igual >= 0 && parte.slice(0, igual).trim() === COOKIE_SESSAO_DE_OPERADOR
+  })
+}

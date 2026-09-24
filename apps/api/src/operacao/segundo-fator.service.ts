@@ -1,0 +1,193 @@
+import { ErroDeDominio, relogioDoSistema, type Ambiente, type Banco, type EmissorDeTokenDeOperador, type Relogio } from '@educa/nucleo'
+import {
+  CodigoDeErro,
+  type PedidoConfigurarSegundoFatorDeOperador,
+  type PedidoSegundoFatorDeOperador,
+  type RespostaConfigurarSegundoFatorDeOperador,
+  type RespostaSegundoFatorDeOperador,
+} from '@educa/shared'
+import { randomBytes } from 'node:crypto'
+import { SegredoNaoDecifra, type CifraDoSegredo } from '../sessao/cifra-do-segredo.js'
+import type { ContadorDeTentativas } from '../sessao/contador-de-tentativas.js'
+import type { CookieDeDispositivo } from '../sessao/cookie-dispositivo.js'
+import { lerCookie } from '../sessao/cookies.js'
+import { BYTES_DO_REFRESH, hashDoRefresh, normalizarEmail } from '../sessao/login.service.js'
+import { gerarCodigosDeRecuperacao, gerarSegredo, hmacDaRecuperacao, normalizarRecuperacao, passoDoCodigo, ROTULO_TOTP_DA_OPERACAO } from '../sessao/segundo-fator.js'
+import { cookiesDaSessaoDeOperador } from './cookie-de-operador.js'
+import { verificarDesafioDeOperador, type ConsumoDeDesafioDeOperador, type DesafioDeOperadorVerificado, type EmissorDeDesafioDeOperador } from './desafio-de-operador.js'
+import { COOKIE_DISPOSITIVO_DE_OPERADOR } from './dispositivo-de-operador.js'
+import { PREFIXO_DO_CONTADOR_DA_OPERACAO } from './entrada.service.js'
+import { OperadorRepository, type OperadorParaSegundoFator } from './operador.repository.js'
+
+export interface DependenciasDoSegundoFator {
+  readonly banco: Banco
+  /** A cifra do segredo do F1, com as mesmas chaves; o dado autenticado (AAD) é o `operador.id`. */
+  readonly cifra: Pick<CifraDoSegredo, 'cifrar' | 'decifrar'>
+  /** A chave do HMAC dos códigos de recuperação (`IDENTIDADE_CHAVE_RECUPERACAO`), a do F1. */
+  readonly chaveRecuperacao: Uint8Array
+  /** Chave de assinatura do desafio, a mesma do token de acesso. */
+  readonly chaveAssinatura: Uint8Array
+  readonly consumo: Pick<ConsumoDeDesafioDeOperador, 'consumir'>
+  /** O contador do F1, com o prefixo `login-op` e a chave pelo `operador.id` (C34). */
+  readonly contador: Pick<ContadorDeTentativas, 'chaveDe' | 'reservar' | 'zerar'>
+  /** O cookie de dispositivo do operador, com a chave própria (`dispositivo-de-operador.ts`). */
+  readonly dispositivo: Pick<CookieDeDispositivo, 'conhece' | 'comEntrada'>
+  readonly emissorDeDesafio: Pick<EmissorDeDesafioDeOperador, 'emitir'>
+  readonly emissorDeToken: Pick<EmissorDeTokenDeOperador, 'emitir'>
+  readonly ambiente: Ambiente
+  readonly relogio?: Relogio
+}
+
+/** O que o controller tira da requisição: o cabeçalho `Cookie`, para a origem do contador e o cookie de dispositivo. */
+export interface OrigemDoSegundoFator {
+  readonly cabecalhoCookie: string | undefined
+}
+
+/** A sessão aberta: o corpo da resposta e os dois `Set-Cookie`. */
+export interface SessaoDeOperadorAberta {
+  readonly resposta: RespostaSegundoFatorDeOperador
+  readonly cookies: readonly string[]
+}
+
+/** Desafio inválido, usado, de outra etapa, de operador desativado ou sem segundo fator para conferir: uma resposta só. */
+const desafioInvalido = () => new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+
+/** O que a transação do `/sessao/mfa` decidiu. Só `aberta` gravou alguma coisa. */
+type Desfecho =
+  | { readonly tipo: 'desafio_invalido' }
+  | { readonly tipo: 'configure_de_novo' }
+  | { readonly tipo: 'segurada'; readonly esperaMs: number }
+  | { readonly tipo: 'codigo_recusado'; readonly esperaMs: number }
+  | { readonly tipo: 'aberta'; readonly sessaoId: string; readonly email: string; readonly chave: string }
+
+/**
+ * O segundo fator do operador Turmma (Tech Spec da A0, seções 4 e 5): configurar o app autenticador e entrar com o
+ * código dele ou com um código de recuperação. O desafio vem **no corpo** e passa por três conferências, nesta ordem,
+ * antes de qualquer outra coisa: assinatura, prazo e `typ` (`verificarDesafioDeOperador`), a etapa da rota, e o uso
+ * único do `jti` (`SET NX`, fora da transação; com o Redis fora, 503). Toda recusa do desafio é `NAO_AUTENTICADO`.
+ *
+ * - **Configurar** (`configurar_mfa`): numa transação, a trava "configurar" grava o segredo novo e sobe o `mfa_versao`
+ *   (só com o segundo fator inativo e o operador ativo), e troca os códigos de recuperação pelos novos. Devolve o
+ *   segredo, os códigos e o desafio `mfa` com a versão. Nada fica ativo ainda.
+ * - **Entrar** (`mfa`), numa transação só, a partir do `for update` da linha do operador ativo:
+ *   1. o desafio que leva versão exige a mesma `mfa_versao` da linha: diferente, outra aba configurou depois, e a
+ *      resposta é 409 `CONFLITO` ("configure de novo"), **sem conferir o código nem contar tentativa**; o desafio sem
+ *      versão (da entrada por e-mail) exige o segundo fator ativo;
+ *   2. a tentativa é reservada no contador `login-op:{HMAC(operador.id)}:{conhecido|outro}` (C34), por conta e nunca
+ *      por IP; segurada, 429 `CONTA_SEGURADA` sem conferir o código;
+ *   3. o código é gasto no banco: o do app pelo passo (`mfa_ultimo_passo`), o de recuperação por `delete … returning`,
+ *      e este só depois da ativação;
+ *   4. o primeiro código válido ativa o segredo da versão conferida, e a sessão de 8 h é inserida.
+ *   O `desativar` começa pelo mesmo `for update`: ou esta transação não acha o operador, ou ele espera por ela e encerra
+ *   a sessão que ela abriu.
+ * - **Fim:** zera o contador, emite o acesso de 10 min (`operador+jwt`, sem `esc`) e grava os cookies
+ *   `turmma_operacao` e `turmma_operacao_dispositivo`, em `/v1/operacao/sessao`.
+ *
+ * O registro da entrada em `acesso_operacao` e a auditoria `operador.mfa_configurado` são da tarefa 8.0 (8.4, C37).
+ */
+export class SegundoFatorDoOperadorService {
+  readonly #relogio: Relogio
+
+  constructor(private readonly dependencias: DependenciasDoSegundoFator) {
+    this.#relogio = dependencias.relogio ?? relogioDoSistema
+  }
+
+  async configurar(pedido: PedidoConfigurarSegundoFatorDeOperador): Promise<RespostaConfigurarSegundoFatorDeOperador> {
+    const { banco, cifra, chaveRecuperacao, emissorDeDesafio } = this.dependencias
+    const verificado = await this.#desafioConsumido(pedido.desafio, 'configurar_mfa')
+    const novo = gerarSegredo(ROTULO_TOTP_DA_OPERACAO)
+    const { cifrado, versao: chaveVersao } = cifra.cifrar(novo.bytes, verificado.operadorId)
+    const codigosRecuperacao = gerarCodigosDeRecuperacao()
+    const hmacs = codigosRecuperacao.map((codigo) => hmacDaRecuperacao(chaveRecuperacao, codigo))
+    const versao = await banco.transaction(async (tx) => {
+      const repositorio = new OperadorRepository(tx)
+      const gravada = await repositorio.gravarSegredoParaConfigurar({ operadorId: verificado.operadorId, segredoCifrado: cifrado, chaveVersao })
+      if (gravada !== undefined) await repositorio.trocarCodigosDeRecuperacao(verificado.operadorId, hmacs)
+      return gravada
+    })
+    // Segundo fator já ativo, ou operador desativado: nada gravado, e a mesma resposta do desafio inválido (C16, C6b).
+    if (versao === undefined) throw desafioInvalido()
+    const desafio = await emissorDeDesafio.emitir({ operadorId: verificado.operadorId, etapa: 'mfa', versao })
+    return { uri: novo.uri, segredo: novo.base32, codigosRecuperacao, etapa: 'mfa', desafio }
+  }
+
+  async entrar(pedido: PedidoSegundoFatorDeOperador, origem: OrigemDoSegundoFator): Promise<SessaoDeOperadorAberta> {
+    const { banco, contador, emissorDeToken, dispositivo, ambiente } = this.dependencias
+    const verificado = await this.#desafioConsumido(pedido.desafio, 'mfa')
+    const refresh = randomBytes(BYTES_DO_REFRESH).toString('base64url')
+    const cookieDeDispositivo = lerCookie(origem.cabecalhoCookie, COOKIE_DISPOSITIVO_DE_OPERADOR)
+
+    const desfecho = await banco.transaction(async (tx): Promise<Desfecho> => {
+      const repositorio = new OperadorRepository(tx)
+      const linha = await repositorio.ativoParaSegundoFator(verificado.operadorId)
+      if (linha === undefined) return { tipo: 'desafio_invalido' }
+      if (verificado.versao !== undefined && verificado.versao !== linha.mfaVersao) return { tipo: 'configure_de_novo' }
+      if (verificado.versao === undefined && !linha.mfaAtivo) return { tipo: 'desafio_invalido' }
+      const segredo = this.#segredo(linha)
+      if (segredo === undefined) return { tipo: 'desafio_invalido' }
+
+      const email = normalizarEmail(linha.email)
+      const chave = contador.chaveDe(linha.id, dispositivo.conhece(cookieDeDispositivo, email) ? 'conhecido' : 'outro', PREFIXO_DO_CONTADOR_DA_OPERACAO)
+      const reserva = await contador.reservar(chave)
+      if (!reserva.liberada) return { tipo: 'segurada', esperaMs: reserva.esperaMs }
+
+      if (!(await this.#codigoConfere(repositorio, linha, segredo, pedido))) return { tipo: 'codigo_recusado', esperaMs: reserva.esperaSeFalharMs }
+      // A linha está travada desde o `for update`, com a versão conferida acima: a ativação não tem como não casar.
+      if (!linha.mfaAtivo && !(await repositorio.ativarSegundoFator(linha.id, linha.mfaVersao))) throw new Error('segundo fator do operador não ativado com a linha travada')
+      return { tipo: 'aberta', sessaoId: await repositorio.abrirSessao(linha.id, hashDoRefresh(refresh)), email, chave }
+    })
+
+    switch (desfecho.tipo) {
+      case 'desafio_invalido':
+        throw desafioInvalido()
+      case 'configure_de_novo':
+        throw new ErroDeDominio(CodigoDeErro.CONFLITO)
+      case 'segurada':
+        throw contaSegurada(desfecho.esperaMs)
+      case 'codigo_recusado':
+        throw desfecho.esperaMs > 0 ? contaSegurada(desfecho.esperaMs) : new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+      case 'aberta': {
+        await contador.zerar(desfecho.chave)
+        const { token, expiraEm } = await emissorDeToken.emitir({ operadorId: verificado.operadorId, sessaoId: desfecho.sessaoId })
+        return {
+          resposta: { token, expiraEm: expiraEm.toISOString() },
+          cookies: cookiesDaSessaoDeOperador({ refresh, email: desfecho.email, cabecalhoCookie: origem.cabecalhoCookie, dispositivo, ambiente }),
+        }
+      }
+    }
+  }
+
+  /** O código do app (passo novo, gasto no banco) ou o de recuperação (gasto no banco, e só com o segundo fator ativo). */
+  async #codigoConfere(repositorio: OperadorRepository, linha: OperadorParaSegundoFator, segredo: Uint8Array, pedido: PedidoSegundoFatorDeOperador): Promise<boolean> {
+    if ('codigo' in pedido) {
+      const passo = passoDoCodigo(segredo, pedido.codigo, this.#relogio.agora())
+      return passo !== undefined && (await repositorio.avancarPassoDoSegundoFator(linha.id, passo))
+    }
+    // Antes da ativação, o código de recuperação não vale (C20): quem ainda não provou ter o app não o pula.
+    if (!linha.mfaAtivo) return false
+    const codigo = normalizarRecuperacao(pedido.recuperacao)
+    return codigo !== undefined && (await repositorio.usarCodigoDeRecuperacao(linha.id, hmacDaRecuperacao(this.dependencias.chaveRecuperacao, codigo)))
+  }
+
+  /** O segredo decifrado com o `operador.id` como AAD; sem segredo, ou com um que não decifra, `undefined`. */
+  #segredo(linha: OperadorParaSegundoFator): Uint8Array | undefined {
+    if (linha.segredoCifrado === null || linha.chaveVersao === null) return undefined
+    try {
+      return this.dependencias.cifra.decifrar({ cifrado: linha.segredoCifrado, versao: linha.chaveVersao }, linha.id)
+    } catch (erro) {
+      if (erro instanceof SegredoNaoDecifra) return undefined
+      throw erro
+    }
+  }
+
+  /** O desafio da etapa, conferido e consumido: o `jti` vale uma vez, e com o Redis fora a resposta é 503. */
+  async #desafioConsumido(desafio: string, etapa: DesafioDeOperadorVerificado['etapa']): Promise<DesafioDeOperadorVerificado> {
+    const verificado = await verificarDesafioDeOperador(desafio, this.dependencias.chaveAssinatura, etapa)
+    await this.dependencias.consumo.consumir(verificado)
+    return verificado
+  }
+}
+
+function contaSegurada(esperaMs: number): ErroDeDominio {
+  return new ErroDeDominio(CodigoDeErro.CONTA_SEGURADA, undefined, Math.max(1, Math.ceil(esperaMs / 1_000)))
+}

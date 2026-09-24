@@ -75,4 +75,23 @@ describe('desafio do operador (tarefa 5.0)', () => {
     const daEscola = await new EmissorDeDesafio(CHAVE).emitir({ contaId: OPERADOR, etapa: 'configurar_mfa', mfaCumprido: false })
     expect(await recusa(verificarDesafioDeOperador(daEscola, CHAVE, 'configurar_mfa'))).toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO })
   })
+
+  it('o desafio `mfa` do configurar leva a versão do segredo (`ver`), e ela volta na verificação; o da entrada por e-mail não leva (tarefa 7.0)', async () => {
+    const emissor = new EmissorDeDesafioDeOperador(CHAVE)
+    const comVersao = await emissor.emitir({ operadorId: OPERADOR, etapa: 'mfa', versao: 3 })
+    expect(decodeJwt(comVersao)).toMatchObject({ ver: 3, etapa: 'mfa' })
+    expect(await verificarDesafioDeOperador(comVersao, CHAVE, 'mfa')).toMatchObject({ operadorId: OPERADOR, etapa: 'mfa', versao: 3 })
+    const semVersao = await verificarDesafioDeOperador(await emissor.emitir({ operadorId: OPERADOR, etapa: 'mfa' }), CHAVE, 'mfa')
+    expect('versao' in semVersao).toBe(false)
+  })
+
+  it('a versão só existe no desafio `mfa`: o emissor não a põe em outra etapa, e o `configurar_mfa` assinado com ela é recusado', async () => {
+    await expect(new EmissorDeDesafioDeOperador(CHAVE).emitir({ operadorId: OPERADOR, etapa: 'configurar_mfa', versao: 1 })).rejects.toThrow()
+    // A mesma montagem sem `ver` passa: a recusa vem da versão fora da etapa.
+    await expect(verificarDesafioDeOperador(await assinar(), CHAVE, 'configurar_mfa')).resolves.toMatchObject({ etapa: 'configurar_mfa' })
+    expect(await recusa(verificarDesafioDeOperador(await assinar({ claims: { ver: 1 } }), CHAVE, 'configurar_mfa'))).toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO })
+    for (const ver of [0, -1, 1.5, '2']) {
+      expect(await recusa(verificarDesafioDeOperador(await assinar({ claims: { etapa: 'mfa', ver } }), CHAVE, 'mfa')), String(ver)).toMatchObject({ codigo: CodigoDeErro.NAO_AUTENTICADO })
+    }
+  })
 })
