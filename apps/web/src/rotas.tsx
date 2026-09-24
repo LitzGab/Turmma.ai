@@ -1,7 +1,8 @@
-import { useEffect, useSyncExternalStore, type ReactNode } from 'react'
+import { Component, lazy, Suspense, useEffect, useSyncExternalStore, type ReactNode } from 'react'
 import { Link, Redirect, Route, Switch, useLocation } from 'wouter'
 import { abrirSessaoPeloCookie, assinarSessao, erroDaSessao, estadoDaSessao } from './api/sessao'
 import { ROTAS } from './caminhos'
+import { Botao } from './componentes/Botao'
 import { Cabecalho } from './componentes/Cabecalho'
 import { EstadoCarregando, EstadoErro } from './componentes/estado'
 import { LoginPorCima } from './componentes/LoginPorCima'
@@ -14,6 +15,44 @@ import { EscolherEscola } from './paginas/EscolherEscola'
 import { Inicio } from './paginas/Inicio'
 import { Mfa } from './paginas/Mfa'
 import { Vinculos } from './paginas/Vinculos'
+
+/**
+ * A área do operador Turmma (A0), só por `import()`: vira o chunk `operacao-*.js` (`vite.config.ts`), que nenhuma tela
+ * da escola baixa (Tech Spec da A0, seção 9, B2). Nada daqui importa de `./operacao/` de outro jeito: o teste de
+ * `apps/web/nome-dos-chunks.test.ts` reprova, no build, o `import` estático.
+ */
+const AreaDaOperacao = lazy(() => import('./operacao/rotas'))
+
+/** O caminho da área, repetido aqui para a entrada não importar nada de `./operacao/`. */
+const BASE_DA_OPERACAO = '/operacao'
+
+/**
+ * A fronteira de erro do chunk da operação: o `import()` que falha (rede da escola caindo, 3G no celular) não vira tela
+ * branca. "Tente de novo" recarrega a página, porque o navegador guarda a falha do módulo e um segundo `import()` do
+ * mesmo endereço devolveria a mesma falha. A tela da operação não tem rascunho que a recarga possa perder.
+ */
+class FronteiraDaOperacao extends Component<{ children: ReactNode }, { falhou: boolean }> {
+  override state = { falhou: false }
+
+  static getDerivedStateFromError(): { falhou: boolean } {
+    return { falhou: true }
+  }
+
+  override render() {
+    if (!this.state.falhou) return this.props.children
+    return (
+      <main className="mx-auto flex min-h-screen max-w-md flex-col gap-4 bg-fundo px-4 py-6 text-tinta sm:px-6">
+        <h1 className="text-xl font-semibold sm:text-2xl">Operação Turmma</h1>
+        <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-4 text-erro">
+          Não foi possível carregar a área da operação. Confira a conexão e tente de novo.
+        </p>
+        <Botao className="self-start" onClick={() => window.location.reload()}>
+          Tente de novo
+        </Botao>
+      </main>
+    )
+  }
+}
 
 /**
  * A área que exige sessão. O estado vem do módulo de sessão, não do cache de consultas: a sessão não é dado de
@@ -85,6 +124,20 @@ export function Rotas() {
   return (
     <Switch>
       <Route path={ROTAS.entrar} component={Entrada} />
+      {/* A área do operador, aninhada: dentro dela os caminhos são relativos a `/operacao`. */}
+      <Route path={BASE_DA_OPERACAO} nest>
+        <FronteiraDaOperacao>
+          <Suspense
+            fallback={
+              <div className="mx-auto flex max-w-md flex-col gap-4 px-4 py-6 sm:px-6">
+                <EstadoCarregando rotulo="Carregando a área da operação…" />
+              </div>
+            }
+          >
+            <AreaDaOperacao />
+          </Suspense>
+        </FronteiraDaOperacao>
+      </Route>
       <Route path={ROTAS.sistema} component={Casca} />
       {/* O endereço da escola, por onde o aluno entra (RF7). Fica antes das rotas fixas por ser a única com parâmetro. */}
       <Route path={ROTAS.escola}>{(parametros) => <EntrarNaEscola slug={parametros.slug} />}</Route>

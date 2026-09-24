@@ -1,7 +1,7 @@
 # Tarefas — Identidade do operador Turmma (A0)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 8 de 11 concluídas
+**Status:** 10 de 11 concluídas
 
 ## Lista
 
@@ -60,11 +60,11 @@
   - [ ] 9.2 Linha no `docs/runbook.md`: com o Redis fora, o caminho é `ops:*`
   - [ ] 9.3 Testes: C38, e a entrada do expurgo no C45
 
-- [ ] **10.0 — Web do operador: chunk, sessão, casca, entrar e MFA**
-  - [ ] 10.1 Chunk `operacao-*.js` com fallback e fronteira de erro
-  - [ ] 10.2 Sessão em memória própria, sem resíduo da pessoa anterior
-  - [ ] 10.3 Casca da operação e as telas de entrar e de código
-  - [ ] 10.4 Testes: E2–E4, B1 (chunk), B2
+- [x] **10.0 — Web do operador: chunk, sessão, casca, entrar e MFA**
+  - [x] 10.1 Chunk `operacao-*.js` com fallback e fronteira de erro
+  - [x] 10.2 Sessão em memória própria, sem resíduo da pessoa anterior
+  - [x] 10.3 Casca da operação e as telas de entrar e de código
+  - [x] 10.4 Testes: E2–E4, B1 (chunk), B2
 
 - [ ] **11.0 — Web do operador: convite e configurar o segundo fator**
   - [ ] 11.1 Tela do convite, com o token do `#`

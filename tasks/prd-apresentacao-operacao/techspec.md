@@ -207,8 +207,15 @@ dos 30 min, como o `inatividade.ts`. Casca com a faixa "Operação Turmma" em `n
 clique, `document.title` por rota e `<h1>` para leitor de tela. Códigos de recuperação uma vez, com
 "Copiar" em região viva; o QR vem com a chave em texto e o `otpauth://`.
 
-**Orçamento.** 150 kB brotli para a entrada; 60 kB para `operacao-*.js` (`manualChunks`); teste de
+**Orçamento.** 150 kB brotli para a entrada; 60 kB para `operacao-*.js` (pelo nome do chunk); teste de
 que a entrada da escola não importa nada de `apps/web/src/operacao/`.
+
+Da tarefa 10.0: o nome vem do `chunkFileNames` (`apps/web/nome-dos-chunks.ts`), e não do `manualChunks`, que no Rolldown
+do Vite 8 vira um grupo que arrasta as dependências (React, componentes da entrada) para o chunk da operação; todo outro
+chunk que não é entrada leva o prefixo `parte-`. O B2 é provado sobre o build. A sessão da operação tem cache de consultas
+próprio; o relógio de inatividade conta do último uso aceito pela API, com o aviso aos 27 min e o fim aos 29 min
+(a API grava `ultimoUsoEm` uma vez por minuto); código do segundo fator recusado volta à entrada, porque a API gasta o
+desafio; abrir a aba sem sessão vai à entrada sem a mensagem de sessão encerrada.
 
 ## 10. Testes
 

@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defaultClientConditions, defineConfig } from 'vite'
+import { nomeDoChunk } from './nome-dos-chunks'
 import { pluginRebaixarCor } from './rebaixar-cor'
 
 // Dentro do compose a API fica atrás da borda, `http://borda:8080`. A web chama caminho relativo e o proxy
@@ -18,7 +19,12 @@ const NAVEGADORES_MINIMOS = ['chrome99', 'edge99', 'firefox97', 'safari15.4']
 export default defineConfig({
   plugins: [react(), tailwindcss(), pluginRebaixarCor()],
   resolve: { conditions: ['source', ...defaultClientConditions] },
-  build: { target: NAVEGADORES_MINIMOS },
+  build: {
+    target: NAVEGADORES_MINIMOS,
+    // A entrada fica `index-*.js`; o chunk da área do operador, `operacao-*.js`; o resto, `parte-*.js` (Tech Spec da
+    // A0, seção 9, "Orçamento"). O porquê de ser pelo nome, e não por `manualChunks`, está em `nome-dos-chunks.ts`.
+    rolldownOptions: { output: { chunkFileNames: nomeDoChunk } },
+  },
   server: { proxy },
   preview: { proxy },
 })

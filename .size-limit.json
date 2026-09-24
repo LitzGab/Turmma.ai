@@ -4,5 +4,11 @@
     "path": "apps/web/dist/assets/index-*.js",
     "limit": "150 kB",
     "brotli": true
+  },
+  {
+    "name": "JS da área do operador (o chunk operacao-*.js, só por import(); a escola nunca o baixa)",
+    "path": "apps/web/dist/assets/operacao-*.js",
+    "limit": "60 kB",
+    "brotli": true
   }
 ]

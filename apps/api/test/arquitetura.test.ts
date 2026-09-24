@@ -125,9 +125,12 @@ function usosDaOperacao(texto: string): string[] {
   return [...porImport, ...porNamespace, ...peloArquivo, ...porSql]
 }
 
-/** Teste e apoio de teste (`*.test.ts`, e o que mora numa pasta `test/`, como a bancada de operadores da tarefa 4.0). */
+/**
+ * Teste e apoio de teste (`*.test.ts`, o que mora numa pasta `test/`, como a bancada de operadores da tarefa 4.0, e o
+ * e2e, cujo apoio cria e apaga o operador que entra pela tela na tarefa 10.0).
+ */
 function deTeste(caminho: string): boolean {
-  return /\.test\.ts$/.test(caminho) || /(^|\/)test\//.test(caminho)
+  return /\.test\.ts$/.test(caminho) || /(^|\/)test\//.test(caminho) || /^e2e\//.test(caminho)
 }
 
 function quemTocaAOperacao(arquivos: readonly Arquivo[]): string[] {

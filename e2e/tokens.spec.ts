@@ -181,8 +181,9 @@ test.describe('pele da D72 nos componentes compartilhados', () => {
     expect(await link.evaluate((elemento) => [getComputedStyle(elemento).color, getComputedStyle(elemento).textDecorationLine])).toEqual(['rgb(180, 82, 15)', 'underline'])
     await tabAteOAnel(page, page.getByRole('button', { name: 'Sair' }), 'botão Sair')
 
-    // Sobre o preto, o anel preto some: ali ele é `caramelo-noite`. A faixa preta chega com a casca da operação (10.0);
-    // aqui ela é montada na página para provar a regra do `estilos.css` antes de alguém depender dela.
+    // Sobre o preto, o anel preto some: ali ele é `caramelo-noite`. Aqui a faixa é montada na página, para provar a regra
+    // do `estilos.css` sem depender da API da operação; na faixa de verdade, o "Sair" da casca da operação é conferido
+    // em `operacao.spec.ts` (tarefa 10.0).
     await page.evaluate(() => {
       document.body.insertAdjacentHTML('beforeend', '<div class="bg-noite" style="background:#0d0d0d;padding:8px"><button type="button">Botão sobre o preto</button></div>')
     })
