@@ -123,7 +123,8 @@ staging nasce quando alguém de fora precisar usar sozinho (D31).
 Os agentes são os três da D32 revista — Assistente de ensino, Tutor e Analista de desempenho
 escolar —, e a pele é uma só, a da D72, com a navegação da D73.
 
-## A0 — `apresentacao-operacao` [ ]
+## A0 — `apresentacao-operacao` [x]
+Concluída em 24/09/2026, validada em tasks/prd-apresentacao-operacao/validacao.md.
 **Depende de:** F1
 
 A identidade do operador Turmma (D76), e a pele da D72 no `apps/web` inteiro. Conta de operador

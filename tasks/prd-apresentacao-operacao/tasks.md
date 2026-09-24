@@ -56,9 +56,9 @@
   - [x] 8.4 Testes: C26–C31, C32 e C39 (sessão), C36 e C36b (`rl:ip`), C37, C43, C44, C46 (entrada)
 
 - [x] **9.0 — Expurgo das tabelas da operação e a linha do runbook**
-  - [ ] 9.1 Alvos novos no `apagarLoteVencido`, com a justificativa reescrita
-  - [ ] 9.2 Linha no `docs/runbook.md`: com o Redis fora, o caminho é `ops:*`
-  - [ ] 9.3 Testes: C38, e a entrada do expurgo no C45
+  - [x] 9.1 Alvos novos no `apagarLoteVencido`, com a justificativa reescrita
+  - [x] 9.2 Linha no `docs/runbook.md`: com o Redis fora, o caminho é `ops:*`
+  - [x] 9.3 Testes: C38, e a entrada do expurgo no C45
 
 - [x] **10.0 — Web do operador: chunk, sessão, casca, entrar e MFA**
   - [x] 10.1 Chunk `operacao-*.js` com fallback e fronteira de erro
