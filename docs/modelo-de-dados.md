@@ -19,6 +19,12 @@ inatividade da sessão é configurável por escola, com padrão diferente para a
 `situacao` tem unicidade parcial: um `em_curso` por escola. `Periodo` (bimestre), `inep`,
 `endereco` e a configuração de retenção entram quando a funcionalidade que os usa chegar.
 
+Rede e escola nascem só pelo operador Turmma (`ops:escola` ou o painel da operação, A0b), e o
+**id delas pode vir do pedido**: a web sorteia um UUID v4 ou v7 ao abrir o diálogo, e o clique
+duplo repete o mesmo id, que o banco recebe com `on conflict do nothing` e devolve sem criar
+outra (Tech Spec da A0b, seção 7c). Só esse id, e só nessas duas tabelas, vem de fora; o resto
+continua `uuidv7()` do banco. O cliente não escolhe um id legível: o contrato só aceita v4 e v7.
+
 ## Pessoas e vínculos
 
 Implementado no F1. A forma exata das tabelas, com unicidades, índices e checks, está na

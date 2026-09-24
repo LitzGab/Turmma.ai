@@ -134,7 +134,7 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
 
   /** O convite pelo serviço que o comando chama, com o relógio escolhido: é como se ele tivesse sido gerado naquela hora. */
   async function convidarEm(escolaId: string, agora: Date, email = `convidada-${randomUUID()}@escola.invalid`): Promise<Convite> {
-    const { conviteId, token } = await criarConviteDeCoordenador(bancada.banco, OPERADOR, { slug: await slugDe(escolaId), email, nome: NOME_DO_CONVIDADO }, { agora: () => agora })
+    const { conviteId, token } = await criarConviteDeCoordenador(bancada.banco, async () => OPERADOR, { slug: await slugDe(escolaId), email, nome: NOME_DO_CONVIDADO }, { agora: () => agora })
     return { conviteId, token, email, ...(await alvoDoConvite(conviteId)) }
   }
 

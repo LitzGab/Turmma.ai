@@ -10,6 +10,12 @@ import { criarAlunosComMatricula, criarSessoesSinteticas, emissorDeTokenSintetic
 /** O operador que os testes gravam na auditoria da rede e da escola que criam. */
 export const OPERADOR_DE_TESTE = 'teste-integracao'
 
+/**
+ * O autor da rede e da escola que a bancada cria: fixo, sem conferir operador ativo. A bancada não é o comando nem o
+ * painel, e os testes que criam operador ativo também criam escola por ela.
+ */
+export const autorDaBancada = async (): Promise<string> => OPERADOR_DE_TESTE
+
 export interface SessaoDeTeste {
   readonly escolaId: string
   readonly usuarioId: string
@@ -46,8 +52,8 @@ export class BancadaDeSessoes {
 
   /** Uma rede independente e uma escola nova nela, com endereço sorteado. */
   async escola(): Promise<string> {
-    const redeId = await criarRede(this.banco, OPERADOR_DE_TESTE, { nome: 'Rede sintética de teste', tipo: 'independente' })
-    const escolaId = await criarEscola(this.banco, OPERADOR_DE_TESTE, { redeId, nome: 'Escola sintética de teste', slug: `teste-${randomUUID()}` })
+    const { id: redeId } = await criarRede(this.banco, autorDaBancada, { id: randomUUID(), nome: 'Rede sintética de teste', tipo: 'independente' })
+    const { id: escolaId } = await criarEscola(this.banco, autorDaBancada, { id: randomUUID(), redeId, nome: 'Escola sintética de teste', slug: `teste-${randomUUID()}` })
     this.#escolas.push(escolaId)
     return escolaId
   }
@@ -57,11 +63,11 @@ export class BancadaDeSessoes {
    * F1 só se grava por comando ou seed: a tela é do F14). As escolas voltam na ordem em que nasceram.
    */
   async redeComEscolas(quantidade: number, ipsDeSaida: readonly string[]): Promise<string[]> {
-    const redeId = await criarRede(this.banco, OPERADOR_DE_TESTE, { nome: 'Rede municipal sintética de teste', tipo: 'prefeitura' })
+    const { id: redeId } = await criarRede(this.banco, autorDaBancada, { id: randomUUID(), nome: 'Rede municipal sintética de teste', tipo: 'prefeitura' })
     await this.pool.query('update rede set ips_saida = $1::inet[] where id = $2', [ipsDeSaida, redeId])
     const escolas: string[] = []
     for (let posicao = 0; posicao < quantidade; posicao++) {
-      const escolaId = await criarEscola(this.banco, OPERADOR_DE_TESTE, { redeId, nome: 'Escola municipal sintética de teste', slug: `teste-${randomUUID()}` })
+      const { id: escolaId } = await criarEscola(this.banco, autorDaBancada, { id: randomUUID(), redeId, nome: 'Escola municipal sintética de teste', slug: `teste-${randomUUID()}` })
       this.#escolas.push(escolaId)
       escolas.push(escolaId)
     }

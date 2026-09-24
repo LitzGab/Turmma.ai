@@ -19,6 +19,8 @@ import { EuDoOperadorService } from './eu.service.js'
 import { FalhasDeEntradaDaOperacao } from './falhas-de-entrada.js'
 import { provedoresDaGuardaDeOperador } from './guarda-de-operador.js'
 import { OperadorRepository } from './operador.repository.js'
+import { PainelController } from './painel.controller.js'
+import { PainelService } from './painel.service.js'
 import { SegundoFatorDoOperadorController } from './segundo-fator.controller.js'
 import { SegundoFatorDoOperadorService } from './segundo-fator.service.js'
 import { SessaoDoOperadorController } from './sessao.controller.js'
@@ -36,7 +38,8 @@ export interface OpcoesDoModuloDaOperacao {
 
 /**
  * A área da operação na API (Tech Spec da A0): as rotas `/v1/operacao/*`, com a `GuardaDeOperador`, e as de entrada: o
- * convite (5.0), a entrada por e-mail (6.0), o segundo fator (7.0), renovar e sair (8.0). O semáforo, o hash de
+ * convite (5.0), a entrada por e-mail (6.0), o segundo fator (7.0), renovar e sair (8.0). Desde a A0b, o painel: rede e
+ * escola (`PainelController`), o único alcance entre escolas da API. O semáforo, o hash de
  * senha, o contador de tentativas e o cliente do Redis de fila do login vêm do `SessaoModule`, que os exporta como
  * global: a mesma instância do login.
  */
@@ -45,7 +48,7 @@ export class OperacaoModule {
   static com(identidade: ConfiguracaoIdentidade, opcoes: OpcoesDoModuloDaOperacao): DynamicModule {
     return {
       module: OperacaoModule,
-      controllers: [EuDoOperadorController, ConviteDeOperadorController, EntradaDoOperadorController, SegundoFatorDoOperadorController, SessaoDoOperadorController],
+      controllers: [EuDoOperadorController, ConviteDeOperadorController, EntradaDoOperadorController, SegundoFatorDoOperadorController, SessaoDoOperadorController, PainelController],
       providers: [
         ...provedoresDaGuardaDeOperador(identidade),
         // Uma série só para as duas etapas da entrada, criada uma vez.
@@ -96,6 +99,7 @@ export class OperacaoModule {
           inject: [BANCO],
         },
         { provide: EuDoOperadorService, useFactory: (banco: Banco) => new EuDoOperadorService(new OperadorRepository(banco)), inject: [BANCO] },
+        { provide: PainelService, useFactory: (banco: Banco) => new PainelService(banco), inject: [BANCO] },
       ],
     }
   }

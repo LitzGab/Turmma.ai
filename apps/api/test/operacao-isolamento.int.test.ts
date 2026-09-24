@@ -158,7 +158,10 @@ describe('área da operação: as cercas entre a operação e a escola (tarefa 4
   describe('C46: nenhuma credencial de escola alcança rota da operação com sessão', () => {
     it('sessão de coordenador, professor e aluno, desafio, cookie de escola e nenhuma credencial: toda rota @RotaDeOperacao responde igual a rota inexistente', async () => {
       const daOperacaoComSessao = rotas.filter((rota) => rota.marcador === 'rota')
-      expect(daOperacaoComSessao.map((rota) => `${rota.verbo} ${rota.caminho}`)).toContain('GET /v1/operacao/eu')
+      // I3 (A0b): as rotas do painel entram na varredura, com o corpo que for: a guarda responde antes dele.
+      expect(daOperacaoComSessao.map((rota) => `${rota.verbo} ${rota.caminho}`)).toEqual(
+        expect.arrayContaining(['GET /v1/operacao/eu', 'GET /v1/operacao/redes', 'POST /v1/operacao/redes', 'POST /v1/operacao/escolas']),
+      )
       expect(daOperacaoComSessao.every(daOperacao)).toBe(true)
 
       const escolaId = await escolas.escola()

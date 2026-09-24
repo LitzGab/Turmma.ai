@@ -15,7 +15,8 @@ import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import { abrirBancoDeOperacao, conferirOperador, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
+import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
+import { abrirBancoDeOperacao, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 
 // Mora em `comando.ts` desde a A0; reexportado para quem já o importava daqui (`ops:sessao-sintetica`).
 export { urlDoBancoDeOperacao } from './comando.js'
@@ -76,20 +77,29 @@ export function lerPedidoDeUso(argumentos: string[], relogio: Relogio = relogioD
   return { escolaId: valores.escola.toLowerCase(), dia, mes }
 }
 
-/** O uso da escola do pedido no dia e no mês, lido no contexto dela. */
-export function consultarUso(banco: Banco, pedido: PedidoDeUso): Promise<RespostaDeUso> {
-  const repositorio = new UsoRepository(banco)
-  return executarNoContexto({ requisicaoId: randomUUID(), escolaId: pedido.escolaId }, async () => ({
-    escolaId: pedido.escolaId,
-    dia: { data: pedido.dia, ...(await repositorio.doDia(pedido.dia)) },
-    mes: { referencia: pedido.mes, ...(await repositorio.doMes(pedido.mes)) },
-  }))
+/**
+ * O uso da escola do pedido no dia e no mês, lido no contexto dela, numa transação curta que começa pela conferência do
+ * autor (Tech Spec da A0b, seção 7c, "Autor ativo"): o comando só lê, e mesmo assim só um operador ativo lê.
+ */
+export function consultarUso(banco: Banco, autor: ConferenciaDoAutor, pedido: PedidoDeUso): Promise<RespostaDeUso> {
+  const requisicaoId = randomUUID()
+  return executarNoContexto({ requisicaoId }, () =>
+    banco.transaction(async (tx) => {
+      await autor(tx)
+      const repositorio = new UsoRepository(tx)
+      return executarNoContexto({ requisicaoId, escolaId: pedido.escolaId }, async () => ({
+        escolaId: pedido.escolaId,
+        dia: { data: pedido.dia, ...(await repositorio.doDia(pedido.dia)) },
+        mes: { referencia: pedido.mes, ...(await repositorio.doMes(pedido.mes)) },
+      }))
+    }),
+  )
 }
 
 /**
  * Executa o comando e devolve o código de saída: 0 consultado, 2 argumento ou ambiente inválido, ou `OPERADOR` que não é
- * operador ativo. Argumento e `OPERADOR` são conferidos antes de abrir o banco; o `OPERADOR`, contra os operadores
- * ativos, antes da consulta.
+ * operador ativo. Argumento e formato do `OPERADOR` são conferidos antes de abrir o banco; o `OPERADOR`, contra os
+ * operadores ativos, na transação da consulta, antes dela.
  */
 export async function executarOpsUso(
   argumentos: string[],
@@ -102,8 +112,7 @@ export async function executarOpsUso(
     const operador = lerOperador(ambiente)
     const { banco, fechar } = abrirBanco(ambiente)
     try {
-      await conferirOperador(banco, operador)
-      terminal.saida(`${JSON.stringify(await consultarUso(banco, pedido), null, 2)}\n`)
+      terminal.saida(`${JSON.stringify(await consultarUso(banco, autorDoComando(operador), pedido), null, 2)}\n`)
       return 0
     } finally {
       await fechar()

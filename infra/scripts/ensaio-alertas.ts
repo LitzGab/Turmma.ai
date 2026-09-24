@@ -612,9 +612,11 @@ async function executarPelaLinhaDeComando(): Promise<void> {
   // Escola e sessões sintéticas do ensaio, só no ambiente local (o ensaio e o emissor recusam outro), com o ensaio
   // como operador na auditoria delas.
   const criarEscolaComSessoes: CriarEscolaComSessoes = async (quantidade) => {
-    const redeId = await escolas.criarRede(banco, OPERADOR_DO_ENSAIO, { nome: 'Rede sintética do ensaio', tipo: 'independente' })
+    // O ensaio não é o comando nem o painel: o autor é fixo, sem conferir operador ativo.
+    const autor = async () => OPERADOR_DO_ENSAIO
+    const { id: redeId } = await escolas.criarRede(banco, autor, { id: randomUUID(), nome: 'Rede sintética do ensaio', tipo: 'independente' })
     const slug = `ensaio-${randomUUID()}`
-    const escolaId = await escolas.criarEscola(banco, OPERADOR_DO_ENSAIO, { redeId, nome: 'Escola sintética do ensaio', slug })
+    const { id: escolaId } = await escolas.criarEscola(banco, autor, { id: randomUUID(), redeId, nome: 'Escola sintética do ensaio', slug })
     const emissor = sessoes.emissorDeTokenSintetico(ambiente)
     const criadas = await sessoes.criarSessoesSinteticas(banco, ambiente, { escolaId, papel: 'coordenador', quantidade })
     return { escolaId, slug, tokens: criadas.map((criada) => async () => (await emissor.emitir({ escolaId, usuarioId: criada.usuarioId, sessaoId: criada.sessaoId })).token) }

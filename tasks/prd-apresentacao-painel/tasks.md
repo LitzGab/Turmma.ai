@@ -1,7 +1,7 @@
 # Tarefas — Painel da operação Turmma (A0b)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 0 de 10 concluídas
+**Status:** 1 de 10 concluídas
 
 Aprovadas por delegação do Joaquim em 24/09/2026 ("faça tudo e aprove até criar as tasks"). As 9.0 e
 10.0 levam as pendências da A0 (`tasks/prd-apresentacao-operacao/retro.md`, "Pendências para a A0b")
@@ -9,13 +9,13 @@ que não cabem numa tarefa que já mexe no mesmo código.
 
 ## Lista
 
-- [ ] **1.0 — Rede e escola pelo painel, com o autor conferido na transação**
-  - [ ] 1.1 `OperadorRepository.autorAtivoNaTransacao`; os cinco `ops:*` de escola passam a conferir o
+- [x] **1.0 — Rede e escola pelo painel, com o autor conferido na transação**
+  - [x] 1.1 `OperadorRepository.autorAtivoNaTransacao`; os cinco `ops:*` de escola passam a conferir o
     `OPERADOR` dentro da transação da escrita
-  - [ ] 1.2 `criarRede`/`criarEscola` com o `id` do pedido e `on conflict (id) do nothing`
-  - [ ] 1.3 `GET /redes`, `POST /redes`, `POST /escolas`, com contratos estritos em `packages/shared`
-  - [ ] 1.4 Documentos do desvio: `docs/arquitetura.md` (`operacao`) e `docs/modelo-de-dados.md`
-  - [ ] 1.5 Testes: E1–E5, E11 (criar escola, e pelo comando), E12, E14, I2, I3, A3 (rede e escola)
+  - [x] 1.2 `criarRede`/`criarEscola` com o `id` do pedido e `on conflict (id) do nothing`
+  - [x] 1.3 `GET /redes`, `POST /redes`, `POST /escolas`, com contratos estritos em `packages/shared`
+  - [x] 1.4 Documentos do desvio: `docs/arquitetura.md` (`operacao`) e `docs/modelo-de-dados.md`
+  - [x] 1.5 Testes: E1–E5, E11 (criar escola, e pelo comando), E12, E14, I2, I3, A3 (rede e escola)
 
 - [ ] **2.0 — Convite da coordenação pelo painel: estado, trava, gerar e revogar**
   - [ ] 2.1 `estadoDaCoordenacao`; índice `convite_pendente_unico`

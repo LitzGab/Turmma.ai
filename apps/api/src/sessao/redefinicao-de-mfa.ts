@@ -1,6 +1,7 @@
 import { contextoAtual, ErroDeDominio, executarNoContexto, RegistroDeAuditoria, sessaoDaRequisicao, type Banco } from '@educa/nucleo'
 import { CodigoDeErro, FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR, type FinalidadeDaRedefinicaoDeMfa } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
+import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
 import { RedefinicaoDeMfaRepository } from './redefinicao-de-mfa.repository.js'
 import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
 
@@ -49,6 +50,7 @@ export class RedefinicaoDeMfa {
  * **Pelo operador** (`ops:redefinir-mfa`), a pedido formal da escola, quando ninguém mais da coordenação pode fazê-lo,
  * ou quando a conta também está em outra escola. O comando recebe só o id do usuário e o número do pedido.
  *
+ * - O autor é conferido como primeira instrução da transação (`ConferenciaDoAutor`), antes de ler o usuário.
  * - A escola vem do usuário, nunca do argumento, e cada registro é gravado no contexto da escola dele, com
  *   `autor_operador` e a finalidade `pedido_formal_da_escola`.
  * - As sessões abertas da conta, em todas as escolas, são encerradas na mesma transação (17.4), como na redefinição
@@ -59,32 +61,35 @@ export class RedefinicaoDeMfa {
  * - Usuário inexistente, desativado ou sem conta: `NAO_ENCONTRADO`, sem nada gravado.
  * - Devolve nada: o comando imprime só "ok" ou o código do erro.
  */
-export async function redefinirMfaPeloOperador(banco: Banco, operador: string, usuarioId: string, pedido: number): Promise<void> {
+export async function redefinirMfaPeloOperador(banco: Banco, autor: ConferenciaDoAutor, usuarioId: string, pedido: number): Promise<void> {
   const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
-  const alvo = await executarNoContexto({ requisicaoId }, () => new ResolucaoDeTenantRepository(banco).escolaDoUsuarioParaOperador(usuarioId))
-  if (alvo?.contaId === null || alvo === undefined || !alvo.ativo) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-  const { contaId } = alvo
-  await executarNoContexto({ requisicaoId, escolaId: alvo.escolaId }, () =>
+  await executarNoContexto({ requisicaoId }, () =>
     banco.transaction(async (tx) => {
+      const autorOperador = await autor(tx)
       const resolucao = new ResolucaoDeTenantRepository(tx)
-      const conta = await resolucao.travarContaParaRedefinir(contaId)
-      if (conta === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-      await resolucao.apagarMfa(contaId)
-      await resolucao.encerrarSessoesDaConta(contaId, 'mfa_redefinido')
-      const usuarios = await resolucao.usuariosAtivosDaConta(contaId)
-      const porEscola = new Map<string, string>([[alvo.escolaId, usuarioId]])
-      for (const ativo of usuarios) if (!porEscola.has(ativo.escolaId)) porEscola.set(ativo.escolaId, ativo.usuarioId)
-      for (const [escolaId, entidadeId] of porEscola) {
-        await executarNoContexto({ requisicaoId, escolaId }, () =>
-          registro.gravar(tx, 'usuario.mfa_redefinido', {
-            entidadeId,
-            antes: { mfaAtivo: conta.mfaAtivo },
-            depois: { mfaAtivo: false, pedidoDoOperador: pedido },
-            finalidade: FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR,
-            autorOperador: operador,
-          }),
-        )
-      }
+      const alvo = await resolucao.escolaDoUsuarioParaOperador(usuarioId)
+      if (alvo?.contaId === null || alvo === undefined || !alvo.ativo) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      const { contaId } = alvo
+      await executarNoContexto({ requisicaoId, escolaId: alvo.escolaId }, async () => {
+        const conta = await resolucao.travarContaParaRedefinir(contaId)
+        if (conta === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+        await resolucao.apagarMfa(contaId)
+        await resolucao.encerrarSessoesDaConta(contaId, 'mfa_redefinido')
+        const usuarios = await resolucao.usuariosAtivosDaConta(contaId)
+        const porEscola = new Map<string, string>([[alvo.escolaId, usuarioId]])
+        for (const ativo of usuarios) if (!porEscola.has(ativo.escolaId)) porEscola.set(ativo.escolaId, ativo.usuarioId)
+        for (const [escolaId, entidadeId] of porEscola) {
+          await executarNoContexto({ requisicaoId, escolaId }, () =>
+            registro.gravar(tx, 'usuario.mfa_redefinido', {
+              entidadeId,
+              antes: { mfaAtivo: conta.mfaAtivo },
+              depois: { mfaAtivo: false, pedidoDoOperador: pedido },
+              finalidade: FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR,
+              autorOperador,
+            }),
+          )
+        }
+      })
     }),
   )
 }

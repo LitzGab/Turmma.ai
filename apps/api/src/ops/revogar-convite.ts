@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
 import { revogarConvitePeloOperador } from '../sessao/convite.service.js'
-import { abrirBancoDeOperacao, ArgumentoInvalido, conferirOperador, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
+import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 
 /**
  * A revogação do convite pelo operador (regra 20, item 8; RF19):
@@ -41,8 +41,7 @@ export async function executarOpsRevogarConvite(
     const operador = lerOperador(ambiente)
     const { banco, fechar } = abrirBanco(ambiente)
     try {
-      await conferirOperador(banco, operador)
-      await revogarConvitePeloOperador(banco, operador, conviteId)
+      await revogarConvitePeloOperador(banco, autorDoComando(operador), conviteId)
       terminal.saida('ok\n')
       return 0
     } finally {

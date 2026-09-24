@@ -1,6 +1,6 @@
 import { and, between, eq, sql } from 'drizzle-orm'
 import { contextoAtual } from '../contexto/contexto.js'
-import type { Banco } from '../db/banco.js'
+import type { Banco, TransacaoBanco } from '../db/banco.js'
 import { usoInfraDiario } from '../db/schema/uso-infra-diario.js'
 import { limitesDoMes } from './dia-de-uso.js'
 
@@ -26,7 +26,7 @@ function escolaDoContexto(): string {
  * grava por aqui: não há gravação de uso com a escola vinda de argumento.
  */
 export class UsoRepository {
-  constructor(private readonly banco: Banco) {}
+  constructor(private readonly banco: Banco | TransacaoBanco) {}
 
   /**
    * Grava o valor absoluto das métricas informadas no dia da escola do contexto. A métrica ausente

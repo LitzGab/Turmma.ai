@@ -1,9 +1,14 @@
+import { FORMATO_OPERADOR } from '@educa/shared'
 import { sql } from 'drizzle-orm'
 import { check, index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { escola } from './escola.js'
 
-/** Identificador curto da pessoa da nossa equipe que rodou um comando `ops:*` (`joaquim`, `gabriel-s`). */
-export const FORMATO_OPERADOR = /^[a-z][a-z0-9-]{1,31}$/
+/**
+ * O formato do autor da nossa equipe: a definição mora em `@educa/shared`. O check `auditoria_operador_formato` a escreve
+ * por extenso, porque o drizzle-kit lê o pacote pelo `dist`, que pode estar atrás; `formato-do-operador.int.test.ts` compara o
+ * check do banco com a constante.
+ */
+export { FORMATO_OPERADOR }
 
 /**
  * O registro consultável de quem fez o quê, em qual escola e quando (regra 20, item 10; RF19). Não é

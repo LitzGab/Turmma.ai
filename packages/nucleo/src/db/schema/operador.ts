@@ -69,7 +69,8 @@ export const operador = pgTable(
     desativadoEm: timestamp({ withTimezone: true }),
   },
   (tabela) => [
-    // O mesmo formato de `auditoria.autor_operador` (FORMATO_OPERADOR), e nunca o autor reservado do nascimento.
+    // O `FORMATO_OPERADOR` de `@educa/shared`, escrito por extenso porque o drizzle-kit lê o pacote pelo `dist`, que pode estar atrás; o
+    // teste `formato-do-operador.int.test.ts` compara o check do banco com a constante. Nunca o autor reservado do nascimento.
     check('operador_apelido_formato', sql`${tabela.apelido} ~ '^[a-z][a-z0-9-]{1,31}$' and ${tabela.apelido} <> 'bootstrap'`),
     check('operador_nome_curto', sql`${tabela.nome} is null or char_length(${tabela.nome}) between 1 and 200`),
     check('operador_email_formato', sql`char_length(${tabela.email}) between 3 and 254 and position('@' in ${tabela.email}) > 1`),
@@ -194,6 +195,7 @@ export const auditoriaOperacao = pgTable(
   },
   (tabela) => [
     index('auditoria_operacao_alvo_em_idx').on(tabela.operadorAlvoId, tabela.em),
+    // O `FORMATO_OPERADOR`, como no check do apelido.
     check('auditoria_operacao_autor_formato', sql`${tabela.autor} ~ '^[a-z][a-z0-9-]{1,31}$'`),
     check(
       'auditoria_operacao_acao_valida',

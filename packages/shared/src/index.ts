@@ -186,7 +186,22 @@ export type {
   Vinculo,
   VinculoDaCoordenacao,
 } from './estrutura/vinculo.js'
-export { esquemaRespostaEuDoOperador } from './operacao/eu.js'
+export { esquemaRespostaEuDoOperador, FORMATO_OPERADOR } from './operacao/eu.js'
+export {
+  esquemaIdDoPedido,
+  esquemaNomeDigitado,
+  esquemaPedidoCriarEscola,
+  esquemaPedidoCriarRede,
+  esquemaRedeDoPainel,
+  esquemaRespostaCriadoNoPainel,
+  esquemaRespostaRedesDoPainel,
+  esquemaSlugDaEscola,
+  MAXIMO_DE_REDES_DO_PAINEL,
+  TAMANHO_MAXIMO_NOME_DIGITADO,
+} from './operacao/painel.js'
+export type { PedidoCriarEscola, PedidoCriarRede, RedeDoPainel, RespostaCriadoNoPainel, RespostaRedesDoPainel } from './operacao/painel.js'
+export { FORMATO_SLUG, TAMANHO_MAXIMO_SLUG, TIPOS_DE_REDE } from './estrutura/rede-e-escola.js'
+export type { TipoDeRede } from './estrutura/rede-e-escola.js'
 export type { RespostaEuDoOperador } from './operacao/eu.js'
 export {
   esquemaPedidoAceitarConviteDeOperador,

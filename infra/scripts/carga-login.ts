@@ -328,12 +328,14 @@ async function semearContas(doArquivo: Record<string, string>): Promise<ContasDo
     const senha = randomBytes(18).toString('base64url')
     const senhaErrada = randomBytes(18).toString('base64url')
     const senhaHash = await (await hash.HashDeSenha.criar({ memoriaKib: Number(doArquivo['LOGIN_ARGON2_MEMORIA_KIB']), iteracoes: Number(doArquivo['LOGIN_ARGON2_ITERACOES']) })).gerar(senha)
-    const redeId = await ops.criarRede(banco, OPERADOR_DA_CARGA_DE_LOGIN, { nome: 'Rede sintética do login', tipo: 'independente' })
+    // A carga não é o comando nem o painel: o autor é fixo, sem conferir operador ativo.
+    const autor = async () => OPERADOR_DA_CARGA_DE_LOGIN
+    const { id: redeId } = await ops.criarRede(banco, autor, { id: randomUUID(), nome: 'Rede sintética do login', tipo: 'independente' })
     const slugs = {} as Record<NomeDeEscola, string>
     const emails = {} as Record<NomeDeEscola, string[]>
     for (const nome of NOMES_DAS_ESCOLAS) {
       const slug = `login-${nome.toLowerCase()}-${randomUUID()}`
-      const escolaId = await ops.criarEscola(banco, OPERADOR_DA_CARGA_DE_LOGIN, { redeId, nome: `Escola sintética ${nome}`, slug })
+      const { id: escolaId } = await ops.criarEscola(banco, autor, { id: randomUUID(), redeId, nome: `Escola sintética ${nome}`, slug })
       slugs[nome] = slug
       await sessoes.criarAlunosComMatricula(banco, doArquivo, escolaId, Array.from({ length: ALUNOS_POR_ESCOLA }, (_, posicao) => ({ matricula: matriculaSintetica(posicao), senhaHash })))
       const equipe = await sessoes.criarSessoesSinteticas(banco, doArquivo, { escolaId, papel: 'professor', quantidade: EQUIPE_POR_ESCOLA })

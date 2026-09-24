@@ -11,7 +11,11 @@ import { configurarAplicacao } from '../src/configurar-app.js'
 import { abrirBancoDeOperacao, criarEscola, criarRede, executarOpsEscola, type BancoDoComando } from '../src/ops/escola.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/
+/** O autor dos casos de uso chamados direto, sem o comando: fixo, sem conferir operador ativo. */
+const autorFixo = (apelido: string) => async (): Promise<string> => apelido
+
+// O comando sorteia o id (v4); o painel manda o que a web sorteou (v4 ou v7).
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
 interface Execucao {
   codigo: number
@@ -90,9 +94,9 @@ describe('npm run ops:escola: rede e escola nascem só por comando do operador',
   })
 
   it('borda: o mesmo slug de novo sai com CONFLITO, sem o slug na mensagem, e não cria nada nem audita', async () => {
-    const redeId = await criarRede(banco, 'operador-teste', { nome: 'Rede Sintética do Conflito', tipo: 'grupo' })
+    const { id: redeId } = await criarRede(banco, autorFixo('operador-teste'), { id: randomUUID(), nome: 'Rede Sintética do Conflito', tipo: 'grupo' })
     redes.push(redeId)
-    escolas.push(await criarEscola(banco, 'operador-teste', { redeId, nome: 'Colégio Sintético Original', slug: `conflito-${sufixo}` }))
+    escolas.push((await criarEscola(banco, autorFixo('operador-teste'), { id: randomUUID(), redeId, nome: 'Colégio Sintético Original', slug: `conflito-${sufixo}` })).id)
     const { rows: antes } = await pool.query<{ total: string }>(`select count(*) as total from auditoria where acao = 'escola.criada'`)
 
     const repetida = await rodar(['escola', 'criar', '--rede', redeId, '--nome', 'Outro Colégio Sintético', '--slug', `conflito-${sufixo}`], ambiente)
@@ -118,14 +122,14 @@ describe('npm run ops:escola: rede e escola nascem só por comando do operador',
 
   it('a escola e a rede não nascem sem a auditoria delas: com a gravação recusada, a transação desfaz a criação', async () => {
     const nomeDaRede = `Rede Sintética Sem Auditoria ${sufixo}`
-    await expect(criarRede(banco, 'Operador Invalido', { nome: nomeDaRede, tipo: 'independente' })).rejects.toEqual(new AuditoriaRecusada('sem_autor'))
+    await expect(criarRede(banco, autorFixo('Operador Invalido'), { id: randomUUID(), nome: nomeDaRede, tipo: 'independente' })).rejects.toEqual(new AuditoriaRecusada('sem_autor'))
     const { rows: redesCriadas } = await pool.query('select 1 from rede where nome = $1', [nomeDaRede])
     expect(redesCriadas).toHaveLength(0)
 
-    const redeId = await criarRede(banco, 'operador-teste', { nome: `Rede Sintética Com Auditoria ${sufixo}`, tipo: 'independente' })
+    const { id: redeId } = await criarRede(banco, autorFixo('operador-teste'), { id: randomUUID(), nome: `Rede Sintética Com Auditoria ${sufixo}`, tipo: 'independente' })
     redes.push(redeId)
     const slugSemAuditoria = `sem-auditoria-${sufixo}`
-    await expect(criarEscola(banco, 'Operador Invalido', { redeId, nome: 'Colégio Sintético', slug: slugSemAuditoria })).rejects.toEqual(new AuditoriaRecusada('sem_autor'))
+    await expect(criarEscola(banco, autorFixo('Operador Invalido'), { id: randomUUID(), redeId, nome: 'Colégio Sintético', slug: slugSemAuditoria })).rejects.toEqual(new AuditoriaRecusada('sem_autor'))
     const { rows: escolasCriadas } = await pool.query('select 1 from escola where slug = $1', [slugSemAuditoria])
     expect(escolasCriadas).toHaveLength(0)
   })
@@ -157,15 +161,20 @@ interface RotaRegistrada {
 }
 
 /**
- * Rotas de escrita com `rede(s)` ou `escola(s)` em qualquer segmento fixo que já foram conferidas e não criam
- * rede nem escola. Quem acrescentar uma rota dessas a declara aqui, e a revisão confere:
+ * Rotas de escrita com `rede(s)` ou `escola(s)` em qualquer segmento fixo que já foram conferidas. Quem acrescentar uma
+ * rota dessas a declara aqui, e a revisão confere:
+ * - `POST /v1/operacao/redes` e `POST /v1/operacao/escolas` (A0b, tarefa 1.0): as únicas que criam rede e escola, pelo
+ *   painel da operação. São `@RotaDeOperacao`: só a sessão de operador Turmma as alcança, e credencial de escola
+ *   responde como rota inexistente (C41 e C46). Não é cadastro público (D2).
+ *
+ * As outras não criam rede nem escola:
  * - `PUT /v1/escola/sessao` (5.0): muda a inatividade da escola da sessão, que já existe; não recebe escola nenhuma.
  * - `POST /v1/sessao/escola` (12.0): escolhe ou troca a escola da sessão entre os usuários ativos da conta; recebe só o
  *   `usuarioId`, e a escola vem do banco. Não cria escola nem rede.
  * - `PUT /v1/escola/provedores` (13.0): troca a lista de domínios e tenants do login pela conta da escola da sessão,
  *   que já existe; não recebe escola nenhuma.
  */
-const ROTAS_PERMITIDAS: readonly string[] = ['PUT /v1/escola/sessao', 'POST /v1/sessao/escola', 'PUT /v1/escola/provedores']
+const ROTAS_PERMITIDAS: readonly string[] = ['POST /v1/operacao/redes', 'POST /v1/operacao/escolas', 'PUT /v1/escola/sessao', 'POST /v1/sessao/escola', 'PUT /v1/escola/provedores']
 
 /** Rota que escreve e tem rede ou escola em algum segmento fixo: `POST /v1/escolas`, `POST /v1/escolas/criar`. */
 function criaRedeOuEscola(rota: RotaRegistrada): boolean {
@@ -176,7 +185,7 @@ function criaRedeOuEscola(rota: RotaRegistrada): boolean {
   return fixos.some((segmento) => /(^|[-_.])(redes?|escolas?|instituic(ao|oes)|unidades?)([-_.]|$)/i.test(segmento))
 }
 
-describe('permissão: nenhuma rota da API cria rede nem escola', () => {
+describe('permissão: nenhuma rota da API cria rede nem escola, fora das duas do painel da operação', () => {
   let app: INestApplication
 
   beforeAll(async () => {

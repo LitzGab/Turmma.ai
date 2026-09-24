@@ -176,8 +176,10 @@ export class BancadaDeFila {
    * inventado é recusado pelo banco, e todo teste de fila cria a escola antes de gravar job.
    */
   async escola(): Promise<string> {
-    const redeId = await criarRede(this.banco, OPERADOR_DA_BANCADA, { nome: 'Rede sintética da fila', tipo: 'independente' })
-    return criarEscola(this.banco, OPERADOR_DA_BANCADA, { redeId, nome: 'Escola sintética da fila', slug: `fila-${randomUUID()}` })
+    // A bancada não é o comando nem o painel: o autor é fixo, sem conferir operador ativo.
+    const autor = async () => OPERADOR_DA_BANCADA
+    const { id: redeId } = await criarRede(this.banco, autor, { id: randomUUID(), nome: 'Rede sintética da fila', tipo: 'independente' })
+    return (await criarEscola(this.banco, autor, { id: randomUUID(), redeId, nome: 'Escola sintética da fila', slug: `fila-${randomUUID()}` })).id
   }
 
   /** Enfileira como a API faz: na transação, com a escola e a requisição no contexto. */

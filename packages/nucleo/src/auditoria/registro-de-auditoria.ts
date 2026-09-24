@@ -1,6 +1,6 @@
+import { FORMATO_OPERADOR } from '@educa/shared'
 import { z } from 'zod'
 import { contextoAtual } from '../contexto/contexto.js'
-import { FORMATO_OPERADOR } from '../db/schema/auditoria.js'
 import { ACOES_DE_AUDITORIA, type AcaoDeAuditoria, type DefinicaoDeAcao, type EstadosDaAcao } from './acoes.js'
 import { AuditoriaRecusada } from './auditoria-recusada.js'
 import type { ExecutorDeAuditoria } from './auditoria.repository.js'

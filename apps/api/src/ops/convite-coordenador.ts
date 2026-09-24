@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
 import { criarConviteDeCoordenador, type PedidoDeConvite } from '../sessao/convite.service.js'
-import { abrirBancoDeOperacao, ArgumentoInvalido, conferirOperador, criarArquivoDoToken, esquemaNome, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
+import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, criarArquivoDoToken, esquemaNome, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 
 /**
  * O convite do primeiro coordenador, pelo operador, depois do contrato (RF1; Tech Spec, seção 5, "Operador"):
@@ -15,8 +15,8 @@ import { abrirBancoDeOperacao, ArgumentoInvalido, conferirOperador, criarArquivo
  *
  * - `OPERADOR` e os argumentos são conferidos antes de abrir o banco. O arquivo de `--saida` é criado antes também, com
  *   modo 0600 e sem sobrescrever um que já exista: se ele não pode ser criado, nada é gravado no banco.
- * - Com operador ativo (A0), o `OPERADOR` precisa ser um deles, conferido antes de qualquer escrita; recusado, o
- *   arquivo é apagado.
+ * - Com operador ativo (A0), o `OPERADOR` precisa ser um deles, conferido como primeira instrução da transação,
+ *   antes de ler a escola; recusado, o arquivo é apagado.
  * - O token (32 bytes sorteados) vai só para o arquivo. O terminal mostra o id do convite (que o `ops:revogar-convite`
  *   recebe) e o caminho do arquivo: nunca o token, o nome nem o e-mail. Se o banco falha, o arquivo é apagado.
  * - Escola inexistente sai com `NAO_ENCONTRADO`, e coordenador já ativo com `CONFLITO`, sem o valor recebido.
@@ -76,8 +76,7 @@ export async function executarOpsConviteCoordenador(
     try {
       const { banco, fechar } = abrirBanco(ambiente)
       try {
-        await conferirOperador(banco, operador)
-        const { conviteId, token } = await criarConviteDeCoordenador(banco, operador, pedido)
+        const { conviteId, token } = await criarConviteDeCoordenador(banco, autorDoComando(operador), pedido)
         await arquivo.writeFile(`${token}\n`)
         gravado = true
         terminal.saida(`${JSON.stringify({ conviteId, arquivo: pedido.saida })}\n`)

@@ -335,10 +335,13 @@ describe('arquitetura: os marcadores da operação só na pasta da operação (C
   })
 })
 
+/** As rotas do painel da operação (A0b) que já existem: a I3 prova que as varreduras C36, C41 e C46 as enxergam. */
+const ROTAS_DO_PAINEL = ['GET /v1/operacao/redes', 'POST /v1/operacao/redes', 'POST /v1/operacao/escolas']
+
 describe('arquitetura: a rota @RotaDeOperacao tem a GuardaDeOperador no handler resolvido (C41)', () => {
   it('toda rota @RotaDeOperacao registrada tem a guarda', () => {
     const rotas = rotasDaApi().filter((rota) => rota.marcador === 'rota')
-    expect(rotas.map(nomeDaRota)).toContain('GET /v1/operacao/eu')
+    expect(rotas.map(nomeDaRota)).toEqual(expect.arrayContaining(['GET /v1/operacao/eu', ...ROTAS_DO_PAINEL]))
     expect(rotasDeOperacaoSemGuarda(rotas)).toEqual([])
   })
 
@@ -390,7 +393,8 @@ describe('arquitetura: toda rota @RotaDeOperacao conta pelo rl:op:{sub} (C36, pa
 
   it('em cada rota @RotaDeOperacao registrada, o token de operador conta no rl:op do sub, e em nenhum outro limite', async () => {
     const rotas = rotasDaApi().filter((rota) => rota.marcador === 'rota')
-    expect(rotas.length).toBeGreaterThan(0)
+    // I3 (A0b): as rotas do painel estão entre as varridas.
+    expect(rotas.map(nomeDaRota)).toEqual(expect.arrayContaining(ROTAS_DO_PAINEL))
     for (const rota of rotas) {
       const { guarda, limitador } = guardaComLimitador()
       expect(await guarda.canActivate(execucao(rota, await tokenDeOperador())), nomeDaRota(rota)).toBe(true)
@@ -496,10 +500,15 @@ describe('arquitetura: toda rota @EntradaDeOperacao está num dos três grupos d
 /**
  * C44 (Tech Spec da A0, seção 6; PRD, RF1): o operador e o convite dele nascem só pelo `ops:operador`. Os únicos
  * métodos que os inserem são o `criar` e o `criarConvite` do `OperadorRepository` (e só ele toca as tabelas, C45); aqui
- * se prova que só o comando os chama, e que nenhum módulo da API importa o código dos comandos.
+ * se prova que só o comando os chama, e que nenhum módulo da API importa o código dos comandos, com uma exceção escrita:
+ * o painel da operação (A0b) importa o `ops:escola`, cujos `criarRede` e `criarEscola` são o caso de uso das duas rotas
+ * de criação (Tech Spec da A0b, seção 1). Quem o importa fica preso também em `escola.repository.test.ts` (I2).
  */
 const COMANDO_DO_OPERADOR = 'apps/api/src/ops/operador.ts'
 const PASTA_DOS_COMANDOS = 'apps/api/src/ops/'
+const IMPORTACAO_DOS_COMANDOS = /from\s+['"](?:\.\.?\/)+(?:[^'"]*\/)?ops\/([^'"]+)['"]/g
+/** O arquivo da API, fora de `ops/`, e o comando que ele pode importar. */
+const COMANDOS_QUE_A_API_IMPORTA: Readonly<Record<string, readonly string[]>> = { 'apps/api/src/operacao/painel.service.ts': ['escola.js'] }
 
 /** Os arquivos de produção que criam operador ou convite de operador fora do comando, ou que importam os comandos na API. */
 function quemCriaOperadorForaDoComando(arquivos: readonly Arquivo[]): string[] {
@@ -509,7 +518,11 @@ function quemCriaOperadorForaDoComando(arquivos: readonly Arquivo[]): string[] {
       const codigo = semComentarios(arquivo.texto)
       const chamaORepository = /\bOperadorRepository\b/.test(codigo) && /\.(?:criar|criarConvite)\s*\(/.test(codigo) && arquivo.caminho !== COMANDO_DO_OPERADOR
       const chamaOComando = /\b(?:criarOperador|gerarConviteDeOperador|executarOpsOperador)\s*\(/.test(codigo) && !arquivo.caminho.startsWith(PASTA_DOS_COMANDOS)
-      const importaOsComandos = arquivo.caminho.startsWith('apps/api/src/') && !arquivo.caminho.startsWith(PASTA_DOS_COMANDOS) && /from\s+['"](?:\.\.?\/)+(?:[^'"]*\/)?ops\//.test(codigo)
+      const permitidos = COMANDOS_QUE_A_API_IMPORTA[arquivo.caminho] ?? []
+      const importaOsComandos =
+        arquivo.caminho.startsWith('apps/api/src/') &&
+        !arquivo.caminho.startsWith(PASTA_DOS_COMANDOS) &&
+        [...codigo.matchAll(IMPORTACAO_DOS_COMANDOS)].some((importacao) => !permitidos.includes(importacao[1] ?? ''))
       return chamaORepository || chamaOComando || importaOsComandos
     })
     .map((arquivo) => arquivo.caminho)
@@ -529,12 +542,16 @@ describe('arquitetura: nenhuma rota registrada cria operador (C44)', () => {
       { caminho: 'apps/api/src/operacao/convite.service.ts', texto: "import { OperadorRepository } from './operador.repository.js'\nawait repositorio.criarConvite({ operadorId })" },
       { caminho: 'apps/api/src/operacao/atalho.controller.ts', texto: "import { criarOperador } from '../ops/operador.js'\nawait criarOperador(banco, autor, dados)" },
       { caminho: 'apps/api/src/app.module.ts', texto: "import { algo } from './ops/uso.js'" },
+      // O painel importa só o `ops:escola`: outro comando, ou o escola de outro arquivo, continua reprovado.
+      { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { criarEscola } from '../ops/escola.js'\nimport { executarOpsUso } from '../ops/uso.js'" },
+      { caminho: 'apps/api/src/operacao/eu.service.ts', texto: "import { criarEscola } from '../ops/escola.js'" },
     ]
     const inocentes = [
       { caminho: COMANDO_DO_OPERADOR, texto: "import { OperadorRepository } from '../operacao/operador.repository.js'\nawait repositorio.criar(dados)" },
       { caminho: 'apps/api/src/estrutura/turma.service.ts', texto: 'await turmas.criar({ nome })' },
       { caminho: 'apps/api/src/operacao/eu.service.ts', texto: "import type { OperadorRepository } from './operador.repository.js'\n// nunca chama .criar( daqui" },
       { caminho: 'apps/api/test/registros-operador.int.test.ts', texto: "import { criarOperador } from '../src/ops/operador.js'\nawait criarOperador(banco, autor, dados)" },
+      { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { criarEscola, criarRede } from '../ops/escola.js'" },
     ]
     expect(quemCriaOperadorForaDoComando([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho))
   })

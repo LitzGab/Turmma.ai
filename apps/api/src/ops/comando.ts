@@ -1,13 +1,14 @@
-import { ConfiguracaoInvalida, criarBanco, criarPool, FORMATO_OPERADOR, validarAmbiente, type Banco } from '@educa/nucleo'
+import { ConfiguracaoInvalida, criarBanco, criarPool, validarAmbiente, type Banco } from '@educa/nucleo'
+import { esquemaNomeDigitado, FORMATO_OPERADOR } from '@educa/shared'
 import { open, type FileHandle } from 'node:fs/promises'
 import { z } from 'zod'
-import { OperadorRepository } from '../operacao/operador.repository.js'
+import { OperadorRepository, type ConferenciaDoAutor } from '../operacao/operador.repository.js'
 
 /**
  * O que os comandos do operador (`ops:escola`, `ops:redefinir-mfa`, `ops:convite-coordenador`, `ops:revogar-convite`,
  * `ops:uso` e `ops:operador`) têm em comum: o erro de argumento, que cita só a opção e nunca o valor; o nome aceito; o
- * `OPERADOR` que vai para a auditoria e a conferência dele contra os operadores ativos; a saída do terminal; o arquivo
- * 0600 do token; e o banco de operação, com uma conexão só.
+ * `OPERADOR` que vai para a auditoria e a conferência dele contra os operadores ativos, dentro da transação da escrita; a
+ * saída do terminal; o arquivo 0600 do token; e o banco de operação, com uma conexão só.
  */
 
 export class ArgumentoInvalido extends Error {
@@ -17,18 +18,11 @@ export class ArgumentoInvalido extends Error {
   }
 }
 
-const TAMANHO_MAXIMO_NOME = 200
-
 /**
- * Nome de rede, de escola ou da pessoa convidada (`ops:convite-coordenador`): texto de uma linha, sem caractere de
- * controle, com o mesmo teto do check de `usuario.nome`.
+ * Nome de rede, de escola ou da pessoa convidada (`ops:convite-coordenador`): o mesmo esquema do contrato do painel da
+ * operação (`@educa/shared`), para o comando e a tela aceitarem o mesmo nome.
  */
-export const esquemaNome = z
-  .string()
-  .trim()
-  .min(1)
-  .max(TAMANHO_MAXIMO_NOME)
-  .regex(/^[^\p{Cc}]+$/u)
+export const esquemaNome = esquemaNomeDigitado
 
 const esquemaAmbienteOperador = z.object({ OPERADOR: z.string().regex(FORMATO_OPERADOR) })
 
@@ -46,12 +40,24 @@ export class OperadorRecusado extends Error {
 }
 
 /**
- * A conferência do `OPERADOR` depois de abrir o banco e antes de qualquer escrita (Tech Spec da A0, seção 5,
- * "Nascimento"): sem operador ativo, qualquer `OPERADOR` no formato passa (o nascimento, `bootstrap`); com um, só o
- * apelido de um operador ativo. O `ops:operador` faz a mesma conferência dentro da transação, sob a trava.
+ * O autor dos cinco comandos de escola (`ops:escola`, `ops:convite-coordenador`, `ops:revogar-convite`,
+ * `ops:redefinir-mfa` e `ops:uso`), conferido como primeira instrução da transação do caso de uso (Tech Spec da A0b,
+ * seção 7c, "Autor ativo"):
+ * - o `OPERADOR` é um operador ativo: a linha dele fica em `for share` até o fim da transação, e um `desativar` que
+ *   chegue depois espera a escrita confirmar; o que chegou antes faz a escrita não o achar;
+ * - não há operador ativo nenhum: qualquer `OPERADOR` no formato passa, e é ele o autor (o nascimento, Tech Spec da A0,
+ *   seção 5). O `desativar` nunca deixa zero ativos, então isso só vale antes do primeiro `ops:operador criar`;
+ * - senão, `OperadorRecusado`, e a transação desfaz tudo: nada é lido nem gravado antes desta conferência.
+ *
+ * O `ops:operador` tem a própria conferência, sob a trava dos operadores (`autorSobATrava`).
  */
-export async function conferirOperador(banco: Banco, apelido: string): Promise<void> {
-  if ((await new OperadorRepository(banco).situacaoDoAutor(apelido)) === 'recusado') throw new OperadorRecusado()
+export function autorDoComando(apelido: string): ConferenciaDoAutor {
+  return async (tx) => {
+    const ativo = await OperadorRepository.autorAtivoNaTransacao(tx, { apelido })
+    if (ativo !== undefined) return ativo
+    if ((await new OperadorRepository(tx).contarAtivos()) === 0) return apelido
+    throw new OperadorRecusado()
+  }
 }
 
 /** Cria o arquivo do token só se ele não existe, com modo 0600: só o dono lê. */

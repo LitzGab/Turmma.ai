@@ -1,6 +1,7 @@
 import { contextoAtual, ErroDeDominio, executarNoContexto, RegistroDeAuditoria, relogioDoSistema, VALIDADE_DO_CONVITE_HORAS, type Banco, type Relogio } from '@educa/nucleo'
 import { CodigoDeErro, type PedidoAceitarConvite, type RespostaAceitarConvite, type RespostaConsultarConvite } from '@educa/shared'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
 import type { BilheteDeConvite } from './bilhete-de-convite.js'
 import { ConviteRepository } from './convite.repository.js'
 import type { EmissorDeDesafio } from './desafio.js'
@@ -143,25 +144,30 @@ export interface PedidoDeConvite {
  * - grava o convite com o SHA-256 do token, válido por 72 h, e `convite.criado` com o operador e se a conta é nova
  *   (sem o e-mail: é o que reconstitui um e-mail digitado errado).
  *
+ * O autor é conferido como primeira instrução da transação (`ConferenciaDoAutor`), antes de ler a escola do slug.
  * Escola inexistente: `NAO_ENCONTRADO`, antes de criar qualquer coisa. Devolve o id do convite e o token, que o comando
  * grava num arquivo 0600: nunca o token no terminal, nem nome ou e-mail.
  */
-export async function criarConviteDeCoordenador(banco: Banco, operador: string, pedido: PedidoDeConvite, relogio: Relogio = relogioDoSistema): Promise<{ conviteId: string; token: string }> {
+export async function criarConviteDeCoordenador(banco: Banco, autor: ConferenciaDoAutor, pedido: PedidoDeConvite, relogio: Relogio = relogioDoSistema): Promise<{ conviteId: string; token: string }> {
   const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
-  const escolaId = await executarNoContexto({ requisicaoId }, () => new ResolucaoDeTenantRepository(banco).escolaPorSlug(pedido.slug))
-  if (escolaId === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
   const token = randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')
   const expiraEm = new Date(relogio.agora().getTime() + VALIDADE_DO_CONVITE_HORAS * 60 * 60 * 1_000)
-  const conviteId = await executarNoContexto({ requisicaoId, escolaId }, () =>
+  const conviteId = await executarNoContexto({ requisicaoId }, () =>
     banco.transaction(async (tx) => {
-      const conta = await new ResolucaoDeTenantRepository(tx).contaParaConvite(normalizarEmail(pedido.email))
-      const convites = new ConviteRepository(tx)
-      const usuarioId = await convites.usuarioConvidado(conta.id, pedido.nome)
-      if (usuarioId === undefined) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
-      await convites.revogarConvitesDoUsuario(usuarioId)
-      const criado = await convites.criarConvite({ tokenHash: hashDoToken(token), usuarioId, expiraEm })
-      await registro.gravar(tx, 'convite.criado', { entidadeId: criado, depois: { usuarioId, expiraEm: expiraEm.toISOString(), contaNova: conta.nova }, autorOperador: operador })
-      return criado
+      // O autor primeiro: quem não passa não lê nem grava nada, nem a escola do slug.
+      const autorOperador = await autor(tx)
+      const escolaId = await new ResolucaoDeTenantRepository(tx).escolaPorSlug(pedido.slug)
+      if (escolaId === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      return executarNoContexto({ requisicaoId, escolaId }, async () => {
+        const conta = await new ResolucaoDeTenantRepository(tx).contaParaConvite(normalizarEmail(pedido.email))
+        const convites = new ConviteRepository(tx)
+        const usuarioId = await convites.usuarioConvidado(conta.id, pedido.nome)
+        if (usuarioId === undefined) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
+        await convites.revogarConvitesDoUsuario(usuarioId)
+        const criado = await convites.criarConvite({ tokenHash: hashDoToken(token), usuarioId, expiraEm })
+        await registro.gravar(tx, 'convite.criado', { entidadeId: criado, depois: { usuarioId, expiraEm: expiraEm.toISOString(), contaNova: conta.nova }, autorOperador })
+        return criado
+      })
     }),
   )
   return { conviteId, token }
@@ -169,17 +175,21 @@ export async function criarConviteDeCoordenador(banco: Banco, operador: string, 
 
 /**
  * A revogação do convite pelo operador (`ops:revogar-convite`; RF19): a escola vem do convite, nunca do argumento, e a
- * revogação e `convite.revogado` são uma transação no contexto dela. Convite inexistente ou já revogado:
- * `NAO_ENCONTRADO`, sem nada gravado. Revogar um convite já aceito por conta que tinha senha impede a ativação no login.
+ * revogação e `convite.revogado` são uma transação no contexto dela, com o autor conferido como primeira instrução.
+ * Convite inexistente ou já revogado: `NAO_ENCONTRADO`, sem nada gravado. Revogar um convite já aceito por conta que
+ * tinha senha impede a ativação no login.
  */
-export async function revogarConvitePeloOperador(banco: Banco, operador: string, conviteId: string): Promise<void> {
+export async function revogarConvitePeloOperador(banco: Banco, autor: ConferenciaDoAutor, conviteId: string): Promise<void> {
   const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
-  const escolaId = await executarNoContexto({ requisicaoId }, () => new ResolucaoDeTenantRepository(banco).escolaDoConviteParaOperador(conviteId))
-  if (escolaId === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-  await executarNoContexto({ requisicaoId, escolaId }, () =>
+  await executarNoContexto({ requisicaoId }, () =>
     banco.transaction(async (tx) => {
-      if (!(await new ConviteRepository(tx).revogar(conviteId))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-      await registro.gravar(tx, 'convite.revogado', { entidadeId: conviteId, autorOperador: operador })
+      const autorOperador = await autor(tx)
+      const escolaId = await new ResolucaoDeTenantRepository(tx).escolaDoConviteParaOperador(conviteId)
+      if (escolaId === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      await executarNoContexto({ requisicaoId, escolaId }, async () => {
+        if (!(await new ConviteRepository(tx).revogar(conviteId))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+        await registro.gravar(tx, 'convite.revogado', { entidadeId: conviteId, autorOperador })
+      })
     }),
   )
 }

@@ -1,5 +1,6 @@
 import {
   ConfiguracaoInvalida,
+  contextoAtual,
   ErroDeDominio,
   erroDoPostgresEm,
   executarNoContexto,
@@ -17,23 +18,27 @@ import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import { abrirBancoDeOperacao, ArgumentoInvalido, conferirOperador, esquemaNome, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
-import { RedeEEscolaRepository } from './escola.repository.js'
+import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
+import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, esquemaNome, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
+import { RedeEEscolaRepository, type Criada } from './escola.repository.js'
 
 // O que é comum aos comandos do operador mora em `comando.ts`; reexportado aqui para quem já o importava daqui.
 export { abrirBancoDeOperacao, ArgumentoInvalido, lerOperador, type BancoDoComando, type SaidaDoComando }
 
 /**
- * Criação de rede e de escola pelo operador (RF1, D2). Não há rota pública de cadastro: a escola nasce
- * só por aqui.
+ * Criação de rede e de escola pelo operador Turmma (RF1, D2): por este comando, ou pelo painel da operação
+ * (`POST /v1/operacao/redes` e `/escolas`, A0b), que chama os mesmos `criarRede` e `criarEscola`. Não há rota de escola
+ * nem cadastro público: a escola nasce só por aqui.
  *
  *   OPERADOR=<pessoa da equipe> npm run -s ops:escola -- rede criar --nome <nome> --tipo prefeitura|grupo|independente
  *   OPERADOR=<pessoa da equipe> npm run -s ops:escola -- escola criar --rede <uuid> --nome <nome> --slug <endereco>
  *
  * - `OPERADOR` é obrigatório em qualquer ambiente e vai para `autor_operador` da auditoria. Sem ele, o
- *   comando recusa antes de abrir conexão com o banco. Com operador ativo (A0), só o apelido de um deles passa.
+ *   comando recusa antes de abrir conexão com o banco. Com operador ativo (A0), só o apelido de um deles passa,
+ *   conferido dentro da transação da criação (`autorDoComando`).
+ * - O comando sorteia o id da rede e da escola; o painel manda o que a web sorteou.
  * - A criação e a auditoria dela são uma transação só. A da escola é gravada no contexto da escola
- *   criada; a da rede, com escola nula.
+ *   criada; a da rede, com escola nula. O pedido repetido (mesmo id, mesmos dados) devolve o id sem auditoria nova.
  * - Imprime só o id criado, em JSON. Nenhum comando do operador lista ou lê pessoa.
  */
 
@@ -80,31 +85,40 @@ export function lerPedidoDoOperador(argumentos: string[]): PedidoDoOperador {
 
 const registro = new RegistroDeAuditoria()
 
-/** Cria a rede e grava `rede.criada`, com escola nula e o operador como autor, na mesma transação. */
-export function criarRede(banco: Banco, operador: string, pedido: { nome: string; tipo: TipoDeRede }): Promise<string> {
-  return executarNoContexto({ requisicaoId: randomUUID() }, () =>
+/**
+ * Cria a rede e grava `rede.criada`, com escola nula e o autor conferido, na mesma transação. O autor é a primeira
+ * instrução dela (`ConferenciaDoAutor`): quem não passa não grava nada. O pedido repetido (mesmo id, mesmos dados)
+ * devolve o mesmo id sem auditoria nova; o mesmo id com outros dados, `CONFLITO`.
+ */
+export function criarRede(banco: Banco, autor: ConferenciaDoAutor, pedido: { id: string; nome: string; tipo: TipoDeRede }): Promise<Criada> {
+  return executarNoContexto({ requisicaoId: contextoAtual()?.requisicaoId ?? randomUUID() }, () =>
     banco.transaction(async (tx) => {
-      const redeId = await new RedeEEscolaRepository(tx).criarRede(pedido)
-      await registro.gravar(tx, 'rede.criada', { entidadeId: redeId, depois: { tipo: pedido.tipo }, autorOperador: operador })
-      return redeId
+      const autorOperador = await autor(tx)
+      const criada = await new RedeEEscolaRepository(tx).criarRede(pedido)
+      if (criada.nova) await registro.gravar(tx, 'rede.criada', { entidadeId: criada.id, depois: { tipo: pedido.tipo }, autorOperador })
+      return criada
     }),
   )
 }
 
 /**
- * Cria a escola e grava `escola.criada` no contexto dela, na mesma transação. Slug repetido sai como
- * `CONFLITO` e rede inexistente como `NAO_ENCONTRADO`, sem o valor recebido.
+ * Cria a escola e grava `escola.criada` no contexto dela, na mesma transação, com o autor conferido como primeira
+ * instrução. Slug de outra escola e o mesmo id com outros dados saem como `CONFLITO`, e rede inexistente como
+ * `NAO_ENCONTRADO`, sem o valor recebido. O pedido repetido devolve o mesmo id sem auditoria nova.
  */
-export async function criarEscola(banco: Banco, operador: string, pedido: { redeId: string; nome: string; slug: string }): Promise<string> {
-  const requisicaoId = randomUUID()
+export async function criarEscola(banco: Banco, autor: ConferenciaDoAutor, pedido: { id: string; redeId: string; nome: string; slug: string }): Promise<Criada> {
+  const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
   try {
     return await executarNoContexto({ requisicaoId }, () =>
       banco.transaction(async (tx) => {
-        const escolaId = await new RedeEEscolaRepository(tx).criarEscola(pedido)
-        await executarNoContexto({ requisicaoId, escolaId }, () =>
-          registro.gravar(tx, 'escola.criada', { entidadeId: escolaId, depois: { redeId: pedido.redeId }, autorOperador: operador }),
-        )
-        return escolaId
+        const autorOperador = await autor(tx)
+        const criada = await new RedeEEscolaRepository(tx).criarEscola(pedido)
+        if (criada.nova) {
+          await executarNoContexto({ requisicaoId, escolaId: criada.id }, () =>
+            registro.gravar(tx, 'escola.criada', { entidadeId: criada.id, depois: { redeId: pedido.redeId }, autorOperador }),
+          )
+        }
+        return criada
       }),
     )
   } catch (erro) {
@@ -122,8 +136,8 @@ const MENSAGEM_DO_OPERADOR: Partial<Record<CodigoDeErro, string>> = {
 
 /**
  * Executa o comando e devolve o código de saída: 0 criado, 1 erro (`CONFLITO`, `NAO_ENCONTRADO` ou
- * `ERRO_INTERNO` resumido), 2 argumento ou ambiente inválido. Argumento e `OPERADOR` são conferidos antes de
- * abrir o banco.
+ * `ERRO_INTERNO` resumido), 2 argumento ou ambiente inválido, ou `OPERADOR` que não é operador ativo. Argumento e
+ * formato do `OPERADOR` são conferidos antes de abrir o banco; o `OPERADOR` contra os ativos, dentro da transação.
  */
 export async function executarOpsEscola(
   argumentos: string[],
@@ -136,11 +150,11 @@ export async function executarOpsEscola(
     const operador = lerOperador(ambiente)
     const { banco, fechar } = abrirBanco(ambiente)
     try {
-      await conferirOperador(banco, operador)
+      const autor = autorDoComando(operador)
       const resposta =
         pedido.entidade === 'rede'
-          ? { redeId: await criarRede(banco, operador, pedido) }
-          : { escolaId: await criarEscola(banco, operador, pedido) }
+          ? { redeId: (await criarRede(banco, autor, { id: randomUUID(), nome: pedido.nome, tipo: pedido.tipo })).id }
+          : { escolaId: (await criarEscola(banco, autor, { id: randomUUID(), redeId: pedido.redeId, nome: pedido.nome, slug: pedido.slug })).id }
       terminal.saida(`${JSON.stringify(resposta)}\n`)
       return 0
     } finally {

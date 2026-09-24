@@ -1,7 +1,14 @@
 import { z } from 'zod'
 
-/** O formato do apelido do operador, o mesmo do `FORMATO_OPERADOR` do comando e do check do banco. */
-const apelidoDoOperador = z.string().regex(/^[a-z][a-z0-9-]{1,31}$/)
+/**
+ * Identificador curto da pessoa da nossa equipe (`joaquim`, `gabriel-s`): o apelido do operador e o `OPERADOR` dos
+ * comandos `ops:*`, que vai para `auditoria.autor_operador`. É a única definição: os checks do banco
+ * (`operador_apelido_formato`, `auditoria_operador_formato` e `auditoria_operacao_autor_formato`) são gerados desta
+ * expressão, e um teste compara o que está no banco com ela.
+ */
+export const FORMATO_OPERADOR = /^[a-z][a-z0-9-]{1,31}$/
+
+const apelidoDoOperador = z.string().regex(FORMATO_OPERADOR)
 
 /**
  * Corpo de `GET /v1/operacao/eu` (Tech Spec da A0, seção 4): o apelido e o nome do operador da sessão, e nada mais.

@@ -25,13 +25,15 @@ function arquivosDeCodigo(): { caminho: string; texto: string }[] {
 const CRIACAO_DE_REDE_OU_ESCOLA = /\binsert\s*\(\s*(?:schema\.)?(?:rede|escola)\b|\binsert\s+into\s+(?:"?public"?\.)?"?(?:rede|escola)"?[\s(]/i
 
 /**
- * Quem, fora de arquivo `.test.ts`, importa o comando `ops:escola` (que exporta `criarRede` e `criarEscola`). Só o
- * que monta escola sintética: a bancada dos testes de integração da API (que desde a tarefa 2.0 exige sessão real), a
+ * Quem, fora de arquivo `.test.ts`, importa o comando `ops:escola` (que exporta `criarRede` e `criarEscola`): o painel da
+ * operação (`painel.service.ts`, A0b), a única rota que cria rede e escola, só com sessão de operador Turmma; e o que
+ * monta escola sintética: a bancada dos testes de integração da API (que desde a tarefa 2.0 exige sessão real), a
  * bancada da fila (desde a tarefa 3.0 `job_registro` tem FK para `escola`), o ensaio de alertas, que só roda com
  * `AMBIENTE=local`, e o cenário de carga "login às 7h30" (16.0), que monta as escolas A, B e C no banco do compose de
- * carga. Uma rota que chame a criação, com qualquer nome, entra aqui e a revisão confere.
+ * carga. Outra rota que chame a criação, com qualquer nome, entra aqui e a revisão confere.
  */
 const IMPORTADORES_PERMITIDOS_DO_COMANDO: readonly string[] = [
+  'apps/api/src/operacao/painel.service.ts',
   'apps/api/test/sessao-de-teste.ts',
   'apps/worker/test/fila-de-teste.ts',
   'infra/scripts/carga-login.ts',
@@ -49,12 +51,12 @@ function importacoesRelativas(arquivo: { caminho: string; texto: string }): stri
 }
 
 describe('RedeEEscolaRepository: a criação de rede e escola é só do operador', () => {
-  it('só criarRede e criarEscola saem sem escopo, cada um com justificativa que cita o operador', () => {
+  it('só criarRede e criarEscola saem sem escopo, cada um com justificativa que cita o comando ou o painel do operador', () => {
     const metodos = Object.getOwnPropertyNames(RedeEEscolaRepository.prototype).filter((nome) => nome !== 'constructor')
     const semEscopo = metodos.filter((metodo) => justificativaSemEscopo(RedeEEscolaRepository, metodo) !== undefined)
     expect(metodos.sort()).toEqual(['criarEscola', 'criarRede'])
     expect(semEscopo.sort()).toEqual(['criarEscola', 'criarRede'])
-    for (const metodo of semEscopo) expect(justificativaSemEscopo(RedeEEscolaRepository, metodo), metodo).toMatch(/operador/)
+    for (const metodo of semEscopo) expect(justificativaSemEscopo(RedeEEscolaRepository, metodo), metodo).toMatch(/comando ou o painel do operador/)
   })
 
   it('nenhum código fora do repository do operador cria rede ou escola, e só o comando ops:escola o importa', () => {
@@ -63,11 +65,12 @@ describe('RedeEEscolaRepository: a criação de rede e escola é só do operador
     expect(arquivos.filter((arquivo) => /escola\.repository/.test(arquivo.texto)).map((arquivo) => arquivo.caminho)).toEqual([COMANDO])
   })
 
-  it('nenhum código fora de teste importa o comando: criarRede e criarEscola não chegam a controller nenhum', () => {
+  it('fora de teste, só o painel da operação e as bancadas importam o comando: criarRede e criarEscola chegam a uma rota só, a do operador', () => {
     const importadores = arquivosDeCodigo()
       .filter((arquivo) => importacoesRelativas(arquivo).includes(COMANDO))
       .map((arquivo) => arquivo.caminho)
-    expect(importadores).toEqual(IMPORTADORES_PERMITIDOS_DO_COMANDO)
+    // A ordem da varredura é a do sistema de arquivos: compara as listas ordenadas.
+    expect([...importadores].sort()).toEqual([...IMPORTADORES_PERMITIDOS_DO_COMANDO].sort())
     // A resolução enxerga importação relativa de verdade: o comando importa o repository.
     const comando = arquivosDeCodigo().find((arquivo) => arquivo.caminho === COMANDO)
     expect(comando && importacoesRelativas(comando)).toContain(REPOSITORY)

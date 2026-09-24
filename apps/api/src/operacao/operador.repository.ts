@@ -3,6 +3,7 @@ import {
   auditoriaOperacao,
   codigoRecuperacaoOperador,
   conviteOperador,
+  ErroDeDominio,
   operador,
   sessaoOperador,
   type AcaoDaAuditoriaDaOperacao,
@@ -11,6 +12,7 @@ import {
   type MotivoDeEncerramentoDeOperador,
   type TransacaoBanco,
 } from '@educa/nucleo'
+import { CodigoDeErro } from '@educa/shared'
 import { and, count, eq, exists, isNull, lt, or, sql } from 'drizzle-orm'
 import { DURACAO_DA_SESSAO_DE_OPERADOR_HORAS } from './prazos-da-sessao.js'
 
@@ -49,6 +51,16 @@ export interface CredencialDeEntrada {
  * - `recusado`: há operador ativo, e o `OPERADOR` não existe ou foi desativado.
  */
 export type SituacaoDoAutor = 'bootstrap' | 'ativo' | 'recusado'
+
+/** Quem assina uma escrita do operador: o operador da sessão do painel, pelo id, ou o `OPERADOR` do comando, pelo apelido. */
+export type QuemEscreve = { readonly operadorId: string } | { readonly apelido: string }
+
+/**
+ * A conferência do autor de uma escrita do operador (Tech Spec da A0b, seção 5, "Autor"), que o caso de uso chama como
+ * **primeira instrução da transação dele** e que devolve o apelido que vai para `autor_operador`. Quem não passa lança:
+ * o painel, `SESSAO_ENCERRADA`; o comando, `OperadorRecusado`. O pedido nunca escolhe o autor.
+ */
+export type ConferenciaDoAutor = (tx: TransacaoBanco) => Promise<string>
 
 export interface OperadorAlvo {
   readonly id: string
@@ -117,6 +129,24 @@ export interface OperadorDaSessao {
 export class OperadorRepository {
   constructor(private readonly banco: Banco | TransacaoBanco) {}
 
+  /**
+   * O autor ativo de uma escrita, dentro da transação dela (Tech Spec da A0b, seção 7c, "Autor ativo"): `select apelido
+   * from operador where id (ou apelido) = $1 and desativado_em is null for share`. O `for share` segura a linha até o fim
+   * da transação, e o `desativar` começa pelo `for update` dessa linha: se ele chegou antes, a escrita espera, relê a
+   * condição depois do commit dele e não acha o operador; se a escrita chegou antes, o `desativar` espera ela confirmar,
+   * com a auditoria. Devolve o apelido, ou `undefined` quando não há operador ativo com esse id ou apelido.
+   *
+   * Recebe a transação, e não o banco: fora de uma, o `for share` soltaria a linha na hora e não seguraria nada.
+   */
+  static async autorAtivoNaTransacao(tx: TransacaoBanco, quem: QuemEscreve): Promise<string | undefined> {
+    const [linha] = await tx
+      .select({ apelido: operador.apelido })
+      .from(operador)
+      .where(and('operadorId' in quem ? eq(operador.id, quem.operadorId) : eq(operador.apelido, quem.apelido), isNull(operador.desativadoEm)))
+      .for('share')
+    return linha?.apelido
+  }
+
   /** Põe a transação na fila da trava dos operadores; solta sozinha no commit ou no rollback. */
   async travarOperadores(): Promise<void> {
     await this.banco.execute(sql`select pg_advisory_xact_lock(${CHAVE_DA_TRAVA_DOS_OPERADORES})`)
@@ -152,13 +182,13 @@ export class OperadorRepository {
   /** Apelido ou e-mail repetido sai como erro do banco (23505), que o comando traduz sem o valor. */
   async criar(dados: { apelido: string; nome: string; email: string }): Promise<string> {
     const [criado] = await this.banco.insert(operador).values(dados).returning({ id: operador.id })
-    if (criado === undefined) throw new Error('operador não devolvido pelo insert')
+    if (criado === undefined) throw new ErroDeDominio(CodigoDeErro.ERRO_INTERNO)
     return criado.id
   }
 
   async criarConvite(dados: { operadorId: string; tokenHash: string; expiraEm: Date }): Promise<string> {
     const [criado] = await this.banco.insert(conviteOperador).values(dados).returning({ id: conviteOperador.id })
-    if (criado === undefined) throw new Error('convite de operador não devolvido pelo insert')
+    if (criado === undefined) throw new ErroDeDominio(CodigoDeErro.ERRO_INTERNO)
     return criado.id
   }
 
@@ -378,7 +408,7 @@ export class OperadorRepository {
       .where(and(eq(operador.id, dados.operadorId), isNull(operador.desativadoEm)))
       .returning({ id: operador.id })
     // A linha está travada desde o passo 1: só não casa se alguém mudou a trava; aí nada do aceite fica.
-    if (gravados.length === 0) throw new Error('operador do aceite não gravado')
+    if (gravados.length === 0) throw new ErroDeDominio(CodigoDeErro.ERRO_INTERNO)
     await this.apagarCodigosDeRecuperacao(dados.operadorId)
     return true
   }
@@ -476,7 +506,7 @@ export class OperadorRepository {
       .insert(sessaoOperador)
       .values({ operadorId, refreshHash, expiraEm: sql`now() + make_interval(hours => ${DURACAO_DA_SESSAO_DE_OPERADOR_HORAS})` })
       .returning({ id: sessaoOperador.id })
-    if (criada === undefined) throw new Error('sessão de operador não devolvida pelo insert')
+    if (criada === undefined) throw new ErroDeDominio(CodigoDeErro.ERRO_INTERNO)
     return criada.id
   }
 

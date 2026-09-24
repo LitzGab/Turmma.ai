@@ -1,3 +1,4 @@
+import { FORMATO_SLUG, TAMANHO_MAXIMO_SLUG } from '@educa/shared'
 import { sql } from 'drizzle-orm'
 import { check, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core'
 import { rede } from './rede.js'
@@ -7,13 +8,13 @@ export const INATIVIDADE_ALUNO_PADRAO_MIN = 30
 /** Minutos sem uso até a sessão de professor e coordenador vencer, quando a escola não configurou outro. */
 export const INATIVIDADE_EQUIPE_PADRAO_MIN = 120
 
-/** Endereço da escola: letras minúsculas e dígitos, com hífen só entre eles (`colegio-horizonte`). */
-export const FORMATO_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-export const TAMANHO_MAXIMO_SLUG = 63
+/** O formato e o tamanho do endereço da escola moram em `@educa/shared`, que o contrato do painel também lê. */
+export { FORMATO_SLUG, TAMANHO_MAXIMO_SLUG }
 
 /**
  * A unidade, e o tenant: todo dado de domínio pertence a uma escola e nunca cruza para outra (regra 10).
- * Nasce só por `ops:escola`, nunca por rota (RF1, D2).
+ * Nasce só pelo operador Turmma: o `ops:escola` ou o painel da operação (`POST /v1/operacao/escolas`, A0b), nunca por
+ * rota de escola (RF1, D2). O id pode vir do pedido: é a idempotência do clique duplo no painel.
  *
  * - `slug` é o endereço público da escola (`/e/:slug`), único no sistema inteiro, e o banco confere o
  *   formato: o endereço é público de qualquer jeito (Tech Spec, seção 5).

@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
 import { redefinirMfaPeloOperador } from '../sessao/redefinicao-de-mfa.js'
-import { abrirBancoDeOperacao, ArgumentoInvalido, conferirOperador, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
+import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 
 /**
  * Redefinição do MFA pelo operador, a pedido formal da escola (PRD, caso de borda "Único coordenador perde o app
@@ -13,7 +13,7 @@ import { abrirBancoDeOperacao, ArgumentoInvalido, conferirOperador, lerOperador,
  *   OPERADOR=<pessoa da equipe> npm run -s ops:redefinir-mfa -- --usuario <uuid> --pedido <número do pedido>
  *
  * - `OPERADOR` e os argumentos são conferidos antes de abrir o banco; com operador ativo (A0), o `OPERADOR` precisa ser
- *   um deles, conferido antes de qualquer escrita.
+ *   um deles, conferido como primeira instrução da transação, antes de ler o usuário.
  * - A escola vem do usuário, nunca do argumento. O registro vai para a auditoria de cada escola em que a conta tem
  *   usuário ativo, com `autor_operador`, a finalidade `pedido_formal_da_escola` e o número do pedido.
  * - O pedido é um número (o protocolo do pedido formal da escola), nunca texto: a auditoria fica cinco anos e não
@@ -59,8 +59,7 @@ export async function executarOpsRedefinirMfa(
     const operador = lerOperador(ambiente)
     const { banco, fechar } = abrirBanco(ambiente)
     try {
-      await conferirOperador(banco, operador)
-      await redefinirMfaPeloOperador(banco, operador, pedido.usuarioId, pedido.pedido)
+      await redefinirMfaPeloOperador(banco, autorDoComando(operador), pedido.usuarioId, pedido.pedido)
       terminal.saida('ok\n')
       return 0
     } finally {
