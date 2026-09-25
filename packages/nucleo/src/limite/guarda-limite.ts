@@ -40,6 +40,9 @@ export function acimaDoLimiteDoIp(requisicao: IncomingMessage): boolean {
  * operador que esta guarda verifica. Sem token de operador que confira, não conta nada e deixa passar: quem responde é
  * a `GuardaDeOperador`, com o 404 de uma rota inexistente, sem banco nem Redis. Contar ali daria um 429 que a rota
  * inexistente não dá, e diria que a rota existe. O token vencido conta: ele também chega ao Postgres.
+ *
+ * A rota `@EntradaDeOperacao()` conta por IP no balde próprio da operação (`rl:ip:op`, A0b, tarefa 9.0), nunca no
+ * `rl:ip` nem no `rl:ip-login` da escola: acima dele, recusa com 429, ou só marca a requisição, se é `@LimiteQueRebaixa`.
  */
 export class GuardaDeLimite implements CanActivate {
   constructor(
@@ -57,9 +60,18 @@ export class GuardaDeLimite implements CanActivate {
     if (this.reflector.getAllAndOverride<boolean | undefined>(METADADO_SEM_LIMITE, alvos) === true) return true
 
     const requisicao = execucao.switchToHttp().getRequest<IncomingMessage>()
-    if (marcadorDeOperacao(this.reflector, execucao) === 'rota') return this.#consumirDeOperador(requisicao)
+    const marcador = marcadorDeOperacao(this.reflector, execucao)
+    if (marcador === 'rota') return this.#consumirDeOperador(requisicao)
     const anonima = rotaSemSessao(this.reflector, execucao)
-    if (anonima && this.reflector.getAllAndOverride<boolean | undefined>(METADADO_LIMITE_QUE_REBAIXA, alvos) === true) {
+    const rebaixa = anonima && this.reflector.getAllAndOverride<boolean | undefined>(METADADO_LIMITE_QUE_REBAIXA, alvos) === true
+    if (marcador === 'entrada') {
+      const daOperacao = await this.limitador.consumirDaOperacao(await this.#ipDaRequisicao(requisicao))
+      if (daOperacao.aceita) return true
+      if (!rebaixa) throw new ErroDeDominio(CodigoDeErro.LIMITE_EXCEDIDO, undefined, segundosParaTentarDeNovo(daOperacao.msAteLiberar))
+      ACIMA_DO_LIMITE_DO_IP.add(requisicao)
+      return true
+    }
+    if (rebaixa) {
       const doLogin = await this.limitador.consumirDoLogin(await this.#ipDaRequisicao(requisicao))
       if (!doLogin.aceita) ACIMA_DO_LIMITE_DO_IP.add(requisicao)
       return true

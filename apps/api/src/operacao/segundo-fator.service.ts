@@ -1,4 +1,4 @@
-import { ErroDeDominio, relogioDoSistema, type Ambiente, type Banco, type EmissorDeTokenDeOperador, type Relogio } from '@educa/nucleo'
+import { contextoAtual, ErroDeDominio, executarNoContexto, relogioDoSistema, type Ambiente, type Banco, type EmissorDeTokenDeOperador, type Relogio } from '@educa/nucleo'
 import {
   CodigoDeErro,
   type PedidoConfigurarSegundoFatorDeOperador,
@@ -6,7 +6,8 @@ import {
   type RespostaConfigurarSegundoFatorDeOperador,
   type RespostaSegundoFatorDeOperador,
 } from '@educa/shared'
-import { randomBytes } from 'node:crypto'
+import { Logger } from '@nestjs/common'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { SegredoNaoDecifra, type CifraDoSegredo } from '../sessao/cifra-do-segredo.js'
 import type { ContadorDeTentativas } from '../sessao/contador-de-tentativas.js'
 import type { CookieDeDispositivo } from '../sessao/cookie-dispositivo.js'
@@ -92,9 +93,13 @@ type Desfecho =
  *   O `desativar` começa pelo mesmo `for update`: ou esta transação não acha o operador, ou ele espera por ela e encerra
  *   a sessão que ela abriu.
  * - **Fim:** zera o contador, emite o acesso de 10 min (`operador+jwt`, sem `esc`) e grava os cookies
- *   `turmma_operacao` e `turmma_operacao_dispositivo`, em `/v1/operacao/sessao`.
+ *   `turmma_operacao` e `turmma_operacao_dispositivo`, em `/v1/operacao/sessao`. A sessão já foi gravada: o contador que
+ *   o Redis não zerou (fora, ou recusando) não vira erro para quem entrou, e a resposta segue. Vira a linha
+ *   `operacao.contador_nao_zerado`, com o `requisicaoId` e o `operadorId`, e nada da pessoa (tarefa 9.0 da A0b); o
+ *   contador vence sozinho em 15 min.
  */
 export class SegundoFatorDoOperadorService {
+  readonly #logger = new Logger('operacao')
   readonly #relogio: Relogio
 
   constructor(private readonly dependencias: DependenciasDoSegundoFator) {
@@ -147,7 +152,7 @@ export class SegundoFatorDoOperadorService {
       }
       if (!linha.mfaAtivo) {
         // A linha está travada desde o `for update`, com a versão conferida acima: a ativação não tem como não casar.
-        if (!(await repositorio.ativarSegundoFator(linha.id, linha.mfaVersao))) throw new Error('segundo fator do operador não ativado com a linha travada')
+        if (!(await repositorio.ativarSegundoFator(linha.id, linha.mfaVersao))) throw new ErroDeDominio(CodigoDeErro.ERRO_INTERNO)
         await repositorio.auditar({ autor: linha.apelido, acao: 'operador.mfa_configurado', operadorAlvoId: linha.id })
       }
       const sessaoId = await repositorio.abrirSessao(linha.id, hashDoRefresh(refresh))
@@ -167,7 +172,10 @@ export class SegundoFatorDoOperadorService {
         this.dependencias.falhas.somar()
         throw desfecho.esperaMs > 0 ? contaSegurada(desfecho.esperaMs) : new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
       case 'aberta': {
-        await contador.zerar(desfecho.chave)
+        if (!(await contador.zerar(desfecho.chave))) {
+          const operadorId = verificado.operadorId
+          executarNoContexto({ ...(contextoAtual() ?? { requisicaoId: randomUUID() }), operadorId }, () => this.#logger.warn('operacao.contador_nao_zerado'))
+        }
         const { token, expiraEm } = await emissorDeToken.emitir({ operadorId: verificado.operadorId, sessaoId: desfecho.sessaoId })
         return {
           resposta: { token, expiraEm: expiraEm.toISOString() },

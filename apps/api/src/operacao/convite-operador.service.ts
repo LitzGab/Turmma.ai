@@ -30,7 +30,10 @@ export interface OrigemDoAceite {
  * - **Consultar:** diz só que o convite vale.
  * - **Aceitar:** grava a senha, zera o segundo fator e devolve o desafio `configurar_mfa`, sem sessão e sem cookie: o
  *   aceite não pula o segundo fator. A trava é do banco (`OperadorRepository.aceitarConvite`): dois aceites juntos
- *   gravam uma senha só, e o operador desativado não aceita.
+ *   gravam uma senha só, e o operador desativado não aceita. Na mesma transação, e só no aceite que venceu, as sessões
+ *   abertas da conta são encerradas com o motivo `convite_aceito` (o convite novo é o caminho de recuperar a conta, e
+ *   quem estava com a credencial de antes não segue dentro), e a `AuditoriaOperacao` recebe `convite_operador.aceito`,
+ *   com o próprio operador de autor e alvo (tarefa 9.0): autor, ação, alvo e data, nunca a senha nem o token.
  * - **Hash:** o argon2 roda no semáforo do F1, no balde da equipe com a vez por IP, antes da transação (ela não segura a
  *   linha do operador durante o hash). Acima do limite por IP (`@LimiteQueRebaixa`), o aceite não é recusado: vai para
  *   o fim do balde. O convite que não vale sai antes do hash, sem gastar a vez.
@@ -49,7 +52,14 @@ export class ConviteDeOperadorService {
     const valido = await new OperadorRepository(banco).conviteValidoPorHash(hashDoTokenDeConvite(pedido.token))
     if (valido === undefined) throw conviteInvalido()
     const senhaHash = await semaforo.executar(baldeDaEquipe(origem.ip, origem.acimaDoLimiteDoIp), () => hash.gerar(pedido.senha))
-    const aceito = await banco.transaction((tx) => new OperadorRepository(tx).aceitarConvite({ ...valido, senhaHash }))
+    const aceito = await banco.transaction(async (tx) => {
+      const repositorio = new OperadorRepository(tx)
+      const apelido = await repositorio.aceitarConvite({ ...valido, senhaHash })
+      if (apelido === undefined) return false
+      await repositorio.encerrarSessoes(valido.operadorId, 'convite_aceito')
+      await repositorio.auditar({ autor: apelido, acao: 'convite_operador.aceito', operadorAlvoId: valido.operadorId })
+      return true
+    })
     if (!aceito) throw conviteInvalido()
     return { etapa: 'configurar_mfa', desafio: await emissorDeDesafio.emitir({ operadorId: valido.operadorId, etapa: 'configurar_mfa' }) }
   }

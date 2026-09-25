@@ -61,7 +61,8 @@ describe('ContadorDeTentativas no seguro em memória (Redis de fila fora): a mes
     const contador = new ContadorDeTentativas(redisFora, CHAVE, relogioParado())
     const chave = contador.chaveDe('camila@escola.invalid', 'outro')
     for (let tentativa = 1; tentativa <= 4; tentativa++) await contador.reservar(chave)
-    await contador.zerar(chave)
+    // Com o Redis fora, o seguro zera, e o `zerar` diz que o Redis não confirmou (A0b, tarefa 9.0).
+    expect(await contador.zerar(chave)).toBe(false)
     for (let tentativa = 1; tentativa <= 4; tentativa++) expect(await contador.reservar(chave)).toEqual({ liberada: true, esperaSeFalharMs: 0 })
   })
 

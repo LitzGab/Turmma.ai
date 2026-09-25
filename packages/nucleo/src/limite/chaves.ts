@@ -21,6 +21,14 @@ export const PREFIXO_LIMITE_IP_LOGIN = 'rl:ip-login'
  */
 export const PREFIXO_LIMITE_OPERADOR = 'rl:op'
 
+/**
+ * O limite por IP das sete rotas de entrada da operação Turmma (`@EntradaDeOperacao`: convite, e-mail, segundo fator,
+ * renovar e sair), num balde próprio, com o mesmo teto do anônimo (A0b, tarefa 9.0). A rede de uma escola sai por um IP
+ * só: sem ele, os alunos dela esgotando o `rl:ip` (ou o `rl:ip-login` às 7h30) recusariam ou rebaixariam o operador que
+ * estivesse na mesma rede, e as tentativas contra a entrada do operador gastariam o limite dos alunos.
+ */
+export const PREFIXO_LIMITE_IP_OPERACAO = 'rl:ip:op'
+
 /** Janela de todo limite. Os limites da configuração são "por minuto". */
 export const JANELA_LIMITE_SEGUNDOS = 60
 

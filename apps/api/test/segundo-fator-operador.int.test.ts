@@ -12,7 +12,7 @@ import { DiscoveryService } from '@nestjs/core'
 import type { Redis } from 'ioredis'
 import { createHash, randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { BANCO } from '../src/banco.module.js'
 import { COOKIE_SESSAO_DE_OPERADOR } from '../src/operacao/cookie-de-operador.js'
 import { verificarDesafioDeOperador } from '../src/operacao/desafio-de-operador.js'
@@ -25,6 +25,7 @@ import { CLIENTE_REDIS_LOGIN } from '../src/sessao/sessao.module.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
 import { caminhoConcreto, rotasDe } from './rotas-registradas.js'
 import {
+  ativarNoBanco,
   base32DoGravado,
   codigoDoPasso,
   configurar,
@@ -43,6 +44,7 @@ import {
   pedir,
   subir,
   valorDoCookie,
+  UUID,
   type Cabecalhos,
   type Resposta,
 } from './segundo-fator-de-operador.js'
@@ -332,6 +334,53 @@ describe('segundo fator do operador: configurar e entrar com código (tarefa 7.0
     return app.get<Redis>(CLIENTE_REDIS_LOGIN, { strict: false }).hget(chave, 'falhas')
   }
 
+  describe('o contador que o Redis não zera depois do commit da sessão (A0b, tarefa 9.0)', () => {
+    it('`zerar` que falha: a sessão abre, a resposta é 200 com os dois cookies, e a linha `operacao.contador_nao_zerado` leva só ids, nada da pessoa', async () => {
+      const { operadorId, apelido, nome } = await operadores.operador()
+      const { base32 } = await ativarNoBanco(operadores.pool, operadorId)
+      // Uma falha antes: o contador tem o que zerar.
+      esperarErro(await entrar(url, { desafio: await desafio(operadorId, 'mfa'), codigo: codigoDoPasso(base32, passoAtual() - 10) }), 401, CodigoDeErro.NAO_AUTENTICADO)
+      expect(await falhasNoContador(operadorId, 'outro')).toBe('1')
+
+      // O Redis de fila recusa o `del` do contador, e só ele: a reserva e a marca do desafio passam.
+      const cliente = app.get<Redis>(CLIENTE_REDIS_LOGIN, { strict: false })
+      const recusa = vi.spyOn(cliente, 'del').mockRejectedValue(new Error('recusado pelo teste'))
+      const antes = linhasDeLog.length
+      let resposta: Resposta
+      try {
+        resposta = guardar(await entrar(url, { desafio: await desafio(operadorId, 'mfa'), codigo: codigoDoPasso(base32, passoAtual()) }))
+        expect(recusa).toHaveBeenCalledTimes(1)
+      } finally {
+        recusa.mockRestore()
+      }
+      expect(resposta.status).toBe(200)
+      expect(esquemaRespostaSegundoFatorDeOperador.safeParse(resposta.corpo).success).toBe(true)
+      expect(resposta.setCookie.map((linha) => linha.split('=')[0]).sort()).toEqual([COOKIE_SESSAO_DE_OPERADOR, COOKIE_DISPOSITIVO_DE_OPERADOR].sort())
+      expect((await estadoDoOperador(operadores.pool, operadorId)).sessoesAbertas).toBe(1)
+      // O contador não foi zerado: ficou com a falha de antes e a reserva desta entrada, e quem o zera agora é o
+      // vencimento de 15 min.
+      expect(await falhasNoContador(operadorId, 'outro')).toBe('2')
+
+      const linhas = linhasDeLog
+        .slice(antes)
+        .map((linha) => JSON.parse(linha) as Record<string, unknown>)
+        .filter((linha) => linha['msg'] === 'operacao.contador_nao_zerado')
+      expect(linhas).toEqual([expect.objectContaining({ level: 'warn', origem: 'operacao', operadorId, requisicaoId: expect.stringMatching(UUID) })])
+      const chave = app.get(ContadorDeTentativas).chaveDe(operadorId, 'outro', PREFIXO_DO_CONTADOR_DA_OPERACAO)
+      const texto = JSON.stringify(linhas[0])
+      for (const daPessoa of [apelido, nome, `${apelido}@turmma.invalid`, chave, chave.split(':')[1] ?? chave]) expect(texto).not.toContain(daPessoa)
+      expect(Object.keys(linhas[0] ?? {}).sort()).toEqual(['level', 'msg', 'operadorId', 'origem', 'requisicaoId', 'servico', 'time'])
+    })
+
+    it('com o Redis zerando, a mesma entrada não escreve a linha', async () => {
+      const { operadorId } = await operadores.operador()
+      const { base32 } = await ativarNoBanco(operadores.pool, operadorId)
+      const antes = linhasDeLog.length
+      expect((await entrar(url, { desafio: await desafio(operadorId, 'mfa'), codigo: codigoDoPasso(base32, passoAtual()) })).status).toBe(200)
+      expect(linhasDeLog.slice(antes).filter((linha) => linha.includes('operacao.contador_nao_zerado'))).toEqual([])
+    })
+  })
+
   describe('C39 (MFA): contrato estrito e no-store', () => {
     it('campo a mais, os dois códigos juntos, código fora do formato e desafio ausente: ENTRADA_INVALIDA com no-store, e o desafio não é gasto', async () => {
       const { operadorId } = await operadores.operador()
@@ -486,7 +535,7 @@ describe('segundo fator do operador: o limite (C32 e C34)', () => {
     await operadores.fechar()
   })
 
-  it('C32: `mfa/configurar` acima do `rl:ip` responde 429 LIMITE_EXCEDIDO com Retry-After; outro IP segue', async () => {
+  it('C32: `mfa/configurar` acima do `rl:ip:op` responde 429 LIMITE_EXCEDIDO com Retry-After; outro IP segue', async () => {
     const { operadorId } = await operadores.operador()
     const [ip, outro] = [ipSorteado(), ipSorteado()]
     const invalido = await desafioInvalido(operadorId, 'configurar_mfa')
@@ -512,7 +561,7 @@ describe('segundo fator do operador: o limite (C32 e C34)', () => {
     const [x, y] = [await ativar(), await ativar()]
     const errado = codigoDoPasso(x.base32, passoAtual() - 10)
 
-    // Cinco erros de X, cada um com um desafio novo, do mesmo IP e acima do `rl:ip`: nenhum 429 LIMITE_EXCEDIDO.
+    // Cinco erros de X, cada um com um desafio novo, do mesmo IP e acima do `rl:ip:op`: nenhum 429 LIMITE_EXCEDIDO.
     const erros: Resposta[] = []
     for (let vez = 0; vez < 5; vez++) erros.push(await entrar(url, { desafio: await desafio(x.operadorId, 'mfa'), codigo: errado }, doIp(ip)))
     for (const resposta of erros.slice(0, 4)) esperarErro(resposta, 401, CodigoDeErro.NAO_AUTENTICADO)

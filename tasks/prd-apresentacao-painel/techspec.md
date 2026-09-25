@@ -148,7 +148,7 @@ Não se aplica: não há IA nem dado de aluno.
 
 | Item | Resposta |
 |---|---|
-| Caminho quente e limite | nenhum; as oito contam em `rl:op:{sub}` e recusam com 429 (A0); nenhuma é anônima |
+| Caminho quente e limite | nenhum; as oito contam em `rl:op:{sub}` e recusam com 429 (A0); nenhuma é anônima. As sete de entrada da operação (A0) passam a contar por IP no balde próprio `rl:ip:op`, com o teto do anônimo: as que recusavam no `rl:ip` recusam nele, e as `@LimiteQueRebaixa`, que contavam no `rl:ip-login` da escola, rebaixam por ele (tarefa 9.0) |
 | Índices, falhas, alerta | os de escopo, com `EXPLAIN` de 30 escolas na tarefa; seção 5; sem alerta novo |
 
 | Trava | Instrução e condições | Na mesma transação | Quem perde recebe | Cenário paralelo |

@@ -180,6 +180,18 @@ describe('criarLogger', () => {
     const [boot, dentro] = registros()
     expect(boot).not.toHaveProperty('requisicaoId')
     expect(dentro).toMatchObject({ requisicaoId: 'r-1', escolaId: 'e-1', usuarioId: 'u-1', servico: 'teste', level: 'warn' })
+    expect(dentro).not.toHaveProperty('operadorId')
+  })
+
+  it('põe o operadorId do contexto da operação (A0b, tarefa 9.0), sem escola nem usuário', () => {
+    const { logger, registros } = loggerCapturado()
+    executarNoContexto({ requisicaoId: 'r-2', operadorId: 'o-1' }, () => {
+      logger.warn({ evento: 'teste' })
+    })
+    const [linha] = registros()
+    expect(linha).toMatchObject({ requisicaoId: 'r-2', operadorId: 'o-1' })
+    expect(linha).not.toHaveProperty('escolaId')
+    expect(linha).not.toHaveProperty('usuarioId')
   })
 
   it('loga erro do Postgres só com SQLSTATE e constraint, sem mensagem nem detail', () => {

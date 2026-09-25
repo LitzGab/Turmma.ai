@@ -1,9 +1,12 @@
-import { ALVOS_DO_EXPURGO_DE_ACESSO, contextoAtual, LOTE_DO_EXPURGO, type AlvoDoExpurgoDeAcesso, type ExpurgoDeAcessoRepository, type LoggerBase, type Relogio } from '@educa/nucleo'
+import { contextoAtual, LOTE_DO_EXPURGO, type AlvoDoExpurgoDeAcesso, type ExpurgoDeAcessoRepository, type LoggerBase, type Relogio } from '@educa/nucleo'
 import { CodigoDeFalhaDeJob } from '@educa/shared'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
 
 export const TIPO_EXPURGAR_ACESSO = 'sistema.expurgar-acesso'
+
+/** Quantas linhas saíram de cada alvo: um total por alvo, e o compilador recusa o objeto a que falte um. */
+export type TotaisDoExpurgoDeAcesso = Record<AlvoDoExpurgoDeAcesso, number>
 
 export interface DependenciasDoExpurgoDeAcesso {
   repositorio: Pick<ExpurgoDeAcessoRepository, 'apagarLoteVencido' | 'limparLoteDeContasSemUso'>
@@ -48,10 +51,17 @@ export function criarExpurgoDeAcesso({ repositorio, relogio, logger, lote = LOTE
         if (doLote < lote) return total
       }
     }
-    // Uma tabela depois da outra, na ordem de `ALVOS_DO_EXPURGO_DE_ACESSO`, e a conta por último: nunca dois lotes do
-    // mesmo job ao mesmo tempo.
-    const totais = {} as Record<AlvoDoExpurgoDeAcesso, number>
-    for (const alvo of ALVOS_DO_EXPURGO_DE_ACESSO) totais[alvo] = await apagar(alvo)
+    // Uma tabela depois da outra, na ordem de `ALVOS_DO_EXPURGO_DE_ACESSO` (as propriedades avaliam na ordem em que estão
+    // escritas, e o teste "lotes" confere a ordem), e a conta por último: nunca dois lotes do mesmo job ao mesmo tempo.
+    // Objeto literal com o tipo declarado, sem afirmação: alvo novo sem total é erro de compilação (tarefa 9.0 da A0b).
+    const totais: TotaisDoExpurgoDeAcesso = {
+      registro_acesso: await apagar('registro_acesso'),
+      sessao: await apagar('sessao'),
+      convite: await apagar('convite'),
+      acesso_operacao: await apagar('acesso_operacao'),
+      sessao_operador: await apagar('sessao_operador'),
+      convite_operador: await apagar('convite_operador'),
+    }
     const contasLimpasTotal = await limparContas()
     const {
       registro_acesso: registrosDeAcessoTotal,

@@ -12,6 +12,7 @@ import {
   PREFIXO_LIMITE_ESCOLA,
   PREFIXO_LIMITE_IP,
   PREFIXO_LIMITE_IP_LOGIN,
+  PREFIXO_LIMITE_IP_OPERACAO,
   PREFIXO_LIMITE_OPERADOR,
   PREFIXO_LIMITE_USUARIO,
 } from './chaves.js'
@@ -152,6 +153,7 @@ export class LimitadorDeRequisicoes {
   readonly #escola: LimitesDoPrefixo
   readonly #ipAnonimo: Limite
   readonly #ipDoLogin: Limite
+  readonly #ipDaOperacao: Limite
   readonly #operador: Limite
   readonly #proporcaoDoSeguro: ProporcaoEmJanela
   readonly #avisarAtivado = avisoEspacado(() => this.#logger.warn('limite.seguro_ativado'))
@@ -165,6 +167,7 @@ export class LimitadorDeRequisicoes {
     this.#escola = new LimitesDoPrefixo(cliente, PREFIXO_LIMITE_ESCOLA, config.instancias)
     this.#ipAnonimo = criarLimite(cliente, PREFIXO_LIMITE_IP, config.porIpAnonimoMin, config.instancias)
     this.#ipDoLogin = criarLimite(cliente, PREFIXO_LIMITE_IP_LOGIN, config.porIpAnonimoMin, config.instancias)
+    this.#ipDaOperacao = criarLimite(cliente, PREFIXO_LIMITE_IP_OPERACAO, config.porIpAnonimoMin, config.instancias)
     this.#operador = criarLimite(cliente, PREFIXO_LIMITE_OPERADOR, config.porOperadorMin, config.instancias)
   }
 
@@ -217,6 +220,15 @@ export class LimitadorDeRequisicoes {
    */
   async consumirDoLogin(ip: string): Promise<ResultadoDoLimite> {
     return this.#consumirUmaChave(this.#ipDoLogin, ip)
+  }
+
+  /**
+   * O limite por IP das rotas de entrada da operação (`@EntradaDeOperacao`, `rl:ip:op`), com o mesmo teto do anônimo e
+   * balde próprio: nem a escola atrás do mesmo IP gasta o do operador, nem o contrário. Quem chama recusa acima dele, ou
+   * só rebaixa, nas rotas `@LimiteQueRebaixa`.
+   */
+  async consumirDaOperacao(ip: string): Promise<ResultadoDoLimite> {
+    return this.#consumirUmaChave(this.#ipDaOperacao, ip)
   }
 
   /**

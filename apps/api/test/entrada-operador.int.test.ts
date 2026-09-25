@@ -3,6 +3,7 @@ import { criarLogger, METRICAS, relogioDoSistema, type Banco } from '@educa/nucl
 import { CodigoDeErro, esquemaRespostaEntradaDeOperador, MENSAGENS_DE_ERRO } from '@educa/shared'
 import type { INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
+import type { Redis } from 'ioredis'
 import { randomBytes, randomUUID } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -13,11 +14,14 @@ import type { ConfiguracaoApi } from '../src/config.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
 import { verificarDesafioDeOperador } from '../src/operacao/desafio-de-operador.js'
 import { COOKIE_DISPOSITIVO_DE_OPERADOR, cookieDeDispositivoDeOperador } from '../src/operacao/dispositivo-de-operador.js'
+import { PREFIXO_DO_CONTADOR_DA_OPERACAO } from '../src/operacao/entrada.service.js'
 import { gerarConviteDeOperador } from '../src/ops/operador.js'
+import { ContadorDeTentativas } from '../src/sessao/contador-de-tentativas.js'
 import { CookieDeDispositivo } from '../src/sessao/cookie-dispositivo.js'
 import { COOKIE_DISPOSITIVO } from '../src/sessao/cookies.js'
 import { HashDeSenha } from '../src/sessao/hash-de-senha.js'
 import { SemaforoDeHash } from '../src/sessao/senha/semaforo-de-hash.js'
+import { CLIENTE_REDIS_LOGIN } from '../src/sessao/sessao.module.js'
 import { configuracaoDeTeste, MONTAGEM_DE_TESTE } from './configuracao-de-teste.js'
 import { BancadaDeOperadores } from './sessao-de-operador.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'
@@ -365,8 +369,13 @@ describe('POST /v1/operacao/sessao/email: o operador entra por e-mail e senha (t
     it('borda: a senha certa zera o contador do e-mail: quatro erros, uma entrada, e mais quatro erros ainda respondem 401', async () => {
       const operador = await operadorComSenha()
       const ip = ipSorteado()
+      // O contador da conta, no Redis de fila (A0b, tarefa 9.0): a prova direta, além da resposta das tentativas seguintes.
+      const chave = app.get(ContadorDeTentativas).chaveDe(operador.email, 'outro', PREFIXO_DO_CONTADOR_DA_OPERACAO)
+      const falhasNoContador = () => app.get<Redis>(CLIENTE_REDIS_LOGIN, { strict: false }).hget(chave, 'falhas')
       for (let falha = 1; falha <= 4; falha++) esperarNaoAutenticado(await entrar(operador.email, SENHA_ERRADA, doIp(ip)))
+      expect(await falhasNoContador()).toBe('4')
       expect((await entrar(operador.email, SENHA, doIp(ip))).status).toBe(200)
+      expect(await falhasNoContador()).toBeNull()
       for (let falha = 1; falha <= 4; falha++) esperarNaoAutenticado(await entrar(operador.email, SENHA_ERRADA, doIp(ip)))
       esperarSegurada(await entrar(operador.email, SENHA_ERRADA, doIp(ip)), 30)
     })

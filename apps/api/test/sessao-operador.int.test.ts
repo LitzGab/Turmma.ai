@@ -1,5 +1,5 @@
 import 'reflect-metadata'
-import { LimitadorDeRequisicoes } from '@educa/nucleo'
+import { LimitadorDeRequisicoes, PREFIXO_LIMITE_IP, PREFIXO_LIMITE_IP_LOGIN, PREFIXO_LIMITE_IP_OPERACAO } from '@educa/nucleo'
 import { CodigoDeErro, esquemaRespostaRenovacaoDeOperador } from '@educa/shared'
 import type { INestApplication } from '@nestjs/common'
 import type { Redis } from 'ioredis'
@@ -9,10 +9,12 @@ import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { aguardarSaudavel, compose, composeOuFalha } from '../../../tools/testes/compose.ts'
 import { CLIENTE_REDIS_CACHE } from '../src/limite.module.js'
 import { COOKIE_SESSAO_DE_OPERADOR } from '../src/operacao/cookie-de-operador.js'
+import { EntradaDoOperadorService } from '../src/operacao/entrada.service.js'
 import { OperadorRepository } from '../src/operacao/operador.repository.js'
 import { JANELA_DO_REFRESH_ANTERIOR_SEGUNDOS } from '../src/operacao/prazos-da-sessao.js'
 import { executarOpsOperador } from '../src/ops/operador.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
+import { esperarNaTrava } from './gatilho-de-parada.js'
 import { barreira, doIp, esperarErro, ipSorteado, pedir, subir, valorDoCookie, type Cabecalhos, type Resposta } from './segundo-fator-de-operador.js'
 import { BancadaDeOperadores, type SessaoDeOperadorDeTeste } from './sessao-de-operador.js'
 
@@ -37,11 +39,12 @@ interface LinhaDaSessao {
  */
 describe('sessão do operador: renovar, sair e os prazos (tarefa 8.0)', () => {
   const operadores = new BancadaDeOperadores()
+  const linhasDeLog: string[] = []
   let app: INestApplication
   let url: string
 
   beforeAll(async () => {
-    ;({ app, url } = await subir())
+    ;({ app, url } = await subir(undefined, linhasDeLog))
   })
 
   afterAll(async () => {
@@ -231,6 +234,80 @@ describe('sessão do operador: renovar, sair e os prazos (tarefa 8.0)', () => {
       expect((await linha(sessao.sessaoId)).encerrada).toBe(false)
       expect((await renovar(terceiro)).status).toBe(200)
     })
+
+    it('log do reuso (A0b, tarefa 9.0): a linha `operacao.reuso_de_refresh`, capturada, é só o evento, sem e-mail, apelido, nome, token, refresh, hash nem id', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const primeira = await renovar(sessao.refresh)
+      const novo = valorDoCookie(primeira.setCookie, COOKIE_SESSAO_DE_OPERADOR) ?? ''
+      const { token } = esquemaRespostaRenovacaoDeOperador.parse(primeira.corpo)
+      await operadores.pool.query(`update sessao_operador set rotacionado_em = now() - make_interval(secs => $2) where id = $1`, [sessao.sessaoId, JANELA_DO_REFRESH_ANTERIOR_SEGUNDOS + 1])
+
+      const antes = linhasDeLog.length
+      esperarRecusa(await renovar(sessao.refresh))
+      expect(await linha(sessao.sessaoId)).toMatchObject({ encerrada: true, motivo: 'reuso_de_refresh' })
+      const doReuso = linhasDeLog
+        .slice(antes)
+        .map((texto) => JSON.parse(texto) as Record<string, unknown>)
+        .filter((registro) => registro['msg'] === 'operacao.reuso_de_refresh')
+      expect(doReuso).toEqual([expect.objectContaining({ level: 'warn', origem: 'operacao' })])
+      expect(Object.keys(doReuso[0] ?? {}).sort()).toEqual(['level', 'msg', 'origem', 'requisicaoId', 'servico', 'time'])
+      // Nem a linha do reuso, nem o resto do log desta renovação (a do erro HTTP) levam algo da pessoa ou da sessão.
+      const texto = linhasDeLog.slice(antes).join('\n')
+      const pessoais = [`${sessao.apelido}@turmma.invalid`, sessao.apelido, sessao.nome, sessao.refresh, novo, hash(sessao.refresh), hash(novo), token, sessao.token, sessao.sessaoId, sessao.operadorId]
+      expect(pessoais.filter((valor) => texto.includes(valor))).toEqual([])
+    })
+  })
+
+  describe('renovar e sair juntos (A0b, tarefa 9.0)', () => {
+    /**
+     * A linha da sessão fica segura pelo teste (`for update` numa transação dele); o `primeiro` pedido sai e para na
+     * trava, o `segundo` sai e para atrás dele, e o teste solta. Assim a ordem em que as duas escritas pegam a linha é a
+     * do teste, e não a da sorte.
+     */
+    async function naOrdem(sessaoId: string, primeiro: { pedir: () => Promise<Resposta>; padrao: string }, segundo: { pedir: () => Promise<Resposta>; padrao: string }): Promise<[Resposta, Resposta]> {
+      const segurador = await operadores.pool.connect()
+      let confirmado = false
+      try {
+        await segurador.query('begin')
+        await segurador.query('select id from sessao_operador where id = $1 for update', [sessaoId])
+        const doPrimeiro = primeiro.pedir()
+        await esperarNaTrava(operadores.pool, primeiro.padrao)
+        const doSegundo = segundo.pedir()
+        await esperarNaTrava(operadores.pool, segundo.padrao)
+        await segurador.query('commit')
+        confirmado = true
+        return [await doPrimeiro, await doSegundo]
+      } finally {
+        if (!confirmado) await segurador.query('rollback').catch(() => undefined)
+        segurador.release()
+      }
+    }
+
+    // As duas escritas na linha: a trava da renovação (`rotacionarSessao`) e a da saída (`encerrarSessaoPelaSaida`).
+    const ROTACIONAR = '%update "sessao_operador" set "refresh_hash" =%'
+    const SAIR_DA_SESSAO = '%update "sessao_operador" set "encerrada_em" =%'
+
+    it('renovar antes, sair depois: a saída acha a sessão pelo refresh anterior e a encerra; o refresh novo não renova, e o acesso novo não entra', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const [renovada, saida] = await naOrdem(sessao.sessaoId, { pedir: () => renovar(sessao.refresh), padrao: ROTACIONAR }, { pedir: () => sair(sessao.refresh), padrao: SAIR_DA_SESSAO })
+      expect(renovada.status).toBe(200)
+      expect(saida.status).toBe(204)
+      const novo = valorDoCookie(renovada.setCookie, COOKIE_SESSAO_DE_OPERADOR) ?? ''
+      expect(novo).not.toBe('')
+      expect(await linha(sessao.sessaoId)).toMatchObject({ refreshHash: hash(novo), refreshHashAnterior: hash(sessao.refresh), encerrada: true, motivo: 'saida' })
+      esperarRecusa(await renovar(novo))
+      esperarRecusa(await renovar(sessao.refresh))
+      esperarErro(await eu(esquemaRespostaRenovacaoDeOperador.parse(renovada.corpo).token), 401, CodigoDeErro.SESSAO_ENCERRADA)
+    })
+
+    it('sair antes, renovar depois: a renovação que esperava relê a sessão encerrada e é recusada, sem rotacionar e sem acesso novo', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const [saida, renovada] = await naOrdem(sessao.sessaoId, { pedir: () => sair(sessao.refresh), padrao: SAIR_DA_SESSAO }, { pedir: () => renovar(sessao.refresh), padrao: ROTACIONAR })
+      expect(saida.status).toBe(204)
+      esperarRecusa(renovada)
+      expect(await linha(sessao.sessaoId)).toMatchObject({ refreshHash: hash(sessao.refresh), refreshHashAnterior: null, encerrada: true, motivo: 'saida' })
+      esperarRecusa(await renovar(sessao.refresh))
+    })
   })
 
   describe('sair', () => {
@@ -333,7 +410,7 @@ describe('sessão do operador: o limite de renovar e sair (C32) e o Redis de cac
     await operadores.fechar()
   })
 
-  it('C32: `renovar` e `sair` acima do `rl:ip` respondem 429 LIMITE_EXCEDIDO com Retry-After e no-store; outro IP segue', async () => {
+  it('C32: `renovar` e `sair` acima do `rl:ip:op` respondem 429 LIMITE_EXCEDIDO com Retry-After e no-store; outro IP segue', async () => {
     const sessao = await operadores.operadorComSessao()
     for (const caminho of [RENOVAR, SAIR]) {
       const ip = ipSorteado()
@@ -348,7 +425,49 @@ describe('sessão do operador: o limite de renovar e sair (C32) e o Redis de cac
     expect((await pedir(url, 'POST', RENOVAR, undefined, comCookie(sessao.refresh))).status).toBe(200)
   })
 
-  it('C36b: com o Redis de cache fora, `rl:ip` (renovar) e `rl:op` (/eu) seguem no seguro em memória (limite ÷ instâncias), sem 5xx', async () => {
+  it('balde próprio (A0b, tarefa 9.0): o `rl:ip` da escola esgotado não recusa a entrada do operador pelo mesmo IP, e o `rl:ip:op` esgotado não recusa a escola; o `rl:ip-login` da escola não rebaixa o operador, e o `rl:ip:op` rebaixa', async () => {
+    const sessao = await operadores.operadorComSessao()
+    const renovarNaEscola = (ip: string) => pedir(url, 'POST', '/v1/sessao/renovar', undefined, doIp(ip))
+    const entrarNaEscola = (ip: string) => pedir(url, 'POST', '/v1/sessao/email', {}, doIp(ip))
+    const entrarNaOperacao = (ip: string) => pedir(url, 'POST', '/v1/operacao/sessao/email', { email: `${sessao.apelido}@turmma.invalid`, senha: 'senha-errada-do-teste' }, doIp(ip))
+    // O que a guarda marcou em cada entrada do operador por e-mail: se ela foi rebaixada pelo limite por IP.
+    const rebaixadas: boolean[] = []
+    const original = EntradaDoOperadorService.prototype.entrar
+    const espiao = vi.spyOn(EntradaDoOperadorService.prototype, 'entrar').mockImplementation(async function (this: EntradaDoOperadorService, pedido, origem) {
+      rebaixadas.push(origem.acimaDoLimiteDoIp)
+      return original.call(this, pedido, origem)
+    })
+    // A contagem de cada balde, no Redis de cache: `{prefixo}:{ip}`.
+    const cache = app.get<Redis>(CLIENTE_REDIS_CACHE)
+    const contagem = async (prefixo: string, ip: string) => Number((await cache.get(`${prefixo}:${ip}`)) ?? 0)
+    try {
+      // A escola passa do `rl:ip` e do `rl:ip-login` do IP X; o operador, pelo mesmo X, renova e entra sem rebaixar.
+      const x = ipSorteado()
+      for (let vez = 0; vez < LIMITE_POR_IP; vez++) expect((await renovarNaEscola(x)).status).toBe(401)
+      esperarErro(await renovarNaEscola(x), 429, CodigoDeErro.LIMITE_EXCEDIDO)
+      // O corpo vazio é recusado depois da guarda, sem hash: cada um conta no `rl:ip-login`.
+      for (let vez = 0; vez <= LIMITE_POR_IP; vez++) esperarErro(await entrarNaEscola(x), 400, CodigoDeErro.ENTRADA_INVALIDA)
+      expect([await contagem(PREFIXO_LIMITE_IP, x), await contagem(PREFIXO_LIMITE_IP_LOGIN, x)]).toEqual([LIMITE_POR_IP + 1, LIMITE_POR_IP + 1])
+      expect((await pedir(url, 'POST', RENOVAR, undefined, comCookie(sessao.refresh, x))).status).toBe(200)
+      esperarErro(await entrarNaOperacao(x), 401, CodigoDeErro.NAO_AUTENTICADO)
+      expect(rebaixadas).toEqual([false])
+      // As duas do operador contaram no balde dele, e nada a mais no da escola.
+      expect([await contagem(PREFIXO_LIMITE_IP_OPERACAO, x), await contagem(PREFIXO_LIMITE_IP, x), await contagem(PREFIXO_LIMITE_IP_LOGIN, x)]).toEqual([2, LIMITE_POR_IP + 1, LIMITE_POR_IP + 1])
+
+      // O operador passa do `rl:ip:op` do IP Y; a escola, pelo mesmo Y, segue sem 429, e a entrada do operador rebaixa.
+      const y = ipSorteado()
+      for (let vez = 0; vez < LIMITE_POR_IP; vez++) expect((await pedir(url, 'POST', RENOVAR, undefined, doIp(y))).status).toBe(401)
+      esperarErro(await pedir(url, 'POST', RENOVAR, undefined, doIp(y)), 429, CodigoDeErro.LIMITE_EXCEDIDO)
+      esperarErro(await renovarNaEscola(y), 401, CodigoDeErro.NAO_AUTENTICADO)
+      esperarErro(await entrarNaOperacao(y), 401, CodigoDeErro.NAO_AUTENTICADO)
+      expect(rebaixadas).toEqual([false, true])
+      expect([await contagem(PREFIXO_LIMITE_IP_OPERACAO, y), await contagem(PREFIXO_LIMITE_IP, y), await contagem(PREFIXO_LIMITE_IP_LOGIN, y)]).toEqual([LIMITE_POR_IP + 2, 1, 0])
+    } finally {
+      espiao.mockRestore()
+    }
+  })
+
+  it('C36b: com o Redis de cache fora, `rl:ip:op` (renovar) e `rl:op` (/eu) seguem no seguro em memória (limite ÷ instâncias), sem 5xx', async () => {
     const sessao = await operadores.operadorComSessao()
     const cliente = app.get<Redis>(CLIENTE_REDIS_CACHE)
     const limitador = app.get(LimitadorDeRequisicoes)

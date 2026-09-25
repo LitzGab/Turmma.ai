@@ -64,6 +64,16 @@ rota do painel (teste C46). O desenho está na Tech Spec da A0b
   senha e existe de verdade. Vínculo não confirmado não dá acesso a aluno.
 - Um usuário pode ter vínculo em mais de uma escola; o token carrega a escola ativa.
 - Convite é token único, com validade curta, uso único e revogável.
+- **O `SessaoModule` é global desde a A0**, como o `BancoModule` e o `LimiteModule`. Ele exporta o
+  semáforo do hash de senha, o hash, o contador de tentativas e o cliente do Redis de fila do login,
+  e o `OperacaoModule` (a entrada, o convite e o segundo fator do operador Turmma) recebe a **mesma
+  instância**: o teto do semáforo é o das threads do processo, e dois semáforos dobrariam o argon2
+  que a instância aceita ao mesmo tempo; o contador é um só, com o prefixo `login-op` separando as
+  contas do operador das da escola, e o seguro em memória dele, com o Redis fora, vale para as duas.
+  Montar outro `SessaoModule` na operação criaria a segunda instância de cada peça sem ninguém ver.
+- **As rotas de entrada da operação contam por IP num balde próprio** (`rl:ip:op`, A0b), com o teto
+  do limite anônimo: a rede de uma escola, que sai por um IP só, não recusa nem rebaixa o operador
+  que está nela, e as tentativas contra a entrada do operador não gastam o limite dos alunos.
 
 ## Assíncrono
 

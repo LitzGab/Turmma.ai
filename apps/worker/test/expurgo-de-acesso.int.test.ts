@@ -10,7 +10,7 @@ import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { AGENDAMENTOS, FILA_DOS_AGENDAMENTOS } from '../src/agendamentos.js'
 import type { ConfiguracaoStorage } from '../src/config.js'
 import { montarWorker, type WorkerMontado } from '../src/montagem.js'
-import { criarExpurgoDeAcesso, TIPO_EXPURGAR_ACESSO } from '../src/processadores/expurgar-acesso.js'
+import { criarExpurgoDeAcesso, TIPO_EXPURGAR_ACESSO, type TotaisDoExpurgoDeAcesso } from '../src/processadores/expurgar-acesso.js'
 import { BancadaDeFila, configuracaoDoBanco, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
 
 // `registro_acesso`, `sessao` e `convite` do Postgres do compose de teste, com linhas de duas escolas (e a falha de
@@ -392,6 +392,30 @@ describe('sistema.expurgar-acesso', () => {
       convitesDeOperadorTotal: porAlvo.convite_operador,
       contasLimpasTotal: 7,
     })
+  })
+
+  it('alvo sem total (A0b, tarefa 9.0): o objeto dos totais do processador é conferido alvo a alvo pelo compilador', () => {
+    // @ts-expect-error falta o total de `convite_operador`: sem a afirmação `as Record`, o compilador recusa o objeto.
+    const semUmAlvo: TotaisDoExpurgoDeAcesso = { registro_acesso: 0, sessao: 0, convite: 0, acesso_operacao: 0, sessao_operador: 0 }
+    expect(Object.keys(semUmAlvo)).toHaveLength(ALVOS_DO_EXPURGO_DE_ACESSO.length - 1)
+  })
+
+  it('lote ordenado (A0b, tarefa 9.0): com o lote menor que o total, o de `convite_operador` leva primeiro o mais antigo, mesmo semeado fora da ordem do prazo', async () => {
+    // Muito além de qualquer linha semeada ou deixada por outro caso, e inseridos fora da ordem do prazo: o mais antigo
+    // por último, depois dos vencidos do `semear`, que vêm antes na tabela.
+    const duzentos = await conviteOperador({ expiraHa: '200 years' })
+    const cem = await conviteOperador({ expiraHa: '100 years' })
+    const trezentos = await conviteOperador({ revogadoHa: '300 years', expiraHa: '299 years' })
+    semeado.sai.convite_operador.push(duzentos, cem, trezentos)
+    const repositorio = new ExpurgoDeAcessoRepository(bancada.banco)
+    const existem = async () => (await bancada.pool.query<{ id: string }>('select id from convite_operador where id = any($1::uuid[])', [[duzentos, cem, trezentos]])).rows.map(({ id }) => id).sort()
+
+    expect(await repositorio.apagarLoteVencido('convite_operador', AGORA, 1)).toBe(1)
+    expect(await existem()).toEqual([duzentos, cem].sort())
+    expect(await repositorio.apagarLoteVencido('convite_operador', AGORA, 1)).toBe(1)
+    expect(await existem()).toEqual([cem])
+    expect(await repositorio.apagarLoteVencido('convite_operador', AGORA, 1)).toBe(1)
+    expect(await existem()).toEqual([])
   })
 
   it('idempotência (D49): rodar de novo depois do fim não apaga nada além do prazo', async () => {

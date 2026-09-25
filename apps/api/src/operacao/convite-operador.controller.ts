@@ -18,9 +18,9 @@ import { EntradaDeOperacao } from './marcadores.js'
  * `ops:operador` abre o link. Rotas de entrada, sem sessão: as guardas da escola não leem credencial nenhuma aqui, e o
  * único que abre alguma coisa é o token do convite, no corpo, conferido pelo service contra o hash no banco.
  *
- * - `consultar`: limite anônimo por IP (`rl:ip`), que recusa com 429.
- * - `aceitar`: `@LimiteQueRebaixa`, como o login por senha: acima do limite por IP, o aceite vai para o fim do balde
- *   no semáforo do hash, nunca 429 (Tech Spec da A0, seção 5, "Limite").
+ * - `consultar`: limite por IP da operação (`rl:ip:op`, balde próprio, tarefa 9.0 da A0b), que recusa com 429.
+ * - `aceitar`: `@LimiteQueRebaixa`, como o login por senha: acima do mesmo limite por IP da operação, o aceite vai para
+ *   o fim do balde no semáforo do hash, nunca 429 (Tech Spec da A0, seção 5, "Limite").
  *
  * As duas saem com `no-store`, e o contrato estrito recusa campo a mais na entrada e não deixa sair campo a mais (C39).
  * Nenhuma rota cria convite nem operador: eles nascem só pelo `ops:operador`.

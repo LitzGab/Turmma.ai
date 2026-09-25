@@ -97,6 +97,8 @@ describe('registros da operação: acesso e auditoria (C37, tarefa 8.0)', () => 
       { autor, acao: 'convite_operador.gerado' },
       { autor, acao: 'convite_operador.revogado' },
       { autor, acao: 'convite_operador.gerado' },
+      // O aceite, com o próprio operador de autor (A0b, tarefa 9.0).
+      { autor: apelido, acao: 'convite_operador.aceito' },
       { autor: apelido, acao: 'operador.mfa_configurado' },
     ])
   })

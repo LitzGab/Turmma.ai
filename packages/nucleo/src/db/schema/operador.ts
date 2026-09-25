@@ -18,7 +18,12 @@ export const VALIDADE_DO_CONVITE_DE_OPERADOR_HORAS = 72
  */
 export const AUTOR_BOOTSTRAP = 'bootstrap'
 
-export const MOTIVOS_DE_ENCERRAMENTO_DE_OPERADOR = ['saida', 'reuso_de_refresh', 'desativacao'] as const
+/**
+ * Por que a sessão do operador terminou: a saída, o reuso do refresh, a desativação, ou o aceite de um convite novo da
+ * conta (A0b, tarefa 9.0), que é o caminho de recuperá-la e troca a senha: as sessões abertas com a credencial de antes
+ * não seguem abertas.
+ */
+export const MOTIVOS_DE_ENCERRAMENTO_DE_OPERADOR = ['saida', 'reuso_de_refresh', 'desativacao', 'convite_aceito'] as const
 export type MotivoDeEncerramentoDeOperador = (typeof MOTIVOS_DE_ENCERRAMENTO_DE_OPERADOR)[number]
 
 export const EVENTOS_DE_ACESSO_DA_OPERACAO = ['entrada', 'entrada_falha', 'saida'] as const
@@ -30,6 +35,7 @@ export const ACOES_DA_AUDITORIA_DA_OPERACAO = [
   'operador.mfa_configurado',
   'convite_operador.gerado',
   'convite_operador.revogado',
+  'convite_operador.aceito',
 ] as const
 export type AcaoDaAuditoriaDaOperacao = (typeof ACOES_DA_AUDITORIA_DA_OPERACAO)[number]
 
@@ -150,7 +156,7 @@ export const sessaoOperador = pgTable(
     index('sessao_operador_aberta_idx').on(tabela.operadorId).where(sql`encerrada_em is null`),
     // O expurgo de 30 dias (tarefa 9.0) desce pelo fim da sessão, como o `sessao_fim_idx`.
     index('sessao_operador_fim_idx').on(sql`coalesce(${tabela.encerradaEm}, ${tabela.expiraEm})`),
-    check('sessao_operador_motivo_valido', sql`${tabela.motivo} is null or ${tabela.motivo} in ('saida', 'reuso_de_refresh', 'desativacao')`),
+    check('sessao_operador_motivo_valido', sql`${tabela.motivo} is null or ${tabela.motivo} in ('saida', 'reuso_de_refresh', 'desativacao', 'convite_aceito')`),
     check('sessao_operador_motivo_so_encerrada', sql`${tabela.motivo} is null or ${tabela.encerradaEm} is not null`),
   ],
 )
@@ -177,10 +183,11 @@ export const acessoOperacao = pgTable(
 )
 
 /**
- * A auditoria da operação: quem criou ou desativou operador, configurou segundo fator e gerou ou revogou convite de
- * operador, e quando. Prestação de contas por vigência + 5 anos, fora do expurgo de acesso (`docs/lgpd.md`). O autor é
- * o apelido do `OPERADOR` do comando, `bootstrap` no nascimento, ou o operador da sessão no segundo fator. Sem texto
- * livre: autor, ação da lista fechada, alvo e data.
+ * A auditoria da operação: quem criou ou desativou operador, configurou segundo fator, gerou ou revogou convite de
+ * operador, aceitou o convite (que troca a senha e zera o segundo fator), e quando. Prestação de contas por vigência + 5
+ * anos, fora do expurgo de acesso (`docs/lgpd.md`). O autor é o apelido do `OPERADOR` do comando, `bootstrap` no
+ * nascimento, ou o próprio operador no segundo fator e no aceite. Sem texto livre: autor, ação da lista fechada, alvo e
+ * data.
  */
 export const auditoriaOperacao = pgTable(
   'auditoria_operacao',
@@ -199,7 +206,7 @@ export const auditoriaOperacao = pgTable(
     check('auditoria_operacao_autor_formato', sql`${tabela.autor} ~ '^[a-z][a-z0-9-]{1,31}$'`),
     check(
       'auditoria_operacao_acao_valida',
-      sql`${tabela.acao} in ('operador.criado', 'operador.desativado', 'operador.mfa_configurado', 'convite_operador.gerado', 'convite_operador.revogado')`,
+      sql`${tabela.acao} in ('operador.criado', 'operador.desativado', 'operador.mfa_configurado', 'convite_operador.gerado', 'convite_operador.revogado', 'convite_operador.aceito')`,
     ),
   ],
 )

@@ -6,6 +6,7 @@ import { Reflector } from '@nestjs/core'
 import { getTableName, is } from 'drizzle-orm'
 import { PgTable } from 'drizzle-orm/pg-core'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import type { IncomingMessage } from 'node:http'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
@@ -416,6 +417,7 @@ describe('arquitetura: toda rota @RotaDeOperacao conta pelo rl:op:{sub} (C36, pa
       consumirDeOperador: vi.fn(async (_operadorId: string) => resultado),
       consumirAnonima: vi.fn(async () => ({ aceita: true }) as const),
       consumirDoLogin: vi.fn(async () => ({ aceita: true }) as const),
+      consumirDaOperacao: vi.fn(async () => ({ aceita: true }) as const),
       consumirAutenticada: vi.fn(async () => ({ aceita: true }) as const),
     }
     const guarda = new nucleo.GuardaDeLimite(new Reflector(), limitador as unknown as nucleo.LimitadorDeRequisicoes, new nucleo.ProxiesConfiaveis(['127.0.0.1']), { daEscola: async () => ({ porUsuarioMin: 1, porEscolaMin: 1 }) }, identidade)
@@ -442,7 +444,7 @@ describe('arquitetura: toda rota @RotaDeOperacao conta pelo rl:op:{sub} (C36, pa
       const { guarda, limitador } = guardaComLimitador()
       expect(await guarda.canActivate(execucao(rota, await tokenDeOperador())), nomeDaRota(rota)).toBe(true)
       expect(limitador.consumirDeOperador.mock.calls, nomeDaRota(rota)).toEqual([[OPERADOR]])
-      expect([limitador.consumirAnonima, limitador.consumirDoLogin, limitador.consumirAutenticada].map((consumo) => consumo.mock.calls.length), nomeDaRota(rota)).toEqual([0, 0, 0])
+      expect([limitador.consumirAnonima, limitador.consumirDoLogin, limitador.consumirDaOperacao, limitador.consumirAutenticada].map((consumo) => consumo.mock.calls.length), nomeDaRota(rota)).toEqual([0, 0, 0, 0])
     }
   })
 
@@ -456,7 +458,7 @@ describe('arquitetura: toda rota @RotaDeOperacao conta pelo rl:op:{sub} (C36, pa
     for (const authorization of [undefined, `Bearer ${tokenDeEscola}`, 'Bearer a.b.c']) {
       const { guarda, limitador } = guardaComLimitador()
       expect(await guarda.canActivate(execucao(rota, authorization))).toBe(true)
-      expect(Object.values(limitador).map((consumo) => consumo.mock.calls.length)).toEqual([0, 0, 0, 0])
+      expect(Object.values(limitador).map((consumo) => consumo.mock.calls.length)).toEqual([0, 0, 0, 0, 0])
     }
   })
 })
@@ -486,25 +488,27 @@ describe('arquitetura: toda rota @EntradaDeOperacao está num dos três grupos d
   /**
    * O grupo de cada entrada (Tech Spec da A0, seção 5, "Limite"): rebaixa no semáforo do hash (quem recusa é o contador
    * por conta), recusa pelo contador do `operador.id` no service (a rota também não responde 429 pelo IP), ou o limite
-   * anônimo por IP que recusa (`rl:ip`).
+   * por IP que recusa. As três contam no balde por IP próprio da operação (`rl:ip:op`, A0b, tarefa 9.0), nunca no `rl:ip`
+   * nem no `rl:ip-login` da escola.
    */
-  const GRUPOS: Record<string, 'rebaixa_no_hash' | 'contador_do_operador' | 'rl_ip'> = {
-    'POST /v1/operacao/convite/consultar': 'rl_ip',
+  const GRUPOS: Record<string, 'rebaixa_no_hash' | 'contador_do_operador' | 'recusa_pelo_ip'> = {
+    'POST /v1/operacao/convite/consultar': 'recusa_pelo_ip',
     'POST /v1/operacao/convite/aceitar': 'rebaixa_no_hash',
     'POST /v1/operacao/sessao/email': 'rebaixa_no_hash',
-    'POST /v1/operacao/sessao/mfa/configurar': 'rl_ip',
+    'POST /v1/operacao/sessao/mfa/configurar': 'recusa_pelo_ip',
     'POST /v1/operacao/sessao/mfa': 'contador_do_operador',
-    'POST /v1/operacao/sessao/renovar': 'rl_ip',
-    'POST /v1/operacao/sessao/sair': 'rl_ip',
+    'POST /v1/operacao/sessao/renovar': 'recusa_pelo_ip',
+    'POST /v1/operacao/sessao/sair': 'recusa_pelo_ip',
   }
 
   /** O que a `GuardaDeLimite` faz com a rota, com o IP acima do limite: qual limite ela conta, e se responde 429. */
-  async function acimaDoLimite(rota: RotaRegistrada): Promise<{ contou: string[]; recusou: boolean }> {
+  async function acimaDoLimite(rota: RotaRegistrada): Promise<{ contou: string[]; recusou: boolean; rebaixou: boolean }> {
     const recusa = { aceita: false, msAteLiberar: 1_000 } as const
     const limitador = {
       consumirDeOperador: vi.fn(async () => recusa),
       consumirAnonima: vi.fn(async () => recusa),
       consumirDoLogin: vi.fn(async () => recusa),
+      consumirDaOperacao: vi.fn(async () => recusa),
       consumirAutenticada: vi.fn(async () => recusa),
     }
     const guarda = new nucleo.GuardaDeLimite(new Reflector(), limitador as unknown as nucleo.LimitadorDeRequisicoes, new nucleo.ProxiesConfiaveis(['127.0.0.1']), { daEscola: async () => ({ porUsuarioMin: 1, porEscolaMin: 1 }) }, identidade)
@@ -525,13 +529,17 @@ describe('arquitetura: toda rota @EntradaDeOperacao está num dos três grupos d
     const contou = Object.entries(limitador)
       .filter(([, consumo]) => consumo.mock.calls.length > 0)
       .map(([nome]) => nome)
-    return { contou, recusou }
+    return { contou, recusou, rebaixou: nucleo.acimaDoLimiteDoIp(requisicao as unknown as IncomingMessage) }
   }
 
-  it('cada entrada conta no limite do seu grupo: rl:ip recusa com 429; rebaixar e o contador do operador nunca recusam pelo IP', async () => {
+  it('cada entrada conta no rl:ip:op, o balde por IP da operação: o grupo que recusa responde 429; rebaixar e o contador do operador nunca recusam pelo IP, só marcam a requisição', async () => {
     const entradas = rotasDaApi().filter((rota) => rota.marcador === 'entrada')
     expect(entradas.map(nomeDaRota).sort()).toEqual(Object.keys(GRUPOS).sort())
-    const esperado = { rl_ip: { contou: ['consumirAnonima'], recusou: true }, rebaixa_no_hash: { contou: ['consumirDoLogin'], recusou: false }, contador_do_operador: { contou: ['consumirDoLogin'], recusou: false } }
+    const esperado = {
+      recusa_pelo_ip: { contou: ['consumirDaOperacao'], recusou: true, rebaixou: false },
+      rebaixa_no_hash: { contou: ['consumirDaOperacao'], recusou: false, rebaixou: true },
+      contador_do_operador: { contou: ['consumirDaOperacao'], recusou: false, rebaixou: true },
+    }
     for (const rota of entradas) {
       const grupo = GRUPOS[nomeDaRota(rota)]
       if (grupo === undefined) throw new Error(`entrada sem grupo: ${nomeDaRota(rota)}`)

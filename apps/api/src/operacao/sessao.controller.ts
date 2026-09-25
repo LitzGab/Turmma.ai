@@ -15,8 +15,9 @@ function exigirCorpoVazio(corpo: unknown): void {
  * sete rotas de entrada. Sem token de acesso (ele pode ter vencido): a credencial é o cookie `turmma_operacao`, que só
  * vai a `/v1/operacao/sessao`, e quem o confere é o service.
  *
- * Limite (seção 5, "Limite"): as duas usam o limite anônimo por IP (`rl:ip`), que recusa com 429 (C32), como as rotas
- * iguais do F1. Saem com `no-store`, e o contrato estrito recusa corpo com campo e não deixa sair campo a mais (C39).
+ * Limite (seção 5, "Limite"): as duas usam o limite por IP da operação (`rl:ip:op`, com o teto do anônimo e balde
+ * próprio, tarefa 9.0 da A0b), que recusa com 429 (C32), como as rotas iguais do F1 no `rl:ip`. Saem com `no-store`, e
+ * o contrato estrito recusa corpo com campo e não deixa sair campo a mais (C39).
  */
 @Controller('v1/operacao/sessao')
 export class SessaoDoOperadorController {

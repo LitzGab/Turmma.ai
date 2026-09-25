@@ -20,9 +20,10 @@ import { SegundoFatorDoOperadorService } from './segundo-fator.service.js'
  * estrito recusa campo a mais na entrada e não deixa sair campo a mais (C39).
  *
  * Limite (seção 5, "Limite"):
- * - `mfa/configurar`: o limite anônimo por IP (`rl:ip`), que recusa com 429 (C32).
+ * - `mfa/configurar`: o limite por IP da operação (`rl:ip:op`, balde próprio, tarefa 9.0 da A0b), que recusa com 429
+ *   (C32).
  * - `mfa`: quem recusa é o contador pelo `operador.id`, no service (C34), e nunca o IP: a equipe inteira pode sair por
- *   um IP só. Por isso leva `@LimiteQueRebaixa`, que conta no balde do login e nunca responde 429; sem hash aqui, o
+ *   um IP só. Por isso leva `@LimiteQueRebaixa`, que conta no mesmo `rl:ip:op` e nunca responde 429; sem hash aqui, o
  *   rebaixamento não tem efeito, e cada tentativa já exige um desafio novo, que só a senha dá.
  */
 @Controller('v1/operacao/sessao')

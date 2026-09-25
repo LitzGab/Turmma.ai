@@ -34,7 +34,7 @@ describe('OperadorRepository: o que o banco não devolveu sai como erro tipado, 
 
   it('aceitarConvite com a linha travada, o convite usado e o operador não gravado', async () => {
     // for update → o operador ativo; returning do convite → usado; returning do operador → nada.
-    const banco = bancoQueDevolve([{ id: 'o' }], [{ id: 'c' }], [])
+    const banco = bancoQueDevolve([{ apelido: 'o' }], [{ id: 'c' }], [])
     const erro = await new OperadorRepository(banco).aceitarConvite({ conviteId: 'c', operadorId: 'o', senhaHash: 'h' }).catch((e: unknown) => e)
     expect(erro).toBeInstanceOf(ErroDeDominio)
     expect(erro).toEqual(ERRO_TIPADO)

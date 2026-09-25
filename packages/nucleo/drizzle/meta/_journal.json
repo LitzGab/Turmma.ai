@@ -120,6 +120,13 @@
       "when": 1790311676051,
       "tag": "0016_usuario_coordenador_ativo",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790341461936,
+      "tag": "0017_operador_aceite",
+      "breakpoints": true
     }
   ]
 }

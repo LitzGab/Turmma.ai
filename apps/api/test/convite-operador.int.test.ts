@@ -11,6 +11,7 @@ import { AppModule } from '../src/app.module.js'
 import { BANCO } from '../src/banco.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
 import { verificarDesafioDeOperador } from '../src/operacao/desafio-de-operador.js'
+import { hashDoTokenDeConvite } from '../src/operacao/token-do-convite.js'
 import { gerarConviteDeOperador } from '../src/ops/operador.js'
 import { criarConviteDeCoordenador } from '../src/sessao/convite.service.js'
 import { HashDeSenha } from '../src/sessao/hash-de-senha.js'
@@ -144,6 +145,26 @@ describe('convite do operador: consultar e aceitar (tarefa 5.0)', () => {
     return linha
   }
 
+  /** As linhas `convite_operador.aceito` da auditoria da operação com este operador de alvo, a linha inteira em JSON. */
+  async function aceitesAuditados(operadorId: string): Promise<Array<{ autor: string; operadorAlvoId: string; linha: string }>> {
+    const { rows } = await operadores.pool.query<{ autor: string; operadorAlvoId: string; linha: string }>(
+      `select autor, operador_alvo_id as "operadorAlvoId", row_to_json(a)::text as linha from auditoria_operacao a
+        where operador_alvo_id = $1 and acao = 'convite_operador.aceito'`,
+      [operadorId],
+    )
+    return rows
+  }
+
+  /** Se a sessão terminou, e com que motivo. */
+  async function fimDaSessao(sessaoId: string): Promise<{ encerrada: boolean; motivo: string | null }> {
+    const { rows } = await operadores.pool.query<{ encerrada: boolean; motivo: string | null }>('select encerrada_em is not null as encerrada, motivo from sessao_operador where id = $1', [sessaoId])
+    const linha = rows[0]
+    if (linha === undefined) throw new Error('sessão não encontrada')
+    return linha
+  }
+
+  const eu = (token: string) => pedir(url, 'GET', '/v1/operacao/eu', undefined, { Authorization: `Bearer ${token}` })
+
   async function usadoEm(conviteId: string): Promise<Date | null> {
     const { rows } = await operadores.pool.query<{ usado_em: Date | null }>('select usado_em from convite_operador where id = $1', [conviteId])
     return rows[0]?.usado_em ?? null
@@ -209,6 +230,42 @@ describe('convite do operador: consultar e aceitar (tarefa 5.0)', () => {
       expect(await hash.verificar(linha.senha_hash, SENHA)).toBe(true)
       expect({ ...linha, senha_hash: undefined }).toEqual({ senha_hash: undefined, mfa_segredo_cifrado: null, mfa_ativado_em: null, mfa_ultimo_passo: null, mfa_chave_versao: null, codigos: 0 })
       expect(await usadoEm(convite.conviteId)).not.toBeNull()
+    })
+  })
+
+  describe('o aceite audita e encerra as sessões abertas da conta (A0b, tarefa 9.0)', () => {
+    it('aceite auditado: grava uma linha `convite_operador.aceito`, com o próprio operador de autor e de alvo, sem senha, token nem hash', async () => {
+      const convite = await operadorComConvite()
+      const outro = await operadorComConvite()
+      expect(await aceitesAuditados(convite.operadorId)).toEqual([])
+      expect((await aceitar(convite.token)).status).toBe(200)
+
+      const aceites = await aceitesAuditados(convite.operadorId)
+      expect(aceites.map(({ autor, operadorAlvoId }) => ({ autor, operadorAlvoId }))).toEqual([{ autor: convite.apelido, operadorAlvoId: convite.operadorId }])
+      const senhaHash = (await linhaDoOperador(convite.operadorId)).senha_hash ?? ''
+      const tokenHash = hashDoTokenDeConvite(convite.token)
+      for (const segredo of [SENHA, convite.token, tokenHash, senhaHash, `${convite.apelido}@turmma.invalid`]) expect(aceites[0]?.linha).not.toContain(segredo)
+      // O aceite de um operador não audita outro.
+      expect(await aceitesAuditados(outro.operadorId)).toEqual([])
+    })
+
+    it('aceite encerra sessões: as duas abertas da conta terminam com `convite_aceito` e a requisição seguinte recebe SESSAO_ENCERRADA; a já encerrada mantém o motivo, e a de outro operador segue aberta', async () => {
+      const convite = await operadorComConvite()
+      const dono = { operadorId: convite.operadorId, apelido: convite.apelido, nome: 'Pessoa Sintética da Operação' }
+      const [primeira, segunda, jaEncerrada] = [await operadores.sessao(dono), await operadores.sessao(dono), await operadores.sessao(dono)]
+      await operadores.pool.query(`update sessao_operador set encerrada_em = now(), motivo = 'saida' where id = $1`, [jaEncerrada.sessaoId])
+      const deOutro = await operadores.operadorComSessao()
+      for (const sessao of [primeira, segunda, deOutro]) expect((await eu(sessao.token)).status).toBe(200)
+
+      expect((await aceitar(convite.token)).status).toBe(200)
+
+      for (const sessao of [primeira, segunda]) {
+        expect(await fimDaSessao(sessao.sessaoId)).toEqual({ encerrada: true, motivo: 'convite_aceito' })
+        esperarErro(await eu(sessao.token), 401, CodigoDeErro.SESSAO_ENCERRADA)
+      }
+      expect(await fimDaSessao(jaEncerrada.sessaoId)).toEqual({ encerrada: true, motivo: 'saida' })
+      expect(await fimDaSessao(deOutro.sessaoId)).toEqual({ encerrada: false, motivo: null })
+      expect((await eu(deOutro.token)).status).toBe(200)
     })
   })
 
@@ -292,8 +349,9 @@ describe('convite do operador: consultar e aceitar (tarefa 5.0)', () => {
   })
 
   describe('a trava do aceite no banco: o que muda entre a consulta do convite e a transação', () => {
-    it('revogado pelo `ops:operador convite` durante o hash: recusado igual a revogado, e o convite novo continua valendo', async () => {
+    it('revogado pelo `ops:operador convite` durante o hash: recusado igual a revogado, sem encerrar a sessão aberta nem auditar aceite, e o convite novo continua valendo', async () => {
       const convite = await operadorComConvite()
+      const aberta = await operadores.sessao({ operadorId: convite.operadorId, apelido: convite.apelido, nome: 'Pessoa Sintética da Operação' })
       let novo = ''
       const resposta = await aceitarMudandoDuranteOHash(convite.token, async () => {
         novo = (await gerarConviteDeOperador(banco, autor, convite.apelido)).token
@@ -301,6 +359,9 @@ describe('convite do operador: consultar e aceitar (tarefa 5.0)', () => {
       expect(forma(resposta)).toEqual(forma(await consultar(randomBytes(32).toString('base64url'))))
       expect(await usadoEm(convite.conviteId)).toBeNull()
       expect((await linhaDoOperador(convite.operadorId)).senha_hash).toBeNull()
+      // O aceite recusado não encerra nada nem audita: só o que venceu a trava faz as duas coisas.
+      expect(await fimDaSessao(aberta.sessaoId)).toEqual({ encerrada: false, motivo: null })
+      expect(await aceitesAuditados(convite.operadorId)).toEqual([])
       expect((await consultar(novo)).status).toBe(200)
     })
 
@@ -392,6 +453,8 @@ describe('convite do operador: consultar e aceitar (tarefa 5.0)', () => {
       const { senha_hash: senhaHash } = await linhaDoOperador(convite.operadorId)
       expect(await hash.verificar(senhaHash, vencedora)).toBe(true)
       expect(await hash.verificar(senhaHash, perdedora)).toBe(false)
+      // Um aceite auditado, o de quem venceu: o que perdeu não grava nada.
+      expect(await aceitesAuditados(convite.operadorId)).toHaveLength(1)
     })
   })
 
@@ -504,7 +567,7 @@ describe('convite do operador: o limite por IP (C32 e C33, parte)', () => {
 
   const doIp = (valor: string): Cabecalhos => ({ 'X-Forwarded-For': valor })
 
-  it('C32: `convite/consultar` acima do `rl:ip` responde 429 LIMITE_EXCEDIDO com Retry-After; outro IP segue', async () => {
+  it('C32: `convite/consultar` acima do `rl:ip:op` responde 429 LIMITE_EXCEDIDO com Retry-After; outro IP segue', async () => {
     const [ip, outro] = [ipSorteado(), ipSorteado()]
     const token = randomBytes(32).toString('base64url')
     for (let vez = 0; vez < LIMITE_POR_IP; vez++) esperarErro(await pedir(url, 'POST', '/v1/operacao/convite/consultar', { token }, doIp(ip)), 404, CodigoDeErro.NAO_ENCONTRADO)

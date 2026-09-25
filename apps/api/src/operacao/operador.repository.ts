@@ -379,15 +379,16 @@ export class OperadorRepository {
    * 3. grava a senha e zera o segundo fator (segredo, chave, ativação, último passo e códigos de recuperação): o convite
    *    novo é o caminho de recuperar a conta (PRD da A0, seções 3 e 7), e leva a configurar o segundo fator de novo.
    *
-   * Devolve se aceitou. Quem perde não grava nada.
+   * Devolve o apelido do operador que aceitou (o autor da auditoria do aceite, que quem chama grava na mesma transação),
+   * ou `undefined` quando não aceitou. Quem perde não grava nada.
    */
-  async aceitarConvite(dados: { conviteId: string; operadorId: string; senhaHash: string }): Promise<boolean> {
+  async aceitarConvite(dados: { conviteId: string; operadorId: string; senhaHash: string }): Promise<string | undefined> {
     const [ativo] = await this.banco
-      .select({ id: operador.id })
+      .select({ apelido: operador.apelido })
       .from(operador)
       .where(and(eq(operador.id, dados.operadorId), isNull(operador.desativadoEm)))
       .for('update')
-    if (ativo === undefined) return false
+    if (ativo === undefined) return undefined
     const usados = await this.banco
       .update(conviteOperador)
       .set({ usadoEm: sql`now()` })
@@ -401,7 +402,7 @@ export class OperadorRepository {
         ),
       )
       .returning({ id: conviteOperador.id })
-    if (usados.length === 0) return false
+    if (usados.length === 0) return undefined
     const gravados = await this.banco
       .update(operador)
       .set({ senhaHash: dados.senhaHash, mfaSegredoCifrado: null, mfaChaveVersao: null, mfaAtivadoEm: null, mfaUltimoPasso: null })
@@ -410,7 +411,7 @@ export class OperadorRepository {
     // A linha está travada desde o passo 1: só não casa se alguém mudou a trava; aí nada do aceite fica.
     if (gravados.length === 0) throw new ErroDeDominio(CodigoDeErro.ERRO_INTERNO)
     await this.apagarCodigosDeRecuperacao(dados.operadorId)
-    return true
+    return ativo.apelido
   }
 
   /**

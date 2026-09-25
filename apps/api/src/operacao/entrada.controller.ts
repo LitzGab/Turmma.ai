@@ -7,9 +7,10 @@ import { EntradaDeOperacao } from './marcadores.js'
 
 /**
  * `POST /v1/operacao/sessao/email` (Tech Spec da A0, seção 4): o operador entra com e-mail e senha e recebe o desafio
- * do segundo fator. Rota de entrada, sem sessão, com `@LimiteQueRebaixa`: acima do limite por IP, a tentativa vai para
- * o fim do balde no semáforo do hash, nunca 429; quem recusa é o contador por conta, no service (C33). Sai com
- * `no-store`, e o contrato estrito recusa campo a mais na entrada e não deixa sair campo a mais.
+ * do segundo fator. Rota de entrada, sem sessão, com `@LimiteQueRebaixa`: acima do limite por IP da operação
+ * (`rl:ip:op`, balde próprio, tarefa 9.0 da A0b), a tentativa vai para o fim do balde no semáforo do hash, nunca 429;
+ * quem recusa é o contador por conta, no service (C33). Sai com `no-store`, e o contrato estrito recusa campo a mais na
+ * entrada e não deixa sair campo a mais.
  */
 @Controller('v1/operacao/sessao')
 export class EntradaDoOperadorController {

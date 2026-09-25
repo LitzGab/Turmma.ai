@@ -160,8 +160,9 @@ export interface OpcoesDoLogger {
 }
 
 /**
- * Logger JSON de todo processo. Toda linha leva `requisicaoId`, e `escolaId` e `usuarioId`
- * quando existirem, lidos do contexto da requisição em andamento.
+ * Logger JSON de todo processo. Toda linha leva `requisicaoId`, e `escolaId`, `usuarioId` e
+ * `operadorId` (o operador Turmma, A0) quando existirem, lidos do contexto da requisição em
+ * andamento: só ids, nunca nome, e-mail ou apelido (regra 20, item 9).
  */
 export function criarLogger(opcoes: OpcoesDoLogger): LoggerBase {
   const configuracao = {
@@ -178,6 +179,7 @@ export function criarLogger(opcoes: OpcoesDoLogger): LoggerBase {
         requisicaoId: contexto.requisicaoId,
         ...(contexto.escolaId === undefined ? {} : { escolaId: contexto.escolaId }),
         ...(contexto.usuarioId === undefined ? {} : { usuarioId: contexto.usuarioId }),
+        ...(contexto.operadorId === undefined ? {} : { operadorId: contexto.operadorId }),
       }
     },
   }

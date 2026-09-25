@@ -1,7 +1,7 @@
 # Tarefas — Painel da operação Turmma (A0b)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 8 de 10 concluídas
+**Status:** 9 de 10 concluídas
 
 Aprovadas por delegação do Joaquim em 24/09/2026 ("faça tudo e aprove até criar as tasks"). As 9.0 e
 10.0 levam as pendências da A0 (`tasks/prd-apresentacao-operacao/retro.md`, "Pendências para a A0b")
@@ -58,12 +58,12 @@ que não cabem numa tarefa que já mexe no mesmo código.
   - [x] 8.1 Tela Uso (tabela e cartões, quatro estados), com os formatadores
   - [x] 8.2 Testes: W5, W6 (Uso), W7 (Uso)
 
-- [ ] **9.0 — Acabamento da A0 na API e no worker**
-  - [ ] 9.1 Auditoria do aceite do operador; o motivo `convite_aceito` encerra as sessões da conta
-  - [ ] 9.2 Falha do `contador.zerar` depois do commit da sessão vira log; `rl:ip:op` próprio
-  - [ ] 9.3 Expurgo: `order by` no lote de `convite_operador`; o `{} as Record` trocado
-  - [ ] 9.4 `SessaoModule` global em `docs/arquitetura.md`
-  - [ ] 9.5 Testes que faltaram na A0 (tabela da tarefa)
+- [x] **9.0 — Acabamento da A0 na API e no worker**
+  - [x] 9.1 Auditoria do aceite do operador; o motivo `convite_aceito` encerra as sessões da conta
+  - [x] 9.2 Falha do `contador.zerar` depois do commit da sessão vira log; `rl:ip:op` próprio
+  - [x] 9.3 Expurgo: `order by` no lote de `convite_operador`; o `{} as Record` trocado
+  - [x] 9.4 `SessaoModule` global em `docs/arquitetura.md`
+  - [x] 9.5 Testes que faltaram na A0 (tabela da tarefa)
 
 - [ ] **10.0 — Acabamento da A0 na web e no e2e**
   - [ ] 10.1 Fronteira de erro com `document.title`; a senha sai do estado depois de falha; o aceite

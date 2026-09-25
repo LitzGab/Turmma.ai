@@ -234,14 +234,19 @@ export class ContadorDeTentativas {
     }
   }
 
-  /** O acerto zera o contador daquela origem, no Redis e no seguro. Falha ao zerar só deixa a conta contando. */
-  async zerar(chave: string): Promise<void> {
+  /**
+   * O acerto zera o contador daquela origem, no Redis e no seguro. Nunca lança: falha ao zerar só deixa a conta contando
+   * até o contador vencer sozinho, em 15 min. Devolve se o Redis confirmou (`false` com ele fora ou recusando), para quem
+   * já gravou alguma coisa antes, como a sessão do operador, registrar a falha sem desfazer nada (tarefa 9.0 da A0b).
+   */
+  async zerar(chave: string): Promise<boolean> {
     this.#seguro.zerar(chave)
-    if (this.cliente.status !== 'ready') return
+    if (this.cliente.status !== 'ready') return false
     try {
       await this.cliente.del(chave)
+      return true
     } catch {
-      // O contador vence sozinho em 15 min.
+      return false
     }
   }
 }

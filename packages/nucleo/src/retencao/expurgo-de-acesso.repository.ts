@@ -37,8 +37,10 @@ export type AlvoDoExpurgoDeAcesso = (typeof ALVOS_DO_EXPURGO_DE_ACESSO)[number]
  *   (Marco Civil, art. 15), inclusive a falha sem operador reconhecido. Desce por `acesso_operacao_em_idx`.
  * - **Sessão de operador:** 30 dias depois de encerrada ou, sem encerramento, de expirada, pela expressão do índice
  *   `sessao_operador_fim_idx`.
- * - **Convite de operador:** 30 dias depois de usado, revogado ou vencido, pelo mesmo `least` do convite. Um por
- *   operador de cada vez, dezenas no total: sem índice próprio.
+ * - **Convite de operador:** 30 dias depois de usado, revogado ou vencido, pelo mesmo `least` do convite, mas, ao
+ *   contrário dele, com `order by` por essa expressão (tarefa 9.0 da A0b): o lote que não cabe inteiro leva os mais
+ *   antigos. Um por operador de cada vez, dezenas no total: sem índice próprio, a ordenação é a de uma tabela pequena,
+ *   lida inteira.
  */
 const APAGAR_LOTE: Record<AlvoDoExpurgoDeAcesso, (agora: Date, limite: number) => SQL> = {
   registro_acesso: (agora, limite) => sql`
@@ -95,6 +97,7 @@ const APAGAR_LOTE: Record<AlvoDoExpurgoDeAcesso, (agora: Date, limite: number) =
     where id = any(array(
       select id from convite_operador
       where least(usado_em, revogado_em, expira_em) < ${agora.toISOString()}::timestamptz - make_interval(days => ${RETENCAO_CONVITE_DIAS})
+      order by least(usado_em, revogado_em, expira_em)
       limit ${limite}
       for update skip locked
     ))

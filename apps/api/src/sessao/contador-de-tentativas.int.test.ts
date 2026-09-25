@@ -96,7 +96,7 @@ describe('ContadorDeTentativas no Redis de fila', () => {
     const conhecido = contador.chaveDe(email, 'conhecido')
     for (let tentativa = 1; tentativa <= FALHAS_ANTES_DE_SEGURAR; tentativa++) await contador.reservar(outro)
     for (let tentativa = 1; tentativa < FALHAS_ANTES_DE_SEGURAR; tentativa++) await contador.reservar(conhecido)
-    await contador.zerar(conhecido)
+    expect(await contador.zerar(conhecido)).toBe(true)
     expect(await cliente.exists(conhecido)).toBe(0)
     expect((await contador.reservar(outro)).liberada).toBe(false)
     for (let tentativa = 1; tentativa < FALHAS_ANTES_DE_SEGURAR; tentativa++) expect(await contador.reservar(conhecido)).toEqual({ liberada: true, esperaSeFalharMs: 0 })
