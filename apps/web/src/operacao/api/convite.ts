@@ -1,10 +1,11 @@
 import {
+  CodigoDeErro,
   esquemaRespostaAceitarConviteDeOperador,
   esquemaRespostaConsultarConviteDeOperador,
   type PedidoAceitarConviteDeOperador,
   type RespostaConsultarConviteDeOperador,
 } from '@educa/shared'
-import { chamarApi } from '../../api/cliente'
+import { chamarApi, ErroDaApi } from '../../api/cliente'
 import { esquecerDesafioDeOperador, guardarDesafioDeOperador } from './sessao'
 
 export const CAMINHO_DA_CONSULTA_DE_CONVITE_DE_OPERADOR = '/v1/operacao/convite/consultar'
@@ -30,4 +31,38 @@ export async function aceitarConviteDeOperador(pedido: PedidoAceitarConviteDeOpe
   esquecerDesafioDeOperador()
   const resposta = await chamarApi(CAMINHO_DO_ACEITE_DE_CONVITE_DE_OPERADOR, esquemaRespostaAceitarConviteDeOperador, { metodo: 'POST', corpo: pedido })
   guardarDesafioDeOperador(resposta.etapa, resposta.desafio)
+}
+
+/** O convite que não vale chega como `NAO_ENCONTRADO`, igual nos cinco casos (C9). */
+export function ehConviteInvalido(erro: unknown): boolean {
+  return erro instanceof ErroDaApi && erro.codigo === CodigoDeErro.NAO_ENCONTRADO
+}
+
+/** O que a tela do convite faz com a resposta do aceite. */
+export type DesfechoDoAceite =
+  | { readonly tipo: 'aceito' }
+  | { readonly tipo: 'invalido' }
+  | { readonly tipo: 'falhou'; readonly erro: unknown }
+  | { readonly tipo: 'descartado' }
+
+/**
+ * O aceite, conferido contra o link que está na tela quando a resposta volta. `vezDoLink` sobe a cada link novo colado
+ * na aba (o `hashchange`); se ela mudou enquanto o aceite estava no ar, a resposta é de um link que a tela já largou, e
+ * é **descartada**: não navega nem muda a tela, e o desafio que ela trouxe sai da memória, porque é da conta do link
+ * anterior e a tela agora mostra outro (tarefa 10.0 da A0b). Quando o aceite anterior deu certo no servidor, a senha
+ * daquela conta já está criada: quem a criou entra depois com o e-mail e a senha, e configura o segundo fator por lá.
+ */
+export async function aceitarConviteDeOperadorNaVez(pedido: PedidoAceitarConviteDeOperador, vezDoLink: () => number): Promise<DesfechoDoAceite> {
+  const vez = vezDoLink()
+  try {
+    await aceitarConviteDeOperador(pedido)
+  } catch (erro) {
+    if (vezDoLink() !== vez) return { tipo: 'descartado' }
+    return ehConviteInvalido(erro) ? { tipo: 'invalido' } : { tipo: 'falhou', erro }
+  }
+  if (vezDoLink() !== vez) {
+    esquecerDesafioDeOperador()
+    return { tipo: 'descartado' }
+  }
+  return { tipo: 'aceito' }
 }

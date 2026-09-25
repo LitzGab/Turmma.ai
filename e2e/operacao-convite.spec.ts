@@ -237,6 +237,47 @@ test.describe('convite do operador Turmma e o segundo fator pela web', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
+  test('o aceite ainda no ar quando outro link chega à aba é descartado: a tela fica no link novo, que segue até o configurar', async ({ page, hasTouch }) => {
+    const anterior = await criarOperadorConvidado()
+    const novo = await criarOperadorConvidado()
+    // Só o primeiro aceite fica segurado: é o que ainda está no ar quando o link novo chega.
+    let aceites = 0
+    let liberar: () => void = () => undefined
+    const segurada = new Promise<void>((resolver) => (liberar = resolver))
+    await page.route(ROTA_ACEITAR, async (rota: Route) => {
+      aceites++
+      if (aceites === 1) await segurada
+      await rota.continue()
+    })
+
+    await page.goto(`/operacao/convite#${anterior.token}`)
+    await page.getByLabel('Senha nova').fill(SENHA_NOVA, { timeout: PRAZO_DA_TELA_MS })
+    await acionar(page, /Criar a senha e continuar|Salvando/, hasTouch)
+    await expect.poll(() => aceites, { timeout: PRAZO_DA_TELA_MS }).toBe(1)
+
+    // O link novo muda só o `#`: a tela confere o convite dele e mostra o formulário vazio, com o aceite anterior no ar.
+    await page.goto(`/operacao/convite#${novo.token}`)
+    await expect(page.getByLabel('Senha nova')).toHaveValue('', { timeout: PRAZO_DA_TELA_MS })
+    await expect(page.getByRole('status').filter({ hasText: 'Conferindo o convite' })).toHaveCount(0, { timeout: PRAZO_DA_TELA_MS })
+    const respostaDoAnterior = page.waitForResponse((resposta) => new URL(resposta.url()).pathname === '/v1/operacao/convite/aceitar')
+    liberar()
+    // O aceite anterior valeu no servidor (200, com o desafio de configurar), e mesmo assim a tela não segue com ele.
+    expect((await respostaDoAnterior).status()).toBe(200)
+    const botao = page.getByRole('button', { name: 'Criar a senha e continuar' })
+    await expect(botao).toBeEnabled({ timeout: PRAZO_DA_TELA_MS })
+    await expect(page).toHaveURL(/\/operacao\/convite$/)
+    await expect(page.getByRole('heading', { name: 'Configurar o segundo fator' })).toHaveCount(0)
+    await expect(page.getByRole('alert')).toHaveCount(0)
+
+    // A tela é a do link novo, e segue: a senha dele leva ao configurar do segundo fator dele.
+    const configurar = respostaDoConfigurar(page)
+    await page.getByLabel('Senha nova').fill(SENHA_NOVA)
+    await acionar(page, 'Criar a senha e continuar', hasTouch)
+    await expect(page.getByRole('heading', { name: 'Configurar o segundo fator' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    expect(aceites).toBe(2)
+    expect((await configurar).status()).toBe(200)
+  })
+
   test('clique repetido em "Criar a senha e continuar" manda um aceite só', async ({ page, hasTouch }) => {
     const operador = await criarOperadorConvidado()
     let aceites = 0

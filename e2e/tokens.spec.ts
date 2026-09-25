@@ -105,7 +105,7 @@ function portao(): { aberta: Promise<void>; abrir: () => void } {
 }
 
 test.describe('pele da D72 nos componentes compartilhados', () => {
-  test('o CSS servido tem cada token de cor da 9.9, com o hex do documento', async ({ page }) => {
+  test('E5: o CSS servido tem cada token de cor da 9.9, com o hex do documento', async ({ page }) => {
     await page.goto('/sistema')
     const tokens = tokensDaD72()
     // `white` e `black` incluídas; outro número é o bloco do documento lido pela metade, e o teste passaria vazio.

@@ -1,5 +1,5 @@
 import { TAMANHO_MAXIMO_EMAIL, TAMANHO_MAXIMO_SENHA } from '@educa/shared'
-import { useEffect, useState, useSyncExternalStore, type FormEvent } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from 'react'
 import { useLocation } from 'wouter'
 import { Botao } from '../../componentes/Botao'
 import { Campo } from '../../componentes/Campo'
@@ -26,6 +26,7 @@ export function Entrar() {
   const [senha, definirSenha] = useState('')
   const [entrando, definirEntrando] = useState(false)
   const [falha, definirFalha] = useState<unknown>(undefined)
+  const campoDaSenha = useRef<HTMLInputElement>(null)
 
   // Quem já tem a sessão aberta nesta aba não fica na entrada: o Voltar do navegador devolve à casca.
   useEffect(() => {
@@ -39,12 +40,15 @@ export function Entrar() {
     definirFalha(undefined)
     try {
       const etapa = await entrarComoOperador({ email, senha })
-      // A senha sai da memória da tela assim que a resposta chega, em qualquer etapa.
-      definirSenha('')
       navegar(etapa === 'mfa' ? ROTAS_DA_OPERACAO.mfa : ROTAS_DA_OPERACAO.configurarMfa)
     } catch (erro) {
       definirFalha(erro)
+      // A pessoa digita a senha de novo, e o foco já está no campo dela (a mensagem é anunciada pelo `alert`).
+      campoDaSenha.current?.focus()
     } finally {
+      // A senha sai da memória da tela assim que a resposta chega, dê certo ou não: no computador do laboratório, a
+      // senha errada não fica no estado da tela para quem sentar depois (tarefa 10.0 da A0b).
+      definirSenha('')
       definirEntrando(false)
     }
   }
@@ -80,6 +84,7 @@ export function Entrar() {
           maxLength={TAMANHO_MAXIMO_SENHA}
           value={senha}
           onChange={(evento) => definirSenha(evento.target.value)}
+          ref={campoDaSenha}
         />
         {falha !== undefined && (
           <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-4 text-erro">

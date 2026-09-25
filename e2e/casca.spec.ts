@@ -283,7 +283,7 @@ test.describe('casca da web', () => {
     expect(pedidos).toBe(1)
   })
 
-  test('o CSS servido tem os hex da D72, não usa oklch() nem color-mix(), e pinta o aviso de atenção', async ({ page }) => {
+  test('E5: o CSS servido tem os hex da D72, não usa oklch() nem color-mix(), e pinta o aviso de atenção', async ({ page }) => {
     await page.goto('/sistema')
     const folhas = await page.locator('link[rel="stylesheet"]').evaluateAll((links) => links.map((link) => (link as HTMLLinkElement).href))
     expect(folhas.length).toBeGreaterThan(0)

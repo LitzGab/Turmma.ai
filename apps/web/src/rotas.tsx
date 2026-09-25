@@ -15,6 +15,7 @@ import { EscolherEscola } from './paginas/EscolherEscola'
 import { Inicio } from './paginas/Inicio'
 import { Mfa } from './paginas/Mfa'
 import { Vinculos } from './paginas/Vinculos'
+import { tituloDaOperacao } from './titulo-da-operacao'
 
 /**
  * A área do operador Turmma (A0), só por `import()`: vira o chunk `operacao-*.js` (`vite.config.ts`), que nenhuma tela
@@ -26,16 +27,31 @@ const AreaDaOperacao = lazy(() => import('./operacao/rotas'))
 /** O caminho da área, repetido aqui para a entrada não importar nada de `./operacao/`. */
 const BASE_DA_OPERACAO = '/operacao'
 
+/** O título da aba quando o chunk da operação não chega: sem ele, a aba ficaria com o título da página anterior. */
+const TITULO_DA_FRONTEIRA_DA_OPERACAO = tituloDaOperacao('Não foi possível carregar')
+
 /**
  * A fronteira de erro do chunk da operação: o `import()` que falha (rede da escola caindo, 3G no celular) não vira tela
  * branca. "Tente de novo" recarrega a página, porque o navegador guarda a falha do módulo e um segundo `import()` do
  * mesmo endereço devolveria a mesma falha. A tela da operação não tem rascunho que a recarga possa perder.
+ *
+ * A aba ganha o título da falha, como as rotas da operação ganham o delas (`useTituloDaPagina`), e o devolve ao sair.
  */
 class FronteiraDaOperacao extends Component<{ children: ReactNode }, { falhou: boolean }> {
   override state = { falhou: false }
+  private tituloAnterior: string | undefined
 
   static getDerivedStateFromError(): { falhou: boolean } {
     return { falhou: true }
+  }
+
+  override componentDidCatch(): void {
+    this.tituloAnterior ??= document.title
+    document.title = TITULO_DA_FRONTEIRA_DA_OPERACAO
+  }
+
+  override componentWillUnmount(): void {
+    if (this.tituloAnterior !== undefined) document.title = this.tituloAnterior
   }
 
   override render() {

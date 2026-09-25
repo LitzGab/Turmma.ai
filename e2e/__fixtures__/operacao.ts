@@ -1,5 +1,6 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { Client } from 'pg'
+import { hashDoTokenDeConvite, sortearTokenDeConvite } from '../../apps/api/src/operacao/token-do-convite.ts'
 import { lerAmbienteDeTeste, urlDoBancoDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
 import { codigoDoAutenticador } from './sessao.ts'
 
@@ -65,15 +66,15 @@ export type EstadoDoConviteDeTeste = 'pendente' | 'usado' | 'vencido' | 'revogad
 
 /**
  * O operador como o `ops:operador criar` o deixa: a linha com apelido, nome e e-mail, e um convite de 72 h cujo banco
- * guarda só o SHA-256 do token. Os outros estados são o mesmo convite depois de usado, vencido ou revogado.
+ * guarda só o hash do token, pelo `hashDoTokenDeConvite` do comando. Os outros estados são o mesmo convite depois de usado, vencido ou revogado.
  */
 export async function criarOperadorConvidado(estado: EstadoDoConviteDeTeste = 'pendente'): Promise<OperadorConvidado> {
   const marca = randomUUID().replaceAll('-', '').slice(0, 12)
   const apelido = `e2e-${marca}`
   const nome = `Operadora sintética ${marca.slice(0, 6)}`
   const email = `${apelido}@turmma.invalid`
-  // 32 bytes em base64url, como o `ops:operador`; o banco guarda só o SHA-256 em hex.
-  const token = randomBytes(32).toString('base64url')
+  // O token e o hash pelas mesmas peças do `ops:operador` e do aceite: um hash repetido aqui passaria a divergir calado.
+  const token = sortearTokenDeConvite()
   const expira = estado === 'vencido' ? "now() - interval '1 minute'" : "now() + interval '72 hours'"
   const usado = estado === 'usado' ? 'now()' : 'null'
   const revogado = estado === 'revogado' ? 'now()' : 'null'
@@ -84,7 +85,7 @@ export async function criarOperadorConvidado(estado: EstadoDoConviteDeTeste = 'p
     if (id === undefined) throw new Error('o seed do e2e não criou o operador')
     await banco.query(`insert into convite_operador (operador_id, token_hash, expira_em, usado_em, revogado_em) values ($1, $2, ${expira}, ${usado}, ${revogado})`, [
       id,
-      createHash('sha256').update(token).digest('hex'),
+      hashDoTokenDeConvite(token),
     ])
     return id
   })
@@ -97,8 +98,8 @@ export async function criarOperadorComSegundoFator(): Promise<OperadorDeTeste> {
   const nome = `Operadora sintética ${marca.slice(0, 6)}`
   const email = `${apelido}@turmma.invalid`
   const senha = `senha-sintetica-de-operador-${marca}`
-  // 32 bytes em base64url, como o `ops:operador`; o banco guarda só o SHA-256 em hex.
-  const token = randomBytes(32).toString('base64url')
+  // O token e o hash pelas mesmas peças do `ops:operador` e do aceite.
+  const token = sortearTokenDeConvite()
 
   const operadorId = await comBanco(async (banco) => {
     const { rows } = await banco.query<{ id: string }>('insert into operador (apelido, nome, email) values ($1, $2, $3) returning id', [apelido, nome, email])
@@ -106,7 +107,7 @@ export async function criarOperadorComSegundoFator(): Promise<OperadorDeTeste> {
     if (id === undefined) throw new Error('o seed do e2e não criou o operador')
     await banco.query("insert into convite_operador (operador_id, token_hash, expira_em) values ($1, $2, now() + interval '72 hours')", [
       id,
-      createHash('sha256').update(token).digest('hex'),
+      hashDoTokenDeConvite(token),
     ])
     return id
   })

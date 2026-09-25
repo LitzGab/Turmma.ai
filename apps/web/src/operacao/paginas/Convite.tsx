@@ -1,11 +1,10 @@
-import { CodigoDeErro, TAMANHO_MAXIMO_SENHA, TAMANHO_MAXIMO_TOKEN_DE_CONVITE, TAMANHO_MINIMO_SENHA_NOVA } from '@educa/shared'
-import { useEffect, useState, type FormEvent } from 'react'
+import { TAMANHO_MAXIMO_SENHA, TAMANHO_MAXIMO_TOKEN_DE_CONVITE, TAMANHO_MINIMO_SENHA_NOVA } from '@educa/shared'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'wouter'
-import { ErroDaApi } from '../../api/cliente'
 import { Botao } from '../../componentes/Botao'
 import { Campo } from '../../componentes/Campo'
 import { EstadoCarregando } from '../../componentes/estado'
-import { aceitarConviteDeOperador, consultarConviteDeOperador } from '../api/convite'
+import { aceitarConviteDeOperadorNaVez, consultarConviteDeOperador, ehConviteInvalido } from '../api/convite'
 import { ROTAS_DA_OPERACAO } from '../caminhos'
 import { CascaPublicaDaOperacao, ErroDaOperacao } from '../componentes/CascaDaOperacao'
 import { TEXTO_DO_CONVITE_INVALIDO, textoDaFalha } from '../textos'
@@ -48,7 +47,8 @@ type Etapa =
  * aparecem, porque quem tem o link ainda não provou nada. O link sem token cai na mesma mensagem.
  *
  * O token vive só no estado desta tela e some quando ela sai; a senha sai da memória assim que a resposta chega, dê
- * certo ou não. O desafio que o aceite devolve fica no módulo da sessão do operador, nunca na URL.
+ * certo ou não, ou antes, quando outro link chega à aba. O desafio que o aceite devolve fica no módulo da sessão do
+ * operador, nunca na URL; o de um aceite feito com o link anterior nem fica.
  */
 export function Convite() {
   useTituloDaPagina('Convite')
@@ -60,13 +60,17 @@ export function Convite() {
   const [senha, definirSenha] = useState('')
   const [aceitando, definirAceitando] = useState(false)
   const [falha, definirFalha] = useState<unknown>(undefined)
+  // Sobe a cada link colado nesta aba: o aceite que estava no ar com o link anterior volta e é descartado.
+  const vezDoLink = useRef(0)
 
   // Outro link colado nesta mesma aba muda só o `#`, sem recarregar — inclusive o mesmo link de novo, depois de a tela
   // ter tirado o fragmento da barra. A tela tira o fragmento da barra de novo e recomeça a consulta, mesmo com o token
-  // igual; a senha que estivesse digitada sai da memória. Fragmento que não é token (vazio, `%` quebrado, longo demais)
+  // igual; a senha que estivesse digitada sai da memória, e a resposta do aceite que ainda estivesse no ar não vale mais
+  // para esta tela (`aceitarConviteDeOperadorNaVez`). Fragmento que não é token (vazio, `%` quebrado, longo demais)
   // mostra a mesma tela do convite que não vale.
   useEffect(() => {
     function aoMudarOFragmento(): void {
+      vezDoLink.current++
       const novo = tokenDoFragmento()
       apagarFragmentoDaBarra()
       definirSenha('')
@@ -102,14 +106,14 @@ export function Convite() {
     definirAceitando(true)
     definirFalha(undefined)
     try {
-      await aceitarConviteDeOperador({ token, senha })
+      const desfecho = await aceitarConviteDeOperadorNaVez({ token, senha }, () => vezDoLink.current)
+      // Outro link chegou enquanto o aceite estava no ar: a tela já é a dele, e nada daqui muda.
+      if (desfecho.tipo === 'descartado') return
       definirSenha('')
-      navegar(ROTAS_DA_OPERACAO.configurarMfa, { replace: true })
-    } catch (erro) {
-      definirSenha('')
+      if (desfecho.tipo === 'aceito') navegar(ROTAS_DA_OPERACAO.configurarMfa, { replace: true })
       // Usado entre a consulta e o aceite (outra aba, o link aberto duas vezes): a mesma tela do convite que não vale.
-      if (ehConviteInvalido(erro)) definirEtapa({ nome: 'invalido' })
-      else definirFalha(erro)
+      else if (desfecho.tipo === 'invalido') definirEtapa({ nome: 'invalido' })
+      else definirFalha(desfecho.erro)
     } finally {
       definirAceitando(false)
     }
@@ -174,9 +178,4 @@ export function Convite() {
       )}
     </CascaPublicaDaOperacao>
   )
-}
-
-/** O convite que não vale chega como `NAO_ENCONTRADO`, igual nos cinco casos (C9). */
-function ehConviteInvalido(erro: unknown): boolean {
-  return erro instanceof ErroDaApi && erro.codigo === CodigoDeErro.NAO_ENCONTRADO
 }

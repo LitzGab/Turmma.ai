@@ -1,4 +1,4 @@
-import type { Page, Request, Route } from '@playwright/test'
+import type { Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { codigoDoOperador, criarOperadorComSegundoFator as criarOperador, encerrarSessoesDoOperador, removerOperador, type OperadorDeTeste } from './__fixtures__/operacao.ts'
 import { criarEquipeComSenha } from './__fixtures__/sessao.ts'
@@ -58,6 +58,10 @@ test.describe('área do operador Turmma', () => {
     await page.getByLabel('Senha').fill('senha-que-nao-e-a-dela')
     await acionar(page, /^Entrar$/, hasTouch)
     await expect(page.getByRole('alert')).toContainText('E-mail ou senha incorretos', { timeout: PRAZO_DA_ENTRADA_MS })
+    // A senha errada sai da tela junto com a resposta, e o foco volta ao campo dela para digitar de novo.
+    await expect(page.getByLabel('Senha')).toHaveValue('')
+    await expect(page.getByLabel('Senha')).toBeFocused()
+    await expect(page.getByLabel('E-mail')).toHaveValue(operador.email)
 
     await page.getByLabel('Senha').fill(operador.senha)
     const entrar = page.getByRole('button', { name: /^Entrar$/ })
@@ -126,6 +130,56 @@ test.describe('área do operador Turmma', () => {
 
     await expect(page.getByRole('banner')).toContainText(bruno.nome, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('banner')).not.toContainText(ana.nome)
+  })
+
+  test('clique duplo em "Entrar" do segundo fator e em "Sair": um pedido cada, e o operador seguinte na mesma aba entra e sai de novo', async ({ page, hasTouch }) => {
+    const ana = await criarOperadorComSegundoFator()
+    const bruno = await criarOperadorComSegundoFator()
+    const pedidos: string[] = []
+    page.on('request', (pedido: Request) => {
+      if (pedido.method() === 'POST') pedidos.push(new URL(pedido.url()).pathname)
+    })
+    const quantos = (caminho: string) => pedidos.filter((pedido) => pedido === caminho).length
+    /**
+     * Os dois cliques no mesmo instante, antes de a tela desenhar o botão desligado: é o caso que o `disabled` e o
+     * estado da tela não seguram, porque o segundo clique ainda encontra o botão ligado. Quem segura é a sessão.
+     */
+    const cliqueDuplo = (botao: Locator) =>
+      botao.evaluate((elemento: HTMLButtonElement) => {
+        elemento.click()
+        elemento.click()
+      })
+
+    await page.goto('/operacao/entrar')
+    await page.getByLabel('E-mail').fill(ana.email, { timeout: PRAZO_DA_ENTRADA_MS })
+    await page.getByLabel('Senha').fill(ana.senha)
+    await acionar(page, /^Entrar$/, hasTouch)
+    await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await page.getByLabel('Código do aplicativo').fill(codigoDoOperador(ana))
+    await cliqueDuplo(page.getByRole('button', { name: /^Entrar$/ }))
+
+    await esperarCasca(page, ana)
+    expect(quantos('/v1/operacao/sessao/mfa')).toBe(1)
+    await expect(page.getByRole('alert')).toHaveCount(0)
+
+    await cliqueDuplo(page.getByRole('banner').getByRole('button', { name: 'Sair' }))
+    await expect(page.getByRole('heading', { name: 'Entrar na operação' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    expect(quantos('/v1/operacao/sessao/sair')).toBe(1)
+    // A saída confirmada não deixa aviso: a segunda saída que falhasse diria "a saída não foi confirmada".
+    await expect(page.getByRole('alert')).toHaveCount(0)
+
+    // O recomeço, na mesma aba e sem recarregar: o Bruno entra, não vê nada da Ana, e o Sair dele sai de novo.
+    await page.getByLabel('E-mail').fill(bruno.email)
+    await page.getByLabel('Senha').fill(bruno.senha)
+    await acionar(page, /^Entrar$/, hasTouch)
+    await page.getByLabel('Código do aplicativo').fill(codigoDoOperador(bruno), { timeout: PRAZO_DA_ENTRADA_MS })
+    await acionar(page, /^Entrar$/, hasTouch)
+    await esperarCasca(page, bruno)
+    await expect(page.getByRole('banner')).not.toContainText(ana.nome)
+    await acionar(page, 'Sair', hasTouch)
+    await expect(page.getByRole('heading', { name: 'Entrar na operação' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    expect(quantos('/v1/operacao/sessao/sair')).toBe(2)
+    expect(quantos('/v1/operacao/sessao/mfa')).toBe(2)
   })
 
   test('código do segundo fator recusado volta à entrada explicando, porque a API gastou o desafio', async ({ page, hasTouch }) => {
@@ -229,13 +283,15 @@ test.describe('área do operador Turmma', () => {
     await expect(page.getByRole('alert')).toHaveText(TEXTO_DA_SESSAO_ENCERRADA)
   })
 
-  test('E4: o chunk da operação que não chega mostra a fronteira de erro com "Tente de novo", e a nova tentativa carrega', async ({ page, hasTouch }) => {
+  test('E4: o chunk da operação que não chega mostra a fronteira de erro com "Tente de novo" e o título dela na aba, e a nova tentativa carrega', async ({ page, hasTouch }) => {
     const abortar = (rota: Route) => rota.abort('internetdisconnected')
     await page.route(CHUNK_DA_OPERACAO, abortar)
 
     await page.goto('/operacao/entrar')
     await expect(page.getByRole('alert')).toContainText('Não foi possível carregar a área da operação', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('button', { name: 'Tente de novo' })).toBeVisible()
+    // A aba diz o que aconteceu, e não fica com o título da página de antes ("Turmma", do `index.html`).
+    await expect(page).toHaveTitle('Não foi possível carregar · Operação Turmma')
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 

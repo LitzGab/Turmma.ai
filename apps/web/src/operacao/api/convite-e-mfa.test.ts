@@ -14,7 +14,8 @@ interface Chamada {
 }
 
 const chamadas: Chamada[] = []
-let fila: { status: number; corpo?: unknown }[] = []
+/** `segurar` prende a resposta até o teste liberar: é o aceite que ainda está no ar quando outro link chega à aba. */
+let fila: { status: number; corpo?: unknown; segurar?: Promise<void> }[] = []
 
 /** Dez códigos no alfabeto do contrato (sem 0, 1, I e O), como a API os gera. */
 const CODIGOS = 'ABCDEFGHJK'.split('').map((letra) => `${letra.repeat(4)}23456789`)
@@ -42,6 +43,7 @@ beforeEach(async () => {
       chamadas.push({ caminho, corpo: typeof opcoes?.body === 'string' ? (JSON.parse(opcoes.body) as unknown) : undefined })
       const resposta = fila.shift()
       if (resposta === undefined) throw new Error(`chamada sem resposta preparada: ${caminho}`)
+      await (resposta.segurar ?? Promise.resolve())
       return new Response(resposta.corpo === undefined ? null : JSON.stringify(resposta.corpo), { status: resposta.status })
     }),
   )
@@ -82,6 +84,57 @@ describe('aceite do convite do operador', () => {
     fila.push({ status: 404, corpo: envelope('NAO_ENCONTRADO') })
     expect(await codigoDoErro(m.convite.aceitarConviteDeOperador({ token: 'token-usado', senha: 'frase-sintetica-comprida' }))).toBe('NAO_ENCONTRADO')
     expect(m.sessao.desafioDeOperador('mfa')).toBeUndefined()
+  })
+})
+
+describe('o aceite feito com o link anterior a um hashchange', () => {
+  const PEDIDO = { token: 'token-do-primeiro-link', senha: 'frase-sintetica-comprida' }
+
+  /** Um aceite no ar, segurado: o teste decide se outro link chega (a vez sobe) antes de a resposta voltar. */
+  function aceiteSegurado(resposta: { status: number; corpo?: unknown }) {
+    let vez = 0
+    let liberar: () => void = () => undefined
+    fila.push({ ...resposta, segurar: new Promise<void>((resolver) => (liberar = resolver)) })
+    const desfecho = m.convite.aceitarConviteDeOperadorNaVez(PEDIDO, () => vez)
+    return {
+      desfecho,
+      outroLink: () => {
+        vez++
+      },
+      liberar: () => liberar(),
+    }
+  }
+
+  it('a resposta que volta depois de outro link é descartada: não vale como aceite, e o desafio dela não fica na aba', async () => {
+    const aceite = aceiteSegurado({ status: 200, corpo: { etapa: 'configurar_mfa', desafio: 'desafio-do-link-anterior' } })
+    aceite.outroLink()
+    aceite.liberar()
+    expect(await aceite.desfecho).toEqual({ tipo: 'descartado' })
+    expect(m.sessao.desafioDeOperador('configurar_mfa')).toBeUndefined()
+  })
+
+  it('com o mesmo link na tela, a mesma resposta vale: segue para o configurar, com o desafio guardado', async () => {
+    const aceite = aceiteSegurado({ status: 200, corpo: { etapa: 'configurar_mfa', desafio: 'desafio-do-link-anterior' } })
+    aceite.liberar()
+    expect(await aceite.desfecho).toEqual({ tipo: 'aceito' })
+    expect(m.sessao.desafioDeOperador('configurar_mfa')).toBe('desafio-do-link-anterior')
+  })
+
+  it('a recusa que volta depois de outro link também é descartada: a tela do link novo não vira "convite que não vale"', async () => {
+    const depois = aceiteSegurado({ status: 404, corpo: envelope('NAO_ENCONTRADO') })
+    depois.outroLink()
+    depois.liberar()
+    expect(await depois.desfecho).toEqual({ tipo: 'descartado' })
+
+    const semOutroLink = aceiteSegurado({ status: 404, corpo: envelope('NAO_ENCONTRADO') })
+    semOutroLink.liberar()
+    expect(await semOutroLink.desfecho).toEqual({ tipo: 'invalido' })
+
+    const falhaSemOutroLink = aceiteSegurado({ status: 503, corpo: envelope('INDISPONIVEL_TENTE_DE_NOVO') })
+    falhaSemOutroLink.liberar()
+    const falha = await falhaSemOutroLink.desfecho
+    expect(falha.tipo).toBe('falhou')
+    expect(falha.tipo === 'falhou' && falha.erro).toHaveProperty('codigo', 'INDISPONIVEL_TENTE_DE_NOVO')
   })
 })
 

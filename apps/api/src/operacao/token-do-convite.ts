@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { BYTES_DO_TOKEN_DE_CONVITE, hashDoToken } from '../sessao/convite.service.js'
+import { BYTES_DO_TOKEN_DE_CONVITE, hashDoToken } from '../sessao/hash-do-token.js'
 
 /**
  * O token do convite de operador é a mesma peça do convite do coordenador (F1): 256 bits sorteados, em base64url, e o

@@ -615,13 +615,66 @@ describe('arquitetura: nenhuma rota registrada cria operador (C44)', () => {
  */
 const DOC_MODELO = 'docs/modelo-de-dados.md'
 
-/** Toda tabela das migrations que termina sem `escola_id`, na ordem das migrations. */
+/**
+ * O SQL de uma migration em comandos, sem o que não é DDL: o corpo das funções (`$$ … $$`), os comentários (inclusive o
+ * `--> statement-breakpoint` do drizzle) e o texto entre aspas simples. Assim um `;` ou um `CREATE TABLE` dentro de
+ * função, comentário ou texto não vira comando.
+ */
+function comandosDaMigration(sql: string): string[] {
+  return sql
+    .replace(/\$(\w*)\$[\s\S]*?\$\1\$/g, "''")
+    .replace(/--[^\n]*/g, '')
+    .replace(/'(?:[^']|'')*'/g, "''")
+    .split(';')
+    .map((comando) => comando.trim())
+    .filter((comando) => comando !== '')
+}
+
+/** O nome de tabela como a migration o escreve: com ou sem aspas, com ou sem o esquema `public` na frente. */
+const NOME_DE_TABELA = String.raw`(?:"?public"?\.)?"?(\w+)"?`
+const CRIACAO = new RegExp(String.raw`^create\s+(?:unlogged\s+)?table\s+(?:if\s+not\s+exists\s+)?${NOME_DE_TABELA}\s*\(([\s\S]*)\)`, 'i')
+const ALTERACAO = new RegExp(String.raw`^alter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?${NOME_DE_TABELA}\s+([\s\S]*)$`, 'i')
+/** Qualquer `CREATE … TABLE`, inclusive o que a leitura acima não entende: a conferência de que nenhuma escapou. */
+const CRIACAO_SOLTA = /\bcreate\s+(?:[a-z]+\s+)*table\b/gi
+const COLUNA_ESCOLA = String.raw`"?escola_id"?(?![\w"])`
+
+/**
+ * Toda tabela das migrations que termina sem `escola_id`, na ordem das migrations. Lê o DDL do drizzle e o escrito à
+ * mão: `CREATE TABLE [IF NOT EXISTS]` com ou sem `"public".`, em qualquer caixa; `ALTER TABLE … ADD`/`DROP`/`RENAME
+ * COLUMN` do `escola_id`; `ALTER TABLE … RENAME TO`; e `DROP TABLE`. Um `CREATE TABLE` que ela não consegue ler (`AS
+ * SELECT`, `PARTITION OF`, temporária, outro esquema) **falha o teste**, em vez de sumir da conta calado: a leitura
+ * estrita tem de achar tantas criações quanto a busca solta. O `ALTER` não tem essa conferência: uma forma dele que a
+ * leitura não conheça (o `escola_id` perdido por outro caminho) ainda passaria, e a regra 80, item 9, já a torna rara.
+ */
 function tabelasSemEscola(sqls: readonly string[]): string[] {
   const temEscola = new Map<string, boolean>()
   for (const sql of sqls) {
-    for (const criacao of sql.matchAll(/CREATE TABLE "(\w+)" \(([\s\S]*?)\n\);/g)) temEscola.set(criacao[1] ?? '', /"escola_id"/.test(criacao[2] ?? ''))
-    for (const coluna of sql.matchAll(/ALTER TABLE "(\w+)" ADD COLUMN "escola_id"/g)) temEscola.set(coluna[1] ?? '', true)
-    for (const remocao of sql.matchAll(/DROP TABLE (?:IF EXISTS )?"(\w+)"/g)) temEscola.delete(remocao[1] ?? '')
+    for (const comando of comandosDaMigration(sql)) {
+      const soltas = [...comando.matchAll(CRIACAO_SOLTA)].length
+      const criacao = CRIACAO.exec(comando)
+      if (soltas !== (criacao === null ? 0 : 1)) throw new Error(`criação de tabela que a leitura das migrations não reconhece: ${comando.slice(0, 120)}`)
+      if (criacao !== null) {
+        temEscola.set(criacao[1] ?? '', new RegExp(`(?:^|[\\s(,])${COLUNA_ESCOLA}`, 'i').test(criacao[2] ?? ''))
+        continue
+      }
+      const alteracao = ALTERACAO.exec(comando)
+      if (alteracao !== null) {
+        const tabela = alteracao[1] ?? ''
+        const acoes = alteracao[2] ?? ''
+        const novoNome = new RegExp(String.raw`^rename\s+to\s+"?(\w+)"?$`, 'i').exec(acoes)?.[1]
+        if (novoNome !== undefined) {
+          const tinha = temEscola.get(tabela)
+          temEscola.delete(tabela)
+          if (tinha !== undefined) temEscola.set(novoNome, tinha)
+          continue
+        }
+        if (new RegExp(String.raw`\b(?:add\s+(?:column\s+)?(?:if\s+not\s+exists\s+)?|rename\s+(?:column\s+)?"?\w+"?\s+to\s+)${COLUNA_ESCOLA}`, 'i').test(acoes)) temEscola.set(tabela, true)
+        if (new RegExp(String.raw`\b(?:drop\s+(?:column\s+)?(?:if\s+exists\s+)?|rename\s+(?:column\s+)?)${COLUNA_ESCOLA}`, 'i').test(acoes)) temEscola.set(tabela, false)
+        continue
+      }
+      const remocao = new RegExp(String.raw`^drop\s+table\s+(?:if\s+exists\s+)?([\s\S]+?)(?:\s+(?:cascade|restrict))?$`, 'i').exec(comando)
+      for (const nome of remocao?.[1]?.split(',') ?? []) temEscola.delete(new RegExp(`^\\s*${NOME_DE_TABELA}\\s*$`).exec(nome)?.[1] ?? '')
+    }
   }
   return [...temEscola].filter(([, tem]) => !tem).map(([tabela]) => tabela)
 }
@@ -673,5 +726,46 @@ describe('arquitetura: toda tabela sem escola_id está nas exceções do modelo 
     const documento = '## Regras transversais\n\n1. Exceções: `Conta`.\n2. Id é UUID. `Nova` aparece aqui, fora do item 1.\n'
     expect(tabelasSemEscola(migrations)).toEqual(['conta', 'nova'])
     expect(excecoesNaoDeclaradas(tabelasSemEscola(migrations), documento)).toEqual(['nova'])
+  })
+
+  it('lê o CREATE TABLE escrito à mão: IF NOT EXISTS, "public"., caixa baixa, sem aspas, CRLF e ") ;"', () => {
+    expect(tabelasSemEscola(['CREATE TABLE IF NOT EXISTS "nova" (\n\t"id" uuid\n);'])).toEqual(['nova'])
+    expect(tabelasSemEscola(['CREATE TABLE "public"."nova" (\n\t"id" uuid\n);'])).toEqual(['nova'])
+    expect(tabelasSemEscola(['create table nova (\r\n  id uuid\r\n) ;'])).toEqual(['nova'])
+    // A mesma escrita à mão com `escola_id` não entra na lista: a coluna é lida no corpo, com ou sem aspas.
+    expect(tabelasSemEscola(['create table if not exists public.de_escola (\r\n  id uuid,\r\n  escola_id uuid not null\r\n);'])).toEqual([])
+  })
+
+  it('segue a tabela pelo ALTER escrito à mão: RENAME TO leva o nome novo, e DROP ou RENAME do escola_id a põe na lista', () => {
+    const nova = 'CREATE TABLE "nova" (\n\t"id" uuid\n);'
+    const deEscola = 'CREATE TABLE "de_escola" (\n\t"escola_id" uuid\n);'
+    expect(tabelasSemEscola([nova, 'ALTER TABLE "nova" RENAME TO "renomeada";'])).toEqual(['renomeada'])
+    expect(tabelasSemEscola([deEscola, 'ALTER TABLE "public"."de_escola" RENAME TO "com_escola";'])).toEqual([])
+    expect(tabelasSemEscola([deEscola, 'ALTER TABLE "de_escola" DROP COLUMN "escola_id";'])).toEqual(['de_escola'])
+    expect(tabelasSemEscola([deEscola, 'alter table de_escola drop column if exists escola_id cascade;'])).toEqual(['de_escola'])
+    expect(tabelasSemEscola([deEscola, 'ALTER TABLE "de_escola" RENAME COLUMN "escola_id" TO "unidade_id";'])).toEqual(['de_escola'])
+    expect(tabelasSemEscola([nova, 'ALTER TABLE "nova" RENAME COLUMN "unidade_id" TO "escola_id";'])).toEqual([])
+    // O que só parece: a restrição com `escola_id` no nome e a coluna que só termina em `escola_id` não mudam nada.
+    expect(tabelasSemEscola([deEscola, 'ALTER TABLE "de_escola" DROP CONSTRAINT "de_escola_escola_id_escola_id_fk";'])).toEqual([])
+    expect(tabelasSemEscola([deEscola, 'ALTER TABLE "de_escola" DROP COLUMN "outra_escola_id";'])).toEqual([])
+    expect(tabelasSemEscola([nova, 'ALTER TABLE "nova" ADD COLUMN "outra_escola_id" uuid;'])).toEqual(['nova'])
+    expect(tabelasSemEscola([nova, 'DROP TABLE IF EXISTS "public"."nova" CASCADE;'])).toEqual([])
+  })
+
+  it('falha diante do CREATE TABLE que não consegue ler, e não se confunde com o que está em comentário, texto ou função', () => {
+    for (const ilegivel of [
+      'CREATE TABLE "copia" AS SELECT * FROM "escola";',
+      'CREATE TABLE "auth"."conta" (\n\t"id" uuid\n);',
+      'CREATE TABLE "filha" PARTITION OF "mae" FOR VALUES IN (1);',
+      'CREATE TEMPORARY TABLE "rascunho" (\n\t"id" uuid\n);',
+    ]) {
+      expect(() => tabelasSemEscola([ilegivel]), ilegivel).toThrow(/não reconhece/)
+    }
+    const semDdl = [
+      '-- CREATE TABLE "fantasma" (\n',
+      "CREATE FUNCTION \"f\"() RETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  CREATE TABLE fantasma (id uuid);\n  RETURN NULL;\nEND;\n$$;",
+      "ALTER TABLE \"x\" ADD CONSTRAINT \"x_nome\" CHECK (\"x\".\"nome\" <> 'create table fantasma (; ');",
+    ].join('\n')
+    expect(tabelasSemEscola([semDdl])).toEqual([])
   })
 })

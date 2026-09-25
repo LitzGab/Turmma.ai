@@ -77,6 +77,24 @@ function instalarBroadcastChannel(): void {
   vi.stubGlobal('BroadcastChannel', CanalFalso)
 }
 
+/**
+ * As Web Locks como o navegador as dá: um pedido por vez em cada nome, e o seguinte só começa quando a tarefa do
+ * anterior termina. Um objeto só, para as duas abas do teste, como o navegador é um só.
+ */
+function travasEmFila(): { request: (nome: string, tarefa: () => Promise<unknown>) => Promise<unknown> } {
+  const filas = new Map<string, Promise<unknown>>()
+  return {
+    request: (nome, tarefa) => {
+      const vez = (filas.get(nome) ?? Promise.resolve()).then(tarefa)
+      filas.set(
+        nome,
+        vez.catch(() => undefined),
+      )
+      return vez
+    },
+  }
+}
+
 async function erroDe(promessa: Promise<unknown>): Promise<{ codigo: string }> {
   const erro = await promessa.then(
     () => undefined,
@@ -249,6 +267,27 @@ describe('abrir a aba pelo cookie', () => {
     // Renovar não é uso (tarefa 8.0): o relógio de inatividade só começa na primeira requisição aceita.
     expect(sessao.ultimoUsoDaSessaoDeOperador()).toBeUndefined()
   })
+
+  it('duas abas que renovam juntas esperam a vez na trava das Web Locks: a segunda renovação só sai depois de a primeira voltar', async () => {
+    vi.stubGlobal('navigator', { locks: travasEmFila() })
+    vi.resetModules()
+    const outraAba = await importarSessao()
+    let liberar: () => void = () => undefined
+    const segurar = new Promise<void>((resolver) => (liberar = resolver))
+    responderCom({ status: 200, corpo: { token: 'token-desta-aba', expiraEm: DAQUI_A_MUITO }, segurar }, { status: 200, corpo: { token: 'token-da-outra-aba', expiraEm: DAQUI_A_MUITO } })
+    const renovacoes = () => chamadas.filter((chamada) => chamada.caminho === sessao.CAMINHO_DA_RENOVACAO_DE_OPERADOR).length
+
+    const juntas = Promise.all([sessao.renovarSessaoDeOperador(), outraAba.renovarSessaoDeOperador()])
+    await new Promise((resolver) => setTimeout(resolver, 10))
+    // A primeira está no ar, segurada: a da outra aba espera na trava, sem sair.
+    expect(renovacoes()).toBe(1)
+
+    liberar()
+    await juntas
+    expect(renovacoes()).toBe(2)
+    expect(sessao.tokenDeOperador()).toBe('token-desta-aba')
+    expect(outraAba.tokenDeOperador()).toBe('token-da-outra-aba')
+  })
 })
 
 describe('o segundo fator gasta o desafio', () => {
@@ -279,6 +318,56 @@ describe('o segundo fator gasta o desafio', () => {
     responderCom({ status, corpo: envelope(codigo) })
     expect((await erroDe(sessao.entrarComSegundoFatorDeOperador({ codigo: '000000' }))).codigo).toBe(codigo)
     expect(sessao.desafioDeOperador('mfa')).toBe(ANA.desafio)
+  })
+
+  it('dois envios juntos (o clique duplo em "Entrar") saem como um pedido só, e os dois recebem a sessão aberta', async () => {
+    await comDesafio()
+    responderCom({ status: 200, corpo: { token: ANA.token, expiraEm: DAQUI_A_MUITO } })
+
+    await Promise.all([sessao.entrarComSegundoFatorDeOperador({ codigo: '123456' }), sessao.entrarComSegundoFatorDeOperador({ codigo: '123456' })])
+
+    expect(chamadas.map((chamada) => chamada.caminho)).toEqual([sessao.CAMINHO_DO_SEGUNDO_FATOR_DE_OPERADOR])
+    expect(sessao.estadoDaSessaoDeOperador()).toBe('aberta')
+    expect(sessao.tokenDeOperador()).toBe(ANA.token)
+  })
+
+  it('o envio que já voltou não segura o seguinte: depois de um 503 dos dois envios juntos, a nova tentativa sai', async () => {
+    await comDesafio()
+    responderCom({ status: 503, corpo: envelope(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO) })
+
+    const juntos = await Promise.allSettled([sessao.entrarComSegundoFatorDeOperador({ codigo: '123456' }), sessao.entrarComSegundoFatorDeOperador({ codigo: '123456' })])
+    expect(juntos.map((resultado) => resultado.status)).toEqual(['rejected', 'rejected'])
+    expect(chamadas).toHaveLength(1)
+
+    responderCom({ status: 200, corpo: { token: ANA.token, expiraEm: DAQUI_A_MUITO } })
+    await sessao.entrarComSegundoFatorDeOperador({ codigo: '654321' })
+    expect(chamadas.map((chamada) => chamada.corpo)).toEqual([
+      { desafio: ANA.desafio, codigo: '123456' },
+      { desafio: ANA.desafio, codigo: '654321' },
+    ])
+    expect(sessao.estadoDaSessaoDeOperador()).toBe('aberta')
+  })
+})
+
+describe('o Sair', () => {
+  it('dois Sair juntos (o clique duplo): um pedido à API e a sessão esquecida uma vez; o Sair da sessão seguinte sai de novo', async () => {
+    const aoTrocar = vi.fn()
+    sessao.aoTrocarDeSessaoDeOperador(aoTrocar)
+    await entrar(sessao, ANA)
+    aoTrocar.mockClear()
+    responderCom({ status: 204 })
+
+    await Promise.all([sessao.sairComoOperador(), sessao.sairComoOperador()])
+
+    expect(chamadas.map((chamada) => chamada.caminho)).toEqual([sessao.CAMINHO_DA_SAIDA_DE_OPERADOR])
+    expect(aoTrocar).toHaveBeenCalledTimes(1)
+    expect(sessao.estadoDaSessaoDeOperador()).toBe('anonima')
+
+    await entrar(sessao, BRUNO)
+    responderCom({ status: 204 })
+    await sessao.sairComoOperador()
+    expect(chamadas.map((chamada) => chamada.caminho)).toEqual([sessao.CAMINHO_DA_SAIDA_DE_OPERADOR])
+    expect(sessao.tokenDeOperador()).toBeUndefined()
   })
 })
 

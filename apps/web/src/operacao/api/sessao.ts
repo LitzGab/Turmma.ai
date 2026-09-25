@@ -396,6 +396,15 @@ export async function entrarComoOperador(pedido: PedidoEntradaDeOperador): Promi
 }
 
 /**
+ * O segundo fator que já está no ar. Dois envios juntos (o clique duplo em "Entrar", o Enter e o clique no mesmo
+ * instante, antes de a tela desligar o botão) levam o mesmo desafio, e a API gasta o desafio no primeiro: o segundo
+ * voltaria recusado e mandaria à entrada, com "o código não foi aceito", quem acabou de entrar. Aqui o segundo recebe
+ * o resultado do primeiro, e sai um pedido só (tarefa 10.0 da A0b). O código do segundo envio não vai a lugar nenhum:
+ * com o desafio gasto, a API o recusaria do mesmo jeito.
+ */
+let segundoFatorEmAndamento: Promise<void> | undefined
+
+/**
  * `POST /v1/operacao/sessao/mfa`, com o desafio `mfa` no corpo. Abre a sessão: o token fica em memória, o cookie
  * `turmma_operacao` vem no cabeçalho, e o cache do que havia antes nesta aba sai.
  *
@@ -404,7 +413,14 @@ export async function entrarComoOperador(pedido: PedidoEntradaDeOperador): Promi
  * pessoa refazer a senha. `ENTRADA_INVALIDA` (formato do código) é recusado antes do consumo, e 503 e sem rede podem
  * ter chegado ou não: nesses o desafio fica, e a pessoa tenta de novo na mesma tela.
  */
-export async function entrarComSegundoFatorDeOperador(codigo: CodigoDoSegundoFatorDeOperador): Promise<void> {
+export function entrarComSegundoFatorDeOperador(codigo: CodigoDoSegundoFatorDeOperador): Promise<void> {
+  segundoFatorEmAndamento ??= enviarSegundoFator(codigo).finally(() => {
+    segundoFatorEmAndamento = undefined
+  })
+  return segundoFatorEmAndamento
+}
+
+async function enviarSegundoFator(codigo: CodigoDoSegundoFatorDeOperador): Promise<void> {
   const emAndamento = desafioDeOperador('mfa')
   if (emAndamento === undefined) throw new ErroDaApi(CodigoDeErro.NAO_AUTENTICADO)
   const enviadaEm = Date.now()
@@ -438,13 +454,25 @@ async function sairNaApi(): Promise<boolean> {
 }
 
 /**
+ * A saída que já está no ar. Dois "Sair" juntos (o clique duplo antes de a tela desligar o botão, ou o da faixa e o do
+ * aviso de inatividade) esperam a mesma saída: um pedido à API, e a sessão esquecida uma vez (tarefa 10.0 da A0b).
+ */
+let saidaEmAndamento: Promise<void> | undefined
+
+/**
  * "Sair", a um clique (D59). Esta aba esquece tudo de qualquer jeito, e as outras abas da operação também, pelo canal
  * próprio; nenhuma aba de escola é tocada. Se a API não confirmou, a entrada avisa: o cookie pode continuar valendo.
  */
-export async function sairComoOperador(): Promise<void> {
-  const confirmada = await sairNaApi()
-  esquecerTudo(confirmada ? undefined : TEXTO_DA_SAIDA_NAO_CONFIRMADA)
-  avisarOutrasAbas({ tipo: 'saiu' })
+export function sairComoOperador(): Promise<void> {
+  saidaEmAndamento ??= sairNaApi()
+    .then((confirmada) => {
+      esquecerTudo(confirmada ? undefined : TEXTO_DA_SAIDA_NAO_CONFIRMADA)
+      avisarOutrasAbas({ tipo: 'saiu' })
+    })
+    .finally(() => {
+      saidaEmAndamento = undefined
+    })
+  return saidaEmAndamento
 }
 
 /**

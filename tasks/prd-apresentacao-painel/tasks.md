@@ -1,7 +1,7 @@
 # Tarefas — Painel da operação Turmma (A0b)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 9 de 10 concluídas
+**Status:** 10 de 10 concluídas
 
 Aprovadas por delegação do Joaquim em 24/09/2026 ("faça tudo e aprove até criar as tasks"). As 9.0 e
 10.0 levam as pendências da A0 (`tasks/prd-apresentacao-operacao/retro.md`, "Pendências para a A0b")
@@ -65,12 +65,12 @@ que não cabem numa tarefa que já mexe no mesmo código.
   - [x] 9.4 `SessaoModule` global em `docs/arquitetura.md`
   - [x] 9.5 Testes que faltaram na A0 (tabela da tarefa)
 
-- [ ] **10.0 — Acabamento da A0 na web e no e2e**
-  - [ ] 10.1 Fronteira de erro com `document.title`; a senha sai do estado depois de falha; o aceite
+- [x] **10.0 — Acabamento da A0 na web e no e2e**
+  - [x] 10.1 Fronteira de erro com `document.title`; a senha sai do estado depois de falha; o aceite
     em andamento durante um `hashchange`
-  - [ ] 10.2 Renovações em paralelo; clique duplo em "Entrar" do segundo fator e em "Sair"
-  - [ ] 10.3 O e2e semeia o convite com `hashDoTokenDeConvite`; E5 no nome do teste
-  - [ ] 10.4 `tabelasSemEscola` reconhece o DDL escrito à mão, ou falha diante do que não reconhece
+  - [x] 10.2 Renovações em paralelo; clique duplo em "Entrar" do segundo fator e em "Sair"
+  - [x] 10.3 O e2e semeia o convite com `hashDoTokenDeConvite`; E5 no nome do teste
+  - [x] 10.4 `tabelasSemEscola` reconhece o DDL escrito à mão, ou falha diante do que não reconhece
 
 ## Dependências e paralelismo
 

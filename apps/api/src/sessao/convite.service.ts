@@ -9,27 +9,20 @@ import {
   type RespostaAceitarConvite,
   type RespostaConsultarConvite,
 } from '@educa/shared'
-import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
 import type { BilheteDeConvite } from './bilhete-de-convite.js'
 import { ConviteRepository } from './convite.repository.js'
 import type { EmissorDeDesafio } from './desafio.js'
+import { BYTES_DO_TOKEN_DE_CONVITE, hashDoToken } from './hash-do-token.js'
 import type { HashDeSenha } from './hash-de-senha.js'
 import { normalizarEmail } from './login.service.js'
 import { ResolucaoDeTenantRepository, type UsuarioComConviteAceito } from './resolucao-de-tenant.repository.js'
-
-/** Bytes do token do convite: 256 bits sorteados. O banco guarda só o SHA-256, e o link leva o valor. */
-export const BYTES_DO_TOKEN_DE_CONVITE = 32
 
 const registro = new RegistroDeAuditoria()
 
 /** Expirado, revogado, usado e inexistente: a mesma resposta, que não diz se o convite existe (regra 10, item 6). */
 const conviteInvalido = () => new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-
-/** O SHA-256 do token, em hex: é o que `convite.token_hash` guarda e o aceite procura. */
-export function hashDoToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex')
-}
 
 export interface DependenciasDoConvite {
   readonly banco: Banco

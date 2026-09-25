@@ -1,7 +1,8 @@
 import { hash, type Algorithm } from '@node-rs/argon2'
-import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { Secret, TOTP } from 'otpauth'
 import { Client } from 'pg'
+import { BYTES_DO_TOKEN_DE_CONVITE, hashDoToken } from '../../apps/api/src/sessao/hash-do-token.ts'
 import { lerAmbienteDeTeste, urlDoBancoDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
 
 /**
@@ -213,9 +214,9 @@ export async function ligarContaExterna(escolaId: string, usuarioId: string, cha
 export async function criarConviteDeCoordenador(opcoes: { conta?: EquipeDeTeste; expirado?: boolean; revogado?: boolean } = {}): Promise<ConviteDeTeste> {
   const marca = randomUUID()
   const escola = await criarEscolaSintetica()
-  // 32 bytes em base64url, como o `ops:convite-coordenador`; o banco guarda só o SHA-256.
-  const token = randomBytes(32).toString('base64url')
-  const tokenHash = createHash('sha256').update(token).digest('hex')
+  // O token e o hash pelas mesmas peças do `ops:convite-coordenador` e do aceite; o banco guarda só o hash.
+  const token = randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')
+  const tokenHash = hashDoToken(token)
   const expiraEm = opcoes.expirado ? new Date(Date.now() - 60_000) : new Date(Date.now() + 72 * 60 * 60 * 1_000)
   return comBanco(async (banco) => {
     const contaId =

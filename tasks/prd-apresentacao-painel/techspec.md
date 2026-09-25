@@ -186,6 +186,11 @@ escola sem uso com zero; a ordem e as páginas das duas telas são as mesmas pe�
 do Uso (tarefa 8.0). O `/eu` e a tela carregam
 juntos: o 503 do `/eu` fica no alto, com "Tentar de novo", e a tela embaixo (tarefa 6.0).
 
+Acabamento da A0 (tarefa 10.0): o segundo fator e o "Sair" do operador devolvem o pedido que já está no ar, como a
+renovação, porque o estado da tela não segura dois cliques no mesmo instante; o aceite do convite do operador feito com o
+link anterior a um `hashchange` é descartado (`aceitarConviteDeOperadorNaVez`); a entrada limpa a senha também na falha; e
+a fronteira de erro do chunk da operação dá título à aba.
+
 ## 10. Testes
 
 | Camada | O que será testado |
