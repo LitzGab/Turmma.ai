@@ -92,6 +92,12 @@ export const METRICAS = {
    * painel das escolas não contar a nossa equipe.
    */
   entradaFalhaDaOperacao: 'operacao.entrada_falha',
+  /**
+   * Gravações de uso que a consolidação noturna pulou para não parar as outras escolas, por `origem` (`contador`,
+   * `storage`) e `causa` (`escola_inexistente`, `valor_invalido`, `erro_de_storage`). Sem escola: o id vai no log
+   * `uso.escola_ignorada`, e a escola eliminada não abre série.
+   */
+  escolaIgnoradaNoUso: 'uso.escola_ignorada',
   /** Histograma, em segundos, da leitura de sessão da `GuardaDeSessao`, uma por requisição autenticada. */
   leituraDeSessao: 'sessao.leitura.duracao',
   /** p99 do atraso do event loop no intervalo, em segundos. */

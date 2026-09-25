@@ -1383,6 +1383,55 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Uso por escola pulado na consolidação",
+      "description": "Gravações de uso que a consolidação noturna (sistema.consolidar-uso, 2h) pulou nas últimas 24 h para não parar as outras escolas, por origem (contador do Redis ou storage) e causa (escola_inexistente, valor_invalido, erro_de_storage). O id da escola está no log uso.escola_ignorada. Sem alerta: a pasta de uma escola eliminada aparece toda noite, e o erro de storage já faz o job falhar. O que fazer está no runbook, em \"Rotina do sistema sem rodar\".",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 107
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (origem, causa) (increase(uso_escola_ignorada_total[1d]))",
+          "legendFormat": "{{origem}} · {{causa}}",
+          "range": true
+        }
+      ]
     }
   ]
 }

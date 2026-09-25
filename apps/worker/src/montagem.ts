@@ -111,7 +111,7 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
   }
   const aguardandoVaga = medidor?.createCounter(METRICAS.aguardandoVaga, { description: 'Jobs que chegaram ao worker sem vaga e voltaram a esperar' })
   const stalled = medidor?.createCounter(METRICAS.jobsStalled, { description: 'Jobs devolvidos à espera por lock vencido' })
-  const rotinas = config.pools.lote === undefined || config.storage === undefined ? undefined : montarRotinas(config.storage, banco, uso, relogio, logger)
+  const rotinas = config.pools.lote === undefined || config.storage === undefined ? undefined : montarRotinas(config.storage, banco, uso, relogio, logger, medidor)
   const sandbox = new SandboxDeCpu(config.threadsMaximo)
   const repositorio = new JobRegistroRepository(banco)
   // Banco fora: o despachante acorda pela sondagem, e só.
@@ -202,6 +202,7 @@ function montarRotinas(
   contador: ContadorDeUso,
   relogio: Relogio,
   logger: LoggerBase,
+  medidor: Meter | undefined,
 ): { processadores: Record<string, Processador>; encerrar(): void } {
   const s3 = criarClienteS3(storage)
   return {
@@ -212,6 +213,7 @@ function montarRotinas(
         storage: new MedidorDeStorage(s3, storage.bucket),
         relogio,
         logger,
+        ...(medidor === undefined ? {} : { medidor }),
       }),
       [TIPO_EXPURGAR_JOBS]: criarExpurgoDeJobs({ repositorio: new ExpurgoDeJobsRepository(banco), logger }),
       [TIPO_EXPURGAR_ACESSO]: criarExpurgoDeAcesso({ repositorio: new ExpurgoDeAcessoRepository(banco), relogio, logger }),

@@ -385,6 +385,23 @@ três toleram reexecução (D49), e o expurgo do acesso não apaga nada dentro d
 acesso à operação (6 meses), a sessão e o convite de operador (30 dias): parado, eles também passam da retenção.
 A auditoria da operação e a conta do operador nunca passam por ele.
 
+**Escola pulada na consolidação de uso** (painel "Uso por escola pulado na consolidação", métrica
+`uso_escola_ignorada_total` por `origem` e `causa`; log `uso.escola_ignorada`, com o id da escola, a origem, a causa e o
+erro resumido: SQLSTATE e restrição, ou o tipo). Sem alerta. A consolidação pula a escola que o banco recusa e segue com as
+outras. Por causa:
+1. `escola_inexistente`: a escola não está mais no banco. O SeaweedFS guarda a pasta `escolas/<id>/` vazia depois que os
+   objetos saem, e por isso ela volta toda noite, com `origem="storage"`. É esperado depois de uma eliminação. O contador do
+   Redis (`origem="contador"`) não é apagado: ele vence sozinho em 35 dias. Se o id for de uma escola que devia existir,
+   pare: é o worker apontado para outro banco, ou uma restauração pela metade. Confira o `BANCO_URL` do worker-lote antes
+   de qualquer outra coisa. Nada foi perdido, porque o contador continua no Redis até vencer.
+2. `valor_invalido`: um contador com texto, ou com um dia que não existe na chave. Nada no sistema escreve assim: é chave
+   gravada à mão ou corrompida. Veja com `redis-cli --scan --pattern 'uso:*:<id>:*'` no Redis de fila e apague a chave errada.
+   O contador válido da mesma escola, em outro dia, foi gravado normalmente.
+3. `erro_de_storage`: a listagem da pasta da escola falhou. As outras escolas foram medidas, e o job falha no fim para a
+   fila tentar de novo, então também aparece como job falho em `job_registro`. Depois de três pastas seguidas com erro, a
+   rotina desiste na hora, porque é o storage fora: siga pelo storage (`docker compose ps storage`). Rodar de novo à mão é
+   seguro (D49).
+
 ## Operador não entra no painel da operação (Redis de fila fora)
 
 Sem alerta próprio: aparece como o 503 `INDISPONIVEL_TENTE_DE_NOVO` ao concluir o segundo fator
