@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ESCOLAS_POR_PAGINA,
+  esquemaConsultaDoPainel,
   esquemaPedidoConviteDaCoordenacao,
   esquemaPedidoCriarEscola,
   esquemaPedidoCriarRede,
   esquemaRespostaConviteDaCoordenacao,
   esquemaRespostaCriadoNoPainel,
+  esquemaRespostaEscolasDoPainel,
   esquemaRespostaRedesDoPainel,
+  esquemaRespostaUsoDoPainel,
+  MAXIMA_PAGINA_DO_PAINEL,
   MAXIMO_DE_REDES_DO_PAINEL,
 } from './painel.js'
 
@@ -68,5 +73,39 @@ describe('contratos do painel da operação (Tech Spec da A0b, seção 4)', () =
     for (const invalido of ['A'.repeat(42), 'A'.repeat(44), `${'A'.repeat(42)}=`, `${'A'.repeat(42)}+`]) {
       expect(esquemaRespostaConviteDaCoordenacao.safeParse({ conviteId: V7, token: invalido }).success, invalido).toBe(false)
     }
+  })
+
+  it('a consulta da lista e do uso: página de 1 em diante e ordem nome ou uso, com os padrões; estrita, sem escola nem filtro', () => {
+    expect(esquemaConsultaDoPainel.parse({})).toStrictEqual({ pagina: 1, ordem: 'nome' })
+    expect(esquemaConsultaDoPainel.parse({ pagina: '3', ordem: 'uso' })).toStrictEqual({ pagina: 3, ordem: 'uso' })
+    expect(esquemaConsultaDoPainel.parse({ pagina: String(MAXIMA_PAGINA_DO_PAINEL) }).pagina).toBe(MAXIMA_PAGINA_DO_PAINEL)
+    for (const pagina of ['0', '-1', '1.5', 'x', '', String(MAXIMA_PAGINA_DO_PAINEL + 1), ['1', '2']]) expect(esquemaConsultaDoPainel.safeParse({ pagina }).success, String(pagina)).toBe(false)
+    for (const ordem of ['Nome', 'id', 'requisicoes', ['nome', 'uso']]) expect(esquemaConsultaDoPainel.safeParse({ ordem }).success, String(ordem)).toBe(false)
+    for (const aMais of [{ escolaId: V4 }, { redeId: V4 }, { limite: '100' }]) expect(esquemaConsultaDoPainel.safeParse(aMais).success).toBe(false)
+  })
+
+  it('a resposta da lista é estrita: só id, nome, endereço, rede, estado, convite e número, até 25 por página', () => {
+    const item = { id: V7, nome: 'Colégio Sintético', slug: 'colegio-sintetico', rede: { id: REDE, nome: 'Rede Sintética' }, estado: 'pendente', conviteId: V4, turmas: 2, professores: 3, alunos: 40 }
+    const pagina = { itens: [item], pagina: 1, total: 1 }
+    expect(esquemaRespostaEscolasDoPainel.safeParse(pagina).success).toBe(true)
+    const { conviteId: _semConvite, ...semConvite } = item
+    expect(esquemaRespostaEscolasDoPainel.safeParse({ ...pagina, itens: [{ ...semConvite, estado: 'sem_convite' }] }).success).toBe(true)
+    for (const aMais of [{ coordenacao: 'Coordenação Sintética' }, { email: 'coordenacao@escola.invalid' }, { alunosNomes: [] }]) {
+      expect(esquemaRespostaEscolasDoPainel.safeParse({ ...pagina, itens: [{ ...item, ...aMais }] }).success).toBe(false)
+    }
+    expect(esquemaRespostaEscolasDoPainel.safeParse({ ...pagina, itens: [{ ...item, rede: { ...item.rede, tipo: 'grupo' } }] }).success).toBe(false)
+    expect(esquemaRespostaEscolasDoPainel.safeParse({ ...pagina, itens: [{ ...item, estado: 'ativo' }] }).success).toBe(false)
+    expect(esquemaRespostaEscolasDoPainel.safeParse({ ...pagina, itens: [{ ...item, alunos: -1 }] }).success).toBe(false)
+    expect(esquemaRespostaEscolasDoPainel.safeParse({ ...pagina, itens: Array.from({ length: ESCOLAS_POR_PAGINA + 1 }, () => item) }).success).toBe(false)
+  })
+
+  it('a resposta do uso é estrita: id, nome, dia e mês com as três medidas, e as datas de referência', () => {
+    const periodo = { requisicoes: 10, jobs: 2, bytesStorage: 1_048_576 }
+    const resposta = { itens: [{ id: V7, nome: 'Colégio Sintético', dia: periodo, mes: periodo }], pagina: 1, total: 1, dia: '2026-09-23', mes: '2026-09' }
+    expect(esquemaRespostaUsoDoPainel.safeParse(resposta).success).toBe(true)
+    expect(esquemaRespostaUsoDoPainel.safeParse({ ...resposta, itens: [{ ...resposta.itens[0], slug: 'x' }] }).success).toBe(false)
+    expect(esquemaRespostaUsoDoPainel.safeParse({ ...resposta, itens: [{ ...resposta.itens[0], dia: { ...periodo, custo: 1 } }] }).success).toBe(false)
+    for (const dia of ['2026-02-30', '23/09/2026', '2026-9-23']) expect(esquemaRespostaUsoDoPainel.safeParse({ ...resposta, dia }).success, dia).toBe(false)
+    for (const mes of ['2026-13', '2026-9', '2026-09-01']) expect(esquemaRespostaUsoDoPainel.safeParse({ ...resposta, mes }).success, mes).toBe(false)
   })
 })

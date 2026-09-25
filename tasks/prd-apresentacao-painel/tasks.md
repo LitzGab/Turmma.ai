@@ -1,7 +1,7 @@
 # Tarefas — Painel da operação Turmma (A0b)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 4 de 10 concluídas
+**Status:** 5 de 10 concluídas
 
 Aprovadas por delegação do Joaquim em 24/09/2026 ("faça tudo e aprove até criar as tasks"). As 9.0 e
 10.0 levam as pendências da A0 (`tasks/prd-apresentacao-operacao/retro.md`, "Pendências para a A0b")
@@ -37,11 +37,11 @@ que não cabem numa tarefa que já mexe no mesmo código.
   - [x] 4.3 Texto do `NAO_ENCONTRADO` na entrada da escola
   - [x] 4.4 Testes: E6 (login), E15, E16, W10 (entrada da escola)
 
-- [ ] **5.0 — Leitura entre escolas: lista e uso**
-  - [ ] 5.1 `PainelRepository` (`redes`, `escolas`, `uso`), com `@SemEscopo`
-  - [ ] 5.2 `GET /escolas` e `GET /uso`, com o estado pela `estadoDaCoordenacao`
-  - [ ] 5.3 `EXPLAIN` com 30 escolas
-  - [ ] 5.4 Testes: I1, I4, I5, I6, L1–L4
+- [x] **5.0 — Leitura entre escolas: lista e uso**
+  - [x] 5.1 `PainelRepository` (`redes`, `escolas`, `uso`), com `@SemEscopo`
+  - [x] 5.2 `GET /escolas` e `GET /uso`, com o estado pela `estadoDaCoordenacao`
+  - [x] 5.3 `EXPLAIN` com 30 escolas
+  - [x] 5.4 Testes: I1, I4, I5, I6, L1–L4
 
 - [ ] **6.0 — Web: Escolas, Nova rede e Nova escola**
   - [ ] 6.1 Navegação da casca; tela Escolas (tabela e cartões, quatro estados, página e ordem)

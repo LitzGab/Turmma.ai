@@ -113,6 +113,13 @@
       "when": 1790279325890,
       "tag": "0015_convite_pendente_unico",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790311676051,
+      "tag": "0016_usuario_coordenador_ativo",
+      "breakpoints": true
     }
   ]
 }

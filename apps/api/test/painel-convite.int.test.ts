@@ -1,5 +1,5 @@
 import { criarBanco, criarPool, ErroDeDominio, estadoDaCoordenacao, executarNoContexto, type Banco, type PoolBanco, type TransacaoBanco } from '@educa/nucleo'
-import { CodigoDeErro, esquemaRespostaConviteDaCoordenacao, ESTADOS_DA_COORDENACAO, type EstadoDaCoordenacao, type RespostaConviteDaCoordenacao } from '@educa/shared'
+import { CodigoDeErro, esquemaRespostaConviteDaCoordenacao, esquemaRespostaEscolasDoPainel, ESTADOS_DA_COORDENACAO, type EstadoDaCoordenacao, type RespostaConviteDaCoordenacao } from '@educa/shared'
 import type { INestApplication } from '@nestjs/common'
 import { is, SQL } from 'drizzle-orm'
 import { PgDialect } from 'drizzle-orm/pg-core'
@@ -17,7 +17,7 @@ import { executarOpsRevogarConvite } from '../src/ops/revogar-convite.js'
 import { ConviteRepository } from '../src/sessao/convite.repository.js'
 import { criarConviteDeCoordenador, refazerConviteDaCoordenacao } from '../src/sessao/convite.service.js'
 import { esperarNaTrava, GatilhoDeParada } from './gatilho-de-parada.js'
-import { ESPERA_DO_AUTOR, esperarErro, pedir, PRAZO_DAS_CONSULTAS_MS, segurarODesativar, subirApiDoPainel, type Resposta } from './painel-de-teste.js'
+import { ESPERA_DO_AUTOR, esperarErro, pedir, PRAZO_DAS_CONSULTAS_MS, segurarODesativar, subirApiDoPainel, todasAsPaginas, type Resposta } from './painel-de-teste.js'
 import { BancadaDeOperadores } from './sessao-de-operador.js'
 import { autorDaBancada, BancadaDeSessoes } from './sessao-de-teste.js'
 import { emOrdemNaTrava as emOrdem, esperarNaTravaDaEscola as esperarNaFilaDaEscola, segurarTravaDaEscola as segurarTrava } from './trava-da-escola.js'
@@ -27,8 +27,9 @@ import { emOrdemNaTrava as emOrdem, esperarNaTravaDaEscola as esperarNaFilaDaEsc
  * convite-coordenacao`, `POST /v1/operacao/convites/:id/refazer` e `POST /v1/operacao/convites/:id/revogar`, e os `ops:*`
  * de convite pelo mesmo caso de uso. Cenários de `tasks/prd-apresentacao-painel/cenarios.md`: E6 (gerar, refazer e
  * revogar), E7, E8, E9, E10, E11 e E13 (convite), E12 (as três rotas), I6 (refazer), I7, A1, A2 e A3 (gerar, refazer e
- * revogar). As partes de login da E6 e a ativação sob a trava (E15, E16) são da 4.0, em `login-convite-revogado` e
- * `ativacao-sob-trava`. Postgres e Redis reais do compose de teste.
+ * revogar), e a L4 da tarefa 5.0 (a lista, com as escolas em cada estado). As partes de login da E6 e a ativação sob a
+ * trava (E15, E16) são da 4.0, em `login-convite-revogado` e `ativacao-sob-trava`. Postgres e Redis reais do compose de
+ * teste.
  */
 
 const HORA_MS = 60 * 60 * 1_000
@@ -795,6 +796,37 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
       expect((await convitesDa(escola.escolaId)).map((convite) => convite.id)).toEqual([alvo])
       expect(await auditoriaDe(escola.escolaId, 'convite.refeito')).toEqual([])
       expect(await estadoDe(escola.escolaId)).toBe('ativa')
+    })
+  })
+
+  describe('L4 (tarefa 5.0): a lista mostra o estado e o conviteId da escrita', () => {
+    it('para cada estado da E6, e o convite novo depois de um refazer, pela GET /v1/operacao/escolas', async () => {
+      const sessao = await operadores.operadorComSessao()
+      const preparadas: [EstadoDaCoordenacao, EscolaPreparada][] = []
+      for (const estado of ESTADOS_DA_COORDENACAO) preparadas.push([estado, await escolaEm(estado, sessao.token)])
+      // Com dois convites na escola (a origem revogada e o refeito), o último é o refeito.
+      const origem = await escolaEm('pendente', sessao.token)
+      if (origem.conviteId === undefined) throw new Error('convite de origem')
+      const refeito = gerado(await refazer(sessao.token, origem.conviteId))
+
+      const leitor = await operadores.operadorComSessao()
+      const { itens } = await todasAsPaginas(async (pagina) => {
+        const resposta = await pedir(url, 'GET', `/v1/operacao/escolas?pagina=${pagina}`, leitor.token)
+        expect(resposta.status).toBe(200)
+        return esquemaRespostaEscolasDoPainel.parse(resposta.corpo)
+      })
+      const naLista = (escolaId: string) => {
+        const achadas = itens.filter((item) => item.id === escolaId)
+        expect(achadas).toHaveLength(1)
+        return achadas[0]
+      }
+      for (const [estado, escola] of preparadas) {
+        const item = naLista(escola.escolaId)
+        expect(item?.estado, estado).toBe(estado)
+        expect(item?.estado, estado).toBe(await estadoDe(escola.escolaId))
+        expect(item?.conviteId, estado).toBe(escola.conviteId)
+      }
+      expect(naLista(origem.escolaId)).toMatchObject({ estado: 'pendente', conviteId: refeito.conviteId })
     })
   })
 

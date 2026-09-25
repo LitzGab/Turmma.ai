@@ -14,6 +14,10 @@ import { escola } from './escola.js'
  * - `unique (escola_id, conta_id, papel)`: a mesma conta não é duas vezes professora na mesma escola.
  * - O índice por `conta_id` serve à resolução de tenant (os usuários ativos de uma conta, depois da senha), que
  *   por definição atravessa escolas.
+ * - O índice parcial `(escola_id)` dos coordenadores ativos serve ao estado da coordenação (`estadoDaCoordenacao`), que a
+ *   lista do painel da operação lê para as escolas da página (A0b, tarefa 5.0): sem ele, a pergunta "há coordenador
+ *   ativo?" varre os usuários de todas as escolas, que crescem com os alunos (regra 80, item 8). Tem uma linha por
+ *   coordenador ativo.
  * - `nome` é dado pessoal (`docs/lgpd.md`): nunca em log nem em auditoria.
  */
 export const usuario = pgTable(
@@ -32,6 +36,7 @@ export const usuario = pgTable(
     unique('usuario_escola_id_unico').on(tabela.escolaId, tabela.id),
     unique('usuario_escola_conta_papel_unico').on(tabela.escolaId, tabela.contaId, tabela.papel),
     index('usuario_conta_idx').on(tabela.contaId).where(sql`conta_id is not null`),
+    index('usuario_coordenador_ativo_idx').on(tabela.escolaId).where(sql`papel = 'coordenador' and desativado_em is null`),
     check('usuario_papel_valido', sql`${tabela.papel} in ('coordenador', 'professor', 'aluno')`),
     check('usuario_conta_so_falta_para_aluno', sql`${tabela.contaId} is not null or ${tabela.papel} = 'aluno'`),
     check('usuario_nome_preenchido', sql`char_length(btrim(${tabela.nome})) between 1 and 200`),

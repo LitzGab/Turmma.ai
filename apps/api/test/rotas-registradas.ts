@@ -110,3 +110,22 @@ export function rotasForaDaCerca(rotas: readonly RotaRegistrada[]): string[] {
 export function caminhoConcreto(caminho: string): string {
   return caminho.replace(/:[A-Za-z0-9_]+/g, () => randomUUID())
 }
+
+/**
+ * As oito rotas do painel da operação (Tech Spec da A0b, seção 4). A I3 prova que as varreduras C36, C41 e C46 enxergam
+ * exatamente estas, e que as rotas `@RotaDeOperacao` são elas mais o `GET /v1/operacao/eu` da A0: rota nova do painel é
+ * mudança da spec, e entra aqui.
+ */
+export const ROTAS_DO_PAINEL: readonly string[] = [
+  'GET /v1/operacao/redes',
+  'POST /v1/operacao/redes',
+  'GET /v1/operacao/escolas',
+  'POST /v1/operacao/escolas',
+  'GET /v1/operacao/uso',
+  'POST /v1/operacao/escolas/:id/convite-coordenacao',
+  'POST /v1/operacao/convites/:id/refazer',
+  'POST /v1/operacao/convites/:id/revogar',
+]
+
+/** As rotas `@RotaDeOperacao` da API: o `/eu` da A0 e as oito do painel, em ordem, para comparar com a lista registrada. */
+export const ROTAS_COM_SESSAO_DE_OPERADOR: readonly string[] = ['GET /v1/operacao/eu', ...ROTAS_DO_PAINEL].toSorted()

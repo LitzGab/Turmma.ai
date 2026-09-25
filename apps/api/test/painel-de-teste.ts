@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 import { criarLogger, type PoolBanco } from '@educa/nucleo'
-import { MENSAGENS_DE_ERRO, type CodigoDeErro } from '@educa/shared'
+import { ESCOLAS_POR_PAGINA, MENSAGENS_DE_ERRO, type CodigoDeErro } from '@educa/shared'
 import type { INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import type { AddressInfo } from 'node:net'
@@ -90,4 +90,32 @@ export async function segurarODesativar(pool: PoolBanco, operadorId: string): Pr
       conexao.release()
     },
   }
+}
+
+/** Uma página da lista ou do uso do painel, como a API a devolve. */
+export interface PaginaDoPainel<Item> {
+  readonly itens: readonly Item[]
+  readonly pagina: number
+  readonly total: number
+}
+
+/**
+ * Percorre a lista ou o uso do painel página a página, da 1 até a última, e mais uma depois dela, conferindo em cada uma
+ * o número, o total (o mesmo em todas) e o tamanho (25, e o resto na última; nenhuma na seguinte). Devolve os itens na
+ * ordem em que vieram, e o total. O banco de teste tem as escolas dos outros arquivos: quem chama procura as suas.
+ */
+export async function todasAsPaginas<Item>(buscar: (pagina: number) => Promise<PaginaDoPainel<Item>>): Promise<{ itens: Item[]; total: number; paginas: PaginaDoPainel<Item>[] }> {
+  const primeira = await buscar(1)
+  const { total } = primeira
+  const ultima = Math.max(1, Math.ceil(total / ESCOLAS_POR_PAGINA))
+  const paginas = [primeira]
+  for (let numero = 2; numero <= ultima; numero++) paginas.push(await buscar(numero))
+  const depois = await buscar(ultima + 1)
+  for (const [posicao, pagina] of paginas.entries()) {
+    expect(pagina.pagina).toBe(posicao + 1)
+    expect(pagina.total).toBe(total)
+    expect(pagina.itens).toHaveLength(posicao + 1 < ultima ? ESCOLAS_POR_PAGINA : total - ESCOLAS_POR_PAGINA * (ultima - 1))
+  }
+  expect([depois.itens, depois.pagina, depois.total]).toEqual([[], ultima + 1, total])
+  return { itens: paginas.flatMap((pagina) => pagina.itens), total, paginas }
 }

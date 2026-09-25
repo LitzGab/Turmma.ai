@@ -60,3 +60,9 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-25 01:24:24 | `revisor-geral` | 2ª | APROVADO | `4_task` | `apps/api/src/sessao/mfa.service.ts:146-149`. Depois do 503 `TEMPO_ESGOTADO` da trava, a mensagem diz "Tente de novo em instantes". Quem repete dentro dos… |
 | 2026-09-25 01:24:26 | `tenancy-guardian` | 2ª | APROVADO | `4_task` | A trava usa `hashtext` do id da escola, e duas escolas podem cair na mesma chave. Aí uma espera a outra, sem que dado cruze de escola. Isso já existia antes… |
 | 2026-09-25 01:24:36 | `infra-guardian` | 2ª | APROVADO | `4_task` | três, abaixo |
+| 2026-09-25 02:34:27 | `test-engineer` | 1ª | REPROVADO | `5_task` | `apps/api/src/operacao/painel.repository.ts:90`, a chave da ordem `uso`: o período do mês que ela usa não tem teste que o prove. A chave repete, numa… |
+| 2026-09-25 02:37:03 | `test-engineer` | 2ª | APROVADO | `5_task` | nenhuma nova. |
+| 2026-09-25 02:48:36 | `tenancy-guardian` | 1ª | APROVADO | `5_task` | `painel.repository.ts:103-105` e `:139`: nas contagens de turmas, professores e alunos, quem de fato separa as escolas é o `ano_letivo_id = ano.id`, junto com… |
+| 2026-09-25 02:48:52 | `privacy-guardian` | 1ª | APROVADO | `5_task` | `docs/lgpd.md`: registrar, numa linha ou nota sobre o painel da operação (D76), que a equipe Turmma vê por escola só contagens do ano em curso e uso de infra,… |
+| 2026-09-25 02:49:02 | `infra-guardian` | 1ª | APROVADO | `5_task` | `packages/nucleo/drizzle/0016_usuario_coordenador_ativo.sql:7`: o `CREATE INDEX` sem `CONCURRENTLY` segura a escrita em `usuario` enquanto o índice é… |
+| 2026-09-25 03:04:50 | `revisor-geral` | 1ª | APROVADO | `5_task` | `apps/api/src/operacao/painel.repository.ts:135-163` e `:203-223`: a página e o `total` saem de duas consultas em paralelo, cada uma com a sua fotografia do… |

@@ -1,22 +1,38 @@
-import { contextoAtual, ErroDeDominio, executarNoContexto, exigirOperadorDoContexto, type Banco } from '@educa/nucleo'
+import {
+  contextoAtual,
+  diaAnterior,
+  diaDeUso,
+  ErroDeDominio,
+  estadoDaCoordenacao,
+  executarNoContexto,
+  exigirOperadorDoContexto,
+  relogioDoSistema,
+  type Banco,
+  type Relogio,
+} from '@educa/nucleo'
 import {
   CodigoDeErro,
   esquemaRespostaConviteDaCoordenacao,
   esquemaRespostaCriadoNoPainel,
+  esquemaRespostaEscolasDoPainel,
   esquemaRespostaRedesDoPainel,
+  esquemaRespostaUsoDoPainel,
+  type ConsultaDoPainel,
   type PedidoConviteDaCoordenacao,
   type PedidoCriarEscola,
   type PedidoCriarRede,
   type RespostaConviteDaCoordenacao,
   type RespostaCriadoNoPainel,
+  type RespostaEscolasDoPainel,
   type RespostaRedesDoPainel,
+  type RespostaUsoDoPainel,
 } from '@educa/shared'
 import { Logger } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
 import { criarEscola, criarRede } from '../ops/escola.js'
 import { criarConviteDeCoordenador, refazerConviteDaCoordenacao, revogarConvitePeloOperador } from '../sessao/convite.service.js'
 import { OperadorRepository, type ConferenciaDoAutor } from './operador.repository.js'
-import { PainelRepository } from './painel.repository.js'
+import { PainelRepository, type ReferenciaDoUso } from './painel.repository.js'
 
 /**
  * O autor das escritas do painel: o operador da sessão, conferido dentro da transação da escrita (Tech Spec da A0b,
@@ -29,6 +45,16 @@ function autorDaSessao(operadorId: string): ConferenciaDoAutor {
     if (apelido === undefined) throw new ErroDeDominio(CodigoDeErro.SESSAO_ENCERRADA)
     return apelido
   }
+}
+
+/**
+ * O período do uso lido no instante `agora`: o último dia fechado, que é o dia civil de São Paulo anterior ao de hoje
+ * (`diaDeUso`, o mesmo fuso da consolidação), e o mês dele, do dia 1 até ele. Às 22h de São Paulo, já o dia seguinte em
+ * UTC, o último dia fechado continua o de ontem em São Paulo; no dia 1, o mês é o anterior.
+ */
+export function referenciaDoUso(agora: Date): ReferenciaDoUso {
+  const dia = diaAnterior(diaDeUso(agora))
+  return { dia, primeiroDoMes: `${dia.slice(0, 7)}-01` }
 }
 
 /** Roda `logar` com a escola no contexto, além dos ids da requisição: a linha de log leva só ids (regra 20, item 9). */
@@ -49,14 +75,44 @@ function naEscola(escolaId: string, logar: () => void): void {
  *   e-mail, endereço nem token. O pedido repetido não loga de novo, como não audita de novo.
  * - A escola do `:id` do caminho (que o controller só confere como UUID) vai só ao caso de uso do gerar, que abre o
  *   contexto dela depois de conferir o autor (Tech Spec da A0b, seção 6).
+ * - A leitura entre escolas (redes, a lista e o uso) vem só do `PainelRepository`, e sai pelos contratos estritos de
+ *   `packages/shared`: id, nome, endereço e número, nunca pessoa. A leitura não audita nem loga: não traz dado de aluno
+ *   nem de pessoa (Tech Spec da A0b, seção 7).
  */
 export class PainelService {
   readonly #logger = new Logger('operacao')
 
-  constructor(private readonly banco: Banco) {}
+  constructor(
+    private readonly banco: Banco,
+    private readonly relogio: Relogio = relogioDoSistema,
+  ) {}
 
   async redes(): Promise<RespostaRedesDoPainel> {
     return esquemaRespostaRedesDoPainel.parse({ itens: await new PainelRepository(this.banco).redes() })
+  }
+
+  /**
+   * Uma página da lista de escolas, com o estado da coordenação calculado pela mesma `estadoDaCoordenacao` da escrita, e o
+   * `conviteId` do último convite de coordenação, quando há. Na ordem `uso`, o mês de referência é o do `uso`.
+   */
+  async escolas({ pagina, ordem }: ConsultaDoPainel): Promise<RespostaEscolasDoPainel> {
+    const lida = await new PainelRepository(this.banco).escolas({ pagina, ordem, referencia: referenciaDoUso(this.relogio.agora()) })
+    return esquemaRespostaEscolasDoPainel.parse({
+      pagina,
+      total: lida.total,
+      itens: lida.itens.map(({ coordenacao, ...escola }) => ({
+        ...escola,
+        estado: estadoDaCoordenacao(coordenacao),
+        ...(coordenacao.ultimoConvite === undefined ? {} : { conviteId: coordenacao.ultimoConvite.id }),
+      })),
+    })
+  }
+
+  /** Uma página do uso por escola, com o último dia fechado e o mês dele como referência. */
+  async uso({ pagina, ordem }: ConsultaDoPainel): Promise<RespostaUsoDoPainel> {
+    const referencia = referenciaDoUso(this.relogio.agora())
+    const lida = await new PainelRepository(this.banco).uso({ pagina, ordem, referencia })
+    return esquemaRespostaUsoDoPainel.parse({ pagina, total: lida.total, itens: lida.itens, dia: referencia.dia, mes: referencia.dia.slice(0, 7) })
   }
 
   async criarRede(pedido: PedidoCriarRede): Promise<RespostaCriadoNoPainel> {

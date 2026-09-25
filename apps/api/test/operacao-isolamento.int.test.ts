@@ -19,7 +19,7 @@ import { executarOpsOperador } from '../src/ops/operador.js'
 import { EmissorDeDesafio } from '../src/sessao/desafio.js'
 import { cookieDeRenovacao } from './api-com-sessao.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
-import { caminhoConcreto, daOperacao, rotasDe, rotasDeOperacaoSemGuarda, type RotaRegistrada } from './rotas-registradas.js'
+import { caminhoConcreto, daOperacao, ROTAS_COM_SESSAO_DE_OPERADOR, rotasDe, rotasDeOperacaoSemGuarda, type RotaRegistrada } from './rotas-registradas.js'
 import { BancadaDeOperadores, type SessaoDeOperadorDeTeste } from './sessao-de-operador.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'
 
@@ -158,18 +158,9 @@ describe('área da operação: as cercas entre a operação e a escola (tarefa 4
   describe('C46: nenhuma credencial de escola alcança rota da operação com sessão', () => {
     it('sessão de coordenador, professor e aluno, desafio, cookie de escola e nenhuma credencial: toda rota @RotaDeOperacao responde igual a rota inexistente', async () => {
       const daOperacaoComSessao = rotas.filter((rota) => rota.marcador === 'rota')
-      // I3 (A0b): as rotas do painel entram na varredura, com o corpo que for: a guarda responde antes dele.
-      expect(daOperacaoComSessao.map((rota) => `${rota.verbo} ${rota.caminho}`)).toEqual(
-        expect.arrayContaining([
-          'GET /v1/operacao/eu',
-          'GET /v1/operacao/redes',
-          'POST /v1/operacao/redes',
-          'POST /v1/operacao/escolas',
-          'POST /v1/operacao/escolas/:id/convite-coordenacao',
-          'POST /v1/operacao/convites/:id/refazer',
-          'POST /v1/operacao/convites/:id/revogar',
-        ]),
-      )
+      // I3 (A0b): a varredura enxerga exatamente o `/eu` e as oito rotas do painel, com o corpo que for: a guarda responde
+      // antes dele.
+      expect(daOperacaoComSessao.map((rota) => `${rota.verbo} ${rota.caminho}`).toSorted()).toEqual(ROTAS_COM_SESSAO_DE_OPERADOR)
       expect(daOperacaoComSessao.every(daOperacao)).toBe(true)
 
       const escolaId = await escolas.escola()

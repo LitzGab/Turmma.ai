@@ -22,13 +22,15 @@ A leitura entre escolas mora num só `PainelRepository`, com `@SemEscopo`. A web
 
 ## 3. Modelo de dados
 
-Nenhuma tabela nova; uma migration de índice, compatível:
+Nenhuma tabela nova; duas migrations de índice, compatíveis:
 
 ```
-convite_pendente_unico  único (escola_id, usuario_id) where usado_em is null and revogado_em is null
+convite_pendente_unico         único (escola_id, usuario_id) where usado_em is null and revogado_em is null
+usuario_coordenador_ativo_idx  (escola_id) where papel = 'coordenador' and desativado_em is null
 ```
 
-Rede de segurança da trava da 7c (o F1 sempre revoga antes de criar). `AcaoDeAuditoria` ganha
+O primeiro é a rede de segurança da trava da 7c (o F1 sempre revoga antes de criar). O segundo serve à lista (tarefa
+5.0): sem ele, o `EXPLAIN` mostrou o "há coordenador ativo?" varrendo `usuario` de todas as escolas. `AcaoDeAuditoria` ganha
 `convite.refeito`, com `depois: { origemId, usuarioId, expiraEm }`.
 
 ## 4. API
@@ -102,11 +104,12 @@ reserva (tarefa 4.0).
   chega no F2, não é `usuario` até a aprovação, e a A1 usa esta definição;
 - estado: `coordenadorAtivo` e o último convite, calculado no service pela mesma `estadoDaCoordenacao`
   da escrita; o `conviteId` sai na lista, para o refazer e o revogar;
-- uso: o último dia fechado (dia civil de São Paulo, `diaDeUso`) e o mês dele, como o `UsoRepository`
-  (soma, pico de bytes), zero sem linha.
+- uso: o último dia fechado (dia civil de São Paulo, `diaDeUso`) e o mês dele, do dia 1 até o último dia fechado
+  (tarefa 5.0: o dia de hoje fica fora também do mês), como o `UsoRepository` (soma, pico de bytes), zero sem linha.
 
 Ordem: `nome`, ou `uso` (requisições do mês, decrescente, calculado para todas antes de paginar);
-desempate por `id`; 25 por página (D25).
+desempate por `id`; 25 por página (D25). `?pagina=` é o número da página, de 1; a resposta traz `pagina` e `total`, e o
+uso também `dia` e `mes` de referência (tarefa 5.0). Uma consulta pela página e uma pelo total.
 
 **Falhas.** Banco fora: 503 `INDISPONIVEL_TENTE_DE_NOVO` (A0). Consolidação atrasada: a data de
 referência aparece, e zero sem linha.

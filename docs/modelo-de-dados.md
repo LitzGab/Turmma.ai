@@ -101,6 +101,11 @@ revogado_em is null` é a rede de segurança da trava, e a recusa dele sai como 
 revoga o convite de origem por um `update` condicional (só em aberto) e cria outro para o mesmo
 usuário, com `convite.refeito` na auditoria (a origem, o usuário e a validade).
 
+A lista do painel lê o mesmo estado para as escolas da página, e por isso `Usuario` ganhou o índice
+parcial `usuario_coordenador_ativo_idx (escola_id) where papel = 'coordenador' and desativado_em is
+null` (A0b, tarefa 5.0): sem ele, a pergunta "há coordenador ativo?" varre os usuários de todas as
+escolas, que crescem com os alunos.
+
 ## Operação Turmma
 
 Implementado na A0 (D76). A forma exata das tabelas, com unicidades, índices e checks, está na

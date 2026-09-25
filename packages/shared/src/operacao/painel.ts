@@ -113,3 +113,96 @@ export const esquemaRespostaConviteDaCoordenacao = z.strictObject({
 })
 
 export type RespostaConviteDaCoordenacao = z.infer<typeof esquemaRespostaConviteDaCoordenacao>
+
+/** Quantas escolas cada página da lista e do uso traz (Tech Spec da A0b, seções 4 e 5; D25). */
+export const ESCOLAS_POR_PAGINA = 25
+
+/** A maior página pedida: com 25 por página, 250 mil escolas, muito acima do primeiro ano (D25). O deslocamento fica limitado. */
+export const MAXIMA_PAGINA_DO_PAINEL = 10_000
+
+/**
+ * As ordens da lista e do uso: `nome` (crescente), ou `uso`, pelas requisições do mês de referência (decrescente, calculado
+ * para todas as escolas antes de paginar). Nas duas, o desempate é pelo `id`, e a página seguinte continua de onde a
+ * anterior parou.
+ */
+export const ORDENS_DO_PAINEL = ['nome', 'uso'] as const
+
+export type OrdemDoPainel = (typeof ORDENS_DO_PAINEL)[number]
+
+/**
+ * Consulta de `GET /v1/operacao/escolas` e `GET /v1/operacao/uso`: `?pagina=` (de 1, padrão 1) e `?ordem=` (padrão
+ * `nome`). Estrita: nada de escola, rede ou filtro a mais, e o parâmetro repetido não passa.
+ */
+export const esquemaConsultaDoPainel = z.strictObject({
+  pagina: z.coerce.number().int().min(1).max(MAXIMA_PAGINA_DO_PAINEL).default(1),
+  ordem: z.enum(ORDENS_DO_PAINEL).default('nome'),
+})
+
+export type ConsultaDoPainel = z.infer<typeof esquemaConsultaDoPainel>
+
+const esquemaContagem = z.number().int().nonnegative()
+
+/**
+ * Uma escola na lista do painel: id, nome, endereço, a rede, o estado da primeira coordenação (com o id do último convite
+ * de coordenação, quando há, para refazer e revogar) e as contagens do ano letivo em curso. **Só número**: nada de nome,
+ * e-mail ou matrícula de pessoa, nem nome de turma (RF3).
+ */
+export const esquemaEscolaDoPainel = z.strictObject({
+  id: z.uuid(),
+  nome: z.string().min(1).max(TAMANHO_MAXIMO_NOME_DIGITADO),
+  slug: esquemaSlugDaEscola,
+  rede: z.strictObject({ id: z.uuid(), nome: z.string().min(1).max(TAMANHO_MAXIMO_NOME_DIGITADO) }),
+  estado: z.enum(ESTADOS_DA_COORDENACAO),
+  conviteId: z.uuid().optional(),
+  turmas: esquemaContagem,
+  professores: esquemaContagem,
+  alunos: esquemaContagem,
+})
+
+export type EscolaDoPainel = z.infer<typeof esquemaEscolaDoPainel>
+
+/** Resposta de `GET /v1/operacao/escolas`: a página (até 25), o número dela e o total de escolas. */
+export const esquemaRespostaEscolasDoPainel = z.strictObject({
+  itens: z.array(esquemaEscolaDoPainel).max(ESCOLAS_POR_PAGINA),
+  pagina: z.number().int().min(1),
+  total: esquemaContagem,
+})
+
+export type RespostaEscolasDoPainel = z.infer<typeof esquemaRespostaEscolasDoPainel>
+
+/** O uso de infra de uma escola num período (D30): requisições, jobs e bytes de storage. */
+export const esquemaUsoDoPeriodoDoPainel = z.strictObject({
+  requisicoes: esquemaContagem,
+  jobs: esquemaContagem,
+  bytesStorage: esquemaContagem,
+})
+
+export type UsoDoPeriodoDoPainel = z.infer<typeof esquemaUsoDoPeriodoDoPainel>
+
+/**
+ * O uso de uma escola: o do último dia fechado e o do mês dele, até esse dia (requisições e jobs somados, e o pico de
+ * bytes). Zero quando não há linha. Só id, nome e número.
+ */
+export const esquemaUsoDaEscolaDoPainel = z.strictObject({
+  id: z.uuid(),
+  nome: z.string().min(1).max(TAMANHO_MAXIMO_NOME_DIGITADO),
+  dia: esquemaUsoDoPeriodoDoPainel,
+  mes: esquemaUsoDoPeriodoDoPainel,
+})
+
+export type UsoDaEscolaDoPainel = z.infer<typeof esquemaUsoDaEscolaDoPainel>
+
+/**
+ * Resposta de `GET /v1/operacao/uso`: a página, o total, e as referências: `dia`, o último dia fechado (o dia civil de
+ * São Paulo anterior ao de hoje, `AAAA-MM-DD`), e `mes`, o mês dele (`AAAA-MM`), contado do dia 1 até `dia`. O dia de
+ * hoje só aparece depois da consolidação.
+ */
+export const esquemaRespostaUsoDoPainel = z.strictObject({
+  itens: z.array(esquemaUsoDaEscolaDoPainel).max(ESCOLAS_POR_PAGINA),
+  pagina: z.number().int().min(1),
+  total: esquemaContagem,
+  dia: z.iso.date(),
+  mes: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+})
+
+export type RespostaUsoDoPainel = z.infer<typeof esquemaRespostaUsoDoPainel>

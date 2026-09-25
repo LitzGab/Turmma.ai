@@ -12,8 +12,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { AppModule } from '../src/app.module.js'
 import { EntradaDeOperacao, RotaDeOperacao } from '../src/operacao/marcadores.js'
 import { OperacaoModule } from '../src/operacao/operacao.module.js'
+import { PainelController } from '../src/operacao/painel.controller.js'
+import { PainelRepository } from '../src/operacao/painel.repository.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
-import { controladoresDoModulo, rotasDe, rotasDeOperacaoSemGuarda, rotasForaDaCerca, type RotaRegistrada } from './rotas-registradas.js'
+import { controladoresDoModulo, ROTAS_COM_SESSAO_DE_OPERADOR, ROTAS_DO_PAINEL, rotasDe, rotasDeOperacaoSemGuarda, rotasForaDaCerca, type RotaRegistrada } from './rotas-registradas.js'
 
 const RAIZ = fileURLToPath(new URL('../../../', import.meta.url))
 const MODULO_SESSAO = 'apps/api/src/sessao/'
@@ -71,6 +73,47 @@ describe('arquitetura: a resolução de tenant fica dentro do módulo de sessão
     ]
     const dentro = { caminho: 'apps/api/src/sessao/login.service.ts', texto: "import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'" }
     expect(usosForaDoModuloSessao([...fora, dentro])).toEqual(fora.map((arquivo) => arquivo.caminho))
+  })
+})
+
+/**
+ * I1 (Tech Spec da A0b, seção 6; regra 10, item 9): a leitura entre escolas do painel mora num repository só, o
+ * `PainelRepository`, com exatamente três métodos, cada um `@SemEscopo` com a justificativa do painel; e só o
+ * `painel.service.ts` o usa. Um quarto método sem escopo, ou outro arquivo que o importe, é mudança da spec.
+ */
+const REPOSITORY_DO_PAINEL = 'apps/api/src/operacao/painel.repository.ts'
+const USO_DO_PAINEL_REPOSITORY = /\bPainelRepository\b|painel\.repository/
+
+/** Quem, fora de teste e do próprio arquivo, cita a classe ou o arquivo dela: importação, reexportação ou `import()`. */
+function quemUsaOPainelRepository(arquivos: readonly Arquivo[]): string[] {
+  return arquivos
+    .filter((arquivo) => !deTeste(arquivo.caminho) && arquivo.caminho !== REPOSITORY_DO_PAINEL)
+    .filter((arquivo) => USO_DO_PAINEL_REPOSITORY.test(arquivo.texto))
+    .map((arquivo) => arquivo.caminho)
+}
+
+describe('arquitetura: a leitura entre escolas mora só no PainelRepository, e só o painel.service.ts o usa (I1)', () => {
+  it('os métodos são exatamente redes, escolas e uso, cada um @SemEscopo com a justificativa que cita o painel', () => {
+    const metodos = Object.getOwnPropertyNames(PainelRepository.prototype).filter((nome) => nome !== 'constructor')
+    expect(metodos.toSorted()).toEqual(['escolas', 'redes', 'uso'])
+    for (const metodo of metodos) expect(nucleo.justificativaSemEscopo(PainelRepository, metodo), metodo).toMatch(/^painel do operador: /)
+  })
+
+  it('fora de teste, só o painel.service.ts o importa', () => {
+    expect(quemUsaOPainelRepository(arquivosDoRepositorio())).toEqual(['apps/api/src/operacao/painel.service.ts'])
+  })
+
+  it('a varredura reprova quem de fora o importa, reexporta ou carrega por import dinâmico, e deixa o teste passar', () => {
+    const fora = [
+      { caminho: 'apps/api/src/estrutura/turma.service.ts', texto: "import { PainelRepository } from '../operacao/painel.repository.js'" },
+      { caminho: 'apps/api/src/operacao/eu.service.ts', texto: "export * from './painel.repository.js'" },
+      { caminho: 'apps/worker/src/consolidacao.ts', texto: "const { PainelRepository } = await import('../../api/src/operacao/painel.repository.js')" },
+    ]
+    const permitidos = [
+      { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { PainelRepository } from './painel.repository.js'" },
+      { caminho: 'apps/api/test/painel-leitura.int.test.ts', texto: "import { PainelRepository } from '../src/operacao/painel.repository.js'" },
+    ]
+    expect(quemUsaOPainelRepository([...fora, ...permitidos])).toEqual(['apps/api/src/estrutura/turma.service.ts', 'apps/api/src/operacao/eu.service.ts', 'apps/worker/src/consolidacao.ts', 'apps/api/src/operacao/painel.service.ts'])
   })
 })
 
@@ -335,20 +378,13 @@ describe('arquitetura: os marcadores da operação só na pasta da operação (C
   })
 })
 
-/** As rotas do painel da operação (A0b) que já existem: a I3 prova que as varreduras C36, C41 e C46 as enxergam. */
-const ROTAS_DO_PAINEL = [
-  'GET /v1/operacao/redes',
-  'POST /v1/operacao/redes',
-  'POST /v1/operacao/escolas',
-  'POST /v1/operacao/escolas/:id/convite-coordenacao',
-  'POST /v1/operacao/convites/:id/refazer',
-  'POST /v1/operacao/convites/:id/revogar',
-]
-
 describe('arquitetura: a rota @RotaDeOperacao tem a GuardaDeOperador no handler resolvido (C41)', () => {
   it('toda rota @RotaDeOperacao registrada tem a guarda', () => {
     const rotas = rotasDaApi().filter((rota) => rota.marcador === 'rota')
-    expect(rotas.map(nomeDaRota)).toEqual(expect.arrayContaining(['GET /v1/operacao/eu', ...ROTAS_DO_PAINEL]))
+    // I3 (A0b): a varredura enxerga exatamente o `/eu` e as oito rotas do painel, nem uma a mais, nem uma a menos.
+    expect(rotas.map(nomeDaRota).toSorted()).toEqual(ROTAS_COM_SESSAO_DE_OPERADOR)
+    expect(rotasDe([PainelController]).map(nomeDaRota).toSorted()).toEqual(ROTAS_DO_PAINEL.toSorted())
+    expect(ROTAS_DO_PAINEL).toHaveLength(8)
     expect(rotasDeOperacaoSemGuarda(rotas)).toEqual([])
   })
 
@@ -400,8 +436,8 @@ describe('arquitetura: toda rota @RotaDeOperacao conta pelo rl:op:{sub} (C36, pa
 
   it('em cada rota @RotaDeOperacao registrada, o token de operador conta no rl:op do sub, e em nenhum outro limite', async () => {
     const rotas = rotasDaApi().filter((rota) => rota.marcador === 'rota')
-    // I3 (A0b): as rotas do painel estão entre as varridas.
-    expect(rotas.map(nomeDaRota)).toEqual(expect.arrayContaining(ROTAS_DO_PAINEL))
+    // I3 (A0b): as varridas são exatamente o `/eu` e as oito rotas do painel.
+    expect(rotas.map(nomeDaRota).toSorted()).toEqual(ROTAS_COM_SESSAO_DE_OPERADOR)
     for (const rota of rotas) {
       const { guarda, limitador } = guardaComLimitador()
       expect(await guarda.canActivate(execucao(rota, await tokenDeOperador())), nomeDaRota(rota)).toBe(true)
