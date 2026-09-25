@@ -45,8 +45,9 @@ módulo novo. Ver `rules/10`.
 para o operador com sessão (`@RotaDeOperacao`). Ele cria rede e escola pelos casos de uso do
 `ops:escola`, e lê entre escolas por um só repository, o `PainelRepository`, em que cada método
 é `@SemEscopo` com a justificativa do painel (regra 10, item 9), devolvendo id, nome e número,
-nunca pessoa. Nenhum outro módulo lê fora da escola do token, e credencial de escola não alcança
-rota do painel (teste C46). O desenho está na Tech Spec da A0b
+nunca pessoa. As escritas do painel alcançam mais quatro `@SemEscopo` dos comandos `ops:*`,
+listados com a justificativa em `docs/modelo-de-dados.md` ("Operação Turmma"). Nenhum outro
+módulo lê fora da escola do token, e credencial de escola não alcança rota do painel (teste C46). O desenho está na Tech Spec da A0b
 (`tasks/prd-apresentacao-painel/techspec.md`, seções 6 e 11).
 
 ## Autenticação e identidade

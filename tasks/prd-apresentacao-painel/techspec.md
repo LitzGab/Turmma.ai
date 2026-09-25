@@ -2,6 +2,8 @@
 
 **PRD:** `tasks/prd-apresentacao-painel/prd.md`
 **Status:** aprovada (24/09/2026, `/revisar-spec` rodada 6); clarificações decididas por Claude, com delegação do Joaquim (**Decisão**).
+**Acerto ao código:** 25/09/2026, correção `2026-09-25-spec-da-a0b-atras-do-codigo`, a partir da validação (rodada 1,
+seção 4): seções 3, 5 (matriz), 7, 7c e 11, com as decisões que as tarefas tomaram e o código cumpre.
 
 ## 1. Resumo da abordagem
 
@@ -22,15 +24,18 @@ A leitura entre escolas mora num só `PainelRepository`, com `@SemEscopo`. A web
 
 ## 3. Modelo de dados
 
-Nenhuma tabela nova; duas migrations de índice, compatíveis:
+Nenhuma tabela nova; três migrations, compatíveis com o código anterior:
 
 ```
-convite_pendente_unico         único (escola_id, usuario_id) where usado_em is null and revogado_em is null
-usuario_coordenador_ativo_idx  (escola_id) where papel = 'coordenador' and desativado_em is null
+0015  convite_pendente_unico         único (escola_id, usuario_id) where usado_em is null and revogado_em is null
+0016  usuario_coordenador_ativo_idx  (escola_id) where papel = 'coordenador' and desativado_em is null
+0017  auditoria_operacao_acao_valida e sessao_operador_motivo_valido ganham 'convite_operador.aceito' e 'convite_aceito'
 ```
 
-O primeiro é a rede de segurança da trava da 7c (o F1 sempre revoga antes de criar). O segundo serve à lista (tarefa
-5.0): sem ele, o `EXPLAIN` mostrou o "há coordenador ativo?" varrendo `usuario` de todas as escolas. `AcaoDeAuditoria` ganha
+O primeiro índice é a rede de segurança da trava da 7c (o F1 sempre revoga antes de criar). O segundo serve à lista
+(tarefa 5.0): sem ele, o `EXPLAIN` mostrou o "há coordenador ativo?" varrendo `usuario` de todas as escolas. A `0017`
+(tarefa 9.0, pendência da A0) só amplia dois checks das tabelas da operação: o aceite do convite do operador passa a ser
+auditado e a encerrar as sessões abertas da conta. `AcaoDeAuditoria` ganha
 `convite.refeito`, com `depois: { origemId, usuarioId, expiraEm }`.
 
 ## 4. API
@@ -71,7 +76,7 @@ estado. O servidor decide pela matriz; a tela a espelha:
 
 | Estado | gerar | refazer (do último convite) | revogar |
 |---|---|---|---|
-| `sem_convite`, `revogado`, `sem_coordenacao` | cria | `CONFLITO` | `CONFLITO` (`revogado`: `NAO_ENCONTRADO`) |
+| `sem_convite`, `revogado`, `sem_coordenacao` | cria | `CONFLITO` (`sem_convite`: `NAO_ENCONTRADO`) | `CONFLITO` (`sem_convite` e `revogado`: `NAO_ENCONTRADO`) |
 | `pendente`, `vencido` | `CONFLITO` | revoga e cria outro | revoga |
 | `aceito` | cria, e o aceite anterior deixa de ativar | `CONFLITO` | revoga |
 | `ativa` | `CONFLITO` | `CONFLITO` | `CONFLITO` |
@@ -79,7 +84,11 @@ estado. O servidor decide pela matriz; a tela a espelha:
 Refazer de convite que não é o último: `CONFLITO`; revogar também (tarefa 2.0), depois de responder `NAO_ENCONTRADO` ao convite já revogado. Gerar em escola inexistente: `NAO_ENCONTRADO`,
 antes de criar conta. Refazer grava só `convite.refeito`, no convite novo, com o `origemId`, para o mesmo usuário (nome e e-mail se corrigem
 revogando e gerando); a origem sai pelo `update` condicional (só em aberto), e o que ele não revoga é `CONFLITO`; em
-`sem_convite` não há convite a passar, e o id inexistente é `NAO_ENCONTRADO` (tarefa 3.0). Revogar em `revogado` fica `NAO_ENCONTRADO`, como no F1.
+`sem_convite` não há convite a passar, e o id inexistente é `NAO_ENCONTRADO`, no refazer (tarefa 3.0) e no revogar (tarefa
+2.0): a escola do convite não é achada, e a resposta sai antes da matriz. Por isso a entrada `sem_convite` de
+`REFAZER_` e `REVOGAR_CONVITE_POR_ESTADO` (`conflito`) não é alcançada no fluxo normal (só se o expurgo apagasse o
+convite entre achar a escola e ler o estado: aí o revogar responde `NAO_ENCONTRADO`, e o refazer `CONFLITO`); na tela, `sem_convite` não
+oferece refazer nem revogar. Revogar em `revogado` fica `NAO_ENCONTRADO`, como no F1.
 
 Gerar em `aceito` e `sem_coordenacao` revoga o último convite na mesma transação, com `convite.revogado`
 dele na auditoria; com o mesmo e-mail, o F1 reusa o usuário, e só o convite novo o ativa. **A ativação por convite (aceite, ou login com o
@@ -134,7 +143,7 @@ Testes: `cenarios.md`, grupo I.
 | Item | Resposta |
 |---|---|
 | Campos tocados | nome e e-mail da coordenadora, digitados no gerar (já no mapa, F1) |
-| Novos campos | nenhum; `docs/lgpd.md` não muda |
+| Novos campos | nenhum. `docs/lgpd.md` ganhou o que as tarefas acrescentaram a linhas que já existiam: o convite de coordenador gerado ou refeito pelo painel, com o link uma vez (2.0 e 7.0); o motivo `convite_aceito` da sessão do operador e o `convite_operador.aceito` da auditoria da operação (9.0); o que o painel vê de cada escola e o `rl:ip:op` no "IP só em memória" (correção `2026-09-25-spec-da-a0b-atras-do-codigo`) |
 | Log | `operacao.{rede,escola}.criada`, `operacao.convite.{gerado,refeito,revogado}`, só com ids |
 | Auditoria | `rede.criada`, `escola.criada`, `convite.{criado,refeito,revogado}`, com o apelido conferido |
 | Leitura e token | contagem não é dado de aluno (sem auditoria de leitura); o token sai só na resposta, e o banco guarda o hash |
@@ -157,7 +166,7 @@ Não se aplica: não há IA nem dado de aluno.
 | Rede ou escola repetida | `insert … on conflict do nothing returning id` (sem alvo: com o alvo no id, dois pedidos iguais podiam levantar 23505 no índice do slug; tarefa 1.0), e sem linha, `select` pelo id na mesma chamada; slug pela restrição única | a auditoria | mesmo id e dados: o mesmo id, sem segunda auditoria; outros dados, ou outro id com o mesmo slug: `CONFLITO` (23505 mapeado, nunca 500) | dois POST iguais; mesmo id com outros dados; ids diferentes com o mesmo slug |
 | Convite da escola | `pg_advisory_xact_lock(7_000_003, hashtext(escola_id::text))`, estado lido depois | conta, usuário, revogação, convite, auditoria | a matriz da seção 5 | E8: no fim, no máximo um convite em aberto |
 | Ativação por convite | a mesma trava, primeira instrução; depois o `update` do F1 | uso do convite, ativação, auditoria | seção 5 (`NAO_ENCONTRADO`, sem `login_falho`) | E15 |
-| Convite em aberto | índice `convite_pendente_unico`; no refazer, antes dele, o `update` condicional da origem (tarefa 3.0) | — | 23505 vira `CONFLITO`; o `update` que não revoga, também | sem a trava (mutação), só entre convites do mesmo usuário; no refazer, o segundo para na linha da origem |
+| Convite em aberto | no refazer, o `update` condicional da origem (`usado_em is null and revogado_em is null`), que é quem segura dois refazer sem a trava; o índice `convite_pendente_unico` fica atrás dele, como rede de segurança do gerar e de um `update` que perdesse a condição (tarefa 3.0) | — | o `update` que não revoga dá `CONFLITO`; o 23505 do índice também | E9 (sem a trava, mutação): o segundo refazer para na linha da origem, não revoga nada e recebe `CONFLITO`; o 23505 como `CONFLITO` é provado no teste do repository (2.0) |
 
 ## 9. Frontend
 
@@ -206,7 +215,7 @@ A lista fechada, com um identificador por teste, está em `cenarios.md`, parte d
 
 | Regra | Como é atendida | Desvio e justificativa | Documento que registra o desvio |
 |---|---|---|---|
-| 10, item 9 | seção 6, com teste de arquitetura | lê entre escolas e abre o contexto pelo `:id`; três `@SemEscopo` no `PainelRepository`, o sinal da regra, por ser o único lugar desse alcance (`ops` fica com dois; `sessao` não ganha nenhum); recusada: uma chamada por escola, que o espalharia | `docs/arquitetura.md` (`operacao`), `docs/modelo-de-dados.md` (Operação Turmma) |
+| 10, item 9 | seção 6, com teste de arquitetura | lê entre escolas e abre o contexto pelo `:id`; três `@SemEscopo` no `PainelRepository`, o sinal da regra, por ser o único lugar desse alcance (`ops` fica com dois; `sessao` não ganha nenhum); recusada: uma chamada por escola, que o espalharia | `docs/arquitetura.md` (Multi-tenant), `docs/modelo-de-dados.md` (Operação Turmma, "O painel da operação"), com os sete `@SemEscopo` da seção 6 e a justificativa |
 | 10, item 7 | o id é UUID | o cliente sorteia o id de rede e escola; recusada: chave de idempotência em tabela ou Redis, mais estado para a mesma garantia | `docs/modelo-de-dados.md` (Estrutura institucional) |
 | 00, 20, 50, 80 | DTO estrito, token só na resposta, log por id, quatro estados, 7c | nenhum | — |
 

@@ -2,6 +2,8 @@
 
 Parte da Tech Spec (`techspec.md`, seção 10): cada cenário é um teste, e a tarefa que o cobre cita o
 identificador. A lista é fechada; mudar exige revisar a spec. Saiu das rodadas 1 e 2 do `/revisar-spec`.
+Acertada ao código em 25/09/2026 pela correção `2026-09-25-spec-da-a0b-atras-do-codigo`, a partir da validação (rodada 1,
+seção 4): E9 e W10 passam a dizer o que as tarefas 3.0 e 6.0 decidiram e os testes já provam.
 Concorrência é sempre com as chamadas em paralelo (`Promise.all`), e integração é com Postgres real.
 
 ## I — Isolamento e arquitetura
@@ -67,7 +69,13 @@ Concorrência é sempre com as chamadas em paralelo (`Promise.all`), e integraç
   refazer; refazer e revogar; dois revogar. No fim, no máximo um convite em aberto; o perdedor recebe o
   erro da matriz; dois revogar dão um 204 e um `NAO_ENCONTRADO`, com uma auditoria
 - **E9** Mutação: sem a trava por escola, dois refazer do mesmo convite continuam com um só convite em
-  aberto, pelo índice (23505 vira `CONFLITO`)
+  aberto, pelo `update` condicional da origem: o segundo passa pela leitura do estado, para na linha da origem, e quando
+  o primeiro confirma não revoga nada (`revogado_em is null` já não vale) e recebe `CONFLITO`. Este teste prova o
+  resultado (um só em aberto, o perdedor com `CONFLITO`); a condição do `update` é provada no teste do repository do
+  `revogarParaRefazer` (3.0: o convite já revogado não é revogado de novo), e o 23505 do índice `convite_pendente_unico`
+  como `CONFLITO`, no teste do repository do índice (2.0).
+  Também sem a trava, o aceite no meio do refazer: o `usado_em is null` do mesmo `update` segura, e o refazer recebe
+  `CONFLITO` sem convite novo (tarefa 3.0)
 - **E10** O mesmo e-mail convidado em duas escolas, em paralelo: os dois convites existem, cada um na
   sua escola, e nenhuma resposta traz nada da outra
 - **E11** Autor desativado: com o `desativar` segurando a linha do operador (transação aberta pelo
@@ -155,10 +163,14 @@ Concorrência é sempre com as chamadas em paralelo (`Promise.all`), e integraç
   "Convite revogado"; `aceito` "Convite aceito, falta o primeiro acesso"; `sem_coordenacao` "Sem
   coordenação ativa"; `ativa` "Ativa". Mensagens: `CONFLITO` no refazer e no revogar "O convite mudou.
   A lista foi atualizada."; no gerar "Esta escola já tem convite. Use Refazer para um link novo."; no
-  slug "Esse endereço já é de outra escola. Escolha outro."; `NAO_ENCONTRADO` no revogar "Esse convite
-  já não vale. A lista foi atualizada."; 429 "Muitas ações seguidas. Tente de novo em N segundos.", com
+  slug "Esse endereço já é de outra escola. Escolha outro.", salvo depois de uma tentativa incerta (a conexão caiu ou a
+  resposta veio fora do contrato, e o servidor pode ter criado a escola): aí o `CONFLITO` com os dados mudados é o mesmo
+  id recusado, e a revisão mostra "A tentativa anterior pode ter criado a escola antes de a conexão cair. Feche este
+  diálogo e confira a lista antes de tentar de novo." (tarefa 6.0); `NAO_ENCONTRADO` no refazer e no revogar "Esse
+  convite já não vale. A lista foi atualizada."; 429 "Muitas ações seguidas. Tente de novo em N segundos.", com
   o N do `Retry-After`; 503 `TEMPO_ESGOTADO` "A operação demorou demais. Tente de novo em instantes.";
-  401 no meio de um diálogo leva à entrada com "Sua sessão terminou. Entre de novo." Na tela de entrada
+  401 no meio de um diálogo leva à entrada com "Sua sessão terminou. Entre de novo para continuar.", o texto do
+  catálogo (`MENSAGENS_DE_ERRO.SESSAO_ENCERRADA`) que a A0 já deixa na entrada (tarefa 6.0). Na tela de entrada
   da equipe (`/entrar`) e na do segundo fator, o `NAO_ENCONTRADO` da E16 mostra o texto da tela de convite inválido
   do F1, sem dizer que a senha estava certa (tarefa 4.0)
 - **W8** (e2e) Teclado: criar escola e gerar convite só com Tab e Enter; foco preso no diálogo e devolvido

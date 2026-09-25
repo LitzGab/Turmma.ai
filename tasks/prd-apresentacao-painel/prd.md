@@ -47,6 +47,12 @@ numa tela própria, sem nunca ver dado de pessoa da escola.
 | RF7 | A leitura entre escolas fica num módulo só, com cada consulta sem escopo declarada e justificada (regra 10, item 9) | Teste de arquitetura sobre o módulo |
 | RF8 | As telas têm a pele da D72, os quatro estados, teclado e toque, e funcionam em `chromebook` e `celular` | e2e nos dois projetos, com verificação de acessibilidade |
 
+**Nota ao RF2** (correção `2026-09-25-spec-da-a0b-atras-do-codigo`, a partir da validação, rodada 1): o par "gerar e
+refazer em paralelo" do "Como se prova" foi trocado na revisão da spec (rodada 2, recomendação do `test-engineer`) e não
+tem teste paralelo próprio. Ele é coberto por construção: gerar e refazer pegam a mesma trava da escola e só então leem o
+estado, e pela matriz o refazer só existe em `pendente` e `vencido`, onde o gerar é `CONFLITO`; quem chega depois na
+trava lê o estado que o primeiro deixou. Provam a matriz e a trava a E6 e a E8 de `cenarios.md`.
+
 ## 6. Regras de negócio
 
 - **A escola é a controladora; nós somos operadores** (D10): o painel vê que a escola existe, se

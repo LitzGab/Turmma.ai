@@ -20,10 +20,11 @@ inatividade da sessão é configurável por escola, com padrão diferente para a
 `endereco` e a configuração de retenção entram quando a funcionalidade que os usa chegar.
 
 Rede e escola nascem só pelo operador Turmma (`ops:escola` ou o painel da operação, A0b), e o
-**id delas pode vir do pedido**: a web sorteia um UUID v4 ou v7 ao abrir o diálogo, e o clique
-duplo repete o mesmo id, que o banco recebe com `on conflict do nothing` e devolve sem criar
-outra (Tech Spec da A0b, seção 7c). Só esse id, e só nessas duas tabelas, vem de fora; o resto
-continua `uuidv7()` do banco. O cliente não escolhe um id legível: o contrato só aceita v4 e v7.
+**id delas pode vir do pedido**: a web sorteia um UUID v4 ou v7 ao abrir o diálogo, e o comando
+sorteia um v4 (`randomUUID()`) a cada execução. O clique duplo repete o mesmo id, que o banco
+recebe com `on conflict do nothing` e devolve sem criar outra (Tech Spec da A0b, seções 5 e 7c).
+Só esse id, e só nessas duas tabelas, vem de fora; o resto continua `uuidv7()` do banco. O cliente
+não escolhe um id legível: o contrato só aceita v4 e v7.
 
 ## Pessoas e vínculos
 
@@ -129,6 +130,31 @@ O que impede que isso vire atalho para dado de escola é a cerca, provada por te
 prazo, `AcessoOperacao`, `SessaoOperador` e `ConviteOperador`. O operador desativado não guarda
 dado pessoal, por check no banco: fica o apelido, que é o que vai para `Auditoria.autorOperador`.
 Um convite pendente por operador, por único parcial.
+
+**O painel da operação** (A0b, D76) lê entre escolas, e é a exceção da regra 10, item 9. O desenho
+está na Tech Spec da A0b (`tasks/prd-apresentacao-painel/techspec.md`, seções 6 e 11), e as consultas
+sem escopo que uma rota do painel alcança são estas, cada uma com `@SemEscopo` e a justificativa no
+código:
+
+| Repository e método | O que faz | Justificativa |
+|---|---|---|
+| `PainelRepository.redes` | a lista de redes para criar escola | acima do tenant; só id, nome e tipo, até 200, sem escola nem pessoa |
+| `PainelRepository.escolas` | a lista de escolas, com o estado da coordenação e as contagens do ano em curso | só id, nome, endereço e número, sem pessoa |
+| `PainelRepository.uso` | o uso de infra de cada escola no último dia fechado e no mês dele | só id, nome e número, sem pessoa |
+| `RedeEEscolaRepository.criarRede`, `criarEscola` | cria, ou lê pelo id o pedido repetido | a rede fica acima do tenant, e a escola é o próprio tenant, que nasce ali; só o comando ou o painel cria, e devolve só o id |
+| `ResolucaoDeTenantRepository.contaParaConvite` | acha ou cria a conta pelo e-mail no convite da coordenação | a conta é global e não tem escola; não lê nada dela e devolve só o id e se é nova |
+| `ResolucaoDeTenantRepository.escolaDoConviteParaOperador` | a escola do convite de coordenação | recebe só o id do convite, e a escola dele vira o contexto, nunca o argumento |
+
+O `PainelRepository` é o único lugar da leitura entre escolas: os três métodos dele são todos
+`@SemEscopo`, e só o `painel.service.ts` o importa (teste de arquitetura I1). Os outros quatro já
+existiam para os comandos `ops:*` e passaram a servir também ao painel, com a justificativa "comando
+ou painel" (o `ops` continua com os dois, I2, e o `sessao` não ganhou nenhum). Eles servem às
+escritas: fora a leitura da escola do convite, que só devolve o `escola_id`, as escritas abrem o
+contexto da escola antes de tocar qualquer tabela dela, e o resto do gerar, refazer e revogar roda
+com escopo. Não há tabela nova: o painel lê `rede`, `escola`, `ano_letivo`, `turma`,
+`vinculo`, `usuario`, `convite` e `uso_infra_diario`, e devolve só id, nome, endereço, estado e
+número. A alternativa recusada, uma chamada por escola no contexto dela, espalharia a exceção por
+todos os repositories que a lista toca.
 
 ## Grade horária e calendário
 

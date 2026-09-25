@@ -322,8 +322,13 @@ Fase posterior (D11). Nota, entrega e alerta, alimentados pelo motor de eventos 
 Não é área da escola: é a nossa. Só o operador Turmma entra, com conta própria e segundo fator
 obrigatório, e nenhuma pessoa de escola alcança estas telas.
 
-- **Escolas**: a lista de redes e escolas, com o estado (convite pendente, ativa) e contagens de
-  turmas, alunos e professores ativos. Só número, nunca nome
+- **Escolas**: a lista de redes e escolas, com o estado da primeira coordenação e contagens de
+  turmas, alunos e professores ativos do ano em curso. Só número, nunca nome. Os estados são sete, e
+  a tela os diz em texto, sem o identificador: sem convite, convite enviado e ainda não aberto,
+  vencido, revogado, aceito sem o primeiro acesso, sem coordenação ativa, e ativa. Os textos exatos,
+  e os das mensagens de cada ação, estão no cenário W10 da A0b
+  (`tasks/prd-apresentacao-painel/cenarios.md`); as ações de cada estado saem da matriz da seção 5
+  da Tech Spec da A0b
 - **Nova rede** e **nova escola**: nome, tipo de rede e o endereço da escola
 - **Convite da coordenação**: cadastrar a primeira coordenadora, copiar o link, revogar e refazer
 - **Uso e custo**: por escola, no dia e no mês — o uso de infra desde já (D30), o consumo de IA

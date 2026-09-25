@@ -91,10 +91,22 @@ gravado, com a finalidade de segurança, e esquecido por instância:
   e-mail: vale por um minuto e sai da memória na varredura do minuto seguinte, ou no login seguinte, se a instância
   ficar sem login;
 - nos contadores por IP, o Redis de fila e o seguro em memória recebem só o HMAC do IP, com prazo de um minuto (o
-  limite por IP das rotas de login, do rate limit do F0, no Redis de cache, também vive só a janela de um minuto).
+  limite por IP das rotas de login, do rate limit do F0, no Redis de cache, também vive só a janela de um minuto);
+- no `rl:ip:op`, o balde próprio das sete rotas de entrada da operação (A0b, tarefa 9.0): como o `rl:ip`, o IP é a chave
+  do contador no Redis de cache e no seguro em memória, só pela janela de um minuto. Não é dado novo: é o mesmo IP que
+  essas rotas já contavam no `rl:ip` e no `rl:ip-login`, em outro balde.
 
 Nenhum desses vira rótulo de métrica, linha de log, auditoria ou tabela: o alerta traz a escola, e o IP de um ataque,
 quando preciso, é consultado no registro de acesso, só para a investigação.
+
+**O painel da operação não vê pessoa da escola** (A0b, D76). A equipe Turmma vê, por escola, só id, nome, endereço, rede,
+o estado da primeira coordenação e números: turmas, professores ativos e alunos ativos do ano letivo em curso, e o uso de
+infra (requisições, jobs e bytes de storage) do último dia fechado e do mês dele. Nada de nome, e-mail ou matrícula de
+pessoa, nem nome de turma; o contrato de saída é estrito, e o teste I6 da A0b semeia sentinelas em cada tabela de pessoa e
+confere que nenhuma resposta nem linha de log as traz. A contagem não identifica ninguém e não gera auditoria de leitura.
+O único dado de pessoa que passa pelo painel é o nome e o e-mail da coordenadora que o operador digita no convite (linha
+"Convite de coordenador" e a conta global, acima). É o que respondemos quando a escola pergunta o que nós, como
+operadores, vemos (D61).
 
 **Aluno não tem e-mail nem telefone no sistema.** Contato é sempre do responsável. Quem
 propuser adicionar precisa justificar por escrito e atualizar esta tabela.
