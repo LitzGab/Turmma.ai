@@ -108,7 +108,11 @@ revisão do endereço, no computador da escola e no celular.
   diálogo aberto", nos dois projetos (dentro do diálogo, um só na página, Tab até "Continuar na sessão", Enter ou toque,
   axe; fechado o diálogo, o aviso volta à casca).
 - **A resposta que chega depois de o diálogo fechar não fecha o outro** (recomendação do mesmo revisor): o anúncio sai, e
-  só o diálogo que criou é fechado.
+  só a abertura em que o pedido saiu é fechada — nem o diálogo do outro tipo, nem o mesmo diálogo reaberto depois do
+  "Cancelar". Até a correção `2026-09-25-resposta-atrasada-fecha-o-dialogo-reaberto` a guarda comparava só o tipo, e o
+  Nova escola reaberto era fechado pela resposta do cancelado; agora cada abertura tem um número
+  (`useDialogoDaTela`, `apps/web/src/operacao/dialogo-aberto.ts`). Prova: o e2e "clique duplo e resposta perdida", nos
+  trechos da troca de tipo e da reabertura do mesmo diálogo, e `dialogo-aberto.test.ts`.
 - **A revisão do Nova escola tem "Cancelar"**, como os outros passos: sair do diálogo nunca é mais difícil que seguir nele
   (D59), e o Esc faz o mesmo.
 - **`entrarNaOperacao`, `acionar` e `esperarCasca` foram para `e2e/__fixtures__/tela-da-operacao.ts`**, de onde o

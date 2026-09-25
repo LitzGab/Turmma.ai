@@ -9,6 +9,7 @@ import { buscaDaConsulta, consultaDasEscolas, lerConsultaDaTela } from '../api/p
 import { INICIO_DA_OPERACAO } from '../caminhos'
 import { CLASSES_DO_BOTAO_SECUNDARIO } from '../componentes/botao-secundario'
 import { ErroDaOperacao } from '../componentes/CascaDaOperacao'
+import { useDialogoDaTela } from '../dialogo-aberto'
 import { CLASSES_DO_TOM, TEXTO_DO_ESTADO, TOM_DO_ESTADO } from '../estados-da-escola'
 import { TEXTO_DA_LISTA_VAZIA } from '../textos'
 import { useTituloDaPagina } from '../titulo'
@@ -17,9 +18,6 @@ import { NovaRede } from './NovaRede'
 
 
 const ROTULO_DA_ORDEM: Readonly<Record<OrdemDoPainel, string>> = { nome: 'Nome', uso: 'Mais uso no mês' }
-
-/** O diálogo aberto: um de cada vez, e só enquanto está aberto ele existe. */
-type Dialogo = 'rede' | 'escola' | undefined
 
 /** O estado da coordenação em texto, com a cor de reforço da família dele (regra 50, item 11). */
 function Estado({ escola }: { escola: EscolaDoPainel }) {
@@ -122,7 +120,9 @@ export function Escolas() {
   const [, navegar] = useLocation()
   const consulta = lerConsultaDaTela(busca)
   const escolas = useQuery(consultaDasEscolas(consulta))
-  const [dialogo, definirDialogo] = useState<Dialogo>(undefined)
+  // O diálogo aberto: um de cada vez, e só enquanto está aberto ele existe; cada abertura é uma instância própria.
+  const dialogo = useDialogoDaTela<'rede' | 'escola'>()
+  const aberta = dialogo.aberta
   const [anuncio, definirAnuncio] = useState('')
   // A rede criada por último nesta tela: o Nova escola já a traz escolhida (o fluxo rede → escola, cenário W8).
   const [redeSugerida, definirRedeSugerida] = useState<string | undefined>(undefined)
@@ -139,8 +139,8 @@ export function Escolas() {
     <>
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-3">
-          <Botao onClick={() => definirDialogo('escola')}>Nova escola</Botao>
-          <button type="button" onClick={() => definirDialogo('rede')} className={CLASSES_DO_BOTAO_SECUNDARIO}>
+          <Botao onClick={() => dialogo.abrir('escola')}>Nova escola</Botao>
+          <button type="button" onClick={() => dialogo.abrir('rede')} className={CLASSES_DO_BOTAO_SECUNDARIO}>
             Nova rede
           </button>
         </div>
@@ -171,7 +171,7 @@ export function Escolas() {
       ) : escolas.isError && dados === undefined ? (
         <ErroDaOperacao erro={escolas.error} aoTentarDeNovo={() => void escolas.refetch()} tentando={escolas.isFetching} />
       ) : dados === undefined || dados.total === 0 ? (
-        <EstadoVazio titulo={TEXTO_DA_LISTA_VAZIA.titulo} descricao={TEXTO_DA_LISTA_VAZIA.descricao} acao={{ rotulo: 'Nova rede', aoAcionar: () => definirDialogo('rede') }} />
+        <EstadoVazio titulo={TEXTO_DA_LISTA_VAZIA.titulo} descricao={TEXTO_DA_LISTA_VAZIA.descricao} acao={{ rotulo: 'Nova rede', aoAcionar: () => dialogo.abrir('rede') }} />
       ) : dados.itens.length === 0 ? (
         <EstadoVazio
           titulo="Não há escolas nesta página."
@@ -211,25 +211,28 @@ export function Escolas() {
         </section>
       )}
 
-      {dialogo === 'rede' && (
+      {aberta?.tipo === 'rede' && (
         <NovaRede
-          aoFechar={() => definirDialogo(undefined)}
+          key={aberta.numero}
+          aoFechar={dialogo.fechar}
           aoCriar={(rede) => {
             definirAnuncio(`Rede ${rede.nome} criada. Agora crie a escola dela em Nova escola.`)
-            // A resposta pode chegar depois de o diálogo fechar, com outro já aberto: só este fecha.
-            definirDialogo((aberto) => (aberto === 'rede' ? undefined : aberto))
+            // A resposta pode chegar depois de o diálogo fechar, com outro já aberto, até outro Nova rede: só esta
+            // abertura fecha (`dialogo-aberto.ts`).
+            dialogo.fecharSeAinda(aberta)
             definirRedeSugerida(rede.id)
           }}
         />
       )}
-      {dialogo === 'escola' && (
+      {aberta?.tipo === 'escola' && (
         <NovaEscola
+          key={aberta.numero}
           redeSugeridaId={redeSugerida}
-          aoFechar={() => definirDialogo(undefined)}
-          aoPedirNovaRede={() => definirDialogo('rede')}
+          aoFechar={dialogo.fechar}
+          aoPedirNovaRede={() => dialogo.abrir('rede')}
           aoCriar={(escola) => {
             definirAnuncio(`Escola ${escola.nome} criada.`)
-            definirDialogo((aberto) => (aberto === 'escola' ? undefined : aberto))
+            dialogo.fecharSeAinda(aberta)
           }}
         />
       )}

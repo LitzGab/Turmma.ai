@@ -495,7 +495,70 @@ test.describe('Escolas, Nova rede e Nova escola (A0b, tarefa 6.0)', () => {
     soltarAtrasada()
     await expect(page.getByRole('status').filter({ hasText: `Escola da resposta atrasada ${marca} criada.` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(noDialogo(page).getByRole('heading', { name: 'Nova rede' })).toBeVisible()
+    await acionar(page, 'Cancelar', hasTouch)
     await page.unroute(ROTA_DE_CRIAR_ESCOLA, segurarAtrasada)
+
+    // Reabrir o mesmo diálogo com o pedido no ar (correção 2026-09-25-resposta-atrasada-fecha-o-dialogo-reaberto): a
+    // resposta atrasada é da abertura que foi cancelada, e não fecha a reaberta, que é outro pedido com outro id e com o
+    // que o operador já digitou nela.
+    const enderecoDaPrimeira = `reaberta-${marca}`
+    let soltarReaberta: () => void = () => undefined
+    const reabertaSegura = new Promise<void>((resolver) => {
+      soltarReaberta = resolver
+    })
+    let reabertaNoAr = false
+    const segurarReaberta = async (rota: Route) => {
+      if (rota.request().method() !== 'POST') return rota.fallback()
+      reabertaNoAr = true
+      await reabertaSegura
+      return rota.fallback()
+    }
+    await page.route(ROTA_DE_CRIAR_ESCOLA, segurarReaberta)
+    await preencherERevisar(`Escola da primeira abertura ${marca}`, enderecoDaPrimeira)
+    await acionar(page, 'Criar escola', hasTouch)
+    await expect.poll(() => reabertaNoAr).toBe(true)
+    await acionar(page, 'Cancelar', hasTouch)
+    await expect(noDialogo(page)).toHaveCount(0)
+    await acionar(page, 'Nova escola', hasTouch)
+    const nomeDaReaberta = noDialogo(page).getByLabel('Nome da escola')
+    await nomeDaReaberta.fill(`Escola da segunda abertura ${marca}`, { timeout: PRAZO_DA_ENTRADA_MS })
+    soltarReaberta()
+    await expect(page.getByRole('status').filter({ hasText: `Escola da primeira abertura ${marca} criada.` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(noDialogo(page).getByRole('heading', { name: 'Nova escola' })).toBeVisible()
+    await expect(nomeDaReaberta).toHaveValue(`Escola da segunda abertura ${marca}`)
+    expect(await escolasComOEndereco(enderecoDaPrimeira)).toHaveLength(1)
+    await acionar(page, 'Cancelar', hasTouch)
+    await page.unroute(ROTA_DE_CRIAR_ESCOLA, segurarReaberta)
+
+    // O mesmo no Nova rede.
+    const redeDaPrimeira = `Rede da primeira abertura ${marca}`
+    let soltarRedeReaberta: () => void = () => undefined
+    const redeReabertaSegura = new Promise<void>((resolver) => {
+      soltarRedeReaberta = resolver
+    })
+    let redeReabertaNoAr = false
+    const segurarRedeReaberta = async (rota: Route) => {
+      if (rota.request().method() !== 'POST') return rota.fallback()
+      redeReabertaNoAr = true
+      await redeReabertaSegura
+      return rota.fallback()
+    }
+    await page.route(ROTA_DAS_REDES, segurarRedeReaberta)
+    await acionar(page, 'Nova rede', hasTouch)
+    await noDialogo(page).getByLabel('Nome da rede').fill(redeDaPrimeira, { timeout: PRAZO_DA_ENTRADA_MS })
+    await acionar(page, 'Criar rede', hasTouch)
+    await expect.poll(() => redeReabertaNoAr).toBe(true)
+    await acionar(page, 'Cancelar', hasTouch)
+    await expect(noDialogo(page)).toHaveCount(0)
+    await acionar(page, 'Nova rede', hasTouch)
+    const nomeDaRedeReaberta = noDialogo(page).getByLabel('Nome da rede')
+    await nomeDaRedeReaberta.fill(`Rede da segunda abertura ${marca}`, { timeout: PRAZO_DA_ENTRADA_MS })
+    soltarRedeReaberta()
+    await expect(page.getByRole('status').filter({ hasText: `Rede ${redeDaPrimeira} criada.` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(noDialogo(page).getByRole('heading', { name: 'Nova rede' })).toBeVisible()
+    await expect(nomeDaRedeReaberta).toHaveValue(`Rede da segunda abertura ${marca}`)
+    expect(await redesComONome(redeDaPrimeira)).toHaveLength(1)
+    await page.unroute(ROTA_DAS_REDES, segurarRedeReaberta)
   })
 
   test('recomeço: reabrir o diálogo sorteia outro id; sair e entrar outro operador na aba não mostra a lista do primeiro', async ({ page, hasTouch }) => {
