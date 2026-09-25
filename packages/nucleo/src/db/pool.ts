@@ -79,7 +79,7 @@ function aguardarReadyForQuery(conexao: pg.PoolClient, limiteMs: number): Promis
  *
  * Vale para a forma com promessa, que é a usada no projeto (e a do Drizzle). Callback e
  * consulta em stream seguem o comportamento original. Transação de verdade não passa por aqui:
- * usa `pool.connect()` e devolve a conexão explicitamente.
+ * usa `pool.connect()` e devolve a conexão explicitamente (ver `conexaoQueSaiNoErroDeConexao`).
  */
 function consultaQueDevolveAConexao(pool: pg.Pool, limiteReadyForQueryMs: number): Consulta {
   const original = pool.query.bind(pool) as Consulta
@@ -117,6 +117,60 @@ function consultaQueDevolveAConexao(pool: pg.Pool, limiteReadyForQueryMs: number
   }
 }
 
+/** A `query` do cliente antes da troca: o mesmo cliente volta ao pool e é emprestado de novo, e a troca não se empilha. */
+const consultaDoCliente = new WeakMap<pg.PoolClient, Consulta>()
+
+/**
+ * `pool.connect()` na forma com promessa, que é a da transação do Drizzle, com a conexão emprestada saindo do pool no
+ * primeiro erro de conexão de uma consulta (`ehErroDeConexao`: timeout do cliente, socket, sessão encerrada) ou no
+ * primeiro `'error'` da conexão, que o `pg` emite na queda do socket mesmo entre duas consultas da transação.
+ *
+ * O Drizzle manda o `begin` fora do `try` e só devolve a conexão no `finally` dele, sem erro. Com o Postgres travado, o
+ * prazo do cliente (`query_timeout`) estoura com a consulta já enviada, e dois defeitos aparecem:
+ * - `begin` que estoura: a conexão nunca é devolvida. Cada uma dessas esgota uma vaga do pool até a instância reiniciar,
+ *   e o `pool.end()` do desligamento espera por ela para sempre;
+ * - consulta do meio que estoura: o `rollback` estoura também e sai da fila sem ir ao servidor, e a conexão volta ao
+ *   pool como boa, com a transação ainda aberta no servidor. O `commit` de quem a pega depois confirma a escrita da
+ *   requisição que já respondeu 503.
+ *
+ * Aqui a conexão é devolvida com o erro na hora em que a consulta falha: o pool a descarta e a encerra, e o servidor
+ * desfaz a transação ao perder a sessão. O `rollback` seguinte falha na hora, e o `release` do Drizzle no `finally` não
+ * faz nada. Erro de consulta (unicidade, `statement_timeout`) não é de conexão: a transação segue e o `rollback` é do
+ * Drizzle, como antes. A forma com callback, que o próprio `pg.Pool#query` usa por dentro, fica como está.
+ */
+function conexaoQueSaiNoErroDeConexao(pool: pg.Pool): typeof pool.connect {
+  const original = pool.connect.bind(pool) as (...argumentos: unknown[]) => unknown
+  return async function conectar(...argumentos: unknown[]): Promise<unknown> {
+    if (typeof argumentos[0] === 'function') return original(...argumentos)
+    const conexao = (await original()) as pg.PoolClient
+    const devolverAoPool = conexao.release.bind(conexao)
+    let devolvida = false
+    // Emprestada, a conexão fica sem o ouvinte de 'error' do pool, e o `pg` emite 'error' em toda queda de socket, com
+    // ou sem consulta em andamento. Sem ouvinte, um failover do Postgres com uma transação aberta encerraria o processo.
+    const aoErroDaConexao = (erro: Error): void => devolver(erro)
+    const devolver = (erro?: Error | boolean): void => {
+      if (devolvida) return
+      devolvida = true
+      // Antes de devolver: o pool põe o ouvinte dele de volta, e o deste empréstimo não se acumula no cliente.
+      conexao.off('error', aoErroDaConexao)
+      devolverAoPool(erro)
+    }
+    conexao.on('error', aoErroDaConexao)
+    const consultar = consultaDoCliente.get(conexao) ?? (conexao.query as Consulta)
+    consultaDoCliente.set(conexao, consultar)
+    conexao.release = devolver
+    conexao.query = function (...argumentosDaConsulta: unknown[]): unknown {
+      const resultado = consultar.apply(conexao, argumentosDaConsulta)
+      if (typeof argumentosDaConsulta.at(-1) === 'function' || ehSubmittable(argumentosDaConsulta[0])) return resultado
+      return (resultado as Promise<unknown>).catch((erro: unknown) => {
+        if (ehErroDeConexao(erro)) devolver(erro instanceof Error ? erro : new Error('consulta falhou'))
+        throw erro
+      })
+    } as typeof conexao.query
+    return conexao
+  } as unknown as typeof pool.connect
+}
+
 /**
  * Pool único por processo. Os timeouts existem para que um Postgres travado vire resposta
  * rápida de indisponível, e não requisição pendurada ocupando o event loop na hora da aula.
@@ -138,6 +192,7 @@ export function criarPool(config: ConfiguracaoBanco, aoPerderConexaoOciosa: () =
   pool.on('error', aoPerderConexaoOciosa)
   // A assinatura sobrecarregada de `query` não tem como ser escrita sem `any`; o comportamento
   // é o mesmo em todas as formas, e os testes de integração cobrem a forma com promessa.
+  pool.connect = conexaoQueSaiNoErroDeConexao(pool)
   pool.query = consultaQueDevolveAConexao(pool, config.timeoutConexaoMs) as unknown as typeof pool.query
   return pool
 }

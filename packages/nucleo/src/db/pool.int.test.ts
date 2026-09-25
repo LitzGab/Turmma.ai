@@ -1,7 +1,9 @@
+import { sql } from 'drizzle-orm'
 import pg from 'pg'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, onTestFinished } from 'vitest'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../../tools/ci/compose.ts'
 import { aguardarSaudavel, compose, composeOuFalha } from '../../../../tools/testes/compose.ts'
+import { criarBanco } from './banco.js'
 import { bancoResponde, criarPool, type ConfiguracaoBanco, type PoolBanco } from './pool.js'
 
 function configuracaoLocal(): ConfiguracaoBanco {
@@ -139,6 +141,226 @@ describe('criarPool', () => {
       const pidNovo = await pidDa(pool)
       expect(pidNovo).toBeDefined()
       expect(pidNovo).not.toBe(pidInicial)
+    })
+  })
+
+  /**
+   * Transação do Drizzle com o Postgres travado (`docker pause`): o prazo do cliente (`query_timeout`) estoura com a
+   * consulta já enviada. O Drizzle manda o `begin` fora do `try`, e o `rollback` que ele manda depois de um erro também
+   * estoura (e sai da fila sem ir ao servidor); nos dois casos ele não devolve a conexão com erro. A conexão emprestada
+   * tem de sair do pool assim mesmo: presa, ela esgota o pool e segura o `end()` para sempre; devolvida como boa, ela
+   * leva a transação aberta no servidor para quem a pegar depois.
+   */
+  describe('transação do Drizzle com o prazo do cliente estourado', () => {
+    /** `true` se `end()` terminou dentro do prazo: com conexão presa, ele nunca termina. */
+    async function encerraNoPrazo(pool: PoolBanco, limiteMs: number): Promise<boolean> {
+      let prazo: NodeJS.Timeout | undefined
+      const esgotado = new Promise<false>((resolver) => (prazo = setTimeout(() => resolver(false), limiteMs)))
+      try {
+        return await Promise.race([pool.end().then(() => true as const), esgotado])
+      } finally {
+        clearTimeout(prazo)
+      }
+    }
+
+    it('o `begin` que estoura não prende a conexão: o pool de uma conexão volta a responder e o `end()` termina', async () => {
+      // Sem entrar em `abertos`: com a conexão presa, o `end()` do afterEach esperaria até o prazo do hook.
+      const pool = criarPool(configuracaoLocal(), () => undefined)
+      // A conexão ociosa que a transação vai pegar: é ela que recebe o `begin` com o Postgres parado.
+      expect(await bancoResponde(pool)).toBe(true)
+      composeOuFalha('pause', 'postgres')
+      try {
+        await expect(criarBanco(pool).transaction(async (tx) => tx.execute(sql`select 1`))).rejects.toThrow()
+        expect(pool.totalCount - pool.idleCount).toBe(0)
+      } finally {
+        compose('unpause', 'postgres')
+        await aguardarSaudavel('postgres')
+      }
+      expect(await bancoResponde(pool)).toBe(true)
+      expect(await encerraNoPrazo(pool, 5_000)).toBe(true)
+    })
+
+    it('o `rollback` que estoura não devolve a transação aberta: a escrita da requisição que falhou não é confirmada por outra', async () => {
+      const pool = criarPool(configuracaoLocal(), () => undefined)
+      abertos.push(pool)
+      const banco = criarBanco(pool)
+      const tabela = `teste_pool_rollback_${Date.now()}`
+      await pool.query(`create table ${tabela} (nome text)`)
+      try {
+        let pausado = false
+        try {
+          await expect(
+            banco.transaction(async (tx) => {
+              await tx.execute(sql.raw(`insert into ${tabela} (nome) values ('da requisição que falhou')`))
+              composeOuFalha('pause', 'postgres')
+              pausado = true
+              await tx.execute(sql`select 1`)
+            }),
+            // O `release` do `finally` do Drizzle vem depois do descarte: lançando, ele trocaria o erro do banco pelo da
+            // liberação dupla do `pg-pool`.
+          ).rejects.not.toThrow(/already been released/)
+        } finally {
+          if (pausado) {
+            compose('unpause', 'postgres')
+            await aguardarSaudavel('postgres')
+          }
+        }
+        // A requisição seguinte, no mesmo pool de uma conexão, confirma a própria escrita.
+        await banco.transaction(async (tx) => tx.execute(sql.raw(`insert into ${tabela} (nome) values ('da requisição seguinte')`)))
+        const { rows } = await pool.query<{ nome: string }>(`select nome from ${tabela} order by nome`)
+        expect(rows.map((linha) => linha.nome)).toEqual(['da requisição seguinte'])
+      } finally {
+        await pool.query(`drop table if exists ${tabela}`)
+      }
+    })
+  })
+
+  describe('a conexão emprestada por `pool.connect()`', () => {
+    async function pidDaConexao(conexao: pg.PoolClient): Promise<number | undefined> {
+      const { rows } = await conexao.query<{ pid: number }>('select pg_backend_pid() as pid')
+      return rows[0]?.pid
+    }
+
+    it('descartada no erro de conexão, aceita o `release` de quem a pegou sem lançar, e o pool abre outra', async () => {
+      const pool = criarPool({ ...configuracaoLocal(), timeoutConsultaMs: 10_000 }, () => undefined)
+      abertos.push(pool)
+      const descartes: unknown[] = []
+      pool.on('remove', (conexao) => descartes.push(conexao))
+      const conexao = await pool.connect()
+      const pid = await pidDaConexao(conexao)
+      const administrador = new pg.Client({ connectionString: configuracaoLocal().url })
+      abertos.push(administrador)
+      await administrador.connect()
+
+      // Encerrada com a consulta em andamento, como no teste do `pool.query`: o erro chega pela consulta.
+      const rejeitada = expect(conexao.query('select pg_sleep(5)')).rejects.toMatchObject({ code: '57P01' })
+      await expect.poll(async () => {
+        const { rows } = await administrador.query<{ ativa: boolean }>(`select state = 'active' as ativa from pg_stat_activity where pid = $1`, [pid])
+        return rows[0]?.ativa
+      }).toBe(true)
+      await administrador.query('select pg_terminate_backend($1)', [pid])
+      await rejeitada
+
+      // O `finally` do Drizzle e o `catch` do `OuvinteDeJobs` devolvem a conexão de novo, e isso não pode lançar.
+      expect(() => conexao.release()).not.toThrow()
+      expect(() => conexao.release(true)).not.toThrow()
+      await expect.poll(() => descartes.length).toBe(1)
+      const outra = await pool.connect()
+      try {
+        expect(await pidDaConexao(outra)).not.toBe(pid)
+      } finally {
+        outra.release()
+      }
+    })
+
+    /**
+     * Emprestada, a conexão fica sem o ouvinte de 'error' do pool, e o `pg` emite 'error' em toda queda de socket. Sem
+     * ouvinte, a exceção sobe ao processo, e o `uncaughtException` do logger o encerra: um failover do Postgres com uma
+     * transação aberta derrubaria a instância.
+     */
+    describe('queda da sessão com a transação aberta', () => {
+      function capturarExcecoes(): unknown[] {
+        const excecoes: unknown[] = []
+        const aoExcecao = (erro: unknown) => excecoes.push(erro)
+        process.on('uncaughtException', aoExcecao)
+        onTestFinished(() => {
+          process.off('uncaughtException', aoExcecao)
+        })
+        return excecoes
+      }
+
+      function poolComDescartes() {
+        const pool = criarPool({ ...configuracaoLocal(), timeoutConsultaMs: 10_000 }, () => undefined)
+        abertos.push(pool)
+        const descartes: unknown[] = []
+        pool.on('remove', (conexao) => descartes.push(conexao))
+        return { pool, descartes }
+      }
+
+      it('sessão encerrada pelo servidor entre duas consultas: nada sobe ao processo, a conexão sai do pool e o pool responde', async () => {
+        const excecoes = capturarExcecoes()
+        const { pool, descartes } = poolComDescartes()
+        const conexao = await pool.connect()
+        await conexao.query('begin')
+        const pid = await pidDaConexao(conexao)
+        const administrador = new pg.Client({ connectionString: configuracaoLocal().url })
+        abertos.push(administrador)
+        await administrador.connect()
+        await administrador.query('select pg_terminate_backend($1)', [pid])
+
+        // Nenhuma consulta em andamento: o aviso da queda chega só pelo 'error' da conexão.
+        await expect.poll(() => descartes.length).toBe(1)
+        await expect(conexao.query('select 1')).rejects.toThrow()
+        expect(() => conexao.release()).not.toThrow()
+        expect(excecoes).toEqual([])
+        expect(await bancoResponde(pool)).toBe(true)
+      })
+
+      it('socket resetado no meio de uma consulta da transação: nada sobe ao processo, a conexão sai do pool e o pool responde', async () => {
+        const excecoes = capturarExcecoes()
+        const { pool, descartes } = poolComDescartes()
+        const conexao = await pool.connect()
+        await conexao.query('begin')
+        const rejeitada = expect(conexao.query('select pg_sleep(5)')).rejects.toMatchObject({ code: 'ECONNRESET' })
+        // `connection` é interno do `pg` (8.x) e não está nos tipos: uma troca de versão pode mudá-lo.
+        const { connection: protocolo } = conexao as pg.PoolClient & { connection: { stream: { destroy(erro: Error): void } } }
+        protocolo.stream.destroy(Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' }))
+        await rejeitada
+
+        await expect.poll(() => descartes.length).toBe(1)
+        expect(() => conexao.release()).not.toThrow()
+        expect(excecoes).toEqual([])
+        expect(await bancoResponde(pool)).toBe(true)
+      })
+    })
+
+    it('emprestada e devolvida dezenas de milhares de vezes, a mesma conexão ainda consulta: a troca da `query` não se empilha', async () => {
+      const pool = criarPool(configuracaoLocal(), () => undefined)
+      abertos.push(pool)
+      const pid = await pool.query<{ pid: number }>('select pg_backend_pid() as pid')
+      for (let vez = 0; vez < 50_000; vez++) (await pool.connect()).release()
+      const conexao = await pool.connect()
+      try {
+        // Emprestada, só o ouvinte de 'error' deste empréstimo: o pool tira o dele, e o dos anteriores saiu na devolução.
+        expect(conexao.listenerCount('error')).toBe(1)
+        expect(await pidDaConexao(conexao)).toBe(pid.rows[0]?.pid)
+      } finally {
+        conexao.release()
+      }
+      expect(await bancoResponde(pool)).toBe(true)
+    })
+
+    it('na transação do Drizzle, o erro de consulta (unicidade) não descarta: o `rollback` é do Drizzle e a conexão volta limpa', async () => {
+      const pool = criarPool(configuracaoLocal(), () => undefined)
+      abertos.push(pool)
+      const descartes: unknown[] = []
+      pool.on('remove', (conexao) => descartes.push(conexao))
+      const banco = criarBanco(pool)
+      const tabela = `teste_pool_tx_unica_${Date.now()}`
+      await pool.query(`create table ${tabela} (nome text unique)`)
+      try {
+        const pidAntes = (await pool.query<{ pid: number }>('select pg_backend_pid() as pid')).rows[0]?.pid
+        await expect(
+          banco.transaction(async (tx) => {
+            await tx.execute(sql.raw(`insert into ${tabela} (nome) values ('Enzo Martins')`))
+            await tx.execute(sql.raw(`insert into ${tabela} (nome) values ('Enzo Martins')`))
+          }),
+        ).rejects.toMatchObject({ cause: { code: '23505' } })
+        const depois = await pool.query<{ pid: number; total: string }>(`select pg_backend_pid() as pid, (select count(*) from ${tabela}) as total`)
+        expect(depois.rows[0]).toEqual({ pid: pidAntes, total: '0' })
+        expect(descartes).toHaveLength(0)
+      } finally {
+        await pool.query(`drop table if exists ${tabela}`)
+      }
+    })
+
+    it('a forma com callback, a do `pg.Pool#query` por dentro, segue respondendo', async () => {
+      const pool = criarPool(configuracaoLocal(), () => undefined)
+      abertos.push(pool)
+      const resultado = await new Promise<pg.QueryResult<{ um: number }>>((resolver, rejeitar) => {
+        pool.query<{ um: number }>('select 1 as um', (erro, resposta) => (erro ? rejeitar(erro) : resolver(resposta)))
+      })
+      expect(resultado.rows).toEqual([{ um: 1 }])
     })
   })
 
