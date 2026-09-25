@@ -4,7 +4,8 @@ import { and, desc, eq, exists, gte, isNotNull, isNull, sql } from 'drizzle-orm'
 
 /**
  * A primeira metade da chave do `pg_advisory_xact_lock` que põe em fila, por escola, o que mexe no convite da coordenação
- * dela (Tech Spec da A0b, seção 7c, "Convite da escola"): gerar, refazer e revogar pelo painel e pelo `ops:*`. A segunda
+ * dela (Tech Spec da A0b, seção 7c, "Convite da escola" e "Ativação por convite"): gerar, refazer e revogar pelo painel e
+ * pelo `ops:*`, e a ativação pelo convite (o aceite, e o login com o bilhete, com ou sem MFA). A segunda
  * metade é `hashtext` do id da escola, e escolas diferentes não esperam uma pela outra. As outras chaves do código são
  * 7_000_001 (migração) e 7_000_002 (operadores).
  */
@@ -73,8 +74,8 @@ export class ConviteRepository {
   /**
    * Põe a transação na fila da trava do convite da escola do contexto (`pg_advisory_xact_lock(7_000_003,
    * hashtext(escola_id::text))`); solta sozinha no commit ou no rollback. Quem gera, refaz ou revoga pega a trava antes
-   * de ler o estado da coordenação: dois pedidos na mesma escola decidem um depois do outro, cada um vendo o que o
-   * anterior gravou.
+   * de ler o estado da coordenação, e quem ativa pelo convite a pega como primeira instrução da transação: dois pedidos
+   * na mesma escola decidem um depois do outro, cada um vendo o que o anterior gravou.
    */
   async travarEscola(): Promise<void> {
     await this.banco.execute(sql`select pg_advisory_xact_lock(${CHAVE_DA_TRAVA_DO_CONVITE_DA_ESCOLA}, hashtext(${escolaDoContexto()}::uuid::text))`)

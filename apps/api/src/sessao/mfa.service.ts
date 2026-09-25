@@ -8,7 +8,7 @@ import type { CookieDeDispositivo } from './cookie-dispositivo.js'
 import { COOKIE_DISPOSITIVO, lerCookie } from './cookies.js'
 import { verificarDesafio, type ConsumoDeDesafio, type DesafioVerificado } from './desafio.js'
 import { ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from './login.service.js'
-import { ResolucaoDeTenantRepository, type MfaDaConta } from './resolucao-de-tenant.repository.js'
+import { ResolucaoDeTenantRepository, type MfaDaConta, type UsuarioAtivoDaConta } from './resolucao-de-tenant.repository.js'
 import { gerarCodigosDeRecuperacao, gerarSegredo, hmacDaRecuperacao, normalizarRecuperacao, passoDoCodigo } from './segundo-fator.js'
 
 export interface DependenciasDoMfa {
@@ -46,10 +46,15 @@ const naoAutenticado = () => new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
  *   o código certo passa com ele; a espera dobra de 30 s a 15 min, como a da senha. O sufixo `conhecido` vale para o
  *   navegador que já concluiu um login desta conta, que só ganha o `educa_dispositivo` depois do segundo fator.
  * - **Redis de fila fora:** o desafio é recusado antes de qualquer código ser conferido, e a pessoa entra de novo.
- * - **Fim:** o acerto consome o desafio, ativa o usuário do convite que veio no desafio (7.0) e segue como o login da senha, para `escolher` (com o MFA cumprido) ou
- *   `pronta`, que grava a sessão e os cookies `educa_sessao` e `educa_dispositivo`. O desafio que veio da escolha ou
+ * - **Fim:** o acerto ativa o usuário do convite que veio no desafio (7.0), sob a trava do convite da escola, e só então
+ *   consome o desafio (o 503 da trava não o gasta); segue como o login da senha, para `escolher` (com o MFA cumprido)
+ *   ou `pronta`, que grava a sessão e os cookies `educa_sessao` e `educa_dispositivo`. O desafio que veio da escolha ou
  *   da troca de escola (12.0) leva o destino: o acerto entra direto nele e, na troca, encerra só agora a sessão de
  *   origem, na mesma transação.
+ * - **O convite que já não ativa** (Tech Spec da A0b, seção 5): o código certo com o convite do desafio revogado (antes
+ *   do login, entre a senha e o código, ou por um gerar do operador que venceu a trava) entra no outro usuário ativo da
+ *   conta; sem nenhum, `NAO_ENCONTRADO`, sem `login_falho` e com a reserva do contador do código desfeita. Código errado
+ *   conta como sempre.
  */
 export class MfaService {
   readonly #relogio: Relogio
@@ -111,12 +116,20 @@ export class MfaService {
       throw naoAutenticado()
     }
 
+    // Daqui em diante o código está certo: o que falhar no caminho (a trava da escola além do prazo, o banco fora) não é
+    // código errado, e a reserva é desfeita antes de o erro subir.
+    const usuarios = await this.#depoisDoCodigoCerto(conta.id, verificado).catch(async (erro: unknown) => {
+      await contador.desfazer(chave, reserva)
+      throw erro
+    })
+    if (usuarios.length === 0 && verificado.conviteId !== undefined) {
+      // O convite do bilhete já não ativa (revogado antes, ou por um gerar do operador que venceu a trava), e a conta não
+      // tem outro usuário ativo: a resposta de convite inválido, sem `login_falho`, e o contador do código volta ao que
+      // era antes (Tech Spec da A0b, seção 5).
+      await contador.desfazer(chave, reserva)
+      throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+    }
     await contador.zerar(chave)
-    await this.dependencias.consumo.consumir(verificado)
-    // Com a credencial inteira verificada, o usuário do convite cujo bilhete veio no login é ativado (7.0).
-    const pendente = verificado.conviteId === undefined ? undefined : await this.dependencias.ativacao.pendenteDoConvite(conta.id, verificado.conviteId)
-    if (pendente !== undefined) await this.dependencias.ativacao.ativar(pendente)
-    const usuarios = (await resolucao.usuariosAtivosDaConta(conta.id)).filter((ativo) => ativo.papel !== 'aluno')
     if (usuarios.length === 0) throw naoAutenticado()
     if (verificado.destinoUsuarioId !== undefined) {
       // O segundo fator pedido na escolha ou na troca de escola (12.0): entra direto no usuário escolhido, que ainda
@@ -126,6 +139,22 @@ export class MfaService {
       return this.dependencias.conclusao.entrarNoDestino(destino, conta.id, conta.email, verificado.origem, origem)
     }
     return this.dependencias.conclusao.concluir({ contaId: conta.id, email: conta.email, usuarios, mfaAtivo: true, mfaCumprido: true }, origem)
+  }
+
+  /**
+   * Com a credencial inteira verificada: ativa o usuário do convite cujo bilhete veio no login (7.0), sob a trava da
+   * escola, lê os usuários ativos da conta, sem aluno, e só então consome o desafio. Na ordem inversa, o 503 da trava
+   * (ou do banco) gastaria o desafio, e a pessoa, repetindo como o `Retry-After` manda, receberia "código incorreto".
+   * Assim ela repete com o código seguinte do app: o passo deste já foi gravado (`mfa_ultimo_passo`), e dois pedidos com
+   * o mesmo desafio não passam os dois pelo código. A ativação já acontece uma vez só, pelo `update` condicional.
+   */
+  async #depoisDoCodigoCerto(contaId: string, verificado: DesafioVerificado): Promise<UsuarioAtivoDaConta[]> {
+    const { consumo, ativacao, resolucao } = this.dependencias
+    const pendente = verificado.conviteId === undefined ? undefined : await ativacao.pendenteDoConvite(contaId, verificado.conviteId)
+    if (pendente !== undefined) await ativacao.ativar(pendente)
+    const usuarios = (await resolucao.usuariosAtivosDaConta(contaId)).filter((ativo) => ativo.papel !== 'aluno')
+    await consumo.consumir(verificado)
+    return usuarios
   }
 
   /** O código do app (passo novo, gravado no banco) ou o de recuperação (usado uma vez, no banco). */

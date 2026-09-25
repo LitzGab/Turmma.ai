@@ -1,14 +1,14 @@
-import { IP_DESCONHECIDO, type Meter } from '@educa/nucleo'
-import type { EtapaComDesafio, PedidoLoginEmail, RespostaLogin } from '@educa/shared'
+import { ErroDeDominio, IP_DESCONHECIDO, type Meter } from '@educa/nucleo'
+import { CodigoDeErro, type EtapaComDesafio, type PedidoLoginEmail, type RespostaLogin } from '@educa/shared'
 import { createHash } from 'node:crypto'
 import type { ConclusaoDeLogin } from './conclusao-de-login.js'
 import type { AtivacaoPorConvite } from './convite.service.js'
 import type { ContadorDeTentativas } from './contador-de-tentativas.js'
 import type { CookieDeDispositivo } from './cookie-dispositivo.js'
 import { COOKIE_DISPOSITIVO, lerCookie } from './cookies.js'
-import type { ResolucaoDeTenantRepository, UsuarioAtivoDaConta } from './resolucao-de-tenant.repository.js'
+import type { ResolucaoDeTenantRepository, UsuarioAtivoDaConta, UsuarioComConviteAceito } from './resolucao-de-tenant.repository.js'
 import { baldeDaEquipe, contadorDoRebaixamentoPorIp } from './senha/baldes-de-login.js'
-import type { ConferenciaNaVez, TentativaDeSenha } from './senha/conferencia-na-vez.js'
+import type { ConferenciaNaVez, SenhaConferida, TentativaDeSenha } from './senha/conferencia-na-vez.js'
 import { DuracaoDoLogin } from './senha/duracao-do-login.js'
 import type { LimiteDoEmailPorIp } from './senha/limite-email-ip.js'
 
@@ -75,8 +75,15 @@ export function hashDoRefresh(refresh: string): string {
  *   devolvem só o desafio, sem cookie.
  * - **Convite aceito por conta que já tinha senha** (7.0): só com o `bilhete` que o aceite devolveu, da mesma conta, o
  *   usuário que espera o convite conta como usuário da conta, e só é ativado com a credencial inteira. Sem MFA, logo
- *   depois da senha certa; com MFA, a resposta é `mfa` com o convite no desafio, e quem ativa é o `MfaService`, depois
- *   do código. Sem o bilhete, o login segue como se não houvesse convite.
+ *   depois da senha certa, sob a trava do convite da escola (`AtivacaoPorConvite`); com MFA, a resposta é `mfa` com o
+ *   convite no desafio, e quem ativa é o `MfaService`, depois do código. Sem o bilhete, o login segue como se não
+ *   houvesse convite.
+ * - **A senha certa com o convite que já não ativa** (Tech Spec da A0b, seção 5): o bilhete é desta conta, mas o convite
+ *   foi revogado, antes ou por um gerar do operador que venceu a trava. Com outro usuário ativo, entra nele (ou vai a
+ *   `escolher`, sem a escola do convite). Sem nenhum, `NAO_ENCONTRADO`, a resposta de convite inválido, sem `login_falho`
+ *   e com a reserva do contador desfeita; com MFA, essa resposta só vem depois do código certo. Senha errada conta como
+ *   sempre. Quem tem o bilhete (30 min, preso à conta) distingue aí a senha certa (404) da errada (401): é aceito, porque
+ *   as erradas continuam contando, e com o convite ainda válido a senha certa já dava o login, sinal mais forte.
  * - **Semáforo do hash** (14.0): todo login por e-mail, exista a conta ou não, espera a vez no balde `equipe`, com a
  *   vez rodando por IP. A vez vem antes de a tentativa ser contada: o 503 de quem esperou demais não conta como senha
  *   errada, e a web que repete o pedido no 503 não segura a conta de ninguém.
@@ -115,27 +122,67 @@ export class LoginService {
     }
 
     const { reserva, credencial, confere } = await conferencia.conferir(tentativa)
-    // Só com a senha certa há uma consulta a mais (os usuários ativos): o tempo dela só diz algo a quem já tem a
-    // senha. Não copie este padrão para antes do hash.
-    const { ativacao } = this.dependencias
-    const pendente = confere && credencial !== undefined ? await ativacao.pendentePeloBilhete(pedido.bilhete, credencial.id) : undefined
-    // Sem MFA, o usuário do convite é ativado já com a senha certa; com MFA, só depois do código (`MfaService`).
-    if (pendente !== undefined && credencial?.mfaAtivo === false) await ativacao.ativar(pendente)
-    const esperaCodigo = pendente !== undefined && credencial?.mfaAtivo === true
-    const usuarios = confere && credencial !== undefined ? await this.#usuariosAtivos(credencial.id) : []
-    if (credencial === undefined || (usuarios.length === 0 && !esperaCodigo)) {
-      await resolucao.gravarFalhaDeLoginPorEmail(ipParaRegistro(origem.ip))
-      return conferencia.recusar(tentativa, reserva)
+    if (!confere || credencial === undefined) return this.#recusar(tentativa, reserva, origem)
+
+    // Daqui em diante a senha está certa: o que falhar no caminho (a trava da escola além do prazo, o banco fora) não é
+    // senha errada, e a reserva é desfeita antes de o erro subir.
+    const { conviteId, pendente, usuarios } = await this.#depoisDaSenhaCerta(credencial, pedido.bilhete).catch(async (erro: unknown) => {
+      await contador.desfazer(chave, reserva)
+      throw erro
+    })
+    if (vaiAoCodigoComOConvite(conviteId, credencial.mfaAtivo, pendente, usuarios)) {
+      if (pendente === undefined) await contador.desfazer(chave, reserva)
+      else await contador.zerar(chave)
+      return this.dependencias.conclusao.pedirSegundoFator(credencial.id, conviteId)
+    }
+    if (usuarios.length === 0) {
+      if (conviteId === undefined) return this.#recusar(tentativa, reserva, origem)
+      // A senha certa, com o bilhete desta conta, de um convite que já não ativa (revogado, ou trocado por um gerar que
+      // venceu a trava) e sem outro usuário ativo: não houve acesso, e não foi senha errada. Nem `login` nem
+      // `login_falho`, e o contador volta ao que era antes (Tech Spec da A0b, seção 5).
+      await contador.desfazer(chave, reserva)
+      throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
     }
 
     await contador.zerar(chave)
-    if (esperaCodigo) return this.dependencias.conclusao.pedirSegundoFator(credencial.id, pendente.conviteId)
     return this.dependencias.conclusao.concluir({ contaId: credencial.id, email, usuarios, mfaAtivo: credencial.mfaAtivo, mfaCumprido: false }, origem)
+  }
+
+  /**
+   * O que vem depois da senha certa: o convite do bilhete desta conta, o usuário que espera por ele e, sem MFA, a
+   * ativação dele (sob a trava da escola), e os usuários ativos da conta. Só com a senha certa há estas consultas a mais:
+   * o tempo delas só diz algo a quem já tem a senha. Não copie este padrão para antes do hash.
+   */
+  async #depoisDaSenhaCerta(
+    credencial: NonNullable<CredencialDaConta>,
+    bilhete: string | undefined,
+  ): Promise<{ conviteId: string | undefined; pendente: UsuarioComConviteAceito | undefined; usuarios: UsuarioAtivoDaConta[] }> {
+    const { ativacao } = this.dependencias
+    const conviteId = await ativacao.conviteDoBilhete(bilhete, credencial.id)
+    const pendente = conviteId === undefined ? undefined : await ativacao.pendenteDoConvite(credencial.id, conviteId)
+    // Sem MFA, o usuário do convite é ativado já com a senha certa; com MFA, só depois do código (`MfaService`).
+    if (pendente !== undefined && !credencial.mfaAtivo) await ativacao.ativar(pendente)
+    return { conviteId, pendente, usuarios: await this.#usuariosAtivos(credencial.id) }
+  }
+
+  /** Senha errada, e-mail que não existe e conta sem usuário ativo: `login_falho` e a resposta única (RF6). */
+  async #recusar(tentativa: TentativaDeSenha<CredencialDaConta>, reserva: SenhaConferida<unknown>['reserva'], origem: OrigemDaRequisicao): Promise<never> {
+    await this.dependencias.resolucao.gravarFalhaDeLoginPorEmail(ipParaRegistro(origem.ip))
+    return this.dependencias.conferencia.recusar(tentativa, reserva)
   }
 
   async #usuariosAtivos(contaId: string): Promise<UsuarioAtivoDaConta[]> {
     return (await this.dependencias.resolucao.usuariosAtivosDaConta(contaId)).filter((ativo) => ativo.papel !== 'aluno')
   }
+}
+
+/**
+ * Com MFA e o bilhete desta conta, o código vem antes de tudo: com o convite ainda à espera (quem ativa é o
+ * `MfaService`), ou com o convite que já não ativa e nenhum outro usuário ativo, que aí só depois do código certo recebe
+ * a resposta de convite inválido. Com outro usuário ativo e o convite que já não ativa, o login segue o caminho de sempre.
+ */
+function vaiAoCodigoComOConvite(conviteId: string | undefined, mfaAtivo: boolean, pendente: UsuarioComConviteAceito | undefined, usuarios: readonly UsuarioAtivoDaConta[]): conviteId is string {
+  return conviteId !== undefined && mfaAtivo && (pendente !== undefined || usuarios.length === 0)
 }
 
 /**

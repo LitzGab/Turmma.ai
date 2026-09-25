@@ -44,6 +44,13 @@ export interface DependenciasDoConvite {
  *   conta existente.
  * - **Uso único no banco:** o aceite é o `update … where usado_em is null and revogado_em is null and expira_em > now()`,
  *   e a senha só é gravada `where senha_hash is null`, na mesma transação.
+ * - **Sob a trava da escola** (Tech Spec da A0b, seção 7c, "Ativação por convite"): a primeira instrução da transação é
+ *   a trava do convite da escola, a mesma do gerar, do refazer e do revogar do operador, antes de o aceite prender a
+ *   linha do convite. Na outra ordem, o aceite seguraria a linha esperando a trava, e o refazer seguraria a trava
+ *   esperando a linha (40P01). Quem chega depois lê o que o outro gravou: o aceite depois de um refazer ou revogar não
+ *   acha o convite e responde como convite inválido; o refazer ou revogar depois de um aceite lê o estado novo e recebe
+ *   `CONFLITO`. O aceite que não ativa o usuário desfaz tudo e responde como convite inválido, nunca 500. A espera na
+ *   trava além do `statement_timeout` é o 503 `TEMPO_ESGOTADO`, sem nada gravado.
  */
 export class ConviteService {
   constructor(private readonly dependencias: DependenciasDoConvite) {}
@@ -67,19 +74,25 @@ export class ConviteService {
     const senhaHash = !valido.contaTemSenha && pedido.senha !== undefined ? await hash.gerar(pedido.senha) : undefined
     const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
 
-    const aceite = await banco.transaction(async (tx) => {
-      const resolucaoNaTransacao = new ResolucaoDeTenantRepository(tx)
-      const usado = await resolucaoNaTransacao.usarConvitePorHash(tokenHash)
-      if (usado === undefined) return undefined
-      // Se outro convite da mesma conta definiu a senha entre a leitura e aqui, esta não é gravada: vale o caminho da
-      // conta que já tem senha.
-      const senhaDefinida = senhaHash !== undefined && (await resolucaoNaTransacao.definirSenhaNoAceite(valido.contaId, senhaHash))
-      await executarNoContexto({ requisicaoId, escolaId: usado.escolaId, usuarioId: usado.usuarioId }, async () => {
-        if (senhaDefinida && !(await new ConviteRepository(tx).ativarPorConvite(usado.usuarioId, usado.id))) throw new Error('usuário do convite não ativado')
-        await registro.gravar(tx, 'convite.aceito', { entidadeId: usado.id, depois: { usuarioId: usado.usuarioId, usuarioAtivo: senhaDefinida } })
-      })
-      return { senhaDefinida, conviteId: usado.id }
-    })
+    // A escola da trava é a do convite lido pelo hash: o `token_hash` é único, e o `update` abaixo acha o mesmo convite.
+    const aceite = await executarNoContexto({ requisicaoId, escolaId: valido.escolaId }, () =>
+      banco.transaction(async (tx) => {
+        // A trava da escola primeiro, antes de prender a linha do convite: ver o docblock.
+        await new ConviteRepository(tx).travarEscola()
+        const resolucaoNaTransacao = new ResolucaoDeTenantRepository(tx)
+        const usado = await resolucaoNaTransacao.usarConvitePorHash(tokenHash)
+        if (usado === undefined) return undefined
+        // Se outro convite da mesma conta definiu a senha entre a leitura e aqui, esta não é gravada: vale o caminho da
+        // conta que já tem senha.
+        const senhaDefinida = senhaHash !== undefined && (await resolucaoNaTransacao.definirSenhaNoAceite(valido.contaId, senhaHash))
+        await executarNoContexto({ requisicaoId, escolaId: usado.escolaId, usuarioId: usado.usuarioId }, async () => {
+          // O usuário que não ativa desfaz o uso do convite e a senha: a resposta é a de convite inválido.
+          if (senhaDefinida && !(await new ConviteRepository(tx).ativarPorConvite(usado.usuarioId, usado.id))) throw conviteInvalido()
+          await registro.gravar(tx, 'convite.aceito', { entidadeId: usado.id, depois: { usuarioId: usado.usuarioId, usuarioAtivo: senhaDefinida } })
+        })
+        return { senhaDefinida, conviteId: usado.id }
+      }),
+    )
     if (aceite === undefined) throw conviteInvalido()
     if (!aceite.senhaDefinida) return { etapa: 'entrar', bilhete: await bilhetes.emitir({ contaId: valido.contaId, conviteId: aceite.conviteId }) }
     return { etapa: 'configurar_mfa', desafio: await emissorDeDesafio.emitir({ contaId: valido.contaId, etapa: 'configurar_mfa', mfaCumprido: false }) }
@@ -95,7 +108,9 @@ export class ConviteService {
  *   com o convite no desafio, e quem ativa é o `MfaService`, depois do código).
  *
  * O usuário é ativado na escola dele, numa transação com `usuario.ativado_por_convite`, e dois logins ao mesmo tempo
- * ativam uma vez.
+ * ativam uma vez. A primeira instrução da transação é a trava do convite da escola (Tech Spec da A0b, seção 7c): entre a
+ * ativação e o gerar do operador, que revoga o convite aceito, só um vence. Quem perde é a ativação que acha o convite
+ * já revogado, e aí `ativar` não grava nada; o login decide o que responder pelos usuários ativos da conta (seção 5).
  */
 export class AtivacaoPorConvite {
   constructor(
@@ -103,12 +118,14 @@ export class AtivacaoPorConvite {
     private readonly bilhetes: BilheteDeConvite,
   ) {}
 
-  /** O usuário que espera o convite do bilhete, se o bilhete vale e é desta conta. Sem aluno. */
-  async pendentePeloBilhete(bilhete: string | undefined, contaId: string): Promise<UsuarioComConviteAceito | undefined> {
+  /**
+   * O convite do bilhete, se o bilhete vale e é desta conta; senão, `undefined`, e o login segue como se ele não tivesse
+   * vindo. O convite pode já não ativar ninguém (revogado): quem diz é `pendenteDoConvite`, e depois `ativar`.
+   */
+  async conviteDoBilhete(bilhete: string | undefined, contaId: string): Promise<string | undefined> {
     if (bilhete === undefined) return undefined
     const verificado = await this.bilhetes.verificar(bilhete)
-    if (verificado?.contaId !== contaId) return undefined
-    return this.pendenteDoConvite(contaId, verificado.conviteId)
+    return verificado?.contaId === contaId ? verificado.conviteId : undefined
   }
 
   /** O usuário da conta que espera este convite, pelo id que veio no desafio `mfa` assinado por nós. Sem aluno. */
@@ -117,11 +134,14 @@ export class AtivacaoPorConvite {
     return pendente?.papel === 'aluno' ? undefined : pendente
   }
 
+  /** Ativa o usuário pelo convite, sob a trava da escola, se o convite ainda o ativa. */
   async ativar(pendente: UsuarioComConviteAceito): Promise<void> {
     const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
     await executarNoContexto({ requisicaoId, escolaId: pendente.escolaId, usuarioId: pendente.usuarioId }, () =>
       this.banco.transaction(async (tx) => {
-        if (!(await new ConviteRepository(tx).ativarPorConvite(pendente.usuarioId, pendente.conviteId))) return
+        const convites = new ConviteRepository(tx)
+        await convites.travarEscola()
+        if (!(await convites.ativarPorConvite(pendente.usuarioId, pendente.conviteId))) return
         await registro.gravar(tx, 'usuario.ativado_por_convite', { entidadeId: pendente.usuarioId, depois: { conviteId: pendente.conviteId } })
       }),
     )

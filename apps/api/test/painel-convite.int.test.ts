@@ -14,19 +14,21 @@ import type { SaidaDoComando } from '../src/ops/comando.js'
 import { executarOpsConviteCoordenador } from '../src/ops/convite-coordenador.js'
 import { desativarOperador } from '../src/ops/operador.js'
 import { executarOpsRevogarConvite } from '../src/ops/revogar-convite.js'
-import { CHAVE_DA_TRAVA_DO_CONVITE_DA_ESCOLA, ConviteRepository } from '../src/sessao/convite.repository.js'
+import { ConviteRepository } from '../src/sessao/convite.repository.js'
 import { criarConviteDeCoordenador, refazerConviteDaCoordenacao } from '../src/sessao/convite.service.js'
-import { aguardar, esperarNaTrava, GatilhoDeParada } from './gatilho-de-parada.js'
+import { esperarNaTrava, GatilhoDeParada } from './gatilho-de-parada.js'
 import { ESPERA_DO_AUTOR, esperarErro, pedir, PRAZO_DAS_CONSULTAS_MS, segurarODesativar, subirApiDoPainel, type Resposta } from './painel-de-teste.js'
 import { BancadaDeOperadores } from './sessao-de-operador.js'
 import { autorDaBancada, BancadaDeSessoes } from './sessao-de-teste.js'
+import { emOrdemNaTrava as emOrdem, esperarNaTravaDaEscola as esperarNaFilaDaEscola, segurarTravaDaEscola as segurarTrava } from './trava-da-escola.js'
 
 /**
  * O convite da primeira coordenação pelo painel da operação (A0b, tarefas 2.0 e 3.0): `POST /v1/operacao/escolas/:id/
  * convite-coordenacao`, `POST /v1/operacao/convites/:id/refazer` e `POST /v1/operacao/convites/:id/revogar`, e os `ops:*`
  * de convite pelo mesmo caso de uso. Cenários de `tasks/prd-apresentacao-painel/cenarios.md`: E6 (gerar, refazer e
  * revogar), E7, E8, E9, E10, E11 e E13 (convite), E12 (as três rotas), I6 (refazer), I7, A1, A2 e A3 (gerar, refazer e
- * revogar). As partes de login da E6 são da 4.0. Postgres e Redis reais do compose de teste.
+ * revogar). As partes de login da E6 e a ativação sob a trava (E15, E16) são da 4.0, em `login-convite-revogado` e
+ * `ativacao-sob-trava`. Postgres e Redis reais do compose de teste.
  */
 
 const HORA_MS = 60 * 60 * 1_000
@@ -177,52 +179,10 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
     return { escolaId, quem, conviteId, link }
   }
 
-  /** Segura a trava do convite da escola por fora, numa conexão do teste; `soltar` pode ser chamado mais de uma vez. */
-  async function segurarTravaDaEscola(escolaId: string): Promise<() => Promise<void>> {
-    const conexao = await pool.connect()
-    await conexao.query('select pg_advisory_lock($1, hashtext($2::uuid::text))', [CHAVE_DA_TRAVA_DO_CONVITE_DA_ESCOLA, escolaId])
-    let solta = false
-    return async () => {
-      if (solta) return
-      solta = true
-      try {
-        await conexao.query('select pg_advisory_unlock($1, hashtext($2::uuid::text))', [CHAVE_DA_TRAVA_DO_CONVITE_DA_ESCOLA, escolaId])
-      } finally {
-        conexao.release()
-      }
-    }
-  }
-
-  /** Espera `quantas` transações paradas na trava do convite desta escola, com `wait_event = 'advisory'`. */
-  async function esperarNaTravaDaEscola(escolaId: string, quantas: number): Promise<void> {
-    await aguardar(async () => {
-      const { rows } = await pool.query<{ total: number }>(
-        `select count(*)::int as total from pg_locks l join pg_stat_activity a on a.pid = l.pid
-          where l.locktype = 'advisory' and l.classid = $1 and l.objid = hashtext($2::uuid::text)::oid and l.objsubid = 2
-            and not l.granted and a.wait_event = 'advisory'`,
-        [CHAVE_DA_TRAVA_DO_CONVITE_DA_ESCOLA, escolaId],
-      )
-      return (rows[0]?.total ?? 0) >= quantas
-    }, `${quantas} na trava do convite da escola`)
-  }
-
-  /**
-   * Dispara as duas chamadas com a trava da escola segura pelo teste, uma depois da outra: a segunda só sai quando a
-   * primeira já espera na trava, e o Postgres entrega a trava na ordem da fila. Solta com as duas esperando.
-   */
-  async function emOrdemNaTrava(escolaId: string, primeira: () => Promise<Resposta>, segunda: () => Promise<Resposta>): Promise<[Resposta, Resposta]> {
-    const soltar = await segurarTravaDaEscola(escolaId)
-    try {
-      const daPrimeira = primeira()
-      await esperarNaTravaDaEscola(escolaId, 1)
-      const daSegunda = segunda()
-      await esperarNaTravaDaEscola(escolaId, 2)
-      await soltar()
-      return [await daPrimeira, await daSegunda]
-    } finally {
-      await soltar()
-    }
-  }
+  // A trava do convite da escola vista pelo teste (`trava-da-escola.ts`), com o pool deste arquivo.
+  const segurarTravaDaEscola = (escolaId: string) => segurarTrava(pool, escolaId)
+  const esperarNaTravaDaEscola = (escolaId: string, quantas: number) => esperarNaFilaDaEscola(pool, escolaId, quantas)
+  const emOrdemNaTrava = (escolaId: string, primeira: () => Promise<Resposta>, segunda: () => Promise<Resposta>) => emOrdem(pool, escolaId, primeira, segunda)
 
   /** Os convites da escola, com o usuário, e se cada um está em aberto ou revogado. */
   const convitesDa = async (escolaId: string) =>
@@ -811,28 +771,24 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
       expect(await auditoriaDe(escola.escolaId, 'convite.refeito')).toHaveLength(1)
     })
 
-    it('o aceite, que ainda não pega a trava (4.0), no meio do refazer: o update condicional vê o convite usado, e o refazer recebe CONFLITO sem convite novo', async () => {
+    it('o aceite no meio do refazer, com o refazer sem a trava: o update condicional vê o convite usado, e o refazer recebe CONFLITO sem convite novo', async () => {
       const sessao = await operadores.operadorComSessao()
       const escola = await escolaEm('pendente', sessao.token)
       const alvo = escola.conviteId ?? ''
       const gatilho = new GatilhoDeParada(pool, { tabela: 'convite', evento: 'update', quando: `new.id = '${alvo}'::uuid and new.usado_em is not null` })
       await gatilho.armar()
       try {
+        // O aceite pega a trava da escola (4.0) e para no gatilho, com a linha do convite presa. O refazer, sem a trava
+        // (a mutação), lê `pendente` (o aceite não confirmou) e para no update da linha: é o update condicional que o
+        // segura. Com a trava, quem segura é ela, e a E15(d) cobre as duas ordens.
         const aceite = aceitar(escola.link ?? '', SENHA)
         await gatilho.esperarParadas()
-        const doRefazer = refazer(sessao.token, alvo)
-        // O refazer lê `pendente` (o aceite não confirmou) e para no update da linha que o aceite segura. Com a trava no
-        // aceite (4.0), ele para antes, na trava; o resultado é o mesmo.
-        await aguardar(async () => {
-          const { rows } = await pool.query<{ total: number }>(
-            `select count(*)::int as total from pg_stat_activity
-              where datname = current_database() and wait_event_type = 'Lock' and (query ilike '%set "revogado_em"%' or query ilike '%pg_advisory_xact_lock%')`,
-          )
-          return (rows[0]?.total ?? 0) >= 1
-        }, 'o refazer esperando o aceite')
+        const doRefazer = refazerConviteDaCoordenacao(semATravaDaEscola(banco), autorDaBancada, alvo).catch((erro: unknown) => erro)
+        await esperarNaTrava(pool, '%set "revogado_em"%')
         await gatilho.soltar()
         expect((await aceite).corpo).toEqual({ etapa: 'configurar_mfa', desafio: expect.any(String) })
-        esperarErro(await doRefazer, 409, CodigoDeErro.CONFLITO)
+        expect(await doRefazer).toBeInstanceOf(ErroDeDominio)
+        expect(await doRefazer).toMatchObject({ codigo: CodigoDeErro.CONFLITO })
       } finally {
         await gatilho.desarmar()
       }

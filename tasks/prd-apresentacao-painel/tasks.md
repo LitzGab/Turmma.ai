@@ -1,7 +1,7 @@
 # Tarefas — Painel da operação Turmma (A0b)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 3 de 10 concluídas
+**Status:** 4 de 10 concluídas
 
 Aprovadas por delegação do Joaquim em 24/09/2026 ("faça tudo e aprove até criar as tasks"). As 9.0 e
 10.0 levam as pendências da A0 (`tasks/prd-apresentacao-operacao/retro.md`, "Pendências para a A0b")
@@ -30,12 +30,12 @@ que não cabem numa tarefa que já mexe no mesmo código.
   - [x] 3.2 `POST /convites/:id/refazer`
   - [x] 3.3 Testes: E6 (refazer), E8 (pares com refazer), E9, E11 (refazer), A1, A2 e A3 (refazer)
 
-- [ ] **4.0 — Ativação por convite sob a trava da escola, e a senha certa que não conta**
-  - [ ] 4.1 A trava como primeira instrução no aceite e em `AtivacaoPorConvite.ativar`
-  - [ ] 4.2 Login e MFA: convite que já não ativa → outro usuário ativo, ou `NAO_ENCONTRADO` sem
+- [x] **4.0 — Ativação por convite sob a trava da escola, e a senha certa que não conta**
+  - [x] 4.1 A trava como primeira instrução no aceite e em `AtivacaoPorConvite.ativar`
+  - [x] 4.2 Login e MFA: convite que já não ativa → outro usuário ativo, ou `NAO_ENCONTRADO` sem
     `login_falho` e com a reserva desfeita
-  - [ ] 4.3 Texto do `NAO_ENCONTRADO` na entrada da escola
-  - [ ] 4.4 Testes: E6 (login), E15, E16, W10 (entrada da escola)
+  - [x] 4.3 Texto do `NAO_ENCONTRADO` na entrada da escola
+  - [x] 4.4 Testes: E6 (login), E15, E16, W10 (entrada da escola)
 
 - [ ] **5.0 — Leitura entre escolas: lista e uso**
   - [ ] 5.1 `PainelRepository` (`redes`, `escolas`, `uso`), com `@SemEscopo`

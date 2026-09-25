@@ -47,3 +47,16 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-24 19:50:48 | `tenancy-guardian` | 1ª | APROVADO | `3_task` | Em `convite.repository.ts:129`, pôr também `eq(convite.tipo, 'coordenador')` no `where` de `revogarParaRefazer`, como defesa em profundidade. Hoje só o… |
 | 2026-09-24 19:50:54 | `infra-guardian` | 1ª | APROVADO | `3_task` | Na 4.0 o aceite passa a pegar a mesma trava, com o `statement_timeout` de 300 ms do pool da API. Falta um teste de que o aceite que perde a trava para um… |
 | 2026-09-24 19:51:12 | `revisor-geral` | 1ª | APROVADO | `3_task` | `tasks/prd-apresentacao-painel/cenarios.md:69-70`: a E9 ainda diz "pelo índice (23505 vira `CONFLITO`)". A divergência foi para a Tech Spec, mas não para o… |
+| 2026-09-25 00:03:32 | `test-engineer` | 1ª | REPROVADO | `4_task` | O caso de permissão do novo ramo não tem teste. |
+| 2026-09-25 00:39:18 | `test-engineer` | 2ª | APROVADO | `4_task` | Recomendações que ficaram de fora nesta rodada. Os motivos dados são aceitáveis. Ficam registradas para o `/validar` e o `/retro`: |
+| 2026-09-25 00:40:38 | `privacy-guardian` | 1ª | APROVADO | `4_task` | Registrar nos furos conhecidos de `docs/lgpd.md` (ou no docblock de `login.service.ts`) um sinal que ficou de fora. Quem tem o bilhete de uma conta sem outro… |
+| 2026-09-25 00:40:48 | `tenancy-guardian` | 1ª | APROVADO | `4_task` | `apps/api/src/sessao/convite.service.ts:77`: o contexto de fora usa `valido.escolaId`, lido fora da transação, e o de dentro usa `usado.escolaId`. Os dois só… |
+| 2026-09-25 00:41:19 | `frontend-reviewer` | 1ª | AJUSTES NECESSÁRIOS | `4_task` | Entrada com dois avisos que se contradizem. Em `apps/web/src/paginas/Entrar.tsx:66-70`, o aviso `AVISO_DO_CONVITE_PARA_CONTA_EXISTENTE` fica na tela quando a… |
+| 2026-09-25 00:41:35 | `infra-guardian` | 1ª | APROVADO | `4_task` | `desfazer` pode descontar do lugar errado. Em `apps/api/src/sessao/contador-de-tentativas.ts:224-233`, o `desfazer` roda o `SCRIPT_DESFAZER` no Redis sempre… |
+| 2026-09-25 00:42:35 | `revisor-geral` | 1ª | APROVADO | `4_task` | seis, abaixo |
+| 2026-09-25 01:23:04 | `test-engineer` | 3ª | APROVADO | `4_task` | duas, abaixo |
+| 2026-09-25 01:23:52 | `frontend-reviewer` | 2ª | APROVADO | `4_task` | Em `Mfa.tsx:63`, o aviso de convite inválido vai para o bloco de aviso da entrada, com estilo `pendente` (âmbar). Na entrada direta, o mesmo texto sai como… |
+| 2026-09-25 01:24:12 | `privacy-guardian` | 2ª | APROVADO | `4_task` | Em `apps/web/src/paginas/Entrar.tsx`, no `NAO_ENCONTRADO`, apagar também o `bilheteDeConvite` da memória, não só o aviso. O bilhete de um convite revogado não… |
+| 2026-09-25 01:24:24 | `revisor-geral` | 2ª | APROVADO | `4_task` | `apps/api/src/sessao/mfa.service.ts:146-149`. Depois do 503 `TEMPO_ESGOTADO` da trava, a mensagem diz "Tente de novo em instantes". Quem repete dentro dos… |
+| 2026-09-25 01:24:26 | `tenancy-guardian` | 2ª | APROVADO | `4_task` | A trava usa `hashtext` do id da escola, e duas escolas podem cair na mesma chave. Aí uma espera a outra, sem que dado cruze de escola. Isso já existia antes… |
+| 2026-09-25 01:24:36 | `infra-guardian` | 2ª | APROVADO | `4_task` | três, abaixo |

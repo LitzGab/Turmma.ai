@@ -22,14 +22,24 @@ export const MENSAGENS_DE_ERRO: Readonly<Record<CodigoDeErro, string>> = {
 }
 
 /**
+ * O texto da tela de convite inválido (F1): expirado, revogado, já usado e inexistente chegam iguais, e a tela pede um
+ * convite novo, que é o que resolve os quatro.
+ */
+const CONVITE_QUE_NAO_VALE = 'Este convite não vale mais. Peça um convite novo à sua escola.'
+
+/**
  * O que a tela de entrada diz, onde a mensagem geral não serve (regra 50, item 12).
  *
  * - `NAO_AUTENTICADO` no login não é sessão vencida: é a resposta única de senha errada, e-mail que não existe e
  *   conta sem usuário ativo (RF6). A tela não pode dizer qual dos três foi, e o texto vale para os três.
- * - `NAO_ENCONTRADO` e `CONFLITO` não acontecem aqui; quem cair neles vê a mensagem geral.
+ * - `NAO_ENCONTRADO` é o login com o bilhete de um convite que já não ativa, numa conta sem outro usuário ativo (Tech
+ *   Spec da A0b, seção 5): o texto é o da tela de convite inválido, e não diz que a senha estava certa. Só a entrada com
+ *   convite o recebe; a entrada do operador (`apps/web/src/operacao/textos.ts`) usa este catálogo e não o recebe.
+ * - `CONFLITO` não acontece aqui; quem cair nele vê a mensagem geral.
  */
 export const MENSAGENS_DA_ENTRADA: Readonly<Partial<Record<CodigoDeErro, string>>> = {
   NAO_AUTENTICADO: 'E-mail ou senha incorretos. Confira os dois e tente de novo.',
+  NAO_ENCONTRADO: CONVITE_QUE_NAO_VALE,
 }
 
 /**
@@ -51,10 +61,12 @@ export const MENSAGENS_DO_ACESSO_DA_ESCOLA: Readonly<Partial<Record<CodigoDeErro
 
 /**
  * O que a tela do segundo fator diz (RF12). `NAO_AUTENTICADO` cobre o código errado, o código já usado e o desafio
- * vencido, que chegam iguais de propósito, e o texto vale para os três.
+ * vencido, que chegam iguais de propósito, e o texto vale para os três. `NAO_ENCONTRADO` é o código certo com o convite
+ * do bilhete que já não ativa, numa conta sem outro usuário ativo: o texto da tela de convite inválido, como na entrada.
  */
 export const MENSAGENS_DO_SEGUNDO_FATOR: Readonly<Partial<Record<CodigoDeErro, string>>> = {
   NAO_AUTENTICADO: 'Código incorreto ou já usado. Confira o código que o aplicativo mostra agora e tente de novo.',
+  NAO_ENCONTRADO: CONVITE_QUE_NAO_VALE,
   ENTRADA_INVALIDA: 'O código do aplicativo tem 6 dígitos, e o de recuperação tem 12 letras e números. Confira e tente de novo.',
 }
 
@@ -63,7 +75,7 @@ export const MENSAGENS_DO_SEGUNDO_FATOR: Readonly<Partial<Record<CodigoDeErro, s
  * não diz qual deles foi (regra 10, item 6): pede um convite novo, que é o que resolve os quatro.
  */
 export const MENSAGENS_DO_CONVITE: Readonly<Partial<Record<CodigoDeErro, string>>> = {
-  NAO_ENCONTRADO: 'Este convite não vale mais. Peça um convite novo à sua escola.',
+  NAO_ENCONTRADO: CONVITE_QUE_NAO_VALE,
 }
 
 /**

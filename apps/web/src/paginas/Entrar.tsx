@@ -2,7 +2,7 @@ import { CodigoDeErro, mensagemDaEntrada, TAMANHO_MAXIMO_EMAIL, TAMANHO_MAXIMO_S
 import { useId, useState, type FormEvent } from 'react'
 import { useLocation } from 'wouter'
 import { ErroDaApi } from '../api/cliente'
-import { avisoDaEntrada, entrarPorEmail, saidaPendente } from '../api/sessao'
+import { avisoDaEntrada, definirAvisoDaEntrada, entrarPorEmail, saidaPendente } from '../api/sessao'
 import { Botao } from '../componentes/Botao'
 import { Marca } from '../componentes/Marca'
 import { ROTA_DA_ETAPA } from '../caminhos'
@@ -41,6 +41,9 @@ export function Entrar() {
       // Sem `replace`: o Voltar do navegador leva à entrada, que com sessão aberta devolve à área autenticada.
       navegar(ROTA_DA_ETAPA[resposta.etapa])
     } catch (erro) {
+      // O convite que já não vale (A0b, E16): o aviso de "entre com a sua senha para concluir o convite" deixou de ser
+      // verdade, e a tela não pode dizer as duas coisas ao mesmo tempo.
+      if (erro instanceof ErroDaApi && erro.codigo === CodigoDeErro.NAO_ENCONTRADO) definirAvisoDaEntrada(undefined)
       definirFalha(erro)
     } finally {
       definirEntrando(false)

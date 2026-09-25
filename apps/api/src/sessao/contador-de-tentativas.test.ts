@@ -65,6 +65,43 @@ describe('ContadorDeTentativas no seguro em memória (Redis de fila fora): a mes
     for (let tentativa = 1; tentativa <= 4; tentativa++) expect(await contador.reservar(chave)).toEqual({ liberada: true, esperaSeFalharMs: 0 })
   })
 
+  it('A0b: desfazer tira só a falha daquela reserva, e as de antes continuam contando', async () => {
+    const contador = new ContadorDeTentativas(redisFora, CHAVE, relogioParado())
+    const chave = contador.chaveDe('camila@escola.invalid', 'outro')
+    for (let tentativa = 1; tentativa <= 2; tentativa++) await contador.reservar(chave)
+    const reserva = await contador.reservar(chave)
+    if (!reserva.liberada) throw new Error('a terceira reserva foi recusada')
+    await contador.desfazer(chave, reserva)
+    // Duas falhas contadas: a terceira e a quarta passam sem espera, e a quinta segura. Sem desfazer, a quarta já
+    // seguraria; com zerar no lugar, a quinta ainda passaria sem espera.
+    expect(await contador.reservar(chave)).toEqual({ liberada: true, esperaSeFalharMs: 0 })
+    expect(await contador.reservar(chave)).toEqual({ liberada: true, esperaSeFalharMs: 0 })
+    expect(await contador.reservar(chave)).toEqual({ liberada: true, esperaSeFalharMs: ESPERA_INICIAL_MS })
+  })
+
+  it('A0b: a reserva que segurou a conta, desfeita, solta a espera que ela gravou', async () => {
+    const contador = new ContadorDeTentativas(redisFora, CHAVE, relogioParado())
+    const chave = contador.chaveDe('camila@escola.invalid', 'outro')
+    for (let tentativa = 1; tentativa <= 4; tentativa++) await contador.reservar(chave)
+    const quinta = await contador.reservar(chave)
+    expect(quinta).toEqual({ liberada: true, esperaSeFalharMs: ESPERA_INICIAL_MS })
+    if (!quinta.liberada) throw new Error('a quinta reserva foi recusada')
+    await contador.desfazer(chave, quinta)
+    // De volta às quatro: a próxima não encontra a conta segurada, e é ela a quinta.
+    expect(await contador.reservar(chave)).toEqual({ liberada: true, esperaSeFalharMs: ESPERA_INICIAL_MS })
+  })
+
+  it('A0b: desfazer a única falha apaga o contador, e desfazer sem contador não faz nada', async () => {
+    const contador = new ContadorDeTentativas(redisFora, CHAVE, relogioParado())
+    const chave = contador.chaveDe('camila@escola.invalid', 'outro')
+    const unica = await contador.reservar(chave)
+    if (!unica.liberada) throw new Error('a reserva foi recusada')
+    await contador.desfazer(chave, unica)
+    await contador.desfazer(chave, unica)
+    for (let tentativa = 1; tentativa <= 4; tentativa++) expect(await contador.reservar(chave)).toEqual({ liberada: true, esperaSeFalharMs: 0 })
+    expect(await contador.reservar(chave)).toEqual({ liberada: true, esperaSeFalharMs: ESPERA_INICIAL_MS })
+  })
+
   it('borda: 15 min sem falha nova, o contador vence e recomeça do zero', async () => {
     const relogio = relogioParado()
     const contador = new ContadorDeTentativas(redisFora, CHAVE, relogio)

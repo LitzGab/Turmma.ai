@@ -56,6 +56,14 @@ export function Mfa() {
         navegar(ROTAS.entrar, { replace: true })
         return
       }
+      // O código certo com o convite que já não vale (A0b, E16): a API já gastou o desafio, e repetir o código aqui só
+      // daria "Código incorreto". A pessoa volta à entrada, que diz o que fazer: pedir um convite novo.
+      if (erro instanceof ErroDaApi && erro.codigo === CodigoDeErro.NAO_ENCONTRADO) {
+        esquecerDesafio()
+        definirAvisoDaEntrada(mensagemDoSegundoFator(CodigoDeErro.NAO_ENCONTRADO))
+        navegar(ROTAS.entrar, { replace: true })
+        return
+      }
       definirFalha(erro)
     } finally {
       definirEntrando(false)

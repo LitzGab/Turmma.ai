@@ -237,6 +237,27 @@ export async function criarConviteDeCoordenador(opcoes: { conta?: EquipeDeTeste;
 }
 
 /**
+ * O usuário deixa a escola (a coordenação o desativa): a conta continua com a senha, sem usuário ativo nele. É a pessoa
+ * que já trabalhou numa escola cliente e recebe o convite de outra.
+ */
+export async function desativarUsuario(usuarioId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('update usuario set desativado_em = now() where id = $1', [usuarioId])
+  })
+}
+
+/**
+ * O operador revoga o convite da coordenação, depois do aceite e antes da primeira entrada (A0b, estado `aceito`), como
+ * o painel faz: o convite usado ganha `revogado_em`, e o bilhete do aceite deixa de ativar. Só o convite daquele usuário
+ * convidado, na escola dele.
+ */
+export async function revogarConvite(convite: Pick<ConviteDeTeste, 'escolaId' | 'usuarioId'>): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('update convite set revogado_em = now() where escola_id = $1 and usuario_id = $2 and revogado_em is null', [convite.escolaId, convite.usuarioId])
+  })
+}
+
+/**
  * O código que um aplicativo autenticador mostraria para aquele segredo. O e2e faz aqui o papel do KeePassXC do
  * computador da coordenadora: o `otpauth` com os valores padrão é o mesmo TOTP que a API confere (SHA1, 6 dígitos,
  * 30 s; Tech Spec, seção 5, "TOTP").

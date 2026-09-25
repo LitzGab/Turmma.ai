@@ -47,6 +47,15 @@ describe('mensagemDaEntrada', () => {
     expect(mensagemDaEntrada(CodigoDeErro.CONTA_SEGURADA, Number.NaN)).toBe(MENSAGENS_DE_ERRO.CONTA_SEGURADA)
   })
 
+  it('W10 (A0b): o convite que já não ativa, com a senha certa, mostra o texto da tela de convite inválido, sem dizer que a senha estava certa', () => {
+    const mensagem = mensagemDaEntrada(CodigoDeErro.NAO_ENCONTRADO)
+    expect(mensagem).toBe(mensagemDoConvite(CodigoDeErro.NAO_ENCONTRADO))
+    expect(mensagem).toBe('Este convite não vale mais. Peça um convite novo à sua escola.')
+    // A mensagem geral ("Não encontramos o que você procurou…") não diz o que fazer na entrada.
+    expect(mensagem).not.toBe(MENSAGENS_DE_ERRO.NAO_ENCONTRADO)
+    expect(mensagem).not.toMatch(/senha|e-mail|corret/i)
+  })
+
   it('o código sem texto próprio cai no catálogo geral, e nenhuma mensagem mostra código nem status', () => {
     expect(mensagemDaEntrada(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO)).toBe(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO)
     for (const codigo of Object.values(CodigoDeErro)) {
@@ -85,6 +94,13 @@ describe('mensagemDoSegundoFator', () => {
     const mensagem = mensagemDoSegundoFator(CodigoDeErro.NAO_AUTENTICADO)
     expect(mensagem).toContain('Código incorreto')
     expect(mensagem).not.toBe(MENSAGENS_DE_ERRO.NAO_AUTENTICADO)
+  })
+
+  it('W10 (A0b): o código certo com o convite que já não ativa mostra o texto da tela de convite inválido, sem falar do código nem da senha', () => {
+    const mensagem = mensagemDoSegundoFator(CodigoDeErro.NAO_ENCONTRADO)
+    expect(mensagem).toBe(mensagemDoConvite(CodigoDeErro.NAO_ENCONTRADO))
+    expect(mensagem).not.toBe(MENSAGENS_DE_ERRO.NAO_ENCONTRADO)
+    expect(mensagem).not.toMatch(/senha|código|corret/i)
   })
 
   it('a conta segurada no quinto código errado diz a espera, como na senha', () => {

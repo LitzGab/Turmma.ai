@@ -159,8 +159,8 @@ Concorrência é sempre com as chamadas em paralelo (`Promise.all`), e integraç
   já não vale. A lista foi atualizada."; 429 "Muitas ações seguidas. Tente de novo em N segundos.", com
   o N do `Retry-After`; 503 `TEMPO_ESGOTADO` "A operação demorou demais. Tente de novo em instantes.";
   401 no meio de um diálogo leva à entrada com "Sua sessão terminou. Entre de novo." Na tela de entrada
-  da escola, o `NAO_ENCONTRADO` da E16 mostra o texto da tela de convite inválido do F1, sem dizer que a
-  senha estava certa
+  da equipe (`/entrar`) e na do segundo fator, o `NAO_ENCONTRADO` da E16 mostra o texto da tela de convite inválido
+  do F1, sem dizer que a senha estava certa (tarefa 4.0)
 - **W8** (e2e) Teclado: criar escola e gerar convite só com Tab e Enter; foco preso no diálogo e devolvido
   ao botão que o abriu; Esc cai na mesma pergunta de fechar sem copiar
 - **W9** (e2e) Sem `navigator.clipboard`, o Copiar seleciona o campo e pede para copiar; "Link copiado"

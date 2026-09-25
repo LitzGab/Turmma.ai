@@ -86,7 +86,9 @@ antes de `usarConvitePorHash`, senão há deadlock); o `update` já exige convit
 resultado e não pela corrida: login com senha (e código, no MFA) certos e bilhete válido da conta, cujo
 convite já não ativa (revogado antes, ou por um gerar concorrente), entra no outro usuário ativo da conta, se houver;
 sem ele, `NAO_ENCONTRADO`, sem `login_falho` e com a reserva do contador desfeita. Senha errada conta
-como sempre. O 57014 segue 503 `TEMPO_ESGOTADO`.
+como sempre. O 57014 segue 503 `TEMPO_ESGOTADO`. Com MFA, a senha certa vai ao código e a resposta vem depois dele,
+com as duas reservas desfeitas; o que falhar depois da senha ou do código certos (o 57014 da trava) também desfaz a
+reserva (tarefa 4.0).
 
 **Decisão:** o `ops:convite-coordenador` segue a mesma regra (hoje ele refaz sozinho); vai no docblock.
 

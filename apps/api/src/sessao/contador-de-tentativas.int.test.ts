@@ -102,6 +102,53 @@ describe('ContadorDeTentativas no Redis de fila', () => {
     for (let tentativa = 1; tentativa < FALHAS_ANTES_DE_SEGURAR; tentativa++) expect(await contador.reservar(conhecido)).toEqual({ liberada: true, esperaSeFalharMs: 0 })
   })
 
+  it('A0b: desfazer no Redis tira só a falha daquela reserva; a que segurou a conta solta a espera; a única apaga a chave', async () => {
+    const contador = new ContadorDeTentativas(cliente, CHAVE, relogioParado())
+    const chave = contador.chaveDe(emailNovo(), 'outro')
+    for (let tentativa = 1; tentativa <= 2; tentativa++) await contador.reservar(chave)
+    const terceira = await contador.reservar(chave)
+    if (!terceira.liberada) throw new Error('a terceira reserva foi recusada')
+    await contador.desfazer(chave, terceira)
+    expect(await cliente.hget(chave, 'falhas')).toBe('2')
+
+    // Até a quinta, que segura; desfeita, a conta volta a quatro falhas e sem espera.
+    await contador.reservar(chave)
+    await contador.reservar(chave)
+    const quinta = await contador.reservar(chave)
+    expect(quinta).toEqual({ liberada: true, esperaSeFalharMs: ESPERA_INICIAL_MS })
+    if (!quinta.liberada) throw new Error('a quinta reserva foi recusada')
+    await contador.desfazer(chave, quinta)
+    expect(await cliente.hgetall(chave)).toEqual({ falhas: '4', ate: '0' })
+    // A próxima reserva é a quinta de novo, e não encontra a conta segurada.
+    expect(await contador.reservar(chave)).toEqual({ liberada: true, esperaSeFalharMs: ESPERA_INICIAL_MS })
+
+    const outra = contador.chaveDe(emailNovo(), 'outro')
+    const unica = await contador.reservar(outra)
+    if (!unica.liberada) throw new Error('a reserva foi recusada')
+    await contador.desfazer(outra, unica)
+    expect(await cliente.exists(outra)).toBe(0)
+  })
+
+  it('A0b: a espera que o Redis gravou e o seguro espelhou (15.3), desfeita, sai dos dois: com o Redis sumindo depois, o seguro não segura a conta', async () => {
+    const producao = criarClienteRedisDaApi(URL_REDIS_FILA, 'teste-contador-desfazer', () => undefined)
+    try {
+      await pronto(producao)
+      const contador = new ContadorDeTentativas(producao, CHAVE)
+      const chave = contador.chaveDe(emailNovo(), 'outro')
+      for (let tentativa = 1; tentativa < FALHAS_ANTES_DE_SEGURAR; tentativa++) await contador.reservar(chave)
+      const quinta = await contador.reservar(chave)
+      expect(quinta).toEqual({ liberada: true, esperaSeFalharMs: ESPERA_INICIAL_MS })
+      if (!quinta.liberada) throw new Error('a quinta reserva foi recusada')
+      await contador.desfazer(chave, quinta)
+      producao.disconnect()
+      // Só o seguro atende agora: sem desfazer o espelho, a conta estaria segurada nele por 30 s.
+      expect(await contador.reservar(chave)).toMatchObject({ liberada: true })
+      expect(contador.proporcaoDoSeguro).toBeGreaterThan(0)
+    } finally {
+      producao.disconnect()
+    }
+  })
+
   it('falha (15.5): Redis de fila travado, com a conexão aberta; cada reserva corta nos 100 ms do cliente de produção e cai no seguro, que conta e segura a conta na quinta; quando o Redis volta, as cinco também estão lá, para o lado de segurar', async () => {
     // O cliente de produção da API, de propósito: o que se prova é o corte dos 100 ms.
     const producao = criarClienteRedisDaApi(URL_REDIS_FILA, 'teste-contador-travado', () => undefined)

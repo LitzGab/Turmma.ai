@@ -71,6 +71,30 @@ redis.call('PEXPIRE', KEYS[1], math.max(validade, espera))
 return {1, espera}
 `
 
+/**
+ * Desfaz uma reserva, numa operação só: tira a falha que ela contou e, se foi ela que segurou a conta (a quinta, ou a
+ * seguinte depois da espera), solta a espera que ela gravou. Enquanto a conta está segurada nenhuma outra reserva é
+ * contada, e por isso a espera que existe é a desta. Sem falha nenhuma, apaga a chave.
+ */
+const SCRIPT_DESFAZER = `
+local soltar = tonumber(ARGV[1])
+local falhas = tonumber(redis.call('HGET', KEYS[1], 'falhas'))
+if not falhas then
+  return 0
+end
+falhas = falhas - 1
+if falhas <= 0 then
+  redis.call('DEL', KEYS[1])
+  return 0
+end
+if soltar == 1 then
+  redis.call('HSET', KEYS[1], 'falhas', falhas, 'ate', 0)
+else
+  redis.call('HSET', KEYS[1], 'falhas', falhas)
+end
+return falhas
+`
+
 interface EstadoEmMemoria {
   falhas: number
   ate: number
@@ -114,6 +138,15 @@ class SeguroEmMemoria {
 
   zerar(chave: string): void {
     this.#estados.delete(chave)
+  }
+
+  /** A mesma regra do `SCRIPT_DESFAZER`, em memória. */
+  desfazer(chave: string, soltarEspera: boolean): void {
+    const atual = this.#estados.get(chave)
+    if (atual === undefined) return
+    const falhas = atual.falhas - 1
+    if (falhas <= 0) this.#estados.delete(chave)
+    else this.#estados.set(chave, { ...atual, falhas, ate: soltarEspera ? 0 : atual.ate })
   }
 
   #varrer(agora: number): void {
@@ -180,6 +213,25 @@ export class ContadorDeTentativas {
     this.#proporcaoDoSeguro.registrar(true)
     this.#avisarSeguro()
     return this.#seguro.reservar(chave, agora)
+  }
+
+  /**
+   * Desfaz a reserva de uma tentativa que não foi de senha (ou código) errado: a senha certa com o convite que já não
+   * ativa (Tech Spec da A0b, seção 5), ou a ativação que esperou a trava da escola além do prazo. O contador volta ao que
+   * era antes dela, e não a zero: as falhas de antes continuam contando. No Redis e no seguro, como o `zerar`; falha ao
+   * desfazer só deixa a tentativa contada, para o lado de segurar. Se o Redis caiu ou voltou entre a reserva e aqui, o
+   * lugar que desfaz pode não ser o que contou, e o contador fica com uma falha a menos: só depois de uma senha (ou
+   * código) certa, e por isso aceito.
+   */
+  async desfazer(chave: string, reserva: Extract<Reserva, { liberada: true }>): Promise<void> {
+    const soltarEspera = reserva.esperaSeFalharMs > 0
+    this.#seguro.desfazer(chave, soltarEspera)
+    if (this.cliente.status !== 'ready') return
+    try {
+      await this.cliente.eval(SCRIPT_DESFAZER, 1, chave, soltarEspera ? 1 : 0)
+    } catch {
+      // A tentativa fica contada, e o contador vence sozinho em 15 min.
+    }
   }
 
   /** O acerto zera o contador daquela origem, no Redis e no seguro. Falha ao zerar só deixa a conta contando. */
