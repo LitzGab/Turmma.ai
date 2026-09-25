@@ -24,9 +24,19 @@ import {
 const raiz = process.env['CLAUDE_PROJECT_DIR'] ?? process.cwd()
 const argumentos = process.argv.slice(2)
 
-function rodar(comando: string): boolean {
+function rodar(comando: string, ambiente: NodeJS.ProcessEnv = process.env): boolean {
   process.stdout.write(`\n▶ ${comando}\n`)
-  return spawnSync(comando, { cwd: raiz, shell: '/bin/sh', stdio: 'inherit' }).status === 0
+  return spawnSync(comando, { cwd: raiz, shell: '/bin/sh', stdio: 'inherit', env: ambiente }).status === 0
+}
+
+/**
+ * Só o `test`, a primeira suíte que sobe o compose de teste, começa do banco limpo, como a esteira
+ * (`comandosDaSubidaDeTeste`, em `tools/ci/compose.ts`). O e2e e o infra vêm depois e reusam o que ela subiu: com a
+ * variável neles, o `globalSetup` do infra derrubaria o ambiente que o `test:e2e --manter-ambiente` deixou de pé. Por
+ * isso ela sai também do ambiente herdado, e não só deixa de ser posta.
+ */
+function ambienteDaSuite(suite: string): NodeJS.ProcessEnv {
+  return { ...process.env, EDUCA_BANCO_NOVO: suite === 'test' ? '1' : undefined }
 }
 
 if (argumentos[0] === 'conferir') {
@@ -51,7 +61,7 @@ const suites = ['typecheck', 'lint', 'test', ...(argumentos.includes('--e2e') ? 
 // Com node_modules anterior ao lock (um pull que trouxe dependência nova), o typecheck falha com TS2307
 // sem dizer que falta instalar.
 const dependencias = rodar('[ -f node_modules/.package-lock.json ] && [ ! package-lock.json -nt node_modules/.package-lock.json ] || npm ci')
-const falhou = !dependencias ? 'dependências' : suites.find((suite) => !rodar(`npm run ${suite === 'e2e' ? 'test:e2e' : suite === 'infra' ? 'test:infra' : suite}`))
+const falhou = !dependencias ? 'dependências' : suites.find((suite) => !rodar(`npm run ${suite === 'e2e' ? 'test:e2e' : suite === 'infra' ? 'test:infra' : suite}`, ambienteDaSuite(suite)))
 
 if (falhou) {
   process.stdout.write(`\n✗ portão local vermelho em ${falhou}. Nenhum carimbo gravado.\n`)

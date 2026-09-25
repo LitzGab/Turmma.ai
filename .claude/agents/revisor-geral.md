@@ -36,6 +36,9 @@ certo. Subtarefa não feita também.
 Divergiu da arquitetura definida? Divergência decidida em silêncio é bloqueante, mesmo que o
 caminho escolhido pareça melhor: devia ter parado e reportado.
 
+Cada divergência do `N_task.md` já está na `techspec.md` e no `cenarios.md`? Divergência só no
+`N_task.md` é bloqueante.
+
 ## 3. Regras sem guardião próprio
 
 | Regra | O que olhar |

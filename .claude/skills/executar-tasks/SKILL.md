@@ -87,7 +87,8 @@ Regras obrigatórias:
   interessam, e faça a autoconferência do passo 2 da skill antes de codar.
 - Rode o portão local com carimbo (`node tools/processo/portao-local.ts`, com `--e2e` e
   `--infra` quando se aplicam).
-- Revisores (passo 5 da skill): `test-engineer` primeiro e sozinho; com ele aprovado,
+- Revisores (passo 5 da skill): `test-engineer` primeiro e sozinho; com tela, o
+  `frontend-reviewer` sozinho em seguida; com eles aprovados e sem ajustes,
   `revisor-geral` e os guardiões marcados em paralelo. Todo prompt começa com
   `Tarefa: tasks/prd-[funcionalidade]/[N]_task.md`; em rodada nova, traga as correções
   exigidas e o diff desde a rodada anterior. ESPERE todos terminarem. Reprovou: corrija e

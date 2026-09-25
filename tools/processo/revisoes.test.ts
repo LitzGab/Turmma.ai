@@ -16,6 +16,7 @@ import {
   carimbarSeNadaMudou,
   chaveDaRodada,
   CHAVE_DO_PORTAO,
+  impressaoSemComentarios,
   instantaneoDe,
   ehCommit,
   extrairVeredito,
@@ -371,9 +372,20 @@ describe('hooks sobre um repositório de verdade', () => {
     // em menos de um segundo: quem decide as suítes é o package.json que o script recebe.
     const script = join(import.meta.dirname, 'portao-local.ts')
 
-    const comSuiteDeTeste = (comandoDoTeste: string) => {
+    // Só a suíte `test` recebe EDUCA_BANCO_NOVO=1 (banco limpo, como a esteira); as outras, nem herdada. O portão roda
+    // aqui com a variável herdada, como o próprio `npm run test` desta suíte roda quando é o portão que o chama. O e2e e
+    // o infra são o motivo da regra: com a variável, o `globalSetup` do infra derrubaria o ambiente que o e2e deixou.
+    const comSuiteDeTeste = (comandoDoTeste: string, flags: string[] = []) => {
       const raiz = repositorio()
-      writeFileSync(join(raiz, 'package.json'), JSON.stringify({ scripts: { typecheck: 'true', lint: 'true', test: comandoDoTeste } }))
+      const semBancoNovo = 'test -z "$EDUCA_BANCO_NOVO"'
+      const scripts = {
+        typecheck: semBancoNovo,
+        lint: semBancoNovo,
+        test: `test "$EDUCA_BANCO_NOVO" = 1 && ${comandoDoTeste}`,
+        'test:e2e': semBancoNovo,
+        'test:infra': semBancoNovo,
+      }
+      writeFileSync(join(raiz, 'package.json'), JSON.stringify({ scripts }))
       // O portão só pula o `npm ci` com o lock do node_modules presente e não mais velho que o da raiz.
       writeFileSync(join(raiz, 'package-lock.json'), '{}\n')
       mkdirSync(join(raiz, 'node_modules'), { recursive: true })
@@ -382,7 +394,7 @@ describe('hooks sobre um repositório de verdade', () => {
       // o controle negativo viraria recusa e o vermelho pareceria do produto (`test-engineer`).
       writeFileSync(join(raiz, '.gitignore'), 'node_modules/\n')
       const noInicio = instantaneoDe(alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
-      const saida = spawnSync('node', [script], { env: { ...process.env, CLAUDE_PROJECT_DIR: raiz }, encoding: 'utf8' })
+      const saida = spawnSync('node', [script, ...flags], { env: { ...process.env, CLAUDE_PROJECT_DIR: raiz, EDUCA_BANCO_NOVO: '1' }, encoding: 'utf8' })
       return { raiz, noInicio, saida }
     }
 
@@ -398,6 +410,22 @@ describe('hooks sobre um repositório de verdade', () => {
     expect(limpo.saida.status).toBe(0)
     expect(lerCarimbo(limpo.raiz)?.suites).toEqual(['typecheck', 'lint', 'test'])
     expect(lerInstantaneos(limpo.raiz)[CHAVE_DO_PORTAO]).toEqual(limpo.noInicio)
+
+    // O `conferir` que o revisor-geral roda não tem a exceção de comentário: comentário muda lint e teste que varre o
+    // fonte, e o carimbo só vale para o que as suítes viram.
+    mkdirSync(join(limpo.raiz, 'tasks/correcoes'), { recursive: true })
+    writeFileSync(join(limpo.raiz, 'tasks/correcoes/2026-09-25-x.md'), '# Correção\n\n**Subagentes obrigatórios:** `test-engineer`\n')
+    const conferir = () => spawnSync('node', [script, 'conferir', 'tasks/correcoes/2026-09-25-x.md'], { env: { ...process.env, CLAUDE_PROJECT_DIR: limpo.raiz }, encoding: 'utf8' })
+    expect(conferir().status).toBe(0)
+    writeFileSync(join(limpo.raiz, 'apps/codigo.ts'), '// comentário novo, e só ele\nexport const a = 1\n')
+    const soComentario = conferir()
+    expect(soComentario.status).toBe(1)
+    expect(soComentario.stdout).toMatch(/apps\/codigo.ts mudou em/)
+
+    // Com --e2e e --infra, a variável herdada não chega a nenhuma das duas.
+    const completo = comSuiteDeTeste('true', ['--e2e', '--infra'])
+    expect(completo.saida.status).toBe(0)
+    expect(lerCarimbo(completo.raiz)?.suites).toEqual(['typecheck', 'lint', 'test', 'e2e', 'infra'])
   }, 60_000)
 
   it('correção passa pelo mesmo portão, com o documento em tasks/correcoes', () => {
@@ -534,6 +562,167 @@ describe('o que conta como alteração depois do portão e da rodada', () => {
     const alteracoes = alteracoesDeCodigo(raiz, ['TODO.md', 'docs/runbook.md', 'apps/api/src/x.ts'])
     expect(alteracoes.map(({ arquivo }) => arquivo).sort()).toEqual(['apps/api/src/x.ts', 'docs/runbook.md'])
     expect(alteracoes.every(({ hash }) => hash.length === 64)).toBe(true)
+  })
+})
+
+describe('mudança só de comentário', () => {
+  // Retrospectiva da A0b: recomendação barata ficava sem aplicar porque "anularia as aprovações", inclusive o
+  // comentário falso de `eu.ts` que quatro revisores apontaram. Só comentário não muda o que os guardiões aprovaram
+  // nem o que as suítes provaram; o `revisor-geral` lê o comentário como parte da regra e continua caducando.
+  const documento = 'tasks/prd-exemplo/9_task.md'
+  const arquivo = 'apps/api/src/regra.ts'
+  const obrigatorios = ['tenancy-guardian', 'privacy-guardian', 'test-engineer', 'revisor-geral']
+  const ORIGINAL = [
+    '/** Só a própria escola: o escopo vem do token. */',
+    "const BASE = 'https://a.example/escola'",
+    'export function podeVer(escolaId: string, alvo: string): boolean {',
+    '  // @ts-expect-error o alvo pode faltar',
+    '  const nada: number = alvo',
+    '  return escolaId === alvo // e só ela',
+    '}',
+    'export const endereco = (id: string) => `${BASE}/${id}`',
+    '',
+  ].join('\n')
+
+  /** O portão depois de trocar o conteúdo, com as rodadas e o carimbo gravados sobre o ORIGINAL pelo mesmo caminho do hook. */
+  function bloqueiosDepoisDe(novo: string, semOPar = false): string[] {
+    const raiz = mkdtempSync(join(tmpdir(), 'comentario-'))
+    mkdirSync(join(raiz, dirname(arquivo)), { recursive: true })
+    writeFileSync(join(raiz, arquivo), ORIGINAL)
+    const revisoes = lerRevisoes(tarefaCom(...obrigatorios.map((revisor) => rodada(revisor, 'APROVADO', '2026-09-13 10:00:00', '2026-09-13 10:05:00'))))
+    for (const chave of [CHAVE_DO_PORTAO, ...obrigatorios.map((revisor) => chaveDaRodada(documento, revisor, 1))]) {
+      gravarInstantaneo(raiz, chave, alteracoesDeCodigo(raiz, [arquivo]))
+    }
+    const gravados = lerInstantaneos(raiz)
+    const instantaneos = semOPar ? Object.fromEntries(Object.entries(gravados).filter(([chave]) => !chave.endsWith('|sem-comentarios'))) : gravados
+    writeFileSync(join(raiz, arquivo), novo)
+    const depois = new Date(lerHora('2026-09-13 10:30:00'))
+    utimesSync(join(raiz, arquivo), depois, depois)
+    return avaliarPortao({
+      obrigatorios,
+      revisoes,
+      alteracoes: alteracoesDeCodigo(raiz, [arquivo]),
+      carimbo: carimboVerde,
+      mensagemCommit: 'Implementa x (tarefa 9.0)\n\nRevisões: ...',
+      documento,
+      instantaneos,
+    }).bloqueios
+  }
+
+  const quem = (bloqueios: string[]) => bloqueios.map((bloqueio) => (bloqueio.startsWith('portão local') ? 'carimbo' : bloqueio.split(':')[0])).sort()
+  const TODOS = ['carimbo', 'privacy-guardian', 'revisor-geral', 'tenancy-guardian', 'test-engineer']
+
+  it('só comentário mudou: os guardiões e o test-engineer mantêm a rodada; o revisor-geral e o carimbo caducam', () => {
+    const novo = ORIGINAL.replace('Só a própria escola: o escopo vem do token.', 'O escopo vem do token, nunca do cliente.')
+      .replace('// e só ela', '// e nenhuma outra')
+      .replace('export function', '\n// linha nova de comentário\nexport function')
+    // O carimbo continua estrito: comentário muda lint (`no-irregular-whitespace`) e teste que varre o texto do fonte.
+    expect(quem(bloqueiosDepoisDe(novo))).toEqual(['carimbo', 'revisor-geral'])
+  })
+
+  it('dois arquivos, um só com comentário e outro com código: tudo caduca', () => {
+    const raiz = mkdtempSync(join(tmpdir(), 'comentario-'))
+    const outro = 'apps/api/src/outra.ts'
+    for (const caminho of [arquivo, outro]) {
+      mkdirSync(join(raiz, dirname(caminho)), { recursive: true })
+      writeFileSync(join(raiz, caminho), ORIGINAL)
+    }
+    const revisoes = lerRevisoes(tarefaCom(...obrigatorios.map((revisor) => rodada(revisor, 'APROVADO', '2026-09-13 10:00:00', '2026-09-13 10:05:00'))))
+    for (const revisor of obrigatorios) gravarInstantaneo(raiz, chaveDaRodada(documento, revisor, 1), alteracoesDeCodigo(raiz, [arquivo, outro]))
+    writeFileSync(join(raiz, arquivo), ORIGINAL.replace('// e só ela', '// e nenhuma outra'))
+    writeFileSync(join(raiz, outro), ORIGINAL.replace('escolaId === alvo', 'escolaId !== alvo'))
+    // O de comentário depois do de código: é ele o mais recente, e mesmo assim o que caduca todos é o outro.
+    utimesSync(join(raiz, outro), new Date(lerHora('2026-09-13 10:30:00')), new Date(lerHora('2026-09-13 10:30:00')))
+    utimesSync(join(raiz, arquivo), new Date(lerHora('2026-09-13 10:31:00')), new Date(lerHora('2026-09-13 10:31:00')))
+    const { bloqueios } = avaliarPortao({
+      obrigatorios,
+      revisoes,
+      alteracoes: alteracoesDeCodigo(raiz, [arquivo, outro]),
+      carimbo: null,
+      mensagemCommit: 'Implementa x (tarefa 9.0)\n\nRevisões: ...',
+      documento,
+      instantaneos: lerInstantaneos(raiz),
+    })
+    const porRevisor = bloqueios.filter((bloqueio) => !bloqueio.startsWith('portão local'))
+    expect(porRevisor).toHaveLength(obrigatorios.length)
+    // Os guardiões caducam pelo arquivo de código; o revisor-geral, pelo mais recente, que é o de comentário.
+    for (const bloqueio of porRevisor.filter((texto) => !texto.startsWith('revisor-geral'))) expect(bloqueio).toContain(outro)
+  })
+
+  it('código mudou: tudo caduca', () => {
+    expect(quem(bloqueiosDepoisDe(ORIGINAL.replace('escolaId === alvo', 'escolaId !== alvo')))).toEqual(TODOS)
+  })
+
+  it('comentário com diretiva mudou, antes ou depois: tudo caduca', () => {
+    expect(quem(bloqueiosDepoisDe(ORIGINAL.replace('o alvo pode faltar', 'o alvo nunca falta')))).toEqual(TODOS)
+    // A diretiva que aparece num comentário comum, e a que some dele.
+    expect(quem(bloqueiosDepoisDe(ORIGINAL.replace('// e só ela', '// eslint-disable-line')))).toEqual(TODOS)
+    expect(quem(bloqueiosDepoisDe(ORIGINAL.replace('// @ts-expect-error o alvo pode faltar', '// o alvo pode faltar')))).toEqual(TODOS)
+  })
+
+  it('string com // mudou: tudo caduca', () => {
+    expect(quem(bloqueiosDepoisDe(ORIGINAL.replace('https://a.example/escola', 'https://b.example/escola')))).toEqual(TODOS)
+  })
+
+  it('instantâneo gravado antes do par sem comentários: a leitura é a restrita, e tudo caduca', () => {
+    expect(quem(bloqueiosDepoisDe(ORIGINAL.replace('// e só ela', '// e nenhuma outra'), true))).toEqual(TODOS)
+  })
+
+  describe('a impressão sem comentários', () => {
+    const igual = (arquivoDoCaso: string, antes: string, depois: string) => {
+      const a = impressaoSemComentarios(arquivoDoCaso, antes)
+      expect(a).not.toBeNull()
+      return a === impressaoSemComentarios(arquivoDoCaso, depois)
+    }
+
+    it('o docblock e o comentário dentro do JSX são comentário', () => {
+      expect(igual('a.ts', '/** um */\nexport const a = 1\n', '/** outro */\nexport const a = 1\n')).toBe(true)
+      expect(igual('a.tsx', 'export const A = () => <a>{/* um */}</a>\n', 'export const A = () => <a>{/* outro */}</a>\n')).toBe(true)
+    })
+
+    it('o // de expressão regular e o texto do JSX são código, espaço incluído', () => {
+      expect(igual('a.ts', 'export const r = /[//]a/\n', 'export const r = /[//]b/\n')).toBe(false)
+      expect(igual('a.tsx', 'export const A = () => <a>// um</a>\n', 'export const A = () => <a>// outro</a>\n')).toBe(false)
+      expect(igual('a.tsx', 'export const A = () => <a> x</a>\n', 'export const A = () => <a>x</a>\n')).toBe(false)
+    })
+
+    it('a quebra de linha que muda a árvore conta, e o shebang é diretiva', () => {
+      // `return\nx` devolve undefined: os tokens são os mesmos, a árvore não.
+      expect(igual('a.ts', 'export function f(x: number) { return x }\n', 'export function f(x: number) { return\nx }\n')).toBe(false)
+      expect(igual('a.ts', '#!/usr/bin/env node\nexport const a = 1\n', '#!/usr/bin/env -S node\nexport const a = 1\n')).toBe(false)
+    })
+
+    // Montado em partes: escrito por inteiro neste arquivo, o próprio Vitest leria a diretiva e trocaria o ambiente dele.
+    const VITEST_ENVIRONMENT = ['@vitest', 'environment node'].join('-')
+    // As cinco da retrospectiva, mais o comentário de configuração do ESLint e o ambiente do Vitest. Cada uma, sozinha,
+    // num comentário comum que antes não tinha nada: tirar uma da lista deixa a sua linha vermelha.
+    it.each(['@ts-ignore', '@ts-expect-error', 'eslint-disable-next-line', 'eslint no-console: off', '/// <reference types="vite/client" />', '@jsx h', '#!', VITEST_ENVIRONMENT])(
+      'comentário que passa a ter %s conta como código',
+      (diretiva) => {
+        expect(igual('a.ts', '// um\nexport const a = 1\n', `// ${diretiva}\nexport const a = 1\n`)).toBe(false)
+      },
+    )
+
+    it('.mts e .cts também são TypeScript', () => {
+      expect(igual('a.mts', '// um\nexport const a = 1\n', '// outro\nexport const a = 1\n')).toBe(true)
+      expect(igual('a.cts', '// um\nexport const a = 1\n', '// outro\nexport const a = 2\n')).toBe(false)
+    })
+
+    it('sem o compilador instalado (antes do npm ci), não se aplica', () => {
+      // O mesmo módulo, copiado para fora do repositório: dali não há `node_modules` para achar o `typescript`.
+      const pasta = mkdtempSync(join(tmpdir(), 'sem-typescript-'))
+      writeFileSync(join(pasta, 'revisoes.ts'), readFileSync(join(import.meta.dirname, 'revisoes.ts')))
+      const programa = "import { impressaoSemComentarios } from './revisoes.ts'\nconsole.log(String(impressaoSemComentarios('a.ts', 'export const a = 1\\n')))\n"
+      writeFileSync(join(pasta, 'rodar.ts'), programa)
+      const saida = spawnSync('node', ['rodar.ts'], { cwd: pasta, encoding: 'utf8' })
+      expect(saida.stderr).toBe('')
+      expect(saida.stdout.trim()).toBe('null')
+    })
+
+    it('não se aplica fora de .ts e .tsx, nem a arquivo com erro de sintaxe', () => {
+      expect(impressaoSemComentarios('a.js', 'export const a = 1 // um\n')).toBeNull()
+      expect(impressaoSemComentarios('a.ts', 'export const a = (\n')).toBeNull()
+    })
   })
 })
 
@@ -802,8 +991,11 @@ describe('achados separados por documento, com índice', () => {
       expect(existsSync(join(raiz, `tasks/prd-exemplo/achados/${String(numero)}_task.md`))).toBe(true)
     }
     // O instantâneo de conteúdo é do mesmo tipo: um arquivo só, escrito por todas as rodadas. Perder a chave de uma
-    // delas faz aquela rodada cair no `mtime` e voltar a bloquear o commit de quem fez teste de mutação.
-    expect(Object.keys(lerInstantaneos(raiz))).toHaveLength(quantos)
+    // delas faz aquela rodada cair no `mtime` e voltar a bloquear o commit de quem fez teste de mutação. Cada rodada
+    // grava duas chaves: o hash inteiro e o par sem comentários.
+    const chaves = Object.keys(lerInstantaneos(raiz))
+    expect(chaves.filter((chave) => !chave.endsWith('|sem-comentarios'))).toHaveLength(quantos)
+    expect(chaves.filter((chave) => chave.endsWith('|sem-comentarios'))).toHaveLength(quantos)
   })
 
   it('o índice de uma funcionalidade inteira cabe no que se lê antes de cada tarefa', () => {

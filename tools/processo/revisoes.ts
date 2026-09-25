@@ -19,7 +19,9 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, statSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { basename, dirname, join } from 'node:path'
+import type * as TS from 'typescript'
 
 export const REVISORES_COM_VETO = ['tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'infra-guardian', 'test-engineer', 'revisor-geral']
 export const REVISORES_SEM_VETO = ['llm-integrator', 'pedagogia-reviewer', 'frontend-reviewer']
@@ -53,6 +55,8 @@ export interface Alteracao {
   quando: number
   /** Hash do conteúdo atual. É ele que decide se o arquivo mudou de fato; ver `mudouDeVerdade`. */
   hash: string
+  /** Só em `.ts`/`.tsx`: o hash do arquivo sem comentários nem espaço. Ver `impressaoSemComentarios`. */
+  semComentarios?: string
 }
 
 export interface Carimbo {
@@ -81,6 +85,19 @@ export function instantaneoDe(alteracoes: Alteracao[]): Record<string, string> {
 }
 
 /**
+ * O par de cada instantâneo, com o hash sem comentários dos `.ts`/`.tsx`. Chave própria, e não um campo a mais no
+ * instantâneo de sempre, para o instantâneo gravado antes desta mudança continuar valendo como estava: sem o par, nada
+ * conta como mudança só de comentário, e a leitura é a restrita.
+ */
+export function chaveSemComentarios(chave: string): string {
+  return `${chave}|sem-comentarios`
+}
+
+export function instantaneoSemComentariosDe(alteracoes: Alteracao[]): Record<string, string> {
+  return Object.fromEntries(alteracoes.flatMap(({ arquivo, semComentarios }) => (semComentarios === undefined ? [] : [[arquivo, semComentarios]])))
+}
+
+/**
  * Arquivos cujo conteúdo difere entre dois instantâneos, incluindo os que entraram e os que saíram.
  *
  * É como o portão local confere, no fim, que nada mudou enquanto ele rodava: o instantâneo é gravado com o conteúdo
@@ -95,6 +112,91 @@ export function arquivosQueMudaram(antes: Record<string, string>, depois: Record
 function mudouDeVerdade(alteracao: Alteracao, instantaneo: Record<string, string> | undefined): boolean {
   const anterior = instantaneo?.[alteracao.arquivo]
   return anterior === undefined || anterior !== alteracao.hash
+}
+
+/** O arquivo mudou, mas sem comentários e sem espaço é igual ao que a referência viu. */
+function mudouSoComentario(alteracao: Alteracao, semComentarios: Record<string, string> | undefined): boolean {
+  return alteracao.semComentarios !== undefined && semComentarios?.[alteracao.arquivo] === alteracao.semComentarios
+}
+
+/**
+ * Comentário que muda o que o compilador, o lint, o teste ou o runtime fazem. Mudança num trecho de trivia que tem um
+ * destes conta como código. A lista pedida na retrospectiva da A0b é `@ts-`, `eslint-`, `/// <reference`, `@jsx` e
+ * `#!`; `eslint` sem hífen cobre também o comentário de configuração (`/* eslint regra: off *\/`), e `@vitest-` o
+ * ambiente do teste (`// @vitest-environment jsdom`).
+ *
+ * Ficam de fora, de propósito, `@vite-ignore`, `#__PURE__` e `v8 ignore`: mudam o build ou a cobertura, que os revisores
+ * não aprovam linha a linha. Quem prova build e suíte é o carimbo, e ele não usa esta exceção (`avaliarCarimbo`).
+ */
+export const MARCAS_DE_DIRETIVA = ['@ts-', 'eslint', '/// <reference', '@jsx', '#!', '@vitest-'] as const
+
+let typescript: typeof TS | null | undefined
+/**
+ * Carregado só quando há `.ts` alterado: o hook roda a cada revisor e a cada commit, e o compilador pesa. Sem ele (clone
+ * sem `node_modules`, antes do `npm ci` do portão local), `null`: não se afirma nada, e toda mudança conta.
+ */
+function carregarTypescript(): typeof TS | null {
+  if (typescript === undefined) {
+    try {
+      typescript = createRequire(import.meta.url)('typescript') as typeof TS
+    } catch {
+      typescript = null
+    }
+  }
+  return typescript
+}
+
+const EH_TYPESCRIPT = /\.[cm]?tsx?$/
+
+/**
+ * O arquivo sem comentários e sem espaço, para dizer se uma mudança foi só de comentário. `null` quando não se aplica
+ * (não é `.ts`/`.tsx`, ou não compila como sintaxe), e aí toda mudança conta.
+ *
+ * Pelo parser, e não pelo scanner sozinho: o scanner não sabe o contexto, e lê como comentário o `//` de uma
+ * expressão regular (`/[//]/`) e o de um texto de JSX (`<a>http://x</a>`) — uma mudança de código passaria por
+ * comentário, que é o erro que não pode acontecer. A árvore dá cada token no contexto certo; o texto entre dois
+ * tokens é trivia (espaço e comentário), e sai. Sai inteiro, espaço junto: formatar também não muda o que os
+ * revisores aprovaram. O tipo de cada nó entra na impressão, para `return x` e `return\nx` (que a inserção automática
+ * de ponto e vírgula lê diferente) não saírem iguais.
+ *
+ * A trivia que tem uma marca de `MARCAS_DE_DIRETIVA` fica na impressão, inteira: aí mudar o comentário muda o hash, e
+ * tudo caduca como antes. O JSDoc não vira nó (`JSDocParsingMode.ParseNone`) e fica na trivia, como os outros.
+ */
+export function impressaoSemComentarios(arquivo: string, conteudo: string): string | null {
+  if (!EH_TYPESCRIPT.test(arquivo)) return null
+  const ts = carregarTypescript()
+  if (!ts) return null
+  const fonte = ts.createSourceFile(
+    arquivo,
+    conteudo,
+    { languageVersion: ts.ScriptTarget.Latest, jsDocParsingMode: ts.JSDocParsingMode.ParseNone },
+    true,
+    arquivo.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  )
+  // Com erro de sintaxe a recuperação do parser pode deixar texto fora da árvore: aí não se afirma nada. O campo é
+  // interno do compilador; se sumir numa versão nova, o hook quebra alto em vez de passar a aceitar tudo.
+  if ((fonte as unknown as { parseDiagnostics: readonly unknown[] }).parseDiagnostics.length > 0) return null
+  const partes: string[] = []
+  const visitar = (no: TS.Node): void => {
+    const filhos = no.getChildren(fonte)
+    if (filhos.length > 0) {
+      partes.push(`(${String(no.kind)}`)
+      filhos.forEach(visitar)
+      partes.push(')')
+      return
+    }
+    // O texto de JSX não tem trivia: espaço e `//` dentro dele são conteúdo.
+    if (no.kind === ts.SyntaxKind.JsxText) {
+      partes.push(`${String(no.kind)}:${conteudo.slice(no.pos, no.end)}`)
+      return
+    }
+    const inicio = no.getStart(fonte)
+    const trivia = conteudo.slice(no.pos, inicio)
+    if (MARCAS_DE_DIRETIVA.some((marca) => trivia.includes(marca))) partes.push(`trivia:${trivia}`)
+    partes.push(`${String(no.kind)}:${conteudo.slice(inicio, no.end)}`)
+  }
+  visitar(fonte)
+  return partes.join('\n')
 }
 
 export type TipoDocumento = 'tarefa' | 'spec' | 'correcao'
@@ -375,12 +477,23 @@ export function acrescentarNoIndice(conteudoIndice: string, revisao: Revisao, do
 
 const ehArquivoDeTeste = (arquivo: string) => /\.(test|spec)\.tsx?$/.test(arquivo) || /(^|\/)(test|e2e|__fixtures__)\//.test(arquivo)
 
+// Quem lê o comentário como parte do que aprova: a regra do módulo mora no docblock, e comentário que afirma o que o
+// código não faz é achado dele. Para os outros, mudança só de comentário não mexe no que aprovaram.
+const REVISOR_DE_COMENTARIO = 'revisor-geral'
+
 // A alteração mais recente, depois do início da rodada, que o revisor ainda não viu e que importa para ele.
-export function alteracaoQueCaduca(revisor: string, inicioDaRodada: string, alteracoes: Alteracao[], instantaneo?: Record<string, string>): Alteracao | null {
+export function alteracaoQueCaduca(
+  revisor: string,
+  inicioDaRodada: string,
+  alteracoes: Alteracao[],
+  instantaneo?: Record<string, string>,
+  semComentarios?: Record<string, string>,
+): Alteracao | null {
   const inicio = Math.floor(lerHora(inicioDaRodada) / 1000)
   return alteracoes
     .filter((alteracao) => Math.floor(alteracao.quando / 1000) > inicio)
     .filter((alteracao) => mudouDeVerdade(alteracao, instantaneo))
+    .filter((alteracao) => revisor === REVISOR_DE_COMENTARIO || !mudouSoComentario(alteracao, semComentarios))
     .filter((alteracao) => REVISORES_DE_TESTE.includes(revisor) || !ehArquivoDeTeste(alteracao.arquivo))
     .reduce<Alteracao | null>((maisRecente, alteracao) => (!maisRecente || alteracao.quando > maisRecente.quando ? alteracao : maisRecente), null)
 }
@@ -406,6 +519,9 @@ export function avaliarCarimbo(carimbo: Carimbo | null, exigidas: string[], alte
   const inicio = new Date(carimbo.inicio).getTime()
   const depois = alteracoes
     .filter((alteracao) => alteracao.quando >= inicio)
+    // Sem a exceção de comentário, de propósito: comentário muda lint (`no-irregular-whitespace`) e teste que varre o
+    // texto do fonte (`guardas.test.ts`, `arquitetura.test.ts`, `porta-unica.test.ts`). O carimbo só vale para o que as
+    // suítes viram (`test-engineer`, retrospectiva da A0b).
     .filter((alteracao) => mudouDeVerdade(alteracao, instantaneo))
     .sort((a, b) => b.quando - a.quando)[0]
   if (depois) {
@@ -453,7 +569,8 @@ export function avaliarPortao(entrada: {
       bloqueios.push(`${revisor}: a última rodada (${ultima.rodada}ª, ${ultima.fim}) terminou ${ultima.veredito}. Corrija e chame uma rodada nova.`)
       continue
     }
-    const alteracao = alteracaoQueCaduca(revisor, ultima.inicio, entrada.alteracoes, entrada.instantaneos[chaveDaRodada(entrada.documento, revisor, ultima.rodada)])
+    const chave = chaveDaRodada(entrada.documento, revisor, ultima.rodada)
+    const alteracao = alteracaoQueCaduca(revisor, ultima.inicio, entrada.alteracoes, entrada.instantaneos[chave], entrada.instantaneos[chaveSemComentarios(chave)])
     if (alteracao) {
       bloqueios.push(
         `${revisor}: ${alteracao.arquivo} mudou em ${formatarHora(new Date(alteracao.quando))}, depois do início da ${ultima.rodada}ª rodada (${ultima.inicio}). ` +
@@ -579,11 +696,16 @@ export function alteracoesDeCodigo(raiz: string, arquivos: string[]): Alteracao[
     .filter((arquivo) => !arquivo.startsWith('tasks/') && !arquivo.startsWith('.processo/'))
     .filter((arquivo) => !ehDocumentoSemSuite(arquivo))
     .filter((arquivo) => existsSync(join(raiz, arquivo)))
-    .map((arquivo) => ({
-      arquivo,
-      quando: statSync(join(raiz, arquivo)).mtimeMs,
-      hash: createHash('sha256').update(readFileSync(join(raiz, arquivo))).digest('hex'),
-    }))
+    .map((arquivo) => {
+      const conteudo = readFileSync(join(raiz, arquivo))
+      const impressao = impressaoSemComentarios(arquivo, conteudo.toString('utf8'))
+      return {
+        arquivo,
+        quando: statSync(join(raiz, arquivo)).mtimeMs,
+        hash: createHash('sha256').update(conteudo).digest('hex'),
+        ...(impressao === null ? {} : { semComentarios: createHash('sha256').update(impressao).digest('hex') }),
+      }
+    })
 }
 
 export function lerInstantaneos(raiz: string): Instantaneos {
@@ -613,6 +735,9 @@ export function gravarInstantaneo(raiz: string, chave: string, alteracoes: Alter
   comTrava(caminho, () => {
     const instantaneos = lerInstantaneos(raiz)
     instantaneos[chave] = instantaneoDe(alteracoes)
+    // Gravado também na chave do portão, onde ninguém o lê: o carimbo não tem a exceção de comentário
+    // (`avaliarCarimbo`). Fica pela simetria de uma gravação só, não porque o carimbo o use.
+    instantaneos[chaveSemComentarios(chave)] = instantaneoSemComentariosDe(alteracoes)
     writeFileSync(caminho, `${JSON.stringify(instantaneos, null, 2)}\n`)
   })
 }

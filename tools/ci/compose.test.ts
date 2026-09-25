@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ARGUMENTOS_COMPOSE, etapasDeEncerramento } from './compose.ts'
+import { ARGUMENTOS_COMPOSE, comandosDaSubidaDeTeste, etapasDeEncerramento } from './compose.ts'
 
 // O caminho de falha dos scripts da esteira não tinha teste, e é justamente ele que sobra para
 // diagnosticar um vermelho que não reproduz na máquina de quem escreveu o teste.
@@ -55,5 +55,21 @@ describe('encerramento dos scripts da esteira', () => {
       expect(etapa.comando).toBe('docker')
       expect(etapa.argumentos?.slice(0, ARGUMENTOS_COMPOSE.length)).toEqual([...ARGUMENTOS_COMPOSE])
     }
+  })
+})
+
+describe('subida do compose de teste pela integração', () => {
+  const SUBIR = ['up', '--detach', '--wait', 'postgres', 'redis-fila', 'redis-cache', 'storage', 'oidc-falso']
+
+  it('com EDUCA_BANCO_NOVO=1 derruba o projeto inteiro com os volumes antes de subir, como o fim do job da esteira', () => {
+    // Escrito à mão: lido de `compose.ts`, trocar o `down` por um que guarda o volume deixaria tudo verde.
+    expect(comandosDaSubidaDeTeste({ EDUCA_BANCO_NOVO: '1' })).toEqual([['down', '--volumes', '--remove-orphans'], SUBIR])
+    // O mesmo `down` da esteira: se um mudar, o banco da máquina deixa de ser o da esteira.
+    expect(etapasDeEncerramento(0)[0]?.argumentos).toEqual([...ARGUMENTOS_COMPOSE, 'down', '--volumes', '--remove-orphans'])
+  })
+
+  it('sem a variável, ou com outro valor, só sobe e reaproveita o que está de pé', () => {
+    expect(comandosDaSubidaDeTeste({})).toEqual([SUBIR])
+    expect(comandosDaSubidaDeTeste({ EDUCA_BANCO_NOVO: '0' })).toEqual([SUBIR])
   })
 })

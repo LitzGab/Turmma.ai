@@ -37,7 +37,11 @@ implementação que se afastou da spec ou da subtarefa sem dizer — e em duas d
 **editar o documento para acomodar o resultado**: a linha do cenário de carga reescrita depois da
 medição, e o limite de dois grupos do k6 desligado. Baixar a régua é decisão de quem é dono da
 tarefa, nunca de quem implementa. O que diverge vai para a seção "Divergências resolvidas nesta
-tarefa" do `N_task.md`, com o motivo, e sobe para a Tech Spec quando o commit entra.</critical>
+tarefa" do `N_task.md`, com o motivo, e, antes dos revisores, entra na `techspec.md`, no
+`cenarios.md` e no documento que a seção 11 aponta, com o texto do código. Editar `.md` não caduca
+rodada nem carimbo, com uma exceção: o `docs/runbook.md`, que a guarda `alerta-tem-runbook` lê, conta
+como código e caduca os dois (`DOCUMENTO_QUE_UMA_SUITE_LE`, em `tools/processo/revisoes.ts`). O
+maior do `/validar` da A0b foram seis decisões de tarefa que só estavam no `N_task.md`.</critical>
 
 ### Autoconferência antes de codar
 
@@ -45,8 +49,14 @@ O `test-engineer` é quem mais reprova (38% das rodadas no F0 e no começo do F1
 reprovação custa uma rodada nova. Responda no plano, por escrito, as perguntas que ele vai
 fazer, e as dos guardiões marcados:
 
-- Para cada teste da tabela "Testes que provam a regra": **qual linha de código, se apagada,
-  deixa este teste vermelho?** Se não há resposta, o teste não prova nada.
+- **Rode a mutação, não só imagine.** Liste cada cláusula que o diff acrescenta — condição de
+  `where`, `if` de guarda, `catch` que traduz erro, restrição ou índice de migration, trava de
+  clique, classe CSS que o e2e diz provar —, inclusive as que a tabela de testes não cita e as
+  cópias da mesma regra em outro arquivo. Para cada uma: apague, rode, veja vermelho, restaure
+  (`git checkout --`). Trava se prova pelo efeito (dois registros), não pela espera. Registre na
+  seção "Mutações" do `N_task.md`: `arquivo:linha → teste vermelho`. Na A0b foram seis
+  reprovações (4.0, 5.0, 6.0 duas vezes, 7.0, 9.0) por cláusula sem teste, todas fora da lista que
+  o implementador tinha conferido.
 - **O cenário tem o segundo dado que torna a cláusula observável?** Foi a maior causa técnica de
   reprovação no F1, catorze vezes: a regra está no código, mas o teste tem uma turma só, uma escola
   só, um estado só, ou o valor padrão só — e apagar a cláusula não deixa nada vermelho. Se o
@@ -116,6 +126,10 @@ Falhou algum, conserte. Não prossiga com teste vermelho, não desabilite teste,
 
 Rode o portão antes dos revisores. Mexeu em código depois dele, rode de novo antes do commit.
 
+O `test` do portão começa derrubando o projeto de teste `educa-teste` com os volumes
+(`EDUCA_BANCO_NOVO=1`). Enquanto ele roda, nada mais usa o banco de teste: nem revisor com
+mutação, nem `npm run test:integracao` à mão, nem outro worktree.
+
 ## 5. Revisores obrigatórios
 
 <critical>A tarefa não fecha sem os revisores obrigatórios. Não é recomendação: o hook
@@ -143,8 +157,11 @@ toda tarefa tem**, marcados ou não:
 1. **`test-engineer` sozinho, primeiro.** É ele quem mais reprova, e a correção de teste que
    ele exige faria caducar a rodada de quem já tivesse aprovado. Reprovou: corrija, rode o
    portão local e chame rodada nova dele.
-2. **Com o `test-engineer` aprovado, todos os outros em paralelo**: `revisor-geral` e os
-   guardiões marcados. Não dependem um do outro.
+   **Tarefa com tela: com o `test-engineer` aprovado, o `frontend-reviewer` sozinho; os outros
+   em paralelo só depois dele sem ajustes.** Os ajustes dele mexem em código de tela e caducam
+   quem aprovou junto: na A0b foram 12 das 18 rodadas caducadas sem reprovação (4.0, 6.0, 7.0).
+2. **Com o `test-engineer` aprovado (e o `frontend-reviewer`, se a tarefa tem tela), todos os
+   outros em paralelo**: `revisor-geral` e os guardiões marcados. Não dependem um do outro.
 3. **Espere TODOS terminarem antes de seguir.** Veredito que não chegou não existe. Anunciar
    que vai esperar e fazer o commit antes (o que aconteceu na 5.0) é falha da tarefa.
 
@@ -172,14 +189,25 @@ mudou, em vez de refazer a tarefa inteira.
 - **Reprovou: corrija e chame uma rodada nova com um revisor novo** (ferramenta Agent, não
   mensagem para o anterior). O registro depende de o revisor terminar como subagente.
 - **Recomendação não reprova.** Fica em `achados/<documento>.md`, resumida em
-  `achados/indice.md`, escrito pelo hook, e o `/validar` e o `/retro` leem de lá. Aplique agora só
-  a que custa pouco **e antes de o revisor aprovar**: recomendação aplicada depois da aprovação
-  caduca a rodada, e custa uma rodada nova.
+  `achados/indice.md`, escrito pelo hook, e o `/validar` e o `/retro` leem de lá.
+  Recomendação barata se aplica, também depois de aprovação: junte todas num lote, com todos os
+  revisores terminados, rode o portão e chame rodada nova só de quem o hook apontar, com o diff.
+  A que não for aplicada vai para "Recomendações sem aplicar" no `N_task.md`, com destino
+  (`TODO.md`, tarefa que toca o arquivo, ou recusada com motivo). "Anularia as aprovações" não é
+  motivo. Na A0b, nove ou mais ficaram para trás assim, entre elas o comentário falso de
+  `packages/shared/src/operacao/eu.ts` que quatro revisores apontaram na 1.0. Mudança só em
+  comentário de `.ts`/`.tsx` caduca só o `revisor-geral`, salvo comentário com diretiva (ver a
+  caducidade abaixo); o carimbo caduca sempre, e o portão roda de novo.
 - **Mexeu em código depois de uma aprovação, a aprovação caducou**, e o hook diz de quem.
   A caducidade segue o que o revisor audita: mudança **só em arquivo de teste** (`*.test.ts`,
   `*.spec.ts`, `test/`, `e2e/`, `__fixtures__/`) caduca só `test-engineer` e `revisor-geral`;
-  mudança em qualquer outro arquivo caduca todos. Por isso, na correção pedida pelo
-  `test-engineer`, mexa só no teste sempre que der.
+  mudança em qualquer outro arquivo caduca todos. Mudança **só em comentário** de `.ts`/`.tsx`/
+  `.mts`/`.cts` (o arquivo sem comentários nem espaço é igual ao da rodada) caduca só o
+  `revisor-geral`, salvo quando o trecho mudado tem uma marca de `MARCAS_DE_DIRETIVA`
+  (`tools/processo/revisoes.ts`: `@ts-`, `eslint`, `/// <reference`, `@jsx`, `#!`, `@vitest-`), e aí
+  caduca todos. O carimbo não tem essa exceção: comentário muda lint (`no-irregular-whitespace`) e
+  teste que varre o texto do fonte. Por isso, na correção pedida pelo `test-engineer`, mexa só no
+  teste sempre que der.
 - **Não edite a seção "Revisões" nem nada dentro de `achados/`.** Quem escreve é o hook.
 
 ## 6. Conferência final

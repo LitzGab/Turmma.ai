@@ -32,7 +32,8 @@ de escola usando o tutor.
 Você roda antes dos outros revisores, porque correção de teste depois de uma aprovação faz
 a rodada deles caducar. Seja completo na primeira rodada: diga tudo que falta de uma vez.
 
-1. O teste falharia se a regra fosse removida? Se não falharia, não é teste.
+1. O teste falharia se a regra fosse removida? Se não falharia, não é teste. Confira a seção
+   "Mutações" contra o diff: cláusula nova sem linha lá é onde procurar primeiro.
 2. Há asserção sobre o resultado, ou só sobre o código ter rodado?
 3. Os casos de borda listados estão cobertos?
 4. Há `.skip`, teste comentado, ou mock que esconde a regra sendo testada?

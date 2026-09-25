@@ -56,12 +56,28 @@ export function etapaCompose(nome: string, ...argumentos: string[]): Etapa {
  */
 export const ETAPA_DO_LOG_DA_FALHA = ['logs', '--no-color', '--timestamps', '--tail', '4000'] as const
 
+/** O projeto de teste inteiro, com os volumes: o que a esteira faz no fim de cada job. */
+export const DERRUBAR_COM_VOLUMES = ['down', '--volumes', '--remove-orphans'] as const
+
 /** Os passos de encerramento, em função do código de saída. Separado para o caminho de falha ter teste. */
 export function etapasDeEncerramento(codigo: number, derrubar = true): Etapa[] {
   return [
     ...(codigo === 0 ? [] : [etapaCompose('logs dos serviços', ...ETAPA_DO_LOG_DA_FALHA)]),
-    ...(derrubar ? [etapaCompose('derrubar o ambiente', 'down', '--volumes', '--remove-orphans')] : []),
+    ...(derrubar ? [etapaCompose('derrubar o ambiente', ...DERRUBAR_COM_VOLUMES)] : []),
   ]
+}
+
+/**
+ * O que o `globalSetup` da integração pede ao compose de teste, depois de `ARGUMENTOS_COMPOSE`.
+ *
+ * Com `EDUCA_BANCO_NOVO=1`, que o portão local define, começa do zero, como cada job da esteira: o projeto de teste
+ * inteiro cai com os volumes antes de subir. Sem isso o banco da máquina acumulava milhares de escolas de outras
+ * execuções, e três testes da A0b passaram na esteira e falharam na máquina (ou o contrário) por percorrer a lista
+ * global ou supor a ordem do id; o volume foi recriado à mão quatro vezes. O projeto inteiro, e não só os serviços de
+ * dados: o `test:e2e --manter-ambiente` deixa API e worker de pé, presos ao banco que ia sumir.
+ */
+export function comandosDaSubidaDeTeste(ambiente: Readonly<Record<string, string | undefined>>): string[][] {
+  return [...(ambiente['EDUCA_BANCO_NOVO'] === '1' ? [[...DERRUBAR_COM_VOLUMES]] : []), ['up', '--detach', '--wait', ...SERVICOS_INFRA]]
 }
 
 /**
