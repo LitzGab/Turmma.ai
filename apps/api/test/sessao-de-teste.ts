@@ -52,11 +52,12 @@ export class BancadaDeSessoes {
 
   /**
    * Uma rede independente e uma escola nova nela, com endereço sorteado. O id é sorteado (UUID v4), como o `ops:escola`
-   * e o painel fazem: não cresce com a criação, e teste nenhum supõe ordem entre escolas.
+   * e o painel fazem: não cresce com a criação, e teste nenhum supõe ordem entre escolas. `nome` é para o teste que
+   * procura a escola numa página da lista do painel.
    */
-  async escola(): Promise<string> {
+  async escola(nome = 'Escola sintética de teste'): Promise<string> {
     const { id: redeId } = await criarRede(this.banco, autorDaBancada, { id: randomUUID(), nome: 'Rede sintética de teste', tipo: 'independente' })
-    const { id: escolaId } = await criarEscola(this.banco, autorDaBancada, { id: randomUUID(), redeId, nome: 'Escola sintética de teste', slug: `teste-${randomUUID()}` })
+    const { id: escolaId } = await criarEscola(this.banco, autorDaBancada, { id: randomUUID(), redeId, nome, slug: `teste-${randomUUID()}` })
     this.#escolas.push(escolaId)
     return escolaId
   }

@@ -48,6 +48,13 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 ## Infra e operação
 
+- [ ] **A consolidação noturna de uso para para todas as escolas numa escola que não existe mais.**
+      `criarConsolidacaoDeUso` (`apps/worker/src/processadores/consolidar-uso.ts`) grava `uso_infra_diario` para
+      cada pasta `escolas/<id>/` do storage e cada contador do Redis. Na primeira escola que não está no banco, a FK
+      responde 23503 e a rotina inteira falha. O SeaweedFS guarda a pasta vazia depois que os objetos saem, e por isso
+      basta uma escola eliminada. Contraria a regra 80, item 3. O conserto é pular a escola inexistente com log por id e
+      métrica, por `/corrigir`, com o `infra-guardian`. No local, é o que deixa `apps/worker/test/uso.int.test.ts`
+      vermelho quando só o banco de teste é recriado (correção `2026-09-25-l4-depende-do-tamanho-do-banco`)
 - [ ] Alerta para muitos `login.externo{resultado="provedor"}` (erro, prazo ou discovery do Google ou da Microsoft), com linha no runbook: hoje a métrica existe, mas nada avisa quando o login pela conta da escola começa a falhar em massa (revisão da 13.0)
 - [ ] Login pela Microsoft: passar a exigir a claim `xms_edov` (e-mail de domínio verificado) para ligar professor pelo e-mail. Hoje o e-mail vale como verificado porque o tenant já foi conferido, como a Tech Spec define; com a claim, um administrador do tenant da escola não consegue pôr o e-mail de outra professora num usuário e ligá-lo à conta dela (revisão da 13.0)
 

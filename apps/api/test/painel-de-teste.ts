@@ -3,6 +3,7 @@ import { criarLogger, type PoolBanco } from '@educa/nucleo'
 import { ESCOLAS_POR_PAGINA, MENSAGENS_DE_ERRO, type CodigoDeErro } from '@educa/shared'
 import type { INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
+import { randomUUID } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 import { expect } from 'vitest'
 import { AppModule } from '../src/app.module.js'
@@ -90,6 +91,16 @@ export async function segurarODesativar(pool: PoolBanco, operadorId: string): Pr
       conexao.release()
     },
   }
+}
+
+/**
+ * Um nome que vem antes de todos os outros do banco de teste na ordem por nome: o número do começo diminui com o relógio,
+ * e o nome de agora passa na frente dos que as execuções anteriores deixaram (o banco local guarda milhares de escolas e
+ * redes). É o que põe as escolas de um teste na primeira página da lista do painel, e a rede dele nas 200 do
+ * `GET /v1/operacao/redes`, sem percorrer tudo. A mesma regra do `nomeDeRedeQueVemPrimeiro` do e2e.
+ */
+export function nomeQueVemPrimeiro(resto: string): string {
+  return `${String(9_999_999_999_999 - Date.now()).padStart(13, '0')} ${resto} ${randomUUID().slice(0, 8)}`
 }
 
 /** Uma página da lista ou do uso do painel, como a API a devolve. */

@@ -17,7 +17,7 @@ import { executarOpsRevogarConvite } from '../src/ops/revogar-convite.js'
 import { ConviteRepository } from '../src/sessao/convite.repository.js'
 import { criarConviteDeCoordenador, refazerConviteDaCoordenacao } from '../src/sessao/convite.service.js'
 import { esperarNaTrava, GatilhoDeParada } from './gatilho-de-parada.js'
-import { ESPERA_DO_AUTOR, esperarErro, pedir, PRAZO_DAS_CONSULTAS_MS, segurarODesativar, subirApiDoPainel, todasAsPaginas, type Resposta } from './painel-de-teste.js'
+import { ESPERA_DO_AUTOR, esperarErro, nomeQueVemPrimeiro, pedir, PRAZO_DAS_CONSULTAS_MS, segurarODesativar, subirApiDoPainel, type Resposta } from './painel-de-teste.js'
 import { BancadaDeOperadores } from './sessao-de-operador.js'
 import { autorDaBancada, BancadaDeSessoes } from './sessao-de-teste.js'
 import { emOrdemNaTrava as emOrdem, esperarNaTravaDaEscola as esperarNaFilaDaEscola, segurarTravaDaEscola as segurarTrava } from './trava-da-escola.js'
@@ -157,9 +157,10 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
    * Uma escola nova no estado pedido: o gerar e o revogar do painel e o aceite da rota do convite (conta nova define a
    * senha e ativa; conta com senha espera o login) pelos caminhos de verdade; a coordenação desativada, por `update` no
    * banco (a desativação pela escola não é desta funcionalidade); o vencido, pelo caso de uso com o relógio 73 h atrás.
+   * `nome` é o da escola, quando o teste precisa achá-la numa página da lista.
    */
-  async function escolaEm(estado: EstadoDaCoordenacao, token: string): Promise<EscolaPreparada> {
-    const escolaId = await escolas.escola()
+  async function escolaEm(estado: EstadoDaCoordenacao, token: string, nome?: string): Promise<EscolaPreparada> {
+    const escolaId = await escolas.escola(nome)
     const quem = pessoa()
     if (estado === 'sem_convite') return { escolaId, quem, conviteId: undefined, link: undefined }
     if (estado === 'vencido') {
@@ -802,19 +803,21 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
   describe('L4 (tarefa 5.0): a lista mostra o estado e o conviteId da escrita', () => {
     it('para cada estado da E6, e o convite novo depois de um refazer, pela GET /v1/operacao/escolas', async () => {
       const sessao = await operadores.operadorComSessao()
+      // A lista é de todas as escolas do banco de teste, que guarda as de execuções anteriores (milhares no banco local):
+      // com o nome que vem primeiro na ordem por nome, as escolas deste teste estão todas na primeira página, e o teste
+      // não depende de quantas escolas o banco tem (percorrer todas estourava o limite de 120 pedidos por minuto).
+      const nome = nomeQueVemPrimeiro('Escola sintética do L4')
       const preparadas: [EstadoDaCoordenacao, EscolaPreparada][] = []
-      for (const estado of ESTADOS_DA_COORDENACAO) preparadas.push([estado, await escolaEm(estado, sessao.token)])
+      for (const estado of ESTADOS_DA_COORDENACAO) preparadas.push([estado, await escolaEm(estado, sessao.token, nome)])
       // Com dois convites na escola (a origem revogada e o refeito), o último é o refeito.
-      const origem = await escolaEm('pendente', sessao.token)
+      const origem = await escolaEm('pendente', sessao.token, nome)
       if (origem.conviteId === undefined) throw new Error('convite de origem')
       const refeito = gerado(await refazer(sessao.token, origem.conviteId))
 
       const leitor = await operadores.operadorComSessao()
-      const { itens } = await todasAsPaginas(async (pagina) => {
-        const resposta = await pedir(url, 'GET', `/v1/operacao/escolas?pagina=${pagina}`, leitor.token)
-        expect(resposta.status).toBe(200)
-        return esquemaRespostaEscolasDoPainel.parse(resposta.corpo)
-      })
+      const resposta = await pedir(url, 'GET', '/v1/operacao/escolas?pagina=1&ordem=nome', leitor.token)
+      expect(resposta.status).toBe(200)
+      const { itens } = esquemaRespostaEscolasDoPainel.parse(resposta.corpo)
       const naLista = (escolaId: string) => {
         const achadas = itens.filter((item) => item.id === escolaId)
         expect(achadas).toHaveLength(1)

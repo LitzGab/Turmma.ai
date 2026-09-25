@@ -17,7 +17,7 @@ import { executarOpsRevogarConvite } from '../src/ops/revogar-convite.js'
 import { executarOpsUso } from '../src/ops/uso.js'
 import { criarConviteDeCoordenador } from '../src/sessao/convite.service.js'
 import { esperarNaTrava, GatilhoDeParada } from './gatilho-de-parada.js'
-import { ESPERA_DO_AUTOR, esperarErro, pedir, PRAZO_DAS_CONSULTAS_MS, segurarODesativar as segurarODesativarNoBanco, subirApiDoPainel as subir } from './painel-de-teste.js'
+import { ESPERA_DO_AUTOR, esperarErro, nomeQueVemPrimeiro, pedir, PRAZO_DAS_CONSULTAS_MS, segurarODesativar as segurarODesativarNoBanco, subirApiDoPainel as subir } from './painel-de-teste.js'
 import { BancadaDeOperadores, type SessaoDeOperadorDeTeste } from './sessao-de-operador.js'
 import { autorDaBancada, BancadaDeSessoes } from './sessao-de-teste.js'
 
@@ -116,8 +116,8 @@ describe('painel da operação: rede e escola, com o autor conferido na transaç
 
     it('GET /v1/operacao/redes: a rede criada, só com id, nome e tipo, e nunca mais que 200', async () => {
       const sessao = await operadores.operadorComSessao()
-      // O nome vem antes, na ordem por nome, das redes que outros testes deixam no banco.
-      const pedido = novaRede(`AAAA Rede Sintética ${randomUUID().slice(0, 8)}`)
+      // O nome vem antes, na ordem por nome, das redes que outros testes e o e2e deixam no banco, quantas forem.
+      const pedido = novaRede(nomeQueVemPrimeiro('Rede Sintética'))
       expect((await pedir(url, 'POST', '/v1/operacao/redes', sessao.token, pedido)).status).toBe(201)
       redes.push(pedido.id)
       const redeId = pedido.id
