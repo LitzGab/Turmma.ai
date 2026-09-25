@@ -1,4 +1,5 @@
 import {
+  esquemaRespostaConviteDaCoordenacao,
   esquemaRespostaCriadoNoPainel,
   esquemaRespostaEscolasDoPainel,
   esquemaRespostaRedesDoPainel,
@@ -6,21 +7,26 @@ import {
   ORDENS_DO_PAINEL,
   type ConsultaDoPainel,
   type OrdemDoPainel,
+  type PedidoConviteDaCoordenacao,
   type PedidoCriarEscola,
   type PedidoCriarRede,
+  type RespostaConviteDaCoordenacao,
   type RespostaCriadoNoPainel,
 } from '@educa/shared'
-import { keepPreviousData, queryOptions } from '@tanstack/react-query'
+import { keepPreviousData, mutationOptions, queryOptions } from '@tanstack/react-query'
+import { SEM_CORPO } from '../../api/cliente'
 import { chamarComSessaoDeOperador } from './sessao'
 
 /**
- * O painel da operação na web (Tech Spec da A0b, seções 4 e 9): a lista de escolas, as redes do diálogo Nova escola e as
- * duas criações. Tudo pela sessão do operador, com os contratos de `packages/shared` (regra 00, item 6). As chaves começam
- * por `operacao`, no cache próprio da área, que se esvazia inteiro quando a sessão acaba ou muda de dono.
+ * O painel da operação na web (Tech Spec da A0b, seções 4 e 9): a lista de escolas, as redes do diálogo Nova escola, as
+ * duas criações e o convite da coordenação (gerar, refazer, revogar). Tudo pela sessão do operador, com os contratos de
+ * `packages/shared` (regra 00, item 6). As chaves começam por `operacao`, no cache próprio da área, que se esvazia
+ * inteiro quando a sessão acaba ou muda de dono.
  */
 
 export const CAMINHO_DAS_REDES = '/v1/operacao/redes'
 export const CAMINHO_DAS_ESCOLAS = '/v1/operacao/escolas'
+export const CAMINHO_DOS_CONVITES = '/v1/operacao/convites'
 
 /** A consulta padrão da lista: a primeira página, por nome. */
 export const CONSULTA_PADRAO: ConsultaDoPainel = { pagina: 1, ordem: 'nome' }
@@ -78,4 +84,47 @@ export function criarRedeNoPainel(pedido: PedidoCriarRede): Promise<RespostaCria
 /** `POST /v1/operacao/escolas`, como o da rede. O endereço que já é de outra escola volta `CONFLITO`. */
 export function criarEscolaNoPainel(pedido: PedidoCriarEscola): Promise<RespostaCriadoNoPainel> {
   return chamarComSessaoDeOperador(CAMINHO_DAS_ESCOLAS, esquemaRespostaCriadoNoPainel, { metodo: 'POST', corpo: pedido })
+}
+
+/** `POST /v1/operacao/escolas/:id/convite-coordenacao`: o convite novo, com o token que só existe nesta resposta. */
+export function gerarConviteNoPainel(escolaId: string, pedido: PedidoConviteDaCoordenacao): Promise<RespostaConviteDaCoordenacao> {
+  return chamarComSessaoDeOperador(`${CAMINHO_DAS_ESCOLAS}/${encodeURIComponent(escolaId)}/convite-coordenacao`, esquemaRespostaConviteDaCoordenacao, {
+    metodo: 'POST',
+    corpo: pedido,
+  })
+}
+
+/** `POST /v1/operacao/convites/:id/refazer`, pelo id do último convite que a lista trouxe; o anterior deixa de valer. */
+export function refazerConviteNoPainel(conviteId: string): Promise<RespostaConviteDaCoordenacao> {
+  return chamarComSessaoDeOperador(`${CAMINHO_DOS_CONVITES}/${encodeURIComponent(conviteId)}/refazer`, esquemaRespostaConviteDaCoordenacao, { metodo: 'POST', corpo: {} })
+}
+
+/** `POST /v1/operacao/convites/:id/revogar`: 204, sem corpo. */
+export function revogarConviteNoPainel(conviteId: string): Promise<void> {
+  return chamarComSessaoDeOperador(`${CAMINHO_DOS_CONVITES}/${encodeURIComponent(conviteId)}/revogar`, SEM_CORPO, { metodo: 'POST', corpo: {} })
+}
+
+/**
+ * As mutações que trazem o token do convite (gerar e refazer; Tech Spec da A0b, seção 9). O token é credencial: ele vive
+ * só no diálogo que o pediu (regra 20, item 8). O `MutationCache` guardaria a resposta — e, no gerar, o nome e o e-mail do
+ * pedido — por cinco minutos depois de o diálogo fechar (o `gcTime` padrão das mutações); com `gcTime: 0` ela sai do cache
+ * assim que nenhum diálogo a observa, inclusive quando a resposta chega depois de o diálogo fechar. O diálogo ainda chama
+ * `reset()` ao fechar, que solta a mutação na hora. O diálogo usa estas opções como estão: `aoTerminar` (recarregar a
+ * lista, dê certo ou não) é o único acréscimo, e nada nele leva o token.
+ */
+export function mutacaoDoGerarConvite(escolaId: string, aoTerminar?: () => Promise<void>) {
+  return mutationOptions({
+    mutationFn: (pedido: PedidoConviteDaCoordenacao) => gerarConviteNoPainel(escolaId, pedido),
+    gcTime: 0,
+    ...(aoTerminar === undefined ? {} : { onSettled: aoTerminar }),
+  })
+}
+
+/** O refazer, com a mesma regra do gerar para o token (`mutacaoDoGerarConvite`). */
+export function mutacaoDoRefazerConvite(conviteId: string, aoTerminar?: () => Promise<void>) {
+  return mutationOptions({
+    mutationFn: () => refazerConviteNoPainel(conviteId),
+    gcTime: 0,
+    ...(aoTerminar === undefined ? {} : { onSettled: aoTerminar }),
+  })
 }

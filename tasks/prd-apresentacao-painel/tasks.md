@@ -1,7 +1,7 @@
 # Tarefas — Painel da operação Turmma (A0b)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 6 de 10 concluídas
+**Status:** 7 de 10 concluídas
 
 Aprovadas por delegação do Joaquim em 24/09/2026 ("faça tudo e aprove até criar as tasks"). As 9.0 e
 10.0 levam as pendências da A0 (`tasks/prd-apresentacao-operacao/retro.md`, "Pendências para a A0b")
@@ -49,10 +49,10 @@ que não cabem numa tarefa que já mexe no mesmo código.
   - [x] 6.3 Testes: W6 (Escolas), W7 (Escolas e Nova escola), W8 (criar escola), W10 (estados e
     mensagens de rede e escola)
 
-- [ ] **7.0 — Web: o convite da coordenação**
-  - [ ] 7.1 Gerar com resumo, link uma vez, Copiar com reserva, fechar sem copiar
-  - [ ] 7.2 Refazer e revogar com confirmação; `CONFLITO` com texto próprio
-  - [ ] 7.3 Testes: W1, W2, W3, W4, W8 (convite), W9, W10 (convite)
+- [x] **7.0 — Web: o convite da coordenação**
+  - [x] 7.1 Gerar com resumo, link uma vez, Copiar com reserva, fechar sem copiar
+  - [x] 7.2 Refazer e revogar com confirmação; `CONFLITO` com texto próprio
+  - [x] 7.3 Testes: W1, W2, W3, W4, W8 (convite), W9, W10 (convite)
 
 - [ ] **8.0 — Web: Uso**
   - [ ] 8.1 Tela Uso (tabela e cartões, quatro estados), com os formatadores

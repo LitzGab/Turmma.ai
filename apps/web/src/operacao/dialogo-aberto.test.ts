@@ -27,3 +27,17 @@ describe('a resposta de um pedido fecha só a abertura em que ele saiu (correç�
     expect(fecharSeAindaAberta(undefined, proximaAbertura('escola', 0))).toBeUndefined()
   })
 })
+
+describe('a abertura do convite leva a escola da linha (tarefa 7.0)', () => {
+  it('o alvo fica preso à abertura: a de outra escola é outra abertura, e a resposta da primeira não a fecha', () => {
+    const escolaA = { id: 'a', nome: 'Escola A' }
+    const escolaB = { id: 'b', nome: 'Escola B' }
+    const primeira = proximaAbertura('revogar', 0, escolaA)
+    const segunda = proximaAbertura('revogar', primeira.numero, escolaB)
+    expect(primeira.alvo).toBe(escolaA)
+    expect(segunda.alvo).toBe(escolaB)
+    expect(fecharSeAindaAberta(segunda, primeira)).toBe(segunda)
+    // Sem alvo (Nova rede, Nova escola), a abertura não ganha o campo.
+    expect(proximaAbertura('rede', 0)).toEqual({ tipo: 'rede', numero: 1 })
+  })
+})

@@ -82,6 +82,48 @@ export const ESTADOS_DA_COORDENACAO = ['sem_convite', 'pendente', 'vencido', 're
 export type EstadoDaCoordenacao = (typeof ESTADOS_DA_COORDENACAO)[number]
 
 /**
+ * A matriz estado × ação do convite da coordenação (Tech Spec da A0b, seção 5), num lugar só: o servidor decide por ela,
+ * sob a trava da escola, e a lista do painel mostra só as ações que ela permite no estado que a API deu (tarefa 7.0).
+ * O que a tela oferece é espelho; quem recusa é o servidor, com `CONFLITO` ou `NAO_ENCONTRADO`.
+ */
+
+/** Gerar: cria; em `aceito` e `sem_coordenacao`, revoga o último convite na mesma transação e cria. */
+export const GERAR_CONVITE_POR_ESTADO: Readonly<Record<EstadoDaCoordenacao, 'criar' | 'revogar_o_ultimo_e_criar' | 'conflito'>> = {
+  sem_convite: 'criar',
+  revogado: 'criar',
+  sem_coordenacao: 'revogar_o_ultimo_e_criar',
+  aceito: 'revogar_o_ultimo_e_criar',
+  pendente: 'conflito',
+  vencido: 'conflito',
+  ativa: 'conflito',
+}
+
+/**
+ * Refazer (do último convite): só o convite em aberto, pendente ou vencido. `sem_convite` não chega ao servidor com um
+ * convite a passar: o id é o de um inexistente, e a resposta é `NAO_ENCONTRADO`.
+ */
+export const REFAZER_CONVITE_POR_ESTADO: Readonly<Record<EstadoDaCoordenacao, 'refazer' | 'conflito'>> = {
+  pendente: 'refazer',
+  vencido: 'refazer',
+  sem_convite: 'conflito',
+  revogado: 'conflito',
+  aceito: 'conflito',
+  sem_coordenacao: 'conflito',
+  ativa: 'conflito',
+}
+
+/** Revogar (o último convite). `revogado` fica `NAO_ENCONTRADO`, como no F1. */
+export const REVOGAR_CONVITE_POR_ESTADO: Readonly<Record<EstadoDaCoordenacao, 'revogar' | 'conflito' | 'nao_encontrado'>> = {
+  pendente: 'revogar',
+  vencido: 'revogar',
+  aceito: 'revogar',
+  revogado: 'nao_encontrado',
+  sem_convite: 'conflito',
+  sem_coordenacao: 'conflito',
+  ativa: 'conflito',
+}
+
+/**
  * O e-mail da pessoa convidada, digitado no painel ou no `ops:convite-coordenador`: sem espaço nas pontas, em minúsculas
  * (como o login o procura), no formato de e-mail e até 254.
  */

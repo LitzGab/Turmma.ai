@@ -1,5 +1,14 @@
 import { contextoAtual, ErroDeDominio, estadoDaCoordenacao, executarNoContexto, RegistroDeAuditoria, relogioDoSistema, VALIDADE_DO_CONVITE_HORAS, type Banco, type Relogio } from '@educa/nucleo'
-import { CodigoDeErro, type EstadoDaCoordenacao, type PedidoAceitarConvite, type RespostaAceitarConvite, type RespostaConsultarConvite } from '@educa/shared'
+import {
+  CodigoDeErro,
+  GERAR_CONVITE_POR_ESTADO,
+  REFAZER_CONVITE_POR_ESTADO,
+  REVOGAR_CONVITE_POR_ESTADO,
+  type EstadoDaCoordenacao,
+  type PedidoAceitarConvite,
+  type RespostaAceitarConvite,
+  type RespostaConsultarConvite,
+} from '@educa/shared'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
 import type { BilheteDeConvite } from './bilhete-de-convite.js'
@@ -154,42 +163,6 @@ export class AtivacaoPorConvite {
  */
 export type PedidoDeConvite = { readonly email: string; readonly nome: string } & ({ readonly slug: string } | { readonly escolaId: string })
 
-/** O que gerar faz em cada estado da coordenação (Tech Spec da A0b, seção 5, a matriz). */
-const GERAR: Readonly<Record<EstadoDaCoordenacao, 'criar' | 'revogar_o_ultimo_e_criar' | 'conflito'>> = {
-  sem_convite: 'criar',
-  revogado: 'criar',
-  sem_coordenacao: 'revogar_o_ultimo_e_criar',
-  aceito: 'revogar_o_ultimo_e_criar',
-  pendente: 'conflito',
-  vencido: 'conflito',
-  ativa: 'conflito',
-}
-
-/** O que revogar faz em cada estado da coordenação (a mesma matriz). `revogado` fica `NAO_ENCONTRADO`, como no F1. */
-const REVOGAR: Readonly<Record<EstadoDaCoordenacao, 'revogar' | 'conflito' | 'nao_encontrado'>> = {
-  pendente: 'revogar',
-  vencido: 'revogar',
-  aceito: 'revogar',
-  revogado: 'nao_encontrado',
-  sem_convite: 'conflito',
-  sem_coordenacao: 'conflito',
-  ativa: 'conflito',
-}
-
-/**
- * O que refazer (do último convite) faz em cada estado da coordenação (a mesma matriz): só o convite em aberto, pendente
- * ou vencido, é refeito. `sem_convite` não chega aqui: não há convite a passar, e o id é o de um inexistente.
- */
-const REFAZER: Readonly<Record<EstadoDaCoordenacao, 'refazer' | 'conflito'>> = {
-  pendente: 'refazer',
-  vencido: 'refazer',
-  sem_convite: 'conflito',
-  revogado: 'conflito',
-  aceito: 'conflito',
-  sem_coordenacao: 'conflito',
-  ativa: 'conflito',
-}
-
 /**
  * Pega a trava do convite da escola do contexto e só então lê o estado da coordenação (seção 7c, "Convite da escola").
  * Escola inexistente: `NAO_ENCONTRADO`, antes de qualquer escrita.
@@ -205,7 +178,8 @@ async function coordenacaoSobATrava(convites: ConviteRepository): Promise<{ esta
  * O convite da primeira coordenação, pelo operador: pelo painel (`POST /v1/operacao/escolas/:id/convite-coordenacao`) e
  * pelo `ops:convite-coordenador`, o mesmo caso de uso (RF2; Tech Spec da A0b, seção 5). Numa transação:
  * - o autor é conferido como primeira instrução (`ConferenciaDoAutor`), antes de ler a escola do endereço;
- * - no contexto da escola, pega a trava dela e lê o estado da coordenação; a matriz decide:
+ * - no contexto da escola, pega a trava dela e lê o estado da coordenação; a matriz (`GERAR_CONVITE_POR_ESTADO`, de
+ *   `@educa/shared`, a mesma pela qual a lista do painel mostra as ações) decide:
  *   - `sem_convite`, `revogado`: cria;
  *   - `aceito`, `sem_coordenacao`: revoga o último convite, com `convite.revogado` dele na auditoria (no `aceito`, o aceite
  *     anterior deixa de ativar; no `sem_coordenacao`, o convite já usado é revogado só como registro), e cria;
@@ -232,7 +206,7 @@ export async function criarConviteDeCoordenador(banco: Banco, autor: Conferencia
       return executarNoContexto({ requisicaoId, escolaId }, async () => {
         const convites = new ConviteRepository(tx)
         const { estado, ultimoConviteId } = await coordenacaoSobATrava(convites)
-        const acao = GERAR[estado]
+        const acao = GERAR_CONVITE_POR_ESTADO[estado]
         if (acao === 'conflito') throw new ErroDeDominio(CodigoDeErro.CONFLITO)
         if (acao === 'revogar_o_ultimo_e_criar' && ultimoConviteId !== undefined) {
           if (!(await convites.revogar(ultimoConviteId))) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
@@ -283,7 +257,7 @@ export async function refazerConviteDaCoordenacao(
       const novo = await executarNoContexto({ requisicaoId, escolaId }, async () => {
         const convites = new ConviteRepository(tx)
         const { estado, ultimoConviteId } = await coordenacaoSobATrava(convites)
-        if (REFAZER[estado] === 'conflito' || conviteId !== ultimoConviteId) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
+        if (REFAZER_CONVITE_POR_ESTADO[estado] === 'conflito' || conviteId !== ultimoConviteId) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
         const usuarioId = await convites.revogarParaRefazer(conviteId)
         if (usuarioId === undefined) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
         const criado = await convites.criarConvite({ tokenHash: hashDoToken(token), usuarioId, expiraEm })
@@ -317,7 +291,7 @@ export async function revogarConvitePeloOperador(banco: Banco, autor: Conferenci
       await executarNoContexto({ requisicaoId, escolaId }, async () => {
         const convites = new ConviteRepository(tx)
         const { estado, ultimoConviteId } = await coordenacaoSobATrava(convites)
-        const acao = REVOGAR[estado]
+        const acao = REVOGAR_CONVITE_POR_ESTADO[estado]
         if (acao === 'nao_encontrado') throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
         // Já revogado (por um gerar ou revogar que veio antes na trava): como no F1.
         const jaRevogado = await convites.revogado(conviteId)

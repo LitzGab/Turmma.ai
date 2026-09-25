@@ -83,6 +83,43 @@ export function ehResultadoIncerto(erro: unknown): boolean {
 export const TEXTO_DA_TENTATIVA_INCERTA =
   'A tentativa anterior pode ter criado a escola antes de a conexão cair. Feche este diálogo e confira a lista antes de tentar de novo.'
 
+/** O `CONFLITO` do refazer e do revogar: outra pessoa (ou outra aba) mexeu no convite antes (cenário W10). */
+export const TEXTO_DO_CONVITE_QUE_MUDOU = 'O convite mudou. A lista foi atualizada.'
+
+/** O `CONFLITO` do gerar: a escola já tem convite em aberto, ou a coordenação já entrou (cenário W10). */
+export const TEXTO_DA_ESCOLA_COM_CONVITE = 'Esta escola já tem convite. Use Refazer para um link novo.'
+
+/** O `NAO_ENCONTRADO` do refazer e do revogar: o convite já foi revogado (cenário W10). */
+export const TEXTO_DO_CONVITE_QUE_NAO_VALE = 'Esse convite já não vale. A lista foi atualizada.'
+
+/**
+ * O `NAO_ENCONTRADO` do gerar: a escola do caminho não existe. No MVP nenhuma escola sai do sistema (F16), e por isso o
+ * cenário W10 não o lista; o texto segue o dos outros dois, dizendo que a lista foi atualizada.
+ */
+export const TEXTO_DA_ESCOLA_QUE_NAO_EXISTE = 'Essa escola não foi encontrada. A lista foi atualizada.'
+
+/** A falha de uma ação do convite: o texto, e se a lista deixou de valer e precisa ser recarregada. */
+export interface FalhaDoConvite {
+  readonly texto: string
+  /** `CONFLITO` e `NAO_ENCONTRADO`: o estado que a tela mostrava não é mais o do servidor, e tentar de novo não resolve. */
+  readonly listaMudou: boolean
+}
+
+/**
+ * O texto de uma falha de gerar, refazer ou revogar (cenário W10): `CONFLITO` e `NAO_ENCONTRADO` têm o texto de cada
+ * ação e mandam recarregar a lista; o resto (429, 503, 503 `TEMPO_ESGOTADO`) é o de `textoDaFalha`, e o mesmo botão tenta
+ * de novo. Nenhum texto diz o código.
+ */
+export function falhaDoConvite(acao: 'gerar' | 'refazer' | 'revogar', erro: unknown): FalhaDoConvite {
+  const codigo = codigoDe(erro)
+  if (codigo === CodigoDeErro.CONFLITO) return { texto: acao === 'gerar' ? TEXTO_DA_ESCOLA_COM_CONVITE : TEXTO_DO_CONVITE_QUE_MUDOU, listaMudou: true }
+  if (codigo === CodigoDeErro.NAO_ENCONTRADO) return { texto: acao === 'gerar' ? TEXTO_DA_ESCOLA_QUE_NAO_EXISTE : TEXTO_DO_CONVITE_QUE_NAO_VALE, listaMudou: true }
+  return { texto: textoDaFalha(erro), listaMudou: false }
+}
+
+/** O e-mail que não passa no contrato do convite (`esquemaEmailConvidado`). */
+export const TEXTO_DO_EMAIL_INVALIDO = 'Escreva o e-mail inteiro, com @ e o domínio, com até 254 caracteres.'
+
 /** Os tipos de rede, como o operador os lê no diálogo Nova rede. */
 export const ROTULO_DO_TIPO_DE_REDE: Readonly<Record<TipoDeRede, string>> = {
   prefeitura: 'Prefeitura ou estado',

@@ -1,18 +1,24 @@
 import { useCallback, useRef, useState } from 'react'
 
 /**
- * Uma abertura de um diálogo da tela: o tipo dele e o número **desta** abertura. Cancelar o Nova escola e abrir outro Nova
- * escola são duas aberturas do mesmo tipo, com dois pedidos e dois ids (`pedidos-do-painel.ts`); só o número as separa.
+ * Uma abertura de um diálogo da tela: o tipo dele, o número **desta** abertura e, quando o diálogo age sobre uma coisa da
+ * lista (a escola do convite), o alvo daquela abertura. Cancelar o Nova escola e abrir outro Nova escola são duas
+ * aberturas do mesmo tipo, com dois pedidos e dois ids (`pedidos-do-painel.ts`); só o número as separa.
  */
-export interface AberturaDeDialogo<Tipo extends string> {
+export interface AberturaDeDialogo<Tipo extends string, Alvo = never> {
   readonly tipo: Tipo
   /** Único na tela enquanto ela vive; serve também de `key`, para a abertura nova nunca herdar o estado da anterior. */
   readonly numero: number
+  /**
+   * Sobre o que o diálogo age, fotografado na abertura: a escola do convite (tarefa 7.0). Fica preso à abertura, e não
+   * num estado à parte da tela, para a resposta de um pedido nunca ler o alvo de outra abertura.
+   */
+  readonly alvo?: Alvo
 }
 
 /** A abertura seguinte, com o número depois do último que a tela deu. */
-export function proximaAbertura<Tipo extends string>(tipo: Tipo, ultimoNumero: number): AberturaDeDialogo<Tipo> {
-  return { tipo, numero: ultimoNumero + 1 }
+export function proximaAbertura<Tipo extends string, Alvo = never>(tipo: Tipo, ultimoNumero: number, alvo?: Alvo): AberturaDeDialogo<Tipo, Alvo> {
+  return alvo === undefined ? { tipo, numero: ultimoNumero + 1 } : { tipo, numero: ultimoNumero + 1, alvo }
 }
 
 /**
@@ -20,7 +26,10 @@ export function proximaAbertura<Tipo extends string>(tipo: Tipo, ultimoNumero: n
  * da mutação roda mesmo com o diálogo desmontado, e a resposta pode chegar com outro diálogo aberto, do mesmo tipo ou não;
  * esse fica aberto, com o que já foi digitado nele (correção 2026-09-25-resposta-atrasada-fecha-o-dialogo-reaberto).
  */
-export function fecharSeAindaAberta<Tipo extends string>(aberta: AberturaDeDialogo<Tipo> | undefined, esta: AberturaDeDialogo<Tipo>): AberturaDeDialogo<Tipo> | undefined {
+export function fecharSeAindaAberta<Tipo extends string, Alvo = never>(
+  aberta: AberturaDeDialogo<Tipo, Alvo> | undefined,
+  esta: AberturaDeDialogo<Tipo, Alvo>,
+): AberturaDeDialogo<Tipo, Alvo> | undefined {
   return aberta?.numero === esta.numero ? undefined : aberta
 }
 
@@ -28,21 +37,21 @@ export function fecharSeAindaAberta<Tipo extends string>(aberta: AberturaDeDialo
  * O diálogo aberto de uma tela, um de cada vez. Quem desenha o diálogo passa a `aberta` para a resposta do pedido dele:
  * o `aoCriar` chama `fecharSeAinda(aberta)` com a abertura em que o pedido saiu, nunca com o tipo.
  */
-export function useDialogoDaTela<Tipo extends string>(): {
-  readonly aberta: AberturaDeDialogo<Tipo> | undefined
-  readonly abrir: (tipo: Tipo) => void
+export function useDialogoDaTela<Tipo extends string, Alvo = never>(): {
+  readonly aberta: AberturaDeDialogo<Tipo, Alvo> | undefined
+  readonly abrir: (tipo: Tipo, alvo?: Alvo) => void
   /** O "Cancelar" e o Esc: só o diálogo montado os oferece, e ele é o aberto. */
   readonly fechar: () => void
-  readonly fecharSeAinda: (esta: AberturaDeDialogo<Tipo>) => void
+  readonly fecharSeAinda: (esta: AberturaDeDialogo<Tipo, Alvo>) => void
 } {
-  const [aberta, definirAberta] = useState<AberturaDeDialogo<Tipo> | undefined>(undefined)
+  const [aberta, definirAberta] = useState<AberturaDeDialogo<Tipo, Alvo> | undefined>(undefined)
   const ultimoNumero = useRef(0)
-  const abrir = useCallback((tipo: Tipo) => {
-    const nova = proximaAbertura(tipo, ultimoNumero.current)
+  const abrir = useCallback((tipo: Tipo, alvo?: Alvo) => {
+    const nova = proximaAbertura(tipo, ultimoNumero.current, alvo)
     ultimoNumero.current = nova.numero
     definirAberta(nova)
   }, [])
   const fechar = useCallback(() => definirAberta(undefined), [])
-  const fecharSeAinda = useCallback((esta: AberturaDeDialogo<Tipo>) => definirAberta((atual) => fecharSeAindaAberta(atual, esta)), [])
+  const fecharSeAinda = useCallback((esta: AberturaDeDialogo<Tipo, Alvo>) => definirAberta((atual) => fecharSeAindaAberta(atual, esta)), [])
   return { aberta, abrir, fechar, fecharSeAinda }
 }

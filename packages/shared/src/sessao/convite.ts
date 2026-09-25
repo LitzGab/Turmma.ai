@@ -13,6 +13,12 @@ export const TAMANHO_MINIMO_SENHA_NOVA = 12
  */
 export const TAMANHO_MAXIMO_TOKEN_DE_CONVITE = 128
 
+/**
+ * Validade do convite da coordenação, contada da criação (Tech Spec do F1, seção 3). Aqui, e não só no banco, porque o
+ * painel da operação a mostra no resumo antes de gerar (A0b, tarefa 7.0): o número dito é o mesmo que o banco aplica.
+ */
+export const VALIDADE_DO_CONVITE_HORAS = 72
+
 const token = z.string().min(1).max(TAMANHO_MAXIMO_TOKEN_DE_CONVITE)
 
 /**

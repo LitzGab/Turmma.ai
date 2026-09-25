@@ -1,7 +1,7 @@
 import { esquemaIdDoPedido, TAMANHO_MAXIMO_SLUG } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
-import { pedidoDeEscola, pedidoDeRede, sortearIdDoPedido } from './pedidos-do-painel'
-import { REGRA_DO_ENDERECO, TEXTO_DO_NOME_INVALIDO } from './textos'
+import { pedidoDeConvite, pedidoDeEscola, pedidoDeRede, sortearIdDoPedido } from './pedidos-do-painel'
+import { REGRA_DO_ENDERECO, TEXTO_DO_EMAIL_INVALIDO, TEXTO_DO_NOME_INVALIDO } from './textos'
 
 const REDE = '3f2a8c1e-6b7d-4e9a-8c21-5d4f0e9b7a61'
 const ID = '9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d'
@@ -51,5 +51,21 @@ describe('o pedido de escola, pelo contrato estrito da API', () => {
       ok: false,
       erros: { redeId: 'Escolha a rede da escola.', nome: TEXTO_DO_NOME_INVALIDO, slug: REGRA_DO_ENDERECO },
     })
+  })
+})
+
+describe('o pedido do convite da coordenação, pelo contrato estrito da API (tarefa 7.0)', () => {
+  it('sai com o nome sem os espaços das pontas e o e-mail em minúsculas: é o que o resumo mostra e o que a API grava', () => {
+    expect(pedidoDeConvite({ nome: '  Coordenadora Sintética ', email: ' Coord.Sintetica@Escola.INVALID ' })).toEqual({
+      ok: true,
+      pedido: { nome: 'Coordenadora Sintética', email: 'coord.sintetica@escola.invalid' },
+    })
+  })
+
+  it('e-mail sem @, sem domínio ou vazio volta com o texto do campo; nome vazio com o dele, os dois de uma vez', () => {
+    for (const email of ['', 'coordenacao', 'coordenacao@', '@escola.invalid', 'coordenacao@escola']) {
+      expect(pedidoDeConvite({ nome: 'Coordenadora', email }), email).toEqual({ ok: false, erros: { email: TEXTO_DO_EMAIL_INVALIDO } })
+    }
+    expect(pedidoDeConvite({ nome: '  ', email: 'x' })).toEqual({ ok: false, erros: { nome: TEXTO_DO_NOME_INVALIDO, email: TEXTO_DO_EMAIL_INVALIDO } })
   })
 })

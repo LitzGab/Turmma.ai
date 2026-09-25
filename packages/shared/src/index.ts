@@ -58,6 +58,7 @@ export {
   esquemaRespostaConsultarConvite,
   TAMANHO_MAXIMO_TOKEN_DE_CONVITE,
   TAMANHO_MINIMO_SENHA_NOVA,
+  VALIDADE_DO_CONVITE_HORAS,
 } from './sessao/convite.js'
 export type { PedidoAceitarConvite, PedidoConsultarConvite, RespostaAceitarConvite, RespostaConsultarConvite } from './sessao/convite.js'
 export { esquemaPedidoLoginMatricula, TAMANHO_MAXIMO_MATRICULA, TAMANHO_MAXIMO_SLUG_NO_LOGIN } from './sessao/matricula.js'
@@ -207,9 +208,12 @@ export {
   esquemaUsoDoPeriodoDoPainel,
   ESCOLAS_POR_PAGINA,
   ESTADOS_DA_COORDENACAO,
+  GERAR_CONVITE_POR_ESTADO,
   MAXIMA_PAGINA_DO_PAINEL,
   MAXIMO_DE_REDES_DO_PAINEL,
   ORDENS_DO_PAINEL,
+  REFAZER_CONVITE_POR_ESTADO,
+  REVOGAR_CONVITE_POR_ESTADO,
   TAMANHO_MAXIMO_NOME_DIGITADO,
 } from './operacao/painel.js'
 export type {

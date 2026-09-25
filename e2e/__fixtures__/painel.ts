@@ -178,3 +178,57 @@ export async function redesComONome(nome: string): Promise<{ id: string; tipo: s
     return rows
   })
 }
+
+/** Um nome que vem antes dos outros na lista por nome (`nomeDeRedeQueVemPrimeiro`): a escola do teste na primeira página. */
+export const nomeQueVemPrimeiro = nomeDeRedeQueVemPrimeiro
+
+/** A escola que o teste do convite usa: id, nome e, no estado `pendente`, o último convite de coordenação. */
+export interface EscolaDoConvite extends EscolaSemeada {
+  readonly redeId: string
+  readonly conviteId: string | undefined
+}
+
+/**
+ * Uma escola numa rede própria, com o nome que abre a lista por nome, e a coordenação `sem_convite` ou `pendente` (A0b,
+ * tarefa 7.0). Sintética como as do `semearPainel`. Não é apagada no fim: o convite que o teste gera pela tela deixa
+ * auditoria nela, como as escolas que a tela cria (a limpeza do banco de teste é correção à parte).
+ */
+export async function semearEscolaDoConvite(estado: 'sem_convite' | 'pendente'): Promise<EscolaDoConvite> {
+  const marca = randomUUID().replaceAll('-', '')
+  return comBanco(async (banco) => {
+    const redeId = await id(banco, "insert into rede (nome, tipo) values ($1, 'grupo') returning id", [nomeQueVemPrimeiro('Rede sintética do convite')])
+    const nome = nomeQueVemPrimeiro('Escola sintética do convite')
+    const slug = `convite-${marca}`
+    const escolaId = await id(banco, 'insert into escola (rede_id, nome, slug) values ($1, $2, $3) returning id', [redeId, nome, slug])
+    await coordenacaoNoEstado(banco, escolaId, estado, marca)
+    return { id: escolaId, nome, slug, redeId, conviteId: await ultimoConvite(banco, escolaId) }
+  })
+}
+
+async function ultimoConvite(banco: Client, escolaId: string): Promise<string | undefined> {
+  const { rows } = await banco.query<{ id: string }>("select id from convite where escola_id = $1 and tipo = 'coordenador' order by expira_em desc, id desc limit 1", [escolaId])
+  return rows[0]?.id
+}
+
+/** O último convite de coordenação da escola, como a lista o traz: o que o refazer e o revogar recebem. */
+export async function ultimoConviteDaEscola(escolaId: string): Promise<string | undefined> {
+  return comBanco((banco) => ultimoConvite(banco, escolaId))
+}
+
+/** Quantos convites de coordenação da escola estão em aberto (nem usados nem revogados). */
+export async function convitesEmAberto(escolaId: string): Promise<number> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ total: string }>(
+      "select count(*)::text as total from convite where escola_id = $1 and tipo = 'coordenador' and usado_em is null and revogado_em is null",
+      [escolaId],
+    )
+    return Number(rows[0]?.total ?? '0')
+  })
+}
+
+/** A escola que a tela criou, pelo endereço: o id, para o teste conferir os convites dela no banco. */
+export async function idDaEscolaComOEndereco(slug: string): Promise<string> {
+  const [escola] = await escolasComOEndereco(slug)
+  if (escola === undefined) throw new Error('a escola do teste não está no banco')
+  return escola.id
+}

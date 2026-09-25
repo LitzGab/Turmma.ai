@@ -1,3 +1,4 @@
+import { VALIDADE_DO_CONVITE_HORAS } from '@educa/shared'
 import { sql } from 'drizzle-orm'
 import { check, foreignKey, index, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { escola } from './escola.js'
@@ -6,8 +7,8 @@ import { usuario } from './usuario.js'
 export const TIPOS_DE_CONVITE = ['coordenador'] as const
 export type TipoDeConvite = (typeof TIPOS_DE_CONVITE)[number]
 
-/** Validade do convite, contada da criação (Tech Spec, seção 3). */
-export const VALIDADE_DO_CONVITE_HORAS = 72
+/** Validade do convite, contada da criação (Tech Spec, seção 3). Mora em `@educa/shared`, que o painel também lê. */
+export { VALIDADE_DO_CONVITE_HORAS }
 
 /**
  * O convite do primeiro coordenador (tarefa 7.0; Tech Spec, seções 3 e 5, "Convite"). Nasce só pelo operador: o

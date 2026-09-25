@@ -1,5 +1,5 @@
 import { MAXIMA_PAGINA_DO_PAINEL } from '@educa/shared'
-import { QueryClient } from '@tanstack/react-query'
+import { MutationObserver, QueryClient } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
@@ -119,5 +119,98 @@ describe('as criações com o id do pedido', () => {
     await expect(m.painel.criarEscolaNoPainel(escola)).rejects.toMatchObject({ codigo: 'CONFLITO' })
     vi.mocked(fetch).mockImplementationOnce(async () => new Response(JSON.stringify(envelope('LIMITE_EXCEDIDO')), { status: 429, headers: { 'Retry-After': '12' } }))
     await expect(m.painel.criarEscolaNoPainel(escola)).rejects.toMatchObject({ codigo: 'LIMITE_EXCEDIDO', esperaSegundos: 12 })
+  })
+})
+
+describe('o convite da coordenação (tarefa 7.0)', () => {
+  const ESCOLA_ID = ESCOLA.id
+  const CONVITE_ID = '0192a4c0-5b1e-7c3d-8e4f-a0b1c2d3e4f5'
+  const TOKEN = 'AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_abcde'
+  const pedido = { nome: 'Coordenadora sintética', email: 'coordenadora@escola.invalid' }
+
+  it('gerar, refazer e revogar vão às rotas da API com a sessão; o token e o e-mail nunca vão na URL', async () => {
+    fila.push({ status: 200, corpo: { conviteId: CONVITE_ID, token: TOKEN } }, { status: 200, corpo: { conviteId: CONVITE_ID, token: TOKEN } }, { status: 204 })
+    expect(await m.painel.gerarConviteNoPainel(ESCOLA_ID, pedido)).toEqual({ conviteId: CONVITE_ID, token: TOKEN })
+    expect(await m.painel.refazerConviteNoPainel(CONVITE_ID)).toEqual({ conviteId: CONVITE_ID, token: TOKEN })
+    expect(await m.painel.revogarConviteNoPainel(CONVITE_ID)).toBeUndefined()
+    expect(chamadas).toEqual([
+      { caminho: `/v1/operacao/escolas/${ESCOLA_ID}/convite-coordenacao`, metodo: 'POST', corpo: pedido, autorizacao: 'Bearer token-de-acesso' },
+      { caminho: `/v1/operacao/convites/${CONVITE_ID}/refazer`, metodo: 'POST', corpo: {}, autorizacao: 'Bearer token-de-acesso' },
+      { caminho: `/v1/operacao/convites/${CONVITE_ID}/revogar`, metodo: 'POST', corpo: {}, autorizacao: 'Bearer token-de-acesso' },
+    ])
+  })
+
+  it('a resposta do gerar fora do contrato (um campo de pessoa a mais) não chega ao diálogo', async () => {
+    fila.push({ status: 200, corpo: { conviteId: CONVITE_ID, token: TOKEN, email: pedido.email } })
+    await expect(m.painel.gerarConviteNoPainel(ESCOLA_ID, pedido)).rejects.toMatchObject({ codigo: 'ERRO_INTERNO' })
+  })
+
+  /** Tudo o que o cache de mutações guarda, em texto: é onde o token (e o nome e o e-mail do pedido) poderiam sobrar. */
+  const guardadoNoCache = (cliente: QueryClient) => JSON.stringify(cliente.getMutationCache().getAll().map((mutacao) => mutacao.state))
+  /** O coletor do cache roda num `setTimeout` de `gcTime`; com 0, na próxima volta do laço. */
+  const depoisDoColetor = () => new Promise((resolver) => setTimeout(resolver, 5))
+
+  it('token fora do cache: fechado o diálogo (reset), nenhuma entrada do MutationCache guarda o token, nem o e-mail do pedido', async () => {
+    fila.push({ status: 200, corpo: { conviteId: CONVITE_ID, token: TOKEN } })
+    const cliente = new QueryClient()
+    // O diálogo aberto: a mutação do gerar, com um observador inscrito, como o `useMutation` montado.
+    const observador = new MutationObserver(cliente, m.painel.mutacaoDoGerarConvite(ESCOLA_ID))
+    const desinscrever = observador.subscribe(() => undefined)
+    await observador.mutate(pedido)
+    expect(observador.getCurrentResult().data?.token).toBe(TOKEN)
+    // Com o diálogo aberto o link está lá: a asserção de depois é sobre o fechar, e não sobre um cache que nunca o teve.
+    expect(guardadoNoCache(cliente)).toContain(TOKEN)
+
+    // Fechar: `reset()` e o diálogo desmontado.
+    observador.reset()
+    desinscrever()
+    await depoisDoColetor()
+    expect(guardadoNoCache(cliente)).not.toContain(TOKEN)
+    expect(guardadoNoCache(cliente)).not.toContain(pedido.email)
+    expect(cliente.getMutationCache().getAll()).toEqual([])
+  })
+
+  it('token fora do cache: a resposta que chega depois de o diálogo fechar também não fica no MutationCache', async () => {
+    let responder: (resposta: Response) => void = () => undefined
+    const pedidoSaiu = new Promise<void>((saiu) => {
+      vi.mocked(fetch).mockImplementationOnce(() => {
+        saiu()
+        return new Promise<Response>((resolver) => (responder = resolver))
+      })
+    })
+    const cliente = new QueryClient()
+    const observador = new MutationObserver(cliente, m.painel.mutacaoDoRefazerConvite(CONVITE_ID))
+    const desinscrever = observador.subscribe(() => undefined)
+    const noAr = observador.mutate().catch(() => undefined)
+    await pedidoSaiu
+    // O operador fecha com o pedido no ar ("Fechar sem copiar"): o diálogo some antes da resposta.
+    observador.reset()
+    desinscrever()
+    await depoisDoColetor()
+    // Ainda no ar, a mutação fica no cache (o coletor espera ela terminar); é a resposta que não pode sobrar nele.
+    expect(cliente.getMutationCache().getAll()).toHaveLength(1)
+    responder(new Response(JSON.stringify({ conviteId: CONVITE_ID, token: TOKEN }), { status: 200 }))
+    await noAr
+    await depoisDoColetor()
+    expect(guardadoNoCache(cliente)).not.toContain(TOKEN)
+    expect(cliente.getMutationCache().getAll()).toEqual([])
+  })
+
+  it('as duas mutações que trazem o token saem do cache logo que ninguém as observa (gcTime 0), também com o recarregar da lista que o diálogo acrescenta', async () => {
+    const recarregar = vi.fn(async () => undefined)
+    for (const opcoes of [
+      m.painel.mutacaoDoGerarConvite(ESCOLA_ID),
+      m.painel.mutacaoDoRefazerConvite(CONVITE_ID),
+      m.painel.mutacaoDoGerarConvite(ESCOLA_ID, recarregar),
+      m.painel.mutacaoDoRefazerConvite(CONVITE_ID, recarregar),
+    ]) {
+      expect(opcoes.gcTime).toBe(0)
+    }
+    // O recarregar roda quando o pedido termina, dê certo ou não: o CONFLITO também deixa a lista velha.
+    fila.push({ status: 409, corpo: { erro: { codigo: 'CONFLITO', mensagem: 'x', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } } })
+    const cliente = new QueryClient()
+    const observador = new MutationObserver(cliente, m.painel.mutacaoDoRefazerConvite(CONVITE_ID, recarregar))
+    await expect(observador.mutate()).rejects.toMatchObject({ codigo: 'CONFLITO' })
+    expect(recarregar).toHaveBeenCalledTimes(1)
   })
 })

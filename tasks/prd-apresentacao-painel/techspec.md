@@ -177,6 +177,10 @@ query string. Os textos de estado e de mensagem estão no grupo W.
 
 Quatro estados, teclado, 44 px, 360 px. Chunk até 60 kB brotli (B1); acima, páginas em `operacao-*`.
 
+As ações do convite na linha saem da matriz da seção 5, que mora em `@educa/shared` (`GERAR_`, `REFAZER_` e
+`REVOGAR_CONVITE_POR_ESTADO`), junto com os 72 h: o servidor e a tela leem a mesma (tarefa 7.0). Fechar o convite com o
+link em risco (pedido no ar, ou link sem cópia) pergunta; o segundo pedido de fechar, na pergunta, fecha (tarefa 7.0).
+
 A navegação da casca nasce com Escolas; o item Uso entra com a tela dele, na 8.0 (tarefa 6.0). O `/eu` e a tela carregam
 juntos: o 503 do `/eu` fica no alto, com "Tentar de novo", e a tela embaixo (tarefa 6.0).
 
