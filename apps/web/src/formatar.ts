@@ -15,6 +15,11 @@ export function formatarData(data: string): string {
   return dataSemHora.format(new Date(`${data}T00:00:00Z`))
 }
 
+/** `1234` → `1.234`: número inteiro no formato local, sem unidade. */
+export function formatarNumero(quantidade: number): string {
+  return numero.format(quantidade)
+}
+
 /** `1234` com `aviso`/`avisos` → `1.234 avisos`. Singular só no 1: o CLDR de pt trata 0 como singular, e se escreve "0 avisos". */
 export function formatarQuantidade(quantidade: number, singular: string, pluralizado: string): string {
   return `${numero.format(quantidade)} ${quantidade === 1 ? singular : pluralizado}`

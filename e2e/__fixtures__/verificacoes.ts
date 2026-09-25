@@ -35,6 +35,15 @@ export function larguraExcedente(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
 }
 
+/**
+ * Quantos px o conteúdo do diálogo aberto passa da largura dele. O `dialog` modal fica na camada de cima, fixo, e o que
+ * transborda dele não aumenta o documento: vira rolagem horizontal dentro do próprio diálogo, que a `larguraExcedente`
+ * não enxerga. Zero é sem rolagem; sem diálogo aberto, falha alto.
+ */
+export function larguraExcedenteDoDialogo(page: Page): Promise<number> {
+  return page.locator('dialog[open]').evaluate((dialogo) => dialogo.scrollWidth - dialogo.clientWidth)
+}
+
 /** O foco do elemento aparece: contorno com largura e estilo, ou sombra. */
 export function focoVisivel(page: Page, seletorAtivo = ':focus-visible'): Promise<boolean> {
   return page.evaluate((seletor) => {

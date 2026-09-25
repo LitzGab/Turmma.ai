@@ -66,3 +66,14 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-25 02:48:52 | `privacy-guardian` | 1ª | APROVADO | `5_task` | `docs/lgpd.md`: registrar, numa linha ou nota sobre o painel da operação (D76), que a equipe Turmma vê por escola só contagens do ano em curso e uso de infra,… |
 | 2026-09-25 02:49:02 | `infra-guardian` | 1ª | APROVADO | `5_task` | `packages/nucleo/drizzle/0016_usuario_coordenador_ativo.sql:7`: o `CREATE INDEX` sem `CONCURRENTLY` segura a escrita em `usuario` enquanto o índice é… |
 | 2026-09-25 03:04:50 | `revisor-geral` | 1ª | APROVADO | `5_task` | `apps/api/src/operacao/painel.repository.ts:135-163` e `:203-223`: a página e o `total` saem de duas consultas em paralelo, cada uma com a sua fotografia do… |
+| 2026-09-25 03:47:16 | `test-engineer` | 1ª | REPROVADO | `6_task` | A medida de largura dentro do diálogo não enxerga o diálogo. |
+| 2026-09-25 04:20:49 | `test-engineer` | 2ª | REPROVADO | `6_task` | `e2e/operacao-escolas.spec.ts:179`: o endereço longo não prova que a tela não rola na horizontal. Hoje ele é `${'e'.repeat(30)}-${'f'.repeat(32)}`. O hífen é… |
+| 2026-09-25 04:35:22 | `test-engineer` | 3ª | APROVADO | `6_task` | nenhuma nova. |
+| 2026-09-25 04:36:30 | `privacy-guardian` | 1ª | APROVADO | `6_task` | e2e/__fixtures__/painel.ts:56: o texto que estica o nome da escola longa inclui "Professora Maria Aparecida dos |
+| 2026-09-25 04:37:18 | `frontend-reviewer` | 1ª | AJUSTES NECESSÁRIOS | `6_task` | O aviso de inatividade fica inerte quando um diálogo está aberto. |
+| 2026-09-25 04:37:32 | `revisor-geral` | 1ª | APROVADO | `6_task` | `apps/web/src/operacao/pedidos-do-painel.ts:38`: o `TEXTO_DO_CAMPO[campo as CampoDaEscola]` funciona hoje só porque `CampoDaRede` cabe dentro de… |
+| 2026-09-25 04:55:58 | `test-engineer` | 4ª | APROVADO | `6_task` | `e2e/operacao-escolas.spec.ts:550-555`: o Enter e o toque não causam o uso que o teste espera, e o teste depende da latência da rede simulada. |
+| 2026-09-25 05:19:34 | `test-engineer` | 5ª | APROVADO | `6_task` | Linha 607: o `expect.poll(() => usos.length).toBe(1)` passa assim que chega a 1, e não prova que foi um só. Para provar "exatamente um", repita… |
+| 2026-09-25 05:20:22 | `privacy-guardian` | 2ª | APROVADO | `6_task` | Continuam valendo as recomendações 2 e 3 da rodada anterior, adiadas para o `/validar`: registrar em `docs/lgpd.md` as pendências da 3.0 e da 5.0. |
+| 2026-09-25 05:20:35 | `revisor-geral` | 2ª | APROVADO | `6_task` | `apps/web/src/operacao/paginas/Escolas.tsx:232` (e `:222` no Nova rede): a guarda compara o tipo do diálogo, não a instância. |
+| 2026-09-25 05:21:06 | `frontend-reviewer` | 2ª | APROVADO | `6_task` | Em `AvisoDeInatividade.tsx`, depois de "Continuar na sessão", devolver o foco ao diálogo (ao campo que estava focado, ou ao primeiro) quando o aviso estiver… |

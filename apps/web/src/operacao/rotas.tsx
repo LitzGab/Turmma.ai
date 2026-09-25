@@ -1,8 +1,7 @@
 import { QueryClientProvider, useQuery } from '@tanstack/react-query'
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Link, Redirect, Route, Switch } from 'wouter'
 import { criarClienteDeConsultas } from '../api/cliente-de-consultas'
-import { Botao } from '../componentes/Botao'
 import { EstadoCarregando } from '../componentes/estado'
 import { consultaEuDoOperador } from './api/eu'
 import {
@@ -14,12 +13,14 @@ import {
   sairComoOperador,
 } from './api/sessao'
 import { ROTAS_DA_OPERACAO } from './caminhos'
+import { AvisoDeInatividade, ContextoDoAviso, type AvisoDaSessao } from './componentes/AvisoDeInatividade'
 import { CascaDaOperacao, CascaPublicaDaOperacao, ErroDaOperacao } from './componentes/CascaDaOperacao'
 import { useInatividadeDaOperacao } from './inatividade'
 import { ConfigurarMfa } from './paginas/ConfigurarMfa'
 import { Convite } from './paginas/Convite'
 import { Entrar } from './paginas/Entrar'
 import { Mfa } from './paginas/Mfa'
+import { Escolas } from './paginas/Escolas'
 import { useTituloDaPagina } from './titulo'
 
 /**
@@ -55,40 +56,21 @@ function Protegida({ children }: { children: ReactNode }) {
 }
 
 /**
- * O aviso 2 min antes do fim da sessão parada (Tech Spec da A0, seção 9). Não é diálogo: não rouba o foco de quem
- * voltou à tela, e é anunciado pelo `role="alert"`. "Continuar" e "Sair" do mesmo tamanho (D59).
+ * A casca da operação com a sessão aberta, em volta de cada tela do painel: a faixa com o nome que o `/eu` devolve, o
+ * "Sair", a navegação e o aviso de inatividade. O `/eu` e a tela carregam juntos, sem um esperar o outro no Chromebook em
+ * rede lenta: enquanto o `/eu` não chega a faixa fica sem nome, e se ele falhar (503) a mensagem e o "Tentar de novo"
+ * ficam no alto, com a tela embaixo no lugar.
  */
-function AvisoDeInatividade({ aoContinuar, aoSair }: { aoContinuar: () => void; aoSair: () => void }) {
-  return (
-    <section aria-label="Aviso de inatividade" className="fixed inset-x-0 bottom-0 z-10 border-t border-pendente bg-pendente-cx">
-      <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <p role="alert" className="text-pendente">
-          Sua sessão vai terminar em 2 minutos por falta de uso.
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <Botao onClick={aoContinuar}>Continuar na sessão</Botao>
-          <button
-            type="button"
-            onClick={aoSair}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-tinta hover:bg-realce-suave"
-          >
-            Sair
-          </button>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/**
- * A casca da operação com a sessão aberta. Os quatro estados do `/eu`: carregando, erro (o 503 fica na tela, com
- * "Tentar de novo"), com dado (o nome na faixa) e vazio, que é o conteúdo desta fase: o painel chega na A0b.
- */
-function Inicio() {
-  useTituloDaPagina('Início')
+function ComSessao({ titulo, children }: { titulo: string; children: ReactNode }) {
   const eu = useQuery(consultaEuDoOperador)
   const [saindo, definirSaindo] = useState(false)
   const { avisoVisivel, continuar } = useInatividadeDaOperacao(true)
+  // Quantos diálogos estão abertos: com um aberto, o aviso vai para dentro dele (`AvisoDeInatividade.tsx`).
+  const [dialogosAbertos, definirDialogosAbertos] = useState(0)
+  const registrarDialogo = useCallback(() => {
+    definirDialogosAbertos((abertos) => abertos + 1)
+    return () => definirDialogosAbertos((abertos) => abertos - 1)
+  }, [])
 
   function sair(): void {
     if (saindo) return
@@ -96,23 +78,15 @@ function Inicio() {
     void sairComoOperador().finally(() => definirSaindo(false))
   }
 
+  const aviso: AvisoDaSessao = { visivel: avisoVisivel, continuar, sair, registrarDialogo }
   return (
-    <CascaDaOperacao titulo="Início da operação" nome={eu.data?.nome} aoSair={sair} saindo={saindo}>
-      {eu.isPending ? (
-        <EstadoCarregando rotulo="Carregando a operação…" />
-      ) : eu.isError ? (
-        <ErroDaOperacao erro={eu.error} aoTentarDeNovo={() => void eu.refetch()} tentando={eu.isFetching} />
-      ) : (
-        <div className="rounded-cartao border border-dashed border-borda-campo bg-superficie p-4">
-          <p className="font-medium text-tinta">Você está na operação como {eu.data.apelido}.</p>
-          <p className="mt-1 text-apoio">
-            As telas de redes, escolas e uso ainda não chegaram. Por enquanto, criar rede, escola e o convite da
-            coordenação é pelos comandos <code>ops:*</code> no terminal.
-          </p>
-        </div>
-      )}
-      {avisoVisivel && <AvisoDeInatividade aoContinuar={continuar} aoSair={sair} />}
-    </CascaDaOperacao>
+    <ContextoDoAviso value={aviso}>
+      <CascaDaOperacao titulo={titulo} nome={eu.data?.nome} aoSair={sair} saindo={saindo}>
+        {eu.isError && <ErroDaOperacao erro={eu.error} aoTentarDeNovo={() => void eu.refetch()} tentando={eu.isFetching} />}
+        {children}
+        {avisoVisivel && dialogosAbertos === 0 && <AvisoDeInatividade aoContinuar={continuar} aoSair={sair} />}
+      </CascaDaOperacao>
+    </ContextoDoAviso>
   )
 }
 
@@ -127,7 +101,9 @@ export default function RotasDaOperacao() {
         <Route path={ROTAS_DA_OPERACAO.configurarMfa} component={ConfigurarMfa} />
         <Route path={ROTAS_DA_OPERACAO.inicio}>
           <Protegida>
-            <Inicio />
+            <ComSessao titulo="Escolas">
+              <Escolas />
+            </ComSessao>
           </Protegida>
         </Route>
         <Route>

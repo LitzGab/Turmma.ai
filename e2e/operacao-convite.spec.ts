@@ -3,6 +3,7 @@ import { QUANTIDADE_DE_CODIGOS_DE_RECUPERACAO } from '../packages/shared/src/ses
 import { criarOperadorConvidado as criarConvidado, removerOperador, type EstadoDoConviteDeTeste, type OperadorConvidado } from './__fixtures__/operacao.ts'
 import { codigoDoAutenticador } from './__fixtures__/sessao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
+import { esperarCasca as esperarCascaDaOperacao } from './__fixtures__/tela-da-operacao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /** O Chromebook com CPU ×4 e Fast 3G carrega o chunk da operação, e o servidor ainda faz o hash da senha. */
@@ -74,9 +75,8 @@ async function entrarAteOConfigurar(page: Page, operador: OperadorConvidado, has
 const campoDoCodigo = (page: Page) => page.getByLabel('3. Digite o código que o aplicativo mostra')
 
 async function esperarCasca(page: Page, operador: OperadorConvidado): Promise<void> {
-  await expect(page.getByRole('banner')).toContainText(operador.nome, { timeout: PRAZO_DA_TELA_MS })
-  await expect(page).toHaveURL(/\/operacao$/)
-  await expect(page.getByRole('main')).toContainText(`Você está na operação como ${operador.apelido}`)
+  await esperarCascaDaOperacao(page, operador)
+  await expect(page.getByRole('navigation', { name: 'Operação' }).getByRole('link', { name: 'Escolas' })).toHaveAttribute('aria-current', 'page')
 }
 
 /** Nada do convite, da senha, do segredo nem dos códigos no armazenamento do navegador ou na barra. */

@@ -1,0 +1,180 @@
+import { randomBytes, randomUUID, createHash } from 'node:crypto'
+import { Client } from 'pg'
+import type { EstadoDaCoordenacao } from '../../packages/shared/src/operacao/painel.ts'
+import { TAMANHO_MAXIMO_NOME_DIGITADO } from '../../packages/shared/src/operacao/painel.ts'
+import { TAMANHO_MAXIMO_SLUG } from '../../packages/shared/src/estrutura/rede-e-escola.ts'
+import { urlDoBancoDeTeste } from '../../tools/ci/compose.ts'
+
+/**
+ * As escolas que o painel da operação lista no e2e (A0b, cenários W6 e W7), semeadas direto no banco, como o `ops:escola`
+ * e o convite do F1 as deixariam. Tudo sintético: nomes inventados, e-mails no domínio reservado `.invalid` (regra 20,
+ * item 17).
+ *
+ * O banco do compose de teste guarda as escolas das outras suítes, e a lista do painel é de todas. Por isso as escolas
+ * que o teste precisa ver na primeira página ganham uso no dia de referência, maior que o de qualquer outra: na ordem
+ * `uso` elas vêm primeiro. O valor sobe com o relógio, e o que sobrar de uma execução interrompida fica atrás do de
+ * agora. No fim, o teste as apaga (`removerPainel`).
+ */
+
+async function comBanco<T>(tarefa: (banco: Client) => Promise<T>): Promise<T> {
+  const banco = new Client({ connectionString: urlDoBancoDeTeste() })
+  await banco.connect()
+  try {
+    return await tarefa(banco)
+  } finally {
+    await banco.end()
+  }
+}
+
+async function id(banco: Client, instrucao: string, parametros: unknown[]): Promise<string> {
+  const { rows } = await banco.query<{ id: string }>(instrucao, parametros)
+  const criado = rows[0]?.id
+  if (criado === undefined) throw new Error(`o seed do painel não criou a linha: ${instrucao}`)
+  return criado
+}
+
+export interface EscolaSemeada {
+  readonly id: string
+  readonly nome: string
+  readonly slug: string
+}
+
+export interface PainelSemeado {
+  readonly redeId: string
+  readonly redeNome: string
+  /** As 30 escolas, na ordem em que foram criadas. */
+  readonly escolas: readonly EscolaSemeada[]
+  /** A de nome e rede com 200 caracteres e endereço com 63: a que estica a linha e o cartão a 360 px. */
+  readonly longa: EscolaSemeada
+  /** Uma escola em cada estado da coordenação, todas na primeira página da ordem `uso`. */
+  readonly porEstado: Readonly<Record<EstadoDaCoordenacao, EscolaSemeada>>
+  readonly contas: readonly string[]
+}
+
+/** Um texto de exatamente `tamanho` caracteres, começando pelo que interessa ler. */
+function esticar(inicio: string, tamanho: number): string {
+  const enchimento = ' de Ensino Fundamental e Médio da Rede Sintética de Exemplo'
+  let texto = inicio
+  while (texto.length < tamanho) texto += enchimento
+  return texto.slice(0, tamanho).trimEnd().padEnd(tamanho, 'a')
+}
+
+const ESTADOS_SEMEADOS: readonly EstadoDaCoordenacao[] = ['sem_convite', 'pendente', 'vencido', 'revogado', 'aceito', 'sem_coordenacao', 'ativa']
+
+/**
+ * A coordenação de uma escola em cada estado (Tech Spec da A0b, seção 5), pelos mesmos campos que a
+ * `estadoDaCoordenacao` lê: o coordenador ativo, ou o último convite de coordenação e o usuário dele.
+ */
+async function coordenacaoNoEstado(banco: Client, escolaId: string, estado: EstadoDaCoordenacao, marca: string): Promise<string | undefined> {
+  if (estado === 'sem_convite') return undefined
+  const contaId = await id(banco, 'insert into conta (email) values ($1) returning id', [`painel-${estado}-${marca}@educa.invalid`])
+  const nome = `Coordenadora sintética ${marca.slice(0, 8)}`
+  if (estado === 'ativa') {
+    await banco.query("insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, 'coordenador', $3)", [escolaId, contaId, nome])
+    return contaId
+  }
+  // O convidado nasce inativo; no aceite ele entraria. `aceito`: desativado antes do uso do convite (falta a primeira
+  // entrada); `sem_coordenacao`: desativado depois.
+  const desativado = estado === 'aceito' ? "now() - interval '1 hour'" : 'now()'
+  const usuarioId = await id(banco, `insert into usuario (escola_id, conta_id, papel, nome, desativado_em) values ($1, $2, 'coordenador', $3, ${desativado}) returning id`, [
+    escolaId,
+    contaId,
+    nome,
+  ])
+  const expira = estado === 'vencido' ? "now() - interval '1 minute'" : "now() + interval '72 hours'"
+  const usado = estado === 'aceito' ? 'now()' : estado === 'sem_coordenacao' ? "now() - interval '1 hour'" : 'null'
+  const revogado = estado === 'revogado' ? 'now()' : 'null'
+  await banco.query(
+    `insert into convite (escola_id, token_hash, tipo, usuario_id, expira_em, usado_em, revogado_em) values ($1, $2, 'coordenador', $3, ${expira}, ${usado}, ${revogado})`,
+    [escolaId, createHash('sha256').update(randomBytes(32).toString('base64url')).digest('hex'), usuarioId],
+  )
+  return contaId
+}
+
+/**
+ * 30 escolas numa rede de nome longo: a primeira com nome de 200 caracteres e endereço de 63, as sete seguintes uma em
+ * cada estado da coordenação, e o resto sem nada. As oito primeiras levam uso no último dia fechado, em ordem decrescente.
+ */
+export async function semearPainel(): Promise<PainelSemeado> {
+  const marca = randomUUID().replaceAll('-', '')
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ dia: string }>("select ((now() at time zone 'America/Sao_Paulo')::date - 1)::text as dia")
+    const dia = rows[0]?.dia
+    if (dia === undefined) throw new Error('o seed do painel não leu o dia de referência')
+    // Maior que o uso de qualquer outra escola do banco, e crescente com o relógio (cabe com folga em 2^53).
+    const usoDaVez = Date.now() * 100
+
+    // Na frente das outras redes do banco, para o seletor do Nova escola (que corta em 200) mostrá-la.
+    const redeNome = esticar(nomeDeRedeQueVemPrimeiro('Rede sintética do painel'), TAMANHO_MAXIMO_NOME_DIGITADO)
+    const redeId = await id(banco, "insert into rede (nome, tipo) values ($1, 'prefeitura') returning id", [redeNome])
+    const escolas: EscolaSemeada[] = []
+    const contas: string[] = []
+    const porEstado: Partial<Record<EstadoDaCoordenacao, EscolaSemeada>> = {}
+    for (let posicao = 0; posicao < 30; posicao++) {
+      const longa = posicao === 0
+      const nome = longa ? esticar(`Colégio sintético do painel ${marca.slice(0, 8)}`, TAMANHO_MAXIMO_NOME_DIGITADO) : `Escola sintética do painel ${marca.slice(0, 8)} ${String(posicao).padStart(2, '0')}`
+      const prefixo = `painel-${marca}-${String(posicao).padStart(2, '0')}`
+      // O endereço longo não tem hífen: sem ponto de quebra, só o `wrap-anywhere` da linha e do cartão o segura a 360 px.
+      const slug = longa ? `p${marca}`.padEnd(TAMANHO_MAXIMO_SLUG, 'x') : prefixo
+      const escolaId = await id(banco, 'insert into escola (rede_id, nome, slug) values ($1, $2, $3) returning id', [redeId, nome, slug])
+      const escola = { id: escolaId, nome, slug }
+      escolas.push(escola)
+      const estado = ESTADOS_SEMEADOS[posicao - 1]
+      if (estado !== undefined) {
+        porEstado[estado] = escola
+        const contaId = await coordenacaoNoEstado(banco, escolaId, estado, `${marca}-${String(posicao)}`)
+        if (contaId !== undefined) contas.push(contaId)
+      }
+      if (posicao < 8) {
+        await banco.query('insert into uso_infra_diario (escola_id, dia, requisicoes, jobs, bytes_storage) values ($1, $2, $3, 0, 0)', [escolaId, dia, usoDaVez - posicao])
+      }
+    }
+    const longa = escolas[0]
+    if (longa === undefined || ESTADOS_SEMEADOS.some((estado) => porEstado[estado] === undefined)) throw new Error('o seed do painel ficou incompleto')
+    return { redeId, redeNome, escolas, longa, porEstado: porEstado as Record<EstadoDaCoordenacao, EscolaSemeada>, contas }
+  })
+}
+
+/** Apaga o que `semearPainel` criou: uso, convites, usuários, contas, escolas e a rede. */
+export async function removerPainel(painel: PainelSemeado): Promise<void> {
+  const escolas = painel.escolas.map((escola) => escola.id)
+  await comBanco(async (banco) => {
+    await banco.query('delete from uso_infra_diario where escola_id = any($1::uuid[])', [escolas])
+    await banco.query('delete from convite where escola_id = any($1::uuid[])', [escolas])
+    await banco.query('delete from usuario where escola_id = any($1::uuid[])', [escolas])
+    await banco.query('delete from conta where id = any($1::uuid[])', [painel.contas])
+    await banco.query('delete from escola where id = any($1::uuid[])', [escolas])
+    await banco.query('delete from rede where id = $1', [painel.redeId])
+  })
+}
+
+/**
+ * Um nome de rede que vem antes de todas as outras do banco de teste na lista por nome, que o `GET /v1/operacao/redes`
+ * corta em 200: o número do começo diminui com o relógio, e a rede de agora passa na frente das que as execuções
+ * anteriores deixaram (o banco local guarda milhares). É o que deixa o seletor do Nova escola mostrar a rede do teste.
+ */
+export function nomeDeRedeQueVemPrimeiro(resto: string): string {
+  return `${String(9_999_999_999_999 - Date.now()).padStart(13, '0')} ${resto} ${randomUUID().slice(0, 8)}`
+}
+
+/** Uma rede sem escola, para o teste que cria a escola pela tela, com o nome que abre o seletor. */
+export async function criarRedeDoPainel(): Promise<{ readonly id: string; readonly nome: string }> {
+  const nome = nomeDeRedeQueVemPrimeiro('Rede sintética da tela')
+  return comBanco(async (banco) => ({ id: await id(banco, "insert into rede (nome, tipo) values ($1, 'grupo') returning id", [nome]), nome }))
+}
+
+/** As escolas com aquele endereço, com a rede: é por aqui que o teste confere quantas a tela criou, e com que id. */
+export async function escolasComOEndereco(slug: string): Promise<{ id: string; redeId: string; nome: string }[]> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ id: string; rede_id: string; nome: string }>('select id, rede_id, nome from escola where slug = $1', [slug])
+    return rows.map((linha) => ({ id: linha.id, redeId: linha.rede_id, nome: linha.nome }))
+  })
+}
+
+/** As redes com aquele nome: a criada pela tela, que o teste confere pelo nome único. */
+export async function redesComONome(nome: string): Promise<{ id: string; tipo: string }[]> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ id: string; tipo: string }>('select id, tipo from rede where nome = $1', [nome])
+    return rows
+  })
+}

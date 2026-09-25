@@ -1,6 +1,39 @@
 import type { ReactNode } from 'react'
+import { Link, useRoute } from 'wouter'
 import { Botao } from '../../componentes/Botao'
+import { INICIO_DA_OPERACAO, ROTAS_DA_OPERACAO } from '../caminhos'
 import { textoDaFalha } from '../textos'
+
+/**
+ * Os itens da navegação da operação (Tech Spec da A0b, seção 9). Cada item nasce com a tela dele (`docs/interface.md`
+ * 11.1): Escolas chega na tarefa 6.0, e Uso entra aqui junto da tela dele, na 8.0.
+ */
+const ITENS_DA_NAVEGACAO: readonly PropsDoItem[] = [{ rotulo: 'Escolas', rota: ROTAS_DA_OPERACAO.inicio, endereco: INICIO_DA_OPERACAO }]
+
+interface PropsDoItem {
+  readonly rotulo: string
+  /** A rota relativa à área, que diz se a pessoa está nela. */
+  readonly rota: string
+  /** O endereço do link, pela raiz: `/operacao`, e não `/operacao/` com a barra no fim (`caminhos.ts`). */
+  readonly endereco: string
+}
+
+/**
+ * Um item da navegação. O selecionado não é só cor (`docs/interface.md` 9.1, `realce`): leva o sublinhado grosso e o
+ * `aria-current`, que o leitor de tela anuncia.
+ */
+function ItemDaNavegacao({ rotulo, rota, endereco }: PropsDoItem) {
+  const [aqui] = useRoute(rota)
+  return (
+    <Link
+      to={endereco}
+      aria-current={aqui ? 'page' : undefined}
+      className={`inline-flex min-h-11 items-center border-b-2 px-3 text-base font-medium ${aqui ? 'border-noite text-tinta' : 'border-superficie text-apoio hover:text-tinta'}`}
+    >
+      {rotulo}
+    </Link>
+  )
+}
 
 /**
  * A faixa "Operação Turmma" em `noite` (Tech Spec da A0, seção 9; `docs/interface.md` 5a): a pele é a do produto, com a
@@ -50,8 +83,8 @@ interface PropsDaCasca {
 
 /**
  * A casca da operação com a sessão aberta: a faixa com o nome de quem entrou e o **Sair** a um clique, em toda tela,
- * do mesmo tamanho de qualquer outra ação (D59; PRD da A0, seção 6). Sem menu: o painel (escolas, uso) é da A0b, e
- * cada item de navegação nasce com a fase dele (`docs/interface.md` 11.1).
+ * do mesmo tamanho de qualquer outra ação (D59; PRD da A0, seção 6), e embaixo dela a navegação do painel (A0b). A aba
+ * não tem título visível: a navegação já diz onde a pessoa está (`docs/interface.md` 6, P03).
  */
 export function CascaDaOperacao({ titulo, nome, aoSair, saindo, children }: PropsDaCasca) {
   return (
@@ -69,6 +102,13 @@ export function CascaDaOperacao({ titulo, nome, aoSair, saindo, children }: Prop
           </button>
         </div>
       </Faixa>
+      <nav aria-label="Operação" className="border-b border-linha bg-superficie">
+        <div className="mx-auto flex max-w-5xl flex-wrap gap-1 px-1 sm:px-3">
+          {ITENS_DA_NAVEGACAO.map((item) => (
+            <ItemDaNavegacao key={item.rota} {...item} />
+          ))}
+        </div>
+      </nav>
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
         <h1 className="sr-only">{titulo}</h1>
         {children}

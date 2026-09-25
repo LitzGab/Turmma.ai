@@ -177,6 +177,9 @@ query string. Os textos de estado e de mensagem estão no grupo W.
 
 Quatro estados, teclado, 44 px, 360 px. Chunk até 60 kB brotli (B1); acima, páginas em `operacao-*`.
 
+A navegação da casca nasce com Escolas; o item Uso entra com a tela dele, na 8.0 (tarefa 6.0). O `/eu` e a tela carregam
+juntos: o 503 do `/eu` fica no alto, com "Tentar de novo", e a tela embaixo (tarefa 6.0).
+
 ## 10. Testes
 
 | Camada | O que será testado |

@@ -1,4 +1,4 @@
-import { CodigoDeErro, MENSAGENS_DE_ERRO, mensagemDaEntrada, mensagemDoSegundoFator } from '@educa/shared'
+import { CodigoDeErro, formatarEspera, MENSAGENS_DE_ERRO, mensagemDaEntrada, mensagemDoSegundoFator, type TipoDeRede } from '@educa/shared'
 import { ErroDaApi } from '../api/cliente'
 
 /**
@@ -27,12 +27,80 @@ function codigoDe(erro: unknown): CodigoDeErro {
   return erro instanceof ErroDaApi ? erro.codigo : CodigoDeErro.ERRO_INTERNO
 }
 
-/** O texto de uma falha numa tela com sessão: o 503 da operação tem o texto dele; o resto, o do catálogo. */
+/**
+ * O 503 `TEMPO_ESGOTADO` (a espera da trava ou da consulta passou do `statement_timeout`): nada foi gravado, e tentar de
+ * novo resolve (cenário W10 da A0b).
+ */
+export const TEXTO_DO_TEMPO_ESGOTADO = 'A operação demorou demais. Tente de novo em instantes.'
+
+/**
+ * O 429 do limite do operador (`rl:op`), com a espera que a API mandou no `Retry-After` (cenário W10 da A0b). O número
+ * vem da nossa resposta, nunca do que foi digitado; sem ele, "em instantes".
+ */
+export function textoDoLimite(esperaSegundos: number | undefined): string {
+  if (esperaSegundos === undefined || !Number.isFinite(esperaSegundos)) return 'Muitas ações seguidas. Tente de novo em instantes.'
+  return `Muitas ações seguidas. Tente de novo em ${formatarEspera(esperaSegundos)}.`
+}
+
+/**
+ * O texto de uma falha numa tela com sessão: o 503 da operação, o 503 `TEMPO_ESGOTADO` e o 429 têm o texto deles; o
+ * resto, o do catálogo. O 401 `SESSAO_ENCERRADA` não chega a aparecer aqui: `chamarComSessaoDeOperador` já levou a aba à
+ * entrada, com a mensagem de sessão encerrada.
+ */
 export function textoDaFalha(erro: unknown): string {
   const codigo = codigoDe(erro)
   if (codigo === CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO) return TEXTO_DA_OPERACAO_INDISPONIVEL
+  if (codigo === CodigoDeErro.TEMPO_ESGOTADO) return TEXTO_DO_TEMPO_ESGOTADO
+  if (codigo === CodigoDeErro.LIMITE_EXCEDIDO) return textoDoLimite(erro instanceof ErroDaApi ? erro.esperaSegundos : undefined)
   return MENSAGENS_DE_ERRO[codigo]
 }
+
+/**
+ * O endereço (`slug`) que já é de outra escola: o `CONFLITO` do `POST /v1/operacao/escolas` (Tech Spec da A0b, seção 7c).
+ * Aparece no próprio campo, que é onde está o que corrigir (cenário W10).
+ */
+export const TEXTO_DO_ENDERECO_REPETIDO = 'Esse endereço já é de outra escola. Escolha outro.'
+
+/** A falha do criar escola é o endereço repetido? É a única que volta ao campo; as outras ficam no alerta do diálogo. */
+export function ehEnderecoRepetido(erro: unknown): boolean {
+  return codigoDe(erro) === CodigoDeErro.CONFLITO
+}
+
+/**
+ * A falha em que não se sabe se o servidor criou: a conexão caiu (a resposta pode ter se perdido depois da gravação) ou a
+ * resposta veio fora do contrato. O 503 da trava (`TEMPO_ESGOTADO`), o 429 e os 4xx são recusas: nada foi gravado.
+ */
+export function ehResultadoIncerto(erro: unknown): boolean {
+  const codigo = codigoDe(erro)
+  return codigo === CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO || codigo === CodigoDeErro.ERRO_INTERNO
+}
+
+/**
+ * O `CONFLITO` depois de uma tentativa de resultado incerto, com os dados mudados: o servidor pode ter criado a escola na
+ * tentativa anterior, com o mesmo id e os dados de antes, e é isso que ele recusa agora, e não um endereço de outra
+ * escola. A tela não chama isso de endereço repetido; manda conferir a lista, em vez de o operador criar a segunda.
+ */
+export const TEXTO_DA_TENTATIVA_INCERTA =
+  'A tentativa anterior pode ter criado a escola antes de a conexão cair. Feche este diálogo e confira a lista antes de tentar de novo.'
+
+/** Os tipos de rede, como o operador os lê no diálogo Nova rede. */
+export const ROTULO_DO_TIPO_DE_REDE: Readonly<Record<TipoDeRede, string>> = {
+  prefeitura: 'Prefeitura ou estado',
+  grupo: 'Grupo educacional',
+  independente: 'Escola independente',
+}
+
+/** A regra do endereço da escola, visível junto do campo: é a mesma do contrato (`esquemaSlugDaEscola`). */
+export const REGRA_DO_ENDERECO = 'Só letras minúsculas sem acento, números e hífen entre eles, até 63. Exemplo: colegio-horizonte.'
+
+/** O nome que não passa no contrato: vazio depois de tirar os espaços, ou longo demais. */
+export const TEXTO_DO_NOME_INVALIDO = 'Escreva o nome, com até 200 caracteres.'
+
+/** A lista vazia de verdade (nenhuma escola no sistema): o vazio convida a começar pela rede (cenário W7). */
+export const TEXTO_DA_LISTA_VAZIA = { titulo: 'Nenhuma escola ainda.', descricao: 'Comece criando a rede.' } as const
+
+/** O diálogo Nova escola sem rede nenhuma: a escola pertence a uma rede, que vem antes (cenário W7). */
+export const TEXTO_SEM_REDE = 'Crie a rede primeiro. A escola pertence a uma rede, mesmo quando é a única dela.'
 
 /** O texto de uma falha da entrada por e-mail e senha, com a espera da conta segurada quando a API a informou. */
 export function textoDaFalhaDaEntrada(erro: unknown): string {
