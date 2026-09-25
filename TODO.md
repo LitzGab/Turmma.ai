@@ -51,7 +51,9 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] **Eliminar escola apaga também o resto de uso dela**: a pasta vazia `escolas/<id>/` (o SeaweedFS só a tira da listagem
       com o `DeleteObject` da própria pasta) e os contadores `uso:*:<id>:*` do Redis de fila. Hoje a consolidação pula e conta
       essa escola toda noite como `escola_inexistente` (correção `2026-09-25-consolidacao-para-na-escola-inexistente`), e o
-      sinal fica misturado com o caso que o runbook manda investigar (banco errado, restauração pela metade). Vai na spec da
+      sinal fica misturado com o caso que o runbook manda investigar (banco errado, restauração pela metade). Desde a correção
+      `2026-09-25-acabamento-da-a0b`, se todas as escolas encontradas numa noite forem eliminadas (uma noite sem requisição
+      de escola nenhuma basta), o resto de uso também derruba o job (`uso.nenhuma_escola_no_banco`). Vai na spec da
       eliminação (`privacy-guardian` e `infra-guardian` da correção)
 - [ ] Alerta para muitos `login.externo{resultado="provedor"}` (erro, prazo ou discovery do Google ou da Microsoft), com linha no runbook: hoje a métrica existe, mas nada avisa quando o login pela conta da escola começa a falhar em massa (revisão da 13.0)
 - [ ] Login pela Microsoft: passar a exigir a claim `xms_edov` (e-mail de domínio verificado) para ligar professor pelo e-mail. Hoje o e-mail vale como verificado porque o tenant já foi conferido, como a Tech Spec define; com a claim, um administrador do tenant da escola não consegue pôr o e-mail de outra professora num usuário e ligá-lo à conta dela (revisão da 13.0)
@@ -140,7 +142,9 @@ para o staging".
 - [ ] Antes da primeira escola real: alerta para rotina do sistema que parou de rodar
       (`sistema.consolidar-uso`, `sistema.expurgar-jobs`, `sistema.expurgar-acesso` da 17.0), por exemplo métrica com o horário do
       último sucesso e regra `time() - x > 26h`, com entrada no `docs/runbook.md` (pendência da 11.0
-      registrada na 13.0; dono: Joaquim)
+      registrada na 13.0; dono: Joaquim). Precisa pegar também a rotina que roda e falha: a consolidação falha com
+      `uso.nenhuma_escola_no_banco` quando o worker aponta para o banco errado (correção `2026-09-25-acabamento-da-a0b`),
+      e hoje isso só aparece em `job_registro`
 - [ ] Rodar a avaliação de `docs/avaliacao-de-modelos.md` com Maritaca e Gemini (D37)
 - [ ] Perguntar à Maritaca, por escrito, se o contrato cobre dado de aluno menor de idade e
       se garante processamento só no Brasil (o DPA de agosto/2026 lista Brasil, EUA e UE)
@@ -322,6 +326,52 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       portão de saúde tende a chegar depois de o cliente já ter reconectado. Se algum teste precisar
       medir a latência de reconexão de fato, o ponto de partida honesto é o `ready` do cliente, não o
       healthcheck (`infra-guardian`, 20/09/2026)
+
+Pendências de código da A0b que a retrospectiva deixou (`tasks/prd-apresentacao-painel/retro.md`, "Pendências de
+código"), com o destino de cada uma. As pequenas foram fechadas na correção `2026-09-25-acabamento-da-a0b`.
+
+- [ ] **Defeito, `/corrigir` próprio: o `desfazer` do contador de tentativas pode descontar do lugar errado**
+      (`apps/api/src/sessao/contador-de-tentativas.ts`, `ContadorDeTentativas.desfazer`; `infra-guardian` da 4.0 da A0b).
+      Ele desfaz no seguro em memória e, com o Redis `ready`, também no Redis, sem saber onde a tentativa foi contada. Se a
+      reserva caiu no seguro (Redis fora naquela hora) e o Redis voltou antes do `desfazer`, o `SCRIPT_DESFAZER` tira do
+      Redis uma falha que ele nunca contou, e libera uma falha real: é o lado que a regra do contador proíbe (errar só para
+      o lado de segurar). O docblock hoje aceita o caso. Só acontece depois de senha ou código certos e com o Redis
+      voltando no meio da tentativa. Correção: a `Reserva` liberada guarda onde foi contada (`redis` ou `seguro`), e o
+      `desfazer` age só lá, com teste que reserva no seguro, liga o Redis com uma falha de antes e confere que ela continua
+- [ ] Aceite do convite de operador e `renovar` em paralelo, e aceite e segundo fator em paralelo, sem teste de
+      concorrência próprio; o rebaixamento do `convite/aceitar` com o Redis de cache fora só é provado pelo C36, com
+      limitador falso (`test-engineer` da 9.0 da A0b). Destino: próxima tarefa que tocar
+      `apps/api/src/operacao/convite-operador.service.ts` ou `sessao.service.ts` da operação
+- [ ] Página e `total` do painel em duas consultas paralelas, com fotografias diferentes do banco: uma escola criada entre
+      as duas deixa o total fora da página (`apps/api/src/operacao/painel.repository.ts`, `TOTAL_DE_ESCOLAS` e
+      `escolasDaPagina`; 5.0 da A0b). Ler o total na própria consulta da página, com `count(*) over ()` antes do `limit`,
+      também tira uma conexão. Destino: próxima tarefa que tocar `painel.repository.ts`
+- [ ] `apps/web/src/operacao/paginas/Uso.tsx`: o `VazioDoUso` (`:114`) repete o `EstadoVazio`; e o número longo com
+      `wrap-anywhere` (`:75`, `:101`) pode quebrar no meio entre 640 e ~760 px (`revisor-geral` e `frontend-reviewer` da
+      8.0). Destino: próxima tarefa em `Uso.tsx` (a A2 traz o consumo de IA para esta tela)
+- [ ] `apps/web/src/rotas.tsx:53`: o `componentWillUnmount` da fronteira de erro não tem teste (`test-engineer` da 10.0).
+      Destino: próxima tarefa que tocar `rotas.tsx`
+- [ ] `apps/web/src/operacao/paginas/Convite.tsx`: o `hashchange` não zera `aceitando`, e o botão do link novo fica
+      desligado ("Salvando…") enquanto o aceite do link anterior está no ar, sem dizer por quê; o descarte do desafio só é
+      seguro por isso, e a dependência precisa de um comentário junto ao `aoMudarOFragmento` (`revisor-geral` e
+      `test-engineer` da 10.0). Destino: próxima tarefa em `Convite.tsx`
+- [ ] `apps/api/test/arquitetura.test.ts`, `comandosDaMigration`: tira o comentário `--` antes do texto entre aspas, e um
+      literal como `DEFAULT '--'` corta a linha e faz `tabelasSemEscola` ler errado o resto da migration. Hoje não existe
+      esse caso (`revisor-geral` da 10.0). Destino: próxima tarefa que tocar esse teste, ou a primeira migration com `--`
+      dentro de texto
+- [ ] O anúncio atrasado "Escola X criada." (`role="status"` de `apps/web/src/operacao/paginas/Escolas.tsx:228`) fica fora
+      do `<dialog>` modal reaberto, inerte para o leitor de tela: quem o usa pode não saber que o pedido cancelado criou a
+      escola e repetir. No Nova rede nada segura o duplicado (`frontend-reviewer` da correção `7d495d0`). Destino: próxima
+      tarefa que tocar `Escolas.tsx`
+- [ ] `apps/api/src/operacao/painel.service.ts:62` (`naEscola`): o mesmo caminho morto que a correção
+      `2026-09-25-acabamento-da-a0b` tirou do segundo fator, `contextoAtual() ?? { requisicaoId: randomUUID() }`. Aqui a
+      linha é escrita depois da gravação, então a falha fechada vai no começo do caso de uso, não no log. O mesmo vale para
+      `refazerConviteDaCoordenacao` (`apps/api/src/sessao/convite.service.ts`), que só o painel chama; no gerar e no
+      revogar o fallback é vivo, porque os comandos `ops:*` rodam sem requisição (`tenancy-guardian` da correção). Destino:
+      próxima tarefa que tocar `painel.service.ts` ou `convite.service.ts`
+- [ ] Contador `banco.conexao_descartada{causa}`, separando erro de consulta e erro da conexão: hoje o descarte não
+      aparece em métrica nenhuma, só a queda das conexões em uso, e o failover do Postgres gerenciado precisa ser sinal
+      próprio (`infra-guardian` da correção `577d185`). Destino: antes do staging (D31)
 
 ## Regulação educacional
 

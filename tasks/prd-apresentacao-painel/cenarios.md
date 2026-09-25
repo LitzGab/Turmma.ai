@@ -167,8 +167,10 @@ Concorrência é sempre com as chamadas em paralelo (`Promise.all`), e integraç
   resposta veio fora do contrato, e o servidor pode ter criado a escola): aí o `CONFLITO` com os dados mudados é o mesmo
   id recusado, e a revisão mostra "A tentativa anterior pode ter criado a escola antes de a conexão cair. Feche este
   diálogo e confira a lista antes de tentar de novo." (tarefa 6.0); `NAO_ENCONTRADO` no refazer e no revogar "Esse
-  convite já não vale. A lista foi atualizada."; 429 "Muitas ações seguidas. Tente de novo em N segundos.", com
-  o N do `Retry-After`; 503 `TEMPO_ESGOTADO` "A operação demorou demais. Tente de novo em instantes.";
+  convite já não vale. A lista foi atualizada."; no gerar (a escola do caminho não existe) "Essa escola não foi
+  encontrada. A lista foi atualizada." (tarefa 7.0; entrou no cenário pela correção `2026-09-25-acabamento-da-a0b`);
+  429 "Muitas ações seguidas. Tente de novo em N segundos.", com o N do `Retry-After`;
+  503 `TEMPO_ESGOTADO` "A operação demorou demais. Tente de novo em instantes.";
   401 no meio de um diálogo leva à entrada com "Sua sessão terminou. Entre de novo para continuar.", o texto do
   catálogo (`MENSAGENS_DE_ERRO.SESSAO_ENCERRADA`) que a A0 já deixa na entrada (tarefa 6.0). Na tela de entrada
   da equipe (`/entrar`) e na do segundo fator, o `NAO_ENCONTRADO` da E16 mostra o texto da tela de convite inválido

@@ -87,7 +87,10 @@ export interface DependenciasDaConsolidacao {
  * (`VALIDADE_DO_CONTADOR_SEGUNDOS`): o que não pôde ser gravado não é apagado, e reexecutar pula de novo, sem mudar
  * nada. A pasta com erro de storage também é pulada, mas o job falha no fim, depois das outras escolas, porque o erro
  * pode ser do storage e não da pasta; com `FALHAS_DE_STORAGE_SEGUIDAS_ATE_DESISTIR` pastas seguidas com erro, falha na
- * hora.
+ * hora. Se **todas** as escolas encontradas (no contador e no storage) forem inexistentes no banco, cada uma é pulada do
+ * mesmo jeito, mas o job falha no fim, com `uso.nenhuma_escola_no_banco` no log: em geral é o worker apontado para outro
+ * banco; também dispara numa noite em que todas as encontradas são resto de escola eliminada, até a eliminação apagar o
+ * resto de uso (`TODO.md`). Uma inexistente entre escolas que existem continua só pulada.
  */
 export function criarConsolidacaoDeUso(dependencias: DependenciasDaConsolidacao): Processador {
   const { contador, repositorio, storage, relogio, logger, medidor } = dependencias
@@ -102,8 +105,11 @@ export function criarConsolidacaoDeUso(dependencias: DependenciasDaConsolidacao)
       executarNoContexto({ requisicaoId: contexto.requisicaoId, escolaId }, funcao)
 
     let ignoradasTotal = 0
+    /** As escolas que o banco não tem: se forem todas as encontradas, o job falha no fim. */
+    const inexistentes = new Set<string>()
     const ignorar = (escolaId: string, origem: OrigemDaEscolaIgnorada, causa: CausaDaEscolaIgnorada, erro: unknown): void => {
       ignoradasTotal++
+      if (causa === 'escola_inexistente') inexistentes.add(escolaId)
       escolaIgnorada?.add(1, { origem, causa })
       // Só o id e o erro resumido (SQLSTATE e restrição, ou o tipo): a mensagem do banco traz o valor da linha (regra 20, item 9).
       logger.warn({ evento: 'uso.escola_ignorada', escolaId, origem, causa, erro: resumirErro(erro) })
@@ -159,6 +165,16 @@ export function criarConsolidacaoDeUso(dependencias: DependenciasDaConsolidacao)
     const diasTotal = contagens.length
     const escolasTotal = escolas.length
     logger.info({ evento: 'uso.consolidado', diasTotal, escolasTotal, ignoradasTotal })
+    // Nenhuma das escolas encontradas existe no banco: em geral é o worker apontado para outro banco, ou uma restauração
+    // pela metade (ou só resto de escolas eliminadas, até a eliminação apagá-lo). Pular todas terminaria em sucesso sem
+    // gravar nada, e ninguém veria.
+    const encontradas = new Set([...contagens.map(({ escolaId }) => escolaId), ...escolas])
+    if (encontradas.size > 0 && [...encontradas].every((escolaId) => inexistentes.has(escolaId))) {
+      // Contador e storage juntos: não é o `escolasTotal` de `uso.consolidado`, que conta só as pastas do storage.
+      const encontradasTotal = encontradas.size
+      logger.error({ evento: 'uso.nenhuma_escola_no_banco', encontradasTotal })
+      throw new FalhaDeJob(CodigoDeFalhaDeJob.ERRO_INTERNO)
+    }
     // A pasta com erro não segurou as outras escolas, mas o erro não é engolido: a fila tenta de novo, e a
     // reexecução regrava o mesmo valor nas que já foram (D49).
     if (falhaDeStorage !== undefined) throw falhaDeStorage

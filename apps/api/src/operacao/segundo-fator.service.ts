@@ -7,7 +7,7 @@ import {
   type RespostaSegundoFatorDeOperador,
 } from '@educa/shared'
 import { Logger } from '@nestjs/common'
-import { randomBytes, randomUUID } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import { SegredoNaoDecifra, type CifraDoSegredo } from '../sessao/cifra-do-segredo.js'
 import type { ContadorDeTentativas } from '../sessao/contador-de-tentativas.js'
 import type { CookieDeDispositivo } from '../sessao/cookie-dispositivo.js'
@@ -77,7 +77,8 @@ type Desfecho =
  * - **Configurar** (`configurar_mfa`): numa transação, a trava "configurar" grava o segredo novo e sobe o `mfa_versao`
  *   (só com o segundo fator inativo e o operador ativo), e troca os códigos de recuperação pelos novos. Devolve o
  *   segredo, os códigos e o desafio `mfa` com a versão. Nada fica ativo ainda.
- * - **Entrar** (`mfa`), numa transação só, a partir do `for update` da linha do operador ativo:
+ * - **Entrar** (`mfa`), numa transação só, a partir do `for update` da linha do operador ativo (e, antes do desafio, o
+ *   contexto da requisição: sem ele, falha de montagem, `ERRO_INTERNO` sem gastar nada):
  *   1. o desafio que leva versão exige a mesma `mfa_versao` da linha: diferente, outra aba configurou depois, e a
  *      resposta é 409 `CONFLITO` ("configure de novo"), **sem conferir o código nem contar tentativa**; o desafio sem
  *      versão (da entrada por e-mail) exige o segundo fator ativo;
@@ -127,6 +128,10 @@ export class SegundoFatorDoOperadorService {
 
   async entrar(pedido: PedidoSegundoFatorDeOperador, origem: OrigemDoSegundoFator): Promise<SessaoDeOperadorAberta> {
     const { banco, contador, emissorDeToken, dispositivo, ambiente } = this.dependencias
+    // O middleware abre o contexto em toda requisição HTTP. Sem ele é falha de montagem: recusa antes de gastar o desafio
+    // ou gravar qualquer coisa, em vez de inventar um `requisicaoId` para a linha de log do fim.
+    const requisicao = contextoAtual()
+    if (requisicao === undefined) throw new ErroDeDominio(CodigoDeErro.ERRO_INTERNO)
     const verificado = await this.#desafioConsumido(pedido.desafio, 'mfa')
     const refresh = randomBytes(BYTES_DO_REFRESH).toString('base64url')
     const cookieDeDispositivo = lerCookie(origem.cabecalhoCookie, COOKIE_DISPOSITIVO_DE_OPERADOR)
@@ -174,7 +179,7 @@ export class SegundoFatorDoOperadorService {
       case 'aberta': {
         if (!(await contador.zerar(desfecho.chave))) {
           const operadorId = verificado.operadorId
-          executarNoContexto({ ...(contextoAtual() ?? { requisicaoId: randomUUID() }), operadorId }, () => this.#logger.warn('operacao.contador_nao_zerado'))
+          executarNoContexto({ ...requisicao, operadorId }, () => this.#logger.warn('operacao.contador_nao_zerado'))
         }
         const { token, expiraEm } = await emissorDeToken.emitir({ operadorId: verificado.operadorId, sessaoId: desfecho.sessaoId })
         return {

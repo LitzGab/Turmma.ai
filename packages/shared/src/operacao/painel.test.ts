@@ -12,6 +12,8 @@ import {
   esquemaRespostaUsoDoPainel,
   MAXIMA_PAGINA_DO_PAINEL,
   MAXIMO_DE_REDES_DO_PAINEL,
+  REFAZER_CONVITE_POR_ESTADO,
+  REVOGAR_CONVITE_POR_ESTADO,
 } from './painel.js'
 
 const V4 = '3f1c8a52-6b0e-4d7a-9c21-5e8f0a1b2c3d'
@@ -107,5 +109,35 @@ describe('contratos do painel da operação (Tech Spec da A0b, seção 4)', () =
     expect(esquemaRespostaUsoDoPainel.safeParse({ ...resposta, itens: [{ ...resposta.itens[0], dia: { ...periodo, custo: 1 } }] }).success).toBe(false)
     for (const dia of ['2026-02-30', '23/09/2026', '2026-9-23']) expect(esquemaRespostaUsoDoPainel.safeParse({ ...resposta, dia }).success, dia).toBe(false)
     for (const mes of ['2026-13', '2026-9', '2026-09-01']) expect(esquemaRespostaUsoDoPainel.safeParse({ ...resposta, mes }).success, mes).toBe(false)
+  })
+})
+
+/**
+ * A matriz estado × ação do convite, escrita aqui por extenso como na tabela da Tech Spec da A0b (seção 5): o servidor
+ * decide por ela e a tela a espelha, e por isso ela não pode dizer outra coisa que a tabela.
+ */
+describe('a matriz do convite da coordenação é a da Tech Spec (A0b, seção 5)', () => {
+  it('revogar: `sem_convite` e `revogado` são `NAO_ENCONTRADO`, como a tabela e a rota respondem', () => {
+    expect(REVOGAR_CONVITE_POR_ESTADO).toEqual({
+      sem_convite: 'nao_encontrado',
+      pendente: 'revogar',
+      vencido: 'revogar',
+      revogado: 'nao_encontrado',
+      aceito: 'revogar',
+      sem_coordenacao: 'conflito',
+      ativa: 'conflito',
+    })
+  })
+
+  it('refazer: só `pendente` e `vencido`; o `sem_convite` (inalcançável, o id é de convite inexistente) fica em `conflito`', () => {
+    expect(REFAZER_CONVITE_POR_ESTADO).toEqual({
+      sem_convite: 'conflito',
+      pendente: 'refazer',
+      vencido: 'refazer',
+      revogado: 'conflito',
+      aceito: 'conflito',
+      sem_coordenacao: 'conflito',
+      ativa: 'conflito',
+    })
   })
 })

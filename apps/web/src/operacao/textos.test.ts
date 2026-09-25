@@ -41,9 +41,10 @@ describe('W10: as mensagens do painel para as falhas de rede e escola', () => {
     }
   })
 
-  it('o 401 leva à entrada com "Sua sessão terminou. Entre de novo…", o texto que a sessão do operador deixa na entrada', () => {
+  it('o 401 leva à entrada com "Sua sessão terminou. Entre de novo para continuar.", o texto que a sessão do operador deixa na entrada', () => {
+    // Por extenso, como no W10: se o catálogo mudar, o cenário deixa de ser verdade e este teste fica vermelho.
+    expect(TEXTO_DA_SESSAO_ENCERRADA).toBe('Sua sessão terminou. Entre de novo para continuar.')
     expect(TEXTO_DA_SESSAO_ENCERRADA).toBe(MENSAGENS_DE_ERRO.SESSAO_ENCERRADA)
-    expect(TEXTO_DA_SESSAO_ENCERRADA).toMatch(/^Sua sessão terminou\. Entre de novo/)
   })
 
   it('nenhuma mensagem de falha mostra o código, o status ou o identificador do erro', () => {

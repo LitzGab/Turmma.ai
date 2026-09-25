@@ -93,8 +93,8 @@ export const TEXTO_DA_ESCOLA_COM_CONVITE = 'Esta escola já tem convite. Use Ref
 export const TEXTO_DO_CONVITE_QUE_NAO_VALE = 'Esse convite já não vale. A lista foi atualizada.'
 
 /**
- * O `NAO_ENCONTRADO` do gerar: a escola do caminho não existe. No MVP nenhuma escola sai do sistema (F16), e por isso o
- * cenário W10 não o lista; o texto segue o dos outros dois, dizendo que a lista foi atualizada.
+ * O `NAO_ENCONTRADO` do gerar: a escola do caminho não existe (cenário W10). No MVP nenhuma escola sai do sistema (F16),
+ * e ele quase não aparece; o texto segue o dos outros dois, dizendo que a lista foi atualizada.
  */
 export const TEXTO_DA_ESCOLA_QUE_NAO_EXISTE = 'Essa escola não foi encontrada. A lista foi atualizada.'
 

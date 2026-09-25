@@ -86,8 +86,10 @@ antes de criar conta. Refazer grava só `convite.refeito`, no convite novo, com 
 revogando e gerando); a origem sai pelo `update` condicional (só em aberto), e o que ele não revoga é `CONFLITO`; em
 `sem_convite` não há convite a passar, e o id inexistente é `NAO_ENCONTRADO`, no refazer (tarefa 3.0) e no revogar (tarefa
 2.0): a escola do convite não é achada, e a resposta sai antes da matriz. Por isso a entrada `sem_convite` de
-`REFAZER_` e `REVOGAR_CONVITE_POR_ESTADO` (`conflito`) não é alcançada no fluxo normal (só se o expurgo apagasse o
-convite entre achar a escola e ler o estado: aí o revogar responde `NAO_ENCONTRADO`, e o refazer `CONFLITO`); na tela, `sem_convite` não
+`REFAZER_CONVITE_POR_ESTADO` (`conflito`) não é alcançada no fluxo normal (só se o expurgo apagasse o convite entre achar
+a escola e ler o estado: aí o refazer responde `CONFLITO`); a de `REVOGAR_CONVITE_POR_ESTADO` é `nao_encontrado`, a mesma
+resposta desta tabela, e a mesma corrida no revogar dá `NAO_ENCONTRADO` (correção `2026-09-25-acabamento-da-a0b`, que a
+alinhou; antes ela dizia `conflito` e a rota respondia `NAO_ENCONTRADO` por outro caminho). Na tela, `sem_convite` não
 oferece refazer nem revogar. Revogar em `revogado` fica `NAO_ENCONTRADO`, como no F1.
 
 Gerar em `aceito` e `sem_coordenacao` revoga o último convite na mesma transação, com `convite.revogado`

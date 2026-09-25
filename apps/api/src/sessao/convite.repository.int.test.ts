@@ -1,5 +1,6 @@
 import { ErroDeDominio, executarNoContexto } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
+import { sql, TransactionRollbackError } from 'drizzle-orm'
 import { createHash, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { BancadaDeSessoes } from '../../test/sessao-de-teste.js'
@@ -210,6 +211,29 @@ describe('ConviteRepository: o convite e o usuário convidado só na escola do c
     const usado = await convidado({ aceitoHaS: 10 })
     expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(usado.conviteId))).toBeUndefined()
     expect(await revogadoEm(usado.conviteId)).toBe(false)
+  })
+
+  it('revogarParaRefazer só alcança convite de coordenação: um convite em aberto de outro tipo, pelo id, fica em aberto', async () => {
+    const outro = await convidado({ aceitoHaS: null })
+    let visto: { devolvido: string | undefined; revogado: boolean | undefined } | undefined
+    // Até a A1, o check `convite_tipo_valido` só aceita `coordenador`. Dentro desta transação, que volta atrás no fim, o
+    // check sai e o convite passa a ser de outro tipo: sem `tipo = 'coordenador'` no `where`, o refazer o revogaria. O
+    // `alter table` trava a tabela `convite` até o rollback (milissegundos); os arquivos de integração rodam um por vez
+    // (`fileParallelism: false`), e nenhum outro espera por ela.
+    await expect(
+      bancada.banco.transaction(async (tx) => {
+        await tx.execute(sql`alter table convite drop constraint convite_tipo_valido`)
+        await tx.execute(sql`update convite set tipo = 'professor' where id = ${outro.conviteId}`)
+        const devolvido = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: escolaA }, () => new ConviteRepository(tx).revogarParaRefazer(outro.conviteId))
+        const linhas = await tx.execute<{ revogado: boolean }>(sql`select revogado_em is not null as revogado from convite where id = ${outro.conviteId}`)
+        visto = { devolvido, revogado: linhas.rows[0]?.revogado }
+        tx.rollback()
+      }),
+    ).rejects.toBeInstanceOf(TransactionRollbackError)
+    expect(visto).toEqual({ devolvido: undefined, revogado: false })
+    // O check voltou com a transação.
+    const { rows } = await bancada.pool.query<{ total: number }>("select count(*)::int as total from pg_constraint where conname = 'convite_tipo_valido'")
+    expect(rows[0]?.total).toBe(1)
   })
 
   it('sem escola no contexto, falha fechada', async () => {

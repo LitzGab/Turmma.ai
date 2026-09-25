@@ -112,13 +112,17 @@ export const REFAZER_CONVITE_POR_ESTADO: Readonly<Record<EstadoDaCoordenacao, 'r
   ativa: 'conflito',
 }
 
-/** Revogar (o último convite). `revogado` fica `NAO_ENCONTRADO`, como no F1. */
+/**
+ * Revogar (o último convite). `revogado` fica `NAO_ENCONTRADO`, como no F1. `sem_convite` também: o id que a rota recebe
+ * não acha convite de coordenação, e a resposta é `NAO_ENCONTRADO` antes de a matriz ser lida; a entrada diz o mesmo, para
+ * a matriz ser a tabela da Tech Spec, e é o que valeria se o convite sumisse entre achar a escola e ler o estado.
+ */
 export const REVOGAR_CONVITE_POR_ESTADO: Readonly<Record<EstadoDaCoordenacao, 'revogar' | 'conflito' | 'nao_encontrado'>> = {
   pendente: 'revogar',
   vencido: 'revogar',
   aceito: 'revogar',
   revogado: 'nao_encontrado',
-  sem_convite: 'conflito',
+  sem_convite: 'nao_encontrado',
   sem_coordenacao: 'conflito',
   ativa: 'conflito',
 }

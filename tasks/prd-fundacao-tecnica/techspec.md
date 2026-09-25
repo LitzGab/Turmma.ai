@@ -148,6 +148,10 @@ tardia não sobrescreve `ativo`, `concluido` ou `falhou`.
   bytes do prefixo `escolas/{id}/`.
   O `DEL` só apaga se a chave ainda tem o valor gravado. Os bytes medidos vão para o dia
   que acabou de fechar, e o mês leva o pico. Cada escola é gravada no contexto dela (11.0).
+  A escola que o banco recusa (inexistente, ou valor inválido) é pulada, contada em `uso.escola_ignorada` e logada só
+  por id, e as outras seguem; se todas as escolas encontradas (contador e storage) forem inexistentes no banco, o job
+  falha no fim, com `uso.nenhuma_escola_no_banco` (correções `2026-09-25-consolidacao-para-na-escola-inexistente` e
+  `2026-09-25-acabamento-da-a0b`). Com Redis, Postgres ou storage fora, falha também, e a fila tenta de novo.
 - **Agendamento:** `upsertJobScheduler` com `tz` numa fila `agendamentos` do worker-lote,
   cujo processador só grava o job pelo `Enfileirador` (lote, não urgente). O expurgo roda
   às 3h30. `npm run ops:uso` consulta o dia e o mês de uma escola (11.0).

@@ -267,7 +267,8 @@ export async function refazerConviteDaCoordenacao(
  * `ops:revogar-convite`, o mesmo caso de uso (RF2, RF19; Tech Spec da A0b, seção 5). A escola vem do convite, nunca do
  * argumento, e só convite `tipo = 'coordenador'` é achado. Numa transação, com o autor conferido como primeira
  * instrução, no contexto da escola, com a trava dela, e só então o estado:
- * - convite inexistente, de outro tipo, ou já revogado, e escola em `revogado`: `NAO_ENCONTRADO`, como no F1;
+ * - convite inexistente, de outro tipo, ou já revogado, e escola em `revogado` (ou em `sem_convite`, que só uma corrida
+ *   com o expurgo alcançaria): `NAO_ENCONTRADO`, como no F1;
  * - convite que não é o último da escola: `CONFLITO` (o convite mudou);
  * - `pendente`, `vencido`, `aceito`: revoga, com `convite.revogado`. No `aceito`, o aceite deixa de ativar no login;
  * - `sem_coordenacao`, `ativa`: `CONFLITO`, sem gravar nada.

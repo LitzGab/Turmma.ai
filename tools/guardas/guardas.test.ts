@@ -40,16 +40,32 @@ function marcas(codigo: string): string[] {
     .sort()
 }
 
-async function lintar(motor: ESLint, fixture: string, caminhoSimulado: string): Promise<string[]> {
+/** As mensagens das `regras` (por padrão, as das guardas e a das diretivas) que o ESLint deu na fixture, no caminho simulado. */
+async function lintar(motor: ESLint, fixture: string, caminhoSimulado: string, regras: ReadonlySet<string> = regrasObservadas): Promise<string[]> {
   const [resultado] = await motor.lintText(lerFixture(fixture), { filePath: join(raizRepositorio, caminhoSimulado) })
   if (resultado === undefined) throw new Error(`o ESLint não devolveu resultado para ${fixture}`)
   const fatais = resultado.messages.filter((mensagem: Linter.LintMessage) => mensagem.fatal === true)
   expect(fatais, `a fixture ${fixture} não compila`).toEqual([])
   return resultado.messages
-    .filter((mensagem) => mensagem.ruleId !== null && regrasObservadas.has(mensagem.ruleId))
+    .filter((mensagem) => mensagem.ruleId !== null && regras.has(mensagem.ruleId))
     .map((mensagem) => `${mensagem.line} ${mensagem.ruleId}`)
     .sort()
 }
+
+describe('processadores do worker: nenhuma afirmação de tipo (totais do expurgo, A0b)', () => {
+  it('reprova `{} as T` e o `Partial<T>` afirmado no fim; o objeto literal tipado e o `as const` passam', async () => {
+    const fixture = 'afirmacao-de-tipo-no-processador.ts'
+    const regras = new Set(['@typescript-eslint/consistent-type-assertions'])
+    expect(await lintar(eslint, fixture, 'apps/worker/src/processadores/x.ts', regras)).toEqual(marcasDeViolacao(fixture))
+  })
+
+  it('vale só nos processadores: fora deles, a mesma fixture passa (a regra não subiu para o repositório inteiro)', async () => {
+    const regras = new Set(['@typescript-eslint/consistent-type-assertions'])
+    for (const caminho of ['apps/api/src/sistema/x.ts', 'apps/worker/src/x.ts']) {
+      expect(await lintar(eslint, 'afirmacao-de-tipo-no-processador.ts', caminho, regras), caminho).toEqual([])
+    }
+  })
+})
 
 describe('guarda de espera do serviço do compose', () => {
   it('reprova subir serviço e medir sem esperar, e deixa passar quem espera ou usa --wait', async () => {

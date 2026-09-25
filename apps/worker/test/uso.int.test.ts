@@ -1,6 +1,7 @@
 import 'reflect-metadata'
 import { DeleteObjectCommand, DeleteObjectsCommand, PutObjectCommand, type S3Client } from '@aws-sdk/client-s3'
 import { ContadorDeUso, contextoAtual, executarNoContexto, UsoRepository, VALIDADE_DO_CONTADOR_SEGUNDOS, type UsoDoPeriodo } from '@educa/nucleo'
+import { CodigoDeFalhaDeJob } from '@educa/shared'
 import { Queue } from 'bullmq'
 import { randomUUID } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished } from 'vitest'
@@ -9,6 +10,7 @@ import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
 import { AGENDAMENTOS, criarDisparoDeAgendamento, FILA_DOS_AGENDAMENTOS, FUSO_DOS_AGENDAMENTOS, registrarAgendamentos } from '../src/agendamentos.js'
 import type { ConfiguracaoStorage } from '../src/config.js'
+import { FalhaDeJob } from '../src/falha-de-job.js'
 import { montarWorker, type WorkerMontado } from '../src/montagem.js'
 import { criarConsolidacaoDeUso, FALHAS_DE_STORAGE_SEGUIDAS_ATE_DESISTIR, TIPO_CONSOLIDAR_USO } from '../src/processadores/consolidar-uso.js'
 import { TIPO_EXPURGAR_ACESSO } from '../src/processadores/expurgar-acesso.js'
@@ -384,6 +386,75 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
       expect(await usoDoDia(escolaReal, '2026-09-15')).toEqual({ requisicoes: 4, jobs: 0, bytesStorage: 10 })
       expect(await bancada.redis.get(chaveOrfa)).toBe('5')
       expect(avisosDas([orfa])).toHaveLength(4)
+    })
+
+    it('todas as escolas encontradas inexistentes no banco (o worker apontado para outro banco): pula cada uma, e o job falha no fim, para aparecer como job falho e a fila tentar de novo', async () => {
+      const orfaA = `00000000-0000-4000-8000-${randomUUID().slice(-12)}`
+      const orfaB = `00000000-0000-4000-8000-${randomUUID().slice(-12)}`
+      const orfaC = `00000000-0000-4000-8000-${randomUUID().slice(-12)}`
+      // A órfã A no contador e no storage, a B só no storage, a C só no contador: três encontradas, duas pastas. O bucket de
+      // teste pode ter pasta de escola real de outro teste, e por isso a listagem é só a destas.
+      marcarRequisicoes(orfaA, 5)
+      marcarRequisicoes(orfaC, 1)
+      await aguardarContador(orfaA, '2026-09-15', 'req', 5)
+      await aguardarContador(orfaC, '2026-09-15', 'req', 1)
+      const storage = { listarEscolas: () => Promise.resolve([orfaA, orfaB]), bytesDaEscola: () => Promise.resolve(3) }
+
+      agora = QUARTA_2H
+      const falha = await consolidar(consolidacaoMedida({ storage })).then(
+        () => undefined,
+        (erro: unknown) => erro,
+      )
+
+      expect(falha).toBeInstanceOf(FalhaDeJob)
+      expect(falha).toMatchObject({ codigo: CodigoDeFalhaDeJob.ERRO_INTERNO, definitiva: false })
+      // Cada uma foi pulada e contada como antes, e nada foi gravado nem apagado.
+      expect(avisosDas([orfaA, orfaB, orfaC]).filter(({ origem }) => origem === 'storage')).toEqual([
+        { escolaId: orfaA, origem: 'storage', causa: 'escola_inexistente' },
+        { escolaId: orfaB, origem: 'storage', causa: 'escola_inexistente' },
+      ])
+      // O `SCAN` do contador devolve em ordem arbitrária: as duas do contador, em qualquer ordem.
+      expect(avisosDas([orfaA, orfaB, orfaC]).filter(({ origem }) => origem === 'contador')).toEqual(
+        expect.arrayContaining([
+          { escolaId: orfaA, origem: 'contador', causa: 'escola_inexistente' },
+          { escolaId: orfaC, origem: 'contador', causa: 'escola_inexistente' },
+        ]),
+      )
+      expect(await ignoradas()).toEqual({ 'contador/escola_inexistente': 2, 'storage/escola_inexistente': 2 })
+      expect(await bancada.redis.get(`${bancada.prefixo}:uso:2026-09-15:${orfaA}:req`)).toBe('5')
+      expect(await bancada.redis.get(`${bancada.prefixo}:uso:2026-09-15:${orfaC}:req`)).toBe('1')
+      // A linha que diz por que o job falhou: só a contagem das encontradas (contador e storage juntos), nenhum id.
+      const linhas = log.doEvento('uso.nenhuma_escola_no_banco')
+      expect(linhas).toEqual([expect.objectContaining({ encontradasTotal: 3 })])
+      for (const orfa of [orfaA, orfaB, orfaC]) expect(JSON.stringify(linhas)).not.toContain(orfa)
+    })
+
+    it('a escola real conta de onde vier: só no contador (com a órfã só no storage), ou só no storage (com a órfã só no contador), o job termina', async () => {
+      const [real, orfaDoStorage, orfaDoContador] = [await novaEscola(), `00000000-0000-4000-8000-${randomUUID().slice(-12)}`, `00000000-0000-4000-8000-${randomUUID().slice(-12)}`]
+      marcarRequisicoes(real, 2)
+      await aguardarContador(real, '2026-09-15', 'req', 2)
+      agora = QUARTA_2H
+      await consolidar(consolidacaoMedida({ storage: { listarEscolas: () => Promise.resolve([orfaDoStorage]), bytesDaEscola: () => Promise.resolve(3) } }))
+      expect((await usoDoDia(real, '2026-09-15')).requisicoes).toBe(2)
+
+      agora = TERCA_10H
+      marcarRequisicoes(orfaDoContador, 4)
+      await aguardarContador(orfaDoContador, '2026-09-15', 'req', 4)
+      agora = QUARTA_2H
+      await consolidar(consolidacaoMedida({ storage: { listarEscolas: () => Promise.resolve([real]), bytesDaEscola: () => Promise.resolve(8) } }))
+      expect((await usoDoDia(real, '2026-09-15')).bytesStorage).toBe(8)
+      expect(avisosDas([orfaDoStorage, orfaDoContador])).toEqual([
+        { escolaId: orfaDoStorage, origem: 'storage', causa: 'escola_inexistente' },
+        { escolaId: orfaDoContador, origem: 'contador', causa: 'escola_inexistente' },
+      ])
+      expect(log.doEvento('uso.nenhuma_escola_no_banco')).toEqual([])
+    })
+
+    it('sem escola nenhuma encontrada (nenhum contador, storage vazio), a consolidação termina sem falha', async () => {
+      agora = QUARTA_2H
+      await consolidar(consolidacaoMedida({ contador: { lerDiasFechados: () => Promise.resolve([]), apagarConsolidado: () => Promise.resolve(true) }, storage: { listarEscolas: () => Promise.resolve([]), bytesDaEscola: () => Promise.resolve(0) } }))
+      expect(log.doEvento('uso.nenhuma_escola_no_banco')).toEqual([])
+      expect(log.doEvento('uso.consolidado')).toEqual([expect.objectContaining({ diasTotal: 0, escolasTotal: 0, ignoradasTotal: 0 })])
     })
 
     it('valor inválido num contador (texto, dia que não existe, negativo) pula só aquele dia daquela escola, e a escola seguinte é consolidada', async () => {

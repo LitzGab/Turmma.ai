@@ -1,10 +1,9 @@
 import { randomBytes } from 'node:crypto'
 import { BYTES_DO_TOKEN_DE_CONVITE, hashDoToken } from '../sessao/hash-do-token.js'
 
-/**
- * O token do convite de operador é a mesma peça do convite do coordenador (F1): 256 bits sorteados, em base64url, e o
- * banco guarda só o SHA-256 em hex. Uma implementação só, para o comando que gera e o aceite que procura não divergirem.
- */
+// O token do convite de operador é a mesma peça do convite do coordenador (F1), de `../sessao/hash-do-token.ts`: 256 bits
+// sorteados, em base64url, e o banco guarda só o SHA-256 em hex. Uma implementação só, para o comando que gera e o aceite
+// que procura não divergirem.
 
 /** Um token novo, em base64url, para o link do convite de operador. O valor vai para o arquivo 0600 do comando. */
 export function sortearTokenDeConvite(): string {

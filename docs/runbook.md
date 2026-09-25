@@ -394,6 +394,15 @@ outras. Por causa:
    Redis (`origem="contador"`) não é apagado: ele vence sozinho em 35 dias. Se o id for de uma escola que devia existir,
    pare: é o worker apontado para outro banco, ou uma restauração pela metade. Confira o `BANCO_URL` do worker-lote antes
    de qualquer outra coisa. Nada foi perdido, porque o contador continua no Redis até vencer.
+   **Todas as escolas da noite inexistentes:** quando nenhuma escola encontrada (no contador e no storage) existe no banco,
+   a consolidação pula cada uma como acima, mas o job falha no fim, com `uso.nenhuma_escola_no_banco` no log (só a
+   contagem, `encontradasTotal`), e aparece como job falho em `job_registro`; a fila tenta de novo e falha igual. Sem
+   alerta: até existir o de rotina parada (pendência "alerta para rotina do sistema que parou de rodar", `TODO.md`), só
+   quem procura em `job_registro` ou no log vê. Primeiro, o caso do `BANCO_URL` acima: o primeiro passo é o mesmo.
+   Corrigido o banco, rode a consolidação de novo à mão (D49); os contadores ainda estão no Redis. Se o banco está certo e
+   todos os ids da noite são de escolas eliminadas (uma noite sem requisição de escola nenhuma, com a pasta vazia de uma
+   eliminada no storage, basta), é o resto de uso que a eliminação ainda não apaga (pendência "Eliminar escola apaga
+   também o resto de uso dela", `TODO.md`): apague a pasta `escolas/<id>/` vazia no storage.
 2. `valor_invalido`: um contador com texto, ou com um dia que não existe na chave. Nada no sistema escreve assim: é chave
    gravada à mão ou corrompida. Veja com `redis-cli --scan --pattern 'uso:*:<id>:*'` no Redis de fila e apague a chave errada.
    O contador válido da mesma escola, em outro dia, foi gravado normalmente.

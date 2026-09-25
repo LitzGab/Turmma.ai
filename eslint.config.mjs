@@ -42,11 +42,13 @@ export default tseslint.config(
   },
   {
     // Os processadores do worker montam o registro de cada job (os totais do expurgo, A0b, tarefa 9.0) como objeto
-    // literal com o tipo declarado: `{} as Record<…>` esconderia do compilador a chave que faltasse.
+    // literal com o tipo declarado: `{} as Record<…>` esconderia do compilador a chave que faltasse, e um
+    // `Partial<…>` preenchido no laço e afirmado no fim (`t as Record<…>`) também. Por isso nenhuma afirmação de tipo
+    // (`as const` continua valendo).
     files: ['apps/worker/src/processadores/**/*.ts'],
     ignores: ['**/*.test.ts'],
     rules: {
-      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'as', objectLiteralTypeAssertions: 'never' }],
+      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
     },
   },
   {

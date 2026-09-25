@@ -104,9 +104,10 @@ o estado da primeira coordenação e números: turmas, professores ativos e alun
 infra (requisições, jobs e bytes de storage) do último dia fechado e do mês dele. Nada de nome, e-mail ou matrícula de
 pessoa, nem nome de turma; o contrato de saída é estrito, e o teste I6 da A0b semeia sentinelas em cada tabela de pessoa e
 confere que nenhuma resposta nem linha de log as traz. A contagem não identifica ninguém e não gera auditoria de leitura.
-O único dado de pessoa que passa pelo painel é o nome e o e-mail da coordenadora que o operador digita no convite (linha
-"Convite de coordenador" e a conta global, acima). É o que respondemos quando a escola pergunta o que nós, como
-operadores, vemos (D61).
+O único dado de pessoa da escola que passa pelo painel é o nome e o e-mail da coordenadora que o operador digita no
+convite (linha "Convite de coordenador" e a conta global, acima); o do próprio operador (e-mail, senha e segundo fator,
+na entrada, e o nome e o apelido, na sessão) está na linha "Conta de operador Turmma".
+É o que respondemos quando a escola pergunta o que nós, como operadores, vemos (D61).
 
 **Aluno não tem e-mail nem telefone no sistema.** Contato é sempre do responsável. Quem
 propuser adicionar precisa justificar por escrito e atualizar esta tabela.

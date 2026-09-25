@@ -18,6 +18,7 @@ import { COOKIE_SESSAO_DE_OPERADOR } from '../src/operacao/cookie-de-operador.js
 import { verificarDesafioDeOperador } from '../src/operacao/desafio-de-operador.js'
 import { COOKIE_DISPOSITIVO_DE_OPERADOR, cookieDeDispositivoDeOperador } from '../src/operacao/dispositivo-de-operador.js'
 import { PREFIXO_DO_CONTADOR_DA_OPERACAO } from '../src/operacao/entrada.service.js'
+import { SegundoFatorDoOperadorService } from '../src/operacao/segundo-fator.service.js'
 import { gerarConviteDeOperador } from '../src/ops/operador.js'
 import { ContadorDeTentativas, type OrigemDaTentativa } from '../src/sessao/contador-de-tentativas.js'
 import { COOKIE_SESSAO } from '../src/sessao/cookies.js'
@@ -370,6 +371,18 @@ describe('segundo fator do operador: configurar e entrar com código (tarefa 7.0
       const texto = JSON.stringify(linhas[0])
       for (const daPessoa of [apelido, nome, `${apelido}@turmma.invalid`, chave, chave.split(':')[1] ?? chave]) expect(texto).not.toContain(daPessoa)
       expect(Object.keys(linhas[0] ?? {}).sort()).toEqual(['level', 'msg', 'operadorId', 'origem', 'requisicaoId', 'servico', 'time'])
+    })
+
+    it('fora do contexto da requisição (falha de montagem), `entrar` recusa com ERRO_INTERNO antes de tudo: o desafio não é gasto e nenhuma sessão abre', async () => {
+      const { operadorId } = await operadores.operador()
+      const { base32 } = await ativarNoBanco(operadores.pool, operadorId)
+      const pedido = { desafio: await desafio(operadorId, 'mfa'), codigo: codigoDoPasso(base32, passoAtual()) }
+      // O middleware abre o contexto em toda requisição HTTP; chamado direto, sem ele, o serviço não inventa um.
+      const servico = app.get(SegundoFatorDoOperadorService)
+      await expect(servico.entrar(pedido, { cabecalhoCookie: undefined, ip: '203.0.113.9' })).rejects.toMatchObject({ codigo: CodigoDeErro.ERRO_INTERNO })
+      expect((await estadoDoOperador(operadores.pool, operadorId)).sessoesAbertas).toBe(0)
+      // O desafio não foi gasto: a mesma entrada, pela rota, abre a sessão.
+      expect((await entrar(url, pedido)).status).toBe(200)
     })
 
     it('com o Redis zerando, a mesma entrada não escreve a linha', async () => {
