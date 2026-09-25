@@ -138,7 +138,8 @@ casca da operação; teste prova, nos dois sentidos, que credencial de uma área
 igual a rota inexistente; toda entrada e toda mudança de operador ficam registradas; e o `apps/web`
 inteiro está na pele da D72 com o e2e do F1 verde.
 
-## A0b — `apresentacao-painel` [ ]
+## A0b — `apresentacao-painel` [x]
+Concluída em 25/09/2026, validada em tasks/prd-apresentacao-painel/validacao.md.
 **Depende de:** A0
 
 O painel da operação (D76). Cria rede e escola; gera, revoga e refaz o convite da primeira

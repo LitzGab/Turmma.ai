@@ -1,7 +1,7 @@
 # Tech Spec — Painel da operação Turmma (A0b)
 
 **PRD:** `tasks/prd-apresentacao-painel/prd.md`
-**Status:** aprovada (24/09/2026, `/revisar-spec` rodada 6); clarificações decididas por Claude, com delegação do Joaquim (**Decisão**).
+**Status:** implementada em 25/09/2026 (aprovada em 24/09/2026, `/revisar-spec` rodada 6); clarificações decididas por Claude, com delegação do Joaquim (**Decisão**).
 **Acerto ao código:** 25/09/2026, correção `2026-09-25-spec-da-a0b-atras-do-codigo`, a partir da validação (rodada 1,
 seção 4): seções 3, 5 (matriz), 7, 7c e 11, com as decisões que as tarefas tomaram e o código cumpre.
 
