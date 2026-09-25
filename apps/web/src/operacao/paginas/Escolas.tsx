@@ -1,4 +1,4 @@
-import { ESCOLAS_POR_PAGINA, type ConsultaDoPainel, type EscolaDoPainel, type OrdemDoPainel } from '@educa/shared'
+import type { ConsultaDoPainel, EscolaDoPainel } from '@educa/shared'
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useSearch } from 'wouter'
@@ -6,21 +6,19 @@ import { Botao } from '../../componentes/Botao'
 import { EstadoCarregando, EstadoVazio } from '../../componentes/estado'
 import { formatarNumero, formatarQuantidade } from '../../formatar'
 import { acoesDoConvite, ROTULO_DA_ACAO, type AcaoDoConvite } from '../acoes-do-convite'
-import { buscaDaConsulta, consultaDasEscolas, lerConsultaDaTela } from '../api/painel'
+import { buscaDaConsulta, consultaDasEscolas, lerConsultaDaTela, paginasDoTotal } from '../api/painel'
 import { INICIO_DA_OPERACAO } from '../caminhos'
 import { CLASSES_DO_BOTAO_SECUNDARIO } from '../componentes/botao-secundario'
 import { ErroDaOperacao } from '../componentes/CascaDaOperacao'
 import { ConfirmarConvite } from '../componentes/ConfirmarConvite'
 import { GerarConvite, RefazerConvite } from '../componentes/DialogoDoConvite'
+import { PaginasDaLista, SeletorDeOrdem, VazioAlemDaUltima } from '../componentes/NavegacaoDaLista'
 import { useDialogoDaTela } from '../dialogo-aberto'
 import { CLASSES_DO_TOM, TEXTO_DO_ESTADO, TOM_DO_ESTADO } from '../estados-da-escola'
 import { TEXTO_DA_LISTA_VAZIA } from '../textos'
 import { useTituloDaPagina } from '../titulo'
 import { NovaEscola } from './NovaEscola'
 import { NovaRede } from './NovaRede'
-
-
-const ROTULO_DA_ORDEM: Readonly<Record<OrdemDoPainel, string>> = { nome: 'Nome', uso: 'Mais uso no mês' }
 
 /** O estado da coordenação em texto, com a cor de reforço da família dele (regra 50, item 11). */
 function Estado({ escola }: { escola: EscolaDoPainel }) {
@@ -212,7 +210,7 @@ export function Escolas() {
   }
 
   const dados = escolas.data
-  const paginas = dados === undefined ? 1 : Math.max(1, Math.ceil(dados.total / ESCOLAS_POR_PAGINA))
+  const paginas = paginasDoTotal(dados?.total ?? 0)
   const trocando = escolas.isPlaceholderData
 
   return (
@@ -224,24 +222,7 @@ export function Escolas() {
             Nova rede
           </button>
         </div>
-        <div role="group" aria-label="Ordenar as escolas por" className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-sutil" aria-hidden="true">
-            Ordenar por
-          </span>
-          {(['nome', 'uso'] as const).map((ordem) => (
-            <button
-              key={ordem}
-              type="button"
-              aria-pressed={consulta.ordem === ordem}
-              onClick={() => irPara({ pagina: 1, ordem })}
-              className={`inline-flex min-h-11 items-center justify-center rounded-full border px-4 py-2 text-sm font-medium ${
-                consulta.ordem === ordem ? 'border-noite bg-noite text-white' : 'border-borda-campo bg-superficie text-tinta hover:bg-realce-suave'
-              }`}
-            >
-              {ROTULO_DA_ORDEM[ordem]}
-            </button>
-          ))}
-        </div>
+        <SeletorDeOrdem ordem={consulta.ordem} aoEscolher={(ordem) => irPara({ pagina: 1, ordem })} />
       </div>
 
       <div ref={regiaoDoAnuncio} tabIndex={-1} role="status">{anuncio !== '' && <p className="rounded-controle border border-ok bg-ok-cx p-3 text-ok wrap-anywhere">{anuncio}</p>}</div>
@@ -253,41 +234,14 @@ export function Escolas() {
       ) : dados === undefined || dados.total === 0 ? (
         <EstadoVazio titulo={TEXTO_DA_LISTA_VAZIA.titulo} descricao={TEXTO_DA_LISTA_VAZIA.descricao} acao={{ rotulo: 'Nova rede', aoAcionar: () => dialogo.abrir('rede') }} />
       ) : dados.itens.length === 0 ? (
-        <EstadoVazio
-          titulo="Não há escolas nesta página."
-          descricao={`A lista tem ${formatarQuantidade(paginas, 'página', 'páginas')}.`}
-          acao={{ rotulo: 'Ir para a primeira página', aoAcionar: () => irPara({ pagina: 1, ordem: consulta.ordem }) }}
-        />
+        <VazioAlemDaUltima paginas={paginas} aoIrParaAPrimeira={() => irPara({ pagina: 1, ordem: consulta.ordem })} />
       ) : (
         <section aria-label="Lista de escolas" aria-busy={trocando} className="flex flex-col gap-4">
           {escolas.isError && <ErroDaOperacao erro={escolas.error} aoTentarDeNovo={() => void escolas.refetch()} tentando={escolas.isFetching} />}
           <p className="text-sm text-sutil">{formatarQuantidade(dados.total, 'escola', 'escolas')}</p>
           <Tabela escolas={dados.itens} aoAcionar={dialogo.abrir} focarNaEscola={focarNaEscola} />
           <Cartoes escolas={dados.itens} aoAcionar={dialogo.abrir} focarNaEscola={focarNaEscola} />
-          <nav aria-label="Páginas da lista" className="flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              disabled={consulta.pagina <= 1 || trocando}
-              onClick={() => irPara({ pagina: consulta.pagina - 1, ordem: consulta.ordem })}
-              className={`${CLASSES_DO_BOTAO_SECUNDARIO} disabled:border-inativo disabled:text-inativo`}
-            >
-              Anterior
-            </button>
-            <p className="text-sm text-apoio">
-              Página {formatarNumero(consulta.pagina)} de {formatarNumero(paginas)}
-              <span role="status" className="sr-only">
-                {trocando ? 'Carregando a página…' : ''}
-              </span>
-            </p>
-            <button
-              type="button"
-              disabled={consulta.pagina >= paginas || trocando}
-              onClick={() => irPara({ pagina: consulta.pagina + 1, ordem: consulta.ordem })}
-              className={`${CLASSES_DO_BOTAO_SECUNDARIO} disabled:border-inativo disabled:text-inativo`}
-            >
-              Próxima
-            </button>
-          </nav>
+          <PaginasDaLista rotulo="Páginas da lista" pagina={consulta.pagina} paginas={paginas} trocando={trocando} aoIr={(pagina) => irPara({ pagina, ordem: consulta.ordem })} />
         </section>
       )}
 

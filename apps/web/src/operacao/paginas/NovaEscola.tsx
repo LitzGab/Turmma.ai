@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Botao } from '../../componentes/Botao'
 import { Campo } from '../../componentes/Campo'
 import { EstadoCarregando } from '../../componentes/estado'
-import { CHAVE_DAS_ESCOLAS, consultaDasRedes, criarEscolaNoPainel } from '../api/painel'
+import { CHAVE_DAS_ESCOLAS, CHAVE_DO_USO, consultaDasRedes, criarEscolaNoPainel } from '../api/painel'
 import { ErroDaOperacao } from '../componentes/CascaDaOperacao'
 import { CLASSES_DO_BOTAO_SECUNDARIO } from '../componentes/botao-secundario'
 import { DialogoDaOperacao } from '../componentes/DialogoDaOperacao'
@@ -64,7 +64,8 @@ export function NovaEscola({ aoFechar, aoCriar, aoPedirNovaRede, redeSugeridaId 
   const criar = useMutation({
     mutationFn: criarEscolaNoPainel,
     onSuccess: async (_resposta, pedido) => {
-      await clienteDeConsultas.invalidateQueries({ queryKey: CHAVE_DAS_ESCOLAS })
+      // A escola nova entra na lista e no Uso (com zero): as duas deixam de valer, e a próxima visita ao Uso a traz.
+      await Promise.all([clienteDeConsultas.invalidateQueries({ queryKey: CHAVE_DAS_ESCOLAS }), clienteDeConsultas.invalidateQueries({ queryKey: CHAVE_DO_USO })])
       aoCriar({ id: pedido.id, nome: pedido.nome })
     },
     onError: (erro, pedido) => {

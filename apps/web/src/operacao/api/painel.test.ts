@@ -99,6 +99,43 @@ describe('a página e a ordem da barra de endereço (Tech Spec da A0b, seção 9
   })
 })
 
+describe('o uso por escola (tarefa 8.0)', () => {
+  const USO = {
+    id: ESCOLA.id,
+    nome: ESCOLA.nome,
+    dia: { requisicoes: 10, jobs: 2, bytesStorage: 1024 },
+    mes: { requisicoes: 300, jobs: 40, bytesStorage: 2048 },
+  }
+
+  it('o GET do uso leva a página e a ordem da tela, com o token da sessão, e cada consulta tem a sua chave, fora da da lista', async () => {
+    const resposta = { itens: [USO], pagina: 2, total: 26, dia: '2026-09-23', mes: '2026-09' }
+    fila.push({ status: 200, corpo: resposta })
+    const opcoes = m.painel.consultaDoUso({ pagina: 2, ordem: 'uso' })
+    expect(await new QueryClient().fetchQuery(opcoes)).toEqual(resposta)
+    expect(chamadas).toEqual([{ caminho: '/v1/operacao/uso?pagina=2&ordem=uso', metodo: 'GET', corpo: undefined, autorizacao: 'Bearer token-de-acesso' }])
+    expect(opcoes.queryKey).not.toEqual(m.painel.consultaDoUso({ pagina: 2, ordem: 'nome' }).queryKey)
+    expect(opcoes.queryKey).not.toEqual(m.painel.consultaDoUso({ pagina: 1, ordem: 'uso' }).queryKey)
+    // A criação da escola invalida todas as páginas do uso pelo prefixo; e o uso não se confunde com a lista da mesma página.
+    expect(opcoes.queryKey.slice(0, m.painel.CHAVE_DO_USO.length)).toEqual([...m.painel.CHAVE_DO_USO])
+    expect(opcoes.queryKey).not.toEqual(m.painel.consultaDasEscolas({ pagina: 2, ordem: 'uso' }).queryKey)
+  })
+
+  it('a resposta do uso fora do contrato (um campo de pessoa a mais, ou sem o dia de referência) não chega à tela', async () => {
+    fila.push({ status: 200, corpo: { itens: [{ ...USO, coordenadora: 'Nome de pessoa' }], pagina: 1, total: 1, dia: '2026-09-23', mes: '2026-09' } })
+    await expect(new QueryClient().fetchQuery(m.painel.consultaDoUso({ pagina: 1, ordem: 'nome' }))).rejects.toMatchObject({ codigo: 'ERRO_INTERNO' })
+    fila.push({ status: 200, corpo: { itens: [USO], pagina: 1, total: 1 } })
+    await expect(new QueryClient().fetchQuery(m.painel.consultaDoUso({ pagina: 1, ordem: 'nome' }))).rejects.toMatchObject({ codigo: 'ERRO_INTERNO' })
+  })
+
+  it('as páginas do total: ao menos uma, e a 26ª escola abre a segunda', () => {
+    expect(m.painel.paginasDoTotal(0)).toBe(1)
+    expect(m.painel.paginasDoTotal(1)).toBe(1)
+    expect(m.painel.paginasDoTotal(25)).toBe(1)
+    expect(m.painel.paginasDoTotal(26)).toBe(2)
+    expect(m.painel.paginasDoTotal(30)).toBe(2)
+  })
+})
+
 describe('as criações com o id do pedido', () => {
   it('criar rede e criar escola mandam o pedido inteiro, com o id que veio do diálogo', async () => {
     const rede = { id: '9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d', nome: 'Rede sintética', tipo: 'grupo' as const }

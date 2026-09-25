@@ -86,3 +86,8 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-25 07:41:00 | `privacy-guardian` | 2ª | APROVADO | `7_task` | nenhuma nova. As três da 1ª rodada continuam para o `/validar`: |
 | 2026-09-25 07:41:19 | `frontend-reviewer` | 2ª | APROVADO | `7_task` | Quando o foco vai para o anúncio da página, ele pode estar vazio ou com um texto antigo. Isso acontece no caminho do conflito quando a escola já saiu da… |
 | 2026-09-25 07:41:31 | `revisor-geral` | 2ª | APROVADO | `7_task` | `Escolas.tsx:72-74`. O `ref={(botao) => () => …}` depende de o React 19 aceitar que o `ref` devolva uma limpeza, e de a limpeza rodar antes de o nó ser… |
+| 2026-09-25 09:23:16 | `test-engineer` | 1ª | APROVADO | `8_task` | Risco de teste instável no W6 (`e2e/operacao-uso.spec.ts:118-121`; o mesmo padrão existe em `e2e/operacao-escolas.spec.ts:93`). |
+| 2026-09-25 09:39:52 | `test-engineer` | 2ª | APROVADO | `8_task` | O título do caso novo em `formatos.test.ts` diz "volta como veio, sem quebrar a tela", mas o teste só prova a referência sem hífen. Em… |
+| 2026-09-25 09:55:08 | `test-engineer` | 3ª | APROVADO | `8_task` | Um ano de `0000` a `0099` bate na expressão, mas o `Date.UTC` o joga para 1900+ (`0026-09` sairia "setembro de 1926"). O contrato já recusa esse formato, então… |
+| 2026-09-25 09:56:20 | `revisor-geral` | 1ª | APROVADO | `8_task` | Vazio do Uso copia o componente comum. `apps/web/src/operacao/paginas/Uso.tsx:114-129`: o `VazioDoUso` repete a marcação do `EstadoVazio`… |
+| 2026-09-25 09:56:48 | `frontend-reviewer` | 1ª | APROVADO | `8_task` | Números longos podem quebrar no meio entre 640 e cerca de 760 px (`Uso.tsx:39` e `:75`). |

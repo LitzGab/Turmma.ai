@@ -136,6 +136,16 @@ export const TEXTO_DO_NOME_INVALIDO = 'Escreva o nome, com até 200 caracteres.'
 /** A lista vazia de verdade (nenhuma escola no sistema): o vazio convida a começar pela rede (cenário W7). */
 export const TEXTO_DA_LISTA_VAZIA = { titulo: 'Nenhuma escola ainda.', descricao: 'Comece criando a rede.' } as const
 
+/**
+ * O Uso sem escola nenhuma: o uso nasce com a escola, e o caminho é a tela Escolas, por um link (cenário W7). A escola
+ * nova aparece aqui já no dia em que é criada, com zero, e o uso dela entra depois da consolidação.
+ */
+export const TEXTO_DO_USO_VAZIO = {
+  titulo: 'Nenhuma escola ainda.',
+  descricao: 'O uso de cada escola aparece aqui assim que ela é criada.',
+  link: 'Ir para Escolas',
+} as const
+
 /** O diálogo Nova escola sem rede nenhuma: a escola pertence a uma rede, que vem antes (cenário W7). */
 export const TEXTO_SEM_REDE = 'Crie a rede primeiro. A escola pertence a uma rede, mesmo quando é a única dela.'
 

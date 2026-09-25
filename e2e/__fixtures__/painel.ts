@@ -135,6 +135,17 @@ export async function semearPainel(): Promise<PainelSemeado> {
   })
 }
 
+/**
+ * Troca as tarefas em segundo plano e os bytes da linha de uso que o `semearPainel` deu à escola no dia de referência (a
+ * única linha dela no mês): a tela Uso mostra os dois no formato de cada um (A0b, tarefa 8.0).
+ */
+export async function definirUsoDaEscolaSemeada(escolaId: string, uso: { readonly jobs: number; readonly bytesStorage: number }): Promise<void> {
+  await comBanco(async (banco) => {
+    const { rowCount } = await banco.query('update uso_infra_diario set jobs = $2, bytes_storage = $3 where escola_id = $1', [escolaId, uso.jobs, uso.bytesStorage])
+    if (rowCount !== 1) throw new Error('a escola semeada não tem a linha de uso do dia de referência')
+  })
+}
+
 /** Apaga o que `semearPainel` criou: uso, convites, usuários, contas, escolas e a rede. */
 export async function removerPainel(painel: PainelSemeado): Promise<void> {
   const escolas = painel.escolas.map((escola) => escola.id)

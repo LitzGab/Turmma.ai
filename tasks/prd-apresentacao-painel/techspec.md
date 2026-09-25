@@ -181,7 +181,9 @@ As ações do convite na linha saem da matriz da seção 5, que mora em `@educa/
 `REVOGAR_CONVITE_POR_ESTADO`), junto com os 72 h: o servidor e a tela leem a mesma (tarefa 7.0). Fechar o convite com o
 link em risco (pedido no ar, ou link sem cópia) pergunta; o segundo pedido de fechar, na pergunta, fecha (tarefa 7.0).
 
-A navegação da casca nasce com Escolas; o item Uso entra com a tela dele, na 8.0 (tarefa 6.0). O `/eu` e a tela carregam
+A navegação da casca nasce com Escolas; o item Uso entra com a tela dele, na 8.0 (tarefa 6.0). O Uso mostra a referência que a API devolveu (o dia e o mês), bytes na base 1024 com uma casa ("1,2 GB"), e a
+escola sem uso com zero; a ordem e as páginas das duas telas são as mesmas peças, e criar escola deixa velho também o cache
+do Uso (tarefa 8.0). O `/eu` e a tela carregam
 juntos: o 503 do `/eu` fica no alto, com "Tentar de novo", e a tela embaixo (tarefa 6.0).
 
 ## 10. Testes

@@ -21,6 +21,7 @@ import { Convite } from './paginas/Convite'
 import { Entrar } from './paginas/Entrar'
 import { Mfa } from './paginas/Mfa'
 import { Escolas } from './paginas/Escolas'
+import { Uso } from './paginas/Uso'
 import { useTituloDaPagina } from './titulo'
 
 /**
@@ -99,6 +100,13 @@ export default function RotasDaOperacao() {
         <Route path={ROTAS_DA_OPERACAO.entrar} component={Entrar} />
         <Route path={ROTAS_DA_OPERACAO.mfa} component={Mfa} />
         <Route path={ROTAS_DA_OPERACAO.configurarMfa} component={ConfigurarMfa} />
+        <Route path={ROTAS_DA_OPERACAO.uso}>
+          <Protegida>
+            <ComSessao titulo="Uso">
+              <Uso />
+            </ComSessao>
+          </Protegida>
+        </Route>
         <Route path={ROTAS_DA_OPERACAO.inicio}>
           <Protegida>
             <ComSessao titulo="Escolas">

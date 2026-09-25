@@ -6,8 +6,10 @@
 export const BASE_DA_OPERACAO = '/operacao'
 
 export const ROTAS_DA_OPERACAO = {
-  /** A casca da operação, com a sessão aberta. */
+  /** A casca da operação, com a sessão aberta: a tela Escolas. */
   inicio: '/',
+  /** O uso de infra por escola (A0b, tarefa 8.0), com a página e a ordem na query string. */
+  uso: '/uso',
   /** O link do `ops:operador convite`, com o token no `#`, que a tela tira da barra antes de qualquer chamada. */
   convite: '/convite',
   entrar: '/entrar',
@@ -22,3 +24,6 @@ export const ROTAS_DA_OPERACAO = {
  * barra no fim, e o endereço da casca é um só.
  */
 export const INICIO_DA_OPERACAO = `~${BASE_DA_OPERACAO}`
+
+/** A tela Uso pelo caminho absoluto, como `INICIO_DA_OPERACAO`: é o link da navegação e o destino da troca de página. */
+export const USO_DA_OPERACAO = `~${BASE_DA_OPERACAO}${ROTAS_DA_OPERACAO.uso}`

@@ -3,6 +3,8 @@ import {
   esquemaRespostaCriadoNoPainel,
   esquemaRespostaEscolasDoPainel,
   esquemaRespostaRedesDoPainel,
+  esquemaRespostaUsoDoPainel,
+  ESCOLAS_POR_PAGINA,
   MAXIMA_PAGINA_DO_PAINEL,
   ORDENS_DO_PAINEL,
   type ConsultaDoPainel,
@@ -18,8 +20,8 @@ import { SEM_CORPO } from '../../api/cliente'
 import { chamarComSessaoDeOperador } from './sessao'
 
 /**
- * O painel da operação na web (Tech Spec da A0b, seções 4 e 9): a lista de escolas, as redes do diálogo Nova escola, as
- * duas criações e o convite da coordenação (gerar, refazer, revogar). Tudo pela sessão do operador, com os contratos de
+ * O painel da operação na web (Tech Spec da A0b, seções 4 e 9): a lista de escolas, o uso por escola, as redes do diálogo
+ * Nova escola, as duas criações e o convite da coordenação (gerar, refazer, revogar). Tudo pela sessão do operador, com os contratos de
  * `packages/shared` (regra 00, item 6). As chaves começam por `operacao`, no cache próprio da área, que se esvazia
  * inteiro quando a sessão acaba ou muda de dono.
  */
@@ -27,6 +29,7 @@ import { chamarComSessaoDeOperador } from './sessao'
 export const CAMINHO_DAS_REDES = '/v1/operacao/redes'
 export const CAMINHO_DAS_ESCOLAS = '/v1/operacao/escolas'
 export const CAMINHO_DOS_CONVITES = '/v1/operacao/convites'
+export const CAMINHO_DO_USO = '/v1/operacao/uso'
 
 /** A consulta padrão da lista: a primeira página, por nome. */
 export const CONSULTA_PADRAO: ConsultaDoPainel = { pagina: 1, ordem: 'nome' }
@@ -66,15 +69,34 @@ export function consultaDasEscolas(consulta: ConsultaDoPainel) {
   })
 }
 
+/**
+ * `GET /v1/operacao/uso`: a página do uso por escola, com o total e o dia e o mês de referência que a API escolheu. A
+ * troca de página ou de ordem mantém a anterior na tela, como na lista.
+ */
+export function consultaDoUso(consulta: ConsultaDoPainel) {
+  return queryOptions({
+    queryKey: ['operacao', 'uso', consulta.ordem, consulta.pagina],
+    queryFn: ({ signal }) => chamarComSessaoDeOperador(`${CAMINHO_DO_USO}?${buscaDaConsulta(consulta)}`, esquemaRespostaUsoDoPainel, { sinal: signal }),
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** Quantas páginas de 25 o total dá, e ao menos uma: é o "Página N de M" da lista e do uso. */
+export function paginasDoTotal(total: number): number {
+  return Math.max(1, Math.ceil(total / ESCOLAS_POR_PAGINA))
+}
+
 /** `GET /v1/operacao/redes`: as redes do diálogo Nova escola, por nome. */
 export const consultaDasRedes = queryOptions({
   queryKey: ['operacao', 'redes'],
   queryFn: ({ signal }) => chamarComSessaoDeOperador(CAMINHO_DAS_REDES, esquemaRespostaRedesDoPainel, { sinal: signal }),
 })
 
-/** O prefixo das chaves que a criação de rede ou de escola deixa velhas. */
+/** O prefixo das chaves que a criação de rede ou de escola deixa velhas (a da escola também deixa velho o uso). */
 export const CHAVE_DAS_ESCOLAS = ['operacao', 'escolas'] as const
 export const CHAVE_DAS_REDES = consultaDasRedes.queryKey
+/** O prefixo das chaves do uso: a escola criada entra nele com zero, e todas as páginas deixam de valer. */
+export const CHAVE_DO_USO = ['operacao', 'uso'] as const
 
 /** `POST /v1/operacao/redes`, com o id sorteado ao abrir o diálogo. O pedido repetido devolve o mesmo id. */
 export function criarRedeNoPainel(pedido: PedidoCriarRede): Promise<RespostaCriadoNoPainel> {

@@ -1,14 +1,17 @@
 import type { ReactNode } from 'react'
 import { Link, useRoute } from 'wouter'
 import { Botao } from '../../componentes/Botao'
-import { INICIO_DA_OPERACAO, ROTAS_DA_OPERACAO } from '../caminhos'
+import { INICIO_DA_OPERACAO, ROTAS_DA_OPERACAO, USO_DA_OPERACAO } from '../caminhos'
 import { textoDaFalha } from '../textos'
 
 /**
  * Os itens da navegação da operação (Tech Spec da A0b, seção 9). Cada item nasce com a tela dele (`docs/interface.md`
- * 11.1): Escolas chega na tarefa 6.0, e Uso entra aqui junto da tela dele, na 8.0.
+ * 11.1): Escolas chegou na tarefa 6.0, e Uso na 8.0.
  */
-const ITENS_DA_NAVEGACAO: readonly PropsDoItem[] = [{ rotulo: 'Escolas', rota: ROTAS_DA_OPERACAO.inicio, endereco: INICIO_DA_OPERACAO }]
+const ITENS_DA_NAVEGACAO: readonly PropsDoItem[] = [
+  { rotulo: 'Escolas', rota: ROTAS_DA_OPERACAO.inicio, endereco: INICIO_DA_OPERACAO },
+  { rotulo: 'Uso', rota: ROTAS_DA_OPERACAO.uso, endereco: USO_DA_OPERACAO },
+]
 
 interface PropsDoItem {
   readonly rotulo: string
