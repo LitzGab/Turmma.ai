@@ -56,8 +56,14 @@ Sob `/v1`, escopo do contexto; uma célula da `MATRIZ` por rota:
 - `POST turmas/:id/lista/nome`, `DELETE lista-nomes/:id`, `GET turmas/:id/lista` (coordenador; a leitura
   `nominal_auditado`): o avulso sem nome ou matrícula dá `ENTRADA_INVALIDA`; com matrícula na lista da escola ou em
   `credencial_matricula`, `CONFLITO`; nada gravado. Retira só `livre`, senão `CONFLITO`
-- `POST`, `GET professores` (coordenador): o link uma vez; a lista não diz se a conta existia
-- `POST professores/:usuarioId/convite/{refazer,revogar}`: só o de professor
+- `POST`, `GET professores` (coordenador): o link uma vez; a lista não diz se a conta existia. A lista traz usuário,
+  nome e estado (`ESTADOS_DO_PROFESSOR`: `pendente`, `vencido`, `revogado`, `aceito`, `ativo`, `desativado`), paginada
+  por usuário, sem e-mail; o `aceito` junta o ativo pelo convite e o que espera a primeira entrada (3.0). O e-mail de
+  professor ativo, ou com convite em aberto, é `CONFLITO`; o de professor inativo o chama de volta, no mesmo usuário
+- `POST professores/:usuarioId/convite/{refazer,revogar}`: só o de professor, o último `tipo = 'professor'` do usuário
+  `professor`, pelas matrizes `REFAZER_`/`REVOGAR_CONVITE_DE_PROFESSOR_POR_ESTADO`: os dois só no convite em aberto
+  (`pendente`, `vencido`); revogar o `revogado` é `NAO_ENCONTRADO`, o resto `CONFLITO` (3.0). Sem convite de professor:
+  `NAO_ENCONTRADO`
 - `POST turmas/:id/acesso`, `…/revogar`, `GET …/acesso` (professor, `turma_vinculada`): link e código uma vez; o
   GET, só `expiraEm`
 - `GET turmas/:id/reivindicacoes`, `POST reivindicacoes/decidir` (professor, `turma_vinculada`; coordenador,
@@ -77,7 +83,9 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
 ## 5. Fluxo
 
 1. Cadastro: `contaParaConvite`, `usuarioConvidado(papel: professor)` e o convite sob `travarEscola`.
-2. O professor aceita, confirma o vínculo e gera o acesso, que projeta ou compartilha pelo WhatsApp (P27).
+2. O professor aceita, confirma o vínculo e gera o acesso, que projeta ou compartilha pelo WhatsApp (P27). O aceite do
+   professor responde `entrar` com o bilhete, também com a conta nova (o de coordenador com a conta nova continua em
+   `configurar_mfa`), e a entrada por e-mail termina em `pronta` (3.0).
 3. O aluno abre `/e/<slug>/turma#<token>`, que tira o fragmento do endereço antes da primeira chamada, ou digita o
    código; escolhe o nome e digita matrícula e senha.
 4. `salas/reivindicar`: resolve o acesso; chave já gravada na escola e na turma do acesso → `enviado`, sem hash;
@@ -108,7 +116,8 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
 ## 7. Dado pessoal
 
 - **Campos**: as linhas da A1 em `docs/lgpd.md`. Log só com ids; nada vai a terceiro
-- **Auditoria**: `professor.cadastrado`, sem `contaNova`; `convite.*` com o tipo; `lista.gravada`, também no avulso,
+- **Auditoria**: `professor.cadastrado`, sem campo nenhum; `convite.*` com o tipo, também os do coordenador, e o
+  `contaNova` só no `convite.criado` do coordenador (3.0); `lista.gravada`, também no avulso,
   só com ids e contagens; `lista_nome.retirado`; `acesso_turma.*`; `reivindicacao.decidida` com `decidida_como`, sem
   `teve_matricula_errada`. A coordenação grava `turma.lista_lida` e `turma.reivindicacoes_lidas` a cada leitura; o
   professor, não
@@ -200,6 +209,18 @@ Em `cenarios.md`, parte desta spec: lista fechada, um id por teste, com a cláus
 
 - **Conta global de professor**: o aceite revela se o e-mail tem conta, e a senha de uma conta global é definida por
   quem tem o link. Tolerado pela D71 revista; fecha com a prova de posse do e-mail, item do "Portão da
-  primeira escola real" do `ROADMAP.md`
+  primeira escola real" do `ROADMAP.md`. Dois canais a mais dizem à coordenação se o e-mail tinha conta (3.0), no
+  mesmo risco e com o mesmo fechamento:
+  - **cadastrar de novo o mesmo e-mail** entre o aceite e a primeira entrada da conta que já existia (uma janela que
+    dura até essa entrada, que pode nunca vir): ela responde 201, porque o usuário segue inativo, e a conta nova, já
+    ativa no aceite, `CONFLITO`. Fechar só isso prenderia para sempre quem aceitou e perdeu o bilhete;
+  - **a auditoria do aceite**: `convite.aceito.usuarioAtivo` (do F1) e o `usuario.ativado_por_convite`, que só a conta
+    que já existia grava. Nenhuma rota da coordenação lê a auditoria hoje; a tarefa que a exportar no dossiê (D61)
+    decide, com o `privacy-guardian`, se esses campos saem ou são agregados
+- **Alocação antes do aceite** (3.0): o professor cadastrado fica inativo até o aceite, e a alocação do F1 só aceita
+  professor ativo (`VinculoRepository.pessoaAtivaComPapel`). O W1, o RF7 e o passo 1 da seção 5 descrevem a coordenação
+  alocando antes do aceite. Decide o Joaquim antes da 13.0 (a tela de alocação): ou a alocação passa a aceitar o
+  professor com convite em aberto, correção na API com o `tenancy-guardian` e o `privacy-guardian` (vínculo de quem nunca
+  entrou), ou a tela e o W1 alocam depois da primeira entrada. Até lá, o E10 aloca depois da entrada
 - **Ator dentro da sala** vê o código novo projetado e pode travar os nomes de novo
 - **A fronteira movida** pode mudar a A0b; o e2e dela roda junto

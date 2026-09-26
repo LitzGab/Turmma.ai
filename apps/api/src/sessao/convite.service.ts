@@ -1,4 +1,16 @@
-import { contextoAtual, ErroDeDominio, estadoDaCoordenacao, executarNoContexto, RegistroDeAuditoria, relogioDoSistema, VALIDADE_DO_CONVITE_HORAS, type Banco, type Relogio } from '@educa/nucleo'
+import {
+  contextoAtual,
+  ErroDeDominio,
+  estadoDaCoordenacao,
+  executarNoContexto,
+  RegistroDeAuditoria,
+  relogioDoSistema,
+  VALIDADE_DO_CONVITE_HORAS_POR_TIPO,
+  type Banco,
+  type Relogio,
+  type TipoDeConvite,
+  type TransacaoBanco,
+} from '@educa/nucleo'
 import {
   CodigoDeErro,
   GERAR_CONVITE_POR_ESTADO,
@@ -24,6 +36,12 @@ const registro = new RegistroDeAuditoria()
 /** Expirado, revogado, usado e inexistente: a mesma resposta, que não diz se o convite existe (regra 10, item 6). */
 const conviteInvalido = () => new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
 
+/** O token novo do link: 256 bits sorteados. O banco guarda só o SHA-256. */
+export const tokenNovo = (): string => randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')
+
+/** Até quando vale o convite do tipo gerado agora: 72 h o do coordenador, 7 dias o do professor (`@educa/shared`). */
+export const expiraEmDo = (tipo: TipoDeConvite, relogio: Relogio): Date => new Date(relogio.agora().getTime() + VALIDADE_DO_CONVITE_HORAS_POR_TIPO[tipo] * 60 * 60 * 1_000)
+
 export interface DependenciasDoConvite {
   readonly banco: Banco
   readonly resolucao: ResolucaoDeTenantRepository
@@ -37,8 +55,10 @@ export interface DependenciasDoConvite {
  * no corpo.
  *
  * - **Consultar:** só o nome da escola que convida.
- * - **Aceitar, conta sem senha:** exige a senha, grava o hash, ativa o usuário, grava `convite.aceito` e responde
- *   `configurar_mfa` com o desafio, sem sessão e sem cookie: o aceite não pula o MFA.
+ * - **Aceitar, conta sem senha:** exige a senha, grava o hash, ativa o usuário, grava `convite.aceito` e responde, sem
+ *   sessão e sem cookie: o convite de coordenador, `configurar_mfa` com o desafio (o aceite não pula o MFA); o de
+ *   professor, `entrar` com o bilhete, e a entrada por e-mail e senha termina em `pronta`, sem segundo fator (A1, tarefa
+ *   3.0; `etapaDoLogin`).
  * - **Aceitar, conta com senha** (a pessoa trabalha em outra escola cliente): a senha que vier é ignorada, o convite é
  *   marcado como usado e a resposta é `entrar`, com o bilhete do convite (30 min). O usuário desta escola só é ativado
  *   quando a pessoa entra com a senha e o segundo fator que a conta já tem **e** com esse bilhete
@@ -90,14 +110,17 @@ export class ConviteService {
         await executarNoContexto({ requisicaoId, escolaId: usado.escolaId, usuarioId: usado.usuarioId }, async () => {
           // O usuário que não ativa desfaz o uso do convite e a senha: a resposta é a de convite inválido.
           if (senhaDefinida && !(await new ConviteRepository(tx).ativarPorConvite(usado.usuarioId, usado.id))) throw conviteInvalido()
-          await registro.gravar(tx, 'convite.aceito', { entidadeId: usado.id, depois: { usuarioId: usado.usuarioId, usuarioAtivo: senhaDefinida } })
+          await registro.gravar(tx, 'convite.aceito', { entidadeId: usado.id, depois: { tipo: valido.tipo, usuarioId: usado.usuarioId, usuarioAtivo: senhaDefinida } })
         })
         return { senhaDefinida, conviteId: usado.id }
       }),
     )
     if (aceite === undefined) throw conviteInvalido()
-    if (!aceite.senhaDefinida) return { etapa: 'entrar', bilhete: await bilhetes.emitir({ contaId: valido.contaId, conviteId: aceite.conviteId }) }
-    return { etapa: 'configurar_mfa', desafio: await emissorDeDesafio.emitir({ contaId: valido.contaId, etapa: 'configurar_mfa', mfaCumprido: false }) }
+    // O coordenador com a conta nova vai direto ao MFA; o professor, e quem já tinha senha, vão à entrada com o bilhete.
+    if (aceite.senhaDefinida && valido.tipo === 'coordenador') {
+      return { etapa: 'configurar_mfa', desafio: await emissorDeDesafio.emitir({ contaId: valido.contaId, etapa: 'configurar_mfa', mfaCumprido: false }) }
+    }
+    return { etapa: 'entrar', bilhete: await bilhetes.emitir({ contaId: valido.contaId, conviteId: aceite.conviteId }) }
   }
 }
 
@@ -168,6 +191,51 @@ async function coordenacaoSobATrava(convites: ConviteRepository): Promise<{ esta
 }
 
 /**
+ * O corpo comum de quem convida (A0b; A1, tarefa 3.0), dentro da transação de quem chama, na escola do contexto e depois
+ * da trava dela: acha ou cria a conta do e-mail (conta nova nasce sem senha), acha ou cria o usuário do papel do
+ * convite, inativo até o aceite (`usuarioConvidado`), e grava o convite com o SHA-256 do token. Usuário do papel já
+ * ativo na escola, ou com convite em aberto (o índice `convite_pendente_unico`): `CONFLITO`, e a transação volta atrás.
+ * Devolve o convite, o usuário e se a conta é nova, que só o convite do coordenador leva à auditoria.
+ */
+export async function convidar(
+  tx: TransacaoBanco,
+  convites: ConviteRepository,
+  tipo: TipoDeConvite,
+  pessoa: { readonly email: string; readonly nome: string },
+  token: string,
+  expiraEm: Date,
+): Promise<{ conviteId: string; usuarioId: string; contaNova: boolean }> {
+  const conta = await new ResolucaoDeTenantRepository(tx).contaParaConvite(normalizarEmail(pessoa.email))
+  const usuarioId = await convites.usuarioConvidado(conta.id, pessoa.nome, tipo)
+  if (usuarioId === undefined) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
+  const conviteId = await convites.criarConvite({ tipo, tokenHash: hashDoToken(token), usuarioId, expiraEm })
+  return { conviteId, usuarioId, contaNova: conta.nova }
+}
+
+/**
+ * O refazer comum (A0b; A1, tarefa 3.0), depois da trava da escola e da matriz de quem chama: revoga o convite de origem
+ * pelo `update` condicional (só em aberto e só do tipo) e cria outro para o **mesmo usuário**, com `convite.refeito`
+ * (o tipo, a origem, o usuário e a validade). Se o `update` não revoga (o convite deixou de estar em aberto no meio),
+ * `CONFLITO`.
+ */
+export async function refazerSobATrava(
+  tx: TransacaoBanco,
+  convites: ConviteRepository,
+  tipo: TipoDeConvite,
+  origemId: string,
+  token: string,
+  expiraEm: Date,
+  autorOperador?: string,
+): Promise<{ conviteId: string; usuarioId: string }> {
+  const usuarioId = await convites.revogarParaRefazer(origemId, tipo)
+  if (usuarioId === undefined) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
+  const conviteId = await convites.criarConvite({ tipo, tokenHash: hashDoToken(token), usuarioId, expiraEm })
+  const depois = { tipo, origemId, usuarioId, expiraEm: expiraEm.toISOString() }
+  await registro.gravar(tx, 'convite.refeito', autorOperador === undefined ? { entidadeId: conviteId, depois } : { entidadeId: conviteId, depois, autorOperador })
+  return { conviteId, usuarioId }
+}
+
+/**
  * O convite da primeira coordenação, pelo operador: pelo painel (`POST /v1/operacao/escolas/:id/convite-coordenacao`) e
  * pelo `ops:convite-coordenador`, o mesmo caso de uso (RF2; Tech Spec da A0b, seção 5). Numa transação:
  * - o autor é conferido como primeira instrução (`ConferenciaDoAutor`), antes de ler a escola do endereço;
@@ -188,8 +256,8 @@ async function coordenacaoSobATrava(convites: ConviteRepository): Promise<{ esta
  */
 export async function criarConviteDeCoordenador(banco: Banco, autor: ConferenciaDoAutor, pedido: PedidoDeConvite, relogio: Relogio = relogioDoSistema): Promise<{ conviteId: string; token: string }> {
   const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
-  const token = randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')
-  const expiraEm = new Date(relogio.agora().getTime() + VALIDADE_DO_CONVITE_HORAS * 60 * 60 * 1_000)
+  const token = tokenNovo()
+  const expiraEm = expiraEmDo('coordenador', relogio)
   const conviteId = await executarNoContexto({ requisicaoId }, () =>
     banco.transaction(async (tx) => {
       // O autor primeiro: quem não passa não lê nem grava nada, nem a escola do endereço.
@@ -202,15 +270,12 @@ export async function criarConviteDeCoordenador(banco: Banco, autor: Conferencia
         const acao = GERAR_CONVITE_POR_ESTADO[estado]
         if (acao === 'conflito') throw new ErroDeDominio(CodigoDeErro.CONFLITO)
         if (acao === 'revogar_o_ultimo_e_criar' && ultimoConviteId !== undefined) {
-          if (!(await convites.revogar(ultimoConviteId))) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
-          await registro.gravar(tx, 'convite.revogado', { entidadeId: ultimoConviteId, autorOperador })
+          if (!(await convites.revogar(ultimoConviteId, 'coordenador'))) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
+          await registro.gravar(tx, 'convite.revogado', { entidadeId: ultimoConviteId, depois: { tipo: 'coordenador' }, autorOperador })
         }
-        const conta = await new ResolucaoDeTenantRepository(tx).contaParaConvite(normalizarEmail(pedido.email))
-        const usuarioId = await convites.usuarioConvidado(conta.id, pedido.nome)
-        // Sem coordenador ativo na escola (o estado não é `ativa`), o da conta também não está: não chega aqui.
-        if (usuarioId === undefined) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
-        const criado = await convites.criarConvite({ tokenHash: hashDoToken(token), usuarioId, expiraEm })
-        await registro.gravar(tx, 'convite.criado', { entidadeId: criado, depois: { usuarioId, expiraEm: expiraEm.toISOString(), contaNova: conta.nova }, autorOperador })
+        // Sem coordenador ativo na escola (o estado não é `ativa`), o da conta também não está: `convidar` não recusa aqui.
+        const { conviteId: criado, usuarioId, contaNova } = await convidar(tx, convites, 'coordenador', pedido, token, expiraEm)
+        await registro.gravar(tx, 'convite.criado', { entidadeId: criado, depois: { tipo: 'coordenador', usuarioId, expiraEm: expiraEm.toISOString(), contaNova }, autorOperador })
         return criado
       })
     }),
@@ -240,8 +305,8 @@ export async function refazerConviteDaCoordenacao(
   relogio: Relogio = relogioDoSistema,
 ): Promise<{ conviteId: string; token: string; escolaId: string }> {
   const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
-  const token = randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')
-  const expiraEm = new Date(relogio.agora().getTime() + VALIDADE_DO_CONVITE_HORAS * 60 * 60 * 1_000)
+  const token = tokenNovo()
+  const expiraEm = expiraEmDo('coordenador', relogio)
   return executarNoContexto({ requisicaoId }, () =>
     banco.transaction(async (tx) => {
       const autorOperador = await autor(tx)
@@ -251,11 +316,7 @@ export async function refazerConviteDaCoordenacao(
         const convites = new ConviteRepository(tx)
         const { estado, ultimoConviteId } = await coordenacaoSobATrava(convites)
         if (REFAZER_CONVITE_POR_ESTADO[estado] === 'conflito' || conviteId !== ultimoConviteId) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
-        const usuarioId = await convites.revogarParaRefazer(conviteId)
-        if (usuarioId === undefined) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
-        const criado = await convites.criarConvite({ tokenHash: hashDoToken(token), usuarioId, expiraEm })
-        await registro.gravar(tx, 'convite.refeito', { entidadeId: criado, depois: { origemId: conviteId, usuarioId, expiraEm: expiraEm.toISOString() }, autorOperador })
-        return criado
+        return (await refazerSobATrava(tx, convites, 'coordenador', conviteId, token, expiraEm, autorOperador)).conviteId
       })
       return { conviteId: novo, token, escolaId }
     }),
@@ -293,8 +354,8 @@ export async function revogarConvitePeloOperador(banco: Banco, autor: Conferenci
         if (acao === 'conflito') throw new ErroDeDominio(CodigoDeErro.CONFLITO)
         // Um convite em aberto que não é o último: o convite mudou.
         if (conviteId !== ultimoConviteId) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
-        if (!(await convites.revogar(conviteId))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-        await registro.gravar(tx, 'convite.revogado', { entidadeId: conviteId, autorOperador })
+        if (!(await convites.revogar(conviteId, 'coordenador'))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+        await registro.gravar(tx, 'convite.revogado', { entidadeId: conviteId, depois: { tipo: 'coordenador' }, autorOperador })
       })
       return { escolaId }
     }),

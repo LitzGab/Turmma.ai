@@ -331,7 +331,8 @@ aos cenários.
 
 - **W1** RF1 e RF18: o fluxo inteiro, com nomes gerados: a coordenação cria ano, série, disciplina, turma, lista,
   professor e alocação; o professor aceita, confirma e gera o acesso; o aluno reivindica pelo código; o professor aprova;
-  o aluno entra e vê só a própria turma
+  o aluno entra e vê só a própria turma. **Depende da decisão "Alocação antes do aceite"** (Tech Spec, seção 13): hoje a
+  alocação só aceita o professor que já entrou
 - **W2** RF1: por papel, só os itens da fase (coordenação: Estrutura e Professores; professor: Turmas; aluno: Minha
   turma), e nenhum leva a tela inexistente; o professor abrindo o endereço de uma tela da coordenação cai em "não
   encontrada"; `document.title` muda por rota. **Quebra sem:** a guarda de papel em `rotas.tsx`

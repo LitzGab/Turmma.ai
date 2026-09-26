@@ -127,6 +127,13 @@
       "when": 1790341461936,
       "tag": "0017_operador_aceite",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790432641416,
+      "tag": "0018_convite_professor",
+      "breakpoints": true
     }
   ]
 }

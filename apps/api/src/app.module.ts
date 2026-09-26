@@ -23,6 +23,7 @@ import type { ConfiguracaoApi } from './config.js'
 import { EstruturaModule } from './estrutura/estrutura.module.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
 import { OperacaoModule } from './operacao/operacao.module.js'
+import { ProfessoresModule } from './professores/professores.module.js'
 import { SessaoModule } from './sessao/sessao.module.js'
 import { ProntidaoController } from './sistema/prontidao.controller.js'
 import { SistemaModule } from './sistema/sistema.module.js'
@@ -60,6 +61,7 @@ export class AppModule {
           ...(opcoes.prazoDoRedisDeLoginMs === undefined ? {} : { prazoDoRedisMs: opcoes.prazoDoRedisDeLoginMs }),
         }),
         EstruturaModule,
+        ProfessoresModule,
         OperacaoModule.com(config.identidade, { dispositivo: config.login.dispositivo, mfa: config.login.mfa, ...(opcoes.medidor === undefined ? {} : { medidor: opcoes.medidor }) }),
         SistemaModule.com({
           rotasSinteticas: config.rotasSinteticas,

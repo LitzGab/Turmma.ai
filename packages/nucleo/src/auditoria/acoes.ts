@@ -9,6 +9,7 @@ import {
   MOTIVOS_DE_ENCERRAMENTO_PELA_COORDENACAO,
   PAPEIS_DE_USUARIO,
   PAPEIS_DE_VINCULO,
+  TIPOS_DE_CONVITE,
 } from '@educa/shared'
 import { PROVEDORES_EXTERNOS } from '../db/schema/conta-externa.js'
 import { TIPOS_DE_REDE } from '../db/schema/rede.js'
@@ -115,46 +116,61 @@ export const ACOES_DE_AUDITORIA = {
     finalidade: z.enum(FINALIDADES_DA_REDEFINICAO_DE_MFA),
   },
   /**
-   * O operador gerou o convite do primeiro coordenador (7.0, RF1, RF19), com `ops:convite-coordenador` ou pelo painel
-   * da operação (A0b): o usuário
-   * convidado, ainda inativo, até quando o convite vale e se a conta do e-mail foi criada agora (`contaNova`) ou já
-   * existia. Nunca o nome, o e-mail nem o token.
+   * O convite nasceu, com o `tipo` (A1, tarefa 3.0): o do coordenador, gerado pelo operador (7.0, RF1, RF19) com
+   * `ops:convite-coordenador` ou pelo painel da operação (A0b); o do professor, gerado pela coordenação no cadastro dele
+   * (A1, RF6). O usuário convidado, ainda inativo, e até quando o convite vale. Só o do coordenador leva `contaNova`, se
+   * a conta do e-mail foi criada agora ou já existia: no do professor, nada diz à coordenação se a pessoa tem conta em
+   * outra escola (Tech Spec da A1, seção 7; E11). Nunca o nome, o e-mail nem o token.
    */
   'convite.criado': {
     entidade: 'convite',
     antes: null,
-    depois: z.strictObject({ usuarioId: z.uuid(), expiraEm: z.iso.datetime(), contaNova: z.boolean() }),
+    depois: z.strictObject({ tipo: z.enum(TIPOS_DE_CONVITE), usuarioId: z.uuid(), expiraEm: z.iso.datetime(), contaNova: z.boolean().optional() }),
     finalidade: null,
   },
   /**
-   * O operador revogou o convite (7.0, RF19), com `ops:revogar-convite` ou pelo painel da operação (A0b), ou o gerar
-   * revogou o anterior (A0b, estados `aceito` e `sem_coordenacao`): o link deixa de valer, usado ou não.
+   * O convite foi revogado, com o `tipo` (A1, tarefa 3.0): o do coordenador pelo operador (7.0, RF19), com
+   * `ops:revogar-convite` ou pelo painel da operação (A0b), ou pelo gerar, que revogou o anterior (A0b, estados `aceito`
+   * e `sem_coordenacao`); o do professor pela coordenação (A1, RF6). O link deixa de valer, usado ou não.
    */
   'convite.revogado': {
     entidade: 'convite',
     antes: null,
-    depois: null,
+    depois: z.strictObject({ tipo: z.enum(TIPOS_DE_CONVITE) }),
     finalidade: null,
   },
   /**
-   * O operador refez o convite da coordenação pelo painel da operação (A0b, tarefa 3.0): o convite de origem
-   * (`origemId`, em `pendente` ou `vencido`) deixou de valer, e `entidadeId` é o convite novo, para o mesmo usuário
-   * (`usuarioId`), válido até `expiraEm`. Nunca o nome, o e-mail nem o token.
+   * O convite foi refeito, com o `tipo` (A1, tarefa 3.0): o da coordenação pelo painel da operação (A0b, tarefa 3.0), o
+   * do professor pela coordenação da escola (A1, RF6). O convite de origem (`origemId`, em aberto) deixou de valer, e
+   * `entidadeId` é o convite novo, para o mesmo usuário (`usuarioId`), válido até `expiraEm`. Nunca o nome, o e-mail nem
+   * o token.
    */
   'convite.refeito': {
     entidade: 'convite',
     antes: null,
-    depois: z.strictObject({ origemId: z.uuid(), usuarioId: z.uuid(), expiraEm: z.iso.datetime() }),
+    depois: z.strictObject({ tipo: z.enum(TIPOS_DE_CONVITE), origemId: z.uuid(), usuarioId: z.uuid(), expiraEm: z.iso.datetime() }),
     finalidade: null,
   },
   /**
-   * A pessoa abriu o link e aceitou o convite (7.0). `usuarioAtivo` diz se o aceite já ativou o usuário (conta nova,
-   * que definiu a senha ali) ou se ele espera o login com a senha que a conta já tem (conta de outra escola).
+   * A pessoa abriu o link e aceitou o convite (7.0), com o `tipo` (A1, tarefa 3.0). `usuarioAtivo` diz se o aceite já
+   * ativou o usuário (conta nova, que definiu a senha ali) ou se ele espera o login com a senha que a conta já tem (conta
+   * de outra escola).
    */
   'convite.aceito': {
     entidade: 'convite',
     antes: null,
-    depois: z.strictObject({ usuarioId: z.uuid(), usuarioAtivo: z.boolean() }),
+    depois: z.strictObject({ tipo: z.enum(TIPOS_DE_CONVITE), usuarioId: z.uuid(), usuarioAtivo: z.boolean() }),
+    finalidade: null,
+  },
+  /**
+   * A coordenação cadastrou o professor (A1, tarefa 3.0, RF6, RF16): `entidadeId` é o usuário dele na escola, inativo
+   * até o aceite do convite, que vem no `convite.criado` da mesma transação. Sem campo nenhum: nada diz se a conta do
+   * e-mail era nova ou já existia em outra escola (Tech Spec da A1, seção 7; E11). Nunca o nome nem o e-mail.
+   */
+  'professor.cadastrado': {
+    entidade: 'usuario',
+    antes: null,
+    depois: null,
     finalidade: null,
   },
   /**

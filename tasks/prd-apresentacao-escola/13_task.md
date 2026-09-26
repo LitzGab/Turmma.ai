@@ -27,6 +27,14 @@ disciplina.
   - `tasks/prd-apresentacao-painel/achados/indice.md`, linhas da 6.0 e 7.0: foco depois de conflito e largura dentro
     do diálogo
 
+## Decisão pendente, herdada da 3.0
+
+**Alocação antes do aceite** (Tech Spec, seção 13): o professor cadastrado pela coordenação fica inativo até aceitar o
+convite, e a alocação do F1 só aceita professor ativo (`apps/api/src/estrutura/vinculo.repository.ts`,
+`pessoaAtivaComPapel`). O W1 aloca antes do aceite. Antes de começar esta tarefa, o Joaquim decide: a alocação passa a
+aceitar o professor com convite em aberto (correção na API, com `tenancy-guardian` e `privacy-guardian`), ou a tela
+aloca depois da primeira entrada e o W1 muda.
+
 ## Subtarefas
 
 - [ ] 13.1 — Estrutura: ano, série, disciplina e turma, com renomear e excluir (confirmação `perigo`; o `CONFLITO`

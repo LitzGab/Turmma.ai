@@ -1,4 +1,4 @@
-import { codigoRecuperacao, conta, convite, ErroDeDominio, escola, rede, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type MotivoDeEncerramento, type TransacaoBanco } from '@educa/nucleo'
+import { codigoRecuperacao, conta, convite, ErroDeDominio, escola, rede, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type MotivoDeEncerramento, type TipoDeConvite, type TransacaoBanco } from '@educa/nucleo'
 import { CodigoDeErro, type PapelDeUsuario } from '@educa/shared'
 import { and, eq, exists, gt, gte, isNotNull, isNull, lt, ne, or, sql } from 'drizzle-orm'
 
@@ -45,13 +45,14 @@ export interface UsuarioAtivoDaConta {
 }
 
 /**
- * O convite válido (não usado, não revogado, no prazo) achado pelo hash do token: os ids e se a conta do convidado já
- * tem senha. Nunca o nome nem o e-mail.
+ * O convite válido (não usado, não revogado, no prazo) achado pelo hash do token: os ids, o tipo (o aceite do professor
+ * não leva ao segundo fator, A1) e se a conta do convidado já tem senha. Nunca o nome nem o e-mail.
  */
 export interface ConviteValido {
   readonly escolaId: string
   readonly usuarioId: string
   readonly contaId: string
+  readonly tipo: TipoDeConvite
   readonly contaTemSenha: boolean
 }
 
@@ -344,16 +345,16 @@ export class ResolucaoDeTenantRepository {
    * O convite que ainda vale, pelo hash do token: expirado, revogado, usado e inexistente dão todos `undefined`, e quem
    * chama responde o mesmo erro (regra 10, item 6).
    */
-  @SemEscopo('o link do convite não diz a escola: o convite válido é achado pelo hash do token, e só depois a escola dele vira contexto; devolve só ids e se a conta tem senha')
+  @SemEscopo('o link do convite não diz a escola: o convite válido é achado pelo hash do token, e só depois a escola dele vira contexto; devolve só ids, o tipo e se a conta tem senha')
   async conviteValidoPorHash(tokenHash: string): Promise<ConviteValido | undefined> {
     const [linha] = await this.banco
-      .select({ escolaId: convite.escolaId, usuarioId: convite.usuarioId, contaId: conta.id, senhaHash: conta.senhaHash })
+      .select({ escolaId: convite.escolaId, usuarioId: convite.usuarioId, contaId: conta.id, tipo: convite.tipo, senhaHash: conta.senhaHash })
       .from(convite)
       .innerJoin(usuario, and(eq(usuario.escolaId, convite.escolaId), eq(usuario.id, convite.usuarioId)))
       .innerJoin(conta, eq(conta.id, usuario.contaId))
       .where(and(eq(convite.tokenHash, tokenHash), isNull(convite.usadoEm), isNull(convite.revogadoEm), gt(convite.expiraEm, sql`now()`)))
       .limit(1)
-    return linha === undefined ? undefined : { escolaId: linha.escolaId, usuarioId: linha.usuarioId, contaId: linha.contaId, contaTemSenha: linha.senhaHash !== null }
+    return linha === undefined ? undefined : { escolaId: linha.escolaId, usuarioId: linha.usuarioId, contaId: linha.contaId, tipo: linha.tipo, contaTemSenha: linha.senhaHash !== null }
   }
 
   /**
@@ -437,15 +438,16 @@ export class ResolucaoDeTenantRepository {
   }
 
   /**
-   * Acha ou cria a conta do e-mail, para o convite do coordenador (7.0): conta nova nasce sem senha. Não lê nada da conta
-   * existente além do id, e quem chama não diz ao operador se ela já existia.
+   * Acha ou cria a conta do e-mail, para o convite do coordenador (7.0) e o do professor (A1, tarefa 3.0): conta nova
+   * nasce sem senha. Não lê nada da conta existente além do id, e quem chama não diz ao operador nem à coordenação se ela
+   * já existia.
    *
    * A conta existente fica travada (`FOR NO KEY UPDATE`) até o fim da transação do convite (17.0): a limpeza da conta
    * sem uso, na desativação ou no expurgo da madrugada, não apaga o e-mail de uma conta que está recebendo convite (o
    * expurgo a pula, com `skip locked`, e a desativação espera). Se a limpeza travou antes, esta leitura espera o commit
    * dela, relê a linha, e a conta sem e-mail não é achada: o convite cria outra conta, com o e-mail.
    */
-  @SemEscopo('a conta é global e não tem escola: o convite da coordenação, pelo comando ou pelo painel, acha ou cria a conta pelo e-mail, travando a existente, sem ler nada dela, e devolve só o id e se ela é nova')
+  @SemEscopo('a conta é global e não tem escola: o convite da coordenação, pelo comando ou pelo painel, e o do professor, pela coordenação da escola, acham ou criam a conta pelo e-mail, travando a existente, sem ler nada dela, e devolvem só o id e se ela é nova')
   async contaParaConvite(email: string): Promise<{ id: string; nova: boolean }> {
     for (let tentativa = 0; tentativa < 3; tentativa++) {
       const [criada] = await this.banco.insert(conta).values({ email }).onConflictDoNothing({ target: conta.email }).returning({ id: conta.id })

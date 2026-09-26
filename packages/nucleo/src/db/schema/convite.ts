@@ -1,18 +1,17 @@
-import { VALIDADE_DO_CONVITE_HORAS } from '@educa/shared'
+import { TIPOS_DE_CONVITE, VALIDADE_DO_CONVITE_HORAS, VALIDADE_DO_CONVITE_HORAS_POR_TIPO, type TipoDeConvite } from '@educa/shared'
 import { sql } from 'drizzle-orm'
 import { check, foreignKey, index, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { escola } from './escola.js'
 import { usuario } from './usuario.js'
 
-export const TIPOS_DE_CONVITE = ['coordenador'] as const
-export type TipoDeConvite = (typeof TIPOS_DE_CONVITE)[number]
-
-/** Validade do convite, contada da criação (Tech Spec, seção 3). Mora em `@educa/shared`, que o painel também lê. */
-export { VALIDADE_DO_CONVITE_HORAS }
+/** Os tipos e a validade de cada um moram em `@educa/shared`, que a web também lê (A1, tarefa 3.0). */
+export { TIPOS_DE_CONVITE, VALIDADE_DO_CONVITE_HORAS, VALIDADE_DO_CONVITE_HORAS_POR_TIPO, type TipoDeConvite }
 
 /**
- * O convite do primeiro coordenador (tarefa 7.0; Tech Spec, seções 3 e 5, "Convite"). Nasce só pelo operador: o
- * `ops:convite-coordenador` ou o painel da operação (A0b), nunca por rota de escola (RF1, D2).
+ * O convite do primeiro coordenador (tarefa 7.0; Tech Spec, seções 3 e 5, "Convite") e o do professor (A1, tarefa 3.0).
+ * O de coordenador nasce só pelo operador: o `ops:convite-coordenador` ou o painel da operação (A0b), nunca por rota de
+ * escola (RF1, D2). O de professor nasce só pela coordenação da escola, no cadastro do professor (A1, RF6). O `tipo`
+ * separa os dois em toda escrita: o operador só alcança o de coordenador, e a coordenação só o de professor.
  *
  * - Guarda só o SHA-256 do token (`token_hash`, 64 caracteres hexadecimais), nunca o token: quem lê o banco não tem o
  *   link (regra 20, item 8).
@@ -45,7 +44,7 @@ export const convite = pgTable(
     foreignKey({ name: 'convite_usuario_da_escola_fk', columns: [tabela.escolaId, tabela.usuarioId], foreignColumns: [usuario.escolaId, usuario.id] }).onDelete('cascade'),
     index('convite_escola_usuario_idx').on(tabela.escolaId, tabela.usuarioId),
     uniqueIndex('convite_pendente_unico').on(tabela.escolaId, tabela.usuarioId).where(sql`${tabela.usadoEm} is null and ${tabela.revogadoEm} is null`),
-    check('convite_tipo_valido', sql`${tabela.tipo} in ('coordenador')`),
+    check('convite_tipo_valido', sql`${tabela.tipo} in ('coordenador', 'professor')`),
     check('convite_token_hash_formato', sql`${tabela.tokenHash} ~ '^[0-9a-f]{64}$'`),
   ],
 )

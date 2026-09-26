@@ -38,6 +38,10 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['rede', 'vinculo', 'confirmar', 'nunca'],
   ['rede', 'vinculo', 'contestar', 'nunca'],
   ['rede', 'usuario_mfa', 'redefinir', 'nunca'],
+  ['rede', 'professor', 'listar', 'nunca'],
+  ['rede', 'professor', 'cadastrar', 'nunca'],
+  ['rede', 'professor', 'refazer_convite', 'nunca'],
+  ['rede', 'professor', 'revogar_convite', 'nunca'],
   ['rede', 'indicador_professor', 'ler_agregado', 'agregado'],
   ['rede', 'indicador_professor', 'ler_nominal', 'nunca'],
 
@@ -73,6 +77,10 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['coordenador', 'vinculo', 'confirmar', 'nunca'],
   ['coordenador', 'vinculo', 'contestar', 'nunca'],
   ['coordenador', 'usuario_mfa', 'redefinir', 'unidade'],
+  ['coordenador', 'professor', 'listar', 'unidade'],
+  ['coordenador', 'professor', 'cadastrar', 'unidade'],
+  ['coordenador', 'professor', 'refazer_convite', 'unidade'],
+  ['coordenador', 'professor', 'revogar_convite', 'unidade'],
   ['coordenador', 'indicador_professor', 'ler_agregado', 'agregado'],
   ['coordenador', 'indicador_professor', 'ler_nominal', 'nominal_auditado'],
 
@@ -108,6 +116,10 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['professor', 'vinculo', 'confirmar', 'proprio'],
   ['professor', 'vinculo', 'contestar', 'proprio'],
   ['professor', 'usuario_mfa', 'redefinir', 'nunca'],
+  ['professor', 'professor', 'listar', 'nunca'],
+  ['professor', 'professor', 'cadastrar', 'nunca'],
+  ['professor', 'professor', 'refazer_convite', 'nunca'],
+  ['professor', 'professor', 'revogar_convite', 'nunca'],
   ['professor', 'indicador_professor', 'ler_agregado', 'nunca'],
   ['professor', 'indicador_professor', 'ler_nominal', 'proprio'],
 
@@ -143,6 +155,10 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['aluno', 'vinculo', 'confirmar', 'nunca'],
   ['aluno', 'vinculo', 'contestar', 'nunca'],
   ['aluno', 'usuario_mfa', 'redefinir', 'nunca'],
+  ['aluno', 'professor', 'listar', 'nunca'],
+  ['aluno', 'professor', 'cadastrar', 'nunca'],
+  ['aluno', 'professor', 'refazer_convite', 'nunca'],
+  ['aluno', 'professor', 'revogar_convite', 'nunca'],
   ['aluno', 'indicador_professor', 'ler_agregado', 'nunca'],
   ['aluno', 'indicador_professor', 'ler_nominal', 'nunca'],
 ]

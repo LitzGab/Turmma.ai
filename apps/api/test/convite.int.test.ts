@@ -258,7 +258,7 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
         autor_usuario_id: null,
         autor_operador: OPERADOR,
         antes: null,
-        depois: { usuarioId: convite.usuarioId, expiraEm: expect.any(String), contaNova: true },
+        depois: { tipo: 'coordenador', usuarioId: convite.usuarioId, expiraEm: expect.any(String), contaNova: true },
         finalidade: null,
       },
       {
@@ -268,7 +268,7 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
         autor_usuario_id: convite.usuarioId,
         autor_operador: null,
         antes: null,
-        depois: { usuarioId: convite.usuarioId, usuarioAtivo: true },
+        depois: { tipo: 'coordenador', usuarioId: convite.usuarioId, usuarioAtivo: true },
         finalidade: null,
       },
     ])
@@ -369,7 +369,7 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
       expect(await senhaDaConta(recusado.contaId)).toBeNull()
     }
     expect((await auditoriaDoConvite(escolaId)).filter((linha) => linha['acao'] === 'convite.revogado')).toEqual([
-      expect.objectContaining({ entidade_id: revogado.conviteId, autor_operador: OPERADOR, autor_usuario_id: null }),
+      expect.objectContaining({ entidade_id: revogado.conviteId, autor_operador: OPERADOR, autor_usuario_id: null, depois: { tipo: 'coordenador' } }),
     ])
     // Revogar de novo, ou um id que não existe: NAO_ENCONTRADO, sem o id no terminal.
     const inexistente = randomUUID()
@@ -407,8 +407,8 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
     expect(depoisDoCodigo.corpo).toEqual({ etapa: 'escolher', desafio: expect.any(String), acessos: expect.any(Array) })
     expect(await usuarioAtivo(convite.usuarioId)).toBe(true)
     expect(await auditoriaDoConvite(escolaA)).toEqual([
-      expect.objectContaining({ acao: 'convite.criado', autor_operador: OPERADOR, depois: { usuarioId: convite.usuarioId, expiraEm: expect.any(String), contaNova: false } }),
-      expect.objectContaining({ acao: 'convite.aceito', autor_usuario_id: convite.usuarioId, depois: { usuarioId: convite.usuarioId, usuarioAtivo: false } }),
+      expect.objectContaining({ acao: 'convite.criado', autor_operador: OPERADOR, depois: { tipo: 'coordenador', usuarioId: convite.usuarioId, expiraEm: expect.any(String), contaNova: false } }),
+      expect.objectContaining({ acao: 'convite.aceito', autor_usuario_id: convite.usuarioId, depois: { tipo: 'coordenador', usuarioId: convite.usuarioId, usuarioAtivo: false } }),
       {
         acao: 'usuario.ativado_por_convite',
         entidade: 'usuario',
@@ -548,6 +548,8 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
       expect(rotas).toContain('GET /saude')
       // As do convite do operador (A0, tarefa 5.0) também só consultam e aceitam: o convite dele nasce só pelo
       // `ops:operador`. As do painel (A0b) geram, refazem e revogam o convite da coordenação, e são `@RotaDeOperacao` (C41, C46).
+      // As dos professores (A1, 3.0) refazem e revogam só o convite de professor (I7, `professores.int.test.ts`), e o
+      // `POST /v1/professores`, que cadastra, só gera convite de professor: nenhuma delas alcança o de coordenação.
       expect(rotas.filter((rota) => /convite/i.test(rota)).sort()).toEqual([
         'POST /v1/convites/aceitar',
         'POST /v1/convites/consultar',
@@ -556,6 +558,8 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
         'POST /v1/operacao/convites/:id/refazer',
         'POST /v1/operacao/convites/:id/revogar',
         'POST /v1/operacao/escolas/:id/convite-coordenacao',
+        'POST /v1/professores/:usuarioId/convite/refazer',
+        'POST /v1/professores/:usuarioId/convite/revogar',
       ])
 
       const coordenacao = await bancada.escolaComSessao('coordenador')

@@ -1,11 +1,12 @@
-import { contextoAtual, convite, ErroDeDominio, erroDoPostgresEm, escola, usuario, type Banco, type DadosDaCoordenacao, type TransacaoBanco } from '@educa/nucleo'
+import { contextoAtual, convite, ErroDeDominio, erroDoPostgresEm, escola, usuario, type Banco, type DadosDaCoordenacao, type DadosDoProfessor, type TipoDeConvite, type TransacaoBanco } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
 import { and, desc, eq, exists, gte, isNotNull, isNull, sql } from 'drizzle-orm'
 
 /**
  * A primeira metade da chave do `pg_advisory_xact_lock` que põe em fila, por escola, o que mexe no convite da coordenação
  * dela (Tech Spec da A0b, seção 7c, "Convite da escola" e "Ativação por convite"): gerar, refazer e revogar pelo painel e
- * pelo `ops:*`, e a ativação pelo convite (o aceite, e o login com o bilhete, com ou sem MFA). A segunda
+ * pelo `ops:*`, e a ativação pelo convite (o aceite, e o login com o bilhete, com ou sem MFA). O convite do professor usa a
+ * mesma trava (A1, tarefa 3.0): cadastrar, refazer e revogar pela coordenação da escola. A segunda
  * metade é `hashtext` do id da escola, e escolas diferentes não esperam uma pela outra. As outras chaves do código são
  * 7_000_001 (migração) e 7_000_002 (operadores).
  */
@@ -32,16 +33,18 @@ export class ConviteRepository {
   }
 
   /**
-   * O coordenador convidado, inativo até o aceite (`desativado_em = now()`). Se a conta já tem coordenador inativo
-   * nesta escola (convite revogado ou aceito sem a primeira entrada, ou coordenador desativado que a escola chama de
-   * volta), ele volta a esperar o convite novo, com `desativado_em` de agora e o nome digitado agora: revogar e gerar
-   * com o mesmo e-mail é como o operador corrige o nome (Tech Spec da A0b, seção 5). Se o coordenador está ativo, não
-   * devolve nada e não muda nada, nem o nome: não há o que convidar.
+   * O usuário convidado, com o papel do convite (o coordenador, pelo operador; o professor, pela coordenação da escola,
+   * A1), inativo até o aceite (`desativado_em = now()`). Se a conta já tem usuário inativo desse papel nesta escola
+   * (convite revogado ou aceito sem a primeira entrada, ou usuário desativado que a escola chama de volta), ele volta a
+   * esperar o convite novo, com `desativado_em` de agora e o nome digitado agora: revogar e gerar (ou cadastrar de novo)
+   * com o mesmo e-mail é como se corrige o nome (Tech Spec da A0b, seção 5). O `desativado_em` novo, posterior ao aceite
+   * antigo, faz o convite antigo já usado deixar de ativar. Se o usuário está ativo, não devolve nada e não muda nada, nem
+   * o nome: não há o que convidar.
    */
-  async usuarioConvidado(contaId: string, nome: string): Promise<string | undefined> {
+  async usuarioConvidado(contaId: string, nome: string, papel: TipoDeConvite): Promise<string | undefined> {
     const [linha] = await this.banco
       .insert(usuario)
-      .values({ escolaId: escolaDoContexto(), contaId, papel: 'coordenador', nome, desativadoEm: sql`now()` })
+      .values({ escolaId: escolaDoContexto(), contaId, papel, nome, desativadoEm: sql`now()` })
       .onConflictDoUpdate({
         target: [usuario.escolaId, usuario.contaId, usuario.papel],
         set: { desativadoEm: sql`now()`, nome },
@@ -52,15 +55,15 @@ export class ConviteRepository {
   }
 
   /**
-   * Grava o convite de coordenação. Se o usuário já tem convite em aberto nesta escola, o índice
+   * Grava o convite do tipo pedido. Se o usuário já tem convite em aberto nesta escola, o índice
    * `convite_pendente_unico` recusa, e a recusa sai como `CONFLITO`: é a rede de segurança da trava da escola.
    */
-  async criarConvite(dados: { tokenHash: string; usuarioId: string; expiraEm: Date }): Promise<string> {
+  async criarConvite(dados: { tipo: TipoDeConvite; tokenHash: string; usuarioId: string; expiraEm: Date }): Promise<string> {
     let criado: { id: string } | undefined
     try {
       ;[criado] = await this.banco
         .insert(convite)
-        .values({ escolaId: escolaDoContexto(), tokenHash: dados.tokenHash, tipo: 'coordenador', usuarioId: dados.usuarioId, expiraEm: dados.expiraEm })
+        .values({ escolaId: escolaDoContexto(), tokenHash: dados.tokenHash, tipo: dados.tipo, usuarioId: dados.usuarioId, expiraEm: dados.expiraEm })
         .returning({ id: convite.id })
     } catch (erro) {
       const doPostgres = erroDoPostgresEm(erro)
@@ -148,30 +151,55 @@ export class ConviteRepository {
 
   /**
    * Revoga o convite desta escola para o refazer, só se ele ainda está em aberto (não usado e não revogado; vencido
-   * também), e devolve o usuário dele, para o convite novo; `undefined` quando não revogou. O `update` espera a linha de
-   * quem a mexe ao mesmo tempo e confere as condições de novo depois: dois refazer, ou o refazer e o aceite, revogam no
-   * máximo uma vez, e só o que ainda estava em aberto (Tech Spec da A0b, seção 7c). Só convite de coordenação: quem
-   * chama já achou a escola por um convite `coordenador`, e o filtro aqui é a defesa em profundidade para o dia em que
-   * existir outro tipo (a A1 traz o de professor).
+   * também) e é do tipo pedido, e devolve o usuário dele, para o convite novo; `undefined` quando não revogou. O `update`
+   * espera a linha de quem a mexe ao mesmo tempo e confere as condições de novo depois: dois refazer, ou o refazer e o
+   * aceite, revogam no máximo uma vez, e só o que ainda estava em aberto (Tech Spec da A0b, seção 7c). O `tipo` no
+   * `where` é a segunda camada de quem chama: o operador já achou a escola por um convite `coordenador`, e a coordenação
+   * da escola já achou o último convite `professor` do usuário (I7).
    */
-  async revogarParaRefazer(conviteId: string): Promise<string | undefined> {
+  async revogarParaRefazer(conviteId: string, tipo: TipoDeConvite): Promise<string | undefined> {
     const [revogado] = await this.banco
       .update(convite)
       .set({ revogadoEm: sql`now()` })
-      .where(
-        and(eq(convite.escolaId, escolaDoContexto()), eq(convite.id, conviteId), eq(convite.tipo, 'coordenador'), isNull(convite.usadoEm), isNull(convite.revogadoEm)),
-      )
+      .where(and(eq(convite.escolaId, escolaDoContexto()), eq(convite.id, conviteId), eq(convite.tipo, tipo), isNull(convite.usadoEm), isNull(convite.revogadoEm)))
       .returning({ usuarioId: convite.usuarioId })
     return revogado?.usuarioId
   }
 
-  /** Revoga o convite, usado ou não, se ainda não foi revogado. Devolve se revogou. */
-  async revogar(conviteId: string): Promise<boolean> {
+  /** Revoga o convite do tipo pedido, usado ou não, se ainda não foi revogado. Devolve se revogou. */
+  async revogar(conviteId: string, tipo: TipoDeConvite): Promise<boolean> {
     const revogados = await this.banco
       .update(convite)
       .set({ revogadoEm: sql`now()` })
-      .where(and(eq(convite.escolaId, escolaDoContexto()), eq(convite.id, conviteId), isNull(convite.revogadoEm)))
+      .where(and(eq(convite.escolaId, escolaDoContexto()), eq(convite.id, conviteId), eq(convite.tipo, tipo), isNull(convite.revogadoEm)))
       .returning({ id: convite.id })
     return revogados.length === 1
+  }
+
+  /**
+   * O que decide o estado do professor (`estadoDoProfessor`) para o refazer e o revogar da coordenação (A1, tarefa 3.0):
+   * o `desativado_em` do usuário **professor** desta escola, o último convite `tipo = 'professor'` dele (maior
+   * `expira_em`, depois maior `id`) e a hora do banco. Usuário de outro papel, de outra escola, inexistente, ou professor
+   * sem convite de professor nenhum: `undefined`, a resposta do inexistente (I7). O `tipo` e o papel ficam no `where`.
+   */
+  async dadosDoProfessor(usuarioId: string): Promise<(DadosDoProfessor & { readonly ultimoConvite: NonNullable<DadosDoProfessor['ultimoConvite']> }) | undefined> {
+    const escolaId = escolaDoContexto()
+    const [linha] = await this.banco
+      .select({
+        id: convite.id,
+        expiraEm: convite.expiraEm,
+        usadoEm: convite.usadoEm,
+        revogadoEm: convite.revogadoEm,
+        desativadoEm: usuario.desativadoEm,
+        agora: sql<Date>`now()`.mapWith(convite.expiraEm),
+      })
+      .from(convite)
+      .innerJoin(usuario, and(eq(usuario.escolaId, convite.escolaId), eq(usuario.id, convite.usuarioId)))
+      .where(and(eq(convite.escolaId, escolaId), eq(convite.usuarioId, usuarioId), eq(convite.tipo, 'professor'), eq(usuario.papel, 'professor')))
+      .orderBy(desc(convite.expiraEm), desc(convite.id))
+      .limit(1)
+    if (linha === undefined) return undefined
+    const { desativadoEm, agora, ...ultimoConvite } = linha
+    return { desativadoEm, ultimoConvite, agora }
   }
 }

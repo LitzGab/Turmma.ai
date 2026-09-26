@@ -47,8 +47,8 @@ Vinculo*         → escola*, anoLetivo*, usuario*, turma*, disciplina?, papel*,
 Sessao*          → escola*, conta?, usuario*, metodo* (email | matricula | externo), familia*,
                    refreshHash*, ultimoUsoEm*, expiraEm*, encerradaEm?, motivo?
 RegistroAcesso*  → escola?, usuario?, evento* (login | login_falho | renovacao | saida), ip*, em*
-Convite          → escola*, tokenHash*, tipo (coordenador), usuario*, expiraEm, usadoEm?,
-                   revogadoEm?
+Convite          → escola*, tokenHash*, tipo (coordenador | professor), usuario*, expiraEm,
+                   usadoEm?, revogadoEm?
 ```
 
 **A identidade é global, os vínculos são por escola** (decidido na Tech Spec do F1). `Conta`
@@ -90,8 +90,17 @@ Reivindicacao*   → listaNome*, dispositivo, solicitadoEm*, aprovadoPor?, aprov
 nome e só vira `Usuario` com matrícula e senha **depois da aprovação do professor**. No F1 o
 aluno e o vínculo dele vêm do seed sintético.
 
-`Convite` no F1 é só de coordenador, criado por comando do operador. Os tipos `professor` e
-`sala`, e o vínculo do aluno vindo da lista, entram no F2.
+`Convite` no F1 é só de coordenador, criado por comando do operador. Na A1 (tarefa 3.0) entra o tipo
+`professor`: a coordenação cadastra o professor (nome e e-mail) e o convite nasce junto, válido por
+7 dias (o de coordenador, 72 h; os dois em `VALIDADE_DO_CONVITE_HORAS_POR_TIPO`, de `@educa/shared`).
+O convite de professor reusa a conta global: o e-mail que já tem conta em outra escola cliente
+ganha outro `Usuario` na escola, com a mesma `Conta`, e aceita com a senha que já tinha; o que não
+tem ganha a conta sem senha, definida no aceite. Nada na lista nem na auditoria da coordenação diz
+qual dos dois foi (a conta global é o quarto afrouxamento da D71, só com dado sintético). O aceite do
+professor não leva ao segundo fator. O `tipo` separa os dois convites em toda escrita: o operador só
+alcança o de coordenador, e a coordenação só o de professor, com o filtro no `where` dos dois lados.
+Cadastrar, refazer e revogar o de professor pegam a mesma trava por escola do de coordenador. O
+convite `sala` não existe: o aluno entra pelo acesso da turma (`AcessoTurma`, A1).
 
 Na A0b o convite da primeira coordenação também nasce pelo painel da operação, pelo mesmo caso de
 uso do comando, e o painel também o refaz. Gerar, refazer e revogar pegam uma trava por escola (`pg_advisory_xact_lock(7_000_003,

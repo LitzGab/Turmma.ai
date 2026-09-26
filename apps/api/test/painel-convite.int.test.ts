@@ -252,7 +252,7 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
         // O último convite (no `aceito`, o do aceite que esperava o login; no `sem_coordenacao`, o já usado) é revogado
         // na mesma transação, com a auditoria dele e o apelido conferido, sem nome, e-mail nem token.
         expect((await pool.query('select revogado_em is not null as revogado from convite where id = $1', [escola.conviteId])).rows).toEqual([{ revogado: true }])
-        expect(revogados).toEqual([...revogadosAntes, { entidade_id: escola.conviteId, autor_operador: sessao.apelido, autor_usuario_id: null, antes: null, depois: null }])
+        expect(revogados).toEqual([...revogadosAntes, { entidade_id: escola.conviteId, autor_operador: sessao.apelido, autor_usuario_id: null, antes: null, depois: { tipo: 'coordenador' } }])
         const texto = JSON.stringify(revogados)
         for (const proibido of [escola.quem.nome, escola.quem.email, outra.nome, outra.email, token]) expect(texto).not.toContain(proibido)
       } else {
@@ -314,7 +314,7 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
       expect((await pool.query('select revogado_em is not null as revogado from convite where id = $1', [alvo])).rows).toEqual([{ revogado: true }])
       expect(await auditoriaDe(escola.escolaId, 'convite.revogado')).toEqual([
         ...revogadosAntes,
-        { entidade_id: alvo, autor_operador: sessao.apelido, autor_usuario_id: null, antes: null, depois: null },
+        { entidade_id: alvo, autor_operador: sessao.apelido, autor_usuario_id: null, antes: null, depois: { tipo: 'coordenador' } },
       ])
       expect(await estadoDe(escola.escolaId)).toBe('revogado')
       expect(await abertos(escola.escolaId)).toBe(0)
@@ -582,12 +582,12 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
 
       const pendente = await escolaEm('pendente', sessao.token)
       expect(await rodar(executarOpsRevogarConvite, ['--convite', pendente.conviteId ?? ''], quemRoda.apelido)).toEqual({ codigo: 0, saida: 'ok\n', erro: '' })
-      expect(await auditoriaDe(pendente.escolaId, 'convite.revogado')).toEqual([{ entidade_id: pendente.conviteId, autor_operador: quemRoda.apelido, autor_usuario_id: null, antes: null, depois: null }])
+      expect(await auditoriaDe(pendente.escolaId, 'convite.revogado')).toEqual([{ entidade_id: pendente.conviteId, autor_operador: quemRoda.apelido, autor_usuario_id: null, antes: null, depois: { tipo: 'coordenador' } }])
       expect(await estadoDe(pendente.escolaId)).toBe('revogado')
     })
   })
 
-  describe('I7: escola ativa, e o alarme do tipo', () => {
+  describe('I7: escola ativa, e convite de outro tipo', () => {
     it('revogar pelo id do convite de uma escola ativa não grava nada', async () => {
       const sessao = await operadores.operadorComSessao()
       const escola = await escolaEm('ativa', sessao.token)
@@ -614,17 +614,30 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
       expect(await abertos(pendente.escolaId)).toBe(1)
     })
 
-    it('alarme: convite de outro tipo não entra (23514). Quando a A1 afrouxar o check, este teste quebra e pede o de "outro tipo responde NAO_ENCONTRADO"', async () => {
+    it('I7 da A1: com o check afrouxado pela 0018, refazer e revogar da operação pelo id de um convite de professor respondem NAO_ENCONTRADO, e nada é gravado', async () => {
       const sessao = await operadores.operadorComSessao()
-      const escola = await escolaEm('revogado', sessao.token)
-      const { rows } = await pool.query<{ usuario_id: string }>('select usuario_id from convite where id = $1', [escola.conviteId])
-      await expect(
-        pool.query("insert into convite (escola_id, token_hash, tipo, usuario_id, expira_em) values ($1, $2, 'professor', $3, now() + interval '1 hour')", [
-          escola.escolaId,
-          createHash('sha256').update(randomUUID()).digest('hex'),
-          rows[0]?.usuario_id,
-        ]),
-      ).rejects.toMatchObject({ code: '23514', constraint: 'convite_tipo_valido' })
+      const escola = await escolaEm('pendente', sessao.token)
+      // O professor da escola, inativo, com o convite de professor em aberto, gravado direto no banco: a 0018 o permite.
+      const { rows: contas } = await pool.query<{ id: string }>('insert into conta (email) values ($1) returning id', [`professor-${randomUUID()}@escola.invalid`])
+      const { rows: usuarios } = await pool.query<{ id: string }>(
+        "insert into usuario (escola_id, conta_id, papel, nome, desativado_em) values ($1, $2, 'professor', 'Professor sintético', now()) returning id",
+        [escola.escolaId, contas[0]?.id],
+      )
+      const { rows: convites } = await pool.query<{ id: string }>(
+        "insert into convite (escola_id, token_hash, tipo, usuario_id, expira_em) values ($1, $2, 'professor', $3, now() + interval '7 days') returning id",
+        [escola.escolaId, createHash('sha256').update(randomUUID()).digest('hex'), usuarios[0]?.id],
+      )
+      const deProfessor = convites[0]?.id ?? ''
+      const antes = await retrato(escola.escolaId, escola.quem.email)
+
+      // A mesma resposta do id inexistente: nada diz que o convite existe.
+      for (const resposta of [await refazer(sessao.token, deProfessor), await revogar(sessao.token, deProfessor), await refazer(sessao.token, randomUUID())]) {
+        esperarErro(resposta, 404, CodigoDeErro.NAO_ENCONTRADO)
+      }
+      expect(await retrato(escola.escolaId, escola.quem.email)).toEqual(antes)
+      // O convite da coordenação continua o último e em aberto: o do professor não entra no estado dela.
+      expect(await estadoDe(escola.escolaId)).toBe('pendente')
+      expect((await refazer(sessao.token, escola.conviteId ?? '')).status).toBe(201)
     })
   })
 
@@ -672,7 +685,7 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
       ).rows
       const expiraEm = depois.find((convite) => convite.id === novo)?.expira_em
       expect(novas).toEqual([
-        { acao: 'convite.refeito', entidade_id: novo, autor_operador: sessao.apelido, autor_usuario_id: null, antes: null, depois: { origemId: alvo, usuarioId, expiraEm: expiraEm?.toISOString() } },
+        { acao: 'convite.refeito', entidade_id: novo, autor_operador: sessao.apelido, autor_usuario_id: null, antes: null, depois: { tipo: 'coordenador', origemId: alvo, usuarioId, expiraEm: expiraEm?.toISOString() } },
       ])
       const validadeH = ((expiraEm?.getTime() ?? 0) - Date.now()) / HORA_MS
       expect(validadeH).toBeGreaterThan(71.9)

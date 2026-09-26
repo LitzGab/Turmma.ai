@@ -70,6 +70,14 @@ describe('MATRIZ de permissão', () => {
     }
   })
 
+  it('I9: listar, cadastrar, refazer e revogar o convite de professor são da coordenação, com `unidade`; professor, aluno e rede, `nunca`', () => {
+    expect(RECURSOS.professor).toEqual(['listar', 'cadastrar', 'refazer_convite', 'revogar_convite'])
+    for (const acao of RECURSOS.professor) {
+      expect(alcanceDe('coordenador', 'professor', acao), acao).toBe('unidade')
+      for (const papel of ['professor', 'aluno', 'rede'] as const) expect(alcanceDe(papel, 'professor', acao), `${papel} professor.${acao}`).toBe('nunca')
+    }
+  })
+
   it('alcanceDe devolve a célula, e nunca para papel, recurso ou ação que a matriz não declara', () => {
     expect(alcanceDe('professor', 'turma', 'ler')).toBe('turma_vinculada')
     expect(alcanceDe('responsavel', 'turma', 'ler')).toBe('nunca')

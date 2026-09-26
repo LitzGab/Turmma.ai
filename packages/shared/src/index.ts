@@ -58,9 +58,11 @@ export {
   esquemaRespostaConsultarConvite,
   TAMANHO_MAXIMO_TOKEN_DE_CONVITE,
   TAMANHO_MINIMO_SENHA_NOVA,
+  TIPOS_DE_CONVITE,
   VALIDADE_DO_CONVITE_HORAS,
+  VALIDADE_DO_CONVITE_HORAS_POR_TIPO,
 } from './sessao/convite.js'
-export type { PedidoAceitarConvite, PedidoConsultarConvite, RespostaAceitarConvite, RespostaConsultarConvite } from './sessao/convite.js'
+export type { PedidoAceitarConvite, PedidoConsultarConvite, RespostaAceitarConvite, RespostaConsultarConvite, TipoDeConvite } from './sessao/convite.js'
 export { esquemaPedidoLoginMatricula, TAMANHO_MAXIMO_MATRICULA, TAMANHO_MAXIMO_SLUG_NO_LOGIN } from './sessao/matricula.js'
 export type { PedidoLoginMatricula } from './sessao/matricula.js'
 export { esquemaRespostaAcessoDaEscola, PROVEDORES_DE_CONTA_DA_ESCOLA } from './sessao/acesso-da-escola.js'
@@ -243,6 +245,17 @@ export type {
   UsoDaEscolaDoPainel,
   UsoDoPeriodoDoPainel,
 } from './operacao/painel.js'
+export {
+  esquemaPedidoCadastrarProfessor,
+  esquemaPedidoSemCorpoDoConviteDeProfessor,
+  esquemaProfessorDaEscola,
+  esquemaRespostaConviteDeProfessor,
+  esquemaRespostaListaDeProfessores,
+  ESTADOS_DO_PROFESSOR,
+  REFAZER_CONVITE_DE_PROFESSOR_POR_ESTADO,
+  REVOGAR_CONVITE_DE_PROFESSOR_POR_ESTADO,
+} from './professores/professores.js'
+export type { EstadoDoProfessor, PedidoCadastrarProfessor, ProfessorDaEscola, RespostaConviteDeProfessor, RespostaListaDeProfessores } from './professores/professores.js'
 export { FORMATO_SLUG, TAMANHO_MAXIMO_SLUG, TIPOS_DE_REDE } from './estrutura/rede-e-escola.js'
 export type { TipoDeRede } from './estrutura/rede-e-escola.js'
 export type { RespostaEuDoOperador } from './operacao/eu.js'

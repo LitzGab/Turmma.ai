@@ -69,6 +69,15 @@ link, cria a senha (ou entra com a conta que já tem) e chega à tela "Turmas" p
   rodada que vale para o código atual, e APROVADO nos que têm veto
 - [ ] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
 
+## Herdado da 3.0
+
+- **Clique duplo em refazer** (`test-engineer`, 1ª rodada da 3.0): o refazer vai pelo `usuarioId`, e dois pedidos
+  seguidos respondem 201 os dois, com o primeiro link já revogado pelo segundo (teste "dois refazer do mesmo professor em
+  paralelo" em `apps/api/test/professores.int.test.ts`). A tela trava o botão enquanto o pedido está no ar e mostra só o
+  link da última resposta.
+- **Alocação antes do aceite**: a alocação do F1 só aceita professor ativo; a decisão está na seção 13 da Tech Spec e
+  vem antes da 13.0 ("Decisão pendente" no `13_task.md`).
+
 ## Fora do escopo desta tarefa
 
 Envio do link por e-mail; a alocação (13.0); o confirmar e contestar vínculo, que é a tela "Turmas" (11.0).

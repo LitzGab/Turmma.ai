@@ -14,10 +14,25 @@ export const TAMANHO_MINIMO_SENHA_NOVA = 12
 export const TAMANHO_MAXIMO_TOKEN_DE_CONVITE = 128
 
 /**
- * Validade do convite da coordenação, contada da criação (Tech Spec do F1, seção 3). Aqui, e não só no banco, porque o
- * painel da operação a mostra no resumo antes de gerar (A0b, tarefa 7.0): o número dito é o mesmo que o banco aplica.
+ * Os tipos de convite: o da primeira coordenação, que o operador gera (F1, A0b), e o do professor, que a coordenação da
+ * escola gera ao cadastrá-lo (A1, tarefa 3.0). O check `convite_tipo_valido` do banco aceita os mesmos.
  */
-export const VALIDADE_DO_CONVITE_HORAS = 72
+export const TIPOS_DE_CONVITE = ['coordenador', 'professor'] as const
+
+export type TipoDeConvite = (typeof TIPOS_DE_CONVITE)[number]
+
+/**
+ * Validade do convite por tipo, contada da criação, num lugar só (Tech Spec da A1, seção 3; RF6): 72 h o da coordenação
+ * (Tech Spec do F1, seção 3), 7 dias o do professor. Aqui, e não só na API, porque a tela mostra o prazo no resumo antes
+ * de gerar (A0b, tarefa 7.0; A1, tarefa 14.0): o número dito é o mesmo que a API grava em `expira_em`.
+ */
+export const VALIDADE_DO_CONVITE_HORAS_POR_TIPO = {
+  coordenador: 72,
+  professor: 7 * 24,
+} as const satisfies Readonly<Record<TipoDeConvite, number>>
+
+/** A validade do convite da coordenação, a que o painel da operação mostra (A0b, tarefa 7.0). */
+export const VALIDADE_DO_CONVITE_HORAS = VALIDADE_DO_CONVITE_HORAS_POR_TIPO.coordenador
 
 const token = z.string().min(1).max(TAMANHO_MAXIMO_TOKEN_DE_CONVITE)
 

@@ -1,5 +1,5 @@
 import { CAMPOS_PROIBIDOS_NA_AUDITORIA } from '@educa/nucleo'
-import { CodigoDeErro, esquemaRespostaDisciplina, esquemaRespostaTurma, MENSAGENS_DE_ERRO } from '@educa/shared'
+import { CodigoDeErro, esquemaRespostaConviteDeProfessor, esquemaRespostaDisciplina, esquemaRespostaListaDeProfessores, esquemaRespostaTurma, MENSAGENS_DE_ERRO } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { z } from 'zod'
@@ -15,6 +15,9 @@ import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
  *
  * Toda varredura termina chamando a rota com o recurso da própria escola e conferindo o sucesso: sem isso, uma rota
  * que não existe (ou um caminho escrito errado aqui) responderia o mesmo 404 e passaria calada.
+ *
+ * A rota sem parâmetro de id (`POST` e `GET /v1/professores`, 3.0) não tem recurso de B a pedir: fica fora do I3 por id,
+ * e o isolamento da lista é o "I3 (lista)" de `professores.int.test.ts`. As outras quatro varreduras a cobrem.
  */
 
 /** Uma escola da A1 montada pela API, como a coordenação faria, com as pessoas e os recursos que as rotas pedem. */
@@ -35,14 +38,29 @@ interface EscolaMontada {
   /** Matrícula e hash de senha de um aluno da escola, que nenhuma resposta nem log pode ter (A3, A4). */
   readonly matricula: string
   readonly senhaHash: string
+  /**
+   * O professor cadastrado pela coordenação (3.0), com o convite em aberto: refazer e revogar dão certo. O e-mail e o
+   * token dele nunca aparecem em outra resposta nem em log (A3, A4); o e-mail cadastrado de novo dá `CONFLITO`.
+   */
+  readonly convidado: { readonly usuarioId: string; readonly email: string; readonly token: string }
+  /** O professor com o convite revogado: refazer dá `CONFLITO`. */
+  readonly convidadoRevogado: string
+  /** O professor que aceitou o convite: revogar dá `CONFLITO`. */
+  readonly convidadoAceito: string
 }
 
 /** Uma rota nova da A1, com o que as varreduras precisam para chamá-la na escola montada. */
 interface RotaDaA1 {
-  /** Como a spec a escreve: verbo e caminho, com um parâmetro de id (`PATCH /v1/turmas/:id`). */
+  /**
+   * Como a spec a escreve: verbo e caminho, com um parâmetro de id (`PATCH /v1/turmas/:id`), ou sem ele, na rota da
+   * escola inteira (`GET /v1/professores`).
+   */
   readonly rota: string
-  /** O id que vai no caminho: o recurso da escola montada que a chamada de sucesso alcança. */
-  readonly alvo: (escola: EscolaMontada) => string
+  /**
+   * O id que vai no caminho: o recurso da escola montada que a chamada de sucesso alcança. Só na rota com parâmetro: a
+   * rota sem id não tem recurso de B a pedir, e o I3 dela mora no teste da funcionalidade (`professores.int.test.ts`).
+   */
+  readonly alvo?: (escola: EscolaMontada) => string
   /**
    * O recurso da escola montada em que o professor tem vínculo confirmado, se a rota o alcança por um: o P1 pede com ele
    * também, porque o professor dono é quem mais pode passar por uma célula aberta com filtro de vínculo.
@@ -54,8 +72,8 @@ interface RotaDaA1 {
   readonly sucesso: 200 | 201 | 204
   /** O contrato estrito da resposta de sucesso; sem ele, o corpo é vazio (204). */
   readonly resposta?: z.ZodType
-  /** O pedido da mesma rota que dá `CONFLITO` na escola montada, se a rota tem um. */
-  readonly conflito?: (escola: EscolaMontada) => { readonly alvo: string; readonly corpo?: Record<string, unknown> }
+  /** O pedido da mesma rota que dá `CONFLITO` na escola montada, se a rota tem um (o alvo, se a rota tem parâmetro). */
+  readonly conflito?: (escola: EscolaMontada) => { readonly alvo?: string; readonly corpo?: Record<string, unknown> }
   /** As ações de auditoria que o sucesso grava, em ordem (A1). Vazia quando a spec não pede auditoria da rota. */
   readonly auditoria: readonly string[]
 }
@@ -63,9 +81,17 @@ interface RotaDaA1 {
 /** Em minúsculas, como o `detail` do índice único (`lower(nome)`) o escreveria: a sentinela pega o vazamento dos dois jeitos. */
 const NOME_RENOMEADO = `renomeada ${randomUUID().slice(0, 8)}`
 
+/** O nome dos professores cadastrados pelas varreduras, que o log nunca pode ter (A4). */
+const NOME_DO_PROFESSOR = `professor ${randomUUID().slice(0, 8)}`
+/** O domínio dos e-mails cadastrados pelas varreduras, que nenhuma resposta nem log pode ter (A3, A4). */
+const DOMINIO_DO_EMAIL = `escola-${randomUUID().slice(0, 8)}.invalid`
+/** A senha com que o professor da escola montada aceita o convite. */
+const SENHA_DO_ACEITE = 'senha-do-aceite-sintetica-1'
+
 /**
  * As rotas autenticadas novas da A1. 1.0: renomear e excluir disciplina e turma. Renomear e excluir não gravam
- * auditoria: o RF16 não pede (1_task.md, "Fora do escopo").
+ * auditoria: o RF16 não pede (1_task.md, "Fora do escopo"). 3.0: cadastrar e listar professores, e refazer e revogar o
+ * convite de professor; a lista não grava auditoria (são professores, não aluno).
  */
 const ROTAS_DA_A1: readonly RotaDaA1[] = [
   {
@@ -104,6 +130,37 @@ const ROTAS_DA_A1: readonly RotaDaA1[] = [
     conflito: (escola) => ({ alvo: escola.turmaComVinculo }),
     auditoria: [],
   },
+  {
+    rota: 'POST /v1/professores',
+    corpo: () => ({ nome: NOME_DO_PROFESSOR, email: `professor-${randomUUID()}@${DOMINIO_DO_EMAIL}` }),
+    sucesso: 201,
+    resposta: esquemaRespostaConviteDeProfessor,
+    conflito: (escola) => ({ corpo: { nome: NOME_DO_PROFESSOR, email: escola.convidado.email } }),
+    auditoria: ['professor.cadastrado', 'convite.criado'],
+  },
+  {
+    rota: 'GET /v1/professores',
+    sucesso: 200,
+    resposta: esquemaRespostaListaDeProfessores,
+    auditoria: [],
+  },
+  {
+    rota: 'POST /v1/professores/:usuarioId/convite/refazer',
+    alvo: (escola) => escola.convidado.usuarioId,
+    corpo: () => ({}),
+    sucesso: 201,
+    resposta: esquemaRespostaConviteDeProfessor,
+    conflito: (escola) => ({ alvo: escola.convidadoRevogado, corpo: {} }),
+    auditoria: ['convite.refeito'],
+  },
+  {
+    rota: 'POST /v1/professores/:usuarioId/convite/revogar',
+    alvo: (escola) => escola.convidado.usuarioId,
+    corpo: () => ({}),
+    sucesso: 204,
+    conflito: (escola) => ({ alvo: escola.convidadoAceito, corpo: {} }),
+    auditoria: ['convite.revogado'],
+  },
 ]
 
 describe('escola montada (A1): as varreduras transversais sobre as rotas novas', () => {
@@ -141,7 +198,35 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     const turmaComVinculo = await criado(post('/v1/turmas', { serieId: serie, nome: nomes.turmaComVinculo }))
     const vinculo = await criado(post('/v1/vinculos', { usuarioId: professor.usuarioId, turmaId: turmaComVinculo, disciplinaId: disciplinaComVinculo, papel: 'professor' }))
     await criado(chamar(api.url, 'POST', `/v1/vinculos/${vinculo}/confirmar`, professor.token), 200)
-    return { escolaId, slug: await bancada.slugDe(escolaId), coordenacao, professor, aluno, disciplina, turma, disciplinaComVinculo, turmaComVinculo, nomes, matricula, senhaHash }
+    const convidar = async () => {
+      const email = `professor-${randomUUID()}@${DOMINIO_DO_EMAIL}`
+      const resposta = await post('/v1/professores', { nome: NOME_DO_PROFESSOR, email })
+      expect(resposta.status).toBe(201)
+      return { email, ...esquemaRespostaConviteDeProfessor.parse(resposta.corpo) }
+    }
+    const convidado = await convidar()
+    const revogado = await convidar()
+    await criado(post(`/v1/professores/${revogado.usuarioId}/convite/revogar`, {}), 204)
+    const aceito = await convidar()
+    const aceite = await fetch(`${api.url}/v1/convites/aceitar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: aceito.token, senha: SENHA_DO_ACEITE }) })
+    expect(aceite.status).toBe(200)
+    return {
+      escolaId,
+      slug: await bancada.slugDe(escolaId),
+      coordenacao,
+      professor,
+      aluno,
+      disciplina,
+      turma,
+      disciplinaComVinculo,
+      turmaComVinculo,
+      nomes,
+      matricula,
+      senhaHash,
+      convidado: { usuarioId: convidado.usuarioId, email: convidado.email, token: convidado.token },
+      convidadoRevogado: revogado.usuarioId,
+      convidadoAceito: aceito.usuarioId,
+    }
   }
 
   /** O que a escola tem nas tabelas que as rotas da A1 escrevem, e a auditoria dela. As tarefas seguintes somam as tabelas delas. */
@@ -151,18 +236,20 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       disciplinas: await linhas('select id, nome, area from disciplina where escola_id = $1 order by id'),
       turmas: await linhas('select id, ano_letivo_id, serie_id, nome, turno from turma where escola_id = $1 order by id'),
       vinculos: await linhas('select id, turma_id, disciplina_id, estado from vinculo where escola_id = $1 order by id'),
+      usuarios: await linhas('select id, conta_id, papel, nome, desativado_em from usuario where escola_id = $1 order by id'),
+      convites: await linhas('select id, tipo, usuario_id, expira_em, usado_em, revogado_em from convite where escola_id = $1 order by id'),
       auditoria: await linhas('select id from auditoria where escola_id = $1 order by id'),
     }
   }
 
-  /** Chama a rota com o id no lugar do parâmetro do caminho. */
-  function pedir(rota: RotaDaA1, sessao: SessaoDeTeste, alvo: string, corpo?: Record<string, unknown>): Promise<RespostaHttp> {
+  /** Chama a rota com o id no lugar do parâmetro do caminho, se ela tem um. */
+  function pedir(rota: RotaDaA1, sessao: SessaoDeTeste, alvo: string | undefined, corpo?: Record<string, unknown>): Promise<RespostaHttp> {
     const [verbo, caminho] = rota.rota.split(' ') as [string, string]
-    return chamar(api.url, verbo, caminho.replace(/:[A-Za-z]+/, alvo), sessao.token, corpo)
+    return chamar(api.url, verbo, alvo === undefined ? caminho : caminho.replace(/:[A-Za-z]+/, alvo), sessao.token, corpo)
   }
 
   /** O sucesso da rota pela coordenação da escola, com o recurso dela. */
-  const comSucesso = (rota: RotaDaA1, escola: EscolaMontada) => pedir(rota, escola.coordenacao, rota.alvo(escola), rota.corpo?.(escola))
+  const comSucesso = (rota: RotaDaA1, escola: EscolaMontada) => pedir(rota, escola.coordenacao, rota.alvo?.(escola), rota.corpo?.(escola))
 
   /** A resposta de erro sem o id da requisição, que muda a cada chamada: o resto precisa ser idêntico. */
   function semRequisicao(resposta: RespostaHttp): unknown {
@@ -184,9 +271,9 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       todas.push({ esperado: 409, resposta: await pedir(rota, escola.coordenacao, alvo, corpo) })
     }
     if (rota.corpo !== undefined) {
-      todas.push({ esperado: 400, resposta: await pedir(rota, escola.coordenacao, rota.alvo(escola), { ...rota.corpo(escola), escolaId: escola.escolaId }) })
+      todas.push({ esperado: 400, resposta: await pedir(rota, escola.coordenacao, rota.alvo?.(escola), { ...rota.corpo(escola), escolaId: escola.escolaId }) })
     }
-    todas.push({ esperado: 404, resposta: await pedir(rota, escola.coordenacao, randomUUID(), rota.corpo?.(escola)) })
+    if (rota.alvo !== undefined) todas.push({ esperado: 404, resposta: await pedir(rota, escola.coordenacao, randomUUID(), rota.corpo?.(escola)) })
     todas.push({ esperado: rota.sucesso, resposta: await comSucesso(rota, escola) })
     for (const { esperado, resposta } of todas) expect(resposta.status, `${rota.rota} ${String(esperado)}`).toBe(esperado)
     return todas
@@ -203,19 +290,24 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     await medidor.encerrar()
   })
 
-  it('a lista das rotas é a da spec, sem repetição, e cada uma tem um parâmetro de id no caminho', () => {
+  it('a lista das rotas é a da spec, sem repetição; a rota com parâmetro de id no caminho tem o alvo, e só ela', () => {
     const rotas = ROTAS_DA_A1.map((rota) => rota.rota)
     expect(new Set(rotas).size).toBe(rotas.length)
-    for (const rota of rotas) expect(rota, rota).toMatch(/^(GET|POST|PATCH|DELETE) \/v1\/[^ ]*\/:[A-Za-z]+(\/[^ ]*)?$/)
+    for (const rota of ROTAS_DA_A1) {
+      expect(rota.rota, rota.rota).toMatch(/^(GET|POST|PATCH|DELETE) \/v1\/[^ ]*$/)
+      expect(/\/:[A-Za-z]+(\/|$)/.test(rota.rota), rota.rota).toBe(rota.alvo !== undefined)
+    }
   })
 
   describe('I3: o recurso da escola B pedido pela coordenação de A responde como o id sorteado, e B não muda', () => {
     for (const rota of ROTAS_DA_A1) {
+      const alvo = rota.alvo
+      if (alvo === undefined) continue
       it(rota.rota, async () => {
         const a = await montar()
         const antesEmB = await estadoDe(b)
 
-        const comIdDeB = await pedir(rota, a.coordenacao, rota.alvo(b), rota.corpo?.(a))
+        const comIdDeB = await pedir(rota, a.coordenacao, alvo(b), rota.corpo?.(a))
         const comSorteado = await pedir(rota, a.coordenacao, randomUUID(), rota.corpo?.(a))
         const foraDoFormato = await pedir(rota, a.coordenacao, 'nao-e-um-id', rota.corpo?.(a))
         expect(semRequisicao(comIdDeB)).toEqual(NAO_ENCONTRADO)
@@ -234,9 +326,9 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
         const a = await montar()
         const antes = await estadoDe(a)
 
-        const tentativas: Array<readonly [string, SessaoDeTeste, string]> = [
-          ['professor', a.professor, rota.alvo(a)],
-          ['aluno', a.aluno, rota.alvo(a)],
+        const tentativas: Array<readonly [string, SessaoDeTeste, string | undefined]> = [
+          ['professor', a.professor, rota.alvo?.(a)],
+          ['aluno', a.aluno, rota.alvo?.(a)],
         ]
         if (rota.alvoDoProfessor !== undefined) tentativas.push(['professor com vínculo confirmado', a.professor, rota.alvoDoProfessor(a)])
         for (const [quem, sessao, alvo] of tentativas) {
@@ -271,11 +363,12 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     }
   })
 
-  describe('A3: nenhuma resposta traz token, matrícula ou hash, nem campo fora do contrato', () => {
+  describe('A3: nenhuma resposta traz token, matrícula, hash ou e-mail, nem campo fora do contrato', () => {
     for (const rota of ROTAS_DA_A1) {
       it(rota.rota, async () => {
         const a = await montar()
-        const sentinelas = [a.coordenacao.token, a.professor.token, a.aluno.token, a.matricula, a.senhaHash]
+        // O token do convite só sai na resposta que o cria: o do professor convidado na montagem, em nenhuma destas.
+        const sentinelas = [a.coordenacao.token, a.professor.token, a.aluno.token, a.matricula, a.senhaHash, a.convidado.token, DOMINIO_DO_EMAIL]
 
         for (const { esperado, resposta } of await variantes(rota, a)) {
           const texto = JSON.stringify(resposta.corpo)
@@ -294,25 +387,40 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     }
   })
 
-  it('A4: o log das rotas novas, no sucesso e em cada erro, não tem nome, matrícula, hash, token nem o endereço da escola', async () => {
+  it('A4: o log das rotas novas, no sucesso e em cada erro, não tem nome, matrícula, hash, token, e-mail nem o endereço da escola', async () => {
     const escolas = await Promise.all(ROTAS_DA_A1.map(() => montar()))
     linhasDeLog.length = 0
     let erros = 0
+    /** Os tokens de convite que as respostas de sucesso devolveram: nenhum deles vai a log. */
+    const tokensDevolvidos: string[] = []
     for (const [posicao, rota] of ROTAS_DA_A1.entries()) {
       const escola = escolas[posicao]
       if (escola === undefined) throw new Error('escola não montada')
-      erros += (await variantes(rota, escola)).filter(({ esperado }) => esperado >= 400).length
+      const respostas = await variantes(rota, escola)
+      erros += respostas.filter(({ esperado }) => esperado >= 400).length
+      for (const { resposta } of respostas) if (typeof resposta.corpo['token'] === 'string') tokensDevolvidos.push(resposta.corpo['token'])
     }
+    // O cadastro e o refazer devolveram o token deles: sem isso, a busca abaixo não teria o que procurar.
+    expect(tokensDevolvidos.length).toBe(ROTAS_DA_A1.filter((rota) => rota.resposta === esquemaRespostaConviteDeProfessor).length)
 
     const linhas = linhasDeLog.map((linha) => JSON.parse(linha) as Record<string, unknown>)
     // O log capturou os erros: sem isso, a busca abaixo passaria num log mudo.
     expect(linhas.filter((linha) => linha['evento'] === 'http.erro')).toHaveLength(erros)
     const todoOLog = linhasDeLog.join('\n')
     for (const escola of escolas) {
-      for (const sentinela of [...Object.values(escola.nomes), escola.matricula, escola.senhaHash, escola.slug, escola.coordenacao.token, escola.professor.token, escola.aluno.token]) {
+      for (const sentinela of [
+        ...Object.values(escola.nomes),
+        escola.matricula,
+        escola.senhaHash,
+        escola.slug,
+        escola.coordenacao.token,
+        escola.professor.token,
+        escola.aluno.token,
+        escola.convidado.token,
+      ]) {
         expect(todoOLog).not.toContain(sentinela)
       }
     }
-    expect(todoOLog).not.toContain(NOME_RENOMEADO)
+    for (const sentinela of [NOME_RENOMEADO, NOME_DO_PROFESSOR, DOMINIO_DO_EMAIL, ...tokensDevolvidos]) expect(todoOLog).not.toContain(sentinela)
   })
 })

@@ -1,6 +1,5 @@
 import { ErroDeDominio, executarNoContexto } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
-import { sql, TransactionRollbackError } from 'drizzle-orm'
 import { createHash, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { BancadaDeSessoes } from '../../test/sessao-de-teste.js'
@@ -60,7 +59,7 @@ describe('ConviteRepository: o convite e o usuário convidado só na escola do c
     const alvo = await convidado()
     expect(await naEscola(escolaB, (repositorio) => repositorio.ativarPorConvite(alvo.usuarioId, alvo.conviteId))).toBe(false)
     expect(await ativo(alvo.usuarioId)).toBe(false)
-    expect(await naEscola(escolaB, (repositorio) => repositorio.revogar(alvo.conviteId))).toBe(false)
+    expect(await naEscola(escolaB, (repositorio) => repositorio.revogar(alvo.conviteId, 'coordenador'))).toBe(false)
     expect(await naEscola(escolaB, (repositorio) => repositorio.revogado(alvo.conviteId))).toBeUndefined()
     const { rows } = await bancada.pool.query<{ revogado: boolean }>('select revogado_em is not null as revogado from convite where id = $1', [alvo.conviteId])
     expect(rows).toEqual([{ revogado: false }])
@@ -99,17 +98,17 @@ describe('ConviteRepository: o convite e o usuário convidado só na escola do c
   it('o coordenador convidado nasce inativo; o que já está ativo não é convidado de novo; o inativo volta a esperar', async () => {
     const { rows: contas } = await bancada.pool.query<{ id: string }>('insert into conta (email) values ($1) returning id', [`convidada-${randomUUID()}@escola.invalid`])
     const contaId = contas[0]?.id ?? ''
-    const usuarioId = await naEscola(escolaA, (repositorio) => repositorio.usuarioConvidado(contaId, 'Pessoa sintética'))
+    const usuarioId = await naEscola(escolaA, (repositorio) => repositorio.usuarioConvidado(contaId, 'Pessoa sintética', 'coordenador'))
     expect(usuarioId).toEqual(expect.any(String))
     expect(await ativo(usuarioId ?? '')).toBe(false)
     await bancada.pool.query('update usuario set desativado_em = null where id = $1', [usuarioId])
     // Ativo: nada muda, nem o nome.
-    expect(await naEscola(escolaA, (repositorio) => repositorio.usuarioConvidado(contaId, 'Pessoa sintética Outra'))).toBeUndefined()
+    expect(await naEscola(escolaA, (repositorio) => repositorio.usuarioConvidado(contaId, 'Pessoa sintética Outra', 'coordenador'))).toBeUndefined()
     expect(await ativo(usuarioId ?? '')).toBe(true)
     expect((await bancada.pool.query('select nome from usuario where id = $1', [usuarioId])).rows).toEqual([{ nome: 'Pessoa sintética' }])
     await bancada.pool.query("update usuario set desativado_em = now() - interval '1 day' where id = $1", [usuarioId])
     // Inativo: volta a esperar, com o nome digitado agora.
-    expect(await naEscola(escolaA, (repositorio) => repositorio.usuarioConvidado(contaId, 'Pessoa sintética Corrigida'))).toBe(usuarioId)
+    expect(await naEscola(escolaA, (repositorio) => repositorio.usuarioConvidado(contaId, 'Pessoa sintética Corrigida', 'coordenador'))).toBe(usuarioId)
     const { rows } = await bancada.pool.query<{ recente: boolean; nome: string }>("select desativado_em > now() - interval '1 minute' as recente, nome from usuario where id = $1", [usuarioId])
     expect(rows).toEqual([{ recente: true, nome: 'Pessoa sintética Corrigida' }])
   })
@@ -165,7 +164,7 @@ describe('ConviteRepository: o convite e o usuário convidado só na escola do c
     }
     const criar = (usuarioId: string) =>
       naEscola(escolaE, (repositorio) =>
-        repositorio.criarConvite({ tokenHash: createHash('sha256').update(randomUUID()).digest('hex'), usuarioId, expiraEm: new Date(Date.now() + 72 * 60 * 60 * 1_000) }),
+        repositorio.criarConvite({ tipo: 'coordenador', tokenHash: createHash('sha256').update(randomUUID()).digest('hex'), usuarioId, expiraEm: new Date(Date.now() + 72 * 60 * 60 * 1_000) }),
       )
     const convitesDe = async (usuarioId: string) => (await bancada.pool.query<{ id: string }>('select id from convite where usuario_id = $1 order by id', [usuarioId])).rows.map((linha) => linha.id)
 
@@ -195,45 +194,42 @@ describe('ConviteRepository: o convite e o usuário convidado só na escola do c
     const revogadoEm = async (conviteId: string) => (await bancada.pool.query<{ revogado: boolean }>('select revogado_em is not null as revogado from convite where id = $1', [conviteId])).rows[0]?.revogado
     const pendente = await convidado({ aceitoHaS: null })
     // Em B, o convite de A não é achado: sem a escola no `where`, seria revogado e o usuário de A voltaria.
-    expect(await naEscola(escolaB, (repositorio) => repositorio.revogarParaRefazer(pendente.conviteId))).toBeUndefined()
+    expect(await naEscola(escolaB, (repositorio) => repositorio.revogarParaRefazer(pendente.conviteId, 'coordenador'))).toBeUndefined()
     expect(await revogadoEm(pendente.conviteId)).toBe(false)
-    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(pendente.conviteId))).toBe(pendente.usuarioId)
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(pendente.conviteId, 'coordenador'))).toBe(pendente.usuarioId)
     expect(await revogadoEm(pendente.conviteId)).toBe(true)
     // Já revogado: não revoga de novo, e não devolve usuário para outro convite.
-    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(pendente.conviteId))).toBeUndefined()
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(pendente.conviteId, 'coordenador'))).toBeUndefined()
 
     const vencido = await convidado({ aceitoHaS: null })
     await bancada.pool.query("update convite set expira_em = now() - interval '1 hour' where id = $1", [vencido.conviteId])
-    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(vencido.conviteId))).toBe(vencido.usuarioId)
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(vencido.conviteId, 'coordenador'))).toBe(vencido.usuarioId)
     expect(await revogadoEm(vencido.conviteId)).toBe(true)
 
     // Usado (aceito): não é mais refeito, e continua sem revogação.
     const usado = await convidado({ aceitoHaS: 10 })
-    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(usado.conviteId))).toBeUndefined()
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(usado.conviteId, 'coordenador'))).toBeUndefined()
     expect(await revogadoEm(usado.conviteId)).toBe(false)
   })
 
-  it('revogarParaRefazer só alcança convite de coordenação: um convite em aberto de outro tipo, pelo id, fica em aberto', async () => {
-    const outro = await convidado({ aceitoHaS: null })
-    let visto: { devolvido: string | undefined; revogado: boolean | undefined } | undefined
-    // Até a A1, o check `convite_tipo_valido` só aceita `coordenador`. Dentro desta transação, que volta atrás no fim, o
-    // check sai e o convite passa a ser de outro tipo: sem `tipo = 'coordenador'` no `where`, o refazer o revogaria. O
-    // `alter table` trava a tabela `convite` até o rollback (milissegundos); os arquivos de integração rodam um por vez
-    // (`fileParallelism: false`), e nenhum outro espera por ela.
-    await expect(
-      bancada.banco.transaction(async (tx) => {
-        await tx.execute(sql`alter table convite drop constraint convite_tipo_valido`)
-        await tx.execute(sql`update convite set tipo = 'professor' where id = ${outro.conviteId}`)
-        const devolvido = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: escolaA }, () => new ConviteRepository(tx).revogarParaRefazer(outro.conviteId))
-        const linhas = await tx.execute<{ revogado: boolean }>(sql`select revogado_em is not null as revogado from convite where id = ${outro.conviteId}`)
-        visto = { devolvido, revogado: linhas.rows[0]?.revogado }
-        tx.rollback()
-      }),
-    ).rejects.toBeInstanceOf(TransactionRollbackError)
-    expect(visto).toEqual({ devolvido: undefined, revogado: false })
-    // O check voltou com a transação.
-    const { rows } = await bancada.pool.query<{ total: number }>("select count(*)::int as total from pg_constraint where conname = 'convite_tipo_valido'")
-    expect(rows[0]?.total).toBe(1)
+  it('I7 (camada do repository): revogarParaRefazer e revogar só alcançam o convite do tipo pedido; o de professor, pelo tipo coordenador, fica em aberto, e vice-versa', async () => {
+    const revogadoEm = async (conviteId: string) => (await bancada.pool.query<{ revogado: boolean }>('select revogado_em is not null as revogado from convite where id = $1', [conviteId])).rows[0]?.revogado
+    const deProfessor = await convidado({ aceitoHaS: null })
+    // A 0018 afrouxou o check: o convite passa a ser de professor direto no banco.
+    await bancada.pool.query("update convite set tipo = 'professor' where id = $1", [deProfessor.conviteId])
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(deProfessor.conviteId, 'coordenador'))).toBeUndefined()
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogar(deProfessor.conviteId, 'coordenador'))).toBe(false)
+    expect(await revogadoEm(deProfessor.conviteId)).toBe(false)
+
+    const deCoordenador = await convidado({ aceitoHaS: null })
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(deCoordenador.conviteId, 'professor'))).toBeUndefined()
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogar(deCoordenador.conviteId, 'professor'))).toBe(false)
+    expect(await revogadoEm(deCoordenador.conviteId)).toBe(false)
+
+    // Com o tipo certo, cada um revoga o seu.
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogarParaRefazer(deProfessor.conviteId, 'professor'))).toBe(deProfessor.usuarioId)
+    expect(await naEscola(escolaA, (repositorio) => repositorio.revogar(deCoordenador.conviteId, 'coordenador'))).toBe(true)
+    expect([await revogadoEm(deProfessor.conviteId), await revogadoEm(deCoordenador.conviteId)]).toEqual([true, true])
   })
 
   it('sem escola no contexto, falha fechada', async () => {

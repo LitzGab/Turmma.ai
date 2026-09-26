@@ -50,6 +50,10 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 ## Infra e operação
 
+- [ ] **Índice da lista de professores**: `GET /v1/professores` (A1, 3.0) pagina `usuario` pelo índice `(escola_id, id)` e
+      descarta quem não é `professor`: cada página pode ler todos os usuários da escola, alunos inclusive. Barato hoje
+      (rota rara, só da coordenação, escola de mil usuários). Com escolas maiores, um índice parcial `(escola_id, id) where
+      papel = 'professor'`, conferido com `EXPLAIN` sobre o seed de uma escola grande (`infra-guardian` da 3.0)
 - [ ] **Eliminar escola apaga também o resto de uso dela**: a pasta vazia `escolas/<id>/` (o SeaweedFS só a tira da listagem
       com o `DeleteObject` da própria pasta) e os contadores `uso:*:<id>:*` do Redis de fila. Hoje a consolidação pula e conta
       essa escola toda noite como `escola_inexistente` (correção `2026-09-25-consolidacao-para-na-escola-inexistente`), e o

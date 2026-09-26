@@ -9,7 +9,10 @@ export const RETENCAO_REGISTRO_ACESSO_MESES = 6
 /** Por quantos dias a sessão fica depois de encerrada ou expirada (`docs/lgpd.md`, "Sessão"). */
 export const RETENCAO_SESSAO_DIAS = 30
 
-/** Por quantos dias o convite fica depois de usado, revogado ou expirado (`docs/lgpd.md`, "Convite de coordenador"). */
+/**
+ * Por quantos dias o convite, de coordenador ou de professor, fica depois de usado, revogado ou expirado (`docs/lgpd.md`,
+ * "Convite de coordenador" e "Convite de professor").
+ */
 export const RETENCAO_CONVITE_DIAS = 30
 
 /**

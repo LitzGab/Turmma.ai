@@ -55,6 +55,11 @@ export const RECURSOS = {
   vinculo: ['ler', 'criar', 'encerrar', 'ler_proprios', 'confirmar', 'contestar'],
   /** `POST /v1/usuarios/:id/mfa/redefinir`. */
   usuario_mfa: ['redefinir'],
+  /**
+   * Os professores da escola (A1, 3.0), só da coordenação: `listar` e `cadastrar` são `GET` e `POST /v1/professores`;
+   * `refazer_convite` e `revogar_convite`, `POST /v1/professores/:usuarioId/convite/{refazer,revogar}`.
+   */
+  professor: ['listar', 'cadastrar', 'refazer_convite', 'revogar_convite'],
   /** Uso e desempenho das turmas de um professor (D45): o agregado e o nominal são leituras diferentes. */
   indicador_professor: ['ler_agregado', 'ler_nominal'],
 } as const satisfies Record<string, readonly string[]>
@@ -78,6 +83,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     aluno_da_turma: { ler: 'nunca' },
     vinculo: { ler: 'nunca', criar: 'nunca', encerrar: 'nunca', ler_proprios: 'nunca', confirmar: 'nunca', contestar: 'nunca' },
     usuario_mfa: { redefinir: 'nunca' },
+    professor: { listar: 'nunca', cadastrar: 'nunca', refazer_convite: 'nunca', revogar_convite: 'nunca' },
     indicador_professor: { ler_agregado: 'agregado', ler_nominal: 'nunca' },
   },
   coordenador: {
@@ -93,6 +99,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     aluno_da_turma: { ler: 'nominal_auditado' },
     vinculo: { ler: 'unidade', criar: 'unidade', encerrar: 'unidade', ler_proprios: 'nunca', confirmar: 'nunca', contestar: 'nunca' },
     usuario_mfa: { redefinir: 'unidade' },
+    professor: { listar: 'unidade', cadastrar: 'unidade', refazer_convite: 'unidade', revogar_convite: 'unidade' },
     indicador_professor: { ler_agregado: 'agregado', ler_nominal: 'nominal_auditado' },
   },
   professor: {
@@ -108,6 +115,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     aluno_da_turma: { ler: 'turma_vinculada' },
     vinculo: { ler: 'nunca', criar: 'nunca', encerrar: 'nunca', ler_proprios: 'proprio', confirmar: 'proprio', contestar: 'proprio' },
     usuario_mfa: { redefinir: 'nunca' },
+    professor: { listar: 'nunca', cadastrar: 'nunca', refazer_convite: 'nunca', revogar_convite: 'nunca' },
     indicador_professor: { ler_agregado: 'nunca', ler_nominal: 'proprio' },
   },
   aluno: {
@@ -123,6 +131,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     aluno_da_turma: { ler: 'nunca' },
     vinculo: { ler: 'nunca', criar: 'nunca', encerrar: 'nunca', ler_proprios: 'nunca', confirmar: 'nunca', contestar: 'nunca' },
     usuario_mfa: { redefinir: 'nunca' },
+    professor: { listar: 'nunca', cadastrar: 'nunca', refazer_convite: 'nunca', revogar_convite: 'nunca' },
     indicador_professor: { ler_agregado: 'nunca', ler_nominal: 'nunca' },
   },
 }

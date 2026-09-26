@@ -1,7 +1,7 @@
 # Tarefas — A escola montada pela coordenação (A1)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 1 de 17 concluídas
+**Status:** 2 de 17 concluídas
 
 Aprovadas pelo Joaquim em 26/09/2026. O mapa de cenários por tarefa saiu do `test-engineer`: cada id do
 `cenarios.md` está em uma tarefa, ou dividido entre tarefas com a parte de cada uma dita no `N_task.md`. Os
@@ -25,12 +25,12 @@ dela nos dois.
   - [ ] 2.5 Testes: E3, E4, E5, E6 (sem o aprovado), E7 (sem retirar reivindicado ou aprovado), C8, C9, E2 (nome na
     lista), A1, A2 e I3, P1, I9 da lista; o check `aprovado ⇔ usuario_id ⇔ nome e matrícula nulos` (23514)
 
-- [ ] **3.0 — Professor cadastrado pela coordenação, com convite de 7 dias e aceite sem segundo fator**
-  - [ ] 3.1 Migration 0018: `convite.tipo` aceita `professor`; validade pelo tipo
-  - [ ] 3.2 Cadastro sob `travarEscola`, lista sem link e sem `contaNova`; refazer e revogar só do convite de professor
-  - [ ] 3.3 O aceite do professor sem segundo fator; o coordenador continua exigindo
-  - [ ] 3.4 Documento: `Convite` com o tipo `professor` em `docs/modelo-de-dados.md`
-  - [ ] 3.5 Testes: E8, E9, E10, E11, R4, C7, I7, A1 (professor e convite), I3, P1, I9 dos professores; o aceite sem
+- [x] **3.0 — Professor cadastrado pela coordenação, com convite de 7 dias e aceite sem segundo fator**
+  - [x] 3.1 Migration 0018: `convite.tipo` aceita `professor`; validade pelo tipo
+  - [x] 3.2 Cadastro sob `travarEscola`, lista sem link e sem `contaNova`; refazer e revogar só do convite de professor
+  - [x] 3.3 O aceite do professor sem segundo fator; o coordenador continua exigindo
+  - [x] 3.4 Documento: `Convite` com o tipo `professor` em `docs/modelo-de-dados.md`
+  - [x] 3.5 Testes: E8, E9, E10, E11, R4, C7, I7, A1 (professor e convite), I3, P1, I9 dos professores; o aceite sem
     segundo fator
 
 - [ ] **4.0 — Professor gera e revoga o acesso da turma, com link e código**
