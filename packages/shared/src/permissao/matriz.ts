@@ -51,6 +51,12 @@ export const RECURSOS = {
   turma: ['ler', 'listar', 'criar', 'renomear', 'excluir'],
   /** `GET /v1/turmas/:id/alunos`. */
   aluno_da_turma: ['ler'],
+  /**
+   * A lista de nomes da turma (A1, 2.0), só da coordenação: `previa` e `gravar` são `POST /v1/turmas/:id/lista/previa` e
+   * `POST /v1/turmas/:id/lista`; `acrescentar`, `POST /v1/turmas/:id/lista/nome`; `retirar`, `DELETE /v1/lista-nomes/:id`;
+   * `ler`, `GET /v1/turmas/:id/lista`, com finalidade e auditoria.
+   */
+  lista_nome: ['ler', 'previa', 'gravar', 'acrescentar', 'retirar'],
   /** Criar e encerrar é da coordenação; confirmar e contestar, do professor dono. */
   vinculo: ['ler', 'criar', 'encerrar', 'ler_proprios', 'confirmar', 'contestar'],
   /** `POST /v1/usuarios/:id/mfa/redefinir`. */
@@ -81,6 +87,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     disciplina: { ler: 'nunca', criar: 'nunca', renomear: 'nunca', excluir: 'nunca' },
     turma: { ler: 'nunca', listar: 'nunca', criar: 'nunca', renomear: 'nunca', excluir: 'nunca' },
     aluno_da_turma: { ler: 'nunca' },
+    lista_nome: { ler: 'nunca', previa: 'nunca', gravar: 'nunca', acrescentar: 'nunca', retirar: 'nunca' },
     vinculo: { ler: 'nunca', criar: 'nunca', encerrar: 'nunca', ler_proprios: 'nunca', confirmar: 'nunca', contestar: 'nunca' },
     usuario_mfa: { redefinir: 'nunca' },
     professor: { listar: 'nunca', cadastrar: 'nunca', refazer_convite: 'nunca', revogar_convite: 'nunca' },
@@ -97,6 +104,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     disciplina: { ler: 'unidade', criar: 'unidade', renomear: 'unidade', excluir: 'unidade' },
     turma: { ler: 'unidade', listar: 'unidade', criar: 'unidade', renomear: 'unidade', excluir: 'unidade' },
     aluno_da_turma: { ler: 'nominal_auditado' },
+    lista_nome: { ler: 'nominal_auditado', previa: 'unidade', gravar: 'unidade', acrescentar: 'unidade', retirar: 'unidade' },
     vinculo: { ler: 'unidade', criar: 'unidade', encerrar: 'unidade', ler_proprios: 'nunca', confirmar: 'nunca', contestar: 'nunca' },
     usuario_mfa: { redefinir: 'unidade' },
     professor: { listar: 'unidade', cadastrar: 'unidade', refazer_convite: 'unidade', revogar_convite: 'unidade' },
@@ -113,6 +121,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     disciplina: { ler: 'nunca', criar: 'nunca', renomear: 'nunca', excluir: 'nunca' },
     turma: { ler: 'turma_vinculada', listar: 'nunca', criar: 'nunca', renomear: 'nunca', excluir: 'nunca' },
     aluno_da_turma: { ler: 'turma_vinculada' },
+    lista_nome: { ler: 'nunca', previa: 'nunca', gravar: 'nunca', acrescentar: 'nunca', retirar: 'nunca' },
     vinculo: { ler: 'nunca', criar: 'nunca', encerrar: 'nunca', ler_proprios: 'proprio', confirmar: 'proprio', contestar: 'proprio' },
     usuario_mfa: { redefinir: 'nunca' },
     professor: { listar: 'nunca', cadastrar: 'nunca', refazer_convite: 'nunca', revogar_convite: 'nunca' },
@@ -129,6 +138,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     disciplina: { ler: 'nunca', criar: 'nunca', renomear: 'nunca', excluir: 'nunca' },
     turma: { ler: 'nunca', listar: 'nunca', criar: 'nunca', renomear: 'nunca', excluir: 'nunca' },
     aluno_da_turma: { ler: 'nunca' },
+    lista_nome: { ler: 'nunca', previa: 'nunca', gravar: 'nunca', acrescentar: 'nunca', retirar: 'nunca' },
     vinculo: { ler: 'nunca', criar: 'nunca', encerrar: 'nunca', ler_proprios: 'nunca', confirmar: 'nunca', contestar: 'nunca' },
     usuario_mfa: { redefinir: 'nunca' },
     professor: { listar: 'nunca', cadastrar: 'nunca', refazer_convite: 'nunca', revogar_convite: 'nunca' },

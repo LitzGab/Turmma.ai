@@ -52,10 +52,18 @@ Sob `/v1`, escopo do contexto; uma célula da `MATRIZ` por rota:
   o encerrado), pedido ou acesso vigente → `CONFLITO`; a turma de outro ano não se renomeia nem se exclui (`NAO_ENCONTRADO`).
   O 23503 vira `CONFLITO` só em `apps/api/src/estrutura/exclusao.ts`
 - `POST turmas/:id/lista/previa` e `…/lista` (coordenador), até 200 linhas e 64 KB: `entra`, `ja_existe` (na lista ou
-  aprovada na turma) ou `erro` por linha; grava só sem erro
+  aprovada na turma) ou `erro` por linha; grava só sem erro. O erro da linha é um de `ERROS_DA_LINHA_DA_LISTA`
+  (`sem_nome`, `nome_invalido`, `sem_matricula`, `matricula_invalida`, `matricula_repetida`, `matricula_em_uso`); a
+  gravação com erro que o texto sozinho mostra responde `ENTRADA_INVALIDA`, e com matrícula em uso, `CONFLITO` (2.0).
+  Nome e matrícula seguem as regras do avulso (uma linha, sem caractere de controle, até 200 e 40). O separador é o da
+  primeira linha que tem um; o cabeçalho dá a ordem das colunas; texto sem linha de aluno é `ENTRADA_INVALIDA` (2.0).
+  A gravação e o avulso travam a turma em `for key share` (`TurmaRepository.travarContraExclusao`, C9); a gravação que
+  perde para outra, ao mesmo tempo, a matrícula de **outra** turma volta atrás com `CONFLITO` (2.0)
 - `POST turmas/:id/lista/nome`, `DELETE lista-nomes/:id`, `GET turmas/:id/lista` (coordenador; a leitura
-  `nominal_auditado`): o avulso sem nome ou matrícula dá `ENTRADA_INVALIDA`; com matrícula na lista da escola ou em
-  `credencial_matricula`, `CONFLITO`; nada gravado. Retira só `livre`, senão `CONFLITO`
+  `nominal_auditado`): o avulso sem nome ou matrícula dá `ENTRADA_INVALIDA`; com matrícula na lista da escola (pelo
+  índice único, 23505) ou em `credencial_matricula`, `CONFLITO`; nada gravado. Retira só `livre`, senão `CONFLITO`. A
+  leitura é paginada por id e exige a finalidade de `FINALIDADES_DA_LEITURA_DE_ALUNOS`, conferida antes de procurar a
+  turma. As cinco rotas são o recurso `lista_nome` da `MATRIZ` (`ler`, `previa`, `gravar`, `acrescentar`, `retirar`)
 - `POST`, `GET professores` (coordenador): o link uma vez; a lista não diz se a conta existia. A lista traz usuário,
   nome e estado (`ESTADOS_DO_PROFESSOR`: `pendente`, `vencido`, `revogado`, `aceito`, `ativo`, `desativado`), paginada
   por usuário, sem e-mail; o `aceito` junta o ativo pelo convite e o que espera a primeira entrada (3.0). O e-mail de
@@ -118,7 +126,10 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
 - **Campos**: as linhas da A1 em `docs/lgpd.md`. Log só com ids; nada vai a terceiro
 - **Auditoria**: `professor.cadastrado`, sem campo nenhum; `convite.*` com o tipo, também os do coordenador, e o
   `contaNova` só no `convite.criado` do coordenador (3.0); `lista.gravada`, também no avulso,
-  só com ids e contagens; `lista_nome.retirado`; `acesso_turma.*`; `reivindicacao.decidida` com `decidida_como`, sem
+  só com ids e contagens (`ids` das linhas que entraram, `gravados`, `jaExistentes`; a entidade é a turma, 2.0);
+  `lista_nome.retirado` (a turma e o estado `livre`, 2.0); a prévia não audita: não grava nada nem devolve nome gravado, só
+  diz, das matrículas que a própria coordenação digitou, quais estão na lista da turma ou em uso na escola, e só a
+  coordenação da escola chega a ela (2.0, recomendação do `privacy-guardian`); `acesso_turma.*`; `reivindicacao.decidida` com `decidida_como`, sem
   `teve_matricula_errada`. A coordenação grava `turma.lista_lida` e `turma.reivindicacoes_lidas` a cada leitura; o
   professor, não
 - **Registro de acesso**: as rotas públicas não o gravam, para não ligar o pedido ao IP

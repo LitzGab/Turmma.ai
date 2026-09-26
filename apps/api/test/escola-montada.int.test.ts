@@ -1,5 +1,16 @@
 import { CAMPOS_PROIBIDOS_NA_AUDITORIA } from '@educa/nucleo'
-import { CodigoDeErro, esquemaRespostaConviteDeProfessor, esquemaRespostaDisciplina, esquemaRespostaListaDeProfessores, esquemaRespostaTurma, MENSAGENS_DE_ERRO } from '@educa/shared'
+import {
+  CodigoDeErro,
+  esquemaNomeDaLista,
+  esquemaRespostaConviteDeProfessor,
+  esquemaRespostaDisciplina,
+  esquemaRespostaGravacaoDaLista,
+  esquemaRespostaListaDaTurma,
+  esquemaRespostaListaDeProfessores,
+  esquemaRespostaPreviaDaLista,
+  esquemaRespostaTurma,
+  MENSAGENS_DE_ERRO,
+} from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { z } from 'zod'
@@ -18,6 +29,8 @@ import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
  *
  * A rota sem parâmetro de id (`POST` e `GET /v1/professores`, 3.0) não tem recurso de B a pedir: fica fora do I3 por id,
  * e o isolamento da lista é o "I3 (lista)" de `professores.int.test.ts`. As outras quatro varreduras a cobrem.
+ *
+ * A lista de nomes (2.0) mora na `turmaComVinculo`, e não na `turma`: excluir a `turma` precisa continuar dando certo.
  */
 
 /** Uma escola da A1 montada pela API, como a coordenação faria, com as pessoas e os recursos que as rotas pedem. */
@@ -34,7 +47,20 @@ interface EscolaMontada {
   readonly disciplinaComVinculo: string
   readonly turmaComVinculo: string
   /** Os nomes gravados, únicos por escola, que o log nunca pode ter (A4). */
-  readonly nomes: { readonly disciplina: string; readonly turma: string; readonly disciplinaComVinculo: string; readonly turmaComVinculo: string }
+  readonly nomes: {
+    readonly disciplina: string
+    readonly turma: string
+    readonly disciplinaComVinculo: string
+    readonly turmaComVinculo: string
+    readonly nomeLivre: string
+    readonly nomeReivindicado: string
+  }
+  /**
+   * A lista de nomes da `turmaComVinculo` (2.0): um nome livre (retirar dá certo; a matrícula dele, gravada em outra
+   * turma, dá `CONFLITO`) e um reivindicado, posto no banco até a 6.0 (retirar dá `CONFLITO`). As matrículas nunca vão a
+   * log (A4).
+   */
+  readonly lista: { readonly livre: string; readonly reivindicado: string; readonly matriculaLivre: string; readonly matriculaReivindicada: string }
   /** Matrícula e hash de senha de um aluno da escola, que nenhuma resposta nem log pode ter (A3, A4). */
   readonly matricula: string
   readonly senhaHash: string
@@ -87,11 +113,16 @@ const NOME_DO_PROFESSOR = `professor ${randomUUID().slice(0, 8)}`
 const DOMINIO_DO_EMAIL = `escola-${randomUUID().slice(0, 8)}.invalid`
 /** A senha com que o professor da escola montada aceita o convite. */
 const SENHA_DO_ACEITE = 'senha-do-aceite-sintetica-1'
+/** O nome dos alunos que as varreduras põem na lista, e o prefixo das matrículas deles: nenhum dos dois vai a log (A4). */
+const NOME_NA_LISTA = `aluno da lista ${randomUUID().slice(0, 8)}`
+const PREFIXO_DA_MATRICULA = `lista-${randomUUID().slice(0, 8)}`
+const matriculaNova = (): string => `${PREFIXO_DA_MATRICULA}-${randomUUID().slice(0, 8)}`
 
 /**
  * As rotas autenticadas novas da A1. 1.0: renomear e excluir disciplina e turma. Renomear e excluir não gravam
  * auditoria: o RF16 não pede (1_task.md, "Fora do escopo"). 3.0: cadastrar e listar professores, e refazer e revogar o
- * convite de professor; a lista não grava auditoria (são professores, não aluno).
+ * convite de professor; a lista não grava auditoria (são professores, não aluno). 2.0: a prévia, a gravação, o nome
+ * avulso, a leitura e a retirada da lista de nomes; a prévia não grava nada, e a leitura grava `turma.lista_lida`.
  */
 const ROTAS_DA_A1: readonly RotaDaA1[] = [
   {
@@ -161,6 +192,50 @@ const ROTAS_DA_A1: readonly RotaDaA1[] = [
     conflito: (escola) => ({ alvo: escola.convidadoAceito, corpo: {} }),
     auditoria: ['convite.revogado'],
   },
+  {
+    rota: 'POST /v1/turmas/:id/lista/previa',
+    alvo: (escola) => escola.turma,
+    alvoDoProfessor: (escola) => escola.turmaComVinculo,
+    corpo: () => ({ texto: `${NOME_NA_LISTA};${matriculaNova()}` }),
+    sucesso: 200,
+    resposta: esquemaRespostaPreviaDaLista,
+    auditoria: [],
+  },
+  {
+    rota: 'POST /v1/turmas/:id/lista',
+    alvo: (escola) => escola.turma,
+    alvoDoProfessor: (escola) => escola.turmaComVinculo,
+    corpo: () => ({ texto: `${NOME_NA_LISTA};${matriculaNova()}` }),
+    sucesso: 201,
+    resposta: esquemaRespostaGravacaoDaLista,
+    conflito: (escola) => ({ alvo: escola.turma, corpo: { texto: `${NOME_NA_LISTA};${escola.lista.matriculaLivre}` } }),
+    auditoria: ['lista.gravada'],
+  },
+  {
+    rota: 'POST /v1/turmas/:id/lista/nome',
+    alvo: (escola) => escola.turma,
+    alvoDoProfessor: (escola) => escola.turmaComVinculo,
+    corpo: () => ({ nome: NOME_NA_LISTA, matricula: matriculaNova() }),
+    sucesso: 201,
+    resposta: esquemaNomeDaLista,
+    conflito: (escola) => ({ alvo: escola.turma, corpo: { nome: NOME_NA_LISTA, matricula: escola.lista.matriculaLivre } }),
+    auditoria: ['lista.gravada'],
+  },
+  {
+    rota: 'GET /v1/turmas/:id/lista?finalidade=conferencia_de_cadastro',
+    alvo: (escola) => escola.turmaComVinculo,
+    alvoDoProfessor: (escola) => escola.turmaComVinculo,
+    sucesso: 200,
+    resposta: esquemaRespostaListaDaTurma,
+    auditoria: ['turma.lista_lida'],
+  },
+  {
+    rota: 'DELETE /v1/lista-nomes/:id',
+    alvo: (escola) => escola.lista.livre,
+    sucesso: 204,
+    conflito: (escola) => ({ alvo: escola.lista.reivindicado }),
+    auditoria: ['lista_nome.retirado'],
+  },
 ]
 
 describe('escola montada (A1): as varreduras transversais sobre as rotas novas', () => {
@@ -191,13 +266,31 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     await criado(post(`/v1/anos-letivos/${ano}/abrir`), 200)
     const serie = await criado(post('/v1/series', { etapa: 'ef_anos_finais', ano: 8 }))
     // Em minúsculas, pelo mesmo motivo do `NOME_RENOMEADO`.
-    const nomes = { disciplina: `disciplina ${sufixo}`, disciplinaComVinculo: `com vínculo ${sufixo}`, turma: `turma ${sufixo}`, turmaComVinculo: `turma vinc ${sufixo}` }
+    const nomes = {
+      disciplina: `disciplina ${sufixo}`,
+      disciplinaComVinculo: `com vínculo ${sufixo}`,
+      turma: `turma ${sufixo}`,
+      turmaComVinculo: `turma vinc ${sufixo}`,
+      nomeLivre: `livre ${sufixo}`,
+      nomeReivindicado: `reivindicado ${sufixo}`,
+    }
     const disciplina = await criado(post('/v1/disciplinas', { nome: nomes.disciplina }))
     const disciplinaComVinculo = await criado(post('/v1/disciplinas', { nome: nomes.disciplinaComVinculo }))
     const turma = await criado(post('/v1/turmas', { serieId: serie, nome: nomes.turma }))
     const turmaComVinculo = await criado(post('/v1/turmas', { serieId: serie, nome: nomes.turmaComVinculo }))
     const vinculo = await criado(post('/v1/vinculos', { usuarioId: professor.usuarioId, turmaId: turmaComVinculo, disciplinaId: disciplinaComVinculo, papel: 'professor' }))
     await criado(chamar(api.url, 'POST', `/v1/vinculos/${vinculo}/confirmar`, professor.token), 200)
+    const matriculaLivre = matriculaNova()
+    const matriculaReivindicada = matriculaNova()
+    await criado(post(`/v1/turmas/${turmaComVinculo}/lista`, { texto: `${nomes.nomeLivre};${matriculaLivre}\n${nomes.nomeReivindicado};${matriculaReivindicada}` }))
+    const { rows: daLista } = await bancada.pool.query<{ id: string; matricula: string }>('select id, matricula from lista_nome where escola_id = $1', [escolaId])
+    const idDa = (matricula: string): string => {
+      const id = daLista.find((linha) => linha.matricula === matricula)?.id
+      if (id === undefined) throw new Error('nome da lista não gravado')
+      return id
+    }
+    // O pedido do aluno chega na 6.0; até lá, o reivindicado é posto no banco.
+    await bancada.pool.query(`update lista_nome set estado = 'reivindicado' where id = $1`, [idDa(matriculaReivindicada)])
     const convidar = async () => {
       const email = `professor-${randomUUID()}@${DOMINIO_DO_EMAIL}`
       const resposta = await post('/v1/professores', { nome: NOME_DO_PROFESSOR, email })
@@ -226,6 +319,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       convidado: { usuarioId: convidado.usuarioId, email: convidado.email, token: convidado.token },
       convidadoRevogado: revogado.usuarioId,
       convidadoAceito: aceito.usuarioId,
+      lista: { livre: idDa(matriculaLivre), reivindicado: idDa(matriculaReivindicada), matriculaLivre, matriculaReivindicada },
     }
   }
 
@@ -238,6 +332,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       vinculos: await linhas('select id, turma_id, disciplina_id, estado from vinculo where escola_id = $1 order by id'),
       usuarios: await linhas('select id, conta_id, papel, nome, desativado_em from usuario where escola_id = $1 order by id'),
       convites: await linhas('select id, tipo, usuario_id, expira_em, usado_em, revogado_em from convite where escola_id = $1 order by id'),
+      lista: await linhas('select id, turma_id, nome, matricula, estado, usuario_id, criado_por from lista_nome where escola_id = $1 order by id'),
       auditoria: await linhas('select id from auditoria where escola_id = $1 order by id'),
     }
   }
@@ -411,6 +506,8 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       for (const sentinela of [
         ...Object.values(escola.nomes),
         escola.matricula,
+        escola.lista.matriculaLivre,
+        escola.lista.matriculaReivindicada,
         escola.senhaHash,
         escola.slug,
         escola.coordenacao.token,
@@ -421,6 +518,6 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
         expect(todoOLog).not.toContain(sentinela)
       }
     }
-    for (const sentinela of [NOME_RENOMEADO, NOME_DO_PROFESSOR, DOMINIO_DO_EMAIL, ...tokensDevolvidos]) expect(todoOLog).not.toContain(sentinela)
+    for (const sentinela of [NOME_RENOMEADO, NOME_DO_PROFESSOR, DOMINIO_DO_EMAIL, NOME_NA_LISTA, PREFIXO_DA_MATRICULA, ...tokensDevolvidos]) expect(todoOLog).not.toContain(sentinela)
   })
 })

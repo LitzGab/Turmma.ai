@@ -22,6 +22,18 @@ humana cria o aluno, com a matrícula da lista e a senha do pedido; o aprovado v
   - `credencial-matricula.repository.ts`, `vinculo.repository.ts`, `contador-de-tentativas.ts` (o contador de login
     que a aprovação zera); `apps/api/test/virada-do-ano.int.test.ts` (E19)
 
+## Herdado da 2.0
+
+- **A matrícula do aprovado e o nome avulso ao mesmo tempo.** A aprovação apaga a matrícula da linha da lista e a grava
+  na `credencial_matricula`. O avulso e a gravação da lista (2.0) conferem a `credencial_matricula` antes do `insert`,
+  sem trava: se a aprovação da mesma matrícula fizer commit entre a conferência e o `insert`, a lista ganha um nome
+  livre com a matrícula do aprovado. O único da `credencial_matricula` impede o segundo aluno (a aprovação desse nome
+  estoura), mas o nome fica na lista. Decidir aqui se a aprovação e as escritas da lista pegam uma trava pela matrícula
+  (por exemplo, `pg_advisory_xact_lock` de escola e matrícula), ou se o 23505 da credencial na aprovação vira
+  `ja_decidida`/`CONFLITO` e o nome sai.
+- **O `ja_existe` do aprovado** (8.4): na 2.0, a matrícula de aluno da escola sai `matricula_em_uso` em qualquer turma,
+  pela busca em `credencial_matricula` (`ListaRepository.comCredencial`); a 8.0 separa a desta turma.
+
 ## Subtarefas
 
 - [ ] 8.1 — `GET turmas/:id/reivindicacoes`: professor `turma_vinculada`; coordenação `nominal_auditado`, com

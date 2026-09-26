@@ -35,6 +35,25 @@ convite, e a alocação do F1 só aceita professor ativo (`apps/api/src/estrutur
 aceitar o professor com convite em aberto (correção na API, com `tenancy-guardian` e `privacy-guardian`), ou a tela
 aloca depois da primeira entrada e o W1 muda.
 
+## Herdado da 2.0
+
+- As rotas da lista e os contratos estão em `packages/shared/src/estrutura/lista.ts`: a prévia devolve `linha` (a
+  numeração do arquivo, com cabeçalho e linha em branco), nome e matrícula lidos, `resultado` e o `erro` de
+  `ERROS_DA_LINHA_DA_LISTA`; a gravação responde `ENTRADA_INVALIDA` quando o texto tem erro e `CONFLITO` quando uma
+  matrícula ficou em uso depois da prévia; a leitura exige a `finalidade`. O teto (`MAXIMO_DE_LINHAS_DA_LISTA`,
+  `MAXIMO_DE_BYTES_DA_LISTA`) vem do mesmo arquivo: a tela pode avisar antes de enviar.
+- O separador é o da primeira linha que tem um. Um título com vírgula antes da lista ("Turma 8ºA, manhã") escolhe a
+  vírgula, e as linhas `nome;matrícula` saem todas `sem_matricula`: não grava nada, mas na tela parece a lista inteira
+  errada. A prévia com quase toda linha em erro pode sugerir tirar o título (recomendação do `test-engineer` na 2.0).
+- O cabeçalho só é reconhecido com "nome" e "matrícula". Um `Nome;RA` ou `Aluno;Código` vira uma linha de aluno que
+  `entra`, e sem cabeçalho a segunda coluna é sempre a matrícula (um `nome;CPF` ou `nome;nascimento` colado grava o
+  CPF ou a data como matrícula). O exemplo `nome; matrícula` ao lado e a prévia são a defesa; decidir aqui se a tela avisa
+  a primeira linha que parece cabeçalho, ou se o leitor aprende os sinônimos (recomendações do `revisor-geral` e do
+  `privacy-guardian` na 2.0).
+- A matrícula que já está na lista sai `ja_existe` mesmo com outro nome, e o nome novo é descartado (RF5, "pela
+  matrícula"). A prévia mostra o nome digitado ao lado do `ja_existe`: a tela pode deixar claro que o nome gravado não
+  muda (recomendação do `revisor-geral` na 2.0).
+
 ## Subtarefas
 
 - [ ] 13.1 — Estrutura: ano, série, disciplina e turma, com renomear e excluir (confirmação `perigo`; o `CONFLITO`

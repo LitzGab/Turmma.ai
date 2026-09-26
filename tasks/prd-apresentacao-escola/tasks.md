@@ -1,7 +1,7 @@
 # Tarefas — A escola montada pela coordenação (A1)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 2 de 17 concluídas
+**Status:** 3 de 17 concluídas
 
 Aprovadas pelo Joaquim em 26/09/2026. O mapa de cenários por tarefa saiu do `test-engineer`: cada id do
 `cenarios.md` está em uma tarefa, ou dividido entre tarefas com a parte de cada uma dita no `N_task.md`. Os
@@ -17,12 +17,12 @@ dela nos dois.
   - [x] 1.3 O arquivo transversal `escola-montada.int.test.ts` (I3, A1, A3, A4)
   - [x] 1.4 Testes: E1; E2 (disciplina e turma com vínculo, turma vazia); I3, P1, I9 das rotas desta tarefa
 
-- [ ] **2.0 — Lista de nomes da turma: prévia, gravação, avulso, retirada e leitura auditada**
-  - [ ] 2.1 Migration 0019 `lista_nome`, com o check, o único da matrícula e o índice
-  - [ ] 2.2 Leitor do texto (`;`, `,`, tabulação, cabeçalho, BOM), até 200 linhas e 64 KB
-  - [ ] 2.3 Prévia, gravação, avulso, retirada e leitura auditada, com a consulta a `credencial_matricula`
-  - [ ] 2.4 Documentos: nota em `docs/infra.md` 3.5; `ListaNome` real em `docs/modelo-de-dados.md`
-  - [ ] 2.5 Testes: E3, E4, E5, E6 (sem o aprovado), E7 (sem retirar reivindicado ou aprovado), C8, C9, E2 (nome na
+- [x] **2.0 — Lista de nomes da turma: prévia, gravação, avulso, retirada e leitura auditada**
+  - [x] 2.1 Migration 0019 `lista_nome`, com o check, o único da matrícula e o índice
+  - [x] 2.2 Leitor do texto (`;`, `,`, tabulação, cabeçalho, BOM), até 200 linhas e 64 KB
+  - [x] 2.3 Prévia, gravação, avulso, retirada e leitura auditada, com a consulta a `credencial_matricula`
+  - [x] 2.4 Documentos: nota em `docs/infra.md` 3.5; `ListaNome` real em `docs/modelo-de-dados.md`
+  - [x] 2.5 Testes: E3, E4, E5, E6 (sem o aprovado), E7 (sem retirar reivindicado ou aprovado), C8, C9, E2 (nome na
     lista), A1, A2 e I3, P1, I9 da lista; o check `aprovado ⇔ usuario_id ⇔ nome e matrícula nulos` (23514)
 
 - [x] **3.0 — Professor cadastrado pela coordenação, com convite de 7 dias e aceite sem segundo fator**

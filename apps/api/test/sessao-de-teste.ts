@@ -175,6 +175,8 @@ export class BancadaDeSessoes {
         await this.pool.query('delete from provedor_escola where escola_id = any($1::uuid[])', [escolas])
         // O vínculo da 9.0 aponta para a turma e o usuário, e a estrutura da 8.0 para o ano letivo: saem antes deles.
         await this.pool.query('delete from vinculo where escola_id = any($1::uuid[])', [escolas])
+        // A lista de nomes da A1 (2.0) aponta para a turma e para o usuário.
+        await this.pool.query('delete from lista_nome where escola_id = any($1::uuid[])', [escolas])
         await this.pool.query('delete from turma where escola_id = any($1::uuid[])', [escolas])
         await this.pool.query('delete from serie where escola_id = any($1::uuid[])', [escolas])
         await this.pool.query('delete from disciplina where escola_id = any($1::uuid[])', [escolas])

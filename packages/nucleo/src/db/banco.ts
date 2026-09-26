@@ -14,6 +14,7 @@ import { convite } from './schema/convite.js'
 import { disciplina } from './schema/disciplina.js'
 import { escola } from './schema/escola.js'
 import { jobRegistro } from './schema/job-registro.js'
+import { listaNome } from './schema/lista-nome.js'
 import { provedorEscola } from './schema/provedor-escola.js'
 import { rede } from './schema/rede.js'
 import { registroAcesso } from './schema/registro-acesso.js'
@@ -28,7 +29,7 @@ import { vinculo } from './schema/vinculo.js'
 // pelo `schema` que o pacote exporta (a escrita tem uma porta só, o RegistroDeAuditoria). Sem as seis tabelas da
 // operação (`db/schema/operador.ts`), pelo mesmo motivo: só o `OperadorRepository` as toca, e a consulta relacional
 // (`banco.query.*`) não as alcançaria de fora sem passar por um `import` que o teste de arquitetura vê.
-export const schema = { jobRegistro, configuracaoOperacionalEscola, usoInfraDiario, rede, escola, anoLetivo, conta, codigoRecuperacao, usuario, sessao, registroAcesso, convite, serie, disciplina, turma, vinculo, credencialMatricula, contaExterna, provedorEscola }
+export const schema = { jobRegistro, configuracaoOperacionalEscola, usoInfraDiario, rede, escola, anoLetivo, conta, codigoRecuperacao, usuario, sessao, registroAcesso, convite, serie, disciplina, turma, vinculo, credencialMatricula, contaExterna, provedorEscola, listaNome }
 export type Schema = typeof schema
 
 export type Banco = NodePgDatabase<Schema>

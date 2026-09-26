@@ -78,6 +78,15 @@ describe('MATRIZ de permissão', () => {
     }
   })
 
+  it('I9: a lista de nomes é só da coordenação: a leitura `nominal_auditado`, as escritas e a prévia `unidade`; professor, aluno e rede, `nunca`', () => {
+    expect(RECURSOS.lista_nome).toEqual(['ler', 'previa', 'gravar', 'acrescentar', 'retirar'])
+    expect(alcanceDe('coordenador', 'lista_nome', 'ler')).toBe('nominal_auditado')
+    for (const acao of ['previa', 'gravar', 'acrescentar', 'retirar'] as const) expect(alcanceDe('coordenador', 'lista_nome', acao), acao).toBe('unidade')
+    for (const acao of RECURSOS.lista_nome) {
+      for (const papel of ['professor', 'aluno', 'rede'] as const) expect(alcanceDe(papel, 'lista_nome', acao), `${papel} lista_nome.${acao}`).toBe('nunca')
+    }
+  })
+
   it('alcanceDe devolve a célula, e nunca para papel, recurso ou ação que a matriz não declara', () => {
     expect(alcanceDe('professor', 'turma', 'ler')).toBe('turma_vinculada')
     expect(alcanceDe('responsavel', 'turma', 'ler')).toBe('nunca')

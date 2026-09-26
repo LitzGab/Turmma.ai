@@ -104,7 +104,9 @@ aos cenários.
   condição de não haver acesso vigente no `delete` da turma
 - **E3** (unidade) Leitura do texto: `;`, `,` e tabulação; cabeçalho detectado e ignorado; aspas com separador dentro;
   BOM; linha em branco ignorada; `trim` no nome e na matrícula; 200 linhas passam, 201 e 64 KB + 1 recusam com
-  `ENTRADA_INVALIDA`. **Quebra sem:** cada regra do leitor
+  `ENTRADA_INVALIDA`. Também (2.0): o separador vem da primeira linha que tem um (o título sem separador não desmonta a
+  lista); o cabeçalho dá a ordem das colunas; o texto sem linha de aluno recusa; o erro de cada linha que o texto
+  sozinho mostra. **Quebra sem:** cada regra do leitor
 - **E4** (integração) RF4: um texto com duas linhas ruins entre boas (sem nome; sem matrícula; matrícula repetida no
   texto; matrícula na lista de outra turma da escola; matrícula de aluno aprovado de outra turma): a prévia aponta cada
   linha com o código, e a gravação não grava nenhuma. **Quebra sem:** gravar só sem erro; a consulta a
@@ -244,9 +246,12 @@ aos cenários.
 - **C7** (integração) Dois cadastros do mesmo e-mail na mesma escola; cadastrar × refazer: um convite em aberto no fim.
   **Quebra sem:** `travarEscola`
 - **C8** (integração) A mesma lista gravada duas vezes em paralelo: a contagem de uma vez. **Quebra sem:** `on conflict
-  do nothing`
+  do nothing`. E a mesma lista gravada ao mesmo tempo em duas turmas, com a primeira parada antes do commit: uma grava,
+  e a outra, que leu a lista antes, responde `CONFLITO` e não grava (2.0). **Quebra sem:** a conferência, depois do
+  `insert`, de que o que não entrou está na lista desta turma
 - **C9** (integração) Excluir a turma × gravar a lista: ou a turma sai e a lista recebe `NAO_ENCONTRADO`, ou a lista
-  grava e o excluir recebe `CONFLITO`. **Quebra sem:** a FK mapeada
+  grava e o excluir recebe `CONFLITO`. **Quebra sem:** a FK mapeada; e (2.0) o `for key share` da turma na gravação e no
+  avulso, provado com a exclusão aberta, sem commit, antes de a escrita chegar (sem ele, a escrita dá 500)
 - **C10** (integração) `encerrar` × reivindicar e `encerrar` × aprovar: nunca sobra pedido pendente com hash nem aluno
   aprovado no ano encerrado. **Quebra sem:** o `for share` no ano dentro da transação da reivindicação e da decisão
 - **C11** (integração) Excluir a turma × gerar o acesso, em paralelo, sem acesso vigente antes: ou a turma fica com o

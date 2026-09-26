@@ -77,18 +77,44 @@ aviso de não escrever nome de aluno, e é apagado na virada do ano, quando o v�
 `papel`: `rede` · `coordenador` · `professor` · `aluno` · `responsavel`. A matriz de quem
 alcança o quê é declarada num lugar só, em `packages/shared/src/permissao/matriz.ts`.
 
+### Lista de nomes da turma — A1
+
+Implementado na A1 (tarefa 2.0). A forma exata está na seção 3 da Tech Spec da A1
+(`tasks/prd-apresentacao-escola/techspec.md`) e na migration `0019_lista_nome.sql`.
+
+```
+ListaNome*       → escola*, anoLetivo*, turma*, nome?, matricula?,
+                   estado* (livre | reivindicado | aprovado), usuario?, criadoPor?, criadoEm*
+```
+
+`ListaNome` é a lista que a coordenação sobe por turma, colada ou em arquivo (até 200 linhas e
+64 KB por envio, com prévia linha a linha), ou nome a nome (o aluno que chega em maio). O aluno
+entra pelo link ou pelo código da turma, reivindica um nome e só vira `Usuario` com matrícula e
+senha **depois da aprovação humana** (D4). No F1 o aluno e o vínculo dele vêm do seed sintético.
+
+- **Aprovado ⇔ usuário ⇔ nome e matrícula nulos**, por check no banco: o aprovado guarda só o
+  estado e o usuário, e o nome e a matrícula passam a viver no `Usuario` e na
+  `CredencialMatricula` (`docs/lgpd.md`). O livre e o reivindicado têm os dois, e nenhum usuário.
+- **Matrícula única por escola e ano**, com `btrim`, nunca no sistema (regra 60, item 6). É o
+  alvo do `on conflict do nothing` da gravação: a mesma lista enviada duas vezes, mesmo ao mesmo
+  tempo, entra uma vez. Na prévia, a matrícula que já está na lista da turma sai `ja_existe`; a da
+  lista de outra turma da escola, ou de um aluno da escola (`CredencialMatricula`), sai com erro.
+- Turma, usuário e autor por FK composta com a escola. A turma com nome na lista não se exclui
+  (`CONFLITO`). O autor (`criadoPor`) vira nulo se a pessoa for eliminada, e a autoria fica na
+  auditoria (`lista.gravada`).
+- **O nome livre sai de fato** quando a coordenação o retira (`lista_nome.retirado` na
+  auditoria): é pré-cadastro, sem conta nem histórico, e a minimização vence a exclusão lógica.
+  O reivindicado e o aprovado não saem por aí.
+- A coordenação lê a lista com finalidade, e cada leitura grava `turma.lista_lida`. O professor
+  não lê a lista.
+
 ### Ainda não existe — F2
 
 ```
 Responsavel      → usuario*, aluno*, parentesco
-ListaNome*       → turma*, nome*, status (livre | reivindicado | aprovado), origem
 Reivindicacao*   → listaNome*, dispositivo, solicitadoEm*, aprovadoPor?, aprovadoEm?,
                    rejeitadoEm?
 ```
-
-`ListaNome` é a lista que o coordenador sobe. O aluno entra pelo link da sala, reivindica um
-nome e só vira `Usuario` com matrícula e senha **depois da aprovação do professor**. No F1 o
-aluno e o vínculo dele vêm do seed sintético.
 
 `Convite` no F1 é só de coordenador, criado por comando do operador. Na A1 (tarefa 3.0) entra o tipo
 `professor`: a coordenação cadastra o professor (nome e e-mail) e o convite nasce junto, válido por
@@ -380,7 +406,9 @@ liga a decisão sobre o professor (D45, regra 70 item 8). Os dois estão no mapa
      só alcançadas pelo `OperadorRepository` e pelo expurgo — ver "Operação Turmma".
 2. Id é UUID. Nunca sequencial.
 3. Nada é apagado de verdade: exclusão é lógica, com data e autor — exceto em pedido de
-   eliminação do titular, que apaga de fato e propaga para backup na próxima rotação.
+   eliminação do titular, que apaga de fato e propaga para backup na próxima rotação, e no nome
+   livre da lista de nomes, pré-cadastro sem conta nem histórico, que sai de fato com a autoria na
+   auditoria (A1, Tech Spec da A1, seção 7).
 4. `Auditoria` registra toda escrita que afeta nota, vínculo ou permissão, **e toda leitura
    de dado de aluno por coordenador ou rede**, e toda exportação.
 5. Aluno não tem e-mail nem telefone. Contato é do responsável.

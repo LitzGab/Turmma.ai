@@ -294,6 +294,37 @@ export const ACOES_DE_AUDITORIA = {
     depois: z.strictObject({ quantidade: z.number().int().nonnegative() }),
     finalidade: z.enum(FINALIDADES_DA_LEITURA_DE_ALUNOS),
   },
+  /**
+   * A coordenação gravou a lista de nomes da turma, pelo texto ou pelo nome avulso (A1, 2.0, RF16). `entidadeId` é a
+   * turma; `ids`, as linhas que entraram (as que já estavam na lista não entram de novo); `gravados` e `jaExistentes`,
+   * as contagens. Nunca o nome nem a matrícula.
+   */
+  'lista.gravada': {
+    entidade: 'turma',
+    antes: null,
+    depois: z.strictObject({ ids: z.array(z.uuid()), gravados: z.number().int().nonnegative(), jaExistentes: z.number().int().nonnegative() }),
+    finalidade: null,
+  },
+  /**
+   * A coordenação retirou um nome livre da lista (A1, 2.0, RF5): a linha sai de fato, porque é pré-cadastro, sem conta
+   * nem histórico (Tech Spec da A1, seção 7). `entidadeId` é a linha que saiu; fica a turma dela. Nunca o nome.
+   */
+  'lista_nome.retirado': {
+    entidade: 'lista_nome',
+    antes: z.strictObject({ turmaId: z.uuid(), estado: z.literal('livre') }),
+    depois: null,
+    finalidade: null,
+  },
+  /**
+   * A coordenação leu a lista de nomes de uma turma (A1, 2.0; regra 20, item 10), com a finalidade, a cada leitura.
+   * `entidadeId` é a turma; `quantidade`, quantos nomes a página trouxe. O professor não lê a lista.
+   */
+  'turma.lista_lida': {
+    entidade: 'turma',
+    antes: null,
+    depois: z.strictObject({ quantidade: z.number().int().nonnegative() }),
+    finalidade: z.enum(FINALIDADES_DA_LEITURA_DE_ALUNOS),
+  },
 } as const satisfies Record<string, DefinicaoDeAcao>
 
 export type AcaoDeAuditoria = keyof typeof ACOES_DE_AUDITORIA

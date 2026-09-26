@@ -44,3 +44,12 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-26 13:18:38 | `tenancy-guardian` | 2ª | APROVADO | `3_task` | nenhuma nova. Aceito a recusa da recomendação sobre o teste da escola na consulta de convites, pelo motivo dado: a FK composta impede montar o cenário. A… |
 | 2026-09-26 13:18:40 | `infra-guardian` | 2ª | APROVADO | `3_task` | nenhuma nova. |
 | 2026-09-26 13:18:58 | `privacy-guardian` | 2ª | APROVADO | `3_task` | nenhuma nova. Continua valendo, para a tarefa do dossiê (D61), decidir se `convite.aceito.usuarioAtivo` e `usuario.ativado_por_convite` saem da exportação ou… |
+| 2026-09-26 14:38:25 | `test-engineer` | 1ª | APROVADO | `2_task` | Clique duplo no avulso e na retirada. Hoje as duas coisas só são testadas em sequência (`lista.int.test.ts:338` e `:367`). O mecanismo já está provado, porque… |
+| 2026-09-26 14:48:33 | `test-engineer` | 2ª | APROVADO | `2_task` | Tabela de Mutações: não tem linha para os dois testes novos. |
+| 2026-09-26 14:49:58 | `tenancy-guardian` | 1ª | APROVADO | `2_task` | A escola nas buscas de `naLista`, `quantasNaTurma` e `pagina`, e sozinha no `delete`, é segunda camada que nenhum teste isola: o ano é por escola e a turma é… |
+| 2026-09-26 14:50:53 | `revisor-geral` | 1ª | APROVADO | `2_task` | Finalidade da leitura opcional no contrato. Está em `packages/shared/src/estrutura/lista.ts:95`, e o service a exige em `apps/api/src/estrutura/lista.service.ts… |
+| 2026-09-26 14:51:12 | `privacy-guardian` | 1ª | APROVADO | `2_task` | docs/lgpd.md:72: pôr por extenso na linha "Lista de nomes da turma" o "quem gravou (vira nulo se a pessoa for eliminada; a auditoria guarda o id)", como já… |
+| 2026-09-26 15:02:37 | `test-engineer` | 3ª | APROVADO | `2_task` | `packages/shared/src/estrutura/lista.test.ts` poderia ter um caso de unidade com `esquemaConsultaListaDaTurma.safeParse({})` falhando. Assim a mutação do… |
+| 2026-09-26 15:03:13 | `revisor-geral` | 2ª | APROVADO | `2_task` | `apps/api/src/estrutura/leitor-da-lista.ts:114`: esta linha do docblock de `errosDasLinhas` passa da largura que o resto do arquivo usa. É só estética. |
+| 2026-09-26 15:03:13 | `tenancy-guardian` | 2ª | APROVADO | `2_task` | nenhuma nova. Continua registrada para o `/retro` a da 1ª rodada, sobre a segunda camada de defesa. |
+| 2026-09-26 15:03:26 | `privacy-guardian` | 2ª | APROVADO | `2_task` | nenhuma nova. Seguem as da 1ª rodada com o destino já registrado em "Recomendações sem aplicar" do 2_task.md: no-store e contagem na auditoria para o /retro,… |

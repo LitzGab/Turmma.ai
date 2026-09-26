@@ -6,7 +6,7 @@ const LINHA_AINDA_REFERENCIADA = '23503'
 
 /**
  * O `delete` da estrutura que uma FK barra vira `CONFLITO`, e nada é apagado (Tech Spec da A1, seções 3 e 4): a
- * disciplina com vínculo, a turma com vínculo e, nas tarefas seguintes, a turma com nome na lista ou com pedido. É o
+ * disciplina com vínculo, a turma com vínculo ou com nome na lista (2.0) e, nas tarefas seguintes, a turma com pedido. É o
  * único lugar que traduz o 23503 da exclusão. O nome da restrição e o `detail` do Postgres, que traz o valor da linha,
  * não saem daqui: o erro novo não leva nada do original.
  *

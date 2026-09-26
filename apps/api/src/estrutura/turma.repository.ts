@@ -45,6 +45,20 @@ export class TurmaRepository {
     return linha !== undefined
   }
 
+  /**
+   * Confirma que a turma do ano em curso com esse id existe e a trava em `FOR KEY SHARE` até o fim da transação (A1, 2.0,
+   * C9): o `delete` da turma que chega depois espera, e sai `CONFLITO` pelo nome que esta transação gravou; o que já
+   * apagou a turma faz esta leitura não achar nada. O renomear não espera: não mexe na chave.
+   */
+  async travarContraExclusao(id: string): Promise<boolean> {
+    const [linha] = await this.banco
+      .select({ id: turma.id })
+      .from(turma)
+      .where(and(eq(turma.escolaId, exigirEscolaDoContexto()), eq(turma.anoLetivoId, exigirAnoEmCurso()), eq(turma.id, id)))
+      .for('key share')
+    return linha !== undefined
+  }
+
   async criar(nova: NovaTurma): Promise<TurmaGravada> {
     const [criada] = await this.banco
       .insert(turma)
@@ -69,9 +83,9 @@ export class TurmaRepository {
   }
 
   /**
-   * Apaga a turma do ano em curso com esse id, se nada aponta para ela, e diz se apagou. Com vínculo (qualquer estado),
-   * a FK barra e sai `CONFLITO` (`excluirSemReferencia`); as tarefas seguintes da A1 somam o nome da lista, o pedido e o
-   * acesso vigente. A turma de outro ano, de outra escola ou inexistente não é achada (`false`).
+   * Apaga a turma do ano em curso com esse id, se nada aponta para ela, e diz se apagou. Com vínculo (qualquer estado)
+   * ou com nome na lista (2.0), a FK barra e sai `CONFLITO` (`excluirSemReferencia`); as tarefas seguintes da A1 somam o
+   * pedido e o acesso vigente. A turma de outro ano, de outra escola ou inexistente não é achada (`false`).
    */
   excluir(id: string): Promise<boolean> {
     return excluirSemReferencia(async () => {

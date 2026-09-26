@@ -160,6 +160,35 @@ export type {
   Turno,
 } from './estrutura/turma.js'
 export {
+  ERROS_DA_LINHA_DA_LISTA,
+  ESTADOS_DO_NOME_DA_LISTA,
+  esquemaConsultaListaDaTurma,
+  esquemaLinhaDaPrevia,
+  esquemaMatriculaDigitada,
+  esquemaNomeDaLista,
+  esquemaPedidoNomeAvulso,
+  esquemaPedidoTextoDaLista,
+  esquemaRespostaGravacaoDaLista,
+  esquemaRespostaListaDaTurma,
+  esquemaRespostaPreviaDaLista,
+  MAXIMO_DE_BYTES_DA_LISTA,
+  MAXIMO_DE_LINHAS_DA_LISTA,
+  RESULTADOS_DA_LINHA_DA_LISTA,
+} from './estrutura/lista.js'
+export type {
+  ConsultaListaDaTurma,
+  ErroDaLinhaDaLista,
+  EstadoDoNomeDaLista,
+  LinhaDaPrevia,
+  NomeDaLista,
+  PedidoNomeAvulso,
+  PedidoTextoDaLista,
+  RespostaGravacaoDaLista,
+  RespostaListaDaTurma,
+  RespostaPreviaDaLista,
+  ResultadoDaLinhaDaLista,
+} from './estrutura/lista.js'
+export {
   AVISO_DO_COMPLEMENTO,
   CONTESTACOES_DE_VINCULO,
   EFEITO_DA_CONTESTACAO,

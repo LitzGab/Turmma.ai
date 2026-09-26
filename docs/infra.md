@@ -108,7 +108,11 @@ precisam de um adaptador em Redis para chegar ao professor certo.
 
 ### 3.5 Onboarding de uma escola nova
 
-- Planilha de 400 nomes: um job na fila, não um request
+- Lista de nomes da turma (A1, tarefa 2.0): roda **na hora, dentro do request, sem fila**, porque tem
+  teto — até 200 linhas e 64 KB por envio, uma turma por vez, lida e conferida numa transação curta
+  (duas buscas por índice que começa pela escola e um `insert` de até 200 linhas). Acima do teto,
+  `ENTRADA_INVALIDA`, e nada é lido (Tech Spec da A1, seção 11, regra 00). Planilha da escola inteira
+  (400 nomes ou mais, várias turmas) não existe na A1; quando existir, é um job na fila, não um request
 - Convite de 40 professores: e-mail enviado pela fila, respeitando o limite do provedor
   de e-mail
 - **Reivindicação em sala:** 35 alunos clicam na lista ao mesmo tempo, e dois podem clicar
