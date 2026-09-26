@@ -10,6 +10,8 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] Indicar encarregado (DPO) e publicar canal de contato
 - [ ] Relatório de impacto (RIPD) — dado de menor, volume alto, IA no fluxo
 - [ ] Definir prazos de retenção com uma escola real (varia por rede)
+- [ ] O pedido do titular (acesso e portabilidade, F3, `ciclo-de-vida.service.ts`) cobre também a `lista_nome` e a
+      `reivindicacao` da A1, para a pergunta de fechamento da regra 20 continuar respondida por código
 - [ ] Escrever e ensaiar o processo de incidente
 - [ ] Parecer sobre o ECA Digital (Lei 15.211/2025) para plataforma contratada pela escola,
       com a avaliação de impacto que ele exige. Três perguntas precisam sair dele, nomeadas:
@@ -115,6 +117,10 @@ para o staging".
       storage S3 gerenciados (D26, D28), quando for criar o staging (D31, D42). O Redis do staging
       precisa ser gerenciado **na mesma região**: com o corte de 100 ms do cliente do login, o
       staging passou a ser o único ensaio desse corte fora de produção (`infra-guardian`)
+- [ ] **Bloqueio de IP na borda contra ataque ao código da turma** (A1): na A1 não existe, e a resposta é revogar os
+      acessos da escola (`docs/runbook.md`, "Código da turma errado em massa numa escola"). Entra com o staging e o
+      provedor (D42), com finalidade e prazo de remoção no `docs/lgpd.md` antes do primeiro uso, na regra do provedor
+      e nunca em arquivo versionado (o repositório é público), sem ler as chaves `rl:ip` à mão (`privacy-guardian`)
 - [ ] **Valores que o staging e a produção não herdam do `.env.example`**, e que fazem o boot falhar
       de propósito se forem copiados. Hoje são três, e a lista é executável em `apps/api/src/config.test.ts`
       ("o .env.example não sobe em produção"), que falha quando outra variável entra na mesma classe:
@@ -462,7 +468,7 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [x] ~~Landing page~~ — existe em `turmma.com` (fora deste repositório)
 - [x] ~~Trazer a paleta, a tipografia e o logo para o repositório~~ — já estão em `mockups/`
       (`src/index.css` e `public/marca/`), e a A1 leva de lá para o `apps/web` (D72)
-- [ ] **Antes da Tech Spec da A1:** o avatar de cada um dos **três agentes**, em SVG, por função:
+- [ ] **Antes da Tech Spec da A2:** o avatar de cada um dos **três agentes**, em SVG, por função:
       Assistente de ensino, Tutor e Analista de desempenho escolar (D32 revista, D72)
 - [ ] Identificar no 21st.dev o autor e a licença das peças que o Gabriel colou direto no
       mockup (área de soltar arquivo, miniatura de arquivo, pasta animada, `leaderboard-*` e as duas

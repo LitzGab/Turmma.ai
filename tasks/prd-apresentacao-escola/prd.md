@@ -29,6 +29,7 @@ com a aprovação dele — na tela, com a marca do Turmma, sem cadastro um a um.
 - Item de navegação de fase que não existe (D73): na A1 o professor tem só **Turmas**, e o aluno
   só a própria turma
 - Seed com escola ou pessoa pronta para a demonstração (D71 revista); fixture fica nos testes
+- Aluno do ano seguinte com a matrícula já em `credencial_matricula`: F2
 
 ## 4. Papéis envolvidos
 
@@ -95,7 +96,7 @@ com a aprovação dele — na tela, com a marca do Turmma, sem cadastro um a um.
 | Nome e matrícula na lista, antes da reivindicação | aluno | o aluno reivindicar o próprio nome | livre: fim do ano letivo; reivindicado: vira o cadastro | **não** |
 | Pedido de reivindicação (nome, hora, estado, quem decidiu, quando) | aluno e quem decidiu | aprovação humana da identidade (D4) | vigência + 5 anos | **não** |
 | Convite de professor, link e código da sala (hash, datas, turma) | professor, turma | primeiro acesso e entrada do aluno | 30 dias depois de usar, revogar ou vencer | **não** (só o de coordenador) |
-| Contador de tentativas de código e de reivindicação (HMAC) | aluno | proteção contra força bruta | 15 minutos | **não** |
+| Contador de tentativas de código e de reivindicação (HMAC) | aluno | proteção contra força bruta | 10 minutos | **não** |
 | Hash de senha; nome e e-mail do professor | aluno; professor | autenticar; acesso | já definida | sim |
 
 As linhas novas entram em `docs/lgpd.md` na tarefa que cria a tabela (regra 20, item 1). Nada
@@ -120,7 +121,7 @@ D59 e a minimização da regra 20.
    navegador (regra 20). Tech Spec, com o `privacy-guardian`
 3. Formato do CSV (separador, cabeçalho, acento vindo do Excel) e limite de linhas por envio
    (regra 80, item 3)
-4. Os avatares dos três agentes chegam antes da Tech Spec (`CLAUDE.md`); a casca da A1 já reserva
-   o lugar de "Seu time", mesmo sem agente?
+4. Respondida em 25/09/2026 (Joaquim): avatares e "Seu time" vão para a A2, onde os agentes
+   nascem; a casca da A1 não reserva o lugar (D73). Revê a D72 por `/registrar-decisao`
 5. Borda de campo `#8F8F8F` no lugar do `#D9D9D9` do mockup, pelo contraste de 3:1
    (`docs/interface.md` 9.1): confirmar com o Gabriel

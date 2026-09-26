@@ -372,6 +372,48 @@ rede na borda (regra 80, item 1). Se o ataque vier de muitos IPs, o que avisa é
 **Depois:** registre no `TODO.md` o horário, a duração, se era rede sem `ips_saida` (e se ela foi cadastrada) ou
 ataque, sem IP.
 
+## Código da turma errado em massa numa escola
+
+**Dispara quando:** mais de 10 tentativas por minuto, somadas as instâncias da API, passam do teto de códigos da turma
+errados numa escola (1.000 em 10 min), por 5 min seguidos (`sum(rate(sala_limite_atingido_total{tipo="escola"}[1m])) *
+60 > 10`, regra `infra/grafana/alertas/sala-codigo-errado-por-escola.yaml`, que nasce com a A1; Tech Spec da A1, seção
+7c). A manhã da escola inteira no primeiro dia erra uns 420 códigos em 5 min, abaixo do teto: acima dele, por 5 min, é
+alguém tentando códigos. O alerta não traz escola nem IP (`METRICAS_COM_ESCOLA` é fechada).
+
+**Impacto:** ninguém é recusado. Na escola atacada, todo `salas/abrir` por código espera 1 s, também o do código
+certo; o link, o login e as outras escolas não sentem. O risco é outro: quem acerta um código vigente vê os nomes
+livres daquela turma, que são de menores. Um IP sozinho, no teto do `rl:ip`, leva uma semana para ter ~0,2% de chance;
+com muitos IPs, a chance cresce na mesma proporção, e é por isso que este alerta existe.
+
+**Primeiro olhar:** a escola, no log da API: a linha `sala.limite_atingido` com `tipo` `escola` traz o `escolaId`, que é
+o que o comando abaixo recebe. É o que basta, porque a resposta na A1 é por escola, não por IP.
+Não procure o IP: as rotas da sala não gravam registro de acesso (Tech Spec da A1, seção 7), e ninguém lê as chaves
+`rl:ip` do Redis à mão, nem durante o alerta (`docs/lgpd.md`, "IP só em memória, no login"). Se o log trouxer mais de
+uma escola, cada uma segue os passos abaixo.
+
+**Causas prováveis:**
+1. Alguém tentando códigos contra a escola, de fora ou de dentro da rede dela → revogue os acessos da escola:
+   `OPERADOR=<você> npm run -s ops:revogar-acessos-sala -- --escola <escolaId do log>`. Link e código de todas as turmas dela
+   caem na hora, e o que o atacante já testou deixa de valer. O comando imprime só a contagem e grava cada revogação
+   na auditoria da escola. Avise a coordenação (seção "Como avisar as escolas"), com o horário, de que cada professor
+   precisa gerar um código novo na tela Acesso da turma antes da próxima aula; se o ataque veio de dentro, ela sabe
+   onde procurar.
+2. O ataque volta depois da revogação, contra os códigos novos → alguém dentro da sala está vendo o código projetado
+   (Tech Spec da A1, seção 13). Revogue de novo, trate como incidente (seção "Como avisar as escolas") e combine com a
+   coordenação o passo seguinte, abaixo.
+
+**Se nada disso resolver:** não há como desligar a página da sala só para uma escola. Com os acessos revogados, o
+atacante precisa começar de novo contra os códigos novos, e cada um vale no máximo 30 dias. Se o ataque não parar,
+combine com a coordenação que os professores gerem o código na hora da aula, com validade de 1 dia, e o revoguem ao
+fim dela. Não bloqueie IP na borda na A1: não há de onde tirar o IP sem ler dado que ninguém lê, e o IP de saída da
+escola esconde centenas de alunos (regra 80, item 1). O bloqueio na borda fica para quando existirem o staging e o
+provedor (D42), com finalidade e prazo no `docs/lgpd.md` antes do primeiro uso, e nunca em arquivo versionado: o
+repositório é público (`TODO.md`).
+
+**Depois:** registre no `TODO.md` o horário, a duração, a escola (o id) e quantos acessos foram revogados. Sem IP. Se
+durou mais de um dia ou voltou depois da revogação, registre como incidente e reveja a prioridade do balde próprio da
+sala no limite por IP (`rl:ip:sala`), previsto para o F2.
+
 ## Rotina do sistema sem rodar (consolidação de uso, expurgo de jobs, expurgo do acesso)
 
 *A preencher antes da primeira escola real* (pendência em `TODO.md`). Hoje nada avisa se
