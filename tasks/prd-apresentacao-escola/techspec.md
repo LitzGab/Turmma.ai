@@ -5,16 +5,16 @@
 
 ## 1. Resumo da abordagem
 
-Três tabelas e o convite de professor. A reivindicação é pública, presa ao link ou ao código; a aprovação cria
-usuário, credencial e vínculo numa transação.
+Três tabelas e o convite de professor. A reivindicação é pública, presa ao link ou ao código; a aprovação cria o
+aluno numa transação.
 
 ## 2. Módulos afetados
 
 - `packages/nucleo`, `packages/shared`: migrations, auditoria, contratos `.strict()`, `MATRIZ`, `MENSAGENS_DA_SALA`
 - `apps/api/src/estrutura` (lista, `encerrar`); novos `professores` e `sala`
 - `apps/api/src/sessao`: convite com `tipo`; `AcessoDaSala`; eliminação; `ContadorEmJanela`; `/v1/eu`
-- `apps/api/src/sistema`: o expurgo, com o `@SemEscopo` reescrito; `apps/api/src/ops`: `ops:revogar-acessos-sala`
-- `apps/web`, `infra/carga`, `infra/grafana/alertas`
+- Expurgo (`packages/nucleo/src/retencao`, `apps/worker`), com o `@SemEscopo` reescrito; `ops:revogar-acessos-sala`
+- `apps/web`, `infra/k6`, `infra/grafana/alertas`
 
 ## 3. Modelo de dados
 
@@ -41,12 +41,12 @@ acesso_turma   id, escola_id*, ano_letivo_id*, turma_id*, token_hash*, codigo_hm
 - Código: 8 caracteres de `23456789ABCDEFGHJKMNPQRSTUVWXYZ` (31⁸ ≈ 8,5 × 10¹¹), em dois grupos de 4; HMAC com
   `SALA_CHAVE_CODIGO`, separada da dos contadores
 
-Migrations de expandir: 0018 `convite.tipo` aceita `professor`; 0019 lista e reivindicação; 0020 acesso. Revertido o código, o
+Migrations de expandir: 0018 `convite.tipo` aceita `professor`; 0019 lista; 0020 acesso; 0021 reivindicação. Revertido o código, o
 convite de professor em aberto ativa como o de coordenador, com o papel do `usuario`.
 
 ## 4. API
 
-Sob `/v1`, escopo do contexto, uma célula da `MATRIZ` por rota:
+Sob `/v1`, escopo do contexto; uma célula da `MATRIZ` por rota:
 
 - `PATCH`, `DELETE disciplinas/:id`, `turmas/:id` (coordenador): excluir com nome, vínculo, pedido ou acesso vigente →
   `CONFLITO`
@@ -101,7 +101,8 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
   `sala`. Ele chama `acessoDaSalaPorToken` e `acessoDaSalaPorCodigo`, novos na `ResolucaoDeTenantRepository`, com
   `@SemEscopo` ("o link e o código da sala não dizem a escola"), que exigem o ano `em_curso` e o slug da escola (I1,
   I2)
-- `ops:revogar-acessos-sala` recebe o id da escola, que o log traz, pelo repository com escopo, sem `@SemEscopo`
+- `ops:revogar-acessos-sala` recebe o id da escola do log e monta o contexto como os outros `ops:*`, sem `@SemEscopo`;
+  id que não é UUID dá `ArgumentoInvalido` (saída 2)
 
 ## 7. Dado pessoal
 
@@ -136,7 +137,7 @@ Sem IA. Não se aplica.
 - **Alerta** "Código da turma errado em massa numa escola": `sala.limite_atingido{tipo="escola"}` acima de 10 por
   minuto, somadas as instâncias, por 5 min (`infra/grafana/alertas/sala-codigo-errado-por-escola.yaml`); a rajada
   legítima não chega ao teto. O runbook, na entrada de mesmo nome, revoga os acessos da escola do log, sem ler IP
-- **Carga**: `reivindicacao-em-sala`, K1 e K2
+- **Carga**: K1 e K2
 
 **Limites.** O `ContadorEmJanela` ganha a janela por parâmetro (10 min). Com 60 códigos ativos, um IP no teto do
 `rl:ip` acerta em 7 dias com ~0,2%, e N IPs, N vezes: é o que o alerta pega. O primeiro dia erra ~420 códigos.
@@ -150,11 +151,12 @@ Sem IA. Não se aplica.
 O reenvio com a mesma chave não conta em nenhum; o paralelo de uma matrícula errada conta duas vezes no nome, aceito.
 Não há contador por navegador. `LIMITE_EXCEDIDO` sai com `Retry-After`.
 
-**Corridas**: C1 a C11; a colisão do código sorteia de novo num savepoint.
+**Corridas**: C1 a C11; colisão do código sorteia de novo num savepoint.
 
 ## 9. Frontend
 
-- **Casca** (`docs/interface.md` 11.1): coordenação, Estrutura e Professores; professor, Turmas; aluno, Minha turma.
+- **Casca** (`docs/interface.md` 11.1): coordenação, Estrutura (pedidos dentro da turma) e Professores; professor,
+  Turmas; aluno, Minha turma.
   Guarda de papel em `rotas.tsx` (W2, W12)
 - **Seletor** (P30): escola, rede e papel, sem número de turmas; a troca faz `resetQueries` com o token novo
 - **Fronteira**: a `FronteiraDaOperacao` vira genérica em `componentes/`, com `Suspense` e `EstadoCarregando` em volta
@@ -170,9 +172,9 @@ Não há contador por navegador. `LIMITE_EXCEDIDO` sai com `Retry-After`.
 - **Textos** (`MENSAGENS_DA_SALA`, exatos no W9): o servidor responde igual, e a página escolhe o de `NAO_ENCONTRADO`
   pelo caminho que usou, código ou link. O do limite, "Muitas tentativas agora. Espere N minutos ou chame o
   professor.", vale pelo nome e pelo `rl:ip`
-- **Lista**: arquivo lido como texto (UTF-8, ou windows-1252), com exemplo ao lado
+- **Lista**: arquivo lido como texto (UTF-8 ou windows-1252), com exemplo
 
-Quatro estados em toda tela, na tabela do W4: carregando é `EstadoCarregando`, e erro, `EstadoErro`.
+Quatro estados em toda tela (W4): carregando é `EstadoCarregando`; erro, `EstadoErro`.
 
 ## 10. Testes
 
@@ -190,7 +192,7 @@ Em `cenarios.md`, parte desta spec: lista fechada, um id por teste, com a cláus
 
 ## 12. Premissas não verificadas
 
-- ⚠️ NÃO VERIFICADO: `wa.me/?text=` abre o WhatsApp no Chromebook e no celular; senão, o botão copia
+- ⚠️ NÃO VERIFICADO: `wa.me/?text=` abre o WhatsApp no Chromebook e no celular; senão, copia
 - ⚠️ NÃO VERIFICADO: o Excel brasileiro grava CSV em windows-1252 com `;`; a leitura aceita os dois
 
 ## 13. Riscos técnicos
@@ -199,4 +201,4 @@ Em `cenarios.md`, parte desta spec: lista fechada, um id por teste, com a cláus
   quem tem o link. Tolerado pela D71 revista; fecha com a prova de posse do e-mail, item do "Portão da
   primeira escola real" do `ROADMAP.md`
 - **Ator dentro da sala** vê o código novo projetado e pode travar os nomes de novo
-- **A fronteira movida** pode mudar a A0b: o e2e dela roda junto
+- **A fronteira movida** pode mudar a A0b; o e2e dela roda junto

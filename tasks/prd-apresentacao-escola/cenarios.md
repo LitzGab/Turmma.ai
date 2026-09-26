@@ -176,8 +176,8 @@ aos cenários.
 - **E29** (integração) `ops:revogar-acessos-sala --escola <id de A>`, o id que o log `sala.limite_atingido` traz, com
   `OPERADOR`, pelo repository com o escopo da escola do id, sem `@SemEscopo` novo (a lista do I2 não muda): revoga na hora todos os acessos vigentes
   de A (link e código respondem `NAO_ENCONTRADO`), grava um `acesso_turma.revogado` por acesso na auditoria de A, com
-  `autor_operador`, e não toca nos de B; imprime só a contagem; a segunda execução revoga zero; id inexistente ou que não é UUID dá
-  `NAO_ENCONTRADO`; sem `OPERADOR`, recusa antes de tocar no banco. **Quebra sem:** a escola do contexto na cláusula do
+  `autor_operador`, e não toca nos de B; imprime só a contagem; a segunda execução revoga zero; id inexistente dá `NAO_ENCONTRADO`,
+  e id que não é UUID, `ArgumentoInvalido` com saída 2, como os outros `ops:*`; sem `OPERADOR`, recusa antes de tocar no banco. **Quebra sem:** a escola do contexto na cláusula do
   `update`
 - **E30** (integração) Duas matrículas erradas num nome e depois a certa: o pedido chega com `teveMatriculaErrada:
   true`; outro nome, reivindicado de primeira, com `false`; a resposta não traz número, hora nem matrícula tentada.
