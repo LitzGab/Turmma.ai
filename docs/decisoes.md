@@ -818,6 +818,14 @@ fazer, então é a que precisa estar de pé desde já. Os fixtures de teste cont
 dentro dos testes: o que sai é a escola pronta na demonstração.
 Revista de novo em 23/09/2026 (D76): antes da A1 entra a **A0**, o painel da operação, e a
 escola passa a nascer nele em vez de no `ops:escola`, que continua existindo.
+Revista em 25/09/2026, pelo Joaquim, na revisão da spec da A1: um **quarto afrouxamento**, que vale só enquanto o
+dado for sintético. A conta de professor é global e, na A1, nasce por um link que a coordenação da escola copia, sem
+prova de posse do e-mail, e é reaproveitada quando outra escola convida o mesmo e-mail (RF7 da A1). Ficam tolerados
+dois comportamentos: (a) o aceite do convite responde diferente para e-mail com e sem conta Turmma, e quem tem o link
+descobre se a pessoa trabalha em outra escola cliente; (b) a senha de uma conta global é definida por quem tem o link
+de uma escola e vale no convite de outra. Antes da primeira escola real, a prova de posse do e-mail fecha os dois,
+como item do portão (`ROADMAP.md`). Motivo: a prova exige envio de e-mail pelo sistema, que o PRD da A1 deixou fora,
+e com dado sintético ninguém real fica exposto.
 
 **D72 — A pele do produto é o sistema do ChatGPT, em branco, preto e laranja, e é uma só.**
 *(decidida pelo Joaquim em 23/09/2026, entre a pele do P02, que o Gabriel escolheu em
@@ -836,12 +844,16 @@ de até 1480 px em grade e tabela, 1040 em formulário e 760 em leitura e conver
 trabalho que cabe na janela e rola por dentro. Os nomes dos tokens da seção 9.9 do
 `docs/interface.md` ficam; os valores e os SVGs do logotipo vêm de `mockups/` (`src/index.css`
 e `public/marca/`), que são da marca e não código de terceiro. Os avatares dos três agentes o
-Gabriel entrega antes da Tech Spec da A1. A pele da landing page — papel, creme, azul-noite —
+Gabriel entrega antes da Tech Spec da A2. A pele da landing page — papel, creme, azul-noite —
 continua sendo da landing page. Motivo: o Gabriel rejeitou a pele da landing vendo o produto;
 duas peles dobram o trabalho da A1 e da A2; sem fonte web além do logotipo, o primeiro
 carregamento fica menor no Chromebook (regra 50); e copiar fonte, medida e canto de um
 concorrente direto abre o risco de concorrência desleal (trade dress) sem ganho que o
 compense.
+Revista em 25/09/2026, pelo Joaquim: os avatares dos três agentes e "Seu time" passam da A1 para a
+A2, onde os agentes nascem, e a casca da A1 não reserva o lugar. Motivo: na A1 não existe agente, e
+pela D73 item de fase que não existe não aparece; manter o prazo na A1 travava a Tech Spec dela sem
+nada a mostrar na demonstração.
 
 **D73 — A navegação do professor é a do mockup: a caixa de pedido em primeiro lugar, o time e o
 histórico na lateral.** *(decidida pelo Gabriel em 20/09/2026, vista em mockup; ratificada pelo

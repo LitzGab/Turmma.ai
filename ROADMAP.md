@@ -115,9 +115,10 @@ enviado pelo próprio produto, com nomes inventados.
 **Regras da fatia** (D71): dado 100% sintético; código do produto, não protótipo — mesmas
 regras 00 a 80 e mesmo processo; regra 70 inteira; fora tudo que não aparece no roteiro. **Sem
 seed de escola pronta**: a escola é criada por nós no painel da operação (A0) e montada pela coordenação
-na tela; os fixtures ficam dentro dos testes. Os três afrouxamentos estão aceitos e valem só
+na tela; os fixtures ficam dentro dos testes. Os quatro afrouxamentos estão aceitos e valem só
 enquanto o dado for sintético: AIA com a etapa 1 antes do PRD da fatia, provedor de modelo
-qualquer pela porta, e cenário de carga sem crescer. A apresentação roda na nossa máquina; o
+qualquer pela porta, cenário de carga sem crescer, e a conta de professor reaproveitada entre
+escolas sem prova de posse do e-mail (D71 revista em 25/09/2026). A apresentação roda na nossa máquina; o
 staging nasce quando alguém de fora precisar usar sozinho (D31).
 
 Os agentes são os três da D32 revista — Assistente de ensino, Tutor e Analista de desempenho
@@ -157,7 +158,7 @@ na auditoria da escola com o operador.
 **Depende de:** A0b
 
 A escola montada pela coordenação, com o núcleo do F2 em fatia fina. Casca da web com a marca
-(D72: tokens e logotipo de `mockups/`, avatares dos três agentes) e a navegação dos três papéis
+(D72: tokens e logotipo de `mockups/`) e a navegação dos três papéis
 (D73), com o seletor de escola que troca o token (P30). A **coordenação** cria disciplinas e
 turmas na tela, sobe a lista de nomes de cada turma (colada ou em planilha simples, D3 revista)
 e aloca professor × turma × disciplina. O **professor** entra pelo convite e confirma o vínculo
@@ -185,7 +186,7 @@ recusa antes de extrair (D5). Home com o **Assistente de ensino**, com contexto 
 material, que pergunta antes de abrir a ferramenta (D18) e distingue ferramenta de pedido
 (D74). Ferramentas: atividade e prova objetiva, plano de aula, e **Adaptação** por tipo, sem
 texto livre sobre o aluno (D67). Artefato salvo, ligado à turma, com a página citada,
-exportável em PDF.
+exportável em PDF. A casca ganha **Seu time**, com os avatares dos três agentes (D72 revista).
 
 **Pronto quando:** uma chamada de IA passa pela porta e aparece no consumo da escola e no painel
 da operação, em tokens e em reais estimados contra o teto por aluno (D39, D76); o
@@ -525,7 +526,10 @@ e garanta **processamento no Brasil para conversa de aluno** (D62), e os itens d
 do `TODO.md`. Somam-se: **RIPD**, **AIA das funcionalidades de alto risco** que o piloto usar,
 **aviso de privacidade em linguagem de faixa etária**, **canal de notificação** funcionando, e
 o **parecer sobre o art. 24 do ECA Digital** — se a leitura ampla prevalecer, aluno de até 16
-anos só entra com conta de responsável vinculada (`docs/regulacao.md` 2.2). O piloto do 1º semestre de 2027
+anos só entra com conta de responsável vinculada (`docs/regulacao.md` 2.2). Soma-se também a **prova de posse do
+e-mail** antes de uma conta de professor cruzar escolas (D71 revista em 25/09/2026), com o teste de que
+`convites/consultar` e `/aceitar` respondem igual para e-mail com e sem conta, e de que a senha definida pelo link de
+uma escola não abre a conta no convite de outra. O piloto do 1º semestre de 2027
 vem antes do F16 (D1 revista), então esses itens são puxados para antes dele.
 
 O **staging** (deploy automático do `main`, check externo, custo do ambiente) é criado antes

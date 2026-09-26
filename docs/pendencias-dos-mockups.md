@@ -473,7 +473,7 @@ já filtrado. **O que o produto precisa:** um contador leve por agente (pendente
 definir a conta), atualizado por evento ou na navegação, sem martelar a API (regra 80); a regra
 50, item 6, continua — o feed não aparece vazio, e quem garante isso agora é a função "seu dia".
 **Sétima rodada:** a thread virou conversa, com balões e caixa de resposta. O que isso pede está no
-P29. **Onde entra:** A1 (casca) e F11. **Dono:** Joaquim.
+P29. **Onde entra:** A2 (casca, com Seu time; D72 revista) e F11. **Dono:** Joaquim.
 
 ### P15 — Home sem atalhos, com "Esperando você" · FRONT
 
@@ -789,7 +789,7 @@ não lidas.
 - **Ponto de estado e não lidas** não podem virar pressão de uso (D59). "Online" num agente não diz
   nada. O ponto mostra só "tem algo esperando você"
 
-**Onde entra.** A1 (casca) e F11. **Dono:** Joaquim.
+**Onde entra.** A2 (casca, com Seu time; D72 revista) e F11. **Dono:** Joaquim.
 
 ### P30 — Seletor de escola como espaço de trabalho · FRONT + tenancy
 
@@ -838,8 +838,8 @@ dress do caminho. O Gabriel precisa ser avisado: a oitava rodada pedia o contrá
 
 1. **Antes do PRD da A1:** P01, P02, P03, P04 e P31 — **fechados em 23/09/2026** (D32, D9 e D60
    revistas; D72; D73). O avatar é de **três** agentes, e o Gabriel entrega o desenho antes da
-   Tech Spec. A A1 passou a ser "a escola" (D71 revista): entram no PRD dela o P27 (convite da
-   turma) e o P30 (seletor de escola); P14, P18 e P29 entram na Tech Spec, na parte da casca
+   Tech Spec da A2 (D72 revista em 25/09/2026). A A1 passou a ser "a escola" (D71 revista): entram no PRD dela o P27 (convite da
+   turma) e o P30 (seletor de escola); P18 entra na Tech Spec da A1, na parte da casca; P14 e P29, com Seu time, na A2
 2. **Antes do PRD da A2:** P06 (fatia mínima), P13, P15, P16, P17, P23, P24, P25. A **regra** do P22 (o que é
    ferramenta) já é a D74
 3. **Antes do PRD da A3:** P10, P11, P28 (a estrutura da turma aberta) e os limiares dos indicadores

@@ -378,9 +378,9 @@ ninguém confundir com a tela de uma escola.
   licença das peças coladas no mockup (P20)
 - **Trazer para `apps/web`** os tokens da seção 9.9 e os SVGs da marca (`mockups/public/marca/`, em
   curvas, sem baixar a Fustat) — é a primeira tarefa de tela da A0 (D76), que migra também as telas
-  do F1; o avatar dos três agentes entra na A1. Hoje a casca do F0 ainda usa a paleta `slate`
+  do F1; o avatar dos três agentes entra na A2 (D72 revista). Hoje a casca do F0 ainda usa a paleta `slate`
 - **Avatar dos três agentes**: há proposta na seção 9.7, tirada do mockup; o Gabriel fecha o
-  desenho antes da Tech Spec da A1. A landing page ainda lista os agentes antigos: alinhar junto
+  desenho antes da Tech Spec da A2. A landing page ainda lista os agentes antigos: alinhar junto
 - **Licença das duas peças marcadas "a conferir"** na seção 10.2 (`shadcn/item` e
   `shadcn/spinner`: o 21st.dev não declara, a origem shadcn/ui é MIT), antes de o código entrar
 - **Vestir a família Agent Elements**: 121 classes de cor fixa e 63 variantes `dark:` trocadas à
