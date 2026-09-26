@@ -164,6 +164,7 @@ services:
       IDENTIDADE_CHAVE_CIFRA_VERSAO: ${IDENTIDADE_CHAVE_CIFRA_VERSAO:?defina IDENTIDADE_CHAVE_CIFRA_VERSAO}
       IDENTIDADE_CHAVE_CIFRA_V1: ${IDENTIDADE_CHAVE_CIFRA_V1:?defina IDENTIDADE_CHAVE_CIFRA_V1}
       IDENTIDADE_CHAVE_RECUPERACAO: ${IDENTIDADE_CHAVE_RECUPERACAO:?defina IDENTIDADE_CHAVE_RECUPERACAO}
+      SALA_CHAVE_CODIGO: ${SALA_CHAVE_CODIGO:?defina SALA_CHAVE_CODIGO}
       # Login pela conta da escola contra o oidc-falso. Sem depends_on: fora do ar, só esse botão falha, com
       # `?falha=provedor`, e a matrícula e o e-mail seguem (regra 80, item 4).
       LOGIN_EXTERNO_RETORNO_URL: ${LOGIN_EXTERNO_RETORNO_URL:?defina LOGIN_EXTERNO_RETORNO_URL}

@@ -72,8 +72,11 @@ Sob `/v1`, escopo do contexto; uma célula da `MATRIZ` por rota:
   `professor`, pelas matrizes `REFAZER_`/`REVOGAR_CONVITE_DE_PROFESSOR_POR_ESTADO`: os dois só no convite em aberto
   (`pendente`, `vencido`); revogar o `revogado` é `NAO_ENCONTRADO`, o resto `CONFLITO` (3.0). Sem convite de professor:
   `NAO_ENCONTRADO`
-- `POST turmas/:id/acesso`, `…/revogar`, `GET …/acesso` (professor, `turma_vinculada`): link e código uma vez; o
-  GET, só `expiraEm`
+- `POST turmas/:id/acesso`, `…/revogar`, `GET …/acesso` (professor, `turma_vinculada`; recurso `acesso_turma` da
+  `MATRIZ`, `gerar`, `ler`, `revogar`): link e código uma vez, `{ token, codigo, expiraEm }`, com `no-store`; a web monta o
+  link `/e/<slug>/turma#<token>`, como o do convite, e mostra o código com `exibirCodigoDaTurma` (4.0). O corpo do gerar é
+  `{ validadeDias: 1 | 7 | 30 }`, sem padrão na API (o 7 é da tela). O GET, só `expiraEm`, `null` sem acesso vigente. Revogar
+  sem acesso vigente (revogado, vencido, nunca gerado) é `NAO_ENCONTRADO`, como o convite já revogado (4.0)
 - `GET turmas/:id/reivindicacoes`, `POST reivindicacoes/decidir` (professor, `turma_vinculada`; coordenador,
   `unidade`, e a leitura `nominal_auditado`): o pedido traz `teveMatriculaErrada` (sim ou não); até 40 ids, cada um
   `decidida`, `ja_decidida` ou `nao_encontrada`
@@ -129,7 +132,8 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
   só com ids e contagens (`ids` das linhas que entraram, `gravados`, `jaExistentes`; a entidade é a turma, 2.0);
   `lista_nome.retirado` (a turma e o estado `livre`, 2.0); a prévia não audita: não grava nada nem devolve nome gravado, só
   diz, das matrículas que a própria coordenação digitou, quais estão na lista da turma ou em uso na escola, e só a
-  coordenação da escola chega a ela (2.0, recomendação do `privacy-guardian`); `acesso_turma.*`; `reivindicacao.decidida` com `decidida_como`, sem
+  coordenação da escola chega a ela (2.0, recomendação do `privacy-guardian`); `acesso_turma.gerado` (turma, validade, `expiraEm` e os ids que ele derrubou em `substituidos`) e
+  `acesso_turma.revogado` (a turma), sem token nem código (4.0); `reivindicacao.decidida` com `decidida_como`, sem
   `teve_matricula_errada`. A coordenação grava `turma.lista_lida` e `turma.reivindicacoes_lidas` a cada leitura; o
   professor, não
 - **Registro de acesso**: as rotas públicas não o gravam, para não ligar o pedido ao IP
@@ -172,7 +176,12 @@ Sem IA. Não se aplica.
 O reenvio com a mesma chave não conta em nenhum; o paralelo de uma matrícula errada conta duas vezes no nome, aceito.
 Não há contador por navegador. `LIMITE_EXCEDIDO` sai com `Retry-After`.
 
-**Corridas**: C1 a C11; colisão do código sorteia de novo num savepoint.
+**Corridas**: C1 a C11; colisão do código sorteia de novo num savepoint. **Travas das escritas em turma** (4.0, pendência
+da 1.0): trava o ano em curso em `FOR SHARE` a escrita que faz nascer no ano algo que o encerramento precisa desligar ou
+fechar (criar turma; gerar acesso; na 6.0 e na 8.0, o pedido e a aprovação); a que só troca o nome (renomear) ou tira linha
+(excluir) não trava o ano, e trava a linha da turma (o próprio `update`; o `for update` do excluir). O gerar pega o ano antes
+da turma, e o `encerrar` atualiza o ano antes de tudo: nenhuma ordem cruzada. A gravação e o avulso da lista (2.0) também
+fazem nascer linha no ano e ainda não travam o ano: a 10.0 decide, com o C10.
 
 ## 9. Frontend
 

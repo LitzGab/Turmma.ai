@@ -108,6 +108,39 @@ senha **depois da aprovação humana** (D4). No F1 o aluno e o vínculo dele vê
 - A coordenação lê a lista com finalidade, e cada leitura grava `turma.lista_lida`. O professor
   não lê a lista.
 
+### Acesso da turma — A1
+
+Implementado na A1 (tarefa 4.0). A forma exata está na seção 3 da Tech Spec da A1 e na migration
+`0020_acesso_turma.sql`.
+
+```
+AcessoTurma*     → escola*, anoLetivo*, turma*, tokenHash*, codigoHmac*, validadeDias* (1 | 7 | 30),
+                   expiraEm*, revogadoEm?, criadoPor?, criadoEm*
+```
+
+`AcessoTurma` é o link da sala e o código da turma que o professor com vínculo **confirmado** gera
+(RF9), e que o aluno usa para abrir a turma e reivindicar o nome (5.0 e 6.0). Os dois valem juntos,
+pela mesma validade. A coordenação não gera acesso.
+
+- **O link e o código aparecem uma vez**, na resposta do gerar (`no-store`): o token do link (a web
+  monta `/e/<slug>/turma#<token>`) e o código de 8 caracteres de um alfabeto de 31, sem 0, 1, I, L e
+  O, mostrado em dois grupos de 4. O banco guarda só o SHA-256 do token (a mesma peça do convite) e
+  o HMAC do código com `SALA_CHAVE_CODIGO`, uma chave só dele. A leitura devolve só `expiraEm`.
+- **Vigente** é o não revogado e não vencido. "Gerar novo" revoga todo acesso não revogado da turma,
+  também o de outro professor, na mesma transação do novo; a auditoria do novo
+  (`acesso_turma.gerado`) lista os que ele derrubou. Revogar sem acesso vigente responde como
+  inexistente.
+- Índices únicos parciais entre os não revogados: um acesso por turma (dois gerar ao mesmo tempo:
+  um grava, o outro `CONFLITO`) e o código único na escola (a colisão do sorteio sorteia de novo num
+  savepoint, até três vezes, e depois 503). O token é único no sistema, porque o link não diz a escola.
+- Turma por FK composta com a escola e o ano, `on delete cascade`: a turma só se exclui sem acesso
+  vigente (`CONFLITO`), e o revogado ou vencido sai com ela. O autor (`criadoPor`) vira nulo se o
+  professor for eliminado, e a autoria fica na auditoria.
+- **Travas**: o gerar trava o ano em curso e a linha da turma em `FOR SHARE`; o excluir trava a
+  turma em `FOR UPDATE` num comando próprio, antes do `delete` que confere o acesso vigente. O ano
+  encerrado não ganha acesso novo, e o excluir nunca leva, pela cascata, um acesso que acabou de ser
+  entregue.
+
 ### Ainda não existe — F2
 
 ```

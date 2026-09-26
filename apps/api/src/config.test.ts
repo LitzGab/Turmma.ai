@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { lerAmbienteDeCarga, lerAmbienteDeTeste, lerAmbienteExemplo } from '../../../tools/ci/compose.ts'
 import { TIMEOUT_COMANDO_REDIS_API_MS, TIMEOUT_COMANDO_REDIS_FILA_MS } from '@educa/nucleo'
 import { ConfiguracaoInvalida, lerConfiguracao, MOTIVO_AVISOS_SEM_JSON, MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO } from './config.js'
+import { MOTIVO_CHAVE_DA_SALA_REPETIDA } from './sala/configuracao-da-sala.js'
 import { lerConfiguracaoLogin, MOTIVO_PRAZO_DO_REDIS_DO_LOGIN, PRAZO_MINIMO_DO_REDIS_DO_LOGIN_MS } from './sessao/configuracao-de-login.js'
 
 const ambienteValido = {
@@ -41,6 +42,7 @@ const ambienteValido = {
   IDENTIDADE_CHAVE_CIFRA_VERSAO: '1',
   IDENTIDADE_CHAVE_CIFRA_V1: 'chave_sintetica_da_cifra_do_mfa_com_32_caracteres',
   IDENTIDADE_CHAVE_RECUPERACAO: 'chave_sintetica_da_recuperacao_com_32_caracteres',
+  SALA_CHAVE_CODIGO: 'chave_sintetica_do_codigo_da_turma_com_32_caracteres',
 }
 
 /** A chave AES-256 que o HKDF deriva do texto da variável, como a configuração faz. */
@@ -114,6 +116,7 @@ describe('lerConfiguracao', () => {
       },
       // Sem as variáveis de provedor, o login pela conta da escola fica desligado, e a API sobe igual (13.0).
       loginExterno: { provedores: new Map(), retorno: undefined, chaveDoCookie: undefined, aceitaEmissorSemTls: true },
+      sala: { chaveCodigo: new TextEncoder().encode(ambienteValido.SALA_CHAVE_CODIGO) },
     })
   })
 
@@ -131,6 +134,7 @@ describe('lerConfiguracao', () => {
     ['IDENTIDADE_CHAVE_CIFRA_VERSAO', '0'],
     ['IDENTIDADE_CHAVE_CIFRA_V1', 'curta_sintetica'],
     ['IDENTIDADE_CHAVE_RECUPERACAO', 'curta_sintetica'],
+    ['SALA_CHAVE_CODIGO', 'curta_sintetica'],
   ])('não sobe com %s=%s: o hash nunca abaixo da OWASP e as chaves do login com 256 bits', (variavel, valor) => {
     const erro = erroDe({ ...ambienteValido, [variavel]: valor })
     expect(erro.variaveis).toEqual([variavel])
@@ -270,6 +274,28 @@ describe('lerConfiguracao', () => {
       expect(erro.variaveis).toEqual(['IDENTIDADE_CHAVE_RECUPERACAO'])
       expect(erro.message).not.toContain(repetida)
     }
+  })
+
+  it('código da turma (A1, 4.0): SALA_CHAVE_CODIGO não repete nenhuma outra chave do ambiente, e a recusa não mostra o valor', () => {
+    const outras = {
+      LOGIN_CHAVE_CONTADOR: ambienteValido.LOGIN_CHAVE_CONTADOR,
+      LOGIN_CHAVE_DISPOSITIVO_V1: ambienteValido.LOGIN_CHAVE_DISPOSITIVO_V1,
+      IDENTIDADE_CHAVE_ASSINATURA: ambienteValido.IDENTIDADE_CHAVE_ASSINATURA,
+      IDENTIDADE_CHAVE_CIFRA_V1: ambienteValido.IDENTIDADE_CHAVE_CIFRA_V1,
+      IDENTIDADE_CHAVE_RECUPERACAO: ambienteValido.IDENTIDADE_CHAVE_RECUPERACAO,
+      LOGIN_EXTERNO_CHAVE_COOKIE: 'chave_sintetica_do_cookie_externo_com_32_caracteres',
+    }
+    for (const [variavel, repetida] of Object.entries(outras)) {
+      const erro = erroDe({ ...ambienteValido, LOGIN_EXTERNO_CHAVE_COOKIE: outras.LOGIN_EXTERNO_CHAVE_COOKIE, SALA_CHAVE_CODIGO: repetida })
+      expect(erro.variaveis, variavel).toEqual(expect.arrayContaining(['SALA_CHAVE_CODIGO']))
+      expect(erro.message, variavel).toContain(MOTIVO_CHAVE_DA_SALA_REPETIDA)
+      expect(erro.message, variavel).not.toContain(repetida)
+    }
+    // O piso é 256 bits: 31 caracteres não sobem, 32 sobem.
+    expect(erroDe({ ...ambienteValido, SALA_CHAVE_CODIGO: 's'.repeat(31) }).variaveis).toEqual(['SALA_CHAVE_CODIGO'])
+    expect(lerConfiguracao({ ...ambienteValido, SALA_CHAVE_CODIGO: 's'.repeat(32) }).sala.chaveCodigo).toHaveLength(32)
+    // Com uma chave própria, sobe, e a chave lida é a da variável.
+    expect(lerConfiguracao(ambienteValido).sala.chaveCodigo).toEqual(new TextEncoder().encode(ambienteValido.SALA_CHAVE_CODIGO))
   })
 
   it('.env.example sobe com o argon2 no mínimo da OWASP (m=19456, t=2)', () => {

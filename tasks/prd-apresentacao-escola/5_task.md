@@ -26,6 +26,14 @@ matrícula; tudo que não é um acesso vigente da escola do slug, no ano em curs
     (`LIMITE_REQ_IP_ANONIMO_MIN`)
   - `apps/api/src/sessao/registro-de-acesso.repository.ts` — que o `sala` não chama (A6)
 
+## Notas da 4.0 (`tenancy-guardian`, 1ª rodada)
+
+- O `codigo_hmac` é único só dentro da escola, e a chave é a mesma para todas: o mesmo código em duas escolas dá o mesmo
+  HMAC. A busca pelo código (`acessoDaSalaPorCodigo`) precisa estar presa à escola do slug, com um I3/I4 que tenha o mesmo
+  código vigente em duas escolas.
+- A busca pelo `token_hash` não tem escola (o link não diz a escola): a escola, o ano e a turma que o `sala` recebe vêm da
+  linha achada, nunca do cliente, e o slug é conferido contra a escola da linha.
+
 ## Subtarefas
 
 - [ ] 5.1 — `acessoDaSalaPorToken` e `acessoDaSalaPorCodigo` na `ResolucaoDeTenantRepository`, com `@SemEscopo` ("o

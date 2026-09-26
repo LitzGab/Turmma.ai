@@ -1,6 +1,6 @@
-import { anoLetivo, exigirAnoEmCurso, exigirEscolaDoContexto, serie, sessaoDaRequisicao, turma, usuario, vinculo, type Banco, type TransacaoBanco } from '@educa/nucleo'
+import { acessoTurma, anoLetivo, exigirAnoEmCurso, exigirEscolaDoContexto, serie, sessaoDaRequisicao, turma, usuario, vinculo, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { AlunoDaTurma, ConsultaPaginada, RespostaTurmaAberta, Turma, Turno } from '@educa/shared'
-import { and, asc, eq, exists, gt, isNotNull, isNull, or, type SQL } from 'drizzle-orm'
+import { and, asc, eq, exists, gt, isNotNull, isNull, not, or, sql, type SQL } from 'drizzle-orm'
 import { excluirSemReferencia } from './exclusao.js'
 
 export interface NovaTurma {
@@ -59,6 +59,37 @@ export class TurmaRepository {
     return linha !== undefined
   }
 
+  /**
+   * Confirma que a turma do ano em curso com esse id existe e tem vínculo `confirmado` de professor do usuário do contexto
+   * (o mesmo `turma_vinculada` de `aberta`), e a trava em `FOR SHARE` até o fim da transação (A1, 4.0; Tech Spec, seção
+   * 3). É a trava do gerar acesso: o `FOR UPDATE` do excluir que chega depois espera, e sai `CONFLITO` pelo acesso que
+   * esta transação gravou; o excluir que já apagou a turma faz esta leitura não achar nada, e o gerar sai
+   * `NAO_ENCONTRADO` em vez de esbarrar na FK (C11). Dois gerar não se esperam aqui: o único por turma decide (C5).
+   */
+  async travarComVinculoDoProfessor(id: string): Promise<boolean> {
+    const [linha] = await this.banco
+      .select({ id: turma.id })
+      .from(turma)
+      .where(and(eq(turma.escolaId, exigirEscolaDoContexto()), eq(turma.anoLetivoId, exigirAnoEmCurso()), eq(turma.id, id), this.#comVinculoDoProfessor(undefined)))
+      .for('share')
+    return linha !== undefined
+  }
+
+  /**
+   * Confirma que a turma do ano em curso com esse id existe e a trava em `FOR UPDATE` até o fim da transação, num comando
+   * próprio, antes do `delete` (A1, 4.0, C11). Espera o gerar acesso que está no meio (`FOR SHARE`), e o `delete` que vem
+   * depois, num comando novo, já enxerga o acesso que ele gravou. No mesmo comando do `delete`, o `not exists` leria o
+   * retrato de antes do gerar, e a cascata levaria um acesso que acabou de ser entregue ao professor.
+   */
+  async travarParaExcluir(id: string): Promise<boolean> {
+    const [linha] = await this.banco
+      .select({ id: turma.id })
+      .from(turma)
+      .where(and(eq(turma.escolaId, exigirEscolaDoContexto()), eq(turma.anoLetivoId, exigirAnoEmCurso()), eq(turma.id, id)))
+      .for('update')
+    return linha !== undefined
+  }
+
   async criar(nova: NovaTurma): Promise<TurmaGravada> {
     const [criada] = await this.banco
       .insert(turma)
@@ -83,15 +114,31 @@ export class TurmaRepository {
   }
 
   /**
-   * Apaga a turma do ano em curso com esse id, se nada aponta para ela, e diz se apagou. Com vínculo (qualquer estado)
-   * ou com nome na lista (2.0), a FK barra e sai `CONFLITO` (`excluirSemReferencia`); as tarefas seguintes da A1 somam o
-   * pedido e o acesso vigente. A turma de outro ano, de outra escola ou inexistente não é achada (`false`).
+   * Apaga a turma do ano em curso com esse id, se nada aponta para ela e ela não tem acesso vigente, e diz se apagou. Com
+   * vínculo (qualquer estado) ou com nome na lista (2.0), a FK barra e sai `CONFLITO` (`excluirSemReferencia`); a 6.0
+   * soma o pedido. Com acesso vigente (não revogado e não vencido, 4.0), nada é apagado e volta `false`; o revogado e o
+   * vencido saem com a turma, pela cascata da FK do `acesso_turma`. A turma de outro ano, de outra escola ou inexistente
+   * também volta `false`: quem chama trava a turma antes (`travarParaExcluir`) e separa os dois casos.
    */
   excluir(id: string): Promise<boolean> {
     return excluirSemReferencia(async () => {
+      const escolaId = exigirEscolaDoContexto()
+      const anoLetivoId = exigirAnoEmCurso()
+      const acessoVigente = this.banco
+        .select({ um: acessoTurma.id })
+        .from(acessoTurma)
+        .where(
+          and(
+            eq(acessoTurma.escolaId, turma.escolaId),
+            eq(acessoTurma.anoLetivoId, turma.anoLetivoId),
+            eq(acessoTurma.turmaId, turma.id),
+            isNull(acessoTurma.revogadoEm),
+            gt(acessoTurma.expiraEm, sql`now()`),
+          ),
+        )
       const apagadas = await this.banco
         .delete(turma)
-        .where(and(eq(turma.escolaId, exigirEscolaDoContexto()), eq(turma.anoLetivoId, exigirAnoEmCurso()), eq(turma.id, id)))
+        .where(and(eq(turma.escolaId, escolaId), eq(turma.anoLetivoId, anoLetivoId), eq(turma.id, id), not(exists(acessoVigente))))
         .returning({ id: turma.id })
       return apagadas.length > 0
     })

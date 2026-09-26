@@ -14,6 +14,7 @@ import {
 } from '@educa/nucleo'
 import { esquemaAviso, MAXIMO_DE_AVISOS, type Aviso } from '@educa/shared'
 import { z } from 'zod'
+import { lerConfiguracaoSala, type ConfiguracaoSala } from './sala/configuracao-da-sala.js'
 import { lerConfiguracaoLogin, type ConfiguracaoLogin } from './sessao/configuracao-de-login.js'
 import { lerConfiguracaoLoginExterno, type ConfiguracaoLoginExterno } from './sessao/externa/configuracao-externa.js'
 
@@ -81,6 +82,8 @@ export interface ConfiguracaoApi {
   login: ConfiguracaoLogin
   /** O login pela conta Google ou Microsoft da escola: provedores ligados, retorno e chave do cookie `educa_oidc`. */
   loginExterno: ConfiguracaoLoginExterno
+  /** A chave do HMAC do código da turma (A1, 4.0), separada das do login. */
+  sala: ConfiguracaoSala
   drenagem: ConfiguracaoDrenagem
   limite: ConfiguracaoLimite
   /** Para onde e de quanto em quanto tempo as métricas vão. */
@@ -107,11 +110,12 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const identidade = tentar(() => lerConfiguracaoIdentidade(ambiente))
   const login = tentar(() => lerConfiguracaoLogin(ambiente))
   const loginExterno = tentar(() => lerConfiguracaoLoginExterno(ambiente))
+  const sala = tentar(() => lerConfiguracaoSala(ambiente))
   const drenagem = tentar(() => lerConfiguracaoDrenagem(ambiente))
   const limite = tentar(() => lerConfiguracaoLimite(ambiente))
   const telemetria = tentar(() => lerConfiguracaoTelemetria(ambiente))
-  if ('erro' in api || 'erro' in banco || 'erro' in identidade || 'erro' in login || 'erro' in loginExterno || 'erro' in drenagem || 'erro' in limite || 'erro' in telemetria) {
-    const erros = [api, banco, identidade, login, loginExterno, drenagem, limite, telemetria].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
+  if ('erro' in api || 'erro' in banco || 'erro' in identidade || 'erro' in login || 'erro' in loginExterno || 'erro' in sala || 'erro' in drenagem || 'erro' in limite || 'erro' in telemetria) {
+    const erros = [api, banco, identidade, login, loginExterno, sala, drenagem, limite, telemetria].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
     throw new ConfiguracaoInvalida(
       erros.flatMap((erro) => erro.variaveis).sort(),
       erros.flatMap((erro) => erro.motivos),
@@ -127,6 +131,7 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     identidade: identidade.valor,
     login: login.valor,
     loginExterno: loginExterno.valor,
+    sala: sala.valor,
     drenagem: drenagem.valor,
     limite: limite.valor,
     telemetria: telemetria.valor,

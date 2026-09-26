@@ -100,8 +100,9 @@ aos cenários.
   (D43). **Quebra sem:** a validação do F1 na rota usada pela tela
 - **E2** (integração) Renomear disciplina e turma; excluir disciplina com vínculo e turma com nome na lista, vínculo,
   pedido ou acesso vigente: `CONFLITO`, nada apagado; turma vazia sai, e a turma cujo acesso foi revogado sai levando o
-  acesso (a FK do `acesso_turma` com `on delete cascade`). **Quebra sem:** o mapeamento da FK para `CONFLITO`; a
-  condição de não haver acesso vigente no `delete` da turma
+  acesso (a FK do `acesso_turma` com `on delete cascade`); o vencido também (4.0). Na parte do acesso, o teste tira o
+  vínculo pelo banco depois de gerar, para a FK dele não responder antes (4.0). **Quebra sem:** o mapeamento da FK para
+  `CONFLITO`; a condição de não haver acesso vigente no `delete` da turma
 - **E3** (unidade) Leitura do texto: `;`, `,` e tabulação; cabeçalho detectado e ignorado; aspas com separador dentro;
   BOM; linha em branco ignorada; `trim` no nome e na matrícula; 200 linhas passam, 201 e 64 KB + 1 recusam com
   `ENTRADA_INVALIDA`. Também (2.0): o separador vem da primeira linha que tem um (o título sem separador não desmonta a
@@ -136,7 +137,10 @@ aos cenários.
 - **E12** (integração) RF8: a alocação cria o vínculo `pendente`; sem confirmação, o professor não gera acesso nem lê
   pedidos (P2, P3). **Quebra sem:** o estado inicial do F1
 - **E13** (integração) RF9: gerar com 1, 7 e 30 dias grava o `expira_em` certo; 0, 2 e 31 dão `ENTRADA_INVALIDA`;
-  "Gerar novo" faz o link e o código anteriores responderem `NAO_ENCONTRADO` na hora; o `GET` traz só `expiraEm`.
+  "Gerar novo" faz o link e o código anteriores responderem `NAO_ENCONTRADO` na hora; o `GET` traz só `expiraEm`. Também
+  (4.0): sem acesso vigente (nunca gerado, revogado, vencido), o `GET` traz `{ expiraEm: null }` e revogar é
+  `NAO_ENCONTRADO`; "Gerar novo" revoga também o vencido não revogado; o `acesso_turma.gerado` lista em `substituidos` os
+  que derrubou, e o já revogado não entra de novo.
   **Quebra sem:** a revogação na mesma transação; o enum da validade
 - **E14** (integração) Dois professores confirmados na mesma turma: o gerar do segundo derruba o link e o código do
   primeiro. **Quebra sem:** o único por turma
@@ -259,7 +263,11 @@ aos cenários.
   acesso que o `cascade` já levou, nem 5xx. Um ponto de pausa segura o gerar depois do `insert` e antes do commit,
   enquanto o excluir corre; o `for update` da turma é um comando próprio, antes do `delete` com o `not exists`.
   **Quebra sem:** a trava da linha da turma, `for update` no excluir e `for share` no gerar (sem ela, o `not exists` do
-  `delete` lê o retrato antigo)
+  `delete` lê o retrato antigo). Como o gerar exige o vínculo confirmado, que a FK barra no excluir, o teste tira o vínculo
+  pelo banco (4.0): no primeiro arranjo depois de o gerar passar da conferência; no segundo, numa transação que o teste
+  segura, e é nela que o `delete` da turma para, já com a turma travada. Também (4.0): o `encerrar` parado depois de mudar o
+  ano faz o gerar esperar o `for share` do ano e sair `NAO_ENCONTRADO`, sem acesso no ano encerrado. **Quebra sem:** o
+  `travarAnoEmCurso` no gerar
 
 ## L — Limites e hash
 

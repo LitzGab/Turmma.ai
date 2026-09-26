@@ -2,6 +2,8 @@ import { CAMPOS_PROIBIDOS_NA_AUDITORIA } from '@educa/nucleo'
 import {
   CodigoDeErro,
   esquemaNomeDaLista,
+  esquemaRespostaAcessoDaTurma,
+  esquemaRespostaAcessoGerado,
   esquemaRespostaConviteDeProfessor,
   esquemaRespostaDisciplina,
   esquemaRespostaGravacaoDaLista,
@@ -31,6 +33,10 @@ import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
  * e o isolamento da lista é o "I3 (lista)" de `professores.int.test.ts`. As outras quatro varreduras a cobrem.
  *
  * A lista de nomes (2.0) mora na `turmaComVinculo`, e não na `turma`: excluir a `turma` precisa continuar dando certo.
+ *
+ * As rotas do acesso da turma (4.0) são do professor com vínculo confirmado, e não da coordenação (`autor`): o sucesso, o
+ * I3, a auditoria e as variantes do A3 e do A4 pedem com o professor, e o P1 com a coordenação, o aluno e o professor
+ * na turma em que ele não tem vínculo.
  */
 
 /** Uma escola da A1 montada pela API, como a coordenação faria, com as pessoas e os recursos que as rotas pedem. */
@@ -73,6 +79,11 @@ interface EscolaMontada {
   readonly convidadoRevogado: string
   /** O professor que aceitou o convite: revogar dá `CONFLITO`. */
   readonly convidadoAceito: string
+  /**
+   * O acesso vigente da `turmaComVinculo`, gerado pelo professor (4.0): revogar e ler dão certo. O token e o código
+   * aparecem só na resposta que os criou: em nenhuma outra, e nunca em log (A3, A4).
+   */
+  readonly acesso: { readonly token: string; readonly codigo: string }
 }
 
 /** Uma rota nova da A1, com o que as varreduras precisam para chamá-la na escola montada. */
@@ -92,6 +103,13 @@ interface RotaDaA1 {
    * também, porque o professor dono é quem mais pode passar por uma célula aberta com filtro de vínculo.
    */
   readonly alvoDoProfessor?: (escola: EscolaMontada) => string
+  /**
+   * Quem chama a rota com sucesso: a coordenação (o padrão) ou o professor com vínculo confirmado no alvo (o acesso da
+   * turma, 4.0). O I3, a auditoria e as variantes pedem com ele.
+   */
+  readonly autor?: 'professor'
+  /** Na rota do professor, o recurso da escola montada em que ele **não** tem vínculo: o P1 pede com ele. */
+  readonly alvoSemVinculo?: (escola: EscolaMontada) => string
   /** O corpo válido, se a rota lê corpo. */
   readonly corpo?: (escola: EscolaMontada) => Record<string, unknown>
   /** O status do sucesso, pela coordenação, com o `alvo` e o `corpo`. */
@@ -119,7 +137,8 @@ const PREFIXO_DA_MATRICULA = `lista-${randomUUID().slice(0, 8)}`
 const matriculaNova = (): string => `${PREFIXO_DA_MATRICULA}-${randomUUID().slice(0, 8)}`
 
 /**
- * As rotas autenticadas novas da A1. 1.0: renomear e excluir disciplina e turma. Renomear e excluir não gravam
+ * As rotas autenticadas novas da A1. 4.0: gerar, ler e revogar o acesso da turma, do professor; o gerar grava
+ * `acesso_turma.gerado`, e o revogar `acesso_turma.revogado`. 1.0: renomear e excluir disciplina e turma. Renomear e excluir não gravam
  * auditoria: o RF16 não pede (1_task.md, "Fora do escopo"). 3.0: cadastrar e listar professores, e refazer e revogar o
  * convite de professor; a lista não grava auditoria (são professores, não aluno). 2.0: a prévia, a gravação, o nome
  * avulso, a leitura e a retirada da lista de nomes; a prévia não grava nada, e a leitura grava `turma.lista_lida`.
@@ -236,7 +255,38 @@ const ROTAS_DA_A1: readonly RotaDaA1[] = [
     conflito: (escola) => ({ alvo: escola.lista.reivindicado }),
     auditoria: ['lista_nome.retirado'],
   },
+  {
+    rota: 'POST /v1/turmas/:id/acesso',
+    autor: 'professor',
+    alvo: (escola) => escola.turmaComVinculo,
+    alvoSemVinculo: (escola) => escola.turma,
+    corpo: () => ({ validadeDias: 7 }),
+    sucesso: 201,
+    resposta: esquemaRespostaAcessoGerado,
+    auditoria: ['acesso_turma.gerado'],
+  },
+  {
+    rota: 'GET /v1/turmas/:id/acesso',
+    autor: 'professor',
+    alvo: (escola) => escola.turmaComVinculo,
+    alvoSemVinculo: (escola) => escola.turma,
+    sucesso: 200,
+    resposta: esquemaRespostaAcessoDaTurma,
+    auditoria: [],
+  },
+  {
+    rota: 'POST /v1/turmas/:id/acesso/revogar',
+    autor: 'professor',
+    alvo: (escola) => escola.turmaComVinculo,
+    alvoSemVinculo: (escola) => escola.turma,
+    corpo: () => ({}),
+    sucesso: 204,
+    auditoria: ['acesso_turma.revogado'],
+  },
 ]
+
+/** A sessão que chama a rota com sucesso: a da coordenação, ou a do professor na rota dele. */
+const autorDa = (rota: RotaDaA1, escola: EscolaMontada): SessaoDeTeste => (rota.autor === 'professor' ? escola.professor : escola.coordenacao)
 
 describe('escola montada (A1): as varreduras transversais sobre as rotas novas', () => {
   const bancada = new BancadaDeSessoes()
@@ -303,6 +353,9 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     const aceito = await convidar()
     const aceite = await fetch(`${api.url}/v1/convites/aceitar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: aceito.token, senha: SENHA_DO_ACEITE }) })
     expect(aceite.status).toBe(200)
+    const gerado = await chamar(api.url, 'POST', `/v1/turmas/${turmaComVinculo}/acesso`, professor.token, { validadeDias: 7 })
+    expect(gerado.status).toBe(201)
+    const acesso = esquemaRespostaAcessoGerado.parse(gerado.corpo)
     return {
       escolaId,
       slug: await bancada.slugDe(escolaId),
@@ -320,6 +373,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       convidadoRevogado: revogado.usuarioId,
       convidadoAceito: aceito.usuarioId,
       lista: { livre: idDa(matriculaLivre), reivindicado: idDa(matriculaReivindicada), matriculaLivre, matriculaReivindicada },
+      acesso: { token: acesso.token, codigo: acesso.codigo },
     }
   }
 
@@ -333,6 +387,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       usuarios: await linhas('select id, conta_id, papel, nome, desativado_em from usuario where escola_id = $1 order by id'),
       convites: await linhas('select id, tipo, usuario_id, expira_em, usado_em, revogado_em from convite where escola_id = $1 order by id'),
       lista: await linhas('select id, turma_id, nome, matricula, estado, usuario_id, criado_por from lista_nome where escola_id = $1 order by id'),
+      acessos: await linhas('select id, turma_id, token_hash, codigo_hmac, validade_dias, expira_em, revogado_em, criado_por from acesso_turma where escola_id = $1 order by id'),
       auditoria: await linhas('select id from auditoria where escola_id = $1 order by id'),
     }
   }
@@ -343,8 +398,8 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     return chamar(api.url, verbo, alvo === undefined ? caminho : caminho.replace(/:[A-Za-z]+/, alvo), sessao.token, corpo)
   }
 
-  /** O sucesso da rota pela coordenação da escola, com o recurso dela. */
-  const comSucesso = (rota: RotaDaA1, escola: EscolaMontada) => pedir(rota, escola.coordenacao, rota.alvo?.(escola), rota.corpo?.(escola))
+  /** O sucesso da rota por quem a chama (a coordenação, ou o professor na rota dele), com o recurso da escola. */
+  const comSucesso = (rota: RotaDaA1, escola: EscolaMontada) => pedir(rota, autorDa(rota, escola), rota.alvo?.(escola), rota.corpo?.(escola))
 
   /** A resposta de erro sem o id da requisição, que muda a cada chamada: o resto precisa ser idêntico. */
   function semRequisicao(resposta: RespostaHttp): unknown {
@@ -363,12 +418,12 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     const todas: Array<{ esperado: number; resposta: RespostaHttp }> = []
     if (rota.conflito !== undefined) {
       const { alvo, corpo } = rota.conflito(escola)
-      todas.push({ esperado: 409, resposta: await pedir(rota, escola.coordenacao, alvo, corpo) })
+      todas.push({ esperado: 409, resposta: await pedir(rota, autorDa(rota, escola), alvo, corpo) })
     }
     if (rota.corpo !== undefined) {
-      todas.push({ esperado: 400, resposta: await pedir(rota, escola.coordenacao, rota.alvo?.(escola), { ...rota.corpo(escola), escolaId: escola.escolaId }) })
+      todas.push({ esperado: 400, resposta: await pedir(rota, autorDa(rota, escola), rota.alvo?.(escola), { ...rota.corpo(escola), escolaId: escola.escolaId }) })
     }
-    if (rota.alvo !== undefined) todas.push({ esperado: 404, resposta: await pedir(rota, escola.coordenacao, randomUUID(), rota.corpo?.(escola)) })
+    if (rota.alvo !== undefined) todas.push({ esperado: 404, resposta: await pedir(rota, autorDa(rota, escola), randomUUID(), rota.corpo?.(escola)) })
     todas.push({ esperado: rota.sucesso, resposta: await comSucesso(rota, escola) })
     for (const { esperado, resposta } of todas) expect(resposta.status, `${rota.rota} ${String(esperado)}`).toBe(esperado)
     return todas
@@ -394,7 +449,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     }
   })
 
-  describe('I3: o recurso da escola B pedido pela coordenação de A responde como o id sorteado, e B não muda', () => {
+  describe('I3: o recurso da escola B pedido por quem chama a rota em A responde como o id sorteado, e B não muda', () => {
     for (const rota of ROTAS_DA_A1) {
       const alvo = rota.alvo
       if (alvo === undefined) continue
@@ -402,9 +457,10 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
         const a = await montar()
         const antesEmB = await estadoDe(b)
 
-        const comIdDeB = await pedir(rota, a.coordenacao, alvo(b), rota.corpo?.(a))
-        const comSorteado = await pedir(rota, a.coordenacao, randomUUID(), rota.corpo?.(a))
-        const foraDoFormato = await pedir(rota, a.coordenacao, 'nao-e-um-id', rota.corpo?.(a))
+        const autor = autorDa(rota, a)
+        const comIdDeB = await pedir(rota, autor, alvo(b), rota.corpo?.(a))
+        const comSorteado = await pedir(rota, autor, randomUUID(), rota.corpo?.(a))
+        const foraDoFormato = await pedir(rota, autor, 'nao-e-um-id', rota.corpo?.(a))
         expect(semRequisicao(comIdDeB)).toEqual(NAO_ENCONTRADO)
         expect(semRequisicao(comSorteado)).toEqual(semRequisicao(comIdDeB))
         expect(semRequisicao(foraDoFormato)).toEqual(semRequisicao(comIdDeB))
@@ -415,16 +471,25 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     }
   })
 
-  describe('P1: professor e aluno da escola recebem o 404 do inexistente, com o recurso da própria escola, e nada muda', () => {
+  describe('P1: quem a célula não abre recebe o 404 do inexistente, com o recurso da própria escola, e nada muda', () => {
     for (const rota of ROTAS_DA_A1) {
       it(rota.rota, async () => {
         const a = await montar()
         const antes = await estadoDe(a)
 
-        const tentativas: Array<readonly [string, SessaoDeTeste, string | undefined]> = [
-          ['professor', a.professor, rota.alvo?.(a)],
-          ['aluno', a.aluno, rota.alvo?.(a)],
-        ]
+        // Na rota da coordenação, o professor e o aluno; na do professor, a coordenação, o aluno e o professor na turma em
+        // que ele não tem vínculo.
+        const tentativas: Array<readonly [string, SessaoDeTeste, string | undefined]> =
+          rota.autor === 'professor'
+            ? [
+                ['coordenação', a.coordenacao, rota.alvo?.(a)],
+                ['aluno', a.aluno, rota.alvo?.(a)],
+                ['professor sem vínculo na turma', a.professor, rota.alvoSemVinculo?.(a)],
+              ]
+            : [
+                ['professor', a.professor, rota.alvo?.(a)],
+                ['aluno', a.aluno, rota.alvo?.(a)],
+              ]
         if (rota.alvoDoProfessor !== undefined) tentativas.push(['professor com vínculo confirmado', a.professor, rota.alvoDoProfessor(a)])
         for (const [quem, sessao, alvo] of tentativas) {
           expect(semRequisicao(await pedir(rota, sessao, alvo, rota.corpo?.(a))), quem).toEqual(NAO_ENCONTRADO)
@@ -450,7 +515,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
         )
         expect(rows.map((linha) => linha.acao)).toEqual(rota.auditoria)
         for (const linha of rows) {
-          expect(linha.autor_usuario_id, linha.acao).toBe(a.coordenacao.usuarioId)
+          expect(linha.autor_usuario_id, linha.acao).toBe(autorDa(rota, a).usuarioId)
           const campos = [...Object.keys(linha.antes ?? {}), ...Object.keys(linha.depois ?? {})].map((campo) => campo.toLowerCase())
           for (const proibido of CAMPOS_PROIBIDOS_NA_AUDITORIA) expect(campos.filter((campo) => campo.includes(proibido)), linha.acao).toEqual([])
         }
@@ -463,7 +528,8 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       it(rota.rota, async () => {
         const a = await montar()
         // O token do convite só sai na resposta que o cria: o do professor convidado na montagem, em nenhuma destas.
-        const sentinelas = [a.coordenacao.token, a.professor.token, a.aluno.token, a.matricula, a.senhaHash, a.convidado.token, DOMINIO_DO_EMAIL]
+        // O link e o código do acesso da montagem também: só a resposta do gerar que os criou os traz.
+        const sentinelas = [a.coordenacao.token, a.professor.token, a.aluno.token, a.matricula, a.senhaHash, a.convidado.token, DOMINIO_DO_EMAIL, a.acesso.token, a.acesso.codigo]
 
         for (const { esperado, resposta } of await variantes(rota, a)) {
           const texto = JSON.stringify(resposta.corpo)
@@ -482,21 +548,28 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     }
   })
 
-  it('A4: o log das rotas novas, no sucesso e em cada erro, não tem nome, matrícula, hash, token, e-mail nem o endereço da escola', async () => {
+  it('A4: o log das rotas novas, no sucesso e em cada erro, não tem nome, matrícula, hash, token, código da turma, e-mail nem o endereço da escola', async () => {
     const escolas = await Promise.all(ROTAS_DA_A1.map(() => montar()))
     linhasDeLog.length = 0
     let erros = 0
-    /** Os tokens de convite que as respostas de sucesso devolveram: nenhum deles vai a log. */
+    /** Os tokens de convite e de link da sala, e os códigos da turma, que as respostas de sucesso devolveram: nenhum vai a log. */
     const tokensDevolvidos: string[] = []
+    const codigosDevolvidos: string[] = []
     for (const [posicao, rota] of ROTAS_DA_A1.entries()) {
       const escola = escolas[posicao]
       if (escola === undefined) throw new Error('escola não montada')
       const respostas = await variantes(rota, escola)
       erros += respostas.filter(({ esperado }) => esperado >= 400).length
-      for (const { resposta } of respostas) if (typeof resposta.corpo['token'] === 'string') tokensDevolvidos.push(resposta.corpo['token'])
+      for (const { resposta } of respostas) {
+        if (typeof resposta.corpo['token'] === 'string') tokensDevolvidos.push(resposta.corpo['token'])
+        if (typeof resposta.corpo['codigo'] === 'string') codigosDevolvidos.push(resposta.corpo['codigo'])
+      }
     }
-    // O cadastro e o refazer devolveram o token deles: sem isso, a busca abaixo não teria o que procurar.
-    expect(tokensDevolvidos.length).toBe(ROTAS_DA_A1.filter((rota) => rota.resposta === esquemaRespostaConviteDeProfessor).length)
+    // O cadastro, o refazer e o gerar acesso devolveram o token deles, e o gerar o código: sem isso, a busca abaixo não
+    // teria o que procurar.
+    const devolvemToken = [esquemaRespostaConviteDeProfessor, esquemaRespostaAcessoGerado] as z.ZodType[]
+    expect(tokensDevolvidos.length).toBe(ROTAS_DA_A1.filter((rota) => rota.resposta !== undefined && devolvemToken.includes(rota.resposta)).length)
+    expect(codigosDevolvidos.length).toBe(ROTAS_DA_A1.filter((rota) => rota.resposta === esquemaRespostaAcessoGerado).length)
 
     const linhas = linhasDeLog.map((linha) => JSON.parse(linha) as Record<string, unknown>)
     // O log capturou os erros: sem isso, a busca abaixo passaria num log mudo.
@@ -514,10 +587,12 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
         escola.professor.token,
         escola.aluno.token,
         escola.convidado.token,
+        escola.acesso.token,
+        escola.acesso.codigo,
       ]) {
         expect(todoOLog).not.toContain(sentinela)
       }
     }
-    for (const sentinela of [NOME_RENOMEADO, NOME_DO_PROFESSOR, DOMINIO_DO_EMAIL, NOME_NA_LISTA, PREFIXO_DA_MATRICULA, ...tokensDevolvidos]) expect(todoOLog).not.toContain(sentinela)
+    for (const sentinela of [NOME_RENOMEADO, NOME_DO_PROFESSOR, DOMINIO_DO_EMAIL, NOME_NA_LISTA, PREFIXO_DA_MATRICULA, ...tokensDevolvidos, ...codigosDevolvidos]) expect(todoOLog).not.toContain(sentinela)
   })
 })

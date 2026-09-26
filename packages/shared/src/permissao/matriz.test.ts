@@ -87,6 +87,14 @@ describe('MATRIZ de permissão', () => {
     }
   })
 
+  it('I9: o acesso da turma é só do professor, com `turma_vinculada`; coordenação, aluno e rede, `nunca`', () => {
+    expect(RECURSOS.acesso_turma).toEqual(['gerar', 'ler', 'revogar'])
+    for (const acao of RECURSOS.acesso_turma) {
+      expect(alcanceDe('professor', 'acesso_turma', acao), acao).toBe('turma_vinculada')
+      for (const papel of ['coordenador', 'aluno', 'rede'] as const) expect(alcanceDe(papel, 'acesso_turma', acao), `${papel} acesso_turma.${acao}`).toBe('nunca')
+    }
+  })
+
   it('alcanceDe devolve a célula, e nunca para papel, recurso ou ação que a matriz não declara', () => {
     expect(alcanceDe('professor', 'turma', 'ler')).toBe('turma_vinculada')
     expect(alcanceDe('responsavel', 'turma', 'ler')).toBe('nunca')

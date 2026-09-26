@@ -1,7 +1,7 @@
 # Tarefas — A escola montada pela coordenação (A1)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 3 de 17 concluídas
+**Status:** 4 de 17 concluídas
 
 Aprovadas pelo Joaquim em 26/09/2026. O mapa de cenários por tarefa saiu do `test-engineer`: cada id do
 `cenarios.md` está em uma tarefa, ou dividido entre tarefas com a parte de cada uma dita no `N_task.md`. Os
@@ -33,13 +33,13 @@ dela nos dois.
   - [x] 3.5 Testes: E8, E9, E10, E11, R4, C7, I7, A1 (professor e convite), I3, P1, I9 dos professores; o aceite sem
     segundo fator
 
-- [ ] **4.0 — Professor gera e revoga o acesso da turma, com link e código**
-  - [ ] 4.1 Migration 0020 `acesso_turma`, com a FK em `cascade` e os únicos parciais
-  - [ ] 4.2 Código de 8 caracteres, normalização e HMAC com `SALA_CHAVE_CODIGO`
-  - [ ] 4.3 Gerar (trava da turma, revogação do anterior, savepoint na colisão), revogar e ler
-  - [ ] 4.4 Excluir turma com `for update` e sem acesso vigente
-  - [ ] 4.5 Documento: `AcessoTurma` real em `docs/modelo-de-dados.md`
-  - [ ] 4.6 Testes: E13, E14, E15, C5, C6, C11 (dois arranjos), A5, P2, E12 (acesso), E2 (acesso vigente e
+- [x] **4.0 — Professor gera e revoga o acesso da turma, com link e código**
+  - [x] 4.1 Migration 0020 `acesso_turma`, com a FK em `cascade` e os únicos parciais
+  - [x] 4.2 Código de 8 caracteres, normalização e HMAC com `SALA_CHAVE_CODIGO`
+  - [x] 4.3 Gerar (trava da turma, revogação do anterior, savepoint na colisão), revogar e ler
+  - [x] 4.4 Excluir turma com `for update` e sem acesso vigente
+  - [x] 4.5 Documento: `AcessoTurma` real em `docs/modelo-de-dados.md`
+  - [x] 4.6 Testes: E13, E14, E15, C5, C6, C11 (dois arranjos), A5, P2, E12 (acesso), E2 (acesso vigente e
     cascata), A1 (acesso), I3, I9
 
 - [ ] **5.0 — Aluno abre a turma pelo link ou pelo código**

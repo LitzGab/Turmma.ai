@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { esquemaTokenDeLink } from '../sessao/token.js'
 import { FORMATO_SLUG, TAMANHO_MAXIMO_SLUG, TIPOS_DE_REDE } from '../estrutura/rede-e-escola.js'
 import { TAMANHO_MAXIMO_EMAIL } from '../sessao/login.js'
 
@@ -144,9 +145,6 @@ export const esquemaPedidoConviteDaCoordenacao = z.strictObject({
 
 export type PedidoConviteDaCoordenacao = z.infer<typeof esquemaPedidoConviteDaCoordenacao>
 
-/** O token do convite: 32 bytes sorteados, em base64url sem preenchimento. */
-const FORMATO_DO_TOKEN_DE_CONVITE = /^[A-Za-z0-9_-]{43}$/
-
 /**
  * Resposta do gerar (`POST /v1/operacao/escolas/:id/convite-coordenacao`) e do refazer
  * (`POST /v1/operacao/convites/:id/refazer`): o id do convite novo (que o refazer e o revogar recebem) e o token, que só
@@ -155,7 +153,7 @@ const FORMATO_DO_TOKEN_DE_CONVITE = /^[A-Za-z0-9_-]{43}$/
  */
 export const esquemaRespostaConviteDaCoordenacao = z.strictObject({
   conviteId: z.uuid(),
-  token: z.string().regex(FORMATO_DO_TOKEN_DE_CONVITE),
+  token: esquemaTokenDeLink,
 })
 
 export type RespostaConviteDaCoordenacao = z.infer<typeof esquemaRespostaConviteDaCoordenacao>

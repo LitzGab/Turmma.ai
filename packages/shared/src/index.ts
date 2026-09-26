@@ -285,6 +285,19 @@ export {
   REVOGAR_CONVITE_DE_PROFESSOR_POR_ESTADO,
 } from './professores/professores.js'
 export type { EstadoDoProfessor, PedidoCadastrarProfessor, ProfessorDaEscola, RespostaConviteDeProfessor, RespostaListaDeProfessores } from './professores/professores.js'
+export {
+  ALFABETO_DO_CODIGO_DA_TURMA,
+  codigoDaTurmaValido,
+  esquemaPedidoGerarAcesso,
+  esquemaPedidoRevogarAcesso,
+  esquemaRespostaAcessoDaTurma,
+  esquemaRespostaAcessoGerado,
+  exibirCodigoDaTurma,
+  normalizarCodigoDaTurma,
+  TAMANHO_DO_CODIGO_DA_TURMA,
+  VALIDADES_DO_ACESSO_DIAS,
+} from './sala/acesso.js'
+export type { PedidoGerarAcesso, RespostaAcessoDaTurma, RespostaAcessoGerado, ValidadeDoAcessoDias } from './sala/acesso.js'
 export { FORMATO_SLUG, TAMANHO_MAXIMO_SLUG, TIPOS_DE_REDE } from './estrutura/rede-e-escola.js'
 export type { TipoDeRede } from './estrutura/rede-e-escola.js'
 export type { RespostaEuDoOperador } from './operacao/eu.js'

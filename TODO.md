@@ -382,6 +382,12 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] Contador `banco.conexao_descartada{causa}`, separando erro de consulta e erro da conexão: hoje o descarte não
       aparece em métrica nenhuma, só a queda das conexões em uso, e o failover do Postgres gerenciado precisa ser sinal
       próprio (`infra-guardian` da correção `577d185`). Destino: antes do staging (D31)
+- [ ] O formato do token opaco de 43 caracteres base64url está em três lugares: `esquemaTokenDeLink`
+      (`packages/shared/src/sessao/token.ts`, convite da coordenação e link da sala, A1 4.0), o `token` do convite de
+      professor (`packages/shared/src/professores/professores.ts`, que ainda o pega do contrato do painel) e o
+      `FORMATO_DO_REFRESH` (`apps/api/src/sessao/renovacao.service.ts` e `apps/api/src/operacao/sessao.service.ts`).
+      Unificar no `esquemaTokenDeLink` (`revisor-geral` da 4.0 da A1). Destino: correção própria, ou a 14.0 da A1, que toca o
+      convite de professor
 
 ## Regulação educacional
 

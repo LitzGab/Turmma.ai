@@ -33,6 +33,10 @@ professor; e nenhuma reivindicação ou aprovação escapa do ano que está send
   chave, `teve_matricula_errada` nem `decidida_por`; apaga os nomes livres e reivindicados; o recusado fica com
   `lista_nome_id` nulo
 - [ ] 10.2 — `for share` no ano dentro da transação de `salas/reivindicar` (6.0) e de cada id do `decidir` (8.0)
+  - Da 4.0 (política de trava das escritas em turma, seção 7c da `techspec.md`): o gerar acesso já trava o ano; a
+    gravação e o avulso da lista (2.0) fazem nascer nome livre no ano e ainda não travam. Decidir aqui, com o C10, se
+    entram no `for share`. O `encerrar` continua mudando o ano antes de qualquer outra escrita (é o que evita ordem cruzada
+    com o gerar, que pega o ano antes da turma)
 - [ ] 10.3 — Eliminação do aluno: antes do usuário, na mesma transação, apaga a `lista_nome` dele e os pedidos que
   apontam para ela. Do professor: `criado_por` e `decidida_por` ficam nulos pela FK
 - [ ] 10.4 — Expurgo: `acesso_turma` sai 30 dias depois de vencer ou ser revogado; o convite de professor entra no

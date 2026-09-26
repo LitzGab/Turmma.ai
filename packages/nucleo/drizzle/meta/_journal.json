@@ -141,6 +141,13 @@
       "when": 1790441916109,
       "tag": "0019_lista_nome",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790446322808,
+      "tag": "0020_acesso_turma",
+      "breakpoints": true
     }
   ]
 }

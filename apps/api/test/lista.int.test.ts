@@ -620,7 +620,8 @@ describe('lista de nomes da turma (A1, tarefa 2.0): prévia, gravação, avulso,
         const gravacao = gravar(e, e.t1, texto([[nome(), matricula()]]))
         await gatilho.esperarParadas(1)
         const exclusao = pedir(e.coordenacao, 'DELETE', `/v1/turmas/${e.t1}`)
-        await esperarNaTrava(bancada.pool, '%delete from "turma"%')
+        // Desde a 4.0 o excluir trava a turma em `for update` num comando próprio, antes do `delete`: é nele que espera.
+        await esperarNaTrava(bancada.pool, '%from "turma"%for update%')
         await gatilho.soltar()
         expect((await gravacao).status).toBe(201)
         expect(semRequisicao(await exclusao)).toEqual(CONFLITO)

@@ -76,11 +76,19 @@ export class TurmaService {
   }
 
   /**
-   * `DELETE /v1/turmas/:id` (A1, RF3): a turma vazia do ano em curso sai. Com vínculo: `CONFLITO`, e nada é apagado.
-   * Turma de outro ano, de outra escola ou inexistente: `NAO_ENCONTRADO`.
+   * `DELETE /v1/turmas/:id` (A1, RF3): a turma vazia do ano em curso sai. Com vínculo, nome na lista ou acesso vigente
+   * (4.0): `CONFLITO`, e nada é apagado; o acesso revogado ou vencido sai com ela. Turma de outro ano, de outra escola ou
+   * inexistente: `NAO_ENCONTRADO`.
+   *
+   * A turma é travada em `FOR UPDATE` num comando próprio, antes do `delete` (C11): o gerar acesso que está no meio
+   * termina primeiro, e o `delete` enxerga o acesso dele. Travada e não apagada, a turma só pode ter acesso vigente.
    */
   async excluir(id: string): Promise<void> {
-    if (!(await new TurmaRepository(this.banco).excluir(id))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+    await this.banco.transaction(async (tx) => {
+      const turmas = new TurmaRepository(tx)
+      if (!(await turmas.travarParaExcluir(id))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      if (!(await turmas.excluir(id))) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
+    })
   }
 
   async listar(consulta: ConsultaPaginada): Promise<RespostaListaDeTurmas> {

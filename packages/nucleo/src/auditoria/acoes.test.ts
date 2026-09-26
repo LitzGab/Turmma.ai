@@ -82,6 +82,13 @@ describe('mapa de ações da auditoria', () => {
     expect(problemasDoMapaDeAcoes(acaoCom(esquema))).toEqual([])
   })
 
+  it('acesso_turma.gerado aceita só a validade de 1, 7 ou 30 dias, como o check do banco (A1, 4.0)', () => {
+    const depois = ACOES_DE_AUDITORIA['acesso_turma.gerado'].depois
+    const base = { turmaId: '0190c7e2-0000-7000-8000-000000000000', expiraEm: '2026-09-26T12:00:00.000Z', substituidos: [] }
+    for (const validadeDias of [1, 7, 30]) expect(depois.safeParse({ ...base, validadeDias }).success, String(validadeDias)).toBe(true)
+    for (const validadeDias of [0, 2, 31]) expect(depois.safeParse({ ...base, validadeDias }).success, String(validadeDias)).toBe(false)
+  })
+
   it('finalidade só como enum: texto livre é recusado', () => {
     const mapa = {
       'teste.livre': { entidade: 'teste', antes: null, depois: null, finalidade: z.string().max(200) },

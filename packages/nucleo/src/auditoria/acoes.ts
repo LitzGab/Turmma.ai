@@ -10,6 +10,7 @@ import {
   PAPEIS_DE_USUARIO,
   PAPEIS_DE_VINCULO,
   TIPOS_DE_CONVITE,
+  VALIDADES_DO_ACESSO_DIAS,
 } from '@educa/shared'
 import { PROVEDORES_EXTERNOS } from '../db/schema/conta-externa.js'
 import { TIPOS_DE_REDE } from '../db/schema/rede.js'
@@ -324,6 +325,29 @@ export const ACOES_DE_AUDITORIA = {
     antes: null,
     depois: z.strictObject({ quantidade: z.number().int().nonnegative() }),
     finalidade: z.enum(FINALIDADES_DA_LEITURA_DE_ALUNOS),
+  },
+  /**
+   * O professor gerou o link da sala e o código da turma (A1, 4.0, RF9, RF16). `entidadeId` é o acesso novo; `turmaId`, a
+   * turma; `validadeDias` e `expiraEm`, até quando vale; `substituidos`, os acessos não revogados da turma que este
+   * derrubou na mesma transação ("Gerar novo", também o de outro professor), vazio no primeiro. Nunca o token nem o
+   * código, nem o hash deles.
+   */
+  'acesso_turma.gerado': {
+    entidade: 'acesso_turma',
+    antes: null,
+    depois: z.strictObject({ turmaId: z.uuid(), validadeDias: z.literal(VALIDADES_DO_ACESSO_DIAS), expiraEm: z.iso.datetime(), substituidos: z.array(z.uuid()) }),
+    finalidade: null,
+  },
+  /**
+   * O professor revogou o acesso vigente da turma (A1, 4.0, RF9, RF16): o link e o código deixam de valer na hora.
+   * `entidadeId` é o acesso; `turmaId`, a turma. O que o "Gerar novo" derruba fica no `substituidos` do
+   * `acesso_turma.gerado`, e não aqui.
+   */
+  'acesso_turma.revogado': {
+    entidade: 'acesso_turma',
+    antes: null,
+    depois: z.strictObject({ turmaId: z.uuid() }),
+    finalidade: null,
   },
 } as const satisfies Record<string, DefinicaoDeAcao>
 

@@ -4,6 +4,7 @@ import type { PgTransaction } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 import { validarAmbiente } from '../config/validar-config.js'
 import type { ConfiguracaoBanco, PoolBanco } from './pool.js'
+import { acessoTurma } from './schema/acesso-turma.js'
 import { anoLetivo } from './schema/ano-letivo.js'
 import { codigoRecuperacao } from './schema/codigo-recuperacao.js'
 import { configuracaoOperacionalEscola } from './schema/configuracao-operacional-escola.js'
@@ -29,7 +30,7 @@ import { vinculo } from './schema/vinculo.js'
 // pelo `schema` que o pacote exporta (a escrita tem uma porta só, o RegistroDeAuditoria). Sem as seis tabelas da
 // operação (`db/schema/operador.ts`), pelo mesmo motivo: só o `OperadorRepository` as toca, e a consulta relacional
 // (`banco.query.*`) não as alcançaria de fora sem passar por um `import` que o teste de arquitetura vê.
-export const schema = { jobRegistro, configuracaoOperacionalEscola, usoInfraDiario, rede, escola, anoLetivo, conta, codigoRecuperacao, usuario, sessao, registroAcesso, convite, serie, disciplina, turma, vinculo, credencialMatricula, contaExterna, provedorEscola, listaNome }
+export const schema = { jobRegistro, configuracaoOperacionalEscola, usoInfraDiario, rede, escola, anoLetivo, conta, codigoRecuperacao, usuario, sessao, registroAcesso, convite, serie, disciplina, turma, vinculo, credencialMatricula, contaExterna, provedorEscola, listaNome, acessoTurma }
 export type Schema = typeof schema
 
 export type Banco = NodePgDatabase<Schema>

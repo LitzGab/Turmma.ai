@@ -24,6 +24,8 @@ import { EstruturaModule } from './estrutura/estrutura.module.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
 import { OperacaoModule } from './operacao/operacao.module.js'
 import { ProfessoresModule } from './professores/professores.module.js'
+import type { SorteioDoCodigo } from './sala/codigo-da-sala.js'
+import { SalaModule } from './sala/sala.module.js'
 import { SessaoModule } from './sessao/sessao.module.js'
 import { ProntidaoController } from './sistema/prontidao.controller.js'
 import { SistemaModule } from './sistema/sistema.module.js'
@@ -33,6 +35,8 @@ import { UsoModule } from './uso.module.js'
 export interface OpcoesDeMontagem {
   readonly medidor?: Meter
   readonly prazoDoRedisDeLoginMs?: number
+  /** O sorteio do código da turma que o teste da colisão (C6) repete. */
+  readonly sortearCodigoDaSala?: SorteioDoCodigo
 }
 
 @Module({})
@@ -40,8 +44,8 @@ export class AppModule {
   /**
    * @param opcoes só o teste passa: `medidor`, para ler as métricas do login e da sessão (sem ele, vale o medidor
    * global); `prazoDoRedisDeLoginMs`, que fixa o prazo do cliente Redis do login qualquer que seja a configuração. Sem
-   * ela, quem decide é `LOGIN_REDIS_PRAZO_MS`, por `config.login.prazoDoRedisMs`. Nenhuma das duas opções vem do
-   * ambiente: o `main.ts` monta sem opção.
+   * ela, quem decide é `LOGIN_REDIS_PRAZO_MS`, por `config.login.prazoDoRedisMs`; `sortearCodigoDaSala`, o sorteio do
+   * código da turma que o teste da colisão repete (C6). Nenhuma das opções vem do ambiente: o `main.ts` monta sem opção.
    */
   static com(config: ConfiguracaoApi, opcoes: OpcoesDeMontagem = {}): DynamicModule {
     return {
@@ -62,6 +66,7 @@ export class AppModule {
         }),
         EstruturaModule,
         ProfessoresModule,
+        SalaModule.com({ config: config.sala, ...(opcoes.sortearCodigoDaSala === undefined ? {} : { sortearCodigo: opcoes.sortearCodigoDaSala }) }),
         OperacaoModule.com(config.identidade, { dispositivo: config.login.dispositivo, mfa: config.login.mfa, ...(opcoes.medidor === undefined ? {} : { medidor: opcoes.medidor }) }),
         SistemaModule.com({
           rotasSinteticas: config.rotasSinteticas,
