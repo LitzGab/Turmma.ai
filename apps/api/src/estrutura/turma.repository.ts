@@ -1,6 +1,7 @@
 import { anoLetivo, exigirAnoEmCurso, exigirEscolaDoContexto, serie, sessaoDaRequisicao, turma, usuario, vinculo, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { AlunoDaTurma, ConsultaPaginada, RespostaTurmaAberta, Turma, Turno } from '@educa/shared'
 import { and, asc, eq, exists, gt, isNotNull, isNull, or, type SQL } from 'drizzle-orm'
+import { excluirSemReferencia } from './exclusao.js'
 
 export interface NovaTurma {
   readonly serieId: string
@@ -51,6 +52,35 @@ export class TurmaRepository {
       .returning(colunas)
     if (criada === undefined) throw new Error('turma não criada')
     return criada
+  }
+
+  /**
+   * Troca o nome da turma do ano em curso com esse id e devolve a turma renomeada, com o id da série, que o service
+   * troca pela série. A de outro ano (encerrado ou planejado), de outra escola ou inexistente não é achada
+   * (`undefined`), e nada muda. O nome de outra turma do mesmo ano é barrado pelo mesmo índice único do criar.
+   */
+  async renomear(id: string, nome: string): Promise<(TurmaGravada & { readonly serieId: string }) | undefined> {
+    const [renomeada] = await this.banco
+      .update(turma)
+      .set({ nome })
+      .where(and(eq(turma.escolaId, exigirEscolaDoContexto()), eq(turma.anoLetivoId, exigirAnoEmCurso()), eq(turma.id, id)))
+      .returning({ ...colunas, serieId: turma.serieId })
+    return renomeada
+  }
+
+  /**
+   * Apaga a turma do ano em curso com esse id, se nada aponta para ela, e diz se apagou. Com vínculo (qualquer estado),
+   * a FK barra e sai `CONFLITO` (`excluirSemReferencia`); as tarefas seguintes da A1 somam o nome da lista, o pedido e o
+   * acesso vigente. A turma de outro ano, de outra escola ou inexistente não é achada (`false`).
+   */
+  excluir(id: string): Promise<boolean> {
+    return excluirSemReferencia(async () => {
+      const apagadas = await this.banco
+        .delete(turma)
+        .where(and(eq(turma.escolaId, exigirEscolaDoContexto()), eq(turma.anoLetivoId, exigirAnoEmCurso()), eq(turma.id, id)))
+        .returning({ id: turma.id })
+      return apagadas.length > 0
+    })
   }
 
   /** Uma página das turmas do ano em curso, com a série, em ordem de criação e uma linha a mais que diz se há próxima. */

@@ -25,6 +25,8 @@ describe('estrutura: a coordenação monta o ano letivo, as séries, as discipli
 
   const post = (sessao: SessaoDeTeste, caminho: string, corpo?: unknown): Promise<RespostaHttp> => chamar(api.url, 'POST', caminho, sessao.token, corpo)
   const get = (sessao: SessaoDeTeste, caminho: string): Promise<RespostaHttp> => chamar(api.url, 'GET', caminho, sessao.token)
+  const patch = (sessao: SessaoDeTeste, caminho: string, corpo: unknown): Promise<RespostaHttp> => chamar(api.url, 'PATCH', caminho, sessao.token, corpo)
+  const excluir = (sessao: SessaoDeTeste, caminho: string): Promise<RespostaHttp> => chamar(api.url, 'DELETE', caminho, sessao.token)
 
   const periodo = (ano: number) => ({ ano, inicio: `${ano}-02-01`, fim: `${ano}-12-15` })
 
@@ -58,7 +60,7 @@ describe('estrutura: a coordenação monta o ano letivo, as séries, as discipli
 
   const coordenacaoNova = () => bancada.escolaComSessao('coordenador')
 
-  it('caminho feliz: cria e abre o ano, cria "8º ano" e "1º EM", "Química" e a turma "2ºB", e cada listagem traz o seu', async () => {
+  it('E1 (A1, RF3): caminho feliz: cria e abre o ano, cria "8º ano" e "1º EM", "Química" e a turma "2ºB", e cada listagem traz o seu', async () => {
     const coordenacao = await coordenacaoNova()
 
     const criado = await post(coordenacao, '/v1/anos-letivos', periodo(2026))
@@ -108,7 +110,7 @@ describe('estrutura: a coordenação monta o ano letivo, as séries, as discipli
   })
 
   describe('borda: o recorte da D43', () => {
-    it('"5º ano" e "4º do EM" dão ENTRADA_INVALIDA, e o banco recusa os dois mesmo por fora da rota', async () => {
+    it('E1 (A1, RF3): "5º ano" e "4º do EM" dão ENTRADA_INVALIDA, e o banco recusa os dois mesmo por fora da rota', async () => {
       const coordenacao = await coordenacaoNova()
       for (const fora of [
         { etapa: 'ef_anos_finais', ano: 5 },
@@ -361,6 +363,217 @@ describe('estrutura: a coordenação monta o ano letivo, as séries, as discipli
       } finally {
         await cliente.end()
       }
+    })
+  })
+
+  describe('E2 (A1, RF3): a coordenação renomeia e exclui disciplina e turma', () => {
+    async function criarDisciplina(coordenacao: SessaoDeTeste, nome: string): Promise<Record<string, unknown>> {
+      const resposta = await post(coordenacao, '/v1/disciplinas', { nome, area: 'ciencias_da_natureza' })
+      expect(resposta.status).toBe(201)
+      return resposta.corpo
+    }
+
+    async function criarTurma(coordenacao: SessaoDeTeste, serieId: string, nome: string): Promise<Record<string, unknown>> {
+      const resposta = await post(coordenacao, '/v1/turmas', { serieId, nome, turno: 'tarde' })
+      expect(resposta.status).toBe(201)
+      return resposta.corpo
+    }
+
+    async function nomesNoBanco(tabela: 'turma' | 'disciplina', escolaId: string): Promise<string[]> {
+      const { rows } = await bancada.pool.query<{ nome: string }>(`select nome from ${tabela} where escola_id = $1 order by nome`, [escolaId])
+      return rows.map((linha) => linha.nome)
+    }
+
+    it('renomear: a resposta e a listagem trazem o nome novo, com o resto como estava; o nome de outra, sem diferenciar maiúscula, dá CONFLITO sem o valor', async () => {
+      const coordenacao = await coordenacaoNova()
+      await anoEmCurso(coordenacao, 2026)
+      const serie = await criarSerie(coordenacao, 'ef_anos_finais', 7)
+      const quimica = await criarDisciplina(coordenacao, 'Química')
+      const fisica = await criarDisciplina(coordenacao, 'Física')
+      const setimoA = await criarTurma(coordenacao, serie, '7ºA')
+      const setimoB = await criarTurma(coordenacao, serie, '7ºB')
+
+      const disciplina = await patch(coordenacao, `/v1/disciplinas/${String(quimica['id'])}`, { nome: '  Química Orgânica ' })
+      expect(disciplina.status).toBe(200)
+      expect(disciplina.corpo).toEqual({ ...quimica, nome: 'Química Orgânica' })
+      const turma = await patch(coordenacao, `/v1/turmas/${String(setimoA['id'])}`, { nome: '7ºC' })
+      expect(turma.status).toBe(200)
+      expect(turma.corpo).toEqual({ ...setimoA, nome: '7ºC' })
+      expect((await get(coordenacao, '/v1/disciplinas')).corpo).toEqual({ itens: [disciplina.corpo, fisica] })
+      expect((await get(coordenacao, '/v1/turmas')).corpo).toEqual({ itens: [turma.corpo, setimoB] })
+
+      // O próprio nome com outra maiúscula não conflita com ele mesmo.
+      expect((await patch(coordenacao, `/v1/turmas/${String(setimoA['id'])}`, { nome: '7ºc' })).corpo).toEqual({ ...setimoA, nome: '7ºc' })
+
+      for (const [caminho, nome] of [
+        [`/v1/disciplinas/${String(fisica['id'])}`, 'QUÍMICA ORGÂNICA'],
+        [`/v1/turmas/${String(setimoB['id'])}`, '7ºC'],
+      ] as const) {
+        const repetido = await patch(coordenacao, caminho, { nome })
+        expect(repetido.status, caminho).toBe(409)
+        expect(repetido.corpo.erro?.codigo, caminho).toBe(CodigoDeErro.CONFLITO)
+        const texto = JSON.stringify(repetido.corpo)
+        for (const vazamento of [nome, 'unico', 'nome']) expect(texto, caminho).not.toContain(vazamento)
+      }
+      expect(await nomesNoBanco('disciplina', coordenacao.escolaId)).toEqual(['Física', 'Química Orgânica'])
+      expect(await nomesNoBanco('turma', coordenacao.escolaId)).toEqual(['7ºB', '7ºc'])
+
+      // O nome é único na escola, não entre escolas: a disciplina de outra escola ganha o mesmo nome.
+      const outra = await coordenacaoNova()
+      const daOutra = await criarDisciplina(outra, 'Física')
+      expect((await patch(outra, `/v1/disciplinas/${String(daOutra['id'])}`, { nome: 'Química Orgânica' })).corpo).toEqual({ ...daOutra, nome: 'Química Orgânica' })
+    })
+
+    it('renomear: nome vazio, longo demais, campo a mais ou corpo vazio dão ENTRADA_INVALIDA, e nada muda', async () => {
+      const coordenacao = await coordenacaoNova()
+      await anoEmCurso(coordenacao, 2026)
+      const serie = await criarSerie(coordenacao, 'em', 1)
+      const quimica = await criarDisciplina(coordenacao, 'Química')
+      const turma = await criarTurma(coordenacao, serie, '1ºA')
+
+      for (const [caminho, corpo] of [
+        [`/v1/disciplinas/${String(quimica['id'])}`, { nome: '   ' }],
+        [`/v1/disciplinas/${String(quimica['id'])}`, { nome: 'x'.repeat(81) }],
+        [`/v1/disciplinas/${String(quimica['id'])}`, { nome: 'Física', area: 'matematica' }],
+        [`/v1/disciplinas/${String(quimica['id'])}`, { nome: 'Física', escolaId: coordenacao.escolaId }],
+        [`/v1/disciplinas/${String(quimica['id'])}`, {}],
+        [`/v1/turmas/${String(turma['id'])}`, { nome: '' }],
+        [`/v1/turmas/${String(turma['id'])}`, { nome: 'x'.repeat(41) }],
+        [`/v1/turmas/${String(turma['id'])}`, { nome: '1ºB', turno: 'manha' }],
+        [`/v1/turmas/${String(turma['id'])}`, { nome: '1ºB', serieId: serie }],
+        [`/v1/turmas/${String(turma['id'])}`, {}],
+      ] as const) {
+        const resposta = await patch(coordenacao, caminho, corpo)
+        expect(resposta.status, JSON.stringify(corpo)).toBe(400)
+        expect(resposta.corpo.erro?.codigo, JSON.stringify(corpo)).toBe(CodigoDeErro.ENTRADA_INVALIDA)
+      }
+      expect((await get(coordenacao, '/v1/disciplinas')).corpo).toEqual({ itens: [quimica] })
+      expect((await get(coordenacao, '/v1/turmas')).corpo).toEqual({ itens: [turma] })
+    })
+
+    it('concorrência: duas turmas renomeadas para o mesmo nome em paralelo, e duas disciplinas também: uma fica com ele, a outra recebe CONFLITO', async () => {
+      const coordenacao = await coordenacaoNova()
+      await anoEmCurso(coordenacao, 2026)
+      const serie = await criarSerie(coordenacao, 'em', 2)
+      const [a, b] = [await criarTurma(coordenacao, serie, '2ºA'), await criarTurma(coordenacao, serie, '2ºB')]
+      const [d1, d2] = [await criarDisciplina(coordenacao, 'Física'), await criarDisciplina(coordenacao, 'Química')]
+
+      const turmas = await Promise.all([patch(coordenacao, `/v1/turmas/${String(a['id'])}`, { nome: '2ºZ' }), patch(coordenacao, `/v1/turmas/${String(b['id'])}`, { nome: '2ºz' })])
+      const disciplinas = await Promise.all([
+        patch(coordenacao, `/v1/disciplinas/${String(d1['id'])}`, { nome: 'Biologia' }),
+        patch(coordenacao, `/v1/disciplinas/${String(d2['id'])}`, { nome: 'biologia' }),
+      ])
+
+      expect(turmas.map((resposta) => resposta.status).sort()).toEqual([200, 409])
+      expect(disciplinas.map((resposta) => resposta.status).sort()).toEqual([200, 409])
+      // A perdedora continua com o nome de antes: uma renomeada e uma intacta, em cada tabela.
+      const minusculas = async (tabela: 'turma' | 'disciplina') => (await nomesNoBanco(tabela, coordenacao.escolaId)).map((nome) => nome.toLowerCase()).sort()
+      expect([['2ºa', '2ºz'], ['2ºb', '2ºz']]).toContainEqual(await minusculas('turma'))
+      expect([['biologia', 'física'], ['biologia', 'química']]).toContainEqual(await minusculas('disciplina'))
+    })
+
+    it('excluir disciplina com vínculo e turma com vínculo, também já encerrado: CONFLITO sem o nome da restrição, e nada é apagado; a turma vazia e a disciplina sem vínculo saem', async () => {
+      const coordenacao = await coordenacaoNova()
+      await anoEmCurso(coordenacao, 2026)
+      const serie = await criarSerie(coordenacao, 'em', 3)
+      const comVinculo = { disciplina: await criarDisciplina(coordenacao, 'Química'), turma: await criarTurma(coordenacao, serie, '3ºA') }
+      const semVinculo = { disciplina: await criarDisciplina(coordenacao, 'Física'), turma: await criarTurma(coordenacao, serie, '3ºB') }
+      const professor = await bancada.sessao(coordenacao.escolaId, 'professor')
+      const vinculo = await post(coordenacao, '/v1/vinculos', {
+        usuarioId: professor.usuarioId,
+        turmaId: comVinculo.turma['id'],
+        disciplinaId: comVinculo.disciplina['id'],
+        papel: 'professor',
+      })
+      expect(vinculo.status).toBe(201)
+      const vinculoId = vinculo.corpo['id'] as string
+
+      const recusas = async () => {
+        for (const caminho of [`/v1/disciplinas/${String(comVinculo.disciplina['id'])}`, `/v1/turmas/${String(comVinculo.turma['id'])}`]) {
+          const resposta = await excluir(coordenacao, caminho)
+          expect(resposta.status, caminho).toBe(409)
+          expect(resposta.corpo.erro?.codigo, caminho).toBe(CodigoDeErro.CONFLITO)
+          for (const vazamento of ['vinculo', '_fk', 'Química', '3ºA']) expect(JSON.stringify(resposta.corpo), caminho).not.toContain(vazamento)
+        }
+      }
+      await recusas()
+      // Confirmado pelo professor, o caso comum da escola, segura do mesmo jeito.
+      expect((await post(professor, `/v1/vinculos/${vinculoId}/confirmar`)).status).toBe(200)
+      await recusas()
+      // O vínculo encerrado é histórico da turma e da disciplina: continua segurando as duas.
+      expect((await post(coordenacao, `/v1/vinculos/${vinculoId}/encerrar`, { motivo: 'realocacao' })).status).toBe(200)
+      await recusas()
+      expect(await nomesNoBanco('disciplina', coordenacao.escolaId)).toEqual(['Física', 'Química'])
+      expect(await nomesNoBanco('turma', coordenacao.escolaId)).toEqual(['3ºA', '3ºB'])
+      const { rows } = await bancada.pool.query<{ total: string }>('select count(*) as total from vinculo where escola_id = $1 and id = $2', [coordenacao.escolaId, vinculoId])
+      expect(Number(rows[0]?.total)).toBe(1)
+
+      const turmaVazia = await excluir(coordenacao, `/v1/turmas/${String(semVinculo.turma['id'])}`)
+      expect(turmaVazia.status).toBe(204)
+      expect(turmaVazia.corpo).toEqual({})
+      const disciplinaLivre = await excluir(coordenacao, `/v1/disciplinas/${String(semVinculo.disciplina['id'])}`)
+      expect(disciplinaLivre.status).toBe(204)
+      expect(disciplinaLivre.corpo).toEqual({})
+      expect(await nomesNoBanco('disciplina', coordenacao.escolaId)).toEqual(['Química'])
+      expect(await nomesNoBanco('turma', coordenacao.escolaId)).toEqual(['3ºA'])
+      expect((await get(coordenacao, '/v1/turmas')).corpo).toEqual({ itens: [comVinculo.turma] })
+      expect((await get(coordenacao, '/v1/disciplinas')).corpo).toEqual({ itens: [comVinculo.disciplina] })
+
+      // A que já saiu responde como inexistente.
+      for (const caminho of [`/v1/turmas/${String(semVinculo.turma['id'])}`, `/v1/disciplinas/${String(semVinculo.disciplina['id'])}`]) {
+        const denovo = await excluir(coordenacao, caminho)
+        expect(denovo.status, caminho).toBe(404)
+        expect(denovo.corpo.erro?.codigo, caminho).toBe(CodigoDeErro.NAO_ENCONTRADO)
+      }
+    })
+
+    it('concorrência: dois DELETE da mesma turma vazia em paralelo, e da mesma disciplina: um apaga, o outro recebe NAO_ENCONTRADO', async () => {
+      const coordenacao = await coordenacaoNova()
+      await anoEmCurso(coordenacao, 2026)
+      const serie = await criarSerie(coordenacao, 'ef_anos_finais', 9)
+      const turma = await criarTurma(coordenacao, serie, '9ºA')
+      const disciplina = await criarDisciplina(coordenacao, 'Geografia')
+
+      const turmas = await Promise.all([excluir(coordenacao, `/v1/turmas/${String(turma['id'])}`), excluir(coordenacao, `/v1/turmas/${String(turma['id'])}`)])
+      const disciplinas = await Promise.all([
+        excluir(coordenacao, `/v1/disciplinas/${String(disciplina['id'])}`),
+        excluir(coordenacao, `/v1/disciplinas/${String(disciplina['id'])}`),
+      ])
+
+      expect(turmas.map((resposta) => resposta.status).sort()).toEqual([204, 404])
+      expect(disciplinas.map((resposta) => resposta.status).sort()).toEqual([204, 404])
+      expect(await contar('turma', coordenacao.escolaId)).toBe(0)
+      expect(await contar('disciplina', coordenacao.escolaId)).toBe(0)
+    })
+
+    it('a turma de um ano encerrado não se renomeia nem se exclui, mesmo vazia: NAO_ENCONTRADO sem ano em curso e com outro em curso, e ela fica como estava; a do ano em curso, sim, até com o nome da antiga', async () => {
+      const coordenacao = await coordenacaoNova()
+      const serie = await criarSerie(coordenacao, 'ef_anos_finais', 6)
+      const de2026 = await anoEmCurso(coordenacao, 2026)
+      const antiga = await criarTurma(coordenacao, serie, '6ºA')
+      expect((await post(coordenacao, `/v1/anos-letivos/${de2026}/encerrar`)).status).toBe(200)
+
+      const recusadas = async () => {
+        for (const resposta of [
+          await patch(coordenacao, `/v1/turmas/${String(antiga['id'])}`, { nome: '6ºZ' }),
+          await excluir(coordenacao, `/v1/turmas/${String(antiga['id'])}`),
+        ]) {
+          expect(resposta.status).toBe(404)
+          expect(resposta.corpo.erro?.codigo).toBe(CodigoDeErro.NAO_ENCONTRADO)
+        }
+      }
+      // Entre encerrar um ano e abrir o outro, a escola não tem ano em curso: as duas rotas falham fechadas.
+      await recusadas()
+      await anoEmCurso(coordenacao, 2027)
+      const atual = await criarTurma(coordenacao, serie, '6ºB')
+      await recusadas()
+      expect(await nomesNoBanco('turma', coordenacao.escolaId)).toEqual(['6ºA', '6ºB'])
+
+      // O 404 veio do ano: a turma do ano em curso muda, e o nome da turma do ano encerrado não conflita com ela.
+      expect((await patch(coordenacao, `/v1/turmas/${String(atual['id'])}`, { nome: '6ºa' })).status).toBe(200)
+      expect((await nomesNoBanco('turma', coordenacao.escolaId)).sort()).toEqual(['6ºA', '6ºa'])
+      expect((await excluir(coordenacao, `/v1/turmas/${String(atual['id'])}`)).status).toBe(204)
+      expect(await nomesNoBanco('turma', coordenacao.escolaId)).toEqual(['6ºA'])
     })
   })
 

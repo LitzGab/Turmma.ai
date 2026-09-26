@@ -42,9 +42,13 @@ export const RECURSOS = {
   escola_configuracao: ['alterar'],
   ano_letivo: ['ler', 'criar', 'abrir', 'encerrar'],
   serie: ['ler', 'criar'],
-  disciplina: ['ler', 'criar'],
-  /** `ler` é a turma aberta por id (`GET /v1/turmas/:id`, 9.0); `listar` é a listagem do ano em curso, só da coordenação. */
-  turma: ['ler', 'listar', 'criar'],
+  /** `renomear` e `excluir` são `PATCH` e `DELETE /v1/disciplinas/:id` (A1, 1.0), só da coordenação. */
+  disciplina: ['ler', 'criar', 'renomear', 'excluir'],
+  /**
+   * `ler` é a turma aberta por id (`GET /v1/turmas/:id`, 9.0); `listar` é a listagem do ano em curso, só da coordenação;
+   * `renomear` e `excluir` são `PATCH` e `DELETE /v1/turmas/:id` (A1, 1.0), também só dela.
+   */
+  turma: ['ler', 'listar', 'criar', 'renomear', 'excluir'],
   /** `GET /v1/turmas/:id/alunos`. */
   aluno_da_turma: ['ler'],
   /** Criar e encerrar é da coordenação; confirmar e contestar, do professor dono. */
@@ -69,8 +73,8 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     escola_configuracao: { alterar: 'nunca' },
     ano_letivo: { ler: 'nunca', criar: 'nunca', abrir: 'nunca', encerrar: 'nunca' },
     serie: { ler: 'nunca', criar: 'nunca' },
-    disciplina: { ler: 'nunca', criar: 'nunca' },
-    turma: { ler: 'nunca', listar: 'nunca', criar: 'nunca' },
+    disciplina: { ler: 'nunca', criar: 'nunca', renomear: 'nunca', excluir: 'nunca' },
+    turma: { ler: 'nunca', listar: 'nunca', criar: 'nunca', renomear: 'nunca', excluir: 'nunca' },
     aluno_da_turma: { ler: 'nunca' },
     vinculo: { ler: 'nunca', criar: 'nunca', encerrar: 'nunca', ler_proprios: 'nunca', confirmar: 'nunca', contestar: 'nunca' },
     usuario_mfa: { redefinir: 'nunca' },
@@ -84,8 +88,8 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     escola_configuracao: { alterar: 'unidade' },
     ano_letivo: { ler: 'unidade', criar: 'unidade', abrir: 'unidade', encerrar: 'unidade' },
     serie: { ler: 'unidade', criar: 'unidade' },
-    disciplina: { ler: 'unidade', criar: 'unidade' },
-    turma: { ler: 'unidade', listar: 'unidade', criar: 'unidade' },
+    disciplina: { ler: 'unidade', criar: 'unidade', renomear: 'unidade', excluir: 'unidade' },
+    turma: { ler: 'unidade', listar: 'unidade', criar: 'unidade', renomear: 'unidade', excluir: 'unidade' },
     aluno_da_turma: { ler: 'nominal_auditado' },
     vinculo: { ler: 'unidade', criar: 'unidade', encerrar: 'unidade', ler_proprios: 'nunca', confirmar: 'nunca', contestar: 'nunca' },
     usuario_mfa: { redefinir: 'unidade' },
@@ -99,8 +103,8 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     escola_configuracao: { alterar: 'nunca' },
     ano_letivo: { ler: 'nunca', criar: 'nunca', abrir: 'nunca', encerrar: 'nunca' },
     serie: { ler: 'nunca', criar: 'nunca' },
-    disciplina: { ler: 'nunca', criar: 'nunca' },
-    turma: { ler: 'turma_vinculada', listar: 'nunca', criar: 'nunca' },
+    disciplina: { ler: 'nunca', criar: 'nunca', renomear: 'nunca', excluir: 'nunca' },
+    turma: { ler: 'turma_vinculada', listar: 'nunca', criar: 'nunca', renomear: 'nunca', excluir: 'nunca' },
     aluno_da_turma: { ler: 'turma_vinculada' },
     vinculo: { ler: 'nunca', criar: 'nunca', encerrar: 'nunca', ler_proprios: 'proprio', confirmar: 'proprio', contestar: 'proprio' },
     usuario_mfa: { redefinir: 'nunca' },
@@ -114,8 +118,8 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     escola_configuracao: { alterar: 'nunca' },
     ano_letivo: { ler: 'nunca', criar: 'nunca', abrir: 'nunca', encerrar: 'nunca' },
     serie: { ler: 'nunca', criar: 'nunca' },
-    disciplina: { ler: 'nunca', criar: 'nunca' },
-    turma: { ler: 'nunca', listar: 'nunca', criar: 'nunca' },
+    disciplina: { ler: 'nunca', criar: 'nunca', renomear: 'nunca', excluir: 'nunca' },
+    turma: { ler: 'nunca', listar: 'nunca', criar: 'nunca', renomear: 'nunca', excluir: 'nunca' },
     aluno_da_turma: { ler: 'nunca' },
     vinculo: { ler: 'nunca', criar: 'nunca', encerrar: 'nunca', ler_proprios: 'nunca', confirmar: 'nunca', contestar: 'nunca' },
     usuario_mfa: { redefinir: 'nunca' },

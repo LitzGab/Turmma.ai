@@ -59,6 +59,17 @@ describe('MATRIZ de permissão', () => {
     expect(MATRIZ.coordenador.vinculo.confirmar).toBe('nunca')
   })
 
+  // I9 da A1 (cenarios.md): cada célula nova com o alcance da seção 4 da Tech Spec. A comparação com a expectativa já
+  // pega a célula trocada; este teste diz a regra de cada uma, e as tarefas seguintes da A1 acrescentam as delas.
+  it('I9: renomear e excluir disciplina e turma são da coordenação, com `unidade`; professor, aluno e rede, `nunca`', () => {
+    for (const recurso of ['disciplina', 'turma'] as const) {
+      for (const acao of ['renomear', 'excluir'] as const) {
+        expect(alcanceDe('coordenador', recurso, acao), `${recurso}.${acao}`).toBe('unidade')
+        for (const papel of ['professor', 'aluno', 'rede'] as const) expect(alcanceDe(papel, recurso, acao), `${papel} ${recurso}.${acao}`).toBe('nunca')
+      }
+    }
+  })
+
   it('alcanceDe devolve a célula, e nunca para papel, recurso ou ação que a matriz não declara', () => {
     expect(alcanceDe('professor', 'turma', 'ler')).toBe('turma_vinculada')
     expect(alcanceDe('responsavel', 'turma', 'ler')).toBe('nunca')

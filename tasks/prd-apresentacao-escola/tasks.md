@@ -1,7 +1,7 @@
 # Tarefas — A escola montada pela coordenação (A1)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 0 de 17 concluídas
+**Status:** 1 de 17 concluídas
 
 Aprovadas pelo Joaquim em 26/09/2026. O mapa de cenários por tarefa saiu do `test-engineer`: cada id do
 `cenarios.md` está em uma tarefa, ou dividido entre tarefas com a parte de cada uma dita no `N_task.md`. Os
@@ -11,11 +11,11 @@ dela nos dois.
 
 ## Lista
 
-- [ ] **1.0 — Coordenação renomeia e exclui disciplina e turma**
-  - [ ] 1.1 Células `renomear` e `excluir` de disciplina e turma na `MATRIZ`; contratos `.strict()`
-  - [ ] 1.2 `PATCH` e `DELETE` de `disciplinas/:id` e `turmas/:id`, com a FK violada mapeada para `CONFLITO`
-  - [ ] 1.3 O arquivo transversal `escola-montada.int.test.ts` (I3, A1, A3, A4)
-  - [ ] 1.4 Testes: E1; E2 (disciplina e turma com vínculo, turma vazia); I3, P1, I9 das rotas desta tarefa
+- [x] **1.0 — Coordenação renomeia e exclui disciplina e turma**
+  - [x] 1.1 Células `renomear` e `excluir` de disciplina e turma na `MATRIZ`; contratos `.strict()`
+  - [x] 1.2 `PATCH` e `DELETE` de `disciplinas/:id` e `turmas/:id`, com a FK violada mapeada para `CONFLITO`
+  - [x] 1.3 O arquivo transversal `escola-montada.int.test.ts` (I3, A1, A3, A4)
+  - [x] 1.4 Testes: E1; E2 (disciplina e turma com vínculo, turma vazia); I3, P1, I9 das rotas desta tarefa
 
 - [ ] **2.0 — Lista de nomes da turma: prévia, gravação, avulso, retirada e leitura auditada**
   - [ ] 2.1 Migration 0019 `lista_nome`, com o check, o único da matrícula e o índice

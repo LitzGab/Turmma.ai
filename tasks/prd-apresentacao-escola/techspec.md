@@ -48,8 +48,9 @@ convite de professor em aberto ativa como o de coordenador, com o papel do `usua
 
 Sob `/v1`, escopo do contexto; uma célula da `MATRIZ` por rota:
 
-- `PATCH`, `DELETE disciplinas/:id`, `turmas/:id` (coordenador): excluir com nome, vínculo, pedido ou acesso vigente →
-  `CONFLITO`
+- `PATCH`, `DELETE disciplinas/:id`, `turmas/:id` (coordenador): excluir com nome, vínculo (de qualquer estado, também
+  o encerrado), pedido ou acesso vigente → `CONFLITO`; a turma de outro ano não se renomeia nem se exclui (`NAO_ENCONTRADO`).
+  O 23503 vira `CONFLITO` só em `apps/api/src/estrutura/exclusao.ts`
 - `POST turmas/:id/lista/previa` e `…/lista` (coordenador), até 200 linhas e 64 KB: `entra`, `ja_existe` (na lista ou
   aprovada na turma) ou `erro` por linha; grava só sem erro
 - `POST turmas/:id/lista/nome`, `DELETE lista-nomes/:id`, `GET turmas/:id/lista` (coordenador; a leitura

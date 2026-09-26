@@ -20,6 +20,14 @@ export const esquemaPedidoCriarDisciplina = z
 
 export type PedidoCriarDisciplina = z.infer<typeof esquemaPedidoCriarDisciplina>
 
+/**
+ * Corpo de `PATCH /v1/disciplinas/:id`: só o nome novo, com a mesma regra do criar. Estrito: nada de área, escola ou id,
+ * que não mudam por aqui. O nome de outra disciplina da escola, sem diferenciar maiúscula, é `CONFLITO`.
+ */
+export const esquemaPedidoRenomearDisciplina = z.object({ nome: esquemaPedidoCriarDisciplina.shape.nome }).strict()
+
+export type PedidoRenomearDisciplina = z.infer<typeof esquemaPedidoRenomearDisciplina>
+
 export const esquemaDisciplina = z
   .object({
     id: z.uuid(),
@@ -30,7 +38,7 @@ export const esquemaDisciplina = z
 
 export type Disciplina = z.infer<typeof esquemaDisciplina>
 
-/** Resposta de `POST /v1/disciplinas`. */
+/** Resposta de `POST /v1/disciplinas` e de `PATCH /v1/disciplinas/:id`. */
 export const esquemaRespostaDisciplina = esquemaDisciplina
 export type RespostaDisciplina = Disciplina
 

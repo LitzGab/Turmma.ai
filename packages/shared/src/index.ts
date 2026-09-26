@@ -115,16 +115,25 @@ export {
   AREAS_DO_CONHECIMENTO,
   esquemaDisciplina,
   esquemaPedidoCriarDisciplina,
+  esquemaPedidoRenomearDisciplina,
   esquemaRespostaDisciplina,
   esquemaRespostaListaDeDisciplinas,
   TAMANHO_MAXIMO_NOME_DISCIPLINA,
 } from './estrutura/disciplina.js'
-export type { AreaDoConhecimento, Disciplina, PedidoCriarDisciplina, RespostaDisciplina, RespostaListaDeDisciplinas } from './estrutura/disciplina.js'
+export type {
+  AreaDoConhecimento,
+  Disciplina,
+  PedidoCriarDisciplina,
+  PedidoRenomearDisciplina,
+  RespostaDisciplina,
+  RespostaListaDeDisciplinas,
+} from './estrutura/disciplina.js'
 export {
   esquemaAlunoDaTurma,
   esquemaConsultaAlunosDaTurma,
   esquemaConsultaTurma,
   esquemaPedidoCriarTurma,
+  esquemaPedidoRenomearTurma,
   esquemaRespostaAlunosDaTurma,
   esquemaRespostaListaDeTurmas,
   esquemaRespostaTurma,
@@ -140,6 +149,7 @@ export type {
   ConsultaTurma,
   FinalidadeDaLeituraDeAlunos,
   PedidoCriarTurma,
+  PedidoRenomearTurma,
   RespostaAlunosDaTurma,
   RespostaListaDeTurmas,
   RespostaTurma,

@@ -26,6 +26,14 @@ export const esquemaPedidoCriarTurma = z
 
 export type PedidoCriarTurma = z.infer<typeof esquemaPedidoCriarTurma>
 
+/**
+ * Corpo de `PATCH /v1/turmas/:id`: só o nome novo, com a mesma regra do criar. Estrito: série, turno, ano e escola não
+ * mudam por aqui. A turma é do ano em curso; o nome de outra turma do mesmo ano, sem diferenciar maiúscula, é `CONFLITO`.
+ */
+export const esquemaPedidoRenomearTurma = z.object({ nome: esquemaPedidoCriarTurma.shape.nome }).strict()
+
+export type PedidoRenomearTurma = z.infer<typeof esquemaPedidoRenomearTurma>
+
 export const esquemaTurma = z
   .object({
     id: z.uuid(),
@@ -38,7 +46,7 @@ export const esquemaTurma = z
 
 export type Turma = z.infer<typeof esquemaTurma>
 
-/** Resposta de `POST /v1/turmas`. */
+/** Resposta de `POST /v1/turmas` e de `PATCH /v1/turmas/:id`. */
 export const esquemaRespostaTurma = esquemaTurma
 export type RespostaTurma = Turma
 

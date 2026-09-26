@@ -1,6 +1,7 @@
 import { disciplina, exigirEscolaDoContexto, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { ConsultaPaginada, Disciplina, PedidoCriarDisciplina } from '@educa/shared'
 import { and, asc, eq, gt } from 'drizzle-orm'
+import { excluirSemReferencia } from './exclusao.js'
 
 const colunas = { id: disciplina.id, nome: disciplina.nome, area: disciplina.area }
 
@@ -28,6 +29,35 @@ export class DisciplinaRepository {
       .where(and(eq(disciplina.escolaId, exigirEscolaDoContexto()), pagina === undefined ? undefined : gt(disciplina.id, pagina)))
       .orderBy(asc(disciplina.id))
       .limit(limite + 1)
+  }
+
+  /**
+   * Troca o nome da disciplina da escola com esse id e devolve a disciplina renomeada; a de outra escola ou inexistente
+   * não é achada (`undefined`), e nada muda. O nome de outra disciplina da escola é barrado pelo mesmo índice único do
+   * criar.
+   */
+  async renomear(id: string, nome: string): Promise<Disciplina | undefined> {
+    const [renomeada] = await this.banco
+      .update(disciplina)
+      .set({ nome })
+      .where(and(eq(disciplina.escolaId, exigirEscolaDoContexto()), eq(disciplina.id, id)))
+      .returning(colunas)
+    return renomeada
+  }
+
+  /**
+   * Apaga a disciplina da escola com esse id, se nada aponta para ela, e diz se apagou. Com vínculo (qualquer estado,
+   * de qualquer ano), a FK barra e sai `CONFLITO` (`excluirSemReferencia`); a de outra escola ou inexistente não é
+   * achada (`false`).
+   */
+  excluir(id: string): Promise<boolean> {
+    return excluirSemReferencia(async () => {
+      const apagadas = await this.banco
+        .delete(disciplina)
+        .where(and(eq(disciplina.escolaId, exigirEscolaDoContexto()), eq(disciplina.id, id)))
+        .returning({ id: disciplina.id })
+      return apagadas.length > 0
+    })
   }
 
   /** A disciplina da escola com esse id; a de outra escola não é achada. */

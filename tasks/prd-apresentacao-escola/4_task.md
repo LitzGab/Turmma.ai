@@ -38,6 +38,9 @@ novo" derruba o anterior, também o de outro professor; a turma só sai sem aces
 - [ ] 4.4 — `POST turmas/:id/acesso/revogar` (`acesso_turma.revogado`) e `GET turmas/:id/acesso` (só `expiraEm`)
 - [ ] 4.5 — Excluir turma: `select … for update` da turma como comando próprio, depois o `delete` com `not exists`
   de acesso vigente (`CONFLITO`); o revogado sai pela cascata
+  - Pendência da 1.0 (`revisor-geral`, 1ª rodada): o `renomear` da turma (`TurmaService.renomear`) não trava o ano com
+    `travarAnoEmCurso()`, e o `criar` trava. Decidir aqui uma política só de trava para as escritas em turma (renomear,
+    excluir, gerar acesso) e registrar a escolha, com teste se ela mudar o código
 - [ ] 4.6 — Módulo `apps/api/src/sala`, contratos `.strict()`, células da `MATRIZ` (professor `turma_vinculada`)
 - [ ] 4.7 — Documento: `AcessoTurma` real em `docs/modelo-de-dados.md`
 - [ ] 4.8 — Testes; rotas em `escola-montada.int.test.ts` e `matriz.test.ts`

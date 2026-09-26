@@ -10,6 +10,7 @@ import {
   type ConsultaPaginada,
   type ConsultaTurma,
   type PedidoCriarTurma,
+  type PedidoRenomearTurma,
   type RespostaAlunosDaTurma,
   type RespostaListaDeTurmas,
   type RespostaTurma,
@@ -34,8 +35,8 @@ function alcanceDaTurma(recurso: 'turma' | 'aluno_da_turma'): AlcanceDaTurma {
 }
 
 /**
- * A coordenação cria e lista as turmas do ano letivo em curso (RF2; regra 60, item 5). Sem ano em curso, as duas
- * rotas falham fechadas com `NAO_ENCONTRADO` (Tech Spec, seção 5, "Requisição").
+ * A coordenação cria, lista, renomeia e exclui as turmas do ano letivo em curso (RF2; A1, RF3; regra 60, item 5). Sem
+ * ano em curso, todas essas rotas falham fechadas com `NAO_ENCONTRADO` (Tech Spec, seção 5, "Requisição").
  *
  * - A turma nasce no ano em curso da escola da sessão. Um `anoLetivoId` no corpo que não seja ele (planejado,
  *   encerrado, de outra escola, inexistente) responde como inexistente, e nada é criado.
@@ -56,6 +57,30 @@ export class TurmaService {
       return { ...(await turmas.criar({ serieId: serie.id, nome: pedido.nome, turno: pedido.turno ?? null })), serie }
     })
     return esquemaRespostaTurma.parse(criada)
+  }
+
+  /**
+   * `PATCH /v1/turmas/:id` (A1, RF3): a coordenação troca o nome da turma do ano em curso. Turma de outro ano, de outra
+   * escola ou inexistente: `NAO_ENCONTRADO`, e nada muda. O nome de outra turma do mesmo ano: `CONFLITO`, sem o valor.
+   */
+  async renomear(id: string, pedido: PedidoRenomearTurma): Promise<RespostaTurma> {
+    const renomeada = await this.banco.transaction(async (tx) => {
+      const gravada = await new TurmaRepository(tx).renomear(id, pedido.nome)
+      if (gravada === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      const { serieId, ...turma } = gravada
+      const serie = await new SerieRepository(tx).porId(serieId)
+      if (serie === undefined) throw new Error('série da turma não encontrada')
+      return { ...turma, serie }
+    })
+    return esquemaRespostaTurma.parse(renomeada)
+  }
+
+  /**
+   * `DELETE /v1/turmas/:id` (A1, RF3): a turma vazia do ano em curso sai. Com vínculo: `CONFLITO`, e nada é apagado.
+   * Turma de outro ano, de outra escola ou inexistente: `NAO_ENCONTRADO`.
+   */
+  async excluir(id: string): Promise<void> {
+    if (!(await new TurmaRepository(this.banco).excluir(id))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
   }
 
   async listar(consulta: ConsultaPaginada): Promise<RespostaListaDeTurmas> {

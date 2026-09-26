@@ -19,7 +19,10 @@ aos cenários.
   da sala. **Quebra sem:** a entrada na lista ou a justificativa
 - **I3** (integração) Cada rota autenticada nova, pedida pelo usuário da escola A com o id de um recurso da escola B
   (turma, disciplina, linha da lista, professor, convite, acesso, pedido): `NAO_ENCONTRADO`, com o corpo igual ao de um
-  UUID aleatório, e nada gravado em B. **Quebra sem:** `escola_id` do contexto na cláusula de cada repository
+  UUID aleatório, e nada gravado em B. **Quebra sem:** `escola_id` do contexto na cláusula de cada repository. Na
+  turma, que filtra também pelo ano em curso do contexto, tirar só a escola não deixa o teste vermelho (o ano do contexto
+  é da escola, e a turma de B nunca está nele): a escola fica como segunda camada, e o ano é provado pela turma do ano
+  encerrado da mesma escola (E2, 1.0)
 - **I4** (integração) Na escola A, o código vigente de B com o slug de A, e o token vigente de B com o slug de A:
   `NAO_ENCONTRADO` em `salas/abrir` e em `salas/reivindicar`. **Quebra sem:** a escola do slug na busca pelo código; a
   conferência do slug contra a escola do acesso pelo token

@@ -28,3 +28,8 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-26 02:29:49 | `test-engineer` | 4ª | REPROVADO | `revisao-spec` | `cenarios.md:215-223` (C2, jeito (c)): nada força o segundo envio a passar pela leitura inicial antes de o primeiro gravar. |
 | 2026-09-26 02:31:27 | `infra-guardian` | 5ª | APROVADO | `revisao-spec` | O E29 manda o id que não é UUID para `NAO_ENCONTRADO`. Os comandos que já existem (`apps/api/src/ops/revogar-convite.ts:27-31`) tratam argumento malformado… |
 | 2026-09-26 02:33:02 | `test-engineer` | 5ª | APROVADO | `revisao-spec` | C11, "Quebra sem" (`cenarios.md:253-254`): tirar só o `for share` do gerar não deixa o teste vermelho. |
+| 2026-09-26 10:55:08 | `test-engineer` | 1ª | APROVADO | `1_task` | P1 com o professor dono da turma (`escola-montada.int.test.ts:227-230`). Hoje o P1 usa `a.turma` e `a.disciplina`, com as quais o professor não tem vínculo. O… |
+| 2026-09-26 11:05:58 | `test-engineer` | 2ª | APROVADO | `1_task` | nenhuma nova. |
+| 2026-09-26 11:07:08 | `tenancy-guardian` | 1ª | APROVADO | `1_task` | `apps/api/src/estrutura/turma.service.ts`, no `renomear`: o `throw new Error('série da turma não encontrada')` é um erro sem tipo (regra 00, item 9). Hoje o… |
+| 2026-09-26 11:07:19 | `revisor-geral` | 1ª | APROVADO | `1_task` | `apps/api/src/estrutura/turma.service.ts:37-38`: o comentário da classe ainda diz "Sem ano em curso, as duas rotas falham fechadas". Agora são quatro, e o… |
+| 2026-09-26 11:16:21 | `revisor-geral` | 2ª | APROVADO | `1_task` | A recomendação 2 ficou marcada para a tarefa 4.0, mas só está anotada no `tasks/prd-apresentacao-escola/1_task.md:128`. O… |
