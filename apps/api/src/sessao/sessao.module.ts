@@ -291,8 +291,8 @@ export class SessaoModule implements OnApplicationShutdown {
       ],
       // O `AcessoDaSala` vai ao `SalaModule` (A1, tarefa 5.0), e só ele: a resolução continua dentro deste módulo.
       // `RegistroDeAtividade` é o contrato para o F6: a gravação de resposta de avaliação também conta como uso. O
-      // `SemaforoDeHash` e o `HashDeSenha` vão ao aceite do convite do operador (A0, tarefa 5.0): o semáforo é um só por
-      // instância, porque o teto que ele guarda é o das threads do processo. Global, como o `BancoModule` e o
+      // `SemaforoDeHash` e o `HashDeSenha` vão ao aceite do convite do operador (A0, tarefa 5.0) e à reivindicação do nome
+      // na sala (A1, tarefa 6.0): o semáforo é um só por instância, porque o teto que ele guarda é o das threads do processo. Global, como o `BancoModule` e o
       // `LimiteModule`, para o `OperacaoModule` receber a mesma instância sem montar outra.
       global: true,
       exports: [CLIENTE_REDIS_LOGIN, ContadorDeTentativas, SeguroDoLogin, RegistroDeAtividade, SemaforoDeHash, HashDeSenha, AcessoDaSala],

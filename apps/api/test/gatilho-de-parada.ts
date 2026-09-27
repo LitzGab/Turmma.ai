@@ -37,8 +37,8 @@ export async function esperarNaTrava(pool: PoolBanco, padrao: string, quantos = 
  * a transação já passou por tudo que veio antes (o `for share` do autor, por exemplo). Ali ele espera numa trava
  * consultiva que o teste segura; o teste confere o que quiser com a escrita parada, e solta.
  *
- * Só dispara para as linhas da condição `quando` (SQL sobre `new`), para não parar outra escrita do mesmo arquivo.
- * `desarmar` apaga o gatilho e a função, e solta a trava se ela ainda estiver segura.
+ * Só dispara para as linhas da condição `quando` (SQL sobre `new`; no `delete`, sobre `old`), para não parar outra
+ * escrita do mesmo arquivo. `desarmar` apaga o gatilho e a função, e solta a trava se ela ainda estiver segura.
  */
 export class GatilhoDeParada {
   readonly #pool: PoolBanco
@@ -49,7 +49,7 @@ export class GatilhoDeParada {
 
   constructor(
     pool: PoolBanco,
-    private readonly opcoes: { readonly tabela: string; readonly evento: 'insert' | 'update'; readonly quando: string },
+    private readonly opcoes: { readonly tabela: string; readonly evento: 'insert' | 'update' | 'delete'; readonly quando: string },
   ) {
     this.#pool = pool
   }

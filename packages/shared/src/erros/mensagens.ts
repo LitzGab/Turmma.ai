@@ -19,6 +19,7 @@ export const MENSAGENS_DE_ERRO: Readonly<Record<CodigoDeErro, string>> = {
   CONTA_EXTERNA_NAO_LIGADA: 'Esta conta não está liberada nesta escola. Entre com a sua matrícula ou procure o professor ou a coordenação.',
   ACESSO_VENCIDO: 'Seu acesso precisa ser renovado. Tente de novo.',
   SESSAO_ENCERRADA: 'Sua sessão terminou. Entre de novo para continuar.',
+  REIVINDICACAO_RECUSADA: 'Não foi possível enviar. Confira a matrícula; se estiver certa, chame o professor.',
 }
 
 /**

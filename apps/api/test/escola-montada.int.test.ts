@@ -10,6 +10,7 @@ import {
   esquemaRespostaListaDaTurma,
   esquemaRespostaListaDeProfessores,
   esquemaRespostaPreviaDaLista,
+  esquemaRespostaReivindicacao,
   esquemaRespostaSalaAberta,
   esquemaRespostaTurma,
   MENSAGENS_DE_ERRO,
@@ -46,6 +47,11 @@ import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
  * montada pelo slug e pelo código do acesso dela, e entra na auditoria (nenhum registro), no A3 e no A4. Fica fora do I3,
  * que é por id no caminho (o dela é o I4 de `salas-abrir.int.test.ts`), e do P1, que é da célula da matriz, que a rota
  * anônima não tem.
+ *
+ * A reivindicação do nome (`POST /v1/salas/reivindicar`, 6.0) também é anônima: pede pelo código e pelo link os dois
+ * nomes livres da `turmaComVinculo` guardados para ela, com a matrícula certa, e passa também pelas recusas (matrícula
+ * errada, nome inexistente, nome já reivindicado), que respondem `REIVINDICACAO_RECUSADA`. O nome reivindicado da escola
+ * montada nasce por ela. A senha, as chaves de envio e o hash gravado nunca vão a resposta nem a log.
  */
 
 /** Uma escola da A1 montada pela API, como a coordenação faria, com as pessoas e os recursos que as rotas pedem. */
@@ -72,10 +78,16 @@ interface EscolaMontada {
   }
   /**
    * A lista de nomes da `turmaComVinculo` (2.0): um nome livre (retirar dá certo; a matrícula dele, gravada em outra
-   * turma, dá `CONFLITO`) e um reivindicado, posto no banco até a 6.0 (retirar dá `CONFLITO`). As matrículas nunca vão a
-   * log (A4).
+   * turma, dá `CONFLITO`) e um reivindicado pela sala, com o pedido pendente (6.0; retirar dá `CONFLITO`). Mais dois
+   * livres, que a reivindicação toma pelo código e pelo link. As matrículas nunca vão a log (A4).
    */
-  readonly lista: { readonly livre: string; readonly reivindicado: string; readonly matriculaLivre: string; readonly matriculaReivindicada: string }
+  readonly lista: {
+    readonly livre: string
+    readonly reivindicado: string
+    readonly matriculaLivre: string
+    readonly matriculaReivindicada: string
+    readonly paraReivindicar: readonly [NomeParaReivindicar, NomeParaReivindicar]
+  }
   /** Matrícula e hash de senha de um aluno da escola, que nenhuma resposta nem log pode ter (A3, A4). */
   readonly matricula: string
   readonly senhaHash: string
@@ -98,6 +110,12 @@ interface EscolaMontada {
    * usam, e o A4 os procura no log, como procura o token e o código do acesso vigente.
    */
   readonly semAcesso: { readonly token: string; readonly codigo: string }
+}
+
+/** Um nome livre da lista que a reivindicação toma, com a matrícula dele. */
+interface NomeParaReivindicar {
+  readonly id: string
+  readonly matricula: string
 }
 
 /** Uma rota nova da A1, com o que as varreduras precisam para chamá-la na escola montada. */
@@ -136,6 +154,11 @@ interface RotaDaA1 {
    * por eles como passam pelo id sorteado das outras.
    */
   readonly inexistentes?: (escola: EscolaMontada) => ReadonlyArray<Record<string, unknown>>
+  /**
+   * Na rota da reivindicação (6.0), os corpos que ela recusa com `REIVINDICACAO_RECUSADA` (409): o A3 e o A4 passam por
+   * eles como passam pelo conflito das outras.
+   */
+  readonly recusas?: (escola: EscolaMontada) => ReadonlyArray<Record<string, unknown>>
   /** Outros corpos que dão o mesmo sucesso da rota (a página da sala pelo link, além do código): o A3 e o A4 passam por eles. */
   readonly outrosSucessos?: (escola: EscolaMontada) => ReadonlyArray<Record<string, unknown>>
   /** O status do sucesso, pela coordenação, com o `alvo` e o `corpo`. */
@@ -161,6 +184,24 @@ const SENHA_DO_ACEITE = 'senha-do-aceite-sintetica-1'
 const NOME_NA_LISTA = `aluno da lista ${randomUUID().slice(0, 8)}`
 const PREFIXO_DA_MATRICULA = `lista-${randomUUID().slice(0, 8)}`
 const matriculaNova = (): string => `${PREFIXO_DA_MATRICULA}-${randomUUID().slice(0, 8)}`
+/**
+ * A senha que o aluno cria na reivindicação (6.0): nenhuma resposta nem log pode tê-la (A3, A4). Em minúsculas e com `_`,
+ * no formato de evento que o `LoggerDoNest` deixa passar: a sentinela pega o vazamento também por ali.
+ */
+const SENHA_DA_SALA = `senha_da_sala_${randomBytes(6).toString('hex')}`
+/** Toda chave de envio que as varreduras mandaram: nenhuma resposta nem log pode tê-la (A3, A4). */
+const CHAVES_DE_ENVIO: string[] = []
+const chaveNova = (): string => {
+  const chave = randomUUID()
+  CHAVES_DE_ENVIO.push(chave)
+  return chave
+}
+
+/** O corpo da reivindicação do nome, pelo código ou pelo link do acesso da escola montada, com uma chave nova. */
+function reivindicacao(escola: EscolaMontada, nome: NomeParaReivindicar, caminho: 'codigo' | 'token' = 'codigo'): Record<string, unknown> {
+  const pelo = caminho === 'codigo' ? { codigo: escola.acesso.codigo } : { token: escola.acesso.token }
+  return { slug: escola.slug, ...pelo, listaNomeId: nome.id, matricula: nome.matricula, senha: SENHA_DA_SALA, chaveEnvio: chaveNova() }
+}
 
 /**
  * As rotas autenticadas novas da A1. 4.0: gerar, ler e revogar o acesso da turma, do professor; o gerar grava
@@ -322,6 +363,24 @@ const ROTAS_DA_A1: readonly RotaDaA1[] = [
     resposta: esquemaRespostaSalaAberta,
     auditoria: [],
   },
+  {
+    rota: 'POST /v1/salas/reivindicar',
+    anonima: true,
+    corpo: (escola) => reivindicacao(escola, escola.lista.paraReivindicar[0]),
+    outrosSucessos: (escola) => [reivindicacao(escola, escola.lista.paraReivindicar[1], 'token')],
+    inexistentes: (escola) => [
+      { ...reivindicacao(escola, escola.lista.paraReivindicar[0]), codigo: escola.semAcesso.codigo },
+      { ...reivindicacao(escola, escola.lista.paraReivindicar[0], 'token'), token: escola.semAcesso.token },
+    ],
+    recusas: (escola) => [
+      { ...reivindicacao(escola, escola.lista.paraReivindicar[0]), matricula: escola.lista.matriculaLivre },
+      { ...reivindicacao(escola, escola.lista.paraReivindicar[0], 'token'), listaNomeId: randomUUID() },
+      reivindicacao(escola, { id: escola.lista.reivindicado, matricula: escola.lista.matriculaReivindicada }),
+    ],
+    sucesso: 200,
+    resposta: esquemaRespostaReivindicacao,
+    auditoria: [],
+  },
 ]
 
 /** A sessão que chama a rota com sucesso: a da coordenação, ou a do professor na rota dele. */
@@ -371,15 +430,19 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     await criado(chamar(api.url, 'POST', `/v1/vinculos/${vinculo}/confirmar`, professor.token), 200)
     const matriculaLivre = matriculaNova()
     const matriculaReivindicada = matriculaNova()
-    await criado(post(`/v1/turmas/${turmaComVinculo}/lista`, { texto: `${nomes.nomeLivre};${matriculaLivre}\n${nomes.nomeReivindicado};${matriculaReivindicada}` }))
+    const matriculasParaReivindicar = [matriculaNova(), matriculaNova()] as const
+    const linhas = [
+      `${nomes.nomeLivre};${matriculaLivre}`,
+      `${nomes.nomeReivindicado};${matriculaReivindicada}`,
+      ...matriculasParaReivindicar.map((matricula) => `${NOME_NA_LISTA};${matricula}`),
+    ]
+    await criado(post(`/v1/turmas/${turmaComVinculo}/lista`, { texto: linhas.join('\n') }))
     const { rows: daLista } = await bancada.pool.query<{ id: string; matricula: string }>('select id, matricula from lista_nome where escola_id = $1', [escolaId])
     const idDa = (matricula: string): string => {
       const id = daLista.find((linha) => linha.matricula === matricula)?.id
       if (id === undefined) throw new Error('nome da lista não gravado')
       return id
     }
-    // O pedido do aluno chega na 6.0; até lá, o reivindicado é posto no banco.
-    await bancada.pool.query(`update lista_nome set estado = 'reivindicado' where id = $1`, [idDa(matriculaReivindicada)])
     const convidar = async () => {
       const email = `professor-${randomUUID()}@${DOMINIO_DO_EMAIL}`
       const resposta = await post('/v1/professores', { nome: NOME_DO_PROFESSOR, email })
@@ -395,9 +458,13 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     const gerado = await chamar(api.url, 'POST', `/v1/turmas/${turmaComVinculo}/acesso`, professor.token, { validadeDias: 7 })
     expect(gerado.status).toBe(201)
     const acesso = esquemaRespostaAcessoGerado.parse(gerado.corpo)
+    const slug = await bancada.slugDe(escolaId)
+    // O nome reivindicado nasce pela sala (6.0), com o pedido pendente.
+    const pedido = { slug, codigo: acesso.codigo, listaNomeId: idDa(matriculaReivindicada), matricula: matriculaReivindicada, senha: SENHA_DA_SALA, chaveEnvio: chaveNova() }
+    expect((await chamar(api.url, 'POST', '/v1/salas/reivindicar', undefined, pedido)).status).toBe(200)
     return {
       escolaId,
-      slug: await bancada.slugDe(escolaId),
+      slug,
       coordenacao,
       professor,
       aluno,
@@ -411,7 +478,16 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       convidado: { usuarioId: convidado.usuarioId, email: convidado.email, token: convidado.token },
       convidadoRevogado: revogado.usuarioId,
       convidadoAceito: aceito.usuarioId,
-      lista: { livre: idDa(matriculaLivre), reivindicado: idDa(matriculaReivindicada), matriculaLivre, matriculaReivindicada },
+      lista: {
+        livre: idDa(matriculaLivre),
+        reivindicado: idDa(matriculaReivindicada),
+        matriculaLivre,
+        matriculaReivindicada,
+        paraReivindicar: [
+          { id: idDa(matriculasParaReivindicar[0]), matricula: matriculasParaReivindicar[0] },
+          { id: idDa(matriculasParaReivindicar[1]), matricula: matriculasParaReivindicar[1] },
+        ],
+      },
       acesso: { token: acesso.token, codigo: acesso.codigo },
       semAcesso: { token: randomBytes(32).toString('base64url'), codigo: sortearCodigoDaTurma() },
     }
@@ -428,6 +504,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       convites: await linhas('select id, tipo, usuario_id, expira_em, usado_em, revogado_em from convite where escola_id = $1 order by id'),
       lista: await linhas('select id, turma_id, nome, matricula, estado, usuario_id, criado_por from lista_nome where escola_id = $1 order by id'),
       acessos: await linhas('select id, turma_id, token_hash, codigo_hmac, validade_dias, expira_em, revogado_em, criado_por from acesso_turma where escola_id = $1 order by id'),
+      pedidos: await linhas('select id, turma_id, lista_nome_id, chave_envio, senha_hash, teve_matricula_errada, estado from reivindicacao where escola_id = $1 order by id'),
       auditoria: await linhas('select id from auditoria where escola_id = $1 order by id'),
     }
   }
@@ -466,6 +543,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     }
     if (rota.alvo !== undefined) todas.push({ esperado: 404, resposta: await pedir(rota, autorDa(rota, escola), randomUUID(), rota.corpo?.(escola)) })
     for (const corpo of rota.inexistentes?.(escola) ?? []) todas.push({ esperado: 404, resposta: await pedir(rota, autorDa(rota, escola), undefined, corpo) })
+    for (const corpo of rota.recusas?.(escola) ?? []) todas.push({ esperado: 409, resposta: await pedir(rota, autorDa(rota, escola), undefined, corpo) })
     for (const corpo of rota.outrosSucessos?.(escola) ?? []) todas.push({ esperado: rota.sucesso, resposta: await pedir(rota, autorDa(rota, escola), undefined, corpo) })
     todas.push({ esperado: rota.sucesso, resposta: await comSucesso(rota, escola) })
     for (const { esperado, resposta } of todas) expect(resposta.status, `${rota.rota} ${String(esperado)}`).toBe(esperado)
@@ -573,11 +651,16 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
         const a = await montar()
         // O token do convite só sai na resposta que o cria: o do professor convidado na montagem, em nenhuma destas.
         // O link e o código do acesso da montagem também: só a resposta do gerar que os criou os traz.
-        const sentinelas = [a.coordenacao.token, a.professor.token, a.aluno.token, a.matricula, a.senhaHash, a.convidado.token, DOMINIO_DO_EMAIL, a.acesso.token, a.acesso.codigo]
-        // A página pública da sala (5.0) mostra os nomes livres, e nunca a matrícula de nenhum nem o nome reivindicado.
-        if (rota.anonima === true) sentinelas.push(a.lista.matriculaLivre, a.lista.matriculaReivindicada, a.nomes.nomeReivindicado)
+        const sentinelas = [a.coordenacao.token, a.professor.token, a.aluno.token, a.matricula, a.senhaHash, a.convidado.token, DOMINIO_DO_EMAIL, a.acesso.token, a.acesso.codigo, SENHA_DA_SALA]
+        // A página pública da sala (5.0) mostra os nomes livres, e nunca a matrícula de nenhum nem o nome reivindicado; a
+        // reivindicação (6.0) não devolve a matrícula, o nome, a chave nem o hash do pedido.
+        if (rota.anonima === true) sentinelas.push(a.lista.matriculaLivre, a.lista.matriculaReivindicada, a.nomes.nomeReivindicado, ...a.lista.paraReivindicar.map((nome) => nome.matricula))
+        const chavesAntes = CHAVES_DE_ENVIO.length
 
-        for (const { esperado, resposta } of await variantes(rota, a)) {
+        const respostas = await variantes(rota, a)
+        const { rows: hashesGravados } = await bancada.pool.query<{ senha_hash: string }>('select senha_hash from reivindicacao where escola_id = $1 and senha_hash is not null', [a.escolaId])
+        sentinelas.push(...CHAVES_DE_ENVIO.slice(chavesAntes), ...hashesGravados.map((linha) => linha.senha_hash))
+        for (const { esperado, resposta } of respostas) {
           const texto = JSON.stringify(resposta.corpo)
           for (const sentinela of sentinelas) expect(texto, `${rota.rota} ${String(esperado)}`).not.toContain(sentinela)
           if (esperado >= 400) {
@@ -611,6 +694,11 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
         if (typeof resposta.corpo['codigo'] === 'string') codigosDevolvidos.push(resposta.corpo['codigo'])
       }
     }
+    // As senhas da reivindicação que o banco guardou, em hash: nem elas vão a log.
+    const { rows: hashesGravados } = await bancada.pool.query<{ senha_hash: string }>('select senha_hash from reivindicacao where escola_id = any($1::uuid[]) and senha_hash is not null', [
+      escolas.map((escola) => escola.escolaId),
+    ])
+    expect(hashesGravados.length).toBeGreaterThan(escolas.length)
     // O cadastro, o refazer e o gerar acesso devolveram o token deles, e o gerar o código: sem isso, a busca abaixo não
     // teria o que procurar.
     const devolvemToken = [esquemaRespostaConviteDeProfessor, esquemaRespostaAcessoGerado] as z.ZodType[]
@@ -629,6 +717,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
         escola.matricula,
         escola.lista.matriculaLivre,
         escola.lista.matriculaReivindicada,
+        ...escola.lista.paraReivindicar.map((nome) => nome.matricula),
         escola.senhaHash,
         escola.slug,
         escola.coordenacao.token,
@@ -649,6 +738,19 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
         expect(todoOLog).not.toContain(sentinela)
       }
     }
-    for (const sentinela of [NOME_RENOMEADO, NOME_DO_PROFESSOR, DOMINIO_DO_EMAIL, NOME_NA_LISTA, PREFIXO_DA_MATRICULA, ...tokensDevolvidos, ...codigosDevolvidos]) expect(todoOLog).not.toContain(sentinela)
+    for (const sentinela of [
+      NOME_RENOMEADO,
+      NOME_DO_PROFESSOR,
+      DOMINIO_DO_EMAIL,
+      NOME_NA_LISTA,
+      PREFIXO_DA_MATRICULA,
+      SENHA_DA_SALA,
+      ...CHAVES_DE_ENVIO,
+      ...hashesGravados.map((linha) => linha.senha_hash),
+      ...tokensDevolvidos,
+      ...codigosDevolvidos,
+    ]) {
+      expect(todoOLog).not.toContain(sentinela)
+    }
   })
 })

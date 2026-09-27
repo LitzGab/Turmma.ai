@@ -76,3 +76,14 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-26 20:31:43 | `test-engineer` | 4ª | APROVADO | `5_task` | nenhuma nova. As da 3ª rodada já foram aplicadas. |
 | 2026-09-26 20:32:20 | `privacy-guardian` | 3ª | APROVADO | `5_task` | nenhuma nova. A da 2ª rodada (a trava no `arquitetura.test.ts`) continua pendente no `TODO.md` até a próxima tarefa que tocar o teste. |
 | 2026-09-26 20:32:23 | `infra-guardian` | 3ª | APROVADO | `5_task` | nenhuma nova. |
+| 2026-09-26 22:08:57 | `test-engineer` | 1ª | APROVADO | `6_task` | `salas-reivindicar.int.test.ts:309-319` (E23): `pedidosNaTransacao` igual a `[0]` não prova que o `insert` rodou antes da falha, embora o comentário da linha… |
+| 2026-09-26 22:20:38 | `test-engineer` | 2ª | APROVADO | `6_task` | nenhuma nova. |
+| 2026-09-26 22:21:35 | `tenancy-guardian` | 1ª | APROVADO | `6_task` | `apps/api/src/sala/reivindicacao.repository.ts:24-26` e `apps/api/src/sala/lista-livre.repository.ts:67-68`: nenhum teste quebra se escola e ano saírem daqui,… |
+| 2026-09-26 22:22:22 | `privacy-guardian` | 1ª | APROVADO | `6_task` | Os contadores de matrícula errada por nome só chegam na 7.0. Até lá, adivinhar a matrícula de um nome esbarra só no `rl:ip` e no custo do hash. Não é… |
+| 2026-09-26 22:22:32 | `revisor-geral` | 1ª | APROVADO | `6_task` | `apps/api/src/sala/salas.service.ts:126`: `entradaDaSala` virou função compartilhada, mas continua no arquivo do `SalasService`, e `reivindicacao.service.ts:9`… |
+| 2026-09-26 22:22:44 | `infra-guardian` | 1ª | APROVADO | `6_task` | Alerta do semáforo mistura reivindicação e login. A reivindicação agora soma em `login.hash_recusado` e em `login.hash_espera`. O alerta `login-hash-recusado`… |
+| 2026-09-26 22:36:05 | `test-engineer` | 3ª | APROVADO | `6_task` | A tarefa 10.0 (virada do ano) e a eliminação de aluno precisam fechar ou apagar o pedido pendente antes de apagar o nome. Se não fizerem isso, o 23514 sobe… |
+| 2026-09-26 22:36:55 | `tenancy-guardian` | 2ª | APROVADO | `6_task` | nenhuma nova. A da 1ª rodada, o teste com a turma que não vem da linha do acesso, já está anotada no 8_task.md. |
+| 2026-09-26 22:37:10 | `privacy-guardian` | 2ª | APROVADO | `6_task` | Na 10.0, o 23514 do `reivindicacao_pendente_com_nome` não deve chegar ao cliente como 500. Se a ordem das escritas quebrar num caminho futuro, o erro precisa… |
+| 2026-09-26 22:37:13 | `infra-guardian` | 2ª | APROVADO | `6_task` | nenhuma nova. As duas da 1ª rodada seguem abertas no 9_task.md e no TODO.md. |
+| 2026-09-26 22:37:14 | `revisor-geral` | 2ª | APROVADO | `6_task` | nenhuma nova. |

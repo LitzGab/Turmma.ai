@@ -74,19 +74,21 @@ aos cenários.
 - **P4** (integração) `decidir` e `minha-turma`: aluno no primeiro e professor e coordenação no segundo recebem 404 (o
   resto do `decidir` é a I6). **Quebra sem:** a célula de cada papel
 - **P5** (integração) `salas/abrir` e `salas/reivindicar` com `escolaId`, `turmaId` ou qualquer campo a mais no corpo:
-  400, sem gravar. **Quebra sem:** o contrato `.strict()`
+  400, sem gravar. Também (6.0), em `salas/reivindicar`: o token e o código juntos, a senha abaixo de 12, a falta da
+  chave e o `listaNomeId` que não é UUID, 400 sem hash. **Quebra sem:** o contrato `.strict()`
 
 ## R — Respostas iguais
 
 - **R1** (integração) Em `salas/abrir` e `salas/reivindicar`: token inexistente, vencido, revogado, de ano encerrado,
   de turma excluída (o acesso revogado, a turma excluída, o `cascade` levando o acesso) e de outra escola; código nos
   mesmos seis casos; slug inexistente. Em `salas/abrir`, também o token fora do formato, o código fora do alfabeto e o
-  slug fora do formato: o contrato limita só o tamanho, e o formato fica para a busca (5.0). Todos
+  slug fora do formato: o contrato limita só o tamanho, e o formato fica para a busca (5.0). Em `salas/reivindicar`,
+  nenhum dos casos roda o hash nem grava (6.0). Todos
   com o mesmo status, o mesmo `NAO_ENCONTRADO` e o corpo byte a byte igual. **Quebra sem:** qualquer ramo com texto ou
   código próprio; o contrato que conferisse o formato e desse 400
 - **R2** (integração) Em `salas/reivindicar`, com acesso válido: `listaNomeId` inexistente, de outra turma, de outra
   escola, de ano encerrado, com matrícula errada, com a matrícula de outro nome da turma, já reivindicado e já aprovado.
-  Todos `REIVINDICACAO_RECUSADA`, corpo igual, nada gravado. **Quebra sem:** um ramo que diga qual dos dois errou
+  Todos `REIVINDICACAO_RECUSADA` (409), corpo igual, nada gravado. **Quebra sem:** um ramo que diga qual dos dois errou
 - **R3** (unidade) Com o hash falso contando chamadas: matrícula certa, errada, nome tomado, `listaNomeId` inexistente
   e de outra turma chamam o argon2id uma vez cada, pelo semáforo, antes da transação. **Quebra sem:** o hash sempre (rodar só quando a matrícula bate mede a
   matrícula pelo tempo)
@@ -102,8 +104,10 @@ aos cenários.
 - **E2** (integração) Renomear disciplina e turma; excluir disciplina com vínculo e turma com nome na lista, vínculo,
   pedido ou acesso vigente: `CONFLITO`, nada apagado; turma vazia sai, e a turma cujo acesso foi revogado sai levando o
   acesso (a FK do `acesso_turma` com `on delete cascade`); o vencido também (4.0). Na parte do acesso, o teste tira o
-  vínculo pelo banco depois de gerar, para a FK dele não responder antes (4.0). **Quebra sem:** o mapeamento da FK para
-  `CONFLITO`; a condição de não haver acesso vigente no `delete` da turma
+  vínculo pelo banco depois de gerar, para a FK dele não responder antes (4.0). Na parte do pedido (6.0), o teste deixa
+  só o pedido apontando para a turma: o acesso revogado, os vínculos tirados, o pedido recusado sem os segredos e o nome
+  tirado pelo banco (o `set null` deixa o pedido sem nome); sem o pedido, a turma sai. **Quebra sem:** o mapeamento da FK
+  para `CONFLITO`; a condição de não haver acesso vigente no `delete` da turma; a FK do pedido à turma
 - **E3** (unidade) Leitura do texto: `;`, `,` e tabulação; cabeçalho detectado e ignorado; aspas com separador dentro;
   BOM; linha em branco ignorada; `trim` no nome e na matrícula; 200 linhas passam, 201 e 64 KB + 1 recusam com
   `ENTRADA_INVALIDA`. Também (2.0): o separador vem da primeira linha que tem um (o título sem separador não desmonta a
@@ -166,15 +170,21 @@ aos cenários.
   pedido, sem hash e sem somar contador; `chaveEnvio` que não é UUID dá 400. Depois da decisão, a chave é nula no banco
   (aprovada e recusada). A mesma chave, depois do commit, enviada pelo acesso de T2 da mesma escola com um nome livre de
   T2 não recebe `enviado`: segue o fluxo normal, passa pelos limites e pelo hash, e o 23505 do único da chave na escola
-  leva à releitura, que não a acha em T2 e responde `REIVINDICACAO_RECUSADA`, sem pedido em T2. **Quebra sem:** a
+  leva à releitura, que não a acha em T2 e responde `REIVINDICACAO_RECUSADA`, sem pedido em T2. O `enviado` é 200
+  `{ resultado: 'enviado' }`, no pedido novo e no reenvio (6.0). Também (6.0), no banco: o check
+  `reivindicacao_segredo_so_pendente` recusa (23514) hash, chave ou `teve_matricula_errada` fora do pendente e o
+  pendente sem um deles; o check `reivindicacao_pendente_com_nome` recusa o pendente sem nome e o `delete` do nome de um
+  pendente; a chave é única na escola e não no sistema, e há um pendente por nome (23505); o pedido
+  novo grava `teve_matricula_errada` em `false` até a 7.0. **Quebra sem:** a
   leitura da chave, na escola e na turma do acesso, antes dos limites e depois da volta atrás (sem a turma, T2 recebe
-  `enviado`); a chave anulada na decisão
+  `enviado`); a chave anulada na decisão; o check e os únicos
 - **E22** (integração) O aluno que errou o login antes de ser aprovado entra logo depois da aprovação, sem espera: a
   aprovação zera o contador de falhas daquela matrícula. **Quebra sem:** o zerar na aprovação
 - **E23** (integração) Borda, aba fechada: falha injetada entre o `insert` do pedido e o `update` da `lista_nome` faz
   rollback; o nome continua livre e não há pedido. **Quebra sem:** as duas escritas na mesma transação
 - **E24** (integração) Borda, nomes iguais: dois "Ana Souza" aparecem com ids diferentes; cada um só é reivindicado com
-  a própria matrícula; com a do outro, `REIVINDICACAO_RECUSADA`. **Quebra sem:** a matrícula no `update`
+  a própria matrícula, também digitada com espaço nas pontas (6.0); com a do outro, `REIVINDICACAO_RECUSADA`. **Quebra
+  sem:** a matrícula no `update`; o `trim` do contrato
 - **E25** (integração) Borda, nome do colega: com a matrícula dele, o pedido fica pendente; o professor recusa; o nome
   volta livre, e o dono o reivindica. **Quebra sem:** a devolução a `livre` na recusa
 - **E26** (integração) Borda, aluno de maio: o nome avulso aparece no `salas/abrir` do link já vigente, sem gerar outro.
@@ -243,7 +253,9 @@ aos cenários.
   `pendente`
 - **C4** (integração) Reivindicar × retirar o mesmo nome livre: ou o pedido existe e o retirar recebe `CONFLITO`, ou o
   nome saiu e a reivindicação é recusada; nunca pedido de nome apagado nem 5xx. Um ponto de pausa controla a
-  intercalação, como no C11. **Quebra sem:** o `delete` condicional
+  intercalação, como no C11. Nos dois arranjos (6.0): a reivindicação parada depois do `update` do nome, e a retirada
+  parada depois do `delete`, com a reivindicação esperando a FK do `insert` e recusada, sem pedido. **Quebra sem:** o
+  `delete` condicional
 - **C5** (integração) Dois gerar na mesma turma, sem acesso e com acesso: no fim, um só vigente; o perdedor recebe
   `CONFLITO`, nunca 5xx. **Quebra sem:** o único parcial por turma
 - **C6** (integração) Colisão: com o sorteio falso repetindo, na primeira vez, o código vigente de outra turma, o gerar

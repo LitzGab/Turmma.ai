@@ -1,8 +1,7 @@
 import { ErroDeDominio, type Banco } from '@educa/nucleo'
 import { CodigoDeErro, esquemaRespostaSalaAberta, type PedidoAbrirSala, type RespostaSalaAberta } from '@educa/shared'
-import type { AcessoDaSala, EntradaDaSala } from '../sessao/acesso-da-sala.js'
-import { hashDoToken } from '../sessao/hash-do-token.js'
-import { hmacDoCodigoDaTurma } from './codigo-da-sala.js'
+import type { AcessoDaSala } from '../sessao/acesso-da-sala.js'
+import { entradaDaSala } from './entrada-da-sala.js'
 import { ListaLivreRepository } from './lista-livre.repository.js'
 
 /**
@@ -23,9 +22,7 @@ export class SalasService {
 
   /** `POST /v1/salas/abrir`: o nome da turma e os nomes livres, lidos a cada abertura. */
   async abrir(pedido: PedidoAbrirSala): Promise<RespostaSalaAberta> {
-    const entrada: EntradaDaSala =
-      'token' in pedido ? { slug: pedido.slug, tokenHash: hashDoToken(pedido.token) } : { slug: pedido.slug, codigoHmac: hmacDoCodigoDaTurma(this.chaveCodigo, pedido.codigo) }
-    return this.acessoDaSala.naSala(entrada, async ({ turmaId }) => {
+    return this.acessoDaSala.naSala(entradaDaSala(pedido, this.chaveCodigo), async ({ turmaId }) => {
       const lista = new ListaLivreRepository(this.banco)
       const nomeDaTurma = await lista.nomeDaTurma(turmaId)
       // A turma excluída leva o acesso pela cascata: sem ela aqui, a exclusão chegou entre as duas leituras.

@@ -35,8 +35,12 @@ acesso_turma   id, escola_id*, ano_letivo_id*, turma_id*, token_hash*, codigo_hm
 - `lista_nome`: check `aprovado ⇔ usuario_id ⇔ nome e matrícula nulos`; matrícula única por escola e ano, com `trim`;
   índice `(escola_id, ano_letivo_id, turma_id, estado)`
 - `reivindicacao`: um pendente por nome; `(escola_id, chave_envio)` único parcial, nas não nulas; chave, hash e
-  `teve_matricula_errada` só em pendente; índice `(escola_id, turma_id, estado, solicitada_em)`; sem `dispositivo`
-  (PRD, 10.2)
+  `teve_matricula_errada` só em pendente, e o pendente com os três (check `reivindicacao_segredo_so_pendente`, 6.0) e
+  com o nome (check `reivindicacao_pendente_com_nome`, 6.0: o `set null` da FK num pendente falha, e o `encerrar` e a
+  eliminação fecham ou apagam o pedido antes de apagar o nome);
+  `estado` e `decidida_como` nos valores acima, por check; índice `(escola_id, turma_id, estado, solicitada_em)` e, para
+  o `set null` da FK achar os pedidos do nome que sai sem varrer os da escola, `(escola_id, lista_nome_id)` (6.0); sem
+  `dispositivo` (PRD, 10.2)
 - `acesso_turma`: `token_hash` único; turma e `codigo_hmac` únicos por escola entre os não revogados
 - Código: 8 caracteres de `23456789ABCDEFGHJKMNPQRSTUVWXYZ` (31⁸ ≈ 8,5 × 10¹¹), em dois grupos de 4; HMAC com
   `SALA_CHAVE_CODIGO`, separada da dos contadores
@@ -82,7 +86,9 @@ Sob `/v1`, escopo do contexto; uma célula da `MATRIZ` por rota:
   `decidida`, `ja_decidida` ou `nao_encontrada`
 - `GET minha-turma` (aluno, `proprio`): escola, turma e série, sem colegas
 - `POST salas/abrir` e `…/reivindicar` (anônimas, `no-store`, sem cookie): `{ slug, token | codigo }`; reivindicar
-  leva `listaNomeId`, `matricula`, `senha` e `chaveEnvio` (UUID), e responde `enviado`. O abrir responde 200
+  leva `listaNomeId` (UUID), `matricula` (as regras da lista: uma linha, sem espaço nas pontas, até 40), `senha` (de 12
+  até o teto da senha) e `chaveEnvio` (UUID), e responde 200 `{ resultado: 'enviado' }`, igual no pedido novo e no
+  reenvio; a recusa é `REIVINDICACAO_RECUSADA` com 409 (6.0). O abrir responde 200
   `{ turma: { nome }, nomes: [{ id, nome }] }`, os livres em ordem de nome e até 500 (`MAXIMO_DE_NOMES_NA_SALA`, regra 80,
   itens 3 e 8); o contrato limita o tamanho do slug, do token e do código, e não o formato: token ou código fora do
   formato é `NAO_ENCONTRADO`, como o inexistente (5.0)

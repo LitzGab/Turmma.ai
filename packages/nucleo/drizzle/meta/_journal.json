@@ -148,6 +148,13 @@
       "when": 1790446322808,
       "tag": "0020_acesso_turma",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790472191377,
+      "tag": "0021_reivindicacao",
+      "breakpoints": true
     }
   ]
 }

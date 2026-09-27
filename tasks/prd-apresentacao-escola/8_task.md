@@ -34,6 +34,13 @@ humana cria o aluno, com a matrícula da lista e a senha do pedido; o aprovado v
 - **O `ja_existe` do aprovado** (8.4): na 2.0, a matrícula de aluno da escola sai `matricula_em_uso` em qualquer turma,
   pela busca em `credencial_matricula` (`ListaRepository.comCredencial`); a 8.0 separa a desta turma.
 
+## Notas da 6.0 (`tenancy-guardian`, 1ª rodada)
+
+- Escola e ano no `ReivindicacaoRepository.chaveGravada` e no `ListaLivreRepository.tomar` são segunda camada na 6.0: a
+  turma vem da linha do acesso, e a FK composta barra o nome de outra escola. Quando os pedidos forem lidos e decididos
+  pela turma com sessão de professor ou coordenação, vale um teste em que a turma não venha da linha do acesso, para
+  essas cláusulas deixarem de depender só da FK.
+
 ## Subtarefas
 
 - [ ] 8.1 — `GET turmas/:id/reivindicacoes`: professor `turma_vinculada`; coordenação `nominal_auditado`, com

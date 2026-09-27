@@ -16,6 +16,8 @@ export const STATUS_HTTP_DO_CODIGO: Readonly<Record<CodigoDeErro, number>> = {
   CONTA_EXTERNA_NAO_LIGADA: 401,
   ACESSO_VENCIDO: 401,
   SESSAO_ENCERRADA: 401,
+  // A1, tarefa 6.0: o pedido é bem formado, e o nome não foi tomado; o nome inexistente responde igual ao tomado.
+  REIVINDICACAO_RECUSADA: 409,
 }
 
 /**

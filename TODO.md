@@ -11,7 +11,9 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] Relatório de impacto (RIPD) — dado de menor, volume alto, IA no fluxo
 - [ ] Definir prazos de retenção com uma escola real (varia por rede)
 - [ ] O pedido do titular (acesso e portabilidade, F3, `ciclo-de-vida.service.ts`) cobre também a `lista_nome` e a
-      `reivindicacao` da A1, para a pergunta de fechamento da regra 20 continuar respondida por código
+      `reivindicacao` da A1, para a pergunta de fechamento da regra 20 continuar respondida por código: o pedido se liga
+      ao aluno por `lista_nome_id` enquanto a linha da lista existe, e depois do `set null` já não se liga a ninguém
+      (`privacy-guardian` na 6.0)
 - [ ] Escrever e ensaiar o processo de incidente
 - [ ] Parecer sobre o ECA Digital (Lei 15.211/2025) para plataforma contratada pela escola,
       com a avaliação de impacto que ele exige. Três perguntas precisam sair dele, nomeadas:
@@ -190,7 +192,10 @@ para o staging".
 - [ ] **A página pública da sala só com a 7.0 junto** (A1, tarefa 5.0; `infra-guardian` e `privacy-guardian`): até a
       7.0, a busca pelo código em `salas/abrir` só tem o `rl:ip` anônimo, e quem sabe o slug de uma escola pode tentar
       códigos de vários IPs para listar os nomes livres. Nenhum staging exposto nem dado real sem o contador de código
-      errado por escola e a espera de 1 s da 7.0 (dono: Joaquim, no portão do staging)
+      errado por escola e a espera de 1 s da 7.0 (dono: Joaquim, no portão do staging). O mesmo vale para
+      `salas/reivindicar` (6.0): até o contador por nome da 7.0, quem tem um código válido pode tentar matrículas num
+      nome livre, e cada tentativa só custa um hash, segurado pelo `rl:ip` e pela vez da escola no semáforo
+      (`infra-guardian` e `privacy-guardian` na 6.0)
 - [ ] **`rl:ip:sala` próprio** (Tech Spec da A1, 7c; `infra-guardian` na 5.0): `salas/abrir` divide o `rl:ip` anônimo
       com as outras rotas anônimas, e a folga (cerca de 1.300/min contra 3.000/min) vale para uma escola. Gatilho: rede
       com várias escolas atrás do mesmo IP de saída, ou o F2, o que vier antes (dono: Joaquim)

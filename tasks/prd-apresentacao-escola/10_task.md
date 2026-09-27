@@ -27,6 +27,15 @@ professor; e nenhuma reivindicação ou aprovação escapa do ano que está send
   - Testes: `apps/api/test/virada-do-ano.int.test.ts`, `ciclo-de-vida.int.test.ts`,
     `apps/worker/test/expurgo-de-acesso.int.test.ts`; `apps/api/test/gatilho-de-parada.ts`
 
+## Notas da 6.0 (`privacy-guardian` e `test-engineer`)
+
+- O check `reivindicacao_pendente_com_nome` (0021) recusa com 23514 o `delete` do nome de um pedido pendente (o `set null`
+  da FK). O `encerrar` precisa fechar os pendentes como `encerrada` **antes** de apagar os nomes livres e reivindicados,
+  e a eliminação precisa apagar os pedidos do aluno **antes** da `lista_nome` dele; senão o 23514 sobe como 500. O V1 e
+  o V3 provam a ordem (a mutação que inverte as duas escritas deixa o teste vermelho).
+- Se um caminho futuro esbarrar no 23514 do check, ele não sai como 500: o erro sai tipado (`privacy-guardian`, 2ª rodada
+  da 6.0).
+
 ## Subtarefas
 
 - [ ] 10.1 — `encerrar`, na mesma transação: revoga os acessos do ano; os pendentes viram `encerrada`, sem hash,

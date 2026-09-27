@@ -158,12 +158,48 @@ acesso), de outra escola e slug inexistente respondem o mesmo `NAO_ENCONTRADO`. 
 da turma e os nomes `livre` da lista, com id e nome, sem matrícula, em ordem de nome e até 500
 (`MAXIMO_DE_NOMES_NA_SALA`), lidos a cada abertura; não grava registro de acesso nem lê cookie.
 
+### Pedido de reivindicação — A1
+
+Implementado na A1 (tarefa 6.0). A forma exata está na seção 3 da Tech Spec da A1 e na migration
+`0021_reivindicacao.sql`.
+
+```
+Reivindicacao*   → escola*, anoLetivo*, turma*, listaNome?, chaveEnvio?, senhaHash?,
+                   teveMatriculaErrada?, estado* (pendente | aprovada | recusada | encerrada),
+                   solicitadaEm*, decididaEm?, decididaPor?, decididaComo? (professor | coordenacao)
+```
+
+`Reivindicacao` é o pedido do aluno pelo próprio nome da lista, pela página pública da sala
+(`POST /v1/salas/reivindicar`), com a matrícula e a senha que ele cria. Só a aprovação de uma pessoa
+cria o aluno (D4; 8.0). Não há `dispositivo`: nada liga o pedido ao navegador nem ao IP (PRD, 10.2).
+
+- **O pedido nasce `pendente`** com o hash argon2id da senha, a `chaveEnvio` que a página sorteia a
+  cada envio e `teveMatriculaErrada` (em `false` até a 7.0, que o lê do contador do nome). Os três
+  existem só no pendente, e o pendente tem os três (check); a decisão e o encerramento os apagam. O
+  pendente sempre aponta para o nome (check): o nome de um pendente não se apaga, e o encerramento e
+  a eliminação fecham ou apagam o pedido antes.
+- **Na mesma transação**, o `insert` do pedido e, depois, o `update` condicional do nome da lista
+  para `reivindicado`, por id, escola, ano, turma do acesso, `livre` e matrícula. O hash roda antes,
+  sempre, no semáforo do login, no balde da escola, fora da transação.
+- **Uma resposta só**: nome inexistente, de outra turma ou escola, de ano encerrado, tomado ou com a
+  matrícula errada dão o mesmo `REIVINDICACAO_RECUSADA`, sem gravar. A FK violada, qualquer 23505 ou o
+  `update` sem linha voltam a transação, e um comando novo relê a chave na escola e na turma do
+  acesso: achou, é o reenvio do mesmo envio (`enviado`, sem pedido novo); não achou, a recusa. O nome
+  da restrição nunca é lido.
+- Índices únicos parciais: a chave de envio, na escola (não no sistema); um pendente por nome.
+  Índices pelo escopo: `(escola, turma, estado, solicitadaEm)`, para os pedidos da turma, e
+  `(escola, listaNome)`, para o `set null` da FK achar os pedidos do nome que sai.
+- Turma por FK composta com a escola e o ano, sem ação: a turma com pedido não se exclui
+  (`CONFLITO`). O nome por FK composta com a escola, `on delete set null (lista_nome_id)`: o nome
+  que sai deixa o pedido decidido sem nome. Quem decidiu, `on delete set null (decidida_por)`, com a
+  autoria na auditoria.
+- O reivindicado não se retira da lista (`CONFLITO`), e o login com a matrícula e a senha do pedido
+  pendente responde como senha errada: a credencial só nasce na aprovação.
+
 ### Ainda não existe — F2
 
 ```
 Responsavel      → usuario*, aluno*, parentesco
-Reivindicacao*   → listaNome*, dispositivo, solicitadoEm*, aprovadoPor?, aprovadoEm?,
-                   rejeitadoEm?
 ```
 
 `Convite` no F1 é só de coordenador, criado por comando do operador. Na A1 (tarefa 3.0) entra o tipo

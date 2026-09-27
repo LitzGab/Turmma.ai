@@ -27,6 +27,14 @@ passam na régua do login do F1.
   - `infra/k6/login-7h30.js`, `infra/scripts/carga-login.ts`, `conferir-carga-login.ts`, `infra/test/carga.test.ts`,
     `infra/compose.carga.yml` — o padrão da carga do F1, com o adaptador de hash calibrado
 
+## Notas da 6.0 (`infra-guardian`, 1ª rodada)
+
+- A reivindicação usa o mesmo `SemaforoDeHash` do login e soma em `login.hash_recusado` e em `login.hash_espera`. O
+  alerta `login-hash-recusado` divide o recusado por `login_duracao_seconds_count`, que só conta login: no primeiro dia,
+  com muitas reivindicações e poucos logins, a razão sobe sem o login piorar. Decidir aqui: dizer no runbook
+  (`docs/runbook.md`, a entrada do alerta) que a reivindicação usa o mesmo semáforo, ou separar o 503 dela por rótulo, ou
+  somá-la ao denominador.
+
 ## Subtarefas
 
 - [ ] 9.1 — `ops:revogar-acessos-sala --escola <id>`: exige `OPERADOR` antes de tocar no banco; monta o contexto da

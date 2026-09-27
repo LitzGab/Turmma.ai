@@ -1,7 +1,7 @@
 # Tarefas — A escola montada pela coordenação (A1)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 4 de 17 concluídas
+**Status:** 6 de 17 concluídas
 
 Aprovadas pelo Joaquim em 26/09/2026. O mapa de cenários por tarefa saiu do `test-engineer`: cada id do
 `cenarios.md` está em uma tarefa, ou dividido entre tarefas com a parte de cada uma dita no `N_task.md`. Os
@@ -48,11 +48,11 @@ dela nos dois.
   - [ ] 5.3 Documento: os dois `@SemEscopo` na tabela de `docs/modelo-de-dados.md`
   - [ ] 5.4 Testes: I1, I2, E17, E26, E28, V2; a parte de `salas/abrir` de I4, R1, P5, L10, A6, A7
 
-- [ ] **6.0 — Aluno reivindica o nome, com idempotência e hash sempre no semáforo**
-  - [ ] 6.1 Migration 0021 `reivindicacao`; `REIVINDICACAO_RECUSADA` no catálogo
-  - [ ] 6.2 `POST salas/reivindicar`: chave, hash no semáforo, `insert` e depois `update` condicional, releitura
-  - [ ] 6.3 Documento: `Reivindicacao` real em `docs/modelo-de-dados.md`, sem `dispositivo`
-  - [ ] 6.4 Testes: I5, R2 (sem "já aprovado"), R3, R5, E23, E24, C2, C4, L9; C1 e E21 sem os contadores; a parte de
+- [x] **6.0 — Aluno reivindica o nome, com idempotência e hash sempre no semáforo**
+  - [x] 6.1 Migration 0021 `reivindicacao`; `REIVINDICACAO_RECUSADA` no catálogo
+  - [x] 6.2 `POST salas/reivindicar`: chave, hash no semáforo, `insert` e depois `update` condicional, releitura
+  - [x] 6.3 Documento: `Reivindicacao` real em `docs/modelo-de-dados.md`, sem `dispositivo`
+  - [x] 6.4 Testes: I5, R2 (sem "já aprovado"), R3, R5, E23, E24, C2, C4, L9; C1 e E21 sem os contadores; a parte de
     `salas/reivindicar` de I4, R1, P5, L10, A6, A7; E2 (pedido); E7 (retirar reivindicado)
 
 - [ ] **7.0 — Limites da sala: por escola, por nome e por turma, com as métricas**

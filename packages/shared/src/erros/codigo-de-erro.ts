@@ -33,6 +33,12 @@ export const CodigoDeErro = {
    * web leva à entrada dizendo que a sessão terminou, sem confundir com "não encontrado".
    */
   SESSAO_ENCERRADA: 'SESSAO_ENCERRADA',
+  /**
+   * A reivindicação do nome pela página pública da sala não foi aceita (A1, tarefa 6.0; 409): nome inexistente, de outra
+   * turma ou escola, de ano encerrado, já tomado, ou com a matrícula que não é a dele. Uma resposta só para todos, que
+   * não diz qual dos dois errou, o nome ou a matrícula (RF10; regra 10, item 6), e nada é gravado.
+   */
+  REIVINDICACAO_RECUSADA: 'REIVINDICACAO_RECUSADA',
 } as const
 
 export type CodigoDeErro = (typeof CodigoDeErro)[keyof typeof CodigoDeErro]
