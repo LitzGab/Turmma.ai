@@ -1,7 +1,7 @@
 # Tarefas — A escola montada pela coordenação (A1)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 7 de 17 concluídas
+**Status:** 8 de 17 concluídas
 
 Aprovadas pelo Joaquim em 26/09/2026. O mapa de cenários por tarefa saiu do `test-engineer`: cada id do
 `cenarios.md` está em uma tarefa, ou dividido entre tarefas com a parte de cada uma dita no `N_task.md`. Os
@@ -62,11 +62,11 @@ dela nos dois.
   - [x] 7.4 Testes: I10, L1 a L8, L4b, L6b; os contadores de C1, C2 e E21; E30 (gravação e "Gerar novo"); a métrica
     sem escola; o log uma linha por escola e janela; `Retry-After` no limite por nome
 
-- [ ] **8.0 — Professor ou coordenação decide os pedidos; o aluno aprovado vê a própria turma**
-  - [ ] 8.1 `GET turmas/:id/reivindicacoes`, com a leitura auditada da coordenação
-  - [ ] 8.2 `POST reivindicacoes/decidir`: uma transação por id, a aprovação cria o aluno
-  - [ ] 8.3 `GET minha-turma` (subtarefa separável se a tarefa passar de ~15 arquivos)
-  - [ ] 8.4 Testes: I6, I8, P3, P4, E18, E19, E20, E22, E25, E27, C3; os pedidos do E12; o aprovado de E6 e R2; a
+- [x] **8.0 — Professor ou coordenação decide os pedidos; o aluno aprovado vê a própria turma**
+  - [x] 8.1 `GET turmas/:id/reivindicacoes`, com a leitura auditada da coordenação
+  - [x] 8.2 `POST reivindicacoes/decidir`: uma transação por id, a aprovação cria o aluno
+  - [x] 8.3 `GET minha-turma` (subtarefa separável se a tarefa passar de ~15 arquivos)
+  - [x] 8.4 Testes: I6, I8, P3, P4, E18, E19, E20, E22, E25, E27, C3; os pedidos do E12; o aprovado de E6 e R2; a
     retirada de aprovado do E7; o resto de E21 e E30; A1, A2; I3, I9; fecha A3 e A4
 
 - [ ] **9.0 — Alerta de código errado em massa, `ops:revogar-acessos-sala` e a carga**

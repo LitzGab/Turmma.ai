@@ -26,6 +26,11 @@ envio só que sobrevive ao sistema cheio; e o fluxo inteiro, da escola vazia ao 
 - O texto de ajuda do `LIMITE_EXCEDIDO` pelo nome diz que o professor pode gerar um código novo, que destrava o nome: quem
   tem o link trava um nome por 10 min com cinco matrículas erradas.
 
+## Nota da 8.0 (`conformidade-reviewer`, 1ª rodada)
+
+- O aluno recusado vê que a decisão foi de uma pessoa (o professor ou a coordenação) e que pode reivindicar o nome de novo,
+  para a recusa não parecer automática.
+
 ## Subtarefas
 
 - [ ] 17.1 — `MENSAGENS_DA_SALA` em `packages/shared`, com os textos exatos do W9; o de `NAO_ENCONTRADO` escolhido

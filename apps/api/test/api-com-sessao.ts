@@ -45,11 +45,18 @@ async function lerResposta(resposta: Response): Promise<RespostaHttp> {
   return { status: resposta.status, corpo: texto === '' ? {} : (JSON.parse(texto) as RespostaHttp['corpo']), setCookie: resposta.headers.getSetCookie() }
 }
 
-/** Uma chamada autenticada com o token, como a web faz; sem token (`undefined`), a da rota anônima. */
-export async function chamar(url: string, metodo: string, caminho: string, token: string | undefined, corpo?: unknown): Promise<RespostaHttp> {
+/**
+ * Uma chamada autenticada com o token, como a web faz; sem token (`undefined`), a da rota anônima. `cabecalhos` soma os
+ * que o teste quer mandar, como o `X-Forwarded-For` do IP que o log nunca pode ter (A4 da A1).
+ */
+export async function chamar(url: string, metodo: string, caminho: string, token: string | undefined, corpo?: unknown, cabecalhos: Record<string, string> = {}): Promise<RespostaHttp> {
   const resposta = await fetch(`${url}${caminho}`, {
     method: metodo,
-    headers: { ...(token === undefined ? {} : { Authorization: `Bearer ${token}` }), ...(corpo === undefined ? {} : { 'Content-Type': 'application/json' }) },
+    headers: {
+      ...(token === undefined ? {} : { Authorization: `Bearer ${token}` }),
+      ...(corpo === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...cabecalhos,
+    },
     ...(corpo === undefined ? {} : { body: JSON.stringify(corpo) }),
   })
   return lerResposta(resposta)

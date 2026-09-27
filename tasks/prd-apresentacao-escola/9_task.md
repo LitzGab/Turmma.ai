@@ -46,6 +46,13 @@ passam na régua do login do F1.
 - O runbook diz também que qualquer um com o link trava um nome por 10 min com cinco matrículas erradas, e que o "Gerar
   novo" destrava.
 
+## Nota da 8.0 (`infra-guardian`, 1ª rodada)
+
+- O K2, na variante do primeiro dia, deve incluir o professor decidindo em lotes de 40 (`POST /v1/reivindicacoes/decidir`)
+  e o aprovado entrando logo depois: é o trecho que cria os 2.100 usuários, e o p95 do `decidir` (até 40 transações de
+  ~10 comandos) precisa ser medido contra os 2 s da regra 00, item 4. Medir também com o Redis de login lento (2ª rodada):
+  o zerar dos contadores das aprovadas roda uma vez, depois do lote, em paralelo.
+
 ## Subtarefas
 
 - [ ] 9.1 — `ops:revogar-acessos-sala --escola <id>`: exige `OPERADOR` antes de tocar no banco; monta o contexto da

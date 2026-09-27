@@ -83,6 +83,25 @@ export class VinculoRepository {
     return criado.id
   }
 
+  /**
+   * O vínculo de aluno que a aprovação da reivindicação cria (A1, 8.0, RF13): nasce `confirmado`, com `decidido_em` da
+   * decisão, sem disciplina, e com quem aprovou em `criado_por`. Com o `decidido_em`, o aluno continua na lista de alunos
+   * da turma depois da virada do ano (E19; `TODO.md`).
+   */
+  async criarAlunoConfirmado(usuarioId: string, turmaId: string): Promise<void> {
+    await this.banco.insert(vinculo).values({
+      escolaId: exigirEscolaDoContexto(),
+      anoLetivoId: exigirAnoEmCurso(),
+      usuarioId,
+      turmaId,
+      disciplinaId: null,
+      papel: 'aluno',
+      estado: 'confirmado',
+      criadoPor: sessaoDaRequisicao().usuarioId,
+      decididoEm: sql`now()`,
+    })
+  }
+
   /** Se a pessoa é da escola, está ativa e tem o papel do vínculo: professor com vínculo de professor. */
   async pessoaAtivaComPapel(usuarioId: string, papel: PapelDeVinculo): Promise<boolean> {
     const [linha] = await this.banco

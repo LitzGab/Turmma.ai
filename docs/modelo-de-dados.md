@@ -97,8 +97,11 @@ senha **depois da aprovação humana** (D4). No F1 o aluno e o vínculo dele vê
   `CredencialMatricula` (`docs/lgpd.md`). O livre e o reivindicado têm os dois, e nenhum usuário.
 - **Matrícula única por escola e ano**, com `btrim`, nunca no sistema (regra 60, item 6). É o
   alvo do `on conflict do nothing` da gravação: a mesma lista enviada duas vezes, mesmo ao mesmo
-  tempo, entra uma vez. Na prévia, a matrícula que já está na lista da turma sai `ja_existe`; a da
-  lista de outra turma da escola, ou de um aluno da escola (`CredencialMatricula`), sai com erro.
+  tempo, entra uma vez. Na prévia, a matrícula que já está na lista da turma, ou do aluno aprovado
+  nesta turma (8.0), sai `ja_existe`; a da lista de outra turma da escola, ou de outro aluno da escola
+  (`CredencialMatricula`), sai com erro. O nome avulso confere a credencial depois do `insert`, e a
+  gravação lê a lista antes da credencial: a matrícula que está sendo aprovada nunca entra de novo
+  como nome livre (C12).
 - Turma, usuário e autor por FK composta com a escola. A turma com nome na lista não se exclui
   (`CONFLITO`). O autor (`criadoPor`) vira nulo se a pessoa for eliminada, e a autoria fica na
   auditoria (`lista.gravada`).
@@ -196,6 +199,14 @@ cria o aluno (D4; 8.0). Não há `dispositivo`: nada liga o pedido ao navegador 
   autoria na auditoria.
 - O reivindicado não se retira da lista (`CONFLITO`), e o login com a matrícula e a senha do pedido
   pendente responde como senha errada: a credencial só nasce na aprovação.
+- **A decisão** (8.0): o professor com vínculo confirmado na turma e a coordenação leem os pendentes
+  (a coordenação com finalidade, gravando `turma.reivindicacoes_lidas`) e decidem até 40 por vez, uma
+  transação por pedido. A aprovação cria o `Usuario` aluno com o nome da lista, a `CredencialMatricula`
+  com a matrícula da lista e o hash do pedido, o `Vinculo` de aluno `confirmado` com `decididoEm` e quem
+  aprovou em `criadoPor`, e deixa o nome `aprovado`, sem nome nem matrícula; a recusa devolve o nome a
+  `livre`. Nas duas, o hash, a chave e a marca saem, e `reivindicacao.decidida` guarda quem decidiu e
+  como (`professor` ou `coordenacao`). O pedido fora do alcance de quem decide responde como o
+  inexistente, e o já decidido que ele alcança, `ja_decidida`.
 
 ### Ainda não existe — F2
 

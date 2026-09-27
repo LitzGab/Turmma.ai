@@ -21,6 +21,13 @@ cada pedido termina com o resultado dele em texto.
   - O diálogo em `apps/web/src/componentes/` (14.0) e o padrão de foco devolvido
   - `tasks/prd-apresentacao-painel/achados/indice.md`, 7.0: a chave da linha pela posição, o anúncio vazio
 
+## Nota da 8.0 (`conformidade-reviewer` e `revisor-geral`, 1ª rodada)
+
+- A marca `teveMatriculaErrada` aparece como fato sobre o pedido ("alguém tentou este nome com outra matrícula"), nunca
+  como suspeita sobre o aluno (regra 70, item 7).
+- Um 5xx no meio do `decidir` não desfaz os ids já decididos, e a resposta não diz quais: depois de um erro, a tela relê
+  os pedidos da turma.
+
 ## Subtarefas
 
 - [ ] 16.1 — Pedidos do professor na turma: nome, hora e a marca "Houve tentativa com matrícula errada neste nome;

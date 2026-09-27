@@ -84,7 +84,7 @@ deveria existir.
 | Acesso à operação (entrada, falha de entrada e saída, com IP e data; nunca o e-mail digitado) | nossa equipe | segurança do painel e registro de acesso | obrigação legal (Marco Civil, art. 15); segurança | 6 meses, apagado pelo `sistema.expurgar-acesso`; a escola nunca lê |
 | Auditoria da operação (autor, ação — operador criado ou desativado, segundo fator configurado, convite de operador gerado, revogado ou aceito —, operador alvo, data; nunca a senha nem o token do convite) | nossa equipe | prestação de contas sobre quem teve acesso ao painel, e quando | legítimo interesse; segurança (art. 46) | vigência + 5 anos, fora do expurgo de acesso |
 | Registro de acesso à aplicação (IP, data e hora) | todos | segurança | obrigação legal (Marco Civil, art. 15) | 6 meses, inclusive a falha de login sem escola; apagado pelo `sistema.expurgar-acesso` (17.0); fica depois da eliminação do usuário, com o id |
-| Auditoria (quem fez o quê, com finalidade) | todos | prestação de contas à escola e ao titular | execução de contrato e obrigação da escola | vigência + 5 anos |
+| Auditoria (quem fez o quê, com finalidade; só ids, estados e datas, e na decisão da reivindicação o `alunoId` que a aprovação criou, o elo que liga o aluno à aprovação da identidade dele na pergunta de fechamento da regra 20) | todos | prestação de contas à escola e ao titular | execução de contrato e obrigação da escola | vigência + 5 anos |
 
 **IP só em memória, no login** (F1, tarefas 14.0 e 15.0). Além do registro de acesso, o IP de quem pede é usado sem ser
 gravado, com a finalidade de segurança, e esquecido por instância:

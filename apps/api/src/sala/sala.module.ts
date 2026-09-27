@@ -3,6 +3,7 @@ import { Module, type DynamicModule } from '@nestjs/common'
 import type { Redis } from 'ioredis'
 import { BANCO } from '../banco.module.js'
 import { AcessoDaSala } from '../sessao/acesso-da-sala.js'
+import { ContadorDeTentativas } from '../sessao/contador-de-tentativas.js'
 import { HashDeSenha } from '../sessao/hash-de-senha.js'
 import { ContadorEmJanela } from '../sessao/senha/contador-em-janela.js'
 import { SemaforoDeHash } from '../sessao/senha/semaforo-de-hash.js'
@@ -11,7 +12,11 @@ import { AcessoDaTurmaController } from './acesso-da-turma.controller.js'
 import { AcessoDaTurmaService } from './acesso-da-turma.service.js'
 import { sortearCodigoDaTurma, type SorteioDoCodigo } from './codigo-da-sala.js'
 import type { ConfiguracaoSala } from './configuracao-da-sala.js'
+import { DecisaoService } from './decisao.service.js'
 import { avisarSeguroDaSala, JANELA_DOS_LIMITES_DA_SALA_MS, LimitesDaSala } from './limites-da-sala.js'
+import { MinhaTurmaController } from './minha-turma.controller.js'
+import { MinhaTurmaService } from './minha-turma.service.js'
+import { PedidosController } from './pedidos.controller.js'
 import { ReivindicacaoService } from './reivindicacao.service.js'
 import { SalasController } from './salas.controller.js'
 import { SalasService } from './salas.service.js'
@@ -35,16 +40,18 @@ export interface OpcoesDaSala {
 
 /**
  * A entrada do aluno pela turma (A1): o acesso da turma que o professor gera e revoga (4.0) e a página pública da sala,
- * que o aluno abre pelo link ou pelo código (5.0) e onde reivindica o nome (6.0), com os limites dela (7.0). O
- * `AcessoDaSala`, o `SemaforoDeHash`, o `HashDeSenha` e o cliente do Redis de fila do login vêm do `SessaoModule`, global:
- * o semáforo é um só por instância, dividido com o login, e os contadores da sala moram no Redis que não expulsa chave.
+ * que o aluno abre pelo link ou pelo código (5.0) e onde reivindica o nome (6.0), com os limites dela (7.0); os pedidos
+ * que o professor e a coordenação decidem, e a turma que o aluno aprovado vê (8.0). O `AcessoDaSala`, o `SemaforoDeHash`,
+ * o `HashDeSenha`, o `ContadorDeTentativas` do login (que a aprovação zera) e o cliente do Redis de fila do login vêm do
+ * `SessaoModule`, global: o semáforo é um só por instância, dividido com o login, e os contadores da sala moram no Redis
+ * que não expulsa chave.
  */
 @Module({})
 export class SalaModule {
   static com({ config, chaveContador, instancias, logger, medidor, sortearCodigo = sortearCodigoDaTurma }: OpcoesDaSala): DynamicModule {
     return {
       module: SalaModule,
-      controllers: [AcessoDaTurmaController, SalasController],
+      controllers: [AcessoDaTurmaController, SalasController, PedidosController, MinhaTurmaController],
       providers: [
         { provide: AcessoDaTurmaService, useFactory: (banco: Banco) => new AcessoDaTurmaService(banco, config.chaveCodigo, sortearCodigo), inject: [BANCO] },
         {
@@ -69,6 +76,8 @@ export class SalaModule {
             new ReivindicacaoService({ banco, acessoDaSala, semaforo, hash, chaveCodigo: config.chaveCodigo, limites, medidor: medidor ?? medidorGlobal() }),
           inject: [BANCO, AcessoDaSala, SemaforoDeHash, HashDeSenha, LimitesDaSala],
         },
+        { provide: DecisaoService, useFactory: (banco: Banco, contador: ContadorDeTentativas) => new DecisaoService(banco, contador), inject: [BANCO, ContadorDeTentativas] },
+        { provide: MinhaTurmaService, useFactory: (banco: Banco) => new MinhaTurmaService(banco), inject: [BANCO] },
       ],
     }
   }

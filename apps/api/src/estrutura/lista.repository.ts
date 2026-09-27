@@ -54,6 +54,30 @@ export class ListaRepository {
   }
 
   /**
+   * Das matrículas dadas, as de aluno aprovado **nesta** turma no ano em curso (A1, 8.0, E6): a credencial dele, pelo
+   * usuário da linha da lista da turma, que só a linha `aprovado` tem (check `lista_nome_aprovado_sem_nome`) e que já não
+   * guarda a matrícula. Reenviar a lista não as acusa de em uso: saem `ja_existe`, como a matrícula que ainda está na
+   * lista da turma. Tudo na escola do contexto; o ano é a segunda camada, porque a turma é de um ano só.
+   */
+  async aprovadasNaTurma(turmaId: string, matriculas: readonly string[]): Promise<string[]> {
+    if (matriculas.length === 0) return []
+    const escolaId = exigirEscolaDoContexto()
+    const linhas = await this.banco
+      .select({ matricula: credencialMatricula.matricula })
+      .from(credencialMatricula)
+      .innerJoin(listaNome, and(eq(listaNome.escolaId, credencialMatricula.escolaId), eq(listaNome.usuarioId, credencialMatricula.usuarioId)))
+      .where(
+        and(
+          eq(credencialMatricula.escolaId, escolaId),
+          inArray(credencialMatricula.matricula, [...matriculas]),
+          eq(listaNome.anoLetivoId, exigirAnoEmCurso()),
+          eq(listaNome.turmaId, turmaId),
+        ),
+      )
+    return linhas.map((linha) => linha.matricula)
+  }
+
+  /**
    * Grava os nomes na turma, `livre`, com quem gravou, e devolve os que entraram. A matrícula que já está na lista da
    * escola neste ano não entra de novo nem falha (`on conflict do nothing`, C8): a mesma lista gravada duas vezes ao
    * mesmo tempo entra uma vez.

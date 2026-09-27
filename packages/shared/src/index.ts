@@ -309,6 +309,27 @@ export {
   TAMANHO_MAXIMO_CODIGO_DIGITADO,
 } from './sala/salas.js'
 export type { DecisorDaReivindicacao, EstadoDaReivindicacao, PedidoAbrirSala, PedidoReivindicarSala, RespostaReivindicacao, RespostaSalaAberta } from './sala/salas.js'
+export {
+  DECISOES_DE_PEDIDO,
+  esquemaConsultaPedidosDaTurma,
+  esquemaPedidoDaTurma,
+  esquemaPedidoDecidirReivindicacoes,
+  esquemaRespostaDecisao,
+  esquemaRespostaPedidosDaTurma,
+  MAXIMO_DE_PEDIDOS_POR_DECISAO,
+  RESULTADOS_DA_DECISAO,
+} from './sala/pedidos.js'
+export type {
+  ConsultaPedidosDaTurma,
+  DecisaoDePedido,
+  PedidoDaTurma,
+  PedidoDecidirReivindicacoes,
+  RespostaDecisao,
+  RespostaPedidosDaTurma,
+  ResultadoDaDecisao,
+} from './sala/pedidos.js'
+export { esquemaRespostaMinhaTurma } from './sala/minha-turma.js'
+export type { RespostaMinhaTurma } from './sala/minha-turma.js'
 export { FORMATO_SLUG, TAMANHO_MAXIMO_SLUG, TIPOS_DE_REDE } from './estrutura/rede-e-escola.js'
 export type { TipoDeRede } from './estrutura/rede-e-escola.js'
 export type { RespostaEuDoOperador } from './operacao/eu.js'

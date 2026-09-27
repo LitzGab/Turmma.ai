@@ -464,7 +464,7 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       convite por link, WhatsApp e código (P27), que saíram do F2 para a A1 (D71 revista). Antes do
       PRD da A3: a turma aberta com nove abas (P28). Por `/descobrir`: **ranking de participação**
       (P26, bate na 10.2 do `docs/interface.md` e na D57), **Recursos** e **Mural** (P28)
-- [ ] A1 (antes era o F2): o vínculo de aluno criado pela lista de nomes precisa nascer com `decidido_em` preenchido. A lista de alunos do ano encerrado (10.0) só traz quem chegou confirmado ao fim do ano, e hoje só a fixture de teste grava esse campo: sem ele, o aluno some do histórico da turma
+- [x] A1 (antes era o F2): o vínculo de aluno criado pela lista de nomes precisa nascer com `decidido_em` preenchido. A lista de alunos do ano encerrado (10.0) só traz quem chegou confirmado ao fim do ano, e hoje só a fixture de teste grava esse campo: sem ele, o aluno some do histórico da turma — feito na tarefa 8.0 da A1 (`VinculoRepository.criarAlunoConfirmado`, E19)
 
 - [x] ~~Fechar a lista de agentes e o nível de autonomia de cada um~~ — D32 a D36; lista
       revista em 19/09/2026 para seis agentes e em 23/09/2026 para três, um por pessoa da escola,

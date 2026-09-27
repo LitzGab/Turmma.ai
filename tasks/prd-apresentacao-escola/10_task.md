@@ -36,6 +36,12 @@ professor; e nenhuma reivindicação ou aprovação escapa do ano que está send
 - Se um caminho futuro esbarrar no 23514 do check, ele não sai como 500: o erro sai tipado (`privacy-guardian`, 2ª rodada
   da 6.0).
 
+## Nota da 8.0 (`privacy-guardian`, 1ª rodada)
+
+- Desde a 8.0 existe aluno aprovado com linha `aprovado` na `lista_nome` (FK de `usuario_id` sem ação) e pedidos que
+  apontam para ela: o `eliminar` de hoje falha fechado (23503, volta atrás) nesse aluno. A 10.3 (V3) apaga a linha e os
+  pedidos antes do usuário, e o `/validar` confere, porque o `docs/lgpd.md` já promete a eliminação junto com o usuário.
+
 ## Subtarefas
 
 - [ ] 10.1 — `encerrar`, na mesma transação: revoga os acessos do ano; os pendentes viram `encerrada`, sem hash,

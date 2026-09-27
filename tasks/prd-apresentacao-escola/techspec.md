@@ -82,9 +82,13 @@ Sob `/v1`, escopo do contexto; uma célula da `MATRIZ` por rota:
   `{ validadeDias: 1 | 7 | 30 }`, sem padrão na API (o 7 é da tela). O GET, só `expiraEm`, `null` sem acesso vigente. Revogar
   sem acesso vigente (revogado, vencido, nunca gerado) é `NAO_ENCONTRADO`, como o convite já revogado (4.0)
 - `GET turmas/:id/reivindicacoes`, `POST reivindicacoes/decidir` (professor, `turma_vinculada`; coordenador,
-  `unidade`, e a leitura `nominal_auditado`): o pedido traz `teveMatriculaErrada` (sim ou não); até 40 ids, cada um
-  `decidida`, `ja_decidida` ou `nao_encontrada`
-- `GET minha-turma` (aluno, `proprio`): escola, turma e série, sem colegas
+  `unidade`, e a leitura `nominal_auditado`; recurso `reivindicacao` da `MATRIZ`, `ler` e `decidir`): o pedido traz
+  `teveMatriculaErrada` (sim ou não); até 40 ids, cada um `decidida`, `ja_decidida` ou `nao_encontrada`. A leitura traz
+  só os pendentes, `{ id, nome, solicitadaEm, teveMatriculaErrada }`, paginada por id (8.0). O corpo do decidir é
+  `{ ids, decisao: 'aprovar' | 'recusar' }`, sem id repetido; a resposta, 200 `{ resultados: [{ id, resultado }] }`, na
+  ordem do pedido, com o id como o banco o guarda (8.0)
+- `GET minha-turma` (aluno, `proprio`; recurso `minha_turma`): escola, turma (id e nome) e série, sem colegas; com dois
+  vínculos confirmados no ano (a transferência, F2), o mais novo (8.0)
 - `POST salas/abrir` e `…/reivindicar` (anônimas, `no-store`, sem cookie): `{ slug, token | codigo }`; reivindicar
   leva `listaNomeId` (UUID), `matricula` (as regras da lista: uma linha, sem espaço nas pontas, até 40), `senha` (de 12
   até o teto da senha) e `chaveEnvio` (UUID), e responde 200 `{ resultado: 'enviado' }`, igual no pedido novo e no
@@ -120,11 +124,21 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
    `INCR` do nome conta a tentativa na hora, e ela só passa enquanto não exceder o teto: as tentativas ao mesmo tempo no
    mesmo nome não passam juntas (regra 80, item 7). O `teve_matricula_errada` do pedido é lido do mesmo contador depois
    do hash, logo antes da transação, com as erradas que chegaram junto.
-6. Decisão, uma transação por id: `for share` no ano; `update` condicional em id, escola, ano em curso, pendente e,
+6. Decisão, uma transação por id: `for share` no ano (10.0); `update` condicional em id, escola, ano em curso, pendente e,
    para o professor, `exists` do vínculo confirmado na turma do pedido. Aprovada: usuário, credencial com o hash,
    vínculo `aluno` confirmado com `decidido_em`, a `lista_nome` sem nome e matrícula, e o contador de login da
    matrícula zerado. Recusada: o nome volta a `livre`. Hash, chave e `teve_matricula_errada` saem nos dois. Sem
    linha, uma leitura com o mesmo alcance, aplicado **antes** do estado, separa `ja_decidida` de `nao_encontrada`.
+   O condicional escolhe a linha num `select … for update` com todas essas condições, e o `update` vem pela chave: o hash
+   que vai à credencial sai na mesma escrita, e o `returning` só devolve o valor novo; a decisão que chega ao mesmo
+   tempo espera a trava e, relida a linha já decidida, não a acha (C3). O vínculo do aluno tem quem aprovou em
+   `criado_por`. O contador zerado depois do commit é o da origem `outro`: o `educa_dispositivo` que faria a tentativa
+   contar como `conhecido` só nasce de um login certo com a matrícula, que antes da aprovação não existia (8.0).
+7. **A mesma matrícula na lista e na aprovação** (8.0, C12, herdado da 2.0): a aprovação tira a matrícula da lista e a
+   grava na credencial num commit só. O nome avulso confere a credencial **depois** do `insert`: o `insert` que chega
+   no meio da aprovação espera o commit no índice único e entra, e a conferência, num comando novo, acha a credencial e
+   volta tudo com `CONFLITO`. A gravação e a prévia leem a lista **antes** da credencial, cada uma num comando: o
+   anterior ao commit ainda acha a matrícula na lista, e o posterior já a acha na credencial. Sem trava nova.
 
 ## 6. Isolamento
 
@@ -153,7 +167,9 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
   diz, das matrículas que a própria coordenação digitou, quais estão na lista da turma ou em uso na escola, e só a
   coordenação da escola chega a ela (2.0, recomendação do `privacy-guardian`); `acesso_turma.gerado` (turma, validade, `expiraEm` e os ids que ele derrubou em `substituidos`) e
   `acesso_turma.revogado` (a turma), sem token nem código (4.0); `reivindicacao.decidida` com `decidida_como`, sem
-  `teve_matricula_errada`. A coordenação grava `turma.lista_lida` e `turma.reivindicacoes_lidas` a cada leitura; o
+  `teve_matricula_errada` (8.0: a turma, o estado, `decididaComo` e o `alunoId` que a aprovação criou, nulo na recusa, para
+  a pergunta "o que o sistema guarda deste aluno" achar a decisão dele); `turma.reivindicacoes_lidas` com a quantidade e
+  a finalidade (8.0). A coordenação grava `turma.lista_lida` e `turma.reivindicacoes_lidas` a cada leitura; o
   professor, não
 - **Registro de acesso**: as rotas públicas não o gravam, para não ligar o pedido ao IP
 - **`chaveEnvio`**: sorteada por envio, só na memória da página

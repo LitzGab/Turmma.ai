@@ -26,19 +26,24 @@ const registro = new RegistroDeAuditoria()
  * O resultado de cada linha contra a lista da escola neste ano e os alunos da escola (A1, 2.0, E4 a E6), na ordem do
  * texto. `errosDoTexto` são os que o texto sozinho já mostra (`errosDasLinhas`), e vencem o que a busca achar.
  *
- * - Na lista desta turma: `ja_existe`, pela matrícula (RF5: reenviar acrescenta só o que falta).
- * - Na lista de outra turma da escola neste ano, ou de um aluno da escola (`credencial_matricula`): `matricula_em_uso`.
- *   O aluno aprovado nesta turma também, até a 8.0 o marcar `ja_existe`.
+ * - Na lista desta turma, ou de aluno aprovado nesta turma no ano em curso (8.0, E6), que já não está na lista com a
+ *   matrícula: `ja_existe`, pela matrícula (RF5: reenviar acrescenta só o que falta).
+ * - Na lista de outra turma da escola neste ano, ou de outro aluno da escola (`credencial_matricula`): `matricula_em_uso`.
  * - O resto: `entra`.
+ *
+ * A lista é lida **antes** da credencial, cada uma num comando: a aprovação (8.0) tira a matrícula da lista e a grava na
+ * credencial num commit só, e o comando da lista, anterior a ele, ainda a acha na lista; o da credencial, posterior, já a
+ * acha na credencial. A matrícula que está sendo aprovada nunca sai `entra` (C12).
  */
 async function classificar(lista: ListaRepository, turmaId: string, linhas: readonly LinhaLida[], errosDoTexto: ReadonlyArray<ErroDaLinhaDaLista | undefined>): Promise<LinhaDaPrevia[]> {
   const procuradas = linhas.map((linha) => linha.matricula)
   const turmaDaMatricula = new Map((await lista.naLista(procuradas)).map(({ matricula, turmaId: daLista }) => [matricula, daLista]))
   const deAluno = new Set(await lista.comCredencial(procuradas))
+  const aprovadasNaTurma = new Set(await lista.aprovadasNaTurma(turmaId, procuradas))
   /** O resultado da matrícula que passou na conferência do texto, pelo que está gravado. */
   const peloBanco = (matricula: string): Pick<LinhaDaPrevia, 'resultado' | 'erro'> => {
     const naLista = turmaDaMatricula.get(matricula)
-    if (naLista === turmaId) return { resultado: 'ja_existe' }
+    if (naLista === turmaId || aprovadasNaTurma.has(matricula)) return { resultado: 'ja_existe' }
     if (naLista !== undefined || deAluno.has(matricula)) return { resultado: 'erro', erro: 'matricula_em_uso' }
     return { resultado: 'entra' }
   }
@@ -110,13 +115,18 @@ export class ListaService {
    * `POST /v1/turmas/:id/lista/nome`: o nome avulso (o aluno que chega em maio), `livre`, com `lista.gravada` na mesma
    * transação. A matrícula na lista de qualquer turma da escola neste ano (o índice único), ou de um aluno da escola
    * (`credencial_matricula`, porque o aprovado sai da lista sem matrícula): `CONFLITO`, e nada é gravado.
+   *
+   * A credencial é conferida **depois** do `insert` (8.0, C12): a aprovação da mesma matrícula tira a matrícula da lista
+   * e a grava na credencial num commit só. O `insert` que chega no meio dela espera o commit no índice único e, depois
+   * dele, entra; a conferência, num comando novo, já acha a credencial, e a transação volta atrás. Conferida antes do
+   * `insert`, ela não acharia a credencial ainda sem commit, e a lista ganharia um nome livre com a matrícula do aprovado.
    */
   async acrescentar(turmaId: string, pedido: PedidoNomeAvulso): Promise<NomeDaLista> {
     const criado = await this.banco.transaction(async (tx) => {
       if (!(await new TurmaRepository(tx).travarContraExclusao(turmaId))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
       const lista = new ListaRepository(tx)
-      if ((await lista.comCredencial([pedido.matricula])).length > 0) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
       const gravado = await lista.inserir(turmaId, pedido)
+      if ((await lista.comCredencial([pedido.matricula])).length > 0) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
       await registro.gravar(tx, 'lista.gravada', { entidadeId: turmaId, depois: { ids: [gravado.id], gravados: 1, jaExistentes: 0 } })
       return gravado
     })

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import {
   CONTESTACOES_DE_VINCULO,
+  DECISORES_DA_REIVINDICACAO,
   ESTADOS_DE_VINCULO,
   ESTADOS_EM_DECISAO,
   FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR,
@@ -347,6 +348,34 @@ export const ACOES_DE_AUDITORIA = {
     entidade: 'acesso_turma',
     antes: null,
     depois: z.strictObject({ turmaId: z.uuid() }),
+    finalidade: null,
+  },
+  /**
+   * A coordenação leu os pedidos de reivindicação de uma turma (A1, 8.0; regra 20, item 10), com a finalidade, a cada
+   * leitura (também em cada "Atualizar"). `entidadeId` é a turma; `quantidade`, quantos pedidos a página trouxe. O
+   * professor com vínculo confirmado lê sem registro.
+   */
+  'turma.reivindicacoes_lidas': {
+    entidade: 'turma',
+    antes: null,
+    depois: z.strictObject({ quantidade: z.number().int().nonnegative() }),
+    finalidade: z.enum(FINALIDADES_DA_LEITURA_DE_ALUNOS),
+  },
+  /**
+   * Uma pessoa decidiu um pedido de reivindicação (A1, 8.0, RF12, RF13 e RF16; D4). `entidadeId` é o pedido; `turmaId`, a
+   * turma; `estado`, `aprovada` ou `recusada`; `decididaComo`, o professor da turma ou a coordenação, que o RF16 pede
+   * destacada; `alunoId`, o usuário que a aprovação criou, e nulo na recusa. Nunca o nome, a matrícula, o hash nem a marca
+   * de tentativa com matrícula errada (Tech Spec da A1, seção 7).
+   */
+  'reivindicacao.decidida': {
+    entidade: 'reivindicacao',
+    antes: null,
+    depois: z.strictObject({
+      turmaId: z.uuid(),
+      estado: z.enum(['aprovada', 'recusada']),
+      decididaComo: z.enum(DECISORES_DA_REIVINDICACAO),
+      alunoId: z.uuid().nullable(),
+    }),
     finalidade: null,
   },
 } as const satisfies Record<string, DefinicaoDeAcao>

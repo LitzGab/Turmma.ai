@@ -251,8 +251,10 @@ aos cenários.
   `update` sem linha (com a classificação pelo nome da restrição, o (c) recebe a recusa)
 - **C3** (integração) Aprovar × recusar o mesmo pedido; professor × coordenação; o mesmo lote duas vezes: um decide, o
   outro recebe `ja_decidida`; por pedido, exatamente uma auditoria e, quando a aprovação vence, exatamente um usuário e
-  uma credencial. **Quebra sem:** o `update` condicional em
-  `pendente`
+  uma credencial. Também (8.0), sem depender da intercalação: a aprovação parada no meio por um ponto de pausa, e a recusa
+  da coordenação parada na trava do pedido, e não adiante; solta a aprovação, a recusa sai `ja_decidida`. **Quebra sem:** o
+  `update` condicional em `pendente`, feito como `select … for update` com as condições (8.0): o `pendente` na escolha da
+  linha, ou a trava dela
 - **C4** (integração) Reivindicar × retirar o mesmo nome livre: ou o pedido existe e o retirar recebe `CONFLITO`, ou o
   nome saiu e a reivindicação é recusada; nunca pedido de nome apagado nem 5xx. Um ponto de pausa controla a
   intercalação, como no C11. Nos dois arranjos (6.0): a reivindicação parada depois do `update` do nome, e a retirada
@@ -284,6 +286,13 @@ aos cenários.
   segura, e é nela que o `delete` da turma para, já com a turma travada. Também (4.0): o `encerrar` parado depois de mudar o
   ano faz o gerar esperar o `for share` do ano e sair `NAO_ENCONTRADO`, sem acesso no ano encerrado. **Quebra sem:** o
   `travarAnoEmCurso` no gerar
+- **C12** (integração, 8.0, herdado da 2.0) A lista e a aprovação da mesma matrícula ao mesmo tempo. Um ponto de pausa
+  segura a aprovação depois do `update` da `lista_nome` (a matrícula já saiu da lista e a credencial já foi gravada, sem
+  commit): o nome avulso com essa matrícula, em outra turma, espera no índice único e, solta a aprovação, recebe
+  `CONFLITO`; a gravação da lista com ela, sem esperar, recebe `CONFLITO` em outra turma e `ja_existe` na mesma. No fim,
+  nenhuma linha da lista com a matrícula, e uma credencial. **Quebra sem:** a credencial conferida depois do `insert` no
+  avulso (conferida antes, ela ainda não acha a credencial sem commit, e a lista ganha um nome livre com a matrícula do
+  aprovado)
 
 ## L — Limites e hash
 
@@ -354,7 +363,8 @@ aos cenários.
   rotas novas, inclusive 400, 404, 409, 429 e 503, traz senha, hash, token ou código (fora da resposta que o cria),
   matrícula (fora da lista da coordenação) nem campo fora do contrato. **Quebra sem:** o DTO explícito
 - **A4** (integração) Log capturado de todas as escritas e leituras novas: só ids; nada de nome, matrícula, senha,
-  token, código nem slug. **Quebra sem:** o log por id
+  token, código, slug nem o IP de quem chamou (8.0: as varreduras chamam com um `X-Forwarded-For` que o log não pode ter).
+  **Quebra sem:** o log por id
 - **A5** (integração) No banco e na auditoria, o token e o código nunca em claro: `token_hash` é o `hashDoToken`, e
   `codigo_hmac` o HMAC com a chave própria. **Quebra sem:** o hash na gravação
 - **A6** (integração) As rotas públicas não gravam `registro_acesso`. **Quebra sem:** a ausência de chamada ao
@@ -454,7 +464,7 @@ aos cenários.
 | RF2 | W3 |
 | RF3 | E1, E2, C11 |
 | RF4 | E3, E4, E5, W10 |
-| RF5 | E6, E7, C8 |
+| RF5 | E6, E7, C8, C12 |
 | RF6 | E8, E9, R4, C7 |
 | RF7 | E10, E11, W14 |
 | RF8 | E12, P2 |

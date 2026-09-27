@@ -5,10 +5,13 @@ import {
   esquemaRespostaAcessoDaTurma,
   esquemaRespostaAcessoGerado,
   esquemaRespostaConviteDeProfessor,
+  esquemaRespostaDecisao,
   esquemaRespostaDisciplina,
   esquemaRespostaGravacaoDaLista,
   esquemaRespostaListaDaTurma,
   esquemaRespostaListaDeProfessores,
+  esquemaRespostaMinhaTurma,
+  esquemaRespostaPedidosDaTurma,
   esquemaRespostaPreviaDaLista,
   esquemaRespostaReivindicacao,
   esquemaRespostaSalaAberta,
@@ -52,6 +55,17 @@ import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
  * nomes livres da `turmaComVinculo` guardados para ela, com a matrícula certa, e passa também pelas recusas (matrícula
  * errada, nome inexistente, nome já reivindicado), que respondem `REIVINDICACAO_RECUSADA`. O nome reivindicado da escola
  * montada nasce por ela. A senha, as chaves de envio e o hash gravado nunca vão a resposta nem a log.
+ *
+ * Os pedidos da turma (8.0) são da coordenação e também do professor com vínculo confirmado (`abertaAoProfessor`): a
+ * coordenação lê com finalidade e grava `turma.reivindicacoes_lidas`, e o P1 pede com o aluno e com o professor na turma
+ * em que ele não tem vínculo. A decisão aprova o pedido pendente do nome reivindicado da escola montada, e grava
+ * `reivindicacao.decidida`; o id do pedido vai no corpo, e não no caminho: fica fora do I3 por id, que é a I6 de
+ * `decisao.int.test.ts`, e o P1 pede só com o aluno (o professor sem vínculo recebe `nao_encontrada`, também na I6). A
+ * turma do aluno (`GET /v1/minha-turma`) é só do aluno (`autor: 'aluno'`), que tem vínculo confirmado na
+ * `turmaComVinculo`; o P1 pede com a coordenação e com o professor (P4).
+ *
+ * Toda chamada das varreduras sai com o `X-Forwarded-For` de `IP_DO_PEDIDO`, com a API confiando no 127.0.0.1: o A4
+ * procura o IP no log, como procura o slug (Tech Spec da A1, seção 7, "Registro de acesso").
  */
 
 /** Uma escola da A1 montada pela API, como a coordenação faria, com as pessoas e os recursos que as rotas pedem. */
@@ -88,6 +102,8 @@ interface EscolaMontada {
     readonly matriculaReivindicada: string
     readonly paraReivindicar: readonly [NomeParaReivindicar, NomeParaReivindicar]
   }
+  /** O pedido pendente do nome reivindicado (6.0), que a decisão (8.0) aprova. */
+  readonly pedidoPendente: string
   /** Matrícula e hash de senha de um aluno da escola, que nenhuma resposta nem log pode ter (A3, A4). */
   readonly matricula: string
   readonly senhaHash: string
@@ -136,11 +152,16 @@ interface RotaDaA1 {
    */
   readonly alvoDoProfessor?: (escola: EscolaMontada) => string
   /**
-   * Quem chama a rota com sucesso: a coordenação (o padrão) ou o professor com vínculo confirmado no alvo (o acesso da
-   * turma, 4.0). O I3, a auditoria e as variantes pedem com ele.
+   * Quem chama a rota com sucesso: a coordenação (o padrão), o professor com vínculo confirmado no alvo (o acesso da
+   * turma, 4.0) ou o aluno com vínculo confirmado (a turma dele, 8.0). O I3, a auditoria e as variantes pedem com ele.
    */
-  readonly autor?: 'professor'
-  /** Na rota do professor, o recurso da escola montada em que ele **não** tem vínculo: o P1 pede com ele. */
+  readonly autor?: 'professor' | 'aluno'
+  /**
+   * Na rota da coordenação que o professor com vínculo confirmado também chama (os pedidos da turma, 8.0): o P1 não pede
+   * com o professor no alvo, e sim com o aluno e, se houver `alvoSemVinculo`, com o professor na turma sem vínculo dele.
+   */
+  readonly abertaAoProfessor?: true
+  /** Na rota do professor (ou aberta a ele), o recurso da escola montada em que ele **não** tem vínculo: o P1 pede com ele. */
   readonly alvoSemVinculo?: (escola: EscolaMontada) => string
   /** O corpo válido, se a rota lê corpo. */
   readonly corpo?: (escola: EscolaMontada) => Record<string, unknown>
@@ -171,6 +192,9 @@ interface RotaDaA1 {
   readonly auditoria: readonly string[]
 }
 
+/** A finalidade com que a coordenação lê a lista e os pedidos. */
+const FINALIDADE = 'conferencia_de_cadastro'
+
 /** Em minúsculas, como o `detail` do índice único (`lower(nome)`) o escreveria: a sentinela pega o vazamento dos dois jeitos. */
 const NOME_RENOMEADO = `renomeada ${randomUUID().slice(0, 8)}`
 
@@ -197,6 +221,9 @@ const chaveNova = (): string => {
   return chave
 }
 
+/** O IP de onde as varreduras chamam as rotas (TEST-NET-3, RFC 5737), que o log nunca pode ter (A4). */
+const IP_DO_PEDIDO = `203.0.113.${String(randomBytes(1)[0] ?? 0)}`
+
 /** O corpo da reivindicação do nome, pelo código ou pelo link do acesso da escola montada, com uma chave nova. */
 function reivindicacao(escola: EscolaMontada, nome: NomeParaReivindicar, caminho: 'codigo' | 'token' = 'codigo'): Record<string, unknown> {
   const pelo = caminho === 'codigo' ? { codigo: escola.acesso.codigo } : { token: escola.acesso.token }
@@ -208,7 +235,9 @@ function reivindicacao(escola: EscolaMontada, nome: NomeParaReivindicar, caminho
  * `acesso_turma.gerado`, e o revogar `acesso_turma.revogado`. 1.0: renomear e excluir disciplina e turma. Renomear e excluir não gravam
  * auditoria: o RF16 não pede (1_task.md, "Fora do escopo"). 3.0: cadastrar e listar professores, e refazer e revogar o
  * convite de professor; a lista não grava auditoria (são professores, não aluno). 2.0: a prévia, a gravação, o nome
- * avulso, a leitura e a retirada da lista de nomes; a prévia não grava nada, e a leitura grava `turma.lista_lida`.
+ * avulso, a leitura e a retirada da lista de nomes; a prévia não grava nada, e a leitura grava `turma.lista_lida`. 8.0:
+ * os pedidos da turma, que a coordenação lê gravando `turma.reivindicacoes_lidas`; a decisão, que grava
+ * `reivindicacao.decidida`; e a turma do aluno, sem auditoria.
  */
 const ROTAS_DA_A1: readonly RotaDaA1[] = [
   {
@@ -381,10 +410,34 @@ const ROTAS_DA_A1: readonly RotaDaA1[] = [
     resposta: esquemaRespostaReivindicacao,
     auditoria: [],
   },
+  {
+    rota: `GET /v1/turmas/:id/reivindicacoes?finalidade=${FINALIDADE}`,
+    alvo: (escola) => escola.turmaComVinculo,
+    abertaAoProfessor: true,
+    alvoSemVinculo: (escola) => escola.turma,
+    sucesso: 200,
+    resposta: esquemaRespostaPedidosDaTurma,
+    auditoria: ['turma.reivindicacoes_lidas'],
+  },
+  {
+    rota: 'POST /v1/reivindicacoes/decidir',
+    abertaAoProfessor: true,
+    corpo: (escola) => ({ ids: [escola.pedidoPendente], decisao: 'aprovar' }),
+    sucesso: 200,
+    resposta: esquemaRespostaDecisao,
+    auditoria: ['reivindicacao.decidida'],
+  },
+  {
+    rota: 'GET /v1/minha-turma',
+    autor: 'aluno',
+    sucesso: 200,
+    resposta: esquemaRespostaMinhaTurma,
+    auditoria: [],
+  },
 ]
 
-/** A sessão que chama a rota com sucesso: a da coordenação, ou a do professor na rota dele. */
-const autorDa = (rota: RotaDaA1, escola: EscolaMontada): SessaoDeTeste => (rota.autor === 'professor' ? escola.professor : escola.coordenacao)
+/** A sessão que chama a rota com sucesso: a da coordenação, ou a do professor ou do aluno na rota dele. */
+const autorDa = (rota: RotaDaA1, escola: EscolaMontada): SessaoDeTeste => (rota.autor === 'professor' ? escola.professor : rota.autor === 'aluno' ? escola.aluno : escola.coordenacao)
 
 describe('escola montada (A1): as varreduras transversais sobre as rotas novas', () => {
   const bancada = new BancadaDeSessoes()
@@ -462,6 +515,14 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     // O nome reivindicado nasce pela sala (6.0), com o pedido pendente.
     const pedido = { slug, codigo: acesso.codigo, listaNomeId: idDa(matriculaReivindicada), matricula: matriculaReivindicada, senha: SENHA_DA_SALA, chaveEnvio: chaveNova() }
     expect((await chamar(api.url, 'POST', '/v1/salas/reivindicar', undefined, pedido)).status).toBe(200)
+    const { rows: pedidos } = await bancada.pool.query<{ id: string }>(`select id from reivindicacao where escola_id = $1 and estado = 'pendente'`, [escolaId])
+    const pedidoPendente = pedidos[0]?.id
+    if (pedidoPendente === undefined || pedidos.length !== 1) throw new Error('pedido pendente não gravado')
+    // O aluno da escola montada tem vínculo confirmado na `turmaComVinculo`: é a turma que ele vê (8.0).
+    await bancada.pool.query(
+      `insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`,
+      [escolaId, ano, aluno.usuarioId, turmaComVinculo, coordenacao.usuarioId],
+    )
     return {
       escolaId,
       slug,
@@ -475,6 +536,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       nomes,
       matricula,
       senhaHash,
+      pedidoPendente,
       convidado: { usuarioId: convidado.usuarioId, email: convidado.email, token: convidado.token },
       convidadoRevogado: revogado.usuarioId,
       convidadoAceito: aceito.usuarioId,
@@ -504,7 +566,10 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       convites: await linhas('select id, tipo, usuario_id, expira_em, usado_em, revogado_em from convite where escola_id = $1 order by id'),
       lista: await linhas('select id, turma_id, nome, matricula, estado, usuario_id, criado_por from lista_nome where escola_id = $1 order by id'),
       acessos: await linhas('select id, turma_id, token_hash, codigo_hmac, validade_dias, expira_em, revogado_em, criado_por from acesso_turma where escola_id = $1 order by id'),
-      pedidos: await linhas('select id, turma_id, lista_nome_id, chave_envio, senha_hash, teve_matricula_errada, estado from reivindicacao where escola_id = $1 order by id'),
+      pedidos: await linhas(
+        'select id, turma_id, lista_nome_id, chave_envio, senha_hash, teve_matricula_errada, estado, decidida_em, decidida_por, decidida_como from reivindicacao where escola_id = $1 order by id',
+      ),
+      credenciais: await linhas('select id, usuario_id, matricula, senha_hash from credencial_matricula where escola_id = $1 order by id'),
       auditoria: await linhas('select id from auditoria where escola_id = $1 order by id'),
     }
   }
@@ -513,7 +578,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
   function pedir(rota: RotaDaA1, sessao: SessaoDeTeste, alvo: string | undefined, corpo?: Record<string, unknown>): Promise<RespostaHttp> {
     const [verbo, caminho] = rota.rota.split(' ') as [string, string]
     const endereco = alvo === undefined ? caminho : caminho.replace(/:[A-Za-z]+/, alvo)
-    return chamar(api.url, verbo, endereco, rota.anonima === true ? undefined : sessao.token, corpo)
+    return chamar(api.url, verbo, endereco, rota.anonima === true ? undefined : sessao.token, corpo, { 'X-Forwarded-For': IP_DO_PEDIDO })
   }
 
   /** O sucesso da rota por quem a chama (a coordenação, ou o professor na rota dele), com o recurso da escola. */
@@ -551,7 +616,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
   }
 
   beforeAll(async () => {
-    api = await subirApi(medidor.medidor, {}, linhasDeLog)
+    api = await subirApi(medidor.medidor, { ambiente: { LIMITE_PROXIES_CONFIAVEIS: '127.0.0.1' } }, linhasDeLog)
     b = await montar()
   })
 
@@ -600,18 +665,24 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
         const antes = await estadoDe(a)
 
         // Na rota da coordenação, o professor e o aluno; na do professor, a coordenação, o aluno e o professor na turma em
-        // que ele não tem vínculo.
+        // que ele não tem vínculo; na aberta ao professor, o aluno e o professor sem vínculo; na do aluno, a coordenação e o
+        // professor (P4).
+        const semVinculo = (): Array<readonly [string, SessaoDeTeste, string | undefined]> =>
+          rota.alvoSemVinculo === undefined ? [] : [['professor sem vínculo na turma', a.professor, rota.alvoSemVinculo(a)]]
         const tentativas: Array<readonly [string, SessaoDeTeste, string | undefined]> =
           rota.autor === 'professor'
-            ? [
-                ['coordenação', a.coordenacao, rota.alvo?.(a)],
-                ['aluno', a.aluno, rota.alvo?.(a)],
-                ['professor sem vínculo na turma', a.professor, rota.alvoSemVinculo?.(a)],
-              ]
-            : [
-                ['professor', a.professor, rota.alvo?.(a)],
-                ['aluno', a.aluno, rota.alvo?.(a)],
-              ]
+            ? [['coordenação', a.coordenacao, rota.alvo?.(a)], ['aluno', a.aluno, rota.alvo?.(a)], ...semVinculo()]
+            : rota.autor === 'aluno'
+              ? [
+                  ['coordenação', a.coordenacao, rota.alvo?.(a)],
+                  ['professor', a.professor, rota.alvo?.(a)],
+                ]
+              : rota.abertaAoProfessor === true
+                ? [['aluno', a.aluno, rota.alvo?.(a)], ...semVinculo()]
+                : [
+                    ['professor', a.professor, rota.alvo?.(a)],
+                    ['aluno', a.aluno, rota.alvo?.(a)],
+                  ]
         if (rota.alvoDoProfessor !== undefined) tentativas.push(['professor com vínculo confirmado', a.professor, rota.alvoDoProfessor(a)])
         for (const [quem, sessao, alvo] of tentativas) {
           expect(semRequisicao(await pedir(rota, sessao, alvo, rota.corpo?.(a))), quem).toEqual(NAO_ENCONTRADO)
@@ -677,7 +748,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     }
   })
 
-  it('A4: o log das rotas novas, no sucesso e em cada erro, não tem nome, matrícula, hash, token, código da turma, e-mail nem o endereço da escola', async () => {
+  it('A4: o log das rotas novas, no sucesso e em cada erro, não tem nome, matrícula, hash, token, código da turma, e-mail, o endereço da escola nem o IP', async () => {
     const escolas = await Promise.all(ROTAS_DA_A1.map(() => montar()))
     linhasDeLog.length = 0
     let erros = 0
@@ -739,6 +810,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       }
     }
     for (const sentinela of [
+      IP_DO_PEDIDO,
       NOME_RENOMEADO,
       NOME_DO_PROFESSOR,
       DOMINIO_DO_EMAIL,

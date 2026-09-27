@@ -95,6 +95,29 @@ describe('MATRIZ de permissão', () => {
     }
   })
 
+  it('I9: os pedidos da turma são do professor com `turma_vinculada` e da coordenação, a leitura `nominal_auditado` e a decisão `unidade`; aluno e rede, `nunca`', () => {
+    expect(RECURSOS.reivindicacao).toEqual(['ler', 'decidir'])
+    for (const acao of RECURSOS.reivindicacao) expect(alcanceDe('professor', 'reivindicacao', acao), acao).toBe('turma_vinculada')
+    expect(alcanceDe('coordenador', 'reivindicacao', 'ler')).toBe('nominal_auditado')
+    expect(alcanceDe('coordenador', 'reivindicacao', 'decidir')).toBe('unidade')
+    for (const acao of RECURSOS.reivindicacao) {
+      for (const papel of ['aluno', 'rede'] as const) expect(alcanceDe(papel, 'reivindicacao', acao), `${papel} reivindicacao.${acao}`).toBe('nunca')
+    }
+  })
+
+  it('I9: `minha_turma` é só do aluno, com `proprio`, e é a única célula nova da A1 aberta a ele; coordenação, professor e rede, `nunca`', () => {
+    expect(RECURSOS.minha_turma).toEqual(['ler'])
+    expect(alcanceDe('aluno', 'minha_turma', 'ler')).toBe('proprio')
+    for (const papel of ['coordenador', 'professor', 'rede'] as const) expect(alcanceDe(papel, 'minha_turma', 'ler'), papel).toBe('nunca')
+    const recursosDaA1 = ['disciplina', 'turma', 'lista_nome', 'acesso_turma', 'professor', 'reivindicacao', 'minha_turma'] as const
+    const abertasAoAluno = recursosDaA1.flatMap((recurso) =>
+      Object.entries(MATRIZ.aluno[recurso])
+        .filter(([, alcance]) => alcance !== 'nunca')
+        .map(([acao]) => `${recurso}.${acao}`),
+    )
+    expect(abertasAoAluno).toEqual(['minha_turma.ler'])
+  })
+
   it('alcanceDe devolve a célula, e nunca para papel, recurso ou ação que a matriz não declara', () => {
     expect(alcanceDe('professor', 'turma', 'ler')).toBe('turma_vinculada')
     expect(alcanceDe('responsavel', 'turma', 'ler')).toBe('nunca')
