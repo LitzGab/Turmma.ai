@@ -80,9 +80,10 @@ aos cenários.
 
 - **R1** (integração) Em `salas/abrir` e `salas/reivindicar`: token inexistente, vencido, revogado, de ano encerrado,
   de turma excluída (o acesso revogado, a turma excluída, o `cascade` levando o acesso) e de outra escola; código nos
-  mesmos seis casos; slug inexistente. Todos
+  mesmos seis casos; slug inexistente. Em `salas/abrir`, também o token fora do formato, o código fora do alfabeto e o
+  slug fora do formato: o contrato limita só o tamanho, e o formato fica para a busca (5.0). Todos
   com o mesmo status, o mesmo `NAO_ENCONTRADO` e o corpo byte a byte igual. **Quebra sem:** qualquer ramo com texto ou
-  código próprio
+  código próprio; o contrato que conferisse o formato e desse 400
 - **R2** (integração) Em `salas/reivindicar`, com acesso válido: `listaNomeId` inexistente, de outra turma, de outra
   escola, de ano encerrado, com matrícula errada, com a matrícula de outro nome da turma, já reivindicado e já aprovado.
   Todos `REIVINDICACAO_RECUSADA`, corpo igual, nada gravado. **Quebra sem:** um ramo que diga qual dos dois errou
@@ -150,7 +151,8 @@ aos cenários.
 - **E16** (unidade, web) RF9: o texto do WhatsApp traz o nome da escola e o link, e nenhum nome da lista (sentinela).
   **Quebra sem:** o texto montado só com escola e link
 - **E17** (integração) RF10: `salas/abrir` traz só os nomes livres, com `id` e `nome`, sem matrícula; reivindicado e
-  aprovado não aparecem. **Quebra sem:** o filtro `livre`; o DTO
+  aprovado não aparecem. Em ordem de nome e até 500 (`MAXIMO_DE_NOMES_NA_SALA`): com 501 nomes livres, ficam os 500
+  primeiros em ordem de nome (5.0). **Quebra sem:** o filtro `livre`; o DTO; o `orderBy`; o `limit`
 - **E18** (integração) RF13: aprovado, o aluno entra com a matrícula e a senha do pedido; a credencial tem a matrícula
   da lista; o vínculo `aluno` nasce `confirmado` com `decidido_em`; a `lista_nome` fica `aprovado`, sem nome nem
   matrícula e com `usuario_id`; o pedido fica sem hash e sem chave. De ponta a ponta com " 123 ": a lista grava `123`,

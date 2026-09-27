@@ -21,7 +21,7 @@ export class AcessoDaEscolaService {
     if (slug.length > TAMANHO_MAXIMO_SLUG || !FORMATO_SLUG.test(slug)) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
     const escolaId = await this.resolucao.escolaPorSlug(slug)
     if (escolaId === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-    const lido = await naEscolaSemUsuario(escolaId, async () => {
+    const lido = await naEscolaSemUsuario({ escolaId }, async () => {
       const repositorio = new AcessoDaEscolaRepository(this.banco)
       return { nome: await repositorio.nome(), liberados: await repositorio.provedoresLiberados() }
     })

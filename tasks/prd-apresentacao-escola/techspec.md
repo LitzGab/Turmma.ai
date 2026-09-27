@@ -82,7 +82,10 @@ Sob `/v1`, escopo do contexto; uma célula da `MATRIZ` por rota:
   `decidida`, `ja_decidida` ou `nao_encontrada`
 - `GET minha-turma` (aluno, `proprio`): escola, turma e série, sem colegas
 - `POST salas/abrir` e `…/reivindicar` (anônimas, `no-store`, sem cookie): `{ slug, token | codigo }`; reivindicar
-  leva `listaNomeId`, `matricula`, `senha` e `chaveEnvio` (UUID), e responde `enviado`
+  leva `listaNomeId`, `matricula`, `senha` e `chaveEnvio` (UUID), e responde `enviado`. O abrir responde 200
+  `{ turma: { nome }, nomes: [{ id, nome }] }`, os livres em ordem de nome e até 500 (`MAXIMO_DE_NOMES_NA_SALA`, regra 80,
+  itens 3 e 8); o contrato limita o tamanho do slug, do token e do código, e não o formato: token ou código fora do
+  formato é `NAO_ENCONTRADO`, como o inexistente (5.0)
 
 `convites/consultar` e `/aceitar` não mudam (seção 13).
 
@@ -120,7 +123,9 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
 - A rota pública resolve o acesso pelo `AcessoDaSala`, de `apps/api/src/sessao`, que devolve só escola, ano e turma ao
   `sala`. Ele chama `acessoDaSalaPorToken` e `acessoDaSalaPorCodigo`, novos na `ResolucaoDeTenantRepository`, com
   `@SemEscopo` ("o link e o código da sala não dizem a escola"), que exigem o ano `em_curso` e o slug da escola (I1,
-  I2)
+  I2). Os dois recebem o slug e o juntam à escola da linha no mesmo comando; o `sala` calcula o hash do token e o HMAC
+  do código (a chave é dele), e o `AcessoDaSala` roda o resto no contexto da escola e do ano achados, por
+  `naEscolaSemUsuario`, que passou a receber `{ escolaId, anoLetivoId? }` (5.0)
 - `ops:revogar-acessos-sala` recebe o id da escola do log e monta o contexto como os outros `ops:*`, sem `@SemEscopo`;
   id que não é UUID dá `ArgumentoInvalido` (saída 2)
 

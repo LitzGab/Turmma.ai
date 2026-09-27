@@ -10,14 +10,18 @@ import {
   esquemaRespostaListaDaTurma,
   esquemaRespostaListaDeProfessores,
   esquemaRespostaPreviaDaLista,
+  esquemaRespostaSalaAberta,
   esquemaRespostaTurma,
   MENSAGENS_DE_ERRO,
 } from '@educa/shared'
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { z } from 'zod'
+import { hmacDoCodigoDaTurma, sortearCodigoDaTurma } from '../src/sala/codigo-da-sala.js'
+import { hashDoToken } from '../src/sessao/hash-do-token.js'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
 import { chamar, subirApi, type ApiDeTeste, type RespostaHttp } from './api-com-sessao.js'
+import { configuracaoDeTeste } from './configuracao-de-teste.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 
 /**
@@ -37,6 +41,11 @@ import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
  * As rotas do acesso da turma (4.0) são do professor com vínculo confirmado, e não da coordenação (`autor`): o sucesso, o
  * I3, a auditoria e as variantes do A3 e do A4 pedem com o professor, e o P1 com a coordenação, o aluno e o professor
  * na turma em que ele não tem vínculo.
+ *
+ * A página pública da sala (`POST /v1/salas/abrir`, 5.0) é anônima (`anonima`): vai sem token, abre a turma da escola
+ * montada pelo slug e pelo código do acesso dela, e entra na auditoria (nenhum registro), no A3 e no A4. Fica fora do I3,
+ * que é por id no caminho (o dela é o I4 de `salas-abrir.int.test.ts`), e do P1, que é da célula da matriz, que a rota
+ * anônima não tem.
  */
 
 /** Uma escola da A1 montada pela API, como a coordenação faria, com as pessoas e os recursos que as rotas pedem. */
@@ -84,6 +93,11 @@ interface EscolaMontada {
    * aparecem só na resposta que os criou: em nenhuma outra, e nunca em log (A3, A4).
    */
   readonly acesso: { readonly token: string; readonly codigo: string }
+  /**
+   * Um token e um código que não são de acesso nenhum, sorteados na montagem (5.0): os 404 da página pública da sala os
+   * usam, e o A4 os procura no log, como procura o token e o código do acesso vigente.
+   */
+  readonly semAcesso: { readonly token: string; readonly codigo: string }
 }
 
 /** Uma rota nova da A1, com o que as varreduras precisam para chamá-la na escola montada. */
@@ -112,6 +126,18 @@ interface RotaDaA1 {
   readonly alvoSemVinculo?: (escola: EscolaMontada) => string
   /** O corpo válido, se a rota lê corpo. */
   readonly corpo?: (escola: EscolaMontada) => Record<string, unknown>
+  /**
+   * A rota anônima (a página pública da sala, 5.0): vai sem token, e o sucesso e as variantes não dependem de quem chama.
+   * Fica fora do P1, que é da célula da matriz.
+   */
+  readonly anonima?: true
+  /**
+   * Na rota sem parâmetro de id que responde `NAO_ENCONTRADO` a um pedido, os corpos desses pedidos: o A3 e o A4 passam
+   * por eles como passam pelo id sorteado das outras.
+   */
+  readonly inexistentes?: (escola: EscolaMontada) => ReadonlyArray<Record<string, unknown>>
+  /** Outros corpos que dão o mesmo sucesso da rota (a página da sala pelo link, além do código): o A3 e o A4 passam por eles. */
+  readonly outrosSucessos?: (escola: EscolaMontada) => ReadonlyArray<Record<string, unknown>>
   /** O status do sucesso, pela coordenação, com o `alvo` e o `corpo`. */
   readonly sucesso: 200 | 201 | 204
   /** O contrato estrito da resposta de sucesso; sem ele, o corpo é vazio (204). */
@@ -283,6 +309,19 @@ const ROTAS_DA_A1: readonly RotaDaA1[] = [
     sucesso: 204,
     auditoria: ['acesso_turma.revogado'],
   },
+  {
+    rota: 'POST /v1/salas/abrir',
+    anonima: true,
+    corpo: (escola) => ({ slug: escola.slug, codigo: escola.acesso.codigo }),
+    outrosSucessos: (escola) => [{ slug: escola.slug, token: escola.acesso.token }],
+    inexistentes: (escola) => [
+      { slug: escola.slug, codigo: escola.semAcesso.codigo },
+      { slug: escola.slug, token: escola.semAcesso.token },
+    ],
+    sucesso: 200,
+    resposta: esquemaRespostaSalaAberta,
+    auditoria: [],
+  },
 ]
 
 /** A sessão que chama a rota com sucesso: a da coordenação, ou a do professor na rota dele. */
@@ -374,6 +413,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       convidadoAceito: aceito.usuarioId,
       lista: { livre: idDa(matriculaLivre), reivindicado: idDa(matriculaReivindicada), matriculaLivre, matriculaReivindicada },
       acesso: { token: acesso.token, codigo: acesso.codigo },
+      semAcesso: { token: randomBytes(32).toString('base64url'), codigo: sortearCodigoDaTurma() },
     }
   }
 
@@ -392,10 +432,11 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     }
   }
 
-  /** Chama a rota com o id no lugar do parâmetro do caminho, se ela tem um. */
+  /** Chama a rota com o id no lugar do parâmetro do caminho, se ela tem um; a anônima, sem token. */
   function pedir(rota: RotaDaA1, sessao: SessaoDeTeste, alvo: string | undefined, corpo?: Record<string, unknown>): Promise<RespostaHttp> {
     const [verbo, caminho] = rota.rota.split(' ') as [string, string]
-    return chamar(api.url, verbo, alvo === undefined ? caminho : caminho.replace(/:[A-Za-z]+/, alvo), sessao.token, corpo)
+    const endereco = alvo === undefined ? caminho : caminho.replace(/:[A-Za-z]+/, alvo)
+    return chamar(api.url, verbo, endereco, rota.anonima === true ? undefined : sessao.token, corpo)
   }
 
   /** O sucesso da rota por quem a chama (a coordenação, ou o professor na rota dele), com o recurso da escola. */
@@ -424,6 +465,8 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
       todas.push({ esperado: 400, resposta: await pedir(rota, autorDa(rota, escola), rota.alvo?.(escola), { ...rota.corpo(escola), escolaId: escola.escolaId }) })
     }
     if (rota.alvo !== undefined) todas.push({ esperado: 404, resposta: await pedir(rota, autorDa(rota, escola), randomUUID(), rota.corpo?.(escola)) })
+    for (const corpo of rota.inexistentes?.(escola) ?? []) todas.push({ esperado: 404, resposta: await pedir(rota, autorDa(rota, escola), undefined, corpo) })
+    for (const corpo of rota.outrosSucessos?.(escola) ?? []) todas.push({ esperado: rota.sucesso, resposta: await pedir(rota, autorDa(rota, escola), undefined, corpo) })
     todas.push({ esperado: rota.sucesso, resposta: await comSucesso(rota, escola) })
     for (const { esperado, resposta } of todas) expect(resposta.status, `${rota.rota} ${String(esperado)}`).toBe(esperado)
     return todas
@@ -473,6 +516,7 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
 
   describe('P1: quem a célula não abre recebe o 404 do inexistente, com o recurso da própria escola, e nada muda', () => {
     for (const rota of ROTAS_DA_A1) {
+      if (rota.anonima === true) continue
       it(rota.rota, async () => {
         const a = await montar()
         const antes = await estadoDe(a)
@@ -530,6 +574,8 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
         // O token do convite só sai na resposta que o cria: o do professor convidado na montagem, em nenhuma destas.
         // O link e o código do acesso da montagem também: só a resposta do gerar que os criou os traz.
         const sentinelas = [a.coordenacao.token, a.professor.token, a.aluno.token, a.matricula, a.senhaHash, a.convidado.token, DOMINIO_DO_EMAIL, a.acesso.token, a.acesso.codigo]
+        // A página pública da sala (5.0) mostra os nomes livres, e nunca a matrícula de nenhum nem o nome reivindicado.
+        if (rota.anonima === true) sentinelas.push(a.lista.matriculaLivre, a.lista.matriculaReivindicada, a.nomes.nomeReivindicado)
 
         for (const { esperado, resposta } of await variantes(rota, a)) {
           const texto = JSON.stringify(resposta.corpo)
@@ -575,6 +621,8 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
     // O log capturou os erros: sem isso, a busca abaixo passaria num log mudo.
     expect(linhas.filter((linha) => linha['evento'] === 'http.erro')).toHaveLength(erros)
     const todoOLog = linhasDeLog.join('\n')
+    // A chave do HMAC do código da turma na API de teste: o log não tem o código digitado nem o HMAC dele.
+    const chaveDoCodigo = configuracaoDeTeste().sala.chaveCodigo
     for (const escola of escolas) {
       for (const sentinela of [
         ...Object.values(escola.nomes),
@@ -589,6 +637,14 @@ describe('escola montada (A1): as varreduras transversais sobre as rotas novas',
         escola.convidado.token,
         escola.acesso.token,
         escola.acesso.codigo,
+        escola.semAcesso.token,
+        escola.semAcesso.codigo,
+        // O `sala` calcula o SHA-256 do token do link e o `AcessoDaSala` o recebe: nem ele vai a log (5.0).
+        hashDoToken(escola.acesso.token),
+        hashDoToken(escola.semAcesso.token),
+        // E o HMAC do código, que o `AcessoDaSala` recebe no lugar do código.
+        hmacDoCodigoDaTurma(chaveDoCodigo, escola.acesso.codigo),
+        hmacDoCodigoDaTurma(chaveDoCodigo, escola.semAcesso.codigo),
       ]) {
         expect(todoOLog).not.toContain(sentinela)
       }

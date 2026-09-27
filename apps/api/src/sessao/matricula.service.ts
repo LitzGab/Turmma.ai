@@ -88,7 +88,7 @@ export class LoginPorMatricula {
   async #entrar(pedido: PedidoLoginMatricula, origem: OrigemDaRequisicao): Promise<ResultadoDoLogin> {
     const escolaId = await this.#escolaDoSlug(pedido.slug)
     if (escolaId === undefined) return this.#recusar(ESCOLA_DESCONHECIDA, pedido, origem)
-    return naEscolaSemUsuario(escolaId, async () => {
+    return naEscolaSemUsuario({ escolaId }, async () => {
       const { banco, conferencia, contador, conclusao, rebaixamento } = this.dependencias
       const { chave, identificador, conhecido } = this.#chave(escolaId, pedido.matricula, origem)
       const peloIp = !conhecido && origem.acimaDoLimiteDoIp === true

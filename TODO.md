@@ -187,6 +187,19 @@ para o staging".
       Com zero, a migration é `ALTER TABLE <tabela> VALIDATE CONSTRAINT <nome>_escola_id_escola_id_fk`
       nas três, uma por vez (dono: Joaquim)
 
+- [ ] **A página pública da sala só com a 7.0 junto** (A1, tarefa 5.0; `infra-guardian` e `privacy-guardian`): até a
+      7.0, a busca pelo código em `salas/abrir` só tem o `rl:ip` anônimo, e quem sabe o slug de uma escola pode tentar
+      códigos de vários IPs para listar os nomes livres. Nenhum staging exposto nem dado real sem o contador de código
+      errado por escola e a espera de 1 s da 7.0 (dono: Joaquim, no portão do staging)
+- [ ] **`rl:ip:sala` próprio** (Tech Spec da A1, 7c; `infra-guardian` na 5.0): `salas/abrir` divide o `rl:ip` anônimo
+      com as outras rotas anônimas, e a folga (cerca de 1.300/min contra 3.000/min) vale para uma escola. Gatilho: rede
+      com várias escolas atrás do mesmo IP de saída, ou o F2, o que vier antes (dono: Joaquim)
+- [ ] **Prender o `AcessoDaSala` ao `sala` no teste de arquitetura** (`privacy-guardian` na 5.0): ele sai do
+      `SessaoModule` global, e só o `SalaModule` deve injetá-lo, porque abre contexto de escola sem usuário. A 5.0
+      exigia o `arquitetura.test.ts` sem mudar; a asserção entra na próxima tarefa que tocar o teste, e prende também o
+      `anoLetivoId` de `naEscolaSemUsuario` a `sessao/acesso-da-sala.ts`, o único caminho que põe o ano no contexto sem
+      usuário (`privacy-guardian`, 2ª rodada) (dono: Joaquim)
+
 ## Processo e dívida do F0
 
 - [ ] **Quando o F1 fechar: criar `release` e `develop`** (D23 revista). Ordem combinada: o

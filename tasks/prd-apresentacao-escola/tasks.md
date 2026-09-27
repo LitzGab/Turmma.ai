@@ -42,7 +42,7 @@ dela nos dois.
   - [x] 4.6 Testes: E13, E14, E15, C5, C6, C11 (dois arranjos), A5, P2, E12 (acesso), E2 (acesso vigente e
     cascata), A1 (acesso), I3, I9
 
-- [ ] **5.0 — Aluno abre a turma pelo link ou pelo código**
+- [x] **5.0 — Aluno abre a turma pelo link ou pelo código**
   - [ ] 5.1 `acessoDaSalaPorToken` e `acessoDaSalaPorCodigo` com `@SemEscopo`; o `AcessoDaSala` em `sessao`
   - [ ] 5.2 `POST salas/abrir`, anônima, `no-store`, sem cookie nem registro de acesso
   - [ ] 5.3 Documento: os dois `@SemEscopo` na tabela de `docs/modelo-de-dados.md`

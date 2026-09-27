@@ -141,6 +141,23 @@ pela mesma validade. A coordenação não gera acesso.
   encerrado não ganha acesso novo, e o excluir nunca leva, pela cascata, um acesso que acabou de ser
   entregue.
 
+**A página pública da sala** (`POST /v1/salas/abrir`, tarefa 5.0) não tem sessão: o aluno chega com o
+slug da escola e o link ou o código, e a escola, o ano e a turma saem da linha do acesso vigente. As duas
+consultas sem escopo que ela alcança são estas, cada uma com `@SemEscopo` e a justificativa no código:
+
+| Repository e método | O que faz | Justificativa |
+|---|---|---|
+| `ResolucaoDeTenantRepository.acessoDaSalaPorToken` | acha o acesso vigente pelo hash do token, conferido contra a escola do slug, no ano `em_curso` dela | o link e o código da sala não dizem a escola; o token é único no sistema, e o slug é conferido contra a escola da linha no mesmo comando; devolve só escola, ano e turma |
+| `ResolucaoDeTenantRepository.acessoDaSalaPorCodigo` | acha o acesso vigente pelo HMAC do código, buscado já na escola do slug, no ano `em_curso` dela | o link e o código da sala não dizem a escola; o código é único só dentro da escola e a chave do HMAC é uma só, então o mesmo código em duas escolas tem o mesmo HMAC, e só o slug as separa; devolve só escola, ano e turma |
+
+Ficam em `sessao`, e não em `sala`, porque a `ResolucaoDeTenantRepository` é a fronteira da resolução
+de tenant e só `sessao` a importa (teste de arquitetura I1): o `sala` alcança as duas pelo `AcessoDaSala`,
+de `apps/api/src/sessao/acesso-da-sala.ts`, que devolve só a escola, o ano e a turma e roda o resto no
+contexto delas. Inexistente, vencido, revogado, de ano encerrado, de turma excluída (a cascata levou o
+acesso), de outra escola e slug inexistente respondem o mesmo `NAO_ENCONTRADO`. A página mostra o nome
+da turma e os nomes `livre` da lista, com id e nome, sem matrícula, em ordem de nome e até 500
+(`MAXIMO_DE_NOMES_NA_SALA`), lidos a cada abertura; não grava registro de acesso nem lê cookie.
+
 ### Ainda não existe — F2
 
 ```

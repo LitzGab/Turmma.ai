@@ -20,6 +20,7 @@ import { OpenIdClientAdapter } from './externa/openid-client.adapter.js'
 import type { ProvedorExternoPort } from './externa/provedor-externo.port.js'
 import { AcessoDaEscolaController } from './acesso-da-escola.controller.js'
 import { AcessoDaEscolaService } from './acesso-da-escola.service.js'
+import { AcessoDaSala } from './acesso-da-sala.js'
 import { AtividadeController } from './atividade.controller.js'
 import { RegistroDeAtividade } from './atividade.service.js'
 import { AlunosAtivosRepository } from './alunos-ativos.repository.js'
@@ -210,6 +211,9 @@ export class SessaoModule implements OnApplicationShutdown {
           inject: [BANCO, ResolucaoDeTenantRepository, PROVEDOR_EXTERNO],
         },
         { provide: PROVEDOR_EXTERNO, useFactory: () => new OpenIdClientAdapter(opcoes.loginExterno) },
+        // A porta do `sala` para a resolução (A1, tarefa 5.0): a página pública da sala acha a escola, o ano e a turma pelo
+        // link ou pelo código sem importar a `ResolucaoDeTenantRepository`, que não sai deste módulo.
+        { provide: AcessoDaSala, useFactory: (resolucao: ResolucaoDeTenantRepository) => new AcessoDaSala(resolucao), inject: [ResolucaoDeTenantRepository] },
         {
           provide: LoginExterno,
           useFactory: (banco: Banco, resolucao: ResolucaoDeTenantRepository, provedor: ProvedorExternoPort, conclusao: ConclusaoDeLogin) =>
@@ -285,12 +289,13 @@ export class SessaoModule implements OnApplicationShutdown {
         { provide: RegistroDeAtividade, useFactory: (banco: Banco) => new RegistroDeAtividade(banco, opcoes.medidor ?? medidorGlobal()), inject: [BANCO] },
         { provide: SaidaService, useFactory: (banco: Banco) => new SaidaService(banco, opcoes.identidade.ambiente), inject: [BANCO] },
       ],
+      // O `AcessoDaSala` vai ao `SalaModule` (A1, tarefa 5.0), e só ele: a resolução continua dentro deste módulo.
       // `RegistroDeAtividade` é o contrato para o F6: a gravação de resposta de avaliação também conta como uso. O
       // `SemaforoDeHash` e o `HashDeSenha` vão ao aceite do convite do operador (A0, tarefa 5.0): o semáforo é um só por
       // instância, porque o teto que ele guarda é o das threads do processo. Global, como o `BancoModule` e o
       // `LimiteModule`, para o `OperacaoModule` receber a mesma instância sem montar outra.
       global: true,
-      exports: [CLIENTE_REDIS_LOGIN, ContadorDeTentativas, SeguroDoLogin, RegistroDeAtividade, SemaforoDeHash, HashDeSenha],
+      exports: [CLIENTE_REDIS_LOGIN, ContadorDeTentativas, SeguroDoLogin, RegistroDeAtividade, SemaforoDeHash, HashDeSenha, AcessoDaSala],
     }
   }
 

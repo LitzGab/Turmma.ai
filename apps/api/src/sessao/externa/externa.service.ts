@@ -93,7 +93,7 @@ export class LoginExterno {
     if (typeof slug !== 'string' || slug.length > TAMANHO_MAXIMO_SLUG || !FORMATO_SLUG.test(slug)) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
     const escolaId = await this.dependencias.resolucao.escolaPorSlug(slug)
     if (escolaId === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-    const liberado = await naEscolaSemUsuario(escolaId, () => new ContaExternaRepository(this.dependencias.banco).provedorLiberado(provedor))
+    const liberado = await naEscolaSemUsuario({ escolaId }, () => new ContaExternaRepository(this.dependencias.banco).provedorLiberado(provedor))
     if (!liberado) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
 
     try {
@@ -119,7 +119,7 @@ export class LoginExterno {
     const parametros = new URLSearchParams(consulta)
     if (parametros.has('error')) return this.#falhaDoProvedor(emAndamento.slug, apagar)
 
-    return naEscolaSemUsuario(emAndamento.escolaId, async () => {
+    return naEscolaSemUsuario({ escolaId: emAndamento.escolaId }, async () => {
       let contaNoProvedor: ContaNoProvedor
       try {
         contaNoProvedor = await this.dependencias.provedor.concluir(emAndamento.provedor, new URL(`${CAMINHO_DO_RETORNO}?${parametros.toString()}`, retorno), emAndamento)

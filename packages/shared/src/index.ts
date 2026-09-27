@@ -298,6 +298,8 @@ export {
   VALIDADES_DO_ACESSO_DIAS,
 } from './sala/acesso.js'
 export type { PedidoGerarAcesso, RespostaAcessoDaTurma, RespostaAcessoGerado, ValidadeDoAcessoDias } from './sala/acesso.js'
+export { esquemaPedidoAbrirSala, esquemaRespostaSalaAberta, MAXIMO_DE_NOMES_NA_SALA, TAMANHO_MAXIMO_CODIGO_DIGITADO } from './sala/salas.js'
+export type { PedidoAbrirSala, RespostaSalaAberta } from './sala/salas.js'
 export { FORMATO_SLUG, TAMANHO_MAXIMO_SLUG, TIPOS_DE_REDE } from './estrutura/rede-e-escola.js'
 export type { TipoDeRede } from './estrutura/rede-e-escola.js'
 export type { RespostaEuDoOperador } from './operacao/eu.js'

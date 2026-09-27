@@ -15,6 +15,8 @@ const metodosDe = (classe: { prototype: object }) => Object.getOwnPropertyNames(
 describe('ResolucaoDeTenantRepository: toda operação sem escopo é marcada e justificada', () => {
   it('nasce só com os métodos da tabela da seção 6 que a tarefa usa, cada um com @SemEscopo e a justificativa dele', () => {
     expect(metodosDe(ResolucaoDeTenantRepository)).toEqual([
+      'acessoDaSalaPorCodigo',
+      'acessoDaSalaPorToken',
       'acessosDaConta',
       'apagarMfa',
       'ativarMfa',
@@ -73,6 +75,8 @@ describe('ResolucaoDeTenantRepository: toda operação sem escopo é marcada e j
     expect(justificativas['contaParaConvite']).toMatch(/conta é global.*pelo comando ou pelo painel/)
     expect(justificativas['escolaPorSlug']).toMatch(/slug é o que dá a escola/)
     expect(justificativas['escolasDaRedeDoIpDeSaida']).toMatch(/antes de haver escola/)
+    // A1, tarefa 5.0 (I2): a página pública da sala acha o acesso pelo link ou pelo código, sem sessão.
+    for (const metodo of ['acessoDaSalaPorToken', 'acessoDaSalaPorCodigo']) expect(justificativas[metodo], metodo).toMatch(/link e o código da sala não dizem a escola/)
   })
 
   it('a criação de usuário e sessão, o registro de acesso, o /v1/eu, as escritas da renovação, da atividade e da saída, o alvo da redefinição do MFA, o convite na escola, a sessão de origem da troca e a desativação e a eliminação não saem sem escopo: usam a escola do contexto', () => {
