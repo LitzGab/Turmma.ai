@@ -9,6 +9,7 @@ import {
   encerrarSessoesDoUsuario,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
+import { irPelaNavegacao } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -64,7 +65,7 @@ test.describe('inatividade e login por cima da tela', () => {
     await page.goto('/entrar')
     await entrarPorEmail(page, professora, hasTouch)
     await esperarAreaAutenticada(page, professora.nome)
-    await acionar(page, 'Meus vínculos', hasTouch, 'link')
+    await irPelaNavegacao(page, 'Turmas', hasTouch)
 
     const historia = page.getByRole('listitem').filter({ hasText: 'História' })
     await expect(historia).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -98,7 +99,7 @@ test.describe('inatividade e login por cima da tela', () => {
     await acionar(page, /^Entrar$/, hasTouch)
 
     await expect(dialogo(page)).toBeHidden({ timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(page).toHaveURL(/\/vinculos$/)
+    await expect(page).toHaveURL(/\/professor\/turmas$/)
     await expect(historia.getByRole('textbox')).toHaveValue(escrito, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(historia.getByRole('radio', { name: NOME_DA_CONTESTACAO.turma_errada })).toBeChecked()
   })
@@ -146,7 +147,7 @@ test.describe('inatividade e login por cima da tela', () => {
     await page.goto('/entrar')
     await entrarPorEmail(page, professora, hasTouch)
     await esperarAreaAutenticada(page, professora.nome)
-    await acionar(page, 'Meus vínculos', hasTouch, 'link')
+    await irPelaNavegacao(page, 'Turmas', hasTouch)
     const historia = page.getByRole('listitem').filter({ hasText: 'História' })
     await expect(historia).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     if (hasTouch) await historia.getByRole('button', { name: 'Contestar' }).tap()
@@ -207,8 +208,8 @@ test.describe('inatividade e login por cima da tela', () => {
     await page.clock.fastForward(minutos(2))
 
     // A prova é positiva: a aba em uso continua alcançando a API, o que só acontece com a sessão viva no servidor.
-    await acionar(abaEmUso, 'Meus vínculos', hasTouch, 'link')
-    await expect(abaEmUso.getByText('Nenhuma turma alocada ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await irPelaNavegacao(abaEmUso, 'Turmas', hasTouch)
+    await expect(abaEmUso.getByText('A coordenação ainda não alocou você')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(dialogo(abaEmUso)).toBeHidden()
     await expect(dialogo(abaEsquecida)).toBeHidden()
   })
@@ -294,7 +295,7 @@ test.describe('inatividade e login por cima da tela', () => {
     await page.goto('/entrar')
     await entrarPorEmail(page, primeira, hasTouch)
     await esperarAreaAutenticada(page, primeira.nome)
-    await acionar(page, 'Meus vínculos', hasTouch, 'link')
+    await irPelaNavegacao(page, 'Turmas', hasTouch)
 
     const historia = page.getByRole('listitem').filter({ hasText: 'História' })
     await expect(historia).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })

@@ -1,5 +1,6 @@
 import type { Locator, Page, Request } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { lateral, naGaveta } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -168,18 +169,29 @@ test.describe('pele da D72 nos componentes compartilhados', () => {
     await page.keyboard.press('Enter')
     await expect(page.getByRole('heading', { name: `Olá, ${emA.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
 
-    // O cabeçalho: a marca em curvas, o seletor de escola, o link dos vínculos e o "Sair".
-    const cabecalho = page.getByRole('banner')
-    await expect(cabecalho.getByText('Turmma')).toBeVisible()
-    await expect(cabecalho.locator('img[src="/marca/turmma-pinta.svg"]')).toHaveJSProperty('complete', true)
-    expect(await cabecalho.locator('img[src="/marca/turmma-pinta.svg"]').evaluate((imagem) => (imagem as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+    // A casca: a marca em curvas, o seletor de escola, a navegação e o "Sair". No celular a lateral é a gaveta, e ela
+    // abre pelo teclado também.
+    if (naGaveta(page)) {
+      await tabAteOAnel(page, page.getByRole('button', { name: 'Abrir o menu' }), 'botão do menu')
+      await page.keyboard.press('Enter')
+    }
+    const casca = lateral(page)
+    const pinta = casca.locator('img[src="/marca/turmma-pinta.svg"]')
+    await expect(casca.getByText('Turmma', { exact: true })).toBeVisible()
+    await expect(pinta).toHaveJSProperty('complete', true)
+    expect(await pinta.evaluate((imagem) => (imagem as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
     expect(await larguraExcedente(page)).toBe(0)
-    await tabAteOAnel(page, cabecalho.locator('summary'), 'seletor de escola')
-    const link = page.getByRole('link', { name: 'Meus vínculos' })
-    await tabAteOAnel(page, link, 'link Meus vínculos')
-    // O link é `caramelo-texto` sublinhado: laranja como texto só nesse tom (5,1:1), nunca o `caramelo` (3,0:1).
+    await tabAteOAnel(page, casca.locator('summary'), 'seletor de escola')
+    await tabAteOAnel(page, casca.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }), 'item Turmas da navegação')
+    await tabAteOAnel(page, casca.getByRole('button', { name: 'Sair' }), 'botão Sair')
+
+    // O link de texto é `caramelo-texto` sublinhado: laranja como texto só nesse tom (5,1:1), nunca o `caramelo`
+    // (3,0:1). Até a 11.0 ele era o "Meus vínculos" do cabeçalho; na casca da A1 a navegação é de itens, e o link de
+    // texto que sobra é o "página inicial" da página não encontrada.
+    await page.goto('/endereco-que-nao-existe')
+    const link = page.getByRole('link', { name: 'página inicial' })
+    await tabAteOAnel(page, link, 'link página inicial')
     expect(await link.evaluate((elemento) => [getComputedStyle(elemento).color, getComputedStyle(elemento).textDecorationLine])).toEqual(['rgb(180, 82, 15)', 'underline'])
-    await tabAteOAnel(page, page.getByRole('button', { name: 'Sair' }), 'botão Sair')
 
     // Sobre o preto, o anel preto some: ali ele é `caramelo-noite`. Aqui a faixa é montada na página, para provar a regra
     // do `estilos.css` sem depender da API da operação; na faixa de verdade, o "Sair" da casca da operação é conferido

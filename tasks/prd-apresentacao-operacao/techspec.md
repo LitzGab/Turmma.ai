@@ -199,8 +199,9 @@ modificador de opacidade; `e2e/casca.spec.ts` confere os hex no CSS servido e re
 `color-mix(`.
 
 **Área do operador.** `/operacao/convite`, `/entrar`, `/mfa`, `/mfa/configurar` e `/operacao`, num
-chunk com `import()`, fallback `EstadoCarregando` e fronteira de erro com "Tente de novo". Sessão
-em variável de módulo própria, com `BroadcastChannel` próprio. `ACESSO_VENCIDO` renova;
+chunk com `import()`, fallback `EstadoCarregando` e fronteira de erro com "Tentar de novo" (a peça
+genérica da 11.0 da A1, que também leva o foco ao título da falha). Sessão em variável de módulo
+própria, com `BroadcastChannel` próprio. `ACESSO_VENCIDO` renova;
 `SESSAO_ENCERRADA` vai à entrada com "Sua sessão terminou. Entre de novo para continuar."; o 503
 diz "O Turmma está indisponível agora. Tente de novo em instantes" e fica na tela; aviso 2 min antes
 dos 30 min, como o `inatividade.ts`. Casca com a faixa "Operação Turmma" em `noite`, Sair a um

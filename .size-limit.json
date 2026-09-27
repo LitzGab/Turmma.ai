@@ -1,7 +1,13 @@
 [
   {
-    "name": "JS de entrada da web (o chunk index-*.js que toda tela da escola baixa; chunk carregado por import() fica de fora)",
+    "name": "JS de entrada da web (o chunk index-*.js que toda tela da escola baixa): sozinho, para o build sem a entrada reprovar mesmo com um parte-* no lugar",
     "path": "apps/web/dist/assets/index-*.js",
+    "limit": "150 kB",
+    "brotli": true
+  },
+  {
+    "name": "JS do primeiro carregamento da escola (a entrada index-*.js e os pedaços parte-*.js que ela importa junto; conta também o parte-* que só as áreas dividem, o que só aperta o teto; chunk de área e da operação ficam de fora)",
+    "path": ["apps/web/dist/assets/index-*.js", "apps/web/dist/assets/parte-*.js"],
     "limit": "150 kB",
     "brotli": true
   },
@@ -9,6 +15,24 @@
     "name": "JS da área do operador (o chunk operacao-*.js, só por import(); a escola nunca o baixa)",
     "path": "apps/web/dist/assets/operacao-*.js",
     "limit": "60 kB",
+    "brotli": true
+  },
+  {
+    "name": "JS da área da coordenação (o chunk coordenacao-*.js, só por import(), depois da guarda de papel)",
+    "path": "apps/web/dist/assets/coordenacao-*.js",
+    "limit": "30 kB",
+    "brotli": true
+  },
+  {
+    "name": "JS da área do professor (o chunk professor-*.js, só por import(), depois da guarda de papel)",
+    "path": "apps/web/dist/assets/professor-*.js",
+    "limit": "20 kB",
+    "brotli": true
+  },
+  {
+    "name": "JS da área do aluno (o chunk aluno-*.js, só por import(), depois da guarda de papel)",
+    "path": "apps/web/dist/assets/aluno-*.js",
+    "limit": "10 kB",
     "brotli": true
   }
 ]

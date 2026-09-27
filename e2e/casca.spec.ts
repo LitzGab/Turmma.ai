@@ -1,5 +1,6 @@
-import type { Page, Route } from '@playwright/test'
+import type { Locator, Page, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
+import { entrarComoProfessora, gaveta, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -317,3 +318,172 @@ test.describe('casca da web', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 })
+
+/**
+ * W12 da casca da escola (A1, tarefa 11.0; `docs/interface.md` 11.1): a lateral aberta a partir de 1024 px, o trilho de
+ * 768 a 1023 px e a gaveta abaixo de 768 px, sem rolagem horizontal a 360 px, com alvos de 44 px e percorrida pelo
+ * teclado.
+ */
+test.describe('casca da escola', () => {
+  test('W12: abaixo de 768 px, a barra do topo com o "Sair" a um toque, e a gaveta modal que prende e devolve o foco', async ({ page, hasTouch }) => {
+    await page.setViewportSize({ width: 360, height: 800 })
+    await entrarComoProfessora(page, hasTouch)
+
+    // Sem lateral: a barra do topo tem o menu, a pinta, a escola e o "Sair", e nada passa da largura.
+    const menu = page.getByRole('button', { name: 'Abrir o menu' })
+    await expect(menu).toHaveAttribute('aria-expanded', 'false')
+    await expect(page.getByRole('navigation', { name: 'Seções' })).toHaveCount(0)
+    for (const alvo of [menu, page.getByRole('button', { name: 'Sair' }), page.getByRole('link', { name: 'Turmma, página inicial' })]) await esperarAlvoDeToqueEm(alvo)
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+
+    // A gaveta abre por cima, com o foco dentro, e o Tab não chega à tela atrás dela: depois do último item ele vai para
+    // o navegador (o `body`, visto de dentro da página) e volta ao primeiro, como em todo `dialog` modal.
+    await menu.focus()
+    await page.keyboard.press('Enter')
+    await expect(gaveta(page)).toBeVisible()
+    await expect(menu).toHaveAttribute('aria-expanded', 'true')
+    expect(await gaveta(page).evaluate((dialogo) => dialogo.contains(document.activeElement))).toBe(true)
+    const ondeFoi: string[] = []
+    for (let tecla = 0; tecla < 12; tecla++) {
+      await page.keyboard.press('Tab')
+      ondeFoi.push(
+        await gaveta(page).evaluate((dialogo) => (dialogo.contains(document.activeElement) ? 'gaveta' : document.activeElement === document.body ? 'navegador' : 'atrás')),
+      )
+    }
+    expect(ondeFoi).not.toContain('atrás')
+    expect(ondeFoi).toContain('gaveta')
+    await esperarAlvoDeToqueEm(gaveta(page).getByRole('link', { name: 'Turmas' }))
+    await esperarAlvoDeToqueEm(gaveta(page).getByRole('button', { name: 'Sair' }))
+    await esperarAlvoDeToqueEm(gaveta(page).getByRole('button', { name: 'Fechar o menu' }))
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+
+    // Esc fecha, e o foco volta ao botão que abriu.
+    await page.keyboard.press('Escape')
+    await expect(gaveta(page)).toBeHidden()
+    await expect(menu).toBeFocused()
+    await expect(menu).toHaveAttribute('aria-expanded', 'false')
+
+    // O toque fora da lateral também fecha.
+    if (hasTouch) await menu.tap()
+    else await menu.click()
+    await expect(gaveta(page)).toBeVisible()
+    await page.mouse.click(350, 400)
+    await expect(gaveta(page)).toBeHidden()
+  })
+
+  test('W12: no computador, a lateral aberta percorrida só com Tab, com o "Sair" a um clique e do tamanho dos itens', async ({ page, hasTouch }) => {
+    await page.setViewportSize({ width: 1366, height: 768 })
+    const professora = await entrarComoProfessora(page, hasTouch)
+
+    await expect(page.getByRole('button', { name: 'Abrir o menu' })).toHaveCount(0)
+    const paradas = [
+      page.getByRole('link', { name: 'Turmma, página inicial' }),
+      page.getByRole('button', { name: 'Recolher a lateral' }),
+      page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }),
+      page.getByRole('button', { name: 'Sair' }),
+    ]
+    await page.locator('body').focus()
+    for (const parada of paradas) {
+      await page.keyboard.press('Tab')
+      await expect(parada).toBeFocused()
+      expect(await focoVisivel(page)).toBe(true)
+    }
+    // O "Sair" tem a altura e a largura da linha dos itens (P18, D59), e está à vista, sem menu para abrir.
+    const [item, sair] = await Promise.all([page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }).boundingBox(), page.getByRole('button', { name: 'Sair' }).boundingBox()])
+    expect(sair?.height).toBe(item?.height)
+    expect(sair?.width).toBe(item?.width)
+    expect(item?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+    await expect(page.getByText(professora.nome, { exact: true })).toBeVisible()
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  test('W12: recolher a lateral para o trilho fica guardado, o trilho dá a dica pelo teclado, e abrir desfaz', async ({ page, hasTouch }) => {
+    await page.setViewportSize({ width: 1366, height: 768 })
+    await entrarComoProfessora(page, hasTouch)
+
+    const recolher = page.getByRole('button', { name: 'Recolher a lateral' })
+    if (hasTouch) await recolher.tap()
+    else await recolher.click()
+    const abrir = page.getByRole('button', { name: 'Abrir a lateral' })
+    // O botão que tinha o foco saiu com a lateral: o foco vai para o que faz o contrário, e não se perde.
+    await expect(abrir).toBeFocused()
+    await expect(abrir).toHaveAttribute('aria-expanded', 'false')
+    await expect(page.getByText('Turmma', { exact: true })).toHaveCount(0)
+
+    // No trilho, o item é só o ícone, com o nome para o leitor de tela e a dica que aparece ao chegar pelo teclado.
+    const turmas = page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' })
+    await page.keyboard.press('Tab')
+    await expect(turmas).toBeFocused()
+    await expect(turmas.getByText('Turmas', { exact: true }).last()).toBeVisible()
+    await esperarAlvoDeToqueEm(turmas)
+    await esperarAlvoDeToqueEm(page.getByRole('button', { name: 'Sair' }))
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+
+    // A escolha fica guardada neste navegador.
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Abrir a lateral' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.getByRole('button', { name: 'Recolher a lateral' })).toHaveCount(0)
+
+    if (hasTouch) await page.getByRole('button', { name: 'Abrir a lateral' }).tap()
+    else await page.getByRole('button', { name: 'Abrir a lateral' }).click()
+    await expect(page.getByRole('button', { name: 'Recolher a lateral' })).toBeFocused()
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Recolher a lateral' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  })
+
+  test('W12: de 768 a 1023 px, o trilho, e a lateral abre por cima do conteúdo, sem mudar a escolha do computador', async ({ page, hasTouch }) => {
+    await page.setViewportSize({ width: 900, height: 768 })
+    await entrarComoProfessora(page, hasTouch)
+
+    const abrir = page.getByRole('button', { name: 'Abrir a lateral' })
+    await expect(abrir).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Recolher a lateral' })).toHaveCount(0)
+    if (hasTouch) await abrir.tap()
+    else await abrir.click()
+    await expect(gaveta(page)).toBeVisible()
+    await expect(abrir).toHaveAttribute('aria-expanded', 'true')
+    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Turmas'])
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+    await page.keyboard.press('Escape')
+    await expect(gaveta(page)).toBeHidden()
+    await expect(abrir).toBeFocused()
+
+    // Entre o trilho e o celular (o celular deitado que é girado) a gaveta continua montada: aberta, ela segue aberta, e
+    // o botão de cada largura diz isso.
+    if (hasTouch) await abrir.tap()
+    else await abrir.click()
+    await expect(gaveta(page)).toBeVisible()
+    await page.setViewportSize({ width: 360, height: 800 })
+    await expect(gaveta(page)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Abrir o menu' })).toHaveAttribute('aria-expanded', 'true')
+    await page.setViewportSize({ width: 900, height: 768 })
+    await expect(gaveta(page)).toBeVisible()
+    await expect(abrir).toHaveAttribute('aria-expanded', 'true')
+    await page.keyboard.press('Escape')
+    await expect(gaveta(page)).toBeHidden()
+
+    // Abrir por cima aqui não recolhe nem abre a lateral do computador.
+    if (hasTouch) await abrir.tap()
+    else await abrir.click()
+    await expect(gaveta(page)).toBeVisible()
+    await page.setViewportSize({ width: 1366, height: 768 })
+    await expect(page.getByRole('button', { name: 'Recolher a lateral' })).toBeVisible()
+
+    // A gaveta aberta que saiu com a troca de largura não volta aberta, nem o botão diz que ela está.
+    await page.setViewportSize({ width: 900, height: 768 })
+    await expect(abrir).toHaveAttribute('aria-expanded', 'false')
+    await expect(gaveta(page)).toBeHidden()
+  })
+})
+
+async function esperarAlvoDeToqueEm(alvo: Locator): Promise<void> {
+  const caixa = await alvo.boundingBox()
+  expect(caixa, 'alvo sem caixa').not.toBeNull()
+  expect(caixa?.width ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+  expect(caixa?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+}

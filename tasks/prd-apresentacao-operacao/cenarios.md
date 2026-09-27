@@ -131,7 +131,9 @@ identificador. A lista é fechada; mudar exige revisar a spec. Saiu das rodadas 
   anunciado), código e casca da operação
 - **E2** Sessão encerrada volta à entrada com a mensagem; o 503 fica na tela com a mensagem
 - **E3** Aviso 2 min antes dos 30 min parados
-- **E4** Falha ao carregar o chunk mostra a fronteira de erro com "Tente de novo"
+- **E4** Falha ao carregar o chunk mostra a fronteira de erro com "Tentar de novo" (era "Tente de novo" até a 11.0 da A1,
+  quando a fronteira virou a peça genérica de `apps/web/src/componentes/FronteiraDaArea.tsx`, com o texto do `EstadoErro`),
+  e a falha assume com o foco no título dela
 - **E5** O e2e do F1 continua verde na pele nova; o CSS servido tem os hex dos tokens e não tem
   `oklch(` nem `color-mix(`
 

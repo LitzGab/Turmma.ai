@@ -11,6 +11,7 @@ import {
   ligarContaExterna,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
+import { abrirNavegacao, irPelaNavegacao, lateral } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -81,8 +82,9 @@ async function tabAte(page: Page, alvo: Locator, descricao: string, maximoDeTecl
   throw new Error(`${descricao} não foi alcançado pelo teclado em ${String(maximoDeTeclas)} teclas`)
 }
 
-/** Abre o seletor de escola do cabeçalho, que é um `details`. */
+/** Abre o seletor de escola da lateral, que é um `details`; no celular, a lateral é a gaveta, e ela abre antes. */
 async function abrirSeletor(page: Page, hasTouch: boolean): Promise<void> {
+  await abrirNavegacao(page, hasTouch)
   const resumo = page.locator('summary')
   if (hasTouch) await resumo.tap()
   else await resumo.click()
@@ -130,7 +132,7 @@ test.describe('escolher e trocar de escola', () => {
     await acionar(page, `${emA.escolaNome} · professor`, hasTouch)
     await esperarEscola(page, emA.nome, emA.escolaNome)
 
-    await acionar(page, 'Meus vínculos', hasTouch, 'link')
+    await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByRole('main')).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
 
     await abrirSeletor(page, hasTouch)
@@ -157,11 +159,11 @@ test.describe('escolher e trocar de escola', () => {
       await segurada
       await rota.continue()
     })
-    await acionar(page, 'Meus vínculos', hasTouch, 'link')
-    await expect(page.getByText('Carregando os seus vínculos…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await irPelaNavegacao(page, 'Turmas', hasTouch)
+    await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('body')).not.toContainText(alocacao.turmaNome)
     liberar()
-    await expect(page.getByText('Nenhuma turma alocada ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.getByText('A coordenação ainda não alocou você')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('body')).not.toContainText(alocacao.turmaNome)
   })
 
@@ -174,11 +176,13 @@ test.describe('escolher e trocar de escola', () => {
     await esperarEscola(page, aluno.nome, aluno.escolaNome)
 
     // O aluno entra por matrícula e não tem conta (regra 20, item 2): não há outra escola para listar, e é por isso
-    // que a troca de escola nunca começa por ele. O cabeçalho diz só onde ele está.
+    // que a troca de escola nunca começa por ele. A lateral diz só onde ele está.
+    await abrirNavegacao(page, hasTouch)
     await expect(page.locator('summary')).toHaveCount(0)
-    await expect(page.getByRole('banner')).toContainText(aluno.escolaNome)
-    // Vínculo é do professor: o aluno não confirma turma nenhuma (RF4).
-    await expect(page.getByRole('link', { name: 'Meus vínculos' })).toHaveCount(0)
+    await expect(lateral(page)).toContainText(`Escola: ${aluno.escolaNome}`)
+    // Vínculo é do professor: o aluno não confirma turma nenhuma (RF4), e na A1 ele ainda não tem item (W2).
+    await expect(page.getByRole('link', { name: 'Turmas' })).toHaveCount(0)
+    await expect(page.getByRole('navigation', { name: 'Seções' })).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
   })
 
@@ -202,7 +206,7 @@ test.describe('escolher e trocar de escola', () => {
     await entrarPorEmail(page, emA, hasTouch)
     await acionar(page, `${emA.escolaNome} · professor`, hasTouch)
     await esperarEscola(page, emA.nome, emA.escolaNome)
-    await acionar(page, 'Meus vínculos', hasTouch, 'link')
+    await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByRole('main')).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
 
     // E troca para a escola onde coordena. A sessão de origem continua valendo até o código ser aceito: é por isso
@@ -270,7 +274,7 @@ test.describe('vínculos do professor', () => {
     await page.goto('/entrar')
     await entrarPorEmail(page, professora, hasTouch)
     await esperarEscola(page, professora.nome, professora.escolaNome)
-    await acionar(page, 'Meus vínculos', hasTouch, 'link')
+    await irPelaNavegacao(page, 'Turmas', hasTouch)
 
     const matematica = page.getByRole('listitem').filter({ hasText: 'Matemática' })
     const historia = page.getByRole('listitem').filter({ hasText: 'História' })
@@ -316,7 +320,7 @@ test.describe('vínculos do professor', () => {
     await page.goto('/entrar')
     await entrarPorEmail(page, professora, hasTouch)
     await esperarEscola(page, professora.nome, professora.escolaNome)
-    await acionar(page, 'Meus vínculos', hasTouch, 'link')
+    await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByRole('main')).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
 
     // Abre a contestação sem tocar no mouse.
@@ -360,7 +364,7 @@ test.describe('vínculos do professor', () => {
     await page.goto('/entrar')
     await entrarPorEmail(page, professora, hasTouch)
     await esperarEscola(page, professora.nome, professora.escolaNome)
-    await acionar(page, 'Meus vínculos', hasTouch, 'link')
+    await irPelaNavegacao(page, 'Turmas', hasTouch)
 
     const historia = page.getByRole('listitem').filter({ hasText: 'História' })
     await expect(historia).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -407,10 +411,10 @@ test.describe('vínculos do professor', () => {
     await page.goto('/entrar')
     await entrarPorEmail(page, professora, hasTouch)
     await esperarEscola(page, professora.nome, professora.escolaNome)
-    await acionar(page, 'Meus vínculos', hasTouch, 'link')
+    await irPelaNavegacao(page, 'Turmas', hasTouch)
 
     // Carregando.
-    await expect(page.getByText('Carregando os seus vínculos…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
 
     // Erro: a tela fica de pé e oferece tentar de novo (regra 80, item 6).
     falhar = true
@@ -422,10 +426,10 @@ test.describe('vínculos do professor', () => {
     falhar = false
     segurar = false
     await acionar(page, 'Tentar de novo', hasTouch)
-    await expect(page.getByText('Nenhuma turma alocada ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(page.getByRole('main')).toContainText('Fale com ela')
-    // Sem lista, o que resta na ordem de foco é o cabeçalho, e ele continua alcançável com foco visível.
-    await tabAte(page, page.getByRole('link', { name: 'Início' }), 'o caminho de volta no cabeçalho')
+    await expect(page.getByText('A coordenação ainda não alocou você')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.getByRole('main')).toContainText('fale com ela')
+    // Sem lista, o que resta na ordem de foco é a casca, e ela continua alcançável com foco visível.
+    await tabAte(page, page.getByRole('button', { name: 'Sair' }), 'o "Sair" da casca')
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
@@ -434,7 +438,7 @@ test.describe('vínculos do professor', () => {
     segurar = true
     segurada = new Promise<void>((resolver) => (liberar = resolver))
     await page.reload()
-    await expect(page.getByText('Carregando os seus vínculos…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     liberar()
     await expect(page.getByRole('main')).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
     expect(await larguraExcedente(page)).toBe(0)

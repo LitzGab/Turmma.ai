@@ -283,20 +283,22 @@ test.describe('área do operador Turmma', () => {
     await expect(page.getByRole('alert')).toHaveText(TEXTO_DA_SESSAO_ENCERRADA)
   })
 
-  test('E4: o chunk da operação que não chega mostra a fronteira de erro com "Tente de novo" e o título dela na aba, e a nova tentativa carrega', async ({ page, hasTouch }) => {
+  test('E4: o chunk da operação que não chega mostra a fronteira de erro com "Tentar de novo" e o título dela na aba, e a nova tentativa carrega', async ({ page, hasTouch }) => {
     const abortar = (rota: Route) => rota.abort('internetdisconnected')
     await page.route(CHUNK_DA_OPERACAO, abortar)
 
     await page.goto('/operacao/entrar')
     await expect(page.getByRole('alert')).toContainText('Não foi possível carregar a área da operação', { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(page.getByRole('button', { name: 'Tente de novo' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Tentar de novo' })).toBeVisible()
+    // A falha assume com o foco no título dela, que é o que o leitor de tela anuncia (11.0 da A1).
+    await expect(page.getByRole('heading', { name: 'Operação Turmma' })).toBeFocused()
     // A aba diz o que aconteceu, e não fica com o título da página de antes ("Turmma", do `index.html`).
     await expect(page).toHaveTitle('Não foi possível carregar · Operação Turmma')
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
     await page.unroute(CHUNK_DA_OPERACAO, abortar)
-    await acionar(page, 'Tente de novo', hasTouch)
+    await acionar(page, 'Tentar de novo', hasTouch)
     await expect(page.getByRole('heading', { name: 'Entrar na operação' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   })
 

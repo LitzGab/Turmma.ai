@@ -12,10 +12,11 @@ import {
 } from '@educa/shared'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useId, useState, type FormEvent } from 'react'
-import { mensagemDoErro } from '../api/cliente'
-import { confirmarVinculo, consultaMeusVinculos, contestarVinculo } from '../api/vinculos'
-import { Botao } from '../componentes/Botao'
-import { EstadoCarregando, EstadoErro, EstadoVazio } from '../componentes/estado'
+import { mensagemDoErro } from '../../api/cliente'
+import { confirmarVinculo, consultaMeusVinculos, contestarVinculo } from '../../api/vinculos'
+import { Botao } from '../../componentes/Botao'
+import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
+import { useTituloDaTela } from '../../titulo'
 
 /** A contestação que está sendo escrita, no estado da página: a lista pode recarregar por baixo sem levá-la junto. */
 interface ContestacaoEmAndamento {
@@ -33,8 +34,17 @@ function nomeDoVinculo(vinculo: Vinculo): string {
 }
 
 /**
- * Os vínculos do professor na escola ativa (RF4, RF20). Um cartão por turma e disciplina: o professor que dá duas
- * disciplinas na mesma turma tem dois, e confirma ou contesta cada um separadamente.
+ * "Turmas" do professor (D73; `docs/interface.md` 1): as turmas e disciplinas que a coordenação alocou na escola ativa,
+ * no ano em curso (RF4, RF20 do F1). Um cartão por turma e disciplina: o professor que dá duas disciplinas na mesma turma
+ * tem dois, e confirma ou contesta cada um separadamente.
+ *
+ * Os quatro estados (W4): carregando; erro com "Tentar de novo"; vazio, que diz que é a coordenação quem aloca; e com
+ * dado, em dois grupos — **"Confirme suas turmas"**, as que ainda esperam a decisão dele (pendente ou contestada), com
+ * os botões, e **"Suas turmas"**, as já decididas. Sem confirmar, a turma não abre para ele (E12, P2), e é por isso que
+ * as que esperam vêm primeiro.
+ *
+ * É aba de navegação: o `<h1>` existe só para o leitor de tela, e a lateral já diz onde a pessoa está (`docs/interface.md`
+ * 6, P03).
  *
  * - **O estado aparece em texto**, e não só em cor (regra 50, item 11).
  * - **Contestar mostra o que vai acontecer antes de enviar** (regra 50, item 8): a coordenação vê, e o vínculo não dá
@@ -42,10 +52,9 @@ function nomeDoVinculo(vinculo: Vinculo): string {
  *   não escrever nome de aluno ali (regra 20).
  * - **O que está sendo escrito mora aqui, na página**, e não no cartão: a lista some e volta a cada recarga — e a
  *   sessão pode até vencer no meio —, e nada disso pode apagar o que a professora digitou (regra 80, item 6).
- *
- * Quatro estados: carregando, erro com "Tentar de novo", vazio convidando a falar com a coordenação, e a lista.
  */
-export function Vinculos() {
+export function Turmas() {
+  useTituloDaTela('Turmas')
   const cliente = useQueryClient()
   const vinculos = useInfiniteQuery(consultaMeusVinculos)
   const [contestacao, definirContestacao] = useState<ContestacaoEmAndamento | undefined>(undefined)
@@ -65,6 +74,8 @@ export function Vinculos() {
   })
 
   const itens = vinculos.data?.pages.flatMap((pagina) => pagina.itens) ?? []
+  const paraConfirmar = itens.filter((vinculo) => emDecisao(vinculo.estado))
+  const decididas = itens.filter((vinculo) => !emDecisao(vinculo.estado))
   // Uma decisão por vez: dois cliques seguidos no mesmo cartão, ou em dois cartões, são ação oficial repetida.
   const decidindo = confirmar.isPending || contestar.isPending
 
@@ -79,70 +90,86 @@ export function Vinculos() {
     contestar.mutate({ ...contestacao, codigo: contestacao.codigo })
   }
 
-  return (
-    <section className="flex min-w-0 flex-col gap-4" aria-labelledby="titulo-vinculos">
-      <h1 id="titulo-vinculos" className="text-xl font-semibold sm:text-2xl">
-        Meus vínculos
-      </h1>
-      <p className="text-apoio">Confira as turmas e disciplinas que a coordenação alocou para você neste ano letivo.</p>
+  function cartao(vinculo: Vinculo) {
+    return (
+      <li key={vinculo.id} className="rounded-cartao border border-linha bg-superficie p-4">
+        <p className="font-medium break-words text-tinta">{nomeDoVinculo(vinculo)}</p>
+        {/* O estado em texto: a cor sozinha não chega a quem não a distingue nem ao leitor de tela. */}
+        <p className="mt-1 text-apoio">
+          {NOME_DO_ESTADO_DE_VINCULO[vinculo.estado]}
+          {vinculo.contestacao !== undefined && ` · ${NOME_DA_CONTESTACAO[vinculo.contestacao]}`}
+        </p>
+        {confirmar.isError && confirmar.variables === vinculo.id && (
+          <p role="alert" className="mt-3 rounded-controle border border-erro bg-erro-cx p-3 text-erro">
+            {mensagemDoErro(confirmar.error)}
+          </p>
+        )}
+        {emDecisao(vinculo.estado) &&
+          (contestacao?.vinculoId === vinculo.id ? (
+            <FormularioDeContestacao
+              contestacao={contestacao}
+              enviando={contestar.isPending}
+              falha={contestar.isError ? contestar.error : undefined}
+              aoMudar={definirContestacao}
+              aoEnviar={aoContestar}
+              aoCancelar={() => definirContestacao(undefined)}
+            />
+          ) : (
+            <div className="mt-3 flex flex-wrap gap-3">
+              <Botao onClick={() => aoConfirmar(vinculo.id)} disabled={decidindo}>
+                {confirmar.isPending && confirmar.variables === vinculo.id ? 'Confirmando…' : 'Confirmar'}
+              </Botao>
+              <button
+                type="button"
+                onClick={() => definirContestacao({ vinculoId: vinculo.id, codigo: '', complemento: '' })}
+                disabled={decidindo}
+                className="inline-flex min-h-11 items-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-tinta enabled:hover:bg-realce-suave enabled:active:bg-realce disabled:text-inativo"
+              >
+                Contestar
+              </button>
+            </div>
+          ))}
+      </li>
+    )
+  }
 
-      {vinculos.isPending && <EstadoCarregando rotulo="Carregando os seus vínculos…" />}
+  return (
+    <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-turmas">
+      <h1 id="titulo-turmas" className="sr-only">
+        Turmas
+      </h1>
+
+      {vinculos.isPending && <EstadoCarregando rotulo="Carregando as suas turmas…" />}
       {vinculos.isError && <EstadoErro erro={vinculos.error} tentando={vinculos.isFetching} aoTentarDeNovo={() => void vinculos.refetch({ cancelRefetch: false })} />}
       {!vinculos.isPending && !vinculos.isError && itens.length === 0 && (
         <EstadoVazio
-          titulo="Nenhuma turma alocada ainda"
-          descricao="A coordenação ainda não alocou turmas para você neste ano letivo. Fale com ela para ser alocado; assim que isso acontecer, as turmas aparecem aqui para você confirmar."
+          titulo="A coordenação ainda não alocou você"
+          descricao="Quem aloca o professor nas turmas é a coordenação. Quando ela alocar você, a turma aparece aqui para você confirmar; se você já deveria ter turmas neste ano, fale com ela."
         />
       )}
 
-      {itens.length > 0 && (
-        <ul className="flex flex-col gap-3">
-          {itens.map((vinculo) => (
-            <li key={vinculo.id} className="rounded-cartao border border-linha bg-superficie p-4">
-              <p className="font-medium break-words text-tinta">{nomeDoVinculo(vinculo)}</p>
-              {/* O estado em texto: a cor sozinha não chega a quem não a distingue nem ao leitor de tela. */}
-              <p className="mt-1 text-apoio">
-                {NOME_DO_ESTADO_DE_VINCULO[vinculo.estado]}
-                {vinculo.contestacao !== undefined && ` · ${NOME_DA_CONTESTACAO[vinculo.contestacao]}`}
-              </p>
-              {confirmar.isError && confirmar.variables === vinculo.id && (
-                <p role="alert" className="mt-3 rounded-controle border border-erro bg-erro-cx p-3 text-erro">
-                  {mensagemDoErro(confirmar.error)}
-                </p>
-              )}
-              {emDecisao(vinculo.estado) &&
-                (contestacao?.vinculoId === vinculo.id ? (
-                  <FormularioDeContestacao
-                    contestacao={contestacao}
-                    enviando={contestar.isPending}
-                    falha={contestar.isError ? contestar.error : undefined}
-                    aoMudar={definirContestacao}
-                    aoEnviar={aoContestar}
-                    aoCancelar={() => definirContestacao(undefined)}
-                  />
-                ) : (
-                  <div className="mt-3 flex flex-wrap gap-3">
-                    <Botao onClick={() => aoConfirmar(vinculo.id)} disabled={decidindo}>
-                      {confirmar.isPending && confirmar.variables === vinculo.id ? 'Confirmando…' : 'Confirmar'}
-                    </Botao>
-                    <button
-                      type="button"
-                      onClick={() => definirContestacao({ vinculoId: vinculo.id, codigo: '', complemento: '' })}
-                      disabled={decidindo}
-                      className="inline-flex min-h-11 items-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-tinta enabled:hover:bg-realce-suave enabled:active:bg-realce disabled:text-inativo"
-                    >
-                      Contestar
-                    </button>
-                  </div>
-                ))}
-            </li>
-          ))}
-        </ul>
+      {paraConfirmar.length > 0 && (
+        <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-para-confirmar">
+          <h2 id="titulo-para-confirmar" className="text-lg font-semibold text-tinta">
+            Confirme suas turmas
+          </h2>
+          <p className="text-apoio">A coordenação alocou você nestas turmas. Até você confirmar, a turma não abre para você; se algo estiver errado, conteste.</p>
+          <ul className="flex flex-col gap-3">{paraConfirmar.map(cartao)}</ul>
+        </section>
+      )}
+
+      {decididas.length > 0 && (
+        <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-decididas">
+          <h2 id="titulo-decididas" className="text-lg font-semibold text-tinta">
+            Suas turmas
+          </h2>
+          <ul className="flex flex-col gap-3">{decididas.map(cartao)}</ul>
+        </section>
       )}
 
       {vinculos.hasNextPage && (
         <Botao onClick={() => void vinculos.fetchNextPage()} disabled={vinculos.isFetchingNextPage} className="self-start">
-          {vinculos.isFetchingNextPage ? 'Carregando…' : 'Ver mais vínculos'}
+          {vinculos.isFetchingNextPage ? 'Carregando…' : 'Ver mais turmas'}
         </Botao>
       )}
     </section>

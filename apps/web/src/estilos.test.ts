@@ -142,10 +142,10 @@ describe('guarda de cor em apps/web/src (U3)', () => {
     const conteudos = arquivos.map((arquivo) => ({ nome: arquivo.slice(raizDaWeb.length + 1), conteudo: readFileSync(arquivo, 'utf8') }))
     // Sem estas âncoras o caso passaria vazio no dia em que a varredura deixasse de achar arquivo — uma mudança na
     // pasta ou no filtro de extensão —, e `[].flatMap(...)` é `[]`. O botão primário é a cor da marca (9.1), e as
-    // telas de `paginas/` são as que a tarefa 2.0 da A0 migrou.
+    // telas de `paginas/` são as que a tarefa 2.0 da A0 migrou; a de vínculos foi para `areas/professor/` na 11.0 da A1.
     const nomes = conteudos.map(({ nome }) => nome)
     expect(nomes, 'a varredura não está achando os arquivos da web').toContain('componentes/Botao.tsx')
-    expect(nomes.filter((nome) => nome.startsWith('paginas/')).length).toBeGreaterThanOrEqual(10)
+    expect(nomes.filter((nome) => nome.startsWith('paginas/') || nome.startsWith('areas/')).length).toBeGreaterThanOrEqual(10)
     expect(conteudos.find(({ nome }) => nome === 'componentes/Botao.tsx')?.conteudo).toMatch(/\bbg-caramelo\b/)
     const reprovadas = conteudos.flatMap(({ nome, conteudo }) => classesReprovadas(nome, conteudo))
     expect(reprovadas, 'troque pelo token da D72 (Tech Spec da A0, seção 9; docs/interface.md 9.9)').toEqual([])

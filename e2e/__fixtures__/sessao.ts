@@ -270,7 +270,7 @@ export function codigoDoAutenticador(segredoBase32: string, deslocamentoSegundos
   return new TOTP({ secret: Secret.fromBase32(segredoBase32) }).generate({ timestamp: Date.now() + deslocamentoSegundos * 1_000 })
 }
 
-/** A turma com os vínculos que a coordenação alocou para o professor, como a tela `/vinculos` os recebe (RF4). */
+/** A turma com os vínculos que a coordenação alocou para o professor, como a tela "Turmas" do professor os recebe (RF4). */
 export interface AlocacaoDeTeste {
   readonly turmaNome: string
   /** Um vínculo por disciplina, todos `pendente`: é o professor com duas disciplinas na mesma turma. */

@@ -392,8 +392,10 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] `apps/web/src/operacao/paginas/Uso.tsx`: o `VazioDoUso` (`:114`) repete o `EstadoVazio`; e o número longo com
       `wrap-anywhere` (`:75`, `:101`) pode quebrar no meio entre 640 e ~760 px (`revisor-geral` e `frontend-reviewer` da
       8.0). Destino: próxima tarefa em `Uso.tsx` (a A2 traz o consumo de IA para esta tela)
-- [ ] `apps/web/src/rotas.tsx:53`: o `componentWillUnmount` da fronteira de erro não tem teste (`test-engineer` da 10.0).
-      Destino: próxima tarefa que tocar `rotas.tsx`
+- [x] ~~`apps/web/src/rotas.tsx:53`: o `componentWillUnmount` da fronteira de erro não tem teste (`test-engineer` da
+      10.0)~~ — feito na 11.0 da A1: a fronteira saiu para `apps/web/src/componentes/FronteiraDaArea.tsx`, o título da
+      falha passou para o gancho `useTituloDaAba` da tela da falha, e o W5 de `e2e/areas.spec.ts` prova que sair dela pelo
+      "Sair" devolve a aba ao título de antes
 - [ ] `apps/web/src/operacao/paginas/Convite.tsx`: o `hashchange` não zera `aceitando`, e o botão do link novo fica
       desligado ("Salvando…") enquanto o aceite do link anterior está no ar, sem dizer por quê; o descarte do desafio só é
       seguro por isso, e a dependência precisa de um comentário junto ao `aoMudarOFragmento` (`revisor-geral` e

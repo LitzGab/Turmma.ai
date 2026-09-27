@@ -413,8 +413,9 @@ aos cenários.
   | Pública | "Se o seu nome não aparece, chame o professor"; vencido: o texto do W9 pelo caminho usado e, no link, o campo do código com o foco | nomes livres |
   | Minha turma | nunca vazia | turma, sem colegas |
 - **W5** Fronteira: o `import()` de `coordenacao-*` e de `professor-*` abortado mostra "Confira a conexão e tente de
-  novo" e troca o título da aba, que volta ao sair (o `componentWillUnmount`, pendência da A0b). **Quebra sem:** a
-  fronteira em volta da área
+  novo" e troca o título da aba, que volta ao sair (pelo gancho `useTituloDaAba` da tela da falha, que substituiu o
+  `componentWillUnmount` pendente da A0b, também pelo "Sair"). **Quebra sem:** a fronteira em volta da área; o título da
+  falha
 - **W6** Decisão: o diálogo de "Aprovar N" (`oficial`) mostra turma, nomes e efeito; pela coordenação, o aviso de
   auditoria; "Recusar" (`perigo`) pede confirmação e diz que o nome volta; clique duplo em confirmar manda um pedido só;
   um `ja_decidida` aparece como "Já decidido por outra pessoa", e um `nao_encontrada` como "Este pedido não está mais

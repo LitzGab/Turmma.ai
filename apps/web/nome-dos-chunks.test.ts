@@ -4,11 +4,12 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build, type Rolldown } from 'vite'
 import { afterEach, describe, expect, it } from 'vitest'
-import { nomeDoChunk } from './nome-dos-chunks'
+import { AREAS_DA_ESCOLA, nomeDoChunk } from './nome-dos-chunks'
 
-// B1 (o nome que o teto de 60 kB mede) e B2 (a entrada da escola não leva nada de `src/operacao/`), sobre o build de
-// verdade do Vite, e não sobre o fonte: é o bundler que decide em que chunk cada módulo cai, e um `import` estático
-// esquecido, ou uma configuração de chunk que arraste módulos, só aparece aqui.
+// B1 (o nome que o teto de 60 kB mede) e B2 (a entrada da escola não leva nada de `src/operacao/`), e o mesmo para a área
+// de cada papel da escola (A1, tarefa 11.0), sobre o build de verdade do Vite, e não sobre o fonte: é o bundler que decide
+// em que chunk cada módulo cai, e um `import` estático esquecido, ou uma configuração de chunk que arraste módulos, só
+// aparece aqui.
 
 const raizDaWeb = dirname(fileURLToPath(import.meta.url))
 const diretorios: string[] = []
@@ -63,7 +64,35 @@ describe('nome dos chunks', () => {
     expect(nomeDoChunk({ facadeModuleId: '/repo/apps/web/src/paginas/index.tsx' })).toBe('assets/parte-[name]-[hash].js')
     expect(nomeDoChunk({ facadeModuleId: null })).toBe('assets/parte-[name]-[hash].js')
   })
+
+  it('o chunk que sai de src/areas/<papel>/ leva o nome da pasta; o que está na raiz de src/areas/, não', () => {
+    expect(nomeDoChunk({ facadeModuleId: '/repo/apps/web/src/areas/coordenacao/rotas.tsx' })).toBe('assets/coordenacao-[hash].js')
+    expect(nomeDoChunk({ facadeModuleId: '/repo/apps/web/src/areas/professor/rotas.tsx' })).toBe('assets/professor-[hash].js')
+    expect(nomeDoChunk({ facadeModuleId: 'C:\\repo\\apps\\web\\src\\areas\\aluno\\rotas.tsx' })).toBe('assets/aluno-[hash].js')
+    // A tabela da navegação é da entrada, e uma pasta que só começa com o nome de uma área não é a área.
+    expect(nomeDoChunk({ facadeModuleId: '/repo/apps/web/src/areas/navegacao.ts' })).toBe('assets/parte-[name]-[hash].js')
+    expect(nomeDoChunk({ facadeModuleId: '/repo/apps/web/src/areas/professores/rotas.tsx' })).toBe('assets/parte-[name]-[hash].js')
+  })
 })
+
+/** Os módulos de `src/areas/<papel>/` que um chunk leva. */
+function modulosDeArea(chunk: Chunk): string[] {
+  return chunk.moduleIds.filter((id) => AREAS_DA_ESCOLA.some((area) => id.replaceAll('\\', '/').includes(`/apps/web/src/areas/${area}/`)))
+}
+
+/** Os chunks que o chunk dado importa estaticamente, e os que eles importam: o que o navegador baixa junto com ele. */
+function importadosJunto(chunks: readonly Chunk[], chunk: Chunk): Chunk[] {
+  const vistos = new Map<string, Chunk>()
+  const pendentes = [...chunk.imports]
+  while (pendentes.length > 0) {
+    const nome = pendentes.pop() ?? ''
+    const importado = chunks.find((outro) => outro.fileName === nome)
+    if (importado === undefined || vistos.has(nome)) continue
+    vistos.set(nome, importado)
+    pendentes.push(...importado.imports)
+  }
+  return [...vistos.values()]
+}
 
 describe('o build de verdade da web', () => {
   it('B2: a entrada da escola não leva nenhum módulo de src/operacao/, e a área sai num chunk operacao-* só por import()', async () => {
@@ -86,6 +115,28 @@ describe('o build de verdade da web', () => {
     expect(foraDoChunkDaArea).toEqual([])
     // Nenhum outro chunk tem o nome da entrada, que o teto de 150 kB mediria como se fosse ela.
     expect(chunks.filter((chunk) => !chunk.isEntry && /^assets\/index-/.test(chunk.fileName))).toEqual([])
+  })
+
+  it('as áreas da escola: um chunk por papel, só por import(), fora da entrada, e o primeiro carregamento inteiro no teto', async () => {
+    const chunks = await chunksDoBuild({ raiz: raizDaWeb, configFile: join(raizDaWeb, 'vite.config.ts') })
+    const entrada = chunks.find((chunk) => chunk.isEntry)
+    if (entrada === undefined) throw new Error('build sem chunk de entrada')
+
+    expect(modulosDeArea(entrada)).toEqual([])
+    for (const area of AREAS_DA_ESCOLA) {
+      const daArea = chunks.filter((chunk) => new RegExp(`^assets/${area}-[^/]+\\.js$`).test(chunk.fileName))
+      expect(daArea, `chunk ${area}-*`).toHaveLength(1)
+      expect(daArea[0]?.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith(`/apps/web/src/areas/${area}/rotas.tsx`))).toBe(true)
+      expect(entrada.imports).not.toContain(daArea[0]?.fileName)
+      expect(entrada.dynamicImports).toContain(daArea[0]?.fileName)
+      // Nenhum módulo da área cai fora do chunk dela, onde o teto dela não o mediria.
+      const foraDaArea = chunks.filter((chunk) => chunk !== daArea[0]).flatMap((chunk) => chunk.moduleIds.filter((id) => id.replaceAll('\\', '/').includes(`/apps/web/src/areas/${area}/`)))
+      expect(foraDaArea).toEqual([])
+    }
+    // O que a entrada baixa junto é primeiro carregamento, e o teto de 150 kB mede `index-*` e `parte-*`: qualquer outro
+    // nome aqui (uma área, a operação) ficaria fora da conta, ou entraria no primeiro carregamento sem ninguém ver.
+    expect(importadosJunto(chunks, entrada).map((chunk) => chunk.fileName).filter((nome) => !/^assets\/parte-[^/]+\.js$/.test(nome))).toEqual([])
+    for (const junto of importadosJunto(chunks, entrada)) expect(modulosDeArea(junto)).toEqual([])
   })
 
   it('controle do B2: um import estático de src/operacao/ na entrada aparece como módulo da operação no chunk de entrada', async () => {

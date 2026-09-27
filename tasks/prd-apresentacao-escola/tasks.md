@@ -1,7 +1,7 @@
 # Tarefas — A escola montada pela coordenação (A1)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 10 de 17 concluídas
+**Status:** 11 de 17 concluídas
 
 Aprovadas pelo Joaquim em 26/09/2026. O mapa de cenários por tarefa saiu do `test-engineer`: cada id do
 `cenarios.md` está em uma tarefa, ou dividido entre tarefas com a parte de cada uma dita no `N_task.md`. Os
@@ -82,12 +82,12 @@ dela nos dois.
   - [x] 10.4 Expurgo com o `acesso_turma` e o `@SemEscopo` reescrito
   - [x] 10.5 Testes: V1, V3, V4, V5, C10
 
-- [ ] **11.0 — Web: casca por papel, guarda, título, menu da pessoa e fronteira genérica**
-  - [ ] 11.1 Fronteira de erro genérica em `componentes/`, com o teste do `componentWillUnmount`
-  - [ ] 11.2 Áreas por papel em `import()`, guarda de papel e título por rota
-  - [ ] 11.3 Casca da 11.1, com o menu da pessoa (P18); "Turmas" do professor
-  - [ ] 11.4 Tetos dos chunks novos no `.size-limit.json`
-  - [ ] 11.5 Testes: W2, W5; W4 e W12 da casca; o e2e da A0b junto
+- [x] **11.0 — Web: casca por papel, guarda, título, menu da pessoa e fronteira genérica**
+  - [x] 11.1 Fronteira de erro genérica em `componentes/`, com o teste do `componentWillUnmount`
+  - [x] 11.2 Áreas por papel em `import()`, guarda de papel e título por rota
+  - [x] 11.3 Casca da 11.1, com o menu da pessoa (P18); "Turmas" do professor
+  - [x] 11.4 Tetos dos chunks novos no `.size-limit.json`
+  - [x] 11.5 Testes: W2, W5; W4 e W12 da casca; o e2e da A0b junto
 
 - [ ] **12.0 — Web: seletor de escola (P30) e a "Minha turma" do aluno**
   - [ ] 12.1 `/v1/eu` com escola, rede e papel de cada acesso

@@ -251,6 +251,27 @@ decisão (10.0) travam o ano no começo da transação delas; o ano que deixou d
 - **Seletor** (P30): escola, rede e papel, sem número de turmas; a troca faz `resetQueries` com o token novo
 - **Fronteira**: a `FronteiraDaOperacao` vira genérica em `componentes/`, com `Suspense` e `EstadoCarregando` em volta
   de cada área nova, que tem teto no `.size-limit.json`
+- **Decidido na 11.0** (divergências registradas em `11_task.md`):
+  - Endereços: `/` é a página inicial dos três papéis enquanto não há Estrutura (13.0) nem "Nova conversa" (A2); as
+    áreas ficam em `/coordenacao`, `/professor` e `/aluno`, e "Turmas" em `/professor/turmas` (era `/vinculos`). A área da
+    coordenação e a do aluno nascem sem tela, e respondem "Página não encontrada" até a tarefa da tela dela
+  - A guarda segue com o papel que já conhecia enquanto o `/v1/eu` refaz depois de uma sessão nova (o login por cima),
+    para a área não desmontar com o rascunho dentro (regra 80, item 6)
+  - Linhas da lateral com 44 px também no computador, e não 36: o "Sair" é ação principal (D59, regra 50, item 2a) e tem
+    o tamanho dos itens (P18). Abaixo de 768 px o "Sair" fica também na barra do topo, a um toque
+  - Orçamento: com três áreas, o Rolldown separa React e o roteador num `parte-*` que a entrada importa junto. O teto de
+    150 kB mede `index-*` e `parte-*` (o primeiro carregamento, `docs/interface.md` 10.4), e o `index-*` sozinho continua
+    medido, para o build sem entrada reprovar. Tetos de partida: coordenação 30 kB, professor 20 kB, aluno 10 kB; a 12.4,
+    a 13.4 e a 15.3 os ajustam
+  - Ícones: `lucide-react` entra, ícone a ícone (`docs/interface.md` 9.4)
+  - A fronteira põe o título da falha pelo gancho da tela da falha (`useTituloDaAba`), e não no `componentDidCatch`: a
+    rota de antes devolve o título dela no efeito de desmontagem, que roda depois e apagaria o da falha. Ao assumir, ela
+    fecha a gaveta e leva o foco ao título da falha, também na página inteira da operação; e o botão dela diz "Tentar de
+    novo", como o `EstadoErro` (era "Tente de novo" na operação; E4 da A0 e `techspec.md` da A0 acompanham)
+  - A página inicial do professor aponta para Turmas ("Confira e confirme as suas turmas em Turmas"); a da coordenação
+    e a do aluno dizem que o que eles fazem aparece nas próximas versões, até a 13.0 e a 12.0
+  - A gaveta fecha também na troca de escola e na troca de pessoa (o seletor vai de `/` para `/`), e não só na troca de
+    endereço
 - **Decisão**: "Aprovar N" (`oficial`) revisa turma, nomes e efeito, e avisa a coordenação da auditoria; "Recusar"
   (`perigo`) confirma; depois, texto por pedido (W6). Até 40, explicado. O pedido mostra se houve tentativa com
   matrícula errada no nome. Para o professor, atualiza a cada 15 s com a aba visível (W15); a coordenação usa

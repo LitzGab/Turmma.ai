@@ -990,7 +990,8 @@ ilustração da entrada em SVG ou WebP.
   não abre
 - **"Nova conversa"** é item da lista, como no ChatGPT, e não botão cheio: o laranja da tela é do
   botão de enviar
-- **Itens** em linhas de 36 px (44 px no celular), canto de 10 px, ícone de 18 px + rótulo.
+- **Itens** em linhas de 44 px, também no computador (A1, tarefa 11.0: o "Sair" é ação principal e tem o tamanho dos
+  itens), canto de 10 px, ícone de 18 px + rótulo.
   Selecionado tem **três pistas, não uma**: fundo `realce`, texto `tinta` em peso 600 e um
   filete de 3 px em `caramelo` na borda esquerda — o fundo sozinho dá 1,1:1 e some na tela de um
   Chromebook de entrada. O mockup mostra só o fundo; o produto leva as três
@@ -1031,7 +1032,7 @@ quando ele está ligado para a turma, e em **Atividades e provas** quando não e
 |---|---|
 | ≥ 1024 px (o Chromebook de 1366 × 768 cai aqui) | Lateral aberta de 260 px; recolhe para o trilho por escolha, e a escolha fica guardada |
 | 768 a 1023 px | Trilho de 56 px por padrão; abre por cima do conteúdo |
-| < 768 px, a partir de 360 px | Barra de 56 px no topo com o botão do menu, a pinta e a escola; a lateral vira gaveta; conteúdo em uma coluna com 16 px de margem; tabela vira lista |
+| < 768 px, a partir de 360 px | Barra de 56 px no topo com o botão do menu, a pinta, a escola e o **Sair**, a um toque (D59; A1, tarefa 11.0); a lateral vira gaveta; conteúdo em uma coluna com 16 px de margem; tabela vira lista |
 
 Na conversa, em qualquer largura, a caixa de pedido fica presa embaixo e a lista rola por trás.
 
