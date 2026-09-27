@@ -65,6 +65,25 @@ describe('ContadorEmJanela: os contadores por IP do login (15.0), no Redis de fi
     expect(contador.proporcaoDoSeguro).toBe(0)
   })
 
+  it('L8 (A1, 7.0): a instância com janela de 10 min dá à chave o prazo de 10 min no Redis, e o restante do Retry-After é o prazo dela; sem a chave, 0', async () => {
+    const dezMinutos = 10 * 60_000
+    const contador = new ContadorEmJanela(cliente, CHAVE, { janelaMs: dezMinutos })
+    const chave = contador.chaveDe('sala:teste-janela', randomUUID())
+    expect(await contador.somar(chave)).toEqual({ valor: 1, doSeguro: false })
+    const prazo = await cliente.pttl(chave)
+    expect(prazo).toBeGreaterThan(dezMinutos - 5_000)
+    expect(prazo).toBeLessThanOrEqual(dezMinutos)
+    const restante = await contador.restanteMs(chave)
+    expect(restante).toBeGreaterThan(dezMinutos - 5_000)
+    expect(restante).toBeLessThanOrEqual(prazo)
+    expect(await contador.restanteMs(contador.chaveDe('sala:teste-janela', randomUUID()))).toBe(0)
+    // A do login, sem a opção, continua com o minuto.
+    const doLogin = new ContadorEmJanela(cliente, CHAVE)
+    const chaveDoLogin = doLogin.chaveDe(PREFIXO_EMAIL_POR_IP, ipSorteado())
+    await doLogin.somar(chaveDoLogin)
+    expect(await cliente.pttl(chaveDoLogin)).toBeLessThanOrEqual(JANELA_DO_CONTADOR_POR_IP_MS)
+  })
+
   it('concorrência (regra 80, item 7): vinte somas ao mesmo tempo, de duas instâncias, dão os valores de 1 a 20, cada um uma vez', async () => {
     const [instancia1, instancia2] = [new ContadorEmJanela(cliente, CHAVE), new ContadorEmJanela(cliente, CHAVE)]
     const chave = instancia1.chaveDe(PREFIXO_EMAIL_POR_IP, ipSorteado())
@@ -76,7 +95,7 @@ describe('ContadorEmJanela: os contadores por IP do login (15.0), no Redis de fi
     const fora = criarClienteRedisDaApi('redis://127.0.0.1:9', 'teste-janela-fora', () => undefined)
     try {
       const relogio = relogioParado()
-      const contador = new ContadorEmJanela(fora, CHAVE, relogio)
+      const contador = new ContadorEmJanela(fora, CHAVE, { relogio })
       const chave = contador.chaveDe(PREFIXO_FALHAS_POR_IP_NA_ESCOLA, `${ESCOLA}|${ipSorteado()}`)
       for (let soma = 1; soma <= 3; soma++) expect(await contador.somar(chave)).toEqual({ valor: soma, doSeguro: true })
       expect(await contador.ler(chave)).toEqual({ valor: 3, doSeguro: true })

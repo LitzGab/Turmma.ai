@@ -115,7 +115,11 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
    linha: a transação volta atrás, e um comando novo relê a chave na escola e na turma do acesso. Achou, `enviado`,
    sem contar; não achou, `REIVINDICACAO_RECUSADA`. O nome da restrição nunca é lido.
 5. **Quem conta.** Toda falha que rodou o hash conta no teto da turma. No contador do nome, só a matrícula errada:
-   depois da volta atrás, uma leitura com escola, ano e turma do acesso confere o nome ainda `livre`.
+   **antes do hash** (7.0), uma leitura com escola, ano e turma do acesso confere o nome `livre` e com matrícula diferente
+   da digitada (a chave de outro pedido da escola enviada com a matrícula certa, do E21, não trava o nome); sendo, o
+   `INCR` do nome conta a tentativa na hora, e ela só passa enquanto não exceder o teto: as tentativas ao mesmo tempo no
+   mesmo nome não passam juntas (regra 80, item 7). O `teve_matricula_errada` do pedido é lido do mesmo contador depois
+   do hash, logo antes da transação, com as erradas que chegaram junto.
 6. Decisão, uma transação por id: `for share` no ano; `update` condicional em id, escola, ano em curso, pendente e,
    para o professor, `exists` do vínculo confirmado na turma do pedido. Aprovada: usuário, credencial com o hash,
    vínculo `aluno` confirmado com `decidido_em`, a `lista_nome` sem nome e matrícula, e o contador de login da
@@ -131,7 +135,11 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
   `@SemEscopo` ("o link e o código da sala não dizem a escola"), que exigem o ano `em_curso` e o slug da escola (I1,
   I2). Os dois recebem o slug e o juntam à escola da linha no mesmo comando; o `sala` calcula o hash do token e o HMAC
   do código (a chave é dele), e o `AcessoDaSala` roda o resto no contexto da escola e do ano achados, por
-  `naEscolaSemUsuario`, que passou a receber `{ escolaId, anoLetivoId? }` (5.0)
+  `naEscolaSemUsuario`, que passou a receber `{ escolaId, anoLetivoId? }` (5.0). Pelo código (7.0), o `AcessoDaSala` lê
+  antes a escola do slug (`escolaPorSlug`, o `@SemEscopo` que o login por matrícula já usa), numa consulta que devolve a
+  conexão, e roda entre ela e a busca do acesso a `GuardaDoCodigo` que o `sala` passa (a espera de 1 s acima do teto) e,
+  sem acesso achado, a contagem do código errado; o slug inexistente responde `NAO_ENCONTRADO` sem contar. O
+  `AcessoDaSalaAchado` leva também o id do acesso, que entra na chave do contador do nome
 - `ops:revogar-acessos-sala` recebe o id da escola do log e monta o contexto como os outros `ops:*`, sem `@SemEscopo`;
   id que não é UUID dá `ArgumentoInvalido` (saída 2)
 
@@ -168,8 +176,12 @@ Sem IA. Não se aplica.
 - **`rl:ip`**: `salas/*` contam no anônimo (3.000/min); a escola dá ~1.300/min. Várias escolas da mesma rede atrás de
   um IP de saída passam do teto: limite conhecido da A1, e o `rl:ip:sala` fica para o F2
 - **Falhas**: banco fora, 503; Redis fora, o seguro em memória, teto dividido por `LIMITE_INSTANCIAS_API`
-- **Métrica**: `sala.reivindicacao{resultado}` e `sala.limite_atingido{tipo}` (`escola`, `nome`, `turma`), sem
-  escola (`METRICAS_COM_ESCOLA` é fechada), que vai no log
+- **Métrica**: `sala.reivindicacao{resultado}` (`enviado`, `reenvio`, `recusada`, `limite`, `sem_acesso`, `indisponivel`,
+  `erro`) e `sala.limite_atingido{tipo}` (`escola`, `nome`, `turma`), somada a cada pedido que um limite segura, sem
+  escola (`METRICAS_COM_ESCOLA` é fechada), que vai no log `sala.limite_atingido` com o `tipo` e o `escolaId`, uma linha por
+  escola, tipo e janela (7.0): a marca é mais uma chave do contador da sala (`sala:aviso-limite`, HMAC do tipo e da
+  escola), e vale para todas as instâncias. A linha sai pelo logger JSON do processo, que o `main.ts` passa ao
+  `AppModule` (o `Logger` do Nest só leva o evento); as duas métricas têm painel em `infra/grafana/paineis/fundacao.json`
 - **Alerta** "Código da turma errado em massa numa escola": `sala.limite_atingido{tipo="escola"}` acima de 10 por
   minuto, somadas as instâncias, por 5 min (`infra/grafana/alertas/sala-codigo-errado-por-escola.yaml`); a rajada
   legítima não chega ao teto. O runbook, na entrada de mesmo nome, revoga os acessos da escola do log, sem ler IP
@@ -185,7 +197,13 @@ Sem IA. Não se aplica.
 | hash sem pedido criado, por turma | 150 | `tipo="turma"`; hash rebaixado no balde da escola, nunca recusa |
 
 O reenvio com a mesma chave não conta em nenhum; o paralelo de uma matrícula errada conta duas vezes no nome, aceito.
-Não há contador por navegador. `LIMITE_EXCEDIDO` sai com `Retry-After`.
+Não há contador por navegador. `LIMITE_EXCEDIDO` sai com `Retry-After`, o que falta da janela da chave do nome. "Acima" é a
+partir do teto: o 1.001º código, a 6ª matrícula e o 151º hash já são segurados (7.0). Os três contadores ficam num
+`ContadorEmJanela` próprio da sala, no Redis de fila e com a chave de HMAC do login (`LOGIN_CHAVE_CONTADOR`), e o seguro
+dele entra em `limite.seguro_ativo`. O teto da escola é brando: a leitura antes da busca e a soma depois dela deixam a
+rajada em paralelo passar do teto pelo que estiver em voo, e a espera atrasa cada tentativa sem limitar o volume, que só
+o `rl:ip` limita; quem responde ao volume é o alerta e o `ops:revogar-acessos-sala` (9.0). Risco aceito: quem conhece o
+slug percebe pela espera que a escola está acima do teto; não diz nada de pessoa.
 
 **Corridas**: C1 a C11; colisão do código sorteia de novo num savepoint. **Travas das escritas em turma** (4.0, pendência
 da 1.0): trava o ano em curso em `FOR SHARE` a escrita que faz nascer no ano algo que o encerramento precisa desligar ou

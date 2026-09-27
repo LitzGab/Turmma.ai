@@ -7,6 +7,8 @@ export interface NovoPedido {
   readonly listaNomeId: string
   readonly chaveEnvio: string
   readonly senhaHash: string
+  /** Se o nome teve matrícula errada pelo mesmo acesso na janela do contador (7.0): só sim ou não. */
+  readonly teveMatriculaErrada: boolean
 }
 
 /**
@@ -45,8 +47,8 @@ export class ReivindicacaoRepository {
   }
 
   /**
-   * Grava o pedido `pendente`, com a chave, o hash e `teve_matricula_errada` em `false` (a 7.0 passa a lê-lo do contador
-   * do nome). O nome de outra escola ou inexistente sobe como o 23503 da FK; o nome que já tem pendente e a chave já
+   * Grava o pedido `pendente`, com a chave, o hash e o `teve_matricula_errada` que o serviço leu do contador do nome
+   * (7.0). O nome de outra escola ou inexistente sobe como o 23503 da FK; o nome que já tem pendente e a chave já
    * gravada na escola, como o 23505 dos índices únicos. Quem chama decide, sem ler o nome da restrição.
    */
   async inserirPendente(novo: NovoPedido): Promise<void> {
@@ -57,7 +59,7 @@ export class ReivindicacaoRepository {
       listaNomeId: novo.listaNomeId,
       chaveEnvio: novo.chaveEnvio,
       senhaHash: novo.senhaHash,
-      teveMatriculaErrada: false,
+      teveMatriculaErrada: novo.teveMatriculaErrada,
     })
   }
 }

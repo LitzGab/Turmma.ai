@@ -129,6 +129,7 @@ export {
   PREFIXO_LIMITE_IP_OPERACAO,
   PREFIXO_LIMITE_OPERADOR,
   PREFIXO_LIMITE_USUARIO,
+  segundosParaTentarDeNovo,
 } from './limite/chaves.js'
 export { acimaDoLimiteDoIp, GuardaDeLimite, ipDaRequisicao } from './limite/guarda-limite.js'
 export { LimitadorDeRequisicoes, lerConfiguracaoLimite } from './limite/limitador.js'

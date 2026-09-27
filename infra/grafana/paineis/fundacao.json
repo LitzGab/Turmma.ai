@@ -1432,6 +1432,104 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Limites da sala atingidos",
+      "description": "Pedidos por minuto da página pública da sala (salas/abrir e salas/reivindicar) segurados por um limite, por tipo: escola (mais de 1.000 códigos errados numa escola em 10 min; a busca pelo código espera 1 s, e o código certo continua entrando), nome (5 matrículas erradas no mesmo nome livre pelo mesmo acesso; LIMITE_EXCEDIDO só àquele nome até o \"Gerar novo\") e turma (150 hashes sem pedido numa turma em 10 min; o hash vai rebaixado, nunca recusa). Sem escola: o id vai no log sala.limite_atingido, uma linha por escola, tipo e janela. O alerta de código errado em massa entra na tarefa 9.0 da A1.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 115
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (tipo) (increase(sala_limite_atingido_total[1m]))",
+          "legendFormat": "{{tipo}}",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Reivindicações de nome na sala",
+      "description": "Pedidos por minuto em salas/reivindicar, por resultado: enviado (pedido novo), reenvio (a mesma chave), recusada, limite (nome travado), sem_acesso (link ou código que não vale), indisponivel (503 do semáforo do hash) e erro. Sem escola: a série por escola seria a contagem de quem entrou. Na rajada do primeiro dia, enviado e recusada sobem juntos; limite e indisponivel altos pedem o runbook.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 115
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (resultado) (increase(sala_reivindicacao_total[1m]))",
+          "legendFormat": "{{resultado}}",
+          "range": true
+        }
+      ]
     }
   ]
 }

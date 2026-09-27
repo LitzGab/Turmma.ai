@@ -87,3 +87,11 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-26 22:37:10 | `privacy-guardian` | 2ª | APROVADO | `6_task` | Na 10.0, o 23514 do `reivindicacao_pendente_com_nome` não deve chegar ao cliente como 500. Se a ordem das escritas quebrar num caminho futuro, o erro precisa… |
 | 2026-09-26 22:37:13 | `infra-guardian` | 2ª | APROVADO | `6_task` | nenhuma nova. As duas da 1ª rodada seguem abertas no 9_task.md e no TODO.md. |
 | 2026-09-26 22:37:14 | `revisor-geral` | 2ª | APROVADO | `6_task` | nenhuma nova. |
+| 2026-09-27 00:09:19 | `test-engineer` | 1ª | REPROVADO | `7_task` | O teto do nome não vale com pedidos em paralelo, e nenhum teste de paralelo prova esse teto. |
+| 2026-09-27 00:32:42 | `test-engineer` | 2ª | APROVADO | `7_task` | Uma errada ainda pode escapar da marca do E30. Uma errada que faça a leitura do nome livre depois que a certa leu a marca (`reivindicacao.service.ts:109`), mas… |
+| 2026-09-27 00:34:26 | `privacy-guardian` | 1ª | APROVADO | `7_task` | `docs/lgpd.md:73`: a linha "Reivindicação" diz que a marca registra tentativa com matrícula errada "antes do pedido". Pelo `reivindicacao.service.ts:380`, a… |
+| 2026-09-27 00:34:43 | `tenancy-guardian` | 1ª | APROVADO | `7_task` | `apps/api/src/sessao/acesso-da-sala.ts:54`: quem conhece o slug de uma escola percebe pelo tempo de resposta (a espera de 1 s) que ela está acima do teto de… |
+| 2026-09-27 00:34:47 | `infra-guardian` | 1ª | APROVADO | `7_task` | apps/api/src/sala/limites-da-sala.ts:128 com packages/nucleo/src/limite/chaves.ts:80. Com o Redis de fila fora, o teto do nome vira max(1, floor(5 /… |
+| 2026-09-27 00:35:01 | `revisor-geral` | 1ª | APROVADO | `7_task` | `tasks/prd-apresentacao-escola/cenarios.md:315`: o L6, escrito nesta tarefa, diz "porque a leitura depois da volta atrás confere também a matrícula". Isso… |
+| 2026-09-27 00:46:54 | `test-engineer` | 3ª | APROVADO | `7_task` | `limites-da-sala.int.test.ts:109`: `linhasDeLog` só é zerado no L3, então nas outras linhas o isolamento entre testes depende do filtro por `escolaId`. Hoje… |
+| 2026-09-27 00:47:47 | `test-engineer` | 4ª | APROVADO | `7_task` | Ordem da tabela em `tasks/prd-apresentacao-escola/7_task.md:232-233`: a linha da 3ª rodada ficou antes de uma linha da 1ª rodada do `test-engineer` (a de… |

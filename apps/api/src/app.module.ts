@@ -7,6 +7,7 @@ import {
   GuardaDeLimite,
   GuardaDePermissao,
   GuardaDeSessao,
+  criarLogger,
   InterceptorDeUso,
   LimitadorDeRequisicoes,
   medidorGlobal,
@@ -14,6 +15,7 @@ import {
   SessaoRepository,
   type Banco,
   type LimitesDeRequisicao,
+  type LoggerBase,
   type Meter,
 } from '@educa/nucleo'
 import { Module, type DynamicModule } from '@nestjs/common'
@@ -31,8 +33,13 @@ import { ProntidaoController } from './sistema/prontidao.controller.js'
 import { SistemaModule } from './sistema/sistema.module.js'
 import { UsoModule } from './uso.module.js'
 
-/** O que só a montagem de teste passa ao `AppModule`. */
+/** O que a montagem passa ao `AppModule`: o `main.ts` passa só o `logger`; o resto, só o teste. */
 export interface OpcoesDeMontagem {
+  /**
+   * O logger JSON do processo, o mesmo do `configurarAplicacao`, para a linha que precisa de campo além do evento
+   * (`sala.limite_atingido`, com o tipo e a escola). Sem ele, um logger JSON próprio no stdout.
+   */
+  readonly logger?: LoggerBase
   readonly medidor?: Meter
   readonly prazoDoRedisDeLoginMs?: number
   /** O sorteio do código da turma que o teste da colisão (C6) repete. */
@@ -42,10 +49,11 @@ export interface OpcoesDeMontagem {
 @Module({})
 export class AppModule {
   /**
-   * @param opcoes só o teste passa: `medidor`, para ler as métricas do login e da sessão (sem ele, vale o medidor
-   * global); `prazoDoRedisDeLoginMs`, que fixa o prazo do cliente Redis do login qualquer que seja a configuração. Sem
-   * ela, quem decide é `LOGIN_REDIS_PRAZO_MS`, por `config.login.prazoDoRedisMs`; `sortearCodigoDaSala`, o sorteio do
-   * código da turma que o teste da colisão repete (C6). Nenhuma das opções vem do ambiente: o `main.ts` monta sem opção.
+   * @param opcoes o `main.ts` passa só o `logger`, e o teste passa também o resto: `medidor`, para ler as métricas do
+   * login e da sessão (sem ele, vale o medidor global); `prazoDoRedisDeLoginMs`, que fixa o prazo do cliente Redis do
+   * login qualquer que seja a configuração. Sem ela, quem decide é `LOGIN_REDIS_PRAZO_MS`, por
+   * `config.login.prazoDoRedisMs`; `sortearCodigoDaSala`, o sorteio do código da turma que o teste da colisão repete (C6).
+   * Nenhuma das opções vem do ambiente.
    */
   static com(config: ConfiguracaoApi, opcoes: OpcoesDeMontagem = {}): DynamicModule {
     return {
@@ -66,7 +74,14 @@ export class AppModule {
         }),
         EstruturaModule,
         ProfessoresModule,
-        SalaModule.com({ config: config.sala, ...(opcoes.sortearCodigoDaSala === undefined ? {} : { sortearCodigo: opcoes.sortearCodigoDaSala }) }),
+        SalaModule.com({
+          config: config.sala,
+          chaveContador: config.login.chaveContador,
+          instancias: config.limite.instancias,
+          logger: opcoes.logger ?? criarLogger({ servico: 'api' }),
+          ...(opcoes.medidor === undefined ? {} : { medidor: opcoes.medidor }),
+          ...(opcoes.sortearCodigoDaSala === undefined ? {} : { sortearCodigo: opcoes.sortearCodigoDaSala }),
+        }),
         OperacaoModule.com(config.identidade, { dispositivo: config.login.dispositivo, mfa: config.login.mfa, ...(opcoes.medidor === undefined ? {} : { medidor: opcoes.medidor }) }),
         SistemaModule.com({
           rotasSinteticas: config.rotasSinteticas,

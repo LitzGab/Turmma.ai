@@ -24,11 +24,11 @@ export interface ApiDeTeste {
  * lista, para o teste procurar nela o que nunca pode ir a log; sem ela, o log fica mudo.
  */
 export async function subirApi(medidor: Meter, sobreposicao: SobreposicaoDeTeste = {}, linhasDeLog?: string[], montagem: OpcoesDeMontagem = MONTAGEM_DE_TESTE): Promise<ApiDeTeste> {
-  const app = await NestFactory.create(AppModule.com(configuracaoDeTeste(sobreposicao), { ...montagem, medidor }), { logger: false })
   const logger =
     linhasDeLog === undefined
       ? criarLogger({ servico: 'api-teste', nivel: 'silent' })
       : criarLogger({ servico: 'api-teste', nivel: 'trace', destino: { write: (linha: string) => linhasDeLog.push(linha) } })
+  const app = await NestFactory.create(AppModule.com(configuracaoDeTeste(sobreposicao), { ...montagem, medidor, logger }), { logger: false })
   configurarAplicacao(app, logger, medidor)
   await app.listen(0, '127.0.0.1')
   return { app, url: `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}` }

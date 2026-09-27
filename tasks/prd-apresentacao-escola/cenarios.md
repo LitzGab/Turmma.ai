@@ -54,7 +54,7 @@ aos cenários.
   livre de uma turma de B e um UUID aleatório. As 21 respostas são idênticas (status, código e corpo), sempre
   `REIVINDICACAO_RECUSADA`; nenhuma chave de contador por nome é criada no Redis nem no seguro em memória. A mesma
   sequência num nome livre de T1: `REIVINDICACAO_RECUSADA` nas cinco primeiras e `LIMITE_EXCEDIDO` na 6ª e na 7ª.
-  **Quebra sem:** a turma do acesso na leitura que confere o nome `livre` depois da volta atrás (sem ela, o nome de T2
+  **Quebra sem:** a turma do acesso na leitura que confere o nome `livre` (antes do hash, desde a 7.0) (sem ela, o nome de T2
   tranca na 6ª e confirma que existe). Escola e ano ficam como segunda camada: com a turma, tirar só um deles não deixa
   o teste vermelho
 
@@ -175,7 +175,7 @@ aos cenários.
   `reivindicacao_segredo_so_pendente` recusa (23514) hash, chave ou `teve_matricula_errada` fora do pendente e o
   pendente sem um deles; o check `reivindicacao_pendente_com_nome` recusa o pendente sem nome e o `delete` do nome de um
   pendente; a chave é única na escola e não no sistema, e há um pendente por nome (23505); o pedido
-  novo grava `teve_matricula_errada` em `false` até a 7.0. **Quebra sem:** a
+  novo grava `teve_matricula_errada` lido do contador do nome (7.0, E30). **Quebra sem:** a
   leitura da chave, na escola e na turma do acesso, antes dos limites e depois da volta atrás (sem a turma, T2 recebe
   `enviado`); a chave anulada na decisão; o check e os únicos
 - **E22** (integração) O aluno que errou o login antes de ser aprovado entra logo depois da aprovação, sem espera: a
@@ -204,7 +204,9 @@ aos cenários.
   true`; outro nome, reivindicado de primeira, com `false`; a resposta não traz número, hora nem matrícula tentada.
   Depois de "Gerar novo", o contador do código anterior não marca o pedido feito pelo novo. Aprovado o pedido marcado,
   `teve_matricula_errada` é nulo no banco; outro pedido marcado, recusado, também; a auditoria `reivindicacao.decidida`
-  não traz o campo. **Quebra sem:** o contador do nome lido no `insert` do pedido; a anulação na decisão
+  não traz o campo. Em paralelo (7.0): a matrícula certa com o hash em andamento enquanto três erradas chegam ao mesmo
+  nome grava `true`; a marca conta as erradas que somaram até o fim do hash da certa, e a que chega depois disso, antes do
+  commit, fica de fora (aceito: é "depois", e não "junto"). **Quebra sem:** o contador do nome lido no `insert` do pedido, depois do hash; a anulação na decisão
 
 ## V — Virada de ano, eliminação e expurgo
 
@@ -296,23 +298,29 @@ aos cenários.
   (se recusar, o código certo falha); a espera fora de transação e de conexão
 - **L4** (integração) 6ª matrícula errada no mesmo nome livre: `LIMITE_EXCEDIDO` a esse nome, também com a matrícula
   certa, e sai `sala.limite_atingido{tipo="nome"}`; os outros 34 nomes da turma reivindicam. **Quebra sem:** o
-  `listaNomeId` na chave do contador
+  `listaNomeId` na chave do contador. Também em paralelo (7.0): dez matrículas erradas ao mesmo tempo no mesmo nome livre
+  dão cinco `REIVINDICACAO_RECUSADA`, cinco `LIMITE_EXCEDIDO` e só cinco hashes; quebra sem a soma atômica antes do hash.
+  A errada soma antes do semáforo: se ela sai com o 503 do prazo (L9), já contou (o lado conservador: o atacante não ganha
+  tentativa, e o aluno que errou e pegou o 503 gasta uma das cinco)
 - **L4b** (integração) O ator trava os 35 nomes da turma com o código X (5 matrículas erradas em cada); com X, os 35
   recebem `LIMITE_EXCEDIDO` mesmo com a matrícula certa. O professor gera o código Y; os 35 reivindicam com Y e a
   matrícula certa, e todos ficam pendentes. **Quebra sem:** o `acesso_turma` na chave do contador por nome
-- **L5** (integração) 151 matrículas erradas na turma, espalhadas por 35 nomes (nenhum passa de 4): ninguém recebe 429;
+- **L5** (integração) 151 matrículas erradas na turma, espalhadas por 38 nomes (nenhum passa de 4; com 35 nomes, 4 em cada
+  dão só 140, 7.0): ninguém recebe 429;
   um espião no `SemaforoDeHash` registra a prioridade de cada pedido, e o 151º em diante entra rebaixado; sai
   `sala.limite_atingido{tipo="turma"}`. **Quebra sem:** o teto de fundo que rebaixa e não recusa
 - **L6** (integração) O que cada caso faz com cada contador, lido no Redis: matrícula errada em nome livre soma no nome
   e na turma; nome inexistente, de outra turma ou escola, tomado e corrida perdida (C1) somam só na turma; reenvio com a
-  mesma chave (E21, C2) não soma em nenhum; o reenvio em paralelo de uma matrícula errada soma duas vezes no nome,
-  porque a chave não fica gravada no erro (aceito); código errado soma só na escola; pedido criado não soma. **Quebra
+  mesma chave (E21, C2) não soma em nenhum; a chave de T1 enviada pelo acesso de T2 com a matrícula **certa** do nome de
+  T2 (E21) soma só na turma de T2, porque a leitura antes do hash confere também a matrícula (7.0); o reenvio em
+  paralelo de uma matrícula errada soma duas vezes no nome, porque a chave não fica gravada no erro (aceito); código
+  errado soma só na escola, e o link errado e o slug inexistente em nenhum; pedido criado não soma. **Quebra
   sem:** a tabela de quem conta (Tech Spec, seções 5 e 7c)
 - **L6b** (integração) Um ator reivindica um nome e depois repete o pedido nele, já tomado, 200 vezes em 10 min, com
   matrículas quaisquer: todas `REIVINDICACAO_RECUSADA`, nenhum contador por nome; do 151º em diante, o espião do
   semáforo vê o hash dele rebaixado. Com o semáforo cheio desses pedidos, 30 logins por matrícula da mesma escola
   entram, nenhum com 503. **Quebra sem:** contar no teto da turma toda tentativa que roda o hash e não cria pedido
-- **L7** (integração) Com o Redis fora, o contador vai ao seguro em memória, e o teto cai para o dividido por
+- **L7** (unidade, com o cliente Redis fora do ar, 7.0) Com o Redis fora, o contador vai ao seguro em memória, e o teto cai para o dividido por
   `LIMITE_INSTANCIAS_API`. **Quebra sem:** `limiteDoSeguro` na comparação
 - **L8** (unidade) `ContadorEmJanela` com janela de 10 min: a chave vence em 10 min; a instância do login continua com
   60 s. **Quebra sem:** a janela por parâmetro

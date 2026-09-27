@@ -5,6 +5,22 @@ import { createHmac } from 'node:crypto'
 
 /** A janela dos contadores por IP do login: "por minuto" (Tech Spec da identidade, seção 5, "Baldes do semáforo"). */
 export const JANELA_DO_CONTADOR_POR_IP_MS = 60_000
+const loggerDoLogin = new Logger('login')
+
+/** O aviso de contagem no seguro em memória dos contadores por IP do login. */
+const avisarSeguroDoLogin = () => loggerDoLogin.warn('login.limite_por_ip_no_seguro')
+
+/** O que muda de uma instância do contador para outra: a janela e o aviso do seguro (A1, tarefa 7.0). */
+export interface OpcoesDoContador {
+  /** Quanto cada chave vive desde a primeira soma: 1 min no login (o padrão), 10 min nos limites da sala. */
+  readonly janelaMs?: number
+  /** O aviso de contagem no seguro, um evento fixo, que o contador espaça; o padrão é o do login. */
+  readonly avisarSeguro?: () => void
+  /** Só o teste troca, para mover a janela sem esperar. */
+  readonly relogio?: Relogio
+  /** Só o teste troca, para mover a janela da proporção sem esperar 30 s. */
+  readonly proporcaoDoSeguro?: ProporcaoEmJanela
+}
 
 /** O que o contador diz: o valor na janela e se quem contou foi o seguro em memória (o limite é dividido pelas instâncias). */
 export interface ContagemNaJanela {
@@ -30,20 +46,26 @@ interface EntradaEmMemoria {
 }
 
 /**
- * Os contadores por IP do login (tarefa 15.0): as falhas de um IP numa escola (matrícula) e as tentativas de um IP na
- * rota de e-mail, cada um numa janela de 1 min, no Redis de fila, que não expulsa chave. Nenhuma chave é o IP: é o
- * HMAC dele (e da escola), com a chave do contador de tentativas, e vive só a janela (regra 20; `docs/lgpd.md`,
- * "Contador de tentativas de login").
+ * Contadores numa janela fixa, no Redis de fila, que não expulsa chave. Duas instâncias usam isto:
+ *
+ * - **Os contadores por IP do login** (tarefa 15.0): as falhas de um IP numa escola (matrícula) e as tentativas de um IP
+ *   na rota de e-mail, cada um numa janela de 1 min. Nenhuma chave é o IP: é o HMAC dele (e da escola), com a chave do
+ *   contador de tentativas, e vive só a janela (regra 20; `docs/lgpd.md`, "Contador de tentativas de login").
+ * - **Os limites da sala** (A1, tarefa 7.0; `apps/api/src/sala/limites-da-sala.ts`): código errado por escola, matrícula
+ *   errada por nome e hash sem pedido por turma, numa janela de 10 min, com a mesma chave de HMAC
+ *   (`docs/lgpd.md`, "Contadores da sala").
  *
  * **Redis fora ou travado** (Tech Spec, seção 5, "Redis de fila fora"): cada instância conta em memória, com a mesma
  * janela, e diz que a contagem é do seguro, para quem compara dividir o limite pelas instâncias (`limiteDoSeguro`). A
  * proporção do seguro alimenta `limite.seguro_ativo`. Nunca responde "zero" por não saber: conta sempre, em algum lugar.
  */
 export class ContadorEmJanela {
-  readonly #logger = new Logger('login')
   readonly #seguro = new Map<string, EntradaEmMemoria>()
   readonly #proporcaoDoSeguro: ProporcaoEmJanela
-  readonly #avisarSeguro = avisoEspacado(() => this.#logger.warn('login.limite_por_ip_no_seguro'))
+  readonly #avisarSeguro: () => void
+  readonly #relogio: Relogio
+  /** Quanto cada chave vive desde a primeira soma. */
+  readonly janelaMs: number
   #ultimaVarredura = Number.NEGATIVE_INFINITY
 
   /** Quantas chaves o seguro em memória guarda agora (vivas ou à espera da varredura do minuto). */
@@ -51,14 +73,16 @@ export class ContadorEmJanela {
     return this.#seguro.size
   }
 
-  /** @param proporcaoDoSeguro só o teste troca, para mover a janela sem esperar 30 s. */
   constructor(
     private readonly cliente: Redis,
     private readonly chave: Uint8Array,
-    private readonly relogio: Relogio = relogioDoSistema,
-    proporcaoDoSeguro = new ProporcaoEmJanela(),
+    { janelaMs = JANELA_DO_CONTADOR_POR_IP_MS, avisarSeguro = avisarSeguroDoLogin, relogio = relogioDoSistema, proporcaoDoSeguro = new ProporcaoEmJanela() }: OpcoesDoContador = {},
   ) {
+    if (!Number.isInteger(janelaMs) || janelaMs < 1) throw new RangeError('a janela do contador precisa ser um inteiro positivo de milissegundos')
+    this.janelaMs = janelaMs
+    this.#relogio = relogio
     this.#proporcaoDoSeguro = proporcaoDoSeguro
+    this.#avisarSeguro = avisoEspacado(avisarSeguro)
   }
 
   /** Das contagens dos últimos 30 s, a proporção que o seguro em memória atendeu, de 0 a 1 (`limite.seguro_ativo`). */
@@ -75,7 +99,7 @@ export class ContadorEmJanela {
   async somar(chave: string): Promise<ContagemNaJanela> {
     if (this.cliente.status === 'ready') {
       try {
-        const valor = Number(await this.cliente.eval(SCRIPT_SOMAR, 1, chave, JANELA_DO_CONTADOR_POR_IP_MS))
+        const valor = Number(await this.cliente.eval(SCRIPT_SOMAR, 1, chave, this.janelaMs))
         if (!Number.isFinite(valor)) throw new Error('resposta do contador fora do formato')
         this.#proporcaoDoSeguro.registrar(false)
         return { valor, doSeguro: false }
@@ -100,17 +124,36 @@ export class ContadorEmJanela {
       }
     }
     this.#usouSeguro()
-    return { valor: this.#vivo(chave, this.relogio.agora().getTime())?.valor ?? 0, doSeguro: true }
+    return { valor: this.#vivo(chave, this.#relogio.agora().getTime())?.valor ?? 0, doSeguro: true }
+  }
+
+  /**
+   * Quanto falta, em ms, para a chave sair da janela: 0 quando ela não existe (ou venceu). É o `Retry-After` de quem o
+   * limite segurou. Com o Redis fora, o do seguro em memória.
+   */
+  async restanteMs(chave: string): Promise<number> {
+    if (this.cliente.status === 'ready') {
+      try {
+        const restante = Number(await this.cliente.pttl(chave))
+        if (!Number.isFinite(restante)) throw new Error('resposta do contador fora do formato')
+        // -2 (sem a chave) e -1 (sem prazo, que o script nunca deixa) não seguram ninguém.
+        return Math.max(0, restante)
+      } catch {
+        // Idem: o prazo vem do seguro.
+      }
+    }
+    const agora = this.#relogio.agora().getTime()
+    return Math.max(0, (this.#vivo(chave, agora)?.venceEm ?? agora) - agora)
   }
 
   #somarNoSeguro(chave: string): number {
     this.#usouSeguro()
-    const agora = this.relogio.agora().getTime()
-    const entrada = this.#vivo(chave, agora) ?? { valor: 0, venceEm: agora + JANELA_DO_CONTADOR_POR_IP_MS }
+    const agora = this.#relogio.agora().getTime()
+    const entrada = this.#vivo(chave, agora) ?? { valor: 0, venceEm: agora + this.janelaMs }
     entrada.valor++
     this.#seguro.set(chave, entrada)
-    // A cada janela, e não só quando cresce: o HMAC do IP vencido não fica na memória além do minuto seguinte.
-    if (agora - this.#ultimaVarredura >= JANELA_DO_CONTADOR_POR_IP_MS) this.#varrer(agora)
+    // A cada janela, e não só quando cresce: o HMAC do IP vencido não fica na memória além da janela seguinte.
+    if (agora - this.#ultimaVarredura >= this.janelaMs) this.#varrer(agora)
     return entrada.valor
   }
 

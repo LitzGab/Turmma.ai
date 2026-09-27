@@ -21,6 +21,11 @@ envio só que sobrevive ao sistema cheio; e o fluxo inteiro, da escola vazia ao 
   - A normalização do código (4.0), `REIVINDICACAO_RECUSADA` (6.0) e `packages/shared/src/erros/mensagens.ts`
   - `.size-limit.json`: a página fica na entrada, abaixo de 150 kB
 
+## Nota da 7.0 (`privacy-guardian`, 1ª rodada)
+
+- O texto de ajuda do `LIMITE_EXCEDIDO` pelo nome diz que o professor pode gerar um código novo, que destrava o nome: quem
+  tem o link trava um nome por 10 min com cinco matrículas erradas.
+
 ## Subtarefas
 
 - [ ] 17.1 — `MENSAGENS_DA_SALA` em `packages/shared`, com os textos exatos do W9; o de `NAO_ENCONTRADO` escolhido

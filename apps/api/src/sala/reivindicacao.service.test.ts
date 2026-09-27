@@ -1,4 +1,4 @@
-import { ErroDeDominio, type Banco } from '@educa/nucleo'
+import { ErroDeDominio, medidorGlobal, type Banco } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -22,8 +22,8 @@ function erroDoPostgres(code: string): Error {
   return new Error('consulta falhou', { cause: Object.assign(new Error('do servidor'), { code, severity: 'ERROR' }) })
 }
 
-/** A sala que o `AcessoDaSala` acharia: só escola, ano e turma. */
-const SALA: Parameters<Parameters<AcessoDaSala['naSala']>[1]>[0] = { escolaId: randomUUID(), anoLetivoId: randomUUID(), turmaId: randomUUID() }
+/** A sala que o `AcessoDaSala` acharia: só o acesso, a escola, o ano e a turma. */
+const SALA: Parameters<Parameters<AcessoDaSala['naSala']>[1]>[0] = { acessoId: randomUUID(), escolaId: randomUUID(), anoLetivoId: randomUUID(), turmaId: randomUUID() }
 
 /** Os cinco casos do R3: o que o `insert` do pedido e o `update` do nome fazem em cada um. */
 const CASOS = [
@@ -39,7 +39,7 @@ describe('reivindicação: o hash sempre, pelo semáforo, antes da transação (
     vi.restoreAllMocks()
   })
 
-  function montar(caso: { readonly inserir: string; readonly tomar: boolean }) {
+  function montar(caso: { readonly inserir: string; readonly tomar: boolean }, { rebaixado = false, livreComOutraMatricula = false } = {}) {
     const eventos: string[] = []
     const baldes: BaldeDeLogin[] = []
     let dentroDoSemaforo = false
@@ -78,14 +78,36 @@ describe('reivindicação: o hash sempre, pelo semáforo, antes da transação (
       eventos.push('update do nome')
       return caso.tomar
     })
+    vi.spyOn(ListaLivreRepository.prototype, 'livreComOutraMatricula').mockImplementation(async () => {
+      eventos.push('lê o nome livre')
+      return livreComOutraMatricula
+    })
+    // Os limites da sala (7.0), falsos: só anotam quando são chamados, e o `antesDoHash` diz se a turma está no teto.
+    const limites = {
+      antesDaBusca: vi.fn(async () => undefined),
+      codigoErrado: vi.fn(async () => undefined),
+      antesDoHash: vi.fn(async (_nome: unknown, _turmaId: string, _escolaId: string, _matriculaErrada: boolean) => {
+        eventos.push('limites antes do hash')
+        return { rebaixado }
+      }),
+      teveMatriculaErrada: vi.fn(async () => {
+        eventos.push('lê a marca do nome')
+        return false
+      }),
+      hashSemPedido: vi.fn(async () => {
+        eventos.push('conta na turma')
+      }),
+    }
     const servico = new ReivindicacaoService({
       banco,
       acessoDaSala: { naSala: (_entrada, funcao) => funcao(SALA) },
       semaforo,
       hash,
       chaveCodigo: new Uint8Array(32),
+      limites,
+      medidor: medidorGlobal(),
     })
-    return { servico, eventos, baldes, hash }
+    return { servico, eventos, baldes, hash, limites }
   }
 
   const pedido = { slug: 'colegio-sintetico', codigo: 'ABCD2345', listaNomeId: randomUUID(), matricula: 'sintetica-1', senha: 'senha-sintetica-12', chaveEnvio: randomUUID() }
@@ -102,25 +124,55 @@ describe('reivindicação: o hash sempre, pelo semáforo, antes da transação (
       expect(hash.gerar).toHaveBeenCalledTimes(1)
       expect(hash.gerar).toHaveBeenCalledWith(pedido.senha)
       expect(baldes).toEqual([{ id: SALA.escolaId, subfila: '', rotulo: SALA.escolaId, rebaixado: false }])
-      // A chave é lida antes do hash; o hash roda dentro do semáforo e antes de a transação abrir; a falha relê a chave.
-      const depois = caso.resposta === 'enviado' ? [] : ['lê a chave']
+      // A chave é lida antes dos limites e do hash, e a leitura do nome livre, antes dos limites (7.0); o hash roda dentro
+      // do semáforo e antes de a transação abrir, e a marca do nome é lida entre os dois; a falha relê a chave e conta na
+      // turma.
+      const depois = caso.resposta === 'enviado' ? [] : ['lê a chave', 'conta na turma']
       const escritas = caso.inserir === 'grava' ? ['insert do pedido', 'update do nome'] : ['insert do pedido']
-      expect(eventos).toEqual(['lê a chave', 'hash no semáforo', 'transação', ...escritas, ...depois])
+      expect(eventos).toEqual(['lê a chave', 'lê o nome livre', 'limites antes do hash', 'hash no semáforo', 'lê a marca do nome', 'transação', ...escritas, ...depois])
     })
   }
 
-  it('a chave já gravada responde enviado sem hash, sem semáforo e sem transação', async () => {
-    const { servico, eventos, baldes, hash } = montar(CASOS[0])
+  it('a chave já gravada responde enviado sem hash, sem semáforo, sem transação e sem limite nenhum', async () => {
+    const { servico, eventos, baldes, hash, limites } = montar(CASOS[0])
     vi.mocked(ReivindicacaoRepository.prototype.chaveGravada).mockResolvedValueOnce(true)
     expect(await servico.reivindicar(pedido)).toEqual({ resultado: 'enviado' })
     expect(hash.gerar).not.toHaveBeenCalled()
     expect(baldes).toEqual([])
     expect(eventos).toEqual([])
+    for (const limite of Object.values(limites)) expect(limite).not.toHaveBeenCalled()
+  })
+
+  it('L5 (7.0): a turma no teto de hashes sem pedido manda o hash rebaixado, no balde da escola, e o pedido segue', async () => {
+    const { servico, baldes } = montar(CASOS[0], { rebaixado: true })
+    expect(await servico.reivindicar(pedido)).toEqual({ resultado: 'enviado' })
+    expect(baldes).toEqual([{ id: SALA.escolaId, subfila: '', rotulo: SALA.escolaId, rebaixado: true }])
+  })
+
+  it('L6 (7.0): a matrícula errada num nome livre vai aos limites como errada, pelo acesso e pelo nome escolhido, antes do hash; a recusa conta na turma; o pedido criado não conta', async () => {
+    const recusada = montar(CASOS[1], { livreComOutraMatricula: true })
+    await expect(recusada.servico.reivindicar(pedido)).rejects.toMatchObject({ codigo: CodigoDeErro.REIVINDICACAO_RECUSADA })
+    expect(recusada.limites.antesDoHash).toHaveBeenCalledWith({ acessoId: SALA.acessoId, listaNomeId: pedido.listaNomeId }, SALA.turmaId, SALA.escolaId, true)
+    expect(recusada.limites.hashSemPedido).toHaveBeenCalledWith(SALA.turmaId)
+    vi.restoreAllMocks()
+
+    const criado = montar(CASOS[0])
+    expect(await criado.servico.reivindicar(pedido)).toEqual({ resultado: 'enviado' })
+    expect(criado.limites.antesDoHash).toHaveBeenCalledWith({ acessoId: SALA.acessoId, listaNomeId: pedido.listaNomeId }, SALA.turmaId, SALA.escolaId, false)
+    expect(criado.limites.hashSemPedido).not.toHaveBeenCalled()
+  })
+
+  it('o nome travado (LIMITE_EXCEDIDO do limite) sai antes do hash, sem semáforo e sem transação', async () => {
+    const { servico, eventos, hash, limites } = montar(CASOS[0])
+    limites.antesDoHash.mockRejectedValueOnce(new ErroDeDominio(CodigoDeErro.LIMITE_EXCEDIDO, undefined, 42))
+    await expect(servico.reivindicar(pedido)).rejects.toMatchObject({ codigo: CodigoDeErro.LIMITE_EXCEDIDO, tenteDeNovoEmSegundos: 42 })
+    expect(hash.gerar).not.toHaveBeenCalled()
+    expect(eventos).toEqual(['lê a chave', 'lê o nome livre'])
   })
 
   it('o erro que não é FK, 23505 nem nome não tomado sobe como veio, sem reler a chave', async () => {
     const { servico, eventos } = montar({ inserir: '57014', tomar: true })
     await expect(servico.reivindicar(pedido)).rejects.toThrow('consulta falhou')
-    expect(eventos).toEqual(['lê a chave', 'hash no semáforo', 'transação', 'insert do pedido'])
+    expect(eventos).toEqual(['lê a chave', 'lê o nome livre', 'limites antes do hash', 'hash no semáforo', 'lê a marca do nome', 'transação', 'insert do pedido'])
   })
 })

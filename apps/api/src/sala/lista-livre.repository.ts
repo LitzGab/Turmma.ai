@@ -1,6 +1,6 @@
 import { exigirAnoEmCurso, exigirEscolaDoContexto, listaNome, turma, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import { MAXIMO_DE_NOMES_NA_SALA } from '@educa/shared'
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, ne } from 'drizzle-orm'
 
 /** Um nome livre como a página da sala o mostra: o id e o nome, nunca a matrícula. */
 export interface NomeLivre {
@@ -74,5 +74,31 @@ export class ListaLivreRepository {
       )
       .returning({ id: listaNome.id })
     return tomados.length === 1
+  }
+
+  /**
+   * Se o pedido traz matrícula errada para um nome livre (7.0; Tech Spec da A1, seção 5, passo 5): lido antes do hash,
+   * fora da transação, com a escola e o ano do contexto e a turma do acesso. O nome de outra turma, de outra escola,
+   * inexistente, tomado ou com a matrícula certa (também a chave de outro pedido da escola, E21) dá `false`, e não conta no
+   * limite do nome: só o nome livre da turma do acesso trava, e o travado não diz a ninguém que existe um nome que a página
+   * da sala não mostra. A resposta ao aluno não muda com isto: o hash roda do mesmo jeito. Escola e ano são segunda
+   * camada: a turma é a da linha do acesso, e a FK composta da lista prende o nome a ela.
+   */
+  async livreComOutraMatricula({ turmaId, listaNomeId, matricula }: NomeEscolhido): Promise<boolean> {
+    const [linha] = await this.banco
+      .select({ id: listaNome.id })
+      .from(listaNome)
+      .where(
+        and(
+          eq(listaNome.escolaId, exigirEscolaDoContexto()),
+          eq(listaNome.anoLetivoId, exigirAnoEmCurso()),
+          eq(listaNome.turmaId, turmaId),
+          eq(listaNome.id, listaNomeId),
+          eq(listaNome.estado, 'livre'),
+          ne(listaNome.matricula, matricula),
+        ),
+      )
+      .limit(1)
+    return linha !== undefined
   }
 }

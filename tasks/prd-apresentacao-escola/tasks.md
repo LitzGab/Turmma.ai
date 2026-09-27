@@ -1,7 +1,7 @@
 # Tarefas — A escola montada pela coordenação (A1)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 6 de 17 concluídas
+**Status:** 7 de 17 concluídas
 
 Aprovadas pelo Joaquim em 26/09/2026. O mapa de cenários por tarefa saiu do `test-engineer`: cada id do
 `cenarios.md` está em uma tarefa, ou dividido entre tarefas com a parte de cada uma dita no `N_task.md`. Os
@@ -55,11 +55,11 @@ dela nos dois.
   - [x] 6.4 Testes: I5, R2 (sem "já aprovado"), R3, R5, E23, E24, C2, C4, L9; C1 e E21 sem os contadores; a parte de
     `salas/reivindicar` de I4, R1, P5, L10, A6, A7; E2 (pedido); E7 (retirar reivindicado)
 
-- [ ] **7.0 — Limites da sala: por escola, por nome e por turma, com as métricas**
-  - [ ] 7.1 `ContadorEmJanela` com a janela por parâmetro
-  - [ ] 7.2 Os três contadores, a espera de 1 s, o `LIMITE_EXCEDIDO` com `Retry-After` e o rebaixamento no semáforo
-  - [ ] 7.3 `teve_matricula_errada` lido do contador do nome; métricas e o log `sala.limite_atingido`
-  - [ ] 7.4 Testes: I10, L1 a L8, L4b, L6b; os contadores de C1, C2 e E21; E30 (gravação e "Gerar novo"); a métrica
+- [x] **7.0 — Limites da sala: por escola, por nome e por turma, com as métricas**
+  - [x] 7.1 `ContadorEmJanela` com a janela por parâmetro
+  - [x] 7.2 Os três contadores, a espera de 1 s, o `LIMITE_EXCEDIDO` com `Retry-After` e o rebaixamento no semáforo
+  - [x] 7.3 `teve_matricula_errada` lido do contador do nome; métricas e o log `sala.limite_atingido`
+  - [x] 7.4 Testes: I10, L1 a L8, L4b, L6b; os contadores de C1, C2 e E21; E30 (gravação e "Gerar novo"); a métrica
     sem escola; o log uma linha por escola e janela; `Retry-After` no limite por nome
 
 - [ ] **8.0 — Professor ou coordenação decide os pedidos; o aluno aprovado vê a própria turma**

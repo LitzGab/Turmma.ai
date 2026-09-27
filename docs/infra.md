@@ -246,7 +246,8 @@ ociosa do provedor e, em provedor que oferece API de lote, custa menos.
 
 O login também mora no Redis de fila (identidade, tarefa 15.0): o contador de tentativas, os contadores por IP
 (rebaixamento da escola e limite da rota de e-mail) e a marca de desafio usado ficam nele, porque ele não expulsa
-chave. O cliente do login desiste em 100 ms por comando, de propósito, e aí o contador cai no seguro em memória e o
+chave. Os contadores da página da sala (A1, tarefa 7.0: código errado por escola, matrícula errada por nome e hash sem
+pedido por turma, em 10 min) usam o mesmo cliente. O cliente do login desiste em 100 ms por comando, de propósito, e aí o contador cai no seguro em memória e o
 desafio é recusado. Um `addBulk` grande ou um script de fila longo às 7h30 é exatamente o que faria esses 100 ms
 cortarem no meio da entrada dos alunos. Mais um motivo para lote ficar fora do horário letivo.
 

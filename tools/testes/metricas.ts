@@ -85,6 +85,8 @@ export const NOMES_NO_PROMETHEUS = {
   atividadeFalha: ['sessao_atividade_falha_total'],
   entradaFalhaDaOperacao: ['operacao_entrada_falha_total'],
   escolaIgnoradaNoUso: ['uso_escola_ignorada_total'],
+  reivindicacaoNaSala: ['sala_reivindicacao_total'],
+  limiteDaSala: ['sala_limite_atingido_total'],
   leituraDeSessao: ['sessao_leitura_duracao_seconds_bucket', 'sessao_leitura_duracao_seconds_count', 'sessao_leitura_duracao_seconds_sum'],
   atrasoEventLoop: ['nodejs_eventloop_delay_p99_seconds'],
 } as const satisfies Record<keyof typeof METRICAS, readonly string[]>

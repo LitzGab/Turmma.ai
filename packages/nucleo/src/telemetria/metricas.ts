@@ -98,6 +98,18 @@ export const METRICAS = {
    * `uso.escola_ignorada`, e a escola eliminada não abre série.
    */
   escolaIgnoradaNoUso: 'uso.escola_ignorada',
+  /**
+   * Pedidos de `salas/reivindicar` (A1, tarefa 7.0), por `resultado`: `enviado` (pedido novo), `reenvio` (a chave já
+   * gravada), `recusada`, `limite` (o nome travado), `sem_acesso` (link ou código que não vale), `indisponivel` (o 503 do
+   * semáforo) e `erro`. Sem escola: a série por escola seria a contagem pública de quem entrou, e o id vai só no log.
+   */
+  reivindicacaoNaSala: 'sala.reivindicacao',
+  /**
+   * Vezes que um limite da sala segurou um pedido (A1, tarefa 7.0; Tech Spec da A1, 7c), por `tipo`: `escola` (a espera
+   * de 1 s do código errado demais), `nome` (o `LIMITE_EXCEDIDO` do nome travado) e `turma` (o hash rebaixado). Sem
+   * escola (`METRICAS_COM_ESCOLA` é fechada): a escola vai no log `sala.limite_atingido`, uma linha por escola e janela.
+   */
+  limiteDaSala: 'sala.limite_atingido',
   /** Histograma, em segundos, da leitura de sessão da `GuardaDeSessao`, uma por requisição autenticada. */
   leituraDeSessao: 'sessao.leitura.duracao',
   /** p99 do atraso do event loop no intervalo, em segundos. */
@@ -204,7 +216,7 @@ export function observarRedis(medidor: Meter, clientes: Partial<Record<Instancia
 /**
  * `limite.seguro_ativo`: a proporção das requisições limitadas pelo seguro em memória na janela recente. Com mais de
  * uma fonte (o rate limit no Redis de cache e, no Redis de fila, o contador de tentativas, os contadores por IP e o
- * desafio do login), vale a maior: o alerta `seguro-limite-ativo` dispara quando qualquer uma conta sozinha em memória.
+ * desafio do login e os limites da sala), vale a maior: o alerta `seguro-limite-ativo` dispara quando qualquer uma conta sozinha em memória.
  */
 export function observarSeguroDoLimite(medidor: Meter, ...fontes: ReadonlyArray<{ readonly proporcaoDoSeguro: number }>): void {
   medidor

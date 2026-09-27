@@ -70,9 +70,11 @@ export interface UsuarioComConviteAceito extends UsuarioAtivoDaConta {
 
 /**
  * O acesso vigente da sala achado pelo link ou pelo código (A1, tarefa 5.0): só a escola, o ano e a turma da linha, que
- * viram o contexto da página pública. Nunca o hash do token, o HMAC do código, a validade nem o autor.
+ * viram o contexto da página pública, e o id do acesso, que prende o contador de matrícula errada por nome ao acesso
+ * (7.0): o "Gerar novo" começa do zero. Nunca o hash do token, o HMAC do código, a validade nem o autor.
  */
 export interface AcessoDaSalaAchado {
+  readonly acessoId: string
   readonly escolaId: string
   readonly anoLetivoId: string
   readonly turmaId: string
@@ -487,9 +489,10 @@ export class ResolucaoDeTenantRepository {
    * O acesso da sala pelo link (A1, tarefa 5.0): o vigente (não revogado, `expira_em > now()`) cujo `token_hash` é este,
    * da escola do slug e no ano `em_curso` dela. O token é único no sistema e não diz a escola; o slug é conferido contra a
    * escola da linha no mesmo comando, e o token de outra escola, vencido, revogado, de ano encerrado ou de turma excluída
-   * (a cascata o levou) dão todos `undefined` (regra 10, item 6). A escola, o ano e a turma saem da linha, nunca do cliente.
+   * (a cascata o levou) dão todos `undefined` (regra 10, item 6). O acesso, a escola, o ano e a turma saem da linha, nunca
+   * do cliente.
    */
-  @SemEscopo('o link e o código da sala não dizem a escola: o acesso vigente é achado pelo hash do token, conferido contra a escola do slug e o ano em curso dela, e devolve só a escola, o ano e a turma')
+  @SemEscopo('o link e o código da sala não dizem a escola: o acesso vigente é achado pelo hash do token, conferido contra a escola do slug e o ano em curso dela, e devolve só o acesso, a escola, o ano e a turma')
   async acessoDaSalaPorToken(slug: string, tokenHash: string): Promise<AcessoDaSalaAchado | undefined> {
     return this.#acessoDaSala(slug, eq(acessoTurma.tokenHash, tokenHash))
   }
@@ -499,7 +502,7 @@ export class ResolucaoDeTenantRepository {
    * no ano `em_curso` dela. O código é único só entre os não revogados de uma escola, e a chave do HMAC é uma só: o mesmo
    * código vigente em duas escolas tem o mesmo HMAC, e só o slug separa as duas.
    */
-  @SemEscopo('o link e o código da sala não dizem a escola: o acesso vigente é achado pelo HMAC do código dentro da escola do slug, no ano em curso dela, e devolve só a escola, o ano e a turma')
+  @SemEscopo('o link e o código da sala não dizem a escola: o acesso vigente é achado pelo HMAC do código dentro da escola do slug, no ano em curso dela, e devolve só o acesso, a escola, o ano e a turma')
   async acessoDaSalaPorCodigo(slug: string, codigoHmac: string): Promise<AcessoDaSalaAchado | undefined> {
     return this.#acessoDaSala(slug, eq(acessoTurma.codigoHmac, codigoHmac))
   }
@@ -507,7 +510,7 @@ export class ResolucaoDeTenantRepository {
   /** O acesso vigente da escola do slug, no ano em curso dela, que também atende a `chave` (o token ou o código). */
   async #acessoDaSala(slug: string, chave: SQL): Promise<AcessoDaSalaAchado | undefined> {
     const [linha] = await this.banco
-      .select({ escolaId: acessoTurma.escolaId, anoLetivoId: acessoTurma.anoLetivoId, turmaId: acessoTurma.turmaId })
+      .select({ acessoId: acessoTurma.id, escolaId: acessoTurma.escolaId, anoLetivoId: acessoTurma.anoLetivoId, turmaId: acessoTurma.turmaId })
       .from(acessoTurma)
       .innerJoin(escola, and(eq(escola.id, acessoTurma.escolaId), eq(escola.slug, slug)))
       .innerJoin(anoLetivo, and(eq(anoLetivo.escolaId, acessoTurma.escolaId), eq(anoLetivo.id, acessoTurma.anoLetivoId), eq(anoLetivo.situacao, 'em_curso')))

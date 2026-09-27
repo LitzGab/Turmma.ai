@@ -35,6 +35,17 @@ passam na régua do login do F1.
   (`docs/runbook.md`, a entrada do alerta) que a reivindicação usa o mesmo semáforo, ou separar o 503 dela por rótulo, ou
   somá-la ao denominador.
 
+## Notas da 7.0 (`infra-guardian`, `revisor-geral` e `privacy-guardian`, 1ª rodada)
+
+- Com o Redis de fila fora, o teto do nome no seguro vira `max(1, floor(5 / instâncias))`: com 3 ou mais instâncias, uma
+  matrícula errada trava o nome por 10 min. Decidir aqui um piso para o teto do nome no seguro, ou citar o efeito na sala
+  no runbook do `seguro-limite-ativo`.
+- O `LimitesDaSala.esperandoOCodigo` pode virar gauge por instância junto com o alerta, para ver o acúmulo na espera de 1 s.
+- O parágrafo do runbook diz que, enquanto o slug for alvo, toda entrada pelo código da escola espera 1 s, e que a espera
+  não limita o volume do atacante (só o `rl:ip` limita): a resposta é revogar.
+- O runbook diz também que qualquer um com o link trava um nome por 10 min com cinco matrículas erradas, e que o "Gerar
+  novo" destrava.
+
 ## Subtarefas
 
 - [ ] 9.1 — `ops:revogar-acessos-sala --escola <id>`: exige `OPERADOR` antes de tocar no banco; monta o contexto da

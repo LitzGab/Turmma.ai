@@ -12,13 +12,14 @@ import { ESPERA_MAXIMA_PELO_HASH_MS, RETRY_AFTER_MAXIMO_S, RETRY_AFTER_MINIMO_S,
 import { aguardar, esperarNaTrava, GatilhoDeParada } from './gatilho-de-parada.js'
 import { chamar, subirApi, type ApiDeTeste } from './api-com-sessao.js'
 import { montarEscolaComTurma, type EscolaComTurma } from './escola-com-turma.js'
+import { FerramentasDaSala } from './sala-de-teste.js'
 import { ipSorteado } from './segundo-fator-de-operador.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 
 /**
  * A reivindicação do nome pela página pública da sala (A1, tarefa 6.0; `tasks/prd-apresentacao-escola/cenarios.md`):
- * `POST /v1/salas/reivindicar`, sem login. Cobre I5, R2, R5, E21 e C1 (sem os contadores, que são da 7.0), E23, E24,
- * C2, C4, L9, a parte de `salas/reivindicar` de I4, R1, P5, L10, A6 e A7, o pedido do E2 e a retirada do reivindicado
+ * `POST /v1/salas/reivindicar`, sem login. Cobre I5, R2, R5, E21 e C1 (com os contadores da 7.0), E23, E24,
+ * C2 (com os contadores), C4, L9, a gravação do E30 (7.0), a parte de `salas/reivindicar` de I4, R1, P5, L10, A6 e A7, o pedido do E2 e a retirada do reivindicado
  * do E7. O R3 com o hash falso é o teste de unidade `apps/api/src/sala/reivindicacao.service.test.ts`, e aqui o R2 o
  * confere com o hash de verdade; o A3 e o A4 da rota moram na varredura de `escola-montada.int.test.ts`. Postgres e
  * Redis reais do compose de teste.
@@ -81,9 +82,12 @@ describe('salas/reivindicar (A1, tarefa 6.0): o aluno pede o próprio nome, e o 
   let gerarRealDoSemaforo: HashDeSenha['gerar']
   let verificacoesDoSemaforo: MockInstance<HashDeSenha['verificar']>
   let verificarRealDoSemaforo: HashDeSenha['verificar']
+  /** A leitura dos contadores da sala no Redis de fila (7.0). */
+  let limites: FerramentasDaSala
 
   beforeAll(async () => {
     api = await subirApi(medidor.medidor, { ambiente: AMBIENTE })
+    limites = new FerramentasDaSala(api, bancada)
     apiDoLimite = await subirApi(medidor.medidor, { ambiente: { ...AMBIENTE, LIMITE_REQ_IP_ANONIMO_MIN: String(LIMITE_POR_IP) } })
     apiDoSemaforo = await subirApi(medidor.medidor, { ambiente: { ...AMBIENTE, LOGIN_HASH_CONCORRENCIA: '1' } })
     const hash = api.app.get(HashDeSenha)
@@ -214,6 +218,16 @@ describe('salas/reivindicar (A1, tarefa 6.0): o aluno pede o próprio nome, e o 
     return esquemaRespostaSalaAberta.parse(await aberta.json()).nomes.map((nome) => nome.id)
   }
 
+  /** Os contadores da turma e do nome (pelo acesso vigente da turma) e o da escola, no Redis de fila (7.0). */
+  async function contadores(sala: Sala, nome: Pick<Nome, 'id'>, turmaId = sala.turma) {
+    return limites.contadores(sala, turmaId, { acessoId: await limites.acessoVigente(turmaId), listaNomeId: nome.id })
+  }
+
+  /** Quantos pedidos saíram com o 503 do semáforo em `sala.reivindicacao`, somadas as APIs do arquivo (7.0). */
+  async function indisponiveis(): Promise<number> {
+    return (await medidor.pontos('sala.reivindicacao')).filter(({ atributos }) => atributos['resultado'] === 'indisponivel').reduce((soma, { valor }) => soma + (valor as number), 0)
+  }
+
   /** Um portão para o próximo hash de `gerar`: ele só termina quando o teste soltar. */
   function segurarOProximoHash(espiao: MockInstance<HashDeSenha['gerar']>, real: HashDeSenha['gerar']): { soltar: () => void } {
     let soltar: () => void = () => undefined
@@ -226,7 +240,7 @@ describe('salas/reivindicar (A1, tarefa 6.0): o aluno pede o próprio nome, e o 
   }
 
   describe('o pedido pendente', () => {
-    it('pelo código e pelo link: enviado; o pedido pendente guarda o hash argon2id da senha, a chave e teve_matricula_errada em false, e o nome sai da sala', async () => {
+    it('pelo código e pelo link: enviado; o pedido pendente guarda o hash argon2id da senha, a chave e teve_matricula_errada em false (sem erro no nome), e o nome sai da sala', async () => {
       const sala = await montar()
       const [peloCodigo, peloLink, outro] = await nomes(sala, sala.turma, 3)
       if (peloCodigo === undefined || peloLink === undefined || outro === undefined) throw new Error('nomes não gravados')
@@ -288,6 +302,8 @@ describe('salas/reivindicar (A1, tarefa 6.0): o aluno pede o próprio nome, e o 
       expect(semRequisicao(await reivindicar({ ...corpo, codigo: undefined, token: sala.token }))).toEqual(ENVIADO)
       expect(hashes).not.toHaveBeenCalled()
       expect(await pedidosDa(sala.escolaId)).toHaveLength(1)
+      // O pedido criado e os reenvios não somam em contador nenhum (7.0).
+      expect(await contadores(sala, nome)).toEqual({ escola: 0, turma: 0, nome: 0 })
 
       // A mesma chave, pelo acesso de T2 da mesma escola, com um nome livre de T2 e a matrícula certa dele: segue o fluxo,
       // passa pelo hash, e o 23505 do único da chave na escola leva à releitura, que não a acha em T2.
@@ -298,9 +314,30 @@ describe('salas/reivindicar (A1, tarefa 6.0): o aluno pede o próprio nome, e o 
       expect(hashes).toHaveBeenCalledTimes(1)
       expect(await retrato(sala.escolaId)).toEqual(antes)
       expect(await estadoDoNome(nomeDeT2.id)).toBe('livre')
+      // O hash rodou sem pedido: soma na turma de T2; a matrícula era a certa, e o nome de T2 não soma (7.0, L6).
+      expect(await contadores(sala, nomeDeT2, sala.outraTurma)).toEqual({ escola: 0, turma: 1, nome: 0 })
+      expect(await contadores(sala, nome)).toEqual({ escola: 0, turma: 0, nome: 0 })
 
       // A chave que não é UUID nem chega à sala.
       expect(semRequisicao(await reivindicar({ ...corpo, chaveEnvio: 'chave-que-nao-e-uuid' }))).toEqual(ENTRADA_INVALIDA)
+    })
+
+    it('E30 (gravação, 7.0): duas matrículas erradas e depois a certa gravam teve_matricula_errada em true; o nome de primeira, em false; depois de "Gerar novo", o contador do código anterior não marca o pedido', async () => {
+      const sala = await montar()
+      const [errado, deprimeira, antigo] = await nomes(sala, sala.turma, 3)
+      if (errado === undefined || deprimeira === undefined || antigo === undefined) throw new Error('nomes não gravados')
+      for (let vez = 0; vez < 2; vez++) expect(semRequisicao(await reivindicar(pedido(sala, errado, { matricula: `errada-${String(vez)}` })))).toEqual(RECUSADA)
+      const certo = await reivindicar(pedido(sala, errado))
+      // A resposta é a mesma de qualquer pedido: nem número, nem hora, nem a matrícula tentada.
+      expect(semRequisicao(certo)).toEqual(ENVIADO)
+      expect(semRequisicao(await reivindicar(pedido(sala, deprimeira)))).toEqual(ENVIADO)
+      // Duas erradas no terceiro nome pelo código atual; o professor gera outro, e o pedido pelo novo sai sem marca.
+      for (let vez = 0; vez < 2; vez++) expect(semRequisicao(await reivindicar(pedido(sala, antigo, { matricula: `errada-${String(vez)}` })))).toEqual(RECUSADA)
+      const novo = await gerar(sala, sala.turma)
+      expect(semRequisicao(await reivindicar(pedido({ ...sala, ...novo }, antigo)))).toEqual(ENVIADO)
+
+      const marca = new Map((await pedidosDa(sala.escolaId)).map((linha) => [linha.lista_nome_id, linha.teve_matricula_errada]))
+      expect(Object.fromEntries([errado, deprimeira, antigo].map((nome) => [nome.id, marca.get(nome.id)]))).toEqual({ [errado.id]: true, [deprimeira.id]: false, [antigo.id]: false })
     })
 
     it('E23: a falha entre o insert do pedido e o update do nome volta as duas escritas; o nome continua livre e sem pedido, e o pedido seguinte grava', async () => {
@@ -594,6 +631,8 @@ describe('salas/reivindicar (A1, tarefa 6.0): o aluno pede o próprio nome, e o 
       expect(respostas.map(semRequisicao).sort((x, y) => x.status - y.status)).toEqual([ENVIADO, RECUSADA])
       expect(await pedidosDa(sala.escolaId)).toHaveLength(1)
       expect(await estadoDoNome(nome.id)).toBe('reivindicado')
+      // O perdedor rodou o hash sem pedido: soma um na turma, e nada no nome, que já não está livre (7.0, L6).
+      expect(await contadores(sala, nome)).toEqual({ escola: 0, turma: 1, nome: 0 })
     })
 
     it('C1 (repository): o update num nome já reivindicado não acha linha', async () => {
@@ -615,6 +654,7 @@ describe('salas/reivindicar (A1, tarefa 6.0): o aluno pede o próprio nome, e o 
       const respostas = await Promise.all([reivindicar(corpo), reivindicar(corpo)])
       for (const resposta of respostas) expect(semRequisicao(resposta)).toEqual(ENVIADO)
       expect(await pedidosDa(sala.escolaId)).toHaveLength(1)
+      expect(await contadores(sala, nome)).toEqual({ escola: 0, turma: 0, nome: 0 })
     })
 
     it('C2 (b): com o teto do semáforo ocupado, o segundo envio chega enquanto o primeiro espera, e é atendido depois dele: um pedido, os dois enviado', async () => {
@@ -636,6 +676,7 @@ describe('salas/reivindicar (A1, tarefa 6.0): o aluno pede o próprio nome, e o 
       expect(semRequisicao(await primeiro)).toEqual(ENVIADO)
       expect(semRequisicao(await segundo)).toEqual(ENVIADO)
       expect((await pedidosDa(sala.escolaId)).map((linha) => linha.lista_nome_id).sort()).toEqual([ocupante.id, nome.id].sort())
+      expect(await contadores(sala, nome)).toEqual({ escola: 0, turma: 0, nome: 0 })
     })
 
     it('C2 (c): com o índice da chave depois do "um pendente por nome", o segundo envio, que leu a chave antes do commit do primeiro, recebe o 23505 do pendente e relê a chave: enviado; um terceiro, com outra chave, a recusa', async () => {
@@ -692,11 +733,14 @@ describe('salas/reivindicar (A1, tarefa 6.0): o aluno pede o próprio nome, e o 
         // Duas leituras iniciais e a releitura do segundo, depois do 23505.
         expect(leituras).toHaveBeenCalledTimes(3)
         expect(await pedidosDa(sala.escolaId)).toHaveLength(1)
+        expect(await contadores(sala, nome)).toEqual({ escola: 0, turma: 0, nome: 0 })
 
-        // Um terceiro envio no mesmo nome, com outra chave: o mesmo 23505, e sem a própria chave gravada, a recusa.
+        // Um terceiro envio no mesmo nome, com outra chave: o mesmo 23505, e sem a própria chave gravada, a recusa, que
+        // soma um no teto da turma (L6) e nada no nome, já tomado.
         expect(semRequisicao(await reivindicar(pedido(sala, nome)))).toEqual(RECUSADA)
         expect(restricoes).toEqual([pendente, pendente])
         expect(await pedidosDa(sala.escolaId)).toHaveLength(1)
+        expect(await contadores(sala, nome)).toEqual({ escola: 0, turma: 1, nome: 0 })
       } finally {
         insercoes.mockRestore()
         leituras.mockRestore()
@@ -804,6 +848,7 @@ describe('salas/reivindicar (A1, tarefa 6.0): o aluno pede o próprio nome, e o 
       await vi.waitFor(() => expect(hashesDoSemaforo).toHaveBeenCalledTimes(1))
       const antes = await retrato(a.escolaId)
       const corpo = pedido(a, nome)
+      const indisponiveisAntes = await indisponiveis()
       const inicio = performance.now()
       const recusado = await reivindicar(corpo, { url: apiDoSemaforo.url })
       expect(performance.now() - inicio).toBeGreaterThanOrEqual(ESPERA_MAXIMA_PELO_HASH_MS - 100)
@@ -811,6 +856,8 @@ describe('salas/reivindicar (A1, tarefa 6.0): o aluno pede o próprio nome, e o 
       expect(Number(recusado.retryAfter)).toBeGreaterThanOrEqual(RETRY_AFTER_MINIMO_S)
       expect(Number(recusado.retryAfter)).toBeLessThanOrEqual(RETRY_AFTER_MAXIMO_S)
       expect(recusado.cacheControl).toBe('no-store')
+      // O 503 soma em `sala.reivindicacao{resultado="indisponivel"}` (7.0).
+      expect((await indisponiveis()) - indisponiveisAntes).toBe(1)
       // O ocupante ainda está no hash: o retrato de antes do 503 é o de agora, e o nome do recusado segue livre.
       expect(await retrato(a.escolaId)).toEqual(antes)
       expect(await estadoDoNome(nome.id)).toBe('livre')

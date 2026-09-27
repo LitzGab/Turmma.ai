@@ -1,6 +1,6 @@
 import { ErroDeDominio, type Banco } from '@educa/nucleo'
 import { CodigoDeErro, esquemaRespostaSalaAberta, type PedidoAbrirSala, type RespostaSalaAberta } from '@educa/shared'
-import type { AcessoDaSala } from '../sessao/acesso-da-sala.js'
+import type { AcessoDaSala, GuardaDoCodigo } from '../sessao/acesso-da-sala.js'
 import { entradaDaSala } from './entrada-da-sala.js'
 import { ListaLivreRepository } from './lista-livre.repository.js'
 
@@ -12,12 +12,16 @@ import { ListaLivreRepository } from './lista-livre.repository.js'
  *
  * O que não é um acesso vigente da escola do slug no ano em curso responde o mesmo `NAO_ENCONTRADO`. Nada disto loga: o
  * slug, o token, o código e os nomes nunca vão a log.
+ *
+ * Pelo código, a `guarda` (os limites da sala, 7.0) conta o código errado na escola do slug e, acima do teto, faz a
+ * busca esperar 1 s: quem tenta códigos para listar os nomes livres anda devagar, e o código certo continua abrindo.
  */
 export class SalasService {
   constructor(
     private readonly banco: Banco,
     private readonly acessoDaSala: AcessoDaSala,
     private readonly chaveCodigo: Uint8Array,
+    private readonly guarda: GuardaDoCodigo,
   ) {}
 
   /** `POST /v1/salas/abrir`: o nome da turma e os nomes livres, lidos a cada abertura. */
@@ -28,6 +32,6 @@ export class SalasService {
       // A turma excluída leva o acesso pela cascata: sem ela aqui, a exclusão chegou entre as duas leituras.
       if (nomeDaTurma === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
       return esquemaRespostaSalaAberta.parse({ turma: { nome: nomeDaTurma }, nomes: await lista.nomesLivres(turmaId) })
-    })
+    }, this.guarda)
   }
 }

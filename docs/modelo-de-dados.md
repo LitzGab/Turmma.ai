@@ -174,7 +174,8 @@ Reivindicacao*   → escola*, anoLetivo*, turma*, listaNome?, chaveEnvio?, senha
 cria o aluno (D4; 8.0). Não há `dispositivo`: nada liga o pedido ao navegador nem ao IP (PRD, 10.2).
 
 - **O pedido nasce `pendente`** com o hash argon2id da senha, a `chaveEnvio` que a página sorteia a
-  cada envio e `teveMatriculaErrada` (em `false` até a 7.0, que o lê do contador do nome). Os três
+  cada envio e `teveMatriculaErrada`, lido do contador de matrícula errada daquele nome pelo mesmo acesso da turma
+  (7.0: sim se houve alguma na janela de 10 min, sem número nem hora). Os três
   existem só no pendente, e o pendente tem os três (check); a decisão e o encerramento os apagam. O
   pendente sempre aponta para o nome (check): o nome de um pendente não se apaga, e o encerramento e
   a eliminação fecham ou apagam o pedido antes.
