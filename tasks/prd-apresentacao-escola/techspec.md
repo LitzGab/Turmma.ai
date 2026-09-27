@@ -261,8 +261,8 @@ decisão (10.0) travam o ano no começo da transação delas; o ano que deixou d
     o tamanho dos itens (P18). Abaixo de 768 px o "Sair" fica também na barra do topo, a um toque
   - Orçamento: com três áreas, o Rolldown separa React e o roteador num `parte-*` que a entrada importa junto. O teto de
     150 kB mede `index-*` e `parte-*` (o primeiro carregamento, `docs/interface.md` 10.4), e o `index-*` sozinho continua
-    medido, para o build sem entrada reprovar. Tetos de partida: coordenação 30 kB, professor 20 kB, aluno 10 kB; a 12.4,
-    a 13.4 e a 15.3 os ajustam
+    medido, para o build sem entrada reprovar. Tetos de partida: coordenação 30 kB, professor 20 kB, aluno 10 kB; a 12.4
+    (aluno, 5 kB), a 13.4 e a 15.3 os ajustam
   - Ícones: `lucide-react` entra, ícone a ícone (`docs/interface.md` 9.4)
   - A fronteira põe o título da falha pelo gancho da tela da falha (`useTituloDaAba`), e não no `componentDidCatch`: a
     rota de antes devolve o título dela no efeito de desmontagem, que roda depois e apagaria o da falha. Ao assumir, ela
@@ -272,6 +272,25 @@ decisão (10.0) travam o ano no começo da transação delas; o ano que deixou d
     e a do aluno dizem que o que eles fazem aparece nas próximas versões, até a 13.0 e a 12.0
   - A gaveta fecha também na troca de escola e na troca de pessoa (o seletor vai de `/` para `/`), e não só na troca de
     endereço
+- **Decidido na 12.0** (divergências registradas em `12_task.md`):
+  - O seletor deixa o `details` e vira um botão com `aria-expanded` que abre uma lista (padrão de divulgação, sem setas):
+    abre por clique, toque, Enter ou Espaço, o foco vai para a escola de agora, o Tab percorre as outras, e o Esc fecha
+    só a lista, devolvendo o foco ao botão, sem fechar a gaveta. A lista traz **todos** os acessos da conta, a escola de
+    agora com a marca de escolhido (ícone e `aria-current`); escolhê-la só fecha a lista, sem troca nem token novo. Cada
+    linha tem o nome acessível "escola, rede · papel". Durante a troca, as linhas ficam em `aria-disabled`, e não
+    `disabled`, para o foco não cair no `body`; o toque repetido não manda outra troca. Reabrir apaga o aviso da troca
+    recusada
+  - Com uma escola só, fica o nome dela, sem a rede: o aluno não tem `acessos`, e o `/v1/eu.escola` não traz rede (a 12.1
+    põe a rede só nos acessos)
+  - A etapa `escolher` do login leva o mesmo `esquemaAcessoDaConta`, e por isso também o `redeNome`; a tela da escolha
+    continua mostrando escola e papel. Essa etapa vem antes do segundo fator da coordenação: o que ela expõe é escola,
+    rede e papel de cada acesso da própria conta, e mais nada; campo novo no `esquemaAcessoDaConta` passa pelo
+    `privacy-guardian` (recomendação dele na 12.0)
+  - A página inicial do aluno aponta para "Minha turma", como a do professor aponta para Turmas
+  - "Minha turma" com `NAO_ENCONTRADO` (sem vínculo confirmado no ano em curso: a virada, ou o aluno sem turma) diz a quem
+    recorrer, sem "Tentar de novo"; os outros erros são o `EstadoErro`. A série vem por extenso de `nomeDaSerie`, em
+    `packages/shared`, que a Estrutura da 13.0 reaproveita
+  - Teto do chunk `aluno-*`: 5 kB (a "Minha turma" mede perto de 1 kB)
 - **Decisão**: "Aprovar N" (`oficial`) revisa turma, nomes e efeito, e avisa a coordenação da auditoria; "Recusar"
   (`perigo`) confirma; depois, texto por pedido (W6). Até 40, explicado. O pedido mostra se houve tentativa com
   matrícula errada no nome. Para o professor, atualiza a cada 15 s com a aba visível (W15); a coordenação usa

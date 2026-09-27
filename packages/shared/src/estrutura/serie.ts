@@ -11,6 +11,18 @@ export const ANOS_DA_ETAPA = {
   em: { menor: 1, maior: 3 },
 } as const satisfies Record<Etapa, { menor: number; maior: number }>
 
+/** O nome de cada etapa como a escola escreve (glossário, "Série"). */
+export const NOME_DA_ETAPA: Readonly<Record<Etapa, string>> = { ef_anos_finais: 'Ensino Fundamental', em: 'Ensino Médio' }
+
+/**
+ * A série por extenso, para a tela: `{ etapa: 'ef_anos_finais', ano: 7 }` → "7º ano do Ensino Fundamental", e
+ * `{ etapa: 'em', ano: 2 }` → "2º ano do Ensino Médio" (glossário, "Série"). Um lugar só, para a "Minha turma" do aluno
+ * (A1, 12.0) e a Estrutura da coordenação (13.0) não escreverem a mesma série de dois jeitos.
+ */
+export function nomeDaSerie(serie: { readonly etapa: Etapa; readonly ano: number }): string {
+  return `${String(serie.ano)}º ano do ${NOME_DA_ETAPA[serie.etapa]}`
+}
+
 /**
  * Corpo de `POST /v1/series`: a etapa e o ano dentro dela. "5º ano" e "4º do Ensino Médio" são recusados aqui, e de novo
  * pelo check do banco. Estrito: nada de escola, que vem da sessão.

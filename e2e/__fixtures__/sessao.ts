@@ -16,6 +16,8 @@ import { lerAmbienteDeTeste, urlDoBancoDeTeste, valorObrigatorio } from '../../t
 export interface EquipeDeTeste {
   readonly escolaId: string
   readonly escolaNome: string
+  /** O nome da rede da escola, único por chamada: é o que o seletor de escola mostra embaixo do nome dela (P30). */
+  readonly redeNome: string
   /** O endereço da escola, por onde entram o aluno e quem usa a conta da escola (RF7, RF8). */
   readonly slug: string
   /** A conta é global e vale em todas as escolas da pessoa: é por ela que se cria o segundo vínculo. */
@@ -29,6 +31,7 @@ export interface EquipeDeTeste {
 export interface UsuarioDeTeste {
   readonly escolaId: string
   readonly escolaNome: string
+  readonly redeNome: string
   readonly usuarioId: string
 }
 
@@ -74,6 +77,7 @@ export async function criarEquipeComSenha(papel: 'professor' | 'coordenador' = '
   // Nome de escola e de pessoa únicos: é o que deixa um teste afirmar que a tela não mostra a pessoa do teste ao lado,
   // nem a anterior no mesmo Chromebook.
   const escolaNome = `Colégio sintético ${marca.slice(0, 8)}`
+  const redeNome = `Rede sintética do e2e ${marca.slice(0, 8)}`
   const slug = `e2e-${marca}`
   const nome = `${papel === 'professor' ? 'Professora' : 'Coordenadora'} sintética ${marca.slice(0, 8)}`
   const email = `${papel}-${marca}@educa.invalid`
@@ -81,12 +85,12 @@ export async function criarEquipeComSenha(papel: 'professor' | 'coordenador' = '
   const senhaHash = await hashDaSenha(senha)
 
   return comBanco(async (banco) => {
-    const redeId = await id(banco, "insert into rede (nome, tipo) values ('Rede sintética do e2e', 'independente') returning id", [])
+    const redeId = await id(banco, "insert into rede (nome, tipo) values ($1, 'independente') returning id", [redeNome])
     const escolaId = await id(banco, 'insert into escola (rede_id, nome, slug) values ($1, $2, $3) returning id', [redeId, escolaNome, slug])
     await banco.query("insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, 2026, '2026-02-01', '2026-12-18', 'em_curso')", [escolaId])
     const contaId = await id(banco, 'insert into conta (email, senha_hash) values ($1, $2) returning id', [email, senhaHash])
     const usuarioId = await id(banco, 'insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, $3, $4) returning id', [escolaId, contaId, papel, nome])
-    return { escolaId, escolaNome, slug, contaId, usuarioId, nome, email, senha }
+    return { escolaId, escolaNome, redeNome, slug, contaId, usuarioId, nome, email, senha }
   })
 }
 
@@ -97,9 +101,10 @@ export async function criarEquipeComSenha(papel: 'professor' | 'coordenador' = '
 export async function criarUsuarioEmOutraEscola(contaId: string, papel: 'professor' | 'coordenador' = 'professor'): Promise<UsuarioDeTeste> {
   const marca = randomUUID()
   const escolaNome = `Escola sintética da outra rede ${marca.slice(0, 8)}`
+  const redeNome = `Outra rede sintética do e2e ${marca.slice(0, 8)}`
 
   return comBanco(async (banco) => {
-    const redeId = await id(banco, "insert into rede (nome, tipo) values ('Outra rede sintética do e2e', 'prefeitura') returning id", [])
+    const redeId = await id(banco, "insert into rede (nome, tipo) values ($1, 'prefeitura') returning id", [redeNome])
     const escolaId = await id(banco, 'insert into escola (rede_id, nome, slug) values ($1, $2, $3) returning id', [redeId, escolaNome, `e2e-outra-${marca}`])
     await banco.query("insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, 2026, '2026-02-01', '2026-12-18', 'em_curso')", [escolaId])
     const usuarioId = await id(banco, 'insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, $3, $4) returning id', [
@@ -108,7 +113,7 @@ export async function criarUsuarioEmOutraEscola(contaId: string, papel: 'profess
       papel,
       'Professora sintética na outra escola',
     ])
-    return { escolaId, escolaNome, usuarioId }
+    return { escolaId, escolaNome, redeNome, usuarioId }
   })
 }
 
@@ -272,7 +277,10 @@ export function codigoDoAutenticador(segredoBase32: string, deslocamentoSegundos
 
 /** A turma com os vínculos que a coordenação alocou para o professor, como a tela "Turmas" do professor os recebe (RF4). */
 export interface AlocacaoDeTeste {
+  readonly turmaId: string
   readonly turmaNome: string
+  /** Os ids dos vínculos criados, um por disciplina: é por eles que o teste procura dado desta escola na resposta de outra. */
+  readonly vinculoIds: readonly string[]
   /** Um vínculo por disciplina, todos `pendente`: é o professor com duas disciplinas na mesma turma. */
   readonly disciplinas: readonly string[]
 }
@@ -300,14 +308,64 @@ export async function criarAlocacaoDoProfessor(escolaId: string, usuarioId: stri
     ])
     const serieId = await id(banco, "insert into serie (escola_id, etapa, ano) values ($1, 'ef_anos_finais', 7) returning id", [escolaId])
     const turmaId = await id(banco, 'insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, $4) returning id', [escolaId, anoLetivoId, serieId, turmaNome])
+    const vinculoIds: string[] = []
     for (const disciplina of disciplinas) {
       const disciplinaId = await id(banco, 'insert into disciplina (escola_id, nome) values ($1, $2) returning id', [escolaId, disciplina])
-      await banco.query(
-        "insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, criado_por) values ($1, $2, $3, $4, $5, 'professor', $6)",
-        [escolaId, anoLetivoId, usuarioId, turmaId, disciplinaId, coordenacaoId],
+      vinculoIds.push(
+        await id(
+          banco,
+          "insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, criado_por) values ($1, $2, $3, $4, $5, 'professor', $6) returning id",
+          [escolaId, anoLetivoId, usuarioId, turmaId, disciplinaId, coordenacaoId],
+        ),
       )
     }
-    return { turmaNome, disciplinas }
+    return { turmaId, turmaNome, disciplinas, vinculoIds }
+  })
+}
+
+/** A turma do aluno aprovado, como o `GET /v1/minha-turma` a devolve. */
+export interface TurmaDoAlunoDeTeste {
+  readonly turmaId: string
+  readonly turmaNome: string
+  /** A série por extenso, como a tela a escreve ("2º ano do Ensino Médio"). */
+  readonly serieNome: string
+}
+
+/**
+ * Põe o aluno numa turma do ano em curso da escola dele, com o vínculo `confirmado`, como a aprovação da reivindicação o
+ * deixa (8.0): é o que a "Minha turma" mostra. Atalho só do e2e: grava direto no banco, sem a decisão humana nem a
+ * auditoria dela, e não serve de modelo para seed de demonstração, que monta a escola pela tela (D71).
+ *
+ * Sem `turma`, cria uma de 2º ano do Ensino Médio, para a série na tela não ser um valor que a tela pudesse ter fixo; com
+ * ela, põe o aluno como colega de quem já está lá. O vínculo é assinado por uma coordenadora sintética da mesma escola.
+ */
+export async function colocarAlunoNaTurma(aluno: Pick<AlunoDeTeste, 'escolaId' | 'usuarioId'>, turma?: TurmaDoAlunoDeTeste): Promise<TurmaDoAlunoDeTeste> {
+  return comBanco(async (banco) => {
+    const { rows: anos } = await banco.query<{ id: string }>("select id from ano_letivo where escola_id = $1 and situacao = 'em_curso'", [aluno.escolaId])
+    const anoLetivoId = anos[0]?.id
+    if (anoLetivoId === undefined) throw new Error('a escola do e2e não tem ano letivo em curso')
+    const contaDaCoordenacao = await id(banco, 'insert into conta (email) values ($1) returning id', [`coordenacao-${randomUUID()}@educa.invalid`])
+    const coordenacaoId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, 'coordenador', 'Coordenação sintética') returning id", [
+      aluno.escolaId,
+      contaDaCoordenacao,
+    ])
+    let destino = turma
+    if (destino === undefined) {
+      const turmaNome = `2ºB sintética ${randomUUID().slice(0, 8)}`
+      // A série é única por escola: o segundo aluno da mesma escola, numa turma nova, usa a mesma 2ª série.
+      const serieId = await id(
+        banco,
+        "insert into serie (escola_id, etapa, ano) values ($1, 'em', 2) on conflict (escola_id, etapa, ano) do update set ano = excluded.ano returning id",
+        [aluno.escolaId],
+      )
+      const turmaId = await id(banco, 'insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, $4) returning id', [aluno.escolaId, anoLetivoId, serieId, turmaNome])
+      destino = { turmaId, turmaNome, serieNome: '2º ano do Ensino Médio' }
+    }
+    await banco.query(
+      "insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, decidido_em, criado_por) values ($1, $2, $3, $4, 'aluno', 'confirmado', now(), $5)",
+      [aluno.escolaId, anoLetivoId, aluno.usuarioId, destino.turmaId, coordenacaoId],
+    )
+    return destino
   })
 }
 

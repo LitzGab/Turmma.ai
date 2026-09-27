@@ -42,6 +42,38 @@ export async function irPelaNavegacao(page: Page, rotulo: string, hasTouch: bool
   else await item.click()
 }
 
+/**
+ * O botão que abre o seletor de escola, no topo da lateral (P30; A1, 12.0). Só existe para quem tem mais de uma escola;
+ * com uma só, a lateral mostra o nome dela e não há o que abrir. O nome acessível começa por "Escola:", que as linhas da
+ * lista não têm.
+ */
+export const botaoDoSeletor = (page: Page): Locator => lateral(page).getByRole('button', { name: /^Escola: / })
+
+/** O nome acessível da linha de uma escola no seletor: a escola, a rede e o papel, como a lista os mostra. */
+export function nomeNoSeletor(acesso: { readonly escolaNome: string; readonly redeNome: string }, papel: 'professor' | 'coordenação'): string {
+  return `${acesso.escolaNome}, ${acesso.redeNome} · ${papel}`
+}
+
+/** A linha de uma escola na lista aberta do seletor, pelo nome exato (o botão que abre a lista leva o da escola de agora). */
+export const linhaDoSeletor = (page: Page, nome: string): Locator => lateral(page).getByRole('button', { name: nome, exact: true })
+
+/** Abre o seletor de escola, abrindo antes a gaveta quando a casca está nela. */
+export async function abrirSeletorDeEscola(page: Page, hasTouch: boolean): Promise<void> {
+  await abrirNavegacao(page, hasTouch)
+  const botao = botaoDoSeletor(page)
+  if (hasTouch) await botao.tap()
+  else await botao.click()
+  await expect(botao).toHaveAttribute('aria-expanded', 'true')
+}
+
+/** Abre o seletor e escolhe a escola daquela linha. */
+export async function escolherNoSeletor(page: Page, nome: string, hasTouch: boolean): Promise<void> {
+  await abrirSeletorDeEscola(page, hasTouch)
+  const linha = linhaDoSeletor(page, nome)
+  if (hasTouch) await linha.tap()
+  else await linha.click()
+}
+
 /** O Chromebook com CPU ×4 e rede Fast 3G carrega a página e ainda faz o hash da senha no servidor. */
 export const PRAZO_DA_ENTRADA_MS = 20_000
 

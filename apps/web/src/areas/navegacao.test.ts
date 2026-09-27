@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { estaNoItem, NAVEGACAO } from './navegacao'
 
 describe('navegação por papel', () => {
-  it('W2: na A1, só "Turmas" do professor tem tela; a coordenação e o aluno ainda não têm item', () => {
+  it('W2: na A1, "Turmas" do professor e "Minha turma" do aluno têm tela; a coordenação ainda não tem item', () => {
     expect(NAVEGACAO.professor.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([{ rotulo: 'Turmas', caminho: '/professor/turmas' }])
+    expect(NAVEGACAO.aluno.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([{ rotulo: 'Minha turma', caminho: '/aluno/minha-turma' }])
     expect(NAVEGACAO.coordenador).toEqual([])
-    expect(NAVEGACAO.aluno).toEqual([])
   })
 
   it('o item fica selecionado no endereço dele e abaixo dele, e só neles', () => {

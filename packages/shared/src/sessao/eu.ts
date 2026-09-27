@@ -2,10 +2,13 @@ import { z } from 'zod'
 import { PAPEIS_DE_USUARIO } from '../permissao/matriz.js'
 
 /**
- * Um acesso da conta, para o seletor de escola (RF14, tarefa 12.0): o usuário ativo, o nome da escola e o papel nela.
- * Nada além disso da outra escola: nem id dela, nem turma, nem vínculo.
+ * Um acesso da conta, para o seletor de escola (RF14 do F1; P30, A1 tarefa 12.0) e para a escolha no login: o usuário
+ * ativo, o nome da escola, o nome da rede dela e o papel nela. Nada além disso da outra escola: nem id dela nem da rede,
+ * nem turma, nem número de turmas, nem vínculo (Tech Spec da A1, seção 11).
  */
-export const esquemaAcessoDaConta = z.object({ usuarioId: z.uuid(), escolaNome: z.string().min(1), papel: z.enum(PAPEIS_DE_USUARIO) }).strict()
+export const esquemaAcessoDaConta = z
+  .object({ usuarioId: z.uuid(), escolaNome: z.string().min(1), redeNome: z.string().min(1), papel: z.enum(PAPEIS_DE_USUARIO) })
+  .strict()
 
 export type AcessoDaConta = z.infer<typeof esquemaAcessoDaConta>
 

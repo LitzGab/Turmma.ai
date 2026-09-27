@@ -111,7 +111,7 @@ export {
   SITUACOES_DO_ANO_LETIVO,
 } from './estrutura/ano-letivo.js'
 export type { AnoLetivo, PedidoCriarAnoLetivo, RespostaAnoLetivo, RespostaListaDeAnosLetivos, SituacaoDoAnoLetivo } from './estrutura/ano-letivo.js'
-export { ANOS_DA_ETAPA, esquemaPedidoCriarSerie, esquemaRespostaListaDeSeries, esquemaRespostaSerie, esquemaSerie, ETAPAS } from './estrutura/serie.js'
+export { ANOS_DA_ETAPA, esquemaPedidoCriarSerie, esquemaRespostaListaDeSeries, esquemaRespostaSerie, esquemaSerie, ETAPAS, nomeDaSerie } from './estrutura/serie.js'
 export type { Etapa, PedidoCriarSerie, RespostaListaDeSeries, RespostaSerie, Serie } from './estrutura/serie.js'
 export {
   AREAS_DO_CONHECIMENTO,

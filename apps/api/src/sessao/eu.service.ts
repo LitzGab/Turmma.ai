@@ -5,7 +5,7 @@ import type { ResolucaoDeTenantRepository } from './resolucao-de-tenant.reposito
 
 /**
  * Quem está na sessão, no contrato de `GET /v1/eu`: a inatividade é a do papel na escola da sessão, e `acessos`, os
- * usuários ativos de equipe da conta dela (12.0), com o nome da escola e o papel, para o seletor. A conta vem do
+ * usuários ativos de equipe da conta dela (12.0), com o nome da escola, o da rede e o papel, para o seletor. A conta vem do
  * usuário da sessão, nunca do cliente; o aluno não tem conta, e os acessos dele vêm vazios.
  */
 export class EuService {
@@ -25,7 +25,7 @@ export class EuService {
       nome: linha.nome,
       escola: linha.escola,
       inatividadeMin: inatividadeDoPapel(linha),
-      acessos: acessos.map(({ usuarioId, escolaNome, papel }) => ({ usuarioId, escolaNome, papel })),
+      acessos: acessos.map(({ usuarioId, escolaNome, redeNome, papel }) => ({ usuarioId, escolaNome, redeNome, papel })),
     })
   }
 }

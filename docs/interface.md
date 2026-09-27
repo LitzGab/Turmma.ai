@@ -987,7 +987,9 @@ ilustração da entrada em SVG ou WebP.
 - **Topo da lateral:** pinta + "Turmma" em Fustat, o botão de recolher, e logo abaixo o
   **seletor de escola**, no formato de seletor de espaço de trabalho: sigla, rede, turno, turmas e
   a marca de escolhido (regra 50, item 13; P30). Para quem tem uma escola só, ele mostra o nome e
-  não abre
+  não abre. Na A1 (tarefa 12.0) ele mostra escola, rede e papel, com a marca de escolhido; sigla e
+  turno não existem no modelo, e o número de turmas seria dado da outra escola (Tech Spec da A1,
+  seção 11)
 - **"Nova conversa"** é item da lista, como no ChatGPT, e não botão cheio: o laranja da tela é do
   botão de enviar
 - **Itens** em linhas de 44 px, também no computador (A1, tarefa 11.0: o "Sair" é ação principal e tem o tamanho dos

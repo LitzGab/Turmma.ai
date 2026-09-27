@@ -161,14 +161,17 @@ describe('POST /v1/sessao/email: a equipe entra por e-mail e senha', () => {
     const eu = await fetch(`${url}/v1/eu`, { headers: { Authorization: `Bearer ${String(resposta.corpo['token'])}` } })
     expect(eu.status).toBe(200)
     expect(eu.headers.get('cache-control')).toBe('no-store')
-    const { rows: escolas } = await bancada.pool.query<{ nome: string; slug: string }>('select nome, slug from escola where id = $1', [escolaId])
+    const { rows: escolas } = await bancada.pool.query<{ nome: string; slug: string; rede: string }>(
+      'select escola.nome, escola.slug, rede.nome as rede from escola join rede on rede.id = escola.rede_id where escola.id = $1',
+      [escolaId],
+    )
     expect(await eu.json()).toEqual({
       usuarioId: professor.usuarioId,
       papel: 'professor',
       nome: 'Pessoa sintética',
       escola: { id: escolaId, nome: escolas[0]?.nome, slug: escolas[0]?.slug },
       inatividadeMin: 120,
-      acessos: [{ usuarioId: professor.usuarioId, escolaNome: escolas[0]?.nome, papel: 'professor' }],
+      acessos: [{ usuarioId: professor.usuarioId, escolaNome: escolas[0]?.nome, redeNome: escolas[0]?.rede, papel: 'professor' }],
     })
 
     const { rows: acessos } = await bancada.pool.query<{ evento: string; ip: string }>('select evento, host(ip) as ip from registro_acesso where escola_id = $1 and usuario_id = $2', [escolaId, professor.usuarioId])

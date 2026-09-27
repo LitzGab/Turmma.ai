@@ -236,8 +236,8 @@ describe('meia credencial não sobrevive à sessão', () => {
 
 describe('escolha e troca de escola', () => {
   const ACESSOS = [
-    { usuarioId: '0190f5a0-0000-7000-8000-00000000000a', escolaNome: 'Colégio Vista Alegre', papel: 'professor' as const },
-    { usuarioId: '0190f5a0-0000-7000-8000-00000000000b', escolaNome: 'Escola Municipal Sete', papel: 'coordenador' as const },
+    { usuarioId: '0190f5a0-0000-7000-8000-00000000000a', escolaNome: 'Colégio Vista Alegre', redeNome: 'Rede Vista Alegre', papel: 'professor' as const },
+    { usuarioId: '0190f5a0-0000-7000-8000-00000000000b', escolaNome: 'Escola Municipal Sete', redeNome: 'Rede Municipal de Joinville', papel: 'coordenador' as const },
   ]
   const ESCOLHER = { etapa: 'escolher', desafio: 'desafio.escolher.jwt', acessos: ACESSOS }
 

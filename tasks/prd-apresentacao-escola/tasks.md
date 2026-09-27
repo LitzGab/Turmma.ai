@@ -89,11 +89,11 @@ dela nos dois.
   - [x] 11.4 Tetos dos chunks novos no `.size-limit.json`
   - [x] 11.5 Testes: W2, W5; W4 e W12 da casca; o e2e da A0b junto
 
-- [ ] **12.0 — Web: seletor de escola (P30) e a "Minha turma" do aluno**
-  - [ ] 12.1 `/v1/eu` com escola, rede e papel de cada acesso
-  - [ ] 12.2 Seletor no formato da 11.1; a troca faz `resetQueries` com o token novo
-  - [ ] 12.3 Tela "Minha turma"; teto do chunk do aluno
-  - [ ] 12.4 Testes: W3, W13; W4 e W12 da Minha turma; integração do contrato de `/v1/eu`
+- [x] **12.0 — Web: seletor de escola (P30) e a "Minha turma" do aluno**
+  - [x] 12.1 `/v1/eu` com escola, rede e papel de cada acesso
+  - [x] 12.2 Seletor no formato da 11.1; a troca faz `resetQueries` com o token novo
+  - [x] 12.3 Tela "Minha turma"; teto do chunk do aluno
+  - [x] 12.4 Testes: W3, W13; W4 e W12 da Minha turma; integração do contrato de `/v1/eu`
 
 - [ ] **13.0 — Web: Estrutura, lista de nomes e alocação**
   - [ ] 13.1 Estrutura: ano, série, disciplina e turma, com renomear e excluir

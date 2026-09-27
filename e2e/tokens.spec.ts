@@ -1,6 +1,6 @@
 import type { Locator, Page, Request } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { lateral, naGaveta } from './__fixtures__/casca.ts'
+import { botaoDoSeletor, lateral, naGaveta } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -181,7 +181,7 @@ test.describe('pele da D72 nos componentes compartilhados', () => {
     await expect(pinta).toHaveJSProperty('complete', true)
     expect(await pinta.evaluate((imagem) => (imagem as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
     expect(await larguraExcedente(page)).toBe(0)
-    await tabAteOAnel(page, casca.locator('summary'), 'seletor de escola')
+    await tabAteOAnel(page, botaoDoSeletor(page), 'seletor de escola')
     await tabAteOAnel(page, casca.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }), 'item Turmas da navegação')
     await tabAteOAnel(page, casca.getByRole('button', { name: 'Sair' }), 'botão Sair')
 

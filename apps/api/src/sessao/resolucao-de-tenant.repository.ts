@@ -138,16 +138,18 @@ export class ResolucaoDeTenantRepository {
   }
 
   /**
-   * Os acessos da conta para o `/v1/eu` (12.0) e para a etapa `escolher` do login (20.0): cada usuário ativo de equipe,
-   * com o nome da escola e o papel. O usuário desativado (saiu da escola) e o que ainda espera o convite (inativo até o
-   * login que o ativa, 7.0) não aparecem. Nada da outra escola além do nome dela: nem id, nem turma, nem vínculo.
+   * Os acessos da conta para o `/v1/eu` (12.0 do F1; o seletor da A1, 12.0) e para a etapa `escolher` do login (20.0):
+   * cada usuário ativo de equipe, com o nome da escola, o nome da rede dela e o papel. O usuário desativado (saiu da
+   * escola) e o que ainda espera o convite (inativo até o login que o ativa, 7.0) não aparecem. Nada da outra escola além
+   * do nome dela e do da rede: nem id, nem turma, nem número de turmas, nem vínculo.
    */
-  @SemEscopo('a credencial da equipe é global: o /v1/eu e a etapa escolher listam, pela conta já verificada, em que escolas ela tem usuário ativo, só com id, nome da escola e papel')
-  acessosDaConta(contaId: string): Promise<Array<{ usuarioId: string; escolaNome: string; papel: PapelDeUsuario }>> {
+  @SemEscopo('a credencial da equipe é global: o /v1/eu e a etapa escolher listam, pela conta já verificada, em que escolas ela tem usuário ativo, só com id, nome da escola, nome da rede e papel')
+  acessosDaConta(contaId: string): Promise<Array<{ usuarioId: string; escolaNome: string; redeNome: string; papel: PapelDeUsuario }>> {
     return this.banco
-      .select({ usuarioId: usuario.id, escolaNome: escola.nome, papel: usuario.papel })
+      .select({ usuarioId: usuario.id, escolaNome: escola.nome, redeNome: rede.nome, papel: usuario.papel })
       .from(usuario)
       .innerJoin(escola, eq(escola.id, usuario.escolaId))
+      .innerJoin(rede, eq(rede.id, escola.redeId))
       .where(and(eq(usuario.contaId, contaId), isNull(usuario.desativadoEm), ne(usuario.papel, 'aluno')))
       .orderBy(escola.nome, usuario.id)
   }

@@ -73,13 +73,13 @@ describe('teto do bundle da web (.size-limit.json)', () => {
       { path: 'apps/web/dist/assets/operacao-*.js', limit: '60 kB', brotli: true },
       { path: 'apps/web/dist/assets/coordenacao-*.js', limit: '30 kB', brotli: true },
       { path: 'apps/web/dist/assets/professor-*.js', limit: '20 kB', brotli: true },
-      { path: 'apps/web/dist/assets/aluno-*.js', limit: '10 kB', brotli: true },
+      { path: 'apps/web/dist/assets/aluno-*.js', limit: '5 kB', brotli: true },
     ])
   })
 
   it('todos os grupos pequenos passam: o controle que mostra que as reprovações abaixo vêm do tamanho', () => {
     const { codigo, saida } = sizeLimit(buildDeMentira(BUILD_PEQUENO))
-    for (const teto of ['150 kB', '60 kB', '30 kB', '20 kB', '10 kB']) expect(saida).toContain(teto)
+    for (const teto of ['150 kB', '60 kB', '30 kB', '20 kB', '5 kB']) expect(saida).toContain(teto)
     expect(codigo).toBe(0)
   })
 
@@ -100,7 +100,7 @@ describe('teto do bundle da web (.size-limit.json)', () => {
   for (const [area, teto, acima] of [
     ['coordenacao', '30 kB', 40_000],
     ['professor', '20 kB', 30_000],
-    ['aluno', '10 kB', 15_000],
+    ['aluno', '5 kB', 8_000],
   ] as const) {
     it(`o chunk ${area}-* acima de ${teto} em brotli reprova, com os outros folgados`, () => {
       const { codigo, saida } = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, [`${area}-pequeno.js`]: jsIncompressivel(acima) }))

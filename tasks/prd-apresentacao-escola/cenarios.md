@@ -411,7 +411,7 @@ aos cenários.
   | Pedidos | professor: "Nenhum pedido esperando" → Acesso; coordenação: "Os pedidos chegam quando o professor da turma gerar o acesso", sem botão | seleção |
   | Acesso | "Sem acesso ativo" → Gerar | validade |
   | Pública | "Se o seu nome não aparece, chame o professor"; vencido: o texto do W9 pelo caminho usado e, no link, o campo do código com o foco | nomes livres |
-  | Minha turma | nunca vazia | turma, sem colegas |
+  | Minha turma | nunca vazia; sem vínculo confirmado no ano (`NAO_ENCONTRADO`), "Você ainda não está em uma turma neste ano letivo. Fale com o seu professor ou com a coordenação.", sem "Tentar de novo" (12.0) | turma, série e escola, sem colegas |
 - **W5** Fronteira: o `import()` de `coordenacao-*` e de `professor-*` abortado mostra "Confira a conexão e tente de
   novo" e troca o título da aba, que volta ao sair (pelo gancho `useTituloDaAba` da tela da falha, que substituiu o
   `componentWillUnmount` pendente da A0b, também pelo "Sair"). **Quebra sem:** a fronteira em volta da área; o título da
@@ -453,7 +453,10 @@ aos cenários.
 - **W12** 360 px: nenhuma tela nova com rolagem horizontal; abaixo de 768 px, cartões e gaveta; alvos de 44 px;
   teclado: selecionar pedidos e decidir só com Tab, Espaço e Enter, foco preso no diálogo e devolvido
 - **W13** Seletor (P30): escola, rede e papel, sem número de turmas nem nada da outra escola; com uma escola só, mostra o nome e não
-  abre
+  abre. Na 12.0: a lista traz a escola de agora com a marca de escolhido (ícone e `aria-current`), e escolhê-la não troca
+  nada (o recomeço da tela, "mesma entrada"); o Esc fecha só a lista, também dentro da gaveta; reabrir apaga o aviso da
+  troca recusada e leva o foco à escola de agora; dois toques na mesma escola mandam uma troca só. **Quebra sem:** o
+  `aria-current`; o limite de uma escola; a guarda da escola de agora; a guarda da troca no ar
 - **W14** Aceite do professor: conta nova cria a senha e vai à entrada; o link refeito mostra o texto de convite
   inválido, com "peça outro à coordenação"
 - **W15** (unidade, relógio falso e `visibilitychange`) Professor: a lista de pedidos atualiza a cada 15 s com a aba

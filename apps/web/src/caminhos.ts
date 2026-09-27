@@ -13,6 +13,12 @@ export const ROTAS_DO_PROFESSOR = {
   turmas: '/turmas',
 } as const
 
+/** As rotas da área do aluno, relativas à base dela. */
+export const ROTAS_DO_ALUNO = {
+  /** A turma do aluno aprovado, com a escola e a série, sem colegas (A1, 12.0; RF13). */
+  minhaTurma: '/minha-turma',
+} as const
+
 /** Os endereços da web, num lugar só. */
 export const ROTAS = {
   inicio: '/',
@@ -24,6 +30,8 @@ export const ROTAS = {
   escolherEscola: '/escolher-escola',
   /** "Turmas" do professor, pela raiz: é o endereço que a navegação usa. */
   turmas: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.turmas}`,
+  /** "Minha turma" do aluno, pela raiz: é o endereço que a navegação usa. */
+  minhaTurma: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.minhaTurma}`,
   /** O convite do primeiro coordenador. O token vai no fragmento `#`, e nunca no caminho nem na consulta. */
   convite: '/convite',
   /** Estado do sistema, público: é a tela que se abre justamente quando não se consegue entrar. */

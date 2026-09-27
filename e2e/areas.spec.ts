@@ -4,6 +4,8 @@ import { NOME_DA_CONTESTACAO, NOME_DO_ESTADO_DE_VINCULO } from '../packages/shar
 import {
   abrirNavegacao,
   entrarComoCoordenacaoNaMesmaAba,
+  escolherNoSeletor,
+  nomeNoSeletor,
   entrarComoProfessora,
   entrarPorEmail,
   gaveta,
@@ -13,7 +15,7 @@ import {
   PRAZO_DA_ENTRADA_MS,
 } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { criarAlocacaoDoProfessor, criarAlunoComMatricula, criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
+import { colocarAlunoNaTurma, criarAlocacaoDoProfessor, criarAlunoComMatricula, criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
@@ -34,6 +36,8 @@ const TITULO_DA_FALHA = 'Não foi possível carregar esta parte do Turmma'
  * (outra resolução de módulos); a tarefa que acrescenta a linha lá acrescenta aqui, e o W2 percorre todos.
  */
 const ITENS_DO_PROFESSOR = [{ rotulo: 'Turmas', caminho: '/professor/turmas' }] as const
+/** Os itens do aluno, como a mesma tabela os declara: "Minha turma" chegou na 12.0. */
+const ITENS_DO_ALUNO = [{ rotulo: 'Minha turma', caminho: '/aluno/minha-turma' }] as const
 
 /** Os pedidos de JS que a página fez, pelo caminho: é por eles que o teste sabe qual área foi baixada. */
 function registrarChunks(page: Page): string[] {
@@ -138,7 +142,7 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await expect(page).toHaveTitle('Página não encontrada · Turmma')
     // A casca continua: a pessoa sai dali pela lateral, e não por um beco sem saída.
     await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible()
-    await page.goto('/aluno/qualquer')
+    await page.goto('/aluno/minha-turma')
     await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     // Sem a guarda, a tela seria a mesma (a área da coordenação ainda não tem tela), e é o pedido do chunk que mostra
     // que ela não foi baixada nem montada.
@@ -157,23 +161,41 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await expect(page.getByRole('heading', { name: /^Olá, / })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   })
 
-  test('o aluno não tem item na A1, e os endereços do professor e da coordenação caem em "não encontrada"', async ({ page, hasTouch }) => {
+  test('o aluno vê só "Minha turma", que leva à tela dele, e os endereços do professor e da coordenação caem em "não encontrada"', async ({ page, hasTouch }) => {
     const pedidos = registrarChunks(page)
     const aluno = await criarAlunoComMatricula()
+    const turma = await colocarAlunoNaTurma(aluno)
     await page.goto(`/e/${aluno.slug}`)
     await page.getByLabel('Matrícula').fill(aluno.matricula)
     await page.getByLabel('Senha').fill(aluno.senha)
     if (hasTouch) await page.getByRole('button', { name: /^Entrar$/ }).tap()
     else await page.getByRole('button', { name: /^Entrar$/ }).click()
     await expect(page.getByRole('heading', { name: `Olá, ${aluno.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    // A página inicial não aponta para Turmas, que não é tela do aluno.
-    await expect(page.getByRole('main').getByRole('link', { name: 'Turmas' })).toHaveCount(0)
-    await expect(page.getByRole('main')).toContainText('próximas versões')
+    // A página inicial aponta para a turma dele, e não para Turmas, que não é tela do aluno, nem para "próximas versões".
+    await expect(page.getByRole('main').getByRole('link', { name: 'Turmas', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('main')).not.toContainText('próximas versões')
+    const paraMinhaTurma = page.getByRole('main').getByRole('link', { name: 'Minha turma', exact: true })
+    if (hasTouch) await paraMinhaTurma.tap()
+    else await paraMinhaTurma.click()
+    await expect(page).toHaveURL(/\/aluno\/minha-turma$/)
+    await expect(page.getByRole('main')).toContainText(turma.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
+    await voltarAoInicio(page, hasTouch)
 
     await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' })).toHaveCount(0)
+    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(ITENS_DO_ALUNO.map(({ rotulo }) => rotulo))
     await expect(lateral(page)).toContainText(aluno.nome)
     await expect(lateral(page)).toContainText('aluno')
+
+    // Nenhum item da tabela leva a tela que não existe.
+    for (const item of ITENS_DO_ALUNO) {
+      await irPelaNavegacao(page, item.rotulo, hasTouch)
+      await expect(page).toHaveURL(new RegExp(`${item.caminho}$`))
+      await expect(page).toHaveTitle(`${item.rotulo} · Turmma`, { timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(naoEncontrada(page)).toHaveCount(0)
+    }
+    await expect(page.getByRole('main')).toContainText(turma.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
+    await abrirNavegacao(page, hasTouch)
+    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Minha turma' })).toHaveAttribute('aria-current', 'page')
 
     for (const endereco of ['/professor/turmas', '/coordenacao']) {
       await page.goto(endereco)
@@ -350,13 +372,7 @@ test.describe('recomeço da tela', () => {
     await expect(page.getByRole('heading', { name: `Olá, ${emA.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
 
     // O endereço não muda na troca (`/` para `/`): é a pessoa da sessão que muda, e é ela que fecha a gaveta.
-    await abrirNavegacao(page, hasTouch)
-    const resumo = lateral(page).locator('summary')
-    if (hasTouch) await resumo.tap()
-    else await resumo.click()
-    const escolherB = lateral(page).getByRole('button', { name: `${emB.escolaNome} · professor` })
-    if (hasTouch) await escolherB.tap()
-    else await escolherB.click()
+    await escolherNoSeletor(page, nomeNoSeletor(emB, 'professor'), hasTouch)
     await expect(page.getByRole('heading', { name: 'Olá, Professora sintética na outra escola' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     expect(new URL(page.url()).pathname).toBe('/')
     await expect(gaveta(page)).toBeHidden()

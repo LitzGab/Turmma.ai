@@ -104,12 +104,19 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
     await medidor.encerrar()
   })
 
-  /** Escola nova com nome próprio (o `acessos` mostra o nome) e a inatividade da equipe pedida. */
-  async function escola(prefixo: string, inatividadeEquipeMin = 120): Promise<{ id: string; nome: string }> {
+  /**
+   * Escola nova, cada uma na sua rede, com nome próprio na escola e na rede (o `acessos` mostra os dois, 12.0 da A1) e a
+   * inatividade da equipe pedida. Duas escolas nunca dividem o nome da rede: é o que deixa o teste provar que cada acesso
+   * traz a rede da própria escola.
+   */
+  async function escola(prefixo: string, inatividadeEquipeMin = 120): Promise<{ id: string; nome: string; redeId: string; redeNome: string }> {
     const id = await bancada.escola()
-    const nome = `${prefixo} ${randomUUID().slice(0, 8)}`
+    const marca = randomUUID().slice(0, 8)
+    const nome = `${prefixo} ${marca}`
+    const redeNome = `Rede de ${prefixo} ${marca}`
     await bancada.pool.query('update escola set nome = $1, inatividade_equipe_min = $2 where id = $3', [nome, inatividadeEquipeMin, id])
-    return { id, nome }
+    const { rows } = await bancada.pool.query<{ id: string }>('update rede set nome = $1 where id = (select rede_id from escola where id = $2) returning id', [redeNome, id])
+    return { id, nome, redeId: rows[0]?.id ?? '', redeNome }
   }
 
   /** Uma conta com senha e um usuário ativo na escola, com o papel pedido. */
@@ -232,8 +239,8 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
       etapa: 'escolher',
       desafio: expect.any(String),
       acessos: [
-        { usuarioId: professora.usuarioId, escolaNome: a.nome, papel: 'professor' },
-        { usuarioId: emB, escolaNome: b.nome, papel: 'professor' },
+        { usuarioId: professora.usuarioId, escolaNome: a.nome, redeNome: a.redeNome, papel: 'professor' },
+        { usuarioId: emB, escolaNome: b.nome, redeNome: b.redeNome, papel: 'professor' },
       ].sort((um, outro) => um.escolaNome.localeCompare(outro.escolaNome)),
     })
     expect(login.setCookie).toEqual([])
@@ -606,7 +613,7 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
 
     const eu = await obter('/v1/eu', tokenA)
     expect(eu.status).toBe(200)
-    expect(eu.corpo['acessos']).toEqual([{ usuarioId: professora.usuarioId, escolaNome: a.nome, papel: 'professor' }])
+    expect(eu.corpo['acessos']).toEqual([{ usuarioId: professora.usuarioId, escolaNome: a.nome, redeNome: a.redeNome, papel: 'professor' }])
     esperarNaoEncontrado(await escolherEscola(tokenA, emB))
     expect(await sessoesDe(b.id, emB)).toEqual([])
     expect((await obter('/v1/eu', tokenA)).status).toBe(200)
@@ -631,7 +638,7 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
     ])
 
     const tokenA = await entrarComo(professora, professora.usuarioId)
-    expect((await obter('/v1/eu', tokenA)).corpo['acessos']).toEqual([{ usuarioId: professora.usuarioId, escolaNome: a.nome, papel: 'professor' }])
+    expect((await obter('/v1/eu', tokenA)).corpo['acessos']).toEqual([{ usuarioId: professora.usuarioId, escolaNome: a.nome, redeNome: a.redeNome, papel: 'professor' }])
     esperarNaoEncontrado(await escolherEscola(tokenA, esperando))
     expect(await sessoesDe(b.id, esperando)).toEqual([])
     expect((await obter('/v1/eu', tokenA)).status).toBe(200)
@@ -670,27 +677,43 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
     expect(abertas).toHaveLength(1)
   })
 
-  it('privacidade (RF18): /v1/eu.acessos traz só usuarioId, escolaNome e papel dos usuários ativos da conta; nada de id, turma ou vínculo da outra escola, e o aluno recebe a lista vazia', async () => {
+  it('contrato (A1, 12.0; RF18 do F1): /v1/eu.acessos traz só usuarioId, escolaNome, redeNome e papel dos usuários ativos da conta, cada um com a rede da própria escola; nada de id, turma, número de turmas ou vínculo da outra escola, e o aluno recebe a lista vazia', async () => {
     const a = await escola('Colégio')
     const b = await escola('Escola da rede')
     const professora = await pessoa(a.id)
     const coordenadoraEmB = await naOutraEscola(professora, b.id, 'coordenador')
     // Outra conta na mesma escola B: não é acesso desta.
     await pessoa(b.id)
+    // B tem turmas no ano em curso: nem o nome, nem o id, nem a quantidade delas pode sair no acesso da outra escola.
+    const { rows: anos } = await bancada.pool.query<{ id: string }>(
+      "insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, 2026, '2026-02-01', '2026-12-18', 'em_curso') returning id",
+      [b.id],
+    )
+    const { rows: series } = await bancada.pool.query<{ id: string }>("insert into serie (escola_id, etapa, ano) values ($1, 'em', 2) returning id", [b.id])
+    const turmasDeB: Array<{ id: string; nome: string }> = []
+    for (const nome of [`2ºB de B ${randomUUID().slice(0, 8)}`, `2ºC de B ${randomUUID().slice(0, 8)}`]) {
+      const { rows } = await bancada.pool.query<{ id: string }>('insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, $4) returning id', [
+        b.id,
+        anos[0]?.id,
+        series[0]?.id,
+        nome,
+      ])
+      turmasDeB.push({ id: rows[0]?.id ?? '', nome })
+    }
     const tokenA = await entrarComo(professora, professora.usuarioId)
 
     const eu = await obter('/v1/eu', tokenA)
     expect(eu.status).toBe(200)
     const acessos = eu.corpo['acessos'] as Array<Record<string, unknown>>
-    // Em ordem de nome de escola: "Colégio …" vem antes de "Escola …".
+    // Em ordem de nome de escola: "Colégio …" vem antes de "Escola …". Cada rede é a da própria escola.
     expect(acessos).toEqual([
-      { usuarioId: professora.usuarioId, escolaNome: a.nome, papel: 'professor' },
-      { usuarioId: coordenadoraEmB, escolaNome: b.nome, papel: 'coordenador' },
+      { usuarioId: professora.usuarioId, escolaNome: a.nome, redeNome: a.redeNome, papel: 'professor' },
+      { usuarioId: coordenadoraEmB, escolaNome: b.nome, redeNome: b.redeNome, papel: 'coordenador' },
     ])
-    for (const acesso of acessos) expect(Object.keys(acesso).sort()).toEqual(['escolaNome', 'papel', 'usuarioId'])
-    expect(JSON.stringify(eu.corpo)).not.toContain(b.id)
-    expect(JSON.stringify(eu.corpo)).not.toContain(professora.email)
-    expect(JSON.stringify(eu.corpo)).not.toMatch(/email|conta/i)
+    for (const acesso of acessos) expect(Object.keys(acesso).sort()).toEqual(['escolaNome', 'papel', 'redeNome', 'usuarioId'])
+    const corpo = JSON.stringify(eu.corpo)
+    for (const proibido of [b.id, a.redeId, b.redeId, professora.email, ...turmasDeB.flatMap((turma) => [turma.id, turma.nome])]) expect(corpo).not.toContain(proibido)
+    expect(corpo).not.toMatch(/email|conta/i)
 
     const aluno = await bancada.escolaComSessao('aluno')
     const doAluno = await obter('/v1/eu', aluno.token)

@@ -30,9 +30,9 @@
     "brotli": true
   },
   {
-    "name": "JS da área do aluno (o chunk aluno-*.js, só por import(), depois da guarda de papel)",
+    "name": "JS da área do aluno (o chunk aluno-*.js, só por import(), depois da guarda de papel; na A1, só a Minha turma, perto de 1 kB)",
     "path": "apps/web/dist/assets/aluno-*.js",
-    "limit": "10 kB",
+    "limit": "5 kB",
     "brotli": true
   }
 ]

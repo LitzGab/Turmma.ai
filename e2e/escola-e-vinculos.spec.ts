@@ -11,7 +11,7 @@ import {
   ligarContaExterna,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
-import { abrirNavegacao, irPelaNavegacao, lateral } from './__fixtures__/casca.ts'
+import { abrirNavegacao, abrirSeletorDeEscola, botaoDoSeletor, irPelaNavegacao, lateral, linhaDoSeletor, nomeNoSeletor } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -82,12 +82,11 @@ async function tabAte(page: Page, alvo: Locator, descricao: string, maximoDeTecl
   throw new Error(`${descricao} não foi alcançado pelo teclado em ${String(maximoDeTeclas)} teclas`)
 }
 
-/** Abre o seletor de escola da lateral, que é um `details`; no celular, a lateral é a gaveta, e ela abre antes. */
-async function abrirSeletor(page: Page, hasTouch: boolean): Promise<void> {
-  await abrirNavegacao(page, hasTouch)
-  const resumo = page.locator('summary')
-  if (hasTouch) await resumo.tap()
-  else await resumo.click()
+/** Toca ou clica a linha de uma escola na lista aberta do seletor. */
+async function acionarNoSeletor(page: Page, nome: string, hasTouch: boolean): Promise<void> {
+  const linha = linhaDoSeletor(page, nome)
+  if (hasTouch) await linha.tap()
+  else await linha.click()
 }
 
 test.describe('escolher e trocar de escola', () => {
@@ -135,9 +134,9 @@ test.describe('escolher e trocar de escola', () => {
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByRole('main')).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
 
-    await abrirSeletor(page, hasTouch)
-    await esperarAlvoDeToque(page.getByRole('button', { name: `${emB.escolaNome} · professor` }), 'a escola de destino no seletor')
-    await acionar(page, `${emB.escolaNome} · professor`, hasTouch)
+    await abrirSeletorDeEscola(page, hasTouch)
+    await esperarAlvoDeToque(linhaDoSeletor(page, nomeNoSeletor(emB, 'professor')), 'a escola de destino no seletor')
+    await acionarNoSeletor(page, nomeNoSeletor(emB, 'professor'), hasTouch)
 
     // A troca volta à página inicial, já da escola de destino.
     await esperarEscola(page, 'Professora sintética na outra escola', emB.escolaNome)
@@ -178,11 +177,12 @@ test.describe('escolher e trocar de escola', () => {
     // O aluno entra por matrícula e não tem conta (regra 20, item 2): não há outra escola para listar, e é por isso
     // que a troca de escola nunca começa por ele. A lateral diz só onde ele está.
     await abrirNavegacao(page, hasTouch)
-    await expect(page.locator('summary')).toHaveCount(0)
+    await expect(botaoDoSeletor(page)).toHaveCount(0)
+    await expect(lateral(page).getByRole('button', { expanded: false })).toHaveCount(0)
     await expect(lateral(page)).toContainText(`Escola: ${aluno.escolaNome}`)
-    // Vínculo é do professor: o aluno não confirma turma nenhuma (RF4), e na A1 ele ainda não tem item (W2).
-    await expect(page.getByRole('link', { name: 'Turmas' })).toHaveCount(0)
-    await expect(page.getByRole('navigation', { name: 'Seções' })).toHaveCount(0)
+    // Vínculo é do professor: o aluno não confirma turma nenhuma (RF4); o item dele na A1 é "Minha turma" (W2).
+    await expect(page.getByRole('link', { name: 'Turmas', exact: true })).toHaveCount(0)
+    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Minha turma'])
     expect(await violacoesGraves(page)).toEqual([])
   })
 
@@ -212,8 +212,8 @@ test.describe('escolher e trocar de escola', () => {
     // E troca para a escola onde coordena. A sessão de origem continua valendo até o código ser aceito: é por isso
     // que esvaziar o cache aqui, antes do token de destino, traria de volta o dado da escola de origem — com a
     // credencial dela, que ainda funciona (regra 10, item 1).
-    await abrirSeletor(page, hasTouch)
-    await acionar(page, `${emB.escolaNome} · coordenação`, hasTouch)
+    await abrirSeletorDeEscola(page, hasTouch)
+    await acionarNoSeletor(page, nomeNoSeletor(emB, 'coordenação'), hasTouch)
     await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await page.getByLabel('Código do aplicativo').fill(codigoDoAutenticador(segredo, PASSO_SEGUINTE_SEGUNDOS))
     await acionar(page, /^Entrar$|Entrando/, hasTouch)
@@ -235,8 +235,8 @@ test.describe('escolher e trocar de escola', () => {
     await acionar(page, `${emA.escolaNome} · professor`, hasTouch)
     await esperarEscola(page, emA.nome, emA.escolaNome)
 
-    await abrirSeletor(page, hasTouch)
-    await acionar(page, `${emB.escolaNome} · coordenação`, hasTouch)
+    await abrirSeletorDeEscola(page, hasTouch)
+    await acionarNoSeletor(page, nomeNoSeletor(emB, 'coordenação'), hasTouch)
 
     // Coordenar exige o segundo fator sempre, mesmo vindo de uma sessão já aberta (Tech Spec, seção 5).
     await expect(page.getByRole('heading', { name: 'Configurar o segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -255,8 +255,8 @@ test.describe('escolher e trocar de escola', () => {
     await entrarNoProvedorFalso(page, CONTA_NO_PROVEDOR)
     await expect(page.getByRole('heading', { name: `Olá, ${emA.nome}` })).toBeVisible({ timeout: PRAZO_DO_LOGIN_EXTERNO_MS })
 
-    await abrirSeletor(page, hasTouch)
-    await acionar(page, `${emB.escolaNome} · professor`, hasTouch)
+    await abrirSeletorDeEscola(page, hasTouch)
+    await acionarNoSeletor(page, nomeNoSeletor(emB, 'professor'), hasTouch)
 
     // A API recusa a troca de uma sessão que não é de e-mail, e a tela diz o que fazer em vez de mostrar o código.
     await expect(page.getByRole('alert')).toContainText(AVISO_DA_TROCA_RECUSADA, { timeout: PRAZO_DA_ENTRADA_MS })
