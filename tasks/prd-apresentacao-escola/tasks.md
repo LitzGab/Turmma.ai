@@ -1,7 +1,7 @@
 # Tarefas — A escola montada pela coordenação (A1)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 8 de 17 concluídas
+**Status:** 9 de 17 concluídas
 
 Aprovadas pelo Joaquim em 26/09/2026. O mapa de cenários por tarefa saiu do `test-engineer`: cada id do
 `cenarios.md` está em uma tarefa, ou dividido entre tarefas com a parte de cada uma dita no `N_task.md`. Os
@@ -69,11 +69,11 @@ dela nos dois.
   - [x] 8.4 Testes: I6, I8, P3, P4, E18, E19, E20, E22, E25, E27, C3; os pedidos do E12; o aprovado de E6 e R2; a
     retirada de aprovado do E7; o resto de E21 e E30; A1, A2; I3, I9; fecha A3 e A4
 
-- [ ] **9.0 — Alerta de código errado em massa, `ops:revogar-acessos-sala` e a carga**
-  - [ ] 9.1 `ops:revogar-acessos-sala --escola <id>`
-  - [ ] 9.2 Regra `sala-codigo-errado-por-escola.yaml` e a entrada do runbook conferida
-  - [ ] 9.3 `reivindicacao-em-sala` no k6, com a variante do primeiro dia
-  - [ ] 9.4 Testes: E29, L11, L12, K1, K2
+- [x] **9.0 — Alerta de código errado em massa, `ops:revogar-acessos-sala` e a carga**
+  - [x] 9.1 `ops:revogar-acessos-sala --escola <id>`
+  - [x] 9.2 Regra `sala-codigo-errado-por-escola.yaml` e a entrada do runbook conferida
+  - [x] 9.3 `reivindicacao-em-sala` no k6, com a variante do primeiro dia
+  - [x] 9.4 Testes: E29, L11, L12, K1, K2
 
 - [ ] **10.0 — Virada de ano, eliminação e expurgo alcançam as tabelas novas**
   - [ ] 10.1 `encerrar` revoga, fecha e apaga na mesma transação

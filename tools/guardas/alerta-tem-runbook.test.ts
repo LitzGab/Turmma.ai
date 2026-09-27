@@ -31,6 +31,7 @@ describe('guarda: alerta tem runbook', () => {
       'infra/grafana/alertas/login-lento.yaml',
       'infra/grafana/alertas/login-rebaixado-por-escola.yaml',
       'infra/grafana/alertas/reuso-de-refresh.yaml',
+      'infra/grafana/alertas/sala-codigo-errado-por-escola.yaml',
       'infra/grafana/alertas/seguro-limite-ativo.yaml',
       'infra/grafana/alertas/taxa-5xx.yaml',
     ])
@@ -42,6 +43,7 @@ describe('guarda: alerta tem runbook', () => {
       'Login lento',
       'Login rebaixado numa escola',
       'Reuso de refresh',
+      'Código da turma errado em massa numa escola',
       'Seguro de limite ativo',
       'Taxa de erro 5xx',
     ])

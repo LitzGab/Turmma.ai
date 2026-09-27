@@ -9,6 +9,7 @@ import { parse } from 'yaml'
 import { urlDoBancoDeTeste } from '../../tools/testes/integracao.setup.ts'
 import {
   alertaCom,
+  codigoSorteado,
   criarJobSintetico,
   executarEnsaioDeAlertas,
   gatilhoDaFalhaExiste,
@@ -112,7 +113,7 @@ describe('alertas locais: as regras do ensaio disparam, não disparam com condi�
       // O andamento do ensaio no log do teste: é o que diz em que regra ele parou, se estourar o prazo.
       registrar: (linha) => process.stdout.write(`ensaio: ${linha}\n`),
     })
-    escolas.push(resultado.escolaDoJob, resultado.escolaDaFalha, resultado.escolaDoSeguro, resultado.escolaDoLogin)
+    escolas.push(resultado.escolaDoJob, resultado.escolaDaFalha, resultado.escolaDoSeguro, resultado.escolaDoLogin, resultado.escolaDaSala)
 
     const jobInterativo = resultado.disparos[REGRAS_DO_ENSAIO.jobInterativo]
     const seguroDoLimite = resultado.disparos[REGRAS_DO_ENSAIO.seguroDoLimite]
@@ -121,18 +122,29 @@ describe('alertas locais: as regras do ensaio disparam, não disparam com condi�
     const loginHashRecusado = resultado.disparos[REGRAS_DO_ENSAIO.loginHashRecusado]
     const loginRebaixado = resultado.disparos[REGRAS_DO_ENSAIO.loginRebaixado]
     const loginEmailLimiteIp = resultado.disparos[REGRAS_DO_ENSAIO.loginEmailLimiteIp]
+    const salaCodigoErrado = resultado.disparos[REGRAS_DO_ENSAIO.salaCodigoErrado]
     // Cada regra disparou com os rótulos da condição provocada: a escola do job, a rota que falhou.
     expect(jobInterativo.rotulos).toMatchObject({ fila: 'interativa', escola_id: resultado.escolaDoJob })
     expect(taxa5xx.rotulos).toMatchObject({ job: 'educa/api', http_route: '/v1/sistema/jobs-sinteticos' })
     expect(seguroDoLimite.rotulos['instance']).toMatch(/^[0-9a-f]{12}$/)
     // O rebaixamento traz a escola dos logins do ensaio, e nenhum dos dois de login traz IP.
     expect(loginRebaixado.rotulos).toMatchObject({ escola_id: resultado.escolaDoLogin })
-    for (const disparo of [loginRebaixado, loginEmailLimiteIp]) expect(Object.values(disparo.rotulos).join(' ')).not.toMatch(/\d+\.\d+\.\d+\.\d+|::/)
+    for (const disparo of [loginRebaixado, loginEmailLimiteIp, salaCodigoErrado]) expect(Object.values(disparo.rotulos).join(' ')).not.toMatch(/\d+\.\d+\.\d+\.\d+|::/)
+    // L12 (A1, tarefa 9.0): o de código errado em massa não traz escola: ela vem da linha do log.
+    expect(Object.keys(salaCodigoErrado.rotulos)).not.toContain('escola_id')
+    expect(Object.values(salaCodigoErrado.rotulos)).not.toContain(resultado.escolaDaSala)
     // E só depois de pendente pelo `for:` inteiro: início da pendência e do disparo, os dois informados pelo Grafana.
-    expect([jobInterativo.duracaoS, seguroDoLimite.duracaoS, taxa5xx.duracaoS, loginLento.duracaoS, loginHashRecusado.duracaoS, loginRebaixado.duracaoS, loginEmailLimiteIp.duracaoS]).toEqual([
-      60, 120, 300, 180, 180, 120, 300,
-    ])
-    for (const disparo of [jobInterativo, seguroDoLimite, taxa5xx, loginLento, loginHashRecusado, loginRebaixado, loginEmailLimiteIp]) {
+    expect([
+      jobInterativo.duracaoS,
+      seguroDoLimite.duracaoS,
+      taxa5xx.duracaoS,
+      loginLento.duracaoS,
+      loginHashRecusado.duracaoS,
+      loginRebaixado.duracaoS,
+      loginEmailLimiteIp.duracaoS,
+      salaCodigoErrado.duracaoS,
+    ]).toEqual([60, 120, 300, 180, 180, 120, 300, 300])
+    for (const disparo of [jobInterativo, seguroDoLimite, taxa5xx, loginLento, loginHashRecusado, loginRebaixado, loginEmailLimiteIp, salaCodigoErrado]) {
       expect(disparo.disparadoDesdeMs - disparo.pendenteDesdeMs).toBeGreaterThanOrEqual(disparo.duracaoS * 1_000)
     }
     // Isolamento do gatilho: com a falha forçada valendo, outra escola gravou job na mesma rota.
@@ -147,6 +159,10 @@ describe('alertas locais: as regras do ensaio disparam, não disparam com condi�
     expect(resultado.statusDoLogin['429']).toBeUndefined()
     expect(Object.keys(resultado.statusDoLogin).sort()).toEqual(['401', '503'])
     expect(Object.keys(resultado.statusDoEmail).filter((status) => !['401', '503'].includes(status))).toEqual([])
+    // O ataque ao código passou do teto da escola (1.000) e seguiu acima dele, e ninguém foi recusado: todas
+    // `NAO_ENCONTRADO`, nenhuma 429 nem 5xx (a espera de 1 s não recusa).
+    expect(Object.keys(resultado.statusDaSala)).toEqual(['404'])
+    expect(resultado.statusDaSala['404'] ?? 0).toBeGreaterThan(1_000)
 
     // Restaurado: sem gatilho, a mesma escola grava job; Redis de cache e worker-interativo de pé; a api-1 recriada com o
     // hash do ambiente, e não o lento do ensaio.
@@ -168,6 +184,58 @@ describe('alertas locais: as regras do ensaio disparam, não disparam com condi�
       expect(regras.get(uid)?.alertas.filter((alerta) => alerta.estado !== 'normal'), uid).toEqual([])
     }
   }, 900_000)
+
+  it('L12: a rajada do primeiro dia (420 códigos errados em 5 min, abaixo do teto da escola) não soma na métrica e nem deixa a regra pendente', async () => {
+    const escola = await sessoes.escola()
+    escolas.push(escola)
+    const slug = await sessoes.slugDe(escola)
+    const daRegra = regraPorUidNoArquivo(REGRAS_DO_ENSAIO.salaCodigoErrado)
+    const estadoDaSala = async (): Promise<EstadoDoAlerta> => alertaCom((await lerRegrasNoGrafana(GRAFANA)).get(REGRAS_DO_ENSAIO.salaCodigoErrado), {})?.estado ?? 'normal'
+    // A série nasce em 0 no boot da API: com ela no Prometheus, o aumento durante a rajada é medível. O aumento, e não o
+    // valor: a instância que o ensaio recriou deixa o último valor dela lá por até 5 min, e ele some no meio da rajada.
+    await expect.poll(() => valorNoPrometheus('sum(sala_limite_atingido_total{job="educa/api", tipo="escola"})'), { timeout: 60_000, interval: 1_000 }).toBeDefined()
+    expect(await estadoDaSala()).toBe('normal')
+
+    const estados: EstadoDoAlerta[] = []
+    let amostrando = true
+    const amostragem = (async () => {
+      while (amostrando) {
+        estados.push(await estadoDaSala())
+        await new Promise((resolver) => setTimeout(resolver, 2_000))
+      }
+    })()
+    // 420 códigos em 5 min, espaçados por igual: 84 por minuto, oito vezes o limiar da regra se cada um somasse.
+    const status: Record<string, number> = {}
+    const RAJADA = 420
+    const DURACAO_MS = 5 * 60_000
+    // Um intervalo de exportação e de raspagem antes de marcar o início: um último incremento do ataque do ensaio que
+    // ainda estivesse a caminho do Prometheus não cai dentro da janela da rajada.
+    await new Promise((resolver) => setTimeout(resolver, 20_000))
+    const inicio = Date.now()
+    for (let tentativa = 0; tentativa < RAJADA; tentativa++) {
+      await new Promise((resolver) => setTimeout(resolver, Math.max(0, inicio + (tentativa * DURACAO_MS) / RAJADA - Date.now())))
+      const resposta = await fetch(`${API}/v1/salas/abrir`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, codigo: codigoSorteado() }),
+        signal: AbortSignal.timeout(15_000),
+      })
+      status[String(resposta.status)] = (status[String(resposta.status)] ?? 0) + 1
+      await resposta.body?.cancel()
+    }
+    // Mais duas avaliações da regra depois da rajada, para uma pendência atrasada aparecer.
+    await new Promise((resolver) => setTimeout(resolver, 25_000))
+    amostrando = false
+    await amostragem
+
+    expect(status).toEqual({ '404': RAJADA })
+    // A janela começa no início da rajada: o fim do ataque do ensaio, logo antes, fica de fora.
+    const segundos = Math.floor((Date.now() - inicio) / 1_000)
+    expect(await valorNoPrometheus(`sum(increase(sala_limite_atingido_total{job="educa/api", tipo="escola"}[${String(segundos)}s]))`)).toBe(0)
+    expect(await valorNoPrometheus(daRegra)).toBe(0)
+    expect(estados.length).toBeGreaterThan(100)
+    expect(estados.every((estado) => estado === 'normal')).toBe(true)
+  }, 480_000)
 
   it('borda: espera curta não dispara — a 20 s nem fica pendente, e passando de 30 s por menos de 1 min fica pendente e volta a normal sem disparar', async () => {
     const escola = await sessoes.escola()

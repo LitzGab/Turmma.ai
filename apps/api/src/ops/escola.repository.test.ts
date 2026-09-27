@@ -29,14 +29,15 @@ const CRIACAO_DE_REDE_OU_ESCOLA = /\binsert\s*\(\s*(?:schema\.)?(?:rede|escola)\
  * operação (`painel.service.ts`, A0b), a única rota que cria rede e escola, só com sessão de operador Turmma; e o que
  * monta escola sintética: a bancada dos testes de integração da API (que desde a tarefa 2.0 exige sessão real), a
  * bancada da fila (desde a tarefa 3.0 `job_registro` tem FK para `escola`), o ensaio de alertas, que só roda com
- * `AMBIENTE=local`, e o cenário de carga "login às 7h30" (16.0), que monta as escolas A, B e C no banco do compose de
- * carga. Outra rota que chame a criação, com qualquer nome, entra aqui e a revisão confere.
+ * `AMBIENTE=local`, e os cenários de carga "login às 7h30" (16.0) e "reivindicação em sala" (A1, 9.0), que montam as
+ * escolas sintéticas no banco do compose de carga. Outra rota que chame a criação, com qualquer nome, entra aqui e a revisão confere.
  */
 const IMPORTADORES_PERMITIDOS_DO_COMANDO: readonly string[] = [
   'apps/api/src/operacao/painel.service.ts',
   'apps/api/test/sessao-de-teste.ts',
   'apps/worker/test/fila-de-teste.ts',
   'infra/scripts/carga-login.ts',
+  'infra/scripts/carga-sala.ts',
   'infra/scripts/ensaio-alertas.ts',
 ]
 

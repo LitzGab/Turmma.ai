@@ -22,6 +22,14 @@ export const PREFIXO_HASH_SEM_PEDIDO_POR_TURMA = 'sala:hash-turma'
 /** A marca de que a linha `sala.limite_atingido` daquela escola e daquele tipo já saiu nesta janela. */
 export const PREFIXO_AVISO_DO_LIMITE = 'sala:aviso-limite'
 
+/**
+ * O evento da linha de log que um limite da sala escreve, uma por escola, tipo e janela. O `escolaId` dela é o que o
+ * runbook ("Código da turma errado em massa numa escola") manda passar ao `ops:revogar-acessos-sala --escola` (9.0). A
+ * chamada do log escreve o evento em texto literal, que a guarda do lint exige; o L11 (`infra/test/alertas.test.ts`)
+ * confere que a linha escrita traz este valor.
+ */
+export const EVENTO_DO_LIMITE_DA_SALA = 'sala.limite_atingido'
+
 const loggerDaSala = new Logger('sala')
 
 /** O aviso espaçado do contador da sala contando no seguro em memória (Redis de fila fora). */
@@ -92,8 +100,9 @@ export class LimitesDaSala implements GuardaDoCodigo {
   }
 
   /**
-   * Quantas buscas pelo código estão na espera de 1 s agora, nesta instância. Hoje só o teste do L3 lê (as 50 esperas sem
-   * conexão presa); virar gauge junto do alerta de código errado em massa é da 9.0.
+   * Quantas buscas pelo código estão na espera de 1 s agora, nesta instância. Só o teste do L3 lê (as 50 esperas sem
+   * conexão presa). Não vira gauge (9.0): cada pedido que entra na espera já soma em `sala.limite_atingido{tipo="escola"}`,
+   * que é o que o alerta de código errado em massa lê, e a resposta do runbook é revogar, não olhar o acúmulo.
    */
   get esperandoOCodigo(): number {
     return this.#esperandoOCodigo
@@ -159,6 +168,7 @@ export class LimitesDaSala implements GuardaDoCodigo {
     this.#limitesAtingidos.add(1, { tipo })
     const { janela, logger } = this.dependencias
     const { valor } = await janela.somar(janela.chaveDe(PREFIXO_AVISO_DO_LIMITE, `${tipo}|${escolaId}`))
+    // O texto do evento é o de `EVENTO_DO_LIMITE_DA_SALA`, que o runbook e o L11 usam: troque os dois juntos.
     if (valor === 1) logger.warn({ evento: 'sala.limite_atingido', tipo, escolaId })
   }
 

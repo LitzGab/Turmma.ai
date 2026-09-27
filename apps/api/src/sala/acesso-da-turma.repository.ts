@@ -82,6 +82,22 @@ export class AcessoDaTurmaRepository {
     return revogado?.id
   }
 
+  /**
+   * Revoga todo acesso vigente da escola do contexto, de todas as turmas, e devolve o id e a turma de cada um (o
+   * `ops:revogar-acessos-sala`, A1, tarefa 9.0; runbook, "Código da turma errado em massa numa escola"). O escopo é só a
+   * escola: o comando do operador não tem ano no contexto, e o que ele derruba é tudo que o atacante podia estar
+   * testando naquela escola. Um vigente de outro ano não abre a sala (o `AcessoDaSala` exige o ano `em_curso`), e cair
+   * junto não tira nada de ninguém. Duas execuções ao mesmo tempo esperam a linha uma da outra e, relida, ela já está
+   * revogada: cada acesso sai numa só.
+   */
+  async revogarVigentesDaEscola(): Promise<Array<{ readonly id: string; readonly turmaId: string }>> {
+    return this.banco
+      .update(acessoTurma)
+      .set({ revogadoEm: sql`now()` })
+      .where(and(eq(acessoTurma.escolaId, exigirEscolaDoContexto()), isNull(acessoTurma.revogadoEm), gt(acessoTurma.expiraEm, sql`now()`)))
+      .returning({ id: acessoTurma.id, turmaId: acessoTurma.turmaId })
+  }
+
   /** Até quando vale o acesso vigente da turma, ou `undefined` quando ela não tem nenhum. */
   async vigente(turmaId: string): Promise<Date | undefined> {
     const [linha] = await this.banco

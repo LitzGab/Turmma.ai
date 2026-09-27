@@ -347,7 +347,11 @@ aos cenários.
   declarados; a entrada do runbook; o comando aceitar o que o log entrega
 - **L12** (infra, `infra/test/alertas.int.test.ts`, pelo `ensaio:alertas`) Numa escola sintética, códigos errados
   acima do teto de forma sustentada levam a regra a pendente e, passados os 5 min, a disparada; a rajada do primeiro
-  dia (420 códigos errados em 5 min, como no K2) nem fica pendente; cessado o ataque, a regra volta a normal.
+  dia (420 códigos errados em 5 min, como no K2) nem fica pendente; cessado o ataque, a regra volta a normal. Como ficou
+  na 9.0: o ataque sustentado e a volta a normal rodam pelo ensaio; a rajada do primeiro dia é um teste separado no mesmo
+  arquivo, rodado depois do ensaio, com o ataque parado, porque a regra soma as escolas e a rajada só prova "nem pendente"
+  sem outro ataque somando junto; ela confere também que o aumento de `sala_limite_atingido_total{tipo="escola"}` na
+  janela da rajada é zero.
   **Quebra sem:** a métrica `tipo="escola"` emitida acima do teto; o limiar da regra
 
 ## A — Auditoria, log e resposta
@@ -455,6 +459,16 @@ aos cenários.
   adaptador de hash calibrado. Passa com zero duplicidade, zero 5xx
   e o p95 do login da outra escola na régua do F1
 - **K2** A variante do primeiro dia da escola inteira: 2.100 alunos em 5 min, com os mesmos critérios
+- **K1 e K2, como ficaram na 9.0** (`infra/k6/reivindicacao-em-sala.js`, `npm run carga:sala`): cada fase monta pela API
+  uma escola nova; dois alunos por turma mandam o pedido de dois computadores no mesmo segundo, com a matrícula certa e
+  chaves diferentes (um `enviado` e um `REIVINDICACAO_RECUSADA`); o professor, com seis turmas, aprova os pendentes delas
+  em lotes de até 40 a cada 45 s, e cada aprovado entra logo depois, um depois do outro, pelo login por matrícula, repetindo o 503 como a web (nota da 8.0); a outra escola
+  entra de outro container, com IP próprio. Passa também com o p95 do `decidir` abaixo de 2 s (regra 00, item 4), todos
+  aprovados uma vez (o banco confere nomes, pedidos, alunos, credenciais e vínculos) e, no K2, nenhum código segurado no
+  teto da escola. "Zero 5xx" conta também o 503 que a página repete. A terceira fase, `k2_redis_lento` (12 turmas em 2 min,
+  sem a outra escola), roda com os clientes do Redis de fila pausados 80 ms a cada 100 ms e mede o `decidir` com o zerar
+  dos contadores depois do lote (nota da 8.0, 2ª rodada do `infra-guardian`); a entrada do aprovado nela é medida, não
+  cobrada
 
 ## Mapa
 

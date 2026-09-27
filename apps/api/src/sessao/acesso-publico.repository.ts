@@ -1,12 +1,13 @@
-import { escola, exigirEscolaDoContexto, provedorEscola, type Banco, type ProvedorExterno } from '@educa/nucleo'
+import { escola, exigirEscolaDoContexto, provedorEscola, type Banco, type ProvedorExterno, type TransacaoBanco } from '@educa/nucleo'
 import { and, eq, isNull } from 'drizzle-orm'
 
 /**
  * O que a tela `/e/:slug` mostra antes do login, lido na escola do contexto aberto pelo slug (regra 10, item 3): o
- * nome da escola e os tipos de provedor de conta que ela liberou (13.0), nunca o domínio nem o tenant.
+ * nome da escola e os tipos de provedor de conta que ela liberou (13.0), nunca o domínio nem o tenant. O
+ * `ops:revogar-acessos-sala` (A1, 9.0) usa o `nome` dentro da transação dele para saber se a escola do id existe.
  */
 export class AcessoDaEscolaRepository {
-  constructor(private readonly banco: Banco) {}
+  constructor(private readonly banco: Banco | TransacaoBanco) {}
 
   async nome(): Promise<string | undefined> {
     const [linha] = await this.banco.select({ nome: escola.nome }).from(escola).where(eq(escola.id, exigirEscolaDoContexto())).limit(1)

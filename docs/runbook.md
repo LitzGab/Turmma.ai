@@ -118,6 +118,12 @@ usuário que cai sempre na mesma recebe 429 mais cedo. Nada é liberado sem limi
    o de produção, de propósito (`infra/carga.env`): 401 no login lá é o cenário medindo o que deve medir. E se o aviso
    aparece em **todo** login, confira `LOGIN_REDIS_PRAZO_MS` antes de procurar o Redis: um prazo mal posto, perto do
    piso, dá exatamente esse sintoma com o Redis sadio.
+5. Redis de fila fora, e o log traz `sala.limite_no_seguro` → os limites da página da sala (A1) também contam no seguro
+   em memória, com os tetos divididos por `LIMITE_INSTANCIAS_API`. O do nome, que é 5, cai para
+   `max(1, floor(5 / instâncias))`: com duas instâncias, duas matrículas erradas num nome o travam por 10 min; com três ou
+   mais, uma só. O aluno vê "Muitas tentativas agora" com a matrícula certa. O professor destrava a turma inteira com
+   "Gerar novo" na tela Acesso da turma (a contagem do nome é presa ao acesso), e o Redis de fila de volta desfaz o resto.
+   O código errado por escola (1.000) e o hash por turma (150) caem na mesma proporção, sem recusar ninguém.
 
 **Se nada disso resolver:** não há o que degradar: a API segue atendendo com o seguro. Mantenha o
 Redis de cache como prioridade do dia, porque com ele fora um aluno com script em laço gasta mais
@@ -282,6 +288,11 @@ quantas estão de pé (`docker compose ps api-1 api-2`).
    existem contam num contador comum (11.0), que cresce com varredura de endereço e não segura nem rebaixa escola
    nenhuma, porque não é de escola nenhuma. Para ver de onde vem, `registro_acesso` não ajuda (endereço que não existe
    não grava registro): olhe a borda (`docker compose logs --since 10m borda`).
+5. Uma escola no primeiro dia, com a turma inteira reivindicando o nome na página da sala (A1) → a reivindicação roda o
+   hash no mesmo semáforo, no balde da escola, e soma no recusado e na espera, mas não no denominador do alerta, que conta
+   só login. Com muita reivindicação e pouco login, a razão sobe sem o login ter piorado. Confira no painel "Reivindicações
+   de nome na sala": `indisponivel` subindo junto é a reivindicação recebendo o 503; a página repete sozinha com a
+   mesma chave, e nenhum pedido se perde nem se duplica. Passa com a rajada; se não passar, é a causa 1.
 
 **Se nada disso resolver:** avise as escolas afetadas (seção "Como avisar as escolas") de que o login está demorando
 e de que a tela tenta sozinha. Não desligue o semáforo: sem ele, o hash toma a CPU da API e tudo fica lento, não só o
@@ -375,13 +386,15 @@ ataque, sem IP.
 ## Código da turma errado em massa numa escola
 
 **Dispara quando:** mais de 10 tentativas por minuto, somadas as instâncias da API, passam do teto de códigos da turma
-errados numa escola (1.000 em 10 min), por 5 min seguidos (`sum(rate(sala_limite_atingido_total{tipo="escola"}[1m])) *
-60 > 10`, regra `infra/grafana/alertas/sala-codigo-errado-por-escola.yaml`, que nasce com a A1; Tech Spec da A1, seção
+errados numa escola (1.000 em 10 min), por 5 min seguidos (`sum (rate(sala_limite_atingido_total{job="educa/api",
+tipo="escola"}[1m])) * 60 > 10`, regra `infra/grafana/alertas/sala-codigo-errado-por-escola.yaml`; Tech Spec da A1, seção
 7c). A manhã da escola inteira no primeiro dia erra uns 420 códigos em 5 min, abaixo do teto: acima dele, por 5 min, é
 alguém tentando códigos. O alerta não traz escola nem IP (`METRICAS_COM_ESCOLA` é fechada).
 
-**Impacto:** ninguém é recusado. Na escola atacada, todo `salas/abrir` por código espera 1 s, também o do código
-certo; o link, o login e as outras escolas não sentem. O risco é outro: quem acerta um código vigente vê os nomes
+**Impacto:** ninguém é recusado. Enquanto a escola estiver acima do teto, todo `salas/abrir` pelo código dela espera 1 s,
+também o do código certo; o link, o login e as outras escolas não sentem. A espera atrasa cada tentativa, mas não limita
+o volume do atacante: quem limita é só o limite por IP das rotas anônimas, e muitos IPs passam dele. Por isso a resposta
+é revogar, e não esperar o ataque cansar. O risco é outro: quem acerta um código vigente vê os nomes
 livres daquela turma, que são de menores. Um IP sozinho, no teto do `rl:ip`, leva uma semana para ter ~0,2% de chance;
 com muitos IPs, a chance cresce na mesma proporção, e é por isso que este alerta existe.
 
@@ -401,6 +414,11 @@ uma escola, cada uma segue os passos abaixo.
 2. O ataque volta depois da revogação, contra os códigos novos → alguém dentro da sala está vendo o código projetado
    (Tech Spec da A1, seção 13). Revogue de novo, trate como incidente (seção "Como avisar as escolas") e combine com a
    coordenação o passo seguinte, abaixo.
+3. Sem este alerta, um professor relata que um ou mais nomes não entram, com "Muitas tentativas agora", mesmo com a
+   matrícula certa → é o limite por nome (`sala.limite_atingido{tipo="nome"}`), e não o da escola: qualquer um com o link
+   ou o código trava um nome por 10 min com cinco matrículas erradas. O professor destrava na hora com "Gerar novo" na tela
+   Acesso da turma (a contagem do nome é presa ao acesso que a gerou) e projeta o código novo. Se voltar com o código novo,
+   é a causa 2.
 
 **Se nada disso resolver:** não há como desligar a página da sala só para uma escola. Com os acessos revogados, o
 atacante precisa começar de novo contra os códigos novos, e cada um vale no máximo 30 dias. Se o ataque não parar,
@@ -508,6 +526,12 @@ conta acima do limite por IP. Confere que "Login lento" e "Login recusado pelo s
 com o `.env` de sempre (a instância que sai deixa o último valor no Prometheus por até 5 min). Se o ensaio for
 interrompido, recrie-as à mão: `docker compose up -d --force-recreate --no-deps api-1 api-2`.
 
+O ensaio provoca também o "Código da turma errado em massa numa escola": numa escola sintética sem acesso nenhum, doze
+laços tentam códigos da turma no formato, um por segundo cada, pela página da sala. Em uns 90 s a escola passa do teto de
+1.000 códigos errados, as tentativas seguintes esperam 1 s e somam na métrica, e a regra dispara 5 min depois. Nenhuma
+tentativa recebe 429 nem 5xx: todas `NAO_ENCONTRADO`. A escola do ensaio fica acima do teto só até a janela de 10 min dela
+virar, e nenhuma escola real sente.
+
 O "Reuso de refresh" não entra no ensaio, porque não nasce de serviço parado: ele tem prova própria em
 `infra/test/alertas.int.test.ts`, que reusa cinco cookies (a regra fica normal) e depois o sexto (dispara), na
 esteira.
@@ -555,6 +579,42 @@ Se reprovar, a saída diz a fase e o critério:
 - **429 para conta com cookie:** o contador `conhecido`/`outro` (4.0) não está separando o dono do script.
 - **família encerrada por reuso:** a janela de 2 s do `JA_RENOVADO` (5.0) não está cobrindo as duas abas.
 - **`k6` da fase:** o ambiente não rodou até o fim; veja os logs que o script imprime.
+
+## Rodar o cenário da sala
+
+`npm run carga:sala` roda o cenário "reivindicação em sala" (A1, tarefa 9.0; K1 e K2 da Tech Spec da A1) no mesmo projeto
+compose próprio (`educa-carga`) dos outros cenários, e o derruba no fim. Leva uns 15 min, mais a construção das imagens. Não rode junto com o portão, com
+os testes nem com os outros cenários: os três sobem o mesmo projeto, e a medição depende da CPU livre. A cada fase ele monta
+pela API uma escola nova, como a coordenação e o professor fariam (turmas, lista de 35 nomes gerados cada, professor
+confirmado, acesso), e manda os alunos:
+
+- **k1**: seis turmas de 35 em 5 min, com a outra escola entrando por login, de outro container, ao mesmo tempo;
+- **k2**: o primeiro dia da escola inteira, 60 turmas e 2.100 alunos em 5 min, também com a outra escola;
+- **k2_redis_lento**: 12 turmas em 2 min, com o Redis de fila pausando os clientes 80 ms a cada 100 ms, para medir o
+  `decidir` com o Redis devagar.
+
+Em todas, 20% dos alunos erram o código antes, 10% erram a matrícula antes, e dois por turma mandam o pedido de dois
+computadores no mesmo segundo. O professor aprova os pedidos em lotes de até 40, a cada 45 s, e cada aprovado entra logo
+depois.
+
+Passa quando não há nenhum 5xx (nem o 503 que a página repete), cada disputa tem um vencedor só, todos os alunos terminam
+aprovados uma vez (o banco confere: nenhum nome com dois pedidos, nenhum aluno a mais), o p95 do `decidir` fica abaixo de
+2 s, o p95 do login da outra escola abaixo de 1 s, e o K2 não segura nenhum código errado no teto da escola (a manhã do
+primeiro dia fica abaixo dele). O aprovado entra um depois do outro, pelo professor que o aprovou: a rajada de uma turma
+inteira entrando no mesmo minuto é o cenário "login às 7h30", que continua sendo a prova dela. Rode de novo quando uma
+tarefa mexer na página da sala, na decisão dos pedidos, nos
+limites da sala ou no semáforo do hash, e registre o resultado na tarefa. Para depurar uma fase:
+`npm run carga:sala -- --fases k1`. O resultado parcial não vale como registro.
+
+Se reprovar, a saída diz a fase e o critério:
+- **5xx ou 503:** o semáforo do hash passou do prazo com a reivindicação e o login juntos. Confira "503 do semáforo" na
+  conferência e a calibração do hash em `infra/carga.env` (seção "Rodar o cenário de login").
+- **disputa com dois vencedores, ou nome com dois pedidos:** a restrição de um pendente por nome ou a transação da
+  reivindicação (Tech Spec da A1, seção 5, passo 4) deixou passar a corrida. É defeito, não capacidade.
+- **`decidir` acima de 2 s:** o lote de 40 transações ficou lento. Com o Redis lento, olhe o zerar dos contadores depois do
+  lote (`apps/api/src/sala/decisao.service.ts`).
+- **login da outra escola acima de 1 s:** a sala está tirando a vez do login no semáforo. Confira a espera por balde no
+  painel.
 
 ## Esteira vermelha no e2e
 

@@ -1,0 +1,68 @@
+# Alerta "Código da turma errado em massa numa escola" (Tech Spec da A1, seção 7c; runbook:
+# docs/runbook.md#código-da-turma-errado-em-massa-numa-escola). Provisionado por arquivo no Grafana da observabilidade
+# local (infra/compose.yml monta esta pasta em provisioning/alerting).
+#
+# `sala.limite_atingido{tipo="escola"}` soma cada `salas/abrir` pelo código que chega numa escola já acima do teto de
+# códigos errados (1.000 em 10 min) e espera 1 s antes da busca. Nada é recusado. Dispara quando, somadas as instâncias
+# da API, passam de 10 por minuto por 5 min seguidos: a manhã do primeiro dia da escola inteira erra uns 420 códigos em
+# 5 min, abaixo do teto, e nem chega a somar aqui. Cada instância nasce com o contador em 0 (as séries por tipo nascem
+# no boot).
+#
+# A série não tem escola nem pessoa (`METRICAS_COM_ESCOLA` é fechada): a escola vai na linha `sala.limite_atingido` do
+# log, que é o que o runbook manda ler.
+#
+# Sem dado é normal: a API não exporta sem a observabilidade de pé.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: sala-codigo-errado
+    folder: Educa.ia alertas
+    interval: 10s
+    rules:
+      - uid: educa-sala-codigo-errado-por-escola
+        title: Código da turma errado em massa numa escola
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          area: sala
+        annotations:
+          summary: Mais de 10 entradas por minuto pelo código da turma acima do teto de códigos errados de uma escola, por 5 min
+          description: Alguém tenta códigos da turma em massa contra uma escola. Ninguém é recusado, mas quem acerta um código vê os nomes livres da turma. A escola está na linha sala.limite_atingido do log. Siga o runbook.
+          runbook_url: https://github.com/LitzGab/Educa.ia/blob/main/docs/runbook.md#código-da-turma-errado-em-massa-numa-escola
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: sum (rate(sala_limite_atingido_total{job="educa/api", tipo="escola"}[1m])) * 60
+              instant: true
+              range: false
+              intervalMs: 10000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - type: query
+                  evaluator:
+                    type: gt
+                    params: [10]

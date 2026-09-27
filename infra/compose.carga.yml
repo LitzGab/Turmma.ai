@@ -80,7 +80,9 @@ services:
     restart: 'no'
 
   # O segundo gerador do cenário "login às 7h30" (tarefa 16.0): o ataque "de fora", de um container com IP próprio, ao
-  # mesmo tempo que o k6 da escola. Mesmo script, `FASE=atacante`, chamado por infra/scripts/carga-login.ts.
+  # mesmo tempo que o k6 da escola. Mesmo script, `FASE=atacante`, chamado por infra/scripts/carga-login.ts. No cenário
+  # "reivindicação em sala" (A1, tarefa 9.0), é a outra escola entrando por login, de outra rede, enquanto a turma
+  # reivindica (`FASE=outra_escola`, chamado por infra/scripts/carga-sala.ts).
   k6-atacante:
     image: grafana/k6:2.2.0
     profiles: [carga]

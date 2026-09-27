@@ -155,7 +155,9 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
   sem acesso achado, a contagem do código errado; o slug inexistente responde `NAO_ENCONTRADO` sem contar. O
   `AcessoDaSalaAchado` leva também o id do acesso, que entra na chave do contador do nome
 - `ops:revogar-acessos-sala` recebe o id da escola do log e monta o contexto como os outros `ops:*`, sem `@SemEscopo`;
-  id que não é UUID dá `ArgumentoInvalido` (saída 2)
+  id que não é UUID dá `ArgumentoInvalido` (saída 2). O `update` é `AcessoDaTurmaRepository.revogarVigentesDaEscola`, com a
+  escola do contexto e sem o ano: o comando não tem ano no contexto, e um vigente de outro ano não abre a sala; a
+  existência da escola é o `AcessoDaEscolaRepository.nome` na mesma transação; imprime `{"revogados":N}` (9.0)
 
 ## 7. Dado pessoal
 
@@ -200,8 +202,12 @@ Sem IA. Não se aplica.
   `AppModule` (o `Logger` do Nest só leva o evento); as duas métricas têm painel em `infra/grafana/paineis/fundacao.json`
 - **Alerta** "Código da turma errado em massa numa escola": `sala.limite_atingido{tipo="escola"}` acima de 10 por
   minuto, somadas as instâncias, por 5 min (`infra/grafana/alertas/sala-codigo-errado-por-escola.yaml`); a rajada
-  legítima não chega ao teto. O runbook, na entrada de mesmo nome, revoga os acessos da escola do log, sem ler IP
-- **Carga**: K1 e K2
+  legítima não chega ao teto. O runbook, na entrada de mesmo nome, revoga os acessos da escola do log, sem ler IP. O ensaio
+  (`npm run ensaio:alertas`) provoca o ataque sustentado; a rajada do primeiro dia é teste à parte, com o ataque parado,
+  porque a regra soma as escolas (L12, 9.0)
+- **Carga**: K1 e K2, em `infra/k6/reivindicacao-em-sala.js` e `npm run carga:sala` (9.0): a escola de cada fase montada
+  pela API, o professor aprovando em lotes de até 40 com o aprovado entrando logo depois, a outra escola de outro container,
+  e a fase `k2_redis_lento` para o `decidir` com o Redis de fila devagar (cenarios.md, K1 e K2)
 
 **Limites.** O `ContadorEmJanela` ganha a janela por parâmetro (10 min). Com 60 códigos ativos, um IP no teto do
 `rl:ip` acerta em 7 dias com ~0,2%, e N IPs, N vezes: é o que o alerta pega. O primeiro dia erra ~420 códigos.

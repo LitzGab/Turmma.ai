@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { setTimeout as esperar } from 'node:timers/promises'
 import { pathToFileURL } from 'node:url'
@@ -25,7 +25,9 @@ import { raizRepositorio } from '../../tools/ci/executar.ts'
  *     lento"), os 503 passam de 1% ("Login recusado pelo semáforo") e as falhas do IP do ensaio naquela escola passam
  *     do limiar, e ela fica rebaixada ("Login rebaixado numa escola");
  *   - manda, em paralelo, logins por e-mail sem conta, acima do limite por IP da rota ("Login por e-mail acima do
- *     limite por IP").
+ *     limite por IP");
+ *   - tenta códigos da turma que não existem no endereço de outra escola sintética, sem parar, até passar do teto de
+ *     códigos errados dela e seguir acima dele ("Código da turma errado em massa numa escola", A1, tarefa 9.0).
  * No fim, com sucesso ou não, restaura tudo: remove o gatilho, religa o Redis de cache e os workers, recria as APIs
  * com o ambiente de sempre, e espera as regras voltarem a normal.
  *
@@ -40,6 +42,7 @@ export const REGRAS_DO_ENSAIO = {
   loginHashRecusado: 'educa-login-hash-recusado',
   loginRebaixado: 'educa-login-rebaixado-por-escola',
   loginEmailLimiteIp: 'educa-login-email-limite-ip',
+  salaCodigoErrado: 'educa-sala-codigo-errado-por-escola',
 } as const
 
 export type UidDaRegra = (typeof REGRAS_DO_ENSAIO)[keyof typeof REGRAS_DO_ENSAIO]
@@ -70,6 +73,23 @@ const LOGINS_SIMULTANEOS_DO_ENSAIO = 24
  */
 const LOGINS_POR_EMAIL_DO_ENSAIO = 10
 const PAUSA_ENTRE_LOGINS_POR_EMAIL_MS = 3_000
+/**
+ * Tentativas de código da turma em laço, cada uma com uma pausa depois da resposta. Abaixo do teto da escola (1.000 em
+ * 10 min) a resposta é imediata, e o teto chega em uns 90 s; acima dele cada busca espera 1 s, e as seguradas passam de
+ * 300 por minuto, muito acima do limiar de 10 da regra, até ela disparar, antes de a janela de 10 min da escola virar. No
+ * pico, uns 700 por minuto do IP do ensaio: abaixo do limite anônimo por IP, também dividido pelas instâncias com o Redis
+ * de cache parado.
+ */
+export const TENTATIVAS_DE_CODIGO_SIMULTANEAS = 12
+const PAUSA_ENTRE_CODIGOS_MS = 1_000
+/** O alfabeto do código da turma (Tech Spec da A1, seção 3): o ensaio tenta códigos no formato, que não existem. */
+const ALFABETO_DO_CODIGO = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
+
+/** Um código da turma sorteado, no formato de 8 caracteres: numa escola sem acesso nenhum, sempre errado. */
+export function codigoSorteado(): string {
+  return Array.from(randomBytes(8), (byte) => ALFABETO_DO_CODIGO[byte % ALFABETO_DO_CODIGO.length]).join('')
+}
+
 /** Rota template onde o ensaio força o 5xx, como aparece no rótulo `http_route`. */
 export const ROTA_DA_FALHA = '/v1/sistema/jobs-sinteticos'
 /**
@@ -172,6 +192,10 @@ export interface ResultadoDoEnsaio {
   statusDoLogin: Record<string, number>
   /** Status dos logins por e-mail que o ensaio mandou acima do limite por IP. */
   statusDoEmail: Record<string, number>
+  /** A escola cujo endereço recebeu os códigos da turma errados. */
+  escolaDaSala: string
+  /** Status das tentativas de código da turma: todas `NAO_ENCONTRADO`, sem 429 nem 5xx. */
+  statusDaSala: Record<string, number>
 }
 
 const texto = (valor: unknown): string => (typeof valor === 'string' ? valor : '')
@@ -399,6 +423,38 @@ function iniciarRajadaDeEmail(opcoes: OpcoesDoEnsaio, statusDoEmail: Record<stri
   }
 }
 
+/**
+ * Códigos da turma errados, em laço, no endereço da escola da sala (`POST /v1/salas/abrir`, sem login): passam do teto de
+ * códigos errados da escola e seguem acima dele, e cada tentativa acima do teto soma em `sala.limite_atingido{tipo="escola"}`.
+ * Nenhuma é recusada: a busca só espera 1 s.
+ */
+export function iniciarAtaqueDeCodigo(apiUrl: string, slug: string, statusDaSala: Record<string, number>, simultaneas = TENTATIVAS_DE_CODIGO_SIMULTANEAS, pausaMs = PAUSA_ENTRE_CODIGOS_MS): { parar: () => Promise<void> } {
+  let ativo = true
+  const lacos = Array.from({ length: simultaneas }, async () => {
+    while (ativo) {
+      try {
+        const resposta = await fetch(`${apiUrl}/v1/salas/abrir`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, codigo: codigoSorteado() }),
+          signal: AbortSignal.timeout(15_000),
+        })
+        statusDaSala[String(resposta.status)] = (statusDaSala[String(resposta.status)] ?? 0) + 1
+        await resposta.body?.cancel()
+      } catch {
+        statusDaSala['sem_resposta'] = (statusDaSala['sem_resposta'] ?? 0) + 1
+      }
+      await esperar(pausaMs)
+    }
+  })
+  return {
+    parar: async () => {
+      ativo = false
+      await Promise.all(lacos)
+    },
+  }
+}
+
 /** Recria as APIs, com a sobreposição (o hash lento) ou sem ela (o ambiente de sempre), e espera o healthcheck. */
 async function recriarApis(opcoes: OpcoesDoEnsaio, sobreposicao: Readonly<Record<string, string>>): Promise<void> {
   const resultado = await opcoes.composeCom(sobreposicao, 'up', '--detach', '--wait', '--force-recreate', '--no-deps', ...opcoes.apis)
@@ -441,16 +497,19 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
   const daFalha = await opcoes.criarEscolaComSessoes(USUARIOS_POR_ESCOLA)
   const doSeguro = await opcoes.criarEscolaComSessoes(USUARIOS_POR_ESCOLA)
   const doLogin = await opcoes.criarEscolaComSessoes(1)
-  const [escolaDoJob, escolaDaFalha, escolaDoSeguro, escolaDoLogin] = [doJob.escolaId, daFalha.escolaId, doSeguro.escolaId, doLogin.escolaId]
+  const daSala = await opcoes.criarEscolaComSessoes(1)
+  const [escolaDoJob, escolaDaFalha, escolaDoSeguro, escolaDoLogin, escolaDaSala] = [doJob.escolaId, daFalha.escolaId, doSeguro.escolaId, doLogin.escolaId, daSala.escolaId]
   const statusDaFalha: Record<string, number> = {}
   const statusDoLogin: Record<string, number> = {}
   const statusDoEmail: Record<string, number> = {}
+  const statusDaSala: Record<string, number> = {}
   const disparos: Partial<Record<UidDaRegra, DisparoObservado>> = {}
   let jobId = ''
   let jobDeOutraEscolaNaFalha = ''
   let trafego: { parar: () => Promise<void> } | undefined
   let rajadaDeLogin: { parar: () => Promise<void> } | undefined
   let rajadaDeEmail: { parar: () => Promise<void> } | undefined
+  let ataqueDeCodigo: { parar: () => Promise<void> } | undefined
   let hashLento = false
   let erroDoEnsaio: unknown
 
@@ -475,6 +534,8 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
     registrar('lotando o semáforo do hash com logins que falham numa escola, e passando do limite por IP do e-mail')
     rajadaDeLogin = iniciarRajadaDeLogin(opcoes, doLogin.slug, statusDoLogin)
     rajadaDeEmail = iniciarRajadaDeEmail(opcoes, statusDoEmail)
+    registrar('tentando códigos da turma que não existem numa escola, acima do teto dela')
+    ataqueDeCodigo = iniciarAtaqueDeCodigo(opcoes.apiUrl, daSala.slug, statusDaSala)
 
     const esperados: Record<UidDaRegra, Record<string, string>> = {
       [REGRAS_DO_ENSAIO.jobInterativo]: { fila: 'interativa', escola_id: escolaDoJob },
@@ -484,6 +545,7 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
       [REGRAS_DO_ENSAIO.loginHashRecusado]: {},
       [REGRAS_DO_ENSAIO.loginRebaixado]: { escola_id: escolaDoLogin },
       [REGRAS_DO_ENSAIO.loginEmailLimiteIp]: {},
+      [REGRAS_DO_ENSAIO.salaCodigoErrado]: {},
     }
     // A pendência de cada regra, anotada quando vista: o disparo só vale se veio depois dela e do `for:` inteiro.
     const pendencias: Partial<Record<UidDaRegra, number>> = {}
@@ -516,6 +578,7 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
     () => trafego?.parar() ?? Promise.resolve(),
     () => rajadaDeLogin?.parar() ?? Promise.resolve(),
     () => rajadaDeEmail?.parar() ?? Promise.resolve(),
+    () => ataqueDeCodigo?.parar() ?? Promise.resolve(),
     () => removerGatilhoDaFalha(opcoes.bancoUrl),
     () => subir(opcoes, ['redis-cache', ...WORKERS_INTERATIVOS]),
   ]) {
@@ -569,6 +632,8 @@ export async function executarEnsaioDeAlertas(opcoes: OpcoesDoEnsaio): Promise<R
     statusDaFalha,
     statusDoLogin,
     statusDoEmail,
+    escolaDaSala,
+    statusDaSala,
   }
 }
 

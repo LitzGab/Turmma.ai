@@ -1,15 +1,29 @@
+import type { Redis } from 'ioredis'
+import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
-import { arquivosDeAlertaDoRepositorio } from '../../tools/guardas/alerta-tem-runbook.ts'
-import { NOMES_NO_PROMETHEUS } from '../../tools/testes/metricas.ts'
+import { ancoraDoTitulo, arquivosDeAlertaDoRepositorio, CAMINHO_DO_RUNBOOK, entradasDoRunbook } from '../../tools/guardas/alerta-tem-runbook.ts'
+import { MedidorDeTeste, NOMES_NO_PROMETHEUS } from '../../tools/testes/metricas.ts'
 import { metricasDa } from '../../tools/testes/promql.ts'
 import { ITERACOES_MINIMAS_ARGON2, THREADS_DE_FOLGA_DO_LIBUV } from '../../apps/api/src/sessao/configuracao-de-login.ts'
+import { lerEscolaARevogar, OPCAO_DA_ESCOLA } from '../../apps/api/src/ops/revogar-acessos-sala.ts'
+import { EVENTO_DO_LIMITE_DA_SALA, JANELA_DOS_LIMITES_DA_SALA_MS, LimitesDaSala, TETO_DE_CODIGOS_ERRADOS_POR_ESCOLA } from '../../apps/api/src/sala/limites-da-sala.ts'
+import { ContadorEmJanela } from '../../apps/api/src/sessao/senha/contador-em-janela.ts'
 import { LIMITES_DO_HISTOGRAMA_HTTP_S } from '../../packages/nucleo/src/telemetria/metricas.ts'
 import { lerAmbienteExemplo } from '../../tools/ci/compose.ts'
-import { criarGatilhoDaFalha, estadoDoAlerta, executarEnsaioDeAlertas, HASH_LENTO_DO_ENSAIO, REGRAS_DO_ENSAIO, REGRAS_PROVISIONADAS, regrasDaResposta } from '../scripts/ensaio-alertas.ts'
+import {
+  codigoSorteado,
+  criarGatilhoDaFalha,
+  estadoDoAlerta,
+  executarEnsaioDeAlertas,
+  HASH_LENTO_DO_ENSAIO,
+  REGRAS_DO_ENSAIO,
+  REGRAS_PROVISIONADAS,
+  regrasDaResposta,
+} from '../scripts/ensaio-alertas.ts'
 
 interface Consulta {
   refId: string
@@ -108,6 +122,51 @@ describe('regras de alerta provisionadas', () => {
     // As rebaixadas por minuto, somadas as instâncias, sem rótulo nenhum.
     expect(expressao(limiteEmail)).toBe('sum (rate(login_limite_email_ip_total{job="educa/api"}[1m])) * 60')
     expect(limiar(limiteEmail)).toEqual({ type: 'gt', params: [20] })
+
+    // L11 (A1, tarefa 9.0): as seguradas por minuto no teto de códigos errados, somadas as instâncias, sem agrupar por
+    // escola nem por usuário (a série nem tem escola): a escola vem da linha do log.
+    const sala = regraPorUid(REGRAS_DO_ENSAIO.salaCodigoErrado).regra
+    expect(sala.for).toBe('5m')
+    expect(expressao(sala)).toBe('sum (rate(sala_limite_atingido_total{job="educa/api", tipo="escola"}[1m])) * 60')
+    expect(limiar(sala)).toEqual({ type: 'gt', params: [10] })
+  })
+
+  it('L11: a linha `sala.limite_atingido` que o limite da escola escreve traz o `escolaId` que o comando da entrada do runbook recebe', async () => {
+    // O limite da sala de verdade, com o Redis fora (o seguro em memória conta) e uma instância: o teto é o mesmo.
+    const medidor = new MedidorDeTeste()
+    const linhas: unknown[] = []
+    // O cliente fora do ar: só o `status` é lido antes de ir ao seguro.
+    const foraDoAr = { status: 'end' } as Pick<Redis, 'status'> as Redis
+    const janela = new ContadorEmJanela(foraDoAr, new TextEncoder().encode('chave-de-teste-do-contador-com-32-bytes'), {
+      janelaMs: JANELA_DOS_LIMITES_DA_SALA_MS,
+      avisarSeguro: () => undefined,
+    })
+    const limites = new LimitesDaSala({ janela, instancias: 1, medidor: medidor.medidor, logger: { warn: (linha: unknown) => void linhas.push(linha) }, esperar: async () => undefined })
+    const escolaId = randomUUID()
+    try {
+      for (let vez = 0; vez < TETO_DE_CODIGOS_ERRADOS_POR_ESCOLA; vez++) await limites.codigoErrado(escolaId)
+      await limites.antesDaBusca(escolaId)
+      await limites.antesDaBusca(escolaId)
+    } finally {
+      await medidor.encerrar()
+    }
+    // Uma linha por escola e janela, com o evento da constante: é o que o runbook manda procurar no log.
+    expect(linhas).toEqual([{ evento: EVENTO_DO_LIMITE_DA_SALA, tipo: 'escola', escolaId }])
+    const [linha] = linhas as Array<{ escolaId: string }>
+    // O comando aceita o campo como o log o entrega, e revoga a escola dele.
+    expect(lerEscolaARevogar([`--${OPCAO_DA_ESCOLA}`, linha?.escolaId ?? ''])).toBe(escolaId)
+
+    // A entrada do runbook cita o evento, o campo e o comando com a opção que o leitor aceita, e o comando existe.
+    const entrada = entradasDoRunbook(readFileSync(join(raizRepositorio, CAMINHO_DO_RUNBOOK), 'utf8')).get(ancoraDoTitulo(regraPorUid(REGRAS_DO_ENSAIO.salaCodigoErrado).regra.title)) ?? ''
+    expect(entrada).toContain(`\`${EVENTO_DO_LIMITE_DA_SALA}\``)
+    expect(entrada).toContain('`escolaId`')
+    expect(entrada).toContain(`npm run -s ops:revogar-acessos-sala -- --${OPCAO_DA_ESCOLA} <escolaId do log>`)
+    const pacote = JSON.parse(readFileSync(join(raizRepositorio, 'package.json'), 'utf8')) as { scripts: Record<string, string> }
+    expect(pacote.scripts['ops:revogar-acessos-sala']).toMatch(/build -w @educa\/api && node --env-file=\.env\.example apps\/api\/dist\/ops\/revogar-acessos-sala\.js$/)
+  })
+
+  it('o código que o ensaio tenta tem o formato do código da turma: 8 caracteres do alfabeto sem letra que confunde', () => {
+    for (let vez = 0; vez < 200; vez++) expect(codigoSorteado()).toMatch(/^[2-9A-HJKMNP-Z]{8}$/)
   })
 
   it('o limite de 1 s do login lento é fronteira de balde do histograma de login.duracao: o p95 acima de 1 s não é interpolação', () => {

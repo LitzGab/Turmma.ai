@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
+import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
 import { CHAVE_DA_TRAVA_DOS_OPERADORES } from '../src/operacao/operador.repository.js'
 import type { BancoDoComando, SaidaDoComando } from '../src/ops/comando.js'
@@ -12,8 +13,12 @@ import { executarOpsConviteCoordenador } from '../src/ops/convite-coordenador.js
 import { executarOpsEscola } from '../src/ops/escola.js'
 import { executarOpsOperador } from '../src/ops/operador.js'
 import { executarOpsRedefinirMfa } from '../src/ops/redefinir-mfa.js'
+import { executarOpsRevogarAcessosSala } from '../src/ops/revogar-acessos-sala.js'
 import { executarOpsRevogarConvite } from '../src/ops/revogar-convite.js'
 import { executarOpsUso } from '../src/ops/uso.js'
+import { subirApi, type ApiDeTeste } from './api-com-sessao.js'
+import { FerramentasDaSala, type SalaDeTeste } from './sala-de-teste.js'
+import { BancadaDeSessoes } from './sessao-de-teste.js'
 
 type Comando = (argumentos: string[], ambiente: Record<string, string | undefined>, terminal: SaidaDoComando, abrirBanco?: (ambiente: Record<string, string | undefined>) => BancoDoComando) => Promise<number>
 
@@ -171,6 +176,27 @@ describe('npm run ops:operador: o operador nasce, é reconvidado e é desativado
   describe('C2: com operador ativo, OPERADOR inexistente ou desativado é recusado em cada ops:*, e o ativo passa', () => {
     // O convite pendente de ana, gravado no começo de cada caso.
     let conviteDaAna = ''
+    // A escola com um acesso da turma vigente, que o `ops:revogar-acessos-sala` recusado não pode tocar (A1, 9.0).
+    const bancada = new BancadaDeSessoes()
+    const medidor = new MedidorDeTeste()
+    let api: ApiDeTeste | undefined
+    let sala: SalaDeTeste | undefined
+    let acessoVigente = ''
+
+    beforeAll(async () => {
+      api = await subirApi(medidor.medidor, { ambiente: { LIMITE_PROXIES_CONFIAVEIS: '127.0.0.1' } })
+      const ferramentas = new FerramentasDaSala(api, bancada)
+      sala = await ferramentas.montar()
+      acessoVigente = await ferramentas.acessoVigente(sala.turma)
+    })
+
+    afterAll(async () => {
+      await api?.app.close()
+      await bancada.fechar()
+      await medidor.encerrar()
+    })
+
+    const escolaDaSala = () => sala?.escolaId ?? ''
     const casos: { nome: string; comando: Comando; argumentos: () => string[]; nadaFeito: () => Promise<void>; passou: (execucao: Execucao) => void }[] = [
       {
         nome: 'escola',
@@ -202,6 +228,17 @@ describe('npm run ops:operador: o operador nasce, é reconvidado e é desativado
         argumentos: () => ['--usuario', randomUUID(), '--pedido', '12'],
         nadaFeito: async () => undefined,
         passou: (execucao) => expect(execucao).toMatchObject({ codigo: 1, erro: 'NAO_ENCONTRADO\n' }),
+      },
+      {
+        nome: 'revogar-acessos-sala',
+        comando: executarOpsRevogarAcessosSala,
+        argumentos: () => ['--escola', escolaDaSala()],
+        // O acesso vigente continua vigente, e a auditoria da escola não tem revogação nenhuma.
+        nadaFeito: async () => {
+          expect((await pool.query('select revogado_em from acesso_turma where id = $1', [acessoVigente])).rows).toEqual([{ revogado_em: null }])
+          expect((await pool.query(`select 1 from auditoria where escola_id = $1 and acao = 'acesso_turma.revogado'`, [escolaDaSala()])).rows).toEqual([])
+        },
+        passou: (execucao) => expect(execucao).toEqual({ codigo: 0, saida: `${JSON.stringify({ revogados: 1 })}\n`, erro: '' }),
       },
       {
         nome: 'uso',
