@@ -83,6 +83,8 @@ export class ListaService {
    * transação. O erro que o texto sozinho mostra (sem nome, sem matrícula, repetida no texto) é `ENTRADA_INVALIDA`, antes
    * de procurar a turma; a matrícula em uso, que depende do que já está gravado, é `CONFLITO`. Nos dois, nada é gravado.
    *
+   * - O ano em curso fica travado em `FOR SHARE` (10.0, C10), antes da turma: o `encerrar` que chega depois espera e
+   *   apaga os nomes livres que ela gravou; o que chegou antes faz a gravação responder `NAO_ENCONTRADO`.
    * - A turma fica travada contra a exclusão até o fim (C9): a exclusão que chega depois espera e sai `CONFLITO`; a que
    *   chegou antes faz a gravação responder `NAO_ENCONTRADO`.
    * - A mesma lista gravada duas vezes ao mesmo tempo entra uma vez (C8): a segunda não grava de novo o que a primeira
@@ -95,7 +97,8 @@ export class ListaService {
     const errosDoTexto = errosDasLinhas(linhas)
     if (errosDoTexto.some((erro) => erro !== undefined)) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
     const gravacao = await this.banco.transaction(async (tx) => {
-      if (!(await new TurmaRepository(tx).travarContraExclusao(turmaId))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      const turmas = new TurmaRepository(tx)
+      if (!(await turmas.travarAnoEmCurso()) || !(await turmas.travarContraExclusao(turmaId))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
       const lista = new ListaRepository(tx)
       const classificadas = await classificar(lista, turmaId, linhas, errosDoTexto)
       if (classificadas.some((linha) => linha.resultado === 'erro')) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
@@ -113,8 +116,9 @@ export class ListaService {
 
   /**
    * `POST /v1/turmas/:id/lista/nome`: o nome avulso (o aluno que chega em maio), `livre`, com `lista.gravada` na mesma
-   * transação. A matrícula na lista de qualquer turma da escola neste ano (o índice único), ou de um aluno da escola
-   * (`credencial_matricula`, porque o aprovado sai da lista sem matrícula): `CONFLITO`, e nada é gravado.
+   * transação. O ano e a turma travam como na gravação (10.0, C10; C9). A matrícula na lista de qualquer turma da
+   * escola neste ano (o índice único), ou de um aluno da escola (`credencial_matricula`, porque o aprovado sai da lista
+   * sem matrícula): `CONFLITO`, e nada é gravado.
    *
    * A credencial é conferida **depois** do `insert` (8.0, C12): a aprovação da mesma matrícula tira a matrícula da lista
    * e a grava na credencial num commit só. O `insert` que chega no meio dela espera o commit no índice único e, depois
@@ -123,7 +127,8 @@ export class ListaService {
    */
   async acrescentar(turmaId: string, pedido: PedidoNomeAvulso): Promise<NomeDaLista> {
     const criado = await this.banco.transaction(async (tx) => {
-      if (!(await new TurmaRepository(tx).travarContraExclusao(turmaId))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      const turmas = new TurmaRepository(tx)
+      if (!(await turmas.travarAnoEmCurso()) || !(await turmas.travarContraExclusao(turmaId))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
       const lista = new ListaRepository(tx)
       const gravado = await lista.inserir(turmaId, pedido)
       if ((await lista.comCredencial([pedido.matricula])).length > 0) throw new ErroDeDominio(CodigoDeErro.CONFLITO)

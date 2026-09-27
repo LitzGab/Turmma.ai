@@ -61,7 +61,8 @@ Sob `/v1`, escopo do contexto; uma célula da `MATRIZ` por rota:
   gravação com erro que o texto sozinho mostra responde `ENTRADA_INVALIDA`, e com matrícula em uso, `CONFLITO` (2.0).
   Nome e matrícula seguem as regras do avulso (uma linha, sem caractere de controle, até 200 e 40). O separador é o da
   primeira linha que tem um; o cabeçalho dá a ordem das colunas; texto sem linha de aluno é `ENTRADA_INVALIDA` (2.0).
-  A gravação e o avulso travam a turma em `for key share` (`TurmaRepository.travarContraExclusao`, C9); a gravação que
+  A gravação e o avulso travam o ano em curso em `for share` (10.0, C10) e depois a turma em `for key share`
+  (`TurmaRepository.travarContraExclusao`, C9); a gravação que
   perde para outra, ao mesmo tempo, a matrícula de **outra** turma volta atrás com `CONFLITO` (2.0)
 - `POST turmas/:id/lista/nome`, `DELETE lista-nomes/:id`, `GET turmas/:id/lista` (coordenador; a leitura
   `nominal_auditado`): o avulso sem nome ou matrícula dá `ENTRADA_INVALIDA`; com matrícula na lista da escola (pelo
@@ -177,11 +178,17 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
 - **`chaveEnvio`**: sorteada por envio, só na memória da página
 - **Virada de ano**: o `encerrar`, na mesma transação, revoga os acessos, fecha os pendentes como `encerrada`, sem
   hash, chave, `teve_matricula_errada` nem `decidida_por` (recusar é decisão humana, regra 70 item 2), e apaga os
-  nomes livres e reivindicados
+  nomes livres e reivindicados, nessa ordem (`AnoLetivoRepository.virarSala`, 10.0): o check
+  `reivindicacao_pendente_com_nome` recusa o nome apagado antes de o pendente fechar. A auditoria `ano_letivo.encerrado`
+  ganha `acessosRevogados`, `pedidosEncerrados` e `linhasDaListaApagadas`, só contagens. Revoga todo acesso ainda não
+  revogado do ano, vencido ou não; o já revogado guarda a hora dele, que é de onde o expurgo conta
 - **Nome livre sai de fato**: é pré-cadastro, sem conta nem histórico; a minimização vence a exclusão lógica
-- **Eliminação**: apaga, antes do usuário e na mesma transação, a `lista_nome` do aluno e os pedidos dela; o pedido do
-  titular, no F3, cobre as duas (`TODO.md`)
-- **Retenção**: pedido, vigência + 5 anos, sem nome; acesso e convite, 30 dias após vencer, revogar ou usar
+- **Eliminação**: apaga, antes do usuário e na mesma transação, os pedidos da `lista_nome` do aluno e depois a linha
+  (`CicloDeVidaRepository.apagarDaListaDeNomes`, 10.0); a auditoria `usuario.eliminado` ganha `linhaDaListaApagada` e
+  `pedidosApagados`. O pedido do titular, no F3, cobre as duas (`TODO.md`)
+- **Retenção do pedido decidido**: "vigência + 5 anos" não tem expurgo na A1; entra no F3 (`TODO.md`, 10.0)
+- **Retenção**: pedido, vigência + 5 anos, sem nome; acesso e convite, 30 dias após vencer, revogar ou usar, pelo
+  `sistema.expurgar-acesso` (10.0: o alvo `acesso_turma`, e o convite, de qualquer tipo, com `order by` pelo prazo)
 - **DTO**: a página pública sem matrícula; link e código só na resposta que os cria
 
 ## 7b. Conformidade CNE
@@ -232,7 +239,9 @@ da 1.0): trava o ano em curso em `FOR SHARE` a escrita que faz nascer no ano alg
 fechar (criar turma; gerar acesso; na 6.0 e na 8.0, o pedido e a aprovação); a que só troca o nome (renomear) ou tira linha
 (excluir) não trava o ano, e trava a linha da turma (o próprio `update`; o `for update` do excluir). O gerar pega o ano antes
 da turma, e o `encerrar` atualiza o ano antes de tudo: nenhuma ordem cruzada. A gravação e o avulso da lista (2.0) também
-fazem nascer linha no ano e ainda não travam o ano: a 10.0 decide, com o C10.
+fazem nascer linha no ano: desde a 10.0 travam o ano em `FOR SHARE`, antes da turma, como o gerar (C10). A reivindicação e a
+decisão (10.0) travam o ano no começo da transação delas; o ano que deixou de estar em curso faz a reivindicação voltar atrás
+(`REIVINDICACAO_RECUSADA`, sem gravar) e o id da decisão sair `nao_encontrada`.
 
 ## 9. Frontend
 

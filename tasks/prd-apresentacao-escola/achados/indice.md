@@ -121,3 +121,11 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-27 05:13:57 | `revisor-geral` | 2ª | APROVADO | `9_task` | Em `apps/api/src/sala/limites-da-sala.ts:172`, usar a própria `EVENTO_DO_LIMITE_DA_SALA` no `logger.warn` em vez do literal `'sala.limite_atingido'` com um… |
 | 2026-09-27 05:14:08 | `infra-guardian` | 2ª | APROVADO | `9_task` | Continua pendente, para o `/validar`, a recomendação do critério da entrada do aprovado no `k2_redis_lento`, já registrada em "Recomendações sem aplicar". |
 | 2026-09-27 05:14:13 | `privacy-guardian` | 2ª | APROVADO | `9_task` | nenhuma nova. A recomendação 2 da rodada anterior fica registrada no `/retro` e na tarefa do dossiê. |
+| 2026-09-27 06:34:24 | `test-engineer` | 1ª | REPROVADO | `10_task` | A eliminação do aluno aprovado num ano já encerrado não tem teste. |
+| 2026-09-27 06:45:47 | `test-engineer` | 2ª | APROVADO | `10_task` | nenhuma nova. |
+| 2026-09-27 06:46:59 | `tenancy-guardian` | 1ª | APROVADO | `10_task` | `ciclo-de-vida.repository.ts:105`: não existe índice `(escola_id, usuario_id)` em `lista_nome`, então a busca pelo usuário percorre a lista inteira da escola… |
+| 2026-09-27 06:47:10 | `privacy-guardian` | 1ª | APROVADO | `10_task` | O comentário de `apagarDaListaDeNomes` diz que "a busca pelo usuário desce pelo índice da lista, que começa pela escola". Vale confirmar que existe índice com… |
+| 2026-09-27 06:48:14 | `infra-guardian` | 1ª | APROVADO | `10_task` | apps/api/src/sessao/ciclo-de-vida.repository.ts:105. A |
+| 2026-09-27 06:48:21 | `revisor-geral` | 1ª | APROVADO | `10_task` | `apps/api/src/sala/reivindicacao.service.ts:77` (166 colunas) e `apps/api/src/estrutura/lista.service.ts:119` (174 colunas): linhas de JSDoc bem mais longas… |
+| 2026-09-27 06:59:24 | `revisor-geral` | 2ª | APROVADO | `10_task` | `apps/api/src/sala/reivindicacao.service.ts:78`: a quebra de linha que eu pedi no item 5 do JSDoc não foi feita. |
+| 2026-09-27 07:09:17 | `revisor-geral` | 3ª | APROVADO | `10_task` | A recomendação da 2ª rodada foi aplicada. Em `apps/api/src/sala/reivindicacao.service.ts:78-79`, a última linha do item 5 do JSDoc agora está quebrada em duas.… |

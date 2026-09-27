@@ -121,15 +121,51 @@ describe('sistema.expurgar-acesso', () => {
       [escolaId, usuarioId, randomBytes(32).toString('hex'), AGORA.toISOString(), encerradaHa, expiraHa],
     )
 
-  const convite = (escolaId: string, usuarioId: string, datas: { usadoHa?: string; revogadoHa?: string; expiraHa: string }) =>
+  const convite = (escolaId: string, usuarioId: string, datas: { usadoHa?: string; revogadoHa?: string; expiraHa: string }, tipo: 'coordenador' | 'professor' = 'coordenador') =>
     inserir(
       `insert into convite (escola_id, token_hash, tipo, usuario_id, expira_em, usado_em, revogado_em)
-       values ($1, $2, 'coordenador', $3, $4::timestamptz - $5::interval,
+       values ($1, $2, $8, $3, $4::timestamptz - $5::interval,
                case when $6::interval is null then null else $4::timestamptz - $6::interval end,
                case when $7::interval is null then null else $4::timestamptz - $7::interval end)
        returning id`,
-      [escolaId, randomBytes(32).toString('hex'), usuarioId, AGORA.toISOString(), datas.expiraHa, datas.usadoHa ?? null, datas.revogadoHa ?? null],
+      [escolaId, randomBytes(32).toString('hex'), usuarioId, AGORA.toISOString(), datas.expiraHa, datas.usadoHa ?? null, datas.revogadoHa ?? null, tipo],
     )
+
+  /** O ano e a série sintéticos de cada escola, criados na primeira turma dela. */
+  const estruturas = new Map<string, { anoId: string; serieId: string }>()
+
+  /** Uma turma nova na escola, pelo banco: a FK composta do acesso da turma pede turma do ano da escola. */
+  async function turmaNova(escolaId: string): Promise<{ anoId: string; turmaId: string }> {
+    let estrutura = estruturas.get(escolaId)
+    if (estrutura === undefined) {
+      const anoId = await inserir("insert into ano_letivo (escola_id, ano, inicio, fim) values ($1, 2026, '2026-02-01', '2026-12-15') returning id", [escolaId])
+      const serieId = await inserir("insert into serie (escola_id, etapa, ano) values ($1, 'em', 2) returning id", [escolaId])
+      estrutura = { anoId, serieId }
+      estruturas.set(escolaId, estrutura)
+    }
+    const turmaId = await inserir('insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, $4) returning id', [
+      escolaId,
+      estrutura.anoId,
+      estrutura.serieId,
+      `Turma ${randomBytes(4).toString('hex')}`,
+    ])
+    return { anoId: estrutura.anoId, turmaId }
+  }
+
+  /**
+   * O acesso da turma (A1, tarefa 10.0), numa turma só dele: um não revogado por turma (`acesso_turma_um_por_turma`).
+   * Como o `convite`: `expiraHa` negativo é futuro, e `revogadoHa` nulo é o nunca revogado.
+   */
+  const acessoTurma = async (escolaId: string, datas: { revogadoHa?: string; expiraHa: string }) => {
+    const { anoId, turmaId } = await turmaNova(escolaId)
+    return inserir(
+      `insert into acesso_turma (escola_id, ano_letivo_id, turma_id, token_hash, codigo_hmac, validade_dias, expira_em, revogado_em)
+       values ($1, $2, $3, $4, $5, 7, $6::timestamptz - $7::interval,
+               case when $8::interval is null then null else $6::timestamptz - $8::interval end)
+       returning id`,
+      [escolaId, anoId, turmaId, randomBytes(32).toString('hex'), randomBytes(32).toString('base64url'), AGORA.toISOString(), datas.expiraHa, datas.revogadoHa ?? null],
+    )
+  }
 
   /**
    * Um operador sintético, criado há 10 anos: ativo (com nome e e-mail em `.invalid`) ou desativado há 5 anos, já sem
@@ -280,6 +316,28 @@ describe('sistema.expurgar-acesso', () => {
         await convite(escolaId, aluno, { revogadoHa: '31 days', expiraHa: '29 days' }),
         await convite(escolaId, await usuario(escolaId), { expiraHa: '31 days' }),
       )
+      // O convite de professor (A1): o mesmo prazo, pelo mesmo alvo.
+      fica.convite.push(
+        await convite(escolaId, aluno, { usadoHa: '29 days', expiraHa: '27 days' }, 'professor'),
+        await convite(escolaId, await usuario(escolaId), { expiraHa: '29 days' }, 'professor'),
+      )
+      sai.convite.push(
+        await convite(escolaId, aluno, { revogadoHa: '31 days', expiraHa: '29 days' }, 'professor'),
+        await convite(escolaId, await usuario(escolaId), { expiraHa: '31 days' }, 'professor'),
+      )
+      // Acesso da turma (A1, tarefa 10.0, V5): 30 dias depois de vencer ou ser revogado, o que veio primeiro.
+      fica.acesso_turma.push(
+        await acessoTurma(escolaId, { revogadoHa: '29 days', expiraHa: '-5 days' }),
+        await acessoTurma(escolaId, { expiraHa: '29 days' }),
+        // Vigente: nem revogado nem vencido.
+        await acessoTurma(escolaId, { expiraHa: '-3 days' }),
+      )
+      sai.acesso_turma.push(
+        await acessoTurma(escolaId, { revogadoHa: '31 days', expiraHa: '-5 days' }),
+        await acessoTurma(escolaId, { expiraHa: '31 days' }),
+        // Revogado há 10 dias, mas vencido há 31 ("Gerar novo" também revoga o vencido): vale o que veio primeiro.
+        await acessoTurma(escolaId, { revogadoHa: '10 days', expiraHa: '31 days' }),
+      )
     }
     // A falha por e-mail, antes de haver escola: sem escola onde aplicar retenção própria, sai pelo mesmo prazo.
     resultado.sai.registro_acesso.push(await registro(null, null, 'login_falho', '6 months 1 day'))
@@ -364,7 +422,7 @@ describe('sistema.expurgar-acesso', () => {
     const eventos = log.doEvento('acesso.expurgado')
     expect(eventos).toHaveLength(1)
     const [linha] = eventos
-    for (const chave of ['registrosDeAcessoTotal', 'sessoesTotal', 'convitesTotal', 'acessosDaOperacaoTotal', 'sessoesDeOperadorTotal', 'convitesDeOperadorTotal']) {
+    for (const chave of ['registrosDeAcessoTotal', 'sessoesTotal', 'convitesTotal', 'acessosDaTurmaTotal', 'acessosDaOperacaoTotal', 'sessoesDeOperadorTotal', 'convitesDeOperadorTotal']) {
       expect(linha?.[chave], chave).toEqual(expect.any(Number))
     }
     const texto = log.linhas.join('\n')
@@ -387,6 +445,7 @@ describe('sistema.expurgar-acesso', () => {
       registrosDeAcessoTotal: porAlvo.registro_acesso,
       sessoesTotal: porAlvo.sessao,
       convitesTotal: porAlvo.convite,
+      acessosDaTurmaTotal: porAlvo.acesso_turma,
       acessosDaOperacaoTotal: porAlvo.acesso_operacao,
       sessoesDeOperadorTotal: porAlvo.sessao_operador,
       convitesDeOperadorTotal: porAlvo.convite_operador,
@@ -396,7 +455,7 @@ describe('sistema.expurgar-acesso', () => {
 
   it('alvo sem total (A0b, tarefa 9.0): o objeto dos totais do processador é conferido alvo a alvo pelo compilador', () => {
     // @ts-expect-error falta o total de `convite_operador`: sem a afirmação `as Record`, o compilador recusa o objeto.
-    const semUmAlvo: TotaisDoExpurgoDeAcesso = { registro_acesso: 0, sessao: 0, convite: 0, acesso_operacao: 0, sessao_operador: 0 }
+    const semUmAlvo: TotaisDoExpurgoDeAcesso = { registro_acesso: 0, sessao: 0, convite: 0, acesso_turma: 0, acesso_operacao: 0, sessao_operador: 0 }
     expect(Object.keys(semUmAlvo)).toHaveLength(ALVOS_DO_EXPURGO_DE_ACESSO.length - 1)
   })
 
@@ -418,6 +477,55 @@ describe('sistema.expurgar-acesso', () => {
     expect(await existem()).toEqual([])
   })
 
+  it('lote ordenado (A1, tarefa 10.0): com o lote menor que o total, o de `convite` e o de `acesso_turma` levam primeiro o mais antigo, mesmo semeado fora da ordem do prazo', async () => {
+    const escolaId = await bancada.escola()
+    const repositorio = new ExpurgoDeAcessoRepository(bancada.banco)
+    // Muito além de qualquer linha semeada ou deixada por outro caso, e inseridos fora da ordem do prazo: o mais antigo
+    // por último, depois dos vencidos do `semear`, que vêm antes na tabela.
+    const semeados: Record<'convite' | 'acesso_turma', (ha: { revogadoHa?: string; expiraHa: string }) => Promise<string>> = {
+      convite: async (datas) => convite(escolaId, await usuario(escolaId), datas, 'professor'),
+      acesso_turma: (datas) => acessoTurma(escolaId, datas),
+    }
+    for (const alvo of ['convite', 'acesso_turma'] as const) {
+      const duzentos = await semeados[alvo]({ expiraHa: '200 years' })
+      const cem = await semeados[alvo]({ expiraHa: '100 years' })
+      const trezentos = await semeados[alvo]({ revogadoHa: '300 years', expiraHa: '299 years' })
+      semeado.sai[alvo].push(duzentos, cem, trezentos)
+      const existem = async () => (await restantes(alvo, [duzentos, cem, trezentos])).sort()
+
+      expect(await repositorio.apagarLoteVencido(alvo, AGORA, 1), alvo).toBe(1)
+      expect(await existem(), alvo).toEqual([duzentos, cem].sort())
+      expect(await repositorio.apagarLoteVencido(alvo, AGORA, 1), alvo).toBe(1)
+      expect(await existem(), alvo).toEqual([cem])
+      expect(await repositorio.apagarLoteVencido(alvo, AGORA, 1), alvo).toBe(1)
+      expect(await existem(), alvo).toEqual([])
+    }
+  })
+
+  it('V5 (A1, tarefa 10.0): dois expurgos em paralelo apagam cada acesso da turma vencido uma vez só, e a soma das duas contagens é o que havia vencido', async () => {
+    const vencidos = async () =>
+      (
+        await bancada.pool.query<{ n: number }>(`select count(*)::int as n from acesso_turma where least(revogado_em, expira_em) < $1::timestamptz - interval '30 days'`, [AGORA.toISOString()])
+      ).rows[0]?.n ?? -1
+    const antes = await vencidos()
+    expect(antes).toBeGreaterThanOrEqual(semeado.sai.acesso_turma.length)
+    const repositorio = new ExpurgoDeAcessoRepository(bancada.banco)
+    // Lote de 1: as duas execuções disputam linha a linha.
+    const execucao = async () => {
+      let total = 0
+      for (;;) {
+        const doLote = await repositorio.apagarLoteVencido('acesso_turma', AGORA, 1)
+        total += doLote
+        if (doLote < 1) return total
+      }
+    }
+    const [uma, outra] = await Promise.all([execucao(), execucao()])
+    expect(uma + outra).toBe(antes)
+    expect(await vencidos()).toBe(0)
+    expect(await restantes('acesso_turma', semeado.sai.acesso_turma)).toEqual([])
+    expect(await restantes('acesso_turma', semeado.fica.acesso_turma)).toEqual([...semeado.fica.acesso_turma].sort())
+  })
+
   it('idempotência (D49): rodar de novo depois do fim não apaga nada além do prazo', async () => {
     await expurgar()
     const segunda: Array<[Passo, number]> = []
@@ -426,6 +534,7 @@ describe('sistema.expurgar-acesso', () => {
       ['registro_acesso', 0],
       ['sessao', 0],
       ['convite', 0],
+      ['acesso_turma', 0],
       ['acesso_operacao', 0],
       ['sessao_operador', 0],
       ['convite_operador', 0],
@@ -440,7 +549,7 @@ describe('sistema.expurgar-acesso', () => {
     await Promise.all([expurgar(primeira), expurgar(segunda)])
     await conferir()
     // Juntas, as duas apagaram pelo menos os vencidos semeados (o banco de teste pode ter outros), e nenhuma falhou.
-    for (const alvo of ['registro_acesso', 'sessao', 'convite'] as const) {
+    for (const alvo of ['registro_acesso', 'sessao', 'convite', 'acesso_turma'] as const) {
       const soma = [...primeira, ...segunda].filter(([deQual]) => deQual === alvo).reduce((total, [, apagadas]) => total + apagadas, 0)
       expect(soma, alvo).toBeGreaterThanOrEqual(semeado.sai[alvo].length)
     }
@@ -511,6 +620,7 @@ describe('sistema.expurgar-acesso', () => {
       'registro_acesso',
       'sessao',
       'convite',
+      'acesso_turma',
       'acesso_operacao',
       'sessao_operador',
       'convite_operador',

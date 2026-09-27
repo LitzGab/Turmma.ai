@@ -442,7 +442,8 @@ com mais de 6 meses, sessão e convite vencidos há mais de 30 dias ficam no ban
 fila `agendamentos`. A última execução de cada uma aparece em `job_registro` (tipo e estado) e no log
 (`job_registro.expurgado`, `acesso.expurgado`, só com as contagens). Rodar de novo à mão é seguro: as
 três toleram reexecução (D49), e o expurgo do acesso não apaga nada dentro do prazo. O mesmo job apaga também o
-acesso à operação (6 meses), a sessão e o convite de operador (30 dias): parado, eles também passam da retenção.
+acesso da turma (link e código da sala, 30 dias depois de vencer ou ser revogado, A1), o acesso à operação (6 meses),
+a sessão e o convite de operador (30 dias): parado, eles também passam da retenção.
 A auditoria da operação e a conta do operador nunca passam por ele.
 
 **Escola pulada na consolidação de uso** (painel "Uso por escola pulado na consolidação", métrica

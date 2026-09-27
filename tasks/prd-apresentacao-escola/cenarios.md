@@ -214,20 +214,25 @@ aos cenários.
   nome livre, nome reivindicado e nome aprovado: o acesso fica revogado; o pendente vira `encerrada`, sem hash, sem
   chave, com `teve_matricula_errada` nulo e sem `decidida_por`; os nomes livre e reivindicado saem; o recusado fica com
   `lista_nome_id` nulo, e o `encerrar` não falha; o aprovado fica. Depois, link e código respondem `NAO_ENCONTRADO`, e
-  decidir o pedido dá `nao_encontrada`. **Quebra sem:** cada escrita do `encerrar`, inclusive a anulação de
-  `teve_matricula_errada`; o `on delete set null` da FK
+  decidir o pedido, com o ano seguinte aberto, dá `nao_encontrada`. O acesso já revogado antes guarda a hora da
+  revogação dele; o que outro ano da escola tem (montado pelo banco) fica como está; e num contexto de outra escola a
+  virada não alcança nada (10.0). **Quebra sem:** cada escrita do `encerrar`, inclusive a anulação de
+  `teve_matricula_errada`, e a ordem entre fechar o pendente e apagar o nome; o ano e a escola de cada escrita; o
+  `on delete set null` da FK
 - **V2** (integração) Com o ano posto em `encerrado` no banco sem revogar o acesso, link e código respondem
   `NAO_ENCONTRADO`. **Quebra sem:** o join com o ano `em_curso` na resolução
 - **V3** (integração) Eliminação do aluno aprovado, com um marcador no nome: o teste guarda, antes, o id da
   `lista_nome` dele e os ids dos pedidos que apontam para ela (um recusado e o aprovado); depois do `eliminar`, nenhum
   desses ids existe, e o marcador não sobra no usuário, na credencial nem em tabela da A1; uma falha injetada no meio
-  não apaga nada. **Quebra sem:** o `delete` dos pedidos (sem ele, o `set null` os mantém); o `delete` da
-  `lista_nome` (sem ele, a FK do `usuario_id` faz a eliminação falhar)
+  não apaga nada; a linha e o pedido de um colega aprovado da mesma turma ficam; num contexto de outra escola, nada sai
+  (10.0). **Quebra sem:** o `delete` dos pedidos (sem ele, o `set null` os mantém); o `delete` da
+  `lista_nome` (sem ele, a FK do `usuario_id` faz a eliminação falhar); o usuário e a escola da linha
 - **V4** (integração) Eliminação do professor que gerou acesso e decidiu pedidos: `criado_por` e `decidida_por` ficam
   nulos, a eliminação não falha, e a auditoria mantém o id dele. **Quebra sem:** o `on delete set null (coluna)`
 - **V5** (integração) Expurgo: `acesso_turma` e convite de professor saem 30 dias depois de vencer, revogar ou usar, e
-  ficam no dia 29; dois expurgos em paralelo não falham nem apagam em dobro. **Quebra sem:** as tabelas novas no
-  `sistema.expurgar-acesso`
+  ficam no dia 29; o acesso revogado depois de vencido conta do vencimento; dois expurgos em paralelo não falham nem
+  apagam em dobro (a soma das contagens é o que havia vencido); o lote que não cabe inteiro leva os mais antigos
+  (10.0). **Quebra sem:** as tabelas novas no `sistema.expurgar-acesso`; o `least` do prazo; o `order by` do lote
 
 ## C — Corridas, sempre em paralelo
 
@@ -275,7 +280,11 @@ aos cenários.
   grava e o excluir recebe `CONFLITO`. **Quebra sem:** a FK mapeada; e (2.0) o `for key share` da turma na gravação e no
   avulso, provado com a exclusão aberta, sem commit, antes de a escrita chegar (sem ele, a escrita dá 500)
 - **C10** (integração) `encerrar` × reivindicar e `encerrar` × aprovar: nunca sobra pedido pendente com hash nem aluno
-  aprovado no ano encerrado. **Quebra sem:** o `for share` no ano dentro da transação da reivindicação e da decisão
+  aprovado no ano encerrado. Nos dois arranjos, com um ponto de pausa (10.0): a escrita parada no meio (o `encerrar` espera
+  o ano e fecha o pedido ou encerra o vínculo do aprovado), e o `encerrar` parado depois de mudar o ano (a reivindicação
+  sai `REIVINDICACAO_RECUSADA`, sem pedido; a aprovação, `nao_encontrada`, sem aluno). Também (10.0) `encerrar` × nome
+  avulso e × gravação da lista, paradas depois do `insert`: nenhum nome livre sobra no ano encerrado. **Quebra sem:** o
+  `for share` no ano dentro da transação da reivindicação, da decisão, da gravação e do avulso
 - **C11** (integração) Excluir a turma × gerar o acesso, em paralelo, sem acesso vigente antes: ou a turma fica com o
   acesso vigente e o excluir recebe `CONFLITO`, ou a turma sai e o gerar recebe `NAO_ENCONTRADO`; nunca 201 com um
   acesso que o `cascade` já levou, nem 5xx. Um ponto de pausa segura o gerar depois do `insert` e antes do commit,

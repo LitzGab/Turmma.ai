@@ -15,12 +15,17 @@ export const RETENCAO_SESSAO_DIAS = 30
  */
 export const RETENCAO_CONVITE_DIAS = 30
 
+/** Por quantos dias o acesso da turma fica depois de vencido ou revogado (`docs/lgpd.md`, "Acesso da turma"; A1). */
+export const RETENCAO_ACESSO_TURMA_DIAS = 30
+
 /**
- * As seis tabelas que o `sistema.expurgar-acesso` apaga por prazo, na ordem em que ele passa; a conta vem depois. As
- * três primeiras são das escolas (tarefa 17.0); as três últimas, da operação Turmma (A0, tarefa 9.0), com os mesmos
- * prazos. A `auditoria_operacao` (vigência + 5 anos) e o `operador` (o dado pessoal sai no `desativar`) nunca são alvo.
+ * As sete tabelas que o `sistema.expurgar-acesso` apaga por prazo, na ordem em que ele passa; a conta vem depois. As
+ * quatro primeiras são das escolas: registro de acesso, sessão e convite (tarefa 17.0), e o acesso da turma (A1, tarefa
+ * 10.0); as três últimas, da operação Turmma (A0, tarefa 9.0), com os mesmos prazos. A `auditoria_operacao` (vigência + 5
+ * anos) e o `operador` (o dado pessoal sai no `desativar`) nunca são alvo, nem os pedidos de reivindicação (vigência + 5
+ * anos, sem expurgo na A1).
  */
-export const ALVOS_DO_EXPURGO_DE_ACESSO = ['registro_acesso', 'sessao', 'convite', 'acesso_operacao', 'sessao_operador', 'convite_operador'] as const
+export const ALVOS_DO_EXPURGO_DE_ACESSO = ['registro_acesso', 'sessao', 'convite', 'acesso_turma', 'acesso_operacao', 'sessao_operador', 'convite_operador'] as const
 export type AlvoDoExpurgoDeAcesso = (typeof ALVOS_DO_EXPURGO_DE_ACESSO)[number]
 
 /**
@@ -34,8 +39,13 @@ export type AlvoDoExpurgoDeAcesso = (typeof ALVOS_DO_EXPURGO_DE_ACESSO)[number]
  *   aplicar retenção própria. Desce por `registro_acesso_em_idx`.
  * - **Sessão:** encerrada ou só expirada, pela mesma expressão do índice `sessao_fim_idx`. Uma sessão aberta e no
  *   prazo tem `coalesce` no futuro e nunca sai.
- * - **Convite:** o prazo conta do primeiro que aconteceu entre usar, revogar e expirar (`least` ignora os nulos). A
- *   tabela tem um convite por coordenador convidado, e fica sem índice próprio.
+ * - **Convite:** de coordenador e de professor (A1), o prazo conta do primeiro que aconteceu entre usar, revogar e
+ *   expirar (`least` ignora os nulos), com `order by` por essa expressão (A1, tarefa 10.0): o lote que não cabe inteiro
+ *   leva os mais antigos. Um convite por pessoa da equipe convidada de cada vez, e os vencidos saem em 30 dias: sem
+ *   índice próprio, a ordenação é a de uma tabela pequena.
+ * - **Acesso da turma** (A1, tarefa 10.0): 30 dias depois de vencer ou ser revogado, o que veio primeiro, pelo mesmo
+ *   `least`, com `order by` por ele. Um acesso não revogado por turma, e os revogados saem em 30 dias: a tabela fica na
+ *   ordem das turmas da escola vezes os "Gerar novo" de um mês, sem índice próprio, como o convite.
  * - **Acesso à operação:** entrada, falha de entrada e saída do painel da equipe, com 6 meses como o registro de acesso
  *   (Marco Civil, art. 15), inclusive a falha sem operador reconhecido. Desce por `acesso_operacao_em_idx`.
  * - **Sessão de operador:** 30 dias depois de encerrada ou, sem encerramento, de expirada, pela expressão do índice
@@ -71,6 +81,17 @@ const APAGAR_LOTE: Record<AlvoDoExpurgoDeAcesso, (agora: Date, limite: number) =
     where id = any(array(
       select id from convite
       where least(usado_em, revogado_em, expira_em) < ${agora.toISOString()}::timestamptz - make_interval(days => ${RETENCAO_CONVITE_DIAS})
+      order by least(usado_em, revogado_em, expira_em)
+      limit ${limite}
+      for update skip locked
+    ))
+  `,
+  acesso_turma: (agora, limite) => sql`
+    delete from acesso_turma
+    where id = any(array(
+      select id from acesso_turma
+      where least(revogado_em, expira_em) < ${agora.toISOString()}::timestamptz - make_interval(days => ${RETENCAO_ACESSO_TURMA_DIAS})
+      order by least(revogado_em, expira_em)
       limit ${limite}
       for update skip locked
     ))
@@ -163,8 +184,9 @@ const LIMPAR_TRAVADAS = (ids: readonly string[], agora: Date) => sql`
 
 /**
  * A retenção do acesso (tarefa 17.0; Tech Spec, seção 5, "Ciclo de vida"): registro de acesso com mais de 6 meses,
- * sessão encerrada ou expirada há mais de 30 dias e convite usado, revogado ou expirado há mais de 30 dias saem do
- * banco, e com os mesmos prazos o acesso, a sessão e o convite da operação Turmma (A0, tarefa 9.0); depois, a conta da
+ * sessão encerrada ou expirada há mais de 30 dias, convite (de coordenador ou de professor) usado, revogado ou expirado
+ * há mais de 30 dias e acesso da turma vencido ou revogado há mais de 30 dias (A1, tarefa 10.0) saem do banco, e com os
+ * mesmos prazos o acesso, a sessão e o convite da operação Turmma (A0, tarefa 9.0); depois, a conta da
  * equipe sem uso perde a credencial. Mora em `retencao`, como o expurgo de jobs do F0, e seus
  * dois métodos são, com o dele, as exceções ao escopo fora da resolução de tenant (Tech Spec, seção 6): rotinas nossas,
  * sem requisição de escola.
@@ -177,9 +199,10 @@ export class ExpurgoDeAcessoRepository {
    * só o prazo: nada no prazo sai, de escola nenhuma nem da equipe.
    */
   @SemEscopo(
-    'o expurgo é rotina nossa e aplica o mesmo prazo legal de registro de acesso, sessão e convite a todas as escolas (e à ' +
-      'falha de login sem escola), e às tabelas de acesso, sessão e convite da operação Turmma, que são da equipe e não têm ' +
-      'escola; não devolve linha, só a quantidade apagada, e não atende requisição de escola nenhuma',
+    'o expurgo é rotina nossa e aplica o mesmo prazo de registro de acesso, sessão, convite (de coordenador e de professor) ' +
+      'e acesso da turma (link e código da sala) a todas as escolas (e à falha de login sem escola), e às tabelas de acesso, ' +
+      'sessão e convite da operação Turmma, que são da equipe e não têm escola; não devolve linha, só a quantidade apagada, ' +
+      'e não atende requisição de escola nenhuma',
   )
   async apagarLoteVencido(alvo: AlvoDoExpurgoDeAcesso, agora: Date, limite: number = LOTE_DO_EXPURGO): Promise<number> {
     const resultado = await this.banco.execute(APAGAR_LOTE[alvo](agora, limite))

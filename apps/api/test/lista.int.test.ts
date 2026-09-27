@@ -245,7 +245,7 @@ describe('lista de nomes da turma (A1, tarefa 2.0): prévia, gravação, avulso,
       expect((await linhasDa(a.escolaId)).map((linha) => linha.matricula).sort()).toEqual([naListaDeA, outraNaListaDeA, deAlunoDeB, outraDeAlunoDeB].sort())
     })
 
-    it('a matrícula da lista do ano encerrado entra no ano em curso, e o nome livre de lá não se retira', async () => {
+    it('a matrícula da lista do ano encerrado entra no ano em curso; o nome livre de lá saiu no encerramento (10.0), e a turma de lá não ganha nome', async () => {
       const e = await escolaComTurmas()
       const de2026 = matricula()
       const outraDe2026 = matricula()
@@ -255,7 +255,9 @@ describe('lista de nomes da turma (A1, tarefa 2.0): prévia, gravação, avulso,
       ])
       const livreDe2026 = await idDaMatricula(e.escolaId, de2026)
       await criado(pedir(e.coordenacao, 'POST', `/v1/anos-letivos/${e.anoId}/encerrar`), 200)
-      await anoAberto(e.coordenacao, 2027)
+      // O encerramento apagou os nomes livres do ano (10.0, V1).
+      expect((await linhasDa(e.escolaId)).filter((linha) => linha.ano_letivo_id === e.anoId)).toEqual([])
+      const de2027Ano = await anoAberto(e.coordenacao, 2027)
       const de2027 = await turmaNova(e.coordenacao, e.serieId)
 
       const lida = await previa(e, de2027, texto([[nome(), de2026]]))
@@ -275,8 +277,8 @@ describe('lista de nomes da turma (A1, tarefa 2.0): prévia, gravação, avulso,
         expect(semRequisicao(resposta)).toEqual(NAO_ENCONTRADO)
       }
       expect(await retrato(e.escolaId)).toEqual(antes)
-      // A mesma matrícula nos dois anos, cada uma na lista do seu.
-      expect(new Set((await linhasDa(e.escolaId)).filter((linha) => linha.matricula === de2026).map((linha) => linha.ano_letivo_id)).size).toBe(2)
+      // A matrícula de 2026 agora só na lista de 2027.
+      expect((await linhasDa(e.escolaId)).filter((linha) => linha.matricula === de2026).map((linha) => linha.ano_letivo_id)).toEqual([de2027Ano])
     })
   })
 

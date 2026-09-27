@@ -114,7 +114,8 @@ export class DecisaoService {
   /**
    * A decisão de um pedido (Tech Spec da A1, seção 5, passo 6), numa transação:
    *
-   * 1. Trava o pedido se ele está no alcance de quem decide e ainda `pendente` (`travarPendente`). Sem linha, uma leitura
+   * 1. Trava o ano em curso em `FOR SHARE` (10.0): encerrado no meio do lote, o pedido sai `nao_encontrada`, sem gravar.
+   *    Trava o pedido se ele está no alcance de quem decide e ainda `pendente` (`travarPendente`). Sem linha, uma leitura
    *    com o mesmo alcance, aplicado antes do estado, separa `ja_decidida` de `nao_encontrada`, sem gravar nada (I6, C3).
    * 2. **Aprovada**: o usuário `aluno` com o nome da lista, a credencial com a matrícula da lista e o hash do pedido, o
    *    vínculo `aluno` `confirmado` com `decidido_em`, e a linha da lista `aprovado`, sem nome nem matrícula (E18).
@@ -128,6 +129,7 @@ export class DecisaoService {
    */
   #decidirUm(id: string, decisao: DecisaoDePedido, alcance: AlcanceDoPedido): Promise<DesfechoDoPedido> {
     return this.banco.transaction(async (tx): Promise<DesfechoDoPedido> => {
+      if (!(await new TurmaRepository(tx).travarAnoEmCurso())) return { resultado: 'nao_encontrada' }
       const decisoes = new DecisaoRepository(tx)
       const pedido = await decisoes.travarPendente(id, alcance)
       if (pedido === undefined) return { resultado: (await decisoes.alcancavel(id, alcance)) ? 'ja_decidida' : 'nao_encontrada' }

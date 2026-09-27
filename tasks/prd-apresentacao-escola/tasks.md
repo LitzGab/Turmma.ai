@@ -1,7 +1,7 @@
 # Tarefas — A escola montada pela coordenação (A1)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 9 de 17 concluídas
+**Status:** 10 de 17 concluídas
 
 Aprovadas pelo Joaquim em 26/09/2026. O mapa de cenários por tarefa saiu do `test-engineer`: cada id do
 `cenarios.md` está em uma tarefa, ou dividido entre tarefas com a parte de cada uma dita no `N_task.md`. Os
@@ -75,12 +75,12 @@ dela nos dois.
   - [x] 9.3 `reivindicacao-em-sala` no k6, com a variante do primeiro dia
   - [x] 9.4 Testes: E29, L11, L12, K1, K2
 
-- [ ] **10.0 — Virada de ano, eliminação e expurgo alcançam as tabelas novas**
-  - [ ] 10.1 `encerrar` revoga, fecha e apaga na mesma transação
-  - [ ] 10.2 `for share` no ano nas transações da reivindicação e da decisão
-  - [ ] 10.3 Eliminação apaga a `lista_nome` e os pedidos do aluno; `set null` do professor
-  - [ ] 10.4 Expurgo com o `acesso_turma` e o `@SemEscopo` reescrito
-  - [ ] 10.5 Testes: V1, V3, V4, V5, C10
+- [x] **10.0 — Virada de ano, eliminação e expurgo alcançam as tabelas novas**
+  - [x] 10.1 `encerrar` revoga, fecha e apaga na mesma transação
+  - [x] 10.2 `for share` no ano nas transações da reivindicação e da decisão
+  - [x] 10.3 Eliminação apaga a `lista_nome` e os pedidos do aluno; `set null` do professor
+  - [x] 10.4 Expurgo com o `acesso_turma` e o `@SemEscopo` reescrito
+  - [x] 10.5 Testes: V1, V3, V4, V5, C10
 
 - [ ] **11.0 — Web: casca por papel, guarda, título, menu da pessoa e fronteira genérica**
   - [ ] 11.1 Fronteira de erro genérica em `componentes/`, com o teste do `componentWillUnmount`

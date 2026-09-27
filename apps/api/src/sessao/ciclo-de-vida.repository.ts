@@ -1,6 +1,6 @@
-import { contaExterna, credencialMatricula, exigirEscolaDoContexto, sessao, usuario, vinculo, type ProvedorExterno, type TransacaoBanco } from '@educa/nucleo'
+import { contaExterna, credencialMatricula, exigirEscolaDoContexto, listaNome, reivindicacao, sessao, usuario, vinculo, type ProvedorExterno, type TransacaoBanco } from '@educa/nucleo'
 import type { PapelDeUsuario } from '@educa/shared'
-import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 
 /** O usuário alvo da desativação ou da eliminação: o papel, a conta e se já está desativado. Nunca o nome. */
 export interface UsuarioDoCicloDeVida {
@@ -90,6 +90,26 @@ export class CicloDeVidaRepository {
       .where(and(eq(vinculo.escolaId, exigirEscolaDoContexto()), eq(vinculo.usuarioId, usuarioId)))
       .returning({ id: vinculo.id })
     return apagados.length
+  }
+
+  /**
+   * Apaga a linha `aprovado` da lista de nomes que aponta para o usuário (o aluno que entrou pela lista, A1) e, antes
+   * dela, os pedidos que apontam para essa linha: o aprovado e os recusados do mesmo nome (A1, tarefa 10.0; Tech Spec da
+   * A1, seção 7, "Eliminação"). Os pedidos antes, porque o `set null` da FK os manteria sem nome; a linha antes do
+   * usuário, porque a FK do `usuario_id` não tem ação e faria a eliminação falhar. A linha aprovada não tem pedido
+   * pendente (a aprovação o fechou, e o nome só volta a receber pedido se for `livre`). De qualquer ano da escola. Não
+   * há índice por `(escola_id, usuario_id)`: a busca percorre as linhas da escola pelo prefixo de `lista_nome_turma_idx`,
+   * como a FK do `usuario_id` no `delete` do usuário; a eliminação é rara, e o índice fica no `TODO.md`.
+   */
+  async apagarDaListaDeNomes(usuarioId: string): Promise<{ readonly linhaDaListaApagada: boolean; readonly pedidosApagados: number }> {
+    const escolaId = exigirEscolaDoContexto()
+    const doUsuario = and(eq(listaNome.escolaId, escolaId), eq(listaNome.usuarioId, usuarioId))
+    const pedidos = await this.tx
+      .delete(reivindicacao)
+      .where(and(eq(reivindicacao.escolaId, escolaId), inArray(reivindicacao.listaNomeId, this.tx.select({ id: listaNome.id }).from(listaNome).where(doUsuario))))
+      .returning({ id: reivindicacao.id })
+    const linhas = await this.tx.delete(listaNome).where(doUsuario).returning({ id: listaNome.id })
+    return { linhaDaListaApagada: linhas.length > 0, pedidosApagados: pedidos.length }
   }
 
   /**

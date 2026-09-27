@@ -205,7 +205,8 @@ export const ACOES_DE_AUDITORIA = {
   },
   /**
    * A escola pediu a eliminação do usuário (17.0; Tech Spec, seção 5, "Ciclo de vida"): o usuário, a credencial por
-   * matrícula, a conta externa, os vínculos e as sessões dele nesta escola saíram de fato. O registro de acesso e a
+   * matrícula, a conta externa, os vínculos e as sessões dele nesta escola saíram de fato; do aluno aprovado pela lista
+   * (A1, 10.0), também a linha `aprovado` da lista e os pedidos que apontavam para ela. O registro de acesso e a
    * auditoria ficam, pela retenção legal. `entidadeId` é o id que o usuário tinha; só contagens e sim ou não.
    */
   'usuario.eliminado': {
@@ -216,6 +217,8 @@ export const ACOES_DE_AUDITORIA = {
       vinculosApagados: z.number().int().nonnegative(),
       credencialApagada: z.boolean(),
       contaExternaApagada: z.boolean(),
+      linhaDaListaApagada: z.boolean(),
+      pedidosApagados: z.number().int().nonnegative(),
       contaLimpa: z.boolean(),
     }),
     finalidade: null,
@@ -274,7 +277,9 @@ export const ACOES_DE_AUDITORIA = {
   /**
    * A coordenação encerrou o ano letivo, e a virada aconteceu na mesma transação (10.0, RF16): os vínculos do ano que
    * não estavam encerrados foram a `encerrado` por `fim_do_ano`, e o texto livre das contestações do ano foi apagado
-   * (`docs/lgpd.md`, retenção até o fim do ano letivo). `entidadeId` é o ano. Só as contagens: nunca quem, nunca o texto.
+   * (`docs/lgpd.md`, retenção até o fim do ano letivo). Na sala das turmas (A1, 10.0): os acessos revogados, os pedidos
+   * pendentes fechados como `encerrada` e as linhas livres e reivindicadas da lista apagadas. `entidadeId` é o ano. Só as
+   * contagens: nunca quem, nunca o texto, nunca o nome nem a matrícula.
    */
   'ano_letivo.encerrado': {
     entidade: 'ano_letivo',
@@ -283,6 +288,9 @@ export const ACOES_DE_AUDITORIA = {
       situacao: z.literal('encerrado'),
       vinculosEncerrados: z.number().int().nonnegative(),
       textosDeContestacaoApagados: z.number().int().nonnegative(),
+      acessosRevogados: z.number().int().nonnegative(),
+      pedidosEncerrados: z.number().int().nonnegative(),
+      linhasDaListaApagadas: z.number().int().nonnegative(),
     }),
     finalidade: null,
   },

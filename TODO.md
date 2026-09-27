@@ -14,6 +14,10 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       `reivindicacao` da A1, para a pergunta de fechamento da regra 20 continuar respondida por código: o pedido se liga
       ao aluno por `lista_nome_id` enquanto a linha da lista existe, e depois do `set null` já não se liga a ninguém
       (`privacy-guardian` na 6.0)
+- [ ] O expurgo dos pedidos de reivindicação decididos (e dos fechados como `encerrada` na virada do ano) depois de
+      "vigência + 5 anos" (`docs/lgpd.md`, linha "Reivindicação"): na A1 nenhuma rotina os apaga, e eles ficam, sem nome
+      nem segredo, até a eliminação do aluno aprovado ou uma rotina nova. Entra no F3, com a retenção configurável por
+      escola (regra 20, item 16), no `sistema.expurgar-acesso` ou numa rotina própria (A1, tarefa 10.0)
 - [ ] Escrever e ensaiar o processo de incidente
 - [ ] Parecer sobre o ECA Digital (Lei 15.211/2025) para plataforma contratada pela escola,
       com a avaliação de impacto que ele exige. Três perguntas precisam sair dele, nomeadas:
@@ -52,6 +56,15 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 ## Infra e operação
 
+- [ ] `lista_nome`: índice parcial `(escola_id, usuario_id) where usuario_id is not null`, para a busca da eliminação do
+      aluno aprovado (`CicloDeVidaRepository.apagarDaListaDeNomes`) e a FK do `usuario_id` no `delete` do usuário; hoje as
+      duas percorrem a lista da escola pelo prefixo de `lista_nome_turma_idx`. Na próxima migration de `lista_nome`
+      (`infra-guardian` da 10.0 da A1)
+- [ ] Expurgo do `acesso_turma` e do `convite`: `order by least(...)` sem índice; se o "Gerar novo" virar rotina diária por
+      turma, um índice de expressão pelo prazo (`infra-guardian` da 10.0 da A1)
+- [ ] Encerrar o ano segura, durante a virada, a sala da escola inteira (reivindicação, decisão, lista e acesso esperam o
+      `FOR SHARE` do ano): uma linha no runbook e o aviso na tela de Estrutura (13.0) de não encerrar em horário de aula, e a
+      duração da virada num log só com contagens (`infra-guardian` da 10.0 da A1)
 - [ ] **Índice da lista de professores**: `GET /v1/professores` (A1, 3.0) pagina `usuario` pelo índice `(escola_id, id)` e
       descarta quem não é `professor`: cada página pode ler todos os usuários da escola, alunos inclusive. Barato hoje
       (rota rara, só da coordenação, escola de mil usuários). Com escolas maiores, um índice parcial `(escola_id, id) where

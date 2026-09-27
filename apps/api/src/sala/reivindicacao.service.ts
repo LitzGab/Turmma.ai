@@ -1,5 +1,6 @@
 import { ErroDeDominio, erroDoPostgresEm, METRICAS, type Banco, type Meter } from '@educa/nucleo'
 import { CodigoDeErro, esquemaRespostaReivindicacao, type PedidoReivindicarSala, type RespostaReivindicacao } from '@educa/shared'
+import { TurmaRepository } from '../estrutura/turma.repository.js'
 import type { AcessoDaSala } from '../sessao/acesso-da-sala.js'
 import type { HashDeSenha } from '../sessao/hash-de-senha.js'
 import { baldeDaEscola } from '../sessao/senha/baldes-de-login.js'
@@ -38,8 +39,11 @@ const RESULTADO_DO_ERRO: Partial<Record<CodigoDeErro, ResultadoDaReivindicacao>>
  */
 const VOLTA_E_RELE = new Set(['23503', '23505'])
 
-/** O `update` da `lista_nome` não achou o nome: a transação volta atrás, como no 23505. */
-class NomeNaoTomado extends Error {}
+/**
+ * A transação volta atrás sem gravar, como no 23505: o `update` da `lista_nome` não achou o nome, ou o ano deixou de
+ * estar em curso enquanto o pedido esperava a trava dele (10.0, C10).
+ */
+class NaoGravou extends Error {}
 
 const ENVIADO: RespostaReivindicacao = esquemaRespostaReivindicacao.parse({ resultado: 'enviado' })
 
@@ -63,15 +67,18 @@ type Desfecho = 'enviado' | 'reenvio'
  * 3. **O hash, sempre**: argon2id no `SemaforoDeHash`, no balde da escola, fora da transação e sem conexão presa (L9), em
  *    todo pedido que passou da chave, com a matrícula certa ou não, com o nome tomado ou inexistente (R3): rodar o hash
  *    só quando a matrícula bate diria, pelo tempo, qual dos dois errou. O 503 do prazo do semáforo sai daqui, sem gravar.
- * 4. **A transação**: o `insert` do pedido e, **depois**, o `update` condicional da `lista_nome` (id, escola, ano, turma,
- *    `livre` e matrícula). As duas escritas voltam juntas (E23).
- * 5. **FK violada, qualquer 23505 ou `update` sem linha**: a transação volta atrás, e um comando novo relê a chave na
- *    escola e na turma do acesso. Achou, foi o mesmo envio que gravou antes, ao mesmo tempo (C2): `enviado`, sem contar.
- *    Não achou: `REIVINDICACAO_RECUSADA`, a mesma resposta para o nome inexistente, de outra turma, escola ou ano, tomado
- *    ou com a matrícula errada (R2), sem gravar nada. O nome da restrição nunca é lido: a ordem dos índices não muda a
- *    resposta. A recusa rodou o hash sem criar pedido, e conta no teto da turma (Tech Spec da A1, seção 5, passo 5).
+ * 4. **A transação**: o ano em curso travado em `FOR SHARE` (10.0, C10), o `insert` do pedido e, **depois**, o `update`
+ *    condicional da `lista_nome` (id, escola, ano, turma, `livre` e matrícula). As duas escritas voltam juntas (E23). O
+ *    `encerrar` que chega depois espera o commit e fecha o pedido como `encerrada`; o que chegou antes deixa o ano
+ *    `encerrado`, e o pedido, relido o ano, não grava.
+ * 5. **Ano fora de curso, FK violada, qualquer 23505 ou `update` sem linha**: a transação volta atrás, e um comando novo
+ *    relê a chave na escola e na turma do acesso. Achou, foi o mesmo envio que gravou antes, ao mesmo tempo (C2):
+ *    `enviado`, sem contar. Não achou: `REIVINDICACAO_RECUSADA`, a mesma resposta para o nome inexistente, de outra
+ *    turma, escola ou ano, de ano encerrado, tomado ou com a matrícula errada (R2), sem gravar nada. O nome da
+ *    restrição nunca é lido: a ordem dos índices não muda a resposta. A recusa rodou o hash sem criar pedido, e conta
+ *    no teto da turma (Tech Spec da A1, seção 5, passo 5).
  *
- * Cada pedido soma um em `sala.reivindicacao{resultado}`, sem escola. O `for share` no ano (10.0) entra na tarefa dele.
+ * Cada pedido soma um em `sala.reivindicacao{resultado}`, sem escola.
  */
 export class ReivindicacaoService {
   readonly #pedidos: ReturnType<Meter['createCounter']>
@@ -109,11 +116,12 @@ export class ReivindicacaoService {
         const teveMatriculaErrada = await limites.teveMatriculaErrada(nome)
         try {
           await banco.transaction(async (tx) => {
+            if (!(await new TurmaRepository(tx).travarAnoEmCurso())) throw new NaoGravou()
             await new ReivindicacaoRepository(tx).inserirPendente({ turmaId, listaNomeId, chaveEnvio, senhaHash, teveMatriculaErrada })
-            if (!(await new ListaLivreRepository(tx).tomar({ turmaId, listaNomeId, matricula }))) throw new NomeNaoTomado()
+            if (!(await new ListaLivreRepository(tx).tomar({ turmaId, listaNomeId, matricula }))) throw new NaoGravou()
           })
         } catch (erro) {
-          if (!(erro instanceof NomeNaoTomado) && !VOLTA_E_RELE.has(erroDoPostgresEm(erro)?.code ?? '')) throw erro
+          if (!(erro instanceof NaoGravou) && !VOLTA_E_RELE.has(erroDoPostgresEm(erro)?.code ?? '')) throw erro
           if (await pedidos.chaveGravada(turmaId, chaveEnvio)) return 'reenvio'
           await limites.hashSemPedido(turmaId)
           throw new ErroDeDominio(CodigoDeErro.REIVINDICACAO_RECUSADA)

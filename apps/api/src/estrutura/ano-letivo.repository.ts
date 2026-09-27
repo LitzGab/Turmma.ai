@@ -1,6 +1,13 @@
-import { anoLetivo, exigirEscolaDoContexto, type Banco, type TransacaoBanco } from '@educa/nucleo'
+import { acessoTurma, anoLetivo, exigirEscolaDoContexto, listaNome, reivindicacao, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { AnoLetivo, ConsultaPaginada, PedidoCriarAnoLetivo, SituacaoDoAnoLetivo } from '@educa/shared'
-import { and, asc, eq, gt } from 'drizzle-orm'
+import { and, asc, eq, gt, inArray, isNull, sql } from 'drizzle-orm'
+
+/** O que a virada fez na sala das turmas do ano: só contagens, que a auditoria `ano_letivo.encerrado` leva. */
+export interface ViradaDaSala {
+  readonly acessosRevogados: number
+  readonly pedidosEncerrados: number
+  readonly linhasDaListaApagadas: number
+}
 
 const colunas = { id: anoLetivo.id, ano: anoLetivo.ano, inicio: anoLetivo.inicio, fim: anoLetivo.fim, situacao: anoLetivo.situacao }
 
@@ -50,5 +57,39 @@ export class AnoLetivoRepository {
       .where(and(eq(anoLetivo.escolaId, exigirEscolaDoContexto()), eq(anoLetivo.id, id), eq(anoLetivo.situacao, de)))
       .returning(colunas)
     return mudado
+  }
+
+  /**
+   * A virada da sala das turmas do ano (A1, tarefa 10.0; Tech Spec da A1, seção 7, "Virada de ano"), dentro da transação
+   * do `encerrar` e depois de o ano ter mudado para `encerrado`. Três escritas, nesta ordem:
+   *
+   * 1. Revoga todo acesso da turma do ano ainda não revogado, vencido ou não: nenhum link nem código do ano sobra aberto.
+   * 2. Fecha os pedidos `pendente` do ano como `encerrada`, sem o hash, a chave e a marca de matrícula errada (check
+   *    `reivindicacao_segredo_so_pendente`). Não é decisão (regra 70, item 2): `decidida_por`, `decidida_em` e
+   *    `decidida_como` continuam nulos.
+   * 3. Apaga os nomes `livre` e `reivindicado` do ano (a minimização vence a exclusão lógica; `docs/lgpd.md`). O `set null`
+   *    da FK deixa sem nome os pedidos que apontavam para eles (o recusado, o encerrado); o `aprovado` fica.
+   *
+   * A 2 vem antes da 3: o check `reivindicacao_pendente_com_nome` recusa (23514) o `set null` num pedido pendente. Nenhum
+   * pedido novo chega entre as duas: a reivindicação e a decisão travam o ano em curso em `FOR SHARE` (10.2), e o `update`
+   * do ano, que veio antes, as fez esperar ou recusar.
+   */
+  async virarSala(anoLetivoId: string): Promise<ViradaDaSala> {
+    const escolaId = exigirEscolaDoContexto()
+    const revogados = await this.banco
+      .update(acessoTurma)
+      .set({ revogadoEm: sql`now()` })
+      .where(and(eq(acessoTurma.escolaId, escolaId), eq(acessoTurma.anoLetivoId, anoLetivoId), isNull(acessoTurma.revogadoEm)))
+      .returning({ id: acessoTurma.id })
+    const encerrados = await this.banco
+      .update(reivindicacao)
+      .set({ estado: 'encerrada', senhaHash: null, chaveEnvio: null, teveMatriculaErrada: null })
+      .where(and(eq(reivindicacao.escolaId, escolaId), eq(reivindicacao.anoLetivoId, anoLetivoId), eq(reivindicacao.estado, 'pendente')))
+      .returning({ id: reivindicacao.id })
+    const apagadas = await this.banco
+      .delete(listaNome)
+      .where(and(eq(listaNome.escolaId, escolaId), eq(listaNome.anoLetivoId, anoLetivoId), inArray(listaNome.estado, ['livre', 'reivindicado'])))
+      .returning({ id: listaNome.id })
+    return { acessosRevogados: revogados.length, pedidosEncerrados: encerrados.length, linhasDaListaApagadas: apagadas.length }
   }
 }

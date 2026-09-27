@@ -1,10 +1,11 @@
 import { ErroDeDominio, executarNoContexto } from '@educa/nucleo'
-import { CodigoDeErro, type PapelDeUsuario } from '@educa/shared'
+import { CodigoDeErro, esquemaRespostaDecisao, type PapelDeUsuario } from '@educa/shared'
 import type { Redis } from 'ioredis'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { Secret, TOTP } from 'otpauth'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
+import { CicloDeVidaRepository } from '../src/sessao/ciclo-de-vida.repository.js'
 import { CicloDeVidaService } from '../src/sessao/ciclo-de-vida.service.js'
 import { CifraDoSegredo } from '../src/sessao/cifra-do-segredo.js'
 import { HashDeSenha } from '../src/sessao/hash-de-senha.js'
@@ -13,6 +14,7 @@ import { CLIENTE_REDIS_LOGIN } from '../src/sessao/sessao.module.js'
 import { chamar, subirApi, type ApiDeTeste } from './api-com-sessao.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
 import { montarEscolaComTurma, type EscolaComTurma } from './escola-com-turma.js'
+import { FerramentasDaSala, pedidoDaSala, type NomeDaLista, type SalaDeTeste } from './sala-de-teste.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 
 /** Senha sintética das contas e dos alunos deste teste: nenhuma é de pessoa real. */
@@ -433,7 +435,7 @@ describe('ciclo de vida da conta: desativação, limpeza da conta global e elimi
     await pela(b.coordenacao, () => servico.eliminar(camilaEmB))
     expect(await contaNoBanco(camila.contaId)).toEqual({ email: null, senha: false, mfaAtivo: false, segredo: false, codigos: 0 })
     expect((await auditoriaDoCiclo(escolaB)).map((linha) => linha['depois'])).toEqual([
-      { sessoesApagadas: 2, vinculosApagados: 1, credencialApagada: false, contaExternaApagada: true, contaLimpa: true },
+      { sessoesApagadas: 2, vinculosApagados: 1, credencialApagada: false, contaExternaApagada: true, linhaDaListaApagada: false, pedidosApagados: 0, contaLimpa: true },
     ])
   })
 
@@ -509,7 +511,7 @@ describe('ciclo de vida da conta: desativação, limpeza da conta global e elimi
         autor_usuario_id: null,
         autor_operador: OPERADOR,
         antes: { papel: 'professor', desativadoEm: null },
-        depois: { sessoesApagadas: 0, vinculosApagados: 0, credencialApagada: false, contaExternaApagada: false, contaLimpa: true },
+        depois: { sessoesApagadas: 0, vinculosApagados: 0, credencialApagada: false, contaExternaApagada: false, linhaDaListaApagada: false, pedidosApagados: 0, contaLimpa: true },
         finalidade: null,
       },
     ])
@@ -542,5 +544,182 @@ describe('ciclo de vida da conta: desativação, limpeza da conta global e elimi
     await esperarNaoEncontrado(pela(coordenacao, () => servico.eliminar(coordenacao.usuarioId)))
     expect(await contar('conta_externa', escolaB, deB.usuarioId)).toBe(1)
     expect(await contar('usuario', escolaA, coordenacao.usuarioId)).toBe(1)
+  })
+
+  describe('V3 e V4 (A1, tarefa 10.0): a eliminação alcança a lista de nomes e os pedidos', () => {
+    let sala: FerramentasDaSala
+
+    beforeAll(() => {
+      sala = new FerramentasDaSala(api, bancada)
+    })
+
+    const decidir = async (s: SalaDeTeste, ids: readonly string[], decisao: 'aprovar' | 'recusar' = 'aprovar') => {
+      const resposta = await chamar(api.url, 'POST', '/v1/reivindicacoes/decidir', s.professor.token, { ids, decisao })
+      expect(resposta.status).toBe(200)
+      expect(esquemaRespostaDecisao.parse(resposta.corpo).resultados.map((linha) => linha.resultado)).toEqual(ids.map(() => 'decidida'))
+    }
+
+    /** O aluno reivindica o nome pela sala, com a matrícula certa, e o id do pedido pendente que nasceu. */
+    async function pedir(s: SalaDeTeste, nome: NomeDaLista): Promise<string> {
+      expect((await sala.reivindicar(pedidoDaSala(s, nome))).status).toBe(200)
+      const { rows } = await bancada.pool.query<{ id: string }>(`select id from reivindicacao where escola_id = $1 and lista_nome_id = $2 and estado = 'pendente'`, [s.escolaId, nome.id])
+      const id = rows[0]?.id
+      if (id === undefined) throw new Error('pedido não gravado')
+      return id
+    }
+
+    /** Quais destes ids ainda existem na tabela. */
+    async function existentes(tabela: 'lista_nome' | 'reivindicacao' | 'usuario', ids: readonly string[]): Promise<string[]> {
+      return (await bancada.pool.query<{ id: string }>(`select id from ${tabela} where id = any($1::uuid[]) order by id`, [ids])).rows.map(({ id }) => id)
+    }
+
+    /** Em quantas linhas da escola o texto aparece, por tabela: o usuário, a credencial, as três da A1 e a auditoria. */
+    async function ondeAparece(escolaId: string, texto: string): Promise<Record<string, number>> {
+      const contagem: Record<string, number> = {}
+      for (const tabela of ['usuario', 'credencial_matricula', 'lista_nome', 'reivindicacao', 'acesso_turma', 'vinculo', 'auditoria']) {
+        const { rows } = await bancada.pool.query<{ total: number }>(`select count(*)::int as total from ${tabela} t where t.escola_id = $1 and row_to_json(t)::text like $2`, [
+          escolaId,
+          `%${texto}%`,
+        ])
+        contagem[tabela] = rows[0]?.total ?? -1
+      }
+      return contagem
+    }
+
+    it('V3: eliminar o aluno aprovado apaga, antes do usuário e na mesma transação, a linha dele da lista e os pedidos dela (o recusado e o aprovado); o marcador não sobra; a falha no meio não apaga nada', async () => {
+      const s = await sala.montar()
+      const marcador = `marcador${randomUUID().slice(0, 8)}`
+      const nomeDoAluno = `Aluna ${marcador}`
+      const matricula = `${marcador}-m`
+      expect((await chamar(api.url, 'POST', `/v1/turmas/${s.turma}/lista`, s.coordenacao.token, { texto: `${nomeDoAluno};${matricula}` })).status).toBe(201)
+      const { rows } = await bancada.pool.query<{ id: string }>('select id from lista_nome where escola_id = $1 and matricula = $2', [s.escolaId, matricula])
+      const nome: NomeDaLista = { id: rows[0]?.id ?? '', nome: nomeDoAluno, matricula }
+      // Alguém pede o nome antes e é recusado; depois o aluno pede e é aprovado: os dois pedidos apontam para a linha.
+      const recusado = await pedir(s, nome)
+      await decidir(s, [recusado], 'recusar')
+      const aprovado = await pedir(s, nome)
+      await decidir(s, [aprovado])
+      const alunoId = (await bancada.pool.query<{ usuario_id: string }>('select usuario_id from lista_nome where id = $1', [nome.id])).rows[0]?.usuario_id ?? ''
+      // Um colega da mesma turma, também aprovado, com a linha e o pedido dele: nada dele sai.
+      const colega = await sala.umNome(s)
+      const pedidoDoColega = await pedir(s, colega)
+      await decidir(s, [pedidoDoColega])
+      const antesDoColega = await ondeAparece(s.escolaId, colega.matricula)
+      expect(await ondeAparece(s.escolaId, marcador)).toMatchObject({ usuario: 1, credencial_matricula: 1 })
+
+      // A falha injetada no último passo (a auditoria) desfaz tudo: nada foi apagado.
+      const gatilho = `falha_eliminacao_${randomUUID().replaceAll('-', '')}`
+      await bancada.pool.query(`
+        create function ${gatilho}() returns trigger language plpgsql as $$
+        begin
+          if new.acao = 'usuario.eliminado' and new.escola_id = '${s.escolaId}' then raise exception 'falha forçada da eliminação'; end if;
+          return new;
+        end $$`)
+      await bancada.pool.query(`create trigger ${gatilho} before insert on auditoria for each row execute function ${gatilho}()`)
+      try {
+        await expect(pela(s.coordenacao, () => servico.eliminar(alunoId))).rejects.toThrow()
+      } finally {
+        await bancada.pool.query(`drop trigger ${gatilho} on auditoria`)
+        await bancada.pool.query(`drop function ${gatilho}()`)
+      }
+      expect(await existentes('lista_nome', [nome.id])).toEqual([nome.id])
+      expect(await existentes('reivindicacao', [recusado, aprovado])).toEqual([recusado, aprovado].sort())
+      expect(await existentes('usuario', [alunoId])).toEqual([alunoId])
+
+      await pela(s.coordenacao, () => servico.eliminar(alunoId))
+
+      expect(await existentes('lista_nome', [nome.id])).toEqual([])
+      expect(await existentes('reivindicacao', [recusado, aprovado])).toEqual([])
+      expect(await existentes('usuario', [alunoId])).toEqual([])
+      expect(await ondeAparece(s.escolaId, marcador)).toEqual({ usuario: 0, credencial_matricula: 0, lista_nome: 0, reivindicacao: 0, acesso_turma: 0, vinculo: 0, auditoria: 0 })
+      expect(await existentes('lista_nome', [colega.id])).toEqual([colega.id])
+      expect(await existentes('reivindicacao', [pedidoDoColega])).toEqual([pedidoDoColega])
+      expect(await ondeAparece(s.escolaId, colega.matricula)).toEqual(antesDoColega)
+      const [eliminacao] = (await auditoriaDoCiclo(s.escolaId)).filter((linha) => linha['entidade_id'] === alunoId)
+      expect(eliminacao?.['depois']).toEqual({ sessoesApagadas: 0, vinculosApagados: 1, credencialApagada: true, contaExternaApagada: false, linhaDaListaApagada: true, pedidosApagados: 2, contaLimpa: false })
+    })
+
+    it('V3, borda da virada: o aluno aprovado em 2026, eliminado com 2026 encerrado e 2027 em curso, leva a linha aprovada e os pedidos dela, que só sobrevivem ao ano pela linha aprovada', async () => {
+      const s = await sala.montar()
+      const nome = await sala.umNome(s)
+      const recusado = await pedir(s, nome)
+      await decidir(s, [recusado], 'recusar')
+      const aprovado = await pedir(s, nome)
+      await decidir(s, [aprovado])
+      const alunoId = (await bancada.pool.query<{ usuario_id: string }>('select usuario_id from lista_nome where id = $1', [nome.id])).rows[0]?.usuario_id ?? ''
+      const post = (caminho: string, corpo?: unknown) => chamar(api.url, 'POST', caminho, s.coordenacao.token, corpo)
+      expect((await post(`/v1/anos-letivos/${s.anoLetivoId}/encerrar`)).status).toBe(200)
+      const de2027 = await post('/v1/anos-letivos', { ano: 2027, inicio: '2027-02-01', fim: '2027-12-15' })
+      expect(de2027.status).toBe(201)
+      expect((await post(`/v1/anos-letivos/${String(de2027.corpo['id'])}/abrir`)).status).toBe(200)
+      // A linha aprovada e os dois pedidos dela atravessaram a virada, no ano encerrado.
+      expect(await existentes('lista_nome', [nome.id])).toEqual([nome.id])
+      expect(await existentes('reivindicacao', [recusado, aprovado])).toEqual([recusado, aprovado].sort())
+
+      await pela(s.coordenacao, () => servico.eliminar(alunoId))
+
+      expect(await existentes('lista_nome', [nome.id])).toEqual([])
+      expect(await existentes('reivindicacao', [recusado, aprovado])).toEqual([])
+      expect(await existentes('usuario', [alunoId])).toEqual([])
+      const [eliminacao] = (await auditoriaDoCiclo(s.escolaId)).filter((linha) => linha['entidade_id'] === alunoId)
+      expect(eliminacao?.['depois']).toMatchObject({ linhaDaListaApagada: true, pedidosApagados: 2 })
+    })
+
+    it('isolamento: num contexto de A, `apagarDaListaDeNomes` com o aluno aprovado de B não apaga nada em B; com a escola de B, apaga', async () => {
+      const a = await sala.montar()
+      const b = await sala.montar()
+      const nome = await sala.umNome(b)
+      await decidir(b, [await pedir(b, nome)])
+      const alunoDeB = (await bancada.pool.query<{ usuario_id: string }>('select usuario_id from lista_nome where id = $1', [nome.id])).rows[0]?.usuario_id ?? ''
+      const pedidosDeB = async () => (await bancada.pool.query<{ id: string }>('select id from reivindicacao where escola_id = $1 order by id', [b.escolaId])).rows
+      const antes = await pedidosDeB()
+      expect(antes).toHaveLength(1)
+      const contexto = (escolaId: string) => ({ requisicaoId: randomUUID(), escolaId, usuarioId: a.coordenacao.usuarioId, papel: 'coordenador' as const })
+      const desfeita = new Error('desfazer')
+      const apagarEm = (escolaId: string) =>
+        executarNoContexto(contexto(escolaId), () =>
+          bancada.banco
+            .transaction(async (tx) => {
+              const apagados = await new CicloDeVidaRepository(tx).apagarDaListaDeNomes(alunoDeB)
+              throw Object.assign(desfeita, { apagados })
+            })
+            .catch((erro: unknown) => (erro === desfeita ? (desfeita as Error & { apagados?: unknown }).apagados : Promise.reject(erro))),
+        )
+      expect(await apagarEm(a.escolaId)).toEqual({ linhaDaListaApagada: false, pedidosApagados: 0 })
+      // O controle: com a escola de B, a mesma chamada alcança a linha e o pedido. As duas transações são desfeitas.
+      expect(await apagarEm(b.escolaId)).toEqual({ linhaDaListaApagada: true, pedidosApagados: 1 })
+      expect(await pedidosDeB()).toEqual(antes)
+      expect(await existentes('lista_nome', [nome.id])).toEqual([nome.id])
+    })
+
+    it('V4: eliminar o professor que gerou o acesso e decidiu pedidos não falha; `criado_por` e `decidida_por` ficam nulos, e a auditoria guarda o id dele', async () => {
+      const s = await sala.montar()
+      const [primeiro, segundo] = await sala.nomes(s, s.turma, 2)
+      if (primeiro === undefined || segundo === undefined) throw new Error('nomes')
+      const aprovado = await pedir(s, primeiro)
+      await decidir(s, [aprovado])
+      const recusado = await pedir(s, segundo)
+      await decidir(s, [recusado], 'recusar')
+      const acessoId = await sala.acessoVigente(s.turma)
+      const professorId = s.professor.usuarioId
+      const autoriaAntes = (await bancada.pool.query<{ acao: string }>('select acao from auditoria where escola_id = $1 and autor_usuario_id = $2 order by acao', [s.escolaId, professorId])).rows
+      expect(autoriaAntes.map(({ acao }) => acao)).toEqual(expect.arrayContaining(['acesso_turma.gerado', 'reivindicacao.decidida', 'reivindicacao.decidida']))
+
+      await pela(s.coordenacao, () => servico.eliminar(professorId))
+
+      expect(await existentes('usuario', [professorId])).toEqual([])
+      expect((await bancada.pool.query('select criado_por from acesso_turma where id = $1', [acessoId])).rows).toEqual([{ criado_por: null }])
+      const { rows: pedidos } = await bancada.pool.query('select id, estado, decidida_por, decidida_como from reivindicacao where id = any($1::uuid[]) order by id', [[aprovado, recusado]])
+      expect(pedidos).toEqual(
+        [
+          { id: aprovado, estado: 'aprovada', decidida_por: null, decidida_como: 'professor' },
+          { id: recusado, estado: 'recusada', decidida_por: null, decidida_como: 'professor' },
+        ].sort((x, y) => x.id.localeCompare(y.id)),
+      )
+      // A autoria fica na auditoria, com o id do professor, e o vínculo do aluno que ele aprovou continua com ele em `criado_por`.
+      expect((await bancada.pool.query<{ acao: string }>('select acao from auditoria where escola_id = $1 and autor_usuario_id = $2 order by acao', [s.escolaId, professorId])).rows).toEqual(autoriaAntes)
+      const { rows: vinculosDoAluno } = await bancada.pool.query("select criado_por from vinculo where escola_id = $1 and papel = 'aluno'", [s.escolaId])
+      expect(vinculosDoAluno).toEqual([{ criado_por: professorId }])
+    })
   })
 })

@@ -24,8 +24,12 @@ const registro = new RegistroDeAuditoria()
  * - Abrir: `planejado` → `em_curso`. Com outro ano em curso na escola, `CONFLITO`, pelo índice único parcial. Abrir de
  *   novo o que já está em curso responde o ano como está (o segundo clique); encerrado não reabre.
  * - Encerrar: `em_curso` → `encerrado`, com a virada na mesma transação (10.0): os vínculos do ano vão a `encerrado`
- *   por `fim_do_ano`, o `complemento` das contestações é apagado, e a auditoria leva as contagens. Qualquer falha no
- *   meio desfaz tudo, e o ano continua em curso. Encerrar de novo responde o ano como está, sem virada nem auditoria;
+ *   por `fim_do_ano`, o `complemento` das contestações é apagado, e a sala das turmas vira (A1, 10.0,
+ *   `AnoLetivoRepository.virarSala`): os acessos revogados, os pedidos pendentes fechados como `encerrada` e os nomes
+ *   livres e reivindicados apagados. A auditoria leva as contagens. O ano muda antes de tudo: a escrita que faz nascer
+ *   algo no ano (turma, vínculo, acesso, nome da lista, pedido, aprovação) trava o ano em `FOR SHARE`, e ou termina
+ *   antes e é alcançada pela virada, ou espera e, relido o ano, não grava. Qualquer falha no meio desfaz tudo, e o ano
+ *   continua em curso. Encerrar de novo responde o ano como está, sem virada nem auditoria;
  *   planejado nunca aberto não se encerra. O cache de sessão por escola da Tech Spec (seção 13) não existe: quando a
  *   16.0 o criar, é aqui que a versão avança.
  * - Id de outra escola, inexistente ou fora do formato: `NAO_ENCONTRADO`, igual (regra 10, item 6).
@@ -50,7 +54,8 @@ export class AnoLetivoService {
     return this.banco.transaction((tx) =>
       this.#transitar(tx, id, 'em_curso', 'encerrado', async (ano) => {
         const contagens = await new VinculoRepository(tx).virarAno(ano.id)
-        await registro.gravar(tx, 'ano_letivo.encerrado', { entidadeId: ano.id, antes: { situacao: 'em_curso' }, depois: { situacao: 'encerrado', ...contagens } })
+        const daSala = await new AnoLetivoRepository(tx).virarSala(ano.id)
+        await registro.gravar(tx, 'ano_letivo.encerrado', { entidadeId: ano.id, antes: { situacao: 'em_curso' }, depois: { situacao: 'encerrado', ...contagens, ...daSala } })
       }),
     )
   }

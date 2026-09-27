@@ -110,6 +110,11 @@ senha **depois da aprovação humana** (D4). No F1 o aluno e o vínculo dele vê
   O reivindicado e o aprovado não saem por aí.
 - A coordenação lê a lista com finalidade, e cada leitura grava `turma.lista_lida`. O professor
   não lê a lista.
+- **Virada e eliminação** (10.0): o encerramento do ano apaga os nomes livres e reivindicados do
+  ano, na mesma transação, depois de fechar os pedidos pendentes como `encerrada` e revogar os
+  acessos; o aprovado fica. A gravação e o avulso travam o ano em curso em `FOR SHARE` antes da
+  turma: o nome que nasce junto com o encerramento é alcançado por ele, ou não nasce. A eliminação
+  do aluno aprovado apaga, antes do usuário, os pedidos da linha dele e a linha.
 
 ### Acesso da turma — A1
 
@@ -207,6 +212,11 @@ cria o aluno (D4; 8.0). Não há `dispositivo`: nada liga o pedido ao navegador 
   `livre`. Nas duas, o hash, a chave e a marca saem, e `reivindicacao.decidida` guarda quem decidiu e
   como (`professor` ou `coordenacao`). O pedido fora do alcance de quem decide responde como o
   inexistente, e o já decidido que ele alcança, `ja_decidida`.
+- **O ano travado** (10.0): a reivindicação e cada decisão travam o ano em curso em `FOR SHARE` no
+  começo da transação. O encerramento, que muda o ano antes de tudo, ou espera e fecha o pedido
+  pendente como `encerrada` (sem hash, chave, marca nem quem decidiu: não é decisão), ou chega antes e
+  faz a reivindicação ser recusada e a decisão sair `nao_encontrada`, sem gravar. O pedido decidido ou
+  encerrado fica sem nome quando a linha da lista sai, e não tem expurgo na A1 (`TODO.md`, F3).
 
 ### Ainda não existe — F2
 

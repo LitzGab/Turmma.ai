@@ -2,6 +2,7 @@ import { ErroDeDominio, medidorGlobal, type Banco } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { TurmaRepository } from '../estrutura/turma.repository.js'
 import type { AcessoDaSala } from '../sessao/acesso-da-sala.js'
 import type { BaldeDeLogin } from '../sessao/senha/baldes-de-login.js'
 import { ListaLivreRepository } from './lista-livre.repository.js'
@@ -39,7 +40,7 @@ describe('reivindicação: o hash sempre, pelo semáforo, antes da transação (
     vi.restoreAllMocks()
   })
 
-  function montar(caso: { readonly inserir: string; readonly tomar: boolean }, { rebaixado = false, livreComOutraMatricula = false } = {}) {
+  function montar(caso: { readonly inserir: string; readonly tomar: boolean }, { rebaixado = false, livreComOutraMatricula = false, anoEmCurso = true } = {}) {
     const eventos: string[] = []
     const baldes: BaldeDeLogin[] = []
     let dentroDoSemaforo = false
@@ -69,6 +70,11 @@ describe('reivindicação: o hash sempre, pelo semáforo, antes da transação (
     vi.spyOn(ReivindicacaoRepository.prototype, 'chaveGravada').mockImplementation(async () => {
       eventos.push('lê a chave')
       return false
+    })
+    // A trava do ano em curso (10.0, C10), no começo da transação: fora de curso, o pedido volta atrás sem gravar.
+    vi.spyOn(TurmaRepository.prototype, 'travarAnoEmCurso').mockImplementation(async () => {
+      eventos.push('trava o ano')
+      return anoEmCurso
     })
     vi.spyOn(ReivindicacaoRepository.prototype, 'inserirPendente').mockImplementation(async () => {
       eventos.push('insert do pedido')
@@ -129,7 +135,7 @@ describe('reivindicação: o hash sempre, pelo semáforo, antes da transação (
       // turma.
       const depois = caso.resposta === 'enviado' ? [] : ['lê a chave', 'conta na turma']
       const escritas = caso.inserir === 'grava' ? ['insert do pedido', 'update do nome'] : ['insert do pedido']
-      expect(eventos).toEqual(['lê a chave', 'lê o nome livre', 'limites antes do hash', 'hash no semáforo', 'lê a marca do nome', 'transação', ...escritas, ...depois])
+      expect(eventos).toEqual(['lê a chave', 'lê o nome livre', 'limites antes do hash', 'hash no semáforo', 'lê a marca do nome', 'transação', 'trava o ano', ...escritas, ...depois])
     })
   }
 
@@ -173,6 +179,13 @@ describe('reivindicação: o hash sempre, pelo semáforo, antes da transação (
   it('o erro que não é FK, 23505 nem nome não tomado sobe como veio, sem reler a chave', async () => {
     const { servico, eventos } = montar({ inserir: '57014', tomar: true })
     await expect(servico.reivindicar(pedido)).rejects.toThrow('consulta falhou')
-    expect(eventos).toEqual(['lê a chave', 'lê o nome livre', 'limites antes do hash', 'hash no semáforo', 'lê a marca do nome', 'transação', 'insert do pedido'])
+    expect(eventos).toEqual(['lê a chave', 'lê o nome livre', 'limites antes do hash', 'hash no semáforo', 'lê a marca do nome', 'transação', 'trava o ano', 'insert do pedido'])
+  })
+
+  it('C10 (10.0): o ano que deixou de estar em curso faz a transação voltar atrás antes do `insert`; relê a chave e, sem ela, recusa e conta na turma', async () => {
+    const { servico, eventos, limites } = montar(CASOS[0], { anoEmCurso: false })
+    await expect(servico.reivindicar(pedido)).rejects.toMatchObject({ codigo: CodigoDeErro.REIVINDICACAO_RECUSADA })
+    expect(eventos).toEqual(['lê a chave', 'lê o nome livre', 'limites antes do hash', 'hash no semáforo', 'lê a marca do nome', 'transação', 'trava o ano', 'lê a chave', 'conta na turma'])
+    expect(limites.hashSemPedido).toHaveBeenCalledWith(SALA.turmaId)
   })
 })

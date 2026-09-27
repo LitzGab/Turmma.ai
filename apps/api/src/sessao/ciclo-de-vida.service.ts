@@ -28,8 +28,11 @@ const naoEncontrado = () => new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
  *   credencial guardada nesta escola: as sessões dele aqui são encerradas, o hash da senha da matrícula é apagado e a
  *   conta Google ou Microsoft ligada é desligada. Se a conta global ficou sem usuário ativo em escola nenhuma, ela é
  *   limpa (e-mail, senha, segundo fator e as sessões que restarem).
- * - **Eliminar:** apaga de fato o usuário e o que é dele nesta escola (credencial, conta externa, vínculos e sessões);
- *   o registro de acesso e a auditoria ficam pela retenção legal. Se era o último usuário da conta, a mesma limpeza.
+ * - **Eliminar:** apaga de fato o usuário e o que é dele nesta escola (credencial, conta externa, vínculos e sessões,
+ *   e, do aluno que entrou pela lista da A1, a linha `aprovado` da lista e os pedidos dela, antes do usuário); o
+ *   registro de acesso e a auditoria ficam pela retenção legal. De quem gerou acesso da turma, gravou a lista ou decidiu
+ *   pedido, o `criado_por` e o `decidida_por` ficam nulos pela FK, e a autoria fica na auditoria. Se era o último
+ *   usuário da conta, a mesma limpeza.
  * - **Desligar a conta externa:** a coordenação desliga a conta Google ou Microsoft de um usuário ativo, e ele liga a
  *   nova no login seguinte (decidido na 13.0).
  *
@@ -66,12 +69,13 @@ export class CicloDeVidaService {
       const vinculosApagados = await repositorio.apagarVinculos(usuarioId)
       const credencialApagada = await repositorio.apagarCredencialDaMatricula(usuarioId)
       const contaExternaApagada = (await repositorio.apagarContaExterna(usuarioId)) !== undefined
+      const { linhaDaListaApagada, pedidosApagados } = await repositorio.apagarDaListaDeNomes(usuarioId)
       await repositorio.apagarUsuario(usuarioId)
       const contaLimpa = alvo.contaId !== null && (await new ResolucaoDeTenantRepository(tx).limparContaSemUso(alvo.contaId))
       await registro.gravar(tx, 'usuario.eliminado', {
         entidadeId: usuarioId,
         antes: { papel: alvo.papel, desativadoEm: alvo.desativadoEm?.toISOString() ?? null },
-        depois: { sessoesApagadas, vinculosApagados, credencialApagada, contaExternaApagada, contaLimpa },
+        depois: { sessoesApagadas, vinculosApagados, credencialApagada, contaExternaApagada, linhaDaListaApagada, pedidosApagados, contaLimpa },
         ...autoria,
       })
     })
