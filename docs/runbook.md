@@ -635,6 +635,18 @@ serviços no próprio job.
 Vermelho de e2e que não reproduz na máquina segura a tarefa seguinte (regra 40, D52): trate como
 defeito por `/corrigir`, com a causa achada no traço, e não repetindo a execução até passar.
 
+**Job `cancelled` com a suíte verde é o teto, não um teste.** O sinal: nenhum `✘` no log, o último
+caso terminado segundos antes de `The operation was canceled`, e o job com a duração do
+`timeout-minutes` do e2e em `.github/workflows/ci.yml`. Repetir a execução não resolve, porque a suíte
+só cresce. O job custa uns 3 min 30 s fixos, a maior parte na subida do compose, e de 5 a 6 s de
+relógio por caso; caso de tela com muita ida à API custa mais que o dobro. `tools/ci/esteira.test.ts`
+refaz essa conta com os casos de agora e reprova no portão local quando a suíte não cabe nem pela
+média. É piso, não previsão: com caso pesado, o job estoura o teto antes de o teste reprovar, e o
+aviso que sobra é a duração do job de e2e na execução verde, que ninguém confere sozinho. Quando o
+teste reprovar, ou quando o job chegar a 5 min do teto, a saída é decisão do Joaquim: subir o teto com
+a conta refeita, ou repartir o e2e em mais de um job. Baixar as constantes do teste para ele passar
+não é saída.
+
 **O artefato é público**, porque o repositório é. Ele é inofensivo hoje por construção: todo dado do
 e2e é sintético, e o ambiente do compose de teste sai só de `.env.example` e `infra/teste.env`, os dois
 versionados, sem ler nada do runner (`tools/ci/compose.ts`). Por isso, **nada além da saída do

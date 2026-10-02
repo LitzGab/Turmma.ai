@@ -153,3 +153,7 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-25 17:47:43 | `infra-guardian` | 2ª | APROVADO | `2026-09-25-acabamento-da-a0b` | `apps/worker/src/processadores/consolidar-uso.ts:90-92` (docblock) e `:167` (comentário) ainda dizem "é o worker apontado para outro banco, e não uma escola… |
 | 2026-09-25 17:47:45 | `privacy-guardian` | 2ª | APROVADO | `2026-09-25-acabamento-da-a0b` | `docs/lgpd.md:109`: a linha que recebeu a remissão ao operador passou muito da largura das vizinhas. É só formatação; dá para quebrá-la como as outras quando o… |
 | 2026-09-25 17:47:47 | `revisor-geral` | 2ª | APROVADO | `2026-09-25-acabamento-da-a0b` | O documento diz que "a linha do W10 voltou à quebra", mas `tasks/prd-apresentacao-painel/cenarios.md:172` ficou com 165 caracteres (a do 429/503). Antes da… |
+| 2026-10-02 07:12:55 | `test-engineer` | 1ª | APROVADO | `2026-10-02-teto-do-e2e-na-esteira` | A guarda só dispara depois do estouro que o próprio documento prevê. |
+| 2026-10-02 07:17:25 | `infra-guardian` | 1ª | APROVADO | `2026-10-02-teto-do-e2e-na-esteira` | quatro, abaixo |
+| 2026-10-02 08:26:25 | `test-engineer` | 2ª | APROVADO | `2026-10-02-teto-do-e2e-na-esteira` | duas, abaixo |
+| 2026-10-02 08:26:48 | `infra-guardian` | 2ª | APROVADO | `2026-10-02-teto-do-e2e-na-esteira` | três, abaixo |

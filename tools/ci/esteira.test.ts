@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -40,6 +41,26 @@ const NOME_DO_ARTEFATO_DO_TRACO = 'traco-do-e2e'
 const MODOS_QUE_GUARDAM_NA_FALHA = ['retain-on-failure'] as const
 /** Onde o Playwright escreve quando `outputDir` não é declarado. */
 const PADRAO_DO_DIRETORIO_DE_SAIDA = 'test-results'
+
+/**
+ * O que o job de e2e custa no runner, pelo log das oito execuções de 26/09 a 02/10/2026
+ * (`tasks/correcoes/2026-10-02-teto-do-e2e-na-esteira.md`), arredondado para cima:
+ *
+ * - fixo: preparo do job, navegador, build, subida do compose e derrubada. Medido de 2 min 43 s a 3 min 37 s;
+ * - por caso: relógio do runner, com os 2 trabalhadores que ele dá. Medido de 5,0 a 5,6 s.
+ *
+ * É piso, não previsão: conta caso, não peso. Caso de tela com muita ida à API custa mais que o dobro da média (os
+ * de `estrutura.spec.ts` saíram a 13,9 s), e aí o job passa do teto antes de a conta daqui passar.
+ */
+const MINUTOS_FIXOS_DO_E2E = 4
+const SEGUNDOS_POR_CASO_DO_E2E = 6
+
+/** Quantos casos o Playwright vai rodar, pelos dois projetos: é ele quem conta, e não uma busca por `test(` no fonte. */
+function casosDoE2e(): number {
+  const lista = spawnSync('npx', ['playwright', 'test', '--list'], { cwd: raizRepositorio, encoding: 'utf8' })
+  expect(lista.status, lista.stderr).toBe(0)
+  return Number(/^Total: (\d+) tests? in \d+ files?$/m.exec(lista.stdout)?.[1])
+}
 
 interface Workflow {
   on: { push?: { branches?: string[] } } & Record<string, unknown>
@@ -143,6 +164,18 @@ describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
       expect(caminhoPublicado, `diretório de saída de ${projeto.name ?? 'topo'}`).toBe(saida.replace(/\/$/, ''))
     }
   })
+
+  it('o teto do e2e cobre a suíte que existe: estourado, a esteira cancela o job sem nenhum teste vermelho', () => {
+    const teto = Number(workflow.jobs['e2e']?.['timeout-minutes'])
+    const casos = casosDoE2e()
+    expect(casos).toBeGreaterThan(0)
+    const minutos = Math.ceil(MINUTOS_FIXOS_DO_E2E + (casos * SEGUNDOS_POR_CASO_DO_E2E) / 60)
+    expect(
+      minutos,
+      `o e2e tem ${String(casos)} casos, uns ${String(minutos)} min no runner, e o teto do job é de ${String(teto)} min: a esteira ` +
+        'cancelaria o job com a suíte verde. O que fazer está em docs/runbook.md, "Esteira vermelha no e2e".',
+    ).toBeLessThanOrEqual(teto)
+  }, 30_000)
 
   it('nenhum outro job publica artefato: só o e2e produz traço, e artefato de esteira é superfície a mais', () => {
     for (const [nome, job] of Object.entries(workflow.jobs)) {

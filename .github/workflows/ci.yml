@@ -68,7 +68,13 @@ jobs:
   e2e:
     name: e2e (compose completo e Playwright)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # O teto acompanha a suíte, que cresce a cada tarefa de tela: uns 3 min 30 s fixos (navegador, build, subir e
+    # derrubar o compose) e de 5 a 6 s de relógio por caso, com os 2 trabalhadores do runner. Com 30 min, os 304
+    # casos da tarefa 13.0 da A1 foram cancelados no caso 286, sem nenhum vermelho. `tools/ci/esteira.test.ts`
+    # refaz a conta com os casos de agora e reprova quando a suíte não cabe nem pela média. É piso: caso pesado
+    # estoura o teto antes de a conta passar dele (docs/runbook.md, "Esteira vermelha no e2e"). Subir o número,
+    # só com a conta refeita.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -84,7 +90,7 @@ jobs:
       # a linha de tempo das requisições que diz para onde o prazo foi. Só na falha, e por 7 dias: o
       # artefato serve para diagnosticar a execução, não para arquivo. Todo dado do e2e é sintético
       # (regra 20, item 17).
-      # `cancelled()` também: com `timeout-minutes: 30`, um e2e travado é cancelado, não "failure", e
+      # `cancelled()` também: com o `timeout-minutes` do job, um e2e travado é cancelado, não "failure", e
       # é justamente na lentidão que o traço mais serve.
       - if: failure() || cancelled()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
