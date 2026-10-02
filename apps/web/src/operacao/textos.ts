@@ -1,5 +1,7 @@
 import { CodigoDeErro, formatarEspera, MENSAGENS_DE_ERRO, mensagemDaEntrada, mensagemDoSegundoFator, type TipoDeRede } from '@educa/shared'
 import { ErroDaApi } from '../api/cliente'
+import type { FalhaDoConvite } from '../componentes/DialogoDoConvite'
+import { TEXTO_DO_CONVITE_QUE_MUDOU, TEXTO_DO_CONVITE_QUE_NAO_VALE } from '../componentes/textos-do-convite'
 
 /**
  * Os textos da área do operador (Tech Spec da A0, seção 9). Ficam aqui, no chunk da operação, e não no catálogo de
@@ -83,14 +85,8 @@ export function ehResultadoIncerto(erro: unknown): boolean {
 export const TEXTO_DA_TENTATIVA_INCERTA =
   'A tentativa anterior pode ter criado a escola antes de a conexão cair. Feche este diálogo e confira a lista antes de tentar de novo.'
 
-/** O `CONFLITO` do refazer e do revogar: outra pessoa (ou outra aba) mexeu no convite antes (cenário W10). */
-export const TEXTO_DO_CONVITE_QUE_MUDOU = 'O convite mudou. A lista foi atualizada.'
-
 /** O `CONFLITO` do gerar: a escola já tem convite em aberto, ou a coordenação já entrou (cenário W10). */
 export const TEXTO_DA_ESCOLA_COM_CONVITE = 'Esta escola já tem convite. Use Refazer para um link novo.'
-
-/** O `NAO_ENCONTRADO` do refazer e do revogar: o convite já foi revogado (cenário W10). */
-export const TEXTO_DO_CONVITE_QUE_NAO_VALE = 'Esse convite já não vale. A lista foi atualizada.'
 
 /**
  * O `NAO_ENCONTRADO` do gerar: a escola do caminho não existe (cenário W10). No MVP nenhuma escola sai do sistema (F16),
@@ -98,17 +94,10 @@ export const TEXTO_DO_CONVITE_QUE_NAO_VALE = 'Esse convite já não vale. A list
  */
 export const TEXTO_DA_ESCOLA_QUE_NAO_EXISTE = 'Essa escola não foi encontrada. A lista foi atualizada.'
 
-/** A falha de uma ação do convite: o texto, e se a lista deixou de valer e precisa ser recarregada. */
-export interface FalhaDoConvite {
-  readonly texto: string
-  /** `CONFLITO` e `NAO_ENCONTRADO`: o estado que a tela mostrava não é mais o do servidor, e tentar de novo não resolve. */
-  readonly listaMudou: boolean
-}
-
 /**
  * O texto de uma falha de gerar, refazer ou revogar (cenário W10): `CONFLITO` e `NAO_ENCONTRADO` têm o texto de cada
- * ação e mandam recarregar a lista; o resto (429, 503, 503 `TEMPO_ESGOTADO`) é o de `textoDaFalha`, e o mesmo botão tenta
- * de novo. Nenhum texto diz o código.
+ * ação (os do refazer e do revogar, em `componentes/textos-do-convite.ts`, com a escola) e mandam recarregar a lista; o
+ * resto (429, 503, 503 `TEMPO_ESGOTADO`) é o de `textoDaFalha`, e o mesmo botão tenta de novo. Nenhum texto diz o código.
  */
 export function falhaDoConvite(acao: 'gerar' | 'refazer' | 'revogar', erro: unknown): FalhaDoConvite {
   const codigo = codigoDe(erro)
@@ -116,9 +105,6 @@ export function falhaDoConvite(acao: 'gerar' | 'refazer' | 'revogar', erro: unkn
   if (codigo === CodigoDeErro.NAO_ENCONTRADO) return { texto: acao === 'gerar' ? TEXTO_DA_ESCOLA_QUE_NAO_EXISTE : TEXTO_DO_CONVITE_QUE_NAO_VALE, listaMudou: true }
   return { texto: textoDaFalha(erro), listaMudou: false }
 }
-
-/** O e-mail que não passa no contrato do convite (`esquemaEmailConvidado`). */
-export const TEXTO_DO_EMAIL_INVALIDO = 'Escreva o e-mail inteiro, com @ e o domínio, com até 254 caracteres.'
 
 /** Os tipos de rede, como o operador os lê no diálogo Nova rede. */
 export const ROTULO_DO_TIPO_DE_REDE: Readonly<Record<TipoDeRede, string>> = {
@@ -129,9 +115,6 @@ export const ROTULO_DO_TIPO_DE_REDE: Readonly<Record<TipoDeRede, string>> = {
 
 /** A regra do endereço da escola, visível junto do campo: é a mesma do contrato (`esquemaSlugDaEscola`). */
 export const REGRA_DO_ENDERECO = 'Só letras minúsculas sem acento, números e hífen entre eles, até 63. Exemplo: colegio-horizonte.'
-
-/** O nome que não passa no contrato: vazio depois de tirar os espaços, ou longo demais. */
-export const TEXTO_DO_NOME_INVALIDO = 'Escreva o nome, com até 200 caracteres.'
 
 /** A lista vazia de verdade (nenhuma escola no sistema): o vazio convida a começar pela rede (cenário W7). */
 export const TEXTO_DA_LISTA_VAZIA = { titulo: 'Nenhuma escola ainda.', descricao: 'Comece criando a rede.' } as const

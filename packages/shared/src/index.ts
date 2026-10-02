@@ -3,6 +3,7 @@ export type { RespostaDeErro } from './erros/codigo-de-erro.js'
 export {
   avisoDoSegundoFatorConsumido,
   AVISO_DA_TROCA_RECUSADA,
+  AVISO_DO_CONVITE_COM_SENHA_NOVA,
   AVISO_DO_CONVITE_PARA_CONTA_EXISTENTE,
   AVISO_DO_SEGUNDO_FATOR_CONSUMIDO,
   formatarEspera,

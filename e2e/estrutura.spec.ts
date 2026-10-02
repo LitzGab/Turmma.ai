@@ -246,8 +246,12 @@ test.describe('W4 (Estrutura): do vazio ao roteiro, montando a escola pela tela'
     await expect(anuncio(turmas, `Turma ${turma} criada. Abra a turma para subir a lista de nomes.`)).toBeVisible()
     // Com turma e professor, mas sem disciplina, a alocação ainda diz o que criar primeiro.
     const alocacao = principal(page).getByRole('region', { name: 'Alocação' })
-    await expect(alocacao).toContainText('Crie uma turma e um professor primeiro')
+    // O título diz só o que falta: com a turma e o professor, não pede outra vez a turma nem o professor (14.0).
+    await expect(alocacao).toContainText('Crie uma disciplina primeiro')
+    await expect(alocacao).not.toContainText('Crie uma turma')
     await expect(alocacao).toContainText('Falta: uma disciplina.')
+    // O professor já existe: o vazio não manda à tela Professores.
+    await expect(alocacao.getByRole('link', { name: 'Ir para Professores' })).toHaveCount(0)
 
     // A disciplina, com o nome repetido recusado pela API e explicado no diálogo.
     const disciplina = `Matemática ${marca}`
@@ -1092,9 +1096,15 @@ test.describe('W4 (Alocação): o professor com convite em aberto', () => {
     const alocacao = principal(page).getByRole('region', { name: 'Alocação' })
     const oQueFalta = principal(page).getByRole('region', { name: 'O que falta para a escola começar' })
     // Vazio: há turma e disciplina, mas não há professor alocável.
-    await expect(alocacao).toContainText('Crie uma turma e um professor primeiro', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(alocacao).toContainText('Crie um professor primeiro', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(alocacao).not.toContainText('Crie uma turma')
     await expect(alocacao).toContainText('Falta: um professor cadastrado, com o convite em aberto ou já aceito.')
     await expect(oQueFalta).toContainText('Professores · falta')
+    // O caminho até a tela onde o professor se cadastra e o convite vencido se refaz (14.0), no vazio e no roteiro.
+    const paraProfessores = alocacao.getByRole('link', { name: 'Ir para Professores' })
+    await expect(paraProfessores).toHaveAttribute('href', '/coordenacao/professores')
+    await alvoDeToque(paraProfessores, 'Ir para Professores')
+    await expect(oQueFalta.getByRole('link', { name: 'Professores' })).toHaveAttribute('href', '/coordenacao/professores')
 
     // Dois com o convite em aberto, criados fora da ordem do nome: a escolha vem pelo nome, e não pela ordem da API.
     const bruno = await convidarProfessorNoBanco(coordenadora.escolaId, 'pendente', 'Bruno')
@@ -1210,8 +1220,9 @@ test.describe('W4 (Alocação): o professor com convite em aberto', () => {
     // Vazio de novo, agora sem turma: há professor alocável e disciplina, e falta a turma.
     await apagarTurmaNoBanco(coordenadora.escolaId, outraTurma.id)
     await page.reload()
-    await expect(alocacao).toContainText('Crie uma turma e um professor primeiro', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(alocacao).toContainText('Crie uma turma primeiro', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(alocacao).toContainText('Falta: uma turma.')
+    await expect(alocacao.getByRole('link', { name: 'Ir para Professores' })).toHaveCount(0)
     await expect(alocacao.getByRole('button', { name: 'Alocar' })).toHaveCount(0)
   })
 })

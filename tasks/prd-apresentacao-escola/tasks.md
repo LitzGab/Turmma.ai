@@ -1,7 +1,7 @@
 # Tarefas — A escola montada pela coordenação (A1)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 11 de 17 concluídas
+**Status:** 14 de 17 concluídas
 
 Aprovadas pelo Joaquim em 26/09/2026. O mapa de cenários por tarefa saiu do `test-engineer`: cada id do
 `cenarios.md` está em uma tarefa, ou dividido entre tarefas com a parte de cada uma dita no `N_task.md`. Os
@@ -102,11 +102,11 @@ dela nos dois.
   - [ ] 13.4 Teto do chunk da coordenação
   - [ ] 13.5 Testes: W10; W4 e W12 de Estrutura, Lista e Alocação
 
-- [ ] **14.0 — Web: Professores e o aceite do convite pelo professor**
-  - [ ] 14.1 O diálogo de convite de cópia única sai de `operacao/` para `componentes/`
-  - [ ] 14.2 Tela Professores: cadastrar, copiar, refazer e revogar
-  - [ ] 14.3 Aceite do professor na tela de convite
-  - [ ] 14.4 Testes: W14; W4 e W12 de Professores; o e2e da A0b junto
+- [x] **14.0 — Web: Professores e o aceite do convite pelo professor**
+  - [x] 14.1 O diálogo de convite de cópia única sai de `operacao/` para `componentes/`
+  - [x] 14.2 Tela Professores: cadastrar, copiar, refazer e revogar
+  - [x] 14.3 Aceite do professor na tela de convite
+  - [x] 14.4 Testes: W14; W4 e W12 de Professores; o e2e da A0b junto
 
 - [ ] **15.0 — Web: acesso da turma do professor**
   - [ ] 15.1 Gerar, mostrar o código em grupos, "Gerar novo" com confirmação, revogar

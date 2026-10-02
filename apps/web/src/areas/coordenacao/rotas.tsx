@@ -3,12 +3,13 @@ import { ROTAS_DA_COORDENACAO } from '../../caminhos'
 import { ConteudoNaoEncontrado } from '../../componentes/NaoEncontrada'
 import { Estrutura } from './Estrutura'
 import { ListaDaTurma } from './ListaDaTurma'
+import { Professores } from './Professores'
 
 /**
  * A área da coordenação, relativa a `/coordenacao`, num chunk próprio, `coordenacao-*.js` (`apps/web/nome-dos-chunks.ts`),
  * que só se baixa depois de a guarda de `apps/web/src/rotas.tsx` conferir o papel.
  *
- * Na A1: Estrutura (13.0), com a turma aberta e a lista de nomes dela; Professores vem na 14.0, com a linha dela em
+ * Na A1: Estrutura (13.0), com a turma aberta e a lista de nomes dela, e Professores (14.0), cada uma com a linha dela em
  * `areas/navegacao.ts`. Qualquer outro endereço daqui responde "Página não encontrada".
  */
 export default function RotasDaCoordenacao() {
@@ -20,6 +21,7 @@ export default function RotasDaCoordenacao() {
         manteria o texto colado e a prévia da anterior, e "Gravar lista" os mandaria para a turma nova.
       */}
       <Route path={ROTAS_DA_COORDENACAO.turma}>{(parametros) => <ListaDaTurma key={parametros.turmaId} turmaId={parametros.turmaId} />}</Route>
+      <Route path={ROTAS_DA_COORDENACAO.professores} component={Professores} />
       <Route>
         <ConteudoNaoEncontrado />
       </Route>

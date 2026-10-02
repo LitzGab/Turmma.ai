@@ -9,12 +9,16 @@ import {
 } from '@educa/shared'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useId, useState, type FormEvent } from 'react'
+import { Link } from 'wouter'
 import { alocarProfessor, CHAVE_DA_ESTRUTURA, consultaDisciplinas, consultaTurmas, consultaVinculos } from '../../api/estrutura'
 import { consultaProfessores } from '../../api/professores'
+import { ROTAS_DA_COORDENACAO } from '../../caminhos'
 import { Botao } from '../../componentes/Botao'
+import { CLASSES_DO_LINK_SECUNDARIO } from '../../componentes/botao-secundario'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { AlertaDaFalha, Anuncio, textoDaFalha, useEnvioUnico } from './dialogos'
 import { ordenarPeloNome, ordenarTurmas, ordenarVinculos } from './ordem'
+import { descricaoDoQueFalta, oQueFaltaParaAlocar, tituloDoQueFalta } from './o-que-falta-para-alocar'
 
 /** O estado do vínculo como a coordenação o lê: quem decide agora é o professor (regra 50, item 11: em texto). */
 const ESTADO_PARA_A_COORDENACAO: Readonly<Record<EstadoDeVinculo, string>> = {
@@ -45,8 +49,9 @@ const CLASSES_DO_SELETOR = 'min-h-11 w-full min-w-0 rounded-controle border bord
  * `ESTADOS_DO_PROFESSOR_ALOCAVEIS`, e quem recusa o resto é a API, com o mesmo `NAO_ENCONTRADO` do inexistente. O
  * vencido e o revogado não aparecem: a tela Professores (14.0) refaz o convite.
  *
- * Os quatro estados: carregando; erro com "Tentar de novo"; vazio, sem turma ou sem professor alocável, que diz o que
- * criar primeiro; e com dado, a escolha e os vínculos.
+ * Os quatro estados: carregando; erro com "Tentar de novo"; vazio, sem turma, sem disciplina ou sem professor alocável,
+ * que diz o que criar primeiro e leva à tela Professores quando é o professor que falta; e com dado, a escolha e os
+ * vínculos.
  */
 export function Alocacao({ anoEmCurso, anuncio, aoAnunciar }: { anoEmCurso: boolean; anuncio: string; aoAnunciar: (texto: string) => void }) {
   const idDoTitulo = useId()
@@ -74,18 +79,21 @@ export function Alocacao({ anoEmCurso, anuncio, aoAnunciar }: { anoEmCurso: bool
     if (turmas.data === undefined || disciplinas.data === undefined || professores.data === undefined || vinculos.data === undefined)
       return <EstadoCarregando rotulo="Carregando a alocação…" />
     const alocaveis = professores.data.itens.filter((professor) => (ESTADOS_DO_PROFESSOR_ALOCAVEIS as readonly EstadoDoProfessor[]).includes(professor.estado))
-    if (turmas.data.itens.length === 0 || alocaveis.length === 0 || disciplinas.data.itens.length === 0) {
-      // O vazio diz o que falta, e não só o que a alocação precisa: com a turma criada, pedir "uma turma" de novo confunde.
-      const faltam = [
-        ...(turmas.data.itens.length === 0 ? ['uma turma'] : []),
-        ...(disciplinas.data.itens.length === 0 ? ['uma disciplina'] : []),
-        ...(alocaveis.length === 0 ? ['um professor cadastrado, com o convite em aberto ou já aceito'] : []),
-      ]
+    const faltam = oQueFaltaParaAlocar({ turmas: turmas.data.itens.length, disciplinas: disciplinas.data.itens.length, professores: alocaveis.length })
+    if (faltam.length > 0) {
+      // O vazio diz o que falta, no título e na descrição, e não só o que a alocação precisa: com a turma criada, pedir
+      // "uma turma" de novo confunde. Quando falta o professor, o caminho até a tela dele vem junto.
       return (
-        <EstadoVazio
-          titulo="Crie uma turma e um professor primeiro"
-          descricao={`A alocação liga um professor a uma turma e a uma disciplina. Falta: ${faltam.join('; ')}.`}
-        />
+        <>
+          <EstadoVazio titulo={tituloDoQueFalta(faltam)} descricao={descricaoDoQueFalta(faltam)} />
+          {faltam.includes('professor') && (
+            <div>
+              <Link to={ROTAS_DA_COORDENACAO.professores} className={CLASSES_DO_LINK_SECUNDARIO}>
+                Ir para Professores
+              </Link>
+            </div>
+          )}
+        </>
       )
     }
     const nomes = new Map(professores.data.itens.map((professor) => [professor.usuarioId, professor.nome]))

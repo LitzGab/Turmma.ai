@@ -1,7 +1,8 @@
 import { esquemaIdDoPedido, TAMANHO_MAXIMO_SLUG } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
+import { TEXTO_DO_EMAIL_INVALIDO, TEXTO_DO_NOME_INVALIDO } from '../componentes/pedido-de-convite'
 import { pedidoDeConvite, pedidoDeEscola, pedidoDeRede, sortearIdDoPedido } from './pedidos-do-painel'
-import { REGRA_DO_ENDERECO, TEXTO_DO_EMAIL_INVALIDO, TEXTO_DO_NOME_INVALIDO } from './textos'
+import { REGRA_DO_ENDERECO } from './textos'
 
 const REDE = '3f2a8c1e-6b7d-4e9a-8c21-5d4f0e9b7a61'
 const ID = '9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d'

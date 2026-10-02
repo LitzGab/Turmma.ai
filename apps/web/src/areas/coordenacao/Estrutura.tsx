@@ -41,7 +41,7 @@ import {
   renomearTurma,
 } from '../../api/estrutura'
 import { consultaProfessores } from '../../api/professores'
-import { caminhoDaTurmaNaEstrutura } from '../../caminhos'
+import { caminhoDaTurmaNaEstrutura, ROTAS_DA_COORDENACAO } from '../../caminhos'
 import { CLASSES_DO_BOTAO_PERIGO, CLASSES_DO_BOTAO_SECUNDARIO, CLASSES_DO_LINK_SECUNDARIO } from '../../componentes/botao-secundario'
 import { Campo } from '../../componentes/Campo'
 import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
@@ -51,6 +51,7 @@ import { useTituloDaTela } from '../../titulo'
 import { Alocacao } from './Alocacao'
 import { AlertaDaFalha, Anuncio, ConfirmacaoDePerigo, DialogoDeFormulario, listaMudou, textoDaFalha, useEnvioUnico } from './dialogos'
 import { ordenarPeloNome, ordenarSeries, ordenarTurmas } from './ordem'
+import { AvisoDeListaIncompleta, Linha } from './pecas-da-lista'
 
 /** O nome da turma com o turno, quando a escola informou: "7ºA · manhã". */
 const NOME_DO_TURNO: Readonly<Record<Turno, string>> = { manha: 'manhã', tarde: 'tarde', noite: 'noite', integral: 'integral' }
@@ -64,6 +65,8 @@ interface PassoDoRoteiro {
   readonly titulo: string
   readonly texto: string
   readonly feito: boolean | undefined
+  /** A tela onde o passo se faz, quando não é esta: o link fecha a frase do passo. */
+  readonly link?: { readonly rotulo: string; readonly para: string }
 }
 
 /**
@@ -92,7 +95,12 @@ function passosDoRoteiro(dados: ContagemDoRoteiro | undefined): PassoDoRoteiro[]
     { titulo: 'Disciplinas', texto: 'As que os professores dão.', feito: tem(dados?.disciplinas) },
     { titulo: 'Turmas', texto: 'Cada turma numa série do ano em curso.', feito: tem(dados?.turmas) },
     { titulo: 'Lista de nomes', texto: 'Abra cada turma e cole a lista ou envie o arquivo, com nome e matrícula.', feito: undefined },
-    { titulo: 'Professores', texto: 'Cadastre cada professor com o e-mail dele e mande o convite.', feito: tem(dados?.professores) },
+    {
+      titulo: 'Professores',
+      texto: 'Cadastre cada professor com o e-mail dele e mande o convite, em',
+      feito: tem(dados?.professores),
+      link: { rotulo: 'Professores', para: ROTAS_DA_COORDENACAO.professores },
+    },
     { titulo: 'Alocação', texto: 'Ligue cada professor à turma e à disciplina. Ele confirma pelo convite.', feito: tem(dados?.vinculos) },
   ]
 }
@@ -112,7 +120,18 @@ function Roteiro({ passos, titulo }: { passos: readonly PassoDoRoteiro[]; titulo
               <span className="font-medium text-tinta">{passo.titulo}</span>
               {/* O estado em texto, e não só em cor (regra 50, item 11). */}
               {passo.feito !== undefined && <span className={passo.feito ? 'text-ok' : 'text-pendente'}>{passo.feito ? ' · feito' : ' · falta'}</span>}
-              <span className="block text-sm text-apoio">{passo.texto}</span>
+              <span className="block text-sm text-apoio">
+                {passo.texto}
+                {passo.link !== undefined && (
+                  <>
+                    {' '}
+                    <Link className="text-caramelo-texto underline" to={passo.link.para}>
+                      {passo.link.rotulo}
+                    </Link>
+                    .
+                  </>
+                )}
+              </span>
             </span>
           </li>
         ))}
@@ -148,12 +167,6 @@ function Secao({ titulo, tituloRef, anuncio, acao, children }: PropsDaSecao) {
       {children}
     </section>
   )
-}
-
-/** "Mostrando os primeiros 1.000": a lista passou do teto de páginas que a tela lê (`lerPaginas`). */
-function AvisoDeListaIncompleta({ completa }: { completa: boolean }) {
-  if (completa) return null
-  return <p className="text-sm text-apoio">A lista é maior do que esta tela mostra: aparecem só os primeiros.</p>
 }
 
 /**
@@ -499,19 +512,6 @@ export function Estrutura() {
 /** A série e o turno da turma, por extenso. */
 function detalheDaTurma(turma: Turma): string {
   return turma.turno === null ? nomeDaSerie(turma.serie) : `${nomeDaSerie(turma.serie)} · ${NOME_DO_TURNO[turma.turno]}`
-}
-
-/** Um item da lista: o cartão, em uma coluna no celular e em linha a partir de 768 px (W12). */
-function Linha({ titulo, detalhe, children }: { titulo: string; detalhe?: string; children: ReactNode }) {
-  return (
-    <li className="flex min-w-0 flex-col gap-3 rounded-cartao border border-linha bg-superficie p-4 md:flex-row md:items-center md:justify-between">
-      <div className="min-w-0">
-        <p className="font-medium break-words text-tinta">{titulo}</p>
-        {detalhe !== undefined && <p className="text-sm break-words text-apoio">{detalhe}</p>}
-      </div>
-      <div className="flex flex-wrap gap-2">{children}</div>
-    </li>
-  )
 }
 
 /** Renomear e Excluir da linha, com o nome do item no nome acessível do botão (WCAG 2.5.3). */

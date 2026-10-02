@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { FALHAS_DO_LOGIN_EXTERNO } from '../sessao/externa.js'
 import { CodigoDeErro } from './codigo-de-erro.js'
 import {
+  AVISO_DO_CONVITE_COM_SENHA_NOVA,
+  AVISO_DO_CONVITE_PARA_CONTA_EXISTENTE,
   formatarEspera,
   mensagemDaEntrada,
   mensagemDaEntradaPorMatricula,
@@ -50,7 +52,7 @@ describe('mensagemDaEntrada', () => {
   it('W10 (A0b): o convite que já não ativa, com a senha certa, mostra o texto da tela de convite inválido, sem dizer que a senha estava certa', () => {
     const mensagem = mensagemDaEntrada(CodigoDeErro.NAO_ENCONTRADO)
     expect(mensagem).toBe(mensagemDoConvite(CodigoDeErro.NAO_ENCONTRADO))
-    expect(mensagem).toBe('Este convite não vale mais. Peça um convite novo à sua escola.')
+    expect(mensagem).toBe('Este convite não vale mais. Peça outro à coordenação da sua escola. Se o convite era para a coordenação, peça a quem enviou o link.')
     // A mensagem geral ("Não encontramos o que você procurou…") não diz o que fazer na entrada.
     expect(mensagem).not.toBe(MENSAGENS_DE_ERRO.NAO_ENCONTRADO)
     expect(mensagem).not.toMatch(/senha|e-mail|corret/i)
@@ -109,10 +111,20 @@ describe('mensagemDoSegundoFator', () => {
 })
 
 describe('mensagemDoConvite', () => {
-  it('expirado, revogado, usado e inexistente pedem um convite novo, sem dizer qual deles foi', () => {
+  it('W14 (A1): expirado, revogado, refeito, usado e inexistente pedem outro convite à coordenação, sem dizer qual deles foi', () => {
     const mensagem = mensagemDoConvite(CodigoDeErro.NAO_ENCONTRADO)
-    expect(mensagem).toBe('Este convite não vale mais. Peça um convite novo à sua escola.')
+    expect(mensagem).toBe('Este convite não vale mais. Peça outro à coordenação da sua escola. Se o convite era para a coordenação, peça a quem enviou o link.')
     expect(mensagem).not.toMatch(/expirad|revogad|usad|não existe/i)
+  })
+})
+
+describe('os avisos da entrada depois do aceite do convite', () => {
+  it('W14 (A1): o professor que criou a senha é mandado entrar com ela, sem segundo fator nem prazo; quem já tinha conta, com a senha que já usa', () => {
+    expect(AVISO_DO_CONVITE_COM_SENHA_NOVA).toBe('Senha criada. Entre com o seu e-mail e a senha que você acabou de criar.')
+    expect(AVISO_DO_CONVITE_COM_SENHA_NOVA).not.toMatch(/segundo fator|30 minutos/i)
+    expect(AVISO_DO_CONVITE_PARA_CONTA_EXISTENTE).toBe(
+      'Você já tem acesso em outra escola: entre com a sua senha para concluir o convite. Se passar de 30 minutos, peça um convite novo à escola.',
+    )
   })
 })
 

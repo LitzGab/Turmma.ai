@@ -23,10 +23,12 @@ export const MENSAGENS_DE_ERRO: Readonly<Record<CodigoDeErro, string>> = {
 }
 
 /**
- * O texto da tela de convite inválido (F1): expirado, revogado, já usado e inexistente chegam iguais, e a tela pede um
- * convite novo, que é o que resolve os quatro.
+ * O texto da tela de convite inválido (F1): expirado, revogado, refeito, já usado e inexistente chegam iguais, e a tela
+ * pede outro convite, que é o que resolve todos. A mesma tela serve ao convite do professor, que a coordenação da escola
+ * gera, e ao da coordenação, que vem de nós (A1, 14.0); o convite que não vale não diz de que tipo era, e por isso o
+ * texto diz a quem pedir nos dois casos.
  */
-const CONVITE_QUE_NAO_VALE = 'Este convite não vale mais. Peça um convite novo à sua escola.'
+const CONVITE_QUE_NAO_VALE = 'Este convite não vale mais. Peça outro à coordenação da sua escola. Se o convite era para a coordenação, peça a quem enviou o link.'
 
 /**
  * O que a tela de entrada diz, onde a mensagem geral não serve (regra 50, item 12).
@@ -72,8 +74,8 @@ export const MENSAGENS_DO_SEGUNDO_FATOR: Readonly<Partial<Record<CodigoDeErro, s
 }
 
 /**
- * O que a tela do convite diz. Expirado, revogado, já usado e inexistente chegam no mesmo `NAO_ENCONTRADO`, e a tela
- * não diz qual deles foi (regra 10, item 6): pede um convite novo, que é o que resolve os quatro.
+ * O que a tela do convite diz. Expirado, revogado, refeito, já usado e inexistente chegam no mesmo `NAO_ENCONTRADO`, e a
+ * tela não diz qual deles foi (regra 10, item 6): pede outro convite, que é o que resolve todos.
  */
 export const MENSAGENS_DO_CONVITE: Readonly<Partial<Record<CodigoDeErro, string>>> = {
   NAO_ENCONTRADO: CONVITE_QUE_NAO_VALE,
@@ -101,6 +103,12 @@ export function avisoDoSegundoFatorConsumido(esperaSegundos?: number): string {
  */
 export const AVISO_DO_CONVITE_PARA_CONTA_EXISTENTE =
   'Você já tem acesso em outra escola: entre com a sua senha para concluir o convite. Se passar de 30 minutos, peça um convite novo à escola.'
+
+/**
+ * O aviso que a tela de entrada mostra ao professor que acabou de criar a senha pelo convite (A1, 14.0): o aceite do
+ * professor não abre sessão nem passa pelo segundo fator, e o que falta é entrar com a senha nova.
+ */
+export const AVISO_DO_CONVITE_COM_SENHA_NOVA = 'Senha criada. Entre com o seu e-mail e a senha que você acabou de criar.'
 
 /**
  * O que o seletor de escola diz quando a troca é recusada (Tech Spec, seção 5, "Troca de escola"). A API responde o
@@ -166,7 +174,7 @@ export function mensagemDoSegundoFator(codigo: CodigoDeErro, esperaSegundos?: nu
   return mensagemDaTela(MENSAGENS_DO_SEGUNDO_FATOR, codigo, esperaSegundos)
 }
 
-/** A mensagem da tela do convite do primeiro coordenador. */
+/** A mensagem da tela do convite, a mesma para o do coordenador e o do professor. */
 export function mensagemDoConvite(codigo: CodigoDeErro): string {
   return mensagemDaTela(MENSAGENS_DO_CONVITE, codigo)
 }

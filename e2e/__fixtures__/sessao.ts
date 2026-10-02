@@ -3,6 +3,7 @@ import { randomBytes, randomUUID } from 'node:crypto'
 import { Secret, TOTP } from 'otpauth'
 import { Client } from 'pg'
 import { BYTES_DO_TOKEN_DE_CONVITE, hashDoToken } from '../../apps/api/src/sessao/hash-do-token.ts'
+import type { EstadoDoProfessor } from '../../packages/shared/src/professores/professores.ts'
 import { lerAmbienteDeTeste, urlDoBancoDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
 
 /**
@@ -459,29 +460,113 @@ export async function criarTodasAsSeriesNoBanco(escolaId: string): Promise<void>
   })
 }
 
+/** O professor da lista da coordenação, como a fixture o deixou: o e-mail só existe aqui, a lista não o mostra (E11). */
+export interface ProfessorDeTeste {
+  readonly usuarioId: string
+  readonly nome: string
+  readonly email: string
+}
+
+/** Os estados do professor na escola, como `estadoDoProfessor` os calcula (`packages/nucleo`, A1, 3.0): os do contrato. */
+export type EstadoDoProfessorDeTeste = EstadoDoProfessor
+
+const NOME_DO_ESTADO_NO_TESTE: Readonly<Record<EstadoDoProfessorDeTeste, string>> = {
+  pendente: 'convidado',
+  vencido: 'de convite vencido',
+  revogado: 'de convite revogado',
+  aceito: 'que aceitou',
+  ativo: 'ativo',
+  desativado: 'desativado',
+}
+
 /**
- * Um professor cadastrado pela coordenação (3.0), ainda sem entrar: o usuário inativo e o convite de professor, em aberto
- * (`pendente`) ou vencido. É o que a alocação da Estrutura oferece, ou não (13.0). O e-mail é do domínio reservado. O
- * `primeiroNome` é para o teste que prova a ordem da escolha: o nome inteiro continua com a marca única.
+ * Um professor da escola no estado dado, como o cadastro pela coordenação (3.0) e o que veio depois o deixariam: o
+ * usuário, ativo ou não, e o convite de professor em aberto, vencido, revogado ou já usado. É o que a alocação da
+ * Estrutura oferece, ou não (13.0), e o que a tela Professores lista (14.0). O e-mail é do domínio reservado. O
+ * `primeiroNome` é para o teste que prova a ordem: o nome inteiro continua com a marca única.
+ *
+ * - `pendente`, `vencido`, `revogado`: o usuário inativo e o convite não usado;
+ * - `aceito`: o convite usado e o usuário ativo, como a conta nova fica no aceite;
+ * - `ativo`: ativo sem convite de professor (o de antes da A1); `desativado`: inativo sem convite.
  */
-export async function convidarProfessorNoBanco(
-  escolaId: string,
-  estado: 'pendente' | 'vencido',
-  primeiroNome = 'Professor',
-): Promise<{ readonly usuarioId: string; readonly nome: string }> {
+export async function convidarProfessorNoBanco(escolaId: string, estado: EstadoDoProfessorDeTeste, primeiroNome = 'Professor'): Promise<ProfessorDeTeste> {
   const marca = randomUUID()
-  const nome = `${primeiroNome} ${estado === 'pendente' ? 'convidado' : 'de convite vencido'} ${marca.slice(0, 8)}`
+  const nome = `${primeiroNome} ${NOME_DO_ESTADO_NO_TESTE[estado]} ${marca.slice(0, 8)}`
+  const email = `professor-${marca}@educa.invalid`
+  const ativo = estado === 'aceito' || estado === 'ativo'
   return comBanco(async (banco) => {
-    const contaId = await id(banco, 'insert into conta (email) values ($1) returning id', [`professor-${marca}@educa.invalid`])
-    const usuarioId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome, desativado_em) values ($1, $2, 'professor', $3, now()) returning id", [escolaId, contaId, nome])
-    const expiraEm = estado === 'pendente' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000) : new Date(Date.now() - 60_000)
-    await banco.query("insert into convite (escola_id, token_hash, tipo, usuario_id, expira_em) values ($1, $2, 'professor', $3, $4)", [
+    const contaId = await id(banco, 'insert into conta (email) values ($1) returning id', [email])
+    const usuarioId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome, desativado_em) values ($1, $2, 'professor', $3, $4) returning id", [
       escolaId,
-      hashDoToken(randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')),
+      contaId,
+      nome,
+      ativo ? null : new Date(),
+    ])
+    if (estado !== 'ativo' && estado !== 'desativado') {
+      const expiraEm = estado === 'vencido' ? new Date(Date.now() - 60_000) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000)
+      await banco.query("insert into convite (escola_id, token_hash, tipo, usuario_id, expira_em, usado_em, revogado_em) values ($1, $2, 'professor', $3, $4, $5, $6)", [
+        escolaId,
+        hashDoToken(randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')),
+        usuarioId,
+        expiraEm,
+        estado === 'aceito' ? new Date() : null,
+        estado === 'revogado' ? new Date() : null,
+      ])
+    }
+    return { usuarioId, nome, email }
+  })
+}
+
+/** O convite de professor (A1, 3.0), como a coordenação o gera ao cadastrar, mas direto no banco: o link e quem é convidado. */
+export interface ConviteDeProfessorDeTeste extends EscolaDeTeste {
+  /** O token do link, que só existe aqui: o banco guarda o SHA-256 dele. */
+  readonly token: string
+  readonly usuarioId: string
+  readonly nome: string
+  readonly email: string
+}
+
+/**
+ * Um convite de professor válido por 7 dias, numa escola nova.
+ *
+ * - Sem `conta`, a conta nasce sem senha: o aceite pede a senha nova e leva à entrada, porque o professor não tem segundo
+ *   fator.
+ * - Com `conta`, o convite é para quem já trabalha em outra escola cliente: o aceite não troca a senha dela e leva à
+ *   entrada, com o bilhete.
+ * - `expirado`, `revogado` e `usado` deixam o convite num dos estados em que ele não vale mais; o `usado` é o link que o
+ *   professor abre de novo depois de já ter aceitado.
+ */
+export async function criarConviteDeProfessor(opcoes: { conta?: EquipeDeTeste; expirado?: boolean; revogado?: boolean; usado?: boolean } = {}): Promise<ConviteDeProfessorDeTeste> {
+  const marca = randomUUID()
+  const escola = await criarEscolaSintetica()
+  const token = randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')
+  const nome = `Professor sintético ${marca.slice(0, 8)}`
+  const email = opcoes.conta?.email ?? `professor-${marca}@educa.invalid`
+  const expiraEm = opcoes.expirado ? new Date(Date.now() - 60_000) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000)
+  return comBanco(async (banco) => {
+    const contaId = opcoes.conta?.contaId ?? (await id(banco, 'insert into conta (email) values ($1) returning id', [email]))
+    const usuarioId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome, desativado_em) values ($1, $2, 'professor', $3, now()) returning id", [
+      escola.escolaId,
+      contaId,
+      nome,
+    ])
+    await banco.query("insert into convite (escola_id, token_hash, tipo, usuario_id, expira_em, revogado_em, usado_em) values ($1, $2, 'professor', $3, $4, $5, $6)", [
+      escola.escolaId,
+      hashDoToken(token),
       usuarioId,
       expiraEm,
+      opcoes.revogado === true ? new Date() : null,
+      opcoes.usado === true ? new Date() : null,
     ])
-    return { usuarioId, nome }
+    return { ...escola, token, usuarioId, nome, email }
+  })
+}
+
+/** Quantos convites de professor a escola tem em aberto (nem usados, nem revogados): é o que o clique duplo não pode dobrar. */
+export async function convitesDeProfessorEmAberto(escolaId: string): Promise<number> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ total: string }>("select count(*) as total from convite where escola_id = $1 and tipo = 'professor' and usado_em is null and revogado_em is null", [escolaId])
+    return Number(rows[0]?.total ?? 0)
   })
 }
 

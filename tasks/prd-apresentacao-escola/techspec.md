@@ -332,6 +332,54 @@ decisão (10.0) travam o ano no começo da transação delas; o ano que deixou d
     alocável), com o título do W4. "Sem rastro" (nome e matrícula fora de `localStorage`, `sessionStorage`, IndexedDB,
     Cache Storage e do endereço) é provado no e2e, porque a web não tem ambiente de DOM na unidade
   - Teto do chunk `coordenacao-*`: 20 kB (mede ~12 kB)
+- **Decidido na 14.0** (divergências registradas em `14_task.md`):
+  - Professores fica em `/coordenacao/professores`, item da lateral depois de Estrutura: a lista pelo nome, com o estado do
+    convite em texto e só as ações das matrizes (`REFAZER_`/`REVOGAR_CONVITE_DE_PROFESSOR_POR_ESTADO`). `vencido` diz para
+    refazer; `revogado` e `desativado`, para cadastrar de novo o mesmo e-mail (a lista não traz e-mail, seção 4). O
+    `aceito` não diz se a pessoa já entrou (E11). O erro da releitura com a lista na tela fica por cima dela, com "Tentar de
+    novo"
+  - O diálogo do convite de cópia única mora em `componentes/DialogoDoConvite.tsx` (o convite novo e o refeito), com a
+    moldura, os textos, a mutação e o texto de cada falha vindos de quem usa; o link e a cópia em
+    `componentes/link-do-convite.ts`, e o pedido pelo contrato em `componentes/pedido-de-convite.ts`. A operação usa os
+    três, com o `DialogoDaOperacao` de moldura, sem mudar de comportamento além da pergunta de fechar (abaixo). O
+    revogar da escola é a `ConfirmacaoDePerigo` da 13.0; o `ConfirmarConvite` continua na operação
+  - A releitura que cai com a lista ainda vazia (logo depois do primeiro cadastro) mostra o erro, e não "Nenhum
+    professor ainda". O resumo do cadastro avisa o nome que já está na lista ("Já há um professor com este nome na
+    lista. Se é a mesma pessoa voltando, pode seguir…"), sem impedir: a lista só mostra o nome, e o e-mail na linha fica
+    para decidir com a prova de posse (`TODO.md`). A etapa do link do cadastro diz o e-mail com que a pessoa entra; a do
+    refazer, não, porque a lista não o traz
+  - **A pergunta de fechar só vale enquanto há link em risco**: o pedido que falha com ela aberta volta à etapa dele, com
+    a falha à vista e o foco nela; e "Voltar e corrigir" solta a falha, com o foco no campo do nome. Vale também para o
+    convite da coordenação, na operação, que usa o mesmo diálogo
+  - O `CONFLITO` do cadastro é do e-mail digitado ("Este e-mail já é de um professor desta escola, ativo ou com o convite
+    em aberto…"): o diálogo continua com "Voltar e corrigir". O do refazer e o do revogar, e o `NAO_ENCONTRADO` deles,
+    recarregam a lista e deixam só "Fechar", com os mesmos dois textos do convite da coordenação
+    (`componentes/textos-do-convite.ts`). O refazer trava o botão com o pedido no ar e mostra o link da única resposta
+  - **O diálogo aberto sai quando a sessão da aba muda** (venceu, ou outra pessoa entrou; `aoTrocarDeSessao`): o link é
+    credencial do professor, e não fica na tela atrás do login por cima (regra 20, item 8). O `gcTime: 0` tira a resposta
+    do `MutationCache` também nesse desmonte, sem `reset()`. Não custa nada à coordenação: a volta dela passa pelo segundo
+    fator, que já desmonta a área
+  - **O aceite serve aos dois tipos de convite com os mesmos textos**, porque a consulta diz só a escola (seção 4): "Você
+    foi convidado para entrar em …", e a senha nova sem prometer o segundo fator. O convite que não vale diz a quem pedir
+    nos dois casos ("Este convite não vale mais. Peça outro à coordenação da sua escola. Se o convite era para a
+    coordenação, peça a quem enviou o link."), na tela do convite, na entrada e no segundo fator, e a tela oferece "Já
+    aceitou o convite? Entrar". O professor com a conta nova vai à entrada com "Senha criada. Entre com o seu e-mail e a
+    senha que você acabou de criar."; quem já tinha conta, com o aviso de antes. Depois de entrar, a página inicial dele
+    aponta para Turmas (11.0). O passo da senha leva o foco ao campo "Senha nova"; o "mostrar" da senha vem com a peça da
+    17.0
+  - O aceite recomeça com outro link colado na aba (`hashchange`, também o mesmo link de novo): o fragmento sai da barra,
+    a tela volta a conferir na hora, e a senha digitada e o aviso da tentativa anterior saem. O aceite ainda no ar com o
+    link anterior é descartado quando volta, **sem guardar o bilhete nem o desafio** (`aceitarConviteNaVez`), e não segura
+    o botão do link novo. O fragmento que não é token (`%` quebrado) cai em "O endereço do convite está incompleto", sem
+    derrubar a tela. A consulta que cai por rede ou servidor tem "Tentar de novo", com o token da memória da tela; o
+    convite usado ou revogado entre a consulta e o aceite mostra a tela do convite que não vale, sem o nome da escola
+  - O vazio da Alocação diz no título só o que falta ("Crie uma disciplina primeiro"; "Crie uma turma e um professor
+    primeiro" quando faltam os dois) e, quando falta o professor, leva à tela Professores; o passo "Professores" do
+    roteiro também
+  - Teto do chunk `coordenacao-*`: continua 20 kB (mede ~14,5 kB com os Professores, e a 16.0 ainda põe os pedidos
+    nele). O diálogo do convite e os textos dele caem em pedaços `parte-*` que a coordenação divide com a operação, e
+    conta no primeiro carregamento (123,8 kB de 150)
+  - O `token` do contrato do convite de professor usa o `esquemaTokenDeLink` (pendência da 4.0)
 - **Decisão**: "Aprovar N" (`oficial`) revisa turma, nomes e efeito, e avisa a coordenação da auditoria; "Recusar"
   (`perigo`) confirma; depois, texto por pedido (W6). Até 40, explicado. O pedido mostra se houve tentativa com
   matrícula errada no nome. Para o professor, atualiza a cada 15 s com a aba visível (W15); a coordenação usa
@@ -378,6 +426,10 @@ Em `cenarios.md`, parte desta spec: lista fechada, um id por teste, com a cláus
   - **a auditoria do aceite**: `convite.aceito.usuarioAtivo` (do F1) e o `usuario.ativado_por_convite`, que só a conta
     que já existia grava. Nenhuma rota da coordenação lê a auditoria hoje; a tarefa que a exportar no dossiê (D61)
     decide, com o `privacy-guardian`, se esses campos saem ou são agregados
+  - **o aviso da entrada depois do aceite** (14.0): a tela diz "Senha criada" quando mandou a senha e o aceite respondeu
+    `entrar`, que é o professor com a conta nova. Se outro convite da mesma conta definiu a senha entre a consulta e o
+    aceite, a API ignora a senha digitada, e o aviso diz "senha criada" de uma senha que não valeu; a entrada recusa, e
+    o caminho é o outro convite. Borda aceita, com o mesmo fechamento
 - **Alocação antes do aceite** (3.0; decidida pelo Joaquim em 27/09/2026, feita na 13.0): a alocação aceita o professor
   com convite em aberto. Alocável é o professor da escola da sessão com o estado de `estadoDoProfessor` em
   `ESTADOS_DO_PROFESSOR_ALOCAVEIS` (`pendente`, `aceito`, `ativo`; `VinculoRepository.professorAlocavel`, no lugar do

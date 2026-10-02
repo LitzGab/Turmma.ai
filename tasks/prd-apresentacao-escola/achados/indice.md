@@ -165,3 +165,15 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-02 01:07:21 | `test-engineer` | 7ª | APROVADO | `13_task` | duas, abaixo (uma só de documento, uma só de teste) |
 | 2026-10-02 01:09:27 | `privacy-guardian` | 2ª | APROVADO | `13_task` | uma, de código, abaixo. |
 | 2026-10-02 01:12:00 | `revisor-geral` | 2ª | APROVADO | `13_task` | três, todas só de documento (abaixo) |
+| 2026-10-02 03:21:15 | `test-engineer` | 1ª | REPROVADO | `14_task` | `apps/web/src/paginas/Convite.tsx:113` e `:114` (a guarda `atual &&`, com a limpeza em `:116-118`): a consulta do link anterior que responde depois do… |
+| 2026-10-02 03:50:20 | `test-engineer` | 2ª | APROVADO | `14_task` | `tasks/prd-apresentacao-escola/14_task.md:249-252`: a tabela "Recomendações sem aplicar" está vazia. A dos dois professores com o mesmo nome não foi aplicada e… |
+| 2026-10-02 03:59:49 | `frontend-reviewer` | 1ª | AJUSTES NECESSÁRIOS | `14_task` | `apps/web/src/areas/coordenacao/Professores.tsx:94-99` — o vazio ignora `professores.isError`; o erro por cima só existe no ramo com dado (`:109`). |
+| 2026-10-02 04:38:48 | `frontend-reviewer` | 2ª | AJUSTES NECESSÁRIOS | `14_task` | `apps/web/src/componentes/DialogoDoConvite.tsx:241` (com `:231-234`, e o "Voltar e corrigir" em `:389`) — regressão desta rodada: depois de uma recusa no… |
+| 2026-10-02 04:58:04 | `frontend-reviewer` | 3ª | APROVADO | `14_task` | O "Voltar e corrigir" depois de recusa só tem e2e pela tela Professores; a operação usa a mesma peça. Um `toBeFocused()` em… |
+| 2026-10-02 05:08:06 | `test-engineer` | 3ª | APROVADO | `14_task` | `cenarios.md` sem os casos desta rodada. `tasks/prd-apresentacao-escola/cenarios.md:417` (W4, Professores) e `:476-486` (W14) não dizem o erro da releitura com… |
+| 2026-10-02 05:12:17 | `privacy-guardian` | 1ª | APROVADO | `14_task` | Nome repetido: não cabe nesta tarefa, fica registrado (detalhe abaixo). |
+| 2026-10-02 05:15:07 | `revisor-geral` | 1ª | APROVADO | `14_task` | seis, listadas abaixo |
+| 2026-10-02 05:39:41 | `test-engineer` | 4ª | APROVADO | `14_task` | Duas linhas a acrescentar em "Mutações" do `14_task.md`: o inverso de `DialogoDoConvite.tsx:64` (a pergunta que fica quando o pedido dá certo) e… |
+| 2026-10-02 05:44:48 | `frontend-reviewer` | 4ª | APROVADO | `14_task` | `14_task.md:125` ainda diz que `operacao/textos.ts` reexporta os dois textos de campo; a linha `:186-189` do mesmo documento diz que o reexport saiu. Acertar a… |
+| 2026-10-02 05:46:56 | `privacy-guardian` | 2ª | APROVADO | `14_task` | nenhuma nova. As duas da 1ª rodada sem aplicar seguem com destino em "Recomendações sem aplicar" do 14_task.md (linhas 306 e 307). |
+| 2026-10-02 05:48:17 | `revisor-geral` | 2ª | APROVADO | `14_task` | quatro, listadas abaixo |

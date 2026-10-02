@@ -268,7 +268,9 @@ O desenho da área, e o que o design do aluno **não** herda do professor, está
   precisa ser rápida (D24). A escola em si é criada por nós, no painel da operação (A0b, D76) ou
   pelo `ops:escola`, e a coordenação chega por convite (D2). Na A1 entra a parte fina: disciplinas e turmas criadas na tela, lista de nomes
   por turma, alocação e convite ao professor; grade horária e calendário vêm com o F2 (D71
-  revista)
+  revista). Na A1 o cadastro e o convite do professor têm tela própria, **Professores**, item da lateral ao lado de
+  Estrutura (tarefa 14.0; Tech Spec da A1, seção 9): cadastrar com nome e e-mail, copiar o link que aparece uma vez,
+  refazer e revogar. O roteiro da Estrutura e o vazio da Alocação levam a ela
 - **Material**: **só a coordenação sobe material para a base da escola**; professor e aluno não
   sobem (D75). Fontes com titularidade e licença, upload, estado da ingestão com o que entrou,
   o que falhou, o que está pendente e o que foi recusado por falta de licença (F4,

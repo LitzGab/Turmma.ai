@@ -18,7 +18,7 @@
     "brotli": true
   },
   {
-    "name": "JS da área da coordenação (o chunk coordenacao-*.js, só por import(), depois da guarda de papel; na 13.0, a Estrutura com a lista e a alocação, perto de 12 kB, e folga para os Professores da 14.0)",
+    "name": "JS da área da coordenação (o chunk coordenacao-*.js, só por import(), depois da guarda de papel; na 14.0, a Estrutura com a lista e a alocação e os Professores, perto de 14,5 kB, e folga para os pedidos da 16.0; o diálogo do convite fica num parte-* que ela divide com a operação)",
     "path": "apps/web/dist/assets/coordenacao-*.js",
     "limit": "20 kB",
     "brotli": true

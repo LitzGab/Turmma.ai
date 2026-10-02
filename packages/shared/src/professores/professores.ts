@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { esquemaDePagina } from '../estrutura/paginacao.js'
-import { esquemaEmailConvidado, esquemaNomeDigitado, esquemaRespostaConviteDaCoordenacao, TAMANHO_MAXIMO_NOME_DIGITADO } from '../operacao/painel.js'
+import { esquemaEmailConvidado, esquemaNomeDigitado, TAMANHO_MAXIMO_NOME_DIGITADO } from '../operacao/painel.js'
+import { esquemaTokenDeLink } from '../sessao/token.js'
 
 /**
  * Corpo de `POST /v1/professores` (A1, RF6): o nome e o e-mail de login do professor, com as regras do convite da
@@ -29,7 +30,7 @@ export const esquemaPedidoSemCorpoDoConviteDeProfessor = z.strictObject({})
 export const esquemaRespostaConviteDeProfessor = z.strictObject({
   usuarioId: z.uuid(),
   conviteId: z.uuid(),
-  token: esquemaRespostaConviteDaCoordenacao.shape.token,
+  token: esquemaTokenDeLink,
 })
 
 export type RespostaConviteDeProfessor = z.infer<typeof esquemaRespostaConviteDeProfessor>

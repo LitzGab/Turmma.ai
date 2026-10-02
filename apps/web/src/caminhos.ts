@@ -19,6 +19,8 @@ export const ROTAS_DA_COORDENACAO = {
   estrutura: '/estrutura',
   /** Uma turma aberta dentro de Estrutura, com a lista de nomes dela (13.0) e, na 16.0, os pedidos. */
   turma: '/estrutura/turmas/:turmaId',
+  /** Os professores da escola e o convite de cada um: cadastrar, copiar o link, refazer e revogar (A1, 14.0; RF6). */
+  professores: '/professores',
 } as const
 
 /**
@@ -48,9 +50,11 @@ export const ROTAS = {
   turmas: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.turmas}`,
   /** Estrutura da coordenação, pela raiz: é o endereço que a navegação usa, e onde a coordenação abre (13.0). */
   estrutura: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.estrutura}`,
+  /** Professores da coordenação, pela raiz: é o endereço que a navegação usa (14.0). */
+  professores: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.professores}`,
   /** "Minha turma" do aluno, pela raiz: é o endereço que a navegação usa. */
   minhaTurma: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.minhaTurma}`,
-  /** O convite do primeiro coordenador. O token vai no fragmento `#`, e nunca no caminho nem na consulta. */
+  /** O convite da coordenação e o do professor. O token vai no fragmento `#`, e nunca no caminho nem na consulta. */
   convite: '/convite',
   /** Estado do sistema, público: é a tela que se abre justamente quando não se consegue entrar. */
   sistema: '/sistema',

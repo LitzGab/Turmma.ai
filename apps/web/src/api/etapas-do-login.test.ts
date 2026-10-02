@@ -186,16 +186,80 @@ describe('convite', () => {
     expect(chamadas[0]?.corpo).toEqual({ token: TOKEN })
   })
 
+  /** O aceite com o link que continua na tela: a vez não muda enquanto ele está no ar. */
+  const naMesmaVez = () => 0
+
   it('conta nova: o aceite com senha guarda o desafio de configurar_mfa, e nenhuma sessão é aberta', async () => {
-    responderCom({ status: 200, corpo: { etapa: 'configurar_mfa', desafio: 'desafio.configurar.jwt' } })
-    await convite.aceitarConvite({ token: TOKEN, senha: 'senha-nova-com-doze' })
+    const resposta = { etapa: 'configurar_mfa', desafio: 'desafio.configurar.jwt' }
+    responderCom({ status: 200, corpo: resposta })
+    expect(await convite.aceitarConviteNaVez({ token: TOKEN, senha: 'senha-nova-com-doze' }, naMesmaVez)).toEqual({ tipo: 'aceito', resposta })
+    expect(chamadas[0]).toMatchObject({ caminho: convite.CAMINHO_DO_ACEITE_DE_CONVITE, metodo: 'POST', corpo: { token: TOKEN, senha: 'senha-nova-com-doze' } })
     expect(sessao.desafioDaEtapa('configurar_mfa')).toBe('desafio.configurar.jwt')
+    expect(sessao.convitePendente()).toBe(false)
     expect(sessao.tokenDeAcesso()).toBeUndefined()
+  })
+
+  it('W14: o professor com a conta nova recebe `entrar` no aceite com senha, e o bilhete vai no login com a senha criada', async () => {
+    const resposta = { etapa: 'entrar', bilhete: 'bilhete.do.professor.jwt' }
+    responderCom({ status: 200, corpo: resposta })
+    expect(await convite.aceitarConviteNaVez({ token: TOKEN, senha: 'senha-nova-com-doze' }, naMesmaVez)).toEqual({ tipo: 'aceito', resposta })
+    expect(sessao.convitePendente()).toBe(true)
+    expect(sessao.desafioDaEtapa('configurar_mfa')).toBeUndefined()
+    responderCom({ status: 200, corpo: PRONTA })
+    await sessao.entrarPorEmail({ email: 'professor@escola.test', senha: 'senha-nova-com-doze' })
+    expect(chamadas.at(-1)?.corpo).toEqual({ email: 'professor@escola.test', senha: 'senha-nova-com-doze', bilhete: 'bilhete.do.professor.jwt' })
+  })
+
+  it('a recusa do aceite volta como falha, com o erro tipado, e nada fica guardado', async () => {
+    responderCom({ status: 400, corpo: envelope(CodigoDeErro.ENTRADA_INVALIDA) })
+    const desfecho = await convite.aceitarConviteNaVez({ token: TOKEN }, naMesmaVez)
+    expect(desfecho).toMatchObject({ tipo: 'falhou', erro: { codigo: CodigoDeErro.ENTRADA_INVALIDA } })
+    expect(sessao.convitePendente()).toBe(false)
+  })
+
+  it('recomeço: o aceite que volta depois de outro link chegar à aba é descartado, dê certo ou não, e não guarda bilhete nem desafio', async () => {
+    for (const resposta of [
+      { status: 200, corpo: { etapa: 'entrar', bilhete: 'bilhete.do.link.anterior.jwt' } },
+      { status: 200, corpo: { etapa: 'configurar_mfa', desafio: 'desafio.do.link.anterior.jwt' } },
+      { status: 404, corpo: envelope(CodigoDeErro.NAO_ENCONTRADO) },
+      { status: 503, corpo: envelope(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO) },
+    ]) {
+      // A vez do link sobe enquanto o aceite está no ar: é o `hashchange` de outro link colado na aba.
+      let vez = 0
+      responderCom(resposta)
+      const aceite = convite.aceitarConviteNaVez({ token: TOKEN }, () => vez)
+      vez = 1
+      expect(await aceite, String(resposta.status)).toEqual({ tipo: 'descartado' })
+      expect(sessao.convitePendente()).toBe(false)
+      expect(sessao.desafioDaEtapa('configurar_mfa')).toBeUndefined()
+    }
+  })
+
+  it('recomeço: o aceite descartado não apaga o bilhete que o aceite do link novo já guardou', async () => {
+    let responderAoAnterior: (resposta: Response) => void = () => undefined
+    const anteriorSaiu = new Promise<void>((saiu) => {
+      vi.mocked(fetch).mockImplementationOnce(() => {
+        saiu()
+        return new Promise<Response>((resolver) => (responderAoAnterior = resolver))
+      })
+    })
+    let vez = 0
+    const anterior = convite.aceitarConviteNaVez({ token: TOKEN }, () => vez)
+    await anteriorSaiu
+    // O link novo chega, e o aceite dele sai e volta com o aceite do anterior ainda no ar.
+    vez = 1
+    responderCom({ status: 200, corpo: { etapa: 'entrar', bilhete: 'bilhete.do.link.novo.jwt' } })
+    expect((await convite.aceitarConviteNaVez({ token: 'token-sintetico-do-link-novo' }, () => vez)).tipo).toBe('aceito')
+    responderAoAnterior(new Response(JSON.stringify({ etapa: 'entrar', bilhete: 'bilhete.do.link.anterior.jwt' }), { status: 200 }))
+    expect(await anterior).toEqual({ tipo: 'descartado' })
+    responderCom({ status: 200, corpo: PRONTA })
+    await sessao.entrarPorEmail({ email: 'camila@escola.test', senha: 'segredo-da-camila' })
+    expect(chamadas.at(-1)?.corpo).toEqual({ email: 'camila@escola.test', senha: 'segredo-da-camila', bilhete: 'bilhete.do.link.novo.jwt' })
   })
 
   it('conta que já existe: o bilhete fica em memória e vai no corpo do próximo login, uma vez só', async () => {
     responderCom({ status: 200, corpo: { etapa: 'entrar', bilhete: 'bilhete.jwt' } })
-    await convite.aceitarConvite({ token: TOKEN })
+    await convite.aceitarConviteNaVez({ token: TOKEN }, naMesmaVez)
     expect(sessao.convitePendente()).toBe(true)
 
     // Senha errada: o bilhete precisa sobreviver, senão a segunda tentativa entraria sem ativar a escola do convite.
@@ -221,7 +285,7 @@ describe('convite', () => {
 describe('meia credencial não sobrevive à sessão', () => {
   it('a sessão aberta apaga desafio, bilhete e aviso: no Chromebook do carrinho nada disso passa para a pessoa seguinte', async () => {
     responderCom({ status: 200, corpo: { etapa: 'entrar', bilhete: 'bilhete.jwt' } })
-    await convite.aceitarConvite({ token: 'token-sintetico-do-convite' })
+    await convite.aceitarConviteNaVez({ token: 'token-sintetico-do-convite' }, () => 0)
     sessao.definirAvisoDaEntrada('aviso qualquer')
     sessao.guardarDesafio('mfa', 'desafio.mfa.jwt')
 

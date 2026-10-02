@@ -76,6 +76,13 @@ envio só que sobrevive ao sistema cheio; e o fluxo inteiro, da escola vazia ao 
   rodada que vale para o código atual, e APROVADO nos que têm veto
 - [ ] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
 
+## Herdado da 14.0
+
+- **A senha nova do aceite do convite sem "mostrar"** (`frontend-reviewer`, 1ª rodada da 14.0): em
+  `apps/web/src/paginas/Convite.tsx`, o professor digita 12 caracteres uma vez, às cegas, e o erro de digitação só se
+  resolve com outro convite. O campo de senha com "mostrar" que esta tarefa faz para a página pública (W11) fica em
+  `componentes/`, e a tela do convite passa a usá-lo.
+
 ## Fora do escopo desta tarefa
 
 Contador por navegador (7c); contagem de quem entrou (D59); reset de senha (F2).

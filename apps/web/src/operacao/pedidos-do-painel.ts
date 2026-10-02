@@ -7,7 +7,8 @@ import {
   type PedidoCriarRede,
   type TipoDeRede,
 } from '@educa/shared'
-import { REGRA_DO_ENDERECO, TEXTO_DO_EMAIL_INVALIDO, TEXTO_DO_NOME_INVALIDO } from './textos'
+import { pedidoDeConvitePelo, TEXTO_DO_NOME_INVALIDO, type ValidacaoDoConvite } from '../componentes/pedido-de-convite'
+import { REGRA_DO_ENDERECO } from './textos'
 
 /**
  * O id do pedido de rede ou de escola (Tech Spec da A0b, seção 5, "Idempotência"): um UUID v4, sorteado quando o diálogo
@@ -31,7 +32,6 @@ export type Validacao<Pedido, Campo extends string> = { readonly ok: true; reado
 
 export type CampoDaRede = 'nome'
 export type CampoDaEscola = 'redeId' | 'nome' | 'slug'
-export type CampoDoConvite = 'nome' | 'email'
 
 const TEXTO_DO_CAMPO_DA_REDE: Readonly<Record<CampoDaRede, string>> = { nome: TEXTO_DO_NOME_INVALIDO }
 
@@ -39,11 +39,6 @@ const TEXTO_DO_CAMPO_DA_ESCOLA: Readonly<Record<CampoDaEscola, string>> = {
   redeId: 'Escolha a rede da escola.',
   nome: TEXTO_DO_NOME_INVALIDO,
   slug: REGRA_DO_ENDERECO,
-}
-
-const TEXTO_DO_CAMPO_DO_CONVITE: Readonly<Record<CampoDoConvite, string>> = {
-  nome: TEXTO_DO_NOME_INVALIDO,
-  email: TEXTO_DO_EMAIL_INVALIDO,
 }
 
 /**
@@ -82,10 +77,8 @@ export function pedidoDeEscola(id: string, campos: { readonly redeId: string; re
 /**
  * O pedido de `POST /v1/operacao/escolas/:id/convite-coordenacao` (tarefa 7.0), pelo mesmo contrato estrito da API: o
  * nome sem os espaços das pontas e o e-mail em minúsculas, como o login o procura. O resumo antes de gerar mostra o que
- * sai daqui, e não o que foi digitado.
+ * sai daqui, e não o que foi digitado. A leitura é a do diálogo de convite, que a escola também usa (A1, 14.0).
  */
-export function pedidoDeConvite(campos: { readonly nome: string; readonly email: string }): Validacao<PedidoConviteDaCoordenacao, CampoDoConvite> {
-  const lido = esquemaPedidoConviteDaCoordenacao.safeParse({ nome: campos.nome, email: campos.email })
-  if (lido.success) return { ok: true, pedido: lido.data }
-  return { ok: false, erros: errosDos(lido.error.issues.map((problema) => problema.path), TEXTO_DO_CAMPO_DO_CONVITE) }
+export function pedidoDeConvite(campos: { readonly nome: string; readonly email: string }): ValidacaoDoConvite<PedidoConviteDaCoordenacao> {
+  return pedidoDeConvitePelo(esquemaPedidoConviteDaCoordenacao, campos)
 }

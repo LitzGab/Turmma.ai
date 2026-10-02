@@ -38,8 +38,11 @@ const TITULO_DA_FALHA = 'Não foi possível carregar esta parte do Turmma'
  * (outra resolução de módulos); a tarefa que acrescenta a linha lá acrescenta aqui, e o W2 percorre todos.
  */
 const ITENS_DO_PROFESSOR = [{ rotulo: 'Turmas', caminho: '/professor/turmas' }] as const
-/** Os itens da coordenação, como a mesma tabela os declara: "Estrutura" chegou na 13.0. */
-const ITENS_DA_COORDENACAO = [{ rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' }] as const
+/** Os itens da coordenação, como a mesma tabela os declara: "Estrutura" chegou na 13.0, e "Professores", na 14.0. */
+const ITENS_DA_COORDENACAO = [
+  { rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' },
+  { rotulo: 'Professores', caminho: '/coordenacao/professores' },
+] as const
 /** Os itens do aluno, como a mesma tabela os declara: "Minha turma" chegou na 12.0. */
 const ITENS_DO_ALUNO = [{ rotulo: 'Minha turma', caminho: '/aluno/minha-turma' }] as const
 
@@ -141,11 +144,12 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     const pedidos = registrarChunks(page)
     await entrarComoProfessora(page, hasTouch)
 
-    // Os endereços da coordenação que têm tela desde a 13.0: a Estrutura e uma turma aberta nela.
-    for (const endereco of ['/coordenacao/estrutura', `/coordenacao/estrutura/turmas/${randomUUID()}`]) {
+    // Os endereços da coordenação que têm tela: a Estrutura e uma turma aberta nela (13.0), e Professores (14.0).
+    for (const endereco of ['/coordenacao/estrutura', `/coordenacao/estrutura/turmas/${randomUUID()}`, '/coordenacao/professores']) {
       await page.goto(endereco)
       await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       await expect(page.getByRole('heading', { name: 'Estrutura' })).toHaveCount(0)
+      await expect(page.getByRole('heading', { name: 'Professores' })).toHaveCount(0)
     }
     await expect(page).toHaveTitle('Página não encontrada · Turmma')
     // A casca continua: a pessoa sai dali pela lateral, e não por um beco sem saída.
@@ -205,7 +209,7 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await abrirNavegacao(page, hasTouch)
     await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Minha turma' })).toHaveAttribute('aria-current', 'page')
 
-    for (const endereco of ['/professor/turmas', '/coordenacao/estrutura']) {
+    for (const endereco of ['/professor/turmas', '/coordenacao/estrutura', '/coordenacao/professores']) {
       await page.goto(endereco)
       await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     }

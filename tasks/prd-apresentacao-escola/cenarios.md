@@ -414,8 +414,8 @@ aos cenários.
   |---|---|---|
   | Estrutura | "Comece pelo ano letivo" → roteiro até a alocação; a coordenação abre aqui (13.0) | o que falta, sem marcar o passo cuja leitura ainda carrega ou falhou; as listas na ordem da escola, e não na de criação; só o ano planejado se abre, e só sem ano em curso; o ano letivo novo não grava período de outro ano; na turma nova, a série que outra pessoa excluiu sai da escolha (13.0) |
   | Lista | "Cole a lista ou envie o arquivo: nome; matrícula" | prévia, erros primeiro |
-  | Professores | "Nenhum professor ainda" → Cadastrar | estado do convite |
-  | Alocação | "Crie uma turma e um professor primeiro" (sem turma, sem disciplina ou sem professor alocável: o de convite vencido não conta; a descrição diz o que falta, 13.0) | vínculos; a escolha pelo nome; o convite que vence com a tela aberta sai da escolha, e o "Alocar" seguinte não o reenvia (13.0) |
+  | Professores | "Nenhum professor ainda" → Cadastrar; a releitura que cai com a lista ainda vazia, logo depois do primeiro cadastro, mostra o erro com "Tentar de novo", e não o vazio (14.0) | estado do convite, em texto, pelo nome, e só as ações que a matriz permite; o erro da releitura por cima da lista; o resumo do cadastro avisa o nome que já está na lista, sem impedir; a etapa do link do cadastro diz a quem mandar e o e-mail com que a pessoa entra ("Mande o link a …, que entra com o e-mail …"), e a do refazer, só o nome, porque a lista não traz e-mail; a recusa que chega com a pergunta de fechar aberta tira a pergunta e volta à etapa do pedido, com o foco no aviso, e "Voltar e corrigir" leva o foco ao campo do nome (14.0) |
+  | Alocação | "Crie uma turma e um professor primeiro" (sem turma, sem disciplina ou sem professor alocável: o de convite vencido não conta; a descrição diz o que falta, 13.0). O título diz só o que falta — "Crie uma disciplina primeiro" com a turma e o professor já criados —, e, faltando o professor, o vazio leva à tela Professores (14.0) | vínculos; a escolha pelo nome; o convite que vence com a tela aberta sai da escolha, e o "Alocar" seguinte não o reenvia (13.0) |
   | Turmas | "A coordenação ainda não alocou você"; só pendente: "Confirme suas turmas" | confirmadas |
   | Pedidos | professor: "Nenhum pedido esperando" → Acesso; coordenação: "Os pedidos chegam quando o professor da turma gerar o acesso", sem botão | seleção |
   | Acesso | "Sem acesso ativo" → Gerar | validade |
@@ -474,7 +474,25 @@ aos cenários.
   troca recusada e leva o foco à escola de agora; dois toques na mesma escola mandam uma troca só. **Quebra sem:** o
   `aria-current`; o limite de uma escola; a guarda da escola de agora; a guarda da troca no ar
 - **W14** Aceite do professor: conta nova cria a senha e vai à entrada; o link refeito mostra o texto de convite
-  inválido, com "peça outro à coordenação"
+  inválido, com "peça outro à coordenação". Como ficou na 14.0: a tela é a mesma do convite da coordenação, e o texto do
+  convite que não vale serve aos dois ("Este convite não vale mais. Peça outro à coordenação da sua escola. Se o convite
+  era para a coordenação, peça a quem enviou o link."), igual para expirado, revogado, refeito, já usado e inexistente,
+  com "Já aceitou o convite? Entrar"; a entrada mostra "Senha criada. Entre com o seu e-mail e a senha que você acabou
+  de criar.", sem segundo fator; o professor entra e chega a Turmas pela página inicial; quem já tem conta em outra
+  escola aceita sem senha nova. O recomeço da tela: o mesmo link colado de novo recomeça a consulta com a barra limpa; o
+  aceite do link anterior que responde depois não entra nem guarda bilhete, e a consulta do link anterior que responde
+  depois (valendo, recusada ou caindo) não troca a tela do link novo; o fragmento quebrado diz que o endereço está
+  incompleto; a consulta que cai tem "Tentar de novo"; o passo da senha leva o foco ao campo "Senha nova". **Quebra
+  sem:** o `hashchange`; a vez do link no aceite; a guarda da consulta; o aviso pela senha nova; o `try` do fragmento; o
+  foco no campo da senha. Em Professores (W4, 14.0), **quebra sem:** o erro no lugar do vazio quando a releitura cai; a
+  pergunta que sai quando o link deixa de estar em risco; a falha solta no "Voltar e corrigir"; o aviso do nome
+  repetido; o diálogo que sai quando a sessão da aba muda. Também em Professores (14.0): o `CONFLITO` do cadastro (o
+  e-mail de quem já tem convite em aberto) diz o que fazer sem dizer de quem é o e-mail, e "Voltar e corrigir" deixa
+  trocar o e-mail; o `CONFLITO` do refazer e o revogar do já revogado recarregam a lista e deixam só "Fechar"; dois
+  cliques no mesmo instante em cadastrar, refazer e revogar mandam um pedido só, e o link na tela é o da única resposta.
+  No aceite (14.0): dois cliques no mesmo instante em "Aceitar o convite" mandam um aceite só; o convite usado ou
+  revogado entre a consulta e o aceite mostra a tela do convite que não vale, sem o nome da escola. **Quebra sem:** a
+  trava do pedido no ar, em cada um; o `NAO_ENCONTRADO` do aceite levando à tela do convite que não vale
 - **W15** (unidade, relógio falso e `visibilitychange`) Professor: a lista de pedidos atualiza a cada 15 s com a aba
   visível e para com ela escondida; a atualização mantém os ids selecionados, o foco e os ids do diálogo aberto, e
   anuncia os pedidos novos numa região `aria-live="polite"`, sem roubar o foco. Coordenação: nenhuma leitura sai sem o

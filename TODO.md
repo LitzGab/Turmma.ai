@@ -129,6 +129,16 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       `aguardarSaudavel` (`tools/testes/compose.ts`). Sem carimbo
       uniforme, o log de um ensaio de carga não cruza com o instante do que falhou
 
+- [ ] **Job `infra` da esteira perto do teto, sem guarda.** Leva de 29 a 30 min desde `3aeec3b` (tarefa 9.0 da A1),
+      contra 22 a 23 min antes (30 min na execução 37001095812, do commit `241ba1c`); o teto é de 45 min e nenhuma
+      guarda liga o tamanho da suíte a ele, como a de `tools/ci/esteira.test.ts` passou a fazer com o e2e. E os
+      comentários que dizem quanto ele leva venceram: "uns 11 min" e "uns 16 min" em `.github/workflows/ci.yml:54-55`,
+      e "uns 16 min" em `vitest.config.ts:7`, `README.md:60` e `.claude/rules/40-testes.md:102`. Na mesma correção, a
+      frase do `docs/runbook.md` ("Esteira vermelha no e2e") que diz que a guarda do teto "reprova no portão local":
+      está certa e incompleta, porque o teste é de unidade e reprova também no job `verificar` (`test-engineer` e
+      `infra-guardian` da correção `2026-10-02-teto-do-e2e-na-esteira`). Destino: correção própria por `/corrigir`,
+      antes da próxima tarefa que acrescentar teste com espera de relógio em `infra/**/*.int.test.ts`
+
 **Ao ligar HTTPS na borda do staging, as quatro coisas abaixo são da mesma tarefa.** Estão separadas
 porque item único vira execução parcial. Motivo e medição de cada uma em
 `tasks/correcoes/2026-09-22-log-da-borda-afogado-pela-sonda-do-proprio-container.md`, seção "O que fica
@@ -436,12 +446,34 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] Contador `banco.conexao_descartada{causa}`, separando erro de consulta e erro da conexão: hoje o descarte não
       aparece em métrica nenhuma, só a queda das conexões em uso, e o failover do Postgres gerenciado precisa ser sinal
       próprio (`infra-guardian` da correção `577d185`). Destino: antes do staging (D31)
-- [ ] O formato do token opaco de 43 caracteres base64url está em três lugares: `esquemaTokenDeLink`
-      (`packages/shared/src/sessao/token.ts`, convite da coordenação e link da sala, A1 4.0), o `token` do convite de
-      professor (`packages/shared/src/professores/professores.ts`, que ainda o pega do contrato do painel) e o
-      `FORMATO_DO_REFRESH` (`apps/api/src/sessao/renovacao.service.ts` e `apps/api/src/operacao/sessao.service.ts`).
-      Unificar no `esquemaTokenDeLink` (`revisor-geral` da 4.0 da A1). Destino: correção própria, ou a 14.0 da A1, que toca o
-      convite de professor
+- [ ] Professores com o mesmo nome na tela Professores da coordenação (A1, 14.0): a lista traz só usuário, nome e estado
+      (sem e-mail, para não dizer se a conta do e-mail existia, E11), e duas pessoas de mesmo nome dão duas linhas e dois
+      "Refazer o convite de …" iguais; o link refeito de uma pode ir para a outra. A tela avisa o nome repetido no resumo
+      do cadastro, sem impedir. O desempate de verdade é o e-mail na linha, que muda o contrato da 3.0
+      (`esquemaProfessorDaEscola`) e o E11 (`test-engineer` e `frontend-reviewer` da 14.0). A consequência, pela matriz
+      de estados (leitura do `privacy-guardian`, não reproduzida): quem recebe o link errado define a senha da conta da
+      outra pessoa; a linha vira `aceito`, que não tem refazer nem revogar, e recadastrar o e-mail dá `CONFLITO`; a pessoa
+      certa fica sem caminho até o reset de senha (F2). É o mesmo risco da conta global da Tech Spec da A1, seção 13,
+      tolerado enquanto o dado for sintético. Posição do `privacy-guardian` para a decisão: o e-mail na linha é aceitável
+      (está na tabela de dados, e foi a coordenação que o digitou), com três condições — só nas linhas com convite em
+      aberto (`pendente`, `vencido`); decidir se a origem é o e-mail global da conta ou o que a escola digitou (campo
+      novo, com linha própria no `docs/lgpd.md`); e o E11 passar a provar que o e-mail aparece igual nos dois casos.
+      Destino: junto da prova de posse do e-mail do "Portão da primeira escola real" (`ROADMAP.md`)
+- [ ] A trava do pedido no ar e o alerta com foco existem duas vezes na web: `useEnvioUnico` e `AlertaDaFalha`, em
+      `apps/web/src/areas/coordenacao/dialogos.tsx` (A1, 13.0), e o `noAr` e o `Falha` de
+      `apps/web/src/componentes/DialogoDoConvite.tsx` (da A0b, que veio para `componentes/` na 14.0). Mover os dois
+      primeiros para `componentes/` e o diálogo do convite passar a usá-los deixa um jeito só (`revisor-geral` da 14.0).
+      Não é troca de nome: o `Falha` leva o foco de novo a cada erro, e o `AlertaDaFalha`, só quando o texto muda, e a
+      trava do diálogo está sob o e2e da A0b e as mutações da 14.0. Na mesma correção: o mapa
+      `TEXTOS_DO_CONVITE_QUE_MUDOU` de `areas/coordenacao/convite-de-professor.ts` difere por uma letra do texto
+      `TEXTO_DO_CONVITE_QUE_MUDOU` que o arquivo importa; dar ao mapa um nome que diga o que ele é (`revisor-geral` da
+      14.0, 2ª rodada). Destino: correção própria
+- [ ] O formato do token opaco de 43 caracteres base64url está em dois lugares: `esquemaTokenDeLink`
+      (`packages/shared/src/sessao/token.ts`: convite da coordenação, link da sala e, desde a 14.0 da A1, o convite de
+      professor) e o `FORMATO_DO_REFRESH` (`apps/api/src/sessao/renovacao.service.ts` e
+      `apps/api/src/operacao/sessao.service.ts`). Unificar os dois da API no mesmo formato (`revisor-geral` da 4.0 da A1).
+      A 14.0 fez a parte do convite de professor; o refresh é da API de sessão, fora de uma tarefa de tela. Destino:
+      correção própria
 
 ## Regulação educacional
 
