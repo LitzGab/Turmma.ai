@@ -380,6 +380,47 @@ decisão (10.0) travam o ano no começo da transação delas; o ano que deixou d
     nele). O diálogo do convite e os textos dele caem em pedaços `parte-*` que a coordenação divide com a operação, e
     conta no primeiro carregamento (123,8 kB de 150)
   - O `token` do contrato do convite de professor usa o `esquemaTokenDeLink` (pendência da 4.0)
+- **Decidido na 15.0** (divergências registradas em `15_task.md`):
+  - A turma aberta pelo professor fica em `/professor/turmas/:turmaId`, dentro de Turmas (o item da lateral continua
+    selecionado), e abre pelo cartão do vínculo **confirmado** ("Abrir a turma"); o pendente, o contestado e o encerrado
+    não oferecem o link. O nome e a série vêm do `GET /v1/turmas/:id`, que já servia o professor com vínculo confirmado.
+    A turma que a API não acha (vínculo não confirmado ou encerrado, turma excluída, ano virado, outra escola,
+    inexistente) tem uma resposta só na tela, com a quem recorrer e sem "Tentar de novo", na página e na seção do acesso
+  - A seção "Acesso dos alunos": carregando; erro com "Tentar de novo"; "Sem acesso ativo" com o Gerar; e, com acesso,
+    só "Vale até …", "Gerar novo" e "Revogar" (`perigo`). **A releitura que falha mostra o erro, e não o estado de
+    antes**: "Sem acesso ativo" logo depois de gerar negaria o acesso que acabou de nascer
+  - Gerar e "Gerar novo" são o mesmo diálogo: a validade em três opções (7 dias já escolhidos), o que acontece, e então
+    o acesso, uma vez. "Gerar novo" diz antes que o link e o código de agora caem, também os de outro professor da
+    turma, e que os nomes travados por matrícula errada destravam; o primeiro acesso não fala disso. O acesso gerado
+    mostra o código em `font-mono`, de 36 px a 60 px, pelos dois grupos de `exibirCodigoDaTurma` (para o leitor de
+    tela, soletrado), o endereço onde o
+    aluno o digita (`<host>/e/<slug>/turma`), o link num campo de leitura, e avisa que quem tem o link ou o código vê os
+    nomes livres da lista e que "Gerar novo" derruba o link que foi parar onde não devia
+  - As peças de cópia única (a pergunta de fechar, a cópia, o campo do link, a falha com o foco, o foco de cada etapa)
+    saíram de `componentes/DialogoDoConvite.tsx` para `componentes/copia-unica.tsx`, e o convite e o acesso as usam; a
+    pergunta recebe o texto e o rótulo de voltar de quem a usa. `Anuncio`, `AlertaDaFalha`, `useEnvioUnico`,
+    `DialogoDeFormulario` e `ConfirmacaoDePerigo` saíram de `areas/coordenacao/dialogos.tsx` para
+    `componentes/dialogos.tsx` (nota da 13.0), `textoDaFalha` e `listaMudou` para `componentes/texto-da-falha.ts`, que a
+    operação também passou a usar (o `textoDaFalha` dela é o mesmo, com o mapa de textos dela), e a classe do `select`,
+    para `componentes/seletor.ts`. O `useEnvioUnico` recebe as opções da mutação como o `useMutation` as recebe
+  - O link e o código vivem só na mutação do diálogo que os pediu (`gcTime: 0`, `reset()` ao fechar), e **a validade na
+    seção vem sempre da leitura**, nunca da resposta do gerar: o gerar que responde atrasado, depois de outro, não troca
+    o código na tela nem a validade. O `CONFLITO` do gerar (outro gerar ao mesmo tempo) e o `NAO_ENCONTRADO` recarregam
+    a seção e deixam só "Fechar"; o `NAO_ENCONTRADO` do revogar (o acesso já caiu), também
+  - **O diálogo aberto sai quando a sessão da aba muda**, sem ouvinte próprio: a turma aberta só desenha a seção com a
+    turma e a escola (`/v1/eu`) lidas, e toda sessão que acaba ou muda esvazia as duas leituras. A releitura que cai
+    por rede ou servidor com o dado já na tela **não** desmonta nada: o código pode estar projetado; a que responde
+    `NAO_ENCONTRADO` (o vínculo encerrado com a tela aberta) tira a página inteira, com o diálogo, leva o foco ao
+    aviso e tira o nome da turma do título da aba. Outra turma é outra
+    tela (a `key` da rota)
+  - **WhatsApp**: o botão abre `https://wa.me/?text=…` numa aba nova (`window.open`, sem deixar o `opener` com ela), com
+    o texto de `textoDoWhatsApp`, que só recebe o nome da escola e o link. "Sem o WhatsApp" é o que a tela consegue
+    saber: o navegador não abriu a aba nova. Aí o mesmo botão copia o texto e diz onde colar; sem área de transferência,
+    seleciona o link no campo. Compartilhar conta como link copiado para a pergunta de fechar. O botão é `secundario`,
+    sem o verde nem o símbolo do WhatsApp (D72: três cores; logotipo de terceiro fica de fora)
+  - Teto do chunk `professor-*`: 10 kB (mede ~5,3 kB com Turmas e a turma aberta, e a 16.0 ainda põe os pedidos nele). Os
+    diálogos e a cópia única caem em pedaços `parte-*` que as áreas dividem, e contam no primeiro carregamento (126,2 kB
+    de 150)
 - **Decisão**: "Aprovar N" (`oficial`) revisa turma, nomes e efeito, e avisa a coordenação da auditoria; "Recusar"
   (`perigo`) confirma; depois, texto por pedido (W6). Até 40, explicado. O pedido mostra se houve tentativa com
   matrícula errada no nome. Para o professor, atualiza a cada 15 s com a aba visível (W15); a coordenação usa
@@ -411,7 +452,10 @@ Em `cenarios.md`, parte desta spec: lista fechada, um id por teste, com a cláus
 
 ## 12. Premissas não verificadas
 
-- ⚠️ NÃO VERIFICADO: `wa.me/?text=` abre o WhatsApp no Chromebook e no celular; senão, copia
+- ⚠️ NÃO VERIFICADO: `wa.me/?text=` abre o WhatsApp no Chromebook e no celular; senão, copia. Na 15.0 o "senão" é o
+  navegador que não abre a aba nova (o que a tela consegue saber): o botão copia o texto. O `wa.me` que abre e não
+  carrega (a rede da escola o bloqueia, ou não há WhatsApp Web) a tela não tem como perceber, e continua sem verificação
+  em Chromebook de escola: sobra o "Copiar link", na mesma etapa
 - ⚠️ NÃO VERIFICADO: o Excel brasileiro grava CSV em windows-1252 com `;`; a leitura aceita os dois
 
 ## 13. Riscos técnicos

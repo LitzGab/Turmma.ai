@@ -65,6 +65,16 @@ Cada nome tem estado: livre, reivindicado, aprovado.
 **Reivindicação** — O ato do aluno de dizer "este nome da lista sou eu", pendente de
 aprovação do professor.
 
+**Acesso da turma** — O link da sala e o código da turma, que o professor com vínculo confirmado gera para os alunos
+chegarem à lista de nomes e pedirem o próprio nome. Os dois valem juntos, por 1, 7 ou 30 dias, e a turma tem um acesso
+só: "Gerar novo" derruba o anterior, também o de outro professor da turma. Aparecem uma vez, quando são gerados.
+
+**Link da sala** — O endereço `/e/<slug>/turma` com o token do acesso no fragmento. É de uso múltiplo: a turma inteira
+usa o mesmo, e o que é único é a reivindicação de cada nome.
+
+**Código da turma** — Os oito caracteres do acesso, sem os que se confundem na lousa (0, 1, I, L, O), mostrados em dois
+grupos de quatro. O aluno o digita no endereço da sala, no lugar de abrir o link.
+
 **Conta** — A credencial global de quem é da equipe (professor, coordenador): e-mail, senha e segundo fator. Uma
 conta tem um usuário em cada escola onde trabalha. Aluno não tem conta.
 

@@ -11,7 +11,14 @@ export const BASE_DA_AREA: Readonly<Record<PapelDeUsuario, string>> = { coordena
 export const ROTAS_DO_PROFESSOR = {
   /** As turmas e disciplinas que a coordenação alocou: confirmar ou contestar cada uma (F1, RF4 e D73). */
   turmas: '/turmas',
+  /** Uma turma aberta dentro de Turmas, com o acesso dos alunos (A1, 15.0; RF9) e, na 16.0, os pedidos. */
+  turma: '/turmas/:turmaId',
 } as const
+
+/** O endereço da turma aberta pelo professor, **relativo à área**, como o da Estrutura (`caminhoDaTurmaNaEstrutura`). */
+export function caminhoDaTurmaDoProfessor(turmaId: string): string {
+  return ROTAS_DO_PROFESSOR.turma.replace(':turmaId', encodeURIComponent(turmaId))
+}
 
 /** As rotas da área da coordenação, relativas à base dela. */
 export const ROTAS_DA_COORDENACAO = {
@@ -59,6 +66,14 @@ export const ROTAS = {
   /** Estado do sistema, público: é a tela que se abre justamente quando não se consegue entrar. */
   sistema: '/sistema',
 } as const
+
+/**
+ * O endereço da sala da turma, por onde o aluno reivindica o nome: `/e/<slug>/turma` (Tech Spec da A1, seção 4). O token
+ * do link vai no fragmento `#`, como o do convite, e nunca no caminho nem na consulta; a página é da 17.0.
+ */
+export function caminhoDaSala(slug: string): string {
+  return `${ROTAS.escola.replace(':slug', encodeURIComponent(slug))}/turma`
+}
 
 /**
  * A tela de cada etapa que o login pode devolver (Tech Spec, seção 5, "Etapas"). `pronta` já tem sessão e vai para

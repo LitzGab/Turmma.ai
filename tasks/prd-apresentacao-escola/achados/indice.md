@@ -177,3 +177,14 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-02 05:44:48 | `frontend-reviewer` | 4ª | APROVADO | `14_task` | `14_task.md:125` ainda diz que `operacao/textos.ts` reexporta os dois textos de campo; a linha `:186-189` do mesmo documento diz que o reexport saiu. Acertar a… |
 | 2026-10-02 05:46:56 | `privacy-guardian` | 2ª | APROVADO | `14_task` | nenhuma nova. As duas da 1ª rodada sem aplicar seguem com destino em "Recomendações sem aplicar" do 14_task.md (linhas 306 e 307). |
 | 2026-10-02 05:48:17 | `revisor-geral` | 2ª | APROVADO | `14_task` | quatro, listadas abaixo |
+| 2026-10-02 17:17:46 | `test-engineer` | 1ª | REPROVADO | `15_task` | e2e/acesso-da-turma.spec.ts:593-595 — o W12 não prova os 360 px com nome comprido. |
+| 2026-10-02 17:33:53 | `test-engineer` | 2ª | APROVADO | `15_task` | As quatro da 1ª rodada que não foram aplicadas estão em "Recomendações sem aplicar" do `15_task.md`, com destino no `/validar`. Mantenho as quatro como… |
+| 2026-10-02 17:38:14 | `frontend-reviewer` | 1ª | APROVADO | `15_task` | 5, listadas abaixo |
+| 2026-10-02 17:40:47 | `privacy-guardian` | 1ª | APROVADO | `15_task` | docs/lgpd.md, linha "Acesso da turma": a frase "fora de URL e de armazenamento do navegador" vale para a nossa |
+| 2026-10-02 17:41:29 | `revisor-geral` | 1ª | REPROVADO | `15_task` | um, de portão; nenhum de código (abaixo) |
+| 2026-10-02 18:15:18 | `test-engineer` | 3ª | APROVADO | `15_task` | A validade em linha (apps/web/src/areas/professor/AcessoDaTurma.tsx:231) foi aplicada para o "Cancelar" caber no celular baixo, mas nenhum teste roda a 360 ×… |
+| 2026-10-02 18:16:42 | `frontend-reviewer` | 2ª | APROVADO | `15_task` | três, abaixo |
+| 2026-10-02 18:46:04 | `test-engineer` | 4ª | APROVADO | `15_task` | `e2e/acesso-da-turma.spec.ts:689`: o `cancelar?.y ?? 640` com `height ?? 0` dá exatamente 640 quando a caixa é nula, e a asserção passaria sem botão. Hoje não… |
+| 2026-10-02 18:47:02 | `frontend-reviewer` | 3ª | APROVADO | `15_task` | duas, abaixo |
+| 2026-10-02 18:48:26 | `revisor-geral` | 2ª | APROVADO | `15_task` | tasks/prd-apresentacao-escola/15_task.md:149 — frase quebrada na divergência da releitura: "…o aviso não puxa o foco. E e a turma só desenha a seção…". Acertar… |
+| 2026-10-02 18:48:29 | `privacy-guardian` | 2ª | APROVADO | `15_task` | e2e/acesso-da-turma.spec.ts:1095 — no fim do teste "a releitura que cai…", conferir também o código com o espaço do meio e o soletrado, como já faz a linha… |

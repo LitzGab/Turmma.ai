@@ -8,6 +8,7 @@ import { CLASSES_DO_BOTAO_PERIGO, CLASSES_DO_BOTAO_SECUNDARIO } from '../../comp
 import { Dialogo } from '../../componentes/Dialogo'
 import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
 import { DialogoDeConviteNovo, DialogoDeConviteRefeito } from '../../componentes/DialogoDoConvite'
+import { Anuncio, ConfirmacaoDePerigo } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { useTituloDaTela } from '../../titulo'
 import {
@@ -22,7 +23,6 @@ import {
   TEXTO_DO_NOME_REPETIDO,
   TEXTOS_DO_CONVITE_QUE_MUDOU,
 } from './convite-de-professor'
-import { Anuncio, ConfirmacaoDePerigo } from './dialogos'
 import { ordenarPeloNome } from './ordem'
 import { AvisoDeListaIncompleta, Linha } from './pecas-da-lista'
 

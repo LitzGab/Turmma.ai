@@ -9,8 +9,8 @@ import {
 } from '@educa/shared'
 import type { FalhaDoConvite } from '../../componentes/DialogoDoConvite'
 import { pedidoDeConvitePelo, type ValidacaoDoConvite } from '../../componentes/pedido-de-convite'
+import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
 import { TEXTO_DO_CONVITE_QUE_MUDOU, TEXTO_DO_CONVITE_QUE_NAO_VALE } from '../../componentes/textos-do-convite'
-import { listaMudou, textoDaFalha } from './dialogos'
 
 /**
  * O convite do professor na tela Professores (A1, 14.0; RF6): o que a lista diz de cada estado, as ações que cada estado

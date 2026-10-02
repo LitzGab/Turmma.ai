@@ -15,8 +15,10 @@ import { consultaProfessores } from '../../api/professores'
 import { ROTAS_DA_COORDENACAO } from '../../caminhos'
 import { Botao } from '../../componentes/Botao'
 import { CLASSES_DO_LINK_SECUNDARIO } from '../../componentes/botao-secundario'
+import { AlertaDaFalha, Anuncio, useEnvioUnico } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
-import { AlertaDaFalha, Anuncio, textoDaFalha, useEnvioUnico } from './dialogos'
+import { CLASSES_DO_SELETOR } from '../../componentes/seletor'
+import { textoDaFalha } from '../../componentes/texto-da-falha'
 import { ordenarPeloNome, ordenarTurmas, ordenarVinculos } from './ordem'
 import { descricaoDoQueFalta, oQueFaltaParaAlocar, tituloDoQueFalta } from './o-que-falta-para-alocar'
 
@@ -39,7 +41,8 @@ function turmaEDisciplina(vinculo: VinculoDaCoordenacao): string {
   return vinculo.disciplina === undefined ? vinculo.turma.nome : `${vinculo.turma.nome} · ${vinculo.disciplina.nome}`
 }
 
-const CLASSES_DO_SELETOR = 'min-h-11 w-full min-w-0 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta'
+/** O `select` da alocação ocupa a coluna inteira dele. */
+const CLASSES_DO_SELETOR_DA_ALOCACAO = `w-full ${CLASSES_DO_SELETOR}`
 
 /**
  * A alocação professor × turma × disciplina (A1, 13.0; RF8; W4, "Alocação"), dentro da Estrutura. O vínculo nasce
@@ -202,7 +205,7 @@ function FormularioDeAlocacao({ professores, turmas, disciplinas, aoAnunciar, re
           <label htmlFor={campos.professor} className="font-medium">
             Professor
           </label>
-          <select id={campos.professor} aria-describedby={campos.dica} value={escolhido.usuarioId} onChange={(evento) => definirUsuarioId(evento.target.value)} className={CLASSES_DO_SELETOR}>
+          <select id={campos.professor} aria-describedby={campos.dica} value={escolhido.usuarioId} onChange={(evento) => definirUsuarioId(evento.target.value)} className={CLASSES_DO_SELETOR_DA_ALOCACAO}>
             <option value="">Escolha o professor</option>
             {professores.map((professor) => (
               <option key={professor.usuarioId} value={professor.usuarioId}>
@@ -215,7 +218,7 @@ function FormularioDeAlocacao({ professores, turmas, disciplinas, aoAnunciar, re
           <label htmlFor={campos.turma} className="font-medium">
             Turma
           </label>
-          <select id={campos.turma} value={escolhido.turmaId} onChange={(evento) => definirTurmaId(evento.target.value)} className={CLASSES_DO_SELETOR}>
+          <select id={campos.turma} value={escolhido.turmaId} onChange={(evento) => definirTurmaId(evento.target.value)} className={CLASSES_DO_SELETOR_DA_ALOCACAO}>
             <option value="">Escolha a turma</option>
             {turmas.map((turma) => (
               <option key={turma.id} value={turma.id}>
@@ -228,7 +231,7 @@ function FormularioDeAlocacao({ professores, turmas, disciplinas, aoAnunciar, re
           <label htmlFor={campos.disciplina} className="font-medium">
             Disciplina
           </label>
-          <select id={campos.disciplina} value={escolhido.disciplinaId} onChange={(evento) => definirDisciplinaId(evento.target.value)} className={CLASSES_DO_SELETOR}>
+          <select id={campos.disciplina} value={escolhido.disciplinaId} onChange={(evento) => definirDisciplinaId(evento.target.value)} className={CLASSES_DO_SELETOR_DA_ALOCACAO}>
             <option value="">Escolha a disciplina</option>
             {disciplinas.map((disciplina) => (
               <option key={disciplina.id} value={disciplina.id}>

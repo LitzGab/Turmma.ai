@@ -12,9 +12,12 @@ import {
 } from '@educa/shared'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useId, useState, type FormEvent } from 'react'
+import { Link } from 'wouter'
 import { mensagemDoErro } from '../../api/cliente'
 import { confirmarVinculo, consultaMeusVinculos, contestarVinculo } from '../../api/vinculos'
+import { caminhoDaTurmaDoProfessor } from '../../caminhos'
 import { Botao } from '../../componentes/Botao'
+import { CLASSES_DO_LINK_SECUNDARIO } from '../../componentes/botao-secundario'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { useTituloDaTela } from '../../titulo'
 
@@ -41,7 +44,8 @@ function nomeDoVinculo(vinculo: Vinculo): string {
  * Os quatro estados (W4): carregando; erro com "Tentar de novo"; vazio, que diz que é a coordenação quem aloca; e com
  * dado, em dois grupos — **"Confirme suas turmas"**, as que ainda esperam a decisão dele (pendente ou contestada), com
  * os botões, e **"Suas turmas"**, as já decididas. Sem confirmar, a turma não abre para ele (E12, P2), e é por isso que
- * as que esperam vêm primeiro.
+ * as que esperam vêm primeiro. Só o cartão do vínculo confirmado leva à turma aberta (15.0), onde ele gera o acesso dos
+ * alunos: o encerrado e o contestado não a alcançam, e a tela não oferece o que a API recusaria.
  *
  * É aba de navegação: o `<h1>` existe só para o leitor de tela, e a lateral já diz onde a pessoa está (`docs/interface.md`
  * 6, P03).
@@ -129,6 +133,12 @@ export function Turmas() {
               </button>
             </div>
           ))}
+        {vinculo.estado === 'confirmado' && (
+          // Relativo à área: o `Route` aninhado em `/professor` resolve o `to` a partir da base dela.
+          <Link to={caminhoDaTurmaDoProfessor(vinculo.turma.id)} className={`mt-3 ${CLASSES_DO_LINK_SECUNDARIO}`}>
+            Abrir a turma<span className="sr-only"> {vinculo.turma.nome}</span>
+          </Link>
+        )}
       </li>
     )
   }
@@ -206,7 +216,7 @@ function FormularioDeContestacao({ contestacao, enviando, falha, aoMudar, aoEnvi
               checked={contestacao.codigo === codigo}
               onChange={() => aoMudar({ ...contestacao, codigo })}
               required
-              className="h-6 w-6"
+              className="h-6 w-6 accent-noite"
             />
             <span>{NOME_DA_CONTESTACAO[codigo]}</span>
           </label>

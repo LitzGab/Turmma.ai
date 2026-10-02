@@ -45,11 +45,13 @@ import { caminhoDaTurmaNaEstrutura, ROTAS_DA_COORDENACAO } from '../../caminhos'
 import { CLASSES_DO_BOTAO_PERIGO, CLASSES_DO_BOTAO_SECUNDARIO, CLASSES_DO_LINK_SECUNDARIO } from '../../componentes/botao-secundario'
 import { Campo } from '../../componentes/Campo'
 import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
+import { AlertaDaFalha, Anuncio, ConfirmacaoDePerigo, DialogoDeFormulario, useEnvioUnico } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
+import { CLASSES_DO_SELETOR } from '../../componentes/seletor'
+import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
 import { formatarData } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import { Alocacao } from './Alocacao'
-import { AlertaDaFalha, Anuncio, ConfirmacaoDePerigo, DialogoDeFormulario, listaMudou, textoDaFalha, useEnvioUnico } from './dialogos'
 import { ordenarPeloNome, ordenarSeries, ordenarTurmas } from './ordem'
 import { AvisoDeListaIncompleta, Linha } from './pecas-da-lista'
 
@@ -728,7 +730,7 @@ function NovaSerie({ existentes, aoFechar, aoCriar, recarregar }: PropsDeCriar<S
             id={campo}
             value={escolhida}
             onChange={(evento) => definirEscolhida(evento.target.value)}
-            className="min-h-11 min-w-0 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta"
+            className={CLASSES_DO_SELETOR}
           >
             {disponiveis.map((serie) => (
               <option key={`${serie.etapa}:${String(serie.ano)}`} value={`${serie.etapa}:${String(serie.ano)}`}>
@@ -834,7 +836,7 @@ function NovaTurma({ anoLetivo, series, aoFechar, aoCriar, recarregar }: PropsDe
               id={campoDaSerie}
               value={serieEscolhida}
               onChange={(evento) => definirSerieId(evento.target.value)}
-              className="min-h-11 min-w-0 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta"
+              className={CLASSES_DO_SELETOR}
             >
               {ordenadas.map((serie) => (
                 <option key={serie.id} value={serie.id}>
@@ -862,7 +864,7 @@ function NovaTurma({ anoLetivo, series, aoFechar, aoCriar, recarregar }: PropsDe
               id={campoDoTurno}
               value={turno}
               onChange={(evento) => definirTurno(evento.target.value === '' ? '' : (TURNOS.find((opcao) => opcao === evento.target.value) ?? ''))}
-              className="min-h-11 min-w-0 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta"
+              className={CLASSES_DO_SELETOR}
             >
               <option value="">Sem turno</option>
               {TURNOS.map((opcao) => (

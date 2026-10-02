@@ -79,7 +79,10 @@ O desenho visual desta casca, com medidas e componentes, está na seção 11.1.
   diagnóstico, ganha os sinais do Tutor no F10 e a comparação da série no F12 (D69). **Quais
   abas ela tem** — as nove do mockup, a sala de carteiras, Recursos e Mural — fecha no PRD da A3
   (P11, P28). Na A1 a turma já existe para o professor ver os alunos e aprovar quem reivindicou o
-  nome (D4, D71 revista)
+  nome (D4, D71 revista). Ela abre pelo cartão do vínculo confirmado, em `/professor/turmas/:turmaId`, e começa pela
+  seção **Acesso dos alunos** (tarefa 15.0; Tech Spec da A1, seção 9): gerar o link da sala e o código da turma com
+  validade de 1, 7 ou 30 dias, projetar o código, copiar o link ou mandá-lo pelo WhatsApp, trocar por um novo e
+  revogar. Os pedidos entram na mesma tela, na 16.0
 - **Seu time** é um grupo da lateral com os dois agentes que o professor vê: o **Assistente de
   ensino**, por onde chegam as funções que trabalham sozinhas (correção de objetiva, adaptação,
   "seu dia e sua semana"), e o **Tutor**, que o professor supervisiona (D8, D47). Cada um abre a

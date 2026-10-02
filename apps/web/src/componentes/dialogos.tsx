@@ -1,39 +1,29 @@
 import { CodigoDeErro } from '@educa/shared'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, type UseMutationOptions } from '@tanstack/react-query'
 import { useEffect, useRef, type FormEvent, type ReactNode, type RefObject } from 'react'
-import { ErroDaApi, mensagemDoErro } from '../../api/cliente'
-import { Botao } from '../../componentes/Botao'
-import { CLASSES_DO_BOTAO_PERIGO_CHEIO, CLASSES_DO_BOTAO_SECUNDARIO } from '../../componentes/botao-secundario'
-import { Dialogo } from '../../componentes/Dialogo'
+import { Botao } from './Botao'
+import { CLASSES_DO_BOTAO_PERIGO_CHEIO, CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
+import { Dialogo } from './Dialogo'
+import { listaMudou, textoDaFalha } from './texto-da-falha'
 
 /**
- * As peças dos diálogos da Estrutura (A1, 13.0): o envio único, o alerta de falha dentro do diálogo e os dois diálogos
- * que se repetem — o formulário (criar, renomear, acrescentar) e a confirmação de `perigo` (excluir, retirar).
+ * As peças dos diálogos das telas da escola: o envio único, o anúncio da ação que terminou, o alerta de falha dentro do
+ * diálogo e os dois diálogos que se repetem — o formulário (criar, renomear, acrescentar) e a confirmação de `perigo`
+ * (excluir, retirar, revogar). Nasceram na Estrutura da coordenação (A1, 13.0) e vieram para `componentes/` na 15.0, com
+ * a turma do professor usando as mesmas: importar de `areas/coordenacao/` levaria o módulo para o chunk da outra área.
+ * O texto de cada falha e o "a lista mudou" moram em `texto-da-falha.ts`, sem React.
  *
  * Cada abertura é uma instância nova (`useDialogoDaTela`, `key` pelo número): o aviso e o foco de uma tentativa anterior
  * não sobrevivem ao fechar e abrir de novo (o "recomeço da tela" do 13_task.md).
  */
 
-/** O texto de uma falha, pelo código: o da tela quando ela tem um, senão o do catálogo (regra 50, item 12). */
-export function textoDaFalha(erro: unknown, textos: Partial<Record<CodigoDeErro, string>> = {}): string {
-  return (erro instanceof ErroDaApi ? textos[erro.codigo] : undefined) ?? mensagemDoErro(erro)
-}
-
-/** A falha mudou o que está na tela (o item saiu ou mudou): a lista recarrega, e o diálogo só oferece "Fechar". */
-export function listaMudou(erro: unknown, codigos: readonly CodigoDeErro[]): boolean {
-  return erro instanceof ErroDaApi && codigos.includes(erro.codigo)
-}
-
 /**
  * Um pedido por vez: o segundo clique de um clique duplo chega antes do `isPending` da mutação, e sairia outro pedido. A
- * trava é na hora, numa `ref`, e solta quando o pedido termina.
+ * trava é na hora, numa `ref`, e solta quando o pedido termina. As opções são as do `useMutation`, escritas na tela ou
+ * vindas de `api/` (as do acesso da turma, que têm teste de unidade); o `gcTime: 0` vale sempre: a resposta não fica no
+ * cache depois de o diálogo sair.
  */
-export function useEnvioUnico<Entrada, Saida>(opcoes: {
-  mutationFn: (entrada: Entrada) => Promise<Saida>
-  onSuccess?: (saida: Saida, entrada: Entrada) => unknown
-  onError?: (erro: Error, entrada: Entrada) => unknown
-  onSettled?: () => unknown
-}) {
+export function useEnvioUnico<Entrada, Saida>(opcoes: UseMutationOptions<Saida, Error, Entrada>) {
   const noAr = useRef(false)
   const mutacao = useMutation({ ...opcoes, gcTime: 0 })
   function enviar(entrada: Entrada): void {

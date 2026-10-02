@@ -1,11 +1,12 @@
 import { useMutation, type UseMutationOptions } from '@tanstack/react-query'
-import { useEffect, useId, useRef, useState, type ComponentType, type FormEvent, type ReactNode, type RefObject } from 'react'
+import { useRef, useState, type ComponentType, type FormEvent, type ReactNode, type RefObject } from 'react'
 import { ROTAS } from '../caminhos'
 import { Botao } from './Botao'
 import { CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
 import { Campo } from './Campo'
+import { AvisoDaCopia, CampoDoLink, Falha, Pergunta, useCopia, useFechamento, useFocoDaEtapa } from './copia-unica'
 import type { PropsDoDialogo } from './Dialogo'
-import { copiarLink, linkDoConvite } from './link-do-convite'
+import { linkDoConvite } from './link-do-convite'
 import type { CampoDoConvite, ValidacaoDoConvite } from './pedido-de-convite'
 
 /**
@@ -15,14 +16,13 @@ import type { CampoDoConvite, ValidacaoDoConvite } from './pedido-de-convite'
  * passa a moldura (o `Dialogo`, ou o da operação, com o aviso de inatividade), os textos, a mutação e o texto de cada
  * falha.
  *
+ * A pergunta de fechar, a cópia, a falha com o foco e o foco de cada etapa são as peças de `copia-unica.tsx`, que o acesso
+ * da turma do professor também usa (15.0).
+ *
  * O token vive só na mutação do diálogo que o pediu: cada abertura é outra instância (a `key` da abertura), e a resposta
  * que chega depois de o diálogo fechar não cai em nenhum outro. As opções da mutação vêm de quem usa, com `gcTime: 0`, e
  * entram no `useMutation` como estão: fechado o diálogo, o token sai do cache na mesma hora (regra 20, item 8).
  */
-
-/** O que a área de transferência fez, dito no `role="status"` de dentro do diálogo. */
-const TEXTO_DO_LINK_COPIADO = 'Link copiado.'
-const TEXTO_DO_LINK_SELECIONADO = 'O link está selecionado no campo. Copie com Ctrl+C, ou toque e segure no campo e escolha Copiar.'
 
 /** A moldura do diálogo: o `Dialogo` de `componentes/`, ou o da operação, que acrescenta o aviso de inatividade. */
 export type MolduraDoConvite = ComponentType<Omit<PropsDoDialogo, 'rodape'>>
@@ -49,63 +49,13 @@ interface TextosDaAcao {
   readonly anuncio: string
 }
 
-/**
- * Fechar o diálogo que tem, ou vai ter, um link que ninguém copiou. Com o link em risco — o pedido no ar, ou o link na
- * tela sem cópia confirmada —, o primeiro pedido de fechar (o botão, o Esc ou o toque fora) mostra a pergunta; o segundo,
- * feito na pergunta, fecha. Sem link em risco, fecha na hora.
- *
- * Fechar de vez solta a mutação (`reset()`): o token sai do diálogo e, com o `gcTime: 0` das mutações do convite, do
- * cache na mesma hora (regra 20, item 8).
- */
-function useFechamento(linkEmRisco: boolean, soltar: () => void, aoFechar: () => void) {
-  const [perguntando, definirPerguntando] = useState(false)
-  // A pergunta só vale enquanto há link em risco. O pedido que falha com ela aberta leva o diálogo de volta à etapa
-  // dele, com a falha à vista: a pergunta diria que há um link, e "Fechar sem copiar" esconderia a recusa.
-  if (perguntando && !linkEmRisco) definirPerguntando(false)
-  function fecharDeVez(): void {
-    soltar()
-    aoFechar()
-  }
-  function pedirParaFechar(): void {
-    if (!linkEmRisco || perguntando) fecharDeVez()
-    else definirPerguntando(true)
-  }
-  return { perguntando, pedirParaFechar, fecharDeVez, voltar: () => definirPerguntando(false) }
-}
+const ROTULO_DE_VOLTAR = 'Voltar ao convite'
 
-/** A pergunta antes de fechar sem o link copiado. "Voltar" e "Fechar sem copiar" do mesmo tamanho (D59). */
-function Pergunta({
-  titulo,
-  noAr,
-  quemEntra,
-  aoVoltar,
-  aoFecharDeVez,
-}: {
-  titulo: RefObject<HTMLHeadingElement | null>
-  /** O pedido ainda sem resposta: o link não existe ainda, e a pergunta diz isso. */
-  noAr: boolean
-  quemEntra: string
-  aoVoltar: () => void
-  aoFecharDeVez: () => void
-}) {
-  return (
-    <div className="mt-4 flex flex-col gap-4">
-      <h3 ref={titulo} tabIndex={-1} className="font-semibold">
-        Fechar sem copiar o link?
-      </h3>
-      <p className="text-apoio">
-        {noAr
-          ? `O convite ainda está sendo gerado, e o link aparece uma vez só, aqui. Se fechar agora, ele não aparece, e para ${quemEntra} entrar será preciso refazer o convite.`
-          : `O link aparece uma vez só. Se fechar agora, ele não aparece de novo, e para ${quemEntra} entrar será preciso refazer o convite.`}
-      </p>
-      <div className="flex flex-wrap gap-3">
-        <Botao onClick={aoVoltar}>Voltar ao convite</Botao>
-        <button type="button" onClick={aoFecharDeVez} className={CLASSES_DO_BOTAO_SECUNDARIO}>
-          Fechar sem copiar
-        </button>
-      </div>
-    </div>
-  )
+/** O que a pergunta de fechar diz do convite: o link aparece uma vez, e sem ele só refazendo. */
+function textoDaPergunta(noAr: boolean, quemEntra: string): string {
+  return noAr
+    ? `O convite ainda está sendo gerado, e o link aparece uma vez só, aqui. Se fechar agora, ele não aparece, e para ${quemEntra} entrar será preciso refazer o convite.`
+    : `O link aparece uma vez só. Se fechar agora, ele não aparece de novo, e para ${quemEntra} entrar será preciso refazer o convite.`
 }
 
 /**
@@ -138,7 +88,6 @@ function EtapaDoLink({
   aoFechar: () => void
 }) {
   const campo = useRef<HTMLInputElement>(null)
-  const idDoCampo = useId()
   return (
     <div className="mt-4 flex flex-col gap-4">
       <h3 ref={titulo} tabIndex={-1} className="font-semibold">
@@ -147,28 +96,8 @@ function EtapaDoLink({
       <p className="text-apoio">
         {mandePara} {validade} Depois de fechar, este link não aparece de novo.
       </p>
-      <div className="flex flex-col gap-1">
-        <label htmlFor={idDoCampo} className="font-medium">
-          Link do convite
-        </label>
-        <input
-          ref={campo}
-          id={idDoCampo}
-          type="text"
-          readOnly
-          value={link}
-          autoComplete="off"
-          spellCheck={false}
-          onFocus={(evento) => evento.currentTarget.select()}
-          onCopy={aoCopiarAMao}
-          className="min-h-11 w-full min-w-0 rounded-controle border border-borda-campo bg-fundo px-3 py-2 text-base text-tinta"
-        />
-      </div>
-      {/* Sempre na árvore, mesmo vazio: a região que aparece junto com o texto nem sempre é anunciada. A altura fica
-          reservada, e o texto chega sem empurrar os botões. */}
-      <p role="status" className={`min-h-6 text-sm ${copiado ? 'text-ok' : 'text-apoio'}`}>
-        <span key={vezDaCopia}>{copia}</span>
-      </p>
+      <CampoDoLink ref={campo} rotulo="Link do convite" link={link} aoCopiarAMao={aoCopiarAMao} />
+      <AvisoDaCopia texto={copia} vez={vezDaCopia} copiado={copiado} />
       <div className="flex flex-wrap gap-3">
         <Botao onClick={() => aoCopiar(campo.current)}>Copiar link</Botao>
         <button type="button" onClick={aoFechar} className={CLASSES_DO_BOTAO_SECUNDARIO}>
@@ -177,69 +106,6 @@ function EtapaDoLink({
       </div>
     </div>
   )
-}
-
-/** A cópia do link e o que foi dito dela: vazio, "Link copiado." ou o pedido de copiar à mão. */
-function useCopia() {
-  const [copiado, definirCopiado] = useState(false)
-  const [dito, definirDito] = useState({ texto: '', vez: 0 })
-  // Cada vez é um nó novo na região, e o leitor de tela anuncia de novo o "Link copiado." da segunda cópia.
-  const definirTexto = (texto: string) => definirDito((anterior) => ({ texto, vez: anterior.vez + 1 }))
-  async function copiar(link: string, campo: HTMLInputElement | null): Promise<void> {
-    // Sem contexto seguro não há `navigator.clipboard`, embora o tipo diga que sempre há.
-    const area: Clipboard | undefined = navigator.clipboard
-    const resultado = await copiarLink(link, area)
-    if (resultado === 'copiado') {
-      definirCopiado(true)
-      definirTexto(TEXTO_DO_LINK_COPIADO)
-      return
-    }
-    campo?.focus()
-    campo?.select()
-    definirTexto(TEXTO_DO_LINK_SELECIONADO)
-  }
-  function copiadoAMao(): void {
-    definirCopiado(true)
-    definirTexto(TEXTO_DO_LINK_COPIADO)
-  }
-  return { copiado, texto: dito.texto, vez: dito.vez, copiar, copiadoAMao }
-}
-
-/**
- * A falha de um pedido, com o foco nela: o botão que o fez pode sumir (a lista mudou, e só sobra "Fechar") ou estar
- * desligado, e o foco não fica solto no diálogo. O alerta é lido pelo `role="alert"` de qualquer jeito.
- */
-function Falha({ texto, erro }: { texto: string; erro: unknown }) {
-  const alerta = useRef<HTMLParagraphElement>(null)
-  useEffect(() => {
-    alerta.current?.focus()
-  }, [erro])
-  return (
-    <p ref={alerta} tabIndex={-1} role="alert" className="rounded-controle border border-erro bg-erro-cx p-3 text-erro">
-      {texto}
-    </p>
-  )
-}
-
-/**
- * O foco que acompanha a etapa: a pergunta, o link, ou o começo da etapa a que se voltou. Quando a etapa volta por causa
- * de uma falha (o pedido recusado com a pergunta de fechar aberta), o foco é do alerta da falha, e não do começo da etapa.
- */
-function useFocoDaEtapa(etapa: string, alvo: RefObject<HTMLElement | null>, comFalha: boolean): void {
-  const primeira = useRef(true)
-  // A falha desta renderização, para o efeito da etapa: ele só roda quando a etapa muda.
-  const falhou = useRef(comFalha)
-  useEffect(() => {
-    falhou.current = comFalha
-  }, [comFalha])
-  useEffect(() => {
-    // Na abertura, quem põe o foco é o diálogo (`focoInicial`), depois do `showModal`.
-    if (primeira.current) {
-      primeira.current = false
-      return
-    }
-    if (!falhou.current) alvo.current?.focus()
-  }, [etapa, alvo])
 }
 
 /** O que os dois diálogos têm em comum: a moldura, a falha, a etapa do link e o fechar. */
@@ -347,7 +213,7 @@ export function DialogoDeConviteNovo<Pedido, Resposta extends { readonly token: 
   )
 
   if (etapa === 'pergunta')
-    return dialogo(<Pergunta titulo={tituloDaPergunta} noAr={gerar.isPending} quemEntra={textosDoLink.quemEntra} aoVoltar={fechamento.voltar} aoFecharDeVez={fechamento.fecharDeVez} />)
+    return dialogo(<Pergunta titulo={tituloDaPergunta} texto={textoDaPergunta(gerar.isPending, textosDoLink.quemEntra)} rotuloDeVoltar={ROTULO_DE_VOLTAR} aoVoltar={fechamento.voltar} aoFecharDeVez={fechamento.fecharDeVez} />)
 
   if (etapa === 'link' && gerar.data !== undefined && revisando !== undefined) {
     const link = linkDoConvite(window.location.origin, ROTAS.convite, gerar.data.token)
@@ -506,7 +372,7 @@ export function DialogoDeConviteRefeito<Resposta extends { readonly token: strin
   )
 
   if (etapa === 'pergunta')
-    return dialogo(<Pergunta titulo={tituloDaPergunta} noAr={refazer.isPending} quemEntra={textosDoLink.quemEntra} aoVoltar={fechamento.voltar} aoFecharDeVez={fechamento.fecharDeVez} />)
+    return dialogo(<Pergunta titulo={tituloDaPergunta} texto={textoDaPergunta(refazer.isPending, textosDoLink.quemEntra)} rotuloDeVoltar={ROTULO_DE_VOLTAR} aoVoltar={fechamento.voltar} aoFecharDeVez={fechamento.fecharDeVez} />)
 
   if (etapa === 'link' && refazer.data !== undefined) {
     const link = linkDoConvite(window.location.origin, ROTAS.convite, refazer.data.token)

@@ -108,11 +108,11 @@ dela nos dois.
   - [x] 14.3 Aceite do professor na tela de convite
   - [x] 14.4 Testes: W14; W4 e W12 de Professores; o e2e da A0b junto
 
-- [ ] **15.0 — Web: acesso da turma do professor**
-  - [ ] 15.1 Gerar, mostrar o código em grupos, "Gerar novo" com confirmação, revogar
-  - [ ] 15.2 Compartilhar pelo WhatsApp, com a cópia como reserva
-  - [ ] 15.3 Teto do chunk do professor
-  - [ ] 15.4 Testes: E16, W7; W4 e W12 de Acesso
+- [x] **15.0 — Web: acesso da turma do professor**
+  - [x] 15.1 Gerar, mostrar o código em grupos, "Gerar novo" com confirmação, revogar
+  - [x] 15.2 Compartilhar pelo WhatsApp, com a cópia como reserva
+  - [x] 15.3 Teto do chunk do professor
+  - [x] 15.4 Testes: E16, W7; W4 e W12 de Acesso
 
 - [ ] **16.0 — Web: pedidos, com os diálogos de decisão**
   - [ ] 16.1 Pedidos do professor, atualizados a cada 15 s com a aba visível

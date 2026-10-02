@@ -162,7 +162,10 @@ aos cenários.
   entrada com espaço, hífen e minúscula normaliza para o mesmo; o HMAC com `SALA_CHAVE_CODIGO` difere do HMAC da mesma
   entrada com a chave dos contadores. **Quebra sem:** o alfabeto; a chave própria
 - **E16** (unidade, web) RF9: o texto do WhatsApp traz o nome da escola e o link, e nenhum nome da lista (sentinela).
-  **Quebra sem:** o texto montado só com escola e link
+  **Quebra sem:** o texto montado só com escola e link. Como ficou na 15.0: a função só recebe a escola e o link, e a
+  sentinela é tudo o mais que a tela tem à mão (nome de aluno, matrícula, turma, código); o endereço é o `wa.me/?text=`
+  com o texto inteiro na consulta; o link da sala é `/e/<slug>/turma#<token>`, com o token só no fragmento; a aba nova
+  do WhatsApp fica sem o `opener`, e o navegador que não a abre faz o botão copiar o texto
 - **E17** (integração) RF10: `salas/abrir` traz só os nomes livres, com `id` e `nome`, sem matrícula; reivindicado e
   aprovado não aparecem. Em ordem de nome e até 500 (`MAXIMO_DE_NOMES_NA_SALA`): com 501 nomes livres, ficam os 500
   primeiros em ordem de nome (5.0). **Quebra sem:** o filtro `livre`; o DTO; o `orderBy`; o `limit`
@@ -418,7 +421,7 @@ aos cenários.
   | Alocação | "Crie uma turma e um professor primeiro" (sem turma, sem disciplina ou sem professor alocável: o de convite vencido não conta; a descrição diz o que falta, 13.0). O título diz só o que falta — "Crie uma disciplina primeiro" com a turma e o professor já criados —, e, faltando o professor, o vazio leva à tela Professores (14.0) | vínculos; a escolha pelo nome; o convite que vence com a tela aberta sai da escolha, e o "Alocar" seguinte não o reenvia (13.0) |
   | Turmas | "A coordenação ainda não alocou você"; só pendente: "Confirme suas turmas" | confirmadas |
   | Pedidos | professor: "Nenhum pedido esperando" → Acesso; coordenação: "Os pedidos chegam quando o professor da turma gerar o acesso", sem botão | seleção |
-  | Acesso | "Sem acesso ativo" → Gerar | validade |
+  | Acesso | "Sem acesso ativo" → Gerar | validade. Como ficou na 15.0: a turma abre pelo cartão do vínculo confirmado, e só por ele (o pendente, o contestado e o encerrado não têm o link); "Vale até …", com "Gerar novo" e "Revogar", sem link nem código; a releitura que cai mostra o erro com "Tentar de novo", e não o estado de antes, também logo depois de gerar; a turma que não chega tem o erro no lugar da tela; a turma pendente, a encerrada e a que não existe, pelo endereço, dizem a mesma coisa, com a quem recorrer e sem "Tentar de novo" |
   | Pública | "Se o seu nome não aparece, chame o professor"; vencido: o texto do W9 pelo caminho usado e, no link, o campo do código com o foco | nomes livres |
   | Minha turma | nunca vazia; sem vínculo confirmado no ano (`NAO_ENCONTRADO`), "Você ainda não está em uma turma neste ano letivo. Fale com o seu professor ou com a coordenação.", sem "Tentar de novo" (12.0) | turma, série e escola, sem colegas |
 - **W5** Fronteira: o `import()` de `coordenacao-*` e de `professor-*` abortado mostra "Confira a conexão e tente de
@@ -432,7 +435,29 @@ aos cenários.
   erro de digitação", sem número nem hora, também no diálogo de "Aprovar N"; o 41º não é selecionável, com o texto do
   limite; não existe "aprovar todos"
 - **W7** Acesso: código em dois grupos de 4; "Gerar novo" pede confirmação e diz que o atual cai e que os nomes
-  travados por tentativas erradas destravam; fechar sem copiar pergunta; sem o WhatsApp, o botão copia o texto
+  travados por tentativas erradas destravam; fechar sem copiar pergunta; sem o WhatsApp, o botão copia o texto. Como
+  ficou na 15.0 (`e2e/acesso-da-turma.spec.ts`): a validade escolhida (1, 7 ou 30 dias, 7 já marcado) é a que vai ao
+  servidor; o código aparece grande (36 px ou mais), com o endereço onde o aluno o digita, e o link, num campo de
+  leitura, com o aviso de que quem tem o link ou o código vê os nomes livres; copiado, fecha sem perguntar, e sem copiar
+  pergunta pelo botão, pelo toque fora e pelo Esc; "Gerar novo" diz também que cai o acesso de outro professor da turma, e
+  o primeiro acesso não fala disso; o WhatsApp abre o `wa.me` numa aba nova, sem `opener`, com a escola e o link e sem
+  nome da lista, da turma nem da professora; sem o WhatsApp (o navegador não abre a aba), o botão copia o texto, e sem
+  área de transferência seleciona o link; revogar é `perigo` (texto em `erro` na seção, cheio só na confirmação) e diz
+  que os pedidos já feitos continuam. Clique duplo: dois cliques em Gerar mandam um pedido só, com um acesso vigente e o
+  código da única resposta na tela; em revogar, um pedido só. O recomeço da tela: outra turma no endereço não fica com o
+  diálogo da primeira; abrir de novo a mesma turma mostra só a validade; outro professor na mesma aba não vê link, código
+  nem o "Acesso ativo" do primeiro, e a turma do primeiro pelo endereço responde como a que não existe; o gerar anterior
+  que responde depois do seguinte não troca o código na tela, e a validade na seção é a do servidor; o `CONFLITO` do
+  gerar recarrega a seção e deixa só "Fechar", e reabrindo o aviso e o foco da tentativa anterior saem; a recusa que
+  chega com a pergunta de fechar aberta volta à etapa do pedido, com o foco no aviso; o revogar do acesso que já caiu diz
+  que a turma não tem acesso ativo; a turma que saiu do alcance (o vínculo encerrado com a tela aberta) diz a quem
+  recorrer; a sessão que vence com o acesso na tela tira o diálogo, com o link e o código, de trás do login por cima; a
+  releitura que cai com o código projetado não tira o diálogo, e a que deixa de achar a turma tira a página inteira; o
+  código vai soletrado para o leitor de tela. **Quebra sem:** a validade do estado do diálogo; os dois
+  grupos de `exibirCodigoDaTurma`; a letra grande; o "o que cai" só no "Gerar novo"; a pergunta enquanto há link em risco;
+  o texto só com escola e link; a cópia quando a aba não abre; a trava do pedido no ar; a `key` da turma na rota; a
+  chave da leitura por turma; a validade vinda da leitura; o `CONFLITO` e o `NAO_ENCONTRADO` que mudam a seção; o erro
+  no lugar do estado de antes; a seção que só existe com a turma e a escola lidas
 - **W8** Página pública: quando a primeira requisição sai, o endereço já não tem `#`; depois de abrir e de enviar,
   nenhum nome nem `chaveEnvio` em `localStorage`, `sessionStorage`, IndexedDB, Cache Storage ou no endereço; clique
   duplo em enviar manda um pedido, e o botão fica em carregamento até a resposta, também na espera de 1 s; o 503 mostra
@@ -467,7 +492,11 @@ aos cenários.
 - **W11** Campos: código com `autocapitalize="characters"`; matrícula e senha com `autocomplete="off"`; matrícula com
   `inputmode="text"`; senha com "mostrar" e os 12 caracteres avisados
 - **W12** 360 px: nenhuma tela nova com rolagem horizontal; abaixo de 768 px, cartões e gaveta; alvos de 44 px;
-  teclado: selecionar pedidos e decidir só com Tab, Espaço e Enter, foco preso no diálogo e devolvido
+  teclado: selecionar pedidos e decidir só com Tab, Espaço e Enter, foco preso no diálogo e devolvido. No Acesso
+  (15.0): o diálogo com o código grande cabe em 360 px; a validade troca pelas setas; gerar, copiar, trocar e revogar só
+  com Tab e Enter; o foco começa no texto que diz o que acontece, e não no botão; fechado o diálogo, o foco volta a quem
+  o abriu ou, se ele saiu da seção, ao título dela; dois Esc seguidos fecham de verdade, com o link e o código;
+  a 360 × 640, a confirmação do "Gerar novo" cabe inteira, com o "Cancelar" dentro da janela (a validade em linha)
 - **W13** Seletor (P30): escola, rede e papel, sem número de turmas nem nada da outra escola; com uma escola só, mostra o nome e não
   abre. Na 12.0: a lista traz a escola de agora com a marca de escolhido (ícone e `aria-current`), e escolhê-la não troca
   nada (o recomeço da tela, "mesma entrada"); o Esc fecha só a lista, também dentro da gaveta; reabrir apaga o aviso da

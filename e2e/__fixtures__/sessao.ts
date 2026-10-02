@@ -295,11 +295,17 @@ export interface AlocacaoDeTeste {
  * por isso a fixture cria também a coordenadora sintética que assina a alocação, como no onboarding de verdade.
  *
  * O nome da turma leva uma marca única: é com ele que o teste de isolamento afirma que nada da escola A aparece
- * depois da troca para a B.
+ * depois da troca para a B. `nomeDaTurma` é para o teste que precisa de um nome próprio (o de 40 caracteres sem espaço,
+ * que prova que a tela não estica).
  */
-export async function criarAlocacaoDoProfessor(escolaId: string, usuarioId: string, disciplinas: readonly string[] = ['Matemática']): Promise<AlocacaoDeTeste> {
+export async function criarAlocacaoDoProfessor(
+  escolaId: string,
+  usuarioId: string,
+  disciplinas: readonly string[] = ['Matemática'],
+  nomeDaTurma?: string,
+): Promise<AlocacaoDeTeste> {
   const marca = randomUUID().slice(0, 8)
-  const turmaNome = `7ºA sintética ${marca}`
+  const turmaNome = nomeDaTurma ?? `7ºA sintética ${marca}`
   return comBanco(async (banco) => {
     const { rows: anos } = await banco.query<{ id: string }>("select id from ano_letivo where escola_id = $1 and situacao = 'em_curso'", [escolaId])
     const anoLetivoId = anos[0]?.id
@@ -309,7 +315,12 @@ export async function criarAlocacaoDoProfessor(escolaId: string, usuarioId: stri
       escolaId,
       contaDaCoordenacao,
     ])
-    const serieId = await id(banco, "insert into serie (escola_id, etapa, ano) values ($1, 'ef_anos_finais', 7) returning id", [escolaId])
+    // A série é única por escola: a segunda turma do mesmo professor, na mesma escola, usa a mesma 7ª série.
+    const serieId = await id(
+      banco,
+      "insert into serie (escola_id, etapa, ano) values ($1, 'ef_anos_finais', 7) on conflict (escola_id, etapa, ano) do update set ano = excluded.ano returning id",
+      [escolaId],
+    )
     const turmaId = await id(banco, 'insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, $4) returning id', [escolaId, anoLetivoId, serieId, turmaNome])
     const vinculoIds: string[] = []
     for (const disciplina of disciplinas) {
@@ -603,5 +614,77 @@ export async function criarAnoLetivoNoBanco(escolaId: string, ano: number, situa
 export async function apagarSerieNoBanco(escolaId: string, etapa: 'ef_anos_finais' | 'em', ano: number): Promise<void> {
   await comBanco(async (banco) => {
     await banco.query('delete from serie where escola_id = $1 and etapa = $2 and ano = $3', [escolaId, etapa, ano])
+  })
+}
+
+/**
+ * O professor confirma os vínculos, direto no banco: é o que abre a turma para ele (E12, P2). Atalho do e2e para o teste
+ * que não é sobre confirmar; a confirmação pela tela é provada em `e2e/areas.spec.ts` e `e2e/escola-e-vinculos.spec.ts`.
+ */
+export async function confirmarVinculosNoBanco(escolaId: string, vinculoIds: readonly string[]): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query("update vinculo set estado = 'confirmado', decidido_em = now() where escola_id = $1 and id = any($2::uuid[])", [escolaId, [...vinculoIds]])
+  })
+}
+
+/**
+ * A coordenação encerra os vínculos do professor naquela turma, com a tela dele aberta: é o professor realocado em março,
+ * que deixa de alcançar a turma na requisição seguinte.
+ */
+export async function encerrarVinculosNoBanco(escolaId: string, turmaId: string, usuarioId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query(
+      "update vinculo set estado = 'encerrado', motivo_encerramento = 'realocacao', encerrado_em = now() where escola_id = $1 and turma_id = $2 and usuario_id = $3 and estado <> 'encerrado'",
+      [escolaId, turmaId, usuarioId],
+    )
+  })
+}
+
+/** Quantos acessos vigentes (nem revogados, nem vencidos) a turma tem: é o que o clique duplo em "Gerar" não pode dobrar. */
+export async function acessosVigentesDaTurma(escolaId: string, turmaId: string): Promise<number> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ total: string }>(
+      'select count(*) as total from acesso_turma where escola_id = $1 and turma_id = $2 and revogado_em is null and expira_em > now()',
+      [escolaId, turmaId],
+    )
+    return Number(rows[0]?.total ?? 0)
+  })
+}
+
+/**
+ * Outro professor da turma gera o acesso com esta tela aberta, direto no banco: o que estava vigente cai, e o novo vale
+ * pelos dias dados. O token e o código são sorteados e não saem daqui: o banco guarda só o hash de um e um valor único no
+ * lugar do HMAC do outro, que ninguém vai conferir. Devolve até quando ele vale, como a API o devolveria.
+ */
+export async function gerarAcessoNoBanco(escolaId: string, turmaId: string, validadeDias: 1 | 7 | 30): Promise<string> {
+  return comBanco(async (banco) => {
+    const { rows: turmas } = await banco.query<{ ano_letivo_id: string }>('select ano_letivo_id from turma where escola_id = $1 and id = $2', [escolaId, turmaId])
+    const anoLetivoId = turmas[0]?.ano_letivo_id
+    if (anoLetivoId === undefined) throw new Error('turma do e2e não encontrada')
+    await banco.query('update acesso_turma set revogado_em = now() where escola_id = $1 and turma_id = $2 and revogado_em is null', [escolaId, turmaId])
+    const { rows } = await banco.query<{ expira_em: Date }>(
+      "insert into acesso_turma (escola_id, ano_letivo_id, turma_id, token_hash, codigo_hmac, validade_dias, expira_em) values ($1, $2, $3, $4, $5, $6, now() + make_interval(days => $6)) returning expira_em",
+      [escolaId, anoLetivoId, turmaId, hashDoToken(randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')), randomBytes(32).toString('hex'), validadeDias],
+    )
+    const expiraEm = rows[0]?.expira_em
+    if (expiraEm === undefined) throw new Error('o seed do e2e não criou o acesso da turma')
+    return expiraEm.toISOString()
+  })
+}
+
+/** Outro professor da turma revoga o acesso vigente com esta tela aberta, direto no banco. */
+export async function revogarAcessoNoBanco(escolaId: string, turmaId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('update acesso_turma set revogado_em = now() where escola_id = $1 and turma_id = $2 and revogado_em is null', [escolaId, turmaId])
+  })
+}
+
+/**
+ * O professor contesta o vínculo, direto no banco: ele continua esperando a correção da coordenação, e não abre a turma
+ * (E12, P2). A contestação pela tela é provada em `e2e/areas.spec.ts` e `e2e/escola-e-vinculos.spec.ts`.
+ */
+export async function contestarVinculosNoBanco(escolaId: string, vinculoIds: readonly string[]): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query("update vinculo set estado = 'contestado', contestacao = 'nao_leciono', decidido_em = now() where escola_id = $1 and id = any($2::uuid[])", [escolaId, [...vinculoIds]])
   })
 }

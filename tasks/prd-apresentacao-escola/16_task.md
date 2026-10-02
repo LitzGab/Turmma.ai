@@ -38,6 +38,13 @@ cada pedido termina com o resultado dele em texto.
   os dois diálogos) se movem para `apps/web/src/componentes/` quando a área do professor precisar delas (ver a nota no
   `15_task.md`), sem copiar (`revisor-geral`, 1ª rodada da 13.0).
 
+## Herdado da 15.0 (`frontend-reviewer`, 3ª rodada)
+
+- O aviso de turma indisponível está escrito duas vezes: na seção do acesso (`apps/web/src/areas/professor/AcessoDaTurma.tsx`)
+  e no `TurmaIndisponivel` da página (`apps/web/src/areas/professor/Turma.tsx`), que recebe o foco quando chega por
+  releitura. Esta tarefa põe os pedidos na mesma página e vai precisar do mesmo aviso: vira um componente só, decidindo
+  quando ele puxa o foco.
+
 ## Subtarefas
 
 - [ ] 16.1 — Pedidos do professor na turma: nome, hora e a marca "Houve tentativa com matrícula errada neste nome;

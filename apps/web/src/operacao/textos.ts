@@ -1,6 +1,7 @@
 import { CodigoDeErro, formatarEspera, MENSAGENS_DE_ERRO, mensagemDaEntrada, mensagemDoSegundoFator, type TipoDeRede } from '@educa/shared'
 import { ErroDaApi } from '../api/cliente'
 import type { FalhaDoConvite } from '../componentes/DialogoDoConvite'
+import { textoDaFalha as textoDaFalhaPeloCodigo } from '../componentes/texto-da-falha'
 import { TEXTO_DO_CONVITE_QUE_MUDOU, TEXTO_DO_CONVITE_QUE_NAO_VALE } from '../componentes/textos-do-convite'
 
 /**
@@ -46,15 +47,15 @@ export function textoDoLimite(esperaSegundos: number | undefined): string {
 
 /**
  * O texto de uma falha numa tela com sessão: o 503 da operação, o 503 `TEMPO_ESGOTADO` e o 429 têm o texto deles; o
- * resto, o do catálogo. O 401 `SESSAO_ENCERRADA` não chega a aparecer aqui: `chamarComSessaoDeOperador` já levou a aba à
+ * resto, o do catálogo, pela mesma função das telas da escola (`componentes/texto-da-falha.ts`). O 401 `SESSAO_ENCERRADA` não chega a aparecer aqui: `chamarComSessaoDeOperador` já levou a aba à
  * entrada, com a mensagem de sessão encerrada.
  */
 export function textoDaFalha(erro: unknown): string {
-  const codigo = codigoDe(erro)
-  if (codigo === CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO) return TEXTO_DA_OPERACAO_INDISPONIVEL
-  if (codigo === CodigoDeErro.TEMPO_ESGOTADO) return TEXTO_DO_TEMPO_ESGOTADO
-  if (codigo === CodigoDeErro.LIMITE_EXCEDIDO) return textoDoLimite(erro instanceof ErroDaApi ? erro.esperaSegundos : undefined)
-  return MENSAGENS_DE_ERRO[codigo]
+  return textoDaFalhaPeloCodigo(erro, {
+    [CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO]: TEXTO_DA_OPERACAO_INDISPONIVEL,
+    [CodigoDeErro.TEMPO_ESGOTADO]: TEXTO_DO_TEMPO_ESGOTADO,
+    [CodigoDeErro.LIMITE_EXCEDIDO]: textoDoLimite(erro instanceof ErroDaApi ? erro.esperaSegundos : undefined),
+  })
 }
 
 /**

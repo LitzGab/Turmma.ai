@@ -460,14 +460,31 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       novo, com linha própria no `docs/lgpd.md`); e o E11 passar a provar que o e-mail aparece igual nos dois casos.
       Destino: junto da prova de posse do e-mail do "Portão da primeira escola real" (`ROADMAP.md`)
 - [ ] A trava do pedido no ar e o alerta com foco existem duas vezes na web: `useEnvioUnico` e `AlertaDaFalha`, em
-      `apps/web/src/areas/coordenacao/dialogos.tsx` (A1, 13.0), e o `noAr` e o `Falha` de
-      `apps/web/src/componentes/DialogoDoConvite.tsx` (da A0b, que veio para `componentes/` na 14.0). Mover os dois
-      primeiros para `componentes/` e o diálogo do convite passar a usá-los deixa um jeito só (`revisor-geral` da 14.0).
+      `apps/web/src/componentes/dialogos.tsx` (A1, 13.0; vieram para `componentes/` na 15.0, e o `useEnvioUnico` passou a
+      receber as opções da mutação, com que o acesso da turma já o usa), e o `noAr` de
+      `apps/web/src/componentes/DialogoDoConvite.tsx` com o `Falha` de `componentes/copia-unica.tsx` (da A0b). O diálogo
+      do convite passar a usar o `useEnvioUnico`, e o `Falha` e o `AlertaDaFalha` virarem um só, deixa um jeito só
+      (`revisor-geral` da 14.0).
       Não é troca de nome: o `Falha` leva o foco de novo a cada erro, e o `AlertaDaFalha`, só quando o texto muda, e a
       trava do diálogo está sob o e2e da A0b e as mutações da 14.0. Na mesma correção: o mapa
       `TEXTOS_DO_CONVITE_QUE_MUDOU` de `areas/coordenacao/convite-de-professor.ts` difere por uma letra do texto
       `TEXTO_DO_CONVITE_QUE_MUDOU` que o arquivo importa; dar ao mapa um nome que diga o que ele é (`revisor-geral` da
-      14.0, 2ª rodada). Destino: correção própria
+      14.0, 2ª rodada). E `linkDoConvite` e `copiarLink` (`componentes/link-do-convite.ts`) já montam também o link da
+      sala e copiam o convite inteiro do WhatsApp: `linkComToken` e `copiarTexto`, ou equivalente (`revisor-geral` da
+      15.0); e `codigoEmDoisGrupos` (`areas/professor/acesso-da-turma.ts`) é só outro nome de `exibirCodigoDaTurma`. Destino: correção própria
+- [ ] Acesso da turma (A1, 15.0): o gerar espera a releitura da seção antes de mostrar o link e o código
+      (`apps/web/src/api/acesso.ts`, `onSettled`). Numa rede que engasga, o diálogo fica em "Gerando…" com o acesso já
+      gerado no servidor. O `frontend-reviewer` sugere mostrar o acesso assim que o `POST` responde e recarregar a seção
+      por trás; pede resolver junto o foco de quem fecha antes da releitura (o "Gerar acesso" do vazio some) e a seção
+      que afirma "Sem acesso ativo" nesse intervalo. Destino: decidir antes do `/validar` da A1
+- [ ] Encerrar o vínculo do professor não revoga o acesso da turma que ele gerou (A1, 4.0; achado do `privacy-guardian`
+      na 15.0, sem reprodução: nenhum arquivo do encerramento de vínculo toca `acesso_turma`). O professor realocado
+      fica com um link e um código que mostram os nomes livres da turma até vencerem ou alguém gerar outro. Decidir, com
+      o `privacy-guardian`, se o encerramento do último vínculo confirmado dele na turma revoga o acesso, ou se
+      `docs/lgpd.md` e a tela da coordenação dizem que "Gerar novo" é o remédio. Destino: antes do `/validar` da A1
+- [ ] `Referrer-Policy` na borda (`no-referrer` ou `same-origin`): a aba do `wa.me` que o botão do WhatsApp abre recebe
+      a origem da web como referência (`privacy-guardian` da 15.0). Não é dado pessoal; fecha com os cabeçalhos de
+      segurança da borda, com o `infra-guardian`
 - [ ] O formato do token opaco de 43 caracteres base64url está em dois lugares: `esquemaTokenDeLink`
       (`packages/shared/src/sessao/token.ts`: convite da coordenação, link da sala e, desde a 14.0 da A1, o convite de
       professor) e o `FORMATO_DO_REFRESH` (`apps/api/src/sessao/renovacao.service.ts` e

@@ -11,10 +11,11 @@ import { Botao } from '../../componentes/Botao'
 import { CLASSES_DO_BOTAO_PERIGO, CLASSES_DO_BOTAO_SECUNDARIO } from '../../componentes/botao-secundario'
 import { Campo } from '../../componentes/Campo'
 import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
+import { AlertaDaFalha, AlertaSemFoco, Anuncio, ConfirmacaoDePerigo, DialogoDeFormulario, useEnvioUnico } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
+import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
 import { formatarQuantidade } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
-import { AlertaDaFalha, AlertaSemFoco, Anuncio, ConfirmacaoDePerigo, DialogoDeFormulario, listaMudou, textoDaFalha, useEnvioUnico } from './dialogos'
 import { comQuebrasDoCampo, lerArquivoDaLista, tetoPassado, type MotivoDoArquivoRecusado } from './ler-arquivo-da-lista'
 import {
   avisosDaPrevia,
