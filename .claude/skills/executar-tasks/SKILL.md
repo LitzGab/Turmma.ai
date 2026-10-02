@@ -58,7 +58,7 @@ Para cada tarefa pendente:
    - Relatório: testes 100%, typecheck limpo, e2e verde se tocou tela, portão local carimbado?
 
    Revisor obrigatório sem rodada na seção é falha, mesmo que o relatório diga APROVADO.
-   - Push: `git rev-list --count origin/main..main` é zero? Commit de tarefa sem push é
+   - Push: `git rev-list --count origin/develop..develop` é zero? Commit de tarefa sem push é
      falha, porque a próxima não tem esteira para conferir.
 5. **Decisão:** sucesso completo → próxima. Qualquer falha → PARE e reporte.
 
@@ -93,7 +93,7 @@ Regras obrigatórias:
   `Tarefa: tasks/prd-[funcionalidade]/[N]_task.md`; em rodada nova, traga as correções
   exigidas e o diff desde a rodada anterior. ESPERE todos terminarem. Reprovou: corrija e
   chame um revisor novo. O hook registra as rodadas e bloqueia o commit sem elas.
-- Antes do commit, confira a esteira do último commit do `main` (passo 7 da skill):
+- Antes do commit, confira a esteira do último commit da `develop` (passo 7 da skill):
   vermelha, não commite e reporte; rodando, espere.
 - Ao concluir, marque `[x]` em tasks.md, faça o commit da tarefa com a linha `Revisões:` e
   o push.
