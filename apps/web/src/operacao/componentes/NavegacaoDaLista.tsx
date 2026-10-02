@@ -1,7 +1,7 @@
 import type { OrdemDoPainel } from '@educa/shared'
 import { EstadoVazio } from '../../componentes/estado'
 import { formatarNumero, formatarQuantidade } from '../../formatar'
-import { CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
+import { CLASSES_DO_BOTAO_SECUNDARIO } from '../../componentes/botao-secundario'
 
 /**
  * A ordem e as páginas das duas listas do painel, Escolas e Uso (Tech Spec da A0b, seção 9): a mesma consulta

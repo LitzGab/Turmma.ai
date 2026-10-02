@@ -310,8 +310,8 @@ describe('professores (A1, tarefa 3.0): a coordenação cadastra, o professor ac
     const tokenB = String(escolhido.corpo['token'])
     expect((await bancada.pool.query('select count(*)::int as total from conta where email = $1', [deA.email])).rows).toEqual([{ total: 1 }])
 
-    // A estrutura de B, com três vínculos pendentes do professor. A alocação do F1 só aceita o professor ativo
-    // (`VinculoRepository.pessoaAtivaComPapel`): ela vem depois da primeira entrada (`3_task.md`, "Divergências resolvidas nesta tarefa").
+    // A estrutura de B, com três vínculos pendentes do professor, alocados depois da primeira entrada. A alocação antes do
+    // aceite (13.0, `VinculoRepository.professorAlocavel`) é provada no E12, adiante.
     const post = (caminho: string, corpo?: unknown) => chamar(api.url, 'POST', caminho, coordenacao.token, corpo)
     const id = async (resposta: Promise<{ status: number; corpo: Record<string, unknown> }>, status = 201) => {
       const lida = await resposta
@@ -430,6 +430,207 @@ describe('professores (A1, tarefa 3.0): a coordenação cadastra, o professor ac
     const convite = await cadastrado(coordenacao)
     expect((await pedir('POST', `/v1/professores/${convite.usuarioId}/convite/refazer`, coordenacao.token)).status).toBe(201)
     expect((await pedir('POST', `/v1/professores/${convite.usuarioId}/convite/revogar`, coordenacao.token)).status).toBe(204)
+  })
+
+  describe('E12 (13.0): a alocação aceita o professor com convite em aberto, e o vínculo só alcança a turma depois do aceite e da confirmação', () => {
+    /** O ano em curso, a série, a disciplina e a turma da escola, pela API, como a tela da Estrutura os cria. */
+    async function estruturaDa(coordenacao: SessaoDeTeste): Promise<{ turmaId: string; disciplinaId: string }> {
+      const criado = async (caminho: string, corpo?: unknown, status = 201): Promise<string> => {
+        const resposta = await pedir('POST', caminho, coordenacao.token, corpo)
+        expect(resposta.status, caminho).toBe(status)
+        return String(resposta.corpo['id'])
+      }
+      const ano = await criado('/v1/anos-letivos', { ano: 2026, inicio: '2026-02-01', fim: '2026-12-15' })
+      await criado(`/v1/anos-letivos/${ano}/abrir`, undefined, 200)
+      const serieId = await criado('/v1/series', { etapa: 'ef_anos_finais', ano: 8 })
+      const disciplinaId = await criado('/v1/disciplinas', { nome: `Geografia ${randomUUID().slice(0, 8)}` })
+      const turmaId = await criado('/v1/turmas', { serieId, nome: '8A' })
+      return { turmaId, disciplinaId }
+    }
+
+    /** Uma disciplina a mais na escola: a alocação nova, que o índice único do vínculo não recusaria. */
+    async function estruturaExtra(coordenacao: SessaoDeTeste): Promise<{ disciplinaId: string }> {
+      const resposta = await pedir('POST', '/v1/disciplinas', coordenacao.token, { nome: `História ${randomUUID().slice(0, 8)}` })
+      expect(resposta.status).toBe(201)
+      return { disciplinaId: String(resposta.corpo['id']) }
+    }
+
+    const alocar = (coordenacao: SessaoDeTeste, usuarioId: string, { turmaId, disciplinaId }: { turmaId: string; disciplinaId: string }) =>
+      pedir('POST', '/v1/vinculos', coordenacao.token, { usuarioId, turmaId, disciplinaId, papel: 'professor' })
+
+    const vinculosDa = async (escolaId: string) =>
+      (await bancada.pool.query<{ usuario_id: string; estado: string }>('select usuario_id, estado from vinculo where escola_id = $1 order by id', [escolaId])).rows
+
+    it('o convite pendente é alocado, e o vínculo pendente só alcança a turma depois do aceite, da entrada e da confirmação', async () => {
+      const { escolaId, coordenacao } = await escolaComCoordenacao()
+      const estrutura = await estruturaDa(coordenacao)
+      const convite = await cadastrado(coordenacao)
+      expect(await estadoNaLista(coordenacao, convite.usuarioId)).toBe('pendente')
+
+      const alocado = await alocar(coordenacao, convite.usuarioId, estrutura)
+      expect(alocado.status).toBe(201)
+      expect(alocado.corpo).toMatchObject({ usuarioId: convite.usuarioId, turma: { id: estrutura.turmaId }, estado: 'pendente' })
+      expect(await vinculosDa(escolaId)).toEqual([{ usuario_id: convite.usuarioId, estado: 'pendente' }])
+
+      // O professor aceita e entra: o vínculo pendente ainda não abre a turma (P2); confirmado, abre.
+      const aceite = await aceitar(convite.token, SENHA_NOVA)
+      const login = await entrar(convite.email, SENHA_NOVA, String(aceite.corpo['bilhete']))
+      const token = String(login.corpo['token'])
+      expect(semRequisicao(await pedir('GET', `/v1/turmas/${estrutura.turmaId}`, token))).toEqual(NAO_ENCONTRADO)
+      const meus = await pedir('GET', '/v1/meus-vinculos', token)
+      const [vinculo] = (meus.corpo['itens'] as Array<{ id: string; estado: string }> | undefined) ?? []
+      expect(vinculo).toMatchObject({ id: alocado.corpo['id'], estado: 'pendente' })
+      expect((await pedir('POST', `/v1/vinculos/${String(alocado.corpo['id'])}/confirmar`, token)).status).toBe(200)
+      expect((await pedir('GET', `/v1/turmas/${estrutura.turmaId}`, token)).status).toBe(200)
+    })
+
+    it('o aceito é alocado nos dois casos que junta, com a mesma resposta: a conta nova, já ativa, e a de outra escola à espera da primeira entrada', async () => {
+      const deA = await professoraDe(await bancada.escola())
+      const { escolaId, coordenacao } = await escolaComCoordenacao()
+      const estrutura = await estruturaDa(coordenacao)
+      const comConta = await cadastrado(coordenacao, { nome: 'Professora com conta', email: deA.email })
+      const semConta = await cadastrado(coordenacao)
+      expect((await aceitar(comConta.token)).corpo['etapa']).toBe('entrar')
+      expect((await aceitar(semConta.token, SENHA_NOVA)).corpo['etapa']).toBe('entrar')
+      // A conta nova ficou ativa no aceite; a outra, inativa até a primeira entrada. A lista diz `aceito` nas duas (E11).
+      const { rows: ativos } = await bancada.pool.query<{ id: string; ativo: boolean }>('select id, desativado_em is null as ativo from usuario where id = any($1::uuid[]) order by id', [
+        [comConta.usuarioId, semConta.usuarioId],
+      ])
+      expect(Object.fromEntries(ativos.map((linha) => [linha.id, linha.ativo]))).toEqual({ [comConta.usuarioId]: false, [semConta.usuarioId]: true })
+      expect([await estadoNaLista(coordenacao, comConta.usuarioId), await estadoNaLista(coordenacao, semConta.usuarioId)]).toEqual(['aceito', 'aceito'])
+
+      const [a, b] = [await alocar(coordenacao, comConta.usuarioId, estrutura), await alocar(coordenacao, semConta.usuarioId, estrutura)]
+      expect([a.status, b.status]).toEqual([201, 201])
+      const forma = (resposta: Resposta) => ({ ...resposta.corpo, id: 'id', usuarioId: 'usuario' })
+      expect(forma(a)).toEqual(forma(b))
+      expect(await vinculosDa(escolaId)).toEqual(
+        expect.arrayContaining([
+          { usuario_id: comConta.usuarioId, estado: 'pendente' },
+          { usuario_id: semConta.usuarioId, estado: 'pendente' },
+        ]),
+      )
+    })
+
+    it('vencido, revogado, desativado depois do aceite e o professor de outra escola dão o NAO_ENCONTRADO do inexistente, sem gravar', async () => {
+      const { escolaId, coordenacao } = await escolaComCoordenacao()
+      const estrutura = await estruturaDa(coordenacao)
+
+      const vencido = await cadastrado(coordenacao)
+      await bancada.pool.query("update convite set expira_em = now() - interval '1 second' where id = $1", [vencido.conviteId])
+      const revogado = await cadastrado(coordenacao)
+      expect((await revogar(coordenacao, revogado.usuarioId)).status).toBe(204)
+      const desligado = await cadastrado(coordenacao)
+      expect((await aceitar(desligado.token, SENHA_NOVA)).status).toBe(200)
+      await bancada.pool.query("update usuario set desativado_em = now() + interval '1 second' where id = $1", [desligado.usuarioId])
+
+      // A outra escola: um professor com convite em aberto e um ativo. Quem prova a escola na consulta do usuário é o
+      // ativo: sem ela, o pendente ainda sairia como `desativado`, porque o convite dele não é desta escola.
+      const outra = await escolaComCoordenacao()
+      const pendenteDeB = await cadastrado(outra.coordenacao)
+      const ativoDeB = await bancada.sessao(outra.escolaId, 'professor')
+
+      const estados = await Promise.all([vencido, revogado, desligado].map((professor) => estadoNaLista(coordenacao, professor.usuarioId)))
+      expect(estados).toEqual(['vencido', 'revogado', 'desativado'])
+      expect(await estadoNaLista(outra.coordenacao, pendenteDeB.usuarioId)).toBe('pendente')
+
+      const inexistente = semRequisicao(await alocar(coordenacao, randomUUID(), estrutura))
+      expect(inexistente).toEqual(NAO_ENCONTRADO)
+      for (const [caso, usuarioId] of [
+        ['vencido', vencido.usuarioId],
+        ['revogado', revogado.usuarioId],
+        ['desativado depois do aceite', desligado.usuarioId],
+        ['pendente de outra escola', pendenteDeB.usuarioId],
+        ['ativo de outra escola', ativoDeB.usuarioId],
+      ] as const) {
+        expect(semRequisicao(await alocar(coordenacao, usuarioId, estrutura)), caso).toEqual(inexistente)
+      }
+      expect(await vinculosDa(escolaId)).toEqual([])
+      expect(await vinculosDa(outra.escolaId)).toEqual([])
+    })
+
+    it('de ponta a ponta com o convite revogado depois da alocação: o vínculo fica pendente, o revogado não é alocado de novo, e o mesmo professor, cadastrado de novo, aceita, confirma e abre a turma', async () => {
+      const { escolaId, coordenacao } = await escolaComCoordenacao()
+      const estrutura = await estruturaDa(coordenacao)
+      const convite = await cadastrado(coordenacao)
+      const alocado = await alocar(coordenacao, convite.usuarioId, estrutura)
+      expect(alocado.status).toBe(201)
+
+      // Revogado depois de alocado: sem trava nova, o vínculo continua pendente (ninguém chega a ele sem o aceite), e uma
+      // alocação nova do revogado é recusada como a do inexistente, sem gravar.
+      expect((await revogar(coordenacao, convite.usuarioId)).status).toBe(204)
+      expect(await estadoNaLista(coordenacao, convite.usuarioId)).toBe('revogado')
+      expect(await vinculosDa(escolaId)).toEqual([{ usuario_id: convite.usuarioId, estado: 'pendente' }])
+      expect(semRequisicao(await alocar(coordenacao, convite.usuarioId, { turmaId: estrutura.turmaId, disciplinaId: (await estruturaExtra(coordenacao)).disciplinaId }))).toEqual(NAO_ENCONTRADO)
+      expect(await vinculosDa(escolaId)).toEqual([{ usuario_id: convite.usuarioId, estado: 'pendente' }])
+
+      // O convite revogado não se refaz (a matriz da 3.0): a coordenação cadastra de novo o mesmo e-mail, que chama o mesmo
+      // usuário de volta, com um convite novo. Aceito e dentro, o vínculo de antes ainda é o dele, pendente, e não abre a
+      // turma; confirmado, abre.
+      expect(semRequisicao(await refazer(coordenacao, convite.usuarioId))).toEqual(CONFLITO)
+      const deNovo = await cadastrado(coordenacao, { nome: convite.nome, email: convite.email })
+      expect(deNovo.usuarioId).toBe(convite.usuarioId)
+      expect(await estadoNaLista(coordenacao, convite.usuarioId)).toBe('pendente')
+      const aceite = await aceitar(deNovo.token, SENHA_NOVA)
+      expect(aceite.status).toBe(200)
+      const login = await entrar(convite.email, SENHA_NOVA, String(aceite.corpo['bilhete']))
+      const token = String(login.corpo['token'])
+      expect(semRequisicao(await pedir('GET', `/v1/turmas/${estrutura.turmaId}`, token))).toEqual(NAO_ENCONTRADO)
+      const meus = await pedir('GET', '/v1/meus-vinculos', token)
+      expect((meus.corpo['itens'] as Array<{ id: string; estado: string }> | undefined) ?? []).toMatchObject([{ id: alocado.corpo['id'], estado: 'pendente' }])
+      expect((await pedir('POST', `/v1/vinculos/${String(alocado.corpo['id'])}/confirmar`, token)).status).toBe(200)
+      expect((await pedir('GET', `/v1/turmas/${estrutura.turmaId}`, token)).status).toBe(200)
+    })
+
+    it('de ponta a ponta com o aceito à espera da primeira entrada (a conta que já existia em outra escola): alocado ainda inativo, entra, e só abre a turma ao confirmar', async () => {
+      const deA = await professoraDe(await bancada.escola())
+      const { escolaId, coordenacao } = await escolaComCoordenacao()
+      const estrutura = await estruturaDa(coordenacao)
+      const convite = await cadastrado(coordenacao, { nome: 'Professora com conta', email: deA.email })
+      const aceite = await aceitar(convite.token)
+      expect(aceite.corpo).toEqual({ etapa: 'entrar', bilhete: expect.any(String) })
+      // Aceito, e ainda inativo na escola nova: é assim que ele é alocado.
+      expect(await estadoNaLista(coordenacao, convite.usuarioId)).toBe('aceito')
+      expect((await bancada.pool.query('select desativado_em is null as ativo from usuario where id = $1', [convite.usuarioId])).rows).toEqual([{ ativo: false }])
+      const alocado = await alocar(coordenacao, convite.usuarioId, estrutura)
+      expect(alocado.status).toBe(201)
+      expect(await vinculosDa(escolaId)).toEqual([{ usuario_id: convite.usuarioId, estado: 'pendente' }])
+
+      // A primeira entrada, com a senha de sempre, escolhendo a escola nova: o vínculo pendente não abre a turma.
+      const login = await entrar(deA.email, SENHA_DE_A, String(aceite.corpo['bilhete']))
+      expect(login.corpo['etapa']).toBe('escolher')
+      const escolhido = await pedir('POST', '/v1/sessao/escola', String(login.corpo['desafio']), { usuarioId: convite.usuarioId })
+      expect(escolhido.corpo['etapa']).toBe('pronta')
+      const token = String(escolhido.corpo['token'])
+      expect(semRequisicao(await pedir('GET', `/v1/turmas/${estrutura.turmaId}`, token))).toEqual(NAO_ENCONTRADO)
+      expect((await pedir('POST', `/v1/vinculos/${String(alocado.corpo['id'])}/confirmar`, token)).status).toBe(200)
+      expect((await pedir('GET', `/v1/turmas/${estrutura.turmaId}`, token)).status).toBe(200)
+      // O usuário dela na escola de antes continua como estava.
+      expect((await bancada.pool.query('select desativado_em is null as ativo from usuario where id = $1', [deA.usuarioId])).rows).toEqual([{ ativo: true }])
+    })
+
+    it('vale o último convite de professor: o refeito é alocado; um convite de outro tipo em aberto não faz o revogado alocável', async () => {
+      const { escolaId, coordenacao } = await escolaComCoordenacao()
+      const estrutura = await estruturaDa(coordenacao)
+
+      // Refeito: o anterior foi revogado pelo refazer, e o novo, em aberto, vence mais tarde.
+      const refeito = await cadastrado(coordenacao)
+      expect((await refazer(coordenacao, refeito.usuarioId)).status).toBe(201)
+      expect(await estadoNaLista(coordenacao, refeito.usuarioId)).toBe('pendente')
+      expect((await alocar(coordenacao, refeito.usuarioId, estrutura)).status).toBe(201)
+
+      // Revogado, com um convite de coordenador em aberto e mais novo para o mesmo usuário (gravado no banco, fora do
+      // caminho normal): o estado continua o do convite de professor, e a alocação recusa.
+      const revogado = await cadastrado(coordenacao)
+      expect((await revogar(coordenacao, revogado.usuarioId)).status).toBe(204)
+      await bancada.pool.query("insert into convite (escola_id, token_hash, tipo, usuario_id, expira_em) values ($1, $3, 'coordenador', $2, now() + interval '30 days')", [
+        escolaId,
+        revogado.usuarioId,
+        hashSorteado(),
+      ])
+      expect(await estadoNaLista(coordenacao, revogado.usuarioId)).toBe('revogado')
+      expect(semRequisicao(await alocar(coordenacao, revogado.usuarioId, estrutura))).toEqual(NAO_ENCONTRADO)
+      expect(await vinculosDa(escolaId)).toEqual([{ usuario_id: refeito.usuarioId, estado: 'pendente' }])
+    })
   })
 
   describe('C7: cadastros ao mesmo tempo terminam com um convite em aberto', () => {

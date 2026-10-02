@@ -57,9 +57,11 @@ function daCoordenacao(lido: VinculoLido): VinculoDaCoordenacao {
  * falha fechada sem ano em curso (Tech Spec, seção 5, "Requisição"), e toda escrita grava a auditoria na mesma
  * transação (regra 20, item 10).
  *
- * - **Criar** (coordenação): a turma do ano em curso, a pessoa ativa da escola com o papel do vínculo e a disciplina da
- *   escola, ou `NAO_ENCONTRADO`, igual para o id de outra escola e o inexistente. Nasce `pendente`. O repetido, mesmo em
- *   dois pedidos simultâneos, dá `CONFLITO` pelo índice único.
+ * - **Criar** (coordenação): a turma do ano em curso, o professor alocável da escola (`VinculoRepository.professorAlocavel`:
+ *   o convite em aberto e dentro do prazo, o `aceito` e o `ativo`; A1, 13.0) e a disciplina da escola, ou
+ *   `NAO_ENCONTRADO`, igual para o id de outra escola e o inexistente. Nasce `pendente`, e só alcança a turma depois de o
+ *   professor aceitar o convite, entrar e confirmar. O repetido, mesmo em dois pedidos simultâneos, dá `CONFLITO` pelo
+ *   índice único.
  * - **Confirmar e contestar** (professor dono): o vínculo de outro professor, de outra escola ou inexistente dá
  *   `NAO_ENCONTRADO`. Só a partir de `pendente` ou `contestado`. Confirmar de novo o que já está confirmado responde o
  *   vínculo como está, sem gravar nada (o segundo clique); o resto dá `CONFLITO`.
@@ -82,7 +84,9 @@ export class VinculoService {
       // O ano em curso travado em `FOR SHARE`: o encerramento do ano espera o vínculo nascer, e o que chega depois não nasce.
       if (!(await turmas.travarAnoEmCurso())) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
       if ((await turmas.aberta(turmaId, 'unidade')) === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-      if (!(await vinculos.pessoaAtivaComPapel(usuarioId, pedido.papel))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      // A guarda confere o papel de professor, o único que a coordenação cria (`PAPEIS_DE_VINCULO_PELA_COORDENACAO`):
+      // outro papel naquela lista pede outra guarda aqui.
+      if (!(await vinculos.professorAlocavel(usuarioId))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
       if (disciplinaId !== null && (await new DisciplinaRepository(tx).porId(disciplinaId)) === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
       const id = await vinculos.criar({ usuarioId, turmaId, disciplinaId, papel: pedido.papel })
       await registro.gravar(tx, 'vinculo.criado', { entidadeId: id, depois: { usuarioId, turmaId, disciplinaId, papel: pedido.papel, estado: 'pendente' } })

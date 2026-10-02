@@ -291,6 +291,47 @@ decisão (10.0) travam o ano no começo da transação delas; o ano que deixou d
     recorrer, sem "Tentar de novo"; os outros erros são o `EstadoErro`. A série vem por extenso de `nomeDaSerie`, em
     `packages/shared`, que a Estrutura da 13.0 reaproveita
   - Teto do chunk `aluno-*`: 5 kB (a "Minha turma" mede perto de 1 kB)
+- **Decidido na 13.0** (divergências registradas em `13_task.md`):
+  - A coordenação abre em Estrutura (`/coordenacao/estrutura`): a página inicial a leva para lá, sem ficar no histórico.
+    A turma aberta, com a lista, fica em `/coordenacao/estrutura/turmas/:turmaId`; os links de dentro da área são
+    relativos à base dela
+  - Estrutura numa tela só (ano letivo, séries, disciplinas, turmas e alocação), com o roteiro do que falta; a lista de
+    nomes, na turma aberta. A lista de nomes fica sem marca no roteiro: saber se cada turma tem lista seria uma leitura
+    auditada por turma
+  - `Dialogo`, `CLASSES_DO_BOTAO_SECUNDARIO` e `useDialogoDaTela` saem de `operacao/` para `componentes/` (antecipado da
+    14.1), com o aviso de inatividade da operação pelo `rodape` do `Dialogo`: importar de `operacao/` reprovaria o B2
+  - A lista é lida com a finalidade fixa `conferencia_de_cadastro` e não envelhece sozinha (`staleTime` infinito); as
+    listas da estrutura vêm em até 10 páginas de 100, e acima disso a tela diz que mostra só as primeiras (turmas e
+    disciplinas; a alocação corta sem aviso acima de 1.000 vínculos ou professores, o que não acontece numa escola do
+    recorte: `TODO.md`)
+  - A prévia avisa o título antes da lista, o cabeçalho não reconhecido e a coluna que parece CPF ou data; esta última
+    segura a gravação (regra 20, item 2). A gravação recusada pela API tira a prévia; a que cai por rede ou servidor a
+    mantém. O arquivo em UTF-16 com BOM (o "Texto Unicode" do Excel) também é lido, com teto de 128 KB. Com dois alunos
+    de mesmo nome, o "Retirar" e a confirmação dizem a matrícula
+  - A alocação oferece só os professores de `ESTADOS_DO_PROFESSOR_ALOCAVEIS` (seção 13)
+  - As listas e as escolhas vêm na ordem da escola (a API pagina pela criação): séries pela etapa e pelo ano, turmas pela
+    série e pelo nome, disciplinas e professores pelo nome; os anos letivos, do mais novo ao mais antigo. Na alocação, o
+    item que saiu da lista sai da escolha, e o "Alocar" seguinte não reenvia quem a API acabou de recusar
+  - O roteiro não marca o passo cuja leitura ainda carrega ou falhou. O ano letivo novo não grava período de outro ano,
+    porque o ano não se altera nem se exclui depois: o início cai no ano e o fim, nele ou no seguinte, **no contrato**
+    (`esquemaPedidoCriarAnoLetivo`, em `packages/shared`; a API recusa com `ENTRADA_INVALIDA`, E1), e na tela o período
+    acompanha o ano digitado e o erro vai para o campo. O anúncio de cada ação aparece na seção dela, e o erro de campo
+    leva o foco ao campo. A planilha (`.xlsx`, `.xls`, `.ods`) é recusada com o que fazer
+  - Na lista colada, o foco só vai ao título da prévia e ao alerta quando a resposta chega, uma vez, e só do `body`
+    (onde o botão desligado durante o pedido o deixa) ou de um botão: a prévia e o alerta que voltam porque o texto voltou a um valor anterior, e
+    a resposta que chega com a pessoa já de volta no campo, não tiram o foco dele
+  - A web pede a API sem cache HTTP (`cache: 'no-store'` no `chamarApi`): respostas com nome e matrícula não ficam em
+    disco no computador da escola. O nome avulso tem a mesma trava da lista colada para matrícula que parece CPF ou
+    data, e os dois campos ficam fora do corretor ortográfico. O arquivo que o navegador não consegue ler tem aviso. Na
+    turma nova, a série que saiu da lista sai da escolha
+  - A tela segura antes de enviar o texto vazio, o texto acima de 64 KB e a lista acima de 200 nomes e um cabeçalho (o
+    que a API recusaria; entre 200 e 201 linhas, decide a API). A prévia marca a linha que parece CPF ou data. Os
+    diálogos de criar, renomear, excluir e retirar fecham com a lista já recarregada, e o foco vai ao título da seção
+    quando o botão que abriu saiu com o item. O `perigo` tem duas classes em `componentes/botao-secundario.ts` (texto em
+    `erro` na linha; cheio só na confirmação). O vazio da Alocação diz o que falta (turma, disciplina ou professor
+    alocável), com o título do W4. "Sem rastro" (nome e matrícula fora de `localStorage`, `sessionStorage`, IndexedDB,
+    Cache Storage e do endereço) é provado no e2e, porque a web não tem ambiente de DOM na unidade
+  - Teto do chunk `coordenacao-*`: 20 kB (mede ~12 kB)
 - **Decisão**: "Aprovar N" (`oficial`) revisa turma, nomes e efeito, e avisa a coordenação da auditoria; "Recusar"
   (`perigo`) confirma; depois, texto por pedido (W6). Até 40, explicado. O pedido mostra se houve tentativa com
   matrícula errada no nome. Para o professor, atualiza a cada 15 s com a aba visível (W15); a coordenação usa
@@ -302,7 +343,7 @@ decisão (10.0) travam o ano no começo da transação delas; o ano que deixou d
 - **Textos** (`MENSAGENS_DA_SALA`, exatos no W9): o servidor responde igual, e a página escolhe o de `NAO_ENCONTRADO`
   pelo caminho que usou, código ou link. O do limite, "Muitas tentativas agora. Espere N minutos ou chame o
   professor.", vale pelo nome e pelo `rl:ip`
-- **Lista**: arquivo lido como texto (UTF-8 ou windows-1252), com exemplo
+- **Lista**: arquivo lido como texto (UTF-8 ou windows-1252; na 13.0, também UTF-16 com BOM), com exemplo
 
 Quatro estados em toda tela (W4): carregando é `EstadoCarregando`; erro, `EstadoErro`.
 
@@ -337,10 +378,13 @@ Em `cenarios.md`, parte desta spec: lista fechada, um id por teste, com a cláus
   - **a auditoria do aceite**: `convite.aceito.usuarioAtivo` (do F1) e o `usuario.ativado_por_convite`, que só a conta
     que já existia grava. Nenhuma rota da coordenação lê a auditoria hoje; a tarefa que a exportar no dossiê (D61)
     decide, com o `privacy-guardian`, se esses campos saem ou são agregados
-- **Alocação antes do aceite** (3.0): o professor cadastrado fica inativo até o aceite, e a alocação do F1 só aceita
-  professor ativo (`VinculoRepository.pessoaAtivaComPapel`). O W1, o RF7 e o passo 1 da seção 5 descrevem a coordenação
-  alocando antes do aceite. Decide o Joaquim antes da 13.0 (a tela de alocação): ou a alocação passa a aceitar o
-  professor com convite em aberto, correção na API com o `tenancy-guardian` e o `privacy-guardian` (vínculo de quem nunca
-  entrou), ou a tela e o W1 alocam depois da primeira entrada. Até lá, o E10 aloca depois da entrada
+- **Alocação antes do aceite** (3.0; decidida pelo Joaquim em 27/09/2026, feita na 13.0): a alocação aceita o professor
+  com convite em aberto. Alocável é o professor da escola da sessão com o estado de `estadoDoProfessor` em
+  `ESTADOS_DO_PROFESSOR_ALOCAVEIS` (`pendente`, `aceito`, `ativo`; `VinculoRepository.professorAlocavel`, no lugar do
+  `pessoaAtivaComPapel`). `vencido`, `revogado`, `desativado`, quem não é professor e o professor de outra escola
+  respondem o `NAO_ENCONTRADO` do inexistente. O `aceito` vale nos dois casos que junta, para a alocação não dizer se o
+  e-mail tinha conta (E11). O vínculo nasce `pendente` e não alcança a turma até o aceite, a entrada e a confirmação
+  (P2); o convite revogado depois da alocação deixa o vínculo pendente, como já deixava revogar depois de alocar. O E10
+  continua alocando depois da entrada; o E12 prova a alocação antes do aceite
 - **Ator dentro da sala** vê o código novo projetado e pode travar os nomes de novo
 - **A fronteira movida** pode mudar a A0b; o e2e dela roda junto

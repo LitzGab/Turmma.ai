@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { Botao } from '../../componentes/Botao'
 import { CHAVE_DAS_ESCOLAS, revogarConviteNoPainel } from '../api/painel'
 import { falhaDoConvite } from '../textos'
-import { CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
+import { CLASSES_DO_BOTAO_SECUNDARIO } from '../../componentes/botao-secundario'
 import { DialogoDaOperacao } from './DialogoDaOperacao'
 
 interface Props {

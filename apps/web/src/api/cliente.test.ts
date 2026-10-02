@@ -89,6 +89,15 @@ describe('chamarApi', () => {
     expect(opcoes.body ?? '').not.toContain('token-da-camila')
   })
 
+  it('nenhuma resposta da API vai para o cache HTTP do navegador, na leitura e na escrita (regra 20)', async () => {
+    responder(200, { itens: [] })
+    await buscarDaApi('/v1/turmas/x/lista', esquemaRespostaAvisos)
+    expect(ultimoPedido().opcoes.cache).toBe('no-store')
+    responder(200, { itens: [] })
+    await chamarApi('/v1/turmas/x/lista', esquemaRespostaAvisos, { metodo: 'POST', corpo: { texto: 'Ana;1' }, token: 'token-da-renata' })
+    expect(ultimoPedido().opcoes.cache).toBe('no-store')
+  })
+
   it('sem token, não manda cabeçalho de autorização nenhum', async () => {
     responder(200, { itens: [] })
     await buscarDaApi('/v1/sistema/avisos', esquemaRespostaAvisos)

@@ -27,7 +27,7 @@ export const SEM_CORPO: EsquemaDeResposta<void> = { safeParse: () => ({ success:
 
 export interface OpcoesDaChamada {
   /** `GET` quando não dito. */
-  readonly metodo?: 'GET' | 'POST' | 'DELETE'
+  readonly metodo?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
   /** Corpo JSON do pedido. */
   readonly corpo?: unknown
   /** O token de acesso da sessão, quando a rota exige (`Authorization: Bearer`). Nunca vai na URL (regra 50, item 7). */
@@ -73,6 +73,10 @@ async function lerJson(resposta: Response): Promise<unknown> {
  *
  * O cookie de renovação vai junto por ser mesma origem (o navegador nunca o lê; é `HttpOnly`), e o token de acesso,
  * quando existe, vai no cabeçalho `Authorization`.
+ *
+ * `cache: 'no-store'`: a resposta da API não vai para o cache HTTP do navegador, que fica em disco no computador da
+ * escola. Várias trazem nome e matrícula de aluno (a lista da turma, 13.0), e o Chromebook do carrinho passa de mão em
+ * mão (regra 20).
  */
 export async function chamarApi<T>(caminho: string, esquema: EsquemaDeResposta<T>, opcoes: OpcoesDaChamada = {}): Promise<T> {
   const { metodo = 'GET', corpo, token, sinal } = opcoes
@@ -80,6 +84,7 @@ export async function chamarApi<T>(caminho: string, esquema: EsquemaDeResposta<T
   try {
     resposta = await fetch(caminho, {
       method: metodo,
+      cache: 'no-store',
       headers: {
         Accept: 'application/json',
         ...(corpo === undefined ? {} : { 'Content-Type': 'application/json' }),

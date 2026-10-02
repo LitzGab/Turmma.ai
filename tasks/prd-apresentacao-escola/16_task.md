@@ -28,6 +28,16 @@ cada pedido termina com o resultado dele em texto.
 - Um 5xx no meio do `decidir` não desfaz os ids já decididos, e a resposta não diz quais: depois de um erro, a tela relê
   os pedidos da turma.
 
+## Nota da 13.0 (`frontend-reviewer`, 1ª rodada)
+
+- Na lista de nomes da turma (`apps/web/src/areas/coordenacao/ListaDaTurma.tsx`), o aluno aprovado vem sem nome nem
+  matrícula e o cartão diz "Aluno aprovado" no título e no estado: trinta aprovados viram trinta cartões iguais. Esta
+  tarefa, que põe os pedidos e os aprovados dentro da turma, decide como a turma os mostra (uma contagem, ou o nome que a
+  rota dos alunos da turma já entrega com auditoria).
+- As peças de `apps/web/src/areas/coordenacao/dialogos.tsx` (`Anuncio`, `AlertaDaFalha`, `useEnvioUnico`, `textoDaFalha`,
+  os dois diálogos) se movem para `apps/web/src/componentes/` quando a área do professor precisar delas (ver a nota no
+  `15_task.md`), sem copiar (`revisor-geral`, 1ª rodada da 13.0).
+
 ## Subtarefas
 
 - [ ] 16.1 — Pedidos do professor na turma: nome, hora e a marca "Houve tentativa com matrícula errada neste nome;

@@ -54,6 +54,25 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       13.819/2019, Lei 15.231/2025) e como o sinal chega a essa pessoa
 - [x] ~~Decidir região de hospedagem~~ — Brasil (D28)
 
+- [ ] **A lista de nomes colada pela coordenação** (`privacy-guardian` e `revisor-geral`, 13.0 da A1), antes de qualquer
+      dado real, a levar para o `/validar` da A1:
+      - CPF sem pontuação passa pela trava da prévia (`previa-da-lista.ts` pega só `000.000.000-00` e datas; o Excel
+        exporta CPF como número de 11 algarismos): marcar quando a maioria das linhas tem 11 algarismos com dígitos
+        verificadores válidos
+      - colunas a mais (nascimento, CPF, telefone numa exportação da secretaria) trafegam no corpo da prévia e da
+        gravação, sem serem gravadas nem logadas: a tela avisar, ou recortar para nome e matrícula antes de enviar
+      - a sessão que vence com a lista colada na tela: hoje o texto e a prévia somem porque a consulta da turma volta a
+        pendente (seguro para a pessoa seguinte, e o rascunho de quem volta se perde). Decidir se o rascunho sobrevive
+        para a mesma pessoa, e ter um e2e do caso "outra pessoa" (nenhum nome nem matrícula atrás do login por cima)
+      - a trava de CPF ou data existe só na tela (`pareceDocumento`, na prévia e no nome avulso): a API aceita a
+        matrícula com essa forma, na lista e no avulso, de qualquer outro cliente. Decidir se a regra vai para o
+        contrato (`packages/shared`, regra 00, item 1), junto com a saída para o falso positivo, que no servidor pesa mais
+      - a trava de documento não tem saída para falso positivo: a escola cuja matrícula tenha forma de data
+        (`2026-02-01`, `1/2/26`) não consegue gravar, nem pela lista nem pelo avulso, e o texto não diz o que fazer.
+        Perguntar o formato da matrícula nas entrevistas do piloto
+      - `Cache-Control: no-store` nas respostas nominais da API (`/retro` da A1, registrado no `2_task.md`): a web já
+        pede sem cache (`cache: 'no-store'` no `chamarApi`, 13.0); falta o cabeçalho, para qualquer outro cliente
+
 ## Infra e operação
 
 - [ ] `lista_nome`: índice parcial `(escola_id, usuario_id) where usuario_id is not null`, para a busca da eliminação do
@@ -519,6 +538,22 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       mockup (área de soltar arquivo, miniatura de arquivo, pasta animada, `leaderboard-*` e as duas
       da HextaUI) e conferir a do calendário `vaib215/event-manager`, antes de qualquer uma entrar no
       código (P20)
+- [ ] **Foco durante o pedido e ao trocar de tela** (`frontend-reviewer`, 13.0 da A1): o botão que fica `disabled` enquanto
+      o pedido está no ar perde o foco para o `body` (medido em "Alocar", "Ver a prévia", "Ver mais nomes" e "Abrir o ano
+      letivo"; vale para o `Botao` e o secundário de todas as telas, também as da operação), e abrir uma tela pela lateral
+      ou por link não leva o foco ao `<h1>`. A 12.0 resolveu o primeiro no `SeletorDeEscola` com `aria-disabled`; falta o
+      padrão no `Botao`, com o estilo do desligado, e o foco na troca de rota, na casca. E o erro de campo do `Campo` não
+      tem região viva: quando o foco já está no campo com erro (Enter com o foco nele), o leitor de tela pode não ler.
+      Na lista colada da Estrutura (`ListaDaTurma.tsx`), o alerta que volta porque o texto voltou ao recusado é
+      `role="alert"` e é lido de novo (`AlertaSemFoco`), a rever em teste com leitor de tela (3ª rodada da 13.0)
+- [ ] **Encerrar alocação pela tela** (`frontend-reviewer`, 13.0 da A1): a API tem `POST /v1/vinculos/:id/encerrar` e
+      nenhuma tela o usa. O professor alocado na turma errada não se desfaz pela Estrutura, o vínculo `contestado` não
+      oferece ação, e a turma com alocação não se exclui. Decisão de produto (o que a coordenação pode desfazer, e com
+      que aviso ao professor), a levar para o `/validar` da A1
+- [ ] **Listas da Estrutura sem virtualização** (`frontend-reviewer`, 13.0 da A1): turmas, disciplinas e alocações rendem
+      até 1.000 cartões. Cabe numa escola do recorte (dezenas); rever se a alocação de uma escola passar de algumas
+      centenas (regra 50, item 1). Junto: a Alocação lê até 1.000 vínculos e 1.000 professores e, acima disso, corta sem
+      o aviso que turmas e disciplinas têm (`revisor-geral`)
 
 ## Comercial
 

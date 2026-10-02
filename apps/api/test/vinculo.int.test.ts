@@ -278,7 +278,7 @@ describe('vínculo: a coordenação cria, o professor confirma ou contesta, a co
       expect(registros.at(-1)).toMatchObject({ autor_usuario_id: escola.coordenacao.usuarioId, antes: { estado: 'confirmado' }, depois: { estado: 'encerrado', motivo: 'desligamento' } })
     })
 
-    it('criar: a pessoa precisa ser professor ativo da escola; coordenador, aluno, desativado e papel de aluno dão 404 ou 400, e nada nasce', async () => {
+    it('criar: a pessoa precisa ser professor alocável da escola (13.0); coordenador, aluno, desativado sem convite e papel de aluno dão 404 ou 400, e nada nasce', async () => {
       const escola = await montarEscolaComTurma(api, bancada)
       const aluno = await bancada.sessao(escola.coordenacao.escolaId, 'aluno')
       const desativado = await professorDe(escola)

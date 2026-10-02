@@ -13,6 +13,22 @@ export const ROTAS_DO_PROFESSOR = {
   turmas: '/turmas',
 } as const
 
+/** As rotas da área da coordenação, relativas à base dela. */
+export const ROTAS_DA_COORDENACAO = {
+  /** Onde a escola se monta: ano letivo, séries, disciplinas, turmas e alocação (A1, 13.0; `docs/interface.md` 3 e 11.1). */
+  estrutura: '/estrutura',
+  /** Uma turma aberta dentro de Estrutura, com a lista de nomes dela (13.0) e, na 16.0, os pedidos. */
+  turma: '/estrutura/turmas/:turmaId',
+} as const
+
+/**
+ * O endereço da turma aberta na Estrutura, **relativo à área**: o link sai de dentro do `Route` aninhado em `/coordenacao`,
+ * onde o wouter resolve o `to` a partir da base da área.
+ */
+export function caminhoDaTurmaNaEstrutura(turmaId: string): string {
+  return ROTAS_DA_COORDENACAO.turma.replace(':turmaId', encodeURIComponent(turmaId))
+}
+
 /** As rotas da área do aluno, relativas à base dela. */
 export const ROTAS_DO_ALUNO = {
   /** A turma do aluno aprovado, com a escola e a série, sem colegas (A1, 12.0; RF13). */
@@ -30,6 +46,8 @@ export const ROTAS = {
   escolherEscola: '/escolher-escola',
   /** "Turmas" do professor, pela raiz: é o endereço que a navegação usa. */
   turmas: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.turmas}`,
+  /** Estrutura da coordenação, pela raiz: é o endereço que a navegação usa, e onde a coordenação abre (13.0). */
+  estrutura: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.estrutura}`,
   /** "Minha turma" do aluno, pela raiz: é o endereço que a navegação usa. */
   minhaTurma: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.minhaTurma}`,
   /** O convite do primeiro coordenador. O token vai no fragmento `#`, e nunca no caminho nem na consulta. */

@@ -1,12 +1,26 @@
-import { disciplina, exigirAnoEmCurso, exigirEscolaDoContexto, sessaoDaRequisicao, turma, usuario, vinculo, type Banco, type TransacaoBanco } from '@educa/nucleo'
-import type {
-  ConsultaPaginada,
-  ContestacaoDeVinculo,
-  EstadoDeVinculo,
-  MotivoDeEncerramentoDeVinculo,
-  PapelDeVinculo,
+import {
+  convite,
+  disciplina,
+  estadoDoProfessor,
+  exigirAnoEmCurso,
+  exigirEscolaDoContexto,
+  sessaoDaRequisicao,
+  turma,
+  usuario,
+  vinculo,
+  type Banco,
+  type TransacaoBanco,
+} from '@educa/nucleo'
+import {
+  ESTADOS_DO_PROFESSOR_ALOCAVEIS,
+  type ConsultaPaginada,
+  type ContestacaoDeVinculo,
+  type EstadoDeVinculo,
+  type EstadoDoProfessor,
+  type MotivoDeEncerramentoDeVinculo,
+  type PapelDeVinculo,
 } from '@educa/shared'
-import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, isNotNull, ne, sql, type SQL } from 'drizzle-orm'
 
 export interface NovoVinculo {
   readonly usuarioId: string
@@ -102,13 +116,32 @@ export class VinculoRepository {
     })
   }
 
-  /** Se a pessoa é da escola, está ativa e tem o papel do vínculo: professor com vínculo de professor. */
-  async pessoaAtivaComPapel(usuarioId: string, papel: PapelDeVinculo): Promise<boolean> {
-    const [linha] = await this.banco
-      .select({ id: usuario.id })
+  /**
+   * Se a coordenação pode alocar este usuário numa turma (A1, 13.0, decidido pelo Joaquim em 27/09/2026): um `professor`
+   * da escola do contexto cujo estado, por `estadoDoProfessor` (a mesma função da lista da coordenação e do refazer e do
+   * revogar), está em `ESTADOS_DO_PROFESSOR_ALOCAVEIS` — o convite em aberto e dentro do prazo, o `aceito` e o `ativo`.
+   * O estado sai do `desativado_em` do usuário e do último convite `tipo = 'professor'` dele na escola (maior `expira_em`,
+   * depois maior `id`, a ordem de `ConviteRepository.dadosDoProfessor`), com a hora do banco.
+   *
+   * O usuário de outra escola, o que não é professor, o inexistente, e o professor `vencido`, `revogado` ou `desativado`
+   * dão `false`, e o serviço responde `NAO_ENCONTRADO` igual para todos (regra 10, item 6). A escola vem do contexto nas
+   * duas consultas; na do convite ela é segunda camada, porque a FK composta já prende o convite à escola do usuário.
+   */
+  async professorAlocavel(usuarioId: string): Promise<boolean> {
+    const escolaId = exigirEscolaDoContexto()
+    const [professor] = await this.banco
+      .select({ desativadoEm: usuario.desativadoEm, agora: sql<Date>`now()`.mapWith(usuario.desativadoEm) })
       .from(usuario)
-      .where(and(eq(usuario.escolaId, exigirEscolaDoContexto()), eq(usuario.id, usuarioId), eq(usuario.papel, papel), isNull(usuario.desativadoEm)))
-    return linha !== undefined
+      .where(and(eq(usuario.escolaId, escolaId), eq(usuario.id, usuarioId), eq(usuario.papel, 'professor')))
+    if (professor === undefined) return false
+    const [ultimoConvite] = await this.banco
+      .select({ id: convite.id, expiraEm: convite.expiraEm, usadoEm: convite.usadoEm, revogadoEm: convite.revogadoEm })
+      .from(convite)
+      .where(and(eq(convite.escolaId, escolaId), eq(convite.usuarioId, usuarioId), eq(convite.tipo, 'professor')))
+      .orderBy(desc(convite.expiraEm), desc(convite.id))
+      .limit(1)
+    const estado = estadoDoProfessor({ desativadoEm: professor.desativadoEm, ultimoConvite, agora: professor.agora })
+    return (ESTADOS_DO_PROFESSOR_ALOCAVEIS as readonly EstadoDoProfessor[]).includes(estado)
   }
 
   /** Uma página dos vínculos do ano, do estado pedido ou de todos, em ordem de criação, com uma linha a mais. */

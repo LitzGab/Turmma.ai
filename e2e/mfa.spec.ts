@@ -1,5 +1,6 @@
 import { AVISO_DO_SEGUNDO_FATOR_CONSUMIDO, mensagemDoSegundoFator } from '../packages/shared/src/erros/mensagens.ts'
 import { QUANTIDADE_DE_CODIGOS_DE_RECUPERACAO } from '../packages/shared/src/sessao/mfa.ts'
+import { esperarEstrutura } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { campoCodigo, configurarSegundoFator, entrarComSenha } from './__fixtures__/segundo-fator.ts'
 import { codigoDoAutenticador, criarEquipeComSenha } from './__fixtures__/sessao.ts'
@@ -77,7 +78,8 @@ test.describe('segundo fator da coordenação, sem celular', () => {
     expect(caixaDoEntrar?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
     await campoCodigo(page).fill(codigoDoAutenticador(segredo, PASSO_SEGUINTE_SEGUNDOS))
     await page.getByRole('button', { name: /^Entrar$/ }).click()
-    await expect(page.getByRole('heading', { name: `Olá, ${renata.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // A coordenação abre em Estrutura (13.0).
+    await esperarEstrutura(page)
   })
 
   test('código de recuperação entra sem o aplicativo, e o mesmo código não passa de novo', async ({ page }) => {
@@ -92,7 +94,8 @@ test.describe('segundo fator da coordenação, sem celular', () => {
     await page.getByRole('button', { name: 'Usar um código de recuperação' }).click()
     await page.getByLabel('Código de recuperação').fill(primeiro ?? '')
     await page.getByRole('button', { name: /^Entrar$/ }).click()
-    await expect(page.getByRole('heading', { name: `Olá, ${renata.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // A coordenação abre em Estrutura (13.0).
+    await esperarEstrutura(page)
 
     // Sai e tenta o mesmo código: ele valeu uma vez só (RF12).
     await page.getByRole('button', { name: 'Sair' }).click()
@@ -107,7 +110,8 @@ test.describe('segundo fator da coordenação, sem celular', () => {
     // E um código ainda não usado entra: o que valeu uma vez foi aquele, não o segundo fator inteiro.
     await page.getByLabel('Código de recuperação').fill(segundo ?? '')
     await page.getByRole('button', { name: /^Entrar$/ }).click()
-    await expect(page.getByRole('heading', { name: `Olá, ${renata.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // A coordenação abre em Estrutura (13.0).
+    await esperarEstrutura(page)
   })
 
   test('cinco códigos errados gastam o desafio: a tela volta à entrada explicando, e o código certo não entra sem refazer a senha', async ({ page }) => {

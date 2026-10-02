@@ -22,6 +22,14 @@ copia o link ou o compartilha pelo WhatsApp com um texto sem nome de aluno, e tr
     `operacao/` se esta vier antes: não copie)
   - `apps/web/src/componentes/CodigoQr.tsx` — existe; o QR não está na spec, e fica fora
 
+## Nota da 13.0 (`revisor-geral`, 1ª rodada)
+
+- `Anuncio`, `AlertaDaFalha`, `useEnvioUnico`, `textoDaFalha`, `DialogoDeFormulario` e `ConfirmacaoDePerigo` nasceram em
+  `apps/web/src/areas/coordenacao/dialogos.tsx`. Se esta tarefa precisar deles na área do professor, eles se movem para
+  `apps/web/src/componentes/` (e a classe do `select`, repetida em `Estrutura.tsx` e `Alocacao.tsx`, vira uma constante
+  lá), sem copiar: importar de outra área poria o módulo num `parte-*` (B2). A operação tem outro `textoDaFalha` em
+  `operacao/textos.ts`; juntar os dois é desta mudança.
+
 ## Subtarefas
 
 - [ ] 15.1 — A turma aberta pelo professor, com a seção Acesso: sem acesso, "Sem acesso ativo" e Gerar; gerar com a

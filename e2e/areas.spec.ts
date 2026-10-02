@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { NOME_DA_CONTESTACAO, NOME_DO_ESTADO_DE_VINCULO } from '../packages/shared/src/estrutura/vinculo.ts'
@@ -5,6 +6,7 @@ import {
   abrirNavegacao,
   entrarComoCoordenacaoNaMesmaAba,
   escolherNoSeletor,
+  esperarEstrutura,
   nomeNoSeletor,
   entrarComoProfessora,
   entrarPorEmail,
@@ -36,6 +38,8 @@ const TITULO_DA_FALHA = 'Não foi possível carregar esta parte do Turmma'
  * (outra resolução de módulos); a tarefa que acrescenta a linha lá acrescenta aqui, e o W2 percorre todos.
  */
 const ITENS_DO_PROFESSOR = [{ rotulo: 'Turmas', caminho: '/professor/turmas' }] as const
+/** Os itens da coordenação, como a mesma tabela os declara: "Estrutura" chegou na 13.0. */
+const ITENS_DA_COORDENACAO = [{ rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' }] as const
 /** Os itens do aluno, como a mesma tabela os declara: "Minha turma" chegou na 12.0. */
 const ITENS_DO_ALUNO = [{ rotulo: 'Minha turma', caminho: '/aluno/minha-turma' }] as const
 
@@ -137,15 +141,19 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     const pedidos = registrarChunks(page)
     await entrarComoProfessora(page, hasTouch)
 
-    await page.goto('/coordenacao')
-    await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // Os endereços da coordenação que têm tela desde a 13.0: a Estrutura e uma turma aberta nela.
+    for (const endereco of ['/coordenacao/estrutura', `/coordenacao/estrutura/turmas/${randomUUID()}`]) {
+      await page.goto(endereco)
+      await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(page.getByRole('heading', { name: 'Estrutura' })).toHaveCount(0)
+    }
     await expect(page).toHaveTitle('Página não encontrada · Turmma')
     // A casca continua: a pessoa sai dali pela lateral, e não por um beco sem saída.
     await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible()
     await page.goto('/aluno/minha-turma')
     await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    // Sem a guarda, a tela seria a mesma (a área da coordenação ainda não tem tela), e é o pedido do chunk que mostra
-    // que ela não foi baixada nem montada.
+    // A área do aluno responderia "não encontrada" para o professor também sem a guarda (a "Minha turma" é só do aluno
+    // na API): é o pedido do chunk que mostra que nenhuma das duas áreas foi baixada nem montada.
     expect(pedidos.filter((caminho) => CHUNK_DA_COORDENACAO.test(caminho) || CHUNK_DO_ALUNO.test(caminho))).toEqual([])
 
     // Um endereço que não existe dentro da própria área responde igual: a tela não confirma o que é de outro papel.
@@ -197,7 +205,7 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await abrirNavegacao(page, hasTouch)
     await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Minha turma' })).toHaveAttribute('aria-current', 'page')
 
-    for (const endereco of ['/professor/turmas', '/coordenacao']) {
+    for (const endereco of ['/professor/turmas', '/coordenacao/estrutura']) {
       await page.goto(endereco)
       await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     }
@@ -238,22 +246,21 @@ test.describe('W5: a fronteira do import() de cada área', () => {
 
   test('a área da coordenação que não chega mostra a mesma fronteira, e a nova tentativa carrega', async ({ page, hasTouch }) => {
     const coordenadora = await criarEquipeComSenha('coordenador')
-    await page.goto('/entrar')
-    await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-
+    // A coordenação abre em Estrutura (13.0): a área é pedida já na entrada, e é ali que ela não chega.
     const abortar = (rota: Route) => rota.abort('internetdisconnected')
     await page.route(CHUNK_DA_COORDENACAO, abortar)
-    await navegarSemRecarregar(page, '/coordenacao')
+    await page.goto('/entrar')
+    await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
     await expect(page.getByRole('alert')).toContainText('Confira a conexão e tente de novo', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page).toHaveTitle('Não foi possível carregar · Turmma')
     await expect(page.getByRole('heading', { name: TITULO_DA_FALHA })).toBeFocused()
     expect(await violacoesGraves(page)).toEqual([])
 
-    // Com a rede de volta, "Tentar de novo" recarrega e a área chega (a da coordenação ainda não tem tela na A1).
+    // Com a rede de volta, "Tentar de novo" recarrega e a área chega, com a Estrutura.
     await page.unroute(CHUNK_DA_COORDENACAO, abortar)
     if (hasTouch) await page.getByRole('button', { name: 'Tentar de novo' }).tap()
     else await page.getByRole('button', { name: 'Tentar de novo' }).click()
-    await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarEstrutura(page)
     await expect(page.getByRole('heading', { name: TITULO_DA_FALHA })).toHaveCount(0)
   })
 })
@@ -343,12 +350,12 @@ test.describe('recomeço da tela', () => {
     })
     const coordenadora = await criarEquipeComSenha('coordenador')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    // A página inicial da coordenação também não aponta para Turmas, que é tela do professor.
+    // A coordenação abre em Estrutura (13.0), que também não aponta para Turmas, tela do professor.
+    await esperarEstrutura(page)
     await expect(page.getByRole('main').getByRole('link', { name: 'Turmas' })).toHaveCount(0)
-    await expect(page.getByRole('main')).toContainText('próximas versões')
 
     await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' })).toHaveCount(0)
+    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(ITENS_DA_COORDENACAO.map(({ rotulo }) => rotulo))
     await expect(lateral(page)).toContainText(coordenadora.nome)
     await expect(page.locator('body')).not.toContainText(professora.nome)
     await expect(page.locator('body')).not.toContainText(alocacao.turmaNome)

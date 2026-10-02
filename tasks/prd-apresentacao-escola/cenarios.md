@@ -100,7 +100,10 @@ aos cenários.
 ## E — Escrita e regra
 
 - **E1** (integração) RF3: criar ano letivo, série, disciplina e turma; "5º ano" recusado com o erro tipado da série
-  (D43). **Quebra sem:** a validação do F1 na rota usada pela tela
+  (D43). Também (13.0): o ano letivo cujo período contradiz o ano (o início em outro ano, o fim depois do ano seguinte)
+  dá `ENTRADA_INVALIDA`, sem gravar, e o fim em janeiro do ano seguinte passa: o ano não se altera nem se exclui depois
+  de criado. **Quebra sem:** a validação do F1 na rota usada pela tela; as duas regras do período em
+  `esquemaPedidoCriarAnoLetivo`
 - **E2** (integração) Renomear disciplina e turma; excluir disciplina com vínculo e turma com nome na lista, vínculo,
   pedido ou acesso vigente: `CONFLITO`, nada apagado; turma vazia sai, e a turma cujo acesso foi revogado sai levando o
   acesso (a FK do `acesso_turma` com `on delete cascade`); o vencido também (4.0). Na parte do acesso, o teste tira o
@@ -140,7 +143,13 @@ aos cenários.
   professores` e a auditoria `professor.cadastrado` têm os mesmos campos nos dois, sem `contaNova` nem nada que os
   distinga. **Quebra sem:** um campo derivado de a conta ser nova
 - **E12** (integração) RF8: a alocação cria o vínculo `pendente`; sem confirmação, o professor não gera acesso nem lê
-  pedidos (P2, P3). **Quebra sem:** o estado inicial do F1
+  pedidos (P2, P3). Também (13.0, a alocação antes do aceite): o professor com convite `pendente` é alocado, e o `aceito`
+  também, nos dois casos que junta (conta nova e conta de outra escola à espera da primeira entrada, com a mesma
+  resposta); `vencido`, `revogado`, `desativado` depois do aceite e o professor de outra escola, com convite em aberto ou
+  ativo, dão o `NAO_ENCONTRADO` do inexistente, sem gravar; o convite refeito vale pelo último, e um convite de outro tipo
+  não conta; o vínculo do pendente só alcança a turma depois do aceite, da entrada e da confirmação. **Quebra sem:** o
+  estado inicial do F1; cada estado de `ESTADOS_DO_PROFESSOR_ALOCAVEIS`; a escola, o papel, o tipo e a ordem do último
+  convite em `professorAlocavel`
 - **E13** (integração) RF9: gerar com 1, 7 e 30 dias grava o `expira_em` certo; 0, 2 e 31 dão `ENTRADA_INVALIDA`;
   "Gerar novo" faz o link e o código anteriores responderem `NAO_ENCONTRADO` na hora; o `GET` traz só `expiraEm`. Também
   (4.0): sem acesso vigente (nunca gerado, revogado, vencido), o `GET` traz `{ expiraEm: null }` e revogar é
@@ -389,8 +398,8 @@ aos cenários.
 
 - **W1** RF1 e RF18: o fluxo inteiro, com nomes gerados: a coordenação cria ano, série, disciplina, turma, lista,
   professor e alocação; o professor aceita, confirma e gera o acesso; o aluno reivindica pelo código; o professor aprova;
-  o aluno entra e vê só a própria turma. **Depende da decisão "Alocação antes do aceite"** (Tech Spec, seção 13): hoje a
-  alocação só aceita o professor que já entrou
+  o aluno entra e vê só a própria turma. A alocação vem antes do aceite: decidido pelo Joaquim em 27/09/2026 (Tech Spec,
+  seção 13), feito na 13.0 e provado no E12
 - **W2** RF1: por papel, só os itens da fase (coordenação: Estrutura e Professores; professor: Turmas; aluno: Minha
   turma), e nenhum leva a tela inexistente; o professor abrindo o endereço de uma tela da coordenação cai em "não
   encontrada"; `document.title` muda por rota. **Quebra sem:** a guarda de papel em `rotas.tsx`
@@ -403,10 +412,10 @@ aos cenários.
 
   | Tela | Vazio → próximo passo | Com dado |
   |---|---|---|
-  | Estrutura | "Comece pelo ano letivo" → roteiro até a alocação | o que falta |
+  | Estrutura | "Comece pelo ano letivo" → roteiro até a alocação; a coordenação abre aqui (13.0) | o que falta, sem marcar o passo cuja leitura ainda carrega ou falhou; as listas na ordem da escola, e não na de criação; só o ano planejado se abre, e só sem ano em curso; o ano letivo novo não grava período de outro ano; na turma nova, a série que outra pessoa excluiu sai da escolha (13.0) |
   | Lista | "Cole a lista ou envie o arquivo: nome; matrícula" | prévia, erros primeiro |
   | Professores | "Nenhum professor ainda" → Cadastrar | estado do convite |
-  | Alocação | "Crie uma turma e um professor primeiro" | vínculos |
+  | Alocação | "Crie uma turma e um professor primeiro" (sem turma, sem disciplina ou sem professor alocável: o de convite vencido não conta; a descrição diz o que falta, 13.0) | vínculos; a escolha pelo nome; o convite que vence com a tela aberta sai da escolha, e o "Alocar" seguinte não o reenvia (13.0) |
   | Turmas | "A coordenação ainda não alocou você"; só pendente: "Confirme suas turmas" | confirmadas |
   | Pedidos | professor: "Nenhum pedido esperando" → Acesso; coordenação: "Os pedidos chegam quando o professor da turma gerar o acesso", sem botão | seleção |
   | Acesso | "Sem acesso ativo" → Gerar | validade |
@@ -447,7 +456,14 @@ aos cenários.
   texto com código de erro nem com "computador". **Quebra sem:** a escolha pelo caminho; o texto do limite sem "código
   novo" (falso no `rl:ip`); o arredondamento para cima e o singular
 - **W10** Lista: arquivo em windows-1252 com `;` e acento (amostra do Excel) e em UTF-8 com BOM e `,`: a prévia mostra
-  os nomes certos, com as linhas de erro primeiro e em texto
+  os nomes certos, com as linhas de erro primeiro e em texto. Também (13.0): a coluna que parece CPF ou data de
+  nascimento segura a gravação, e a tela avisa o título antes da lista e o cabeçalho que o leitor não reconhece; o "Texto
+  Unicode" do Excel (UTF-16 com BOM e tabulação) sai com os nomes certos; a escolha do arquivo é limpa depois de lida,
+  para a mesma planilha corrigida ser lida de novo; a planilha em si (`.xlsx`, `.xls`, `.ods`) é recusada com o que fazer;
+  a prévia e o alerta só levam o foco quando a resposta chega, e não quando voltam com o texto, nem de quem já voltou ao
+  campo; com dois alunos de mesmo nome na turma, o "Retirar" e a confirmação dizem a matrícula; o nome avulso recusa a
+  matrícula que parece CPF ou data; o arquivo que o navegador não consegue ler tem aviso; a web pede a API sem cache
+  HTTP, para a resposta com nome e matrícula não ficar em disco
 - **W11** Campos: código com `autocapitalize="characters"`; matrícula e senha com `autocomplete="off"`; matrícula com
   `inputmode="text"`; senha com "mostrar" e os 12 caracteres avisados
 - **W12** 360 px: nenhuma tela nova com rolagem horizontal; abaixo de 768 px, cartões e gaveta; alvos de 44 px;

@@ -8,7 +8,7 @@ import { copiarLink, linkDoConvite } from '../acoes-do-convite'
 import { CHAVE_DAS_ESCOLAS, mutacaoDoGerarConvite, mutacaoDoRefazerConvite } from '../api/painel'
 import { pedidoDeConvite, type CampoDoConvite } from '../pedidos-do-painel'
 import { falhaDoConvite } from '../textos'
-import { CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
+import { CLASSES_DO_BOTAO_SECUNDARIO } from '../../componentes/botao-secundario'
 import { DialogoDaOperacao } from './DialogoDaOperacao'
 
 /** O que é dito do link, antes de gerar e depois: vale 72 h, entra uma vez, e aparece uma vez só. */

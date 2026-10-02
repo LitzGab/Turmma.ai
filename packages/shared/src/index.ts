@@ -106,6 +106,9 @@ export {
   esquemaPedidoCriarAnoLetivo,
   esquemaRespostaAnoLetivo,
   esquemaRespostaListaDeAnosLetivos,
+  fimCaiAteOAnoSeguinte,
+  fimDepoisDoInicio,
+  inicioCaiNoAnoLetivo,
   MAIOR_ANO_LETIVO,
   MENOR_ANO_LETIVO,
   SITUACOES_DO_ANO_LETIVO,
@@ -281,6 +284,7 @@ export {
   esquemaRespostaConviteDeProfessor,
   esquemaRespostaListaDeProfessores,
   ESTADOS_DO_PROFESSOR,
+  ESTADOS_DO_PROFESSOR_ALOCAVEIS,
   REFAZER_CONVITE_DE_PROFESSOR_POR_ESTADO,
   REVOGAR_CONVITE_DE_PROFESSOR_POR_ESTADO,
 } from './professores/professores.js'

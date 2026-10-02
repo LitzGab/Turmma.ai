@@ -11,7 +11,7 @@ import {
   ligarContaExterna,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
-import { abrirNavegacao, abrirSeletorDeEscola, botaoDoSeletor, irPelaNavegacao, lateral, linhaDoSeletor, nomeNoSeletor } from './__fixtures__/casca.ts'
+import { abrirNavegacao, abrirSeletorDeEscola, botaoDoSeletor, esperarEstrutura, irPelaNavegacao, lateral, linhaDoSeletor, nomeNoSeletor } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -218,7 +218,9 @@ test.describe('escolher e trocar de escola', () => {
     await page.getByLabel('Código do aplicativo').fill(codigoDoAutenticador(segredo, PASSO_SEGUINTE_SEGUNDOS))
     await acionar(page, /^Entrar$|Entrando/, hasTouch)
 
-    await esperarEscola(page, 'Professora sintética na outra escola', emB.escolaNome)
+    // Na escola onde coordena, ela abre em Estrutura (13.0), com a escola de destino no seletor.
+    await esperarEstrutura(page)
+    await expect(page.locator('body')).toContainText(emB.escolaNome)
     // Nada da escola onde ela dá aula pode aparecer dentro da escola onde ela coordena. O nome de A segue só no
     // seletor, que é acesso da própria conta.
     await expect(page.getByRole('main')).not.toContainText(emA.escolaNome)

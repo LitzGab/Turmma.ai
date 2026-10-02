@@ -340,7 +340,7 @@ describe('acesso à turma: só o vínculo confirmado abre a turma e os alunos (R
           meus: await vinculos.listarDoUsuario({ limite: 50 }),
           porId: await vinculos.porId(b.vinculo),
           porIdDoUsuario: await vinculos.porIdDoUsuario(b.vinculo),
-          professor: await vinculos.pessoaAtivaComPapel(b.professor.usuarioId, 'professor'),
+          professor: await vinculos.professorAlocavel(b.professor.usuarioId),
           disciplina: await new DisciplinaRepository(bancada.banco).porId(b.quimica),
           ...naTransacao,
         }
@@ -367,8 +367,9 @@ describe('acesso à turma: só o vínculo confirmado abre a turma e os alunos (R
         turma: await new TurmaRepository(bancada.banco).aberta(b.turma, 'turma_vinculada'),
         alunos: (await new TurmaRepository(bancada.banco).alunos(b.turma, { limite: 50 })).length,
         meus: (await new VinculoRepository(bancada.banco).listarDoUsuario({ limite: 50 })).length,
+        professor: await new VinculoRepository(bancada.banco).professorAlocavel(b.professor.usuarioId),
       }))
-      expect(deB).toEqual({ turma: expect.objectContaining({ id: b.turma }), alunos: 2, meus: 2 })
+      expect(deB).toEqual({ turma: expect.objectContaining({ id: b.turma }), alunos: 2, meus: 2, professor: true })
     })
 
     it('o banco recusa o vínculo de A com a turma, o usuário ou a disciplina de B, e com a turma de outro ano: as FKs compostas são a segunda camada', async () => {

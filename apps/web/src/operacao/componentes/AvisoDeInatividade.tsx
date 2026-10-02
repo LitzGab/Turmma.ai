@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 import { Botao } from '../../componentes/Botao'
-import { CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
+import { CLASSES_DO_BOTAO_SECUNDARIO } from '../../componentes/botao-secundario'
 
 /**
  * O aviso de inatividade da sessão com a tela aberta, e o que a casca precisa saber dos diálogos. Um `dialog` modal deixa

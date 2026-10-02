@@ -26,7 +26,9 @@ link, cria a senha (ou entra com a conta que já tem) e chega à tela "Turmas" p
 
 ## Subtarefas
 
-- [ ] 14.1 — O diálogo de convite de cópia única sai de `apps/web/src/operacao/` para `apps/web/src/componentes/`,
+- [ ] 14.1 — (O `Dialogo.tsx`, a `CLASSES_DO_BOTAO_SECUNDARIO` e o `useDialogoDaTela` já saíram para `componentes/` na
+  13.0, com o `DialogoDaOperacao` como o `Dialogo` mais o aviso de inatividade.) O diálogo de convite de cópia única sai
+  de `apps/web/src/operacao/` para `apps/web/src/componentes/`,
   sem nada da operação dentro; a operação passa a importar de lá, sem mudar de comportamento. O `nome-dos-chunks`
   continua impedindo a escola de baixar o chunk da operação
 - [ ] 14.2 — Tela Professores: cadastrar (nome e e-mail, `autocomplete="off"`), o resumo antes de enviar ("vale 7
@@ -75,8 +77,18 @@ link, cria a senha (ou entra com a conta que já tem) e chega à tela "Turmas" p
   seguidos respondem 201 os dois, com o primeiro link já revogado pelo segundo (teste "dois refazer do mesmo professor em
   paralelo" em `apps/api/test/professores.int.test.ts`). A tela trava o botão enquanto o pedido está no ar e mostra só o
   link da última resposta.
-- **Alocação antes do aceite**: a alocação do F1 só aceita professor ativo; a decisão está na seção 13 da Tech Spec e
-  vem antes da 13.0 ("Decisão pendente" no `13_task.md`).
+- **Alocação antes do aceite**: decidida pelo Joaquim em 27/09/2026 e feita na 13.0 (Tech Spec, seção 13): a alocação
+  aceita o professor com convite em aberto, e o vínculo só alcança a turma depois do aceite e da confirmação.
+
+## Herdado da 13.0
+
+- **O caminho até Professores** (`frontend-reviewer`, 1ª rodada da 13.0): o vazio da Alocação ("Falta: … um professor
+  cadastrado…") e o passo "Professores" do roteiro da Estrutura não levam a lugar nenhum, porque a tela Professores chega
+  aqui. Esta tarefa põe o link nos dois (`apps/web/src/areas/coordenacao/Alocacao.tsx` e `Estrutura.tsx`), e acerta o
+  título do vazio da Alocação com o W4 do `cenarios.md`: "Crie uma turma e um professor primeiro" aparece também quando
+  só falta a disciplina (2ª rodada).
+- **O professor de convite vencido ou revogado não aparece na alocação**: é nesta tela que a coordenação refaz o convite
+  (ou cadastra de novo o e-mail do revogado, que chama o mesmo usuário de volta, com o vínculo pendente de antes).
 
 ## Fora do escopo desta tarefa
 

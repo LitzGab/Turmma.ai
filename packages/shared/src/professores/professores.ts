@@ -50,6 +50,17 @@ export const ESTADOS_DO_PROFESSOR = ['pendente', 'vencido', 'revogado', 'aceito'
 export type EstadoDoProfessor = (typeof ESTADOS_DO_PROFESSOR)[number]
 
 /**
+ * Os estados em que a coordenação aloca o professor numa turma (`POST /v1/vinculos`; A1, 13.0, decidido pelo Joaquim em
+ * 27/09/2026): o convite em aberto e dentro do prazo, e quem já entrou. O servidor decide por esta lista, com o estado de
+ * `estadoDoProfessor`, e a tela de alocação oferece só estes professores. O vínculo nasce `pendente` e só alcança a turma
+ * depois do aceite e da confirmação (P2).
+ *
+ * `vencido`, `revogado` e `desativado` ficam de fora, e respondem como o professor inexistente. O `aceito` entra inteiro:
+ * alocar só o ativo diria à coordenação se o e-mail tinha conta em outra escola (E11).
+ */
+export const ESTADOS_DO_PROFESSOR_ALOCAVEIS = ['pendente', 'aceito', 'ativo'] as const satisfies readonly EstadoDoProfessor[]
+
+/**
  * A matriz estado × ação do convite do professor, num lugar só, como a da coordenação (A0b): o servidor decide por ela,
  * sob a trava da escola, e a tela (14.0) mostra só as ações que ela permite. Quem recusa é o servidor. O professor sem
  * convite de professor nenhum não chega à matriz: `NAO_ENCONTRADO`.

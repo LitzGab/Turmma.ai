@@ -206,7 +206,7 @@ describe('estrutura: a coordenação monta o ano letivo, as séries, as discipli
       expect(await situacoes(coordenacao.escolaId)).toEqual({ 2026: 'encerrado', 2027: 'planejado' })
     })
 
-    it('o mesmo ano duas vezes na escola dá CONFLITO, também em paralelo; período invertido e campo a mais são ENTRADA_INVALIDA', async () => {
+    it('o mesmo ano duas vezes na escola dá CONFLITO, também em paralelo; período invertido, de outro ano ou sem fim à vista, e campo a mais, são ENTRADA_INVALIDA; o fim em janeiro do ano seguinte passa', async () => {
       const coordenacao = await coordenacaoNova()
       const juntas = await Promise.all([post(coordenacao, '/v1/anos-letivos', periodo(2026)), post(coordenacao, '/v1/anos-letivos', periodo(2026))])
       expect(juntas.map((resposta) => resposta.status).sort()).toEqual([201, 409])
@@ -217,12 +217,21 @@ describe('estrutura: a coordenação monta o ano letivo, as séries, as discipli
         { ...periodo(2027), situacao: 'em_curso' },
         { ...periodo(2027), escolaId: coordenacao.escolaId },
         { ano: 1999, inicio: '1999-02-01', fim: '1999-12-15' },
+        // O período não contradiz o ano (A1, 13.0): o ano letivo não se altera nem se exclui depois de criado.
+        { ano: 2027, inicio: '2026-02-01', fim: '2026-12-15' },
+        { ano: 2027, inicio: '2028-02-01', fim: '2028-12-15' },
+        { ano: 2027, inicio: '2027-02-01', fim: '2207-12-15' },
       ]) {
         const resposta = await post(coordenacao, '/v1/anos-letivos', invalido)
         expect(resposta.status, JSON.stringify(invalido)).toBe(400)
         expect(resposta.corpo.erro?.codigo).toBe(CodigoDeErro.ENTRADA_INVALIDA)
       }
       expect(await contar('ano_letivo', coordenacao.escolaId)).toBe(1)
+      // A rede que termina o ano letivo em janeiro do ano seguinte: passa.
+      const comFimEmJaneiro = await post(coordenacao, '/v1/anos-letivos', { ano: 2027, inicio: '2027-02-01', fim: '2028-01-20' })
+      expect(comFimEmJaneiro.status).toBe(201)
+      expect(comFimEmJaneiro.corpo).toMatchObject({ ano: 2027, inicio: '2027-02-01', fim: '2028-01-20', situacao: 'planejado' })
+      expect(await contar('ano_letivo', coordenacao.escolaId)).toBe(2)
     })
   })
 

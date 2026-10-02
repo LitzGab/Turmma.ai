@@ -149,3 +149,19 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-09-27 11:54:29 | `frontend-reviewer` | 3ª | APROVADO | `12_task` | nenhuma nova. As duas da 2ª rodada continuam registradas para o `/validar`, como você disse. |
 | 2026-09-27 11:55:03 | `privacy-guardian` | 2ª | APROVADO | `12_task` | nenhuma nova. |
 | 2026-09-27 11:55:07 | `revisor-geral` | 2ª | APROVADO | `12_task` | `e2e/__fixtures__/sessao.ts`, no comentário do `colocarAlunoNaTurma`: a frase nova foi colada no meio de uma linha e deixou a linha bem mais longa que as… |
+| 2026-10-01 20:34:11 | `test-engineer` | 1ª | REPROVADO | `13_task` | e2e/estrutura.spec.ts:358-378 — o título do teste |
+| 2026-10-01 21:18:36 | `test-engineer` | 2ª | APROVADO | `13_task` | apps/web/src/areas/coordenacao/ListaDaTurma.tsx:259 — |
+| 2026-10-01 21:35:12 | `frontend-reviewer` | 1ª | AJUSTES NECESSÁRIOS | `13_task` | O roteiro diz "falta" enquanto a seção carrega e quando ela falha — `apps/web/src/areas/coordenacao/Estrutura.tsx:187-198` |
+| 2026-10-01 22:27:02 | `test-engineer` | 3ª | APROVADO | `13_task` | Anúncio na seção errada sobrevive (confirmado rodando). O auxiliar `anuncio` (e2e/estrutura.spec.ts:65) procura no `main` inteiro, então trocar a seção em… |
+| 2026-10-01 22:33:06 | `frontend-reviewer` | 2ª | AJUSTES NECESSÁRIOS | `13_task` | A prévia que reaparece tira o foco do campo, e o que a pessoa digita depois se perde — `apps/web/src/areas/coordenacao/ListaDaTurma.tsx:401-403` |
+| 2026-10-01 23:24:15 | `test-engineer` | 4ª | REPROVADO | `13_task` | `apps/web/src/areas/coordenacao/ListaDaTurma.tsx:265` — `focoPendente.current = undefined` dentro do efeito (o pedido de foco é consumido ao ser atendido) não… |
+| 2026-10-01 23:45:16 | `test-engineer` | 5ª | APROVADO | `13_task` | `tasks/prd-apresentacao-escola/13_task.md:99` — a linha "o que a tela segura" lista "início vazio" e não o "fim vazio", que agora tem teste. Acrescentar, para… |
+| 2026-10-01 23:53:16 | `frontend-reviewer` | 3ª | APROVADO | `13_task` | 3, listadas abaixo |
+| 2026-10-01 23:57:09 | `tenancy-guardian` | 1ª | APROVADO | `13_task` | apps/web/src/areas/coordenacao/Estrutura.tsx:798 — o `POST /v1/turmas` manda `anoLetivoId` no corpo, ao contrário do que o pedido de auditoria afirma ("nenhuma… |
+| 2026-10-02 00:01:10 | `privacy-guardian` | 1ª | APROVADO | `13_task` | sete, abaixo. |
+| 2026-10-02 00:02:12 | `revisor-geral` | 1ª | APROVADO | `13_task` | nove, abaixo |
+| 2026-10-02 00:40:24 | `test-engineer` | 6ª | APROVADO | `13_task` | Só documento — `tasks/prd-apresentacao-escola/13_task.md`, seção "Mutações". Falta declarar o sobrevivente `\|\| ativo instanceof HTMLButtonElement` de… |
+| 2026-10-02 00:46:09 | `frontend-reviewer` | 4ª | APROVADO | `13_task` | três, nenhuma pede lote de código agora (abaixo) |
+| 2026-10-02 01:07:21 | `test-engineer` | 7ª | APROVADO | `13_task` | duas, abaixo (uma só de documento, uma só de teste) |
+| 2026-10-02 01:09:27 | `privacy-guardian` | 2ª | APROVADO | `13_task` | uma, de código, abaixo. |
+| 2026-10-02 01:12:00 | `revisor-geral` | 2ª | APROVADO | `13_task` | três, todas só de documento (abaixo) |

@@ -72,7 +72,7 @@ async function id(banco: Client, instrucao: string, parametros: unknown[]): Prom
  *
  * Cada chamada cria a própria escola, para dois testes em paralelo nunca disputarem a mesma conta.
  */
-export async function criarEquipeComSenha(papel: 'professor' | 'coordenador' = 'professor'): Promise<EquipeDeTeste> {
+export async function criarEquipeComSenha(papel: 'professor' | 'coordenador' = 'professor', opcoes: { readonly semAnoLetivo?: boolean } = {}): Promise<EquipeDeTeste> {
   const marca = randomUUID()
   // Nome de escola e de pessoa únicos: é o que deixa um teste afirmar que a tela não mostra a pessoa do teste ao lado,
   // nem a anterior no mesmo Chromebook.
@@ -87,7 +87,9 @@ export async function criarEquipeComSenha(papel: 'professor' | 'coordenador' = '
   return comBanco(async (banco) => {
     const redeId = await id(banco, "insert into rede (nome, tipo) values ($1, 'independente') returning id", [redeNome])
     const escolaId = await id(banco, 'insert into escola (rede_id, nome, slug) values ($1, $2, $3) returning id', [redeId, escolaNome, slug])
-    await banco.query("insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, 2026, '2026-02-01', '2026-12-18', 'em_curso')", [escolaId])
+    // Sem ano letivo é a escola como o painel da operação a cria: a coordenação começa por ele (Estrutura, 13.0).
+    if (opcoes.semAnoLetivo !== true)
+      await banco.query("insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, 2026, '2026-02-01', '2026-12-18', 'em_curso')", [escolaId])
     const contaId = await id(banco, 'insert into conta (email, senha_hash) values ($1, $2) returning id', [email, senhaHash])
     const usuarioId = await id(banco, 'insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, $3, $4) returning id', [escolaId, contaId, papel, nome])
     return { escolaId, escolaNome, redeNome, slug, contaId, usuarioId, nome, email, senha }
@@ -376,5 +378,145 @@ export async function colocarAlunoNaTurma(aluno: Pick<AlunoDeTeste, 'escolaId' |
 export async function encerrarSessoesDoUsuario(usuarioId: string): Promise<void> {
   await comBanco(async (banco) => {
     await banco.query("update sessao set encerrada_em = now(), motivo = 'desativacao' where usuario_id = $1 and encerrada_em is null", [usuarioId])
+  })
+}
+
+/** A estrutura que a coordenação já montou, gravada direto no banco: série, disciplina e turmas do ano em curso. */
+export interface EstruturaDeTeste {
+  readonly anoLetivoId: string
+  readonly disciplina: { readonly id: string; readonly nome: string }
+  readonly turmas: ReadonlyArray<{ readonly id: string; readonly nome: string }>
+}
+
+/**
+ * Uma série de 7º ano, uma disciplina e as turmas dadas, no ano em curso da escola, como a Estrutura (13.0) as criaria.
+ * Atalho do e2e para o teste que não é sobre criar: nomes com uma marca única, para o teste de isolamento procurá-los.
+ * As turmas nascem na ordem dada, que é a ordem em que a API as lista (o id segue a criação): quem prova a ordem da tela
+ * as dá fora da ordem do nome.
+ */
+export async function montarEstruturaNoBanco(escolaId: string, turmas: readonly string[] = ['7A']): Promise<EstruturaDeTeste> {
+  const marca = randomUUID().slice(0, 8)
+  return comBanco(async (banco) => {
+    const { rows: anos } = await banco.query<{ id: string }>("select id from ano_letivo where escola_id = $1 and situacao = 'em_curso'", [escolaId])
+    const anoLetivoId = anos[0]?.id
+    if (anoLetivoId === undefined) throw new Error('a escola do e2e não tem ano letivo em curso')
+    const serieId = await id(banco, "insert into serie (escola_id, etapa, ano) values ($1, 'ef_anos_finais', 7) on conflict (escola_id, etapa, ano) do update set ano = excluded.ano returning id", [escolaId])
+    const disciplinaNome = `Ciências sintética ${marca}`
+    const disciplinaId = await id(banco, 'insert into disciplina (escola_id, nome) values ($1, $2) returning id', [escolaId, disciplinaNome])
+    const criadas: Array<{ id: string; nome: string }> = []
+    for (const turma of turmas) {
+      const nome = `${turma} ${marca}`
+      criadas.push({ id: await id(banco, 'insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, $4) returning id', [escolaId, anoLetivoId, serieId, nome]), nome })
+    }
+    return { anoLetivoId, disciplina: { id: disciplinaId, nome: disciplinaNome }, turmas: criadas }
+  })
+}
+
+/**
+ * Nomes na lista da turma, livres como a gravação da lista (2.0) os deixa ou já reivindicados (o aluno pediu o nome, 6.0),
+ * na ordem dada. Nome e matrícula inventados pelo teste.
+ */
+export async function porNaListaDaTurma(
+  escolaId: string,
+  turmaId: string,
+  nomes: ReadonlyArray<{ readonly nome: string; readonly matricula: string; readonly estado?: 'livre' | 'reivindicado' }>,
+): Promise<void> {
+  await comBanco(async (banco) => {
+    const { rows } = await banco.query<{ ano_letivo_id: string }>('select ano_letivo_id from turma where escola_id = $1 and id = $2', [escolaId, turmaId])
+    const anoLetivoId = rows[0]?.ano_letivo_id
+    if (anoLetivoId === undefined) throw new Error('turma do e2e não encontrada')
+    for (const { nome, matricula, estado = 'livre' } of nomes)
+      await banco.query('insert into lista_nome (escola_id, ano_letivo_id, turma_id, nome, matricula, estado) values ($1, $2, $3, $4, $5, $6)', [
+        escolaId,
+        anoLetivoId,
+        turmaId,
+        nome,
+        matricula,
+        estado,
+      ])
+  })
+}
+
+/** Uma disciplina a mais na escola, direto no banco: criada depois, vem depois na lista da API. */
+export async function criarDisciplinaNoBanco(escolaId: string, nome: string): Promise<string> {
+  return comBanco((banco) => id(banco, 'insert into disciplina (escola_id, nome) values ($1, $2) returning id', [escolaId, nome]))
+}
+
+/** Apaga a disciplina direto no banco: é a outra pessoa da coordenação que a excluiu enquanto a tela estava aberta. */
+export async function apagarDisciplinaNoBanco(escolaId: string, disciplinaId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('delete from disciplina where escola_id = $1 and id = $2', [escolaId, disciplinaId])
+  })
+}
+
+/** As sete séries do recorte (D43), do 6º ano ao 3º do Ensino Médio, na escola. */
+export async function criarTodasAsSeriesNoBanco(escolaId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query(
+      "insert into serie (escola_id, etapa, ano) select $1, etapa, ano from (values ('ef_anos_finais', 6), ('ef_anos_finais', 7), ('ef_anos_finais', 8), ('ef_anos_finais', 9), ('em', 1), ('em', 2), ('em', 3)) as recorte(etapa, ano) on conflict (escola_id, etapa, ano) do nothing",
+      [escolaId],
+    )
+  })
+}
+
+/**
+ * Um professor cadastrado pela coordenação (3.0), ainda sem entrar: o usuário inativo e o convite de professor, em aberto
+ * (`pendente`) ou vencido. É o que a alocação da Estrutura oferece, ou não (13.0). O e-mail é do domínio reservado. O
+ * `primeiroNome` é para o teste que prova a ordem da escolha: o nome inteiro continua com a marca única.
+ */
+export async function convidarProfessorNoBanco(
+  escolaId: string,
+  estado: 'pendente' | 'vencido',
+  primeiroNome = 'Professor',
+): Promise<{ readonly usuarioId: string; readonly nome: string }> {
+  const marca = randomUUID()
+  const nome = `${primeiroNome} ${estado === 'pendente' ? 'convidado' : 'de convite vencido'} ${marca.slice(0, 8)}`
+  return comBanco(async (banco) => {
+    const contaId = await id(banco, 'insert into conta (email) values ($1) returning id', [`professor-${marca}@educa.invalid`])
+    const usuarioId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome, desativado_em) values ($1, $2, 'professor', $3, now()) returning id", [escolaId, contaId, nome])
+    const expiraEm = estado === 'pendente' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000) : new Date(Date.now() - 60_000)
+    await banco.query("insert into convite (escola_id, token_hash, tipo, usuario_id, expira_em) values ($1, $2, 'professor', $3, $4)", [
+      escolaId,
+      hashDoToken(randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')),
+      usuarioId,
+      expiraEm,
+    ])
+    return { usuarioId, nome }
+  })
+}
+
+/** O convite em aberto do professor passa do prazo, com a tela da coordenação aberta: ele deixa de ser alocável (13.0). */
+export async function vencerConviteNoBanco(usuarioId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query("update convite set expira_em = now() - interval '1 minute' where usuario_id = $1 and tipo = 'professor' and usado_em is null and revogado_em is null", [usuarioId])
+  })
+}
+
+/**
+ * A turma sai da escola com os vínculos e os nomes da lista dela, direto no banco: outra pessoa da coordenação esvaziou e
+ * excluiu a turma com esta tela aberta.
+ */
+export async function apagarTurmaNoBanco(escolaId: string, turmaId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('delete from vinculo where escola_id = $1 and turma_id = $2', [escolaId, turmaId])
+    await banco.query('delete from lista_nome where escola_id = $1 and turma_id = $2', [escolaId, turmaId])
+    await banco.query('delete from turma where escola_id = $1 and id = $2', [escolaId, turmaId])
+  })
+}
+
+/**
+ * Um ano letivo da escola, direto no banco, na situação dada: o encerrado de antes da virada, o planejado ainda por abrir,
+ * e o que outra pessoa da coordenação abriu com esta tela aberta.
+ */
+export async function criarAnoLetivoNoBanco(escolaId: string, ano: number, situacao: 'planejado' | 'em_curso' | 'encerrado'): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, $2, $3, $4, $5)', [escolaId, ano, `${String(ano)}-02-01`, `${String(ano)}-12-15`, situacao])
+  })
+}
+
+/** A série sai da escola direto no banco: outra pessoa da coordenação a excluiu com o diálogo da turma nova aberto. */
+export async function apagarSerieNoBanco(escolaId: string, etapa: 'ef_anos_finais' | 'em', ano: number): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('delete from serie where escola_id = $1 and etapa = $2 and ano = $3', [escolaId, etapa, ano])
   })
 }

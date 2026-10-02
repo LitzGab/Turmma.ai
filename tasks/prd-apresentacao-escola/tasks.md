@@ -95,7 +95,7 @@ dela nos dois.
   - [x] 12.3 Tela "Minha turma"; teto do chunk do aluno
   - [x] 12.4 Testes: W3, W13; W4 e W12 da Minha turma; integração do contrato de `/v1/eu`
 
-- [ ] **13.0 — Web: Estrutura, lista de nomes e alocação**
+- [x] **13.0 — Web: Estrutura, lista de nomes e alocação**
   - [ ] 13.1 Estrutura: ano, série, disciplina e turma, com renomear e excluir
   - [ ] 13.2 Lista: colar ou arquivo, prévia com erros primeiro, avulso e retirada
   - [ ] 13.3 Alocação professor × turma × disciplina
@@ -142,7 +142,7 @@ dela nos dois.
 | 10.0 | 8.0 | 9.0, 11.0 a 16.0 |
 | 11.0 | — | 1.0 a 10.0 |
 | 12.0 | 11.0, 8.0 | 9.0, 10.0, 13.0, 14.0, 15.0 |
-| 13.0 | 11.0, 2.0 | 3.0 a 10.0, 14.0, 15.0 |
+| 13.0 | 11.0, 2.0, 3.0 | 4.0 a 10.0, 14.0, 15.0 |
 | 14.0 | 11.0, 3.0 | 4.0 a 10.0, 13.0, 15.0 |
 | 15.0 | 11.0, 4.0 | 5.0 a 10.0, 13.0, 14.0 |
 | 16.0 | 15.0, 13.0, 8.0 | 9.0, 10.0, 12.0 |
@@ -171,7 +171,7 @@ se a 2.0 for commitada antes da 3.0, os números se trocam, e a Tech Spec é cor
 | 10.0 | `privacy-guardian`, `tenancy-guardian`, `infra-guardian` |
 | 11.0 | `frontend-reviewer` |
 | 12.0 | `frontend-reviewer`, `tenancy-guardian`, `privacy-guardian` |
-| 13.0 | `frontend-reviewer`, `privacy-guardian` |
+| 13.0 | `frontend-reviewer`, `privacy-guardian`, `tenancy-guardian` (a alocação com convite em aberto, decidida em 27/09/2026) |
 | 14.0 | `frontend-reviewer`, `privacy-guardian` |
 | 15.0 | `frontend-reviewer`, `privacy-guardian` |
 | 16.0 | `frontend-reviewer`, `privacy-guardian` |
