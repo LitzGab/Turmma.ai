@@ -31,7 +31,14 @@ acesso_turma   id, escola_id*, ano_letivo_id*, turma_id*, token_hash*, codigo_hm
 - Ids `uuidv7()`. FKs compostas com a escola: à `lista_nome`, `on delete set null (lista_nome_id)`; à `turma`, a do
   acesso com `on delete cascade`, e a turma só sai sem acesso vigente; ao `usuario`, `usuario_id` sem ação,
   `criado_por` e `decidida_por` com `set null (coluna)`, e a autoria fica na auditoria. O `delete` da turma e o gerar
-  pegam a trava da linha da turma (`for update` e `for share`)
+  pegam a trava da linha da turma (`for update` e `for share`); desde a correção `2026-10-03-acesso-sobrevive-ao-vinculo`,
+  o encerrar do vínculo e a eliminação do professor também (`for no key update`), e o gerar reconfere o vínculo num
+  comando próprio depois da trava
+- Fim do vínculo de quem gerou (correção `2026-10-03-acesso-sobrevive-ao-vinculo`, G1 da validação; regra 20, item 18):
+  quando termina o último vínculo `confirmado` do professor na turma (o encerrar, por `desligamento` ou `realocacao`, ou
+  a eliminação do usuário), o acesso vigente daquela turma que ele gerou (`criado_por`) é revogado na mesma transação,
+  com `acesso_turma.revogado`. Outro vínculo confirmado dele na turma segura o acesso; o de outro professor fica. A
+  desativação não termina vínculo e não revoga (`TODO.md`, F2)
 - `lista_nome`: check `aprovado ⇔ usuario_id ⇔ nome e matrícula nulos`; matrícula única por escola e ano, com `trim`;
   índice `(escola_id, ano_letivo_id, turma_id, estado)`
 - `reivindicacao`: um pendente por nome; `(escola_id, chave_envio)` único parcial, nas não nulas; chave, hash e
@@ -169,7 +176,8 @@ confirmado, pendente ou já decidido: `nao_encontrada`.
   `lista_nome.retirado` (a turma e o estado `livre`, 2.0); a prévia não audita: não grava nada nem devolve nome gravado, só
   diz, das matrículas que a própria coordenação digitou, quais estão na lista da turma ou em uso na escola, e só a
   coordenação da escola chega a ela (2.0, recomendação do `privacy-guardian`); `acesso_turma.gerado` (turma, validade, `expiraEm` e os ids que ele derrubou em `substituidos`) e
-  `acesso_turma.revogado` (a turma), sem token nem código (4.0); `reivindicacao.decidida` com `decidida_como`, sem
+  `acesso_turma.revogado` (a turma), sem token nem código (4.0; também um por acesso que o fim do vínculo de quem gerou
+  derruba, com o autor do encerrar ou da eliminação, correção `2026-10-03-acesso-sobrevive-ao-vinculo`); `reivindicacao.decidida` com `decidida_como`, sem
   `teve_matricula_errada` (8.0: a turma, o estado, `decididaComo` e o `alunoId` que a aprovação criou, nulo na recusa, para
   a pergunta "o que o sistema guarda deste aluno" achar a decisão dele); `turma.reivindicacoes_lidas` com a quantidade e
   a finalidade (8.0). A coordenação grava `turma.lista_lida` e `turma.reivindicacoes_lidas` a cada leitura; o
@@ -241,7 +249,12 @@ fechar (criar turma; gerar acesso; na 6.0 e na 8.0, o pedido e a aprovação); a
 da turma, e o `encerrar` atualiza o ano antes de tudo: nenhuma ordem cruzada. A gravação e o avulso da lista (2.0) também
 fazem nascer linha no ano: desde a 10.0 travam o ano em `FOR SHARE`, antes da turma, como o gerar (C10). A reivindicação e a
 decisão (10.0) travam o ano no começo da transação delas; o ano que deixou de estar em curso faz a reivindicação voltar atrás
-(`REIVINDICACAO_RECUSADA`, sem gravar) e o id da decisão sair `nao_encontrada`.
+(`REIVINDICACAO_RECUSADA`, sem gravar) e o id da decisão sair `nao_encontrada`. **Turma e vínculo** (correção
+`2026-10-03-acesso-sobrevive-ao-vinculo`): o encerrar do vínculo trava a turma (`FOR NO KEY UPDATE`) antes do vínculo, e a
+eliminação trava, em ordem de id, toda turma em que o professor tem vínculo, em qualquer estado, antes de apagá-los; o
+excluir já travava a turma antes de a FK pedir o vínculo. A ordem é sempre turma → vínculo. O gerar que esperou a turma
+reconfere o vínculo num comando próprio (em `READ COMMITTED`, a linha da turma não mudou e o `exists` do `FOR SHARE` ficaria
+com o retrato antigo) e sai `NAO_ENCONTRADO`; o gerar que já tinha a turma termina antes, e o acesso dele cai na revogação.
 
 ## 9. Frontend
 

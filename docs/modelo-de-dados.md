@@ -138,16 +138,24 @@ pela mesma validade. A coordenação não gera acesso.
   também o de outro professor, na mesma transação do novo; a auditoria do novo
   (`acesso_turma.gerado`) lista os que ele derrubou. Revogar sem acesso vigente responde como
   inexistente.
+- **Quem gerou e saiu**: quando termina o último vínculo `confirmado` do professor na turma (o
+  encerrar da coordenação, por `desligamento` ou `realocacao`, ou a eliminação do usuário), o acesso
+  vigente daquela turma que ele gerou é revogado na mesma transação, com `acesso_turma.revogado`.
+  Outro vínculo confirmado dele na turma (outra disciplina) segura o acesso, e o acesso de outro
+  professor não é tocado (correção `2026-10-03-acesso-sobrevive-ao-vinculo`).
 - Índices únicos parciais entre os não revogados: um acesso por turma (dois gerar ao mesmo tempo:
   um grava, o outro `CONFLITO`) e o código único na escola (a colisão do sorteio sorteia de novo num
   savepoint, até três vezes, e depois 503). O token é único no sistema, porque o link não diz a escola.
 - Turma por FK composta com a escola e o ano, `on delete cascade`: a turma só se exclui sem acesso
   vigente (`CONFLITO`), e o revogado ou vencido sai com ela. O autor (`criadoPor`) vira nulo se o
   professor for eliminado, e a autoria fica na auditoria.
-- **Travas**: o gerar trava o ano em curso e a linha da turma em `FOR SHARE`; o excluir trava a
-  turma em `FOR UPDATE` num comando próprio, antes do `delete` que confere o acesso vigente. O ano
-  encerrado não ganha acesso novo, e o excluir nunca leva, pela cascata, um acesso que acabou de ser
-  entregue.
+- **Travas**: o gerar trava o ano em curso e a linha da turma em `FOR SHARE`, e reconfere o vínculo
+  num comando próprio depois da trava; o excluir (`FOR UPDATE`), o encerrar do vínculo e a eliminação
+  do professor (`FOR NO KEY UPDATE`) travam a turma num comando próprio, antes do vínculo, do
+  `delete` e da revogação: a ordem é sempre turma → vínculo. O ano
+  encerrado não ganha acesso novo, o excluir nunca leva, pela cascata, um acesso que acabou de ser
+  entregue, e o acesso gerado no mesmo instante em que o vínculo termina cai com ele (ou o gerar sai
+  inexistente).
 
 **A página pública da sala** (`POST /v1/salas/abrir`, tarefa 5.0) não tem sessão: o aluno chega com o
 slug da escola e o link ou o código, e a escola, o ano e a turma saem da linha do acesso vigente. As duas

@@ -201,8 +201,10 @@ aos cenários.
   volta livre, e o dono o reivindica. **Quebra sem:** a devolução a `livre` na recusa
 - **E26** (integração) Borda, aluno de maio: o nome avulso aparece no `salas/abrir` do link já vigente, sem gerar outro.
   **Quebra sem:** a leitura da lista a cada abertura
-- **E27** (integração) Borda, turma sem professor: o vínculo é encerrado depois de gerar o acesso; o link antigo ainda
-  abre e aceita pedido; a coordenação decide com `decidida_como = 'coordenacao'`; a coordenação não gera acesso (P2).
+- **E27** (integração) Borda, turma sem professor: o pedido chega pelo link, e depois o vínculo do professor que gerou o
+  acesso é encerrado; o link antigo deixa de aceitar pedido (revisto pela correção
+  `2026-10-03-acesso-sobrevive-ao-vinculo`: o fim do último vínculo de quem gerou revoga o acesso); a coordenação decide
+  o pedido que ficou com `decidida_como = 'coordenacao'`; a coordenação não gera acesso (P2).
   **Quebra sem:** o alcance `unidade` da coordenação no `decidir`
 - **E28** (integração) Borda, link projetado depois da semana: com o relógio além do `expira_em`, `NAO_ENCONTRADO`.
   **Quebra sem:** `expira_em` na resolução

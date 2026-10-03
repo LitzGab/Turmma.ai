@@ -67,27 +67,75 @@ export class TurmaRepository {
    * `NAO_ENCONTRADO` em vez de esbarrar na FK (C11). Dois gerar não se esperam aqui: o único por turma decide (C5).
    */
   async travarComVinculoDoProfessor(id: string): Promise<boolean> {
-    const [linha] = await this.banco
-      .select({ id: turma.id })
-      .from(turma)
-      .where(and(eq(turma.escolaId, exigirEscolaDoContexto()), eq(turma.anoLetivoId, exigirAnoEmCurso()), eq(turma.id, id), this.#comVinculoDoProfessor(undefined)))
-      .for('share')
-    return linha !== undefined
+    const daTurmaVinculada = and(eq(turma.escolaId, exigirEscolaDoContexto()), eq(turma.anoLetivoId, exigirAnoEmCurso()), eq(turma.id, id), this.#comVinculoDoProfessor(undefined))
+    const [travada] = await this.banco.select({ id: turma.id }).from(turma).where(daTurmaVinculada).for('share')
+    if (travada === undefined) return false
+    // O vínculo de novo, num comando próprio, depois da trava (correção 2026-10-03-acesso-sobrevive-ao-vinculo): o
+    // encerramento do vínculo e a eliminação do professor travam a turma em `FOR NO KEY UPDATE` (`travarContraOGerar`). Se este
+    // gerar esperou por eles, a linha da turma não mudou e o Postgres não reconfere o `exists` acima, que ficou com o
+    // retrato de antes. Em `READ COMMITTED`, este comando já enxerga o vínculo encerrado ou apagado, e o gerar sai
+    // `NAO_ENCONTRADO` em vez de entregar um acesso a quem acabou de sair.
+    const [ainda] = await this.banco.select({ id: turma.id }).from(turma).where(daTurmaVinculada)
+    return ainda !== undefined
   }
 
   /**
-   * Confirma que a turma do ano em curso com esse id existe e a trava em `FOR UPDATE` até o fim da transação, num comando
-   * próprio, antes do `delete` (A1, 4.0, C11). Espera o gerar acesso que está no meio (`FOR SHARE`), e o `delete` que vem
-   * depois, num comando novo, já enxerga o acesso que ele gravou. No mesmo comando do `delete`, o `not exists` leria o
-   * retrato de antes do gerar, e a cascata levaria um acesso que acabou de ser entregue ao professor.
+   * Confirma que a turma do ano em curso com esse id existe e a trava até o fim da transação, num comando próprio: espera
+   * o gerar acesso que está no meio (`FOR SHARE`), e o comando seguinte já enxerga o acesso que ele gravou.
+   *
+   * - O excluir (A1, 4.0, C11) trava em `FOR UPDATE` antes do `delete`: no mesmo comando, o `not exists` leria o retrato
+   *   de antes do gerar, e a cascata levaria um acesso que acabou de ser entregue ao professor.
+   * - O encerrar do vínculo (correção 2026-10-03-acesso-sobrevive-ao-vinculo) trava em `FOR NO KEY UPDATE` antes de
+   *   travar o vínculo e de revogar o acesso de quem saiu: o acesso que o gerar do mesmo professor acabou de gravar cai
+   *   junto, e o gerar que chega depois espera e reconfere o vínculo (`travarComVinculoDoProfessor`). O `NO KEY UPDATE`
+   *   barra o gerar e deixa passar o `FOR KEY SHARE` das FKs para a turma (o pedido de reivindicação, a lista).
+   *
+   * **A ordem é sempre a turma, depois o vínculo**, no excluir (a FK do vínculo pede `FOR KEY SHARE` nele no `delete`),
+   * no encerrar e na eliminação. Quem travar os dois em outro caminho segue a mesma ordem, ou abre um deadlock.
    */
-  async travarParaExcluir(id: string): Promise<boolean> {
+  async travarContraOGerar(id: string, modo: 'update' | 'no key update'): Promise<boolean> {
     const [linha] = await this.banco
       .select({ id: turma.id })
       .from(turma)
       .where(and(eq(turma.escolaId, exigirEscolaDoContexto()), eq(turma.anoLetivoId, exigirAnoEmCurso()), eq(turma.id, id)))
-      .for('update')
+      .for(modo)
     return linha !== undefined
+  }
+
+  /**
+   * Trava em `FOR NO KEY UPDATE`, em ordem de id, toda turma da escola do contexto em que o usuário tem vínculo de
+   * professor, em qualquer estado (a eliminação do professor, correção 2026-10-03-acesso-sobrevive-ao-vinculo): é a
+   * `travarContraOGerar` de cada turma dele, antes de apagar os vínculos e revogar o acesso que ele gerou. Qualquer
+   * estado, e não só o confirmado: o pendente que ele confirma entre esta trava e o `delete` dos vínculos daria acesso
+   * numa turma destravada. A ordem de id evita que duas eliminações se prendam uma à outra; a turma vem antes do vínculo,
+   * como no encerrar e no excluir. O escopo é só a escola: a eliminação pode rodar sem ano no contexto (o comando do
+   * operador), e o limite de tenant continua sendo a escola.
+   */
+  async travarContraOGerarDoProfessor(usuarioId: string): Promise<void> {
+    await this.banco
+      .select({ id: turma.id })
+      .from(turma)
+      .where(
+        and(
+          eq(turma.escolaId, exigirEscolaDoContexto()),
+          exists(
+            this.banco
+              .select({ um: vinculo.id })
+              .from(vinculo)
+              .where(
+                and(
+                  eq(vinculo.escolaId, turma.escolaId),
+                  eq(vinculo.anoLetivoId, turma.anoLetivoId),
+                  eq(vinculo.turmaId, turma.id),
+                  eq(vinculo.usuarioId, usuarioId),
+                  eq(vinculo.papel, 'professor'),
+                ),
+              ),
+          ),
+        ),
+      )
+      .orderBy(asc(turma.id))
+      .for('no key update')
   }
 
   async criar(nova: NovaTurma): Promise<TurmaGravada> {
@@ -118,7 +166,7 @@ export class TurmaRepository {
    * vínculo (qualquer estado) ou com nome na lista (2.0), a FK barra e sai `CONFLITO` (`excluirSemReferencia`); a 6.0
    * soma o pedido. Com acesso vigente (não revogado e não vencido, 4.0), nada é apagado e volta `false`; o revogado e o
    * vencido saem com a turma, pela cascata da FK do `acesso_turma`. A turma de outro ano, de outra escola ou inexistente
-   * também volta `false`: quem chama trava a turma antes (`travarParaExcluir`) e separa os dois casos.
+   * também volta `false`: quem chama trava a turma antes (`travarContraOGerar`) e separa os dois casos.
    */
   excluir(id: string): Promise<boolean> {
     return excluirSemReferencia(async () => {

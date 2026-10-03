@@ -1,6 +1,6 @@
-import { acessoTurma, exigirAnoEmCurso, exigirEscolaDoContexto, sessaoDaRequisicao, type Banco, type TransacaoBanco } from '@educa/nucleo'
+import { acessoTurma, exigirAnoEmCurso, exigirEscolaDoContexto, sessaoDaRequisicao, vinculo, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { ValidadeDoAcessoDias } from '@educa/shared'
-import { and, eq, gt, isNull, sql } from 'drizzle-orm'
+import { and, eq, gt, isNull, notExists, sql } from 'drizzle-orm'
 
 export interface NovoAcesso {
   readonly turmaId: string
@@ -95,6 +95,50 @@ export class AcessoDaTurmaRepository {
       .update(acessoTurma)
       .set({ revogadoEm: sql`now()` })
       .where(and(eq(acessoTurma.escolaId, exigirEscolaDoContexto()), isNull(acessoTurma.revogadoEm), gt(acessoTurma.expiraEm, sql`now()`)))
+      .returning({ id: acessoTurma.id, turmaId: acessoTurma.turmaId })
+  }
+
+  /**
+   * Revoga o acesso vigente que o usuário gerou nas turmas em que ele não tem mais vínculo `confirmado` de professor, e
+   * devolve o id e a turma de cada um (correção 2026-10-03-acesso-sobrevive-ao-vinculo; regra 20, item 18). Roda na
+   * transação que encerra o vínculo (com `turmaId`, só aquela turma) ou que elimina o usuário (sem, todas), depois da
+   * trava da turma (`TurmaRepository.travarContraOGerar`) e da mudança no vínculo: o vínculo encerrado ou apagado já não
+   * conta. Outro vínculo confirmado dele na mesma turma (outra disciplina) segura o acesso; o acesso gerado por outro
+   * professor não é dele, e fica.
+   *
+   * O escopo é a escola do contexto, sem o ano: o limite de tenant continua sendo a escola (regra 10); o ano fica de fora
+   * porque a eliminação pode rodar sem ano no contexto (o comando do operador), e o acesso de um ano encerrado já foi
+   * revogado na virada. O vínculo que segura o acesso é o da escola, do ano e da turma
+   * do próprio acesso.
+   */
+  async revogarDeQuemSaiu(usuarioId: string, turmaId?: string): Promise<Array<{ readonly id: string; readonly turmaId: string }>> {
+    const escolaId = exigirEscolaDoContexto()
+    const vinculoQueSegura = this.banco
+      .select({ um: vinculo.id })
+      .from(vinculo)
+      .where(
+        and(
+          eq(vinculo.escolaId, acessoTurma.escolaId),
+          eq(vinculo.anoLetivoId, acessoTurma.anoLetivoId),
+          eq(vinculo.turmaId, acessoTurma.turmaId),
+          eq(vinculo.usuarioId, usuarioId),
+          eq(vinculo.papel, 'professor'),
+          eq(vinculo.estado, 'confirmado'),
+        ),
+      )
+    return this.banco
+      .update(acessoTurma)
+      .set({ revogadoEm: sql`now()` })
+      .where(
+        and(
+          eq(acessoTurma.escolaId, escolaId),
+          turmaId === undefined ? undefined : eq(acessoTurma.turmaId, turmaId),
+          eq(acessoTurma.criadoPor, usuarioId),
+          isNull(acessoTurma.revogadoEm),
+          gt(acessoTurma.expiraEm, sql`now()`),
+          notExists(vinculoQueSegura),
+        ),
+      )
       .returning({ id: acessoTurma.id, turmaId: acessoTurma.turmaId })
   }
 

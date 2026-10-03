@@ -86,7 +86,7 @@ export class TurmaService {
   async excluir(id: string): Promise<void> {
     await this.banco.transaction(async (tx) => {
       const turmas = new TurmaRepository(tx)
-      if (!(await turmas.travarParaExcluir(id))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      if (!(await turmas.travarContraOGerar(id, 'update'))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
       if (!(await turmas.excluir(id))) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
     })
   }

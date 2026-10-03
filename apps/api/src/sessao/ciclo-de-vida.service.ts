@@ -1,6 +1,8 @@
 import { contextoAtual, ErroDeDominio, exigirEscolaDoContexto, RegistroDeAuditoria, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
 import { z } from 'zod'
+import { TurmaRepository } from '../estrutura/turma.repository.js'
+import { AcessoDaTurmaRepository } from '../sala/acesso-da-turma.repository.js'
 import { CicloDeVidaRepository, type UsuarioDoCicloDeVida } from './ciclo-de-vida.repository.js'
 import { EscritaDeSessaoRepository } from './escrita-de-sessao.repository.js'
 import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
@@ -31,8 +33,10 @@ const naoEncontrado = () => new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
  * - **Eliminar:** apaga de fato o usuário e o que é dele nesta escola (credencial, conta externa, vínculos e sessões,
  *   e, do aluno que entrou pela lista da A1, a linha `aprovado` da lista e os pedidos dela, antes do usuário); o
  *   registro de acesso e a auditoria ficam pela retenção legal. De quem gerou acesso da turma, gravou a lista ou decidiu
- *   pedido, o `criado_por` e o `decidida_por` ficam nulos pela FK, e a autoria fica na auditoria. Se era o último
- *   usuário da conta, a mesma limpeza.
+ *   pedido, o `criado_por` e o `decidida_por` ficam nulos pela FK, e a autoria fica na auditoria. O acesso da turma
+ *   vigente que ele gerou é revogado antes, com `acesso_turma.revogado`: os vínculos dele saíram, e o link e o código não
+ *   continuam abrindo a sala (correção 2026-10-03-acesso-sobrevive-ao-vinculo). Se era o último usuário da conta, a
+ *   mesma limpeza.
  * - **Desligar a conta externa:** a coordenação desliga a conta Google ou Microsoft de um usuário ativo, e ele liga a
  *   nova no login seguinte (decidido na 13.0).
  *
@@ -66,7 +70,13 @@ export class CicloDeVidaService {
     await this.#naTransacao(usuarioId, async (tx, alvo) => {
       const repositorio = new CicloDeVidaRepository(tx)
       const sessoesApagadas = await repositorio.apagarSessoes(usuarioId)
+      // As turmas dele em `FOR NO KEY UPDATE` antes de apagar os vínculos (turma → vínculo, como o encerrar e o excluir): o gerar que está no meio termina primeiro, e o acesso
+      // dele cai abaixo; o que chega depois espera, reconfere o vínculo e sai `NAO_ENCONTRADO`. A revogação vem antes do
+      // `delete` do usuário, que anula o `criado_por` pela FK.
+      await new TurmaRepository(tx).travarContraOGerarDoProfessor(usuarioId)
       const vinculosApagados = await repositorio.apagarVinculos(usuarioId)
+      const acessosRevogados = await new AcessoDaTurmaRepository(tx).revogarDeQuemSaiu(usuarioId)
+      for (const revogado of acessosRevogados) await registro.gravar(tx, 'acesso_turma.revogado', { entidadeId: revogado.id, depois: { turmaId: revogado.turmaId }, ...autoria })
       const credencialApagada = await repositorio.apagarCredencialDaMatricula(usuarioId)
       const contaExternaApagada = (await repositorio.apagarContaExterna(usuarioId)) !== undefined
       const { linhaDaListaApagada, pedidosApagados } = await repositorio.apagarDaListaDeNomes(usuarioId)

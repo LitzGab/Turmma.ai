@@ -20,6 +20,7 @@ import {
   type Vinculo,
   type VinculoDaCoordenacao,
 } from '@educa/shared'
+import { AcessoDaTurmaRepository } from '../sala/acesso-da-turma.repository.js'
 import { DisciplinaRepository } from './disciplina.repository.js'
 import { paginar } from './entrada.js'
 import { TurmaRepository } from './turma.repository.js'
@@ -66,7 +67,9 @@ function daCoordenacao(lido: VinculoLido): VinculoDaCoordenacao {
  *   `NAO_ENCONTRADO`. Só a partir de `pendente` ou `contestado`. Confirmar de novo o que já está confirmado responde o
  *   vínculo como está, sem gravar nada (o segundo clique); o resto dá `CONFLITO`.
  * - **Encerrar** (coordenação): `desligamento` ou `realocacao`. O acesso cai na requisição seguinte, porque a leitura
- *   da turma junta o vínculo a cada vez. Encerrar de novo responde o vínculo como está.
+ *   da turma junta o vínculo a cada vez. Encerrar de novo responde o vínculo como está. Se era o último vínculo
+ *   confirmado do professor na turma, o acesso da turma (link e código da sala) que ele gerou é revogado na mesma
+ *   transação, com `acesso_turma.revogado` (correção 2026-10-03-acesso-sobrevive-ao-vinculo; regra 20, item 18).
  */
 export class VinculoService {
   /** Só o nome do evento: escola, usuário e requisição vêm do contexto, e o complemento nunca vai a log (regra 20, item 9). */
@@ -119,11 +122,18 @@ export class VinculoService {
   async encerrar(id: string, pedido: PedidoEncerrarVinculo): Promise<RespostaVinculoDaCoordenacao> {
     const encerrado = await this.banco.transaction(async (tx) => {
       const vinculos = new VinculoRepository(tx)
+      // A turma travada antes do vínculo, na ordem do excluir e da eliminação (turma → vínculo): o gerar do professor que
+      // está no meio termina primeiro, e o acesso dele cai abaixo; o que chega depois espera, reconfere o vínculo e sai
+      // `NAO_ENCONTRADO`. O vínculo é relido com a trava: o estado lido aqui pode ter mudado na espera.
+      const turmaId = await vinculos.turmaDe(id)
+      if (turmaId === undefined || !(await new TurmaRepository(tx).travarContraOGerar(turmaId, 'no key update'))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
       const antes = await vinculos.travar(id, { doUsuario: false })
       if (antes === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-      if (antes !== 'encerrado') {
+      if (antes.estado !== 'encerrado') {
         if (!(await vinculos.encerrar(id, pedido.motivo))) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
-        await registro.gravar(tx, 'vinculo.encerrado', { entidadeId: id, antes: { estado: antes }, depois: { estado: 'encerrado', motivo: pedido.motivo } })
+        await registro.gravar(tx, 'vinculo.encerrado', { entidadeId: id, antes: { estado: antes.estado }, depois: { estado: 'encerrado', motivo: pedido.motivo } })
+        const revogados = await new AcessoDaTurmaRepository(tx).revogarDeQuemSaiu(antes.usuarioId, antes.turmaId)
+        for (const revogado of revogados) await registro.gravar(tx, 'acesso_turma.revogado', { entidadeId: revogado.id, depois: { turmaId: revogado.turmaId } })
         this.#logger.log('vinculo.encerrado')
       }
       return this.#lido(vinculos.porId(id))
@@ -134,8 +144,11 @@ export class VinculoService {
   async #decidir(id: string, decisao: Decisao): Promise<RespostaVinculo> {
     const decidido = await this.banco.transaction(async (tx) => {
       const vinculos = new VinculoRepository(tx)
-      const antes = await vinculos.travar(id, { doUsuario: true })
-      if (antes === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      const travado = await vinculos.travar(id, { doUsuario: true })
+      if (travado === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+      const antes = travado.estado
+      // Contestar só sai de `pendente` ou `contestado`: o vínculo confirmado, o único que gera acesso, nunca é contestado,
+      // e a decisão não tem acesso a revogar.
       if (!emDecisao(antes)) {
         if (antes === 'confirmado' && decisao.estado === 'confirmado') return this.#lido(vinculos.porIdDoUsuario(id))
         throw new ErroDeDominio(CodigoDeErro.CONFLITO)

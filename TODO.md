@@ -477,11 +477,19 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       gerado no servidor. O `frontend-reviewer` sugere mostrar o acesso assim que o `POST` responde e recarregar a seção
       por trás; pede resolver junto o foco de quem fecha antes da releitura (o "Gerar acesso" do vazio some) e a seção
       que afirma "Sem acesso ativo" nesse intervalo. Destino: decidir antes do `/validar` da A1
-- [ ] Encerrar o vínculo do professor não revoga o acesso da turma que ele gerou (A1, 4.0; achado do `privacy-guardian`
-      na 15.0, sem reprodução: nenhum arquivo do encerramento de vínculo toca `acesso_turma`). O professor realocado
-      fica com um link e um código que mostram os nomes livres da turma até vencerem ou alguém gerar outro. Decidir, com
-      o `privacy-guardian`, se o encerramento do último vínculo confirmado dele na turma revoga o acesso, ou se
-      `docs/lgpd.md` e a tela da coordenação dizem que "Gerar novo" é o remédio. Destino: antes do `/validar` da A1
+- [x] Encerrar o vínculo do professor não revoga o acesso da turma que ele gerou (A1, 4.0; achado do `privacy-guardian`
+      na 15.0; G1 da validação da A1). Resolvido pela correção `2026-10-03-acesso-sobrevive-ao-vinculo`
+      (`tasks/correcoes/2026-10-03-acesso-sobrevive-ao-vinculo.md`): o fim do último vínculo confirmado dele na turma
+      (encerrar ou eliminação) revoga, na mesma transação e com auditoria, o acesso vigente que ele gerou
+- [ ] A desativação do professor (`CicloDeVidaService.desativar`, 17.0) não encerra os vínculos dele nem revoga o acesso
+      da turma que ele gerou: ele deixa de entrar, mas o link e o código que já tem continuam abrindo a sala até vencerem.
+      Fechar junto com a tela de estrutura do F2 (que chama a desativação): ou a desativação encerra os vínculos pelo
+      mesmo caminho do encerrar (e a revogação vem junto), ou revoga o acesso dele com a mesma trava da turma. Ficou fora
+      da correção `2026-10-03-acesso-sobrevive-ao-vinculo`, que cobre o fim do vínculo. Junto, a janela que o
+      `infra-guardian` registrou na eliminação: a coordenação cria um vínculo novo do mesmo professor numa turma ainda não
+      travada, e ele confirma e gera antes do `delete` dos vínculos (improvável; fecha quando a trava passar a ser no
+      usuário). E o `40P01` que ainda sai `ERRO_INTERNO` (`mapear-erro-postgres.ts`): `CONFLITO` ou uma nova tentativa,
+      numa correção geral. Destino: F2, antes do portão da primeira escola real
 - [ ] `Referrer-Policy` na borda (`no-referrer` ou `same-origin`): a aba do `wa.me` que o botão do WhatsApp abre recebe
       a origem da web como referência (`privacy-guardian` da 15.0). Não é dado pessoal; fecha com os cabeçalhos de
       segurança da borda, com o `infra-guardian`

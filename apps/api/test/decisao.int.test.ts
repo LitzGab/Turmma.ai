@@ -10,7 +10,7 @@ import {
   MENSAGENS_DE_ERRO,
   type ResultadoDaDecisao,
 } from '@educa/shared'
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
 import { DecisaoRepository } from '../src/sala/decisao.repository.js'
@@ -18,7 +18,7 @@ import { ListaLivreRepository } from '../src/sala/lista-livre.repository.js'
 import { ReivindicacaoRepository } from '../src/sala/reivindicacao.repository.js'
 import { chamar, subirApi, type ApiDeTeste, type RespostaHttp } from './api-com-sessao.js'
 import { esperarNaTrava, GatilhoDeParada } from './gatilho-de-parada.js'
-import { FerramentasDaSala, pedidoDaSala, SENHA_DA_SALA, type NomeDaLista, type SalaDeTeste } from './sala-de-teste.js'
+import { FerramentasDaSala, pedidoDaSala, semRequisicao, SENHA_DA_SALA, type NomeDaLista, type SalaDeTeste } from './sala-de-teste.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 
 /**
@@ -530,11 +530,17 @@ describe('decisão dos pedidos (A1, tarefa 8.0): uma pessoa aprova ou recusa, e 
   })
 
   describe('E27: a turma sem professor é decidida pela coordenação', () => {
-    it('com o vínculo encerrado depois de gerar o acesso, o link antigo aceita o pedido, o professor não decide, a coordenação decide como coordenacao e não gera acesso', async () => {
+    it('com o vínculo encerrado depois do pedido, o link antigo deixa de aceitar pedido, o professor não decide, a coordenação decide como coordenacao e não gera acesso', async () => {
       const s = await sala.montar()
-      for (const id of await vinculosDe(s.professor.usuarioId, s.turma)) expect((await post(s.coordenacao, `/v1/vinculos/${id}/encerrar`, { motivo: 'desligamento' })).status).toBe(200)
       const nome = await sala.umNome(s)
       const pedidoId = await pedir(s, nome, { codigo: undefined, token: s.token })
+      for (const id of await vinculosDe(s.professor.usuarioId, s.turma)) expect((await post(s.coordenacao, `/v1/vinculos/${id}/encerrar`, { motivo: 'desligamento' })).status).toBe(200)
+      // O fim do último vínculo de quem gerou revoga o acesso (correção 2026-10-03-acesso-sobrevive-ao-vinculo): o link
+      // antigo responde como inexistente, e o pedido que chegou antes continua para a coordenação decidir.
+      const pedidoPeloRevogado = await sala.reivindicar(pedidoDaSala(s, await sala.umNome(s), { codigo: undefined, token: s.token }))
+      const pedidoPeloInexistente = await sala.reivindicar(pedidoDaSala(s, await sala.umNome(s), { codigo: undefined, token: randomBytes(32).toString('base64url') }))
+      expect(pedidoPeloRevogado.status).toBe(404)
+      expect(semRequisicao(pedidoPeloRevogado)).toEqual(semRequisicao(pedidoPeloInexistente))
       expect((await lerPedidos(s.professor, s.turma)).status).toBe(404)
       expect(resultados(await decidir(s.professor, [pedidoId]))).toEqual(['nao_encontrada'])
 

@@ -168,16 +168,30 @@ export class VinculoRepository {
   }
 
   /**
+   * A turma do vínculo, sem trava: o encerrar a lê para travar a turma antes do vínculo (a ordem turma → vínculo, a mesma
+   * do excluir e da eliminação; correção 2026-10-03-acesso-sobrevive-ao-vinculo). A turma de um vínculo não muda; o
+   * estado é relido depois, com a trava (`travar`).
+   */
+  async turmaDe(id: string): Promise<string | undefined> {
+    const [linha] = await this.banco.select({ turmaId: vinculo.turmaId }).from(vinculo).where(and(this.#escopo(), eq(vinculo.id, id)))
+    return linha?.turmaId
+  }
+
+  /**
    * O estado do vínculo, travado em `FOR UPDATE` até o fim da transação: o segundo clique espera o primeiro e relê o
    * estado já mudado (regra 80, item 7). `doUsuario` restringe ao vínculo do usuário do contexto (o professor dono).
+   * Devolve também de quem é e a turma, que o encerramento usa para revogar o acesso de quem saiu.
    */
-  async travar(id: string, { doUsuario }: { readonly doUsuario: boolean }): Promise<EstadoDeVinculo | undefined> {
+  async travar(
+    id: string,
+    { doUsuario }: { readonly doUsuario: boolean },
+  ): Promise<{ readonly estado: EstadoDeVinculo; readonly usuarioId: string; readonly turmaId: string } | undefined> {
     const [linha] = await this.banco
-      .select({ estado: vinculo.estado })
+      .select({ estado: vinculo.estado, usuarioId: vinculo.usuarioId, turmaId: vinculo.turmaId })
       .from(vinculo)
       .where(and(this.#escopo(), eq(vinculo.id, id), doUsuario ? this.#doUsuario() : undefined))
       .for('update')
-    return linha?.estado
+    return linha
   }
 
   /**

@@ -82,7 +82,7 @@ com a aprovação dele — na tela, com a marca do Turmma, sem cadastro um a um.
 | Dois alunos com o mesmo nome | Os dois aparecem; cada um só é reivindicado com a própria matrícula |
 | Aluno pega o nome do colega | Sem a matrícula dele, é recusado; com ela, o professor vê o pedido e recusa, e o nome volta livre |
 | Aluno que chega em maio | A coordenação acrescenta o nome; ele usa o link vigente ou um novo |
-| Turma sem professor alocado | Sem link da sala; pedido que chegue por link antigo é decidido pela coordenação, com auditoria |
+| Turma sem professor alocado | Sem link da sala (o fim do vínculo de quem gerou o link o revoga); pedido que chegou antes pelo link é decidido pela coordenação, com auditoria |
 | Matrícula repetida ou já usada na escola | Apontada na linha; nada é gravado |
 | Convite aberto depois de refeito | Responde como inexistente e orienta pedir outro à coordenação |
 | Link projetado que circulou no grupo depois da semana | Venceu; responde como inexistente |
