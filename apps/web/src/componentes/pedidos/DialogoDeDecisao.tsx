@@ -56,6 +56,9 @@ export function DialogoDeDecisao({ decisao, ids, pedidos, turmaNome, quem, aoDec
   const tituloDoResultado = useRef<HTMLHeadingElement>(null)
   const { enviar, mutacao } = useEnvioUnico({
     mutationFn: (enviados: readonly PedidoDaTurma[]) => decidirPedidos({ ids: enviados.map((pedido) => pedido.id), decisao }),
+    // Nas opções do `useMutation`, e não nos callbacks do `mutate`: aqui ele roda na cadeia da mutação, antes de a tela
+    // ver o resultado, e o e2e de pedidos para o relógio da aba contando com isso
+    // (correção 2026-10-03-decididos-continuam-marcados).
     onSuccess: aoDecidir,
     onError: aoFalhar,
   })

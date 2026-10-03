@@ -900,6 +900,72 @@ test.describe('recomeço da tela dos pedidos', () => {
     expect(leituras).toEqual(['?limite=100&finalidade=conferencia_de_cadastro'])
     expect(await leiturasDePedidosNaAuditoria(professora.escolaId, turma.turmaId)).toEqual([{ autor: coordenadora.usuarioId, finalidade: 'conferencia_de_cadastro' }])
   })
+
+  test('decisão e releitura desenhadas juntas: o pedido decidido sai da marcação mesmo que a tela nunca desenhe a lista sem ele, e ao fechar o foco vai ao título da seção', async ({
+    page,
+    hasTouch,
+  }) => {
+    test.setTimeout(180_000)
+    const cenario = await criarProfessoraComTurma()
+    const { professora, turma } = cenario
+    const [ana, bruno] = nomesDeTeste(2)
+    if (ana === undefined || bruno === undefined) throw new Error('faltou nome de teste')
+    await criarPedidosNoBanco(professora.escolaId, turma.turmaId, [ana, bruno])
+    // A leitura parada no que a tela já tem: a releitura que a decisão pede ainda traz a Ana pendente. É o pior caso da
+    // tela, e não precisa de servidor atrasado para acontecer: basta a resposta da decisão e a da releitura serem
+    // desenhadas na mesma vez (correção 2026-10-03-decididos-continuam-marcados).
+    let parar = false
+    let ultima = ''
+    // Só conta a releitura pedida pela decisão: uma de 15 s que saia antes dela não prova a ordem que o teste quer.
+    let decidido = false
+    const releu = portao()
+    page.on('response', (resposta) => {
+      if (resposta.request().method() === 'POST' && ehADecisao(new URL(resposta.url()))) decidido = true
+    })
+    await page.route(ehALeitura, async (rota: Route) => {
+      if (parar) {
+        await rota.fulfill({ status: 200, contentType: 'application/json', body: ultima })
+        if (decidido) releu.abrir()
+        return
+      }
+      const resposta = await rota.fetch()
+      ultima = await resposta.text()
+      return rota.fulfill({ response: resposta, body: ultima })
+    })
+    await page.clock.install()
+    await abrirATurma(page, cenario, hasTouch)
+    await expect(linhas(page)).toHaveCount(2, { timeout: PRAZO_DA_ENTRADA_MS })
+    await marcar(page, [ana.nome], hasTouch)
+    await tocar(secao(page), 'Aprovar 1 pedido', hasTouch)
+    await expect(oQueVaiSerDecidido(page, `Você vai aprovar 1 pedido da turma ${turma.turmaNome}.`)).toBeFocused()
+
+    // Com o relógio da aba parado, o TanStack Query não entrega nada à tela (ele agenda a entrega num `setTimeout`): a
+    // decisão responde, a lista é tirada da Ana e relida, e só então a tela desenha tudo de uma vez. Foi o que a esteira
+    // fez sozinha no Chromebook (run 37080632880): a lista sem a Ana nunca chegou à tela.
+    parar = true
+    const decidiu = page.waitForResponse((resposta) => resposta.request().method() === 'POST' && ehADecisao(new URL(resposta.url())))
+    await page.clock.pauseAt(new Date((await page.evaluate(() => Date.now())) + 1_000))
+    await tocar(noDialogo(page), 'Aprovar 1 pedido', hasTouch)
+    await decidiu
+    await releu.aberta
+    await page.clock.resume()
+    await expect(resultados(page)).toHaveText([`${ana.nome}${APROVADO}`], { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(tituloDoResultado(page)).toBeFocused()
+
+    // A Ana está na lista velha, mas não marcada: na seção, o único botão é o "Fechar" do diálogo (que mora nela), sem o
+    // de decisão que o abriu; o foco, ao fechar, vai ao título.
+    await expect(caixa(page, ana.nome)).not.toBeChecked()
+    await expect(secao(page).getByRole('button')).toHaveText(['Fechar'])
+    await tocar(noDialogo(page), 'Fechar', hasTouch)
+    await expect(dialogosDaTela(page)).toHaveCount(0)
+    await expect(tituloDaSecao(page)).toBeFocused()
+    // A releitura seguinte, que já vem do servidor, tira a Ana; o foco continua no título.
+    parar = false
+    await passarOIntervalo(page)
+    await expect(linhas(page)).toHaveText([new RegExp(`^${bruno.nome}`)], { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(tituloDaSecao(page)).toBeFocused()
+    expect(await alunosDaTurmaNoBanco(professora.escolaId, turma.turmaId)).toBe(1)
+  })
 })
 
 test.describe('os aprovados na lista de nomes da coordenação', () => {

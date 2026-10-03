@@ -157,3 +157,7 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-02 07:17:25 | `infra-guardian` | 1ª | APROVADO | `2026-10-02-teto-do-e2e-na-esteira` | quatro, abaixo |
 | 2026-10-02 08:26:25 | `test-engineer` | 2ª | APROVADO | `2026-10-02-teto-do-e2e-na-esteira` | duas, abaixo |
 | 2026-10-02 08:26:48 | `infra-guardian` | 2ª | APROVADO | `2026-10-02-teto-do-e2e-na-esteira` | três, abaixo |
+| 2026-10-03 13:19:10 | `test-engineer` | 1ª | APROVADO | `2026-10-03-decididos-continuam-marcados` | Risco de verde falso (`e2e/pedidos.spec.ts`, no `page.clock.pauseAt(... + 1_000)`). O `pauseAt` adianta o relógio em 1 s, e isso dispara qualquer temporizador… |
+| 2026-10-03 13:20:16 | `test-engineer` | 2ª | APROVADO | `2026-10-03-decididos-continuam-marcados` | Em `e2e/pedidos.spec.ts:923-925` o ouvinte `page.on('response', …)` fica registrado até o fim do teste. Não causa erro, porque `decidido` só é lido enquanto… |
+| 2026-10-03 13:20:54 | `frontend-reviewer` | 1ª | APROVADO | `2026-10-03-decididos-continuam-marcados` | O e2e novo roda só com a professora. A coordenação passa pelo mesmo código e não precisa de outro teste agora. Se um dia ela tiver um `aoDecidir` próprio, vale… |
+| 2026-10-03 13:52:40 | `test-engineer` | 3ª | APROVADO | `2026-10-03-decididos-continuam-marcados` | nenhuma nova. As três registradas no documento seguem para o `/validar` e o `/retro`. |

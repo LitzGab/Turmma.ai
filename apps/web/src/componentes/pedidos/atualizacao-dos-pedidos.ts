@@ -1,4 +1,4 @@
-import { MAXIMO_DE_PEDIDOS_POR_DECISAO, type DecisorDaReivindicacao, type PedidoDaTurma } from '@educa/shared'
+import { MAXIMO_DE_PEDIDOS_POR_DECISAO, type DecisorDaReivindicacao, type PedidoDaTurma, type RespostaDecisao } from '@educa/shared'
 
 /**
  * A lista de pedidos que se atualiza, e o que sobrevive a cada atualização (A1, 16.0; RF12; W15): quem tem a lista
@@ -60,6 +60,16 @@ export function agendarAtualizacao(quem: DecisorDaReivindicacao, atualizar: () =
 export function pedidosQueContinuam(ids: Iterable<string>, pedidos: readonly PedidoDaTurma[]): PedidoDaTurma[] {
   const procurados = new Set(ids)
   return pedidos.filter((pedido) => procurados.has(pedido.id))
+}
+
+/**
+ * A marcação depois da resposta da decisão: todo id da resposta deixou de esperar por esta pessoa (`decidida`,
+ * `ja_decidida` ou `nao_encontrada`) e sai dela na hora, sem depender de a tela desenhar a lista sem ele. Uma releitura
+ * velha que ainda o traga volta com ele desmarcado (correção 2026-10-03-decididos-continuam-marcados).
+ */
+export function semOsDecididos(marcados: readonly string[], resposta: RespostaDecisao): string[] {
+  const fechados = new Set(resposta.resultados.map((resultado) => resultado.id))
+  return marcados.filter((id) => !fechados.has(id))
 }
 
 /** Dá para marcar mais um? Uma decisão leva até 40 pedidos (RF12): o 41º fica desligado, com o texto do limite. */

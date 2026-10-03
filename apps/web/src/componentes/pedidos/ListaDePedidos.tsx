@@ -7,7 +7,7 @@ import { CLASSES_DO_BOTAO_OFICIAL, CLASSES_DO_BOTAO_PERIGO, CLASSES_DO_BOTAO_SEC
 import { useDialogoDaTela } from '../dialogo-aberto'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../estado'
 import { listaMudou } from '../texto-da-falha'
-import { agendarAtualizacao, alternarMarca, atualizaSozinha, pedidosQueContinuam, podeMarcarMais, quantosNovos } from './atualizacao-dos-pedidos'
+import { agendarAtualizacao, alternarMarca, atualizaSozinha, pedidosQueContinuam, podeMarcarMais, quantosNovos, semOsDecididos } from './atualizacao-dos-pedidos'
 import { DialogoDeDecisao } from './DialogoDeDecisao'
 import {
   quantidadeDePedidos,
@@ -205,6 +205,11 @@ export function ListaDePedidos({ turma, quem, vazio, aoPerderATurma, aoDecidir }
           turmaNome={turma.nome}
           quem={quem}
           aoDecidir={async (resposta) => {
+            // O que a resposta fechou sai da marcação aqui, e não só quando a tela desenhar a lista sem ele: a lista tirada
+            // e a releitura podem chegar à tela na mesma vez, e uma releitura velha o traria de volta ainda marcado, com o
+            // botão que abriu o diálogo de pé e o foco indo para ele ao fechar
+            // (correção 2026-10-03-decididos-continuam-marcados).
+            definirMarcados((atuais) => semOsDecididos(atuais, resposta))
             await aplicarDecisao(cliente, turma.id, quem, resposta)
             void aoDecidir?.()
           }}

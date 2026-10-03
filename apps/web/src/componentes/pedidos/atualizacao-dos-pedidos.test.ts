@@ -8,6 +8,7 @@ import {
   pedidosQueContinuam,
   podeMarcarMais,
   quantosNovos,
+  semOsDecididos,
   type AbaDoNavegador,
 } from './atualizacao-dos-pedidos'
 
@@ -142,6 +143,21 @@ describe('W15: o que a atualização mantém', () => {
     const depois = [pedido('a'), pedido('c'), pedido('d')]
     expect(pedidosQueContinuam(idsDoDialogo, depois).map(({ id }) => id)).toEqual(['a', 'c'])
     expect(pedidosQueContinuam(idsDoDialogo, [])).toEqual([])
+  })
+
+  it('a resposta da decisão tira da marcação cada id dela, qualquer que seja o resultado, e deixa os outros', () => {
+    const resposta = {
+      resultados: [
+        { id: '00000000-0000-4000-8000-00000000000a', resultado: 'decidida' as const },
+        { id: '00000000-0000-4000-8000-00000000000b', resultado: 'ja_decidida' as const },
+        { id: '00000000-0000-4000-8000-00000000000c', resultado: 'nao_encontrada' as const },
+      ],
+    }
+    const marcados = ['00000000-0000-4000-8000-00000000000a', '00000000-0000-4000-8000-00000000000b', '00000000-0000-4000-8000-00000000000c', 'fora-da-decisao']
+    expect(semOsDecididos(marcados, resposta)).toEqual(['fora-da-decisao'])
+    // A lista velha que ainda traz os decididos não os marca de novo: a marcação é por id, e eles saíram dela.
+    expect(pedidosQueContinuam(semOsDecididos(marcados, resposta), [pedido('00000000-0000-4000-8000-00000000000a')])).toEqual([])
+    expect(semOsDecididos(marcados, { resultados: [] })).toEqual(marcados)
   })
 
   it('os pedidos novos são contados pelo id: o que já estava não é novo, e o que saiu não conta', () => {
