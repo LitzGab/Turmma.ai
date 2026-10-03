@@ -1,7 +1,7 @@
 import { CodigoDeErro, nomeDaSerie, TAMANHO_MAXIMO_MATRICULA, TAMANHO_MAXIMO_NOME_DIGITADO, type EstadoDoNomeDaLista, type NomeDaLista, type RespostaPreviaDaLista } from '@educa/shared'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { useEffect, useId, useRef, useState, type ChangeEvent, type RefObject } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type ChangeEvent, type RefObject } from 'react'
 import { Link } from 'wouter'
 import { ErroDaApi } from '../../api/cliente'
 import { consultaTurmaAberta } from '../../api/estrutura'
@@ -13,8 +13,10 @@ import { Campo } from '../../componentes/Campo'
 import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
 import { AlertaDaFalha, AlertaSemFoco, Anuncio, ConfirmacaoDePerigo, DialogoDeFormulario, useEnvioUnico } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
+import { ListaDePedidos } from '../../componentes/pedidos/ListaDePedidos'
 import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
-import { formatarQuantidade } from '../../formatar'
+import { TurmaIndisponivel } from '../../componentes/TurmaIndisponivel'
+import { formatarNumero, formatarQuantidade } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import { comQuebrasDoCampo, lerArquivoDaLista, tetoPassado, type MotivoDoArquivoRecusado } from './ler-arquivo-da-lista'
 import {
@@ -28,12 +30,33 @@ import {
   TEXTO_DO_RESULTADO,
 } from './previa-da-lista'
 
-/** O estado do nome em texto, para a coordenação (regra 50, item 11). */
-const ESTADO_DO_NOME: Readonly<Record<EstadoDoNomeDaLista, string>> = {
+/**
+ * O estado do nome em texto, para a coordenação (regra 50, item 11). O aprovado não tem linha: a lista o traz sem nome nem
+ * matrícula, que passaram a viver no usuário, e trinta cartões "Aluno aprovado" iguais não diriam nada. Eles viram uma
+ * contagem (16.0, nota da 13.0).
+ */
+const ESTADO_DO_NOME: Readonly<Record<Exclude<EstadoDoNomeDaLista, 'aprovado'>, string>> = {
   livre: 'Livre: esperando o aluno pedir o nome',
   reivindicado: 'O aluno pediu o nome: esperando a decisão',
-  aprovado: 'Aluno aprovado',
 }
+
+/**
+ * O nome que a lista ainda mostra: livre, ou pedido e esperando a decisão. Esses têm nome e matrícula (o check
+ * `lista_nome_aprovado_sem_nome` só os tira do aprovado).
+ */
+type NomeAindaNaLista = NomeDaLista & { readonly estado: Exclude<EstadoDoNomeDaLista, 'aprovado'>; readonly nome: string; readonly matricula: string }
+
+/**
+ * O que a lista diz dos aprovados, que contam entre os nomes dela e não têm cartão. A lista é paginada: com páginas ainda
+ * por ler, a contagem é só dos nomes mostrados, e a tela diz isso, em vez de afirmar o total da turma.
+ */
+function textoDosAprovados(aprovados: number, mostrados: number, haMais: boolean): string {
+  const quantos = haMais ? `Aprovados entre os primeiros ${formatarNumero(mostrados)} nomes: ${formatarNumero(aprovados)}.` : `Aprovados nesta turma: ${formatarNumero(aprovados)}.`
+  return `${quantos} Eles contam entre os nomes da lista, mas não aparecem pelo nome: já entram com a matrícula e a senha.`
+}
+
+/** A turma que a API não acha para a coordenação: saiu do ano em curso, ou foi excluída por outra pessoa. */
+const TEXTO_DA_TURMA_FORA_DO_ANO = 'Esta turma não está no ano letivo em curso: ela pode ter sido excluída. Volte para Estrutura e abra a turma de novo.'
 
 const EXEMPLO_DA_LISTA = 'nome; matrícula\nAna Souza; 2026001\nBruno Lima; 2026002'
 
@@ -64,7 +87,8 @@ interface PreviaDoTexto {
 /**
  * A turma aberta na Estrutura, com a lista de nomes dela (A1, 13.0; RF4 e RF5; W4, "Lista"; W10): colar ou escolher o
  * arquivo, ver a prévia linha a linha, com os erros primeiro e em texto, e gravar só sem erro; acrescentar um nome
- * avulso; retirar um nome livre. A matrícula aparece aqui, para a coordenação, e em nenhuma tela do aluno.
+ * avulso; retirar um nome livre. A matrícula aparece aqui, para a coordenação, e em nenhuma tela do aluno. Embaixo, os
+ * pedidos de nome da turma, que a coordenação também decide (16.0; RF12), lidos só no "Atualizar".
  *
  * - **Nome e matrícula só na memória da página e no corpo das requisições**: nunca no endereço, em `localStorage` nem em
  *   `sessionStorage` (regra 20; regra 50, item 7).
@@ -72,11 +96,15 @@ interface PreviaDoTexto {
  *   depois da edição não aparece. A gravação manda o mesmo texto da prévia.
  * - **Um envio por vez**: o clique duplo em "Gravar lista" manda um pedido só (`useEnvioUnico`).
  * - **Cada leitura da lista é auditada** (`turma.lista_lida`, finalidade de conferência de cadastro): a lista é lida ao
- *   abrir a turma e depois de cada escrita, e não ao voltar para a aba.
+ *   abrir a turma e depois de cada escrita, a decisão de um pedido inclusive, e não ao voltar para a aba.
+ * - **A turma que sai com a tela aberta** (a leitura dos pedidos deixa de achá-la) tira a página, com o foco no aviso.
  */
 export function ListaDaTurma({ turmaId }: { turmaId: string }) {
   const turma = useQuery(consultaTurmaAberta(turmaId))
-  useTituloDaTela(turma.data === undefined ? 'Turma' : `Turma ${turma.data.nome}`)
+  // A leitura dos pedidos deixou de achar a turma: a página diz isso, como quando é a leitura da turma que não a acha.
+  const [perdida, definirPerdida] = useState(false)
+  const perderATurma = useCallback(() => definirPerdida(true), [])
+  useTituloDaTela(turma.data === undefined || perdida ? 'Turma' : `Turma ${turma.data.nome}`)
 
   const voltar = (
     // Relativo à área: o `Route` aninhado em `/coordenacao` resolve o `to` a partir da base dela.
@@ -93,14 +121,13 @@ export function ListaDaTurma({ turmaId }: { turmaId: string }) {
         <EstadoCarregando rotulo="Carregando a turma…" />
       </section>
     )
-  if (turma.isError)
+  if (turma.isError || perdida)
     return (
       <section className="flex min-w-0 flex-col gap-4">
         {voltar}
-        {turma.error instanceof ErroDaApi && turma.error.codigo === CodigoDeErro.NAO_ENCONTRADO ? (
-          <p role="status" className="rounded-cartao border border-linha bg-superficie p-4 text-apoio">
-            Esta turma não está no ano letivo em curso: ela pode ter sido excluída. Volte para Estrutura e abra a turma de novo.
-          </p>
+        {perdida || (turma.error instanceof ErroDaApi && turma.error.codigo === CodigoDeErro.NAO_ENCONTRADO) ? (
+          // Quando a turma sai com a tela aberta, o "Atualizar" que tinha o foco saiu com ela: o foco vem para o aviso.
+          <TurmaIndisponivel texto={TEXTO_DA_TURMA_FORA_DO_ANO} comFoco={perdida} />
         ) : (
           <EstadoErro erro={turma.error} tentando={turma.isFetching} aoTentarDeNovo={() => void turma.refetch({ cancelRefetch: false })} />
         )}
@@ -116,12 +143,12 @@ export function ListaDaTurma({ turmaId }: { turmaId: string }) {
         </h1>
         <p className="text-apoio">{nomeDaSerie(turma.data.serie)}</p>
       </div>
-      <ConteudoDaLista turmaId={turmaId} />
+      <ConteudoDaLista turmaId={turmaId} turmaNome={turma.data.nome} aoPerderATurma={perderATurma} />
     </section>
   )
 }
 
-function ConteudoDaLista({ turmaId }: { turmaId: string }) {
+function ConteudoDaLista({ turmaId, turmaNome, aoPerderATurma }: { turmaId: string; turmaNome: string; aoPerderATurma: () => void }) {
   const cliente = useQueryClient()
   const nomes = useInfiniteQuery(consultaListaDaTurma(turmaId))
   const [anuncio, definirAnuncio] = useState('')
@@ -134,6 +161,9 @@ function ConteudoDaLista({ turmaId }: { turmaId: string }) {
 
   const recarregarNomes = () => cliente.invalidateQueries({ queryKey: consultaListaDaTurma(turmaId).queryKey })
   const itens = nomes.data?.pages.flatMap((pagina) => pagina.itens) ?? []
+  // Os aprovados vêm sem nome nem matrícula: entram na contagem, e não em cartões.
+  const semAprovados = itens.filter((nome): nome is NomeAindaNaLista => nome.estado !== 'aprovado' && nome.nome !== null && nome.matricula !== null)
+  const aprovados = itens.length - semAprovados.length
 
   function abrir(tipo: 'acrescentar' | 'retirar', item?: NomeDaLista): void {
     definirAnuncio('')
@@ -174,13 +204,16 @@ function ConteudoDaLista({ turmaId }: { turmaId: string }) {
             <p className="text-sm text-sutil">
               {nomes.hasNextPage ? `Mostrando os primeiros ${formatarQuantidade(itens.length, 'nome', 'nomes')}` : `${formatarQuantidade(itens.length, 'nome', 'nomes')} na lista`}
             </p>
+            {aprovados > 0 && (
+              <p className="rounded-cartao border border-ok bg-ok-cx p-4 break-words text-ok">{textoDosAprovados(aprovados, itens.length, nomes.hasNextPage)}</p>
+            )}
             <ul className="flex flex-col gap-3">
-              {itens.map((nome) => (
+              {semAprovados.map((nome) => (
                 <li key={nome.id} className="flex min-w-0 flex-col gap-3 rounded-cartao border border-linha bg-superficie p-4 md:flex-row md:items-center md:justify-between">
                   <div className="min-w-0">
-                    <p className="font-medium break-words text-tinta">{nome.nome ?? 'Aluno aprovado'}</p>
-                    {nome.matricula !== null && <p className="text-sm break-words text-apoio">Matrícula {nome.matricula}</p>}
-                    <p className={`text-sm ${nome.estado === 'livre' ? 'text-apoio' : nome.estado === 'aprovado' ? 'text-ok' : 'text-pendente'}`}>{ESTADO_DO_NOME[nome.estado]}</p>
+                    <p className="font-medium break-words text-tinta">{nome.nome}</p>
+                    <p className="text-sm break-words text-apoio">Matrícula {nome.matricula}</p>
+                    <p className={`text-sm ${nome.estado === 'livre' ? 'text-apoio' : 'text-pendente'}`}>{ESTADO_DO_NOME[nome.estado]}</p>
                   </div>
                   {nome.estado === 'livre' && (
                     <button type="button" onClick={() => abrir('retirar', nome)} className={CLASSES_DO_BOTAO_PERIGO}>
@@ -188,8 +221,7 @@ function ConteudoDaLista({ turmaId }: { turmaId: string }) {
                       Retirar
                       <span className="sr-only">
                         {' '}
-                        {nome.nome ?? ''}
-                        {nome.matricula === null ? '' : `, matrícula ${nome.matricula}`} da lista
+                        {nome.nome}, matrícula {nome.matricula} da lista
                       </span>
                     </button>
                   )}
@@ -204,6 +236,17 @@ function ConteudoDaLista({ turmaId }: { turmaId: string }) {
           </>
         )}
       </section>
+
+      <ListaDePedidos
+        turma={{ id: turmaId, nome: turmaNome }}
+        quem="coordenacao"
+        vazio={{
+          titulo: 'Nenhum pedido esperando',
+          descricao: 'Os pedidos chegam quando o professor da turma gerar o acesso e os alunos pedirem o nome.',
+        }}
+        aoPerderATurma={aoPerderATurma}
+        aoDecidir={recarregarNomes}
+      />
 
       {aberta?.tipo === 'acrescentar' && (
         <NomeAvulso

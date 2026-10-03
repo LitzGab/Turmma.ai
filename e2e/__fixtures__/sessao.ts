@@ -688,3 +688,139 @@ export async function contestarVinculosNoBanco(escolaId: string, vinculoIds: rea
     await banco.query("update vinculo set estado = 'contestado', contestacao = 'nao_leciono', decidido_em = now() where escola_id = $1 and id = any($2::uuid[])", [escolaId, [...vinculoIds]])
   })
 }
+
+/**
+ * Uma coordenadora a mais na escola de alguém que o teste já criou, com conta e senha próprias: é a segunda pessoa da
+ * **mesma** escola na mesma aba, a que alcança a mesma turma por outro papel (16.0). O nome leva uma marca única.
+ */
+export async function criarCoordenadoraNaEscola(escola: Pick<EquipeDeTeste, 'escolaId' | 'escolaNome' | 'redeNome' | 'slug'>): Promise<EquipeDeTeste> {
+  const marca = randomUUID()
+  const nome = `Coordenadora sintética ${marca.slice(0, 8)}`
+  const email = `coordenador-${marca}@educa.invalid`
+  const senha = `senha-sintetica-${marca}`
+  const senhaHash = await hashDaSenha(senha)
+  return comBanco(async (banco) => {
+    const contaId = await id(banco, 'insert into conta (email, senha_hash) values ($1, $2) returning id', [email, senhaHash])
+    const usuarioId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, 'coordenador', $3) returning id", [escola.escolaId, contaId, nome])
+    return { escolaId: escola.escolaId, escolaNome: escola.escolaNome, redeNome: escola.redeNome, slug: escola.slug, contaId, usuarioId, nome, email, senha }
+  })
+}
+
+/** Um pedido de nome pendente, como a página pública da sala o deixa (6.0): o id dele e o do nome da lista. */
+export interface PedidoDeTeste {
+  readonly id: string
+  readonly listaNomeId: string
+  readonly nome: string
+  readonly matricula: string
+}
+
+/**
+ * Pedidos de nome pendentes na turma, direto no banco, na ordem dada (o id segue a criação, e é a ordem em que a API os
+ * lista): o nome entra na lista já `reivindicado`, e o pedido, com a chave de envio, o hash de uma senha inventada e a
+ * marca da tentativa com matrícula errada que o teste pedir. Nome e matrícula inventados pelo teste. Atalho só do e2e: o
+ * pedido de verdade nasce na página pública (17.0).
+ */
+export async function criarPedidosNoBanco(
+  escolaId: string,
+  turmaId: string,
+  pedidos: ReadonlyArray<{ readonly nome: string; readonly matricula: string; readonly teveMatriculaErrada?: boolean }>,
+): Promise<PedidoDeTeste[]> {
+  const senhaHash = await hashDaSenha(`senha-sintetica-${randomUUID()}`)
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ ano_letivo_id: string }>('select ano_letivo_id from turma where escola_id = $1 and id = $2', [escolaId, turmaId])
+    const anoLetivoId = rows[0]?.ano_letivo_id
+    if (anoLetivoId === undefined) throw new Error('turma do e2e não encontrada')
+    const criados: PedidoDeTeste[] = []
+    for (const { nome, matricula, teveMatriculaErrada = false } of pedidos) {
+      const listaNomeId = await id(banco, "insert into lista_nome (escola_id, ano_letivo_id, turma_id, nome, matricula, estado) values ($1, $2, $3, $4, $5, 'reivindicado') returning id", [
+        escolaId,
+        anoLetivoId,
+        turmaId,
+        nome,
+        matricula,
+      ])
+      const pedidoId = await id(
+        banco,
+        'insert into reivindicacao (escola_id, ano_letivo_id, turma_id, lista_nome_id, chave_envio, senha_hash, teve_matricula_errada) values ($1, $2, $3, $4, $5, $6, $7) returning id',
+        [escolaId, anoLetivoId, turmaId, listaNomeId, randomUUID(), senhaHash, teveMatriculaErrada],
+      )
+      criados.push({ id: pedidoId, listaNomeId, nome, matricula })
+    }
+    return criados
+  })
+}
+
+/**
+ * Outra pessoa recusa o pedido com esta tela aberta, direto no banco: o pedido fecha sem o hash, a chave e a marca, e o
+ * nome volta a `livre`, como a decisão da API o deixa (8.0).
+ */
+export async function recusarPedidoNoBanco(escolaId: string, pedido: Pick<PedidoDeTeste, 'id' | 'listaNomeId'>): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query(
+      "update reivindicacao set estado = 'recusada', senha_hash = null, chave_envio = null, teve_matricula_errada = null, decidida_em = now(), decidida_como = 'coordenacao' where escola_id = $1 and id = $2",
+      [escolaId, pedido.id],
+    )
+    await banco.query("update lista_nome set estado = 'livre' where escola_id = $1 and id = $2", [escolaId, pedido.listaNomeId])
+  })
+}
+
+/** O pedido deixa de existir com esta tela aberta, direto no banco, e o nome volta a `livre`: para quem decide, é o `nao_encontrada`. */
+export async function apagarPedidoNoBanco(escolaId: string, pedido: Pick<PedidoDeTeste, 'id' | 'listaNomeId'>): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('delete from reivindicacao where escola_id = $1 and id = $2', [escolaId, pedido.id])
+    await banco.query("update lista_nome set estado = 'livre' where escola_id = $1 and id = $2", [escolaId, pedido.listaNomeId])
+  })
+}
+
+/** Quantos alunos a turma tem com vínculo confirmado: é o que a aprovação cria, e o que o clique duplo não pode dobrar. */
+export async function alunosDaTurmaNoBanco(escolaId: string, turmaId: string): Promise<number> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ total: string }>("select count(*) as total from vinculo where escola_id = $1 and turma_id = $2 and papel = 'aluno' and estado = 'confirmado'", [
+      escolaId,
+      turmaId,
+    ])
+    return Number(rows[0]?.total ?? 0)
+  })
+}
+
+/** O estado de cada nome da lista da turma, pelo nome: `null` é o aprovado, que a lista guarda sem nome. */
+export async function estadosDaListaNoBanco(escolaId: string, turmaId: string): Promise<Array<{ nome: string | null; estado: string }>> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ nome: string | null; estado: string }>('select nome, estado from lista_nome where escola_id = $1 and turma_id = $2 order by id', [escolaId, turmaId])
+    return rows
+  })
+}
+
+/** As leituras dos pedidos da turma que ficaram na auditoria (`turma.reivindicacoes_lidas`, A2): quem leu e para quê. */
+export async function leiturasDePedidosNaAuditoria(escolaId: string, turmaId: string): Promise<Array<{ autor: string | null; finalidade: string | null }>> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ autor: string | null; finalidade: string | null }>(
+      "select autor_usuario_id as autor, finalidade from auditoria where escola_id = $1 and acao = 'turma.reivindicacoes_lidas' and entidade_id = $2 order by em",
+      [escolaId, turmaId],
+    )
+    return rows
+  })
+}
+
+/** O ano letivo em curso da escola é encerrado com a tela aberta, direto no banco: as turmas dele saem do alcance de todos. */
+export async function encerrarAnoNoBanco(escolaId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query("update ano_letivo set situacao = 'encerrado' where escola_id = $1 and situacao = 'em_curso'", [escolaId])
+  })
+}
+
+/**
+ * Alunos já aprovados na lista da turma, direto no banco, como a aprovação (8.0) deixa a linha: só o estado e o usuário,
+ * sem nome nem matrícula. O usuário é um aluno inventado da escola.
+ */
+export async function porAprovadosNaListaDaTurma(escolaId: string, turmaId: string, quantos: number): Promise<void> {
+  await comBanco(async (banco) => {
+    const { rows } = await banco.query<{ ano_letivo_id: string }>('select ano_letivo_id from turma where escola_id = $1 and id = $2', [escolaId, turmaId])
+    const anoLetivoId = rows[0]?.ano_letivo_id
+    if (anoLetivoId === undefined) throw new Error('turma do e2e não encontrada')
+    for (let vez = 0; vez < quantos; vez++) {
+      const usuarioId = await id(banco, "insert into usuario (escola_id, papel, nome) values ($1, 'aluno', $2) returning id", [escolaId, `Aluno aprovado sintético ${randomUUID().slice(0, 8)}`])
+      await banco.query("insert into lista_nome (escola_id, ano_letivo_id, turma_id, estado, usuario_id) values ($1, $2, $3, 'aprovado', $4)", [escolaId, anoLetivoId, turmaId, usuarioId])
+    }
+  })
+}

@@ -1,7 +1,7 @@
 # Tarefas — A escola montada pela coordenação (A1)
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 14 de 17 concluídas
+**Status:** 16 de 17 concluídas
 
 Aprovadas pelo Joaquim em 26/09/2026. O mapa de cenários por tarefa saiu do `test-engineer`: cada id do
 `cenarios.md` está em uma tarefa, ou dividido entre tarefas com a parte de cada uma dita no `N_task.md`. Os
@@ -114,11 +114,11 @@ dela nos dois.
   - [x] 15.3 Teto do chunk do professor
   - [x] 15.4 Testes: E16, W7; W4 e W12 de Acesso
 
-- [ ] **16.0 — Web: pedidos, com os diálogos de decisão**
-  - [ ] 16.1 Pedidos do professor, atualizados a cada 15 s com a aba visível
-  - [ ] 16.2 Pedidos da coordenação dentro da turma, com "Atualizar"
-  - [ ] 16.3 Diálogos "Aprovar N" (`oficial`) e "Recusar" (`perigo`), com o resultado por pedido
-  - [ ] 16.4 Testes: W6, W15; W4 e W12 de Pedidos
+- [x] **16.0 — Web: pedidos, com os diálogos de decisão**
+  - [x] 16.1 Pedidos do professor, atualizados a cada 15 s com a aba visível
+  - [x] 16.2 Pedidos da coordenação dentro da turma, com "Atualizar"
+  - [x] 16.3 Diálogos "Aprovar N" (`oficial`) e "Recusar" (`perigo`), com o resultado por pedido
+  - [x] 16.4 Testes: W6, W15; W4 e W12 de Pedidos
 
 - [ ] **17.0 — Web: página pública da turma e o e2e do fluxo inteiro**
   - [ ] 17.1 `MENSAGENS_DA_SALA` em `packages/shared`

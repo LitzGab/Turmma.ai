@@ -71,15 +71,15 @@ describe('teto do bundle da web (.size-limit.json)', () => {
       { path: 'apps/web/dist/assets/index-*.js', limit: '150 kB', brotli: true },
       { path: ['apps/web/dist/assets/index-*.js', 'apps/web/dist/assets/parte-*.js'], limit: '150 kB', brotli: true },
       { path: 'apps/web/dist/assets/operacao-*.js', limit: '60 kB', brotli: true },
-      { path: 'apps/web/dist/assets/coordenacao-*.js', limit: '20 kB', brotli: true },
-      { path: 'apps/web/dist/assets/professor-*.js', limit: '10 kB', brotli: true },
+      { path: 'apps/web/dist/assets/coordenacao-*.js', limit: '16 kB', brotli: true },
+      { path: 'apps/web/dist/assets/professor-*.js', limit: '8 kB', brotli: true },
       { path: 'apps/web/dist/assets/aluno-*.js', limit: '5 kB', brotli: true },
     ])
   })
 
   it('todos os grupos pequenos passam: o controle que mostra que as reprovações abaixo vêm do tamanho', () => {
     const { codigo, saida } = sizeLimit(buildDeMentira(BUILD_PEQUENO))
-    for (const teto of ['150 kB', '60 kB', '20 kB', '10 kB', '5 kB']) expect(saida).toContain(teto)
+    for (const teto of ['150 kB', '60 kB', '16 kB', '8 kB', '5 kB']) expect(saida).toContain(teto)
     expect(codigo).toBe(0)
   })
 
@@ -98,10 +98,10 @@ describe('teto do bundle da web (.size-limit.json)', () => {
   })
 
   for (const [area, teto, acima] of [
-    // Entre 20 e 30 kB em brotli: reprova só com o teto da 13.0, e passaria com o de partida da 11.0.
-    ['coordenacao', '20 kB', 25_000],
-    // Entre 10 e 20 kB em brotli: reprova só com o teto da 15.0, e passaria com o de partida da 11.0.
-    ['professor', '10 kB', 11_000],
+    // Entre 16 e 20 kB em brotli: reprova só com o teto da 16.0, e passaria com o da 13.0.
+    ['coordenacao', '16 kB', 18_000],
+    // Entre 8 e 10 kB em brotli: reprova só com o teto da 16.0, e passaria com o da 15.0.
+    ['professor', '8 kB', 9_000],
     ['aluno', '5 kB', 8_000],
   ] as const) {
     it(`o chunk ${area}-* acima de ${teto} em brotli reprova, com os outros folgados`, () => {

@@ -1,34 +1,44 @@
 import { nomeDaSerie } from '@educa/shared'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { useEffect, useId, useRef } from 'react'
+import { useCallback, useId, useRef, useState } from 'react'
 import { Link } from 'wouter'
 import { consultaTurmaAberta } from '../../api/estrutura'
 import { consultaEu } from '../../api/eu'
 import { ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { EstadoCarregando, EstadoErro } from '../../componentes/estado'
+import { ListaDePedidos } from '../../componentes/pedidos/ListaDePedidos'
+import { TurmaIndisponivel } from '../../componentes/TurmaIndisponivel'
 import { useTituloDaTela } from '../../titulo'
 import { TEXTO_DA_TURMA_INDISPONIVEL, turmaIndisponivel } from './acesso-da-turma'
 import { AcessoDaTurma } from './AcessoDaTurma'
 
 /**
- * A turma aberta pelo professor, dentro de Turmas (A1, 15.0; `docs/interface.md` 1 e 11.1): o nome e a série, e o acesso
- * dos alunos. Os pedidos chegam na 16.0, e as abas, com a A3 (P28).
+ * A turma aberta pelo professor, dentro de Turmas (A1, 15.0 e 16.0; `docs/interface.md` 1 e 11.1): o nome e a série, o
+ * acesso dos alunos e os pedidos de nome, que ele aprova ou recusa. As abas chegam com a A3 (P28).
  *
  * Só abre a turma em que o vínculo dele está confirmado, no ano em curso: quem decide é a API (`GET /v1/turmas/:id`), e
  * a turma de outro professor, a de outra escola, a pendente e a que não existe respondem igual (regra 10, item 6). A tela
  * diz uma coisa só para as quatro, com a quem recorrer.
  *
- * A seção do acesso só existe com a turma e a escola da sessão lidas. Toda sessão que acaba ou muda esvazia as duas
- * leituras (`main.tsx`), e a seção sai com o que estiver aberto nela — o link e o código inclusive. A releitura que cai
- * por rede ou servidor com o dado já na tela não desmonta nada: a professora pode estar com o código projetado.
+ * As seções só existem com a turma e a escola da sessão lidas. Toda sessão que acaba ou muda esvazia as duas leituras
+ * (`main.tsx`), e as seções saem com o que estiver aberto nelas — o link e o código, os pedidos marcados e o diálogo da
+ * decisão inclusive. A releitura que cai por rede ou servidor com o dado já na tela não desmonta nada: a professora pode
+ * estar com o código projetado.
+ *
+ * A turma que sai do alcance com a tela aberta tira a página inteira, com um aviso só: pela releitura da turma, ou pela
+ * leitura dos pedidos, que é a que se repete sozinha e a primeira a saber (`perdida`).
  */
 export function Turma({ turmaId }: { turmaId: string }) {
   const turma = useQuery(consultaTurmaAberta(turmaId))
   const eu = useQuery(consultaEu)
   const idDoTitulo = useId()
+  const tituloDoAcesso = useRef<HTMLHeadingElement>(null)
+  // A leitura dos pedidos deixou de achar a turma: vale como a releitura da turma que deixa de achá-la.
+  const [perdida, definirPerdida] = useState(false)
+  const perderATurma = useCallback(() => definirPerdida(true), [])
   // A turma que a API deixou de achar sai também do título da aba.
-  const indisponivel = turmaIndisponivel(turma.error)
+  const indisponivel = perdida || turmaIndisponivel(turma.error)
   useTituloDaTela(turma.data === undefined || indisponivel ? 'Turma' : `Turma ${turma.data.nome}`)
 
   const voltar = (
@@ -47,10 +57,12 @@ export function Turma({ turmaId }: { turmaId: string }) {
     return (
       <section className="flex min-w-0 flex-col gap-4">
         {voltar}
-        {falha === undefined ? (
+        {indisponivel ? (
+          // Com a turma já na tela, tudo o que tinha o foco saiu com ela (o diálogo aberto, os botões das seções): o foco
+          // vem para o aviso. Na página que abre já sem a turma, fica onde o navegador o pôs.
+          <TurmaIndisponivel texto={TEXTO_DA_TURMA_INDISPONIVEL} comFoco={turma.data !== undefined} />
+        ) : falha === undefined ? (
           <EstadoCarregando rotulo="Carregando a turma…" />
-        ) : indisponivel ? (
-          <TurmaIndisponivel porReleitura={turma.data !== undefined} />
         ) : (
           <EstadoErro erro={falha.error} tentando={falha.isFetching} aoTentarDeNovo={() => void falha.refetch({ cancelRefetch: false })} />
         )}
@@ -67,24 +79,17 @@ export function Turma({ turmaId }: { turmaId: string }) {
         </h1>
         <p className="text-apoio">{nomeDaSerie(turma.data.serie)}</p>
       </div>
-      <AcessoDaTurma turmaId={turmaId} escola={eu.data.escola} />
+      <AcessoDaTurma turmaId={turmaId} escola={eu.data.escola} titulo={tituloDoAcesso} />
+      <ListaDePedidos
+        turma={{ id: turmaId, nome: turma.data.nome }}
+        quem="professor"
+        vazio={{
+          titulo: 'Nenhum pedido esperando',
+          descricao: 'Os pedidos aparecem aqui quando os alunos entram pelo link da sala ou pelo código da turma e pedem o nome. Confira se o acesso dos alunos está ativo.',
+          acao: { rotulo: 'Ver o acesso dos alunos', aoAcionar: () => tituloDoAcesso.current?.focus() },
+        }}
+        aoPerderATurma={perderATurma}
+      />
     </section>
-  )
-}
-
-/**
- * O aviso da turma que a API não acha. Quando ele chega por releitura, com a turma já na tela, tudo o que tinha o foco
- * saiu com ela (o diálogo aberto, os botões da seção): o foco vem para o aviso, e não cai no `body`. Na página que abre
- * já sem a turma, o foco fica onde o navegador o pôs, antes do "Voltar para Turmas".
- */
-function TurmaIndisponivel({ porReleitura }: { porReleitura: boolean }) {
-  const aviso = useRef<HTMLParagraphElement>(null)
-  useEffect(() => {
-    if (porReleitura) aviso.current?.focus()
-  }, [porReleitura])
-  return (
-    <p ref={aviso} tabIndex={-1} role="status" className="rounded-cartao border border-linha bg-superficie p-4 text-apoio">
-      {TEXTO_DA_TURMA_INDISPONIVEL}
-    </p>
   )
 }

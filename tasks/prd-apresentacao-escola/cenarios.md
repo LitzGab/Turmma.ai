@@ -420,7 +420,7 @@ aos cenários.
   | Professores | "Nenhum professor ainda" → Cadastrar; a releitura que cai com a lista ainda vazia, logo depois do primeiro cadastro, mostra o erro com "Tentar de novo", e não o vazio (14.0) | estado do convite, em texto, pelo nome, e só as ações que a matriz permite; o erro da releitura por cima da lista; o resumo do cadastro avisa o nome que já está na lista, sem impedir; a etapa do link do cadastro diz a quem mandar e o e-mail com que a pessoa entra ("Mande o link a …, que entra com o e-mail …"), e a do refazer, só o nome, porque a lista não traz e-mail; a recusa que chega com a pergunta de fechar aberta tira a pergunta e volta à etapa do pedido, com o foco no aviso, e "Voltar e corrigir" leva o foco ao campo do nome (14.0) |
   | Alocação | "Crie uma turma e um professor primeiro" (sem turma, sem disciplina ou sem professor alocável: o de convite vencido não conta; a descrição diz o que falta, 13.0). O título diz só o que falta — "Crie uma disciplina primeiro" com a turma e o professor já criados —, e, faltando o professor, o vazio leva à tela Professores (14.0) | vínculos; a escolha pelo nome; o convite que vence com a tela aberta sai da escolha, e o "Alocar" seguinte não o reenvia (13.0) |
   | Turmas | "A coordenação ainda não alocou você"; só pendente: "Confirme suas turmas" | confirmadas |
-  | Pedidos | professor: "Nenhum pedido esperando" → Acesso; coordenação: "Os pedidos chegam quando o professor da turma gerar o acesso", sem botão | seleção |
+  | Pedidos | professor: "Nenhum pedido esperando" → Acesso; coordenação: "Os pedidos chegam quando o professor da turma gerar o acesso", sem botão. Como ficou na 16.0: o passo do professor é "Ver o acesso dos alunos", que leva o foco à seção do acesso, na mesma página; a coordenação, antes do primeiro "Atualizar", vê "Clique em Atualizar para ver os pedidos…" e o aviso de que cada consulta fica na auditoria; a releitura que cai com a lista vazia mostra o erro com "Tentar de novo", e não o vazio | seleção. Como ficou na 16.0: o nome, "Pediu em …" e a marca só no pedido que a teve; a contagem; a releitura que cai com a lista na tela deixa a lista e a marcação, com o erro por cima; havendo mais pedidos que os de uma leitura (100), a tela diz; a turma que sai do alcance com a tela aberta troca a página inteira pelo aviso, com o foco nele, nos dois papéis; na lista de nomes da coordenação, os aprovados viram "Aprovados nesta turma: N", e, com página da lista ainda por ler, "Aprovados entre os primeiros M nomes: N"; dois cliques no mesmo instante em "Atualizar" fazem uma leitura e um registro |
   | Acesso | "Sem acesso ativo" → Gerar | validade. Como ficou na 15.0: a turma abre pelo cartão do vínculo confirmado, e só por ele (o pendente, o contestado e o encerrado não têm o link); "Vale até …", com "Gerar novo" e "Revogar", sem link nem código; a releitura que cai mostra o erro com "Tentar de novo", e não o estado de antes, também logo depois de gerar; a turma que não chega tem o erro no lugar da tela; a turma pendente, a encerrada e a que não existe, pelo endereço, dizem a mesma coisa, com a quem recorrer e sem "Tentar de novo" |
   | Pública | "Se o seu nome não aparece, chame o professor"; vencido: o texto do W9 pelo caminho usado e, no link, o campo do código com o foco | nomes livres |
   | Minha turma | nunca vazia; sem vínculo confirmado no ano (`NAO_ENCONTRADO`), "Você ainda não está em uma turma neste ano letivo. Fale com o seu professor ou com a coordenação.", sem "Tentar de novo" (12.0) | turma, série e escola, sem colegas |
@@ -433,7 +433,24 @@ aos cenários.
   um `ja_decidida` aparece como "Já decidido por outra pessoa", e um `nao_encontrada` como "Este pedido não está mais
   disponível"; o pedido com `teveMatriculaErrada` mostra "Houve tentativa com matrícula errada neste nome; pode ter sido
   erro de digitação", sem número nem hora, também no diálogo de "Aprovar N"; o 41º não é selecionável, com o texto do
-  limite; não existe "aprovar todos"
+  limite; não existe "aprovar todos". Como ficou na 16.0 (`e2e/pedidos.spec.ts` e as unidades de
+  `componentes/pedidos/`): o diálogo abre com o foco em "Você vai aprovar N pedidos da turma …", e o botão que confirma é
+  o preto do `oficial`, na seção e no diálogo; o do recusar é `perigo` (texto em `erro` na seção, cheio só na
+  confirmação); com a decisão no ar, o botão diz "Aprovando…" e fica desligado; depois, o resultado de cada pedido com o
+  nome ("Aprovado: já pode entrar com a matrícula e a senha", "Recusado: o nome voltou à lista", e os dois textos acima,
+  estes no tom de atenção), e o foco vai ao título do resultado e, fechado, ao título da seção; um lote de 40 com um
+  pedido já decidido por outra pessoa e um que deixou de existir cria 38 alunos; o aviso de auditoria aparece só para a
+  coordenação; a decisão que falha diz o que houve com a lista de cada papel, com o foco no aviso, e a da coordenação
+  deixa só "Fechar" e tira a lista e a marcação da tela, sem leitura nova; a decisão da coordenação recarrega a lista de
+  nomes, também quando a resposta se perde. O recomeço da tela: a lista recarregada com o diálogo aberto tira dele o
+  pedido que outra pessoa decidiu, e diz quantos saíram; sem nenhum, o diálogo diz que nada foi enviado e só deixa
+  fechar; reabrindo depois de uma falha, o aviso e o foco da tentativa anterior saem; o mesmo lote confirmado de novo
+  mostra "Já decidido por outra pessoa", sem aluno em dobro; a atualização que estava no ar e chega depois da decisão não
+  traz de volta o pedido decidido; a coordenação da mesma escola, na mesma aba depois do professor, não vê os pedidos nem
+  a marcação dele, e nenhuma leitura sai antes do clique dela. **Quebra sem:** a trava do pedido no ar; a marca no
+  diálogo; a caixa desligada no limite e o texto dela; o `oficial` e o `perigo`; o resultado pelo nome enviado; os
+  pedidos do diálogo pela lista de agora; a lista esvaziada depois da falha da coordenação; a leitura descartada na
+  decisão; a chave da leitura por papel e a leitura desligada da coordenação
 - **W7** Acesso: código em dois grupos de 4; "Gerar novo" pede confirmação e diz que o atual cai e que os nomes
   travados por tentativas erradas destravam; fechar sem copiar pergunta; sem o WhatsApp, o botão copia o texto. Como
   ficou na 15.0 (`e2e/acesso-da-turma.spec.ts`): a validade escolhida (1, 7 ou 30 dias, 7 já marcado) é a que vai ao
@@ -492,7 +509,10 @@ aos cenários.
 - **W11** Campos: código com `autocapitalize="characters"`; matrícula e senha com `autocomplete="off"`; matrícula com
   `inputmode="text"`; senha com "mostrar" e os 12 caracteres avisados
 - **W12** 360 px: nenhuma tela nova com rolagem horizontal; abaixo de 768 px, cartões e gaveta; alvos de 44 px;
-  teclado: selecionar pedidos e decidir só com Tab, Espaço e Enter, foco preso no diálogo e devolvido. No Acesso
+  teclado: selecionar pedidos e decidir só com Tab, Espaço e Enter, foco preso no diálogo e devolvido. Nos Pedidos
+  (16.0): cada pedido é um cartão inteiro clicável, com 44 px ou mais de altura; o nome de aluno comprido e sem espaço
+  não estica a tela nem o diálogo; o Esc fecha sem decidir e devolve o foco ao botão que abriu; depois de decidir, o foco
+  vai ao título da seção, porque os botões saem com a marcação. No Acesso
   (15.0): o diálogo com o código grande cabe em 360 px; a validade troca pelas setas; gerar, copiar, trocar e revogar só
   com Tab e Enter; o foco começa no texto que diz o que acontece, e não no botão; fechado o diálogo, o foco volta a quem
   o abriu ou, se ele saiu da seção, ao título dela; dois Esc seguidos fecham de verdade, com o link e o código;
@@ -526,7 +546,12 @@ aos cenários.
   visível e para com ela escondida; a atualização mantém os ids selecionados, o foco e os ids do diálogo aberto, e
   anuncia os pedidos novos numa região `aria-live="polite"`, sem roubar o foco. Coordenação: nenhuma leitura sai sem o
   clique em "Atualizar", nem com a aba visível por 60 s. **Quebra sem:** a seleção guardada por id; a atualização
-  automática só para o professor
+  automática só para o professor. Como ficou na 16.0: a unidade (`componentes/pedidos/atualizacao-dos-pedidos.test.ts`)
+  prova o relógio, a aba, o papel e o que se mantém por id — a web não tem ambiente de DOM na unidade —, e o que é do
+  navegador está no e2e (`e2e/pedidos.spec.ts`), com o relógio da aba simulado: o pedido novo chega 15 s depois, com a
+  caixa marcada ainda marcada e com o foco, e a região viva dizendo "N pedidos novos na lista."; a primeira leitura não
+  anuncia nada; a aba que volta relê na hora e recomeça a contagem; a coordenação não lê em 60 s, nem com
+  `visibilitychange` e `focus`, nem quando a sessão volta a valer (unidade de `api/pedidos.test.ts`)
 
 ## K — Carga
 

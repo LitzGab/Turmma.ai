@@ -1341,6 +1341,8 @@ test.describe('recomeço da Estrutura', () => {
       window.dispatchEvent(new PopStateEvent('popstate'))
     }, `/coordenacao/estrutura/turmas/${turmaDeA.id}`)
     await expect(principal(page)).toContainText('Esta turma não está no ano letivo em curso', { timeout: PRAZO_DA_ENTRADA_MS })
+    // Na página que já abre sem a turma, o aviso não puxa o foco: isso é de quando ela sai com a tela aberta (16.0).
+    await expect(principal(page).getByRole('status').filter({ hasText: 'Esta turma não está no ano letivo em curso' })).not.toBeFocused()
     for (const deOutra of [turmaDeA.nome, nomeDeA]) await expect(page.locator('body')).not.toContainText(deOutra)
   })
 })

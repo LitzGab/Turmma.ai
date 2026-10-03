@@ -20,3 +20,10 @@ export const CLASSES_DO_BOTAO_PERIGO =
 /** O `perigo` cheio, com texto branco (6,6:1 sobre o `erro`): só o botão que confirma a exclusão, dentro do diálogo. */
 export const CLASSES_DO_BOTAO_PERIGO_CHEIO =
   'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-erro px-4 py-2 text-base font-medium text-white disabled:bg-inativo disabled:text-tinta'
+
+/**
+ * O botão `oficial` (`docs/interface.md` 8.4, princípio 2, e 11.1): o preto, reservado à decisão oficial. Aprovar os
+ * pedidos de nome cria a conta do aluno, e por isso não se parece com nenhum outro botão da tela (regra 50, item 8).
+ */
+export const CLASSES_DO_BOTAO_OFICIAL =
+  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-noite px-4 py-2 text-base font-medium text-white enabled:hover:bg-noite-alto enabled:active:bg-noite-baixo disabled:bg-inativo disabled:text-tinta'

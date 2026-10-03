@@ -30,8 +30,9 @@ const INTERVALO_DA_DIFUSAO_MS = 60_000
  *
  * - **Só ponteiro e teclado contam.** A aba esquecida no Chromebook do carrinho, com ninguém na frente, não renova
  *   nada: é justamente ela que precisa vencer antes de o aluno seguinte sentar.
- * - **Nenhuma tela faz polling.** O aviso de atividade só sai quando houve interação e já passaram 5 min do último;
- *   o resto é um `setTimeout` que não fala com a API.
+ * - **O relógio não faz polling, e leitura nenhuma conta como atividade.** O aviso de atividade só sai quando houve
+ *   interação e já passaram 5 min do último; o resto é um `setTimeout` que não fala com a API. A lista de pedidos do
+ *   professor relê sozinha (A1, 16.0), e essa leitura não move o relógio daqui nem o `ultimo_uso_em` do servidor.
  * - **O relógio mede a interação de verdade**, e não o último aviso enviado: o aviso pode estar até 5 min atrasado, e
  *   é por isso que o servidor tem 5 min de tolerância. Aqui, vencer pelo `inatividadeMin` da escola nunca desloga
  *   ninguém antes da hora — a conta sai da última tecla, não da última requisição.

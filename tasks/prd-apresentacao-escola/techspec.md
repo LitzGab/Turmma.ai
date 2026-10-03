@@ -421,6 +421,43 @@ decisão (10.0) travam o ano no começo da transação delas; o ano que deixou d
   - Teto do chunk `professor-*`: 10 kB (mede ~5,3 kB com Turmas e a turma aberta, e a 16.0 ainda põe os pedidos nele). Os
     diálogos e a cópia única caem em pedaços `parte-*` que as áreas dividem, e contam no primeiro carregamento (126,2 kB
     de 150)
+- **Decidido na 16.0** (divergências registradas em `16_task.md`):
+  - Os pedidos são a seção "Pedidos de nome" da turma aberta, embaixo do acesso (professor, `areas/professor/Turma.tsx`) e
+    embaixo da lista de nomes (coordenação, `areas/coordenacao/ListaDaTurma.tsx`, e não `Estrutura.tsx`), com a mesma peça,
+    `componentes/pedidos/ListaDePedidos.tsx`, que recebe quem decide. O link da Estrutura para a turma continua "Lista de
+    nomes"
+  - **Uma leitura traz até 100 pedidos** (a página máxima da API). Havendo mais, a tela diz que os próximos aparecem
+    depois que estes forem decididos, em vez de paginar: quem decide tira os da frente
+  - **Professor**: lê ao abrir a turma e relê a cada 15 s com a aba à vista (`agendarAtualizacao`, com `visibilitychange`);
+    quando a aba volta, relê na hora e recomeça a contagem. A leitura não conta como atividade da sessão: o relógio de
+    inatividade continua de ponteiro e teclado. A releitura que cai com a lista na tela deixa a lista, com o erro por
+    cima; com a lista vazia, mostra o erro, e não o vazio
+  - **Coordenação**: nenhuma leitura sem o clique em "Atualizar" — nem ao abrir a turma, nem ao voltar para a aba, nem
+    quando a sessão volta a valer, nem depois de decidir (`enabled: false`). Nos dois papéis a lista não fica guardada fora da tela
+    (`gcTime: 0`, recomendação do `privacy-guardian`). Antes do primeiro clique a seção diz o que fazer e que cada consulta fica na auditoria em nome dela. A
+    finalidade é fixa, `conferencia_de_cadastro`, a mesma da lista de nomes da mesma tela
+  - **Marcação por id, até 40**: com 40 marcados, as outras caixas ficam desligadas, descritas pelo texto do limite. Os
+    botões "Aprovar N pedidos" (`oficial`, novo em `componentes/botao-secundario.ts`) e "Recusar N pedidos" (`perigo`) só
+    existem com pedido marcado; sem nenhum, a seção diz como decidir, o limite e que não há aprovar todos. O pedido que
+    sai da lista sai da marcação, e não volta marcado
+  - **O diálogo acompanha a lista**: guarda os ids da abertura e mostra, deles, os que continuam pendentes; o que outra
+    pessoa decidiu sai dele, com o aviso de quantos saíram, e o envio leva só os que continuam. Sem nenhum, só resta
+    fechar. Depois da resposta, o diálogo mostra o resultado de cada pedido, com o nome que foi enviado: `decidida` é
+    "Aprovado: já pode entrar com a matrícula e a senha" ou "Recusado: o nome voltou à lista"; os outros dois, os textos
+    do W6. Fechado, o foco vai ao título da seção
+  - **A lista depois da decisão**: todo id da resposta sai dela na hora, sem leitura (a leitura que estava no ar é
+    descartada, para não trazer de volta o decidido); a do professor ainda é relida. **Depois de uma decisão que falha**
+    (nota da 8.0): a do professor é relida, e a nova tentativa manda só os que continuam; a da coordenação sai da tela,
+    com a marcação, e volta ao estado de antes da primeira leitura, com o diálogo dizendo para fechar e atualizar
+  - **A turma que sai do alcance com a tela aberta** (a leitura dos pedidos responde `NAO_ENCONTRADO`): a página inteira
+    dá lugar ao aviso da turma, com o foco nele, nos dois papéis. O aviso é um componente só,
+    `componentes/TurmaIndisponivel.tsx`, com o texto de cada papel
+  - **Os aprovados na lista de nomes da coordenação** viram uma contagem ("Aprovados nesta turma: N"; com página da lista ainda por ler,
+    "Aprovados entre os primeiros M nomes: N"), sem cartão: a
+    lista os traz sem nome nem matrícula (nota da 13.0). A decisão da coordenação recarrega a lista de nomes, como as
+    outras escritas da tela
+  - Tetos: `professor-*` 8 kB (mede ~5,5 kB) e `coordenacao-*` 16 kB (mede ~13,5 kB). Os pedidos caem num `parte-*` que
+    as duas áreas dividem, e contam no primeiro carregamento (129,7 kB de 150)
 - **Decisão**: "Aprovar N" (`oficial`) revisa turma, nomes e efeito, e avisa a coordenação da auditoria; "Recusar"
   (`perigo`) confirma; depois, texto por pedido (W6). Até 40, explicado. O pedido mostra se houve tentativa com
   matrícula errada no nome. Para o professor, atualiza a cada 15 s com a aba visível (W15); a coordenação usa

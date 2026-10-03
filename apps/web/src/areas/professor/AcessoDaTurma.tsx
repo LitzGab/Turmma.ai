@@ -11,6 +11,7 @@ import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
 import { Anuncio, ConfirmacaoDePerigo, useEnvioUnico } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { linkDoConvite } from '../../componentes/link-do-convite'
+import { TurmaIndisponivel } from '../../componentes/TurmaIndisponivel'
 import { formatarDataHora } from '../../formatar'
 import {
   DITOS_DO_CONVITE_SEM_WHATSAPP,
@@ -60,18 +61,18 @@ interface AlvoDoGerar {
  *   lidas, e toda sessão que acaba ou muda esvazia as duas leituras; o diálogo aberto sai junto, e não fica atrás do
  *   login por cima (regra 20, item 8).
  */
-export function AcessoDaTurma({ turmaId, escola }: { turmaId: string; escola: EscolaDaSessao }) {
+export function AcessoDaTurma({ turmaId, escola, titulo }: { turmaId: string; escola: EscolaDaSessao; titulo: RefObject<HTMLHeadingElement | null> }) {
   const cliente = useQueryClient()
   const acesso = useQuery(consultaAcessoDaTurma(turmaId))
   const dialogo = useDialogoDaTela<TipoDeDialogo, AlvoDoGerar>()
   const aberta = dialogo.aberta
   const [anuncio, definirAnuncio] = useState('')
   const idDoTitulo = useId()
-  const titulo = useRef<HTMLHeadingElement>(null)
 
   const recarregar = useCallback(() => cliente.invalidateQueries({ queryKey: consultaAcessoDaTurma(turmaId).queryKey }), [cliente, turmaId])
   // O foco quando o botão que abriu o diálogo saiu da seção: o "Gerar acesso" do vazio, ou o "Revogar" do acesso que caiu.
-  const focarNoTitulo = useCallback(() => titulo.current?.focus(), [])
+  // O título é de quem desenha a página: o vazio dos pedidos também leva o foco a ele (16.0).
+  const focarNoTitulo = useCallback(() => titulo.current?.focus(), [titulo])
 
   /** Abrir um diálogo apaga o anúncio da ação anterior: o que ele dizia já não é o que a pessoa está fazendo. */
   function abrir(tipo: TipoDeDialogo, alvo?: AlvoDoGerar): void {
@@ -82,12 +83,7 @@ export function AcessoDaTurma({ turmaId, escola }: { turmaId: string; escola: Es
   function conteudo(): ReactNode {
     if (acesso.isPending) return <EstadoCarregando rotulo="Carregando o acesso da turma…" />
     if (acesso.isError) {
-      if (turmaIndisponivel(acesso.error))
-        return (
-          <p role="status" className="rounded-cartao border border-linha bg-superficie p-4 text-apoio">
-            {TEXTO_DA_TURMA_INDISPONIVEL}
-          </p>
-        )
+      if (turmaIndisponivel(acesso.error)) return <TurmaIndisponivel texto={TEXTO_DA_TURMA_INDISPONIVEL} />
       return <EstadoErro erro={acesso.error} tentando={acesso.isFetching} aoTentarDeNovo={() => void acesso.refetch({ cancelRefetch: false })} />
     }
     const { expiraEm } = acesso.data

@@ -82,7 +82,10 @@ O desenho visual desta casca, com medidas e componentes, está na seção 11.1.
   nome (D4, D71 revista). Ela abre pelo cartão do vínculo confirmado, em `/professor/turmas/:turmaId`, e começa pela
   seção **Acesso dos alunos** (tarefa 15.0; Tech Spec da A1, seção 9): gerar o link da sala e o código da turma com
   validade de 1, 7 ou 30 dias, projetar o código, copiar o link ou mandá-lo pelo WhatsApp, trocar por um novo e
-  revogar. Os pedidos entram na mesma tela, na 16.0
+  revogar. Embaixo, a seção **Pedidos de nome** (tarefa 16.0): cada pedido com o nome, a hora e, se houve, a marca da
+  tentativa com matrícula errada; a lista se atualiza sozinha a cada 15 s, com a aba à vista; o professor marca até 40 e
+  aprova (`oficial`) ou recusa (`perigo`) depois de revisar a turma, os nomes e o efeito, e cada pedido termina com o
+  resultado em texto. Não existe "aprovar todos"
 - **Seu time** é um grupo da lateral com os dois agentes que o professor vê: o **Assistente de
   ensino**, por onde chegam as funções que trabalham sozinhas (correção de objetiva, adaptação,
   "seu dia e sua semana"), e o **Tutor**, que o professor supervisiona (D8, D47). Cada um abre a
@@ -273,7 +276,10 @@ O desenho da área, e o que o design do aluno **não** herda do professor, está
   por turma, alocação e convite ao professor; grade horária e calendário vêm com o F2 (D71
   revista). Na A1 o cadastro e o convite do professor têm tela própria, **Professores**, item da lateral ao lado de
   Estrutura (tarefa 14.0; Tech Spec da A1, seção 9): cadastrar com nome e e-mail, copiar o link que aparece uma vez,
-  refazer e revogar. O roteiro da Estrutura e o vazio da Alocação levam a ela
+  refazer e revogar. O roteiro da Estrutura e o vazio da Alocação levam a ela. Dentro da turma aberta, embaixo da lista
+  de nomes, a coordenação também decide os **pedidos de nome** (tarefa 16.0), com a mesma peça do professor: a lista só é
+  lida no clique em "Atualizar", porque cada consulta fica na auditoria em nome dela, e a tela diz isso. Os alunos já
+  aprovados aparecem na lista de nomes como uma contagem, sem o nome
 - **Material**: **só a coordenação sobe material para a base da escola**; professor e aluno não
   sobem (D75). Fontes com titularidade e licença, upload, estado da ingestão com o que entrou,
   o que falhou, o que está pendente e o que foi recusado por falta de licença (F4,

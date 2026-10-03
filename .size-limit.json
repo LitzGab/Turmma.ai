@@ -18,15 +18,15 @@
     "brotli": true
   },
   {
-    "name": "JS da área da coordenação (o chunk coordenacao-*.js, só por import(), depois da guarda de papel; na 14.0, a Estrutura com a lista e a alocação e os Professores, perto de 14,5 kB, e folga para os pedidos da 16.0; o diálogo do convite fica num parte-* que ela divide com a operação)",
+    "name": "JS da área da coordenação (o chunk coordenacao-*.js, só por import(), depois da guarda de papel; na 16.0, a Estrutura com a lista e a alocação, os Professores e os pedidos dentro da turma, perto de 13,5 kB; o diálogo do convite e os pedidos ficam em parte-* que ela divide com a operação e com o professor)",
     "path": "apps/web/dist/assets/coordenacao-*.js",
-    "limit": "20 kB",
+    "limit": "16 kB",
     "brotli": true
   },
   {
-    "name": "JS da área do professor (o chunk professor-*.js, só por import(), depois da guarda de papel; na 15.0, Turmas e a turma aberta com o acesso dos alunos, perto de 5,3 kB, e folga para os pedidos da 16.0; os diálogos e a cópia única ficam em parte-* que ela divide com a coordenação e a operação)",
+    "name": "JS da área do professor (o chunk professor-*.js, só por import(), depois da guarda de papel; na 16.0, Turmas e a turma aberta com o acesso dos alunos e os pedidos, perto de 5,5 kB; os diálogos, a cópia única e os pedidos ficam em parte-* que ela divide com a coordenação e a operação)",
     "path": "apps/web/dist/assets/professor-*.js",
-    "limit": "10 kB",
+    "limit": "8 kB",
     "brotli": true
   },
   {
