@@ -1,10 +1,10 @@
 import { hash, type Algorithm } from '@node-rs/argon2'
-import { randomBytes, randomUUID } from 'node:crypto'
+import { createHmac, randomBytes, randomInt, randomUUID } from 'node:crypto'
 import { Secret, TOTP } from 'otpauth'
 import { Client } from 'pg'
-import { hmacDoCodigoDaTurma, sortearCodigoDaTurma, sortearTokenDaSala } from '../../apps/api/src/sala/codigo-da-sala.ts'
 import { BYTES_DO_TOKEN_DE_CONVITE, hashDoToken } from '../../apps/api/src/sessao/hash-do-token.ts'
 import type { EstadoDoProfessor } from '../../packages/shared/src/professores/professores.ts'
+import { ALFABETO_DO_CODIGO_DA_TURMA, normalizarCodigoDaTurma, TAMANHO_DO_CODIGO_DA_TURMA } from '../../packages/shared/src/sala/acesso.ts'
 import { lerAmbienteDeTeste, urlDoBancoDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
 
 /**
@@ -838,9 +838,13 @@ export interface AcessoDaSalaDeTeste {
  * O que estava vigente cai. É o que a página pública da turma (17.0) abre pelo link e pelo código.
  */
 export async function gerarAcessoDaSalaNoBanco(escolaId: string, turmaId: string): Promise<AcessoDaSalaDeTeste> {
-  const token = sortearTokenDaSala()
-  const codigo = sortearCodigoDaTurma()
+  // As contas de `apps/api/src/sala/codigo-da-sala.ts`, refeitas aqui: aquele módulo importa `@educa/shared` pelo nome, e o
+  // Playwright o resolveria para o `dist`, que a esteira não constrói (correção 2026-10-03-e2e-sem-dist-do-shared). Se
+  // divergirem da API, a página pública não acha o código e o `turma-publica.spec.ts` reprova.
+  const token = randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')
+  const codigo = Array.from({ length: TAMANHO_DO_CODIGO_DA_TURMA }, () => ALFABETO_DO_CODIGO_DA_TURMA.charAt(randomInt(ALFABETO_DO_CODIGO_DA_TURMA.length))).join('')
   const chave = new TextEncoder().encode(valorObrigatorio(lerAmbienteDeTeste(), 'SALA_CHAVE_CODIGO'))
+  const codigoHmac = createHmac('sha256', chave).update(normalizarCodigoDaTurma(codigo)).digest('base64url')
   await comBanco(async (banco) => {
     const { rows } = await banco.query<{ ano_letivo_id: string }>('select ano_letivo_id from turma where escola_id = $1 and id = $2', [escolaId, turmaId])
     const anoLetivoId = rows[0]?.ano_letivo_id
@@ -851,7 +855,7 @@ export async function gerarAcessoDaSalaNoBanco(escolaId: string, turmaId: string
       anoLetivoId,
       turmaId,
       hashDoToken(token),
-      hmacDoCodigoDaTurma(chave, codigo),
+      codigoHmac,
     ])
   })
   return { token, codigo }
