@@ -2,6 +2,7 @@ import { hash, type Algorithm } from '@node-rs/argon2'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { Secret, TOTP } from 'otpauth'
 import { Client } from 'pg'
+import { hmacDoCodigoDaTurma, sortearCodigoDaTurma, sortearTokenDaSala } from '../../apps/api/src/sala/codigo-da-sala.ts'
 import { BYTES_DO_TOKEN_DE_CONVITE, hashDoToken } from '../../apps/api/src/sessao/hash-do-token.ts'
 import type { EstadoDoProfessor } from '../../packages/shared/src/professores/professores.ts'
 import { lerAmbienteDeTeste, urlDoBancoDeTeste, valorObrigatorio } from '../../tools/ci/compose.ts'
@@ -822,5 +823,53 @@ export async function porAprovadosNaListaDaTurma(escolaId: string, turmaId: stri
       const usuarioId = await id(banco, "insert into usuario (escola_id, papel, nome) values ($1, 'aluno', $2) returning id", [escolaId, `Aluno aprovado sintético ${randomUUID().slice(0, 8)}`])
       await banco.query("insert into lista_nome (escola_id, ano_letivo_id, turma_id, estado, usuario_id) values ($1, $2, $3, 'aprovado', $4)", [escolaId, anoLetivoId, turmaId, usuarioId])
     }
+  })
+}
+
+/** O link e o código de uma sala, como o professor os recebe no "Gerar acesso" (4.0): só existem aqui. */
+export interface AcessoDaSalaDeTeste {
+  readonly token: string
+  readonly codigo: string
+}
+
+/**
+ * Um acesso vigente da turma com link e código **conhecidos**, direto no banco, como o gerar da API o deixa (4.0): o banco
+ * guarda o SHA-256 do token e o HMAC do código com a `SALA_CHAVE_CODIGO` do compose de teste, pelas mesmas peças da API.
+ * O que estava vigente cai. É o que a página pública da turma (17.0) abre pelo link e pelo código.
+ */
+export async function gerarAcessoDaSalaNoBanco(escolaId: string, turmaId: string): Promise<AcessoDaSalaDeTeste> {
+  const token = sortearTokenDaSala()
+  const codigo = sortearCodigoDaTurma()
+  const chave = new TextEncoder().encode(valorObrigatorio(lerAmbienteDeTeste(), 'SALA_CHAVE_CODIGO'))
+  await comBanco(async (banco) => {
+    const { rows } = await banco.query<{ ano_letivo_id: string }>('select ano_letivo_id from turma where escola_id = $1 and id = $2', [escolaId, turmaId])
+    const anoLetivoId = rows[0]?.ano_letivo_id
+    if (anoLetivoId === undefined) throw new Error('turma do e2e não encontrada')
+    await banco.query('update acesso_turma set revogado_em = now() where escola_id = $1 and turma_id = $2 and revogado_em is null', [escolaId, turmaId])
+    await banco.query("insert into acesso_turma (escola_id, ano_letivo_id, turma_id, token_hash, codigo_hmac, validade_dias, expira_em) values ($1, $2, $3, $4, $5, 7, now() + interval '7 days')", [
+      escolaId,
+      anoLetivoId,
+      turmaId,
+      hashDoToken(token),
+      hmacDoCodigoDaTurma(chave, codigo),
+    ])
+  })
+  return { token, codigo }
+}
+
+/** Os pedidos pendentes da turma, pela chave de envio: é o que prova que o reenvio com a mesma chave não dobra o pedido. */
+export async function pedidosPendentesDaTurma(escolaId: string, turmaId: string): Promise<number> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ total: string }>("select count(*) as total from reivindicacao where escola_id = $1 and turma_id = $2 and estado = 'pendente'", [escolaId, turmaId])
+    return Number(rows[0]?.total ?? 0)
+  })
+}
+
+/** Outro aluno pede o nome com a página aberta, direto no banco: o nome deixa de ser livre, e a lista relida não o traz. */
+export async function tomarNomeNoBanco(escolaId: string, listaNomeId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    const { rowCount } = await banco.query("update lista_nome set estado = 'reivindicado' where escola_id = $1 and id = $2", [escolaId, listaNomeId])
+    // Sem a linha, o teste seguiria com o nome livre e não provaria a corrida que diz provar.
+    if (rowCount !== 1) throw new Error('o nome do e2e não foi tomado: id da lista não encontrado')
   })
 }

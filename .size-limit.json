@@ -6,7 +6,7 @@
     "brotli": true
   },
   {
-    "name": "JS do primeiro carregamento da escola (a entrada index-*.js e os pedaços parte-*.js que ela importa junto; conta também o parte-* que só as áreas dividem, o que só aperta o teto; chunk de área e da operação ficam de fora)",
+    "name": "JS do primeiro carregamento da escola (a entrada index-*.js e os pedaços parte-*.js que ela importa junto; conta também o parte-* que só as áreas dividem, o que só aperta o teto; chunk de área e da operação ficam de fora; na 17.0, com a página pública da turma, que fica na entrada por ser a primeira tela do aluno, perto de 134 kB)",
     "path": ["apps/web/dist/assets/index-*.js", "apps/web/dist/assets/parte-*.js"],
     "limit": "150 kB",
     "brotli": true

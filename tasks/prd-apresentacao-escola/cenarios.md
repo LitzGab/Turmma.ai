@@ -422,7 +422,7 @@ aos cenários.
   | Turmas | "A coordenação ainda não alocou você"; só pendente: "Confirme suas turmas" | confirmadas |
   | Pedidos | professor: "Nenhum pedido esperando" → Acesso; coordenação: "Os pedidos chegam quando o professor da turma gerar o acesso", sem botão. Como ficou na 16.0: o passo do professor é "Ver o acesso dos alunos", que leva o foco à seção do acesso, na mesma página; a coordenação, antes do primeiro "Atualizar", vê "Clique em Atualizar para ver os pedidos…" e o aviso de que cada consulta fica na auditoria; a releitura que cai com a lista vazia mostra o erro com "Tentar de novo", e não o vazio | seleção. Como ficou na 16.0: o nome, "Pediu em …" e a marca só no pedido que a teve; a contagem; a releitura que cai com a lista na tela deixa a lista e a marcação, com o erro por cima; havendo mais pedidos que os de uma leitura (100), a tela diz; a turma que sai do alcance com a tela aberta troca a página inteira pelo aviso, com o foco nele, nos dois papéis; na lista de nomes da coordenação, os aprovados viram "Aprovados nesta turma: N", e, com página da lista ainda por ler, "Aprovados entre os primeiros M nomes: N"; dois cliques no mesmo instante em "Atualizar" fazem uma leitura e um registro |
   | Acesso | "Sem acesso ativo" → Gerar | validade. Como ficou na 15.0: a turma abre pelo cartão do vínculo confirmado, e só por ele (o pendente, o contestado e o encerrado não têm o link); "Vale até …", com "Gerar novo" e "Revogar", sem link nem código; a releitura que cai mostra o erro com "Tentar de novo", e não o estado de antes, também logo depois de gerar; a turma que não chega tem o erro no lugar da tela; a turma pendente, a encerrada e a que não existe, pelo endereço, dizem a mesma coisa, com a quem recorrer e sem "Tentar de novo" |
-  | Pública | "Se o seu nome não aparece, chame o professor"; vencido: o texto do W9 pelo caminho usado e, no link, o campo do código com o foco | nomes livres |
+  | Pública | "Se o seu nome não aparece, chame o professor"; vencido: o texto do W9 pelo caminho usado e, no link, o campo do código com o foco. Na 17.0, a turma sem nome livre diz "Nenhum nome livre nesta turma." e o mesmo "chame o professor", sem formulário | nomes livres. Na 17.0: "Turma …" com o foco ao abrir; só os livres, sem matrícula; "Não é a sua turma? Usar outro código"; depois do pedido, o aviso da espera, quem decide, que a recusa devolve o nome, e nada do pedido na tela |
   | Minha turma | nunca vazia; sem vínculo confirmado no ano (`NAO_ENCONTRADO`), "Você ainda não está em uma turma neste ano letivo. Fale com o seu professor ou com a coordenação.", sem "Tentar de novo" (12.0) | turma, série e escola, sem colegas |
 - **W5** Fronteira: o `import()` de `coordenacao-*` e de `professor-*` abortado mostra "Confira a conexão e tente de
   novo" e troca o título da aba, que volta ao sair (pelo gancho `useTituloDaAba` da tela da falha, que substituiu o
@@ -486,7 +486,17 @@ aos cenários.
   mostra o texto do limite com os minutos do `Retry-After`, pelo nome (L4) e pelo `rl:ip` (L10); a tela depois do pedido
   traz o aviso sobre "matrícula ou senha incorretas"; "Tentando de novo…" sai numa região `role="status"`, e os erros
   numa `role="alert"`, ligadas ao campo por `aria-describedby`. **Quebra sem:** o texto escolhido pelo caminho da
-  página; o teto de reenvios; a espera pelo `Retry-After`; o `role` e o `aria-describedby`
+  página; o teto de reenvios; a espera pelo `Retry-After`; o `role` e o `aria-describedby`. Como ficou na 17.0
+  (`e2e/turma-publica.spec.ts`; a regra do reenvio também na unidade, `apps/web/src/paginas/reenvio-da-sala.test.ts`): o
+  código em branco e o fora do formato não chamam `salas/abrir`, e o código vai normalizado; o clique duplo em "Abrir a
+  turma" manda uma abertura só; pelo código, o 429 e o 503 da abertura ficam no campo do código, e pelo link o 503 tem
+  "Tentar de novo" com o token da memória; o envio sem nome escolhido diz "Escolha o seu nome na lista.", sem chamada; a
+  recusa mantém a matrícula, com o foco nela, e o nome escolhido, tira a senha e relê os nomes (um nome tomado no banco com
+  a página aberta sai), e a releitura que cai deixa a lista; mexer num campo depois do quarto 503 faz o envio seguinte ter
+  chave nova; o `NAO_ENCONTRADO` do envio leva ao campo do código com o texto do caminho; a resposta do envio no ar quando
+  o aluno usa outro código, ou cola um link pela metade, não muda a tela; a página que sai com o reenvio esperando não
+  reenvia; o link colado pela metade leva ao campo do código, sem chamada. **Quebra sem:** a vez da abertura e a do envio;
+  a trava da abertura pelo código; a conferência do formato; o pedido reaproveitado só sem mudança
 - **W9** (unidade) `MENSAGENS_DA_SALA`, com o texto de `NAO_ENCONTRADO` escolhido pelo caminho que a página usou (o
   servidor responde igual): código digitado, "Não encontramos turma com este código. Confira as letras e os números; se
   estiver certo, peça o código atual ao professor."; link, "Este link não vale mais. Peça o código atual ao professor.";
@@ -496,7 +506,8 @@ aos cenários.
   pelo nome e pelo `rl:ip`, sem prometer que um código novo destrava; `INDISPONIVEL_TENTE_DE_NOVO` "O sistema está cheio
   agora. Tentando de novo…" e, depois do terceiro reenvio, "O sistema está cheio agora." com "Tentar de novo"; nenhum
   texto com código de erro nem com "computador". **Quebra sem:** a escolha pelo caminho; o texto do limite sem "código
-  novo" (falso no `rl:ip`); o arredondamento para cima e o singular
+  novo" (falso no `rl:ip`); o arredondamento para cima e o singular. Na 17.0: sem `Retry-After`, "Muitas tentativas agora.
+  Espere alguns minutos ou chame o professor."; o `Retry-After` de zero diz 1 minuto
 - **W10** Lista: arquivo em windows-1252 com `;` e acento (amostra do Excel) e em UTF-8 com BOM e `,`: a prévia mostra
   os nomes certos, com as linhas de erro primeiro e em texto. Também (13.0): a coluna que parece CPF ou data de
   nascimento segura a gravação, e a tela avisa o título antes da lista e o cabeçalho que o leitor não reconhece; o "Texto
@@ -507,7 +518,8 @@ aos cenários.
   matrícula que parece CPF ou data; o arquivo que o navegador não consegue ler tem aviso; a web pede a API sem cache
   HTTP, para a resposta com nome e matrícula não ficar em disco
 - **W11** Campos: código com `autocapitalize="characters"`; matrícula e senha com `autocomplete="off"`; matrícula com
-  `inputmode="text"`; senha com "mostrar" e os 12 caracteres avisados
+  `inputmode="text"`; senha com "mostrar" e os 12 caracteres avisados. Na 17.0, o "Mostrar a senha" é um interruptor
+  (`aria-pressed`), e o aceite do convite usa a mesma peça (`e2e/convite.spec.ts`, W14)
 - **W12** 360 px: nenhuma tela nova com rolagem horizontal; abaixo de 768 px, cartões e gaveta; alvos de 44 px;
   teclado: selecionar pedidos e decidir só com Tab, Espaço e Enter, foco preso no diálogo e devolvido. Nos Pedidos
   (16.0): cada pedido é um cartão inteiro clicável, com 44 px ou mais de altura; o nome de aluno comprido e sem espaço

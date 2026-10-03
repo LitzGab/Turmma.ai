@@ -50,6 +50,11 @@ export const ROTAS = {
   entrar: '/entrar',
   /** O endereço da escola, por onde o aluno entra (RF7). O slug vem do parâmetro da rota. */
   escola: '/e/:slug',
+  /**
+   * A página pública da turma, por onde o aluno reivindica o nome (A1, 17.0): o link da sala (`#<token>`) ou o código
+   * digitado. O token vai no fragmento, como o do convite, e nunca no caminho nem na consulta.
+   */
+  salaDaTurma: '/e/:slug/turma',
   mfa: '/mfa',
   configurarMfa: '/mfa/configurar',
   escolherEscola: '/escolher-escola',
@@ -69,10 +74,15 @@ export const ROTAS = {
 
 /**
  * O endereço da sala da turma, por onde o aluno reivindica o nome: `/e/<slug>/turma` (Tech Spec da A1, seção 4). O token
- * do link vai no fragmento `#`, como o do convite, e nunca no caminho nem na consulta; a página é da 17.0.
+ * do link vai no fragmento `#`, como o do convite, e nunca no caminho nem na consulta.
  */
 export function caminhoDaSala(slug: string): string {
-  return `${ROTAS.escola.replace(':slug', encodeURIComponent(slug))}/turma`
+  return ROTAS.salaDaTurma.replace(':slug', encodeURIComponent(slug))
+}
+
+/** O endereço da escola, onde o aluno aprovado entra com a matrícula e a senha (RF7 do F1). */
+export function caminhoDaEscola(slug: string): string {
+  return ROTAS.escola.replace(':slug', encodeURIComponent(slug))
 }
 
 /**

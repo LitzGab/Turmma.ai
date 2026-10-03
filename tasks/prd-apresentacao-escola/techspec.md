@@ -458,6 +458,29 @@ decisão (10.0) travam o ano no começo da transação delas; o ano que deixou d
     outras escritas da tela
   - Tetos: `professor-*` 8 kB (mede ~5,5 kB) e `coordenacao-*` 16 kB (mede ~13,5 kB). Os pedidos caem num `parte-*` que
     as duas áreas dividem, e contam no primeiro carregamento (129,7 kB de 150)
+- **Decidido na 17.0** (divergências registradas em `17_task.md`):
+  - A página pública fica em `/e/:slug/turma`, na entrada (o primeiro carregamento mede ~133,7 kB de 150), e não usa o
+    TanStack Query: as duas chamadas são anônimas, e o token não vai para chave nem fecho de consulta guardada. Cada abertura
+    tem a sua vez, e a resposta de uma vez que passou (o código de antes, o link de antes) não muda a tela; o envio também
+    confere a vez, e a página que sai não reenvia mais nada
+  - O código em branco ou fora do formato (8 caracteres do alfabeto, depois de `normalizarCodigoDaTurma`) não sai da página:
+    o em branco diz "Digite o código da turma que o professor mostrou."; o fora do formato, o texto do código do W9. Uma
+    abertura por vez pelo código
+  - A abertura que cai fora do `NAO_ENCONTRADO`: pelo código, o texto fica no campo (o 429 com os minutos, o 503 com "O
+    sistema está cheio agora."); pelo link, o texto com "Tentar de novo", com o token da memória. A abertura não se repete
+    sozinha. O limite sem `Retry-After` diz "Espere alguns minutos"
+  - A recusa mantém a matrícula (com o foco nela) e o nome escolhido que continua livre, tira a senha e relê a lista; a
+    releitura que cai deixa a lista de antes. O `NAO_ENCONTRADO` do envio leva ao campo do código, com o texto do caminho
+  - A `chaveEnvio` é sorteada a cada envio e reaproveitada só no "Tentar de novo" do mesmo pedido, depois do quarto 503;
+    mexer num campo faz o envio seguinte ser um pedido novo. Sem `Retry-After`, o reenvio espera 2 s; a variação vai de 0
+    a 1 s
+  - Botões: "Não é a sua turma? Usar outro código" na turma aberta; "Ir para a entrada da escola" e "Voltar à lista de
+    nomes" depois do pedido, que não mostra o nome nem a matrícula e diz que quem decide é uma pessoa e que a recusa devolve
+    o nome. "Voltar à lista de nomes" reabre pelo token ou pelo código que ficou na memória da aba, de propósito: o acesso é
+    da turma inteira, e é o caminho do aluno seguinte no mesmo computador. O nome não escolhido diz "Escolha o seu nome na
+    lista.", com o foco no primeiro nome
+  - O `CampoDeSenha` (com "Mostrar", `aria-pressed`) fica em `componentes/`, e o aceite do convite passou a usá-lo; o
+    `Campo` ganhou `descritoTambemPor` e `acao`; o token do fragmento saiu para `paginas/fragmento.ts`
 - **Decisão**: "Aprovar N" (`oficial`) revisa turma, nomes e efeito, e avisa a coordenação da auditoria; "Recusar"
   (`perigo`) confirma; depois, texto por pedido (W6). Até 40, explicado. O pedido mostra se houve tentativa com
   matrícula errada no nome. Para o professor, atualiza a cada 15 s com a aba visível (W15); a coordenação usa

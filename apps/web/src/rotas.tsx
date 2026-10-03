@@ -18,6 +18,7 @@ import { EntrarNaEscola } from './paginas/EntrarNaEscola'
 import { EscolherEscola } from './paginas/EscolherEscola'
 import { Inicio } from './paginas/Inicio'
 import { Mfa } from './paginas/Mfa'
+import { TurmaPublica } from './paginas/TurmaPublica'
 import { tituloDaEscola, tituloDaOperacao } from './titulo'
 
 /**
@@ -189,6 +190,8 @@ export function Rotas() {
         </FronteiraDaArea>
       </Route>
       <Route path={ROTAS.sistema} component={Casca} />
+      {/* A página pública da turma, por onde o aluno pede o nome (A1, 17.0). Na entrada, e não num chunk de área: é a primeira tela do aluno. */}
+      <Route path={ROTAS.salaDaTurma}>{(parametros) => <TurmaPublica slug={parametros.slug} />}</Route>
       {/* O endereço da escola, por onde o aluno entra (RF7). Fica antes das rotas fixas por ser a única com parâmetro. */}
       <Route path={ROTAS.escola}>{(parametros) => <EntrarNaEscola slug={parametros.slug} />}</Route>
       {/* Etapas do login, sem sessão ainda. */}

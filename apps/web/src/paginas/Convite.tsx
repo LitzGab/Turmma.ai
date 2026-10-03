@@ -4,7 +4,6 @@ import {
   CodigoDeErro,
   mensagemDoConvite,
   TAMANHO_MAXIMO_SENHA,
-  TAMANHO_MAXIMO_TOKEN_DE_CONVITE,
   TAMANHO_MINIMO_SENHA_NOVA,
 } from '@educa/shared'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
@@ -15,34 +14,10 @@ import { definirAvisoDaEntrada } from '../api/sessao'
 import { ROTAS } from '../caminhos'
 import { Botao } from '../componentes/Botao'
 import { CLASSES_DO_LINK_SECUNDARIO } from '../componentes/botao-secundario'
-import { Campo } from '../componentes/Campo'
+import { CampoDeSenha } from '../componentes/CampoDeSenha'
 import { CascaPublica } from '../componentes/CascaPublica'
 import { EstadoCarregando, EstadoErro } from '../componentes/estado'
-
-/**
- * O token do convite, lido do fragmento `#` e tirado da barra antes de qualquer chamada (regra 20, item 8; Tech Spec,
- * seção 5, "Convite").
- *
- * O fragmento nunca é mandado ao servidor pelo navegador, e por isso é onde o token do link vive; mas ele fica no
- * histórico do computador da escola, e é isso que o `history.replaceState` resolve. O token some da barra, do botão
- * Voltar e de qualquer captura de tela feita depois.
- */
-function tokenDoFragmento(): string | undefined {
-  const bruto = window.location.hash.replace(/^#/, '')
-  let token: string
-  try {
-    token = decodeURIComponent(bruto).trim()
-  } catch {
-    // `%` solto no link colado pela metade: não é token nenhum, e a tela diz que o endereço está incompleto.
-    return undefined
-  }
-  return token === '' || token.length > TAMANHO_MAXIMO_TOKEN_DE_CONVITE ? undefined : token
-}
-
-/** Tira o fragmento da barra, sem recarregar e sem entrada nova no histórico. */
-function apagarFragmentoDaBarra(): void {
-  if (window.location.hash !== '') window.history.replaceState(null, '', window.location.pathname + window.location.search)
-}
+import { apagarFragmentoDaBarra, tokenDoFragmento } from './fragmento'
 
 type Etapa =
   | { readonly nome: 'sem-token' }
@@ -238,12 +213,11 @@ function SenhaNova({ aceitando, aoEnviar }: { aceitando: boolean; aoEnviar: (sen
   return (
     <form className="flex flex-col gap-4" onSubmit={enviar}>
       <p className="text-apoio">Crie a senha que você vai usar para entrar.</p>
-      <Campo
+      <CampoDeSenha
         ref={campo}
         rotulo="Senha nova"
         dica={`Pelo menos ${String(TAMANHO_MINIMO_SENHA_NOVA)} caracteres. Use uma frase que só você saiba.`}
         name="senha"
-        type="password"
         autoComplete="new-password"
         required
         minLength={TAMANHO_MINIMO_SENHA_NOVA}

@@ -314,6 +314,8 @@ export {
   TAMANHO_MAXIMO_CODIGO_DIGITADO,
 } from './sala/salas.js'
 export type { DecisorDaReivindicacao, EstadoDaReivindicacao, PedidoAbrirSala, PedidoReivindicarSala, RespostaReivindicacao, RespostaSalaAberta } from './sala/salas.js'
+export { MENSAGENS_DA_SALA, mensagemDaSala, mensagemDoLimiteDaSala, minutosDaEspera } from './sala/mensagens-da-sala.js'
+export type { CaminhoDaSala } from './sala/mensagens-da-sala.js'
 export {
   DECISOES_DE_PEDIDO,
   esquemaConsultaPedidosDaTurma,

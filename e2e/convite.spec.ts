@@ -165,6 +165,14 @@ test.describe('aceite do convite, do coordenador e do professor', () => {
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
     await page.getByLabel('Senha nova').fill(SENHA_NOVA)
+    // A senha digitada uma vez só, às cegas, se confere com o "Mostrar" (herdado da 14.0, a peça da 17.0).
+    const mostrar = page.getByRole('button', { name: 'Mostrar a senha' })
+    await expect(mostrar).toHaveAttribute('aria-pressed', 'false')
+    await acionar(page, 'Mostrar a senha', hasTouch)
+    await expect(page.getByLabel('Senha nova')).toHaveAttribute('type', 'text')
+    await expect(mostrar).toHaveAttribute('aria-pressed', 'true')
+    await acionar(page, 'Mostrar a senha', hasTouch)
+    await expect(page.getByLabel('Senha nova')).toHaveAttribute('type', 'password')
     await acionar(page, /Definir a senha e continuar|Salvando/, hasTouch)
 
     // O professor não configura segundo fator: vai à entrada, com o aviso de que a senha foi criada.
