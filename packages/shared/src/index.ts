@@ -369,3 +369,31 @@ export type {
   RespostaAceitarConviteDeOperador,
   RespostaConsultarConviteDeOperador,
 } from './operacao/convite.js'
+export { AGENTES, CHAVES_DE_FUNCAO, ehChaveDeFuncao, FUNCOES, NIVEIS_DE_AUTONOMIA, NOMES_DOS_AGENTES } from './time/funcoes.js'
+export type { Agente, ChaveDeFuncao, DeclaracaoDeFuncao, NivelDeAutonomia } from './time/funcoes.js'
+export {
+  ALTERNATIVAS_POR_QUESTAO,
+  esquemaAdaptacaoAplicada,
+  esquemaCitacao,
+  esquemaConteudoDeAtividade,
+  esquemaConteudoDePlanoDeAula,
+  esquemaConteudoDoArtefato,
+  esquemaHabilidade,
+  esquemaQuestaoObjetiva,
+  FERRAMENTAS,
+  ROTULOS_DA_ADAPTACAO,
+  TIPOS_DE_ADAPTACAO,
+  TIPOS_DE_ARTEFATO,
+} from './assistente/conteudo.js'
+export type {
+  AdaptacaoAplicada,
+  Citacao,
+  ConteudoDeAtividade,
+  ConteudoDePlanoDeAula,
+  ConteudoDoArtefato,
+  Ferramenta,
+  Habilidade,
+  QuestaoObjetiva,
+  TipoDeAdaptacao,
+  TipoDeArtefato,
+} from './assistente/conteudo.js'
