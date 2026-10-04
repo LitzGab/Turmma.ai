@@ -56,9 +56,14 @@ provedor não compara nada; as 15 amostras de saída do Tutor são poucas para d
 
 | Pacote | Worktree e branch | O que faz |
 |---|---|---|
-| M | `../Educa.ia-mvp-m`, `mvp/m` | material: API e tela da coordenação. **Entregue e integrado na `mvp/fase-2`** |
-| P | `../Educa.ia-mvp-p`, `mvp/p` | API do Assistente: conversa, ferramentas, artefato, PDF, adaptação, entregas |
-| W | `../Educa.ia-mvp-w`, `mvp/w` | web do professor: Home, Conversa, Ferramentas, Artefato, Seu time |
+| W, rodada 2 | `../Educa.ia-mvp-w`, `mvp/w` | e2e do fluxo da A2 contra a API real, professor abrindo em Nova conversa, "Só conversar" ligado |
+| P, rodada 2 | `../Educa.ia-mvp-p`, `mvp/p` | artefato e entrega autorizados pela turma **e pela disciplina** |
+| A (API) | `../Educa.ia-mvp-a`, `mvp/a` | atividade aplicada, respostas, correção, validação do lote, desempenho da turma |
+| T (API) | `../Educa.ia-mvp-t`, `mvp/t` | Tutor, memória, sinais e uso do Tutor por turma |
+
+Integrados na `mvp/fase-2` (`02b4b1a`), ainda sem portão: M (material, API e tela), P (API do Assistente), W (telas do
+professor, com a API simulada no e2e dos estados) e a quinta rodada do C (o menu que fechava sozinho depois de uma
+rolagem era defeito de produto, corrigido; `Tela` sem margem dobrada; campo condicional no formulário).
 
 A branch de integração da fase 2 é `mvp/fase-2` (`../Educa.ia-mvp-fase-2`). Os worktrees de S, L e C ficam de pé
 para rodadas de correção.
@@ -69,9 +74,11 @@ retomados às 14h21 do ponto em que pararam. Se acontecer de novo, retoma-se cad
 
 **Falta**
 
-- Integrar M, P e W na `mvp/fase-2`; segunda rodada do W com o e2e do fluxo contra a API real; portão, revisores da
-  fase 2 e esteira.
-- Fases 3 e 4 (seção 3) e o fechamento (seção 8).
+- Fechar a fase 2: integrar a rodada 2 de W e de P, portão, revisores da fase (os três com veto e o
+  `frontend-reviewer`) e esteira.
+- Fase 3: integrar as APIs de A e de T; depois, as telas do aluno (atividades, Tutor), o Aprovar, Turmas com
+  desempenho e os sinais no Seu time, num pacote de telas que só começa quando o W terminar (mexem nos mesmos arquivos).
+- Fase 4 (governança e Analista) e o fechamento (seção 8).
 
 Para os pacotes das fases 3 e 4, o que os revisores já pediram:
 - **A (atividade e correção):** `aprovar-lote` monta `apresentado` e `aberto` das linhas de `correcao` no servidor;
@@ -138,6 +145,15 @@ descarregado, e quem carrega é o Joaquim).
     com a segunda passada aprovada.
 18. **Sem dependência nova na web.** O pacote C mediu o Radix (36,8 kB os quatro) e escreveu as peças à mão; `clsx` e
     `class-variance-authority` também ficaram de fora. A decisão 11 fica só com `pdfkit` e `pdfjs-dist`.
+20. **"Só conversar" virou campo do contrato** (`resposta: 'so_conversar'` no pedido de mensagem): sem ele, uma das duas
+    opções da pergunta da D18 não fazia nada.
+21. **Artefato e entrega se autorizam pela turma e pela disciplina.** Com só a turma, a professora de outra disciplina
+    da mesma turma leria o artefato da colega e decidiria a versão adaptada dela.
+22. **O professor abre em Nova conversa** (D73), e os specs da A1 que afirmavam a página "Início" para o professor são
+    ajustados na rodada 2 do W.
+23. **A fase 3 começou pela API**, em paralelo com o fim da fase 2; as telas dela esperam o W.
+24. **Teto do grupo "peças + galeria" em 26 kB** (medido: 23,47). O primeiro carregamento está em 141,57 de 150 kB;
+    cerca de 15 kB do grupo são pedaços que a entrada nunca baixa, mas o glob soma.
 19. **Uma thread só por professora com o Assistente** nesta fatia: sem "Histórico" na lateral.
 12. **Teto de bundle.** As peças novas e o Radix não podem entrar no primeiro carregamento (150 kB). Os tetos por área
     (`professor-*` 8 kB, `coordenacao-*` 16 kB, `aluno-*` 5 kB) vão ser revistos quando as telas chegarem, com o número
