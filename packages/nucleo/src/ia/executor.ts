@@ -1,19 +1,21 @@
-import type { CodigoDeErro } from '@educa/shared'
+import { CodigoDeErro } from '@educa/shared'
+import { randomUUID } from 'node:crypto'
 import { setImmediate as proximaVolta, setTimeout as esperar } from 'node:timers/promises'
 import type { ConfiguracaoDoExecutor } from '../config/config-ia.js'
+import { executarNoContexto } from '../contexto/contexto.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
 import { resumirErro } from '../erro/resumir-erro.js'
 import type { LoggerBase } from '../log/logger.js'
 import { relogioDoSistema, type Relogio } from '../relogio.js'
-import { ErroDeIa, type CodigoDeErroDeIa } from './erros.js'
+import { ErroDeIa } from './erros.js'
 
 export const ESTADOS_DA_EXECUCAO = ['pendente', 'rodando', 'concluida', 'falhou'] as const
 export type EstadoDaExecucao = (typeof ESTADOS_DA_EXECUCAO)[number]
 
 /** A execução ficou `pendente` ou `rodando` além do prazo: o processo caiu ou reiniciou no meio dela. */
-export const EXECUCAO_INTERROMPIDA = 'EXECUCAO_INTERROMPIDA'
-/** O que `execucao_agente.erro` guarda: o código, e mais nada. */
-export type CodigoDeFalhaDaExecucao = CodigoDeErro | CodigoDeErroDeIa | typeof EXECUCAO_INTERROMPIDA
+export const EXECUCAO_INTERROMPIDA = CodigoDeErro.EXECUCAO_INTERROMPIDA
+/** O que `execucao_agente.erro` guarda: um código do contrato, e mais nada. */
+export type CodigoDeFalhaDaExecucao = CodigoDeErro
 
 /** A `execucao_agente` que o `POST` já gravou como `pendente` antes de responder `202`. */
 export interface ExecucaoAgendada {
@@ -78,7 +80,6 @@ const PRAZOS_ATE_A_VARREDURA = 2
 const chaveDe = (execucao: ExecucaoAgendada): string => `${execucao.escolaId}:${execucao.chave}`
 
 function codigoDaFalha(erro: unknown): CodigoDeFalhaDaExecucao {
-  if (erro instanceof ErroDeIa) return erro.codigoDeIa
   if (erro instanceof ErroDeDominio) return erro.codigo
   return 'ERRO_INTERNO'
 }
@@ -166,7 +167,11 @@ export class ExecutorNoProcesso implements ExecutorDeAgente {
       const { escolaId } = item.execucao
       this.rodando += 1
       this.rodandoPorEscola.set(escolaId, (this.rodandoPorEscola.get(escolaId) ?? 0) + 1)
-      const promessa = this.rodar(item).finally(() => {
+      // Cada execução roda num contexto próprio, só com a escola dela. Sem isso ela herdaria o contexto de quem
+      // disparou o despacho, que pode ser a requisição de outra pessoa, de outra escola: a execução que termina é
+      // quem chama a próxima da fila. O log sairia com o usuário errado, e um repository com escopo no contexto
+      // leria a escola errada.
+      const promessa = executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => this.rodar(item)).finally(() => {
         this.rodando -= 1
         const restantes = (this.rodandoPorEscola.get(escolaId) ?? 1) - 1
         if (restantes === 0) this.rodandoPorEscola.delete(escolaId)

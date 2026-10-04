@@ -18,7 +18,8 @@ import { tentativaAtividade } from './tentativa-atividade.js'
  * - `destaques` são os motivos, de lista fechada, pelos quais esta correção precisa ser aberta antes da aprovação (D33):
  *   fato sobre o trabalho, sem texto. `destaque_aberto_em` e `destaque_aberto_por` registram a abertura pelo professor
  *   (D56), uma vez só (`update … where destaque_aberto_em is null`); só o que tem destaque se abre (check). Quem abriu é
- *   conferido pelo gatilho `correcao_destaque_aberto_por_da_escola`, sem FK.
+ *   conferido pelo gatilho `correcao_destaque_aberto_por_da_equipe` (0023: professor ou coordenação da escola), sem FK.
+ *   **A validação do lote só entra com todo destaque daqui aberto** (gatilho da `validacao_do_lote`, 0023).
  * - Índice único `(escola_id, entrega_id, aluno_id)`: o job de correção que roda duas vezes não cria duas correções do
  *   mesmo aluno no lote (regra 80, item 7), e é por ele que se lê o lote inteiro, pelo escopo.
  * - FK composta `(escola_id, entrega_id, atividade_aplicada_id)` para a entrega: a correção só existe em entrega que é

@@ -1,21 +1,26 @@
+import type { OrigemDaSaidaDeIa } from '@educa/shared'
 import type { Perfil } from './perfis.js'
-import type { TarefaDeIa } from './tarefa.js'
+import type { DefinicaoDeTarefa } from './tarefa.js'
 
-/** Quem atendeu: um adaptador, ou nenhum, quando a resposta saiu de regra fixa da tarefa (assunto delicado no Tutor). */
-export const ORIGENS_DA_SAIDA = ['falso', 'openai_compat', 'regra_fixa'] as const
-export type OrigemDaSaida = (typeof ORIGENS_DA_SAIDA)[number]
+/**
+ * Quem atendeu: um adaptador, ou nenhum, quando a resposta saiu de regra fixa da tarefa (assunto delicado no Tutor).
+ * A lista é `ORIGENS_DA_SAIDA_DE_IA`, de `@educa/shared`, a mesma do check de `consumo_ia`.
+ */
+export type OrigemDaSaida = OrigemDaSaidaDeIa
 
 /**
  * Uma chamada de IA. A tarefa já declara a função e o perfil (regra 30, item 2); quem chama diz de que escola é o
  * gasto e, no Tutor, de que aluno. Não há campo para modelo nem para provedor: isso é configuração.
  */
 export interface PedidoDeGeracao<Entrada, Saida> {
-  readonly tarefa: TarefaDeIa<Entrada, Saida>
+  readonly tarefa: DefinicaoDeTarefa<Entrada, Saida>
   readonly entrada: Entrada
   /** Do contexto autenticado ou da execução gravada, nunca do cliente (regra 10). */
   readonly escolaId: string
   /** Obrigatório nas tarefas do Tutor: é por ele que o freio diário do aluno é consultado (D38). Só o id, nunca o nome. */
   readonly alunoId?: string
+  /** No Tutor, a turma em que o aluno está perguntando: é por ela que o pacote do mês é consultado (D38). */
+  readonly turmaId?: string
   /** A `execucao_agente` que pediu, para o consumo apontar para ela. */
   readonly execucaoId?: string
   /** Cancela a chamada em curso: o `ExecutorDeAgente` passa o dele, e a execução que estourou o prazo não segue gastando. */

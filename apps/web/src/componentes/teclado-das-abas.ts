@@ -12,3 +12,11 @@ export function abaDaTecla(ids: readonly string[], ativa: string, tecla: string)
   if (tecla === 'End') return ids.at(-1)
   return undefined
 }
+
+/**
+ * A aba que fica na ordem do Tab: a ativa. Com a ativa fora da lista (a aba que deixou de existir, um id que veio errado
+ * do endereço), é a primeira: sem isso nenhuma aba teria parada, e a lista inteira sumiria para quem usa o teclado.
+ */
+export function abaNaOrdemDoTab(ids: readonly string[], ativa: string): string | undefined {
+  return ids.includes(ativa) ? ativa : ids[0]
+}

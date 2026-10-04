@@ -23,12 +23,16 @@ export const TEXTO_DA_ESPERA = 'Esperando você'
 
 /**
  * A linha da aprovação: "Aprovado por Camila Souza · 19/09, 10h42" (`docs/interface.md` 11.3), "Esperando você", ou
- * "Rejeitado por Camila Souza · 19/09, 10h42". Data e hora no formato local (regra 50, item 12).
+ * "Camila Souza rejeitou · 19/09, 10h42". Data e hora no formato local (regra 50, item 12).
+ *
+ * A rejeição é escrita com a pessoa como sujeito, e não como "Rejeitado por": o particípio concordaria com o que foi
+ * rejeitado (a versão adaptada, o lote), e a frase com o verbo vale para qualquer coisa e para qualquer pessoa. A
+ * aprovação segue a 11.3, com o `verbo` de quem usa para o gênero do que foi aprovado.
  */
 export function textoDaAprovacao(aprovacao: Aprovacao, { verbo = VERBO_DA_APROVACAO, espera = TEXTO_DA_ESPERA, fuso, agora }: OpcoesDoTexto = {}): string {
   if (aprovacao.estado === 'pendente') return espera
   const quando = formatarDiaEHora(aprovacao.quando, { ...(fuso === undefined ? {} : { fuso }), ...(agora === undefined ? {} : { agora }) })
-  return `${aprovacao.estado === 'aprovada' ? verbo : 'Rejeitado por'} ${aprovacao.por} · ${quando}`
+  return aprovacao.estado === 'aprovada' ? `${verbo} ${aprovacao.por} · ${quando}` : `${aprovacao.por} rejeitou · ${quando}`
 }
 
 /** O motivo da rejeição, que vem junto dela: "Motivo: a questão 3 não é do capítulo." Em branco, não há linha. */

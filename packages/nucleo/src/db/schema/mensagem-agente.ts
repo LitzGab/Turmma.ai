@@ -46,7 +46,11 @@ export const mensagemAgente = pgTable(
       columns: [tabela.escolaId, tabela.anoLetivoId, tabela.threadId],
       foreignColumns: [threadAgente.escolaId, threadAgente.anoLetivoId, threadAgente.id],
     }).onDelete('cascade'),
-    foreignKey({ name: 'mensagem_agente_execucao_da_escola_fk', columns: [tabela.escolaId, tabela.execucaoId], foreignColumns: [execucaoAgente.escolaId, execucaoAgente.id] }),
+    foreignKey({
+      name: 'mensagem_agente_execucao_do_ano_da_escola_fk',
+      columns: [tabela.escolaId, tabela.anoLetivoId, tabela.execucaoId],
+      foreignColumns: [execucaoAgente.escolaId, execucaoAgente.anoLetivoId, execucaoAgente.id],
+    }),
     foreignKey({
       name: 'mensagem_agente_turma_do_ano_da_escola_fk',
       columns: [tabela.escolaId, tabela.anoLetivoId, tabela.turmaId],

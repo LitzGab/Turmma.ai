@@ -1,5 +1,5 @@
 import { Check, type LucideIcon } from 'lucide-react'
-import { useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
 
 export interface OpcaoDeEscolha {
   readonly id: string
@@ -35,14 +35,31 @@ const CLASSES_DA_OPCAO =
  * com o foco. Um clique escolhe: não há "selecionar e depois enviar".
  *
  * Depois da escolha o cartão **encolhe para uma linha** que diz o que foi escolhido, e não deixa escolher de novo: a
- * conversa segue dali.
+ * conversa segue dali. O botão que tinha o foco some com o cartão, e por isso **o foco vai para a linha**: quem escolheu
+ * pelo teclado continua de onde estava, e o leitor de tela lê o que ficou escolhido (regra 50, item 11). Só quando a
+ * escolha foi feita aqui: a conversa antiga que abre com a escolha já feita não puxa o foco de ninguém.
  */
 export function Escolha({ pergunta, opcoes, escolhida, aoEscolher, desligada = false }: PropsDaEscolha) {
   const idDaPergunta = useId()
+  const linha = useRef<HTMLParagraphElement>(null)
+  // Alguém escolheu neste cartão, e a linha ainda não recebeu o foco.
+  const escolheuAqui = useRef(false)
   const feita = opcoes.find((opcao) => opcao.id === escolhida)
+  const idDaFeita = feita?.id
+  useEffect(() => {
+    if (idDaFeita === undefined || !escolheuAqui.current) return
+    escolheuAqui.current = false
+    linha.current?.focus()
+  }, [idDaFeita])
+
+  function escolher(id: string): void {
+    escolheuAqui.current = true
+    aoEscolher(id)
+  }
+
   if (feita !== undefined)
     return (
-      <p data-escolha="feita" className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-full bg-realce-suave px-3 py-1.5 text-sm text-apoio">
+      <p ref={linha} tabIndex={-1} data-escolha="feita" className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-full bg-realce-suave px-3 py-1.5 text-sm text-apoio">
         <Check aria-hidden="true" size={14} strokeWidth={2.4} className="shrink-0" />
         <span className="min-w-0 break-words">
           Você escolheu: <span className="font-medium text-tinta">{feita.titulo}</span>
@@ -58,7 +75,7 @@ export function Escolha({ pergunta, opcoes, escolhida, aoEscolher, desligada = f
         {opcoes.map((opcao) => {
           const Icone = opcao.icone
           return (
-            <button key={opcao.id} type="button" disabled={desligada} onClick={() => aoEscolher(opcao.id)} className={CLASSES_DA_OPCAO}>
+            <button key={opcao.id} type="button" disabled={desligada} onClick={() => escolher(opcao.id)} className={CLASSES_DA_OPCAO}>
               <Icone aria-hidden="true" size={18} strokeWidth={1.75} className="mt-0.5 shrink-0" />
               <span className="flex min-w-0 flex-col">
                 <span className="font-medium break-words">{opcao.titulo}</span>

@@ -23,7 +23,7 @@ export async function exigirFuncaoAtiva(suspensao: SuspensaoDeFuncao, escolaId: 
   } catch {
     throw new ErroDeIa('IA_INDISPONIVEL')
   }
-  if (suspensa) throw new ErroDeIa('IA_FUNCAO_SUSPENSA')
+  if (suspensa) throw new ErroDeIa('FUNCAO_SUSPENSA')
 }
 
 /** Suspensões em memória, para teste. */

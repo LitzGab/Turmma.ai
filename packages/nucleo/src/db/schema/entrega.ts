@@ -17,18 +17,23 @@ import { turma } from './turma.js'
  *   tem justificativa, e só ela.
  * - Decidir é um `update … where estado = 'pendente'`: a segunda decisão não acha linha, não grava nada e responde
  *   `ENTREGA_JA_DECIDIDA`. A decisão fica na própria linha: não há tabela de decisões onde uma segunda caberia.
- * - `decidida_por` é conferido na gravação pelo gatilho `entrega_decidida_por_da_escola` (a função
- *   `exigir_usuario_da_escola`, da 0013), e não por FK: a eliminação do professor não apaga quem aprovou, que é o que a
+ * - **A turma da entrega é a do que ela decide** (0023): o artefato e a atividade aplicada vão por FK composta com a
+ *   escola, o ano e a turma. É pela `turma_id` que o professor é autorizado, e uma entrega da turma X apontando para a
+ *   aplicação da turma Y entregaria a decisão a quem não é professor dela.
+ * - `decidida_por` é conferido na gravação pelo gatilho `entrega_decidida_por_da_equipe` (a função
+ *   `exigir_equipe_da_escola`, da 0023: professor ou coordenação da escola, nunca aluno), e não por FK: a eliminação do professor não apaga quem aprovou, que é o que a
  *   governança responde (regra 70, item 6), e o `set null` quebraria o check da aprovada.
  * - Check `entrega_alvo_do_tipo`: a `versao_adaptada` aponta para o artefato adaptado, e o `lote_de_correcao`, para a
  *   atividade aplicada; nunca os dois. `funcao` é a do catálogo (`adaptacao` ou `correcao_de_objetiva`), e o check
  *   `entrega_funcao_do_tipo` prende um ao outro.
  * - **O lote só fica `aprovada` com o registro da validação** (D56): gatilho de restrição adiado
- *   `entrega_lote_aprovado_com_validacao` (escrito à mão na 0022), conferido no commit, quando a `validacao_do_lote` da
+ *   `entrega_lote_aprovado_com_validacao` (escrito à mão na 0022; desde a 0023 relê a entrega pela escola e pelo id), conferido no commit, quando a `validacao_do_lote` da
  *   mesma transação já existe. Aprovar o lote sem ela falha com 23514, mesmo por fora da API.
  * - Índices únicos parciais: uma entrega por versão adaptada, e um lote não rejeitado por atividade aplicada. Encerrar
  *   duas vezes, ou o job de correção rodar duas vezes, não cria dois lotes (regra 80, item 7); o rejeitado deixa corrigir
  *   de novo.
+ * - **Suspender a função não mexe na entrega**: a suspensão recusa execução nova e não apaga o que foi produzido. A
+ *   entrega pendente de função suspensa continua podendo ser aprovada ou rejeitada pelo professor.
  * - `justificativa` é texto do professor sobre a saída da IA (`docs/lgpd.md`): nunca em log nem em auditoria.
  * - `unique (escola_id, id, atividade_aplicada_id)` é o alvo da correção e da validação, que só existem para lote.
  * - Índices pelo escopo (regra 80, item 8): `(escola_id, turma_id, estado, id)` para "Seu time", e
@@ -62,13 +67,21 @@ export const entrega = pgTable(
       columns: [tabela.escolaId, tabela.anoLetivoId, tabela.turmaId],
       foreignColumns: [turma.escolaId, turma.anoLetivoId, turma.id],
     }),
-    foreignKey({ name: 'entrega_artefato_da_escola_fk', columns: [tabela.escolaId, tabela.artefatoId], foreignColumns: [artefato.escolaId, artefato.id] }),
     foreignKey({
-      name: 'entrega_atividade_aplicada_do_ano_da_escola_fk',
-      columns: [tabela.escolaId, tabela.anoLetivoId, tabela.atividadeAplicadaId],
-      foreignColumns: [atividadeAplicada.escolaId, atividadeAplicada.anoLetivoId, atividadeAplicada.id],
+      name: 'entrega_artefato_da_turma_fk',
+      columns: [tabela.escolaId, tabela.anoLetivoId, tabela.turmaId, tabela.artefatoId],
+      foreignColumns: [artefato.escolaId, artefato.anoLetivoId, artefato.turmaId, artefato.id],
     }),
-    foreignKey({ name: 'entrega_execucao_da_escola_fk', columns: [tabela.escolaId, tabela.execucaoId], foreignColumns: [execucaoAgente.escolaId, execucaoAgente.id] }),
+    foreignKey({
+      name: 'entrega_atividade_aplicada_da_turma_fk',
+      columns: [tabela.escolaId, tabela.anoLetivoId, tabela.turmaId, tabela.atividadeAplicadaId],
+      foreignColumns: [atividadeAplicada.escolaId, atividadeAplicada.anoLetivoId, atividadeAplicada.turmaId, atividadeAplicada.id],
+    }),
+    foreignKey({
+      name: 'entrega_execucao_do_ano_da_escola_fk',
+      columns: [tabela.escolaId, tabela.anoLetivoId, tabela.execucaoId],
+      foreignColumns: [execucaoAgente.escolaId, execucaoAgente.anoLetivoId, execucaoAgente.id],
+    }),
     uniqueIndex('entrega_uma_por_versao_adaptada').on(tabela.escolaId, tabela.artefatoId).where(sql`${tabela.artefatoId} is not null`),
     uniqueIndex('entrega_um_lote_por_aplicacao')
       .on(tabela.escolaId, tabela.atividadeAplicadaId)

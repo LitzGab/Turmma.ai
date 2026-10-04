@@ -1,4 +1,4 @@
-import { esquemaConteudoDeAtividade, type ConteudoDeAtividade, type Habilidade, type QuestaoObjetiva } from '@educa/shared'
+import { esquemaConteudoDeAtividade, MAXIMO_DE_QUESTOES_POR_ATIVIDADE, TAMANHO_MAXIMO_DO_TEMA, type ConteudoDeAtividade, type Habilidade, type QuestaoObjetiva } from '@educa/shared'
 import { z } from 'zod'
 import {
   citacaoDaFrase,
@@ -21,8 +21,8 @@ import { capitalizar, cortar, hashEstavel, normalizar, palavras, palavrasEmComum
 
 export const esquemaEntradaDeAtividadeObjetiva = z.strictObject({
   /** O que o professor pediu, com as palavras dele. Vai ao modelo como dado. */
-  tema: z.string().min(1).max(200),
-  quantidade: z.number().int().min(1).max(20),
+  tema: z.string().min(1).max(TAMANHO_MAXIMO_DO_TEMA),
+  quantidade: z.number().int().min(1).max(MAXIMO_DE_QUESTOES_POR_ATIVIDADE),
   contexto: esquemaContextoDaTurma,
   /** As habilidades da disciplina que a atividade pode cobrar: toda questão leva uma delas. */
   habilidades: esquemaHabilidades,
@@ -220,6 +220,7 @@ export const gerarAtividadeObjetiva = definirTarefa({
   esquemaDeSaida: esquemaConteudoDeAtividade,
   prompt: PROMPT_GERAR_ATIVIDADE_OBJETIVA,
   maximoDeTokensDeSaida: 6000,
+  levaTextoLivreDePessoa: false,
   levaTextoDeAluno: false,
 
   montarPedido(entrada) {

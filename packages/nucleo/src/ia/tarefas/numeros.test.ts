@@ -1,3 +1,4 @@
+import { esquemaConteudoDaMensagemDoAgente, esquemaConteudoDoResumoDoAnalista, HIPOTESES_DO_ANALISTA } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { AdaptadorRoteirizado } from '../__fixtures__/adaptador-roteirizado.js'
 import { entradaDoAnalista, entradaDoAssistente, entradaDoRelatorio, ESCOLA_A } from '../__fixtures__/entradas.js'
@@ -21,32 +22,45 @@ describe('propor_ferramenta: o Assistente pergunta antes de abrir a ferramenta (
 
   it('pedido que corresponde a uma ferramenta vira proposta com o que deu para entender, e nada é gerado', () => {
     expect(proposta('monta uma atividade com 5 questões sobre reagente limitante para o 2ºB')).toEqual({
-      tipo: 'proposta',
+      tipo: 'proposta_de_ferramenta',
       texto: 'Quer que eu abra a ferramenta de atividade objetiva com 5 questões sobre “reagente limitante”? Você ajusta antes de gerar.',
       proposta: { ferramenta: 'atividade_objetiva', parametros: { tema: 'reagente limitante', quantidade: 5 } },
     })
     expect(proposta('preciso de um plano de aula de 50 minutos sobre mol e massa molar')).toMatchObject({
-      tipo: 'proposta',
-      proposta: { ferramenta: 'plano_de_aula', parametros: { tema: 'mol e massa molar', duracaoMinutos: 50 } },
+      tipo: 'proposta_de_ferramenta',
+      proposta: { ferramenta: 'plano_de_aula', parametros: { tema: 'mol e massa molar' } },
     })
   })
 
-  it('sem quantidade nem duração no pedido, a proposta não inventa: o cartão abre só com o tema', () => {
-    expect(proposta('faz uns exercícios sobre rendimento')).toMatchObject({ proposta: { ferramenta: 'atividade_objetiva', parametros: { tema: 'rendimento' } } })
-    const saida = proposta('faz uns exercícios sobre rendimento')
-    expect(saida.tipo === 'proposta' && 'quantidade' in saida.proposta.parametros).toBe(false)
+  it('a saída cabe no conteúdo que a mensagem do agente guarda, depois que o Assistente acrescenta a turma e a disciplina', () => {
+    const turmaId = '2f0e1d3c-4b5a-4c6d-8e7f-9a0b1c2d3e4f'
+    const disciplinaId = '3a1f2e4d-5c6b-4d7e-9f80-a1b2c3d4e5f6'
+    for (const mensagem of ['monta uma atividade com 5 questões sobre reagente limitante', 'plano de aula sobre mol', 'o que é rendimento teórico?', 'bom dia']) {
+      const saida = proposta(mensagem)
+      const conteudo = saida.tipo === 'texto' ? saida : { ...saida, proposta: { ...saida.proposta, parametros: { ...saida.proposta.parametros, turmaId, disciplinaId } } }
+      expect(esquemaConteudoDaMensagemDoAgente.safeParse(conteudo).success, mensagem).toBe(true)
+    }
   })
 
-  it('pedido de adaptação que descreve um aluno vira proposta só com os tipos: o que foi dito sobre o aluno não aparece em lugar nenhum da saída', () => {
+  it('sem quantidade no pedido, a proposta não inventa: o cartão abre só com o tema', () => {
+    const saida = proposta('faz uns exercícios sobre rendimento')
+    expect(saida).toMatchObject({ proposta: { ferramenta: 'atividade_objetiva', parametros: { tema: 'rendimento' } } })
+    expect(saida.tipo === 'proposta_de_ferramenta' && 'quantidade' in saida.proposta.parametros).toBe(false)
+  })
+
+  it('pedido de adaptação que descreve um aluno vira texto que aponta a ferramenta: o que foi dito sobre o aluno não aparece em lugar nenhum da saída', () => {
     const saida = proposta('quero adaptar a atividade com fonte ampliada e mais tempo para o Enzo, que tem baixa visão')
-    expect(saida).toMatchObject({ tipo: 'proposta', proposta: { ferramenta: 'adaptacao', parametros: { tipos: ['fonte_ampliada', 'tempo_adicional'] } } })
+    expect(saida.tipo).toBe('texto')
+    expect(saida.texto).toContain('pede só o tipo de adaptação, sem nenhuma informação sobre o aluno')
     expect(JSON.stringify(saida)).not.toMatch(/Enzo|baixa visão/)
   })
 
-  it('a proposta de adaptação não tem campo de texto: descrição de aluno nos parâmetros nem passa no schema', () => {
-    const comTexto = { tipo: 'proposta', texto: 'Quer abrir?', proposta: { ferramenta: 'adaptacao', parametros: { tipos: ['fonte_ampliada'], observacao: 'aluno com baixa visão' } } }
-    expect(proporFerramenta.esquemaDeSaida.safeParse(comTexto).success).toBe(false)
-    expect(proporFerramenta.esquemaDeSaida.safeParse({ tipo: 'proposta', texto: 'Quer abrir?', proposta: { ferramenta: 'prova_discursiva', parametros: {} } }).success).toBe(false)
+  it('a proposta só existe para as ferramentas que geram a partir de um tema, e não tem campo para texto sobre aluno', () => {
+    const base = { tipo: 'proposta_de_ferramenta', texto: 'Quer abrir?' }
+    expect(proporFerramenta.esquemaDeSaida.safeParse({ ...base, proposta: { ferramenta: 'adaptacao', parametros: { tema: 'x' } } }).success).toBe(false)
+    expect(proporFerramenta.esquemaDeSaida.safeParse({ ...base, proposta: { ferramenta: 'prova_discursiva', parametros: { tema: 'x' } } }).success).toBe(false)
+    expect(proporFerramenta.esquemaDeSaida.safeParse({ ...base, proposta: { ferramenta: 'atividade_objetiva', parametros: { tema: 'x', observacao: 'aluno com baixa visão' } } }).success).toBe(false)
+    expect(proporFerramenta.esquemaDeSaida.safeParse({ ...base, proposta: { ferramenta: 'atividade_objetiva', parametros: { tema: 'x' } } }).success).toBe(true)
   })
 
   it('o que não é pedido de ferramenta vira texto, com a página do material citada quando a resposta vem dele', () => {
@@ -100,66 +114,104 @@ describe('relatorio_da_correcao: a conta é do domínio, a IA só põe em palavr
   })
 })
 
-describe('resumo_do_analista: só agregado, alerta como hipótese com contexto', () => {
-  it('alerta só o que está abaixo do limiar recebido, do pior para o melhor, com hipótese e contexto', () => {
-    const saida = resumoDoAnalista.falso(entradaDoAnalista())
-    expect(saida.alertas).toHaveLength(1)
-    expect(saida.alertas[0]).toMatchObject({ serie: '2ª série do Ensino Médio', disciplina: 'Química', acertoPercentual: 49, habilidade: { codigo: 'EM13CNT104' } })
-    expect(saida.alertas[0]?.hipotese).toContain('Uma hipótese é que')
-    expect(saida.alertas[0]?.hipotese).toContain('abaixo do limiar de 60%')
-    expect(saida.alertas[0]?.contexto).toContain('Agregado de 180 respostas, em 3 turmas')
-    expect(saida.alertas[0]?.contexto).toContain('não permite concluir a causa')
-    expect(saida.destaques.map((destaque) => destaque.acertoPercentual)).toEqual([82, 64])
-    // Média ponderada pelas respostas: (49×180 + 64×90 + 82×240) ÷ 510 = 67.
-    expect(saida.resumo).toContain('O acerto médio por habilidade foi de 67%')
-    expect(saida.resumo).toContain('De 28/09/2026 a 02/10/2026')
+describe('resumo_do_analista: só agregado, em listas fechadas, sem texto do modelo', () => {
+  const entrada = entradaDoAnalista()
+  const bom = resumoDoAnalista.falso(entrada)
+
+  it('a saída é exatamente o que `resumo_do_analista.conteudo` guarda: passa no schema do contrato de @educa/shared', () => {
+    expect(resumoDoAnalista.esquemaDeSaida).toBe(esquemaConteudoDoResumoDoAnalista)
+    expect(esquemaConteudoDoResumoDoAnalista.safeParse(bom).success).toBe(true)
+    expect(resumoDoAnalista.conferir?.(entrada, bom)).toEqual([])
+  })
+
+  it('devolve os agregados como vieram e acrescenta só os alertas', () => {
+    const { alertas, ...agregados } = bom
+    const { limiarDeAcertoBaixoPercentual: _limiar, ...recebidos } = entrada
+    expect(agregados).toEqual(recebidos)
+    expect(alertas.length).toBeGreaterThan(0)
+  })
+
+  it('alerta só o que está abaixo do limiar recebido, do pior para o melhor, com o valor medido, a referência e hipóteses da lista fechada', () => {
+    // 2ª série: 88/180 = 48,9% e 58/90 = 64,4%. 1ª série: 197/240 = 82,1% e 30/60 = 50%. Limiar: 60.
+    expect(bom.alertas.map((alerta) => [alerta.tipo, alerta.serie.ano, alerta.habilidade?.codigo, alerta.valor, alerta.referencia])).toEqual([
+      ['habilidade_com_acerto_baixo', 2, 'EM13CNT104', 48.9, 60],
+      ['habilidade_com_acerto_baixo', 1, 'EM13CNT302', 50, 60],
+    ])
+    for (const alerta of bom.alertas) for (const hipotese of alerta.hipoteses) expect(HIPOTESES_DO_ANALISTA).toContain(hipotese)
+    // Com um lote só no recorte, a hipótese é que o número ainda diz pouco; com mais, as duas que cabe conferir primeiro.
+    expect(bom.alertas[0]?.hipoteses).toEqual(['conteudo_recente', 'questoes_acima_do_material'])
+    expect(bom.alertas[1]?.hipoteses).toEqual(['poucas_atividades_no_tema'])
   })
 
   it('o limiar é de quem chama: mudando o limiar, muda o que é alerta', () => {
-    expect(resumoDoAnalista.falso({ ...entradaDoAnalista(), limiarDeAlertaPercentual: 40 }).alertas).toEqual([])
-    expect(resumoDoAnalista.falso({ ...entradaDoAnalista(), limiarDeAlertaPercentual: 70 }).alertas.map((alerta) => alerta.acertoPercentual)).toEqual([49, 64])
+    expect(resumoDoAnalista.falso({ ...entrada, limiarDeAcertoBaixoPercentual: 40 }).alertas).toEqual([])
+    expect(resumoDoAnalista.falso({ ...entrada, limiarDeAcertoBaixoPercentual: 70 }).alertas.map((alerta) => alerta.valor)).toEqual([48.9, 50, 64.4])
   })
 
-  it('recorte com um professor só é nominal e nem entra (D45)', () => {
-    const entrada = entradaDoAnalista()
+  it('recorte com um professor só é nominal e nem entra com número (D45)', () => {
     const [primeiro, ...demais] = entrada.recortes
-    expect(resumoDoAnalista.esquemaDeEntrada.safeParse({ ...entrada, recortes: [{ ...primeiro, professoresNoRecorte: 1 }, ...demais] }).success).toBe(false)
-    expect(resumoDoAnalista.esquemaDeEntrada.safeParse({ ...entrada, recortes: [{ ...primeiro, professoresNoRecorte: 2 }, ...demais] }).success).toBe(true)
+    expect(resumoDoAnalista.esquemaDeEntrada.safeParse({ ...entrada, recortes: [{ ...primeiro, professores: 1 }, ...demais] }).success).toBe(false)
+    expect(resumoDoAnalista.esquemaDeEntrada.safeParse({ ...entrada, recortesNominais: [{ ...entrada.recortesNominais[0], acertoPercentual: 40 }] }).success).toBe(false)
   })
 
   it('não há pessoa na entrada: professor, turma nomeada e aluno não têm campo', () => {
-    const entrada = entradaDoAnalista()
     const [primeiro, ...demais] = entrada.recortes
-    for (const extra of [{ professor: 'Camila Souza' }, { turma: '2ºB' }, { alunosEmRisco: ['Enzo Martins'] }]) {
+    for (const extra of [{ professor: 'Camila Souza' }, { turma: '2ºB' }, { alunosEmRisco: ['Enzo Martins'] }, { professorId: '3a1f2e4d-5c6b-4d7e-9f80-a1b2c3d4e5f6' }]) {
       expect(resumoDoAnalista.esquemaDeEntrada.safeParse({ ...entrada, recortes: [{ ...primeiro, ...extra }, ...demais] }).success).toBe(false)
     }
   })
 
-  it('a saída da versão determinística não cita pessoa: nem professor, nem aluno, nem nome de turma', () => {
-    expect(JSON.stringify(resumoDoAnalista.falso(entradaDoAnalista())).toLowerCase()).not.toMatch(/professor|docente|\baluno\b|\baluna\b/)
-  })
-
-  it('a conferência recusa número inventado, alerta acima do limiar e qualquer fala sobre professor', () => {
-    const entrada = entradaDoAnalista()
-    const bom = resumoDoAnalista.falso(entrada)
+  it('a saída não tem onde levar texto do modelo: campo de texto, em qualquer lugar, é recusado pelo schema', () => {
     const [alerta] = bom.alertas
-    const [destaque] = bom.destaques
-    if (alerta === undefined || destaque === undefined) throw new Error('o resumo de teste deveria ter alerta e destaque')
-    expect(resumoDoAnalista.conferir?.(entrada, bom)).toEqual([])
-    expect(resumoDoAnalista.conferir?.(entrada, { ...bom, alertas: [{ ...alerta, acertoPercentual: 12 }] })).toHaveLength(1)
-    expect(resumoDoAnalista.conferir?.(entrada, { ...bom, alertas: [{ ...alerta, serie: '3ª série do Ensino Médio' }] })).toHaveLength(1)
-    expect(resumoDoAnalista.conferir?.(entrada, { ...bom, alertas: [{ ...destaque, hipotese: 'x', contexto: 'y' }] })).toHaveLength(1)
-    expect(resumoDoAnalista.conferir?.(entrada, { ...bom, alertas: [{ ...alerta, hipotese: 'Os professores da série não retomaram o conteúdo.' }] })).toHaveLength(1)
-    expect(resumoDoAnalista.conferir?.(entrada, { ...bom, resumo: 'A professora de Química precisa rever o planejamento.' })).toHaveLength(1)
+    if (alerta === undefined) throw new Error('o resumo de teste deveria ter alerta')
+    const recusadas: unknown[] = [
+      { ...bom, resumo: 'O resultado indica falha do professor da 2ª série.' },
+      { ...bom, alertas: [{ ...alerta, hipotese: 'Os professores não retomaram o conteúdo.' }] },
+      { ...bom, alertas: [{ ...alerta, contexto: 'Agregado de 180 respostas.' }] },
+      { ...bom, alertas: [{ ...alerta, hipoteses: ['o professor faltou muito'] }] },
+      { ...bom, alertas: [{ ...alerta, hipoteses: [] }] },
+      { ...bom, alertas: [{ ...alerta, tipo: 'professor_com_turma_fraca' }] },
+      { ...bom, recortes: bom.recortes.map((recorte) => ({ ...recorte, leitura: 'turma fraca' })) },
+    ]
+    for (const saida of recusadas) expect(resumoDoAnalista.esquemaDeSaida.safeParse(saida).success, JSON.stringify(saida).slice(0, 80)).toBe(false)
   })
 
-  it('o modelo que culpa o professor duas vezes não tem o resumo entregue à coordenação', async () => {
-    const entrada = entradaDoAnalista()
-    const culpando = JSON.stringify({ ...resumoDoAnalista.falso(entrada), resumo: 'O resultado indica falha do professor da 2ª série.' })
-    const { ia, consumo } = provedorCom(new AdaptadorRoteirizado([culpando, culpando]))
+  it('o único texto do alerta é o da entrada, campo por campo: o modelo não troca nome de disciplina nem descrição de habilidade', () => {
+    const [alerta] = bom.alertas
+    if (alerta === undefined || alerta.habilidade === null) throw new Error('o resumo de teste deveria ter alerta de habilidade')
+    const com = (mudanca: Partial<typeof alerta>) => resumoDoAnalista.conferir?.(entrada, { ...bom, alertas: [{ ...alerta, ...mudanca }] }) ?? []
+    expect(com({})).toEqual([])
+    expect(com({ disciplina: { ...alerta.disciplina, nome: 'Química (culpa do professor da tarde)' } })).toHaveLength(1)
+    expect(com({ habilidade: { ...alerta.habilidade, descricao: 'Os alunos do 2ºB não estudam' } })).toHaveLength(1)
+    expect(com({ serie: { ...alerta.serie, ano: 3 } })).toHaveLength(1)
+  })
+
+  it('a conferência recusa número inventado, referência trocada, alerta acima do limiar, recorte que não veio, tipo sem dado e agregado alterado', () => {
+    const [alerta] = bom.alertas
+    if (alerta === undefined) throw new Error('o resumo de teste deveria ter alerta')
+    const com = (mudanca: Partial<typeof alerta>) => resumoDoAnalista.conferir?.(entrada, { ...bom, alertas: [{ ...alerta, ...mudanca }] }) ?? []
+    expect(com({ valor: 12 })).toHaveLength(1)
+    expect(com({ referencia: 75 })).toHaveLength(1)
+    expect(com({ serie: { ...alerta.serie, id: 'e5f6a7b8-c9d0-4e1f-8a3b-4c5d6e7f8091' } })).toHaveLength(1)
+    expect(com({ tipo: 'habilidade_em_queda' })).toHaveLength(1)
+    expect(com({ hipoteses: ['conteudo_recente', 'conteudo_recente'] })).toHaveLength(1)
+    expect(resumoDoAnalista.conferir?.(entrada, { ...bom, alertas: [alerta, alerta] })).toHaveLength(1)
+    // 58/90 = 64,4%, acima do limiar de 60: não é alerta.
+    const acima = entrada.recortes[0]?.porHabilidade[1]
+    if (acima === undefined) throw new Error('sem a segunda habilidade')
+    expect(com({ habilidade: acima.habilidade, valor: 64.4 })).toHaveLength(1)
+    expect(resumoDoAnalista.conferir?.(entrada, { ...bom, escola: { ...bom.escola, lotesAprovados: 99 } })).toHaveLength(1)
+    expect(resumoDoAnalista.conferir?.(entrada, { ...bom, recortes: [...bom.recortes].reverse() })).toHaveLength(1)
+  })
+
+  it('o modelo que escreve texto no resumo duas vezes não tem nada entregue à coordenação', async () => {
+    const comTexto = JSON.stringify({ ...bom, resumo: 'O resultado indica falha do professor da 2ª série.' })
+    const adaptador = new AdaptadorRoteirizado([comTexto, comTexto])
+    const { ia, consumo } = provedorCom(adaptador)
     const erro: unknown = await ia.gerar({ tarefa: resumoDoAnalista, entrada, escolaId: ESCOLA_A }).catch((motivo: unknown) => motivo)
     expect(erro).toBeInstanceOf(ErroDeIa)
     expect((erro as ErroDeIa).codigoDeIa).toBe('IA_SAIDA_INVALIDA')
+    expect(adaptador.correcoes[1]?.problemas.join(' ')).toContain('resumo')
     expect(consumo.registros).toMatchObject([{ funcao: 'resumo_e_alerta', estado: 'falhou' }])
   })
 })

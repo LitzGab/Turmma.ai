@@ -79,26 +79,48 @@ export const entradaDoRelatorio = (): EntradaDoRelatorio => ({
   ],
 })
 
+const SERIE_2 = { id: 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d', etapa: 'em', ano: 2 } as const
+const SERIE_1 = { id: 'b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e', etapa: 'em', ano: 1 } as const
+const QUIMICA = { id: 'c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f', nome: 'Química' } as const
+const FISICA = { id: 'd4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f80', nome: 'Física' } as const
+
+/** Os agregados como o domínio os monta, nas formas do contrato: dois recortes com grupo mínimo e um que ficou de fora. */
 export const entradaDoAnalista = (): EntradaDoAnalista => ({
   periodo: { inicio: '2026-09-28', fim: '2026-10-02' },
-  limiarDeAlertaPercentual: 60,
+  escola: {
+    atividadesAplicadas: 7,
+    lotesAprovados: 5,
+    lotesEsperando: 2,
+    versoesAdaptadasAprovadas: 1,
+    trocasComOTutor: 312,
+    sinais: { travou: 14, resposta_pronta: 9, duvida_repetida: 6, atencao_humana: 1 },
+  },
   recortes: [
     {
-      serie: '2ª série do Ensino Médio',
-      disciplina: 'Química',
-      professoresNoRecorte: 2,
-      turmas: 3,
-      habilidades: [
-        { habilidade: habilidades[0] ?? { codigo: 'X', descricao: 'x' }, respostas: 180, acertoPercentual: 49 },
-        { habilidade: habilidades[2] ?? { codigo: 'X', descricao: 'x' }, respostas: 90, acertoPercentual: 64 },
+      serie: { ...SERIE_2 },
+      disciplina: { ...QUIMICA },
+      professores: 2,
+      alunos: 61,
+      lotesAprovados: 4,
+      acertoPercentual: 54,
+      porHabilidade: [
+        { habilidade: habilidades[0] ?? { codigo: 'X', descricao: 'x' }, acertos: 88, total: 180 },
+        { habilidade: habilidades[2] ?? { codigo: 'X', descricao: 'x' }, acertos: 58, total: 90 },
       ],
     },
     {
-      serie: '1ª série do Ensino Médio',
-      disciplina: 'Química',
-      professoresNoRecorte: 3,
-      turmas: 4,
-      habilidades: [{ habilidade: habilidades[1] ?? { codigo: 'X', descricao: 'x' }, respostas: 240, acertoPercentual: 82 }],
+      serie: { ...SERIE_1 },
+      disciplina: { ...QUIMICA },
+      professores: 3,
+      alunos: 92,
+      lotesAprovados: 1,
+      acertoPercentual: 71,
+      porHabilidade: [
+        { habilidade: habilidades[1] ?? { codigo: 'X', descricao: 'x' }, acertos: 197, total: 240 },
+        { habilidade: habilidades[3] ?? { codigo: 'X', descricao: 'x' }, acertos: 30, total: 60 },
+      ],
     },
   ],
+  recortesNominais: [{ serie: { ...SERIE_2 }, disciplina: { ...FISICA } }],
+  limiarDeAcertoBaixoPercentual: 60,
 })

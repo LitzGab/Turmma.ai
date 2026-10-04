@@ -87,8 +87,9 @@ export function DialogoDeConfirmacao({
             ))}
           </dl>
           <p className="break-words text-apoio">{efeito}</p>
+          {/* Dentro da descrição: o leitor de tela ouve o aviso ao abrir, junto do que vai acontecer, e não depois do botão. */}
+          {aviso !== undefined && <p className="rounded-controle border border-pendente bg-pendente-cx p-3 break-words text-pendente">{aviso}</p>}
         </div>
-        {aviso !== undefined && <p className="rounded-controle border border-pendente bg-pendente-cx p-3 break-words text-pendente">{aviso}</p>}
         {children}
         <p role="alert" className="rounded-controle bg-erro-cx p-3 break-words text-erro empty:hidden">
           {falha}
