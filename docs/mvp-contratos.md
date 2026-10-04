@@ -132,6 +132,15 @@ item 7): o schema é estrito e recusa esses campos. Troca é a mensagem do aluno
 `POST /tutor/mensagens` aceita `questao` (só com `atividadeAplicadaId`) e `pagina` (só com `materialId`), que a tela do
 aluno manda quando sabe. Nesta fatia o professor não lê o texto da conversa: nenhuma rota o entrega.
 
+**A ordem das conferências do `POST /tutor/mensagens`**, todas no servidor: (1) o aluno alcança a atividade e o material
+que referencia, senão `NAO_ENCONTRADO`; (2) atividade avaliativa aberta na turma, `TUTOR_PAUSADO_EM_AVALIACAO`; (3)
+**assunto pessoal delicado** (D36); (4) o freio do dia e o pacote do mês; (5) função suspensa. As recusas de 2, 4 e 5 não
+gravam mensagem nem contam troca. **O assunto delicado é a exceção: passa na frente do freio, do pacote e da
+suspensão.** O aluno no limite do dia, a turma com o pacote esgotado e a escola com o Tutor ou os sinais suspensos ainda
+recebem `202`, a mensagem fixa (`tipo: 'assunto_delicado'`, com o 188 em risco à vida) e o sinal `atencao_humana` para o
+professor, sem referência e sem conteúdo. Esse turno não chama modelo, a execução já volta `concluida`, e a pergunta fica
+na conversa sem a questão, o material e a página. Por isso a tela no estado `limite` não trava a caixa de texto.
+
 ### Governança e Analista (G) — `governanca/`
 
 | Rota | Entrada | Saída | Célula | Erros próprios | Auditoria |

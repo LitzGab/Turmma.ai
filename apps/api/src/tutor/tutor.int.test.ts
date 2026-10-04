@@ -18,6 +18,7 @@ import {
 } from '../../test/escola-com-tutor.js'
 import { variacaoDoPdf } from '../../test/material-de-teste.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste.js'
+import { TETO_DE_PEDIDOS_DE_IA_POR_USUARIO } from '../assistente/limite-de-pedidos-de-ia.js'
 import { EXECUTOR_DE_AGENTE } from '../ia/ia.module.js'
 import { TROCAS_SEGUIDAS_PARA_TRAVOU } from './sinais-do-turno.js'
 
@@ -176,6 +177,16 @@ describe('Tutor e sinais', () => {
         expect(await enviar(aluno, corpo), JSON.stringify(corpo)).toMatchObject({ status: 400, corpo: { erro: { codigo: 'ENTRADA_INVALIDA' } } })
       }
       expect(await mensagensDe(aluno)).toEqual([])
+    })
+
+    it('o envio tem limite por aluno, não por IP: quem passa do teto do minuto espera, e o colega no mesmo endereço continua', async () => {
+      const aluno = await novoAluno(a)
+      const colega = await novoAluno(a)
+      for (let pedido = 0; pedido < TETO_DE_PEDIDOS_DE_IA_POR_USUARIO; pedido += 1) expect((await enviar(aluno, { texto: 'o que é mol?', ...naQuestao(1) })).status).toBe(202)
+      expect(await enviar(aluno, { texto: 'o que é mol?', ...naQuestao(1) })).toMatchObject({ status: 429, corpo: { erro: { codigo: 'LIMITE_EXCEDIDO' } } })
+      expect((await enviar(colega, { texto: 'o que é mol?', ...naQuestao(1) })).status).toBe(202)
+      await executor.ociosa()
+      expect((await mensagensDe(aluno)).filter((mensagem) => mensagem.autor === 'aluno')).toHaveLength(TETO_DE_PEDIDOS_DE_IA_POR_USUARIO)
     })
 
     it('quando o Tutor é perguntado, diz que é uma inteligência artificial, e não uma pessoa', async () => {
