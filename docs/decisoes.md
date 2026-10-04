@@ -826,6 +826,9 @@ descobre se a pessoa trabalha em outra escola cliente; (b) a senha de uma conta 
 de uma escola e vale no convite de outra. Antes da primeira escola real, a prova de posse do e-mail fecha os dois,
 como item do portão (`ROADMAP.md`). Motivo: a prova exige envio de e-mail pelo sistema, que o PRD da A1 deixou fora,
 e com dado sintético ninguém real fica exposto.
+Revista em 04/10/2026, pelo Joaquim (D77): só para a A2 a A5, e só enquanto o dado for sintético, a regra (2) deixa de
+pedir o mesmo processo. As quatro specs viram uma fatia só, com processo enxuto; o que muda, o que não muda e quando o
+processo completo volta estão na D77. A A1 foi feita pelo processo completo.
 
 **D72 — A pele do produto é o sistema do ChatGPT, em branco, preto e laranja, e é uma só.**
 *(decidida pelo Joaquim em 23/09/2026, entre a pele do P02, que o Gabriel escolheu em
@@ -916,3 +919,22 @@ serve à equipe inteira. Fica numa spec própria, a A0, antes da A1, porque é o
 segurança, com revisores próprios, e a A1 já estava no teto do PRD. Na revisão da spec, no mesmo
 dia, a A0 foi dividida em duas: a **A0**, identidade do operador e a pele da D72, e a **A0b**, o
 painel.
+
+**D77 — O MVP de apresentação (A2 a A5) é uma fatia só, com processo enxuto.** *(decidida pelo
+Joaquim em 04/10/2026)*
+Revisa a D71 ("mesmas regras e mesmo processo"), a D23 e a D53 **apenas para esta fatia**, e só
+enquanto o dado for sintético. O que muda: (1) a A2 a A5 viram **uma fatia**, com os contratos
+primeiro — tabelas, schemas de API e `MATRIZ` numa migration só —, em vez de cinco PRDs, Tech
+Specs e listas de tarefas; o plano é o `docs/mvp-rapido.md`. (2) O commit de código leva o
+marcador `(mvp: <resumo>)`, com o portão local (`node tools/processo/portao-local.ts`) a cada
+commit. (3) A esteira, que só roda sozinha em `develop`, `release` e `main`, é disparada à mão na
+branch, com `gh workflow run esteira --ref mvp/apresentacao`, no fim de cada fase, e não por
+commit. (4) Os revisores com veto — `tenancy-guardian`, `privacy-guardian` e
+`conformidade-reviewer` — passam uma vez por fase, e o `test-engineer` entra nas fases de nota,
+correção e Tutor. (5) A execução de IA roda no processo da API, atrás de uma interface, com
+consulta a cada segundo, em vez de job do worker: dívida declarada, marcada `TODO(fila)`. O que
+**não** muda: as regras 10, 20, 30, 40 e 70; o teste de isolamento por módulo; o teste de que
+nada chega ao aluno sem aprovação registrada; e a D55, a D56, a D47, a D57, a D58 e a D66.
+Motivo: a A1 levou cerca de sete dias, a esteira leva cerca de 30 a 40 min por commit, e o
+roteiro de demonstração precisa estar de pé em 06/10/2026. Revisão: o processo completo volta
+antes da primeira escola real — F2, F3 e o portão do piloto.

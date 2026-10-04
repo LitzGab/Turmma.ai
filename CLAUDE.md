@@ -129,12 +129,13 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D68 | Busca na web por ativação do professor: para ele no Assistente de ensino, e para o aluno no Tutor só em fontes aprovadas, com duas chaves, socrático, só em sala |
 | D69 | "Turmas" é item da navegação do professor, com "Meu uso" dentro, e nasce no F6; tempo ocioso do aluno não é indicador (revista pela D73) |
 | D70 | Sair da aba durante a prova é fato mostrado só ao professor, com o aluno avisado, sem consequência automática nem histórico; fora de avaliação não existe |
-| D71 | Depois do F1 vem o MVP de apresentação: cinco specs (A1 a A5), fatias finas e reais do fluxo completo, dado 100% sintético, mesmas regras e mesmo processo. A A1 é a escola montada pela coordenação, sem seed de escola pronta; os quatro afrouxamentos valem só enquanto o dado for sintético (revista em 23/09/2026 e 25/09/2026); a A0, painel da operação, vem antes da A1 (D76) |
+| D71 | Depois do F1 vem o MVP de apresentação: cinco specs (A1 a A5), fatias finas e reais do fluxo completo, dado 100% sintético, mesmas regras e mesmo processo (na A2 a A5, o processo enxuto da D77). A A1 é a escola montada pela coordenação, sem seed de escola pronta; os quatro afrouxamentos valem só enquanto o dado for sintético (revista em 23/09/2026 e 25/09/2026); a A0, painel da operação, vem antes da A1 (D76) |
 | D72 | A pele do produto é o sistema do ChatGPT em branco, preto e laranja, uma só em todas as telas, com o padrão de espaço do P03; tokens e logotipo vêm de `mockups/` |
 | D73 | Navegação do professor: Nova conversa, Ferramentas, Calendário e Turmas, com Seu time e Histórico na lateral; cada item só aparece com a fase dele |
 | D74 | É ferramenta o que entrega um output próprio; o resto é pedido ao Assistente. Quatro categorias: Planejar, Preparar a aula, Avaliar, Corrigir |
 | D75 | O material da escola entra pela coordenação, com titularidade e licença declaradas; professor e aluno não sobem material para a base |
 | D76 | A equipe Turmma tem um painel de operação (A0 e A0b): cria rede e escola, convida a coordenação e acompanha uso e custo por escola, sem ver dado de pessoa |
+| D77 | O MVP de apresentação (A2 a A5) é uma fatia só, com processo enxuto, enquanto o dado for sintético: contratos primeiro, commit `(mvp: <resumo>)` com portão local, esteira disparada à mão por fase, revisores com veto numa passada por fase e IA no processo da API como dívida declarada; as regras 10, 20, 30, 40 e 70 não mudam, e o processo completo volta antes da primeira escola real (revisa a D71, a D23 e a D53 só para esta fatia) |
 
 > **D54 a D71 estão ratificadas.** Saíram em 19/09/2026 da leitura das fontes de regulação e
 > da estrutura de agentes por papel; o Gabriel ratificou as dele no mesmo dia, e o Joaquim
