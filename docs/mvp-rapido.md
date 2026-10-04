@@ -1,8 +1,47 @@
 # MVP de apresentação, caminho rápido (A2 a A5 numa fatia só)
 
-> Branch `mvp/apresentacao`, worktree `../Educa.ia-mvp`. A `develop` segue com a A1, em outro chat. Prazo: terça,
-> 06/10/2026. Este documento **substitui, só para esta árvore**, o ciclo PRD → Tech Spec → tarefas da A2 a A5: cinco
-> specs viram uma fatia, com contratos primeiro e telas em paralelo. As regras que importam continuam as mesmas.
+> Branch `mvp/apresentacao`, na pasta principal (D77). Prazo: terça, 06/10/2026. Este documento **substitui, só para
+> esta fatia**, o ciclo PRD → Tech Spec → tarefas da A2 a A5: cinco specs viram uma fatia, com contratos primeiro e
+> telas em paralelo. As regras que importam continuam as mesmas. Os pacotes correm em worktrees irmãos
+> (`../Educa.ia-mvp-<pacote>`, branch `mvp/<pacote>`) e o merge na `mvp/apresentacao` é do orquestrador.
+> **Quem retoma o trabalho começa pela seção "Estado", logo abaixo.**
+
+## Estado
+
+> Atualizada a cada commit. Quem retoma lê esta seção, `git log mvp/apresentacao` e `git status`.
+
+**Fase atual:** preparação — este documento, o marcador `(mvp: …)` no hook e a etapa 1 das cinco AIAs.
+
+**Feito**
+
+- Esteira da `develop` verde no `573f0a1`, branch `mvp/apresentacao` criada da `develop` e publicada, D77 registrada.
+- Este documento corrigido (04/10/2026): saíram o worktree `../Educa.ia-mvp` e o projeto `educa-mvp`; a seção 8 ficou
+  só com o que falta; entraram as fases da seção 3 e as decisões abaixo.
+
+**Falta**
+
+- O marcador `(mvp: <resumo>)` em `tools/processo/revisoes.ts`, com teste, e o commit dos contratos de
+  `packages/shared` (time e assistente) com ele.
+- A etapa 1 das cinco AIAs em `docs/aia/` (o Joaquim revisa depois).
+- Fases 1 a 4 (seção 3) e o fechamento (seção 8).
+
+**Esteira disparada à mão:** nenhuma ainda.
+
+**Decisões tomadas pelo Claude nesta execução (a revisar pelo Joaquim)**
+
+1. **Outra sessão aberta na pasta.** Em 04/10/2026 havia uma segunda sessão do Claude nesta pasta (a conversa de
+   planejamento, que escreveu o prompt), parada e sem ferramenta em curso. Não estava editando, então o trabalho
+   seguiu. Se ela voltar a commitar, o commit cai nesta branch.
+2. **As fases 1 a 4** não estavam escritas na seção 3; ficaram definidas ali, seguindo a prioridade A2 → A3 → A4 → A5.
+3. **Banco de teste com worktrees em paralelo.** O projeto compose de teste é um só (`educa-teste`, portas fixas), e
+   o portão local derruba os volumes. A saída está na seção 5: trava de arquivo em volta de tudo que usa o banco.
+4. **O merge passa pelo portão.** Cada fase é integrada numa branch `mvp/fase-<n>` e entra na `mvp/apresentacao` por
+   `git merge --no-ff --no-commit`, portão local e `git commit` com `(mvp: …)`, que é o que o hook confere. Os commits
+   dos pacotes nos worktrees não passam pelo hook (ele olha a pasta principal), e por isso não contam como portão.
+5. **O marcador `(mvp: …)` só vale em branch `mvp/…`** e exige typecheck, lint e test carimbados. O e2e não entra no
+   portão de cada commit (leva perto de uma hora): roda na esteira de cada fase e no fechamento.
+6. **A seção 8 dizia que os passos 0 a 4 estavam feitos; estavam o 0, o 1 e o 2.** O hook (3) e as AIAs (4) são os
+   itens 1 e 2 do prompt de 04/10/2026 e entraram em "Falta".
 
 ## 1. O que a demonstração mostra (o roteiro, D71)
 
@@ -24,7 +63,7 @@ Dado 100% sintético. Sem `Nota` (D46): é diagnóstico formativo. Sem discursiv
 ## 2. O que fica de fora (é o que torna isto rápido)
 
 Não entram: fila BullMQ para a IA (ver 4), gateway com limitador e reserva, k6, runbook e alertas novos, `test:infra`,
-`size-limit` novo, a esteira por tarefa, AIA completa (só a etapa 1, em `docs/aia/`, no fim), grade horária, calendário,
+`size-limit` novo, a esteira por tarefa, AIA completa (só a etapa 1, em `docs/aia/`), grade horária, calendário,
 busca na web, família, nota oficial, ENEM, BNCC completa (só um catálogo curto de habilidades por disciplina, em código).
 
 Não é desculpa para relaxar o que não se negocia, e **continua valendo, com teste que quebra se a regra sumir**:
@@ -63,6 +102,30 @@ quebra. Depois API e web correm lado a lado em cima do contrato.
 Cada agente mexe só no que é dele. Arquivo compartilhado (`app.module.ts`, `navegacao.ts`, `caminhos.ts`, `index.ts` do
 shared) leva só uma linha por módulo, e o conflito se resolve no merge.
 
+### As quatro fases
+
+| Fase | Entrega | Pacotes | Revisão no fim da fase |
+|---|---|---|---|
+| 1 | Contratos, dados e camada de IA: a migration 0022, os schemas de `packages/shared`, as células da `MATRIZ`, a porta `LLMProvider` com o adaptador falso e o OpenAI-compatível, o `ExecutorDeAgente` e o registro de consumo | S, L | `tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer` |
+| 2 | **A2**: material com licença, Assistente de ensino (conversa, ferramentas, artefato, adaptação pendente, PDF), Home, Ferramentas e Seu time, e o PDF de demonstração | M, P, W | os três, mais `frontend-reviewer` |
+| 3 | **A3 e A4**: atividade aplicada, respostas do aluno, correção de objetiva com o registro da validação, diagnóstico por habilidade em Turmas; Tutor e sinais | A, T | os três, mais `test-engineer` (correção e Tutor) e `frontend-reviewer` |
+| 4 | **A5**: governança, suspensão por função, consumo e o resumo do Analista | G | os três, mais `frontend-reviewer` |
+
+No fim de cada fase: merge pelo portão local, `gh workflow run esteira --ref mvp/apresentacao` em segundo plano, e a
+fase seguinte começa sem esperar por ela. O fechamento (seção 8) só acontece com a esteira verde.
+
+### Decisões de processo desta fatia
+
+- **O `frontend-reviewer` roda numa passada por fase, nas telas.** A D77 cita só os revisores com veto
+  (`tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer`, e o `test-engineer` nas fases de nota, correção e
+  Tutor). O `frontend-reviewer` não tem veto, e por isso não estava na lista, mas continua entrando em toda fase que
+  cria ou altera tela.
+- **As regras 00, 50, 60 e 80 continuam valendo.** A D77 lista 10, 20, 30, 40 e 70 como "não muda"; as outras quatro
+  também não mudam. A **única exceção declarada** é o item 4 da regra 00 junto com a D49: a execução de IA roda no
+  processo da API, atrás do `ExecutorDeAgente`, marcada `TODO(fila)` (seção 4, item 1). Tudo o mais da regra 80
+  (limite por usuário e por escola, concorrência resolvida no banco, índice começando pelo escopo, listagem paginada,
+  timeout em chamada de modelo) vale como está.
+
 ## 4. Decisões de atalho (para o MVP, anotadas para voltar depois)
 
 1. **A execução de IA roda no processo da API, em segundo plano**, atrás de uma interface `ExecutorDeAgente`
@@ -74,24 +137,40 @@ shared) leva só uma linha por módulo, e o conflito se resolve no merge.
 3. **Extração de PDF** com biblioteca de Node, só do texto, por página; o arquivo não vai ao storage (só texto e metadados).
 4. **O adaptador falso gera conteúdo determinístico a partir dos trechos** (atividade, plano, adaptação, turno do Tutor,
    resumo do Analista), de modo que a demonstração e os testes não dependem de modelo. O modelo local entra por
-   `OpenAICompatAdapter` (`LLM_BASE_URL=http://127.0.0.1:8080/v1`, o `llama-server` da máquina).
+   `OpenAICompatAdapter`, só no ensaio final: é o Qwen que o Joaquim carrega no `llama-server` da máquina
+   (`http://127.0.0.1:8080/v1`, modo roteador; ninguém carrega nem descarrega modelo por código). A URL e o id do
+   modelo vêm de variável de ambiente; o id se descobre no `GET /v1/models`. Ele raciocina por padrão, então nas
+   tarefas de saída estruturada o adaptador pede `chat_template_kwargs: { enable_thinking: false }`, descarta
+   qualquer bloco de raciocínio antes de validar o JSON, valida com o schema, repete uma vez se falhar e tem timeout.
 5. **Correção de objetiva é determinística** (compara com o gabarito). A IA entra no texto do relatório, não na conta.
 6. **Sem WebSocket**: polling no `GET /v1/execucoes/:id` e no Seu time.
 
-## 5. Ambiente de teste isolado (só vale enquanto outro chat usar o banco de teste)
+## 5. Ambiente de teste: um banco só, com trava
 
-O outro chat usa o projeto compose `educa-teste`. **Nunca** rode `node tools/processo/portao-local.ts`,
-`npm run ci:*` nem `EDUCA_BANCO_NOVO=1` desta árvore: o `down --volumes` apagaria o banco que o outro chat usa. Use:
+O portão é o normal: `node tools/processo/portao-local.ts`, na pasta principal, antes de cada commit de código na
+`mvp/apresentacao`. Não existe projeto de teste extra nem variável para trocar o projeto.
+
+O projeto compose de teste é um só (`educa-teste`, portas fixas em `infra/teste.env`), e o `test` do portão começa
+derrubando os volumes (`EDUCA_BANCO_NOVO=1`). Com vários worktrees na mesma máquina, dois usos ao mesmo tempo se
+atropelam. Por isso **tudo que usa o banco de teste roda atrás da mesma trava de arquivo**:
 
 ```
-EDUCA_PROJETO_TESTE=educa-mvp npx vitest run --project integracao <arquivo>
-EDUCA_PROJETO_TESTE=educa-mvp npx vitest run --project unidade <arquivo>
-npm run typecheck && npm run lint
+TRAVA=/home/joaquimdp/Documentos/git/Educa.ia/.processo/banco-de-teste.lock
+
+# num worktree de pacote: só os arquivos do pacote
+flock -w 540 "$TRAVA" npx vitest run --project integracao <arquivos do pacote>
+
+# na pasta principal, o orquestrador
+flock "$TRAVA" node tools/processo/portao-local.ts
 ```
 
-O projeto `educa-mvp` sobe sozinho (Postgres 35442, Redis 36389/36390, storage 38343, oidc-falso 38071) e migra no
-`globalSetup`. O hook de commit do Claude Code olha o diretório principal, não esta árvore: **ele não protege aqui**.
-O portão desta árvore é o comando acima, rodado por quem commita, antes de cada commit.
+Num worktree de pacote **não se roda** o portão local, `npm run test` inteiro, `npm run ci:*`, `EDUCA_BANCO_NOVO=1`
+nem `docker compose down`. Roda-se `npm run typecheck`, `npm run lint`, os testes de unidade e, atrás da trava, os
+arquivos de integração do próprio pacote. Se a trava não vier em nove minutos, é o portão da pasta principal rodando:
+espera-se e tenta-se de novo. Migration nova só existe num pacote por vez (o snapshot do drizzle é uma corrente).
+
+O hook de commit olha a pasta principal, não o worktree: commit feito num worktree não é conferido por ele. O que vale
+como portão é o do merge (seção "Estado", decisão 4).
 
 ## 6. Pronto quando
 
@@ -140,35 +219,24 @@ inexistente. `POST` que dispara IA responde `202 { execucaoId }`; a tela consult
 `mensagem_tutor`, `sinal_tutor`, `suspensao_de_funcao`, `resumo_do_analista`. Nenhum campo guarda texto sobre a pessoa
 (D66, D57). Campo pessoal novo entra em `docs/lgpd.md`.
 
-## 8. Como executar (depois que a A1 fechar, na pasta principal)
+## 8. O que falta executar
 
-Sem outro chat usando a pasta nem o banco, **não há worktree nem projeto de teste extra**: tudo roda na pasta principal,
-numa branch `mvp/apresentacao` nova, com o portão local de sempre.
+Já feito: a esteira da `develop` ficou verde no `573f0a1`, a `mvp/apresentacao` nasceu dela e está publicada, e a D77
+registra a mudança de processo. O que está em curso e o que vem depois fica na seção "Estado".
 
-0. **Pré-condição:** `gh run list --branch develop --limit 1` verde no commit da correção G2 (`edd6f51`), `git status`
-   limpo, `develop` no GitHub, e `ROADMAP.md` com a A1 em `[x]`.
-1. **Trazer o que já existe e limpar.** Copiar de `../Educa.ia-mvp` este documento, `packages/shared/src/time/`,
-   `packages/shared/src/assistente/` e as linhas do fim de `packages/shared/src/index.ts` que exportam os dois. Depois:
-   `git worktree remove --force ../Educa.ia-mvp`, `git branch -D mvp/apresentacao` (a antiga, só com a mudança do
-   projeto de teste, que não vale mais), `docker compose -p educa-mvp down -v`, e `git switch -c mvp/apresentacao develop`.
-   Reverter `EDUCA_PROJETO_TESTE` não é preciso: a branch antiga some e a nova nasce da `develop`.
-2. **Registrar a mudança de processo** com `/registrar-decisao` (revisa a D71, a D23 e a D53 **só para esta fatia**; o
-   Joaquim ratifica). O que muda: uma fatia só em vez de cinco specs; commit marcado `(mvp: <resumo>)`; portão local
-   (`node tools/processo/portao-local.ts`) a cada commit; **esteira por lote, no fim de cada fase, e não por commit**
-   (a esteira leva ~40 min e 20 commits seriam 13 h de espera); revisores só onde a regra pede veto — `tenancy-guardian`,
-   `privacy-guardian` e `conformidade-reviewer` numa passada por fase, `test-engineer` nas fases de nota, correção e
-   Tutor. O que **não** muda: as regras 10, 20, 30, 40 e 70, o teste de isolamento por módulo, o teste de "nada chega
-   ao aluno sem aprovação", e o frontend-reviewer nas telas.
-3. **Adaptar `tools/processo/revisoes.ts`** para aceitar o marcador `(mvp: ...)` com portão carimbado e sem documento
-   de tarefa. Commit de código sem marcador continua bloqueado.
-4. **AIA, etapa 1** (D71: basta a etapa 1 enquanto o dado for sintético), cinco rascunhos em `docs/aia/`:
+1. **O marcador no hook.** `tools/processo/revisoes.ts` aceita `(mvp: <resumo>)` com o portão local carimbado e sem
+   documento de tarefa, só em branch `mvp/…`. Commit de código sem marcador continua bloqueado.
+2. **AIA, etapa 1** (D71: basta a etapa 1 enquanto o dado for sintético), cinco rascunhos em `docs/aia/`:
    `adaptacao.md`, `correcao-de-objetiva.md`, `diagnostico-por-habilidade.md`, `tutor.md`, `sinais-e-alertas.md`. O
    escopo negativo sai de `docs/agentes.md` (nível 4) e de `docs/regulacao.md`. **O Joaquim revisa; o Gabriel revê
-   depois.** Esta é a única porta que só uma pessoa abre.
-5. **Fases 1 a 4** como na seção 3, cada agente no seu worktree (`git worktree add ../Educa.ia-mvp-<pacote>`), e o
-   orquestrador faz o merge. As telas seguem a seção 9.
-6. **Fechamento:** `docs/roteiro-da-demonstracao.md`, o PDF de demonstração (seção 9.5), o e2e do roteiro inteiro,
-   `typecheck`, `lint`, `test` e `test:e2e` verdes, a esteira da branch verde, e o merge na `develop` pelo Joaquim.
+   depois.** Esta é a única porta que só uma pessoa abre, e a implementação não espera por ela.
+3. **Fases 1 a 4** como na seção 3, cada pacote no seu worktree (`git worktree add ../Educa.ia-mvp-<pacote> -b
+   mvp/<pacote>`), e o orquestrador faz o merge. As telas seguem a seção 9. No fim de cada fase, a esteira é
+   disparada à mão (`gh workflow run esteira --ref mvp/apresentacao`) e a fase seguinte não espera por ela. O e2e
+   "W4: os estados de Turmas" é intermitente: se for o único vermelho, roda-se de novo o job antes de investigar.
+4. **Fechamento:** `docs/roteiro-da-demonstracao.md`, o PDF de demonstração (seção 9.5), o e2e do roteiro inteiro, o
+   ensaio com o modelo local, `typecheck`, `lint`, `test` e `test:e2e` verdes, e a esteira da branch verde. **Sem merge
+   na `develop`**: quem faz é o Joaquim, depois de avisado.
 
 Prioridade se o prazo apertar (cada uma é demonstrável sozinha): **A2 inteira → A3 → A4 → A5**. Dentro da A5, Governança
 e Agentes antes do Analista. O que cortar primeiro: Biblioteca em grade, Memória do aluno, abas além de Visão Geral e
