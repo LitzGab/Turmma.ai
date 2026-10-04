@@ -1,0 +1,130 @@
+import { esquemaPedidoDecidirEntrega, type Entrega } from '@educa/shared'
+import { describe, expect, it } from 'vitest'
+import { textoDaAprovacao, motivoDaRejeicao } from '../../componentes/ia/aprovacao'
+import { problemaDoTexto } from '../../componentes/texto-longo'
+import { aprovacaoDaEntrega, decideAqui, entregasDoFiltro, esperandoVoce, falaDaEntrega, LIMITES_DA_JUSTIFICATIVA, resumoDaAprovacao, textoDaAdaptacao } from './entregas'
+
+const TURMA = '0190f5a0-0000-7000-8000-00000000002b'
+const AGORA = new Date('2026-10-05T12:00:00.000Z')
+
+function entrega(final: string, campos: Partial<Entrega> = {}): Entrega {
+  return {
+    id: `0190f5a0-0000-7000-8000-0000000000${final}`,
+    tipo: 'versao_adaptada',
+    funcao: 'adaptacao',
+    estado: 'pendente',
+    turmaId: TURMA,
+    titulo: 'Atividade de estequiometria',
+    artefatoId: '0190f5a0-0000-7000-8000-0000000000a9',
+    atividadeAplicadaId: null,
+    criadaEm: '2026-10-05T13:40:00.000Z',
+    decididaEm: null,
+    decididaPor: null,
+    justificativa: null,
+    ...campos,
+  }
+}
+const CAMILA = { id: '0190f5a0-0000-7000-8000-0000000000f1', nome: 'Camila Souza' }
+
+describe('o texto de cada estado da entrega (regra 70, itens 3 e 6)', () => {
+  const texto = (item: Entrega) => textoDaAprovacao(aprovacaoDaEntrega(item), { verbo: 'Aprovada por', fuso: 'America/Sao_Paulo', agora: AGORA })
+
+  it('pendente diz que espera a professora, e não tem autor nem data', () => {
+    expect(aprovacaoDaEntrega(entrega('01'))).toEqual({ estado: 'pendente' })
+    expect(texto(entrega('01'))).toBe('Esperando você')
+  })
+
+  it('aprovada diz quem aprovou e quando', () => {
+    const aprovada = entrega('02', { estado: 'aprovada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA })
+    expect(texto(aprovada)).toBe('Aprovada por Camila Souza · 05/10, 10h42')
+  })
+
+  it('rejeitada diz quem rejeitou, quando e o motivo', () => {
+    const rejeitada = entrega('03', { estado: 'rejeitada', decididaEm: '2026-10-05T13:50:00.000Z', decididaPor: CAMILA, justificativa: 'A questão 3 ficou sem o enunciado.' })
+    expect(texto(rejeitada)).toBe('Camila Souza rejeitou · 05/10, 10h50')
+    expect(motivoDaRejeicao(aprovacaoDaEntrega(rejeitada))).toBe('Motivo: A questão 3 ficou sem o enunciado.')
+  })
+
+  it('quem decidiu e saiu da escola deixa o registro, sem o nome', () => {
+    expect(texto(entrega('04', { estado: 'aprovada', decididaEm: '2026-10-05T13:42:00.000Z' }))).toBe('Aprovada por pessoa que não está mais na escola · 05/10, 10h42')
+  })
+
+  it('a decidida sem data não é afirmada como aprovada', () => {
+    expect(aprovacaoDaEntrega(entrega('05', { estado: 'aprovada', decididaPor: CAMILA }))).toEqual({ estado: 'pendente' })
+  })
+})
+
+describe('"Esperando você" (11.2)', () => {
+  it('só as pendentes aparecem, da mais antiga para a mais nova, com a função, o que é e a turma', () => {
+    const itens = esperandoVoce(
+      [
+        entrega('02', { criadaEm: '2026-10-05T14:00:00.000Z', titulo: 'Lista 3' }),
+        entrega('03', { estado: 'aprovada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA }),
+        entrega('01', { tipo: 'lote_de_correcao', funcao: 'correcao_de_objetiva', artefatoId: null, atividadeAplicadaId: '0190f5a0-0000-7000-8000-0000000000b1', criadaEm: '2026-10-05T09:00:00.000Z' }),
+        entrega('04', { estado: 'rejeitada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA, justificativa: 'Faltou a questão 2.' }),
+      ],
+      { [TURMA]: '2ºB' },
+    )
+    expect(itens).toEqual([
+      { id: '0190f5a0-0000-7000-8000-000000000001', funcao: 'correcao_de_objetiva', nomeDaFuncao: 'Correção de objetiva', titulo: 'Correção da turma', detalhe: 'Atividade de estequiometria · 2ºB' },
+      { id: '0190f5a0-0000-7000-8000-000000000002', funcao: 'adaptacao', nomeDaFuncao: 'Adaptação', titulo: 'Versão adaptada', detalhe: 'Lista 3 · 2ºB' },
+    ])
+  })
+
+  it('sem pendência a lista é vazia, e a turma que a tela não conhece não vira "undefined"', () => {
+    expect(esperandoVoce([entrega('03', { estado: 'aprovada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA })], {})).toEqual([])
+    expect(esperandoVoce([entrega('01')], {})[0]?.detalhe).toBe('Atividade de estequiometria')
+  })
+})
+
+describe('a conversa do Assistente no Seu time (11.4)', () => {
+  const lista = [
+    entrega('01'),
+    entrega('02', { estado: 'aprovada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA }),
+    entrega('03', { tipo: 'lote_de_correcao', funcao: 'correcao_de_objetiva', artefatoId: null, atividadeAplicadaId: '0190f5a0-0000-7000-8000-0000000000b1' }),
+  ]
+
+  it('o filtro deixa passar tudo, só o que espera a professora, ou só uma função', () => {
+    const finais = (filtro: Parameters<typeof entregasDoFiltro>[1]) => entregasDoFiltro(lista, filtro).map((item) => item.id.slice(-2))
+    expect(finais('tudo')).toEqual(['01', '02', '03'])
+    expect(finais('esperando')).toEqual(['01', '03'])
+    expect(finais('adaptacao')).toEqual(['01', '02'])
+    expect(finais('correcao_de_objetiva')).toEqual(['03'])
+  })
+
+  it('o Assistente diz o que fez e o que falta para valer, sem falar de aluno', () => {
+    expect(falaDaEntrega(entrega('01'), '2ºB')).toBe('Preparei a versão adaptada de "Atividade de estequiometria" da turma 2ºB. Ela só pode ir aos alunos depois que você aprovar.')
+    expect(falaDaEntrega(entrega('03', { tipo: 'lote_de_correcao' }), undefined)).toBe('Corrigi "Atividade de estequiometria". O diagnóstico só chega aos alunos depois que você revisar os destaques e aprovar.')
+  })
+
+  it('só a versão adaptada pendente se decide por aqui: o lote de correção tem a tela dele, e a decidida não se decide de novo', () => {
+    expect(decideAqui(entrega('01'))).toBe(true)
+    expect(decideAqui(entrega('02', { estado: 'aprovada' }))).toBe(false)
+    expect(decideAqui(entrega('02', { estado: 'rejeitada' }))).toBe(false)
+    expect(decideAqui(entrega('03', { tipo: 'lote_de_correcao' }))).toBe(false)
+  })
+
+  it('o diálogo de aprovar diz o que é, de qual turma, e que foi a IA que fez', () => {
+    expect(resumoDaAprovacao(entrega('01'), '2ºB')).toEqual([
+      { rotulo: 'O que é', valor: 'Versão adaptada de "Atividade de estequiometria"' },
+      { rotulo: 'Turma', valor: '2ºB' },
+      { rotulo: 'Feita por', valor: 'Assistente de ensino, com IA' },
+    ])
+  })
+
+  it('rejeitar exige justificativa de 8 a 500 caracteres, os limites do contrato, contados sem as pontas', () => {
+    const problema = (justificativa: string) => problemaDoTexto(justificativa, LIMITES_DA_JUSTIFICATIVA)
+    expect(LIMITES_DA_JUSTIFICATIVA).toEqual({ minimo: 8, maximo: 500 })
+    expect(esquemaPedidoDecidirEntrega.safeParse({ decisao: 'rejeitar', justificativa: '1234567' }).success).toBe(false)
+    expect(problema('')).toBe('Escreva pelo menos 8 caracteres.')
+    expect(problema('   curta   ')).toBe('Escreva pelo menos 8 caracteres: faltam 3.')
+    expect(problema('12345678')).toBeUndefined()
+    expect(problema('a'.repeat(500))).toBeUndefined()
+    expect(problema('a'.repeat(501))).toBe('Use até 500 caracteres.')
+  })
+
+  it('a adaptação é dita pelos tipos, com o tempo extra junto do tipo dele', () => {
+    expect(textoDaAdaptacao({ tipos: ['fonte_ampliada', 'tempo_adicional'], tempoExtraPercentual: 50 })).toBe('Fonte ampliada + Tempo adicional (50% a mais)')
+    expect(textoDaAdaptacao({ tipos: ['linguagem_direta'] })).toBe('Linguagem direta')
+  })
+})
