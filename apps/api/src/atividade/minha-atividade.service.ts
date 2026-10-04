@@ -57,6 +57,12 @@ function paraATela(lida: MinhaAtividadeLida): unknown {
  * - **O diagnóstico só existe com o lote aprovado.** Antes disso (lote pendente, rejeitado ou ainda não corrigido) a
  *   rota responde como inexistente, e nem a lista nem a prova dizem acerto, gabarito ou explicação.
  * - Nada daqui traz dado de colega, média da turma nem posição.
+ *
+ * **Lacuna desta fatia: o aluno transferido.** O alcance do aluno é pela turma em que ele está **agora**. Quem respondeu
+ * na turma X e saiu dela (vínculo encerrado, ou movido para Y) continua no lote de X, que a professora de X corrige e
+ * aprova (o trabalho é dele, e foi feito lá); mas, depois de sair, ele não lê o diagnóstico daquela atividade: a rota
+ * responde como inexistente. Ler o próprio trabalho de uma turma antiga pede alcance pela tentativa, e não pelo vínculo,
+ * e fica para depois do MVP de apresentação (decisão do pacote Z; teste em `correcao.int.test.ts`, "aluno transferido").
  */
 export class MinhaAtividadeService {
   constructor(private readonly banco: Banco) {}

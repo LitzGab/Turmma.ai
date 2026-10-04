@@ -7,6 +7,7 @@ import { textoDaFalha } from '../../componentes/texto-da-falha'
 import { caminhoDaCorrecaoDoProfessor } from '../../caminhos'
 import { Botao } from '../../componentes/Botao'
 import { DialogoDeConfirmacao } from '../../componentes/DialogoDeConfirmacao'
+import { EstadoCarregando } from '../../componentes/estado'
 import { CabecalhoDeSecao } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
 import { EFEITO_DE_APLICAR, EFEITO_DE_ENCERRAR, ESCOLHA_DE_AVALIATIVA, semCorrecao, situacaoDaAplicacao, TEXTO_SEM_CORRECAO, textoDeAlunos } from './aprovar'
@@ -106,7 +107,8 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
       <CabecalhoDeSecao
         id={idDoTitulo}
         titulo="Na turma"
-        apoio={aplicadas.length === 0 ? 'Esta atividade ainda não foi aplicada.' : 'Atribuída à turma.'}
+        // A frase só com a lista lida: carregando ou com falha, a tela não afirma que a atividade não foi aplicada.
+        {...(atividades.data === undefined ? {} : { apoio: aplicadas.length === 0 ? 'Esta atividade ainda não foi aplicada.' : 'Atribuída à turma.' })}
         acao={
           aplicavel ? (
             <Botao variante="oficial" onClick={abrirAplicar}>
@@ -115,10 +117,17 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
           ) : undefined
         }
       />
+      {atividades.isPending && <EstadoCarregando rotulo="Carregando as aplicações desta atividade…" />}
       {atividades.isError && (
-        <p role="alert" className="rounded-controle bg-erro-cx p-3 break-words text-erro">
-          {textoDaFalha(atividades.error)}
-        </p>
+        // O erro fica na seção, com "Tentar de novo" secundário: a ação principal do artefato continua sendo uma só.
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <p role="alert" className="min-w-0 flex-1 basis-56 rounded-controle bg-erro-cx p-3 break-words text-erro">
+            {textoDaFalha(atividades.error)}
+          </p>
+          <Botao variante="secundario" disabled={atividades.isFetching} onClick={() => void atividades.refetch({ cancelRefetch: false })}>
+            {atividades.isFetching ? 'Tentando…' : 'Tentar de novo'}
+          </Botao>
+        </div>
       )}
       <p role="status" className="rounded-controle bg-info-cx p-3 break-words text-info empty:hidden">
         {aviso}

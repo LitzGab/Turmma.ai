@@ -1,10 +1,23 @@
 import { MENSAGEM_DE_ASSUNTO_DELICADO, MENSAGEM_DE_RISCO_A_VIDA, type ExecutorNoProcesso } from '@educa/nucleo'
 import { esquemaRespostaConversaDoTutor, esquemaRespostaMemoriaDoTutor, esquemaRespostaSinais, esquemaRespostaUsoDoTutor, TROCAS_POR_DIA_PADRAO_DO_TUTOR, type ChaveDeFuncao } from '@educa/shared'
+import type { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
 import { chamar, subirApi, type ApiDeTeste, type RespostaHttp } from '../../test/api-com-sessao.js'
-import { dispararExecucao, enviarMaterialDeDemonstracao, execucaoTerminada, montarEscolaComAssistente, NOME_DO_ALUNO_DE_TESTE, zerarLimiteDePedidosDeIa, type EscolaComAssistente, type ExecucaoLida } from '../../test/escola-com-assistente.js'
+import {
+  comoPessoa,
+  dispararExecucao,
+  enviarMaterialDeDemonstracao,
+  execucaoTerminada,
+  montarAnoAnterior,
+  montarEscolaComAssistente,
+  NOME_DO_ALUNO_DE_TESTE,
+  zerarLimiteDePedidosDeIa,
+  type AnoAnterior,
+  type EscolaComAssistente,
+  type ExecucaoLida,
+} from '../../test/escola-com-assistente.js'
 import {
   ALTERNATIVA_CERTA_DA_QUESTAO_3,
   aplicarAtividade,
@@ -16,11 +29,17 @@ import {
   lancarLote,
   trocasJaFeitas,
 } from '../../test/escola-com-tutor.js'
+import * as pelaRota from '../../test/atividade-de-teste.js'
+import { GatilhoDeParada } from '../../test/gatilho-de-parada.js'
 import { variacaoDoPdf } from '../../test/material-de-teste.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste.js'
 import { TETO_DE_PEDIDOS_DE_IA_POR_USUARIO } from '../assistente/limite-de-pedidos-de-ia.js'
 import { EXECUTOR_DE_AGENTE } from '../ia/ia.module.js'
+import { CLIENTE_REDIS_CACHE } from '../limite.module.js'
+import { CLIENTE_REDIS_LOGIN } from '../sessao/sessao.module.js'
 import { TROCAS_SEGUIDAS_PARA_TRAVOU } from './sinais-do-turno.js'
+import { SupervisaoDoTutorRepository } from './supervisao.repository.js'
+import { TutorDoAlunoRepository } from './tutor.repository.js'
 
 interface LinhaDeSinal {
   readonly tipo: string
@@ -49,6 +68,8 @@ describe('Tutor e sinais', () => {
   /** A lista de Química aplicada ao 2ºB da escola A, não avaliativa, e a mesma na escola B. */
   let atividade: string
   let atividadeDeB: string
+  /** As rotas da atividade (aplicar, responder, encerrar, aprovar), para o lote que nasce e é aprovado como na tela. */
+  let rotas: pelaRota.RotasDaAtividade
 
   const sql = <Linha extends Record<string, unknown> = Record<string, unknown>>(texto: string, valores: unknown[] = []) => bancada.pool.query<Linha>(texto, valores)
   const get = async (sessao: SessaoDeTeste, caminho: string): Promise<RespostaHttp> => chamar(api.url, 'GET', caminho, await sessao.tokenNovo())
@@ -86,7 +107,34 @@ describe('Tutor e sinais', () => {
     ])
     return sessao
   }
-  /** Onde a palavra marcada aparece fora de `mensagem_tutor`: sinal, execução, consumo, auditoria e log. */
+  /** O aluno sai da turma do 2ºB e vai para o 2ºC, no mesmo ano: o vínculo antigo é encerrado (`realocacao`). */
+  const transferir = async (escola: EscolaComAssistente, aluno: SessaoDeTeste) => {
+    await sql(`update vinculo set estado = 'encerrado', motivo_encerramento = 'realocacao', encerrado_em = now() where escola_id = $1 and usuario_id = $2 and turma_id = $3`, [escola.escolaId, aluno.usuarioId, escola.turma])
+    await sql(`insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`, [escola.escolaId, escola.anoLetivoId, aluno.usuarioId, escola.outraTurma, escola.coordenacao.usuarioId])
+  }
+  /** Os valores de uma chave do Redis, como texto, pelo tipo dela. */
+  const valoresNoRedis = async (redis: Redis, chave: string): Promise<(string | null)[]> => {
+    const tipo = await redis.type(chave)
+    if (tipo === 'string') return [await redis.get(chave)]
+    if (tipo === 'hash') return Object.entries(await redis.hgetall(chave)).flat()
+    if (tipo === 'list') return redis.lrange(chave, 0, -1)
+    if (tipo === 'set') return redis.smembers(chave)
+    if (tipo === 'zset') return redis.zrange(chave, '0', '-1')
+    if (tipo === 'stream') return (await redis.xrange(chave, '-', '+')).flatMap(([, campos]) => campos)
+    return []
+  }
+  /** Se a palavra marcada está em alguma chave ou valor do Redis: o de fila (sessão, limites, leitura do lote) e o de cache. */
+  const estaNoRedis = async (redis: Redis, marca: string): Promise<boolean> => {
+    const tem = (textos: readonly (string | null)[]) => textos.some((texto) => texto?.toLowerCase().includes(marca.toLowerCase()) === true)
+    let cursor = '0'
+    do {
+      const [proximo, chaves] = await redis.scan(cursor, 'COUNT', 1000)
+      cursor = proximo
+      for (const chave of chaves) if (tem([chave]) || tem(await valoresNoRedis(redis, chave))) return true
+    } while (cursor !== '0')
+    return false
+  }
+  /** Onde a palavra marcada aparece fora de `mensagem_tutor`: sinal, execução, consumo, auditoria, log e Redis. */
   const ondeVazou = async (escolaId: string, marca: string): Promise<string[]> => {
     const achados: string[] = []
     for (const tabela of ['sinal_tutor', 'execucao_agente', 'consumo_ia', 'auditoria']) {
@@ -94,12 +142,16 @@ describe('Tutor e sinais', () => {
       if (Number(rows[0]?.total) > 0) achados.push(tabela)
     }
     if (linhasDeLog.some((linha) => linha.toLowerCase().includes(marca.toLowerCase()))) achados.push('log')
+    for (const [nome, token] of [['redis de fila', CLIENTE_REDIS_LOGIN], ['redis de cache', CLIENTE_REDIS_CACHE]] as const) {
+      if (await estaNoRedis(api.app.get<Redis>(token), marca)) achados.push(nome)
+    }
     return achados
   }
 
   beforeAll(async () => {
     api = await subirApi(medidor.medidor, {}, linhasDeLog)
     executor = api.app.get<ExecutorNoProcesso>(EXECUTOR_DE_AGENTE)
+    rotas = pelaRota.rotasDaAtividade(api)
     a = await montarEscolaComAssistente(api, bancada)
     b = await montarEscolaComAssistente(api, bancada)
     atividade = await aplicarAtividade(bancada, a)
@@ -389,6 +441,26 @@ describe('Tutor e sinais', () => {
       expect(dita.texto).not.toMatch(/errou 3/)
     })
 
+    it('o lote aprovado pela rota da professora entra na memória e na resposta do Tutor; antes da aprovação, não', async () => {
+      const aluno = await novoAluno(a)
+      const titulo = `Lista sintética pela rota ${randomUUID().slice(0, 8)}`
+      const id = await pelaRota.aplicarAtividade(rotas, a.professora, await pelaRota.criarAtividade(bancada, a, { conteudo: pelaRota.conteudoDeTeste(a.materialId, titulo) }), a.turma)
+      // Acerta só a questão 2: uma de três na primeira habilidade, nenhuma de duas na segunda.
+      await pelaRota.responderProva(rotas, aluno, id, [1, 1, 0, 0, 1])
+      expect(await pelaRota.encerrarAtividade(rotas, a.professora, id)).not.toBeNull()
+
+      expect((await memoriaDe(aluno)).trabalhos).toEqual([{ atividadeAplicadaId: id, titulo, enviadaEm: expect.any(String) as string, resultado: null }])
+      // Fora de atividade, para a conversa da questão continuar nova: o Tutor só lembra no primeiro turno de cada conversa.
+      expect(resposta(await turno(aluno, 'como eu começo a estudar?')).texto).not.toMatch(/você errou/)
+
+      expect((await pelaRota.aprovarOLote(rotas, a.professora, id)).status).toBe(200)
+      const [trabalho] = (await memoriaDe(aluno)).trabalhos
+      expect(trabalho).toMatchObject({ atividadeAplicadaId: id, titulo, resultado: { acertos: 1, total: 5 } })
+      expect(trabalho?.resultado?.aReforcar.map((habilidade) => habilidade.codigo)).toContain(pelaRota.HABILIDADE_DAS_TRES_PRIMEIRAS.codigo)
+      // A questão 2 da lista do Tutor é da segunda habilidade (o mesmo código), em que ele errou as duas: é dela que o Tutor lembra.
+      expect(resposta(await turno(aluno, 'como eu começo essa?', naQuestao(2))).texto).toContain(`você errou 2 questões de “${pelaRota.HABILIDADE_DAS_DUAS_ULTIMAS.descricao}”`)
+    })
+
     it('o aluno só com correção pendente não ouve do Tutor nenhum resultado', async () => {
       const aluno = await novoAluno(a)
       const pendente = await aplicarAtividade(bancada, a, { titulo: 'Outra lista pendente' })
@@ -667,6 +739,117 @@ describe('Tutor e sinais', () => {
       expect([quem(usoDeFisica.alunos, deQuimica), quem(usoDeFisica.alunos, deFisica), quem(usoDeFisica.alunos, semDisciplina)]).toEqual([0, 1, 1])
       // A última referência que a professora de Química vê é a do material de Química.
       expect(usoDeQuimica.alunos.find((linha) => linha.aluno.id === deQuimica.usuarioId)?.ultimaReferencia).toEqual({ atividadeAplicadaId: null, questao: null, materialId: a.materialId, pagina: 2 })
+    })
+
+    it('o aluno transferido depois do 202 e antes de a execução rodar: a execução falha com código do catálogo, sem resposta, sem sinal e sem troca contada', async () => {
+      const aluno = await novoAluno(a)
+      // A pergunta fora de atividade e de material: o alcance da hora de rodar acha a turma nova, e só a conferência da turma da pergunta recusa.
+      const parada = new GatilhoDeParada(bancada.pool, { tabela: 'execucao_agente', evento: 'update', quando: `new.solicitada_por = '${aluno.usuarioId}'::uuid and new.estado = 'rodando'` })
+      await parada.armar()
+      const aceita = await enviar(aluno, { texto: 'como eu organizo o estudo de estequiometria?' }).catch(async (falha: unknown) => {
+        await parada.desarmar()
+        throw falha
+      })
+      const execucaoId = aceita.corpo['execucaoId'] as string
+      try {
+        expect(aceita.status).toBe(202)
+        await parada.esperarParadas()
+        await transferir(a, aluno)
+      } finally {
+        await parada.desarmar()
+      }
+      await executor.ociosa()
+
+      const { rows } = await sql<{ estado: string; erro: string | null; resultado: unknown }>('select estado, erro, resultado from execucao_agente where escola_id = $1 and id = $2', [a.escolaId, execucaoId])
+      expect(rows).toEqual([{ estado: 'falhou', erro: 'NAO_ENCONTRADO', resultado: null }])
+      expect((await mensagensDe(aluno)).map((mensagem) => mensagem.autor)).toEqual(['aluno'])
+      expect(await sinaisDe(aluno)).toEqual([])
+      expect((await conversaDe(aluno)).uso.hoje).toBe(0)
+      expect((await usoPara(a.professora, a.turma)).alunos.some((linha) => linha.aluno.id === aluno.usuarioId)).toBe(false)
+    })
+
+    it('depois de transferido, a pergunta sobre a atividade da turma antiga responde como inexistente, e nada é gravado', async () => {
+      const aluno = await novoAluno(a)
+      expect((await turno(aluno, 'não entendi a questão 3', naQuestao(3))).estado).toBe('concluida')
+      await transferir(a, aluno)
+      const antes = await mensagensDe(aluno)
+      const inexistente = { status: 404, corpo: { erro: { codigo: 'NAO_ENCONTRADO' } } }
+      expect(await enviar(aluno, { texto: 'e a questão 3?', ...naQuestao(3) })).toMatchObject(inexistente)
+      expect(await get(aluno, `/v1/tutor/conversa?atividadeAplicadaId=${atividade}`)).toMatchObject(inexistente)
+      expect(await mensagensDe(aluno)).toEqual(antes)
+    })
+
+    describe('o ano letivo anterior', () => {
+      let anterior: AnoAnterior
+      /** A escola A vista no ano anterior: o que os helpers gravam com ela cai em 2025. */
+      let deAntes: EscolaComAssistente
+      let aluno: SessaoDeTeste
+      let atividadeDeAntes: string
+
+      beforeAll(async () => {
+        anterior = await montarAnoAnterior(bancada, a)
+        deAntes = { ...a, anoLetivoId: anterior.anoLetivoId }
+        aluno = await novoAluno(a)
+        // O aluno estava no 2ºB de 2025, com a professora de Química (que tem vínculo confirmado lá): conversa, sinais e lote aprovado daquele ano.
+        await sql(`insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`, [a.escolaId, anterior.anoLetivoId, aluno.usuarioId, anterior.turmaId, a.coordenacao.usuarioId])
+        atividadeDeAntes = await aplicarAtividade(bancada, deAntes, { turmaId: anterior.turmaId, titulo: 'Lista sintética de 2025' })
+        await lancarLote(bancada, deAntes, atividadeDeAntes, 'aprovada', { alunoId: aluno.usuarioId, acertos: 0, total: 3, porHabilidade: [{ codigo: HABILIDADE_LIMITANTE.codigo, acertos: 0, total: 3 }] }, anterior.turmaId)
+        await trocasJaFeitas(bancada, deAntes, aluno.usuarioId, 2, { turmaId: anterior.turmaId, haDias: 300 })
+        for (const [tipo, atividadeAplicadaId, questao] of [['travou', atividadeDeAntes, 3], ['atencao_humana', null, null]] as const) {
+          await sql('insert into sinal_tutor (escola_id, ano_letivo_id, turma_id, aluno_id, tipo, atividade_aplicada_id, questao) values ($1, $2, $3, $4, $5, $6, $7)', [a.escolaId, anterior.anoLetivoId, anterior.turmaId, aluno.usuarioId, tipo, atividadeAplicadaId, questao])
+        }
+      })
+
+      it('a conversa, a memória e os sinais do aluno no ano anterior não aparecem no ano em curso, nem na resposta do Tutor', async () => {
+        expect((await conversaDe(aluno)).mensagens).toEqual([])
+        expect(await get(aluno, `/v1/tutor/conversa?atividadeAplicadaId=${atividadeDeAntes}`)).toMatchObject({ status: 404, corpo: { erro: { codigo: 'NAO_ENCONTRADO' } } })
+        expect(await memoriaDe(aluno)).toMatchObject({ trabalhos: [], sinais: [] })
+        // O lote aprovado de 2025 (três erros em reagente limitante) não é lembrado no turno de hoje.
+        expect(resposta(await turno(aluno, 'como eu começo essa?', naQuestao(2))).texto).not.toMatch(/você errou/)
+        // No ano anterior, a mesma leitura acha o que foi gravado: o caso é real.
+        const noAnoAnterior = await comoPessoa(deAntes, aluno, 'aluno', () => new TutorDoAlunoRepository(bancada.banco).trabalhos(10))
+        expect(noAnoAnterior.map((trabalho) => trabalho.atividadeAplicadaId)).toEqual([atividadeDeAntes])
+      })
+
+      it('a professora com vínculo confirmado na turma do ano anterior não lê os sinais nem o uso daquele ano no ano em curso', async () => {
+        const inexistente = { status: 404, corpo: { erro: { codigo: 'NAO_ENCONTRADO' } } }
+        for (const rota of ['/v1/sinais', '/v1/tutor/uso']) expect(await get(a.professora, `${rota}?turmaId=${anterior.turmaId}`), rota).toMatchObject(inexistente)
+        const leituras = (supervisao: SupervisaoDoTutorRepository): Record<string, () => Promise<boolean | readonly unknown[]>> => ({
+          turma: () => supervisao.turmaDoProfessor(anterior.turmaId),
+          sinais: () => supervisao.sinais(anterior.turmaId, undefined, 50),
+          grupos: () => supervisao.grupos(anterior.turmaId, new Date(0), 50),
+          trocas: () => supervisao.ultimasTrocas(anterior.turmaId, 50),
+        })
+        for (const [nome, ler] of Object.entries(leituras(new SupervisaoDoTutorRepository(bancada.banco)))) {
+          const noAnoEmCurso = await comoPessoa(a, a.professora, 'professor', ler)
+          const noAnoAnterior = await comoPessoa(deAntes, a.professora, 'professor', ler)
+          expect(noAnoEmCurso === false || (Array.isArray(noAnoEmCurso) && noAnoEmCurso.length === 0), `${nome}: no ano em curso`).toBe(true)
+          expect(noAnoAnterior === true || (Array.isArray(noAnoAnterior) && noAnoAnterior.length > 0), `${nome}: no ano anterior`).toBe(true)
+        }
+      })
+    })
+
+    it('a professora com Química e Física na mesma turma vê os sinais e o uso das duas, e nada de uma terceira disciplina', async () => {
+      const turmaNova = (await chamar(api.url, 'POST', '/v1/turmas', await a.coordenacao.tokenNovo(), { serieId: a.serieId, nome: `2º${randomUUID().slice(0, 4)}` })).corpo['id'] as string
+      const biologia = (await chamar(api.url, 'POST', '/v1/disciplinas', await a.coordenacao.tokenNovo(), { nome: `Biologia ${randomUUID().slice(0, 6)}` })).corpo['id'] as string
+      for (const [professoraId, disciplinaId] of [[a.professora.usuarioId, a.quimica], [a.professora.usuarioId, a.fisica], [a.deFisica.usuarioId, biologia]] as const) {
+        await sql(`insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, $5, 'professor', 'confirmado', $6, now())`, [a.escolaId, a.anoLetivoId, professoraId, turmaNova, disciplinaId, a.coordenacao.usuarioId])
+      }
+      const deQuimica = await aplicarAtividade(bancada, a, { turmaId: turmaNova, titulo: 'Lista de Química' })
+      const deFisica = await aplicarAtividade(bancada, a, { turmaId: turmaNova, disciplinaId: a.fisica, titulo: 'Lista de Física' })
+      const deBiologia = await aplicarAtividade(bancada, a, { turmaId: turmaNova, disciplinaId: biologia, titulo: 'Lista de Biologia', aplicadaPor: a.deFisica.usuarioId })
+      const alunos = { quimica: await novoAluno(a, turmaNova), fisica: await novoAluno(a, turmaNova), biologia: await novoAluno(a, turmaNova) }
+      await turno(alunos.quimica, 'qual é a resposta da questão 3?', { atividadeAplicadaId: deQuimica, questao: 3 })
+      await turno(alunos.fisica, 'qual é a resposta da questão 3?', { atividadeAplicadaId: deFisica, questao: 3 })
+      await turno(alunos.biologia, 'qual é a resposta da questão 3?', { atividadeAplicadaId: deBiologia, questao: 3 })
+
+      const sinais = await sinaisPara(a.professora, turmaNova, '&limite=100')
+      expect(new Set(sinais.itens.map((sinal) => sinal.aluno.id))).toEqual(new Set([alunos.quimica.usuarioId, alunos.fisica.usuarioId]))
+      expect(new Set(sinais.grupos.map((grupo) => grupo.atividadeAplicadaId))).toEqual(new Set([deQuimica, deFisica]))
+      const uso = await usoPara(a.professora, turmaNova)
+      expect(new Set(uso.alunos.map((linha) => linha.aluno.id))).toEqual(new Set([alunos.quimica.usuarioId, alunos.fisica.usuarioId]))
+      // A professora de Biologia vê o dela, e só.
+      expect((await sinaisPara(a.deFisica, turmaNova)).itens.map((sinal) => sinal.aluno.id)).toEqual([alunos.biologia.usuarioId])
     })
 
     it('nenhuma rota entrega a conversa nem a memória de aluno a professor ou a coordenação', async () => {

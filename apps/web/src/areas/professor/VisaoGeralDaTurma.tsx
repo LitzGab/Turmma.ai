@@ -35,7 +35,17 @@ export default function VisaoGeralDaTurma({ turmaId }: { turmaId: string }) {
       <section aria-labelledby={idDasHabilidades} className="flex min-w-0 flex-col gap-3">
         <CabecalhoDeSecao id={idDasHabilidades} titulo="Acerto por habilidade" apoio="Só das correções que você já aprovou, na sua disciplina." />
         {desempenho.isPending && <EstadoCarregando rotulo="Carregando o desempenho da turma…" />}
-        {desempenho.isError && dados === undefined && <EstadoErro erro={desempenho.error} tentando={desempenho.isFetching} aoTentarDeNovo={() => void desempenho.refetch({ cancelRefetch: false })} />}
+        {desempenho.isError && dados === undefined && (
+          // Com as atividades falhando junto, um erro só, e "Tentar de novo" lê as duas: um botão principal por tela.
+          <EstadoErro
+            erro={desempenho.error}
+            tentando={desempenho.isFetching || atividades.isFetching}
+            aoTentarDeNovo={() => {
+              void desempenho.refetch({ cancelRefetch: false })
+              if (atividades.isError) void atividades.refetch({ cancelRefetch: false })
+            }}
+          />
+        )}
         {dados !== undefined && dados.lotesAprovados === 0 && (
           <EstadoVazio
             variante="tracejado"
@@ -53,7 +63,12 @@ export default function VisaoGeralDaTurma({ turmaId }: { turmaId: string }) {
                 valor={item.acertos}
                 maximo={item.total}
                 texto={`${String(item.acertos)} de ${String(item.total)}`}
-                detalhe={item.alunosAbaixoDaMetade === 0 ? 'Nenhum aluno abaixo da metade nesta habilidade.' : `${textoDeAlunos(item.alunosAbaixoDaMetade)} abaixo da metade nesta habilidade.`}
+                // De onde vem o número: a metade é o limiar provisório (os limiares são decisão em aberto), e a tela diz qual é.
+                detalhe={
+                  item.alunosAbaixoDaMetade === 0
+                    ? 'Nenhum aluno acertou menos da metade das questões desta habilidade nas atividades aprovadas.'
+                    : `${textoDeAlunos(item.alunosAbaixoDaMetade)} ${item.alunosAbaixoDaMetade === 1 ? 'acertou' : 'acertaram'} menos da metade das questões desta habilidade nas atividades aprovadas.`
+                }
               />
             ))}
           </div>
@@ -84,7 +99,10 @@ export default function VisaoGeralDaTurma({ turmaId }: { turmaId: string }) {
       <section aria-labelledby={idDasAtividades} className="flex min-w-0 flex-col gap-3">
         <CabecalhoDeSecao id={idDasAtividades} titulo="Atividades da turma" />
         {atividades.isPending && <EstadoCarregando rotulo="Carregando as atividades da turma…" />}
-        {atividades.isError && atividades.data === undefined && <EstadoErro erro={atividades.error} tentando={atividades.isFetching} aoTentarDeNovo={() => void atividades.refetch({ cancelRefetch: false })} />}
+        {atividades.isError && atividades.data === undefined && desempenho.isError && dados === undefined && (
+          <p className="text-sm break-words text-sutil">Também não foi possível carregar as atividades. “Tentar de novo”, acima, lê as duas.</p>
+        )}
+        {atividades.isError && atividades.data === undefined && !(desempenho.isError && dados === undefined) && <EstadoErro erro={atividades.error} tentando={atividades.isFetching} aoTentarDeNovo={() => void atividades.refetch({ cancelRefetch: false })} />}
         {atividades.data !== undefined && aplicadas.length === 0 && (
           <EstadoVazio titulo="Nenhuma atividade aplicada a esta turma" descricao="Gere uma atividade objetiva em Ferramentas e use “Aplicar à turma”, no artefato. Ela aparece aqui, com quantos alunos já enviaram." />
         )}

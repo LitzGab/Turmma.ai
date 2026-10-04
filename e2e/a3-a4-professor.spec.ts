@@ -83,13 +83,14 @@ test.describe('A3 e A4 de ponta a ponta, do lado da professora, contra a API rea
     // Aprovar: o resumo, os destaques fechados, e o botão desligado com o contador dizendo por quê.
     await expect(page.getByRole('heading', { level: 1, name: 'Revisar a correção' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).toContainText(`${TITULO} · ${turmaNome}`)
-    await expect(principal(page)).toContainText('3 de 3 alunos')
+    await expect(principal(page)).toContainText('3 alunos responderam · 3 na turma hoje')
     await expect(principal(page).getByText('Assistente · correção de objetiva')).toBeVisible()
     await expect(principal(page).locator('[data-selo-ia]').first()).toBeVisible()
     const fechados = page.locator('[data-destaque="fechado"]')
     const quantos = await fechados.count()
-    // O aluno que abriu e não respondeu é destaque, com o motivo dito como fato do trabalho.
-    expect(quantos).toBeGreaterThanOrEqual(1)
+    // Exatamente um destaque: o aluno que abriu e não respondeu, com o motivo dito como fato do trabalho. Com três alunos,
+    // sem histórico aprovado e com duas questões, nenhum outro motivo dispara (menos de cinco colegas, menos de quatro respostas).
+    expect(quantos).toBe(1)
     const doEmBranco = page.locator('[data-destaque]').filter({ hasText: emBranco.nome })
     await expect(doEmBranco).toContainText('Em branco')
     await expect(doEmBranco).toContainText('Nenhuma questão foi respondida.')
@@ -117,7 +118,7 @@ test.describe('A3 e A4 de ponta a ponta, do lado da professora, contra a API rea
     const dialogo = page.getByRole('alertdialog', { name: 'Aprovar 3 correções' })
     await expect(dialogo).toContainText(TITULO)
     await expect(dialogo).toContainText(turmaNome)
-    await expect(dialogo).toContainText('3 de 3 alunos')
+    await expect(dialogo).toContainText('3 alunos responderam · 3 na turma hoje')
     await expect(dialogo).toContainText('O diagnóstico por habilidade chega aos alunos da turma.')
     expect(await larguraExcedenteDoDialogo(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])

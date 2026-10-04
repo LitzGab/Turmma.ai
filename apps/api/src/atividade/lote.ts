@@ -36,6 +36,12 @@ export function habilidadesDaAtividade(questoes: readonly QuestaoObjetiva[]): Ma
  *
  * `mediaDeAcertos` é a média de **questões acertadas**, com duas casas: não é nota nem percentual convertido (D46). A
  * distribuição tem uma faixa por contagem de acertos, de zero ao total.
+ *
+ * **As duas contagens não se misturam** (decisão do pacote Z, aluno transferido). `corrigidos` é **quem respondeu**: a
+ * correção é do trabalho feito, então quem abriu a atividade nesta turma entra, mesmo que tenha saído dela antes do
+ * encerramento; é o denominador de todo número do resumo (média, distribuição, por questão, por habilidade).
+ * `alunosDaTurma` é o número atual da turma, pelo vínculo, à parte: não é denominador de nada, e pode ser menor que
+ * `corrigidos` depois de uma transferência.
  */
 export function resumoDoLote({ questoes, alunosDaTurma, correcoes, respostas }: DadosDoLote): ResumoDoLote {
   const somaDeAcertos = correcoes.reduce((soma, correcao) => soma + correcao.acertos, 0)

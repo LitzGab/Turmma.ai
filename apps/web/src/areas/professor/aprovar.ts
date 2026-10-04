@@ -16,8 +16,14 @@ export function textoDaMedia(resumo: Pick<ResumoDoLote, 'mediaDeAcertos' | 'ques
 }
 
 /** "28 de 32 alunos": quantos têm correção, de quantos a turma tem. Quem não abriu a atividade não tem correção. */
+/**
+ * Quem respondeu, e a turma de hoje à parte. Não é "N de M": `corrigidos` conta o trabalho feito, inclusive de quem saiu
+ * da turma antes de a professora encerrar, e `alunosDaTurma` é a turma de agora. Juntos como fração, depois de uma
+ * transferência a tela diria "5 de 4 alunos" (docblock de `resumoDoLote`, na API).
+ */
 export function textoDosCorrigidos(resumo: Pick<ResumoDoLote, 'corrigidos' | 'alunosDaTurma'>): string {
-  return `${String(resumo.corrigidos)} de ${String(resumo.alunosDaTurma)} ${resumo.alunosDaTurma === 1 ? 'aluno' : 'alunos'}`
+  const responderam = `${String(resumo.corrigidos)} ${resumo.corrigidos === 1 ? 'aluno respondeu' : 'alunos responderam'}`
+  return `${responderam} · ${String(resumo.alunosDaTurma)} na turma hoje`
 }
 
 /** A faixa da distribuição: "0 a 1 acerto", "2 acertos", "4 a 5 acertos". */
