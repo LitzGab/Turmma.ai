@@ -109,7 +109,7 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     await expect(pendente).toContainText(`Preparei "Atividade — Estequiometria (versão adaptada)" da turma ${turmaNome}. Esta versão adaptada só pode ir aos alunos depois que você aprovar.`, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('[data-faixa-esperando]')).toContainText(`Atividade — Estequiometria (versão adaptada) · ${turmaNome}`)
     await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link')).toHaveAccessibleName(/^Assistente de ensino\s*1\s*esperando você$/)
+    await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: /^Assistente de ensino/ })).toHaveAccessibleName(/^Assistente de ensino\s*1\s*esperando você$/)
     if (await page.getByRole('dialog', { name: 'Menu' }).isVisible()) await page.keyboard.press('Escape')
 
     // Aprovar: a confirmação diz o que é, de qual turma, e que só depois disso a versão pode ir aos alunos.
@@ -131,7 +131,7 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     await expect(page.locator('[data-faixa-esperando]')).toHaveCount(0)
     expect(await entregasNoBanco(professora.escolaId)).toEqual([{ tipo: 'versao_adaptada', funcao: 'adaptacao', estado: 'aprovada', decididaPor: professora.usuarioId, decidida: true, justificativa: null }])
     await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link')).toHaveAccessibleName('Assistente de ensino')
+    await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: /^Assistente de ensino/ })).toHaveAccessibleName('Assistente de ensino')
   })
 
   test('"Só conversar" recebe a resposta em texto, sem a ferramenta abrir de novo; e o pedido de corrigir redação recebe a recusa que explica, como mensagem do Assistente', async ({ page, hasTouch }) => {
@@ -161,7 +161,7 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     // D55: a IA não corrige redação nem discursiva. A recusa é uma mensagem do Assistente, assinada, e não um erro.
     await caixa(page).fill('corrige a redação do meu aluno e sugere uma nota')
     await acionar(page.getByRole('button', { name: 'Enviar' }), hasTouch)
-    const recusa = conversa(page).locator('[data-texto-da-ia]').filter({ hasText: 'Eu não corrijo nem avalio redação ou resposta discursiva de aluno' })
+    const recusa = conversa(page).locator('[data-texto-da-ia]').filter({ hasText: 'Eu não corrijo nem avalio redação, resposta discursiva ou texto de aluno' })
     await expect(recusa).toBeVisible({ timeout: PRAZO_DA_IA_MS })
     await expect(conversa(page).locator('[data-selo-ia]')).toHaveCount(3)
     await expect(principal(page).getByRole('alert')).toHaveCount(0)

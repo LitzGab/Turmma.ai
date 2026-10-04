@@ -200,6 +200,7 @@ test('W1: da escola vazia à aluna aprovada, só pela tela — a coordenação m
 
   // O professor aprova o pedido, conferindo o nome.
   await professor.reload()
+  await abrirAbaAlunos(professor, hasTouch)
   const pedidos = principal(professor).getByRole('region', { name: 'Pedidos de nome' })
   await acionar(pedidos.getByRole('checkbox', { name: aluna.nome }), hasTouch)
   await acionar(botao(pedidos, 'Aprovar 1 pedido'), hasTouch)

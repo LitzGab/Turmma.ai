@@ -273,7 +273,9 @@ test.describe('Material da coordenação', () => {
     await expect(principal(page).getByText('Envie um arquivo por vez. Escolha só o PDF deste material.')).toBeVisible()
   })
 
-  test('os quatro estados: carregando, erro com "Tentar de novo", vazio que convida a enviar, e com dado em cada situação', async ({ page, hasTouch }) => {
+  // Os quatro estados, em três casos: juntos, com a entrada da coordenação, três varreduras de acessibilidade e a leitura
+  // de um PDF de verdade, passavam dos 30 s no celular (CPU ×4). Cada caso começa da escola montada no banco.
+  test('os estados sem dado: carregando, erro com "Tentar de novo", e o vazio que convida a enviar', async ({ page, hasTouch }) => {
     const segurada = portao()
     let falhar = true
     await page.route(
@@ -285,7 +287,7 @@ test.describe('Material da coordenação', () => {
         return rota.continue()
       },
     )
-    const cenario = await abrirMaterial(page, hasTouch)
+    await abrirMaterial(page, hasTouch)
 
     // Carregando: a lista ainda não chegou.
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando os materiais…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -305,13 +307,14 @@ test.describe('Material da coordenação', () => {
     await expect(lista(page).getByRole('button')).toHaveCount(0)
     expect(await principal(page).getByRole('button').evaluateAll((botoes) => botoes.filter((botao) => getComputedStyle(botao).backgroundColor === 'rgb(232, 115, 46)').map((botao) => botao.textContent))).toEqual(['Enviar material'])
     expect(await violacoesGraves(page)).toEqual([])
+  })
 
-    // Com dado: o que entrou, o que está sendo lido e o que falhou, o mais novo primeiro.
-    const { escolaId } = cenario.coordenadora
-    await criarMaterialNoBanco(escolaId, cenario.estrutura.disciplina.id, { titulo: 'Capítulo pronto', estado: 'pronto', paginas: 12 })
-    await criarMaterialNoBanco(escolaId, cenario.estrutura.disciplina.id, { titulo: 'Capítulo sem texto', estado: 'falhou', falha: 'sem_texto' })
-    await criarMaterialNoBanco(escolaId, cenario.estrutura.disciplina.id, { titulo: 'Capítulo em leitura', estado: 'processando' })
-    await page.reload()
+  test('com dado, em cada situação: o que entrou, o que está sendo lido e o que falhou, o mais novo primeiro', async ({ page, hasTouch }) => {
+    await abrirMaterial(page, hasTouch, async ({ coordenadora, estrutura }) => {
+      await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo pronto', estado: 'pronto', paginas: 12 })
+      await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo sem texto', estado: 'falhou', falha: 'sem_texto' })
+      await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo em leitura', estado: 'processando' })
+    })
     await expect(itemDe(page, 'Capítulo pronto').getByText('Pronto · 12 páginas')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(itemDe(page, 'Capítulo em leitura').getByText('Processando')).toBeVisible()
     const falhou = itemDe(page, 'Capítulo sem texto')
@@ -320,6 +323,14 @@ test.describe('Material da coordenação', () => {
     await expect(lista(page).getByRole('listitem')).toHaveText([/Capítulo em leitura/, /Capítulo sem texto/, /Capítulo pronto/])
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  test('o material que falhou: "Tentar de novo" devolve ao formulário o que ele declarava, e o arquivo de verdade entra no lugar dele', async ({ page, hasTouch }) => {
+    await abrirMaterial(page, hasTouch, async ({ coordenadora, estrutura }) => {
+      await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo sem texto', estado: 'falhou', falha: 'sem_texto' })
+    })
+    const falhou = itemDe(page, 'Capítulo sem texto')
+    await expect(falhou.getByText('Falhou')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
 
     // "Tentar de novo" devolve ao formulário o que o material declarava, e pede o arquivo.
     await acionar(falhou.getByRole('button', { name: /^Tentar de novo/ }), hasTouch)

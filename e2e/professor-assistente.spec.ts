@@ -98,7 +98,7 @@ async function enviarPedido(page: Page, texto: string, hasTouch: boolean): Promi
 }
 
 test.describe('a navegação do professor na A2 (D73)', () => {
-  test('a lateral tem Nova conversa, Ferramentas e Turmas, e "Seu time" com o Assistente e o que espera a professora; Calendário, Histórico e Tutor não aparecem', async ({ page, hasTouch }) => {
+  test('a lateral tem Nova conversa, Ferramentas e Turmas, e "Seu time" com o Assistente e o que espera a professora, e o Tutor sem contador; Calendário e Histórico não aparecem', async ({ page, hasTouch }) => {
     // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
     test.slow()
     const { api, turmaId, disciplinaId } = await entrar(page, hasTouch)
@@ -112,12 +112,13 @@ test.describe('a navegação do professor na A2 (D73)', () => {
     await abrirNavegacao(page, hasTouch)
     await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Nova conversa', 'Ferramentas', 'Turmas'])
     const time = lateral(page).getByRole('navigation', { name: 'Seu time' })
-    // Só o agente que já tem tela: a linha do Tutor chega com os sinais.
-    await expect(time.getByRole('link')).toHaveCount(1)
+    // Os dois agentes que já têm tela (fase 3): o Assistente e o Tutor, que não espera ninguém e não leva contador.
+    await expect(time.getByRole('link')).toHaveText([/^Assistente de ensino/, /^Tutor$/])
+    await expect(time.getByRole('link', { name: 'Tutor' })).toHaveAccessibleName('Tutor')
     const assistente = time.getByRole('link', { name: /Assistente de ensino/ })
     // O contador diz só o que espera a professora: as duas pendentes, e não a que ela já aprovou.
     await expect(assistente).toHaveAccessibleName(/^Assistente de ensino\s*2\s*esperando você$/, { timeout: PRAZO_DA_ENTRADA_MS })
-    for (const fora of ['Calendário', 'Histórico', 'Tutor']) await expect(lateral(page).getByText(fora, { exact: true })).toHaveCount(0)
+    for (const fora of ['Calendário', 'Histórico']) await expect(lateral(page).getByText(fora, { exact: true })).toHaveCount(0)
     // D59: o contador não se mexe sozinho.
     expect(await assistente.locator('[data-contador-do-time]').evaluate((elemento) => getComputedStyle(elemento).animationName)).toBe('none')
     expect(await violacoesGraves(page)).toEqual([])
@@ -610,8 +611,8 @@ test.describe('o artefato', () => {
     await expect(page.getByText('24 g de carbono são 2 mol, que formam 2 mol de CO₂, ou 88 g.')).toBeVisible()
     await expect(page.getByRole('button', { name: `Fonte: ${TITULO_DO_MATERIAL}, p. 142` })).toBeVisible()
     await expect(page.getByText(`Página 142 · ${TITULO_DO_MATERIAL}`)).toBeVisible()
-    // O aplicar à turma é da próxima fase: não há botão sem efeito no lugar dele.
-    await expect(page.getByRole('button', { name: /Aplicar/ })).toHaveCount(0)
+    // Aplicar à turma (fase 3): um botão só, no artefato; o fluxo dele está em `professor-turma.spec.ts`.
+    await expect(page.getByRole('button', { name: /Aplicar/ })).toHaveCount(1)
     // As versões adaptadas, cada uma com a situação dela: a pendente espera, a aprovada diz quem e quando.
     const versoes = page.getByRole('region', { name: 'Versões adaptadas' })
     await expect(versoes.locator('[data-aprovacao="pendente"]')).toHaveText('Esperando você')
@@ -775,7 +776,7 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
     await expect(faixa).toHaveCount(0)
     // O contador da lateral acompanha: não há mais nada esperando.
     await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link')).toHaveAccessibleName('Assistente de ensino')
+    await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: /^Assistente de ensino/ })).toHaveAccessibleName('Assistente de ensino')
   })
 
   test('Rejeitar exige justificativa de 8 a 500 caracteres antes de mandar, e a tela mostra quem rejeitou e o motivo; a entrega já decidida em outra aba vira a tela atualizada, e não erro', async ({ page, hasTouch }) => {

@@ -381,11 +381,12 @@ test.describe('casca da escola', () => {
     const paradas = [
       page.getByRole('link', { name: 'Turmma, página inicial' }),
       page.getByRole('button', { name: 'Recolher a lateral' }),
-      // A2 (D73): os três itens do professor e, em "Seu time", a linha do Assistente de ensino.
+      // A2 (D73): os três itens do professor e, em "Seu time", as linhas do Assistente de ensino e do Tutor (fase 3).
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Nova conversa' }),
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Ferramentas' }),
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }),
       page.getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: 'Assistente de ensino' }),
+      page.getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: 'Tutor' }),
       page.getByRole('button', { name: 'Sair' }),
     ]
     await page.locator('body').focus()
