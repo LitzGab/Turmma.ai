@@ -1,4 +1,4 @@
-import type { ChaveDeFuncao } from '@educa/shared'
+import type { ChaveDeFuncao, EstadoDeConsumoDeIa, TarefaDeIa } from '@educa/shared'
 import { relogioDoSistema, type Relogio } from '../relogio.js'
 import { diaDeUso } from '../uso/dia-de-uso.js'
 import type { CodigoDeErroDeIa } from './erros.js'
@@ -9,31 +9,32 @@ import type { OrigemDaSaida } from './porta.js'
  * O que toda execução de IA deixa registrado (regra 30, item 4): é o que sustenta a cobrança, o consumo da
  * governança e a resposta à escola quando ela pergunta por que a IA disse algo.
  *
- * `entrada` e `saida` são conteúdo, e **nunca vão para o log** (regra 20, item 9). Em tarefa que leva texto de aluno
- * (`levaTextoDeAluno`, hoje o turno do Tutor) elas não vêm: o registro da conversa é `mensagem_tutor`, com a
- * retenção curta e o acesso restrito de lá (regra 20, item 14), e `consumo_ia` não vira uma segunda cópia dela.
+ * `entrada` e `saida` são conteúdo, e **nunca vão para o log** (regra 20, item 9). Em tarefa que leva texto livre de
+ * pessoa (`levaTextoLivreDePessoa`: o turno do Tutor e a conversa do professor com o Assistente) elas não vêm: o
+ * registro da conversa é `mensagem_tutor` ou `mensagem_agente`, com o dono, o acesso restrito e a retenção de lá
+ * (regra 20, item 14; regra 70, item 8), e `consumo_ia`, que a coordenação consulta, não vira uma cópia dela.
  */
 export interface ConsumoDeIa {
   readonly escolaId: string
   /** Só no Tutor. O id, nunca o nome. */
   readonly alunoId?: string
   readonly execucaoId?: string
-  readonly tarefa: string
+  readonly tarefa: TarefaDeIa
   readonly funcao: ChaveDeFuncao
   readonly perfil: Perfil
   readonly origem: OrigemDaSaida
   readonly modelo: string
   readonly promptVersao: string
-  /** Ausente (nula na tabela) em tarefa que leva texto de aluno. */
+  /** Ausente (nula na tabela) em tarefa que leva texto livre de pessoa. */
   readonly entrada?: unknown
-  /** Ausente (nula na tabela) em tarefa que leva texto de aluno, e quando a execução falhou. */
+  /** Ausente (nula na tabela) em tarefa que leva texto livre de pessoa, e quando a execução falhou. */
   readonly saida?: unknown
   readonly tokensDeEntrada: number
   readonly tokensDeSaida: number
   readonly duracaoMs: number
   readonly envioExterno: boolean
   readonly tentativas: number
-  readonly estado: 'concluida' | 'falhou'
+  readonly estado: EstadoDeConsumoDeIa
   readonly codigoDeErro?: CodigoDeErroDeIa
   readonly em: Date
 }
@@ -48,9 +49,21 @@ export interface ConsultaDeOrcamento {
   readonly funcao: ChaveDeFuncao
   /** Presente no Tutor: além do teto da escola, vale o freio diário do aluno (D38). */
   readonly alunoId?: string
+  /** Presente no Tutor: a turma cujo pacote do mês é conferido (D38). */
+  readonly turmaId?: string
+  /**
+   * A execução que está perguntando, quando a consulta é feita de dentro dela: a pergunta dela mesma já está gravada
+   * e não conta contra ela. Na consulta feita antes de gravar (o `POST` do Tutor), não vem.
+   */
+  readonly execucaoId?: string
 }
 
-export type DecisaoDoOrcamento = { readonly permitido: true } | { readonly permitido: false; readonly tenteDeNovoEmSegundos?: number }
+/** Por que não pode gastar: o teto da escola, o freio diário do aluno ou o pacote do mês da turma. */
+export type CodigoDeOrcamento = 'IA_ORCAMENTO_ESGOTADO' | 'LIMITE_DIARIO_DO_TUTOR' | 'PACOTE_DO_TUTOR_ESGOTADO'
+
+export type DecisaoDoOrcamento =
+  | { readonly permitido: true }
+  | { readonly permitido: false; readonly codigo: CodigoDeOrcamento; readonly tenteDeNovoEmSegundos?: number }
 
 /**
  * Porta do orçamento, consultada **antes** de gastar (D14). Os tetos são configuração por escola e por rede, nunca
@@ -92,13 +105,13 @@ export class OrcamentoEmMemoria implements OrcamentoDeIa {
       const gastos = daEscola
         .filter((registro) => diaDeUso(registro.em).startsWith(mes))
         .reduce((soma, registro) => soma + registro.tokensDeEntrada + registro.tokensDeSaida, 0)
-      if (gastos >= this.limites.tokensPorEscolaNoMes) return { permitido: false }
+      if (gastos >= this.limites.tokensPorEscolaNoMes) return { permitido: false, codigo: 'IA_ORCAMENTO_ESGOTADO' }
     }
     if (consulta.alunoId !== undefined && this.limites.trocasPorAlunoNoDia !== undefined) {
       const trocas = daEscola.filter(
         (registro) => registro.alunoId === consulta.alunoId && registro.funcao === consulta.funcao && registro.estado === 'concluida' && diaDeUso(registro.em) === hoje,
       ).length
-      if (trocas >= this.limites.trocasPorAlunoNoDia) return { permitido: false }
+      if (trocas >= this.limites.trocasPorAlunoNoDia) return { permitido: false, codigo: 'LIMITE_DIARIO_DO_TUTOR' }
     }
     return { permitido: true }
   }

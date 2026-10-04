@@ -2,7 +2,7 @@ import { setTimeout as esperar } from 'node:timers/promises'
 import type { AdaptadorDeModelo, ChamadaAoModelo, RespostaDoModelo } from './adaptador.js'
 import { ErroDeIa } from './erros.js'
 import type { Perfil } from './perfis.js'
-import { MaterialSemConteudoAproveitavel, type TarefaDeIa } from './tarefa.js'
+import { MaterialSemConteudoAproveitavel, type DefinicaoDeTarefa } from './tarefa.js'
 
 export const MODELO_FALSO = 'falso-deterministico'
 
@@ -11,12 +11,12 @@ export function estimarTokens(texto: string): number {
   return Math.ceil(texto.length / 4)
 }
 
-function versaoDeterministica<Entrada, Saida>(tarefa: TarefaDeIa<Entrada, Saida>, entrada: Entrada): Saida {
+function versaoDeterministica<Entrada, Saida>(tarefa: DefinicaoDeTarefa<Entrada, Saida>, entrada: Entrada): Saida {
   try {
     return tarefa.falso(entrada)
   } catch (erro) {
-    // Sem material aproveitável não há saída: é o mesmo desfecho de um modelo que não entregou o formato.
-    if (erro instanceof MaterialSemConteudoAproveitavel) throw new ErroDeIa('IA_SAIDA_INVALIDA')
+    // Sem material aproveitável não há o que citar, e por isso não há saída (regra 30, item 12).
+    if (erro instanceof MaterialSemConteudoAproveitavel) throw new ErroDeIa('MATERIAL_INSUFICIENTE')
     throw erro
   }
 }

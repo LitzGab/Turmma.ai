@@ -23,6 +23,7 @@ import { APP_GUARD, APP_INTERCEPTOR, DiscoveryModule, DiscoveryService, Reflecto
 import { BANCO, BancoModule } from './banco.module.js'
 import type { ConfiguracaoApi } from './config.js'
 import { EstruturaModule } from './estrutura/estrutura.module.js'
+import { IaModule } from './ia/ia.module.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
 import { OperacaoModule } from './operacao/operacao.module.js'
 import { ProfessoresModule } from './professores/professores.module.js'
@@ -74,6 +75,7 @@ export class AppModule {
         }),
         EstruturaModule,
         ProfessoresModule,
+        IaModule.com({ ambiente: config.identidade.ambiente, ...(opcoes.logger === undefined ? {} : { logger: opcoes.logger }) }),
         SalaModule.com({
           config: config.sala,
           chaveContador: config.login.chaveContador,
