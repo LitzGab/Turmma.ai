@@ -16,6 +16,8 @@ const Ferramentas = lazy(() => import('./Ferramentas'))
 const Ferramenta = lazy(() => import('./Ferramenta'))
 const Artefato = lazy(() => import('./Artefato'))
 const Time = lazy(() => import('./Time'))
+const Tutor = lazy(() => import('./Tutor'))
+const Aprovar = lazy(() => import('./Aprovar'))
 
 /**
  * A área do professor, relativa a `/professor` (o `Route` aninhado de `apps/web/src/rotas.tsx`), num chunk próprio,
@@ -38,6 +40,9 @@ export default function RotasDoProfessor() {
       {/* A `key` pelo artefato: ir de uma versão adaptada à atividade de origem é abrir outra tela, sem o renomear da anterior. */}
       <Route path={ROTAS_DO_PROFESSOR.artefato}>{(parametros) => <Artefato key={parametros.artefatoId} artefatoId={parametros.artefatoId} />}</Route>
       <Route path={ROTAS_DO_PROFESSOR.timeDoAssistente} component={Time} />
+      <Route path={ROTAS_DO_PROFESSOR.timeDoTutor} component={Tutor} />
+      {/* A `key` pela atividade: outra correção é outra tela, sem os destaques abertos nem o diálogo da anterior. */}
+      <Route path={ROTAS_DO_PROFESSOR.aprovar}>{(parametros) => <Aprovar key={parametros.atividadeAplicadaId} atividadeAplicadaId={parametros.atividadeAplicadaId} />}</Route>
       <Route path={ROTAS_DO_PROFESSOR.turmas} component={Turmas} />
       {/*
         A `key` pela turma: outra turma é outra tela. Sem ela, ir de uma turma aberta para outra pelo histórico manteria

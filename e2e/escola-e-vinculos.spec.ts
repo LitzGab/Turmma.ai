@@ -11,7 +11,7 @@ import {
   ligarContaExterna,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
-import { abrirNavegacao, abrirSeletorDeEscola, botaoDoSeletor, esperarGovernanca, irPelaNavegacao, lateral, linhaDoSeletor, nomeNoSeletor, esperarNovaConversa } from './__fixtures__/casca.ts'
+import { abrirNavegacao, abrirSeletorDeEscola, botaoDoSeletor, esperarGovernanca, irPelaNavegacao, lateral, linhaDoSeletor, nomeNoSeletor, esperarNovaConversa, esperarAtividades } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -61,10 +61,9 @@ async function esperarEscola(page: Page, nome: string, escolaNome: string): Prom
   await esperarNovaConversa(page, nome, { escolaNome })
 }
 
-/** O aluno continua abrindo na "Início", com o nome dele e o da escola na página. */
+/** O aluno abre em "Atividades" (A3), com o nome dele e o da escola na lateral. */
 async function esperarEscolaDoAluno(page: Page, nome: string, escolaNome: string): Promise<void> {
-  await expect(page.getByRole('heading', { name: `Olá, ${nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-  await expect(page.getByRole('main')).toContainText(escolaNome)
+  await esperarAtividades(page, nome, { escolaNome })
 }
 
 /** O formulário do `oidc-falso`, que faz o papel da tela do Google: o nome digitado ali é o `subject` do usuário. */
@@ -188,9 +187,10 @@ test.describe('escolher e trocar de escola', () => {
     await expect(botaoDoSeletor(page)).toHaveCount(0)
     await expect(lateral(page).getByRole('button', { expanded: false })).toHaveCount(0)
     await expect(lateral(page)).toContainText(`Escola: ${aluno.escolaNome}`)
-    // Vínculo é do professor: o aluno não confirma turma nenhuma (RF4); o item dele na A1 é "Minha turma" (W2).
+    // Vínculo é do professor: o aluno não confirma turma nenhuma (RF4); os itens dele são o Tutor, as Atividades (A3 e
+    // A4) e "Minha turma" (W2).
     await expect(page.getByRole('link', { name: 'Turmas', exact: true })).toHaveCount(0)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Minha turma'])
+    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Tutor', 'Atividades', 'Minha turma'])
     expect(await violacoesGraves(page)).toEqual([])
   })
 

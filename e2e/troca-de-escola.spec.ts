@@ -15,6 +15,7 @@ import {
   nomeNoSeletor,
   PRAZO_DA_ENTRADA_MS,
   esperarNovaConversa,
+  esperarAtividades,
 } from './__fixtures__/casca.ts'
 import { cacheDeConsultas, semAcessosDaConta } from './__fixtures__/consultas.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
@@ -281,7 +282,7 @@ test.describe('recomeço da tela do seletor', () => {
     await page.getByLabel('Matrícula').fill(aluno.matricula)
     await page.getByLabel('Senha').fill(aluno.senha)
     await acionar(page, /^Entrar$/, hasTouch)
-    await expect(page.getByRole('heading', { name: `Olá, ${aluno.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarAtividades(page, aluno.nome)
 
     await abrirNavegacao(page, hasTouch)
     await expect(botaoDoSeletor(page)).toHaveCount(0)
@@ -321,10 +322,21 @@ test.describe('recomeço da tela do seletor', () => {
     await expect(botaoDoSeletor(page)).toBeFocused()
     await esperarNovaConversa(page, emA.nome)
 
-    // A tela seguinte ainda fala com o mesmo token: nenhuma sessão nova foi gravada.
+    // As telas seguintes ainda falam com o mesmo token: nenhuma sessão nova foi gravada. Turmas pode não pedir nada (a
+    // Nova conversa já leu os vínculos, e o cache das consultas os serve); o Seu time do Assistente lê a lista inteira das
+    // entregas, que a Nova conversa não lê, e por isso sempre sai ao menos um pedido observado depois da escolha.
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByText('A coordenação ainda não alocou você')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    const listaDasEntregas = page.waitForRequest((pedido) => {
+      const url = new URL(pedido.url())
+      return url.pathname === '/v1/entregas' && !url.searchParams.has('estado')
+    })
+    await abrirNavegacao(page, hasTouch)
+    const assistente = lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: /^Assistente de ensino/ })
+    await (hasTouch ? assistente.tap() : assistente.click())
+    await listaDasEntregas
     expect(trocas).toBe(0)
+    expect(tokens.length).toBeGreaterThan(0)
     expect(new Set(tokens)).toEqual(new Set([tokenDeA]))
   })
 

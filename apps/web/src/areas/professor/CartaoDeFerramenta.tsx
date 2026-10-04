@@ -108,6 +108,10 @@ export function CartaoDeFerramenta({ ferramenta, iniciais, aoCancelar, nivel = 3
       <MotorFormulario descricao={descricao} estado={estado} nivel={nivel} aoGerar={aoGerar} aoEditar={limpar} {...(aoCancelar === undefined ? {} : { aoCancelar })} {...(problema === undefined ? {} : { falha: problema })}>
         {artefatoGerado !== undefined && <ResultadoDaFerramenta artefatoId={artefatoGerado.artefatoId} entregaId={artefatoGerado.entregaId} funcao={item.funcao} />}
       </MotorFormulario>
+      {/* Para quem não vê a tela: a troca de "Gerando…" pelo resultado é dita uma vez, com calma. */}
+      <span role="status" data-anuncio-do-resultado="" className="sr-only">
+        {estado === 'pronto' ? `${descricao.nome}: geração concluída. O resultado está logo abaixo do pedido.` : ''}
+      </span>
       {gerando && demorando && <AvisoFila situacao="demora" />}
       {ciclo?.etapa === 'falhou' && <FalhaDoPedido erro={ciclo.erro} funcao={item.funcao} aoTentarDeNovo={repetir} />}
     </div>

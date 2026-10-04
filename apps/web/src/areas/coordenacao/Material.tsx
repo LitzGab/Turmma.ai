@@ -2,7 +2,7 @@ import { CodigoDeErro, MENSAGEM_DA_FALHA_DE_MATERIAL, TAMANHO_MAXIMO_DO_LICENCIA
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileText, Upload } from 'lucide-react'
 import { useCallback, useEffect, useId, useRef, useState, type DragEvent, type FormEvent } from 'react'
-import { ErroDaApi } from '../../api/cliente'
+import { ErroDaApi, mensagemDoErro } from '../../api/cliente'
 import { consultaDisciplinas } from '../../api/estrutura'
 import { consultaMateriais, enviarMaterial, excluirMaterial, type CamposDoEnvioDeMaterial } from '../../api/material'
 import { aoTrocarDeSessao } from '../../api/sessao'
@@ -363,13 +363,29 @@ export default function Material() {
         <span role="status" className="sr-only">
           {emLeitura === 0 ? '' : emLeitura === 1 ? 'Um material está sendo lido.' : `${String(emLeitura)} materiais estão sendo lidos.`}
         </span>
-        {materiais.isError && erroDaLeitura}
+        {/*
+          Com a lista já na tela, a releitura que falhou é dita aqui com o "Tentar de novo" em `secundario`: o `primario`
+          da tela é um só, o "Enviar material".
+        */}
+        {materiais.isError && (
+          <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-cartao border border-erro bg-erro-cx p-4">
+            <p role="alert" className="min-w-0 flex-1 basis-56 break-words text-erro">
+              {mensagemDoErro(materiais.error)}
+            </p>
+            <Botao variante="secundario" onClick={() => void materiais.refetch({ cancelRefetch: false })}>
+              Tentar de novo
+            </Botao>
+            <span role="status" className="text-erro">
+              {materiais.isFetching ? 'Tentando de novo…' : ''}
+            </span>
+          </div>
+        )}
         {semNada ? (
           !materiais.isError && (
             <EstadoVazio
               titulo="Nenhum material ainda"
-              descricao="Envie o primeiro PDF da escola, com a licença declarada. É dele que o Assistente e o Tutor tiram as atividades e as explicações, sempre citando a página."
-              {...(dasDisciplinas.itens.length === 0 ? {} : { acao: { rotulo: 'Escolher o primeiro arquivo', aoAcionar: () => entradaDeArquivo.current?.click() } })}
+              // Sem botão aqui: o arquivo se escolhe no formulário acima, e o `primario` da tela é o "Enviar material".
+              descricao="Envie o primeiro PDF da escola pelo formulário acima, com a licença declarada. É dele que o Assistente e o Tutor tiram as atividades e as explicações, sempre citando a página."
             />
           )
         ) : (

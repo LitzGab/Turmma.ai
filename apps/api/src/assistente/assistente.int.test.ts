@@ -434,6 +434,21 @@ describe('Assistente de ensino', () => {
       expect(legitimo.resultado?.mensagem?.['texto']).not.toBe(RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO)
     })
 
+    it('colar o texto numa mensagem e pedir a opinião na seguinte também é recusado, sem modelo; e o texto colado não vai ao modelo depois', async () => {
+      const colado = 'Na minha opinião a internet ajudou muito as pessoas porque agora da para estudar de casa e falar com os amigos. Mas tambem tem coisas ruins como o cyberbullying e as fake news.'
+      await zerarLimiteDePedidosDeIa(api)
+      // A professora da outra turma, para a conversa começar limpa.
+      await execucaoTerminada(api, a.colega, await dispararExecucao(api, a.colega, '/v1/assistente/mensagens', mensagem(a, colado, { turmaId: a.outraTurma })))
+      const execucaoId = await dispararExecucao(api, a.colega, '/v1/assistente/mensagens', mensagem(a, 'e aí, ficou bom?', { turmaId: a.outraTurma }))
+      const execucao = await execucaoTerminada(api, a.colega, execucaoId)
+      expect(execucao.resultado?.mensagem).toMatchObject({ tipo: 'texto', texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO })
+      const { rows } = await sql('select origem from consumo_ia where escola_id = $1 and execucao_id = $2', [a.escolaId, execucaoId])
+      expect(rows).toEqual([{ origem: 'regra_fixa' }])
+      // O pedido comum que vem depois segue, e responde.
+      const seguinte = await execucaoTerminada(api, a.colega, await dispararExecucao(api, a.colega, '/v1/assistente/mensagens', mensagem(a, 'monta uma atividade de estequiometria', { turmaId: a.outraTurma })))
+      expect(seguinte.resultado?.mensagem?.['tipo']).toBe('proposta_de_ferramenta')
+    })
+
     it('o nome e a condição de um aluno no pedido de atividade não viram o tema da proposta, e por isso não viram título de artefato', async () => {
       const execucaoId = await dispararExecucao(api, a.professora, '/v1/assistente/mensagens', mensagem(a, 'Monta uma atividade para a Mariana Albuquerque, que tem dislexia'))
       const execucao = await execucaoTerminada(api, a.professora, execucaoId)
