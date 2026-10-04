@@ -2,6 +2,7 @@ import { esquemaConteudoDaMensagemDoAgente, esquemaConteudoDoResumoDoAnalista, H
 import { describe, expect, it } from 'vitest'
 import { AdaptadorRoteirizado } from '../__fixtures__/adaptador-roteirizado.js'
 import { AMOSTRAS_DO_ASSISTENTE } from '../__fixtures__/amostras-do-assistente.js'
+import { AMOSTRAS_DA_REVISAO, SAIDAS_DA_REVISAO } from '../__fixtures__/amostras-do-assistente-revisao.js'
 import { entradaDoAnalista, entradaDoAssistente, entradaDoRelatorio, ESCOLA_A } from '../__fixtures__/entradas.js'
 import { MATERIAL_DE_ESTEQUIOMETRIA } from '../__fixtures__/estequiometria.js'
 import type { AdaptadorDeModelo } from '../adaptador.js'
@@ -9,7 +10,7 @@ import { ConsumoEmMemoria, OrcamentoEmMemoria } from '../consumo.js'
 import { ErroDeIa } from '../erros.js'
 import { ProvedorDeIa } from '../provedor.js'
 import { SuspensoesEmMemoria } from '../suspensao.js'
-import { atribuiNotaOuConceito, pedeJulgamentoDeTextoDeAluno, proporFerramenta, RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO } from './propor-ferramenta.js'
+import { atribuiNotaOuConceito, conversaPedeJulgamentoDeTextoDeAluno, pedeJulgamentoDeTextoDeAluno, proporFerramenta, RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, turnosQuePodemIrAoModelo } from './propor-ferramenta.js'
 import { relatorioDaCorrecao } from './relatorio-da-correcao.js'
 import { resumoDoAnalista } from './resumo-do-analista.js'
 
@@ -281,6 +282,43 @@ describe('propor_ferramenta e a D55: a IA não julga texto de aluno nem dá nota
       expect(tema('monta uma atividade de estequiometria para a Mariana, que tem dislexia')).toBe('estequiometria')
       expect(tema('prepara uma prova sobre mol para o aluno com laudo de dislexia')).toBe('mol')
     })
+  })
+})
+
+describe('a D55 sobre as amostras escritas sem olhar para a regra (a revisão da conformidade)', () => {
+  /** A taxa declarada sobre este arquivo, à parte da do primeiro: hoje, a regra acerta todas, nos dois sentidos. */
+  const TAXA_MINIMA = 1
+  const comoTurnos = (anteriores: readonly string[] = []) => anteriores.map((texto) => ({ autor: 'professor' as const, texto }))
+
+  it('a regra, olhando a conversa, acerta a taxa declarada, e o teste diz quais errou', () => {
+    expect(AMOSTRAS_DA_REVISAO.filter((amostra) => amostra.origem === 'professora' && amostra.espera === 'recusa').length).toBeGreaterThanOrEqual(30)
+    const erradas = AMOSTRAS_DA_REVISAO.filter((amostra) => conversaPedeJulgamentoDeTextoDeAluno(amostra.frase, comoTurnos(amostra.anteriores)) !== (amostra.espera === 'recusa')).map(
+      (amostra) => `${amostra.espera}: ${amostra.frase.slice(0, 90)}`,
+    )
+    expect(erradas).toEqual(erradas.slice(0, Math.floor(AMOSTRAS_DA_REVISAO.length * (1 - TAXA_MINIMA))))
+  })
+
+  it('a conferência da saída acerta as respostas da revisão: nota por número, por extenso ou por letra é recusada; número que não é nota passa', () => {
+    const erradas = SAIDAS_DA_REVISAO.filter((saida) => atribuiNotaOuConceito(saida.texto) !== saida.atribuiNota).map((saida) => saida.texto)
+    expect(erradas).toEqual([])
+  })
+
+  it('o turno anterior que a regra recusaria, e o texto colado, não vão ao modelo; o pedido comum vai', () => {
+    const colado = 'Na minha opinião a internet ajudou muito as pessoas porque agora da para estudar de casa e falar com os amigos. Mas tambem tem coisas ruins como o cyberbullying e as fake news.'
+    const turnos = [
+      { autor: 'professor' as const, texto: 'monta uma atividade de mol' },
+      { autor: 'assistente' as const, texto: 'Quer que eu abra a ferramenta?' },
+      { autor: 'professor' as const, texto: 'corrige a redação do Lucas' },
+      { autor: 'professor' as const, texto: colado },
+    ]
+    expect(turnosQuePodemIrAoModelo(turnos)).toEqual(turnos.slice(0, 2))
+    const pedido = proporFerramenta.montarPedido({ ...entradaDoAssistente('monta uma atividade de rendimento'), turnosAnteriores: turnos })
+    const enviado = JSON.stringify(pedido)
+    expect(enviado).not.toMatch(/Lucas|cyberbullying/u)
+    expect(enviado).toContain('monta uma atividade de mol')
+    // E a mensagem curta depois do texto colado é recusada sem modelo.
+    expect(proporFerramenta.semModelo?.({ ...entradaDoAssistente('e aí, ficou bom?'), turnosAnteriores: [{ autor: 'professor', texto: colado }] })).toMatchObject({ texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO })
+    expect(proporFerramenta.semModelo?.({ ...entradaDoAssistente('ficou bom, pode gerar'), turnosAnteriores: [{ autor: 'professor', texto: 'monta uma atividade de mol' }] })).toBeUndefined()
   })
 })
 

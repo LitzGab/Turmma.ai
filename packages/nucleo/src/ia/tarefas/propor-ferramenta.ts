@@ -67,9 +67,14 @@ export const RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO =
 /** "Notas de aula" e "nota de rodapé" não são nota de aluno: saem do texto antes de a regra olhar. */
 const NOTA_QUE_NAO_E_DE_ALUNO = /\bnotas? (de aula|de rodape|explicativas?|fiscal|fiscais|musica\w*|tecnicas?|introdutorias?|historicas?|de corte)\b/g
 
+/** Minúsculas, sem acento e sem o que não é nota de aluno: a forma em que as listas comparam. */
+const paraARegra = (mensagem: string): string => normalizar(mensagem).replace(NOTA_QUE_NAO_E_DE_ALUNO, ' ')
+/** Sem acento, **com** maiúscula: é por ela que o nome próprio aparece ("o texto do Lucas"). */
+const semAcento = (mensagem: string): string => mensagem.normalize('NFD').replace(/\p{M}/gu, '')
+
 /**
- * Pedido de **nota, conceito ou pontuação** à IA: recusa sozinho, sem precisar de outra palavra. "Dê o conceito de
- * mol" pede uma definição, e passa; "atividade sobre pontuação" é assunto de aula, e passa.
+ * Pedido de **nota, conceito ou pontuação** à IA, ou de decidir se o aluno passa: recusa sozinho, sem precisar de outra
+ * palavra. "Dê o conceito de mol" pede uma definição, e passa; "atividade sobre pontuação" é assunto de aula, e passa.
  */
 const PEDE_NOTA = new RegExp(
   [
@@ -80,10 +85,14 @@ const PEDE_NOTA = new RegExp(
     String.raw`\bnotas? (de|entre) (0|zero|um|1) (a|e|ate) \w+`,
     String.raw`\bde (0|zero) a (10|dez|100|cem)\b`,
     String.raw`\bnotas? (para|pra|pro|d[oa]s?|dess[ea]s?|dest[ea]s?|ness[ea]s?|nest[ea]s?|niss[oa]|nist[oa]|que (ele|ela|o|a|ess|est))\b`,
-    String.raw`\bmerec\w*\b[^.?!]{0,30}\b(nota|conceito|pontos?)\b`,
+    String.raw`\bnota (\d+|dez|nove|oito|maxima|maior|alta|baixa)\b`,
+    String.raw`\bmerec\w*\b[^.?!]{0,30}\b(nota|conceito|pontos?|credito)\b`,
     String.raw`\b(nota|conceito)\b[^.?!]{0,20}\bmerec\w*`,
-    String.raw`\bquanto (vale|valeria|merece|mereceria|voce daria|vc daria|daria|tirou|tiraria)\b`,
+    String.raw`\bquanto\b[^.?!]{0,25}\b(vale|valeria|merece|mereceria|daria|tira|tiraria|tirou|tirariam)\b`,
+    String.raw`\b(tira|tiraria|tirou|tirariam)\b[^.?!]{0,15}\bquanto\b`,
     String.raw`\bquantos pontos\b`,
+    String.raw`\bcredito (parcial|total|integral)\b`,
+    String.raw`\b(passa|aprova\w*) ou (reprova\w*|nao)\b|\b(ele|ela|o aluno|a aluna) (passa|reprova|aprova)\b`,
     String.raw`\b(que|qual) (seria |e )?(o )?conceito (merec\w*|voce|vc|daria|dar|cabe|atribu\w*|para|pra|dess\w*|dest\w*|ness\w*|nest\w*|d[oa] (alun|text|respost|redac|trabalh))`,
     String.raw`\b(de|da|dou) (um |o |algum )conceito\b(?! (de|do|da)\b)`,
     String.raw`\b(dar|daria|atribu\w*|sugir\w*|suger\w*|propo\w*) (um |o |algum )?conceito\b(?! (de|do|da)\b)`,
@@ -94,61 +103,83 @@ const PEDE_NOTA = new RegExp(
     String.raw`\bpontuacao (d[oa]s?|para|pra|dess[ea]|dest[ea]) (o |a |ess\w* |est\w* )?(alun|text|respost|redac|trabalh|produc)`,
   ].join('|'),
 )
+/** "nota?", "e o conceito?", "a nota dele?": a pergunta inteira é a nota. */
+const SO_A_NOTA = /^(e )?(a |o |qual (a |o )?|e a |e o )?(nota|conceito|pontuacao|nivel)( dele| dela| final| disso| dessa| desse)?\s*\??$/
+/** Escrever devolutiva, comentário ou parecer para entregar: é a devolutiva sobre o texto do aluno que a D55 proíbe. */
+const ESCREVE_DEVOLUTIVA = /\b(faz|faca|fazer|escrev\w*|redij\w*|redig\w*|cri\w*|ger\w*|mont\w*|prepar\w*) (um |uma |o |a |os |as )?(\w+ )?(comentarios?|devolutivas?|feedbacks?|pareceres?|parecer)\b/
 
-/** Pedido de **julgamento**: olhar, achar, analisar, avaliar, corrigir, comentar, dizer se está bom, apontar erro, melhorar, reescrever, revisar. */
+/** Pedido de **julgamento**: olhar, achar, conferir, classificar, ranquear, apontar ou marcar erro, aplicar a rubrica, dizer se está bom. */
 const PEDE_JULGAMENTO = new RegExp(
   String.raw`\b(` +
     [
-      String.raw`d[ae]r? uma (olhada|olhadinha|lida|conferida|revisada|corrigida|analisada)`,
+      String.raw`d[ae]r? uma (olhada|olhadinha|lida|conferida|revisada|corrigida|analisada|checada)`,
       String.raw`olha(da)? (ess|est|nes|iss|ist|aqui|so|o que)\w*`,
       String.raw`(ve|veja|ver) (se|ess\w*|est\w*|iss\w*|ist\w*|o que)`,
       String.raw`o que (voce |vc |tu )?(acha|achou|pensa|diz|me diz)`,
       String.raw`que (voce |vc )?(acha|achou)`,
-      String.raw`analis\w*|avali\w*|corrig\w*|corrij\w*|correc\w*|pre-?correc\w*|coment\w*`,
-      String.raw`(esta|estao|ta|tao|ficou|ficaram) (bom|boa|bons|boas|certo|certa|certos|certas|correto|correta|ok|adequad\w*|ruim|errad\w*|legal|coerent\w*)`,
-      String.raw`apont\w* (os |as |o que )?(erros?|falhas?|problemas?|esta errado)`,
-      String.raw`(os |quais (sao )?(os )?)erros (d|ness|nest|que)\w*`,
+      String.raw`analis\w*|avali\w*|corrig\w*|corrij\w*|correc\w*|pre-?correc\w*|coment\w*|confer\w*|chec\w*|classific\w*|ranque\w*|ranke\w*`,
+      String.raw`(esta|estao|ta|tao|ficou|ficaram|e) (bom|boa|bons|boas|certo|certa|certos|certas|correto|correta|completo|completa|ok|adequad\w*|ruim|errad\w*|legal|coerent\w*|fraco|fraca|forte|melhor|pior|suficiente)`,
+      String.raw`(qual|quais)\b[^.?!]{0,30}\b(melhor|pior|mais fort\w*|mais frac\w*)`,
+      String.raw`(melhor|pior) (pra|para|ate) (a |o )?(pior|melhor)`,
+      String.raw`(apont|identific|marc|sublinh|grif|destac|list|mostr|encontr|ach|resum)\w* (os |as |todos os |o que )?(\w+ )?(erros?|falhas?|problemas?|desvios?|esta errado)`,
+      String.raw`erros?|plagi\w*|copiou|copiaram`,
+      String.raw`aplic\w* (a |essa |esta |minha |sua )?rubrica`,
+      String.raw`(qual|em que|que) (o )?nivel`,
+      String.raw`faz sentido|atende (a|à) proposta|(acertou|errou|acertaram|erraram|entendeu|entenderam)|(usou|usaram|escreveu|escreveram) bem|(ficou|esta|ta) faltando`,
       String.raw`melhor(a|e|ar|ando|aria|em)|reescrev\w*|revis\w*|devolutiv\w*|feedbacks?|parecer\w*|julg\w*|opin\w*`,
     ].join('|') +
     String.raw`)\b`,
 )
 
-/** O que é texto escrito: resposta, texto, parágrafo, redação, trabalho, produção. */
-const TEXTO = String.raw`(respostas?|textos?|textinhos?|paragrafos?|redac\w+|trabalhos?|producao|producoes|dissertac\w+|composic\w+|relatorios?|resumos?|resenhas?)`
+/** O que é texto escrito: resposta, texto, parágrafo, redação, trabalho, produção, e as partes dele. */
+const TEXTO = String.raw`(respostas?|textos?|textinhos?|paragrafos?|redac\w+|trabalhos?|producao|producoes|dissertac\w+|composic\w+|relatorios?|resumos?|resenhas?|argumentos?|conclus\w+|introduc\w+|teses?|trechos?|frases?)`
 /** O que o aluno produz e não é só texto: prova, atividade, exercício, questão, tarefa. Só conta com a marca de que é de um aluno. */
 const TRABALHO = String.raw`(${TEXTO}|provas?|atividades?|exercicios?|questao|questoes|tarefas?|licao|licoes|cadernos?)`
-/** A marca forte de que o trabalho é de um aluno: "do aluno", "da aluna", "dele", "dela", "que o Caio escreveu". */
+/** A marca forte de que o trabalho é de um aluno: "do aluno", "da turma", "dela", "que o Caio escreveu", "escritos por alunos". */
 const DE_ALUNO = new RegExp(
   [
-    String.raw`\b${TRABALHO}\b[^.?!]{0,40}\bd(e|[oa]s?) (meus? |minhas? |um |uma |cada |algum |alguns |algumas )?(alun\w+|estudante\w*|menin\w+|garot\w+|crianca\w*)\b`,
+    String.raw`\b${TRABALHO}\b[^.?!]{0,40}\bd(e|[oa]s?) (meus? |minhas? |um |uma |cada |algum |alguns |algumas )?(alun\w+|estudante\w*|menin\w+|garot\w+|crianca\w*|turma)\b`,
     String.raw`\b(alun\w+|estudante\w*)\b[^.?!]{0,40}\b(escrev\w+|respond\w+|redig\w+|entreg\w+|fez|fizeram|produziu|produziram|mandou|mandaram)\b`,
+    String.raw`\bescrit\w* (por|pel[oa]s?) (\w+ )?(alun\w+|estudante\w*)\b`,
     String.raw`\b${TRABALHO} (\w+ ){0,2}del[ea]s?\b`,
     String.raw`\b${TRABALHO}\b[^.?!]{0,20}\bque (?!eu |voce |vc |tu |nos |a gente |a ia |o assistente )(o |a |os |as |um |uma |meu |minha )?\w+ (\w+ ){0,2}(escreveu|escreveram|fez|fizeram|respondeu|responderam|entregou|entregaram|produziu|mandou|redigiu)\b`,
+    String.raw`\b(devolver|entregar|mandar) (pro|pra|para o|para a|ao|a) (alun\w+|estudante\w*)\b`,
   ].join('|'),
 )
+/** O que começa com maiúscula e não é nome de pessoa: disciplina, prova, sigla que a escola usa. */
+const NAO_E_PESSOA = new Set('Quimica Fisica Matematica Biologia Historia Geografia Portugues Ingles Espanhol Artes Filosofia Sociologia Ciencias Enem Saeb Bncc Turmma Brasil Assistente Tutor'.split(' '))
+/** Uma pessoa pelo nome: "a Ana", "o Pedro", "do Lucas", "da Maria", "pro Davi". */
+const PESSOA_PELO_NOME = /\b(?:o|a|do|da|pro|pra|que o|que a|e o|e a)\s+([A-Z][a-z]{2,})\b/g
+function citaPessoaPeloNome(mensagem: string): boolean {
+  return [...semAcento(mensagem).matchAll(PESSOA_PELO_NOME)].some((achado) => !NAO_E_PESSOA.has(achado[1] ?? ''))
+}
 /** Redação e prova discursiva são, por natureza, texto de aluno. */
 const REDACAO_OU_DISCURSIVA = /\b(redac\w+|discursiv\w+|dissertat\w+|producao textual|producoes textuais)\b/
-/** A marca fraca: o texto está aqui, apontado ou colado ("essa resposta", "o texto abaixo", "a redação a seguir"). */
+/** A marca fraca: o texto está aqui, apontado ou colado ("essa resposta", "estes três parágrafos", "o texto abaixo"). */
 const TEXTO_APONTADO = new RegExp(
   [
-    String.raw`\b(ess[ea]s?|est[ea]s?|ness[ea]s?|nest[ea]s?|dess[ea]s?|dest[ea]s?) ${TEXTO}\b`,
+    String.raw`\b(ess[ea]s?|est[ea]s?|ness[ea]s?|nest[ea]s?|dess[ea]s?|dest[ea]s?) (\w+ )?${TEXTO}\b`,
     String.raw`\b${TEXTO}\b[^.?!]{0,20}\b(abaixo|a seguir|seguintes?|colad\w+|em anexo|anexad\w+|aqui)\b`,
+    String.raw`\b(isso|isto|disso|disto) aqui\b`,
   ].join('|'),
 )
 const RESPOSTA = /\brespostas?\b/
-/** O gabarito e as alternativas são do material do professor: "confere se a resposta do gabarito está certa" é trabalho dele. */
-const DO_GABARITO = /\b(gabarito\w*|alternativas?)\b/
+/** O que é do material do professor: o gabarito, a alternativa, o enunciado, a explicação da questão. */
+const DO_MATERIAL = /\b(gabarito\w*|alternativas?|enunciados?|explicac\w+ da questao)\b/
 /** O que é do próprio professor, ou do Assistente: "que eu gerei", "que você montou", "meu plano", "minha atividade". */
 const DO_PROPRIO_PROFESSOR =
   /\bque (eu|voce|vc|a gente|nos) (\w+ )?(gerei|gerou|geramos|fiz|fez|fizemos|escrevi|escreveu|montei|montou|montamos|criei|criou|elaborei|elaborou|preparei|preparou)\b|\b(meu|minha|meus|minhas) (plano|texto|enunciado|atividade|prova|questao|questoes|aula|material|rubrica|criterios?)\b/
-/** Opinião pedida sobre algo que veio junto: "o que achou?", "dá uma olhada", "está bom?". */
-const PEDE_OPINIAO = /\b(o que (voce |vc |tu )?(acha|achou)|que (voce |vc )?(acha|achou)|d[ae]r? uma (olhada|olhadinha|lida)|(esta|ta|ficou) (bom|boa|certo|certa|ok|legal)|olha (isso|isto|so|aqui)|corrig\w*|corrij\w*|avali\w*|analis\w*|coment\w*|apont\w* (os )?erros)\b/
+/** Pedir a rubrica ou os critérios, **antes** da aplicação: é o que a D55 deixa (`docs/decisoes.md`). */
+const PEDE_RUBRICA = /\b(mont|cri|faz|fac|elabor|ger|prepar|quero|preciso|sugir|suger|escrev|defin)\w* (\w+ ){0,3}(rubricas?|criterios?|barema|grade de correcao)\b/
+/** Opinião pedida sobre o que veio junto, ou antes: "o que achou?", "e aí, ficou bom?", "e esse?". */
+const PEDE_OPINIAO =
+  /\b(o que (voce |vc |tu )?(acha|achou)|que (voce |vc )?(acha|achou)|d[ae]r? uma (olhada|olhadinha|lida)|(esta|ta|ficou|e) (bom|boa|certo|certa|ok|legal|melhor|pior)|olha (isso|isto|so|aqui)|e (ai|esse|essa|este|esta|isso|agora)|segue|corrig\w*|corrij\w*|avali\w*|analis\w*|coment\w*|confer\w*|chec\w*|apont\w* (os )?erros)\b/
 
 const ASPAS_LONGAS = /[“"][^”"]{60,}[”"]/u
 const CARACTERES_DE_TEXTO_COLADO = 160
 const CARACTERES_DEPOIS_DOS_DOIS_PONTOS = 80
 
-/** A mensagem traz um bloco de texto colado: aspas compridas, várias linhas, ou dois-pontos seguidos de um parágrafo. */
+/** A mensagem traz um bloco de texto colado: aspas compridas, várias linhas, dois-pontos seguidos de um parágrafo, ou é longa. */
 function trazTextoColado(mensagem: string): boolean {
   const cru = mensagem.trim()
   if (ASPAS_LONGAS.test(cru) || cru.length >= CARACTERES_DE_TEXTO_COLADO) return true
@@ -158,55 +189,94 @@ function trazTextoColado(mensagem: string): boolean {
 }
 
 /**
- * O professor está pedindo que a IA **julgue texto ou resposta de aluno**, ou que **dê nota, conceito ou pontuação**?
- * Decide por regra, antes de qualquer chamada: com ela, a mensagem **não segue para o provedor** (`semModelo`), e por
- * isso o texto do aluno que veio colado também não. Erra para o lado de recusar.
+ * Uma mensagem só: o professor está pedindo que a IA **julgue texto ou resposta de aluno**, ou que **dê nota, conceito
+ * ou pontuação**? Erra para o lado de recusar.
  *
  * Recusa:
- * - pedido de nota, conceito ou pontuação, sozinho ("que nota você daria?", "que conceito merece esse texto?");
- * - pedido de julgamento (olhar, achar, analisar, avaliar, corrigir, comentar, dizer se está bom, apontar erro,
- *   melhorar, reescrever, revisar) sobre redação ou discursiva; sobre trabalho **de aluno** ("do aluno", "dela", "que o
- *   Caio escreveu"); sobre texto **apontado ou colado** ("essa resposta", "o texto abaixo"); ou sobre uma resposta;
- * - pedido de opinião com um bloco de texto colado junto ("…o que achou?").
+ * - pedido de nota, conceito ou pontuação, ou de dizer se passa, sozinho ("nota?", "ele tira quanto?");
+ * - pedido de escrever devolutiva, comentário ou parecer;
+ * - julgamento (olhar, conferir, classificar, ranquear, apontar ou marcar erro, aplicar a rubrica, dizer se está bom,
+ *   melhorar, reescrever) sobre redação ou discursiva; sobre trabalho **de aluno** ("do aluno", "dela", "da turma"); sobre
+ *   o que **uma pessoa pelo nome** escreveu ("o texto do Lucas", "a Ana acertou?"); sobre texto **apontado** ("essa
+ *   resposta", "estes três parágrafos"); ou sobre uma resposta;
+ * - texto colado com marca de aluno, de redação ou de nome, com ou sem verbo ("segue o texto do Lucas: …");
+ * - texto colado com qualquer pedido de opinião ("… o que achou?", "tem erro aqui? …").
  *
- * Passa, porque é trabalho do professor sobre o material dele: "corrige a atividade que eu gerei", "avalia se essa
- * questão está boa", "melhora o enunciado da questão 3", "monta uma rubrica de redação", "cria critérios para a
- * discursiva".
- *
- * **O que a regra não pega**: texto de aluno colado sem nenhuma palavra de julgamento nem de nota ("segue o que a
- * turma escreveu", ou só o texto), e pedido escrito de um jeito que estas listas não conhecem. Esses seguem para o
- * modelo, sob o prompt, que proíbe corrigir e avaliar, e sob a conferência da saída, que recusa nota, conceito e
- * pontuação (`atribuiNotaOuConceito`). Por isso a tarefa declara `levaTextoDeAluno`.
+ * Passa, porque é trabalho do professor sobre o material dele: "corrige a atividade que eu gerei", "melhora o enunciado
+ * da questão 3", "confere o gabarito", e o pedido de rubrica e de critérios, antes da aplicação.
  */
 export function pedeJulgamentoDeTextoDeAluno(mensagem: string): boolean {
-  const texto = normalizar(mensagem).replace(NOTA_QUE_NAO_E_DE_ALUNO, ' ')
-  if (PEDE_NOTA.test(texto)) return true
+  const texto = paraARegra(mensagem)
+  if (PEDE_NOTA.test(texto) || SO_A_NOTA.test(texto.trim()) || ESCREVE_DEVOLUTIVA.test(texto)) return true
+  const colado = trazTextoColado(mensagem)
   const julga = PEDE_JULGAMENTO.test(texto)
-  if (julga && (REDACAO_OU_DISCURSIVA.test(texto) || DE_ALUNO.test(texto))) return true
-  // Daqui para baixo, a marca é fraca: o que o próprio professor diz que é dele, ou do gabarito, não é texto de aluno.
-  if (DO_PROPRIO_PROFESSOR.test(texto)) return false
-  if (julga && (TEXTO_APONTADO.test(texto) || (RESPOSTA.test(texto) && !DO_GABARITO.test(texto)))) return true
-  return PEDE_OPINIAO.test(texto) && trazTextoColado(mensagem)
+  const deAluno = DE_ALUNO.test(texto) || citaPessoaPeloNome(mensagem)
+  const apontado = TEXTO_APONTADO.test(texto)
+  // A rubrica e os critérios pedidos antes da aplicação passam; aplicados a um texto, não.
+  if (PEDE_RUBRICA.test(texto) && !colado && !deAluno && !apontado && !/\baplic\w*/.test(texto)) return false
+  if (julga && (REDACAO_OU_DISCURSIVA.test(texto) || deAluno)) return true
+  if (colado && (deAluno || REDACAO_OU_DISCURSIVA.test(texto) || julga || PEDE_OPINIAO.test(texto))) return true
+  // Daqui para baixo, a marca é fraca: o que o próprio professor diz que é dele, ou do material dele, não é texto de aluno.
+  if (DO_PROPRIO_PROFESSOR.test(texto) || DO_MATERIAL.test(texto)) return false
+  return julga && (apontado || RESPOSTA.test(texto))
 }
 
-/** O que o professor pediu, para a regra: a mensagem de agora e, em "só conversar", o último pedido dele, que é o que a resposta atende. */
-function pedidoParaARegra(entrada: EntradaDoAssistente): string {
-  const ultimoPedido = entrada.semProposta === true ? (entrada.turnosAnteriores.findLast((turno) => turno.autor === 'professor')?.texto ?? '') : ''
-  return `${ultimoPedido}\n${entrada.mensagem}`
+/** Os turnos da conversa, como a tarefa os recebe. */
+type Turno = EntradaDoAssistente['turnosAnteriores'][number]
+
+/** A mensagem curta que pede opinião, ou nota, sobre o que veio antes: "e aí, ficou bom?", "e esse?", "dá nota pra cada uma". */
+function pedeOpiniaoSobreOAnterior(mensagem: string): boolean {
+  const texto = paraARegra(mensagem)
+  // O pedido que diz sobre o que é, e é do material do professor, não se refere ao texto colado antes.
+  if (DO_PROPRIO_PROFESSOR.test(texto) || DO_MATERIAL.test(texto) || PEDE_RUBRICA.test(texto)) return false
+  return PEDE_OPINIAO.test(texto) || PEDE_JULGAMENTO.test(texto) || PEDE_NOTA.test(texto) || SO_A_NOTA.test(texto.trim())
 }
 
+/**
+ * A conversa inteira, e não só a frase (D55; regra 70, item 2a): recusa a mensagem que a regra recusaria, e a que pede
+ * opinião, ou nota, depois de um turno do professor com texto colado — colar numa mensagem e perguntar "e aí, ficou
+ * bom?" na seguinte é a forma mais comum de pedir pré-correção. Em "só conversar", a resposta atende o último pedido do
+ * professor, e por isso ele também passa pela regra.
+ *
+ * **O que a regra ainda não pega**, dito com franqueza: pedido escrito de um jeito que estas listas não conhecem
+ * ("o que a turma entendeu disso?", ironia, abreviação nova); texto de aluno curto colado sem marca nenhuma e sem pedido;
+ * julgamento sobre uma pessoa citada só pelo primeiro nome no começo da frase ("Bianca usou bem os conectivos?"); e o
+ * que vier por um turno de mais de oito mensagens atrás. Esses seguem para o modelo, sob o prompt, que proíbe julgar
+ * texto de aluno, e sob a conferência da saída, que recusa nota, conceito e pontuação. Por isso a tarefa declara
+ * `levaTextoDeAluno`. A D55 não se resolve só com lista de palavras.
+ */
+export function conversaPedeJulgamentoDeTextoDeAluno(mensagem: string, turnosAnteriores: readonly Turno[], semProposta = false): boolean {
+  if (pedeJulgamentoDeTextoDeAluno(mensagem)) return true
+  const doProfessor = turnosAnteriores.filter((turno) => turno.autor === 'professor').map((turno) => turno.texto)
+  if (semProposta && pedeJulgamentoDeTextoDeAluno(doProfessor.at(-1) ?? '')) return true
+  return pedeOpiniaoSobreOAnterior(mensagem) && doProfessor.some(trazTextoColado)
+}
+
+/**
+ * Os turnos anteriores que podem ir ao modelo: sai o turno do professor que a regra recusaria, e sai o texto colado,
+ * que pode ser de aluno mesmo sem pedido nenhum junto. O pedido de agora vai inteiro; o contexto perde só isso.
+ */
+export function turnosQuePodemIrAoModelo(turnosAnteriores: readonly Turno[]): Turno[] {
+  return turnosAnteriores.filter((turno) => turno.autor !== 'professor' || !(pedeJulgamentoDeTextoDeAluno(turno.texto) || trazTextoColado(turno.texto)))
+}
+
+/** Número de nota, em algarismo ou por extenso. */
+const NUMERO_DE_NOTA = String.raw`(\d{1,3}([.,]\d{1,2})?|zero|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|cem)( e meio)?`
+/** Onde o número é a nota: acaba a frase, ou vem "pontos", "de 10", "/10". "Dou 3 exemplos" não. */
+const FIM_DA_NOTA = String.raw`(?=\s*([.,;!?)]|$|\n|e meio|pontos?\b|de (10|dez)\b|em (10|dez)\b|\/|no maximo|para (ess|est|o text|a redac|a respost)|pra (ess|est)))`
 const SAIDA_COM_NOTA: readonly RegExp[] = [
   /\bnotas?\b[^.!?\n]{0,30}\d/,
+  new RegExp(String.raw`\bnota( final)?\b[:\s]+(seria |e |de )?${NUMERO_DE_NOTA}\b`),
   /\b\d{1,3}([.,]\d{1,2})?\s*\/\s*(10|100)\b/,
   /\b\d{1,2}([.,]\d{1,2})? (de|em|sobre) (10|dez)\b(?! (questoes|itens|exercicios|alunos|perguntas|minutos|aulas))/,
   /\bpontuac\w+\b[^.!?\n]{0,30}\d/,
   /\b\d{1,3}([.,]\d)? pontos?\b(?! (importantes?|principais|centrais|chave|de atencao|fortes|fracos))/,
   /\b(daria|dou|atribuo|atribuiria|merece|mereceria|ficaria com|tiraria|vale|valeria)\b[^.!?\n]{0,25}\b(nota|conceito)\b/,
-  /\b(eu )?(daria|dou|atribuo|atribuiria) (um|uma) \d/,
+  new RegExp(String.raw`\b(daria|dou|atribuo|atribuiria|merece|mereceria|tira|tiraria|tirou|ficaria com|fica com|vale|valeria)\b\s+(um |uma |uns |umas |a |o |cerca de |no maximo |nota )?${NUMERO_DE_NOTA}\b${FIM_DA_NOTA}`),
   /\bconceito\b( final| sugerido| atribuido| proposto)?[:\s]+["“']?(insuficiente|regular|bom|muito bom|otimo|excelente|satisfatorio|insatisfatorio)\b/,
 ]
-/** "Conceito A", "conceito: B": a letra maiúscula sozinha, para não confundir com "o conceito a ser trabalhado". */
-const SAIDA_COM_CONCEITO_EM_LETRA = /\b[Cc]onceito\b[:\s]+(final\s+)?["“'‘]?[A-E]\b(?![\p{L}-])/u
+/** "Conceito A", "merece um B", "daria um C": a letra maiúscula sozinha, para não confundir com "o conceito a ser trabalhado". */
+const SAIDA_COM_CONCEITO_EM_LETRA = /\b([Cc]onceito\b[:\s]+(final\s+)?|([Dd]aria|[Dd]ou|[Aa]tribuo|[Aa]tribuiria|[Mm]erece|[Mm]ereceria|[Tt]iraria|[Ff]icaria com)\s+(um|uma|o)?\s*)["“'‘]?[A-E][+-]?(?![\p{L}-])/u
 
 /**
  * A resposta atribui **nota, conceito ou pontuação**? É a conferência da saída (D55; regra 70, item 2a): o que o
@@ -214,8 +284,8 @@ const SAIDA_COM_CONCEITO_EM_LETRA = /\b[Cc]onceito\b[:\s]+(final\s+)?["“'‘]?
  * nota a nada, então a conferência não precisa saber a quê a nota se refere.
  */
 export function atribuiNotaOuConceito(resposta: string): boolean {
-  const texto = normalizar(resposta).replace(NOTA_QUE_NAO_E_DE_ALUNO, ' ')
-  return SAIDA_COM_NOTA.some((padrao) => padrao.test(texto)) || SAIDA_COM_CONCEITO_EM_LETRA.test(resposta)
+  const texto = paraARegra(resposta)
+  return SAIDA_COM_NOTA.some((padrao) => padrao.test(texto)) || SAIDA_COM_CONCEITO_EM_LETRA.test(semAcento(resposta))
 }
 
 const PROBLEMA_DA_NOTA =
@@ -300,7 +370,7 @@ export const proporFerramenta = definirTarefa({
    * recebe a recusa fixa **sem chamar modelo nenhum**, qualquer que seja o adaptador. A mensagem não sai daqui.
    */
   semModelo(entrada): SaidaDoAssistente | undefined {
-    return pedeJulgamentoDeTextoDeAluno(pedidoParaARegra(entrada)) ? { tipo: 'texto', texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, citacoes: [] } : undefined
+    return conversaPedeJulgamentoDeTextoDeAluno(entrada.mensagem, entrada.turnosAnteriores, entrada.semProposta === true) ? { tipo: 'texto', texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, citacoes: [] } : undefined
   },
 
   montarPedido(entrada) {
@@ -312,7 +382,8 @@ export const proporFerramenta = definirTarefa({
       dados: [
         dadoEmJson('serie_e_disciplina', entrada.contexto),
         ...dadosDosTrechos(entrada.trechos),
-        ...entrada.turnosAnteriores.map((turno) => ({ tipo: turno.autor === 'professor' ? 'turno_anterior_do_professor' : 'turno_anterior_do_assistente', corpo: turno.texto })),
+        // Turno que a regra recusaria, e texto colado, não vão ao modelo (D55).
+        ...turnosQuePodemIrAoModelo(entrada.turnosAnteriores).map((turno) => ({ tipo: turno.autor === 'professor' ? 'turno_anterior_do_professor' : 'turno_anterior_do_assistente', corpo: turno.texto })),
         { tipo: 'mensagem_do_professor_agora', corpo: entrada.mensagem },
       ],
     }
