@@ -1,7 +1,6 @@
 import { MENSAGENS_DE_ERRO, type ChaveDeFuncao, type CodigoDeErro } from '@educa/shared'
-import { PauseCircle } from 'lucide-react'
 import { aparenciaDaFalha } from '../../api/ciclo-de-execucao'
-import { Faixa } from '../../componentes/Faixa'
+import { EstadoVazio } from '../../componentes/estado'
 import { AvisoFila } from '../../componentes/ia/AvisoFila'
 
 /**
@@ -14,9 +13,17 @@ export const TEXTO_DA_SUSPENSAO: Readonly<Partial<Record<ChaveDeFuncao, string>>
   adaptacao: 'A coordenação suspendeu a Adaptação nesta escola. Enquanto isso o Assistente não prepara versão adaptada nova; as que você já aprovou continuam valendo. Fale com a coordenação para saber quando volta.',
 }
 
-/** A função suspensa pela escola: **aviso que explica, e não erro** — cinza, sem alarme, sem "Tentar de novo". */
+/**
+ * A função suspensa pela escola: **aviso que explica, e não erro** — sem vermelho, sem alarme, sem "Tentar de novo". É a
+ * caixa tracejada dos estados da tela (`EstadoVazio`), com o título dizendo o que houve: a função não falhou, ela está
+ * desligada, e a tela diz por quem e o que continua valendo.
+ */
 export function AvisoDeSuspensao({ funcao }: { funcao: ChaveDeFuncao }) {
-  return <Faixa icone={PauseCircle}>{TEXTO_DA_SUSPENSAO[funcao] ?? MENSAGENS_DE_ERRO.FUNCAO_SUSPENSA}</Faixa>
+  return (
+    <div role="note" data-funcao-suspensa={funcao}>
+      <EstadoVazio titulo="Função suspensa pela coordenação" descricao={TEXTO_DA_SUSPENSAO[funcao] ?? MENSAGENS_DE_ERRO.FUNCAO_SUSPENSA} />
+    </div>
+  )
 }
 
 interface PropsDaFalha {

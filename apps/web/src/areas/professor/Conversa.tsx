@@ -111,7 +111,7 @@ export default function Conversa() {
       )}
 
       {!semNada && conversa.data !== undefined && (
-        <ListaDeMensagens rotulo="Conversa com o Assistente de ensino">
+        <ListaDeMensagens rotulo="Conversa com o Assistente de ensino" ocupada={pendente?.pensando === true}>
           {mensagens.map((mensagem) => {
             if (mensagem.autor === 'usuario') return <MensagemPessoa key={mensagem.id}>{mensagem.texto}</MensagemPessoa>
             if (mensagem.tipo === 'texto')
