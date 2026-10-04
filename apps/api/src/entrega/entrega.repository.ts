@@ -2,7 +2,7 @@ import { artefato, atividadeAplicada, entrega, exigirAnoEmCurso, exigirEscolaDoC
 import type { ChaveDeFuncao, ConsultaEntregas, EstadoDeEntrega, TipoDeEntrega } from '@educa/shared'
 import { and, desc, eq, lt, sql, type SQL } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
-import { comVinculoConfirmadoDoProfessor } from '../assistente/turma-do-professor.repository.js'
+import { comVinculoConfirmadoDoProfessor, disciplinaDaEntrega } from '../assistente/turma-do-professor.repository.js'
 
 /** Uma entrega como o professor da turma a lê: com o título do artefato a que se refere e o nome de quem decidiu. */
 export interface EntregaLida {
@@ -33,8 +33,10 @@ const artefatoDoLote = alias(artefato, 'artefato_do_lote')
 
 /**
  * As entregas da escola e do ano letivo do contexto que o professor do contexto alcança: as das turmas em que ele tem
- * vínculo `confirmado` (`turma_vinculada`; regra 10, itens 3 e 4). **A turma que autoriza é a da própria entrega**, que o
- * banco prende à do artefato ou da atividade aplicada por FK; nenhuma turma vem do cliente para autorizar.
+ * vínculo `confirmado` **na disciplina da entrega** (`turma_vinculada`; regra 10, itens 3 e 4; regra 70, item 3). **A
+ * turma que autoriza é a da própria entrega**, que o banco prende à do artefato ou da atividade aplicada por FK, e **a
+ * disciplina é a do artefato dela** (o da versão adaptada, ou o da atividade aplicada, no lote): nada vem do cliente
+ * para autorizar. A professora de outra disciplina da mesma turma não lê nem decide a entrega da colega.
  *
  * Decidir é um `update … where estado = 'pendente'`: a segunda decisão não acha linha e não troca a primeira (regra 80,
  * item 7). Quem decide é a pessoa da **sessão**: sem sessão no contexto, `sessaoDaRequisicao` recusa, e nada é decidido.
@@ -47,7 +49,7 @@ export class EntregaRepository {
     return and(
       eq(entrega.escolaId, exigirEscolaDoContexto()),
       eq(entrega.anoLetivoId, exigirAnoEmCurso()),
-      comVinculoConfirmadoDoProfessor(this.banco, { escolaId: entrega.escolaId, anoLetivoId: entrega.anoLetivoId, turmaId: entrega.turmaId }),
+      comVinculoConfirmadoDoProfessor(this.banco, { escolaId: entrega.escolaId, anoLetivoId: entrega.anoLetivoId, turmaId: entrega.turmaId }, disciplinaDaEntrega(this.banco, entrega)),
     )
   }
 

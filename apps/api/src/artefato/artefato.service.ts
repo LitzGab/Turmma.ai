@@ -54,8 +54,9 @@ function atividadeOriginal(lido: ArtefatoLido): ConteudoDeAtividade {
 /**
  * O artefato do professor (MVP, A2; D63, D67): listar, abrir, renomear, exportar em PDF e pedir a versão adaptada.
  *
- * - **Só o professor com vínculo confirmado na turma do artefato** o alcança, e a turma é a do artefato lido do banco.
- *   O de outra turma, de outra escola e o inexistente respondem o mesmo `NAO_ENCONTRADO`. Coordenação e aluno não leem.
+ * - **Só o professor com vínculo confirmado na turma e na disciplina do artefato** o alcança, e as duas são as do
+ *   artefato lido do banco. O de outra turma, de outra disciplina da mesma turma, de outra escola e o inexistente
+ *   respondem o mesmo `NAO_ENCONTRADO`. Coordenação e aluno não leem.
  * - **Renomear muda só o título**, na coluna e no conteúdo, juntos.
  * - **O PDF** é gerado na hora, sem guardar arquivo e sem dado de pessoa; não gera auditoria (contrato, decisão 24).
  * - **A Adaptação recebe só os tipos e o tempo extra** (D35, D67): não existe campo de texto, e nada sobre aluno entra.

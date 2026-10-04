@@ -112,10 +112,10 @@ describe('entregas', () => {
   })
 
   describe('isolamento', () => {
-    it('a entrega de A não é listada nem decidida pela professora de B, pela colega de outra turma, pela coordenação nem pelo aluno: igual ao inexistente, e continua pendente', async () => {
+    it('a entrega de A não é listada nem decidida pela professora de B, pela colega de outra turma, pela professora de outra disciplina da mesma turma, pela coordenação nem pelo aluno: igual ao inexistente, e continua pendente', async () => {
       const { entregaId } = await entregaPendente(a, atividadeDeA)
       const deB = await entregaPendente(b, atividadeDeB)
-      for (const sessao of [b.professora, a.colega, a.coordenacao, a.aluno]) {
+      for (const sessao of [b.professora, a.colega, a.deFisica, a.coordenacao, a.aluno]) {
         for (const corpo of [{ decisao: 'aprovar' }, { decisao: 'rejeitar', justificativa: 'Não era para esta turma.' }]) {
           const resposta = await decidir(sessao, entregaId, corpo)
           const doInexistente = await decidir(sessao, randomUUID(), corpo)
@@ -132,11 +132,14 @@ describe('entregas', () => {
       expect((await listar(b.professora)).itens.map((item) => item.id)).toEqual([deB.entregaId])
       expect((await listar(a.colega)).itens).toEqual([])
       expect((await listar(a.colega, `?turmaId=${a.turma}`)).itens).toEqual([])
+      // A professora de Física do 2ºB tem vínculo confirmado na turma, e nem assim: a entrega é de Química.
+      expect((await listar(a.deFisica)).itens).toEqual([])
+      expect((await listar(a.deFisica, `?turmaId=${a.turma}&estado=pendente`)).itens).toEqual([])
       expect((await listar(b.professora, `?turmaId=${a.turma}`)).itens).toEqual([])
       for (const sessao of [a.coordenacao, a.aluno]) expect(semId(await pedir(sessao, 'GET', '/v1/entregas'))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
 
       // No repository: com o id certo e o contexto errado, nada é lido nem decidido.
-      for (const [escola, sessao] of [[b, b.professora], [a, a.colega]] as const) {
+      for (const [escola, sessao] of [[b, b.professora], [a, a.colega], [a, a.deFisica]] as const) {
         expect(await comoPessoa(escola, sessao, 'professor', () => new EntregaRepository(bancada.banco).porId(entregaId))).toBeUndefined()
         expect(await comoPessoa(escola, sessao, 'professor', () => new EntregaRepository(bancada.banco).decidir(entregaId, 'aprovada', null))).toBe(false)
       }
@@ -144,14 +147,18 @@ describe('entregas', () => {
       expect((await noBanco(entregaId)).estado).toBe('pendente')
     })
 
-    it('a turma que autoriza é a da entrega: a colega passa a decidir quando ganha vínculo confirmado na turma, e deixa de decidir quando ele acaba', async () => {
+    it('a turma e a disciplina que autorizam são as da entrega: a colega passa a decidir quando ganha vínculo confirmado em Química na turma, e deixa de decidir quando ele acaba', async () => {
       const primeira = await entregaPendente(a, atividadeDeA)
       const segunda = await entregaPendente(a, atividadeDeA)
-      await vincularProfessor(bancada, a, a.colega.usuarioId, a.turma, a.fisica, 'pendente')
+      // Vínculo confirmado na turma em outra disciplina não basta; pendente na disciplina certa, também não.
+      await vincularProfessor(bancada, a, a.colega.usuarioId, a.turma, a.fisica)
       expect((await decidir(a.colega, primeira.entregaId, { decisao: 'aprovar' })).status).toBe(404)
-      await sql(`update vinculo set estado = 'confirmado', decidido_em = now() where escola_id = $1 and usuario_id = $2 and turma_id = $3`, [a.escolaId, a.colega.usuarioId, a.turma])
+      await vincularProfessor(bancada, a, a.colega.usuarioId, a.turma, a.quimica, 'pendente')
+      expect((await decidir(a.colega, primeira.entregaId, { decisao: 'aprovar' })).status).toBe(404)
+      expect((await noBanco(primeira.entregaId)).estado).toBe('pendente')
+      await sql(`update vinculo set estado = 'confirmado', decidido_em = now() where escola_id = $1 and usuario_id = $2 and turma_id = $3 and disciplina_id = $4`, [a.escolaId, a.colega.usuarioId, a.turma, a.quimica])
       expect(await decidir(a.colega, primeira.entregaId, { decisao: 'aprovar' })).toMatchObject({ status: 200, corpo: { estado: 'aprovada', decididaPor: { id: a.colega.usuarioId } } })
-      await sql(`update vinculo set estado = 'encerrado', motivo_encerramento = 'realocacao', encerrado_em = now() where escola_id = $1 and usuario_id = $2 and turma_id = $3`, [a.escolaId, a.colega.usuarioId, a.turma])
+      await sql(`update vinculo set estado = 'encerrado', motivo_encerramento = 'realocacao', encerrado_em = now() where escola_id = $1 and usuario_id = $2 and turma_id = $3 and disciplina_id = $4`, [a.escolaId, a.colega.usuarioId, a.turma, a.quimica])
       expect((await decidir(a.colega, segunda.entregaId, { decisao: 'aprovar' })).status).toBe(404)
       expect((await noBanco(segunda.entregaId)).estado).toBe('pendente')
       await sql('delete from vinculo where escola_id = $1 and usuario_id = $2 and turma_id = $3', [a.escolaId, a.colega.usuarioId, a.turma])
@@ -244,8 +251,14 @@ describe('entregas', () => {
       expect(semId(await decidir(a.professora, loteId, { decisao: 'aprovar' }))).toEqual({ status: 400, codigo: 'ENTRADA_INVALIDA' })
       expect(await noBanco(loteId)).toMatchObject({ estado: 'pendente', decidida_por: null })
       expect(await auditoriasDa(loteId)).toEqual([])
-      // Quem não alcança o lote não descobre, pela resposta, que ele existe nem que é um lote.
-      expect(semId(await decidir(b.professora, loteId, { decisao: 'aprovar' }))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+      // Quem não alcança o lote não descobre, pela resposta, que ele existe nem que é um lote: a outra escola, e a
+      // professora de Física da mesma turma, porque o lote é da disciplina do artefato da atividade aplicada.
+      for (const sessao of [b.professora, a.deFisica]) {
+        expect(semId(await decidir(sessao, loteId, { decisao: 'aprovar' }))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+        expect(semId(await decidir(sessao, loteId, { decisao: 'rejeitar', justificativa: 'Não é da minha disciplina.' }))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+      }
+      expect((await listar(a.deFisica)).itens.map((item) => item.id)).not.toContain(loteId)
+      expect((await noBanco(loteId)).estado).toBe('pendente')
       expect(await decidir(a.professora, loteId, { decisao: 'rejeitar', justificativa: 'A correção contou errado a questão 1.' })).toMatchObject({ status: 200, corpo: { estado: 'rejeitada', tipo: 'lote_de_correcao' } })
     })
   })

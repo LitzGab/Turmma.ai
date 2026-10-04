@@ -1,6 +1,7 @@
-import { disciplina, exigirAnoEmCurso, exigirEscolaDoContexto, serie, sessaoDaRequisicao, turma, vinculo, type Banco, type TransacaoBanco } from '@educa/nucleo'
+import { artefato, atividadeAplicada, disciplina, exigirAnoEmCurso, exigirEscolaDoContexto, serie, sessaoDaRequisicao, turma, vinculo, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { Etapa } from '@educa/shared'
-import { and, eq, exists, type AnyColumn, type SQL } from 'drizzle-orm'
+import { and, eq, exists, sql, type AnyColumn, type SQL } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 
 /** As colunas de uma linha que dizem de que turma ela é: a escola, o ano letivo e a turma. */
 export interface ColunasDaTurma {
@@ -9,18 +10,24 @@ export interface ColunasDaTurma {
   readonly turmaId: AnyColumn
 }
 
+/** A disciplina do vínculo exigido: um id já conferido, ou a coluna (ou a subconsulta) que diz de que disciplina a linha é. */
+export type DisciplinaDoVinculo = string | AnyColumn | SQL
+
 /**
  * O `turma_vinculada` da `MATRIZ`, num lugar só: existe vínculo `confirmado` de professor do **usuário do contexto** na
- * turma da linha, na escola e no ano da própria linha. É `exists`, e não `join`: quem dá duas disciplinas na mesma turma
- * tem dois vínculos, e o `join` repetiria a linha.
+ * turma **e na disciplina** da linha, na escola e no ano da própria linha. É `exists`, e não `join`: quem dá duas
+ * disciplinas na mesma turma tem dois vínculos, e o `join` repetiria a linha.
  *
  * O usuário vem da sessão, nunca de argumento (regra 10, item 3). Vínculo pendente, contestado ou encerrado não dá
  * alcance: o professor que saiu em março não lê a turma em outubro (regra 20, item 18).
  *
- * `disciplinaId` restringe ao vínculo naquela disciplina: é o que o gerar e a conversa pedem, porque o material é da
- * disciplina. Sem ele, basta o vínculo na turma, em qualquer disciplina (artefato e entrega, que são da turma).
+ * **A disciplina é obrigatória** (regra 10, item 4; regra 70, item 3): a professora de Matemática do 2ºB não lê o
+ * artefato de Química da colega da mesma turma, nem decide a versão adaptada ou o lote de correção dela. Quem decide
+ * sobre uma saída de IA é a professora daquela disciplina naquela turma. A disciplina vem da própria linha: a coluna
+ * `disciplina_id` do artefato, `disciplinaDoArtefato` para a atividade aplicada, `disciplinaDaEntrega` para a entrega
+ * (versão adaptada ou lote). Subconsulta que não acha a disciplina dá nulo, e nulo não casa com vínculo nenhum.
  */
-export function comVinculoConfirmadoDoProfessor(banco: Banco | TransacaoBanco, colunas: ColunasDaTurma, disciplinaId?: string): SQL {
+export function comVinculoConfirmadoDoProfessor(banco: Banco | TransacaoBanco, colunas: ColunasDaTurma, disciplinaId: DisciplinaDoVinculo): SQL {
   const { usuarioId } = sessaoDaRequisicao()
   return exists(
     banco
@@ -34,10 +41,48 @@ export function comVinculoConfirmadoDoProfessor(banco: Banco | TransacaoBanco, c
           eq(vinculo.usuarioId, usuarioId),
           eq(vinculo.papel, 'professor'),
           eq(vinculo.estado, 'confirmado'),
-          disciplinaId === undefined ? undefined : eq(vinculo.disciplinaId, disciplinaId),
+          eq(vinculo.disciplinaId, disciplinaId),
         ),
       ),
   )
+}
+
+/** As colunas de uma linha que apontam para um artefato do mesmo ano: a atividade aplicada, a entrega da versão adaptada. */
+export interface ColunasDoArtefato {
+  readonly escolaId: AnyColumn
+  readonly anoLetivoId: AnyColumn
+  readonly artefatoId: AnyColumn
+}
+
+const artefatoDaLinha = alias(artefato, 'artefato_da_linha')
+const aplicacaoDaEntrega = alias(atividadeAplicada, 'aplicacao_da_entrega')
+const artefatoDaAplicacao = alias(artefato, 'artefato_da_aplicacao')
+
+/**
+ * A disciplina do artefato para o qual a linha aponta, como subconsulta: é o `disciplinaId` de
+ * `comVinculoConfirmadoDoProfessor` para a **atividade aplicada** (`atividade_aplicada.artefato_id`). O artefato é
+ * lido na escola e no ano da própria linha.
+ */
+export function disciplinaDoArtefato(banco: Banco | TransacaoBanco, colunas: ColunasDoArtefato): SQL {
+  const consulta = banco
+    .select({ disciplinaId: artefatoDaLinha.disciplinaId })
+    .from(artefatoDaLinha)
+    .where(and(eq(artefatoDaLinha.escolaId, colunas.escolaId), eq(artefatoDaLinha.anoLetivoId, colunas.anoLetivoId), eq(artefatoDaLinha.id, colunas.artefatoId)))
+  return sql`(${consulta})`
+}
+
+/**
+ * A disciplina de uma **entrega**, como subconsulta: a do artefato dela, na versão adaptada; a do artefato da atividade
+ * aplicada, no lote de correção. É o `disciplinaId` de `comVinculoConfirmadoDoProfessor` para listar e decidir entrega
+ * e para aprovar o lote. `colunas` são as da tabela `entrega` (ou de um alias dela).
+ */
+export function disciplinaDaEntrega(banco: Banco | TransacaoBanco, colunas: ColunasDoArtefato & { readonly atividadeAplicadaId: AnyColumn }): SQL {
+  const doLote = banco
+    .select({ disciplinaId: artefatoDaAplicacao.disciplinaId })
+    .from(aplicacaoDaEntrega)
+    .innerJoin(artefatoDaAplicacao, and(eq(artefatoDaAplicacao.escolaId, aplicacaoDaEntrega.escolaId), eq(artefatoDaAplicacao.anoLetivoId, aplicacaoDaEntrega.anoLetivoId), eq(artefatoDaAplicacao.id, aplicacaoDaEntrega.artefatoId)))
+    .where(and(eq(aplicacaoDaEntrega.escolaId, colunas.escolaId), eq(aplicacaoDaEntrega.anoLetivoId, colunas.anoLetivoId), eq(aplicacaoDaEntrega.id, colunas.atividadeAplicadaId)))
+  return sql`coalesce(${disciplinaDoArtefato(banco, colunas)}, (${doLote}))`
 }
 
 /** A turma e a disciplina de um pedido, como a tarefa de IA as recebe: a série e o nome da disciplina, sem nome de turma nem de pessoa. */

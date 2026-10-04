@@ -12,13 +12,16 @@ import type { BancadaDeSessoes, SessaoDeTeste } from './sessao-de-teste.js'
 
 /**
  * Uma escola pronta para o Assistente de ensino (MVP, A2): a de `montarEscolaComTurma`, mais a professora com vínculo
- * confirmado em Química no 2ºB, a colega com vínculo confirmado em Química no 2ºC (mesma escola, outra turma), um aluno
+ * confirmado em Química no 2ºB, a colega com vínculo confirmado em Química no 2ºC (mesma escola, outra turma), a
+ * professora de Física do 2ºB (mesma turma, outra disciplina), um aluno
  * do 2ºB e o material de demonstração de Química, enviado pela coordenação e já extraído. Tudo sintético.
  */
 export interface EscolaComAssistente extends EscolaComTurma {
   readonly escolaId: string
   readonly professora: SessaoDeTeste
   readonly colega: SessaoDeTeste
+  /** A professora de Física do 2ºB: a mesma turma da professora, outra disciplina. */
+  readonly deFisica: SessaoDeTeste
   readonly aluno: SessaoDeTeste
   readonly materialId: string
 }
@@ -50,19 +53,20 @@ export async function enviarMaterialDeDemonstracao(api: ApiDeTeste, escola: Esco
 export async function montarEscolaComAssistente(api: ApiDeTeste, bancada: BancadaDeSessoes): Promise<EscolaComAssistente> {
   const escola = await montarEscolaComTurma(api, bancada)
   const { escolaId } = escola.coordenacao
-  const [professora, colega] = await bancada.sessoes(escolaId, { papel: 'professor', quantidade: 2 })
+  const [professora, colega, deFisica] = await bancada.sessoes(escolaId, { papel: 'professor', quantidade: 3 })
   const aluno = await bancada.sessao(escolaId, 'aluno')
-  if (professora === undefined || colega === undefined) throw new Error('sessões de teste não criadas')
+  if (professora === undefined || colega === undefined || deFisica === undefined) throw new Error('sessões de teste não criadas')
   await bancada.pool.query('update usuario set nome = $1 where id = $2', [NOME_DA_PROFESSORA_DE_TESTE, professora.usuarioId])
   await bancada.pool.query('update usuario set nome = $1 where id = $2', [NOME_DO_ALUNO_DE_TESTE, aluno.usuarioId])
   await vincularProfessor(bancada, escola, professora.usuarioId, escola.turma, escola.quimica)
   await vincularProfessor(bancada, escola, colega.usuarioId, escola.outraTurma, escola.quimica)
+  await vincularProfessor(bancada, escola, deFisica.usuarioId, escola.turma, escola.fisica)
   await bancada.pool.query(
     `insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`,
     [escolaId, escola.anoLetivoId, aluno.usuarioId, escola.turma, escola.coordenacao.usuarioId],
   )
   const materialId = await enviarMaterialDeDemonstracao(api, escola, escola.quimica)
-  return { ...escola, escolaId, professora, colega, aluno, materialId }
+  return { ...escola, escolaId, professora, colega, deFisica, aluno, materialId }
 }
 
 /** O contexto que a `GuardaDeSessao` gravaria para esta pessoa: é nele que um service chamado direto roda, como numa rota. */
