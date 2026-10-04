@@ -10,6 +10,7 @@ import {
   arquivosAlterados,
   arquivosDoCommit,
   avaliarCarimbo,
+  avaliarCommitDoMvp,
   avaliarPortao,
   arquivosQueMudaram,
   caminhoDaTarefa,
@@ -27,9 +28,11 @@ import {
   lerInstantaneos,
   lerRevisoes,
   lerTranscript,
+  marcadorDoMvp,
   portao,
   registrar,
   revisoresObrigatorios,
+  SUITES_DO_MVP,
   type Carimbo,
   type Revisao,
 } from './revisoes.ts'
@@ -448,6 +451,113 @@ describe('hooks sobre um repositório de verdade', () => {
     expect(portao({ tool_input: { command: 'git add docs.md && git commit -m "Ajusta o texto"' } }, raiz)).toBeNull()
     // Código sujo de outra tarefa na árvore não bloqueia o commit que não o leva.
     expect(portao({ tool_input: { command: 'git commit -m "Registra decisão D53"' } }, raiz)).toBeNull()
+  })
+
+  describe('o marcador da fatia do MVP (D77)', () => {
+    /** O repositório de fixture numa branch da fatia, com o código salvo antes do portão. */
+    function repositorioDoMvp(branch = 'mvp/apresentacao') {
+      const raiz = repositorio()
+      execFileSync('git', ['checkout', '-q', '-b', branch], { cwd: raiz, stdio: 'pipe' })
+      tocar(raiz, 'apps/codigo.ts', '2026-09-13T09:00:00')
+      return raiz
+    }
+    /** O portão local passou às 09:59:30 sobre o conteúdo de agora. */
+    const carimbar = (raiz: string, suites: string[]) => {
+      gravarCarimbo(raiz, { inicio: new Date('2026-09-13T09:59:30').toISOString(), suites })
+      gravarInstantaneo(raiz, CHAVE_DO_PORTAO, alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
+    }
+    const commitCom = (mensagem: string) => ({ tool_input: { command: `git add apps/codigo.ts && git commit -m "${mensagem}"` } })
+    const COMMIT_DO_MVP = commitCom('Cria os contratos do time (mvp: contratos do time)')
+
+    it('passa sem documento de tarefa e sem revisor, só com o portão local carimbado', () => {
+      const raiz = repositorioDoMvp()
+      carimbar(raiz, ['typecheck', 'lint', 'test'])
+      expect(portao(COMMIT_DO_MVP, raiz)).toBeNull()
+      // O carimbo de uma tarefa, com suítes a mais, também serve.
+      carimbar(raiz, ['typecheck', 'lint', 'test', 'e2e', 'infra'])
+      expect(portao(COMMIT_DO_MVP, raiz)).toBeNull()
+    })
+
+    it('bloqueia sem carimbo, com carimbo sem uma das três suítes, e com código editado depois do portão', () => {
+      const raiz = repositorioDoMvp()
+      expect(portao(COMMIT_DO_MVP, raiz)).toMatch(/^Commit bloqueado: portão local: nunca passou/)
+
+      carimbar(raiz, ['typecheck', 'lint'])
+      expect(portao(COMMIT_DO_MVP, raiz)).toMatch(/^Commit bloqueado: portão local: o último não rodou test\./)
+
+      carimbar(raiz, ['typecheck', 'lint', 'test'])
+      expect(portao(COMMIT_DO_MVP, raiz)).toBeNull()
+      corrigir(raiz, 'apps/codigo.ts', '2026-09-13T10:05:00', 'export const a = 2\n')
+      expect(portao(COMMIT_DO_MVP, raiz)).toMatch(/^Commit bloqueado: portão local: apps\/codigo.ts mudou em 2026-09-13 10:05:00/)
+    })
+
+    it('o código que o commit não leva também invalida o carimbo: as suítes rodaram sobre a árvore inteira', () => {
+      const raiz = repositorioDoMvp()
+      writeFileSync(join(raiz, 'apps/outro.ts'), 'export const b = 1\n')
+      tocar(raiz, 'apps/outro.ts', '2026-09-13T09:00:00')
+      carimbar(raiz, ['typecheck', 'lint', 'test'])
+      expect(portao(COMMIT_DO_MVP, raiz)).toBeNull()
+      corrigir(raiz, 'apps/outro.ts', '2026-09-13T10:05:00', 'export const b = 2\n')
+      expect(portao(COMMIT_DO_MVP, raiz)).toMatch(/portão local: apps\/outro.ts mudou/)
+    })
+
+    it('só vale em branch mvp/…: na develop, o mesmo commit com o portão verde é bloqueado', () => {
+      for (const branch of ['develop', 'main', 'correcao/mvp/x']) {
+        const raiz = repositorioDoMvp(branch)
+        carimbar(raiz, ['typecheck', 'lint', 'test'])
+        expect(portao(COMMIT_DO_MVP, raiz)).toMatch(new RegExp(`só vale em branch mvp/… \\(D77\\), e esta é ${branch}\\.`))
+      }
+      const pacote = repositorioDoMvp('mvp/material')
+      carimbar(pacote, ['typecheck', 'lint', 'test'])
+      expect(portao(COMMIT_DO_MVP, pacote)).toBeNull()
+    })
+
+    it('com o HEAD solto não há branch, e o marcador não vale', () => {
+      const raiz = repositorioDoMvp()
+      const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=teste', '-c', 'user.email=teste@exemplo.invalid', ...args], { cwd: raiz, stdio: 'pipe' })
+      git('add', '-A')
+      git('commit', '-q', '-m', 'base')
+      git('checkout', '-q', '--detach')
+      // Outro tamanho e outro instante: com os dois iguais ao que está no índice, o git não vê a mudança.
+      corrigir(raiz, 'apps/codigo.ts', '2026-09-13T09:30:00', 'export const a = 30\n')
+      carimbar(raiz, ['typecheck', 'lint', 'test'])
+      expect(arquivosAlterados(raiz)).toContain('apps/codigo.ts')
+      expect(portao(COMMIT_DO_MVP, raiz)).toMatch(/esta é um HEAD solto\./)
+    })
+
+    it('marcador sem resumo não é marcador, e código sem marcador continua bloqueado', () => {
+      const raiz = repositorioDoMvp()
+      carimbar(raiz, ['typecheck', 'lint', 'test'])
+      for (const mensagem of ['Ajusta x', 'Ajusta x (mvp: )', 'Ajusta x (mvp:)', 'Ajusta x (mvp)', 'Ajusta x mvp: contratos']) {
+        expect(portao(commitCom(mensagem), raiz)).toMatch(/leva código \(apps\/codigo.ts\) sem "\(tarefa N.0\)"/)
+      }
+      expect(marcadorDoMvp('git commit -m "x (mvp:  contratos do time )"')).toBe('contratos do time')
+      expect(marcadorDoMvp('git commit -m "x (mvp: )"')).toBeNull()
+      expect(marcadorDoMvp('git commit -m "x"')).toBeNull()
+    })
+
+    it('a marca de tarefa vence a do MVP: os revisores da tarefa continuam exigidos', () => {
+      const raiz = repositorioDoMvp()
+      carimbar(raiz, ['typecheck', 'lint', 'test'])
+      const comando = COMMIT_DA_TAREFA.replace('(tarefa 9.0)', '(tarefa 9.0) (mvp: atalho)')
+      expect(comando).toContain('(mvp: atalho)')
+      expect(portao({ tool_input: { command: comando } }, raiz)).toMatch(/revisões de tasks\/prd-exemplo\/9_task.md incompletas[\s\S]*nenhuma rodada registrada/)
+    })
+
+    it('commit que não leva código passa com ou sem o marcador, sem portão', () => {
+      const raiz = repositorioDoMvp()
+      writeFileSync(join(raiz, 'docs.md'), 'texto\n')
+      expect(portao({ tool_input: { command: 'git add docs.md && git commit -m "Atualiza o estado (mvp: estado)"' } }, raiz)).toBeNull()
+      expect(portao({ tool_input: { command: 'git add docs.md && git commit -m "Atualiza o estado"' } }, raiz)).toBeNull()
+    })
+
+    it('a decisão, sem repositório: a branch errada vem antes do carimbo', () => {
+      const semAlteracao = { carimbo: null, alteracoes: [], instantaneo: undefined }
+      expect(avaliarCommitDoMvp({ ...semAlteracao, branch: 'develop' })).toMatch(/só vale em branch mvp\//)
+      expect(avaliarCommitDoMvp({ ...semAlteracao, branch: 'mvp/apresentacao' })).toMatch(/portão local: nunca passou/)
+      const verde: Carimbo = { inicio: new Date('2026-09-13T09:59:30').toISOString(), suites: [...SUITES_DO_MVP] }
+      expect(avaliarCommitDoMvp({ ...semAlteracao, carimbo: verde, branch: 'mvp/apresentacao' })).toBeNull()
+    })
   })
 
   it('lê do comando os arquivos que o commit leva', () => {
