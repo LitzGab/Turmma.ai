@@ -10,9 +10,13 @@
 
 > Atualizada a cada commit. Quem retoma lê esta seção, `git log mvp/apresentacao` e `git status`.
 
-**Fase atual:** fechamento. **As fases 1, 2 e 3 estão fechadas**: a esteira `37241713815` sobre `5f6dd03` ficou verde
-em todos os jobs (04/10/2026), com todos os revisores aprovando. A fase 4 (governança) está integrada na branch de
-integração com a segunda rodada da revisão; o pacote R escreve o roteiro e o e2e do roteiro inteiro.
+**Fase atual:** fechamento. **As quatro fases estão integradas** na `mvp/apresentacao` (`a0a06fd`, 04/10/2026), com o
+portão local verde (294 arquivos, 4115 testes) e **todos os revisores de todas as fases aprovando**. Falta a esteira
+final (`37245636814`) verde e o ensaio com o modelo local, que depende do Joaquim carregar o Qwen. O roteiro está em
+`docs/roteiro-da-demonstracao.md`, e o e2e dele, em `e2e/roteiro-da-demonstracao.spec.ts`. **Sem merge na `develop`**:
+é do Joaquim.
+
+Os worktrees e as branches dos pacotes foram removidos depois de integrados; tudo está na `mvp/apresentacao`.
 
 **Feito**
 
@@ -90,7 +94,7 @@ tentativa, mostrado só ao professor para obrigá-lo a abrir antes de aprovar, e
 | `frontend-reviewer` | AJUSTES NECESSÁRIOS | A Governança dizia que nada da IA chega ao aluno sem aprovação, e o Tutor responde em tempo real (D47); o foco caía no `body` ao fechar o dado nominal. Corrigidos pelo orquestrador (`b1368ac`) |
 | `conformidade-reviewer` (com a privacidade) | REPROVADO | O grupo mínimo do Analista contava professores com vínculo, e o número mostrado era o de uma professora só (D45, D64): agora conta quem aprovou lote no recorte, e o mesmo na lista da Governança (G, rodada 2). Efeito da suspensão por função, "resumo semanal" que não existe, os 60% como limite provisório: corrigidos |
 
-A segunda passada dos dois fica para depois do roteiro, sobre o diff final.
+Na segunda passada (`2dad84d..1486cbd`), os dois aprovaram.
 
 **Interrupções de 04/10/2026:** o limite de uso da sessão estourou duas vezes, por volta das 11h50 e das 17h20, e
 derrubou os agentes em curso no meio do trabalho. Nada se perdeu: cada worktree ficou com o que estava escrito, sem
@@ -144,6 +148,7 @@ Para os pacotes das fases 3 e 4, o que os revisores já pediram:
 | correções da fase 1 | `37220240549` | `1440e79` | verde, todos os jobs, inclusive infra |
 | fase 2 | `37227505570` | `5c1b53d` | vermelha em três e2e (o professor abrindo em Nova conversa num spec que ficou de fora, o cache da Home nova, um teste comprido demais no celular), corrigidos pelo W |
 | fases 2 e 3, com as correções | `37241713815` | `5f6dd03` | **verde**, todos os jobs |
+| fase 4 e fechamento | `37245636814` | `a0a06fd` | a conferir |
 
 **Modelo local do ensaio final:** `qwen3.6-35b-a3b` no `llama-server` (`GET /v1/models` em 04/10/2026; estava
 descarregado, e quem carrega é o Joaquim).
