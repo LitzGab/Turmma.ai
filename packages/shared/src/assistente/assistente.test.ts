@@ -9,6 +9,7 @@ import {
   esquemaRespostaConversaDoAssistente,
   FERRAMENTAS_GERADORAS,
   MAXIMO_DE_MENSAGENS_POR_PAGINA,
+  RESPOSTAS_A_PROPOSTA,
 } from './conversa.js'
 import { esquemaConsultaEntregas, esquemaEntrega, esquemaPedidoDecidirEntrega, TAMANHO_MINIMO_DA_JUSTIFICATIVA } from './entrega.js'
 import { CATALOGO_DE_HABILIDADES, HABILIDADE_GERAL, habilidadeDoCatalogo, habilidadesDaDisciplina } from './habilidades.js'
@@ -156,6 +157,18 @@ describe('conversa com o Assistente (D18; regra 70, item 8)', () => {
     for (const campo of ['escolaId', 'anoLetivoId', 'usuarioId', 'threadId']) expect(esquemaPedidoMensagemAoAssistente.safeParse({ ...corpo, [campo]: UM_ID }).success, campo).toBe(false)
     expect(esquemaPedidoMensagemAoAssistente.safeParse({ ...corpo, texto: '' }).success).toBe(false)
     expect(esquemaPedidoMensagemAoAssistente.safeParse({ ...corpo, chaveEnvio: 'chave-1' }).success).toBe(false)
+  })
+
+  it('"só conversar" é uma marca opcional de lista fechada: sem ela nada muda, e ela não aceita texto livre', () => {
+    const corpo = { texto: 'Só conversar', turmaId: UM_ID, disciplinaId: OUTRO_ID, chaveEnvio: CHAVE }
+    expect(RESPOSTAS_A_PROPOSTA).toEqual(['so_conversar'])
+    expect(esquemaPedidoMensagemAoAssistente.parse(corpo)).toEqual(corpo)
+    expect(esquemaPedidoMensagemAoAssistente.parse({ ...corpo, resposta: 'so_conversar' })).toEqual({ ...corpo, resposta: 'so_conversar' })
+    for (const resposta of ['abrir_ferramenta', 'gerar', '', 'prefiro conversar sobre o aluno', null, true]) {
+      expect(esquemaPedidoMensagemAoAssistente.safeParse({ ...corpo, resposta }).success, String(resposta)).toBe(false)
+    }
+    // Continua estrito: a marca não abre a porta para campo vizinho.
+    expect(esquemaPedidoMensagemAoAssistente.safeParse({ ...corpo, resposta: 'so_conversar', proposta: { ferramenta: 'atividade_objetiva' } }).success).toBe(false)
   })
 
   it('o Assistente responde texto com página citada ou a proposta de ferramenta; a proposta só de ferramenta que gera', () => {

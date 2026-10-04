@@ -1,12 +1,14 @@
 import {
   ConfiguracaoInvalida,
   lerConfiguracaoBanco,
+  lerConfiguracaoDeIa,
   lerConfiguracaoDrenagem,
   lerConfiguracaoIdentidade,
   lerConfiguracaoLimite,
   lerConfiguracaoTelemetria,
   validarAmbiente,
   type ConfiguracaoBanco,
+  type ConfiguracaoDeIa,
   type ConfiguracaoDrenagem,
   type ConfiguracaoIdentidade,
   type ConfiguracaoLimite,
@@ -88,6 +90,12 @@ export interface ConfiguracaoApi {
   limite: ConfiguracaoLimite
   /** Para onde e de quanto em quanto tempo as métricas vão. */
   telemetria: ConfiguracaoTelemetria
+  /**
+   * A camada de IA: o adaptador (o falso, sem nenhuma variável), o modelo de cada perfil, o prazo da chamada e as vagas
+   * e o prazo das execuções em segundo plano. Nenhuma variável dela é obrigatória fora de produção, onde o adaptador
+   * falso é recusado.
+   */
+  ia: ConfiguracaoDeIa
 }
 
 /** Executa a leitura e devolve o erro de configuração em vez de lançar, para somar os problemas. */
@@ -114,10 +122,12 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const drenagem = tentar(() => lerConfiguracaoDrenagem(ambiente))
   const limite = tentar(() => lerConfiguracaoLimite(ambiente))
   const telemetria = tentar(() => lerConfiguracaoTelemetria(ambiente))
-  if ('erro' in api || 'erro' in banco || 'erro' in identidade || 'erro' in login || 'erro' in loginExterno || 'erro' in sala || 'erro' in drenagem || 'erro' in limite || 'erro' in telemetria) {
-    const erros = [api, banco, identidade, login, loginExterno, sala, drenagem, limite, telemetria].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
+  const ia = tentar(() => lerConfiguracaoDeIa(ambiente))
+  if ('erro' in api || 'erro' in banco || 'erro' in identidade || 'erro' in login || 'erro' in loginExterno || 'erro' in sala || 'erro' in drenagem || 'erro' in limite || 'erro' in telemetria || 'erro' in ia) {
+    const erros = [api, banco, identidade, login, loginExterno, sala, drenagem, limite, telemetria, ia].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
     throw new ConfiguracaoInvalida(
-      erros.flatMap((erro) => erro.variaveis).sort(),
+      // Sem repetir: o `AMBIENTE` é validado pela identidade e de novo pela IA, que o lê para a trava de produção.
+      [...new Set(erros.flatMap((erro) => erro.variaveis))].sort(),
       erros.flatMap((erro) => erro.motivos),
     )
   }
@@ -135,5 +145,6 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     drenagem: drenagem.valor,
     limite: limite.valor,
     telemetria: telemetria.valor,
+    ia: ia.valor,
   }
 }

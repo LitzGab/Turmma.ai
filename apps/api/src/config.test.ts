@@ -1,7 +1,7 @@
 import { hkdfSync } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { lerAmbienteDeCarga, lerAmbienteDeTeste, lerAmbienteExemplo } from '../../../tools/ci/compose.ts'
-import { TIMEOUT_COMANDO_REDIS_API_MS, TIMEOUT_COMANDO_REDIS_FILA_MS } from '@educa/nucleo'
+import { MOTIVO_ADAPTADOR_FALSO_EM_PRODUCAO, TIMEOUT_COMANDO_REDIS_API_MS, TIMEOUT_COMANDO_REDIS_FILA_MS } from '@educa/nucleo'
 import { ConfiguracaoInvalida, lerConfiguracao, MOTIVO_AVISOS_SEM_JSON, MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO } from './config.js'
 import { MOTIVO_CHAVE_DA_SALA_REPETIDA } from './sala/configuracao-da-sala.js'
 import { lerConfiguracaoLogin, MOTIVO_PRAZO_DO_REDIS_DO_LOGIN, PRAZO_MINIMO_DO_REDIS_DO_LOGIN_MS } from './sessao/configuracao-de-login.js'
@@ -44,6 +44,12 @@ const ambienteValido = {
   IDENTIDADE_CHAVE_RECUPERACAO: 'chave_sintetica_da_recuperacao_com_32_caracteres',
   SALA_CHAVE_CODIGO: 'chave_sintetica_do_codigo_da_turma_com_32_caracteres',
 }
+
+/**
+ * A camada de IA como a produção a configura: o adaptador falso é recusado lá, e a API só sobe com o provedor declarado.
+ * Endereço e modelo sintéticos.
+ */
+const IA_DE_PRODUCAO = { IA_ADAPTADOR: 'openai_compat', LLM_BASE_URL: 'https://modelo.sintetico.example/v1', LLM_MODELO: 'modelo-sintetico' }
 
 /** A chave AES-256 que o HKDF deriva do texto da variável, como a configuração faz. */
 function chaveDerivada(texto: string): Uint8Array {
@@ -117,7 +123,28 @@ describe('lerConfiguracao', () => {
       // Sem as variáveis de provedor, o login pela conta da escola fica desligado, e a API sobe igual (13.0).
       loginExterno: { provedores: new Map(), retorno: undefined, chaveDoCookie: undefined, aceitaEmissorSemTls: true },
       sala: { chaveCodigo: new TextEncoder().encode(ambienteValido.SALA_CHAVE_CODIGO) },
+      // Sem nenhuma variável de IA, o adaptador falso, com os padrões do prazo e das vagas.
+      ia: { adaptador: 'falso', timeoutMs: 60_000, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 150_000 } },
     })
+  })
+
+  it('a camada de IA é lida aqui, com as outras: nenhuma variável é obrigatória, a inválida é apontada pelo nome, e o adaptador falso não sobe em produção', () => {
+    expect(Object.keys(ambienteValido).filter((variavel) => variavel.startsWith('IA_') || variavel.startsWith('LLM_'))).toEqual([])
+    expect(lerConfiguracao({ ...ambienteValido, ...IA_DE_PRODUCAO, IA_EXECUCOES_POR_ESCOLA: '3' }).ia).toMatchObject({
+      adaptador: 'openai_compat',
+      modelo: { baseUrl: IA_DE_PRODUCAO.LLM_BASE_URL, processamentoLocal: false },
+      executor: { vagasPorEscola: 3 },
+    })
+    // O compose entrega a variável sem valor como texto vazio: vale como ausente.
+    expect(lerConfiguracao({ ...ambienteValido, IA_ADAPTADOR: '', LLM_BASE_URL: '' }).ia.adaptador).toBe('falso')
+    expect(erroDe({ ...ambienteValido, IA_ADAPTADOR: 'outro' }).variaveis).toEqual(['IA_ADAPTADOR'])
+    expect(erroDe({ ...ambienteValido, IA_ADAPTADOR: 'openai_compat' }).variaveis).toEqual(['LLM_BASE_URL', 'LLM_MODELO'])
+    // Somada às outras leituras, e sem repetir o AMBIENTE, que a identidade já aponta.
+    expect(erroDe({ ...ambienteValido, API_PORTA: '0', LLM_TIMEOUT_MS: 'um minuto' }).variaveis).toEqual(['API_PORTA', 'LLM_TIMEOUT_MS'])
+    expect(erroDe({ ...ambienteValido, AMBIENTE: 'homologacao' }).variaveis).toEqual(['AMBIENTE'])
+    const emProducao = erroDe({ ...ambienteValido, AMBIENTE: 'producao' })
+    expect(emProducao.variaveis).toEqual(['IA_ADAPTADOR'])
+    expect(emProducao.message).toContain(MOTIVO_ADAPTADOR_FALSO_EM_PRODUCAO)
   })
 
   it('o login pela conta da escola meio configurado reprova o boot junto com as outras variáveis', () => {
@@ -169,7 +196,7 @@ describe('lerConfiguracao', () => {
 
   it('permissão (16.0): LOGIN_PROTECAO_DESLIGADA=true liga o controle negativo fora de produção, e a API não sobe com ela em produção', () => {
     expect(lerConfiguracao({ ...ambienteValido, LOGIN_PROTECAO_DESLIGADA: 'true' }).login.protecaoDesligada).toBe(true)
-    expect(erroDe({ ...ambienteValido, AMBIENTE: 'producao', ROTAS_SINTETICAS: 'false', LOGIN_PROTECAO_DESLIGADA: 'true' }).variaveis).toEqual(['LOGIN_PROTECAO_DESLIGADA'])
+    expect(erroDe({ ...ambienteValido, ...IA_DE_PRODUCAO, AMBIENTE: 'producao', ROTAS_SINTETICAS: 'false', LOGIN_PROTECAO_DESLIGADA: 'true' }).variaveis).toEqual(['LOGIN_PROTECAO_DESLIGADA'])
     expect(erroDe({ ...ambienteValido, LOGIN_PROTECAO_DESLIGADA: undefined }).variaveis).toEqual(['LOGIN_PROTECAO_DESLIGADA'])
   })
 
@@ -182,17 +209,17 @@ describe('lerConfiguracao', () => {
     const acimaDoCorte = String(TIMEOUT_COMANDO_REDIS_FILA_MS)
     // Até o corte, passa em todo ambiente: é o valor de `ambienteValido`, e é o que o cenário de carga fixa.
     for (const ambiente of ['local', 'staging', 'producao'] as const) {
-      expect(lerConfiguracao({ ...ambienteValido, AMBIENTE: ambiente }).login.prazoDoRedisMs).toBe(TIMEOUT_COMANDO_REDIS_API_MS)
+      expect(lerConfiguracao({ ...ambienteValido, ...IA_DE_PRODUCAO, AMBIENTE: ambiente }).login.prazoDoRedisMs).toBe(TIMEOUT_COMANDO_REDIS_API_MS)
     }
     // Acima dele, só em `local`.
     expect(lerConfiguracao({ ...ambienteValido, LOGIN_REDIS_PRAZO_MS: acimaDoCorte }).login.prazoDoRedisMs).toBe(TIMEOUT_COMANDO_REDIS_FILA_MS)
-    const emProducao = erroDe({ ...ambienteValido, AMBIENTE: 'producao', LOGIN_REDIS_PRAZO_MS: acimaDoCorte })
+    const emProducao = erroDe({ ...ambienteValido, ...IA_DE_PRODUCAO, AMBIENTE: 'producao', LOGIN_REDIS_PRAZO_MS: acimaDoCorte })
     expect(emProducao.variaveis).toEqual(['LOGIN_REDIS_PRAZO_MS'])
     expect(emProducao.message).toContain(MOTIVO_PRAZO_DO_REDIS_DO_LOGIN)
     expect(erroDe({ ...ambienteValido, AMBIENTE: 'staging', LOGIN_REDIS_PRAZO_MS: acimaDoCorte }).variaveis).toEqual(['LOGIN_REDIS_PRAZO_MS'])
     // Um a mais que o corte já não passa, nos dois: o limite é o valor, não uma faixa.
     for (const ambiente of ['staging', 'producao'] as const) {
-      expect(erroDe({ ...ambienteValido, AMBIENTE: ambiente, LOGIN_REDIS_PRAZO_MS: String(TIMEOUT_COMANDO_REDIS_API_MS + 1) }).variaveis, ambiente).toEqual(['LOGIN_REDIS_PRAZO_MS'])
+      expect(erroDe({ ...ambienteValido, ...IA_DE_PRODUCAO, AMBIENTE: ambiente, LOGIN_REDIS_PRAZO_MS: String(TIMEOUT_COMANDO_REDIS_API_MS + 1) }).variaveis, ambiente).toEqual(['LOGIN_REDIS_PRAZO_MS'])
     }
     // O piso é a única defesa contra o prazo que não espera nada: zero passaria pelo teto (0 ≤ 100) e a API subiria
     // em produção, mas o ioredis corta todo comando no tick seguinte — desafio recusado e contador no seguro a cada
@@ -225,10 +252,11 @@ describe('lerConfiguracao', () => {
     const exemplo = { ...ambienteValido, ...lerAmbienteExemplo(), API_PORTA: '3000', BANCO_URL: ambienteValido.BANCO_URL, REDIS_CACHE_URL: ambienteValido.REDIS_CACHE_URL, REDIS_FILA_URL: ambienteValido.REDIS_FILA_URL, TELEMETRIA_OTLP_URL: ambienteValido.TELEMETRIA_OTLP_URL }
     expect(lerConfiguracao(exemplo).identidade.ambiente).toBe('local')
     // O prazo do Redis do login, que aqui é o de desenvolvimento, e os dois emissores do login pela conta da escola,
-    // que apontam para o `oidc-falso` em http. Em produção soma a rota sintética, que o exemplo deixa ligada.
+    // que apontam para o `oidc-falso` em http. Em produção somam a rota sintética, que o exemplo deixa ligada, e o
+    // adaptador falso de IA, que o exemplo usa e a produção recusa.
     const semTls = ['LOGIN_EXTERNO_GOOGLE_EMISSOR', 'LOGIN_EXTERNO_MICROSOFT_EMISSOR', 'LOGIN_REDIS_PRAZO_MS']
     expect(erroDe({ ...exemplo, AMBIENTE: 'staging' }).variaveis).toEqual(semTls)
-    expect(erroDe({ ...exemplo, AMBIENTE: 'producao' }).variaveis).toEqual([...semTls, 'ROTAS_SINTETICAS'])
+    expect(erroDe({ ...exemplo, AMBIENTE: 'producao' }).variaveis).toEqual(['IA_ADAPTADOR', ...semTls, 'ROTAS_SINTETICAS'])
   })
 
   it('AMBIENTE ausente ou inválido vale como produção na leitura do login, e o prazo acima do corte cai junto', () => {
@@ -352,7 +380,7 @@ describe('lerConfiguracao', () => {
   })
 
   it('sobe em produção sem nenhuma variável a mais: a flag do token sintético do F0 não existe mais', () => {
-    const config = lerConfiguracao({ ...ambienteValido, AMBIENTE: 'producao' })
+    const config = lerConfiguracao({ ...ambienteValido, ...IA_DE_PRODUCAO, AMBIENTE: 'producao' })
     expect(config.identidade.ambiente).toBe('producao')
   })
 
@@ -361,7 +389,7 @@ describe('lerConfiguracao', () => {
     for (const valor of ['1', 'TRUE', '', 'sim']) {
       expect(erroDe({ ...ambienteValido, ROTAS_SINTETICAS: valor }).variaveis).toEqual(['ROTAS_SINTETICAS'])
     }
-    const emProducao = erroDe({ ...ambienteValido, AMBIENTE: 'producao', ROTAS_SINTETICAS: 'true' })
+    const emProducao = erroDe({ ...ambienteValido, ...IA_DE_PRODUCAO, AMBIENTE: 'producao', ROTAS_SINTETICAS: 'true' })
     expect(emProducao.variaveis).toEqual(['ROTAS_SINTETICAS'])
     expect(emProducao.message).toContain(MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO)
   })

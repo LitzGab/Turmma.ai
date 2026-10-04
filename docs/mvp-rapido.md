@@ -10,7 +10,7 @@
 
 > Atualizada a cada commit. Quem retoma lê esta seção, `git log mvp/apresentacao` e `git status`.
 
-**Fase atual:** fase 2 (A2) em curso desde 04/10/2026, junto com a última rodada de correção da fase 1.
+**Fase atual:** fase 2 (A2) em curso. **A fase 1 está fechada** (`97da66a`, 04/10/2026), com os quatro revisores aprovando.
 
 **Feito**
 
@@ -46,20 +46,22 @@ destaque não aberto, autoria por papel, saída do "(D47)" da tela (migration 00
 | `tenancy-guardian` | REPROVADO | Duas cláusulas de escopo do módulo de IA da API sem teste que as proteja (limite do Tutor por escola; mensagem do Tutor lida pela execução). L, rodada 4 |
 | `privacy-guardian` | REPROVADO | O adaptador de modelo seguia redirecionamento HTTP, e o registro de envio externo poderia mentir. L, rodada 4 |
 
-A fase 1 fecha com a terceira passada do `tenancy-guardian` e do `privacy-guardian` sobre a rodada 4 do L.
+**Terceira passada** (`bd3793c..d4e9faf`): `tenancy-guardian` APROVADO e `privacy-guardian` APROVADO. A rodada 4 de L
+e de C está integrada no `97da66a`, com o portão local verde (257 arquivos, 3515 testes). Recomendações que ficaram:
+o teste da cláusula de escola em `ia.int.test.ts` usa mensagens criadas por outros testes do arquivo; quem chamar a
+camada de IA fora de requisição e fora do executor precisa abrir contexto com a escola, ou a guarda de escola do
+provedor não compara nada; as 15 amostras de saída do Tutor são poucas para declarar a taxa do modelo local.
 
 **Em curso**
 
 | Pacote | Worktree e branch | O que faz |
 |---|---|---|
-| L, rodada 4 | `../Educa.ia-mvp-l`, `mvp/l` | os três bloqueantes da segunda passada, a regra do Tutor e o texto puro nos prompts |
-| C, rodada 4 | `../Educa.ia-mvp-c`, `mvp/c` | as recomendações da segunda passada do `frontend-reviewer` |
-| M | `../Educa.ia-mvp-m`, `mvp/m` | material: API e tela da coordenação |
+| M | `../Educa.ia-mvp-m`, `mvp/m` | material: API e tela da coordenação. **Entregue e integrado na `mvp/fase-2`** |
 | P | `../Educa.ia-mvp-p`, `mvp/p` | API do Assistente: conversa, ferramentas, artefato, PDF, adaptação, entregas |
 | W | `../Educa.ia-mvp-w`, `mvp/w` | web do professor: Home, Conversa, Ferramentas, Artefato, Seu time |
 
-A branch de integração da fase 1 é `mvp/fase-1` (`../Educa.ia-mvp-fase-1`); as rodadas de correção entram por ela. A
-da fase 2 será `mvp/fase-2`.
+A branch de integração da fase 2 é `mvp/fase-2` (`../Educa.ia-mvp-fase-2`). Os worktrees de S, L e C ficam de pé
+para rodadas de correção.
 
 **Interrupção de 04/10/2026:** o limite de uso da sessão estourou por volta das 11h50 e derrubou os cinco agentes
 acima no meio do trabalho. Nada se perdeu: cada worktree ficou com o que estava escrito, sem commit, e os cinco foram
@@ -67,7 +69,6 @@ retomados às 14h21 do ponto em que pararam. Se acontecer de novo, retoma-se cad
 
 **Falta**
 
-- Integrar a rodada 4 de L e de C, portão, terceira passada do `tenancy-guardian` e do `privacy-guardian`.
 - Integrar M, P e W na `mvp/fase-2`; segunda rodada do W com o e2e do fluxo contra a API real; portão, revisores da
   fase 2 e esteira.
 - Fases 3 e 4 (seção 3) e o fechamento (seção 8).
@@ -77,7 +78,8 @@ Para os pacotes das fases 3 e 4, o que os revisores já pediram:
   aprovar sem nunca ter lido a correção do lote é recusado ou fica registrado; correção inserida ou alterada depois do
   lote aprovado não pode passar (reexecução do job); o aluno precisa ser da turma da aplicação antes de criar a
   tentativa; a correção determinística chama a conferência de função ativa.
-- **T (Tutor e sinais):** o aluno no limite diário que escreve assunto delicado recebe o encaminhamento, não o 429, e
+- **T (Tutor e sinais):** os turnos anteriores que vão ao modelo se filtram por `mensagem_tutor.tipo =
+  'assunto_delicado'`, não por igualdade com o texto da mensagem fixa; o aluno no limite diário que escreve assunto delicado recebe o encaminhamento, não o 429, e
   a tela no estado `limite` não trava a caixa; a rota `GET /v1/tutor/uso`; memória só de lote aprovado; sinal
   `pediu a resposta pronta` só nasce de classificação com questão em andamento; nada de "há X minutos" nem ordenação
   por recência no uso do Tutor.
@@ -90,7 +92,7 @@ Para os pacotes das fases 3 e 4, o que os revisores já pediram:
 | Quando | Execução | Commit | Resultado |
 |---|---|---|---|
 | fase 1 | `37208632853` | `7fddb5f` | verde na reexecução. Na primeira vez, só o job de infra caiu, no ensaio de alertas: a regra "Login recusado pelo semáforo do hash" ficou em `pending` até o prazo de 540 s. Nada da fase 1 mexe em login, e o job passou ao ser rodado de novo: intermitente, a observar |
-| correções da fase 1 | `37220240549` | `1440e79` | a conferir |
+| correções da fase 1 | `37220240549` | `1440e79` | verde, todos os jobs, inclusive infra |
 
 **Modelo local do ensaio final:** `qwen3.6-35b-a3b` no `llama-server` (`GET /v1/models` em 04/10/2026; estava
 descarregado, e quem carrega é o Joaquim).
