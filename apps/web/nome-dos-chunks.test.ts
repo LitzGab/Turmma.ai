@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { build, type Rolldown } from 'vite'
 import { brotliCompressSync } from 'node:zlib'
 import { afterEach, describe, expect, it } from 'vitest'
-import { AREAS_DA_ESCOLA, areaDoModulo, ehPecaForaDaEntrada, nomeDoChunk, PECAS_FORA_DA_ENTRADA, TETO_DE_UMA_TELA_EM_BYTES, type AreaDaEscola } from './nome-dos-chunks'
+import { AREAS_DA_ESCOLA, areaDoModulo, ehPecaForaDaEntrada, nomeDoChunk, PECAS_FORA_DA_ENTRADA, TETO_DE_UMA_TELA_EM_BYTES, TETO_DO_PRIMEIRO_CARREGAMENTO_EM_BYTES, type AreaDaEscola } from './nome-dos-chunks'
 
 // B1 (o nome que o teto de 60 kB mede) e B2 (a entrada da escola não leva nada de `src/operacao/`), e o mesmo para a área
 // de cada papel da escola (A1, tarefa 11.0), sobre o build de verdade do Vite, e não sobre o fonte: é o bundler que decide
@@ -28,6 +28,10 @@ type Chunk = Rolldown.OutputChunk
  */
 async function chunksDoBuild(opcoes: { raiz: string; configFile: string | false; comGaleria?: boolean }): Promise<Chunk[]> {
   const anterior = process.env['VITE_COM_GALERIA']
+  // O Vitest roda com `NODE_ENV=test`, e o Vite o respeita no build: sairia o React de desenvolvimento, três vezes maior.
+  // O tamanho que o teto mede é o do build de produção, como o `npm run build` faz.
+  const ambienteAnterior = process.env['NODE_ENV']
+  process.env['NODE_ENV'] = 'production'
   if (opcoes.comGaleria === true) process.env['VITE_COM_GALERIA'] = '1'
   else delete process.env['VITE_COM_GALERIA']
   try {
@@ -35,6 +39,8 @@ async function chunksDoBuild(opcoes: { raiz: string; configFile: string | false;
   } finally {
     if (anterior === undefined) delete process.env['VITE_COM_GALERIA']
     else process.env['VITE_COM_GALERIA'] = anterior
+    if (ambienteAnterior === undefined) delete process.env['NODE_ENV']
+    else process.env['NODE_ENV'] = ambienteAnterior
   }
 }
 
@@ -222,6 +228,27 @@ function telasAcimaDoTeto(chunks: readonly Chunk[]): string[] {
   })
 }
 
+/**
+ * O primeiro carregamento de verdade: a entrada e os pedaços que ela importa estaticamente, direta e transitivamente,
+ * com o tamanho de cada um em brotli, do maior para o menor. O `import()` não entra: é baixado só quando a tela pede.
+ */
+function primeiroCarregamento(chunks: readonly Chunk[]): { total: number; pedacos: { nome: string; bytes: number }[] } {
+  const entrada = chunks.find((chunk) => chunk.isEntry)
+  if (entrada === undefined) throw new Error('build sem chunk de entrada')
+  const pedacos = [entrada, ...importadosJunto(chunks, entrada)]
+    .map((chunk) => ({ nome: semHash(chunk.fileName), bytes: brotliCompressSync(chunk.code).length }))
+    .sort((a, b) => b.bytes - a.bytes)
+  return { total: pedacos.reduce((soma, pedaco) => soma + pedaco.bytes, 0), pedacos }
+}
+
+/** O que a reprovação diz: o total e os três maiores pedaços, para quem estourou saber onde cortar. */
+function excessoDoPrimeiroCarregamento(chunks: readonly Chunk[]): string | undefined {
+  const { total, pedacos } = primeiroCarregamento(chunks)
+  if (total <= TETO_DO_PRIMEIRO_CARREGAMENTO_EM_BYTES) return undefined
+  const maiores = pedacos.slice(0, 3).map((pedaco) => `${pedaco.nome} ${(pedaco.bytes / 1000).toFixed(1)} kB`)
+  return `primeiro carregamento com ${(total / 1000).toFixed(1)} kB em brotli, acima de ${String(TETO_DO_PRIMEIRO_CARREGAMENTO_EM_BYTES / 1000)} kB; os maiores: ${maiores.join(', ')}`
+}
+
 /** Os chunks que o chunk dado importa estaticamente, e os que eles importam: o que o navegador baixa junto com ele. */
 function importadosJunto(chunks: readonly Chunk[], chunk: Chunk): Chunk[] {
   const vistos = new Map<string, Chunk>()
@@ -284,6 +311,13 @@ describe('o build de verdade da web', () => {
     // nome aqui (uma área, a operação) ficaria fora da conta, ou entraria no primeiro carregamento sem ninguém ver.
     expect(importadosJunto(chunks, entrada).map((chunk) => chunk.fileName).filter((nome) => !/^assets\/parte-[^/]+\.js$/.test(nome))).toEqual([])
     for (const junto of importadosJunto(chunks, entrada)) expect(modulosDeArea(junto)).toEqual([])
+    // O primeiro carregamento de verdade — a entrada e o que ela importa estaticamente — no teto de 150 kB em brotli.
+    // A mensagem diz o total e os três maiores pedaços.
+    expect(excessoDoPrimeiroCarregamento(chunks), 'tire da entrada o que só uma tela usa (import() por tela; docs/interface.md 10.4)').toBeUndefined()
+    // A conta não ficou vazia: a entrada está nela, com o tamanho de verdade.
+    const { total, pedacos } = primeiroCarregamento(chunks)
+    expect(pedacos.map((pedaco) => pedaco.nome)).toContain('index')
+    expect(total).toBeGreaterThan(50_000)
   })
 
   it('as peças do MVP de apresentação ficam fora do primeiro carregamento, e a galeria sai num chunk galeria-* só por import()', async () => {
@@ -459,6 +493,34 @@ describe('o build de verdade da web', () => {
       configFile: false,
     })
     expect(telasImportadasDeFora(vazando).some((achado) => /^(?:aluno|tela-aluno-Tutor) → tela-professor-/.test(achado))).toBe(true)
+  })
+
+  it('controle do primeiro carregamento: conta o que a entrada importa estaticamente, reprova acima de 150 kB, e não conta o import()', async () => {
+    // Base64 de bytes aleatórios não comprime: 90 mil bytes viram uns 120 kB em base64 e quase isso em brotli.
+    const pesado = (nome: string) => `export const ${nome} = '${randomBytes(90_000).toString('base64')}'\n`
+    const raiz = projetoDeMentira({
+      'src/main.ts': "import { a } from './a'\nconsole.log(a.length)\nvoid import('./areas/professor/rotas').then((m) => console.log(m.default()))\n",
+      'src/a.ts': `import { b } from './b'\n${pesado('a')}console.log(b.length)\n`,
+      'src/b.ts': pesado('b'),
+      // O texto é usado inteiro, junto do título da página: `area.length` o minificador trocaria pelo número, e o peso sumiria.
+      'src/areas/professor/rotas.ts': `${pesado('area')}export default function rotas(): string {\n  return area + document.title\n}\n`,
+    })
+    const chunks = await chunksDoBuild({ raiz, configFile: false })
+    // O que a entrada importa estaticamente, transitivamente, entra na conta, e passa do teto; a mensagem diz quanto e onde.
+    expect(excessoDoPrimeiroCarregamento(chunks)).toMatch(/^primeiro carregamento com \d+\.\d kB em brotli, acima de 150 kB; os maiores: index \d+\.\d kB$/)
+    // O pedaço da área, só por import(), tem o mesmo peso e fica de fora.
+    const { total, pedacos } = primeiroCarregamento(chunks)
+    expect(pedacos.map((pedaco) => pedaco.nome)).toEqual(['index'])
+    expect(total).toBeGreaterThan(TETO_DO_PRIMEIRO_CARREGAMENTO_EM_BYTES)
+    expect(chunks.map((chunk) => [chunk.fileName.replace(/-[\w-]{8}\.js$/, ''), brotliCompressSync(chunk.code).length > 80_000])).toContainEqual(['assets/professor', true])
+
+    // O par: o mesmo peso, com o segundo módulo pesado só por import(), cabe. É a importação estática que decide.
+    const leve = projetoDeMentira({
+      'src/main.ts': "import { a } from './a'\nconsole.log(a.length)\nvoid import('./b').then((m) => console.log(m.b.length))\n",
+      'src/a.ts': `export const a = '${randomBytes(40_000).toString('base64')}'\n`,
+      'src/b.ts': pesado('b'),
+    })
+    expect(excessoDoPrimeiroCarregamento(await chunksDoBuild({ raiz: leve, configFile: false }))).toBeUndefined()
   })
 
   it('controle do teto de uma tela: a que passa de 30 kB em brotli aparece pelo nome, e a pequena ao lado dela, não', async () => {

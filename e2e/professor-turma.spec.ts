@@ -80,10 +80,29 @@ test.describe('aplicar à turma e encerrar, no artefato (A3)', () => {
     await expect(naTurma).toContainText('Esta versão adaptada só pode ser aplicada à turma depois que você aprovar.', { timeout: PRAZO_DA_TELA_MS })
     await expect(page.getByRole('button', { name: 'Aplicar à turma' })).toHaveCount(0)
 
+    // Carregando e com falha, a seção não afirma que a atividade não foi aplicada, nem oferece "Aplicar à turma".
+    const segura = portao()
+    api.trocar('aplicadas', async () => {
+      await segura.aberta
+      return erroDaApi(503, 'INDISPONIVEL_TENTE_DE_NOVO')
+    })
+    // A recarga esquece a lista que a versão adaptada já leu (é a mesma turma), e a tela lê de novo.
+    await page.reload()
+    await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toBeAttached({ timeout: PRAZO_DA_TELA_MS })
     await irPara(page, `/professor/artefatos/${atividade.id}`)
+    await expect(naTurma.getByText('Carregando as aplicações desta atividade…')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(naTurma).not.toContainText('ainda não foi aplicada')
+    await expect(page.getByRole('button', { name: 'Aplicar à turma' })).toHaveCount(0)
+    segura.abrir()
+    await expect(naTurma.getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_TELA_MS })
+    await expect(naTurma).not.toContainText('ainda não foi aplicada')
+    await expect(page.getByRole('button', { name: 'Aplicar à turma' })).toHaveCount(0)
+    api.trocar('aplicadas')
+    await acionar(naTurma.getByRole('button', { name: 'Tentar de novo' }), hasTouch)
     await expect(naTurma).toContainText('Esta atividade ainda não foi aplicada.', { timeout: PRAZO_DA_TELA_MS })
     const aplicar = page.getByRole('button', { name: 'Aplicar à turma' })
-    // Decisão da professora, registrada: o botão é o preto.
+    // Decisão da professora, registrada: o botão é o preto. O ponteiro sai de cima dele: o "Tentar de novo" estava ali.
+    if (!hasTouch) await page.mouse.move(0, 0)
     expect(await aplicar.evaluate((botao) => getComputedStyle(botao).backgroundColor)).toBe('rgb(13, 13, 13)')
     await acionar(aplicar, hasTouch)
     const dialogo = page.getByRole('alertdialog', { name: 'Aplicar à turma' })
@@ -238,6 +257,8 @@ test.describe('aprovar a correção (11.5)', () => {
     await expect(aprovar).toBeDisabled()
     const contador = barra.locator('[data-contador-dos-destaques]')
     await expect(contador).toHaveText('0 de 2 destaques abertos. Abra os 2 destaques que faltam para liberar a aprovação.')
+    // O leitor de tela lê o porquê junto do botão desligado.
+    await expect(aprovar).toHaveAccessibleDescription('0 de 2 destaques abertos. Abra os 2 destaques que faltam para liberar a aprovação.')
     expect(await principal(page).getByRole('button').evaluateAll((botoes) => botoes.filter((botao) => getComputedStyle(botao).backgroundColor === 'rgb(232, 115, 46)').length)).toBe(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
@@ -480,8 +501,8 @@ test.describe('a turma aberta: Visão Geral e Alunos (D69)', () => {
     const habilidades = page.getByRole('region', { name: 'Acerto por habilidade' })
     await expect(habilidades).toContainText('QUI.EM.04', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(habilidades).toContainText('20 de 28')
-    await expect(habilidades).toContainText('8 alunos abaixo da metade nesta habilidade.')
-    await expect(habilidades).toContainText('Nenhum aluno abaixo da metade nesta habilidade.')
+    await expect(habilidades).toContainText('8 alunos acertaram menos da metade das questões desta habilidade nas atividades aprovadas.')
+    await expect(habilidades).toContainText('Nenhum aluno acertou menos da metade das questões desta habilidade nas atividades aprovadas.')
     // A barra é neutra: cinza, nunca vermelha.
     expect(await habilidades.locator('svg rect').evaluateAll((retangulos) => [...new Set(retangulos.map((retangulo) => getComputedStyle(retangulo).fill))])).toEqual(['rgb(240, 240, 240)', 'rgb(93, 93, 93)'])
     const alunos = page.getByRole('region', { name: 'Por aluno' })
