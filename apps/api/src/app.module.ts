@@ -27,6 +27,7 @@ import { BANCO, BancoModule } from './banco.module.js'
 import type { ConfiguracaoApi } from './config.js'
 import { EntregaModule } from './entrega/entrega.module.js'
 import { EstruturaModule } from './estrutura/estrutura.module.js'
+import { GovernancaModule } from './governanca/governanca.module.js'
 import { IaModule } from './ia/ia.module.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
 import { MaterialModule } from './material/material.module.js'
@@ -88,6 +89,7 @@ export class AppModule {
         EntregaModule,
         AtividadeModule,
         TutorModule,
+        GovernancaModule,
         SalaModule.com({
           config: config.sala,
           chaveContador: config.login.chaveContador,
