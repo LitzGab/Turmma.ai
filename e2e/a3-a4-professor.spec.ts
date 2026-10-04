@@ -88,8 +88,9 @@ test.describe('A3 e A4 de ponta a ponta, do lado da professora, contra a API rea
     await expect(principal(page).locator('[data-selo-ia]').first()).toBeVisible()
     const fechados = page.locator('[data-destaque="fechado"]')
     const quantos = await fechados.count()
-    // O aluno que abriu e não respondeu é destaque, com o motivo dito como fato do trabalho.
-    expect(quantos).toBeGreaterThanOrEqual(1)
+    // Exatamente um destaque: o aluno que abriu e não respondeu, com o motivo dito como fato do trabalho. Com três alunos,
+    // sem histórico aprovado e com duas questões, nenhum outro motivo dispara (menos de cinco colegas, menos de quatro respostas).
+    expect(quantos).toBe(1)
     const doEmBranco = page.locator('[data-destaque]').filter({ hasText: emBranco.nome })
     await expect(doEmBranco).toContainText('Em branco')
     await expect(doEmBranco).toContainText('Nenhuma questão foi respondida.')
