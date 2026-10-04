@@ -9,16 +9,19 @@ import { raizRepositorio } from './executar.ts'
 // O `.size-limit.json` real, com o mesmo teto e o mesmo caminho, aplicado a um build de mentira. Prova
 // que o portão reprova bundle acima do teto, e não só que o comando existe.
 //
-// Um teto por grupo (Tech Spec da A0, seção 9, "Orçamento"; Tech Spec da A1, seção 9, "Fronteira"): 150 kB no primeiro
-// carregamento da escola — a entrada (`index-*.js`, o chunk que o Vite gera para o `index.html`) e os pedaços `parte-*.js`
-// que ela importa junto —, e não na soma de todo o JS do build; 60 kB no chunk da área do operador (`operacao-*.js`); e
+// Um teto por grupo (Tech Spec da A0, seção 9, "Orçamento"; Tech Spec da A1, seção 9, "Fronteira"): 150 kB na entrada
+// sozinha (`index-*.js`, o chunk que o Vite gera para o `index.html`); 60 kB no chunk da área do operador (`operacao-*.js`); e
 // um teto próprio para a área de cada papel (`coordenacao-*.js`, `professor-*.js`, `aluno-*.js`). A operação e as áreas
 // só se baixam por `import()` e não pesam no primeiro carregamento do Chromebook. Os nomes são garantidos por
 // `apps/web/nome-dos-chunks.ts`, com o teste dele sobre o build de verdade.
 //
-// No MVP de apresentação entram mais dois nomes. As peças (`pecas-*.js`, somadas à `galeria-*.js`, que as leva enquanto
-// só ela as usa) têm teto próprio aqui. A tela que uma área carrega por `import()` (`tela-<area>-*.js`) não tem: o glob
-// soma os arquivos, e o teto de **cada** tela é conferido no teste do build (`apps/web/nome-dos-chunks.test.ts`).
+// O **primeiro carregamento inteiro** (a entrada e os pedaços que ela importa estaticamente) não está aqui: um glob não
+// sabe quem importa quem, e o grupo `index-*` + `parte-*` passou a somar o `parte-*` que só as áreas dividem. O teto de
+// 150 kB dele está no teste do build de verdade (`apps/web/nome-dos-chunks.test.ts`), que segue os `import`.
+//
+// No MVP de apresentação entram mais dois nomes. As peças (`pecas-*.js`) têm teto próprio aqui; a galeria (`galeria-*.js`)
+// não entra nele. A tela que uma área carrega por `import()` (`tela-<area>-*.js`) não tem: o glob soma os arquivos, e o
+// teto de **cada** tela é conferido no teste do build.
 
 interface Verificacao {
   name: string
@@ -34,7 +37,7 @@ const BUILD_PEQUENO: Record<string, string> = {
   'coordenacao-pequeno.js': jsIncompressivel(1_000),
   'professor-pequeno.js': jsIncompressivel(1_000),
   'aluno-pequeno.js': jsIncompressivel(1_000),
-  'galeria-pequeno.js': jsIncompressivel(1_000),
+  'pecas-pequeno.js': jsIncompressivel(1_000),
 }
 
 const diretorios: string[] = []
@@ -70,16 +73,15 @@ function jsIncompressivel(bytesAleatorios: number): string {
 }
 
 describe('teto do bundle da web (.size-limit.json)', () => {
-  it('declara 150 kB em brotli sobre a entrada, sozinha e com os pedaços parte-*, 60 kB sobre a operação, um teto por área da escola e 26 kB sobre as peças', () => {
+  it('declara 150 kB em brotli sobre a entrada sozinha, 60 kB sobre a operação, um teto por área da escola e 26 kB sobre as peças', () => {
     const verificacoes = JSON.parse(readFileSync(join(raizRepositorio, '.size-limit.json'), 'utf8')) as Verificacao[]
     expect(verificacoes.map(({ path, limit, brotli }) => ({ path, limit, brotli }))).toEqual([
       { path: 'apps/web/dist/assets/index-*.js', limit: '150 kB', brotli: true },
-      { path: ['apps/web/dist/assets/index-*.js', 'apps/web/dist/assets/parte-*.js'], limit: '150 kB', brotli: true },
       { path: 'apps/web/dist/assets/operacao-*.js', limit: '60 kB', brotli: true },
       { path: 'apps/web/dist/assets/coordenacao-*.js', limit: '16 kB', brotli: true },
       { path: 'apps/web/dist/assets/professor-*.js', limit: '8 kB', brotli: true },
       { path: 'apps/web/dist/assets/aluno-*.js', limit: '5 kB', brotli: true },
-      { path: ['apps/web/dist/assets/galeria-*.js', 'apps/web/dist/assets/pecas-*.js'], limit: '26 kB', brotli: true },
+      { path: 'apps/web/dist/assets/pecas-*.js', limit: '26 kB', brotli: true },
     ])
   })
 
@@ -89,12 +91,11 @@ describe('teto do bundle da web (.size-limit.json)', () => {
     expect(codigo).toBe(0)
   })
 
-  it('o pedaço parte-* que a entrada importa junto conta no teto do primeiro carregamento', () => {
-    // 100 kB + 60 kB incompressíveis: cada um abaixo de 150 kB, os dois juntos acima. Com o teto só sobre `index-*.js`,
-    // como era até a A1, o React que o Rolldown separa num `parte-*` compartilhado ficaria fora da conta.
-    const { codigo, saida } = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, 'index-pequeno.js': jsIncompressivel(100_000), 'parte-comum.js': jsIncompressivel(60_000) }))
-    expect(saida).toMatch(/exceeded/i)
-    expect(codigo).not.toBe(0)
+  it('o pedaço parte-* não conta em grupo nenhum do size-limit: quem o mede, quando a entrada o importa, é o teste do build', () => {
+    // 100 kB + 60 kB incompressíveis: os dois juntos passariam de 150 kB, e o grupo `index-*` + `parte-*` de antes
+    // reprovaria. Agora o `parte-*` só pesa no primeiro carregamento se a entrada o importa, o que só o build sabe.
+    const { codigo } = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, 'index-pequeno.js': jsIncompressivel(100_000), 'parte-comum.js': jsIncompressivel(60_000) }))
+    expect(codigo).toBe(0)
   })
 
   it('sem nenhum pedaço parte-* no build, o teto da entrada continua medindo a entrada', () => {
@@ -124,25 +125,25 @@ describe('teto do bundle da web (.size-limit.json)', () => {
     })
   }
 
-  it('as peças acima de 26 kB em brotli reprovam, num pedaço pecas-* só ou somadas à galeria', () => {
+  it('as peças acima de 26 kB em brotli reprovam, num pedaço pecas-* só ou somadas entre vários; a galeria não conta', () => {
     // 32 kB incompressíveis num `pecas-*`: acima do teto das peças. Os outros grupos nem o enxergam.
     const sozinho = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, 'pecas-CaixaPedido.js': jsIncompressivel(32_000) }))
     expect(sozinho.saida).toMatch(/exceeded/i)
     expect(sozinho.codigo).not.toBe(0)
-    // 11 kB na galeria e 11 kB em dois `pecas-*`: cada arquivo abaixo de 26 kB, os três juntos acima. É a soma que o teto
+    // 11 kB em três `pecas-*`: cada arquivo abaixo de 26 kB, os três juntos acima. É a soma que o teto
     // mede, porque a mesma peça muda de arquivo quando uma segunda tela passa a usá-la.
     const somados = sizeLimit(
-      buildDeMentira({ ...BUILD_PEQUENO, 'galeria-pequeno.js': jsIncompressivel(11_000), 'pecas-Menu.js': jsIncompressivel(11_000), 'pecas-Abas.js': jsIncompressivel(11_000) }),
+      buildDeMentira({ ...BUILD_PEQUENO, 'pecas-pequeno.js': jsIncompressivel(11_000), 'pecas-Menu.js': jsIncompressivel(11_000), 'pecas-Abas.js': jsIncompressivel(11_000) }),
     )
     expect(somados.saida).toMatch(/exceeded/i)
     expect(somados.codigo).not.toBe(0)
-    // O controle: 5 kB na galeria e 5 kB num `pecas-*` cabem.
-    const folgado = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, 'galeria-pequeno.js': jsIncompressivel(5_000), 'pecas-Menu.js': jsIncompressivel(5_000) }))
+    // O controle: a galeria de 40 kB não pesa nas peças. Ela é da máquina e do e2e, e leva a página dela.
+    const folgado = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, 'galeria-pequeno.js': jsIncompressivel(40_000), 'pecas-Menu.js': jsIncompressivel(5_000) }))
     expect(folgado.codigo).toBe(0)
   })
 
-  it('sem a galeria e sem nenhum pecas-* no build, reprova: as peças que perderam o nome não escapam do teto', () => {
-    const { 'galeria-pequeno.js': _semGaleria, ...resto } = BUILD_PEQUENO
+  it('sem nenhum pecas-* no build, reprova: as peças que perderam o nome não escapam do teto', () => {
+    const { 'pecas-pequeno.js': _semPecas, ...resto } = BUILD_PEQUENO
     const { codigo, saida } = sizeLimit(buildDeMentira({ ...resto, 'parte-Galeria.js': jsIncompressivel(1_000) }))
     expect(saida).toMatch(/can.t find files/i)
     expect(codigo).not.toBe(0)
@@ -150,8 +151,7 @@ describe('teto do bundle da web (.size-limit.json)', () => {
 
   it('a tela tela-<area>-* não conta no teto da área nem no do primeiro carregamento: o teto dela é o do teste do build', () => {
     // 40 kB incompressíveis numa tela do professor, com a entrada em 100 kB: com o nome `professor-*`, estouraria os 8 kB
-    // da área; com `parte-*`, somaria no primeiro carregamento e passaria dos 150 kB. Como `tela-professor-*`, o
-    // `size-limit` não a mede.
+    // da área. Como `tela-professor-*`, o `size-limit` não a mede.
     const { codigo } = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, 'index-pequeno.js': jsIncompressivel(100_000), 'tela-professor-Aprovar.js': jsIncompressivel(40_000) }))
     expect(codigo).toBe(0)
     // O par: a mesma tela com o nome da área reprova, e é por isso que o nome importa.
@@ -190,8 +190,7 @@ describe('teto do bundle da web (.size-limit.json)', () => {
   })
 
   it('sem o chunk de entrada no build, reprova em vez de passar sem medir nada, também com um parte-* no lugar dela', () => {
-    // O teto do primeiro carregamento soma `index-*` e `parte-*`, e acharia o `parte-*` sozinho: é o teto só da entrada
-    // que reprova o build que perdeu a entrada.
+    // O `parte-*` não substitui a entrada em grupo nenhum: o build que perdeu a entrada reprova.
     const { 'index-pequeno.js': _semEntrada, ...resto } = BUILD_PEQUENO
     const { codigo, saida } = sizeLimit(buildDeMentira({ ...resto, 'parte-comum.js': jsIncompressivel(1_000) }))
     expect(saida).toMatch(/can.t find files/i)
