@@ -10,8 +10,8 @@
 
 > Atualizada a cada commit. Quem retoma lê esta seção, `git log mvp/apresentacao` e `git status`.
 
-**Fase atual:** fases 2 e 3 em curso. A fase 1 está fechada (`97da66a`). **A fase 2 (A2) está integrada** (`5c1b53d`,
-04/10/2026), com o portão local verde (277 arquivos, 3795 testes), e espera as correções da revisão para fechar.
+**Fase atual:** fase 4 (governança) em curso. As fases 2 e 3 estão integradas (`5f6dd03`, 04/10/2026), com o portão
+local verde (293 arquivos, 4093 testes) e **todos os revisores aprovando**; fecham com a esteira `37241713815` verde.
 
 **Feito**
 
@@ -69,6 +69,19 @@ teste que quebra) e o `licenciante` do material só para a coordenação.
 A branch de integração da fase 2 é `mvp/fase-2` (`../Educa.ia-mvp-fase-2`). Os worktrees de S, L e C ficam de pé
 para rodadas de correção.
 
+**Revisão da fase 3** (sobre `mvp/fase-2`, de `5c1b53d` a `19adc1f`)
+
+| Revisor | Veredito | O que exigiu, e como fechou |
+|---|---|---|
+| `tenancy-guardian` | APROVADO | Testes de ano anterior no Tutor, no Analista e na atividade, e a escola na chave do Redis: escritos (Z) |
+| `privacy-guardian` | APROVADO | A marca de leitura do lote no mapa da LGPD, o Redis na busca da palavra marcada, as tabelas da fase no item de acesso do titular: feitos (Z) |
+| `conformidade-reviewer` | APROVADO na 2ª passada | O limite por minuto vinha antes do assunto delicado no Tutor (corrigido); a recusa da D55 não generalizava: corrigida pela conversa inteira, e aceita **só para a demonstração**. Na 2ª passada a lista de palavras pegou 6 de 47 frases novas; o que falta antes de dado real está no `TODO.md` |
+| `test-engineer` | APROVADO na 2ª passada | O aluno transferido no desempenho, no lote e no Tutor: escritos (Z) |
+| `frontend-reviewer` | APROVADO na 2ª passada | A ordem e a rolagem do Tutor do aluno, os estados do "Na turma" do Artefato: corrigidos (W) |
+
+O destaque `padrao_de_erro`, que compara o aluno com a turma, foi julgado pelo `conformidade-reviewer`: é fato daquela
+tentativa, mostrado só ao professor para obrigá-lo a abrir antes de aprovar, e não perfilização.
+
 **Interrupções de 04/10/2026:** o limite de uso da sessão estourou duas vezes, por volta das 11h50 e das 17h20, e
 derrubou os agentes em curso no meio do trabalho. Nada se perdeu: cada worktree ficou com o que estava escrito, sem
 commit. Na primeira, os cinco foram retomados às 14h21. Na segunda (W, G e C), o W foi retomado às 18h20 com prioridade
@@ -119,7 +132,8 @@ Para os pacotes das fases 3 e 4, o que os revisores já pediram:
 |---|---|---|---|
 | fase 1 | `37208632853` | `7fddb5f` | verde na reexecução. Na primeira vez, só o job de infra caiu, no ensaio de alertas: a regra "Login recusado pelo semáforo do hash" ficou em `pending` até o prazo de 540 s. Nada da fase 1 mexe em login, e o job passou ao ser rodado de novo: intermitente, a observar |
 | correções da fase 1 | `37220240549` | `1440e79` | verde, todos os jobs, inclusive infra |
-| fase 2 | `37227505570` | `5c1b53d` | a conferir. É a primeira a rodar os specs da A1 ajustados para o professor abrir em Nova conversa, e a mudança em `infra/` da variável da galeria |
+| fase 2 | `37227505570` | `5c1b53d` | vermelha em três e2e (o professor abrindo em Nova conversa num spec que ficou de fora, o cache da Home nova, um teste comprido demais no celular), corrigidos pelo W |
+| fases 2 e 3, com as correções | `37241713815` | `5f6dd03` | a conferir |
 
 **Modelo local do ensaio final:** `qwen3.6-35b-a3b` no `llama-server` (`GET /v1/models` em 04/10/2026; estava
 descarregado, e quem carrega é o Joaquim).
@@ -178,6 +192,15 @@ descarregado, e quem carrega é o Joaquim).
     da disciplina em que tem vínculo. O sinal `atencao_humana`, que não tem referência, chega a todo professor da turma.
 27. **Não há política de Tutor por turma (D19) nem contestação da memória nesta fatia.** O Tutor fica ligado para o
     aluno com turma; o estado "desligado fora da sala" não existe; o aluno vê o que o Tutor sabe e fala com a professora.
+32. **O teto do primeiro carregamento mede o que a entrada baixa de verdade** (126 kB de 150), no teste do build; o glob
+    antigo somava pedaços que a entrada nunca baixa e dava 148,6. O professor baixa cerca de 164 kB até a primeira
+    tela; o teste do e2e que roda a 28,5 de 30 s no celular gasta o tempo em recarregamentos, porque o servidor de teste
+    não comprime nem guarda em cache: fica para infra, no `TODO.md`.
+33. **No lote, a correção é do trabalho feito**: quem respondeu e foi transferido antes de encerrar entra no lote; o
+    Aprovar diz "N alunos responderam · M na turma hoje"; o desempenho é a foto da turma de hoje; o aluno transferido
+    não lê o diagnóstico da turma antiga nesta fatia (lacuna).
+34. **A área do aluno trata quem dá a aula por "quem dá a aula"**, neutro. A mensagem fixa de assunto delicado ainda diz
+    "seu professor": é rascunho da D36, esperando o Joaquim.
 28. **A conversa do professor com o Assistente passou a contar como texto de aluno para a D62.** A regra fixa da D55
     não pega texto de aluno colado sem palavra de julgamento, que segue ao modelo; por isso a tarefa declara
     `levaTextoDeAluno`. Na prática: com provedor externo, a conversa do professor também exige processamento no Brasil.

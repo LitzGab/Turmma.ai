@@ -725,5 +725,8 @@ qualquer dado real:
 - [ ] **Assunto delicado sem teto de IA.** Agora passa na frente de todo limite (D36). Falta um teto próprio, alto, ou a
   deduplicação do sinal `atencao_humana`, para um laço de mensagens não encher a lista do professor; e confirmar que o
   limite geral de requisições por escola, o da borda, não chega antes do 188 às 10h.
+- [ ] **Servidor do e2e sem compressão nem cache.** O `vite preview` manda o JS cru e sem cache, e o teste
+  `e2e/areas.spec.ts:163` roda a 28,5 de 30 s no perfil celular, gastando o tempo em recarregamentos. Servir o build do
+  e2e comprimido e com cache, como a produção, é mudança de infra (contêiner `web` e borda), com `test:infra`.
 - [ ] **Ensaio de alertas intermitente** na esteira: a regra "Login recusado pelo semáforo do hash" ficou em `pending`
   até o prazo numa execução da `mvp/apresentacao` e passou na reexecução. Se voltar, entra por `/corrigir`.
