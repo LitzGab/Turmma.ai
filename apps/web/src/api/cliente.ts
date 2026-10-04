@@ -27,7 +27,7 @@ export const SEM_CORPO: EsquemaDeResposta<void> = { safeParse: () => ({ success:
 
 export interface OpcoesDaChamada {
   /** `GET` quando não dito. */
-  readonly metodo?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  readonly metodo?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   /** Corpo JSON do pedido. */
   readonly corpo?: unknown
   /** O token de acesso da sessão, quando a rota exige (`Authorization: Bearer`). Nunca vai na URL (regra 50, item 7). */
