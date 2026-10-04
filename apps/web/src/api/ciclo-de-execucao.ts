@@ -83,8 +83,11 @@ export function intervaloDaConsulta(execucao: { readonly estado: EstadoDeExecuca
   return INTERVALO_DA_CONSULTA_DE_EXECUCAO_MS
 }
 
-/** A partir de quando a tela avisa que a resposta está demorando (`AvisoFila`), sem contar o tempo na tela (D59). */
-export const LIMIAR_DA_DEMORA_MS = 10_000
+/**
+ * A partir de quando a tela avisa que a resposta está demorando, sem contar o tempo na tela (D59). Vinte segundos: uma
+ * geração de atividade num modelo local passa dos dez com folga, e o aviso que aparece em toda geração deixa de avisar.
+ */
+export const LIMIAR_DA_DEMORA_MS = 20_000
 
 export function estaDemorando(desde: number, agora: number): boolean {
   return agora - desde >= LIMIAR_DA_DEMORA_MS

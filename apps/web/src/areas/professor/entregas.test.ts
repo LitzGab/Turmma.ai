@@ -2,7 +2,7 @@ import { esquemaPedidoDecidirEntrega, type Entrega } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { textoDaAprovacao, motivoDaRejeicao } from '../../componentes/ia/aprovacao'
 import { problemaDoTexto } from '../../componentes/texto-longo'
-import { aprovacaoDaEntrega, avisoDaFuncaoSuspensa, decideAqui, entregasDoFiltro, esperandoVoce, falaDaEntrega, LIMITES_DA_JUSTIFICATIVA, resumoDaAprovacao, textoDaAdaptacao } from './entregas'
+import { aprovacaoDaEntrega, avisoDaFuncaoSuspensa, decideAqui, podeRenomear, saidaEmPdf, entregasDoFiltro, esperandoVoce, falaDaEntrega, LIMITES_DA_JUSTIFICATIVA, resumoDaAprovacao, textoDaAdaptacao } from './entregas'
 
 const TURMA = '0190f5a0-0000-7000-8000-00000000002b'
 const AGORA = new Date('2026-10-05T12:00:00.000Z')
@@ -109,6 +109,20 @@ describe('a conversa do Assistente no Seu time (11.4)', () => {
     expect(avisoDaFuncaoSuspensa(entrega('01'), false)).toBeUndefined()
     expect(avisoDaFuncaoSuspensa(entrega('02', { estado: 'aprovada' }), true)).toBeUndefined()
     expect(avisoDaFuncaoSuspensa(entrega('02', { estado: 'rejeitada' }), true)).toBeUndefined()
+  })
+
+  it('a versão adaptada só sai limpa em PDF depois de aprovada: a pendente sai como rascunho, e a rejeitada não sai', () => {
+    expect(saidaEmPdf(null)).toBe('limpa')
+    expect(saidaEmPdf({ estado: 'aprovada' })).toBe('limpa')
+    expect(saidaEmPdf({ estado: 'pendente' })).toBe('rascunho')
+    expect(saidaEmPdf({ estado: 'rejeitada' })).toBe('nao_exporta')
+  })
+
+  it('a versão adaptada já decidida não muda de nome; a pendente e o artefato sem entrega mudam', () => {
+    expect(podeRenomear(null)).toBe(true)
+    expect(podeRenomear({ estado: 'pendente' })).toBe(true)
+    expect(podeRenomear({ estado: 'aprovada' })).toBe(false)
+    expect(podeRenomear({ estado: 'rejeitada' })).toBe(false)
   })
 
   it('o diálogo de aprovar diz o que é, de qual turma, e que foi a IA que fez', () => {

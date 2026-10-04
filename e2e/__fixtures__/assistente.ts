@@ -64,6 +64,10 @@ export const QUEM_DECIDE = { id: randomUUID(), nome: 'Camila Souza sintética' }
 
 export class ApiDoAssistente {
   conversa: MensagemDaConversa[] = []
+  /** As mensagens anteriores às de `conversa`: a API as entrega em outra página, por `?antes=`. */
+  conversaAnterior: MensagemDaConversa[] = []
+  /** Com ele, as listas de artefatos e de entregas saem paginadas, deste tamanho, com `proxima`. */
+  porPagina: number | undefined
   entregas: Entrega[] = []
   artefatos: RespostaArtefato[] = []
   suspensas = new Set<ChaveDeFuncao>()
@@ -104,6 +108,16 @@ export class ApiDoAssistente {
     this.execucoes.set(execucaoId, { ...atual, estado: 'falhou', resultado: null, erro })
   }
 
+  /** Uma página da lista, como a API a entrega: `proxima` é o id do último item, e `?pagina=` continua depois dele. */
+  private pagina<Item extends { readonly id: string }>(itens: readonly Item[], url: URL): { itens: Item[]; proxima?: string } {
+    if (this.porPagina === undefined) return { itens: [...itens] }
+    const depoisDe = url.searchParams.get('pagina')
+    const inicio = depoisDe === null ? 0 : itens.findIndex((item) => item.id === depoisDe) + 1
+    const fatia = itens.slice(inicio, inicio + this.porPagina)
+    const ultimo = fatia.at(-1)
+    return { itens: fatia, ...(inicio + this.porPagina < itens.length && ultimo !== undefined ? { proxima: ultimo.id } : {}) }
+  }
+
   private aceitar(tarefa: RespostaExecucao['tarefa']): Resposta {
     const id = randomUUID()
     this.execucoes.set(id, { id, tarefa, estado: 'pendente', resultado: null, erro: null })
@@ -113,7 +127,11 @@ export class ApiDoAssistente {
   private deSempre(rota: Rota, { corpo, url, ids }: { corpo: unknown; url: URL; ids: readonly string[] }): Resposta {
     const id = ids[0] ?? ''
     if (rota === 'time') return { status: 200, corpo: montarTime(this.suspensas) }
-    if (rota === 'conversa') return { status: 200, corpo: { mensagens: this.conversa } }
+    if (rota === 'conversa') {
+      if (url.searchParams.get('antes') !== null) return { status: 200, corpo: { mensagens: this.conversaAnterior } }
+      const primeira = this.conversa[0]
+      return { status: 200, corpo: { mensagens: this.conversa, ...(this.conversaAnterior.length > 0 && primeira !== undefined ? { anterior: primeira.id } : {}) } }
+    }
     if (rota === 'mensagens') return this.aceitar('propor_ferramenta')
     if (rota === 'gerar') return this.aceitar(id === 'plano_de_aula' ? 'gerar_plano_de_aula' : 'gerar_atividade_objetiva')
     if (rota === 'adaptar') return this.aceitar('adaptar_atividade')
@@ -123,7 +141,7 @@ export class ApiDoAssistente {
       return execucao === undefined ? erroDaApi(404, 'NAO_ENCONTRADO') : { status: 200, corpo: execucao }
     }
     if (rota === 'artefatos')
-      return { status: 200, corpo: { itens: this.artefatos.map(({ conteudo: _conteudo, versoesAdaptadas: _versoes, aplicacoes: _aplicacoes, ...resumido }) => resumido) } }
+      return { status: 200, corpo: this.pagina(this.artefatos.map(({ conteudo: _conteudo, versoesAdaptadas: _versoes, aplicacoes: _aplicacoes, ...resumido }) => resumido), url) }
     if (rota === 'artefato' || rota === 'renomear' || rota === 'pdf') {
       const artefato = this.artefatos.find((item) => item.id === id)
       if (artefato === undefined) return erroDaApi(404, 'NAO_ENCONTRADO')
@@ -137,7 +155,9 @@ export class ApiDoAssistente {
     if (rota === 'entregas') {
       const estado = url.searchParams.get('estado')
       const turma = url.searchParams.get('turmaId')
-      return { status: 200, corpo: { itens: this.entregas.filter((entrega) => (estado === null || entrega.estado === estado) && (turma === null || entrega.turmaId === turma)) } }
+      const filtradas = this.entregas.filter((entrega) => (estado === null || entrega.estado === estado) && (turma === null || entrega.turmaId === turma))
+      // Só a lista inteira do Seu time é paginada aqui: a de pendentes e a da turma pedem a página maior.
+      return { status: 200, corpo: estado === null && turma === null ? this.pagina(filtradas, url) : { itens: filtradas } }
     }
     if (rota === 'decidir') {
       const entrega = this.entregas.find((item) => item.id === id)

@@ -298,12 +298,12 @@ test.describe('Material da coordenação', () => {
     falhar = false
     await acionar(principal(page).getByRole('button', { name: 'Tentar de novo' }), hasTouch)
 
-    // Vazio: convida a enviar o primeiro material, e o botão abre a escolha do arquivo.
+    // Vazio: convida a enviar o primeiro material pelo formulário, sem um segundo botão principal na tela: a ação da tela
+    // é uma só, o "Enviar material".
     await expect(lista(page).getByText('Nenhum material ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(lista(page)).toContainText('Envie o primeiro PDF da escola, com a licença declarada.')
-    const seletor = page.waitForEvent('filechooser')
-    await acionar(lista(page).getByRole('button', { name: 'Escolher o primeiro arquivo' }), hasTouch)
-    await seletor
+    await expect(lista(page)).toContainText('Envie o primeiro PDF da escola pelo formulário acima, com a licença declarada.')
+    await expect(lista(page).getByRole('button')).toHaveCount(0)
+    expect(await principal(page).getByRole('button').evaluateAll((botoes) => botoes.filter((botao) => getComputedStyle(botao).backgroundColor === 'rgb(232, 115, 46)').map((botao) => botao.textContent))).toEqual(['Enviar material'])
     expect(await violacoesGraves(page)).toEqual([])
 
     // Com dado: o que entrou, o que está sendo lido e o que falhou, o mais novo primeiro.

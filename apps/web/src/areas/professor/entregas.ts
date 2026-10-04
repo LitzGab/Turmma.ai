@@ -54,6 +54,29 @@ export function avisoDaFuncaoSuspensa(entrega: Pick<Entrega, 'estado' | 'funcao'
   return `A coordenação suspendeu a função "${FUNCOES[entrega.funcao].nome}" nesta escola: o Assistente não prepara outra enquanto isso. Esta entrega continua esperando a sua decisão.`
 }
 
+/**
+ * Como a versão adaptada sai em PDF, pela situação da entrega dela (regra 70, item 3): a aprovada sai limpa; a que ainda
+ * espera a decisão sai como **rascunho**, marcada em toda página; **a rejeitada não sai**. O artefato que não é versão
+ * adaptada (sem entrega) é rascunho da professora e sai como está.
+ */
+export type SaidaEmPdf = 'limpa' | 'rascunho' | 'nao_exporta'
+
+export function saidaEmPdf(entrega: { readonly estado: Entrega['estado'] } | null): SaidaEmPdf {
+  if (entrega === null || entrega.estado === 'aprovada') return 'limpa'
+  return entrega.estado === 'pendente' ? 'rascunho' : 'nao_exporta'
+}
+
+export const TEXTO_DO_RASCUNHO_EM_PDF = 'Esta versão ainda espera a sua decisão: o PDF sai marcado como rascunho em todas as páginas.'
+export const TEXTO_DA_REJEITADA_SEM_PDF = 'Esta versão foi rejeitada e não pode ser exportada: ela não vai aos alunos. Peça outra versão adaptada a partir da atividade de origem.'
+
+/** O título só muda enquanto a versão adaptada espera a decisão: depois de decidida, o que foi decidido não muda de nome. */
+export function podeRenomear(entrega: { readonly estado: Entrega['estado'] } | null): boolean {
+  return entrega === null || entrega.estado === 'pendente'
+}
+
+/** O aviso do título e do tema: os dois vão para o modelo, e não são lugar de escrever sobre aluno (regra 20, item 3). */
+export const AVISO_DE_TEXTO_SEM_ALUNO = 'Não escreva nome nem condição de aluno.'
+
 /** Um cartão de "Esperando você", na Home: a função que fez, o que foi feito e de que turma. */
 export interface ItemEsperando {
   readonly id: string

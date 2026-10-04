@@ -124,7 +124,8 @@ function campoDoTema(iniciais: IniciaisDaFerramenta | undefined, exemplo: string
     tipo: 'texto',
     chave: 'tema',
     rotulo: 'Tema',
-    dica: 'O assunto, como está no material da escola. É dele que saem as páginas citadas.',
+    // O tema vai para o modelo: o aviso é o mesmo do título e da justificativa (regra 20, item 3).
+    dica: 'O assunto, como está no material da escola. É dele que saem as páginas citadas. Não escreva nome nem condição de aluno.',
     exemplo,
     obrigatorio: true,
     maximo: TAMANHO_MAXIMO_DO_TEMA,

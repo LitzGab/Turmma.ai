@@ -1,5 +1,6 @@
 import { CodigoDeErro, type Entrega, type PedidoDecidirEntrega } from '@educa/shared'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ChevronRight } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useLocation } from 'wouter'
 import { ErroDaApi, mensagemDoErro } from '../../api/cliente'
@@ -88,16 +89,19 @@ export default function Time() {
   const decidir = useMutation({
     mutationFn: ({ entrega, pedido }: { entrega: Entrega; pedido: PedidoDecidirEntrega }) => decidirEntrega(entrega.id, pedido),
     onSuccess: async (decidida) => {
-      definirAberta(undefined)
       definirAviso('')
+      // A lista muda antes de o diálogo fechar: o botão que o abriu já saiu da tela, e o foco vai para a entrega decidida
+      // (`focoDeReserva`), e não para um botão que some em seguida, o que o jogaria no `body`.
       await aplicarEntregaDecidida(cliente, decidida)
+      definirAberta(undefined)
     },
-    onError: (erro) => {
+    onError: async (erro) => {
       // Outra aba, ou o primeiro clique, já decidiu: a tela se atualiza e mostra como ficou.
       if (!(erro instanceof ErroDaApi) || erro.codigo !== CodigoDeErro.ENTREGA_JA_DECIDIDA) return
-      definirAberta(undefined)
       definirAviso('Esta entrega já tinha sido decidida. A tela foi atualizada com a decisão.')
-      recarregarEntregas(cliente)
+      // Pela mesma razão, o diálogo só fecha depois da releitura.
+      await recarregarEntregas(cliente)
+      definirAberta(undefined)
     },
     onSettled: () => {
       decidindo.current = false
@@ -149,7 +153,11 @@ export default function Time() {
       <header className="flex min-w-0 flex-col gap-2">
         <AssinaturaIA agente="assistente_de_ensino" tamanho={32} />
         <details className="group min-w-0 rounded-cartao border border-linha bg-superficie">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center px-4 text-sm font-medium text-tinta hover:bg-realce-suave">O que cada função faz sozinha, e o que espera você</summary>
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 px-4 text-sm font-medium text-tinta hover:bg-realce-suave">
+            {/* A seta diz que a linha abre, e gira aberta: é aqui que está a resposta a "o que essa IA faz sozinha?". */}
+            <ChevronRight aria-hidden="true" size={16} strokeWidth={1.75} className="shrink-0 group-open:rotate-90" />
+            O que cada função faz sozinha, e o que espera você
+          </summary>
           <div className="flex min-w-0 flex-col gap-3 border-t border-linha p-4">
             <h2 id={idDasFuncoes} className="sr-only">
               Funções do Assistente de ensino
@@ -206,10 +214,10 @@ export default function Time() {
 
       {/* Sem entrega nenhuma, a tela não fica vazia: diz o que o Assistente faz e como pedir (regra 50, item 6). */}
       {entregas.data !== undefined && todas.length === 0 && (vinculos.data === undefined || temTurma) && (
-        <Cartao titulo="O Assistente ainda não tem nada esperando você">
+        <Cartao titulo="O que o Assistente de ensino faz por você">
           <div className="flex min-w-0 flex-col gap-3">
             <p className="min-w-0 break-words text-apoio">
-              Quando ele preparar uma versão adaptada ou corrigir uma atividade da turma, o que foi feito aparece aqui, esperando a sua decisão. Nada disso chega ao aluno antes de você aprovar.
+              Ele prepara a versão adaptada de uma atividade e corrige as objetivas da turma, e o que fez aparece aqui, esperando a sua decisão: nada chega ao aluno antes de você aprovar. Agora não há nada esperando você.
             </p>
             {assistente !== undefined && (
               <ul className="flex min-w-0 list-disc flex-col gap-1.5 pl-5 text-apoio">
@@ -236,31 +244,71 @@ export default function Time() {
           {esperando.length > 0 && (
             // Presa no alto enquanto a conversa rola: abaixo da barra do topo no celular (56 px), no alto no computador.
             <section aria-labelledby={idDaFaixa} data-faixa-esperando="" className="sticky top-14 z-10 flex min-w-0 flex-col gap-2 rounded-cartao border border-pendente bg-pendente-cx p-3 md:top-0">
-              <h2 id={idDaFaixa} className="text-sm font-semibold text-pendente">
+              <h2 id={idDaFaixa} className="sr-only">
                 Esperando você
               </h2>
-              <ul className="flex max-h-40 min-w-0 flex-col gap-1 overflow-y-auto">
-                {esperando.map((entrega) => (
-                  <li key={entrega.id} className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                    <span className="min-w-0 flex-1 basis-40 text-sm break-words text-tinta">
-                      {entrega.titulo}
-                      {nomes[entrega.turmaId] !== undefined && ` · ${nomes[entrega.turmaId] ?? ''}`}
-                    </span>
-                    <Botao
-                      variante="secundario"
-                      tamanho="compacto"
-                      onClick={() => {
-                        if (!visiveis.some((visivel) => visivel.id === entrega.id)) definirFiltro('esperando')
-                        definirAlvo(undefined)
-                        // Depois do render com o filtro certo: o mesmo alvo duas vezes seguidas ainda leva até ele.
-                        requestAnimationFrame(() => definirAlvo(entrega.id))
-                      }}
-                    >
-                      Ver<span className="sr-only"> {entrega.titulo}</span>
-                    </Botao>
-                  </li>
-                ))}
-              </ul>
+              {/*
+                Uma pendência cabe numa linha. Com várias, a faixa presa ocuparia a tela do celular: fica recolhida no
+                contador, e abre a pedido.
+              */}
+              {esperando.length === 1 ? (
+                <>
+                  <p aria-hidden="true" className="text-sm font-semibold text-pendente">
+                    Esperando você
+                  </p>
+                  <ul className="flex max-h-40 min-w-0 flex-col gap-1 overflow-y-auto">
+                    {esperando.map((entrega) => (
+                      <li key={entrega.id} className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                        <span className="min-w-0 flex-1 basis-40 text-sm break-words text-tinta">
+                          {entrega.titulo}
+                          {nomes[entrega.turmaId] !== undefined && ` · ${nomes[entrega.turmaId] ?? ''}`}
+                        </span>
+                        <Botao
+                          variante="secundario"
+                          tamanho="compacto"
+                          onClick={() => {
+                            if (!visiveis.some((visivel) => visivel.id === entrega.id)) definirFiltro('esperando')
+                            definirAlvo(undefined)
+                            // Depois do render com o filtro certo: o mesmo alvo duas vezes seguidas ainda leva até ele.
+                            requestAnimationFrame(() => definirAlvo(entrega.id))
+                          }}
+                        >
+                          Ver<span className="sr-only"> {entrega.titulo}</span>
+                        </Botao>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <details className="group min-w-0">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-pendente md:min-h-9">
+                    <ChevronRight aria-hidden="true" size={16} strokeWidth={1.75} className="shrink-0 group-open:rotate-90" />
+                    {esperando.length} entregas esperando você
+                  </summary>
+                  <ul className="flex max-h-40 min-w-0 flex-col gap-1 overflow-y-auto">
+                    {esperando.map((entrega) => (
+                      <li key={entrega.id} className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                        <span className="min-w-0 flex-1 basis-40 text-sm break-words text-tinta">
+                          {entrega.titulo}
+                          {nomes[entrega.turmaId] !== undefined && ` · ${nomes[entrega.turmaId] ?? ''}`}
+                        </span>
+                        <Botao
+                          variante="secundario"
+                          tamanho="compacto"
+                          onClick={() => {
+                            if (!visiveis.some((visivel) => visivel.id === entrega.id)) definirFiltro('esperando')
+                            definirAlvo(undefined)
+                            // Depois do render com o filtro certo: o mesmo alvo duas vezes seguidas ainda leva até ele.
+                            requestAnimationFrame(() => definirAlvo(entrega.id))
+                          }}
+                        >
+                          Ver<span className="sr-only"> {entrega.titulo}</span>
+                        </Botao>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
             </section>
           )}
 

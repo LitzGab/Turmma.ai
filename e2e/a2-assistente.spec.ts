@@ -230,9 +230,32 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
-  test('rejeitar a versão adaptada exige a justificativa, e a tela e o banco guardam quem rejeitou e por quê', async ({ page, hasTouch }) => {
+  test('o plano de aula sai com objetivos, etapas e a página citada; e rejeitar a versão adaptada exige a justificativa, com a tela e o banco guardando quem rejeitou e por quê', async ({ page, hasTouch }) => {
     test.setTimeout(300_000)
     const { professora, turmaNome } = await montarEscolaEEntrar(page, hasTouch)
+
+    // O plano de aula, pelo formulário: objetivos, etapas com o tempo de cada uma, a assinatura da IA e as fontes.
+    await irPelaNavegacao(page, 'Ferramentas', hasTouch)
+    await acionar(page.locator('[data-ferramenta="plano_de_aula"]'), hasTouch)
+    const plano = page.locator('[data-cartao-de-ferramenta="plano_de_aula"]')
+    await plano.getByLabel('Tema').fill('Estequiometria', { timeout: PRAZO_DA_ENTRADA_MS })
+    await acionar(plano.getByRole('button', { name: 'Gerar plano de aula' }), hasTouch)
+    const planoPronto = plano.locator('[data-motor="pronto"]')
+    await expect(planoPronto.getByText('Plano de aula — Estequiometria')).toBeVisible({ timeout: PRAZO_DA_IA_MS })
+    await expect(planoPronto.locator('[data-selo-ia]')).toHaveCount(1)
+    await expect(planoPronto.getByRole('heading', { name: 'Objetivos' })).toBeVisible()
+    await expect(planoPronto.getByRole('heading', { name: 'Etapas' })).toBeVisible()
+    await expect(planoPronto.getByText(new RegExp(`^Fontes \\(\\d\\): ${TITULO_DO_MATERIAL}, p\\. `))).toBeVisible()
+    await acionar(planoPronto.getByRole('link', { name: 'Abrir o artefato' }), hasTouch)
+    await expect(page.getByRole('heading', { level: 1, name: 'Plano de aula — Estequiometria' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page)).toContainText(`Plano de aula · ${turmaNome} · ${DISCIPLINA}`)
+    await expect(principal(page).getByText(/^Duração: \d+ min$/)).toBeVisible()
+    await expect(principal(page).getByRole('heading', { name: 'Como avaliar' })).toBeVisible()
+    await expect(principal(page).getByRole('button', { name: new RegExp(`^Fonte: ${TITULO_DO_MATERIAL}, p\\. [1-6]$`) }).first()).toBeVisible()
+    // Plano de aula não tem versão adaptada: só a atividade objetiva se adapta.
+    await expect(page.getByRole('button', { name: 'Pedir versão adaptada' })).toHaveCount(0)
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
     // Sem conversar: o formulário de Ferramentas é o mesmo motor do cartão.
     await irPelaNavegacao(page, 'Ferramentas', hasTouch)
     await acionar(page.locator('[data-ferramenta="atividade_objetiva"]'), hasTouch)
@@ -265,16 +288,21 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     // Em Ferramentas, o que foi gerado vem do mais novo para o mais antigo, e a versão adaptada diz a situação dela.
     await irPelaNavegacao(page, 'Ferramentas', hasTouch)
     const gerados = page.locator('[data-artefato]')
-    await expect(gerados).toHaveCount(2, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(gerados).toHaveCount(3, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(gerados.nth(0)).toContainText(`Versão adaptada · Linguagem direta · ${turmaNome}`)
     await expect(gerados.nth(0)).toContainText('Rejeitada')
     await expect(gerados.nth(1)).toContainText(`Atividade objetiva · ${turmaNome}`)
+    await expect(gerados.nth(2)).toContainText(`Plano de aula · ${turmaNome}`)
     // A versão rejeitada, aberta: a adaptação pelo tipo, e quem rejeitou e por quê, lidos da API.
     await acionar(gerados.nth(0), hasTouch)
     await expect(page.getByRole('heading', { level: 1, name: 'Atividade — Estequiometria (versão adaptada)' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).locator('[data-aprovacao="rejeitada"]')).toContainText(`${professora.nome} rejeitou · `, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).locator('[data-aprovacao="rejeitada"]')).toContainText('Motivo: A questão 2 ficou sem o dado da massa.')
     await expect(page.getByRole('button', { name: 'Pedir versão adaptada' })).toHaveCount(0)
+    // Rejeitada, a versão não sai em PDF nem muda de nome, e a tela diz por quê.
+    await expect(page.getByRole('button', { name: /Exportar/ })).toHaveCount(0)
+    await expect(page.locator('[data-sem-pdf]')).toContainText('Esta versão foi rejeitada e não pode ser exportada')
+    await expect(page.getByRole('button', { name: 'Renomear' })).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
   })

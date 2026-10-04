@@ -1,4 +1,4 @@
-import { CodigoDeErro, NOME_DA_FERRAMENTA, type ArtefatoResumido, type Entrega } from '@educa/shared'
+import { CodigoDeErro, esquemaPedidoRenomearArtefato, NOME_DA_FERRAMENTA, type ArtefatoResumido, type Entrega } from '@educa/shared'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Pencil } from 'lucide-react'
 import { useId, useRef, useState, type FormEvent } from 'react'
@@ -19,12 +19,11 @@ import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import { ConteudoDoArtefato } from './ConteudoDoArtefato'
-import { aprovacaoDaEntrega, textoDaAdaptacao, VERBO_DA_ENTREGA } from './entregas'
+import { aprovacaoDaEntrega, AVISO_DE_TEXTO_SEM_ALUNO, podeRenomear, saidaEmPdf, TEXTO_DA_REJEITADA_SEM_PDF, TEXTO_DO_RASCUNHO_EM_PDF, textoDaAdaptacao, VERBO_DA_ENTREGA } from './entregas'
 import { ExportarPdf } from './ExportarPdf'
 import { ferramentaDoCatalogo } from './ferramentas'
 import { nomesDasDisciplinas, nomesDasTurmas } from './turmas-da-professora'
 
-const TAMANHO_MAXIMO_DO_TITULO = 160
 
 /** A situação da versão adaptada, com quem decidiu e quando, quando a leitura das entregas da turma a trouxe. */
 function LinhaDaVersao({ versao, entregas, carregando }: { versao: Pick<ArtefatoResumido, 'entrega'>; entregas: readonly Entrega[] | undefined; carregando: boolean }) {
@@ -109,11 +108,16 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
   const podeAdaptar = dados.tipo === 'atividade_objetiva' && !adaptada
   const funcao = adaptada ? 'adaptacao' : ferramentaDoCatalogo(dados.tipo).funcao
 
+  // O título é conferido pelo contrato da rota (`esquemaPedidoRenomearArtefato`): o limite é o dele, e não um número
+  // repetido aqui.
+  const tituloConferido = esquemaPedidoRenomearArtefato.safeParse({ titulo: novoTitulo ?? '' })
+  const tituloLongo = (novoTitulo ?? '').trim() !== '' && !tituloConferido.success
+  const pdf = saidaEmPdf(dados.entrega)
+
   function aoRenomear(evento: FormEvent<HTMLFormElement>): void {
     evento.preventDefault()
-    const titulo = novoTitulo?.trim() ?? ''
-    if (titulo === '' || renomear.isPending) return
-    renomear.mutate(titulo)
+    if (!tituloConferido.success || renomear.isPending) return
+    renomear.mutate(tituloConferido.data.titulo)
   }
 
   return (
@@ -125,11 +129,15 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
       antes={voltar}
       acoes={
         <>
-          <Botao ref={botaoDeRenomear} variante="discreto" tamanho="compacto" onClick={() => definirNovoTitulo(dados.titulo)} disabled={novoTitulo !== undefined}>
-            <Pencil aria-hidden="true" size={16} strokeWidth={1.75} className="shrink-0" />
-            Renomear
-          </Botao>
-          <ExportarPdf artefatoId={dados.id} titulo={dados.titulo} variante="secundario" />
+          {/* A versão adaptada já decidida não muda de nome: a API recusaria, e a tela não oferece o que ela recusa. */}
+          {podeRenomear(dados.entrega) && (
+            <Botao ref={botaoDeRenomear} variante="discreto" tamanho="compacto" onClick={() => definirNovoTitulo(dados.titulo)} disabled={novoTitulo !== undefined}>
+              <Pencil aria-hidden="true" size={16} strokeWidth={1.75} className="shrink-0" />
+              Renomear
+            </Botao>
+          )}
+          {/* A aprovada sai limpa; a pendente, como rascunho; a rejeitada não sai, e a tela diz por quê, logo abaixo. */}
+          {pdf !== 'nao_exporta' && <ExportarPdf artefatoId={dados.id} titulo={dados.titulo} variante="secundario" rascunho={pdf === 'rascunho'} />}
           {podeAdaptar && (
             // Relativo à área, como os links: o `Route` aninhado em `/professor` resolve a partir da base dela.
             <Botao onClick={() => navegar(caminhoDaAdaptacaoDoArtefato(dados.id))}>Pedir versão adaptada</Botao>
@@ -140,12 +148,20 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
     >
       {novoTitulo !== undefined && (
         <form onSubmit={aoRenomear} className="flex min-w-0 flex-col gap-3 rounded-cartao border border-linha bg-superficie p-4">
-          <Campo rotulo="Novo título" value={novoTitulo} onChange={(evento) => definirNovoTitulo(evento.target.value)} maxLength={TAMANHO_MAXIMO_DO_TITULO} autoComplete="off" autoFocus />
+          <Campo
+            rotulo="Novo título"
+            dica={`${AVISO_DE_TEXTO_SEM_ALUNO} O título aparece no PDF e vai para o Assistente quando você pede a versão adaptada.`}
+            erro={tituloLongo ? 'O título ficou comprido demais. Encurte e salve de novo.' : undefined}
+            value={novoTitulo}
+            onChange={(evento) => definirNovoTitulo(evento.target.value)}
+            autoComplete="off"
+            autoFocus
+          />
           <p role="alert" className="rounded-controle bg-erro-cx p-3 break-words text-erro empty:hidden">
             {renomear.isError ? mensagemDoErro(renomear.error) : ''}
           </p>
           <div className="flex flex-wrap gap-3">
-            <Botao type="submit" variante="secundario" disabled={renomear.isPending || novoTitulo.trim() === ''}>
+            <Botao type="submit" variante="secundario" disabled={renomear.isPending || !tituloConferido.success}>
               {renomear.isPending ? 'Salvando…' : 'Salvar o título'}
             </Botao>
             <Botao
@@ -180,6 +196,12 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
                 <Link to={ROTAS_DO_PROFESSOR.timeDoAssistente} className="text-caramelo-texto underline">
                   Ver e decidir em Seu time
                 </Link>
+              </p>
+            )}
+            {pdf === 'rascunho' && <p className="min-w-0 text-sm break-words text-sutil">{TEXTO_DO_RASCUNHO_EM_PDF}</p>}
+            {pdf === 'nao_exporta' && (
+              <p data-sem-pdf="" className="min-w-0 text-sm break-words text-sutil">
+                {TEXTO_DA_REJEITADA_SEM_PDF}
               </p>
             )}
             {dados.origemId !== null && (
