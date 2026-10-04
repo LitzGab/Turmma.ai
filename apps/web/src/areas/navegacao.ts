@@ -1,5 +1,5 @@
 import { NOMES_DOS_AGENTES, type Agente, type PapelDeUsuario } from '@educa/shared'
-import { Blocks, BookOpen, ClipboardList, GraduationCap, LayoutGrid, MessageCircleQuestion, MessagesSquare, School, SquarePen, UsersRound, type LucideIcon } from 'lucide-react'
+import { Blocks, BookOpen, Bot, ChartColumn, ClipboardList, GraduationCap, LayoutGrid, MessageCircleQuestion, MessagesSquare, School, ShieldCheck, SquarePen, UsersRound, type LucideIcon } from 'lucide-react'
 import { ROTAS } from '../caminhos'
 
 /*
@@ -34,7 +34,11 @@ export interface ItemDaNavegacao {
  * protege nada (regra 00, item 1).
  */
 export const NAVEGACAO: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao[]>> = {
+  // A5: Governança, onde a coordenação abre (11.1), Agentes e Analista vêm antes da montagem da escola.
   coordenador: [
+    { rotulo: 'Governança', caminho: ROTAS.governanca, icone: ShieldCheck },
+    { rotulo: 'Agentes', caminho: ROTAS.agentes, icone: Bot },
+    { rotulo: 'Analista', caminho: ROTAS.analista, icone: ChartColumn },
     { rotulo: 'Estrutura', caminho: ROTAS.estrutura, icone: Blocks },
     { rotulo: 'Professores', caminho: ROTAS.professores, icone: GraduationCap },
     { rotulo: 'Material', caminho: ROTAS.material, icone: BookOpen },

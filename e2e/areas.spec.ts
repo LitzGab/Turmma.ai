@@ -6,7 +6,7 @@ import {
   abrirNavegacao,
   entrarComoCoordenacaoNaMesmaAba,
   escolherNoSeletor,
-  esperarEstrutura,
+  esperarGovernanca,
   nomeNoSeletor,
   entrarComoProfessora,
   entrarPorEmail,
@@ -46,8 +46,14 @@ const ITENS_DO_PROFESSOR = [
   { rotulo: 'Ferramentas', caminho: '/professor/ferramentas' },
   { rotulo: 'Turmas', caminho: '/professor/turmas' },
 ] as const
-/** Os itens da coordenação, como a mesma tabela os declara: "Estrutura" chegou na 13.0, "Professores", na 14.0, e "Material", no MVP de apresentação (A2). */
+/**
+ * Os itens da coordenação, como a mesma tabela os declara: "Estrutura" chegou na 13.0, "Professores", na 14.0, "Material",
+ * no MVP de apresentação (A2), e "Governança", "Agentes" e "Analista", na A5, na frente: é na Governança que ela abre.
+ */
 const ITENS_DA_COORDENACAO = [
+  { rotulo: 'Governança', caminho: '/coordenacao/governanca' },
+  { rotulo: 'Agentes', caminho: '/coordenacao/agentes' },
+  { rotulo: 'Analista', caminho: '/coordenacao/analista' },
   { rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' },
   { rotulo: 'Professores', caminho: '/coordenacao/professores' },
   { rotulo: 'Material', caminho: '/coordenacao/material' },
@@ -164,7 +170,8 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     const pedidos = registrarChunks(page)
     const professora = await entrarComoProfessora(page, hasTouch)
 
-    // Os endereços da coordenação que têm tela: a Estrutura e uma turma aberta nela (13.0), e Professores (14.0).
+    // Os endereços da coordenação que têm tela: a Estrutura e uma turma aberta nela (13.0), e Professores (14.0). A guarda é
+    // da área inteira: a Governança (A5) cai no mesmo "não encontrada", sem baixar o pedaço da área (o teste do chunk abaixo).
     for (const endereco of ['/coordenacao/estrutura', `/coordenacao/estrutura/turmas/${randomUUID()}`, '/coordenacao/professores']) {
       await page.goto(endereco)
       await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -276,7 +283,7 @@ test.describe('W5: a fronteira do import() de cada área', () => {
 
   test('a área da coordenação que não chega mostra a mesma fronteira, e a nova tentativa carrega', async ({ page, hasTouch }) => {
     const coordenadora = await criarEquipeComSenha('coordenador')
-    // A coordenação abre em Estrutura (13.0): a área é pedida já na entrada, e é ali que ela não chega.
+    // A coordenação abre em Governança (A5): a área é pedida já na entrada, e é ali que ela não chega.
     const abortar = (rota: Route) => rota.abort('internetdisconnected')
     await page.route(CHUNK_DA_COORDENACAO, abortar)
     await page.goto('/entrar')
@@ -286,11 +293,11 @@ test.describe('W5: a fronteira do import() de cada área', () => {
     await expect(page.getByRole('heading', { name: TITULO_DA_FALHA })).toBeFocused()
     expect(await violacoesGraves(page)).toEqual([])
 
-    // Com a rede de volta, "Tentar de novo" recarrega e a área chega, com a Estrutura.
+    // Com a rede de volta, "Tentar de novo" recarrega e a área chega, com a Governança.
     await page.unroute(CHUNK_DA_COORDENACAO, abortar)
     if (hasTouch) await page.getByRole('button', { name: 'Tentar de novo' }).tap()
     else await page.getByRole('button', { name: 'Tentar de novo' }).click()
-    await esperarEstrutura(page)
+    await esperarGovernanca(page)
     await expect(page.getByRole('heading', { name: TITULO_DA_FALHA })).toHaveCount(0)
   })
 })
@@ -380,8 +387,8 @@ test.describe('recomeço da tela', () => {
     })
     const coordenadora = await criarEquipeComSenha('coordenador')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    // A coordenação abre em Estrutura (13.0), que também não aponta para Turmas, tela do professor.
-    await esperarEstrutura(page)
+    // A coordenação abre em Governança (A5), que também não aponta para Turmas, tela do professor.
+    await esperarGovernanca(page)
     await expect(page.getByRole('main').getByRole('link', { name: 'Turmas' })).toHaveCount(0)
 
     await abrirNavegacao(page, hasTouch)

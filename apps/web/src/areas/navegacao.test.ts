@@ -14,7 +14,11 @@ describe('navegação por papel', () => {
       { rotulo: 'Atividades', caminho: '/aluno/atividades' },
       { rotulo: 'Minha turma', caminho: '/aluno/minha-turma' },
     ])
+    // A5: a coordenação abre em Governança, e Agentes e Analista vêm com ela.
     expect(NAVEGACAO.coordenador.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([
+      { rotulo: 'Governança', caminho: '/coordenacao/governanca' },
+      { rotulo: 'Agentes', caminho: '/coordenacao/agentes' },
+      { rotulo: 'Analista', caminho: '/coordenacao/analista' },
       { rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' },
       { rotulo: 'Professores', caminho: '/coordenacao/professores' },
       { rotulo: 'Material', caminho: '/coordenacao/material' },
