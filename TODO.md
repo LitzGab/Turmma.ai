@@ -411,6 +411,24 @@ das rodadas 1 e 2). Os itens que valem para funcionalidade futura ficam lá e s�
       medir a latência de reconexão de fato, o ponto de partida honesto é o `ready` do cliente, não o
       healthcheck (`infra-guardian`, 20/09/2026)
 
+Pendências de processo da retrospectiva da A1 (`tasks/prd-apresentacao-escola/retro.md`, "Decisão"). São mudanças em
+código de `tools/processo/`, que pedem teste e revisão, por isso não entraram com o texto das skills.
+
+- [ ] **Portão local sem o `dist` dos pacotes** (proposta 5 da retro da A1). A esteira começa do clone, sem
+      `packages/*/dist`, e um dist velho na máquina deixou passar o vermelho da 17.0. O portão
+      (`tools/processo/portao-local.ts`) remove `packages/*/dist` antes do `test` e de novo antes do `e2e` (um `ops:*`
+      rodado pelo `test` reconstrói o dist), com o teste que roda o portão como processo
+      (`tools/processo/revisoes.test.ts`): com um `packages/shared/dist` plantado, o e2e não o vê. Antes, verificar que
+      o vitest e o typecheck não dependem do dist. Até lá, a guarda de `tools/ci/playwright.test.ts` (correção
+      `e2e-sem-dist-do-shared`) fecha o caminho que causou o vermelho. Destino: correção própria
+- [ ] **O hook cobra o `revisor-geral` na correção grande** (proposta 12 da retro da A1). O `/corrigir` já diz que ele é
+      obrigatório com mais de 5 arquivos fora de `tasks/` ou com `.github/`, `tools/ci/` ou `tools/processo/`; falta o
+      hook (`revisoresObrigatorios`, em `tools/processo/revisoes.ts`) exigir isso sem depender de a linha "Subagentes
+      obrigatórios" do documento o listar. Destino: correção própria
+- [ ] **Stashes antigos no `git stash`, para o Joaquim decidir** (dono: Joaquim). Continuam lá o "tarefa 1.0 A0
+      aprovada, aguardando esteira", de 23/09, e o "resto do pop abortado do stash de 18/09". Conferir se o conteúdo já
+      está em algum commit antes de qualquer `drop`. Ninguém descarta sem ele
+
 Pendências de código da A0b que a retrospectiva deixou (`tasks/prd-apresentacao-painel/retro.md`, "Pendências de
 código"), com o destino de cada uma. As pequenas foram fechadas na correção `2026-09-25-acabamento-da-a0b`.
 

@@ -67,7 +67,7 @@ o nível de autonomia do agente. Referência: `.claude/rules/70-conformidade-cne
 | Fila e prioridade | interativa, normal, lote |
 | Limite por escola | concorrência, tamanho, quantidade |
 | Rate limit | por usuário e por escola; **por rota nova**: qual contador, se ele recusa ou só rebaixa, e o teste do 429 |
-| Corridas de concorrência | **uma linha por trava**: a instrução com todas as condições de estado (o dono ativo, o convite não revogado), o que fica na mesma transação, o que o perdedor recebe, e o cenário em paralelo que a prova |
+| Corridas de concorrência | **uma linha por trava**: a instrução com todas as condições de estado (o dono ativo, o convite não revogado), o que fica na mesma transação, o que o perdedor recebe, e o cenário em paralelo que a prova; quando a mesma escrita pode violar duas restrições únicas (a chave de idempotência e a regra de negócio), qual delas decide, e que a resposta ao perdedor não depende da ordem em que o Postgres as confere |
 | Índices novos | começando pelo escopo |
 | Migration | compatível com o código anterior? |
 | Quando cada dependência cai | banco, Redis, provedor de IA, storage: o que o usuário vê |

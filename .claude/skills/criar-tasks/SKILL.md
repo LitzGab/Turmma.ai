@@ -94,7 +94,10 @@ Na dúvida, marque. Auditoria a mais custa minutos; auditoria a menos custa o co
   dividida no roadmap
 - **Tarefa cabe numa rodada de revisão.** Mira de até ~15 arquivos de código alterados e um
   `N_task.md` de até 800 palavras. Tarefa que passa disso vira duas: diff grande é onde o
-  revisor deixa passar coisa e onde a rodada nova custa mais
+  revisor deixa passar coisa e onde a rodada nova custa mais. Tarefa de tela conta as telas: uma
+  tela, ou um diálogo grande, por tarefa, com o e2e dela. A 13.0 da A1 juntou Estrutura, Lista e
+  Alocação, previa 11 arquivos e levou 53, com 17 rodadas e 7 do `test-engineer`. A 11.0, a 14.0 e
+  a 15.0 também passaram de 25
 - Formato `X.0` para tarefa principal, `X.Y` para subtarefa
 - Marque o que pode correr em paralelo
 

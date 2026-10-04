@@ -65,7 +65,18 @@ Para cada tarefa pendente:
 **A esteira não bloqueia a próxima tarefa, mas bloqueia o commit dela.** A execução leva uns
 20 minutos; esperar por ela entre tarefas dobraria o tempo. Por isso a próxima começa logo, e
 o subagente confere a esteira do commit anterior antes de commitar (passo 7 de
-`executar-task`). Se a esteira ficou vermelha, ele para sem commitar e a execução para aqui.
+`executar-task`). Se a esteira ficou vermelha, ele para sem commitar, com o trabalho na árvore.
+O orquestrador então:
+
+1. guarda a tarefa com `git stash push --include-untracked -m "tarefa N.0 pronta, esteira de <hash>
+   vermelha"`;
+2. roda o `/corrigir` da esteira, que commita por cima do vermelho (ver o passo 6 dele);
+3. espera a esteira da correção ficar verde;
+4. volta a tarefa com `git stash pop` e confere que o `git stash list` não guardou mais nada dela;
+5. dispara um subagente novo para a mesma tarefa, só para os passos 4 a 7: portão de novo (a base
+   mudou), rodada nova de quem o hook apontar, conferência, commit e push.
+
+Stash que sobra é trabalho perdido: o da 1.0 da A0, de 23/09, continua na lista.
 
 Depois da última tarefa, espere a esteira do último commit
 (`gh run watch <id> --exit-status`) antes do encerramento. Vermelha é falha da execução.
@@ -117,8 +128,13 @@ Esteira no último commit: [verde | vermelha: job]
 Pendentes restantes: [lista]
 ```
 
-Com todas as tarefas concluídas, o próximo passo é `/validar <funcionalidade>` e, depois dele,
-`/retro <funcionalidade>`.
+Com todas as tarefas concluídas, antes do `/validar`, procure o que tem destino nele:
+``grep -n "/validar" TODO.md tasks/prd-<funcionalidade>/*_task.md`` (e leia os itens que citam a
+spec, em qualquer forma: "antes do `/validar` da A1", "a levar para o /validar"). Cada item sai com um
+de três destinos: fechado por `/corrigir`; decidido pelo Joaquim, com destino novo escrito (fase ou
+portão); ou levado ao `/validar` como pergunta explícita, no relatório de encerramento. O validador
+confere, não decide. Na A1, G1 e G2 tinham "destino: antes do /validar", chegaram abertas e viraram
+as duas maiores. Depois disso, `/validar <funcionalidade>` e, depois dele, `/retro <funcionalidade>`.
 
 ## Notas
 

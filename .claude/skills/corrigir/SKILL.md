@@ -29,7 +29,8 @@ Crie `tasks/correcoes/<AAAA-MM-DD>-<slug-curto>.md`:
 
 **Origem:** <esteira run <id> | validacao.md de <func> | uso | teste intermitente>
 **Subagentes obrigatórios:** <guardiões pela natureza, com a tabela do /criar-tasks>
-<!-- test-engineer é obrigatório em toda correção, marcado ou não. -->
+<!-- test-engineer é obrigatório em toda correção, marcado ou não. `revisor-geral`, quando a correção passa
+     do limite do passo 5: marque-o aqui. -->
 
 ## Sintoma
 <o que acontece, com a saída ou o link>
@@ -68,16 +69,34 @@ node tools/processo/portao-local.ts   # com --e2e e --infra quando se aplicam
 
 Mesma mecânica do passo 5 de `.claude/skills/executar-task/SKILL.md`, com o documento da
 correção na linha `Tarefa:`: `test-engineer` primeiro e sozinho, depois os guardiões marcados em
-paralelo. `revisor-geral` não é obrigatório aqui; chame-o se a correção passou de ~5 arquivos.
+paralelo. `revisor-geral` é obrigatório quando a correção altera mais de 5 arquivos fora de
+`tasks/`, ou toca `.github/`, `tools/ci/` ou `tools/processo/`. Escreva-o, entre crases, na linha
+"Subagentes obrigatórios" do documento, no passo 1 ou assim que passar do limite: é dessa linha que o
+hook tira quem cobra. Na A1, duas correções
+passaram do limite sem ele (`decididos-continuam-marcados`, com 7 arquivos, e `e2e-em-fatias`, com
+11, a N5 do `/validar`).
+
+Antes de cada rodada do `revisor-geral`, rode
+`node tools/processo/portao-local.ts conferir tasks/correcoes/<AAAA-MM-DD>-<slug>.md`. Se der
+inválido, rode o portão com as suítes que a mensagem pede antes de chamar. Na A1, três rodadas dele
+reprovaram só ou também pelo carimbo, que é uma conferência de um comando.
 
 ## 6. Commit e push
 
-Com a esteira do commit anterior verde (passo 7 da `executar-task`):
+Com a esteira do commit anterior verde (passo 7 da `executar-task`), salvo quando a origem desta
+correção é a esteira vermelha do commit anterior: aí ela commita por cima dela, porque é ela que a
+fecha, e a esteira que precisa ficar verde é a dela. Correção de outra origem espera o verde, como
+tarefa. Na A1, `241ba1c`, `ef2bed0` e `509cfc3` seguiram essa exceção sem ela estar escrita:
 
 - stage só os arquivos da correção, o documento e, se o hook os escreveu,
   `tasks/correcoes/achados/<slug>.md` e `tasks/correcoes/achados/indice.md`. O índice é da pasta:
   linha de outro documento que tenha entrado enquanto esta correção corria vai junto, e é assim
   mesmo — ele só é acrescentado, e tirar a linha à mão perderia o registro dela;
+- antes do commit, `git diff --cached --name-only` confere com a lista dos arquivos da correção (um
+  `git add` que falha num caminho errado não prepara nada daquele comando); depois do commit e antes
+  do push, `git show --stat HEAD` e `git status --short`: se algo ficou de fora e o commit ainda não
+  foi enviado, `git reset --soft HEAD~1`, prepare de novo e refaça. Na 15.0 da A1, um commit saiu
+  parcial e só foi refeito porque alguém olhou;
 - veio um `achados-revisoes.md` de volta num merge? `node tools/processo/separar-achados.ts` antes
   do commit, e então prepare a deleção dele e a pasta `achados/` inteira, que é mais do que os
   arquivos desta correção;

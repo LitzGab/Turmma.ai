@@ -54,9 +54,14 @@ fazer, e as dos guardiões marcados:
   clique, classe CSS que o e2e diz provar —, inclusive as que a tabela de testes não cita e as
   cópias da mesma regra em outro arquivo. Para cada uma: apague, rode, veja vermelho, restaure
   (`git checkout --`). Trava se prova pelo efeito (dois registros), não pela espera. Registre na
-  seção "Mutações" do `N_task.md`: `arquivo:linha → teste vermelho`. Na A0b foram seis
-  reprovações (4.0, 5.0, 6.0 duas vezes, 7.0, 9.0) por cláusula sem teste, todas fora da lista que
-  o implementador tinha conferido.
+  seção "Mutações" do `N_task.md`: `arquivo` › função › trecho da cláusula → teste vermelho, sem
+  número de linha, que muda a cada edição (o `test-engineer` apontou linha deslocada em quatro
+  rodadas da A1). Na A0b foram seis reprovações (4.0, 5.0, 6.0 duas vezes, 7.0, 9.0) por cláusula
+  sem teste, todas fora da lista que o implementador tinha conferido.
+  Condição composta (`a && b && c`) se muta termo a termo: trocar a expressão inteira por `true`
+  deixou dois de três termos sem teste na 17.0 da A1. E a mutação vale para a cláusula que entra
+  depois, para atender um revisor: na 11.0 e na 13.0 da A1, a condição posta pelo ajuste do
+  `frontend-reviewer` chegou sem linha nova em "Mutações" e o `test-engineer` reprovou.
 - **O cenário tem o segundo dado que torna a cláusula observável?** Foi a maior causa técnica de
   reprovação no F1, catorze vezes: a regra está no código, mas o teste tem uma turma só, uma escola
   só, um estado só, ou o valor padrão só — e apagar a cláusula não deixa nada vermelho. Se o
@@ -85,6 +90,12 @@ fazer, e as dos guardiões marcados:
   dois módulos, mova-a para arquivo próprio ou para o `nucleo`, nesta tarefa, e não copie.
 - Toda operação que pode acontecer duas vezes ao mesmo tempo tem teste com as duas chamadas
   **em paralelo** (`Promise.all`), não em sequência?
+- **Corrida entre duas operações diferentes, ou resposta que chega fora de ordem, tem a ordem
+  forçada no teste.** No banco, `GatilhoDeParada` e `esperarNaTrava`
+  (`apps/api/test/gatilho-de-parada.ts`), como o C5 e o C11 da A1. Na tela, a resposta segurada
+  com `page.route` ou o relógio parado com `page.clock.pauseAt`, como o teste da correção
+  `2026-10-03-decididos-continuam-marcados`. `Promise.all` solto prova a ordem que sair, e vira
+  intermitente no banco carregado da esteira: 4.0, 7.0, 11.0, 14.0 e o W6 da 16.0, na A1.
 - O teste de isolamento quebraria sem a cláusula de escopo do repository?
 - Os casos de borda do `N_task.md` têm cada um o seu teste?
 - Leia a seção "O que verificar" de cada guardião marcado (`.claude/agents/<nome>.md`) e diga
@@ -110,6 +121,13 @@ node tools/processo/portao-local.ts            # typecheck, lint e test
 node tools/processo/portao-local.ts --e2e      # se tocou tela (frontend-reviewer marcado)
 node tools/processo/portao-local.ts --infra    # se mexeu em infra (regra 40, D52)
 ```
+
+Com `--e2e`, os specs que a tarefa criou ou alterou rodam também repetidos, com os trabalhadores da
+esteira, sobre o ambiente que o `test:e2e` deixou de pé:
+`npx playwright test <specs da tarefa> --repeat-each 3 --workers 2`. A máquina roda o e2e com 6
+trabalhadores e a esteira com 2. O W6 da 16.0 da A1 passou em três portões locais e caiu na esteira
+por uma ordem de entrega que só a máquina lenta produziu (correção
+`2026-10-03-decididos-continuam-marcados`, que reproduziu com `--repeat-each 3`).
 
 O script instala as dependências se o `node_modules` for anterior ao lock, roda as suítes e,
 se tudo passar, grava o carimbo em `.processo/portao.json`. **O hook bloqueia o commit sem
@@ -162,6 +180,10 @@ toda tarefa tem**, marcados ou não:
    quem aprovou junto: na A0b foram 12 das 18 rodadas caducadas sem reprovação (4.0, 6.0, 7.0).
 2. **Com o `test-engineer` aprovado (e o `frontend-reviewer`, se a tarefa tem tela), todos os
    outros em paralelo**: `revisor-geral` e os guardiões marcados. Não dependem um do outro.
+   Antes de cada rodada do `revisor-geral`, rode
+   `node tools/processo/portao-local.ts conferir tasks/prd-<funcionalidade>/<N>_task.md`. Se der
+   inválido, rode o portão com as suítes que a mensagem pede antes de chamar. Na A1, três rodadas
+   dele reprovaram só ou também pelo carimbo, que é uma conferência de um comando.
 3. **Espere TODOS terminarem antes de seguir.** Veredito que não chegou não existe. Anunciar
    que vai esperar e fazer o commit antes (o que aconteceu na 5.0) é falha da tarefa.
 
@@ -249,7 +271,8 @@ Só depois de tudo verde e todos os revisores obrigatórios aprovados:
   - `conclusion` diferente de `success` (`failure`, `cancelled`, `skipped`, `timed_out`,
     `startup_failure`, `action_required`): **não faça o commit.** Retorne `STATUS: FALHA`
     com o commit, a conclusão e o job. Corrigir ou reexecutar a esteira não é escopo desta
-    tarefa
+    tarefa. Deixe o trabalho na árvore, sem stash e sem descartar nada, e ponha no relatório
+    `Trabalho: pronto, sem commit`, com o `git status --short` dos arquivos da tarefa
   - sem `gh` ou sem rede: não faça o commit e reporte
 - Marque a tarefa `[x]` em `tasks.md`
 - **Faça o commit da tarefa, direto na `develop`** (D23 revista). Stage apenas os arquivos desta
@@ -266,7 +289,12 @@ Só depois de tudo verde e todos os revisores obrigatórios aprovados:
   Mensagem no padrão `<Verbo> <o quê> (tarefa N.0)`, por exemplo
   `Implementa reivindicação de nome pelo link da sala (tarefa 4.0)`, com a linha
   `Revisões: <revisor> <veredito> (<n>ª rodada), ...` no corpo. Um commit por tarefa, nunca
-  `--amend` em commit existente, nunca `--no-verify`
+  `--amend` em commit existente, nunca `--no-verify`.
+  Antes do commit, `git diff --cached --name-only` confere com a lista dos arquivos da tarefa (um
+  `git add` que falha num caminho errado não prepara nada daquele comando). Depois do commit e antes
+  do push, `git show --stat HEAD` e `git status --short`: nada da tarefa pode ter ficado de fora. Se
+  ficou e o commit ainda não foi enviado, `git reset --soft HEAD~1`, prepare de novo e refaça. Na
+  15.0 da A1, o commit saiu parcial e só foi refeito porque alguém olhou
 - **Commit bloqueado pelo hook:** a mensagem diz qual revisor falta, reprovou ou caducou.
   Resolva o que ela aponta. Não contorne: o hook também bloqueia commit que leva código de
   `apps/`, `packages/`, `infra/` ou `e2e/` sem `(tarefa N.0)` nem `(correção <slug>)`

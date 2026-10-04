@@ -42,7 +42,8 @@ Definidos com o `test-engineer`. Não improvise aqui.
 | permissão: quem não pode | integração | |
 | isolamento entre escolas | integração | |
 | concorrência: [as duas chamadas ao mesmo tempo, com `Promise.all`] | integração | |
-| recomeço da tela: [a segunda pessoa na mesma aba, sem reload; a mesma entrada de novo — mesmo link, mesmo token; a resposta atrasada da entrada anterior; a lista recarregada ou a falha com o diálogo aberto] | e2e | |
+| estados da tela: [carregando, erro, vazio, com dado; o vazio e o "falta" só com a leitura terminada e sem erro; o foco depois de cada ação que troca o que aparece] | e2e | |
+| recomeço da tela: [a segunda pessoa na mesma aba, sem reload; a mesma entrada de novo — mesmo link, mesmo token; a resposta atrasada da entrada anterior, com a resposta segurada no teste (`page.route` ou `page.clock.pauseAt`); a lista recarregada ou a falha com o diálogo aberto] | e2e | |
 | log novo: [a linha capturada] | integração | não leva nome, e-mail, matrícula, token, senha nem código (regra 20, item 9) |
 
 A linha de concorrência diz **em paralelo**, com as transações abertas juntas, e não "clique duplo".
@@ -74,6 +75,16 @@ recomendações na A0 (7.0, 8.0, 9.0) foram log sem teste do conteúdo.
 
 O que pertence a outra tarefa e não deve ser implementado aqui.
 
+## Divergências resolvidas nesta tarefa
+
+Preenchida por quem implementa (`/executar-task`, passo 2). Uma linha por decisão que se afasta da
+Tech Spec, do `cenarios.md` ou da subtarefa. A coluna "Onde está na spec" é preenchida **antes dos
+revisores**: divergência sem ela está só na tarefa, e o `revisor-geral` reprova (foram quatro
+reprovações na A1). Sem nenhuma, escreva "nenhuma".
+
+| Divergência | Motivo | Onde está na spec (`techspec.md` §, id do `cenarios.md`, documento da seção 11) |
+|---|---|---|
+
 ## Mutações
 
 Preenchida por quem implementa, antes dos revisores (`/executar-task`, passo 2). Uma linha por
@@ -82,7 +93,7 @@ restrição ou índice de migration, trava de clique, classe CSS que o e2e diz p
 que a tabela de testes não cita e as cópias da mesma regra em outro arquivo. Apagada, rodada,
 vermelha, restaurada.
 
-| Cláusula (`arquivo:linha`) | Teste que ficou vermelho |
+| Cláusula (`arquivo` › função › o texto da condição) | Teste que ficou vermelho |
 |---|---|
 
 ## Recomendações sem aplicar
