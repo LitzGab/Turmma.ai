@@ -7,6 +7,8 @@ export interface Etapa {
   nome: string
   comando: string
   argumentos: readonly string[]
+  /** Chamado quando a etapa termina, verde ou vermelha, com a duração dela: é por aqui que o e2e mede os testes. */
+  aoTerminar?: (codigo: number, duracaoMs: number) => void
 }
 
 export function rodarEtapa(etapa: Etapa): Promise<number> {
@@ -30,7 +32,9 @@ export async function executarEtapas(
 ): Promise<number> {
   let codigo = 0
   for (const etapa of etapas) {
+    const inicio = performance.now()
     codigo = await rodarEtapa(etapa)
+    etapa.aoTerminar?.(codigo, performance.now() - inicio)
     if (codigo !== 0) break
   }
   for (const etapa of finalizacao(codigo)) {

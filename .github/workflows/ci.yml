@@ -66,14 +66,23 @@ jobs:
       - run: npm run ci:infra
 
   e2e:
-    name: e2e (compose completo e Playwright)
+    # Em fatias, cada uma no seu runner e com o seu compose: o job único chegou ao teto de 45 min com 394 casos, e foi
+    # cancelado duas vezes seguidas com a suíte verde (tasks/correcoes/2026-10-03-e2e-em-fatias.md). O Playwright
+    # reparte os casos por contagem (`fullyParallel`), e nenhum spec depende de outro ter rodado antes.
+    name: e2e ${{ matrix.fatia }}/4 (compose completo e Playwright)
     runs-on: ubuntu-24.04
-    # O teto acompanha a suíte, que cresce a cada tarefa de tela: uns 3 min 30 s fixos (navegador, build, subir e
-    # derrubar o compose) e de 5 a 6 s de relógio por caso, com os 2 trabalhadores do runner. Com 30 min, os 304
-    # casos da tarefa 13.0 da A1 foram cancelados no caso 286, sem nenhum vermelho. `tools/ci/esteira.test.ts`
-    # refaz a conta com os casos de agora e reprova quando a suíte não cabe nem pela média. É piso: caso pesado
-    # estoura o teto antes de a conta passar dele (docs/runbook.md, "Esteira vermelha no e2e"). Subir o número,
-    # só com a conta refeita.
+    strategy:
+      # Uma fatia vermelha não cancela as outras: o vermelho de cada uma, e o traço dela, continuam aparecendo. A
+      # execução inteira fica vermelha do mesmo jeito, que é o que o passo 7 da /executar-task confere.
+      fail-fast: false
+      # O número de fatias é o tamanho desta lista, e o `/4` do passo `npm run ci:e2e` tem de acompanhá-lo.
+      matrix:
+        fatia: [1, 2, 3, 4]
+    # O teto é de cada fatia. Ela custa uns 4 min fixos (navegador, build, subir e derrubar o compose) e até 7 s de
+    # relógio por caso, com os 2 trabalhadores do runner. `tools/ci/esteira.test.ts` refaz a conta com os casos de cada
+    # fatia e reprova quando uma passa de 60% do teto; `tools/ci/e2e.ts` avisa no log quando os testes de uma fatia
+    # passam desse limiar na esteira. Os dois são o sinal para acrescentar fatia, não para subir este número
+    # (docs/runbook.md, "Esteira vermelha no e2e").
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -84,7 +93,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run ci:e2e
+      - run: npm run ci:e2e -- --shard=${{ matrix.fatia }}/4
       # O `trace: 'retain-on-failure'` do `playwright.config.ts` já escreve o traço e o contexto do erro
       # em `test-results/`; sem este passo eles morriam com o runner, e todo vermelho de e2e ficava sem
       # a linha de tempo das requisições que diz para onde o prazo foi. Só na falha, e por 7 dias: o
@@ -92,10 +101,11 @@ jobs:
       # (regra 20, item 17).
       # `cancelled()` também: com o `timeout-minutes` do job, um e2e travado é cancelado, não "failure", e
       # é justamente na lentidão que o traço mais serve.
+      # Um artefato por fatia, com o número dela no nome: dois com o mesmo nome na mesma execução são recusados.
       - if: failure() || cancelled()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: traco-do-e2e
+          name: traco-do-e2e-${{ matrix.fatia }}
           path: test-results/
           retention-days: 7
           # `warn`, não `ignore`: o job já falhou, e diretório vazio aqui é sinal de que algo mudou —

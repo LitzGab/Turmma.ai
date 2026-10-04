@@ -619,11 +619,13 @@ Se reprovar, a saída diz a fase e o critério:
 
 ## Esteira vermelha no e2e
 
-O job de e2e publica o diretório de saída do Playwright quando falha ou é cancelado: artefato
-**`traco-do-e2e`** da execução, com `trace.zip` e `error-context.md` do caso que falhou, por 7 dias.
-(O nome, o prazo e o caminho são afirmados em `tools/ci/esteira.test.ts`; se renomearem o artefato, é
-lá que o vermelho aparece, e esta seção precisa acompanhar.)
-Baixe com `gh run download <id> --name traco-do-e2e` e abra com `npx playwright show-trace <arquivo>`:
+O e2e roda em **quatro fatias**, cada uma num job próprio (`e2e 1/4` a `e2e 4/4`), com o seu compose e
+o seu `--shard=<i>/4` do Playwright; uma fatia vermelha não cancela as outras. Cada fatia publica o
+diretório de saída do Playwright quando falha ou é cancelada: artefato **`traco-do-e2e-<i>`**, com o
+número da fatia, `trace.zip` e `error-context.md` do caso que falhou, por 7 dias. (O nome, o prazo e o
+caminho são afirmados em `tools/ci/esteira.test.ts`; se renomearem o artefato, é lá que o vermelho
+aparece, e esta seção precisa acompanhar.)
+Baixe com `gh run download <id> --name traco-do-e2e-<i>` e abra com `npx playwright show-trace <arquivo>`:
 é ele que tem a linha de tempo das requisições e diz se o prazo foi numa resposta lenta da API, numa
 tentativa rebaixada na fila do login ou na tela que não chegou a montar.
 
@@ -633,19 +635,27 @@ O caso morto pelo estouro de `timeout-minutes` não deixa traço finalizado; aí
 serviços no próprio job.
 
 Vermelho de e2e que não reproduz na máquina segura a tarefa seguinte (regra 40, D52): trate como
-defeito por `/corrigir`, com a causa achada no traço, e não repetindo a execução até passar.
+defeito por `/corrigir`, com a causa achada no traço, e não repetindo a execução até passar. Para
+repetir só a fatia na máquina: `node tools/ci/e2e.ts --shard=<i>/4`, que sobe o compose limpo como a
+esteira. A fatia começa com o banco vazio e roda só a parte dela: caso que passa na suíte inteira e
+falha na fatia depende de outro spec ter rodado antes, e isso é o defeito.
 
-**Job `cancelled` com a suíte verde é o teto, não um teste.** O sinal: nenhum `✘` no log, o último
-caso terminado segundos antes de `The operation was canceled`, e o job com a duração do
+**Job `cancelled` com a suíte verde é o teto, não um teste.** O sinal: nenhum `✘` no log da fatia, o
+último caso terminado segundos antes de `The operation was canceled`, e o job com a duração do
 `timeout-minutes` do e2e em `.github/workflows/ci.yml`. Repetir a execução não resolve, porque a suíte
-só cresce. O job custa uns 3 min 30 s fixos, a maior parte na subida do compose, e de 5 a 6 s de
-relógio por caso; caso de tela com muita ida à API custa mais que o dobro. `tools/ci/esteira.test.ts`
-refaz essa conta com os casos de agora e reprova no portão local quando a suíte não cabe nem pela
-média. É piso, não previsão: com caso pesado, o job estoura o teto antes de o teste reprovar, e o
-aviso que sobra é a duração do job de e2e na execução verde, que ninguém confere sozinho. Quando o
-teste reprovar, ou quando o job chegar a 5 min do teto, a saída é decisão do Joaquim: subir o teto com
-a conta refeita, ou repartir o e2e em mais de um job. Baixar as constantes do teste para ele passar
-não é saída.
+só cresce: o job único de 394 casos foi cancelado assim duas vezes seguidas aos 45 min, e por isso o e2e
+foi repartido (`tasks/correcoes/2026-10-03-e2e-em-fatias.md`). Cada fatia custa uns 4 min fixos, a
+maior parte na subida do compose, e até 7 s de relógio por caso; caso de tela com muita ida à API custa
+mais que o dobro.
+
+Dois sinais chegam antes do cancelamento. `tools/ci/esteira.test.ts` refaz a conta com os casos de cada
+fatia e reprova no portão local e no job `verificar` quando uma delas passa de 60% do teto, mesmo pela
+média. E `tools/ci/e2e.ts` mede a etapa de testes de cada fatia e, quando ela passa desse limiar (60% do
+teto menos o custo fixo), deixa a anotação **"e2e perto do teto"** no resumo da execução, mesmo verde.
+Qualquer um dos dois pede mais fatias: acrescentar o número à `matrix.fatia` e trocar o `/4` pelo novo
+total nos dois lugares em que ele aparece, o `name` do job e o passo `npm run ci:e2e`; a guarda confere
+os dois contra o tamanho da matriz. Subir o `timeout-minutes` ou baixar as
+constantes de `tools/ci/prazo-do-e2e.ts` para o teste passar não é saída.
 
 **O artefato é público**, porque o repositório é. Ele é inofensivo hoje por construção: todo dado do
 e2e é sintético, e o ambiente do compose de teste sai só de `.env.example` e `infra/teste.env`, os dois

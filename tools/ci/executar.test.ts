@@ -25,6 +25,21 @@ describe('executarEtapas', () => {
     expect(await executarEtapas([sairCom(0)], () => [sairCom(5)])).toBe(5)
   })
 
+  it('avisa o fim de cada etapa que rodou, verde ou vermelha, com o código e a duração dela; a que não rodou não avisa', async () => {
+    const avisos: { nome: string; codigo: number; duracaoMs: number }[] = []
+    const comAviso = (etapa: Etapa): Etapa => ({
+      ...etapa,
+      aoTerminar: (codigo, duracaoMs) => avisos.push({ nome: etapa.nome, codigo, duracaoMs }),
+    })
+    const lenta: Etapa = { nome: 'lenta', comando: 'node', argumentos: ['-e', 'setTimeout(() => process.exit(0), 300)'] }
+    expect(await executarEtapas([comAviso(lenta), comAviso(sairCom(4)), comAviso(sairCom(0, '/*nao roda*/'))])).toBe(4)
+    expect(avisos.map(({ nome, codigo }) => [nome, codigo])).toEqual([
+      ['lenta', 0],
+      ['sai com 4', 4],
+    ])
+    expect(avisos[0]?.duracaoMs).toBeGreaterThanOrEqual(300)
+  })
+
   it('processo morto por sinal conta como falha', async () => {
     const morto: Etapa = { nome: 'morto', comando: 'node', argumentos: ['-e', 'process.kill(process.pid, "SIGKILL")'] }
     expect(await executarEtapas([morto])).not.toBe(0)

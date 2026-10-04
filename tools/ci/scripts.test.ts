@@ -167,6 +167,22 @@ describe('scripts ci:* reais', () => {
     expect(indiceDe(vermelho.chamadas, 'npx playwright test')).toBe(-1)
   })
 
+  it('ci:e2e leva a fatia da esteira ao Playwright, e fatia malformada reprova antes de subir qualquer coisa', () => {
+    const fatia = rodarScript('e2e.ts', null, ['--shard=2/4'])
+    expect(fatia.codigo).toBe(0)
+    expect(fatia.chamadas).toContain('npx playwright test --shard=2/4')
+    // `CI=true` chega às etapas: é o mesmo `naEsteira` que faz o aviso de prazo sair como anotação da execução.
+    expect(fatia.chamadas).toContain('npx playwright install --with-deps chromium')
+
+    // Sem fatia, a suíte inteira: é o `npm run test:e2e` da máquina.
+    expect(rodarScript('e2e.ts', null).chamadas).toContain('npx playwright test')
+
+    // `${{ matrix.fatia }}` que não foi expandido, ou um índice fora do total, rodaria a suíte errada numa fatia.
+    const malformada = rodarScript('e2e.ts', null, ['--shard=5/4'])
+    expect(malformada.codigo).not.toBe(0)
+    expect(malformada.chamadas).toEqual([])
+  })
+
   it('test:e2e mantém o ambiente de pé para o desenvolvedor, mas não esconde a falha', () => {
     const vermelho = rodarScript('e2e.ts', 'npx playwright test', ['--manter-ambiente'])
     expect(vermelho.codigo).not.toBe(0)
