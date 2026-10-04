@@ -15,7 +15,6 @@ export function textoDaMedia(resumo: Pick<ResumoDoLote, 'mediaDeAcertos' | 'ques
   return `${numero.format(resumo.mediaDeAcertos)} de ${String(resumo.questoes)} ${resumo.questoes === 1 ? 'questão' : 'questões'}`
 }
 
-/** "28 de 32 alunos": quantos têm correção, de quantos a turma tem. Quem não abriu a atividade não tem correção. */
 /**
  * Quem respondeu, e a turma de hoje à parte. Não é "N de M": `corrigidos` conta o trabalho feito, inclusive de quem saiu
  * da turma antes de a professora encerrar, e `alunosDaTurma` é a turma de agora. Juntos como fração, depois de uma
