@@ -10,36 +10,53 @@
 
 > Atualizada a cada commit. Quem retoma lê esta seção, `git log mvp/apresentacao` e `git status`.
 
-**Fase atual:** fase 1 em curso (04/10/2026), junto com o fim da preparação.
+**Fase atual:** fase 2 (A2) lançada em 04/10/2026, com as correções da revisão da fase 1 em curso.
 
 **Feito**
 
 - Esteira da `develop` verde no `573f0a1`, branch `mvp/apresentacao` criada da `develop` e publicada, D77 registrada.
-- Este documento corrigido (`a8d2fe1`): saíram o worktree `../Educa.ia-mvp` e o projeto `educa-mvp`; a seção 8 ficou
-  só com o que falta; entraram as fases da seção 3 e as decisões abaixo.
+- Este documento corrigido (`a8d2fe1`), com as fases da seção 3, a trava do banco de teste e o passo a passo dos pacotes.
 - O marcador `(mvp: <resumo>)` em `tools/processo/revisoes.ts`, com nove casos em `revisoes.test.ts` (`8c054ce`).
-- Os contratos de `packages/shared` (time e assistente), com o marcador e o portão local verde: 225 arquivos e 2796
-  testes (`336a756`).
+- Os contratos de `packages/shared` de time e assistente (`336a756`).
+- A etapa 1 das cinco AIAs em `docs/aia/` (`d23179a`), em rascunho, **esperando a revisão do Joaquim**.
+- **Fase 1 integrada** (`7fddb5f`), com o portão local verde (254 arquivos, 3353 testes): migration 0022 com 17 tabelas,
+  schemas das 41 rotas, `MATRIZ`, códigos de erro, auditoria e `docs/mvp-contratos.md` (S); porta `LLMProvider`,
+  adaptador falso e OpenAI-compatível, sete tarefas, `ExecutorDeAgente`, suspensão por função (L); peças da web e
+  convenção de pedaço por tela (C); conteúdo, script e PDF de demonstração (D).
 
-- A etapa 1 das cinco AIAs em `docs/aia/` (`d23179a`), em rascunho, **esperando a revisão do Joaquim**. Cada arquivo
-  lista, na seção 1.7 e nas perguntas em aberto, o que não deu para fechar.
+**Revisão da fase 1** (uma passada, sobre `mvp/fase-1` em `88e2d32`)
+
+| Revisor | Veredito | O que exigiu | Quem corrige |
+|---|---|---|---|
+| `tenancy-guardian` | REPROVADO | O teste das restrições cobre 24 das 50 FKs de escola e nenhum caso de segundo ano letivo. Estrutura sem furo | S, rodada 2 |
+| `privacy-guardian` | REPROVADO | A conversa do professor era copiada para `consumo_ia`; `LLM_PROCESSAMENTO_LOCAL=true` aceitava endereço de fora | L, rodada 3; S, rodada 2 |
+| `conformidade-reviewer` | REPROVADO | A recusa do Tutor dependia de o modelo se classificar certo; faltava ao professor o uso do Tutor por turma; o resumo do Analista tinha texto livre | L, rodada 3; S, rodada 2 |
+| `frontend-reviewer` | AJUSTES NECESSÁRIOS | Botão desligado igual ao ligado; foco caindo no `body` em três peças; Enter enviando no teclado virtual; cinco peças faltando | C, rodada 3 |
+
+As recomendações acatadas vão junto: FK com a turma e com o ano letivo, gatilho da D56 que recusa validação com
+destaque não aberto, autoria por papel, saída do "(D47)" da tela (migration 0023, só aditiva). Depois das correções, os
+quatro passam de novo, só sobre o diff.
 
 **Em curso**
 
 | Pacote | Worktree e branch | O que faz |
 |---|---|---|
-| S | `../Educa.ia-mvp-s`, `mvp/s` | 17 tabelas, migration 0022, schemas de API, `MATRIZ`, auditoria, `docs/mvp-contratos.md` |
-| L | `../Educa.ia-mvp-l`, `mvp/l` | porta `LLMProvider`, adaptador falso e OpenAI-compatível, tarefas, `ExecutorDeAgente` |
-| C | `../Educa.ia-mvp-c`, `mvp/c` | peças da web da seção 9.3 e a galeria |
-| D | `../Educa.ia-mvp-d`, `mvp/d` | conteúdo, script e PDF de demonstração |
+| S, rodada 2 | `../Educa.ia-mvp-s`, `mvp/s` | migration 0023, teste de catálogo das FKs, rota de uso do Tutor por turma, ajustes de contrato |
+| L, rodada 3 | `../Educa.ia-mvp-l`, `mvp/l` | portas em Postgres, módulo de IA da API, `GET /v1/execucoes/:id`, serviço de agendar, e os bloqueantes dos revisores |
+| C, rodada 3 | `../Educa.ia-mvp-c`, `mvp/c` | os três bloqueantes das peças e cinco peças novas |
+| M | `../Educa.ia-mvp-m`, `mvp/m` | material: API e tela da coordenação |
+| W | `../Educa.ia-mvp-w`, `mvp/w` | web do professor: Home, Conversa, Ferramentas, Artefato, Seu time |
+
+A branch de integração da fase 1 é `mvp/fase-1` (`../Educa.ia-mvp-fase-1`); as rodadas de correção entram por ela.
 
 **Falta**
 
-- Integrar a fase 1 (`mvp/fase-1`), portão, merge, revisores da fase e esteira à mão.
-- Depois de S integrado: o registro de consumo e o repositório de execução em Postgres (portas do pacote L).
-- Fases 2 a 4 (seção 3) e o fechamento (seção 8).
+- Integrar as rodadas de correção de S, L e C, portão, segunda passada dos revisores.
+- Lançar o pacote P (API do Assistente), que depende do módulo de IA do L; depois, a segunda rodada do W com o e2e do
+  fluxo contra a API real.
+- Fases 3 e 4 (seção 3) e o fechamento (seção 8).
 
-**Esteira disparada à mão:** nenhuma ainda.
+**Esteira disparada à mão:** fase 1, execução `37208632853`, sobre o `7fddb5f` (04/10/2026). Resultado a conferir.
 
 **Para o Joaquim decidir (achado ao escrever as AIAs; nada disto trava a fatia)**
 
@@ -97,6 +114,17 @@ descarregado, e quem carrega é o Joaquim).
     3, antes de a professora aprovar a correção no passo 4, e o diagnóstico só pode chegar ao aluno depois da aprovação.
     Fica assim: a memória do Tutor vem dos lotes **já aprovados** e das sessões anteriores do próprio aluno com o
     Tutor. Na demonstração, o aluno abre o Tutor numa segunda atividade, depois de a primeira ter sido aprovada.
+14. **Suspender uma função recusa execução nova e não apaga o que já foi produzido.** A entrega pendente de uma função
+    suspensa continua podendo ser aprovada ou rejeitada pelo professor: quem decide é a pessoa.
+15. **`consumo_ia` não guarda texto livre de pessoa**, de aluno nem de professor: nessas tarefas, `entrada` e `saida`
+    ficam nulas, e o registro do que foi dito é `mensagem_tutor` ou `mensagem_agente`, ligado pela execução.
+16. **A correção da revisão entra por migration 0023, aditiva**, em vez de reescrever a 0022 já integrada.
+17. **A fase 2 começou com o veto da fase 1 ainda aberto.** As correções são restrições e testes a mais, não mudança de
+    contrato, e as armadilhas que cada revisor listou por pacote foram para os briefs. A fase 1 só conta como fechada
+    com a segunda passada aprovada.
+18. **Sem dependência nova na web.** O pacote C mediu o Radix (36,8 kB os quatro) e escreveu as peças à mão; `clsx` e
+    `class-variance-authority` também ficaram de fora. A decisão 11 fica só com `pdfkit` e `pdfjs-dist`.
+19. **Uma thread só por professora com o Assistente** nesta fatia: sem "Histórico" na lateral.
 12. **Teto de bundle.** As peças novas e o Radix não podem entrar no primeiro carregamento (150 kB). Os tetos por área
     (`professor-*` 8 kB, `coordenacao-*` 16 kB, `aluno-*` 5 kB) vão ser revistos quando as telas chegarem, com o número
     medido, e cada tela entra por import de rota.
