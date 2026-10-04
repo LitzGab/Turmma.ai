@@ -1,4 +1,4 @@
-import { NOME_DO_MOTIVO_DE_DESTAQUE, type AtividadeAplicada, type Destaque, type RespostaCorrecaoDoLote, type ResumoDoLote } from '@educa/shared'
+import { NOME_DO_MOTIVO_DE_DESTAQUE, type AtividadeAplicada, type Destaque, type MotivoDeDestaque, type RespostaCorrecaoDoLote, type ResumoDoLote } from '@educa/shared'
 import type { LinhaDoResumo } from '../../componentes/DialogoDeConfirmacao'
 import { formatarDiaEHora } from '../../formatar'
 
@@ -30,9 +30,24 @@ export function textoDeAlunos(quantos: number): string {
   return `${String(quantos)} ${quantos === 1 ? 'aluno' : 'alunos'}`
 }
 
+/**
+ * O que cada motivo de destaque quer dizer, **como fato do trabalho, nunca como juízo sobre o aluno** (D57): o que se vê
+ * nas respostas, e não o que isso diria da pessoa.
+ */
+export const EXPLICACAO_DO_MOTIVO: Readonly<Record<MotivoDeDestaque, string>> = {
+  em_branco: 'Nenhuma questão foi respondida.',
+  fora_do_historico: 'Os acertos ficaram bem acima ou bem abaixo dos que ele teve nas correções aprovadas desta disciplina.',
+  padrao_de_erro: 'A mesma alternativa em todas as questões, ou erro em questões que quase toda a turma acertou.',
+}
+
 /** Por que a correção do aluno foi destacada, em texto: "Em branco · Padrão de erro para conferir". */
 export function motivosDoDestaque(destaque: Pick<Destaque, 'motivos'>): string {
   return destaque.motivos.map((motivo) => NOME_DO_MOTIVO_DE_DESTAQUE[motivo]).join(' · ')
+}
+
+/** A explicação de cada motivo do destaque, uma frase por motivo. */
+export function explicacoesDoDestaque(destaque: Pick<Destaque, 'motivos'>): string {
+  return destaque.motivos.map((motivo) => EXPLICACAO_DO_MOTIVO[motivo]).join(' ')
 }
 
 /** "2 de 5 acertos", e quantas ficaram em branco quando ficou alguma. */
@@ -108,6 +123,24 @@ export const ESCOLHA_DE_AVALIATIVA = [
   { valor: 'pratica', avaliativa: false, rotulo: 'É prática', descricao: 'O Tutor continua disponível para a turma, conduzindo por perguntas.' },
   { valor: 'avaliativa', avaliativa: true, rotulo: 'É avaliativa', descricao: 'O Tutor fica pausado para a turma até você encerrar a atividade.' },
 ] as const
+
+/**
+ * A atividade encerrada que não tem correção para revisar, e por quê. A API encerra sem corrigir em dois casos: ninguém
+ * abriu a atividade, ou a escola suspendeu a correção de objetiva. Com um lote rejeitado, encerrar de novo corrige de novo.
+ */
+export type SemCorrecao = 'ninguem_respondeu' | 'correcao_suspensa' | 'lote_rejeitado'
+
+export function semCorrecao(aplicada: Pick<AtividadeAplicada, 'estado' | 'entrega' | 'participacao'>): SemCorrecao | undefined {
+  if (aplicada.estado !== 'encerrada') return undefined
+  if (aplicada.entrega === null) return aplicada.participacao.iniciaram === 0 ? 'ninguem_respondeu' : 'correcao_suspensa'
+  return aplicada.entrega.estado === 'rejeitada' ? 'lote_rejeitado' : undefined
+}
+
+export const TEXTO_SEM_CORRECAO: Readonly<Record<SemCorrecao, string>> = {
+  ninguem_respondeu: 'Nenhum aluno abriu a atividade: não há o que corrigir.',
+  correcao_suspensa: 'A atividade encerrou sem corrigir: a coordenação suspendeu a correção de objetiva nesta escola. Quando a função voltar, peça a correção de novo.',
+  lote_rejeitado: 'Você rejeitou a correção desta atividade. Peça a correção de novo quando o que estava errado for resolvido.',
+}
 
 export const EFEITO_DE_APLICAR = 'Os alunos da turma passam a ver a atividade e podem responder. Fica registrado que você aplicou, com a data e a hora.'
 export const EFEITO_DE_ENCERRAR =

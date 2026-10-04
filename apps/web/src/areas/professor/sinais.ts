@@ -42,8 +42,9 @@ const VERBO_DO_GRUPO = {
 /** O que o Tutor diz de um grupo de sinais, sem nome de ninguém: "8 alunos travaram na questão 3 de «…»." */
 export function falaDoGrupo(grupo: GrupoDeSinais, referencias: ReferenciasDaTurma): string {
   const [singular, plural] = VERBO_DO_GRUPO[grupo.tipo]
-  const onde = ondeFoi({ atividadeAplicadaId: grupo.atividadeAplicadaId, questao: grupo.questao, materialId: null, pagina: null }, referencias)
-  return `${String(grupo.alunos)} ${grupo.alunos === 1 ? `aluno ${singular}` : `alunos ${plural}`}${onde === '' ? '' : ` ${onde}`}.`
+  // Os sinais de página de material caem num grupo só, sem atividade: a tela diz que foi no material, e não inventa a página.
+  const onde = grupo.atividadeAplicadaId === null ? 'no material da turma' : ondeFoi({ atividadeAplicadaId: grupo.atividadeAplicadaId, questao: grupo.questao, materialId: null, pagina: null }, referencias)
+  return `${String(grupo.alunos)} ${grupo.alunos === 1 ? `aluno ${singular}` : `alunos ${plural}`} ${onde}.`
 }
 
 /** O sinal de um aluno, para a professora da turma: o que aconteceu no trabalho, e onde. */
@@ -75,6 +76,13 @@ export function emQueEstava(uso: Pick<UsoDoAluno, 'ultimaReferencia'>, referenci
   const onde = ondeFoi(uso.ultimaReferencia, referencias)
   return onde === '' ? 'Sem atividade nem material' : onde.charAt(0).toLocaleUpperCase('pt-BR') + onde.slice(1)
 }
+
+/** Quando o Tutor avisa, para a professora saber o que o sinal quer dizer: os limiares que a API usa. */
+export const QUANDO_O_TUTOR_AVISA = [
+  'Travou: a quarta troca seguida na mesma questão ou página, no mesmo dia.',
+  'Pediu a resposta pronta: o aluno pediu a resposta, e o Tutor não entregou.',
+  'Repetiu a mesma dúvida: o aluno voltou a uma questão ou página em que já tinha pedido ajuda.',
+] as const
 
 /** "12 de 60": as trocas de hoje do aluno, contra o limite do dia da escola. */
 export function trocasDeHoje(uso: Pick<UsoDoAluno, 'trocasHoje'>, limiteDoDia: number): string {

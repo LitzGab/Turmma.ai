@@ -11,7 +11,8 @@ describe('os sinais do Tutor: só o trabalho, e onde', () => {
   it('o grupo é dito sem nome de ninguém, no singular e no plural', () => {
     expect(falaDoGrupo({ tipo: 'travou', atividadeAplicadaId: id('a1'), questao: 3, alunos: 8 }, REFERENCIAS)).toBe('8 alunos travaram na questão 3 de "Atividade — Estequiometria".')
     expect(falaDoGrupo({ tipo: 'resposta_pronta', atividadeAplicadaId: id('a1'), questao: 2, alunos: 1 }, REFERENCIAS)).toBe('1 aluno pediu a resposta pronta na questão 2 de "Atividade — Estequiometria".')
-    expect(falaDoGrupo({ tipo: 'duvida_repetida', atividadeAplicadaId: null, questao: null, alunos: 3 }, REFERENCIAS)).toBe('3 alunos repetiram a mesma dúvida.')
+    // Os sinais de página de material vêm num grupo só, sem atividade: a tela diz que foi no material.
+    expect(falaDoGrupo({ tipo: 'duvida_repetida', atividadeAplicadaId: null, questao: null, alunos: 3 }, REFERENCIAS)).toBe('3 alunos repetiram a mesma dúvida no material da turma.')
   })
 
   it('o sinal de um aluno diz o que aconteceu e onde: na questão da atividade, ou na página do material', () => {
@@ -47,7 +48,7 @@ describe('os sinais do Tutor: só o trabalho, e onde', () => {
   })
 
   it('regra 70, item 7: nenhum texto fixo fala em tempo parado, ociosidade, atenção, humor ou emoção do aluno', () => {
-    const fixos = Object.values(textos).flatMap((valor) => (typeof valor === 'string' ? [valor] : []))
+    const fixos = [...Object.values(textos).flatMap((valor) => (typeof valor === 'string' ? [valor] : [])), ...textos.QUANDO_O_TUTOR_AVISA]
     expect(fixos.length).toBeGreaterThanOrEqual(2)
     for (const texto of fixos) expect(texto).not.toMatch(/ocios|parado|distra|desatent|humor|triste|ansios|emoç/i)
   })

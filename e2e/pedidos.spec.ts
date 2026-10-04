@@ -1,7 +1,7 @@
 import type { Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaPedidosDaTurma } from '../packages/shared/src/sala/pedidos.ts'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa, abrirAbaAlunos } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   alunosDaTurmaNoBanco,
@@ -174,6 +174,8 @@ async function abrirATurma(page: Page, { professora, turma }: Cenario, hasTouch:
   await irPelaNavegacao(page, 'Turmas', hasTouch)
   await acionar(principal(page).getByRole('link', { name: `Abrir a turma ${turma.turmaNome}` }), hasTouch)
   await expect(page).toHaveURL(new RegExp(`/professor/turmas/${turma.turmaId}$`))
+  // Os pedidos de nome ficam na aba "Alunos" da turma aberta (A3).
+  await abrirAbaAlunos(page, hasTouch)
 }
 
 /**

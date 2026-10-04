@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ChartColumn } from 'lucide-react'
+import { ChartNoAxesColumn } from 'lucide-react'
 import { useId } from 'react'
 import { Link } from 'wouter'
 import { consultaAtividadesAplicadas, consultaDesempenhoDaTurma } from '../../api/atividades'
@@ -33,13 +33,13 @@ export default function VisaoGeralDaTurma({ turmaId }: { turmaId: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <section aria-labelledby={idDasHabilidades} className="flex min-w-0 flex-col gap-3">
-        <CabecalhoDeSecao id={idDasHabilidades} titulo="Acerto por habilidade" apoio="Só das correções que você já aprovou." />
+        <CabecalhoDeSecao id={idDasHabilidades} titulo="Acerto por habilidade" apoio="Só das correções que você já aprovou, na sua disciplina." />
         {desempenho.isPending && <EstadoCarregando rotulo="Carregando o desempenho da turma…" />}
         {desempenho.isError && dados === undefined && <EstadoErro erro={desempenho.error} tentando={desempenho.isFetching} aoTentarDeNovo={() => void desempenho.refetch({ cancelRefetch: false })} />}
         {dados !== undefined && dados.lotesAprovados === 0 && (
           <EstadoVazio
             variante="tracejado"
-            icone={ChartColumn}
+            icone={ChartNoAxesColumn}
             titulo="Ainda não há correção aprovada nesta turma"
             descricao="O acerto por habilidade aparece aqui depois que você aprovar a correção de uma atividade aplicada à turma. Correção que ainda espera você não entra na conta."
           />
@@ -67,7 +67,8 @@ export default function VisaoGeralDaTurma({ turmaId }: { turmaId: string }) {
             rotulo="Acertos por aluno"
             colunas={[
               { chave: 'nome', titulo: 'Aluno', celula: (aluno) => aluno.nome },
-              { chave: 'acertos', titulo: 'Acertos', celula: (aluno) => `${String(aluno.acertos)} de ${String(aluno.total)}` },
+              // O aluno que ainda não tem correção aprovada vem zerado: a tela diz isso, em vez de "0 de 0".
+              { chave: 'acertos', titulo: 'Acertos', celula: (aluno) => (aluno.total === 0 ? 'Sem correção aprovada' : `${String(aluno.acertos)} de ${String(aluno.total)}`) },
               {
                 chave: 'habilidades',
                 titulo: 'Por habilidade',

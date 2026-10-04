@@ -18,9 +18,9 @@ import { Selecao } from '../../componentes/Selecao'
 import { Estado } from '../../componentes/SeloDeEstado'
 import { Tabela } from '../../componentes/Tabela'
 import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
-import { formatarDataHora } from '../../formatar'
+import { formatarDiaEHora } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
-import { emQueEstava, falaDoGrupo, separarSinais, TEXTO_DA_ATENCAO_HUMANA, textoDoSinal, TITULO_DA_ATENCAO_HUMANA, trocasDeHoje } from './sinais'
+import { emQueEstava, falaDoGrupo, QUANDO_O_TUTOR_AVISA, separarSinais, TEXTO_DA_ATENCAO_HUMANA, textoDoSinal, TITULO_DA_ATENCAO_HUMANA, trocasDeHoje } from './sinais'
 
 /** De quanto em quanto os sinais são relidos, com a aba à vista: não há WebSocket nesta fatia. */
 const INTERVALO_DOS_SINAIS_MS = 15_000
@@ -97,7 +97,17 @@ export default function Tutor() {
                 </p>
               </div>
             ))}
-            <p className="min-w-0 text-sm break-words text-sutil">Você vê aqui os sinais e o uso da turma. A conversa de um aluno com o Tutor não abre nesta tela.</p>
+            <div className="flex min-w-0 flex-col gap-1">
+              <p className="font-medium text-tinta">Quando o Tutor avisa você</p>
+              <ul className="flex min-w-0 list-disc flex-col gap-1 pl-5 text-sm text-apoio">
+                {QUANDO_O_TUTOR_AVISA.map((quando) => (
+                  <li key={quando} className="break-words">
+                    {quando}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <p className="min-w-0 text-sm break-words text-sutil">Você vê aqui os sinais e o uso da turma na sua disciplina. A conversa de um aluno com o Tutor não abre nesta tela.</p>
           </div>
         </details>
       </header>
@@ -125,7 +135,7 @@ export default function Tutor() {
               <ul className="flex min-w-0 flex-col gap-1 text-tinta">
                 {atencao.map((sinal) => (
                   <li key={sinal.id} className="break-words">
-                    <span className="font-medium">{sinal.aluno.nome}</span> · {formatarDataHora(sinal.criadoEm)}
+                    <span className="font-medium">{sinal.aluno.nome}</span> · {formatarDiaEHora(sinal.criadoEm)}
                   </li>
                 ))}
               </ul>
@@ -160,7 +170,7 @@ export default function Tutor() {
                 colunas={[
                   { chave: 'aluno', titulo: 'Aluno', celula: (sinal) => sinal.aluno.nome },
                   { chave: 'sinal', titulo: 'O que aconteceu', celula: (sinal) => textoDoSinal(sinal, referencias) },
-                  { chave: 'quando', titulo: 'Quando', celula: (sinal) => formatarDataHora(sinal.criadoEm) },
+                  { chave: 'quando', titulo: 'Quando', celula: (sinal) => formatarDiaEHora(sinal.criadoEm) },
                 ]}
                 linhas={trabalho}
                 chaveDaLinha={(sinal) => sinal.id}
@@ -194,7 +204,8 @@ export default function Tutor() {
                     colunas={[
                       { chave: 'aluno', titulo: 'Aluno', celula: (aluno) => aluno.aluno.nome },
                       { chave: 'hoje', titulo: 'Trocas hoje', celula: (aluno) => trocasDeHoje(aluno, uso.data.limiteDoDia) },
-                      { chave: 'ultima', titulo: 'Última troca', celula: (aluno) => formatarDataHora(aluno.ultimaTrocaEm) },
+                      // A hora, como hora ("05/10, 10h42"): nunca "há X minutos", que viraria relógio de tempo parado.
+                      { chave: 'ultima', titulo: 'Última troca', celula: (aluno) => formatarDiaEHora(aluno.ultimaTrocaEm) },
                       { chave: 'onde', titulo: 'Em que estava', celula: (aluno) => emQueEstava(aluno, referencias) },
                     ]}
                     linhas={uso.data.alunos}

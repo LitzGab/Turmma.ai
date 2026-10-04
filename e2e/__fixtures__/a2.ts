@@ -29,3 +29,31 @@ export async function entregasNoBanco(escolaId: string): Promise<EntregaNoBanco[
     await banco.end()
   }
 }
+
+/** As atividades aplicadas da escola, com a entrega do lote de cada uma, na ordem em que nasceram. */
+export async function atividadesAplicadasNoBanco(escolaId: string): Promise<Array<{ id: string; estado: string; avaliativa: boolean }>> {
+  const banco = new Client({ connectionString: urlDoBancoDeTeste() })
+  await banco.connect()
+  try {
+    const { rows } = await banco.query<{ id: string; estado: string; avaliativa: boolean }>('select id, estado, avaliativa from atividade_aplicada where escola_id = $1 order by id', [escolaId])
+    return rows
+  } finally {
+    await banco.end()
+  }
+}
+
+/** O registro da validação de cada lote aprovado da escola (D56): quem confirmou, quantos destaques foram apresentados e quantos foram abertos. */
+export async function validacoesNoBanco(escolaId: string): Promise<Array<{ confirmadaPor: string; apresentados: number; abertos: number }>> {
+  const banco = new Client({ connectionString: urlDoBancoDeTeste() })
+  await banco.connect()
+  try {
+    const { rows } = await banco.query<{ confirmadaPor: string; apresentados: number; abertos: number }>(
+      `select confirmada_por as "confirmadaPor", jsonb_array_length(apresentado -> 'destaques') as apresentados, jsonb_array_length(aberto) as abertos
+         from validacao_do_lote where escola_id = $1 order by id`,
+      [escolaId],
+    )
+    return rows
+  } finally {
+    await banco.end()
+  }
+}

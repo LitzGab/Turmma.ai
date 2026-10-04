@@ -9,7 +9,7 @@ import { Botao } from '../../componentes/Botao'
 import { DialogoDeConfirmacao } from '../../componentes/DialogoDeConfirmacao'
 import { CabecalhoDeSecao } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
-import { EFEITO_DE_APLICAR, EFEITO_DE_ENCERRAR, ESCOLHA_DE_AVALIATIVA, situacaoDaAplicacao, textoDeAlunos } from './aprovar'
+import { EFEITO_DE_APLICAR, EFEITO_DE_ENCERRAR, ESCOLHA_DE_AVALIATIVA, semCorrecao, situacaoDaAplicacao, TEXTO_SEM_CORRECAO, textoDeAlunos } from './aprovar'
 
 /** O que a tela diz quando a API recusa aplicar: a que já está aberta, e a versão adaptada que ainda não foi aprovada. */
 const TEXTOS_DA_APLICACAO: Partial<Record<CodigoDeErro, string>> = {
@@ -48,6 +48,7 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
   const [dialogo, definirDialogo] = useState<{ tipo: 'aplicar' } | { tipo: 'encerrar'; aplicada: AtividadeAplicada } | undefined>(undefined)
   const [escolha, definirEscolha] = useState<Escolha | undefined>(undefined)
   const [tentou, definirTentou] = useState(false)
+  const [aviso, definirAviso] = useState('')
   const decidindo = useRef(false)
   const secao = useRef<HTMLElement>(null)
   const idDoTitulo = useId()
@@ -84,6 +85,16 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
     encerrar.mutate(aplicada.id)
   }
 
+  /** A atividade já está encerrada: pedir a correção de novo não muda nada para os alunos, e não passa pelo diálogo. */
+  function corrigirDeNovo(aplicada: AtividadeAplicada): void {
+    if (decidindo.current) return
+    decidindo.current = true
+    definirAviso('')
+    encerrar.mutate(aplicada.id, {
+      onSuccess: ({ atividade }) => definirAviso(atividade.entrega === null ? TEXTO_SEM_CORRECAO[semCorrecao(atividade) ?? 'correcao_suspensa'] : 'Correção feita. Ela está esperando você revisar.'),
+    })
+  }
+
   const turma = nomeDaTurma ?? 'Turma da atividade'
   const aplicavel = atividades.data !== undefined && podeAplicar(artefato, aplicadas)
   // A versão adaptada que ainda não foi aprovada não vai à turma: a tela diz por quê, em vez de oferecer um botão que a API recusa.
@@ -109,10 +120,20 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
           {textoDaFalha(atividades.error)}
         </p>
       )}
+      <p role="status" className="rounded-controle bg-info-cx p-3 break-words text-info empty:hidden">
+        {aviso}
+      </p>
+      {encerrar.isError && dialogo === undefined && (
+        <p role="alert" className="rounded-controle bg-erro-cx p-3 break-words text-erro">
+          {textoDaFalha(encerrar.error)}
+        </p>
+      )}
       {esperaAprovacao && <p className="min-w-0 text-sm break-words text-sutil">Esta versão adaptada só pode ser aplicada à turma depois que você aprovar.</p>}
       {aplicadas.length > 0 && (
         <ul className="flex min-w-0 flex-col gap-2">
-          {aplicadas.map((aplicada) => (
+          {aplicadas.map((aplicada) => {
+            const motivo = semCorrecao(aplicada)
+            return (
             <li key={aplicada.id} data-atividade-aplicada={aplicada.estado} className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-cartao border border-linha bg-superficie p-4">
               <div className="flex min-w-0 flex-1 basis-56 flex-col gap-1">
                 <p className="font-medium break-words text-tinta">{situacaoDaAplicacao(aplicada)}</p>
@@ -121,7 +142,11 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
                   {aplicada.encerradaEm !== null && ` · encerrada em ${formatarDataHora(aplicada.encerradaEm)}`}
                 </p>
                 {aplicada.avaliativa && aplicada.estado === 'aberta' && <p className="text-sm break-words text-sutil">É avaliativa: o Tutor está pausado para a turma até você encerrar.</p>}
-                {aplicada.estado === 'encerrada' && aplicada.entrega === null && <p className="text-sm break-words text-sutil">A correção está sendo preparada. Ela aparece em Seu time quando ficar pronta.</p>}
+                {motivo !== undefined && (
+                  <p data-sem-correcao={motivo} className="text-sm break-words text-sutil">
+                    {TEXTO_SEM_CORRECAO[motivo]}
+                  </p>
+                )}
               </div>
               {aplicada.estado === 'aberta' && (
                 <Botao
@@ -140,8 +165,15 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
                   {aplicada.entrega.estado === 'pendente' ? 'Revisar a correção' : 'Ver a correção'}
                 </Link>
               )}
+              {/* Encerrada sem lote que valha (função suspensa, ou lote rejeitado): encerrar de novo corrige de novo. */}
+              {(motivo === 'correcao_suspensa' || motivo === 'lote_rejeitado') && (
+                <Botao variante="secundario" disabled={encerrar.isPending} onClick={() => corrigirDeNovo(aplicada)}>
+                  {encerrar.isPending && encerrar.variables === aplicada.id ? 'Corrigindo…' : 'Corrigir de novo'}
+                </Botao>
+              )}
             </li>
-          ))}
+            )
+          })}
         </ul>
       )}
 

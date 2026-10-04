@@ -111,6 +111,18 @@ export async function esperarNovaConversa(page: Page, nome: string, opcoes: { re
   if (opcoes.escolaNome !== undefined) await expect(page.getByText(opcoes.escolaNome).first()).toBeVisible({ timeout })
 }
 
+/**
+ * Na turma aberta do professor, o acesso da sala e os pedidos de nome ficam na aba **"Alunos"** (A3; D69): a turma abre
+ * na "Visão Geral", com o acerto por habilidade. Cada vez que a turma é aberta de novo (outro endereço, voltar pelo
+ * histórico), ela abre na Visão Geral outra vez.
+ */
+export async function abrirAbaAlunos(page: Page, hasTouch: boolean): Promise<void> {
+  const aba = page.getByRole('tab', { name: 'Alunos' })
+  if (hasTouch) await aba.tap({ timeout: PRAZO_DA_ENTRADA_MS })
+  else await aba.click({ timeout: PRAZO_DA_ENTRADA_MS })
+  await expect(aba).toHaveAttribute('aria-selected', 'true')
+}
+
 /** A professora de uma escola só, em "Nova conversa", onde ela abre. */
 export async function entrarComoProfessora(page: Page, hasTouch: boolean): Promise<EquipeDeTeste> {
   const professora = await criarEquipeComSenha()

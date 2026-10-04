@@ -1,9 +1,8 @@
 import type { Locator, Page } from '@playwright/test'
 import { entregasNoBanco } from './__fixtures__/a2.ts'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarEstrutura, esperarNovaConversa, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
-import { CAMINHO_DO_PDF_DE_DEMONSTRACAO } from './__fixtures__/material.ts'
+import { acionar, caixa, conversa, DISCIPLINA, gerarAtividade, montarEscolaEEntrar, PRAZO_DA_IA_MS, principal, TITULO_DO_MATERIAL } from './__fixtures__/fluxo-do-professor.ts'
+import { abrirNavegacao, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarCoordenadoraNaEscola, criarEquipeComSenha, type EquipeDeTeste } from './__fixtures__/sessao.ts'
 import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
@@ -14,58 +13,6 @@ import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './
  *
  * Nada aqui é simulado na página: os estados de cada tela, com a API simulada, estão em `professor-assistente.spec.ts`.
  */
-
-/** A leitura do PDF e cada geração passam pela fila curta da API e pela consulta da execução, com a CPU ×4 do perfil. */
-const PRAZO_DA_IA_MS = 45_000
-const TITULO_DO_MATERIAL = 'Química 2, capítulo 7: Estequiometria'
-const DISCIPLINA = 'Química'
-
-interface Escola {
-  readonly professora: EquipeDeTeste
-  readonly turmaNome: string
-}
-
-async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
-  await (hasTouch ? alvo.tap() : alvo.click())
-}
-
-const principal = (page: Page) => page.getByRole('main')
-const caixa = (page: Page) => page.getByRole('textbox', { name: 'Pedido ao Assistente de ensino' })
-const conversa = (page: Page) => page.getByRole('log', { name: 'Conversa com o Assistente de ensino' })
-
-/**
- * A escola como a demonstração a encontra: a professora com a turma de Química confirmada (A1), e o material que a
- * **coordenação sobe pela tela**, com titularidade e licença declaradas (D75). Depois a coordenação sai, e a professora
- * entra na mesma aba, em "Nova conversa".
- */
-async function montarEscolaEEntrar(page: Page, hasTouch: boolean): Promise<Escola> {
-  const professora = await criarEquipeComSenha()
-  const alocacao = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId, [DISCIPLINA])
-  await confirmarVinculosNoBanco(professora.escolaId, alocacao.vinculoIds)
-  const coordenadora = await criarCoordenadoraNaEscola(professora)
-
-  await page.goto('/entrar')
-  await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-  await esperarEstrutura(page)
-  await irPelaNavegacao(page, 'Material', hasTouch)
-  await expect(page).toHaveURL(/\/coordenacao\/material$/)
-  await page.getByTestId('arquivo-do-material').setInputFiles(CAMINHO_DO_PDF_DE_DEMONSTRACAO)
-  await principal(page).getByLabel('Título').fill(TITULO_DO_MATERIAL)
-  await principal(page).getByLabel('Disciplina').selectOption({ label: DISCIPLINA })
-  await principal(page).getByLabel('De quem é o material').selectOption({ label: 'Material próprio da escola' })
-  await principal(page).getByLabel('Licença de uso (obrigatória)').selectOption({ label: 'Autoria da escola ou de professor dela' })
-  await principal(page).getByLabel(/^Declaro que a escola pode usar este material/).check()
-  await acionar(principal(page).getByRole('button', { name: 'Enviar material' }), hasTouch)
-  const material = principal(page).getByRole('region', { name: 'Materiais da escola' }).getByRole('listitem').filter({ hasText: TITULO_DO_MATERIAL })
-  await expect(material.getByText('Pronto · 6 páginas')).toBeVisible({ timeout: PRAZO_DA_IA_MS })
-
-  // A coordenação sai, e a professora entra no mesmo computador.
-  await acionar(page.getByRole('button', { name: 'Sair' }).first(), hasTouch)
-  await expect(page).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
-  await entrarPorEmail(page, professora, hasTouch)
-  await esperarNovaConversa(page, professora.nome)
-  return { professora, turmaNome: alocacao.turmaNome }
-}
 
 /** Pede ao Assistente, pela caixa de pedido, e espera a pergunta da D18 sobre a atividade objetiva. */
 async function pedirAtividade(page: Page, pedido: string, hasTouch: boolean): Promise<Locator> {
@@ -78,14 +25,6 @@ async function pedirAtividade(page: Page, pedido: string, hasTouch: boolean): Pr
   await expect(escolha).toBeVisible({ timeout: PRAZO_DA_IA_MS })
   await expect(escolha.getByRole('button')).toHaveText([/^Usar a ferramenta Atividade objetiva/, /^Só conversar/])
   return escolha
-}
-
-/** Gera a atividade de estequiometria pelo formulário da ferramenta, com a turma já escolhida, e espera o resultado. */
-async function gerarAtividade(cartao: Locator, hasTouch: boolean, questoes: string): Promise<void> {
-  await cartao.getByLabel('Tema').fill('Estequiometria')
-  await cartao.getByLabel('Questões').fill(questoes)
-  await acionar(cartao.getByRole('button', { name: 'Gerar atividade' }), hasTouch)
-  await expect(cartao.locator('[data-motor="pronto"]').getByText('Atividade — Estequiometria')).toBeVisible({ timeout: PRAZO_DA_IA_MS })
 }
 
 /** Do resultado da atividade até a versão adaptada pendente, pelo "Pedir versão adaptada" do artefato. */

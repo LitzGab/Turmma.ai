@@ -29,6 +29,7 @@ import {
   EFEITO_DE_APROVAR_O_LOTE,
   EFEITO_DE_REJEITAR_O_LOTE,
   estadoDoDestaque,
+  explicacoesDoDestaque,
   letraDaAlternativa,
   motivosDoDestaque,
   resumoDoLote,
@@ -42,6 +43,19 @@ import { aprovacaoDaEntrega, AUTOR_QUE_SAIU, LIMITES_DA_JUSTIFICATIVA, VERBO_DA_
 import { nomesDasTurmas } from './turmas-da-professora'
 
 const idDoDestaque = (alunoId: string) => `destaque-${alunoId}`
+
+/**
+ * O que a tela diz quando a decisão não foi registrada por um motivo que não é erro de ninguém. O `CONFLITO` é o lote que
+ * mudou desde a leitura (a aprovação vale para o que a pessoa leu: a API confere); o indisponível é o registro que não pôde
+ * ser gravado agora. Em todos, **nada foi aprovado**, e a tela relê a correção.
+ */
+const AVISO_DA_DECISAO: Partial<Record<CodigoDeErro, string>> = {
+  [CodigoDeErro.ENTREGA_JA_DECIDIDA]: 'Esta correção já tinha sido decidida. A tela foi atualizada com a decisão.',
+  [CodigoDeErro.DESTAQUES_NAO_ABERTOS]: 'Ainda há destaque para abrir. A tela foi atualizada: abra o que falta e aprove de novo.',
+  [CodigoDeErro.CONFLITO]: 'A correção mudou desde que você abriu esta tela, e nada foi aprovado. Ela foi atualizada: confira de novo e aprove.',
+  [CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO]: 'Não foi possível registrar a decisão agora, e nada foi aprovado. Confira a correção e tente de novo em instantes.',
+  [CodigoDeErro.TEMPO_ESGOTADO]: 'Não foi possível registrar a decisão agora, e nada foi aprovado. Confira a correção e tente de novo em instantes.',
+}
 
 /** O que a abertura de um destaque mostra: as respostas do aluno, questão a questão, e o acerto dele nos lotes aprovados antes. */
 function DestaqueAberto({ aberto }: { aberto: RespostaDestaqueAberto }) {
@@ -133,9 +147,11 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
     },
     onError: async (erro) => {
       if (!(erro instanceof ErroDaApi)) return
-      // Outra aba já decidiu, ou um destaque deixou de estar aberto: a tela se atualiza e diz o que houve, sem alarme.
-      if (erro.codigo !== CodigoDeErro.ENTREGA_JA_DECIDIDA && erro.codigo !== CodigoDeErro.DESTAQUES_NAO_ABERTOS) return
-      definirAviso(erro.codigo === CodigoDeErro.ENTREGA_JA_DECIDIDA ? 'Esta correção já tinha sido decidida. A tela foi atualizada com a decisão.' : 'Ainda há destaque para abrir. A tela foi atualizada: abra o que falta e aprove de novo.')
+      // Outra aba já decidiu, um destaque deixou de estar aberto, o lote mudou desde que a tela o leu, ou o registro não
+      // pôde ser gravado agora: a tela se atualiza e diz o que houve, com calma, sem erro cru. Nada foi aprovado.
+      const texto = AVISO_DA_DECISAO[erro.codigo]
+      if (texto === undefined) return
+      definirAviso(texto)
       await recarregarDepoisDoLote(cliente)
       fechar()
     },
@@ -173,7 +189,7 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
   const entregaInteira = entregas.data?.pages.flatMap((pagina) => pagina.itens).find((entrega) => entrega.id === dados.entrega.id)
   const turma = entregaInteira === undefined ? undefined : nomesDasTurmas(vinculos.data?.pages.flatMap((pagina) => pagina.itens) ?? [])[entregaInteira.turmaId]
   const problemaDaJustificativa = problemaDoTexto(justificativa, LIMITES_DA_JUSTIFICATIVA)
-  const falha = decidir.isError && !(decidir.error instanceof ErroDaApi && (decidir.error.codigo === CodigoDeErro.ENTREGA_JA_DECIDIDA || decidir.error.codigo === CodigoDeErro.DESTAQUES_NAO_ABERTOS)) ? mensagemDoErro(decidir.error) : undefined
+  const falha = decidir.isError && !(decidir.error instanceof ErroDaApi && AVISO_DA_DECISAO[decidir.error.codigo] !== undefined) ? mensagemDoErro(decidir.error) : undefined
 
   function abrirDecisao(escolha: 'aprovar' | 'rejeitar'): void {
     decidir.reset()
@@ -202,13 +218,14 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
         <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div className="flex min-w-0 flex-1 basis-56 flex-col gap-1">
             <p className="font-medium break-words text-tinta">{destaque.nome}</p>
-            <p className="text-sm break-words text-apoio">{motivosDoDestaque(destaque)}</p>
+            <p className="text-sm font-medium break-words text-apoio">{motivosDoDestaque(destaque)}</p>
+            <p className="text-sm break-words text-apoio">{explicacoesDoDestaque(destaque)}</p>
             <p className="text-sm break-words text-sutil">{acertosDoAluno(destaque)}</p>
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-3">
             {estado.aberto ? <Estado familia="ok">{estado.texto}</Estado> : <Estado familia="pendente">{estado.texto}</Estado>}
             {/* Abrir é o que fica registrado (D56). O já aberto pode ser visto de novo: a hora registrada continua a primeira. */}
-            {(!estado.aberto || aberto === undefined) && (
+            {(estado.aberto ? aberto === undefined : pendente) && (
               <Botao variante="secundario" disabled={abrir.isPending} onClick={() => abrir.mutate(destaque.alunoId)}>
                 {abrindo ? 'Abrindo…' : estado.aberto ? 'Ver de novo' : 'Abrir'}
                 <span className="sr-only"> a correção de {destaque.nome}</span>
