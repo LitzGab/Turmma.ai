@@ -276,6 +276,15 @@ describe('Tutor e sinais', () => {
       expect((await conversaDe(aluno, `?atividadeAplicadaId=${atividade}`)).estado).toBe('limite')
     })
 
+    it('passa na frente do limite de pedidos por minuto: no teto, o aluno recebe o encaminhamento, e a dúvida comum dele continua recusada', async () => {
+      const aluno = await novoAluno(a)
+      for (let pedido = 0; pedido < TETO_DE_PEDIDOS_DE_IA_POR_USUARIO; pedido += 1) expect((await enviar(aluno, { texto: 'o que é mol?', ...naQuestao(1) })).status).toBe(202)
+      expect(await enviar(aluno, { texto: 'o que é mol?', ...naQuestao(1) })).toMatchObject({ status: 429, corpo: { erro: { codigo: 'LIMITE_EXCEDIDO' } } })
+      expect(resposta(await turno(aluno, 'não tô bem, ninguém gosta de mim', naQuestao(3)))).toMatchObject({ tipo: 'assunto_delicado', texto: MENSAGEM_DE_ASSUNTO_DELICADO })
+      expect(await sinaisDe(aluno)).toContainEqual(expect.objectContaining({ tipo: 'atencao_humana' }))
+      expect(await enviar(aluno, { texto: 'o que é mol?', ...naQuestao(1) })).toMatchObject({ status: 429, corpo: { erro: { codigo: 'LIMITE_EXCEDIDO' } } })
+    })
+
     it('passa na frente do pacote do mês esgotado e da suspensão, do Tutor e dos sinais', async () => {
       const aluno = await novoAluno(b)
       const alunosDaTurma = Number((await sql<{ total: string }>(`select count(*) as total from vinculo where escola_id = $1 and turma_id = $2 and papel = 'aluno' and estado = 'confirmado'`, [b.escolaId, b.turma])).rows[0]?.total)
