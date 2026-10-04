@@ -22,7 +22,7 @@ function ProximoPasso() {
 /**
  * A primeira tela de quem entrou, no aluno. Ela mostra quem está na sessão e em qual escola, que é o que prova, para a
  * pessoa e para o teste, que a sessão vale de verdade. A navegação de cada papel está na lateral (`areas/navegacao.ts`).
- * A coordenação abre em Estrutura (13.0; `docs/interface.md` 11.1, enquanto a Governança não existe) e o professor, em
+ * A coordenação abre em Governança (MVP, A5; `docs/interface.md` 11.1: é a tela que fecha a venda) e o professor, em
  * "Nova conversa" (A2; D73): daqui os dois são levados para lá, sem ficar no histórico.
  *
  * Não há estado vazio: a resposta de `/v1/eu` sempre traz a pessoa e a escola. Carregando, erro e com dado estão
@@ -34,7 +34,7 @@ export function Inicio() {
 
   if (eu.isPending) return <EstadoCarregando rotulo="Carregando a sua escola…" />
   const papel = eu.data?.papel
-  if (papel === 'coordenador') return <Redirect to={ROTAS.estrutura} replace />
+  if (papel === 'coordenador') return <Redirect to={ROTAS.governanca} replace />
   // O professor abre em "Nova conversa", a caixa de pedido do Assistente de ensino (A2; D73; `docs/interface.md` 11.1).
   if (papel === 'professor') return <Redirect to={ROTAS.novaConversa} replace />
   return (
