@@ -81,7 +81,7 @@ export class AppModule {
         ProfessoresModule,
         MaterialModule.com(opcoes.logger ?? criarLogger({ servico: 'api' })),
         IaModule.com({ config: config.ia, ...(opcoes.logger === undefined ? {} : { logger: opcoes.logger }) }),
-        AssistenteModule.com({ chaveContador: config.login.chaveContador, instancias: config.limite.instancias }),
+        AssistenteModule.com({ chaveContador: config.login.chaveContador, instancias: config.limite.instancias, logger: opcoes.logger ?? criarLogger({ servico: 'api' }) }),
         ArtefatoModule,
         EntregaModule,
         SalaModule.com({

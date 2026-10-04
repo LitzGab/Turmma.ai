@@ -362,6 +362,12 @@ describe('Assistente de ensino', () => {
       expect(await contarNaEscola(bancada, 'execucao_agente', a.escolaId)).toBe(execucoesAntes)
       expect((await post(a.colega, '/v1/assistente/mensagens', mensagem(a, 'o que é mol?', { turmaId: a.outraTurma }))).status).toBe(202)
       await executor.ociosa()
+      // Uma linha de log por janela, com o evento e os ids, e nada do pedido (regra 80, item 10; regra 20, item 9).
+      expect(await post(a.professora, '/v1/assistente/mensagens', mensagem(a, 'e massa molar?'))).toMatchObject({ status: 429 })
+      const doLimite = linhasDeLog.map((linha) => JSON.parse(linha) as Record<string, unknown>).filter((linha) => linha['evento'] === 'ia.limite_de_pedidos_atingido')
+      expect(doLimite).toHaveLength(1)
+      expect(doLimite[0]).toMatchObject({ evento: 'ia.limite_de_pedidos_atingido', tipo: 'usuario', escolaId: a.escolaId, usuarioId: a.professora.usuarioId })
+      expect(JSON.stringify(doLimite)).not.toMatch(/massa molar|mol\?/u)
     })
   })
 })

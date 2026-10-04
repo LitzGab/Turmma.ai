@@ -42,6 +42,7 @@ import { AVISO_DE_IA_NO_PDF } from './pdf-do-artefato.js'
 describe('ferramentas e artefato', () => {
   const bancada = new BancadaDeSessoes()
   const medidor = new MedidorDeTeste()
+  const linhasDeLog: string[] = []
   let api: ApiDeTeste
   let executor: ExecutorNoProcesso
   let a: EscolaComAssistente
@@ -86,7 +87,7 @@ describe('ferramentas e artefato', () => {
   const falso = () => api.app.get<LLMProvider>(LLM_PROVIDER)
 
   beforeAll(async () => {
-    api = await subirApi(medidor.medidor)
+    api = await subirApi(medidor.medidor, {}, linhasDeLog)
     executor = api.app.get<ExecutorNoProcesso>(EXECUTOR_DE_AGENTE)
     a = await montarEscolaComAssistente(api, bancada)
     b = await montarEscolaComAssistente(api, bancada)
@@ -212,7 +213,7 @@ describe('ferramentas e artefato', () => {
   })
 
   describe('isolamento', () => {
-    it('o artefato de A não é lido, renomeado, exportado nem adaptado pela professora de B, pela colega de outra turma, pela coordenação nem pelo aluno: igual ao inexistente', async () => {
+    it('o artefato de A não é lido, renomeado, exportado nem adaptado pela professora de B, pela colega de outra turma, pela professora de outra disciplina da mesma turma, pela coordenação nem pelo aluno: igual ao inexistente', async () => {
       const inexistente = randomUUID()
       const rotas = (id: string): [string, string, unknown?][] => [
         ['GET', `/v1/artefatos/${id}`],
@@ -221,7 +222,7 @@ describe('ferramentas e artefato', () => {
         ['POST', `/v1/artefatos/${id}/adaptar`, { tipos: ['fonte_ampliada'], chaveEnvio: randomUUID() }],
       ]
       const antes = [await contarNaEscola(bancada, 'execucao_agente', a.escolaId), await contarNaEscola(bancada, 'execucao_agente', b.escolaId)]
-      for (const sessao of [b.professora, a.colega, a.coordenacao, a.aluno]) {
+      for (const sessao of [b.professora, a.colega, a.deFisica, a.coordenacao, a.aluno]) {
         for (const [indice, [metodo, caminho, corpo]] of rotas(atividadeDeA).entries()) {
           const [, caminhoDoInexistente] = rotas(inexistente)[indice] ?? []
           const doInexistente = await pedir(sessao, metodo, caminhoDoInexistente ?? '', corpo)
@@ -232,7 +233,7 @@ describe('ferramentas e artefato', () => {
       expect((await artefatoDe(a.professora, atividadeDeA)).titulo).not.toBe('Título trocado por quem não podia')
       expect([await contarNaEscola(bancada, 'execucao_agente', a.escolaId), await contarNaEscola(bancada, 'execucao_agente', b.escolaId)]).toEqual(antes)
       // No repository: com o id certo e o contexto errado, nada; com o contexto da dona, o artefato.
-      for (const [escola, sessao] of [[b, b.professora], [a, a.colega]] as const) {
+      for (const [escola, sessao] of [[b, b.professora], [a, a.colega], [a, a.deFisica]] as const) {
         expect(await comoPessoa(escola, sessao, 'professor', () => new ArtefatoRepository(bancada.banco).porId(atividadeDeA))).toBeUndefined()
         expect(await comoPessoa(escola, sessao, 'professor', () => new ArtefatoRepository(bancada.banco).renomear(atividadeDeA, 'Outro'))).toBe(false)
         expect(await comoPessoa(escola, sessao, 'professor', () => new ArtefatoRepository(bancada.banco).versoesAdaptadas(atividadeDeA))).toEqual([])
@@ -251,6 +252,14 @@ describe('ferramentas e artefato', () => {
       expect(Object.keys(deA.itens[0] ?? {}).sort()).toEqual(['adaptacao', 'criadoEm', 'disciplinaId', 'entrega', 'id', 'origemId', 'tipo', 'titulo', 'turmaId'])
       expect((await listar(a.colega)).itens).toEqual([])
       expect((await listar(a.colega, `?turmaId=${a.turma}`)).itens).toEqual([])
+      // A professora de Física do 2ºB vê os artefatos de Física da turma, e nenhum de Química: a disciplina é a do artefato.
+      expect(deA.itens.map((item) => item.disciplinaId)).toContain(a.fisica)
+      for (const consulta of ['', `?turmaId=${a.turma}`]) {
+        const deFisica = (await listar(a.deFisica, consulta)).itens
+        expect(deFisica.length).toBeGreaterThan(0)
+        expect(deFisica.every((item) => item.disciplinaId === a.fisica)).toBe(true)
+        expect(deFisica.map((item) => item.id)).not.toContain(atividadeDeA)
+      }
       expect((await listar(b.professora, `?turmaId=${a.turma}`)).itens).toEqual([])
       expect((await listar(b.professora)).itens.map((item) => item.id)).toContain(atividadeDeB)
       // Do mais novo para o mais antigo, uma página por vez.
@@ -360,8 +369,8 @@ describe('ferramentas e artefato', () => {
       expect(await contarNaEscola(bancada, 'entrega', a.escolaId, `execucao_id = '${execucaoId}'`)).toBe(1)
       expect(await contarNaEscola(bancada, 'entrega', a.escolaId, `artefato_id = '${execucao.resultado?.artefatoId ?? ''}'`)).toBe(1)
 
-      // A colega, com vínculo na turma, usa a chave da professora: não recebe a execução dela, e nada novo nasce.
-      await vincularProfessor(bancada, a, a.colega.usuarioId, a.turma, a.fisica)
+      // A colega, com vínculo na turma e na disciplina, usa a chave da professora: não recebe a execução dela, e nada novo nasce.
+      await vincularProfessor(bancada, a, a.colega.usuarioId, a.turma, a.quimica)
       try {
         const daColega = await pedir(a.colega, 'POST', `/v1/artefatos/${atividadeDeA}/adaptar`, corpo)
         expect(semId(daColega)).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
@@ -464,6 +473,39 @@ describe('ferramentas e artefato', () => {
       } finally {
         await retomar(a, 'conversa_e_ferramentas')
       }
+    })
+  })
+
+  describe('o tema é texto livre da professora (regra 20, item 9)', () => {
+    it('o tema e o título ficam na execução, no consumo e no artefato, que são dela; nunca vão para log nem para auditoria, nem quando a execução falha', async () => {
+      const proibido = /Bernardo|Queiroz|discalculia/u
+      const tema = 'reagente limitante para o Bernardo Queiroz, que tem discalculia'
+      const execucaoId = await dispararExecucao(api, a.professora, '/v1/ferramentas/atividade_objetiva/gerar', parametros(a, tema, { quantidade: 2 }))
+      const geracao = await execucaoTerminada(api, a.professora, execucaoId)
+      expect(geracao.estado).toBe('concluida')
+      const artefatoId = geracao.resultado?.artefatoId ?? ''
+      // O caminho inteiro: renomear, exportar, adaptar, decidir; e uma geração que falha com o mesmo tipo de tema.
+      expect((await pedir(a.professora, 'PATCH', `/v1/artefatos/${artefatoId}`, { titulo: 'Lista do Bernardo Queiroz' })).status).toBe(200)
+      expect((await baixarPdf(a.professora, artefatoId)).status).toBe(200)
+      const adaptacao = await execucaoTerminada(api, a.professora, await dispararExecucao(api, a.professora, `/v1/artefatos/${artefatoId}/adaptar`, { tipos: ['fonte_ampliada'] }))
+      expect((await pedir(a.professora, 'POST', `/v1/entregas/${adaptacao.resultado?.entregaId ?? ''}/decidir`, { decisao: 'aprovar' })).status).toBe(200)
+      const falha = await execucaoTerminada(api, a.professora, await dispararExecucao(api, a.professora, '/v1/ferramentas/plano_de_aula/gerar', parametros(a, 'xilofone do Bernardo Queiroz com discalculia')))
+      expect(falha).toMatchObject({ estado: 'falhou', erro: 'MATERIAL_INSUFICIENTE' })
+      expect(semId(await pedir(a.professora, 'POST', '/v1/ferramentas/atividade_objetiva/gerar', { ...parametros(a, tema, { turmaId: a.outraTurma }), chaveEnvio: randomUUID() }))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+
+      // Onde o tema está: na entrada da execução e no consumo dela (aceito pelo contrato), e no título do artefato.
+      const { rows: execucoes } = await sql('select entrada from execucao_agente where id = $1', [execucaoId])
+      expect(JSON.stringify(execucoes)).toMatch(proibido)
+      expect(JSON.stringify((await sql('select entrada from consumo_ia where escola_id = $1 and execucao_id = $2', [a.escolaId, execucaoId])).rows)).toMatch(proibido)
+      // Onde ele nunca está: no log (nem o da geração, nem o da falha, nem o da requisição) e na auditoria.
+      const log = linhasDeLog.join('\n')
+      expect(log).toContain(execucaoId)
+      expect(log).not.toMatch(proibido)
+      expect(log).not.toMatch(/reagente limitante para|xilofone|Lista do/u)
+      const { rows: auditorias } = await sql('select * from auditoria where escola_id = $1', [a.escolaId])
+      expect(auditorias.some((linha: { acao: string }) => linha.acao === 'entrega.decidida')).toBe(true)
+      expect(JSON.stringify(auditorias)).not.toMatch(proibido)
+      expect(JSON.stringify(auditorias)).not.toMatch(/reagente limitante para|Lista do/u)
     })
   })
 

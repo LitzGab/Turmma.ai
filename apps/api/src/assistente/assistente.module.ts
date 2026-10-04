@@ -1,4 +1,4 @@
-import type { Banco } from '@educa/nucleo'
+import type { Banco, LoggerBase } from '@educa/nucleo'
 import { Global, Module, type DynamicModule } from '@nestjs/common'
 import type { Redis } from 'ioredis'
 import { BANCO } from '../banco.module.js'
@@ -17,6 +17,8 @@ export interface OpcoesDoAssistente {
   readonly chaveContador: Uint8Array
   /** Quantas instâncias da API dividem os tetos quando o Redis de fila está fora (`LIMITE_INSTANCIAS_API`). */
   readonly instancias: number
+  /** O logger JSON do processo, para a linha `ia.limite_de_pedidos_atingido` com a escola e a pessoa por id. */
+  readonly logger: LoggerBase
 }
 
 /**
@@ -29,14 +31,14 @@ export interface OpcoesDoAssistente {
 @Global()
 @Module({})
 export class AssistenteModule {
-  static com({ chaveContador, instancias }: OpcoesDoAssistente): DynamicModule {
+  static com({ chaveContador, instancias, logger }: OpcoesDoAssistente): DynamicModule {
     return {
       module: AssistenteModule,
       controllers: [TimeController, AssistenteController],
       providers: [
         {
           provide: LimiteDePedidosDeIa,
-          useFactory: (cliente: Redis) => new LimiteDePedidosDeIa({ janela: new ContadorEmJanela(cliente, chaveContador, { janelaMs: JANELA_DOS_PEDIDOS_DE_IA_MS, avisarSeguro: avisarSeguroDosPedidosDeIa }), instancias }),
+          useFactory: (cliente: Redis) => new LimiteDePedidosDeIa({ janela: new ContadorEmJanela(cliente, chaveContador, { janelaMs: JANELA_DOS_PEDIDOS_DE_IA_MS, avisarSeguro: avisarSeguroDosPedidosDeIa }), instancias, logger }),
           inject: [CLIENTE_REDIS_LOGIN],
         },
         { provide: TimeService, useFactory: (banco: Banco) => new TimeService(banco), inject: [BANCO] },

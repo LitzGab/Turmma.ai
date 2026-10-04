@@ -27,8 +27,8 @@ function paraATela(lida: EntregaLida): unknown {
  * As entregas que esperam a decisão do professor (MVP, A2; regra 70, itens 3 e 6): o que a IA produziu só vale depois
  * da aprovação registrada, com autor e data, e pode ser rejeitado com justificativa.
  *
- * - **Só o professor com vínculo confirmado na turma da entrega** lê e decide. A de outra turma, de outra escola e a
- *   inexistente respondem o mesmo `NAO_ENCONTRADO` (regra 10, item 6).
+ * - **Só o professor com vínculo confirmado na turma e na disciplina da entrega** lê e decide. A de outra turma, de
+ *   outra disciplina da mesma turma, de outra escola e a inexistente respondem o mesmo `NAO_ENCONTRADO` (regra 10, item 6).
  * - **Decidir é uma vez só.** O `update` condicional grava a primeira decisão; a segunda, mesmo simultânea, responde
  *   `ENTREGA_JA_DECIDIDA`, não troca nada e não grava auditoria.
  * - **O lote de correção não se aprova por aqui** (`ENTRADA_INVALIDA`): a aprovação dele grava o registro da validação
