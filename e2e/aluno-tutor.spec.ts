@@ -123,6 +123,16 @@ test.describe('o Tutor pelo item da lateral e a conversa por atividade', () => {
     // "Hoje: N de 60 perguntas", em texto, com o que a API mandou.
     await expect(usoDoDia(page)).toContainText('Hoje: 12 de 60 perguntas')
     await expect(usoDoDia(page)).toContainText('faltam 48')
+    // Com o teclado aberto no celular (a tela baixa), a barra vira uma linha de texto, e volta quando a tela cresce.
+    const tamanho = page.viewportSize()
+    if (tamanho !== null) {
+      const linha = usoDoDia(page).getByText('Hoje: 12 de 60 perguntas · faltam 48')
+      await expect(linha).toBeHidden()
+      await page.setViewportSize({ width: tamanho.width, height: 400 })
+      await expect(linha).toBeVisible()
+      await page.setViewportSize(tamanho)
+      await expect(linha).toBeHidden()
+    }
     expect(await violacoesGraves(page)).toEqual([])
 
     // Erro ao ler a conversa: "Tentar de novo", sem código.

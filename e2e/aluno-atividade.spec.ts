@@ -189,6 +189,12 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
     await acionar(mapa(page).getByRole('button', { name: 'Questão 3, sem resposta' }), hasTouch)
     await expect(mapa(page)).toContainText('Questão 3 de 3')
     await expect(principal(page).getByRole('button', { name: 'Próxima' })).toBeDisabled()
+    // Trocar de questão leva o foco ao enunciado; o "Próxima" que desliga na última não deixa o foco cair no `body`.
+    await expect(principal(page).getByRole('heading', { level: 2, name: /^Questão 3:/ })).toBeFocused()
+    await acionar(principal(page).getByRole('button', { name: 'Anterior' }), hasTouch)
+    await acionar(principal(page).getByRole('button', { name: 'Próxima' }), hasTouch)
+    await expect(principal(page).getByRole('button', { name: 'Próxima' })).toBeDisabled()
+    await expect(principal(page).getByRole('heading', { level: 2, name: /^Questão 3:/ })).toBeFocused()
 
     // Atividade comum: o Tutor está a um toque, levando a atividade e a questão.
     await expect(principal(page).getByRole('link', { name: 'Pedir ajuda ao Tutor nesta questão' })).toHaveAttribute('href', `/aluno/tutor/${atividade.id}?questao=3`)

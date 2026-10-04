@@ -312,7 +312,13 @@ function ConversaComOTutor({ atividadeAplicadaId }: { atividadeAplicadaId: strin
           <div className="flex w-full min-w-0 flex-col gap-3">
             {uso !== undefined && (
               <div data-uso-do-dia="">
-                <BarraRotulada rotulo={uso.rotulo} valor={uso.valor} maximo={uso.maximo} texto={uso.resto} />
+                {/* Com a tela baixa (o teclado aberto no celular), a barra vira uma linha de texto: a caixa continua à vista. */}
+                <div className="[@media(max-height:32rem)]:hidden">
+                  <BarraRotulada rotulo={uso.rotulo} valor={uso.valor} maximo={uso.maximo} texto={uso.resto} />
+                </div>
+                <p className="hidden text-sm text-sutil [@media(max-height:32rem)]:block">
+                  {uso.rotulo} · {uso.resto}
+                </p>
               </div>
             )}
             <CaixaPedido variante="so-texto" rotulo="Pergunta para o Tutor" exemplo="Escreva a sua dúvida…" valor={texto} aoMudar={definirTexto} aoEnviar={aoEnviar} estado={emCurso(ciclo) ? 'gerando' : 'pronta'} />

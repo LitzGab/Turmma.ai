@@ -63,7 +63,12 @@ export default function VisaoGeralDaTurma({ turmaId }: { turmaId: string }) {
                 valor={item.acertos}
                 maximo={item.total}
                 texto={`${String(item.acertos)} de ${String(item.total)}`}
-                detalhe={item.alunosAbaixoDaMetade === 0 ? 'Nenhum aluno abaixo da metade nesta habilidade.' : `${textoDeAlunos(item.alunosAbaixoDaMetade)} abaixo da metade nesta habilidade.`}
+                // De onde vem o número: a metade é o limiar provisório (os limiares são decisão em aberto), e a tela diz qual é.
+                detalhe={
+                  item.alunosAbaixoDaMetade === 0
+                    ? 'Nenhum aluno acertou menos da metade das questões desta habilidade nas atividades aprovadas.'
+                    : `${textoDeAlunos(item.alunosAbaixoDaMetade)} ${item.alunosAbaixoDaMetade === 1 ? 'acertou' : 'acertaram'} menos da metade das questões desta habilidade nas atividades aprovadas.`
+                }
               />
             ))}
           </div>

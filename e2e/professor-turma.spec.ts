@@ -257,6 +257,8 @@ test.describe('aprovar a correção (11.5)', () => {
     await expect(aprovar).toBeDisabled()
     const contador = barra.locator('[data-contador-dos-destaques]')
     await expect(contador).toHaveText('0 de 2 destaques abertos. Abra os 2 destaques que faltam para liberar a aprovação.')
+    // O leitor de tela lê o porquê junto do botão desligado.
+    await expect(aprovar).toHaveAccessibleDescription('0 de 2 destaques abertos. Abra os 2 destaques que faltam para liberar a aprovação.')
     expect(await principal(page).getByRole('button').evaluateAll((botoes) => botoes.filter((botao) => getComputedStyle(botao).backgroundColor === 'rgb(232, 115, 46)').length)).toBe(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
@@ -499,8 +501,8 @@ test.describe('a turma aberta: Visão Geral e Alunos (D69)', () => {
     const habilidades = page.getByRole('region', { name: 'Acerto por habilidade' })
     await expect(habilidades).toContainText('QUI.EM.04', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(habilidades).toContainText('20 de 28')
-    await expect(habilidades).toContainText('8 alunos abaixo da metade nesta habilidade.')
-    await expect(habilidades).toContainText('Nenhum aluno abaixo da metade nesta habilidade.')
+    await expect(habilidades).toContainText('8 alunos acertaram menos da metade das questões desta habilidade nas atividades aprovadas.')
+    await expect(habilidades).toContainText('Nenhum aluno acertou menos da metade das questões desta habilidade nas atividades aprovadas.')
     // A barra é neutra: cinza, nunca vermelha.
     expect(await habilidades.locator('svg rect').evaluateAll((retangulos) => [...new Set(retangulos.map((retangulo) => getComputedStyle(retangulo).fill))])).toEqual(['rgb(240, 240, 240)', 'rgb(93, 93, 93)'])
     const alunos = page.getByRole('region', { name: 'Por aluno' })
