@@ -46,12 +46,17 @@ export default function Analista() {
   useEffect(() => {
     if (!concluiu) return
     focarResumo.current = true
-    void cliente.invalidateQueries({ queryKey: consultaResumoDoAnalista.queryKey }).then(() => {
-      if (focarResumo.current) resumoNovo.current?.focus()
-      focarResumo.current = false
-    })
+    void cliente.invalidateQueries({ queryKey: consultaResumoDoAnalista.queryKey })
     limpar()
   }, [concluiu, cliente, limpar])
+
+  // O foco vai para o resumo depois que ele está na tela, já com o id novo: o efeito roda depois do render que o desenhou.
+  const idDoResumo = resumo.data?.resumo?.id
+  useEffect(() => {
+    if (!focarResumo.current || idDoResumo === undefined) return
+    focarResumo.current = false
+    resumoNovo.current?.focus()
+  }, [idDoResumo])
 
   const gerar = useCallback(() => {
     limpar()
