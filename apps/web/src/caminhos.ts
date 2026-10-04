@@ -28,6 +28,8 @@ export const ROTAS_DA_COORDENACAO = {
   turma: '/estrutura/turmas/:turmaId',
   /** Os professores da escola e o convite de cada um: cadastrar, copiar o link, refazer e revogar (A1, 14.0; RF6). */
   professores: '/professores',
+  /** O material da escola: enviar o PDF com a licença declarada e acompanhar a leitura (MVP, A2; D75). */
+  material: '/material',
 } as const
 
 /**
@@ -64,6 +66,8 @@ export const ROTAS = {
   estrutura: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.estrutura}`,
   /** Professores da coordenação, pela raiz: é o endereço que a navegação usa (14.0). */
   professores: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.professores}`,
+  /** Material da coordenação, pela raiz: é o endereço que a navegação usa (MVP, A2). */
+  material: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.material}`,
   /** "Minha turma" do aluno, pela raiz: é o endereço que a navegação usa. */
   minhaTurma: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.minhaTurma}`,
   /** O convite da coordenação e o do professor. O token vai no fragmento `#`, e nunca no caminho nem na consulta. */

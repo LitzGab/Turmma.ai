@@ -24,6 +24,7 @@ import { BANCO, BancoModule } from './banco.module.js'
 import type { ConfiguracaoApi } from './config.js'
 import { EstruturaModule } from './estrutura/estrutura.module.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
+import { MaterialModule } from './material/material.module.js'
 import { OperacaoModule } from './operacao/operacao.module.js'
 import { ProfessoresModule } from './professores/professores.module.js'
 import type { SorteioDoCodigo } from './sala/codigo-da-sala.js'
@@ -74,6 +75,7 @@ export class AppModule {
         }),
         EstruturaModule,
         ProfessoresModule,
+        MaterialModule.com(opcoes.logger ?? criarLogger({ servico: 'api' })),
         SalaModule.com({
           config: config.sala,
           chaveContador: config.login.chaveContador,

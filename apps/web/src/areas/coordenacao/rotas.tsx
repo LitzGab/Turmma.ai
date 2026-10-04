@@ -1,9 +1,13 @@
+import { lazy } from 'react'
 import { Route, Switch } from 'wouter'
 import { ROTAS_DA_COORDENACAO } from '../../caminhos'
 import { ConteudoNaoEncontrado } from '../../componentes/NaoEncontrada'
 import { Estrutura } from './Estrutura'
 import { ListaDaTurma } from './ListaDaTurma'
 import { Professores } from './Professores'
+
+/** Material (MVP, A2): tela nova, num pedaço próprio (`tela-coordenacao-Material-*.js`), que só quem a abre baixa. */
+const Material = lazy(() => import('./Material'))
 
 /**
  * A área da coordenação, relativa a `/coordenacao`, num chunk próprio, `coordenacao-*.js` (`apps/web/nome-dos-chunks.ts`),
@@ -25,6 +29,7 @@ export default function RotasDaCoordenacao() {
       */}
       <Route path={ROTAS_DA_COORDENACAO.turma}>{(parametros) => <ListaDaTurma key={parametros.turmaId} turmaId={parametros.turmaId} />}</Route>
       <Route path={ROTAS_DA_COORDENACAO.professores} component={Professores} />
+      <Route path={ROTAS_DA_COORDENACAO.material} component={Material} />
       <Route>
         <ConteudoNaoEncontrado />
       </Route>
