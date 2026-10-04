@@ -118,6 +118,8 @@ test.describe('Governança de IA', () => {
     ])
     await acionar(dado.getByRole('button', { name: 'Fechar dado nominal' }), hasTouch)
     await expect(dado).toHaveCount(0)
+    // O botão que tinha o foco sumiu com o resultado: o foco volta para quem abriu, e não cai no `body`.
+    await expect(principal(page).getByRole('button', { name: 'Abrir dado nominal de uma turma' })).toBeFocused()
   })
 
   test('os quatro estados: carregando, erro com "Tentar de novo", com dado, e a escola sem nada gerado explica o que vai aparecer', async ({ page, hasTouch }) => {
