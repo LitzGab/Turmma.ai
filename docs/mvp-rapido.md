@@ -10,7 +10,8 @@
 
 > Atualizada a cada commit. Quem retoma lê esta seção, `git log mvp/apresentacao` e `git status`.
 
-**Fase atual:** fase 2 (A2) em curso. **A fase 1 está fechada** (`97da66a`, 04/10/2026), com os quatro revisores aprovando.
+**Fase atual:** fases 2 e 3 em curso. A fase 1 está fechada (`97da66a`). **A fase 2 (A2) está integrada** (`5c1b53d`,
+04/10/2026), com o portão local verde (277 arquivos, 3795 testes), e espera as correções da revisão para fechar.
 
 **Feito**
 
@@ -52,18 +53,27 @@ o teste da cláusula de escola em `ia.int.test.ts` usa mensagens criadas por out
 camada de IA fora de requisição e fora do executor precisa abrir contexto com a escola, ou a guarda de escola do
 provedor não compara nada; as 15 amostras de saída do Tutor são poucas para declarar a taxa do modelo local.
 
+**Revisão da fase 2** (uma passada, sobre `mvp/fase-2` em `572a0cd`)
+
+| Revisor | Veredito | O que exigiu | Quem corrige |
+|---|---|---|---|
+| `tenancy-guardian` | APROVADO | Recomendações: nenhum teste quebra se a cláusula de ano letivo sumir; `doMaterial` sem disciplina | P, rodada 3 |
+| `privacy-guardian` | APROVADO | Recomendações: aviso nos campos livres (tema e título); `licenciante` fora do que o professor recebe | P e W, rodada 3 |
+| `conformidade-reviewer` | REPROVADO | A recusa de corrigir discursiva (D55) só pegava a frase canônica: de 25 frases de professor, recusou uma. A versão adaptada saía em PDF pendente ou rejeitada, com o aviso "revisado" | P, rodada 3 |
+| `frontend-reviewer` | AJUSTES NECESSÁRIOS | A resposta aparecia acima da pergunta até a conversa ser relida; a tela pulava ao carregar mensagens antigas; Material vazio com dois botões principais | W, rodada 3 |
+
+Decisão sobre o PDF da versão adaptada: aprovada exporta limpa; pendente exporta como rascunho, com a marca em toda
+página e sem a frase de revisão; rejeitada não exporta.
+
 **Em curso**
 
 | Pacote | Worktree e branch | O que faz |
 |---|---|---|
-| W, rodada 2 | `../Educa.ia-mvp-w`, `mvp/w` | e2e do fluxo da A2 contra a API real, professor abrindo em Nova conversa, "Só conversar" ligado |
-| P, rodada 2 | `../Educa.ia-mvp-p`, `mvp/p` | artefato e entrega autorizados pela turma **e pela disciplina** |
+| P, rodada 3 | `../Educa.ia-mvp-p`, `mvp/p` | os dois bloqueantes de conformidade (regra da D55 com amostras, PDF da versão adaptada) e as recomendações de teste |
+| W, rodada 3 | `../Educa.ia-mvp-w`, `mvp/w` | parte 1: ajustes da revisão da fase 2 nas telas; parte 2: telas do professor da fase 3 (aplicar à turma, Aprovar, sinais e uso do Tutor no Seu time, desempenho na turma aberta) |
+| X | `../Educa.ia-mvp-x`, `mvp/x` | telas do aluno: Atividades, Atividade e Tutor (a memória, só se couber) |
 | A (API) | `../Educa.ia-mvp-a`, `mvp/a` | atividade aplicada, respostas, correção, validação do lote, desempenho da turma |
-| T (API) | `../Educa.ia-mvp-t`, `mvp/t` | Tutor, memória, sinais e uso do Tutor por turma |
-
-Integrados na `mvp/fase-2` (`02b4b1a`), ainda sem portão: M (material, API e tela), P (API do Assistente), W (telas do
-professor, com a API simulada no e2e dos estados) e a quinta rodada do C (o menu que fechava sozinho depois de uma
-rolagem era defeito de produto, corrigido; `Tela` sem margem dobrada; campo condicional no formulário).
+| T (API), rodada 2 | `../Educa.ia-mvp-t`, `mvp/t` | Tutor, memória, sinais e uso. Entregue (45 testes de integração); a rodada 2 põe o assunto delicado na frente da avaliação aberta |
 
 A branch de integração da fase 2 é `mvp/fase-2` (`../Educa.ia-mvp-fase-2`). Os worktrees de S, L e C ficam de pé
 para rodadas de correção.
@@ -74,11 +84,15 @@ retomados às 14h21 do ponto em que pararam. Se acontecer de novo, retoma-se cad
 
 **Falta**
 
-- Fechar a fase 2: integrar a rodada 2 de W e de P, portão, revisores da fase (os três com veto e o
-  `frontend-reviewer`) e esteira.
-- Fase 3: integrar as APIs de A e de T; depois, as telas do aluno (atividades, Tutor), o Aprovar, Turmas com
-  desempenho e os sinais no Seu time, num pacote de telas que só começa quando o W terminar (mexem nos mesmos arquivos).
+- Fechar a fase 2: integrar a rodada 3 de P e a parte 1 da rodada 3 de W, portão, segunda passada do
+  `conformidade-reviewer` e do `frontend-reviewer`.
+- Fase 3: integrar as APIs de A e de T e as telas de W (parte 2) e de X; segunda rodada das telas com o e2e do fluxo
+  real; portão, revisores (os três com veto, `test-engineer` e `frontend-reviewer`) e esteira.
 - Fase 4 (governança e Analista) e o fechamento (seção 8).
+
+Limiares que os pacotes escolheram e que são decisão de produto em aberto (indicadores, `CLAUDE.md`): `travou` na
+quarta troca seguida na mesma questão ou página, no mesmo dia; `duvida_repetida` quando o aluno volta a uma questão ou
+página em que já pediu ajuda. Os dos destaques da correção entram quando o pacote A entregar.
 
 Para os pacotes das fases 3 e 4, o que os revisores já pediram:
 - **A (atividade e correção):** `aprovar-lote` monta `apresentado` e `aberto` das linhas de `correcao` no servidor;
@@ -100,6 +114,7 @@ Para os pacotes das fases 3 e 4, o que os revisores já pediram:
 |---|---|---|---|
 | fase 1 | `37208632853` | `7fddb5f` | verde na reexecução. Na primeira vez, só o job de infra caiu, no ensaio de alertas: a regra "Login recusado pelo semáforo do hash" ficou em `pending` até o prazo de 540 s. Nada da fase 1 mexe em login, e o job passou ao ser rodado de novo: intermitente, a observar |
 | correções da fase 1 | `37220240549` | `1440e79` | verde, todos os jobs, inclusive infra |
+| fase 2 | `37227505570` | `5c1b53d` | a conferir. É a primeira a rodar os specs da A1 ajustados para o professor abrir em Nova conversa, e a mudança em `infra/` da variável da galeria |
 
 **Modelo local do ensaio final:** `qwen3.6-35b-a3b` no `llama-server` (`GET /v1/models` em 04/10/2026; estava
 descarregado, e quem carrega é o Joaquim).
@@ -151,6 +166,13 @@ descarregado, e quem carrega é o Joaquim).
     da mesma turma leria o artefato da colega e decidiria a versão adaptada dela.
 22. **O professor abre em Nova conversa** (D73), e os specs da A1 que afirmavam a página "Início" para o professor são
     ajustados na rodada 2 do W.
+25. **O assunto delicado passa na frente de tudo no Tutor**, inclusive da avaliação aberta, do freio diário, do pacote
+    do mês e da suspensão dos sinais: o aluno recebe a mensagem fixa da D36 e o sinal `atencao_humana` nasce. A caixa
+    de texto do Tutor não trava no limite nem em avaliação, por isso.
+26. **Desempenho, sinais e uso do Tutor são por disciplina**: a professora vê o que nasceu de atividade ou de material
+    da disciplina em que tem vínculo. O sinal `atencao_humana`, que não tem referência, chega a todo professor da turma.
+27. **Não há política de Tutor por turma (D19) nem contestação da memória nesta fatia.** O Tutor fica ligado para o
+    aluno com turma; o estado "desligado fora da sala" não existe; o aluno vê o que o Tutor sabe e fala com a professora.
 23. **A fase 3 começou pela API**, em paralelo com o fim da fase 2; as telas dela esperam o W.
 24. **Teto do grupo "peças + galeria" em 26 kB** (medido: 23,47). O primeiro carregamento está em 141,57 de 150 kB;
     cerca de 15 kB do grupo são pedaços que a entrada nunca baixa, mas o glob soma.
