@@ -10,58 +10,87 @@
 
 > Atualizada a cada commit. Quem retoma lê esta seção, `git log mvp/apresentacao` e `git status`.
 
-**Fase atual:** fase 1 em curso (04/10/2026), junto com o fim da preparação.
+**Fase atual:** fase 2 (A2) em curso desde 04/10/2026, junto com a última rodada de correção da fase 1.
 
 **Feito**
 
 - Esteira da `develop` verde no `573f0a1`, branch `mvp/apresentacao` criada da `develop` e publicada, D77 registrada.
-- Este documento corrigido (`a8d2fe1`): saíram o worktree `../Educa.ia-mvp` e o projeto `educa-mvp`; a seção 8 ficou
-  só com o que falta; entraram as fases da seção 3 e as decisões abaixo.
+- Este documento corrigido (`a8d2fe1`), com as fases da seção 3, a trava do banco de teste e o passo a passo dos pacotes.
 - O marcador `(mvp: <resumo>)` em `tools/processo/revisoes.ts`, com nove casos em `revisoes.test.ts` (`8c054ce`).
-- Os contratos de `packages/shared` (time e assistente), com o marcador e o portão local verde: 225 arquivos e 2796
-  testes (`336a756`).
+- Os contratos de `packages/shared` de time e assistente (`336a756`).
+- A etapa 1 das cinco AIAs em `docs/aia/` (`d23179a`), em rascunho, **esperando a revisão do Joaquim**.
+- **Fase 1 integrada** (`7fddb5f`), com o portão local verde (254 arquivos, 3353 testes): migration 0022 com 17 tabelas,
+  schemas das 41 rotas, `MATRIZ`, códigos de erro, auditoria e `docs/mvp-contratos.md` (S); porta `LLMProvider`,
+  adaptador falso e OpenAI-compatível, sete tarefas, `ExecutorDeAgente`, suspensão por função (L); peças da web e
+  convenção de pedaço por tela (C); conteúdo, script e PDF de demonstração (D).
 
-- A etapa 1 das cinco AIAs em `docs/aia/` (`d23179a`), em rascunho, **esperando a revisão do Joaquim**. Cada arquivo
-  lista, na seção 1.7 e nas perguntas em aberto, o que não deu para fechar.
+**Revisão da fase 1** (uma passada, sobre `mvp/fase-1` em `88e2d32`)
+
+| Revisor | Veredito | O que exigiu | Quem corrige |
+|---|---|---|---|
+| `tenancy-guardian` | REPROVADO | O teste das restrições cobre 24 das 50 FKs de escola e nenhum caso de segundo ano letivo. Estrutura sem furo | S, rodada 2 |
+| `privacy-guardian` | REPROVADO | A conversa do professor era copiada para `consumo_ia`; `LLM_PROCESSAMENTO_LOCAL=true` aceitava endereço de fora | L, rodada 3; S, rodada 2 |
+| `conformidade-reviewer` | REPROVADO | A recusa do Tutor dependia de o modelo se classificar certo; faltava ao professor o uso do Tutor por turma; o resumo do Analista tinha texto livre | L, rodada 3; S, rodada 2 |
+| `frontend-reviewer` | AJUSTES NECESSÁRIOS | Botão desligado igual ao ligado; foco caindo no `body` em três peças; Enter enviando no teclado virtual; cinco peças faltando | C, rodada 3 |
+
+As recomendações acatadas foram junto: FK com a turma e com o ano letivo, gatilho da D56 que recusa validação com
+destaque não aberto, autoria por papel, saída do "(D47)" da tela (migration 0023). As correções estão integradas no
+`1440e79`, com o portão local verde (257 arquivos, 3466 testes).
+
+**Segunda passada**, só sobre o diff das correções (`88e2d32..bd3793c`)
+
+| Revisor | Veredito | O que ficou |
+|---|---|---|
+| `frontend-reviewer` | APROVADO | Recomendações em correção no C, rodada 4 (foco atrás da barra presa, Markdown cru no texto da IA, galeria só por variável) |
+| `conformidade-reviewer` | APROVADO | A regra de recusa do Tutor tem falso positivo e falso negativo: em correção no L, rodada 4, com arquivo de amostras. Para aluno real, exige taxa medida contra o modelo |
+| `tenancy-guardian` | REPROVADO | Duas cláusulas de escopo do módulo de IA da API sem teste que as proteja (limite do Tutor por escola; mensagem do Tutor lida pela execução). L, rodada 4 |
+| `privacy-guardian` | REPROVADO | O adaptador de modelo seguia redirecionamento HTTP, e o registro de envio externo poderia mentir. L, rodada 4 |
+
+A fase 1 fecha com a terceira passada do `tenancy-guardian` e do `privacy-guardian` sobre a rodada 4 do L.
 
 **Em curso**
 
 | Pacote | Worktree e branch | O que faz |
 |---|---|---|
-| S | `../Educa.ia-mvp-s`, `mvp/s` | 17 tabelas, migration 0022, schemas de API, `MATRIZ`, auditoria, `docs/mvp-contratos.md` |
-| L | `../Educa.ia-mvp-l`, `mvp/l` | porta `LLMProvider`, adaptador falso e OpenAI-compatível, tarefas, `ExecutorDeAgente` |
-| C | `../Educa.ia-mvp-c`, `mvp/c` | peças da web da seção 9.3 e a galeria |
-| D | `../Educa.ia-mvp-d`, `mvp/d` | conteúdo, script e PDF de demonstração |
+| L, rodada 4 | `../Educa.ia-mvp-l`, `mvp/l` | os três bloqueantes da segunda passada, a regra do Tutor e o texto puro nos prompts |
+| C, rodada 4 | `../Educa.ia-mvp-c`, `mvp/c` | as recomendações da segunda passada do `frontend-reviewer` |
+| M | `../Educa.ia-mvp-m`, `mvp/m` | material: API e tela da coordenação |
+| P | `../Educa.ia-mvp-p`, `mvp/p` | API do Assistente: conversa, ferramentas, artefato, PDF, adaptação, entregas |
+| W | `../Educa.ia-mvp-w`, `mvp/w` | web do professor: Home, Conversa, Ferramentas, Artefato, Seu time |
+
+A branch de integração da fase 1 é `mvp/fase-1` (`../Educa.ia-mvp-fase-1`); as rodadas de correção entram por ela. A
+da fase 2 será `mvp/fase-2`.
+
+**Interrupção de 04/10/2026:** o limite de uso da sessão estourou por volta das 11h50 e derrubou os cinco agentes
+acima no meio do trabalho. Nada se perdeu: cada worktree ficou com o que estava escrito, sem commit, e os cinco foram
+retomados às 14h21 do ponto em que pararam. Se acontecer de novo, retoma-se cada agente pelo worktree dele.
 
 **Falta**
 
-- Integrar a fase 1 (`mvp/fase-1`), portão, merge, revisores da fase e esteira à mão.
-- Depois de S integrado: o registro de consumo e o repositório de execução em Postgres (portas do pacote L).
-- Fases 2 a 4 (seção 3) e o fechamento (seção 8).
+- Integrar a rodada 4 de L e de C, portão, terceira passada do `tenancy-guardian` e do `privacy-guardian`.
+- Integrar M, P e W na `mvp/fase-2`; segunda rodada do W com o e2e do fluxo contra a API real; portão, revisores da
+  fase 2 e esteira.
+- Fases 3 e 4 (seção 3) e o fechamento (seção 8).
 
-**Esteira disparada à mão:** nenhuma ainda.
+Para os pacotes das fases 3 e 4, o que os revisores já pediram:
+- **A (atividade e correção):** `aprovar-lote` monta `apresentado` e `aberto` das linhas de `correcao` no servidor;
+  aprovar sem nunca ter lido a correção do lote é recusado ou fica registrado; correção inserida ou alterada depois do
+  lote aprovado não pode passar (reexecução do job); o aluno precisa ser da turma da aplicação antes de criar a
+  tentativa; a correção determinística chama a conferência de função ativa.
+- **T (Tutor e sinais):** o aluno no limite diário que escreve assunto delicado recebe o encaminhamento, não o 429, e
+  a tela no estado `limite` não trava a caixa; a rota `GET /v1/tutor/uso`; memória só de lote aprovado; sinal
+  `pediu a resposta pronta` só nasce de classificação com questão em andamento; nada de "há X minutos" nem ordenação
+  por recência no uso do Tutor.
+- **G (governança e Analista):** só o alerta `habilidade_com_acerto_baixo` é produzido nesta fatia; os outros tipos do
+  contrato não ganham tela; consumo não abre por origem nem por aluno; a lista do resumo aplica o grupo mínimo de dois
+  professores ou omite a série.
 
-**Para o Joaquim decidir (achado ao escrever as AIAs; nada disto trava a fatia)**
+**Esteira disparada à mão**
 
-- **Tipos de adaptação.** `packages/shared/src/assistente/conteudo.ts` tem seis; a D67 cita "compatível com leitor de
-  tela", que não está entre eles; `leitura_de_apoio` não é descrita em documento nenhum; o mockup lista outros três.
-  O código ficou com os seis.
-- **O que acontece com o que uma função já produziu quando ela é suspensa** não está decidido em documento nenhum. As
-  AIAs trazem uma proposta por função (seção 1.7); o código da fase 4 segue: suspender recusa execução nova e não
-  apaga nem esconde o que já foi aprovado.
-- **Classificação do Tutor.** `docs/regulacao.md` o põe em "cuidados adicionais" e a D60 e a regra 70, item 6a, o
-  tratam como alto risco para efeito de AIA. `FUNCOES` segue a D60.
-- **Destaque de discursiva na D56** ("discursiva com baixa confiança") contradiz a D55. Não afeta a fatia, que não tem
-  discursiva; `docs/agentes.md` já traz a lista sem esse item.
-- **Política "livre" do Tutor** aparece no glossário, em `docs/fluxos.md` e no modelo de dados, e contradiz "nunca
-  entrega resposta pronta". Na fatia, o Tutor é sempre socrático.
-- **Três listas diferentes de tipos de sinal** (`docs/agentes.md`, `docs/modelo-de-dados.md`, este plano). A fatia usa
-  a deste plano: `travou`, `resposta_pronta`, `duvida_repetida`, `atencao_humana`.
-- **Em qual fase a AIA da adaptação é devida**: `docs/conformidade-mec.md` diz F11, o README das AIAs diz F7, o
-  `TODO.md` diz A2.
-- **AIA antes da implementação.** A D71 e a regra 70, item 6a, pedem a etapa 1 antes de a funcionalidade existir. O
-  rascunho está escrito, mas a implementação começou sem a sua revisão, por instrução sua de 04/10/2026 ("eu reviso
-  depois; não espere"). Fica registrado como decisão tomada sem a revisão, a conferir.
+| Quando | Execução | Commit | Resultado |
+|---|---|---|---|
+| fase 1 | `37208632853` | `7fddb5f` | verde na reexecução. Na primeira vez, só o job de infra caiu, no ensaio de alertas: a regra "Login recusado pelo semáforo do hash" ficou em `pending` até o prazo de 540 s. Nada da fase 1 mexe em login, e o job passou ao ser rodado de novo: intermitente, a observar |
+| correções da fase 1 | `37220240549` | `1440e79` | a conferir |
 
 **Modelo local do ensaio final:** `qwen3.6-35b-a3b` no `llama-server` (`GET /v1/models` em 04/10/2026; estava
 descarregado, e quem carrega é o Joaquim).
@@ -97,6 +126,17 @@ descarregado, e quem carrega é o Joaquim).
     3, antes de a professora aprovar a correção no passo 4, e o diagnóstico só pode chegar ao aluno depois da aprovação.
     Fica assim: a memória do Tutor vem dos lotes **já aprovados** e das sessões anteriores do próprio aluno com o
     Tutor. Na demonstração, o aluno abre o Tutor numa segunda atividade, depois de a primeira ter sido aprovada.
+14. **Suspender uma função recusa execução nova e não apaga o que já foi produzido.** A entrega pendente de uma função
+    suspensa continua podendo ser aprovada ou rejeitada pelo professor: quem decide é a pessoa.
+15. **`consumo_ia` não guarda texto livre de pessoa**, de aluno nem de professor: nessas tarefas, `entrada` e `saida`
+    ficam nulas, e o registro do que foi dito é `mensagem_tutor` ou `mensagem_agente`, ligado pela execução.
+16. **A correção da revisão entra por migration 0023, aditiva**, em vez de reescrever a 0022 já integrada.
+17. **A fase 2 começou com o veto da fase 1 ainda aberto.** As correções são restrições e testes a mais, não mudança de
+    contrato, e as armadilhas que cada revisor listou por pacote foram para os briefs. A fase 1 só conta como fechada
+    com a segunda passada aprovada.
+18. **Sem dependência nova na web.** O pacote C mediu o Radix (36,8 kB os quatro) e escreveu as peças à mão; `clsx` e
+    `class-variance-authority` também ficaram de fora. A decisão 11 fica só com `pdfkit` e `pdfjs-dist`.
+19. **Uma thread só por professora com o Assistente** nesta fatia: sem "Histórico" na lateral.
 12. **Teto de bundle.** As peças novas e o Radix não podem entrar no primeiro carregamento (150 kB). Os tetos por área
     (`professor-*` 8 kB, `coordenacao-*` 16 kB, `aluno-*` 5 kB) vão ser revistos quando as telas chegarem, com o número
     medido, e cada tela entra por import de rota.

@@ -16,7 +16,6 @@ import {
 } from '@educa/shared'
 import { ExecucaoDoPedidoRepository } from '../assistente/execucao-do-pedido.repository.js'
 import type { LimiteDePedidosDeIa } from '../assistente/limite-de-pedidos-de-ia.js'
-import { TrechoParaTarefaRepository } from '../assistente/trecho-para-tarefa.repository.js'
 import { EntregaRepository } from '../entrega/entrega.repository.js'
 import { paginar } from '../estrutura/entrada.js'
 import type { AgendadorDeExecucoes } from '../ia/agendador-de-execucoes.js'
@@ -101,7 +100,7 @@ export class ArtefatoService {
     if (lido === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
     const conteudo = esquemaConteudoDoArtefato.parse(lido.conteudo)
     // O id do material vem do `jsonb`, sem FK: o título é relido pela escola do contexto, e o que não for dela não aparece.
-    const titulos = await new TrechoParaTarefaRepository(this.banco).titulosDosMateriais([...new Set(citacoesDoConteudo(conteudo).map((citacao) => citacao.materialId))])
+    const titulos = await new ArtefatoRepository(this.banco).titulosDosMateriais([...new Set(citacoesDoConteudo(conteudo).map((citacao) => citacao.materialId))])
     return { nome: nomeDoArquivoDoPdf(conteudo.titulo), bytes: await gerarPdfDoArtefato(conteudo, titulos) }
   }
 

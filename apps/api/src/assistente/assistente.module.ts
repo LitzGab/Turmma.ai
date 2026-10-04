@@ -10,7 +10,7 @@ import { AssistenteService } from './assistente.service.js'
 import { avisarSeguroDosPedidosDeIa, JANELA_DOS_PEDIDOS_DE_IA_MS, LimiteDePedidosDeIa } from './limite-de-pedidos-de-ia.js'
 import { TimeController } from './time.controller.js'
 import { TimeService } from './time.service.js'
-import { TrechosParaTarefa } from './trechos-para-tarefa.service.js'
+import { BuscaDeTrechos } from '../material/busca-de-trechos.js'
 
 export interface OpcoesDoAssistente {
   /** A chave de HMAC dos contadores (`LOGIN_CHAVE_CONTADOR`): a chave do contador nunca é o id em texto. */
@@ -21,8 +21,8 @@ export interface OpcoesDoAssistente {
 
 /**
  * O Assistente de ensino na API (MVP, A2): o time (`GET /v1/time`) e a conversa do professor. Exporta o que os outros
- * módulos de IA reusam: o `LimiteDePedidosDeIa` (todo `POST` que dispara IA conta por pessoa e por escola) e a
- * `TrechosParaTarefa` (a busca de trechos do material para as tarefas, que o Tutor também usa). O cliente do Redis de
+ * módulos de IA reusam: o `LimiteDePedidosDeIa` (todo `POST` que dispara IA conta por pessoa e por escola). Os trechos do
+ * material vêm da `BuscaDeTrechos`, do `MaterialModule`: há uma busca só para as tarefas. O cliente do Redis de
  * fila vem do `SessaoModule`, e o `AgendadorDeExecucoes`, do `IaModule`, os dois globais. É global pelo mesmo motivo: o
  * módulo de domínio que dispara IA só injeta.
  */
@@ -39,15 +39,14 @@ export class AssistenteModule {
           useFactory: (cliente: Redis) => new LimiteDePedidosDeIa({ janela: new ContadorEmJanela(cliente, chaveContador, { janelaMs: JANELA_DOS_PEDIDOS_DE_IA_MS, avisarSeguro: avisarSeguroDosPedidosDeIa }), instancias }),
           inject: [CLIENTE_REDIS_LOGIN],
         },
-        { provide: TrechosParaTarefa, useFactory: (banco: Banco) => new TrechosParaTarefa(banco), inject: [BANCO] },
         { provide: TimeService, useFactory: (banco: Banco) => new TimeService(banco), inject: [BANCO] },
         {
           provide: AssistenteService,
-          useFactory: (banco: Banco, agendador: AgendadorDeExecucoes, limite: LimiteDePedidosDeIa, trechos: TrechosParaTarefa) => new AssistenteService(banco, agendador, limite, trechos),
-          inject: [BANCO, AgendadorDeExecucoes, LimiteDePedidosDeIa, TrechosParaTarefa],
+          useFactory: (banco: Banco, agendador: AgendadorDeExecucoes, limite: LimiteDePedidosDeIa, trechos: BuscaDeTrechos) => new AssistenteService(banco, agendador, limite, trechos),
+          inject: [BANCO, AgendadorDeExecucoes, LimiteDePedidosDeIa, BuscaDeTrechos],
         },
       ],
-      exports: [LimiteDePedidosDeIa, TrechosParaTarefa],
+      exports: [LimiteDePedidosDeIa],
     }
   }
 }

@@ -1,18 +1,19 @@
 import { executarNoContexto, type ContextoDaRequisicao, type ExecutorNoProcesso } from '@educa/nucleo'
 import type { PapelDeUsuario } from '@educa/shared'
 import type { Redis } from 'ioredis'
-import { randomBytes, randomUUID } from 'node:crypto'
-import { MATERIAL_DE_DEMONSTRACAO, PAGINAS_DO_MATERIAL, textoDaPagina } from '../../../tools/demonstracao/conteudo-estequiometria.ts'
+import { randomUUID } from 'node:crypto'
+import { MATERIAL_DE_DEMONSTRACAO } from '../../../tools/demonstracao/conteudo-estequiometria.ts'
 import { EXECUTOR_DE_AGENTE } from '../src/ia/ia.module.js'
 import { CLIENTE_REDIS_LOGIN } from '../src/sessao/sessao.module.js'
 import { chamar, type ApiDeTeste, type RespostaHttp } from './api-com-sessao.js'
 import { montarEscolaComTurma, type EscolaComTurma } from './escola-com-turma.js'
+import { enviarMaterial, esperarExtracao, PDF_DE_DEMONSTRACAO } from './material-de-teste.js'
 import type { BancadaDeSessoes, SessaoDeTeste } from './sessao-de-teste.js'
 
 /**
  * Uma escola pronta para o Assistente de ensino (MVP, A2): a de `montarEscolaComTurma`, mais a professora com vínculo
  * confirmado em Química no 2ºB, a colega com vínculo confirmado em Química no 2ºC (mesma escola, outra turma), um aluno
- * do 2ºB e o material de demonstração de Química, `pronto`, com um trecho por página. Tudo sintético.
+ * do 2ºB e o material de demonstração de Química, enviado pela coordenação e já extraído. Tudo sintético.
  */
 export interface EscolaComAssistente extends EscolaComTurma {
   readonly escolaId: string
@@ -35,23 +36,15 @@ export async function vincularProfessor(bancada: BancadaDeSessoes, escola: Escol
 }
 
 /**
- * O material de demonstração gravado direto em `material` e `trecho`, como o envio da coordenação o deixaria (a rota de
- * envio é de outro módulo): `pronto`, autoria da escola, um trecho por página, com o texto de
- * `tools/demonstracao/conteudo-estequiometria.ts`. Devolve o id do material.
+ * O PDF de demonstração enviado pela coordenação, pela rota `POST /v1/materiais`, com titularidade da escola e a
+ * licença declarada, e já extraído: `pronto`, com um trecho por página. Devolve o id do material. `arquivo` troca o
+ * PDF quando a mesma escola precisa de um segundo material (o mesmo arquivo duas vezes é `CONFLITO`).
  */
-export async function gravarMaterialDeDemonstracao(bancada: BancadaDeSessoes, escola: EscolaComTurma, disciplinaId: string, titulo: string = MATERIAL_DE_DEMONSTRACAO.titulo): Promise<string> {
-  const { escolaId, usuarioId } = escola.coordenacao
-  const { rows } = await bancada.pool.query<{ id: string }>(
-    `insert into material (escola_id, disciplina_id, titulo, titularidade, licenca, declaracao, sha256, tamanho_bytes, paginas, estado, enviado_por)
-     values ($1, $2, $3, 'escola', 'autoria_da_escola', true, $4, 48000, $5, 'pronto', $6) returning id`,
-    [escolaId, disciplinaId, titulo, randomBytes(32).toString('hex'), PAGINAS_DO_MATERIAL.length, usuarioId],
-  )
-  const materialId = rows[0]?.id
-  if (materialId === undefined) throw new Error('material de teste não gravado')
-  for (const pagina of PAGINAS_DO_MATERIAL) {
-    await bancada.pool.query('insert into trecho (escola_id, disciplina_id, material_id, pagina, texto) values ($1, $2, $3, $4, $5)', [escolaId, disciplinaId, materialId, pagina.numero, textoDaPagina(pagina.numero)])
-  }
-  return materialId
+export async function enviarMaterialDeDemonstracao(api: ApiDeTeste, escola: EscolaComTurma, disciplinaId: string, titulo: string = MATERIAL_DE_DEMONSTRACAO.titulo, arquivo: Buffer = PDF_DE_DEMONSTRACAO): Promise<string> {
+  const resposta = await enviarMaterial(api, { token: await escola.coordenacao.tokenNovo() }, { titulo, disciplinaId }, { arquivo })
+  if (resposta.status !== 201) throw new Error(`material de teste não enviado: ${String(resposta.status)} ${resposta.corpo.erro?.codigo ?? ''}`)
+  await esperarExtracao(api)
+  return resposta.corpo['id'] as string
 }
 
 export async function montarEscolaComAssistente(api: ApiDeTeste, bancada: BancadaDeSessoes): Promise<EscolaComAssistente> {
@@ -68,7 +61,7 @@ export async function montarEscolaComAssistente(api: ApiDeTeste, bancada: Bancad
     `insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`,
     [escolaId, escola.anoLetivoId, aluno.usuarioId, escola.turma, escola.coordenacao.usuarioId],
   )
-  const materialId = await gravarMaterialDeDemonstracao(bancada, escola, escola.quimica)
+  const materialId = await enviarMaterialDeDemonstracao(api, escola, escola.quimica)
   return { ...escola, escolaId, professora, colega, aluno, materialId }
 }
 

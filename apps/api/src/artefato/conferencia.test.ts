@@ -2,7 +2,6 @@ import { ErroDeIa } from '@educa/nucleo'
 import type { AdaptacaoAplicada, ConteudoDeAtividade, QuestaoObjetiva } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { exigirCitacoesEntregues } from '../assistente/citacoes.js'
-import { consultaDoTema } from '../assistente/trechos-para-tarefa.service.js'
 import { citacoesDoConteudo, exigirAdaptacaoFiel, habilidadesParaOTema } from './conferencia.js'
 
 const MATERIAL = '0190f5a0-0000-7000-8000-0000000000a1'
@@ -95,14 +94,5 @@ describe('habilidadesParaOTema', () => {
 
   it('disciplina sem catálogo recebe a habilidade geral, nunca lista vazia', () => {
     expect(habilidadesParaOTema('Filosofia', 'em', 'ética')).toEqual([{ codigo: 'GERAL.01', descricao: 'Compreender e aplicar o conteúdo estudado no material da turma.' }])
-  })
-})
-
-describe('consultaDoTema', () => {
-  it('liga as palavras por "or", sem repetir, e não deixa passar operador da busca', () => {
-    expect(consultaDoTema('Monta uma atividade de estequiometria')).toBe('monta or uma or atividade or de or estequiometria')
-    expect(consultaDoTema('"reagente limitante" -excesso reagente')).toBe('reagente or limitante or excesso')
-    expect(consultaDoTema(' ?! ')).toBe('')
-    expect(consultaDoTema(Array.from({ length: 80 }, (_, indice) => `p${String(indice)}`).join(' ')).split(' or ')).toHaveLength(24)
   })
 })

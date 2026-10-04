@@ -31,6 +31,13 @@ describe('teclado do menu', () => {
     expect(itemDaTecla([{ rotulo: 'Água' }, { rotulo: 'Época' }], 0, 'e')).toBe(1)
   })
 
+  it('a letra com Ctrl, Alt ou ⌘ é atalho do navegador, e não busca no menu', () => {
+    expect(itemDaTecla(ITENS, 0, 'a', true)).toBeUndefined()
+    expect(itemDaTecla(ITENS, 0, 'a', false)).toBe(1)
+    // As setas continuam valendo com o modificador: quem segura o Ctrl por engano não perde a navegação.
+    expect(itemDaTecla(ITENS, 0, 'ArrowDown', true)).toBe(1)
+  })
+
   it('Tab, Enter, Esc e as teclas de controle não são de navegação', () => {
     for (const tecla of ['Tab', 'Enter', 'Escape', 'Shift', ' ', 'ArrowRight']) expect(itemDaTecla(ITENS, 0, tecla)).toBeUndefined()
   })

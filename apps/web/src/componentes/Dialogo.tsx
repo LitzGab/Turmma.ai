@@ -88,7 +88,9 @@ export function Dialogo({ titulo, aoFechar, fecharAoClicarFora = false, aoFechar
     return () => {
       desmontando.current = true
       if (atual.open) atual.close()
-      if (quemAbriu?.isConnected === true) quemAbriu.focus()
+      // O gatilho que continua na página mas ficou desligado (o "Aprovar" depois de aprovado) não aceita foco: vale como
+      // o que saiu da página, e o foco vai para a reserva.
+      if (quemAbriu?.isConnected === true && !quemAbriu.matches(':disabled')) quemAbriu.focus()
       else reserva.current?.()
     }
     // O `focoInicial` é um `useRef` de quem desenha o diálogo: o mesmo objeto enquanto o diálogo vive.

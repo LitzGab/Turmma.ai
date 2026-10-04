@@ -1,5 +1,5 @@
 import type { PapelDeUsuario } from '@educa/shared'
-import { Blocks, GraduationCap, School, UsersRound, type LucideIcon } from 'lucide-react'
+import { Blocks, BookOpen, GraduationCap, School, UsersRound, type LucideIcon } from 'lucide-react'
 import { ROTAS } from '../caminhos'
 
 /*
@@ -31,6 +31,7 @@ export const NAVEGACAO: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao
   coordenador: [
     { rotulo: 'Estrutura', caminho: ROTAS.estrutura, icone: Blocks },
     { rotulo: 'Professores', caminho: ROTAS.professores, icone: GraduationCap },
+    { rotulo: 'Material', caminho: ROTAS.material, icone: BookOpen },
   ],
   professor: [{ rotulo: 'Turmas', caminho: ROTAS.turmas, icone: UsersRound }],
   aluno: [{ rotulo: 'Minha turma', caminho: ROTAS.minhaTurma, icone: School }],

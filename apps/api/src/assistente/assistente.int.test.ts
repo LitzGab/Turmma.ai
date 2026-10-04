@@ -12,7 +12,6 @@ import {
   contarNaEscola,
   dispararExecucao,
   execucaoTerminada,
-  gravarMaterialDeDemonstracao,
   montarEscolaComAssistente,
   vincularProfessor,
   zerarLimiteDePedidosDeIa,
@@ -23,12 +22,11 @@ import { EXECUTOR_DE_AGENTE } from '../ia/ia.module.js'
 import { ConversaRepository } from './conversa.repository.js'
 import { TETO_DE_PEDIDOS_DE_IA_POR_USUARIO } from './limite-de-pedidos-de-ia.js'
 import { RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO } from './recusa-de-correcao.js'
-import { TrechosParaTarefa } from './trechos-para-tarefa.service.js'
 import { TurmaDoProfessorRepository } from './turma-do-professor.repository.js'
 
 /**
- * O Assistente de ensino na API (MVP, A2): o time, a conversa do professor e a busca de trechos para as tarefas, com a
- * API montada pelo `AppModule`, o Postgres do compose de teste e o adaptador falso de IA.
+ * O Assistente de ensino na API (MVP, A2): o time e a conversa do professor, com a API montada pelo `AppModule`, o
+ * Postgres do compose de teste, o material de demonstração enviado pela rota da coordenação e o adaptador falso de IA.
  *
  * Em cada caso de isolamento, a outra escola (ou a colega da mesma escola) tem a linha que a consulta alcançaria se a
  * cláusula de escopo saísse do repository (regra 10, item 5).
@@ -227,43 +225,6 @@ describe('Assistente de ensino', () => {
         .sort()
       // Nenhum módulo da coordenação, da governança ou do Analista lê a conversa do professor (regra 70, item 8).
       expect(tocam).toEqual(['apps/api/src/assistente/conversa.repository.ts', 'apps/api/src/ia/execucao.repository.ts'])
-    })
-  })
-
-  describe('a busca de trechos para as tarefas', () => {
-    const buscar = (escola: EscolaComAssistente, disciplinaId: string, tema: string, limite = 12) =>
-      comoPessoa(escola, escola.professora, 'professor', () => api.app.get(TrechosParaTarefa).buscar({ disciplinaId, tema, limite }))
-
-    it('acha as páginas do tema, em ordem de página, só no material da escola do contexto', async () => {
-      const achados = await buscar(a, a.quimica, 'reagente limitante e reagente em excesso')
-      expect(achados.length).toBeGreaterThan(0)
-      expect(achados.every((trecho) => trecho.materialId === a.materialId)).toBe(true)
-      expect(achados.map((trecho) => trecho.pagina)).toEqual([...achados.map((trecho) => trecho.pagina)].sort((x, y) => x - y))
-      expect(achados.some((trecho) => /reagente limitante/i.test(trecho.texto))).toBe(true)
-      expect(Object.keys(achados[0] ?? {}).sort()).toEqual(['materialId', 'pagina', 'texto', 'titulo'])
-      // Com a disciplina de B no contexto de A, nada: a escola vem do contexto, e o material de B não cruza.
-      expect(await buscar(a, b.quimica, 'reagente limitante')).toEqual([])
-      expect((await buscar(b, b.quimica, 'reagente limitante')).every((trecho) => trecho.materialId === b.materialId)).toBe(true)
-      // Outra disciplina da mesma escola não tem material.
-      expect(await buscar(a, a.fisica, 'reagente limitante')).toEqual([])
-      expect(await buscar(a, a.quimica, 'reagente limitante', 2)).toHaveLength(2)
-      expect(await buscar(a, a.quimica, ' ?! ')).toEqual([])
-    })
-
-    it('só material pronto e não excluído vira trecho de tarefa, e a página longa chega no tamanho que a tarefa aceita', async () => {
-      const outro = await gravarMaterialDeDemonstracao(bancada, a, a.fisica, 'Material sintético de Física')
-      const doOutro = async () => (await buscar(a, a.fisica, 'estequiometria')).filter((trecho) => trecho.materialId === outro).length
-      expect(await doOutro()).toBeGreaterThan(0)
-      await sql(`update material set estado = 'processando' where id = $1`, [outro])
-      expect(await doOutro()).toBe(0)
-      await sql(`update material set estado = 'pronto', excluido_em = now() where id = $1`, [outro])
-      expect(await doOutro()).toBe(0)
-      await sql(`update material set excluido_em = null where id = $1`, [outro])
-      await sql(`update trecho set texto = $2 where material_id = $1 and pagina = 1`, [outro, `Estequiometria. ${'palavra '.repeat(2400)}`])
-      const longa = (await buscar(a, a.fisica, 'estequiometria')).find((trecho) => trecho.pagina === 1)
-      expect(longa?.texto).toHaveLength(8000)
-      await sql('delete from trecho where material_id = $1', [outro])
-      await sql('delete from material where id = $1', [outro])
     })
   })
 

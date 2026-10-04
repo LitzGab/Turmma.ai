@@ -28,6 +28,7 @@ import { EntregaModule } from './entrega/entrega.module.js'
 import { EstruturaModule } from './estrutura/estrutura.module.js'
 import { IaModule } from './ia/ia.module.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
+import { MaterialModule } from './material/material.module.js'
 import { OperacaoModule } from './operacao/operacao.module.js'
 import { ProfessoresModule } from './professores/professores.module.js'
 import type { SorteioDoCodigo } from './sala/codigo-da-sala.js'
@@ -78,6 +79,7 @@ export class AppModule {
         }),
         EstruturaModule,
         ProfessoresModule,
+        MaterialModule.com(opcoes.logger ?? criarLogger({ servico: 'api' })),
         IaModule.com({ config: config.ia, ...(opcoes.logger === undefined ? {} : { logger: opcoes.logger }) }),
         AssistenteModule.com({ chaveContador: config.login.chaveContador, instancias: config.limite.instancias }),
         ArtefatoModule,

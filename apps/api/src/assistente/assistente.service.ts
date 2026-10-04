@@ -11,11 +11,11 @@ import {
   type RespostaExecucaoAceita,
 } from '@educa/shared'
 import type { AgendadorDeExecucoes } from '../ia/agendador-de-execucoes.js'
+import type { BuscaDeTrechos, TrechoDoMaterial } from '../material/busca-de-trechos.js'
 import { exigirCitacoesEntregues } from './citacoes.js'
 import { ConversaRepository, type MensagemGravada, type PerguntaDaExecucao } from './conversa.repository.js'
 import type { LimiteDePedidosDeIa } from './limite-de-pedidos-de-ia.js'
 import { proporFerramentaDoAssistente } from './recusa-de-correcao.js'
-import type { TrechoParaTarefa, TrechosParaTarefa } from './trechos-para-tarefa.service.js'
 import { TurmaDoProfessorRepository } from './turma-do-professor.repository.js'
 
 /** Quantos trechos do material acompanham a mensagem do professor (o teto de `esquemaEntradaDoAssistente`). */
@@ -64,7 +64,7 @@ export class AssistenteService {
     private readonly banco: Banco,
     private readonly agendador: AgendadorDeExecucoes,
     private readonly limite: LimiteDePedidosDeIa,
-    private readonly trechos: TrechosParaTarefa,
+    private readonly trechos: BuscaDeTrechos,
   ) {}
 
   /** `GET /v1/assistente/conversa`: uma página da thread do professor, da mais antiga para a mais nova, e o `anterior` quando há mais para trás. */
@@ -84,7 +84,7 @@ export class AssistenteService {
     if ((await new TurmaDoProfessorRepository(this.banco).turmaComDisciplina(turmaId, disciplinaId)) === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
 
     // O que a execução leu antes de chamar o modelo, e que a conclusão usa: só existe depois de `entrada` rodar.
-    let lido: { pergunta: PerguntaDaExecucao; entregues: readonly TrechoParaTarefa[] } | undefined
+    let lido: { pergunta: PerguntaDaExecucao; entregues: readonly TrechoDoMaterial[] } | undefined
     return this.agendador.agendar({
       tarefa: proporFerramentaDoAssistente,
       chaveEnvio: pedido.chaveEnvio,
@@ -102,7 +102,7 @@ export class AssistenteService {
         const turma = await new TurmaDoProfessorRepository(this.banco).turmaComDisciplina(pergunta.turmaId, pergunta.disciplinaId)
         if (turma === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
         const mensagem = esquemaConteudoDaMensagemDoUsuario.parse(pergunta.conteudo).texto
-        const entregues = await this.trechos.buscar({ disciplinaId: pergunta.disciplinaId, tema: mensagem, limite: TRECHOS_NA_CONVERSA })
+        const entregues = await this.trechos.buscar({ texto: mensagem, disciplinaId: pergunta.disciplinaId, limite: TRECHOS_NA_CONVERSA })
         const anteriores = await conversa.anteriores(pergunta.id, TURNOS_ANTERIORES_NA_CONVERSA)
         lido = { pergunta, entregues }
         return {

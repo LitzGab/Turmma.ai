@@ -8,6 +8,7 @@ describe('navegação por papel', () => {
     expect(NAVEGACAO.coordenador.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([
       { rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' },
       { rotulo: 'Professores', caminho: '/coordenacao/professores' },
+      { rotulo: 'Material', caminho: '/coordenacao/material' },
     ])
   })
 

@@ -15,9 +15,9 @@ import { contextoDaTarefa } from '../assistente/assistente.service.js'
 import { exigirCitacoesEntregues } from '../assistente/citacoes.js'
 import { ExecucaoDoPedidoRepository } from '../assistente/execucao-do-pedido.repository.js'
 import type { LimiteDePedidosDeIa } from '../assistente/limite-de-pedidos-de-ia.js'
-import type { TrechoParaTarefa, TrechosParaTarefa } from '../assistente/trechos-para-tarefa.service.js'
 import { TurmaDoProfessorRepository } from '../assistente/turma-do-professor.repository.js'
 import type { AgendadorDeExecucoes } from '../ia/agendador-de-execucoes.js'
+import type { BuscaDeTrechos, TrechoDoMaterial } from '../material/busca-de-trechos.js'
 import { ArtefatoRepository } from './artefato.repository.js'
 import { citacoesDoConteudo, habilidadesParaOTema } from './conferencia.js'
 
@@ -36,7 +36,7 @@ interface Preparado {
   readonly parametros: ParametrosDeFerramenta
   readonly contexto: { serie: string; disciplina: string }
   readonly habilidades: Habilidade[]
-  readonly entregues: readonly TrechoParaTarefa[]
+  readonly entregues: readonly TrechoDoMaterial[]
 }
 
 /**
@@ -58,7 +58,7 @@ export class FerramentasService {
     private readonly banco: Banco,
     private readonly agendador: AgendadorDeExecucoes,
     private readonly limite: LimiteDePedidosDeIa,
-    private readonly trechos: TrechosParaTarefa,
+    private readonly trechos: BuscaDeTrechos,
   ) {}
 
   async gerar(ferramenta: FerramentaGeradora, pedido: PedidoGerarComFerramenta): Promise<RespostaExecucaoAceita> {
@@ -112,8 +112,11 @@ export class FerramentasService {
     const { parametros } = await new ExecucaoDoPedidoRepository(this.banco).entradaDaChave(chaveEnvio, tarefa)
     const turma = await new TurmaDoProfessorRepository(this.banco).turmaComDisciplina(parametros.turmaId, parametros.disciplinaId)
     if (turma === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-    const entregues = await this.trechos.buscar({ disciplinaId: parametros.disciplinaId, tema: parametros.tema, limite: TRECHOS_NA_FERRAMENTA })
-    if (entregues.length === 0) throw new ErroDeIa('MATERIAL_INSUFICIENTE')
+    // A porta de trechos não confere papel: o vínculo confirmado na disciplina foi conferido logo acima.
+    const achados = await this.trechos.buscar({ texto: parametros.tema, disciplinaId: parametros.disciplinaId, limite: TRECHOS_NA_FERRAMENTA })
+    if (achados.length === 0) throw new ErroDeIa('MATERIAL_INSUFICIENTE')
+    // A busca escolhe por relevância; a tarefa recebe as páginas escolhidas na ordem do material, como quem lê o capítulo.
+    const entregues = [...achados].sort((a, b) => a.materialId.localeCompare(b.materialId) || a.pagina - b.pagina)
     return { parametros, contexto: contextoDaTarefa(turma), habilidades: habilidadesParaOTema(turma.disciplina, turma.serie.etapa, parametros.tema), entregues }
   }
 

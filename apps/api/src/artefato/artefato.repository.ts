@@ -1,6 +1,6 @@
-import { artefato, atividadeAplicada, entrega, exigirAnoEmCurso, exigirEscolaDoContexto, sessaoDaRequisicao, type Banco, type TransacaoBanco } from '@educa/nucleo'
+import { artefato, atividadeAplicada, entrega, exigirAnoEmCurso, exigirEscolaDoContexto, material, sessaoDaRequisicao, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import { MAXIMO_DE_VERSOES_NO_ARTEFATO, type ConsultaArtefatos, type ConteudoDoArtefato, type EstadoDeAtividadeAplicada, type EstadoDeEntrega, type TipoDeArtefato } from '@educa/shared'
-import { and, desc, eq, lt, sql, type SQL } from 'drizzle-orm'
+import { and, desc, eq, inArray, lt, sql, type SQL } from 'drizzle-orm'
 import { comVinculoConfirmadoDoProfessor } from '../assistente/turma-do-professor.repository.js'
 
 /** Um artefato como o repository o devolve: o `conteudo` é `jsonb`, e o service o valida antes de usar. */
@@ -114,6 +114,19 @@ export class ArtefatoRepository {
       )
       .orderBy(desc(atividadeAplicada.id))
       .limit(MAXIMO_DE_VERSOES_NO_ARTEFATO)
+  }
+
+  /**
+   * O título dos materiais que o artefato cita, para a linha "Fonte" do PDF. Inclui o material excluído: a linha dele
+   * fica justamente porque artefatos já o citam. O id vem do `jsonb`, sem FK: só os da escola do contexto são achados.
+   */
+  async titulosDosMateriais(ids: readonly string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map()
+    const linhas = await this.banco
+      .select({ id: material.id, titulo: material.titulo })
+      .from(material)
+      .where(and(eq(material.escolaId, exigirEscolaDoContexto()), inArray(material.id, [...ids])))
+    return new Map(linhas.map((linha) => [linha.id, linha.titulo]))
   }
 
   /**
