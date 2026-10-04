@@ -68,6 +68,8 @@ describe('prazo do e2e (tools/ci/prazo-do-e2e.ts)', () => {
     naMaquina.at(-1)?.aoTerminar?.(0, 30 * MINUTO)
     expect(escritos[1]).not.toContain('::warning')
     expect(() => etapasDoE2e(['--shard=5/4'], 45, true)).toThrow(/fatia do e2e inválida/)
+    // O build que o teto mede é o do e2e, com a galeria das peças; nenhuma outra etapa leva a variável.
+    expect(etapas.filter((etapa) => etapa.ambiente !== undefined).map((etapa) => [etapa.nome, etapa.ambiente])).toEqual([['build da web', { VITE_COM_GALERIA: '1' }]])
   })
 
   it('lê uma fatia só, no formato <i>/<n> com 1 ≤ i ≤ n; sem fatia é a suíte inteira', () => {

@@ -64,6 +64,7 @@ function focarItem(lista: HTMLElement | null, indice: number | undefined): void 
  * - **Cada item tem 44 px**, com o rótulo e, se houver, o ícone e uma frase.
  * - **Não passa da janela a 360 px**: a posição é medida na abertura (`flutuante.ts`).
  * - **O Tab fecha** e devolve o foco ao botão: o item que some com o foco em cima o jogaria no `body`.
+ * - **A rolagem por fora fecha**, com o foco de volta no botão: o menu não corre atrás dele pela tela.
  * - **O toque fora fecha, e só fecha**: o que está embaixo do menu não é acionado pelo mesmo toque, e o resto da página
  *   fica inerte enquanto o menu está aberto.
  *
@@ -81,7 +82,7 @@ export function Menu({ rotulo, prefixo, icone: Icone, soIcone = false, itens, ao
   const lista = useRef<HTMLDivElement>(null)
   const idDoBotao = useId()
   const idDaLista = useId()
-  const { ancora, posicao } = useFlutuante<HTMLSpanElement>({ aberto, aoFechar: () => definirAberto(false), alinhamento, lado, altura: ALTURA_DO_MENU })
+  const { ancora, posicao } = useFlutuante<HTMLSpanElement>({ aberto, aoFechar: fecharEVoltar, alinhamento, lado, altura: ALTURA_DO_MENU })
   useRestoInerte(aberto, ancora)
   const deEscolha = escolhido !== undefined
 
@@ -100,9 +101,13 @@ export function Menu({ rotulo, prefixo, icone: Icone, soIcone = false, itens, ao
     definirAberto(true)
   }
 
+  /**
+   * Fecha e devolve o foco ao botão, por qualquer caminho: a escolha, o Esc, o Tab, o toque fora e a rolagem por fora. Sem
+   * rolar a página até o botão: quem rolou para longe dele não é puxado de volta.
+   */
   function fecharEVoltar(): void {
     definirAberto(false)
-    botao.current?.focus()
+    botao.current?.focus({ preventScroll: true })
   }
 
   function teclaNoBotao(evento: KeyboardEvent<HTMLButtonElement>): void {
