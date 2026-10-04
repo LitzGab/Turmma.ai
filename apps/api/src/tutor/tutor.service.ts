@@ -151,8 +151,6 @@ export class TutorService {
 
   /** `POST /v1/tutor/mensagens`: confere, grava a pergunta com a execução e responde o id dela. */
   async enviar(pedido: PedidoMensagemAoTutor): Promise<RespostaExecucaoAceita> {
-    // Por aluno e por escola, nunca por IP: a turma inteira sai pelo mesmo endereço (regra 80, item 1).
-    await this.limite.contar()
     const alcance = await this.#alcance(pedido)
     const onde: ReferenciaDaPergunta = { atividadeAplicadaId: alcance.atividade?.id ?? null, questao: pedido.questao ?? null, materialId: alcance.material?.id ?? null, pagina: pedido.pagina ?? null }
     const { turmaId } = alcance.turma
@@ -164,6 +162,11 @@ export class TutorService {
 
     // Antes de tudo, até da avaliação aberta: a trava existe para o Tutor não ajudar na prova, e a mensagem fixa não ajuda em prova nenhuma.
     if (ehAssuntoDelicado(pedido.texto)) return jaAceita === undefined ? this.#encaminhar(pedido, alcance) : { execucaoId: jaAceita.id }
+
+    // Por aluno e por escola, nunca por IP: a turma inteira sai pelo mesmo endereço (regra 80, item 1). Depois do assunto
+    // delicado, e não antes: às 10h, com seis turmas, o teto da escola se esgota, e o aluno que escreve sobre se machucar
+    // receberia "espere um minuto" no lugar do 188 (D36). O encaminhamento não chama modelo, então não há o que proteger.
+    await this.limite.contar()
 
     if (jaAceita === undefined && (await new TutorDoAlunoRepository(this.banco).avaliativaAberta(turmaId)) !== undefined) throw new ErroDeDominio(CodigoDeErro.TUTOR_PAUSADO_EM_AVALIACAO)
 
