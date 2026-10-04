@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AdaptadorRoteirizado } from '../__fixtures__/adaptador-roteirizado.js'
+import { ALTERNATIVAS_DAS_AMOSTRAS_DE_SAIDA, AMOSTRAS_DE_PEDIDO, AMOSTRAS_DE_SAIDA, type AmostraDePedido } from '../__fixtures__/amostras-do-tutor.js'
 import { ALUNO_1, entradaDoTutor, ESCOLA_A, questaoDoReagenteLimitante } from '../__fixtures__/entradas.js'
 import { MATERIAL_DE_ESTEQUIOMETRIA, PAGINAS_DE_ESTEQUIOMETRIA } from '../__fixtures__/estequiometria.js'
 import type { AdaptadorDeModelo } from '../adaptador.js'
@@ -16,6 +17,7 @@ import {
   MENSAGEM_DE_ASSUNTO_DELICADO,
   MENSAGEM_DE_RISCO_A_VIDA,
   mencionaRiscoAVida,
+  pedeRespostaPronta,
   turnoDoTutor,
   turnosParaOModelo,
   type EntradaDoTutor,
@@ -112,6 +114,60 @@ describe('o Tutor não entrega a resposta: a recusa é testada, não pedida (reg
     const entrada = entradaDoTutor('não entendi')
     expect(turnoDoTutor.esquemaDeEntrada.safeParse({ ...entrada, questao: { ...entrada.questao, gabarito: questao.gabarito } }).success).toBe(false)
     expect(turnoDoTutor.esquemaDeEntrada.safeParse({ ...entrada, questao: { ...entrada.questao, explicacao: questao.explicacao } }).success).toBe(false)
+  })
+})
+
+describe('as amostras fixas do Tutor (regra 40): a regra determinística, com a taxa mínima declarada', () => {
+  /** A regra é fixa: sobre as amostras de hoje, acerta todas. O ensaio com o modelo local declara a dele sobre o mesmo arquivo. */
+  const TAXA_MINIMA_DA_REGRA = 1
+
+  const entradaDaAmostra = (amostra: AmostraDePedido): EntradaDoTutor => {
+    const { questao: _questao, ...semQuestao } = entradaDoTutor(amostra.frase)
+    return {
+      ...(amostra.comQuestao ? entradaDoTutor(amostra.frase) : semQuestao),
+      turnosAnteriores: amostra.turnoAnteriorDoAluno === undefined ? [] : [{ autor: 'aluno', texto: amostra.turnoAnteriorDoAluno }, { autor: 'tutor', texto: 'O que a questão pede?' }],
+    }
+  }
+
+  it('o arquivo tem as duas classes, com e sem questão em andamento', () => {
+    expect(AMOSTRAS_DE_PEDIDO.length).toBeGreaterThanOrEqual(50)
+    expect(AMOSTRAS_DE_PEDIDO.filter((amostra) => amostra.espera === 'pedido_de_resposta').length).toBeGreaterThanOrEqual(25)
+    expect(AMOSTRAS_DE_PEDIDO.filter((amostra) => amostra.espera === 'duvida_legitima').length).toBeGreaterThanOrEqual(20)
+    expect(AMOSTRAS_DE_PEDIDO.some((amostra) => !amostra.comQuestao && amostra.espera === 'duvida_legitima')).toBe(true)
+  })
+
+  it('pedido de resposta e dúvida legítima: a regra acerta a taxa declarada, e o teste diz quais amostras errou', () => {
+    const erradas = AMOSTRAS_DE_PEDIDO.filter((amostra) => pedeRespostaPronta(entradaDaAmostra(amostra)) !== (amostra.espera === 'pedido_de_resposta'))
+    expect(erradas.map((amostra) => `${amostra.espera}: ${amostra.frase}`)).toEqual([])
+    expect(1 - erradas.length / AMOSTRAS_DE_PEDIDO.length).toBeGreaterThanOrEqual(TAXA_MINIMA_DA_REGRA)
+  })
+
+  it('a classificação que sai do Tutor é a da amostra: o sinal ao professor não marca a dúvida legítima', async () => {
+    for (const amostra of AMOSTRAS_DE_PEDIDO) {
+      const saida = await turno(entradaDaAmostra(amostra))
+      expect(saida.classificacao === 'pediu_resposta_pronta', amostra.frase).toBe(amostra.espera === 'pedido_de_resposta')
+    }
+  })
+
+  it('as quatro dúvidas que a regra larga marcava saem "normal", mesmo com o modelo dizendo "normal" e a regra podendo forçar', async () => {
+    const socratica = JSON.stringify({ classificacao: 'normal', resposta: 'Vamos por partes. O que você já sabe sobre isso?', citacoes: [] })
+    for (const frase of ['qual é o resultado da reação entre sódio e cloro?', 'o mol de sódio é maior que o de cloro?', 'a reação começa com qual reagente?', 'como eu sei se acertei o balanceamento?']) {
+      const { questao: _questao, ...semQuestao } = entradaDoTutor(frase)
+      expect((await turno(semQuestao, new AdaptadorRoteirizado([socratica]))).classificacao, frase).toBe('normal')
+      expect((await turno(semQuestao)).classificacao, frase).toBe('normal')
+    }
+  })
+
+  it('saídas de modelo com questão em andamento: a conferência recusa as que entregam e aceita as que conduzem, na taxa declarada', () => {
+    const erradas = AMOSTRAS_DE_SAIDA.filter((amostra) => {
+      const entrada = { ...entradaDoTutor(amostra.duvida), trechos: [] }
+      const comAlternativas = { ...entrada, questao: { ...(entrada.questao as NonNullable<EntradaDoTutor['questao']>), alternativas: [...ALTERNATIVAS_DAS_AMOSTRAS_DE_SAIDA] } }
+      const saida = turnoDoTutor.ajustar?.(comAlternativas, { classificacao: 'normal', resposta: amostra.resposta, citacoes: [] }) ?? { classificacao: 'normal' as const, resposta: amostra.resposta, citacoes: [] }
+      const recusada = (turnoDoTutor.conferir?.(comAlternativas, saida) ?? []).length > 0
+      return recusada !== (amostra.espera === 'entrega')
+    })
+    expect(erradas.map((amostra) => `${amostra.espera}: ${amostra.resposta}`)).toEqual([])
+    expect(1 - erradas.length / AMOSTRAS_DE_SAIDA.length).toBeGreaterThanOrEqual(TAXA_MINIMA_DA_REGRA)
   })
 })
 
@@ -309,6 +365,24 @@ describe('assunto pessoal delicado: mensagem fixa, sem modelo (D36)', () => {
     for (const proibido of ['meu pai me bate', 'me matar', '188', 'Obrigado por me contar']) expect(enviado).not.toContain(proibido)
     expect(enviado).toContain('ok, voltando: deu 2 mol')
     expect(enviado).toContain('não entendi a questão 3')
+  })
+
+  it('o turno que só o modelo classificou como delicado, sem gatilho, também sai: é o que veio logo antes da mensagem fixa', () => {
+    const entrada: EntradaDoTutor = {
+      ...entradaDoTutor('voltando: como eu acho o limitante?'),
+      turnosAnteriores: [
+        { autor: 'aluno', texto: 'deu 2 mol' },
+        { autor: 'tutor', texto: 'E o cloro, quanto dá?' },
+        { autor: 'aluno', texto: 'as coisas lá em casa andam complicadas' },
+        { autor: 'tutor', texto: MENSAGEM_DE_ASSUNTO_DELICADO },
+      ],
+    }
+    expect(ehAssuntoDelicado('as coisas lá em casa andam complicadas')).toBe(false)
+    expect(turnosParaOModelo(entrada)).toEqual([
+      { autor: 'aluno', texto: 'deu 2 mol' },
+      { autor: 'tutor', texto: 'E o cloro, quanto dá?' },
+    ])
+    expect(JSON.stringify(turnoDoTutor.montarPedido(entrada))).not.toContain('lá em casa')
   })
 
   it('resposta do Tutor a um turno delicado sai junto com ele, mesmo que não seja a mensagem fixa (conversa antiga, texto revisado)', () => {

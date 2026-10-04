@@ -14,7 +14,7 @@ import {
 } from '../material.js'
 import { PROMPT_TURNO_DO_TUTOR } from '../prompts/turno-do-tutor.js'
 import { definirTarefa } from '../tarefa.js'
-import { contemTexto, cortar, normalizar, palavras, palavrasDeConteudo } from '../texto.js'
+import { contemTexto, cortar, normalizar, palavras, palavrasDeConteudo, semPontoFinal } from '../texto.js'
 
 /**
  * A classificação é do **pedido**, pelo que o aluno escreveu, e é fechada: não existe valor para humor, atenção,
@@ -132,38 +132,65 @@ const PERGUNTAS_SOBRE_O_TUTOR: readonly RegExp[] = [
   /\b(voce|vc) tem sentimentos?\b/,
 ]
 
-/** As três formas de tentar arrancar a resposta (regra 30, item 11): direta, disfarçada de conferência e fatiada. */
+/**
+ * As três formas de tentar arrancar a resposta (regra 30, item 11): direta, disfarçada de conferência e fatiada.
+ *
+ * Esta classificação vira, para o professor, "pediu a resposta pronta" ao lado do nome do aluno. Por isso a regra é
+ * estreita de propósito: marcar como pedido a dúvida legítima ("o mol de sódio é maior que o de cloro?") é dizer ao
+ * professor uma coisa que o aluno não fez.
+ *
+ * Os pedidos diretos falam da resposta, do gabarito ou de resolver por ele, e valem sempre.
+ */
 const PEDIDOS_DIRETOS: readonly RegExp[] = [
-  /\b(qual|quais) (e |eh |sao |seria )?(a |as |o )?(resposta|respostas|alternativa|letra|opcao|gabarito|resultado)\b/,
-  /\b(da|de|diz|diga|fala|fale|passa|passe|manda|mande|conta|conte|mostra|mostre)( logo| so| ai)? (a |o |as )?(resposta|respostas|gabarito|resultado|alternativa certa|alternativa correta|letra certa)\b/,
+  /\b(qual|quais) (e |eh |sao |seria )?(a |as |o )?(resposta|respostas|alternativa|letra|opcao|gabarito)\b/,
+  /\b(da|de|diz|diga|fala|fale|passa|passe|manda|mande|conta|conte|mostra|mostre)( logo| so| ai)? (a |o |as )?(resposta|respostas|gabarito|alternativa certa|alternativa correta|letra certa)\b/,
   /\b(responde|responda|resolve|resolva|faz|faca) (isso |essa |a questao |o exercicio |a conta )?(pra|para|por) mim\b/,
   /\bgabarito\b/,
   /\bresposta pronta\b/,
   /\bso (quero|preciso d)a resposta\b/,
 ]
 
-const PEDIDOS_DE_CONFERENCIA: readonly RegExp[] = [
-  /\b(e|eh) a (letra |alternativa |opcao )?[a-d]\b/,
-  /\ba resposta (e|eh|seria|da|deu)\b/,
-  /\b(marquei|marcar|marco|chutei|coloquei|botei|vou de|fui na) (a |na )?(letra |alternativa |opcao )?[a-d]\b/,
+const POSICAO = '([a-d]|primeira|segunda|terceira|quarta|ultima)'
+/** Depois da letra ou do ordinal vem o fim da frase, e não um nome: "é a segunda?" é palpite, "o que é a segunda etapa?" é dúvida. */
+const FIM_DO_PALPITE = '( opcao| alternativa| letra)?(?=\\s*($|[?,.!]|ne\\b|certo\\b|mesmo\\b|ou\\b|e\\b))'
+
+/**
+ * A conferência de palpite e o pedido fatiado só são pedido de resposta **com uma questão em andamento**: "tá certo?",
+ * "é a segunda?", "C ou D?" só pedem a resposta de uma questão quando há questão. Sem ela, pergunta sobre o conteúdo é dúvida.
+ */
+const CONFERENCIAS_DE_PALPITE: readonly RegExp[] = [
+  new RegExp(`(?<!\\b(?:o que|qual) )\\b(e|eh|seria|sera|deve ser) a (letra |alternativa |opcao )?${POSICAO}${FIM_DO_PALPITE}`),
+  new RegExp(`\\b(marquei|marcar|marco|chutei|coloquei|botei|vou de|fui na) (a |na )?(letra |alternativa |opcao )?${POSICAO}\\b`),
+  /\ba resposta (e|eh|seria)\b/,
+  /\b(ta|esta|tava|estaria|ficou) (cert[oa]|corret[oa]|errad[oa])\b/,
   /\b(confirma (pra|para) mim|pode confirmar|confirma se|so confirma)\b/,
-  /\bacertei\b/,
-  /\b(e|eh) (isso|essa|esse) (mesmo|a resposta)\b/,
+  /\bacertei\s*(\?|$|,? ne\b)/,
+  /\b(e|eh) (isso|essa|esse)( mesmo| a resposta)?\s*\?/,
+  /\bqual (e |eh |seria )?a (certa|correta)\b/,
+  /\bqual (eu )?(marco|marcar|devo marcar|escolho)\b/,
+  /\b(da|de|diz|diga|fala|fale|passa|passe|manda|mande|mostra|mostre)( logo| so| ai)? a solucao\b/,
+  /\b[a-d] ou (a )?[a-d]\b/,
+  /\bsim ou nao\b/,
 ]
 
 const PEDIDOS_FATIADOS: readonly RegExp[] = [
   /\bso (me )?(diz|diga|fala|fale|conta) (se|qual|quanto|o|a)\b/,
   /\b(primeira|ultima) letra\b/,
-  /\bso o (numero|valor|resultado|final|comeco)\b/,
-  /\bso a (conta|primeira parte|metade)\b/,
+  /\bso o (numero|valor|resultado|final)\b/,
+  /\bso a (conta final|primeira parte|metade)\b/,
   /\b(elimina|eliminar|descarta|descartar|tira|tirar) (uma |duas |tres |as |alguma |algumas )?(alternativa|alternativas|opcoes|letras|erradas)\b/,
   /\bquais? (alternativas? |letras? |opcoes )?(eu )?(posso |da pra |devo )?(eliminar|descartar)\b/,
-  /\b(e|eh) (maior|menor) (que|do que|ou)\b/,
-  /\b(comeca|termina) com\b/,
+  // "É maior que…" e "começa com…" só fatiam a resposta quando falam dela, ou de um número: sobre o conteúdo, são dúvida.
+  /\b(resposta|resultado|valor|numero)\b.{0,20}\b(maior|menor)\b/,
+  /\b(e|eh|da|deu) (maior|menor) (que|do que) \d/,
+  /\b(resposta|alternativa|certa|correta)\b.{0,20}\b(comeca|termina) com\b/,
   /\b(e|eh) (a|o) .{1,40} ou (a|o) .{1,40}\?/,
   /\bentre (a |as )?(letras? )?[a-d] (e|ou) (a )?[a-d]\b/,
   /\b(nao|n) (e|eh) a (letra |alternativa )?[a-d]\b/,
 ]
+
+/** A insistência depois de um pedido recusado: sozinha não diz nada, e depois de "é a B, né?" é o mesmo pedido. */
+const INSISTENCIA = /^(e entao|entao|e ai|fala|diz|anda|vai|por favor|responde)\b.{0,25}$|^(sim|nao|certo|ne)\s*\?+$/
 
 const algumCasa = (padroes: readonly RegExp[], texto: string): boolean => padroes.some((padrao) => padrao.test(texto))
 
@@ -176,9 +203,22 @@ export function ehAssuntoDelicado(duvida: string): boolean {
   return algumCasa(GATILHOS_DE_RISCO_A_VIDA, texto) || algumCasa(GATILHOS_DE_ASSUNTO_DELICADO, texto)
 }
 
-export function pedeRespostaPronta(duvida: string): boolean {
-  const texto = normalizar(duvida)
-  return algumCasa(PEDIDOS_DIRETOS, texto) || algumCasa(PEDIDOS_DE_CONFERENCIA, texto) || algumCasa(PEDIDOS_FATIADOS, texto)
+function pedeNestaMensagem(texto: string, comQuestao: boolean): boolean {
+  if (algumCasa(PEDIDOS_DIRETOS, texto)) return true
+  return comQuestao && (algumCasa(CONFERENCIAS_DE_PALPITE, texto) || algumCasa(PEDIDOS_FATIADOS, texto))
+}
+
+/**
+ * O aluno pediu a resposta pronta? Decide a regra, pelo que ele escreveu: o pedido direto, sempre; a conferência de
+ * palpite e o pedido fatiado, só com questão em andamento; e, com questão, a insistência curta logo depois de um pedido.
+ */
+export function pedeRespostaPronta(entrada: Pick<EntradaDoTutor, 'duvida' | 'questao' | 'turnosAnteriores'>): boolean {
+  const comQuestao = entrada.questao !== undefined
+  const texto = normalizar(entrada.duvida)
+  if (pedeNestaMensagem(texto, comQuestao)) return true
+  if (!comQuestao || !INSISTENCIA.test(texto)) return false
+  const anterior = entrada.turnosAnteriores.findLast((turno) => turno.autor === 'aluno')
+  return anterior !== undefined && pedeNestaMensagem(normalizar(anterior.texto), true)
 }
 
 function mensagemFixaDoAssuntoDelicado(duvida: string): SaidaDoTutor {
@@ -222,15 +262,22 @@ function estaForaDoEscopo(entrada: EntradaDoTutor): boolean {
   return !doAssunto.some((palavra) => radicaisDaReferencia.has(radical(palavra)))
 }
 
-const TAMANHO_MINIMO_DA_ALTERNATIVA_CONFERIDA = 6
+const TAMANHO_DA_ALTERNATIVA_LONGA = 6
 
-/** As alternativas que dá para procurar num texto sem alarme falso: "2" e "B" aparecem em qualquer frase. */
-function alternativasConferiveis(entrada: EntradaDoTutor): string[] {
-  return (entrada.questao?.alternativas ?? []).filter((alternativa) => normalizar(alternativa).length >= TAMANHO_MINIMO_DA_ALTERNATIVA_CONFERIDA)
-}
-
+/**
+ * O texto repete uma alternativa da questão? A alternativa comprida é procurada inteira. A curta ("144 g", "80%",
+ * "2 mol") também, quando tem número: ela aparece como palavra solta, fora de "página 5", "questão 5" e da contagem
+ * da memória ("errou 3 questões"), que são referência e não resposta. Letra sozinha fica com os padrões de letra.
+ */
 function repeteAlternativa(texto: string, entrada: EntradaDoTutor): boolean {
-  return alternativasConferiveis(entrada).some((alternativa) => contemTexto(texto, alternativa))
+  const normalizado = normalizar(texto)
+  return (entrada.questao?.alternativas ?? []).some((alternativa) => {
+    const alvo = normalizar(semPontoFinal(alternativa))
+    if (alvo.length >= TAMANHO_DA_ALTERNATIVA_LONGA) return contemTexto(texto, alternativa)
+    if (!/\d/.test(alvo)) return false
+    const escapado = alvo.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
+    return new RegExp(`(?<![\\p{L}\\p{N}])(?<!(?:pagina|paginas|questao|passo|p\\.) )${escapado}(?![\\p{L}\\p{N}])(?! quest)`, 'u').test(normalizado)
+  })
 }
 
 /**
@@ -245,7 +292,7 @@ function comecoSemAResposta(frase: FraseDoMaterial, comeco: string, entrada: Ent
 function apoioNoMaterial(entrada: EntradaDoTutor): { citacao: Citacao; orientacao: string } | undefined {
   const busca = `${entrada.duvida} ${entrada.questao?.enunciado ?? ''}`
   // Quando a dúvida ou a questão nomeiam um conceito que o material define, a página certa é a da definição dele.
-  const fato = fatoCitadoNoTexto(extrairFatos(entrada.trechos), busca)
+  const fato = fatoCitadoNoTexto(extrairFatos(entrada.trechos).filter((candidato) => !candidato.numerico), busca)
   const candidatas = frasesDoMaterial(entrada.trechos)
   const frase = fato ?? fraseMaisProxima(candidatas, busca) ?? candidatas[0]
   if (frase === undefined) return undefined
@@ -300,51 +347,68 @@ const SIMULA_VINCULO = /\b(senti (a )?sua falta|saudades? de voce|te amo|amo voc
 const ENTREGA_A_RESPOSTA: readonly RegExp[] = [
   /\b(resposta|alternativa|letra|opcao) (certa|correta) (e|eh|seria|sera)\b/,
   /\ba (certa|correta|errada) (e|eh|seria|sera)\b/,
+  /\ba resposta (e|eh|da|seria)\b(?! (sua|voce|com voce|quem))/,
   /\b(e|eh) a (letra |alternativa |opcao )?[a-d]\b/,
   /\b(letra|alternativa|opcao) [a-d] (e|eh|esta) (a )?(certa|correta|errada|incorreta)\b/,
+  /\ba (primeira|segunda|terceira|quarta|ultima)( opcao| alternativa)? (e|eh|esta) (a )?(certa|correta|errada|incorreta)\b/,
   /\bo gabarito (e|eh)\b/,
   /\bmarque (a )?(letra |alternativa |opcao )?[a-d]\b/,
   /\b(pode|podemos) (eliminar|descartar) (a |as )?(letra|alternativa|opcao|letras|alternativas)\b/,
 ]
 /**
- * Diante de "é a B, né?", começar com "sim", "isso" ou "não é", ou dizer "você acertou", já é a resposta. "Você errou
- * 3 questões" é a memória do trabalho anterior, com o número, e não entra.
+ * Confirmar ou negar já é a resposta: "sim", "isso", "não é", "está certo", "acertou", "pode marcar". "Você errou 3
+ * questões" é a memória do trabalho anterior, com o número, e não entra; "boa pergunta" também não.
  */
-const CONFIRMA_OU_NEGA = /^(sim|isso|exato|exatamente|correto|certo|certa|acertou|errou|errado)\b|^nao[,.!]? (e|eh|esta|ta)\b|\bvoce (acertou|errou)\b(?! \d)/
+const CONFIRMA_OU_NEGA =
+  /^(sim|isso|exato|exatamente|correto|certo|certa|errado|perfeito|muito bem)\b|^boa[!,.]|^nao[,.!]? (e|eh|esta|ta)\b|\b(acertou|errou)\b(?! \d)|\b(esta|ta) (cert[oa]|corret[oa]|errad[oa])\b|\bpode marcar\b/
 
 /**
  * O aluno pediu a resposta pronta? Quem decide é a **regra**, pelo que ele escreveu; a classificação do modelo só
  * soma. Um modelo que classifica "é a B, né?" como dúvida normal não desliga a recusa, nem o sinal ao professor.
  */
 function pediuRespostaPronta(entrada: EntradaDoTutor, saida: SaidaDoTutor): boolean {
-  return saida.classificacao === 'pediu_resposta_pronta' || pedeRespostaPronta(entrada.duvida)
+  return saida.classificacao === 'pediu_resposta_pronta' || pedeRespostaPronta(entrada)
 }
 
 /**
  * Os turnos anteriores que podem ir ao modelo. O que o aluno escreveu sobre um assunto delicado, e a mensagem fixa que
  * ele recebeu, nunca entram: a regra do assunto delicado vale para a conversa inteira, não só para a dúvida de agora
- * (D36; D62).
+ * (D36; D62). Sai o turno que casa com gatilho, com a resposta dele; e sai o turno do aluno que veio logo antes de uma
+ * mensagem fixa, mesmo sem gatilho: foi o modelo que o classificou como delicado.
  */
 export function turnosParaOModelo(entrada: EntradaDoTutor): EntradaDoTutor['turnosAnteriores'] {
   const turnos: EntradaDoTutor['turnosAnteriores'] = []
+  let anteriorEraDoAluno = false
   let pulaAResposta = false
   for (const turno of entrada.turnosAnteriores) {
     if (turno.autor === 'aluno') {
       pulaAResposta = ehAssuntoDelicado(turno.texto)
       if (!pulaAResposta) turnos.push(turno)
+      anteriorEraDoAluno = !pulaAResposta
       continue
     }
     const ehMensagemFixa = turno.texto === MENSAGEM_DE_ASSUNTO_DELICADO || turno.texto === MENSAGEM_DE_RISCO_A_VIDA
+    if (ehMensagemFixa && anteriorEraDoAluno) turnos.pop()
     if (!pulaAResposta && !ehMensagemFixa) turnos.push(turno)
     pulaAResposta = false
+    anteriorEraDoAluno = false
   }
   return turnos
 }
 
 /**
- * A recusa não depende do prompt (regra 30, item 11). Saída de qualquer modelo que entregue a resposta, confirme um
- * palpite, copie uma alternativa, diga ser uma pessoa ou simule vínculo é saída inválida: volta para o modelo uma vez
- * e, se insistir, a chamada falha com erro tipado. O aluno nunca a recebe.
+ * A recusa não depende só do prompt (regra 30, item 11): a saída de qualquer modelo passa por esta conferência, e a que
+ * ela reprova volta para o modelo uma vez e, se insistir, a chamada falha com erro tipado, sem chegar ao aluno.
+ *
+ * **O que a conferência garante**, por regra fixa: a saída não diz ser uma pessoa nem simula vínculo com as frases
+ * listadas; não aponta alternativa por letra ou por ordem; não repete o texto de uma alternativa (comprida, ou curta
+ * com número); e, com questão em andamento ou pedido reconhecido, não confirma nem nega ("sim", "isso", "está certo",
+ * "acertou", "pode marcar"). O pedido reconhecido pela regra sai classificado como tal, diga o modelo o que disser.
+ *
+ * **O que ela não garante**: é lista de padrões em português, não entendimento. Uma resposta que entrega o
+ * resultado por outro caminho (resolve a conta passo a passo, parafraseia a alternativa certa, confirma com outra
+ * palavra) passa. Isso fica com o prompt, com a avaliação do modelo nas amostras fixas, e com a supervisão do
+ * professor, que vê os sinais e o uso da turma (D47): o Tutor é supervisionado, não infalível.
  */
 function problemasDoTurno(entrada: EntradaDoTutor, saida: SaidaDoTutor): string[] {
   const problemas = problemasDasCitacoes(saida.citacoes, entrada.trechos, 'Citações')
@@ -362,8 +426,9 @@ function problemasDoTurno(entrada: EntradaDoTutor, saida: SaidaDoTutor): string[
     problemas.push('A resposta ou o trecho citado repete o texto de uma alternativa da questão. Aponte a página e pergunte, sem copiar alternativa.')
   }
   const pediu = pediuRespostaPronta(entrada, saida)
-  if (pediu && CONFIRMA_OU_NEGA.test(texto)) {
-    problemas.push('O aluno pediu a resposta ou a confirmação de um palpite: não confirme nem negue. Recuse e faça uma pergunta que o ajude a avançar.')
+  // Com questão em andamento, confirmar ou negar é entregar, tenha o aluno pedido de um jeito que a regra reconhece ou não.
+  if ((pediu || entrada.questao !== undefined) && CONFIRMA_OU_NEGA.test(texto)) {
+    problemas.push('Há uma questão em andamento, ou o aluno pediu a resposta: não confirme nem negue. Recuse e faça uma pergunta que o ajude a avançar.')
   }
   if (pediu && entrada.trechos.length > 0 && saida.citacoes.length === 0) {
     problemas.push('Ao recusar a resposta pronta, aponte em "citacoes" a página do material que ajuda o aluno a seguir.')
@@ -409,7 +474,7 @@ export const turnoDoTutor = definirTarefa({
    */
   ajustar(entrada, saida): SaidaDoTutor {
     if (saida.classificacao === 'assunto_delicado' || ehAssuntoDelicado(entrada.duvida)) return mensagemFixaDoAssuntoDelicado(entrada.duvida)
-    return pedeRespostaPronta(entrada.duvida) ? { ...saida, classificacao: 'pediu_resposta_pronta' } : saida
+    return pedeRespostaPronta(entrada) ? { ...saida, classificacao: 'pediu_resposta_pronta' } : saida
   },
 
   conferir: problemasDoTurno,
@@ -418,7 +483,7 @@ export const turnoDoTutor = definirTarefa({
     if (ehAssuntoDelicado(entrada.duvida)) return mensagemFixaDoAssuntoDelicado(entrada.duvida)
     const texto = normalizar(entrada.duvida)
     // Antes de tudo: quem pede a resposta junto de outra pergunta continua pedindo a resposta.
-    if (pedeRespostaPronta(entrada.duvida)) {
+    if (pedeRespostaPronta(entrada)) {
       return conduzirPorPerguntas(
         entrada,
         'Essa eu não respondo por você, e também não confirmo nem descarto alternativa: se eu contar, você não aprende a chegar lá.',
@@ -438,7 +503,7 @@ export const turnoDoTutor = definirTarefa({
     if (estaForaDoEscopo(entrada)) {
       return {
         classificacao: 'fora_do_escopo',
-        resposta: `Isso foge do material da sua turma, e eu só ajudo com ele. Qual é a sua dúvida de ${entrada.contexto.disciplina}?`,
+        resposta: `Esse assunto foge do material da sua turma, e eu só ajudo com ele. Qual é a sua dúvida de ${entrada.contexto.disciplina}?`,
         citacoes: [],
       }
     }

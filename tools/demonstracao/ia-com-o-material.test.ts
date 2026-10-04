@@ -62,9 +62,17 @@ describe('as frases definitórias do material de demonstração', () => {
     expect(fatos.length).toBeGreaterThanOrEqual(25)
     expect(new Set(fatos.map((fato) => fato.pagina))).toEqual(new Set([1, 2, 3, 4, 5]))
     for (const fato of fatos) {
+      // A definição é frase-chave declarada no conteúdo; a relação com número é um item da lista da página.
       const declaradas = PAGINAS_DO_MATERIAL.find((pagina) => pagina.numero === fato.pagina)?.frasesChave ?? []
-      expect(declaradas, `"${fato.frase}" não é frase-chave da página ${String(fato.pagina)}`).toContain(fato.frase)
+      if (fato.numerico) expectFraseSoDaPagina(fato.frase, fato.pagina)
+      else expect(declaradas, `"${fato.frase}" não é frase-chave da página ${String(fato.pagina)}`).toContain(fato.frase)
     }
+    expect(fatos.filter((fato) => fato.numerico).map((fato) => [fato.termo, fato.complemento])).toEqual([
+      ['massa molar de água (H2O)', '18 g/mol'],
+      ['massa molar de gás carbônico (CO2)', '44 g/mol'],
+      ['massa molar de carbonato de cálcio (CaCO3)', '100 g/mol'],
+      ['massa molar de cloreto de sódio (NaCl)', '58,5 g/mol'],
+    ])
   })
 
   it('definição sem artigo vira fato, e o que não é definição fica de fora', () => {
@@ -101,9 +109,9 @@ describe('atividade objetiva a partir do material de demonstração', () => {
   it('nenhum enunciado contém a própria resposta, nem carrega título de seção colado', () => {
     for (const questao of (pedirAtividade('estequiometria', 20)).questoes) {
       const correta = semAcentoNemCaixa(semPonto(questao.alternativas[questao.gabarito] ?? ''))
-      expect(correta.length).toBeGreaterThan(10)
+      expect(correta.length).toBeGreaterThan(3)
       expect(semAcentoNemCaixa(questao.enunciado)).not.toContain(correta)
-      expect(questao.enunciado).toMatch(/^Segundo o material, o que é [^.:;]+\?$/)
+      expect(questao.enunciado).toMatch(/^Segundo o material, (o que|qual) é [^.:;]+\?$/)
       expect(questao.enunciado).not.toMatch(/\d\.\d/)
     }
   })
@@ -133,6 +141,19 @@ describe('atividade objetiva a partir do material de demonstração', () => {
     expect(questoes[0]?.alternativas).toContain('O reagente que sobra quando a reação termina.')
     expect(questoes[0]?.alternativas).toContain('A quantidade de reagente que sobra depois que o reagente limitante acaba.')
     expect(questoes.filter((questao) => questao.citacao.pagina === 4).length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('a atividade não é só "o que é X?": a relação com número do material vira questão, com as outras massas molares como distratores', () => {
+    const { questoes } = pedirAtividade('estequiometria', 10)
+    const numericas = questoes.filter((questao) => questao.enunciado.startsWith('Segundo o material, qual é '))
+    expect(numericas.length).toBeGreaterThanOrEqual(1)
+    const [daAgua] = pedirAtividade('massa molar', 6).questoes.filter((questao) => questao.enunciado === 'Segundo o material, qual é a massa molar de água (H2O)?')
+    if (daAgua === undefined) throw new Error('a atividade sobre massa molar deveria perguntar a da água')
+    expect(daAgua.alternativas[daAgua.gabarito]).toBe('18 g/mol')
+    expect([...daAgua.alternativas].sort()).toEqual(['100 g/mol', '18 g/mol', '44 g/mol', '58,5 g/mol'])
+    expect(daAgua.citacao).toEqual({ materialId: MATERIAL, pagina: 2, trecho: 'Água, H2O: 2 × 1 + 16 = 18 g/mol.' })
+    expectFraseSoDaPagina(daAgua.citacao.trecho, 2)
+    expect(daAgua.enunciado).not.toContain('18')
   })
 
   it('com o texto extraído do PDF, a atividade é a mesma', () => {

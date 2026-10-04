@@ -464,6 +464,9 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/web.Dockerfile
+      args:
+        # Só "1" leva a galeria das peças para o build (o e2e roda nela). Staging e produção definem outro valor.
+        VITE_COM_GALERIA: ${VITE_COM_GALERIA:?defina VITE_COM_GALERIA}
     environment:
       # A web chega à API pela borda, como o navegador chegará em staging.
       API_URL_INTERNA: http://borda:8080

@@ -22,8 +22,23 @@ afterEach(() => {
 
 type Chunk = Rolldown.OutputChunk
 
-/** Os chunks de JS de um build feito em memória, sem gravar `dist/`. */
-async function chunksDoBuild(opcoes: { raiz: string; configFile: string | false }): Promise<Chunk[]> {
+/**
+ * Os chunks de JS de um build feito em memória, sem gravar `dist/`. `comGaleria` liga `VITE_COM_GALERIA=1`, como o
+ * compose de teste; sem ele o build é o de produção, que não leva a galeria (`src/rotas.tsx`).
+ */
+async function chunksDoBuild(opcoes: { raiz: string; configFile: string | false; comGaleria?: boolean }): Promise<Chunk[]> {
+  const anterior = process.env['VITE_COM_GALERIA']
+  if (opcoes.comGaleria === true) process.env['VITE_COM_GALERIA'] = '1'
+  else delete process.env['VITE_COM_GALERIA']
+  try {
+    return await chunksDoBuildComOAmbiente(opcoes)
+  } finally {
+    if (anterior === undefined) delete process.env['VITE_COM_GALERIA']
+    else process.env['VITE_COM_GALERIA'] = anterior
+  }
+}
+
+async function chunksDoBuildComOAmbiente(opcoes: { raiz: string; configFile: string | false }): Promise<Chunk[]> {
   const saida = await build({
     root: opcoes.raiz,
     configFile: opcoes.configFile,
@@ -255,7 +270,7 @@ describe('o build de verdade da web', () => {
   })
 
   it('as peças do MVP de apresentação ficam fora do primeiro carregamento, e a galeria sai num chunk galeria-* só por import()', async () => {
-    const chunks = await chunksDoBuild({ raiz: raizDaWeb, configFile: join(raizDaWeb, 'vite.config.ts') })
+    const chunks = await chunksDoBuild({ raiz: raizDaWeb, configFile: join(raizDaWeb, 'vite.config.ts'), comGaleria: true })
     const entrada = chunks.find((chunk) => chunk.isEntry)
     if (entrada === undefined) throw new Error('build sem chunk de entrada')
     const galeria = chunks.filter((chunk) => /^assets\/galeria-[^/]+\.js$/.test(chunk.fileName))
@@ -279,19 +294,20 @@ describe('o build de verdade da web', () => {
     expect(emParte).toEqual([])
   })
 
-  it('com VITE_SEM_GALERIA=1 o build não leva a galeria: nem o pedaço, nem o módulo, nem as peças que só ela usa', async () => {
-    const anterior = process.env['VITE_SEM_GALERIA']
-    process.env['VITE_SEM_GALERIA'] = '1'
+  it('sem VITE_COM_GALERIA=1 o build não leva a galeria: nem o pedaço, nem o módulo; quem esquece a variável fica sem ela', async () => {
+    const chunks = await chunksDoBuild({ raiz: raizDaWeb, configFile: join(raizDaWeb, 'vite.config.ts') })
+    expect(chunks.filter((chunk) => /^assets\/galeria-/.test(chunk.fileName))).toEqual([])
+    expect(chunks.flatMap((chunk) => chunk.moduleIds.filter((id) => id.replaceAll('\\', '/').includes('/apps/web/src/galeria/')))).toEqual([])
+    // O build continua inteiro: a entrada e as três áreas estão lá.
+    expect(chunks.some((chunk) => chunk.isEntry)).toBe(true)
+    for (const area of AREAS_DA_ESCOLA) expect(chunks.filter((chunk) => new RegExp(`^assets/${area}-`).test(chunk.fileName)), area).toHaveLength(1)
+    // Qualquer outro valor também não liga: só o "1".
+    process.env['VITE_COM_GALERIA'] = 'true'
     try {
-      const chunks = await chunksDoBuild({ raiz: raizDaWeb, configFile: join(raizDaWeb, 'vite.config.ts') })
-      expect(chunks.filter((chunk) => /^assets\/galeria-/.test(chunk.fileName))).toEqual([])
-      expect(chunks.flatMap((chunk) => chunk.moduleIds.filter((id) => id.replaceAll('\\', '/').includes('/apps/web/src/galeria/')))).toEqual([])
-      // O build continua inteiro: a entrada e as três áreas estão lá.
-      expect(chunks.some((chunk) => chunk.isEntry)).toBe(true)
-      for (const area of AREAS_DA_ESCOLA) expect(chunks.filter((chunk) => new RegExp(`^assets/${area}-`).test(chunk.fileName)), area).toHaveLength(1)
+      const comOutroValor = await chunksDoBuildComOAmbiente({ raiz: raizDaWeb, configFile: join(raizDaWeb, 'vite.config.ts') })
+      expect(comOutroValor.filter((chunk) => /^assets\/galeria-/.test(chunk.fileName))).toEqual([])
     } finally {
-      if (anterior === undefined) delete process.env['VITE_SEM_GALERIA']
-      else process.env['VITE_SEM_GALERIA'] = anterior
+      delete process.env['VITE_COM_GALERIA']
     }
   })
 

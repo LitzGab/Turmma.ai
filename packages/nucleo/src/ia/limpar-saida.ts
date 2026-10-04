@@ -29,3 +29,30 @@ export function limparSaidaDoModelo(texto: string): string {
   const fim = semCerca.lastIndexOf('}')
   return inicio >= 0 && fim > inicio ? semCerca.slice(inicio, fim + 1) : semCerca
 }
+
+/**
+ * Tira de um texto a marcação de Markdown que modelo põe por hábito. A tela mostra o texto do modelo como texto, sem
+ * interpretar marcação: `**Questão 1**` e `### Etapa` apareceriam crus para a professora e para o aluno.
+ *
+ * Só sai o que é marcação sem dúvida, para não estragar conteúdo que usa os mesmos sinais de verdade:
+ * - negrito e itálico de asterisco, só quando o asterisco encosta na palavra e não está no meio de uma conta: `2 * 3`,
+ *   `2*3*4` e `a * b` ficam;
+ * - título de linha (`## Etapa`): só cerquilha no começo da linha seguida de espaço; `nº`, `#1` e `C#` ficam;
+ * - crase de código em volta de uma palavra ou fórmula.
+ * Sublinhado não é tocado: a lacuna das questões é `______`, e nome com sublinhado não é marcação.
+ */
+export function tirarMarcacao(texto: string): string {
+  return texto
+    .replace(/(?<![\p{L}\p{N}*])\*\*(?=[^\s*])([^\n]*?[^\s*])\*\*(?![\p{L}\p{N}*])/gu, '$1')
+    .replace(/(?<![\p{L}\p{N}*])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?![\p{L}\p{N}*])/gu, '$1')
+    .replace(/^[ \t]{0,3}#{1,6}[ \t]+/gmu, '')
+    .replace(/`([^`\n]+)`/gu, '$1')
+}
+
+/** A mesma limpeza em todo texto de um valor já lido do JSON, em qualquer profundidade. Número, booleano e chave ficam como estão. */
+export function semMarcacao(valor: unknown): unknown {
+  if (typeof valor === 'string') return tirarMarcacao(valor)
+  if (Array.isArray(valor)) return valor.map(semMarcacao)
+  if (typeof valor !== 'object' || valor === null) return valor
+  return Object.fromEntries(Object.entries(valor).map(([chave, item]) => [chave, semMarcacao(item)]))
+}

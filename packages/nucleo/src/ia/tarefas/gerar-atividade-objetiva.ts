@@ -177,11 +177,25 @@ function intercalarPorPagina<Item extends { materialId: string; pagina: number }
 }
 
 /**
+ * Dentro de cada página, uma definição, um valor, uma definição: a atividade não fica só de "o que é X?" quando o
+ * material também traz relações com número ("qual é a massa molar de…?"). A ordem das páginas não muda.
+ */
+function alternandoDefinicaoEValor(fatos: readonly Fato[]): Fato[] {
+  const paginas = [...new Set(fatos.map((fato) => `${fato.materialId}:${fato.pagina}`))]
+  return paginas.flatMap((pagina) => {
+    const daPagina = fatos.filter((fato) => `${fato.materialId}:${fato.pagina}` === pagina)
+    const definicoes = daPagina.filter((fato) => !fato.numerico)
+    const valores = daPagina.filter((fato) => fato.numerico)
+    return Array.from({ length: Math.max(definicoes.length, valores.length) }, (_, posicao) => [definicoes[posicao], valores[posicao]]).flat().filter((fato) => fato !== undefined)
+  })
+}
+
+/**
  * O que fala do tema pedido vem antes, do que mais tem a ver para o que menos; o resto fica na ordem em que estava.
  * Com tema que não aparece em frase nenhuma, a ordem não muda.
  */
 function primeiroODoTema(ordem: readonly number[], fatos: readonly Fato[], tema: string): number[] {
-  const afinidade = (indice: number): number => palavrasEmComum(tema, fatos[indice]?.frase ?? '')
+  const afinidade = (indice: number): number => palavrasEmComum(tema, `${fatos[indice]?.termo ?? ''} ${fatos[indice]?.frase ?? ''}`)
   return [...ordem].sort((a, b) => afinidade(b) - afinidade(a))
 }
 
@@ -190,7 +204,7 @@ function primeiroODoTema(ordem: readonly number[], fatos: readonly Fato[], tema:
  * elas não bastam, completa com lacuna: a frase do material com uma palavra escondida.
  */
 export function questoesDoMaterial(entrada: Pick<EntradaDeAtividadeObjetiva, 'tema' | 'trechos' | 'habilidades' | 'quantidade'>): QuestaoObjetiva[] {
-  const fatos = extrairFatos(entrada.trechos)
+  const fatos = alternandoDefinicaoEValor(extrairFatos(entrada.trechos))
   const questoes: QuestaoObjetiva[] = []
   const frasesUsadas = new Set<string>()
   for (const indice of primeiroODoTema(intercalarPorPagina(fatos), fatos, entrada.tema)) {
