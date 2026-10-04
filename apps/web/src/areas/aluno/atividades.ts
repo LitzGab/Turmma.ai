@@ -18,10 +18,10 @@ export const TEXTO_DA_SITUACAO: Readonly<Record<SituacaoDaMinhaAtividade, string
 }
 
 /** O aviso da atividade avaliativa, dito **antes** de o aluno abrir: enquanto ela está aberta, o Tutor da turma para. */
-export const AVISO_DA_AVALIACAO = 'Avaliação: o Tutor fica pausado até a professora encerrar.'
+export const AVISO_DA_AVALIACAO = 'Avaliação: o Tutor fica pausado até quem dá a aula encerrar.'
 
 /** O que se diz enquanto a correção espera a professora: é o que separa "enviada" de "com resultado" (regra 70, item 3). */
-export const TEXTO_DA_ESPERA_PELA_CORRECAO = 'Sua professora ainda vai revisar a correção.'
+export const TEXTO_DA_ESPERA_PELA_CORRECAO = 'Quem dá a aula ainda vai revisar a correção.'
 
 /** A atividade ainda recebe resposta do aluno? */
 export function estaParaResponder(atividade: Pick<MinhaAtividade, 'situacao'>): boolean {
@@ -41,7 +41,7 @@ export function detalheDaSituacao(atividade: Pick<MinhaAtividade, 'situacao' | '
   if (atividade.situacao === 'para_fazer') return 'Você ainda não começou.'
   if (atividade.situacao === 'em_andamento') return `Você respondeu ${String(atividade.respondidas)} de ${String(atividade.questoes)}. Dá para continuar de onde parou.`
   if (atividade.situacao === 'enviada') return TEXTO_DA_ESPERA_PELA_CORRECAO
-  if (atividade.situacao === 'encerrada') return `A professora encerrou esta atividade. O que você marcou ficou guardado. ${TEXTO_DA_ESPERA_PELA_CORRECAO}`
+  if (atividade.situacao === 'encerrada') return `Quem dá a aula encerrou esta atividade. O que você marcou ficou guardado. ${TEXTO_DA_ESPERA_PELA_CORRECAO}`
   return 'A correção foi aprovada. Abra para ver os seus acertos por habilidade.'
 }
 

@@ -26,7 +26,8 @@ import { CICLO_DO_TUTOR, enviarPerguntaAoTutor } from './memoria-do-aluno'
 import {
   avisoDaPausa,
   LINHA_DO_CVV,
-  mensagensNaTela,
+  itensDoTutor,
+  marcaDoFim,
   partesDoEncaminhamento,
   pausaDoEstado,
   pausaNaTela,
@@ -153,7 +154,7 @@ function EscolhaDaAtividade() {
         <EstadoErro erro={atividades.error} tentando={atividades.isFetching} aoTentarDeNovo={() => void atividades.refetch({ cancelRefetch: false })} />
       )}
       {atividades.data !== undefined && itens.length === 0 && (
-        <EstadoVazio titulo="Nenhuma atividade para pedir ajuda agora" descricao="O Tutor ajuda nas atividades que a sua professora passa para a turma. Quando houver uma, ela aparece aqui." />
+        <EstadoVazio titulo="Nenhuma atividade para pedir ajuda agora" descricao="O Tutor ajuda nas atividades que quem dá a aula passa para a turma. Quando houver uma, ela aparece aqui." />
       )}
       {itens.length > 0 && (
         <section aria-labelledby="titulo-escolha" className="flex min-w-0 flex-col gap-3">
@@ -208,7 +209,6 @@ function ConversaComOTutor({ atividadeAplicadaId }: { atividadeAplicadaId: strin
   const agora = conversa.data?.pages[0]
   const lidas = conversa.data === undefined ? [] : mensagensDoTutorEmOrdem(conversa.data.pages)
   const pendente = pendenteNoTutor(lidas, ciclo, atividadeAplicadaId)
-  const mensagens = mensagensNaTela(lidas, pendente)
   const pausa = pausaNaTela(agora, pendente)
   const atividade = atividades.data?.pages.flatMap((pagina) => pagina.itens).find((item) => item.id === atividadeAplicadaId)
   const uso = agora === undefined ? undefined : usoDoDia(agora.uso)
@@ -234,11 +234,13 @@ function ConversaComOTutor({ atividadeAplicadaId }: { atividadeAplicadaId: strin
   }, [pausaRecusada, pausaLida, conversaLida, lidaEm, terminada, limpar])
 
   // O que acabou de entrar fica à vista: a pergunta, a resposta, o aviso. Sem animação: a tela só vai até o fim.
-  const quantas = mensagens.length
+  // Pela marca do fim, e não pelo número de mensagens: "Ver mensagens anteriores" não joga o aluno para o fim.
+  const itens = itensDoTutor(lidas, pendente)
   const etapa = pendente === undefined ? undefined : ciclo?.etapa
+  const marca = marcaDoFim(itens, etapa, pausa)
   useEffect(() => {
     fim.current?.scrollIntoView({ block: 'end' })
-  }, [quantas, etapa, pausa])
+  }, [marca])
 
   function aoEnviar(pergunta: string): void {
     // `iniciar` grava a pergunta como enviada antes de devolver: o segundo Enter encontra a pergunta no ar.
@@ -247,7 +249,7 @@ function ConversaComOTutor({ atividadeAplicadaId }: { atividadeAplicadaId: strin
   }
 
   const naoEncontrada = conversa.error instanceof ErroDaApi && conversa.error.codigo === CodigoDeErro.NAO_ENCONTRADO
-  const semNada = conversa.data !== undefined && mensagens.length === 0 && pendente === undefined && pausa === undefined
+  const semNada = conversa.data !== undefined && itens.length === 0 && pendente === undefined && pausa === undefined
 
   return (
     <>
@@ -282,9 +284,11 @@ function ConversaComOTutor({ atividadeAplicadaId }: { atividadeAplicadaId: strin
         </Botao>
       )}
 
-      {conversa.data !== undefined && (mensagens.length > 0 || pendente !== undefined) && (
+      {conversa.data !== undefined && (itens.length > 0 || pendente !== undefined) && (
         <ListaDeMensagens rotulo="Conversa com o Tutor" ocupada={pendente?.pensando === true}>
-          {mensagens.map((mensagem) => {
+          {itens.map((item) => {
+            if (item.tipo === 'pergunta') return <MensagemPessoa key={`pergunta:${item.texto}`}>{item.texto}</MensagemPessoa>
+            const { mensagem } = item
             if (mensagem.autor === 'aluno') return <MensagemPessoa key={mensagem.id}>{mensagem.texto}</MensagemPessoa>
             if (mensagem.tipo === 'assunto_delicado') return <Encaminhamento key={mensagem.id} texto={mensagem.texto} />
             return (
@@ -293,7 +297,6 @@ function ConversaComOTutor({ atividadeAplicadaId }: { atividadeAplicadaId: strin
               </MensagemIA>
             )
           })}
-          {pendente?.pergunta !== undefined && <MensagemPessoa>{pendente.pergunta}</MensagemPessoa>}
           {pendente?.pensando === true && <Pensando agente="tutor" demorando={demorando} />}
           {pendente?.falha !== undefined && <FalhaNaConversa falha={pendente.falha} aoTentarDeNovo={repetir} />}
         </ListaDeMensagens>
@@ -309,7 +312,13 @@ function ConversaComOTutor({ atividadeAplicadaId }: { atividadeAplicadaId: strin
           <div className="flex w-full min-w-0 flex-col gap-3">
             {uso !== undefined && (
               <div data-uso-do-dia="">
-                <BarraRotulada rotulo={uso.rotulo} valor={uso.valor} maximo={uso.maximo} texto={uso.resto} />
+                {/* Com a tela baixa (o teclado aberto no celular), a barra vira uma linha de texto: a caixa continua à vista. */}
+                <div className="[@media(max-height:32rem)]:hidden">
+                  <BarraRotulada rotulo={uso.rotulo} valor={uso.valor} maximo={uso.maximo} texto={uso.resto} />
+                </div>
+                <p className="hidden text-sm text-sutil [@media(max-height:32rem)]:block">
+                  {uso.rotulo} · {uso.resto}
+                </p>
               </div>
             )}
             <CaixaPedido variante="so-texto" rotulo="Pergunta para o Tutor" exemplo="Escreva a sua dúvida…" valor={texto} aoMudar={definirTexto} aoEnviar={aoEnviar} estado={emCurso(ciclo) ? 'gerando' : 'pronta'} />

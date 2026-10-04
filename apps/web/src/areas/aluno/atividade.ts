@@ -139,7 +139,7 @@ export function avisoDeEscolhasPerdidas(fila: EstadoDaFila): string | undefined 
   if (fila.falha !== 'encerrada' || fila.pendentes.length === 0) return undefined
   const questoes = fila.pendentes.map((pendente) => pendente.questao).sort((a, b) => a - b)
   const quais = questoes.length === 1 ? `a resposta da questão ${String(questoes[0])}` : `as respostas das questões ${questoes.slice(0, -1).join(', ')} e ${String(questoes.at(-1))}`
-  return `A atividade foi encerrada antes de ${quais} ${questoes.length === 1 ? 'ser salva' : 'serem salvas'}. Se isso fizer diferença, avise a professora.`
+  return `A atividade foi encerrada antes de ${quais} ${questoes.length === 1 ? 'ser salva' : 'serem salvas'}. Se isso fizer diferença, avise quem dá a aula.`
 }
 
 /** "2 de 3 questões": o acerto numa habilidade, em contagem. Sem percentual, que se lê como nota (D46). */

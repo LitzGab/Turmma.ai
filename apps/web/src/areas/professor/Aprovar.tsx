@@ -121,6 +121,7 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
   const situacao = useRef<HTMLDivElement>(null)
   const idDosDestaques = useId()
   const idDasOutras = useId()
+  const idDoContador = useId()
   const dados = correcao.data
 
   const abrir = useMutation({
@@ -338,7 +339,7 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
         <BarraPresa
           rotulo="Aprovação do lote"
           informacao={
-            <span data-contador-dos-destaques="">
+            <span id={idDoContador} data-contador-dos-destaques="">
               <span className="font-medium text-tinta">{contador.texto}.</span> {contador.porQue ?? 'Tudo aberto: a aprovação está liberada.'}
             </span>
           }
@@ -346,7 +347,8 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
           <Botao variante="perigo" onClick={() => abrirDecisao('rejeitar')}>
             Rejeitar…
           </Botao>
-          <Botao variante="oficial" disabled={!dados.podeAprovar} onClick={() => abrirDecisao('aprovar')}>
+          {/* O contador diz por que o botão está desligado: o leitor de tela o lê junto do botão. */}
+          <Botao variante="oficial" disabled={!dados.podeAprovar} aria-describedby={idDoContador} onClick={() => abrirDecisao('aprovar')}>
             {rotuloDeAprovar(resumo.corrigidos)}
           </Botao>
         </BarraPresa>
