@@ -130,6 +130,28 @@ describe('material da escola', () => {
       for (const resposta of [semLicenciante, licencianteAMais, comEscola]) expect(erroDe(resposta)).toEqual({ status: 400, codigo: CodigoDeErro.ENTRADA_INVALIDA })
       expect(await materiaisDa(bancada, escola.coordenacao.escolaId)).toHaveLength(1)
     })
+
+    it('o licenciante é da coordenação: o professor da disciplina lê o material sem ele, na lista e por id', async () => {
+      const escola = await montarEscolaComTurma(api, bancada)
+      const deTerceiro = await enviarMaterial(api, escola.coordenacao, { disciplinaId: escola.quimica, titularidade: 'terceiro_com_licenca', licenca: 'licenca_comercial_autorizada', licenciante: 'Editora sintética' })
+      expect(deTerceiro.status).toBe(201)
+      await esperarExtracao(api)
+      const id = deTerceiro.corpo['id'] as string
+      const professor = await professorCom(escola, escola.quimica, true)
+
+      const lidoPelaCoordenacao = await get(escola.coordenacao, `/v1/materiais/${id}`)
+      expect(lidoPelaCoordenacao.corpo).toMatchObject({ id, licenciante: 'Editora sintética' })
+      const listadoPelaCoordenacao = await get(escola.coordenacao, '/v1/materiais')
+      expect(listadoPelaCoordenacao.corpo['itens']).toEqual([expect.objectContaining({ id, licenciante: 'Editora sintética' })])
+
+      const lidoPeloProfessor = await get(professor, `/v1/materiais/${id}`)
+      expect(lidoPeloProfessor.status).toBe(200)
+      // O resto do material ele lê: é a titularidade e a licença que dizem que a escola pode usar.
+      expect(lidoPeloProfessor.corpo).toMatchObject({ id, titularidade: 'terceiro_com_licenca', licenca: 'licenca_comercial_autorizada', licenciante: null })
+      const listadoPeloProfessor = await get(professor, '/v1/materiais')
+      expect(listadoPeloProfessor.corpo['itens']).toEqual([expect.objectContaining({ id, licenciante: null })])
+      expect(JSON.stringify([lidoPeloProfessor.corpo, listadoPeloProfessor.corpo])).not.toContain('Editora sintética')
+    })
   })
 
   describe('recusa por licença, antes de abrir o arquivo (D5, D75)', () => {
@@ -348,10 +370,14 @@ describe('material da escola', () => {
       expect(await noContexto(() => trechos.buscar({ texto: 'de a o', disciplinaId: escola.quimica }))).toEqual([])
       expect(await noContexto(() => trechos.buscar({ texto: '   ', disciplinaId: escola.quimica }))).toEqual([])
 
-      const doMaterial = await noContexto(() => trechos.doMaterial(materialId))
+      const doMaterial = await noContexto(() => trechos.doMaterial(materialId, escola.quimica))
       expect(doMaterial.map((trecho) => trecho.pagina)).toEqual([1, 2, 3, 4, 5, 6])
-      expect((await noContexto(() => trechos.doMaterial(materialId, 2))).map((trecho) => trecho.pagina)).toEqual([1, 2])
-      expect(await noContexto(() => trechos.doMaterial(randomUUID()))).toEqual([])
+      expect((await noContexto(() => trechos.doMaterial(materialId, escola.quimica, 2))).map((trecho) => trecho.pagina)).toEqual([1, 2])
+      expect(await noContexto(() => trechos.doMaterial(randomUUID(), escola.quimica))).toEqual([])
+      // A disciplina é filtro, e não enfeite: o material de Química pedido com a disciplina de Física, que existe na
+      // mesma escola, não devolve página nenhuma, nem com uma disciplina que não existe.
+      expect(await noContexto(() => trechos.doMaterial(materialId, escola.fisica))).toEqual([])
+      expect(await noContexto(() => trechos.doMaterial(materialId, randomUUID()))).toEqual([])
       // Sem escola no contexto, a porta falha fechada em vez de buscar em todas as escolas.
       await expect(trechos.buscar({ texto: pergunta, disciplinaId: escola.quimica })).rejects.toThrow()
     })
@@ -400,7 +426,7 @@ describe('material da escola', () => {
       expect(esquemaRespostaListaDeMateriais.parse((await get(escola.coordenacao, '/v1/materiais')).corpo).itens).toEqual([])
       expect(itensDe(await buscar(escola.coordenacao, 'reagente limitante'))).toEqual([])
       const porta = api.app.get(BuscaDeTrechos)
-      expect(await executarNoContexto({ requisicaoId: randomUUID(), escolaId: escola.coordenacao.escolaId }, () => porta.doMaterial(id))).toEqual([])
+      expect(await executarNoContexto({ requisicaoId: randomUUID(), escolaId: escola.coordenacao.escolaId }, () => porta.doMaterial(id, escola.quimica))).toEqual([])
 
       // Excluir de novo é como excluir o que não existe, e não grava segunda auditoria.
       expect(erroDe(await del(escola.coordenacao, `/v1/materiais/${id}`))).toEqual({ status: 404, codigo: CodigoDeErro.NAO_ENCONTRADO })

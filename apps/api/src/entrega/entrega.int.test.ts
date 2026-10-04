@@ -9,8 +9,10 @@ import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
 import { chamar, subirApi, type ApiDeTeste, type RespostaHttp } from '../../test/api-com-sessao.js'
 import {
   comoPessoa,
+  copiarArtefatoParaOAnoAnterior,
   dispararExecucao,
   execucaoTerminada,
+  montarAnoAnterior,
   montarEscolaComAssistente,
   NOME_DA_PROFESSORA_DE_TESTE,
   vincularProfessor,
@@ -147,6 +149,24 @@ describe('entregas', () => {
       expect((await noBanco(entregaId)).estado).toBe('pendente')
     })
 
+    it('a entrega do ano letivo anterior não é listada nem decidida no ano em curso, nem com vínculo confirmado naquele ano: igual ao inexistente', async () => {
+      const anterior = await montarAnoAnterior(bancada, b)
+      const de2025 = await copiarArtefatoParaOAnoAnterior(bancada, b, anterior, atividadeDeB)
+      for (const corpo of [{ decisao: 'aprovar' }, { decisao: 'rejeitar', justificativa: 'Entrega de outro ano letivo.' }]) {
+        expect(semId(await decidir(b.professora, de2025.entregaId, corpo))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+      }
+      expect(await noBanco(de2025.entregaId)).toEqual({ estado: 'pendente', decidida_por: null, decidida_em: null, justificativa: null })
+      expect(await auditoriasDa(de2025.entregaId)).toEqual([])
+      for (const consulta of ['', '?estado=pendente', `?turmaId=${anterior.turmaId}`]) {
+        expect((await listar(b.professora, consulta)).itens.map((item) => item.id)).not.toContain(de2025.entregaId)
+      }
+      expect(await comoPessoa(b, b.professora, 'professor', () => new EntregaRepository(bancada.banco).porId(de2025.entregaId))).toBeUndefined()
+      expect(await comoPessoa(b, b.professora, 'professor', () => new EntregaRepository(bancada.banco).decidir(de2025.entregaId, 'aprovada', null))).toBe(false)
+      // No contexto do próprio ano de 2025, a mesma consulta acha: o que separou foi o ano letivo, e não o vínculo.
+      const em2025 = { requisicaoId: randomUUID(), escolaId: b.escolaId, usuarioId: b.professora.usuarioId, papel: 'professor' as const, sessaoId: b.professora.sessaoId, anoLetivoId: anterior.anoLetivoId }
+      expect((await executarNoContexto(em2025, () => new EntregaRepository(bancada.banco).porId(de2025.entregaId)))?.id).toBe(de2025.entregaId)
+    })
+
     it('a turma e a disciplina que autorizam são as da entrega: a colega passa a decidir quando ganha vínculo confirmado em Química na turma, e deixa de decidir quando ele acaba', async () => {
       const primeira = await entregaPendente(a, atividadeDeA)
       const segunda = await entregaPendente(a, atividadeDeA)
@@ -198,7 +218,7 @@ describe('entregas', () => {
     })
 
     it('rejeitar exige justificativa, que fica só na entrega: não vai para a auditoria nem para o log', async () => {
-      const { entregaId } = await entregaPendente(a, atividadeDeA)
+      const { entregaId, execucaoId } = await entregaPendente(a, atividadeDeA)
       for (const corpo of [{ decisao: 'rejeitar' }, { decisao: 'rejeitar', justificativa: 'curta' }, { decisao: 'rejeitar', justificativa: '        ' }, { decisao: 'aprovar', justificativa: 'Aprovo com ressalva.' }, { decisao: 'talvez' }, { decisao: 'aprovar', decididaPor: a.colega.usuarioId }, {}]) {
         expect(semId(await decidir(a.professora, entregaId, corpo)), JSON.stringify(corpo)).toEqual({ status: 400, codigo: 'ENTRADA_INVALIDA' })
       }
@@ -212,6 +232,8 @@ describe('entregas', () => {
       expect(auditorias).toHaveLength(1)
       expect(auditorias[0]?.['depois']).toMatchObject({ estado: 'rejeitada' })
       expect(JSON.stringify(auditorias)).not.toMatch(/Otávio|confuso/u)
+      // O log capturado não está vazio: tem a linha da execução que criou esta entrega. E não tem a justificativa.
+      expect(linhasDeLog.some((linha) => linha.includes('ia.execucao.concluida') && linha.includes(execucaoId))).toBe(true)
       expect(linhasDeLog.join('\n')).not.toMatch(/Otávio|enunciado da questão 2/u)
       // Rejeitada, a versão não vai à turma.
       const { rows } = await sql('select artefato_id from entrega where id = $1', [entregaId])

@@ -69,7 +69,14 @@ function alcanceDoMaterial(acao: 'listar' | 'ler' | 'buscar'): AlcanceDoMaterial
   throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
 }
 
-const paraResposta = (lido: MaterialLido): RespostaMaterial => esquemaRespostaMaterial.parse({ ...lido, enviadoEm: lido.enviadoEm.toISOString() })
+/**
+ * O que sai para quem pede. O `licenciante` é de quem a escola licenciou o material, e pode ser nome de pessoa: é dado
+ * da coordenação, que o declarou. O professor usa o título e a página, então recebe `null` no lugar (regra 20, item 4:
+ * DTO mínimo). Quem decide é o alcance da célula da `MATRIZ`, não o nome do papel.
+ */
+function paraResposta(lido: MaterialLido, alcance: AlcanceDoMaterial): RespostaMaterial {
+  return esquemaRespostaMaterial.parse({ ...lido, licenciante: alcance === 'unidade' ? lido.licenciante : null, enviadoEm: lido.enviadoEm.toISOString() })
+}
 
 export interface DependenciasDoMaterial {
   readonly banco: Banco
@@ -140,7 +147,8 @@ export class MaterialService {
     const tamanho = bytes.byteLength
     logger.info({ evento: 'material.enviado', materialId: gravado.id, tamanho })
     this.#agendarExtracao(gravado.id, bytes)
-    return paraResposta(gravado)
+    // Quem envia é sempre a coordenação (a célula `material.enviar` é só dela): recebe o que declarou.
+    return paraResposta(gravado, 'unidade')
   }
 
   /**
@@ -227,16 +235,18 @@ export class MaterialService {
   /** `GET /v1/materiais`: a coordenação, os da escola; o professor, os das disciplinas dele, com ou sem o filtro. */
   async listar(consulta: ConsultaMateriais): Promise<RespostaListaDeMateriais> {
     const filtro = { ...consulta, ...(consulta.disciplinaId === undefined ? {} : { disciplinaId: consulta.disciplinaId.toLowerCase() }) }
-    const linhas = await new MaterialRepository(this.dependencias.banco).listar(filtro, alcanceDoMaterial('listar'))
+    const alcance = alcanceDoMaterial('listar')
+    const linhas = await new MaterialRepository(this.dependencias.banco).listar(filtro, alcance)
     const { itens, proxima } = paginar(linhas, consulta.limite)
-    return esquemaRespostaListaDeMateriais.parse({ itens: itens.map(paraResposta), ...(proxima === undefined ? {} : { proxima }) })
+    return esquemaRespostaListaDeMateriais.parse({ itens: itens.map((item) => paraResposta(item, alcance)), ...(proxima === undefined ? {} : { proxima }) })
   }
 
   /** `GET /v1/materiais/:id`. De outra escola, de disciplina sem vínculo, excluído ou inexistente: `NAO_ENCONTRADO`. */
   async ler(id: string): Promise<RespostaMaterial> {
-    const lido = await new MaterialRepository(this.dependencias.banco).porId(id, alcanceDoMaterial('ler'))
+    const alcance = alcanceDoMaterial('ler')
+    const lido = await new MaterialRepository(this.dependencias.banco).porId(id, alcance)
     if (lido === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-    return paraResposta(lido)
+    return paraResposta(lido, alcance)
   }
 
   /**

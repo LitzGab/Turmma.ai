@@ -39,6 +39,13 @@ export type EstadoDoTutor = (typeof ESTADOS_DO_TUTOR)[number]
  * vê no uso da turma: a tela as manda quando sabe. A turma e o aluno vêm da sessão. Responde 202 com a execução. Com avaliação aberta
  * responde `TUTOR_PAUSADO_EM_AVALIACAO`; no freio, `LIMITE_DIARIO_DO_TUTOR` ou `PACOTE_DO_TUTOR_ESGOTADO`; com a função
  * suspensa, `FUNCAO_SUSPENSA`. Nenhum deles grava mensagem nem conta troca.
+ *
+ * **A exceção é o assunto pessoal delicado (D36), que passa na frente de tudo.** O texto que casa com os gatilhos não é
+ * barrado pela avaliação aberta, pelo freio do dia, pelo pacote do mês nem pela suspensão: o aluno recebe `202` e a
+ * mensagem fixa (`tipo: 'assunto_delicado'`, com o 188 em risco à vida), a pergunta e a mensagem fixa são gravadas na
+ * conversa, e os professores da turma recebem o sinal `atencao_humana`, sem referência e sem conteúdo. Esse turno não
+ * chama modelo e a execução já volta `concluida`. A trava da avaliação existe para o Tutor não ajudar na prova, e a
+ * mensagem fixa não ajuda em prova nenhuma. Por isso a tela não trava a caixa de texto nos estados `avaliacao` e `limite`.
  */
 export const esquemaPedidoMensagemAoTutor = z
   .strictObject({

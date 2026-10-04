@@ -1,4 +1,4 @@
-import { type ExecutorNoProcesso } from '@educa/nucleo'
+import { executarNoContexto, RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, type ExecutorDeAgente, type ExecutorNoProcesso, type LLMProvider, type SuspensaoDeFuncao } from '@educa/nucleo'
 import { esquemaRespostaConversaDoAssistente, esquemaRespostaTime, FUNCOES, type ChaveDeFuncao } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
@@ -12,16 +12,19 @@ import {
   contarNaEscola,
   dispararExecucao,
   execucaoTerminada,
+  montarAnoAnterior,
   montarEscolaComAssistente,
   vincularProfessor,
   zerarLimiteDePedidosDeIa,
   type EscolaComAssistente,
 } from '../../test/escola-com-assistente.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste.js'
-import { EXECUTOR_DE_AGENTE } from '../ia/ia.module.js'
+import { AgendadorDeExecucoes } from '../ia/agendador-de-execucoes.js'
+import { EXECUTOR_DE_AGENTE, SUSPENSAO_DE_FUNCAO } from '../ia/ia.module.js'
+import { BuscaDeTrechos } from '../material/busca-de-trechos.js'
+import { AssistenteService } from './assistente.service.js'
 import { ConversaRepository } from './conversa.repository.js'
-import { TETO_DE_PEDIDOS_DE_IA_POR_USUARIO } from './limite-de-pedidos-de-ia.js'
-import { RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO } from './recusa-de-correcao.js'
+import { LimiteDePedidosDeIa, TETO_DE_PEDIDOS_DE_IA_POR_USUARIO } from './limite-de-pedidos-de-ia.js'
 import { TurmaDoProfessorRepository } from './turma-do-professor.repository.js'
 
 /**
@@ -244,6 +247,68 @@ describe('Assistente de ensino', () => {
       expect(await turmas()).toBeUndefined()
     })
 
+    it('a conversa e a execução do ano letivo anterior não aparecem no ano em curso: a thread é do ano, e a resposta é a do inexistente', async () => {
+      const anterior = await montarAnoAnterior(bancada, b)
+      const chaveDe2025 = randomUUID()
+      const dono = [b.escolaId, anterior.anoLetivoId, b.professora.usuarioId]
+      const { rows: threads } = await sql(`insert into thread_agente (escola_id, ano_letivo_id, usuario_id, agente) values ($1, $2, $3, 'assistente_de_ensino') returning id`, dono)
+      const { rows: execucoes } = await sql(
+        `insert into execucao_agente (escola_id, ano_letivo_id, funcao, tarefa, solicitada_por, chave_envio, entrada) values ($1, $2, 'conversa_e_ferramentas', 'propor_ferramenta', $3, $4, '{"tarefa":"propor_ferramenta"}') returning id`,
+        [...dono, chaveDe2025],
+      )
+      const execucaoDe2025 = (execucoes[0] as { id: string }).id
+      const { rows: mensagens } = await sql(
+        `insert into mensagem_agente (escola_id, ano_letivo_id, thread_id, execucao_id, autor, conteudo, turma_id, disciplina_id) values ($1, $2, $3, $4, 'usuario', '{"tipo":"texto","texto":"pergunta feita em 2025"}', $5, $6) returning id`,
+        [b.escolaId, anterior.anoLetivoId, (threads[0] as { id: string }).id, execucaoDe2025, anterior.turmaId, b.quimica],
+      )
+      const mensagemDe2025 = (mensagens[0] as { id: string }).id
+
+      // A conversa de 2026 não traz a de 2025, pela rota nem pelo repository.
+      expect(JSON.stringify(await conversaDe(b.professora, '?limite=100'))).not.toContain('pergunta feita em 2025')
+      const emCurso = await comoPessoa(b, b.professora, 'professor', () => new ConversaRepository(bancada.banco).anteriores(undefined, 100))
+      expect(emCurso.map((item) => item.id)).not.toContain(mensagemDe2025)
+      expect(await comoPessoa(b, b.professora, 'professor', () => new ConversaRepository(bancada.banco).perguntaDaChave(chaveDe2025))).toBeUndefined()
+      // No contexto de 2025, as mesmas consultas acham: o que separou foi o ano letivo.
+      const em2025 = { requisicaoId: randomUUID(), escolaId: b.escolaId, usuarioId: b.professora.usuarioId, papel: 'professor' as const, sessaoId: b.professora.sessaoId, anoLetivoId: anterior.anoLetivoId }
+      expect((await executarNoContexto(em2025, () => new ConversaRepository(bancada.banco).anteriores(undefined, 100))).map((item) => item.id)).toEqual([mensagemDe2025])
+      expect((await executarNoContexto(em2025, () => new ConversaRepository(bancada.banco).perguntaDaChave(chaveDe2025)))?.id).toBe(mensagemDe2025)
+
+      // A execução de 2025 não é lida em 2026, e a chave dela não devolve a execução antiga nem grava uma nova.
+      expect(await get(b.professora, `/v1/execucoes/${execucaoDe2025}`)).toMatchObject({ status: 404, corpo: { erro: { codigo: 'NAO_ENCONTRADO' } } })
+      const reenvio = await post(b.professora, '/v1/assistente/mensagens', { ...mensagem(b, 'o que é mol?'), chaveEnvio: chaveDe2025 })
+      expect(reenvio).toMatchObject({ status: 404, corpo: { erro: { codigo: 'NAO_ENCONTRADO' } } })
+      expect(JSON.stringify(reenvio.corpo)).not.toContain(execucaoDe2025)
+      expect(await contarNaEscola(bancada, 'execucao_agente', b.escolaId, `chave_envio = '${chaveDe2025}'`)).toBe(1)
+      // Mandar mensagem sobre a turma de 2025 também responde como o inexistente.
+      expect((await post(b.professora, '/v1/assistente/mensagens', mensagem(b, 'bom dia', { turmaId: anterior.turmaId }))).status).toBe(404)
+    })
+
+    it('quem perdeu o vínculo depois do 202 não recebe resposta sobre a turma: a execução confere de novo ao rodar, e nada vai ao modelo', async () => {
+      let liberar = (): void => undefined
+      const antesDeRodar = new Promise<void>((resolver) => (liberar = resolver))
+      let chamadasAoModelo = 0
+      const ia = {
+        gerar: async () => {
+          chamadasAoModelo += 1
+          return { saida: { tipo: 'texto', texto: 'resposta que não deveria existir', citacoes: [] }, medicao: {} }
+        },
+      } as unknown as LLMProvider
+      // O trabalho da execução espera o teste liberar: é o intervalo entre o `202` e a execução.
+      const comEspera: ExecutorDeAgente = { agendar: (execucao, trabalho) => executor.agendar(execucao, async (sinal) => (await antesDeRodar, trabalho(sinal))) }
+      const servico = new AssistenteService(bancada.banco, new AgendadorDeExecucoes(bancada.banco, ia, comEspera, api.app.get<SuspensaoDeFuncao>(SUSPENSAO_DE_FUNCAO)), api.app.get(LimiteDePedidosDeIa), api.app.get(BuscaDeTrechos))
+
+      await vincularProfessor(bancada, b, b.colega.usuarioId, b.turma, b.quimica)
+      const { execucaoId } = await comoPessoa(b, b.colega, 'professor', () => servico.enviar({ texto: 'o que é o reagente limitante?', turmaId: b.turma, disciplinaId: b.quimica, chaveEnvio: randomUUID() }))
+      await sql(`update vinculo set estado = 'encerrado', motivo_encerramento = 'realocacao', encerrado_em = now() where escola_id = $1 and usuario_id = $2 and turma_id = $3`, [b.escolaId, b.colega.usuarioId, b.turma])
+      liberar()
+      expect(await execucaoTerminada(api, b.colega, execucaoId)).toMatchObject({ estado: 'falhou', erro: 'NAO_ENCONTRADO', resultado: null })
+      expect(chamadasAoModelo).toBe(0)
+      // A pergunta dela fica na conversa dela; resposta do Assistente, nenhuma, e nenhum consumo.
+      const { rows } = await sql('select autor from mensagem_agente where escola_id = $1 and execucao_id = $2', [b.escolaId, execucaoId])
+      expect(rows).toEqual([{ autor: 'usuario' }])
+      expect(await contarNaEscola(bancada, 'consumo_ia', b.escolaId, `execucao_id = '${execucaoId}'`)).toBe(0)
+    })
+
     it('fora de teste, só o repository da conversa e a leitura da execução de quem pediu tocam a thread e as mensagens do Assistente', () => {
       const raiz = fileURLToPath(new URL('../../../../', import.meta.url))
       const pasta = join(raiz, 'apps/api/src')
@@ -332,6 +397,8 @@ describe('Assistente de ensino', () => {
       expect(JSON.stringify((await sql('select * from auditoria where escola_id = $1', [a.escolaId])).rows)).not.toMatch(proibido)
       expect(JSON.stringify((await sql('select * from artefato where escola_id = $1', [a.escolaId])).rows)).not.toMatch(proibido)
       expect(await contarNaEscola(bancada, 'artefato', a.escolaId)).toBe(artefatosAntes)
+      // O log capturado não está vazio: tem a linha desta execução. E não tem o que a professora escreveu.
+      expect(linhasDeLog.some((linha) => linha.includes('ia.execucao.concluida') && linha.includes(execucaoId))).toBe(true)
       expect(linhasDeLog.join('\n')).not.toMatch(proibido)
       expect(linhasDeLog.join('\n')).not.toContain('adapta a atividade')
     })
@@ -349,7 +416,30 @@ describe('Assistente de ensino', () => {
       expect(JSON.stringify(resposta)).not.toMatch(/tecnologia|celular|\d/u)
       expect(Object.keys((resposta[0] as { conteudo: object }).conteudo).sort()).toEqual(['citacoes', 'texto', 'tipo'])
       expect([await contarNaEscola(bancada, 'artefato', a.escolaId), await contarNaEscola(bancada, 'entrega', a.escolaId)]).toEqual(antes)
+      expect(linhasDeLog.some((linha) => linha.includes('ia.execucao.concluida') && linha.includes(execucaoId))).toBe(true)
       expect(linhasDeLog.join('\n')).not.toMatch(/tecnologia aproxima/u)
+    })
+
+    it('as outras formas de pedir julgamento ou nota também são recusadas pela rota, sem modelo; o pedido legítimo sobre o próprio material segue', async () => {
+      const texto = 'A água é formada porque o hidrogênio gosta do oxigênio e os dois se juntam na reação.'
+      for (const pedido of ['que nota você daria?', 'dá uma olhada nesse texto do aluno', 'avalia essa resposta', `${texto} ${texto} o que achou?`, 'que conceito merece esse texto?']) {
+        await zerarLimiteDePedidosDeIa(api)
+        const execucaoId = await dispararExecucao(api, a.professora, '/v1/assistente/mensagens', mensagem(a, pedido))
+        const execucao = await execucaoTerminada(api, a.professora, execucaoId)
+        expect(execucao.resultado?.mensagem, pedido).toMatchObject({ tipo: 'texto', texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, citacoes: [] })
+        const { rows } = await sql('select origem from consumo_ia where escola_id = $1 and execucao_id = $2', [a.escolaId, execucaoId])
+        expect(rows, pedido).toEqual([{ origem: 'regra_fixa' }])
+      }
+      const legitimo = await execucaoTerminada(api, a.professora, await dispararExecucao(api, a.professora, '/v1/assistente/mensagens', mensagem(a, 'melhora o enunciado da questão 3')))
+      expect(legitimo.resultado?.mensagem?.['texto']).not.toBe(RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO)
+    })
+
+    it('o nome e a condição de um aluno no pedido de atividade não viram o tema da proposta, e por isso não viram título de artefato', async () => {
+      const execucaoId = await dispararExecucao(api, a.professora, '/v1/assistente/mensagens', mensagem(a, 'Monta uma atividade para a Mariana Albuquerque, que tem dislexia'))
+      const execucao = await execucaoTerminada(api, a.professora, execucaoId)
+      expect(execucao.resultado?.mensagem).toMatchObject({ tipo: 'proposta_de_ferramenta', proposta: { ferramenta: 'atividade_objetiva', parametros: { tema: 'Química', turmaId: a.turma, disciplinaId: a.quimica } } })
+      const { rows } = await sql(`select conteudo from mensagem_agente where escola_id = $1 and execucao_id = $2 and autor = 'agente'`, [a.escolaId, execucaoId])
+      expect(JSON.stringify(rows)).not.toMatch(/Mariana|Albuquerque|dislexia/u)
     })
   })
 
