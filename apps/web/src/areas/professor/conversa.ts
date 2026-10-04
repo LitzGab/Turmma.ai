@@ -1,4 +1,4 @@
-import type { CodigoDeErro, MensagemDaConversa, MensagemDoAgente } from '@educa/shared'
+import type { CodigoDeErro, MensagemDaConversa, MensagemDoAgente, PropostaDeFerramenta } from '@educa/shared'
 import { emCurso, type CicloDeExecucao } from '../../api/ciclo-de-execucao'
 import type { EscolhaDaProposta, PedidoDaConversa } from './memoria-do-professor'
 
@@ -38,6 +38,18 @@ export function pendenteNaConversa(mensagens: readonly MensagemDaConversa[], cic
     ...(resposta === undefined ? {} : { resposta }),
     ...(ciclo.etapa === 'falhou' ? { erro: ciclo.erro } : {}),
   }
+}
+
+/** O que a professora "diz" ao escolher só conversar: é a fala dela na thread, como a tela a mostra. */
+export const FALA_DE_SO_CONVERSAR = 'Só conversar'
+
+/**
+ * A resposta "só conversar" à pergunta da D18, como pedido ao Assistente: a mensagem seguinte dela, na turma e na
+ * disciplina da proposta, **com a marca** que faz o Assistente responder em texto ao último pedido, sem propor a
+ * ferramenta de novo. A marca é de lista fechada (`RESPOSTAS_A_PROPOSTA`): nada do que ela escreveu vai junto.
+ */
+export function pedidoDeSoConversar(proposta: PropostaDeFerramenta): PedidoDaConversa {
+  return { texto: FALA_DE_SO_CONVERSAR, turmaId: proposta.parametros.turmaId, disciplinaId: proposta.parametros.disciplinaId, resposta: 'so_conversar' }
 }
 
 /** A conversa como a tela a desenha: a lida, mais a resposta que a execução já trouxe. */

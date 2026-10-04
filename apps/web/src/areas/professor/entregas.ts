@@ -43,6 +43,16 @@ export function falaDaEntrega(entrega: Pick<Entrega, 'tipo' | 'titulo'>, nomeDaT
   return `Corrigi "${entrega.titulo}"${daTurma(nomeDaTurma)}. O diagnóstico só chega aos alunos depois que você revisar os destaques e aprovar.`
 }
 
+/**
+ * O que a entrega pendente diz quando a escola suspendeu a função que a fez (D60): que a função está suspensa, e que a
+ * decisão continua sendo da professora — suspender não decide nada por ela. Sem data: o contrato não diz desde quando.
+ * A entrega já decidida não diz nada: ela não espera mais ninguém.
+ */
+export function avisoDaFuncaoSuspensa(entrega: Pick<Entrega, 'estado' | 'funcao'>, suspensa: boolean): string | undefined {
+  if (!suspensa || entrega.estado !== 'pendente') return undefined
+  return `A coordenação suspendeu a função "${FUNCOES[entrega.funcao].nome}" nesta escola: o Assistente não prepara outra enquanto isso. Esta entrega continua esperando a sua decisão.`
+}
+
 /** Um cartão de "Esperando você", na Home: a função que fez, o que foi feito e de que turma. */
 export interface ItemEsperando {
   readonly id: string

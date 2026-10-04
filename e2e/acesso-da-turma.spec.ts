@@ -1,7 +1,7 @@
 import type { Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaAcessoGerado } from '../packages/shared/src/sala/acesso.ts'
-import { abrirNavegacao, entrarPorEmail, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarPorEmail, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   acessosVigentesDaTurma,
@@ -186,7 +186,7 @@ async function criarProfessoraComTurma(disciplinas: readonly string[] = ['Matem�
 async function abrirATurma(page: Page, { professora, turma }: Cenario, hasTouch: boolean): Promise<void> {
   await page.goto('/entrar')
   await entrarPorEmail(page, professora, hasTouch)
-  await expect(page.getByRole('heading', { name: `Olá, ${professora.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  await esperarNovaConversa(page, professora.nome)
   await irPelaNavegacao(page, 'Turmas', hasTouch)
   await acionar(principal(page).getByRole('link', { name: `Abrir a turma ${turma.turmaNome}` }), hasTouch)
   await expect(page).toHaveURL(new RegExp(`/professor/turmas/${turma.turmaId}$`))
@@ -274,7 +274,7 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     })
     await page.goto('/entrar')
     await entrarPorEmail(page, professora, hasTouch)
-    await expect(page.getByRole('heading', { name: `Olá, ${professora.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarNovaConversa(page, professora.nome)
     await irPelaNavegacao(page, 'Turmas', hasTouch)
 
     // Só o cartão do vínculo confirmado leva à turma: os que esperam a decisão e o encerrado não oferecem o que a API
@@ -605,7 +605,7 @@ test.describe('W12 (Acesso): a 360 px e só com teclado', () => {
     await confirmarVinculosNoBanco(professora.escolaId, turma.vinculoIds)
     await page.goto('/entrar')
     await entrarPorEmail(page, professora, hasTouch)
-    await expect(page.getByRole('heading', { name: `Olá, ${professora.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarNovaConversa(page, professora.nome)
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     // A lista de Turmas, com o cartão do nome comprido e o link da turma, também cabe em 360 px.
     const abrir = principal(page).getByRole('link', { name: `Abrir a turma ${turma.turmaNome}` })
@@ -1023,7 +1023,7 @@ test.describe('recomeço da tela do acesso', () => {
       return rota.fallback()
     })
     await entrarPorEmail(page, outro, hasTouch)
-    await expect(page.getByRole('heading', { name: `Olá, ${outro.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarNovaConversa(page, outro.nome)
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(principal(page).getByRole('link', { name: `Abrir a turma ${turma.turmaNome}` })).toHaveCount(0)
     await acionar(principal(page).getByRole('link', { name: `Abrir a turma ${turmaDoOutro.turmaNome}` }), hasTouch)

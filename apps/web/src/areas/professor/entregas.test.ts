@@ -2,7 +2,7 @@ import { esquemaPedidoDecidirEntrega, type Entrega } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { textoDaAprovacao, motivoDaRejeicao } from '../../componentes/ia/aprovacao'
 import { problemaDoTexto } from '../../componentes/texto-longo'
-import { aprovacaoDaEntrega, decideAqui, entregasDoFiltro, esperandoVoce, falaDaEntrega, LIMITES_DA_JUSTIFICATIVA, resumoDaAprovacao, textoDaAdaptacao } from './entregas'
+import { aprovacaoDaEntrega, avisoDaFuncaoSuspensa, decideAqui, entregasDoFiltro, esperandoVoce, falaDaEntrega, LIMITES_DA_JUSTIFICATIVA, resumoDaAprovacao, textoDaAdaptacao } from './entregas'
 
 const TURMA = '0190f5a0-0000-7000-8000-00000000002b'
 const AGORA = new Date('2026-10-05T12:00:00.000Z')
@@ -102,6 +102,13 @@ describe('a conversa do Assistente no Seu time (11.4)', () => {
     expect(decideAqui(entrega('02', { estado: 'aprovada' }))).toBe(false)
     expect(decideAqui(entrega('02', { estado: 'rejeitada' }))).toBe(false)
     expect(decideAqui(entrega('03', { tipo: 'lote_de_correcao' }))).toBe(false)
+  })
+
+  it('D60: a entrega pendente de função suspensa diz que a função está suspensa e que a decisão continua dela; a decidida e a de função ativa não dizem nada', () => {
+    expect(avisoDaFuncaoSuspensa(entrega('01'), true)).toBe('A coordenação suspendeu a função "Adaptação" nesta escola: o Assistente não prepara outra enquanto isso. Esta entrega continua esperando a sua decisão.')
+    expect(avisoDaFuncaoSuspensa(entrega('01'), false)).toBeUndefined()
+    expect(avisoDaFuncaoSuspensa(entrega('02', { estado: 'aprovada' }), true)).toBeUndefined()
+    expect(avisoDaFuncaoSuspensa(entrega('02', { estado: 'rejeitada' }), true)).toBeUndefined()
   })
 
   it('o diálogo de aprovar diz o que é, de qual turma, e que foi a IA que fez', () => {

@@ -159,6 +159,13 @@ describe('como a falha aparece: nunca erro cru (regra 80, item 4)', () => {
     expect(aparenciaDaFalha(CodigoDeErro.FUNCAO_SUSPENSA)).toBe('suspensa')
   })
 
+  it('o limite de pedidos por minuto é dito com calma, e não como falha da IA nem como erro', () => {
+    expect(aparenciaDaFalha(CodigoDeErro.LIMITE_EXCEDIDO)).toBe('limite')
+    // O envio recusado pelo limite não chegou a virar execução: repetir usa a mesma chave.
+    const recusado = recusarEnvio(comecarEnvio<Pedido>(undefined, PEDIDO, sorteio('chave-1'), 1_000), 'chave-1', new ErroDaApi(CodigoDeErro.LIMITE_EXCEDIDO))
+    expect(tentarDeNovo(recusado, sorteio(), 70_000)?.chaveEnvio).toBe('chave-1')
+  })
+
   it('o que passa sozinho vira aviso com "Tentar de novo"; o que pede mudança vem com a mensagem do catálogo', () => {
     expect([CodigoDeErro.IA_INDISPONIVEL, CodigoDeErro.IA_TEMPO_ESGOTADO, CodigoDeErro.EXECUCAO_INTERROMPIDA, CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO, CodigoDeErro.ERRO_INTERNO].map(aparenciaDaFalha)).toEqual(['fila', 'fila', 'fila', 'fila', 'fila'])
     expect([CodigoDeErro.MATERIAL_INSUFICIENTE, CodigoDeErro.IA_ORCAMENTO_ESGOTADO, CodigoDeErro.NAO_ENCONTRADO, CodigoDeErro.CONFLITO].map(aparenciaDaFalha)).toEqual(['explicada', 'explicada', 'explicada', 'explicada'])

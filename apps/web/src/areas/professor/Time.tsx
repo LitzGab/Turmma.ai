@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useLocation } from 'wouter'
 import { ErroDaApi, mensagemDoErro } from '../../api/cliente'
 import { aplicarEntregaDecidida, consultaEntregas, decidirEntrega, recarregarEntregas } from '../../api/entregas'
-import { agenteDoTime, consultaTime } from '../../api/time'
+import { agenteDoTime, consultaTime, funcaoSuspensa } from '../../api/time'
 import { consultaMeusVinculos } from '../../api/vinculos'
 import { caminhoDoArtefatoDoProfessor, ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { Abas } from '../../componentes/Abas'
@@ -21,9 +21,11 @@ import { problemaDoTexto } from '../../componentes/texto-longo'
 import { Tela } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
+import { AvisoNaEntregaDeFuncaoSuspensa } from './avisos'
 import {
   aprovacaoDaEntrega,
   AVISO_DA_JUSTIFICATIVA,
+  avisoDaFuncaoSuspensa,
   decideAqui,
   EFEITO_DE_APROVAR,
   EFEITO_DE_REJEITAR,
@@ -274,7 +276,9 @@ export default function Time() {
               <p className="rounded-cartao border border-dashed border-borda-campo bg-superficie p-4 text-apoio">Nada neste filtro. Em "Tudo" está o que o Assistente já fez.</p>
             ) : (
               <Conversa rotulo="O que o Assistente de ensino fez">
-                {visiveis.map((entrega) => (
+                {visiveis.map((entrega) => {
+                  const suspensao = avisoDaFuncaoSuspensa(entrega, funcaoSuspensa(time.data, entrega.funcao))
+                  return (
                   <div key={entrega.id} id={idDoCartao(entrega.id)} tabIndex={-1} data-entrega={entrega.estado} className="flex min-w-0 scroll-mt-48 flex-col gap-1 rounded-cartao">
                     <p className="pl-8 text-[13px] text-sutil">{formatarDataHora(entrega.criadaEm)}</p>
                     <MensagemIA
@@ -304,8 +308,14 @@ export default function Time() {
                     >
                       {falaDaEntrega(entrega, nomes[entrega.turmaId])}
                     </MensagemIA>
+                    {suspensao !== undefined && (
+                      <div className="pl-8">
+                        <AvisoNaEntregaDeFuncaoSuspensa texto={suspensao} />
+                      </div>
+                    )}
                   </div>
-                ))}
+                  )
+                })}
               </Conversa>
             )}
           </Abas>

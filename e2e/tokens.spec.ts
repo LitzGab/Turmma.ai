@@ -1,6 +1,6 @@
 import type { Locator, Page, Request } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { botaoDoSeletor, lateral, naGaveta } from './__fixtures__/casca.ts'
+import { botaoDoSeletor, lateral, naGaveta, esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -167,7 +167,7 @@ test.describe('pele da D72 nos componentes compartilhados', () => {
     await expect(page.getByRole('heading', { name: 'Escolher a escola' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await page.getByRole('button', { name: `${emA.escolaNome} · professor` }).focus()
     await page.keyboard.press('Enter')
-    await expect(page.getByRole('heading', { name: `Olá, ${emA.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarNovaConversa(page, emA.nome)
 
     // A casca: a marca em curvas, o seletor de escola, a navegação e o "Sair". No celular a lateral é a gaveta, e ela
     // abre pelo teclado também.
