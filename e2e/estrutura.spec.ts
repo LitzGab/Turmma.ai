@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import type { Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, abrirEstrutura, esperarEstrutura, esperarGovernanca, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, abrirEstrutura, esperarEstrutura, esperarGovernanca, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   apagarDisciplinaNoBanco,
@@ -106,6 +106,9 @@ test.describe('W4 (Estrutura): do vazio ao roteiro, montando a escola pela tela'
     await convidarProfessorNoBanco(coordenadora.escolaId, 'pendente')
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
+    // A coordenação abre em Governança (A5) e chega à Estrutura pela lateral.
+    await esperarGovernanca(page)
+    await irPelaNavegacao(page, 'Estrutura', hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando a estrutura da escola…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page).toHaveTitle('Estrutura · Turmma')
     segurado.abrir()
@@ -1330,6 +1333,10 @@ test.describe('recomeço da Estrutura', () => {
       await rota.continue()
     })
     await entrarComoCoordenacaoNaMesmaAba(page, deB, hasTouch)
+    // Ela abre em Governança (A5), que também não mostra nada de A, e vai à Estrutura pela lateral.
+    await esperarGovernanca(page)
+    for (const deOutra of [turmaDeA.nome, nomeDeA, estruturaDeA.disciplina.nome]) await expect(page.locator('body')).not.toContainText(deOutra)
+    await irPelaNavegacao(page, 'Estrutura', hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando a estrutura da escola…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     for (const deOutra of [turmaDeA.nome, nomeDeA, estruturaDeA.disciplina.nome]) await expect(page.locator('body')).not.toContainText(deOutra)
     segurada.abrir()
