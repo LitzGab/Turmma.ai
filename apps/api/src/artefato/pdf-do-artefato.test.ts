@@ -1,7 +1,7 @@
 import type { ConteudoDeAtividade, ConteudoDePlanoDeAula, QuestaoObjetiva } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { extrairTextoPorPagina } from '../../../../tools/demonstracao/extrair-texto.ts'
-import { AVISO_DE_IA_NO_PDF, gerarPdfDoArtefato, nomeDoArquivoDoPdf, textoParaAFontePadrao } from './pdf-do-artefato.js'
+import { AVISO_DE_IA_NO_PDF, AVISO_DE_IA_NO_RASCUNHO, gerarPdfDoArtefato, MARCA_DE_RASCUNHO, nomeDoArquivoDoPdf, textoParaAFontePadrao } from './pdf-do-artefato.js'
 
 const MATERIAL = '0190f5a0-0000-7000-8000-0000000000a1'
 const TITULOS = new Map([[MATERIAL, 'Química 2 — Capítulo 7: Estequiometria']])
@@ -106,6 +106,23 @@ describe('gerarPdfDoArtefato', () => {
     expect(paginas.length).toBeGreaterThan(paginasDoOriginal.length)
     expect(paginas.at(-1)).toContain('Versão adaptada: Fonte ampliada, Tempo adicional (+25%).')
     expect(paginas.slice(0, -1).join(' ')).not.toMatch(/Fonte ampliada|Tempo adicional/u)
+  })
+
+  it('o rascunho leva a marca em toda página, inclusive nas que a quebra criou e na do gabarito, e não diz que foi revisado', async () => {
+    const adaptada: ConteudoDeAtividade = { ...atividade(12), adaptacao: { tipos: ['fonte_ampliada'] } }
+    const paginas = (await extrairTextoPorPagina(await gerarPdfDoArtefato(adaptada, TITULOS, { rascunho: true }))).map(umaLinha)
+    const limpas = (await extrairTextoPorPagina(await gerarPdfDoArtefato(adaptada, TITULOS))).map(umaLinha)
+    // A marca fica fora do fluxo do texto: não cria página nem empurra questão.
+    expect(paginas.length).toBe(limpas.length)
+    expect(paginas.length).toBeGreaterThan(3)
+    for (const pagina of paginas) expect(pagina).toContain(MARCA_DE_RASCUNHO)
+    expect(paginas.join(' ')).toContain(umaLinha(AVISO_DE_IA_NO_RASCUNHO))
+    expect(paginas.join(' ')).not.toContain('revisado')
+    expect(paginas.join(' ')).toContain('12. Segundo o material')
+    // Sem a opção, nada de rascunho, e o aviso é o de quem revisou.
+    expect(limpas.join(' ')).not.toContain('Rascunho')
+    expect(limpas.join(' ')).toContain(umaLinha(AVISO_DE_IA_NO_PDF))
+    expect(AVISO_DE_IA_NO_RASCUNHO).not.toMatch(/revisad/u)
   })
 
   it('o plano de aula sai com a duração, os objetivos, as etapas com a página de origem, a avaliação e as fontes', async () => {

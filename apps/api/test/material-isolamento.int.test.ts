@@ -168,8 +168,9 @@ describe('material: isolamento entre escolas', () => {
     // Com a disciplina de B, com o material de B, ou pedindo as páginas do material de B: nada.
     expect(await naEscolaA(() => porta.buscar({ texto: 'reagente limitante', disciplinaId: b.quimica }))).toEqual([])
     expect(await naEscolaA(() => porta.buscar({ texto: 'reagente limitante', disciplinaId: a.quimica, materialId: b.materialId }))).toEqual([])
-    expect(await naEscolaA(() => porta.doMaterial(b.materialId))).toEqual([])
-    expect((await naEscolaA(() => porta.doMaterial(a.materialId))).map((trecho) => trecho.pagina)).toEqual([1, 2, 3, 4, 5, 6])
+    expect(await naEscolaA(() => porta.doMaterial(b.materialId, b.quimica))).toEqual([])
+    expect(await naEscolaA(() => porta.doMaterial(b.materialId, a.quimica))).toEqual([])
+    expect((await naEscolaA(() => porta.doMaterial(a.materialId, a.quimica))).map((trecho) => trecho.pagina)).toEqual([1, 2, 3, 4, 5, 6])
   })
 
   it('a extração em segundo plano grava na escola de quem enviou, mesmo quando a vaga foi liberada pela extração de outra escola', async () => {

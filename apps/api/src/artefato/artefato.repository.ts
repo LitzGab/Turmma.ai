@@ -1,6 +1,6 @@
 import { artefato, atividadeAplicada, entrega, exigirAnoEmCurso, exigirEscolaDoContexto, material, sessaoDaRequisicao, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import { MAXIMO_DE_VERSOES_NO_ARTEFATO, type ConsultaArtefatos, type ConteudoDoArtefato, type EstadoDeAtividadeAplicada, type EstadoDeEntrega, type TipoDeArtefato } from '@educa/shared'
-import { and, desc, eq, inArray, lt, sql, type SQL } from 'drizzle-orm'
+import { and, desc, eq, exists, inArray, lt, ne, not, sql, type SQL } from 'drizzle-orm'
 import { comVinculoConfirmadoDoProfessor, disciplinaDoArtefato } from '../assistente/turma-do-professor.repository.js'
 
 /** Um artefato como o repository o devolve: o `conteudo` é `jsonb`, e o service o valida antes de usar. */
@@ -136,13 +136,21 @@ export class ArtefatoRepository {
 
   /**
    * Troca o título, na coluna e dentro do `conteudo`, **no mesmo comando**: as duas cópias nunca divergem. Só o título
-   * muda; as questões, o gabarito e as citações ficam como foram gravados. Diz se achou o artefato no alcance.
+   * muda; as questões, o gabarito e as citações ficam como foram gravados.
+   *
+   * **A versão adaptada com a entrega já decidida não muda**: a condição vai no mesmo `update`, para a decisão que chega
+   * junto com o renomear não deixar passar um título que a professora não viu ao decidir (regra 80, item 7). Diz se
+   * renomeou; `false` é o artefato fora do alcance, ou a versão já decidida, e quem chama separa os dois.
    */
   async renomear(id: string, titulo: string): Promise<boolean> {
+    const jaDecidida = this.banco
+      .select({ um: entrega.id })
+      .from(entrega)
+      .where(and(eq(entrega.escolaId, artefato.escolaId), eq(entrega.anoLetivoId, artefato.anoLetivoId), eq(entrega.artefatoId, artefato.id), ne(entrega.estado, 'pendente')))
     const renomeados = await this.banco
       .update(artefato)
       .set({ titulo, conteudo: sql`jsonb_set(${artefato.conteudo}, '{titulo}', to_jsonb(${titulo}::text))`, atualizadoEm: sql`now()` })
-      .where(and(this.#noAlcance(), eq(artefato.id, id)))
+      .where(and(this.#noAlcance(), eq(artefato.id, id), not(exists(jaDecidida))))
       .returning({ id: artefato.id })
     return renomeados.length > 0
   }

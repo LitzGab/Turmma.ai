@@ -1,9 +1,10 @@
-import { executarNoContexto, type ContextoDaRequisicao, type ExecutorNoProcesso } from '@educa/nucleo'
+import { executarNoContexto, PREFIXO_LIMITE_USUARIO, type ContextoDaRequisicao, type ExecutorNoProcesso } from '@educa/nucleo'
 import type { PapelDeUsuario } from '@educa/shared'
 import type { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
 import { MATERIAL_DE_DEMONSTRACAO } from '../../../tools/demonstracao/conteudo-estequiometria.ts'
 import { EXECUTOR_DE_AGENTE } from '../src/ia/ia.module.js'
+import { CLIENTE_REDIS_CACHE } from '../src/limite.module.js'
 import { CLIENTE_REDIS_LOGIN } from '../src/sessao/sessao.module.js'
 import { chamar, type ApiDeTeste, type RespostaHttp } from './api-com-sessao.js'
 import { montarEscolaComTurma, type EscolaComTurma } from './escola-com-turma.js'
@@ -69,6 +70,59 @@ export async function montarEscolaComAssistente(api: ApiDeTeste, bancada: Bancad
   return { ...escola, escolaId, professora, colega, deFisica, aluno, materialId }
 }
 
+/** O ano letivo anterior da escola, já encerrado, com uma turma e o vínculo da professora nela, em Química. */
+export interface AnoAnterior {
+  readonly anoLetivoId: string
+  readonly turmaId: string
+}
+
+/**
+ * O ano de 2025 da escola, `encerrado`, com uma turma e o vínculo **confirmado** da professora em Química naquele ano.
+ * O vínculo fica confirmado de propósito: o que tira do alcance o que é de 2025 tem de ser a cláusula de ano letivo do
+ * repository, e não a falta de vínculo (regra 10, item 2).
+ */
+export async function montarAnoAnterior(bancada: BancadaDeSessoes, escola: EscolaComAssistente): Promise<AnoAnterior> {
+  const { rows: anos } = await bancada.pool.query<{ id: string }>(`insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, 2025, '2025-02-01', '2025-12-15', 'encerrado') returning id`, [escola.escolaId])
+  const anoLetivoId = anos[0]?.id
+  if (anoLetivoId === undefined) throw new Error('ano anterior não criado')
+  const { rows: turmas } = await bancada.pool.query<{ id: string }>(`insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, '2ºB de 2025') returning id`, [escola.escolaId, anoLetivoId, escola.serieId])
+  const turmaId = turmas[0]?.id
+  if (turmaId === undefined) throw new Error('turma do ano anterior não criada')
+  await bancada.pool.query(
+    `insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, $5, 'professor', 'confirmado', $6, now())`,
+    [escola.escolaId, anoLetivoId, escola.professora.usuarioId, turmaId, escola.quimica, escola.coordenacao.usuarioId],
+  )
+  return { anoLetivoId, turmaId }
+}
+
+/**
+ * Uma cópia do artefato no ano anterior, na turma daquele ano; com `adaptada`, a versão adaptada dela, com a entrega
+ * `pendente`. Devolve os ids. É gravado direto: nenhuma rota escreve em ano encerrado.
+ */
+export async function copiarArtefatoParaOAnoAnterior(bancada: BancadaDeSessoes, escola: EscolaComAssistente, anterior: AnoAnterior, artefatoId: string): Promise<{ artefatoId: string; adaptadaId: string; entregaId: string }> {
+  const copiar = async (origemId: string | null, conteudo: string): Promise<string> => {
+    const { rows } = await bancada.pool.query<{ id: string }>(
+      `insert into artefato (escola_id, ano_letivo_id, turma_id, disciplina_id, tipo, titulo, conteudo, origem_id, criado_por)
+       select escola_id, $2, $3, disciplina_id, tipo, titulo, ${conteudo}, $4, criado_por from artefato where escola_id = $1 and id = $5 returning id`,
+      [escola.escolaId, anterior.anoLetivoId, anterior.turmaId, origemId, artefatoId],
+    )
+    const id = rows[0]?.id
+    if (id === undefined) throw new Error('artefato do ano anterior não gravado')
+    return id
+  }
+  const original = await copiar(null, 'conteudo')
+  const adaptadaId = await copiar(original, `conteudo || '{"adaptacao": {"tipos": ["fonte_ampliada"]}}'::jsonb`)
+  const { rows } = await bancada.pool.query<{ id: string }>(`insert into entrega (escola_id, ano_letivo_id, turma_id, funcao, tipo, artefato_id) values ($1, $2, $3, 'adaptacao', 'versao_adaptada', $4) returning id`, [
+    escola.escolaId,
+    anterior.anoLetivoId,
+    anterior.turmaId,
+    adaptadaId,
+  ])
+  const entregaId = rows[0]?.id
+  if (entregaId === undefined) throw new Error('entrega do ano anterior não gravada')
+  return { artefatoId: original, adaptadaId, entregaId }
+}
+
 /** O contexto que a `GuardaDeSessao` gravaria para esta pessoa: é nele que um service chamado direto roda, como numa rota. */
 export function comoPessoa<T>(escola: EscolaComAssistente, sessao: SessaoDeTeste, papel: PapelDeUsuario, funcao: () => T): T {
   const contexto: ContextoDaRequisicao = { requisicaoId: randomUUID(), escolaId: escola.escolaId, usuarioId: sessao.usuarioId, papel, sessaoId: sessao.sessaoId, anoLetivoId: escola.anoLetivoId }
@@ -96,11 +150,15 @@ export async function dispararExecucao(api: ApiDeTeste, sessao: SessaoDeTeste, c
   return resposta.corpo['execucaoId'] as string
 }
 
-/** Zera os contadores do limite de pedidos de IA, para um teste não gastar o minuto do outro. */
+/**
+ * Zera os contadores do limite de pedidos de IA e os do limite geral por usuário, para um teste não gastar o minuto do
+ * outro: um arquivo destes faz, pela mesma professora, mais requisições por minuto do que uma pessoa faria.
+ */
 export async function zerarLimiteDePedidosDeIa(api: ApiDeTeste): Promise<void> {
-  const redis = api.app.get<Redis>(CLIENTE_REDIS_LOGIN)
-  const chaves = await redis.keys('ia:pedidos-*')
-  if (chaves.length > 0) await redis.del(...chaves)
+  for (const [redis, padrao] of [[api.app.get<Redis>(CLIENTE_REDIS_LOGIN), 'ia:pedidos-*'], [api.app.get<Redis>(CLIENTE_REDIS_CACHE), `${PREFIXO_LIMITE_USUARIO}:*`]] as const) {
+    const chaves = await redis.keys(padrao)
+    if (chaves.length > 0) await redis.del(...chaves)
+  }
 }
 
 /** Quantas linhas da escola há na tabela, com o filtro dado. */
