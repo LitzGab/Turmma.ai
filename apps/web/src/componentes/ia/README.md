@@ -23,8 +23,23 @@ onde importar está no topo de `src/areas/navegacao.ts`. Aqui ficam as regras de
   ponha o texto do modelo em `dangerouslySetInnerHTML` nem o interprete como Markdown.
 - **Em `aoEnviar` (e em `aoGerar` do `MotorFormulario`), limpe o valor e mude o estado na hora**, sem esperar o
   `isPending` da mutação: é o que impede o segundo envio do mesmo pedido e mostra que o toque foi recebido.
+- **Ligue `ocupada` na `Conversa` enquanto a resposta chega** (execução `pendente` ou `rodando`): o registro lê cada nó
+  que entra, e com `aria-busy` o leitor de tela espera a resposta ficar pronta e a lê uma vez, inteira. Desligue quando
+  a execução terminar, com a resposta ou com o `AvisoFila` de falha já na lista.
+- O `TextoDaIA` tira a marcação comum de Markdown (`**`, `#`, cerca de código, marcador de lista) sem interpretá-la; o
+  asterisco de uma conta fica. Não limpe o texto antes de entregá-lo à peça.
 - A `CaixaPedido` presa no pé da conversa vai dentro de uma `BarraPresa` com `semLinha`, como último filho do bloco que
   rola.
+
+## Barra presa
+
+- A `BarraPresa` é o **último filho do bloco que rola** (a `Tela`, a coluna da conversa, ou uma caixa com
+  `overflow-y-auto`). Ela é opaca e fica por cima da lista: para o controle que recebe foco pelo Tab não ficar escondido
+  atrás dela (WCAG 2.4.11), a peça reserva a própria altura no bloco que rola (`scroll-padding-bottom`). **Não ponha
+  `scroll-padding-bottom` à mão nesse bloco, e não ponha duas barras presas no mesmo bloco**: a segunda apagaria a
+  reserva da primeira.
+- Um bloco que rola com `overflow: hidden` no meio do caminho, ou a barra fora do bloco que de fato rola, desfaz a
+  reserva: confira com o Tab, no meio da lista, que o controle focado para acima da barra.
 
 ## Desenho
 
@@ -32,8 +47,8 @@ onde importar está no topo de `src/areas/navegacao.ts`. Aqui ficam as regras de
   já são `primario`: na tela que os tem, o resto é `secundario` ou `discreto`.
 - `NumeroPainel` formata número (`1412` vira `1.412`); **texto vai como veio** (`"61%"`).
 - `BarraRotulada` **não se pinta**: é neutra sempre, e o valor está no texto. Nada de vermelho perto do limite.
-- `Menu` e `ChipFonte` abrem em posição fixa na janela, e não são cortados por tabela que rola nem por diálogo. Um
-  ancestral com `transform` ou `filter` tira a posição do lugar: não ponha.
+- `Menu` e `ChipFonte` abrem em posição fixa na janela, e não são cortados por tabela que rola nem por diálogo. Quando
+  algo rola por fora deles, fecham. Um ancestral com `transform` ou `filter` tira a posição do lugar: não ponha.
 - Título de `Cartao`, `CabecalhoDeSecao` e `MotorFormulario` tem `nivel`: acerte-o para a ordem dos títulos não pular.
 
 ## O que a peça não dá
@@ -41,6 +56,8 @@ onde importar está no topo de `src/areas/navegacao.ts`. Aqui ficam as regras de
 - **Os quatro estados são de cada consulta** (carregando, vazio, erro, com dado): `EstadoCarregando`, `EstadoVazio` e
   `EstadoErro` de `componentes/estado`. `Tabela`, `Abas` e `Conversa` desenham só o "com dado".
 - `Tabela` não pagina nem virtualiza: entregue a página.
+- `CampoLongo` conta e limita pelo texto sem o espaço das pontas, como a API; valide com `problemaDoTexto` e não ponha
+  `maxLength` por fora.
 
 ## Adaptação
 

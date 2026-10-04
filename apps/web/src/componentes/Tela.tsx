@@ -24,19 +24,29 @@ interface PropsDaTela {
   readonly descricao?: string
   /** Os controles da tela: na tela de objeto, ao lado do título; na aba, a barra do topo (abas, filtros, busca). */
   readonly acoes?: ReactNode
+  /** O que vem antes do título: o "Voltar" da tela de objeto. */
+  readonly antes?: ReactNode
+  /**
+   * A tela põe a margem da página ela mesma. **Só fora da casca** (a galeria, uma página pública): dentro da casca da
+   * escola a margem já é do `main` dela, e com as duas a tela ficaria com 32 px de cada lado a 360 px.
+   */
+  readonly comMargem?: boolean
   readonly children: ReactNode
 }
 
 /**
- * A moldura de toda tela, com o padrão de espaço do sistema (D72; P03; `docs/interface.md` 6 e 9.3): margem de 16 px no
- * celular e de 24 px a partir de 768 px, topo de 16 a 20 px, fim de 32 px, e 16 px entre blocos.
+ * A moldura de toda tela, com o padrão de espaço do sistema (D72; P03; `docs/interface.md` 6 e 9.3): a coluna na largura
+ * da 9.3 e 16 px entre blocos. **A margem da página é da casca** (`CascaDaEscola`: 16 px no celular e 24 px a partir de
+ * 768 px, topo de 16 a 20 px, fim de 32 px), e por isso a `Tela` não a repete; fora da casca, `comMargem` põe a mesma.
+ * A casca limita o conteúdo a 1024 px: a largura `grade` só passa disso quando a casca deixar.
  *
  * `min-w-0` na coluna é o que deixa um filho largo (tabela, linha de abas) rolar por dentro em vez de empurrar a página
  * a 360 px (regra 50, item 2a).
  */
-export function Tela({ titulo, largura = 'grade', objeto = false, descricao, acoes, children }: PropsDaTela) {
+export function Tela({ titulo, largura = 'grade', objeto = false, descricao, acoes, antes, comMargem = false, children }: PropsDaTela) {
   return (
-    <div className={`mx-auto flex w-full min-w-0 flex-col gap-4 px-4 pt-4 pb-8 md:px-6 md:pt-5 ${LARGURA_DA_TELA[largura]}`}>
+    <div data-tela={largura} className={`mx-auto flex w-full min-w-0 flex-col gap-4 ${comMargem ? 'px-4 pt-4 pb-8 md:px-6 md:pt-5' : ''} ${LARGURA_DA_TELA[largura]}`}>
+      {antes}
       {objeto ? (
         <header className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-3">
           <div className="min-w-0">

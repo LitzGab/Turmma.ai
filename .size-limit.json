@@ -36,9 +36,9 @@
     "brotli": true
   },
   {
-    "name": "JS das peças do MVP de apresentação (os pedaços pecas-*.js, que as telas dividem, somados à galeria-*.js, que leva as peças enquanto só ela as usa e fica com a página dela depois; só por import(), fora do primeiro carregamento; com o texto da IA, a barra presa, a tabela, o campo de várias linhas e a conversa, tudo ainda na galeria, perto de 17,2 kB)",
+    "name": "JS das peças do MVP de apresentação (os pedaços pecas-*.js, que as telas dividem, somados à galeria-*.js, que leva as peças que só ela usa e a página dela; só por import(), fora do primeiro carregamento; medido no build com VITE_COM_GALERIA=1, que é o do e2e; com as telas do professor e a de Material dividindo as peças em quinze pecas-*, 23,5 kB)",
     "path": ["apps/web/dist/assets/galeria-*.js", "apps/web/dist/assets/pecas-*.js"],
-    "limit": "20 kB",
+    "limit": "26 kB",
     "brotli": true
   }
 ]

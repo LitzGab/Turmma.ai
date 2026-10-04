@@ -4,6 +4,7 @@ import { Campo, MarcaDeObrigatorio } from '../Campo'
 import { Selecao } from '../Selecao'
 import type { NivelDoTitulo } from '../Tela'
 import {
+  campoVisivel,
   MAXIMO_DO_TEXTO,
   problemaDaDescricao,
   resumoDoPedido,
@@ -82,6 +83,9 @@ function CampoDeVarias({ campo, marcados, erro, aoMudar }: { campo: CampoDeMulti
  * O formulário de toda ferramenta: **a ferramenta é dado, e o motor é um só** (P23; `docs/interface.md` 1.2 e 11.3). É o
  * mesmo na tela de Ferramentas e no cartão dentro da conversa (D18): mesmos campos, mesmo contrato. A regra — valor
  * inicial, o que falta, o que sai — está em `motor-formulario.ts`, com teste.
+ *
+ * Um campo pode ser **condicional** (`quando`): aparece, é cobrado e sai no pedido só com uma opção marcada em outro
+ * campo, de múltipla escolha. O tempo extra da Adaptação aparece com "Tempo adicional" marcado, e some sem ele.
  *
  * Quatro tipos de campo, e nenhum outro: texto curto, número, seleção e múltipla escolha de lista fechada. **Não existe
  * campo de texto longo, nem campo "sobre o aluno"**, e a Adaptação não tem campo de texto nenhum: ela recebe o tipo de
@@ -180,6 +184,8 @@ export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEdit
         {descricao.nome}
       </Titulo>
       {campos.map((campo) => {
+        // O campo condicional só existe na tela com a opção dele marcada (`campoVisivel`).
+        if (!campoVisivel(campo, valores)) return null
         const valor = valores[campo.chave]
         const texto = typeof valor === 'string' ? valor : ''
         return (

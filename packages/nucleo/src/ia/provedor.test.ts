@@ -1,5 +1,6 @@
 import { CodigoDeErro } from '@educa/shared'
 import { describe, expect, it, vi } from 'vitest'
+import { executarNoContexto } from '../contexto/contexto.js'
 import { AdaptadorRoteirizado } from './__fixtures__/adaptador-roteirizado.js'
 import { ALUNO_1, ALUNO_2, atividadeDeEstequiometria, entradaDeAtividade, entradaDoAssistente, entradaDoRelatorio, entradaDoTutor, ESCOLA_A, ESCOLA_B } from './__fixtures__/entradas.js'
 import type { AdaptadorDeModelo } from './adaptador.js'
@@ -216,6 +217,32 @@ describe('ProvedorDeIa: o domínio nunca vê erro cru', () => {
     expect(new ErroDeIa('MATERIAL_INSUFICIENTE')).toMatchObject({ codigo: 'MATERIAL_INSUFICIENTE', status: 422 })
     // Todo código da camada é um código do contrato da API: o que a execução grava é o que a tela sabe mostrar.
     for (const codigo of CODIGOS_DE_ERRO_DE_IA) expect(Object.values(CodigoDeErro)).toContain(codigo)
+  })
+})
+
+describe('ProvedorDeIa: a escola do pedido é a de quem pede (regra 10, item 3)', () => {
+  const pedir = (ia: ProvedorDeIa, escolaId: string) => ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId })
+
+  it('com contexto da escola A, o pedido em nome da escola B é recusado antes de consultar, gastar ou registrar', async () => {
+    const adaptador = new AdaptadorRoteirizado([])
+    const consultar = vi.fn(async () => ({ permitido: true as const }))
+    const estaSuspensa = vi.fn(async () => false)
+    const logger = registrador()
+    const { ia, consumo } = montar({ adaptador, orcamento: { consultar }, suspensao: { estaSuspensa }, logger })
+    const erro = await executarNoContexto({ requisicaoId: 'r', escolaId: ESCOLA_A, usuarioId: 'u' }, () => erroDe(pedir(ia, ESCOLA_B)))
+    expect(erro).toMatchObject({ codigoDeIa: 'IA_ENTRADA_INVALIDA', status: 500 })
+    expect(adaptador.chamadas).toBe(0)
+    expect(consultar).not.toHaveBeenCalled()
+    expect(estaSuspensa).not.toHaveBeenCalled()
+    expect(consumo.registros).toEqual([])
+    expect(logger.linhas()).toEqual([{ evento: 'ia.geracao.escola_fora_do_contexto', tipo: 'gerar_atividade_objetiva' }])
+  })
+
+  it('com a escola do contexto, o pedido passa; sem contexto de escola (rotina nossa), não há com o que comparar', async () => {
+    const { ia } = montar()
+    await expect(executarNoContexto({ requisicaoId: 'r', escolaId: ESCOLA_A }, () => pedir(ia, ESCOLA_A))).resolves.toBeDefined()
+    await expect(executarNoContexto({ requisicaoId: 'r' }, () => pedir(ia, ESCOLA_B))).resolves.toBeDefined()
+    await expect(pedir(ia, ESCOLA_B)).resolves.toBeDefined()
   })
 })
 

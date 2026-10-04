@@ -33,9 +33,17 @@ const CLASSES_DO_CAMPO = 'min-h-11 rounded-controle border border-borda-campo bg
  * do celular (regra 50, itens 2a e 11). O `inputmode` e o `autocomplete` ficam a cargo de quem usa, porque mudam por
  * campo: a matrícula da entrada é numérica e a da página da turma é texto (W11), senha é `current-password`, código do aplicativo é `one-time-code`.
  */
-/** A marca de campo obrigatório, ao lado do rótulo: texto, e não asterisco, que ninguém explica (regra 50, item 11). */
+/**
+ * A marca de campo obrigatório, ao lado do rótulo: texto, e não asterisco, que ninguém explica (regra 50, item 11). É para
+ * quem vê: o leitor de tela já ouve "obrigatório" pelo `aria-required` do campo, e com a marca no nome ouviria duas vezes.
+ */
 export function MarcaDeObrigatorio() {
-  return <span className="text-sm font-normal text-sutil"> (obrigatório)</span>
+  return (
+    <span aria-hidden="true" className="text-sm font-normal text-sutil">
+      {' '}
+      (obrigatório)
+    </span>
+  )
 }
 
 export function Campo({ rotulo, dica, erro, descritoTambemPor, obrigatorio = false, acao, ...props }: Props) {

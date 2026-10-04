@@ -6,7 +6,7 @@ import { consumoIa, type Banco, type ConsumoDeIa, type RegistroDeConsumo, type T
  * de uma linha na escola dela.
  *
  * `entrada` e `saida` chegam ausentes nas tarefas que levam texto livre de pessoa e são gravadas nulas; nas funções do
- * Tutor o banco recusa qualquer outra coisa (`consumo_ia_sem_texto_de_aluno`). Nada daqui vai a log.
+ * Tutor o banco recusa qualquer outra coisa (`consumo_ia_sem_conversa_de_pessoa`). Nada daqui vai a log.
  */
 export class ConsumoRepository implements RegistroDeConsumo {
   constructor(private readonly banco: Banco | TransacaoBanco) {}

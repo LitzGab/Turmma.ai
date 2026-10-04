@@ -194,9 +194,17 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
 
     // O que o modelo devolveu com cara de HTML está escrito, e não virou marcação.
     await expect(texto).toContainText('Use <b>massa molar</b> e a proporção da equação balanceada.')
-    await expect(texto.locator('b, strong, script, img')).toHaveCount(0)
-    // Dois parágrafos, com a quebra de linha simples dentro do primeiro, e um chip por fonte, sem repetir a página citada duas vezes.
-    await expect(texto.locator('p').first()).toContainText('2. Qual é o reagente limitante quando sobra oxigênio?')
+    await expect(texto.locator('b, strong, em, script, img, h1, h2, h3, pre, code')).toHaveCount(0)
+    await expect(texto.locator('> ul, > ol')).toHaveCount(0)
+    // A marcação de Markdown que o modelo mandou sai, sem virar título nem lista: `###`, `**` e o marcador somem, o item
+    // de lista vira parágrafo, e a quebra de linha simples fica dentro do parágrafo dela.
+    await expect(texto.locator('p').first()).toHaveText('Lista de estequiometria')
+    await expect(texto.locator('p').nth(1)).toContainText('Questão 1. Qual a massa de CO₂ formada na queima de 24 g de carbono?')
+    await expect(texto.locator('p').nth(1)).toContainText('Questão 2. Qual é o reagente limitante quando sobra oxigênio?')
+    expect(await texto.textContent()).not.toMatch(/\*\*|###/)
+    // O asterisco que é conteúdo fica: a conta continua uma conta.
+    await expect(texto.locator('p').nth(2)).toHaveText('Lembre: 2 * 12 = 24 g de carbono.')
+    // Um chip por fonte, sem repetir a página citada duas vezes.
     const chips = texto.getByRole('button', { name: /^Fonte: / })
     await expect(chips).toHaveCount(3)
     await expect(chips).toHaveText([/p\. 142$/, /p\. 145$/, /p\. 151$/])
@@ -513,6 +521,17 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await expect(bloco.locator('[data-acao]')).toHaveText('Escolhido: vizinho')
     await botao.focus()
 
+    // A página rola com o menu aberto: ele fecha, em vez de correr atrás do botão, e o foco volta para o botão sem
+    // puxar a página de volta.
+    await page.keyboard.press('ArrowDown')
+    await expect(menu.getByRole('menuitem', { name: 'Exportar em PDF' })).toBeFocused()
+    const antesDeRolar = await page.evaluate(() => window.scrollY)
+    await page.evaluate(() => window.scrollBy(0, 120))
+    await expect(menu).toHaveCount(0)
+    await expect(botao).toBeFocused()
+    expect(await page.evaluate(() => window.scrollY)).toBe(antesDeRolar + 120)
+    await expect(vizinho).not.toHaveAttribute('inert')
+
     // Enter abre, e Enter no item escolhe.
     await page.keyboard.press('Enter')
     await expect(menu.getByRole('menuitem', { name: 'Exportar em PDF' })).toBeFocused()
@@ -520,6 +539,46 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await expect(menu).toHaveCount(0)
     await expect(bloco.locator('[data-acao]')).toHaveText('Escolhido: exportar')
     await expect(botao).toBeFocused()
+  })
+
+  test('o menu que abre logo depois de uma rolagem fica aberto: o evento de rolagem que sobrou de antes do clique não o fecha', async ({ page }) => {
+    await abrirGaleria(page)
+    const bloco = secao(page, 'selecao-e-menu')
+    const botao = bloco.getByRole('button', { name: 'Ações da atividade' })
+    const menu = page.getByRole('menu', { name: 'Ações da atividade' })
+    await botao.scrollIntoViewIfNeeded()
+
+    // A página rola e o botão é acionado no mesmo instante, como o Playwright faz ao trazer o botão para a tela e como
+    // faz quem solta a rolagem e clica: o navegador entrega o evento de rolagem no quadro seguinte, com o menu já aberto.
+    // O botão não saiu do lugar depois da abertura, e o menu não tem por que fechar.
+    for (const repeticao of [1, 2, 3]) {
+      await botao.evaluate((elemento) => {
+        window.scrollBy(0, 40)
+        ;(elemento as HTMLElement).click()
+      })
+      // Dois quadros: o evento de rolagem pendente já foi entregue.
+      await page.evaluate(() => new Promise((resolver) => requestAnimationFrame(() => requestAnimationFrame(() => resolver(null)))))
+      await expect(menu, `abertura ${String(repeticao)}`).toBeVisible()
+      await expect(menu.getByRole('menuitem', { name: 'Exportar em PDF' })).toBeFocused()
+      await page.keyboard.press('Escape')
+      await expect(menu).toHaveCount(0)
+    }
+
+    // O controle: com o menu aberto, a rolagem que tira o botão do lugar continua fechando.
+    await botao.focus()
+    await page.keyboard.press('Enter')
+    await expect(menu).toBeVisible()
+    await page.evaluate(() => window.scrollBy(0, -60))
+    await expect(menu).toHaveCount(0)
+    await expect(botao).toBeFocused()
+  })
+
+  test('a Tela não põe margem dentro da casca; fora dela, com `comMargem`, põe a da página', async ({ page }) => {
+    await abrirGaleria(page)
+    // A galeria está fora da casca e pede a margem: 16 px no celular, 24 px a partir de 768 px, dos dois lados.
+    const tela = page.locator('[data-tela]').first()
+    const esperada = (page.viewportSize()?.width ?? 0) >= 768 ? '24px' : '16px'
+    expect(await tela.evaluate((elemento) => [getComputedStyle(elemento).paddingLeft, getComputedStyle(elemento).paddingRight])).toEqual([esperada, esperada])
   })
 
   test('o diálogo de confirmação: o que vai acontecer e o aviso são lidos ao abrir, o foco não começa em confirmar e volta para onde dá', async ({ page, hasTouch }) => {
@@ -575,7 +634,10 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await expect(rejeitar).toBeDisabled()
     await expect(rejeicao.getByText('Motivo da rejeição (obrigatório)')).toBeVisible()
     await expect(motivo).toHaveAttribute('aria-required', 'true')
-    await expect(motivo).toHaveAttribute('maxlength', '500')
+    // A marca "(obrigatório)" é para quem vê: o nome do campo não a leva, e o leitor de tela não ouve "obrigatório" duas vezes.
+    await expect(rejeicao.getByRole('textbox', { name: 'Motivo da rejeição', exact: true })).toHaveCount(1)
+    // O limite do campo é o do contador, e não o `maxlength` do navegador, que contaria o espaço das pontas.
+    await expect(motivo).not.toHaveAttribute('maxlength')
     await expect(rejeicao.getByText('0 de 500')).toBeVisible()
     await motivo.fill('  errada  ')
     // O contador conta sem o espaço das pontas, como a API.
@@ -702,6 +764,24 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await rolagem.evaluate((elemento) => elemento.scrollTo(0, elemento.scrollHeight))
     const ultimo = rolagem.locator('li').last()
     await expect.poll(async () => (await caixa(ultimo)).y + (await caixa(ultimo)).height).toBeLessThanOrEqual((await caixa(barra)).y + 0.5)
+    // Pelo Tab, no meio da lista: o controle que recebe o foco para acima da barra, e não escondido atrás dela (WCAG
+    // 2.4.11). A barra reservou a altura dela no bloco que rola.
+    expect(await rolagem.evaluate((elemento) => elemento.style.scrollPaddingBottom)).toBe(`${String(Math.ceil((await caixa(barra)).height))}px`)
+    await rolagem.evaluate((elemento) => elemento.scrollTo(0, 0))
+    const abrir = rolagem.locator('li').getByRole('button', { name: 'Abrir' })
+    await expect(abrir).toHaveCount(6)
+    await abrir.first().focus()
+    for (let indice = 0; indice < 6; indice++) {
+      if (indice > 0) await page.keyboard.press('Tab')
+      await expect(abrir.nth(indice)).toBeFocused()
+      const [focado, daBarra, daCaixa] = [await caixa(abrir.nth(indice)), await caixa(barra), await caixa(rolagem)]
+      expect(focado.y + focado.height, `item ${String(indice + 1)} atrás da barra`).toBeLessThanOrEqual(daBarra.y + 0.5)
+      expect(focado.y, `item ${String(indice + 1)} acima da caixa`).toBeGreaterThanOrEqual(daCaixa.y - 0.5)
+    }
+    // O Tab seguinte chega à barra: ela é o fim da lista, na ordem do teclado também.
+    await page.keyboard.press('Tab')
+    await expect(barra.getByRole('button', { name: 'Rejeitar' })).toBeFocused()
+
     // A 360 px os dois botões da barra continuam com o alvo de toque e dentro da caixa.
     for (const botao of await barra.getByRole('button').all()) {
       const medida = await caixa(botao)
@@ -714,10 +794,19 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     const tabela = secao(page, 'tabela')
     const larga = (page.viewportSize()?.width ?? 0) >= 768
     if (larga) {
+      const principal = tabela.locator('[data-tabela="tabela"]').first()
       await expect(tabela.getByRole('table', { name: 'O que a IA gerou e quem aprovou' })).toBeVisible()
-      await expect(tabela.getByRole('columnheader')).toHaveText(['O quê', 'Agente e função', 'Turma', 'Aprovação', 'Ações'])
-      await expect(tabela.getByRole('rowheader')).toHaveText(['Correção da lista 3', 'Versão com fonte ampliada', 'Atividade de estequiometria'])
+      await expect(principal.getByRole('columnheader')).toHaveText(['O quê', 'Agente e função', 'Turma', 'Aprovação', 'Ações'])
+      await expect(principal.getByRole('rowheader')).toHaveText(['Correção da lista 3', 'Versão com fonte ampliada', 'Atividade de estequiometria'])
       await expect(tabela.locator('[data-tabela="lista"]')).toHaveCount(0)
+      // A tabela que cabe não é uma parada a mais no Tab; a que não cabe rola dentro dela mesma, e aí recebe foco e nome.
+      expect(await principal.evaluate((elemento) => elemento.scrollWidth > elemento.clientWidth)).toBe(false)
+      await expect(principal).not.toHaveAttribute('tabindex')
+      await expect(principal).not.toHaveAttribute('role')
+      const estreita = tabela.locator('[data-tabela-estreita] [data-tabela="tabela"]')
+      expect(await estreita.evaluate((elemento) => elemento.scrollWidth > elemento.clientWidth)).toBe(true)
+      await expect(estreita).toHaveAttribute('tabindex', '0')
+      await expect(tabela.getByRole('region', { name: 'Tabela que não cabe' })).toHaveCount(1)
     } else {
       await expect(tabela.locator('table')).toHaveCount(0)
       const itens = tabela.getByRole('list', { name: 'O que a IA gerou e quem aprovou' }).locator('> li')
@@ -726,7 +815,7 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
       await expect(itens.first()).toContainText('Correção da lista 3')
     }
     // Para a coordenação, a pendente diz por quem espera.
-    await expect(tabela.locator('[data-aprovacao="pendente"]')).toHaveText('Esperando o professor')
+    await expect(tabela.locator('[data-aprovacao="pendente"]').first()).toHaveText('Esperando o professor')
 
     // O menu de uma linha, dentro do contêiner que rola ou corta: abre inteiro, por cima, sem ser cortado.
     const acoes = tabela.getByRole('button', { name: 'Ações de Correção da lista 3' })
@@ -753,18 +842,27 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
 
     // "Preparando a resposta": um texto, anunciado com calma, sem nada animado; a demora troca o texto, uma vez.
     const conversa = secao(page, 'conversa')
-    await expect(conversa.getByRole('log', { name: 'Conversa com o Assistente de ensino' })).toHaveAttribute('aria-live', 'polite')
+    const registro = conversa.getByRole('log', { name: 'Conversa com o Assistente de ensino' })
+    await expect(registro).toHaveAttribute('aria-live', 'polite')
+    await expect(registro).toHaveAttribute('aria-busy', 'false')
     const pensando = conversa.locator('[data-pensando]')
     await expect(pensando.locator('[aria-live="polite"]')).toHaveText('Preparando a resposta…')
     expect(await pensando.evaluate((elemento) => [elemento, ...elemento.querySelectorAll('*')].filter((no) => getComputedStyle(no).animationName !== 'none').length)).toBe(0)
     await acionar(conversa.getByRole('button', { name: 'Simular a demora' }), hasTouch)
     await expect(pensando.locator('[aria-live="polite"]')).toHaveText('Ainda preparando a resposta. Você não precisa pedir de novo.')
+    // Enquanto a resposta chega, a conversa está ocupada: o leitor de tela espera para ler o que entrou.
+    await expect(registro).toHaveAttribute('aria-busy', 'true')
 
     // O campo de várias linhas: rótulo, contador em texto e o limite no próprio campo.
     const observacao = secao(page, 'selecao-e-menu').getByLabel('Observação')
-    await expect(observacao).toHaveAttribute('maxlength', '200')
     await observacao.fill('linha um\nlinha dois')
     await expect(secao(page, 'selecao-e-menu').getByText('19 de 200')).toBeVisible()
+    // O campo corta no limite pela mesma conta do contador: o espaço das pontas não gasta o limite, e nada trava antes.
+    await observacao.fill(`  ${'x'.repeat(205)}`)
+    await expect(observacao).toHaveValue(`  ${'x'.repeat(200)}`)
+    await expect(secao(page, 'selecao-e-menu').getByText('200 de 200')).toBeVisible()
+    // Só cresce para baixo: arrastado para o lado, estouraria a largura da tela.
+    expect(await observacao.evaluate((elemento) => getComputedStyle(elemento).resize)).toBe('vertical')
     // A seleção obrigatória diz que é, em texto e para o leitor de tela.
     await expect(secao(page, 'selecao-e-menu').getByText('Turma (obrigatório)')).toBeVisible()
     await expect(secao(page, 'selecao-e-menu').getByLabel('Turma')).toHaveAttribute('aria-required', 'true')

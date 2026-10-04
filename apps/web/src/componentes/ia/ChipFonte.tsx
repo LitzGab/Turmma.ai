@@ -24,7 +24,7 @@ const ALTURA_DO_CARTAO = 220
  *   segue pelo Tab não deixa um cartão aberto para trás, cobrindo o texto.
  * - **Cabe dentro de um parágrafo**: é feito só de `span`, e o alvo tem 24 px de altura, a da linha do texto.
  * - **Não passa da janela a 360 px nem é cortado** pela lista que rola: a posição é fixa na janela, medida na abertura
- *   (`flutuante.ts`).
+ *   (`flutuante.ts`). Quando a conversa rola, o cartão fecha.
  *
  * Fonte de fora leva outro chip, "da web", de desenho diferente (D68), que nasce com a busca na web, fora do MVP.
  */
@@ -32,9 +32,19 @@ export function ChipFonte({ citacao, materiais }: PropsDoChip) {
   const [aberto, definirAberto] = useState(false)
   const botao = useRef<HTMLButtonElement>(null)
   const idDoCartao = useId()
-  const { ancora, posicao } = useFlutuante<HTMLSpanElement>({ aberto, aoFechar: () => definirAberto(false), alinhamento: 'inicio', lado: 'auto', altura: ALTURA_DO_CARTAO })
+  const { ancora, posicao } = useFlutuante<HTMLSpanElement>({ aberto, aoFechar: fechar, alinhamento: 'inicio', lado: 'auto', altura: ALTURA_DO_CARTAO })
   const nome = nomeDoChip(citacao, materiais)
   const visivel = textoDoChip(citacao.pagina)
+
+  /**
+   * Fecha pelo toque fora e pela rolagem por fora. Se o foco estava dentro do cartão, que some, volta para o chip — sem
+   * rolar a página até ele.
+   */
+  function fechar(): void {
+    const focoNoCartao = document.activeElement !== botao.current && ancora.current?.contains(document.activeElement) === true
+    definirAberto(false)
+    if (focoNoCartao) botao.current?.focus({ preventScroll: true })
+  }
 
   function aoTeclar(evento: KeyboardEvent<HTMLSpanElement>): void {
     if (evento.key !== 'Escape' || !aberto) return
