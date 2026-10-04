@@ -65,6 +65,18 @@ export interface TarefaDeIa<Entrada, Saida> {
   falso(entrada: Entrada): Saida
 }
 
+/**
+ * A versão determinística não achou, nos trechos, nada de que tirar a saída (material só com sumário, por exemplo).
+ * Ela não inventa conteúdo: lança isto, e o adaptador falso responde com saída inválida, como qualquer modelo que
+ * não entregou.
+ *
+ * É uma classe própria, e não o `ErroDeIa`, para a tarefa não depender do resto da camada: tarefa é dado, e pode
+ * ser lida por um teste de `tools/` sem trazer junto o provedor e os erros de domínio.
+ */
+export class MaterialSemConteudoAproveitavel extends Error {
+  override readonly name = 'MaterialSemConteudoAproveitavel'
+}
+
 /** Só para o compilador tirar `Entrada` e `Saida` dos dois schemas. */
 export function definirTarefa<Entrada, Saida>(tarefa: TarefaDeIa<Entrada, Saida>): TarefaDeIa<Entrada, Saida> {
   return tarefa

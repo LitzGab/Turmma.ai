@@ -18,6 +18,7 @@ export const MOTIVO_PROCESSAMENTO_LOCAL_EM_ENDERECO_DE_FORA =
   'LLM_PROCESSAMENTO_LOCAL=true só vale com LLM_BASE_URL nesta máquina ou em rede privada: declarar local um provedor de fora apagaria o registro de envio externo'
 export const MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA =
   'IA_EXECUCAO_TIMEOUT_MS precisa ser maior que LLM_TIMEOUT_MS: senão a execução estoura antes de a chamada ao modelo terminar'
+export const MOTIVO_RECUO_MAIOR_QUE_O_PRAZO = 'LLM_RECUO_MS precisa ser menor que LLM_TIMEOUT_MS: a repetição acontece dentro do prazo da chamada, não depois dele'
 export const MOTIVO_VAGAS_DE_IA_INCOERENTES = 'IA_EXECUCOES_POR_ESCOLA não pode passar de IA_EXECUCOES_TOTAL: uma escola sozinha ocuparia todas as vagas'
 
 /** O compose entrega variável sem valor como texto vazio: vale como ausente, e o padrão entra. */
@@ -52,6 +53,8 @@ export const esquemaAmbienteDeIa = z
     /** Só para provedor que exige chave. Nunca vai para log, erro nem registro. */
     LLM_CHAVE_API: opcional(z.string().min(1).optional()),
     LLM_TIMEOUT_MS: inteiro(1_000, 600_000, 60_000),
+    /** Quanto esperar antes da única repetição depois de um 429 ou de um 5xx do provedor. */
+    LLM_RECUO_MS: inteiro(0, 60_000, 500),
     LLM_PROCESSAMENTO_LOCAL: opcional(z.enum(['true', 'false']).default('false')),
     IA_EXECUCOES_POR_ESCOLA: inteiro(1, 100, 2),
     IA_EXECUCOES_TOTAL: inteiro(1, 1_000, 8),
@@ -60,6 +63,7 @@ export const esquemaAmbienteDeIa = z
   .superRefine((valores, contexto) => {
     const problema = (variavel: string, message: string): void => contexto.addIssue({ code: 'custom', path: [variavel], message })
     if (valores.AMBIENTE === 'producao' && valores.IA_ADAPTADOR === 'falso') problema('IA_ADAPTADOR', MOTIVO_ADAPTADOR_FALSO_EM_PRODUCAO)
+    if (valores.LLM_RECUO_MS >= valores.LLM_TIMEOUT_MS) problema('LLM_RECUO_MS', MOTIVO_RECUO_MAIOR_QUE_O_PRAZO)
     if (valores.IA_EXECUCAO_TIMEOUT_MS <= valores.LLM_TIMEOUT_MS) problema('IA_EXECUCAO_TIMEOUT_MS', MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA)
     if (valores.IA_EXECUCOES_POR_ESCOLA > valores.IA_EXECUCOES_TOTAL) problema('IA_EXECUCOES_POR_ESCOLA', MOTIVO_VAGAS_DE_IA_INCOERENTES)
     if (valores.IA_ADAPTADOR !== 'openai_compat') return
@@ -79,6 +83,8 @@ export interface ConfiguracaoDoModelo {
   readonly chaveApi?: string
   /** O modelo roda na nossa máquina ou rede: não há envio externo. */
   readonly processamentoLocal: boolean
+  /** Espera antes da única repetição em 429 e 5xx (regra 30, item 8). */
+  readonly recuoMs: number
 }
 
 export interface ConfiguracaoDoExecutor {
@@ -121,6 +127,7 @@ export function lerConfiguracaoDeIa(ambiente: Record<string, string | undefined>
       modelos,
       ...(valores.LLM_CHAVE_API === undefined ? {} : { chaveApi: valores.LLM_CHAVE_API }),
       processamentoLocal: valores.LLM_PROCESSAMENTO_LOCAL === 'true',
+      recuoMs: valores.LLM_RECUO_MS,
     },
   }
 }

@@ -1,3 +1,4 @@
+import { setTimeout as esperar } from 'node:timers/promises'
 import { z } from 'zod'
 import type { ConfiguracaoDoModelo } from '../config/config-ia.js'
 import type { AdaptadorDeModelo, ChamadaAoModelo, RespostaDoModelo } from './adaptador.js'
@@ -111,28 +112,12 @@ export class AdaptadorOpenAICompat implements AdaptadorDeModelo {
       // O modelo local raciocina por padrão. Toda tarefa daqui é de saída estruturada: o raciocínio sai desligado.
       chat_template_kwargs: { enable_thinking: false },
     })
-    const falha = (): ErroDeIa => new ErroDeIa(chamada.sinal.aborted ? 'IA_TEMPO_ESGOTADO' : 'IA_INDISPONIVEL')
-
-    let resposta: Response
-    try {
-      resposta = await fetch(this.endereco, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', ...(this.config.chaveApi === undefined ? {} : { authorization: `Bearer ${this.config.chaveApi}` }) },
-        body: corpo,
-        signal: chamada.sinal,
-      })
-    } catch {
-      throw falha()
-    }
-    if (!resposta.ok) {
-      await resposta.body?.cancel().catch(() => undefined)
-      throw new ErroDeIa('IA_INDISPONIVEL', esperaSugerida(resposta))
-    }
+    const resposta = await this.pedirComRecuo(corpo, chamada.sinal)
     let envelope: unknown
     try {
       envelope = await resposta.json()
     } catch {
-      throw falha()
+      throw new ErroDeIa(chamada.sinal.aborted ? 'IA_TEMPO_ESGOTADO' : 'IA_INDISPONIVEL')
     }
     const lido = esquemaDaResposta.safeParse(envelope)
     if (!lido.success) throw new ErroDeIa('IA_INDISPONIVEL')
@@ -142,6 +127,38 @@ export class AdaptadorOpenAICompat implements AdaptadorDeModelo {
       modelo: lido.data.model !== undefined && lido.data.model.length > 0 ? lido.data.model : modelo,
       tokensDeEntrada: lido.data.usage?.prompt_tokens ?? estimarTokens(mensagens.map((mensagem) => mensagem.content).join('\n')),
       tokensDeSaida: lido.data.usage?.completion_tokens ?? estimarTokens(conteudo),
+    }
+  }
+
+  /**
+   * Uma chamada e, em 429 ou 5xx, **uma** repetição depois do recuo (regra 30, item 8). São os dois casos em que
+   * tentar de novo adianta: o provedor está cheio ou tropeçou. Outro 4xx é pedido errado ou configuração errada, e
+   * repetir daria o mesmo. Tudo acontece dentro do prazo da chamada: o sinal que estoura a primeira tentativa
+   * também corta a espera e a repetição.
+   */
+  private async pedirComRecuo(corpo: string, sinal: AbortSignal): Promise<Response> {
+    for (let tentativa = 1; ; tentativa += 1) {
+      let resposta: Response
+      try {
+        resposta = await fetch(this.endereco, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...(this.config.chaveApi === undefined ? {} : { authorization: `Bearer ${this.config.chaveApi}` }) },
+          body: corpo,
+          signal: sinal,
+        })
+      } catch {
+        throw new ErroDeIa(sinal.aborted ? 'IA_TEMPO_ESGOTADO' : 'IA_INDISPONIVEL')
+      }
+      if (resposta.ok) return resposta
+      await resposta.body?.cancel().catch(() => undefined)
+      const sugerida = esperaSugerida(resposta)
+      const valeRepetir = tentativa === 1 && (resposta.status === 429 || resposta.status >= 500)
+      // O provedor que pede uma espera maior que o nosso recuo recusaria a repetição de novo: a espera vai para quem chamou.
+      if (!valeRepetir || (sugerida !== undefined && sugerida * 1_000 > this.config.recuoMs)) throw new ErroDeIa('IA_INDISPONIVEL', sugerida)
+      // O prazo que acaba durante o recuo não muda a causa: o provedor estava indisponível.
+      await esperar(this.config.recuoMs, undefined, { signal: sinal }).catch(() => {
+        throw new ErroDeIa('IA_INDISPONIVEL', sugerida)
+      })
     }
   }
 }

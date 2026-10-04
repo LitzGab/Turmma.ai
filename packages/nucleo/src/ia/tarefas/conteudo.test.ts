@@ -8,6 +8,7 @@ import { ConsumoEmMemoria, OrcamentoEmMemoria } from '../consumo.js'
 import { ErroDeIa } from '../erros.js'
 import { extrairFatos } from '../material.js'
 import { ProvedorDeIa } from '../provedor.js'
+import { SuspensoesEmMemoria } from '../suspensao.js'
 import { normalizar, semPontoFinal } from '../texto.js'
 import { adaptarAtividade } from './adaptar-atividade.js'
 import { gerarAtividadeObjetiva } from './gerar-atividade-objetiva.js'
@@ -19,7 +20,7 @@ const doMaterial = (texto: string): boolean => MATERIAL_INTEIRO.includes(normali
 
 function provedorCom(adaptador: AdaptadorFalso | AdaptadorRoteirizado): { ia: ProvedorDeIa; consumo: ConsumoEmMemoria } {
   const consumo = new ConsumoEmMemoria()
-  return { ia: new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), timeoutMs: 5_000 }), consumo }
+  return { ia: new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000 }), consumo }
 }
 
 async function erroDe(promessa: Promise<unknown>): Promise<ErroDeIa> {

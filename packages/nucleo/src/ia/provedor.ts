@@ -10,6 +10,7 @@ import { AdaptadorOpenAICompat } from './adaptador-openai-compat.js'
 import type { ConsumoDeIa, OrcamentoDeIa, RegistroDeConsumo } from './consumo.js'
 import { ErroDeIa, type CodigoDeErroDeIa } from './erros.js'
 import type { LLMProvider, MedicaoDaGeracao, PedidoDeGeracao, ResultadoDaGeracao } from './porta.js'
+import { exigirFuncaoAtiva, type SuspensaoDeFuncao } from './suspensao.js'
 import type { TarefaDeIa } from './tarefa.js'
 
 /** O que o provedor escreve no log: evento fixo, ids, duração. Nunca entrada, saída nem prompt (regra 20, item 9). */
@@ -19,6 +20,7 @@ export interface DependenciasDoProvedor {
   readonly adaptador: AdaptadorDeModelo
   readonly registro: RegistroDeConsumo
   readonly orcamento: OrcamentoDeIa
+  readonly suspensao: SuspensaoDeFuncao
   /** Prazo de cada chamada ao modelo (`LLM_TIMEOUT_MS`). */
   readonly timeoutMs: number
   readonly logger?: RegistradorDeIa
@@ -65,8 +67,9 @@ interface Gasto {
 }
 
 /**
- * A implementação da porta, igual para todo adaptador. Em toda chamada, nesta ordem: valida a entrada, consulta o
- * orçamento, chama o modelo com prazo, valida a saída (repetindo uma vez), registra o consumo e escreve o log.
+ * A implementação da porta, igual para todo adaptador. Em toda chamada, nesta ordem: valida a entrada, confere se a
+ * escola suspendeu a função, consulta o orçamento, chama o modelo com prazo, valida a saída (repetindo uma vez),
+ * registra o consumo e escreve o log.
  *
  * Nada que não foi registrado é devolvido: se o registro falhar, a chamada falha (regra 30, item 4).
  */
@@ -81,6 +84,8 @@ export class ProvedorDeIa implements LLMProvider {
     const { tarefa } = pedido
     const { adaptador } = this.dependencias
     const inicio = performance.now()
+    // O conteúdo de tarefa que leva texto de aluno não entra no registro de consumo: o registro dele é a conversa.
+    const conteudo = <Conteudo extends object>(campos: Conteudo): Conteudo | Record<string, never> => (tarefa.levaTextoDeAluno ? {} : campos)
 
     // Entrada fora do schema é erro de quem chamou, antes de qualquer gasto: chave a mais (um nome) para aqui.
     const lida = tarefa.esquemaDeEntrada.safeParse(pedido.entrada)
@@ -90,6 +95,13 @@ export class ProvedorDeIa implements LLMProvider {
     }
     const entrada = lida.data
 
+    // Função suspensa pela escola não executa nada: nem modelo, nem regra fixa, nem consulta de orçamento (D60).
+    try {
+      await exigirFuncaoAtiva(this.dependencias.suspensao, pedido.escolaId, tarefa.funcao)
+    } catch (erro) {
+      this.avisar(pedido, erro instanceof ErroDeIa ? erro.codigoDeIa : 'IA_INDISPONIVEL', inicio, 0)
+      throw erro
+    }
     await this.exigirOrcamento(pedido, inicio)
 
     const gasto: Gasto = { modelo: adaptador.modeloDoPerfil(tarefa.perfil), tokensDeEntrada: 0, tokensDeSaida: 0, tentativas: 0 }
@@ -103,15 +115,14 @@ export class ProvedorDeIa implements LLMProvider {
       if (!(erro instanceof ErroDeIa)) this.dependencias.logger?.warn({ evento: 'ia.geracao.erro_inesperado', erro: resumirErro(erro) })
       const medicao = this.medir(pedido, gasto, inicio, false)
       // O registro da falha é o melhor possível: se ele também falhar, o erro que sobe continua sendo o da chamada.
-      await this.dependencias.registro.registrar(this.consumo(pedido, medicao, { entrada, estado: 'falhou', codigoDeErro: codigo })).catch(() => undefined)
+      await this.dependencias.registro.registrar(this.consumo(pedido, medicao, { ...conteudo({ entrada }), estado: 'falhou', codigoDeErro: codigo })).catch(() => undefined)
       this.avisar(pedido, codigo, inicio, gasto.tentativas)
       throw erro instanceof ErroDeIa ? erro : new ErroDeIa('IA_INDISPONIVEL')
     }
 
-    const regraFixa = fixa !== undefined
-    const medicao = this.medir(pedido, gasto, inicio, regraFixa)
+    const medicao = this.medir(pedido, gasto, inicio, fixa !== undefined)
     try {
-      await this.dependencias.registro.registrar(this.consumo(pedido, medicao, { ...(regraFixa ? {} : { entrada }), saida, estado: 'concluida' }))
+      await this.dependencias.registro.registrar(this.consumo(pedido, medicao, { ...conteudo({ entrada, saida }), estado: 'concluida' }))
     } catch {
       this.avisar(pedido, 'IA_INDISPONIVEL', inicio, gasto.tentativas)
       throw new ErroDeIa('IA_INDISPONIVEL')
@@ -214,6 +225,7 @@ export class ProvedorDeIa implements LLMProvider {
 export interface PortasDoProvedor {
   readonly registro: RegistroDeConsumo
   readonly orcamento: OrcamentoDeIa
+  readonly suspensao: SuspensaoDeFuncao
   readonly logger?: RegistradorDeIa
   readonly relogio?: Relogio
 }

@@ -20,8 +20,10 @@ const { saida, medicao } = await ia.gerar({
 - **Tarefas** (`tarefas/`, catálogo em `TAREFAS_DE_IA`): `propor_ferramenta`, `gerar_atividade_objetiva`,
   `gerar_plano_de_aula`, `adaptar_atividade`, `turno_do_tutor`, `relatorio_da_correcao`, `resumo_do_analista`.
   A entrada é estrita: não existe chave para nome de aluno ou de professor. No Tutor, `alunoId` vai no pedido.
-- **Toda chamada** consulta `OrcamentoDeIa` antes de gastar e grava em `RegistroDeConsumo` depois; entrada e saída
-  vão para o registro, nunca para o log.
+- **Toda chamada** confere `SuspensaoDeFuncao` (função suspensa pela escola recusa com `IA_FUNCAO_SUSPENSA`), consulta
+  `OrcamentoDeIa` antes de gastar e grava em `RegistroDeConsumo` depois. Entrada e saída vão para o registro, nunca
+  para o log; em tarefa que leva texto de aluno (o Tutor) nem para o registro.
+- **Função que roda sem modelo** (a correção de objetiva) chama `exigirFuncaoAtiva(suspensao, escolaId, funcao)` antes.
 - **Prompt** é arquivo versionado em `prompts/`; a versão determinística de cada tarefa é o `falso` dela.
 - **`ExecutorDeAgente`** roda o trabalho depois do `202`: `executor.agendar({ id, escolaId, chave }, (sinal) => …)`.
   No boot, `executor.iniciar()` encerra o que ficou preso. Roda no processo da API (`TODO(fila)`, D77).

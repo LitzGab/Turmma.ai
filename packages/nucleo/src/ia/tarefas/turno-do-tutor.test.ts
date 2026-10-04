@@ -7,6 +7,7 @@ import { AdaptadorFalso } from '../adaptador-falso.js'
 import { ConsumoEmMemoria, OrcamentoEmMemoria } from '../consumo.js'
 import { ErroDeIa } from '../erros.js'
 import { ProvedorDeIa } from '../provedor.js'
+import { SuspensoesEmMemoria } from '../suspensao.js'
 import { normalizar, semPontoFinal } from '../texto.js'
 import {
   CLASSIFICACOES_DO_TURNO,
@@ -21,7 +22,7 @@ import {
 
 function montar(adaptador: AdaptadorDeModelo = new AdaptadorFalso()): { ia: ProvedorDeIa; consumo: ConsumoEmMemoria } {
   const consumo = new ConsumoEmMemoria()
-  return { ia: new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), timeoutMs: 5_000 }), consumo }
+  return { ia: new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000 }), consumo }
 }
 
 async function turno(entrada: EntradaDoTutor, adaptador?: AdaptadorDeModelo): Promise<SaidaDoTutor> {
@@ -196,7 +197,8 @@ describe('assunto pessoal delicado: mensagem fixa, sem modelo (D36)', () => {
     expect(adaptador.chamadas).toBe(0)
     expect(medicao).toMatchObject({ origem: 'regra_fixa', tentativas: 0, tokensDeEntrada: 0, tokensDeSaida: 0, envioExterno: false })
     expect(consumo.registros).toHaveLength(1)
-    expect(consumo.registros[0]?.entrada).toBeUndefined()
+    expect(consumo.registros[0]).not.toHaveProperty('entrada')
+    expect(consumo.registros[0]).not.toHaveProperty('saida')
     expect(JSON.stringify(consumo.registros)).not.toContain('briguei')
   })
 

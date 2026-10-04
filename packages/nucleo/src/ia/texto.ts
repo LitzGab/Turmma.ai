@@ -13,12 +13,16 @@ export function normalizar(texto: string): string {
     .trim()
 }
 
-/** As frases de um texto. A quebra de linha do PDF no meio da frase vira espaço antes. */
+/**
+ * As frases de um texto. A quebra de linha do PDF no meio da frase vira espaço antes, e a frase acaba em todo ponto
+ * seguido de espaço, venha depois maiúscula ou não: a linha de fórmula que segue uma definição começa em minúscula
+ * ("…multiplicada por 100. rendimento (%) = …") e não pode entrar nela. Número com ponto e sem espaço ("7.1") fica inteiro.
+ */
 export function frases(texto: string): string[] {
   return texto
     .replace(/\s+/g, ' ')
     .trim()
-    .split(/(?<=[.!?])\s+(?=[\p{Lu}\d"“])/u)
+    .split(/(?<=[.!?])\s+/u)
     .map((frase) => frase.trim())
     .filter((frase) => frase.length > 0)
 }

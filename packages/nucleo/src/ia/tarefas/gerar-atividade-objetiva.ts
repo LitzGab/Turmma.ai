@@ -1,6 +1,5 @@
 import { esquemaConteudoDeAtividade, type ConteudoDeAtividade, type Habilidade, type QuestaoObjetiva } from '@educa/shared'
 import { z } from 'zod'
-import { ErroDeIa } from '../erros.js'
 import {
   citacaoDaFrase,
   citacaoVeioDosTrechos,
@@ -12,12 +11,13 @@ import {
   extrairFatos,
   frasesDoMaterial,
   habilidadeMaisProxima,
+  termoComArtigo,
   type Fato,
   type FraseDoMaterial,
 } from '../material.js'
 import { PROMPT_GERAR_ATIVIDADE_OBJETIVA } from '../prompts/gerar-atividade-objetiva.js'
-import { definirTarefa } from '../tarefa.js'
-import { capitalizar, cortar, hashEstavel, normalizar, palavras } from '../texto.js'
+import { definirTarefa, MaterialSemConteudoAproveitavel } from '../tarefa.js'
+import { capitalizar, cortar, hashEstavel, normalizar, palavras, palavrasEmComum } from '../texto.js'
 
 export const esquemaEntradaDeAtividadeObjetiva = z.strictObject({
   /** O que o professor pediu, com as palavras dele. Vai ao modelo como dado. */
@@ -54,24 +54,28 @@ function alternativaDoFato(fato: Fato): string {
 }
 
 function enunciadoDoFato(fato: Fato): string {
-  const alvo = `${fato.artigo} ${fato.termo}`
+  const alvo = termoComArtigo(fato)
   if (fato.copula !== 'é' && fato.copula !== 'são') return `Segundo o material, a que ${fato.copula.replace(/ a$/, '')} ${alvo}?`
   if (fato.numerico) return `Segundo o material, ${fato.copula === 'são' ? 'quais são' : 'qual é'} ${alvo}?`
   return `Segundo o material, o que ${fato.copula} ${alvo}?`
 }
 
+const textoDoFato = (fato: Fato): string => `${fato.termo} ${fato.complemento}`
+
 /**
  * Os distratores são as definições de outros termos do mesmo material: primeiro as do mesmo tipo (valor com valor,
- * definição com definição), depois as mais próximas no texto, que são as do mesmo assunto e por isso as mais plausíveis.
+ * definição com definição), depois as que mais têm palavras em comum com a correta, que são as que um aluno
+ * confundiria, e por fim as mais próximas no texto. Definição de outro assunto se elimina só de ler.
  */
 function distratoresDoFato(fatos: readonly Fato[], indice: number, certo: Fato): string[] {
   const usados = new Set([normalizar(alternativaDoFato(certo))])
   const candidatos = fatos
-    .map((fato, posicao) => ({ fato, posicao }))
+    .map((fato, posicao) => ({ fato, posicao, afinidade: palavrasEmComum(textoDoFato(certo), textoDoFato(fato)) }))
     .filter(({ posicao }) => posicao !== indice)
     .sort(
       (a, b) =>
         Number(b.fato.numerico === certo.numerico) - Number(a.fato.numerico === certo.numerico) ||
+        b.afinidade - a.afinidade ||
         Math.abs(a.posicao - indice) - Math.abs(b.posicao - indice) ||
         a.posicao - b.posicao,
     )
@@ -173,14 +177,23 @@ function intercalarPorPagina<Item extends { materialId: string; pagina: number }
 }
 
 /**
+ * O que fala do tema pedido vem antes, do que mais tem a ver para o que menos; o resto fica na ordem em que estava.
+ * Com tema que não aparece em frase nenhuma, a ordem não muda.
+ */
+function primeiroODoTema(ordem: readonly number[], fatos: readonly Fato[], tema: string): number[] {
+  const afinidade = (indice: number): number => palavrasEmComum(tema, fatos[indice]?.frase ?? '')
+  return [...ordem].sort((a, b) => afinidade(b) - afinidade(a))
+}
+
+/**
  * Questões tiradas das frases definitórias do material ("X é Y", "X corresponde a Y", relação com número). Quando
  * elas não bastam, completa com lacuna: a frase do material com uma palavra escondida.
  */
-export function questoesDoMaterial(entrada: Pick<EntradaDeAtividadeObjetiva, 'trechos' | 'habilidades' | 'quantidade'>): QuestaoObjetiva[] {
+export function questoesDoMaterial(entrada: Pick<EntradaDeAtividadeObjetiva, 'tema' | 'trechos' | 'habilidades' | 'quantidade'>): QuestaoObjetiva[] {
   const fatos = extrairFatos(entrada.trechos)
   const questoes: QuestaoObjetiva[] = []
   const frasesUsadas = new Set<string>()
-  for (const indice of intercalarPorPagina(fatos)) {
+  for (const indice of primeiroODoTema(intercalarPorPagina(fatos), fatos, entrada.tema)) {
     if (questoes.length === entrada.quantidade) break
     const questao = questaoDoFato(fatos, indice, entrada.habilidades)
     if (questao === undefined) continue
@@ -231,7 +244,7 @@ export const gerarAtividadeObjetiva = definirTarefa({
   falso(entrada): ConteudoDeAtividade {
     const questoes = questoesDoMaterial(entrada)
     // Material sem frase aproveitável não vira atividade inventada: falha como saída inválida, e o professor é avisado.
-    if (questoes.length === 0) throw new ErroDeIa('IA_SAIDA_INVALIDA')
+    if (questoes.length === 0) throw new MaterialSemConteudoAproveitavel()
     return { tipo: 'atividade_objetiva', titulo: cortar(`Atividade — ${entrada.tema}`, 160), questoes }
   },
 })
