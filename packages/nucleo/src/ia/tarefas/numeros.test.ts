@@ -6,13 +6,14 @@ import type { AdaptadorDeModelo } from '../adaptador.js'
 import { ConsumoEmMemoria, OrcamentoEmMemoria } from '../consumo.js'
 import { ErroDeIa } from '../erros.js'
 import { ProvedorDeIa } from '../provedor.js'
+import { SuspensoesEmMemoria } from '../suspensao.js'
 import { proporFerramenta } from './propor-ferramenta.js'
 import { relatorioDaCorrecao } from './relatorio-da-correcao.js'
 import { resumoDoAnalista } from './resumo-do-analista.js'
 
 function provedorCom(adaptador: AdaptadorDeModelo): { ia: ProvedorDeIa; consumo: ConsumoEmMemoria } {
   const consumo = new ConsumoEmMemoria()
-  return { ia: new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), timeoutMs: 5_000 }), consumo }
+  return { ia: new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000 }), consumo }
 }
 
 describe('propor_ferramenta: o Assistente pergunta antes de abrir a ferramenta (D18)', () => {

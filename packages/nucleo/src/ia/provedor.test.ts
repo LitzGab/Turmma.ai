@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 import { AdaptadorRoteirizado } from './__fixtures__/adaptador-roteirizado.js'
-import { ALUNO_1, ALUNO_2, atividadeDeEstequiometria, entradaDeAtividade, entradaDoTutor, ESCOLA_A, ESCOLA_B } from './__fixtures__/entradas.js'
+import { ALUNO_1, ALUNO_2, atividadeDeEstequiometria, entradaDeAtividade, entradaDoRelatorio, entradaDoTutor, ESCOLA_A, ESCOLA_B } from './__fixtures__/entradas.js'
 import type { AdaptadorDeModelo } from './adaptador.js'
 import { AdaptadorFalso, MODELO_FALSO } from './adaptador-falso.js'
 import { ConsumoEmMemoria, OrcamentoEmMemoria, type OrcamentoDeIa, type RegistroDeConsumo } from './consumo.js'
 import { ErroDeIa } from './erros.js'
 import { criarProvedorDeIa, MODELO_DA_REGRA_FIXA, ProvedorDeIa, type RegistradorDeIa } from './provedor.js'
+import { exigirFuncaoAtiva, SuspensoesEmMemoria, type SuspensaoDeFuncao } from './suspensao.js'
 import { gerarAtividadeObjetiva } from './tarefas/gerar-atividade-objetiva.js'
+import { relatorioDaCorrecao } from './tarefas/relatorio-da-correcao.js'
 import { turnoDoTutor } from './tarefas/turno-do-tutor.js'
 
 const EXECUCAO = '1d2e3f4a-5b6c-4d7e-8f90-a1b2c3d4e5f6'
@@ -18,13 +20,14 @@ function registrador(): RegistradorDeIa & { linhas: () => unknown[] } {
   return { info, warn, linhas: () => [...info.mock.calls, ...warn.mock.calls].flat() }
 }
 
-function montar(opcoes: { adaptador?: AdaptadorDeModelo; orcamento?: OrcamentoDeIa; registro?: RegistroDeConsumo; logger?: RegistradorDeIa; agora?: () => Date } = {}) {
+function montar(opcoes: { adaptador?: AdaptadorDeModelo; orcamento?: OrcamentoDeIa; registro?: RegistroDeConsumo; suspensao?: SuspensaoDeFuncao; logger?: RegistradorDeIa; agora?: () => Date } = {}) {
   const consumo = new ConsumoEmMemoria()
   const relogio = { agora: opcoes.agora ?? (() => new Date('2026-10-05T13:00:00Z')) }
   const ia = new ProvedorDeIa({
     adaptador: opcoes.adaptador ?? new AdaptadorFalso(),
     registro: opcoes.registro ?? consumo,
     orcamento: opcoes.orcamento ?? SEMPRE,
+    suspensao: opcoes.suspensao ?? new SuspensoesEmMemoria(),
     timeoutMs: 5_000,
     relogio,
     ...(opcoes.logger === undefined ? {} : { logger: opcoes.logger }),
@@ -61,7 +64,7 @@ describe('ProvedorDeIa: saída validada e medição', () => {
 
   it('criarProvedorDeIa: sem nada configurado, a porta é a do adaptador falso', async () => {
     const consumo = new ConsumoEmMemoria()
-    const ia = criarProvedorDeIa({ adaptador: 'falso', timeoutMs: 5_000, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 10_000 } }, { registro: consumo, orcamento: SEMPRE })
+    const ia = criarProvedorDeIa({ adaptador: 'falso', timeoutMs: 5_000, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 10_000 } }, { registro: consumo, orcamento: SEMPRE, suspensao: new SuspensoesEmMemoria() })
     const { medicao } = await ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
     expect(medicao.origem).toBe('falso')
   })
@@ -92,6 +95,34 @@ describe('ProvedorDeIa: toda execução registra (regra 30, item 4)', () => {
     await erroDe(ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A }))
     expect(consumo.registros).toMatchObject([{ estado: 'falhou', codigoDeErro: 'IA_SAIDA_INVALIDA', tentativas: 2, tokensDeEntrada: 200, tokensDeSaida: 40 }])
     expect(consumo.registros[0]).not.toHaveProperty('saida')
+  })
+
+  it('tarefa que leva texto de aluno não deixa entrada nem saída no consumo: o registro da conversa é do Tutor, não daqui', async () => {
+    const { ia, consumo } = montar()
+    const duvida = 'como eu acho o reagente limitante? palavra-marcada-do-aluno'
+    const { saida } = await ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor(duvida), escolaId: ESCOLA_A, alunoId: ALUNO_1 })
+    expect(turnoDoTutor.levaTextoDeAluno).toBe(true)
+    expect(consumo.registros).toMatchObject([{ tarefa: 'turno_do_tutor', alunoId: ALUNO_1, estado: 'concluida' }])
+    expect(consumo.registros[0]).not.toHaveProperty('entrada')
+    expect(consumo.registros[0]).not.toHaveProperty('saida')
+    expect(consumo.registros[0]?.tokensDeEntrada).toBeGreaterThan(0)
+    const gravado = JSON.stringify(consumo.registros)
+    expect(gravado).not.toContain('palavra-marcada-do-aluno')
+    expect(gravado).not.toContain(saida.resposta.slice(0, 20))
+  })
+
+  it('na falha de tarefa que leva texto de aluno, o consumo também fica sem a entrada', async () => {
+    const { ia, consumo } = montar({ adaptador: new AdaptadorRoteirizado(['não é json', 'não é json']) })
+    await erroDe(ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('não entendi palavra-marcada-do-aluno'), escolaId: ESCOLA_A, alunoId: ALUNO_1 }))
+    expect(consumo.registros).toMatchObject([{ estado: 'falhou', codigoDeErro: 'IA_SAIDA_INVALIDA' }])
+    expect(JSON.stringify(consumo.registros)).not.toContain('palavra-marcada')
+  })
+
+  it('tarefa sem texto de aluno guarda a entrada na falha: é o que explica depois por que a IA não entregou', async () => {
+    const { ia, consumo } = montar({ adaptador: new AdaptadorRoteirizado(['não é json', 'não é json']) })
+    const entrada = entradaDeAtividade()
+    await erroDe(ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada, escolaId: ESCOLA_A }))
+    expect(consumo.registros[0]?.entrada).toEqual(entrada)
   })
 
   it('se o registro falhar, a saída não é devolvida: nada que não foi registrado chega ao domínio', async () => {
@@ -141,6 +172,7 @@ describe('ProvedorDeIa: o domínio nunca vê erro cru', () => {
     expect(new ErroDeIa('IA_SAIDA_INVALIDA')).toMatchObject({ codigo: 'INDISPONIVEL_TENTE_DE_NOVO', status: 503 })
     expect(new ErroDeIa('IA_ORCAMENTO_ESGOTADO', 30)).toMatchObject({ codigo: 'LIMITE_EXCEDIDO', status: 429, tenteDeNovoEmSegundos: 30 })
     expect(new ErroDeIa('IA_ENTRADA_INVALIDA')).toMatchObject({ codigo: 'ENTRADA_INVALIDA', status: 400 })
+    expect(new ErroDeIa('IA_FUNCAO_SUSPENSA')).toMatchObject({ codigo: 'CONFLITO', status: 409 })
   })
 })
 
@@ -190,12 +222,91 @@ describe('ProvedorDeIa: orçamento consultado antes de gastar (D14, D38)', () =>
   })
 })
 
+describe('ProvedorDeIa: função suspensa pela escola não executa (D60)', () => {
+  function comSuspensao() {
+    const suspensao = new SuspensoesEmMemoria()
+    const adaptador = new AdaptadorRoteirizado([JSON.stringify(atividadeDeEstequiometria()), JSON.stringify(atividadeDeEstequiometria())])
+    const consultar = vi.fn(async () => ({ permitido: true as const }))
+    const logger = registrador()
+    return { suspensao, adaptador, consultar, logger, ...montar({ suspensao, adaptador, orcamento: { consultar }, logger }) }
+  }
+  const gerar = (ia: ProvedorDeIa, escolaId: string) => ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId })
+
+  it('função suspensa na escola A recusa com erro próprio, sem chamar o adaptador, sem consultar orçamento e sem registrar consumo', async () => {
+    const { ia, suspensao, adaptador, consultar, consumo, logger } = comSuspensao()
+    suspensao.suspender(ESCOLA_A, 'conversa_e_ferramentas')
+    const erro = await erroDe(gerar(ia, ESCOLA_A))
+    expect(erro).toMatchObject({ codigoDeIa: 'IA_FUNCAO_SUSPENSA', codigo: 'CONFLITO', status: 409 })
+    expect(adaptador.chamadas).toBe(0)
+    expect(consultar).not.toHaveBeenCalled()
+    expect(consumo.registros).toEqual([])
+    expect(logger.linhas()).toMatchObject([{ evento: 'ia.geracao.falhou', codigo: 'IA_FUNCAO_SUSPENSA', escolaId: ESCOLA_A }])
+  })
+
+  it('a mesma função na escola B executa', async () => {
+    const { ia, suspensao, adaptador } = comSuspensao()
+    suspensao.suspender(ESCOLA_A, 'conversa_e_ferramentas')
+    await expect(gerar(ia, ESCOLA_B)).resolves.toMatchObject({ saida: atividadeDeEstequiometria() })
+    expect(adaptador.chamadas).toBe(1)
+  })
+
+  it('outra função na escola A executa: suspender a adaptação não desliga a conversa e as ferramentas', async () => {
+    const { ia, suspensao, adaptador } = comSuspensao()
+    suspensao.suspender(ESCOLA_A, 'adaptacao')
+    suspensao.suspender(ESCOLA_A, 'tutor_com_o_aluno')
+    await expect(gerar(ia, ESCOLA_A)).resolves.toBeDefined()
+    expect(adaptador.chamadas).toBe(1)
+  })
+
+  it('retomada a função, ela volta a executar', async () => {
+    const { ia, suspensao } = comSuspensao()
+    suspensao.suspender(ESCOLA_A, 'conversa_e_ferramentas')
+    expect((await erroDe(gerar(ia, ESCOLA_A))).codigoDeIa).toBe('IA_FUNCAO_SUSPENSA')
+    suspensao.retomar(ESCOLA_A, 'conversa_e_ferramentas')
+    await expect(gerar(ia, ESCOLA_A)).resolves.toBeDefined()
+  })
+
+  it('o Tutor suspenso não responde nem com a mensagem fixa: nada da função executa', async () => {
+    const suspensao = new SuspensoesEmMemoria()
+    suspensao.suspender(ESCOLA_A, 'tutor_com_o_aluno')
+    const { ia, consumo } = montar({ suspensao })
+    const erro = await erroDe(ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('eu quero morrer'), escolaId: ESCOLA_A, alunoId: ALUNO_1 }))
+    expect(erro.codigoDeIa).toBe('IA_FUNCAO_SUSPENSA')
+    expect(consumo.registros).toEqual([])
+  })
+
+  it('sem conseguir consultar a suspensão, não executa', async () => {
+    const adaptador = new AdaptadorRoteirizado([])
+    const { ia } = montar({ adaptador, suspensao: { estaSuspensa: async () => Promise.reject(new Error('banco fora')) } })
+    expect((await erroDe(gerar(ia, ESCOLA_A))).codigoDeIa).toBe('IA_INDISPONIVEL')
+    expect(adaptador.chamadas).toBe(0)
+  })
+
+  it('a função sem modelo usa a mesma conferência: a correção de objetiva suspensa é recusada antes da conta', async () => {
+    const suspensao = new SuspensoesEmMemoria()
+    suspensao.suspender(ESCOLA_A, 'correcao_de_objetiva')
+    const corrigir = vi.fn(() => 'lote corrigido')
+    const encerrar = async (escolaId: string): Promise<string> => {
+      await exigirFuncaoAtiva(suspensao, escolaId, 'correcao_de_objetiva')
+      return corrigir()
+    }
+    const erro: unknown = await encerrar(ESCOLA_A).catch((motivo: unknown) => motivo)
+    expect(erro).toBeInstanceOf(ErroDeIa)
+    expect((erro as ErroDeIa).codigoDeIa).toBe('IA_FUNCAO_SUSPENSA')
+    expect(corrigir).not.toHaveBeenCalled()
+    await expect(encerrar(ESCOLA_B)).resolves.toBe('lote corrigido')
+    // E o relatório da correção, que usa modelo, é recusado pelo provedor com o mesmo código.
+    const { ia } = montar({ suspensao })
+    expect((await erroDe(ia.gerar({ tarefa: relatorioDaCorrecao, entrada: entradaDoRelatorio(), escolaId: ESCOLA_A }))).codigoDeIa).toBe('IA_FUNCAO_SUSPENSA')
+  })
+})
+
 describe('OrcamentoEmMemoria', () => {
   function comLimites(limites: { tokensPorEscolaNoMes?: number; trocasPorAlunoNoDia?: number }) {
     let agora = new Date('2026-10-05T13:00:00Z')
     const consumo = new ConsumoEmMemoria()
     const relogio = { agora: () => agora }
-    const ia = new ProvedorDeIa({ adaptador: new AdaptadorFalso(), registro: consumo, orcamento: new OrcamentoEmMemoria(consumo, limites, relogio), timeoutMs: 5_000, relogio })
+    const ia = new ProvedorDeIa({ adaptador: new AdaptadorFalso(), registro: consumo, orcamento: new OrcamentoEmMemoria(consumo, limites, relogio), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000, relogio })
     const tutor = (escolaId: string, alunoId: string) => ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('não entendi essa'), escolaId, alunoId })
     return { ia, tutor, avancarPara: (iso: string) => void (agora = new Date(iso)) }
   }

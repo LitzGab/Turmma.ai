@@ -237,6 +237,7 @@ export {
   MOTIVO_LLM_SEM_ENDERECO,
   MOTIVO_LLM_SEM_MODELO,
   MOTIVO_PROCESSAMENTO_LOCAL_EM_ENDERECO_DE_FORA,
+  MOTIVO_RECUO_MAIOR_QUE_O_PRAZO,
   MOTIVO_VAGAS_DE_IA_INCOERENTES,
 } from './config/config-ia.js'
 export type { AdaptadorDeIa, ConfiguracaoDeIa, ConfiguracaoDoExecutor, ConfiguracaoDoModelo } from './config/config-ia.js'
@@ -249,6 +250,8 @@ export type { LLMProvider, MedicaoDaGeracao, OrigemDaSaida, PedidoDeGeracao, Res
 export type { Dado, PedidoAoModelo, PromptVersionado, TarefaDeIa } from './ia/tarefa.js'
 export { ConsumoEmMemoria, OrcamentoEmMemoria } from './ia/consumo.js'
 export type { ConsultaDeOrcamento, ConsumoDeIa, DecisaoDoOrcamento, LimitesDoOrcamentoEmMemoria, OrcamentoDeIa, RegistroDeConsumo } from './ia/consumo.js'
+export { exigirFuncaoAtiva, SuspensoesEmMemoria } from './ia/suspensao.js'
+export type { SuspensaoDeFuncao } from './ia/suspensao.js'
 export { criarProvedorDeIa, MODELO_DA_REGRA_FIXA, ProvedorDeIa } from './ia/provedor.js'
 export type { DependenciasDoProvedor, PortasDoProvedor, RegistradorDeIa } from './ia/provedor.js'
 export { AdaptadorFalso, MODELO_FALSO } from './ia/adaptador-falso.js'

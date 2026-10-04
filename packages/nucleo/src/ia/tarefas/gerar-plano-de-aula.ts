@@ -1,6 +1,5 @@
 import { esquemaConteudoDePlanoDeAula, type Citacao, type ConteudoDePlanoDeAula } from '@educa/shared'
 import { z } from 'zod'
-import { ErroDeIa } from '../erros.js'
 import {
   citacaoDaFrase,
   dadoEmJson,
@@ -14,8 +13,8 @@ import {
   type FraseDoMaterial,
 } from '../material.js'
 import { PROMPT_GERAR_PLANO_DE_AULA } from '../prompts/gerar-plano-de-aula.js'
-import { definirTarefa } from '../tarefa.js'
-import { cortar, enumerar, palavras } from '../texto.js'
+import { definirTarefa, MaterialSemConteudoAproveitavel } from '../tarefa.js'
+import { cortar, enumerar, palavras, palavrasEmComum } from '../texto.js'
 
 export const esquemaEntradaDePlanoDeAula = z.strictObject({
   tema: z.string().min(1).max(200),
@@ -26,34 +25,54 @@ export const esquemaEntradaDePlanoDeAula = z.strictObject({
 })
 export type EntradaDePlanoDeAula = z.infer<typeof esquemaEntradaDePlanoDeAula>
 
-/** Um ponto do material em que uma etapa se apoia: o conceito, com e sem artigo, e a frase de onde saiu. */
+/** Um ponto do material em que uma etapa se apoia: como chamá-lo no meio da frase, entre aspas, e a frase de onde saiu. */
 interface Apoio extends FraseDoMaterial {
-  /** "o reagente limitante": para o meio da frase. */
-  readonly conceito: string
-  /** "reagente limitante": para citar entre aspas. */
+  /** "o conceito de reagente limitante", ou "o trecho “…”" quando o material não tem frase definitória. */
+  readonly referencia: string
+  /** "reagente limitante": para citar entre aspas e para a lista da avaliação. */
   readonly nome: string
+  /** Quantas palavras do tema pedido a frase tem. */
+  readonly afinidade: number
 }
 
 function apoiosDoMaterial(entrada: EntradaDePlanoDeAula): Apoio[] {
   const fatos = extrairFatos(entrada.trechos).filter((fato) => !fato.numerico)
-  if (fatos.length > 0) return fatos.map((fato) => ({ materialId: fato.materialId, pagina: fato.pagina, frase: fato.frase, conceito: `${fato.artigo} ${fato.termo}`, nome: fato.termo }))
+  if (fatos.length > 0) {
+    return fatos.map((fato) => ({
+      materialId: fato.materialId,
+      pagina: fato.pagina,
+      frase: fato.frase,
+      referencia: `o conceito de ${fato.termo}`,
+      nome: fato.termo,
+      afinidade: palavrasEmComum(entrada.tema, fato.frase),
+    }))
+  }
   // Sem frase definitória, o apoio é a própria frase, chamada pelas primeiras palavras dela.
   return frasesDoMaterial(entrada.trechos)
     .filter((frase) => palavras(frase.frase).length >= 6)
     .map((frase) => {
       const comeco = `${palavras(frase.frase).slice(0, 5).join(' ')}…`
-      return { ...frase, conceito: `o trecho “${comeco}”`, nome: comeco }
+      return { ...frase, referencia: `o trecho “${comeco}”`, nome: comeco, afinidade: palavrasEmComum(entrada.tema, frase.frase) }
     })
 }
 
-/** Quatro apoios espalhados pelo material: começo, um terço, dois terços e fim. Com menos de quatro, repete o último. */
+/**
+ * Quatro apoios, na ordem do material. Primeiro os que falam do tema pedido; faltando, completa com os outros,
+ * espalhados do começo ao fim. Com menos de quatro no material inteiro, repete o último.
+ */
 function quatroApoios(apoios: readonly Apoio[]): [Apoio, Apoio, Apoio, Apoio] {
-  const escolher = (fracao: number): Apoio => {
-    const apoio = apoios[Math.min(apoios.length - 1, Math.round((apoios.length - 1) * fracao))]
-    if (apoio === undefined) throw new ErroDeIa('IA_SAIDA_INVALIDA')
+  const ordem = apoios.map((_apoio, indice) => indice)
+  const doTema = ordem.filter((indice) => (apoios[indice]?.afinidade ?? 0) > 0).sort((a, b) => (apoios[b]?.afinidade ?? 0) - (apoios[a]?.afinidade ?? 0))
+  const outros = ordem.filter((indice) => !doTema.includes(indice))
+  const espalhados = [0, 1 / 3, 2 / 3, 1].map((fracao) => outros[Math.round((outros.length - 1) * fracao)]).filter((indice) => indice !== undefined)
+  const escolhidos = [...new Set([...doTema, ...espalhados, ...outros])].slice(0, 4).sort((a, b) => a - b)
+  const escolher = (posicao: number): Apoio => {
+    const apoio = apoios[escolhidos[Math.min(posicao, escolhidos.length - 1)] ?? -1]
+    // Material sem nenhuma frase aproveitável não vira plano inventado.
+    if (apoio === undefined) throw new MaterialSemConteudoAproveitavel()
     return apoio
   }
-  return [escolher(0), escolher(1 / 3), escolher(2 / 3), escolher(1)]
+  return [escolher(0), escolher(1), escolher(2), escolher(3)]
 }
 
 function citacoesSemRepetir(apoios: readonly Apoio[]): Citacao[] {
@@ -107,7 +126,8 @@ export const gerarPlanoDeAula = definirTarefa({
     const apoios = apoiosDoMaterial(entrada)
     const [abertura, exposicao, pratica, fechamento] = quatroApoios(apoios)
     const usados = [abertura, exposicao, pratica, fechamento]
-    const conceitos = [...new Set(usados.map((apoio) => apoio.conceito))]
+    const nomes = [...new Set(usados.map((apoio) => apoio.nome))]
+    const referencias = [...new Set(usados.map((apoio) => apoio.referencia))]
     // Cada parte tem pelo menos um minuto, e o fechamento fica com o que sobrar: a soma é sempre a duração pedida.
     const minutosDaAbertura = Math.max(1, Math.floor(entrada.duracaoMinutos * 0.15))
     const minutosDaExposicao = Math.max(1, Math.floor(entrada.duracaoMinutos * 0.35))
@@ -116,7 +136,7 @@ export const gerarPlanoDeAula = definirTarefa({
     return {
       tipo: 'plano_de_aula',
       titulo: cortar(`Plano de aula — ${entrada.tema}`, 160),
-      objetivos: conceitos.slice(0, 4).map((conceito) => cortar(`Explicar ${conceito} com as próprias palavras, com apoio do material.`, 300)),
+      objetivos: referencias.map((referencia) => cortar(`Explicar ${referencia} com as próprias palavras, com apoio do material.`, 300)),
       habilidades: [...entrada.habilidades],
       duracaoMinutos: entrada.duracaoMinutos,
       etapas: [
@@ -129,23 +149,23 @@ export const gerarPlanoDeAula = definirTarefa({
         {
           titulo: 'Exposição dialogada',
           minutos: minutosDaExposicao,
-          descricao: cortar(`Apresente ${exposicao.conceito} a partir da página ${exposicao.pagina} do material. A cada conceito, peça um exemplo à turma antes de dar o seu.`, 800),
+          descricao: cortar(`Apresente ${exposicao.referencia} a partir da página ${exposicao.pagina} do material. A cada conceito, peça um exemplo à turma antes de dar o seu.`, 800),
           citacao: citacaoDaFrase(exposicao),
         },
         {
           titulo: 'Prática em duplas',
           minutos: minutosDaPratica,
-          descricao: cortar(`Em duplas, os alunos explicam um ao outro ${pratica.conceito} e escrevem um exemplo próprio, consultando a página ${pratica.pagina}. Circule pela sala e anote as dúvidas que se repetem.`, 800),
+          descricao: cortar(`Em duplas, os alunos explicam um ao outro ${pratica.referencia} e escrevem um exemplo próprio, consultando a página ${pratica.pagina}. Circule pela sala e anote as dúvidas que se repetem.`, 800),
           citacao: citacaoDaFrase(pratica),
         },
         {
           titulo: 'Fechamento',
           minutos: minutosDoFechamento,
-          descricao: cortar(`Volte às respostas do quadro e compare com o que o material diz sobre ${fechamento.conceito}, na página ${fechamento.pagina}. Cada aluno escreve, em uma frase, o que mudou no que pensava.`, 800),
+          descricao: cortar(`Volte às respostas do quadro e compare com o que o material diz sobre ${fechamento.referencia}, na página ${fechamento.pagina}. Cada aluno escreve, em uma frase, o que mudou no que pensava.`, 800),
           citacao: citacaoDaFrase(fechamento),
         },
       ],
-      avaliacao: cortar(`Atividade objetiva curta sobre ${enumerar(conceitos)}, com a página do material citada em cada questão, corrigida em sala no fim da aula.`, 600),
+      avaliacao: cortar(`Atividade objetiva curta sobre ${enumerar(nomes)}, com a página do material citada em cada questão, corrigida em sala no fim da aula.`, 600),
       citacoes: citacoesSemRepetir(usados),
     }
   },

@@ -9,8 +9,9 @@ import type { OrigemDaSaida } from './porta.js'
  * O que toda execução de IA deixa registrado (regra 30, item 4): é o que sustenta a cobrança, o consumo da
  * governança e a resposta à escola quando ela pergunta por que a IA disse algo.
  *
- * `entrada` e `saida` são conteúdo: o prompt do Tutor é texto de aluno. Vão para a tabela, com a retenção dela, e
- * **nunca para o log** (regra 20, item 9).
+ * `entrada` e `saida` são conteúdo, e **nunca vão para o log** (regra 20, item 9). Em tarefa que leva texto de aluno
+ * (`levaTextoDeAluno`, hoje o turno do Tutor) elas não vêm: o registro da conversa é `mensagem_tutor`, com a
+ * retenção curta e o acesso restrito de lá (regra 20, item 14), e `consumo_ia` não vira uma segunda cópia dela.
  */
 export interface ConsumoDeIa {
   readonly escolaId: string
@@ -23,12 +24,9 @@ export interface ConsumoDeIa {
   readonly origem: OrigemDaSaida
   readonly modelo: string
   readonly promptVersao: string
-  /**
-   * Ausente quando a resposta saiu de regra fixa (assunto delicado no Tutor): nada foi ao modelo, e o que o aluno
-   * escreveu fica só na conversa dele, com o acesso auditado de lá (D36).
-   */
+  /** Ausente (nula na tabela) em tarefa que leva texto de aluno. */
   readonly entrada?: unknown
-  /** Ausente quando a execução falhou. */
+  /** Ausente (nula na tabela) em tarefa que leva texto de aluno, e quando a execução falhou. */
   readonly saida?: unknown
   readonly tokensDeEntrada: number
   readonly tokensDeSaida: number

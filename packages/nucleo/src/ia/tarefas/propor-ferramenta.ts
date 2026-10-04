@@ -1,6 +1,17 @@
 import { esquemaCitacao, TIPOS_DE_ADAPTACAO, type TipoDeAdaptacao } from '@educa/shared'
 import { z } from 'zod'
-import { citacaoDaFrase, dadoEmJson, dadosDosTrechos, esquemaContextoDaTurma, esquemaTrecho, fraseMaisProxima, frasesDoMaterial, problemasDasCitacoes } from '../material.js'
+import {
+  citacaoDaFrase,
+  dadoEmJson,
+  dadosDosTrechos,
+  esquemaContextoDaTurma,
+  esquemaTrecho,
+  extrairFatos,
+  fatoCitadoNoTexto,
+  fraseMaisProxima,
+  frasesDoMaterial,
+  problemasDasCitacoes,
+} from '../material.js'
 import { PROMPT_PROPOR_FERRAMENTA } from '../prompts/propor-ferramenta.js'
 import { definirTarefa } from '../tarefa.js'
 import { cortar, normalizar } from '../texto.js'
@@ -122,7 +133,8 @@ export const proporFerramenta = definirTarefa({
         proposta: { ferramenta: 'atividade_objetiva', parametros: quantidade === undefined ? { tema } : { tema, quantidade } },
       }
     }
-    const frase = fraseMaisProxima(frasesDoMaterial(entrada.trechos), entrada.mensagem)
+    // Pergunta sobre um conceito que o material define é respondida com a definição dele, e não com a frase mais parecida.
+    const frase = fatoCitadoNoTexto(extrairFatos(entrada.trechos), entrada.mensagem) ?? fraseMaisProxima(frasesDoMaterial(entrada.trechos), entrada.mensagem)
     if (frase !== undefined) {
       return {
         tipo: 'texto',

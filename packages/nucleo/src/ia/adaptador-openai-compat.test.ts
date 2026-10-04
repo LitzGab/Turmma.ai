@@ -7,6 +7,7 @@ import { AdaptadorOpenAICompat } from './adaptador-openai-compat.js'
 import { ConsumoEmMemoria, OrcamentoEmMemoria } from './consumo.js'
 import { ErroDeIa } from './erros.js'
 import { ProvedorDeIa } from './provedor.js'
+import { SuspensoesEmMemoria } from './suspensao.js'
 import { PROMPT_GERAR_ATIVIDADE_OBJETIVA } from './prompts/gerar-atividade-objetiva.js'
 import { gerarAtividadeObjetiva } from './tarefas/gerar-atividade-objetiva.js'
 import { MENSAGEM_DE_ASSUNTO_DELICADO, turnoDoTutor } from './tarefas/turno-do-tutor.js'
@@ -15,6 +16,8 @@ const MODELOS = { rapido: 'qwen-pequeno', padrao: 'qwen-medio', complexo: 'qwen-
 const BOA = atividadeDeEstequiometria()
 const TEXTO_BOM = JSON.stringify(BOA)
 const USO = { prompt_tokens: 1200, completion_tokens: 300 }
+/** Recuo curto, para o teste não esperar: o valor de produção vem de `LLM_RECUO_MS`. */
+const RECUO_MS = 40
 
 let servidor: ServidorLlamaFalso | undefined
 
@@ -29,8 +32,8 @@ async function montar(
 ): Promise<{ ia: ProvedorDeIa; consumo: ConsumoEmMemoria; pedidos: PedidoRecebido[] }> {
   servidor = await subirServidorLlamaFalso(roteiro)
   const consumo = new ConsumoEmMemoria()
-  const adaptador = new AdaptadorOpenAICompat({ baseUrl: servidor.url, modelos: MODELOS, processamentoLocal: true, ...opcoes.config })
-  const ia = new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), timeoutMs: opcoes.timeoutMs ?? 5_000 })
+  const adaptador = new AdaptadorOpenAICompat({ baseUrl: servidor.url, modelos: MODELOS, processamentoLocal: true, recuoMs: RECUO_MS, ...opcoes.config })
+  const ia = new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: opcoes.timeoutMs ?? 5_000 })
   return { ia, consumo, pedidos: servidor.pedidos }
 }
 
@@ -197,20 +200,57 @@ describe('AdaptadorOpenAICompat: prazo e indisponibilidade', () => {
     expect(performance.now() - inicio).toBeLessThan(1_500)
   })
 
-  it('erro 500: erro tipado de indisponível, sem repetir, e o corpo do provedor não sai da camada', async () => {
-    const { ia, consumo, pedidos } = await montar(() => ({ status: 500, corpo: { error: { message: 'falha interna ao processar o prompt: "texto do aluno"' } } }))
+  it('erro 500 duas vezes: uma repetição depois do recuo e, então, erro tipado de indisponível; o corpo do provedor não sai da camada', async () => {
+    const chegadas: number[] = []
+    const { ia, consumo, pedidos } = await montar(() => {
+      chegadas.push(performance.now())
+      return { status: 500, corpo: { error: { message: 'falha interna ao processar o prompt: "texto do aluno"' } } }
+    })
     const erro = await erroDe(gerarAtividade(ia))
     expect(erro).toMatchObject({ codigoDeIa: 'IA_INDISPONIVEL', codigo: 'INDISPONIVEL_TENTE_DE_NOVO', status: 503 })
     expect(`${erro.message} ${JSON.stringify(erro)}`).not.toContain('texto do aluno')
-    expect(pedidos).toHaveLength(1)
+    // Exatamente duas: a chamada e uma repetição. A saída inválida não entra aqui, então o provedor não repete por cima.
+    expect(pedidos).toHaveLength(2)
+    expect((chegadas[1] ?? 0) - (chegadas[0] ?? 0)).toBeGreaterThanOrEqual(RECUO_MS - 5)
+    expect(pedidos[1]?.corpo).toEqual(pedidos[0]?.corpo)
     expect(consumo.registros).toMatchObject([{ estado: 'falhou', codigoDeErro: 'IA_INDISPONIVEL', tentativas: 1 }])
   })
 
-  it('erro 429: indisponível, com a espera que o provedor sugeriu', async () => {
+  it.each([500, 502, 503, 429])('erro %i e depois resposta boa: a repetição resolve, e o domínio nem fica sabendo', async (status) => {
+    const { ia, pedidos } = await montar((_pedido, numero) => (numero === 1 ? { status, corpo: { error: { message: 'tente de novo' } } } : { corpo: respostaDoChat(TEXTO_BOM, { uso: USO }) }))
+    const { saida, medicao } = await gerarAtividade(ia)
+    expect(saida).toEqual(BOA)
+    expect(pedidos).toHaveLength(2)
+    expect(medicao).toMatchObject({ tentativas: 1, tokensDeEntrada: 1200 })
+  })
+
+  it.each([400, 401, 404, 422])('erro %i não é repetido: pedido ou configuração errada não melhora na segunda vez', async (status) => {
+    const { ia, pedidos } = await montar(() => ({ status, corpo: { error: { message: 'pedido inválido' } } }))
+    expect((await erroDe(gerarAtividade(ia))).codigoDeIa).toBe('IA_INDISPONIVEL')
+    expect(pedidos).toHaveLength(1)
+  })
+
+  it('erro 429 com espera sugerida maior que o recuo: não repete à toa, e a espera vai para quem chamou', async () => {
     const { ia, pedidos } = await montar(() => ({ status: 429, cabecalhos: { 'retry-after': '7' }, corpo: { error: { message: 'rate limit' } } }))
     const erro = await erroDe(gerarAtividade(ia))
     expect(erro).toMatchObject({ codigoDeIa: 'IA_INDISPONIVEL', tenteDeNovoEmSegundos: 7 })
     expect(pedidos).toHaveLength(1)
+  })
+
+  it('a repetição respeita o prazo da chamada: recuo que não cabe no prazo termina em indisponível, sem segunda chamada', async () => {
+    const { ia, pedidos } = await montar(() => ({ status: 503, corpo: {} }), { timeoutMs: 80, config: { recuoMs: 2_000 } })
+    const inicio = performance.now()
+    expect((await erroDe(gerarAtividade(ia))).codigoDeIa).toBe('IA_INDISPONIVEL')
+    expect(performance.now() - inicio).toBeLessThan(1_000)
+    expect(pedidos).toHaveLength(1)
+  })
+
+  it('a repetição que estoura o prazo é cortada: o total nunca passa do prazo da chamada', async () => {
+    const { ia, pedidos } = await montar((_pedido, numero) => (numero === 1 ? { status: 500, corpo: {} } : { corpo: respostaDoChat(TEXTO_BOM), atrasoMs: 3_000 }), { timeoutMs: 200 })
+    const inicio = performance.now()
+    expect((await erroDe(gerarAtividade(ia))).codigoDeIa).toBe('IA_TEMPO_ESGOTADO')
+    expect(performance.now() - inicio).toBeLessThan(1_500)
+    expect(pedidos).toHaveLength(2)
   })
 
   it('resposta 200 que não é do padrão (sem choices, ou que nem é JSON): indisponível, não exceção solta', async () => {

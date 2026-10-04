@@ -9,6 +9,7 @@ import {
   MOTIVO_LLM_SEM_ENDERECO,
   MOTIVO_LLM_SEM_MODELO,
   MOTIVO_PROCESSAMENTO_LOCAL_EM_ENDERECO_DE_FORA,
+  MOTIVO_RECUO_MAIOR_QUE_O_PRAZO,
   MOTIVO_VAGAS_DE_IA_INCOERENTES,
 } from './config-ia.js'
 import { ConfiguracaoInvalida } from './validar-config.js'
@@ -63,8 +64,15 @@ describe('lerConfiguracaoDeIa', () => {
         baseUrl: 'http://127.0.0.1:8080/v1',
         modelos: { rapido: 'qwen3-8b', padrao: 'qwen3-8b', complexo: 'qwen3-8b', visao: 'qwen3-8b' },
         processamentoLocal: true,
+        recuoMs: 500,
       },
     })
+  })
+
+  it('o recuo da repetição em 429 e 5xx é configurável e precisa caber no prazo da chamada', () => {
+    expect(lerConfiguracaoDeIa({ ...LLAMA, LLM_RECUO_MS: '1500' }).modelo?.recuoMs).toBe(1_500)
+    expect(lerConfiguracaoDeIa({ ...LLAMA, LLM_RECUO_MS: '0' }).modelo?.recuoMs).toBe(0)
+    expect(erroDe({ ...LLAMA, LLM_RECUO_MS: '60000', LLM_TIMEOUT_MS: '60000' })).toMatchObject({ variaveis: ['LLM_RECUO_MS'], motivos: [MOTIVO_RECUO_MAIOR_QUE_O_PRAZO] })
   })
 
   it('o id por perfil vence o comum, e só o perfil declarado muda', () => {
@@ -118,7 +126,8 @@ describe('lerConfiguracaoDeIa', () => {
     ['IA_EXECUCOES_POR_ESCOLA', '0'],
     ['IA_EXECUCAO_TIMEOUT_MS', 'dois minutos'],
   ])('recusa %s="%s"', (variavel, valor) => {
-    expect(erroDe({ ...LLAMA, [variavel]: valor }).variaveis).toEqual([variavel])
+    // Um prazo inválido também reprova o que se compara com ele; o que importa é a variável errada estar apontada.
+    expect(erroDe({ ...LLAMA, [variavel]: valor }).variaveis).toContain(variavel)
   })
 
   it('endereço inválido com processamento local declarado aponta só o endereço, sem quebrar a validação', () => {

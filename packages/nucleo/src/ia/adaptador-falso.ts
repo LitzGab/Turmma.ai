@@ -2,12 +2,23 @@ import { setTimeout as esperar } from 'node:timers/promises'
 import type { AdaptadorDeModelo, ChamadaAoModelo, RespostaDoModelo } from './adaptador.js'
 import { ErroDeIa } from './erros.js'
 import type { Perfil } from './perfis.js'
+import { MaterialSemConteudoAproveitavel, type TarefaDeIa } from './tarefa.js'
 
 export const MODELO_FALSO = 'falso-deterministico'
 
 /** Estimativa grosseira e estável: quatro caracteres por token. Serve para o consumo aparecer na governança sem modelo. */
 export function estimarTokens(texto: string): number {
   return Math.ceil(texto.length / 4)
+}
+
+function versaoDeterministica<Entrada, Saida>(tarefa: TarefaDeIa<Entrada, Saida>, entrada: Entrada): Saida {
+  try {
+    return tarefa.falso(entrada)
+  } catch (erro) {
+    // Sem material aproveitável não há saída: é o mesmo desfecho de um modelo que não entregou o formato.
+    if (erro instanceof MaterialSemConteudoAproveitavel) throw new ErroDeIa('IA_SAIDA_INVALIDA')
+    throw erro
+  }
 }
 
 export interface OpcoesDoAdaptadorFalso {
@@ -36,7 +47,7 @@ export class AdaptadorFalso implements AdaptadorDeModelo {
         throw new ErroDeIa('IA_TEMPO_ESGOTADO')
       })
     }
-    const texto = JSON.stringify(chamada.tarefa.falso(chamada.entrada))
+    const texto = JSON.stringify(versaoDeterministica(chamada.tarefa, chamada.entrada))
     return {
       texto,
       modelo: MODELO_FALSO,

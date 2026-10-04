@@ -1,6 +1,17 @@
 import { esquemaCitacao, esquemaHabilidade, type Citacao } from '@educa/shared'
 import { z } from 'zod'
-import { dadoEmJson, dadosDosTrechos, esquemaContextoDaTurma, esquemaTrecho, fraseMaisProxima, frasesDoMaterial, problemasDasCitacoes, type FraseDoMaterial } from '../material.js'
+import {
+  dadoEmJson,
+  dadosDosTrechos,
+  esquemaContextoDaTurma,
+  esquemaTrecho,
+  extrairFatos,
+  fatoCitadoNoTexto,
+  fraseMaisProxima,
+  frasesDoMaterial,
+  problemasDasCitacoes,
+  type FraseDoMaterial,
+} from '../material.js'
 import { PROMPT_TURNO_DO_TUTOR } from '../prompts/turno-do-tutor.js'
 import { definirTarefa } from '../tarefa.js'
 import { contemTexto, cortar, normalizar, palavras, palavrasDeConteudo } from '../texto.js'
@@ -223,21 +234,25 @@ function repeteAlternativa(texto: string, entrada: EntradaDoTutor): boolean {
 }
 
 /**
- * O trecho que o aluno vê no chip da página. A frase do material pode ser, palavra por palavra, a alternativa
- * correta: nesse caso o chip mostra só o começo dela, ou só a página.
+ * O trecho que o aluno vê no chip da página é só o começo da frase: o bastante para ele achar o lugar no material,
+ * nunca a frase inteira. A frase que ajuda costuma ser a própria definição que ele pediu, ou, palavra por palavra, a
+ * alternativa correta da questão. Se até o começo repete uma alternativa, o chip mostra só a página.
  */
-function trechoSemAResposta(frase: FraseDoMaterial, entrada: EntradaDoTutor): string {
-  if (!repeteAlternativa(frase.frase, entrada)) return cortar(frase.frase, 400)
-  const comeco = `${palavras(frase.frase).slice(0, 4).join(' ')}…`
+function comecoSemAResposta(frase: FraseDoMaterial, comeco: string, entrada: EntradaDoTutor): string {
   return repeteAlternativa(comeco, entrada) ? `Página ${frase.pagina} do material` : comeco
 }
 
 function apoioNoMaterial(entrada: EntradaDoTutor): { citacao: Citacao; orientacao: string } | undefined {
-  const candidatas = frasesDoMaterial(entrada.trechos)
   const busca = `${entrada.duvida} ${entrada.questao?.enunciado ?? ''}`
-  const frase = fraseMaisProxima(candidatas, busca) ?? candidatas[0]
+  // Quando a dúvida ou a questão nomeiam um conceito que o material define, a página certa é a da definição dele.
+  const fato = fatoCitadoNoTexto(extrairFatos(entrada.trechos), busca)
+  const candidatas = frasesDoMaterial(entrada.trechos)
+  const frase = fato ?? fraseMaisProxima(candidatas, busca) ?? candidatas[0]
   if (frase === undefined) return undefined
-  const trecho = trechoSemAResposta(frase, entrada)
+  // Da definição, o chip mostra até o verbo ("Reagente limitante é…"); de outra frase, as quatro primeiras palavras.
+  const ateOVerbo = fato === undefined ? -1 : fato.frase.indexOf(` ${fato.copula} `)
+  const comeco = fato === undefined || ateOVerbo < 0 ? `${palavras(frase.frase).slice(0, 4).join(' ')}…` : `${fato.frase.slice(0, ateOVerbo + 1 + fato.copula.length)}…`
+  const trecho = comecoSemAResposta(frase, comeco, entrada)
   const onde = trecho.endsWith('…') ? `, no trecho que começa com “${trecho}”` : ''
   return {
     citacao: { materialId: frase.materialId, pagina: frase.pagina, trecho },
