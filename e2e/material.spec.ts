@@ -1,6 +1,6 @@
 import type { Locator, Page, Request, Route } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { entrarComoCoordenacaoNaMesmaAba, esperarEstrutura, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { entrarComoCoordenacaoNaMesmaAba, esperarGovernanca, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { CAMINHO_DO_PDF_DE_DEMONSTRACAO, criarMaterialNoBanco, materiaisNoBanco, recusasNaAuditoria } from './__fixtures__/material.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { criarEquipeComSenha, montarEstruturaNoBanco, type EquipeDeTeste, type EstruturaDeTeste } from './__fixtures__/sessao.ts'
@@ -60,7 +60,7 @@ async function abrirMaterial(page: Page, hasTouch: boolean, antes?: (cenario: Ce
   await antes?.(cenario)
   await page.goto('/entrar')
   await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-  await esperarEstrutura(page)
+  await esperarGovernanca(page)
   await irPelaNavegacao(page, 'Material', hasTouch)
   await expect(page).toHaveURL(/\/coordenacao\/material$/)
   return cenario

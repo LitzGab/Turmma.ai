@@ -121,19 +121,36 @@ export async function entrarComoProfessora(page: Page, hasTouch: boolean): Promi
 }
 
 /**
- * A coordenação abre em Estrutura (A1, 13.0; `docs/interface.md` 11.1): o endereço e a tela. O endereço vem da página
- * inicial, na entrada; a tela, do chunk da área, e por isso o teste que segura o chunk confere só o endereço.
+ * A coordenação abre em Governança (MVP, A5; `docs/interface.md` 11.1: é a tela que fecha a venda), e não mais em
+ * Estrutura: o endereço e a tela. O endereço vem da página inicial, na entrada; a tela, do pedaço dela, que a área
+ * carrega por `import()`, e por isso o teste que segura o chunk da área confere só o endereço.
  */
+export async function esperarGovernanca(page: Page): Promise<void> {
+  await expect(page).toHaveURL(/\/coordenacao\/governanca$/, { timeout: PRAZO_DA_ENTRADA_MS })
+  await expect(page.getByRole('heading', { level: 1, name: 'Governança' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
+}
+
+/** A Estrutura da coordenação aberta (A1, 13.0): o endereço e a tela. */
 export async function esperarEstrutura(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/coordenacao\/estrutura$/, { timeout: PRAZO_DA_ENTRADA_MS })
   await expect(page.getByRole('heading', { level: 1, name: 'Estrutura' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
 }
 
 /**
+ * A coordenação que acabou de entrar vai à Estrutura: **confere que abriu em Governança** e segue pela navegação da
+ * lateral, sem recarregar a página. É o caminho de quem monta a escola desde a A5.
+ */
+export async function abrirEstrutura(page: Page, hasTouch: boolean): Promise<void> {
+  await esperarGovernanca(page)
+  await irPelaNavegacao(page, 'Estrutura', hasTouch)
+  await esperarEstrutura(page)
+}
+
+/**
  * A coordenadora no primeiro acesso, a partir da tela de entrada já aberta e sem recarregar a página: configura o
  * segundo fator do jeito sem celular, volta à entrada e entra com o código. Sem recarga, o que o teste afirma sobre o
- * cache da pessoa anterior na mesma aba continua valendo. Termina com a aba no endereço da Estrutura, onde a coordenação
- * abre (13.0); quem precisa da tela chama `esperarEstrutura`.
+ * cache da pessoa anterior na mesma aba continua valendo. Termina com a aba no endereço da Governança, onde a coordenação
+ * abre (A5); quem precisa da tela chama `esperarGovernanca`, e quem vai montar a escola, `abrirEstrutura`.
  */
 export async function entrarComoCoordenacaoNaMesmaAba(page: Page, coordenadora: EquipeDeTeste, hasTouch: boolean): Promise<void> {
   const respostaDoSegredo = page.waitForResponse((resposta) => new URL(resposta.url()).pathname === '/v1/conta/mfa/configurar')
@@ -147,5 +164,5 @@ export async function entrarComoCoordenacaoNaMesmaAba(page: Page, coordenadora: 
   await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   await campoCodigo(page).fill(codigoDoAutenticador(segredo, PASSO_SEGUINTE_SEGUNDOS))
   await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
-  await expect(page).toHaveURL(/\/coordenacao\/estrutura$/, { timeout: PRAZO_DA_ENTRADA_MS })
+  await expect(page).toHaveURL(/\/coordenacao\/governanca$/, { timeout: PRAZO_DA_ENTRADA_MS })
 }

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { Browser, BrowserContext, BrowserContextOptions, Locator, Page } from '@playwright/test'
 import { exibirCodigoDaTurma } from '../packages/shared/src/sala/acesso.ts'
 import type { RespostaAcessoGerado } from '../packages/shared/src/sala/acesso.ts'
-import { entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarEstrutura, irPelaNavegacao, PRAZO_DA_ENTRADA_MS, esperarNovaConversa } from './__fixtures__/casca.ts'
+import { entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, abrirEstrutura, irPelaNavegacao, PRAZO_DA_ENTRADA_MS, esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { alunosDaTurmaNoBanco, criarEquipeComSenha, montarEstruturaNoBanco, porNaListaDaTurma } from './__fixtures__/sessao.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -77,7 +77,7 @@ test('W1: da escola vazia à aluna aprovada, só pela tela — a coordenação m
   const coordenadora = await criarEquipeComSenha('coordenador', { semAnoLetivo: true })
   await page.goto('/entrar')
   await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-  await esperarEstrutura(page)
+  await abrirEstrutura(page, hasTouch)
   await expect(principal(page).getByText('Comece pelo ano letivo')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
 
   // Ano letivo, aberto.

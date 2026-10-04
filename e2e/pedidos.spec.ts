@@ -1,7 +1,7 @@
 import type { Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaPedidosDaTurma } from '../packages/shared/src/sala/pedidos.ts'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, abrirEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   alunosDaTurmaNoBanco,
@@ -330,7 +330,7 @@ test.describe('W4 (Pedidos) e W6, pela coordenação', () => {
     await page.clock.install()
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     await acionar(principal(page).getByRole('link', { name: `Lista de nomes da turma ${turma.nome}` }), hasTouch)
     await expect(principal(page).getByRole('heading', { level: 1, name: `Turma ${turma.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
 
@@ -880,7 +880,7 @@ test.describe('recomeço da tela dos pedidos', () => {
       if (ehUmaLeitura(pedido)) leituras.push(new URL(pedido.url()).search)
     })
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     await acionar(principal(page).getByRole('link', { name: `Lista de nomes da turma ${turma.turmaNome}` }), hasTouch)
     await expect(principal(page).getByRole('heading', { level: 1, name: `Turma ${turma.turmaNome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     // Nada do que o professor leu ou marcou: a seção espera o clique dela, e nenhuma leitura saiu.
@@ -981,7 +981,7 @@ test.describe('os aprovados na lista de nomes da coordenação', () => {
     await porAprovadosNaListaDaTurma(coordenadora.escolaId, turma.id, 1)
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     await acionar(principal(page).getByRole('link', { name: `Lista de nomes da turma ${turma.nome}` }), hasTouch)
     const nomesDaTurma = principal(page).getByRole('region', { name: 'Nomes da turma' })
     await expect(nomesDaTurma).toContainText('Mostrando os primeiros 100 nomes', { timeout: PRAZO_DA_ENTRADA_MS })

@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test'
 import { entregasNoBanco } from './__fixtures__/a2.ts'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarEstrutura, esperarNovaConversa, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarGovernanca, esperarNovaConversa, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { CAMINHO_DO_PDF_DE_DEMONSTRACAO } from './__fixtures__/material.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarCoordenadoraNaEscola, criarEquipeComSenha, type EquipeDeTeste } from './__fixtures__/sessao.ts'
@@ -46,7 +46,7 @@ async function montarEscolaEEntrar(page: Page, hasTouch: boolean): Promise<Escol
 
   await page.goto('/entrar')
   await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-  await esperarEstrutura(page)
+  await esperarGovernanca(page)
   await irPelaNavegacao(page, 'Material', hasTouch)
   await expect(page).toHaveURL(/\/coordenacao\/material$/)
   await page.getByTestId('arquivo-do-material').setInputFiles(CAMINHO_DO_PDF_DE_DEMONSTRACAO)
