@@ -57,8 +57,11 @@ function atividadeOriginal(lido: ArtefatoLido): ConteudoDeAtividade {
  * - **Só o professor com vínculo confirmado na turma e na disciplina do artefato** o alcança, e as duas são as do
  *   artefato lido do banco. O de outra turma, de outra disciplina da mesma turma, de outra escola e o inexistente
  *   respondem o mesmo `NAO_ENCONTRADO`. Coordenação e aluno não leem.
- * - **Renomear muda só o título**, na coluna e no conteúdo, juntos.
+ * - **Renomear muda só o título**, na coluna e no conteúdo, juntos. A versão adaptada **já decidida** não se renomeia
+ *   (`CONFLITO`): o que foi aprovado ou rejeitado fica como estava quando a professora decidiu.
  * - **O PDF** é gerado na hora, sem guardar arquivo e sem dado de pessoa; não gera auditoria (contrato, decisão 24).
+ *   **A versão adaptada sai limpa só com a entrega `aprovada`**; `pendente`, sai como rascunho marcado em toda página e
+ *   sem a frase "revisado"; `rejeitada`, não sai (`VERSAO_ADAPTADA_NAO_APROVADA`).
  * - **A Adaptação recebe só os tipos e o tempo extra** (D35, D67): não existe campo de texto, e nada sobre aluno entra.
  *   Só atividade objetiva se adapta, e versão adaptada não se adapta de novo (`CONFLITO`). **A versão adaptada e a
  *   entrega `pendente` nascem na mesma transação**, depois de conferido que o gabarito, as habilidades e as citações
@@ -92,17 +95,25 @@ export class ArtefatoService {
   }
 
   async renomear(id: string, pedido: PedidoRenomearArtefato): Promise<RespostaArtefato> {
-    if (!(await new ArtefatoRepository(this.banco).renomear(id, pedido.titulo))) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+    const artefatos = new ArtefatoRepository(this.banco)
+    if (!(await artefatos.renomear(id, pedido.titulo))) {
+      // Não renomeou: ou o artefato não está no alcance, ou é versão adaptada com a entrega já decidida.
+      throw new ErroDeDominio((await artefatos.porId(id)) === undefined ? CodigoDeErro.NAO_ENCONTRADO : CodigoDeErro.CONFLITO)
+    }
     return this.ler(id)
   }
 
   async pdf(id: string): Promise<PdfDoArtefato> {
     const lido = await new ArtefatoRepository(this.banco).porId(id)
     if (lido === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+    // A versão adaptada só sai limpa depois de aprovada (regra 70, itens 3 e 6): pendente, sai como rascunho, para a
+    // professora ver a fonte ampliada antes de decidir; rejeitada, ou sem entrega, não sai.
+    const rascunho = lido.origemId !== null && lido.entregaEstado === 'pendente'
+    if (lido.origemId !== null && lido.entregaEstado !== 'aprovada' && !rascunho) throw new ErroDeDominio(CodigoDeErro.VERSAO_ADAPTADA_NAO_APROVADA)
     const conteudo = esquemaConteudoDoArtefato.parse(lido.conteudo)
     // O id do material vem do `jsonb`, sem FK: o título é relido pela escola do contexto, e o que não for dela não aparece.
     const titulos = await new ArtefatoRepository(this.banco).titulosDosMateriais([...new Set(citacoesDoConteudo(conteudo).map((citacao) => citacao.materialId))])
-    return { nome: nomeDoArquivoDoPdf(conteudo.titulo), bytes: await gerarPdfDoArtefato(conteudo, titulos) }
+    return { nome: nomeDoArquivoDoPdf(rascunho ? `rascunho ${conteudo.titulo}` : conteudo.titulo), bytes: await gerarPdfDoArtefato(conteudo, titulos, { rascunho }) }
   }
 
   async adaptar(id: string, pedido: PedidoAdaptarArtefato): Promise<RespostaExecucaoAceita> {

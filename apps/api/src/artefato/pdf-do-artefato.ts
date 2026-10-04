@@ -8,7 +8,9 @@ import PDFDocument from 'pdfkit'
  *   página à parte; ou o plano, com objetivos, etapas e fontes. Não entra nome de professor, de turma nem de aluno: a
  *   função recebe só o conteúdo do artefato e o título dos materiais citados, e não tem de onde tirar outro.
  * - **Com o aviso de IA** (regra 70, item 4a): o conteúdo foi gerado por inteligência artificial e revisado por quem o
- *   exporta. Vai na primeira página e na do gabarito.
+ *   exporta. Vai na primeira página e na do gabarito. **No rascunho** (a versão adaptada ainda pendente), o aviso não
+ *   diz "revisado", e toda página leva a marca de rascunho: quem decide se o PDF sai limpo, como rascunho ou não sai é
+ *   o service, pelo estado da entrega.
  * - **A fonte é a padrão do PDF** (Helvetica), sem fonte embutida: o arquivo fica pequeno e sai rápido. Ela não tem
  *   seta, dígito subscrito nem letra grega, e o que o material escreve assim vira o equivalente que ela tem
  *   (`textoParaAFontePadrao`). Nada chega ao arquivo fora do que a fonte escreve.
@@ -19,6 +21,19 @@ import PDFDocument from 'pdfkit'
 
 export const AVISO_DE_IA_NO_PDF =
   'Conteúdo gerado por inteligência artificial (Assistente de ensino do Turmma) a partir do material da escola, e revisado pela professora ou pelo professor que o exportou.'
+/** O aviso do rascunho: diz que é IA, e **não** diz que foi revisado, porque ainda não foi aprovado. */
+export const AVISO_DE_IA_NO_RASCUNHO = 'Conteúdo gerado por inteligência artificial (Assistente de ensino do Turmma) a partir do material da escola. Ainda não foi aprovado: não entregue aos alunos.'
+/** A marca de toda página da versão adaptada que ainda espera a decisão (regra 70, itens 3 e 6). */
+export const MARCA_DE_RASCUNHO = 'Rascunho — aguardando a aprovação da professora'
+
+export interface OpcoesDoPdf {
+  /**
+   * A versão adaptada com a entrega ainda `pendente`: sai com a marca de rascunho em toda página e sem a frase
+   * "revisado". A professora precisa ver a fonte ampliada para decidir; o que ela não leva é um papel com cara de
+   * aprovado.
+   */
+  readonly rascunho?: boolean
+}
 
 const MARGEM = 56
 const COR_DO_TEXTO = '#0D0D0D'
@@ -180,10 +195,10 @@ function fonteDaCitacao(citacao: Pick<Citacao, 'materialId' | 'pagina'>, titulos
   return `Fonte: ${titulos.get(citacao.materialId) ?? 'material da escola'}, p. ${String(citacao.pagina)}`
 }
 
-function escreverAtividade(folha: Folha, conteudo: ConteudoDeAtividade, titulos: ReadonlyMap<string, string>): void {
+function escreverAtividade(folha: Folha, conteudo: ConteudoDeAtividade, titulos: ReadonlyMap<string, string>, aviso: string): void {
   const estilos = estilosDoPdf(conteudo.adaptacao?.tipos.includes('fonte_ampliada') === true)
   folha.escrever(conteudo.titulo, estilos.titulo)
-  folha.escrever(AVISO_DE_IA_NO_PDF, estilos.aviso)
+  folha.escrever(aviso, estilos.aviso)
   conteudo.questoes.forEach((questao, indice) => {
     folha.junto([
       [`${String(indice + 1)}. ${questao.enunciado}`, { ...estilos.corpo, depois: 8 }],
@@ -196,7 +211,7 @@ function escreverAtividade(folha: Folha, conteudo: ConteudoDeAtividade, titulos:
   const doProfessor = estilosDoPdf(false)
   folha.novaPagina()
   folha.escrever(`Gabarito — ${conteudo.titulo}`, doProfessor.titulo)
-  folha.escrever(AVISO_DE_IA_NO_PDF, doProfessor.aviso)
+  folha.escrever(aviso, doProfessor.aviso)
   if (conteudo.adaptacao !== undefined) {
     const { tipos, tempoExtraPercentual } = conteudo.adaptacao
     const rotulos = tipos.map((tipo) => (tipo === 'tempo_adicional' && tempoExtraPercentual !== undefined ? `${ROTULOS_DA_ADAPTACAO[tipo]} (+${String(tempoExtraPercentual)}%)` : ROTULOS_DA_ADAPTACAO[tipo]))
@@ -236,21 +251,31 @@ function escreverPlano(folha: Folha, conteudo: ConteudoDePlanoDeAula, titulos: R
  * O PDF do artefato, em memória. `titulos` é o título de cada material citado, lido pela escola do contexto; material
  * que não está no mapa sai como "material da escola".
  */
-export function gerarPdfDoArtefato(conteudo: ConteudoDoArtefato, titulos: ReadonlyMap<string, string>): Promise<Buffer> {
+export function gerarPdfDoArtefato(conteudo: ConteudoDoArtefato, titulos: ReadonlyMap<string, string>, { rascunho = false }: OpcoesDoPdf = {}): Promise<Buffer> {
   return new Promise((resolver, rejeitar) => {
     const documento = new PDFDocument({
       size: 'A4',
       margin: MARGEM,
       // Só o título e o produto: os metadados do arquivo não levam autor.
       info: { Title: textoParaAFontePadrao(conteudo.titulo), Creator: 'Turmma', Producer: 'Turmma' },
+      // As páginas ficam abertas até o fim, para a marca de rascunho entrar em todas, inclusive nas que a quebra criou.
+      bufferPages: true,
     })
     const pedacos: Buffer[] = []
     documento.on('data', (pedaco: Buffer) => pedacos.push(pedaco))
     documento.on('end', () => resolver(Buffer.concat(pedacos)))
     documento.on('error', rejeitar)
     const folha = new Folha(documento)
-    if (conteudo.tipo === 'atividade_objetiva') escreverAtividade(folha, conteudo, titulos)
+    if (conteudo.tipo === 'atividade_objetiva') escreverAtividade(folha, conteudo, titulos, rascunho ? AVISO_DE_IA_NO_RASCUNHO : AVISO_DE_IA_NO_PDF)
     else escreverPlano(folha, conteudo, titulos)
+    if (rascunho) {
+      const { start, count } = documento.bufferedPageRange()
+      for (let pagina = start; pagina < start + count; pagina += 1) {
+        documento.switchToPage(pagina)
+        // No alto da página, acima da margem: fora do fluxo do texto, e por isso não empurra nem quebra nada.
+        documento.font('Helvetica-Bold').fontSize(10).fillColor(COR_DO_TEXTO).text(MARCA_DE_RASCUNHO, MARGEM, MARGEM / 2, { lineBreak: false })
+      }
+    }
     documento.end()
   })
 }

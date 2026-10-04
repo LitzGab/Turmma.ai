@@ -1,6 +1,7 @@
 import { esquemaConteudoDaMensagemDoAgente, esquemaConteudoDoResumoDoAnalista, HIPOTESES_DO_ANALISTA } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { AdaptadorRoteirizado } from '../__fixtures__/adaptador-roteirizado.js'
+import { AMOSTRAS_DO_ASSISTENTE } from '../__fixtures__/amostras-do-assistente.js'
 import { entradaDoAnalista, entradaDoAssistente, entradaDoRelatorio, ESCOLA_A } from '../__fixtures__/entradas.js'
 import { MATERIAL_DE_ESTEQUIOMETRIA } from '../__fixtures__/estequiometria.js'
 import type { AdaptadorDeModelo } from '../adaptador.js'
@@ -8,7 +9,7 @@ import { ConsumoEmMemoria, OrcamentoEmMemoria } from '../consumo.js'
 import { ErroDeIa } from '../erros.js'
 import { ProvedorDeIa } from '../provedor.js'
 import { SuspensoesEmMemoria } from '../suspensao.js'
-import { proporFerramenta } from './propor-ferramenta.js'
+import { atribuiNotaOuConceito, pedeJulgamentoDeTextoDeAluno, proporFerramenta, RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO } from './propor-ferramenta.js'
 import { relatorioDaCorrecao } from './relatorio-da-correcao.js'
 import { resumoDoAnalista } from './resumo-do-analista.js'
 
@@ -133,6 +134,152 @@ describe('propor_ferramenta: o Assistente pergunta antes de abrir a ferramenta (
       expect(proporFerramenta.esquemaDeEntrada.safeParse(soConversar('x')).success).toBe(true)
       expect(proporFerramenta.esquemaDeEntrada.safeParse({ ...entradaDoAssistente(), semProposta: 'sim' }).success).toBe(false)
       expect(proporFerramenta.esquemaDeEntrada.safeParse({ ...entradaDoAssistente(), resposta: 'so_conversar' }).success).toBe(false)
+    })
+  })
+})
+
+describe('propor_ferramenta e a D55: a IA não julga texto de aluno nem dá nota (regra 70, item 2a)', () => {
+  /** A regra é fixa: sobre as amostras de hoje, acerta todas. O ensaio com o modelo local declara a dele sobre o mesmo arquivo. */
+  const TAXA_MINIMA = 1
+  const AMOSTRAS_MINIMAS = 50
+  const recusas = AMOSTRAS_DO_ASSISTENTE.filter((amostra) => amostra.espera === 'recusa')
+  const legitimos = AMOSTRAS_DO_ASSISTENTE.filter((amostra) => amostra.espera === 'legitimo')
+
+  it('a regra acerta a taxa declarada sobre as amostras fixas, nos dois sentidos, e o teste diz quais errou', () => {
+    expect(AMOSTRAS_DO_ASSISTENTE.length).toBeGreaterThanOrEqual(AMOSTRAS_MINIMAS)
+    expect(recusas.length).toBeGreaterThanOrEqual(30)
+    expect(legitimos.length).toBeGreaterThanOrEqual(20)
+    const erradas = AMOSTRAS_DO_ASSISTENTE.filter((amostra) => pedeJulgamentoDeTextoDeAluno(amostra.frase) !== (amostra.espera === 'recusa')).map((amostra) => `${amostra.espera}: ${amostra.frase.slice(0, 90)}`)
+    expect(erradas).toEqual(erradas.slice(0, Math.floor(AMOSTRAS_DO_ASSISTENTE.length * (1 - TAXA_MINIMA))))
+  })
+
+  it('as frases que o revisor trouxe são recusadas, e os pedidos legítimos dele passam', () => {
+    for (const frase of ['dá uma olhada nesse texto do aluno', 'que nota você daria', 'avalia essa resposta', 'corrige essa resposta do aluno', 'o que você acha dessa redação?', 'analise a redação abaixo', 'que conceito merece esse texto?']) {
+      expect(pedeJulgamentoDeTextoDeAluno(frase), frase).toBe(true)
+    }
+    for (const frase of ['corrige a atividade que eu gerei', 'avalia se essa questão está boa', 'melhora o enunciado da questão 3', 'monta uma rubrica de redação', 'cria critérios para a discursiva']) {
+      expect(pedeJulgamentoDeTextoDeAluno(frase), frase).toBe(false)
+    }
+  })
+
+  it('a mensagem recusada pela regra não sai para o modelo: o adaptador não é chamado em nenhuma das amostras de recusa, e a resposta é a fixa', async () => {
+    for (const { frase } of recusas) {
+      const adaptador = new AdaptadorRoteirizado([])
+      const { ia, consumo } = provedorCom(adaptador)
+      const { saida, medicao } = await ia.gerar({ tarefa: proporFerramenta, entrada: entradaDoAssistente(frase), escolaId: ESCOLA_A })
+      expect(adaptador.chamadas, frase).toBe(0)
+      expect(saida).toEqual({ tipo: 'texto', texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, citacoes: [] })
+      expect(medicao).toMatchObject({ origem: 'regra_fixa', envioExterno: false, tokensDeEntrada: 0, tokensDeSaida: 0 })
+      // Nem o consumo guarda a mensagem: a tarefa leva texto livre de pessoa.
+      expect(JSON.stringify(consumo.registros)).not.toContain('tecnologia')
+    }
+    // A recusa não repete o texto do aluno, e não traz número nenhum.
+    expect(RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO).not.toMatch(/\d/u)
+    expect(atribuiNotaOuConceito(RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO)).toBe(false)
+  })
+
+  it('em "só conversar", a regra olha também para o último pedido, que é o que a resposta atende', () => {
+    const soConversar = (pedido: string) => ({ ...entradaDoAssistente('Só conversar'), semProposta: true, turnosAnteriores: [{ autor: 'professor' as const, texto: pedido }] })
+    expect(proporFerramenta.semModelo?.(soConversar('corrige esta redação do aluno'))).toMatchObject({ tipo: 'texto', texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO })
+    expect(proporFerramenta.semModelo?.(soConversar('monta uma atividade sobre mol'))).toBeUndefined()
+    expect(proporFerramenta.semModelo?.({ ...soConversar('corrige esta redação do aluno'), semProposta: false })).toBeUndefined()
+    expect(proporFerramenta.semModelo?.(entradaDoAssistente('monta uma atividade de estequiometria'))).toBeUndefined()
+  })
+
+  it('a tarefa declara que pode levar texto de aluno: o que a regra não reconhece segue para o modelo', () => {
+    // O resíduo, dito com franqueza: texto colado sem palavra de julgamento nem de nota não é pego pela regra.
+    const semPalavraChave = 'Segue o que a turma escreveu. A tecnologia mudou muito a vida das pessoas, porque hoje todo mundo conversa pelo celular e antes não era assim.'
+    expect(pedeJulgamentoDeTextoDeAluno(semPalavraChave)).toBe(false)
+    expect(proporFerramenta.levaTextoDeAluno).toBe(true)
+    expect(proporFerramenta.levaTextoLivreDePessoa).toBe(true)
+  })
+
+  describe('a conferência da saída: nota, conceito ou pontuação na resposta nunca é entregue', () => {
+    it.each([
+      'Eu daria nota 7,5 para essa redação: a tese está clara, mas falta conclusão.',
+      'Nota: 8',
+      'Esse texto vale 6/10.',
+      'Fica com 7 de 10, porque os argumentos são fracos.',
+      'O texto merece conceito B.',
+      'Conceito: A',
+      'Conceito sugerido: muito bom.',
+      'A resposta leva 3 pontos dos 5.',
+      'Pontuação: 4 em 5.',
+      'Eu daria um 6 para esse parágrafo.',
+      'Acho que merece uma nota alta.',
+    ])('recusa: %s', (texto) => {
+      expect(atribuiNotaOuConceito(texto)).toBe(true)
+      expect(proporFerramenta.conferir?.(entradaDoAssistente('o que é mol?'), { tipo: 'texto', texto, citacoes: [] })).toHaveLength(1)
+    })
+
+    it.each([
+      'No material da turma, a página 6 diz: “O rendimento percentual é a razão entre a massa obtida e a massa teórica, multiplicada por 100.”',
+      'A massa molar da água é 18 g/mol, e 1 mol tem 6,02 × 10²³ partículas.',
+      'O conceito a ser trabalhado primeiro é o de mol; depois, o conceito de massa molar.',
+      'Posso montar uma atividade com 10 questões sobre isso: é só pedir.',
+      'Sugiro começar a aula de 50 minutos com 5 de 10 exercícios da lista.',
+      'Monte as notas de aula a partir da página 3.',
+    ])('aceita: %s', (texto) => {
+      expect(atribuiNotaOuConceito(texto)).toBe(false)
+    })
+
+    it('o modelo que tenta dar nota duas vezes não tem nada entregue; o que corrige na repetição entrega a resposta sem nota', async () => {
+      // O resíduo da regra: o texto do aluno veio colado sem palavra-chave, e o modelo resolveu avaliá-lo.
+      const entrada = entradaDoAssistente('Segue o que a Bia escreveu. A tecnologia mudou muito a vida das pessoas e hoje todo mundo conversa pelo celular.')
+      expect(proporFerramenta.semModelo?.(entrada)).toBeUndefined()
+      const comNota = JSON.stringify({ tipo: 'texto', texto: 'O texto da Bia está razoável. Eu daria nota 6,5: falta desenvolver o argumento.', citacoes: [] })
+      const insistente = new AdaptadorRoteirizado([comNota, comNota])
+      const { ia, consumo } = provedorCom(insistente)
+      const erro: unknown = await ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A }).catch((motivo: unknown) => motivo)
+      expect(erro).toBeInstanceOf(ErroDeIa)
+      expect((erro as ErroDeIa).codigoDeIa).toBe('IA_SAIDA_INVALIDA')
+      expect(insistente.chamadas).toBe(2)
+      expect(insistente.correcoes[1]?.problemas.join(' ')).toContain('nota, conceito ou pontuação')
+      expect(consumo.registros).toMatchObject([{ funcao: 'conversa_e_ferramentas', estado: 'falhou', codigoDeErro: 'IA_SAIDA_INVALIDA' }])
+      expect(JSON.stringify(consumo.registros)).not.toMatch(/6,5|razoável/u)
+
+      const semNota = { tipo: 'texto', texto: 'Eu não avalio texto de aluno: a correção é sua.', citacoes: [] }
+      const { saida } = await provedorCom(new AdaptadorRoteirizado([comNota, JSON.stringify(semNota)])).ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A })
+      expect(saida).toEqual(semNota)
+    })
+
+    it('a proposta de ferramenta com nota no texto também é recusada', () => {
+      const proposta = { tipo: 'proposta_de_ferramenta' as const, texto: 'A redação vale nota 8. Quer que eu abra a ferramenta?', proposta: { ferramenta: 'atividade_objetiva' as const, parametros: { tema: 'mol' } } }
+      expect(proporFerramenta.conferir?.(entradaDoAssistente(), proposta)).toHaveLength(1)
+    })
+  })
+
+  describe('o tema da proposta é o assunto, nunca o que foi dito sobre um aluno', () => {
+    const tema = (mensagem: string) => {
+      const saida = proporFerramenta.falso(entradaDoAssistente(mensagem))
+      return saida.tipo === 'proposta_de_ferramenta' ? saida.proposta.parametros.tema : undefined
+    }
+
+    it('sem "sobre", o tema é o que vem depois do nome da ferramenta, e não a mensagem inteira', () => {
+      expect(tema('monta uma atividade de estequiometria')).toBe('estequiometria')
+      expect(tema('monta uma atividade de estequiometria com 5 questões')).toBe('estequiometria')
+      expect(tema('faz uma lista de exercícios de reagente limitante para o 2º ano')).toBe('reagente limitante')
+      expect(tema('preciso de um plano de aula de mol e massa molar')).toBe('mol e massa molar')
+      expect(tema('quero uma prova objetiva de balanceamento, bem curta')).toBe('balanceamento')
+    })
+
+    it('o nome e a condição de um aluno não viram tema, com ou sem a palavra "adapta": sem assunto claro, o tema é a disciplina', () => {
+      const proibido = /Mariana|dislexia|Enzo|TDAH|laudo|aluno/iu
+      for (const mensagem of [
+        'Monta uma atividade para a Mariana, que tem dislexia',
+        'monta uma atividade de estequiometria para a Mariana, que tem dislexia',
+        'faz uns exercícios pro Enzo que tem TDAH',
+        'prepara uma prova sobre mol para o aluno com laudo de dislexia',
+        'quero uma lista de exercícios do aluno Enzo',
+        'monta uma atividade sobre dislexia do Enzo',
+      ]) {
+        const saida = proporFerramenta.falso(entradaDoAssistente(mensagem))
+        expect(saida.tipo, mensagem).toBe('proposta_de_ferramenta')
+        expect(JSON.stringify(saida), mensagem).not.toMatch(proibido)
+      }
+      expect(tema('Monta uma atividade para a Mariana, que tem dislexia')).toBe('Química')
+      expect(tema('monta uma atividade de estequiometria para a Mariana, que tem dislexia')).toBe('estequiometria')
+      expect(tema('prepara uma prova sobre mol para o aluno com laudo de dislexia')).toBe('mol')
     })
   })
 })

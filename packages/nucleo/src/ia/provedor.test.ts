@@ -125,7 +125,7 @@ describe('ProvedorDeIa: toda execução registra (regra 30, item 4)', () => {
   it('a conversa do professor com o Assistente não é copiada para o consumo, no sucesso e na falha: só ele a lê, e ela mora em mensagem_agente', async () => {
     const mensagem = 'monta uma atividade para o Enzo, que tem dislexia: palavra-marcada-do-professor'
     const entrada = { ...entradaDoAssistente(mensagem), turnosAnteriores: [{ autor: 'professor' as const, texto: 'turno-anterior-marcado' }] }
-    expect(proporFerramenta).toMatchObject({ levaTextoLivreDePessoa: true, levaTextoDeAluno: false })
+    expect(proporFerramenta).toMatchObject({ levaTextoLivreDePessoa: true, levaTextoDeAluno: true })
     const { ia, consumo } = montar()
     await ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A, execucaoId: EXECUCAO })
     const falhando = montar({ registro: consumo, adaptador: new AdaptadorRoteirizado(['não é json', 'não é json']) })

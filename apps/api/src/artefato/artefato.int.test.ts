@@ -9,9 +9,11 @@ import { chamar, subirApi, type ApiDeTeste, type RespostaHttp } from '../../test
 import {
   comoPessoa,
   contarNaEscola,
+  copiarArtefatoParaOAnoAnterior,
   dispararExecucao,
   enviarMaterialDeDemonstracao,
   execucaoTerminada,
+  montarAnoAnterior,
   montarEscolaComAssistente,
   NOME_DA_PROFESSORA_DE_TESTE,
   NOME_DO_ALUNO_DE_TESTE,
@@ -28,7 +30,7 @@ import { BuscaDeTrechos } from '../material/busca-de-trechos.js'
 import { ArtefatoRepository } from './artefato.repository.js'
 import { ArtefatoService } from './artefato.service.js'
 import { DURACAO_PADRAO_DO_PLANO_DE_AULA_MIN, FerramentasService } from './ferramentas.service.js'
-import { AVISO_DE_IA_NO_PDF } from './pdf-do-artefato.js'
+import { AVISO_DE_IA_NO_PDF, AVISO_DE_IA_NO_RASCUNHO, MARCA_DE_RASCUNHO } from './pdf-do-artefato.js'
 
 /**
  * As ferramentas e o artefato (MVP, A2), com a API montada pelo `AppModule`, o Postgres do compose de teste, o material
@@ -276,10 +278,42 @@ describe('ferramentas e artefato', () => {
       for (const alvo of [{ turmaId: a.outraTurma }, { turmaId: b.turma, disciplinaId: b.quimica }, { turmaId: randomUUID() }, { disciplinaId: randomUUID() }]) {
         expect(semId(await pedir(a.professora, 'POST', '/v1/ferramentas/atividade_objetiva/gerar', { ...parametros(a, 'mol', alvo), chaveEnvio: randomUUID() }))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
       }
+      // A disciplina existe na escola, a turma é dela, e o vínculo é em outra disciplina: Física, para quem só dá Química.
+      for (const [escola, sessao, turmaId] of [[b, b.professora, b.turma], [a, a.colega, a.outraTurma]] as const) {
+        const antesDela = await contarNaEscola(bancada, 'execucao_agente', escola.escolaId)
+        expect(semId(await pedir(sessao, 'POST', '/v1/ferramentas/atividade_objetiva/gerar', { turmaId, disciplinaId: escola.fisica, tema: 'mol', chaveEnvio: randomUUID() }))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+        expect(semId(await pedir(sessao, 'POST', '/v1/ferramentas/plano_de_aula/gerar', { turmaId, disciplinaId: escola.fisica, tema: 'mol', chaveEnvio: randomUUID() }))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+        expect(await contarNaEscola(bancada, 'execucao_agente', escola.escolaId)).toBe(antesDela)
+      }
       for (const sessao of [a.coordenacao, a.aluno]) {
         expect(semId(await pedir(sessao, 'POST', '/v1/ferramentas/atividade_objetiva/gerar', { ...parametros(a, 'mol'), chaveEnvio: randomUUID() }))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
       }
       expect(await contarNaEscola(bancada, 'execucao_agente', a.escolaId)).toBe(antes)
+    })
+
+    it('o artefato do ano letivo anterior não aparece no ano em curso, nem com vínculo confirmado naquele ano: a resposta é a do inexistente', async () => {
+      const anterior = await montarAnoAnterior(bancada, b)
+      const de2025 = await copiarArtefatoParaOAnoAnterior(bancada, b, anterior, atividadeDeB)
+      for (const id of [de2025.artefatoId, de2025.adaptadaId]) {
+        for (const [metodo, caminho, corpo] of [
+          ['GET', `/v1/artefatos/${id}`],
+          ['PATCH', `/v1/artefatos/${id}`, { titulo: 'Título de 2025 trocado em 2026' }],
+          ['GET', `/v1/artefatos/${id}/pdf`],
+          ['POST', `/v1/artefatos/${id}/adaptar`, { tipos: ['fonte_ampliada'], chaveEnvio: randomUUID() }],
+        ] as const) {
+          expect(semId(await pedir(b.professora, metodo, caminho, corpo)), `${metodo} ${caminho}`).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+        }
+        expect(await comoPessoa(b, b.professora, 'professor', () => new ArtefatoRepository(bancada.banco).porId(id))).toBeUndefined()
+      }
+      const lista = esquemaRespostaListaDeArtefatos.parse((await get(b.professora, '/v1/artefatos?limite=100')).corpo).itens
+      expect(lista.map((item) => item.id)).toContain(atividadeDeB)
+      expect(lista.some((item) => [de2025.artefatoId, de2025.adaptadaId].includes(item.id) || item.turmaId === anterior.turmaId)).toBe(false)
+      expect(esquemaRespostaListaDeArtefatos.parse((await get(b.professora, `/v1/artefatos?turmaId=${anterior.turmaId}`)).corpo).itens).toEqual([])
+      expect(await comoPessoa(b, b.professora, 'professor', () => new ArtefatoRepository(bancada.banco).versoesAdaptadas(de2025.artefatoId))).toEqual([])
+      const { rows } = await sql('select titulo from artefato where id = $1', [de2025.artefatoId])
+      expect((rows[0] as { titulo: string }).titulo).not.toBe('Título de 2025 trocado em 2026')
+      // Gerar para a turma de 2025 também responde como o inexistente: a turma do pedido é do ano em curso.
+      expect(semId(await pedir(b.professora, 'POST', '/v1/ferramentas/atividade_objetiva/gerar', { turmaId: anterior.turmaId, disciplinaId: b.quimica, tema: 'mol', chaveEnvio: randomUUID() }))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
     })
 
     it('quem perdeu o vínculo depois do 202 não recebe o artefato: a execução confere de novo ao rodar', async () => {
@@ -303,6 +337,63 @@ describe('ferramentas e artefato', () => {
       // Nada do material foi ao modelo, e nenhum artefato nasceu.
       expect(chamadasAoModelo).toBe(0)
       expect(await contarNaEscola(bancada, 'artefato', a.escolaId)).toBe(antes)
+    })
+  })
+
+  describe('o PDF da versão adaptada segue a entrega (regra 70, itens 3 e 6)', () => {
+    const adaptar = async () => {
+      const execucao = await execucaoTerminada(api, a.professora, await dispararExecucao(api, a.professora, `/v1/artefatos/${atividadeDeA}/adaptar`, { tipos: ['fonte_ampliada'] }))
+      return { adaptadaId: execucao.resultado?.artefatoId ?? '', entregaId: execucao.resultado?.entregaId ?? '' }
+    }
+
+    it('pendente, sai como rascunho: a marca em toda página, sem a frase "revisado"; aprovada, sai limpo; rejeitada, não sai', async () => {
+      const paraAprovar = await adaptar()
+      const paraRejeitar = await adaptar()
+      const revisado = /revisado pela professora ou pelo professor/u
+
+      // Pendente: a professora vê a versão, com a fonte ampliada, para decidir; o papel diz que é rascunho.
+      const rascunho = await baixarPdf(a.professora, paraAprovar.adaptadaId)
+      expect(rascunho.status).toBe(200)
+      expect(rascunho.disposicao).toMatch(/^attachment; filename="rascunho-[a-z0-9-]+\.pdf"$/u)
+      const paginasDoRascunho = (await extrairTextoPorPagina(rascunho.bytes)).map(normalizarTexto)
+      expect(paginasDoRascunho.length).toBeGreaterThan(1)
+      for (const pagina of paginasDoRascunho) expect(pagina).toContain(MARCA_DE_RASCUNHO)
+      expect(paginasDoRascunho.join(' ')).toContain(normalizarTexto(AVISO_DE_IA_NO_RASCUNHO))
+      expect(paginasDoRascunho.join(' ')).not.toMatch(revisado)
+
+      // Aprovada: sem a marca, e com o aviso de quem revisou.
+      expect((await pedir(a.professora, 'POST', `/v1/entregas/${paraAprovar.entregaId}/decidir`, { decisao: 'aprovar' })).status).toBe(200)
+      const limpo = await baixarPdf(a.professora, paraAprovar.adaptadaId)
+      expect(limpo.status).toBe(200)
+      expect(limpo.disposicao).not.toContain('rascunho')
+      const textoLimpo = (await extrairTextoPorPagina(limpo.bytes)).map(normalizarTexto).join(' ')
+      expect(textoLimpo).not.toContain('Rascunho')
+      expect(textoLimpo).toMatch(revisado)
+
+      // Rejeitada: nunca sai, nem como rascunho.
+      expect((await pedir(a.professora, 'POST', `/v1/entregas/${paraRejeitar.entregaId}/decidir`, { decisao: 'rejeitar', justificativa: 'O enunciado ficou diferente do original.' })).status).toBe(200)
+      const recusado = await pedir(a.professora, 'GET', `/v1/artefatos/${paraRejeitar.adaptadaId}/pdf`)
+      expect(semId(recusado)).toEqual({ status: 409, codigo: 'VERSAO_ADAPTADA_NAO_APROVADA' })
+      // O original, que é rascunho da própria professora e não vai a aluno por aqui, continua saindo limpo.
+      const original = (await extrairTextoPorPagina((await baixarPdf(a.professora, atividadeDeA)).bytes)).map(normalizarTexto).join(' ')
+      expect(original).not.toContain('Rascunho')
+      expect(original).toMatch(revisado)
+    })
+
+    it('a versão adaptada já decidida não se renomeia: CONFLITO, e o título fica o que a professora viu ao decidir', async () => {
+      const { adaptadaId, entregaId } = await adaptar()
+      // Pendente, ainda se renomeia.
+      expect((await pedir(a.professora, 'PATCH', `/v1/artefatos/${adaptadaId}`, { titulo: 'Versão com fonte ampliada' })).status).toBe(200)
+      expect((await pedir(a.professora, 'POST', `/v1/entregas/${entregaId}/decidir`, { decisao: 'aprovar' })).status).toBe(200)
+      expect(semId(await pedir(a.professora, 'PATCH', `/v1/artefatos/${adaptadaId}`, { titulo: 'Outro título, depois de aprovada' }))).toEqual({ status: 409, codigo: 'CONFLITO' })
+      const { rows } = await sql(`select titulo, conteudo ->> 'titulo' as no_conteudo from artefato where id = $1`, [adaptadaId])
+      expect(rows).toEqual([{ titulo: 'Versão com fonte ampliada', no_conteudo: 'Versão com fonte ampliada' }])
+      // Quem não alcança o artefato continua recebendo a resposta do inexistente, e não o conflito.
+      expect(semId(await pedir(a.deFisica, 'PATCH', `/v1/artefatos/${adaptadaId}`, { titulo: 'x' }))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+      // A rejeitada também não.
+      const rejeitada = await adaptar()
+      expect((await pedir(a.professora, 'POST', `/v1/entregas/${rejeitada.entregaId}/decidir`, { decisao: 'rejeitar', justificativa: 'Não é o que eu pedi nesta versão.' })).status).toBe(200)
+      expect(semId(await pedir(a.professora, 'PATCH', `/v1/artefatos/${rejeitada.adaptadaId}`, { titulo: 'Título depois de rejeitada' }))).toEqual({ status: 409, codigo: 'CONFLITO' })
     })
   })
 

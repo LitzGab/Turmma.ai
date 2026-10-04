@@ -35,7 +35,7 @@ const NOMES = Object.keys(CASOS) as TarefaDeIa[]
 
 /** Função e perfil de cada tarefa. O perfil é o mais barato que resolve (regra 30, item 2): mudar aqui é mudar a fatura. */
 const DECLARADO: Readonly<Record<TarefaDeIa, { funcao: ChaveDeFuncao; perfil: Perfil; levaTextoLivreDePessoa: boolean; levaTextoDeAluno: boolean }>> = {
-  propor_ferramenta: { funcao: 'conversa_e_ferramentas', perfil: 'rapido', levaTextoLivreDePessoa: true, levaTextoDeAluno: false },
+  propor_ferramenta: { funcao: 'conversa_e_ferramentas', perfil: 'rapido', levaTextoLivreDePessoa: true, levaTextoDeAluno: true },
   gerar_atividade_objetiva: { funcao: 'conversa_e_ferramentas', perfil: 'padrao', levaTextoLivreDePessoa: false, levaTextoDeAluno: false },
   gerar_plano_de_aula: { funcao: 'conversa_e_ferramentas', perfil: 'padrao', levaTextoLivreDePessoa: false, levaTextoDeAluno: false },
   adaptar_atividade: { funcao: 'adaptacao', perfil: 'padrao', levaTextoLivreDePessoa: false, levaTextoDeAluno: false },

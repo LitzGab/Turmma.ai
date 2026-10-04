@@ -265,7 +265,8 @@ export class TutorService {
       limite: TRECHOS_NO_TURNO,
     })
     if (alcance.material === undefined || pergunta.pagina === null) return achados
-    const aberta = (await this.trechos.doMaterial(alcance.material.id)).find((trecho) => trecho.pagina === pergunta.pagina && trecho.disciplinaId === disciplinaId)
+    // A disciplina vai para a porta, que filtra no repository: o material de outra disciplina não devolve página nenhuma.
+    const aberta = (await this.trechos.doMaterial(alcance.material.id, disciplinaId)).find((trecho) => trecho.pagina === pergunta.pagina)
     if (aberta === undefined) return achados
     return [aberta, ...achados.filter((trecho) => !(trecho.materialId === aberta.materialId && trecho.pagina === aberta.pagina))].slice(0, TRECHOS_NO_TURNO)
   }
