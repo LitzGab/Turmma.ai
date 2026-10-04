@@ -8,6 +8,9 @@ import { Turmas } from './Turmas'
  * A área do professor, relativa a `/professor` (o `Route` aninhado de `apps/web/src/rotas.tsx`), num chunk próprio,
  * `professor-*.js` (`apps/web/nome-dos-chunks.ts`), que só se baixa depois de a guarda conferir o papel. Na A1 ela tem
  * só "Turmas" (D73), com a turma aberta dentro dela (15.0): o item da lateral continua selecionado (`estaNoItem`).
+ *
+ * **Tela nova entra por `lazy(() => import('./Tela'))`**, e não por `import` direto: as cinco linhas da convenção estão
+ * no topo de `areas/navegacao.ts`.
  */
 export default function RotasDoProfessor() {
   return (
