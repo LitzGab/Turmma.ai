@@ -218,7 +218,7 @@ test.describe('aprovar a correção (11.5)', () => {
     // A correção é saída de IA: a função assina, com o selo.
     await expect(page.getByText('Assistente · correção de objetiva')).toBeVisible()
     await expect(principal(page).locator('[data-selo-ia]')).toHaveCount(1)
-    await expect(principal(page)).toContainText('28 de 30 alunos')
+    await expect(principal(page)).toContainText('28 alunos responderam · 30 na turma hoje')
     await expect(principal(page)).toContainText('1,3 de 2 questões')
     await expect(page.getByRole('region', { name: 'Distribuição dos acertos' })).toContainText('2 acertos')
     await expect(page.getByRole('region', { name: 'Acerto por habilidade' })).toContainText('QUI.EM.05')
@@ -282,7 +282,7 @@ test.describe('aprovar a correção (11.5)', () => {
     const dialogo = page.getByRole('alertdialog', { name: 'Aprovar 28 correções' })
     await expect(dialogo).toContainText('Atividade de estequiometria')
     await expect(dialogo).toContainText(turmaNome)
-    await expect(dialogo).toContainText('28 de 30 alunos')
+    await expect(dialogo).toContainText('28 alunos responderam · 30 na turma hoje')
     await expect(dialogo).toContainText('O diagnóstico por habilidade chega aos alunos da turma.')
     await expect(dialogo).not.toContainText(VOCABULARIO_DE_NOTA)
     expect(api.pedidosEm(/aprovar-lote$/)).toHaveLength(0)

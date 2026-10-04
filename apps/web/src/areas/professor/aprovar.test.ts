@@ -34,7 +34,10 @@ describe('aprovar a correção: os textos', () => {
   it('a média é de acertos, em questões, e a contagem diz de quantos alunos', () => {
     expect(textoDaMedia(RESUMO)).toBe('3,4 de 5 questões')
     expect(textoDaMedia({ mediaDeAcertos: 1, questoes: 1 })).toBe('1 de 1 questão')
-    expect(textoDosCorrigidos(RESUMO)).toBe('28 de 32 alunos')
+    expect(textoDosCorrigidos(RESUMO)).toBe('28 alunos responderam · 32 na turma hoje')
+    // Depois de uma transferência, quem respondeu pode ser mais que a turma de hoje: a tela não vira fração impossível.
+    expect(textoDosCorrigidos({ corrigidos: 5, alunosDaTurma: 4 })).toBe('5 alunos responderam · 4 na turma hoje')
+    expect(textoDosCorrigidos({ corrigidos: 1, alunosDaTurma: 30 })).toBe('1 aluno respondeu · 30 na turma hoje')
     expect(rotuloDeAprovar(28)).toBe('Aprovar 28 correções')
     expect(rotuloDeAprovar(1)).toBe('Aprovar 1 correção')
   })
@@ -51,7 +54,7 @@ describe('aprovar a correção: os textos', () => {
     expect(resumoDoLote({ titulo: 'Atividade — Estequiometria', resumo: RESUMO, destaques: [destaque('01', '2026-10-05T13:38:00.000Z')], destaquesAbertos: 1 }, '2ºB')).toEqual([
       { rotulo: 'Atividade', valor: 'Atividade — Estequiometria' },
       { rotulo: 'Turma', valor: '2ºB' },
-      { rotulo: 'Correções', valor: '28 de 32 alunos' },
+      { rotulo: 'Correções', valor: '28 alunos responderam · 32 na turma hoje' },
       { rotulo: 'Destaques abertos', valor: '1 de 1' },
     ])
   })
