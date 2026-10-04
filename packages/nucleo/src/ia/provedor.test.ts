@@ -1,13 +1,16 @@
+import { CodigoDeErro } from '@educa/shared'
 import { describe, expect, it, vi } from 'vitest'
 import { AdaptadorRoteirizado } from './__fixtures__/adaptador-roteirizado.js'
-import { ALUNO_1, ALUNO_2, atividadeDeEstequiometria, entradaDeAtividade, entradaDoRelatorio, entradaDoTutor, ESCOLA_A, ESCOLA_B } from './__fixtures__/entradas.js'
+import { ALUNO_1, ALUNO_2, atividadeDeEstequiometria, entradaDeAtividade, entradaDoAssistente, entradaDoRelatorio, entradaDoTutor, ESCOLA_A, ESCOLA_B } from './__fixtures__/entradas.js'
 import type { AdaptadorDeModelo } from './adaptador.js'
 import { AdaptadorFalso, MODELO_FALSO } from './adaptador-falso.js'
 import { ConsumoEmMemoria, OrcamentoEmMemoria, type OrcamentoDeIa, type RegistroDeConsumo } from './consumo.js'
-import { ErroDeIa } from './erros.js'
+import { CODIGOS_DE_ERRO_DE_IA, ErroDeIa } from './erros.js'
 import { criarProvedorDeIa, MODELO_DA_REGRA_FIXA, ProvedorDeIa, type RegistradorDeIa } from './provedor.js'
 import { exigirFuncaoAtiva, SuspensoesEmMemoria, type SuspensaoDeFuncao } from './suspensao.js'
+import type { DefinicaoDeTarefa } from './tarefa.js'
 import { gerarAtividadeObjetiva } from './tarefas/gerar-atividade-objetiva.js'
+import { proporFerramenta } from './tarefas/propor-ferramenta.js'
 import { relatorioDaCorrecao } from './tarefas/relatorio-da-correcao.js'
 import { turnoDoTutor } from './tarefas/turno-do-tutor.js'
 
@@ -101,7 +104,7 @@ describe('ProvedorDeIa: toda execução registra (regra 30, item 4)', () => {
     const { ia, consumo } = montar()
     const duvida = 'como eu acho o reagente limitante? palavra-marcada-do-aluno'
     const { saida } = await ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor(duvida), escolaId: ESCOLA_A, alunoId: ALUNO_1 })
-    expect(turnoDoTutor.levaTextoDeAluno).toBe(true)
+    expect(turnoDoTutor).toMatchObject({ levaTextoLivreDePessoa: true, levaTextoDeAluno: true })
     expect(consumo.registros).toMatchObject([{ tarefa: 'turno_do_tutor', alunoId: ALUNO_1, estado: 'concluida' }])
     expect(consumo.registros[0]).not.toHaveProperty('entrada')
     expect(consumo.registros[0]).not.toHaveProperty('saida')
@@ -116,6 +119,42 @@ describe('ProvedorDeIa: toda execução registra (regra 30, item 4)', () => {
     await erroDe(ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('não entendi palavra-marcada-do-aluno'), escolaId: ESCOLA_A, alunoId: ALUNO_1 }))
     expect(consumo.registros).toMatchObject([{ estado: 'falhou', codigoDeErro: 'IA_SAIDA_INVALIDA' }])
     expect(JSON.stringify(consumo.registros)).not.toContain('palavra-marcada')
+  })
+
+  it('a conversa do professor com o Assistente não é copiada para o consumo, no sucesso e na falha: só ele a lê, e ela mora em mensagem_agente', async () => {
+    const mensagem = 'monta uma atividade para o Enzo, que tem dislexia: palavra-marcada-do-professor'
+    const entrada = { ...entradaDoAssistente(mensagem), turnosAnteriores: [{ autor: 'professor' as const, texto: 'turno-anterior-marcado' }] }
+    expect(proporFerramenta).toMatchObject({ levaTextoLivreDePessoa: true, levaTextoDeAluno: false })
+    const { ia, consumo } = montar()
+    await ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A, execucaoId: EXECUCAO })
+    const falhando = montar({ registro: consumo, adaptador: new AdaptadorRoteirizado(['não é json', 'não é json']) })
+    await erroDe(falhando.ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A, execucaoId: EXECUCAO }))
+    expect(consumo.registros).toMatchObject([
+      { tarefa: 'propor_ferramenta', funcao: 'conversa_e_ferramentas', estado: 'concluida', execucaoId: EXECUCAO },
+      { tarefa: 'propor_ferramenta', estado: 'falhou', codigoDeErro: 'IA_SAIDA_INVALIDA' },
+    ])
+    for (const registro of consumo.registros) {
+      expect(registro).not.toHaveProperty('entrada')
+      expect(registro).not.toHaveProperty('saida')
+    }
+    expect(JSON.stringify(consumo.registros)).not.toMatch(/marcad|Enzo|dislexia/)
+  })
+
+  it('as tarefas de geração continuam gravando entrada e saída: é o que responde por que a IA gerou aquilo', async () => {
+    const { ia, consumo } = montar()
+    for (const [tarefa, entrada] of [
+      [gerarAtividadeObjetiva, entradaDeAtividade()],
+      [relatorioDaCorrecao, entradaDoRelatorio()],
+    ] as const) {
+      const { saida } = await ia.gerar({ tarefa: tarefa as DefinicaoDeTarefa<unknown, unknown>, entrada, escolaId: ESCOLA_A })
+      expect(consumo.registros.at(-1)).toMatchObject({ tarefa: tarefa.nome, entrada, saida })
+    }
+  })
+
+  it('o aluno só entra no consumo da função que é dele: em outra tarefa, o id passado por engano não é gravado (D64)', async () => {
+    const { ia, consumo } = montar()
+    await ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A, alunoId: ALUNO_1 })
+    expect(consumo.registros[0]).not.toHaveProperty('alunoId')
   })
 
   it('tarefa sem texto de aluno guarda a entrada na falha: é o que explica depois por que a IA não entregou', async () => {
@@ -161,18 +200,22 @@ describe('ProvedorDeIa: o domínio nunca vê erro cru', () => {
     const { ia, consumo } = montar({ logger, adaptador: new AdaptadorRoteirizado([new Error('HTTP 400: prompt era "texto do aluno Enzo"')]) })
     const erro = await erroDe(ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A }))
     expect(erro.codigoDeIa).toBe('IA_INDISPONIVEL')
-    expect(erro.codigo).toBe('INDISPONIVEL_TENTE_DE_NOVO')
+    expect(erro.codigo).toBe('IA_INDISPONIVEL')
     expect(`${erro.message} ${JSON.stringify(erro)} ${JSON.stringify(logger.linhas())}`).not.toContain('Enzo')
     expect(consumo.registros).toMatchObject([{ estado: 'falhou', codigoDeErro: 'IA_INDISPONIVEL' }])
   })
 
-  it('cada código de IA responde com um código do contrato da API e o status dele', () => {
-    expect(new ErroDeIa('IA_INDISPONIVEL')).toMatchObject({ codigo: 'INDISPONIVEL_TENTE_DE_NOVO', status: 503 })
-    expect(new ErroDeIa('IA_TEMPO_ESGOTADO')).toMatchObject({ codigo: 'TEMPO_ESGOTADO', status: 503 })
-    expect(new ErroDeIa('IA_SAIDA_INVALIDA')).toMatchObject({ codigo: 'INDISPONIVEL_TENTE_DE_NOVO', status: 503 })
-    expect(new ErroDeIa('IA_ORCAMENTO_ESGOTADO', 30)).toMatchObject({ codigo: 'LIMITE_EXCEDIDO', status: 429, tenteDeNovoEmSegundos: 30 })
-    expect(new ErroDeIa('IA_ENTRADA_INVALIDA')).toMatchObject({ codigo: 'ENTRADA_INVALIDA', status: 400 })
-    expect(new ErroDeIa('IA_FUNCAO_SUSPENSA')).toMatchObject({ codigo: 'CONFLITO', status: 409 })
+  it('cada código de IA é um código do contrato da API, com o status dele', () => {
+    expect(new ErroDeIa('IA_INDISPONIVEL')).toMatchObject({ codigo: 'IA_INDISPONIVEL', status: 503 })
+    expect(new ErroDeIa('IA_TEMPO_ESGOTADO')).toMatchObject({ codigo: 'IA_TEMPO_ESGOTADO', status: 503 })
+    expect(new ErroDeIa('IA_SAIDA_INVALIDA')).toMatchObject({ codigo: 'IA_SAIDA_INVALIDA', status: 502 })
+    expect(new ErroDeIa('IA_ORCAMENTO_ESGOTADO', 30)).toMatchObject({ codigo: 'IA_ORCAMENTO_ESGOTADO', status: 429, tenteDeNovoEmSegundos: 30 })
+    expect(new ErroDeIa('LIMITE_DIARIO_DO_TUTOR')).toMatchObject({ codigo: 'LIMITE_DIARIO_DO_TUTOR', status: 429 })
+    expect(new ErroDeIa('IA_ENTRADA_INVALIDA')).toMatchObject({ codigo: 'IA_ENTRADA_INVALIDA', status: 500 })
+    expect(new ErroDeIa('FUNCAO_SUSPENSA')).toMatchObject({ codigo: 'FUNCAO_SUSPENSA', status: 409 })
+    expect(new ErroDeIa('MATERIAL_INSUFICIENTE')).toMatchObject({ codigo: 'MATERIAL_INSUFICIENTE', status: 422 })
+    // Todo código da camada é um código do contrato da API: o que a execução grava é o que a tela sabe mostrar.
+    for (const codigo of CODIGOS_DE_ERRO_DE_IA) expect(Object.values(CodigoDeErro)).toContain(codigo)
   })
 })
 
@@ -200,7 +243,7 @@ describe('ProvedorDeIa: orçamento consultado antes de gastar (D14, D38)', () =>
 
   it('orçamento esgotado: erro tipado com a espera sugerida, e o modelo não é chamado', async () => {
     const adaptador = new AdaptadorRoteirizado([])
-    const { ia } = montar({ adaptador, orcamento: { consultar: async () => ({ permitido: false, tenteDeNovoEmSegundos: 3600 }) } })
+    const { ia } = montar({ adaptador, orcamento: { consultar: async () => ({ permitido: false, codigo: 'IA_ORCAMENTO_ESGOTADO', tenteDeNovoEmSegundos: 3600 }) } })
     const erro = await erroDe(ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A }))
     expect(erro).toMatchObject({ codigoDeIa: 'IA_ORCAMENTO_ESGOTADO', status: 429, tenteDeNovoEmSegundos: 3600 })
     expect(adaptador.chamadas).toBe(0)
@@ -213,12 +256,30 @@ describe('ProvedorDeIa: orçamento consultado antes de gastar (D14, D38)', () =>
     expect(adaptador.chamadas).toBe(0)
   })
 
-  it('assunto delicado também passa pelo orçamento e pelo registro, sem modelo', async () => {
+  it('a consulta leva a turma e a execução, quando vêm no pedido: o pacote do mês é da turma, e a pergunta da própria execução não conta contra ela', async () => {
     const consultar = vi.fn(async () => ({ permitido: true as const }))
+    const { ia } = montar({ orcamento: { consultar } })
+    await ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('não entendi'), escolaId: ESCOLA_A, alunoId: ALUNO_1, turmaId: ESCOLA_B, execucaoId: EXECUCAO })
+    expect(consultar.mock.calls).toEqual([[{ escolaId: ESCOLA_A, funcao: 'tutor_com_o_aluno', alunoId: ALUNO_1, turmaId: ESCOLA_B, execucaoId: EXECUCAO }]])
+  })
+
+  it('o código da recusa é o que o orçamento deu: freio do dia e pacote do mês chegam com o código próprio', async () => {
+    for (const codigo of ['LIMITE_DIARIO_DO_TUTOR', 'PACOTE_DO_TUTOR_ESGOTADO'] as const) {
+      const { ia } = montar({ adaptador: new AdaptadorRoteirizado([]), orcamento: { consultar: async () => ({ permitido: false, codigo }) } })
+      const erro = await erroDe(ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('não entendi'), escolaId: ESCOLA_A, alunoId: ALUNO_1 }))
+      expect(erro).toMatchObject({ codigoDeIa: codigo, codigo, status: 429 })
+    }
+  })
+
+  it('assunto delicado não passa pelo orçamento: no fim do freio do dia, o aluno ainda recebe a mensagem fixa com o 188', async () => {
+    const consultar = vi.fn(async () => ({ permitido: false as const, codigo: 'LIMITE_DIARIO_DO_TUTOR' as const }))
     const { ia, consumo } = montar({ orcamento: { consultar }, adaptador: new AdaptadorRoteirizado([]) })
-    await ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('eu quero morrer'), escolaId: ESCOLA_A, alunoId: ALUNO_1 })
-    expect(consultar).toHaveBeenCalledTimes(1)
+    const { saida } = await ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('eu quero morrer'), escolaId: ESCOLA_A, alunoId: ALUNO_1 })
+    expect(saida.resposta).toContain('188')
+    expect(consultar).not.toHaveBeenCalled()
     expect(consumo.registros).toMatchObject([{ origem: 'regra_fixa', modelo: MODELO_DA_REGRA_FIXA, tentativas: 0, estado: 'concluida' }])
+    // A dúvida comum, com o mesmo orçamento esgotado, é recusada.
+    expect((await erroDe(ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('não entendi'), escolaId: ESCOLA_A, alunoId: ALUNO_1 }))).codigoDeIa).toBe('LIMITE_DIARIO_DO_TUTOR')
   })
 })
 
@@ -236,11 +297,11 @@ describe('ProvedorDeIa: função suspensa pela escola não executa (D60)', () =>
     const { ia, suspensao, adaptador, consultar, consumo, logger } = comSuspensao()
     suspensao.suspender(ESCOLA_A, 'conversa_e_ferramentas')
     const erro = await erroDe(gerar(ia, ESCOLA_A))
-    expect(erro).toMatchObject({ codigoDeIa: 'IA_FUNCAO_SUSPENSA', codigo: 'CONFLITO', status: 409 })
+    expect(erro).toMatchObject({ codigoDeIa: 'FUNCAO_SUSPENSA', codigo: 'FUNCAO_SUSPENSA', status: 409 })
     expect(adaptador.chamadas).toBe(0)
     expect(consultar).not.toHaveBeenCalled()
     expect(consumo.registros).toEqual([])
-    expect(logger.linhas()).toMatchObject([{ evento: 'ia.geracao.falhou', codigo: 'IA_FUNCAO_SUSPENSA', escolaId: ESCOLA_A }])
+    expect(logger.linhas()).toMatchObject([{ evento: 'ia.geracao.falhou', codigo: 'FUNCAO_SUSPENSA', escolaId: ESCOLA_A }])
   })
 
   it('a mesma função na escola B executa', async () => {
@@ -261,7 +322,7 @@ describe('ProvedorDeIa: função suspensa pela escola não executa (D60)', () =>
   it('retomada a função, ela volta a executar', async () => {
     const { ia, suspensao } = comSuspensao()
     suspensao.suspender(ESCOLA_A, 'conversa_e_ferramentas')
-    expect((await erroDe(gerar(ia, ESCOLA_A))).codigoDeIa).toBe('IA_FUNCAO_SUSPENSA')
+    expect((await erroDe(gerar(ia, ESCOLA_A))).codigoDeIa).toBe('FUNCAO_SUSPENSA')
     suspensao.retomar(ESCOLA_A, 'conversa_e_ferramentas')
     await expect(gerar(ia, ESCOLA_A)).resolves.toBeDefined()
   })
@@ -271,7 +332,7 @@ describe('ProvedorDeIa: função suspensa pela escola não executa (D60)', () =>
     suspensao.suspender(ESCOLA_A, 'tutor_com_o_aluno')
     const { ia, consumo } = montar({ suspensao })
     const erro = await erroDe(ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('eu quero morrer'), escolaId: ESCOLA_A, alunoId: ALUNO_1 }))
-    expect(erro.codigoDeIa).toBe('IA_FUNCAO_SUSPENSA')
+    expect(erro.codigoDeIa).toBe('FUNCAO_SUSPENSA')
     expect(consumo.registros).toEqual([])
   })
 
@@ -292,12 +353,12 @@ describe('ProvedorDeIa: função suspensa pela escola não executa (D60)', () =>
     }
     const erro: unknown = await encerrar(ESCOLA_A).catch((motivo: unknown) => motivo)
     expect(erro).toBeInstanceOf(ErroDeIa)
-    expect((erro as ErroDeIa).codigoDeIa).toBe('IA_FUNCAO_SUSPENSA')
+    expect((erro as ErroDeIa).codigoDeIa).toBe('FUNCAO_SUSPENSA')
     expect(corrigir).not.toHaveBeenCalled()
     await expect(encerrar(ESCOLA_B)).resolves.toBe('lote corrigido')
     // E o relatório da correção, que usa modelo, é recusado pelo provedor com o mesmo código.
     const { ia } = montar({ suspensao })
-    expect((await erroDe(ia.gerar({ tarefa: relatorioDaCorrecao, entrada: entradaDoRelatorio(), escolaId: ESCOLA_A }))).codigoDeIa).toBe('IA_FUNCAO_SUSPENSA')
+    expect((await erroDe(ia.gerar({ tarefa: relatorioDaCorrecao, entrada: entradaDoRelatorio(), escolaId: ESCOLA_A }))).codigoDeIa).toBe('FUNCAO_SUSPENSA')
   })
 })
 
@@ -315,11 +376,11 @@ describe('OrcamentoEmMemoria', () => {
     const { tutor, avancarPara } = comLimites({ trocasPorAlunoNoDia: 2 })
     await tutor(ESCOLA_A, ALUNO_1)
     await tutor(ESCOLA_A, ALUNO_1)
-    expect((await erroDe(tutor(ESCOLA_A, ALUNO_1))).codigoDeIa).toBe('IA_ORCAMENTO_ESGOTADO')
+    expect((await erroDe(tutor(ESCOLA_A, ALUNO_1))).codigoDeIa).toBe('LIMITE_DIARIO_DO_TUTOR')
     await expect(tutor(ESCOLA_A, ALUNO_2)).resolves.toBeDefined()
     // 23h59 de São Paulo ainda é o mesmo dia; 00h01 já é o seguinte.
     avancarPara('2026-10-06T02:59:00Z')
-    expect((await erroDe(tutor(ESCOLA_A, ALUNO_1))).codigoDeIa).toBe('IA_ORCAMENTO_ESGOTADO')
+    expect((await erroDe(tutor(ESCOLA_A, ALUNO_1))).codigoDeIa).toBe('LIMITE_DIARIO_DO_TUTOR')
     avancarPara('2026-10-06T03:01:00Z')
     await expect(tutor(ESCOLA_A, ALUNO_1)).resolves.toBeDefined()
   })

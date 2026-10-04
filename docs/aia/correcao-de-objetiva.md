@@ -100,7 +100,11 @@ responde como inexistente enquanto a entrega do lote está pendente.
 **N3. Não deixa aprovar o lote com destaque fechado.**
 Fundamento: D33; D56; `docs/regulacao.md`, seção 1.2.
 Como se confere: teste em que aprovar o lote com um destaque não aberto falha; leitura da tela:
-botão inativo, com o contador dizendo por quê.
+botão inativo, com o contador dizendo por quê. **O banco garante, por fora da API:** o lote só
+fica aprovado com o registro da validação na mesma transação, e o registro só entra se toda
+correção do lote com destaque estiver aberta e constar do que foi apresentado (gatilhos das
+migrations 0022 e 0023, com teste). O que o banco não garante é que o `apresentado` seja igual ao
+que a tela mostrou: isso é do serviço, com teste.
 
 **N4. Não se aprova sozinha**, nem por tempo decorrido, nem por job, nem por reexecução.
 Fundamento: regra 70, itens 1 e 3; D56.

@@ -1,4 +1,4 @@
-import type { ChaveDeFuncao } from '@educa/shared'
+import type { ChaveDeFuncao, TarefaDeIa as NomeDeTarefa } from '@educa/shared'
 import type { z } from 'zod'
 import type { Perfil } from './perfis.js'
 
@@ -34,19 +34,34 @@ export interface PedidoAoModelo {
  * Toda tarefa é de saída estruturada: o que volta ao domínio já passou por `esquemaDeSaida` e por `conferir`
  * (regra 30, item 7).
  */
-export interface TarefaDeIa<Entrada, Saida> {
-  readonly nome: string
+export interface DefinicaoDeTarefa<Entrada, Saida> {
+  /** O nome do catálogo do contrato (`TAREFAS_DE_IA`, em `@educa/shared`): é o que a execução e o consumo gravam. */
+  readonly nome: NomeDeTarefa
   /** A função do agente que gasta (D9, D14): é por ela que o consumo e a suspensão se registram. */
   readonly funcao: ChaveDeFuncao
   /** O mais barato que resolve (regra 30, item 2). */
   readonly perfil: Perfil
-  /** Sempre `strictObject`, em todos os níveis: chave a mais (um nome, um diagnóstico) é entrada inválida. */
+  /**
+   * Sempre `strictObject`, em todos os níveis: chave a mais (um nome, um diagnóstico) é entrada inválida. Isso prende
+   * a forma, não o conteúdo: campo de texto livre continua podendo trazer nome (`levaTextoLivreDePessoa`).
+   */
   readonly esquemaDeEntrada: z.ZodType<Entrada>
   readonly esquemaDeSaida: z.ZodType<Saida>
   readonly prompt: PromptVersionado
   /** Teto de tokens de saída por chamada: tarefa que não sabe parar queima a margem (D14). */
   readonly maximoDeTokensDeSaida: number
-  /** A entrada leva texto escrito por aluno: só em provedor com processamento no Brasil, antes de aluno real (D62). */
+  /**
+   * A entrada leva **texto livre escrito por uma pessoa**, aluno ou professor: a conversa com o Tutor, a conversa do
+   * professor com o Assistente. O schema estrito barra a chave a mais, não o que a pessoa escreve: nesse texto pode
+   * vir o nome ou a condição de um aluno. Por isso a entrada e a saída destas tarefas **não vão para o registro de
+   * consumo**: o texto já está em `mensagem_tutor` ou em `mensagem_agente`, ligado pela execução, com o dono, o
+   * acesso e a retenção de lá (regra 20, item 14; regra 70, item 8).
+   */
+  readonly levaTextoLivreDePessoa: boolean
+  /**
+   * O texto livre é de **aluno**: além de não ir para o consumo, só pode ir a provedor com processamento no Brasil,
+   * antes de aluno real (D62). Toda tarefa com esta marca tem também a de cima.
+   */
   readonly levaTextoDeAluno: boolean
   montarPedido(entrada: Entrada): PedidoAoModelo
   /**
@@ -67,8 +82,7 @@ export interface TarefaDeIa<Entrada, Saida> {
 
 /**
  * A versão determinística não achou, nos trechos, nada de que tirar a saída (material só com sumário, por exemplo).
- * Ela não inventa conteúdo: lança isto, e o adaptador falso responde com saída inválida, como qualquer modelo que
- * não entregou.
+ * Ela não inventa conteúdo: lança isto, e o adaptador falso responde `MATERIAL_INSUFICIENTE`.
  *
  * É uma classe própria, e não o `ErroDeIa`, para a tarefa não depender do resto da camada: tarefa é dado, e pode
  * ser lida por um teste de `tools/` sem trazer junto o provedor e os erros de domínio.
@@ -78,6 +92,6 @@ export class MaterialSemConteudoAproveitavel extends Error {
 }
 
 /** Só para o compilador tirar `Entrada` e `Saida` dos dois schemas. */
-export function definirTarefa<Entrada, Saida>(tarefa: TarefaDeIa<Entrada, Saida>): TarefaDeIa<Entrada, Saida> {
+export function definirTarefa<Entrada, Saida>(tarefa: DefinicaoDeTarefa<Entrada, Saida>): DefinicaoDeTarefa<Entrada, Saida> {
   return tarefa
 }

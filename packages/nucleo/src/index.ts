@@ -242,15 +242,14 @@ export {
   MOTIVO_VAGAS_DE_IA_INCOERENTES,
 } from './config/config-ia.js'
 export type { AdaptadorDeIa, ConfiguracaoDeIa, ConfiguracaoDoExecutor, ConfiguracaoDoModelo } from './config/config-ia.js'
-export { PERFIS } from './ia/perfis.js'
 export type { Perfil } from './ia/perfis.js'
 export { CODIGOS_DE_ERRO_DE_IA, ErroDeIa } from './ia/erros.js'
 export type { CodigoDeErroDeIa } from './ia/erros.js'
-export { ORIGENS_DA_SAIDA } from './ia/porta.js'
 export type { LLMProvider, MedicaoDaGeracao, OrigemDaSaida, PedidoDeGeracao, ResultadoDaGeracao } from './ia/porta.js'
-export type { Dado, PedidoAoModelo, PromptVersionado, TarefaDeIa } from './ia/tarefa.js'
+export { MaterialSemConteudoAproveitavel } from './ia/tarefa.js'
+export type { Dado, DefinicaoDeTarefa, PedidoAoModelo, PromptVersionado } from './ia/tarefa.js'
 export { ConsumoEmMemoria, OrcamentoEmMemoria } from './ia/consumo.js'
-export type { ConsultaDeOrcamento, ConsumoDeIa, DecisaoDoOrcamento, LimitesDoOrcamentoEmMemoria, OrcamentoDeIa, RegistroDeConsumo } from './ia/consumo.js'
+export type { CodigoDeOrcamento, ConsultaDeOrcamento, ConsumoDeIa, DecisaoDoOrcamento, LimitesDoOrcamentoEmMemoria, OrcamentoDeIa, RegistroDeConsumo } from './ia/consumo.js'
 export { exigirFuncaoAtiva, SuspensoesEmMemoria } from './ia/suspensao.js'
 export type { SuspensaoDeFuncao } from './ia/suspensao.js'
 export { criarProvedorDeIa, MODELO_DA_REGRA_FIXA, ProvedorDeIa } from './ia/provedor.js'
@@ -262,16 +261,15 @@ export { ESTADOS_DA_EXECUCAO, EXECUCAO_INTERROMPIDA, ExecucoesEmMemoria, Executo
 export type { CodigoDeFalhaDaExecucao, DependenciasDoExecutor, EstadoDaExecucao, ExecucaoAgendada, ExecutorDeAgente, RepositorioDeExecucoes } from './ia/executor.js'
 export { esquemaContextoDaTurma, esquemaTrecho } from './ia/material.js'
 export type { ContextoDaTurma, Trecho } from './ia/material.js'
-export { TAREFAS_DE_IA } from './ia/tarefas/index.js'
-export type { NomeDaTarefaDeIa } from './ia/tarefas/index.js'
+export { CATALOGO_DE_TAREFAS } from './ia/tarefas/index.js'
 export { adaptarAtividade, esquemaEntradaDeAdaptacao } from './ia/tarefas/adaptar-atividade.js'
 export type { EntradaDeAdaptacao } from './ia/tarefas/adaptar-atividade.js'
 export { esquemaEntradaDeAtividadeObjetiva, gerarAtividadeObjetiva } from './ia/tarefas/gerar-atividade-objetiva.js'
 export type { EntradaDeAtividadeObjetiva } from './ia/tarefas/gerar-atividade-objetiva.js'
 export { esquemaEntradaDePlanoDeAula, gerarPlanoDeAula } from './ia/tarefas/gerar-plano-de-aula.js'
 export type { EntradaDePlanoDeAula } from './ia/tarefas/gerar-plano-de-aula.js'
-export { esquemaEntradaDoAssistente, esquemaPropostaDeFerramenta, esquemaSaidaDoAssistente, proporFerramenta } from './ia/tarefas/propor-ferramenta.js'
-export type { EntradaDoAssistente, PropostaDeFerramenta, SaidaDoAssistente } from './ia/tarefas/propor-ferramenta.js'
+export { esquemaEntradaDoAssistente, esquemaPropostaDoAssistente, esquemaSaidaDoAssistente, proporFerramenta } from './ia/tarefas/propor-ferramenta.js'
+export type { EntradaDoAssistente, PropostaDoAssistente, SaidaDoAssistente } from './ia/tarefas/propor-ferramenta.js'
 export { esquemaEntradaDoRelatorio, esquemaSaidaDoRelatorio, relatorioDaCorrecao } from './ia/tarefas/relatorio-da-correcao.js'
 export type { EntradaDoRelatorio, SaidaDoRelatorio } from './ia/tarefas/relatorio-da-correcao.js'
 export { esquemaEntradaDoAnalista, esquemaSaidaDoAnalista, resumoDoAnalista } from './ia/tarefas/resumo-do-analista.js'
@@ -282,6 +280,7 @@ export {
   esquemaSaidaDoTutor,
   MENSAGEM_DE_ASSUNTO_DELICADO,
   MENSAGEM_DE_RISCO_A_VIDA,
+  ehAssuntoDelicado,
   turnoDoTutor,
 } from './ia/tarefas/turno-do-tutor.js'
 export type { ClassificacaoDoTurno, EntradaDoTutor, SaidaDoTutor } from './ia/tarefas/turno-do-tutor.js'

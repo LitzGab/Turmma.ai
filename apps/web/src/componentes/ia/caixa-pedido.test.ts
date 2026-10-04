@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { podeEnviar, teclaEnvia, textoDoPedido } from './caixa-pedido'
+import { dicaDoEnter, podeEnviar, teclaEnvia, textoDoPedido } from './caixa-pedido'
 
 describe('caixa de pedido', () => {
   it('Enter envia e Shift+Enter quebra a linha', () => {
     expect(teclaEnvia({ key: 'Enter', shiftKey: false, isComposing: false })).toBe(true)
     expect(teclaEnvia({ key: 'Enter', shiftKey: true, isComposing: false })).toBe(false)
+  })
+
+  it('com o dedo, o Enter nunca envia: no teclado virtual não existe Shift+Enter, e a segunda linha mandaria o pedido pela metade', () => {
+    expect(teclaEnvia({ key: 'Enter', shiftKey: false, isComposing: false }, true)).toBe(false)
+    expect(teclaEnvia({ key: 'Enter', shiftKey: true, isComposing: false }, true)).toBe(false)
+    // O controle: a mesma tecla, com teclado, envia.
+    expect(teclaEnvia({ key: 'Enter', shiftKey: false, isComposing: false }, false)).toBe(true)
+  })
+
+  it('a dica diz o que o Enter faz naquele aparelho', () => {
+    expect(dicaDoEnter(false)).toBe('Enter envia. Shift e Enter quebram a linha.')
+    expect(dicaDoEnter(true)).toBe('Enter quebra a linha. Para enviar, use o botão Enviar.')
   })
 
   it('o Enter que confirma um acento em composição não envia o pedido pela metade', () => {

@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Botao } from '../Botao'
-import { Campo } from '../Campo'
+import { Campo, MarcaDeObrigatorio } from '../Campo'
 import { Selecao } from '../Selecao'
+import type { NivelDoTitulo } from '../Tela'
 import {
   MAXIMO_DO_TEXTO,
   problemaDaDescricao,
@@ -33,6 +34,8 @@ interface PropsDoMotor {
   readonly falha?: string
   /** O resultado, no estado `pronto`: o artefato, com a assinatura da IA e as fontes. */
   readonly children?: ReactNode
+  /** O nível do título do formulário, que é o nome da ferramenta. Sem ele, 3: o formulário dentro de uma seção ou cartão. */
+  readonly nivel?: NivelDoTitulo
 }
 
 function CampoDeVarias({ campo, marcados, erro, aoMudar }: { campo: CampoDeMultipla; marcados: readonly string[]; erro: string | undefined; aoMudar: (marcados: readonly string[]) => void }) {
@@ -41,7 +44,10 @@ function CampoDeVarias({ campo, marcados, erro, aoMudar }: { campo: CampoDeMulti
   const descritoPor = [campo.dica === undefined ? undefined : idDaDica, erro === undefined ? undefined : idDoErro].filter((id) => id !== undefined).join(' ')
   return (
     <fieldset {...(descritoPor === '' ? {} : { 'aria-describedby': descritoPor })} className="flex min-w-0 flex-col gap-2">
-      <legend className="font-medium">{campo.rotulo}</legend>
+      <legend className="font-medium">
+        {campo.rotulo}
+        {(campo.minimo ?? 0) > 0 && <MarcaDeObrigatorio />}
+      </legend>
       {campo.dica !== undefined && (
         <p id={idDaDica} className="text-sm text-apoio">
           {campo.dica}
@@ -89,20 +95,25 @@ function CampoDeVarias({ campo, marcados, erro, aoMudar }: { campo: CampoDeMulti
  *
  * O estado é de quem usa, porque é ele que sabe quando a geração terminou (`GET /v1/execucoes/:id`).
  */
-export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEditar, falha, children }: PropsDoMotor) {
+export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEditar, falha, children, nivel = 3 }: PropsDoMotor) {
+  const Titulo = `h${nivel}` as const
   const campos: readonly CampoDoMotor[] = descricao.campos
   const [valores, definirValores] = useState<ValoresDoFormulario>(() => valoresPadrao(campos))
   const [pendencias, definirPendencias] = useState<readonly Pendencia[]>([])
   const [pedido, definirPedido] = useState<ValoresValidados | undefined>(undefined)
   const formulario = useRef<HTMLFormElement>(null)
   const recolhido = useRef<HTMLDivElement>(null)
+  const titulo = useRef<HTMLHeadingElement>(null)
   const estadoAnterior = useRef(estado)
   const idDoTitulo = useId()
 
   // Quando o formulário dá lugar ao pedido recolhido, o botão que tinha o foco some: o foco vai para a linha do pedido,
-  // e não para o `body`. Só na troca de estado: a tela que já abre pronta não puxa o foco de ninguém.
+  // e não para o `body`. E na volta ("Editar os campos", que some com o pedido recolhido), para o título do formulário.
+  // Só na troca de estado: a tela que já abre pronta, ou no formulário, não puxa o foco de ninguém.
   useEffect(() => {
-    if (estadoAnterior.current === 'formulario' && estado !== 'formulario') recolhido.current?.focus()
+    const eraFormulario = estadoAnterior.current === 'formulario'
+    if (eraFormulario && estado !== 'formulario') recolhido.current?.focus()
+    if (!eraFormulario && estado === 'formulario') titulo.current?.focus()
     estadoAnterior.current = estado
   }, [estado])
 
@@ -165,9 +176,9 @@ export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEdit
 
   return (
     <form ref={formulario} noValidate onSubmit={aoSubmeter} aria-labelledby={idDoTitulo} data-motor="formulario" className="flex min-w-0 flex-col gap-4">
-      <h3 id={idDoTitulo} className="text-base font-semibold text-tinta">
+      <Titulo ref={titulo} tabIndex={-1} id={idDoTitulo} className="text-base font-semibold text-tinta">
         {descricao.nome}
-      </h3>
+      </Titulo>
       {campos.map((campo) => {
         const valor = valores[campo.chave]
         const texto = typeof valor === 'string' ? valor : ''
@@ -182,7 +193,7 @@ export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEdit
                 onChange={(evento) => mudar(campo.chave, evento.target.value)}
                 {...(campo.exemplo === undefined ? {} : { placeholder: campo.exemplo })}
                 maxLength={campo.maximo ?? MAXIMO_DO_TEXTO}
-                aria-required={campo.obrigatorio === true}
+                obrigatorio={campo.obrigatorio === true}
                 autoComplete="off"
               />
             )}
@@ -194,7 +205,7 @@ export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEdit
                 value={texto}
                 onChange={(evento) => mudar(campo.chave, evento.target.value)}
                 inputMode="numeric"
-                aria-required={campo.obrigatorio === true}
+                obrigatorio={campo.obrigatorio === true}
                 autoComplete="off"
               />
             )}
@@ -207,6 +218,7 @@ export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEdit
                 valor={texto}
                 aoMudar={(escolhido) => mudar(campo.chave, escolhido)}
                 marcador="Escolha…"
+                obrigatoria={campo.obrigatorio === true}
               />
             )}
             {campo.tipo === 'multipla' && <CampoDeVarias campo={campo} marcados={Array.isArray(valor) ? valor : []} erro={erroDe(campo.chave)} aoMudar={(marcados) => mudar(campo.chave, marcados)} />}

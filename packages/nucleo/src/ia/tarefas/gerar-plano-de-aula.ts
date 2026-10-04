@@ -1,4 +1,4 @@
-import { esquemaConteudoDePlanoDeAula, type Citacao, type ConteudoDePlanoDeAula } from '@educa/shared'
+import { esquemaConteudoDePlanoDeAula, TAMANHO_MAXIMO_DO_TEMA, type Citacao, type ConteudoDePlanoDeAula } from '@educa/shared'
 import { z } from 'zod'
 import {
   citacaoDaFrase,
@@ -17,7 +17,7 @@ import { definirTarefa, MaterialSemConteudoAproveitavel } from '../tarefa.js'
 import { cortar, enumerar, palavras, palavrasEmComum } from '../texto.js'
 
 export const esquemaEntradaDePlanoDeAula = z.strictObject({
-  tema: z.string().min(1).max(200),
+  tema: z.string().min(1).max(TAMANHO_MAXIMO_DO_TEMA),
   duracaoMinutos: z.number().int().min(10).max(240),
   contexto: esquemaContextoDaTurma,
   habilidades: esquemaHabilidades,
@@ -93,6 +93,7 @@ export const gerarPlanoDeAula = definirTarefa({
   esquemaDeSaida: esquemaConteudoDePlanoDeAula,
   prompt: PROMPT_GERAR_PLANO_DE_AULA,
   maximoDeTokensDeSaida: 4000,
+  levaTextoLivreDePessoa: false,
   levaTextoDeAluno: false,
 
   montarPedido(entrada) {

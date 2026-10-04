@@ -130,6 +130,11 @@ export const RECURSOS = {
   /** `GET /v1/sinais` (MVP, A4): os sinais do Tutor, só para o professor da turma (D34). A coordenação vê só a soma, no Analista. */
   sinal: ['ler'],
   /**
+   * `GET /v1/tutor/uso` (MVP, A4; D8, D47; regra 70, item 4): o uso do Tutor por aluno, só para o professor da turma. É o
+   * que faz não existir uso invisível a ele. A coordenação não lê uso nominal de aluno, e o aluno não lê o dos colegas.
+   */
+  uso_do_tutor: ['ler'],
+  /**
    * A governança de IA (MVP, A5), só da coordenação: `ler_resumo`, `ler_funcoes` e `ler_consumo` são os três `GET` de
    * `/v1/governanca`; `suspender_funcao` e `retomar_funcao`, os dois `POST` de `/v1/governanca/funcoes/:chave`. O resumo
    * e o consumo são agregados: sem professor, sem turma, sem aluno.
@@ -181,6 +186,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     desempenho_da_turma: { ler: 'nunca' },
     tutor: { enviar_mensagem: 'nunca', ler_conversa: 'nunca', ler_memoria: 'nunca' },
     sinal: { ler: 'nunca' },
+    uso_do_tutor: { ler: 'nunca' },
     governanca: { ler_resumo: 'nunca', ler_funcoes: 'nunca', suspender_funcao: 'nunca', retomar_funcao: 'nunca', ler_consumo: 'nunca' },
     analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
   },
@@ -216,6 +222,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     desempenho_da_turma: { ler: 'nominal_auditado' },
     tutor: { enviar_mensagem: 'nunca', ler_conversa: 'nunca', ler_memoria: 'nunca' },
     sinal: { ler: 'nunca' },
+    uso_do_tutor: { ler: 'nunca' },
     governanca: { ler_resumo: 'agregado', ler_funcoes: 'unidade', suspender_funcao: 'unidade', retomar_funcao: 'unidade', ler_consumo: 'agregado' },
     analista: { ler_resumo: 'agregado', gerar: 'unidade', ler_nominal: 'nominal_auditado' },
   },
@@ -251,6 +258,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     desempenho_da_turma: { ler: 'turma_vinculada' },
     tutor: { enviar_mensagem: 'nunca', ler_conversa: 'nunca', ler_memoria: 'nunca' },
     sinal: { ler: 'turma_vinculada' },
+    uso_do_tutor: { ler: 'turma_vinculada' },
     governanca: { ler_resumo: 'nunca', ler_funcoes: 'nunca', suspender_funcao: 'nunca', retomar_funcao: 'nunca', ler_consumo: 'nunca' },
     analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
   },
@@ -286,6 +294,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     desempenho_da_turma: { ler: 'nunca' },
     tutor: { enviar_mensagem: 'proprio', ler_conversa: 'proprio', ler_memoria: 'proprio' },
     sinal: { ler: 'nunca' },
+    uso_do_tutor: { ler: 'nunca' },
     governanca: { ler_resumo: 'nunca', ler_funcoes: 'nunca', suspender_funcao: 'nunca', retomar_funcao: 'nunca', ler_consumo: 'nunca' },
     analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
   },
