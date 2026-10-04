@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { Browser, BrowserContext, BrowserContextOptions, Locator, Page } from '@playwright/test'
 import { exibirCodigoDaTurma } from '../packages/shared/src/sala/acesso.ts'
 import type { RespostaAcessoGerado } from '../packages/shared/src/sala/acesso.ts'
-import { entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarEstrutura, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarEstrutura, irPelaNavegacao, PRAZO_DA_ENTRADA_MS, esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { alunosDaTurmaNoBanco, criarEquipeComSenha, montarEstruturaNoBanco, porNaListaDaTurma } from './__fixtures__/sessao.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -148,7 +148,7 @@ test('W1: da escola vazia à aluna aprovada, só pela tela — a coordenação m
   await acionar(botao(principal(professor), 'Definir a senha e continuar'), hasTouch)
   await expect(professor).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
   await entrarPorEmail(professor, { ...coordenadora, email: professorEmail, senha: SENHA_DO_PROFESSOR }, hasTouch)
-  await expect(professor.getByRole('heading', { name: `Olá, ${professorNome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  await esperarNovaConversa(professor, professorNome)
   await irPelaNavegacao(professor, 'Turmas', hasTouch)
   const paraConfirmar = principal(professor).getByRole('region', { name: 'Confirme suas turmas', exact: true })
   await expect(paraConfirmar).toContainText(turma, { timeout: PRAZO_DA_ENTRADA_MS })

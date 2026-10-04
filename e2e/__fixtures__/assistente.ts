@@ -248,11 +248,11 @@ export function versaoAdaptada(origem: RespostaArtefato, estado: Entrega['estado
   const artefato: RespostaArtefato = {
     ...origem,
     id: randomUUID(),
-    titulo: `${origem.titulo} (adaptada)`,
+    titulo: `${origem.titulo} (versão adaptada)`,
     origemId: origem.id,
     adaptacao: { tipos: ['fonte_ampliada', 'tempo_adicional'], tempoExtraPercentual: 50 },
     entrega: { id: entregaId, estado, decididaEm },
-    conteudo: origem.conteudo.tipo === 'atividade_objetiva' ? { ...origem.conteudo, titulo: `${origem.titulo} (adaptada)`, adaptacao: { tipos: ['fonte_ampliada', 'tempo_adicional'], tempoExtraPercentual: 50 } } : origem.conteudo,
+    conteudo: origem.conteudo.tipo === 'atividade_objetiva' ? { ...origem.conteudo, titulo: `${origem.titulo} (versão adaptada)`, adaptacao: { tipos: ['fonte_ampliada', 'tempo_adicional'], tempoExtraPercentual: 50 } } : origem.conteudo,
     versoesAdaptadas: [],
     aplicacoes: [],
   }
@@ -262,7 +262,8 @@ export function versaoAdaptada(origem: RespostaArtefato, estado: Entrega['estado
     funcao: 'adaptacao',
     estado,
     turmaId: origem.turmaId,
-    titulo: origem.titulo,
+    // Como a API real: o título da entrega de adaptação é o da própria versão adaptada.
+    titulo: artefato.titulo,
     artefatoId: artefato.id,
     atividadeAplicadaId: null,
     criadaEm: '2026-10-05T13:40:00.000Z',

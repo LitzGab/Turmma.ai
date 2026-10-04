@@ -112,18 +112,20 @@ const PASSAGEIROS: readonly CodigoDeErro[] = [
   CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO,
   CodigoDeErro.TEMPO_ESGOTADO,
   CodigoDeErro.ERRO_INTERNO,
-  CodigoDeErro.LIMITE_EXCEDIDO,
 ]
 
 /**
  * Como a falha aparece na tela, pelo código (regra 80, item 4: nunca erro cru):
  * - `fila`: passa sozinha, e a tela oferece "Tentar de novo" (`AvisoFila`);
  * - `suspensa`: a escola suspendeu a função. É aviso que explica, e não erro: pedir de novo não adianta;
+ * - `limite`: a pessoa passou do número de pedidos de IA por minuto (429). Não é falha de ninguém: a tela diz com calma
+ *   que é só esperar, e o pedido continua lá para ser repetido;
  * - `explicada`: algo precisa mudar antes (o tema, o orçamento da escola), e a mensagem do catálogo diz o quê.
  */
-export type AparenciaDaFalha = 'fila' | 'suspensa' | 'explicada'
+export type AparenciaDaFalha = 'fila' | 'suspensa' | 'limite' | 'explicada'
 
 export function aparenciaDaFalha(erro: CodigoDeErro): AparenciaDaFalha {
   if (erro === CodigoDeErro.FUNCAO_SUSPENSA) return 'suspensa'
+  if (erro === CodigoDeErro.LIMITE_EXCEDIDO) return 'limite'
   return PASSAGEIROS.includes(erro) ? 'fila' : 'explicada'
 }

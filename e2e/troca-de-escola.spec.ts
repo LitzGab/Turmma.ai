@@ -14,6 +14,7 @@ import {
   naGaveta,
   nomeNoSeletor,
   PRAZO_DA_ENTRADA_MS,
+  esperarNovaConversa,
 } from './__fixtures__/casca.ts'
 import { cacheDeConsultas, semAcessosDaConta } from './__fixtures__/consultas.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
@@ -59,7 +60,7 @@ async function entrarEmA(page: Page, emA: EquipeDeTeste, hasTouch: boolean): Pro
   const escolherA = page.getByRole('button', { name: `${emA.escolaNome} · professor` })
   if (hasTouch) await escolherA.tap({ timeout: PRAZO_DA_ENTRADA_MS })
   else await escolherA.click({ timeout: PRAZO_DA_ENTRADA_MS })
-  await expect(page.getByRole('heading', { name: `Olá, ${emA.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  await esperarNovaConversa(page, emA.nome)
 }
 
 /** Caminha pelo teclado até o alvo, e falha se ele não estiver na ordem de foco ou se o foco não aparecer. */
@@ -123,7 +124,7 @@ test.describe('W3: a troca de escola não deixa nada de A no cliente', () => {
 
     // A troca sai da tela de Turmas de A, com a lista dela montada e no cache.
     await escolherNoSeletor(page, nomeNoSeletor(emB, 'professor'), hasTouch)
-    await expect(page.getByRole('heading', { name: `Olá, ${NOME_DA_PROFESSORA_EM_B}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarNovaConversa(page, NOME_DA_PROFESSORA_EM_B)
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByRole('main')).toContainText(deB.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
     const corpos = await Promise.all(respostasDepois)
@@ -252,7 +253,7 @@ test.describe('W12: o seletor pelo teclado, pelo toque e a 360 px', () => {
     await expect(linhaDoSeletor(page, nomeNoSeletor(emB, 'professor'))).toBeFocused()
     expect(await focoVisivel(page)).toBe(true)
     await page.keyboard.press('Enter')
-    await expect(page.getByRole('heading', { name: `Olá, ${NOME_DA_PROFESSORA_EM_B}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarNovaConversa(page, NOME_DA_PROFESSORA_EM_B)
   })
 })
 
@@ -318,7 +319,7 @@ test.describe('recomeço da tela do seletor', () => {
     await escolherNoSeletor(page, nomeNoSeletor(emA, 'professor'), hasTouch)
     await expect(botaoDoSeletor(page)).toHaveAttribute('aria-expanded', 'false')
     await expect(botaoDoSeletor(page)).toBeFocused()
-    await expect(page.getByRole('heading', { name: `Olá, ${emA.nome}` })).toBeVisible()
+    await esperarNovaConversa(page, emA.nome)
 
     // A tela seguinte ainda fala com o mesmo token: nenhuma sessão nova foi gravada.
     await irPelaNavegacao(page, 'Turmas', hasTouch)
@@ -346,7 +347,7 @@ test.describe('recomeço da tela do seletor', () => {
     await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
 
     await escolherNoSeletor(page, nomeNoSeletor(emB, 'professor'), hasTouch)
-    await expect(page.getByRole('heading', { name: `Olá, ${NOME_DA_PROFESSORA_EM_B}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarNovaConversa(page, NOME_DA_PROFESSORA_EM_B)
     // A lista de A chega agora, com B na tela. Dois quadros depois, o que ela fosse pintar já estaria lá.
     segurada.abrir()
     await page.evaluate(() => new Promise<void>((pronto) => requestAnimationFrame(() => requestAnimationFrame(() => pronto()))))
@@ -409,6 +410,6 @@ test.describe('recomeço da tela do seletor', () => {
     await expect(aviso).toHaveCount(0)
     await expect(linhaDoSeletor(page, nomeNoSeletor(emA, 'professor'))).toBeFocused()
     // E ela continua em A, com a sessão de pé.
-    await expect(page.getByRole('heading', { name: `Olá, ${emA.nome}` })).toBeVisible()
+    await esperarNovaConversa(page, emA.nome)
   })
 })

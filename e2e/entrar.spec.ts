@@ -1,6 +1,7 @@
 import type { Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO, mensagemDaEntrada } from '../packages/shared/src/erros/mensagens.ts'
 import { criarEquipeComSenha, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
+import { esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -38,11 +39,14 @@ async function esperarAlvoDeToque(page: Page, nome: string | RegExp): Promise<vo
   expect(caixa?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
 }
 
-/** A área autenticada com a pessoa e a escola na tela: é o que prova que o token da sessão vale. */
+/**
+ * A área autenticada com a pessoa e a escola na tela: é o que prova que o token da sessão vale. Quem entra aqui é a
+ * professora, que abre em "Nova conversa" (A2; D73), com o nome dela e o da escola na casca.
+ */
 async function esperarAreaAutenticada(page: Page, equipe: EquipeDeTeste): Promise<void> {
-  await expect(page.getByRole('heading', { name: `Olá, ${equipe.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-  await expect(page.getByRole('main')).toContainText(equipe.escolaNome)
-  await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible()
+  await esperarNovaConversa(page, equipe.nome, { escolaNome: equipe.escolaNome })
+  // No celular há dois "Sair": o da barra do topo, à vista, e o da lateral, na gaveta fechada.
+  await expect(page.getByRole('button', { name: 'Sair' }).first()).toBeVisible()
 }
 
 /** O que a aba guardou depois de uma etapa que ainda não gravou sessão: precisa ser nada. */
@@ -81,7 +85,7 @@ test.describe('entrada da equipe por e-mail e senha', () => {
     // Enter dentro do formulário envia: ninguém precisa alcançar o botão para entrar.
     await page.keyboard.press('Enter')
     await esperarAreaAutenticada(page, equipe)
-    expect(new URL(page.url()).pathname).toBe('/')
+    expect(new URL(page.url()).pathname).toBe('/professor/nova-conversa')
 
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])

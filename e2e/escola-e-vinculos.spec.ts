@@ -11,7 +11,7 @@ import {
   ligarContaExterna,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
-import { abrirNavegacao, abrirSeletorDeEscola, botaoDoSeletor, esperarEstrutura, irPelaNavegacao, lateral, linhaDoSeletor, nomeNoSeletor } from './__fixtures__/casca.ts'
+import { abrirNavegacao, abrirSeletorDeEscola, botaoDoSeletor, esperarEstrutura, irPelaNavegacao, lateral, linhaDoSeletor, nomeNoSeletor, esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -53,8 +53,16 @@ async function entrarPorEmail(page: Page, equipe: EquipeDeTeste, hasTouch: boole
   await acionar(page, /^Entrar$/, hasTouch)
 }
 
-/** A área autenticada de uma escola: o nome de quem entrou e o nome dela. */
+/**
+ * A área autenticada de uma escola: o nome de quem entrou e o nome dela. A professora abre em "Nova conversa" (A2; D73),
+ * com o nome dela e o da escola na casca.
+ */
 async function esperarEscola(page: Page, nome: string, escolaNome: string): Promise<void> {
+  await esperarNovaConversa(page, nome, { escolaNome })
+}
+
+/** O aluno continua abrindo na "Início", com o nome dele e o da escola na página. */
+async function esperarEscolaDoAluno(page: Page, nome: string, escolaNome: string): Promise<void> {
   await expect(page.getByRole('heading', { name: `Olá, ${nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   await expect(page.getByRole('main')).toContainText(escolaNome)
 }
@@ -115,7 +123,7 @@ test.describe('escolher e trocar de escola', () => {
     await page.keyboard.press('Enter')
 
     await esperarEscola(page, 'Professora sintética na outra escola', emB.escolaNome)
-    expect(new URL(page.url()).pathname).toBe('/')
+    expect(new URL(page.url()).pathname).toBe('/professor/nova-conversa')
     // O nome de A aparece no seletor, e só ali: é um acesso da própria conta. O nome de quem ela é em A, não.
     await expect(page.getByRole('main')).not.toContainText(emA.escolaNome)
     await expect(page.locator('body')).not.toContainText(emA.nome)
@@ -138,9 +146,9 @@ test.describe('escolher e trocar de escola', () => {
     await esperarAlvoDeToque(linhaDoSeletor(page, nomeNoSeletor(emB, 'professor')), 'a escola de destino no seletor')
     await acionarNoSeletor(page, nomeNoSeletor(emB, 'professor'), hasTouch)
 
-    // A troca volta à página inicial, já da escola de destino.
+    // A troca volta à tela em que o professor abre, já da escola de destino.
     await esperarEscola(page, 'Professora sintética na outra escola', emB.escolaNome)
-    expect(new URL(page.url()).pathname).toBe('/')
+    expect(new URL(page.url()).pathname).toBe('/professor/nova-conversa')
     // Sem o esvaziamento do cache na troca, a turma de A continuaria no cliente e apareceria na tela de B. O nome da
     // escola A segue no seletor, e só nele: ele é um acesso da própria conta, e não dado da escola A.
     await expect(page.locator('body')).not.toContainText(alocacao.turmaNome)
@@ -172,7 +180,7 @@ test.describe('escolher e trocar de escola', () => {
     await page.getByLabel('Matrícula').fill(aluno.matricula)
     await campoSenha(page).fill(aluno.senha)
     await acionar(page, /^Entrar$/, hasTouch)
-    await esperarEscola(page, aluno.nome, aluno.escolaNome)
+    await esperarEscolaDoAluno(page, aluno.nome, aluno.escolaNome)
 
     // O aluno entra por matrícula e não tem conta (regra 20, item 2): não há outra escola para listar, e é por isso
     // que a troca de escola nunca começa por ele. A lateral diz só onde ele está.
@@ -255,7 +263,7 @@ test.describe('escolher e trocar de escola', () => {
     await page.goto(`/e/${emA.slug}`)
     await acionar(page, /Entrar com a conta Google/, hasTouch, 'link')
     await entrarNoProvedorFalso(page, CONTA_NO_PROVEDOR)
-    await expect(page.getByRole('heading', { name: `Olá, ${emA.nome}` })).toBeVisible({ timeout: PRAZO_DO_LOGIN_EXTERNO_MS })
+    await esperarNovaConversa(page, emA.nome, { timeout: PRAZO_DO_LOGIN_EXTERNO_MS })
 
     await abrirSeletorDeEscola(page, hasTouch)
     await acionarNoSeletor(page, nomeNoSeletor(emB, 'professor'), hasTouch)

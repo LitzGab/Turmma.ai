@@ -37,6 +37,7 @@ import { SalaModule } from './sala/sala.module.js'
 import { SessaoModule } from './sessao/sessao.module.js'
 import { ProntidaoController } from './sistema/prontidao.controller.js'
 import { SistemaModule } from './sistema/sistema.module.js'
+import { TutorModule } from './tutor/tutor.module.js'
 import { UsoModule } from './uso.module.js'
 
 /** O que a montagem passa ao `AppModule`: o `main.ts` passa só o `logger`; o resto, só o teste. */
@@ -86,6 +87,7 @@ export class AppModule {
         ArtefatoModule,
         EntregaModule,
         AtividadeModule,
+        TutorModule,
         SalaModule.com({
           config: config.sala,
           chaveContador: config.login.chaveContador,

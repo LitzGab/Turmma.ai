@@ -1,7 +1,7 @@
 import type { Browser, BrowserContextOptions, Locator, Page, Route } from '@playwright/test'
 import { AVISO_DO_CONVITE_COM_SENHA_NOVA, MENSAGENS_DE_ERRO, mensagemDoConvite } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaConviteDeProfessor } from '../packages/shared/src/professores/professores.ts'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, esperarEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, esperarEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   convidarProfessorNoBanco,
@@ -497,9 +497,9 @@ test.describe('cadastrar, copiar o link e o aceite do professor', () => {
     await professor.getByLabel('E-mail').fill(`prof-${marca}@educa.invalid`)
     await professor.getByLabel('Senha').fill(SENHA_NOVA)
     await acionar(professor.getByRole('button', { name: /^Entrar$/ }), hasTouch)
-    await expect(professor.getByRole('heading', { name: `Olá, ${nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    // A página inicial dele aponta para Turmas, onde ele confirma o que a coordenação alocar.
-    await acionar(professor.getByRole('main').getByRole('link', { name: 'Turmas', exact: true }), hasTouch)
+    await esperarNovaConversa(professor, nome)
+    // Ele abre em "Nova conversa" (A2); Turmas, onde ele confirma o que a coordenação alocar, está na lateral.
+    await irPelaNavegacao(professor, 'Turmas', hasTouch)
     await expect(professor).toHaveURL(/\/professor\/turmas$/)
     await expect(professor.getByRole('main')).toContainText('A coordenação ainda não alocou você', { timeout: PRAZO_DA_ENTRADA_MS })
 
