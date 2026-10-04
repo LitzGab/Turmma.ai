@@ -70,6 +70,11 @@ export const ROTAS = {
   convite: '/convite',
   /** Estado do sistema, público: é a tela que se abre justamente quando não se consegue entrar. */
   sistema: '/sistema',
+  /**
+   * A galeria das peças (`galeria/Galeria.tsx`): fora da navegação, sem sessão e sem API, só com dado inventado. Existe
+   * para o e2e provar as peças antes de as telas existirem; ninguém chega a ela por um link do produto.
+   */
+  galeria: '/galeria',
 } as const
 
 /**
