@@ -59,7 +59,7 @@ export default function Governanca() {
 
   return (
     <Tela titulo="Governança">
-      <p className="max-w-prose text-apoio">O que a IA produziu nesta escola no ano letivo, e o que as pessoas decidiram sobre isso. Nada do que a IA gera chega ao aluno sem um professor aprovar.</p>
+      <p className="max-w-prose text-apoio">O que a IA produziu nesta escola no ano letivo, e o que as pessoas decidiram sobre isso. Nenhum material nem diagnóstico da IA chega ao aluno sem um professor aprovar; o Tutor responde ao aluno na hora, com o professor acompanhando. As atividades e os planos que a professora gera ficam com ela, e só chegam à turma quando ela os aplica.</p>
       <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <NumeroPainel rotulo="Gerado por IA" valor={numeros.geradoPorIa} apoio="Atividades, planos, versões adaptadas e correções" />
         <NumeroPainel rotulo="Aprovado por gente" valor={numeros.aprovadoPorPessoa} apoio="Versões adaptadas e correções que um professor aprovou" />

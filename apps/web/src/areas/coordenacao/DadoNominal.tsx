@@ -1,6 +1,6 @@
 import { FINALIDADES_DA_LEITURA_NOMINAL, NOME_DA_FINALIDADE_NOMINAL, nomeDaSerie, type FinalidadeDaLeituraNominal, type RespostaAnalistaNominal } from '@educa/shared'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { consultaTurmas } from '../../api/estrutura'
 import { lerDadoNominal } from '../../api/governanca'
 import { BarraRotulada } from '../../componentes/BarraRotulada'
@@ -32,6 +32,8 @@ const OPCOES_DE_FINALIDADE = FINALIDADES_DA_LEITURA_NOMINAL.map((finalidade) => 
  */
 export function DadoNominal() {
   const [aberto, definirAberto] = useState(false)
+  // Fechar o resultado desmonta o botão que tinha o foco: ele volta para quem abriu (regra 50, item 11).
+  const abrir = useRef<HTMLButtonElement>(null)
   const { enviar, mutacao } = useEnvioUnico({
     mutationFn: ({ turmaId, finalidade }: { turmaId: string; finalidade: FinalidadeDaLeituraNominal }) => lerDadoNominal(turmaId, finalidade),
     onSuccess: () => definirAberto(false),
@@ -46,6 +48,7 @@ export function DadoNominal() {
       />
       <div>
         <Botao
+          ref={abrir}
           variante="oficial"
           onClick={() => {
             mutacao.reset()
@@ -55,7 +58,13 @@ export function DadoNominal() {
           Abrir dado nominal de uma turma
         </Botao>
       </div>
-      {mutacao.data !== undefined && !aberto && <ResultadoNominal dado={mutacao.data} aoFechar={() => mutacao.reset()} />}
+      {mutacao.data !== undefined && !aberto && <ResultadoNominal
+          dado={mutacao.data}
+          aoFechar={() => {
+            mutacao.reset()
+            abrir.current?.focus()
+          }}
+        />}
       {aberto && (
         <PedidoNominal
           aoFechar={() => definirAberto(false)}
