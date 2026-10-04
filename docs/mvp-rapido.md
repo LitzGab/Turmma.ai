@@ -57,23 +57,14 @@ provedor não compara nada; as 15 amostras de saída do Tutor são poucas para d
 
 | Revisor | Veredito | O que exigiu | Quem corrige |
 |---|---|---|---|
-| `tenancy-guardian` | APROVADO | Recomendações: nenhum teste quebra se a cláusula de ano letivo sumir; `doMaterial` sem disciplina | P, rodada 3 |
-| `privacy-guardian` | APROVADO | Recomendações: aviso nos campos livres (tema e título); `licenciante` fora do que o professor recebe | P e W, rodada 3 |
-| `conformidade-reviewer` | REPROVADO | A recusa de corrigir discursiva (D55) só pegava a frase canônica: de 25 frases de professor, recusou uma. A versão adaptada saía em PDF pendente ou rejeitada, com o aviso "revisado" | P, rodada 3 |
-| `frontend-reviewer` | AJUSTES NECESSÁRIOS | A resposta aparecia acima da pergunta até a conversa ser relida; a tela pulava ao carregar mensagens antigas; Material vazio com dois botões principais | W, rodada 3 |
+| `tenancy-guardian` | APROVADO | Recomendações: nenhum teste quebra se a cláusula de ano letivo sumir; `doMaterial` sem disciplina | W, rodada 3 | `../Educa.ia-mvp-w`, `mvp/w` | parte 1: ajustes da revisão da fase 2 nas telas; parte 2: telas do professor da fase 3 (aplicar à turma, Aprovar, sinais e uso do Tutor no Seu time, desempenho na turma aberta), com o e2e do fluxo real |
+| X | `../Educa.ia-mvp-x`, `mvp/x` | telas do aluno: Atividades, Atividade e Tutor (a memória, só se couber), com o e2e do fluxo real |
+| G | `../Educa.ia-mvp-g`, `mvp/g` | fase 4: API de governança e do Analista e as três telas da coordenação |
 
-Decisão sobre o PDF da versão adaptada: aprovada exporta limpa; pendente exporta como rascunho, com a marca em toda
-página e sem a frase de revisão; rejeitada não exporta.
-
-**Em curso**
-
-| Pacote | Worktree e branch | O que faz |
-|---|---|---|
-| P, rodada 3 | `../Educa.ia-mvp-p`, `mvp/p` | os dois bloqueantes de conformidade (regra da D55 com amostras, PDF da versão adaptada) e as recomendações de teste |
-| W, rodada 3 | `../Educa.ia-mvp-w`, `mvp/w` | parte 1: ajustes da revisão da fase 2 nas telas; parte 2: telas do professor da fase 3 (aplicar à turma, Aprovar, sinais e uso do Tutor no Seu time, desempenho na turma aberta) |
-| X | `../Educa.ia-mvp-x`, `mvp/x` | telas do aluno: Atividades, Atividade e Tutor (a memória, só se couber) |
-| A (API) | `../Educa.ia-mvp-a`, `mvp/a` | atividade aplicada, respostas, correção, validação do lote, desempenho da turma |
-| T (API), rodada 2 | `../Educa.ia-mvp-t`, `mvp/t` | Tutor, memória, sinais e uso. Entregue (45 testes de integração); a rodada 2 põe o assunto delicado na frente da avaliação aberta |
+Integrados na branch de integração (`mvp/fase-2`, `b1b385f`), ainda sem portão: a rodada 3 do P (recusa da D55 na
+conversa com 76 amostras; PDF da versão adaptada só limpo depois de aprovada), a API do Tutor (T, 46 testes de
+integração), a API de atividade e correção (A, 58 testes de integração, 42 regras removidas uma a uma e todas com
+teste que quebra) e o `licenciante` do material só para a coordenação.
 
 A branch de integração da fase 2 é `mvp/fase-2` (`../Educa.ia-mvp-fase-2`). Os worktrees de S, L e C ficam de pé
 para rodadas de correção.
@@ -90,9 +81,14 @@ retomados às 14h21 do ponto em que pararam. Se acontecer de novo, retoma-se cad
   real; portão, revisores (os três com veto, `test-engineer` e `frontend-reviewer`) e esteira.
 - Fase 4 (governança e Analista) e o fechamento (seção 8).
 
-Limiares que os pacotes escolheram e que são decisão de produto em aberto (indicadores, `CLAUDE.md`): `travou` na
-quarta troca seguida na mesma questão ou página, no mesmo dia; `duvida_repetida` quando o aluno volta a uma questão ou
-página em que já pediu ajuda. Os dos destaques da correção entram quando o pacote A entregar.
+Limiares que os pacotes escolheram e que são **decisão de produto em aberto** (indicadores, `CLAUDE.md`):
+- Tutor: `travou` na quarta troca seguida na mesma questão ou página, no mesmo dia; `duvida_repetida` quando o aluno
+  volta a uma questão ou página em que já pediu ajuda.
+- Destaques da correção: `em_branco`, nenhuma questão respondida; `fora_do_historico`, taxa de acertos 40 pontos ou mais
+  acima ou abaixo do histórico aprovado do aluno na disciplina (até 10 lotes, somando ao menos 5 questões, atividade
+  com ao menos 3); `padrao_de_erro`, quatro ou mais respostas todas na mesma alternativa com algum erro, ou erro em
+  metade ou mais das questões que 90% dos colegas acertaram (com 5 ou mais colegas corrigidos e 2 ou mais questões
+  assim). Este último compara o aluno com a turma para destacá-lo ao professor: vale o Joaquim olhar.
 
 Para os pacotes das fases 3 e 4, o que os revisores já pediram:
 - **A (atividade e correção):** `aprovar-lote` monta `apresentado` e `aberto` das linhas de `correcao` no servidor;
@@ -173,6 +169,15 @@ descarregado, e quem carrega é o Joaquim).
     da disciplina em que tem vínculo. O sinal `atencao_humana`, que não tem referência, chega a todo professor da turma.
 27. **Não há política de Tutor por turma (D19) nem contestação da memória nesta fatia.** O Tutor fica ligado para o
     aluno com turma; o estado "desligado fora da sala" não existe; o aluno vê o que o Tutor sabe e fala com a professora.
+28. **A conversa do professor com o Assistente passou a contar como texto de aluno para a D62.** A regra fixa da D55
+    não pega texto de aluno colado sem palavra de julgamento, que segue ao modelo; por isso a tarefa declara
+    `levaTextoDeAluno`. Na prática: com provedor externo, a conversa do professor também exige processamento no Brasil.
+29. **Encerrar com a correção suspensa encerra sem corrigir**, e não recusa: a atividade fecha para o aluno, não nasce
+    lote, e encerrar de novo depois da retomada corrige. Segue o contrato e a AIA, não o que o orquestrador pediu.
+30. **Aprovar o lote sem ter lido a correção é recusado.** A leitura fica registrada por pessoa e por lote, por 12 horas,
+    com um resumo do que foi mostrado; a aprovação só passa se o resumo for o do lote naquele instante (D56).
+31. **Não há relatório em texto da correção nesta fatia**: o contrato não tem onde guardá-lo, e a tarefa
+    `relatorio_da_correcao` não é chamada. A tela mostra os números e os destaques.
 23. **A fase 3 começou pela API**, em paralelo com o fim da fase 2; as telas dela esperam o W.
 24. **Teto do grupo "peças + galeria" em 26 kB** (medido: 23,47). O primeiro carregamento está em 141,57 de 150 kB;
     cerca de 15 kB do grupo são pedaços que a entrada nunca baixa, mas o glob soma.
