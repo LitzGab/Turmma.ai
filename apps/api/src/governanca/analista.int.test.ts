@@ -25,8 +25,10 @@ import {
   NOME_DA_PROFESSORA_DE_TESTE,
   NOME_DO_ALUNO_DE_TESTE,
   zerarLimiteDePedidosDeIa,
+  type AnoAnterior,
   type EscolaComAssistente,
 } from '../../test/escola-com-assistente.js'
+import { aplicarAtividade as gravarAplicacao, lancarLote, trocasJaFeitas } from '../../test/escola-com-tutor.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste.js'
 import { TETO_DE_PEDIDOS_DE_IA_POR_USUARIO } from '../assistente/limite-de-pedidos-de-ia.js'
 import { EXECUTOR_DE_AGENTE } from '../ia/ia.module.js'
@@ -79,6 +81,9 @@ describe('Analista de desempenho escolar', () => {
   }
   const nominal = (sessao: SessaoDeTeste, turmaId: string, finalidade: string | null = FINALIDADE) =>
     get(sessao, `/v1/analista/nominal?turmaId=${turmaId}${finalidade === null ? '' : `&finalidade=${finalidade}`}`)
+  /** O 2025 da escola A, criado uma vez só (o ano é único por escola) e usado por quem precisar dele. */
+  let anoAnterior: AnoAnterior | undefined
+  const anteriorDeA = async (): Promise<AnoAnterior> => (anoAnterior ??= await montarAnoAnterior(bancada, a))
   const leiturasNominais = (escola: EscolaComAssistente) =>
     sql<{ autor_usuario_id: string; entidade_id: string; depois: unknown; finalidade: string }>(`select autor_usuario_id, entidade_id, depois, finalidade from auditoria where escola_id = $1 and acao = 'analista.nominal_lido' order by id`, [escola.escolaId])
 
@@ -296,7 +301,7 @@ describe('Analista de desempenho escolar', () => {
     })
 
     it('a turma de outra escola, de outro ano e a inexistente respondem igual, sem auditoria em nenhuma das escolas', async () => {
-      const anterior = await montarAnoAnterior(bancada, a)
+      const anterior = await anteriorDeA()
       const antes = { deA: (await leiturasNominais(a)).length, deB: (await leiturasNominais(b)).length }
       expect(erro(await nominal(a.coordenacao, b.turma))).toEqual(NAO_ENCONTRADO)
       expect(erro(await nominal(a.coordenacao, anterior.turmaId))).toEqual(NAO_ENCONTRADO)
@@ -317,6 +322,24 @@ describe('Analista de desempenho escolar', () => {
       for (const proibido of [a.serieId, a.quimica, a.fisica]) expect(deB.texto).not.toContain(proibido)
       // E o resumo de A continua sendo o de A.
       expect(esquemaRespostaResumoDoAnalista.parse((await get(a.coordenacao, '/v1/analista/resumo')).corpo).resumo?.id).toBe(deA.id)
+    })
+
+    it('a aplicação, o lote aprovado, a troca com o Tutor e os sinais do ano anterior não entram em número nenhum do ano em curso', async () => {
+      const antes = await gerar(a)
+      const anterior = await anteriorDeA()
+      const deAntes = { ...a, anoLetivoId: anterior.anoLetivoId }
+      // A Bia estava no 2ºB de 2025, com a professora de Química: lá ela errou tudo, trocou com o Tutor e travou.
+      await sql(`insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`, [a.escolaId, anterior.anoLetivoId, bia.usuarioId, anterior.turmaId, a.coordenacao.usuarioId])
+      const aplicacao = await gravarAplicacao(bancada, deAntes, { turmaId: anterior.turmaId, titulo: 'Lista sintética de 2025' })
+      await lancarLote(bancada, deAntes, aplicacao, 'aprovada', { alunoId: bia.usuarioId, acertos: 0, total: 5, porHabilidade: [{ codigo: HABILIDADE_DAS_TRES_PRIMEIRAS.codigo, acertos: 0, total: 3 }, { codigo: HABILIDADE_DAS_DUAS_ULTIMAS.codigo, acertos: 0, total: 2 }] }, anterior.turmaId)
+      await trocasJaFeitas(bancada, deAntes, bia.usuarioId, 2, { turmaId: anterior.turmaId, haDias: 300 })
+      for (const [tipo, atividade, questao] of [['travou', aplicacao, 1], ['atencao_humana', null, null]] as const) {
+        await sql('insert into sinal_tutor (escola_id, ano_letivo_id, turma_id, aluno_id, tipo, atividade_aplicada_id, questao) values ($1, $2, $3, $4, $5, $6, $7)', [a.escolaId, anterior.anoLetivoId, anterior.turmaId, bia.usuarioId, tipo, atividade, questao])
+      }
+
+      const depois = await gerar(a)
+      expect(depois.id).not.toBe(antes.id)
+      expect(depois.conteudo).toEqual(antes.conteudo)
     })
 
     it('professor e aluno não alcançam nenhuma rota do Analista: a resposta é a do inexistente, e nada é gravado', async () => {

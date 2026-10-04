@@ -5,7 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
 import { subirApi, type ApiDeTeste, type RespostaHttp } from '../../test/api-com-sessao.js'
 import { alunosComSessao, aplicarAtividade, aprovarOLote, criarAtividade, encerrarAtividade, GABARITO_DE_TESTE, responderProva, rotasDaAtividade, type RotasDaAtividade } from '../../test/atividade-de-teste.js'
-import { montarEscolaComAssistente, vincularProfessor, type EscolaComAssistente } from '../../test/escola-com-assistente.js'
+import { copiarArtefatoParaOAnoAnterior, montarAnoAnterior, montarEscolaComAssistente, vincularProfessor, type EscolaComAssistente } from '../../test/escola-com-assistente.js'
+import { lancarLote } from '../../test/escola-com-tutor.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste.js'
 import { AtividadeAplicadaRepository } from './atividade-aplicada.repository.js'
 import { CorrecaoRepository } from './correcao.repository.js'
@@ -292,6 +293,51 @@ describe('isolamento da atividade e da correção', () => {
           expect(vazio(await executarNoContexto(contexto(a.escolaId, outroAno, sessao, papel), ler)), `${nome}: com o ano letivo trocado`).toBe(true)
         }
       }
+    })
+
+    it('com o ano anterior real e vínculo confirmado nele, cada leitura do ano anterior não acha nada no ano em curso, e acha no ano dela', async () => {
+      const { banco } = bancada
+      const anterior = await montarAnoAnterior(bancada, a)
+      const deAntes = { ...a, anoLetivoId: anterior.anoLetivoId }
+      // Um aluno que só existiu no 2ºB de 2025: lá ele fez a lista, e o lote foi aprovado pela professora (que tem vínculo confirmado lá).
+      const [antigo] = (await alunosComSessao(bancada, deAntes, anterior.turmaId, ['Aluno Sintético de 2025'])) as [SessaoDeTeste]
+      const { artefatoId } = await copiarArtefatoParaOAnoAnterior(bancada, a, anterior, artefatoDeA)
+      const [aplicacao] = await sql<{ id: string }>('insert into atividade_aplicada (escola_id, ano_letivo_id, turma_id, artefato_id, avaliativa, aplicada_por) values ($1, $2, $3, $4, false, $5) returning id', [a.escolaId, anterior.anoLetivoId, anterior.turmaId, artefatoId, a.professora.usuarioId])
+      const aplicacaoId = aplicacao?.id ?? ''
+      const entregaId = await lancarLote(bancada, deAntes, aplicacaoId, 'aprovada', { alunoId: antigo.usuarioId, acertos: 2, total: 5, porHabilidade: [{ codigo: 'QUI.EM.05', acertos: 2, total: 3 }, { codigo: 'QUI.EM.06', acertos: 0, total: 2 }] }, anterior.turmaId)
+
+      const daProfessora: Record<string, () => Promise<unknown>> = {
+        'aplicação por id': () => new AtividadeAplicadaRepository(banco).porId(aplicacaoId),
+        'aplicações da turma': () => new AtividadeAplicadaRepository(banco).listar({ turmaId: anterior.turmaId, limite: 50 }),
+        'aplicação travada': () => new AtividadeAplicadaRepository(banco).travar(aplicacaoId),
+        'lote da aplicação': () => new CorrecaoRepository(banco).loteDaAplicacao(aplicacaoId),
+        'lote por id': () => new CorrecaoRepository(banco).lote(entregaId),
+        'lote vigente': () => new CorrecaoRepository(banco).temLoteVigente(aplicacaoId),
+        'respostas da aplicação': () => new CorrecaoRepository(banco).respostasPorAluno(aplicacaoId),
+        'correções do lote': () => new CorrecaoRepository(banco).correcoesDoLote(entregaId),
+        'histórico aprovado': () => new CorrecaoRepository(banco).historicoAprovado([antigo.usuarioId], a.quimica),
+        'validação do lote': () => new CorrecaoRepository(banco).validacao(entregaId),
+        'turma da escola': () => new DesempenhoRepository(banco).turmaDaEscola(anterior.turmaId),
+        'disciplinas da professora': () => new DesempenhoRepository(banco).disciplinasDaProfessora(anterior.turmaId),
+        'lotes aprovados': () => new DesempenhoRepository(banco).lotesAprovados(anterior.turmaId, 'todas'),
+        'acertos por aluno': () => new DesempenhoRepository(banco).acertosPorAlunoEHabilidade(anterior.turmaId, 'todas'),
+        'descrições das habilidades': () => new DesempenhoRepository(banco).descricoesDasHabilidades(anterior.turmaId, 'todas'),
+        'alunos da turma': () => new DesempenhoRepository(banco).alunos(anterior.turmaId),
+      }
+      const doAluno: Record<string, () => Promise<unknown>> = {
+        'minhas atividades': () => new MinhaAtividadeRepository(banco).listar({ limite: 50 }),
+        'minha tentativa': () => new MinhaAtividadeRepository(banco).tentativa(aplicacaoId),
+        'meu diagnóstico': () => new MinhaAtividadeRepository(banco).diagnostico(aplicacaoId),
+      }
+      for (const [leituras, sessao, papel] of [[daProfessora, a.professora, 'professor'], [doAluno, antigo, 'aluno']] as const) {
+        for (const [nome, ler] of Object.entries(leituras)) {
+          expect(vazio(await executarNoContexto(contexto(a.escolaId, anterior.anoLetivoId, sessao, papel), ler)), `${nome}: acha no ano dela`).toBe(false)
+          expect(vazio(await executarNoContexto(contexto(a.escolaId, a.anoLetivoId, sessao, papel), ler)), `${nome}: no ano em curso`).toBe(true)
+        }
+      }
+      // Pela rota, no ano em curso, a professora recebe a resposta do inexistente.
+      expect(erro(await rotas.correcao(a.professora, aplicacaoId))).toEqual(NAO_ENCONTRADO)
+      expect(erro(await rotas.desempenho(a.professora, anterior.turmaId))).toEqual(NAO_ENCONTRADO)
     })
 
     it('cada escrita, com a escola ou o ano trocado, não grava nada', async () => {

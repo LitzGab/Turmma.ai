@@ -4,7 +4,19 @@ import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
 import { chamar, subirApi, type ApiDeTeste, type RespostaHttp } from '../../test/api-com-sessao.js'
-import { dispararExecucao, enviarMaterialDeDemonstracao, execucaoTerminada, montarEscolaComAssistente, NOME_DO_ALUNO_DE_TESTE, zerarLimiteDePedidosDeIa, type EscolaComAssistente, type ExecucaoLida } from '../../test/escola-com-assistente.js'
+import {
+  comoPessoa,
+  dispararExecucao,
+  enviarMaterialDeDemonstracao,
+  execucaoTerminada,
+  montarAnoAnterior,
+  montarEscolaComAssistente,
+  NOME_DO_ALUNO_DE_TESTE,
+  zerarLimiteDePedidosDeIa,
+  type AnoAnterior,
+  type EscolaComAssistente,
+  type ExecucaoLida,
+} from '../../test/escola-com-assistente.js'
 import {
   ALTERNATIVA_CERTA_DA_QUESTAO_3,
   aplicarAtividade,
@@ -22,6 +34,8 @@ import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste
 import { TETO_DE_PEDIDOS_DE_IA_POR_USUARIO } from '../assistente/limite-de-pedidos-de-ia.js'
 import { EXECUTOR_DE_AGENTE } from '../ia/ia.module.js'
 import { TROCAS_SEGUIDAS_PARA_TRAVOU } from './sinais-do-turno.js'
+import { SupervisaoDoTutorRepository } from './supervisao.repository.js'
+import { TutorDoAlunoRepository } from './tutor.repository.js'
 
 interface LinhaDeSinal {
   readonly tipo: string
@@ -711,6 +725,56 @@ describe('Tutor e sinais', () => {
       expect(await enviar(aluno, { texto: 'e a questão 3?', ...naQuestao(3) })).toMatchObject(inexistente)
       expect(await get(aluno, `/v1/tutor/conversa?atividadeAplicadaId=${atividade}`)).toMatchObject(inexistente)
       expect(await mensagensDe(aluno)).toEqual(antes)
+    })
+
+    describe('o ano letivo anterior', () => {
+      let anterior: AnoAnterior
+      /** A escola A vista no ano anterior: o que os helpers gravam com ela cai em 2025. */
+      let deAntes: EscolaComAssistente
+      let aluno: SessaoDeTeste
+      let atividadeDeAntes: string
+
+      beforeAll(async () => {
+        anterior = await montarAnoAnterior(bancada, a)
+        deAntes = { ...a, anoLetivoId: anterior.anoLetivoId }
+        aluno = await novoAluno(a)
+        // O aluno estava no 2ºB de 2025, com a professora de Química (que tem vínculo confirmado lá): conversa, sinais e lote aprovado daquele ano.
+        await sql(`insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`, [a.escolaId, anterior.anoLetivoId, aluno.usuarioId, anterior.turmaId, a.coordenacao.usuarioId])
+        atividadeDeAntes = await aplicarAtividade(bancada, deAntes, { turmaId: anterior.turmaId, titulo: 'Lista sintética de 2025' })
+        await lancarLote(bancada, deAntes, atividadeDeAntes, 'aprovada', { alunoId: aluno.usuarioId, acertos: 0, total: 3, porHabilidade: [{ codigo: HABILIDADE_LIMITANTE.codigo, acertos: 0, total: 3 }] }, anterior.turmaId)
+        await trocasJaFeitas(bancada, deAntes, aluno.usuarioId, 2, { turmaId: anterior.turmaId, haDias: 300 })
+        for (const [tipo, atividadeAplicadaId, questao] of [['travou', atividadeDeAntes, 3], ['atencao_humana', null, null]] as const) {
+          await sql('insert into sinal_tutor (escola_id, ano_letivo_id, turma_id, aluno_id, tipo, atividade_aplicada_id, questao) values ($1, $2, $3, $4, $5, $6, $7)', [a.escolaId, anterior.anoLetivoId, anterior.turmaId, aluno.usuarioId, tipo, atividadeAplicadaId, questao])
+        }
+      })
+
+      it('a conversa, a memória e os sinais do aluno no ano anterior não aparecem no ano em curso, nem na resposta do Tutor', async () => {
+        expect((await conversaDe(aluno)).mensagens).toEqual([])
+        expect(await get(aluno, `/v1/tutor/conversa?atividadeAplicadaId=${atividadeDeAntes}`)).toMatchObject({ status: 404, corpo: { erro: { codigo: 'NAO_ENCONTRADO' } } })
+        expect(await memoriaDe(aluno)).toMatchObject({ trabalhos: [], sinais: [] })
+        // O lote aprovado de 2025 (três erros em reagente limitante) não é lembrado no turno de hoje.
+        expect(resposta(await turno(aluno, 'como eu começo essa?', naQuestao(2))).texto).not.toMatch(/você errou/)
+        // No ano anterior, a mesma leitura acha o que foi gravado: o caso é real.
+        const noAnoAnterior = await comoPessoa(deAntes, aluno, 'aluno', () => new TutorDoAlunoRepository(bancada.banco).trabalhos(10))
+        expect(noAnoAnterior.map((trabalho) => trabalho.atividadeAplicadaId)).toEqual([atividadeDeAntes])
+      })
+
+      it('a professora com vínculo confirmado na turma do ano anterior não lê os sinais nem o uso daquele ano no ano em curso', async () => {
+        const inexistente = { status: 404, corpo: { erro: { codigo: 'NAO_ENCONTRADO' } } }
+        for (const rota of ['/v1/sinais', '/v1/tutor/uso']) expect(await get(a.professora, `${rota}?turmaId=${anterior.turmaId}`), rota).toMatchObject(inexistente)
+        const leituras = (supervisao: SupervisaoDoTutorRepository): Record<string, () => Promise<boolean | readonly unknown[]>> => ({
+          turma: () => supervisao.turmaDoProfessor(anterior.turmaId),
+          sinais: () => supervisao.sinais(anterior.turmaId, undefined, 50),
+          grupos: () => supervisao.grupos(anterior.turmaId, new Date(0), 50),
+          trocas: () => supervisao.ultimasTrocas(anterior.turmaId, 50),
+        })
+        for (const [nome, ler] of Object.entries(leituras(new SupervisaoDoTutorRepository(bancada.banco)))) {
+          const noAnoEmCurso = await comoPessoa(a, a.professora, 'professor', ler)
+          const noAnoAnterior = await comoPessoa(deAntes, a.professora, 'professor', ler)
+          expect(noAnoEmCurso === false || (Array.isArray(noAnoEmCurso) && noAnoEmCurso.length === 0), `${nome}: no ano em curso`).toBe(true)
+          expect(noAnoAnterior === true || (Array.isArray(noAnoAnterior) && noAnoAnterior.length > 0), `${nome}: no ano anterior`).toBe(true)
+        }
+      })
     })
 
     it('nenhuma rota entrega a conversa nem a memória de aluno a professor ou a coordenação', async () => {
