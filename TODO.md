@@ -689,3 +689,25 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 
 - [ ] Iniciar aprovação da API oficial do WhatsApp (prazo de semanas — comece antes de precisar)
 - [ ] Portal da família sobre o motor de eventos
+
+## Antes da primeira escola real, vindo da revisão da fase 1 do MVP de apresentação (04/10/2026)
+
+O MVP de apresentação corre com dado sintético (D71, D77). Os revisores apontaram o que precisa existir antes de
+qualquer dado real:
+
+- [ ] **Trava da D62 em código.** A marca "leva texto de aluno" da camada de IA não tem consumidor: texto de aluno com
+  envio externo e sem contrato que vede treinamento e garanta processamento no Brasil precisa ser recusado
+  (`privacy-guardian`).
+- [ ] **Expurgo** de `consumo_ia` (`entrada` e `saida`), de `execucao_agente` e das conversas, no prazo do mapa de
+  `docs/lgpd.md`, configurável por escola. O mapa cita o expurgo e ele não existe.
+- [ ] **Aviso no campo de tema** das ferramentas, para não escrever nome nem condição de aluno, e busca textual nos
+  campos livres no procedimento de eliminação do titular.
+- [ ] **Recusa do Tutor medida.** Conjunto fixo de amostras com taxa mínima declarada, rodado contra o modelo de
+  produção (regra 40). A regra determinística cobre o que está no arquivo de amostras; o resto fica com o modelo, e
+  para aluno real isso não basta sem medição (`conformidade-reviewer`).
+- [ ] **Teto de IA por escola e custo.** Não há coluna de teto nem tabela de preço: `IA_ORCAMENTO_ESGOTADO` nunca
+  dispara e `custo_micros` fica em zero (D14, D39).
+- [ ] **Galeria das peças fora do build** de staging e de produção.
+- [ ] **Execução de IA e extração de PDF por fila**, no lugar do processo da API (`TODO(fila)`, D49).
+- [ ] **Ensaio de alertas intermitente** na esteira: a regra "Login recusado pelo semáforo do hash" ficou em `pending`
+  até o prazo numa execução da `mvp/apresentacao` e passou na reexecução. Se voltar, entra por `/corrigir`.
