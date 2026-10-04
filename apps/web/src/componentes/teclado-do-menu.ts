@@ -18,8 +18,11 @@ export function itemInicial(itens: readonly ItemNavegavel[], ponta: 'primeiro' |
   return ponta === 'primeiro' ? indices[0] : indices.at(-1)
 }
 
-/** O índice do item para onde a tecla leva, a partir do `atual`. `undefined`: a tecla não é de navegação do menu. */
-export function itemDaTecla(itens: readonly ItemNavegavel[], atual: number, tecla: string): number | undefined {
+/**
+ * O índice do item para onde a tecla leva, a partir do `atual`. `undefined`: a tecla não é de navegação do menu.
+ * `comModificador` é a tecla apertada com Ctrl, Alt ou ⌘: aí a letra é atalho do navegador (Ctrl+A, Ctrl+P), e não busca.
+ */
+export function itemDaTecla(itens: readonly ItemNavegavel[], atual: number, tecla: string, comModificador = false): number | undefined {
   const indices = ligados(itens)
   if (indices.length === 0) return undefined
   const posicao = indices.indexOf(atual)
@@ -29,7 +32,7 @@ export function itemDaTecla(itens: readonly ItemNavegavel[], atual: number, tecl
   if (tecla === 'End') return indices.at(-1)
   // Uma letra ou um número: o próximo item que começa por ela, a partir do atual, dando a volta. Sem acento e sem caixa,
   // para "a" achar "Adaptação" e "Água".
-  if ([...tecla].length === 1 && /[\p{L}\p{N}]/u.test(tecla)) {
+  if (!comModificador && [...tecla].length === 1 && /[\p{L}\p{N}]/u.test(tecla)) {
     const letra = semAcento(tecla)
     const depois = [...indices.filter((indice) => indice > atual), ...indices.filter((indice) => indice <= atual)]
     return depois.find((indice) => semAcento(itens[indice]?.rotulo ?? '').startsWith(letra))

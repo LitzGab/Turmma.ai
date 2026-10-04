@@ -22,8 +22,10 @@ describe('linha de aprovação', () => {
 
   it('a rejeitada diz quem rejeitou e quando, e o motivo vem numa linha própria', () => {
     const rejeitada = { estado: 'rejeitada', por: 'Camila Souza', quando: QUANDO, motivo: '  A questão 3 não é do capítulo.  ' } as const
-    // O verbo é o da aprovação: a rejeição nunca sai escrita como "Aprovado por".
-    expect(textoDaAprovacao(rejeitada, { ...OPCOES, verbo: 'Aprovada por' })).toBe('Rejeitado por Camila Souza · 19/09, 10h42')
+    // O verbo é o da aprovação: a rejeição nunca sai escrita como "Aprovada por". E a frase não muda com o gênero de
+    // quem rejeitou nem do que foi rejeitado.
+    expect(textoDaAprovacao(rejeitada, { ...OPCOES, verbo: 'Aprovada por' })).toBe('Camila Souza rejeitou · 19/09, 10h42')
+    expect(textoDaAprovacao({ ...rejeitada, por: 'Rafael Lima' }, OPCOES)).toBe('Rafael Lima rejeitou · 19/09, 10h42')
     expect(motivoDaRejeicao(rejeitada)).toBe('Motivo: A questão 3 não é do capítulo.')
   })
 

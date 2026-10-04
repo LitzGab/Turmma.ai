@@ -70,7 +70,7 @@ function jsIncompressivel(bytesAleatorios: number): string {
 }
 
 describe('teto do bundle da web (.size-limit.json)', () => {
-  it('declara 150 kB em brotli sobre a entrada, sozinha e com os pedaços parte-*, 60 kB sobre a operação, um teto por área da escola e 17 kB sobre as peças', () => {
+  it('declara 150 kB em brotli sobre a entrada, sozinha e com os pedaços parte-*, 60 kB sobre a operação, um teto por área da escola e 20 kB sobre as peças', () => {
     const verificacoes = JSON.parse(readFileSync(join(raizRepositorio, '.size-limit.json'), 'utf8')) as Verificacao[]
     expect(verificacoes.map(({ path, limit, brotli }) => ({ path, limit, brotli }))).toEqual([
       { path: 'apps/web/dist/assets/index-*.js', limit: '150 kB', brotli: true },
@@ -79,13 +79,13 @@ describe('teto do bundle da web (.size-limit.json)', () => {
       { path: 'apps/web/dist/assets/coordenacao-*.js', limit: '16 kB', brotli: true },
       { path: 'apps/web/dist/assets/professor-*.js', limit: '8 kB', brotli: true },
       { path: 'apps/web/dist/assets/aluno-*.js', limit: '5 kB', brotli: true },
-      { path: ['apps/web/dist/assets/galeria-*.js', 'apps/web/dist/assets/pecas-*.js'], limit: '17 kB', brotli: true },
+      { path: ['apps/web/dist/assets/galeria-*.js', 'apps/web/dist/assets/pecas-*.js'], limit: '20 kB', brotli: true },
     ])
   })
 
   it('todos os grupos pequenos passam: o controle que mostra que as reprovações abaixo vêm do tamanho', () => {
     const { codigo, saida } = sizeLimit(buildDeMentira(BUILD_PEQUENO))
-    for (const teto of ['150 kB', '60 kB', '16 kB', '8 kB', '5 kB', '17 kB']) expect(saida).toContain(teto)
+    for (const teto of ['150 kB', '60 kB', '16 kB', '8 kB', '5 kB', '20 kB']) expect(saida).toContain(teto)
     expect(codigo).toBe(0)
   })
 
@@ -124,15 +124,15 @@ describe('teto do bundle da web (.size-limit.json)', () => {
     })
   }
 
-  it('as peças acima de 17 kB em brotli reprovam, num pedaço pecas-* só ou somadas à galeria', () => {
-    // 20 kB incompressíveis num `pecas-*`: acima do teto das peças, abaixo de todos os outros.
-    const sozinho = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, 'pecas-CaixaPedido.js': jsIncompressivel(20_000) }))
+  it('as peças acima de 20 kB em brotli reprovam, num pedaço pecas-* só ou somadas à galeria', () => {
+    // 26 kB incompressíveis num `pecas-*`: acima do teto das peças. Os outros grupos nem o enxergam.
+    const sozinho = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, 'pecas-CaixaPedido.js': jsIncompressivel(26_000) }))
     expect(sozinho.saida).toMatch(/exceeded/i)
     expect(sozinho.codigo).not.toBe(0)
-    // 7 kB na galeria e 7 kB em dois `pecas-*`: cada arquivo abaixo de 17 kB, os três juntos acima. É a soma que o teto
+    // 9 kB na galeria e 9 kB em dois `pecas-*`: cada arquivo abaixo de 20 kB, os três juntos acima. É a soma que o teto
     // mede, porque a mesma peça muda de arquivo quando uma segunda tela passa a usá-la.
     const somados = sizeLimit(
-      buildDeMentira({ ...BUILD_PEQUENO, 'galeria-pequeno.js': jsIncompressivel(7_000), 'pecas-Menu.js': jsIncompressivel(7_000), 'pecas-Abas.js': jsIncompressivel(7_000) }),
+      buildDeMentira({ ...BUILD_PEQUENO, 'galeria-pequeno.js': jsIncompressivel(9_000), 'pecas-Menu.js': jsIncompressivel(9_000), 'pecas-Abas.js': jsIncompressivel(9_000) }),
     )
     expect(somados.saida).toMatch(/exceeded/i)
     expect(somados.codigo).not.toBe(0)

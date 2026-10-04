@@ -15,6 +15,11 @@ interface Props extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'clas
    * `role="alert"` ou `role="status"` fora do campo, que o leitor de tela lê de novo ao voltar a ele (17.0, W8).
    */
   descritoTambemPor?: string | undefined
+  /**
+   * O campo precisa ser preenchido: o rótulo diz "(obrigatório)", em texto, e o leitor de tela ouve `aria-required`. Não
+   * é o `required` do navegador, que barraria o envio com a mensagem dele, em outro tom e às vezes em outra língua.
+   */
+  obrigatorio?: boolean
   /** Um botão ao lado do campo, na mesma linha: o "Mostrar" da senha (`CampoDeSenha`). */
   acao?: ReactNode
   /** O campo em si, para quem precisa pôr o foco nele (o erro que volta do servidor, por exemplo). */
@@ -28,7 +33,12 @@ const CLASSES_DO_CAMPO = 'min-h-11 rounded-controle border border-borda-campo bg
  * do celular (regra 50, itens 2a e 11). O `inputmode` e o `autocomplete` ficam a cargo de quem usa, porque mudam por
  * campo: a matrícula da entrada é numérica e a da página da turma é texto (W11), senha é `current-password`, código do aplicativo é `one-time-code`.
  */
-export function Campo({ rotulo, dica, erro, descritoTambemPor, acao, ...props }: Props) {
+/** A marca de campo obrigatório, ao lado do rótulo: texto, e não asterisco, que ninguém explica (regra 50, item 11). */
+export function MarcaDeObrigatorio() {
+  return <span className="text-sm font-normal text-sutil"> (obrigatório)</span>
+}
+
+export function Campo({ rotulo, dica, erro, descritoTambemPor, obrigatorio = false, acao, ...props }: Props) {
   const campo = useId()
   const descricao = useId()
   const idDoErro = useId()
@@ -40,6 +50,7 @@ export function Campo({ rotulo, dica, erro, descritoTambemPor, acao, ...props }:
       id={campo}
       {...(descritoPor === '' ? {} : { 'aria-describedby': descritoPor })}
       {...(erro === undefined ? {} : { 'aria-invalid': true })}
+      {...(obrigatorio ? { 'aria-required': true } : {})}
       {...props}
       className={acao === undefined ? CLASSES_DO_CAMPO : `${CLASSES_DO_CAMPO} min-w-0 flex-1`}
     />
@@ -48,6 +59,7 @@ export function Campo({ rotulo, dica, erro, descritoTambemPor, acao, ...props }:
     <div className="flex flex-col gap-1">
       <label htmlFor={campo} className="font-medium">
         {rotulo}
+        {obrigatorio && <MarcaDeObrigatorio />}
       </label>
       {dica !== undefined && (
         <p id={descricao} className="text-sm text-apoio">

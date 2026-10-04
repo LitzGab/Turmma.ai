@@ -56,8 +56,16 @@ export function Tela({ titulo, largura = 'grade', objeto = false, descricao, aco
   )
 }
 
+/**
+ * O nível do título de uma seção, de um cartão ou de um formulário. A peça não sabe onde foi posta: dentro de um cartão
+ * que já é `h2`, o título de dentro é `h3`. Quem monta a tela diz o nível, para a ordem dos títulos não pular.
+ */
+export type NivelDoTitulo = 2 | 3 | 4
+
 interface PropsDoCabecalhoDeSecao {
   readonly titulo: string
+  /** Sem ele, 2: a seção direto dentro da tela. */
+  readonly nivel?: NivelDoTitulo
   /** O id do título, para a `section` de quem usa apontar para ele com `aria-labelledby`. */
   readonly id?: string
   readonly apoio?: string
@@ -66,13 +74,14 @@ interface PropsDoCabecalhoDeSecao {
 }
 
 /** O cabeçalho de uma seção dentro da tela: título de cartão (16 px, peso 600), uma linha de apoio e, à direita, uma ação. */
-export function CabecalhoDeSecao({ titulo, id, apoio, acao }: PropsDoCabecalhoDeSecao) {
+export function CabecalhoDeSecao({ titulo, nivel = 2, id, apoio, acao }: PropsDoCabecalhoDeSecao) {
+  const Titulo = `h${nivel}` as const
   return (
     <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-2">
       <div className="min-w-0">
-        <h2 {...(id === undefined ? {} : { id })} className="text-base leading-snug font-semibold break-words text-tinta">
+        <Titulo {...(id === undefined ? {} : { id })} className="text-base leading-snug font-semibold break-words text-tinta">
           {titulo}
-        </h2>
+        </Titulo>
         {apoio !== undefined && <p className="mt-0.5 text-sm break-words text-sutil">{apoio}</p>}
       </div>
       {acao}

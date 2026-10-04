@@ -2,9 +2,13 @@
  * O botão secundário — "Cancelar", "Nova rede", "Voltar e corrigir", "Anterior", "Nova turma" —: contorno, do mesmo
  * tamanho da ação principal, porque sair ou recusar nunca é menor que seguir (D59). Alvo de toque de 44 px. Nasceu na
  * operação e veio para `componentes/` na A1 (13.0), com a Estrutura da coordenação usando o mesmo.
+ *
+ * Desligado, ele muda de desenho, como todo botão: a borda apaga, o fundo vira `realce-suave` e o texto, `inativo`. Sem
+ * isso o "Parar" e o "Tentar de novo" desligados seriam idênticos aos ligados, e o clique que não faz nada pareceria
+ * tela quebrada.
  */
 export const CLASSES_DO_BOTAO_SECUNDARIO =
-  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-tinta enabled:hover:bg-realce-suave'
+  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-tinta enabled:hover:bg-realce-suave disabled:border-linha disabled:bg-realce-suave disabled:text-inativo'
 
 /** O mesmo contorno num link (`<a>`), que não tem `enabled`: o hover vale sempre. */
 export const CLASSES_DO_LINK_SECUNDARIO =
@@ -15,7 +19,7 @@ export const CLASSES_DO_LINK_SECUNDARIO =
  * do secundário. O cheio em `erro` fica só dentro do diálogo de confirmação (`CLASSES_DO_BOTAO_PERIGO_CHEIO`).
  */
 export const CLASSES_DO_BOTAO_PERIGO =
-  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-erro enabled:hover:bg-erro-cx'
+  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-erro enabled:hover:bg-erro-cx disabled:border-linha disabled:bg-realce-suave disabled:text-inativo'
 
 /** O `perigo` cheio, com texto branco (6,6:1 sobre o `erro`): só o botão que confirma a exclusão, dentro do diálogo. */
 export const CLASSES_DO_BOTAO_PERIGO_CHEIO =
@@ -63,9 +67,9 @@ const TAMANHO_DO_BOTAO: Readonly<Record<TamanhoDeBotao, string>> = {
 const COR_DO_BOTAO: Readonly<Record<VarianteDeBotao, string>> = {
   primario: 'bg-caramelo text-tinta enabled:hover:bg-caramelo-claro enabled:active:bg-caramelo-fundo disabled:bg-inativo',
   oficial: 'bg-noite text-white enabled:hover:bg-noite-alto enabled:active:bg-noite-baixo disabled:bg-inativo disabled:text-tinta',
-  secundario: 'border border-borda-campo bg-superficie text-tinta enabled:hover:bg-realce-suave',
+  secundario: 'border border-borda-campo bg-superficie text-tinta enabled:hover:bg-realce-suave disabled:border-linha disabled:bg-realce-suave disabled:text-inativo',
   discreto: 'text-sutil enabled:hover:bg-realce-suave enabled:hover:text-tinta enabled:active:bg-realce disabled:text-inativo',
-  perigo: 'border border-borda-campo bg-superficie text-erro enabled:hover:bg-erro-cx',
+  perigo: 'border border-borda-campo bg-superficie text-erro enabled:hover:bg-erro-cx disabled:border-linha disabled:bg-realce-suave disabled:text-inativo',
 }
 
 const COR_DO_PERIGO_CHEIO = 'bg-erro text-white disabled:bg-inativo disabled:text-tinta'

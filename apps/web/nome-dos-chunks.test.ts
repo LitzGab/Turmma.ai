@@ -272,11 +272,27 @@ describe('o build de verdade da web', () => {
     // peças apagadas, ou com a lista apontando para arquivos que mudaram de nome.
     const noBuild = chunks.flatMap((chunk) => chunk.moduleIds.map((id) => id.replaceAll('\\', '/')))
     for (const peca of PECAS_FORA_DA_ENTRADA) expect(noBuild.some((id) => new RegExp(`/apps/web/src/componentes/${peca}\\.tsx?$`).test(id)), peca).toBe(true)
-    for (const deIa of ['AssinaturaIA.tsx', 'CaixaPedido.tsx', 'ChipFonte.tsx', 'Escolha.tsx', 'MotorFormulario.tsx'])
+    for (const deIa of ['AssinaturaIA.tsx', 'CaixaPedido.tsx', 'ChipFonte.tsx', 'Escolha.tsx', 'MotorFormulario.tsx', 'TextoDaIA.tsx'])
       expect(noBuild.some((id) => id.endsWith(`/apps/web/src/componentes/ia/${deIa}`)), deIa).toBe(true)
     // Peça nenhuma cai num `parte-*`, que o teto de 150 kB mediria como primeiro carregamento sem ela estar nele.
     const emParte = chunks.filter((chunk) => /^assets\/parte-/.test(chunk.fileName)).flatMap((chunk) => chunk.moduleIds.filter(ehPecaForaDaEntrada))
     expect(emParte).toEqual([])
+  })
+
+  it('com VITE_SEM_GALERIA=1 o build não leva a galeria: nem o pedaço, nem o módulo, nem as peças que só ela usa', async () => {
+    const anterior = process.env['VITE_SEM_GALERIA']
+    process.env['VITE_SEM_GALERIA'] = '1'
+    try {
+      const chunks = await chunksDoBuild({ raiz: raizDaWeb, configFile: join(raizDaWeb, 'vite.config.ts') })
+      expect(chunks.filter((chunk) => /^assets\/galeria-/.test(chunk.fileName))).toEqual([])
+      expect(chunks.flatMap((chunk) => chunk.moduleIds.filter((id) => id.replaceAll('\\', '/').includes('/apps/web/src/galeria/')))).toEqual([])
+      // O build continua inteiro: a entrada e as três áreas estão lá.
+      expect(chunks.some((chunk) => chunk.isEntry)).toBe(true)
+      for (const area of AREAS_DA_ESCOLA) expect(chunks.filter((chunk) => new RegExp(`^assets/${area}-`).test(chunk.fileName)), area).toHaveLength(1)
+    } finally {
+      if (anterior === undefined) delete process.env['VITE_SEM_GALERIA']
+      else process.env['VITE_SEM_GALERIA'] = anterior
+    }
   })
 
   it('a peça que duas telas dividem sai num pedaço pecas-*, e o que elas dividem e não é peça continua parte-*', async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { abaDaTecla } from './teclado-das-abas'
+import { abaDaTecla, abaNaOrdemDoTab } from './teclado-das-abas'
 
 const ABAS = ['visao-geral', 'alunos', 'atividades']
 
@@ -18,6 +18,12 @@ describe('teclado das abas', () => {
 
   it('o Tab e as outras teclas não são da lista: seguem para o navegador', () => {
     for (const tecla of ['Tab', 'Enter', ' ', 'ArrowDown', 'a']) expect(abaDaTecla(ABAS, 'alunos', tecla)).toBeUndefined()
+  })
+
+  it('a parada do Tab é a aba ativa; com a ativa fora da lista, é a primeira, e nunca nenhuma', () => {
+    expect(abaNaOrdemDoTab(ABAS, 'alunos')).toBe('alunos')
+    expect(abaNaOrdemDoTab(ABAS, 'sumiu')).toBe('visao-geral')
+    expect(abaNaOrdemDoTab([], 'alunos')).toBeUndefined()
   })
 
   it('sem abas, ou com a ativa fora da lista, não leva a lugar nenhum', () => {

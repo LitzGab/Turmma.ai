@@ -24,7 +24,18 @@ export interface TeclaDaCaixa {
   readonly isComposing: boolean
 }
 
-/** **Enter envia, Shift+Enter quebra a linha.** O Enter que fecha uma composição não é envio. */
-export function teclaEnvia(tecla: TeclaDaCaixa): boolean {
-  return tecla.key === 'Enter' && !tecla.shiftKey && !tecla.isComposing
+/**
+ * **Com teclado, Enter envia e Shift+Enter quebra a linha.** O Enter que fecha uma composição não é envio.
+ *
+ * **Com o dedo (`ponteiroGrosso`), o Enter nunca envia: ele quebra a linha, e o envio é o botão.** No teclado virtual
+ * não existe Shift+Enter, e quem quisesse escrever a segunda linha mandaria o pedido pela metade — uma chamada de modelo
+ * gasta e uma resposta ao pedido errado (regra 50, item 2a: nada que só funcione com atalho de teclado; D14).
+ */
+export function teclaEnvia(tecla: TeclaDaCaixa, ponteiroGrosso = false): boolean {
+  return !ponteiroGrosso && tecla.key === 'Enter' && !tecla.shiftKey && !tecla.isComposing
+}
+
+/** O que a caixa diz ao leitor de tela sobre o Enter, que muda com o aparelho. */
+export function dicaDoEnter(ponteiroGrosso: boolean): string {
+  return ponteiroGrosso ? 'Enter quebra a linha. Para enviar, use o botão Enviar.' : 'Enter envia. Shift e Enter quebram a linha.'
 }
