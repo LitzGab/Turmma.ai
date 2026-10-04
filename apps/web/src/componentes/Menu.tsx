@@ -1,7 +1,7 @@
 import { Check, ChevronDown, type LucideIcon } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { classesDoBotao } from './botao-secundario'
-import { estiloDoRecuo, useFlutuante, useRestoInerte } from './flutuante'
+import { estiloDoFlutuante, useFlutuante, useRestoInerte } from './flutuante'
 import { itemDaTecla, itemInicial } from './teclado-do-menu'
 
 export interface ItemDoMenu {
@@ -67,8 +67,9 @@ function focarItem(lista: HTMLElement | null, indice: number | undefined): void 
  * - **O toque fora fecha, e só fecha**: o que está embaixo do menu não é acionado pelo mesmo toque, e o resto da página
  *   fica inerte enquanto o menu está aberto.
  *
- * O menu fica no fluxo do documento, logo depois do botão, e não num portal: dentro de um contêiner com
- * `overflow: hidden` ele seria cortado. A caixa de pedido e as barras de tela não cortam.
+ * O menu fica no documento logo depois do botão, sem portal, e em **posição fixa na janela** (`flutuante.ts`): dentro de
+ * uma tabela que rola, de um `Dialogo` ou da lista da conversa ele não sai cortado. O limite está escrito lá: ancestral
+ * com `transform` ou `filter` tira a posição do lugar.
  */
 export function Menu({ rotulo, prefixo, icone: Icone, soIcone = false, itens, aoEscolher, escolhido, titulo, alinhamento = 'inicio', lado = 'auto', variante = 'secundario', desligado = false }: PropsDoMenu) {
   const [aberto, definirAberto] = useState(false)
@@ -84,13 +85,15 @@ export function Menu({ rotulo, prefixo, icone: Icone, soIcone = false, itens, ao
   useRestoInerte(aberto, ancora)
   const deEscolha = escolhido !== undefined
 
+  const medido = posicao !== undefined
   useEffect(() => {
     const ponta = entradaPendente.current
-    if (!aberto || ponta === undefined) return
+    // Só depois da medida: antes dela o menu existe sem aparecer, e o que não aparece não recebe foco.
+    if (!aberto || !medido || ponta === undefined) return
     entradaPendente.current = undefined
     const doEscolhido = itens.findIndex((item) => item.id === escolhido && item.desabilitado !== true)
     focarItem(lista.current, ponta === 'primeiro' && doEscolhido !== -1 ? doEscolhido : itemInicial(itens, ponta))
-  }, [aberto, itens, escolhido])
+  }, [aberto, medido, itens, escolhido])
 
   function abrir(ponta: 'primeiro' | 'ultimo'): void {
     entradaPendente.current = ponta
@@ -118,7 +121,7 @@ export function Menu({ rotulo, prefixo, icone: Icone, soIcone = false, itens, ao
       return
     }
     const atual = Array.from(lista.current?.querySelectorAll('[data-item]') ?? []).findIndex((item) => item === document.activeElement)
-    const destino = itemDaTecla(itens, atual, evento.key)
+    const destino = itemDaTecla(itens, atual, evento.key, evento.ctrlKey || evento.metaKey || evento.altKey)
     if (destino === undefined) return
     evento.preventDefault()
     focarItem(lista.current, destino)
@@ -131,7 +134,7 @@ export function Menu({ rotulo, prefixo, icone: Icone, soIcone = false, itens, ao
   }
 
   return (
-    <span ref={ancora} className="relative inline-flex max-w-full min-w-0">
+    <span ref={ancora} className="inline-flex max-w-full min-w-0">
       <button
         ref={botao}
         type="button"
@@ -163,8 +166,8 @@ export function Menu({ rotulo, prefixo, icone: Icone, soIcone = false, itens, ao
           role="menu"
           aria-labelledby={idDoBotao}
           onKeyDown={teclaNaLista}
-          style={estiloDoRecuo(alinhamento, posicao.recuo)}
-          className={`absolute z-30 flex max-h-[292px] w-[min(20rem,calc(100vw-2rem))] flex-col gap-0.5 overflow-y-auto rounded-cartao bg-superficie p-1.5 text-left shadow-flutua ${posicao.lado === 'acima' ? 'bottom-full mb-2' : 'top-full mt-2'}`}
+          style={{ ...estiloDoFlutuante(posicao), maxHeight: posicao?.alturaMaxima ?? ALTURA_DO_MENU }}
+          className="fixed z-30 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-0.5 overflow-y-auto rounded-cartao bg-superficie p-1.5 text-left shadow-flutua"
         >
           {titulo !== undefined && (
             <p aria-hidden="true" className="px-2.5 pt-1.5 pb-1 text-[13px] font-medium text-sutil">

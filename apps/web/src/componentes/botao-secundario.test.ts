@@ -55,6 +55,20 @@ describe('as variantes de botão da 11.1', () => {
     expect(classesDoBotao({ variante: 'primario', cheio: true })).toBe(classesDoBotao({ variante: 'primario' }))
   })
 
+  it('toda variante tem desenho de desligado: o botão que não faz nada não se parece com o que faz', () => {
+    const desligado = (texto: string) => [...classes(texto)].filter((classe) => classe.startsWith('disabled:'))
+    for (const variante of VARIANTES_DE_BOTAO) {
+      // O desligado muda a cor do texto ou do fundo, e não só a borda: é o que se vê de longe.
+      expect(desligado(classesDoBotao({ variante })).some((classe) => /^disabled:(?:bg|text)-/.test(classe)), variante).toBe(true)
+    }
+    expect(desligado(classesDoBotao({ variante: 'perigo', cheio: true })).some((classe) => /^disabled:(?:bg|text)-/.test(classe))).toBe(true)
+    // O perigo desligado perde o vermelho: `text-erro` ligado, `inativo` desligado.
+    expect(desligado(classesDoBotao({ variante: 'perigo' }))).toContain('disabled:text-inativo')
+    expect(desligado(classesDoBotao({ variante: 'secundario' }))).toContain('disabled:text-inativo')
+    // E as constantes escritas à mão, que as telas da A0 e da A1 usam num `<button>` solto, também.
+    for (const constante of [CLASSES_DO_BOTAO_SECUNDARIO, CLASSES_DO_BOTAO_PERIGO, CLASSES_DO_BOTAO_PERIGO_CHEIO, CLASSES_DO_BOTAO_OFICIAL]) expect(desligado(constante).length, constante).toBeGreaterThan(0)
+  })
+
   it('a variante do Botao e a constante escrita à mão dizem o mesmo botão', () => {
     // As telas da A0 e da A1 usam as constantes num `<button>` solto; se uma das duas mudar sozinha, a tela nova e a
     // antiga passam a ter dois "secundários". A tabela acrescenta só o vão do ícone.

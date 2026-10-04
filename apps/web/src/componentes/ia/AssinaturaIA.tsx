@@ -8,8 +8,10 @@ import { AvatarAgente, type TamanhoDoAvatar } from './AvatarAgente'
  */
 export function SeloIA() {
   return (
-    <span title="Gerado por inteligência artificial" className="inline-flex shrink-0 items-center rounded-lg bg-ia-cx px-1.5 py-0.5 text-xs leading-tight font-medium text-ia">
-      IA
+    <span data-selo-ia="" className="inline-flex shrink-0 items-center rounded-lg bg-ia-cx px-1.5 py-0.5 text-xs leading-tight font-medium text-ia">
+      {/* O que a sigla quer dizer vai em texto para o leitor de tela, e não num `title`, que só existe no hover. */}
+      <span aria-hidden="true">IA</span>
+      <span className="sr-only">gerado por inteligência artificial</span>
     </span>
   )
 }

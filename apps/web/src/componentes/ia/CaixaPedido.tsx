@@ -1,7 +1,9 @@
+import { TAMANHO_MAXIMO_DA_PERGUNTA_AO_TUTOR, TAMANHO_MAXIMO_DO_PEDIDO } from '@educa/shared'
 import { ArrowUp, Square } from 'lucide-react'
 import { useId, useLayoutEffect, useRef, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { Botao } from '../Botao'
-import { podeEnviar, teclaEnvia, textoDoPedido, type EstadoDaCaixa } from './caixa-pedido'
+import { PONTEIRO_GROSSO, useMidia } from '../midia'
+import { dicaDoEnter, podeEnviar, teclaEnvia, textoDoPedido, type EstadoDaCaixa } from './caixa-pedido'
 
 type PropsDaCaixa = {
   /** O nome do campo para o leitor de tela: "Pedido ao Assistente de ensino", "Pergunta para o Tutor". */
@@ -15,6 +17,12 @@ type PropsDaCaixa = {
   /** Com a resposta chegando (`gerando`), o enviar vira "Parar" e chama isto. */
   readonly aoParar?: () => void
   readonly estado?: EstadoDaCaixa
+  /**
+   * Quantos caracteres cabem. Sem ele, o tamanho que o contrato da API aceita (`@educa/shared`): o do pedido ao
+   * Assistente na caixa completa, o da pergunta ao Tutor na de só texto. O campo não deixa passar disso, em vez de a
+   * API recusar depois.
+   */
+  readonly maximo?: number
 } & (
   | {
       /** A caixa do professor: a barra de baixo tem lugar para o que muda o pedido e para o contexto. */
@@ -36,19 +44,23 @@ const ALTURA_MAXIMA_DO_CAMPO = 192
  * com o enviar. Canto de 28 px e a sombra suave da 9.3; a borda é a `borda-campo`, e não a linha clara do desenho: campo
  * de formulário de escola precisa de 3:1 de contraste na borda (9.1).
  *
- * - **Enter envia, Shift+Enter quebra a linha**, e o Enter que confirma um acento não envia (`caixa-pedido.ts`).
+ * - **Com teclado, Enter envia e Shift+Enter quebra a linha**, e o Enter que confirma um acento não envia
+ *   (`caixa-pedido.ts`). **Com o dedo, Enter quebra a linha e o envio é o botão**: no teclado virtual não há Shift+Enter.
  * - **O botão de enviar existe sempre**, com 44 px: quem está no toque não depende do Enter (regra 50, item 2a). É o
  *   `primario` da tela, o laranja (8.4, princípio 2).
  * - **Enquanto a resposta chega, enviar vira "Parar"** (9.5, regra 5), e um segundo pedido não sai.
  * - **Sem texto, não envia**: só espaço não é pedido.
+ * - **Enviar e parar devolvem o foco ao campo**: o botão acionado dá lugar ao outro, e o foco não cai no `body` (regra
+ *   50, item 11).
  *
  * A caixa não se prende ao pé da tela sozinha: quem monta a conversa decide onde ela fica.
  */
-export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar, estado = 'pronta', variante = 'completa', esquerda, direita }: PropsDaCaixa) {
+export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar, estado = 'pronta', maximo, variante = 'completa', esquerda, direita }: PropsDaCaixa) {
   const campo = useRef<HTMLTextAreaElement>(null)
   const idDoCampo = useId()
   const idDaDica = useId()
   const soTexto = variante === 'so-texto'
+  const ponteiroGrosso = useMidia(PONTEIRO_GROSSO)
 
   // O campo cresce com o texto, até o teto, e encolhe de volta quando o texto é enviado ou apagado.
   useLayoutEffect(() => {
@@ -60,7 +72,15 @@ export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar
 
   function enviar(): void {
     const texto = textoDoPedido(valor)
-    if (estado === 'pronta' && texto !== undefined) aoEnviar(texto)
+    if (estado !== 'pronta' || texto === undefined) return
+    aoEnviar(texto)
+    // O enviar vai dar lugar ao "Parar": o foco volta para o campo antes de o botão sumir.
+    campo.current?.focus()
+  }
+
+  function parar(): void {
+    aoParar?.()
+    campo.current?.focus()
   }
 
   function aoSubmeter(evento: FormEvent<HTMLFormElement>): void {
@@ -69,7 +89,7 @@ export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar
   }
 
   function aoTeclar(evento: KeyboardEvent<HTMLTextAreaElement>): void {
-    if (!teclaEnvia({ key: evento.key, shiftKey: evento.shiftKey, isComposing: evento.nativeEvent.isComposing })) return
+    if (!teclaEnvia({ key: evento.key, shiftKey: evento.shiftKey, isComposing: evento.nativeEvent.isComposing }, ponteiroGrosso)) return
     evento.preventDefault()
     enviar()
   }
@@ -78,7 +98,7 @@ export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar
   // mesmo `button`, que viraria `submit` no meio do clique em "Parar", e o clique enviaria o pedido seguinte.
   const botao =
     estado === 'gerando' && aoParar !== undefined ? (
-      <Botao key="parar" variante="secundario" onClick={aoParar} className="shrink-0">
+      <Botao key="parar" variante="secundario" onClick={parar} className="shrink-0">
         <Square aria-hidden="true" size={14} strokeWidth={2.4} className="shrink-0" />
         Parar
       </Botao>
@@ -97,7 +117,9 @@ export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar
       disabled={estado === 'desligada'}
       {...(exemplo === undefined ? {} : { placeholder: exemplo })}
       aria-describedby={idDaDica}
-      enterKeyHint="send"
+      maxLength={maximo ?? (soTexto ? TAMANHO_MAXIMO_DA_PERGUNTA_AO_TUTOR : TAMANHO_MAXIMO_DO_PEDIDO)}
+      // A tecla do teclado virtual diz o que ela faz: com o dedo é quebra de linha, e não "enviar".
+      enterKeyHint={ponteiroGrosso ? 'enter' : 'send'}
       onChange={(evento) => aoMudar(evento.target.value)}
       onKeyDown={aoTeclar}
       className="block max-h-48 min-h-11 w-full min-w-0 resize-none rounded-controle bg-superficie px-3 py-2.5 text-base text-tinta disabled:text-inativo"
@@ -110,7 +132,7 @@ export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar
         {rotulo}
       </label>
       <span id={idDaDica} className="sr-only">
-        Enter envia. Shift e Enter quebram a linha.
+        {dicaDoEnter(ponteiroGrosso)}
       </span>
       {soTexto ? (
         <div className="flex min-w-0 items-end gap-2">
