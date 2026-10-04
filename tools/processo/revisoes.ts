@@ -16,6 +16,10 @@
 // atual, com APROVADO quando o revisor tem veto, enquanto o portão local (typecheck, lint, testes)
 // não tiver passado depois da última alteração, ou enquanto a mensagem não trouxer a linha
 // "Revisões:". Bloqueia também commit que leva código sem nenhuma das duas marcas.
+//
+// A terceira marca é `(mvp: <resumo>)`, da fatia do MVP de apresentação (D77): não tem documento de
+// tarefa nem revisor por commit (os revisores passam por fase), e por isso sobra só o portão local
+// carimbado. Vale só em branch `mvp/…`, para o processo enxuto não vazar para a `develop`.
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, statSync, writeFileSync } from 'node:fs'
@@ -31,8 +35,17 @@ const REVISORES = new Set([...REVISORES_COM_VETO, ...REVISORES_SEM_VETO])
 // o que eles aprovaram não mudou, e quem confere o teste corrigido é o test-engineer.
 const REVISORES_DE_TESTE = ['test-engineer', 'revisor-geral']
 
-// Código só entra no main por tarefa ou por correção, as duas com revisores.
+// Código só entra por tarefa ou por correção, as duas com revisores; na fatia do MVP de apresentação, por
+// `(mvp: <resumo>)`, com o portão local (D77).
 export const PASTAS_DE_CODIGO = ['apps/', 'packages/', 'infra/', 'e2e/']
+
+/** Onde o marcador `(mvp: …)` vale: a branch da fatia e as dos pacotes dela (D77). */
+export const PREFIXO_DAS_BRANCHES_DO_MVP = 'mvp/'
+/**
+ * O que o portão local precisa ter rodado para um commit do MVP. Sem `e2e` nem `infra`, de propósito: a D77 troca a
+ * esteira por commit pela esteira disparada à mão no fim de cada fase, e é ela que roda os dois.
+ */
+export const SUITES_DO_MVP = ['typecheck', 'lint', 'test']
 
 export const CAMINHO_CARIMBO = '.processo/portao.json'
 /** O arquivo único por pasta, de antes da separação. Só a migração o lê. */
@@ -835,6 +848,46 @@ export function documentoDoCommit(comando: string, raiz: string, arquivos: strin
   return { caminho: join('tasks', escolhidas[0], `${numero}_task.md`) }
 }
 
+/**
+ * O resumo do marcador `(mvp: <resumo>)`, ou `null` quando o comando não o traz. Marcador sem resumo não vale: é ele
+ * que diz, no `git log`, o que o commit fez, já que não existe documento de tarefa para onde olhar.
+ */
+export function marcadorDoMvp(comando: string): string | null {
+  const resumo = /\(mvp:([^()\n]*)\)/.exec(comando)?.[1]?.trim()
+  return resumo ? resumo : null
+}
+
+/**
+ * O veredito do commit do MVP (D77): a branch certa e o portão local valendo para o código de agora. Não há revisor a
+ * conferir aqui — na fatia do MVP eles passam uma vez por fase —, então o carimbo é a única prova, e ele não tem a
+ * exceção de comentário (`avaliarCarimbo`).
+ */
+export function avaliarCommitDoMvp(entrada: {
+  /** A branch da árvore; vazia com o HEAD solto. */
+  branch: string
+  carimbo: Carimbo | null
+  alteracoes: Alteracao[]
+  instantaneo: Record<string, string> | undefined
+}): string | null {
+  if (!entrada.branch.startsWith(PREFIXO_DAS_BRANCHES_DO_MVP)) {
+    return (
+      `Commit bloqueado: o marcador "(mvp: …)" só vale em branch ${PREFIXO_DAS_BRANCHES_DO_MVP}… (D77), e esta é ${entrada.branch || 'um HEAD solto'}. ` +
+      'Fora da fatia do MVP, código entra por /executar-task ou por /corrigir, que passam pelos revisores.'
+    )
+  }
+  const carimbo = avaliarCarimbo(entrada.carimbo, SUITES_DO_MVP, entrada.alteracoes, entrada.instantaneo)
+  return carimbo ? `Commit bloqueado: ${carimbo}` : null
+}
+
+/** A branch em que a árvore está. Funciona em repositório sem commit; com o HEAD solto, devolve vazio. */
+function branchAtual(raiz: string): string {
+  try {
+    return execFileSync('git', ['symbolic-ref', '--short', '-q', 'HEAD'], { cwd: raiz, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch {
+    return ''
+  }
+}
+
 function arquivosPreparados(raiz: string): string[] {
   return execFileSync('git', ['diff', '--cached', '--name-only', '-z'], { cwd: raiz, encoding: 'utf8' }).split('\0').filter(Boolean)
 }
@@ -849,9 +902,18 @@ export function portao(entrada: EntradaHook, raiz: string): string | null {
       PASTAS_DE_CODIGO.some((pasta) => arquivo.startsWith(pasta)),
     )
     if (codigo.length === 0) return null
+    if (marcadorDoMvp(comando) !== null) {
+      return avaliarCommitDoMvp({
+        branch: branchAtual(raiz),
+        carimbo: lerCarimbo(raiz),
+        alteracoes: alteracoesDeCodigo(raiz, arquivos),
+        instantaneo: lerInstantaneos(raiz)[CHAVE_DO_PORTAO],
+      })
+    }
     return (
       `Commit bloqueado: ele leva código (${codigo.slice(0, 3).join(', ')}${codigo.length > 3 ? ', …' : ''}) sem "(tarefa N.0)" nem "(correção <slug>)". ` +
-      'Código entra por /executar-task ou por /corrigir, que passam pelos revisores.'
+      'Código entra por /executar-task ou por /corrigir, que passam pelos revisores. ' +
+      `Na fatia do MVP de apresentação (D77), em branch ${PREFIXO_DAS_BRANCHES_DO_MVP}…, o marcador é "(mvp: <resumo>)", com o portão local carimbado.`
     )
   }
   if ('erro' in documento) return documento.erro
