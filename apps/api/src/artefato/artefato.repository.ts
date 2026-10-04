@@ -1,7 +1,7 @@
 import { artefato, atividadeAplicada, entrega, exigirAnoEmCurso, exigirEscolaDoContexto, material, sessaoDaRequisicao, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import { MAXIMO_DE_VERSOES_NO_ARTEFATO, type ConsultaArtefatos, type ConteudoDoArtefato, type EstadoDeAtividadeAplicada, type EstadoDeEntrega, type TipoDeArtefato } from '@educa/shared'
 import { and, desc, eq, inArray, lt, sql, type SQL } from 'drizzle-orm'
-import { comVinculoConfirmadoDoProfessor } from '../assistente/turma-do-professor.repository.js'
+import { comVinculoConfirmadoDoProfessor, disciplinaDoArtefato } from '../assistente/turma-do-professor.repository.js'
 
 /** Um artefato como o repository o devolve: o `conteudo` é `jsonb`, e o service o valida antes de usar. */
 export interface ArtefatoLido {
@@ -51,8 +51,9 @@ const colunas = {
 
 /**
  * Os artefatos da escola e do ano letivo do contexto que o professor do contexto alcança: os das turmas em que ele tem
- * vínculo `confirmado` (`turma_vinculada`; regra 10, itens 3 e 4). **A turma que autoriza é a do próprio artefato**,
- * lida do banco, nunca a que o cliente mandou. Coordenação e aluno não têm vínculo de professor: nada é achado.
+ * vínculo `confirmado` **na disciplina do artefato** (`turma_vinculada`; regra 10, itens 3 e 4). **A turma e a
+ * disciplina que autorizam são as do próprio artefato**, lidas do banco, nunca as que o cliente mandou: a professora de
+ * outra disciplina da mesma turma não o alcança. Coordenação e aluno não têm vínculo de professor: nada é achado.
  *
  * O artefato tem o gabarito: nenhum método daqui serve ao aluno, que recebe a prova pela atividade aplicada.
  */
@@ -63,7 +64,7 @@ export class ArtefatoRepository {
     return and(
       eq(artefato.escolaId, exigirEscolaDoContexto()),
       eq(artefato.anoLetivoId, exigirAnoEmCurso()),
-      comVinculoConfirmadoDoProfessor(this.banco, { escolaId: artefato.escolaId, anoLetivoId: artefato.anoLetivoId, turmaId: artefato.turmaId }),
+      comVinculoConfirmadoDoProfessor(this.banco, { escolaId: artefato.escolaId, anoLetivoId: artefato.anoLetivoId, turmaId: artefato.turmaId }, artefato.disciplinaId),
     )
   }
 
@@ -98,7 +99,7 @@ export class ArtefatoRepository {
 
   /**
    * Onde o artefato foi aplicado, da aplicação mais nova para a mais antiga, até o teto da resposta. Só as aplicações em
-   * turma que o professor alcança: a aplicação pode ser em outra turma do mesmo ano.
+   * turma em que o professor tem vínculo na disciplina do artefato: a aplicação pode ser em outra turma do mesmo ano.
    */
   aplicacoes(artefatoId: string): Promise<AplicacaoLida[]> {
     return this.banco
@@ -109,7 +110,11 @@ export class ArtefatoRepository {
           eq(atividadeAplicada.escolaId, exigirEscolaDoContexto()),
           eq(atividadeAplicada.anoLetivoId, exigirAnoEmCurso()),
           eq(atividadeAplicada.artefatoId, artefatoId),
-          comVinculoConfirmadoDoProfessor(this.banco, { escolaId: atividadeAplicada.escolaId, anoLetivoId: atividadeAplicada.anoLetivoId, turmaId: atividadeAplicada.turmaId }),
+          comVinculoConfirmadoDoProfessor(
+            this.banco,
+            { escolaId: atividadeAplicada.escolaId, anoLetivoId: atividadeAplicada.anoLetivoId, turmaId: atividadeAplicada.turmaId },
+            disciplinaDoArtefato(this.banco, { escolaId: atividadeAplicada.escolaId, anoLetivoId: atividadeAplicada.anoLetivoId, artefatoId: atividadeAplicada.artefatoId }),
+          ),
         ),
       )
       .orderBy(desc(atividadeAplicada.id))
