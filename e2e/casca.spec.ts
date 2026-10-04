@@ -446,7 +446,7 @@ test.describe('casca da escola', () => {
     else await abrir.click()
     await expect(gaveta(page)).toBeVisible()
     await expect(abrir).toHaveAttribute('aria-expanded', 'true')
-    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Turmas'])
+    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Nova conversa', 'Ferramentas', 'Turmas'])
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
     await page.keyboard.press('Escape')
