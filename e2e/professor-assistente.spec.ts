@@ -98,7 +98,7 @@ async function enviarPedido(page: Page, texto: string, hasTouch: boolean): Promi
 }
 
 test.describe('a navegação do professor na A2 (D73)', () => {
-  test('a lateral tem Nova conversa, Ferramentas e Turmas, e "Seu time" com o Assistente e o que espera a professora; Calendário, Histórico e Tutor não aparecem', async ({ page, hasTouch }) => {
+  test('a lateral tem Nova conversa, Ferramentas e Turmas, e "Seu time" com o Assistente e o que espera a professora, e o Tutor sem contador; Calendário e Histórico não aparecem', async ({ page, hasTouch }) => {
     // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
     test.slow()
     const { api, turmaId, disciplinaId } = await entrar(page, hasTouch)
@@ -112,12 +112,13 @@ test.describe('a navegação do professor na A2 (D73)', () => {
     await abrirNavegacao(page, hasTouch)
     await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Nova conversa', 'Ferramentas', 'Turmas'])
     const time = lateral(page).getByRole('navigation', { name: 'Seu time' })
-    // Só o agente que já tem tela: a linha do Tutor chega com os sinais.
-    await expect(time.getByRole('link')).toHaveCount(1)
+    // Os dois agentes que já têm tela (fase 3): o Assistente e o Tutor, que não espera ninguém e não leva contador.
+    await expect(time.getByRole('link')).toHaveText([/^Assistente de ensino/, /^Tutor$/])
+    await expect(time.getByRole('link', { name: 'Tutor' })).toHaveAccessibleName('Tutor')
     const assistente = time.getByRole('link', { name: /Assistente de ensino/ })
     // O contador diz só o que espera a professora: as duas pendentes, e não a que ela já aprovou.
     await expect(assistente).toHaveAccessibleName(/^Assistente de ensino\s*2\s*esperando você$/, { timeout: PRAZO_DA_ENTRADA_MS })
-    for (const fora of ['Calendário', 'Histórico', 'Tutor']) await expect(lateral(page).getByText(fora, { exact: true })).toHaveCount(0)
+    for (const fora of ['Calendário', 'Histórico']) await expect(lateral(page).getByText(fora, { exact: true })).toHaveCount(0)
     // D59: o contador não se mexe sozinho.
     expect(await assistente.locator('[data-contador-do-time]').evaluate((elemento) => getComputedStyle(elemento).animationName)).toBe('none')
     expect(await violacoesGraves(page)).toEqual([])
@@ -219,6 +220,8 @@ test.describe('a conversa (11.3)', () => {
     await expect(conversa.locator('[data-pensando]')).toContainText('Assistente de ensino')
     await expect(selosDeIA(conversa.locator('[data-pensando]'))).toHaveCount(1)
     await expect(caixa(page)).toHaveValue('')
+    // O enviar da Home saiu da tela com ela: o foco chega na caixa da conversa, e não no `body`.
+    await expect(caixa(page)).toBeFocused()
     // O pedido saiu uma vez, com a chave do envio, o texto e a turma; nada de escola nem de pessoa.
     await expect.poll(() => api.pedidosEm(/mensagens$/).length).toBe(1)
     const enviado = api.pedidosEm(/mensagens$/)[0]?.corpo as Record<string, unknown>
@@ -229,9 +232,19 @@ test.describe('a conversa (11.3)', () => {
     // A execução conclui com a proposta de ferramenta: a pergunta da D18.
     const proposta = propostaDeAtividade(turmaId, disciplinaId)
     api.conversa = [mensagemDela(pedido, turmaId, disciplinaId), proposta]
+    // A releitura da conversa demora: enquanto ela não volta, a resposta que a execução trouxe aparece **depois** do
+    // pedido, e não acima dele.
+    const releitura = portao()
+    api.trocar('conversa', async (lido) => {
+      await releitura.aberta
+      return api.responder('conversa', lido)
+    })
     api.concluir(api.ultimaExecucao(), { tipo: 'mensagem', mensagem: proposta })
     const escolha = conversa.getByRole('group', { name: proposta.texto })
     await expect(escolha).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(conversa.locator('article')).toHaveText([new RegExp(`^Você: ${pedido}$`), /Posso fazer isso com a ferramenta Atividade objetiva/])
+    releitura.abrir()
+    api.trocar('conversa')
     await expect(conversa.locator('[data-pensando]')).toHaveCount(0)
     // O pedido não aparece duas vezes quando a conversa lida o traz.
     await expect(conversa.getByText(pedido)).toHaveCount(1)
@@ -255,13 +268,17 @@ test.describe('a conversa (11.3)', () => {
     await expect(conversa.getByText('Você escolheu:')).toContainText('Usar a ferramenta Atividade objetiva')
     const cartao = page.locator('[data-cartao-de-ferramenta="atividade_objetiva"]')
     await expect(cartao.getByLabel('Tema')).toHaveValue('Estequiometria')
+    // A opção escolhida saiu da tela: o foco vai para o cartão que abriu.
+    await expect(page.getByRole('region', { name: 'Ferramenta Atividade objetiva' })).toBeFocused()
     await expect(cartao.getByLabel('Questões')).toHaveValue('10')
     await expect(cartao.getByLabel('Turma e disciplina')).toHaveValue(`${turmaId}:${disciplinaId}`)
     // Com o cartão aberto, a ação da tela é a dele: a caixa de pedido espera.
     await expect(caixa(page)).toBeDisabled()
     await cartao.getByLabel('Questões').fill('2')
     await acionar(cartao.getByRole('button', { name: 'Gerar atividade' }), hasTouch)
-    await expect(cartao.getByRole('status')).toContainText('Gerando', { timeout: PRAZO_DA_TELA_MS })
+    await expect(cartao.getByRole('status').filter({ hasText: 'Gerando' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    // O botão de gerar deu lugar ao pedido recolhido: o foco fica dentro do cartão.
+    expect(await page.evaluate(() => document.activeElement?.closest('[data-motor]') !== null && document.activeElement !== document.body)).toBe(true)
     await expect.poll(() => api.pedidosEm(/gerar$/).length).toBe(1)
     const gerar = api.pedidosEm(/gerar$/)[0]
     expect(gerar?.caminho).toBe('/v1/ferramentas/atividade_objetiva/gerar')
@@ -272,6 +289,8 @@ test.describe('a conversa (11.3)', () => {
     api.artefatos = [artefato]
     api.concluir(api.ultimaExecucao(), { tipo: 'artefato', artefatoId: artefato.id, entregaId: null })
     await expect(cartao.getByText(artefato.titulo)).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    // A troca de "Gerando…" pelo resultado é anunciada a quem não vê a tela.
+    await expect(cartao.locator('[data-anuncio-do-resultado]')).toHaveText('Atividade objetiva: geração concluída. O resultado está logo abaixo do pedido.')
     await expect(cartao.getByText('Assistente · conversa e ferramentas')).toBeVisible()
     await expect(selosDeIA(cartao)).toHaveCount(1)
     await expect(cartao.getByRole('button', { name: `Fonte: ${TITULO_DO_MATERIAL}, p. 142` })).toBeVisible()
@@ -284,6 +303,38 @@ test.describe('a conversa (11.3)', () => {
     expect(await violacoesGraves(page)).toEqual([])
     await acionar(cartao.getByRole('link', { name: 'Abrir o artefato' }), hasTouch)
     await expect(page).toHaveURL(new RegExp(`/professor/artefatos/${artefato.id}$`))
+  })
+
+  test('"Ver mensagens anteriores" traz as antigas, em ordem, sem jogar a tela para o fim da conversa', async ({ page, hasTouch }) => {
+    test.slow()
+    const { api, turmaId, disciplinaId } = await entrar(page, hasTouch)
+    const troca = (numero: number, quando: string) => [mensagemDela(`pergunta ${quando} ${String(numero)}`, turmaId, disciplinaId), respostaComPagina(`Resposta ${quando} ${String(numero)}, com algumas linhas de texto para a conversa ficar mais alta que a janela.`)]
+    api.conversaAnterior = [1, 2, 3, 4, 5, 6].flatMap((numero) => troca(numero, 'antiga'))
+    api.conversa = [1, 2, 3, 4, 5, 6].flatMap((numero) => troca(numero, 'recente'))
+    await irPara(page, '/professor/conversa')
+    const conversa = page.getByRole('log')
+    const ultima = conversa.getByText('Resposta recente 6,')
+    // A conversa abre no fim: a última mensagem à vista.
+    await expect(ultima).toBeInViewport({ timeout: PRAZO_DA_TELA_MS })
+    await expect(conversa.getByText('Você: pergunta antiga 1')).toHaveCount(0)
+
+    const anteriores = page.getByRole('button', { name: 'Ver mensagens anteriores' })
+    await anteriores.scrollIntoViewIfNeeded()
+    await expect(ultima).not.toBeInViewport()
+    await acionar(anteriores, hasTouch)
+    await expect(conversa.getByText('Você: pergunta antiga 1')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(anteriores).toHaveCount(0)
+    // Ela foi ler o começo: a tela fica onde ela está, e não volta para o fim.
+    await page.evaluate(() => new Promise<void>((pronto) => requestAnimationFrame(() => requestAnimationFrame(() => pronto()))))
+    await expect(ultima).not.toBeInViewport()
+    // As antigas vêm antes das recentes, cada pergunta antes da resposta dela.
+    const falas = await conversa.locator('article').allInnerTexts()
+    expect(falas).toHaveLength(24)
+    expect(falas[0]).toContain('pergunta antiga 1')
+    expect(falas[1]).toContain('Resposta antiga 1,')
+    expect(falas[12]).toContain('pergunta recente 1')
+    expect(falas[23]).toContain('Resposta recente 6,')
+    expect(await larguraExcedente(page)).toBe(0)
   })
 
   test('os quatro estados da conversa; a resposta com chip de página e fontes; a falha vira aviso com "Tentar de novo", nunca código; a função suspensa vira aviso que explica', async ({ page, hasTouch }) => {
@@ -394,9 +445,14 @@ test.describe('Ferramentas (D74) e o formulário', () => {
     const origem = atividadeSintetica(turmaId, disciplinaId)
     const adaptada = versaoAdaptada(origem)
     api.artefatos = [adaptada.artefato, origem]
+    // A lista vem em páginas: a primeira, e "Ver mais" traz a seguinte.
+    api.porPagina = 1
     await recarregar(page)
     const gerados = page.locator('[data-artefato]')
-    await expect(gerados).toHaveCount(2, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(gerados).toHaveCount(1, { timeout: PRAZO_DA_ENTRADA_MS })
+    await acionar(page.getByRole('button', { name: 'Ver mais' }), hasTouch)
+    await expect(gerados).toHaveCount(2, { timeout: PRAZO_DA_TELA_MS })
+    await expect(page.getByRole('button', { name: 'Ver mais' })).toHaveCount(0)
     await expect(gerados.nth(0)).toContainText('Versão adaptada · Fonte ampliada + Tempo adicional (50% a mais)')
     await expect(gerados.nth(0)).toContainText('Esperando você')
     await expect(gerados.nth(1)).toContainText(`Atividade objetiva · ${turmaNome}`)
@@ -471,7 +527,10 @@ test.describe('Ferramentas (D74) e o formulário', () => {
     await expect(pronto.getByText('Assistente · adaptação')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
     await expect(selosDeIA(pronto)).toHaveCount(1)
     await expect(pronto.locator('[data-aprovacao="pendente"]')).toHaveText('Esperando você')
-    await expect(pronto.getByText('Esta versão só pode ir aos alunos depois que você aprovar.')).toBeVisible()
+    await expect(pronto.getByText('Esta versão só pode ir aos alunos depois que você aprovar. Até lá, o PDF dela sai marcado como rascunho.')).toBeVisible()
+    // Pendente, a versão só sai em PDF como rascunho, e o botão diz isso antes do clique.
+    await expect(pronto.getByRole('button', { name: 'Exportar rascunho em PDF' })).toBeVisible()
+    await expect(pronto.getByRole('button', { name: 'Exportar em PDF', exact: true })).toHaveCount(0)
     await expect(pronto.getByRole('link', { name: 'Ver e decidir em Seu time' })).toBeVisible()
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
@@ -519,9 +578,10 @@ test.describe('o artefato', () => {
     const origem = atividadeSintetica(turmaId, disciplinaId)
     const pendente = versaoAdaptada(origem)
     const aprovada = versaoAdaptada(origem, 'aprovada')
-    const comVersoes = { ...origem, versoesAdaptadas: [resumoDoArtefato(pendente.artefato), resumoDoArtefato(aprovada.artefato)] }
-    api.artefatos = [comVersoes, pendente.artefato, aprovada.artefato]
-    api.entregas = [pendente.entrega, aprovada.entrega]
+    const rejeitada = versaoAdaptada(origem, 'rejeitada')
+    const comVersoes = { ...origem, versoesAdaptadas: [resumoDoArtefato(pendente.artefato), resumoDoArtefato(aprovada.artefato), resumoDoArtefato(rejeitada.artefato)] }
+    api.artefatos = [comVersoes, pendente.artefato, aprovada.artefato, rejeitada.artefato]
+    api.entregas = [pendente.entrega, aprovada.entrega, rejeitada.entrega]
 
     // Carregando, erro e o que não existe (ou é de outra turma), que respondem igual.
     const segura = portao()
@@ -551,8 +611,8 @@ test.describe('o artefato', () => {
     await expect(page.getByText('24 g de carbono são 2 mol, que formam 2 mol de CO₂, ou 88 g.')).toBeVisible()
     await expect(page.getByRole('button', { name: `Fonte: ${TITULO_DO_MATERIAL}, p. 142` })).toBeVisible()
     await expect(page.getByText(`Página 142 · ${TITULO_DO_MATERIAL}`)).toBeVisible()
-    // O aplicar à turma é da próxima fase: não há botão sem efeito no lugar dele.
-    await expect(page.getByRole('button', { name: /Aplicar/ })).toHaveCount(0)
+    // Aplicar à turma (fase 3): um botão só, no artefato; o fluxo dele está em `professor-turma.spec.ts`.
+    await expect(page.getByRole('button', { name: /Aplicar/ })).toHaveCount(1)
     // As versões adaptadas, cada uma com a situação dela: a pendente espera, a aprovada diz quem e quando.
     const versoes = page.getByRole('region', { name: 'Versões adaptadas' })
     await expect(versoes.locator('[data-aprovacao="pendente"]')).toHaveText('Esperando você')
@@ -572,12 +632,32 @@ test.describe('o artefato', () => {
     await acionar(page.getByRole('button', { name: 'Exportar em PDF' }), hasTouch)
     expect((await baixado).suggestedFilename()).toBe('atividade-sintetica.pdf')
 
-    // A versão adaptada aberta: a adaptação pelo tipo, e a aprovação com quem e quando.
+    // A versão que ainda espera a decisão só sai em PDF como rascunho, e a tela diz isso antes do clique.
+    await acionar(versoes.getByRole('link').nth(0), hasTouch)
+    await expect(page.locator('[data-aprovacao="pendente"]')).toHaveText('Esperando você', { timeout: PRAZO_DA_TELA_MS })
+    await expect(page.getByRole('button', { name: 'Exportar rascunho em PDF' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Exportar em PDF', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('main')).toContainText('o PDF sai marcado como rascunho em todas as páginas')
+    await expect(page.getByRole('button', { name: 'Renomear' })).toBeVisible()
+    await acionar(page.getByRole('link', { name: 'Abrir a atividade de origem' }), hasTouch)
+
+    // A rejeitada não sai em PDF, e a tela diz por quê; decidida, também não muda de nome.
+    await acionar(versoes.getByRole('link').nth(2), hasTouch)
+    await expect(page.locator('[data-aprovacao="rejeitada"]')).toContainText(`${QUEM_DECIDE.nome} rejeitou`, { timeout: PRAZO_DA_TELA_MS })
+    await expect(page.getByRole('button', { name: /Exportar/ })).toHaveCount(0)
+    await expect(page.locator('[data-sem-pdf]')).toHaveText('Esta versão foi rejeitada e não pode ser exportada: ela não vai aos alunos. Peça outra versão adaptada a partir da atividade de origem.')
+    await expect(page.getByRole('button', { name: 'Renomear' })).toHaveCount(0)
+    expect(await violacoesGraves(page)).toEqual([])
+    await acionar(page.getByRole('link', { name: 'Abrir a atividade de origem' }), hasTouch)
+
+    // A versão adaptada aprovada: a adaptação pelo tipo, a aprovação com quem e quando, e o PDF limpo.
     await acionar(versoes.getByRole('link').nth(1), hasTouch)
     await expect(page.getByRole('heading', { level: 1, name: aprovada.artefato.titulo })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
     await expect(page.getByText('Fonte ampliada + Tempo adicional (50% a mais)')).toBeVisible()
     await expect(page.getByText('Assistente · adaptação')).toBeVisible()
     await expect(page.locator('[data-aprovacao="aprovada"]')).toContainText(`Aprovada por ${QUEM_DECIDE.nome}`)
+    await expect(page.getByRole('button', { name: 'Exportar em PDF', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Renomear' })).toHaveCount(0)
     // Versão adaptada não se adapta de novo.
     await expect(page.getByRole('button', { name: 'Pedir versão adaptada' })).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
@@ -607,8 +687,10 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
     api.trocar('entregas')
     await acionar(page.getByRole('button', { name: 'Tentar de novo' }), hasTouch)
 
-    const convite = page.getByRole('region', { name: 'O Assistente ainda não tem nada esperando você' })
+    // O vazio abre pelo que o Assistente faz, e só depois diz que não há nada esperando.
+    const convite = page.getByRole('region', { name: 'O que o Assistente de ensino faz por você' })
     await expect(convite).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(convite).toContainText('Agora não há nada esperando você.')
     await expect(convite).toContainText(FUNCOES.adaptacao.fazSozinha)
     await expect(convite.getByRole('button', { name: 'Pedir ao Assistente' })).toBeVisible()
     // O cabeçalho diz o que cada função faz sozinha e o que espera aprovação, com o texto que a API dá.
@@ -689,10 +771,12 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
     const decidida = page.locator('[data-entrega="aprovada"]')
     await expect(decidida.locator('[data-aprovacao="aprovada"]')).toContainText(`Aprovada por ${QUEM_DECIDE.nome} · `, { timeout: PRAZO_DA_TELA_MS })
     await expect(decidida.getByRole('button')).toHaveCount(0)
+    // O botão que abriu o diálogo saiu com a decisão: o foco fica na entrega decidida, e não no `body`.
+    await expect(decidida).toBeFocused()
     await expect(faixa).toHaveCount(0)
     // O contador da lateral acompanha: não há mais nada esperando.
     await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link')).toHaveAccessibleName('Assistente de ensino')
+    await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: /^Assistente de ensino/ })).toHaveAccessibleName('Assistente de ensino')
   })
 
   test('Rejeitar exige justificativa de 8 a 500 caracteres antes de mandar, e a tela mostra quem rejeitou e o motivo; a entrega já decidida em outra aba vira a tela atualizada, e não erro', async ({ page, hasTouch }) => {
@@ -704,9 +788,22 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
     const segunda = versaoAdaptada({ ...origem, titulo: 'Lista 4' })
     api.artefatos = [origem, primeira.artefato, segunda.artefato]
     api.entregas = [primeira.entrega, { ...segunda.entrega, criadaEm: '2026-10-05T14:00:00.000Z' }]
+    // As entregas vêm em páginas: "Ver mais entregas" traz a seguinte.
+    api.porPagina = 1
     await irPara(page, '/professor/time/assistente')
     const pendentes = page.locator('[data-entrega="pendente"]')
+    await expect(pendentes).toHaveCount(1, { timeout: PRAZO_DA_TELA_MS })
+    await acionar(page.getByRole('button', { name: 'Ver mais entregas' }), hasTouch)
     await expect(pendentes).toHaveCount(2, { timeout: PRAZO_DA_TELA_MS })
+    await expect(page.getByRole('button', { name: 'Ver mais entregas' })).toHaveCount(0)
+    api.porPagina = undefined
+    // Com mais de uma pendência a faixa presa fica recolhida no contador, e abre a pedido: não toma a tela do celular.
+    const faixa = page.locator('[data-faixa-esperando]')
+    await expect(faixa.getByText('2 entregas esperando você')).toBeVisible()
+    await expect(faixa.getByRole('button', { name: /^Ver/ })).toHaveCount(0)
+    await acionar(faixa.getByText('2 entregas esperando você'), hasTouch)
+    await expect(faixa.getByRole('button', { name: /^Ver/ })).toHaveCount(2)
+    await acionar(faixa.getByText('2 entregas esperando você'), hasTouch)
 
     await acionar(pendentes.nth(0).getByRole('button', { name: /^Rejeitar/ }), hasTouch)
     const dialogo = page.getByRole('alertdialog', { name: 'Rejeitar a versão adaptada' })
@@ -733,6 +830,7 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
     const rejeitada = page.locator('[data-entrega="rejeitada"]')
     await expect(rejeitada.locator('[data-aprovacao="rejeitada"]')).toContainText(`${QUEM_DECIDE.nome} rejeitou · `, { timeout: PRAZO_DA_TELA_MS })
     await expect(rejeitada.locator('[data-aprovacao="rejeitada"]')).toContainText('Motivo: A questão 2 ficou sem as alternativas.')
+    await expect(rejeitada).toBeFocused()
 
     // A outra entrega é decidida em outra aba enquanto o diálogo está aberto nesta.
     await acionar(pendentes.nth(0).getByRole('button', { name: /^Aprovar/ }), hasTouch)
@@ -746,6 +844,8 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
     await expect(page.getByRole('main')).not.toContainText('ENTREGA_JA_DECIDIDA')
     await expect(page.locator('[data-entrega="aprovada"] [data-aprovacao="aprovada"]')).toContainText(`Aprovada por ${QUEM_DECIDE.nome}`, { timeout: PRAZO_DA_TELA_MS })
     await expect(pendentes).toHaveCount(0)
+    // Também aqui o diálogo só fechou depois de a tela reler: o foco está na entrega, e não no `body`.
+    await expect(page.locator('[data-entrega="aprovada"]')).toBeFocused()
     expect(await violacoesGraves(page)).toEqual([])
   })
 })

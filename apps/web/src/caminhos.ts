@@ -21,6 +21,10 @@ export const ROTAS_DO_PROFESSOR = {
   artefato: '/artefatos/:artefatoId',
   /** Seu time › Assistente de ensino: o que as funções dele fizeram e o que espera a professora (11.4). */
   timeDoAssistente: '/time/assistente',
+  /** Seu time › Tutor: os sinais e o uso do Tutor pela turma, sem conversa de aluno (A4; 11.4). */
+  timeDoTutor: '/time/tutor',
+  /** Aprovar a correção de objetiva de uma atividade aplicada: os destaques e o registro da validação (A3; 11.5). */
+  aprovar: '/aprovar/:atividadeAplicadaId',
   /** As turmas e disciplinas que a coordenação alocou: confirmar ou contestar cada uma (F1, RF4 e D73). */
   turmas: '/turmas',
   /** Uma turma aberta dentro de Turmas, com o acesso dos alunos (A1, 15.0; RF9) e, na 16.0, os pedidos. */
@@ -48,6 +52,11 @@ export function caminhoDaAdaptacaoDoArtefato(artefatoId: string): string {
 /** O endereço de um artefato aberto, **relativo à área**. */
 export function caminhoDoArtefatoDoProfessor(artefatoId: string): string {
   return ROTAS_DO_PROFESSOR.artefato.replace(':artefatoId', encodeURIComponent(artefatoId))
+}
+
+/** O endereço da correção de uma atividade aplicada, **relativo à área**: é o "Revisar" do Seu time. */
+export function caminhoDaCorrecaoDoProfessor(atividadeAplicadaId: string): string {
+  return ROTAS_DO_PROFESSOR.aprovar.replace(':atividadeAplicadaId', encodeURIComponent(atividadeAplicadaId))
 }
 
 /** As rotas da área da coordenação, relativas à base dela. */
@@ -125,6 +134,8 @@ export const ROTAS = {
   artefatos: `${BASE_DA_AREA.professor}/artefatos`,
   /** Seu time › Assistente de ensino, pela raiz: é o endereço da linha do agente na lateral. */
   timeDoAssistente: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.timeDoAssistente}`,
+  /** Seu time › Tutor, pela raiz: é o endereço da linha do agente na lateral. */
+  timeDoTutor: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.timeDoTutor}`,
   /** "Turmas" do professor, pela raiz: é o endereço que a navegação usa. */
   turmas: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.turmas}`,
   /** Estrutura da coordenação, pela raiz: é o endereço que a navegação usa, e onde a coordenação abre (13.0). */

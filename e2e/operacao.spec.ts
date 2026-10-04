@@ -2,6 +2,7 @@ import type { Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { codigoDoOperador, criarOperadorComSegundoFator as criarOperador, encerrarSessoesDoOperador, removerOperador, type OperadorDeTeste } from './__fixtures__/operacao.ts'
 import { criarEquipeComSenha } from './__fixtures__/sessao.ts'
+import { esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { acionar, entrarNaOperacao, esperarCasca, PRAZO_DA_ENTRADA_MS } from './__fixtures__/tela-da-operacao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -322,7 +323,8 @@ test.describe('área do operador Turmma', () => {
     await escola.getByLabel('E-mail').fill(professora.email)
     await escola.getByLabel('Senha').fill(professora.senha)
     await acionar(escola, /^Entrar$/, hasTouch)
-    await expect(escola.getByRole('heading', { name: `Olá, ${professora.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // A professora abre em "Nova conversa" (A2, D73).
+    await esperarNovaConversa(escola, professora.nome)
 
     // Duas abas da operação: a segunda abre pelo cookie da primeira.
     await entrarNaOperacao(page, operador, hasTouch)
@@ -337,8 +339,8 @@ test.describe('área do operador Turmma', () => {
     await expect(outra.getByRole('banner')).not.toContainText(operador.nome)
 
     // A escola não ouviu nada: a tela continua, e a sessão dela ainda vale no servidor (recarregar reabre pelo cookie).
-    await expect(escola.getByRole('heading', { name: `Olá, ${professora.nome}` })).toBeVisible()
+    await esperarNovaConversa(escola, professora.nome, { timeout: 2_000 })
     await escola.reload()
-    await expect(escola.getByRole('heading', { name: `Olá, ${professora.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarNovaConversa(escola, professora.nome)
   })
 })

@@ -14,7 +14,6 @@ import { ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { BarraPresa } from '../../componentes/BarraPresa'
 import { Botao } from '../../componentes/Botao'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
-import { AvisoFila } from '../../componentes/ia/AvisoFila'
 import { Escolha, type OpcaoDeEscolha } from '../../componentes/ia/Escolha'
 import { Conversa as ListaDeMensagens, MensagemIA, MensagemPessoa, Pensando } from '../../componentes/ia/Mensagem'
 import { TextoDaIA } from '../../componentes/ia/TextoDaIA'
@@ -23,7 +22,7 @@ import { useTituloDaTela } from '../../titulo'
 import { AvisoDeSuspensao, FalhaDoPedido } from './avisos'
 import { CaixaDoAssistente } from './CaixaDoAssistente'
 import { CartaoDeFerramenta } from './CartaoDeFerramenta'
-import { mensagensNaTela, pedidoDeSoConversar, pendenteNaConversa, propostaQuePergunta } from './conversa'
+import { itensDaConversa, marcaDoFim, mensagensNaTela, pedidoDeSoConversar, pendenteNaConversa, propostaQuePergunta } from './conversa'
 import { ferramentaDoCatalogo } from './ferramentas'
 import { abrirCartaoNaConversa, CARTAO_DA_CONVERSA, CICLO_DA_CONVERSA, CICLO_DA_FERRAMENTA, CONTEXTO_ESCOLHIDO, enviarPedidoDaConversa, ESCOLHAS_DAS_PROPOSTAS, type EscolhaDaProposta } from './memoria-do-professor'
 import { turmaEscolhida, turmasDaProfessora, valorDoContexto } from './turmas-da-professora'
@@ -76,13 +75,36 @@ export default function Conversa() {
   const suspensa = funcaoSuspensa(time.data, 'conversa_e_ferramentas')
   const titulos = materiais.data ?? {}
 
-  // O que acabou de entrar fica à vista: o pedido, a resposta, o cartão. Sem animação: a tela só vai até o fim.
-  const quantas = mensagens.length
-  const etapa = ciclo?.etapa
+  const itens = itensDaConversa(lidas, pendente)
+  // O que acabou de entrar fica à vista: o pedido, a resposta, o cartão. Sem animação: a tela só vai até o fim. As
+  // mensagens anteriores, trazidas por "Ver mensagens anteriores", não mudam o fim, e a tela fica onde a professora está.
+  const marca = marcaDoFim(itens, ciclo?.etapa)
   const ferramentaDoCartao = cartao?.ferramenta
   useEffect(() => {
     fim.current?.scrollIntoView({ block: 'end' })
-  }, [quantas, etapa, ferramentaDoCartao])
+  }, [marca, ferramentaDoCartao])
+
+  // O foco acompanha o que a professora acabou de fazer (regra 50, item 11). O botão que ela acionou sumiu — o enviar da
+  // Home, a opção da pergunta, o "Cancelar" do cartão —, e sem isto o foco cairia no `body`:
+  // - o cartão que abre recebe o foco; o que fecha o devolve à caixa de pedido;
+  // - quem chega da Home com o pedido no ar continua na caixa, pronta para o pedido seguinte.
+  const secaoDoCartao = useRef<HTMLElement>(null)
+  const barra = useRef<HTMLDivElement>(null)
+  const cartaoAnterior = useRef<string | undefined>(undefined)
+  const chegouComPedido = useRef(emCurso(ciclo))
+  const conversaLida = conversa.data !== undefined
+  const temCaixa = turma !== undefined
+  useEffect(() => {
+    if (!conversaLida) return
+    if (ferramentaDoCartao !== undefined) secaoDoCartao.current?.focus()
+    else if (cartaoAnterior.current !== undefined) barra.current?.querySelector('textarea')?.focus()
+    cartaoAnterior.current = ferramentaDoCartao
+  }, [ferramentaDoCartao, conversaLida])
+  useEffect(() => {
+    if (!temCaixa || !chegouComPedido.current) return
+    chegouComPedido.current = false
+    barra.current?.querySelector('textarea')?.focus()
+  }, [temCaixa])
 
   function aoEscolher(mensagem: Extract<MensagemDoAgente, { tipo: 'proposta_de_ferramenta' }>, escolha: string): void {
     if (escolha !== 'ferramenta' && escolha !== 'conversa') return
@@ -115,7 +137,10 @@ export default function Conversa() {
 
       {!semNada && conversa.data !== undefined && (
         <ListaDeMensagens rotulo="Conversa com o Assistente de ensino" ocupada={pendente?.pensando === true}>
-          {mensagens.map((mensagem) => {
+          {itens.map((item) => {
+            // O pedido que ainda não voltou da API: no lugar dele, antes da resposta.
+            if (item.tipo === 'pedido') return <MensagemPessoa key="pedido-no-ar">{item.texto}</MensagemPessoa>
+            const { mensagem } = item
             if (mensagem.autor === 'usuario') return <MensagemPessoa key={mensagem.id}>{mensagem.texto}</MensagemPessoa>
             if (mensagem.tipo === 'texto')
               return (
@@ -139,13 +164,11 @@ export default function Conversa() {
             )
           })}
 
-          {pendente?.pedido !== undefined && <MensagemPessoa>{pendente.pedido}</MensagemPessoa>}
-          {pendente?.pensando === true && <Pensando agente="assistente_de_ensino" />}
-          {pendente?.pensando === true && demorando && <AvisoFila situacao="demora" />}
+          {pendente?.pensando === true && <Pensando agente="assistente_de_ensino" demorando={demorando} />}
           {pendente?.erro !== undefined && <FalhaDoPedido erro={pendente.erro} funcao="conversa_e_ferramentas" aoTentarDeNovo={repetir} />}
 
           {cartao !== undefined && (
-            <section aria-label={`Ferramenta ${ferramentaDoCatalogo(cartao.ferramenta).nome}`} className="min-w-0 rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
+            <section ref={secaoDoCartao} tabIndex={-1} aria-label={`Ferramenta ${ferramentaDoCatalogo(cartao.ferramenta).nome}`} className="min-w-0 rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
               {/* A `key` pela ferramenta e pelo que ela já sabe: outro cartão é outro formulário, e não o anterior com os valores dele. */}
               <CartaoDeFerramenta key={`${cartao.ferramenta}-${JSON.stringify(cartao.iniciais)}`} ferramenta={cartao.ferramenta} iniciais={cartao.iniciais} nivel={2} aoCancelar={() => CARTAO_DA_CONVERSA.guardar(undefined)} />
             </section>
@@ -166,7 +189,7 @@ export default function Conversa() {
       {suspensa && <AvisoDeSuspensao funcao="conversa_e_ferramentas" />}
       {turma !== undefined && (
         <BarraPresa rotulo="Novo pedido" semLinha>
-          <div className="w-full min-w-0">
+          <div ref={barra} className="w-full min-w-0">
             <CaixaDoAssistente turmas={turmas} turma={turma} iniciar={iniciar} respondendo={emCurso(ciclo)} desligada={suspensa || cartaoOcupaATela} />
           </div>
         </BarraPresa>

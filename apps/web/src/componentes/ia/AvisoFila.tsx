@@ -14,7 +14,8 @@ interface PropsDoAviso {
  * As palavras servem ao aluno de 11 anos e à professora.
  */
 const TEXTO_DO_AVISO = {
-  demora: { titulo: 'Muita gente usando agora.', texto: 'Sua resposta sai em instantes. Você não precisa pedir de novo.' },
+  // Verdade sempre: com uma pessoa só e um modelo lento a geração também demora, e a tela não culpa quem não existe.
+  demora: { titulo: 'Ainda preparando.', texto: 'Pode levar mais alguns segundos. Você não precisa pedir de novo.' },
   falha: { titulo: 'Não foi possível responder agora.', texto: 'Tente de novo em instantes.' },
 } as const
 
