@@ -477,7 +477,8 @@ recusada no servidor.
 
 ## MVP de apresentação (A2 a A5) — o que está implementado
 
-Implementado na fatia única do MVP de apresentação (D77), na migration `0022_mvp_apresentacao.sql`. A forma exata, com
+Implementado na fatia única do MVP de apresentação (D77), nas migrations `0022_mvp_apresentacao.sql` e
+`0023_mvp_restricoes.sql` (a segunda só aperta: FKs com o ano letivo e a turma, gatilhos e duas colunas nulas). A forma exata, com
 colunas, unicidades, checks e gatilhos, está em `docs/mvp-contratos.md` e no docblock de cada tabela; os blocos de
 "Conteúdo", "Avaliação", "Agentes" e "Tutor, sala e supervisão", acima, continuam sendo o desenho definitivo, que cada fase
 completa.
@@ -507,8 +508,8 @@ Correcao*          → escola*, anoLetivo*, entrega* (lote), atividadeAplicada*,
                      porHabilidade*, destaques*, destaqueAbertoEm?, destaqueAbertoPor?
 ValidacaoDoLote*   → escola*, anoLetivo*, entrega*, atividadeAplicada*, apresentado*, aberto*, confirmadaPor*,
                      confirmadaEm*
-MensagemTutor*     → escola*, anoLetivo*, turma*, aluno*, execucao*, atividadeAplicada?, material?,
-                     autor* (aluno | tutor), tipo* (texto | assunto_delicado), texto*, citacoes?
+MensagemTutor*     → escola*, anoLetivo*, turma*, aluno*, execucao*, atividadeAplicada?, questao?, material?,
+                     pagina?, autor* (aluno | tutor), tipo* (texto | assunto_delicado), texto*, citacoes?
 SinalTutor*        → escola*, anoLetivo*, turma*, aluno*, execucao?, tipo* (travou | resposta_pronta |
                      duvida_repetida | atencao_humana), atividadeAplicada?, questao?, material?, pagina?
 SuspensaoDeFuncao* → escola*, funcao*, motivo?, suspensaPor*, suspensaEm*, retomadaPor?, retomadaEm?
@@ -532,7 +533,12 @@ O que a fatia tem de diferente do desenho definitivo, e por quê:
   das tentativas, das correções de lote aprovado e dos sinais. `SinalTutor` não tem `detalhe`: é tipo fechado mais a
   referência ao trabalho, e `atencao_humana` não carrega referência nenhuma (D36, D57, D66).
 - **O freio e o pacote do Tutor** são duas colunas de `configuracao_operacional_escola`, e não a `PacoteTutor` por turma.
-- **`ConsumoIa` não tem usuário** (D64): só o aluno, nas funções do Tutor.
+- **`ConsumoIa` não tem usuário** (D64): só o aluno, nas funções do Tutor. `entrada` e `saida` ficam nulas onde a chamada
+  leva conversa de pessoa (o Tutor e a proposta de ferramenta).
+- **O uso do Tutor por turma** (`GET /v1/tutor/uso`) é leitura de `MensagemTutor`, sem tabela: por aluno, as trocas do dia,
+  a última e em que ele estava (`questao`, `pagina`). É o que faz não existir uso invisível ao professor (D47).
+- **Nada cruza de turma nem de ano letivo na mesma escola**: a entrega, a mensagem e o sinal do Tutor apontam para a
+  aplicação com a turma, e as FKs para `Artefato` e `ExecucaoAgente` levam o ano.
 
 ## Comunicação, conta e conformidade
 

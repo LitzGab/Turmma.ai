@@ -89,6 +89,7 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['rede', 'tutor', 'ler_conversa', 'nunca'],
   ['rede', 'tutor', 'ler_memoria', 'nunca'],
   ['rede', 'sinal', 'ler', 'nunca'],
+  ['rede', 'uso_do_tutor', 'ler', 'nunca'],
   ['rede', 'governanca', 'ler_resumo', 'nunca'],
   ['rede', 'governanca', 'ler_funcoes', 'nunca'],
   ['rede', 'governanca', 'suspender_funcao', 'nunca'],
@@ -183,6 +184,8 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['coordenador', 'tutor', 'ler_conversa', 'nunca'],
   ['coordenador', 'tutor', 'ler_memoria', 'nunca'],
   ['coordenador', 'sinal', 'ler', 'nunca'],
+  // O uso do Tutor por aluno é nominal de menor: a coordenação vê só a soma da escola, na governança.
+  ['coordenador', 'uso_do_tutor', 'ler', 'nunca'],
   ['coordenador', 'governanca', 'ler_resumo', 'agregado'],
   ['coordenador', 'governanca', 'ler_funcoes', 'unidade'],
   ['coordenador', 'governanca', 'suspender_funcao', 'unidade'],
@@ -276,6 +279,8 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['professor', 'tutor', 'ler_conversa', 'nunca'],
   ['professor', 'tutor', 'ler_memoria', 'nunca'],
   ['professor', 'sinal', 'ler', 'turma_vinculada'],
+  // Não existe uso do Tutor invisível ao professor da turma (regra 70, item 4).
+  ['professor', 'uso_do_tutor', 'ler', 'turma_vinculada'],
   ['professor', 'governanca', 'ler_resumo', 'nunca'],
   ['professor', 'governanca', 'ler_funcoes', 'nunca'],
   ['professor', 'governanca', 'suspender_funcao', 'nunca'],
@@ -369,6 +374,7 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['aluno', 'tutor', 'ler_conversa', 'proprio'],
   ['aluno', 'tutor', 'ler_memoria', 'proprio'],
   ['aluno', 'sinal', 'ler', 'nunca'],
+  ['aluno', 'uso_do_tutor', 'ler', 'nunca'],
   ['aluno', 'governanca', 'ler_resumo', 'nunca'],
   ['aluno', 'governanca', 'ler_funcoes', 'nunca'],
   ['aluno', 'governanca', 'suspender_funcao', 'nunca'],

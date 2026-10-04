@@ -16,8 +16,12 @@ import { usuario } from './usuario.js'
  *   garante no banco que é objeto e que o `tipo` dele é o da coluna. **Não muda depois de gravado**: só o título muda
  *   (`PATCH`, que atualiza a coluna e o `titulo` de dentro do conteúdo no mesmo comando), e por isso a atividade aplicada
  *   não precisa de cópia das questões.
- * - **Versão adaptada** é o artefato com `origem_id` (FK composta para o original, na mesma escola). Só atividade
- *   objetiva se adapta, e não se adapta uma versão adaptada (a tarefa confere; o check garante o tipo).
+ * - **Versão adaptada** é o artefato com `origem_id`, por FK composta `(escola_id, ano_letivo_id, turma_id, origem_id)`
+ *   (0023): o original é da mesma escola, do mesmo ano letivo e da **mesma turma** da versão. Só atividade objetiva se
+ *   adapta, e não se adapta uma versão adaptada (a tarefa confere; o check garante o tipo).
+ * - `unique (escola_id, ano_letivo_id, id)` é o alvo da aplicação, que pode ser em outra turma do mesmo ano;
+ *   `unique (escola_id, ano_letivo_id, turma_id, id)`, o da versão adaptada e da entrega, que são da turma do artefato. A
+ *   execução também vai com o ano: nada aqui cruza de ano letivo (regra 60, item 5).
  * - Check `artefato_adaptacao_fechada`: a versão adaptada tem `conteudo.adaptacao`, e o original não tem; os `tipos` são
  *   de **lista fechada**, e o objeto não aceita chave além de `tipos` e `tempoExtraPercentual`. Não existe onde escrever
  *   texto sobre um aluno, uma condição ou um motivo, nem por fora da API (D35, D67). E **não existe coluna nem tabela
@@ -52,6 +56,8 @@ export const artefato = pgTable(
   },
   (tabela) => [
     unique('artefato_escola_id_unico').on(tabela.escolaId, tabela.id),
+    unique('artefato_escola_ano_id_unico').on(tabela.escolaId, tabela.anoLetivoId, tabela.id),
+    unique('artefato_escola_ano_turma_id_unico').on(tabela.escolaId, tabela.anoLetivoId, tabela.turmaId, tabela.id),
     foreignKey({
       name: 'artefato_turma_do_ano_da_escola_fk',
       columns: [tabela.escolaId, tabela.anoLetivoId, tabela.turmaId],
@@ -59,11 +65,15 @@ export const artefato = pgTable(
     }),
     foreignKey({ name: 'artefato_disciplina_da_escola_fk', columns: [tabela.escolaId, tabela.disciplinaId], foreignColumns: [disciplina.escolaId, disciplina.id] }),
     foreignKey({
-      name: 'artefato_origem_da_escola_fk',
-      columns: [tabela.escolaId, tabela.origemId],
-      foreignColumns: [tabela.escolaId as AnyPgColumn, tabela.id as AnyPgColumn],
+      name: 'artefato_origem_da_turma_fk',
+      columns: [tabela.escolaId, tabela.anoLetivoId, tabela.turmaId, tabela.origemId],
+      foreignColumns: [tabela.escolaId as AnyPgColumn, tabela.anoLetivoId as AnyPgColumn, tabela.turmaId as AnyPgColumn, tabela.id as AnyPgColumn],
     }),
-    foreignKey({ name: 'artefato_execucao_da_escola_fk', columns: [tabela.escolaId, tabela.execucaoId], foreignColumns: [execucaoAgente.escolaId, execucaoAgente.id] }),
+    foreignKey({
+      name: 'artefato_execucao_do_ano_da_escola_fk',
+      columns: [tabela.escolaId, tabela.anoLetivoId, tabela.execucaoId],
+      foreignColumns: [execucaoAgente.escolaId, execucaoAgente.anoLetivoId, execucaoAgente.id],
+    }),
     // A migration escreve `on delete set null ("criado_por")`: o `set null` inteiro anularia também a escola.
     foreignKey({ name: 'artefato_criado_por_da_escola_fk', columns: [tabela.escolaId, tabela.criadoPor], foreignColumns: [usuario.escolaId, usuario.id] }).onDelete('set null'),
     uniqueIndex('artefato_um_por_execucao').on(tabela.escolaId, tabela.execucaoId).where(sql`${tabela.execucaoId} is not null`),
