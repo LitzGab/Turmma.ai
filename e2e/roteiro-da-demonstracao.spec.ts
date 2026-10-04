@@ -42,9 +42,9 @@ import { entrarNaOperacao } from './__fixtures__/tela-da-operacao.ts'
  * dois alunos de apoio) vai pela API, com as mesmas rotas que a tela usa. Os pedaços já têm spec próprio, com os
  * estados de cada tela, nos dois projetos; aqui o que se prova é que eles se encadeiam na ordem do roteiro.
  *
- * **Só no projeto `chromebook`.** O roteiro é o de quem apresenta, num computador; o celular de cada tela já está nos
- * specs dela (D51). A aluna, que na escola usa o Chromebook, fica na página do perfil (CPU ×4 e Fast 3G); as outras
- * pessoas, em navegadores sem limitação, como em `escola-montada.spec.ts`.
+ * **Nos dois projetos (D51).** Todo fluxo funciona também no celular: no `celular`, as quatro pessoas usam a tela de
+ * 360 px, com toque e a navegação na gaveta. A aluna fica na página do perfil (CPU ×4 e rede limitada); as outras
+ * pessoas, em navegadores com a mesma tela e o mesmo toque, sem a limitação, como em `escola-montada.spec.ts`.
  *
  * **Prazo próprio: 8 min.** São umas 40 telas, sete gerações de IA pela fila curta da API e dois logins com segundo
  * fator, em sequência e sem paralelismo possível: cada passo depende do anterior, como na reunião. Medido em 1,1 min na
@@ -73,12 +73,15 @@ test.afterEach(async () => {
   for (const operadorId of operadores.splice(0)) await removerOperador(operadorId)
 })
 
-/** Outro computador: o da operação, o da coordenação, o da professora. Mesmas opções do projeto, sem a limitação do CDP. */
+/** Outro aparelho: o da operação, o da coordenação, o da professora. Mesma tela e toque do projeto, sem a limitação do CDP. */
 async function outroNavegador(browser: Browser): Promise<Page> {
   const uso = test.info().project.use
   const opcoes: BrowserContextOptions = { permissions: ['clipboard-read', 'clipboard-write'] }
   if (uso.baseURL !== undefined) opcoes.baseURL = uso.baseURL
   if (uso.viewport !== undefined) opcoes.viewport = uso.viewport
+  if (uso.isMobile !== undefined) opcoes.isMobile = uso.isMobile
+  if (uso.hasTouch !== undefined) opcoes.hasTouch = uso.hasTouch
+  if (uso.deviceScaleFactor !== undefined) opcoes.deviceScaleFactor = uso.deviceScaleFactor
   if (uso.userAgent !== undefined) opcoes.userAgent = uso.userAgent
   if (uso.locale !== undefined) opcoes.locale = uso.locale
   if (uso.timezoneId !== undefined) opcoes.timezoneId = uso.timezoneId
@@ -94,8 +97,8 @@ async function entrarComEmail(page: Page, email: string, senha: string): Promise
 }
 
 /** No Seu time da lateral, o link de um agente. */
-async function abrirNoSeuTime(page: Page, agente: RegExp | string): Promise<void> {
-  await abrirNavegacao(page, false)
+async function abrirNoSeuTime(page: Page, agente: RegExp | string, hasTouch: boolean): Promise<void> {
+  await abrirNavegacao(page, hasTouch)
   await lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: agente }).click()
 }
 
@@ -103,9 +106,7 @@ async function abrirNoSeuTime(page: Page, agente: RegExp | string): Promise<void
 const numeroDoPainel = (page: Page, rotulo: string) => principal(page).getByText(rotulo, { exact: true }).first().locator('..')
 
 test.describe('o roteiro da demonstração, de ponta a ponta', () => {
-  test.skip(({ isMobile }) => isMobile, 'o roteiro é o de quem apresenta, no computador: o celular de cada tela está no spec dela (D51)')
-
-  test('do painel da operação à governança, na ordem da reunião, com o adaptador falso', async ({ page: aluna, browser, request }) => {
+  test('do painel da operação à governança, na ordem da reunião, com o adaptador falso', async ({ page: aluna, browser, request, hasTouch }) => {
     test.setTimeout(PRAZO_DO_ROTEIRO_MS)
     const marca = randomUUID().slice(0, 8)
     const senha = `frase sintética da demonstração ${marca}`
@@ -127,7 +128,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     const linkDaCoordenacao = await test.step('o operador cria a escola e convida a coordenação', async () => {
       const operador = await criarOperadorComSegundoFator()
       operadores.push(operador.operadorId)
-      await entrarNaOperacao(operacao, operador, false)
+      await entrarNaOperacao(operacao, operador, hasTouch)
       await botao(principal(operacao), 'Nova rede').click()
       await dialogo(operacao).getByLabel('Nome da rede').fill(rede, { timeout: PRAZO_DA_ENTRADA_MS })
       await botao(dialogo(operacao), 'Criar rede').click()
@@ -180,7 +181,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await expect(principal(coordenacao)).toContainText('A IA ainda não gerou nada nesta escola', { timeout: PRAZO_DA_ENTRADA_MS })
 
       // Estrutura: ano letivo aberto, a série, Química e Física, 2ºA e 2ºB.
-      await irPelaNavegacao(coordenacao, 'Estrutura', false)
+      await irPelaNavegacao(coordenacao, 'Estrutura', hasTouch)
       await expect(principal(coordenacao).getByText('Comece pelo ano letivo')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       await botao(principal(coordenacao), 'Criar o ano letivo').click()
       await dialogo(coordenacao).getByLabel('Ano').fill('2026')
@@ -220,7 +221,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       })
 
       // Três professores, cada um com o convite de cópia única.
-      await irPelaNavegacao(coordenacao, 'Professores', false)
+      await irPelaNavegacao(coordenacao, 'Professores', hasTouch)
       const links: Record<'helena' | 'marta' | 'davi', string> = { helena: '', marta: '', davi: '' }
       for (const [chave, professor] of [['helena', helena], ['marta', marta], ['davi', davi]] as const) {
         await botao(principal(coordenacao), 'Cadastrar professor').click()
@@ -237,7 +238,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       }
 
       // A alocação: duas professoras de Química na mesma série (2ºA e 2ºB) e um de Física no 2ºA.
-      await irPelaNavegacao(coordenacao, 'Estrutura', false)
+      await irPelaNavegacao(coordenacao, 'Estrutura', hasTouch)
       const alocacao = principal(coordenacao).getByRole('region', { name: 'Alocação' })
       for (const [professor, turma, disciplina] of [[helena, turmaA, DISCIPLINA], [marta, turmaB, DISCIPLINA], [davi, turmaA, 'Física']] as const) {
         await alocacao.getByLabel('Professor', { exact: true }).selectOption({ label: `${professor.nome} (convite em aberto)` }, { timeout: PRAZO_DA_ENTRADA_MS })
@@ -261,13 +262,13 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await expect(professora).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
       await entrarComEmail(professora, helena.email, senha)
       await esperarNovaConversa(professora, helena.nome)
-      await irPelaNavegacao(professora, 'Turmas', false)
+      await irPelaNavegacao(professora, 'Turmas', hasTouch)
       const paraConfirmar = principal(professora).getByRole('region', { name: 'Confirme suas turmas', exact: true })
       await paraConfirmar.getByRole('listitem').filter({ hasText: turmaA }).getByRole('button', { name: 'Confirmar' }).click({ timeout: PRAZO_DA_ENTRADA_MS })
       await principal(professora).getByRole('link', { name: `Abrir a turma ${turmaA}` }).click()
       // Sem correção aprovada, a turma não tem número nenhum: o acerto por habilidade só conta lote aprovado.
       await expect(principal(professora).getByText('Ainda não há correção aprovada nesta turma')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-      await abrirAbaAlunos(professora, false)
+      await abrirAbaAlunos(professora, hasTouch)
       const acesso = principal(professora).getByRole('region', { name: 'Acesso dos alunos' })
       await botao(acesso, 'Gerar acesso').click()
       const respostaDoGerar = professora.waitForResponse((resposta) => /^\/v1\/turmas\/[^/]+\/acesso$/.test(new URL(resposta.url()).pathname) && resposta.request().method() === 'POST')
@@ -299,7 +300,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       expect(await alunosDaTurmaNoBanco(escolaId, turmaAId)).toBe(0)
 
       await professora.reload()
-      await abrirAbaAlunos(professora, false)
+      await abrirAbaAlunos(professora, hasTouch)
       const pedidos = principal(professora).getByRole('region', { name: 'Pedidos de nome' })
       for (const aluno of [ana, bruno, carla]) await pedidos.getByRole('checkbox', { name: aluno.nome }).check({ timeout: PRAZO_DA_ENTRADA_MS })
       await botao(pedidos, 'Aprovar 3 pedidos').click()
@@ -318,7 +319,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
 
     // ── 4. Passo 1: o material, recusado sem licença e lido com ela (A2; D5, D75). ─────────────────────────────────
     await test.step('a coordenação sobe o PDF sem licença e é recusada antes da leitura; com a licença, ele fica pronto', async () => {
-      await irPelaNavegacao(coordenacao, 'Material', false)
+      await irPelaNavegacao(coordenacao, 'Material', hasTouch)
       const preencher = async (licenca: string) => {
         await coordenacao.getByTestId('arquivo-do-material').setInputFiles(CAMINHO_DO_PDF_DE_DEMONSTRACAO)
         await principal(coordenacao).getByLabel('Título').fill(TITULO_DO_MATERIAL)
@@ -342,7 +343,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     // ── 5. Passo 2: a conversa, a pergunta da D18, a página citada, o PDF, a versão adaptada aprovada (A2). ──────────
     const helenaId = await usuarioDaEquipe(escolaId, helena.email)
     await test.step('a professora pede a atividade, aceita a ferramenta, vê a página citada, exporta, adapta e aprova', async () => {
-      await irPelaNavegacao(professora, 'Nova conversa', false)
+      await irPelaNavegacao(professora, 'Nova conversa', hasTouch)
       const pedido = 'monta uma atividade de estequiometria com 5 questões'
       await caixa(professora).fill(pedido)
       await professora.getByRole('button', { name: 'Enviar' }).click()
@@ -354,7 +355,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await escolha.getByRole('button', { name: /^Usar a ferramenta Atividade objetiva/ }).click()
       const cartao = professora.locator('[data-cartao-de-ferramenta="atividade_objetiva"]')
       await expect(cartao.getByLabel('Turma e disciplina').locator('option:checked')).toHaveText(`${turmaA} · ${DISCIPLINA}`)
-      await gerarAtividade(cartao, false, '5')
+      await gerarAtividade(cartao, hasTouch, '5')
       const resultado = cartao.locator('[data-motor="pronto"]')
       await expect(resultado.locator('ol > li')).toHaveCount(5)
       await expect(resultado.getByRole('button', { name: new RegExp(`^Fonte: ${TITULO_DO_MATERIAL}, p\\. [1-6]$`) })).toHaveCount(5)
@@ -404,7 +405,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     const acertosDaAna = respostasDaAna.filter((resposta, indice) => resposta === primeira.questoes[indice]?.gabarito).length
 
     const primeiraAplicadaId = await test.step('a professora aplica a primeira atividade como avaliação, e a aluna responde uma por vez e envia', async () => {
-      await irPelaNavegacao(professora, 'Ferramentas', false)
+      await irPelaNavegacao(professora, 'Ferramentas', hasTouch)
       await professora.locator('[data-artefato]').filter({ hasText: 'Atividade objetiva · ' }).first().click({ timeout: PRAZO_DA_ENTRADA_MS })
       await expect(professora.getByRole('heading', { level: 1, name: PRIMEIRA })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       const naTurma = professora.locator('[data-aplicacao-do-artefato]')
@@ -492,7 +493,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     })
 
     await test.step('a turma mostra o acerto por habilidade, e a aluna vê o diagnóstico, com quem aprovou, sem nota', async () => {
-      await irPelaNavegacao(professora, 'Turmas', false)
+      await irPelaNavegacao(professora, 'Turmas', hasTouch)
       await principal(professora).getByRole('link', { name: `Abrir a turma ${turmaA}` }).click()
       const habilidades = professora.getByRole('region', { name: 'Acerto por habilidade' })
       await expect(habilidades).toContainText(/\d+ de \d+/, { timeout: PRAZO_DA_ENTRADA_MS })
@@ -512,11 +513,11 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
 
     // ── 8. Passo 5: o Tutor numa segunda atividade, e o sinal para a professora (A4; D47, D66, regra 70 item 7). ────
     await test.step('numa segunda atividade, a aluna pede a resposta ao Tutor: ele recusa, lembra do que ela errou e cita a página', async () => {
-      await irPelaNavegacao(professora, 'Ferramentas', false)
+      await irPelaNavegacao(professora, 'Ferramentas', hasTouch)
       await professora.locator('[data-ferramenta="atividade_objetiva"]').click()
       const cartao = professora.locator('[data-cartao-de-ferramenta="atividade_objetiva"]')
       await expect(cartao.locator('[data-motor="formulario"]')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-      await gerarAtividade(cartao, false, '2', TEMA_DA_SEGUNDA)
+      await gerarAtividade(cartao, hasTouch, '2', TEMA_DA_SEGUNDA)
       await cartao.getByRole('link', { name: 'Abrir o artefato' }).click()
       const naTurma = professora.locator('[data-aplicacao-do-artefato]')
       await naTurma.getByRole('button', { name: 'Aplicar à turma' }).click({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -528,7 +529,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       const alternativaCerta = segunda.questoes[0]?.alternativaCerta ?? ''
       expect(alternativaCerta).not.toBe('')
 
-      await irPelaNavegacao(aluna, 'Atividades', false)
+      await irPelaNavegacao(aluna, 'Atividades', hasTouch)
       await principal(aluna).getByRole('region', { name: 'Para responder' }).getByRole('link', { name: new RegExp(SEGUNDA) }).click({ timeout: PRAZO_DA_ENTRADA_MS })
       await expect(principal(aluna).getByRole('heading', { level: 1, name: SEGUNDA })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       await principal(aluna).getByRole('link', { name: 'Pedir ajuda ao Tutor nesta questão' }).click()
@@ -548,7 +549,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await expect(principal(aluna).locator('[data-uso-do-dia]')).toContainText('Hoje: 1 de 60 perguntas', { timeout: PRAZO_DA_ENTRADA_MS })
 
       // A professora vê o sinal, com a questão e o nome, e nada do que a aluna escreveu.
-      await abrirNoSeuTime(professora, 'Tutor')
+      await abrirNoSeuTime(professora, 'Tutor', hasTouch)
       const sinais = professora.getByRole('region', { name: 'Sinais da turma' })
       await expect(sinais).toContainText(`Pediu a resposta pronta na questão 1 de "${SEGUNDA}"`, { timeout: PRAZO_DA_ENTRADA_MS })
       await expect(sinais).toContainText(ana.nome)
@@ -559,7 +560,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     // ── 9. Passo 6: a governança, a suspensão por função, o Analista e o nominal com auditoria (A5; D9, D45, D64). ─
     const coordenadoraId = await usuarioDaEquipe(escolaId, coordenadora.email)
     await test.step('a coordenação vê o que a IA gerou e que uma pessoa aprovou, em agregado e sem nome de ninguém', async () => {
-      await irPelaNavegacao(coordenacao, 'Governança', false)
+      await irPelaNavegacao(coordenacao, 'Governança', hasTouch)
       await esperarGovernanca(coordenacao)
       // Três artefatos (as duas atividades e a versão adaptada) e um lote; aprovados a versão e o lote.
       await expect(numeroDoPainel(coordenacao, 'Gerado por IA')).toContainText('4', { timeout: PRAZO_DA_ENTRADA_MS })
@@ -576,7 +577,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     })
 
     await test.step('a coordenação suspende a Adaptação, o servidor recusa, e ela retoma, com tudo na auditoria', async () => {
-      await irPelaNavegacao(coordenacao, 'Agentes', false)
+      await irPelaNavegacao(coordenacao, 'Agentes', hasTouch)
       for (const agente of ['Assistente de ensino', 'Tutor', 'Analista de desempenho escolar']) {
         await expect(principal(coordenacao).getByRole('heading', { level: 2, name: agente })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       }
@@ -602,7 +603,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     })
 
     await test.step('o Analista gera o resumo com número, graças às duas professoras de Química, e o nominal pede finalidade e fica na auditoria', async () => {
-      await irPelaNavegacao(coordenacao, 'Analista', false)
+      await irPelaNavegacao(coordenacao, 'Analista', hasTouch)
       await expect(principal(coordenacao)).toContainText('Nenhum resumo gerado ainda', { timeout: PRAZO_DA_ENTRADA_MS })
       await principal(coordenacao).getByRole('button', { name: 'Gerar resumo' }).click()
       const resumo = principal(coordenacao).locator('[data-resumo-do-analista]')
