@@ -170,7 +170,8 @@ export function descricaoDaFerramenta(ferramenta: Ferramenta, opcoes: OpcoesDaDe
     opcoes: TIPOS_DE_ADAPTACAO.map((tipo) => ({ valor: tipo, rotulo: ROTULOS_DA_ADAPTACAO[tipo] })),
     minimo: 1,
   }
-  const tempoExtra: CampoDeSelecao = { tipo: 'selecao', chave: 'tempoExtra', rotulo: 'Tempo extra', dica: 'Só com "Tempo adicional" marcado. Sem escolher, a escola decide o tempo.', opcoes: TEMPOS_EXTRAS }
+  // Só existe com "Tempo adicional" marcado (campo condicional do motor): sem o tipo, o campo some e o valor não sai.
+  const tempoExtra: CampoDeSelecao = { tipo: 'selecao', chave: 'tempoExtra', rotulo: 'Tempo extra', dica: 'Sem escolher, a escola decide o tempo.', opcoes: TEMPOS_EXTRAS, quando: { campo: 'tipos', contem: 'tempo_adicional' } }
   return { ferramenta, nome: NOME_DA_FERRAMENTA.adaptacao, verbo: 'Gerar versão adaptada', campos: [origem, tipos, tempoExtra] }
 }
 

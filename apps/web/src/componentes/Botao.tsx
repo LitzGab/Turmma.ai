@@ -1,9 +1,11 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, Ref } from 'react'
 import { classesDoBotao, type TamanhoDeBotao, type VarianteDeBotao } from './botao-secundario'
 
 type PropsDeBotao = ButtonHTMLAttributes<HTMLButtonElement> & {
   /** O tamanho do alvo: 44 px (`principal`) ou 36 px (`compacto`, controle de barra e de linha no computador). */
   tamanho?: TamanhoDeBotao
+  /** O botão em si, para quem precisa devolver o foco a ele (o "Renomear" depois de fechar o campo, por exemplo). */
+  ref?: Ref<HTMLButtonElement>
 } & (
     | { variante?: Exclude<VarianteDeBotao, 'perigo'>; cheio?: never }
     /** `cheio` é o `perigo` em `erro` com texto branco: só o botão que confirma, dentro do diálogo de confirmação. */

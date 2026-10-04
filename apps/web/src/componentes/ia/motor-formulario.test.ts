@@ -1,6 +1,6 @@
 import { ROTULOS_DA_ADAPTACAO, TIPOS_DE_ADAPTACAO } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
-import { problemaDaDescricao, resumoDoPedido, validarFormulario, valoresPadrao, type CampoDoMotor, type DescricaoDeFerramenta } from './motor-formulario'
+import { campoVisivel, problemaDaDescricao, resumoDoPedido, validarFormulario, valoresPadrao, type CampoDoMotor, type DescricaoDeFerramenta } from './motor-formulario'
 
 const TURMAS = [
   { valor: 'turma-2b', rotulo: '2ºB' },
@@ -133,6 +133,52 @@ describe('validação do formulário', () => {
   it('valor de chave que a descrição não tem não sai no pedido', () => {
     const resultado = validarFormulario(ADAPTACAO.campos, { tipos: ['fonte_ampliada'], tempoExtraPercentual: '', observacao: 'o aluno tem dislexia' })
     expect(resultado).toEqual({ ok: true, valores: { tipos: ['fonte_ampliada'] } })
+  })
+})
+
+describe('campo condicional', () => {
+  const tipos = { tipo: 'multipla', chave: 'tipos', rotulo: 'Tipo de adaptação', minimo: 1, opcoes: TIPOS_DE_ADAPTACAO.map((valor) => ({ valor, rotulo: ROTULOS_DA_ADAPTACAO[valor] })) } as const
+  const tempo = { tipo: 'numero', chave: 'tempoExtraPercentual', rotulo: 'Tempo adicional (%)', minimo: 10, maximo: 100, obrigatorio: true, quando: { campo: 'tipos', contem: 'tempo_adicional' } } as const
+  const comCondicao = { ferramenta: 'adaptacao', nome: 'Adaptação', verbo: 'Gerar versão adaptada', campos: [tipos, tempo] } satisfies DescricaoDeFerramenta
+
+  it('o campo só aparece com a opção marcada no campo de múltipla escolha', () => {
+    expect(campoVisivel(tempo, { tipos: ['fonte_ampliada'], tempoExtraPercentual: '' })).toBe(false)
+    expect(campoVisivel(tempo, { tipos: ['fonte_ampliada', 'tempo_adicional'], tempoExtraPercentual: '' })).toBe(true)
+    expect(campoVisivel(tempo, {})).toBe(false)
+    // Sem condição, sempre.
+    expect(campoVisivel(tipos, {})).toBe(true)
+  })
+
+  it('escondido, o campo obrigatório não é cobrado e o valor que ficou de antes não sai no pedido', () => {
+    expect(validarFormulario(comCondicao.campos, { tipos: ['fonte_ampliada'], tempoExtraPercentual: '25' })).toEqual({ ok: true, valores: { tipos: ['fonte_ampliada'] } })
+  })
+
+  it('à vista, o campo é cobrado e sai no pedido como qualquer outro', () => {
+    expect(validarFormulario(comCondicao.campos, { tipos: ['tempo_adicional'], tempoExtraPercentual: '' })).toEqual({
+      ok: false,
+      pendencias: [{ chave: 'tempoExtraPercentual', rotulo: 'Tempo adicional (%)', mensagem: 'Preencha "Tempo adicional (%)".' }],
+    })
+    expect(validarFormulario(comCondicao.campos, { tipos: ['tempo_adicional'], tempoExtraPercentual: '25' })).toEqual({ ok: true, valores: { tipos: ['tempo_adicional'], tempoExtraPercentual: 25 } })
+  })
+
+  it('a condição só aponta para uma opção de um campo de múltipla escolha: a descrição com outra coisa é recusada', () => {
+    expect(problemaDaDescricao(comCondicao)).toBeUndefined()
+    const semOpcao = { ...tempo, quando: { campo: 'tipos', contem: 'laudo' } }
+    const semCampo = { ...tempo, quando: { campo: 'nao-existe', contem: 'tempo_adicional' } }
+    const deSelecao: CampoDoMotor = { tipo: 'selecao', chave: 'turmaId', rotulo: 'Turma', opcoes: TURMAS }
+    const sobreSelecao = { ...tempo, quando: { campo: 'turmaId', contem: 'turma-2b' } }
+    const sobreSiMesmo: CampoDoMotor = { ...tipos, quando: { campo: 'tipos', contem: 'tempo_adicional' } }
+    expect(problemaDaDescricao({ ferramenta: 'adaptacao', campos: [tipos, semOpcao] })).toMatch(/não aponta para uma opção/)
+    expect(problemaDaDescricao({ ferramenta: 'adaptacao', campos: [tipos, semCampo] })).toMatch(/não aponta para uma opção/)
+    expect(problemaDaDescricao({ ferramenta: 'adaptacao', campos: [deSelecao, sobreSelecao] })).toMatch(/não aponta para uma opção/)
+    expect(problemaDaDescricao({ ferramenta: 'adaptacao', campos: [sobreSiMesmo] })).toMatch(/não aponta para uma opção/)
+  })
+
+  it('a condição não abre brecha para texto na Adaptação: o campo condicional de texto continua recusado', () => {
+    const texto = { tipo: 'texto', chave: 'observacao', rotulo: 'Sobre o aluno', quando: { campo: 'tipos', contem: 'tempo_adicional' } } as const
+    // @ts-expect-error com ou sem condição, a Adaptação não tem campo de texto
+    const descricao: DescricaoDeFerramenta = { ferramenta: 'adaptacao', nome: 'Adaptação', verbo: 'Gerar versão adaptada', campos: [tipos, texto] }
+    expect(problemaDaDescricao(descricao)).toMatch(/Adaptação não tem campo de texto/)
   })
 })
 

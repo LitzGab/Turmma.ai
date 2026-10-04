@@ -327,7 +327,7 @@ export default function Galeria() {
 
   return (
     <main className="min-h-screen bg-fundo text-tinta">
-      <Tela titulo="Galeria de peças" objeto descricao="As peças do MVP de apresentação, com dado inventado. Não é uma tela do produto." largura="formulario">
+      <Tela comMargem titulo="Galeria de peças" objeto descricao="As peças do MVP de apresentação, com dado inventado. Não é uma tela do produto." largura="formulario">
         <Secao nome="botoes" titulo="Botões">
           {TAMANHOS_DE_BOTAO.filter((tamanho) => tamanho !== 'icone').map((tamanho) => (
             <div key={tamanho} data-tamanho={tamanho} className="flex min-w-0 flex-wrap items-center gap-3">
