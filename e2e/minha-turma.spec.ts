@@ -1,6 +1,6 @@
 import type { Page, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
-import { abrirNavegacao, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarAtividades } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula, type AlunoDeTeste } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -13,7 +13,7 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, violacoesGraves } from '.
 const ROTA_MINHA_TURMA = '**/v1/minha-turma'
 const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. Fale com o seu professor ou com a coordenação.'
 
-/** O aluno entra pelo endereço da escola, com matrícula e senha, e chega à página inicial. */
+/** O aluno entra pelo endereço da escola, com matrícula e senha, e chega a "Atividades", onde ele abre. */
 async function entrarComoAluno(page: Page, aluno: AlunoDeTeste, hasTouch: boolean): Promise<void> {
   await page.goto(`/e/${aluno.slug}`)
   await page.getByLabel('Matrícula').fill(aluno.matricula)
@@ -21,7 +21,7 @@ async function entrarComoAluno(page: Page, aluno: AlunoDeTeste, hasTouch: boolea
   const entrar = page.getByRole('button', { name: /^Entrar$/ })
   if (hasTouch) await entrar.tap()
   else await entrar.click()
-  await expect(page.getByRole('heading', { name: `Olá, ${aluno.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  await esperarAtividades(page, aluno.nome)
 }
 
 /** Uma porta que segura a resposta até o teste abrir. */
@@ -133,7 +133,7 @@ test.describe('recomeço da "Minha turma"', () => {
     const entrar = page.getByRole('button', { name: /^Entrar$/ })
     if (hasTouch) await entrar.tap()
     else await entrar.click()
-    await expect(page.getByRole('heading', { name: `Olá, ${segundo.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarAtividades(page, segundo.nome)
     await irPelaNavegacao(page, 'Minha turma', hasTouch)
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Carregando a sua turma…', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('body')).not.toContainText(turmaDoPrimeiro.turmaNome)

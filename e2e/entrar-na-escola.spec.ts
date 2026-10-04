@@ -1,6 +1,7 @@
 import type { Page, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO, mensagemDaEntradaPorMatricula, mensagemDaFalhaExterna, mensagemDoAcessoDaEscola } from '../packages/shared/src/erros/mensagens.ts'
 import { criarAlunoComMatricula, criarEscolaSintetica, liberarProvedorDaEscola, ligarContaExterna, type AlunoDeTeste } from './__fixtures__/sessao.ts'
+import { esperarAtividades } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -37,10 +38,9 @@ async function esperarAlvoDeToque(page: Page, nome: string | RegExp, papel: 'but
   expect(caixa?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
 }
 
-/** A área autenticada com o nome do aluno: é o que prova que a sessão vale de verdade. */
+/** A área autenticada, em "Atividades", onde o aluno abre, com o nome dele e o da escola na lateral: é o que prova que a sessão vale de verdade. */
 async function esperarAreaAutenticada(page: Page, aluno: AlunoDeTeste): Promise<void> {
-  await expect(page.getByRole('heading', { name: `Olá, ${aluno.nome}` })).toBeVisible({ timeout: PRAZO_DO_LOGIN_EXTERNO_MS })
-  await expect(page.getByRole('main')).toContainText(aluno.escolaNome)
+  await esperarAtividades(page, aluno.nome, { timeout: PRAZO_DO_LOGIN_EXTERNO_MS, escolaNome: aluno.escolaNome })
 }
 
 async function entrar(page: Page, matricula: string, senha: string, hasTouch: boolean): Promise<void> {
@@ -83,7 +83,9 @@ test.describe('entrada do aluno pelo endereço da escola', () => {
     await page.keyboard.press('Enter')
 
     await esperarAreaAutenticada(page, aluno)
-    expect(new URL(page.url()).pathname).toBe('/')
+    // O aluno sai do endereço da escola e abre em "Atividades" (A3): o endereço é só o da tela, sem nada do login.
+    expect(new URL(page.url()).pathname).toBe('/aluno/atividades')
+    expect(new URL(page.url()).search).toBe('')
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
   })

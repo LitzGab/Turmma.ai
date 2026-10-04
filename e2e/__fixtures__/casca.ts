@@ -149,3 +149,31 @@ export async function entrarComoCoordenacaoNaMesmaAba(page: Page, coordenadora: 
   await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
   await expect(page).toHaveURL(/\/coordenacao\/estrutura$/, { timeout: PRAZO_DA_ENTRADA_MS })
 }
+
+/** O título da aba na tela em que o aluno abre. */
+export const TITULO_DAS_ATIVIDADES = 'Atividades · Turmma'
+
+/**
+ * O aluno abre em "Atividades" (MVP, A3), e não mais na página "Início": o endereço, a tela e, na lateral, o nome de quem
+ * entrou e o papel. É o que prova que a sessão vale e de quem ela é, como a saudação "Olá, <nome>" provava antes.
+ *
+ * No celular a lateral é a gaveta, fechada: o nome está nela, fora da vista, e o teste o lê sem abri-la.
+ */
+export async function esperarAtividades(page: Page, nome: string, opcoes: { readonly timeout?: number; readonly escolaNome?: string } = {}): Promise<void> {
+  const timeout = opcoes.timeout ?? PRAZO_DA_ENTRADA_MS
+  await expect(page).toHaveURL(/\/aluno\/atividades$/, { timeout })
+  await expect(page.getByRole('main').getByRole('heading', { level: 1, name: 'Atividades' })).toBeAttached({ timeout })
+  const lateralDaCasca = naGaveta(page) ? page.locator('dialog[aria-label="Menu"]') : page.locator('body')
+  await expect(lateralDaCasca).toContainText(nome, { timeout })
+  await expect(lateralDaCasca).toContainText('aluno', { timeout })
+  if (opcoes.escolaNome !== undefined) await expect(lateralDaCasca).toContainText(opcoes.escolaNome, { timeout })
+}
+
+/** O aluno entra pelo endereço da escola, com matrícula e senha, e chega a "Atividades", onde ele abre. */
+export async function entrarComoAluno(page: Page, aluno: { readonly slug: string; readonly matricula: string; readonly senha: string; readonly nome: string }, hasTouch: boolean): Promise<void> {
+  await page.goto(`/e/${aluno.slug}`)
+  await page.getByLabel('Matrícula').fill(aluno.matricula)
+  await page.getByLabel('Senha').fill(aluno.senha)
+  await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
+  await esperarAtividades(page, aluno.nome)
+}

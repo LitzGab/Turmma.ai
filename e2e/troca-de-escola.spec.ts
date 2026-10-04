@@ -15,6 +15,7 @@ import {
   nomeNoSeletor,
   PRAZO_DA_ENTRADA_MS,
   esperarNovaConversa,
+  esperarAtividades,
 } from './__fixtures__/casca.ts'
 import { cacheDeConsultas, semAcessosDaConta } from './__fixtures__/consultas.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
@@ -281,7 +282,7 @@ test.describe('recomeço da tela do seletor', () => {
     await page.getByLabel('Matrícula').fill(aluno.matricula)
     await page.getByLabel('Senha').fill(aluno.senha)
     await acionar(page, /^Entrar$/, hasTouch)
-    await expect(page.getByRole('heading', { name: `Olá, ${aluno.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarAtividades(page, aluno.nome)
 
     await abrirNavegacao(page, hasTouch)
     await expect(botaoDoSeletor(page)).toHaveCount(0)
