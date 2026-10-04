@@ -15,14 +15,13 @@ import { Campo } from '../../componentes/Campo'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { AssinaturaIA } from '../../componentes/ia/AssinaturaIA'
 import { LinhaAprovacao } from '../../componentes/ia/LinhaAprovacao'
-import { CabecalhoDeSecao } from '../../componentes/Tela'
+import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import { ConteudoDoArtefato } from './ConteudoDoArtefato'
 import { aprovacaoDaEntrega, textoDaAdaptacao, VERBO_DA_ENTREGA } from './entregas'
 import { ExportarPdf } from './ExportarPdf'
 import { ferramentaDoCatalogo } from './ferramentas'
-import { Pagina } from './Pagina'
 import { nomesDasDisciplinas, nomesDasTurmas } from './turmas-da-professora'
 
 const TAMANHO_MAXIMO_DO_TITULO = 160
@@ -60,9 +59,9 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
   const temVersao = dados !== undefined && (dados.entrega !== null || dados.versoesAdaptadas.length > 0)
   const entregas = useQuery({ ...consultaEntregasDaTurma(dados?.turmaId ?? ''), enabled: temVersao })
   const [novoTitulo, definirNovoTitulo] = useState<string | undefined>(undefined)
-  const lugarDoRenomear = useRef<HTMLSpanElement>(null)
+  const botaoDeRenomear = useRef<HTMLButtonElement>(null)
   // O formulário some com o foco dentro dele: o foco volta ao botão que o abriu, que só religa no render seguinte.
-  const devolverOFoco = () => requestAnimationFrame(() => lugarDoRenomear.current?.querySelector('button')?.focus())
+  const devolverOFoco = () => requestAnimationFrame(() => botaoDeRenomear.current?.focus())
   const idDasVersoes = useId()
   const idDasAplicacoes = useId()
   useTituloDaTela(dados?.titulo ?? 'Artefato')
@@ -88,7 +87,7 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
   if (dados === undefined) {
     const naoEncontrado = artefato.error instanceof ErroDaApi && artefato.error.codigo === CodigoDeErro.NAO_ENCONTRADO
     return (
-      <Pagina titulo="Artefato" antes={voltar}>
+      <Tela titulo="Artefato" antes={voltar} largura="formulario">
         {artefato.isPending ? (
           <EstadoCarregando rotulo="Carregando o artefato…" />
         ) : naoEncontrado ? (
@@ -96,7 +95,7 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
         ) : (
           <EstadoErro erro={artefato.error} tentando={artefato.isFetching} aoTentarDeNovo={() => void artefato.refetch({ cancelRefetch: false })} />
         )}
-      </Pagina>
+      </Tela>
     )
   }
 
@@ -118,20 +117,18 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
   }
 
   return (
-    <Pagina
+    <Tela
+      largura="formulario"
       titulo={dados.titulo}
       objeto
       descricao={descricao}
       antes={voltar}
       acoes={
         <>
-          {/* O `Botao` não aceita `ref`: o foco volta ao "Renomear" pelo invólucro dele. */}
-          <span ref={lugarDoRenomear} className="inline-flex">
-            <Botao variante="discreto" tamanho="compacto" onClick={() => definirNovoTitulo(dados.titulo)} disabled={novoTitulo !== undefined}>
-              <Pencil aria-hidden="true" size={16} strokeWidth={1.75} className="shrink-0" />
-              Renomear
-            </Botao>
-          </span>
+          <Botao ref={botaoDeRenomear} variante="discreto" tamanho="compacto" onClick={() => definirNovoTitulo(dados.titulo)} disabled={novoTitulo !== undefined}>
+            <Pencil aria-hidden="true" size={16} strokeWidth={1.75} className="shrink-0" />
+            Renomear
+          </Botao>
           <ExportarPdf artefatoId={dados.id} titulo={dados.titulo} variante="secundario" />
           {podeAdaptar && (
             // Relativo à área, como os links: o `Route` aninhado em `/professor` resolve a partir da base dela.
@@ -224,6 +221,6 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
           </ul>
         </section>
       )}
-    </Pagina>
+    </Tela>
   )
 }

@@ -541,6 +541,46 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await expect(botao).toBeFocused()
   })
 
+  test('o menu que abre logo depois de uma rolagem fica aberto: o evento de rolagem que sobrou de antes do clique não o fecha', async ({ page }) => {
+    await abrirGaleria(page)
+    const bloco = secao(page, 'selecao-e-menu')
+    const botao = bloco.getByRole('button', { name: 'Ações da atividade' })
+    const menu = page.getByRole('menu', { name: 'Ações da atividade' })
+    await botao.scrollIntoViewIfNeeded()
+
+    // A página rola e o botão é acionado no mesmo instante, como o Playwright faz ao trazer o botão para a tela e como
+    // faz quem solta a rolagem e clica: o navegador entrega o evento de rolagem no quadro seguinte, com o menu já aberto.
+    // O botão não saiu do lugar depois da abertura, e o menu não tem por que fechar.
+    for (const repeticao of [1, 2, 3]) {
+      await botao.evaluate((elemento) => {
+        window.scrollBy(0, 40)
+        ;(elemento as HTMLElement).click()
+      })
+      // Dois quadros: o evento de rolagem pendente já foi entregue.
+      await page.evaluate(() => new Promise((resolver) => requestAnimationFrame(() => requestAnimationFrame(() => resolver(null)))))
+      await expect(menu, `abertura ${String(repeticao)}`).toBeVisible()
+      await expect(menu.getByRole('menuitem', { name: 'Exportar em PDF' })).toBeFocused()
+      await page.keyboard.press('Escape')
+      await expect(menu).toHaveCount(0)
+    }
+
+    // O controle: com o menu aberto, a rolagem que tira o botão do lugar continua fechando.
+    await botao.focus()
+    await page.keyboard.press('Enter')
+    await expect(menu).toBeVisible()
+    await page.evaluate(() => window.scrollBy(0, -60))
+    await expect(menu).toHaveCount(0)
+    await expect(botao).toBeFocused()
+  })
+
+  test('a Tela não põe margem dentro da casca; fora dela, com `comMargem`, põe a da página', async ({ page }) => {
+    await abrirGaleria(page)
+    // A galeria está fora da casca e pede a margem: 16 px no celular, 24 px a partir de 768 px, dos dois lados.
+    const tela = page.locator('[data-tela]').first()
+    const esperada = (page.viewportSize()?.width ?? 0) >= 768 ? '24px' : '16px'
+    expect(await tela.evaluate((elemento) => [getComputedStyle(elemento).paddingLeft, getComputedStyle(elemento).paddingRight])).toEqual([esperada, esperada])
+  })
+
   test('o diálogo de confirmação: o que vai acontecer e o aviso são lidos ao abrir, o foco não começa em confirmar e volta para onde dá', async ({ page, hasTouch }) => {
     await abrirGaleria(page)
     const bloco = secao(page, 'confirmacao')

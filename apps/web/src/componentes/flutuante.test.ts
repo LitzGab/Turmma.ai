@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estiloDoFlutuante, larguraDoFlutuante, posicaoDoFlutuante, type CaixaNaJanela } from './flutuante'
+import { botaoSaiuDoLugar, estiloDoFlutuante, larguraDoFlutuante, posicaoDoFlutuante, type CaixaNaJanela } from './flutuante'
 
 const CELULAR = { largura: 360, altura: 800 }
 const CHROMEBOOK = { largura: 1366, altura: 768 }
@@ -63,5 +63,19 @@ describe('posição do que flutua', () => {
     expect(estiloDoFlutuante({ lado: 'abaixo', esquerda: 24, distancia: 152, alturaMaxima: 292 })).toEqual({ left: 24, top: 152 })
     expect(estiloDoFlutuante({ lado: 'acima', esquerda: 16, distancia: 76, alturaMaxima: 292 })).toEqual({ left: 16, bottom: 76 })
     expect(estiloDoFlutuante(undefined)).toEqual({ left: 0, top: 0, visibility: 'hidden' })
+  })
+})
+
+describe('fechar ao rolar', () => {
+  it('o evento de rolagem que chega com o botão no mesmo lugar não fecha: é o que sobrou de uma rolagem anterior à abertura', () => {
+    expect(botaoSaiuDoLugar({ esquerda: 24, topo: 300 }, { esquerda: 24, topo: 300 })).toBe(false)
+    // Meio pixel de arredondamento não é o botão saindo do lugar.
+    expect(botaoSaiuDoLugar({ esquerda: 24, topo: 300 }, { esquerda: 24.4, topo: 299.5 })).toBe(false)
+  })
+
+  it('o botão que andou com a rolagem, para cima, para baixo ou para o lado, fecha', () => {
+    expect(botaoSaiuDoLugar({ esquerda: 24, topo: 300 }, { esquerda: 24, topo: 180 })).toBe(true)
+    expect(botaoSaiuDoLugar({ esquerda: 24, topo: 300 }, { esquerda: 24, topo: 302 })).toBe(true)
+    expect(botaoSaiuDoLugar({ esquerda: 24, topo: 300 }, { esquerda: -40, topo: 300 })).toBe(true)
   })
 })

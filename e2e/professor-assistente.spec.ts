@@ -425,15 +425,20 @@ test.describe('Ferramentas (D74) e o formulário', () => {
     // Sem atividade e sem tipo, nada sai, e cada campo diz o que falta.
     await acionar(formulario.getByRole('button', { name: 'Gerar versão adaptada' }), hasTouch)
     await expect(formulario.getByRole('alert')).toContainText('Para gerar, confira: Atividade de origem, Tipo de adaptação.')
-    // Tempo extra sem "Tempo adicional" não sai, e a tela diz o que fazer.
+    // O tempo extra só existe com "Tempo adicional" marcado: sem o tipo, o campo nem aparece, e não há o que recusar
+    // depois de enviar. Marcado o tipo, o campo aparece; desmarcado, some de novo.
     await formulario.getByLabel('Atividade de origem').selectOption(origem.id)
     await formulario.getByRole('checkbox', { name: 'Fonte ampliada' }).check()
+    await expect(formulario.getByLabel('Tempo extra')).toHaveCount(0)
+    await formulario.getByRole('checkbox', { name: 'Tempo adicional' }).check()
     await formulario.getByLabel('Tempo extra').selectOption('50')
-    await acionar(formulario.getByRole('button', { name: 'Gerar versão adaptada' }), hasTouch)
-    await expect(formulario.getByRole('alert')).toContainText('O tempo extra só vale com "Tempo adicional" marcado.')
+    await formulario.getByRole('checkbox', { name: 'Tempo adicional' }).uncheck()
+    await expect(formulario.getByLabel('Tempo extra')).toHaveCount(0)
     expect(api.pedidosEm(/adaptar$/)).toHaveLength(0)
 
+    // De volta com o tipo marcado, o campo volta com o que estava escolhido.
     await formulario.getByRole('checkbox', { name: 'Tempo adicional' }).check()
+    await expect(formulario.getByLabel('Tempo extra')).toHaveValue('50')
     await acionar(formulario.getByRole('button', { name: 'Gerar versão adaptada' }), hasTouch)
     await expect.poll(() => api.pedidosEm(/adaptar$/).length).toBe(1)
     const adaptar = api.pedidosEm(/adaptar$/)[0]

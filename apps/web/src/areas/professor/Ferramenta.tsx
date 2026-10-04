@@ -3,11 +3,11 @@ import { useLayoutEffect } from 'react'
 import { Link, useSearch } from 'wouter'
 import { PARAMETRO_DA_ORIGEM, ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { ConteudoNaoEncontrado } from '../../componentes/NaoEncontrada'
+import { Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
 import { CartaoDeFerramenta } from './CartaoDeFerramenta'
 import { ehFerramenta, ferramentaDoCatalogo } from './ferramentas'
 import { esquecerGeracaoTerminada } from './memoria-do-professor'
-import { Pagina } from './Pagina'
 
 /** Um id de artefato tem a forma de UUID: o que vier diferente no endereço não vira escolha no formulário. */
 const FORMA_DE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -22,7 +22,8 @@ function Formulario({ ferramenta }: { ferramenta: Parameters<typeof ferramentaDo
   const origem = new URLSearchParams(useSearch()).get(PARAMETRO_DA_ORIGEM)
   const iniciais = ferramenta === 'adaptacao' && origem !== null && FORMA_DE_ID.test(origem) ? { origem } : undefined
   return (
-    <Pagina
+    <Tela
+      largura="formulario"
       titulo={item.nome}
       objeto
       descricao={item.descricao}
@@ -38,7 +39,7 @@ function Formulario({ ferramenta }: { ferramenta: Parameters<typeof ferramentaDo
         {/* O título da ferramenta já é o `h1` da tela: o do formulário vem um nível abaixo. */}
         <CartaoDeFerramenta ferramenta={ferramenta} nivel={2} {...(iniciais === undefined ? {} : { iniciais })} />
       </div>
-    </Pagina>
+    </Tela>
   )
 }
 

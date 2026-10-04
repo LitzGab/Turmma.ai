@@ -10,12 +10,11 @@ import { caminhoDaFerramentaDoProfessor, caminhoDoArtefatoDoProfessor } from '..
 import { Botao } from '../../componentes/Botao'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { Estado } from '../../componentes/SeloDeEstado'
-import { CabecalhoDeSecao } from '../../componentes/Tela'
+import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import { textoDaAdaptacao } from './entregas'
 import { catalogoPorCategoria } from './ferramentas'
-import { Pagina } from './Pagina'
 import { nomesDasTurmas } from './turmas-da-professora'
 
 /** O que a linha de um artefato diz do estado da versão adaptada. O detalhe (quem e quando) está no artefato aberto. */
@@ -41,7 +40,7 @@ export default function Ferramentas() {
   const gerados = artefatos.data?.pages.flatMap((pagina) => pagina.itens) ?? []
 
   return (
-    <Pagina titulo="Ferramentas">
+    <Tela titulo="Ferramentas" largura="formulario">
       <section aria-labelledby={idDoCatalogo} className="flex min-w-0 flex-col gap-4">
         <h2 id={idDoCatalogo} className="sr-only">
           Catálogo
@@ -112,6 +111,6 @@ export default function Ferramentas() {
           </Botao>
         )}
       </section>
-    </Pagina>
+    </Tela>
   )
 }

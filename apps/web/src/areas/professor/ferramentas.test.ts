@@ -109,9 +109,15 @@ describe('o pedido que sai do formulário', () => {
       expect(esquemaPedidoAdaptarArtefato.safeParse({ tipos: ['tempo_adicional'], tempoExtraPercentual: Number(tempo.valor), chaveEnvio: CHAVE }).success).toBe(true)
   })
 
-  it('tempo extra sem "Tempo adicional" marcado não sai, e a tela diz o que fazer', () => {
+  it('tempo extra sem "Tempo adicional" marcado não sai: o campo some do formulário, e o valor que ficou de antes não vai no pedido', () => {
+    // O campo é condicional: sem o tipo marcado, o formulário nem o valida, e o pedido sai só com os tipos.
     const montado = montarPedido('adaptacao', validados('adaptacao', { origem: ATIVIDADE, tipos: ['fonte_ampliada'], tempoExtra: '25' }))
-    expect(montado).toEqual({ ok: false, problema: 'O tempo extra só vale com "Tempo adicional" marcado. Marque esse tipo, ou deixe o tempo extra sem escolha.' })
+    expect(montado).toEqual({ ok: true, pedido: { ferramenta: 'adaptacao', artefatoId: ATIVIDADE, tipos: ['fonte_ampliada'] } })
+    // E quem monta o pedido continua recusando o tempo extra sem o tipo, se os valores chegarem por outro caminho.
+    expect(montarPedido('adaptacao', { origem: ATIVIDADE, tipos: ['fonte_ampliada'], tempoExtra: '25' })).toEqual({
+      ok: false,
+      problema: 'O tempo extra só vale com "Tempo adicional" marcado. Marque esse tipo, ou deixe o tempo extra sem escolha.',
+    })
   })
 
   it('tipo fora da lista fechada não vira pedido', () => {

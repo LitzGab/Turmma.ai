@@ -18,6 +18,7 @@ import { AssinaturaIA } from '../../componentes/ia/AssinaturaIA'
 import { Conversa, MensagemIA } from '../../componentes/ia/Mensagem'
 import { Estado } from '../../componentes/SeloDeEstado'
 import { problemaDoTexto } from '../../componentes/texto-longo'
+import { Tela } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import {
@@ -35,7 +36,6 @@ import {
   VERBO_DA_ENTREGA,
   type FiltroDoTime,
 } from './entregas'
-import { Pagina } from './Pagina'
 import { nomesDasTurmas, turmasDaProfessora } from './turmas-da-professora'
 
 /** De quanto em quanto a conversa do Assistente relê as entregas, com a aba à vista: não há WebSocket nesta fatia. */
@@ -143,7 +143,7 @@ export default function Time() {
   const focoDeReserva = aberta === undefined ? undefined : () => document.getElementById(idDoCartao(aberta.entrega.id))?.focus()
 
   return (
-    <Pagina titulo="Seu time: Assistente de ensino" largura="conversa">
+    <Tela titulo="Seu time: Assistente de ensino" largura="conversa">
       <header className="flex min-w-0 flex-col gap-2">
         <AssinaturaIA agente="assistente_de_ensino" tamanho={32} />
         <details className="group min-w-0 rounded-cartao border border-linha bg-superficie">
@@ -359,6 +359,6 @@ export default function Time() {
           />
         </DialogoDeConfirmacao>
       )}
-    </Pagina>
+    </Tela>
   )
 }

@@ -18,6 +18,7 @@ import { AvisoFila } from '../../componentes/ia/AvisoFila'
 import { Escolha, type OpcaoDeEscolha } from '../../componentes/ia/Escolha'
 import { Conversa as ListaDeMensagens, MensagemIA, MensagemPessoa, Pensando } from '../../componentes/ia/Mensagem'
 import { TextoDaIA } from '../../componentes/ia/TextoDaIA'
+import { Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
 import { AvisoDeSuspensao, FalhaDoPedido } from './avisos'
 import { CaixaDoAssistente } from './CaixaDoAssistente'
@@ -25,7 +26,6 @@ import { CartaoDeFerramenta } from './CartaoDeFerramenta'
 import { mensagensNaTela, pendenteNaConversa, propostaQuePergunta } from './conversa'
 import { ferramentaDoCatalogo } from './ferramentas'
 import { abrirCartaoNaConversa, CARTAO_DA_CONVERSA, CICLO_DA_CONVERSA, CICLO_DA_FERRAMENTA, CONTEXTO_ESCOLHIDO, enviarPedidoDaConversa, ESCOLHAS_DAS_PROPOSTAS, type EscolhaDaProposta } from './memoria-do-professor'
-import { Pagina } from './Pagina'
 import { turmaEscolhida, turmasDaProfessora, valorDoContexto } from './turmas-da-professora'
 
 /** As duas respostas à pergunta da D18, **do mesmo peso**: nenhuma é a "certa" (D59), e a peça `Escolha` as desenha iguais. */
@@ -99,7 +99,7 @@ export default function Conversa() {
   const semNada = conversa.data !== undefined && mensagens.length === 0 && pendente === undefined && cartao === undefined
 
   return (
-    <Pagina titulo="Conversa com o Assistente de ensino" largura="conversa">
+    <Tela titulo="Conversa com o Assistente de ensino" largura="conversa">
       {conversa.isPending && <EstadoCarregando rotulo="Carregando a conversa…" />}
       {conversa.isError && conversa.data === undefined && <EstadoErro erro={conversa.error} tentando={conversa.isFetching} aoTentarDeNovo={() => void conversa.refetch({ cancelRefetch: false })} />}
       {semNada && <EstadoVazio titulo="Nenhuma conversa ainda" descricao="Escreva um pedido na caixa abaixo: uma atividade, um plano de aula, uma dúvida sobre o material da turma. O Assistente responde com a página de onde tirou." />}
@@ -169,6 +169,6 @@ export default function Conversa() {
           </div>
         </BarraPresa>
       )}
-    </Pagina>
+    </Tela>
   )
 }

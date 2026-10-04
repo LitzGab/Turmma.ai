@@ -14,12 +14,12 @@ import { consultaMeusVinculos } from '../../api/vinculos'
 import { ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { Botao } from '../../componentes/Botao'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
+import { Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
 import { AvisoDeSuspensao } from './avisos'
 import { CaixaDoAssistente } from './CaixaDoAssistente'
 import { esperandoVoce } from './entregas'
 import { CICLO_DA_CONVERSA, CONTEXTO_ESCOLHIDO, enviarPedidoDaConversa } from './memoria-do-professor'
-import { Pagina } from './Pagina'
 import { saudacao } from './saudacao'
 import { nomesDasTurmas, turmaEscolhida, turmasDaProfessora } from './turmas-da-professora'
 
@@ -60,7 +60,7 @@ export default function Home() {
   const esperando = esperandoVoce(pendentes.data?.itens ?? [], nomesDasTurmas(itensDosVinculos))
 
   return (
-    <Pagina titulo="Nova conversa" largura="conversa">
+    <Tela titulo="Nova conversa" largura="conversa">
       <div className="flex min-w-0 flex-col gap-6 pt-4 md:pt-10">
         <div className="min-w-0 text-center">
           <p className="text-[28px] leading-tight break-words text-tinta">{saudacao(eu.data?.nome, agora)}</p>
@@ -143,6 +143,6 @@ export default function Home() {
           </section>
         )}
       </div>
-    </Pagina>
+    </Tela>
   )
 }
