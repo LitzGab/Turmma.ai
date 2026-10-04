@@ -101,10 +101,10 @@ describe('gerar_atividade_objetiva, versão determinística', () => {
     expect(gerarAtividadeObjetiva.conferir?.(entrada, atividade)).toEqual([])
   })
 
-  it('material sem frase aproveitável não vira atividade inventada: falha com saída inválida', async () => {
+  it('material sem frase aproveitável não vira atividade inventada: falha com material insuficiente', async () => {
     const { ia } = provedorCom(new AdaptadorFalso())
     const entrada = { ...entradaDeAtividade(), trechos: [{ materialId: MATERIAL_DE_ESTEQUIOMETRIA, pagina: 1, texto: 'Sumário. Capítulo 7.' }] }
-    expect((await erroDe(ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada, escolaId: ESCOLA_A }))).codigoDeIa).toBe('IA_SAIDA_INVALIDA')
+    expect((await erroDe(ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada, escolaId: ESCOLA_A }))).codigoDeIa).toBe('MATERIAL_INSUFICIENTE')
   })
 })
 

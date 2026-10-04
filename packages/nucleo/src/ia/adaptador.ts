@@ -1,5 +1,5 @@
 import type { Perfil } from './perfis.js'
-import type { TarefaDeIa } from './tarefa.js'
+import type { DefinicaoDeTarefa } from './tarefa.js'
 
 /** O que voltou errado na tentativa anterior, para o modelo corrigir. Só existe na repetição. */
 export interface CorrecaoPedida {
@@ -8,7 +8,7 @@ export interface CorrecaoPedida {
 }
 
 export interface ChamadaAoModelo<Entrada, Saida> {
-  readonly tarefa: TarefaDeIa<Entrada, Saida>
+  readonly tarefa: DefinicaoDeTarefa<Entrada, Saida>
   /** Já validada pelo schema de entrada. */
   readonly entrada: Entrada
   readonly sinal: AbortSignal

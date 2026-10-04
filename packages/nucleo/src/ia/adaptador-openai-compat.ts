@@ -7,7 +7,7 @@ import { ErroDeIa } from './erros.js'
 import { limparSaidaDoModelo } from './limpar-saida.js'
 import type { Perfil } from './perfis.js'
 import { ABRE_DADO, FECHA_DADO, pedidoDeCorrecao, REGRAS_COMUNS } from './prompts/comum.js'
-import type { Dado, TarefaDeIa } from './tarefa.js'
+import type { Dado, DefinicaoDeTarefa } from './tarefa.js'
 
 export interface MensagemDoChat {
   readonly role: 'system' | 'user' | 'assistant'
@@ -33,7 +33,7 @@ export function renderizarDado(dado: Dado): string {
 const esquemasEmJson = new WeakMap<object, string>()
 
 /** O JSON Schema da saída, tirado do mesmo zod que valida: o que se pede ao modelo e o que se confere não divergem. */
-function esquemaDaSaidaEmJson(tarefa: TarefaDeIa<never, unknown>): string {
+function esquemaDaSaidaEmJson(tarefa: DefinicaoDeTarefa<never, unknown>): string {
   const guardado = esquemasEmJson.get(tarefa)
   if (guardado !== undefined) return guardado
   const esquema = JSON.stringify(z.toJSONSchema(tarefa.esquemaDeSaida))
@@ -48,7 +48,7 @@ export function montarMensagens<Entrada, Saida>(chamada: Pick<ChamadaAoModelo<En
   const { tarefa, entrada, correcao } = chamada
   const pedido = tarefa.montarPedido(entrada)
   const mensagens: MensagemDoChat[] = [
-    { role: 'system', content: [tarefa.prompt.sistema, REGRAS_COMUNS, `JSON Schema da resposta:\n${esquemaDaSaidaEmJson(tarefa as TarefaDeIa<never, unknown>)}`].join('\n\n') },
+    { role: 'system', content: [tarefa.prompt.sistema, REGRAS_COMUNS, `JSON Schema da resposta:\n${esquemaDaSaidaEmJson(tarefa as DefinicaoDeTarefa<never, unknown>)}`].join('\n\n') },
     { role: 'user', content: [pedido.instrucao, ...pedido.dados.map(renderizarDado)].join('\n\n') },
   ]
   if (correcao !== undefined) {

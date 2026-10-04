@@ -17,7 +17,7 @@ const { saida, medicao } = await ia.gerar({
 // falha: sempre ErroDeIa (codigoDeIa: IA_INDISPONIVEL | IA_TEMPO_ESGOTADO | IA_SAIDA_INVALIDA | …)
 ```
 
-- **Tarefas** (`tarefas/`, catálogo em `TAREFAS_DE_IA`): `propor_ferramenta`, `gerar_atividade_objetiva`,
+- **Tarefas** (`tarefas/`, catálogo em `CATALOGO_DE_TAREFAS`; os nomes são os de `TAREFAS_DE_IA`, em `@educa/shared`): `propor_ferramenta`, `gerar_atividade_objetiva`,
   `gerar_plano_de_aula`, `adaptar_atividade`, `turno_do_tutor`, `relatorio_da_correcao`, `resumo_do_analista`.
   A entrada é estrita: não existe chave para nome de aluno ou de professor. No Tutor, `alunoId` vai no pedido.
 - **Toda chamada** confere `SuspensaoDeFuncao` (função suspensa pela escola recusa com `IA_FUNCAO_SUSPENSA`), consulta

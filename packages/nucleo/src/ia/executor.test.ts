@@ -1,5 +1,6 @@
 import { setTimeout as esperar } from 'node:timers/promises'
 import { describe, expect, it, vi } from 'vitest'
+import { contextoAtual, executarNoContexto } from '../contexto/contexto.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
 import { ESCOLA_A, ESCOLA_B } from './__fixtures__/entradas.js'
 import { ErroDeIa } from './erros.js'
@@ -157,6 +158,26 @@ describe('ExecutorNoProcesso: vagas por escola e no total (regra 80, item 3)', (
     await executor.ociosa()
     expect(maximoJuntas).toBe(3)
     expect(maximoPorEscola).toBe(2)
+  })
+})
+
+describe('ExecutorNoProcesso: cada execução roda no contexto da escola dela', () => {
+  it('a execução de B, despachada quando a de A termina dentro da requisição de A, não herda a escola nem o usuário de A', async () => {
+    const { executor, pendente } = montar({ vagasNoTotal: 1 })
+    const [deA, deB] = [pendente(ESCOLA_A), pendente(ESCOLA_B)]
+    const vistos: (ReturnType<typeof contextoAtual> | undefined)[] = []
+    const requisicaoDeA = { requisicaoId: 'requisicao-de-a', escolaId: ESCOLA_A, usuarioId: 'usuario-de-a' }
+    // As duas são agendadas de dentro da requisição de A; com uma vaga só, a de B começa no fim da de A.
+    executarNoContexto(requisicaoDeA, () => {
+      executor.agendar(deA, async () => void vistos.push(contextoAtual()))
+      executor.agendar(deB, async () => void vistos.push(contextoAtual()))
+    })
+    await executor.ociosa()
+    expect(vistos.map((contexto) => contexto?.escolaId)).toEqual([ESCOLA_A, ESCOLA_B])
+    for (const contexto of vistos) {
+      expect(contexto?.usuarioId).toBeUndefined()
+      expect(contexto?.requisicaoId).not.toBe('requisicao-de-a')
+    }
   })
 })
 

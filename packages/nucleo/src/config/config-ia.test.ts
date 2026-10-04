@@ -104,6 +104,41 @@ describe('lerConfiguracaoDeIa', () => {
     expect(erro.motivos).toEqual([MOTIVO_PROCESSAMENTO_LOCAL_EM_ENDERECO_DE_FORA])
   })
 
+  it.each([
+    'http://127.0.0.1:8080/v1',
+    'http://localhost:8080/v1',
+    'http://host.docker.internal:8080/v1',
+    'http://llama:8080/v1',
+    'http://10.1.2.3/v1',
+    'http://172.16.0.9/v1',
+    'http://172.31.255.1/v1',
+    'http://192.168.0.20:8080/v1',
+    'http://[::1]:8080/v1',
+    'http://[fd12:3456:789a::1]/v1',
+    'http://[fe80::1]/v1',
+  ])('processamento local vale para %s', (endereco) => {
+    expect(lerConfiguracaoDeIa({ ...LLAMA, LLM_BASE_URL: endereco, LLM_PROCESSAMENTO_LOCAL: 'true' }).modelo?.processamentoLocal).toBe(true)
+  })
+
+  it.each([
+    // IPv6 público não tem ponto, e nome com ponto pode começar como faixa privada: nenhum dos dois é rede nossa.
+    'http://[2606:4700:4700::1111]/v1',
+    'https://10.provedor.com/v1',
+    'https://192.168.provedor.com/v1',
+    'http://172.15.0.1/v1',
+    'http://172.32.0.1/v1',
+    'http://8.8.8.8/v1',
+    'http://[2001:db8::1]/v1',
+    'https://api.provedor.example/v1',
+    'https://localhost.provedor.com/v1',
+  ])('processamento local declarado com %s não sobe: a chamada ficaria gravada como se não saísse daqui', (endereco) => {
+    const erro = erroDe({ ...LLAMA, LLM_BASE_URL: endereco, LLM_PROCESSAMENTO_LOCAL: 'true' })
+    expect(erro.variaveis).toEqual(['LLM_PROCESSAMENTO_LOCAL'])
+    expect(erro.motivos).toEqual([MOTIVO_PROCESSAMENTO_LOCAL_EM_ENDERECO_DE_FORA])
+    // Sem a declaração, o mesmo endereço sobe, e a chamada conta como envio externo.
+    expect(lerConfiguracaoDeIa({ ...LLAMA, LLM_BASE_URL: endereco }).modelo?.processamentoLocal).toBe(false)
+  })
+
   it('a chave do provedor entra na configuração e nunca na mensagem de erro', () => {
     const chave = 'chave-sintetica-que-nao-pode-vazar'
     expect(lerConfiguracaoDeIa({ ...LLAMA, LLM_CHAVE_API: chave }).modelo?.chaveApi).toBe(chave)

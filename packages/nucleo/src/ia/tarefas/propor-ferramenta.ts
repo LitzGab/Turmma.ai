@@ -1,4 +1,4 @@
-import { esquemaCitacao, TIPOS_DE_ADAPTACAO, type TipoDeAdaptacao } from '@educa/shared'
+import { esquemaCitacao, FERRAMENTAS_GERADORAS, MAXIMO_DE_CITACOES_POR_MENSAGEM, MAXIMO_DE_QUESTOES_POR_ATIVIDADE, TAMANHO_MAXIMO_DO_TEMA } from '@educa/shared'
 import { z } from 'zod'
 import {
   citacaoDaFrase,
@@ -28,29 +28,25 @@ export type EntradaDoAssistente = z.infer<typeof esquemaEntradaDoAssistente>
 
 /**
  * A proposta é o que a tela mostra como "quer abrir a ferramenta?" (D18): a ferramenta e o que deu para entender do
- * pedido, para o cartão já abrir preenchido. Nada é gerado antes do sim. A Adaptação só aceita **tipos**: não há
- * campo de texto, e por isso o que o professor disser sobre um aluno não tem para onde ir (D35, D67).
+ * pedido, para o cartão já abrir preenchido. Nada é gerado antes do sim. É a parte da `PropostaDeFerramenta` do
+ * contrato (`@educa/shared`) que o modelo consegue dar: a turma e a disciplina, quem acrescenta é o Assistente, da
+ * mensagem do professor. Só as ferramentas que geram a partir de um tema: a Adaptação parte de uma atividade pronta
+ * e tem rota própria, então pedido de adaptação vira texto que diz onde ela fica.
  */
-export const esquemaPropostaDeFerramenta = z.discriminatedUnion('ferramenta', [
-  z.strictObject({
-    ferramenta: z.literal('atividade_objetiva'),
-    parametros: z.strictObject({ tema: z.string().min(1).max(200), quantidade: z.number().int().min(1).max(20).optional() }),
+export const esquemaPropostaDoAssistente = z.strictObject({
+  ferramenta: z.enum(FERRAMENTAS_GERADORAS),
+  parametros: z.strictObject({
+    tema: z.string().min(1).max(TAMANHO_MAXIMO_DO_TEMA),
+    quantidade: z.number().int().min(1).max(MAXIMO_DE_QUESTOES_POR_ATIVIDADE).optional(),
   }),
-  z.strictObject({
-    ferramenta: z.literal('plano_de_aula'),
-    parametros: z.strictObject({ tema: z.string().min(1).max(200), duracaoMinutos: z.number().int().min(10).max(240).optional() }),
-  }),
-  z.strictObject({
-    ferramenta: z.literal('adaptacao'),
-    parametros: z.strictObject({ tipos: z.array(z.enum(TIPOS_DE_ADAPTACAO)).max(TIPOS_DE_ADAPTACAO.length).optional() }),
-  }),
-])
-export type PropostaDeFerramenta = z.infer<typeof esquemaPropostaDeFerramenta>
+})
+export type PropostaDoAssistente = z.infer<typeof esquemaPropostaDoAssistente>
 
+/** Os mesmos dois tipos, e os mesmos tetos, do conteúdo que `mensagem_agente` guarda (`esquemaConteudoDaMensagemDoAgente`). */
 export const esquemaSaidaDoAssistente = z.discriminatedUnion('tipo', [
-  z.strictObject({ tipo: z.literal('texto'), texto: z.string().min(1).max(2000), citacoes: z.array(esquemaCitacao).max(5) }),
+  z.strictObject({ tipo: z.literal('texto'), texto: z.string().min(1).max(8000), citacoes: z.array(esquemaCitacao).max(MAXIMO_DE_CITACOES_POR_MENSAGEM) }),
   /** `texto` é a pergunta ao professor. */
-  z.strictObject({ tipo: z.literal('proposta'), texto: z.string().min(1).max(400), proposta: esquemaPropostaDeFerramenta }),
+  z.strictObject({ tipo: z.literal('proposta_de_ferramenta'), texto: z.string().min(1).max(1000), proposta: esquemaPropostaDoAssistente }),
 ])
 export type SaidaDoAssistente = z.infer<typeof esquemaSaidaDoAssistente>
 
@@ -58,20 +54,11 @@ const PEDE_ADAPTACAO = /\badapt\w*/
 const PEDE_PLANO = /\b(planos? de aulas?|planej\w+|sequencia didatica|roteiro de aula)\b/
 const PEDE_ATIVIDADE = /\b(atividades?|exercicios?|questoes|questao|lista|quiz|prova|simulado)\b/
 
-const SINAIS_DO_TIPO: Readonly<Record<TipoDeAdaptacao, RegExp>> = {
-  fonte_ampliada: /\b(fonte|letra) (ampliada|maior|grande)\b/,
-  tempo_adicional: /\b(tempo (adicional|extra|a mais)|mais tempo)\b/,
-  linguagem_direta: /\blinguagem (direta|simples|clara)\b/,
-  enunciado_simplificado: /\b(enunciados? (simplificados?|simples|mais facil|mais faceis|curtos?)|simplific\w+)\b/,
-  resposta_escrita_no_lugar_da_oral: /\b(resposta escrita|escrita no lugar)\b/,
-  leitura_de_apoio: /\b(leitura|texto) de apoio\b/,
-}
-
 /** O tema é o que vem depois de "sobre"; sem "sobre", a mensagem inteira, que o professor ajusta no cartão. */
 function temaDaMensagem(mensagem: string): string {
   const achado = /\bsobre\s+(.+?)(?=[.?!\n,;]|\s+com\s+\d|\s+(?:para|pra)\s+|\s+de\s+\d+\s+min|$)/iu.exec(mensagem)
   const tema = (achado?.[1] ?? mensagem).trim()
-  return cortar(tema.length > 0 ? tema : mensagem.trim(), 200)
+  return cortar(tema.length > 0 ? tema : mensagem.trim(), TAMANHO_MAXIMO_DO_TEMA)
 }
 
 function numeroEntre(achado: RegExpExecArray | null, minimo: number, maximo: number): number | undefined {
@@ -87,6 +74,7 @@ export const proporFerramenta = definirTarefa({
   esquemaDeSaida: esquemaSaidaDoAssistente,
   prompt: PROMPT_PROPOR_FERRAMENTA,
   maximoDeTokensDeSaida: 800,
+  levaTextoLivreDePessoa: true,
   levaTextoDeAluno: false,
 
   montarPedido(entrada) {
@@ -108,28 +96,27 @@ export const proporFerramenta = definirTarefa({
   falso(entrada): SaidaDoAssistente {
     const texto = normalizar(entrada.mensagem)
     if (PEDE_ADAPTACAO.test(texto)) {
-      const tipos = TIPOS_DE_ADAPTACAO.filter((tipo) => SINAIS_DO_TIPO[tipo].test(texto))
+      // O que o professor disse sobre o aluno não é repetido: a resposta só aponta a ferramenta, que pede o tipo.
       return {
-        tipo: 'proposta',
-        texto: 'Quer que eu abra a ferramenta de Adaptação? Ela pede a atividade e o tipo de adaptação, sem nenhuma informação sobre o aluno.',
-        proposta: { ferramenta: 'adaptacao', parametros: tipos.length > 0 ? { tipos } : {} },
+        tipo: 'texto',
+        texto: 'A Adaptação parte de uma atividade que já existe: abra a atividade e escolha “Adaptar”. Ela pede só o tipo de adaptação, sem nenhuma informação sobre o aluno, e a versão adaptada espera a sua aprovação.',
+        citacoes: [],
       }
     }
     if (PEDE_PLANO.test(texto)) {
       const tema = temaDaMensagem(entrada.mensagem)
-      const duracaoMinutos = numeroEntre(/(\d{2,3})\s*(?:min|minutos)\b/.exec(texto), 10, 240)
       return {
-        tipo: 'proposta',
-        texto: cortar(`Quer que eu abra a ferramenta de plano de aula sobre “${tema}”${duracaoMinutos === undefined ? '' : `, para ${duracaoMinutos} minutos`}? Você ajusta antes de gerar.`, 400),
-        proposta: { ferramenta: 'plano_de_aula', parametros: duracaoMinutos === undefined ? { tema } : { tema, duracaoMinutos } },
+        tipo: 'proposta_de_ferramenta',
+        texto: cortar(`Quer que eu abra a ferramenta de plano de aula sobre “${tema}”? Você ajusta antes de gerar.`, 1000),
+        proposta: { ferramenta: 'plano_de_aula', parametros: { tema } },
       }
     }
     if (PEDE_ATIVIDADE.test(texto)) {
       const tema = temaDaMensagem(entrada.mensagem)
-      const quantidade = numeroEntre(/(\d{1,2})\s*(?:questoes|questao|exercicios?|perguntas?|itens)\b/.exec(texto), 1, 20)
+      const quantidade = numeroEntre(/(\d{1,2})\s*(?:questoes|questao|exercicios?|perguntas?|itens)\b/.exec(texto), 1, MAXIMO_DE_QUESTOES_POR_ATIVIDADE)
       return {
-        tipo: 'proposta',
-        texto: cortar(`Quer que eu abra a ferramenta de atividade objetiva${quantidade === undefined ? '' : ` com ${quantidade} questões`} sobre “${tema}”? Você ajusta antes de gerar.`, 400),
+        tipo: 'proposta_de_ferramenta',
+        texto: cortar(`Quer que eu abra a ferramenta de atividade objetiva${quantidade === undefined ? '' : ` com ${quantidade} questões`} sobre “${tema}”? Você ajusta antes de gerar.`, 1000),
         proposta: { ferramenta: 'atividade_objetiva', parametros: quantidade === undefined ? { tema } : { tema, quantidade } },
       }
     }
@@ -138,7 +125,7 @@ export const proporFerramenta = definirTarefa({
     if (frase !== undefined) {
       return {
         tipo: 'texto',
-        texto: cortar(`No material da turma, a página ${frase.pagina} diz: “${frase.frase}” Posso montar uma atividade objetiva ou um plano de aula sobre isso: é só pedir.`, 2000),
+        texto: cortar(`No material da turma, a página ${frase.pagina} diz: “${frase.frase}” Posso montar uma atividade objetiva ou um plano de aula sobre isso: é só pedir.`, 8000),
         citacoes: [citacaoDaFrase(frase)],
       }
     }

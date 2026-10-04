@@ -299,14 +299,47 @@ const AFIRMA_SER_PESSOA = /(?<!nao )(?<!nem )\b(sou|eu sou) (uma? |o |a )?(pesso
 const SIMULA_VINCULO = /\b(senti (a )?sua falta|saudades? de voce|te amo|amo voce|gosto muito de voce|adoro voce|nao me deixe|fico triste sem voce|volte logo|seu melhor amigo|sua melhor amiga)\b/
 const ENTREGA_A_RESPOSTA: readonly RegExp[] = [
   /\b(resposta|alternativa|letra|opcao) (certa|correta) (e|eh|seria|sera)\b/,
-  /\b(e|eh) a (letra|alternativa|opcao) [a-d]\b/,
+  /\ba (certa|correta|errada) (e|eh|seria|sera)\b/,
+  /\b(e|eh) a (letra |alternativa |opcao )?[a-d]\b/,
   /\b(letra|alternativa|opcao) [a-d] (e|eh|esta) (a )?(certa|correta|errada|incorreta)\b/,
   /\bo gabarito (e|eh)\b/,
   /\bmarque (a )?(letra |alternativa |opcao )?[a-d]\b/,
   /\b(pode|podemos) (eliminar|descartar) (a |as )?(letra|alternativa|opcao|letras|alternativas)\b/,
 ]
-/** Diante de "é a B, né?", começar com "sim", "isso" ou "não é" já é a resposta. */
-const CONFIRMA_OU_NEGA = /^(sim|isso|exato|exatamente|correto|certo|certa|acertou|errou|errado)\b|^nao[,.!]? (e|eh|esta|ta)\b/
+/**
+ * Diante de "é a B, né?", começar com "sim", "isso" ou "não é", ou dizer "você acertou", já é a resposta. "Você errou
+ * 3 questões" é a memória do trabalho anterior, com o número, e não entra.
+ */
+const CONFIRMA_OU_NEGA = /^(sim|isso|exato|exatamente|correto|certo|certa|acertou|errou|errado)\b|^nao[,.!]? (e|eh|esta|ta)\b|\bvoce (acertou|errou)\b(?! \d)/
+
+/**
+ * O aluno pediu a resposta pronta? Quem decide é a **regra**, pelo que ele escreveu; a classificação do modelo só
+ * soma. Um modelo que classifica "é a B, né?" como dúvida normal não desliga a recusa, nem o sinal ao professor.
+ */
+function pediuRespostaPronta(entrada: EntradaDoTutor, saida: SaidaDoTutor): boolean {
+  return saida.classificacao === 'pediu_resposta_pronta' || pedeRespostaPronta(entrada.duvida)
+}
+
+/**
+ * Os turnos anteriores que podem ir ao modelo. O que o aluno escreveu sobre um assunto delicado, e a mensagem fixa que
+ * ele recebeu, nunca entram: a regra do assunto delicado vale para a conversa inteira, não só para a dúvida de agora
+ * (D36; D62).
+ */
+export function turnosParaOModelo(entrada: EntradaDoTutor): EntradaDoTutor['turnosAnteriores'] {
+  const turnos: EntradaDoTutor['turnosAnteriores'] = []
+  let pulaAResposta = false
+  for (const turno of entrada.turnosAnteriores) {
+    if (turno.autor === 'aluno') {
+      pulaAResposta = ehAssuntoDelicado(turno.texto)
+      if (!pulaAResposta) turnos.push(turno)
+      continue
+    }
+    const ehMensagemFixa = turno.texto === MENSAGEM_DE_ASSUNTO_DELICADO || turno.texto === MENSAGEM_DE_RISCO_A_VIDA
+    if (!pulaAResposta && !ehMensagemFixa) turnos.push(turno)
+    pulaAResposta = false
+  }
+  return turnos
+}
 
 /**
  * A recusa não depende do prompt (regra 30, item 11). Saída de qualquer modelo que entregue a resposta, confirme um
@@ -315,7 +348,12 @@ const CONFIRMA_OU_NEGA = /^(sim|isso|exato|exatamente|correto|certo|certa|acerto
  */
 function problemasDoTurno(entrada: EntradaDoTutor, saida: SaidaDoTutor): string[] {
   const problemas = problemasDasCitacoes(saida.citacoes, entrada.trechos, 'Citações')
-  if (saida.classificacao === 'assunto_delicado') return problemas
+  // Assunto delicado só tem uma resposta, a fixa. Texto do modelo no lugar dela é recusado, classifique ele como classificar.
+  if (saida.classificacao === 'assunto_delicado' || ehAssuntoDelicado(entrada.duvida)) {
+    const fixa = mensagemFixaDoAssuntoDelicado(entrada.duvida)
+    if (saida.classificacao !== 'assunto_delicado' || saida.resposta !== fixa.resposta) problemas.push('Assunto pessoal delicado recebe só a mensagem fixa: não escreva resposta própria.')
+    return problemas
+  }
   const texto = normalizar(saida.resposta)
   if (AFIRMA_SER_PESSOA.test(texto)) problemas.push('Você é uma inteligência artificial: não diga que é uma pessoa, o professor ou um amigo.')
   if (SIMULA_VINCULO.test(texto)) problemas.push('Não simule amizade, saudade ou carinho, e não peça para o aluno ficar ou voltar.')
@@ -323,10 +361,11 @@ function problemasDoTurno(entrada: EntradaDoTutor, saida: SaidaDoTutor): string[
   if (repeteAlternativa(saida.resposta, entrada) || saida.citacoes.some((citacao) => repeteAlternativa(citacao.trecho, entrada))) {
     problemas.push('A resposta ou o trecho citado repete o texto de uma alternativa da questão. Aponte a página e pergunte, sem copiar alternativa.')
   }
-  if (saida.classificacao === 'pediu_resposta_pronta' && CONFIRMA_OU_NEGA.test(texto)) {
+  const pediu = pediuRespostaPronta(entrada, saida)
+  if (pediu && CONFIRMA_OU_NEGA.test(texto)) {
     problemas.push('O aluno pediu a resposta ou a confirmação de um palpite: não confirme nem negue. Recuse e faça uma pergunta que o ajude a avançar.')
   }
-  if (saida.classificacao === 'pediu_resposta_pronta' && entrada.trechos.length > 0 && saida.citacoes.length === 0) {
+  if (pediu && entrada.trechos.length > 0 && saida.citacoes.length === 0) {
     problemas.push('Ao recusar a resposta pronta, aponte em "citacoes" a página do material que ajuda o aluno a seguir.')
   }
   if (saida.classificacao !== 'fora_do_escopo' && !saida.resposta.includes('?')) problemas.push('Termine com uma pergunta que faça o aluno avançar.')
@@ -341,6 +380,7 @@ export const turnoDoTutor = definirTarefa({
   esquemaDeSaida: esquemaSaidaDoTutor,
   prompt: PROMPT_TURNO_DO_TUTOR,
   maximoDeTokensDeSaida: 700,
+  levaTextoLivreDePessoa: true,
   levaTextoDeAluno: true,
 
   montarPedido(entrada) {
@@ -351,7 +391,7 @@ export const turnoDoTutor = definirTarefa({
         ...dadosDosTrechos(entrada.trechos),
         ...(entrada.questao === undefined ? [] : [dadoEmJson('questao_em_que_o_aluno_esta', entrada.questao)]),
         dadoEmJson('memoria_do_trabalho_do_aluno_por_habilidade', entrada.memoria),
-        ...entrada.turnosAnteriores.map((turno) => ({ tipo: turno.autor === 'aluno' ? 'turno_anterior_do_aluno' : 'turno_anterior_do_tutor', corpo: turno.texto })),
+        ...turnosParaOModelo(entrada).map((turno) => ({ tipo: turno.autor === 'aluno' ? 'turno_anterior_do_aluno' : 'turno_anterior_do_tutor', corpo: turno.texto })),
         { tipo: 'mensagem_do_aluno_agora', corpo: entrada.duvida },
       ],
     }
@@ -362,9 +402,14 @@ export const turnoDoTutor = definirTarefa({
     return ehAssuntoDelicado(entrada.duvida) ? mensagemFixaDoAssuntoDelicado(entrada.duvida) : undefined
   },
 
-  /** O modelo pode classificar um assunto delicado que os gatilhos não pegaram; o texto, ele não escreve. */
-  ajustar(entrada, saida) {
-    return saida.classificacao === 'assunto_delicado' ? mensagemFixaDoAssuntoDelicado(entrada.duvida) : saida
+  /**
+   * A regra decide, e o modelo não desfaz. Assunto delicado, pelos gatilhos ou pela classificação do modelo, recebe a
+   * mensagem fixa: o texto, o modelo não escreve. E o pedido de resposta pronta que a regra reconhece sai classificado
+   * como tal, diga o modelo o que disser: é dessa classificação que nasce o sinal ao professor.
+   */
+  ajustar(entrada, saida): SaidaDoTutor {
+    if (saida.classificacao === 'assunto_delicado' || ehAssuntoDelicado(entrada.duvida)) return mensagemFixaDoAssuntoDelicado(entrada.duvida)
+    return pedeRespostaPronta(entrada.duvida) ? { ...saida, classificacao: 'pediu_resposta_pronta' } : saida
   },
 
   conferir: problemasDoTurno,
@@ -372,6 +417,14 @@ export const turnoDoTutor = definirTarefa({
   falso(entrada): SaidaDoTutor {
     if (ehAssuntoDelicado(entrada.duvida)) return mensagemFixaDoAssuntoDelicado(entrada.duvida)
     const texto = normalizar(entrada.duvida)
+    // Antes de tudo: quem pede a resposta junto de outra pergunta continua pedindo a resposta.
+    if (pedeRespostaPronta(entrada.duvida)) {
+      return conduzirPorPerguntas(
+        entrada,
+        'Essa eu não respondo por você, e também não confirmo nem descarto alternativa: se eu contar, você não aprende a chegar lá.',
+        'pediu_resposta_pronta',
+      )
+    }
     if (algumCasa(PERGUNTAS_SOBRE_O_TUTOR, texto)) {
       return {
         classificacao: 'normal',
@@ -381,13 +434,6 @@ export const turnoDoTutor = definirTarefa({
           `Qual é a sua dúvida de ${entrada.contexto.disciplina}?`,
         citacoes: [],
       }
-    }
-    if (pedeRespostaPronta(entrada.duvida)) {
-      return conduzirPorPerguntas(
-        entrada,
-        'Essa eu não respondo por você, e também não confirmo nem descarto alternativa: se eu contar, você não aprende a chegar lá.',
-        'pediu_resposta_pronta',
-      )
     }
     if (estaForaDoEscopo(entrada)) {
       return {
