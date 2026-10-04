@@ -38,10 +38,11 @@ const TITULO_DA_FALHA = 'Não foi possível carregar esta parte do Turmma'
  * (outra resolução de módulos); a tarefa que acrescenta a linha lá acrescenta aqui, e o W2 percorre todos.
  */
 const ITENS_DO_PROFESSOR = [{ rotulo: 'Turmas', caminho: '/professor/turmas' }] as const
-/** Os itens da coordenação, como a mesma tabela os declara: "Estrutura" chegou na 13.0, e "Professores", na 14.0. */
+/** Os itens da coordenação, como a mesma tabela os declara: "Estrutura" chegou na 13.0, "Professores", na 14.0, e "Material", no MVP de apresentação (A2). */
 const ITENS_DA_COORDENACAO = [
   { rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' },
   { rotulo: 'Professores', caminho: '/coordenacao/professores' },
+  { rotulo: 'Material', caminho: '/coordenacao/material' },
 ] as const
 /** Os itens do aluno, como a mesma tabela os declara: "Minha turma" chegou na 12.0. */
 const ITENS_DO_ALUNO = [{ rotulo: 'Minha turma', caminho: '/aluno/minha-turma' }] as const

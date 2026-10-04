@@ -25,6 +25,7 @@ import type { ConfiguracaoApi } from './config.js'
 import { EstruturaModule } from './estrutura/estrutura.module.js'
 import { IaModule } from './ia/ia.module.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
+import { MaterialModule } from './material/material.module.js'
 import { OperacaoModule } from './operacao/operacao.module.js'
 import { ProfessoresModule } from './professores/professores.module.js'
 import type { SorteioDoCodigo } from './sala/codigo-da-sala.js'
@@ -75,6 +76,7 @@ export class AppModule {
         }),
         EstruturaModule,
         ProfessoresModule,
+        MaterialModule.com(opcoes.logger ?? criarLogger({ servico: 'api' })),
         IaModule.com({ ambiente: config.identidade.ambiente, ...(opcoes.logger === undefined ? {} : { logger: opcoes.logger }) }),
         SalaModule.com({
           config: config.sala,
