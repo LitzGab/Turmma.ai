@@ -5,7 +5,7 @@ import type { PromptVersionado } from '../tarefa.js'
  * (regra 30, item 11): saída que entrega a resposta ou se passa por pessoa é descartada antes de chegar ao aluno.
  */
 export const PROMPT_TURNO_DO_TUTOR: PromptVersionado = {
-  versao: '2026-10-04.1',
+  versao: '2026-10-04.2',
   sistema: [
     'Você é o Tutor do Turmma: uma inteligência artificial que ajuda um aluno do 6º ano ao Ensino Médio a estudar o material da turma dele. O professor da turma acompanha o uso.',
     '',

@@ -269,6 +269,62 @@ describe('AdaptadorOpenAICompat: prazo e indisponibilidade', () => {
   })
 })
 
+describe('AdaptadorOpenAICompat: redirecionamento nunca é seguido', () => {
+  it.each([307, 308, 301, 302])('um %i do servidor configurado não leva o corpo a outra origem: o destino não recebe nada, e a chamada falha como indisponível', async (status) => {
+    // O destino é "o provedor de fora": se o `fetch` seguisse o 307 ou o 308, reenviaria o POST com o prompt inteiro.
+    const destino = await subirServidorLlamaFalso(() => ({ corpo: respostaDoChat(TEXTO_BOM) }))
+    try {
+      const { ia, consumo, pedidos } = await montar(() => ({ status, cabecalhos: { location: `${destino.url}/chat/completions` }, corpo: {} }))
+      const erro = await erroDe(gerarAtividade(ia))
+      expect(erro.codigoDeIa).toBe('IA_INDISPONIVEL')
+      expect(destino.pedidos).toHaveLength(0)
+      // Nem repetição: o servidor que redireciona não é provedor que tropeçou.
+      expect(pedidos).toHaveLength(1)
+      expect(consumo.registros).toMatchObject([{ estado: 'falhou', codigoDeErro: 'IA_INDISPONIVEL', envioExterno: false }])
+    } finally {
+      await destino.fechar()
+    }
+  })
+
+  it('o turno do Tutor, com o endereço declarado local, não sai da rede por um redirecionamento', async () => {
+    const destino = await subirServidorLlamaFalso(() => ({ corpo: respostaDoChat('{}') }))
+    try {
+      const { ia } = await montar(() => ({ status: 307, cabecalhos: { location: `${destino.url}/chat/completions` }, corpo: {} }))
+      const erro = await erroDe(ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('como eu acho o reagente limitante? palavra-marcada-do-aluno'), escolaId: ESCOLA_A, alunoId: ALUNO_1 }))
+      expect(erro.codigoDeIa).toBe('IA_INDISPONIVEL')
+      expect(JSON.stringify(destino.pedidos)).not.toContain('palavra-marcada-do-aluno')
+      expect(destino.pedidos).toHaveLength(0)
+    } finally {
+      await destino.fechar()
+    }
+  })
+})
+
+describe('AdaptadorOpenAICompat: o texto do modelo chega à tela sem Markdown', () => {
+  it('negrito, título e crase que o modelo põe por hábito saem antes de validar; conta e fórmula ficam', async () => {
+    const [primeira, ...demais] = BOA.questoes
+    if (primeira === undefined) throw new Error('sem questão')
+    const comMarcacao = { ...BOA, titulo: '## Atividade de estequiometria', questoes: [{ ...primeira, enunciado: '**Questão 1.** Segundo o material, o que é o `mol`? Lembre que 2 * 3 = 6 e que a água é H2O.', explicacao: `*Atenção:* ${primeira.explicacao}` }, ...demais] }
+    const { ia } = await montar(() => ({ corpo: respostaDoChat(JSON.stringify(comMarcacao)) }))
+    const { saida } = await gerarAtividade(ia)
+    expect(saida.titulo).toBe('Atividade de estequiometria')
+    expect(saida.questoes[0]?.enunciado).toBe('Questão 1. Segundo o material, o que é o mol? Lembre que 2 * 3 = 6 e que a água é H2O.')
+    expect(saida.questoes[0]?.explicacao).toBe(`Atenção: ${primeira.explicacao}`)
+    expect(JSON.stringify(saida)).not.toMatch(/\*\*|##|`/)
+  })
+
+  it('o sistema pede texto puro e a notação do material', async () => {
+    const { ia, pedidos } = await montar(() => ({ corpo: respostaDoChat(TEXTO_BOM) }))
+    await gerarAtividade(ia)
+    const sistema = pedidos[0]?.corpo.messages?.[0]?.content ?? ''
+    expect(sistema).toContain('TEXTO PURO')
+    expect(sistema).toContain('sem Markdown')
+    expect(sistema).toContain('H2O, CO2')
+    expect(sistema).toContain('->')
+    expect(sistema).toContain('10²³')
+  })
+})
+
 describe('AdaptadorOpenAICompat: o Tutor com modelo de verdade', () => {
   it('assunto delicado não chega ao servidor: nenhuma requisição sai, e o aluno recebe a mensagem fixa', async () => {
     const { ia, pedidos } = await montar(() => ({ corpo: respostaDoChat('{}') }))

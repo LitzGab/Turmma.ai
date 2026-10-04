@@ -489,6 +489,34 @@ describe('camada de IA na API', () => {
     })
   })
 
+  describe('OrcamentoRepository: o limite lido é o da própria escola', () => {
+    it('A e B com limites diferentes: com o limite de A (1) a pergunta é recusada, com o de B (3) é permitida', async () => {
+      const limitar = (escola: Escola, porDia: number) =>
+        sql(
+          'insert into configuracao_operacional_escola (escola_id, tutor_trocas_por_dia, tutor_trocas_por_mes) values ($1, $2, null) on conflict (escola_id) do update set tutor_trocas_por_dia = $2, tutor_trocas_por_mes = null',
+          [escola.escolaId, porDia],
+        )
+      // Cada escola tem a linha dela, e as duas linhas existem ao mesmo tempo: se a leitura do limite perdesse a
+      // cláusula de escola, as duas consultas leriam a mesma linha, e uma das duas respostas abaixo trocaria.
+      await limitar(a, 1)
+      await limitar(b, 3)
+      try {
+        const orcamento = new OrcamentoRepository(bancada.banco)
+        const semPerguntaHoje = await bancada.sessoes(a.escolaId, { papel: 'aluno', quantidade: 1 })
+        const [alunoDeA] = semPerguntaHoje
+        const [alunoDeB] = await bancada.sessoes(b.escolaId, { papel: 'aluno', quantidade: 1 })
+        if (alunoDeA === undefined || alunoDeB === undefined) throw new Error('alunos de teste não criados')
+        await perguntasAoTutor(a, alunoDeA, 1)
+        await perguntasAoTutor(b, alunoDeB, 1)
+        // Uma pergunta em cada escola. Em A, com limite 1, a próxima não cabe; em B, com limite 3, cabe.
+        expect(await orcamento.consultar({ escolaId: a.escolaId, funcao: 'tutor_com_o_aluno', alunoId: alunoDeA.usuarioId })).toEqual({ permitido: false, codigo: 'LIMITE_DIARIO_DO_TUTOR' })
+        expect(await orcamento.consultar({ escolaId: b.escolaId, funcao: 'tutor_com_o_aluno', alunoId: alunoDeB.usuarioId })).toEqual({ permitido: true })
+      } finally {
+        await sql('delete from configuracao_operacional_escola where escola_id = any($1::uuid[])', [[a.escolaId, b.escolaId]])
+      }
+    })
+  })
+
   describe('AgendadorDeExecucoes', () => {
     it('grava a execução pendente, responde o id e roda depois, no contexto de quem pediu; a tela lê o resultado pela rota', async () => {
       const { pedido, aoGravar, aoConcluir, contextoVisto } = pedidoDoAssistente(a)
@@ -653,6 +681,65 @@ describe('camada de IA na API', () => {
       await sql(`update execucao_agente set estado = 'concluida', iniciada_em = now(), concluida_em = now(), resultado = $2 where id = $1`, [forjada.id, JSON.stringify((rows as { resultado: unknown }[])[0]?.resultado)])
       expect((await get(a.outroProfessor, `/v1/execucoes/${forjada.id}`)).status).toBe(404)
       expect((await get(a.professor, `/v1/execucoes/${daOutra}`)).status).toBe(200)
+    })
+
+    it('a resposta do Tutor que o resultado aponta só sai se for da conversa do próprio aluno, na escola dele, mesmo com a referência forjada', async () => {
+      // `resultado.mensagemId` é jsonb, sem FK: o que prende o texto da conversa a quem lê é a cláusula de escola e de aluno.
+      const respostaDoTutorA = async (escola: Escola, aluno: SessaoDeTeste): Promise<{ execucaoId: string; mensagemId: string }> => {
+        const { pedido } = pedidoDoTutor(escola, aluno, 'como eu acho o reagente limitante?')
+        const { execucaoId } = await como(escola, aluno, 'aluno', () => agendador.agendar(pedido))
+        await executor.ociosa()
+        const { rows } = await sql(`select id from mensagem_tutor where escola_id = $1 and execucao_id = $2 and autor = 'tutor'`, [escola.escolaId, execucaoId])
+        const mensagemId = (rows as { id: string }[])[0]?.id
+        if (mensagemId === undefined) throw new Error('o Tutor deveria ter respondido')
+        return { execucaoId, mensagemId }
+      }
+      const doColega = await respostaDoTutorA(a, a.outroAluno)
+      const deOutraEscola = await respostaDoTutorA(b, b.outroAluno)
+
+      // Um aluno novo, sem conversa nenhuma, com duas execuções dele concluídas que apontam para a resposta de outro aluno.
+      const [curioso] = await bancada.sessoes(a.escolaId, { papel: 'aluno', quantidade: 1 })
+      if (curioso === undefined) throw new Error('aluno de teste não criado')
+      const forjar = async (mensagemId: string): Promise<string> => {
+        const forjada = await execucaoPendente(a, curioso, 'turno_do_tutor', 'tutor_com_o_aluno')
+        await sql(`update execucao_agente set estado = 'concluida', iniciada_em = now(), concluida_em = now(), resultado = $2 where id = $1`, [forjada.id, JSON.stringify({ tipo: 'mensagem_do_tutor', mensagemId })])
+        return forjada.id
+      }
+      const [apontaParaOColega, apontaParaOutraEscola, apontaParaNada] = [await forjar(doColega.mensagemId), await forjar(deOutraEscola.mensagemId), await forjar(randomUUID())]
+
+      const recusas = await Promise.all([apontaParaOColega, apontaParaOutraEscola, apontaParaNada].map((id) => get(curioso, `/v1/execucoes/${id}`)))
+      for (const recusa of recusas) {
+        expect(recusa.status).toBe(404)
+        expect(recusa.corpo.erro?.codigo).toBe(CodigoDeErro.NAO_ENCONTRADO)
+        expect(JSON.stringify(recusa.corpo)).not.toContain('Releia')
+      }
+      expect(new Set(recusas.map((recusa) => JSON.stringify({ ...(recusa.corpo.erro as object), requisicaoId: undefined }))).size).toBe(1)
+      // O dono de cada conversa lê a resposta dele, com o texto.
+      const propria = await get(a.outroAluno, `/v1/execucoes/${doColega.execucaoId}`)
+      expect(propria.status).toBe(200)
+      expect(propria.corpo).toMatchObject({ resultado: { tipo: 'mensagem_do_tutor', mensagem: { id: doColega.mensagemId, autor: 'tutor' } } })
+      expect((await get(b.outroAluno, `/v1/execucoes/${deOutraEscola.execucaoId}`)).status).toBe(200)
+    })
+
+    it('a cláusula de escola das mensagens vale por si: com a pessoa de B e a escola A no contexto, a mensagem de B não é achada', async () => {
+      // O id de usuário é de uma escola só, então pela rota a cláusula de pessoa já barra a outra escola. Aqui o
+      // contexto junta a escola A com a pessoa de B, que é o que sobraria se só a cláusula de escola segurasse.
+      const { rows: doTutor } = await sql(`select id from mensagem_tutor where escola_id = $1 and aluno_id = $2 and autor = 'tutor' limit 1`, [b.escolaId, b.outroAluno.usuarioId])
+      const { rows: doAssistente } = await sql(
+        `select m.id from mensagem_agente m join thread_agente t on t.escola_id = m.escola_id and t.id = m.thread_id where m.escola_id = $1 and t.usuario_id = $2 and m.autor = 'agente' limit 1`,
+        [b.escolaId, b.professor.usuarioId],
+      )
+      const [idDoTutor, idDoAssistente] = [(doTutor as { id: string }[])[0]?.id ?? '', (doAssistente as { id: string }[])[0]?.id ?? '']
+      expect(idDoTutor).not.toBe('')
+      expect(idDoAssistente).not.toBe('')
+      const naEscola = <T>(escolaId: string, usuarioId: string, funcao: () => T): T => executarNoContexto({ requisicaoId: randomUUID(), escolaId, usuarioId }, funcao)
+      const execucoes = new ExecucaoDaSessaoRepository(bancada.banco)
+
+      expect(await naEscola(a.escolaId, b.outroAluno.usuarioId, () => execucoes.mensagemDoTutor(idDoTutor))).toBeUndefined()
+      expect(await naEscola(a.escolaId, b.professor.usuarioId, () => execucoes.mensagemDoAssistente(idDoAssistente))).toBeUndefined()
+      // Na escola certa, a mesma pessoa acha a própria mensagem.
+      expect(await naEscola(b.escolaId, b.outroAluno.usuarioId, () => execucoes.mensagemDoTutor(idDoTutor))).toMatchObject({ id: idDoTutor })
+      expect(await naEscola(b.escolaId, b.professor.usuarioId, () => execucoes.mensagemDoAssistente(idDoAssistente))).toMatchObject({ id: idDoAssistente })
     })
 
     it('a execução que falhou devolve só o código do erro, e a sem sessão não passa', async () => {
