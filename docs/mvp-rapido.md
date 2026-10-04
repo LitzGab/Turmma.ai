@@ -10,8 +10,9 @@
 
 > Atualizada a cada commit. Quem retoma lê esta seção, `git log mvp/apresentacao` e `git status`.
 
-**Fase atual:** fase 4 (governança) em curso. As fases 2 e 3 estão integradas (`5f6dd03`, 04/10/2026), com o portão
-local verde (293 arquivos, 4093 testes) e **todos os revisores aprovando**; fecham com a esteira `37241713815` verde.
+**Fase atual:** fechamento. **As fases 1, 2 e 3 estão fechadas**: a esteira `37241713815` sobre `5f6dd03` ficou verde
+em todos os jobs (04/10/2026), com todos os revisores aprovando. A fase 4 (governança) está integrada na branch de
+integração com a segunda rodada da revisão; o pacote R escreve o roteiro e o e2e do roteiro inteiro.
 
 **Feito**
 
@@ -82,6 +83,15 @@ para rodadas de correção.
 O destaque `padrao_de_erro`, que compara o aluno com a turma, foi julgado pelo `conformidade-reviewer`: é fato daquela
 tentativa, mostrado só ao professor para obrigá-lo a abrir antes de aprovar, e não perfilização.
 
+**Revisão da fase 4** (governança, agentes e Analista)
+
+| Revisor | Veredito | O que exigiu, e como fechou |
+|---|---|---|
+| `frontend-reviewer` | AJUSTES NECESSÁRIOS | A Governança dizia que nada da IA chega ao aluno sem aprovação, e o Tutor responde em tempo real (D47); o foco caía no `body` ao fechar o dado nominal. Corrigidos pelo orquestrador (`b1368ac`) |
+| `conformidade-reviewer` (com a privacidade) | REPROVADO | O grupo mínimo do Analista contava professores com vínculo, e o número mostrado era o de uma professora só (D45, D64): agora conta quem aprovou lote no recorte, e o mesmo na lista da Governança (G, rodada 2). Efeito da suspensão por função, "resumo semanal" que não existe, os 60% como limite provisório: corrigidos |
+
+A segunda passada dos dois fica para depois do roteiro, sobre o diff final.
+
 **Interrupções de 04/10/2026:** o limite de uso da sessão estourou duas vezes, por volta das 11h50 e das 17h20, e
 derrubou os agentes em curso no meio do trabalho. Nada se perdeu: cada worktree ficou com o que estava escrito, sem
 commit. Na primeira, os cinco foram retomados às 14h21. Na segunda (W, G e C), o W foi retomado às 18h20 com prioridade
@@ -133,7 +143,7 @@ Para os pacotes das fases 3 e 4, o que os revisores já pediram:
 | fase 1 | `37208632853` | `7fddb5f` | verde na reexecução. Na primeira vez, só o job de infra caiu, no ensaio de alertas: a regra "Login recusado pelo semáforo do hash" ficou em `pending` até o prazo de 540 s. Nada da fase 1 mexe em login, e o job passou ao ser rodado de novo: intermitente, a observar |
 | correções da fase 1 | `37220240549` | `1440e79` | verde, todos os jobs, inclusive infra |
 | fase 2 | `37227505570` | `5c1b53d` | vermelha em três e2e (o professor abrindo em Nova conversa num spec que ficou de fora, o cache da Home nova, um teste comprido demais no celular), corrigidos pelo W |
-| fases 2 e 3, com as correções | `37241713815` | `5f6dd03` | a conferir |
+| fases 2 e 3, com as correções | `37241713815` | `5f6dd03` | **verde**, todos os jobs |
 
 **Modelo local do ensaio final:** `qwen3.6-35b-a3b` no `llama-server` (`GET /v1/models` em 04/10/2026; estava
 descarregado, e quem carrega é o Joaquim).
@@ -201,6 +211,10 @@ descarregado, e quem carrega é o Joaquim).
     não lê o diagnóstico da turma antiga nesta fatia (lacuna).
 34. **A área do aluno trata quem dá a aula por "quem dá a aula"**, neutro. A mensagem fixa de assunto delicado ainda diz
     "seu professor": é rascunho da D36, esperando o Joaquim.
+35. **O Analista e a lista da Governança só mostram número com dois ou mais professores que decidiram ou produziram
+    naquele recorte**, não com dois alocados. Para a demonstração: as duas professoras de Química aprovam um lote cada.
+36. **O limiar do alerta do Analista (60%) é provisório**, escolhido pelo pacote, e a tela diz isso. Indicador é
+    decisão em aberto.
 28. **A conversa do professor com o Assistente passou a contar como texto de aluno para a D62.** A regra fixa da D55
     não pega texto de aluno colado sem palavra de julgamento, que segue ao modelo; por isso a tarefa declara
     `levaTextoDeAluno`. Na prática: com provedor externo, a conversa do professor também exige processamento no Brasil.
