@@ -22,6 +22,7 @@ import { Module, type DynamicModule } from '@nestjs/common'
 import { APP_GUARD, APP_INTERCEPTOR, DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core'
 import { ArtefatoModule } from './artefato/artefato.module.js'
 import { AssistenteModule } from './assistente/assistente.module.js'
+import { AtividadeModule } from './atividade/atividade.module.js'
 import { BANCO, BancoModule } from './banco.module.js'
 import type { ConfiguracaoApi } from './config.js'
 import { EntregaModule } from './entrega/entrega.module.js'
@@ -85,6 +86,7 @@ export class AppModule {
         AssistenteModule.com({ chaveContador: config.login.chaveContador, instancias: config.limite.instancias, logger: opcoes.logger ?? criarLogger({ servico: 'api' }) }),
         ArtefatoModule,
         EntregaModule,
+        AtividadeModule,
         TutorModule,
         SalaModule.com({
           config: config.sala,
