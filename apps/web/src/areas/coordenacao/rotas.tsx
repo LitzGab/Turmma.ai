@@ -8,6 +8,10 @@ import { Professores } from './Professores'
 
 /** Material (MVP, A2): tela nova, num pedaço próprio (`tela-coordenacao-Material-*.js`), que só quem a abre baixa. */
 const Material = lazy(() => import('./Material'))
+/** Governança, Agentes e Analista (MVP, A5): cada uma no pedaço dela (`tela-coordenacao-<Tela>-*.js`). */
+const Governanca = lazy(() => import('./Governanca'))
+const Agentes = lazy(() => import('./Agentes'))
+const Analista = lazy(() => import('./Analista'))
 
 /**
  * A área da coordenação, relativa a `/coordenacao`, num chunk próprio, `coordenacao-*.js` (`apps/web/nome-dos-chunks.ts`),
@@ -30,6 +34,9 @@ export default function RotasDaCoordenacao() {
       <Route path={ROTAS_DA_COORDENACAO.turma}>{(parametros) => <ListaDaTurma key={parametros.turmaId} turmaId={parametros.turmaId} />}</Route>
       <Route path={ROTAS_DA_COORDENACAO.professores} component={Professores} />
       <Route path={ROTAS_DA_COORDENACAO.material} component={Material} />
+      <Route path={ROTAS_DA_COORDENACAO.governanca} component={Governanca} />
+      <Route path={ROTAS_DA_COORDENACAO.agentes} component={Agentes} />
+      <Route path={ROTAS_DA_COORDENACAO.analista} component={Analista} />
       <Route>
         <ConteudoNaoEncontrado />
       </Route>

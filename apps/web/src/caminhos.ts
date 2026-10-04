@@ -61,6 +61,12 @@ export function caminhoDaCorrecaoDoProfessor(atividadeAplicadaId: string): strin
 
 /** As rotas da área da coordenação, relativas à base dela. */
 export const ROTAS_DA_COORDENACAO = {
+  /** A governança de IA: o que a IA gerou e quem aprovou, e o consumo. É onde a coordenação abre (MVP, A5; `docs/interface.md` 11.1 e 11.7). */
+  governanca: '/governanca',
+  /** Os três agentes e as funções de cada um, com a suspensão por função (MVP, A5; D9, D60). */
+  agentes: '/agentes',
+  /** O resumo do Analista de desempenho escolar, em agregado (MVP, A5; D45). */
+  analista: '/analista',
   /** Onde a escola se monta: ano letivo, séries, disciplinas, turmas e alocação (A1, 13.0; `docs/interface.md` 3 e 11.1). */
   estrutura: '/estrutura',
   /** Uma turma aberta dentro de Estrutura, com a lista de nomes dela (13.0) e, na 16.0, os pedidos. */
@@ -138,7 +144,13 @@ export const ROTAS = {
   timeDoTutor: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.timeDoTutor}`,
   /** "Turmas" do professor, pela raiz: é o endereço que a navegação usa. */
   turmas: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.turmas}`,
-  /** Estrutura da coordenação, pela raiz: é o endereço que a navegação usa, e onde a coordenação abre (13.0). */
+  /** Governança da coordenação, pela raiz: é o endereço que a navegação usa, e onde a coordenação abre (MVP, A5). */
+  governanca: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.governanca}`,
+  /** Agentes da coordenação, pela raiz (MVP, A5). */
+  agentes: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.agentes}`,
+  /** Analista da coordenação, pela raiz (MVP, A5). */
+  analista: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.analista}`,
+  /** Estrutura da coordenação, pela raiz: é o endereço que a navegação usa (13.0). */
   estrutura: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.estrutura}`,
   /** Professores da coordenação, pela raiz: é o endereço que a navegação usa (14.0). */
   professores: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.professores}`,

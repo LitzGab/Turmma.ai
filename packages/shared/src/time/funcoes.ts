@@ -77,7 +77,7 @@ export const FUNCOES = {
     nome: 'Resumo e alerta',
     autonomia: 2,
     altoRisco: true,
-    fazSozinha: 'Monta o resumo semanal e o alerta da coordenação, sempre em agregado por série e disciplina.',
+    fazSozinha: 'Monta o resumo e os alertas quando a coordenação pede, sempre em agregado por série e disciplina.',
     esperaAprovacao: 'O detalhe de turma ou de pessoa só abre com registro em auditoria. Nunca contata professor nem família.',
   },
 } as const satisfies Record<string, DeclaracaoDeFuncao>

@@ -24,6 +24,7 @@ import {
   montarEscolaComAssistente,
   NOME_DA_PROFESSORA_DE_TESTE,
   NOME_DO_ALUNO_DE_TESTE,
+  vincularProfessor,
   zerarLimiteDePedidosDeIa,
   type AnoAnterior,
   type EscolaComAssistente,
@@ -43,8 +44,8 @@ const NOME_DA_BIA = 'Aluna Sintética Bia Souza'
  * O Analista de desempenho escolar (MVP, A5; D34, D45, D46, D64; regra 70, itens 7 a 9), pela rota, com o adaptador
  * falso. Na escola A, no 2º ano:
  *
- * - **Química tem duas professoras** (a do 2ºB e a colega do 2ºC): o recorte entra com número. O lote do 2ºB está
- *   aprovado (Caio acertou tudo, Bia quase nada); o do 2ºC ainda espera a colega, e não entra em conta nenhuma.
+ * - **Química tem duas professoras alocadas** (a do 2ºB e a colega do 2ºC). O lote do 2ºB está aprovado (Caio acertou
+ *   tudo, Bia quase nada); o do 2ºC começa esperando a colega. Com uma só com lote aprovado, a Química não tem número.
  * - **Física tem uma professora só** (no 2ºB): o lote dela está aprovado, e mesmo assim o recorte não leva número.
  */
 describe('Analista de desempenho escolar', () => {
@@ -130,64 +131,81 @@ describe('Analista de desempenho escolar', () => {
   })
 
   describe('o resumo em agregado', () => {
-    it('antes de gerar não há resumo; gerado, traz o acerto por habilidade por série e disciplina, só de lote aprovado', async () => {
+    it('com duas professoras alocadas em Química e só uma com lote aprovado, a Química não tem número: vai para os recortes sem número', async () => {
       expect(esquemaRespostaResumoDoAnalista.parse((await get(a.coordenacao, '/v1/analista/resumo')).corpo)).toEqual({ resumo: null })
-      const { conteudo } = await gerar(a)
-      const serie = { id: a.serieId, etapa: 'em', ano: 2 }
-      // Só o lote aprovado do 2ºB entra: Caio 3/3 e 2/2, Bia 1/3 e 0/2. O lote pendente do 2ºC mudaria os quatro números.
-      expect(conteudo.recortes).toEqual([
-        {
-          serie,
-          disciplina: { id: a.quimica, nome: 'Química' },
-          professores: 2,
-          alunos: 2,
-          lotesAprovados: 1,
-          acertoPercentual: 60,
-          porHabilidade: [
-            { habilidade: HABILIDADE_DAS_TRES_PRIMEIRAS, acertos: 4, total: 6 },
-            { habilidade: HABILIDADE_DAS_DUAS_ULTIMAS, acertos: 2, total: 4 },
-          ],
-        },
+      const { conteudo, texto } = await gerar(a)
+      // O grupo mínimo conta quem decidiu lote aprovado no recorte, não quem tem vínculo nele (D45, D64): o número da
+      // Química seria o resultado da professora do 2ºB, e diria que a colega do 2ºC não aplicou nada.
+      expect(conteudo.recortes).toEqual([])
+      expect(conteudo.alertas).toEqual([])
+      expect(conteudo.recortesNominais).toEqual([
+        { serie: { id: a.serieId, etapa: 'em', ano: 2 }, disciplina: { id: a.fisica, nome: 'Física' } },
+        { serie: { id: a.serieId, etapa: 'em', ano: 2 }, disciplina: { id: a.quimica, nome: 'Química' } },
       ])
       expect(conteudo.escola).toEqual({ atividadesAplicadas: 3, lotesAprovados: 2, lotesEsperando: 1, versoesAdaptadasAprovadas: 0, trocasComOTutor: 0, sinais: { travou: 2, resposta_pronta: 0, duvida_repetida: 0, atencao_humana: 1 } })
       expect(conteudo.periodo.inicio).toBe('2026-02-01')
+      // Nem o número de professores com vínculo aparece.
+      expect(texto).not.toContain('"professores"')
     })
 
-    it('o recorte de um professor só não leva número: aparece em `recortesNominais`, só com a série e a disciplina', async () => {
-      const { conteudo, texto } = await gerar(a)
-      expect(conteudo.recortesNominais).toEqual([{ serie: { id: a.serieId, etapa: 'em', ano: 2 }, disciplina: { id: a.fisica, nome: 'Física' } }])
-      expect(conteudo.recortes.map((recorte) => recorte.disciplina.id)).toEqual([a.quimica])
-      expect(conteudo.alertas.every((alerta) => alerta.disciplina.id === a.quimica)).toBe(true)
-      // A Física aparece uma vez só, no recorte sem número.
-      expect(texto.split(a.fisica)).toHaveLength(2)
+    it('aprovado o lote da colega, a Química tem duas professoras com dado e ganha número, só de lote aprovado', async () => {
+      await aprovarOLote(rotas, a.colega, pendenteNoC)
+      // Um lote novo da colega, ainda pendente, em que o aluno do 2ºC acertou tudo: se contasse, mudaria os números.
+      await comLote(a, a.colega, a.outraTurma, a.quimica, [[alunoDoC, TODAS_CERTAS]])
+      const { conteudo } = await gerar(a)
+      // 2ºB: Caio 3/3 e 2/2, Bia 1/3 e 0/2; 2ºC: 1/3 e 0/2. O lote pendente ficaria em 8/12 e 4/8.
+      expect(conteudo.recortes).toEqual([
+        {
+          serie: { id: a.serieId, etapa: 'em', ano: 2 },
+          disciplina: { id: a.quimica, nome: 'Química' },
+          professores: 2,
+          alunos: 3,
+          lotesAprovados: 2,
+          acertoPercentual: 46.7,
+          porHabilidade: [
+            { habilidade: HABILIDADE_DAS_TRES_PRIMEIRAS, acertos: 5, total: 9 },
+            { habilidade: HABILIDADE_DAS_DUAS_ULTIMAS, acertos: 2, total: 6 },
+          ],
+        },
+      ])
+      expect(conteudo.escola).toMatchObject({ atividadesAplicadas: 4, lotesAprovados: 3, lotesEsperando: 1 })
     })
 
-    it('quando a segunda professora sai do recorte, a Química também perde o número', async () => {
-      await sql(`update vinculo set estado = 'pendente', decidido_em = null where escola_id = $1 and usuario_id = $2`, [a.escolaId, a.colega.usuarioId])
+    it('o recorte de um professor só com lote não leva número, mesmo com um segundo professor alocado nele', async () => {
+      await vincularProfessor(bancada, a, a.colega.usuarioId, a.outraTurma, a.fisica)
+      try {
+        const { conteudo, texto } = await gerar(a)
+        expect(conteudo.recortesNominais).toEqual([{ serie: { id: a.serieId, etapa: 'em', ano: 2 }, disciplina: { id: a.fisica, nome: 'Física' } }])
+        expect(conteudo.recortes.map((recorte) => recorte.disciplina.id)).toEqual([a.quimica])
+        expect(conteudo.alertas.every((alerta) => alerta.disciplina.id === a.quimica)).toBe(true)
+        // A Física aparece uma vez só, no recorte sem número.
+        expect(texto.split(a.fisica)).toHaveLength(2)
+      } finally {
+        await sql(`delete from vinculo where escola_id = $1 and usuario_id = $2 and disciplina_id = $3`, [a.escolaId, a.colega.usuarioId, a.fisica])
+      }
+    })
+
+    it('quando os dois lotes aprovados da Química foram decididos pela mesma pessoa, ela perde o número', async () => {
+      const [lote] = await sql<{ id: string; decidida_por: string }>(`select id, decidida_por from entrega where escola_id = $1 and atividade_aplicada_id = $2 and estado = 'aprovada'`, [a.escolaId, pendenteNoC])
+      if (lote === undefined) throw new Error('lote do 2ºC sem aprovação')
+      await sql('update entrega set decidida_por = $3 where escola_id = $1 and id = $2', [a.escolaId, lote.id, a.professora.usuarioId])
       try {
         const { conteudo } = await gerar(a)
         expect(conteudo.recortes).toEqual([])
-        expect(conteudo.alertas).toEqual([])
         expect(conteudo.recortesNominais.map((recorte) => recorte.disciplina.nome)).toEqual(['Física', 'Química'])
         for (const recorte of conteudo.recortesNominais) expect(Object.keys(recorte).sort()).toEqual(['disciplina', 'serie'])
       } finally {
-        await sql(`update vinculo set estado = 'confirmado', decidido_em = now() where escola_id = $1 and usuario_id = $2`, [a.escolaId, a.colega.usuarioId])
+        await sql('update entrega set decidida_por = $3 where escola_id = $1 and id = $2', [a.escolaId, lote.id, lote.decidida_por])
       }
     })
 
     it('o alerta é só o de habilidade com acerto baixo, com o número medido, o limiar e hipótese de lista fechada', async () => {
       const { conteudo } = await gerar(a)
-      // 4 de 6 é 66,7%, acima do limiar; 2 de 4 é 50%, abaixo.
+      // 2 de 6 é 33,3% e 5 de 9 é 55,6%, os dois abaixo do limiar; do pior para o melhor.
+      const comum = { tipo: 'habilidade_com_acerto_baixo', serie: { id: a.serieId, etapa: 'em', ano: 2 }, disciplina: { id: a.quimica, nome: 'Química' }, referencia: LIMIAR_DE_ACERTO_BAIXO_PERCENTUAL, hipoteses: ['conteudo_recente', 'questoes_acima_do_material'] }
       expect(conteudo.alertas).toEqual([
-        {
-          tipo: 'habilidade_com_acerto_baixo',
-          serie: { id: a.serieId, etapa: 'em', ano: 2 },
-          disciplina: { id: a.quimica, nome: 'Química' },
-          habilidade: HABILIDADE_DAS_DUAS_ULTIMAS,
-          valor: 50,
-          referencia: LIMIAR_DE_ACERTO_BAIXO_PERCENTUAL,
-          hipoteses: ['poucas_atividades_no_tema'],
-        },
+        { ...comum, habilidade: HABILIDADE_DAS_DUAS_ULTIMAS, valor: 33.3 },
+        { ...comum, habilidade: HABILIDADE_DAS_TRES_PRIMEIRAS, valor: 55.6 },
       ])
     })
 
@@ -203,13 +221,6 @@ describe('Analista de desempenho escolar', () => {
         }
         for (const proibido of [a.turma, a.outraTurma, '2ºB', '2ºC', NOME_DA_PROFESSORA_DE_TESTE, NOME_DO_ALUNO_DE_TESTE, NOME_DA_BIA]) expect(onde).not.toContain(proibido)
       }
-    })
-
-    it('aprovado o lote do 2ºC, ele passa a contar', async () => {
-      await aprovarOLote(rotas, a.colega, pendenteNoC)
-      const { conteudo } = await gerar(a)
-      expect(conteudo.recortes).toMatchObject([{ alunos: 3, lotesAprovados: 2, acertoPercentual: 46.7, porHabilidade: [{ acertos: 5, total: 9 }, { acertos: 2, total: 6 }] }])
-      expect(conteudo.escola).toMatchObject({ lotesAprovados: 3, lotesEsperando: 0 })
     })
 
     it('a mesma chave de envio devolve a mesma execução e grava um resumo só', async () => {
