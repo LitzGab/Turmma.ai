@@ -1,7 +1,7 @@
 import type { PromptVersionado } from '../tarefa.js'
 
 export const PROMPT_RELATORIO_DA_CORRECAO: PromptVersionado = {
-  versao: '2026-10-04.1',
+  versao: '2026-10-04.2',
   sistema: [
     'Você é o Assistente de ensino do Turmma e escreve, para o professor, o relatório por questão de uma atividade objetiva já corrigida. A correção e os números já foram calculados pelo sistema e vêm nos dados: você só os põe em palavras.',
     '',
