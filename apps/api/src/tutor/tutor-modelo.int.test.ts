@@ -1,0 +1,254 @@
+import { MENSAGEM_DE_ASSUNTO_DELICADO, type ExecutorNoProcesso } from '@educa/nucleo'
+import { CodigoDeErro, esquemaRespostaConversaDoTutor } from '@educa/shared'
+import { randomUUID } from 'node:crypto'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
+import { chamar, subirApi, type ApiDeTeste } from '../../test/api-com-sessao.js'
+import { dispararExecucao, execucaoTerminada, montarEscolaComAssistente, NOME_DA_PROFESSORA_DE_TESTE, zerarLimiteDePedidosDeIa, type EscolaComAssistente, type ExecucaoLida } from '../../test/escola-com-assistente.js'
+import {
+  ALTERNATIVA_CERTA_DA_QUESTAO_3,
+  ambienteDoModeloDeMentira,
+  aplicarAtividade,
+  citacaoDoPrimeiroTrecho,
+  HABILIDADE_LIMITANTE,
+  HABILIDADE_PROPORCAO,
+  lancarLote,
+  MARCA_NA_EXPLICACAO,
+  subirModeloDeMentira,
+  type ModeloDeMentira,
+} from '../../test/escola-com-tutor.js'
+import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste.js'
+import { EXECUTOR_DE_AGENTE } from '../ia/ia.module.js'
+
+const NOME_DO_ALUNO = 'Aluno Sintético Otávio Quintanilha'
+
+/**
+ * O Tutor **pela rota, contra um modelo de mentira** (regra 30, item 11; regra 40): a API é montada com o adaptador
+ * OpenAI-compatível apontado para um servidor desta máquina, que responde o que o teste mandar e guarda o que recebeu.
+ * Aqui se prova o que não depende do modelo se comportar: a recusa que ele tenta furar, a falha que não vira erro cru
+ * nem troca contada, e o que de fato sai do sistema para o provedor.
+ */
+describe('Tutor contra um modelo que não obedece', () => {
+  const bancada = new BancadaDeSessoes()
+  const medidor = new MedidorDeTeste()
+  const linhasDeLog: string[] = []
+  let modelo: ModeloDeMentira
+  let api: ApiDeTeste
+  let executor: ExecutorNoProcesso
+  let a: EscolaComAssistente
+  let atividade: string
+
+  const sql = <Linha extends Record<string, unknown> = Record<string, unknown>>(texto: string, valores: unknown[] = []) => bancada.pool.query<Linha>(texto, valores)
+  const turno = async (sessao: SessaoDeTeste, texto: string, onde: Record<string, unknown> = {}): Promise<ExecucaoLida & { execucaoId: string }> => {
+    const execucaoId = await dispararExecucao(api, sessao, '/v1/tutor/mensagens', { texto, ...onde })
+    return { execucaoId, ...(await execucaoTerminada(api, sessao, execucaoId)) }
+  }
+  const naQuestao = (questao: number) => ({ atividadeAplicadaId: atividade, questao })
+  const resposta = (execucao: ExecucaoLida): { tipo: string; texto: string } => execucao.resultado?.mensagem as never
+  const usoDeHoje = async (sessao: SessaoDeTeste) => esquemaRespostaConversaDoTutor.parse((await chamar(api.url, 'GET', `/v1/tutor/conversa?atividadeAplicadaId=${atividade}`, await sessao.tokenNovo())).corpo).uso.hoje
+  const sinaisDe = async (aluno: SessaoDeTeste) => (await sql<{ tipo: string; atividade_aplicada_id: string | null; questao: number | null }>('select tipo, atividade_aplicada_id, questao from sinal_tutor where escola_id = $1 and aluno_id = $2 order by id', [a.escolaId, aluno.usuarioId])).rows
+  const respostasGravadas = async (aluno: SessaoDeTeste) => (await sql<{ texto: string }>(`select texto from mensagem_tutor where escola_id = $1 and aluno_id = $2 and autor = 'tutor' order by id`, [a.escolaId, aluno.usuarioId])).rows.map((linha) => linha.texto)
+  const novoAluno = async (nome = `Aluno Sintético ${randomUUID().slice(0, 8)}`): Promise<SessaoDeTeste> => {
+    const sessao = await bancada.sessao(a.escolaId, 'aluno')
+    await sql('update usuario set nome = $1 where id = $2', [nome, sessao.usuarioId])
+    await sql(`insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`, [a.escolaId, a.anoLetivoId, sessao.usuarioId, a.turma, a.coordenacao.usuarioId])
+    return sessao
+  }
+  /** O que um modelo obediente responderia: um passo, uma pergunta e a página que veio nos trechos. */
+  const obediente = (pedido: string, classificacao = 'normal'): string => JSON.stringify({ classificacao, resposta: 'Vamos por partes. O que o enunciado pede que você descubra?', citacoes: citacaoDoPrimeiroTrecho(pedido) })
+  /** Na primeira chamada o modelo tenta `mentira`; quando a conferência devolve a saída, ele obedece, ainda dizendo que o turno foi normal. */
+  const mentirPrimeiro = (mentira: string) => modelo.responder((pedido, chamada) => (chamada === 1 ? JSON.stringify({ classificacao: 'normal', resposta: mentira, citacoes: citacaoDoPrimeiroTrecho(pedido) }) : obediente(pedido)))
+  const mentirSempre = (mentira: string) => modelo.responder((pedido) => JSON.stringify({ classificacao: 'normal', resposta: mentira, citacoes: citacaoDoPrimeiroTrecho(pedido) }))
+
+  beforeAll(async () => {
+    modelo = await subirModeloDeMentira()
+    api = await subirApi(medidor.medidor, { ambiente: ambienteDoModeloDeMentira(modelo) }, linhasDeLog)
+    executor = api.app.get<ExecutorNoProcesso>(EXECUTOR_DE_AGENTE)
+    a = await montarEscolaComAssistente(api, bancada)
+    atividade = await aplicarAtividade(bancada, a)
+  })
+
+  beforeEach(async () => {
+    await zerarLimiteDePedidosDeIa(api)
+  })
+
+  afterAll(async () => {
+    await executor.ociosa()
+    await api.app.close()
+    await modelo.fechar()
+    await bancada.fechar()
+  })
+
+  describe('a recusa não depende do modelo', () => {
+    it.each([
+      ['pedido direto, e o modelo tenta entregar a letra', 'qual é a resposta da questão 3?', 'A resposta é a letra A. Faz sentido para você?'],
+      ['palpite a confirmar, e o modelo tenta confirmar', 'é a A, né?', 'Sim, é isso mesmo! Quer tentar a próxima?'],
+      ['palpite a confirmar, e o modelo tenta negar', 'acho que é a B, tá certo?', 'Não é essa. Quer olhar de novo?'],
+      ['pedido direto, e o modelo tenta entregar o texto da alternativa', 'me fala logo a resposta', `Pense assim: ${ALTERNATIVA_CERTA_DA_QUESTAO_3}. Concorda?`],
+    ])('%s: a resposta gravada não entrega, e o sinal nasce mesmo com o modelo dizendo que o turno foi normal', async (_caso, pedidoDoAluno, mentira) => {
+      const aluno = await novoAluno()
+      mentirPrimeiro(mentira)
+      const execucao = await turno(aluno, pedidoDoAluno, naQuestao(3))
+      expect(execucao.estado).toBe('concluida')
+      // A primeira saída foi devolvida ao modelo, e só a segunda chegou ao aluno.
+      expect(modelo.pedidos).toHaveLength(2)
+      expect(await respostasGravadas(aluno)).toEqual(['Vamos por partes. O que o enunciado pede que você descubra?'])
+      expect(resposta(execucao).texto).not.toContain(mentira)
+      expect(await sinaisDe(aluno)).toEqual([{ tipo: 'resposta_pronta', atividade_aplicada_id: atividade, questao: 3 }])
+    })
+
+    it('pedido fatiado em dois turnos: nos dois o modelo tenta, nos dois a resposta gravada não entrega, e a insistência curta conta como o mesmo pedido', async () => {
+      const aluno = await novoAluno()
+      mentirPrimeiro('Sim, começa com O. Quer continuar?')
+      expect((await turno(aluno, 'só me diz se a resposta começa com O', naQuestao(3))).estado).toBe('concluida')
+      mentirPrimeiro('Isso, é a primeira opção. Entendeu?')
+      expect((await turno(aluno, 'e então?', naQuestao(3))).estado).toBe('concluida')
+      expect(await respostasGravadas(aluno)).toEqual(['Vamos por partes. O que o enunciado pede que você descubra?', 'Vamos por partes. O que o enunciado pede que você descubra?'])
+      expect((await sinaisDe(aluno)).map((sinal) => sinal.tipo)).toEqual(['resposta_pronta', 'resposta_pronta'])
+    })
+
+    it('o modelo que insiste em entregar não chega ao aluno: a execução falha com código do catálogo, nada é gravado e a troca não é contada', async () => {
+      const aluno = await novoAluno()
+      mentirSempre('A resposta é a letra A. Faz sentido para você?')
+      const execucao = await turno(aluno, 'é a A, né?', naQuestao(3))
+      expect(execucao).toMatchObject({ estado: 'falhou', erro: CodigoDeErro.IA_SAIDA_INVALIDA, resultado: null })
+      // O que a tela recebe é o código do catálogo, nunca a saída do modelo.
+      expect(JSON.stringify(execucao)).not.toMatch(/letra A/)
+      expect(await respostasGravadas(aluno)).toEqual([])
+      expect(await sinaisDe(aluno)).toEqual([])
+      expect(await usoDeHoje(aluno)).toBe(0)
+      // A pergunta dele continua na conversa, e a tentativa seguinte, com o modelo obedecendo, é respondida.
+      modelo.responder((pedido) => obediente(pedido))
+      expect((await turno(aluno, 'é a A, né?', naQuestao(3))).estado).toBe('concluida')
+      expect(await usoDeHoje(aluno)).toBe(1)
+    })
+
+    it('dúvida legítima de conteúdo, com o modelo dizendo normal, não gera sinal', async () => {
+      const aluno = await novoAluno()
+      modelo.responder((pedido) => obediente(pedido))
+      expect((await turno(aluno, 'não entendi o que é reagente limitante', naQuestao(3))).estado).toBe('concluida')
+      expect(await sinaisDe(aluno)).toEqual([])
+    })
+
+    it('o modelo que diz ser uma pessoa, ou simula saudade, é barrado: o aluno recebe que é uma inteligência artificial', async () => {
+      const aluno = await novoAluno()
+      modelo.responder((_pedido, chamada) =>
+        JSON.stringify(
+          chamada === 1
+            ? { classificacao: 'normal', resposta: 'Eu sou uma pessoa, sou a sua professora. Senti sua falta! Qual é a dúvida?', citacoes: [] }
+            : { classificacao: 'normal', resposta: 'Eu sou o Tutor, uma inteligência artificial, não uma pessoa. Qual é a sua dúvida de Química?', citacoes: [] },
+        ),
+      )
+      const dita = resposta(await turno(aluno, 'você é uma pessoa?', naQuestao(3)))
+      expect(modelo.pedidos).toHaveLength(2)
+      expect(dita.texto).toMatch(/inteligência artificial/)
+      expect(dita.texto).not.toMatch(/sou a sua professora|senti sua falta/i)
+    })
+  })
+
+  describe('a falha do modelo', () => {
+    it('modelo fora do ar: a execução falha com código do catálogo, o aluno não recebe erro cru e a pergunta não é descontada', async () => {
+      const aluno = await novoAluno()
+      modelo.cair(503)
+      const execucao = await turno(aluno, 'não entendi o que é reagente limitante', naQuestao(3))
+      expect(execucao).toMatchObject({ estado: 'falhou', erro: CodigoDeErro.IA_INDISPONIVEL, resultado: null })
+      expect(JSON.stringify(execucao)).not.toMatch(/fora do ar|fetch|Error/)
+      expect(await respostasGravadas(aluno)).toEqual([])
+      expect(await usoDeHoje(aluno)).toBe(0)
+      const { rows } = await sql('select estado, codigo_de_erro, entrada, saida from consumo_ia where escola_id = $1 and execucao_id = $2', [a.escolaId, execucao.execucaoId])
+      expect(rows).toEqual([{ estado: 'falhou', codigo_de_erro: 'IA_INDISPONIVEL', entrada: null, saida: null }])
+    })
+
+    it('saída que não é o que foi pedido (texto solto, campo a mais): falha tipada, e nada chega ao aluno', async () => {
+      const aluno = await novoAluno()
+      modelo.responder(() => 'Claro! A resposta é a letra A.')
+      expect(await turno(aluno, 'não entendi o que é reagente limitante', naQuestao(3))).toMatchObject({ estado: 'falhou', erro: CodigoDeErro.IA_SAIDA_INVALIDA })
+      modelo.responder((pedido) => JSON.stringify({ ...(JSON.parse(obediente(pedido)) as object), observacaoSobreOAluno: 'parece desatento e ansioso' }))
+      expect(await turno(aluno, 'não entendi o que é reagente limitante', naQuestao(3))).toMatchObject({ estado: 'falhou', erro: CodigoDeErro.IA_SAIDA_INVALIDA })
+      expect(await respostasGravadas(aluno)).toEqual([])
+      expect(await usoDeHoje(aluno)).toBe(0)
+    })
+
+    it('citação de página que não foi entregue ao modelo é saída inválida', async () => {
+      const aluno = await novoAluno()
+      modelo.responder(() => JSON.stringify({ classificacao: 'normal', resposta: 'Releia a página 99. O que ela diz?', citacoes: [{ materialId: a.materialId, pagina: 99, trecho: 'Página 99' }] }))
+      expect(await turno(aluno, 'não entendi o que é reagente limitante', naQuestao(3))).toMatchObject({ estado: 'falhou', erro: CodigoDeErro.IA_SAIDA_INVALIDA })
+      expect(await respostasGravadas(aluno)).toEqual([])
+    })
+  })
+
+  describe('o que sai do sistema para o modelo', () => {
+    it('a questão vai sem gabarito e sem explicação, a memória só com lote aprovado, e nenhum nome de pessoa', async () => {
+      const aluno = await novoAluno(NOME_DO_ALUNO)
+      const aprovada = await aplicarAtividade(bancada, a, { titulo: 'Lista aprovada' })
+      const pendente = await aplicarAtividade(bancada, a, { titulo: 'Lista pendente' })
+      const rejeitada = await aplicarAtividade(bancada, a, { titulo: 'Lista rejeitada' })
+      const alunoId = aluno.usuarioId
+      await lancarLote(bancada, a, aprovada, 'aprovada', { alunoId, acertos: 1, total: 3, porHabilidade: [{ codigo: HABILIDADE_LIMITANTE.codigo, acertos: 1, total: 3 }] })
+      await lancarLote(bancada, a, pendente, 'pendente', { alunoId, acertos: 0, total: 3, porHabilidade: [{ codigo: HABILIDADE_PROPORCAO.codigo, acertos: 0, total: 3 }] })
+      await lancarLote(bancada, a, rejeitada, 'rejeitada', { alunoId, acertos: 0, total: 3, porHabilidade: [{ codigo: HABILIDADE_PROPORCAO.codigo, acertos: 0, total: 3 }] })
+
+      modelo.responder((pedido) => obediente(pedido))
+      expect((await turno(aluno, 'não entendi o que é reagente limitante', naQuestao(3))).estado).toBe('concluida')
+      expect(modelo.pedidos).toHaveLength(1)
+      const pedido = modelo.pedidos[0] ?? ''
+
+      // A questão em andamento foi, com o enunciado e as alternativas.
+      expect(pedido).toContain('questao_em_que_o_aluno_esta')
+      expect(pedido).toContain('o que é o reagente limitante?')
+      expect(pedido).toContain(ALTERNATIVA_CERTA_DA_QUESTAO_3)
+      // O gabarito e a explicação, não: o Tutor não tem como entregar o que não recebeu.
+      expect(pedido).not.toMatch(/gabarito\\?"\s*:/)
+      expect(pedido).not.toContain('explicacao')
+      expect(pedido).not.toContain(MARCA_NA_EXPLICACAO)
+
+      // A memória: a habilidade do lote aprovado, com os números dele; a do pendente e a do rejeitado, não.
+      expect(pedido).toContain('memoria_do_trabalho_do_aluno_por_habilidade')
+      expect(pedido).toMatch(new RegExp(`${HABILIDADE_LIMITANTE.codigo.replace(/\./g, '\\.')}.{0,200}acertos\\\\?":1,\\\\?"erros\\\\?":2`))
+      expect(pedido).not.toContain(HABILIDADE_PROPORCAO.codigo)
+      expect(pedido).not.toContain(HABILIDADE_PROPORCAO.descricao)
+
+      // Nenhum nome, nenhum id de pessoa (regra 20, item 12).
+      for (const proibido of [NOME_DO_ALUNO, 'Otávio', NOME_DA_PROFESSORA_DE_TESTE, aluno.usuarioId, a.professora.usuarioId, a.escolaId, a.turma]) expect(pedido, proibido).not.toContain(proibido)
+      // E o que foi ao modelo não foi a log.
+      expect(linhasDeLog.some((linha) => linha.includes('reagente limitante') || linha.includes(NOME_DO_ALUNO))).toBe(false)
+    })
+
+    it('o turno de assunto delicado nunca vai ao modelo, nem no turno seguinte: o filtro é o tipo gravado, não o texto', async () => {
+      const aluno = await novoAluno()
+      const marca = `araponga${randomUUID().slice(0, 8)}`
+      modelo.responder((pedido) => obediente(pedido))
+      await turno(aluno, 'como eu começo a questão 3?', naQuestao(3))
+      const delicado = await turno(aluno, `eu apanho em casa ${marca}`, naQuestao(3))
+      expect(resposta(delicado)).toMatchObject({ tipo: 'assunto_delicado', texto: MENSAGEM_DE_ASSUNTO_DELICADO })
+      // O turno delicado não chamou o modelo: só o primeiro turno chegou a ele.
+      expect(modelo.pedidos).toHaveLength(1)
+
+      // Troca-se, no banco, o texto dos dois lados do turno por um que nenhum gatilho reconhece: só o `tipo` ainda diz o que ele foi.
+      await sql(`update mensagem_tutor set texto = $3 where escola_id = $1 and execucao_id = $2 and autor = 'aluno'`, [a.escolaId, delicado.execucaoId, `pergunta trocada ${marca}`])
+      await sql(`update mensagem_tutor set texto = $3 where escola_id = $1 and execucao_id = $2 and autor = 'tutor'`, [a.escolaId, delicado.execucaoId, `mensagem fixa de outra versão ${marca}`])
+
+      modelo.responder((pedido) => obediente(pedido))
+      expect((await turno(aluno, 'e o que o enunciado quer dizer com limitante?', naQuestao(3))).estado).toBe('concluida')
+      const pedido = modelo.pedidos[0] ?? ''
+      // O turno comum de antes foi como turno anterior; o delicado, não.
+      expect(pedido).toContain('como eu começo a questão 3?')
+      expect(pedido).not.toContain(marca)
+      expect(pedido).not.toContain('apanho')
+    })
+
+    it('quando é o modelo que classifica o turno como assunto delicado, o aluno recebe a mensagem fixa, e o professor, o sinal sem referência', async () => {
+      const aluno = await novoAluno()
+      // Nenhum gatilho da regra reconhece esta frase: quem a classifica é o modelo, e o texto que ele escreveu é descartado.
+      modelo.responder(() => JSON.stringify({ classificacao: 'assunto_delicado', resposta: 'Sinto muito, vamos conversar sobre isso. O que aconteceu?', citacoes: [] }))
+      const execucao = await turno(aluno, 'lá em casa as coisas estão bem complicadas', naQuestao(3))
+      expect(resposta(execucao)).toMatchObject({ tipo: 'assunto_delicado', texto: MENSAGEM_DE_ASSUNTO_DELICADO })
+      expect(await respostasGravadas(aluno)).toEqual([MENSAGEM_DE_ASSUNTO_DELICADO])
+      const { rows: sinais } = await sql('select tipo, atividade_aplicada_id, questao, material_id, pagina from sinal_tutor where escola_id = $1 and aluno_id = $2', [a.escolaId, aluno.usuarioId])
+      expect(sinais).toEqual([{ tipo: 'atencao_humana', atividade_aplicada_id: null, questao: null, material_id: null, pagina: null }])
+      // A pergunta perde a questão: o turno delicado não é referência a trabalho.
+      const { rows: perguntas } = await sql(`select questao, material_id, pagina from mensagem_tutor where escola_id = $1 and execucao_id = $2 and autor = 'aluno'`, [a.escolaId, execucao.execucaoId])
+      expect(perguntas).toEqual([{ questao: null, material_id: null, pagina: null }])
+    })
+  })
+})
