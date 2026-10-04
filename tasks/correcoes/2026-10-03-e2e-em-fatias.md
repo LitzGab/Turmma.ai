@@ -145,8 +145,18 @@ As quatro somam os 394 casos, todas verdes com o banco vazio e sem nenhum outro 
 depende de estado deixado por outro na partição de hoje. Spec novo ou fatia a mais trocam casos de
 fatia; daí em diante quem segura é a própria esteira, em que cada fatia começa com o banco vazio.
 
-**Esteira desta correção:** preenchida depois do push, com a execução, a conclusão e a duração de
-cada fatia no runner.
+**Esteira desta correção:** execução 37173864338 (commit `b55842e`), `success` na 1ª tentativa, sem
+rerun, e nenhuma anotação "e2e perto do teto".
+
+| Fatia | Casos | Testes | Job inteiro | Do teto de 45 |
+|---|---|---|---|---|
+| 1/4 | 99 | 10,4 min | 13 min 47 s | 31% |
+| 2/4 | 99 | 11,6 min | 14 min 51 s | **33%** (a mais lenta) |
+| 3/4 | 98 | 9,4 min | 12 min 44 s | 28% |
+| 4/4 | 98 | 9,7 min | 12 min 35 s | 28% |
+
+A pior fatia levou 14 min 51 s, contra os ~13 a ~16 min estimados pelos logs, e a etapa de testes
+ficou a 11,6 min do limiar de 23 min. O job `infra` (29 min 50 s) passou a ser o mais longo da execução.
 
 ## Recomendações sem aplicar
 
