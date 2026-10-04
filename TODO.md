@@ -709,5 +709,16 @@ qualquer dado real:
   dispara e `custo_micros` fica em zero (D14, D39).
 - [ ] **Galeria das peças fora do build** de staging e de produção.
 - [ ] **Execução de IA e extração de PDF por fila**, no lugar do processo da API (`TODO(fila)`, D49).
+- [ ] **Recusa da D55 no Assistente, estrutural.** A regra por lista de palavras pegou 6 de 47 frases novas escritas
+  pelo `conformidade-reviewer` na segunda passada da fase 3 (04/10/2026): foi ajustada às amostras. Para a demonstração
+  ela foi aceita; antes de dado real: texto colado na mensagem atual não vai ao modelo, ou é recusado quando não é
+  material do próprio professor; a conferência da saída recusa número de 0 a 10 ou letra de A a E depois de "sugiro",
+  "colocaria", "iria de", "fecharia em", "classificaria", e "considero" ou "avaliação:" seguido de insuficiente,
+  regular ou satisfatório; a entrada cobre a trajetória do aluno ("reprovo", "recuperação", "conselho de classe",
+  "encaminho"); e um terceiro arquivo de amostras, escrito por outra pessoa, com a taxa medida e declarada abaixo de 1.
+  Falso positivo conhecido: "critérios para avaliar redação antes de aplicar" é recusado.
+- [ ] **Assunto delicado sem teto de IA.** Agora passa na frente de todo limite (D36). Falta um teto próprio, alto, ou a
+  deduplicação do sinal `atencao_humana`, para um laço de mensagens não encher a lista do professor; e confirmar que o
+  limite geral de requisições por escola, o da borda, não chega antes do 188 às 10h.
 - [ ] **Ensaio de alertas intermitente** na esteira: a regra "Login recusado pelo semáforo do hash" ficou em `pending`
   até o prazo numa execução da `mvp/apresentacao` e passou na reexecução. Se voltar, entra por `/corrigir`.
