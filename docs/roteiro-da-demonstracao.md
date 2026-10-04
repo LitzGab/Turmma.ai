@@ -14,7 +14,8 @@
 - Docker com Compose e Node 22. Na pasta do repositório: `npm ci` uma vez.
 - **Quatro perfis de navegador** (no Chrome: "Adicionar perfil"), um por pessoa: **Operação**, **Coordenação**,
   **Professora**, **Aluno**. Janela anônima não serve para separar pessoas: todas as anônimas dividem os mesmos cookies.
-  Para os dois alunos de apoio (passo 4), mais dois perfis, **Aluno 2** e **Aluno 3**, ou o Firefox.
+  Para os alunos de apoio, mais dois perfis, **Aluno 2** e **Aluno 3**, ou o Firefox, e para a segunda professora de
+  Química, um perfil **Professora 2** (de preferência no computador de outra pessoa da equipe, seção 8).
 - Um gerador de código de segundo fator no computador. O jeito mais simples, na pasta do repositório:
 
   ```bash
@@ -31,7 +32,7 @@ docker compose up -d --build --wait
 ```
 
 A web fica em **http://127.0.0.1:58080**. Por padrão a IA é o **adaptador falso**: não depende de modelo, responde
-sempre igual e nada sai da máquina. Para usar o modelo local, veja a seção 9.
+sempre igual e nada sai da máquina. Para usar o modelo local, veja a seção 10.
 
 ### 0.3 O operador (uma vez por máquina, 3 min)
 
@@ -60,26 +61,32 @@ são copiados da tela.
 | Segunda professora de Química, no 2ºB | Marta Demo, `marta@demo.invalid` |
 | Professor de Física do 2ºA | Davi Demo, `davi@demo.invalid` |
 | Alunos do 2ºA (lista de nomes) | Ana Demo `D26-001`, Bruno Demo `D26-002`, Carla Demo `D26-003` |
+| Alunos do 2ºB (lista de nomes) | Elisa Demo `D26-004`, Fábio Demo `D26-005` |
 | Senhas | qualquer frase com 12 caracteres ou mais, a mesma para todos, anotada à parte |
 | Material | `tools/demonstracao/quimica-2-cap-7-estequiometria.pdf` (6 páginas, texto nosso, autoria da escola) |
 
-Por que duas professoras de Química: o Analista e a governança só mostram número de uma série com **dois ou mais
-professores** no recorte (D45). Com uma só, o número seria o resultado dela, e a tela não mostra.
+Por que duas professoras de Química, **as duas aprovando correção**: o Analista só mostra número de uma série e
+disciplina em que **dois ou mais professores distintos aprovaram correção**, e a governança só lista a linha de uma série
+com dois ou mais professores com entrega no ano (D45). Com uma só, o número seria o resultado dela, e a tela não mostra.
+Por isso a Marta aplica uma atividade no 2ºB e aprova a correção (seção 8).
 
 ### 0.5 A ordem que evita tela vazia
 
 A turma, o diagnóstico do aluno, a memória do Tutor e o Analista só mostram **correção aprovada**. Por isso a ordem é
 fixa: primeira atividade aplicada, respondida, encerrada e **aprovada** antes de abrir a turma, o diagnóstico e o
-Analista; e o Tutor entra numa **segunda** atividade, depois da primeira aprovada, para ele lembrar do que o aluno errou.
+Analista; o Tutor entra numa **segunda** atividade, depois da primeira aprovada, para ele lembrar do que o aluno errou;
+e o Analista só vem depois de a **segunda professora de Química** também ter aprovado uma correção (seção 8).
 
 ### 0.6 Versão curta e versão completa
 
 | | Versão completa (~40 min) | Versão curta (~20 min) |
 |---|---|---|
 | Parte A, a escola montada (seções 1 e 2) | ao vivo | feita antes, na véspera; na reunião só se mostra o resultado |
-| Passos 1 a 6 (seções 3 a 8) | ao vivo | ao vivo |
+| A segunda professora de Química (seção 8) | outra pessoa da equipe, em paralelo aos passos 2 a 5 | igual |
+| Passos 1 a 6 (seções 3 a 7 e 9) | ao vivo | ao vivo |
 
-Na versão curta, faça antes as seções 1 e 2 inteiras. Não aplique nenhuma atividade antes da reunião.
+Na versão curta, faça antes as seções 1 e 2 inteiras. Não aplique nenhuma atividade antes da reunião: a seção 8
+precisa do material, que sobe ao vivo no passo 1.
 
 ---
 
@@ -117,7 +124,8 @@ vale 72 horas. O painel da operação não mostra dado de aluno nem de professor
    Carla Demo;D26-003
    ```
 
-   **Ver a prévia** ("3 nomes entram") → **Gravar lista**. **Diga:** "A escola sobe só nome e matrícula. Aluno não tem
+   **Ver a prévia** ("3 nomes entram") → **Gravar lista**. Volte a **Estrutura** e faça o mesmo no **2ºB**, com
+   `Elisa Demo;D26-004` e `Fábio Demo;D26-005`. **Diga:** "A escola sobe só nome e matrícula. Aluno não tem
    e-mail, CPF, foto nem data de nascimento no sistema."
 6. **Professores** → **Cadastrar professor** → Helena Demo, `helena@demo.invalid` → **Revisar** → **Cadastrar e gerar o
    link** → copie o link (cole num bloco de notas, com o nome) → **Fechar**. Repita para Marta Demo e Davi Demo.
@@ -221,20 +229,39 @@ aluno e sugere uma nota" (a resposta explica que a IA não corrige redação nem
    pediu a resposta pronta, não **o que** ela escreveu. Supervisão, não vigilância: sem conversa, sem tempo de tela,
    sem emoção."
 
-## 8. Passo 6: a governança da coordenação (Coordenação, 6 min)
+## 8. A segunda professora de Química aprova uma correção (Professora 2, 6 min, em paralelo)
 
-1. Perfil **Coordenação** → **Governança** (recarregue). **Aparece:** Gerado por IA **4**, Aprovado por gente **2**,
+Depois do passo 1 (o material precisa estar pronto), outra pessoa da equipe faz isto no perfil **Professora 2**, com a
+Marta, enquanto quem apresenta segue os passos 2 a 5. Sem segunda pessoa, faça entre o passo 5 e o passo 6.
+
+1. Marta (já com a turma confirmada, seção 2, item 8) → **Turmas** → **Abrir a turma 2ºB** → aba **Alunos** →
+   **Gerar acesso**.
+2. Nos perfis Aluno 2 e Aluno 3 (**Sair** do Bruno e da Carla antes), Elisa e Fábio reivindicam o nome com o código, e a
+   Marta aprova os dois pedidos.
+3. Marta → **Ferramentas** → **Atividade objetiva** → Tema `Massa molar`, Questões `3` → **Gerar atividade** → **Abrir o
+   artefato** → **Aplicar à turma** → **É prática**.
+4. Elisa e Fábio entram, respondem e enviam.
+5. Marta → **Encerrar a atividade** → **Revisar a correção** → abre os destaques → **Aprovar 2 correções**.
+
+**Diga** (se a coordenação perguntar o que a segunda pessoa está fazendo): "Outra professora de Química da escola usa
+o mesmo sistema na turma dela. É o que deixa a coordenação ver o número da série sem expor uma professora."
+
+## 9. Passo 6: a governança da coordenação (Coordenação, 6 min)
+
+1. Perfil **Coordenação** → **Governança** (recarregue). **Aparece:** Gerado por IA **6**, Aprovado por gente **3**,
    Esperando o professor **0**, Rejeitado **0**; a tabela "O que a IA gerou e quem aprovou" com a correção e a
-   adaptação, por série; o consumo do mês por função, em tokens. **Diga:** "A coordenação vê o que a IA fez e que uma
+   adaptação, por série; o texto do que chega ao aluno; o consumo do mês por função, em tokens. **Diga:** "A coordenação vê o que a IA fez e que uma
    pessoa decidiu, em agregado. Não há coluna nem filtro por professor: ninguém é ranqueado pelo uso da ferramenta."
 2. **Agentes** → os três agentes (Assistente de ensino, Tutor, Analista de desempenho escolar), cada função com o que
-   faz sozinha e o que espera aprovação. Em **Adaptação**, **Suspender a função Adaptação** → Motivo → **Suspender
-   Adaptação**. **Aparece:** "Suspensa nesta escola desde…". **Diga:** "A escola desliga uma função sem desligar o
+   faz sozinha e o que espera aprovação. Em **Adaptação**, **Suspender esta função: Adaptação** → a confirmação diz o
+   efeito ("O professor deixa de conseguir pedir versão adaptada nova…") → Motivo → **Suspender Adaptação**.
+   **Aparece:** "Suspensa nesta escola desde…". **Diga:** "A escola desliga uma função sem desligar o
    resto, e o servidor passa a recusar. O que já foi produzido continua podendo ser decidido pela professora." Depois,
-   **Retomar a função Adaptação**.
-3. **Analista** → **Gerar resumo**. **Aparece:** em "2º ano do Ensino Médio · Química", "2 professores no recorte", o
-   acerto por habilidade e, se alguma ficar abaixo de 60%, o alerta como **hipótese a conferir**. **Diga:** "Química
-   tem número porque tem duas professoras. Com uma só, o número seria dela, e o sistema não mostra."
+   **Retomar esta função: Adaptação**.
+3. **Analista** → **Gerar resumo**. **Aparece:** em "2º ano do Ensino Médio · Química", "2 correções aprovadas", o
+   acerto por habilidade e, se alguma ficar abaixo de 60%, o alerta "…um limite provisório desta versão, a definir com a
+   escola", como **hipótese a conferir**. O cartão não diz quantos professores há. **Diga:** "Química tem número porque
+   as duas professoras aprovaram correções; com uma só, o número seria dela, e o sistema não mostra."
 4. **Abrir dado nominal de uma turma**. **Aparece:** o aviso "Esta abertura fica na auditoria da escola". Escolha
    `2ºA · 2º ano do Ensino Médio` e a finalidade → **Abrir dado nominal**. **Aparece:** os professores da turma (Helena,
    Química; Davi, Física) e "Esta abertura foi registrada na auditoria da escola." **Diga:** "Dado nominal só com
@@ -242,7 +269,7 @@ aluno e sugere uma nota" (a resposta explica que a IA não corrige redação nem
 
 ---
 
-## 9. O modelo local (ensaio final)
+## 10. O modelo local (ensaio final)
 
 Por padrão a demonstração usa o adaptador falso. Para o Qwen: **quem carrega o modelo é o Joaquim**, no
 `llama-server` da máquina, que escuta só em `127.0.0.1:8080`. Nada muda nele. A API roda em contêiner, e de dentro do
@@ -293,20 +320,21 @@ docker compose up -d --wait api-1 api-2
 
 Sem as variáveis, a API volta ao `.env.example`, que é o falso. A escola, as pessoas e o que já foi gerado continuam.
 
-## 10. Se der errado
+## 11. Se der errado
 
 | O que acontece | O que fazer |
 |---|---|
-| A geração passa de 20 s | A tela avisa que está demorando, sozinha. Com o modelo local é normal até um minuto: fale da página citada enquanto espera. Passou de dois minutos, volte ao falso (seção 9) e gere de novo |
-| O modelo não responde, ou a tela diz que a IA está indisponível | Volte ao adaptador falso (seção 9) e clique em **Tentar de novo**. Diga: "a IA tem reserva declarada: quando o modelo não responde, o sistema avisa, nunca dá erro cru" |
+| A geração passa de 20 s | A tela avisa que está demorando, sozinha. Com o modelo local é normal até um minuto: fale da página citada enquanto espera. Passou de dois minutos, volte ao falso (seção 10) e gere de novo |
+| O modelo não responde, ou a tela diz que a IA está indisponível | Volte ao adaptador falso (seção 10) e clique em **Tentar de novo**. Diga: "a IA tem reserva declarada: quando o modelo não responde, o sistema avisa, nunca dá erro cru" |
 | Uma tela mostra erro com **Tentar de novo** | Clique uma vez. Persistindo: recarregue a página (a sessão volta sozinha) |
 | O código do segundo fator não entra | Era o mesmo código da ativação: espere o próximo (até 30 s) |
 | O convite diz que não vale | Já foi usado ou venceu: no painel da operação, **Refazer o convite** (coordenação) ou, na coordenação, refazer o do professor |
-| A turma ou o Analista aparecem vazios | Falta correção aprovada (seção 0.5). Para o Analista, falta também a segunda professora de Química confirmar a turma |
+| A turma ou o Analista aparecem vazios | Falta correção aprovada (seção 0.5) |
+| Química aparece no Analista em "Recortes sem número" | Só uma professora aprovou correção: falta a seção 8. Feita, clique em **Gerar resumo** de novo |
 | "Esta função da IA está suspensa" | Ficou suspensa do passo 6: **Agentes** → **Retomar** |
 | O sistema inteiro travou | `docker compose up -d --wait`. Os dados ficam no volume; nada se perde |
 
-## 11. O que não mostrar, e o que responder
+## 12. O que não mostrar, e o que responder
 
 Nada disto existe nesta fatia. Não abra, não prometa data.
 
@@ -324,7 +352,19 @@ Nada disto existe nesta fatia. Não abra, não prometa data.
 | Saber se o aluno usa outra IA, tempo de tela | "Não medimos navegação nem tempo ocioso (D69, D70). Bloquear outros sites é configuração da rede da escola." |
 | Login pela conta Google ou Microsoft da escola | "Funciona, guardando só o identificador da conta; nesta demonstração usamos matrícula e senha." |
 
-## 12. Depois da demonstração
+## 13. Perguntas que a coordenação vai fazer
+
+| Pergunta | Resposta |
+|---|---|
+| "Quem aprovou esta?" | "A tabela mostra que uma pessoa aprovou, e quando. O nome fica na auditoria da escola, que guarda quem decidiu cada item; esta versão não mostra a auditoria na tela, mas ela existe e responde por item." Não prometa tela nem data |
+| "Gerou 6 e aprovaram 3: e as outras?" | "As atividades e os planos são rascunho da professora e não passam por aprovação: ficam com ela e só chegam à turma quando ela aplica, e aplicar fica registrado. O que precisa de aprovação é o que chega ao aluno vindo da IA: a versão adaptada e a correção." |
+| "Por que 60%?" | "É um limite provisório desta versão, a definir com a escola. Qual indicador usar e com que limite é decisão que ainda vamos tomar com vocês." |
+| "Se eu suspender os sinais, o aviso de aluno em risco para?" | "Não. O aviso de que um aluno precisa de um adulto continua chegando ao professor, e o uso do Tutor pela turma continua visível a ele. Param só os avisos de aprendizagem (quem travou, quem pediu a resposta pronta)." |
+| "Quando sai o resumo semanal?" | "O resumo sai quando a coordenação pede, no botão Gerar resumo. Não há envio automático." |
+| "Quanto custa em reais?" | "O custo de cada chamada ainda não é medido nesta versão; o consumo aparece em tokens, por função. O preço para a escola é por aluno, com o uso normal incluso, sem crédito para controlar (D40)." |
+| "O que são tokens e execuções?" | "Execução é cada vez que a IA trabalhou, como gerar uma atividade ou responder ao aluno; tokens são o tamanho do texto que ela leu e escreveu nesse trabalho, a medida que os provedores de IA usam para cobrar." |
+
+## 14. Depois da demonstração
 
 Os dados ficam no volume do Docker. Para começar do zero, com cuidado: `docker compose down -v` apaga **tudo** do
 ambiente local (escolas, pessoas, operador). Na próxima vez, repita a partir do 0.2.

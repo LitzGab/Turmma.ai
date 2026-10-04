@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto'
 import type { APIRequestContext } from '@playwright/test'
 import { Client } from 'pg'
 import { urlDoBancoDeTeste } from '../../tools/ci/compose.ts'
+import { ProfessoraPelaApi } from './a3.ts'
+import { entrarComoAlunoPelaApi, responderPelaApi } from './aluno-pela-api.ts'
 import { expect } from './perfis.ts'
 
 /**
@@ -60,6 +62,11 @@ export function atividadeNoBanco(escolaId: string, titulo: string): Promise<{ id
     const { id, conteudo } = rows[0]
     return { id, questoes: conteudo.questoes.map((questao) => ({ gabarito: questao.gabarito, habilidade: questao.habilidade.codigo, alternativaCerta: questao.alternativas[questao.gabarito] ?? '' })) }
   })
+}
+
+/** A disciplina da escola com aquele nome. */
+export function disciplinaDoNome(escolaId: string, nome: string): Promise<string> {
+  return comBanco((banco) => umId(banco, 'select id from disciplina where escola_id = $1 and nome = $2', [escolaId, nome]))
 }
 
 /** Quantos artefatos a escola tem: zero antes de a professora escolher a ferramenta prova que a pergunta da D18 não gera nada. */
@@ -125,4 +132,60 @@ export async function erroAoPedirVersaoAdaptada(request: APIRequestContext, toke
   if (resposta.status() === 202) return null
   const corpo = (await resposta.json()) as { erro?: { codigo?: string } }
   return corpo.erro?.codigo ?? `HTTP ${String(resposta.status())}`
+}
+
+export interface AlunoDeApoio {
+  readonly nome: string
+  readonly matricula: string
+  readonly senha: string
+}
+
+/**
+ * A segunda professora da disciplina faz, pela API e na turma dela, o que a demonstração deixa pronto na véspera: gera o
+ * acesso, aprova os pedidos de nome dos alunos de apoio, gera uma atividade com a ferramenta, aplica, os alunos
+ * respondem, e ela encerra, abre os destaques e **aprova o lote**. É o que dá ao recorte da série e da disciplina dois
+ * professores distintos com correção aprovada, e por isso número no Analista (D45). Devolve o id do artefato.
+ */
+export async function segundaProfessoraAprovaUmLotePelaApi(
+  request: APIRequestContext,
+  professora: { email: string; senha: string },
+  turma: { slug: string; turmaId: string; disciplinaId: string; tema: string },
+  alunos: readonly AlunoDeApoio[],
+): Promise<string> {
+  const token = await tokenDaEquipe(request, professora.email, professora.senha)
+  const acesso = await request.post(`/v1/turmas/${turma.turmaId}/acesso`, { headers: comToken(token), data: { validadeDias: 1 } })
+  expect(acesso.ok(), 'a segunda professora gera o acesso da turma dela').toBe(true)
+  const { codigo } = (await acesso.json()) as { codigo: string }
+  for (const aluno of alunos) await alunoReivindicaPelaApi(request, { slug: turma.slug, codigo }, aluno)
+  const lidos = await request.get(`/v1/turmas/${turma.turmaId}/reivindicacoes`, { headers: comToken(token) })
+  expect(lidos.ok(), 'a segunda professora lê os pedidos').toBe(true)
+  const { itens } = (await lidos.json()) as { itens: { id: string }[] }
+  expect(itens).toHaveLength(alunos.length)
+  const decisao = await request.post('/v1/reivindicacoes/decidir', { headers: comToken(token), data: { ids: itens.map((pedido) => pedido.id), decisao: 'aprovar' } })
+  expect(decisao.ok(), 'a segunda professora aprova os pedidos').toBe(true)
+
+  const pedido = await request.post('/v1/ferramentas/atividade_objetiva/gerar', {
+    headers: comToken(token),
+    data: { turmaId: turma.turmaId, disciplinaId: turma.disciplinaId, tema: turma.tema, quantidade: 3, chaveEnvio: randomUUID() },
+  })
+  expect(pedido.status(), 'a ferramenta aceita o pedido').toBe(202)
+  const { execucaoId } = (await pedido.json()) as { execucaoId: string }
+  let artefatoId: string | undefined
+  await expect
+    .poll(
+      async () => {
+        const execucao = (await (await request.get(`/v1/execucoes/${execucaoId}`, { headers: comToken(token) })).json()) as { estado: string; resultado: { artefatoId?: string } | null }
+        artefatoId = execucao.resultado?.artefatoId
+        return execucao.estado
+      },
+      { timeout: 45_000, intervals: [1_000] },
+    )
+    .toBe('concluida')
+  if (artefatoId === undefined) throw new Error('a geração da segunda professora não devolveu artefato')
+
+  const dela = await ProfessoraPelaApi.entrar(request, professora)
+  const aplicadaId = await dela.aplicar(artefatoId, turma.turmaId, false)
+  for (const aluno of alunos) await responderPelaApi(request, await entrarComoAlunoPelaApi(request, { slug: turma.slug, ...aluno }), aplicadaId, [0, 1, 2])
+  await dela.encerrarEAprovar(aplicadaId)
+  return artefatoId
 }

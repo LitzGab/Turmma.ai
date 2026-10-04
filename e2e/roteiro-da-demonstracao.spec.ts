@@ -16,10 +16,12 @@ import {
   alunoDaMatricula,
   alunoReivindicaPelaApi,
   aplicacaoDoArtefato,
+  disciplinaDoNome,
   artefatosNoBanco,
   atividadeNoBanco,
   erroAoPedirVersaoAdaptada,
   professorAceitaEConfirmaPelaApi,
+  segundaProfessoraAprovaUmLotePelaApi,
   tokenDaEquipe,
   turmaDoNome,
   usuarioDaEquipe,
@@ -34,7 +36,8 @@ import { entrarNaOperacao } from './__fixtures__/tela-da-operacao.ts'
  * coordenação monta a escola na tela; a professora aceita, gera o acesso, e a aluna reivindica o nome e é aprovada; a
  * coordenação sobe o material (e a recusa sem licença); a professora gera a atividade pela conversa, exporta, adapta e
  * aprova; aplica; os alunos respondem; ela encerra, abre os destaques e aprova com a validação; a turma e o diagnóstico
- * aparecem; numa segunda atividade a aluna pede a resposta ao Tutor e é conduzida; a professora vê o sinal sem a
+ * aparecem; a segunda professora de Química aprova um lote na turma dela, para o recorte ter dois professores com
+ * correção aprovada (D45); numa segunda atividade a aluna pede a resposta ao Tutor e é conduzida; a professora vê o sinal sem a
  * conversa; e a coordenação abre a governança, suspende e retoma uma função, gera o resumo do Analista e abre o nominal.
  *
  * Nada de seed de escola (D71 revista): a escola nasce na tela do operador, e o banco só é **lido**, para as asserções
@@ -122,6 +125,10 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     const ana = { nome: `Ana Demo ${marca}`, matricula: `D26-${marca}-1`, senha }
     const bruno = { nome: `Bruno Demo ${marca}`, matricula: `D26-${marca}-2`, senha }
     const carla = { nome: `Carla Demo ${marca}`, matricula: `D26-${marca}-3`, senha }
+    const doB = [
+      { nome: `Elisa Demo ${marca}`, matricula: `D26-${marca}-4`, senha },
+      { nome: `Fábio Demo ${marca}`, matricula: `D26-${marca}-5`, senha },
+    ]
 
     // ── 1. O operador cria a rede e a escola no painel e convida a coordenação (A0b). ─────────────────────────────
     const operacao = await outroNavegador(browser)
@@ -209,16 +216,19 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       }
       await expect(principal(coordenacao).getByRole('region', { name: 'Turmas de 2026' })).toContainText(turmaB)
 
-      // A lista de nomes do 2ºA: só nome e matrícula.
-      await principal(coordenacao).getByRole('link', { name: `Lista de nomes da turma ${turmaA}` }).click()
-      await principal(coordenacao).getByLabel('Lista colada').fill(`nome;matrícula\n${[ana, bruno, carla].map((aluno) => `${aluno.nome};${aluno.matricula}`).join('\n')}\n`, { timeout: PRAZO_DA_ENTRADA_MS })
-      await botao(principal(coordenacao), 'Ver a prévia').click()
-      const previa = principal(coordenacao).getByRole('region', { name: 'Prévia' })
-      await expect(previa.getByRole('status')).toHaveText('3 nomes entram · 0 já estão na lista · 0 linhas com erro', { timeout: PRAZO_DA_ENTRADA_MS })
-      await botao(previa, 'Gravar lista').click()
-      await expect(principal(coordenacao).getByRole('region', { name: 'Nomes da turma' }).getByRole('status').filter({ hasText: '3 nomes gravados na lista.' })).toBeVisible({
-        timeout: PRAZO_DA_ENTRADA_MS,
-      })
+      // A lista de nomes de cada turma: só nome e matrícula.
+      for (const [turma, alunos] of [[turmaA, [ana, bruno, carla]], [turmaB, doB]] as const) {
+        if (turma === turmaB) await irPelaNavegacao(coordenacao, 'Estrutura', hasTouch)
+        await principal(coordenacao).getByRole('link', { name: `Lista de nomes da turma ${turma}` }).click({ timeout: PRAZO_DA_ENTRADA_MS })
+        await principal(coordenacao).getByLabel('Lista colada').fill(`nome;matrícula\n${alunos.map((aluno) => `${aluno.nome};${aluno.matricula}`).join('\n')}\n`, { timeout: PRAZO_DA_ENTRADA_MS })
+        await botao(principal(coordenacao), 'Ver a prévia').click()
+        const previa = principal(coordenacao).getByRole('region', { name: 'Prévia' })
+        await expect(previa.getByRole('status')).toHaveText(`${String(alunos.length)} nomes entram · 0 já estão na lista · 0 linhas com erro`, { timeout: PRAZO_DA_ENTRADA_MS })
+        await botao(previa, 'Gravar lista').click()
+        await expect(principal(coordenacao).getByRole('region', { name: 'Nomes da turma' }).getByRole('status').filter({ hasText: `${String(alunos.length)} nomes gravados na lista.` })).toBeVisible({
+          timeout: PRAZO_DA_ENTRADA_MS,
+        })
+      }
 
       // Três professores, cada um com o convite de cópia única.
       await irPelaNavegacao(coordenacao, 'Professores', hasTouch)
@@ -511,6 +521,13 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       for (const colega of [bruno, carla]) await expect(aluna.locator('body')).not.toContainText(colega.nome)
     })
 
+    await test.step('a segunda professora de Química aplica uma atividade no 2ºB e aprova o lote (na véspera, em outro perfil, pela API)', async () => {
+      const turmaBId = await turmaDoNome(escolaId, turmaB)
+      const disciplinaId = await disciplinaDoNome(escolaId, DISCIPLINA)
+      await segundaProfessoraAprovaUmLotePelaApi(request, { email: marta.email, senha }, { slug, turmaId: turmaBId, disciplinaId, tema: 'Massa molar' }, doB)
+      expect((await validacoesNoBanco(escolaId)).map((validacao) => validacao.confirmadaPor).sort()).toEqual([helenaId, await usuarioDaEquipe(escolaId, marta.email)].sort())
+    })
+
     // ── 8. Passo 5: o Tutor numa segunda atividade, e o sinal para a professora (A4; D47, D66, regra 70 item 7). ────
     await test.step('numa segunda atividade, a aluna pede a resposta ao Tutor: ele recusa, lembra do que ela errou e cita a página', async () => {
       await irPelaNavegacao(professora, 'Ferramentas', hasTouch)
@@ -562,9 +579,10 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     await test.step('a coordenação vê o que a IA gerou e que uma pessoa aprovou, em agregado e sem nome de ninguém', async () => {
       await irPelaNavegacao(coordenacao, 'Governança', hasTouch)
       await esperarGovernanca(coordenacao)
-      // Três artefatos (as duas atividades e a versão adaptada) e um lote; aprovados a versão e o lote.
-      await expect(numeroDoPainel(coordenacao, 'Gerado por IA')).toContainText('4', { timeout: PRAZO_DA_ENTRADA_MS })
-      await expect(numeroDoPainel(coordenacao, 'Aprovado por gente')).toContainText('2')
+      // Quatro artefatos (as duas atividades da Helena, a versão adaptada e a atividade da Marta) e dois lotes; aprovados a
+      // versão e os dois lotes.
+      await expect(numeroDoPainel(coordenacao, 'Gerado por IA')).toContainText('6', { timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(numeroDoPainel(coordenacao, 'Aprovado por gente')).toContainText('3')
       await expect(numeroDoPainel(coordenacao, 'Esperando o professor')).toContainText('0')
       await expect(numeroDoPainel(coordenacao, 'Rejeitado')).toContainText('0')
       const tabela = principal(coordenacao).getByRole('region', { name: 'O que a IA gerou e quem aprovou' }).first()
@@ -582,8 +600,9 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
         await expect(principal(coordenacao).getByRole('heading', { level: 2, name: agente })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       }
       const adaptacao = principal(coordenacao).locator('[data-funcao="adaptacao"]')
-      await adaptacao.getByRole('button', { name: 'Suspender a função Adaptação' }).click()
+      await adaptacao.getByRole('button', { name: 'Suspender esta função: Adaptação' }).click()
       const suspender = coordenacao.getByRole('alertdialog')
+      await expect(suspender).toContainText('O professor deixa de conseguir pedir versão adaptada nova.')
       await suspender.getByLabel('Motivo').selectOption({ label: 'A escola está revendo o uso pedagógico' })
       await suspender.getByRole('button', { name: 'Suspender Adaptação' }).click()
       await expect(adaptacao).toContainText('Suspensa nesta escola desde', { timeout: PRAZO_DA_ENTRADA_MS })
@@ -593,22 +612,26 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       const segunda = await atividadeNoBanco(escolaId, SEGUNDA)
       const tokenDaHelena = await tokenDaEquipe(request, helena.email, senha)
       expect(await erroAoPedirVersaoAdaptada(request, tokenDaHelena, segunda.id)).toBe('FUNCAO_SUSPENSA')
-      expect(await entregasNoBanco(escolaId)).toHaveLength(2)
+      expect(await entregasNoBanco(escolaId)).toHaveLength(3)
 
-      await adaptacao.getByRole('button', { name: 'Retomar a função Adaptação' }).click()
+      await adaptacao.getByRole('button', { name: 'Retomar esta função: Adaptação' }).click()
       await expect(adaptacao).toContainText('Funcionando', { timeout: PRAZO_DA_ENTRADA_MS })
       expect(await suspensoesNoBanco(escolaId, 'adaptacao')).toEqual([{ suspensaPor: coordenadoraId, motivo: 'revisao_pedagogica', retomada: true }])
       expect((await auditoriasNoBanco(escolaId, 'funcao.suspensa')).map((registro) => registro.autor)).toEqual([coordenadoraId])
       expect((await auditoriasNoBanco(escolaId, 'funcao.retomada')).map((registro) => registro.autor)).toEqual([coordenadoraId])
     })
 
-    await test.step('o Analista gera o resumo com número, graças às duas professoras de Química, e o nominal pede finalidade e fica na auditoria', async () => {
+    await test.step('o Analista gera o resumo com número, porque as duas professoras de Química aprovaram correção, e o nominal pede finalidade e fica na auditoria', async () => {
       await irPelaNavegacao(coordenacao, 'Analista', hasTouch)
       await expect(principal(coordenacao)).toContainText('Nenhum resumo gerado ainda', { timeout: PRAZO_DA_ENTRADA_MS })
       await principal(coordenacao).getByRole('button', { name: 'Gerar resumo' }).click()
       const resumo = principal(coordenacao).locator('[data-resumo-do-analista]')
       await expect(resumo).toBeVisible({ timeout: PRAZO_DA_IA_MS })
-      await expect(resumo.getByRole('region', { name: `${SERIE} · ${DISCIPLINA}` })).toContainText('2 professores no recorte')
+      // Química tem número porque as duas professoras aprovaram correção nela (D45); o cartão não diz quantos professores.
+      const quimica = resumo.getByRole('region', { name: `${SERIE} · ${DISCIPLINA}` })
+      await expect(quimica).toContainText('2 correções aprovadas')
+      await expect(quimica).not.toContainText('professor')
+      await expect(resumo.locator('[data-recorte-nominal]')).toHaveCount(0)
       await expect(resumo).toContainText('É uma hipótese a conferir, não uma conclusão')
       for (const nome of [helena.nome, marta.nome, davi.nome, ana.nome, bruno.nome, carla.nome, turmaA]) await expect(principal(coordenacao)).not.toContainText(nome)
 
