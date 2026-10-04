@@ -129,7 +129,7 @@ export const NOME_DA_FINALIDADE_NOMINAL: Readonly<Record<FinalidadeDaLeituraNomi
   conversa_pedagogica_a_pedido_do_professor: 'Conversa pedagógica com o professor, a pedido dele',
   apoio_a_aluno_em_risco: 'Apoio a um aluno em risco, com o professor da turma',
   pedido_do_titular: 'Atender pedido do titular do dado (LGPD)',
-  apuracao_de_denuncia: 'Apurar denúncia recebida no canal da escola',
+  apuracao_de_denuncia: 'Apurar denúncia sobre o uso de IA recebida no canal da escola',
 }
 
 /**

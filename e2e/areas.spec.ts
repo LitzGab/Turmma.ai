@@ -170,11 +170,12 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     const pedidos = registrarChunks(page)
     const professora = await entrarComoProfessora(page, hasTouch)
 
-    // Os endereços da coordenação que têm tela: a Estrutura e uma turma aberta nela (13.0), e Professores (14.0). A guarda é
-    // da área inteira: a Governança (A5) cai no mesmo "não encontrada", sem baixar o pedaço da área (o teste do chunk abaixo).
-    for (const endereco of ['/coordenacao/estrutura', `/coordenacao/estrutura/turmas/${randomUUID()}`, '/coordenacao/professores']) {
+    // Os endereços da coordenação que têm tela: a Governança, onde ela abre (A5), uma turma aberta na Estrutura (13.0) e
+    // Professores (14.0).
+    for (const endereco of ['/coordenacao/governanca', `/coordenacao/estrutura/turmas/${randomUUID()}`, '/coordenacao/professores']) {
       await page.goto(endereco)
       await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(page.getByRole('heading', { name: 'Governança' })).toHaveCount(0)
       await expect(page.getByRole('heading', { name: 'Estrutura' })).toHaveCount(0)
       await expect(page.getByRole('heading', { name: 'Professores' })).toHaveCount(0)
     }

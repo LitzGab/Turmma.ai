@@ -52,9 +52,9 @@ test.describe('Governança de IA', () => {
     const { escola } = await entrar(page, hasTouch)
     if (escola === undefined) throw new Error('escola sem entregas')
     await expect(page).toHaveTitle('Governança · Turmma')
-    // Três artefatos (duas listas e uma versão adaptada) e dois lotes; dois aprovados, um esperando.
-    await expect(numero(page, 'Gerado por IA')).toContainText('5', { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(numero(page, 'Aprovado por gente')).toContainText('2')
+    // Quatro artefatos (três listas e uma versão adaptada) e três lotes; três aprovados, um esperando.
+    await expect(numero(page, 'Gerado por IA')).toContainText('7', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(numero(page, 'Aprovado por gente')).toContainText('3')
     await expect(numero(page, 'Esperando o professor')).toContainText('1')
     await expect(numero(page, 'Rejeitado')).toContainText('0')
 
@@ -161,12 +161,13 @@ test.describe('Agentes', () => {
     await expect(correcao).toContainText('Faz sozinha')
     await expect(correcao).toContainText('Espera aprovação')
     await expect(correcao).toContainText('Alto risco')
+    await expect(correcao).toContainText('Faz e avisa')
     await expect(correcao).toContainText('Funcionando')
     await expect(principal(page).getByRole('region', { name: 'O que a IA nunca faz' })).toContainText('redação e discursiva')
     expect(await violacoesGraves(page)).toEqual([])
 
-    await acionar(correcao.getByRole('button', { name: 'Suspender a função Correção de objetiva' }), hasTouch)
-    await expect(dialogo(page)).toContainText('deixa de aceitar pedido novo')
+    await acionar(correcao.getByRole('button', { name: 'Suspender esta função: Correção de objetiva' }), hasTouch)
+    await expect(dialogo(page)).toContainText('fica sem correção até a função voltar')
     await expect(dialogo(page)).toContainText('continua podendo ser aprovado ou rejeitado')
     await expect(dialogo(page)).toContainText('auditoria')
     await dialogo(page).getByLabel('Motivo').selectOption({ label: 'A escola está revendo o uso pedagógico' })
@@ -177,12 +178,15 @@ test.describe('Agentes', () => {
     await expect(correcao).toContainText('Suspensa nesta escola desde', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(correcao).toContainText('Motivo: A escola está revendo o uso pedagógico')
     await expect(principal(page).getByRole('status').filter({ hasText: 'A função "Correção de objetiva" está suspensa nesta escola.' })).toBeVisible()
+    // O foco vai para o botão que tomou o lugar do que abriu a confirmação.
+    await expect(correcao.getByRole('button', { name: 'Retomar esta função: Correção de objetiva' })).toBeFocused()
     // Só ela: a Adaptação, do mesmo agente, continua.
     await expect(principal(page).locator('[data-funcao="adaptacao"]')).toContainText('Funcionando')
     expect(await suspensoesNoBanco(coordenadora.escolaId, 'correcao_de_objetiva')).toEqual([{ suspensaPor: coordenadora.usuarioId, motivo: 'revisao_pedagogica', retomada: false }])
 
-    await acionar(correcao.getByRole('button', { name: 'Retomar a função Correção de objetiva' }), hasTouch)
+    await acionar(correcao.getByRole('button', { name: 'Retomar esta função: Correção de objetiva' }), hasTouch)
     await expect(correcao).toContainText('Funcionando', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(correcao.getByRole('button', { name: 'Suspender esta função: Correção de objetiva' })).toBeFocused()
     expect(await suspensoesNoBanco(coordenadora.escolaId, 'correcao_de_objetiva')).toEqual([{ suspensaPor: coordenadora.usuarioId, motivo: 'revisao_pedagogica', retomada: true }])
     expect((await auditoriasNoBanco(coordenadora.escolaId, 'funcao.suspensa')).map((registro) => registro.autor)).toEqual([coordenadora.usuarioId])
     expect((await auditoriasNoBanco(coordenadora.escolaId, 'funcao.retomada')).map((registro) => registro.autor)).toEqual([coordenadora.usuarioId])
@@ -204,14 +208,19 @@ test.describe('Analista', () => {
     const resumo = principal(page).locator('[data-resumo-do-analista]')
     await expect(resumo).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('button', { name: 'Gerar resumo' })).toBeEnabled()
+    // O foco vai para o resumo que chegou.
+    await expect(resumo.getByText(/^Resumo gerado em/)).toBeFocused()
 
     const alerta = resumo.locator('[data-alerta="habilidade_com_acerto_baixo"]')
     await expect(alerta).toHaveCount(1)
-    await expect(alerta).toContainText(`Em ${escola.serieNome} · Química, o acerto em "Identificar o reagente limitante" (QUI.EM.06) ficou em 50%, abaixo da referência de 60%.`)
+    await expect(alerta).toContainText(`Em ${escola.serieNome} · Química, o acerto em "Identificar o reagente limitante" (QUI.EM.06) ficou em 50%, abaixo de 60%, um limite provisório desta versão, a definir com a escola.`)
     await expect(alerta).toContainText('Hipóteses a conferir')
     await expect(resumo).toContainText('É uma hipótese a conferir, não uma conclusão')
     // Química tem duas professoras: tem número. Física, uma só: aparece sem número, dito como tal.
-    await expect(resumo.getByRole('region', { name: `${escola.serieNome} · Química` })).toContainText('2 professores no recorte')
+    const quimica = resumo.getByRole('region', { name: `${escola.serieNome} · Química` })
+    await expect(quimica).toContainText('2 correções aprovadas')
+    // O recorte não diz quantos professores tem: nem os com vínculo, nem os com correção.
+    await expect(quimica).not.toContainText('professor')
     const semNumero = resumo.locator('[data-recorte-nominal]')
     await expect(semNumero).toHaveCount(1)
     await expect(semNumero).toContainText(`${escola.serieNome} · Física`)

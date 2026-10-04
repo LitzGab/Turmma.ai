@@ -1,6 +1,6 @@
 import { MOTIVOS_DE_SUSPENSAO, NOME_DO_MOTIVO_DE_SUSPENSAO, type Agente, type FuncaoDaGovernanca, type MotivoDeSuspensao } from '@educa/shared'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { aplicarFuncao, consultaFuncoesDaGovernanca, retomarFuncao, suspenderFuncao } from '../../api/governanca'
 import { Botao } from '../../componentes/Botao'
 import { Cartao } from '../../componentes/Cartao'
@@ -15,7 +15,7 @@ import { textoDaFalha } from '../../componentes/texto-da-falha'
 import { formatarDataHora } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import { O_QUE_A_IA_NUNCA_FAZ } from './nunca-faz'
-import { AVISO_DA_SUSPENSAO, EFEITO_DA_SUSPENSAO } from './textos-da-governanca'
+import { AVISO_DA_SUSPENSAO, EFEITO_DA_SUSPENSAO, NOME_DA_AUTONOMIA } from './textos-da-governanca'
 
 const OPCOES_DE_MOTIVO = MOTIVOS_DE_SUSPENSAO.map((motivo) => ({ valor: motivo, rotulo: NOME_DO_MOTIVO_DE_SUSPENSAO[motivo] }))
 
@@ -42,11 +42,21 @@ export default function Agentes() {
   const [anuncio, definirAnuncio] = useState('')
   // Para onde o foco vai se o botão que abriu a confirmação não estiver mais na tela quando ela fecha.
   const avisos = useRef<HTMLDivElement>(null)
+  // Depois de suspender ou retomar, o botão daquela função troca por outro: o foco vai para o novo, e não cai no `body`.
+  // A chave fica numa ref, e o efeito roda depois de cada render (o anúncio e a lista nova sempre renderizam de novo).
+  const focarFuncao = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    const chave = focarFuncao.current
+    if (chave === undefined) return
+    focarFuncao.current = undefined
+    document.querySelector<HTMLButtonElement>(`[data-funcao="${chave}"] button[data-alternar-funcao]`)?.focus()
+  })
   const retomada = useEnvioUnico({
     mutationFn: (funcao: FuncaoDaGovernanca) => retomarFuncao(funcao.chave),
     onSuccess: (nova) => {
       aplicarFuncao(cliente, nova)
       definirAnuncio(`A função "${nova.nome}" voltou a funcionar nesta escola.`)
+      focarFuncao.current = nova.chave
     },
     // A que já tinha sido retomada em outra aba responde como inexistente: a lista é lida de novo e mostra como está.
     onError: () => void cliente.invalidateQueries({ queryKey: consultaFuncoesDaGovernanca.queryKey }),
@@ -121,6 +131,7 @@ export default function Agentes() {
           aoSuspender={(nova) => {
             aplicarFuncao(cliente, nova)
             definirAnuncio(`A função "${nova.nome}" está suspensa nesta escola.`)
+            focarFuncao.current = nova.chave
             definirSuspendendo(undefined)
           }}
         />
@@ -151,6 +162,7 @@ function CartaoDoAgente({ agente, nome, funcoes, retomando, aoSuspender, aoRetom
           <li key={funcao.chave} data-funcao={funcao.chave} className="flex min-w-0 flex-col gap-2 border-t border-linha pt-4">
             <h3 className="font-medium break-words text-tinta">{funcao.nome}</h3>
             <div className="flex min-w-0 flex-wrap gap-2">
+              <Estado familia="info">{NOME_DA_AUTONOMIA[funcao.autonomia]}</Estado>
               {funcao.altoRisco && <Estado familia="info">Alto risco: tem avaliação de impacto</Estado>}
               {funcao.suspensao !== null ? (
                 <Estado familia="pendente">{`Suspensa nesta escola desde ${formatarDataHora(funcao.suspensao.suspensaEm)}`}</Estado>
@@ -171,11 +183,11 @@ function CartaoDoAgente({ agente, nome, funcoes, retomando, aoSuspender, aoRetom
             </dl>
             <div>
               {funcao.suspensao !== null ? (
-                <Botao variante="secundario" tamanho="compacto" aria-label={`Retomar a função ${funcao.nome}`} onClick={() => aoRetomar(funcao)} disabled={retomando === funcao.chave}>
+                <Botao variante="secundario" tamanho="compacto" data-alternar-funcao aria-label={`Retomar esta função: ${funcao.nome}`} onClick={() => aoRetomar(funcao)} disabled={retomando === funcao.chave}>
                   {retomando === funcao.chave ? 'Retomando…' : 'Retomar esta função'}
                 </Botao>
               ) : (
-                <Botao variante="perigo" tamanho="compacto" aria-label={`Suspender a função ${funcao.nome}`} onClick={() => aoSuspender(funcao)}>
+                <Botao variante="perigo" tamanho="compacto" data-alternar-funcao aria-label={`Suspender esta função: ${funcao.nome}`} onClick={() => aoSuspender(funcao)}>
                   Suspender esta função
                 </Botao>
               )}
@@ -209,7 +221,7 @@ function SuspenderFuncao({ alvo, aoFechar, aoSuspender, focoDeReserva }: PropsDo
         { rotulo: 'Função', valor: alvo.funcao.nome },
         { rotulo: 'Agente', valor: alvo.agente },
       ]}
-      efeito={EFEITO_DA_SUSPENSAO}
+      efeito={EFEITO_DA_SUSPENSAO[alvo.funcao.chave]}
       aviso={AVISO_DA_SUSPENSAO}
       rotuloDeConfirmar={`Suspender ${alvo.funcao.nome}`}
       rotuloConfirmando="Suspendendo…"

@@ -9,6 +9,7 @@ import {
   type ConsumoSomado,
   type Etapa,
   type ItemDaGovernanca,
+  type NivelDeAutonomia,
   type TipoDeEntrega,
 } from '@educa/shared'
 import { aparenciaDaFalha } from '../../api/ciclo-de-execucao'
@@ -90,17 +91,42 @@ export function nomeDoRecorte(recorte: { readonly serie: { readonly etapa: Etapa
  */
 export function fraseDoAlerta(alerta: AlertaDoAnalista): string | null {
   if (alerta.tipo !== 'habilidade_com_acerto_baixo' || alerta.habilidade === null) return null
-  return `Em ${nomeDoRecorte(alerta)}, o acerto em "${alerta.habilidade.descricao}" (${alerta.habilidade.codigo}) ficou em ${formatarPercentual(alerta.valor)}, abaixo da referência de ${formatarPercentual(alerta.referencia)}.`
+  return `Em ${nomeDoRecorte(alerta)}, o acerto em "${alerta.habilidade.descricao}" (${alerta.habilidade.codigo}) ficou em ${formatarPercentual(alerta.valor)}, abaixo de ${formatarPercentual(alerta.referencia)}, um limite provisório desta versão, a definir com a escola.`
 }
 
 /** O que acompanha todo alerta: é hipótese, e quem conclui é a escola. */
 export const AVISO_DE_HIPOTESE = 'É uma hipótese a conferir, não uma conclusão: quem conclui é a escola, com os professores.'
 
-/** O que a confirmação de suspender diz que acontece (decisão 14 do MVP; D60). */
-export const EFEITO_DA_SUSPENSAO =
-  'A função deixa de aceitar pedido novo nesta escola, e as outras funções continuam. O que ela já produziu não é apagado, e o que está esperando o professor continua podendo ser aprovado ou rejeitado por ele.'
+/** O que vale para toda suspensão (decisão 14 do MVP; D60): recusa pedido novo e não apaga nada. */
+const EFEITO_COMUM_DA_SUSPENSAO =
+  'As outras funções continuam. O que ela já produziu não é apagado, e o que está esperando o professor continua podendo ser aprovado ou rejeitado por ele.'
+
+/**
+ * O que a confirmação de suspender diz que acontece, **por função**: cada uma para de um jeito, e duas coisas nunca param
+ * (o encaminhamento de assunto delicado do Tutor e o aviso de que um aluno precisa de um adulto; D36).
+ */
+export const EFEITO_DA_SUSPENSAO: Readonly<Record<ChaveDeFuncao, string>> = {
+  conversa_e_ferramentas: `O Assistente deixa de responder pedido novo dos professores e as ferramentas deixam de gerar. ${EFEITO_COMUM_DA_SUSPENSAO}`,
+  correcao_de_objetiva: `A atividade objetiva que o professor encerrar fica sem correção até a função voltar; as respostas dos alunos ficam guardadas, e encerrar de novo depois corrige. ${EFEITO_COMUM_DA_SUSPENSAO}`,
+  adaptacao: `O professor deixa de conseguir pedir versão adaptada nova. ${EFEITO_COMUM_DA_SUSPENSAO}`,
+  tutor_com_o_aluno: `O Tutor deixa de responder dúvida nova dos alunos. Quem escrever sobre um assunto pessoal delicado continua recebendo a mensagem de encaminhamento, e o professor continua sendo avisado. ${EFEITO_COMUM_DA_SUSPENSAO}`,
+  sinais_para_o_professor: `Param os avisos de aprendizagem (quem travou, quem pediu a resposta pronta, a dúvida repetida). O aviso de que um aluno precisa de um adulto continua chegando ao professor, e o uso do Tutor por turma continua visível a ele. ${EFEITO_COMUM_DA_SUSPENSAO}`,
+  resumo_e_alerta: `O Analista deixa de gerar resumo novo; o último gerado continua na tela. ${EFEITO_COMUM_DA_SUSPENSAO}`,
+}
 
 export const AVISO_DA_SUSPENSAO = 'A suspensão fica na auditoria da escola, com quem suspendeu e quando.'
+
+/** O que a Governança diz sobre o que chega ao aluno: só o Tutor responde sem aprovação prévia, e com o professor acompanhando (D47). */
+export const O_QUE_CHEGA_AO_ALUNO =
+  'Nenhum material nem diagnóstico da IA chega ao aluno sem um professor aprovar; o Tutor responde ao aluno na hora, com o professor acompanhando. As atividades e os planos que a professora gera ficam com ela, e só chegam à turma quando ela os aplica.'
+
+/** A autonomia de cada função num selo curto (D9; `docs/agentes.md`), com o texto do catálogo ao lado. */
+export const NOME_DA_AUTONOMIA: Readonly<Record<NivelDeAutonomia, string>> = {
+  1: 'Faz e registra',
+  2: 'Faz e avisa',
+  3: 'Propõe e espera aprovação',
+  4: 'Nunca faz',
+}
 
 /** O que o diálogo do dado nominal avisa antes de abrir (regra 20, item 10; D45). */
 export const AVISO_DO_NOMINAL = 'Esta abertura fica na auditoria da escola, com o seu nome, a data, a turma e a finalidade.'

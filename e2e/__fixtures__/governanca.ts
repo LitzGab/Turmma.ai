@@ -7,8 +7,8 @@ import { urlDoBancoDeTeste } from '../../tools/ci/compose.ts'
  * entregas, do jeito que o roteiro da demonstração a deixa no passo 5. Tudo sintético, gravado direto.
  *
  * No 2º ano do Ensino Médio: **Química tem duas professoras** (uma no 2ºB, outra no 2ºC) e **Física, uma só** (no 2ºB).
- * A lista de Química do 2ºB e a de Física do 2ºB estão corrigidas e com o lote aprovado; há uma versão adaptada de
- * Química esperando a professora. Com isso a governança tem número e linha, o Analista tem um recorte com número
+ * As listas de Química do 2ºB e do 2ºC e a de Física do 2ºB estão corrigidas e com o lote aprovado (cada uma pela
+ * professora dela); há uma versão adaptada de Química esperando a professora. Com isso a governança tem número e linha, o Analista tem um recorte com número
  * (Química) e um sem (Física), e o resumo gera um alerta (acerto de 50% numa habilidade).
  */
 export interface EscolaComEntregas {
@@ -95,31 +95,38 @@ export async function montarEscolaComEntregas(escolaId: string, coordenadoraId: 
     await vincular(deFisicaNoB, doB.id, fisica, 'professor')
     await vincular(alunoId, doB.id, null, 'aluno')
 
-    const artefato = (disciplinaId: string, titulo: string, autor: string, origemId: string | null = null) =>
+    const artefato = (disciplinaId: string, titulo: string, autor: string, origemId: string | null = null, turmaId: string = doB.id) =>
       id(
         banco,
         `insert into artefato (escola_id, ano_letivo_id, turma_id, disciplina_id, tipo, titulo, conteudo, origem_id, criado_por)
          values ($1, $2, $3, $4, 'atividade_objetiva', $5, $6::jsonb || $7::jsonb, $8, $9) returning id`,
-        [escolaId, anoLetivoId, doB.id, disciplinaId, titulo, conteudoDaLista(titulo), origemId === null ? '{}' : '{"adaptacao": {"tipos": ["fonte_ampliada"]}}', origemId, autor],
+        [escolaId, anoLetivoId, turmaId, disciplinaId, titulo, conteudoDaLista(titulo), origemId === null ? '{}' : '{"adaptacao": {"tipos": ["fonte_ampliada"]}}', origemId, autor],
       )
 
     /** A lista aplicada, respondida, corrigida e com o lote aprovado pela professora, com a validação registrada (D56). */
-    async function loteAprovado(disciplinaId: string, titulo: string, professora: string, porHabilidade: readonly { codigo: string; acertos: number; total: number }[]): Promise<string> {
-      const artefatoId = await artefato(disciplinaId, titulo, professora)
+    async function loteAprovado(
+      disciplinaId: string,
+      titulo: string,
+      professora: string,
+      porHabilidade: readonly { codigo: string; acertos: number; total: number }[],
+      turmaId: string = doB.id,
+      deQuem: string = alunoId,
+    ): Promise<string> {
+      const artefatoId = await artefato(disciplinaId, titulo, professora, null, turmaId)
       const aplicadaId = await id(
         banco,
         "insert into atividade_aplicada (escola_id, ano_letivo_id, turma_id, artefato_id, avaliativa, estado, aplicada_por, encerrada_em) values ($1, $2, $3, $4, false, 'encerrada', $5, now()) returning id",
-        [escolaId, anoLetivoId, doB.id, artefatoId, professora],
+        [escolaId, anoLetivoId, turmaId, artefatoId, professora],
       )
       const acertos = porHabilidade.reduce((soma, medida) => soma + medida.acertos, 0)
       const total = porHabilidade.reduce((soma, medida) => soma + medida.total, 0)
       await banco.query('begin')
       try {
-        await banco.query('insert into tentativa_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, enviada_em) values ($1, $2, $3, $4, now())', [escolaId, anoLetivoId, aplicadaId, alunoId])
+        await banco.query('insert into tentativa_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, enviada_em) values ($1, $2, $3, $4, now())', [escolaId, anoLetivoId, aplicadaId, deQuem])
         const entregaId = await id(banco, "insert into entrega (escola_id, ano_letivo_id, turma_id, funcao, tipo, atividade_aplicada_id) values ($1, $2, $3, 'correcao_de_objetiva', 'lote_de_correcao', $4) returning id", [
           escolaId,
           anoLetivoId,
-          doB.id,
+          turmaId,
           aplicadaId,
         ])
         await banco.query('insert into correcao (escola_id, ano_letivo_id, entrega_id, atividade_aplicada_id, aluno_id, acertos, total, em_branco, por_habilidade) values ($1, $2, $3, $4, $5, $6, $7, 0, $8)', [
@@ -127,7 +134,7 @@ export async function montarEscolaComEntregas(escolaId: string, coordenadoraId: 
           anoLetivoId,
           entregaId,
           aplicadaId,
-          alunoId,
+          deQuem,
           acertos,
           total,
           JSON.stringify(porHabilidade),
@@ -155,6 +162,20 @@ export async function montarEscolaComEntregas(escolaId: string, coordenadoraId: 
       { codigo: HABILIDADE_MASSA.codigo, acertos: 2, total: 2 },
       { codigo: HABILIDADE_LIMITANTE.codigo, acertos: 1, total: 2 },
     ])
+    // Química no 2ºC, da segunda professora: com as duas tendo correção aprovada, a Química tem número no Analista.
+    const alunoDoC = await pessoa('aluno', `Aluna Sintética Lia ${marca}`)
+    await vincular(alunoDoC, doC.id, null, 'aluno')
+    await loteAprovado(
+      quimica,
+      'Estequiometria: lista sintética do 2ºC',
+      deQuimicaNoC,
+      [
+        { codigo: HABILIDADE_MASSA.codigo, acertos: 2, total: 2 },
+        { codigo: HABILIDADE_LIMITANTE.codigo, acertos: 1, total: 2 },
+      ],
+      doC.id,
+      alunoDoC,
+    )
     await loteAprovado(fisica, 'Cinemática: lista sintética', deFisicaNoB, [
       { codigo: HABILIDADE_MASSA.codigo, acertos: 1, total: 2 },
       { codigo: HABILIDADE_LIMITANTE.codigo, acertos: 0, total: 2 },
