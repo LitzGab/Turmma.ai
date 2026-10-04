@@ -148,6 +148,32 @@ export default function Time() {
   const problemaDaJustificativa = problemaDoTexto(justificativa, LIMITES_DA_JUSTIFICATIVA)
   const focoDeReserva = aberta === undefined ? undefined : () => document.getElementById(idDoCartao(aberta.entrega.id))?.focus()
 
+  // A lista do que espera a professora, uma só: na linha, com uma pendência, e dentro do recolhido, com várias.
+  const listaDoQueEspera = (
+    <ul className="flex max-h-40 min-w-0 flex-col gap-1 overflow-y-auto">
+      {esperando.map((entrega) => (
+        <li key={entrega.id} className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <span className="min-w-0 flex-1 basis-40 text-sm break-words text-tinta">
+            {entrega.titulo}
+            {nomes[entrega.turmaId] !== undefined && ` · ${nomes[entrega.turmaId] ?? ''}`}
+          </span>
+          <Botao
+            variante="secundario"
+            tamanho="compacto"
+            onClick={() => {
+              if (!visiveis.some((visivel) => visivel.id === entrega.id)) definirFiltro('esperando')
+              definirAlvo(undefined)
+              // Depois do render com o filtro certo: o mesmo alvo duas vezes seguidas ainda leva até ele.
+              requestAnimationFrame(() => definirAlvo(entrega.id))
+            }}
+          >
+            Ver<span className="sr-only"> {entrega.titulo}</span>
+          </Botao>
+        </li>
+      ))}
+    </ul>
+  )
+
   return (
     <Tela titulo="Seu time: Assistente de ensino" largura="conversa">
       <header className="flex min-w-0 flex-col gap-2">
@@ -256,28 +282,7 @@ export default function Time() {
                   <p aria-hidden="true" className="text-sm font-semibold text-pendente">
                     Esperando você
                   </p>
-                  <ul className="flex max-h-40 min-w-0 flex-col gap-1 overflow-y-auto">
-                    {esperando.map((entrega) => (
-                      <li key={entrega.id} className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                        <span className="min-w-0 flex-1 basis-40 text-sm break-words text-tinta">
-                          {entrega.titulo}
-                          {nomes[entrega.turmaId] !== undefined && ` · ${nomes[entrega.turmaId] ?? ''}`}
-                        </span>
-                        <Botao
-                          variante="secundario"
-                          tamanho="compacto"
-                          onClick={() => {
-                            if (!visiveis.some((visivel) => visivel.id === entrega.id)) definirFiltro('esperando')
-                            definirAlvo(undefined)
-                            // Depois do render com o filtro certo: o mesmo alvo duas vezes seguidas ainda leva até ele.
-                            requestAnimationFrame(() => definirAlvo(entrega.id))
-                          }}
-                        >
-                          Ver<span className="sr-only"> {entrega.titulo}</span>
-                        </Botao>
-                      </li>
-                    ))}
-                  </ul>
+                  {listaDoQueEspera}
                 </>
               ) : (
                 <details className="group min-w-0">
@@ -285,28 +290,7 @@ export default function Time() {
                     <ChevronRight aria-hidden="true" size={16} strokeWidth={1.75} className="shrink-0 group-open:rotate-90" />
                     {esperando.length} entregas esperando você
                   </summary>
-                  <ul className="flex max-h-40 min-w-0 flex-col gap-1 overflow-y-auto">
-                    {esperando.map((entrega) => (
-                      <li key={entrega.id} className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                        <span className="min-w-0 flex-1 basis-40 text-sm break-words text-tinta">
-                          {entrega.titulo}
-                          {nomes[entrega.turmaId] !== undefined && ` · ${nomes[entrega.turmaId] ?? ''}`}
-                        </span>
-                        <Botao
-                          variante="secundario"
-                          tamanho="compacto"
-                          onClick={() => {
-                            if (!visiveis.some((visivel) => visivel.id === entrega.id)) definirFiltro('esperando')
-                            definirAlvo(undefined)
-                            // Depois do render com o filtro certo: o mesmo alvo duas vezes seguidas ainda leva até ele.
-                            requestAnimationFrame(() => definirAlvo(entrega.id))
-                          }}
-                        >
-                          Ver<span className="sr-only"> {entrega.titulo}</span>
-                        </Botao>
-                      </li>
-                    ))}
-                  </ul>
+                  {listaDoQueEspera}
                 </details>
               )}
             </section>

@@ -59,7 +59,7 @@ export default function Atividades() {
         <EstadoErro erro={atividades.error} tentando={atividades.isFetching} aoTentarDeNovo={() => void atividades.refetch({ cancelRefetch: false })} />
       )}
       {atividades.data !== undefined && itens.length === 0 && (
-        <EstadoVazio titulo="Nada para fazer agora" descricao="Quando a sua professora passar uma atividade para a turma, ela aparece aqui." />
+        <EstadoVazio titulo="Nada para fazer agora" descricao="Quando quem dá a aula passar uma atividade para a turma, ela aparece aqui." />
       )}
 
       {itens.length > 0 && (

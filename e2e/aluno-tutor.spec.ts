@@ -14,7 +14,7 @@ import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.t
 
 const PRAZO_DA_TELA_MS = 15_000
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-const SUPERVISAO = 'Seu professor acompanha como você usa o Tutor.'
+const SUPERVISAO = 'Quem dá a aula acompanha como você usa o Tutor.'
 const PROIBIDO_NA_AREA = /\bnotas?\b|\bconceito\b|ranking|média da turma|colegas?\b/i
 /** O que a área do aluno não tem (D59; 11.6): sequência, conquista, sugestão pronta. */
 const INDUZ_USO = /sequência|dias seguidos|conquista|parabéns|continue assim|sugest/i
@@ -213,6 +213,42 @@ test.describe('o Tutor pelo item da lateral e a conversa por atividade', () => {
 })
 
 test.describe('o Tutor pausado explica, não parece erro, e não trava a caixa', () => {
+  test('"Ver mensagens anteriores" traz as antigas, em ordem, sem jogar a tela para o fim da conversa', async ({ page, hasTouch }) => {
+    test.slow()
+    const atividade = minhaAtividade()
+    const troca = (numero: number, quando: string) => [
+      perguntaDoAluno(`pergunta ${quando} ${String(numero)}`),
+      respostaDoTutor(`Resposta ${quando} ${String(numero)}, com algumas linhas de texto para a conversa ficar mais alta que a janela do computador.`),
+    ]
+    await entrar(page, hasTouch, (simulada) => {
+      simulada.atividades = [atividade]
+      simulada.conversasAnteriores.set(atividade.id, [1, 2, 3, 4, 5, 6].flatMap((numero) => troca(numero, 'antiga')))
+      simulada.conversas.set(atividade.id, [1, 2, 3, 4, 5, 6].flatMap((numero) => troca(numero, 'recente')))
+    })
+    await irPara(page, `/aluno/tutor/${atividade.id}`)
+    const ultima = conversa(page).getByText('Resposta recente 6,')
+    // A conversa abre no fim: a última mensagem à vista.
+    await expect(ultima).toBeInViewport({ timeout: PRAZO_DA_TELA_MS })
+    await expect(conversa(page).getByText('Você: pergunta antiga 1')).toHaveCount(0)
+
+    const anteriores = page.getByRole('button', { name: 'Ver mensagens anteriores' })
+    await anteriores.scrollIntoViewIfNeeded()
+    await expect(ultima).not.toBeInViewport()
+    await acionar(anteriores, hasTouch)
+    await expect(conversa(page).getByText('Você: pergunta antiga 1')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(anteriores).toHaveCount(0)
+    // O aluno foi ler o começo: a tela fica onde ele está, e não volta para o fim.
+    await page.evaluate(() => new Promise<void>((pronto) => requestAnimationFrame(() => requestAnimationFrame(() => pronto()))))
+    await expect(ultima).not.toBeInViewport()
+    // As antigas vêm antes das recentes, cada pergunta antes da resposta dela.
+    const falas = await conversa(page).locator('article').allInnerTexts()
+    expect(falas).toHaveLength(24)
+    expect(falas[0]).toContain('pergunta antiga 1')
+    expect(falas[1]).toContain('Resposta antiga 1,')
+    expect(falas[12]).toContain('pergunta recente 1')
+    expect(falas[23]).toContain('Resposta recente 6,')
+  })
+
   test('em avaliação: o aviso com o título dela; a pergunta comum volta recusada e vira o mesmo aviso; a mensagem de assunto delicado recebe o encaminhamento com o 188', async ({ page, hasTouch }) => {
     test.slow()
     const atividade = minhaAtividade()
@@ -225,7 +261,7 @@ test.describe('o Tutor pausado explica, não parece erro, e não trava a caixa',
     await expect(pausa(page)).toHaveAttribute('data-pausa-do-tutor', 'avaliacao', { timeout: PRAZO_DA_TELA_MS })
     await expect(pausa(page)).toContainText('O Tutor está pausado durante a avaliação.')
     await expect(pausa(page)).toContainText('Prova de estequiometria')
-    await expect(pausa(page)).toContainText('Ele volta quando a professora encerrar.')
+    await expect(pausa(page)).toContainText('Ele volta quando quem dá a aula encerrar.')
     // É aviso, e não erro: sem alerta, sem "Tentar de novo", sem vermelho.
     await expect(principal(page).getByRole('alert')).toHaveCount(0)
     await expect(principal(page).getByRole('button', { name: 'Tentar de novo' })).toHaveCount(0)

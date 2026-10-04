@@ -1,7 +1,7 @@
 import type { Sinal } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import * as textos from './sinais'
-import { emQueEstava, falaDoGrupo, ondeFoi, separarSinais, textoDoSinal, trocasDeHoje } from './sinais'
+import { emQueEstava, falaDoGrupo, ondeFoi, separarSinais, textoDaAtencaoHumana, textoDoSinal, tituloDaAtencaoHumana, trocasDeHoje } from './sinais'
 
 const id = (final: string) => `0190f5a0-0000-7000-8000-0000000000${final}`
 const REFERENCIAS = { atividades: { [id('a1')]: 'Atividade — Estequiometria' }, materiais: { [id('b1')]: 'Química 2' } }
@@ -48,8 +48,18 @@ describe('os sinais do Tutor: só o trabalho, e onde', () => {
   })
 
   it('regra 70, item 7: nenhum texto fixo fala em tempo parado, ociosidade, atenção, humor ou emoção do aluno', () => {
-    const fixos = [...Object.values(textos).flatMap((valor) => (typeof valor === 'string' ? [valor] : [])), ...textos.QUANDO_O_TUTOR_AVISA]
+    const fixos = [...Object.values(textos).flatMap((valor) => (typeof valor === 'string' ? [valor] : [])), ...textos.QUANDO_O_TUTOR_AVISA, ...[1, 2].flatMap((quantos) => [tituloDaAtencaoHumana(quantos), textoDaAtencaoHumana(quantos)])]
     expect(fixos.length).toBeGreaterThanOrEqual(2)
     for (const texto of fixos) expect(texto).not.toMatch(/ocios|parado|distra|desatent|humor|triste|ansios|emoç/i)
+  })
+})
+
+describe('o aviso de atenção humana (D36)', () => {
+  it('fala de um aluno ou de vários, sem dizer o que foi dito', () => {
+    expect(tituloDaAtencaoHumana(1)).toBe('Um aluno precisa de um adulto')
+    expect(tituloDaAtencaoHumana(3)).toBe('3 alunos precisam de um adulto')
+    expect(textoDaAtencaoHumana(1)).toContain('procure o aluno pessoalmente')
+    expect(textoDaAtencaoHumana(2)).toContain('procure cada aluno pessoalmente')
+    for (const quantos of [1, 2]) expect(textoDaAtencaoHumana(quantos)).toContain('O que foi dito não aparece aqui')
   })
 })

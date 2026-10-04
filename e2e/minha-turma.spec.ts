@@ -11,7 +11,7 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, violacoesGraves } from '.
  */
 
 const ROTA_MINHA_TURMA = '**/v1/minha-turma'
-const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. Fale com o seu professor ou com a coordenação.'
+const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. Fale com quem dá a aula ou com a coordenação.'
 
 /** O aluno entra pelo endereço da escola, com matrícula e senha, e chega a "Atividades", onde ele abre. */
 async function entrarComoAluno(page: Page, aluno: AlunoDeTeste, hasTouch: boolean): Promise<void> {

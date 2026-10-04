@@ -57,8 +57,15 @@ export function textoDoSinal(sinal: Exclude<Sinal, { tipo: 'atencao_humana' }>, 
  * O sinal de atenção humana (D36): **sem o conteúdo, sem referência e sem caminho para conversa nenhuma**. A tela diz só
  * que um aluno precisa de um adulto, e o que a professora faz com isso.
  */
-export const TITULO_DA_ATENCAO_HUMANA = 'Um aluno precisa de um adulto'
-export const TEXTO_DA_ATENCAO_HUMANA = 'O Tutor parou a conversa e mostrou ao aluno como falar com um adulto. O que foi dito não aparece aqui: procure o aluno pessoalmente, ou a coordenação.'
+export function tituloDaAtencaoHumana(alunos: number): string {
+  return alunos > 1 ? `${String(alunos)} alunos precisam de um adulto` : 'Um aluno precisa de um adulto'
+}
+
+export function textoDaAtencaoHumana(alunos: number): string {
+  return alunos > 1
+    ? 'O Tutor parou a conversa e mostrou a cada um como falar com um adulto. O que foi dito não aparece aqui: procure cada aluno pessoalmente, ou a coordenação.'
+    : 'O Tutor parou a conversa e mostrou ao aluno como falar com um adulto. O que foi dito não aparece aqui: procure o aluno pessoalmente, ou a coordenação.'
+}
 
 /** Os sinais separados em dois: os de atenção humana, que vêm primeiro e à parte, e os de trabalho. */
 export function separarSinais(sinais: readonly Sinal[]): { readonly atencao: Extract<Sinal, { tipo: 'atencao_humana' }>[]; readonly trabalho: Exclude<Sinal, { tipo: 'atencao_humana' }>[] } {

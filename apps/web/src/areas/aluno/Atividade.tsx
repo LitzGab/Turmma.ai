@@ -182,7 +182,7 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
           )}
           {marca === 'salvando' && <span className="text-sutil">{TEXTO_DA_MARCA.salvando}</span>}
           {marca === 'nao_salva' && estadoDaFila.falha === 'passageira' && <span className="min-w-0 break-words text-erro">{TEXTO_DA_MARCA.nao_salva}</span>}
-          {marca === 'nao_salva' && estadoDaFila.falha === 'recusada' && <span className="min-w-0 break-words text-erro">Não foi possível salvar esta resposta. Chame a professora.</span>}
+          {marca === 'nao_salva' && estadoDaFila.falha === 'recusada' && <span className="min-w-0 break-words text-erro">Não foi possível salvar esta resposta. Chame quem dá a aula.</span>}
         </div>
         {marca === 'nao_salva' && estadoDaFila.falha === 'passageira' && (
           <Botao variante="secundario" onClick={fila.tentarAgora} className="self-start">
@@ -228,7 +228,7 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
             { rotulo: 'Com resposta', valor: textoDasRespondidas(contagem) },
             { rotulo: 'Em branco', valor: textoDasEmBranco(contagem.emBranco) },
           ]}
-          efeito="Depois de enviar, não dá para mudar as respostas. A sua professora revisa a correção antes de você ver o resultado."
+          efeito="Depois de enviar, não dá para mudar as respostas. Quem dá a aula revisa a correção antes de você ver o resultado."
           {...(impedimento !== undefined
             ? { aviso: impedimento }
             : contagem.emBranco > 0
@@ -326,7 +326,7 @@ function SemMaisRespostas({ prova, estadoDaFila }: PropsDoFim) {
 
   return (
     <>
-      <Cartao titulo={prova.enviadaEm === null ? 'A professora encerrou esta atividade' : 'Atividade enviada'} className="flex flex-col gap-2">
+      <Cartao titulo={prova.enviadaEm === null ? 'Quem dá a aula encerrou esta atividade' : 'Atividade enviada'} className="flex flex-col gap-2">
         <p className="break-words text-apoio">
           {prova.enviadaEm === null ? '' : `Enviada em ${formatarDiaEHora(prova.enviadaEm)}. `}
           Você respondeu {textoDasRespondidas(contagem)}. Não dá mais para mudar as respostas.
@@ -379,7 +379,7 @@ export default function Atividade({ atividadeAplicadaId }: { atividadeAplicadaId
         {prova.isPending ? (
           <EstadoCarregando rotulo="Carregando a atividade…" />
         ) : naoEncontrada ? (
-          <EstadoVazio titulo="Esta atividade não está disponível" descricao="Ela pode ser de outra turma, ou o endereço está errado. O que a sua professora passou para você está em Atividades." />
+          <EstadoVazio titulo="Esta atividade não está disponível" descricao="Ela pode ser de outra turma, ou o endereço está errado. As atividades da sua turma estão em Atividades." />
         ) : (
           <EstadoErro erro={prova.error} tentando={prova.isFetching} aoTentarDeNovo={() => void prova.refetch({ cancelRefetch: false })} />
         )}

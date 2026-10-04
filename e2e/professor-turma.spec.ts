@@ -80,10 +80,29 @@ test.describe('aplicar à turma e encerrar, no artefato (A3)', () => {
     await expect(naTurma).toContainText('Esta versão adaptada só pode ser aplicada à turma depois que você aprovar.', { timeout: PRAZO_DA_TELA_MS })
     await expect(page.getByRole('button', { name: 'Aplicar à turma' })).toHaveCount(0)
 
+    // Carregando e com falha, a seção não afirma que a atividade não foi aplicada, nem oferece "Aplicar à turma".
+    const segura = portao()
+    api.trocar('aplicadas', async () => {
+      await segura.aberta
+      return erroDaApi(503, 'INDISPONIVEL_TENTE_DE_NOVO')
+    })
+    // A recarga esquece a lista que a versão adaptada já leu (é a mesma turma), e a tela lê de novo.
+    await page.reload()
+    await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toBeAttached({ timeout: PRAZO_DA_TELA_MS })
     await irPara(page, `/professor/artefatos/${atividade.id}`)
+    await expect(naTurma.getByText('Carregando as aplicações desta atividade…')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(naTurma).not.toContainText('ainda não foi aplicada')
+    await expect(page.getByRole('button', { name: 'Aplicar à turma' })).toHaveCount(0)
+    segura.abrir()
+    await expect(naTurma.getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_TELA_MS })
+    await expect(naTurma).not.toContainText('ainda não foi aplicada')
+    await expect(page.getByRole('button', { name: 'Aplicar à turma' })).toHaveCount(0)
+    api.trocar('aplicadas')
+    await acionar(naTurma.getByRole('button', { name: 'Tentar de novo' }), hasTouch)
     await expect(naTurma).toContainText('Esta atividade ainda não foi aplicada.', { timeout: PRAZO_DA_TELA_MS })
     const aplicar = page.getByRole('button', { name: 'Aplicar à turma' })
-    // Decisão da professora, registrada: o botão é o preto.
+    // Decisão da professora, registrada: o botão é o preto. O ponteiro sai de cima dele: o "Tentar de novo" estava ali.
+    if (!hasTouch) await page.mouse.move(0, 0)
     expect(await aplicar.evaluate((botao) => getComputedStyle(botao).backgroundColor)).toBe('rgb(13, 13, 13)')
     await acionar(aplicar, hasTouch)
     const dialogo = page.getByRole('alertdialog', { name: 'Aplicar à turma' })

@@ -4,6 +4,8 @@ import type { CicloDeExecucao } from '../../api/ciclo-de-execucao'
 import {
   avisoDaPausa,
   falhaDaPergunta,
+  itensDoTutor,
+  marcaDoFim,
   LINHA_DO_CVV,
   mensagensNaTela,
   partesDoEncaminhamento,
@@ -63,7 +65,7 @@ describe('o Tutor pausado é aviso que explica, e não erro', () => {
   it('em avaliação diz o título dela e quando o Tutor volta; no limite, que por hoje acabou e que amanhã volta', () => {
     const avaliacao = avisoDaPausa('avaliacao', { avaliacao: 'Prova de estequiometria' })
     expect(avaliacao.titulo).toBe('O Tutor está pausado durante a avaliação.')
-    expect(avaliacao.texto).toBe('A sua turma tem uma avaliação aberta agora: Prova de estequiometria. Ele volta quando a professora encerrar.')
+    expect(avaliacao.texto).toBe('A sua turma tem uma avaliação aberta agora: Prova de estequiometria. Ele volta quando quem dá a aula encerrar.')
     const limite = avisoDaPausa('limite_do_dia', { limiteDoDia: 60 })
     expect(limite.titulo).toBe('Por hoje acabou.')
     expect(limite.texto).toBe('Você fez as 60 perguntas de hoje. Amanhã o Tutor volta. As suas atividades continuam abertas.')
@@ -136,6 +138,25 @@ describe('o que a conversa mostra além do que a API já devolveu', () => {
     expect(pendenteNoTutor([doAluno('01', PEDIDO.texto), resposta], concluida(resposta), ATIVIDADE)).toBeUndefined()
   })
 
+  it('com a conversa vazia e a execução já concluída, a pergunta vem antes da resposta, também na mensagem com o 188', () => {
+    const encaminhamento: MensagemDoTutorAoAluno = { ...doTutor('03', 'Isso é importante. Ligue 188.'), tipo: 'assunto_delicado' }
+    const pendente = pendenteNoTutor([], concluida(encaminhamento), ATIVIDADE)
+    expect(itensDoTutor([], pendente)).toEqual([
+      { tipo: 'pergunta', texto: PEDIDO.texto },
+      { tipo: 'mensagem', mensagem: encaminhamento },
+    ])
+    // Com a conversa lida de volta, a pergunta e a resposta vêm dela, na ordem dela, uma vez cada.
+    const lidas = [doAluno('01', PEDIDO.texto), encaminhamento]
+    expect(itensDoTutor(lidas, pendenteNoTutor(lidas, concluida(encaminhamento), ATIVIDADE))).toEqual(lidas.map((mensagem) => ({ tipo: 'mensagem', mensagem })))
+  })
+
+  it('a rolagem até o fim segue o último item, e não muda quando as mensagens anteriores chegam no começo', () => {
+    const recentes = [doAluno('04', 'e agora?'), doTutor('05', 'O que você já sabe da massa molar?')]
+    const comAnteriores = [doAluno('01', 'oi'), doTutor('02', 'Olá!'), ...recentes]
+    expect(marcaDoFim(itensDoTutor(comAnteriores, undefined), undefined, undefined)).toBe(marcaDoFim(itensDoTutor(recentes, undefined), undefined, undefined))
+    expect(marcaDoFim(itensDoTutor(recentes, { pergunta: 'e a 3?', pensando: true }), 'esperando', undefined)).not.toBe(marcaDoFim(itensDoTutor(recentes, undefined), undefined, undefined))
+  })
+
   it('a pergunta que falhou fica na conversa, com o que houve', () => {
     expect(pendenteNoTutor([], falhou(CodigoDeErro.IA_INDISPONIVEL), ATIVIDADE)).toEqual({ pergunta: PEDIDO.texto, pensando: false, falha: { tipo: 'tentar', texto: TEXTO_DA_FALHA_DO_TUTOR } })
   })
@@ -179,6 +200,6 @@ describe('o que acompanha a pergunta', () => {
   })
 
   it('a faixa de supervisão diz que o professor acompanha (D8)', () => {
-    expect(TEXTO_DA_SUPERVISAO).toBe('Seu professor acompanha como você usa o Tutor.')
+    expect(TEXTO_DA_SUPERVISAO).toBe('Quem dá a aula acompanha como você usa o Tutor.')
   })
 })

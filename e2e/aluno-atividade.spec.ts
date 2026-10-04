@@ -15,8 +15,8 @@ import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './
 const PRAZO_DA_TELA_MS = 15_000
 /** A fila de respostas tenta de novo sozinha em 2 s, 4 s e 8 s: o teste espera até a terceira tentativa, com folga. */
 const PRAZO_DO_REENVIO_MS = 25_000
-const AVISO_DA_AVALIACAO = 'Avaliação: o Tutor fica pausado até a professora encerrar.'
-const ESPERA_PELA_CORRECAO = 'Sua professora ainda vai revisar a correção.'
+const AVISO_DA_AVALIACAO = 'Avaliação: o Tutor fica pausado até quem dá a aula encerrar.'
+const ESPERA_PELA_CORRECAO = 'Quem dá a aula ainda vai revisar a correção.'
 /** O que a área do aluno nunca diz: nota, conceito, e nada que compare (D46; regra 50, item 9). */
 const PROIBIDO_NA_AREA = /\bnotas?\b|\bconceito\b|ranking|média da turma|colegas?\b/i
 
@@ -87,7 +87,7 @@ test.describe('Atividades: os quatro estados', () => {
     // Vazia: diz que não há o que fazer agora, sem cobrar nada.
     segurada.abrir()
     await expect(principal(page).getByText('Nada para fazer agora')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
-    await expect(principal(page)).toContainText('Quando a sua professora passar uma atividade para a turma, ela aparece aqui.')
+    await expect(principal(page)).toContainText('Quando quem dá a aula passar uma atividade para a turma, ela aparece aqui.')
     await expect(principal(page).getByRole('link')).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
 
@@ -336,10 +336,10 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
     if (prova === undefined) throw new Error('prova sintética não criada')
     api.provas.set(avaliacao.id, { ...prova, estado: 'encerrada' })
     await acionar(alternativa(page, 0), hasTouch)
-    await expect(principal(page).getByRole('heading', { name: 'A professora encerrou esta atividade' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(principal(page).getByRole('heading', { name: 'Quem dá a aula encerrou esta atividade' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
     await expect(principal(page).getByRole('radio')).toHaveCount(0)
     // A escolha que não chegou a ser salva é dita, em vez de sumir em silêncio.
-    await expect(principal(page).getByRole('alert')).toHaveText('A atividade foi encerrada antes de a resposta da questão 1 ser salva. Se isso fizer diferença, avise a professora.')
+    await expect(principal(page).getByRole('alert')).toHaveText('A atividade foi encerrada antes de a resposta da questão 1 ser salva. Se isso fizer diferença, avise quem dá a aula.')
     await expect(principal(page)).toContainText('Você respondeu 0 de 3 questões.')
     await expect(principal(page).locator('[data-resultado="aguardando"]')).toContainText(ESPERA_PELA_CORRECAO, { timeout: PRAZO_DA_TELA_MS })
     await expect(page.locator('body')).not.toContainText(PROIBIDO_NA_AREA)
