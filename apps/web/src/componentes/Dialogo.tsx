@@ -36,6 +36,13 @@ export interface PropsDoDialogo {
    * por cima (`LoginPorCima`), que é outro diálogo.
    */
   readonly rodape?: ReactNode
+  /**
+   * `alertdialog` é o diálogo que interrompe para pedir uma confirmação (a decisão oficial, a ação de perigo): o leitor de
+   * tela o anuncia como alerta e lê a descrição junto do título. Sem isto, é o diálogo comum.
+   */
+  readonly papel?: 'alertdialog'
+  /** O id do texto que descreve o diálogo, lido com o título ao abrir: "o que vai acontecer" na confirmação. */
+  readonly descritoPor?: string
 }
 
 /**
@@ -55,7 +62,7 @@ export interface PropsDoDialogo {
  * volta sozinho pelo id, se a pessoa abrir de novo e repetir. No convite, o Esc e o clique fora vão ao `aoFechar` dele,
  * que pergunta antes de fechar sem o link copiado (tarefa 7.0).
  */
-export function Dialogo({ titulo, aoFechar, fecharAoClicarFora = false, aoFecharPeloNavegador, focoInicial, focoDeReserva, children, rodape }: PropsDoDialogo) {
+export function Dialogo({ titulo, aoFechar, fecharAoClicarFora = false, aoFecharPeloNavegador, focoInicial, focoDeReserva, children, rodape, papel, descritoPor }: PropsDoDialogo) {
   const dialogo = useRef<HTMLDialogElement>(null)
   // Quem fecha o `dialog` somos nós, ao desmontar; o `close` que chega sem isso veio do navegador.
   const desmontando = useRef(false)
@@ -124,6 +131,8 @@ export function Dialogo({ titulo, aoFechar, fecharAoClicarFora = false, aoFechar
     <dialog
       ref={dialogo}
       aria-labelledby={idDoTitulo}
+      {...(papel === undefined ? {} : { role: papel })}
+      {...(descritoPor === undefined ? {} : { 'aria-describedby': descritoPor })}
       onCancel={(evento) => {
         evento.preventDefault()
         aoFechar()

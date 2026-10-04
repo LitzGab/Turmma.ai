@@ -11,6 +11,9 @@ import { Professores } from './Professores'
  *
  * Na A1: Estrutura (13.0), com a turma aberta e a lista de nomes dela, e Professores (14.0), cada uma com a linha dela em
  * `areas/navegacao.ts`. Qualquer outro endereço daqui responde "Página não encontrada".
+ *
+ * **Tela nova entra por `lazy(() => import('./Tela'))`**, e não por `import` direto: as cinco linhas da convenção estão
+ * no topo de `areas/navegacao.ts`.
  */
 export default function RotasDaCoordenacao() {
   return (

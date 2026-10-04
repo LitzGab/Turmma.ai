@@ -7,17 +7,29 @@
  * - o chunk carregado por `import()` leva o nome do módulo de onde saiu, e um `import()` de um `index.tsx` viraria
  *   `index-*.js` e contaria contra a entrada. Por isso todo chunk que não é entrada nem área ganha o prefixo `parte-`;
  * - o chunk que sai de `src/operacao/` é `operacao-*.js`, qualquer que seja o arquivo da fachada;
- * - o que sai de `src/areas/<pasta>/` é `<pasta>-*.js`: todas as rotas de uma área têm a mesma fachada, o `rotas.tsx`
- *   dela, e o teto mede a área inteira.
+ * - a fachada de cada área, `src/areas/<pasta>/rotas.tsx`, é `<pasta>-*.js`: leva o que o `rotas.tsx` importa direto (as
+ *   telas da A1), e o teto da área mede esse pedaço;
+ * - a **tela** que a área carrega por `lazy(() => import('./Tela'))` é `tela-<pasta>-<Tela>-*.js`, e o que só as telas
+ *   de uma área dividem entre si sai com o mesmo prefixo. Não casa com o glob da área, nem com o do primeiro
+ *   carregamento: quem abre Turmas não baixa a tela de Aprovar. O teto de cada tela é `TETO_DE_UMA_TELA_EM_BYTES`,
+ *   conferido pelo teste do build, porque o glob do `size-limit` soma os arquivos e não mede um por um;
+ * - o que sai de `src/galeria/` é `galeria-*.js`: a galeria das peças está no build porque o e2e roda sobre ele, e só
+ *   quem digita o endereço dela a baixa;
+ * - o pedaço **sem fachada** que só tem peças do MVP de apresentação (`componentes/ia/` e as peças gerais listadas em
+ *   `PECAS_FORA_DA_ENTRADA`) é `pecas-*.js`. É o pedaço que o Rolldown cria sozinho para o que duas áreas dividem. Como
+ *   `parte-*`, ele contaria no teto do primeiro carregamento sem nunca ser baixado nele: as peças só chegam por
+ *   `import()`, com a tela que as usa. O teste do build de verdade prova as duas metades — nenhuma peça na entrada nem
+ *   no que ela baixa junto, e nada do que ela baixa junto com outro nome que não `parte-*`.
  *
  * Por nome, e não por `manualChunks`: no Rolldown do Vite 8 ele vira um grupo que, por padrão, puxa junto as
  * dependências dos módulos capturados (React, os componentes da entrada), e a entrada passaria a importar o chunk da
  * operação — o contrário do que se quer.
  */
 
-/** O mínimo de um chunk que o nome precisa: o módulo de fachada, quando ele existe. */
+/** O mínimo de um chunk que o nome precisa: o módulo de fachada, quando ele existe, e os módulos que ele leva. */
 export interface ChunkParaNomear {
   readonly facadeModuleId: string | null
+  readonly moduleIds?: readonly string[]
 }
 
 /** A pasta da área do operador, como aparece no id do módulo (sempre com `/`, também no Windows do Vite). */
@@ -28,11 +40,96 @@ export const AREAS_DA_ESCOLA = ['coordenacao', 'professor', 'aluno'] as const
 
 const PASTA_DAS_AREAS = '/apps/web/src/areas/'
 
+export type AreaDaEscola = (typeof AREAS_DA_ESCOLA)[number]
+
+/**
+ * O teto de **uma** tela carregada por `import()`, em brotli: 30 kB. No Fast 3G do Chromebook de entrada são perto de
+ * 0,2 s de rede e, com a CPU quatro vezes mais lenta, perto de 0,15 s para ler o JS, somados ao pedaço das peças que a
+ * tela usa. É teto, não meta: as três telas da coordenação da A1, juntas, pesam 13 kB.
+ */
+export const TETO_DE_UMA_TELA_EM_BYTES = 30_000
+
+/** A área a que um módulo pertence: a pasta dele em `src/areas/`. Fora delas, nenhuma. */
+export function areaDoModulo(idDoModulo: string): AreaDaEscola | undefined {
+  const id = idDoModulo.replaceAll('\\', '/')
+  return AREAS_DA_ESCOLA.find((pasta) => id.includes(`${PASTA_DAS_AREAS}${pasta}/`))
+}
+
+/** A fachada da área é o `rotas.tsx` da pasta dela, e só ele: qualquer outro módulo de lá que vire pedaço é tela. */
+function ehFachadaDaArea(idDoModulo: string, area: AreaDaEscola): boolean {
+  return new RegExp(`${PASTA_DAS_AREAS}${area}/rotas\\.tsx?$`).test(idDoModulo.replaceAll('\\', '/').replace(/[?#].*$/, ''))
+}
+
+/** A área de um pedaço sem fachada: a única que tem módulo nele. Com módulos de duas áreas, ou de nenhuma, não é de área. */
+function areaDoPedacoDividido(idsDosModulos: readonly string[]): AreaDaEscola | undefined {
+  const areas = new Set(idsDosModulos.map(areaDoModulo).filter((area) => area !== undefined))
+  return areas.size === 1 ? [...areas][0] : undefined
+}
+
+/** A pasta da galeria das peças, que só existe para o e2e e para quem desenvolve. */
+const PASTA_DA_GALERIA = '/apps/web/src/galeria/'
+
+const PASTA_DA_WEB = '/apps/web/src/'
+const PASTA_DOS_COMPONENTES = '/apps/web/src/componentes/'
+const PASTA_DAS_PECAS_DE_IA = '/apps/web/src/componentes/ia/'
+
+/**
+ * As peças gerais do MVP de apresentação (`docs/mvp-rapido.md` 9.3) que **não** estão no primeiro carregamento: os
+ * arquivos de `src/componentes/`, sem a extensão. As de IA são a pasta `componentes/ia/` inteira. O `Botao`, o `Dialogo`,
+ * o `Campo` e os estados não entram na lista: a entrada os usa, e eles pesam no teto dela.
+ *
+ * A peça que uma tela da entrada passar a usar **sai daqui**: o teste do build reprova a peça da lista que aparecer no
+ * primeiro carregamento, em vez de deixá-la passar sem ser medida.
+ */
+export const PECAS_FORA_DA_ENTRADA = [
+  'Abas',
+  'barra',
+  'BarraRotulada',
+  'Cartao',
+  'DialogoDeConfirmacao',
+  'Faixa',
+  'flutuante',
+  'Menu',
+  'NumeroPainel',
+  'Selecao',
+  'SeloDeEstado',
+  'teclado-das-abas',
+  'teclado-do-menu',
+  'Tela',
+] as const
+
+/** O módulo é uma peça que fica fora do primeiro carregamento? */
+export function ehPecaForaDaEntrada(idDoModulo: string): boolean {
+  const id = idDoModulo.replaceAll('\\', '/').replace(/[?#].*$/, '')
+  if (id.includes(PASTA_DAS_PECAS_DE_IA)) return true
+  const posicao = id.indexOf(PASTA_DOS_COMPONENTES)
+  if (posicao === -1) return false
+  const arquivo = id.slice(posicao + PASTA_DOS_COMPONENTES.length).replace(/\.tsx?$/, '')
+  return (PECAS_FORA_DA_ENTRADA as readonly string[]).includes(arquivo)
+}
+
+/**
+ * O pedaço só tem peças? Conta o código da web: os módulos de fora (`node_modules`, `packages/shared`) acompanham quem
+ * os usa. Pedaço sem nenhum módulo da web não é de peças.
+ */
+function soTemPecas(idsDosModulos: readonly string[]): boolean {
+  const daWeb = idsDosModulos.filter((id) => id.replaceAll('\\', '/').includes(PASTA_DA_WEB))
+  return daWeb.length > 0 && daWeb.every(ehPecaForaDaEntrada)
+}
+
 export function nomeDoChunk(chunk: ChunkParaNomear): string {
   const fachada = chunk.facadeModuleId?.replaceAll('\\', '/')
-  if (fachada === undefined) return 'assets/parte-[name]-[hash].js'
+  if (fachada === undefined) {
+    const modulos = chunk.moduleIds ?? []
+    // O que duas telas da mesma área dividem é pedaço daquela área. Com módulo de duas áreas, o pedaço fica `parte-*`, e
+    // o teste do build o reprova: tela de uma área não importa módulo de outra.
+    const areaDoDividido = areaDoPedacoDividido(modulos)
+    if (areaDoDividido !== undefined) return `assets/tela-${areaDoDividido}-[name]-[hash].js`
+    return soTemPecas(modulos) ? 'assets/pecas-[name]-[hash].js' : 'assets/parte-[name]-[hash].js'
+  }
   if (fachada.includes(PASTA_DA_OPERACAO)) return 'assets/operacao-[hash].js'
-  const area = AREAS_DA_ESCOLA.find((pasta) => fachada.includes(`${PASTA_DAS_AREAS}${pasta}/`))
-  if (area !== undefined) return `assets/${area}-[hash].js`
+  if (fachada.includes(PASTA_DA_GALERIA)) return 'assets/galeria-[hash].js'
+  const area = areaDoModulo(fachada)
+  if (area !== undefined) return ehFachadaDaArea(fachada, area) ? `assets/${area}-[hash].js` : `assets/tela-${area}-[name]-[hash].js`
   return 'assets/parte-[name]-[hash].js'
 }

@@ -34,5 +34,11 @@
     "path": "apps/web/dist/assets/aluno-*.js",
     "limit": "5 kB",
     "brotli": true
+  },
+  {
+    "name": "JS das peças do MVP de apresentação (os pedaços pecas-*.js, que as telas dividem, somados à galeria-*.js, que leva as peças enquanto só ela as usa e fica com a página dela depois; só por import(), fora do primeiro carregamento; na entrega das peças, tudo na galeria, perto de 14 kB)",
+    "path": ["apps/web/dist/assets/galeria-*.js", "apps/web/dist/assets/pecas-*.js"],
+    "limit": "17 kB",
+    "brotli": true
   }
 ]

@@ -191,6 +191,7 @@ export { credencialMatricula } from './db/schema/credencial-matricula.js'
 export { listaNome } from './db/schema/lista-nome.js'
 export { acessoTurma } from './db/schema/acesso-turma.js'
 export { reivindicacao } from './db/schema/reivindicacao.js'
+export * from './db/schema/mvp/tabelas.js'
 export { contaExterna, PROVEDORES_EXTERNOS } from './db/schema/conta-externa.js'
 export type { ProvedorExterno } from './db/schema/conta-externa.js'
 export { provedorEscola } from './db/schema/provedor-escola.js'
@@ -227,3 +228,60 @@ export type { DadosDaAuditoria } from './auditoria/registro-de-auditoria.js'
 // Só leitura: a escrita em `auditoria` tem uma porta só, o RegistroDeAuditoria (a tabela e o insert ficam fora do pacote).
 export { AuditoriaRepository, LIMITE_MAXIMO_DA_LISTAGEM, LIMITE_PADRAO_DA_LISTAGEM } from './auditoria/auditoria.repository.js'
 export type { ExecutorDeAuditoria, RegistroAuditado } from './auditoria/auditoria.repository.js'
+// Camada de IA (regra 30): o domínio importa a porta, as tarefas e os erros; adaptador é detalhe daqui.
+export {
+  ADAPTADORES_DE_IA,
+  esquemaAmbienteDeIa,
+  lerConfiguracaoDeIa,
+  MOTIVO_ADAPTADOR_FALSO_EM_PRODUCAO,
+  MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA,
+  MOTIVO_LLM_SEM_ENDERECO,
+  MOTIVO_LLM_SEM_MODELO,
+  MOTIVO_PROCESSAMENTO_LOCAL_EM_ENDERECO_DE_FORA,
+  MOTIVO_RECUO_MAIOR_QUE_O_PRAZO,
+  MOTIVO_VAGAS_DE_IA_INCOERENTES,
+} from './config/config-ia.js'
+export type { AdaptadorDeIa, ConfiguracaoDeIa, ConfiguracaoDoExecutor, ConfiguracaoDoModelo } from './config/config-ia.js'
+export { PERFIS } from './ia/perfis.js'
+export type { Perfil } from './ia/perfis.js'
+export { CODIGOS_DE_ERRO_DE_IA, ErroDeIa } from './ia/erros.js'
+export type { CodigoDeErroDeIa } from './ia/erros.js'
+export { ORIGENS_DA_SAIDA } from './ia/porta.js'
+export type { LLMProvider, MedicaoDaGeracao, OrigemDaSaida, PedidoDeGeracao, ResultadoDaGeracao } from './ia/porta.js'
+export type { Dado, PedidoAoModelo, PromptVersionado, TarefaDeIa } from './ia/tarefa.js'
+export { ConsumoEmMemoria, OrcamentoEmMemoria } from './ia/consumo.js'
+export type { ConsultaDeOrcamento, ConsumoDeIa, DecisaoDoOrcamento, LimitesDoOrcamentoEmMemoria, OrcamentoDeIa, RegistroDeConsumo } from './ia/consumo.js'
+export { exigirFuncaoAtiva, SuspensoesEmMemoria } from './ia/suspensao.js'
+export type { SuspensaoDeFuncao } from './ia/suspensao.js'
+export { criarProvedorDeIa, MODELO_DA_REGRA_FIXA, ProvedorDeIa } from './ia/provedor.js'
+export type { DependenciasDoProvedor, PortasDoProvedor, RegistradorDeIa } from './ia/provedor.js'
+export { AdaptadorFalso, MODELO_FALSO } from './ia/adaptador-falso.js'
+export { AdaptadorOpenAICompat } from './ia/adaptador-openai-compat.js'
+export type { AdaptadorDeModelo } from './ia/adaptador.js'
+export { ESTADOS_DA_EXECUCAO, EXECUCAO_INTERROMPIDA, ExecucoesEmMemoria, ExecutorNoProcesso } from './ia/executor.js'
+export type { CodigoDeFalhaDaExecucao, DependenciasDoExecutor, EstadoDaExecucao, ExecucaoAgendada, ExecutorDeAgente, RepositorioDeExecucoes } from './ia/executor.js'
+export { esquemaContextoDaTurma, esquemaTrecho } from './ia/material.js'
+export type { ContextoDaTurma, Trecho } from './ia/material.js'
+export { TAREFAS_DE_IA } from './ia/tarefas/index.js'
+export type { NomeDaTarefaDeIa } from './ia/tarefas/index.js'
+export { adaptarAtividade, esquemaEntradaDeAdaptacao } from './ia/tarefas/adaptar-atividade.js'
+export type { EntradaDeAdaptacao } from './ia/tarefas/adaptar-atividade.js'
+export { esquemaEntradaDeAtividadeObjetiva, gerarAtividadeObjetiva } from './ia/tarefas/gerar-atividade-objetiva.js'
+export type { EntradaDeAtividadeObjetiva } from './ia/tarefas/gerar-atividade-objetiva.js'
+export { esquemaEntradaDePlanoDeAula, gerarPlanoDeAula } from './ia/tarefas/gerar-plano-de-aula.js'
+export type { EntradaDePlanoDeAula } from './ia/tarefas/gerar-plano-de-aula.js'
+export { esquemaEntradaDoAssistente, esquemaPropostaDeFerramenta, esquemaSaidaDoAssistente, proporFerramenta } from './ia/tarefas/propor-ferramenta.js'
+export type { EntradaDoAssistente, PropostaDeFerramenta, SaidaDoAssistente } from './ia/tarefas/propor-ferramenta.js'
+export { esquemaEntradaDoRelatorio, esquemaSaidaDoRelatorio, relatorioDaCorrecao } from './ia/tarefas/relatorio-da-correcao.js'
+export type { EntradaDoRelatorio, SaidaDoRelatorio } from './ia/tarefas/relatorio-da-correcao.js'
+export { esquemaEntradaDoAnalista, esquemaSaidaDoAnalista, resumoDoAnalista } from './ia/tarefas/resumo-do-analista.js'
+export type { EntradaDoAnalista, SaidaDoAnalista } from './ia/tarefas/resumo-do-analista.js'
+export {
+  CLASSIFICACOES_DO_TURNO,
+  esquemaEntradaDoTutor,
+  esquemaSaidaDoTutor,
+  MENSAGEM_DE_ASSUNTO_DELICADO,
+  MENSAGEM_DE_RISCO_A_VIDA,
+  turnoDoTutor,
+} from './ia/tarefas/turno-do-tutor.js'
+export type { ClassificacaoDoTurno, EntradaDoTutor, SaidaDoTutor } from './ia/tarefas/turno-do-tutor.js'

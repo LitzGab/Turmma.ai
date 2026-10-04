@@ -36,7 +36,8 @@
     "carga:login": "npm run -s build -w @educa/shared && npm run -s build -w @educa/nucleo && npm run -s build -w @educa/api && node infra/scripts/carga-login.ts",
     "carga:login:controle-negativo": "npm run -s build -w @educa/shared && npm run -s build -w @educa/nucleo && npm run -s build -w @educa/api && node infra/scripts/carga-login.ts --controle-negativo",
     "carga:sala": "npm run -s build -w @educa/shared && npm run -s build -w @educa/nucleo && npm run -s build -w @educa/api && node infra/scripts/carga-sala.ts",
-    "db:gerar": "drizzle-kit generate --config packages/nucleo/drizzle.config.ts"
+    "db:gerar": "drizzle-kit generate --config packages/nucleo/drizzle.config.ts",
+    "demonstracao:material": "node tools/demonstracao/gerar-material.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
@@ -45,10 +46,13 @@
     "@playwright/test": "1.63.0",
     "@size-limit/file": "13.1.1",
     "@types/node": "22.20.2",
+    "@types/pdfkit": "0.17.6",
     "drizzle-kit": "0.31.10",
     "eslint": "10.10.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.12.0",
+    "pdfjs-dist": "6.4.299",
+    "pdfkit": "0.20.2",
     "size-limit": "13.1.1",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.0",

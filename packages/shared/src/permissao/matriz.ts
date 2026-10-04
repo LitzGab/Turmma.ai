@@ -82,6 +82,65 @@ export const RECURSOS = {
   professor: ['listar', 'cadastrar', 'refazer_convite', 'revogar_convite'],
   /** Uso e desempenho das turmas de um professor (D45): o agregado e o nominal são leituras diferentes. */
   indicador_professor: ['ler_agregado', 'ler_nominal'],
+  /**
+   * O material da escola (MVP, A2; D75): `enviar`, `listar`, `ler` e `excluir` são `POST`, `GET`, `GET /:id` e `DELETE` de
+   * `/v1/materiais`; `buscar`, `GET /v1/materiais/busca`. Só a coordenação envia e exclui. O professor lê e busca só o das
+   * disciplinas em que tem vínculo confirmado; o aluno não lê material (o Tutor lê por ele, no servidor).
+   */
+  material: ['enviar', 'listar', 'ler', 'excluir', 'buscar'],
+  /** `GET /v1/time` (MVP, A2): os agentes, as funções, a autonomia e a suspensão na escola. Catálogo, sem dado de pessoa. */
+  time: ['ler'],
+  /**
+   * A conversa do professor com o Assistente de ensino (MVP, A2): `ler_conversa` é `GET /v1/assistente/conversa`;
+   * `enviar_mensagem`, `POST /v1/assistente/mensagens`. Só o próprio professor: a coordenação nunca a lê (regra 70, item 8).
+   */
+  assistente: ['ler_conversa', 'enviar_mensagem'],
+  /** `GET /v1/execucoes/:id` (MVP): só quem pediu a execução a consulta. */
+  execucao: ['ler'],
+  /** `POST /v1/ferramentas/:ferramenta/gerar` (MVP, A2; D18): o professor, para turma e disciplina com vínculo confirmado dele. */
+  ferramenta: ['gerar'],
+  /**
+   * O artefato (MVP, A2): `listar` e `ler` são `GET /v1/artefatos` e `GET /v1/artefatos/:id`; `renomear`, o `PATCH`;
+   * `exportar`, `GET /v1/artefatos/:id/pdf`; `adaptar`, `POST /v1/artefatos/:id/adaptar`. Só o professor da turma do
+   * artefato. O aluno nunca lê artefato: recebe a prova pela atividade aplicada.
+   */
+  artefato: ['listar', 'ler', 'renomear', 'exportar', 'adaptar'],
+  /**
+   * A entrega pendente de decisão (MVP; regra 70, item 3): `listar` é `GET /v1/entregas`; `decidir`,
+   * `POST /v1/entregas/:id/decidir`; `aprovar_lote`, `POST /v1/entregas/:id/aprovar-lote`, com o registro da validação
+   * (D56). Só o professor da turma decide: a coordenação não aprova no lugar dele.
+   */
+  entrega: ['listar', 'decidir', 'aprovar_lote'],
+  /** A atividade aplicada (MVP, A3), do professor da turma: `aplicar`, `listar` e `encerrar` são as três rotas de `/v1/atividades-aplicadas`. */
+  atividade_aplicada: ['aplicar', 'listar', 'encerrar'],
+  /**
+   * O lado do aluno na atividade (MVP, A3), só dele: `listar` é `GET /v1/minhas-atividades`; `ler_prova`, `responder`,
+   * `enviar` e `ler_diagnostico` são `GET …/prova`, `PUT …/respostas/:questao`, `POST …/enviar` e `GET …/meu-diagnostico`.
+   */
+  minha_atividade: ['listar', 'ler_prova', 'responder', 'enviar', 'ler_diagnostico'],
+  /** A correção do lote (MVP, A3; D33, D56), do professor da turma: `ler` é `GET …/correcao`; `abrir_destaque`, o `POST …/destaques/:alunoId/abrir`. */
+  correcao: ['ler', 'abrir_destaque'],
+  /**
+   * `GET /v1/turmas/:id/desempenho` (MVP, A3): o professor lê a turma dele. A coordenação lê com finalidade e auditoria,
+   * porque a resposta nomeia alunos (D34) e a turma numa disciplina é de um professor só (D45).
+   */
+  desempenho_da_turma: ['ler'],
+  /** O Tutor (MVP, A4), só do aluno: `enviar_mensagem`, `ler_conversa` e `ler_memoria` são as três rotas de `/v1/tutor`. */
+  tutor: ['enviar_mensagem', 'ler_conversa', 'ler_memoria'],
+  /** `GET /v1/sinais` (MVP, A4): os sinais do Tutor, só para o professor da turma (D34). A coordenação vê só a soma, no Analista. */
+  sinal: ['ler'],
+  /**
+   * A governança de IA (MVP, A5), só da coordenação: `ler_resumo`, `ler_funcoes` e `ler_consumo` são os três `GET` de
+   * `/v1/governanca`; `suspender_funcao` e `retomar_funcao`, os dois `POST` de `/v1/governanca/funcoes/:chave`. O resumo
+   * e o consumo são agregados: sem professor, sem turma, sem aluno.
+   */
+  governanca: ['ler_resumo', 'ler_funcoes', 'suspender_funcao', 'retomar_funcao', 'ler_consumo'],
+  /**
+   * O Analista de desempenho escolar (MVP, A5), só da coordenação: `ler_resumo` é `GET /v1/analista/resumo`, agregado
+   * com grupo mínimo (D45); `gerar`, `POST /v1/analista/gerar`; `ler_nominal`, `GET /v1/analista/nominal`, com
+   * finalidade e auditoria.
+   */
+  analista: ['ler_resumo', 'gerar', 'ler_nominal'],
 } as const satisfies Record<string, readonly string[]>
 
 export type Recurso = keyof typeof RECURSOS
@@ -109,6 +168,21 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     usuario_mfa: { redefinir: 'nunca' },
     professor: { listar: 'nunca', cadastrar: 'nunca', refazer_convite: 'nunca', revogar_convite: 'nunca' },
     indicador_professor: { ler_agregado: 'agregado', ler_nominal: 'nunca' },
+    material: { enviar: 'nunca', listar: 'nunca', ler: 'nunca', excluir: 'nunca', buscar: 'nunca' },
+    time: { ler: 'nunca' },
+    assistente: { ler_conversa: 'nunca', enviar_mensagem: 'nunca' },
+    execucao: { ler: 'nunca' },
+    ferramenta: { gerar: 'nunca' },
+    artefato: { listar: 'nunca', ler: 'nunca', renomear: 'nunca', exportar: 'nunca', adaptar: 'nunca' },
+    entrega: { listar: 'nunca', decidir: 'nunca', aprovar_lote: 'nunca' },
+    atividade_aplicada: { aplicar: 'nunca', listar: 'nunca', encerrar: 'nunca' },
+    minha_atividade: { listar: 'nunca', ler_prova: 'nunca', responder: 'nunca', enviar: 'nunca', ler_diagnostico: 'nunca' },
+    correcao: { ler: 'nunca', abrir_destaque: 'nunca' },
+    desempenho_da_turma: { ler: 'nunca' },
+    tutor: { enviar_mensagem: 'nunca', ler_conversa: 'nunca', ler_memoria: 'nunca' },
+    sinal: { ler: 'nunca' },
+    governanca: { ler_resumo: 'nunca', ler_funcoes: 'nunca', suspender_funcao: 'nunca', retomar_funcao: 'nunca', ler_consumo: 'nunca' },
+    analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
   },
   coordenador: {
     sistema_contexto: { ler: 'proprio' },
@@ -129,6 +203,21 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     usuario_mfa: { redefinir: 'unidade' },
     professor: { listar: 'unidade', cadastrar: 'unidade', refazer_convite: 'unidade', revogar_convite: 'unidade' },
     indicador_professor: { ler_agregado: 'agregado', ler_nominal: 'nominal_auditado' },
+    material: { enviar: 'unidade', listar: 'unidade', ler: 'unidade', excluir: 'unidade', buscar: 'unidade' },
+    time: { ler: 'unidade' },
+    assistente: { ler_conversa: 'nunca', enviar_mensagem: 'nunca' },
+    execucao: { ler: 'proprio' },
+    ferramenta: { gerar: 'nunca' },
+    artefato: { listar: 'nunca', ler: 'nunca', renomear: 'nunca', exportar: 'nunca', adaptar: 'nunca' },
+    entrega: { listar: 'nunca', decidir: 'nunca', aprovar_lote: 'nunca' },
+    atividade_aplicada: { aplicar: 'nunca', listar: 'nunca', encerrar: 'nunca' },
+    minha_atividade: { listar: 'nunca', ler_prova: 'nunca', responder: 'nunca', enviar: 'nunca', ler_diagnostico: 'nunca' },
+    correcao: { ler: 'nunca', abrir_destaque: 'nunca' },
+    desempenho_da_turma: { ler: 'nominal_auditado' },
+    tutor: { enviar_mensagem: 'nunca', ler_conversa: 'nunca', ler_memoria: 'nunca' },
+    sinal: { ler: 'nunca' },
+    governanca: { ler_resumo: 'agregado', ler_funcoes: 'unidade', suspender_funcao: 'unidade', retomar_funcao: 'unidade', ler_consumo: 'agregado' },
+    analista: { ler_resumo: 'agregado', gerar: 'unidade', ler_nominal: 'nominal_auditado' },
   },
   professor: {
     sistema_contexto: { ler: 'proprio' },
@@ -149,6 +238,21 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     usuario_mfa: { redefinir: 'nunca' },
     professor: { listar: 'nunca', cadastrar: 'nunca', refazer_convite: 'nunca', revogar_convite: 'nunca' },
     indicador_professor: { ler_agregado: 'nunca', ler_nominal: 'proprio' },
+    material: { enviar: 'nunca', listar: 'turma_vinculada', ler: 'turma_vinculada', excluir: 'nunca', buscar: 'turma_vinculada' },
+    time: { ler: 'unidade' },
+    assistente: { ler_conversa: 'proprio', enviar_mensagem: 'proprio' },
+    execucao: { ler: 'proprio' },
+    ferramenta: { gerar: 'turma_vinculada' },
+    artefato: { listar: 'turma_vinculada', ler: 'turma_vinculada', renomear: 'turma_vinculada', exportar: 'turma_vinculada', adaptar: 'turma_vinculada' },
+    entrega: { listar: 'turma_vinculada', decidir: 'turma_vinculada', aprovar_lote: 'turma_vinculada' },
+    atividade_aplicada: { aplicar: 'turma_vinculada', listar: 'turma_vinculada', encerrar: 'turma_vinculada' },
+    minha_atividade: { listar: 'nunca', ler_prova: 'nunca', responder: 'nunca', enviar: 'nunca', ler_diagnostico: 'nunca' },
+    correcao: { ler: 'turma_vinculada', abrir_destaque: 'turma_vinculada' },
+    desempenho_da_turma: { ler: 'turma_vinculada' },
+    tutor: { enviar_mensagem: 'nunca', ler_conversa: 'nunca', ler_memoria: 'nunca' },
+    sinal: { ler: 'turma_vinculada' },
+    governanca: { ler_resumo: 'nunca', ler_funcoes: 'nunca', suspender_funcao: 'nunca', retomar_funcao: 'nunca', ler_consumo: 'nunca' },
+    analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
   },
   aluno: {
     sistema_contexto: { ler: 'proprio' },
@@ -169,6 +273,21 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     usuario_mfa: { redefinir: 'nunca' },
     professor: { listar: 'nunca', cadastrar: 'nunca', refazer_convite: 'nunca', revogar_convite: 'nunca' },
     indicador_professor: { ler_agregado: 'nunca', ler_nominal: 'nunca' },
+    material: { enviar: 'nunca', listar: 'nunca', ler: 'nunca', excluir: 'nunca', buscar: 'nunca' },
+    time: { ler: 'nunca' },
+    assistente: { ler_conversa: 'nunca', enviar_mensagem: 'nunca' },
+    execucao: { ler: 'proprio' },
+    ferramenta: { gerar: 'nunca' },
+    artefato: { listar: 'nunca', ler: 'nunca', renomear: 'nunca', exportar: 'nunca', adaptar: 'nunca' },
+    entrega: { listar: 'nunca', decidir: 'nunca', aprovar_lote: 'nunca' },
+    atividade_aplicada: { aplicar: 'nunca', listar: 'nunca', encerrar: 'nunca' },
+    minha_atividade: { listar: 'proprio', ler_prova: 'proprio', responder: 'proprio', enviar: 'proprio', ler_diagnostico: 'proprio' },
+    correcao: { ler: 'nunca', abrir_destaque: 'nunca' },
+    desempenho_da_turma: { ler: 'nunca' },
+    tutor: { enviar_mensagem: 'proprio', ler_conversa: 'proprio', ler_memoria: 'proprio' },
+    sinal: { ler: 'nunca' },
+    governanca: { ler_resumo: 'nunca', ler_funcoes: 'nunca', suspender_funcao: 'nunca', retomar_funcao: 'nunca', ler_consumo: 'nunca' },
+    analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
   },
 }
 

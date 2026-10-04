@@ -1,10 +1,12 @@
+import { randomBytes } from 'node:crypto'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build, type Rolldown } from 'vite'
+import { brotliCompressSync } from 'node:zlib'
 import { afterEach, describe, expect, it } from 'vitest'
-import { AREAS_DA_ESCOLA, nomeDoChunk } from './nome-dos-chunks'
+import { AREAS_DA_ESCOLA, areaDoModulo, ehPecaForaDaEntrada, nomeDoChunk, PECAS_FORA_DA_ENTRADA, TETO_DE_UMA_TELA_EM_BYTES, type AreaDaEscola } from './nome-dos-chunks'
 
 // B1 (o nome que o teto de 60 kB mede) e B2 (a entrada da escola não leva nada de `src/operacao/`), e o mesmo para a área
 // de cada papel da escola (A1, tarefa 11.0), sobre o build de verdade do Vite, e não sobre o fonte: é o bundler que decide
@@ -73,11 +75,119 @@ describe('nome dos chunks', () => {
     expect(nomeDoChunk({ facadeModuleId: '/repo/apps/web/src/areas/navegacao.ts' })).toBe('assets/parte-[name]-[hash].js')
     expect(nomeDoChunk({ facadeModuleId: '/repo/apps/web/src/areas/professores/rotas.tsx' })).toBe('assets/parte-[name]-[hash].js')
   })
+
+  it('a tela que a área carrega por import() é tela-<area>-<nome>-*: fora do glob da área, do da entrada e do primeiro carregamento', () => {
+    expect(nomeDoChunk({ facadeModuleId: '/repo/apps/web/src/areas/professor/Aprovar.tsx' })).toBe('assets/tela-professor-[name]-[hash].js')
+    expect(nomeDoChunk({ facadeModuleId: 'C:\\repo\\apps\\web\\src\\areas\\aluno\\Tutor.tsx' })).toBe('assets/tela-aluno-[name]-[hash].js')
+    expect(nomeDoChunk({ facadeModuleId: '/repo/apps/web/src/areas/coordenacao/governanca/Agentes.tsx' })).toBe('assets/tela-coordenacao-[name]-[hash].js')
+    // Só o `rotas.tsx` da raiz da área é a fachada: um `rotas.tsx` de subpasta, ou um módulo com nome parecido, é tela.
+    expect(nomeDoChunk({ facadeModuleId: '/repo/apps/web/src/areas/professor/abas/rotas.tsx' })).toBe('assets/tela-professor-[name]-[hash].js')
+    expect(nomeDoChunk({ facadeModuleId: '/repo/apps/web/src/areas/professor/outras-rotas.tsx' })).toBe('assets/tela-professor-[name]-[hash].js')
+    // Nenhum dos nomes casa com os globs que o `.size-limit.json` soma: `<area>-*`, `index-*`, `parte-*`.
+    for (const area of AREAS_DA_ESCOLA) {
+      const nome = nomeDoChunk({ facadeModuleId: `/repo/apps/web/src/areas/${area}/index.tsx` }).replace('assets/', '')
+      expect(nome).toBe(`tela-${area}-[name]-[hash].js`)
+      expect(/^(?:index|parte|coordenacao|professor|aluno|operacao|pecas|galeria)-/.test(nome), nome).toBe(false)
+    }
+  })
+
+  it('o pedaço sem fachada com módulo de uma área só é daquela área; com módulo de duas, não ganha nome de área nenhuma', () => {
+    const doProfessor = '/repo/apps/web/src/areas/professor/destaques.ts'
+    const peca = '/repo/apps/web/src/componentes/ia/CaixaPedido.tsx'
+    expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [doProfessor] })).toBe('assets/tela-professor-[name]-[hash].js')
+    // Com uma peça junto, continua da área: é a área que o baixa, e o teto de tela o mede.
+    expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [doProfessor, peca] })).toBe('assets/tela-professor-[name]-[hash].js')
+    expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [doProfessor, '/repo/apps/web/src/areas/aluno/Tutor.tsx'] })).toBe('assets/parte-[name]-[hash].js')
+    expect(areaDoModulo(doProfessor)).toBe('professor')
+    expect(areaDoModulo(peca)).toBeUndefined()
+    expect(areaDoModulo('/repo/apps/web/src/areas/navegacao.ts')).toBeUndefined()
+  })
+
+  it('o chunk que sai de src/galeria/ é galeria-*, fora do glob do primeiro carregamento', () => {
+    expect(nomeDoChunk({ facadeModuleId: '/repo/apps/web/src/galeria/Galeria.tsx' })).toBe('assets/galeria-[hash].js')
+    expect(nomeDoChunk({ facadeModuleId: 'C:\\repo\\apps\\web\\src\\galeria\\Galeria.tsx' })).toBe('assets/galeria-[hash].js')
+  })
+
+  it('o pedaço sem fachada que só tem peças é pecas-*; com um módulo que não é peça, ou sem nenhum da web, continua parte-*', () => {
+    const peca = '/repo/apps/web/src/componentes/ia/CaixaPedido.tsx'
+    const geral = '/repo/apps/web/src/componentes/Menu.tsx'
+    const deFora = '/repo/node_modules/lucide-react/dist/esm/icons/check.js'
+    expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [peca, geral, deFora] })).toBe('assets/pecas-[name]-[hash].js')
+    expect(nomeDoChunk({ facadeModuleId: null, moduleIds: ['C:\\repo\\apps\\web\\src\\componentes\\ia\\textos-das-fontes.ts'] })).toBe('assets/pecas-[name]-[hash].js')
+    // O `Dialogo` é da entrada: o pedaço que o leva conta no primeiro carregamento, mesmo com uma peça ao lado.
+    expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [peca, '/repo/apps/web/src/componentes/Dialogo.tsx'] })).toBe('assets/parte-[name]-[hash].js')
+    // Só React, ou só o contrato compartilhado: é o que a entrada baixa, e continua `parte-*`.
+    expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [deFora] })).toBe('assets/parte-[name]-[hash].js')
+    expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [] })).toBe('assets/parte-[name]-[hash].js')
+  })
+
+  it('peça fora da entrada é a pasta componentes/ia/ e a lista das gerais, e nada mais de componentes/', () => {
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ia/motor-formulario.ts')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/Abas.tsx')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/teclado-das-abas.ts')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/SeloDeEstado.tsx?v=1')).toBe(true)
+    // As que a entrada usa, e as que só têm o nome parecido.
+    for (const daEntrada of ['Botao.tsx', 'botao-secundario.ts', 'Dialogo.tsx', 'Campo.tsx', 'estado/EstadoVazio.tsx', 'MenuDaPessoa.tsx', 'seletor.ts', 'pedidos/Menu.tsx'])
+      expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/areas/professor/Menu.tsx')).toBe(false)
+  })
 })
 
 /** Os módulos de `src/areas/<papel>/` que um chunk leva. */
 function modulosDeArea(chunk: Chunk): string[] {
   return chunk.moduleIds.filter((id) => AREAS_DA_ESCOLA.some((area) => id.replaceAll('\\', '/').includes(`/apps/web/src/areas/${area}/`)))
+}
+
+/** O nome do pedaço sem a pasta e sem o hash, que tem oito caracteres e pode ter hífen: `tela-professor-Aprovar`. */
+function semHash(nomeDoArquivo: string): string {
+  return nomeDoArquivo.replace(/^assets\//, '').replace(/-[\w-]{8}\.js$/, '')
+}
+
+/** A área de um pedaço, pelo nome dele: a fachada (`<area>-*`) ou uma tela dela (`tela-<area>-*`). */
+function areaDoPedaco(chunk: Chunk): { area: AreaDaEscola; tela: boolean } | undefined {
+  for (const area of AREAS_DA_ESCOLA) {
+    if (new RegExp(`^assets/${area}-[^/]+\\.js$`).test(chunk.fileName)) return { area, tela: false }
+    if (new RegExp(`^assets/tela-${area}-[^/]+\\.js$`).test(chunk.fileName)) return { area, tela: true }
+  }
+  return undefined
+}
+
+/**
+ * Os módulos de área que caíram num pedaço que não é da área deles, como `pedaço: módulo`. Lista vazia é a única resposta
+ * certa: módulo de `areas/professor/` só existe na fachada do professor e nas telas dele.
+ */
+function modulosDeAreaForaDoLugar(chunks: readonly Chunk[]): string[] {
+  return chunks.flatMap((chunk) =>
+    chunk.moduleIds
+      .filter((id) => areaDoModulo(id) !== undefined && areaDoModulo(id) !== areaDoPedaco(chunk)?.area)
+      .map((id) => `${semHash(chunk.fileName)}: ${id.replaceAll('\\', '/').replace(/^.*\/apps\/web\/src\//, '')}`),
+  )
+}
+
+/**
+ * As telas que alguém de fora da área delas importa, por `import` ou por `import()`, como `quem importa → tela`. A tela do
+ * professor só é alcançada pela fachada do professor e pelas outras telas dele: nem a entrada (que só chega à área
+ * depois da guarda de papel), nem a fachada de outro papel. É a regra 10 e a regra 50, item 9, no build: o Chromebook
+ * do aluno não baixa a tela de Aprovar.
+ */
+function telasImportadasDeFora(chunks: readonly Chunk[]): string[] {
+  return chunks.flatMap((quem) =>
+    [...quem.imports, ...quem.dynamicImports].flatMap((nome) => {
+      const importado = chunks.find((chunk) => chunk.fileName === nome)
+      const destino = importado === undefined ? undefined : areaDoPedaco(importado)
+      if (importado === undefined || destino === undefined || !destino.tela) return []
+      return areaDoPedaco(quem)?.area === destino.area ? [] : [`${semHash(quem.fileName)} → ${semHash(importado.fileName)}`]
+    }),
+  )
+}
+
+/** As telas acima do teto de uma tela, em brotli, com o nome e o tamanho de cada uma: é a mensagem de quem estourou. */
+function telasAcimaDoTeto(chunks: readonly Chunk[]): string[] {
+  return chunks.flatMap((chunk) => {
+    if (areaDoPedaco(chunk)?.tela !== true) return []
+    const bytes = brotliCompressSync(chunk.code).length
+    return bytes > TETO_DE_UMA_TELA_EM_BYTES ? [`${semHash(chunk.fileName)}: ${(bytes / 1000).toFixed(1)} kB em brotli, acima de ${String(TETO_DE_UMA_TELA_EM_BYTES / 1000)} kB`] : []
+  })
 }
 
 /** Os chunks que o chunk dado importa estaticamente, e os que eles importam: o que o navegador baixa junto com ele. */
@@ -117,26 +227,163 @@ describe('o build de verdade da web', () => {
     expect(chunks.filter((chunk) => !chunk.isEntry && /^assets\/index-/.test(chunk.fileName))).toEqual([])
   })
 
-  it('as áreas da escola: um chunk por papel, só por import(), fora da entrada, e o primeiro carregamento inteiro no teto', async () => {
+  it('as áreas da escola: uma fachada por papel, só por import(), fora da entrada; as telas em pedaços que só a área delas importa, cada uma no teto', async () => {
     const chunks = await chunksDoBuild({ raiz: raizDaWeb, configFile: join(raizDaWeb, 'vite.config.ts') })
     const entrada = chunks.find((chunk) => chunk.isEntry)
     if (entrada === undefined) throw new Error('build sem chunk de entrada')
 
     expect(modulosDeArea(entrada)).toEqual([])
     for (const area of AREAS_DA_ESCOLA) {
-      const daArea = chunks.filter((chunk) => new RegExp(`^assets/${area}-[^/]+\\.js$`).test(chunk.fileName))
-      expect(daArea, `chunk ${area}-*`).toHaveLength(1)
-      expect(daArea[0]?.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith(`/apps/web/src/areas/${area}/rotas.tsx`))).toBe(true)
-      expect(entrada.imports).not.toContain(daArea[0]?.fileName)
-      expect(entrada.dynamicImports).toContain(daArea[0]?.fileName)
-      // Nenhum módulo da área cai fora do chunk dela, onde o teto dela não o mediria.
-      const foraDaArea = chunks.filter((chunk) => chunk !== daArea[0]).flatMap((chunk) => chunk.moduleIds.filter((id) => id.replaceAll('\\', '/').includes(`/apps/web/src/areas/${area}/`)))
-      expect(foraDaArea).toEqual([])
+      // A fachada é uma só, e é o `rotas.tsx` da área: é ela que o teto `<area>-*.js` mede. As telas por `import()` saem
+      // como `tela-<area>-*`, e não entram nesta conta.
+      const fachadas = chunks.filter((chunk) => new RegExp(`^assets/${area}-[^/]+\\.js$`).test(chunk.fileName))
+      expect(fachadas, `fachada ${area}-*`).toHaveLength(1)
+      expect(fachadas[0]?.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith(`/apps/web/src/areas/${area}/rotas.tsx`))).toBe(true)
+      expect(entrada.imports).not.toContain(fachadas[0]?.fileName)
+      expect(entrada.dynamicImports).toContain(fachadas[0]?.fileName)
     }
+    // Nenhum módulo de área cai fora da fachada e das telas dela, onde nem o teto da área nem o da tela o mediriam.
+    expect(modulosDeAreaForaDoLugar(chunks)).toEqual([])
+    // Nenhuma tela é importada de fora da área dela: nem pela entrada, nem pela fachada de outro papel.
+    expect(telasImportadasDeFora(chunks)).toEqual([])
+    // E nenhuma tela, sozinha, passa do teto de uma tela. A lista diz qual estourou, e por quanto.
+    expect(telasAcimaDoTeto(chunks), 'divida a tela, ou tire dela o que pesa (docs/interface.md 10.4)').toEqual([])
     // O que a entrada baixa junto é primeiro carregamento, e o teto de 150 kB mede `index-*` e `parte-*`: qualquer outro
     // nome aqui (uma área, a operação) ficaria fora da conta, ou entraria no primeiro carregamento sem ninguém ver.
     expect(importadosJunto(chunks, entrada).map((chunk) => chunk.fileName).filter((nome) => !/^assets\/parte-[^/]+\.js$/.test(nome))).toEqual([])
     for (const junto of importadosJunto(chunks, entrada)) expect(modulosDeArea(junto)).toEqual([])
+  })
+
+  it('as peças do MVP de apresentação ficam fora do primeiro carregamento, e a galeria sai num chunk galeria-* só por import()', async () => {
+    const chunks = await chunksDoBuild({ raiz: raizDaWeb, configFile: join(raizDaWeb, 'vite.config.ts') })
+    const entrada = chunks.find((chunk) => chunk.isEntry)
+    if (entrada === undefined) throw new Error('build sem chunk de entrada')
+    const galeria = chunks.filter((chunk) => /^assets\/galeria-[^/]+\.js$/.test(chunk.fileName))
+
+    expect(galeria).toHaveLength(1)
+    expect(galeria[0]?.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith('/apps/web/src/galeria/Galeria.tsx'))).toBe(true)
+    expect(entrada.imports).not.toContain(galeria[0]?.fileName)
+    expect(entrada.dynamicImports).toContain(galeria[0]?.fileName)
+
+    // Nenhuma peça na entrada nem no que ela baixa junto: é o que mantém o Chromebook das 7h30 sem o peso delas.
+    const primeiroCarregamento = [entrada, ...importadosJunto(chunks, entrada)]
+    expect(primeiroCarregamento.flatMap((chunk) => chunk.moduleIds.filter(ehPecaForaDaEntrada))).toEqual([])
+    // E as peças existem no build, cada arquivo da lista e a pasta de IA: sem isto, a asserção acima passaria com as
+    // peças apagadas, ou com a lista apontando para arquivos que mudaram de nome.
+    const noBuild = chunks.flatMap((chunk) => chunk.moduleIds.map((id) => id.replaceAll('\\', '/')))
+    for (const peca of PECAS_FORA_DA_ENTRADA) expect(noBuild.some((id) => new RegExp(`/apps/web/src/componentes/${peca}\\.tsx?$`).test(id)), peca).toBe(true)
+    for (const deIa of ['AssinaturaIA.tsx', 'CaixaPedido.tsx', 'ChipFonte.tsx', 'Escolha.tsx', 'MotorFormulario.tsx'])
+      expect(noBuild.some((id) => id.endsWith(`/apps/web/src/componentes/ia/${deIa}`)), deIa).toBe(true)
+    // Peça nenhuma cai num `parte-*`, que o teto de 150 kB mediria como primeiro carregamento sem ela estar nele.
+    const emParte = chunks.filter((chunk) => /^assets\/parte-/.test(chunk.fileName)).flatMap((chunk) => chunk.moduleIds.filter(ehPecaForaDaEntrada))
+    expect(emParte).toEqual([])
+  })
+
+  it('a peça que duas telas dividem sai num pedaço pecas-*, e o que elas dividem e não é peça continua parte-*', async () => {
+    // Uma função que lê o documento, e não uma constante de texto: a constante seria copiada para dentro de quem a usa, e
+    // o módulo sumiria do build.
+    const SELO_DE_MENTIRA = 'export function selo(): string {\n  return `IA em ${document.title}`\n}\n'
+    const raiz = projetoDeMentira({
+      'src/main.ts': "void import('./areas/professor/rotas').then((m) => console.log(m.tela))\nvoid import('./galeria/Galeria').then((m) => console.log(m.tela))\n",
+      'src/areas/professor/rotas.ts': "import { selo } from '../../componentes/ia/selo'\nimport { comum } from '../../componentes/comum'\nexport const tela = `professor ${selo()} ${comum()}`\n",
+      'src/galeria/Galeria.ts': "import { selo } from '../componentes/ia/selo'\nimport { comum } from '../componentes/comum'\nexport const tela = `galeria ${selo()} ${comum()}`\n",
+      'src/componentes/ia/selo.ts': SELO_DE_MENTIRA,
+      'src/componentes/comum.ts': "export function comum(): string {\n  return `não é peça em ${document.title}`\n}\n",
+    })
+    const chunks = await chunksDoBuild({ raiz, configFile: false })
+    const comOSelo = chunks.find((chunk) => chunk.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith('/src/componentes/ia/selo.ts')))
+    const semFachada = chunks.filter((chunk) => chunk.facadeModuleId === null)
+    // O Rolldown junta num pedaço só o que as mesmas telas dividem: a peça e o módulo comum caem juntos, e o pedaço
+    // misto conta no primeiro carregamento, que é o lado seguro.
+    expect(semFachada.map((chunk) => chunk.fileName)).toEqual([expect.stringMatching(/^assets\/parte-[^/]+\.js$/)])
+    expect(comOSelo?.fileName).toMatch(/^assets\/parte-/)
+    expect(chunks.map((chunk) => chunk.fileName)).toContainEqual(expect.stringMatching(/^assets\/galeria-[^/]+\.js$/))
+
+    // Sem o módulo que não é peça, o pedaço dividido só tem peças, e sai do glob do primeiro carregamento.
+    const soPecas = projetoDeMentira({
+      'src/main.ts': "void import('./areas/professor/rotas').then((m) => console.log(m.tela))\nvoid import('./galeria/Galeria').then((m) => console.log(m.tela))\n",
+      'src/areas/professor/rotas.ts': "import { selo } from '../../componentes/ia/selo'\nexport const tela = `professor ${selo()}`\n",
+      'src/galeria/Galeria.ts': "import { selo } from '../componentes/ia/selo'\nexport const tela = `galeria ${selo()}`\n",
+      'src/componentes/ia/selo.ts': SELO_DE_MENTIRA,
+    })
+    const chunksSoPecas = await chunksDoBuild({ raiz: soPecas, configFile: false })
+    const dividido = chunksSoPecas.filter((chunk) => chunk.facadeModuleId === null)
+    expect(dividido.map((chunk) => chunk.fileName)).toEqual([expect.stringMatching(/^assets\/pecas-[^/]+\.js$/)])
+    expect(dividido[0]?.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith('/src/componentes/ia/selo.ts'))).toBe(true)
+  })
+
+  /** Um módulo de mentira que o bundler não copia para dentro de quem o usa: lê o documento, e por isso não é constante. */
+  const modulo = (nome: string, importa = '') => `${importa}export function ${nome}(): string {\n  return \`${nome} em \${document.title}\`\n}\n`
+  /** A entrada de mentira, como a de verdade: cada área só por `import()`. */
+  const ENTRADA_DE_MENTIRA = "void import('./areas/professor/rotas').then((m) => console.log(m.default()))\nvoid import('./areas/aluno/rotas').then((m) => console.log(m.default()))\n"
+  const fachada = (telas: readonly string[]) => `export default function rotas(): string[] {\n  void Promise.all([${telas.map((tela) => `import('${tela}')`).join(', ')}])\n  return [document.title]\n}\n`
+
+  it('a tela por import() sai como tela-<area>-<nome>-*, o que duas telas da área dividem também, e só a área delas as importa', async () => {
+    const raiz = projetoDeMentira({
+      'src/main.ts': ENTRADA_DE_MENTIRA,
+      'src/areas/professor/rotas.ts': fachada(['./Aprovar', './Home']),
+      'src/areas/professor/Aprovar.ts': modulo('Aprovar', "import { destaques } from './destaques'\nconsole.log(destaques())\n"),
+      'src/areas/professor/Home.ts': modulo('Home', "import { destaques } from './destaques'\nconsole.log(destaques())\n"),
+      'src/areas/professor/destaques.ts': modulo('destaques'),
+      'src/areas/aluno/rotas.ts': fachada(['./Tutor']),
+      'src/areas/aluno/Tutor.ts': modulo('Tutor'),
+    })
+    const chunks = await chunksDoBuild({ raiz, configFile: false })
+    const nomes = chunks.map((chunk) => semHash(chunk.fileName)).sort()
+    expect(nomes).toEqual(['aluno', 'index', 'professor', 'tela-aluno-Tutor', 'tela-professor-Aprovar', 'tela-professor-Home', 'tela-professor-destaques'])
+    // Nenhum nome de tela casa com o glob da área, que o teto da fachada soma.
+    for (const area of AREAS_DA_ESCOLA) expect(chunks.filter((chunk) => new RegExp(`^assets/${area}-`).test(chunk.fileName)).length, area).toBeLessThanOrEqual(1)
+
+    expect(modulosDeAreaForaDoLugar(chunks)).toEqual([])
+    expect(telasImportadasDeFora(chunks)).toEqual([])
+    expect(telasAcimaDoTeto(chunks)).toEqual([])
+    // A fachada do aluno só alcança a tela do aluno; a entrada não alcança tela nenhuma sem passar pela fachada.
+    const doAluno = chunks.find((chunk) => /^assets\/aluno-/.test(chunk.fileName))
+    const entrada = chunks.find((chunk) => chunk.isEntry)
+    expect([...(doAluno?.imports ?? []), ...(doAluno?.dynamicImports ?? [])].filter((nome) => /tela-/.test(nome))).toEqual([expect.stringMatching(/^assets\/tela-aluno-Tutor-/)])
+    expect([...(entrada?.imports ?? []), ...(entrada?.dynamicImports ?? [])].filter((nome) => /tela-/.test(nome))).toEqual([])
+  })
+
+  it('controle: a fachada do aluno que importa a tela do professor, por import() ou por import estático, reprova', async () => {
+    const comum = {
+      'src/main.ts': ENTRADA_DE_MENTIRA,
+      'src/areas/professor/rotas.ts': fachada(['./Aprovar']),
+      'src/areas/professor/Aprovar.ts': modulo('Aprovar'),
+      'src/areas/aluno/Tutor.ts': modulo('Tutor'),
+    }
+    // Por `import()`: a tela do professor vira dependência dinâmica da fachada do aluno.
+    const porImportDinamico = await chunksDoBuild({ raiz: projetoDeMentira({ ...comum, 'src/areas/aluno/rotas.ts': fachada(['./Tutor', '../professor/Aprovar']) }), configFile: false })
+    expect(telasImportadasDeFora(porImportDinamico)).toEqual(['aluno → tela-professor-Aprovar'])
+
+    // Por `import` estático: o navegador do aluno baixa a tela do professor junto com a área dele.
+    const estatico = "import { Aprovar } from '../professor/Aprovar'\nconsole.log(Aprovar())\n"
+    const porImportEstatico = await chunksDoBuild({ raiz: projetoDeMentira({ ...comum, 'src/areas/aluno/rotas.ts': `${estatico}${fachada(['./Tutor'])}` }), configFile: false })
+    expect(telasImportadasDeFora(porImportEstatico)).toEqual(['aluno → tela-professor-Aprovar'])
+
+    // E a tela do professor que só o aluno importa, direto, vai parar dentro do pedaço do aluno: módulo fora do lugar.
+    const soOAluno = await chunksDoBuild({
+      raiz: projetoDeMentira({ ...comum, 'src/areas/professor/rotas.ts': fachada([]), 'src/areas/aluno/rotas.ts': `${estatico}${fachada(['./Tutor'])}` }),
+      configFile: false,
+    })
+    expect(modulosDeAreaForaDoLugar(soOAluno)).toEqual(['aluno: areas/professor/Aprovar.ts'])
+
+    // A entrada que pula a fachada e importa a tela direto também reprova: a tela chegaria antes da guarda de papel.
+    const pelaEntrada = await chunksDoBuild({ raiz: projetoDeMentira({ ...comum, 'src/main.ts': `${ENTRADA_DE_MENTIRA}void import('./areas/professor/Aprovar')\n`, 'src/areas/aluno/rotas.ts': fachada(['./Tutor']) }), configFile: false })
+    expect(telasImportadasDeFora(pelaEntrada)).toEqual(['index → tela-professor-Aprovar'])
+  })
+
+  it('controle do teto de uma tela: a que passa de 30 kB em brotli aparece pelo nome, e a pequena ao lado dela, não', async () => {
+    // Base64 de bytes aleatórios não comprime: 40 mil bytes viram mais de 30 kB em brotli.
+    const pesada = `export const peso = '${randomBytes(40_000).toString('base64')}'\n${modulo('Governanca')}`
+    const raiz = projetoDeMentira({
+      'src/main.ts': "void import('./areas/coordenacao/rotas').then((m) => console.log(m.default()))\n",
+      'src/areas/coordenacao/rotas.ts': fachada(['./Governanca', './Agentes']),
+      'src/areas/coordenacao/Governanca.ts': pesada,
+      'src/areas/coordenacao/Agentes.ts': modulo('Agentes'),
+    })
+    const estouradas = telasAcimaDoTeto(await chunksDoBuild({ raiz, configFile: false }))
+    expect(estouradas).toEqual([expect.stringMatching(/^tela-coordenacao-Governanca: \d+\.\d kB em brotli, acima de 30 kB$/)])
+    expect(TETO_DE_UMA_TELA_EM_BYTES).toBe(30_000)
   })
 
   it('controle do B2: um import estático de src/operacao/ na entrada aparece como módulo da operação no chunk de entrada', async () => {
