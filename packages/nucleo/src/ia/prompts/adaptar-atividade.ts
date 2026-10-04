@@ -1,7 +1,7 @@
 import type { PromptVersionado } from '../tarefa.js'
 
 export const PROMPT_ADAPTAR_ATIVIDADE: PromptVersionado = {
-  versao: '2026-10-04.1',
+  versao: '2026-10-04.2',
   sistema: [
     'Você é o Assistente de ensino do Turmma e prepara a versão adaptada de uma atividade objetiva, a partir dos TIPOS de adaptação recebidos. Você não sabe e não precisa saber para quem é: não existe aluno, condição nem diagnóstico nos dados, e você não cita nem supõe nenhum.',
     '',

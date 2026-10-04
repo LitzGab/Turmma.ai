@@ -145,6 +145,10 @@ export class AdaptadorOpenAICompat implements AdaptadorDeModelo {
           headers: { 'content-type': 'application/json', ...(this.config.chaveApi === undefined ? {} : { authorization: `Bearer ${this.config.chaveApi}` }) },
           body: corpo,
           signal: sinal,
+          // Redirecionamento nunca é seguido: um 307 ou 308 faria o `fetch` reenviar o corpo inteiro, com o prompt, para
+          // outra origem. Com o endereço declarado local, a conversa sairia da nossa rede e ficaria gravada como se não
+          // tivesse saído. O servidor que redireciona é tratado como indisponível.
+          redirect: 'error',
         })
       } catch {
         throw new ErroDeIa(sinal.aborted ? 'IA_TEMPO_ESGOTADO' : 'IA_INDISPONIVEL')

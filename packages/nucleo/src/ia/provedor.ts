@@ -1,6 +1,7 @@
 import type { ChaveDeFuncao } from '@educa/shared'
 import type { ConfiguracaoDeIa } from '../config/config-ia.js'
 import { ConfiguracaoInvalida } from '../config/validar-config.js'
+import { contextoAtual } from '../contexto/contexto.js'
 import { resumirErro } from '../erro/resumir-erro.js'
 import type { LoggerBase } from '../log/logger.js'
 import { relogioDoSistema, type Relogio } from '../relogio.js'
@@ -9,6 +10,7 @@ import { AdaptadorFalso } from './adaptador-falso.js'
 import { AdaptadorOpenAICompat } from './adaptador-openai-compat.js'
 import type { ConsumoDeIa, OrcamentoDeIa, RegistroDeConsumo } from './consumo.js'
 import { ErroDeIa, type CodigoDeErroDeIa } from './erros.js'
+import { semMarcacao } from './limpar-saida.js'
 import type { LLMProvider, MedicaoDaGeracao, PedidoDeGeracao, ResultadoDaGeracao } from './porta.js'
 import { exigirFuncaoAtiva, type SuspensaoDeFuncao } from './suspensao.js'
 import type { DefinicaoDeTarefa } from './tarefa.js'
@@ -45,7 +47,8 @@ function interpretar<Entrada, Saida>(tarefa: DefinicaoDeTarefa<Entrada, Saida>, 
   } catch {
     return { ok: false, problemas: ['A resposta não é um JSON válido: veio texto fora do objeto, ou o objeto veio cortado.'] }
   }
-  return validar(tarefa, entrada, bruto)
+  // A tela mostra o texto como texto: a marcação que o modelo põe por hábito sai antes de validar.
+  return validar(tarefa, entrada, semMarcacao(bruto))
 }
 
 function validar<Entrada, Saida>(tarefa: DefinicaoDeTarefa<Entrada, Saida>, entrada: Entrada, bruto: unknown): Interpretacao<Saida> {
@@ -87,6 +90,16 @@ export class ProvedorDeIa implements LLMProvider {
     // O conteúdo de tarefa que leva texto livre de pessoa (aluno ou professor) não entra no registro de consumo: o
     // registro dele é a conversa, que tem dono, acesso restrito e retenção.
     const conteudo = <Conteudo extends object>(campos: Conteudo): Conteudo | Record<string, never> => (tarefa.levaTextoLivreDePessoa ? {} : campos)
+
+    // A escola do pedido é a de quem está pedindo. Com contexto de escola (a requisição, ou a execução em segundo
+    // plano), pedir em nome de outra escola é defeito de quem chamou: recusa antes de consultar, gastar ou registrar
+    // na escola errada (regra 10, item 3). Sem contexto (rotina nossa, teste de unidade) não há com o que comparar.
+    const escolaDoContexto = contextoAtual()?.escolaId
+    if (escolaDoContexto !== undefined && escolaDoContexto !== pedido.escolaId) {
+      const tipo = tarefa.nome
+      this.dependencias.logger?.warn({ evento: 'ia.geracao.escola_fora_do_contexto', tipo })
+      throw new ErroDeIa('IA_ENTRADA_INVALIDA')
+    }
 
     // Entrada fora do schema é erro de quem chamou, antes de qualquer gasto: chave a mais (um nome) para aqui.
     const lida = tarefa.esquemaDeEntrada.safeParse(pedido.entrada)

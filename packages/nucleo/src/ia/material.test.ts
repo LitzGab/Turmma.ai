@@ -30,6 +30,18 @@ describe('extrairFatos: o que é frase definitória', () => {
     expect(fatos.map(termoComArtigo)).toEqual(['o mol', 'a massa molar da água', 'uma equação balanceada'])
   })
 
+  it('a relação com número em item de lista vira fato de valor: o nome, a fórmula e a massa molar', () => {
+    const fatos = fatosDe('H = 1; C = 12; O = 16.\nÁgua, H2O: 2 × 1 + 16 = 18 g/mol.\nCarbonato de cálcio, CaCO3: 40 + 12 + 3 × 16 = 100 g/mol.\nCloreto de sódio, NaCl: 23 + 35,5 = 58,5 g/mol.')
+    expect(fatos.map((fato) => [termoComArtigo(fato), fato.complemento, fato.numerico])).toEqual([
+      ['a massa molar de água (H2O)', '18 g/mol', true],
+      ['a massa molar de carbonato de cálcio (CaCO3)', '100 g/mol', true],
+      ['a massa molar de cloreto de sódio (NaCl)', '58,5 g/mol', true],
+    ])
+    expect(fatos[0]?.frase).toBe('Água, H2O: 2 × 1 + 16 = 18 g/mol.')
+    // Conta de exemplo e passo de resolução não são relação do material.
+    expect(fatosDe('Passo 2: a massa molar do metano é 12 + 4 × 1 = 16 g/mol. Passo 4: m = 8 mol × 18 g/mol = 144 g de água.')).toEqual([])
+  })
+
   it('nome próprio no meio do termo fica como está, e termo com travessão é termo', () => {
     expect(termosDe('Constante de Avogadro é o número de entidades que existem em 1 mol: 6,02 × 10²³ por mol. Cálculo mol–mol é o cálculo em que a quantidade dada e a quantidade pedida estão em mols.')).toEqual(['constante de Avogadro', 'cálculo mol–mol'])
   })

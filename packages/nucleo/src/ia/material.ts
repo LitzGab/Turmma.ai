@@ -106,9 +106,33 @@ function ehValor(complemento: string): boolean {
   return /^\d/u.test(complemento) && complemento.length <= 60 && !/=|, /u.test(complemento)
 }
 
+/**
+ * A relação com número escrita como item de lista: "Água, H2O: 2 × 1 + 16 = 18 g/mol." O nome, a fórmula, a conta e o
+ * valor. A unidade diz o que o valor é: g/mol é massa molar.
+ */
+const MASSA_MOLAR_EM_ITEM = /^(\p{Lu}[\p{L} ]{1,40}), ([A-Z][A-Za-z0-9()]{0,14}): [^=]{1,40}= (\d[\d,]* g\/mol)$/u
+
+function massaMolarDoItem(frase: string, trecho: Trecho): Fato | undefined {
+  const achado = MASSA_MOLAR_EM_ITEM.exec(semPontoFinal(frase))
+  if (achado === null) return undefined
+  const [, nome = '', formula = '', valor = ''] = achado
+  return {
+    materialId: trecho.materialId,
+    pagina: trecho.pagina,
+    frase,
+    artigo: 'a',
+    termo: `massa molar de ${minusculaInicial(nome)} (${formula})`,
+    copula: 'é',
+    complemento: valor,
+    numerico: true,
+  }
+}
+
 function fatoDaFrase(frase: string, trecho: Trecho): Fato | undefined {
   // Pergunta não define nada ("Qual é o reagente limitante?").
   if (frase.endsWith('?')) return undefined
+  const doItem = massaMolarDoItem(frase, trecho)
+  if (doItem !== undefined) return doItem
   const achado = TERMO_E_COMPLEMENTO.exec(semPontoFinal(frase))
   if (achado === null) return undefined
   const [, antesDoVerbo = '', copula = '', depoisDoVerbo = ''] = achado

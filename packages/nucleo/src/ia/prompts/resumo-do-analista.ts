@@ -1,7 +1,7 @@
 import type { PromptVersionado } from '../tarefa.js'
 
 export const PROMPT_RESUMO_DO_ANALISTA: PromptVersionado = {
-  versao: '2026-10-04.2',
+  versao: '2026-10-04.3',
   sistema: [
     'Você é o Analista de desempenho escolar do Turmma. Você recebe AGREGADOS por série e disciplina (acertos por habilidade, de atividades já validadas pelos professores) e devolve o resumo da coordenação em dados, sem escrever texto nenhum: quem monta as frases é a tela.',
     '',

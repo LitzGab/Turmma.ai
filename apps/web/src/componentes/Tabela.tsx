@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { A_PARTIR_DE_768, useMidia } from './midia'
 
 export interface ColunaDaTabela<Linha> {
@@ -27,7 +27,8 @@ interface PropsDaTabela<Linha> {
  * - **Uma estrutura de cada vez no documento**, escolhida pela largura (`useMidia`): pôr as duas e esconder uma com CSS
  *   dobraria os nós de uma tabela longa no Chromebook, e os controles de dentro das células existiriam duas vezes.
  * - **Na tabela, o cabeçalho é acessível**: `caption`, `th` de coluna e a primeira célula como `th` de linha. Quando ela
- *   não cabe, **rola dentro do próprio contêiner**, que recebe foco para rolar pelo teclado.
+ *   não cabe, **rola dentro do próprio contêiner**, que aí — e só aí — recebe foco, para rolar pelo teclado. A tabela
+ *   que cabe não vira uma parada a mais no Tab.
  * - **Na lista**, cada valor tem o rótulo dele em texto (`dt` e `dd`): o que na tabela é posição, aqui é dito.
  *
  * A peça não pagina nem virtualiza: quem a usa entrega a página (regra 80, item 8). E não tem os quatro estados: vazio,
@@ -36,6 +37,19 @@ interface PropsDaTabela<Linha> {
 export function Tabela<Linha>({ rotulo, colunas, linhas, chaveDaLinha }: PropsDaTabela<Linha>) {
   const larga = useMidia(A_PARTIR_DE_768)
   const [primeira, ...outras] = colunas
+  const regiao = useRef<HTMLDivElement>(null)
+  // A tabela passa da largura do contêiner agora? Medido quando ele ou ela mudam de tamanho.
+  const [sobra, definirSobra] = useState(false)
+  useEffect(() => {
+    const elemento = regiao.current
+    if (elemento === null) return
+    const medir = () => definirSobra(elemento.scrollWidth > elemento.clientWidth)
+    medir()
+    const observador = new ResizeObserver(medir)
+    observador.observe(elemento)
+    if (elemento.firstElementChild !== null) observador.observe(elemento.firstElementChild)
+    return () => observador.disconnect()
+  }, [larga])
 
   if (!larga)
     return (
@@ -60,8 +74,8 @@ export function Tabela<Linha>({ rotulo, colunas, linhas, chaveDaLinha }: PropsDa
     )
 
   return (
-    // A região recebe foco: a tabela que rola de lado precisa ser rolável pelo teclado.
-    <div role="region" aria-label={rotulo} tabIndex={0} data-tabela="tabela" className="min-w-0 overflow-x-auto rounded-cartao border border-linha">
+    // Com sobra, a região recebe foco e nome: a tabela que rola de lado precisa ser rolável pelo teclado.
+    <div ref={regiao} {...(sobra ? { role: 'region', 'aria-label': rotulo, tabIndex: 0 } : {})} data-tabela="tabela" className="min-w-0 overflow-x-auto rounded-cartao border border-linha">
       <table className="w-full border-collapse text-left text-sm">
         <caption className="sr-only">{rotulo}</caption>
         <thead>
