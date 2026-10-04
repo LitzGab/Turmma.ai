@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { esquemaConsultaSinais, esquemaGrupoDeSinais, esquemaRespostaSinais, esquemaSinal, TIPOS_DE_SINAL } from './sinal.js'
+import { esquemaConsultaUsoDoTutor, esquemaRespostaUsoDoTutor, esquemaUsoDoAluno } from './uso.js'
 import {
   esquemaConsultaConversaDoTutor,
   esquemaMensagemDoTutor,
@@ -76,6 +77,16 @@ describe('conversa com o Tutor (D36, D38, D47)', () => {
     expect(esquemaPedidoMensagemAoTutor.safeParse({ texto: 'sem chave' }).success).toBe(false)
   })
 
+  it('a questão só vai com a atividade aplicada, e a página, com o material: é a referência que o professor vê no uso', () => {
+    const base = { texto: 'Como acho o reagente limitante?', chaveEnvio: CHAVE }
+    expect(esquemaPedidoMensagemAoTutor.safeParse({ ...base, atividadeAplicadaId: UM_ID, questao: 3 }).success).toBe(true)
+    expect(esquemaPedidoMensagemAoTutor.safeParse({ ...base, materialId: UM_ID, pagina: 151 }).success).toBe(true)
+    expect(esquemaPedidoMensagemAoTutor.safeParse({ ...base, questao: 3 }).success).toBe(false)
+    expect(esquemaPedidoMensagemAoTutor.safeParse({ ...base, pagina: 151 }).success).toBe(false)
+    expect(esquemaPedidoMensagemAoTutor.safeParse({ ...base, materialId: UM_ID, questao: 3 }).success).toBe(false)
+    for (const questao of [0, 21, 1.5]) expect(esquemaPedidoMensagemAoTutor.safeParse({ ...base, atividadeAplicadaId: UM_ID, questao }).success, String(questao)).toBe(false)
+  })
+
   it('o Tutor responde texto com página citada ou a mensagem fixa de assunto delicado; o aluno só escreve texto', () => {
     const citacao = { materialId: UM_ID, pagina: 151, trecho: 'O reagente limitante é o que acaba primeiro.' }
     expect(esquemaMensagemDoTutor.safeParse({ id: UM_ID, autor: 'tutor', tipo: 'texto', texto: 'O que a equação diz?', citacoes: [citacao], criadaEm: AGORA }).success).toBe(true)
@@ -118,5 +129,67 @@ describe('memória do Tutor (D66): o trabalho do aluno, nunca a pessoa', () => {
     }
     expect(esquemaRespostaMemoriaDoTutor.safeParse({ trabalhos: [{ ...trabalho, comoTerminou: 'saiu irritado' }], sinais: [] }).success).toBe(false)
     expect(esquemaRespostaMemoriaDoTutor.safeParse({ trabalhos: [], sinais: [{ ...sinal, detalhe: 'chorou' }] }).success).toBe(false)
+  })
+})
+
+describe('uso do Tutor por turma: nenhum uso é invisível ao professor, e supervisão não é vigilância (regra 70, itens 4 e 7; D47)', () => {
+  const referencia = { atividadeAplicadaId: OUTRO_ID, questao: 3, materialId: null, pagina: null }
+  const uso = { aluno, trocasHoje: 12, ultimaTrocaEm: AGORA, ultimaReferencia: referencia }
+  const resposta = { turmaId: UM_ID, limiteDoDia: 60, trocasDaTurmaNoMes: 412, pacoteDaTurmaNoMes: 9600, alunos: [uso] }
+
+  it('por aluno: as trocas do dia, a hora da última e em que ele estava; o aluno sem sinal nenhum aparece do mesmo jeito', () => {
+    expect(esquemaRespostaUsoDoTutor.parse(resposta)).toEqual(resposta)
+    // Quem só fez perguntas comuns, fora de atividade e de material, e não trocou hoje: continua visível.
+    const semSinal = { aluno: { id: OUTRO_ID, nome: 'Bruno Tavares' }, trocasHoje: 0, ultimaTrocaEm: AGORA, ultimaReferencia: { atividadeAplicadaId: null, questao: null, materialId: null, pagina: null } }
+    expect(esquemaRespostaUsoDoTutor.safeParse({ ...resposta, alunos: [uso, semSinal] }).success).toBe(true)
+    expect(esquemaUsoDoAluno.safeParse({ ...uso, ultimaReferencia: { atividadeAplicadaId: null, questao: null, materialId: OUTRO_ID, pagina: 151 } }).success).toBe(true)
+    // Sem a hora da última troca ou sem as trocas do dia, o uso não está dito.
+    for (const campo of ['trocasHoje', 'ultimaTrocaEm', 'ultimaReferencia'] as const) {
+      const { [campo]: _fora, ...semCampo } = uso
+      expect(esquemaUsoDoAluno.safeParse(semCampo).success, campo).toBe(false)
+    }
+  })
+
+  it('sem conteúdo de conversa: pergunta, resposta, trecho, assunto e resumo são recusados', () => {
+    for (const campo of [
+      { ultimaPergunta: 'não entendi nada da questão 3' },
+      { ultimaResposta: 'O que a equação diz?' },
+      { texto: 'meus pais brigaram' },
+      { trecho: 'não entendi' },
+      { assunto: 'reagente limitante' },
+      { resumo: 'pediu a resposta duas vezes' },
+      { mensagens: [] },
+      { mensagemId: OUTRO_ID },
+      { execucaoId: OUTRO_ID },
+    ]) {
+      expect(esquemaUsoDoAluno.safeParse({ ...uso, ...campo }).success, Object.keys(campo)[0]).toBe(false)
+    }
+    expect(esquemaUsoDoAluno.safeParse({ ...uso, ultimaReferencia: { ...referencia, pergunta: 'qual é a resposta?' } }).success).toBe(false)
+  })
+
+  it('sem tempo ocioso, sem histórico de navegação e sem leitura sobre o aluno', () => {
+    for (const campo of [
+      { tempoOciosoSegundos: 540 },
+      { tempoDeSessaoMinutos: 22 },
+      { tempoEntreTrocas: 90 },
+      { online: true },
+      { historico: [referencia] },
+      { referencias: [referencia] },
+      { paginasAbertas: [150, 151] },
+      { saidasDaAba: 3 },
+      { engajamento: 'baixo' },
+      { atencao: 'dispersa' },
+      { posicao: 1 },
+      { sinais: ['atencao_humana'] },
+    ]) {
+      expect(esquemaUsoDoAluno.safeParse({ ...uso, ...campo }).success, Object.keys(campo)[0]).toBe(false)
+    }
+    for (const campo of [{ quemNaoUsou: [aluno] }, { ranking: [aluno] }, { alunosSemUso: 20 }]) expect(esquemaRespostaUsoDoTutor.safeParse({ ...resposta, ...campo }).success, Object.keys(campo)[0]).toBe(false)
+  })
+
+  it('a consulta é só a turma: não aceita aluno, período, ordenação nem escola', () => {
+    expect(esquemaConsultaUsoDoTutor.parse({ turmaId: UM_ID })).toEqual({ turmaId: UM_ID })
+    expect(esquemaConsultaUsoDoTutor.safeParse({}).success).toBe(false)
+    for (const campo of [{ alunoId: OUTRO_ID }, { desde: '2026-09-01' }, { ordenarPor: 'trocas' }, { escolaId: OUTRO_ID }]) expect(esquemaConsultaUsoDoTutor.safeParse({ turmaId: UM_ID, ...campo }).success, Object.keys(campo)[0]).toBe(false)
   })
 })

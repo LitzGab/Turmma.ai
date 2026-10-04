@@ -32,6 +32,9 @@ import { usuario } from './usuario.js'
  *   a mensagem do provedor, que pode repetir o prompt, não cabe (regra 20, item 9).
  * - `solicitada_por` é quem pediu, por FK composta com a escola, `on delete set null (solicitada_por)` (escrito à mão na
  *   0022): só quem pediu consulta a execução, e a de quem foi eliminado não responde a mais ninguém.
+ * - `unique (escola_id, ano_letivo_id, id)` (0023) é o alvo do que a execução produz (mensagem, artefato, entrega, sinal,
+ *   resumo): o produto nunca aponta para a execução de outra escola nem de outro ano letivo. `unique (escola_id, id)` fica
+ *   para o consumo, que não tem ano.
  * - O consumo de cada chamada ao modelo fica em `consumo_ia`, com tokens, custo e duração (regra 30, item 4).
  * - Cresce com o Tutor (uma por troca). Lê-se por id ou pela chave. O índice parcial das abertas, `(escola_id, estado,
  *   criada_em)`, só tem as `pendente` e `rodando`: é por ele que a varredura da subida do processo (`falharInterrompidas`,
@@ -59,6 +62,7 @@ export const execucaoAgente = pgTable(
   },
   (tabela) => [
     unique('execucao_agente_escola_id_unico').on(tabela.escolaId, tabela.id),
+    unique('execucao_agente_escola_ano_id_unico').on(tabela.escolaId, tabela.anoLetivoId, tabela.id),
     foreignKey({ name: 'execucao_agente_ano_letivo_da_escola_fk', columns: [tabela.escolaId, tabela.anoLetivoId], foreignColumns: [anoLetivo.escolaId, anoLetivo.id] }),
     // A migration escreve `on delete set null ("solicitada_por")`: o `set null` inteiro anularia também a escola.
     foreignKey({ name: 'execucao_agente_solicitada_por_da_escola_fk', columns: [tabela.escolaId, tabela.solicitadaPor], foreignColumns: [usuario.escolaId, usuario.id] }).onDelete('set null'),

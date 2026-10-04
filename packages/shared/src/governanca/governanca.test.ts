@@ -84,6 +84,19 @@ describe('governança da coordenação: agregada, sem professor (D45, D64; regra
 })
 
 describe('o que cada função faz sozinha, e a suspensão por função (D9, D60)', () => {
+  it('o que a coordenação lê sobre cada função está em português comum: sem código de decisão, de regra nem de fase', () => {
+    for (const chave of CHAVES_DE_FUNCAO) {
+      for (const texto of [FUNCOES[chave].nome, FUNCOES[chave].fazSozinha, FUNCOES[chave].esperaAprovacao]) {
+        expect(texto, chave).not.toMatch(/\bD\d{1,3}\b|\bregra \d|\bRF\d|\bF\d{1,2}\b|\bA[0-5]\b|\bAIA\b/)
+      }
+    }
+    // O aviso de atenção humana está dito a quem decide a compra, com o que o professor não recebe.
+    expect(FUNCOES.sinais_para_o_professor.fazSozinha).toMatch(/assunto pessoal delicado/)
+    expect(FUNCOES.sinais_para_o_professor.fazSozinha).toMatch(/não recebe o que o aluno escreveu/)
+    // E que o Tutor não é aprovado resposta por resposta, mas é acompanhado pelo professor.
+    expect(FUNCOES.tutor_com_o_aluno.esperaAprovacao).toMatch(/professor da turma acompanha/)
+  })
+
   it('o time sai do catálogo: três agentes, as seis funções, e só a função suspensa aparece suspensa', () => {
     const time = montarTime(new Set(['correcao_de_objetiva'] as const))
     expect(esquemaRespostaTime.safeParse(time).success).toBe(true)
@@ -190,10 +203,15 @@ describe('resumo do Analista: agregado com grupo mínimo, sem pessoa e sem texto
       professores: [{ id: OUTRO_ID, nome: 'Camila Duarte', disciplina }],
       lotesAprovados: 2,
       porHabilidade: [{ habilidade, acertos: 30, total: 64 }],
-      entregas: { pendentes: 1, aprovadas: 2, rejeitadas: 0 },
-      sinais: { travou: 8, resposta_pronta: 2, duvida_repetida: 1, atencao_humana: 0 },
+      sinais: { travou: 8, resposta_pronta: 2, duvida_repetida: 1 },
     }
     expect(esquemaRespostaAnalistaNominal.safeParse(nominal).success).toBe(true)
+    // A contagem de atenção humana por turma aponta poucos alunos: só existe somada na escola inteira (D36).
+    expect(esquemaRespostaAnalistaNominal.safeParse({ ...nominal, sinais: { ...nominal.sinais, atencao_humana: 1 } }).success).toBe(false)
+    // Entregas por turma ao lado do professor nomeado seriam medição de adoção nominal (D64).
+    for (const campo of [{ entregas: { pendentes: 1, aprovadas: 2, rejeitadas: 0 } }, { artefatosGerados: 14 }, { usoDoAssistente: 31 }]) {
+      expect(esquemaRespostaAnalistaNominal.safeParse({ ...nominal, ...campo }).success, Object.keys(campo)[0]).toBe(false)
+    }
     for (const campo of [{ alunos: [{ id: UM_ID, nome: 'Ana' }] }, { posicaoDoProfessor: 3 }, { mediaDosOutrosProfessores: 71 }, { recomendacao: 'conversar com a professora' }]) {
       expect(esquemaRespostaAnalistaNominal.safeParse({ ...nominal, ...campo }).success, Object.keys(campo)[0]).toBe(false)
     }
