@@ -1,8 +1,14 @@
 /**
  * O nome dos arquivos de JS do build (Tech Spec da A0, seção 9, "Orçamento"; Tech Spec da A1, seção 9, "Fronteira"). O
- * `.size-limit.json` mede cada grupo pelo nome: a entrada (`index-*.js`, 150 kB), a área do operador (`operacao-*.js`) e
- * a área de cada papel da escola (`coordenacao-*.js`, `professor-*.js`, `aluno-*.js`). Os nomes precisam ser garantidos
- * aqui, e não deixados ao acaso do nome do módulo:
+ * `.size-limit.json` mede cada grupo pelo nome: a entrada sozinha (`index-*.js`), a área do operador (`operacao-*.js`), a
+ * fachada de cada papel da escola (`coordenacao-*.js`, `professor-*.js`, `aluno-*.js`) e as peças (`pecas-*.js`).
+ *
+ * **O primeiro carregamento não é medido por nome.** Ele é o que a entrada baixa de verdade: `index-*.js` e os pedaços
+ * que ela importa estaticamente, direta e transitivamente — e nada além. Somar `index-*` e `parte-*` por glob, como até
+ * o MVP de apresentação, contava também o `parte-*` que só as áreas dividem e que o aluno nunca baixa na entrada, e com
+ * duas áreas de telas o glob passou a medir 20 kB que ninguém baixa às 7h30. A conta de verdade, com o teto
+ * `TETO_DO_PRIMEIRO_CARREGAMENTO_EM_BYTES`, está no teste do build (`nome-dos-chunks.test.ts`), que percorre os `import`
+ * dos pedaços como o navegador faz. Os nomes precisam ser garantidos aqui, e não deixados ao acaso do nome do módulo:
  *
  * - o chunk carregado por `import()` leva o nome do módulo de onde saiu, e um `import()` de um `index.tsx` viraria
  *   `index-*.js` e contaria contra a entrada. Por isso todo chunk que não é entrada nem área ganha o prefixo `parte-`;
@@ -48,6 +54,13 @@ export type AreaDaEscola = (typeof AREAS_DA_ESCOLA)[number]
  * tela usa. É teto, não meta: as três telas da coordenação da A1, juntas, pesam 13 kB.
  */
 export const TETO_DE_UMA_TELA_EM_BYTES = 30_000
+
+/**
+ * O teto do primeiro carregamento da escola, em brotli: 150 kB sobre a entrada e os pedaços que ela importa
+ * estaticamente (regra 50, item 1; `docs/interface.md` 10.4). É o que o Chromebook do aluno baixa às 7h30 antes de ver
+ * qualquer tela; o pedaço que só uma área usa não entra nesta conta, e responde ao teto dela.
+ */
+export const TETO_DO_PRIMEIRO_CARREGAMENTO_EM_BYTES = 150_000
 
 /** A área a que um módulo pertence: a pasta dele em `src/areas/`. Fora delas, nenhuma. */
 export function areaDoModulo(idDoModulo: string): AreaDaEscola | undefined {
