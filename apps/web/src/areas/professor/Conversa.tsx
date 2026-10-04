@@ -23,7 +23,7 @@ import { useTituloDaTela } from '../../titulo'
 import { AvisoDeSuspensao, FalhaDoPedido } from './avisos'
 import { CaixaDoAssistente } from './CaixaDoAssistente'
 import { CartaoDeFerramenta } from './CartaoDeFerramenta'
-import { mensagensNaTela, pendenteNaConversa, propostaQuePergunta } from './conversa'
+import { mensagensNaTela, pedidoDeSoConversar, pendenteNaConversa, propostaQuePergunta } from './conversa'
 import { ferramentaDoCatalogo } from './ferramentas'
 import { abrirCartaoNaConversa, CARTAO_DA_CONVERSA, CICLO_DA_CONVERSA, CICLO_DA_FERRAMENTA, CONTEXTO_ESCOLHIDO, enviarPedidoDaConversa, ESCOLHAS_DAS_PROPOSTAS, type EscolhaDaProposta } from './memoria-do-professor'
 import { turmaEscolhida, turmasDaProfessora, valorDoContexto } from './turmas-da-professora'
@@ -86,6 +86,9 @@ export default function Conversa() {
 
   function aoEscolher(mensagem: Extract<MensagemDoAgente, { tipo: 'proposta_de_ferramenta' }>, escolha: string): void {
     if (escolha !== 'ferramenta' && escolha !== 'conversa') return
+    // "Só conversar" é pedido ao Assistente: ele responde em texto ao último pedido dela, sem propor a ferramenta de novo.
+    // O pedido sai antes de a escolha ficar marcada: com outro pedido no ar, nada muda.
+    if (escolha === 'conversa' && !iniciar(pedidoDeSoConversar(mensagem.proposta))) return
     ESCOLHAS_DAS_PROPOSTAS.guardar({ ...escolhas, [mensagem.id]: escolha })
     if (escolha !== 'ferramenta') return
     const { ferramenta, parametros } = mensagem.proposta
@@ -130,7 +133,6 @@ export default function Conversa() {
                   <div className="flex min-w-0 flex-col items-start gap-2">
                     <TextoDaIA texto={mensagem.texto} citacoes={[]} materiais={titulos} />
                     {escolhida !== undefined && <Escolha pergunta={mensagem.texto} opcoes={opcoesDaProposta(mensagem)} escolhida={escolhida} aoEscolher={() => undefined} />}
-                    {escolhida === 'conversa' && <p className="min-w-0 text-sm break-words text-sutil">Escreva na caixa abaixo o que você quer saber.</p>}
                   </div>
                 )}
               </MensagemIA>
