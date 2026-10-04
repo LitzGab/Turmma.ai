@@ -186,7 +186,8 @@ test.describe('aceite do convite, do coordenador e do professor', () => {
     await acionar(page, /^Entrar$/, hasTouch)
     // O professor abre em "Nova conversa" (A2), com o nome dele e o da escola na casca.
     await esperarNovaConversa(page, convite.nome, { timeout: PRAZO_DA_TELA_MS, escolaNome: convite.escolaNome })
-    const paraTurmas = page.getByRole('main').getByRole('link', { name: 'Turmas', exact: true })
+    // Sem turma confirmada, a tela em que ele abre aponta para Turmas, a um toque.
+    const paraTurmas = page.getByRole('main').getByRole('button', { name: 'Ir para Turmas' })
     if (hasTouch) await paraTurmas.tap()
     else await paraTurmas.click()
     await expect(page).toHaveURL(/\/professor\/turmas$/)

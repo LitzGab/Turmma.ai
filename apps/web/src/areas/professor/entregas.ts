@@ -39,7 +39,8 @@ function daTurma(nomeDaTurma: string | undefined): string {
  * número de aluno nem nome: o detalhe abre na tela da própria entrega.
  */
 export function falaDaEntrega(entrega: Pick<Entrega, 'tipo' | 'titulo'>, nomeDaTurma: string | undefined): string {
-  if (entrega.tipo === 'versao_adaptada') return `Preparei a versão adaptada de "${entrega.titulo}"${daTurma(nomeDaTurma)}. Ela só pode ir aos alunos depois que você aprovar.`
+  // O título da entrega de adaptação é o da própria versão adaptada (a API o devolve assim), e já diz o que ela é.
+  if (entrega.tipo === 'versao_adaptada') return `Preparei "${entrega.titulo}"${daTurma(nomeDaTurma)}. Esta versão adaptada só pode ir aos alunos depois que você aprovar.`
   return `Corrigi "${entrega.titulo}"${daTurma(nomeDaTurma)}. O diagnóstico só chega aos alunos depois que você revisar os destaques e aprovar.`
 }
 
@@ -117,7 +118,7 @@ export const AVISO_DA_JUSTIFICATIVA = 'Diga o que está errado na versão, para 
 /** O que o diálogo de aprovar mostra antes de confirmar (regra 50, item 8): o que é, de qual turma, e o que muda. */
 export function resumoDaAprovacao(entrega: Pick<Entrega, 'tipo' | 'titulo'>, nomeDaTurma: string | undefined): readonly [{ rotulo: string; valor: string }, ...{ rotulo: string; valor: string }[]] {
   return [
-    { rotulo: 'O que é', valor: `${NOME_DO_TIPO_DE_ENTREGA[entrega.tipo]} de "${entrega.titulo}"` },
+    { rotulo: NOME_DO_TIPO_DE_ENTREGA[entrega.tipo], valor: entrega.titulo },
     { rotulo: 'Turma', valor: nomeDaTurma ?? 'Turma da atividade' },
     { rotulo: 'Feita por', valor: 'Assistente de ensino, com IA' },
   ]

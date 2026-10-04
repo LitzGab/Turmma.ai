@@ -194,7 +194,7 @@ test.describe('a Home (11.2): os quatro estados', () => {
     await expect(esperando).toHaveCount(1)
     await expect(esperando).toContainText('Adaptação')
     await expect(esperando).toContainText('Versão adaptada')
-    await expect(esperando).toContainText(`Atividade de estequiometria · ${turmaNome}`)
+    await expect(esperando).toContainText(`Atividade de estequiometria (versão adaptada) · ${turmaNome}`)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
     await acionar(esperando, hasTouch)
@@ -637,11 +637,11 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
 
     // A faixa "Esperando você" presa no alto, o filtro com o contador e a entrega em balão, assinada.
     const faixa = page.locator('[data-faixa-esperando]')
-    await expect(faixa).toContainText(`${origem.titulo} · ${turmaNome}`, { timeout: PRAZO_DA_TELA_MS })
+    await expect(faixa).toContainText(`${adaptada.artefato.titulo} · ${turmaNome}`, { timeout: PRAZO_DA_TELA_MS })
     expect(await faixa.evaluate((elemento) => getComputedStyle(elemento).position)).toBe('sticky')
     await expect(page.getByRole('tab')).toHaveText([/^Tudo$/, /^Esperando você1/, /^Correção$/, /^Adaptação$/])
     const pendente = page.locator('[data-entrega="pendente"]')
-    await expect(pendente).toContainText(`Preparei a versão adaptada de "${origem.titulo}" da turma ${turmaNome}.`)
+    await expect(pendente).toContainText(`Preparei "${adaptada.artefato.titulo}" da turma ${turmaNome}. Esta versão adaptada só pode ir aos alunos depois que você aprovar.`)
     await expect(pendente.getByText('Assistente · adaptação')).toBeVisible()
     await expect(selosDeIA(page.getByRole('log'))).toHaveCount(2)
     await expect(pendente.locator('[data-aprovacao="pendente"]')).toHaveText('Esperando você')
@@ -661,7 +661,7 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
     expect(await aprovar.evaluate((elemento) => getComputedStyle(elemento).backgroundColor)).toBe('rgb(13, 13, 13)')
     await acionar(aprovar, hasTouch)
     const dialogo = page.getByRole('alertdialog', { name: 'Aprovar a versão adaptada' })
-    await expect(dialogo).toContainText(`Versão adaptada de "${origem.titulo}"`)
+    await expect(dialogo).toContainText(adaptada.artefato.titulo)
     await expect(dialogo).toContainText(turmaNome)
     await expect(dialogo).toContainText('Só depois da sua aprovação esta versão pode ir aos alunos da turma.')
     // Nada foi decidido só por abrir.

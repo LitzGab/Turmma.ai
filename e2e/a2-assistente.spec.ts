@@ -167,8 +167,8 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     // Seu time: a entrega esperando, na faixa e na conversa do Assistente, e o contador na lateral.
     await expect(page).toHaveURL(/\/professor\/time\/assistente$/)
     const pendente = page.locator('[data-entrega="pendente"]')
-    await expect(pendente).toContainText(`Preparei a versão adaptada de "Atividade — Estequiometria" da turma ${turmaNome}.`, { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(page.locator('[data-faixa-esperando]')).toContainText('Atividade — Estequiometria')
+    await expect(pendente).toContainText(`Preparei "Atividade — Estequiometria (versão adaptada)" da turma ${turmaNome}. Esta versão adaptada só pode ir aos alunos depois que você aprovar.`, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.locator('[data-faixa-esperando]')).toContainText(`Atividade — Estequiometria (versão adaptada) · ${turmaNome}`)
     await abrirNavegacao(page, hasTouch)
     await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link')).toHaveAccessibleName(/^Assistente de ensino\s*1\s*esperando você$/)
     if (await page.getByRole('dialog', { name: 'Menu' }).isVisible()) await page.keyboard.press('Escape')
@@ -176,7 +176,7 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     // Aprovar: a confirmação diz o que é, de qual turma, e que só depois disso a versão pode ir aos alunos.
     await acionar(pendente.getByRole('button', { name: /^Aprovar/ }), hasTouch)
     const dialogo = page.getByRole('alertdialog', { name: 'Aprovar a versão adaptada' })
-    await expect(dialogo).toContainText('Versão adaptada de "Atividade — Estequiometria"')
+    await expect(dialogo).toContainText('Atividade — Estequiometria (versão adaptada)')
     await expect(dialogo).toContainText(turmaNome)
     await expect(dialogo).toContainText('Só depois da sua aprovação esta versão pode ir aos alunos da turma.')
     expect(await larguraExcedenteDoDialogo(page)).toBe(0)
@@ -232,7 +232,7 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
 
   test('rejeitar a versão adaptada exige a justificativa, e a tela e o banco guardam quem rejeitou e por quê', async ({ page, hasTouch }) => {
     test.setTimeout(300_000)
-    const { professora } = await montarEscolaEEntrar(page, hasTouch)
+    const { professora, turmaNome } = await montarEscolaEEntrar(page, hasTouch)
     // Sem conversar: o formulário de Ferramentas é o mesmo motor do cartão.
     await irPelaNavegacao(page, 'Ferramentas', hasTouch)
     await acionar(page.locator('[data-ferramenta="atividade_objetiva"]'), hasTouch)
@@ -260,6 +260,22 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     expect(await entregasNoBanco(professora.escolaId)).toEqual([
       { tipo: 'versao_adaptada', funcao: 'adaptacao', estado: 'rejeitada', decididaPor: professora.usuarioId, decidida: true, justificativa: 'A questão 2 ficou sem o dado da massa.' },
     ])
+    expect(await violacoesGraves(page)).toEqual([])
+
+    // Em Ferramentas, o que foi gerado vem do mais novo para o mais antigo, e a versão adaptada diz a situação dela.
+    await irPelaNavegacao(page, 'Ferramentas', hasTouch)
+    const gerados = page.locator('[data-artefato]')
+    await expect(gerados).toHaveCount(2, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(gerados.nth(0)).toContainText(`Versão adaptada · Linguagem direta · ${turmaNome}`)
+    await expect(gerados.nth(0)).toContainText('Rejeitada')
+    await expect(gerados.nth(1)).toContainText(`Atividade objetiva · ${turmaNome}`)
+    // A versão rejeitada, aberta: a adaptação pelo tipo, e quem rejeitou e por quê, lidos da API.
+    await acionar(gerados.nth(0), hasTouch)
+    await expect(page.getByRole('heading', { level: 1, name: 'Atividade — Estequiometria (versão adaptada)' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page).locator('[data-aprovacao="rejeitada"]')).toContainText(`${professora.nome} rejeitou · `, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page).locator('[data-aprovacao="rejeitada"]')).toContainText('Motivo: A questão 2 ficou sem o dado da massa.')
+    await expect(page.getByRole('button', { name: 'Pedir versão adaptada' })).toHaveCount(0)
+    expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
   })
 })

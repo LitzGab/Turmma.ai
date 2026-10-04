@@ -290,16 +290,16 @@ export default function Time() {
                           {entrega.artefatoId !== null && (
                             // Relativo à área: o `Route` aninhado em `/professor` resolve o `to` a partir da base dela.
                             <Link to={caminhoDoArtefatoDoProfessor(entrega.artefatoId)} className={CLASSES_DA_ACAO}>
-                              Abrir a versão<span className="sr-only"> de {entrega.titulo}</span>
+                              Abrir a versão<span className="sr-only">: {entrega.titulo}</span>
                             </Link>
                           )}
                           {decideAqui(entrega) && (
                             <>
                               <Botao variante="oficial" onClick={() => abrir(entrega, 'aprovar')}>
-                                Aprovar<span className="sr-only"> a versão adaptada de {entrega.titulo}</span>
+                                Aprovar<span className="sr-only"> {entrega.titulo}</span>
                               </Botao>
                               <Botao variante="perigo" onClick={() => abrir(entrega, 'rejeitar')}>
-                                Rejeitar…<span className="sr-only"> a versão adaptada de {entrega.titulo}</span>
+                                Rejeitar…<span className="sr-only"> {entrega.titulo}</span>
                               </Botao>
                             </>
                           )}
