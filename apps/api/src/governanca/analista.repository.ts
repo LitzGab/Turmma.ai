@@ -34,16 +34,18 @@ export interface RecorteComLotes extends ChaveDoRecorte {
   readonly disciplina: string
   readonly lotesAprovados: number
   readonly alunos: number
+  /**
+   * Quantos professores **distintos** decidiram os lotes aprovados do recorte (`entrega.decidida_por`): é a conta do
+   * grupo mínimo (D45). Conta quem tem **dado** no recorte, não quem tem vínculo: com duas professoras alocadas e só uma
+   * com lote aprovado, o número do recorte seria o dela. Devolve quantos, nunca quem.
+   */
+  readonly professores: number
 }
 
 export interface AcertoNoRecorte extends ChaveDoRecorte {
   readonly codigo: string
   readonly acertos: number
   readonly total: number
-}
-
-export interface ProfessoresNoRecorte extends ChaveDoRecorte {
-  readonly professores: number
 }
 
 export interface NumerosDaEscola {
@@ -83,7 +85,7 @@ const correcaoDaEntrega = and(eq(correcao.escolaId, entrega.escolaId), eq(correc
  * Os dados do Analista de desempenho escolar (MVP, A5; D34, D45, D46, D64), na escola e no ano letivo do contexto.
  *
  * **O que vira número é só lote `aprovada`**: correção pendente ou rejeitada não entra em conta nenhuma. O agregado é
- * por série e disciplina; a única conta que olha professor é a do grupo mínimo (quantos distintos têm vínculo confirmado
+ * por série e disciplina; a única conta que olha professor é a do grupo mínimo (quantos distintos decidiram lote aprovado
  * no recorte), e nenhuma consulta agrupa, filtra ou ordena por professor. O detalhe de uma turma (`professoresDaTurma`)
  * só é chamado pela leitura nominal, que audita antes de responder.
  */
@@ -178,6 +180,7 @@ export class AnalistaRepository {
         disciplina: disciplina.nome,
         lotesAprovados: sql<number>`count(distinct ${entrega.id})::int`,
         alunos: sql<number>`count(distinct ${correcao.alunoId})::int`,
+        professores: sql<number>`count(distinct ${entrega.decididaPor})::int`,
       })
       .from(entrega)
       .innerJoin(atividadeAplicada, aplicacaoDaEntrega)
@@ -205,21 +208,6 @@ export class AnalistaRepository {
       .where(this.#lotesAprovados())
       .groupBy(turma.serieId, artefato.disciplinaId, sql`habilidade.codigo`)
       .orderBy(sql`habilidade.codigo`)
-  }
-
-  /**
-   * Quantos professores **distintos** têm vínculo confirmado em cada série × disciplina, no ano. É a conta do grupo
-   * mínimo (D45): devolve o número, nunca quem.
-   */
-  async professoresPorRecorte(): Promise<ProfessoresNoRecorte[]> {
-    const { escolaId, anoLetivoId } = this.#escopo()
-    const linhas = await this.banco
-      .select({ serieId: turma.serieId, disciplinaId: vinculo.disciplinaId, professores: sql<number>`count(distinct ${vinculo.usuarioId})::int` })
-      .from(vinculo)
-      .innerJoin(turma, and(eq(turma.escolaId, vinculo.escolaId), eq(turma.anoLetivoId, vinculo.anoLetivoId), eq(turma.id, vinculo.turmaId)))
-      .where(and(eq(vinculo.escolaId, escolaId), eq(vinculo.anoLetivoId, anoLetivoId), eq(vinculo.papel, 'professor'), eq(vinculo.estado, 'confirmado')))
-      .groupBy(turma.serieId, vinculo.disciplinaId)
-    return linhas.flatMap((linha) => (linha.disciplinaId === null ? [] : [{ serieId: linha.serieId, disciplinaId: linha.disciplinaId, professores: linha.professores }]))
   }
 
   /** A descrição de cada habilidade das atividades dos lotes aprovados (da turma, se dada), pelo código: o catálogo é nosso, em código. */

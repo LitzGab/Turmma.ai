@@ -1,5 +1,6 @@
 import { nomeDaSerie, type ItemDaGovernanca } from '@educa/shared'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { mensagemDoErro } from '../../api/cliente'
 import { consultaConsumo, consultaResumoDaGovernanca } from '../../api/governanca'
 import { BarraRotulada } from '../../componentes/BarraRotulada'
 import { Botao } from '../../componentes/Botao'
@@ -11,7 +12,7 @@ import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import { DadoNominal } from './DadoNominal'
-import { aprovacaoDoItem, ESPERANDO_O_PROFESSOR, NOME_DO_TIPO_DE_ENTREGA, nomeDaFuncao, textoDoConsumo, textoDoCusto, textoDoPacoteDoTutor } from './textos-da-governanca'
+import { aprovacaoDoItem, ESPERANDO_O_PROFESSOR, NOME_DO_TIPO_DE_ENTREGA, nomeDaFuncao, O_QUE_CHEGA_AO_ALUNO, textoDoConsumo, textoDoCusto, textoDoPacoteDoTutor } from './textos-da-governanca'
 
 /**
  * As colunas de "O que a IA gerou e quem aprovou". **Não existe coluna de professor nem de turma**, e a tabela não tem
@@ -59,7 +60,7 @@ export default function Governanca() {
 
   return (
     <Tela titulo="Governança">
-      <p className="max-w-prose text-apoio">O que a IA produziu nesta escola no ano letivo, e o que as pessoas decidiram sobre isso. Nenhum material nem diagnóstico da IA chega ao aluno sem um professor aprovar; o Tutor responde ao aluno na hora, com o professor acompanhando. As atividades e os planos que a professora gera ficam com ela, e só chegam à turma quando ela os aplica.</p>
+      <p className="max-w-prose text-apoio">O que a IA produziu nesta escola no ano letivo, e o que as pessoas decidiram sobre isso. {O_QUE_CHEGA_AO_ALUNO}</p>
       <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <NumeroPainel rotulo="Gerado por IA" valor={numeros.geradoPorIa} apoio="Atividades, planos, versões adaptadas e correções" />
         <NumeroPainel rotulo="Aprovado por gente" valor={numeros.aprovadoPorPessoa} apoio="Versões adaptadas e correções que um professor aprovou" />
@@ -69,7 +70,17 @@ export default function Governanca() {
 
       <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-registro">
         <CabecalhoDeSecao id="titulo-registro" titulo="O que a IA gerou e quem aprovou" apoio="Da mais nova para a mais antiga. Cada linha diz o que foi gerado, por qual função, e se uma pessoa já decidiu." />
-        {resumo.isError && <EstadoErro erro={resumo.error} tentando={resumo.isFetching} aoTentarDeNovo={() => void resumo.fetchNextPage()} />}
+        {/* A página seguinte que falhou: aviso com botão secundário, para a tela não ganhar um segundo primário ao lado do erro do consumo. */}
+        {resumo.isError && (
+          <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-controle border border-erro bg-erro-cx p-3">
+            <p role="alert" className="min-w-0 flex-1 basis-56 break-words text-erro">
+              {mensagemDoErro(resumo.error)}
+            </p>
+            <Botao variante="secundario" onClick={() => void resumo.fetchNextPage()} disabled={resumo.isFetchingNextPage}>
+              Tentar de novo
+            </Botao>
+          </div>
+        )}
         {itens.length === 0 ? (
           <EstadoVazio
             titulo={nadaGerado ? 'A IA ainda não gerou nada nesta escola' : 'Nenhuma linha para mostrar ainda'}

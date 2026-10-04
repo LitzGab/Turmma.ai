@@ -40,6 +40,8 @@ describe('governança de IA da coordenação', () => {
   let loteAprovado: string
   /** A série de um professor só, em A: o 3º ano, com o 3ºA. */
   let terceiroAno: { serieId: string; turmaId: string; professor: SessaoDeTeste; entregaId: string }
+  /** A versão adaptada da colega, no 2ºC: é o segundo professor com entrega no 2º ano. */
+  let entregaDaColega: string
 
   const sql = async <Linha extends Record<string, unknown>>(texto: string, valores: unknown[] = []): Promise<Linha[]> => (await bancada.pool.query(texto, valores)).rows as Linha[]
   const get = async (sessao: SessaoDeTeste, caminho: string): Promise<RespostaHttp> => chamar(api.url, 'GET', caminho, await sessao.tokenNovo())
@@ -69,6 +71,28 @@ describe('governança de IA da coordenação', () => {
     )
   const auditorias = (escola: EscolaComAssistente, acao: string) =>
     sql<{ autor_usuario_id: string; entidade_id: string; antes: unknown; depois: unknown; em: Date }>('select autor_usuario_id, entidade_id, antes, depois, em from auditoria where escola_id = $1 and acao = $2 order by id', [escola.escolaId, acao])
+
+  /** Um artefato gravado direto, com quem o criou, e a versão adaptada dele com a entrega pendente. Devolve os ids. */
+  const versaoAdaptadaDe = async (escola: EscolaComAssistente, turmaId: string, criadoPor: string): Promise<{ artefatos: string[]; entregaId: string }> => {
+    const [copia] = await sql<{ id: string }>(
+      `insert into artefato (escola_id, ano_letivo_id, turma_id, disciplina_id, tipo, titulo, conteudo, criado_por)
+       select escola_id, ano_letivo_id, $3, disciplina_id, tipo, titulo, conteudo, $4 from artefato where escola_id = $1 and id = $2 returning id`,
+      [escola.escolaId, original, turmaId, criadoPor],
+    )
+    const [adaptada] = await sql<{ id: string }>(
+      `insert into artefato (escola_id, ano_letivo_id, turma_id, disciplina_id, tipo, titulo, conteudo, origem_id, criado_por)
+       select escola_id, ano_letivo_id, turma_id, disciplina_id, tipo, titulo, conteudo || '{"adaptacao": {"tipos": ["fonte_ampliada"]}}'::jsonb, id, criado_por from artefato where escola_id = $1 and id = $2 returning id`,
+      [escola.escolaId, copia?.id],
+    )
+    const [criada] = await sql<{ id: string }>(`insert into entrega (escola_id, ano_letivo_id, turma_id, funcao, tipo, artefato_id) values ($1, $2, $3, 'adaptacao', 'versao_adaptada', $4) returning id`, [
+      escola.escolaId,
+      escola.anoLetivoId,
+      turmaId,
+      adaptada?.id,
+    ])
+    if (copia === undefined || adaptada === undefined || criada === undefined) throw new Error('versão adaptada de teste não criada')
+    return { artefatos: [copia.id, adaptada.id], entregaId: criada.id }
+  }
 
   /** Uma lista aplicada ao 2ºB, com a resposta do aluno da escola, ainda aberta. */
   const listaRespondida = async (escola: EscolaComAssistente): Promise<string> => {
@@ -110,6 +134,9 @@ describe('governança de IA da coordenação', () => {
     if (entrega === undefined) throw new Error('entrega do 3º ano não criada')
     terceiroAno = { serieId: serie.corpo['id'] as string, turmaId, professor, entregaId: entrega.id }
 
+    // A colega, de Química no 2ºC, também tem entrega no 2º ano: a série tem dois professores com dado, e a lista a mostra.
+    entregaDaColega = (await versaoAdaptadaDe(a, a.outraTurma, a.colega.usuarioId)).entregaId
+
     // A escola B tem as próprias entregas, com outros números.
     const deB = await criarAtividade(bancada, b)
     await criarVersaoAdaptada(bancada, b, deB, 'aprovada')
@@ -128,8 +155,9 @@ describe('governança de IA da coordenação', () => {
   describe('o que a IA gerou e quem decidiu', () => {
     it('conta o que a IA gerou e o que as pessoas decidiram, no ano em curso da escola', async () => {
       const { lido } = await resumoDe(a)
-      // Seis artefatos (a lista, três versões adaptadas, a lista e a versão adaptada do 3º ano) e um lote de correção.
-      expect(lido.numeros).toEqual({ geradoPorIa: 7, aprovadoPorPessoa: 2, rejeitado: 1, esperando: 2 })
+      // Oito artefatos (a lista, três versões adaptadas, a lista e a versão adaptada do 3º ano, a lista e a versão adaptada
+      // da colega) e um lote de correção.
+      expect(lido.numeros).toEqual({ geradoPorIa: 9, aprovadoPorPessoa: 2, rejeitado: 1, esperando: 3 })
     })
 
     it('os números de A não somam nada de B, e os de B não somam nada de A', async () => {
@@ -170,30 +198,37 @@ describe('governança de IA da coordenação', () => {
       for (const proibido of [a.turma, a.outraTurma, terceiroAno.turmaId, 'Justificativa sintética', 'Estequiometria', NOME_DA_PROFESSORA_DE_TESTE, NOME_DO_ALUNO_DE_TESTE]) expect(texto).not.toContain(proibido)
     })
 
-    it('a entrega da série de um professor só conta nos números e fica fora da lista; com dois professores, entra', async () => {
+    it('a série com um professor só com entrega fica fora da lista, mesmo com dois professores alocados; com dois com entrega, entra', async () => {
       const { lido, texto } = await resumoDe(a)
-      expect(lido.itens).toHaveLength(4)
+      expect(lido.itens).toHaveLength(5)
       expect(lido.itens.every((item) => item.serie.id === a.serieId)).toBe(true)
+      expect(lido.itens.map((item) => item.id)).toContain(entregaDaColega)
       expect(texto).not.toContain(terceiroAno.entregaId)
       expect(texto).not.toContain(terceiroAno.serieId)
-      // O vínculo pendente não forma grupo: o segundo professor precisa ter confirmado.
+      // Um segundo professor com vínculo confirmado no 3º ano, sem entrega nenhuma: não forma grupo. Senão a linha diria o
+      // que o primeiro fez, e insinuaria que o segundo não usa a ferramenta (D45, D64).
       const segundo = await bancada.sessao(a.escolaId, 'professor')
-      await vincularProfessor(bancada, a, segundo.usuarioId, terceiroAno.turmaId, a.fisica, 'pendente')
+      await vincularProfessor(bancada, a, segundo.usuarioId, terceiroAno.turmaId, a.fisica)
       expect((await resumoDe(a)).texto).not.toContain(terceiroAno.entregaId)
 
-      await sql(`update vinculo set estado = 'confirmado', decidido_em = now() where escola_id = $1 and usuario_id = $2`, [a.escolaId, segundo.usuarioId])
+      // Com uma entrega dele no 3º ano, a série tem dois professores com dado, e entra.
+      const doSegundo = await versaoAdaptadaDe(a, terceiroAno.turmaId, segundo.usuarioId)
       try {
         const comGrupo = await resumoDe(a)
         expect(comGrupo.lido.itens.find((item) => item.id === terceiroAno.entregaId)).toMatchObject({ estado: 'pendente', serie: { id: terceiroAno.serieId, ano: 3 } })
-        expect(comGrupo.lido.numeros).toEqual(lido.numeros)
+        expect(comGrupo.lido.numeros).toEqual({ ...lido.numeros, geradoPorIa: lido.numeros.geradoPorIa + 2, esperando: lido.numeros.esperando + 1 })
       } finally {
+        await sql('delete from entrega where escola_id = $1 and id = $2', [a.escolaId, doSegundo.entregaId])
+        await sql('delete from artefato where escola_id = $1 and id = any($2::uuid[]) and origem_id is not null', [a.escolaId, doSegundo.artefatos])
+        await sql('delete from artefato where escola_id = $1 and id = any($2::uuid[])', [a.escolaId, doSegundo.artefatos])
         await sql('delete from vinculo where escola_id = $1 and usuario_id = $2', [a.escolaId, segundo.usuarioId])
       }
+      expect((await resumoDe(a)).texto).not.toContain(terceiroAno.entregaId)
     })
 
     it('filtra pelo estado e pagina, sem repetir nem pular entrega', async () => {
       const pendentes = await resumoDe(a, '?estado=pendente')
-      expect(pendentes.lido.itens.map((item) => item.estado)).toEqual(['pendente'])
+      expect(pendentes.lido.itens.map((item) => item.estado)).toEqual(['pendente', 'pendente'])
       const todas = (await resumoDe(a)).lido.itens.map((item) => item.id)
       const primeira = (await resumoDe(a, '?limite=3')).lido
       expect(primeira.itens.map((item) => item.id)).toEqual(todas.slice(0, 3))
@@ -210,7 +245,8 @@ describe('governança de IA da coordenação', () => {
 
     it('a auditoria responde o que a IA gerou, quem aprovou e quando; a governança, só que uma pessoa aprovou e quando', async () => {
       const { lido } = await resumoDe(a, '?estado=pendente')
-      const [pendente] = lido.itens
+      // A pendente da professora do 2ºB (a da colega é da turma dela, e a professora não a decide).
+      const pendente = lido.itens.find((item) => item.id !== entregaDaColega)
       if (pendente === undefined) throw new Error('nenhuma entrega pendente')
       const decidida = await post(a.professora, `/v1/entregas/${pendente.id}/decidir`, { decisao: 'aprovar' })
       expect(decidida.status).toBe(200)
