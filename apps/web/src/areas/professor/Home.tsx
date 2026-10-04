@@ -11,7 +11,7 @@ import { useCicloDeExecucao } from '../../api/execucoes'
 import { useLugarNaAba } from '../../api/memoria-da-aba'
 import { consultaTime, funcaoSuspensa } from '../../api/time'
 import { consultaMeusVinculos } from '../../api/vinculos'
-import { ROTAS_DO_PROFESSOR } from '../../caminhos'
+import { caminhoDaCorrecaoDoProfessor, ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { Botao } from '../../componentes/Botao'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { Tela } from '../../componentes/Tela'
@@ -121,7 +121,7 @@ export default function Home() {
                 const Icone = ICONE_DA_FUNCAO[item.funcao] ?? MessagesSquare
                 return (
                   <li key={item.id} className="min-w-0">
-                    <Link to={ROTAS_DO_PROFESSOR.timeDoAssistente} data-esperando-voce="" className="flex h-full min-h-11 min-w-0 items-start gap-3 rounded-cartao border border-linha bg-superficie p-4 hover:bg-realce-suave">
+                    <Link to={item.atividadeAplicadaId === null ? ROTAS_DO_PROFESSOR.timeDoAssistente : caminhoDaCorrecaoDoProfessor(item.atividadeAplicadaId)} data-esperando-voce="" className="flex h-full min-h-11 min-w-0 items-start gap-3 rounded-cartao border border-linha bg-superficie p-4 hover:bg-realce-suave">
                       <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-linha bg-noite text-white">
                         <Icone size={18} strokeWidth={1.75} />
                       </span>
@@ -130,7 +130,7 @@ export default function Home() {
                         <span className="font-medium break-words text-tinta">{item.titulo}</span>
                         <span className="text-sm break-words text-apoio">{item.detalhe}</span>
                         <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-tinta">
-                          Ver e decidir
+                          {item.atividadeAplicadaId === null ? 'Ver e decidir' : 'Revisar'}
                           <ArrowRight aria-hidden="true" size={14} strokeWidth={1.75} />
                         </span>
                       </span>

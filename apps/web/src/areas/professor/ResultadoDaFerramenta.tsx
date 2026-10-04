@@ -8,7 +8,7 @@ import { classesDoBotao } from '../../componentes/botao-secundario'
 import { EstadoCarregando, EstadoErro } from '../../componentes/estado'
 import { MensagemIA } from '../../componentes/ia/Mensagem'
 import { ConteudoDoArtefato } from './ConteudoDoArtefato'
-import { textoDaAdaptacao } from './entregas'
+import { saidaEmPdf, textoDaAdaptacao } from './entregas'
 import { ExportarPdf } from './ExportarPdf'
 
 interface PropsDoResultado {
@@ -46,7 +46,8 @@ export function ResultadoDaFerramenta({ artefatoId, entregaId, funcao }: PropsDo
           <Link to={caminhoDoArtefatoDoProfessor(data.id)} className={CLASSES_DA_ACAO}>
             Abrir o artefato
           </Link>
-          <ExportarPdf artefatoId={data.id} titulo={data.titulo} />
+          {/* A versão adaptada recém-gerada ainda espera a decisão: sai como rascunho, e o botão diz isso. */}
+          {saidaEmPdf(data.entrega) !== 'nao_exporta' && <ExportarPdf artefatoId={data.id} titulo={data.titulo} rascunho={saidaEmPdf(data.entrega) === 'rascunho'} />}
           {entregaId !== null && (
             <Link to={ROTAS_DO_PROFESSOR.timeDoAssistente} className={CLASSES_DA_ACAO}>
               Ver e decidir em Seu time
@@ -59,7 +60,7 @@ export function ResultadoDaFerramenta({ artefatoId, entregaId, funcao }: PropsDo
         <p className="min-w-0 font-semibold break-words text-tinta">{data.titulo}</p>
         {data.adaptacao !== null && <p className="min-w-0 text-sm break-words text-sutil">Adaptação: {textoDaAdaptacao(data.adaptacao)}</p>}
         <ConteudoDoArtefato conteudo={data.conteudo} materiais={materiais.data ?? {}} resumido />
-        {entregaId !== null && <p className="min-w-0 text-sm break-words text-sutil">Esta versão só pode ir aos alunos depois que você aprovar.</p>}
+        {entregaId !== null && <p className="min-w-0 text-sm break-words text-sutil">Esta versão só pode ir aos alunos depois que você aprovar. Até lá, o PDF dela sai marcado como rascunho.</p>}
       </div>
     </MensagemIA>
   )

@@ -1,6 +1,17 @@
 import { randomUUID } from 'node:crypto'
 import type { Page, Route } from '@playwright/test'
-import type { Entrega, MensagemDaConversa, RespostaArtefato, RespostaExecucao, ResultadoDaExecucao } from '../../packages/shared/src/index.ts'
+import type {
+  AtividadeAplicada,
+  Entrega,
+  MensagemDaConversa,
+  RespostaArtefato,
+  RespostaCorrecaoDoLote,
+  RespostaDesempenhoDaTurma,
+  RespostaExecucao,
+  RespostaSinais,
+  RespostaUsoDoTutor,
+  ResultadoDaExecucao,
+} from '../../packages/shared/src/index.ts'
 import type { ChaveDeFuncao } from '../../packages/shared/src/time/funcoes.ts'
 import { montarTime } from '../../packages/shared/src/time/time.ts'
 
@@ -26,7 +37,29 @@ interface Resposta {
   readonly pdf?: string
 }
 
-type Rota = 'time' | 'conversa' | 'mensagens' | 'execucao' | 'gerar' | 'artefatos' | 'artefato' | 'renomear' | 'pdf' | 'adaptar' | 'entregas' | 'decidir' | 'materiais'
+type Rota =
+  | 'time'
+  | 'conversa'
+  | 'mensagens'
+  | 'execucao'
+  | 'gerar'
+  | 'artefatos'
+  | 'artefato'
+  | 'renomear'
+  | 'pdf'
+  | 'adaptar'
+  | 'entregas'
+  | 'decidir'
+  | 'materiais'
+  | 'aplicadas'
+  | 'aplicar'
+  | 'encerrar'
+  | 'correcao'
+  | 'abrirDestaque'
+  | 'aprovarLote'
+  | 'desempenho'
+  | 'sinais'
+  | 'uso'
 
 const ROTAS: readonly { readonly rota: Rota; readonly metodo: string; readonly caminho: RegExp }[] = [
   { rota: 'time', metodo: 'GET', caminho: /^\/v1\/time$/ },
@@ -42,6 +75,16 @@ const ROTAS: readonly { readonly rota: Rota; readonly metodo: string; readonly c
   { rota: 'entregas', metodo: 'GET', caminho: /^\/v1\/entregas$/ },
   { rota: 'decidir', metodo: 'POST', caminho: /^\/v1\/entregas\/([^/]+)\/decidir$/ },
   { rota: 'materiais', metodo: 'GET', caminho: /^\/v1\/materiais$/ },
+  // A3 e A4: a atividade aplicada, a correção, o desempenho, os sinais e o uso do Tutor.
+  { rota: 'aplicadas', metodo: 'GET', caminho: /^\/v1\/atividades-aplicadas$/ },
+  { rota: 'aplicar', metodo: 'POST', caminho: /^\/v1\/atividades-aplicadas$/ },
+  { rota: 'encerrar', metodo: 'POST', caminho: /^\/v1\/atividades-aplicadas\/([^/]+)\/encerrar$/ },
+  { rota: 'correcao', metodo: 'GET', caminho: /^\/v1\/atividades-aplicadas\/([^/]+)\/correcao$/ },
+  { rota: 'abrirDestaque', metodo: 'POST', caminho: /^\/v1\/atividades-aplicadas\/([^/]+)\/correcao\/destaques\/([^/]+)\/abrir$/ },
+  { rota: 'aprovarLote', metodo: 'POST', caminho: /^\/v1\/entregas\/([^/]+)\/aprovar-lote$/ },
+  { rota: 'desempenho', metodo: 'GET', caminho: /^\/v1\/turmas\/([^/]+)\/desempenho$/ },
+  { rota: 'sinais', metodo: 'GET', caminho: /^\/v1\/sinais$/ },
+  { rota: 'uso', metodo: 'GET', caminho: /^\/v1\/tutor\/uso$/ },
 ]
 
 export function erroDaApi(status: number, codigo: string): Resposta {
@@ -64,6 +107,19 @@ export const QUEM_DECIDE = { id: randomUUID(), nome: 'Camila Souza sintética' }
 
 export class ApiDoAssistente {
   conversa: MensagemDaConversa[] = []
+  /** As mensagens anteriores às de `conversa`: a API as entrega em outra página, por `?antes=`. */
+  conversaAnterior: MensagemDaConversa[] = []
+  /** Com ele, as listas de artefatos e de entregas saem paginadas, deste tamanho, com `proxima`. */
+  porPagina: number | undefined
+  /** As atividades aplicadas às turmas da professora. */
+  aplicadas: AtividadeAplicada[] = []
+  /** O lote de correção de cada atividade aplicada, pelo id dela. Sem lote, a rota responde como inexistente. */
+  readonly correcoes = new Map<string, RespostaCorrecaoDoLote>()
+  /** O lote que nasce quando a atividade encerra. Sem ele, a atividade encerra sem corrigir (função suspensa, ou ninguém respondeu). */
+  loteAoEncerrar: ((aplicada: AtividadeAplicada) => RespostaCorrecaoDoLote) | undefined
+  desempenho: RespostaDesempenhoDaTurma | undefined
+  sinais: RespostaSinais = { itens: [], grupos: [] }
+  uso: RespostaUsoDoTutor | undefined
   entregas: Entrega[] = []
   artefatos: RespostaArtefato[] = []
   suspensas = new Set<ChaveDeFuncao>()
@@ -104,6 +160,16 @@ export class ApiDoAssistente {
     this.execucoes.set(execucaoId, { ...atual, estado: 'falhou', resultado: null, erro })
   }
 
+  /** Uma página da lista, como a API a entrega: `proxima` é o id do último item, e `?pagina=` continua depois dele. */
+  private pagina<Item extends { readonly id: string }>(itens: readonly Item[], url: URL): { itens: Item[]; proxima?: string } {
+    if (this.porPagina === undefined) return { itens: [...itens] }
+    const depoisDe = url.searchParams.get('pagina')
+    const inicio = depoisDe === null ? 0 : itens.findIndex((item) => item.id === depoisDe) + 1
+    const fatia = itens.slice(inicio, inicio + this.porPagina)
+    const ultimo = fatia.at(-1)
+    return { itens: fatia, ...(inicio + this.porPagina < itens.length && ultimo !== undefined ? { proxima: ultimo.id } : {}) }
+  }
+
   private aceitar(tarefa: RespostaExecucao['tarefa']): Resposta {
     const id = randomUUID()
     this.execucoes.set(id, { id, tarefa, estado: 'pendente', resultado: null, erro: null })
@@ -113,7 +179,11 @@ export class ApiDoAssistente {
   private deSempre(rota: Rota, { corpo, url, ids }: { corpo: unknown; url: URL; ids: readonly string[] }): Resposta {
     const id = ids[0] ?? ''
     if (rota === 'time') return { status: 200, corpo: montarTime(this.suspensas) }
-    if (rota === 'conversa') return { status: 200, corpo: { mensagens: this.conversa } }
+    if (rota === 'conversa') {
+      if (url.searchParams.get('antes') !== null) return { status: 200, corpo: { mensagens: this.conversaAnterior } }
+      const primeira = this.conversa[0]
+      return { status: 200, corpo: { mensagens: this.conversa, ...(this.conversaAnterior.length > 0 && primeira !== undefined ? { anterior: primeira.id } : {}) } }
+    }
     if (rota === 'mensagens') return this.aceitar('propor_ferramenta')
     if (rota === 'gerar') return this.aceitar(id === 'plano_de_aula' ? 'gerar_plano_de_aula' : 'gerar_atividade_objetiva')
     if (rota === 'adaptar') return this.aceitar('adaptar_atividade')
@@ -123,7 +193,7 @@ export class ApiDoAssistente {
       return execucao === undefined ? erroDaApi(404, 'NAO_ENCONTRADO') : { status: 200, corpo: execucao }
     }
     if (rota === 'artefatos')
-      return { status: 200, corpo: { itens: this.artefatos.map(({ conteudo: _conteudo, versoesAdaptadas: _versoes, aplicacoes: _aplicacoes, ...resumido }) => resumido) } }
+      return { status: 200, corpo: this.pagina(this.artefatos.map(({ conteudo: _conteudo, versoesAdaptadas: _versoes, aplicacoes: _aplicacoes, ...resumido }) => resumido), url) }
     if (rota === 'artefato' || rota === 'renomear' || rota === 'pdf') {
       const artefato = this.artefatos.find((item) => item.id === id)
       if (artefato === undefined) return erroDaApi(404, 'NAO_ENCONTRADO')
@@ -137,8 +207,92 @@ export class ApiDoAssistente {
     if (rota === 'entregas') {
       const estado = url.searchParams.get('estado')
       const turma = url.searchParams.get('turmaId')
-      return { status: 200, corpo: { itens: this.entregas.filter((entrega) => (estado === null || entrega.estado === estado) && (turma === null || entrega.turmaId === turma)) } }
+      const filtradas = this.entregas.filter((entrega) => (estado === null || entrega.estado === estado) && (turma === null || entrega.turmaId === turma))
+      // Só a lista inteira do Seu time é paginada aqui: a de pendentes e a da turma pedem a página maior.
+      return { status: 200, corpo: estado === null && turma === null ? this.pagina(filtradas, url) : { itens: filtradas } }
     }
+    if (rota === 'aplicadas') return { status: 200, corpo: { itens: this.aplicadas.filter((aplicada) => aplicada.turmaId === url.searchParams.get('turmaId')) } }
+    if (rota === 'aplicar') {
+      const pedido = corpo as { artefatoId: string; turmaId: string; avaliativa: boolean }
+      const artefato = this.artefatos.find((item) => item.id === pedido.artefatoId)
+      if (artefato === undefined || artefato.conteudo.tipo !== 'atividade_objetiva') return erroDaApi(404, 'NAO_ENCONTRADO')
+      if (artefato.entrega !== null && artefato.entrega.estado !== 'aprovada') return erroDaApi(409, 'VERSAO_ADAPTADA_NAO_APROVADA')
+      if (this.aplicadas.some((aplicada) => aplicada.artefatoId === artefato.id && aplicada.estado === 'aberta')) return erroDaApi(409, 'CONFLITO')
+      const aplicada: AtividadeAplicada = {
+        id: randomUUID(),
+        artefatoId: artefato.id,
+        turmaId: pedido.turmaId,
+        titulo: artefato.titulo,
+        avaliativa: pedido.avaliativa,
+        estado: 'aberta',
+        questoes: artefato.conteudo.questoes.length,
+        aplicadaEm: new Date().toISOString(),
+        encerradaEm: null,
+        participacao: { alunos: 30, iniciaram: 0, enviaram: 0 },
+        entrega: null,
+      }
+      this.aplicadas = [aplicada, ...this.aplicadas]
+      return { status: 201, corpo: aplicada }
+    }
+    if (rota === 'encerrar') {
+      const aplicada = this.aplicadas.find((item) => item.id === id)
+      if (aplicada === undefined) return erroDaApi(404, 'NAO_ENCONTRADO')
+      const lote = this.loteAoEncerrar?.(aplicada)
+      const encerrada: AtividadeAplicada = { ...aplicada, estado: 'encerrada', encerradaEm: aplicada.encerradaEm ?? new Date().toISOString(), entrega: lote === undefined ? null : lote.entrega }
+      if (lote !== undefined) {
+        this.correcoes.set(aplicada.id, lote)
+        this.entregas = [entregaDoLote(lote, aplicada.turmaId), ...this.entregas.filter((entrega) => entrega.id !== lote.entrega.id)]
+      }
+      this.aplicadas = this.aplicadas.map((item) => (item.id === id ? encerrada : item))
+      return { status: 200, corpo: { atividade: encerrada, execucaoId: null } }
+    }
+    if (rota === 'correcao') {
+      const lote = this.correcoes.get(id)
+      return lote === undefined ? erroDaApi(404, 'NAO_ENCONTRADO') : { status: 200, corpo: lote }
+    }
+    if (rota === 'abrirDestaque') {
+      const lote = this.correcoes.get(id)
+      const destaque = lote?.destaques.find((item) => item.alunoId === ids[1])
+      if (lote === undefined || destaque === undefined) return erroDaApi(404, 'NAO_ENCONTRADO')
+      if (destaque.abertoEm === null && lote.entrega.estado !== 'pendente') return erroDaApi(409, 'ENTREGA_JA_DECIDIDA')
+      // Abrir de novo devolve o mesmo, com a primeira hora.
+      const aberto = { ...destaque, abertoEm: destaque.abertoEm ?? new Date().toISOString() }
+      const destaques = lote.destaques.map((item) => (item.alunoId === aberto.alunoId ? aberto : item))
+      const destaquesAbertos = destaques.filter((item) => item.abertoEm !== null).length
+      this.correcoes.set(id, { ...lote, destaques, destaquesAbertos, podeAprovar: lote.entrega.estado === 'pendente' && destaquesAbertos === destaques.length })
+      return {
+        status: 200,
+        corpo: {
+          destaque: aberto,
+          respostas: lote.resumo.porQuestao.map((questao) => ({ questao: questao.numero, alternativa: aberto.emBranco > 0 ? null : 0, gabarito: questao.gabarito, correta: aberto.emBranco === 0 && questao.gabarito === 0 })),
+          historico: [{ titulo: 'Atividade de balanceamento', acertos: 4, total: 5 }],
+        },
+      }
+    }
+    if (rota === 'aprovarLote') {
+      const achado = [...this.correcoes].find(([, lote]) => lote.entrega.id === id)
+      if (achado === undefined) return erroDaApi(404, 'NAO_ENCONTRADO')
+      const [atividadeId, lote] = achado
+      if (lote.entrega.estado !== 'pendente') return erroDaApi(409, 'ENTREGA_JA_DECIDIDA')
+      if (!lote.podeAprovar) return erroDaApi(409, 'DESTAQUES_NAO_ABERTOS')
+      const confirmadaEm = new Date().toISOString()
+      const validacao = {
+        id: randomUUID(),
+        apresentado: { resumo: lote.resumo, destaques: lote.destaques.map((destaque) => ({ alunoId: destaque.alunoId, motivos: destaque.motivos })) },
+        aberto: lote.destaques.map((destaque) => ({ alunoId: destaque.alunoId, abertoEm: destaque.abertoEm ?? confirmadaEm })),
+        confirmadaPor: QUEM_DECIDE,
+        confirmadaEm,
+      }
+      this.correcoes.set(atividadeId, { ...lote, entrega: { ...lote.entrega, estado: 'aprovada' }, podeAprovar: false, validacao })
+      const anterior = this.entregas.find((entrega) => entrega.id === id)
+      const aprovada: Entrega = { ...(anterior ?? entregaDoLote(lote, '')), estado: 'aprovada', decididaEm: confirmadaEm, decididaPor: QUEM_DECIDE }
+      this.entregas = this.entregas.map((entrega) => (entrega.id === id ? aprovada : entrega))
+      this.aplicadas = this.aplicadas.map((aplicada) => (aplicada.id === atividadeId ? { ...aplicada, entrega: { id, estado: 'aprovada' } } : aplicada))
+      return { status: 200, corpo: { entrega: aprovada, validacao } }
+    }
+    if (rota === 'desempenho') return { status: 200, corpo: this.desempenho ?? { turmaId: id, lotesAprovados: 0, porHabilidade: [], alunos: [] } }
+    if (rota === 'sinais') return { status: 200, corpo: this.sinais }
+    if (rota === 'uso') return { status: 200, corpo: this.uso ?? { turmaId: url.searchParams.get('turmaId') ?? randomUUID(), limiteDoDia: 60, trocasDaTurmaNoMes: 0, pacoteDaTurmaNoMes: 9000, alunos: [] } }
     if (rota === 'decidir') {
       const entrega = this.entregas.find((item) => item.id === id)
       if (entrega === undefined) return erroDaApi(404, 'NAO_ENCONTRADO')
@@ -147,6 +301,8 @@ export class ApiDoAssistente {
       const justificativa = rejeitar && typeof corpo === 'object' && corpo !== null && 'justificativa' in corpo && typeof corpo.justificativa === 'string' ? corpo.justificativa : null
       const decidida: Entrega = { ...entrega, estado: rejeitar ? 'rejeitada' : 'aprovada', decididaEm: new Date().toISOString(), decididaPor: QUEM_DECIDE, justificativa }
       this.entregas = this.entregas.map((item) => (item.id === id ? decidida : item))
+      // O lote rejeitado continua sendo o que a rota da correção mostra, agora decidido.
+      for (const [atividadeId, lote] of this.correcoes) if (lote.entrega.id === id) this.correcoes.set(atividadeId, { ...lote, entrega: { ...lote.entrega, estado: decidida.estado }, podeAprovar: false })
       return { status: 200, corpo: decidida }
     }
     return {
@@ -186,7 +342,9 @@ export class ApiDoAssistente {
   }
 
   async ligar(page: Page): Promise<void> {
-    await page.route(/\/v1\/(time|assistente|execucoes|ferramentas|artefatos|entregas|materiais)(\/|\?|$)/, (route) => this.atender(route))
+    await page.route(/\/v1\/(time|assistente|execucoes|ferramentas|artefatos|entregas|materiais|atividades-aplicadas|sinais|tutor\/uso)(\/|\?|$)/, (route) => this.atender(route))
+    // Das turmas, só o desempenho é simulado: a turma aberta, o acesso e os pedidos são os da A1, de verdade.
+    await page.route(/\/v1\/turmas\/[^/]+\/desempenho(\?|$)/, (route) => this.atender(route))
   }
 }
 
@@ -296,5 +454,92 @@ export function propostaDeAtividade(turmaId: string, disciplinaId: string): Extr
     tipo: 'proposta_de_ferramenta',
     texto: 'Posso fazer isso com a ferramenta Atividade objetiva, ou só conversar.',
     proposta: { ferramenta: 'atividade_objetiva', parametros: { turmaId, disciplinaId, tema: 'Estequiometria', quantidade: 10 } },
+  }
+}
+
+/** A entrega de um lote de correção, como o Seu time a recebe. */
+export function entregaDoLote(lote: RespostaCorrecaoDoLote, turmaId: string): Entrega {
+  return {
+    id: lote.entrega.id,
+    tipo: 'lote_de_correcao',
+    funcao: 'correcao_de_objetiva',
+    estado: lote.entrega.estado,
+    turmaId,
+    titulo: lote.titulo,
+    artefatoId: null,
+    atividadeAplicadaId: lote.atividadeAplicadaId,
+    criadaEm: '2026-10-05T14:00:00.000Z',
+    decididaEm: null,
+    decididaPor: null,
+    justificativa: null,
+  }
+}
+
+const HABILIDADE_04 = { codigo: 'QUI.EM.04', descricao: 'Usar a proporção da equação balanceada para calcular massa, volume ou quantidade de matéria.' }
+const HABILIDADE_05 = { codigo: 'QUI.EM.05', descricao: 'Identificar o reagente limitante e o reagente em excesso.' }
+
+/** Os alunos sintéticos do lote: nomes inventados, de ninguém. */
+export const ALUNOS_DO_LOTE = ['Ana Sintética', 'Bruno Sintético', 'Caio Sintético', 'Dora Sintética'].map((nome) => ({ alunoId: randomUUID(), nome }))
+
+/**
+ * O lote de correção de uma atividade de duas questões: 28 correções numa turma de 30, dois destaques fechados (um em
+ * branco, um fora do histórico) e duas das outras correções. Só número e nome inventado.
+ */
+export function loteSintetico(aplicada: Pick<AtividadeAplicada, 'id' | 'titulo'>): RespostaCorrecaoDoLote {
+  const [ana, bruno, caio, dora] = ALUNOS_DO_LOTE
+  if (ana === undefined || bruno === undefined || caio === undefined || dora === undefined) throw new Error('faltou aluno sintético')
+  return {
+    atividadeAplicadaId: aplicada.id,
+    titulo: aplicada.titulo,
+    entrega: { id: randomUUID(), estado: 'pendente' },
+    resumo: {
+      alunosDaTurma: 30,
+      corrigidos: 28,
+      questoes: 2,
+      mediaDeAcertos: 1.25,
+      distribuicao: [
+        { de: 0, ate: 0, alunos: 5 },
+        { de: 1, ate: 1, alunos: 11 },
+        { de: 2, ate: 2, alunos: 12 },
+      ],
+      porHabilidade: [
+        { habilidade: HABILIDADE_04, acertos: 20, total: 28 },
+        { habilidade: HABILIDADE_05, acertos: 15, total: 28 },
+      ],
+      porQuestao: [
+        { numero: 1, habilidade: HABILIDADE_04, gabarito: 1, acertos: 20, porAlternativa: [3, 20, 2, 2], emBranco: 1 },
+        { numero: 2, habilidade: HABILIDADE_05, gabarito: 2, acertos: 15, porAlternativa: [8, 2, 15, 2], emBranco: 1 },
+      ],
+    },
+    destaques: [
+      { ...ana, acertos: 0, total: 2, emBranco: 2, motivos: ['em_branco'], abertoEm: null },
+      { ...bruno, acertos: 0, total: 2, emBranco: 0, motivos: ['fora_do_historico'], abertoEm: null },
+    ],
+    outras: [
+      { ...caio, acertos: 2, total: 2, emBranco: 0 },
+      { ...dora, acertos: 1, total: 2, emBranco: 0 },
+    ],
+    destaquesAbertos: 0,
+    podeAprovar: false,
+    validacao: null,
+  }
+}
+
+/** O desempenho da turma depois de um lote aprovado: por habilidade e por aluno, em ordem de nome. */
+export function desempenhoSintetico(turmaId: string): RespostaDesempenhoDaTurma {
+  return {
+    turmaId,
+    lotesAprovados: 1,
+    porHabilidade: [
+      { habilidade: HABILIDADE_04, acertos: 20, total: 28, alunosAbaixoDaMetade: 8 },
+      { habilidade: HABILIDADE_05, acertos: 15, total: 28, alunosAbaixoDaMetade: 0 },
+    ],
+    alunos: ALUNOS_DO_LOTE.map((aluno, indice) => ({
+      alunoId: aluno.alunoId,
+      nome: aluno.nome,
+      acertos: indice === 3 ? 0 : indice % 3,
+      total: indice === 3 ? 0 : 2,
+      porHabilidade: indice === 3 ? [] : [{ habilidade: HABILIDADE_04, acertos: indice % 2, total: 1 }],
+    })),
   }
 }

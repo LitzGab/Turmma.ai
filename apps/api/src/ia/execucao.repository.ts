@@ -114,21 +114,34 @@ export class ExecucaoDaSessaoRepository {
     return gravada?.id
   }
 
-  /** A execução desta chave, **se foi esta pessoa que pediu**. A chave de outra pessoa da escola não é achada. */
+  /**
+   * A execução desta chave, **se foi esta pessoa que pediu, no ano letivo em curso**. A chave de outra pessoa da escola
+   * não é achada, nem a de um ano anterior: a execução é do ano em que foi pedida (regra 10, item 2).
+   */
   async daChave(chaveEnvio: string): Promise<{ id: string; tarefa: TarefaDeIa } | undefined> {
     const [linha] = await this.banco
       .select({ id: execucaoAgente.id, tarefa: execucaoAgente.tarefa })
       .from(execucaoAgente)
-      .where(and(eq(execucaoAgente.escolaId, exigirEscolaDoContexto()), eq(execucaoAgente.chaveEnvio, chaveEnvio), eq(execucaoAgente.solicitadaPor, exigirUsuarioDoContexto())))
+      .where(
+        and(
+          eq(execucaoAgente.escolaId, exigirEscolaDoContexto()),
+          eq(execucaoAgente.anoLetivoId, exigirAnoEmCurso()),
+          eq(execucaoAgente.chaveEnvio, chaveEnvio),
+          eq(execucaoAgente.solicitadaPor, exigirUsuarioDoContexto()),
+        ),
+      )
     return linha
   }
 
-  /** A execução com esse id que esta pessoa pediu. A de outra pessoa, mesmo da mesma escola, e a de outra escola não são achadas. */
+  /**
+   * A execução com esse id que esta pessoa pediu, no ano letivo em curso. A de outra pessoa, mesmo da mesma escola, a
+   * de outra escola e a de outro ano letivo não são achadas.
+   */
   async deQuemPediu(id: string): Promise<ExecucaoDeQuemPediu | undefined> {
     const [linha] = await this.banco
       .select({ id: execucaoAgente.id, tarefa: execucaoAgente.tarefa, estado: execucaoAgente.estado, resultado: execucaoAgente.resultado, erro: execucaoAgente.erro })
       .from(execucaoAgente)
-      .where(and(eq(execucaoAgente.escolaId, exigirEscolaDoContexto()), eq(execucaoAgente.id, id), eq(execucaoAgente.solicitadaPor, exigirUsuarioDoContexto())))
+      .where(and(eq(execucaoAgente.escolaId, exigirEscolaDoContexto()), eq(execucaoAgente.anoLetivoId, exigirAnoEmCurso()), eq(execucaoAgente.id, id), eq(execucaoAgente.solicitadaPor, exigirUsuarioDoContexto())))
     return linha
   }
 

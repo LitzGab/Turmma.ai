@@ -281,14 +281,24 @@ export class MaterialRepository {
       .limit(limite)
   }
 
-  /** As páginas de um material `pronto` e não excluído da escola, em ordem, até `limite`. */
-  paginasDoMaterial(materialId: string, limite: number, alcance: AlcanceDoMaterial): Promise<TrechoAchado[]> {
+  /** As páginas de um material `pronto` e não excluído da escola **e da disciplina pedida**, em ordem, até `limite`. */
+  paginasDoMaterial(materialId: string, disciplinaId: string, limite: number, alcance: AlcanceDoMaterial): Promise<TrechoAchado[]> {
     const escolaId = exigirEscolaDoContexto()
     return this.banco
       .select(colunasDoTrecho)
       .from(trecho)
       .innerJoin(material, and(eq(material.escolaId, trecho.escolaId), eq(material.id, trecho.materialId)))
-      .where(and(eq(trecho.escolaId, escolaId), eq(material.escolaId, escolaId), eq(trecho.materialId, materialId), eq(material.estado, 'pronto'), isNull(material.excluidoEm), this.#noAlcance(alcance)))
+      .where(
+        and(
+          eq(trecho.escolaId, escolaId),
+          eq(material.escolaId, escolaId),
+          eq(trecho.disciplinaId, disciplinaId),
+          eq(trecho.materialId, materialId),
+          eq(material.estado, 'pronto'),
+          isNull(material.excluidoEm),
+          this.#noAlcance(alcance),
+        ),
+      )
       .orderBy(asc(trecho.pagina))
       .limit(limite)
   }

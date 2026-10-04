@@ -21,6 +21,10 @@ export const ROTAS_DO_PROFESSOR = {
   artefato: '/artefatos/:artefatoId',
   /** Seu time › Assistente de ensino: o que as funções dele fizeram e o que espera a professora (11.4). */
   timeDoAssistente: '/time/assistente',
+  /** Seu time › Tutor: os sinais e o uso do Tutor pela turma, sem conversa de aluno (A4; 11.4). */
+  timeDoTutor: '/time/tutor',
+  /** Aprovar a correção de objetiva de uma atividade aplicada: os destaques e o registro da validação (A3; 11.5). */
+  aprovar: '/aprovar/:atividadeAplicadaId',
   /** As turmas e disciplinas que a coordenação alocou: confirmar ou contestar cada uma (F1, RF4 e D73). */
   turmas: '/turmas',
   /** Uma turma aberta dentro de Turmas, com o acesso dos alunos (A1, 15.0; RF9) e, na 16.0, os pedidos. */
@@ -50,6 +54,11 @@ export function caminhoDoArtefatoDoProfessor(artefatoId: string): string {
   return ROTAS_DO_PROFESSOR.artefato.replace(':artefatoId', encodeURIComponent(artefatoId))
 }
 
+/** O endereço da correção de uma atividade aplicada, **relativo à área**: é o "Revisar" do Seu time. */
+export function caminhoDaCorrecaoDoProfessor(atividadeAplicadaId: string): string {
+  return ROTAS_DO_PROFESSOR.aprovar.replace(':atividadeAplicadaId', encodeURIComponent(atividadeAplicadaId))
+}
+
 /** As rotas da área da coordenação, relativas à base dela. */
 export const ROTAS_DA_COORDENACAO = {
   /** Onde a escola se monta: ano letivo, séries, disciplinas, turmas e alocação (A1, 13.0; `docs/interface.md` 3 e 11.1). */
@@ -72,9 +81,34 @@ export function caminhoDaTurmaNaEstrutura(turmaId: string): string {
 
 /** As rotas da área do aluno, relativas à base dela. */
 export const ROTAS_DO_ALUNO = {
+  /** O Tutor pelo item da lateral: o aluno escolhe a atividade em que quer ajuda (MVP, A4; `docs/interface.md` 11.6). */
+  tutor: '/tutor',
+  /** A conversa com o Tutor numa atividade: é por atividade que a conversa existe. */
+  tutorDaAtividade: '/tutor/:atividadeAplicadaId',
+  /** O que a professora atribuiu à turma do aluno, com o estado de cada atividade. É onde o aluno abre (MVP, A3). */
+  atividades: '/atividades',
+  /** Uma atividade aberta: uma questão por vez e, depois de aprovada a correção, o diagnóstico. */
+  atividade: '/atividades/:atividadeAplicadaId',
   /** A turma do aluno aprovado, com a escola e a série, sem colegas (A1, 12.0; RF13). */
   minhaTurma: '/minha-turma',
 } as const
+
+/** O endereço de uma atividade aberta pelo aluno, **relativo à área**. */
+export function caminhoDaAtividadeDoAluno(atividadeAplicadaId: string): string {
+  return ROTAS_DO_ALUNO.atividade.replace(':atividadeAplicadaId', encodeURIComponent(atividadeAplicadaId))
+}
+
+/** O nome do parâmetro que leva ao Tutor a questão em que o aluno estava: só o número dela. */
+export const PARAMETRO_DA_QUESTAO = 'questao'
+
+/**
+ * O endereço da conversa com o Tutor numa atividade, **relativo à área**; com a questão, é o "Pedir ajuda ao Tutor nesta
+ * questão". Vão só o id da atividade e o número da questão: nada do que o aluno marcou nem escreveu.
+ */
+export function caminhoDoTutorNaAtividade(atividadeAplicadaId: string, questao?: number): string {
+  const caminho = ROTAS_DO_ALUNO.tutorDaAtividade.replace(':atividadeAplicadaId', encodeURIComponent(atividadeAplicadaId))
+  return questao === undefined ? caminho : `${caminho}?${PARAMETRO_DA_QUESTAO}=${String(questao)}`
+}
 
 /** Os endereços da web, num lugar só. */
 export const ROTAS = {
@@ -100,6 +134,8 @@ export const ROTAS = {
   artefatos: `${BASE_DA_AREA.professor}/artefatos`,
   /** Seu time › Assistente de ensino, pela raiz: é o endereço da linha do agente na lateral. */
   timeDoAssistente: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.timeDoAssistente}`,
+  /** Seu time › Tutor, pela raiz: é o endereço da linha do agente na lateral. */
+  timeDoTutor: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.timeDoTutor}`,
   /** "Turmas" do professor, pela raiz: é o endereço que a navegação usa. */
   turmas: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.turmas}`,
   /** Estrutura da coordenação, pela raiz: é o endereço que a navegação usa, e onde a coordenação abre (13.0). */
@@ -108,6 +144,10 @@ export const ROTAS = {
   professores: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.professores}`,
   /** Material da coordenação, pela raiz: é o endereço que a navegação usa (MVP, A2). */
   material: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.material}`,
+  /** O Tutor do aluno, pela raiz: é o endereço que a navegação usa. */
+  tutor: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.tutor}`,
+  /** "Atividades" do aluno, pela raiz: é onde ele abre (MVP, A3), e o endereço que a navegação usa. */
+  atividades: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.atividades}`,
   /** "Minha turma" do aluno, pela raiz: é o endereço que a navegação usa. */
   minhaTurma: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.minhaTurma}`,
   /** O convite da coordenação e o do professor. O token vai no fragmento `#`, e nunca no caminho nem na consulta. */

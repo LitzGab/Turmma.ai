@@ -1,5 +1,5 @@
 import { NOMES_DOS_AGENTES, type Agente, type PapelDeUsuario } from '@educa/shared'
-import { Blocks, BookOpen, GraduationCap, LayoutGrid, MessagesSquare, School, SquarePen, UsersRound, type LucideIcon } from 'lucide-react'
+import { Blocks, BookOpen, ClipboardList, GraduationCap, LayoutGrid, MessageCircleQuestion, MessagesSquare, School, SquarePen, UsersRound, type LucideIcon } from 'lucide-react'
 import { ROTAS } from '../caminhos'
 
 /*
@@ -46,7 +46,14 @@ export const NAVEGACAO: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao
     { rotulo: 'Ferramentas', caminho: ROTAS.ferramentas, icone: LayoutGrid, tambemEm: [ROTAS.artefatos] },
     { rotulo: 'Turmas', caminho: ROTAS.turmas, icone: UsersRound },
   ],
-  aluno: [{ rotulo: 'Minha turma', caminho: ROTAS.minhaTurma, icone: School }],
+  // A3 e A4: Tutor, Atividades e Minha turma. "Meu desempenho", "Privacidade" e "Avisar um adulto" nascem com a tela de
+  // cada um: nesta fatia não existem, e por isso não aparecem. A conversa do Tutor e a atividade aberta ficam abaixo do
+  // endereço do item delas, que continua selecionado.
+  aluno: [
+    { rotulo: 'Tutor', caminho: ROTAS.tutor, icone: MessageCircleQuestion },
+    { rotulo: 'Atividades', caminho: ROTAS.atividades, icone: ClipboardList },
+    { rotulo: 'Minha turma', caminho: ROTAS.minhaTurma, icone: School },
+  ],
 }
 
 /** Uma linha de "Seu time": o agente, o endereço da conversa dele e o ícone do avatar (círculo com ícone, nunca rosto: D58). */
@@ -55,6 +62,10 @@ export interface AgenteDaLateral {
   readonly rotulo: string
   readonly caminho: string
   readonly icone: LucideIcon
+  /** A cor do avatar, a mesma do agente no resto do produto (`docs/interface.md` 9.7): o Assistente em preto, o Tutor no laranja. */
+  readonly avatar: string
+  /** A linha leva o contador do que espera a pessoa: só o agente que deixa entrega para decidir. */
+  readonly comEspera: boolean
 }
 
 /**
@@ -64,7 +75,12 @@ export interface AgenteDaLateral {
  */
 export const SEU_TIME: Readonly<Record<PapelDeUsuario, readonly AgenteDaLateral[]>> = {
   coordenador: [],
-  professor: [{ agente: 'assistente_de_ensino', rotulo: NOMES_DOS_AGENTES.assistente_de_ensino, caminho: ROTAS.timeDoAssistente, icone: MessagesSquare }],
+  professor: [
+    { agente: 'assistente_de_ensino', rotulo: NOMES_DOS_AGENTES.assistente_de_ensino, caminho: ROTAS.timeDoAssistente, icone: MessagesSquare, avatar: 'bg-noite text-white', comEspera: true },
+    // A4: o Tutor, que a professora supervisiona. A conversa dele mostra sinais e uso da turma, e não conversa de aluno.
+    // Não tem contador: sinal não é pendência que espera decisão, e ponto na lateral não vira pressão de uso (D59).
+    { agente: 'tutor', rotulo: NOMES_DOS_AGENTES.tutor, caminho: ROTAS.timeDoTutor, icone: MessageCircleQuestion, avatar: 'bg-caramelo text-tinta', comEspera: false },
+  ],
   aluno: [],
 }
 

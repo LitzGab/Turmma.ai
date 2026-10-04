@@ -75,11 +75,12 @@ export async function aplicarEntregaDecidida(cliente: QueryClient, decidida: Ent
   cliente.setQueryData<InfiniteData<RespostaListaDeEntregas, string | undefined>>(consultaEntregas.queryKey, (lido) =>
     lido === undefined ? undefined : { ...lido, pages: lido.pages.map((pagina) => ({ ...pagina, itens: pagina.itens.map((entrega) => (entrega.id === decidida.id ? decidida : entrega)) })) },
   )
-  recarregarEntregas(cliente)
+  void recarregarEntregas(cliente)
 }
 
 /** Marca como velho o que depende de uma decisão: a entrega já decidida por outro caminho também cai aqui. */
-export function recarregarEntregas(cliente: QueryClient): void {
-  void cliente.invalidateQueries({ queryKey: CHAVE_DAS_ENTREGAS })
+export async function recarregarEntregas(cliente: QueryClient): Promise<void> {
   void cliente.invalidateQueries({ queryKey: CHAVE_DOS_ARTEFATOS })
+  // Quem chama espera a releitura das entregas que estão na tela: só depois a tela mostra como a entrega ficou.
+  await cliente.invalidateQueries({ queryKey: CHAVE_DAS_ENTREGAS })
 }

@@ -68,8 +68,8 @@ material `pronto` e não excluído.
 | `POST /ferramentas/:ferramenta/gerar` | `esquemaParametroFerramenta`, `esquemaPedidoGerarComFerramenta` | 202 | `ferramenta.gerar` P `tv` | `FUNCAO_SUSPENSA`; na execução, `MATERIAL_INSUFICIENTE` | |
 | `GET /artefatos` | `esquemaConsultaArtefatos` | `esquemaRespostaListaDeArtefatos` | `artefato.listar` P `tv` | | |
 | `GET /artefatos/:id` | | `esquemaRespostaArtefato` | `artefato.ler` P `tv` | | |
-| `PATCH /artefatos/:id` | `esquemaPedidoRenomearArtefato` | `esquemaRespostaArtefato` | `artefato.renomear` P `tv` | | |
-| `GET /artefatos/:id/pdf` | | binário, `Content-Disposition: attachment` | `artefato.exportar` P `tv` | | nenhuma (ver abaixo) |
+| `PATCH /artefatos/:id` | `esquemaPedidoRenomearArtefato` | `esquemaRespostaArtefato` | `artefato.renomear` P `tv` | `CONFLITO` (versão adaptada com a entrega já decidida) | |
+| `GET /artefatos/:id/pdf` | | binário, `Content-Disposition: attachment` | `artefato.exportar` P `tv` | `VERSAO_ADAPTADA_NAO_APROVADA` (versão adaptada rejeitada); pendente sai como rascunho marcado, `rascunho-….pdf` | nenhuma (ver abaixo) |
 | `POST /artefatos/:id/adaptar` | `esquemaPedidoAdaptarArtefato` | 202 | `artefato.adaptar` P `tv` | `FUNCAO_SUSPENSA`, `CONFLITO` (não é atividade, ou já é versão adaptada) | |
 | `GET /entregas` | `esquemaConsultaEntregas` | `esquemaRespostaListaDeEntregas` | `entrega.listar` P `tv` | | |
 | `POST /entregas/:id/decidir` | `esquemaPedidoDecidirEntrega` | `esquemaRespostaEntrega` | `entrega.decidir` P `tv` | `ENTREGA_JA_DECIDIDA`; `ENTRADA_INVALIDA` ao aprovar lote por aqui | `entrega.decidida` |
@@ -131,6 +131,36 @@ item 7): o schema é estrito e recusa esses campos. Troca é a mensagem do aluno
 `mensagem_tutor_trocas_idx` serve a consulta. A coordenação e o aluno não leem (`nunca`). Para a referência existir, o
 `POST /tutor/mensagens` aceita `questao` (só com `atividadeAplicadaId`) e `pagina` (só com `materialId`), que a tela do
 aluno manda quando sabe. Nesta fatia o professor não lê o texto da conversa: nenhuma rota o entrega.
+
+**A ordem das conferências do `POST /tutor/mensagens`**, todas no servidor: (1) o aluno alcança a atividade e o material
+que referencia, senão `NAO_ENCONTRADO`; (2) **assunto pessoal delicado** (D36); (3) atividade avaliativa aberta na turma,
+`TUTOR_PAUSADO_EM_AVALIACAO`; (4) o freio do dia e o pacote do mês; (5) função suspensa. As recusas de 3, 4 e 5 não
+gravam mensagem nem contam troca. **O assunto delicado passa na frente de tudo: da avaliação aberta, do freio, do pacote
+e da suspensão.** O aluno em prova, o aluno no limite do dia, a turma com o pacote esgotado e a escola com o Tutor ou os
+sinais suspensos ainda recebem `202`, a mensagem fixa (`tipo: 'assunto_delicado'`, com o 188 em risco à vida) e o sinal
+`atencao_humana` para os professores da turma, sem referência e sem conteúdo. A trava da avaliação existe para o Tutor
+não ajudar na prova, e a mensagem fixa não ajuda em prova nenhuma. Esse turno não chama modelo, a execução já volta
+`concluida`, e a pergunta fica na conversa sem a questão, o material e a página. Por isso a tela nos estados `avaliacao`
+e `limite` não trava a caixa de texto.
+
+**Sinais e uso são por turma e por disciplina**, e o recorte sai do vínculo de quem pergunta (a consulta só tem
+`turmaId`). O sinal e a troca que nasceram de uma atividade são da disciplina do artefato dela; os de material, da
+disciplina do material; e só o professor com vínculo confirmado **naquela disciplina, naquela turma**, os lê: a professora
+de Física do 2ºB não vê o que nasceu numa atividade de Química do 2ºB. O que não tem disciplina chega a **todo professor
+com vínculo confirmado na turma**: o sinal `atencao_humana`, que não tem referência nenhuma, e a troca feita fora de
+atividade e de material (senão ela seria uso invisível a todos). Em `GET /tutor/uso`, a lista de alunos, `ultimaTrocaEm`
+e `ultimaReferencia` são da disciplina de quem pergunta; **`trocasHoje`, `limiteDoDia`, `trocasDaTurmaNoMes` e
+`pacoteDaTurmaNoMes` são os do freio**, somando todas as disciplinas, para a tela nunca mostrar um número diferente do
+que o freio conta.
+
+**Os limiares dos sinais de trabalho** (`apps/api/src/tutor/sinais-do-turno.ts`; decisão de produto em aberto, ponto de
+partida da fatia). A regra só lê onde o aluno pediu ajuda (a questão da atividade, ou a página do material) e o dia de
+uso: sem texto, sem relógio e sem navegação. Sessão é o trecho de turnos seguidos na mesma referência, no mesmo dia.
+`travou`: `TROCAS_SEGUIDAS_PARA_TRAVOU` = 4 trocas seguidas na mesma questão ou página; nasce uma vez, na quarta.
+`duvida_repetida`: o turno abre uma sessão nova numa questão ou página em que o aluno já tinha pedido ajuda (saiu e
+voltou, ou voltou em outro dia), olhando os últimos `TURNOS_QUE_A_REGRA_OLHA` = 200 turnos que o Tutor respondeu. Turno
+sem questão e sem página não gera nenhum dos dois. `resposta_pronta` não tem limiar: é a classificação da regra da
+tarefa, e só com questão em andamento.
 
 ### Governança e Analista (G) — `governanca/`
 

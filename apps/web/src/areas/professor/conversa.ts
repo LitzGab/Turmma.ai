@@ -52,7 +52,31 @@ export function pedidoDeSoConversar(proposta: PropostaDeFerramenta): PedidoDaCon
   return { texto: FALA_DE_SO_CONVERSAR, turmaId: proposta.parametros.turmaId, disciplinaId: proposta.parametros.disciplinaId, resposta: 'so_conversar' }
 }
 
-/** A conversa como a tela a desenha: a lida, mais a resposta que a execução já trouxe. */
+/** Um item da conversa na tela: uma mensagem (lida, ou a resposta que a execução trouxe) ou o pedido que ainda não foi lido de volta. */
+export type ItemDaConversa = { readonly tipo: 'mensagem'; readonly mensagem: MensagemDaConversa } | { readonly tipo: 'pedido'; readonly texto: string }
+
+/**
+ * A conversa **na ordem em que aconteceu**: as mensagens lidas, depois o pedido que ainda não voltou da API e só então a
+ * resposta que a execução trouxe. A pergunta vem sempre antes da resposta dela, também no intervalo em que as duas ainda
+ * não foram lidas de volta: é nessa ordem que o registro da conversa anuncia ao leitor de tela.
+ */
+export function itensDaConversa(mensagens: readonly MensagemDaConversa[], pendente: PendenteNaConversa | undefined): ItemDaConversa[] {
+  const itens: ItemDaConversa[] = mensagens.map((mensagem) => ({ tipo: 'mensagem', mensagem }))
+  if (pendente?.pedido !== undefined) itens.push({ tipo: 'pedido', texto: pendente.pedido })
+  if (pendente?.resposta !== undefined) itens.push({ tipo: 'mensagem', mensagem: pendente.resposta })
+  return itens
+}
+
+/**
+ * O que faz a conversa rolar até o fim: a última mensagem, o pedido no ar e a etapa dele. **As mensagens anteriores que
+ * "Ver mensagens anteriores" traz não mudam nada disto**: quem foi ler o começo da conversa não é jogada para o fim.
+ */
+export function marcaDoFim(itens: readonly ItemDaConversa[], etapa: string | undefined): string {
+  const ultimo = itens.at(-1)
+  return `${ultimo === undefined ? '' : ultimo.tipo === 'mensagem' ? ultimo.mensagem.id : `pedido:${ultimo.texto}`}|${etapa ?? ''}`
+}
+
+/** As mensagens da conversa, com a resposta que a execução já trouxe: é por elas que a tela decide qual proposta pergunta. */
 export function mensagensNaTela(mensagens: readonly MensagemDaConversa[], pendente: PendenteNaConversa | undefined): readonly MensagemDaConversa[] {
   return pendente?.resposta === undefined ? mensagens : [...mensagens, pendente.resposta]
 }

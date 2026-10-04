@@ -9,7 +9,7 @@ import {
   encerrarSessoesDoUsuario,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
-import { irPelaNavegacao, esperarNovaConversa } from './__fixtures__/casca.ts'
+import { irPelaNavegacao, esperarNovaConversa, esperarAtividades } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -51,9 +51,9 @@ async function esperarAreaAutenticada(page: Page, nome: string): Promise<void> {
   await esperarNovaConversa(page, nome)
 }
 
-/** O aluno na página inicial dele, que continua sendo a "Início". */
+/** O aluno na tela em que ele abre, "Atividades" (A3), com o nome dele na lateral. */
 async function esperarInicioDoAluno(page: Page, nome: string): Promise<void> {
-  await expect(page.getByRole('heading', { name: `Olá, ${nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  await esperarAtividades(page, nome)
 }
 
 /** Minutos no formato que o relógio simulado do Playwright entende. */

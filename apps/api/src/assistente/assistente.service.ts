@@ -1,4 +1,4 @@
-import { ErroDeDominio, ErroDeIa, type Banco, type EntradaDoAssistente } from '@educa/nucleo'
+import { ErroDeDominio, ErroDeIa, proporFerramenta, type Banco, type EntradaDoAssistente } from '@educa/nucleo'
 import {
   CodigoDeErro,
   esquemaConteudoDaMensagemDoAgente,
@@ -16,7 +16,6 @@ import { exigirCitacoesEntregues } from './citacoes.js'
 import { ConversaRepository, type MensagemGravada, type PerguntaDaExecucao } from './conversa.repository.js'
 import { ExecucaoDoPedidoRepository } from './execucao-do-pedido.repository.js'
 import type { LimiteDePedidosDeIa } from './limite-de-pedidos-de-ia.js'
-import { proporFerramentaDoAssistente } from './recusa-de-correcao.js'
 import { TurmaDoProfessorRepository } from './turma-do-professor.repository.js'
 
 /** Quantos trechos do material acompanham a mensagem do professor (o teto de `esquemaEntradaDoAssistente`). */
@@ -58,7 +57,8 @@ function turnoAnterior(mensagem: MensagemGravada): EntradaDoAssistente['turnosAn
  * - **"Só conversar" é a outra opção da pergunta, com o mesmo peso**: a mensagem com `resposta: 'so_conversar'` é
  *   respondida em texto, sobre o último pedido dele, e nunca com outra proposta. Sem a marca, nada muda.
  * - **Pedido de adaptação vira texto que aponta a ferramenta** (a Adaptação recebe só o tipo, D67), e **pedido de
- *   corrigir redação ou discursiva é recusado por regra fixa**, sem chamar modelo (D55).
+ *   julgar texto ou resposta de aluno, ou de dar nota, conceito ou pontuação, é recusado por regra fixa da tarefa**,
+ *   sem chamar modelo; a resposta que trouxer nota é recusada na conferência da saída, e nada é gravado (D55).
  * - **O texto do professor mora só em `mensagem_agente`**: não vai para `execucao_agente.entrada`, consumo, auditoria
  *   nem log (regra 20, item 9).
  */
@@ -89,7 +89,7 @@ export class AssistenteService {
     // O que a execução leu antes de chamar o modelo, e que a conclusão usa: só existe depois de `entrada` rodar.
     let lido: { pergunta: PerguntaDaExecucao; entregues: readonly TrechoDoMaterial[] } | undefined
     return this.agendador.agendar({
-      tarefa: proporFerramentaDoAssistente,
+      tarefa: proporFerramenta,
       chaveEnvio: pedido.chaveEnvio,
       // A marca de "só conversar" é de lista fechada, e fica com a execução; o texto da professora, só na conversa.
       entradaDaExecucao: { tarefa: 'propor_ferramenta', ...(pedido.resposta === undefined ? {} : { resposta: pedido.resposta }) },

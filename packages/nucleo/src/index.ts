@@ -268,7 +268,15 @@ export { esquemaEntradaDeAtividadeObjetiva, gerarAtividadeObjetiva } from './ia/
 export type { EntradaDeAtividadeObjetiva } from './ia/tarefas/gerar-atividade-objetiva.js'
 export { esquemaEntradaDePlanoDeAula, gerarPlanoDeAula } from './ia/tarefas/gerar-plano-de-aula.js'
 export type { EntradaDePlanoDeAula } from './ia/tarefas/gerar-plano-de-aula.js'
-export { esquemaEntradaDoAssistente, esquemaPropostaDoAssistente, esquemaSaidaDoAssistente, proporFerramenta } from './ia/tarefas/propor-ferramenta.js'
+export {
+  atribuiNotaOuConceito,
+  esquemaEntradaDoAssistente,
+  esquemaPropostaDoAssistente,
+  esquemaSaidaDoAssistente,
+  pedeJulgamentoDeTextoDeAluno,
+  proporFerramenta,
+  RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO,
+} from './ia/tarefas/propor-ferramenta.js'
 export type { EntradaDoAssistente, PropostaDoAssistente, SaidaDoAssistente } from './ia/tarefas/propor-ferramenta.js'
 export { esquemaEntradaDoRelatorio, esquemaSaidaDoRelatorio, relatorioDaCorrecao } from './ia/tarefas/relatorio-da-correcao.js'
 export type { EntradaDoRelatorio, SaidaDoRelatorio } from './ia/tarefas/relatorio-da-correcao.js'
