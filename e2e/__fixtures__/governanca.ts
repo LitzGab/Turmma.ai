@@ -71,7 +71,11 @@ export async function montarEscolaComEntregas(escolaId: string, coordenadoraId: 
     const doB = { id: await turma(`2ºB ${marca}`), nome: `2ºB ${marca}` }
     const doC = { id: await turma(`2ºC ${marca}`), nome: `2ºC ${marca}` }
 
-    const pessoa = (papel: 'professor' | 'aluno', nome: string) => id(banco, 'insert into usuario (escola_id, papel, nome) values ($1, $2, $3) returning id', [escolaId, papel, nome])
+    // A equipe tem conta (o banco exige); o aluno, não.
+    const pessoa = async (papel: 'professor' | 'aluno', nome: string): Promise<string> => {
+      const contaId = papel === 'aluno' ? null : await id(banco, 'insert into conta (email) values ($1) returning id', [`professor-${randomUUID()}@educa.invalid`])
+      return id(banco, 'insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, $3, $4) returning id', [escolaId, contaId, papel, nome])
+    }
     const vincular = (usuarioId: string, turmaId: string, disciplinaId: string | null, papel: 'professor' | 'aluno') =>
       banco.query("insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, estado, decidido_em, criado_por) values ($1, $2, $3, $4, $5, $6, 'confirmado', now(), $7)", [
         escolaId,
