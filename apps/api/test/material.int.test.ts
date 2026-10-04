@@ -130,6 +130,28 @@ describe('material da escola', () => {
       for (const resposta of [semLicenciante, licencianteAMais, comEscola]) expect(erroDe(resposta)).toEqual({ status: 400, codigo: CodigoDeErro.ENTRADA_INVALIDA })
       expect(await materiaisDa(bancada, escola.coordenacao.escolaId)).toHaveLength(1)
     })
+
+    it('o licenciante é da coordenação: o professor da disciplina lê o material sem ele, na lista e por id', async () => {
+      const escola = await montarEscolaComTurma(api, bancada)
+      const deTerceiro = await enviarMaterial(api, escola.coordenacao, { disciplinaId: escola.quimica, titularidade: 'terceiro_com_licenca', licenca: 'licenca_comercial_autorizada', licenciante: 'Editora sintética' })
+      expect(deTerceiro.status).toBe(201)
+      await esperarExtracao(api)
+      const id = deTerceiro.corpo['id'] as string
+      const professor = await professorCom(escola, escola.quimica, true)
+
+      const lidoPelaCoordenacao = await get(escola.coordenacao, `/v1/materiais/${id}`)
+      expect(lidoPelaCoordenacao.corpo).toMatchObject({ id, licenciante: 'Editora sintética' })
+      const listadoPelaCoordenacao = await get(escola.coordenacao, '/v1/materiais')
+      expect(listadoPelaCoordenacao.corpo['itens']).toEqual([expect.objectContaining({ id, licenciante: 'Editora sintética' })])
+
+      const lidoPeloProfessor = await get(professor, `/v1/materiais/${id}`)
+      expect(lidoPeloProfessor.status).toBe(200)
+      // O resto do material ele lê: é a titularidade e a licença que dizem que a escola pode usar.
+      expect(lidoPeloProfessor.corpo).toMatchObject({ id, titularidade: 'terceiro_com_licenca', licenca: 'licenca_comercial_autorizada', licenciante: null })
+      const listadoPeloProfessor = await get(professor, '/v1/materiais')
+      expect(listadoPeloProfessor.corpo['itens']).toEqual([expect.objectContaining({ id, licenciante: null })])
+      expect(JSON.stringify([lidoPeloProfessor.corpo, listadoPeloProfessor.corpo])).not.toContain('Editora sintética')
+    })
   })
 
   describe('recusa por licença, antes de abrir o arquivo (D5, D75)', () => {
