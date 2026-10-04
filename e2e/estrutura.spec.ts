@@ -840,10 +840,11 @@ test.describe('W10 e W4 (Lista): a lista de nomes da turma', () => {
     await campo.fill(`Aluno;RA\nCom documento ${marca};123.456.789-09`)
     await acionar(verPrevia, hasTouch)
     const comAvisos = principal(page).getByRole('region', { name: 'Prévia' })
-    await expect(comAvisos.getByRole('status')).toHaveText('2 nomes entram · 0 já estão na lista · 0 linhas com erro', { timeout: PRAZO_DA_ENTRADA_MS })
+    // A linha que parece CPF é erro da API (correção 2026-10-03-trava-de-documento-so-na-tela), e não "entra".
+    await expect(comAvisos.getByRole('status')).toHaveText('1 nome entra · 0 já estão na lista · 1 linha com erro', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(comAvisos).toContainText('A primeira linha parece um cabeçalho, e vai entrar como aluno.')
     await expect(comAvisos).toContainText('A segunda coluna parece CPF ou data de nascimento, e não matrícula.')
-    // A linha suspeita diz o porquê, em vez de "Entra na lista", e o motivo de não gravar não repete o aviso.
+    // A linha suspeita diz o porquê, como erro, em vez de "Entra na lista", e o motivo de não gravar não repete o aviso.
     await expect(comAvisos.getByRole('listitem').filter({ hasText: '123.456.789-09' })).toContainText('Parece CPF ou data de nascimento, e não matrícula: confira esta linha.')
     await expect(comAvisos.getByRole('listitem').filter({ hasText: '123.456.789-09' })).not.toContainText('Entra na lista')
     await expect(comAvisos).toContainText('Nada é gravado enquanto a segunda coluna parecer CPF ou data de nascimento.')

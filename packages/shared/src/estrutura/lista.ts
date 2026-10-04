@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { esquemaNomeDigitado } from '../operacao/painel.js'
+import { pareceDocumento } from './documento-na-matricula.js'
 import { TAMANHO_MAXIMO_MATRICULA } from '../sessao/matricula.js'
 import { esquemaConsultaPaginada, esquemaDePagina } from './paginacao.js'
 import { FINALIDADES_DA_LEITURA_DE_ALUNOS } from './turma.js'
@@ -37,8 +38,12 @@ export const esquemaMatriculaDigitada = z
 export const esquemaPedidoTextoDaLista = z.strictObject({ texto: z.string() })
 export type PedidoTextoDaLista = z.infer<typeof esquemaPedidoTextoDaLista>
 
-/** Corpo de `POST /v1/turmas/:id/lista/nome`: o nome avulso, com as regras de cada linha do texto. */
-export const esquemaPedidoNomeAvulso = z.strictObject({ nome: esquemaNomeDigitado, matricula: esquemaMatriculaDigitada })
+/**
+ * Corpo de `POST /v1/turmas/:id/lista/nome`: o nome avulso, com as regras de cada linha do texto. A matrícula com forma
+ * de CPF pontuado ou de data é `ENTRADA_INVALIDA` (regra 20, item 2; correção `2026-10-03-trava-de-documento-so-na-tela`);
+ * a de CPF sem pontuação, sozinha, passa: pesa só na lista, pela maioria (`matriculasQueParecemDocumento`).
+ */
+export const esquemaPedidoNomeAvulso = z.strictObject({ nome: esquemaNomeDigitado, matricula: esquemaMatriculaDigitada.refine((matricula) => !pareceDocumento(matricula)) })
 export type PedidoNomeAvulso = z.infer<typeof esquemaPedidoNomeAvulso>
 
 /** O que acontece com a linha se a lista for gravada: entra, já está na lista desta turma, ou tem erro. */
@@ -49,10 +54,20 @@ export type ResultadoDaLinhaDaLista = (typeof RESULTADOS_DA_LINHA_DA_LISTA)[numb
  * O erro da linha, um só, na ordem em que é conferido:
  * - `sem_nome`, `nome_invalido`: o nome vazio; com mais de 200 caracteres ou caractere de controle;
  * - `sem_matricula`, `matricula_invalida`: a matrícula vazia; com mais de 40 ou caractere de controle;
+ * - `matricula_parece_documento`: a matrícula com forma de CPF pontuado ou de data, ou de CPF sem pontuação quando a
+ *   maioria da lista tem essa forma (`matriculasQueParecemDocumento`; regra 20, item 2);
  * - `matricula_repetida`: a mesma matrícula em mais de uma linha do texto (todas as linhas dela são apontadas);
  * - `matricula_em_uso`: a matrícula está na lista de outra turma da escola neste ano, ou é de um aluno da escola.
  */
-export const ERROS_DA_LINHA_DA_LISTA = ['sem_nome', 'nome_invalido', 'sem_matricula', 'matricula_invalida', 'matricula_repetida', 'matricula_em_uso'] as const
+export const ERROS_DA_LINHA_DA_LISTA = [
+  'sem_nome',
+  'nome_invalido',
+  'sem_matricula',
+  'matricula_invalida',
+  'matricula_parece_documento',
+  'matricula_repetida',
+  'matricula_em_uso',
+] as const
 export type ErroDaLinhaDaLista = (typeof ERROS_DA_LINHA_DA_LISTA)[number]
 
 /**

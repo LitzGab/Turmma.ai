@@ -179,6 +179,7 @@ export {
   MAXIMO_DE_LINHAS_DA_LISTA,
   RESULTADOS_DA_LINHA_DA_LISTA,
 } from './estrutura/lista.js'
+export { matriculasQueParecemDocumento, pareceCpfSemPontuacao, pareceDocumento } from './estrutura/documento-na-matricula.js'
 export type {
   ConsultaListaDaTurma,
   ErroDaLinhaDaLista,

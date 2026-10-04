@@ -64,15 +64,21 @@ Sob `/v1`, escopo do contexto; uma célula da `MATRIZ` por rota:
   O 23503 vira `CONFLITO` só em `apps/api/src/estrutura/exclusao.ts`
 - `POST turmas/:id/lista/previa` e `…/lista` (coordenador), até 200 linhas e 64 KB: `entra`, `ja_existe` (na lista ou
   aprovada na turma) ou `erro` por linha; grava só sem erro. O erro da linha é um de `ERROS_DA_LINHA_DA_LISTA`
-  (`sem_nome`, `nome_invalido`, `sem_matricula`, `matricula_invalida`, `matricula_repetida`, `matricula_em_uso`); a
-  gravação com erro que o texto sozinho mostra responde `ENTRADA_INVALIDA`, e com matrícula em uso, `CONFLITO` (2.0).
+  (`sem_nome`, `nome_invalido`, `sem_matricula`, `matricula_invalida`, `matricula_parece_documento`,
+  `matricula_repetida`, `matricula_em_uso`); a gravação com erro que o texto sozinho mostra responde `ENTRADA_INVALIDA`,
+  e com matrícula em uso, `CONFLITO` (2.0). `matricula_parece_documento` é a matrícula com forma de CPF pontuado ou de
+  data, ou de CPF sem pontuação (11 algarismos com o dígito verificador certo) quando é mais da metade das matrículas
+  preenchidas e pelo menos duas, pelas funções de `packages/shared/src/estrutura/documento-na-matricula.ts`, as mesmas
+  da tela (regra 20, item 2; correção `2026-10-03-trava-de-documento-so-na-tela`, G2 da validação).
   Nome e matrícula seguem as regras do avulso (uma linha, sem caractere de controle, até 200 e 40). O separador é o da
   primeira linha que tem um; o cabeçalho dá a ordem das colunas; texto sem linha de aluno é `ENTRADA_INVALIDA` (2.0).
   A gravação e o avulso travam o ano em curso em `for share` (10.0, C10) e depois a turma em `for key share`
   (`TurmaRepository.travarContraExclusao`, C9); a gravação que
   perde para outra, ao mesmo tempo, a matrícula de **outra** turma volta atrás com `CONFLITO` (2.0)
 - `POST turmas/:id/lista/nome`, `DELETE lista-nomes/:id`, `GET turmas/:id/lista` (coordenador; a leitura
-  `nominal_auditado`): o avulso sem nome ou matrícula dá `ENTRADA_INVALIDA`; com matrícula na lista da escola (pelo
+  `nominal_auditado`): o avulso sem nome ou matrícula, ou com matrícula com forma de CPF pontuado ou de data (no
+  contrato, `esquemaPedidoNomeAvulso`; o CPF sem pontuação sozinho passa), dá `ENTRADA_INVALIDA`; com matrícula na
+  lista da escola (pelo
   índice único, 23505) ou em `credencial_matricula`, `CONFLITO`; nada gravado. Retira só `livre`, senão `CONFLITO`. A
   leitura é paginada por id e exige a finalidade de `FINALIDADES_DA_LEITURA_DE_ALUNOS`, conferida antes de procurar a
   turma. As cinco rotas são o recurso `lista_nome` da `MATRIZ` (`ler`, `previa`, `gravar`, `acrescentar`, `retirar`)
@@ -318,7 +324,9 @@ com o retrato antigo) e sai `NAO_ENCONTRADO`; o gerar que já tinha a turma term
     disciplinas; a alocação corta sem aviso acima de 1.000 vínculos ou professores, o que não acontece numa escola do
     recorte: `TODO.md`)
   - A prévia avisa o título antes da lista, o cabeçalho não reconhecido e a coluna que parece CPF ou data; esta última
-    segura a gravação (regra 20, item 2). A gravação recusada pela API tira a prévia; a que cai por rede ou servidor a
+    segura a gravação (regra 20, item 2), e a API também a recusa: a linha vem com `matricula_parece_documento`
+    (correção `2026-10-03-trava-de-documento-so-na-tela`). A gravação recusada pela API tira a prévia; a que cai por
+    rede ou servidor a
     mantém. O arquivo em UTF-16 com BOM (o "Texto Unicode" do Excel) também é lido, com teto de 128 KB. Com dois alunos
     de mesmo nome, o "Retirar" e a confirmação dizem a matrícula
   - A alocação oferece só os professores de `ESTADOS_DO_PROFESSOR_ALOCAVEIS` (seção 13)
@@ -335,10 +343,12 @@ com o retrato antigo) e sai `NAO_ENCONTRADO`; o gerar que já tinha a turma term
     a resposta que chega com a pessoa já de volta no campo, não tiram o foco dele
   - A web pede a API sem cache HTTP (`cache: 'no-store'` no `chamarApi`): respostas com nome e matrícula não ficam em
     disco no computador da escola. O nome avulso tem a mesma trava da lista colada para matrícula que parece CPF ou
-    data, e os dois campos ficam fora do corretor ortográfico. O arquivo que o navegador não consegue ler tem aviso. Na
+    data, pela mesma função do contrato que a API usa (`pareceDocumento`), e os dois campos ficam fora do corretor
+    ortográfico. O arquivo que o navegador não consegue ler tem aviso. Na
     turma nova, a série que saiu da lista sai da escolha
   - A tela segura antes de enviar o texto vazio, o texto acima de 64 KB e a lista acima de 200 nomes e um cabeçalho (o
-    que a API recusaria; entre 200 e 201 linhas, decide a API). A prévia marca a linha que parece CPF ou data. Os
+    que a API recusaria; entre 200 e 201 linhas, decide a API). A prévia mostra como erro a linha que a API marca como
+    CPF ou data. Os
     diálogos de criar, renomear, excluir e retirar fecham com a lista já recarregada, e o foco vai ao título da seção
     quando o botão que abriu saiu com o item. O `perigo` tem duas classes em `componentes/botao-secundario.ts` (texto em
     `erro` na linha; cheio só na confirmação). O vazio da Alocação diz o que falta (turma, disciplina ou professor

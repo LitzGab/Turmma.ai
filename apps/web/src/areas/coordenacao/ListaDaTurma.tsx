@@ -1,4 +1,4 @@
-import { CodigoDeErro, nomeDaSerie, TAMANHO_MAXIMO_MATRICULA, TAMANHO_MAXIMO_NOME_DIGITADO, type EstadoDoNomeDaLista, type NomeDaLista, type RespostaPreviaDaLista } from '@educa/shared'
+import { CodigoDeErro, nomeDaSerie, pareceDocumento, TAMANHO_MAXIMO_MATRICULA, TAMANHO_MAXIMO_NOME_DIGITADO, type EstadoDoNomeDaLista, type NomeDaLista, type RespostaPreviaDaLista } from '@educa/shared'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { useCallback, useEffect, useId, useRef, useState, type ChangeEvent, type RefObject } from 'react'
@@ -22,9 +22,7 @@ import { comQuebrasDoCampo, lerArquivoDaLista, tetoPassado, type MotivoDoArquivo
 import {
   avisosDaPrevia,
   linhasNaOrdemDaTela,
-  pareceDocumento,
   podeGravar,
-  TEXTO_DA_LINHA_QUE_PARECE_DOCUMENTO,
   TEXTO_DO_AVISO,
   TEXTO_DO_ERRO_DA_LINHA,
   TEXTO_DO_RESULTADO,
@@ -512,9 +510,8 @@ function PreviaDaLista({ previa, tituloRef, gravando, aoGravar }: PropsDaPrevia)
       ))}
       <ol className="flex flex-col gap-2">
         {linhasNaOrdemDaTela(previa.linhas).map((linha) => {
-          // A linha que a API aceitaria e a tela segura: ela diz o porquê, em vez de "Entra na lista".
-          const suspeita = linha.resultado !== 'erro' && pareceDocumento(linha.matricula)
-          const tom = linha.resultado === 'erro' ? 'border-erro bg-erro-cx text-erro' : suspeita ? 'border-pendente bg-pendente-cx text-pendente' : 'border-linha bg-superficie text-tinta'
+          // A linha que parece CPF ou data vem da API como erro (`matricula_parece_documento`), com o texto dela.
+          const tom = linha.resultado === 'erro' ? 'border-erro bg-erro-cx text-erro' : 'border-linha bg-superficie text-tinta'
           return (
             <li key={linha.linha} className={`min-w-0 rounded-controle border p-3 break-words ${tom}`}>
               <span className="font-medium">Linha {linha.linha}</span>
@@ -522,11 +519,7 @@ function PreviaDaLista({ previa, tituloRef, gravando, aoGravar }: PropsDaPrevia)
               {linha.nome === '' ? '(sem nome)' : linha.nome}
               {linha.matricula === '' ? '' : ` · ${linha.matricula}`}
               <span className="block text-sm">
-                {linha.resultado === 'erro'
-                  ? `Erro: ${linha.erro === undefined ? '' : TEXTO_DO_ERRO_DA_LINHA[linha.erro]}`
-                  : suspeita
-                    ? TEXTO_DA_LINHA_QUE_PARECE_DOCUMENTO
-                    : TEXTO_DO_RESULTADO[linha.resultado]}
+                {linha.resultado === 'erro' ? `Erro: ${linha.erro === undefined ? '' : TEXTO_DO_ERRO_DA_LINHA[linha.erro]}` : TEXTO_DO_RESULTADO[linha.resultado]}
               </span>
             </li>
           )
@@ -586,6 +579,8 @@ function NomeAvulso({ turmaId, aoFechar, aoAcrescentar, recarregar }: { turmaId:
           ? textoDaFalha(mutacao.error, {
               [CodigoDeErro.CONFLITO]: 'Esta matrícula já está na lista de uma turma da escola ou é de um aluno da escola. Nada foi gravado.',
               [CodigoDeErro.NAO_ENCONTRADO]: 'Esta turma não está mais no ano letivo em curso. Nada foi gravado.',
+              // A tela segura antes, com a mesma regra do contrato; se as duas divergirem, a recusa da API diz o que fazer.
+              [CodigoDeErro.ENTRADA_INVALIDA]: 'Confira o nome e a matrícula: a matrícula não pode ter forma de CPF ou de data de nascimento. Nada foi gravado.',
             })
           : undefined
       }

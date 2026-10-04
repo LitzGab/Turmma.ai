@@ -5,6 +5,7 @@ import {
   esquemaNomeDigitado,
   MAXIMO_DE_BYTES_DA_LISTA,
   MAXIMO_DE_LINHAS_DA_LISTA,
+  matriculasQueParecemDocumento,
   type ErroDaLinhaDaLista,
 } from '@educa/shared'
 
@@ -109,16 +110,22 @@ export function lerTextoDaLista(texto: string): LinhaLida[] {
 
 /**
  * O erro de cada linha que se confere sem o banco, na posição dela, ou `undefined` (A1, 2.0, E4): primeiro o nome
- * (`sem_nome`, `nome_invalido`), depois a matrícula (`sem_matricula`, `matricula_invalida`), depois a repetição no texto
- * (`matricula_repetida`, em cada linha da matrícula que aparece mais de uma vez; a linha que tem outro erro conta na
- * repetição, e mostra o erro dela). O nome e a matrícula seguem as regras do nome avulso (`esquemaNomeDigitado`, `esquemaMatriculaDigitada`): as duas entradas gravam a mesma coisa.
+ * (`sem_nome`, `nome_invalido`), depois a matrícula (`sem_matricula`, `matricula_invalida`), depois a forma de
+ * documento (`matricula_parece_documento`: CPF pontuado ou data, ou CPF sem pontuação na lista que é uma coluna de CPF,
+ * `matriculasQueParecemDocumento` de `packages/shared`, a mesma que a tela usa; regra 20, item 2), depois a repetição no
+ * texto (`matricula_repetida`, em cada linha da matrícula que aparece mais de uma vez; a linha que tem outro erro conta
+ * na repetição, e mostra o erro dela). O nome e a matrícula seguem as regras do nome avulso (`esquemaNomeDigitado`, `esquemaMatriculaDigitada`): as duas entradas gravam a mesma coisa.
  */
 export function errosDasLinhas(linhas: readonly LinhaLida[]): Array<ErroDaLinhaDaLista | undefined> {
-  const doCampo = linhas.map(({ nome, matricula }): ErroDaLinhaDaLista | undefined => {
+  // A maioria da coluna de CPF conta todas as matrículas preenchidas, também as de linha com outro erro: é a coluna do
+  // texto que se julga, e a linha errada por outro motivo continua sendo uma linha daquela coluna.
+  const parecemDocumento = matriculasQueParecemDocumento(linhas.map((linha) => linha.matricula))
+  const doCampo = linhas.map(({ nome, matricula }, posicao): ErroDaLinhaDaLista | undefined => {
     if (nome === '') return 'sem_nome'
     if (!esquemaNomeDigitado.safeParse(nome).success) return 'nome_invalido'
     if (matricula === '') return 'sem_matricula'
     if (!esquemaMatriculaDigitada.safeParse(matricula).success) return 'matricula_invalida'
+    if (parecemDocumento[posicao] === true) return 'matricula_parece_documento'
     return undefined
   })
   const vezes = new Map<string, number>()

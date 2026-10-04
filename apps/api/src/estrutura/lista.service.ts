@@ -80,8 +80,9 @@ export class ListaService {
 
   /**
    * `POST /v1/turmas/:id/lista`: grava a lista só se nenhuma linha tiver erro, e grava `lista.gravada` na mesma
-   * transação. O erro que o texto sozinho mostra (sem nome, sem matrícula, repetida no texto) é `ENTRADA_INVALIDA`, antes
-   * de procurar a turma; a matrícula em uso, que depende do que já está gravado, é `CONFLITO`. Nos dois, nada é gravado.
+   * transação. O erro que o texto sozinho mostra (sem nome, sem matrícula, com forma de documento, repetida no texto) é
+   * `ENTRADA_INVALIDA`, antes de procurar a turma; a matrícula em uso, que depende do que já está gravado, é `CONFLITO`.
+   * Nos dois, nada é gravado.
    *
    * - O ano em curso fica travado em `FOR SHARE` (10.0, C10), antes da turma: o `encerrar` que chega depois espera e
    *   apaga os nomes livres que ela gravou; o que chegou antes faz a gravação responder `NAO_ENCONTRADO`.

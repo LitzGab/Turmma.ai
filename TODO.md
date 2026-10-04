@@ -56,20 +56,32 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 - [ ] **A lista de nomes colada pela coordenação** (`privacy-guardian` e `revisor-geral`, 13.0 da A1), antes de qualquer
       dado real, a levar para o `/validar` da A1:
-      - CPF sem pontuação passa pela trava da prévia (`previa-da-lista.ts` pega só `000.000.000-00` e datas; o Excel
-        exporta CPF como número de 11 algarismos): marcar quando a maioria das linhas tem 11 algarismos com dígitos
-        verificadores válidos
+      - [x] ~~CPF sem pontuação passa pela trava da prévia~~ — a lista com mais da metade das matrículas, e pelo menos
+        duas, em 11 algarismos com dígito verificador de CPF válido tem essas linhas recusadas pela API; o avulso
+        sozinho passa (correção `2026-10-03-trava-de-documento-so-na-tela`)
       - colunas a mais (nascimento, CPF, telefone numa exportação da secretaria) trafegam no corpo da prévia e da
         gravação, sem serem gravadas nem logadas: a tela avisar, ou recortar para nome e matrícula antes de enviar
       - a sessão que vence com a lista colada na tela: hoje o texto e a prévia somem porque a consulta da turma volta a
         pendente (seguro para a pessoa seguinte, e o rascunho de quem volta se perde). Decidir se o rascunho sobrevive
         para a mesma pessoa, e ter um e2e do caso "outra pessoa" (nenhum nome nem matrícula atrás do login por cima)
-      - a trava de CPF ou data existe só na tela (`pareceDocumento`, na prévia e no nome avulso): a API aceita a
-        matrícula com essa forma, na lista e no avulso, de qualquer outro cliente. Decidir se a regra vai para o
-        contrato (`packages/shared`, regra 00, item 1), junto com a saída para o falso positivo, que no servidor pesa mais
+      - [x] ~~a trava de CPF ou data existe só na tela~~ — a regra foi para o contrato
+        (`packages/shared/src/estrutura/documento-na-matricula.ts`), e a API recusa na prévia
+        (`matricula_parece_documento`), na gravação da lista e no avulso (`ENTRADA_INVALIDA`) (correção
+        `2026-10-03-trava-de-documento-so-na-tela`, G2). A saída para o falso positivo segue no item abaixo, e no
+        servidor ela pesa mais
       - a trava de documento não tem saída para falso positivo: a escola cuja matrícula tenha forma de data
-        (`2026-02-01`, `1/2/26`) não consegue gravar, nem pela lista nem pelo avulso, e o texto não diz o que fazer.
-        Perguntar o formato da matrícula nas entrevistas do piloto
+        (`2026-02-01`, `1/2/26`) não consegue gravar, nem pela lista nem pelo avulso, e o texto não diz o que fazer; a
+        recusa agora é da API, e nenhum cliente contorna. Perguntar o formato da matrícula nas entrevistas do piloto. Junto, o motivo de não
+        gravar diz "a segunda coluna" mesmo com uma linha só; "enquanto houver matrícula que pareça CPF ou data de
+        nascimento" serve aos dois (`frontend-reviewer`, correção `2026-10-03-trava-de-documento-so-na-tela`)
+      - o CPF que o Excel exporta como número perde o zero à esquerda (`012.345.678-90` vira `1234567890`, 10
+        algarismos), e `pareceCpfSemPontuacao` não o reconhece: na coluna inteira de CPF a lista já é recusada pelas
+        outras linhas, mas, se a coordenação apagar só as marcadas, as de 10 algarismos ficam abaixo da maioria e gravam.
+        Completar com zeros à esquerda antes de conferir o dígito, com o falso positivo medido (`test-engineer` da
+        correção `2026-10-03-trava-de-documento-so-na-tela`)
+      - e2e da coluna com maioria de CPF sem pontuação na tela (`test-engineer` e `frontend-reviewer` da mesma
+        correção): hoje provada na integração e na unidade da web; o job de e2e está perto do teto de 45 min, e o caso
+        entra quando o e2e da lista for dividido
       - `Cache-Control: no-store` nas respostas nominais da API (`/retro` da A1, registrado no `2_task.md`): a web já
         pede sem cache (`cache: 'no-store'` no `chamarApi`, 13.0); falta o cabeçalho, para qualquer outro cliente
 

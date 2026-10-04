@@ -9,7 +9,8 @@ import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 /**
  * A lista de nomes da turma (A1, tarefa 2.0; `tasks/prd-apresentacao-escola/cenarios.md`): E4, E5, E6 e E7 (sem o
  * aprovado nem o reivindicado de verdade, que chegam na 6.0 e na 8.0), a parte da lista do E2, o check da `lista_nome`,
- * o conteúdo de A1 e A2, C8, C9, a gravação ao mesmo tempo em duas turmas, e o log. As varreduras I3, P1, A1, A3 e A4 das
+ * o conteúdo de A1 e A2, C8, C9, a gravação ao mesmo tempo em duas turmas, a matrícula com forma de documento (G2), e
+ * o log. As varreduras I3, P1, A1, A3 e A4 das
  * cinco rotas moram em `escola-montada.int.test.ts`, e o E3 (a leitura do texto) em `leitor-da-lista.test.ts`.
  * Postgres real do compose de teste; nomes e matrículas gerados.
  */
@@ -420,6 +421,86 @@ describe('lista de nomes da turma (A1, tarefa 2.0): prévia, gravação, avulso,
     })
   })
 
+  /**
+   * G2 da validação da A1 (correção `2026-10-03-trava-de-documento-so-na-tela`; regra 00, item 1; regra 20, item 2): a
+   * matrícula com forma de CPF ou de data é recusada pela API, sem a tela no caminho. CPFs sintéticos, com o dígito
+   * verificador calculado.
+   */
+  describe('G2: a matrícula com forma de documento, recusada pela API', () => {
+    const CPFS_SEM_PONTUACAO = ['12345678909', '52998224725', '11144477735'] as const
+
+    it('G2: a matrícula com forma de CPF ou de data é recusada pela API na prévia (linha com `matricula_parece_documento`), na gravação e no avulso (ENTRADA_INVALIDA), e nada é gravado', async () => {
+      const e = await escolaComTurmas()
+      for (const documento of ['123.456.789-09', '01/02/2012', '1/2/12', '2012-02-01']) {
+        const boa: [string, string] = [nome(), matricula()]
+        const suspeita: [string, string] = [nome(), documento]
+        const lista = texto([boa, suspeita])
+
+        const lida = await previa(e, e.t1, lista)
+        expect(lida.status, documento).toBe(200)
+        expect(esquemaRespostaPreviaDaLista.parse(lida.corpo), documento).toEqual({
+          linhas: [
+            { linha: 1, nome: boa[0], matricula: boa[1], resultado: 'entra' },
+            { linha: 2, nome: suspeita[0], matricula: documento, resultado: 'erro', erro: 'matricula_parece_documento' },
+          ],
+          entram: 1,
+          jaExistem: 0,
+          comErro: 1,
+        })
+
+        const antes = await retrato(e.escolaId)
+        expect(semRequisicao(await gravar(e, e.t1, lista)), documento).toEqual(ENTRADA_INVALIDA)
+        expect(semRequisicao(await avulso(e, e.t1, { nome: nome(), matricula: documento })), documento).toEqual(ENTRADA_INVALIDA)
+        // Com espaço nas pontas, que o contrato tira antes de conferir.
+        expect(semRequisicao(await avulso(e, e.t1, { nome: nome(), matricula: `  ${documento} ` })), documento).toEqual(ENTRADA_INVALIDA)
+        expect(await retrato(e.escolaId), documento).toEqual(antes)
+      }
+      // Controle: a mesma lista sem a linha suspeita grava, e o avulso com matrícula normal entra.
+      await gravada(e, e.t1, [[nome(), matricula()]])
+      expect((await avulso(e, e.t1, { nome: nome(), matricula: matricula() })).status).toBe(201)
+    })
+
+    it('G2: a lista com maioria de CPF sem pontuação é marcada como coluna de CPF: cada CPF sai com `matricula_parece_documento`, a gravação é recusada, e nada é gravado', async () => {
+      const e = await escolaComTurmas()
+      const [a, b, c] = CPFS_SEM_PONTUACAO
+      const outra = matricula()
+      const linhas: Array<[string, string]> = [
+        [nome(), a],
+        [nome(), b],
+        [nome(), outra],
+        [nome(), c],
+      ]
+      const lida = await previa(e, e.t1, texto(linhas))
+      expect(lida.status).toBe(200)
+      const resposta = esquemaRespostaPreviaDaLista.parse(lida.corpo)
+      expect(resposta.linhas.map((linha) => [linha.matricula, linha.resultado, linha.erro])).toEqual([
+        [a, 'erro', 'matricula_parece_documento'],
+        [b, 'erro', 'matricula_parece_documento'],
+        [outra, 'entra', undefined],
+        [c, 'erro', 'matricula_parece_documento'],
+      ])
+      expect({ entram: resposta.entram, comErro: resposta.comErro }).toEqual({ entram: 1, comErro: 3 })
+
+      const antes = await retrato(e.escolaId)
+      expect(semRequisicao(await gravar(e, e.t1, texto(linhas)))).toEqual(ENTRADA_INVALIDA)
+      expect(await retrato(e.escolaId)).toEqual(antes)
+    })
+
+    it('G2: o CPF sem pontuação que não é maioria não é marcado: a lista com um só entre matrículas normais grava, e o avulso sozinho entra (matrícula numérica de 11 algarismos)', async () => {
+      const e = await escolaComTurmas()
+      const [a, b] = CPFS_SEM_PONTUACAO
+      const linhas: Array<[string, string]> = [
+        [nome(), a],
+        [nome(), matricula()],
+        [nome(), matricula()],
+      ]
+      const lida = esquemaRespostaPreviaDaLista.parse((await previa(e, e.t1, texto(linhas))).corpo)
+      expect(lida.comErro).toBe(0)
+      await gravada(e, e.t1, linhas)
+      expect((await avulso(e, e.t1, { nome: nome(), matricula: b })).status).toBe(201)
+    })
+  })
+
   describe('o banco: o check e as FKs da `lista_nome`', () => {
     /** O SQLSTATE e a restrição do erro do `insert`, ou `ok`. */
     async function resultadoDo(consulta: Promise<unknown>): Promise<string> {
@@ -656,6 +737,7 @@ describe('lista de nomes da turma (A1, tarefa 2.0): prévia, gravação, avulso,
 
   it('log (A4): as rotas da lista, com e sem erro, não logam nome, matrícula nem o texto', async () => {
     const e = await escolaComTurmas()
+    const CPF_SENTINELA = '987.654.321-00'
     const quem = `${PREFIXO} Sentinela ${randomUUID().slice(0, 8)}`
     const qual = `${PREFIXO}-sentinela-${randomUUID().slice(0, 8)}`
     linhasDeLog.length = 0
@@ -666,15 +748,18 @@ describe('lista de nomes da turma (A1, tarefa 2.0): prévia, gravação, avulso,
       await gravar(e, e.t2, texto([[quem, qual]])),
       await avulso(e, e.t2, { nome: quem, matricula: qual }),
       await avulso(e, e.t2, { nome: quem }),
+      // G2: a matrícula com forma de documento recusada não vai ao log, nem a linha dela na prévia.
+      await avulso(e, e.t2, { nome: quem, matricula: CPF_SENTINELA }),
+      await previa(e, e.t1, texto([[quem, CPF_SENTINELA]])),
       await ler(e, e.t1),
       await ler(e, e.t1, ''),
       await retirar(e, await idDaMatricula(e.escolaId, qual)),
       await retirar(e, randomUUID()),
     ]
-    expect(respostas.map((resposta) => resposta.status)).toEqual([200, 400, 201, 409, 409, 400, 200, 400, 204, 404])
+    expect(respostas.map((resposta) => resposta.status)).toEqual([200, 400, 201, 409, 409, 400, 400, 200, 200, 400, 204, 404])
     const linhas = linhasDeLog.map((linha) => JSON.parse(linha) as Record<string, unknown>)
-    expect(linhas.filter((linha) => linha['evento'] === 'http.erro')).toHaveLength(6)
+    expect(linhas.filter((linha) => linha['evento'] === 'http.erro')).toHaveLength(7)
     const todoOLog = linhasDeLog.join('\n')
-    for (const sentinela of [quem, qual, PREFIXO]) expect(todoOLog).not.toContain(sentinela)
+    for (const sentinela of [quem, qual, PREFIXO, CPF_SENTINELA]) expect(todoOLog).not.toContain(sentinela)
   })
 })

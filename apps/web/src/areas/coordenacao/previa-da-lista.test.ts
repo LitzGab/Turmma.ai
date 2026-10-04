@@ -1,6 +1,6 @@
 import type { LinhaDaPrevia, RespostaPreviaDaLista } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
-import { avisosDaPrevia, linhasNaOrdemDaTela, pareceDocumento, podeGravar } from './previa-da-lista'
+import { avisosDaPrevia, linhasNaOrdemDaTela, podeGravar, TEXTO_DO_ERRO_DA_LINHA } from './previa-da-lista'
 
 const entra = (linha: number, nome: string, matricula: string): LinhaDaPrevia => ({ linha, nome, matricula, resultado: 'entra' })
 const comErro = (linha: number, erro: NonNullable<LinhaDaPrevia['erro']>, nome = 'Nome', matricula = ''): LinhaDaPrevia => ({ linha, nome, matricula, resultado: 'erro', erro })
@@ -34,17 +34,22 @@ describe('W10 (unidade): a prévia na tela', () => {
   })
 
   it('a coluna que parece CPF ou data segura a gravação; a matrícula de verdade, não', () => {
-    for (const documento of ['123.456.789-09', '01/02/2012', '1/2/12', '2012-02-01']) {
-      const lida = previa([entra(1, 'Ana', documento), entra(2, 'Bia', '1002')])
-      expect(avisosDaPrevia(lida.linhas), documento).toEqual(['coluna_parece_documento'])
-      expect(podeGravar(lida), documento).toEqual({ pode: false, motivo: 'Nada é gravado enquanto a segunda coluna parecer CPF ou data de nascimento.' })
-      // A linha suspeita é a marcada; a outra, não.
-      expect(lida.linhas.map((linha) => pareceDocumento(linha.matricula)), documento).toEqual([true, false])
+    // A API marca a linha (correção 2026-10-03-trava-de-documento-so-na-tela): CPF pontuado, data, ou a coluna com
+    // maioria de CPF sem pontuação. A tela avisa a coluna e segura com o motivo dela.
+    const documento = 'Nada é gravado enquanto a segunda coluna parecer CPF ou data de nascimento.'
+    for (const qual of ['123.456.789-09', '01/02/2012', '1/2/12', '2012-02-01', '12345678909']) {
+      const lida = previa([comErro(1, 'matricula_parece_documento', 'Ana', qual), entra(2, 'Bia', '1002')])
+      expect(avisosDaPrevia(lida.linhas), qual).toEqual(['coluna_parece_documento'])
+      expect(podeGravar(lida), qual).toEqual({ pode: false, motivo: documento })
     }
+    // A forma de CPF pontuado ou de data com outro erro antes ainda faz a tela avisar a coluna; o motivo é o do outro erro.
+    const comOutroErro = previa([comErro(1, 'sem_nome', '', '123.456.789-09'), entra(2, 'Bia', '1002')])
+    expect(avisosDaPrevia(comOutroErro.linhas)).toEqual(['coluna_parece_documento'])
+    expect(podeGravar(comOutroErro)).toEqual({ pode: false, motivo: 'Corrija as linhas com erro no texto e veja a prévia de novo: a lista só é gravada sem erro nenhum.' })
     for (const matricula of ['12345678909', '2024-0001', '20240101']) {
       expect(avisosDaPrevia([entra(1, 'Ana', matricula)]), matricula).toEqual([])
-      expect(pareceDocumento(matricula), matricula).toBe(false)
     }
+    expect(TEXTO_DO_ERRO_DA_LINHA.matricula_parece_documento).toBe('Parece CPF ou data de nascimento, e não matrícula: confira esta linha.')
   })
 
   it('grava só sem erro e com algo novo', () => {

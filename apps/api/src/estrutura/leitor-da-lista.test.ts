@@ -174,4 +174,21 @@ describe('E4: o erro de cada linha que o texto sozinho mostra (A1, 2.0)', () => 
   it('o nome é conferido antes da matrícula: sem os dois, `sem_nome`', () => {
     expect(errosDasLinhas([linha('', '')])).toEqual(['sem_nome'])
   })
+
+  it('G2: a matrícula com forma de documento é erro da linha, antes da repetição; o CPF sem pontuação só pela maioria', () => {
+    // CPFs sintéticos, com o dígito verificador calculado.
+    expect(errosDasLinhas([linha('Ana', '123.456.789-09'), linha('Bia', '01/02/2012'), linha('Caio', '01/02/2012'), linha('', '2012-02-01'), linha('Davi', '104')])).toEqual([
+      'matricula_parece_documento',
+      'matricula_parece_documento',
+      'matricula_parece_documento',
+      'sem_nome',
+      undefined,
+    ])
+    expect(errosDasLinhas([linha('Ana', '12345678909'), linha('Bia', '52998224725'), linha('Caio', '103')])).toEqual([
+      'matricula_parece_documento',
+      'matricula_parece_documento',
+      undefined,
+    ])
+    expect(errosDasLinhas([linha('Ana', '12345678909'), linha('Bia', '102'), linha('Caio', '103')])).toEqual([undefined, undefined, undefined])
+  })
 })

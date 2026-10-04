@@ -1,4 +1,4 @@
-import type { ErroDaLinhaDaLista, LinhaDaPrevia, RespostaPreviaDaLista } from '@educa/shared'
+import { pareceDocumento, type ErroDaLinhaDaLista, type LinhaDaPrevia, type RespostaPreviaDaLista } from '@educa/shared'
 
 /**
  * O que a prévia da lista diz à coordenação (A1, 13.0; RF4), fora da tela para ser provado sem navegador. A API dá o
@@ -12,6 +12,7 @@ export const TEXTO_DO_ERRO_DA_LINHA: Readonly<Record<ErroDaLinhaDaLista, string>
   nome_invalido: 'O nome passa de 200 caracteres ou tem um caractere que não é texto.',
   sem_matricula: 'Falta a matrícula.',
   matricula_invalida: 'A matrícula passa de 40 caracteres ou tem um caractere que não é texto.',
+  matricula_parece_documento: 'Parece CPF ou data de nascimento, e não matrícula: confira esta linha.',
   matricula_repetida: 'Esta matrícula aparece em mais de uma linha do texto.',
   matricula_em_uso: 'Esta matrícula já é de um aluno da escola ou está na lista de outra turma.',
 }
@@ -37,8 +38,10 @@ export function linhasNaOrdemDaTela(linhas: readonly LinhaDaPrevia[]): LinhaDaPr
  * - `cabecalho_nao_reconhecido`: só "nome" e "matrícula" são lidos como cabeçalho, e um `Nome;RA` entra como aluno. A
  *   primeira linha sem erro com a matrícula sem nenhum algarismo;
  * - `coluna_parece_documento`: sem cabeçalho a segunda coluna é a matrícula, e um `nome;CPF` ou `nome;nascimento`
- *   gravaria o CPF ou a data como matrícula (regra 20, item 2: aluno não tem CPF nem data de nascimento). Alguma
- *   matrícula no formato de CPF (`000.000.000-00`) ou de data (`01/02/2012`, `2012-02-01`). **Este segura a gravação.**
+ *   gravaria o CPF ou a data como matrícula (regra 20, item 2: aluno não tem CPF nem data de nascimento). Alguma linha
+ *   que a API marcou com `matricula_parece_documento` (CPF pontuado, data, ou a coluna com maioria de CPF sem
+ *   pontuação), ou com a forma de CPF pontuado ou de data e outro erro antes (`pareceDocumento`, de `packages/shared`).
+ *   A API recusa a gravação dessa lista (correção `2026-10-03-trava-de-documento-so-na-tela`), e a tela diz o porquê.
  */
 export const AVISOS_DA_PREVIA = ['titulo_antes_da_lista', 'cabecalho_nao_reconhecido', 'coluna_parece_documento'] as const
 export type AvisoDaPrevia = (typeof AVISOS_DA_PREVIA)[number]
@@ -52,35 +55,28 @@ export const TEXTO_DO_AVISO: Readonly<Record<AvisoDaPrevia, string>> = {
     'A segunda coluna parece CPF ou data de nascimento, e não matrícula. A lista leva só nome e matrícula: confira as colunas e tire o CPF e a data antes de gravar.',
 }
 
-const PARECE_CPF = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/
-const PARECE_DATA = /^(?:\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})$/
-
-/** A matrícula tem a forma de CPF ou de data: é a linha que a tela marca, em vez de dizer "Entra na lista". */
-export function pareceDocumento(matricula: string): boolean {
-  return PARECE_CPF.test(matricula) || PARECE_DATA.test(matricula)
-}
-
-/** O que a linha que parece documento diz no lugar de "Entra na lista": o aviso já explicou, aqui é só qual linha. */
-export const TEXTO_DA_LINHA_QUE_PARECE_DOCUMENTO = 'Parece CPF ou data de nascimento, e não matrícula: confira esta linha.'
-
 export function avisosDaPrevia(linhas: readonly LinhaDaPrevia[]): AvisoDaPrevia[] {
   const avisos: AvisoDaPrevia[] = []
   const semMatricula = linhas.filter((linha) => linha.erro === 'sem_matricula').length
   if (semMatricula >= 2 && semMatricula * 2 >= linhas.length) avisos.push('titulo_antes_da_lista')
   const [primeira] = [...linhas].sort((a, b) => a.linha - b.linha)
   if (primeira !== undefined && primeira.resultado !== 'erro' && !/\d/.test(primeira.matricula)) avisos.push('cabecalho_nao_reconhecido')
-  if (linhas.some((linha) => pareceDocumento(linha.matricula))) avisos.push('coluna_parece_documento')
+  if (linhas.some((linha) => linha.erro === 'matricula_parece_documento' || pareceDocumento(linha.matricula))) avisos.push('coluna_parece_documento')
   return avisos
 }
 
 /**
  * A gravação que a tela oferece: sem linha de erro (a API recusaria), com algo novo a gravar e sem a coluna que parece
- * documento. O motivo vai para a tela quando não pode, sem repetir o texto do aviso.
+ * documento. O motivo vai para a tela quando não pode, sem repetir o texto do aviso. A linha que parece documento é erro
+ * para a API; sem outro erro, o motivo é o da coluna, que o aviso explica.
  */
 export function podeGravar(previa: RespostaPreviaDaLista): { readonly pode: true } | { readonly pode: false; readonly motivo: string } {
-  if (previa.comErro > 0) return { pode: false, motivo: 'Corrija as linhas com erro no texto e veja a prévia de novo: a lista só é gravada sem erro nenhum.' }
-  // O aviso acima da prévia já diz o que fazer: aqui, só que a gravação espera por isso.
-  if (avisosDaPrevia(previa.linhas).includes('coluna_parece_documento')) return { pode: false, motivo: 'Nada é gravado enquanto a segunda coluna parecer CPF ou data de nascimento.' }
+  const outrosErros = previa.linhas.filter((linha) => linha.resultado === 'erro' && linha.erro !== 'matricula_parece_documento').length
+  if (outrosErros > 0) return { pode: false, motivo: 'Corrija as linhas com erro no texto e veja a prévia de novo: a lista só é gravada sem erro nenhum.' }
+  // Daqui em diante, todo erro que sobrar é de documento. O aviso acima da prévia já diz o que fazer: aqui, só que a
+  // gravação espera por isso.
+  const soErroDeDocumento = previa.comErro > 0
+  if (soErroDeDocumento || avisosDaPrevia(previa.linhas).includes('coluna_parece_documento')) return { pode: false, motivo: 'Nada é gravado enquanto a segunda coluna parecer CPF ou data de nascimento.' }
   if (previa.entram === 0) return { pode: false, motivo: 'Nada novo para gravar: todos os nomes já estão na lista desta turma.' }
   return { pode: true }
 }

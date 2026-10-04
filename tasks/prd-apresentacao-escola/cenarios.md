@@ -120,6 +120,13 @@ aos cenários.
   texto; matrícula na lista de outra turma da escola; matrícula de aluno aprovado de outra turma): a prévia aponta cada
   linha com o código, e a gravação não grava nenhuma. **Quebra sem:** gravar só sem erro; a consulta a
   `credencial_matricula` na prévia e na gravação
+- **E4a** (unidade e integração, correção `2026-10-03-trava-de-documento-so-na-tela`, G2 da validação; regra 20, item
+  2) A matrícula com forma de CPF pontuado ou de data, chamando a API sem a tela: a prévia aponta a linha com
+  `matricula_parece_documento`, a gravação da lista e o avulso respondem `ENTRADA_INVALIDA`, e nada é gravado; a lista
+  com mais da metade das matrículas, e pelo menos duas, em CPF sem pontuação (11 algarismos com o dígito verificador
+  certo) tem cada uma dessas linhas marcada e não grava; um CPF sem pontuação só, na lista ou no avulso, passa
+  (matrícula numérica de 11 algarismos). O log não leva a matrícula recusada. **Quebra sem:** a conferência de forma no
+  leitor da API e no `esquemaPedidoNomeAvulso`; a maioria; o dígito verificador
 - **E5** (integração) A mesma matrícula aceita na lista de outra escola (regra 60, item 6); e uma matrícula que só
   existe em `credencial_matricula` da escola B entra na lista e no nome avulso de A, sem `CONFLITO`. **Quebra sem:** o
   único por escola e ano, e não global; a escola na consulta a `credencial_matricula` (sem ela, o `CONFLITO` confirma à
@@ -517,7 +524,8 @@ aos cenários.
   para a mesma planilha corrigida ser lida de novo; a planilha em si (`.xlsx`, `.xls`, `.ods`) é recusada com o que fazer;
   a prévia e o alerta só levam o foco quando a resposta chega, e não quando voltam com o texto, nem de quem já voltou ao
   campo; com dois alunos de mesmo nome na turma, o "Retirar" e a confirmação dizem a matrícula; o nome avulso recusa a
-  matrícula que parece CPF ou data; o arquivo que o navegador não consegue ler tem aviso; a web pede a API sem cache
+  matrícula que parece CPF ou data (a API também recusa, E4a, e a linha da prévia vem como erro); o arquivo que o
+  navegador não consegue ler tem aviso; a web pede a API sem cache
   HTTP, para a resposta com nome e matrícula não ficar em disco
 - **W11** Campos: código com `autocapitalize="characters"`; matrícula e senha com `autocomplete="off"`; matrícula com
   `inputmode="text"`; senha com "mostrar" e os 12 caracteres avisados. Na 17.0, o "Mostrar a senha" é um interruptor
@@ -592,7 +600,7 @@ aos cenários.
 | RF1 | W1, W2 |
 | RF2 | W3 |
 | RF3 | E1, E2, C11 |
-| RF4 | E3, E4, E5, W10 |
+| RF4 | E3, E4, E4a, E5, W10 |
 | RF5 | E6, E7, C8, C12 |
 | RF6 | E8, E9, R4, C7 |
 | RF7 | E10, E11, W14 |
