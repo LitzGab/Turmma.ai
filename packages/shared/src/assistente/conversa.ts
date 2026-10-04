@@ -49,14 +49,28 @@ export const esquemaPropostaDeFerramenta = z.strictObject({
 export type PropostaDeFerramenta = z.infer<typeof esquemaPropostaDeFerramenta>
 
 /**
+ * O que o professor respondeu à pergunta da D18, quando a resposta **não** foi abrir a ferramenta. As duas opções têm o
+ * mesmo peso: abrir a ferramenta é `POST /v1/ferramentas/:ferramenta/gerar`; "só conversar" é a mensagem seguinte com
+ * esta marca, e o Assistente responde ao último pedido em texto, sem propor ferramenta de novo. Lista fechada: não é
+ * campo de texto.
+ */
+export const RESPOSTAS_A_PROPOSTA = ['so_conversar'] as const
+export type RespostaAProposta = (typeof RESPOSTAS_A_PROPOSTA)[number]
+
+/**
  * Corpo de `POST /v1/assistente/mensagens`: o texto, a turma e a disciplina sobre as quais o professor está falando (com
  * vínculo confirmado dele; a de outra pessoa responde como inexistente) e a chave do envio. Responde 202 com a execução.
+ *
+ * `resposta: 'so_conversar'` é opcional, e vai quando o professor escolheu "só conversar" na proposta de ferramenta: o
+ * `texto` é a fala dele como a tela a mostra, e a resposta do Assistente é sempre texto, sobre o último pedido dele. Sem
+ * a marca, nada muda.
  */
 export const esquemaPedidoMensagemAoAssistente = z.strictObject({
   texto: z.string().trim().min(1).max(TAMANHO_MAXIMO_DO_PEDIDO),
   turmaId: z.uuid(),
   disciplinaId: z.uuid(),
   chaveEnvio: esquemaChaveEnvio,
+  resposta: z.enum(RESPOSTAS_A_PROPOSTA).optional(),
 })
 export type PedidoMensagemAoAssistente = z.infer<typeof esquemaPedidoMensagemAoAssistente>
 

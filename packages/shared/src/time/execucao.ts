@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { TIPOS_DE_ADAPTACAO } from '../assistente/conteudo.js'
-import { esquemaMensagemDoAgente, esquemaParametrosDeFerramenta } from '../assistente/conversa.js'
+import { esquemaMensagemDoAgente, esquemaParametrosDeFerramenta, RESPOSTAS_A_PROPOSTA } from '../assistente/conversa.js'
 import { CodigoDeErro } from '../erros/codigo-de-erro.js'
 import { esquemaMensagemDoTutorAoAluno } from '../tutor/tutor.js'
 import type { ChaveDeFuncao } from './funcoes.js'
@@ -83,7 +83,8 @@ const tiposDeAdaptacao = z.array(z.enum(TIPOS_DE_ADAPTACAO)).min(1).max(TIPOS_DE
  * aqui**. Os ids são entrada, e não vínculo: quem executa os relê pelo repository, no escopo da escola da execução.
  */
 export const esquemaEntradaDaExecucao = z.discriminatedUnion('tarefa', [
-  z.strictObject({ tarefa: z.literal('propor_ferramenta') }),
+  // `resposta` é a marca de lista fechada de quem escolheu "só conversar" na proposta (D18): nunca o texto da mensagem.
+  z.strictObject({ tarefa: z.literal('propor_ferramenta'), resposta: z.enum(RESPOSTAS_A_PROPOSTA).optional() }),
   z.strictObject({ tarefa: z.literal('gerar_atividade_objetiva'), parametros: esquemaParametrosDeFerramenta }),
   z.strictObject({ tarefa: z.literal('gerar_plano_de_aula'), parametros: esquemaParametrosDeFerramenta }),
   z.strictObject({ tarefa: z.literal('adaptar_atividade'), artefatoId: z.uuid(), tipos: tiposDeAdaptacao, tempoExtraPercentual: z.number().int().min(10).max(100).optional() }),

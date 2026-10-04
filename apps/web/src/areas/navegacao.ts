@@ -1,5 +1,5 @@
-import type { PapelDeUsuario } from '@educa/shared'
-import { Blocks, GraduationCap, School, UsersRound, type LucideIcon } from 'lucide-react'
+import { NOMES_DOS_AGENTES, type Agente, type PapelDeUsuario } from '@educa/shared'
+import { Blocks, BookOpen, GraduationCap, LayoutGrid, MessagesSquare, School, SquarePen, UsersRound, type LucideIcon } from 'lucide-react'
 import { ROTAS } from '../caminhos'
 
 /*
@@ -17,6 +17,11 @@ export interface ItemDaNavegacao {
   readonly rotulo: string
   readonly caminho: string
   readonly icone: LucideIcon
+  /**
+   * Outros endereços, pela raiz, em que o item também fica selecionado: a conversa aberta dentro de "Nova conversa", o
+   * artefato aberto dentro de "Ferramentas". Sem isto a lateral não diria onde a pessoa está nessas telas.
+   */
+  readonly tambemEm?: readonly string[]
 }
 
 /**
@@ -32,12 +37,41 @@ export const NAVEGACAO: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao
   coordenador: [
     { rotulo: 'Estrutura', caminho: ROTAS.estrutura, icone: Blocks },
     { rotulo: 'Professores', caminho: ROTAS.professores, icone: GraduationCap },
+    { rotulo: 'Material', caminho: ROTAS.material, icone: BookOpen },
   ],
-  professor: [{ rotulo: 'Turmas', caminho: ROTAS.turmas, icone: UsersRound }],
+  // A2 (D73): Nova conversa, Ferramentas e Turmas. Calendário nasce com a grade (F8) e Histórico, com o F5: nenhum
+  // aparece antes da tela dele.
+  professor: [
+    { rotulo: 'Nova conversa', caminho: ROTAS.novaConversa, icone: SquarePen, tambemEm: [ROTAS.conversa] },
+    { rotulo: 'Ferramentas', caminho: ROTAS.ferramentas, icone: LayoutGrid, tambemEm: [ROTAS.artefatos] },
+    { rotulo: 'Turmas', caminho: ROTAS.turmas, icone: UsersRound },
+  ],
   aluno: [{ rotulo: 'Minha turma', caminho: ROTAS.minhaTurma, icone: School }],
 }
 
-/** O item está selecionado no endereço dele e em qualquer um abaixo dele (a turma aberta dentro de Turmas, na 15.0). */
-export function estaNoItem(caminho: string, item: Pick<ItemDaNavegacao, 'caminho'>): boolean {
-  return caminho === item.caminho || caminho.startsWith(`${item.caminho}/`)
+/** Uma linha de "Seu time": o agente, o endereço da conversa dele e o ícone do avatar (círculo com ícone, nunca rosto: D58). */
+export interface AgenteDaLateral {
+  readonly agente: Agente
+  readonly rotulo: string
+  readonly caminho: string
+  readonly icone: LucideIcon
+}
+
+/**
+ * "Seu time", o grupo da lateral com os agentes que a pessoa acompanha (D73; `docs/interface.md` 11.1 e 11.4). Como os
+ * itens, **cada linha nasce com a tela dela**: na A2 o professor tem a do Assistente de ensino; a do Tutor chega com os
+ * sinais (A4). Coordenação e aluno não têm o grupo.
+ */
+export const SEU_TIME: Readonly<Record<PapelDeUsuario, readonly AgenteDaLateral[]>> = {
+  coordenador: [],
+  professor: [{ agente: 'assistente_de_ensino', rotulo: NOMES_DOS_AGENTES.assistente_de_ensino, caminho: ROTAS.timeDoAssistente, icone: MessagesSquare }],
+  aluno: [],
+}
+
+/**
+ * O item está selecionado no endereço dele e em qualquer um abaixo dele (a turma aberta dentro de Turmas, na 15.0), e
+ * nos endereços que ele declara em `tambemEm`, do mesmo jeito.
+ */
+export function estaNoItem(caminho: string, item: Pick<ItemDaNavegacao, 'caminho' | 'tambemEm'>): boolean {
+  return [item.caminho, ...(item.tambemEm ?? [])].some((base) => caminho === base || caminho.startsWith(`${base}/`))
 }

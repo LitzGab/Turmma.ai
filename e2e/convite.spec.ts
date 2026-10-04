@@ -1,6 +1,7 @@
 import type { Page, Route } from '@playwright/test'
 import { AVISO_DO_CONVITE_COM_SENHA_NOVA, AVISO_DO_CONVITE_PARA_CONTA_EXISTENTE, MENSAGENS_DE_ERRO, mensagemDoConvite } from '../packages/shared/src/erros/mensagens.ts'
 import { criarConviteDeCoordenador, criarConviteDeProfessor, criarEquipeComSenha, revogarConvite } from './__fixtures__/sessao.ts'
+import { esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -183,9 +184,10 @@ test.describe('aceite do convite, do coordenador e do professor', () => {
     await page.getByLabel('E-mail').fill(convite.email)
     await page.getByLabel('Senha').fill(SENHA_NOVA)
     await acionar(page, /^Entrar$/, hasTouch)
-    await expect(page.getByRole('heading', { name: `Olá, ${convite.nome}` })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
-    await expect(page.getByRole('main')).toContainText(convite.escolaNome)
-    const paraTurmas = page.getByRole('main').getByRole('link', { name: 'Turmas', exact: true })
+    // O professor abre em "Nova conversa" (A2), com o nome dele e o da escola na casca.
+    await esperarNovaConversa(page, convite.nome, { timeout: PRAZO_DA_TELA_MS, escolaNome: convite.escolaNome })
+    // Sem turma confirmada, a tela em que ele abre aponta para Turmas, a um toque.
+    const paraTurmas = page.getByRole('main').getByRole('button', { name: 'Ir para Turmas' })
     if (hasTouch) await paraTurmas.tap()
     else await paraTurmas.click()
     await expect(page).toHaveURL(/\/professor\/turmas$/)
@@ -401,8 +403,7 @@ test.describe('aceite do convite, do coordenador e do professor', () => {
     await page.getByLabel('E-mail').fill(novo.email)
     await page.getByLabel('Senha').fill(SENHA_NOVA)
     await acionar(page, /^Entrar$/, hasTouch)
-    await expect(page.getByRole('heading', { name: `Olá, ${novo.nome}` })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
-    await expect(page.getByRole('main')).toContainText(novo.escolaNome)
+    await esperarNovaConversa(page, novo.nome, { timeout: PRAZO_DA_TELA_MS, escolaNome: novo.escolaNome })
   })
 
   test('recomeço, consulta atrasada: a consulta do link anterior que responde depois de outro link chegar à aba não troca a tela do link novo, dê certo ou não', async ({

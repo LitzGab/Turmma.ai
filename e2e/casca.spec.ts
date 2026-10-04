@@ -381,7 +381,11 @@ test.describe('casca da escola', () => {
     const paradas = [
       page.getByRole('link', { name: 'Turmma, página inicial' }),
       page.getByRole('button', { name: 'Recolher a lateral' }),
+      // A2 (D73): os três itens do professor e, em "Seu time", a linha do Assistente de ensino.
+      page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Nova conversa' }),
+      page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Ferramentas' }),
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }),
+      page.getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: 'Assistente de ensino' }),
       page.getByRole('button', { name: 'Sair' }),
     ]
     await page.locator('body').focus()
@@ -415,6 +419,11 @@ test.describe('casca da escola', () => {
 
     // No trilho, o item é só o ícone, com o nome para o leitor de tela e a dica que aparece ao chegar pelo teclado.
     const turmas = page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' })
+    // "Turmas" é o terceiro item do professor desde a A2: antes dele vêm "Nova conversa" e "Ferramentas".
+    for (const anterior of ['Nova conversa', 'Ferramentas']) {
+      await page.keyboard.press('Tab')
+      await expect(page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: anterior })).toBeFocused()
+    }
     await page.keyboard.press('Tab')
     await expect(turmas).toBeFocused()
     await expect(turmas.getByText('Turmas', { exact: true }).last()).toBeVisible()
@@ -446,7 +455,7 @@ test.describe('casca da escola', () => {
     else await abrir.click()
     await expect(gaveta(page)).toBeVisible()
     await expect(abrir).toHaveAttribute('aria-expanded', 'true')
-    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Turmas'])
+    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Nova conversa', 'Ferramentas', 'Turmas'])
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
     await page.keyboard.press('Escape')

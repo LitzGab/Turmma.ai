@@ -56,6 +56,10 @@ describe('execução de agente: 202 com o id, e a consulta até terminar', () =>
     expect(esquemaEntradaDaExecucao.safeParse({ tarefa: 'turno_do_tutor' }).success).toBe(true)
     expect(esquemaEntradaDaExecucao.safeParse({ tarefa: 'turno_do_tutor', texto: 'não entendi a questão 3' }).success).toBe(false)
     expect(esquemaEntradaDaExecucao.safeParse({ tarefa: 'propor_ferramenta', texto: 'monta uma lista para o 2ºB' }).success).toBe(false)
+    // A marca de "só conversar" é de lista fechada, e só da conversa: não vira campo de texto nem serve a outra tarefa.
+    expect(esquemaEntradaDaExecucao.safeParse({ tarefa: 'propor_ferramenta', resposta: 'so_conversar' }).success).toBe(true)
+    expect(esquemaEntradaDaExecucao.safeParse({ tarefa: 'propor_ferramenta', resposta: 'prefiro falar do aluno' }).success).toBe(false)
+    expect(esquemaEntradaDaExecucao.safeParse({ tarefa: 'turno_do_tutor', resposta: 'so_conversar' }).success).toBe(false)
     expect(esquemaEntradaDaExecucao.safeParse({ tarefa: 'adaptar_atividade', artefatoId: UM_ID, tipos: ['fonte_ampliada'] }).success).toBe(true)
     expect(esquemaEntradaDaExecucao.safeParse({ tarefa: 'adaptar_atividade', artefatoId: UM_ID, tipos: ['fonte_ampliada'], aluno: 'Ana' }).success).toBe(false)
   })

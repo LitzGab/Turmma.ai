@@ -63,7 +63,7 @@ material `pronto` e não excluído.
 |---|---|---|---|---|---|
 | `GET /time` | | `esquemaRespostaTime` (`montarTime(suspensas)`) | `time.ler` C `un`, P `un` | | |
 | `GET /assistente/conversa` | `esquemaConsultaConversaDoAssistente` | `esquemaRespostaConversaDoAssistente` | `assistente.ler_conversa` P `pr` | | |
-| `POST /assistente/mensagens` | `esquemaPedidoMensagemAoAssistente` | 202 | `assistente.enviar_mensagem` P `pr` | `FUNCAO_SUSPENSA` | |
+| `POST /assistente/mensagens` | `esquemaPedidoMensagemAoAssistente` (`texto`, `turmaId`, `disciplinaId`, `chaveEnvio` e, opcional, `resposta: 'so_conversar'`) | 202 | `assistente.enviar_mensagem` P `pr` | `FUNCAO_SUSPENSA`, `LIMITE_EXCEDIDO` | |
 | `GET /execucoes/:id` | | `esquemaRespostaExecucao` | `execucao.ler` C, P, A `pr` | | |
 | `POST /ferramentas/:ferramenta/gerar` | `esquemaParametroFerramenta`, `esquemaPedidoGerarComFerramenta` | 202 | `ferramenta.gerar` P `tv` | `FUNCAO_SUSPENSA`; na execução, `MATERIAL_INSUFICIENTE` | |
 | `GET /artefatos` | `esquemaConsultaArtefatos` | `esquemaRespostaListaDeArtefatos` | `artefato.listar` P `tv` | | |
@@ -78,6 +78,13 @@ O conteúdo do artefato é `esquemaConteudoDoArtefato` (`assistente/conteudo.ts`
 e página. O catálogo de habilidades é `habilidadesDaDisciplina(nome, etapa)` (`assistente/habilidades.ts`): códigos nossos,
 não da BNCC. A resposta do Assistente é `esquemaConteudoDaMensagemDoAgente`: texto com citações, ou a **proposta de
 ferramenta** (a pergunta da D18).
+
+**As duas opções da pergunta têm rota.** "Abrir a ferramenta" é `POST /ferramentas/:ferramenta/gerar`, com os parâmetros
+da proposta. "Só conversar" é o `POST /assistente/mensagens` seguinte com `resposta: 'so_conversar'` (`RESPOSTAS_A_PROPOSTA`,
+lista fechada; o `texto` é a fala que a tela mostra): o Assistente responde **sempre em texto**, sobre o último pedido do
+professor, com a página citada quando usa o material, e não propõe ferramenta de novo. A marca fica em
+`execucao_agente.entrada` (`{ tarefa: 'propor_ferramenta', resposta }`), nunca o texto; na tarefa `propor_ferramenta` ela
+é `semProposta`. Sem a marca, nada muda.
 
 **O PDF do artefato não gera auditoria**, e isso é decisão, não esquecimento. A regra 20, item 10, pede auditoria de
 exportação porque exportação costuma levar dado de pessoa para fora do sistema. Este PDF não leva: tem as questões, o

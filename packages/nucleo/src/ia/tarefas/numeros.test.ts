@@ -75,6 +75,66 @@ describe('propor_ferramenta: o Assistente pergunta antes de abrir a ferramenta (
     const problemas = proporFerramenta.conferir?.(entrada, { tipo: 'texto', texto: 'Está na página 1.', citacoes: [{ materialId: MATERIAL_DE_ESTEQUIOMETRIA, pagina: 1, trecho: 'O mol é…' }] })
     expect(problemas).toHaveLength(1)
   })
+
+  describe('"só conversar": quem recusou a ferramenta recebe texto, nunca a mesma pergunta de novo', () => {
+    const PEDIDOS_DE_FERRAMENTA = [
+      'monta uma atividade com 5 questões sobre reagente limitante',
+      'quero um plano de aula sobre rendimento',
+      'faz uma lista de exercícios de estequiometria',
+      'prepara um simulado com 10 questões',
+      'adapta a atividade para um aluno com baixa visão',
+      'o que é rendimento teórico?',
+      'bom dia',
+    ]
+    const soConversar = (pedido: string, mensagem = 'Só conversar') => ({ ...entradaDoAssistente(mensagem), semProposta: true, turnosAnteriores: [{ autor: 'professor' as const, texto: pedido }, { autor: 'assistente' as const, texto: 'Quer que eu abra a ferramenta?' }] })
+
+    it('com a marca, a tarefa nunca devolve proposta, qualquer que seja o pedido, com ou sem turno anterior, com ou sem material', () => {
+      for (const pedido of PEDIDOS_DE_FERRAMENTA) {
+        // Sem a marca, os quatro primeiros viram proposta: é a marca que muda a saída.
+        for (const entrada of [soConversar(pedido), { ...soConversar(pedido), trechos: [] }, { ...entradaDoAssistente(pedido), semProposta: true }]) {
+          const saida = proporFerramenta.falso(entrada)
+          expect(saida.tipo, pedido).toBe('texto')
+          expect(proporFerramenta.esquemaDeSaida.safeParse(saida).success).toBe(true)
+          expect(proporFerramenta.conferir?.(entrada, saida)).toEqual([])
+        }
+      }
+      expect(PEDIDOS_DE_FERRAMENTA.slice(0, 4).map((pedido) => proposta(pedido).tipo)).toEqual(Array.from({ length: 4 }, () => 'proposta_de_ferramenta'))
+    })
+
+    it('responde ao último pedido do professor, e não à fala "só conversar", citando a página do material', () => {
+      const saida = proporFerramenta.falso(soConversar('monta uma atividade sobre rendimento teórico'))
+      expect(saida).toMatchObject({ tipo: 'texto', citacoes: [{ materialId: MATERIAL_DE_ESTEQUIOMETRIA, pagina: 6 }] })
+      expect(saida.texto).toContain('página 6')
+      // Sem material sobre o pedido, o texto diz isso, e não inventa citação.
+      expect(proporFerramenta.falso({ ...soConversar('monta uma atividade sobre rendimento teórico'), trechos: [] })).toMatchObject({ tipo: 'texto', citacoes: [] })
+      // O que foi dito sobre um aluno no pedido não volta na resposta.
+      expect(JSON.stringify(proporFerramenta.falso(soConversar('adapta a atividade para a Mariana, que tem dislexia')))).not.toMatch(/Mariana|dislexia/u)
+    })
+
+    it('a proposta que o modelo devolver com a marca é saída inválida, e a instrução ao modelo muda', async () => {
+      const entrada = soConversar('monta uma atividade sobre mol')
+      const umaProposta = { tipo: 'proposta_de_ferramenta' as const, texto: 'Quer que eu abra a ferramenta?', proposta: { ferramenta: 'atividade_objetiva' as const, parametros: { tema: 'mol' } } }
+      expect(proporFerramenta.conferir?.(entrada, umaProposta)).toHaveLength(1)
+      expect(proporFerramenta.conferir?.({ ...entrada, semProposta: false }, umaProposta)).toEqual([])
+      expect(proporFerramenta.conferir?.(entradaDoAssistente('monta uma atividade sobre mol'), umaProposta)).toEqual([])
+      expect(proporFerramenta.montarPedido(entrada).instrucao).toContain('só conversar')
+      expect(proporFerramenta.montarPedido(entradaDoAssistente()).instrucao).not.toContain('só conversar')
+      // O modelo que insiste na proposta duas vezes não entrega nada; o que corrige na repetição entrega o texto.
+      const insistente = new AdaptadorRoteirizado([JSON.stringify(umaProposta), JSON.stringify(umaProposta)])
+      const erro: unknown = await provedorCom(insistente).ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A }).catch((motivo: unknown) => motivo)
+      expect((erro as ErroDeIa).codigoDeIa).toBe('IA_SAIDA_INVALIDA')
+      expect(insistente.correcoes[1]?.problemas.join(' ')).toContain('só conversar')
+      const emTexto = { tipo: 'texto', texto: 'O mol é a unidade de quantidade de matéria.', citacoes: [] }
+      const { saida } = await provedorCom(new AdaptadorRoteirizado([JSON.stringify(umaProposta), JSON.stringify(emTexto)])).ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A })
+      expect(saida).toEqual(emTexto)
+    })
+
+    it('a marca é booleana e a entrada continua estrita', () => {
+      expect(proporFerramenta.esquemaDeEntrada.safeParse(soConversar('x')).success).toBe(true)
+      expect(proporFerramenta.esquemaDeEntrada.safeParse({ ...entradaDoAssistente(), semProposta: 'sim' }).success).toBe(false)
+      expect(proporFerramenta.esquemaDeEntrada.safeParse({ ...entradaDoAssistente(), resposta: 'so_conversar' }).success).toBe(false)
+    })
+  })
 })
 
 describe('relatorio_da_correcao: a conta é do domínio, a IA só põe em palavras', () => {

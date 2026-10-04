@@ -180,20 +180,37 @@ function modulosDeAreaForaDoLugar(chunks: readonly Chunk[]): string[] {
 }
 
 /**
- * As telas que alguém de fora da área delas importa, por `import` ou por `import()`, como `quem importa → tela`. A tela do
- * professor só é alcançada pela fachada do professor e pelas outras telas dele: nem a entrada (que só chega à área
- * depois da guarda de papel), nem a fachada de outro papel. É a regra 10 e a regra 50, item 9, no build: o Chromebook
- * do aluno não baixa a tela de Aprovar.
+ * As telas que alguém de fora da área delas alcança, por `import` ou por `import()`, como `quem alcança → tela`. A tela
+ * do professor só é alcançada pela fachada do professor e pelas outras telas dele: nem a entrada (que só chega à área
+ * depois da guarda de papel), nem a galeria, nem a fachada de outro papel. É a regra 10 e a regra 50, item 9, no build: o
+ * Chromebook do aluno não baixa a tela de Aprovar.
+ *
+ * O que decide é **quem alcança**, e não quem importa: um pedaço de peças (`pecas-*`) pode importar um pedaço de tela
+ * quando os dois só existem para aquela área. Acontece quando uma peça e um módulo da área dividem uma dependência (um
+ * ícone) e são usados pelas mesmas telas: o bundler põe a dependência junto do módulo da área, e a peça a importa de
+ * lá. Por isso a conta sobe pelos pedaços sem área (`pecas-*`, `parte-*`) até achar de quem eles são.
  */
 function telasImportadasDeFora(chunks: readonly Chunk[]): string[] {
-  return chunks.flatMap((quem) =>
-    [...quem.imports, ...quem.dynamicImports].flatMap((nome) => {
-      const importado = chunks.find((chunk) => chunk.fileName === nome)
-      const destino = importado === undefined ? undefined : areaDoPedaco(importado)
-      if (importado === undefined || destino === undefined || !destino.tela) return []
-      return areaDoPedaco(quem)?.area === destino.area ? [] : [`${semHash(quem.fileName)} → ${semHash(importado.fileName)}`]
-    }),
-  )
+  const quemImporta = (alvo: Chunk) => chunks.filter((chunk) => chunk.imports.includes(alvo.fileName) || chunk.dynamicImports.includes(alvo.fileName))
+  const achados = new Set<string>()
+  for (const tela of chunks) {
+    const destino = areaDoPedaco(tela)
+    if (destino?.tela !== true) continue
+    const vistos = new Set<Chunk>()
+    const pendentes = quemImporta(tela)
+    while (pendentes.length > 0) {
+      const quem = pendentes.pop()
+      if (quem === undefined || vistos.has(quem)) continue
+      vistos.add(quem)
+      const area = areaDoPedaco(quem)?.area
+      if (area === destino.area) continue
+      // De outra área, a entrada, ou um pedaço com fachada que não é de área (a galeria, a operação): alcançou de fora.
+      if (area !== undefined || quem.isEntry || quem.facadeModuleId !== null) achados.add(`${semHash(quem.fileName)} → ${semHash(tela.fileName)}`)
+      // Pedaço dividido sem área: quem o alcança é que diz de quem ele é.
+      else pendentes.push(...quemImporta(quem))
+    }
+  }
+  return [...achados].sort()
 }
 
 /** As telas acima do teto de uma tela, em brotli, com o nome e o tamanho de cada uma: é a mensagem de quem estourou. */
@@ -402,6 +419,46 @@ describe('o build de verdade da web', () => {
     // A entrada que pula a fachada e importa a tela direto também reprova: a tela chegaria antes da guarda de papel.
     const pelaEntrada = await chunksDoBuild({ raiz: projetoDeMentira({ ...comum, 'src/main.ts': `${ENTRADA_DE_MENTIRA}void import('./areas/professor/Aprovar')\n`, 'src/areas/aluno/rotas.ts': fachada(['./Tutor']) }), configFile: false })
     expect(telasImportadasDeFora(pelaEntrada)).toEqual(['index → tela-professor-Aprovar'])
+  })
+
+  it('a peça que importa um pedaço de tela da única área que a usa não reprova; a mesma peça alcançada por outra área, sim', async () => {
+    // A colisão que apareceu com as telas do professor: uma peça e um módulo da área dividem uma dependência (o ícone), a
+    // peça é usada por duas das três telas e o módulo da área pelas três. O bundler põe o ícone junto do módulo da área,
+    // num pedaço `tela-professor-*`, e a peça, num `pecas-*` que o importa. Tudo só para o professor: não é vazamento.
+    const comum = {
+      'src/areas/professor/rotas.ts': fachada(['./Home', './Conversa', './Time']),
+      'src/areas/professor/Home.ts': modulo('Home', "import { faixa } from '../../componentes/ia/faixa'\nimport { avisos } from './avisos'\nconsole.log(faixa(), avisos())\n"),
+      'src/areas/professor/Conversa.ts': modulo('Conversa', "import { avisos } from './avisos'\nconsole.log(avisos())\n"),
+      'src/areas/professor/Time.ts': modulo('Time', "import { faixa } from '../../componentes/ia/faixa'\nimport { avisos } from './avisos'\nconsole.log(faixa(), avisos())\n"),
+      'src/areas/professor/avisos.ts': modulo('avisos', "import { icone } from '../../icone'\nconsole.log(icone())\n"),
+      'src/componentes/ia/faixa.ts': modulo('faixa', "import { icone } from '../../icone'\nconsole.log(icone())\n"),
+      'src/icone.ts': modulo('icone'),
+      'src/areas/aluno/rotas.ts': fachada(['./Tutor']),
+      'src/areas/aluno/Tutor.ts': modulo('Tutor'),
+    }
+    const chunks = await chunksDoBuild({ raiz: projetoDeMentira({ ...comum, 'src/main.ts': ENTRADA_DE_MENTIRA }), configFile: false })
+    const daPeca = chunks.find((chunk) => chunk.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith('/src/componentes/ia/faixa.ts')))
+    const doIcone = chunks.find((chunk) => chunk.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith('/src/icone.ts')))
+    // A colisão está de pé: a peça num `pecas-*`, o ícone num pedaço de tela do professor, e um importando o outro.
+    expect(daPeca?.fileName).toMatch(/^assets\/pecas-/)
+    expect(doIcone?.fileName).toMatch(/^assets\/tela-professor-/)
+    expect(daPeca?.imports).toContain(doIcone?.fileName)
+    // E não reprova: quem alcança a peça são só telas do professor.
+    expect(telasImportadasDeFora(chunks)).toEqual([])
+    expect(modulosDeAreaForaDoLugar(chunks)).toEqual([])
+
+    // O controle: a tela do aluno que alcança o módulo do professor por dentro de um pedaço dividido reprova, mesmo sem
+    // importar a tela direto. Aqui o aluno usa a peça, e a peça importa o aviso do professor.
+    const vazando = await chunksDoBuild({
+      raiz: projetoDeMentira({
+        ...comum,
+        'src/main.ts': ENTRADA_DE_MENTIRA,
+        'src/componentes/ia/faixa.ts': modulo('faixa', "import { avisos } from '../../areas/professor/avisos'\nconsole.log(avisos())\n"),
+        'src/areas/aluno/Tutor.ts': modulo('Tutor', "import { faixa } from '../../componentes/ia/faixa'\nconsole.log(faixa())\n"),
+      }),
+      configFile: false,
+    })
+    expect(telasImportadasDeFora(vazando).some((achado) => /^(?:aluno|tela-aluno-Tutor) → tela-professor-/.test(achado))).toBe(true)
   })
 
   it('controle do teto de uma tela: a que passa de 30 kB em brotli aparece pelo nome, e a pequena ao lado dela, não', async () => {

@@ -13,12 +13,26 @@ import type { Ferramenta } from '@educa/shared'
  * execução a descrição que chegue por outro caminho (um JSON, um `as`).
  */
 
+/**
+ * Quando um campo aparece: **só quando outro campo, de múltipla escolha, tem aquela opção marcada**. É condição de lista
+ * fechada, de propósito: não há expressão nem comparação com texto, e nada que deixe um campo depender do que alguém
+ * escreveu. O tempo extra da Adaptação só existe com "Tempo adicional" marcado.
+ */
+export interface CondicaoDoCampo {
+  /** A chave do campo de múltipla escolha. */
+  readonly campo: string
+  /** O valor da opção que precisa estar marcada. */
+  readonly contem: string
+}
+
 interface CampoBase {
   /** O nome do valor na saída: `tema`, `quantidade`, `tipos`. Único na descrição. */
   readonly chave: string
   /** O rótulo visível do campo. */
   readonly rotulo: string
   readonly dica?: string
+  /** Sem ela, o campo aparece sempre. Com ela, só aparece, só é validado e só sai no pedido quando a condição vale. */
+  readonly quando?: CondicaoDoCampo
 }
 
 /** Texto curto, de uma linha: o tema da atividade. É o único campo livre do motor, e a Adaptação não o tem. */
@@ -113,7 +127,23 @@ export function problemaDaDescricao(descricao: { readonly ferramenta: Ferramenta
     return 'A Adaptação não tem campo de texto: ela recebe o tipo de adaptação, de lista fechada (D35, D67).'
   const chaves = descricao.campos.map((campo) => campo.chave)
   if (new Set(chaves).size !== chaves.length) return 'Dois campos da descrição têm a mesma chave.'
+  for (const campo of descricao.campos) {
+    if (campo.quando === undefined) continue
+    const alvo = descricao.campos.find((outro) => outro.chave === campo.quando?.campo)
+    // A condição aponta para uma opção que existe, num campo de múltipla escolha que não é o próprio: do contrário o
+    // campo nunca apareceria, ou dependeria de algo que não é lista fechada.
+    if (alvo === undefined || alvo === campo || alvo.tipo !== 'multipla' || !alvo.opcoes.some((opcao) => opcao.valor === campo.quando?.contem))
+      return `A condição do campo "${campo.rotulo}" não aponta para uma opção de um campo de múltipla escolha.`
+    if (alvo.quando !== undefined) return `A condição do campo "${campo.rotulo}" depende de um campo que também é condicional.`
+  }
   return undefined
+}
+
+/** O campo aparece agora? Sem condição, sempre; com ela, só com a opção marcada no campo de múltipla escolha. */
+export function campoVisivel(campo: CampoDoMotor, valores: ValoresDoFormulario): boolean {
+  if (campo.quando === undefined) return true
+  const marcados = valores[campo.quando.campo]
+  return Array.isArray(marcados) && marcados.includes(campo.quando.contem)
 }
 
 /** Os valores com que o formulário abre: o padrão de cada campo, ou vazio. Padrão fora da lista de opções é ignorado. */
@@ -141,6 +171,8 @@ export function validarFormulario(campos: readonly CampoDoMotor[], valores: Valo
   const validados: Record<string, ValorDoCampo> = {}
   const pendencias: Pendencia[] = []
   for (const campo of campos) {
+    // O campo que a condição escondeu não é cobrado e não sai no pedido, mesmo com um valor que ficou de antes.
+    if (!campoVisivel(campo, valores)) continue
     const bruto = valores[campo.chave]
     if (campo.tipo === 'texto') {
       const texto = typeof bruto === 'string' ? bruto.trim() : ''
