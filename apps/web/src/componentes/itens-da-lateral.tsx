@@ -99,7 +99,6 @@ export function SecaoDoTime({ agentes, esperando, trilho }: PropsDaSecaoDoTime) 
   const [caminho] = useLocation()
   const { fechar } = useContext(ContextoDaGaveta)
   if (agentes.length === 0) return null
-  const espera = textoDoQueEspera(esperando)
   return (
     <nav aria-label="Seu time">
       {!trilho && <p className="px-3 pt-1 pb-1.5 text-sm text-sutil">Seu time</p>}
@@ -107,6 +106,8 @@ export function SecaoDoTime({ agentes, esperando, trilho }: PropsDaSecaoDoTime) 
         {agentes.map((item) => {
           const aqui = estaNoItem(caminho, item)
           const Icone = item.icone
+          // O que espera a pessoa é do agente que deixa entrega para decidir: os outros não levam contador nem ponto.
+          const espera = item.comEspera ? textoDoQueEspera(esperando) : undefined
           return (
             <li key={item.agente}>
               <Link
@@ -116,7 +117,7 @@ export function SecaoDoTime({ agentes, esperando, trilho }: PropsDaSecaoDoTime) 
                 className={`group relative flex items-center gap-3 rounded-linha text-base ${trilho ? 'size-11 justify-center' : `${ALTURA_DO_ITEM_ABERTO} px-3`} ${aqui ? 'bg-realce font-semibold text-tinta' : 'text-apoio hover:bg-realce-suave hover:text-tinta'}`}
               >
                 {aqui && <span aria-hidden="true" data-filete="" className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-caramelo" />}
-                <span aria-hidden="true" className="relative inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-noite text-white">
+                <span aria-hidden="true" className={`relative inline-flex size-6 shrink-0 items-center justify-center rounded-full ${item.avatar}`}>
                   <Icone size={14} strokeWidth={1.75} />
                   {trilho && espera !== undefined && <span data-ponto-de-espera="" className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full border-2 border-lateral bg-caramelo" />}
                 </span>

@@ -1,5 +1,5 @@
 import { NOMES_DOS_AGENTES, type Agente, type PapelDeUsuario } from '@educa/shared'
-import { Blocks, BookOpen, GraduationCap, LayoutGrid, MessagesSquare, School, SquarePen, UsersRound, type LucideIcon } from 'lucide-react'
+import { Blocks, BookOpen, GraduationCap, LayoutGrid, MessageCircleQuestion, MessagesSquare, School, SquarePen, UsersRound, type LucideIcon } from 'lucide-react'
 import { ROTAS } from '../caminhos'
 
 /*
@@ -55,6 +55,10 @@ export interface AgenteDaLateral {
   readonly rotulo: string
   readonly caminho: string
   readonly icone: LucideIcon
+  /** A cor do avatar, a mesma do agente no resto do produto (`docs/interface.md` 9.7): o Assistente em preto, o Tutor no laranja. */
+  readonly avatar: string
+  /** A linha leva o contador do que espera a pessoa: só o agente que deixa entrega para decidir. */
+  readonly comEspera: boolean
 }
 
 /**
@@ -64,7 +68,12 @@ export interface AgenteDaLateral {
  */
 export const SEU_TIME: Readonly<Record<PapelDeUsuario, readonly AgenteDaLateral[]>> = {
   coordenador: [],
-  professor: [{ agente: 'assistente_de_ensino', rotulo: NOMES_DOS_AGENTES.assistente_de_ensino, caminho: ROTAS.timeDoAssistente, icone: MessagesSquare }],
+  professor: [
+    { agente: 'assistente_de_ensino', rotulo: NOMES_DOS_AGENTES.assistente_de_ensino, caminho: ROTAS.timeDoAssistente, icone: MessagesSquare, avatar: 'bg-noite text-white', comEspera: true },
+    // A4: o Tutor, que a professora supervisiona. A conversa dele mostra sinais e uso da turma, e não conversa de aluno.
+    // Não tem contador: sinal não é pendência que espera decisão, e ponto na lateral não vira pressão de uso (D59).
+    { agente: 'tutor', rotulo: NOMES_DOS_AGENTES.tutor, caminho: ROTAS.timeDoTutor, icone: MessageCircleQuestion, avatar: 'bg-caramelo text-tinta', comEspera: false },
+  ],
   aluno: [],
 }
 

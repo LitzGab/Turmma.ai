@@ -7,7 +7,7 @@ import { ErroDaApi, mensagemDoErro } from '../../api/cliente'
 import { aplicarEntregaDecidida, consultaEntregas, decidirEntrega, recarregarEntregas } from '../../api/entregas'
 import { agenteDoTime, consultaTime, funcaoSuspensa } from '../../api/time'
 import { consultaMeusVinculos } from '../../api/vinculos'
-import { caminhoDoArtefatoDoProfessor, ROTAS_DO_PROFESSOR } from '../../caminhos'
+import { caminhoDaCorrecaoDoProfessor, caminhoDoArtefatoDoProfessor, ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { Abas } from '../../componentes/Abas'
 import { Botao } from '../../componentes/Botao'
 import { classesDoBotao } from '../../componentes/botao-secundario'
@@ -339,6 +339,13 @@ export default function Time() {
                             // Relativo à área: o `Route` aninhado em `/professor` resolve o `to` a partir da base dela.
                             <Link to={caminhoDoArtefatoDoProfessor(entrega.artefatoId)} className={CLASSES_DA_ACAO}>
                               Abrir a versão<span className="sr-only">: {entrega.titulo}</span>
+                            </Link>
+                          )}
+                          {/* O lote de correção não se aprova de dentro do balão: "Revisar" leva à tela dos destaques. */}
+                          {entrega.tipo === 'lote_de_correcao' && entrega.atividadeAplicadaId !== null && (
+                            <Link to={caminhoDaCorrecaoDoProfessor(entrega.atividadeAplicadaId)} className={entrega.estado === 'pendente' ? classesDoBotao({ variante: 'secundario' }).replaceAll('enabled:', '') : CLASSES_DA_ACAO}>
+                              {entrega.estado === 'pendente' ? 'Revisar' : 'Ver a correção'}
+                              <span className="sr-only">: {entrega.titulo}</span>
                             </Link>
                           )}
                           {decideAqui(entrega) && (

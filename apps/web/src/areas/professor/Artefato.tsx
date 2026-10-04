@@ -18,6 +18,7 @@ import { LinhaAprovacao } from '../../componentes/ia/LinhaAprovacao'
 import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
+import { AplicacaoDoArtefato } from './AplicacaoDoArtefato'
 import { ConteudoDoArtefato } from './ConteudoDoArtefato'
 import { aprovacaoDaEntrega, AVISO_DE_TEXTO_SEM_ALUNO, podeRenomear, saidaEmPdf, TEXTO_DA_REJEITADA_SEM_PDF, TEXTO_DO_RASCUNHO_EM_PDF, textoDaAdaptacao, VERBO_DA_ENTREGA } from './entregas'
 import { ExportarPdf } from './ExportarPdf'
@@ -62,7 +63,6 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
   // O formulário some com o foco dentro dele: o foco volta ao botão que o abriu, que só religa no render seguinte.
   const devolverOFoco = () => requestAnimationFrame(() => botaoDeRenomear.current?.focus())
   const idDasVersoes = useId()
-  const idDasAplicacoes = useId()
   useTituloDaTela(dados?.titulo ?? 'Artefato')
 
   const renomear = useMutation({
@@ -142,7 +142,6 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
             // Relativo à área, como os links: o `Route` aninhado em `/professor` resolve a partir da base dela.
             <Botao onClick={() => navegar(caminhoDaAdaptacaoDoArtefato(dados.id))}>Pedir versão adaptada</Botao>
           )}
-          {/* A3: o "Aplicar à turma" entra aqui, com a rota de `atividades-aplicadas`. */}
         </>
       }
     >
@@ -231,18 +230,8 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
         </section>
       )}
 
-      {dados.aplicacoes.length > 0 && (
-        <section aria-labelledby={idDasAplicacoes} className="flex min-w-0 flex-col gap-2">
-          <CabecalhoDeSecao id={idDasAplicacoes} titulo="Atribuída à turma" />
-          <ul className="flex min-w-0 flex-col gap-1 text-apoio">
-            {dados.aplicacoes.map((aplicacao) => (
-              <li key={aplicacao.id} className="break-words">
-                {nomesDasTurmas(itensDosVinculos)[aplicacao.turmaId] ?? 'Turma'} · {aplicacao.estado === 'aberta' ? 'aberta' : 'encerrada'} · {formatarDataHora(aplicacao.aplicadaEm)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {/* Aplicar à turma, a escolha "é avaliativa?", o que já foi atribuído e o encerrar (A3). */}
+      <AplicacaoDoArtefato artefato={dados} nomeDaTurma={turma} />
     </Tela>
   )
 }

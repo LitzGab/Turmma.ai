@@ -87,6 +87,8 @@ export interface ItemEsperando {
   readonly titulo: string
   /** De quê e de que turma: "Atividade de estequiometria · 2ºB". */
   readonly detalhe: string
+  /** A atividade aplicada do lote de correção: é por ela que "Revisar" chega à tela de aprovar. Nula na versão adaptada. */
+  readonly atividadeAplicadaId: string | null
 }
 
 /**
@@ -100,7 +102,14 @@ export function esperandoVoce(entregas: readonly Entrega[], nomesDasTurmas: Read
     .sort((a, b) => a.criadaEm.localeCompare(b.criadaEm))
     .map((entrega) => {
       const turma = nomesDasTurmas[entrega.turmaId]
-      return { id: entrega.id, funcao: entrega.funcao, nomeDaFuncao: FUNCOES[entrega.funcao].nome, titulo: NOME_DO_TIPO_DE_ENTREGA[entrega.tipo], detalhe: turma === undefined ? entrega.titulo : `${entrega.titulo} · ${turma}` }
+      return {
+        id: entrega.id,
+        funcao: entrega.funcao,
+        nomeDaFuncao: FUNCOES[entrega.funcao].nome,
+        titulo: NOME_DO_TIPO_DE_ENTREGA[entrega.tipo],
+        detalhe: turma === undefined ? entrega.titulo : `${entrega.titulo} · ${turma}`,
+        atividadeAplicadaId: entrega.tipo === 'lote_de_correcao' ? entrega.atividadeAplicadaId : null,
+      }
     })
 }
 

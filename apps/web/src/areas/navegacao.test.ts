@@ -16,14 +16,17 @@ describe('navegação por papel', () => {
     ])
   })
 
-  it('D73: cada item só aparece com a fase dele — na A2 o professor não tem Calendário nem Histórico, e "Seu time" tem só o Assistente de ensino', () => {
+  it('D73: cada item só aparece com a fase dele — o professor não tem Calendário nem Histórico, e "Seu time" tem o Assistente de ensino e, desde a A4, o Tutor', () => {
     const rotulos = NAVEGACAO.professor.map((item) => item.rotulo)
     expect(rotulos).not.toContain('Calendário')
     expect(rotulos).not.toContain('Histórico')
-    // A linha do Tutor chega com os sinais (A4): antes disso ela levaria a uma tela que não existe.
-    expect(SEU_TIME.professor.map(({ agente, rotulo, caminho }) => ({ agente, rotulo, caminho }))).toEqual([
-      { agente: 'assistente_de_ensino', rotulo: 'Assistente de ensino', caminho: '/professor/time/assistente' },
+    // Só o Assistente deixa entrega esperando decisão: a linha do Tutor não leva contador (D59).
+    expect(SEU_TIME.professor.map(({ agente, rotulo, caminho, comEspera }) => ({ agente, rotulo, caminho, comEspera }))).toEqual([
+      { agente: 'assistente_de_ensino', rotulo: 'Assistente de ensino', caminho: '/professor/time/assistente', comEspera: true },
+      { agente: 'tutor', rotulo: 'Tutor', caminho: '/professor/time/tutor', comEspera: false },
     ])
+    // O Analista é da coordenação, e não aparece para o professor.
+    expect(SEU_TIME.professor.map((item) => item.agente)).not.toContain('analista_de_desempenho_escolar')
     expect(SEU_TIME.coordenador).toEqual([])
     expect(SEU_TIME.aluno).toEqual([])
   })

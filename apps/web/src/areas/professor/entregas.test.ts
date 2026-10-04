@@ -66,8 +66,8 @@ describe('"Esperando você" (11.2)', () => {
       { [TURMA]: '2ºB' },
     )
     expect(itens).toEqual([
-      { id: '0190f5a0-0000-7000-8000-000000000001', funcao: 'correcao_de_objetiva', nomeDaFuncao: 'Correção de objetiva', titulo: 'Correção da turma', detalhe: 'Atividade de estequiometria · 2ºB' },
-      { id: '0190f5a0-0000-7000-8000-000000000002', funcao: 'adaptacao', nomeDaFuncao: 'Adaptação', titulo: 'Versão adaptada', detalhe: 'Lista 3 · 2ºB' },
+      { id: '0190f5a0-0000-7000-8000-000000000001', funcao: 'correcao_de_objetiva', nomeDaFuncao: 'Correção de objetiva', titulo: 'Correção da turma', detalhe: 'Atividade de estequiometria · 2ºB', atividadeAplicadaId: '0190f5a0-0000-7000-8000-0000000000b1' },
+      { id: '0190f5a0-0000-7000-8000-000000000002', funcao: 'adaptacao', nomeDaFuncao: 'Adaptação', titulo: 'Versão adaptada', detalhe: 'Lista 3 · 2ºB', atividadeAplicadaId: null },
     ])
   })
 
