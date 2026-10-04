@@ -1,16 +1,26 @@
 import { z } from 'zod'
 import {
+  CHAVES_DE_FUNCAO,
   CONTESTACOES_DE_VINCULO,
   DECISORES_DA_REIVINDICACAO,
+  ESTADOS_DE_MATERIAL,
   ESTADOS_DE_VINCULO,
   ESTADOS_EM_DECISAO,
   FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR,
   FINALIDADES_DA_LEITURA_DE_ALUNOS,
+  FINALIDADES_DA_LEITURA_NOMINAL,
   FINALIDADES_DA_REDEFINICAO_DE_MFA,
+  LICENCAS_DE_MATERIAL,
+  LICENCAS_DECLARAVEIS,
+  MOTIVOS_DA_RECUSA_DO_MATERIAL,
+  MOTIVOS_DE_DESTAQUE,
   MOTIVOS_DE_ENCERRAMENTO_PELA_COORDENACAO,
+  MOTIVOS_DE_SUSPENSAO,
   PAPEIS_DE_USUARIO,
   PAPEIS_DE_VINCULO,
   TIPOS_DE_CONVITE,
+  TIPOS_DE_ENTREGA,
+  TITULARIDADES_DE_MATERIAL,
   VALIDADES_DO_ACESSO_DIAS,
 } from '@educa/shared'
 import { PROVEDORES_EXTERNOS } from '../db/schema/conta-externa.js'
@@ -385,6 +395,140 @@ export const ACOES_DE_AUDITORIA = {
       alunoId: z.uuid().nullable(),
     }),
     finalidade: null,
+  },
+  /**
+   * A coordenação enviou um material com a titularidade e a licença declaradas (MVP, A2; D5, D75). `entidadeId` é o
+   * material. É o registro de quem declarou que a escola pode usar o material, e quando: a linha do material perde quem
+   * enviou se a pessoa for eliminada, e este fica. Nunca o título, o nome do licenciante nem o nome do arquivo.
+   */
+  'material.enviado': {
+    entidade: 'material',
+    antes: null,
+    depois: z.strictObject({ disciplinaId: z.uuid(), titularidade: z.enum(TITULARIDADES_DE_MATERIAL), licenca: z.enum(LICENCAS_DE_MATERIAL), declaracao: z.literal(true) }),
+    finalidade: null,
+  },
+  /**
+   * O envio foi recusado antes de abrir o arquivo (MVP, A2; D5): sem licença que permita o uso, ou sem a declaração
+   * marcada. **Não há linha em `material`**, e por isso `entidadeId` é a disciplina para a qual o material ia. Leva o que
+   * foi declarado e o motivo; a resposta foi `MATERIAL_SEM_LICENCA`.
+   */
+  'material.recusado': {
+    entidade: 'disciplina',
+    antes: null,
+    depois: z.strictObject({
+      titularidade: z.enum(TITULARIDADES_DE_MATERIAL),
+      licenca: z.enum(LICENCAS_DECLARAVEIS),
+      declaracao: z.boolean(),
+      motivo: z.enum(MOTIVOS_DA_RECUSA_DO_MATERIAL),
+    }),
+    finalidade: null,
+  },
+  /**
+   * A coordenação excluiu um material (MVP, A2; regra 20, item 15): exclusão lógica da linha, e os trechos dele saem de
+   * fato, na mesma transação. `entidadeId` é o material; `trechosApagados`, quantas páginas deixaram a busca.
+   */
+  'material.excluido': {
+    entidade: 'material',
+    antes: z.strictObject({ disciplinaId: z.uuid(), estado: z.enum(ESTADOS_DE_MATERIAL) }),
+    depois: z.strictObject({ trechosApagados: z.number().int().nonnegative() }),
+    finalidade: null,
+  },
+  /**
+   * O professor aplicou uma atividade à turma (MVP, A3; regra 70, item 3; regra 20, item 10): é o ato humano que leva a
+   * saída da IA ao aluno. `entidadeId` é a atividade aplicada; `versaoAdaptada` diz se o artefato era versão adaptada, que
+   * só se aplica com a entrega aprovada.
+   */
+  'atividade.aplicada': {
+    entidade: 'atividade_aplicada',
+    antes: null,
+    depois: z.strictObject({ artefatoId: z.uuid(), turmaId: z.uuid(), avaliativa: z.boolean(), versaoAdaptada: z.boolean() }),
+    finalidade: null,
+  },
+  /**
+   * O professor da turma aprovou ou rejeitou uma entrega da IA (MVP; regra 70, itens 3 e 6; regra 20, item 10).
+   * `entidadeId` é a entrega; o autor do registro é quem decidiu. A aprovação do lote de correção não vem por aqui: é
+   * `lote.aprovado`, com a validação. **Nunca a justificativa da rejeição**, que é texto do professor e fica só na entrega.
+   */
+  'entrega.decidida': {
+    entidade: 'entrega',
+    antes: z.strictObject({ estado: z.literal('pendente') }),
+    depois: z.strictObject({
+      tipo: z.enum(TIPOS_DE_ENTREGA),
+      funcao: z.enum(CHAVES_DE_FUNCAO),
+      turmaId: z.uuid(),
+      estado: z.enum(['aprovada', 'rejeitada']),
+      artefatoId: z.uuid().nullable(),
+      atividadeAplicadaId: z.uuid().nullable(),
+    }),
+    finalidade: null,
+  },
+  /**
+   * O professor abriu a correção destacada de um aluno, antes de aprovar o lote (MVP, A3; D33, D56). `entidadeId` é a
+   * entrega do lote; leva o aluno e os motivos do destaque. Grava uma vez por destaque: abrir de novo não registra outra.
+   */
+  'correcao.destaque_aberto': {
+    entidade: 'entrega',
+    antes: null,
+    depois: z.strictObject({ atividadeAplicadaId: z.uuid(), alunoId: z.uuid(), motivos: z.array(z.enum(MOTIVOS_DE_DESTAQUE)) }),
+    finalidade: null,
+  },
+  /**
+   * O professor aprovou o lote de correção, com todos os destaques abertos (MVP, A3; D33, D56; regra 70, item 6).
+   * `entidadeId` é a entrega; `validacaoId`, o registro do que foi apresentado e aberto; as contagens dizem o tamanho do
+   * que ele validou. É a partir daqui que cada aluno alcança o próprio diagnóstico. Não há nota (D46).
+   */
+  'lote.aprovado': {
+    entidade: 'entrega',
+    antes: z.strictObject({ estado: z.literal('pendente') }),
+    depois: z.strictObject({
+      estado: z.literal('aprovada'),
+      atividadeAplicadaId: z.uuid(),
+      turmaId: z.uuid(),
+      validacaoId: z.uuid(),
+      corrigidos: z.number().int().nonnegative(),
+      destaques: z.number().int().nonnegative(),
+      destaquesAbertos: z.number().int().nonnegative(),
+    }),
+    finalidade: null,
+  },
+  /**
+   * A coordenação suspendeu uma função da IA na escola (MVP, A5; D60): a função recusa executar a partir daqui, e as
+   * outras do mesmo agente continuam. `entidadeId` é a suspensão; o motivo é código de lista fechada, ou nulo.
+   */
+  'funcao.suspensa': {
+    entidade: 'suspensao_de_funcao',
+    antes: null,
+    depois: z.strictObject({ funcao: z.enum(CHAVES_DE_FUNCAO), motivo: z.enum(MOTIVOS_DE_SUSPENSAO).nullable() }),
+    finalidade: null,
+  },
+  /** A coordenação retomou a função suspensa (MVP, A5; D60). `entidadeId` é a suspensão que deixou de valer. */
+  'funcao.retomada': {
+    entidade: 'suspensao_de_funcao',
+    antes: z.strictObject({ funcao: z.enum(CHAVES_DE_FUNCAO), suspensaEm: z.iso.datetime() }),
+    depois: z.strictObject({ retomadaEm: z.iso.datetime() }),
+    finalidade: null,
+  },
+  /**
+   * A coordenação leu o desempenho de uma turma, com os alunos nomeados (MVP, A3; D34; regra 20, item 10), com a
+   * finalidade, a cada leitura. `entidadeId` é a turma; `quantidade`, quantos alunos a resposta trouxe. O professor com
+   * vínculo confirmado lê a própria turma sem registro.
+   */
+  'turma.desempenho_lido': {
+    entidade: 'turma',
+    antes: null,
+    depois: z.strictObject({ quantidade: z.number().int().nonnegative(), lotesAprovados: z.number().int().nonnegative() }),
+    finalidade: z.enum(FINALIDADES_DA_LEITURA_DE_ALUNOS),
+  },
+  /**
+   * A coordenação abriu o dado nominal do Analista: o detalhe de uma turma, que identifica os professores dela (MVP, A5;
+   * D45; regra 20, item 10; regra 70, item 8), com a finalidade, a cada leitura. `entidadeId` é a turma; `professores`,
+   * quantos a resposta nomeou. Nunca quem: o registro prova que a leitura aconteceu e por quê, e não repete o dado.
+   */
+  'analista.nominal_lido': {
+    entidade: 'turma',
+    antes: null,
+    depois: z.strictObject({ professores: z.number().int().nonnegative() }),
+    finalidade: z.enum(FINALIDADES_DA_LEITURA_NOMINAL),
   },
 } as const satisfies Record<string, DefinicaoDeAcao>
 

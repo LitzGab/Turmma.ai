@@ -475,6 +475,65 @@ recusada no servidor. `FonteAprovada` sem `escola` é a lista padrão nossa. `Bu
 professor; o `foraDaSala` é da coordenação. Sem ele ligado, `SessaoTutor` com modo `casa` é
 recusada no servidor.
 
+## MVP de apresentação (A2 a A5) — o que está implementado
+
+Implementado na fatia única do MVP de apresentação (D77), na migration `0022_mvp_apresentacao.sql`. A forma exata, com
+colunas, unicidades, checks e gatilhos, está em `docs/mvp-contratos.md` e no docblock de cada tabela; os blocos de
+"Conteúdo", "Avaliação", "Agentes" e "Tutor, sala e supervisão", acima, continuam sendo o desenho definitivo, que cada fase
+completa.
+
+```
+Material*          → escola*, disciplina*, titulo*, titularidade*, licenciante?, licenca*, declaracao*,
+                     sha256*, tamanhoBytes*, paginas?, estado* (processando | pronto | falhou), falha?,
+                     enviadoPor?, enviadoEm*, excluidoPor?, excluidoEm?
+Trecho*            → escola*, disciplina*, material*, pagina*, texto*, busca (tsvector, português)
+ExecucaoAgente*    → escola*, anoLetivo*, funcao*, tarefa*, solicitadaPor?, chaveEnvio*,
+                     estado* (pendente | rodando | concluida | falhou), entrada*, resultado?, erro?, datas
+ConsumoIa*         → escola*, aluno?, execucao?, tarefa*, funcao*, perfil*, origem*, modelo*, promptVersao*,
+                     tokensDeEntrada*, tokensDeSaida*, custoMicros*, duracaoMs*, envioExterno*, tentativas*,
+                     estado*, codigoDeErro?, entrada?, saida?, em*
+ThreadAgente*      → escola*, anoLetivo*, usuario*, agente*
+MensagemAgente*    → escola*, anoLetivo*, thread*, execucao*, autor* (usuario | agente), conteudo*, turma?, disciplina?
+Artefato*          → escola*, anoLetivo*, turma*, disciplina*, tipo*, titulo*, conteudo*, origem? (versão adaptada),
+                     execucao?, criadoPor?
+Entrega*           → escola*, anoLetivo*, turma*, funcao*, tipo* (versao_adaptada | lote_de_correcao), artefato?,
+                     atividadeAplicada?, execucao?, estado* (pendente | aprovada | rejeitada), decididaPor?,
+                     decididaEm?, justificativa?
+AtividadeAplicada* → escola*, anoLetivo*, turma*, artefato*, avaliativa*, estado* (aberta | encerrada),
+                     aplicadaPor*, aplicadaEm*, encerradaEm?
+TentativaAtividade*→ escola*, anoLetivo*, atividadeAplicada*, aluno*, iniciadaEm*, enviadaEm?
+RespostaAtividade* → escola*, anoLetivo*, atividadeAplicada*, aluno*, questao* (1..20), alternativa* (0..3)
+Correcao*          → escola*, anoLetivo*, entrega* (lote), atividadeAplicada*, aluno*, acertos*, total*, emBranco*,
+                     porHabilidade*, destaques*, destaqueAbertoEm?, destaqueAbertoPor?
+ValidacaoDoLote*   → escola*, anoLetivo*, entrega*, atividadeAplicada*, apresentado*, aberto*, confirmadaPor*,
+                     confirmadaEm*
+MensagemTutor*     → escola*, anoLetivo*, turma*, aluno*, execucao*, atividadeAplicada?, material?,
+                     autor* (aluno | tutor), tipo* (texto | assunto_delicado), texto*, citacoes?
+SinalTutor*        → escola*, anoLetivo*, turma*, aluno*, execucao?, tipo* (travou | resposta_pronta |
+                     duvida_repetida | atencao_humana), atividadeAplicada?, questao?, material?, pagina?
+SuspensaoDeFuncao* → escola*, funcao*, motivo?, suspensaPor*, suspensaEm*, retomadaPor?, retomadaEm?
+ResumoDoAnalista*  → escola*, anoLetivo*, execucao?, conteudo*, geradoEm*
+```
+
+O que a fatia tem de diferente do desenho definitivo, e por quê:
+
+- **`Material` junta a fonte e o material**, e o arquivo não é guardado: ficam os metadados, a titularidade, a licença e a
+  declaração, e o texto por página vai para `Trecho`, sem `embedding` (busca por texto completo em português). Não existe
+  material sem a declaração de licença (check), e a recusa não grava linha (D5, D75).
+- **Não existe `Nota`** (D46). `Correcao` é o diagnóstico formativo de objetiva, por aluno e por lote; `AtividadeAplicada`,
+  `TentativaAtividade` e `RespostaAtividade` são a `Avaliacao`, a `Aplicacao` e a `Resposta`, finas, só para objetiva online.
+- **A função não é tabela**: é o catálogo `FUNCOES`, em código (`packages/shared/src/time/funcoes.ts`). `Entrega`,
+  `ExecucaoAgente` e `ConsumoIa` levam a chave dela, e `SuspensaoDeFuncao` é o registro próprio da suspensão (D60).
+- **A validação do lote é tabela própria** (D56), e o lote só fica aprovado com ela (gatilho no banco). A versão adaptada
+  só é aplicada à turma com a entrega aprovada (gatilho no banco).
+- **Não existe `AdaptacaoAluno`** nesta fatia: a versão adaptada leva só os tipos de adaptação e vai para a turma, sem
+  vínculo com aluno (D35).
+- **O Tutor não tem sessão, política nem resumo de sessão**: a conversa é `MensagemTutor`, por aluno, e a memória é leitura
+  das tentativas, das correções de lote aprovado e dos sinais. `SinalTutor` não tem `detalhe`: é tipo fechado mais a
+  referência ao trabalho, e `atencao_humana` não carrega referência nenhuma (D36, D57, D66).
+- **O freio e o pacote do Tutor** são duas colunas de `configuracao_operacional_escola`, e não a `PacoteTutor` por turma.
+- **`ConsumoIa` não tem usuário** (D64): só o aluno, nas funções do Tutor.
+
 ## Comunicação, conta e conformidade
 
 ```

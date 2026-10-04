@@ -20,6 +20,22 @@ export const MENSAGENS_DE_ERRO: Readonly<Record<CodigoDeErro, string>> = {
   ACESSO_VENCIDO: 'Seu acesso precisa ser renovado. Tente de novo.',
   SESSAO_ENCERRADA: 'Sua sessão terminou. Entre de novo para continuar.',
   REIVINDICACAO_RECUSADA: 'Não foi possível enviar. Confira a matrícula; se estiver certa, chame o professor.',
+  MATERIAL_SEM_LICENCA: 'Este material não pode entrar sem licença de uso. Escolha a licença que a escola tem e marque a declaração, ou envie outro material.',
+  FUNCAO_SUSPENSA: 'Esta função da IA está suspensa na sua escola. Fale com a coordenação para saber quando ela volta.',
+  LIMITE_DIARIO_DO_TUTOR: 'Você chegou ao limite de perguntas ao Tutor por hoje. Amanhã ele volta; se precisar agora, chame o professor.',
+  PACOTE_DO_TUTOR_ESGOTADO: 'A sua turma usou todas as perguntas ao Tutor deste mês. Chame o professor para continuar a atividade.',
+  TUTOR_PAUSADO_EM_AVALIACAO: 'O Tutor fica pausado enquanto a avaliação está aberta. Ele volta quando o professor encerrar a avaliação.',
+  DESTAQUES_NAO_ABERTOS: 'Ainda há casos destacados sem abrir. Abra cada um deles antes de aprovar o lote.',
+  ENTREGA_JA_DECIDIDA: 'Esta entrega já foi decidida. Atualize a tela para ver como ela ficou.',
+  VERSAO_ADAPTADA_NAO_APROVADA: 'A versão adaptada ainda não foi aprovada. Aprove a versão em "Seu time" antes de aplicar à turma.',
+  ATIVIDADE_ENCERRADA: 'Esta atividade já foi encerrada ou enviada, e não recebe mais respostas. Se precisar mudar algo, chame o professor.',
+  IA_INDISPONIVEL: 'A IA está indisponível agora. Tente de novo em instantes.',
+  IA_TEMPO_ESGOTADO: 'A resposta da IA demorou mais que o esperado. Tente de novo em instantes.',
+  IA_SAIDA_INVALIDA: 'A IA não conseguiu montar a resposta desta vez. Tente de novo; se continuar, mude um pouco o pedido.',
+  IA_ORCAMENTO_ESGOTADO: 'O uso de IA da escola chegou ao limite do período. Fale com a coordenação para continuar.',
+  IA_ENTRADA_INVALIDA: 'Não foi possível concluir agora. Tente de novo em instantes.',
+  EXECUCAO_INTERROMPIDA: 'O pedido foi interrompido antes de terminar. Envie de novo.',
+  MATERIAL_INSUFICIENTE: 'Não encontramos esse tema no material da escola. Confira o tema ou peça à coordenação para enviar o material.',
 }
 
 /**
