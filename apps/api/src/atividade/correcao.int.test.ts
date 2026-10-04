@@ -14,7 +14,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
-import { subirApi, type ApiDeTeste, type RespostaHttp } from '../../test/api-com-sessao.js'
+import { chamar, subirApi, type ApiDeTeste, type RespostaHttp } from '../../test/api-com-sessao.js'
 import {
   alunosComSessao,
   aplicarAtividade,
@@ -30,7 +30,7 @@ import {
   rotasDaAtividade,
   type RotasDaAtividade,
 } from '../../test/atividade-de-teste.js'
-import { montarEscolaComAssistente, NOME_DA_PROFESSORA_DE_TESTE, NOME_DO_ALUNO_DE_TESTE, type EscolaComAssistente } from '../../test/escola-com-assistente.js'
+import { montarEscolaComAssistente, NOME_DA_PROFESSORA_DE_TESTE, NOME_DO_ALUNO_DE_TESTE, vincularProfessor, type EscolaComAssistente } from '../../test/escola-com-assistente.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste.js'
 import { CorrecaoService } from './correcao.service.js'
 import { LeituraDoLote } from './leitura-do-lote.js'
@@ -494,6 +494,39 @@ describe('correção de objetiva e validação do lote', () => {
         { habilidade: HABILIDADE_DAS_DUAS_ULTIMAS, acertos: 1, total: 2 },
       ])
       for (const proibido of ['nota', 'conceito', 'posicao', 'ranking', 'faixa']) expect(JSON.stringify(resposta.corpo).toLowerCase()).not.toContain(proibido)
+    })
+
+    it('a professora com duas disciplinas na mesma turma (Química e Física) lê o desempenho das duas somado, e nada de uma terceira', async () => {
+      const turma = await turmaNova()
+      const { escola } = turma
+      await vincularProfessor(bancada, escola, escola.professora.usuarioId, escola.turma, escola.fisica)
+      const biologia = (await chamar(api.url, 'POST', '/v1/disciplinas', await escola.coordenacao.tokenNovo(), { nome: 'Biologia' })).corpo['id'] as string
+      await vincularProfessor(bancada, escola, escola.deFisica.usuarioId, escola.turma, biologia)
+      const loteAprovado = async (professora: SessaoDeTeste, disciplinaId: string, respostas: readonly (readonly [SessaoDeTeste, readonly number[]])[]) => {
+        const id = await aplicarAtividade(rotas, professora, await criarAtividade(bancada, escola, { disciplinaId, conteudo: conteudoDeTeste(escola.materialId, `Lista sintética ${randomUUID()}`) }), escola.turma)
+        for (const [aluno, marcadas] of respostas) await responderProva(rotas, aluno, id, marcadas)
+        if ((await encerrarAtividade(rotas, professora, id)) === null) throw new Error('o lote não nasceu')
+        expect((await aprovarOLote(rotas, professora, id)).status).toBe(200)
+      }
+      const quaseTudoErrado = [1, 1, 0, 0, 1]
+      // Química: Caio acerta tudo. Física: Caio acerta só a questão 2. Biologia (outra professora): Caio e Bia quase tudo errado.
+      await loteAprovado(escola.professora, escola.quimica, [[turma.caio, [...GABARITO_DE_TESTE]]])
+      await loteAprovado(escola.professora, escola.fisica, [[turma.caio, quaseTudoErrado]])
+      await loteAprovado(escola.deFisica, biologia, [
+        [turma.caio, quaseTudoErrado],
+        [turma.bia, quaseTudoErrado],
+      ])
+
+      const desempenho = await lerDesempenho(escola.professora, escola.turma)
+      expect(desempenho.lotesAprovados).toBe(2)
+      // As duas somadas: 3 + 1 de 6 e 2 + 0 de 4, ninguém abaixo da metade. Com a Biologia seriam 5 de 9 e 2 de 6, e três abaixo.
+      expect(desempenho.porHabilidade).toEqual([
+        { habilidade: HABILIDADE_DAS_TRES_PRIMEIRAS, acertos: 4, total: 6, alunosAbaixoDaMetade: 0 },
+        { habilidade: HABILIDADE_DAS_DUAS_ULTIMAS, acertos: 2, total: 4, alunosAbaixoDaMetade: 0 },
+      ])
+      expect(new Map(desempenho.alunos.map((aluno) => [aluno.alunoId, [aluno.acertos, aluno.total]]))).toEqual(
+        new Map([[turma.ana1.usuarioId, [0, 0]], [turma.ana2.usuarioId, [0, 0]], [turma.bia.usuarioId, [0, 0]], [turma.caio.usuarioId, [6, 10]], [turma.davi.usuarioId, [0, 0]]]),
+      )
     })
 
     it('a professora lê sem registro; a coordenação só com finalidade, e cada leitura dela grava auditoria; sem finalidade, nem resposta nem registro', async () => {

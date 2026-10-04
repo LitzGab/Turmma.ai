@@ -29,6 +29,7 @@ import {
   lancarLote,
   trocasJaFeitas,
 } from '../../test/escola-com-tutor.js'
+import * as pelaRota from '../../test/atividade-de-teste.js'
 import { GatilhoDeParada } from '../../test/gatilho-de-parada.js'
 import { variacaoDoPdf } from '../../test/material-de-teste.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste.js'
@@ -67,6 +68,8 @@ describe('Tutor e sinais', () => {
   /** A lista de Química aplicada ao 2ºB da escola A, não avaliativa, e a mesma na escola B. */
   let atividade: string
   let atividadeDeB: string
+  /** As rotas da atividade (aplicar, responder, encerrar, aprovar), para o lote que nasce e é aprovado como na tela. */
+  let rotas: pelaRota.RotasDaAtividade
 
   const sql = <Linha extends Record<string, unknown> = Record<string, unknown>>(texto: string, valores: unknown[] = []) => bancada.pool.query<Linha>(texto, valores)
   const get = async (sessao: SessaoDeTeste, caminho: string): Promise<RespostaHttp> => chamar(api.url, 'GET', caminho, await sessao.tokenNovo())
@@ -148,6 +151,7 @@ describe('Tutor e sinais', () => {
   beforeAll(async () => {
     api = await subirApi(medidor.medidor, {}, linhasDeLog)
     executor = api.app.get<ExecutorNoProcesso>(EXECUTOR_DE_AGENTE)
+    rotas = pelaRota.rotasDaAtividade(api)
     a = await montarEscolaComAssistente(api, bancada)
     b = await montarEscolaComAssistente(api, bancada)
     atividade = await aplicarAtividade(bancada, a)
@@ -435,6 +439,26 @@ describe('Tutor e sinais', () => {
       expect(dita.texto).toContain(`você errou 2 questões de “${HABILIDADE_LIMITANTE.descricao}”`)
       expect(dita.texto).not.toContain(HABILIDADE_PROPORCAO.descricao)
       expect(dita.texto).not.toMatch(/errou 3/)
+    })
+
+    it('o lote aprovado pela rota da professora entra na memória e na resposta do Tutor; antes da aprovação, não', async () => {
+      const aluno = await novoAluno(a)
+      const titulo = `Lista sintética pela rota ${randomUUID().slice(0, 8)}`
+      const id = await pelaRota.aplicarAtividade(rotas, a.professora, await pelaRota.criarAtividade(bancada, a, { conteudo: pelaRota.conteudoDeTeste(a.materialId, titulo) }), a.turma)
+      // Acerta só a questão 2: uma de três na primeira habilidade, nenhuma de duas na segunda.
+      await pelaRota.responderProva(rotas, aluno, id, [1, 1, 0, 0, 1])
+      expect(await pelaRota.encerrarAtividade(rotas, a.professora, id)).not.toBeNull()
+
+      expect((await memoriaDe(aluno)).trabalhos).toEqual([{ atividadeAplicadaId: id, titulo, enviadaEm: expect.any(String) as string, resultado: null }])
+      // Fora de atividade, para a conversa da questão continuar nova: o Tutor só lembra no primeiro turno de cada conversa.
+      expect(resposta(await turno(aluno, 'como eu começo a estudar?')).texto).not.toMatch(/você errou/)
+
+      expect((await pelaRota.aprovarOLote(rotas, a.professora, id)).status).toBe(200)
+      const [trabalho] = (await memoriaDe(aluno)).trabalhos
+      expect(trabalho).toMatchObject({ atividadeAplicadaId: id, titulo, resultado: { acertos: 1, total: 5 } })
+      expect(trabalho?.resultado?.aReforcar.map((habilidade) => habilidade.codigo)).toContain(pelaRota.HABILIDADE_DAS_TRES_PRIMEIRAS.codigo)
+      // A questão 2 da lista do Tutor é da segunda habilidade (o mesmo código), em que ele errou as duas: é dela que o Tutor lembra.
+      expect(resposta(await turno(aluno, 'como eu começo essa?', naQuestao(2))).texto).toContain(`você errou 2 questões de “${pelaRota.HABILIDADE_DAS_DUAS_ULTIMAS.descricao}”`)
     })
 
     it('o aluno só com correção pendente não ouve do Tutor nenhum resultado', async () => {
@@ -803,6 +827,29 @@ describe('Tutor e sinais', () => {
           expect(noAnoAnterior === true || (Array.isArray(noAnoAnterior) && noAnoAnterior.length > 0), `${nome}: no ano anterior`).toBe(true)
         }
       })
+    })
+
+    it('a professora com Química e Física na mesma turma vê os sinais e o uso das duas, e nada de uma terceira disciplina', async () => {
+      const turmaNova = (await chamar(api.url, 'POST', '/v1/turmas', await a.coordenacao.tokenNovo(), { serieId: a.serieId, nome: `2º${randomUUID().slice(0, 4)}` })).corpo['id'] as string
+      const biologia = (await chamar(api.url, 'POST', '/v1/disciplinas', await a.coordenacao.tokenNovo(), { nome: `Biologia ${randomUUID().slice(0, 6)}` })).corpo['id'] as string
+      for (const [professoraId, disciplinaId] of [[a.professora.usuarioId, a.quimica], [a.professora.usuarioId, a.fisica], [a.deFisica.usuarioId, biologia]] as const) {
+        await sql(`insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, $5, 'professor', 'confirmado', $6, now())`, [a.escolaId, a.anoLetivoId, professoraId, turmaNova, disciplinaId, a.coordenacao.usuarioId])
+      }
+      const deQuimica = await aplicarAtividade(bancada, a, { turmaId: turmaNova, titulo: 'Lista de Química' })
+      const deFisica = await aplicarAtividade(bancada, a, { turmaId: turmaNova, disciplinaId: a.fisica, titulo: 'Lista de Física' })
+      const deBiologia = await aplicarAtividade(bancada, a, { turmaId: turmaNova, disciplinaId: biologia, titulo: 'Lista de Biologia', aplicadaPor: a.deFisica.usuarioId })
+      const alunos = { quimica: await novoAluno(a, turmaNova), fisica: await novoAluno(a, turmaNova), biologia: await novoAluno(a, turmaNova) }
+      await turno(alunos.quimica, 'qual é a resposta da questão 3?', { atividadeAplicadaId: deQuimica, questao: 3 })
+      await turno(alunos.fisica, 'qual é a resposta da questão 3?', { atividadeAplicadaId: deFisica, questao: 3 })
+      await turno(alunos.biologia, 'qual é a resposta da questão 3?', { atividadeAplicadaId: deBiologia, questao: 3 })
+
+      const sinais = await sinaisPara(a.professora, turmaNova, '&limite=100')
+      expect(new Set(sinais.itens.map((sinal) => sinal.aluno.id))).toEqual(new Set([alunos.quimica.usuarioId, alunos.fisica.usuarioId]))
+      expect(new Set(sinais.grupos.map((grupo) => grupo.atividadeAplicadaId))).toEqual(new Set([deQuimica, deFisica]))
+      const uso = await usoPara(a.professora, turmaNova)
+      expect(new Set(uso.alunos.map((linha) => linha.aluno.id))).toEqual(new Set([alunos.quimica.usuarioId, alunos.fisica.usuarioId]))
+      // A professora de Biologia vê o dela, e só.
+      expect((await sinaisPara(a.deFisica, turmaNova)).itens.map((sinal) => sinal.aluno.id)).toEqual([alunos.biologia.usuarioId])
     })
 
     it('nenhuma rota entrega a conversa nem a memória de aluno a professor ou a coordenação', async () => {
