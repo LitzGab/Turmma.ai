@@ -83,11 +83,12 @@ async function entrar(page: Page, hasTouch: boolean, { comTurma = true }: { comT
  */
 async function recarregar(page: Page): Promise<void> {
   await page.reload()
-  await expect(page.getByRole('main')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  // A tela da área só existe com a sessão de volta e o `/v1/eu` lido: antes disso a lateral ainda não tem os itens.
+  await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
 }
 
-const caixa = (page: Page) => page.getByLabel('Pedido ao Assistente de ensino')
-const selosDeIA = (alvo: Page | Locator) => alvo.getByTitle('Gerado por inteligência artificial')
+const caixa = (page: Page) => page.getByRole('textbox', { name: 'Pedido ao Assistente de ensino' })
+const selosDeIA = (alvo: Page | Locator) => alvo.locator('[data-selo-ia]')
 
 async function enviarPedido(page: Page, texto: string, hasTouch: boolean): Promise<void> {
   await caixa(page).fill(texto)
@@ -96,6 +97,8 @@ async function enviarPedido(page: Page, texto: string, hasTouch: boolean): Promi
 
 test.describe('a navegação do professor na A2 (D73)', () => {
   test('a lateral tem Nova conversa, Ferramentas e Turmas, e "Seu time" com o Assistente e o que espera a professora; Calendário, Histórico e Tutor não aparecem', async ({ page, hasTouch }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
+    test.slow()
     const { api, turmaId, disciplinaId } = await entrar(page, hasTouch)
     const origem = atividadeSintetica(turmaId, disciplinaId)
     api.entregas = [versaoAdaptada(origem).entrega, versaoAdaptada(origem).entrega, versaoAdaptada(origem, 'aprovada').entrega]
@@ -132,6 +135,8 @@ test.describe('a navegação do professor na A2 (D73)', () => {
 
 test.describe('a Home (11.2): os quatro estados', () => {
   test('sem turma confirmada, a tela diz o que falta e leva a Turmas; não há caixa de pedido', async ({ page, hasTouch }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
+    test.slow()
     await entrar(page, hasTouch, { comTurma: false })
     await irPara(page, '/professor/nova-conversa')
     await expect(page.getByText('Falta uma turma confirmada')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
@@ -143,25 +148,27 @@ test.describe('a Home (11.2): os quatro estados', () => {
   })
 
   test('carregando, erro com "Tentar de novo" e, com dado, a saudação, a caixa com só as três ferramentas e a turma; "Esperando você" só com pendência', async ({ page, hasTouch }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
+    test.slow()
     const { api, turmaId, turmaNome, disciplinaId } = await entrar(page, hasTouch)
     const origem = atividadeSintetica(turmaId, disciplinaId)
 
     // Carregando e erro: as turmas dela, seguradas e depois recusadas.
     const segura = portao()
-    let falhas = 2
+    let recusar = true
     await page.route('**/v1/meus-vinculos*', async (route) => {
       await segura.aberta
-      if (falhas > 0) {
-        falhas -= 1
+      if (recusar) {
         await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify(erroDaApi(503, 'INDISPONIVEL_TENTE_DE_NOVO').corpo) })
       } else await route.continue()
     })
-    await page.reload()
-    await expect(page).toHaveURL(/\/professor\/turmas$/, { timeout: PRAZO_DA_ENTRADA_MS })
+    await recarregar(page)
+    await expect(page).toHaveURL(/\/professor\/turmas$/)
     await irPelaNavegacao(page, 'Nova conversa', hasTouch)
     await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     segura.abrir()
     await expect(page.getByRole('main').getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_TELA_MS })
+    recusar = false
     await acionar(page.getByRole('button', { name: 'Tentar de novo' }), hasTouch)
 
     // Com dado: a saudação pela hora, com o primeiro nome, e nada de enfeite onde não há pendência.
@@ -197,6 +204,8 @@ test.describe('a Home (11.2): os quatro estados', () => {
 
 test.describe('a conversa (11.3)', () => {
   test('o pedido aparece na hora, o Assistente pensa, pergunta se ela quer a ferramenta com duas opções do mesmo tamanho, abre o cartão preenchido, gera e responde com a página citada', async ({ page, hasTouch }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
+    test.slow()
     const { api, turmaId, disciplinaId } = await entrar(page, hasTouch)
     await irPara(page, '/professor/nova-conversa')
     await expect(caixa(page)).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
@@ -278,6 +287,8 @@ test.describe('a conversa (11.3)', () => {
   })
 
   test('os quatro estados da conversa; a resposta com chip de página e fontes; a falha vira aviso com "Tentar de novo", nunca código; a função suspensa vira aviso que explica', async ({ page, hasTouch }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
+    test.slow()
     const { api, turmaId, disciplinaId } = await entrar(page, hasTouch)
 
     // Carregando e erro.
@@ -344,6 +355,8 @@ test.describe('a conversa (11.3)', () => {
 
 test.describe('Ferramentas (D74) e o formulário', () => {
   test('o catálogo tem só as três ferramentas que existem, nas categorias da D74, e a lista do que foi gerado tem os quatro estados', async ({ page, hasTouch }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
+    test.slow()
     const { api, turmaId, turmaNome, disciplinaId } = await entrar(page, hasTouch)
     const segura = portao()
     api.trocar('artefatos', async () => {
@@ -382,6 +395,8 @@ test.describe('Ferramentas (D74) e o formulário', () => {
   })
 
   test('D35, D67: a Adaptação não tem campo de texto; pede a atividade, os tipos da lista fechada e o tempo extra; manda só isso; e a versão nasce esperando a professora', async ({ page, hasTouch }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
+    test.slow()
     const { api, turmaId, turmaNome, disciplinaId } = await entrar(page, hasTouch)
 
     // Vazio: sem atividade para adaptar, a tela diz o que falta e leva até lá.
@@ -456,6 +471,8 @@ test.describe('Ferramentas (D74) e o formulário', () => {
   })
 
   test('a função suspensa pela escola tira o formulário e explica, sem alarme', async ({ page, hasTouch }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
+    test.slow()
     const { api, turmaId, disciplinaId } = await entrar(page, hasTouch)
     api.artefatos = [atividadeSintetica(turmaId, disciplinaId)]
     api.suspensas.add('adaptacao')
@@ -478,6 +495,8 @@ test.describe('Ferramentas (D74) e o formulário', () => {
 
 test.describe('o artefato', () => {
   test('os quatro estados; a atividade com gabarito, explicação e a página de cada questão; renomear; exportar em PDF; pedir versão adaptada; e a versão com quem aprovou', async ({ page, hasTouch }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
+    test.slow()
     const { api, turmaId, turmaNome, disciplinaId } = await entrar(page, hasTouch)
     const origem = atividadeSintetica(turmaId, disciplinaId)
     const pendente = versaoAdaptada(origem)
@@ -555,6 +574,8 @@ test.describe('o artefato', () => {
 
 test.describe('Seu time › Assistente de ensino (11.4)', () => {
   test('carregando, erro, e sem entrega nenhuma a tela não fica vazia: diz o que o Assistente faz, com o texto da escola, e como pedir', async ({ page, hasTouch }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
+    test.slow()
     const { api } = await entrar(page, hasTouch)
     const segura = portao()
     api.trocar('entregas', async (pedido) => {
@@ -586,6 +607,8 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
   })
 
   test('Aprovar mostra o que vai acontecer antes de confirmar, passa pela decisão registrada uma vez só, mesmo com dois cliques, e a tela mostra quem aprovou e quando', async ({ page, hasTouch }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
+    test.slow()
     const { api, turmaId, turmaNome, disciplinaId } = await entrar(page, hasTouch)
     const origem = atividadeSintetica(turmaId, disciplinaId)
     const adaptada = versaoAdaptada(origem)
@@ -652,6 +675,8 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
   })
 
   test('Rejeitar exige justificativa de 8 a 500 caracteres antes de mandar, e a tela mostra quem rejeitou e o motivo; a entrega já decidida em outra aba vira a tela atualizada, e não erro', async ({ page, hasTouch }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
+    test.slow()
     const { api, turmaId, disciplinaId } = await entrar(page, hasTouch)
     const origem = atividadeSintetica(turmaId, disciplinaId)
     const primeira = versaoAdaptada(origem)

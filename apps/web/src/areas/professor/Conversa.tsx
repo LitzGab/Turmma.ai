@@ -163,7 +163,7 @@ export default function Conversa() {
       )}
       {suspensa && <AvisoDeSuspensao funcao="conversa_e_ferramentas" />}
       {turma !== undefined && (
-        <BarraPresa rotulo="Pedido ao Assistente de ensino" semLinha>
+        <BarraPresa rotulo="Novo pedido" semLinha>
           <div className="w-full min-w-0">
             <CaixaDoAssistente turmas={turmas} turma={turma} iniciar={iniciar} respondendo={emCurso(ciclo)} desligada={suspensa || cartaoOcupaATela} />
           </div>
