@@ -10,22 +10,37 @@
 
 > Atualizada a cada commit. Quem retoma lê esta seção, `git log mvp/apresentacao` e `git status`.
 
-**Fase atual:** preparação — este documento, o marcador `(mvp: …)` no hook e a etapa 1 das cinco AIAs.
+**Fase atual:** fase 1 em curso (04/10/2026), junto com o fim da preparação.
 
 **Feito**
 
 - Esteira da `develop` verde no `573f0a1`, branch `mvp/apresentacao` criada da `develop` e publicada, D77 registrada.
-- Este documento corrigido (04/10/2026): saíram o worktree `../Educa.ia-mvp` e o projeto `educa-mvp`; a seção 8 ficou
+- Este documento corrigido (`a8d2fe1`): saíram o worktree `../Educa.ia-mvp` e o projeto `educa-mvp`; a seção 8 ficou
   só com o que falta; entraram as fases da seção 3 e as decisões abaixo.
+- O marcador `(mvp: <resumo>)` em `tools/processo/revisoes.ts`, com nove casos em `revisoes.test.ts` (escrito e verde;
+  o commit espera o portão local, que está rodando).
+
+**Em curso**
+
+| Pacote | Worktree e branch | O que faz |
+|---|---|---|
+| AIA | `../Educa.ia-mvp-aia`, `mvp/aia` | etapa 1 das cinco AIAs |
+| S | `../Educa.ia-mvp-s`, `mvp/s` | 17 tabelas, migration 0022, schemas de API, `MATRIZ`, auditoria, `docs/mvp-contratos.md` |
+| L | `../Educa.ia-mvp-l`, `mvp/l` | porta `LLMProvider`, adaptador falso e OpenAI-compatível, tarefas, `ExecutorDeAgente` |
+| C | `../Educa.ia-mvp-c`, `mvp/c` | peças da web da seção 9.3 e a galeria |
+| D | `../Educa.ia-mvp-d`, `mvp/d` | conteúdo, script e PDF de demonstração |
 
 **Falta**
 
-- O marcador `(mvp: <resumo>)` em `tools/processo/revisoes.ts`, com teste, e o commit dos contratos de
-  `packages/shared` (time e assistente) com ele.
-- A etapa 1 das cinco AIAs em `docs/aia/` (o Joaquim revisa depois).
-- Fases 1 a 4 (seção 3) e o fechamento (seção 8).
+- Commit do hook e dos contratos de `packages/shared` (time e assistente), depois do portão.
+- Integrar a fase 1 (`mvp/fase-1`), portão, merge, revisores da fase e esteira à mão.
+- Depois de S integrado: o registro de consumo e o repositório de execução em Postgres (portas do pacote L).
+- Fases 2 a 4 (seção 3) e o fechamento (seção 8).
 
 **Esteira disparada à mão:** nenhuma ainda.
+
+**Modelo local do ensaio final:** `qwen3.6-35b-a3b` no `llama-server` (`GET /v1/models` em 04/10/2026; estava
+descarregado, e quem carrega é o Joaquim).
 
 **Decisões tomadas pelo Claude nesta execução (a revisar pelo Joaquim)**
 
@@ -42,6 +57,21 @@
    portão de cada commit (leva perto de uma hora): roda na esteira de cada fase e no fechamento.
 6. **A seção 8 dizia que os passos 0 a 4 estavam feitos; estavam o 0, o 1 e o 2.** O hook (3) e as AIAs (4) são os
    itens 1 e 2 do prompt de 04/10/2026 e entraram em "Falta".
+7. **Dois pacotes a mais na fase 1, C e D.** As peças da web (seção 9.3) e o PDF de demonstração (seção 9.5) não
+   dependem do contrato, então saíram na frente, em paralelo com S e L, para as telas das fases 2 a 4 já nascerem
+   com as mesmas peças.
+8. **Recusa de material sem licença não grava `material`**: grava auditoria e responde `MATERIAL_SEM_LICENCA` antes
+   de extrair. O estado `recusado` do mockup é da tela, não de uma linha no banco.
+9. **A versão adaptada é aplicada à turma, como qualquer artefato.** Não existe vínculo entre aluno e adaptação, nem
+   tabela nem coluna (D35): dizer qual aluno recebe qual adaptação é dado sensível que esta fatia não coleta.
+10. **Um adaptador só para modelo local.** O `OpenAICompatAdapter` atende o `llama-server` e atenderia o Ollama pelo
+    `/v1` dele; não há `OllamaAdapter` separado nesta fatia.
+11. **Dependências novas, lista fechada:** `clsx`, `class-variance-authority` e Radix (seleção, menu, abas, diálogo de
+    alerta) na web; `pdfkit` e `pdfjs-dist` para gerar e extrair PDF. Conflito de `package-lock.json` entre pacotes se
+    resolve no merge, com `npm install`.
+12. **Teto de bundle.** As peças novas e o Radix não podem entrar no primeiro carregamento (150 kB). Os tetos por área
+    (`professor-*` 8 kB, `coordenacao-*` 16 kB, `aluno-*` 5 kB) vão ser revistos quando as telas chegarem, com o número
+    medido, e cada tela entra por import de rota.
 
 ## 1. O que a demonstração mostra (o roteiro, D71)
 
@@ -98,6 +128,8 @@ quebra. Depois API e web correm lado a lado em cima do contrato.
 | A — atividade e correção | agente A | `apps/api/src/atividade/*`, `apps/web/src/areas/aluno/*` (atividades) |
 | T — Tutor e sinais | agente T | `apps/api/src/tutor/*`, web do aluno (Tutor) |
 | G — governança e Analista | agente G | `apps/api/src/governanca/*`, `apps/web/src/areas/coordenacao/Governanca*` |
+| C — peças da web | agente C | `apps/web/src/componentes/*` e `componentes/ia/*` (as peças da seção 9.3), a galeria e o spec dela |
+| D — material de demonstração | agente D | `tools/demonstracao/*` (o conteúdo, o script e o PDF da seção 9.5) |
 
 Cada agente mexe só no que é dele. Arquivo compartilhado (`app.module.ts`, `navegacao.ts`, `caminhos.ts`, `index.ts` do
 shared) leva só uma linha por módulo, e o conflito se resolve no merge.
@@ -106,7 +138,7 @@ shared) leva só uma linha por módulo, e o conflito se resolve no merge.
 
 | Fase | Entrega | Pacotes | Revisão no fim da fase |
 |---|---|---|---|
-| 1 | Contratos, dados e camada de IA: a migration 0022, os schemas de `packages/shared`, as células da `MATRIZ`, a porta `LLMProvider` com o adaptador falso e o OpenAI-compatível, o `ExecutorDeAgente` e o registro de consumo | S, L | `tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer` |
+| 1 | Contratos, dados e camada de IA: a migration 0022, os schemas de `packages/shared`, as células da `MATRIZ`, a porta `LLMProvider` com o adaptador falso e o OpenAI-compatível, o `ExecutorDeAgente` e o registro de consumo; as peças da web e o PDF de demonstração, que não dependem do contrato | S, L, C, D | `tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer`, mais `frontend-reviewer` nas peças |
 | 2 | **A2**: material com licença, Assistente de ensino (conversa, ferramentas, artefato, adaptação pendente, PDF), Home, Ferramentas e Seu time, e o PDF de demonstração | M, P, W | os três, mais `frontend-reviewer` |
 | 3 | **A3 e A4**: atividade aplicada, respostas do aluno, correção de objetiva com o registro da validação, diagnóstico por habilidade em Turmas; Tutor e sinais | A, T | os três, mais `test-engineer` (correção e Tutor) e `frontend-reviewer` |
 | 4 | **A5**: governança, suspensão por função, consumo e o resumo do Analista | G | os três, mais `frontend-reviewer` |
