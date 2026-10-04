@@ -17,8 +17,9 @@
 - Esteira da `develop` verde no `573f0a1`, branch `mvp/apresentacao` criada da `develop` e publicada, D77 registrada.
 - Este documento corrigido (`a8d2fe1`): saíram o worktree `../Educa.ia-mvp` e o projeto `educa-mvp`; a seção 8 ficou
   só com o que falta; entraram as fases da seção 3 e as decisões abaixo.
-- O marcador `(mvp: <resumo>)` em `tools/processo/revisoes.ts`, com nove casos em `revisoes.test.ts` (escrito e verde;
-  o commit espera o portão local, que está rodando).
+- O marcador `(mvp: <resumo>)` em `tools/processo/revisoes.ts`, com nove casos em `revisoes.test.ts` (`8c054ce`).
+- Os contratos de `packages/shared` (time e assistente), com o marcador e o portão local verde: 225 arquivos e 2796
+  testes (`336a756`).
 
 **Em curso**
 
@@ -32,7 +33,6 @@
 
 **Falta**
 
-- Commit do hook e dos contratos de `packages/shared` (time e assistente), depois do portão.
 - Integrar a fase 1 (`mvp/fase-1`), portão, merge, revisores da fase e esteira à mão.
 - Depois de S integrado: o registro de consumo e o repositório de execução em Postgres (portas do pacote L).
 - Fases 2 a 4 (seção 3) e o fechamento (seção 8).
