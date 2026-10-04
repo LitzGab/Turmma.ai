@@ -9,6 +9,7 @@ import { ROTAS } from '../caminhos'
  * 3. Peça se importa pelo arquivo dela (`../../componentes/ia/CaixaPedido`, `../../componentes/Cartao`), sem arquivo-barril.
  * 4. Nada da entrada (`src/rotas.tsx`, `paginas/`, a casca, este arquivo) importa peça de `componentes/ia/` ou da lista `PECAS_FORA_DA_ENTRADA`, nem módulo de `areas/<area>/`.
  * 5. Tela de uma área não importa módulo de outra área: o que duas áreas dividem mora em `componentes/`. O build reprova a tela do professor que o aluno baixaria.
+ * Como usar cada peça (aprovação, conversa, barra presa, o que a peça não dá): `src/componentes/ia/README.md`.
  */
 
 /** Um item da lateral: o rótulo, o endereço pela raiz e o ícone de 18 px (`docs/interface.md` 9.4). */

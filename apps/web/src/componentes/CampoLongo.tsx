@@ -1,6 +1,6 @@
 import { useId, type Ref } from 'react'
 import { MarcaDeObrigatorio } from './Campo'
-import { textoDoContador, type LimitesDoTexto } from './texto-longo'
+import { limitarTexto, textoDoContador, type LimitesDoTexto } from './texto-longo'
 
 interface PropsDoCampoLongo extends LimitesDoTexto {
   /** O rótulo visível, sempre. */
@@ -22,7 +22,10 @@ interface PropsDoCampoLongo extends LimitesDoTexto {
  * caracteres) e de quem contesta. É o `Campo` do produto com `textarea`: mesma borda, mesma altura mínima de toque.
  *
  * - **O contador é texto** ("12 de 500"), ligado ao campo por `aria-describedby`: o leitor de tela o ouve ao chegar no
- *   campo, e não a cada tecla. Não muda de cor perto do limite: o campo simplesmente não aceita mais (`maxLength`).
+ *   campo, e não a cada tecla. Não muda de cor perto do limite: o campo simplesmente não aceita mais. **A conta é uma
+ *   só**, a da API, sem o espaço das pontas (`texto-longo.ts`): o limite do campo é o do contador, e não o `maxLength`
+ *   do navegador, que contaria o texto cru.
+ * - **Só cresce para baixo** (`resize-y`): arrastado para o lado, o campo estouraria a largura da tela.
  * - **O erro diz o que fazer**, embaixo, e o campo fica `aria-invalid`.
  *
  * **Não é campo de ferramenta.** O `MotorFormulario` não tem texto longo, e a Adaptação não tem texto nenhum: texto
@@ -51,12 +54,11 @@ export function CampoLongo({ rotulo, valor, aoMudar, dica, erro, obrigatorio = f
         rows={linhas}
         value={valor}
         disabled={desligado}
-        maxLength={maximo}
-        onChange={(evento) => aoMudar(evento.target.value)}
+        onChange={(evento) => aoMudar(limitarTexto(evento.target.value, maximo))}
         aria-describedby={descritoPor}
         {...(erro === undefined ? {} : { 'aria-invalid': true })}
         {...(obrigatorio ? { 'aria-required': true } : {})}
-        className="min-h-11 w-full min-w-0 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta disabled:text-inativo"
+        className="min-h-11 w-full min-w-0 resize-y rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta disabled:text-inativo"
       />
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-1">
         <p id={idDoErro} className="min-w-0 text-sm break-words text-erro empty:hidden">
