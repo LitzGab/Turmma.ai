@@ -204,6 +204,26 @@ espera-se e tenta-se de novo. Migration nova só existe num pacote por vez (o sn
 O hook de commit olha a pasta principal, não o worktree: commit feito num worktree não é conferido por ele. O que vale
 como portão é o do merge (seção "Estado", decisão 4).
 
+### Como cada pacote trabalha e entrega
+
+1. Trabalha e commita **só no próprio worktree** (`../Educa.ia-mvp-<pacote>`, branch `mvp/<pacote>`), começando por
+   `npm ci`. A pasta principal é do orquestrador.
+2. Lê `docs/mvp-contratos.md` antes de tudo: tabela, schema de API, célula da `MATRIZ`, código de erro e ação de
+   auditoria já existem. **Pacote de fase 2 em diante não cria tabela, migration nem schema de `packages/shared`.** Se
+   o contrato não atende, para e avisa o orquestrador, em vez de contornar.
+3. Mexe só nos arquivos do pacote. Arquivo compartilhado (`app.module.ts`, `rotas.tsx`, `navegacao.ts`, `caminhos.ts`)
+   leva o mínimo, uma linha por módulo ou por tela.
+4. Tela nova entra por import de rota (um pedaço por tela), monta-se com as peças de `apps/web/src/componentes/` e
+   `componentes/ia/`, tem os quatro estados e funciona a 360 px. Estado de servidor é do TanStack Query.
+5. Todo módulo novo da API entrega o **teste de isolamento** (escola A não alcança objeto da escola B, e a resposta é
+   igual à do inexistente) e os testes das regras do módulo. Se apagar a regra, o teste falha.
+6. Verifica com `npm run typecheck`, `npm run lint`, a unidade do que tocou e, atrás da trava, a integração e o e2e
+   dos próprios arquivos. Nunca o portão local.
+7. Commita por caminho explícito (nunca `git add -A`), com `(mvp: <resumo>)` na mensagem. Se o hook bloquear falando
+   de portão local, é o portão do orquestrador na pasta principal: espera cinco minutos e tenta de novo.
+8. Antes de entregar: `git merge mvp/apresentacao` no worktree e a verificação de novo. Sem push.
+9. Devolve um relato curto: hash, números dos testes, o que os outros pacotes precisam saber, o que ficou de fora.
+
 ## 6. Pronto quando
 
 O roteiro da seção 1 roda de ponta a ponta, do `/` à governança, com o adaptador falso **e** com o modelo local; o
