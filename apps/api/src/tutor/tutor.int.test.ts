@@ -16,6 +16,7 @@ import {
   lancarLote,
   trocasJaFeitas,
 } from '../../test/escola-com-tutor.js'
+import { GatilhoDeParada } from '../../test/gatilho-de-parada.js'
 import { variacaoDoPdf } from '../../test/material-de-teste.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste.js'
 import { TETO_DE_PEDIDOS_DE_IA_POR_USUARIO } from '../assistente/limite-de-pedidos-de-ia.js'
@@ -85,6 +86,11 @@ describe('Tutor e sinais', () => {
       escola.coordenacao.usuarioId,
     ])
     return sessao
+  }
+  /** O aluno sai da turma do 2ºB e vai para o 2ºC, no mesmo ano: o vínculo antigo é encerrado (`realocacao`). */
+  const transferir = async (escola: EscolaComAssistente, aluno: SessaoDeTeste) => {
+    await sql(`update vinculo set estado = 'encerrado', motivo_encerramento = 'realocacao', encerrado_em = now() where escola_id = $1 and usuario_id = $2 and turma_id = $3`, [escola.escolaId, aluno.usuarioId, escola.turma])
+    await sql(`insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`, [escola.escolaId, escola.anoLetivoId, aluno.usuarioId, escola.outraTurma, escola.coordenacao.usuarioId])
   }
   /** Onde a palavra marcada aparece fora de `mensagem_tutor`: sinal, execução, consumo, auditoria e log. */
   const ondeVazou = async (escolaId: string, marca: string): Promise<string[]> => {
@@ -667,6 +673,44 @@ describe('Tutor e sinais', () => {
       expect([quem(usoDeFisica.alunos, deQuimica), quem(usoDeFisica.alunos, deFisica), quem(usoDeFisica.alunos, semDisciplina)]).toEqual([0, 1, 1])
       // A última referência que a professora de Química vê é a do material de Química.
       expect(usoDeQuimica.alunos.find((linha) => linha.aluno.id === deQuimica.usuarioId)?.ultimaReferencia).toEqual({ atividadeAplicadaId: null, questao: null, materialId: a.materialId, pagina: 2 })
+    })
+
+    it('o aluno transferido depois do 202 e antes de a execução rodar: a execução falha com código do catálogo, sem resposta, sem sinal e sem troca contada', async () => {
+      const aluno = await novoAluno(a)
+      // A pergunta fora de atividade e de material: o alcance da hora de rodar acha a turma nova, e só a conferência da turma da pergunta recusa.
+      const parada = new GatilhoDeParada(bancada.pool, { tabela: 'execucao_agente', evento: 'update', quando: `new.solicitada_por = '${aluno.usuarioId}'::uuid and new.estado = 'rodando'` })
+      await parada.armar()
+      const aceita = await enviar(aluno, { texto: 'como eu organizo o estudo de estequiometria?' }).catch(async (falha: unknown) => {
+        await parada.desarmar()
+        throw falha
+      })
+      const execucaoId = aceita.corpo['execucaoId'] as string
+      try {
+        expect(aceita.status).toBe(202)
+        await parada.esperarParadas()
+        await transferir(a, aluno)
+      } finally {
+        await parada.desarmar()
+      }
+      await executor.ociosa()
+
+      const { rows } = await sql<{ estado: string; erro: string | null; resultado: unknown }>('select estado, erro, resultado from execucao_agente where escola_id = $1 and id = $2', [a.escolaId, execucaoId])
+      expect(rows).toEqual([{ estado: 'falhou', erro: 'NAO_ENCONTRADO', resultado: null }])
+      expect((await mensagensDe(aluno)).map((mensagem) => mensagem.autor)).toEqual(['aluno'])
+      expect(await sinaisDe(aluno)).toEqual([])
+      expect((await conversaDe(aluno)).uso.hoje).toBe(0)
+      expect((await usoPara(a.professora, a.turma)).alunos.some((linha) => linha.aluno.id === aluno.usuarioId)).toBe(false)
+    })
+
+    it('depois de transferido, a pergunta sobre a atividade da turma antiga responde como inexistente, e nada é gravado', async () => {
+      const aluno = await novoAluno(a)
+      expect((await turno(aluno, 'não entendi a questão 3', naQuestao(3))).estado).toBe('concluida')
+      await transferir(a, aluno)
+      const antes = await mensagensDe(aluno)
+      const inexistente = { status: 404, corpo: { erro: { codigo: 'NAO_ENCONTRADO' } } }
+      expect(await enviar(aluno, { texto: 'e a questão 3?', ...naQuestao(3) })).toMatchObject(inexistente)
+      expect(await get(aluno, `/v1/tutor/conversa?atividadeAplicadaId=${atividade}`)).toMatchObject(inexistente)
+      expect(await mensagensDe(aluno)).toEqual(antes)
     })
 
     it('nenhuma rota entrega a conversa nem a memória de aluno a professor ou a coordenação', async () => {

@@ -522,6 +522,99 @@ describe('correção de objetiva e validação do lote', () => {
     })
   })
 
+  /**
+   * O aluno transferido (decisão do pacote Z): a correção é do **trabalho feito**, então quem respondeu na turma X entra
+   * no lote de X, e o resumo conta quem respondeu (`corrigidos`), com o número atual da turma à parte (`alunosDaTurma`).
+   * O desempenho da turma é a foto de hoje: quem saiu não aparece nem conta. E o aluno, depois de sair, não lê o
+   * diagnóstico da turma antiga nesta fatia (lacuna registrada em `minha-atividade.service.ts`).
+   */
+  describe('aluno transferido', () => {
+    const lerDesempenho = async (sessao: SessaoDeTeste, turmaId: string) => esquemaRespostaDesempenhoDaTurma.parse((await rotas.desempenho(sessao, turmaId)).corpo)
+    const transferir = async (escola: EscolaComAssistente, aluno: SessaoDeTeste) => {
+      await sql(`update vinculo set estado = 'encerrado', motivo_encerramento = 'realocacao', encerrado_em = now() where escola_id = $1 and usuario_id = $2 and turma_id = $3`, [escola.escolaId, aluno.usuarioId, escola.turma])
+      await sql(`insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`, [escola.escolaId, escola.anoLetivoId, aluno.usuarioId, escola.outraTurma, escola.coordenacao.usuarioId])
+    }
+    /** A soma de cada habilidade da turma é a soma dos alunos que a lista mostra: o número da tela fecha. */
+    const somaDosAlunos = (desempenho: { alunos: readonly { porHabilidade: readonly { habilidade: { codigo: string }; acertos: number; total: number }[] }[] }) => {
+      const soma = new Map<string, [number, number]>()
+      for (const aluno of desempenho.alunos) {
+        for (const parte of aluno.porHabilidade) {
+          const [acertos, total] = soma.get(parte.habilidade.codigo) ?? [0, 0]
+          soma.set(parte.habilidade.codigo, [acertos + parte.acertos, total + parte.total])
+        }
+      }
+      return soma
+    }
+
+    it('transferido depois de aprovado: não aparece no desempenho da turma, não conta em habilidade nem abaixo da metade, e a soma da turma fecha', async () => {
+      const turma = await turmaNova()
+      const { escola } = turma
+      const { id } = await cenarioComum(turma)
+      await aprovarOLote(rotas, escola.professora, id)
+      await transferir(escola, turma.bia)
+
+      const desempenho = await lerDesempenho(escola.professora, escola.turma)
+      expect(desempenho.lotesAprovados).toBe(1)
+      expect(desempenho.alunos.map((aluno) => aluno.alunoId)).not.toContain(turma.bia.usuarioId)
+      expect(desempenho.alunos).toHaveLength(4)
+      // Sem a Bia (0 de 3 e 0 de 2): 8 de 9 e 3 de 6; abaixo da metade fica só a segunda Ana, na segunda habilidade.
+      expect(desempenho.porHabilidade).toEqual([
+        { habilidade: HABILIDADE_DAS_TRES_PRIMEIRAS, acertos: 8, total: 9, alunosAbaixoDaMetade: 0 },
+        { habilidade: HABILIDADE_DAS_DUAS_ULTIMAS, acertos: 3, total: 6, alunosAbaixoDaMetade: 1 },
+      ])
+      expect(somaDosAlunos(desempenho)).toEqual(new Map(desempenho.porHabilidade.map((linha) => [linha.habilidade.codigo, [linha.acertos, linha.total]])))
+      expect(JSON.stringify(desempenho)).not.toContain(turma.bia.usuarioId)
+    })
+
+    it('transferido antes de a professora encerrar: o trabalho entra no lote da turma em que foi feito, o resumo conta quem respondeu e fecha, o apresentado é o que a rota mostrou, e ele não lê o diagnóstico', async () => {
+      const turma = await turmaNova()
+      const { escola } = turma
+      const id = await aplicarAtividade(rotas, escola.professora, await criarAtividade(bancada, escola, { conteudo: conteudoDeTeste(escola.materialId, `Lista sintética ${randomUUID()}`) }), escola.turma)
+      // Os cinco respondem: Caio 4, Ana 5, a outra Ana 2, Bia 5 e Davi 4. A Bia sai da turma antes do encerramento.
+      const respostas = [
+        [turma.caio, [0, 1, 2, 3, 1]],
+        [turma.ana1, [...GABARITO_DE_TESTE]],
+        [turma.ana2, [0, 1, 3, 0, 1]],
+        [turma.bia, [...GABARITO_DE_TESTE]],
+        [turma.davi, [1, 1, 2, 3, 0]],
+      ] as const
+      for (const [aluno, marcadas] of respostas) await responderProva(rotas, aluno, id, marcadas)
+      await transferir(escola, turma.bia)
+      const entregaId = await encerrarAtividade(rotas, escola.professora, id)
+      if (entregaId === null) throw new Error('o lote não nasceu')
+
+      const lote = await lerCorrecao(escola.professora, id)
+      // Corrigidos 5 de 5 que responderam; a turma, hoje, tem 4: o número dela vem à parte e não é o denominador.
+      expect(lote.resumo).toMatchObject({ corrigidos: 5, alunosDaTurma: 4, mediaDeAcertos: 4 })
+      expect(lote.resumo.distribuicao.reduce((soma, faixa) => soma + faixa.alunos, 0)).toBe(5)
+      for (const questao of lote.resumo.porQuestao) expect(questao.porAlternativa.reduce((soma, alunos) => soma + alunos, 0) + questao.emBranco, `questão ${String(questao.numero)}`).toBe(5)
+      expect(lote.resumo.porHabilidade.map((linha) => linha.total)).toEqual([15, 10])
+      // A professora de X vê o trabalho da Bia, com o nome, no Aprovar.
+      const todos = [...lote.destaques, ...lote.outras]
+      expect(todos.map((correcao) => correcao.alunoId).sort()).toEqual([turma.caio, turma.ana1, turma.ana2, turma.bia, turma.davi].map((aluno) => aluno.usuarioId).sort())
+      expect(todos.find((correcao) => correcao.alunoId === turma.bia.usuarioId)).toMatchObject({ nome: 'Aluna Sintética Bia Souza', acertos: 5, total: 5 })
+
+      for (const destaque of lote.destaques) expect((await rotas.abrirDestaque(escola.professora, id, destaque.alunoId)).status).toBe(200)
+      const mostrado = await lerCorrecao(escola.professora, id)
+      const aprovado = esquemaRespostaLoteAprovado.parse((await rotas.aprovarLote(escola.professora, entregaId)).corpo)
+      expect(aprovado.validacao.apresentado.resumo).toEqual(mostrado.resumo)
+      expect(aprovado.validacao.apresentado.destaques).toEqual(mostrado.destaques.map((destaque) => ({ alunoId: destaque.alunoId, motivos: destaque.motivos })))
+      const [gravada] = await sql<{ apresentado: unknown }>('select apresentado from validacao_do_lote where entrega_id = $1', [entregaId])
+      expect(gravada?.apresentado).toEqual(aprovado.validacao.apresentado)
+
+      // O alcance do aluno é pela turma atual: o diagnóstico da turma antiga responde como inexistente (lacuna desta fatia).
+      expect(erro(await rotas.diagnostico(turma.bia, id))).toEqual(erro(await rotas.diagnostico(turma.bia, randomUUID())))
+      expect((await rotas.diagnostico(turma.caio, id)).status).toBe(200)
+      // E o desempenho de X, a foto de hoje, não a conta.
+      const desempenho = await lerDesempenho(escola.professora, escola.turma)
+      expect(desempenho.alunos.map((aluno) => aluno.alunoId)).not.toContain(turma.bia.usuarioId)
+      expect(desempenho.porHabilidade.map((linha) => [linha.acertos, linha.total])).toEqual([
+        [10, 12],
+        [5, 8],
+      ])
+    })
+  })
+
   describe('rastro', () => {
     it('nenhuma linha de log tem nome de aluno, de professora, enunciado nem explicação', () => {
       const log = linhasDeLog.join('\n')
