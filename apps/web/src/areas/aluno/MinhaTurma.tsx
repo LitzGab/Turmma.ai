@@ -10,7 +10,7 @@ import { useTituloDaTela } from '../../titulo'
  * nova ainda não existe, ou o vínculo dele não está confirmado. Não é falha da rede, e "Tentar de novo" não mudaria
  * nada: o texto diz a quem recorrer.
  */
-const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. Fale com o seu professor ou com a coordenação.'
+const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. Fale com quem dá a aula ou com a coordenação.'
 
 /**
  * "Minha turma" do aluno (A1, 12.0; RF13; D73): a escola, a turma e a série dele, pelo vínculo confirmado no ano em curso.

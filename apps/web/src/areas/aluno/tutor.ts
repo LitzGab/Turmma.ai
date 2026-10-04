@@ -8,7 +8,7 @@ import { aparenciaDaFalha, emCurso, type CicloDeExecucao } from '../../api/ciclo
  */
 
 /** A faixa fixa do topo, que não fecha (D8; regra 70, item 4). */
-export const TEXTO_DA_SUPERVISAO = 'Seu professor acompanha como você usa o Tutor.'
+export const TEXTO_DA_SUPERVISAO = 'Quem dá a aula acompanha como você usa o Tutor.'
 
 /** A mensagem que o aluno mandou ao Tutor, sem a `chaveEnvio`, que o ciclo sorteia. */
 export type PedidoAoTutor = Omit<PedidoMensagemAoTutor, 'chaveEnvio'>
@@ -60,7 +60,7 @@ export function avisoDaPausa(pausa: PausaDoTutor, contexto: { readonly avaliacao
     return {
       pausa,
       titulo: 'O Tutor está pausado durante a avaliação.',
-      texto: `${contexto.avaliacao === undefined ? 'A sua turma tem uma avaliação aberta agora.' : `A sua turma tem uma avaliação aberta agora: ${contexto.avaliacao}.`} Ele volta quando a professora encerrar.`,
+      texto: `${contexto.avaliacao === undefined ? 'A sua turma tem uma avaliação aberta agora.' : `A sua turma tem uma avaliação aberta agora: ${contexto.avaliacao}.`} Ele volta quando quem dá a aula encerrar.`,
     }
   if (pausa === 'limite_do_dia')
     return {
@@ -69,9 +69,9 @@ export function avisoDaPausa(pausa: PausaDoTutor, contexto: { readonly avaliacao
       texto: `${contexto.limiteDoDia === undefined ? 'Você fez as perguntas de hoje.' : `Você fez as ${String(contexto.limiteDoDia)} perguntas de hoje.`} Amanhã o Tutor volta. As suas atividades continuam abertas.`,
     }
   if (pausa === 'pacote_do_mes')
-    return { pausa, titulo: 'As perguntas deste mês acabaram.', texto: 'A sua turma usou todas as perguntas ao Tutor deste mês. Se precisar de ajuda na atividade, chame a professora.' }
+    return { pausa, titulo: 'As perguntas deste mês acabaram.', texto: 'A sua turma usou todas as perguntas ao Tutor deste mês. Se precisar de ajuda na atividade, chame quem dá a aula.' }
   if (pausa === 'fora') return { pausa, titulo: 'O Tutor está desligado agora.', texto: 'A sua escola escolhe os horários em que ele funciona. Não é um erro. As suas atividades continuam abertas.' }
-  return { pausa, titulo: 'O Tutor está pausado na sua escola.', texto: 'A coordenação pausou o Tutor por enquanto. Não é um erro, e não é com você. Se precisar de ajuda na atividade, chame a professora.' }
+  return { pausa, titulo: 'O Tutor está pausado na sua escola.', texto: 'A coordenação pausou o Tutor por enquanto. Não é um erro, e não é com você. Se precisar de ajuda na atividade, chame quem dá a aula.' }
 }
 
 /** A pausa que o estado da conversa diz. No `limite`, é o do dia quando o aluno chegou nele; senão, é o pacote da turma. */
@@ -147,6 +147,30 @@ export function pendenteNoTutor(mensagens: readonly MensagemDoTutor[], ciclo: Ci
     ...(resposta === undefined ? {} : { resposta }),
     ...(ciclo.etapa === 'falhou' ? { falha: falhaDaPergunta(ciclo.erro) } : {}),
   }
+}
+
+/** Um item da conversa na tela: uma mensagem (lida ou trazida pela execução) ou a pergunta que a API ainda não devolveu. */
+export type ItemDoTutor = { readonly tipo: 'mensagem'; readonly mensagem: MensagemDoTutor } | { readonly tipo: 'pergunta'; readonly texto: string }
+
+/**
+ * A conversa **na ordem em que aconteceu**: as mensagens lidas, depois a pergunta que ainda não voltou da API e só então a
+ * resposta que a execução trouxe. A pergunta vem sempre antes da resposta dela, também quando a execução termina antes de
+ * a conversa ser relida (a mensagem com o 188 inclusive): é nessa ordem que o registro anuncia ao leitor de tela.
+ */
+export function itensDoTutor(mensagens: readonly MensagemDoTutor[], pendente: PendenteNoTutor | undefined): ItemDoTutor[] {
+  const itens: ItemDoTutor[] = mensagens.map((mensagem) => ({ tipo: 'mensagem', mensagem }))
+  if (pendente?.pergunta !== undefined) itens.push({ tipo: 'pergunta', texto: pendente.pergunta })
+  if (pendente?.resposta !== undefined) itens.push({ tipo: 'mensagem', mensagem: pendente.resposta })
+  return itens
+}
+
+/**
+ * O que faz a conversa rolar até o fim: o último item, a etapa da pergunta e a pausa. **As mensagens anteriores que "Ver
+ * mensagens anteriores" traz não mudam nada disto**: quem foi ler o começo da conversa não é jogado para o fim.
+ */
+export function marcaDoFim(itens: readonly ItemDoTutor[], etapa: string | undefined, pausa: string | undefined): string {
+  const ultimo = itens.at(-1)
+  return `${ultimo === undefined ? '' : ultimo.tipo === 'mensagem' ? ultimo.mensagem.id : `pergunta:${ultimo.texto}`}|${etapa ?? ''}|${pausa ?? ''}`
 }
 
 /** A conversa como a tela a desenha: a lida, mais a resposta que a execução já trouxe. */

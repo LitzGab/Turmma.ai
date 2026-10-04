@@ -138,10 +138,10 @@ describe('o que a tela diz de cada questão', () => {
 
   it('se a professora encerra com escolhas na fila, a tela diz quais não chegaram a ser salvas', () => {
     expect(avisoDeEscolhasPerdidas(fila({ pendentes: [{ questao: 3, alternativa: 1 }], falha: 'encerrada', tentativas: 1 }))).toBe(
-      'A atividade foi encerrada antes de a resposta da questão 3 ser salva. Se isso fizer diferença, avise a professora.',
+      'A atividade foi encerrada antes de a resposta da questão 3 ser salva. Se isso fizer diferença, avise quem dá a aula.',
     )
     expect(avisoDeEscolhasPerdidas(fila({ pendentes: [{ questao: 5, alternativa: 1 }, { questao: 2, alternativa: 0 }], falha: 'encerrada', tentativas: 1 }))).toBe(
-      'A atividade foi encerrada antes de as respostas das questões 2 e 5 serem salvas. Se isso fizer diferença, avise a professora.',
+      'A atividade foi encerrada antes de as respostas das questões 2 e 5 serem salvas. Se isso fizer diferença, avise quem dá a aula.',
     )
     // Falha de rede não é encerramento: a escolha ainda vai ser salva, e nada foi perdido.
     expect(avisoDeEscolhasPerdidas(fila({ pendentes: [{ questao: 3, alternativa: 1 }], falha: 'passageira', tentativas: 1 }))).toBeUndefined()

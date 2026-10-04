@@ -20,7 +20,7 @@ import { Tabela } from '../../componentes/Tabela'
 import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
 import { formatarDiaEHora } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
-import { emQueEstava, falaDoGrupo, QUANDO_O_TUTOR_AVISA, separarSinais, TEXTO_DA_ATENCAO_HUMANA, textoDoSinal, TITULO_DA_ATENCAO_HUMANA, trocasDeHoje } from './sinais'
+import { emQueEstava, falaDoGrupo, QUANDO_O_TUTOR_AVISA, separarSinais, textoDaAtencaoHumana, textoDoSinal, tituloDaAtencaoHumana, trocasDeHoje } from './sinais'
 
 /** De quanto em quanto os sinais são relidos, com a aba à vista: não há WebSocket nesta fatia. */
 const INTERVALO_DOS_SINAIS_MS = 15_000
@@ -58,6 +58,8 @@ export default function Tutor() {
   const referencias = { atividades: Object.fromEntries((atividades.data?.itens ?? []).map((atividade) => [atividade.id, atividade.titulo])), materiais: materiais.data ?? {} }
   const tutor = agenteDoTime(time.data, 'tutor')
   const { atencao, trabalho } = separarSinais(sinais.data?.itens ?? [])
+  // O título e o texto no plural quando há mais de um aluno: os sinais repetidos de um aluno contam uma vez.
+  const alunosQuePrecisam = new Set(atencao.map((sinal) => sinal.aluno.id)).size
   const grupos = sinais.data?.grupos ?? []
 
   return (
@@ -127,10 +129,10 @@ export default function Tutor() {
           {opcoes.length > 1 && <Selecao rotulo="Turma" opcoes={opcoes} valor={turmaId} aoMudar={definirEscolhida} />}
 
           {atencao.length > 0 && (
-            <section data-atencao-humana="" aria-label={TITULO_DA_ATENCAO_HUMANA} className="flex min-w-0 flex-col gap-2 rounded-cartao border border-pendente bg-pendente-cx p-4">
+            <section data-atencao-humana="" aria-label={tituloDaAtencaoHumana(alunosQuePrecisam)} className="flex min-w-0 flex-col gap-2 rounded-cartao border border-pendente bg-pendente-cx p-4">
               <h2 className="flex min-w-0 items-center gap-2 text-base font-semibold text-pendente">
                 <HeartHandshake aria-hidden="true" size={18} strokeWidth={1.75} className="shrink-0" />
-                {TITULO_DA_ATENCAO_HUMANA}
+                {tituloDaAtencaoHumana(alunosQuePrecisam)}
               </h2>
               <ul className="flex min-w-0 flex-col gap-1 text-tinta">
                 {atencao.map((sinal) => (
@@ -139,14 +141,24 @@ export default function Tutor() {
                   </li>
                 ))}
               </ul>
-              <p className="min-w-0 text-sm break-words text-tinta">{TEXTO_DA_ATENCAO_HUMANA}</p>
+              <p className="min-w-0 text-sm break-words text-tinta">{textoDaAtencaoHumana(alunosQuePrecisam)}</p>
             </section>
           )}
 
           <section aria-labelledby={idDosSinais} className="flex min-w-0 flex-col gap-3">
             <CabecalhoDeSecao id={idDosSinais} titulo="Sinais da turma" apoio="O que o Tutor viu no trabalho dos alunos: onde travaram, quem pediu a resposta pronta, a dúvida que se repetiu." />
             {sinais.isPending && <EstadoCarregando rotulo="Carregando os sinais…" />}
-            {sinais.isError && sinais.data === undefined && <EstadoErro erro={sinais.error} tentando={sinais.isFetching} aoTentarDeNovo={() => void sinais.refetch({ cancelRefetch: false })} />}
+            {sinais.isError && sinais.data === undefined && (
+              // Com o uso falhando junto, um erro só, e "Tentar de novo" lê os dois: um botão principal por tela.
+              <EstadoErro
+                erro={sinais.error}
+                tentando={sinais.isFetching || uso.isFetching}
+                aoTentarDeNovo={() => {
+                  void sinais.refetch({ cancelRefetch: false })
+                  if (uso.isError) void uso.refetch({ cancelRefetch: false })
+                }}
+              />
+            )}
             {/* Sem sinal nenhum a tela não fica vazia: diz o que o Tutor avisa e quando (regra 50, item 6). */}
             {sinais.data !== undefined && grupos.length === 0 && trabalho.length === 0 && (
               <EstadoVazio
@@ -182,7 +194,10 @@ export default function Tutor() {
           <section aria-labelledby={idDoUso} className="flex min-w-0 flex-col gap-3">
             <CabecalhoDeSecao id={idDoUso} titulo="Uso do Tutor pela turma" apoio="Quem já conversou com o Tutor neste ano, em ordem de nome. Não há uso do Tutor que você não veja." />
             {uso.isPending && <EstadoCarregando rotulo="Carregando o uso do Tutor…" />}
-            {uso.isError && uso.data === undefined && <EstadoErro erro={uso.error} tentando={uso.isFetching} aoTentarDeNovo={() => void uso.refetch({ cancelRefetch: false })} />}
+            {uso.isError && uso.data === undefined && sinais.isError && sinais.data === undefined && (
+              <p className="text-sm break-words text-sutil">Também não foi possível carregar o uso. “Tentar de novo”, acima, lê os dois.</p>
+            )}
+            {uso.isError && uso.data === undefined && !(sinais.isError && sinais.data === undefined) && <EstadoErro erro={uso.error} tentando={uso.isFetching} aoTentarDeNovo={() => void uso.refetch({ cancelRefetch: false })} />}
             {uso.data !== undefined && (
               <>
                 {uso.data.pacoteDaTurmaNoMes > 0 && (

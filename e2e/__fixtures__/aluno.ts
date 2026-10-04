@@ -49,6 +49,8 @@ export class ApiDoAluno {
   readonly provas = new Map<string, RespostaProva>()
   readonly diagnosticos = new Map<string, RespostaMeuDiagnostico>()
   readonly conversas = new Map<string, MensagemDoTutor[]>()
+  /** A página anterior da conversa de cada atividade: com ela, a primeira leitura diz que há mensagens antes (`anterior`). */
+  readonly conversasAnteriores = new Map<string, MensagemDoTutor[]>()
   tutor: Pick<RespostaConversaDoTutor, 'estado' | 'uso' | 'avaliacaoAberta'> = { estado: 'ligado', uso: { hoje: 12, limiteDoDia: 60 }, avaliacaoAberta: null }
   readonly execucoes = new Map<string, RespostaExecucao>()
   /** Todo `PUT` e `POST` que a tela mandou, na ordem. */
@@ -105,7 +107,15 @@ export class ApiDoAluno {
       const execucao = this.execucoes.get(id)
       return execucao === undefined ? erroDaApi(404, 'NAO_ENCONTRADO') : { status: 200, corpo: execucao }
     }
-    if (rota === 'conversa') return { status: 200, corpo: { ...this.tutor, mensagens: this.conversas.get(url.searchParams.get('atividadeAplicadaId') ?? '') ?? [] } }
+    if (rota === 'conversa') {
+      const atividade = url.searchParams.get('atividadeAplicadaId') ?? ''
+      const anteriores = this.conversasAnteriores.get(atividade) ?? []
+      const recentes = this.conversas.get(atividade) ?? []
+      // Como a API: `?antes=` devolve a página anterior; a primeira leitura aponta para ela pelo id da mensagem mais antiga.
+      if (url.searchParams.has('antes')) return { status: 200, corpo: { ...this.tutor, mensagens: anteriores } }
+      const primeira = recentes[0]
+      return { status: 200, corpo: { ...this.tutor, mensagens: recentes, ...(anteriores.length > 0 && primeira !== undefined ? { anterior: primeira.id } : {}) } }
+    }
     if (rota === 'mensagens') {
       // Como a API: em avaliação e no limite a pergunta comum é recusada, sem gravar nada.
       if (this.tutor.estado === 'avaliacao') return erroDaApi(409, 'TUTOR_PAUSADO_EM_AVALIACAO')

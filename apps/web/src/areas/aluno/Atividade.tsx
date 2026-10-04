@@ -83,6 +83,14 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
   const cliente = useQueryClient()
   const [atual, definirAtual] = useState(1)
   const [confirmando, definirConfirmando] = useState(false)
+  // Trocar de questão leva o foco ao enunciado dela: o leitor de tela lê "Questão N: …", e o "Próxima" que fica desligado
+  // na última questão não deixa o foco cair no `body`. Só quando o aluno troca: ao abrir a atividade o foco não se move.
+  const enunciado = useRef<HTMLHeadingElement>(null)
+  const trocou = useRef(false)
+  function irParaQuestao(alvo: number): void {
+    trocou.current = true
+    definirAtual(alvo)
+  }
   const numero = questaoValida(atual, prova.questoes.length)
   const questao = prova.questoes[numero - 1]
   const salvas = respostasSalvas(prova)
@@ -92,6 +100,11 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
   const impedimento = impedimentoDoEnvio(contagem)
   const ampliada = prova.adaptacao?.tipos.includes('fonte_ampliada') === true
   const provaId = prova.atividadeAplicadaId
+  useEffect(() => {
+    if (!trocou.current) return
+    trocou.current = false
+    enunciado.current?.focus()
+  }, [numero])
 
   const envio = useMutation({
     mutationFn: () => enviarAtividade(provaId),
@@ -130,7 +143,7 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
               <li key={item.numero}>
                 <button
                   type="button"
-                  onClick={() => definirAtual(item.numero)}
+                  onClick={() => irParaQuestao(item.numero)}
                   aria-label={rotuloNoMapa(item.numero, marcaDoItem)}
                   {...(aberta ? { 'aria-current': 'step' as const } : {})}
                   data-marca={marcaDoItem}
@@ -147,7 +160,7 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
       </nav>
 
       <Cartao className="flex flex-col gap-4">
-        <h2 className={`min-w-0 leading-relaxed font-normal break-words whitespace-pre-wrap text-tinta ${ampliada ? 'text-2xl' : 'text-[17px]'}`}>
+        <h2 ref={enunciado} tabIndex={-1} className={`min-w-0 rounded-controle leading-relaxed font-normal break-words whitespace-pre-wrap text-tinta ${ampliada ? 'text-2xl' : 'text-[17px]'}`}>
           <span className="sr-only">Questão {numero}: </span>
           {questao.enunciado}
         </h2>
@@ -182,7 +195,7 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
           )}
           {marca === 'salvando' && <span className="text-sutil">{TEXTO_DA_MARCA.salvando}</span>}
           {marca === 'nao_salva' && estadoDaFila.falha === 'passageira' && <span className="min-w-0 break-words text-erro">{TEXTO_DA_MARCA.nao_salva}</span>}
-          {marca === 'nao_salva' && estadoDaFila.falha === 'recusada' && <span className="min-w-0 break-words text-erro">Não foi possível salvar esta resposta. Chame a professora.</span>}
+          {marca === 'nao_salva' && estadoDaFila.falha === 'recusada' && <span className="min-w-0 break-words text-erro">Não foi possível salvar esta resposta. Chame quem dá a aula.</span>}
         </div>
         {marca === 'nao_salva' && estadoDaFila.falha === 'passageira' && (
           <Botao variante="secundario" onClick={fila.tentarAgora} className="self-start">
@@ -192,11 +205,11 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
       </Cartao>
 
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-        <Botao variante="secundario" disabled={numero === 1} onClick={() => definirAtual(numero - 1)}>
+        <Botao variante="secundario" disabled={numero === 1} onClick={() => irParaQuestao(numero - 1)}>
           <ArrowLeft aria-hidden="true" size={18} className="shrink-0" />
           Anterior
         </Botao>
-        <Botao variante="secundario" disabled={numero === prova.questoes.length} onClick={() => definirAtual(numero + 1)}>
+        <Botao variante="secundario" disabled={numero === prova.questoes.length} onClick={() => irParaQuestao(numero + 1)}>
           Próxima
           <ArrowRight aria-hidden="true" size={18} className="shrink-0" />
         </Botao>
@@ -228,7 +241,7 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
             { rotulo: 'Com resposta', valor: textoDasRespondidas(contagem) },
             { rotulo: 'Em branco', valor: textoDasEmBranco(contagem.emBranco) },
           ]}
-          efeito="Depois de enviar, não dá para mudar as respostas. A sua professora revisa a correção antes de você ver o resultado."
+          efeito="Depois de enviar, não dá para mudar as respostas. Quem dá a aula revisa a correção antes de você ver o resultado."
           {...(impedimento !== undefined
             ? { aviso: impedimento }
             : contagem.emBranco > 0
@@ -326,7 +339,7 @@ function SemMaisRespostas({ prova, estadoDaFila }: PropsDoFim) {
 
   return (
     <>
-      <Cartao titulo={prova.enviadaEm === null ? 'A professora encerrou esta atividade' : 'Atividade enviada'} className="flex flex-col gap-2">
+      <Cartao titulo={prova.enviadaEm === null ? 'Quem dá a aula encerrou esta atividade' : 'Atividade enviada'} className="flex flex-col gap-2">
         <p className="break-words text-apoio">
           {prova.enviadaEm === null ? '' : `Enviada em ${formatarDiaEHora(prova.enviadaEm)}. `}
           Você respondeu {textoDasRespondidas(contagem)}. Não dá mais para mudar as respostas.
@@ -379,7 +392,7 @@ export default function Atividade({ atividadeAplicadaId }: { atividadeAplicadaId
         {prova.isPending ? (
           <EstadoCarregando rotulo="Carregando a atividade…" />
         ) : naoEncontrada ? (
-          <EstadoVazio titulo="Esta atividade não está disponível" descricao="Ela pode ser de outra turma, ou o endereço está errado. O que a sua professora passou para você está em Atividades." />
+          <EstadoVazio titulo="Esta atividade não está disponível" descricao="Ela pode ser de outra turma, ou o endereço está errado. As atividades da sua turma estão em Atividades." />
         ) : (
           <EstadoErro erro={prova.error} tentando={prova.isFetching} aoTentarDeNovo={() => void prova.refetch({ cancelRefetch: false })} />
         )}

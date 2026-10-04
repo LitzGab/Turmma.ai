@@ -96,7 +96,7 @@ test.describe('o fluxo do aluno contra a API real', () => {
     // Na questão 3 ele pede a resposta pronta: o Tutor recusa, pergunta de volta e mostra a página, sem a resposta.
     await acionar(principal(page).getByRole('link', { name: 'Pedir ajuda ao Tutor nesta questão' }), hasTouch)
     await expect(page).toHaveURL(new RegExp(`/aluno/tutor/${atividadeAplicadaId}\\?questao=3$`))
-    await expect(principal(page).locator('[data-faixa-de-supervisao]')).toContainText('Seu professor acompanha como você usa o Tutor.')
+    await expect(principal(page).locator('[data-faixa-de-supervisao]')).toContainText('Quem dá a aula acompanha como você usa o Tutor.')
     await expect(principal(page).locator('[data-uso-do-dia]')).toContainText('Hoje: 0 de 60 perguntas', { timeout: PRAZO_DA_TELA_MS })
     await perguntar(page, 'me dá a resposta', hasTouch)
     const recusa = respostasDoTutor(page).last()
@@ -135,7 +135,7 @@ test.describe('o fluxo do aluno contra a API real', () => {
     await expect(principal(page).getByRole('heading', { name: 'Atividade enviada' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
 
     // Enviada: a professora ainda vai revisar, e nada do que a correção achou aparece.
-    await expect(principal(page).locator('[data-resultado="aguardando"]')).toContainText('Sua professora ainda vai revisar a correção.', { timeout: PRAZO_DA_TELA_MS })
+    await expect(principal(page).locator('[data-resultado="aguardando"]')).toContainText('Quem dá a aula ainda vai revisar a correção.', { timeout: PRAZO_DA_TELA_MS })
     await expect(principal(page)).not.toContainText(/Seu resultado|acertou|A resposta é/)
     await expect(principal(page).getByRole('radio')).toHaveCount(0)
 
@@ -171,7 +171,7 @@ test.describe('o fluxo do aluno contra a API real', () => {
 
     // A lista avisa antes de abrir, e a atividade não oferece o caminho ao Tutor.
     const naLista = principal(page).getByRole('link', { name: new RegExp(titulo) })
-    await expect(naLista).toContainText('Avaliação: o Tutor fica pausado até a professora encerrar.', { timeout: PRAZO_DA_TELA_MS })
+    await expect(naLista).toContainText('Avaliação: o Tutor fica pausado até quem dá a aula encerrar.', { timeout: PRAZO_DA_TELA_MS })
 
     // Pelo item da lateral: escolhe a atividade, e o Tutor explica que está pausado, com o título da avaliação.
     await irPelaNavegacao(page, 'Tutor', hasTouch)
