@@ -9,6 +9,8 @@ import {
   AVISO_DO_NOMINAL,
   EFEITO_DA_SUSPENSAO,
   ESPERANDO_O_PROFESSOR,
+  NOME_DA_AUTONOMIA,
+  O_QUE_CHEGA_AO_ALUNO,
   falhaDoResumo,
   formatarPercentual,
   fraseDoAlerta,
@@ -72,7 +74,7 @@ describe('o consumo', () => {
 
 describe('o alerta do Analista é hipótese com contexto', () => {
   it('a frase diz o recorte, a habilidade, o número medido e a referência', () => {
-    expect(fraseDoAlerta(alerta)).toBe('Em 2º ano do Ensino Médio · Química, o acerto em "Identificar o reagente limitante" (QUI.EM.06) ficou em 46,7%, abaixo da referência de 60%.')
+    expect(fraseDoAlerta(alerta)).toBe('Em 2º ano do Ensino Médio · Química, o acerto em "Identificar o reagente limitante" (QUI.EM.06) ficou em 46,7%, abaixo de 60%, um limite provisório desta versão, a definir com a escola.')
   })
 
   it('a frase não conclui nem cita pessoa: nada de professor, aluno, turma, culpa ou recomendação', () => {
@@ -112,11 +114,33 @@ describe('gerar o resumo: a falha nunca é erro cru', () => {
 })
 
 describe('a suspensão e o dado nominal dizem o que acontece antes de confirmar', () => {
-  it('suspender recusa pedido novo, não apaga o que foi feito e deixa o professor decidir o que espera', () => {
-    expect(EFEITO_DA_SUSPENSAO).toContain('deixa de aceitar pedido novo')
-    expect(EFEITO_DA_SUSPENSAO).toContain('não é apagado')
-    expect(EFEITO_DA_SUSPENSAO).toContain('continua podendo ser aprovado ou rejeitado')
+  it('toda suspensão diz que as outras funções continuam, que nada é apagado e que o professor decide o que espera', () => {
+    for (const chave of CHAVES_DE_FUNCAO) {
+      expect(EFEITO_DA_SUSPENSAO[chave], chave).toContain('As outras funções continuam')
+      expect(EFEITO_DA_SUSPENSAO[chave], chave).toContain('não é apagado')
+      expect(EFEITO_DA_SUSPENSAO[chave], chave).toContain('continua podendo ser aprovado ou rejeitado')
+    }
     expect(AVISO_DA_SUSPENSAO).toContain('auditoria')
+  })
+
+  it('cada função diz o que para nela, e o que nunca para (D36)', () => {
+    expect(EFEITO_DA_SUSPENSAO.sinais_para_o_professor).toContain('Param os avisos de aprendizagem')
+    expect(EFEITO_DA_SUSPENSAO.sinais_para_o_professor).toContain('aviso de que um aluno precisa de um adulto continua')
+    expect(EFEITO_DA_SUSPENSAO.sinais_para_o_professor).toContain('uso do Tutor por turma continua visível')
+    expect(EFEITO_DA_SUSPENSAO.tutor_com_o_aluno).toContain('continua recebendo a mensagem de encaminhamento')
+    expect(EFEITO_DA_SUSPENSAO.correcao_de_objetiva).toContain('fica sem correção até a função voltar')
+    expect(new Set(Object.values(EFEITO_DA_SUSPENSAO)).size).toBe(CHAVES_DE_FUNCAO.length)
+  })
+
+  it('a Governança diz que só o Tutor responde sem aprovação prévia, com o professor acompanhando (D47)', () => {
+    expect(O_QUE_CHEGA_AO_ALUNO).toContain('Nenhum material nem diagnóstico da IA chega ao aluno sem um professor aprovar')
+    expect(O_QUE_CHEGA_AO_ALUNO).toContain('o Tutor responde ao aluno na hora, com o professor acompanhando')
+    expect(O_QUE_CHEGA_AO_ALUNO).not.toMatch(/nada do que a IA gera chega ao aluno/i)
+  })
+
+  it('o selo de autonomia diz em português comum o que a função faz, nunca o número do nível', () => {
+    expect([NOME_DA_AUTONOMIA[1], NOME_DA_AUTONOMIA[2], NOME_DA_AUTONOMIA[3]]).toEqual(['Faz e registra', 'Faz e avisa', 'Propõe e espera aprovação'])
+    for (const texto of Object.values(NOME_DA_AUTONOMIA)) expect(texto).not.toMatch(/\d|nível/)
   })
 
   it('abrir o dado nominal avisa que fica na auditoria', () => {
