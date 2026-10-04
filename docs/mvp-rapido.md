@@ -69,9 +69,18 @@ teste que quebra) e o `licenciante` do material só para a coordenação.
 A branch de integração da fase 2 é `mvp/fase-2` (`../Educa.ia-mvp-fase-2`). Os worktrees de S, L e C ficam de pé
 para rodadas de correção.
 
-**Interrupção de 04/10/2026:** o limite de uso da sessão estourou por volta das 11h50 e derrubou os cinco agentes
-acima no meio do trabalho. Nada se perdeu: cada worktree ficou com o que estava escrito, sem commit, e os cinco foram
-retomados às 14h21 do ponto em que pararam. Se acontecer de novo, retoma-se cada agente pelo worktree dele.
+**Interrupções de 04/10/2026:** o limite de uso da sessão estourou duas vezes, por volta das 11h50 e das 17h20, e
+derrubou os agentes em curso no meio do trabalho. Nada se perdeu: cada worktree ficou com o que estava escrito, sem
+commit. Na primeira, os cinco foram retomados às 14h21. Na segunda (W, G e C), o W foi retomado às 18h20 com prioridade
+para as falhas da esteira; G e C voltam depois, um de cada vez, para o paralelismo menor não estourar o limite de
+novo. Para retomar: o worktree de cada pacote está na tabela acima; commitar o que está pronto antes de seguir.
+
+**Esteira da fase 2 vermelha** (`37227505570`, sobre `5c1b53d`): duas fatias de e2e, três testes. `operacao.spec.ts:315`
+ainda esperava "Olá, professora" na página inicial do professor; `troca-de-escola.spec.ts:297` não capturou nenhum pedido
+(provável cache da Home nova); `material.spec.ts:276` estourou 30 s no celular. Com o W.
+
+Integrados na branch de integração depois disso: as telas do aluno (X, `58f0cb5`), sem a tela da memória. G entregou a
+API da governança (`31582b0`, ainda não integrada) e foi interrompido nas telas.
 
 **Falta**
 
