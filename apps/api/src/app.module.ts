@@ -20,8 +20,11 @@ import {
 } from '@educa/nucleo'
 import { Module, type DynamicModule } from '@nestjs/common'
 import { APP_GUARD, APP_INTERCEPTOR, DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core'
+import { ArtefatoModule } from './artefato/artefato.module.js'
+import { AssistenteModule } from './assistente/assistente.module.js'
 import { BANCO, BancoModule } from './banco.module.js'
 import type { ConfiguracaoApi } from './config.js'
+import { EntregaModule } from './entrega/entrega.module.js'
 import { EstruturaModule } from './estrutura/estrutura.module.js'
 import { IaModule } from './ia/ia.module.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
@@ -75,7 +78,10 @@ export class AppModule {
         }),
         EstruturaModule,
         ProfessoresModule,
-        IaModule.com({ ambiente: config.identidade.ambiente, ...(opcoes.logger === undefined ? {} : { logger: opcoes.logger }) }),
+        IaModule.com({ config: config.ia, ...(opcoes.logger === undefined ? {} : { logger: opcoes.logger }) }),
+        AssistenteModule.com({ chaveContador: config.login.chaveContador, instancias: config.limite.instancias }),
+        ArtefatoModule,
+        EntregaModule,
         SalaModule.com({
           config: config.sala,
           chaveContador: config.login.chaveContador,

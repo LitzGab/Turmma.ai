@@ -2,9 +2,8 @@ import {
   criarLogger,
   criarProvedorDeIa,
   ExecutorNoProcesso,
-  lerConfiguracaoDeIa,
-  type Ambiente,
   type Banco,
+  type ConfiguracaoDeIa,
   type ExecutorDeAgente,
   type LLMProvider,
   type LoggerBase,
@@ -32,10 +31,9 @@ export const SUSPENSAO_DE_FUNCAO = Symbol('SUSPENSAO_DE_FUNCAO')
 export const ORCAMENTO_DE_IA = Symbol('ORCAMENTO_DE_IA')
 
 export interface OpcoesDoModuloDeIa {
-  readonly ambiente: Ambiente
+  /** A configuração de IA que o `lerConfiguracao` da API leu e validou (`IA_ADAPTADOR`, `LLM_*`, `IA_EXECUC*`). */
+  readonly config: ConfiguracaoDeIa
   readonly logger?: LoggerBase
-  /** As variáveis de IA. Sem isto, as do processo (`IA_ADAPTADOR`, `LLM_*`, `IA_EXECUC*`), como o compose as entrega. */
-  readonly variaveis?: Record<string, string | undefined>
 }
 
 /**
@@ -49,13 +47,14 @@ export interface OpcoesDoModuloDeIa {
  *   agendador não cobre.
  *
  * Na subida, a varredura encerra as execuções que um processo caído deixou `pendente` ou `rodando`, e se repete a cada
- * prazo de execução. Configuração inválida derruba a subida, com o nome da variável (`ConfiguracaoInvalida`).
+ * prazo de execução. A configuração chega lida e validada pelo `lerConfiguracao` da API, com as outras: o módulo não lê
+ * o ambiente do processo.
  */
 @Global()
 @Module({})
 export class IaModule implements OnApplicationBootstrap, OnApplicationShutdown {
   static com(opcoes: OpcoesDoModuloDeIa): DynamicModule {
-    const config = lerConfiguracaoDeIa({ ...(opcoes.variaveis ?? process.env), AMBIENTE: opcoes.ambiente })
+    const { config } = opcoes
     const logger = opcoes.logger ?? criarLogger({ servico: 'api' })
     return {
       module: IaModule,

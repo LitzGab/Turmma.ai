@@ -20,11 +20,13 @@
     "jose": "6.2.12",
     "openid-client": "6.8.8",
     "otpauth": "9.5.2",
+    "pdfkit": "0.20.2",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
     "zod": "4.6.4"
   },
   "devDependencies": {
+    "@types/pdfkit": "0.17.6",
     "@types/supertest": "7.2.1",
     "supertest": "7.2.2"
   }
