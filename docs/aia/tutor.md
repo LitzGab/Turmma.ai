@@ -224,9 +224,12 @@ Fundamento: regra 20, item 14; `docs/regulacao.md`, seção 7.
 Como se confere: teste de autorização por objeto na conversa; teste de isolamento da rede.
 
 **N21. Não funciona às escondidas do professor.**
-Fundamento: D8; regra 70, item 4.
-Como se confere: a tela do aluno tem a faixa de supervisão, que não fecha; toda conversa fica
-registrada para o professor da turma.
+Fundamento: D8; D47; regra 70, item 4.
+Como se confere: a tela do aluno tem a faixa de supervisão, que não fecha; o professor com
+vínculo confirmado na turma vê o **uso** de cada aluno (`GET /v1/tutor/uso`): as trocas do dia, a
+hora da última e em que ele estava, inclusive de quem nunca gerou sinal; teste de que o aluno sem
+sinal aparece no uso. No MVP o professor **não lê o texto** da conversa: nenhuma rota o entrega a
+ele, e o uso vem sem conteúdo, sem tempo ocioso e sem histórico de navegação (regra 70, item 7).
 
 #### Sobre onde e quando o Tutor funciona
 
@@ -401,7 +404,9 @@ Conforme `docs/mvp-rapido.md`, com dado 100% sintético.
 - o gateway de IA com limitador, fila curta e provedor de reserva, e a fila de jobs (D77);
 - o contexto estruturado informado pelo professor e a leitura do tipo de adaptação: não constam
   do contrato do MVP;
-- o modo casa, a política de tutor por turma e o pacote mensal por turma: não constam do contrato
-  do MVP, que traz só o freio diário;
+- o modo casa e a política de tutor por turma: não constam do contrato do MVP. O freio diário por
+  aluno e o **pacote mensal por turma** constam: os dois limites são configuração da escola
+  (`tutor_trocas_por_dia` e `tutor_trocas_por_mes`), e o pacote esgotado responde
+  `PACOTE_DO_TUTOR_ESGOTADO`;
 - o caminho auditado para a orientação ou a direção ver o conteúdo em caso de risco à vida;
 - o filtro de conteúdo, o teste adversário e o canal de notificação de violação (D61).

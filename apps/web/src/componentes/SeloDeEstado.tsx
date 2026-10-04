@@ -26,7 +26,8 @@ type PropsDoEstado =
   | { readonly familia: Exclude<FamiliaDeEstado, 'pendente'>; readonly children: string }
 
 /**
- * O selo de estado. **Estado nunca é só cor** (regra 50, item 11; 9.1): o texto é obrigatório pelo tipo, e o ícone
+ * O selo de estado. A `LinhaAprovacao` de `componentes/ia/` é este mesmo selo, com o texto de quem aprovou e quando:
+ * para a aprovação de saída de IA, use a linha, e não o selo solto. **Estado nunca é só cor** (regra 50, item 11; 9.1): o texto é obrigatório pelo tipo, e o ícone
  * repete a família para quem não distingue o verde do vermelho. O arquivo não se chama `Estado.tsx` porque a pasta
  * `estado/` (vazio, carregando, erro) mora ao lado, e num sistema de arquivos que não distingue maiúscula os dois
  * `import` cairiam no mesmo lugar.
@@ -34,8 +35,8 @@ type PropsDoEstado =
 export function Estado(props: PropsDoEstado) {
   const Icone = ICONE_DO_ESTADO[props.familia]
   return (
-    <span className={`inline-flex max-w-full items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] leading-tight font-medium ${CORES_DO_ESTADO[props.familia]}`}>
-      <Icone aria-hidden="true" size={14} strokeWidth={2.4} className="shrink-0" />
+    <span data-estado={props.familia} className={`inline-flex max-w-full items-start gap-1.5 rounded-lg px-2 py-1 text-[13px] leading-snug font-medium ${CORES_DO_ESTADO[props.familia]}`}>
+      <Icone aria-hidden="true" size={14} strokeWidth={2.4} className="mt-0.5 shrink-0" />
       <span className="min-w-0 break-words">{props.children ?? TEXTO_DO_PENDENTE}</span>
     </span>
   )

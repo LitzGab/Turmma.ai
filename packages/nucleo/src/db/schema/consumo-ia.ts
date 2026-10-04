@@ -13,12 +13,14 @@ import { usuario } from './usuario.js'
  * sobre o que foi enviado para fora. Uma execução pode ter mais de uma chamada.
  *
  * - **`entrada` e `saida` (regra 20 contra regra 30, item 4).** Guardam o que foi ao modelo e o que voltou, para a escola
- *   poder perguntar por que a IA disse algo. **Nas tarefas do Tutor ficam nulas**, e o check
- *   `consumo_ia_sem_texto_de_aluno` garante: o que o aluno escreveu e o que o Tutor respondeu já estão em `mensagem_tutor`,
- *   com retenção curta e acesso restrito, e texto de aluno não se duplica numa tabela de métrica. Nas outras tarefas
- *   (atividade, plano, adaptação, relatório da correção, resumo do Analista, proposta de ferramenta) a entrada não leva
- *   nome de pessoa: a camada de IA recusa chave fora do schema da tarefa. Nunca vão a log (regra 20, item 9), e nenhuma
- *   rota as devolve: a governança só soma números.
+ *   poder perguntar por que a IA disse algo. **Ficam nulas onde a chamada leva conversa de pessoa**, e o check
+ *   `consumo_ia_sem_conversa_de_pessoa` (0023) garante: nas funções do Tutor, em que o texto é do aluno, e na tarefa
+ *   `propor_ferramenta`, em que é a mensagem do professor ao Assistente. A conversa já está em `mensagem_tutor` e em
+ *   `mensagem_agente`, com a retenção e o acesso de lá, e não se duplica numa tabela de métrica. Nas outras tarefas
+ *   (atividade, plano, adaptação, relatório da correção, resumo do Analista) vão o tema, os parâmetros, os trechos do
+ *   material e números. **O schema estrito da tarefa barra chave, não texto**: o tema é texto livre do professor, e
+ *   nada impede que ele escreva um nome ali; por isso a retenção é a da conversa dele (`docs/lgpd.md`). Nunca vão a log
+ *   (regra 20, item 9), e nenhuma rota as devolve: a governança só soma números.
  * - **Não existe consumo por professor** (D64): a tabela não tem coluna de usuário. `aluno_id` só existe nas funções do
  *   Tutor (check), e vira nulo se o aluno for eliminado (`on delete set null (aluno_id)`, escrito à mão na 0022): o custo
  *   da escola fica, sem a pessoa.
@@ -85,8 +87,8 @@ export const consumoIa = pgTable(
     check('consumo_ia_erro_so_no_que_falhou', sql`(${tabela.estado} = 'falhou') = (${tabela.codigoDeErro} is not null)`),
     check('consumo_ia_aluno_so_no_tutor', sql`${tabela.alunoId} is null or ${tabela.funcao} in ('tutor_com_o_aluno', 'sinais_para_o_professor')`),
     check(
-      'consumo_ia_sem_texto_de_aluno',
-      sql`${tabela.funcao} not in ('tutor_com_o_aluno', 'sinais_para_o_professor') or (${tabela.entrada} is null and ${tabela.saida} is null)`,
+      'consumo_ia_sem_conversa_de_pessoa',
+      sql`(${tabela.funcao} not in ('tutor_com_o_aluno', 'sinais_para_o_professor') and ${tabela.tarefa} <> 'propor_ferramenta') or (${tabela.entrada} is null and ${tabela.saida} is null)`,
     ),
   ],
 )

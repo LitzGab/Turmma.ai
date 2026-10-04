@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { camposDaConsultaDeConversa, MAXIMO_DE_MENSAGENS_POR_PAGINA } from '../assistente/conversa.js'
+import { camposDaConsultaDeConversa, MAXIMO_DE_MENSAGENS_POR_PAGINA, MAXIMO_DE_QUESTOES_POR_ATIVIDADE } from '../assistente/conversa.js'
 import { esquemaCitacao, esquemaHabilidade } from '../assistente/conteudo.js'
 import { esquemaChaveEnvio } from '../time/chave-envio.js'
 import { TIPOS_DE_SINAL_DE_TRABALHO } from './sinal.js'
@@ -7,8 +7,10 @@ import { TIPOS_DE_SINAL_DE_TRABALHO } from './sinal.js'
 /**
  * O Tutor do aluno (MVP, A4; D8, D36, D38, D47, D58, D66): `POST /v1/tutor/mensagens`, `GET /v1/tutor/conversa` e
  * `GET /v1/tutor/memoria`. O aluno só alcança a própria conversa, e nenhuma resposta traz dado de colega. A resposta do
- * Tutor é a única saída de IA que chega ao aluno sem aprovação prévia: é supervisionada (D47), e por isso todo turno
- * fica registrado e gera sinal para o professor da turma.
+ * Tutor é a única saída de IA que chega ao aluno sem aprovação prévia: é supervisionada (D47). **Todo turno fica
+ * registrado, e todo uso é visível ao professor da turma**, em `GET /v1/tutor/uso` (`tutor/uso.ts`): quem usou, quantas
+ * trocas no dia, quando foi a última e em que estava. O sinal é outra coisa: só nasce quando o turno é um dos quatro
+ * tipos (`tutor/sinal.ts`), e o aluno com turnos comuns não gera sinal nenhum, mas aparece no uso.
  */
 
 /**
@@ -32,17 +34,25 @@ export const ESTADOS_DO_TUTOR = ['ligado', 'avaliacao', 'fora', 'limite'] as con
 export type EstadoDoTutor = (typeof ESTADOS_DO_TUTOR)[number]
 
 /**
- * Corpo de `POST /v1/tutor/mensagens`: o texto, a atividade aplicada em que o aluno está (ou o material sobre o qual
- * pergunta) e a chave do envio. A turma e o aluno vêm da sessão. Responde 202 com a execução. Com avaliação aberta
+ * Corpo de `POST /v1/tutor/mensagens`: o texto, a atividade aplicada e a questão em que o aluno está (ou o material e a
+ * página sobre os quais pergunta) e a chave do envio. A questão e a página são a referência ao trabalho que o professor
+ * vê no uso da turma: a tela as manda quando sabe. A turma e o aluno vêm da sessão. Responde 202 com a execução. Com avaliação aberta
  * responde `TUTOR_PAUSADO_EM_AVALIACAO`; no freio, `LIMITE_DIARIO_DO_TUTOR` ou `PACOTE_DO_TUTOR_ESGOTADO`; com a função
  * suspensa, `FUNCAO_SUSPENSA`. Nenhum deles grava mensagem nem conta troca.
  */
-export const esquemaPedidoMensagemAoTutor = z.strictObject({
-  texto: z.string().trim().min(1).max(TAMANHO_MAXIMO_DA_PERGUNTA_AO_TUTOR),
-  atividadeAplicadaId: z.uuid().optional(),
-  materialId: z.uuid().optional(),
-  chaveEnvio: esquemaChaveEnvio,
-})
+export const esquemaPedidoMensagemAoTutor = z
+  .strictObject({
+    texto: z.string().trim().min(1).max(TAMANHO_MAXIMO_DA_PERGUNTA_AO_TUTOR),
+    atividadeAplicadaId: z.uuid().optional(),
+    /** O número da questão em que o aluno está, a partir de 1. Só junto da atividade aplicada. */
+    questao: z.number().int().min(1).max(MAXIMO_DE_QUESTOES_POR_ATIVIDADE).optional(),
+    materialId: z.uuid().optional(),
+    /** A página do material que o aluno tem aberta, a partir de 1. Só junto do material. */
+    pagina: z.number().int().min(1).optional(),
+    chaveEnvio: esquemaChaveEnvio,
+  })
+  .refine((pedido) => pedido.questao === undefined || pedido.atividadeAplicadaId !== undefined, { path: ['questao'], message: 'questão só com atividade aplicada' })
+  .refine((pedido) => pedido.pagina === undefined || pedido.materialId !== undefined, { path: ['pagina'], message: 'página só com material' })
 export type PedidoMensagemAoTutor = z.infer<typeof esquemaPedidoMensagemAoTutor>
 
 export const AUTORES_DE_MENSAGEM_DO_TUTOR = ['aluno', 'tutor'] as const

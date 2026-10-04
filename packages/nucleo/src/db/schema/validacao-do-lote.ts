@@ -16,16 +16,21 @@ import { escola } from './escola.js'
  *   (`esquemaDestaquesAbertos`) é cada destaque que o professor abriu, com a hora. É cópia, e não referência: a correção
  *   sai do banco se o aluno for eliminado, e a prova do que foi apresentado precisa ficar. Só ids, números e códigos:
  *   sem nome, e sem texto.
- * - Check `validacao_do_lote_destaques_todos_abertos`: **todo destaque apresentado está entre os abertos.** O banco
- *   recusa a validação com caso destacado sem abrir (`DESTAQUES_NAO_ABERTOS`), mesmo por fora da API.
+ * - **O banco recusa a validação com caso destacado sem abrir** (`DESTAQUES_NAO_ABERTOS`), mesmo por fora da API, por
+ *   duas travas. O check `validacao_do_lote_destaques_todos_abertos` compara o registro com ele mesmo: todo destaque de
+ *   `apresentado` está em `aberto`. O gatilho `validacao_do_lote_destaques_do_lote` (0023) compara o registro com as
+ *   **correções do lote**: toda `correcao` com destaque precisa estar aberta (`destaque_aberto_em`) e constar de
+ *   `apresentado.destaques`. Sem ele, um registro com a lista de destaques vazia aprovaria um lote com caso destacado
+ *   que ninguém abriu.
  * - Índice único `(escola_id, entrega_id)`: uma validação por lote. O duplo clique em aprovar grava uma, e o segundo cai
  *   no 23505 (regra 80, item 7).
  * - FK composta `(escola_id, entrega_id, atividade_aplicada_id)` para a entrega, com a aplicação obrigatória: a
  *   validação só existe para entrega que é lote de correção. É ela que o gatilho adiado da `entrega` procura antes de
  *   deixar o lote ficar `aprovada`.
  * - FK composta `(escola_id, ano_letivo_id, atividade_aplicada_id)` para a aplicação: o ano da validação é o dela.
- * - `confirmada_por` é conferido pelo gatilho `validacao_do_lote_confirmada_por_da_escola` (a função
- *   `exigir_usuario_da_escola`, da 0013), sem FK: a eliminação do professor não apaga quem confirmou.
+ * - `confirmada_por` é conferido pelo gatilho `validacao_do_lote_confirmada_por_da_equipe` (a função
+ *   `exigir_equipe_da_escola`, da 0023: professor ou coordenação da escola), sem FK: a eliminação do professor não apaga
+ *   quem confirmou.
  * - Não se altera nem se apaga: nenhuma rota faz `update` ou `delete` aqui.
  */
 export const validacaoDoLote = pgTable(

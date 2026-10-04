@@ -1,8 +1,11 @@
 import { useId, type ReactNode } from 'react'
+import type { NivelDoTitulo } from './Tela'
 
 interface PropsDoCartao {
   /** Com título, o cartão é uma região com nome (`section` rotulada por ele); sem título, é só a caixa. */
   readonly titulo?: string
+  /** O nível do título. Sem ele, 2; dentro de uma seção que já tem `h2`, 3. */
+  readonly nivel?: NivelDoTitulo
   /** Uma ação à direita do título. */
   readonly acao?: ReactNode
   readonly children: ReactNode
@@ -14,16 +17,17 @@ interface PropsDoCartao {
  * partir de 1024 px. A hierarquia vem de tom e de linha, não de elevação: sombra em cada cartão custa pintura no
  * computador fraco da escola e não diz nada (regra 50, item 1).
  */
-export function Cartao({ titulo, acao, children, className = '' }: PropsDoCartao) {
+export function Cartao({ titulo, nivel = 2, acao, children, className = '' }: PropsDoCartao) {
   const idDoTitulo = useId()
+  const Titulo = `h${nivel}` as const
   const classes = `min-w-0 rounded-cartao border border-linha bg-superficie p-4 lg:p-5 ${className}`
   if (titulo === undefined) return <div className={classes}>{children}</div>
   return (
     <section aria-labelledby={idDoTitulo} className={classes}>
       <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <h2 id={idDoTitulo} className="min-w-0 text-base leading-snug font-semibold break-words text-tinta">
+        <Titulo id={idDoTitulo} className="min-w-0 text-base leading-snug font-semibold break-words text-tinta">
           {titulo}
-        </h2>
+        </Titulo>
         {acao}
       </div>
       {children}

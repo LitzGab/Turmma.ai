@@ -1,0 +1,72 @@
+import { useId, type Ref } from 'react'
+import { MarcaDeObrigatorio } from './Campo'
+import { textoDoContador, type LimitesDoTexto } from './texto-longo'
+
+interface PropsDoCampoLongo extends LimitesDoTexto {
+  /** O rótulo visível, sempre. */
+  readonly rotulo: string
+  readonly valor: string
+  readonly aoMudar: (valor: string) => void
+  readonly dica?: string
+  /** O que está errado e como corrigir (`problemaDoTexto`, ou o que a API devolveu), mostrado por quem usa quando couber. */
+  readonly erro?: string | undefined
+  readonly obrigatorio?: boolean
+  /** Quantas linhas o campo mostra de início. Sem ele, 3. */
+  readonly linhas?: number
+  readonly desligado?: boolean
+  readonly ref?: Ref<HTMLTextAreaElement>
+}
+
+/**
+ * O campo de várias linhas, com rótulo, dica, contador e erro: a justificativa de quem rejeita uma entrega (de 8 a 500
+ * caracteres) e de quem contesta. É o `Campo` do produto com `textarea`: mesma borda, mesma altura mínima de toque.
+ *
+ * - **O contador é texto** ("12 de 500"), ligado ao campo por `aria-describedby`: o leitor de tela o ouve ao chegar no
+ *   campo, e não a cada tecla. Não muda de cor perto do limite: o campo simplesmente não aceita mais (`maxLength`).
+ * - **O erro diz o que fazer**, embaixo, e o campo fica `aria-invalid`.
+ *
+ * **Não é campo de ferramenta.** O `MotorFormulario` não tem texto longo, e a Adaptação não tem texto nenhum: texto
+ * livre sobre aluno é onde o diagnóstico entraria no sistema (D35, D67).
+ */
+export function CampoLongo({ rotulo, valor, aoMudar, dica, erro, obrigatorio = false, linhas = 3, desligado = false, minimo, maximo, ref }: PropsDoCampoLongo) {
+  const campo = useId()
+  const idDaDica = useId()
+  const idDoContador = useId()
+  const idDoErro = useId()
+  const descritoPor = [dica === undefined ? undefined : idDaDica, erro === undefined ? undefined : idDoErro, idDoContador].filter((id) => id !== undefined).join(' ')
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <label htmlFor={campo} className="font-medium">
+        {rotulo}
+        {obrigatorio && <MarcaDeObrigatorio />}
+      </label>
+      {dica !== undefined && (
+        <p id={idDaDica} className="text-sm text-apoio">
+          {dica}
+        </p>
+      )}
+      <textarea
+        id={campo}
+        ref={ref}
+        rows={linhas}
+        value={valor}
+        disabled={desligado}
+        maxLength={maximo}
+        onChange={(evento) => aoMudar(evento.target.value)}
+        aria-describedby={descritoPor}
+        {...(erro === undefined ? {} : { 'aria-invalid': true })}
+        {...(obrigatorio ? { 'aria-required': true } : {})}
+        className="min-h-11 w-full min-w-0 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta disabled:text-inativo"
+      />
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-1">
+        <p id={idDoErro} className="min-w-0 text-sm break-words text-erro empty:hidden">
+          {erro}
+        </p>
+        <p id={idDoContador} className="ml-auto shrink-0 text-sm text-sutil tabular-nums">
+          {textoDoContador(valor, minimo === undefined ? { maximo } : { minimo, maximo })}
+          <span className="sr-only"> caracteres</span>
+        </p>
+      </div>
+    </div>
+  )
+}

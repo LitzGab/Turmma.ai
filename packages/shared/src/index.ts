@@ -719,6 +719,18 @@ export type {
   TipoDeMensagemDoTutor,
 } from './tutor/tutor.js'
 export {
+  esquemaConsultaUsoDoTutor,
+  esquemaReferenciaDaUltimaTroca,
+  esquemaRespostaUsoDoTutor,
+  esquemaUsoDoAluno,
+  MAXIMO_DE_ALUNOS_NO_USO,
+} from './tutor/uso.js'
+export type {
+  ConsultaUsoDoTutor,
+  RespostaUsoDoTutor,
+  UsoDoAluno,
+} from './tutor/uso.js'
+export {
   esquemaConsultaConsumo,
   esquemaConsultaResumoDaGovernanca,
   esquemaConsumoSomado,

@@ -11,7 +11,7 @@ import type { ConsumoDeIa, OrcamentoDeIa, RegistroDeConsumo } from './consumo.js
 import { ErroDeIa, type CodigoDeErroDeIa } from './erros.js'
 import type { LLMProvider, MedicaoDaGeracao, PedidoDeGeracao, ResultadoDaGeracao } from './porta.js'
 import { exigirFuncaoAtiva, type SuspensaoDeFuncao } from './suspensao.js'
-import type { TarefaDeIa } from './tarefa.js'
+import type { DefinicaoDeTarefa } from './tarefa.js'
 
 /** O que o provedor escreve no log: evento fixo, ids, duração. Nunca entrada, saída nem prompt (regra 20, item 9). */
 export type RegistradorDeIa = Pick<LoggerBase, 'info' | 'warn'>
@@ -38,7 +38,7 @@ export const MODELO_DA_REGRA_FIXA = 'regra_fixa'
 type Interpretacao<Saida> = { readonly ok: true; readonly saida: Saida } | { readonly ok: false; readonly problemas: readonly string[] }
 
 /** Do texto do modelo à saída que o domínio pode usar: JSON, schema, ajuste e conferência da tarefa, nesta ordem. */
-function interpretar<Entrada, Saida>(tarefa: TarefaDeIa<Entrada, Saida>, entrada: Entrada, texto: string): Interpretacao<Saida> {
+function interpretar<Entrada, Saida>(tarefa: DefinicaoDeTarefa<Entrada, Saida>, entrada: Entrada, texto: string): Interpretacao<Saida> {
   let bruto: unknown
   try {
     bruto = JSON.parse(texto)
@@ -48,7 +48,7 @@ function interpretar<Entrada, Saida>(tarefa: TarefaDeIa<Entrada, Saida>, entrada
   return validar(tarefa, entrada, bruto)
 }
 
-function validar<Entrada, Saida>(tarefa: TarefaDeIa<Entrada, Saida>, entrada: Entrada, bruto: unknown): Interpretacao<Saida> {
+function validar<Entrada, Saida>(tarefa: DefinicaoDeTarefa<Entrada, Saida>, entrada: Entrada, bruto: unknown): Interpretacao<Saida> {
   const lida = tarefa.esquemaDeSaida.safeParse(bruto)
   if (!lida.success) {
     const problemas = lida.error.issues.slice(0, PROBLEMAS_MAXIMOS_NA_REPETICAO).map((problema) => `${problema.path.join('.') || 'resposta'}: ${problema.message}`)
@@ -68,7 +68,7 @@ interface Gasto {
 
 /**
  * A implementação da porta, igual para todo adaptador. Em toda chamada, nesta ordem: valida a entrada, confere se a
- * escola suspendeu a função, consulta o orçamento, chama o modelo com prazo, valida a saída (repetindo uma vez),
+ * escola suspendeu a função, consulta o orçamento (salvo na resposta de regra fixa), chama o modelo com prazo, valida a saída (repetindo uma vez),
  * registra o consumo e escreve o log.
  *
  * Nada que não foi registrado é devolvido: se o registro falhar, a chamada falha (regra 30, item 4).
@@ -84,8 +84,9 @@ export class ProvedorDeIa implements LLMProvider {
     const { tarefa } = pedido
     const { adaptador } = this.dependencias
     const inicio = performance.now()
-    // O conteúdo de tarefa que leva texto de aluno não entra no registro de consumo: o registro dele é a conversa.
-    const conteudo = <Conteudo extends object>(campos: Conteudo): Conteudo | Record<string, never> => (tarefa.levaTextoDeAluno ? {} : campos)
+    // O conteúdo de tarefa que leva texto livre de pessoa (aluno ou professor) não entra no registro de consumo: o
+    // registro dele é a conversa, que tem dono, acesso restrito e retenção.
+    const conteudo = <Conteudo extends object>(campos: Conteudo): Conteudo | Record<string, never> => (tarefa.levaTextoLivreDePessoa ? {} : campos)
 
     // Entrada fora do schema é erro de quem chamou, antes de qualquer gasto: chave a mais (um nome) para aqui.
     const lida = tarefa.esquemaDeEntrada.safeParse(pedido.entrada)
@@ -102,10 +103,12 @@ export class ProvedorDeIa implements LLMProvider {
       this.avisar(pedido, erro instanceof ErroDeIa ? erro.codigoDeIa : 'IA_INDISPONIVEL', inicio, 0)
       throw erro
     }
-    await this.exigirOrcamento(pedido, inicio)
+    // A resposta de regra fixa não gasta modelo e não passa pelo orçamento: o aluno que escreve sobre um assunto
+    // delicado recebe a mensagem com o 188 mesmo no fim do freio do dia (D36).
+    const fixa = tarefa.semModelo?.(entrada)
+    if (fixa === undefined) await this.exigirOrcamento(pedido, inicio)
 
     const gasto: Gasto = { modelo: adaptador.modeloDoPerfil(tarefa.perfil), tokensDeEntrada: 0, tokensDeSaida: 0, tentativas: 0 }
-    const fixa = tarefa.semModelo?.(entrada)
     let saida: Saida
     try {
       saida = fixa === undefined ? await this.chamarAteValer(pedido, entrada, gasto) : this.exigirSaidaFixa(tarefa, entrada, fixa)
@@ -142,9 +145,11 @@ export class ProvedorDeIa implements LLMProvider {
         escolaId: pedido.escolaId,
         funcao: pedido.tarefa.funcao,
         ...(pedido.alunoId === undefined ? {} : { alunoId: pedido.alunoId }),
+        ...(pedido.turmaId === undefined ? {} : { turmaId: pedido.turmaId }),
+        ...(pedido.execucaoId === undefined ? {} : { execucaoId: pedido.execucaoId }),
       })
       if (!decisao.permitido) {
-        codigo = 'IA_ORCAMENTO_ESGOTADO'
+        codigo = decisao.codigo
         tenteDeNovoEmSegundos = decisao.tenteDeNovoEmSegundos
       }
     } catch {
@@ -156,7 +161,7 @@ export class ProvedorDeIa implements LLMProvider {
   }
 
   /** A regra fixa também passa pelo schema e pela conferência: texto nosso com defeito não chega a ninguém. */
-  private exigirSaidaFixa<Entrada, Saida>(tarefa: TarefaDeIa<Entrada, Saida>, entrada: Entrada, fixa: Saida): Saida {
+  private exigirSaidaFixa<Entrada, Saida>(tarefa: DefinicaoDeTarefa<Entrada, Saida>, entrada: Entrada, fixa: Saida): Saida {
     const validada = validar(tarefa, entrada, fixa)
     if (!validada.ok) throw new ErroDeIa('IA_SAIDA_INVALIDA')
     return validada.saida
@@ -204,7 +209,8 @@ export class ProvedorDeIa implements LLMProvider {
   ): ConsumoDeIa {
     return {
       escolaId: pedido.escolaId,
-      ...(pedido.alunoId === undefined ? {} : { alunoId: pedido.alunoId }),
+      // O aluno só entra no consumo das funções que são dele (o Tutor): nas outras, o consumo não tem pessoa (D64).
+      ...(pedido.alunoId === undefined || !FUNCOES_COM_ORCAMENTO_POR_ALUNO.has(pedido.tarefa.funcao) ? {} : { alunoId: pedido.alunoId }),
       ...(pedido.execucaoId === undefined ? {} : { execucaoId: pedido.execucaoId }),
       tarefa: pedido.tarefa.nome,
       funcao: pedido.tarefa.funcao,

@@ -1,7 +1,7 @@
 import type { Citacao } from '@educa/shared'
 import { FileText } from 'lucide-react'
-import { useId, useRef, useState, type KeyboardEvent } from 'react'
-import { estiloDoRecuo, useFlutuante } from '../flutuante'
+import { useId, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
+import { estiloDoFlutuante, useFlutuante } from '../flutuante'
 import { nomeDoChip, textoDoChip, tituloDoMaterial, type TitulosDosMateriais } from './textos-das-fontes'
 
 interface PropsDoChip {
@@ -20,9 +20,11 @@ const ALTURA_DO_CARTAO = 220
  * - **Abre por clique, por toque e pelo teclado** (Enter ou Espaço), e não por hover: no Chromebook de toque e no
  *   celular não existe hover (regra 50, item 2a). É um botão com `aria-expanded`, e o cartão vem logo depois dele na
  *   ordem de leitura.
- * - **Fecha** pelo mesmo botão, pelo Esc (com o foco de volta no chip) e pelo toque fora.
+ * - **Fecha** pelo mesmo botão, pelo Esc (com o foco de volta no chip), pelo toque fora e **quando o foco sai dele**: quem
+ *   segue pelo Tab não deixa um cartão aberto para trás, cobrindo o texto.
  * - **Cabe dentro de um parágrafo**: é feito só de `span`, e o alvo tem 24 px de altura, a da linha do texto.
- * - **Não passa da janela a 360 px**: a posição é medida na abertura (`flutuante.ts`).
+ * - **Não passa da janela a 360 px nem é cortado** pela lista que rola: a posição é fixa na janela, medida na abertura
+ *   (`flutuante.ts`).
  *
  * Fonte de fora leva outro chip, "da web", de desenho diferente (D68), que nasce com a busca na web, fora do MVP.
  */
@@ -43,8 +45,13 @@ export function ChipFonte({ citacao, materiais }: PropsDoChip) {
     botao.current?.focus()
   }
 
+  /** O foco saiu do chip e do cartão dele (o Tab seguiu adiante): fecha. Dentro do cartão, que recebe foco, continua aberto. */
+  function aoPerderOFoco(evento: FocusEvent<HTMLSpanElement>): void {
+    if (!(evento.relatedTarget instanceof Node) || !evento.currentTarget.contains(evento.relatedTarget)) definirAberto(false)
+  }
+
   return (
-    <span ref={ancora} onKeyDown={aoTeclar} className="relative mx-0.5 inline-block align-baseline">
+    <span ref={ancora} onKeyDown={aoTeclar} onBlur={aoPerderOFoco} className="mx-0.5 inline-block align-baseline">
       <button
         ref={botao}
         type="button"
@@ -62,8 +69,10 @@ export function ChipFonte({ citacao, materiais }: PropsDoChip) {
           id={idDoCartao}
           role="group"
           aria-label={nome}
-          style={estiloDoRecuo('inicio', posicao.recuo)}
-          className={`absolute z-30 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-1 rounded-cartao bg-superficie p-4 text-left text-sm font-normal whitespace-normal shadow-flutua ${posicao.lado === 'acima' ? 'bottom-full mb-2' : 'top-full mt-2'}`}
+          // Recebe foco pelo toque e pelo clique, para quem seleciona o trecho não fechar o cartão ao tirar o foco do chip.
+          tabIndex={-1}
+          style={estiloDoFlutuante(posicao)}
+          className="fixed z-30 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-1 rounded-cartao bg-superficie p-4 text-left text-sm font-normal whitespace-normal shadow-flutua"
         >
           <span className="text-[13px] font-medium text-sutil">Material da escola</span>
           <span className="font-semibold break-words text-tinta">{tituloDoMaterial(citacao.materialId, materiais)}</span>

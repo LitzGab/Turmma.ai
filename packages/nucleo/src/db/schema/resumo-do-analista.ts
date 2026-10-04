@@ -34,7 +34,11 @@ export const resumoDoAnalista = pgTable(
   },
   (tabela) => [
     foreignKey({ name: 'resumo_do_analista_ano_letivo_da_escola_fk', columns: [tabela.escolaId, tabela.anoLetivoId], foreignColumns: [anoLetivo.escolaId, anoLetivo.id] }),
-    foreignKey({ name: 'resumo_do_analista_execucao_da_escola_fk', columns: [tabela.escolaId, tabela.execucaoId], foreignColumns: [execucaoAgente.escolaId, execucaoAgente.id] }),
+    foreignKey({
+      name: 'resumo_do_analista_execucao_do_ano_da_escola_fk',
+      columns: [tabela.escolaId, tabela.anoLetivoId, tabela.execucaoId],
+      foreignColumns: [execucaoAgente.escolaId, execucaoAgente.anoLetivoId, execucaoAgente.id],
+    }),
     uniqueIndex('resumo_do_analista_um_por_execucao').on(tabela.escolaId, tabela.execucaoId).where(sql`${tabela.execucaoId} is not null`),
     index('resumo_do_analista_escola_idx').on(tabela.escolaId, tabela.anoLetivoId, tabela.id),
     check(

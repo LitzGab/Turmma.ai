@@ -22,7 +22,8 @@ import { usuario } from './usuario.js'
  *   chega à conversa.
  * - `questao` é o número da questão, a partir de 1, como em `resposta_atividade`.
  * - O aluno por FK composta com a escola, `on delete cascade`: a eliminação apaga os sinais dele. A turma, com a escola e
- *   o ano; a atividade aplicada, idem; o material, com a escola.
+ *   o ano; a atividade aplicada, com a escola, o ano e **a turma do sinal** (0023): o sinal lido pelo professor da turma X
+ *   nunca aponta para a aplicação da turma Y. A execução, com a escola e o ano; o material, com a escola.
  * - Só o professor com vínculo confirmado na turma lê o sinal nomeado (D34). A coordenação vê a soma por tipo, no resumo
  *   do Analista, nunca a linha.
  * - Índices pelo escopo (regra 80, item 8): `(escola_id, turma_id, id)` para a listagem e o agrupado de "Seu time", e
@@ -53,11 +54,15 @@ export const sinalTutor = pgTable(
       foreignColumns: [turma.escolaId, turma.anoLetivoId, turma.id],
     }),
     foreignKey({ name: 'sinal_tutor_aluno_da_escola_fk', columns: [tabela.escolaId, tabela.alunoId], foreignColumns: [usuario.escolaId, usuario.id] }).onDelete('cascade'),
-    foreignKey({ name: 'sinal_tutor_execucao_da_escola_fk', columns: [tabela.escolaId, tabela.execucaoId], foreignColumns: [execucaoAgente.escolaId, execucaoAgente.id] }),
     foreignKey({
-      name: 'sinal_tutor_atividade_aplicada_do_ano_da_escola_fk',
-      columns: [tabela.escolaId, tabela.anoLetivoId, tabela.atividadeAplicadaId],
-      foreignColumns: [atividadeAplicada.escolaId, atividadeAplicada.anoLetivoId, atividadeAplicada.id],
+      name: 'sinal_tutor_execucao_do_ano_da_escola_fk',
+      columns: [tabela.escolaId, tabela.anoLetivoId, tabela.execucaoId],
+      foreignColumns: [execucaoAgente.escolaId, execucaoAgente.anoLetivoId, execucaoAgente.id],
+    }),
+    foreignKey({
+      name: 'sinal_tutor_atividade_aplicada_da_turma_fk',
+      columns: [tabela.escolaId, tabela.anoLetivoId, tabela.turmaId, tabela.atividadeAplicadaId],
+      foreignColumns: [atividadeAplicada.escolaId, atividadeAplicada.anoLetivoId, atividadeAplicada.turmaId, atividadeAplicada.id],
     }),
     foreignKey({ name: 'sinal_tutor_material_da_escola_fk', columns: [tabela.escolaId, tabela.materialId], foreignColumns: [material.escolaId, material.id] }),
     uniqueIndex('sinal_tutor_um_por_execucao').on(tabela.escolaId, tabela.execucaoId, tabela.tipo).where(sql`${tabela.execucaoId} is not null`),

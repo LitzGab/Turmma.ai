@@ -68,6 +68,7 @@ export const adaptarAtividade = definirTarefa({
   esquemaDeSaida: esquemaConteudoDeAtividade,
   prompt: PROMPT_ADAPTAR_ATIVIDADE,
   maximoDeTokensDeSaida: 6000,
+  levaTextoLivreDePessoa: false,
   levaTextoDeAluno: false,
 
   montarPedido(entrada) {

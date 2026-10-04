@@ -1,72 +1,81 @@
-import { esquemaHabilidade } from '@educa/shared'
+import { esquemaConteudoDoResumoDoAnalista, type AlertaDoAnalista, type ConteudoDoResumoDoAnalista, type HipoteseDoAnalista, type RecorteDoAnalista } from '@educa/shared'
+import { isDeepStrictEqual } from 'node:util'
 import { z } from 'zod'
 import { dadoEmJson } from '../material.js'
 import { PROMPT_RESUMO_DO_ANALISTA } from '../prompts/resumo-do-analista.js'
 import { definirTarefa } from '../tarefa.js'
-import { cortar, normalizar } from '../texto.js'
-
-const percentual = z.number().int().min(0).max(100)
-const nomeDoRecorte = z.string().min(1).max(60)
 
 /**
- * O Analista recebe **só agregados** por série e disciplina. O recorte declara quantos professores há nele, e com
- * menos de dois ele nem entra: um professor só é o indicador dele, e isso é nominal (D45). Não há turma nomeada,
- * professor nem aluno na entrada; o que não entra não tem como sair.
+ * O Analista recebe **só agregados**: o período, os números da escola e os recortes de série e disciplina que o
+ * domínio já montou, nas formas do contrato (`esquemaConteudoDoResumoDoAnalista`, em `@educa/shared`). O recorte com
+ * menos de dois professores nem cabe no schema (D45): entra só em `recortesNominais`, sem número. Não há professor,
+ * turma nem aluno na entrada; o que não entra não tem como sair.
+ *
+ * O limiar do alerta é de quem chama, nunca constante daqui (os indicadores ainda são decisão em aberto).
  */
-export const esquemaEntradaDoAnalista = z.strictObject({
-  periodo: z.strictObject({ inicio: z.iso.date(), fim: z.iso.date() }),
-  /** Abaixo dele a habilidade vira alerta. É configuração de quem chama, nunca constante daqui. */
-  limiarDeAlertaPercentual: percentual,
-  recortes: z
-    .array(
-      z.strictObject({
-        serie: nomeDoRecorte,
-        disciplina: nomeDoRecorte,
-        professoresNoRecorte: z.number().int().min(2),
-        turmas: z.number().int().min(1),
-        habilidades: z
-          .array(z.strictObject({ habilidade: esquemaHabilidade, respostas: z.number().int().min(1), acertoPercentual: percentual }))
-          .min(1)
-          .max(20),
-      }),
-    )
-    .min(1)
-    .max(30),
+export const esquemaEntradaDoAnalista = esquemaConteudoDoResumoDoAnalista.omit({ alertas: true }).extend({
+  /** Abaixo deste acerto a habilidade vira alerta. */
+  limiarDeAcertoBaixoPercentual: z.number().min(0).max(100),
 })
 export type EntradaDoAnalista = z.infer<typeof esquemaEntradaDoAnalista>
 
-const esquemaItemDoResumo = { serie: nomeDoRecorte, disciplina: nomeDoRecorte, habilidade: esquemaHabilidade, acertoPercentual: percentual }
+/**
+ * A saída é **exatamente o que `resumo_do_analista.conteudo` guarda**: o mesmo schema do contrato, sem campo de texto.
+ * O que a IA acrescenta são os alertas, e neles só escolhe o tipo e as hipóteses, de listas fechadas; a frase quem
+ * monta é a tela (`docs/mvp-contratos.md`, decisão 14). Não existe onde escrever sobre uma pessoa.
+ */
+export const esquemaSaidaDoAnalista = esquemaConteudoDoResumoDoAnalista
+export type SaidaDoAnalista = ConteudoDoResumoDoAnalista
 
-export const esquemaSaidaDoAnalista = z.strictObject({
-  resumo: z.string().min(1).max(1200),
-  destaques: z.array(z.strictObject({ ...esquemaItemDoResumo, leitura: z.string().min(1).max(400) })).max(5),
-  /** Alerta é hipótese com contexto, nunca veredito. */
-  alertas: z.array(z.strictObject({ ...esquemaItemDoResumo, hipotese: z.string().min(1).max(500), contexto: z.string().min(1).max(500) })).max(10),
-})
-export type SaidaDoAnalista = z.infer<typeof esquemaSaidaDoAnalista>
-
-interface Item {
-  readonly serie: string
-  readonly disciplina: string
-  readonly turmas: number
-  readonly habilidade: { codigo: string; descricao: string }
-  readonly respostas: number
-  readonly acertoPercentual: number
+/** O acerto de uma habilidade no recorte, em percentual com uma casa: é o `valor` do alerta. */
+export function acertoPercentual(acertos: number, total: number): number {
+  return Math.round((acertos * 1000) / total) / 10
 }
 
-function itensDaEntrada(entrada: EntradaDoAnalista): Item[] {
-  return entrada.recortes.flatMap((recorte) =>
-    recorte.habilidades.map((item) => ({ serie: recorte.serie, disciplina: recorte.disciplina, turmas: recorte.turmas, ...item })),
-  )
+const mesmoRecorte = (alerta: AlertaDoAnalista, recorte: RecorteDoAnalista): boolean => alerta.serie.id === recorte.serie.id && alerta.disciplina.id === recorte.disciplina.id
+
+/**
+ * Com a saída em listas fechadas, a conferência deixa de procurar palavra e passa a conferir dado: tudo que veio na
+ * entrada volta igual, e cada alerta aponta um recorte e uma habilidade que existem, com o número medido e o limiar
+ * recebido. Série, disciplina e habilidade do alerta são as da entrada, campo por campo: é o único texto que há ali,
+ * e o modelo não tem como trocá-lo.
+ */
+function problemasDoResumo(entrada: EntradaDoAnalista, saida: SaidaDoAnalista): string[] {
+  const problemas: string[] = []
+  const { limiarDeAcertoBaixoPercentual: limiar, ...agregados } = entrada
+  const { alertas, ...devolvidos } = saida
+  if (!isDeepStrictEqual(devolvidos, agregados)) problemas.push('"periodo", "escola", "recortes" e "recortesNominais" voltam exatamente como vieram nos dados: não altere, não arredonde e não reordene.')
+  const vistos = new Set<string>()
+  alertas.forEach((alerta, indice) => {
+    const onde = `Alerta ${indice + 1}`
+    // Os dados desta fatia sustentam só o alerta de acerto baixo: queda pede período anterior, e os outros não são de habilidade.
+    if (alerta.tipo !== 'habilidade_com_acerto_baixo') return void problemas.push(`${onde}: os dados só sustentam o tipo "habilidade_com_acerto_baixo".`)
+    const recorte = entrada.recortes.find((candidato) => mesmoRecorte(alerta, candidato))
+    const medida = recorte?.porHabilidade.find((item) => item.habilidade.codigo === alerta.habilidade?.codigo)
+    if (recorte === undefined || medida === undefined) return void problemas.push(`${onde}: série, disciplina e habilidade precisam ser de um recorte recebido.`)
+    if (!isDeepStrictEqual(alerta.serie, recorte.serie) || !isDeepStrictEqual(alerta.disciplina, recorte.disciplina) || !isDeepStrictEqual(alerta.habilidade, medida.habilidade)) {
+      problemas.push(`${onde}: série, disciplina e habilidade são copiadas do recorte, campo por campo.`)
+    }
+    const valor = acertoPercentual(medida.acertos, medida.total)
+    if (alerta.valor !== valor || alerta.referencia !== limiar) problemas.push(`${onde}: "valor" é o acerto medido (${valor}) e "referencia" é o limiar recebido (${limiar}).`)
+    if (valor >= limiar) problemas.push(`${onde}: só é alerta a habilidade com acerto abaixo do limiar de ${limiar}%.`)
+    if (new Set(alerta.hipoteses).size !== alerta.hipoteses.length) problemas.push(`${onde}: não repita hipótese.`)
+    const chave = `${recorte.serie.id}:${recorte.disciplina.id}:${medida.habilidade.codigo}`
+    if (vistos.has(chave)) problemas.push(`${onde}: já há um alerta para esta habilidade neste recorte.`)
+    vistos.add(chave)
+  })
+  return problemas
 }
 
-const chaveDoItem = (item: Pick<Item, 'serie' | 'disciplina' | 'habilidade' | 'acertoPercentual'>): string =>
-  [item.serie, item.disciplina, item.habilidade.codigo, item.acertoPercentual].join('|')
+/**
+ * As hipóteses que os números permitem levantar sem modelo. Com um lote só, o número ainda diz pouco; com mais, as
+ * duas que cabe conferir primeiro. São sempre sobre o conteúdo e o material, e sempre hipótese.
+ */
+function hipotesesDoRecorte(recorte: RecorteDoAnalista): HipoteseDoAnalista[] {
+  return recorte.lotesAprovados < 2 ? ['poucas_atividades_no_tema'] : ['conteudo_recente', 'questoes_acima_do_material']
+}
 
-const dataPorExtenso = (iso: string): string => iso.split('-').reverse().join('/')
-
-/** O Analista fala de série, disciplina e habilidade. Citar professor, mesmo sem nome, já é falar de pessoa (D45). */
-const FALA_DE_PROFESSOR = /\b(professor|professora|professores|professoras|docente|docentes)\b/
+const MAXIMO_DE_ALERTAS = 20
 
 export const resumoDoAnalista = definirTarefa({
   nome: 'resumo_do_analista',
@@ -75,72 +84,37 @@ export const resumoDoAnalista = definirTarefa({
   esquemaDeEntrada: esquemaEntradaDoAnalista,
   esquemaDeSaida: esquemaSaidaDoAnalista,
   prompt: PROMPT_RESUMO_DO_ANALISTA,
-  maximoDeTokensDeSaida: 2500,
+  maximoDeTokensDeSaida: 6000,
+  levaTextoLivreDePessoa: false,
   levaTextoDeAluno: false,
 
   montarPedido(entrada) {
     return {
-      instrucao: 'Escreva o resumo da coordenação a partir dos agregados por série e disciplina.',
+      instrucao: 'Monte o resumo da coordenação: devolva os agregados como vieram e acrescente os alertas das habilidades abaixo do limiar.',
       dados: [dadoEmJson('agregados_por_serie_e_disciplina', entrada)],
     }
   },
 
-  conferir(entrada, saida) {
-    const problemas: string[] = []
-    const conhecidos = new Set(itensDaEntrada(entrada).map(chaveDoItem))
-    for (const item of [...saida.destaques, ...saida.alertas]) {
-      if (!conhecidos.has(chaveDoItem(item))) problemas.push(`“${item.habilidade.codigo}” em ${item.serie}, ${item.disciplina}: série, disciplina, habilidade e acerto precisam ser os dos dados, como vieram.`)
-    }
-    if (saida.alertas.some((alerta) => alerta.acertoPercentual >= entrada.limiarDeAlertaPercentual)) {
-      problemas.push(`Só é alerta a habilidade com acerto abaixo do limiar de ${entrada.limiarDeAlertaPercentual}%.`)
-    }
-    const textos = [saida.resumo, ...saida.destaques.map((destaque) => destaque.leitura), ...saida.alertas.flatMap((alerta) => [alerta.hipotese, alerta.contexto])]
-    if (textos.some((texto) => FALA_DE_PROFESSOR.test(normalizar(texto)))) {
-      problemas.push('Não fale de professor: o resumo trata de série, disciplina e habilidade, e nunca avalia pessoa.')
-    }
-    return problemas
-  },
+  conferir: problemasDoResumo,
 
   falso(entrada): SaidaDoAnalista {
-    const itens = itensDaEntrada(entrada)
-    const limiar = entrada.limiarDeAlertaPercentual
-    const abaixo = itens.filter((item) => item.acertoPercentual < limiar).sort((a, b) => a.acertoPercentual - b.acertoPercentual)
-    const acima = itens.filter((item) => item.acertoPercentual >= limiar).sort((a, b) => b.acertoPercentual - a.acertoPercentual)
-    const respostas = itens.reduce((soma, item) => soma + item.respostas, 0)
-    const media = Math.round(itens.reduce((soma, item) => soma + item.acertoPercentual * item.respostas, 0) / respostas)
-    const recortes = entrada.recortes.length
-    return {
-      resumo: cortar(
-        `De ${dataPorExtenso(entrada.periodo.inicio)} a ${dataPorExtenso(entrada.periodo.fim)}, ${recortes} ${recortes === 1 ? 'recorte' : 'recortes'} de série e disciplina ` +
-          `${recortes === 1 ? 'teve' : 'tiveram'} atividades validadas, somando ${respostas} respostas. O acerto médio por habilidade foi de ${media}%. ` +
-          (abaixo.length === 0
-            ? `Nenhuma habilidade ficou abaixo do limiar de ${limiar}%.`
-            : `${abaixo.length} ${abaixo.length === 1 ? 'habilidade ficou' : 'habilidades ficaram'} abaixo do limiar de ${limiar}% e ${abaixo.length === 1 ? 'aparece' : 'aparecem'} como alerta: é hipótese a conferir, não conclusão.`),
-        1200,
-      ),
-      destaques: acima.slice(0, 3).map((item) => ({
-        serie: item.serie,
-        disciplina: item.disciplina,
-        habilidade: item.habilidade,
-        acertoPercentual: item.acertoPercentual,
-        leitura: cortar(`${item.serie}, ${item.disciplina}: o acerto em “${item.habilidade.descricao}” foi de ${item.acertoPercentual}%, em ${item.respostas} respostas.`, 400),
-      })),
-      alertas: abaixo.slice(0, 10).map((item) => ({
-        serie: item.serie,
-        disciplina: item.disciplina,
-        habilidade: item.habilidade,
-        acertoPercentual: item.acertoPercentual,
-        hipotese: cortar(
-          `${item.serie}, ${item.disciplina}: o acerto em “${item.habilidade.descricao}” ficou em ${item.acertoPercentual}%, abaixo do limiar de ${limiar}%. ` +
-            'Uma hipótese é que o conteúdo ainda não tenha sido retomado depois das primeiras atividades.',
-          500,
-        ),
-        contexto: cortar(
-          `Agregado de ${item.respostas} respostas, em ${item.turmas} ${item.turmas === 1 ? 'turma' : 'turmas'}, de atividades já validadas. ` +
-            'O número não aponta turma nem pessoa e, sozinho, não permite concluir a causa.',
-          500,
-        ),
-      })),
-    }
+    const { limiarDeAcertoBaixoPercentual: limiar, ...agregados } = entrada
+    const alertas: AlertaDoAnalista[] = entrada.recortes
+      .flatMap((recorte) =>
+        recorte.porHabilidade.map((medida) => ({
+          tipo: 'habilidade_com_acerto_baixo' as const,
+          serie: recorte.serie,
+          disciplina: recorte.disciplina,
+          habilidade: medida.habilidade,
+          valor: acertoPercentual(medida.acertos, medida.total),
+          referencia: limiar,
+          hipoteses: hipotesesDoRecorte(recorte),
+        })),
+      )
+      .filter((alerta) => alerta.valor < limiar)
+      // Do pior para o melhor; no empate, a ordem em que vieram.
+      .sort((a, b) => a.valor - b.valor)
+      .slice(0, MAXIMO_DE_ALERTAS)
+    return { ...agregados, alertas }
   },
 })

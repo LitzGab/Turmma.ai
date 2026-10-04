@@ -38,6 +38,32 @@ export interface OpcoesDeSessao {
  * `ops:sessao-sintetica`, no Postgres do compose de teste. A `GuardaDeSessao` lê a sessão gravada: token sem sessão
  * não passa. Nada de pessoa: nomes fixos e sintéticos.
  */
+/**
+ * As tabelas do MVP de apresentação, na ordem em que a limpeza as esvazia: primeiro o que aponta, depois o que é
+ * apontado (a validação e a correção antes da entrega; a entrega e a conversa do Tutor antes da atividade aplicada;
+ * tudo que guarda `execucao_id` antes da execução; o trecho antes do material). Tabela nova do MVP entra aqui, ou o
+ * `fechar` quebra na FK da turma.
+ */
+export const TABELAS_DO_MVP_NA_ORDEM_DE_LIMPEZA = [
+  'validacao_do_lote',
+  'correcao',
+  'resposta_atividade',
+  'tentativa_atividade',
+  'sinal_tutor',
+  'mensagem_tutor',
+  'entrega',
+  'atividade_aplicada',
+  'mensagem_agente',
+  'thread_agente',
+  'resumo_do_analista',
+  'consumo_ia',
+  'artefato',
+  'execucao_agente',
+  'trecho',
+  'material',
+  'suspensao_de_funcao',
+] as const
+
 export class BancadaDeSessoes {
   readonly pool: PoolBanco
   readonly banco: Banco
@@ -173,6 +199,11 @@ export class BancadaDeSessoes {
         // O login pela conta da escola (13.0): a ligação aponta para o usuário; o domínio liberado, só para a escola.
         await this.pool.query('delete from conta_externa where escola_id = any($1::uuid[])', [escolas])
         await this.pool.query('delete from provedor_escola where escola_id = any($1::uuid[])', [escolas])
+        // As tabelas do MVP de apresentação (migrations 0022 e 0023) apontam para a turma, o ano letivo, a disciplina e o
+        // usuário: saem antes deles, do que aponta para o que é apontado.
+        for (const tabela of TABELAS_DO_MVP_NA_ORDEM_DE_LIMPEZA) {
+          await this.pool.query(`delete from ${tabela} where escola_id = any($1::uuid[])`, [escolas])
+        }
         // O vínculo da 9.0 aponta para a turma e o usuário, e a estrutura da 8.0 para o ano letivo: saem antes deles.
         await this.pool.query('delete from vinculo where escola_id = any($1::uuid[])', [escolas])
         // O pedido de reivindicação da A1 (6.0) aponta para a turma, para o nome da lista e para quem decidiu.

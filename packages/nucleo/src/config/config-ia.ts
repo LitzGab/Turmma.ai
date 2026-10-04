@@ -1,3 +1,4 @@
+import { isIP } from 'node:net'
 import { z } from 'zod'
 import { PERFIS, type Perfil } from '../ia/perfis.js'
 import { AMBIENTES, validarAmbiente } from './validar-config.js'
@@ -27,13 +28,25 @@ const opcional = <Esquema extends z.ZodType>(esquema: Esquema) => z.preprocess((
 const modelo = opcional(z.string().min(1).max(200).optional())
 const inteiro = (minimo: number, maximo: number, padrao: number) => opcional(z.coerce.number().int().min(minimo).max(maximo).default(padrao))
 
-/** Loopback, rede privada, o host do Docker ou nome de serviço do compose (sem ponto): o conteúdo não sai da nossa rede. */
+const IPV4_DA_NOSSA_REDE = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/
+/** `::1` (loopback), `fc00::/7` (endereço local único) e `fe80::/10` (link local). */
+const IPV6_DA_NOSSA_REDE = /^(::1$|f[cd][0-9a-f]{2}:|fe[89ab][0-9a-f]:)/i
+
+/**
+ * O endereço é desta máquina ou da nossa rede? Quem decide é o tipo do host, e não a cara dele:
+ * - IPv4: só loopback, as faixas privadas e link local. `8.8.8.8` é de fora.
+ * - IPv6: só `::1`, `fc00::/7` e `fe80::/10`. Um IPv6 público não tem ponto, e nem por isso é "nome sem ponto".
+ * - nome: só o que não tem ponto (`localhost`, o nome de um serviço do compose) ou `host.docker.internal`.
+ *   `10.provedor.com` é um nome com ponto que começa por "10.": é de fora.
+ */
 function enderecoDaNossaRede(endereco: string): boolean {
   // Endereço que nem é URL já foi apontado pelo próprio campo: aqui não há o que conferir.
   if (!URL.canParse(endereco)) return true
   const host = new URL(endereco).hostname.replace(/^\[|\]$/g, '')
-  if (host === 'localhost' || host === '::1' || host === 'host.docker.internal' || !host.includes('.')) return true
-  return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)
+  const versao = isIP(host)
+  if (versao === 4) return IPV4_DA_NOSSA_REDE.test(host)
+  if (versao === 6) return IPV6_DA_NOSSA_REDE.test(host)
+  return host === 'host.docker.internal' || !host.includes('.')
 }
 
 /**

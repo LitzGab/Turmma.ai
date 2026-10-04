@@ -1,4 +1,5 @@
 import { useId, type Ref } from 'react'
+import { MarcaDeObrigatorio } from './Campo'
 import { CLASSES_DO_SELETOR } from './seletor'
 
 export interface OpcaoDeSelecao {
@@ -24,6 +25,8 @@ interface PropsDaSelecao {
   readonly variante?: 'campo' | 'pilula'
   readonly rotuloOculto?: boolean
   readonly desligada?: boolean
+  /** Precisa de uma opção escolhida: o rótulo diz "(obrigatório)" e o leitor de tela ouve `aria-required`. */
+  readonly obrigatoria?: boolean
   readonly ref?: Ref<HTMLSelectElement>
 }
 
@@ -37,7 +40,7 @@ interface PropsDaSelecao {
  * O que o nativo não dá é linha de duas alturas dentro da lista. Quem precisa disso (o catálogo de ferramentas, com
  * ícone e descrição) usa o `Menu`.
  */
-export function Selecao({ rotulo, opcoes, valor, aoMudar, marcador, dica, erro, variante = 'campo', rotuloOculto = false, desligada = false, ref }: PropsDaSelecao) {
+export function Selecao({ rotulo, opcoes, valor, aoMudar, marcador, dica, erro, variante = 'campo', rotuloOculto = false, desligada = false, obrigatoria = false, ref }: PropsDaSelecao) {
   const campo = useId()
   const idDaDica = useId()
   const idDoErro = useId()
@@ -47,6 +50,7 @@ export function Selecao({ rotulo, opcoes, valor, aoMudar, marcador, dica, erro, 
     <div className={`flex min-w-0 flex-col gap-1 ${pilula ? '' : 'w-full'}`}>
       <label htmlFor={campo} className={rotuloOculto || pilula ? 'sr-only' : 'font-medium'}>
         {rotulo}
+        {obrigatoria && <MarcaDeObrigatorio />}
       </label>
       {dica !== undefined && (
         <p id={idDaDica} className="text-sm text-apoio">
@@ -61,6 +65,7 @@ export function Selecao({ rotulo, opcoes, valor, aoMudar, marcador, dica, erro, 
         onChange={(evento) => aoMudar(evento.target.value)}
         {...(descritoPor === '' ? {} : { 'aria-describedby': descritoPor })}
         {...(erro === undefined ? {} : { 'aria-invalid': true })}
+        {...(obrigatoria ? { 'aria-required': true } : {})}
         className={
           pilula
             ? 'min-h-11 max-w-full min-w-0 rounded-full border border-borda-campo bg-superficie px-3 py-1.5 text-sm text-tinta disabled:text-inativo md:min-h-9'

@@ -75,6 +75,7 @@ export const relatorioDaCorrecao = definirTarefa({
   esquemaDeSaida: esquemaSaidaDoRelatorio,
   prompt: PROMPT_RELATORIO_DA_CORRECAO,
   maximoDeTokensDeSaida: 2500,
+  levaTextoLivreDePessoa: false,
   levaTextoDeAluno: false,
 
   montarPedido(entrada) {
