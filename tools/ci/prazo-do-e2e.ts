@@ -116,7 +116,9 @@ export function etapasDoE2e(
       argumentos: ['playwright', 'install', ...(naEsteira ? ['--with-deps'] : []), 'chromium'],
     },
     // O teto do bundle antes de subir o compose: é barato e reprova cedo (RF14).
-    { nome: 'build da web', comando: 'npm', argumentos: ['run', 'build', '-w', '@educa/web'] },
+    // Com a galeria das peças, como o build do compose da esteira (`.env.example`): é o build que o e2e usa, e o teto
+    // das peças mede a galeria enquanto só ela as leva.
+    { nome: 'build da web', comando: 'npm', argumentos: ['run', 'build', '-w', '@educa/web'], ambiente: { VITE_COM_GALERIA: '1' } },
     { nome: 'teto do bundle da web', comando: 'npx', argumentos: ['size-limit'] },
     etapaCompose('subir o ambiente completo', 'up', '--detach', '--build', '--wait'),
     etapaDosTestesDoE2e(fatia, teto, naEsteira, escrever),

@@ -111,6 +111,11 @@ interface PropsDaConversa {
   readonly rotulo: string
   /** As mensagens, na ordem: `MensagemPessoa`, `MensagemIA`, `Pensando`, `AvisoFila`. */
   readonly children: ReactNode
+  /**
+   * A resposta está chegando (a execução está `pendente` ou `rodando`): o leitor de tela espera a conversa ficar pronta
+   * para ler o que entrou, em vez de ler cada pedaço que a tela monta no meio do caminho.
+   */
+  readonly ocupada?: boolean
 }
 
 /**
@@ -118,11 +123,13 @@ interface PropsDaConversa {
  * (`role="log"`) que **anuncia a mensagem que chega**, com calma, sem tirar o foco de onde a pessoa está. Quem usa leitor
  * de tela e acabou de enviar um pedido ouve a resposta sem ter de procurá-la.
  *
- * Só o que entra é anunciado (`additions`): a mensagem antiga que muda de estado não é lida de novo.
+ * Só o que entra é anunciado (`additions`): a mensagem antiga que muda de estado não é lida de novo. E, como o registro
+ * lê **cada nó que entra**, quem usa liga `ocupada` enquanto a resposta chega (`aria-busy`): a resposta é lida uma vez,
+ * inteira, quando fica pronta.
  */
-export function Conversa({ rotulo, children }: PropsDaConversa) {
+export function Conversa({ rotulo, children, ocupada = false }: PropsDaConversa) {
   return (
-    <div role="log" aria-live="polite" aria-relevant="additions" aria-label={rotulo} className="flex min-w-0 flex-col gap-6">
+    <div role="log" aria-live="polite" aria-relevant="additions" aria-busy={ocupada} aria-label={rotulo} className="flex min-w-0 flex-col gap-6">
       {children}
     </div>
   )

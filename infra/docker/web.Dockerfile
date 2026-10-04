@@ -16,7 +16,9 @@ RUN npm ci --ignore-scripts && npm cache clean --force
 COPY --chown=node:node tsconfig.base.json ./
 COPY --chown=node:node packages/shared packages/shared
 COPY --chown=node:node apps/web apps/web
-RUN npm run build -w @educa/web
+# A galeria das peças só entra no build com VITE_COM_GALERIA=1, que o compose passa (.env.example; outro valor em staging).
+ARG VITE_COM_GALERIA=
+RUN VITE_COM_GALERIA=$VITE_COM_GALERIA npm run build -w @educa/web
 WORKDIR /repo/apps/web
 EXPOSE 4173
 CMD ["../../node_modules/.bin/vite", "preview", "--host", "0.0.0.0", "--port", "4173", "--strictPort"]
