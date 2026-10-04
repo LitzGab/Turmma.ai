@@ -62,11 +62,14 @@ export async function montarEscolaEEntrar(page: Page, hasTouch: boolean): Promis
   return { professora, turmaId: alocacao.turmaId, turmaNome: alocacao.turmaNome }
 }
 
-/** Gera a atividade de estequiometria pelo formulário da ferramenta, com a turma já escolhida, e espera o resultado. */
-export async function gerarAtividade(cartao: Locator, hasTouch: boolean, questoes: string): Promise<void> {
-  await cartao.getByLabel('Tema').fill('Estequiometria')
+/**
+ * Gera a atividade pelo formulário da ferramenta, com a turma já escolhida, e espera o resultado. O tema é o de
+ * estequiometria, ou outro capítulo do mesmo material (o roteiro da demonstração gera uma segunda atividade).
+ */
+export async function gerarAtividade(cartao: Locator, hasTouch: boolean, questoes: string, tema = 'Estequiometria'): Promise<void> {
+  await cartao.getByLabel('Tema').fill(tema)
   await cartao.getByLabel('Questões').fill(questoes)
   await acionar(cartao.getByRole('button', { name: 'Gerar atividade' }), hasTouch)
-  await expect(cartao.locator('[data-motor="pronto"]').getByText('Atividade — Estequiometria')).toBeVisible({ timeout: PRAZO_DA_IA_MS })
+  await expect(cartao.locator('[data-motor="pronto"]').getByText(`Atividade — ${tema}`)).toBeVisible({ timeout: PRAZO_DA_IA_MS })
 }
 
