@@ -8,7 +8,12 @@ describe('navegação por papel', () => {
       { rotulo: 'Ferramentas', caminho: '/professor/ferramentas' },
       { rotulo: 'Turmas', caminho: '/professor/turmas' },
     ])
-    expect(NAVEGACAO.aluno.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([{ rotulo: 'Minha turma', caminho: '/aluno/minha-turma' }])
+    // A3 e A4: o aluno tem Tutor, Atividades e Minha turma, nesta ordem, e mais nada.
+    expect(NAVEGACAO.aluno.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([
+      { rotulo: 'Tutor', caminho: '/aluno/tutor' },
+      { rotulo: 'Atividades', caminho: '/aluno/atividades' },
+      { rotulo: 'Minha turma', caminho: '/aluno/minha-turma' },
+    ])
     expect(NAVEGACAO.coordenador.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([
       { rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' },
       { rotulo: 'Professores', caminho: '/coordenacao/professores' },
@@ -29,6 +34,18 @@ describe('navegação por papel', () => {
     expect(SEU_TIME.professor.map((item) => item.agente)).not.toContain('analista_de_desempenho_escolar')
     expect(SEU_TIME.coordenador).toEqual([])
     expect(SEU_TIME.aluno).toEqual([])
+  })
+
+  it('o aluno não tem item que leva a tela inexistente nesta fatia, e a atividade e a conversa abertas ficam dentro do item delas', () => {
+    const rotulos = NAVEGACAO.aluno.map((item) => item.rotulo)
+    for (const fora of ['Meu desempenho', 'Privacidade', 'Avisar um adulto', 'Ranking', 'Colegas']) expect(rotulos).not.toContain(fora)
+    const [tutor, atividades, minhaTurma] = NAVEGACAO.aluno
+    if (tutor === undefined || atividades === undefined || minhaTurma === undefined) throw new Error('faltou item na navegação do aluno')
+    expect(estaNoItem('/aluno/atividades/0190f5a0-0000-7000-8000-000000000001', atividades)).toBe(true)
+    expect(estaNoItem('/aluno/tutor/0190f5a0-0000-7000-8000-000000000001', tutor)).toBe(true)
+    // Pedir ajuda numa atividade é estar no Tutor, e não em Atividades.
+    expect(estaNoItem('/aluno/tutor/0190f5a0-0000-7000-8000-000000000001', atividades)).toBe(false)
+    expect(estaNoItem('/aluno/atividades', minhaTurma)).toBe(false)
   })
 
   it('a conversa aberta fica dentro de "Nova conversa", e o artefato aberto, dentro de "Ferramentas"', () => {

@@ -1,5 +1,5 @@
 import { NOMES_DOS_AGENTES, type Agente, type PapelDeUsuario } from '@educa/shared'
-import { Blocks, BookOpen, GraduationCap, LayoutGrid, MessageCircleQuestion, MessagesSquare, School, SquarePen, UsersRound, type LucideIcon } from 'lucide-react'
+import { Blocks, BookOpen, ClipboardList, GraduationCap, LayoutGrid, MessageCircleQuestion, MessagesSquare, School, SquarePen, UsersRound, type LucideIcon } from 'lucide-react'
 import { ROTAS } from '../caminhos'
 
 /*
@@ -46,7 +46,14 @@ export const NAVEGACAO: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao
     { rotulo: 'Ferramentas', caminho: ROTAS.ferramentas, icone: LayoutGrid, tambemEm: [ROTAS.artefatos] },
     { rotulo: 'Turmas', caminho: ROTAS.turmas, icone: UsersRound },
   ],
-  aluno: [{ rotulo: 'Minha turma', caminho: ROTAS.minhaTurma, icone: School }],
+  // A3 e A4: Tutor, Atividades e Minha turma. "Meu desempenho", "Privacidade" e "Avisar um adulto" nascem com a tela de
+  // cada um: nesta fatia não existem, e por isso não aparecem. A conversa do Tutor e a atividade aberta ficam abaixo do
+  // endereço do item delas, que continua selecionado.
+  aluno: [
+    { rotulo: 'Tutor', caminho: ROTAS.tutor, icone: MessageCircleQuestion },
+    { rotulo: 'Atividades', caminho: ROTAS.atividades, icone: ClipboardList },
+    { rotulo: 'Minha turma', caminho: ROTAS.minhaTurma, icone: School },
+  ],
 }
 
 /** Uma linha de "Seu time": o agente, o endereço da conversa dele e o ícone do avatar (círculo com ícone, nunca rosto: D58). */

@@ -17,6 +17,7 @@ import {
   PRAZO_DA_ENTRADA_MS,
   esperarNovaConversa,
   TITULO_DA_NOVA_CONVERSA,
+  esperarAtividades,
 } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlocacaoDoProfessor, criarAlunoComMatricula, criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
@@ -51,8 +52,12 @@ const ITENS_DA_COORDENACAO = [
   { rotulo: 'Professores', caminho: '/coordenacao/professores' },
   { rotulo: 'Material', caminho: '/coordenacao/material' },
 ] as const
-/** Os itens do aluno, como a mesma tabela os declara: "Minha turma" chegou na 12.0. */
-const ITENS_DO_ALUNO = [{ rotulo: 'Minha turma', caminho: '/aluno/minha-turma' }] as const
+/** Os itens do aluno, como a mesma tabela os declara: "Minha turma" chegou na 12.0; "Tutor" e "Atividades", no MVP (A3 e A4). */
+const ITENS_DO_ALUNO = [
+  { rotulo: 'Tutor', caminho: '/aluno/tutor' },
+  { rotulo: 'Atividades', caminho: '/aluno/atividades' },
+  { rotulo: 'Minha turma', caminho: '/aluno/minha-turma' },
+] as const
 
 /** Os pedidos de JS que a página fez, pelo caminho: é por eles que o teste sabe qual área foi baixada. */
 function registrarChunks(page: Page): string[] {
@@ -85,7 +90,7 @@ const naoEncontrada = (page: Page) => page.getByRole('heading', { name: 'Página
 
 /**
  * Pela marca, que leva à raiz. Para o professor a raiz é a tela em que ele abre, "Nova conversa" (A2; D73); para o aluno,
- * a "Início".
+ * "Atividades" (A3).
  */
 async function voltarAoInicio(page: Page, hasTouch: boolean): Promise<void> {
   await abrirNavegacao(page, hasTouch)
@@ -190,7 +195,7 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await expect(naoEncontrada(page)).toHaveCount(0)
   })
 
-  test('o aluno vê só "Minha turma", que leva à tela dele, e os endereços do professor e da coordenação caem em "não encontrada"', async ({ page, hasTouch }) => {
+  test('o aluno vê "Tutor", "Atividades" e "Minha turma", cada um levando à tela dele, e os endereços do professor e da coordenação caem em "não encontrada"', async ({ page, hasTouch }) => {
     const pedidos = registrarChunks(page)
     const aluno = await criarAlunoComMatricula()
     const turma = await colocarAlunoNaTurma(aluno)
@@ -199,16 +204,16 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await page.getByLabel('Senha').fill(aluno.senha)
     if (hasTouch) await page.getByRole('button', { name: /^Entrar$/ }).tap()
     else await page.getByRole('button', { name: /^Entrar$/ }).click()
-    await expect(page.getByRole('heading', { name: `Olá, ${aluno.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    // A página inicial aponta para a turma dele, e não para Turmas, que não é tela do aluno, nem para "próximas versões".
+    // O aluno abre em "Atividades" (A3), e não numa página de passagem: nada ali aponta para Turmas, que não é tela dele.
+    await esperarAtividades(page, aluno.nome)
     await expect(page.getByRole('main').getByRole('link', { name: 'Turmas', exact: true })).toHaveCount(0)
     await expect(page.getByRole('main')).not.toContainText('próximas versões')
-    const paraMinhaTurma = page.getByRole('main').getByRole('link', { name: 'Minha turma', exact: true })
-    if (hasTouch) await paraMinhaTurma.tap()
-    else await paraMinhaTurma.click()
+    await irPelaNavegacao(page, 'Minha turma', hasTouch)
     await expect(page).toHaveURL(/\/aluno\/minha-turma$/)
     await expect(page.getByRole('main')).toContainText(turma.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
+    // A marca leva à raiz, e a raiz do aluno é "Atividades".
     await voltarAoInicio(page, hasTouch)
+    await expect(page).toHaveURL(/\/aluno\/atividades$/)
 
     await abrirNavegacao(page, hasTouch)
     await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(ITENS_DO_ALUNO.map(({ rotulo }) => rotulo))
@@ -221,10 +226,11 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
       await expect(page).toHaveURL(new RegExp(`${item.caminho}$`))
       await expect(page).toHaveTitle(`${item.rotulo} · Turmma`, { timeout: PRAZO_DA_ENTRADA_MS })
       await expect(naoEncontrada(page)).toHaveCount(0)
+      await abrirNavegacao(page, hasTouch)
+      await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: item.rotulo })).toHaveAttribute('aria-current', 'page')
     }
+    // O último item é "Minha turma": a tela dele, com a turma dele.
     await expect(page.getByRole('main')).toContainText(turma.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
-    await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Minha turma' })).toHaveAttribute('aria-current', 'page')
 
     for (const endereco of ['/professor/turmas', '/coordenacao/estrutura', '/coordenacao/professores']) {
       await page.goto(endereco)
