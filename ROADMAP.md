@@ -154,7 +154,8 @@ a conta dela; a lista mostra a escola nova com as contagens e o uso do dia; test
 resposta do painel traz nome, e-mail, matrícula ou conteúdo de pessoa da escola; e toda ação fica
 na auditoria da escola com o operador.
 
-## A1 — `apresentacao-escola` [ ]
+## A1 — `apresentacao-escola` [x]
+Concluída em 04/10/2026, validada em tasks/prd-apresentacao-escola/validacao.md.
 **Depende de:** A0b
 
 A escola montada pela coordenação, com o núcleo do F2 em fatia fina. Casca da web com a marca

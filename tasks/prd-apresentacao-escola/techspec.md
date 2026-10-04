@@ -1,7 +1,7 @@
 # Tech Spec — A escola montada pela coordenação
 
 **PRD:** `tasks/prd-apresentacao-escola/prd.md`
-**Status:** aprovada (26/09/2026, `/revisar-spec` rodada 5); correções e autores em `revisao-spec.md`.
+**Status:** implementada em 04/10/2026 (aprovada em 26/09/2026, `/revisar-spec` rodada 5; correções e autores em `revisao-spec.md`; validada em `validacao.md`, rodada 2).
 
 ## 1. Resumo da abordagem
 

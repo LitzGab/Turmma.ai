@@ -488,7 +488,14 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       (`apps/web/src/api/acesso.ts`, `onSettled`). Numa rede que engasga, o diálogo fica em "Gerando…" com o acesso já
       gerado no servidor. O `frontend-reviewer` sugere mostrar o acesso assim que o `POST` responde e recarregar a seção
       por trás; pede resolver junto o foco de quem fecha antes da releitura (o "Gerar acesso" do vazio some) e a seção
-      que afirma "Sem acesso ativo" nesse intervalo. Destino: decidir antes do `/validar` da A1
+      que afirma "Sem acesso ativo" nesse intervalo. Decidido no `/validar` da A1 (04/10/2026): não segura a A1, porque o
+      acesso já fica gerado no servidor e a demonstração usa dado sintético. Destino: correção de acabamento antes da
+      primeira demonstração externa
+- [ ] Testes do fim do vínculo (N2 e N3 da validação da A1, rodada 2): em `apps/api/test/acesso-fim-do-vinculo.int.test.ts`,
+      falta o caso do professor com vínculo em duas escolas, em que a eliminação na escola A não pode revogar o acesso que
+      ele gerou na B, pelo caminho da eliminação (`tenancy-guardian`); e o teste da trava do vínculo pendente termina em
+      `await eliminando` sem conferir que o vínculo saiu e que não ficou acesso vigente (`test-engineer`). Destino: a
+      próxima tarefa que tocar o arquivo, ou o F2
 - [x] Encerrar o vínculo do professor não revoga o acesso da turma que ele gerou (A1, 4.0; achado do `privacy-guardian`
       na 15.0; G1 da validação da A1). Resolvido pela correção `2026-10-03-acesso-sobrevive-ao-vinculo`
       (`tasks/correcoes/2026-10-03-acesso-sobrevive-ao-vinculo.md`): o fim do último vínculo confirmado dele na turma

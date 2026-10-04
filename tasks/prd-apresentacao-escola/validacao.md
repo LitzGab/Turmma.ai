@@ -1,5 +1,146 @@
 # Validação — apresentacao-escola (A1, a escola montada pela coordenação)
 
+## Rodada 2 — 04/10/2026
+
+**Escopo:** funcionalidade completa (revalidação). Desde a rodada 1 (`509cfc3`) entraram as correções
+`2026-10-03-acesso-sobrevive-ao-vinculo` (`f075b44`, G1), `2026-10-03-trava-de-documento-so-na-tela` (`edd6f51`, G2) e
+`2026-10-03-e2e-em-fatias` (`b55842e`, `53e8811`, só esteira)
+**Commit validado:** `53e8811c45537b55b16b11ff09ca6ed95f93b5b9` (`develop`)
+**Veredito: APROVADA**
+
+Não precisei reinstalar dependências: o `node_modules/.package-lock.json` (27/09 08:38) continua mais novo que o
+`package-lock.json` (27/09 07:59). A árvore estava limpa no começo e terminou limpa depois das três mutações.
+
+Nesta rodada li por completo o diff de código das três correções (`git diff 509cfc3..53e8811`) e os testes novos. Os
+arquivos dos RF que as correções não tocaram são os mesmos da rodada 1, e por isso a evidência de lá continua valendo.
+Mesmo assim, o portão inteiro rodou de novo sobre o commit validado.
+
+### 1. RF a RF
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF1, RF2, RF3, RF5, RF6, RF7, RF8 | ATENDIDO | os mesmos da rodada 1 | os mesmos da rodada 1, verdes neste portão | Nenhuma correção tocou nesse código |
+| RF4 | ATENDIDO | `apps/api/src/estrutura/leitor-da-lista.ts:128` (`matricula_parece_documento`), `packages/shared/src/estrutura/documento-na-matricula.ts`, `packages/shared/src/estrutura/lista.ts:46` (avulso) | `apps/api/test/lista.int.test.ts:429-489` (E4a/G2, a API chamada sem a tela), `documento-na-matricula.test.ts`, `leitor-da-lista.test.ts` (G2), `previa-da-lista.test.ts`, `e2e/estrutura.spec.ts` (W10) | **G2 fechada.** A regra saiu da web e foi para o contrato, e a web e a API importam as mesmas funções. A prévia aponta a linha, e a gravação e o avulso respondem `ENTRADA_INVALIDA` sem gravar. O CPF sem pontuação é pego pela maioria (mais da metade, com pelo menos dois). Mutação feita (abaixo) |
+| RF9 | ATENDIDO | rodada 1, mais `vinculo.service.ts:129-136` e `ciclo-de-vida.service.ts:76-79` (revogação no fim do vínculo) | rodada 1, mais `acesso-fim-do-vinculo.int.test.ts` (15 casos) | **G1 fechada.** O link e o código de quem saiu respondem como o inexistente, byte a byte (`naoAbreASala`, `:106`) |
+| RF10, RF11, RF12, RF13, RF14 | ATENDIDO | os mesmos da rodada 1 | os mesmos da rodada 1 | O E27 (`decisao.int.test.ts:532`) foi reescrito para o comportamento novo: o link deixa de aceitar pedido depois do encerramento, e o pedido que chegou antes continua sendo decidido pela coordenação |
+| RF15 | ATENDIDO | `acesso-da-turma.repository.ts:114` (`revogarDeQuemSaiu`, escopo pela escola do contexto e `not exists` no vínculo da mesma escola, ano e turma), `turma.repository.ts:114` (trava das turmas do professor, presa à escola) | rodada 1, mais `acesso-fim-do-vinculo.int.test.ts:172` (isolamento por HTTP) e `:187` (isolamento no repository, com o contexto de A forjado e controle positivo em B) | |
+| RF16 | ATENDIDO | `acesso_turma.revogado` por acesso derrubado, na mesma transação, com o autor do encerrar ou da eliminação (sessão ou operador) | `acesso-fim-do-vinculo.int.test.ts:126,220,234` | Sem campo novo na auditoria. O motivo fica no `vinculo.encerrado` ou no `usuario.eliminado` da mesma transação |
+| RF17, RF18, RF19 | ATENDIDO | os mesmos da rodada 1 | os mesmos da rodada 1 | O A3/A4 continuam verdes com o código de erro de linha novo. A carga da RF19 não foi refeita (M2) |
+
+**Total:** 19 atendidos, 0 parciais, 0 não atendidos, 0 não verificáveis.
+
+Provas de mutação (cada uma restaurada com `git checkout -- <arquivo>`; a árvore terminou limpa, em `53e8811`):
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF9 / RF15 (G1) | `vinculo.service.ts:135-136`, a chamada a `revogarDeQuemSaiu` e a auditoria no `encerrar` | `acesso-fim-do-vinculo.int.test.ts` "encerrar por desligamento › … revoga o acesso que ele gerou …" (o acesso continuou com `revogado_em` nulo) |
+| RF9 (G1, concorrência) | `turma.repository.ts:79`, a reconferência do vínculo depois do `FOR SHARE` no gerar (a função passou a devolver o resultado da trava) | "o encerrar parado com a turma travada: o gerar espera, reconfere o vínculo e sai NAO_ENCONTRADO" (`expected 201 to be 404`: o gerar entregou acesso a quem acabou de sair) |
+| RF4 (G2) | `leitor-da-lista.ts:128`, a conferência de forma de documento | `lista.int.test.ts` os dois primeiros "G2" (a prévia devolveu `123.456.789-09` como `entra`, e a coluna de CPF sem pontuação deixou de ser marcada). O terceiro G2, que prova o que **não** cai, continuou verde, como deve |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+Só o que mudou desde a rodada 1. O resto da tabela da rodada 1 continua valendo, e os testes dele passaram neste portão.
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regra: aluno sem e-mail, telefone, foto ou data de nascimento (regra 20, item 2) | cumprida | A ressalva da rodada 1 (a trava existia só na tela) caiu: a API recusa (E4a). O risco aceito (um CPF sem pontuação sozinho, e o CPF de 10 algarismos) está escrito em `docs/lgpd.md`, na tabela de furos, e no `TODO.md` |
+| Regra 20, item 18 (professor que saiu não continua vendo a turma) | cumprida no fim do vínculo | Encerrar e eliminar revogam o acesso. A desativação ainda não revoga, mas `CicloDeVidaService` não tem nenhum chamador fora dos testes: não existe rota nem comando que desative professor hoje. Ver menor N1 |
+| Borda: turma sem professor alocado | coberta | O PRD (`prd.md:85`) e o E27 foram atualizados juntos: sem link da sala, e o pedido anterior fica com a coordenação |
+| Pronto: desvios nos documentos, e `docs/lgpd.md` batendo com o código | cumprido | `techspec.md` seções 3, 4, 7, 8 e 9; `docs/modelo-de-dados.md:141-158`; `docs/lgpd.md:72,95,170`; `cenarios.md` (E4a, E27, W10, a matriz do RF4); `docs/runbook.md` (o e2e em fatias) |
+| Pronto: cada cenário com o seu teste, citado pelo id | cumprido | E4a citado em `lista.int.test.ts:12,425` |
+| G1 e G2, o caminho até APROVADA que a rodada 1 deixou | cumprido | as duas correções, com teste que reproduz e mutação conferida aqui |
+| "Pronto quando" do `ROADMAP.md` (A1) | cumprido | os mesmos itens da rodada 1 |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck` | ✅ |
+| `npm run lint` | ✅ |
+| `npm run test` (`EDUCA_BANCO_NOVO=1`) | ✅ (225 arquivos, 2.787 testes, 8 min 53 s) |
+| `npm run test:e2e` | ✅ (394 passaram, 11,1 min) |
+| `npm run test:infra` | ✅ (5 arquivos, 37 testes, 27 min) |
+| Esteira do GitHub no commit validado | ✅ execução 37175330575, `headSha` 53e8811, os sete jobs verdes na 1ª tentativa (verificar, integração, infra, e2e 1/4 a 4/4, com as fatias entre 12 e 14 min) |
+| Revisões com veto registradas e aprovadas | ✅ (as três correções) |
+
+Processo:
+- `acesso-sobrevive-ao-vinculo`: `test-engineer`, `privacy-guardian`, `tenancy-guardian`, `infra-guardian` e
+  `revisor-geral`, todos com a última rodada APROVADO
+- `trava-de-documento-so-na-tela`: `test-engineer`, `privacy-guardian`, `tenancy-guardian`, `frontend-reviewer` e
+  `revisor-geral`, todos com a última rodada APROVADO
+- `e2e-em-fatias`: `test-engineer` e `infra-guardian`, com a última rodada APROVADO. O documento tem a linha "Esteira desta
+  correção" preenchida, como o `infra-guardian` pediu
+- Os cinco commits do intervalo levam `(correção <slug>)`, ou são o registro da validação (`1f152ea`, só `validacao.md`)
+- Cada correção commitou só depois de a esteira anterior ficar verde. A de `f075b44` e a de `edd6f51` ficaram verdes só
+  na 2ª tentativa do job de e2e, depois do cancelamento pelo teto. Ver menor N4
+
+### 4. Achados
+
+**Críticos**
+- Nenhum.
+
+**Maiores**
+- Nenhum. G1 e G2, da rodada 1, estão fechadas.
+
+**Menores** (as da rodada 1 que continuam abertas, mais as novas, N1 a N5)
+- M1 (continua). `prd.md:59`: o "Como se prova" do RF14 ainda diz "excesso segura o código". **Correção:** ajustar o texto
+  ao desenho da Tech Spec, seção 11
+- M2 (continua). A carga K1/K2 (`9_task.md:173`) não foi refeita com as travas da 10.0 e, agora, com a reconferência no
+  gerar. **Correção:** rodar `npm run carga:sala` uma vez e anotar o resultado
+- M3, M4 e M5 continuam com o destino da rodada 1 (`TODO.md`, `/descobrir`)
+- M7 (continua). `tasks.md:46-49,99-103`: as subtarefas 5.1–5.4 e 13.1–13.5 continuam `[ ]` com a tarefa-mãe `[x]`
+- N1. `TODO.md:496`: a desativação do professor não encerra o vínculo nem revoga o acesso. Hoje não se alcança, porque
+  `CicloDeVidaService` não tem chamador de produção, e o item tem destino (F2, antes do portão da primeira escola real).
+  Junto dele estão a janela da eliminação com vínculo criado no meio e o `40P01` que sai `ERRO_INTERNO`. **Correção:**
+  fechar na tarefa do F2 que ligar a desativação a uma rota, e não antes
+- N2. Recomendação do `tenancy-guardian` sem destino (`achados/2026-10-03-acesso-sobrevive-ao-vinculo.md`, rodadas 1 e 2):
+  falta o caso do professor com vínculo em duas escolas, em que a eliminação em A não revoga o acesso que ele gerou em B.
+  O isolamento no repository (`acesso-fim-do-vinculo.int.test.ts:187`) prova a cláusula de escola, mas não esse arranjo
+  pelo caminho da eliminação. **Correção:** acrescentar o caso na próxima vez que o arquivo for tocado, ou levar ao
+  `TODO.md`
+- N3. `acesso-fim-do-vinculo.int.test.ts:296`: o teste da trava da turma do vínculo pendente termina em
+  `await eliminando`, sem conferir depois que o vínculo pendente saiu e que não ficou acesso vigente (`test-engineer`,
+  3ª rodada, sem destino). A asserção que importa (o 55P03) está antes. **Correção:** duas asserções no fim
+- N4. As esteiras de `f075b44` e `edd6f51` só ficaram verdes repetindo o job de e2e, que o runbook diz que não resolve.
+  A causa foi tratada logo depois, pela correção `e2e-em-fatias`, e a esteira validada passou na 1ª tentativa. Fica
+  para o `/retro`, junto da M6 da rodada 1, porque é o terceiro caso de esteira vermelha com portão local verde
+- N5. A correção `e2e-em-fatias` mexeu em uns dez arquivos (`ci.yml`, `tools/ci/*`, `README.md`, `docs/runbook.md`) sem o
+  `revisor-geral`, que o `/corrigir` recomenda acima de ~5 arquivos. Não é obrigatório, e não há código de produto no
+  diff. **Correção:** nenhuma agora; registro para o `/retro`
+- As recomendações da `trava-de-documento-so-na-tela` (o CPF de 10 algarismos, o e2e da coluna de CPF sem pontuação, o
+  texto "a segunda coluna" com uma linha só, o teste do texto do `ENTRADA_INVALIDA` no avulso) têm destino no `TODO.md`
+  (`:48-56`) ou no documento da correção. Estão registradas, e não pedem nada agora
+
+**Positivos**
+- As correções trazem o "teste que reproduz" rodado contra o código antigo (6 de 8 vermelhos) e uma tabela de mutação
+  por cláusula. As três mutações feitas aqui ficaram vermelhas exatamente onde o documento disse
+- As corridas com o gerar são provadas com gatilho de parada no banco, nos dois sentidos: o gerar parado, e o encerrar
+  ou a eliminação parados. A ordem das travas (turma, depois vínculo) tem teste próprio contra deadlock
+- A regra de privacidade que estava na tela virou função do contrato, usada pela web e pela API. Assim não há mais duas
+  versões da regra para divergir
+
+### 5. Conclusão
+
+Os 19 RF estão atendidos. As duas maiores da rodada 1 estão fechadas, cada uma com código, teste de integração que
+chama a API ou o repository sem a tela, e mutação conferida nesta rodada. O portão local está verde nas cinco etapas, a
+esteira do commit validado está verde nos sete jobs, e todo revisor com veto aprovou as três correções. Não há crítico
+nem maior. As menores não bloqueiam a A2, e cada uma tem destino.
+
+### 6. Pendências herdadas
+
+| Pendência | Destino |
+|---|---|
+| N1, desativação do professor sem revogação; janela da eliminação; `40P01` como `ERRO_INTERNO` | F2, antes do portão da primeira escola real (`TODO.md:496`) |
+| N2, eliminação com vínculo em duas escolas | próxima tarefa que tocar `acesso-fim-do-vinculo.int.test.ts`, ou `TODO.md` |
+| N3, asserções no fim do teste da trava do pendente | mesma de N2 |
+| N4, N5 e M6, esteira x portão local e o `revisor-geral` em correção grande | `/retro` da A1 |
+| M1, texto do RF14 no PRD | próxima edição do PRD, ou o `/retro` |
+| M2, carga no código atual | próxima execução de `npm run carga:sala` |
+| M3, M4, M5, M7, M8 e as demais da rodada 1 | os destinos da tabela da rodada 1, abaixo |
+| CPF de 10 algarismos, falso positivo da data, e2e da coluna de CPF, colunas a mais | `TODO.md:41-56`, entrevistas do piloto |
+
+---
+
 ## Rodada 1 — 03/10/2026
 
 **Escopo:** funcionalidade completa (tarefas 1.0 a 17.0, mais as correções `2026-10-02-teto-do-e2e-na-esteira`,
