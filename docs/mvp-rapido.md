@@ -21,11 +21,13 @@
 - Os contratos de `packages/shared` (time e assistente), com o marcador e o portão local verde: 225 arquivos e 2796
   testes (`336a756`).
 
+- A etapa 1 das cinco AIAs em `docs/aia/` (`d23179a`), em rascunho, **esperando a revisão do Joaquim**. Cada arquivo
+  lista, na seção 1.7 e nas perguntas em aberto, o que não deu para fechar.
+
 **Em curso**
 
 | Pacote | Worktree e branch | O que faz |
 |---|---|---|
-| AIA | `../Educa.ia-mvp-aia`, `mvp/aia` | etapa 1 das cinco AIAs |
 | S | `../Educa.ia-mvp-s`, `mvp/s` | 17 tabelas, migration 0022, schemas de API, `MATRIZ`, auditoria, `docs/mvp-contratos.md` |
 | L | `../Educa.ia-mvp-l`, `mvp/l` | porta `LLMProvider`, adaptador falso e OpenAI-compatível, tarefas, `ExecutorDeAgente` |
 | C | `../Educa.ia-mvp-c`, `mvp/c` | peças da web da seção 9.3 e a galeria |
@@ -38,6 +40,28 @@
 - Fases 2 a 4 (seção 3) e o fechamento (seção 8).
 
 **Esteira disparada à mão:** nenhuma ainda.
+
+**Para o Joaquim decidir (achado ao escrever as AIAs; nada disto trava a fatia)**
+
+- **Tipos de adaptação.** `packages/shared/src/assistente/conteudo.ts` tem seis; a D67 cita "compatível com leitor de
+  tela", que não está entre eles; `leitura_de_apoio` não é descrita em documento nenhum; o mockup lista outros três.
+  O código ficou com os seis.
+- **O que acontece com o que uma função já produziu quando ela é suspensa** não está decidido em documento nenhum. As
+  AIAs trazem uma proposta por função (seção 1.7); o código da fase 4 segue: suspender recusa execução nova e não
+  apaga nem esconde o que já foi aprovado.
+- **Classificação do Tutor.** `docs/regulacao.md` o põe em "cuidados adicionais" e a D60 e a regra 70, item 6a, o
+  tratam como alto risco para efeito de AIA. `FUNCOES` segue a D60.
+- **Destaque de discursiva na D56** ("discursiva com baixa confiança") contradiz a D55. Não afeta a fatia, que não tem
+  discursiva; `docs/agentes.md` já traz a lista sem esse item.
+- **Política "livre" do Tutor** aparece no glossário, em `docs/fluxos.md` e no modelo de dados, e contradiz "nunca
+  entrega resposta pronta". Na fatia, o Tutor é sempre socrático.
+- **Três listas diferentes de tipos de sinal** (`docs/agentes.md`, `docs/modelo-de-dados.md`, este plano). A fatia usa
+  a deste plano: `travou`, `resposta_pronta`, `duvida_repetida`, `atencao_humana`.
+- **Em qual fase a AIA da adaptação é devida**: `docs/conformidade-mec.md` diz F11, o README das AIAs diz F7, o
+  `TODO.md` diz A2.
+- **AIA antes da implementação.** A D71 e a regra 70, item 6a, pedem a etapa 1 antes de a funcionalidade existir. O
+  rascunho está escrito, mas a implementação começou sem a sua revisão, por instrução sua de 04/10/2026 ("eu reviso
+  depois; não espere"). Fica registrado como decisão tomada sem a revisão, a conferir.
 
 **Modelo local do ensaio final:** `qwen3.6-35b-a3b` no `llama-server` (`GET /v1/models` em 04/10/2026; estava
 descarregado, e quem carrega é o Joaquim).
@@ -69,6 +93,10 @@ descarregado, e quem carrega é o Joaquim).
 11. **Dependências novas, lista fechada:** `clsx`, `class-variance-authority` e Radix (seleção, menu, abas, diálogo de
     alerta) na web; `pdfkit` e `pdfjs-dist` para gerar e extrair PDF. Conflito de `package-lock.json` entre pacotes se
     resolve no merge, com `npm install`.
+13. **O Tutor só lembra de resultado aprovado.** O roteiro (seção 1) põe o Tutor lembrando "do que ele errou" no passo
+    3, antes de a professora aprovar a correção no passo 4, e o diagnóstico só pode chegar ao aluno depois da aprovação.
+    Fica assim: a memória do Tutor vem dos lotes **já aprovados** e das sessões anteriores do próprio aluno com o
+    Tutor. Na demonstração, o aluno abre o Tutor numa segunda atividade, depois de a primeira ter sido aprovada.
 12. **Teto de bundle.** As peças novas e o Radix não podem entrar no primeiro carregamento (150 kB). Os tetos por área
     (`professor-*` 8 kB, `coordenacao-*` 16 kB, `aluno-*` 5 kB) vão ser revistos quando as telas chegarem, com o número
     medido, e cada tela entra por import de rota.
