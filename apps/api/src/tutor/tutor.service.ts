@@ -121,10 +121,11 @@ function paraATela(mensagem: MensagemDaConversa): unknown {
  *
  * 1. **O aluno alcança o que referencia.** A atividade aplicada é da turma dele; o material é da escola, `pronto`, não
  *    excluído e de disciplina que a turma tem. O que não alcança responde como o inexistente.
- * 2. **Atividade avaliativa aberta trava o Tutor** para a turma (`TUTOR_PAUSADO_EM_AVALIACAO`; regra 30, item 10).
- * 3. **Assunto pessoal delicado recebe a mensagem fixa** (D36), com o 188 em risco à vida, **antes** do freio e da
- *    suspensão: o aluno no limite do dia, a turma com o pacote esgotado e a escola com a função suspensa não tiram dele
- *    o encaminhamento. Esse turno não chama modelo, não espera fila, e o professor recebe o sinal sem o conteúdo.
+ * 2. **Assunto pessoal delicado recebe a mensagem fixa** (D36), com o 188 em risco à vida, **antes de tudo o mais**: a
+ *    avaliação aberta, o limite do dia, o pacote esgotado e a função suspensa não tiram do aluno o encaminhamento. A
+ *    mensagem fixa não ajuda em prova nenhuma. Esse turno não chama modelo, não espera fila, e o professor recebe o
+ *    sinal sem o conteúdo.
+ * 3. **Atividade avaliativa aberta trava o Tutor** para a turma (`TUTOR_PAUSADO_EM_AVALIACAO`; regra 30, item 10).
  * 4. **O freio do dia do aluno e o pacote do mês da turma** (D38), contados sob a trava do aluno, na mesma transação
  *    que grava a pergunta: dez envios ao mesmo tempo não passam do limite. A pergunta que o modelo não respondeu não
  *    conta.
@@ -161,9 +162,10 @@ export class TutorService {
     const jaAceita = await new ExecucaoDaSessaoRepository(this.banco).daChave(pedido.chaveEnvio)
     if (jaAceita !== undefined && jaAceita.tarefa !== turnoDoTutor.nome) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
 
-    if (jaAceita === undefined && (await new TutorDoAlunoRepository(this.banco).avaliativaAberta(turmaId)) !== undefined) throw new ErroDeDominio(CodigoDeErro.TUTOR_PAUSADO_EM_AVALIACAO)
-
+    // Antes de tudo, até da avaliação aberta: a trava existe para o Tutor não ajudar na prova, e a mensagem fixa não ajuda em prova nenhuma.
     if (ehAssuntoDelicado(pedido.texto)) return jaAceita === undefined ? this.#encaminhar(pedido, alcance) : { execucaoId: jaAceita.id }
+
+    if (jaAceita === undefined && (await new TutorDoAlunoRepository(this.banco).avaliativaAberta(turmaId)) !== undefined) throw new ErroDeDominio(CodigoDeErro.TUTOR_PAUSADO_EM_AVALIACAO)
 
     if (jaAceita === undefined) {
       // Sem a trava: recusa na hora quem já está no limite. A conta que vale é a de dentro da transação, abaixo.
@@ -303,8 +305,8 @@ export class TutorService {
 
   /**
    * O turno de assunto delicado (D36), inteiro numa transação e sem fila: a pergunta, a mensagem fixa, o sinal
-   * `atencao_humana` e a execução já `concluida`. Não passa pelo freio, pelo pacote nem pela suspensão, e não chama
-   * modelo: quem decide o texto é a regra da tarefa (`semModelo`), com o 188 na frente quando há menção a risco à vida.
+   * `atencao_humana` e a execução já `concluida`. Não passa pela trava da avaliação, pelo freio, pelo pacote
+   * nem pela suspensão, e não chama modelo: quem decide o texto é a regra da tarefa (`semModelo`), com o 188 na frente quando há menção a risco à vida.
    *
    * A pergunta fica na conversa em que foi feita, **sem a questão, o material e a página**: não é referência a
    * trabalho. O consumo registra só a medição, como regra fixa, sem entrada nem saída.

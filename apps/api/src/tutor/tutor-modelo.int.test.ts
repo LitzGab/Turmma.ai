@@ -1,4 +1,4 @@
-import { MENSAGEM_DE_ASSUNTO_DELICADO, type ExecutorNoProcesso } from '@educa/nucleo'
+import { MENSAGEM_DE_ASSUNTO_DELICADO, MENSAGEM_DE_RISCO_A_VIDA, type ExecutorNoProcesso } from '@educa/nucleo'
 import { CodigoDeErro, esquemaRespostaConversaDoTutor } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
@@ -235,6 +235,50 @@ describe('Tutor contra um modelo que não obedece', () => {
       expect(pedido).toContain('como eu começo a questão 3?')
       expect(pedido).not.toContain(marca)
       expect(pedido).not.toContain('apanho')
+    })
+
+    it('com avaliação aberta, o assunto delicado ainda recebe a mensagem fixa e o sinal sem referência, sem ir ao modelo; a pergunta comum continua travada', async () => {
+      const aluno = await bancada.sessao(a.escolaId, 'aluno')
+      await sql(`insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`, [a.escolaId, a.anoLetivoId, aluno.usuarioId, a.outraTurma, a.coordenacao.usuarioId])
+      const prova = await aplicarAtividade(bancada, a, { avaliativa: true, turmaId: a.outraTurma, titulo: 'Prova sintética de estequiometria', aplicadaPor: a.colega.usuarioId })
+      const marca = `bemtevi${randomUUID().slice(0, 8)}`
+      const naProva = { atividadeAplicadaId: prova, questao: 3 }
+      const enviar = async (corpo: Record<string, unknown>) => chamar(api.url, 'POST', '/v1/tutor/mensagens', await aluno.tokenNovo(), { chaveEnvio: randomUUID(), ...corpo })
+      const travado = { status: 409, corpo: { erro: { codigo: 'TUTOR_PAUSADO_EM_AVALIACAO' } } }
+      modelo.responder((pedido) => obediente(pedido))
+      try {
+        // A pergunta comum, na prova e fora dela, continua recusada, sem gravar nada.
+        for (const corpo of [{ texto: 'não entendi a questão 3', ...naProva }, { texto: 'o que é mol?' }]) expect(await enviar(corpo)).toMatchObject(travado)
+        expect(await respostasGravadas(aluno)).toEqual([])
+
+        // O assunto delicado passa: 202, a mensagem fixa e o aviso aos professores da turma.
+        const execucao = await turno(aluno, `eu apanho em casa ${marca}`, naProva)
+        expect(execucao).toMatchObject({ estado: 'concluida', resultado: { tipo: 'mensagem_do_tutor', mensagem: { tipo: 'assunto_delicado', texto: MENSAGEM_DE_ASSUNTO_DELICADO } } })
+        expect(resposta(await turno(aluno, 'eu quero morrer', naProva))).toMatchObject({ tipo: 'assunto_delicado', texto: MENSAGEM_DE_RISCO_A_VIDA })
+        const { rows: sinais } = await sql('select tipo, atividade_aplicada_id, questao, material_id, pagina from sinal_tutor where escola_id = $1 and aluno_id = $2 order by id', [a.escolaId, aluno.usuarioId])
+        const semReferencia = { tipo: 'atencao_humana', atividade_aplicada_id: null, questao: null, material_id: null, pagina: null }
+        expect(sinais).toEqual([semReferencia, semReferencia])
+        // Nada foi ao modelo: nem o texto dele, nem a questão da prova.
+        expect(modelo.pedidos).toEqual([])
+        // E o texto dele não saiu da conversa.
+        for (const tabela of ['sinal_tutor', 'execucao_agente', 'consumo_ia', 'auditoria']) {
+          const { rows } = await sql<{ total: string }>(`select count(*) as total from ${tabela} t where t.escola_id = $1 and row_to_json(t)::text ilike $2`, [a.escolaId, `%${marca}%`])
+          expect(Number(rows[0]?.total), tabela).toBe(0)
+        }
+        expect(linhasDeLog.some((linha) => linha.includes(marca))).toBe(false)
+        // A mensagem fixa não destrava o Tutor: a tela continua em avaliação, e a dúvida da prova continua recusada.
+        const conversa = esquemaRespostaConversaDoTutor.parse((await chamar(api.url, 'GET', `/v1/tutor/conversa?atividadeAplicadaId=${prova}`, await aluno.tokenNovo())).corpo)
+        expect(conversa).toMatchObject({ estado: 'avaliacao', avaliacaoAberta: { titulo: 'Prova sintética de estequiometria' } })
+        expect(conversa.mensagens.map((mensagem) => mensagem.tipo)).toEqual(['texto', 'assunto_delicado', 'texto', 'assunto_delicado'])
+        expect(await enviar({ texto: 'e a questão 3, qual é a resposta?', ...naProva })).toMatchObject(travado)
+        // O aviso é da turma em prova: a professora dela o recebe, e a de outra turma, não.
+        const avisos = async (sessao: SessaoDeTeste) => chamar(api.url, 'GET', `/v1/sinais?turmaId=${a.outraTurma}`, await sessao.tokenNovo())
+        const daColega = (await avisos(a.colega)).corpo['itens'] as { tipo: string; aluno: { id: string } }[]
+        expect(daColega.filter((sinal) => sinal.aluno.id === aluno.usuarioId).map((sinal) => sinal.tipo)).toEqual(['atencao_humana', 'atencao_humana'])
+        expect((await avisos(a.professora)).status).toBe(404)
+      } finally {
+        await sql(`update atividade_aplicada set estado = 'encerrada', encerrada_em = now() where escola_id = $1 and id = $2`, [a.escolaId, prova])
+      }
     })
 
     it('quando é o modelo que classifica o turno como assunto delicado, o aluno recebe a mensagem fixa, e o professor, o sinal sem referência', async () => {
