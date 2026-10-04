@@ -120,11 +120,11 @@ describe('MATRIZ de permissão', () => {
 
   // MVP de apresentação (D77; `docs/mvp-rapido.md`, seção 7): uma célula por rota. A comparação com a expectativa pega a
   // célula trocada; estes testes dizem a regra de cada grupo.
-  const RECURSOS_DO_MVP = ['material', 'time', 'assistente', 'execucao', 'ferramenta', 'artefato', 'entrega', 'atividade_aplicada', 'minha_atividade', 'correcao', 'desempenho_da_turma', 'tutor', 'sinal', 'governanca', 'analista'] as const
+  const RECURSOS_DO_MVP = ['material', 'time', 'assistente', 'execucao', 'ferramenta', 'artefato', 'entrega', 'atividade_aplicada', 'minha_atividade', 'correcao', 'desempenho_da_turma', 'tutor', 'sinal', 'uso_do_tutor', 'governanca', 'analista'] as const
 
-  it('MVP: as quarenta e uma rotas têm célula, e a rede não chama nenhuma', () => {
+  it('MVP: as quarenta e duas rotas têm célula, e a rede não chama nenhuma', () => {
     const acoes = RECURSOS_DO_MVP.flatMap((recurso) => RECURSOS[recurso].map((acao) => [recurso, acao] as const))
-    expect(acoes).toHaveLength(41)
+    expect(acoes).toHaveLength(42)
     for (const [recurso, acao] of acoes) expect(alcanceDe('rede', recurso, acao), `${recurso}.${acao}`).toBe('nunca')
   })
 
@@ -146,7 +146,7 @@ describe('MATRIZ de permissão', () => {
   })
 
   it('MVP: ferramenta, artefato, entrega, atividade aplicada, correção e sinais são do professor da turma, e de mais ninguém', () => {
-    for (const recurso of ['ferramenta', 'artefato', 'entrega', 'atividade_aplicada', 'correcao', 'sinal'] as const) {
+    for (const recurso of ['ferramenta', 'artefato', 'entrega', 'atividade_aplicada', 'correcao', 'sinal', 'uso_do_tutor'] as const) {
       for (const acao of RECURSOS[recurso]) {
         expect(alcanceDe('professor', recurso, acao), `${recurso}.${acao}`).toBe('turma_vinculada')
         for (const papel of ['coordenador', 'aluno', 'rede'] as const) expect(alcanceDe(papel, recurso, acao), `${papel} ${recurso}.${acao}`).toBe('nunca')
@@ -197,6 +197,13 @@ describe('MATRIZ de permissão', () => {
     }
     // As leituras da coordenação que identificam professor ou aluno nesta fatia passam por auditoria, sem exceção.
     for (const [recurso, acao] of [['desempenho_da_turma', 'ler'], ['analista', 'ler_nominal']] as const) expect(alcanceDe('coordenador', recurso, acao), `${recurso}.${acao}`).toBe('nominal_auditado')
+  })
+
+  it('MVP: o uso do Tutor por aluno é visível ao professor da turma, e só a ele (regra 70, item 4; D47)', () => {
+    expect(RECURSOS.uso_do_tutor).toEqual(['ler'])
+    expect(alcanceDe('professor', 'uso_do_tutor', 'ler')).toBe('turma_vinculada')
+    // A coordenação não lê uso nominal de aluno, nem com auditoria: não há célula `nominal_auditado` aqui.
+    for (const papel of ['coordenador', 'aluno', 'rede'] as const) expect(alcanceDe(papel, 'uso_do_tutor', 'ler'), papel).toBe('nunca')
   })
 
   it('MVP: o time é catálogo, lido pelo professor e pela coordenação', () => {

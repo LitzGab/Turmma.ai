@@ -31,10 +31,20 @@ import { urlDoBancoDeTeste } from '../../../../../../tools/testes/integracao.set
 import * as exportadas from './tabelas.js'
 
 /**
- * As invariantes das dezessete tabelas do MVP de apresentação (migration 0022), provadas no banco, por fora do código:
- * é o que segura um insert escrito à mão, um job ou um repository de outro pacote que esqueça a regra. Cada teste apaga
- * mentalmente uma restrição e cai: sem a FK composta, o objeto de outra escola entra; sem o check, a entrega aprovada
- * sem autor entra; sem o gatilho, o lote aprovado sem validação entra.
+ * As invariantes das dezessete tabelas do MVP de apresentação (migrations 0022 e 0023), provadas no banco, por fora do
+ * código: é o que segura um insert escrito à mão, um job ou um repository de outro pacote que esqueça a regra.
+ *
+ * O isolamento entre escolas é provado de dois jeitos, e nenhum dos dois cobre sozinho:
+ * - **pelo catálogo** (`pg_constraint`, `pg_trigger`): **toda** FK das dezessete tabelas, fora a da própria escola,
+ *   começa por `escola_id` dos dois lados, e leva o ano letivo quando as duas pontas têm ano; toda coluna de autor sem FK
+ *   tem o gatilho dela. Trocar qualquer FK composta por FK simples, ou apagar um gatilho, quebra este teste, inclusive
+ *   nas tabelas em que não há caso escrito;
+ * - **por casos**, com duas escolas, com dois anos letivos da mesma escola e com duas turmas do mesmo ano: o objeto de
+ *   fora é recusado pela restrição nomeada. Os casos provam que a restrição do catálogo recusa de fato; não cobrem
+ *   todas as FKs, e é por isso que o teste de catálogo existe.
+ *
+ * O resto é regra de negócio no banco: sem o check, a entrega aprovada sem autor entra; sem o gatilho, o lote aprovado
+ * sem validação entra.
  */
 
 const TABELAS_DO_MVP = [
@@ -58,11 +68,60 @@ const TABELAS_DO_MVP = [
 ] as const
 
 /** As que crescem com o aluno (regra 80, item 8). */
+/** Toda FK composta das dezessete tabelas, em ordem de nome: a lista escrita à mão que o catálogo precisa repetir. */
+const FKS_COMPOSTAS_DO_MVP = [
+  'artefato_criado_por_da_escola_fk',
+  'artefato_disciplina_da_escola_fk',
+  'artefato_execucao_do_ano_da_escola_fk',
+  'artefato_origem_da_turma_fk',
+  'artefato_turma_do_ano_da_escola_fk',
+  'atividade_aplicada_artefato_do_ano_da_escola_fk',
+  'atividade_aplicada_turma_do_ano_da_escola_fk',
+  'consumo_ia_aluno_da_escola_fk',
+  'consumo_ia_execucao_da_escola_fk',
+  'correcao_lote_da_aplicacao_da_escola_fk',
+  'correcao_tentativa_fk',
+  'entrega_artefato_da_turma_fk',
+  'entrega_atividade_aplicada_da_turma_fk',
+  'entrega_execucao_do_ano_da_escola_fk',
+  'entrega_turma_do_ano_da_escola_fk',
+  'execucao_agente_ano_letivo_da_escola_fk',
+  'execucao_agente_solicitada_por_da_escola_fk',
+  'material_disciplina_da_escola_fk',
+  'material_enviado_por_da_escola_fk',
+  'material_excluido_por_da_escola_fk',
+  'mensagem_agente_disciplina_da_escola_fk',
+  'mensagem_agente_execucao_do_ano_da_escola_fk',
+  'mensagem_agente_thread_do_ano_da_escola_fk',
+  'mensagem_agente_turma_do_ano_da_escola_fk',
+  'mensagem_tutor_aluno_da_escola_fk',
+  'mensagem_tutor_atividade_aplicada_da_turma_fk',
+  'mensagem_tutor_execucao_do_ano_da_escola_fk',
+  'mensagem_tutor_material_da_escola_fk',
+  'mensagem_tutor_turma_do_ano_da_escola_fk',
+  'resposta_atividade_tentativa_fk',
+  'resumo_do_analista_ano_letivo_da_escola_fk',
+  'resumo_do_analista_execucao_do_ano_da_escola_fk',
+  'sinal_tutor_aluno_da_escola_fk',
+  'sinal_tutor_atividade_aplicada_da_turma_fk',
+  'sinal_tutor_execucao_do_ano_da_escola_fk',
+  'sinal_tutor_material_da_escola_fk',
+  'sinal_tutor_turma_do_ano_da_escola_fk',
+  'tentativa_atividade_aluno_da_escola_fk',
+  'tentativa_atividade_aplicacao_do_ano_da_escola_fk',
+  'thread_agente_ano_letivo_da_escola_fk',
+  'thread_agente_usuario_da_escola_fk',
+  'trecho_material_da_disciplina_da_escola_fk',
+  'validacao_do_lote_aplicacao_do_ano_da_escola_fk',
+  'validacao_do_lote_lote_da_aplicacao_da_escola_fk',
+]
+
 const TABELAS_QUE_CRESCEM = ['trecho', 'resposta_atividade', 'mensagem_tutor', 'sinal_tutor', 'consumo_ia', 'mensagem_agente', 'tentativa_atividade', 'correcao', 'execucao_agente']
 
 interface Cenario {
   escolaId: string
   anoLetivoId: string
+  serieId: string
   turmaId: string
   disciplinaId: string
   coordenadorId: string
@@ -124,6 +183,7 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
     return {
       escolaId,
       anoLetivoId,
+      serieId,
       turmaId,
       disciplinaId,
       coordenadorId: await novoUsuario(escolaId, 'coordenador'),
@@ -141,10 +201,10 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
   const novoTrecho = (c: Pick<Cenario, 'escolaId' | 'disciplinaId'>, materialId: string, pagina: number, texto: string) =>
     id('insert into trecho (escola_id, disciplina_id, material_id, pagina, texto) values ($1, $2, $3, $4, $5) returning id', [c.escolaId, c.disciplinaId, materialId, pagina, texto])
 
-  const novaExecucao = (c: Cenario, tarefa = 'gerar_atividade_objetiva', ajuste: { funcao?: string; chave?: string; entrada?: unknown; solicitadaPor?: string } = {}) =>
+  const novaExecucao = (c: Cenario, tarefa = 'gerar_atividade_objetiva', ajuste: { funcao?: string; chave?: string; entrada?: unknown; solicitadaPor?: string; anoLetivoId?: string } = {}) =>
     id('insert into execucao_agente (escola_id, ano_letivo_id, funcao, tarefa, solicitada_por, chave_envio, entrada) values ($1, $2, $3, $4, $5, $6, $7) returning id', [
       c.escolaId,
-      c.anoLetivoId,
+      ajuste.anoLetivoId ?? c.anoLetivoId,
       ajuste.funcao ?? FUNCAO_DA_TAREFA_DE_IA[tarefa as keyof typeof FUNCAO_DA_TAREFA_DE_IA],
       tarefa,
       ajuste.solicitadaPor ?? c.professorId,
@@ -160,14 +220,14 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
   }
 
   /** Um artefato de atividade objetiva. Com `origemId` é versão adaptada, e leva `adaptacao` no conteúdo. */
-  const novoArtefato = (c: Cenario, ajuste: { origemId?: string; adaptacao?: unknown; tipo?: string; turmaId?: string; criadoPor?: string; escolaId?: string } = {}) => {
+  const novoArtefato = (c: Cenario, ajuste: { origemId?: string; adaptacao?: unknown; tipo?: string; turmaId?: string; criadoPor?: string; escolaId?: string; anoLetivoId?: string; execucaoId?: string } = {}) => {
     const tipo = ajuste.tipo ?? 'atividade_objetiva'
     const conteudo: Record<string, unknown> = { tipo, titulo: 'Lista de estequiometria', questoes: [questao(randomUUID())] }
     if (ajuste.adaptacao !== undefined) conteudo['adaptacao'] = ajuste.adaptacao
     else if (ajuste.origemId !== undefined) conteudo['adaptacao'] = { tipos: ['fonte_ampliada'] }
-    return id('insert into artefato (escola_id, ano_letivo_id, turma_id, disciplina_id, tipo, titulo, conteudo, origem_id, criado_por) values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning id', [
+    return id('insert into artefato (escola_id, ano_letivo_id, turma_id, disciplina_id, tipo, titulo, conteudo, origem_id, criado_por, execucao_id) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id', [
       ajuste.escolaId ?? c.escolaId,
-      c.anoLetivoId,
+      ajuste.anoLetivoId ?? c.anoLetivoId,
       ajuste.turmaId ?? c.turmaId,
       c.disciplinaId,
       tipo,
@@ -175,14 +235,15 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
       JSON.stringify(conteudo),
       ajuste.origemId ?? null,
       ajuste.criadoPor ?? c.professorId,
+      ajuste.execucaoId ?? null,
     ])
   }
 
-  const aplicar = (c: Cenario, artefatoId: string, ajuste: { aplicadaPor?: string; avaliativa?: boolean } = {}) =>
+  const aplicar = (c: Cenario, artefatoId: string, ajuste: { aplicadaPor?: string; avaliativa?: boolean; anoLetivoId?: string; turmaId?: string } = {}) =>
     id('insert into atividade_aplicada (escola_id, ano_letivo_id, turma_id, artefato_id, avaliativa, aplicada_por) values ($1, $2, $3, $4, $5, $6) returning id', [
       c.escolaId,
-      c.anoLetivoId,
-      c.turmaId,
+      ajuste.anoLetivoId ?? c.anoLetivoId,
+      ajuste.turmaId ?? c.turmaId,
       artefatoId,
       ajuste.avaliativa ?? false,
       ajuste.aplicadaPor ?? c.professorId,
@@ -191,16 +252,31 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
   const novaTentativa = (c: Cenario, atividadeAplicadaId: string, alunoId = c.alunoId) =>
     id('insert into tentativa_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id) values ($1, $2, $3, $4) returning id', [c.escolaId, c.anoLetivoId, atividadeAplicadaId, alunoId])
 
-  const entregaDeAdaptacao = (c: Cenario, artefatoId: string) =>
-    id("insert into entrega (escola_id, ano_letivo_id, turma_id, funcao, tipo, artefato_id) values ($1, $2, $3, 'adaptacao', 'versao_adaptada', $4) returning id", [c.escolaId, c.anoLetivoId, c.turmaId, artefatoId])
+  const entregaDeAdaptacao = (c: Cenario, artefatoId: string, ajuste: { turmaId?: string; anoLetivoId?: string } = {}) =>
+    id("insert into entrega (escola_id, ano_letivo_id, turma_id, funcao, tipo, artefato_id) values ($1, $2, $3, 'adaptacao', 'versao_adaptada', $4) returning id", [
+      c.escolaId,
+      ajuste.anoLetivoId ?? c.anoLetivoId,
+      ajuste.turmaId ?? c.turmaId,
+      artefatoId,
+    ])
 
-  const entregaDeLote = (c: Cenario, atividadeAplicadaId: string) =>
+  const entregaDeLote = (c: Cenario, atividadeAplicadaId: string, ajuste: { turmaId?: string; anoLetivoId?: string } = {}) =>
     id("insert into entrega (escola_id, ano_letivo_id, turma_id, funcao, tipo, atividade_aplicada_id) values ($1, $2, $3, 'correcao_de_objetiva', 'lote_de_correcao', $4) returning id", [
       c.escolaId,
-      c.anoLetivoId,
-      c.turmaId,
+      ajuste.anoLetivoId ?? c.anoLetivoId,
+      ajuste.turmaId ?? c.turmaId,
       atividadeAplicadaId,
     ])
+
+  /** Outra turma do mesmo ano letivo, na mesma escola. */
+  const outraTurma = (c: Cenario, anoLetivoId = c.anoLetivoId) =>
+    id('insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, $4) returning id', [c.escolaId, anoLetivoId, c.serieId, `2º${randomUUID().slice(0, 6)}`])
+
+  /** Outro ano letivo da mesma escola, com uma turma dele: a virada de ano (regra 60, item 5). */
+  async function outroAno(c: Cenario): Promise<{ anoLetivoId: string; turmaId: string }> {
+    const anoLetivoId = await id("insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, 2027, '2027-02-01', '2027-12-15', 'planejado') returning id", [c.escolaId])
+    return { anoLetivoId, turmaId: await outraTurma(c, anoLetivoId) }
+  }
 
   const aprovar = (c: Cenario, entregaId: string, por = c.professorId) =>
     cliente.query("update entrega set estado = 'aprovada', decidida_por = $3, decidida_em = now() where escola_id = $1 and id = $2 and estado = 'pendente'", [c.escolaId, entregaId, por])
@@ -312,6 +388,28 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
       const execucaoDeB = await novaExecucao(b)
       const aplicadaDeB = await aplicar(b, artefatoDeB)
       const artefatoDeA = await novoArtefato(a)
+      const aplicadaDeA = await aplicar(a, artefatoDeA)
+      await novaTentativa(a, aplicadaDeA)
+      const loteDeA = await entregaDeLote(a, aplicadaDeA)
+      await novaTentativa(b, aplicadaDeB)
+      const loteDeB = await entregaDeLote(b, aplicadaDeB)
+      const novaThread = (c: Cenario, usuarioId = c.professorId) =>
+        id("insert into thread_agente (escola_id, ano_letivo_id, usuario_id, agente) values ($1, $2, $3, 'assistente_de_ensino') returning id", [c.escolaId, c.anoLetivoId, usuarioId])
+      const [threadDeA, threadDeB] = [await novaThread(a), await novaThread(b)]
+      const mensagemDoProfessor = async (threadId: string, turmaId: string) =>
+        cliente.query("insert into mensagem_agente (escola_id, ano_letivo_id, thread_id, execucao_id, autor, conteudo, turma_id, disciplina_id) values ($1, $2, $3, $4, 'usuario', $5, $6, $7)", [
+          a.escolaId,
+          a.anoLetivoId,
+          threadId,
+          await novaExecucao(a, 'propor_ferramenta'),
+          JSON.stringify({ tipo: 'texto', texto: 'Monta uma lista' }),
+          turmaId,
+          a.disciplinaId,
+        ])
+      const responder = (atividadeAplicadaId: string, alunoId: string) =>
+        cliente.query('insert into resposta_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, questao, alternativa) values ($1, $2, $3, $4, 1, 0)', [a.escolaId, a.anoLetivoId, atividadeAplicadaId, alunoId])
+      const corrigir = (entregaId: string, alunoId: string) =>
+        cliente.query("insert into correcao (escola_id, ano_letivo_id, entrega_id, atividade_aplicada_id, aluno_id, acertos, total, em_branco, por_habilidade) values ($1, $2, $3, $4, $5, 0, 1, 1, '[]')", [a.escolaId, a.anoLetivoId, entregaId, aplicadaDeA, alunoId])
 
       // Cada caso é montado na hora de rodar: a promessa recusada nunca fica sem quem a espere.
       const casos: Array<[string, () => Promise<unknown>]> = [
@@ -321,33 +419,210 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
         ['trecho_material_da_disciplina_da_escola_fk', () => novoTrecho(a, materialDeB, 1, 'texto')],
         ['artefato_turma_do_ano_da_escola_fk', () => novoArtefato(a, { turmaId: b.turmaId })],
         ['artefato_criado_por_da_escola_fk', () => novoArtefato(a, { criadoPor: b.professorId })],
-        ['artefato_origem_da_escola_fk', () => novoArtefato(a, { origemId: artefatoDeB })],
+        ['artefato_origem_da_turma_fk', () => novoArtefato(a, { origemId: artefatoDeB })],
         ['execucao_agente_solicitada_por_da_escola_fk', () => novaExecucao(a, 'gerar_atividade_objetiva', { solicitadaPor: b.professorId })],
-        ['atividade_aplicada_artefato_da_escola_fk', () => aplicar(a, artefatoDeB)],
-        ['atividade_aplicada_aplicada_por_da_escola_fk', () => aplicar(a, artefatoDeA, { aplicadaPor: b.professorId })],
+        ['atividade_aplicada_artefato_do_ano_da_escola_fk', () => aplicar(a, artefatoDeB)],
+        ['atividade_aplicada_aplicada_por_da_escola_fk', async () => aplicar(a, await novoArtefato(a), { aplicadaPor: b.professorId })],
         ['tentativa_atividade_aplicacao_do_ano_da_escola_fk', () => novaTentativa(a, aplicadaDeB)],
-        ['entrega_artefato_da_escola_fk', () => entregaDeAdaptacao(a, artefatoDeB)],
-        ['entrega_atividade_aplicada_do_ano_da_escola_fk', () => entregaDeLote(a, aplicadaDeB)],
-        ['mensagem_tutor_execucao_da_escola_fk', () => mensagemAoTutor(a, execucaoDeB, 'aluno')],
+        ['entrega_artefato_da_turma_fk', () => entregaDeAdaptacao(a, artefatoDeB)],
+        ['entrega_atividade_aplicada_da_turma_fk', () => entregaDeLote(a, aplicadaDeB)],
+        ['mensagem_tutor_execucao_do_ano_da_escola_fk', () => mensagemAoTutor(a, execucaoDeB, 'aluno')],
         ['mensagem_tutor_material_da_escola_fk', async () => mensagemAoTutor(a, await novaExecucao(a, 'turno_do_tutor', { solicitadaPor: a.alunoId }), 'aluno', { material_id: materialDeB })],
         ['mensagem_tutor_aluno_da_escola_fk', async () => mensagemAoTutor(a, await novaExecucao(a, 'turno_do_tutor', { solicitadaPor: a.alunoId }), 'aluno', { aluno_id: b.alunoId })],
         ['sinal_tutor_turma_do_ano_da_escola_fk', () => novoSinal(a, 'travou', { turma_id: b.turmaId })],
-        ['sinal_tutor_atividade_aplicada_do_ano_da_escola_fk', () => novoSinal(a, 'travou', { atividade_aplicada_id: aplicadaDeB, questao: 1 })],
+        ['sinal_tutor_atividade_aplicada_da_turma_fk', () => novoSinal(a, 'travou', { atividade_aplicada_id: aplicadaDeB, questao: 1 })],
         ['suspensao_de_funcao_suspensa_por_da_escola_fk', () => cliente.query("insert into suspensao_de_funcao (escola_id, funcao, suspensa_por) values ($1, 'adaptacao', $2)", [a.escolaId, b.coordenadorId])],
+        // As tabelas que só alcançam a escola por outra tabela: a thread, a mensagem, o resumo, a resposta, a correção e a validação.
+        ['thread_agente_usuario_da_escola_fk', () => novaThread(a, b.professorId)],
+        ['mensagem_agente_thread_do_ano_da_escola_fk', () => mensagemDoProfessor(threadDeB, a.turmaId)],
+        ['mensagem_agente_turma_do_ano_da_escola_fk', () => mensagemDoProfessor(threadDeA, b.turmaId)],
+        ['resumo_do_analista_execucao_do_ano_da_escola_fk', () => cliente.query("insert into resumo_do_analista (escola_id, ano_letivo_id, execucao_id, conteudo) values ($1, $2, $3, '{\"recortes\":[],\"alertas\":[]}')", [a.escolaId, a.anoLetivoId, execucaoDeB])],
+        ['resposta_atividade_tentativa_fk', () => responder(aplicadaDeB, b.alunoId)],
+        ['resposta_atividade_tentativa_fk', () => responder(aplicadaDeA, b.alunoId)],
+        ['correcao_lote_da_aplicacao_da_escola_fk', () => corrigir(loteDeB, a.alunoId)],
+        ['correcao_tentativa_fk', () => corrigir(loteDeA, b.alunoId)],
+        ['validacao_do_lote_lote_da_aplicacao_da_escola_fk', () => validar(a, loteDeB, aplicadaDeA, [], [])],
         ['consumo_ia_execucao_da_escola_fk', () => consumir(a, { execucao_id: execucaoDeB })],
         ['consumo_ia_aluno_da_escola_fk', () => consumir(a, { tarefa: 'turno_do_tutor', funcao: 'tutor_com_o_aluno', aluno_id: b.alunoId })],
       ]
       for (const [restricao, consulta] of casos) expect(await recusa(consulta()), restricao).toEqual({ codigo: '23503', restricao })
 
       // A tentativa com o aluno de outra escola e a entrega decidida por professor de outra escola, com o resto de A.
-      const aplicadaDeA = await aplicar(a, artefatoDeA)
       expect(await recusa(novaTentativa(a, aplicadaDeA, b.alunoId))).toEqual({ codigo: '23503', restricao: 'tentativa_atividade_aluno_da_escola_fk' })
       const adaptadaDeA = await novoArtefato(a, { origemId: artefatoDeA })
       const entregaDeA = await entregaDeAdaptacao(a, adaptadaDeA)
       expect(await recusa(aprovar(a, entregaDeA, b.professorId))).toEqual({ codigo: '23503', restricao: 'entrega_decidida_por_da_escola_fk' })
       // Com as pessoas e os objetos da própria escola, as mesmas escritas passam: a FK barra o de fora, não o uso legítimo.
-      await expect(novaTentativa(a, aplicadaDeA)).resolves.toMatch(/^[0-9a-f-]{36}$/)
+      await expect(mensagemDoProfessor(threadDeA, a.turmaId)).resolves.toMatchObject({ rowCount: 1 })
+      await expect(responder(aplicadaDeA, a.alunoId)).resolves.toMatchObject({ rowCount: 1 })
+      await expect(corrigir(loteDeA, a.alunoId)).resolves.toMatchObject({ rowCount: 1 })
       expect((await aprovar(a, entregaDeA)).rowCount).toBe(1)
+    })
+
+    it('pelo catálogo: toda FK das dezessete tabelas, fora a da própria escola, começa por `escola_id` dos dois lados, e leva o ano letivo quando as duas pontas têm ano', async () => {
+      const { rows: fks } = await cliente.query<{ nome: string; tabela: string; alvo: string; colunas: string[]; colunas_do_alvo: string[] }>(
+        `select c.conname as nome, c.conrelid::regclass::text as tabela, c.confrelid::regclass::text as alvo,
+           (select array_agg(a.attname::text order by k.ordem) from unnest(c.conkey) with ordinality k(numero, ordem) join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.numero) as colunas,
+           (select array_agg(a.attname::text order by k.ordem) from unnest(c.confkey) with ordinality k(numero, ordem) join pg_attribute a on a.attrelid = c.confrelid and a.attnum = k.numero) as colunas_do_alvo
+         from pg_constraint c where c.contype = 'f' and c.conrelid::regclass::text = any($1::text[]) order by c.conname`,
+        [[...TABELAS_DO_MVP]],
+      )
+      const daEscola = fks.filter((fk) => fk.alvo === 'escola')
+      const compostas = fks.filter((fk) => fk.alvo !== 'escola')
+      // A FK simples para a escola, uma por tabela, e mais nenhuma FK simples.
+      expect(daEscola.map((fk) => fk.tabela).sort()).toEqual([...TABELAS_DO_MVP].sort())
+      for (const fk of daEscola) expect([fk.colunas, fk.colunas_do_alvo], fk.nome).toEqual([['escola_id'], ['id']])
+
+      // Toda outra FK é composta e começa pela escola, na tabela e no alvo: trocar qualquer uma por FK simples cai aqui.
+      expect(compostas.filter((fk) => fk.colunas[0] !== 'escola_id' || fk.colunas_do_alvo[0] !== 'escola_id' || fk.colunas.length < 2).map((fk) => fk.nome)).toEqual([])
+      // A lista inteira, pelo nome: a FK que some, ou que muda de nome, precisa ser olhada.
+      expect(compostas.map((fk) => fk.nome)).toEqual(FKS_COMPOSTAS_DO_MVP)
+      // E cada uma das dezessete tabelas tem pelo menos uma FK composta: nenhuma depende só da FK simples da escola.
+      expect([...new Set(compostas.map((fk) => fk.tabela))].sort()).toEqual([...TABELAS_DO_MVP].filter((tabela) => tabela !== 'suspensao_de_funcao').sort())
+
+      // O ano letivo: quando a tabela e o alvo têm `ano_letivo_id`, a FK o leva dos dois lados. Nada cruza de ano na mesma escola.
+      const { rows: comAno } = await cliente.query<{ tabela: string }>("select table_name as tabela from information_schema.columns where table_schema = 'public' and column_name = 'ano_letivo_id'")
+      const temAno = new Set(comAno.map((linha) => linha.tabela))
+      const semAno = compostas.filter((fk) => temAno.has(fk.tabela) && temAno.has(fk.alvo) && !(fk.colunas.includes('ano_letivo_id') && fk.colunas_do_alvo.includes('ano_letivo_id')))
+      // As duas exceções vão à entrega pelo par (entrega, atividade aplicada): o ano delas é preso pela FK da tentativa e
+      // pela FK da aplicação, que levam o ano, e a entrega do lote é presa à aplicação com o ano.
+      expect(semAno.map((fk) => fk.nome)).toEqual(['correcao_lote_da_aplicacao_da_escola_fk', 'validacao_do_lote_lote_da_aplicacao_da_escola_fk'])
+      // O alvo que é o próprio ano letivo: a tabela leva `(escola_id, ano_letivo_id)`.
+      for (const fk of compostas.filter((item) => item.alvo === 'ano_letivo')) expect([fk.colunas, fk.colunas_do_alvo], fk.nome).toEqual([['escola_id', 'ano_letivo_id'], ['escola_id', 'id']])
+    })
+
+    it('pelo catálogo: toda coluna que aponta para pessoa tem FK composta para o usuário ou o gatilho de autor dela, e os gatilhos da regra existem', async () => {
+      const { rows: gatilhos } = await cliente.query<{ tabela: string; nome: string; funcao: string; coluna: string; adiado: boolean }>(
+        `select t.tgrelid::regclass::text as tabela, t.tgname as nome, p.proname as funcao, split_part(encode(t.tgargs, 'escape'), '\\000', 1) as coluna, t.tginitdeferred as adiado
+         from pg_trigger t join pg_proc p on p.oid = t.tgfoid
+         where not t.tgisinternal and t.tgrelid::regclass::text = any($1::text[]) order by 1, 2`,
+        [[...TABELAS_DO_MVP]],
+      )
+      expect(gatilhos).toEqual([
+        { tabela: 'atividade_aplicada', nome: 'atividade_aplicada_aplicada_por_da_equipe', funcao: 'exigir_equipe_da_escola', coluna: 'aplicada_por', adiado: false },
+        { tabela: 'atividade_aplicada', nome: 'atividade_aplicada_so_do_que_pode_ir_ao_aluno', funcao: 'exigir_artefato_que_pode_ir_ao_aluno', coluna: '', adiado: false },
+        { tabela: 'correcao', nome: 'correcao_destaque_aberto_por_da_equipe', funcao: 'exigir_equipe_da_escola', coluna: 'destaque_aberto_por', adiado: false },
+        { tabela: 'entrega', nome: 'entrega_decidida_por_da_equipe', funcao: 'exigir_equipe_da_escola', coluna: 'decidida_por', adiado: false },
+        { tabela: 'entrega', nome: 'entrega_lote_aprovado_com_validacao', funcao: 'exigir_validacao_do_lote_aprovado', coluna: '', adiado: true },
+        { tabela: 'suspensao_de_funcao', nome: 'suspensao_de_funcao_retomada_por_da_escola', funcao: 'exigir_usuario_da_escola', coluna: 'retomada_por', adiado: false },
+        { tabela: 'suspensao_de_funcao', nome: 'suspensao_de_funcao_suspensa_por_da_escola', funcao: 'exigir_usuario_da_escola', coluna: 'suspensa_por', adiado: false },
+        { tabela: 'validacao_do_lote', nome: 'validacao_do_lote_confirmada_por_da_equipe', funcao: 'exigir_equipe_da_escola', coluna: 'confirmada_por', adiado: false },
+        { tabela: 'validacao_do_lote', nome: 'validacao_do_lote_destaques_do_lote', funcao: 'exigir_destaques_do_lote_abertos', coluna: '', adiado: false },
+      ])
+
+      // Toda coluna de pessoa (`*_por`, `aluno_id`, `usuario_id`) das dezessete tabelas: FK composta para `usuario` (ou para a
+      // tentativa, que leva o aluno por FK composta), ou gatilho de autor.
+      const { rows: dePessoa } = await cliente.query<{ tabela: string; coluna: string; com_fk: boolean }>(
+        `select c.table_name as tabela, c.column_name as coluna,
+           exists (
+             select 1 from pg_constraint k join pg_attribute a on a.attrelid = k.conrelid and a.attnum = any(k.conkey)
+             where k.contype = 'f' and k.conrelid = c.table_name::regclass and k.confrelid in ('usuario'::regclass, 'tentativa_atividade'::regclass) and a.attname = c.column_name
+           ) as com_fk
+         from information_schema.columns c
+         where c.table_schema = 'public' and c.table_name = any($1::text[]) and c.column_name ~ '(_por|^aluno_id|^usuario_id)$' order by 1, 2`,
+        [[...TABELAS_DO_MVP]],
+      )
+      const comGatilho = new Set(gatilhos.filter((gatilho) => gatilho.coluna !== '').map((gatilho) => `${gatilho.tabela}.${gatilho.coluna}`))
+      expect(dePessoa.map((linha) => `${linha.tabela}.${linha.coluna}`)).toEqual([
+        'artefato.criado_por',
+        'atividade_aplicada.aplicada_por',
+        'consumo_ia.aluno_id',
+        'correcao.aluno_id',
+        'correcao.destaque_aberto_por',
+        'entrega.decidida_por',
+        'execucao_agente.solicitada_por',
+        'material.enviado_por',
+        'material.excluido_por',
+        'mensagem_tutor.aluno_id',
+        'resposta_atividade.aluno_id',
+        'sinal_tutor.aluno_id',
+        'suspensao_de_funcao.retomada_por',
+        'suspensao_de_funcao.suspensa_por',
+        'tentativa_atividade.aluno_id',
+        'thread_agente.usuario_id',
+        'validacao_do_lote.confirmada_por',
+      ])
+      expect(dePessoa.filter((linha) => !linha.com_fk && !comGatilho.has(`${linha.tabela}.${linha.coluna}`)).map((linha) => `${linha.tabela}.${linha.coluna}`)).toEqual([])
+      // Nenhuma coluna tem os dois: a que tem gatilho é justamente a que não pode ter FK, para o id ficar depois da eliminação.
+      expect(dePessoa.filter((linha) => linha.com_fk && comGatilho.has(`${linha.tabela}.${linha.coluna}`))).toEqual([])
+
+      // O gatilho do lote aprovado relê a entrega pela escola e pelo id (regra 10, item 3).
+      const { rows: corpo } = await cliente.query<{ definicao: string }>("select pg_get_functiondef('exigir_validacao_do_lote_aprovado'::regproc) as definicao")
+      expect(corpo[0]?.definicao).toContain('e."escola_id" = NEW."escola_id" AND e."id" = NEW."id"')
+    })
+
+    it('ano letivo: na mesma escola, nada aponta para turma, artefato, execução, aplicação, thread ou tentativa de outro ano', async () => {
+      const c = await novoCenario()
+      const outro = await outroAno(c)
+      const artefatoDesteAno = await novoArtefato(c)
+      const artefatoDoOutroAno = await novoArtefato(c, { anoLetivoId: outro.anoLetivoId, turmaId: outro.turmaId })
+      const execucaoDoOutroAno = await novaExecucao(c, 'gerar_atividade_objetiva', { anoLetivoId: outro.anoLetivoId })
+      const aplicada = await aplicar(c, artefatoDesteAno)
+      await novaTentativa(c, aplicada)
+      const lote = await entregaDeLote(c, aplicada)
+      const aplicadaSemLote = await aplicar(c, await novoArtefato(c))
+      const threadId = await id("insert into thread_agente (escola_id, ano_letivo_id, usuario_id, agente) values ($1, $2, $3, 'assistente_de_ensino') returning id", [c.escolaId, c.anoLetivoId, c.professorId])
+      const noOutroAno = (tabela: string, colunas: Record<string, unknown>) => {
+        const linha = { escola_id: c.escolaId, ano_letivo_id: outro.anoLetivoId, ...colunas }
+        const nomes = Object.keys(linha)
+        return cliente.query(`insert into ${tabela} (${nomes.join(', ')}) values (${nomes.map((_, i) => `$${String(i + 1)}`).join(', ')})`, Object.values(linha))
+      }
+
+      const casos: Array<[string, () => Promise<unknown>]> = [
+        // A turma de 2027 num registro de 2026.
+        ['artefato_turma_do_ano_da_escola_fk', () => novoArtefato(c, { turmaId: outro.turmaId })],
+        ['atividade_aplicada_turma_do_ano_da_escola_fk', () => aplicar(c, artefatoDesteAno, { turmaId: outro.turmaId })],
+        ['mensagem_tutor_turma_do_ano_da_escola_fk', async () => mensagemAoTutor(c, await novaExecucao(c, 'turno_do_tutor', { solicitadaPor: c.alunoId }), 'aluno', { turma_id: outro.turmaId })],
+        ['sinal_tutor_turma_do_ano_da_escola_fk', () => novoSinal(c, 'travou', { turma_id: outro.turmaId })],
+        // O artefato, a execução e a aplicação de outro ano.
+        ['atividade_aplicada_artefato_do_ano_da_escola_fk', () => aplicar(c, artefatoDoOutroAno)],
+        ['artefato_origem_da_turma_fk', () => novoArtefato(c, { origemId: artefatoDoOutroAno })],
+        ['artefato_execucao_do_ano_da_escola_fk', () => novoArtefato(c, { execucaoId: execucaoDoOutroAno })],
+        ['mensagem_tutor_execucao_do_ano_da_escola_fk', () => mensagemAoTutor(c, execucaoDoOutroAno, 'aluno')],
+        ['sinal_tutor_execucao_do_ano_da_escola_fk', () => novoSinal(c, 'travou', { execucao_id: execucaoDoOutroAno })],
+        ['resumo_do_analista_execucao_do_ano_da_escola_fk', () => cliente.query("insert into resumo_do_analista (escola_id, ano_letivo_id, execucao_id, conteudo) values ($1, $2, $3, '{\"recortes\":[],\"alertas\":[]}')", [c.escolaId, c.anoLetivoId, execucaoDoOutroAno])],
+        ['entrega_execucao_do_ano_da_escola_fk', () => cliente.query('update entrega set execucao_id = $2 where id = $1', [lote, execucaoDoOutroAno])],
+        // O registro gravado com o ano errado: a entrega, a tentativa, a resposta, a correção, a validação e a mensagem de 2027 para o que é de 2026.
+        ['entrega_atividade_aplicada_da_turma_fk', () => entregaDeLote(c, aplicadaSemLote, { anoLetivoId: outro.anoLetivoId, turmaId: outro.turmaId })],
+        ['tentativa_atividade_aplicacao_do_ano_da_escola_fk', () => noOutroAno('tentativa_atividade', { atividade_aplicada_id: aplicada, aluno_id: c.alunoId })],
+        ['resposta_atividade_tentativa_fk', () => noOutroAno('resposta_atividade', { atividade_aplicada_id: aplicada, aluno_id: c.alunoId, questao: 1, alternativa: 0 })],
+        ['correcao_tentativa_fk', () => noOutroAno('correcao', { entrega_id: lote, atividade_aplicada_id: aplicada, aluno_id: c.alunoId, acertos: 0, total: 1, em_branco: 1, por_habilidade: '[]' })],
+        ['validacao_do_lote_aplicacao_do_ano_da_escola_fk', () => noOutroAno('validacao_do_lote', { entrega_id: lote, atividade_aplicada_id: aplicada, apresentado: JSON.stringify({ resumo: resumoDoLote, destaques: [] }), aberto: '[]', confirmada_por: c.professorId })],
+        ['mensagem_agente_thread_do_ano_da_escola_fk', async () => noOutroAno('mensagem_agente', { thread_id: threadId, execucao_id: execucaoDoOutroAno, autor: 'agente', conteudo: JSON.stringify({ tipo: 'texto', texto: 'Resposta', citacoes: [] }) })],
+      ]
+      for (const [restricao, consulta] of casos) expect(await recusa(consulta()), restricao).toEqual({ codigo: '23503', restricao })
+      // A entrega de 2026 com a turma de 2027 cai em duas FKs, a da turma e a da aplicação: qualquer uma a recusa.
+      expect(await recusa(entregaDeLote(c, aplicadaSemLote, { turmaId: outro.turmaId }))).toEqual({ codigo: '23503', restricao: expect.stringMatching(/^entrega_(turma_do_ano_da_escola|atividade_aplicada_da_turma)_fk$/) })
+      // O ano de 2027 funciona por inteiro com o que é dele: a FK barra o que cruza, não o ano novo.
+      await expect(aplicar(c, artefatoDoOutroAno, { anoLetivoId: outro.anoLetivoId, turmaId: outro.turmaId })).resolves.toMatch(/^[0-9a-f-]{36}$/)
+      await expect(novoArtefato(c, { anoLetivoId: outro.anoLetivoId, turmaId: outro.turmaId, execucaoId: execucaoDoOutroAno })).resolves.toMatch(/^[0-9a-f-]{36}$/)
+    })
+
+    it('turma: a entrega, a mensagem e o sinal do Tutor não apontam para a aplicação nem para o artefato de outra turma do mesmo ano', async () => {
+      const c = await novoCenario()
+      const turmaY = await outraTurma(c)
+      const artefatoDaX = await novoArtefato(c)
+      const aplicadaNaX = await aplicar(c, artefatoDaX)
+      const adaptadaDaX = await novoArtefato(c, { origemId: artefatoDaX })
+      const execucao = () => novaExecucao(c, 'turno_do_tutor', { solicitadaPor: c.alunoId })
+
+      const casos: Array<[string, () => Promise<unknown>]> = [
+        // É pela turma da entrega que o professor é autorizado: a entrega da Y não decide o que é da X.
+        ['entrega_atividade_aplicada_da_turma_fk', () => entregaDeLote(c, aplicadaNaX, { turmaId: turmaY })],
+        ['entrega_artefato_da_turma_fk', () => entregaDeAdaptacao(c, adaptadaDaX, { turmaId: turmaY })],
+        // O sinal e a conversa lidos pelo professor da Y não trazem a atividade da X.
+        ['sinal_tutor_atividade_aplicada_da_turma_fk', () => novoSinal(c, 'travou', { turma_id: turmaY, atividade_aplicada_id: aplicadaNaX, questao: 1 })],
+        ['mensagem_tutor_atividade_aplicada_da_turma_fk', async () => mensagemAoTutor(c, await execucao(), 'aluno', { turma_id: turmaY, atividade_aplicada_id: aplicadaNaX })],
+        // A versão adaptada é da turma do original.
+        ['artefato_origem_da_turma_fk', () => novoArtefato(c, { origemId: artefatoDaX, turmaId: turmaY })],
+      ]
+      for (const [restricao, consulta] of casos) expect(await recusa(consulta()), restricao).toEqual({ codigo: '23503', restricao })
+
+      // Com a turma certa, passam; e o mesmo artefato pode ser aplicado à outra turma do mesmo ano, com a entrega dela.
+      await expect(entregaDeLote(c, aplicadaNaX)).resolves.toMatch(/^[0-9a-f-]{36}$/)
+      await expect(novoSinal(c, 'travou', { atividade_aplicada_id: aplicadaNaX, questao: 1 })).resolves.toMatch(/^[0-9a-f-]{36}$/)
+      const aplicadaNaY = await aplicar(c, artefatoDaX, { turmaId: turmaY })
+      await expect(entregaDeLote(c, aplicadaNaY, { turmaId: turmaY })).resolves.toMatch(/^[0-9a-f-]{36}$/)
     })
 
     it('regra 80, item 8: nas tabelas que crescem com o aluno, todo índice que não é a chave primária começa pela escola', async () => {
@@ -619,6 +894,35 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
       expect(await recusa(mudar("estado = 'publicada', decidida_por = $2, decidida_em = now()", [c.professorId]))).toEqual({ codigo: '23514', restricao: 'entrega_estado_valido' })
     })
 
+    it('quem aprova, aplica, confirma e abre destaque é professor ou coordenação da escola: o id de um aluno é recusado', async () => {
+      const c = await novoCenario()
+      const original = await novoArtefato(c)
+      const entregaId = await entregaDeAdaptacao(c, await novoArtefato(c, { origemId: original }))
+      expect(await recusa(aprovar(c, entregaId, c.alunoId))).toEqual({ codigo: '23503', restricao: 'entrega_decidida_por_da_escola_fk' })
+      expect(await recusa(aplicar(c, original, { aplicadaPor: c.alunoId }))).toEqual({ codigo: '23503', restricao: 'atividade_aplicada_aplicada_por_da_escola_fk' })
+      const aplicada = await aplicar(c, original)
+      await novaTentativa(c, aplicada)
+      const lote = await entregaDeLote(c, aplicada)
+      const correcaoId = await novaCorrecao(c, lote, aplicada, ['em_branco'])
+      const abrir = (por: string) => cliente.query('update correcao set destaque_aberto_em = now(), destaque_aberto_por = $2 where id = $1 and destaque_aberto_em is null', [correcaoId, por])
+      expect(await recusa(abrir(c.alunoId))).toEqual({ codigo: '23503', restricao: 'correcao_destaque_aberto_por_da_escola_fk' })
+      const validarComo = (por: string) =>
+        cliente.query('insert into validacao_do_lote (escola_id, ano_letivo_id, entrega_id, atividade_aplicada_id, apresentado, aberto, confirmada_por) values ($1, $2, $3, $4, $5, $6, $7)', [
+          c.escolaId,
+          c.anoLetivoId,
+          lote,
+          aplicada,
+          JSON.stringify({ resumo: resumoDoLote, destaques: [{ alunoId: c.alunoId, motivos: ['em_branco'] }] }),
+          JSON.stringify([{ alunoId: c.alunoId, abertoEm: '2026-10-04T12:00:00.000Z' }]),
+          por,
+        ])
+      await expect(abrir(c.professorId)).resolves.toMatchObject({ rowCount: 1 })
+      expect(await recusa(validarComo(c.alunoId))).toEqual({ codigo: '23503', restricao: 'validacao_do_lote_confirmada_por_da_escola_fk' })
+      // O professor e a coordenação passam no banco; quem pode de fato é a `MATRIZ` que diz.
+      expect((await aprovar(c, entregaId, c.coordenadorId)).rowCount).toBe(1)
+      await expect(validarComo(c.professorId)).resolves.toMatchObject({ rowCount: 1 })
+    })
+
     it('decidir duas vezes não cria segundo registro nem troca a primeira decisão', async () => {
       const c = await novoCenario()
       const outroProfessor = await novoUsuario(c.escolaId, 'professor')
@@ -766,6 +1070,42 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
       expect(rows[0]?.aberto.map((aberto) => aberto.alunoId).sort()).toEqual([c.alunoId, outroAluno].sort())
       expect(rows[0]?.confirmada_por).toBe(c.professorId)
       expect(rows[0]?.confirmada_em).toBeInstanceOf(Date)
+    })
+
+    it('D56: a validação é recusada havendo correção do lote com destaque sem abrir, mesmo que o registro diga que não havia destaque', async () => {
+      const c = await novoCenario()
+      const { aplicada, entregaId } = await lote(c)
+      const correcaoId = await novaCorrecao(c, entregaId, aplicada, ['em_branco', 'padrao_de_erro'])
+      const semAbrir = { codigo: '23514', restricao: 'validacao_do_lote_destaques_do_lote_abertos' }
+      // O registro com a lista de destaques vazia passava no check, que só compara o JSON com ele mesmo.
+      expect(await recusa(validar(c, entregaId, aplicada, [], [])), 'apresentado vazio').toEqual(semAbrir)
+      // E o registro que diz que abriu, sem a correção ter sido aberta de fato.
+      expect(await recusa(validar(c, entregaId, aplicada, [c.alunoId], [c.alunoId])), 'aberto só no registro').toEqual(semAbrir)
+      // Aprovar o lote na mesma transação não muda nada: sem a validação, o commit cai.
+      await cliente.query('begin')
+      await aprovar(c, entregaId)
+      expect(await recusa(validar(c, entregaId, aplicada, [], []))).toEqual(semAbrir)
+      await cliente.query('rollback')
+
+      await cliente.query('update correcao set destaque_aberto_em = now(), destaque_aberto_por = $2 where id = $1', [correcaoId, c.professorId])
+      // Aberto, o destaque ainda precisa constar do que foi apresentado: o registro não pode omitir o caso.
+      expect(await recusa(validar(c, entregaId, aplicada, [], [])), 'aberto e fora do apresentado').toEqual({ codigo: '23514', restricao: 'validacao_do_lote_destaques_do_lote_apresentados' })
+      await cliente.query('begin')
+      await aprovar(c, entregaId)
+      await validar(c, entregaId, aplicada, [c.alunoId], [c.alunoId])
+      await cliente.query('commit')
+      const { rows } = await cliente.query<{ estado: string }>('select estado from entrega where id = $1', [entregaId])
+      expect(rows).toEqual([{ estado: 'aprovada' }])
+    })
+
+    it('D56: a correção sem destaque não segura a validação, e o destaque de outro lote também não', async () => {
+      const c = await novoCenario()
+      const { aplicada, entregaId } = await lote(c)
+      await novaCorrecao(c, entregaId, aplicada)
+      const outro = await lote(c)
+      await novaCorrecao(c, outro.entregaId, outro.aplicada, ['em_branco'])
+      await expect(validar(c, entregaId, aplicada, [], [])).resolves.toMatchObject({ rowCount: 1 })
+      expect(await recusa(validar(c, outro.entregaId, outro.aplicada, [], []))).toEqual({ codigo: '23514', restricao: 'validacao_do_lote_destaques_do_lote_abertos' })
     })
 
     it('a validação precisa do formato, de quem confirmou, e só existe para entrega que é lote', async () => {
@@ -926,6 +1266,56 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
       await expect(mensagemAoTutor(c, execucaoId, 'tutor', { tipo: 'assunto_delicado', texto: 'Mensagem combinada com a sua escola.' })).resolves.toMatch(/^[0-9a-f-]{36}$/)
     })
 
+    it('a mensagem do aluno leva em que ele estava: a questão só com a atividade, a página só com o material, e nunca na resposta do Tutor', async () => {
+      const c = await novoCenario()
+      const aplicada = await aplicar(c, await novoArtefato(c))
+      const materialId = await novoMaterial(c)
+      const execucao = () => novaExecucao(c, 'turno_do_tutor', { solicitadaPor: c.alunoId })
+      expect(await recusa(mensagemAoTutor(c, await execucao(), 'aluno', { questao: 3 }))).toEqual({ codigo: '23514', restricao: 'mensagem_tutor_questao_valida' })
+      expect(await recusa(mensagemAoTutor(c, await execucao(), 'aluno', { atividade_aplicada_id: aplicada, questao: 21 }))).toEqual({ codigo: '23514', restricao: 'mensagem_tutor_questao_valida' })
+      expect(await recusa(mensagemAoTutor(c, await execucao(), 'tutor', { atividade_aplicada_id: aplicada, questao: 3 }))).toEqual({ codigo: '23514', restricao: 'mensagem_tutor_questao_valida' })
+      expect(await recusa(mensagemAoTutor(c, await execucao(), 'aluno', { pagina: 12 }))).toEqual({ codigo: '23514', restricao: 'mensagem_tutor_pagina_valida' })
+      await expect(mensagemAoTutor(c, await execucao(), 'aluno', { atividade_aplicada_id: aplicada, questao: 3 })).resolves.toMatch(/^[0-9a-f-]{36}$/)
+      await expect(mensagemAoTutor(c, await execucao(), 'aluno', { material_id: materialId, pagina: 151 })).resolves.toMatch(/^[0-9a-f-]{36}$/)
+    })
+
+    it('regra 70, item 4: o aluno que nunca gerou sinal aparece no uso da turma, com as trocas do dia, a última e em que estava, sem a conversa', async () => {
+      const c = await novoCenario()
+      const semSinal = await novoUsuario(c.escolaId, 'aluno')
+      const aplicada = await aplicar(c, await novoArtefato(c))
+      const trocar = async (alunoId: string, ajuste: Record<string, unknown> = {}) => {
+        const execucaoId = await novaExecucao(c, 'turno_do_tutor', { solicitadaPor: alunoId })
+        await mensagemAoTutor(c, execucaoId, 'aluno', { aluno_id: alunoId, ...ajuste })
+        await mensagemAoTutor(c, execucaoId, 'tutor', { aluno_id: alunoId, texto: 'O que a equação balanceada diz?' })
+      }
+      // Um aluno com sinal, e outro com três trocas comuns, uma delas de outro dia, e nenhum sinal.
+      await trocar(c.alunoId)
+      await novoSinal(c, 'travou')
+      await trocar(semSinal, { criada_em: '2026-01-10T12:00:00.000Z' })
+      await trocar(semSinal, { atividade_aplicada_id: aplicada, questao: 2 })
+      await trocar(semSinal, { atividade_aplicada_id: aplicada, questao: 5 })
+
+      // A leitura que a rota faz: só colunas de contagem, hora e referência, pelo índice parcial das mensagens do aluno.
+      const { rows } = await cliente.query<{ aluno_id: string; trocas_hoje: string; atividade_aplicada_id: string | null; questao: number | null }>(
+        `select distinct on (m.aluno_id) m.aluno_id,
+           count(*) filter (where m.criada_em >= date_trunc('day', now())) over (partition by m.aluno_id) as trocas_hoje,
+           m.atividade_aplicada_id, m.questao
+         from mensagem_tutor m
+         where m.escola_id = $1 and m.ano_letivo_id = $2 and m.turma_id = $3 and m.autor = 'aluno'
+         order by m.aluno_id, m.criada_em desc`,
+        [c.escolaId, c.anoLetivoId, c.turmaId],
+      )
+      const porAluno = new Map(rows.map((linha) => [linha.aluno_id, linha]))
+      expect(porAluno.size).toBe(2)
+      expect(porAluno.get(semSinal)).toEqual({ aluno_id: semSinal, trocas_hoje: '2', atividade_aplicada_id: aplicada, questao: 5 })
+      expect(porAluno.get(c.alunoId)).toMatchObject({ trocas_hoje: '1', atividade_aplicada_id: null, questao: null })
+      // E ele não tem sinal nenhum: sem o uso, o professor não o veria.
+      const { rows: sinais } = await cliente.query<{ total: string }>('select count(*) as total from sinal_tutor where escola_id = $1 and aluno_id = $2', [c.escolaId, semSinal])
+      expect(sinais).toEqual([{ total: '0' }])
+      const { rows: indice } = await cliente.query<{ indexdef: string }>("select indexdef from pg_indexes where tablename = 'mensagem_tutor' and indexname = 'mensagem_tutor_trocas_idx'")
+      expect(indice[0]?.indexdef).toMatch(/\(escola_id, turma_id, criada_em, aluno_id\) WHERE \(autor = 'aluno'::text\)$/)
+    })
+
     it('D38 e D41: o freio e o pacote do Tutor são configuração da escola, nulos por padrão e nunca zero', async () => {
       const c = await novoCenario()
       await cliente.query('insert into configuracao_operacional_escola (escola_id) values ($1)', [c.escolaId])
@@ -981,21 +1371,27 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
       ])
     })
 
-    it('regra 20 contra regra 30, item 4: nas tarefas do Tutor, `entrada` e `saida` ficam nulas; nas outras, guardam o que foi e voltou', async () => {
+    it('regra 20 contra regra 30, item 4: `entrada` e `saida` ficam nulas onde a chamada leva conversa de pessoa (o Tutor e a mensagem do professor ao Assistente); nas outras, guardam o que foi e voltou', async () => {
       const c = await novoCenario()
       const doTutor = { tarefa: 'turno_do_tutor', funcao: 'tutor_com_o_aluno', perfil: 'rapido', aluno_id: c.alunoId }
-      const semTextoDeAluno = { codigo: '23514', restricao: 'consumo_ia_sem_texto_de_aluno' }
+      const semTextoDeAluno = { codigo: '23514', restricao: 'consumo_ia_sem_conversa_de_pessoa' }
       const conversa = JSON.stringify({ mensagem: 'não consigo achar o reagente limitante, e meus pais brigaram ontem' })
       expect(await recusa(consumir(c, { ...doTutor, entrada: conversa })), 'entrada').toEqual(semTextoDeAluno)
       expect(await recusa(consumir(c, { ...doTutor, saida: JSON.stringify({ resposta: 'O que a equação diz?' }) })), 'saida').toEqual(semTextoDeAluno)
       // Sem aluno e na função dos sinais a regra é a mesma: o que prende é a função, e não o campo do aluno.
       expect(await recusa(consumir(c, { tarefa: 'turno_do_tutor', funcao: 'sinais_para_o_professor', perfil: 'rapido', entrada: conversa })), 'sinais').toEqual(semTextoDeAluno)
       await expect(consumir(c, doTutor)).resolves.toMatchObject({ rowCount: 1 })
+      // A conversa do professor com o Assistente também não é copiada: fica em `mensagem_agente`, que só ele lê.
+      const doProfessor = JSON.stringify({ texto: 'monta uma lista para o 2ºB, o João e a Ana estão com dificuldade' })
+      expect(await recusa(consumir(c, { tarefa: 'propor_ferramenta', perfil: 'rapido', entrada: doProfessor })), 'propor_ferramenta, entrada').toEqual(semTextoDeAluno)
+      expect(await recusa(consumir(c, { tarefa: 'propor_ferramenta', perfil: 'rapido', saida: JSON.stringify({ texto: 'Quer abrir a ferramenta?' }) })), 'propor_ferramenta, saida').toEqual(semTextoDeAluno)
+      await expect(consumir(c, { tarefa: 'propor_ferramenta', perfil: 'rapido' })).resolves.toMatchObject({ rowCount: 1 })
       await expect(consumir(c, { ...doTutor, origem: 'regra_fixa', modelo: 'regra-fixa', tentativas: 0 })).resolves.toMatchObject({ rowCount: 1 })
       // A geração de atividade guarda a entrada e a saída: é o que responde "por que a IA disse isso?".
       await expect(consumir(c, { entrada: JSON.stringify({ tema: 'Reagente limitante' }), saida: JSON.stringify({ tipo: 'atividade_objetiva' }) })).resolves.toMatchObject({ rowCount: 1 })
       const { rows } = await cliente.query<{ funcao: string; com_conteudo: boolean }>('select funcao, (entrada is not null or saida is not null) as com_conteudo from consumo_ia where escola_id = $1 group by 1, 2 order by 1', [c.escolaId])
       expect(rows).toEqual([
+        { funcao: 'conversa_e_ferramentas', com_conteudo: false },
         { funcao: 'conversa_e_ferramentas', com_conteudo: true },
         { funcao: 'tutor_com_o_aluno', com_conteudo: false },
       ])

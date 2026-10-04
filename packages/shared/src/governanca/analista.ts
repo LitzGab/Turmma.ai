@@ -3,7 +3,7 @@ import { esquemaHabilidade } from '../assistente/conteudo.js'
 import { esquemaSerie } from '../estrutura/serie.js'
 import { esquemaAcertoPorHabilidade } from '../atividade/prova.js'
 import { esquemaChaveEnvio } from '../time/chave-envio.js'
-import type { TipoDeSinal } from '../tutor/sinal.js'
+import type { TipoDeSinal, TipoDeSinalDeTrabalho } from '../tutor/sinal.js'
 
 /**
  * O Analista de desempenho escolar (MVP, A5; D34, D45, D57, D64; regra 70, itens 7 a 9): `GET /v1/analista/resumo`,
@@ -84,6 +84,9 @@ export type AlertaDoAnalista = z.infer<typeof esquemaAlertaDoAnalista>
 const contagem = z.number().int().nonnegative()
 const sinaisSomados = z.strictObject({ travou: contagem, resposta_pronta: contagem, duvida_repetida: contagem, atencao_humana: contagem } satisfies Record<TipoDeSinal, z.ZodNumber>)
 
+/** Os sinais de trabalho somados numa turma. **Sem `atencao_humana`**: numa turma, a contagem dele aponta poucos alunos, e esse aviso é só do professor (D36). */
+const sinaisDeTrabalhoSomados = z.strictObject({ travou: contagem, resposta_pronta: contagem, duvida_repetida: contagem } satisfies Record<TipoDeSinalDeTrabalho, z.ZodNumber>)
+
 /**
  * O conteúdo do resumo (`resumo_do_analista.conteudo`): o período, os números da escola, os recortes com grupo mínimo,
  * os recortes que ficaram de fora e os alertas. É validado na saída do modelo e de novo antes de gravar (regra 30, item 7).
@@ -138,16 +141,21 @@ export type ConsultaAnalistaNominal = z.infer<typeof esquemaConsultaAnalistaNomi
 
 /**
  * Resposta de `GET /v1/analista/nominal`: o detalhe de **uma turma**, que identifica os professores dela. Traz os
- * professores com vínculo confirmado e a disciplina de cada um, o acerto por habilidade da turma nos lotes aprovados, as
- * entregas por estado e os sinais do Tutor por tipo. **Não traz aluno**: o desempenho por aluno é
- * `GET /v1/turmas/:id/desempenho`, com a finalidade e a auditoria dele. Não há ordenação nem comparação entre professores.
+ * professores com vínculo confirmado e a disciplina de cada um, o acerto por habilidade da turma nos lotes aprovados e os
+ * sinais de trabalho do Tutor por tipo.
+ *
+ * O que **não** traz, de propósito:
+ * - aluno: o desempenho por aluno é `GET /v1/turmas/:id/desempenho`, com a finalidade e a auditoria dele;
+ * - a contagem de `atencao_humana`: só existe somada na escola inteira, no resumo;
+ * - quantas entregas a turma tem pendentes, aprovadas ou rejeitadas: ao lado do professor nomeado, seria medir o uso
+ *   que ele faz da ferramenta, e adoção nominal por professor não existe (D64; regra 70, item 9);
+ * - ordenação e comparação entre professores (D45).
  */
 export const esquemaRespostaAnalistaNominal = z.strictObject({
   turma: z.strictObject({ id: z.uuid(), nome: z.string().min(1), serie: esquemaSerie }),
   professores: z.array(z.strictObject({ id: z.uuid(), nome: z.string().min(1), disciplina: z.strictObject({ id: z.uuid(), nome: z.string().min(1) }) })).max(40),
   lotesAprovados: z.number().int().nonnegative(),
   porHabilidade: z.array(esquemaAcertoPorHabilidade).max(60),
-  entregas: z.strictObject({ pendentes: z.number().int().nonnegative(), aprovadas: z.number().int().nonnegative(), rejeitadas: z.number().int().nonnegative() }),
-  sinais: sinaisSomados,
+  sinais: sinaisDeTrabalhoSomados,
 })
 export type RespostaAnalistaNominal = z.infer<typeof esquemaRespostaAnalistaNominal>

@@ -62,14 +62,14 @@ export const FUNCOES = {
     autonomia: 2,
     altoRisco: true,
     fazSozinha: 'Conduz o aluno por perguntas, sem entregar a resposta pronta, restrito ao material da turma e citando a página.',
-    esperaAprovacao: 'Responde em tempo real, supervisionado pelo professor da turma, sem aprovação resposta por resposta (D47).',
+    esperaAprovacao: 'Responde na hora, sem que o professor aprove cada resposta. O professor da turma acompanha: vê quem está usando, quanto e em que atividade, e recebe os avisos.',
   },
   sinais_para_o_professor: {
     agente: 'tutor',
     nome: 'Sinais para o professor',
     autonomia: 2,
     altoRisco: true,
-    fazSozinha: 'Avisa o professor da turma quando um aluno travou, pediu a resposta pronta ou repetiu a mesma dúvida.',
+    fazSozinha: 'Avisa o professor da turma quando um aluno travou, pediu a resposta pronta ou repetiu a mesma dúvida, e quando um aluno escreveu sobre um assunto pessoal delicado e precisa da atenção de um adulto. Neste último aviso, o professor não recebe o que o aluno escreveu.',
     esperaAprovacao: 'Só avisa: não decide nada sobre o aluno. O nome do aluno chega só ao professor da turma.',
   },
   resumo_e_alerta: {
