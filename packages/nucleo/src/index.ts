@@ -270,12 +270,14 @@ export { esquemaEntradaDePlanoDeAula, gerarPlanoDeAula } from './ia/tarefas/gera
 export type { EntradaDePlanoDeAula } from './ia/tarefas/gerar-plano-de-aula.js'
 export {
   atribuiNotaOuConceito,
+  conversaPedeJulgamentoDeTextoDeAluno,
   esquemaEntradaDoAssistente,
   esquemaPropostaDoAssistente,
   esquemaSaidaDoAssistente,
   pedeJulgamentoDeTextoDeAluno,
   proporFerramenta,
   RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO,
+  turnosQuePodemIrAoModelo,
 } from './ia/tarefas/propor-ferramenta.js'
 export type { EntradaDoAssistente, PropostaDoAssistente, SaidaDoAssistente } from './ia/tarefas/propor-ferramenta.js'
 export { esquemaEntradaDoRelatorio, esquemaSaidaDoRelatorio, relatorioDaCorrecao } from './ia/tarefas/relatorio-da-correcao.js'
