@@ -146,7 +146,13 @@ describe('guarda de cor em apps/web/src (U3)', () => {
     const nomes = conteudos.map(({ nome }) => nome)
     expect(nomes, 'a varredura não está achando os arquivos da web').toContain('componentes/Botao.tsx')
     expect(nomes.filter((nome) => nome.startsWith('paginas/') || nome.startsWith('areas/')).length).toBeGreaterThanOrEqual(10)
-    expect(conteudos.find(({ nome }) => nome === 'componentes/Botao.tsx')?.conteudo).toMatch(/\bbg-caramelo\b/)
+    // As classes do botão moraram em `Botao.tsx` até o MVP de apresentação; com as cinco variantes da 11.1, a tabela
+    // que o `Botao` lê fica em `botao-secundario.ts`, e é lá que o laranja da ação primária precisa estar.
+    expect(conteudos.find(({ nome }) => nome === 'componentes/botao-secundario.ts')?.conteudo).toMatch(/\bbg-caramelo\b/)
+    // As peças do MVP de apresentação (`docs/mvp-rapido.md`, 9.3) também são varridas: o selo "IA" pinta com a família
+    // `ia`, e a pasta inteira das peças de IA entra na conta.
+    expect(conteudos.find(({ nome }) => nome === 'componentes/ia/AssinaturaIA.tsx')?.conteudo).toMatch(/\bbg-ia-cx\b/)
+    expect(nomes.filter((nome) => nome.startsWith('componentes/ia/') && nome.endsWith('.tsx')).length).toBeGreaterThanOrEqual(10)
     const reprovadas = conteudos.flatMap(({ nome, conteudo }) => classesReprovadas(nome, conteudo))
     expect(reprovadas, 'troque pelo token da D72 (Tech Spec da A0, seção 9; docs/interface.md 9.9)').toEqual([])
   })
