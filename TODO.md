@@ -695,6 +695,11 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 O MVP de apresentação corre com dado sintético (D71, D77). Os revisores apontaram o que precisa existir antes de
 qualquer dado real:
 
+- [ ] **Acesso e portabilidade do titular cobrindo as tabelas da fase 3.** A rota do pedido do titular (F3,
+  `ciclo-de-vida.service.ts`) precisa alcançar, por aluno: `mensagem_tutor`, `sinal_tutor`, `resposta_atividade`,
+  `tentativa_atividade`, `correcao`, `validacao_do_lote` (o aluno do destaque, pelo id) e `consumo_ia` com
+  `envio_externo` (o que foi a provedor externo e quando), para a pergunta de fechamento da regra 20 continuar
+  respondida por código (`privacy-guardian`, revisão da fase 3).
 - [ ] **Trava da D62 em código.** A marca "leva texto de aluno" da camada de IA não tem consumidor: texto de aluno com
   envio externo e sem contrato que vede treinamento e garanta processamento no Brasil precisa ser recusado
   (`privacy-guardian`).

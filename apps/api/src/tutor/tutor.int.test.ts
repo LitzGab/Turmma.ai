@@ -1,5 +1,6 @@
 import { MENSAGEM_DE_ASSUNTO_DELICADO, MENSAGEM_DE_RISCO_A_VIDA, type ExecutorNoProcesso } from '@educa/nucleo'
 import { esquemaRespostaConversaDoTutor, esquemaRespostaMemoriaDoTutor, esquemaRespostaSinais, esquemaRespostaUsoDoTutor, TROCAS_POR_DIA_PADRAO_DO_TUTOR, type ChaveDeFuncao } from '@educa/shared'
+import type { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
@@ -33,6 +34,8 @@ import { variacaoDoPdf } from '../../test/material-de-teste.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste.js'
 import { TETO_DE_PEDIDOS_DE_IA_POR_USUARIO } from '../assistente/limite-de-pedidos-de-ia.js'
 import { EXECUTOR_DE_AGENTE } from '../ia/ia.module.js'
+import { CLIENTE_REDIS_CACHE } from '../limite.module.js'
+import { CLIENTE_REDIS_LOGIN } from '../sessao/sessao.module.js'
 import { TROCAS_SEGUIDAS_PARA_TRAVOU } from './sinais-do-turno.js'
 import { SupervisaoDoTutorRepository } from './supervisao.repository.js'
 import { TutorDoAlunoRepository } from './tutor.repository.js'
@@ -106,7 +109,29 @@ describe('Tutor e sinais', () => {
     await sql(`update vinculo set estado = 'encerrado', motivo_encerramento = 'realocacao', encerrado_em = now() where escola_id = $1 and usuario_id = $2 and turma_id = $3`, [escola.escolaId, aluno.usuarioId, escola.turma])
     await sql(`insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`, [escola.escolaId, escola.anoLetivoId, aluno.usuarioId, escola.outraTurma, escola.coordenacao.usuarioId])
   }
-  /** Onde a palavra marcada aparece fora de `mensagem_tutor`: sinal, execução, consumo, auditoria e log. */
+  /** Os valores de uma chave do Redis, como texto, pelo tipo dela. */
+  const valoresNoRedis = async (redis: Redis, chave: string): Promise<(string | null)[]> => {
+    const tipo = await redis.type(chave)
+    if (tipo === 'string') return [await redis.get(chave)]
+    if (tipo === 'hash') return Object.entries(await redis.hgetall(chave)).flat()
+    if (tipo === 'list') return redis.lrange(chave, 0, -1)
+    if (tipo === 'set') return redis.smembers(chave)
+    if (tipo === 'zset') return redis.zrange(chave, '0', '-1')
+    if (tipo === 'stream') return (await redis.xrange(chave, '-', '+')).flatMap(([, campos]) => campos)
+    return []
+  }
+  /** Se a palavra marcada está em alguma chave ou valor do Redis: o de fila (sessão, limites, leitura do lote) e o de cache. */
+  const estaNoRedis = async (redis: Redis, marca: string): Promise<boolean> => {
+    const tem = (textos: readonly (string | null)[]) => textos.some((texto) => texto?.toLowerCase().includes(marca.toLowerCase()) === true)
+    let cursor = '0'
+    do {
+      const [proximo, chaves] = await redis.scan(cursor, 'COUNT', 1000)
+      cursor = proximo
+      for (const chave of chaves) if (tem([chave]) || tem(await valoresNoRedis(redis, chave))) return true
+    } while (cursor !== '0')
+    return false
+  }
+  /** Onde a palavra marcada aparece fora de `mensagem_tutor`: sinal, execução, consumo, auditoria, log e Redis. */
   const ondeVazou = async (escolaId: string, marca: string): Promise<string[]> => {
     const achados: string[] = []
     for (const tabela of ['sinal_tutor', 'execucao_agente', 'consumo_ia', 'auditoria']) {
@@ -114,6 +139,9 @@ describe('Tutor e sinais', () => {
       if (Number(rows[0]?.total) > 0) achados.push(tabela)
     }
     if (linhasDeLog.some((linha) => linha.toLowerCase().includes(marca.toLowerCase()))) achados.push('log')
+    for (const [nome, token] of [['redis de fila', CLIENTE_REDIS_LOGIN], ['redis de cache', CLIENTE_REDIS_CACHE]] as const) {
+      if (await estaNoRedis(api.app.get<Redis>(token), marca)) achados.push(nome)
+    }
     return achados
   }
 
