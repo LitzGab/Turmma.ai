@@ -32,14 +32,13 @@ const AreaDaOperacao = lazy(() => import('./operacao/rotas'))
  * A galeria das peças do MVP de apresentação, também só por `import()`: vira o chunk `galeria-*.js`, e as peças de
  * `componentes/ia/` não entram no primeiro carregamento por causa dela (`apps/web/nome-dos-chunks.ts`).
  *
- * Ela está no build porque o e2e roda sobre ele, e é pública: não tem dado nenhum, só peças com texto inventado. O build
- * feito com `VITE_SEM_GALERIA=1` não a leva: a rota some, o `import()` sai do código e o endereço responde "Página não
- * encontrada".
- *
- * TODO(staging): o build de staging e o de produção passam `VITE_SEM_GALERIA=1` (no `infra/docker/web.Dockerfile`, por
- * `ARG`, com o compose de teste sem ele, para o e2e continuar com a galeria). Sem isso a galeria vai junto, sem link.
+ * **Só existe no build feito com `VITE_COM_GALERIA=1`**: o `.env.example`, que é o ambiente da máquina e da esteira, liga a
+ * variável, porque o e2e roda sobre aquele build (como o `ROTAS_SINTETICAS` da API). Com qualquer outro valor — o de
+ * staging e o de produção —, a rota some, o `import()` sai do código e o endereço responde "Página não encontrada". O
+ * compose não sobe sem a variável definida, e o build solto sem ela não leva a galeria: o esquecimento falha para o
+ * lado seguro. No servidor de desenvolvimento, `VITE_COM_GALERIA=1 npx vite`.
  */
-const Galeria = import.meta.env.VITE_SEM_GALERIA === '1' ? undefined : lazy(() => import('./galeria/Galeria'))
+const Galeria = import.meta.env.VITE_COM_GALERIA === '1' ? lazy(() => import('./galeria/Galeria')) : undefined
 
 /** O caminho da área, repetido aqui para a entrada não importar nada de `./operacao/`. */
 const BASE_DA_OPERACAO = '/operacao'

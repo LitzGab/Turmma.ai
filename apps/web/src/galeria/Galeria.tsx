@@ -39,7 +39,7 @@ import { useTituloDaTela } from '../titulo'
  *
  * Não chama a API e não tem sessão: tudo aqui é dado inventado, escrito neste arquivo (regra 20, item 17). O e2e roda
  * sobre o build de produção, e por isso a galeria está nele — num pedaço próprio (`galeria-*.js`), que só quem digita o
- * endereço baixa (`apps/web/nome-dos-chunks.ts`), e que o build com `VITE_SEM_GALERIA=1` não leva (`src/rotas.tsx`).
+ * endereço baixa (`apps/web/nome-dos-chunks.ts`), e que só o build com `VITE_COM_GALERIA=1` leva (`src/rotas.tsx`).
  */
 
 const QUIMICA = '0190a1b2-0000-7000-8000-000000000001'
@@ -58,8 +58,12 @@ const CITACOES: readonly Citacao[] = [
   PAGINA_142,
 ]
 
-/** O texto como o modelo o devolve: parágrafos, uma lista e, de propósito, um pedaço com cara de HTML, que fica escrito. */
-const TEXTO_DO_MODELO = '1. Qual a massa de CO₂ formada na queima de 24 g de carbono?\n2. Qual é o reagente limitante quando sobra oxigênio?\n\nUse <b>massa molar</b> e a proporção da equação balanceada.'
+/**
+ * O texto como o modelo o devolve: com Markdown (título, negrito, lista), que a tela limpa; com uma conta, em que o
+ * asterisco é conteúdo e fica; e, de propósito, com um pedaço com cara de HTML, que fica escrito.
+ */
+const TEXTO_DO_MODELO =
+  '### Lista de estequiometria\n\n**Questão 1.** Qual a massa de CO₂ formada na queima de 24 g de carbono?\n**Questão 2.** Qual é o reagente limitante quando sobra oxigênio?\n\n- Lembre: 2 * 12 = 24 g de carbono.\n- Use <b>massa molar</b> e a proporção da equação balanceada.'
 
 const QUANDO = '2026-09-19T13:42:00.000Z'
 
@@ -295,11 +299,15 @@ function DemonstracaoDaConfirmacao() {
   )
 }
 
-const COLUNAS: readonly [ColunaDaTabela<Registro>, ...ColunaDaTabela<Registro>[]] = [
+const COLUNAS_SEM_MENU: readonly [ColunaDaTabela<Registro>, ...ColunaDaTabela<Registro>[]] = [
   { chave: 'oQue', titulo: 'O quê', celula: (registro) => registro.oQue },
   { chave: 'funcao', titulo: 'Agente e função', celula: (registro) => <AssinaturaIA funcao={registro.funcao} /> },
   { chave: 'turma', titulo: 'Turma', celula: (registro) => registro.turma },
   { chave: 'estado', titulo: 'Aprovação', celula: (registro) => <LinhaAprovacao aprovacao={registro.aprovacao} espera="Esperando o professor" /> },
+]
+
+const COLUNAS: readonly [ColunaDaTabela<Registro>, ...ColunaDaTabela<Registro>[]] = [
+  ...COLUNAS_SEM_MENU,
   {
     chave: 'acoes',
     titulo: 'Ações',
@@ -429,7 +437,7 @@ export default function Galeria() {
         </Secao>
 
         <Secao nome="conversa" titulo="Conversa">
-          <Conversa rotulo="Conversa com o Assistente de ensino">
+          <Conversa rotulo="Conversa com o Assistente de ensino" ocupada={demorando}>
             <MensagemPessoa>monta uma atividade de estequiometria pro 2ºB, dez questões</MensagemPessoa>
             <MensagemIA agente="assistente_de_ensino">
               <Escolha
@@ -497,8 +505,12 @@ export default function Galeria() {
           <div data-rolagem="" className="flex h-64 min-w-0 flex-col overflow-y-auto rounded-cartao border border-linha px-4">
             <ul className="flex min-w-0 flex-1 flex-col gap-2 py-4">
               {DESTAQUES.map((destaque) => (
-                <li key={destaque} className="min-w-0 rounded-controle border border-linha p-3 break-words">
-                  {destaque}
+                <li key={destaque} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-controle border border-linha p-3">
+                  <span className="min-w-0 break-words">{destaque}</span>
+                  {/* Um controle em cada item: é o que o Tab alcança no meio da lista, atrás de onde a barra está. */}
+                  <Botao variante="secundario" tamanho="compacto">
+                    Abrir
+                  </Botao>
                 </li>
               ))}
             </ul>
@@ -513,6 +525,10 @@ export default function Galeria() {
 
         <Secao nome="tabela" titulo="Tabela que vira lista">
           <Tabela rotulo="O que a IA gerou e quem aprovou" colunas={COLUNAS} linhas={REGISTROS} chaveDaLinha={(registro) => registro.id} />
+          {/* A mesma tabela num lugar onde não cabe: aí, e só aí, a região que rola recebe foco. */}
+          <div data-tabela-estreita="" className="max-w-[280px]">
+            <Tabela rotulo="Tabela que não cabe" colunas={COLUNAS_SEM_MENU} linhas={REGISTROS} chaveDaLinha={(registro) => registro.id} />
+          </div>
         </Secao>
 
         <Secao nome="pagina-mini" titulo="Página de origem">

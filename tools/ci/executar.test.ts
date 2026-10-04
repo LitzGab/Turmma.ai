@@ -40,6 +40,12 @@ describe('executarEtapas', () => {
     expect(avisos[0]?.duracaoMs).toBeGreaterThanOrEqual(300)
   })
 
+  it('a etapa leva o ambiente dela ao processo, por cima do que já havia, e a etapa sem ambiente não o herda', async () => {
+    const confere = (esperado: string): Etapa['argumentos'] => ['-e', `process.exit(process.env.EDUCA_ETAPA_DE_TESTE === ${JSON.stringify(esperado)} && process.env.PATH ? 0 : 3)`]
+    expect(await executarEtapas([{ nome: 'com ambiente', comando: process.execPath, argumentos: confere('1'), ambiente: { EDUCA_ETAPA_DE_TESTE: '1' } }])).toBe(0)
+    expect(await executarEtapas([{ nome: 'sem ambiente', comando: process.execPath, argumentos: confere('1') }])).toBe(3)
+  })
+
   it('processo morto por sinal conta como falha', async () => {
     const morto: Etapa = { nome: 'morto', comando: 'node', argumentos: ['-e', 'process.kill(process.pid, "SIGKILL")'] }
     expect(await executarEtapas([morto])).not.toBe(0)

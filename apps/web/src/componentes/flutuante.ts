@@ -7,9 +7,11 @@ import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 're
  * item 2a).
  *
  * A posição é **fixa na janela**, e não absoluta no fluxo: dentro de um contêiner que rola ou corta (a tabela que rola
- * de lado, o `Dialogo`, a lista da conversa) o que flutua sairia cortado. Fixo, ele fica por cima de tudo, e é medido de
- * novo quando a página rola ou a janela muda de tamanho. O que isso não cobre: um ancestral com `transform` ou `filter`
- * vira a referência do que é fixo, e a posição sai errada. O produto não tem nenhum (9.5: sem animação que desloca).
+ * de lado, o `Dialogo`, a lista da conversa) o que flutua sairia cortado. Fixo, ele fica por cima de tudo. **Quando algo
+ * rola por fora dele, ele fecha**, em vez de correr atrás do botão: remedir a cada quadro de rolagem é um ouvinte
+ * contínuo, e no Chromebook de entrada o menu andaria um quadro atrás do botão (regra 50, item 1). Quando a janela muda
+ * de tamanho, é medido de novo. O que isso não cobre: um ancestral com `transform` ou `filter` vira a referência do que
+ * é fixo, e a posição sai errada. O produto não tem nenhum (9.5: sem animação que desloca).
  */
 
 /** O respiro entre o que flutua e a borda da janela: a margem da página no celular (9.3). */
@@ -84,7 +86,10 @@ export function estiloDoFlutuante(posicao: PosicaoDoFlutuante | undefined): { le
 
 export interface OpcoesDoFlutuante {
   readonly aberto: boolean
-  /** O toque ou o clique fora pede para fechar. O Esc é de quem desenha, que sabe para onde o foco volta. */
+  /**
+   * O toque ou o clique fora, e a rolagem por fora, pedem para fechar. Quem desenha decide para onde o foco vai: o que
+   * flutua some com o foco dentro, e ele não pode cair no `body`. O Esc também é de quem desenha.
+   */
   readonly aoFechar: () => void
   readonly alinhamento: 'inicio' | 'fim'
   readonly lado: 'auto' | 'acima' | 'abaixo'
@@ -94,8 +99,8 @@ export interface OpcoesDoFlutuante {
 /**
  * A âncora (o elemento que envolve o botão e o que flutua) e a posição medida. Mede antes de pintar
  * (`useLayoutEffect`), para o flutuante não aparecer num lugar e pular para outro, e de novo quando a janela muda de
- * tamanho ou qualquer coisa rola por fora dele. Fecha no `pointerdown` fora da âncora, que vale para mouse, toque e
- * caneta. `posicao` é `undefined` até a primeira medida.
+ * tamanho. Fecha no `pointerdown` fora da âncora, que vale para mouse, toque e caneta, e **quando qualquer coisa rola por
+ * fora dele**. `posicao` é `undefined` até a primeira medida.
  */
 export function useFlutuante<Ancora extends HTMLElement>({ aberto, aoFechar, alinhamento, lado, altura }: OpcoesDoFlutuante): {
   readonly ancora: RefObject<Ancora | null>
@@ -111,10 +116,9 @@ export function useFlutuante<Ancora extends HTMLElement>({ aberto, aoFechar, ali
 
   useLayoutEffect(() => {
     if (!aberto) return
-    function medir(evento?: Event): void {
+    function medir(): void {
       const elemento = ancora.current
-      // A rolagem de dentro do próprio flutuante (o menu comprido) não muda onde ele está.
-      if (elemento === null || (evento?.type === 'scroll' && evento.target instanceof Node && elemento.contains(evento.target))) return
+      if (elemento === null) return
       // O botão é o primeiro filho da âncora: é ele que se mede, e não a âncora, que pode quebrar de linha no meio do texto.
       const caixa = (elemento.firstElementChild ?? elemento).getBoundingClientRect()
       const nova = posicaoDoFlutuante({
@@ -130,11 +134,8 @@ export function useFlutuante<Ancora extends HTMLElement>({ aberto, aoFechar, ali
     }
     medir()
     window.addEventListener('resize', medir)
-    // Na captura: a rolagem de um contêiner não sobe até a janela, e é justamente ela que tira o botão do lugar.
-    window.addEventListener('scroll', medir, true)
     return () => {
       window.removeEventListener('resize', medir)
-      window.removeEventListener('scroll', medir, true)
       definirPosicao(undefined)
     }
   }, [aberto, alinhamento, lado, altura])
@@ -144,8 +145,18 @@ export function useFlutuante<Ancora extends HTMLElement>({ aberto, aoFechar, ali
     function aoApontar(evento: PointerEvent): void {
       if (evento.target instanceof Node && ancora.current?.contains(evento.target) === false) fechar.current()
     }
+    function aoRolar(evento: Event): void {
+      // A rolagem de dentro do próprio flutuante (o menu comprido) não o tira do lugar. Qualquer outra tira o botão.
+      if (evento.target instanceof Node && ancora.current?.contains(evento.target) === true) return
+      fechar.current()
+    }
     document.addEventListener('pointerdown', aoApontar)
-    return () => document.removeEventListener('pointerdown', aoApontar)
+    // Na captura: a rolagem de um contêiner não sobe até a janela, e é justamente ela que tira o botão do lugar.
+    window.addEventListener('scroll', aoRolar, true)
+    return () => {
+      document.removeEventListener('pointerdown', aoApontar)
+      window.removeEventListener('scroll', aoRolar, true)
+    }
   }, [aberto])
 
   return { ancora, posicao }

@@ -7,6 +7,8 @@ export interface Etapa {
   nome: string
   comando: string
   argumentos: readonly string[]
+  /** Variáveis de ambiente desta etapa, por cima das do processo: o build da web que leva a galeria das peças. */
+  ambiente?: Readonly<Record<string, string>>
   /** Chamado quando a etapa termina, verde ou vermelha, com a duração dela: é por aqui que o e2e mede os testes. */
   aoTerminar?: (codigo: number, duracaoMs: number) => void
 }
@@ -14,7 +16,7 @@ export interface Etapa {
 export function rodarEtapa(etapa: Etapa): Promise<number> {
   process.stdout.write(`\n▶ ${etapa.nome}\n`)
   return new Promise((resolver) => {
-    const processo = spawn(etapa.comando, etapa.argumentos, { cwd: raizRepositorio, stdio: 'inherit' })
+    const processo = spawn(etapa.comando, etapa.argumentos, { cwd: raizRepositorio, stdio: 'inherit', ...(etapa.ambiente === undefined ? {} : { env: { ...process.env, ...etapa.ambiente } }) })
     processo.on('error', () => resolver(127))
     // Morto por sinal também é falha: `code` nulo não pode virar sucesso.
     processo.on('close', (codigo) => resolver(codigo ?? 1))
