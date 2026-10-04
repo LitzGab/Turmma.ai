@@ -339,6 +339,31 @@ describe('atividade aplicada', () => {
       expect(await encerrarAtividade(rotas, c.professora, id)).not.toBeNull()
     })
 
+    it('encerrar uma turma de 40 alunos com 20 questões corrige as 40 tentativas dentro do request, bem abaixo de dois segundos', async () => {
+      const c = await montarEscolaComAssistente(api, bancada)
+      const gabarito = Array.from({ length: 20 }, (_, i) => i % 4)
+      const turma = await alunosComSessao(bancada, c, c.turma, Array.from({ length: 39 }, (_, i) => `Aluno sintético ${String(i + 1).padStart(2, '0')}`))
+      const id = await aplicarAtividade(rotas, c.professora, await criarAtividade(bancada, c, { conteudo: conteudoDeTeste(c.materialId, 'Lista sintética de vinte questões', gabarito) }), c.turma)
+      // As 800 respostas entram direto no banco: o que se mede é o encerramento, não os 800 `PUT`.
+      const alunos = [c.aluno, ...turma].map((aluno) => aluno.usuarioId)
+      await sql(`insert into tentativa_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, enviada_em) select $1, $2, $3, aluno, now() from unnest($4::uuid[]) as aluno`, [c.escolaId, c.anoLetivoId, id, alunos])
+      await sql(
+        `insert into resposta_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, questao, alternativa)
+         select $1, $2, $3, aluno, questao, (questao + posicao) % 4 from unnest($4::uuid[]) with ordinality as a(aluno, posicao), generate_series(1, 20) as questao`,
+        [c.escolaId, c.anoLetivoId, id, alunos],
+      )
+      const inicio = performance.now()
+      const resposta = await rotas.encerrar(c.professora, id)
+      const duracaoMs = performance.now() - inicio
+      expect(resposta.status).toBe(200)
+      expect(await contar('correcao', 'atividade_aplicada_id = $1', [id])).toBe(40)
+      // A alternativa marcada é (questão + posição) % 4, e o gabarito, (questão − 1) % 4: acerta tudo quem tem posição ≡ 3 (mod 4), dez dos quarenta.
+      expect(await contar('correcao', 'atividade_aplicada_id = $1 and acertos = 20', [id])).toBe(10)
+      expect(await contar('correcao', 'atividade_aplicada_id = $1 and acertos = 0', [id])).toBe(30)
+      if (process.env['EDUCA_MEDIR_ENCERRAR'] !== undefined) process.stdout.write(`encerrar 40 x 20: ${duracaoMs.toFixed(0)} ms\n`)
+      expect(duracaoMs).toBeLessThan(2000)
+    })
+
     it('se ninguém abriu a atividade, ela encerra sem lote: faltar não é ficar em branco', async () => {
       const id = await aplicada()
       const encerrada = esquemaRespostaAtividadeEncerrada.parse((await rotas.encerrar(a.professora, id)).corpo)
@@ -364,8 +389,9 @@ describe('atividade aplicada', () => {
       const c = await montarEscolaComAssistente(api, bancada)
       const id = await aplicarAtividade(rotas, c.professora, await criarAtividade(bancada, c), c.turma)
       await responderProva(rotas, c.aluno, id, [0, 1, 2, 3, 0])
-      await encerrarAtividade(rotas, c.professora, id)
+      const entregaId = (await encerrarAtividade(rotas, c.professora, id)) as string
       expect(esquemaRespostaMinhasAtividades.parse((await rotas.minhas(c.aluno)).corpo).itens).toHaveLength(1)
+      await rotas.correcao(c.professora, id)
 
       // O ano vira: 2026 encerra e 2027 entra em curso. Os vínculos de 2026 ficam como estavam, de propósito: quem
       // segura a atividade do ano anterior é o filtro de ano letivo, e não o fim do vínculo.
@@ -380,12 +406,18 @@ describe('atividade aplicada', () => {
         [await rotas.correcao(c.professora, id), await rotas.correcao(c.professora, inexistente)],
         [await rotas.encerrar(c.professora, id), await rotas.encerrar(c.professora, inexistente)],
         [await rotas.listar(c.professora, `?turmaId=${c.turma}`), await rotas.listar(c.professora, `?turmaId=${inexistente}`)],
+        [await rotas.aprovarLote(c.professora, entregaId), await rotas.aprovarLote(c.professora, inexistente)],
+        [await rotas.desempenho(c.professora, c.turma), await rotas.desempenho(c.professora, inexistente)],
+        [await rotas.desempenho(c.coordenacao, c.turma, '?finalidade=acompanhamento_pedagogico'), await rotas.desempenho(c.coordenacao, inexistente, '?finalidade=acompanhamento_pedagogico')],
       ] as const) {
         expect(chamada.status).toBe(doInexistente.status)
         expect(chamada.corpo.erro?.codigo ?? chamada.corpo['itens']).toEqual(doInexistente.corpo.erro?.codigo ?? doInexistente.corpo['itens'])
       }
       expect(erro(await rotas.prova(c.aluno, id))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
       expect((await rotas.listar(c.professora, `?turmaId=${c.turma}`)).corpo['itens']).toEqual([])
+      expect(erro(await rotas.aprovarLote(c.professora, entregaId))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+      expect(await sql('select estado from entrega where id = $1', [entregaId])).toEqual([{ estado: 'pendente' }])
+      expect(await contar('auditoria', `acao = 'turma.desempenho_lido' and escola_id = $1`, [c.escolaId])).toBe(0)
     })
   })
 

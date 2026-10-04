@@ -35,8 +35,9 @@ export class LeituraDoLote {
 
   /** Registra que a pessoa da sessão recebeu o lote com esta marca. */
   async registrar(entregaId: string, marca: string): Promise<void> {
+    const chave = this.chave(entregaId)
     try {
-      await this.cliente.set(this.chave(entregaId), marca, 'PX', VALIDADE_DA_LEITURA_DO_LOTE_MS)
+      await this.cliente.set(chave, marca, 'PX', VALIDADE_DA_LEITURA_DO_LOTE_MS)
     } catch {
       logger.warn('atividade.leitura_do_lote_nao_registrada')
     }
@@ -44,8 +45,10 @@ export class LeituraDoLote {
 
   /** A marca do que a pessoa da sessão leu por último deste lote, se leu e a leitura ainda vale. */
   async marcaLida(entregaId: string): Promise<string | undefined> {
+    // Fora do `try`: sem sessão de pessoa, quem recusa é a sessão, e não o Redis.
+    const chave = this.chave(entregaId)
     try {
-      return (await this.cliente.get(this.chave(entregaId))) ?? undefined
+      return (await this.cliente.get(chave)) ?? undefined
     } catch {
       throw new ErroDeDominio(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO)
     }
