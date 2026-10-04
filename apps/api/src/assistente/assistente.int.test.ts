@@ -136,6 +136,35 @@ describe('Assistente de ensino', () => {
       expect(await contarNaEscola(bancada, 'entrega', a.escolaId)).toBe(entregasAntes)
     })
 
+    it('"só conversar" é a outra opção da proposta: a resposta ao último pedido vem em texto, com a página citada, e sem a marca nada muda', async () => {
+      const pedido = 'monta uma atividade sobre reagente limitante'
+      const proposta = await execucaoTerminada(api, a.professora, await dispararExecucao(api, a.professora, '/v1/assistente/mensagens', mensagem(a, pedido)))
+      expect(proposta.resultado?.mensagem?.['tipo']).toBe('proposta_de_ferramenta')
+      const artefatosAntes = await contarNaEscola(bancada, 'artefato', a.escolaId)
+
+      const execucaoId = await dispararExecucao(api, a.professora, '/v1/assistente/mensagens', mensagem(a, 'Só conversar', { resposta: 'so_conversar' }))
+      const resposta = await execucaoTerminada(api, a.professora, execucaoId)
+      expect(resposta).toMatchObject({ estado: 'concluida', resultado: { tipo: 'mensagem', mensagem: { autor: 'agente', tipo: 'texto' } } })
+      // Respondeu ao pedido anterior, com o material: a fala "só conversar" não tem assunto nenhum.
+      const citacoes = resposta.resultado?.mensagem?.['citacoes'] as { materialId: string; pagina: number; trecho: string }[]
+      expect(citacoes).toHaveLength(1)
+      expect(citacoes[0]?.materialId).toBe(a.materialId)
+      expect(String(resposta.resultado?.mensagem?.['texto'])).toMatch(/reagente limitante/iu)
+      // A marca fica com a execução, em lista fechada; a fala, só na conversa. Nada foi gerado.
+      const { rows } = await sql('select entrada from execucao_agente where id = $1', [execucaoId])
+      expect(rows).toEqual([{ entrada: { tarefa: 'propor_ferramenta', resposta: 'so_conversar' } }])
+      expect(await contarNaEscola(bancada, 'artefato', a.escolaId)).toBe(artefatosAntes)
+      expect((await conversaDe(a.professora)).mensagens.slice(-4).map((item) => [item.autor, item.tipo])).toEqual([['usuario', 'texto'], ['agente', 'proposta_de_ferramenta'], ['usuario', 'texto'], ['agente', 'texto']])
+
+      // O mesmo texto de pedido, com a marca, nunca vira proposta; sem a marca, continua virando.
+      const comMarca = await execucaoTerminada(api, a.professora, await dispararExecucao(api, a.professora, '/v1/assistente/mensagens', mensagem(a, pedido, { resposta: 'so_conversar' })))
+      expect(comMarca.resultado?.mensagem?.['tipo']).toBe('texto')
+      const semMarca = await execucaoTerminada(api, a.professora, await dispararExecucao(api, a.professora, '/v1/assistente/mensagens', mensagem(a, pedido)))
+      expect(semMarca.resultado?.mensagem?.['tipo']).toBe('proposta_de_ferramenta')
+      // Lista fechada: outro valor é ENTRADA_INVALIDA.
+      expect((await post(a.professora, '/v1/assistente/mensagens', mensagem(a, 'x', { resposta: 'abrir' }))).corpo.erro?.codigo).toBe('ENTRADA_INVALIDA')
+    })
+
     it('a conversa é paginada para trás, da mais antiga para a mais nova, com teto', async () => {
       const todas = await conversaDe(a.professora)
       expect(todas.mensagens.length).toBeGreaterThanOrEqual(6)

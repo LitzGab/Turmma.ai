@@ -23,6 +23,11 @@ export const esquemaEntradaDoAssistente = z.strictObject({
   /** Trechos do material que a busca achou para a mensagem; pode vir vazio. */
   trechos: z.array(esquemaTrecho).max(6),
   turnosAnteriores: z.array(z.strictObject({ autor: z.enum(['professor', 'assistente']), texto: z.string().min(1).max(2000) })).max(8),
+  /**
+   * O professor respondeu "só conversar" à proposta de ferramenta (D18): a saída é **sempre texto**, sobre o último
+   * pedido dele, e nenhuma ferramenta é proposta de novo. Ausente ou falso, a tarefa escolhe entre propor e responder.
+   */
+  semProposta: z.boolean().optional(),
 })
 export type EntradaDoAssistente = z.infer<typeof esquemaEntradaDoAssistente>
 
@@ -66,6 +71,34 @@ function numeroEntre(achado: RegExpExecArray | null, minimo: number, maximo: num
   return Number.isInteger(numero) && numero >= minimo && numero <= maximo ? numero : undefined
 }
 
+/**
+ * A resposta de quem escolheu "só conversar": texto, sobre o **último pedido** do professor (o turno anterior dele mais
+ * recente; sem turno anterior, a mensagem de agora), com a página citada quando o material tem o que dizer. Nunca proposta.
+ */
+function respostaSoEmTexto(entrada: EntradaDoAssistente): SaidaDoAssistente {
+  const pedido = entrada.turnosAnteriores.findLast((turno) => turno.autor === 'professor')?.texto ?? entrada.mensagem
+  if (PEDE_ADAPTACAO.test(normalizar(pedido))) {
+    return {
+      tipo: 'texto',
+      texto: 'Sem abrir ferramenta, então. Para adaptar, abra a atividade e escolha “Adaptar”: ela pede só o tipo de adaptação, sem nenhuma informação sobre o aluno, e a versão adaptada espera a sua aprovação.',
+      citacoes: [],
+    }
+  }
+  const frase = fatoCitadoNoTexto(extrairFatos(entrada.trechos), pedido) ?? fraseMaisProxima(frasesDoMaterial(entrada.trechos), pedido)
+  if (frase !== undefined) {
+    return {
+      tipo: 'texto',
+      texto: cortar(`Sem abrir a ferramenta, então. No material da turma, a página ${frase.pagina} diz: “${frase.frase}” Se quiser, pergunte por outro ponto do capítulo.`, 8000),
+      citacoes: [citacaoDaFrase(frase)],
+    }
+  }
+  return {
+    tipo: 'texto',
+    texto: 'Sem abrir a ferramenta, então. Não achei no material da turma um trecho sobre esse pedido: diga o assunto com outras palavras, ou pergunte por um conceito do capítulo, e eu respondo com a página.',
+    citacoes: [],
+  }
+}
+
 export const proporFerramenta = definirTarefa({
   nome: 'propor_ferramenta',
   funcao: 'conversa_e_ferramentas',
@@ -79,7 +112,10 @@ export const proporFerramenta = definirTarefa({
 
   montarPedido(entrada) {
     return {
-      instrucao: 'Responda à mensagem do professor: proponha abrir uma ferramenta, se o pedido corresponder a uma, ou responda em texto.',
+      instrucao:
+        entrada.semProposta === true
+          ? 'O professor escolheu só conversar, sem abrir ferramenta. Responda em texto ao último pedido dele (o turno anterior do professor mais recente; se não houver, a mensagem de agora), citando a página quando a resposta vier do material. A saída é do tipo "texto": não devolva "proposta_de_ferramenta".'
+          : 'Responda à mensagem do professor: proponha abrir uma ferramenta, se o pedido corresponder a uma, ou responda em texto.',
       dados: [
         dadoEmJson('serie_e_disciplina', entrada.contexto),
         ...dadosDosTrechos(entrada.trechos),
@@ -90,10 +126,13 @@ export const proporFerramenta = definirTarefa({
   },
 
   conferir(entrada, saida) {
-    return saida.tipo === 'texto' ? problemasDasCitacoes(saida.citacoes, entrada.trechos, 'Citações') : []
+    if (saida.tipo === 'texto') return problemasDasCitacoes(saida.citacoes, entrada.trechos, 'Citações')
+    // Quem escolheu só conversar não recebe a mesma pergunta de novo: proposta, aqui, é saída inválida.
+    return entrada.semProposta === true ? ['O professor escolheu só conversar: responda com "tipo": "texto", sem "proposta_de_ferramenta".'] : []
   },
 
   falso(entrada): SaidaDoAssistente {
+    if (entrada.semProposta === true) return respostaSoEmTexto(entrada)
     const texto = normalizar(entrada.mensagem)
     if (PEDE_ADAPTACAO.test(texto)) {
       // O que o professor disse sobre o aluno não é repetido: a resposta só aponta a ferramenta, que pede o tipo.

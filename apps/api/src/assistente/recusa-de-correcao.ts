@@ -42,6 +42,8 @@ export function pedeCorrecaoDeTextoDeAluno(mensagem: string): boolean {
 export const proporFerramentaDoAssistente: DefinicaoDeTarefa<EntradaDoAssistente, SaidaDoAssistente> = {
   ...proporFerramenta,
   semModelo(entrada) {
-    return pedeCorrecaoDeTextoDeAluno(entrada.mensagem) ? { tipo: 'texto', texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, citacoes: [] } : undefined
+    // Em "só conversar", a resposta é sobre o último pedido do professor: a regra olha para ele também.
+    const ultimoPedido = entrada.semProposta === true ? (entrada.turnosAnteriores.findLast((turno) => turno.autor === 'professor')?.texto ?? '') : ''
+    return pedeCorrecaoDeTextoDeAluno(`${ultimoPedido}\n${entrada.mensagem}`) ? { tipo: 'texto', texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, citacoes: [] } : undefined
   },
 }

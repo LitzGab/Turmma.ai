@@ -37,6 +37,11 @@ describe('proporFerramentaDoAssistente: a recusa é regra fixa, antes do modelo'
     expect(proporFerramentaDoAssistente).toMatchObject({ nome: 'propor_ferramenta', funcao: 'conversa_e_ferramentas', levaTextoLivreDePessoa: true })
     expect(proporFerramentaDoAssistente.semModelo?.(entrada('monta uma atividade de estequiometria'))).toBeUndefined()
     expect(proporFerramentaDoAssistente.falso(entrada('monta uma atividade sobre mol'))).toMatchObject({ tipo: 'proposta_de_ferramenta', proposta: { ferramenta: 'atividade_objetiva' } })
+    // Em "só conversar", a regra olha também para o último pedido, que é o que a resposta vai atender.
+    const soConversar = (pedido: string) => ({ ...entrada('Só conversar'), semProposta: true, turnosAnteriores: [{ autor: 'professor' as const, texto: pedido }] })
+    expect(proporFerramentaDoAssistente.semModelo?.(soConversar('corrige esta redação do aluno'))).toMatchObject({ tipo: 'texto', texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO })
+    expect(proporFerramentaDoAssistente.semModelo?.(soConversar('monta uma atividade sobre mol'))).toBeUndefined()
+    expect(proporFerramentaDoAssistente.semModelo?.({ ...soConversar('corrige esta redação do aluno'), semProposta: false })).toBeUndefined()
   })
 
   it('o pedido de corrigir redação sai com a recusa fixa, sem chamar o adaptador, sem nota, e sem repetir o texto do aluno nem no consumo', async () => {

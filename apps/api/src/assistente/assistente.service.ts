@@ -14,6 +14,7 @@ import type { AgendadorDeExecucoes } from '../ia/agendador-de-execucoes.js'
 import type { BuscaDeTrechos, TrechoDoMaterial } from '../material/busca-de-trechos.js'
 import { exigirCitacoesEntregues } from './citacoes.js'
 import { ConversaRepository, type MensagemGravada, type PerguntaDaExecucao } from './conversa.repository.js'
+import { ExecucaoDoPedidoRepository } from './execucao-do-pedido.repository.js'
 import type { LimiteDePedidosDeIa } from './limite-de-pedidos-de-ia.js'
 import { proporFerramentaDoAssistente } from './recusa-de-correcao.js'
 import { TurmaDoProfessorRepository } from './turma-do-professor.repository.js'
@@ -54,6 +55,8 @@ function turnoAnterior(mensagem: MensagemGravada): EntradaDoAssistente['turnosAn
  * - **O Assistente responde com texto, ou com a proposta de ferramenta**: a pergunta "quer abrir a ferramenta?". A
  *   proposta **não gera nada**: gerar é outro pedido, `POST /v1/ferramentas/:ferramenta/gerar`, depois de o professor
  *   escolher. A turma e a disciplina da proposta são as da mensagem dele, nunca do modelo.
+ * - **"Só conversar" é a outra opção da pergunta, com o mesmo peso**: a mensagem com `resposta: 'so_conversar'` é
+ *   respondida em texto, sobre o último pedido dele, e nunca com outra proposta. Sem a marca, nada muda.
  * - **Pedido de adaptação vira texto que aponta a ferramenta** (a Adaptação recebe só o tipo, D67), e **pedido de
  *   corrigir redação ou discursiva é recusado por regra fixa**, sem chamar modelo (D55).
  * - **O texto do professor mora só em `mensagem_agente`**: não vai para `execucao_agente.entrada`, consumo, auditoria
@@ -88,7 +91,8 @@ export class AssistenteService {
     return this.agendador.agendar({
       tarefa: proporFerramentaDoAssistente,
       chaveEnvio: pedido.chaveEnvio,
-      entradaDaExecucao: { tarefa: 'propor_ferramenta' },
+      // A marca de "só conversar" é de lista fechada, e fica com a execução; o texto da professora, só na conversa.
+      entradaDaExecucao: { tarefa: 'propor_ferramenta', ...(pedido.resposta === undefined ? {} : { resposta: pedido.resposta }) },
       aoGravar: async (tx, execucaoId) => {
         const conversa = new ConversaRepository(tx)
         await conversa.gravarDoUsuario(await conversa.garantirThread(), execucaoId, { texto: pedido.texto, turmaId, disciplinaId })
@@ -102,14 +106,20 @@ export class AssistenteService {
         const turma = await new TurmaDoProfessorRepository(this.banco).turmaComDisciplina(pergunta.turmaId, pergunta.disciplinaId)
         if (turma === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
         const mensagem = esquemaConteudoDaMensagemDoUsuario.parse(pergunta.conteudo).texto
-        const entregues = await this.trechos.buscar({ texto: mensagem, disciplinaId: pergunta.disciplinaId, limite: TRECHOS_NA_CONVERSA })
-        const anteriores = await conversa.anteriores(pergunta.id, TURNOS_ANTERIORES_NA_CONVERSA)
+        const turnosAnteriores = (await conversa.anteriores(pergunta.id, TURNOS_ANTERIORES_NA_CONVERSA)).reverse().map(turnoAnterior)
+        // "Só conversar" (D18): a marca gravada com a execução. A resposta é sobre o último pedido dela, e é para ele
+        // que se buscam os trechos: a fala "só conversar" não diz de que assunto se trata.
+        const semProposta = (await new ExecucaoDoPedidoRepository(this.banco).entradaDaChave(pedido.chaveEnvio, 'propor_ferramenta')).resposta === 'so_conversar'
+        const ultimoPedido = turnosAnteriores.findLast((turno) => turno.autor === 'professor')?.texto
+        const procurado = semProposta && ultimoPedido !== undefined ? `${ultimoPedido} ${mensagem}` : mensagem
+        const entregues = await this.trechos.buscar({ texto: procurado, disciplinaId: pergunta.disciplinaId, limite: TRECHOS_NA_CONVERSA })
         lido = { pergunta, entregues }
         return {
           mensagem,
           contexto: contextoDaTarefa(turma),
           trechos: entregues.map(({ materialId, pagina, texto }) => ({ materialId, pagina, texto })),
-          turnosAnteriores: anteriores.reverse().map(turnoAnterior),
+          turnosAnteriores,
+          ...(semProposta ? { semProposta } : {}),
         }
       },
       aoConcluir: async (saida, tx, execucaoId) => {
