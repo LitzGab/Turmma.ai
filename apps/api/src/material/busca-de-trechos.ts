@@ -65,10 +65,13 @@ export class BuscaDeTrechos {
   /**
    * As páginas de um material, em ordem, até `limite`: para gerar a partir do capítulo inteiro, ou para o Tutor
    * acompanhar a leitura de um material. Material de outra escola, excluído, ainda `processando` ou inexistente: vazio.
-   * Cada trecho leva a `disciplinaId` do material, para quem chama conferir que é a disciplina que a pessoa alcança.
+   *
+   * **A disciplina é obrigatória, e o filtro é no repository**: é a disciplina que quem chama já conferiu que a pessoa
+   * alcança, e o material de outra disciplina da mesma escola responde vazio. O `materialId` costuma vir do cliente ou
+   * de um `jsonb`: sem a disciplina aqui, bastaria um id de material para ler o de uma disciplina que a pessoa não tem.
    */
-  async doMaterial(materialId: string, limite: number = MAXIMO_DE_TRECHOS_PARA_IA): Promise<TrechoDoMaterial[]> {
-    const paginas = await new MaterialRepository(this.banco).paginasDoMaterial(materialId.toLowerCase(), Math.max(1, limite), 'unidade')
+  async doMaterial(materialId: string, disciplinaId: string, limite: number = MAXIMO_DE_TRECHOS_PARA_IA): Promise<TrechoDoMaterial[]> {
+    const paginas = await new MaterialRepository(this.banco).paginasDoMaterial(materialId.toLowerCase(), disciplinaId.toLowerCase(), Math.max(1, limite), 'unidade')
     return paginas.map(paraIa)
   }
 }

@@ -68,8 +68,8 @@ material `pronto` e não excluído.
 | `POST /ferramentas/:ferramenta/gerar` | `esquemaParametroFerramenta`, `esquemaPedidoGerarComFerramenta` | 202 | `ferramenta.gerar` P `tv` | `FUNCAO_SUSPENSA`; na execução, `MATERIAL_INSUFICIENTE` | |
 | `GET /artefatos` | `esquemaConsultaArtefatos` | `esquemaRespostaListaDeArtefatos` | `artefato.listar` P `tv` | | |
 | `GET /artefatos/:id` | | `esquemaRespostaArtefato` | `artefato.ler` P `tv` | | |
-| `PATCH /artefatos/:id` | `esquemaPedidoRenomearArtefato` | `esquemaRespostaArtefato` | `artefato.renomear` P `tv` | | |
-| `GET /artefatos/:id/pdf` | | binário, `Content-Disposition: attachment` | `artefato.exportar` P `tv` | | nenhuma (ver abaixo) |
+| `PATCH /artefatos/:id` | `esquemaPedidoRenomearArtefato` | `esquemaRespostaArtefato` | `artefato.renomear` P `tv` | `CONFLITO` (versão adaptada com a entrega já decidida) | |
+| `GET /artefatos/:id/pdf` | | binário, `Content-Disposition: attachment` | `artefato.exportar` P `tv` | `VERSAO_ADAPTADA_NAO_APROVADA` (versão adaptada rejeitada); pendente sai como rascunho marcado, `rascunho-….pdf` | nenhuma (ver abaixo) |
 | `POST /artefatos/:id/adaptar` | `esquemaPedidoAdaptarArtefato` | 202 | `artefato.adaptar` P `tv` | `FUNCAO_SUSPENSA`, `CONFLITO` (não é atividade, ou já é versão adaptada) | |
 | `GET /entregas` | `esquemaConsultaEntregas` | `esquemaRespostaListaDeEntregas` | `entrega.listar` P `tv` | | |
 | `POST /entregas/:id/decidir` | `esquemaPedidoDecidirEntrega` | `esquemaRespostaEntrega` | `entrega.decidir` P `tv` | `ENTREGA_JA_DECIDIDA`; `ENTRADA_INVALIDA` ao aprovar lote por aqui | `entrega.decidida` |
