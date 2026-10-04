@@ -89,6 +89,76 @@ describe('mapa de ações da auditoria', () => {
     for (const validadeDias of [0, 2, 31]) expect(depois.safeParse({ ...base, validadeDias }).success, String(validadeDias)).toBe(false)
   })
 
+  // MVP de apresentação (D77): o que a fatia audita (regra 20, item 10; regra 70, item 6).
+  const UM_ID = '0190c7e2-0000-7000-8000-000000000000'
+
+  it('o MVP audita material enviado, recusado e excluído, a aplicação, a decisão da entrega, o destaque aberto, o lote aprovado, a suspensão e a retomada, e as duas leituras nominais', () => {
+    const acoes = Object.keys(ACOES_DE_AUDITORIA)
+    for (const acao of [
+      'material.enviado',
+      'material.recusado',
+      'material.excluido',
+      'atividade.aplicada',
+      'entrega.decidida',
+      'correcao.destaque_aberto',
+      'lote.aprovado',
+      'funcao.suspensa',
+      'funcao.retomada',
+      'turma.desempenho_lido',
+      'analista.nominal_lido',
+    ]) {
+      expect(acoes, acao).toContain(acao)
+    }
+  })
+
+  it('a leitura nominal e a do desempenho de aluno pela coordenação só gravam com finalidade de lista fechada', () => {
+    for (const acao of ['turma.desempenho_lido', 'analista.nominal_lido'] as const) {
+      const { finalidade } = ACOES_DE_AUDITORIA[acao]
+      expect(finalidade, acao).not.toBeNull()
+      expect(finalidade.safeParse('quero ver como a professora Ana está indo').success, acao).toBe(false)
+      expect(finalidade.safeParse(undefined).success, acao).toBe(false)
+    }
+    expect(ACOES_DE_AUDITORIA['analista.nominal_lido'].finalidade.options).toEqual(['conversa_pedagogica_a_pedido_do_professor', 'apoio_a_aluno_em_risco', 'pedido_do_titular', 'apuracao_de_denuncia'])
+    // Nenhuma finalidade é de avaliar, cobrar ou decidir sobre o professor (regra 70, item 8).
+    for (const finalidade of ACOES_DE_AUDITORIA['analista.nominal_lido'].finalidade.options) expect(finalidade).not.toMatch(/avalia|desempenho_do_professor|cobranca|sancao|dispensa|ranking/)
+    // As ações que não são leitura de pessoa não aceitam finalidade.
+    for (const acao of ['material.enviado', 'entrega.decidida', 'lote.aprovado', 'funcao.suspensa'] as const) expect(ACOES_DE_AUDITORIA[acao].finalidade, acao).toBeNull()
+  })
+
+  it('a decisão da entrega não leva a justificativa, e o material recusado leva o que foi declarado, sem título nem licenciante', () => {
+    const decidida = ACOES_DE_AUDITORIA['entrega.decidida'].depois
+    const base = { tipo: 'versao_adaptada', funcao: 'adaptacao', turmaId: UM_ID, estado: 'rejeitada', artefatoId: UM_ID, atividadeAplicadaId: null }
+    expect(decidida.safeParse(base).success).toBe(true)
+    expect(decidida.safeParse({ ...base, justificativa: 'O enunciado da questão 2 mudou o que é cobrado' }).success).toBe(false)
+    expect(decidida.safeParse({ ...base, estado: 'pendente' }).success).toBe(false)
+
+    const recusado = ACOES_DE_AUDITORIA['material.recusado'].depois
+    const declarado = { titularidade: 'terceiro_com_licenca', licenca: 'sem_licenca', declaracao: true, motivo: 'sem_licenca' }
+    expect(recusado.safeParse(declarado).success).toBe(true)
+    expect(recusado.safeParse({ ...declarado, licenca: 'licenca_aberta', declaracao: false, motivo: 'sem_declaracao' }).success).toBe(true)
+    for (const proibido of [{ titulo: 'Apostila Sistema X' }, { licenciante: 'Editora X' }, { arquivo: 'apostila.pdf' }]) expect(recusado.safeParse({ ...declarado, ...proibido }).success, Object.keys(proibido)[0]).toBe(false)
+    // O material que entrou só é registrado com licença que permite o uso e com a declaração marcada.
+    const enviado = ACOES_DE_AUDITORIA['material.enviado'].depois
+    expect(enviado.safeParse({ disciplinaId: UM_ID, titularidade: 'escola', licenca: 'autoria_da_escola', declaracao: true }).success).toBe(true)
+    expect(enviado.safeParse({ disciplinaId: UM_ID, titularidade: 'escola', licenca: 'sem_licenca', declaracao: true }).success).toBe(false)
+    expect(enviado.safeParse({ disciplinaId: UM_ID, titularidade: 'escola', licenca: 'autoria_da_escola', declaracao: false }).success).toBe(false)
+  })
+
+  it('o lote aprovado leva a validação e as contagens, e a suspensão, a função e o motivo de lista fechada', () => {
+    const lote = ACOES_DE_AUDITORIA['lote.aprovado'].depois
+    const base = { estado: 'aprovada', atividadeAplicadaId: UM_ID, turmaId: UM_ID, validacaoId: UM_ID, corrigidos: 30, destaques: 3, destaquesAbertos: 3 }
+    expect(lote.safeParse(base).success).toBe(true)
+    // Sem o registro da validação não há o que auditar: a aprovação do lote é sempre com ela (D56).
+    expect(lote.safeParse({ ...base, validacaoId: undefined }).success).toBe(false)
+    expect(lote.safeParse({ ...base, nota: 7.5 }).success).toBe(false)
+
+    const suspensa = ACOES_DE_AUDITORIA['funcao.suspensa'].depois
+    expect(suspensa.safeParse({ funcao: 'correcao_de_objetiva', motivo: null }).success).toBe(true)
+    expect(suspensa.safeParse({ funcao: 'correcao_de_objetiva', motivo: 'incidente' }).success).toBe(true)
+    expect(suspensa.safeParse({ funcao: 'correcao_de_objetiva', motivo: 'a professora Ana reclamou' }).success).toBe(false)
+    expect(suspensa.safeParse({ funcao: 'corretor', motivo: null }).success).toBe(false)
+  })
+
   it('finalidade só como enum: texto livre é recusado', () => {
     const mapa = {
       'teste.livre': { entidade: 'teste', antes: null, depois: null, finalidade: z.string().max(200) },

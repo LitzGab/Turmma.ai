@@ -18,6 +18,25 @@ export const STATUS_HTTP_DO_CODIGO: Readonly<Record<CodigoDeErro, number>> = {
   SESSAO_ENCERRADA: 401,
   // A1, tarefa 6.0: o pedido é bem formado, e o nome não foi tomado; o nome inexistente responde igual ao tomado.
   REIVINDICACAO_RECUSADA: 409,
+  // MVP de apresentação (D77). 422: o pedido é bem formado, e a licença declarada não permite o uso (D5).
+  MATERIAL_SEM_LICENCA: 422,
+  FUNCAO_SUSPENSA: 409,
+  // Freio diário e pacote do mês do Tutor (D38): limite de uso, como o `LIMITE_EXCEDIDO`.
+  LIMITE_DIARIO_DO_TUTOR: 429,
+  PACOTE_DO_TUTOR_ESGOTADO: 429,
+  TUTOR_PAUSADO_EM_AVALIACAO: 409,
+  DESTAQUES_NAO_ABERTOS: 409,
+  ENTREGA_JA_DECIDIDA: 409,
+  VERSAO_ADAPTADA_NAO_APROVADA: 409,
+  ATIVIDADE_ENCERRADA: 409,
+  // Camada de IA (regra 80, item 4). Na rota que responde 202 estes códigos chegam pela execução, e não pelo status.
+  IA_INDISPONIVEL: 503,
+  IA_TEMPO_ESGOTADO: 503,
+  IA_SAIDA_INVALIDA: 502,
+  IA_ORCAMENTO_ESGOTADO: 429,
+  IA_ENTRADA_INVALIDA: 500,
+  EXECUCAO_INTERROMPIDA: 503,
+  MATERIAL_INSUFICIENTE: 422,
 }
 
 /**

@@ -39,6 +39,57 @@ export const CodigoDeErro = {
    * não diz qual dos dois errou, o nome ou a matrícula (RF10; regra 10, item 6), e nada é gravado.
    */
   REIVINDICACAO_RECUSADA: 'REIVINDICACAO_RECUSADA',
+  /**
+   * O material não entra (MVP, D5, D75; 422): a licença declarada não permite o uso, ou a coordenação não marcou a
+   * declaração. A recusa acontece antes de abrir o arquivo, não grava `material` e fica na auditoria (`material.recusado`).
+   */
+  MATERIAL_SEM_LICENCA: 'MATERIAL_SEM_LICENCA',
+  /**
+   * A coordenação suspendeu esta função da IA na escola (D60; 409): o servidor recusa executar, e o que já foi produzido
+   * continua onde estava. A resposta não diz quem suspendeu.
+   */
+  FUNCAO_SUSPENSA: 'FUNCAO_SUSPENSA',
+  /** O aluno chegou ao freio diário de trocas com o Tutor (D38; 429). O número vem da configuração da escola. */
+  LIMITE_DIARIO_DO_TUTOR: 'LIMITE_DIARIO_DO_TUTOR',
+  /** A turma gastou o pacote do mês do Tutor (D38; 429): as trocas de todos os alunos da turma somadas. */
+  PACOTE_DO_TUTOR_ESGOTADO: 'PACOTE_DO_TUTOR_ESGOTADO',
+  /** Há atividade avaliativa aberta para a turma do aluno, e o Tutor fica travado enquanto ela durar (regra 30, item 10; 409). */
+  TUTOR_PAUSADO_EM_AVALIACAO: 'TUTOR_PAUSADO_EM_AVALIACAO',
+  /**
+   * O lote de correção ainda tem caso destacado que o professor não abriu (D33, D56; 409): a aprovação só passa com
+   * todos abertos, e a validação não é gravada.
+   */
+  DESTAQUES_NAO_ABERTOS: 'DESTAQUES_NAO_ABERTOS',
+  /** A entrega já foi aprovada ou rejeitada (409): a segunda decisão não grava nada nem troca a primeira. */
+  ENTREGA_JA_DECIDIDA: 'ENTREGA_JA_DECIDIDA',
+  /**
+   * A versão adaptada ainda não foi aprovada pelo professor (regra 70, item 3; 409): enquanto a entrega dela estiver
+   * pendente ou rejeitada, ela não é aplicada à turma.
+   */
+  VERSAO_ADAPTADA_NAO_APROVADA: 'VERSAO_ADAPTADA_NAO_APROVADA',
+  /** A atividade foi encerrada pelo professor ou já foi enviada pelo aluno (409): a resposta não é mais aceita. */
+  ATIVIDADE_ENCERRADA: 'ATIVIDADE_ENCERRADA',
+  /**
+   * Os erros da camada de IA (MVP; regra 30; regra 80, item 4). São os códigos que `execucao_agente.erro` e
+   * `consumo_ia.codigo_de_erro` guardam, e o que a tela recebe em `GET /v1/execucoes/:id`: nunca o erro cru do provedor,
+   * que pode repetir o prompt. O provedor não respondeu, recusou por limite ou falhou (503).
+   */
+  IA_INDISPONIVEL: 'IA_INDISPONIVEL',
+  /** A chamada ao modelo, ou a execução inteira, passou do prazo (503). */
+  IA_TEMPO_ESGOTADO: 'IA_TEMPO_ESGOTADO',
+  /** A saída do modelo não passou no schema nem na conferência da tarefa, mesmo depois da repetição (502). Nada dela é usado. */
+  IA_SAIDA_INVALIDA: 'IA_SAIDA_INVALIDA',
+  /** O orçamento de IA da escola não cobre mais uma chamada (D14; 429). O freio do Tutor por aluno tem código próprio. */
+  IA_ORCAMENTO_ESGOTADO: 'IA_ORCAMENTO_ESGOTADO',
+  /** Quem chamou a camada de IA mandou entrada fora do schema da tarefa (500): é defeito nosso, e nada foi ao modelo. */
+  IA_ENTRADA_INVALIDA: 'IA_ENTRADA_INVALIDA',
+  /** A execução ficou parada além do prazo porque o processo caiu ou reiniciou no meio dela (503): a varredura a encerrou. */
+  EXECUCAO_INTERROMPIDA: 'EXECUCAO_INTERROMPIDA',
+  /**
+   * O material da escola não tem trecho sobre o tema pedido (422): sem página para citar, a ferramenta não gera (D6;
+   * regra 30, item 12).
+   */
+  MATERIAL_INSUFICIENTE: 'MATERIAL_INSUFICIENTE',
 } as const
 
 export type CodigoDeErro = (typeof CodigoDeErro)[keyof typeof CodigoDeErro]
