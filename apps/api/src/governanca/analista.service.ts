@@ -90,17 +90,16 @@ export class AnalistaService {
     const sinais = await analista.sinaisPorTipo()
     const comLotes = await analista.recortesComLotes()
     const acertos = await analista.acertosPorRecorte()
-    const professores = await analista.professoresPorRecorte()
     const descricoes = await analista.descricoesDasHabilidades()
-    const professoresDe = new Map(professores.map((linha) => [chaveDoRecorte(linha.serieId, linha.disciplinaId), linha.professores]))
 
     const recortes: EntradaDoAnalista['recortes'] = []
     const recortesNominais: EntradaDoAnalista['recortesNominais'] = []
     for (const recorte of comLotes) {
       const chave = chaveDoRecorte(recorte.serieId, recorte.disciplinaId)
       const identificacao = { serie: { id: recorte.serieId, etapa: recorte.etapa, ano: recorte.ano }, disciplina: { id: recorte.disciplinaId, nome: recorte.disciplina } }
-      const quantos = professoresDe.get(chave) ?? 0
-      // Com um professor só, o número do recorte é o resultado dele (D45): fica o recorte, sem número nenhum.
+      // Grupo mínimo pelos professores que **decidiram** lote aprovado no recorte, não pelos que têm vínculo nele: com um
+      // só, o número do recorte é o resultado dele (D45), e quem não aplicou nada ficaria exposto como quem não usa (D64).
+      const quantos = recorte.professores
       if (quantos < GRUPO_MINIMO_DE_PROFESSORES) {
         if (recortesNominais.length < MAXIMO_DE_RECORTES) recortesNominais.push(identificacao)
         continue

@@ -18,7 +18,6 @@ import {
 } from '@educa/nucleo'
 import { GRUPO_MINIMO_DE_PROFESSORES, type ChaveDeFuncao, type ConsultaResumoDaGovernanca, type EstadoDeEntrega, type Etapa, type MotivoDeSuspensao, type TipoDeEntrega } from '@educa/shared'
 import { and, count, desc, eq, gte, isNull, lt, notExists, sql, type SQL } from 'drizzle-orm'
-import { alias } from 'drizzle-orm/pg-core'
 
 /** Os quatro números da governança, na escola e no ano letivo do contexto. */
 export interface NumerosDaGovernanca {
@@ -70,16 +69,14 @@ export function anoEmCursoOuNulo(): string | null {
   return typeof anoLetivoId === 'string' ? anoLetivoId : null
 }
 
-const turmaDoProfessor = alias(turma, 'turma_do_professor_da_serie')
-
 /**
  * A governança de IA da coordenação (MVP, A5; D9, D45, D60, D64; regra 70, itens 5, 6, 8 e 9), na escola do contexto e,
  * no que varia por período, no ano letivo dele. Nada vem do cliente para decidir o escopo (regra 10, item 3).
  *
  * **Nenhuma consulta daqui agrupa, filtra ou ordena por professor**, e nenhuma seleciona coluna de pessoa: a entrega sai
  * sem `decidida_por`, sem turma, sem título e sem justificativa; o consumo, sem `aluno_id`, sem `origem`, sem `entrada`
- * e sem `saida`. A única conta que olha professor é o **grupo mínimo** (D45): quantos professores distintos a série tem,
- * para a linha de uma série com um professor só não identificar quem ele é.
+ * e sem `saida`. A única conta que olha professor é o **grupo mínimo** (D45): quantos professores distintos têm entrega na
+ * série, para a linha de uma série com um professor só não identificar quem ele é.
  */
 export class GovernancaRepository {
   constructor(private readonly banco: Banco | TransacaoBanco) {}
@@ -111,25 +108,26 @@ export class GovernancaRepository {
   }
 
   /**
-   * A série da turma tem pelo menos `GRUPO_MINIMO_DE_PROFESSORES` professores com vínculo confirmado no ano (D45). Conta
-   * professores distintos e não diz quais: é o que deixa a linha "2º ano do Ensino Médio" fora da lista quando a série
-   * tem um professor só, caso em que a linha diria o que **ele** gerou e aprovou (D64).
+   * A série da turma tem entregas de pelo menos `GRUPO_MINIMO_DE_PROFESSORES` professores distintos no ano (D45). Conta
+   * quem tem **dado** na série, não quem tem vínculo nela: o professor de cada entrega é quem criou o artefato (a versão
+   * adaptada) ou quem aplicou a atividade (o lote de correção). Com dois professores alocados e só um gerando entrega, a
+   * linha da série diria o que **ele** gerou e aprovou, e insinuaria que o outro não usa a ferramenta (D64). Conta
+   * professores distintos e não diz quais.
    */
   #serieComGrupoMinimo(): SQL {
-    const professores = this.banco
-      .select({ total: sql`count(distinct ${vinculo.usuarioId})` })
-      .from(vinculo)
-      .innerJoin(turmaDoProfessor, and(eq(turmaDoProfessor.escolaId, vinculo.escolaId), eq(turmaDoProfessor.anoLetivoId, vinculo.anoLetivoId), eq(turmaDoProfessor.id, vinculo.turmaId)))
-      .where(
-        and(
-          eq(vinculo.escolaId, turma.escolaId),
-          eq(vinculo.anoLetivoId, turma.anoLetivoId),
-          eq(turmaDoProfessor.serieId, turma.serieId),
-          eq(vinculo.papel, 'professor'),
-          eq(vinculo.estado, 'confirmado'),
-        ),
-      )
-    return sql`(${professores}) >= ${GRUPO_MINIMO_DE_PROFESSORES}`
+    return sql`(
+      select count(distinct coalesce(artefato_da_serie.criado_por, aplicacao_da_serie.aplicada_por))
+        from entrega entrega_da_serie
+        join turma turma_da_serie
+          on turma_da_serie.escola_id = entrega_da_serie.escola_id and turma_da_serie.ano_letivo_id = entrega_da_serie.ano_letivo_id and turma_da_serie.id = entrega_da_serie.turma_id
+        left join artefato artefato_da_serie
+          on artefato_da_serie.escola_id = entrega_da_serie.escola_id and artefato_da_serie.ano_letivo_id = entrega_da_serie.ano_letivo_id and artefato_da_serie.id = entrega_da_serie.artefato_id
+        left join atividade_aplicada aplicacao_da_serie
+          on aplicacao_da_serie.escola_id = entrega_da_serie.escola_id and aplicacao_da_serie.ano_letivo_id = entrega_da_serie.ano_letivo_id and aplicacao_da_serie.id = entrega_da_serie.atividade_aplicada_id
+       where entrega_da_serie.escola_id = ${entrega.escolaId}
+         and entrega_da_serie.ano_letivo_id = ${entrega.anoLetivoId}
+         and turma_da_serie.serie_id = ${turma.serieId}
+    ) >= ${GRUPO_MINIMO_DE_PROFESSORES}`
   }
 
   /**
