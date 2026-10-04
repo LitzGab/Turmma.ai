@@ -1,0 +1,207 @@
+import { Check, ChevronDown, type LucideIcon } from 'lucide-react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { classesDoBotao } from './botao-secundario'
+import { estiloDoRecuo, useFlutuante, useRestoInerte } from './flutuante'
+import { itemDaTecla, itemInicial } from './teclado-do-menu'
+
+export interface ItemDoMenu {
+  readonly id: string
+  readonly rotulo: string
+  /** Uma frase embaixo do rótulo: o que a ferramenta entrega. */
+  readonly descricao?: string
+  readonly icone?: LucideIcon
+  /** Aparece, mas não dá para escolher. O foco pula. */
+  readonly desabilitado?: boolean
+  /** Ação de perigo (excluir, revogar): texto em `erro`. A confirmação é de quem usa (`DialogoDeConfirmacao`). */
+  readonly perigo?: boolean
+}
+
+interface PropsDoMenu {
+  /** O texto do botão que abre o menu, visível e lido: "Ferramenta", "2ºB · Química". */
+  readonly rotulo: string
+  /**
+   * O que o leitor de tela ouve antes do rótulo, quando o rótulo sozinho não diz o que o botão faz: "Turma" antes de
+   * "2ºB · Química". O texto visível continua dentro do nome (WCAG 2.5.3).
+   */
+  readonly prefixo?: string
+  readonly icone?: LucideIcon
+  /** O botão mostra só o ícone, e o rótulo fica para o leitor de tela: o "mais ações" de uma linha. */
+  readonly soIcone?: boolean
+  readonly itens: readonly ItemDoMenu[]
+  readonly aoEscolher: (id: string) => void
+  /**
+   * O item escolhido agora. Com ele, o menu é de escolha única (a ferramenta do pedido, a turma): os itens são
+   * `menuitemradio`, o escolhido leva a marca, e o foco abre nele.
+   */
+  readonly escolhido?: string
+  /** Um título dentro do menu, acima dos itens: "Ferramentas". */
+  readonly titulo?: string
+  readonly alinhamento?: 'inicio' | 'fim'
+  /** `auto` abre para baixo e vira para cima quando a janela é baixa: é o caso da caixa de pedido presa embaixo. */
+  readonly lado?: 'auto' | 'acima' | 'abaixo'
+  /** O desenho do botão: contorno (`secundario`) ou sem fundo (`discreto`). Nunca `primario` nem `oficial`. */
+  readonly variante?: 'secundario' | 'discreto'
+  readonly desligado?: boolean
+}
+
+/** A altura máxima do menu: 292 px, e daí em diante ele rola por dentro (`docs/interface.md` 11.2). */
+const ALTURA_DO_MENU = 292
+
+/** Põe o foco no item de índice dado. Os itens são achados no DOM, na ordem em que estão na tela. */
+function focarItem(lista: HTMLElement | null, indice: number | undefined): void {
+  if (indice === undefined) return
+  lista?.querySelectorAll<HTMLElement>('[data-item]')[indice]?.focus()
+}
+
+/**
+ * O menu do produto, no padrão de botão de menu da WAI-ARIA, escrito à mão: o `@radix-ui/react-dropdown-menu` medido
+ * neste build pesa perto de 30 kB em brotli, e o menu de ferramenta mora na caixa de pedido da Home, que é a primeira
+ * tela da professora (regra 50, item 1). O que o Radix faria e aqui é feito: nome e estado no botão (`aria-haspopup`,
+ * `aria-expanded`), foco no primeiro item ao abrir, setas, `Home`, `End` e letra, Esc e clique fora fechando, e o foco
+ * de volta no botão ao fechar por qualquer caminho.
+ *
+ * - **Abre por clique, toque, Enter, Espaço e seta**. Nada só no hover, nada só no teclado (regra 50, item 2a).
+ * - **Cada item tem 44 px**, com o rótulo e, se houver, o ícone e uma frase.
+ * - **Não passa da janela a 360 px**: a posição é medida na abertura (`flutuante.ts`).
+ * - **O Tab fecha** e devolve o foco ao botão: o item que some com o foco em cima o jogaria no `body`.
+ * - **O toque fora fecha, e só fecha**: o que está embaixo do menu não é acionado pelo mesmo toque, e o resto da página
+ *   fica inerte enquanto o menu está aberto.
+ *
+ * O menu fica no fluxo do documento, logo depois do botão, e não num portal: dentro de um contêiner com
+ * `overflow: hidden` ele seria cortado. A caixa de pedido e as barras de tela não cortam.
+ */
+export function Menu({ rotulo, prefixo, icone: Icone, soIcone = false, itens, aoEscolher, escolhido, titulo, alinhamento = 'inicio', lado = 'auto', variante = 'secundario', desligado = false }: PropsDoMenu) {
+  const [aberto, definirAberto] = useState(false)
+  // Por onde o foco entra na abertura que acabou de acontecer: o escolhido (ou o primeiro) pelo clique e pela seta para
+  // baixo, o último pela seta para cima. Fica vazio depois de o foco entrar: a lista que muda com o menu aberto não tira
+  // o foco de onde a pessoa está.
+  const entradaPendente = useRef<'primeiro' | 'ultimo' | undefined>(undefined)
+  const botao = useRef<HTMLButtonElement>(null)
+  const lista = useRef<HTMLDivElement>(null)
+  const idDoBotao = useId()
+  const idDaLista = useId()
+  const { ancora, posicao } = useFlutuante<HTMLSpanElement>({ aberto, aoFechar: () => definirAberto(false), alinhamento, lado, altura: ALTURA_DO_MENU })
+  useRestoInerte(aberto, ancora)
+  const deEscolha = escolhido !== undefined
+
+  useEffect(() => {
+    const ponta = entradaPendente.current
+    if (!aberto || ponta === undefined) return
+    entradaPendente.current = undefined
+    const doEscolhido = itens.findIndex((item) => item.id === escolhido && item.desabilitado !== true)
+    focarItem(lista.current, ponta === 'primeiro' && doEscolhido !== -1 ? doEscolhido : itemInicial(itens, ponta))
+  }, [aberto, itens, escolhido])
+
+  function abrir(ponta: 'primeiro' | 'ultimo'): void {
+    entradaPendente.current = ponta
+    definirAberto(true)
+  }
+
+  function fecharEVoltar(): void {
+    definirAberto(false)
+    botao.current?.focus()
+  }
+
+  function teclaNoBotao(evento: KeyboardEvent<HTMLButtonElement>): void {
+    if (evento.key === 'ArrowDown' || evento.key === 'ArrowUp') {
+      evento.preventDefault()
+      abrir(evento.key === 'ArrowUp' ? 'ultimo' : 'primeiro')
+    }
+  }
+
+  function teclaNaLista(evento: KeyboardEvent<HTMLDivElement>): void {
+    if (evento.key === 'Escape' || evento.key === 'Tab') {
+      evento.preventDefault()
+      // O Esc é deste menu: dentro de um diálogo ou da gaveta, ele não fecha o que está em volta.
+      evento.stopPropagation()
+      fecharEVoltar()
+      return
+    }
+    const atual = Array.from(lista.current?.querySelectorAll('[data-item]') ?? []).findIndex((item) => item === document.activeElement)
+    const destino = itemDaTecla(itens, atual, evento.key)
+    if (destino === undefined) return
+    evento.preventDefault()
+    focarItem(lista.current, destino)
+  }
+
+  function escolher(item: ItemDoMenu): void {
+    if (item.desabilitado === true) return
+    fecharEVoltar()
+    aoEscolher(item.id)
+  }
+
+  return (
+    <span ref={ancora} className="relative inline-flex max-w-full min-w-0">
+      <button
+        ref={botao}
+        type="button"
+        id={idDoBotao}
+        disabled={desligado}
+        aria-haspopup="menu"
+        aria-expanded={aberto}
+        {...(aberto ? { 'aria-controls': idDaLista } : {})}
+        onClick={() => (aberto ? definirAberto(false) : abrir('primeiro'))}
+        onKeyDown={teclaNoBotao}
+        className={`${classesDoBotao({ variante, tamanho: 'compacto' })} max-w-full`}
+      >
+        {Icone !== undefined && <Icone aria-hidden="true" size={soIcone ? 20 : 16} strokeWidth={1.75} className="shrink-0" />}
+        {prefixo !== undefined && <span className="sr-only">{prefixo}: </span>}
+        <span className={soIcone ? 'sr-only' : 'min-w-0 truncate'}>{rotulo}</span>
+        {!soIcone && <ChevronDown aria-hidden="true" size={16} strokeWidth={1.75} className="shrink-0" />}
+      </button>
+      {/*
+        O fundo do menu aberto: transparente, por cima da tela inteira e por baixo do menu. O toque fora fecha o menu e
+        **não aciona o que estava embaixo** — sem ele, quem erra o item por um dedo aprova, exclui ou troca de tela sem
+        querer. O resto da página fica inerte enquanto isso (`useRestoInerte`); o fundo é o que garante o mesmo no
+        navegador antigo, que não conhece `inert`.
+      */}
+      {aberto && <span aria-hidden="true" data-fundo-do-menu="" onClick={fecharEVoltar} className="fixed inset-0 z-20" />}
+      {aberto && (
+        <div
+          ref={lista}
+          id={idDaLista}
+          role="menu"
+          aria-labelledby={idDoBotao}
+          onKeyDown={teclaNaLista}
+          style={estiloDoRecuo(alinhamento, posicao.recuo)}
+          className={`absolute z-30 flex max-h-[292px] w-[min(20rem,calc(100vw-2rem))] flex-col gap-0.5 overflow-y-auto rounded-cartao bg-superficie p-1.5 text-left shadow-flutua ${posicao.lado === 'acima' ? 'bottom-full mb-2' : 'top-full mt-2'}`}
+        >
+          {titulo !== undefined && (
+            <p aria-hidden="true" className="px-2.5 pt-1.5 pb-1 text-[13px] font-medium text-sutil">
+              {titulo}
+            </p>
+          )}
+          {itens.map((item) => {
+            const marcado = deEscolha && item.id === escolhido
+            const ItemIcone = item.icone
+            const desligadoAqui = item.desabilitado === true
+            return (
+              <button
+                key={item.id}
+                type="button"
+                data-item=""
+                role={deEscolha ? 'menuitemradio' : 'menuitem'}
+                {...(deEscolha ? { 'aria-checked': marcado } : {})}
+                {...(desligadoAqui ? { 'aria-disabled': true } : {})}
+                // Os itens ligados ficam na ordem do teclado: o menu rola por dentro, e região que rola precisa de algo
+                // alcançável pelo teclado dentro dela. O Tab não passeia por eles: ele fecha o menu (acima).
+                tabIndex={desligadoAqui ? -1 : 0}
+                onClick={() => escolher(item)}
+                className={`flex min-h-11 w-full min-w-0 shrink-0 items-center gap-3 rounded-linha px-2.5 py-2 text-left text-base -outline-offset-2 ${
+                  desligadoAqui ? 'text-inativo' : `hover:bg-realce-suave focus-visible:bg-realce-suave ${item.perigo === true ? 'text-erro' : 'text-tinta'}`
+                } ${marcado ? 'font-semibold' : ''}`}
+              >
+                {ItemIcone !== undefined && <ItemIcone aria-hidden="true" size={18} strokeWidth={1.75} className="shrink-0" />}
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="break-words">{item.rotulo}</span>
+                  {item.descricao !== undefined && <span className={`text-sm font-normal break-words ${desligadoAqui ? 'text-inativo' : 'text-sutil'}`}>{item.descricao}</span>}
+                </span>
+                {marcado && <Check aria-hidden="true" size={16} strokeWidth={2.4} className="shrink-0" />}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </span>
+  )
+}

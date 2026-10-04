@@ -28,6 +28,12 @@ import { tituloDaEscola, tituloDaOperacao } from './titulo'
  */
 const AreaDaOperacao = lazy(() => import('./operacao/rotas'))
 
+/**
+ * A galeria das peças do MVP de apresentação, também só por `import()`: vira o chunk `galeria-*.js`, e as peças de
+ * `componentes/ia/` não entram no primeiro carregamento por causa dela (`apps/web/nome-dos-chunks.ts`).
+ */
+const Galeria = lazy(() => import('./galeria/Galeria'))
+
 /** O caminho da área, repetido aqui para a entrada não importar nada de `./operacao/`. */
 const BASE_DA_OPERACAO = '/operacao'
 
@@ -190,6 +196,13 @@ export function Rotas() {
         </FronteiraDaArea>
       </Route>
       <Route path={ROTAS.sistema} component={Casca} />
+      <Route path={ROTAS.galeria}>
+        <FronteiraDaArea {...FALHA_DA_AREA} paginaInteira>
+          <Suspense fallback={<EstadoCarregando rotulo="Carregando…" />}>
+            <Galeria />
+          </Suspense>
+        </FronteiraDaArea>
+      </Route>
       {/* A página pública da turma, por onde o aluno pede o nome (A1, 17.0). Na entrada, e não num chunk de área: é a primeira tela do aluno. */}
       <Route path={ROTAS.salaDaTurma}>{(parametros) => <TurmaPublica slug={parametros.slug} />}</Route>
       {/* O endereço da escola, por onde o aluno entra (RF7). Fica antes das rotas fixas por ser a única com parâmetro. */}
