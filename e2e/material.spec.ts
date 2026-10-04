@@ -30,6 +30,8 @@ const arquivo = (page: Page) => page.getByTestId('arquivo-do-material')
 const enviar = (page: Page) => principal(page).getByRole('button', { name: /^Enviar material$|^Enviando…$/ })
 const declaracao = (page: Page) => principal(page).getByLabel(/^Declaro que a escola pode usar este material/)
 const dialogo = (page: Page) => page.getByRole('alertdialog')
+/** O arquivo escolhido, como a área de envio o mostra: o nome e o tamanho (o anúncio para o leitor de tela começa por outro texto). */
+const escolhido = (page: Page, nome: string) => principal(page).getByText(new RegExp(`^${nome.replaceAll('.', '\\.')} · \\d`))
 
 async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
   if (hasTouch) await alvo.tap()
@@ -87,7 +89,7 @@ test.describe('Material da coordenação', () => {
 
     await arquivo(page).setInputFiles(CAMINHO_DO_PDF_DE_DEMONSTRACAO)
     // O arquivo escolhido aparece com o nome e o tamanho, e o título é sugerido pelo nome dele.
-    await expect(principal(page).getByText('quimica-2-cap-7-estequiometria.pdf')).toBeVisible()
+    await expect(escolhido(page, 'quimica-2-cap-7-estequiometria.pdf')).toBeVisible()
     await expect(principal(page).getByLabel('Título')).toHaveValue('quimica 2 cap 7 estequiometria')
     await preencher(page, cenario, { comArquivo: false })
     await acionar(enviar(page), hasTouch)
@@ -239,7 +241,7 @@ test.describe('Material da coordenação', () => {
       await page.keyboard.press('Enter')
     }
     await (await seletor).setFiles(CAMINHO_DO_PDF_DE_DEMONSTRACAO)
-    await expect(principal(page).getByText('quimica-2-cap-7-estequiometria.pdf')).toBeVisible()
+    await expect(escolhido(page, 'quimica-2-cap-7-estequiometria.pdf')).toBeVisible()
     await expect(principal(page).getByRole('button', { name: 'Trocar arquivo' })).toBeVisible()
 
     // Arrastado: o mesmo PDF solto na área, com outro nome.
@@ -249,8 +251,8 @@ test.describe('Material da coordenação', () => {
       dados.items.add(new File([new Uint8Array(conteudo)], 'capitulo-arrastado.pdf', { type: 'application/pdf' }))
       return dados
     }, bytes)
-    await principal(page).getByText('quimica-2-cap-7-estequiometria.pdf').dispatchEvent('drop', { dataTransfer: transferencia })
-    await expect(principal(page).getByText('capitulo-arrastado.pdf')).toBeVisible()
+    await escolhido(page, 'quimica-2-cap-7-estequiometria.pdf').dispatchEvent('drop', { dataTransfer: transferencia })
+    await expect(escolhido(page, 'capitulo-arrastado.pdf')).toBeVisible()
 
     // Dois arquivos soltos de uma vez: um por vez.
     const duas = await page.evaluateHandle(() => {
@@ -259,7 +261,7 @@ test.describe('Material da coordenação', () => {
       dados.items.add(new File(['%PDF-1.4 b'], 'b.pdf', { type: 'application/pdf' }))
       return dados
     })
-    await principal(page).getByText('capitulo-arrastado.pdf').dispatchEvent('drop', { dataTransfer: duas })
+    await escolhido(page, 'capitulo-arrastado.pdf').dispatchEvent('drop', { dataTransfer: duas })
     await expect(principal(page).getByText('Envie um arquivo por vez. Escolha só o PDF deste material.')).toBeVisible()
   })
 
