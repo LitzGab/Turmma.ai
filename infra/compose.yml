@@ -195,6 +195,18 @@ services:
       # Métricas OTLP para a observabilidade local. Sem depends_on: fora do ar, perde-se a métrica, e só.
       TELEMETRIA_OTLP_URL: http://observabilidade:4318
       TELEMETRIA_INTERVALO_MS: ${TELEMETRIA_INTERVALO_MS:?defina TELEMETRIA_INTERVALO_MS}
+      # Camada de IA (regra 30): adaptador falso por padrão. Com IA_ADAPTADOR=openai_compat a API fala com o servidor de
+      # LLM_BASE_URL. De dentro do contêiner, 127.0.0.1 é o próprio contêiner: o modelo que roda na máquina se alcança
+      # por host.docker.internal. Os modelos por perfil e a chave do provedor não têm valor no exemplo e não passam por aqui.
+      IA_ADAPTADOR: ${IA_ADAPTADOR:?defina IA_ADAPTADOR}
+      LLM_BASE_URL: ${LLM_BASE_URL:?defina LLM_BASE_URL}
+      LLM_MODELO: ${LLM_MODELO:?defina LLM_MODELO}
+      LLM_TIMEOUT_MS: ${LLM_TIMEOUT_MS:?defina LLM_TIMEOUT_MS}
+      LLM_RECUO_MS: ${LLM_RECUO_MS:?defina LLM_RECUO_MS}
+      LLM_PROCESSAMENTO_LOCAL: ${LLM_PROCESSAMENTO_LOCAL:?defina LLM_PROCESSAMENTO_LOCAL}
+      IA_EXECUCOES_POR_ESCOLA: ${IA_EXECUCOES_POR_ESCOLA:?defina IA_EXECUCOES_POR_ESCOLA}
+      IA_EXECUCOES_TOTAL: ${IA_EXECUCOES_TOTAL:?defina IA_EXECUCOES_TOTAL}
+      IA_EXECUCAO_TIMEOUT_MS: ${IA_EXECUCAO_TIMEOUT_MS:?defina IA_EXECUCAO_TIMEOUT_MS}
     # Acima de DRENAGEM_PRAZO_MS: o Docker só manda SIGKILL depois de a drenagem ter tido o prazo inteiro.
     stop_grace_period: 15s
     ports:
