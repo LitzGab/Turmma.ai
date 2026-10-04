@@ -2,7 +2,7 @@ import { esquemaPedidoDecidirEntrega, type Entrega } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { textoDaAprovacao, motivoDaRejeicao } from '../../componentes/ia/aprovacao'
 import { problemaDoTexto } from '../../componentes/texto-longo'
-import { aprovacaoDaEntrega, decideAqui, entregasDoFiltro, esperandoVoce, falaDaEntrega, LIMITES_DA_JUSTIFICATIVA, resumoDaAprovacao, textoDaAdaptacao } from './entregas'
+import { aprovacaoDaEntrega, avisoDaFuncaoSuspensa, decideAqui, entregasDoFiltro, esperandoVoce, falaDaEntrega, LIMITES_DA_JUSTIFICATIVA, resumoDaAprovacao, textoDaAdaptacao } from './entregas'
 
 const TURMA = '0190f5a0-0000-7000-8000-00000000002b'
 const AGORA = new Date('2026-10-05T12:00:00.000Z')
@@ -14,7 +14,7 @@ function entrega(final: string, campos: Partial<Entrega> = {}): Entrega {
     funcao: 'adaptacao',
     estado: 'pendente',
     turmaId: TURMA,
-    titulo: 'Atividade de estequiometria',
+    titulo: 'Atividade de estequiometria (versão adaptada)',
     artefatoId: '0190f5a0-0000-7000-8000-0000000000a9',
     atividadeAplicadaId: null,
     criadaEm: '2026-10-05T13:40:00.000Z',
@@ -60,7 +60,7 @@ describe('"Esperando você" (11.2)', () => {
       [
         entrega('02', { criadaEm: '2026-10-05T14:00:00.000Z', titulo: 'Lista 3' }),
         entrega('03', { estado: 'aprovada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA }),
-        entrega('01', { tipo: 'lote_de_correcao', funcao: 'correcao_de_objetiva', artefatoId: null, atividadeAplicadaId: '0190f5a0-0000-7000-8000-0000000000b1', criadaEm: '2026-10-05T09:00:00.000Z' }),
+        entrega('01', { tipo: 'lote_de_correcao', funcao: 'correcao_de_objetiva', titulo: 'Atividade de estequiometria', artefatoId: null, atividadeAplicadaId: '0190f5a0-0000-7000-8000-0000000000b1', criadaEm: '2026-10-05T09:00:00.000Z' }),
         entrega('04', { estado: 'rejeitada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA, justificativa: 'Faltou a questão 2.' }),
       ],
       { [TURMA]: '2ºB' },
@@ -73,7 +73,7 @@ describe('"Esperando você" (11.2)', () => {
 
   it('sem pendência a lista é vazia, e a turma que a tela não conhece não vira "undefined"', () => {
     expect(esperandoVoce([entrega('03', { estado: 'aprovada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA })], {})).toEqual([])
-    expect(esperandoVoce([entrega('01')], {})[0]?.detalhe).toBe('Atividade de estequiometria')
+    expect(esperandoVoce([entrega('01')], {})[0]?.detalhe).toBe('Atividade de estequiometria (versão adaptada)')
   })
 })
 
@@ -93,8 +93,8 @@ describe('a conversa do Assistente no Seu time (11.4)', () => {
   })
 
   it('o Assistente diz o que fez e o que falta para valer, sem falar de aluno', () => {
-    expect(falaDaEntrega(entrega('01'), '2ºB')).toBe('Preparei a versão adaptada de "Atividade de estequiometria" da turma 2ºB. Ela só pode ir aos alunos depois que você aprovar.')
-    expect(falaDaEntrega(entrega('03', { tipo: 'lote_de_correcao' }), undefined)).toBe('Corrigi "Atividade de estequiometria". O diagnóstico só chega aos alunos depois que você revisar os destaques e aprovar.')
+    expect(falaDaEntrega(entrega('01'), '2ºB')).toBe('Preparei "Atividade de estequiometria (versão adaptada)" da turma 2ºB. Esta versão adaptada só pode ir aos alunos depois que você aprovar.')
+    expect(falaDaEntrega(entrega('03', { tipo: 'lote_de_correcao', titulo: 'Atividade de estequiometria' }), undefined)).toBe('Corrigi "Atividade de estequiometria". O diagnóstico só chega aos alunos depois que você revisar os destaques e aprovar.')
   })
 
   it('só a versão adaptada pendente se decide por aqui: o lote de correção tem a tela dele, e a decidida não se decide de novo', () => {
@@ -104,9 +104,16 @@ describe('a conversa do Assistente no Seu time (11.4)', () => {
     expect(decideAqui(entrega('03', { tipo: 'lote_de_correcao' }))).toBe(false)
   })
 
+  it('D60: a entrega pendente de função suspensa diz que a função está suspensa e que a decisão continua dela; a decidida e a de função ativa não dizem nada', () => {
+    expect(avisoDaFuncaoSuspensa(entrega('01'), true)).toBe('A coordenação suspendeu a função "Adaptação" nesta escola: o Assistente não prepara outra enquanto isso. Esta entrega continua esperando a sua decisão.')
+    expect(avisoDaFuncaoSuspensa(entrega('01'), false)).toBeUndefined()
+    expect(avisoDaFuncaoSuspensa(entrega('02', { estado: 'aprovada' }), true)).toBeUndefined()
+    expect(avisoDaFuncaoSuspensa(entrega('02', { estado: 'rejeitada' }), true)).toBeUndefined()
+  })
+
   it('o diálogo de aprovar diz o que é, de qual turma, e que foi a IA que fez', () => {
     expect(resumoDaAprovacao(entrega('01'), '2ºB')).toEqual([
-      { rotulo: 'O que é', valor: 'Versão adaptada de "Atividade de estequiometria"' },
+      { rotulo: 'Versão adaptada', valor: 'Atividade de estequiometria (versão adaptada)' },
       { rotulo: 'Turma', valor: '2ºB' },
       { rotulo: 'Feita por', valor: 'Assistente de ensino, com IA' },
     ])

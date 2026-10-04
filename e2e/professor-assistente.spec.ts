@@ -16,7 +16,7 @@ import {
   versaoAdaptada,
   type ApiDoAssistente,
 } from './__fixtures__/assistente.ts'
-import { abrirNavegacao, entrarPorEmail, gaveta, irPelaNavegacao, lateral, naGaveta, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarPorEmail, gaveta, irPelaNavegacao, lateral, naGaveta, PRAZO_DA_ENTRADA_MS, esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarEquipeComSenha, type EquipeDeTeste } from './__fixtures__/sessao.ts'
 import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -51,8 +51,10 @@ async function irPara(page: Page, caminho: string): Promise<void> {
 }
 
 /** A professora entra, com a API do Assistente simulada. `comTurma` dá a ela uma turma de Química com o vínculo confirmado. */
-async function entrar(page: Page, hasTouch: boolean, { comTurma = true }: { comTurma?: boolean } = {}): Promise<Cena> {
+async function entrar(page: Page, hasTouch: boolean, { comTurma = true, antes }: { comTurma?: boolean; antes?: (api: ApiDoAssistente) => void } = {}): Promise<Cena> {
   const api = await simularAssistente(page)
+  // O que a escola já tinha antes de a professora entrar (uma função suspensa): a Home lê o time logo na entrada.
+  antes?.(api)
   const professora = await criarEquipeComSenha()
   let turmaId = ''
   let turmaNome = ''
@@ -63,13 +65,13 @@ async function entrar(page: Page, hasTouch: boolean, { comTurma = true }: { comT
     turmaNome = alocacao.turmaNome
   }
   await page.goto('/entrar')
+  // A professora abre em "Nova conversa", que lê as turmas dela: a resposta de verdade é esperada desde antes da entrada.
+  const vinculos = page.waitForResponse((resposta) => new URL(resposta.url()).pathname === '/v1/meus-vinculos' && resposta.ok())
   await entrarPorEmail(page, professora, hasTouch)
-  await expect(page.getByRole('heading', { name: `Olá, ${professora.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  await esperarNovaConversa(page, professora.nome)
   let disciplinaId = ''
   if (comTurma) {
     // A disciplina da turma, como a API de verdade a devolve: é com ela que as respostas simuladas falam da mesma turma.
-    const vinculos = page.waitForResponse((resposta) => new URL(resposta.url()).pathname === '/v1/meus-vinculos')
-    await irPara(page, '/professor/turmas')
     const { itens } = (await (await vinculos).json()) as { itens: { disciplina?: { id: string } }[] }
     disciplinaId = itens[0]?.disciplina?.id ?? ''
     expect(disciplinaId).toMatch(UUID)
@@ -163,8 +165,6 @@ test.describe('a Home (11.2): os quatro estados', () => {
       } else await route.continue()
     })
     await recarregar(page)
-    await expect(page).toHaveURL(/\/professor\/turmas$/)
-    await irPelaNavegacao(page, 'Nova conversa', hasTouch)
     await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     segura.abrir()
     await expect(page.getByRole('main').getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_TELA_MS })
@@ -194,7 +194,7 @@ test.describe('a Home (11.2): os quatro estados', () => {
     await expect(esperando).toHaveCount(1)
     await expect(esperando).toContainText('Adaptação')
     await expect(esperando).toContainText('Versão adaptada')
-    await expect(esperando).toContainText(`Atividade de estequiometria · ${turmaNome}`)
+    await expect(esperando).toContainText(`Atividade de estequiometria (versão adaptada) · ${turmaNome}`)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
     await acionar(esperando, hasTouch)
@@ -308,8 +308,22 @@ test.describe('a conversa (11.3)', () => {
     expect(await violacoesGraves(page)).toEqual([])
 
     // A execução falha: aviso dentro da conversa, com "Tentar de novo", e nenhum código na tela.
+    // O 13º pedido do minuto: a API recusa com 429, e a tela diz com calma que é só esperar, sem alarme e sem código.
+    api.trocar('mensagens', () => erroDaApi(429, 'LIMITE_EXCEDIDO'))
     await enviarPedido(page, 'o que é reagente limitante?', hasTouch)
-    await expect.poll(() => api.pedidosEm(/mensagens$/).length).toBe(1)
+    const limite = page.locator('[data-limite-de-pedidos]')
+    await expect(limite).toContainText('Você fez muitos pedidos ao Assistente em pouco tempo.', { timeout: PRAZO_DA_TELA_MS })
+    await expect(page.getByRole('main').getByRole('alert')).toHaveCount(0)
+    await expect(page.getByRole('main')).not.toContainText('LIMITE_EXCEDIDO')
+    await expect(page.getByRole('log').getByText('o que é reagente limitante?')).toBeVisible()
+    // "Pedir de novo" manda o mesmo pedido com a mesma chave: o recusado não chegou a virar execução.
+    api.trocar('mensagens')
+    await acionar(limite.getByRole('button', { name: 'Pedir de novo' }), hasTouch)
+    await expect.poll(() => api.pedidosEm(/mensagens$/).length).toBe(2)
+    const [recusado, repetido] = api.pedidosEm(/mensagens$/).map((pedido) => pedido.corpo as { texto: string; chaveEnvio: string })
+    expect(repetido).toEqual(recusado)
+    await expect(limite).toHaveCount(0)
+
     api.falhar(api.ultimaExecucao(), 'IA_INDISPONIVEL')
     const aviso = page.locator('[data-aviso-fila="falha"]')
     await expect(aviso).toContainText('Não foi possível responder agora.', { timeout: PRAZO_DA_TELA_MS })
@@ -317,8 +331,8 @@ test.describe('a conversa (11.3)', () => {
     await expect(page.getByRole('log').getByText('o que é reagente limitante?')).toBeVisible()
     // "Tentar de novo" manda o mesmo pedido com chave nova: a antiga devolveria a execução que falhou.
     await acionar(aviso.getByRole('button', { name: 'Tentar de novo' }), hasTouch)
-    await expect.poll(() => api.pedidosEm(/mensagens$/).length).toBe(2)
-    const [primeiro, segundo] = api.pedidosEm(/mensagens$/).map((pedido) => pedido.corpo as { texto: string; chaveEnvio: string })
+    await expect.poll(() => api.pedidosEm(/mensagens$/).length).toBe(3)
+    const [, primeiro, segundo] = api.pedidosEm(/mensagens$/).map((pedido) => pedido.corpo as { texto: string; chaveEnvio: string })
     expect(segundo?.texto).toBe(primeiro?.texto)
     expect(segundo?.chaveEnvio).not.toBe(primeiro?.chaveEnvio)
 
@@ -478,9 +492,8 @@ test.describe('Ferramentas (D74) e o formulário', () => {
   test('a função suspensa pela escola tira o formulário e explica, sem alarme', async ({ page, hasTouch }) => {
     // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
     test.slow()
-    const { api, turmaId, disciplinaId } = await entrar(page, hasTouch)
+    const { api, turmaId, disciplinaId } = await entrar(page, hasTouch, { antes: (simulada) => simulada.suspensas.add('adaptacao') })
     api.artefatos = [atividadeSintetica(turmaId, disciplinaId)]
-    api.suspensas.add('adaptacao')
     await irPara(page, '/professor/ferramentas/adaptacao')
     await expect(page.getByRole('note')).toContainText('A coordenação suspendeu a Adaptação nesta escola.', { timeout: PRAZO_DA_TELA_MS })
     await expect(page.locator('[data-motor]')).toHaveCount(0)
@@ -614,7 +627,7 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
   test('Aprovar mostra o que vai acontecer antes de confirmar, passa pela decisão registrada uma vez só, mesmo com dois cliques, e a tela mostra quem aprovou e quando', async ({ page, hasTouch }) => {
     // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
     test.slow()
-    const { api, turmaId, turmaNome, disciplinaId } = await entrar(page, hasTouch)
+    const { api, turmaId, turmaNome, disciplinaId } = await entrar(page, hasTouch, { antes: (simulada) => simulada.suspensas.add('adaptacao') })
     const origem = atividadeSintetica(turmaId, disciplinaId)
     const adaptada = versaoAdaptada(origem)
     const antiga = versaoAdaptada(origem, 'rejeitada')
@@ -624,14 +637,17 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
 
     // A faixa "Esperando você" presa no alto, o filtro com o contador e a entrega em balão, assinada.
     const faixa = page.locator('[data-faixa-esperando]')
-    await expect(faixa).toContainText(`${origem.titulo} · ${turmaNome}`, { timeout: PRAZO_DA_TELA_MS })
+    await expect(faixa).toContainText(`${adaptada.artefato.titulo} · ${turmaNome}`, { timeout: PRAZO_DA_TELA_MS })
     expect(await faixa.evaluate((elemento) => getComputedStyle(elemento).position)).toBe('sticky')
     await expect(page.getByRole('tab')).toHaveText([/^Tudo$/, /^Esperando você1/, /^Correção$/, /^Adaptação$/])
     const pendente = page.locator('[data-entrega="pendente"]')
-    await expect(pendente).toContainText(`Preparei a versão adaptada de "${origem.titulo}" da turma ${turmaNome}.`)
+    await expect(pendente).toContainText(`Preparei "${adaptada.artefato.titulo}" da turma ${turmaNome}. Esta versão adaptada só pode ir aos alunos depois que você aprovar.`)
     await expect(pendente.getByText('Assistente · adaptação')).toBeVisible()
     await expect(selosDeIA(page.getByRole('log'))).toHaveCount(2)
     await expect(pendente.locator('[data-aprovacao="pendente"]')).toHaveText('Esperando você')
+    // A escola suspendeu a Adaptação: a entrega que espera diz isso, e continua podendo ser decidida. A já decidida não diz.
+    await expect(pendente.locator('[data-entrega-de-funcao-suspensa]')).toHaveText('A coordenação suspendeu a função "Adaptação" nesta escola: o Assistente não prepara outra enquanto isso. Esta entrega continua esperando a sua decisão.')
+    await expect(page.locator('[data-entrega="rejeitada"] [data-entrega-de-funcao-suspensa]')).toHaveCount(0)
     // A rejeitada de antes diz quem rejeitou e o motivo, e não tem mais o que decidir.
     const rejeitada = page.locator('[data-entrega="rejeitada"]')
     await expect(rejeitada.locator('[data-aprovacao="rejeitada"]')).toContainText(`${QUEM_DECIDE.nome} rejeitou`)
@@ -645,7 +661,7 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
     expect(await aprovar.evaluate((elemento) => getComputedStyle(elemento).backgroundColor)).toBe('rgb(13, 13, 13)')
     await acionar(aprovar, hasTouch)
     const dialogo = page.getByRole('alertdialog', { name: 'Aprovar a versão adaptada' })
-    await expect(dialogo).toContainText(`Versão adaptada de "${origem.titulo}"`)
+    await expect(dialogo).toContainText(adaptada.artefato.titulo)
     await expect(dialogo).toContainText(turmaNome)
     await expect(dialogo).toContainText('Só depois da sua aprovação esta versão pode ir aos alunos da turma.')
     // Nada foi decidido só por abrir.

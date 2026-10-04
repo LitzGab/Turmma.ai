@@ -1,7 +1,8 @@
 import type { MensagemDaConversa, MensagemDoAgente } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import type { CicloDeExecucao } from '../../api/ciclo-de-execucao'
-import { mensagensNaTela, pendenteNaConversa, propostaQuePergunta } from './conversa'
+import { esquemaPedidoMensagemAoAssistente } from '@educa/shared'
+import { mensagensNaTela, pedidoDeSoConversar, pendenteNaConversa, propostaQuePergunta } from './conversa'
 import type { PedidoDaConversa } from './memoria-do-professor'
 
 const TURMA = '0190f5a0-0000-7000-8000-00000000002b'
@@ -70,6 +71,16 @@ describe('a pergunta da D18: qual proposta ainda pergunta', () => {
   it('a proposta antiga, depois de a conversa seguir, não volta a perguntar', () => {
     expect(propostaQuePergunta([proposta('02'), dela('03', 'deixa, me explica reagente limitante'), doAgente('04', 'Claro.')], {}, undefined)).toBeUndefined()
     expect(propostaQuePergunta([proposta('02'), dela('03', 'outro pedido')], {}, undefined)).toBeUndefined()
+  })
+
+  it('"só conversar" vira a mensagem seguinte dela, na turma da proposta, com a marca que pede a resposta em texto; e o corpo passa no contrato', () => {
+    const mensagem = proposta('02')
+    if (mensagem.tipo !== 'proposta_de_ferramenta') throw new Error('era para ser proposta')
+    const pedido = pedidoDeSoConversar(mensagem.proposta)
+    expect(pedido).toEqual({ texto: 'Só conversar', turmaId: TURMA, disciplinaId: DISCIPLINA, resposta: 'so_conversar' })
+    expect(esquemaPedidoMensagemAoAssistente.safeParse({ ...pedido, chaveEnvio: EXECUCAO }).success).toBe(true)
+    // Sem a marca, o Assistente proporia a ferramenta de novo: é ela que diz que a professora já respondeu.
+    expect(pendenteNaConversa([mensagem], { etapa: 'enviando', pedido, chaveEnvio: 'chave-2', desde: 2_000 })).toEqual({ pedido: 'Só conversar', pensando: true })
   })
 
   it('com um pedido novo no ar, a proposta anterior deixa de perguntar', () => {

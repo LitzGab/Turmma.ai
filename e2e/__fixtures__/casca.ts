@@ -92,12 +92,31 @@ export async function entrarPorEmail(page: Page, pessoa: EquipeDeTeste, hasTouch
   await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
 }
 
-/** A professora de uma escola só, na página inicial dela. */
+/** O título da aba na tela em que o professor abre. */
+export const TITULO_DA_NOVA_CONVERSA = 'Nova conversa · Turmma'
+
+/**
+ * O professor abre em "Nova conversa" (A2; D73; `docs/interface.md` 11.1), e não mais na página "Início": o endereço, a
+ * saudação com o primeiro nome dele e, na lateral, o nome inteiro de quem entrou. É o que prova que a sessão vale e de
+ * quem ela é: a saudação sozinha não distingue duas professoras de mesmo primeiro nome.
+ *
+ * No celular a lateral é a gaveta, fechada: o nome está nela, fora da vista, e o teste o lê sem abri-la.
+ */
+export async function esperarNovaConversa(page: Page, nome: string, opcoes: { readonly timeout?: number; readonly escolaNome?: string } = {}): Promise<void> {
+  const timeout = opcoes.timeout ?? PRAZO_DA_ENTRADA_MS
+  await expect(page).toHaveURL(/\/professor\/nova-conversa$/, { timeout })
+  const primeiroNome = (nome.trim().split(/\s+/)[0] ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  await expect(page.getByText(new RegExp(`^(Bom dia|Boa tarde|Boa noite), ${primeiroNome}\\.$`))).toBeVisible({ timeout })
+  await expect(naGaveta(page) ? page.locator('dialog[aria-label="Menu"]') : page.locator('body')).toContainText(nome, { timeout })
+  if (opcoes.escolaNome !== undefined) await expect(page.getByText(opcoes.escolaNome).first()).toBeVisible({ timeout })
+}
+
+/** A professora de uma escola só, em "Nova conversa", onde ela abre. */
 export async function entrarComoProfessora(page: Page, hasTouch: boolean): Promise<EquipeDeTeste> {
   const professora = await criarEquipeComSenha()
   await page.goto('/entrar')
   await entrarPorEmail(page, professora, hasTouch)
-  await expect(page.getByRole('heading', { name: `Olá, ${professora.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  await esperarNovaConversa(page, professora.nome)
   return professora
 }
 
