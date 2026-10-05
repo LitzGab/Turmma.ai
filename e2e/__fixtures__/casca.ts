@@ -92,29 +92,77 @@ export async function entrarPorEmail(page: Page, pessoa: EquipeDeTeste, hasTouch
   await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
 }
 
-/** A professora de uma escola só, na página inicial dela. */
+/** O título da aba na tela em que o professor abre. */
+export const TITULO_DA_NOVA_CONVERSA = 'Nova conversa · Turmma'
+
+/**
+ * O professor abre em "Nova conversa" (A2; D73; `docs/interface.md` 11.1), e não mais na página "Início": o endereço, a
+ * saudação com o primeiro nome dele e, na lateral, o nome inteiro de quem entrou. É o que prova que a sessão vale e de
+ * quem ela é: a saudação sozinha não distingue duas professoras de mesmo primeiro nome.
+ *
+ * No celular a lateral é a gaveta, fechada: o nome está nela, fora da vista, e o teste o lê sem abri-la.
+ */
+export async function esperarNovaConversa(page: Page, nome: string, opcoes: { readonly timeout?: number; readonly escolaNome?: string } = {}): Promise<void> {
+  const timeout = opcoes.timeout ?? PRAZO_DA_ENTRADA_MS
+  await expect(page).toHaveURL(/\/professor\/nova-conversa$/, { timeout })
+  const primeiroNome = (nome.trim().split(/\s+/)[0] ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  await expect(page.getByText(new RegExp(`^(Bom dia|Boa tarde|Boa noite), ${primeiroNome}\\.$`))).toBeVisible({ timeout })
+  await expect(naGaveta(page) ? page.locator('dialog[aria-label="Menu"]') : page.locator('body')).toContainText(nome, { timeout })
+  if (opcoes.escolaNome !== undefined) await expect(page.getByText(opcoes.escolaNome).first()).toBeVisible({ timeout })
+}
+
+/**
+ * Na turma aberta do professor, o acesso da sala e os pedidos de nome ficam na aba **"Alunos"** (A3; D69): a turma abre
+ * na "Visão Geral", com o acerto por habilidade. Cada vez que a turma é aberta de novo (outro endereço, voltar pelo
+ * histórico), ela abre na Visão Geral outra vez.
+ */
+export async function abrirAbaAlunos(page: Page, hasTouch: boolean): Promise<void> {
+  const aba = page.getByRole('tab', { name: 'Alunos' })
+  if (hasTouch) await aba.tap({ timeout: PRAZO_DA_ENTRADA_MS })
+  else await aba.click({ timeout: PRAZO_DA_ENTRADA_MS })
+  await expect(aba).toHaveAttribute('aria-selected', 'true')
+}
+
+/** A professora de uma escola só, em "Nova conversa", onde ela abre. */
 export async function entrarComoProfessora(page: Page, hasTouch: boolean): Promise<EquipeDeTeste> {
   const professora = await criarEquipeComSenha()
   await page.goto('/entrar')
   await entrarPorEmail(page, professora, hasTouch)
-  await expect(page.getByRole('heading', { name: `Olá, ${professora.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  await esperarNovaConversa(page, professora.nome)
   return professora
 }
 
 /**
- * A coordenação abre em Estrutura (A1, 13.0; `docs/interface.md` 11.1): o endereço e a tela. O endereço vem da página
- * inicial, na entrada; a tela, do chunk da área, e por isso o teste que segura o chunk confere só o endereço.
+ * A coordenação abre em Governança (MVP, A5; `docs/interface.md` 11.1: é a tela que fecha a venda), e não mais em
+ * Estrutura: o endereço e a tela. O endereço vem da página inicial, na entrada; a tela, do pedaço dela, que a área
+ * carrega por `import()`, e por isso o teste que segura o chunk da área confere só o endereço.
  */
+export async function esperarGovernanca(page: Page): Promise<void> {
+  await expect(page).toHaveURL(/\/coordenacao\/governanca$/, { timeout: PRAZO_DA_ENTRADA_MS })
+  await expect(page.getByRole('heading', { level: 1, name: 'Governança' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
+}
+
+/** A Estrutura da coordenação aberta (A1, 13.0): o endereço e a tela. */
 export async function esperarEstrutura(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/coordenacao\/estrutura$/, { timeout: PRAZO_DA_ENTRADA_MS })
   await expect(page.getByRole('heading', { level: 1, name: 'Estrutura' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
 }
 
 /**
+ * A coordenação que acabou de entrar vai à Estrutura: **confere que abriu em Governança** e segue pela navegação da
+ * lateral, sem recarregar a página. É o caminho de quem monta a escola desde a A5.
+ */
+export async function abrirEstrutura(page: Page, hasTouch: boolean): Promise<void> {
+  await esperarGovernanca(page)
+  await irPelaNavegacao(page, 'Estrutura', hasTouch)
+  await esperarEstrutura(page)
+}
+
+/**
  * A coordenadora no primeiro acesso, a partir da tela de entrada já aberta e sem recarregar a página: configura o
  * segundo fator do jeito sem celular, volta à entrada e entra com o código. Sem recarga, o que o teste afirma sobre o
- * cache da pessoa anterior na mesma aba continua valendo. Termina com a aba no endereço da Estrutura, onde a coordenação
- * abre (13.0); quem precisa da tela chama `esperarEstrutura`.
+ * cache da pessoa anterior na mesma aba continua valendo. Termina com a aba no endereço da Governança, onde a coordenação
+ * abre (A5); quem precisa da tela chama `esperarGovernanca`, e quem vai montar a escola, `abrirEstrutura`.
  */
 export async function entrarComoCoordenacaoNaMesmaAba(page: Page, coordenadora: EquipeDeTeste, hasTouch: boolean): Promise<void> {
   const respostaDoSegredo = page.waitForResponse((resposta) => new URL(resposta.url()).pathname === '/v1/conta/mfa/configurar')
@@ -128,5 +176,33 @@ export async function entrarComoCoordenacaoNaMesmaAba(page: Page, coordenadora: 
   await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   await campoCodigo(page).fill(codigoDoAutenticador(segredo, PASSO_SEGUINTE_SEGUNDOS))
   await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
-  await expect(page).toHaveURL(/\/coordenacao\/estrutura$/, { timeout: PRAZO_DA_ENTRADA_MS })
+  await expect(page).toHaveURL(/\/coordenacao\/governanca$/, { timeout: PRAZO_DA_ENTRADA_MS })
+}
+
+/** O título da aba na tela em que o aluno abre. */
+export const TITULO_DAS_ATIVIDADES = 'Atividades · Turmma'
+
+/**
+ * O aluno abre em "Atividades" (MVP, A3), e não mais na página "Início": o endereço, a tela e, na lateral, o nome de quem
+ * entrou e o papel. É o que prova que a sessão vale e de quem ela é, como a saudação "Olá, <nome>" provava antes.
+ *
+ * No celular a lateral é a gaveta, fechada: o nome está nela, fora da vista, e o teste o lê sem abri-la.
+ */
+export async function esperarAtividades(page: Page, nome: string, opcoes: { readonly timeout?: number; readonly escolaNome?: string } = {}): Promise<void> {
+  const timeout = opcoes.timeout ?? PRAZO_DA_ENTRADA_MS
+  await expect(page).toHaveURL(/\/aluno\/atividades$/, { timeout })
+  await expect(page.getByRole('main').getByRole('heading', { level: 1, name: 'Atividades' })).toBeAttached({ timeout })
+  const lateralDaCasca = naGaveta(page) ? page.locator('dialog[aria-label="Menu"]') : page.locator('body')
+  await expect(lateralDaCasca).toContainText(nome, { timeout })
+  await expect(lateralDaCasca).toContainText('aluno', { timeout })
+  if (opcoes.escolaNome !== undefined) await expect(lateralDaCasca).toContainText(opcoes.escolaNome, { timeout })
+}
+
+/** O aluno entra pelo endereço da escola, com matrícula e senha, e chega a "Atividades", onde ele abre. */
+export async function entrarComoAluno(page: Page, aluno: { readonly slug: string; readonly matricula: string; readonly senha: string; readonly nome: string }, hasTouch: boolean): Promise<void> {
+  await page.goto(`/e/${aluno.slug}`)
+  await page.getByLabel('Matrícula').fill(aluno.matricula)
+  await page.getByLabel('Senha').fill(aluno.senha)
+  await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
+  await esperarAtividades(page, aluno.nome)
 }

@@ -689,3 +689,50 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 
 - [ ] Iniciar aprovação da API oficial do WhatsApp (prazo de semanas — comece antes de precisar)
 - [ ] Portal da família sobre o motor de eventos
+
+## Antes da primeira escola real, vindo da revisão da fase 1 do MVP de apresentação (04/10/2026)
+
+O MVP de apresentação corre com dado sintético (D71, D77). Os revisores apontaram o que precisa existir antes de
+qualquer dado real:
+
+- [ ] **Acesso e portabilidade do titular cobrindo as tabelas da fase 3.** A rota do pedido do titular (F3,
+  `ciclo-de-vida.service.ts`) precisa alcançar, por aluno: `mensagem_tutor`, `sinal_tutor`, `resposta_atividade`,
+  `tentativa_atividade`, `correcao`, `validacao_do_lote` (o aluno do destaque, pelo id) e `consumo_ia` com
+  `envio_externo` (o que foi a provedor externo e quando), para a pergunta de fechamento da regra 20 continuar
+  respondida por código (`privacy-guardian`, revisão da fase 3).
+- [ ] **Trava da D62 em código.** A marca "leva texto de aluno" da camada de IA não tem consumidor: texto de aluno com
+  envio externo e sem contrato que vede treinamento e garanta processamento no Brasil precisa ser recusado
+  (`privacy-guardian`).
+- [ ] **Expurgo** de `consumo_ia` (`entrada` e `saida`), de `execucao_agente` e das conversas, no prazo do mapa de
+  `docs/lgpd.md`, configurável por escola. O mapa cita o expurgo e ele não existe.
+- [ ] **Aviso no campo de tema** das ferramentas, para não escrever nome nem condição de aluno, e busca textual nos
+  campos livres no procedimento de eliminação do titular.
+- [ ] **Recusa do Tutor medida.** Conjunto fixo de amostras com taxa mínima declarada, rodado contra o modelo de
+  produção (regra 40). A regra determinística cobre o que está no arquivo de amostras; o resto fica com o modelo, e
+  para aluno real isso não basta sem medição (`conformidade-reviewer`).
+- [ ] **Teto de IA por escola e custo.** Não há coluna de teto nem tabela de preço: `IA_ORCAMENTO_ESGOTADO` nunca
+  dispara e `custo_micros` fica em zero (D14, D39).
+- [ ] **Galeria das peças fora do build** de staging e de produção.
+- [ ] **Execução de IA e extração de PDF por fila**, no lugar do processo da API (`TODO(fila)`, D49).
+- [ ] **Recusa da D55 no Assistente, estrutural.** A regra por lista de palavras pegou 6 de 47 frases novas escritas
+  pelo `conformidade-reviewer` na segunda passada da fase 3 (04/10/2026): foi ajustada às amostras. Para a demonstração
+  ela foi aceita; antes de dado real: texto colado na mensagem atual não vai ao modelo, ou é recusado quando não é
+  material do próprio professor; a conferência da saída recusa número de 0 a 10 ou letra de A a E depois de "sugiro",
+  "colocaria", "iria de", "fecharia em", "classificaria", e "considero" ou "avaliação:" seguido de insuficiente,
+  regular ou satisfatório; a entrada cobre a trajetória do aluno ("reprovo", "recuperação", "conselho de classe",
+  "encaminho"); e um terceiro arquivo de amostras, escrito por outra pessoa, com a taxa medida e declarada abaixo de 1.
+  Falso positivo conhecido: "critérios para avaliar redação antes de aplicar" é recusado.
+- [ ] **Assunto delicado sem teto de IA.** Agora passa na frente de todo limite (D36). Falta um teto próprio, alto, ou a
+  deduplicação do sinal `atencao_humana`, para um laço de mensagens não encher a lista do professor; e confirmar que o
+  limite geral de requisições por escola, o da borda, não chega antes do 188 às 10h.
+- [ ] **Servidor do e2e sem compressão nem cache.** O `vite preview` manda o JS cru e sem cache, e o teste
+  `e2e/areas.spec.ts:163` roda a 28,5 de 30 s no perfil celular, gastando o tempo em recarregamentos. Servir o build do
+  e2e comprimido e com cache, como a produção, é mudança de infra (contêiner `web` e borda), com `test:infra`.
+- [ ] **Ensaio de alertas intermitente** na esteira: a regra "Login recusado pelo semáforo do hash" ficou em `pending`
+  até o prazo numa execução da `mvp/apresentacao` e passou na reexecução. Se voltar, entra por `/corrigir`.
+- [ ] **E2e intermitente "segunda pessoa"** (`e2e/areas.spec.ts:381`, chromebook): na esteira `37302975647` a coordenação
+  entrou na aba do professor e "Turmas" mostrou o estado vazio ("A coordenação ainda não alocou você") em vez da turma
+  da professora, e passou na reexecução, sem mudança de código. É o quarto e2e intermitente da `mvp/apresentacao` em
+  torno da página inicial do professor e da troca de escola (os outros são "W4: os estados de Turmas" e os dois da troca
+  de escola no celular): vale um `/corrigir` que olhe os quatro juntos antes de a esteira da `develop` voltar a
+  ser por commit.

@@ -20,10 +20,17 @@ import {
 } from '@educa/nucleo'
 import { Module, type DynamicModule } from '@nestjs/common'
 import { APP_GUARD, APP_INTERCEPTOR, DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core'
+import { ArtefatoModule } from './artefato/artefato.module.js'
+import { AssistenteModule } from './assistente/assistente.module.js'
+import { AtividadeModule } from './atividade/atividade.module.js'
 import { BANCO, BancoModule } from './banco.module.js'
 import type { ConfiguracaoApi } from './config.js'
+import { EntregaModule } from './entrega/entrega.module.js'
 import { EstruturaModule } from './estrutura/estrutura.module.js'
+import { GovernancaModule } from './governanca/governanca.module.js'
+import { IaModule } from './ia/ia.module.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
+import { MaterialModule } from './material/material.module.js'
 import { OperacaoModule } from './operacao/operacao.module.js'
 import { ProfessoresModule } from './professores/professores.module.js'
 import type { SorteioDoCodigo } from './sala/codigo-da-sala.js'
@@ -31,6 +38,7 @@ import { SalaModule } from './sala/sala.module.js'
 import { SessaoModule } from './sessao/sessao.module.js'
 import { ProntidaoController } from './sistema/prontidao.controller.js'
 import { SistemaModule } from './sistema/sistema.module.js'
+import { TutorModule } from './tutor/tutor.module.js'
 import { UsoModule } from './uso.module.js'
 
 /** O que a montagem passa ao `AppModule`: o `main.ts` passa só o `logger`; o resto, só o teste. */
@@ -74,6 +82,14 @@ export class AppModule {
         }),
         EstruturaModule,
         ProfessoresModule,
+        MaterialModule.com(opcoes.logger ?? criarLogger({ servico: 'api' })),
+        IaModule.com({ config: config.ia, ...(opcoes.logger === undefined ? {} : { logger: opcoes.logger }) }),
+        AssistenteModule.com({ chaveContador: config.login.chaveContador, instancias: config.limite.instancias, logger: opcoes.logger ?? criarLogger({ servico: 'api' }) }),
+        ArtefatoModule,
+        EntregaModule,
+        AtividadeModule,
+        TutorModule,
+        GovernancaModule,
         SalaModule.com({
           config: config.sala,
           chaveContador: config.login.chaveContador,

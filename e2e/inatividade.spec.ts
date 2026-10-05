@@ -9,7 +9,7 @@ import {
   encerrarSessoesDoUsuario,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
-import { irPelaNavegacao } from './__fixtures__/casca.ts'
+import { irPelaNavegacao, esperarNovaConversa, esperarAtividades } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -46,8 +46,14 @@ async function entrarPorEmail(page: Page, equipe: EquipeDeTeste, hasTouch: boole
   await acionar(page, /^Entrar$/, hasTouch)
 }
 
+/** A professora na tela em que ela abre, "Nova conversa" (A2; D73): a sessão dela vale. */
 async function esperarAreaAutenticada(page: Page, nome: string): Promise<void> {
-  await expect(page.getByRole('heading', { name: `Olá, ${nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  await esperarNovaConversa(page, nome)
+}
+
+/** O aluno na tela em que ele abre, "Atividades" (A3), com o nome dele na lateral. */
+async function esperarInicioDoAluno(page: Page, nome: string): Promise<void> {
+  await esperarAtividades(page, nome)
 }
 
 /** Minutos no formato que o relógio simulado do Playwright entende. */
@@ -264,7 +270,7 @@ test.describe('inatividade e login por cima da tela', () => {
     await page.getByLabel('Matrícula').fill(aluno.matricula)
     await campoSenha(page).fill(aluno.senha)
     await acionar(page, /^Entrar$/, hasTouch)
-    await esperarAreaAutenticada(page, aluno.nome)
+    await esperarInicioDoAluno(page, aluno.nome)
 
     // A coordenação desativou o aluno, ou a sessão foi encerrada: a requisição seguinte já não vale (RF5).
     await encerrarSessoesDoUsuario(aluno.usuarioId)
@@ -282,7 +288,7 @@ test.describe('inatividade e login por cima da tela', () => {
     await dialogo(page).getByLabel('Senha').fill(aluno.senha)
     await acionar(page, /^Entrar$/, hasTouch)
     await expect(dialogo(page)).toBeHidden({ timeout: PRAZO_DA_ENTRADA_MS })
-    await esperarAreaAutenticada(page, aluno.nome)
+    await esperarInicioDoAluno(page, aluno.nome)
   })
 
   test('Chromebook do carrinho: quem entra no login por cima é outra pessoa, e a tela da anterior sai da frente dela', async ({ page, hasTouch }) => {
@@ -313,7 +319,8 @@ test.describe('inatividade e login por cima da tela', () => {
     await acionar(page, /^Entrar$/, hasTouch)
 
     await esperarAreaAutenticada(page, segunda.nome)
-    expect(new URL(page.url()).pathname).toBe('/')
+    // Ela não fica na tela da anterior (Turmas, com a contestação aberta): é levada para onde o professor abre.
+    expect(new URL(page.url()).pathname).toBe('/professor/nova-conversa')
     await expect(page.locator('body')).not.toContainText(escrito)
     await expect(page.locator('body')).not.toContainText(primeira.nome)
     await expect(page.locator('body')).not.toContainText(primeira.escolaNome)

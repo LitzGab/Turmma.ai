@@ -6,7 +6,7 @@ import {
   abrirNavegacao,
   entrarComoCoordenacaoNaMesmaAba,
   escolherNoSeletor,
-  esperarEstrutura,
+  esperarGovernanca,
   nomeNoSeletor,
   entrarComoProfessora,
   entrarPorEmail,
@@ -15,6 +15,9 @@ import {
   lateral,
   naGaveta,
   PRAZO_DA_ENTRADA_MS,
+  esperarNovaConversa,
+  TITULO_DA_NOVA_CONVERSA,
+  esperarAtividades,
 } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlocacaoDoProfessor, criarAlunoComMatricula, criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
@@ -35,16 +38,32 @@ const TITULO_DA_FALHA = 'Não foi possível carregar esta parte do Turmma'
 
 /**
  * Os itens do professor, como a tabela `apps/web/src/areas/navegacao.ts` os declara. O e2e não importa o fonte da web
- * (outra resolução de módulos); a tarefa que acrescenta a linha lá acrescenta aqui, e o W2 percorre todos.
+ * (outra resolução de módulos); a tarefa que acrescenta a linha lá acrescenta aqui, e o W2 percorre todos. "Nova
+ * conversa" e "Ferramentas" chegaram com a A2 (D73); "Turmas" continua por último, que é onde o W2 termina.
  */
-const ITENS_DO_PROFESSOR = [{ rotulo: 'Turmas', caminho: '/professor/turmas' }] as const
-/** Os itens da coordenação, como a mesma tabela os declara: "Estrutura" chegou na 13.0, e "Professores", na 14.0. */
+const ITENS_DO_PROFESSOR = [
+  { rotulo: 'Nova conversa', caminho: '/professor/nova-conversa' },
+  { rotulo: 'Ferramentas', caminho: '/professor/ferramentas' },
+  { rotulo: 'Turmas', caminho: '/professor/turmas' },
+] as const
+/**
+ * Os itens da coordenação, como a mesma tabela os declara: "Estrutura" chegou na 13.0, "Professores", na 14.0, "Material",
+ * no MVP de apresentação (A2), e "Governança", "Agentes" e "Analista", na A5, na frente: é na Governança que ela abre.
+ */
 const ITENS_DA_COORDENACAO = [
+  { rotulo: 'Governança', caminho: '/coordenacao/governanca' },
+  { rotulo: 'Agentes', caminho: '/coordenacao/agentes' },
+  { rotulo: 'Analista', caminho: '/coordenacao/analista' },
   { rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' },
   { rotulo: 'Professores', caminho: '/coordenacao/professores' },
+  { rotulo: 'Material', caminho: '/coordenacao/material' },
 ] as const
-/** Os itens do aluno, como a mesma tabela os declara: "Minha turma" chegou na 12.0. */
-const ITENS_DO_ALUNO = [{ rotulo: 'Minha turma', caminho: '/aluno/minha-turma' }] as const
+/** Os itens do aluno, como a mesma tabela os declara: "Minha turma" chegou na 12.0; "Tutor" e "Atividades", no MVP (A3 e A4). */
+const ITENS_DO_ALUNO = [
+  { rotulo: 'Tutor', caminho: '/aluno/tutor' },
+  { rotulo: 'Atividades', caminho: '/aluno/atividades' },
+  { rotulo: 'Minha turma', caminho: '/aluno/minha-turma' },
+] as const
 
 /** Os pedidos de JS que a página fez, pelo caminho: é por eles que o teste sabe qual área foi baixada. */
 function registrarChunks(page: Page): string[] {
@@ -75,6 +94,10 @@ async function navegarSemRecarregar(page: Page, caminho: string): Promise<void> 
 
 const naoEncontrada = (page: Page) => page.getByRole('heading', { name: 'Página não encontrada' })
 
+/**
+ * Pela marca, que leva à raiz. Para o professor a raiz é a tela em que ele abre, "Nova conversa" (A2; D73); para o aluno,
+ * "Atividades" (A3).
+ */
 async function voltarAoInicio(page: Page, hasTouch: boolean): Promise<void> {
   await abrirNavegacao(page, hasTouch)
   const marca = lateral(page).getByRole('link', { name: 'Turmma, página inicial' })
@@ -83,17 +106,20 @@ async function voltarAoInicio(page: Page, hasTouch: boolean): Promise<void> {
 }
 
 test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
-  test('o professor vê só "Turmas", o item leva à tela com as três pistas do selecionado, e a aba diz a tela', async ({ page, hasTouch }) => {
+  test('o professor vê os itens da fase dele, cada um leva à tela com as três pistas do selecionado, e a aba diz a tela', async ({ page, hasTouch }) => {
     const professora = await entrarComoProfessora(page, hasTouch)
-    await expect(page).toHaveTitle('Início · Turmma')
-    // A página inicial não diz que as turmas ficam para depois: aponta para elas, a um toque também no celular.
+    // O professor abre em "Nova conversa" (A2; D73), e não numa página de passagem.
+    await expect(page).toHaveTitle(TITULO_DA_NOVA_CONVERSA)
+    // A tela em que ele abre não diz que as turmas ficam para depois: sem turma confirmada, aponta para elas, a um toque
+    // também no celular.
     await expect(page.getByRole('main')).not.toContainText('próximas versões')
-    const paraTurmas = page.getByRole('main').getByRole('link', { name: 'Turmas', exact: true })
-    if (hasTouch) await paraTurmas.tap()
-    else await paraTurmas.click()
+    const paraTurmas = page.getByRole('main').getByRole('button', { name: 'Ir para Turmas' })
+    if (hasTouch) await paraTurmas.tap({ timeout: PRAZO_DA_ENTRADA_MS })
+    else await paraTurmas.click({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page).toHaveURL(/\/professor\/turmas$/)
     await voltarAoInicio(page, hasTouch)
-    await expect(page).toHaveTitle('Início · Turmma')
+    await expect(page).toHaveURL(/\/professor\/nova-conversa$/)
+    await expect(page).toHaveTitle(TITULO_DA_NOVA_CONVERSA)
 
     await abrirNavegacao(page, hasTouch)
     const secoes = lateral(page).getByRole('navigation', { name: 'Seções' })
@@ -134,7 +160,7 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     // endereço, e não só pelo toque num item.
     await voltarAoInicio(page, hasTouch)
     await expect(gaveta(page)).toBeHidden()
-    await expect(page).toHaveTitle('Início · Turmma')
+    await expect(page).toHaveTitle(TITULO_DA_NOVA_CONVERSA)
     await abrirNavegacao(page, hasTouch)
     await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' })).not.toHaveAttribute('aria-current', 'page')
     await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }).locator('[data-filete]')).toHaveCount(0)
@@ -144,10 +170,12 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     const pedidos = registrarChunks(page)
     await entrarComoProfessora(page, hasTouch)
 
-    // Os endereços da coordenação que têm tela: a Estrutura e uma turma aberta nela (13.0), e Professores (14.0).
-    for (const endereco of ['/coordenacao/estrutura', `/coordenacao/estrutura/turmas/${randomUUID()}`, '/coordenacao/professores']) {
+    // Os endereços da coordenação que têm tela: a Governança, onde ela abre (A5), uma turma aberta na Estrutura (13.0) e
+    // Professores (14.0).
+    for (const endereco of ['/coordenacao/governanca', `/coordenacao/estrutura/turmas/${randomUUID()}`, '/coordenacao/professores']) {
       await page.goto(endereco)
       await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(page.getByRole('heading', { name: 'Governança' })).toHaveCount(0)
       await expect(page.getByRole('heading', { name: 'Estrutura' })).toHaveCount(0)
       await expect(page.getByRole('heading', { name: 'Professores' })).toHaveCount(0)
     }
@@ -159,6 +187,14 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     // A área do aluno responderia "não encontrada" para o professor também sem a guarda (a "Minha turma" é só do aluno
     // na API): é o pedido do chunk que mostra que nenhuma das duas áreas foi baixada nem montada.
     expect(pedidos.filter((caminho) => CHUNK_DA_COORDENACAO.test(caminho) || CHUNK_DO_ALUNO.test(caminho))).toEqual([])
+  })
+
+  // Separado do anterior só pelo prazo: as cinco entradas de página por `page.goto`, no perfil de rede lenta e com o
+  // servidor do e2e sem compressão nem cache, passavam dos 30 s juntas (esteira `37245636814`). As asserções são as
+  // mesmas de antes; cada teste começa da entrada da professora.
+  test('o endereço que não existe na área do professor responde igual ao de outro papel, e "página inicial" volta à Nova conversa', async ({ page, hasTouch }) => {
+    const pedidos = registrarChunks(page)
+    const professora = await entrarComoProfessora(page, hasTouch)
 
     // Um endereço que não existe dentro da própria área responde igual: a tela não confirma o que é de outro papel.
     await page.goto('/professor/qualquer')
@@ -169,11 +205,13 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     // Dentro da área, "página inicial" leva à raiz, e não ao começo da área (`/professor/`).
     if (hasTouch) await page.getByRole('main').getByRole('link', { name: 'página inicial', exact: true }).tap()
     else await page.getByRole('main').getByRole('link', { name: 'página inicial', exact: true }).click()
-    await expect(page).toHaveURL(/\/$/)
-    await expect(page.getByRole('heading', { name: /^Olá, / })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // A raiz leva o professor à tela em que ele abre: é por ela que se chega a "Nova conversa", e não por `/professor/`,
+    // que não é tela nenhuma.
+    await esperarNovaConversa(page, professora.nome)
+    await expect(naoEncontrada(page)).toHaveCount(0)
   })
 
-  test('o aluno vê só "Minha turma", que leva à tela dele, e os endereços do professor e da coordenação caem em "não encontrada"', async ({ page, hasTouch }) => {
+  test('o aluno vê "Tutor", "Atividades" e "Minha turma", cada um levando à tela dele, e os endereços do professor e da coordenação caem em "não encontrada"', async ({ page, hasTouch }) => {
     const pedidos = registrarChunks(page)
     const aluno = await criarAlunoComMatricula()
     const turma = await colocarAlunoNaTurma(aluno)
@@ -182,16 +220,16 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await page.getByLabel('Senha').fill(aluno.senha)
     if (hasTouch) await page.getByRole('button', { name: /^Entrar$/ }).tap()
     else await page.getByRole('button', { name: /^Entrar$/ }).click()
-    await expect(page.getByRole('heading', { name: `Olá, ${aluno.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    // A página inicial aponta para a turma dele, e não para Turmas, que não é tela do aluno, nem para "próximas versões".
+    // O aluno abre em "Atividades" (A3), e não numa página de passagem: nada ali aponta para Turmas, que não é tela dele.
+    await esperarAtividades(page, aluno.nome)
     await expect(page.getByRole('main').getByRole('link', { name: 'Turmas', exact: true })).toHaveCount(0)
     await expect(page.getByRole('main')).not.toContainText('próximas versões')
-    const paraMinhaTurma = page.getByRole('main').getByRole('link', { name: 'Minha turma', exact: true })
-    if (hasTouch) await paraMinhaTurma.tap()
-    else await paraMinhaTurma.click()
+    await irPelaNavegacao(page, 'Minha turma', hasTouch)
     await expect(page).toHaveURL(/\/aluno\/minha-turma$/)
     await expect(page.getByRole('main')).toContainText(turma.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
+    // A marca leva à raiz, e a raiz do aluno é "Atividades".
     await voltarAoInicio(page, hasTouch)
+    await expect(page).toHaveURL(/\/aluno\/atividades$/)
 
     await abrirNavegacao(page, hasTouch)
     await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(ITENS_DO_ALUNO.map(({ rotulo }) => rotulo))
@@ -204,10 +242,11 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
       await expect(page).toHaveURL(new RegExp(`${item.caminho}$`))
       await expect(page).toHaveTitle(`${item.rotulo} · Turmma`, { timeout: PRAZO_DA_ENTRADA_MS })
       await expect(naoEncontrada(page)).toHaveCount(0)
+      await abrirNavegacao(page, hasTouch)
+      await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: item.rotulo })).toHaveAttribute('aria-current', 'page')
     }
+    // O último item é "Minha turma": a tela dele, com a turma dele.
     await expect(page.getByRole('main')).toContainText(turma.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
-    await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Minha turma' })).toHaveAttribute('aria-current', 'page')
 
     for (const endereco of ['/professor/turmas', '/coordenacao/estrutura', '/coordenacao/professores']) {
       await page.goto(endereco)
@@ -220,10 +259,11 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
 test.describe('W5: a fronteira do import() de cada área', () => {
   test('a área do professor que não chega: o texto e o título da falha, a casca de pé, e o título de antes ao sair', async ({ page, hasTouch }) => {
     await page.route(CHUNK_DO_PROFESSOR, (rota: Route) => rota.abort('internetdisconnected'))
-    await entrarComoProfessora(page, hasTouch)
-    await expect(page).toHaveTitle('Início · Turmma')
-
-    await irPelaNavegacao(page, 'Turmas', hasTouch)
+    // O professor abre em "Nova conversa" (A2; D73): a área é pedida já na entrada, e é ali que ela não chega.
+    const professora = await criarEquipeComSenha()
+    await page.goto('/entrar')
+    await entrarPorEmail(page, professora, hasTouch)
+    await expect(page).toHaveURL(/\/professor\/nova-conversa$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('alert')).toContainText('Confira a conexão e tente de novo', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page).toHaveTitle('Não foi possível carregar · Turmma')
     // A fronteira assume com o foco nela: quem usa leitor de tela fica sabendo que a tela mudou.
@@ -233,10 +273,12 @@ test.describe('W5: a fronteira do import() de cada área', () => {
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
-    // Saindo por outra rota, a aba volta a dizer a tela em que a pessoa está.
-    await voltarAoInicio(page, hasTouch)
+    // Saindo por outra rota, a aba volta a dizer a tela em que a pessoa está. Fora da área do professor, o que existe
+    // para ele é a página não encontrada, que não depende do pedaço que falhou.
+    await navegarSemRecarregar(page, '/coordenacao/estrutura')
     await expect(page.getByRole('heading', { name: TITULO_DA_FALHA })).toHaveCount(0)
-    await expect(page).toHaveTitle('Início · Turmma')
+    await expect(naoEncontrada(page)).toBeVisible()
+    await expect(page).toHaveTitle('Página não encontrada · Turmma')
 
     // Saindo pelo "Sair", para uma tela que não põe título: a fronteira devolve o de antes dela, e a aba não continua
     // dizendo que algo não carregou (o `componentWillUnmount`, pendência da A0b).
@@ -250,7 +292,7 @@ test.describe('W5: a fronteira do import() de cada área', () => {
 
   test('a área da coordenação que não chega mostra a mesma fronteira, e a nova tentativa carrega', async ({ page, hasTouch }) => {
     const coordenadora = await criarEquipeComSenha('coordenador')
-    // A coordenação abre em Estrutura (13.0): a área é pedida já na entrada, e é ali que ela não chega.
+    // A coordenação abre em Governança (A5): a área é pedida já na entrada, e é ali que ela não chega.
     const abortar = (rota: Route) => rota.abort('internetdisconnected')
     await page.route(CHUNK_DA_COORDENACAO, abortar)
     await page.goto('/entrar')
@@ -260,11 +302,11 @@ test.describe('W5: a fronteira do import() de cada área', () => {
     await expect(page.getByRole('heading', { name: TITULO_DA_FALHA })).toBeFocused()
     expect(await violacoesGraves(page)).toEqual([])
 
-    // Com a rede de volta, "Tentar de novo" recarrega e a área chega, com a Estrutura.
+    // Com a rede de volta, "Tentar de novo" recarrega e a área chega, com a Governança.
     await page.unroute(CHUNK_DA_COORDENACAO, abortar)
     if (hasTouch) await page.getByRole('button', { name: 'Tentar de novo' }).tap()
     else await page.getByRole('button', { name: 'Tentar de novo' }).click()
-    await esperarEstrutura(page)
+    await esperarGovernanca(page)
     await expect(page.getByRole('heading', { name: TITULO_DA_FALHA })).toHaveCount(0)
   })
 })
@@ -354,8 +396,8 @@ test.describe('recomeço da tela', () => {
     })
     const coordenadora = await criarEquipeComSenha('coordenador')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    // A coordenação abre em Estrutura (13.0), que também não aponta para Turmas, tela do professor.
-    await esperarEstrutura(page)
+    // A coordenação abre em Governança (A5), que também não aponta para Turmas, tela do professor.
+    await esperarGovernanca(page)
     await expect(page.getByRole('main').getByRole('link', { name: 'Turmas' })).toHaveCount(0)
 
     await abrirNavegacao(page, hasTouch)
@@ -372,7 +414,7 @@ test.describe('recomeço da tela', () => {
     expect(leiturasDosVinculos).toBe(0)
   })
 
-  test('troca de escola pelo seletor, da página inicial para a página inicial: a gaveta não fica aberta por cima', async ({ page, hasTouch }) => {
+  test('troca de escola pelo seletor, de "Nova conversa" para "Nova conversa": a gaveta não fica aberta por cima', async ({ page, hasTouch }) => {
     const emA = await criarEquipeComSenha()
     const emB = await criarUsuarioEmOutraEscola(emA.contaId)
     await page.goto('/entrar')
@@ -380,12 +422,13 @@ test.describe('recomeço da tela', () => {
     const escolherA = page.getByRole('button', { name: `${emA.escolaNome} · professor` })
     if (hasTouch) await escolherA.tap({ timeout: PRAZO_DA_ENTRADA_MS })
     else await escolherA.click({ timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(page.getByRole('heading', { name: `Olá, ${emA.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await esperarNovaConversa(page, emA.nome)
 
-    // O endereço não muda na troca (`/` para `/`): é a pessoa da sessão que muda, e é ela que fecha a gaveta.
+    // A tela é a mesma antes e depois da troca (o professor abre em "Nova conversa" nas duas escolas): é a pessoa da
+    // sessão que muda, e é ela que fecha a gaveta.
     await escolherNoSeletor(page, nomeNoSeletor(emB, 'professor'), hasTouch)
-    await expect(page.getByRole('heading', { name: 'Olá, Professora sintética na outra escola' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    expect(new URL(page.url()).pathname).toBe('/')
+    await esperarNovaConversa(page, 'Professora sintética na outra escola')
+    expect(new URL(page.url()).pathname).toBe('/professor/nova-conversa')
     await expect(gaveta(page)).toBeHidden()
     await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible()
   })
@@ -412,14 +455,17 @@ test.describe('recomeço da tela', () => {
       await segurada.aberta
       await rota.continue()
     })
-    await entrarComoProfessora(page, hasTouch)
-
+    // O professor abre em "Nova conversa" (A2; D73): a área é pedida já na entrada, e fica segurada.
+    const professora = await criarEquipeComSenha()
+    await page.goto('/entrar')
     const pedidoDoChunk = page.waitForRequest((pedido) => CHUNK_DO_PROFESSOR.test(new URL(pedido.url()).pathname))
-    await irPelaNavegacao(page, 'Turmas', hasTouch)
+    await entrarPorEmail(page, professora, hasTouch)
+    await expect(page).toHaveURL(/\/professor\/nova-conversa$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Carregando…', { timeout: PRAZO_DA_ENTRADA_MS })
     const chunk = await pedidoDoChunk
-    await voltarAoInicio(page, hasTouch)
-    await expect(page).toHaveTitle('Início · Turmma')
+    // Ela sai da área antes de a área chegar. Fora dela, o que existe para o professor é a página não encontrada.
+    await navegarSemRecarregar(page, '/coordenacao/estrutura')
+    await expect(page).toHaveTitle('Página não encontrada · Turmma')
 
     // O chunk chega, e o módulo é avaliado: o `import()` do mesmo endereço só resolve com o módulo que a página já tem.
     // Dois quadros depois, qualquer coisa que a chegada fosse pintar já estaria na tela.
@@ -432,11 +478,12 @@ test.describe('recomeço da tela', () => {
       await import(/* @vite-ignore */ url)
       await new Promise<void>((pronto) => requestAnimationFrame(() => requestAnimationFrame(() => pronto())))
     }, chunk.url())
-    await expect(page).toHaveURL(/\/$/)
-    // O único título do conteúdo é o da página inicial: nada da área, nem a "não encontrada" dela, apareceu junto.
-    await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toHaveText([/^Olá, /])
+    await expect(page).toHaveURL(/\/coordenacao\/estrutura$/)
+    // O único título do conteúdo é o da página em que ela está: nada da área do professor apareceu junto.
+    await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toHaveText(['Página não encontrada'])
+    await expect(page.getByRole('main')).not.toContainText('O que vamos preparar hoje?')
     await expect(page.getByText('A coordenação ainda não alocou você')).toHaveCount(0)
-    await expect(page).toHaveTitle('Início · Turmma')
+    await expect(page).toHaveTitle('Página não encontrada · Turmma')
 
     // Controle: a área chegou de fato. Voltando a ela sem recarregar, aparece sem pedir o chunk de novo.
     await navegarSemRecarregar(page, '/professor/turmas')
@@ -461,7 +508,9 @@ test.describe('recomeço da tela', () => {
       return rota.continue()
     })
 
-    // A aba abre direto na área: a sessão volta pelo cookie, e o papel ainda não é conhecido.
+    // A aba abre direto na área: a sessão volta pelo cookie, e o papel ainda não é conhecido. O pedaço da área que a
+    // entrada baixou (o professor abre em "Nova conversa") foi com a página anterior: a conta recomeça aqui.
+    pedidos.length = 0
     await page.goto('/professor/turmas')
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Carregando…', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(naoEncontrada(page)).toHaveCount(0)
@@ -506,10 +555,10 @@ test.describe('recomeço da tela', () => {
     const professora = await criarEquipeComSenha()
     await page.goto('/entrar')
     await entrarPorEmail(page, professora, hasTouch)
-    await expect(page.getByRole('heading', { name: `Olá, ${professora.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // O professor abre em "Nova conversa" (A2; D73): a área começa a carregar já na entrada.
+    await expect(page).toHaveURL(/\/professor\/nova-conversa$/, { timeout: PRAZO_DA_ENTRADA_MS })
 
-    // A área começa a carregar, e a pessoa abre a gaveta enquanto espera.
-    await navegarSemRecarregar(page, '/professor/turmas')
+    // A área está carregando, e a pessoa abre a gaveta enquanto espera.
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Carregando…', { timeout: PRAZO_DA_ENTRADA_MS })
     const abrir = page.getByRole('button', { name: naGaveta(page) ? 'Abrir o menu' : 'Abrir a lateral' })
     if (hasTouch) await abrir.tap()

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatarData, formatarDataHora, formatarQuantidade } from './formatar'
+import { formatarData, formatarDataHora, formatarDiaEHora, formatarQuantidade } from './formatar'
 
 describe('formatação pt-BR', () => {
   it('data sem hora não volta um dia por causa do fuso', () => {
@@ -9,6 +9,22 @@ describe('formatação pt-BR', () => {
 
   it('data e hora no formato brasileiro', () => {
     expect(formatarDataHora('2026-09-14T13:05:00.000Z')).toMatch(/^14\/09\/2026, \d{2}:05$/)
+  })
+
+  it('dia e hora da linha de aprovação: dia/mês, vírgula e a hora com "h", no fuso de quem lê', () => {
+    const agora = new Date('2026-09-21T12:00:00.000Z')
+    expect(formatarDiaEHora('2026-09-19T13:42:00.000Z', { fuso: 'America/Sao_Paulo', agora })).toBe('19/09, 10h42')
+    // Perto da meia-noite o fuso muda o dia: 01h30 em UTC ainda é a noite do dia 18 em São Paulo.
+    expect(formatarDiaEHora('2026-09-19T01:30:00.000Z', { fuso: 'America/Sao_Paulo', agora })).toBe('18/09, 22h30')
+    // Meia-noite é 00h, e não 24h.
+    expect(formatarDiaEHora('2026-09-19T03:05:00.000Z', { fuso: 'America/Sao_Paulo', agora })).toBe('19/09, 00h05')
+  })
+
+  it('dia e hora de outro ano levam o ano: na auditoria, a data sem ele diria o dia errado', () => {
+    const agora = new Date('2027-02-03T12:00:00.000Z')
+    expect(formatarDiaEHora('2026-09-19T13:42:00.000Z', { fuso: 'America/Sao_Paulo', agora })).toBe('19/09/2026, 10h42')
+    // A virada do ano é a do fuso: 01h de 1º de janeiro em UTC ainda é 31 de dezembro em São Paulo.
+    expect(formatarDiaEHora('2027-01-01T01:00:00.000Z', { fuso: 'America/Sao_Paulo', agora: new Date('2027-01-01T01:30:00.000Z') })).toBe('31/12, 22h00')
   })
 
   it('quantidade com separador de milhar e plural', () => {

@@ -175,7 +175,9 @@ reivindicando o mesmo nome no mesmo segundo não geram duplicidade nem erro cru;
 própria navegação com a marca; e o teste de isolamento do F1 continua verde com as tabelas
 novas.
 
-## A2 — `apresentacao-professor` [ ]
+## A2 — `apresentacao-professor` [x]
+Concluída em 05/10/2026 na fatia única da D77 (merge da `mvp/apresentacao` pelo PR #1), sem PRD nem `/validar`:
+o critério foi a seção 6 de `docs/mvp-rapido.md`, e o estado está na seção Estado dele.
 **Depende de:** A1
 
 Camada de IA mínima: porta `LLMProvider`, adaptadores Ollama, OpenAI-compatível e falso,
@@ -195,7 +197,9 @@ material que a coordenação subiu com licença vira trechos com página, e o se
 recusado; a professora gera o mesmo artefato pelo chat e pelo formulário, com a página citada;
 a Adaptação não tem campo em que caiba um diagnóstico, e a versão adaptada nasce pendente.
 
-## A3 — `apresentacao-atividade-e-correcao` [ ]
+## A3 — `apresentacao-atividade-e-correcao` [x]
+Concluída em 05/10/2026 na fatia única da D77 (merge da `mvp/apresentacao` pelo PR #1), sem PRD nem `/validar`:
+o critério foi a seção 6 de `docs/mvp-rapido.md`, e o estado está na seção Estado dele.
 **Depende de:** A2 · **pode correr em paralelo com A4**
 
 O aluno responde a atividade objetiva no navegador. A **função de correção do Assistente**
@@ -208,7 +212,9 @@ abas da turma aberta fecham neste PRD (P11, P28).
 destaques abertos, e o registro mostra o que foi apresentado e aberto; a correção roda duas
 vezes sem duplicar aviso nem chamada de IA; e nada é gerado por IA sobre resposta discursiva.
 
-## A4 — `apresentacao-tutor-e-sinais` [ ]
+## A4 — `apresentacao-tutor-e-sinais` [x]
+Concluída em 05/10/2026 na fatia única da D77 (merge da `mvp/apresentacao` pelo PR #1), sem PRD nem `/validar`:
+o critério foi a seção 6 de `docs/mvp-rapido.md`, e o estado está na seção Estado dele.
 **Depende de:** A2 · **pode correr em paralelo com A3**
 
 **Tutor** socrático restrito ao material da turma, citando a página, com identidade de agente
@@ -221,7 +227,9 @@ o professor da turma (D32 revista, D34).
 Tutor diz o que é quando o aluno pergunta se é uma pessoa; o sinal chega ao professor certo e a
 nenhum outro; e nenhum campo guarda texto livre sobre o aluno.
 
-## A5 — `apresentacao-coordenacao` [ ]
+## A5 — `apresentacao-coordenacao` [x]
+Concluída em 05/10/2026 na fatia única da D77 (merge da `mvp/apresentacao` pelo PR #1), sem PRD nem `/validar`:
+o critério foi a seção 6 de `docs/mvp-rapido.md`, e o estado está na seção Estado dele.
 **Depende de:** A3, A4
 
 **Governança**: o que a IA gerou e quem aprovou, com o número; cada agente e cada função, o que

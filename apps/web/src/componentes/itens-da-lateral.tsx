@@ -1,6 +1,6 @@
 import { useContext, type ReactNode } from 'react'
 import { Link, useLocation } from 'wouter'
-import { estaNoItem, type ItemDaNavegacao } from '../areas/navegacao'
+import { estaNoItem, type AgenteDaLateral, type ItemDaNavegacao } from '../areas/navegacao'
 import { ContextoDaGaveta } from './gaveta'
 
 /**
@@ -66,5 +66,86 @@ export function ItemDaLateral({ item, trilho }: { item: ItemDaNavegacao; trilho:
         )}
       </Link>
     </li>
+  )
+}
+
+/** O que espera a pessoa naquele agente: quantas entregas pendentes a leitura trouxe, e se há mais além da página. */
+export interface EsperandoNoTime {
+  readonly quantidade: number
+  readonly haMais: boolean
+}
+
+/** "3 esperando você", "100 ou mais esperando você". Só existe com pendência: zero não tem texto. */
+export function textoDoQueEspera({ quantidade, haMais }: EsperandoNoTime): string | undefined {
+  if (quantidade === 0) return undefined
+  return `${String(quantidade)}${haMais ? ' ou mais' : ''} esperando você`
+}
+
+interface PropsDaSecaoDoTime {
+  readonly agentes: readonly AgenteDaLateral[]
+  readonly esperando: EsperandoNoTime
+  readonly trilho: boolean
+}
+
+/**
+ * "Seu time" na lateral (`docs/interface.md` 11.1 e 11.4): o rótulo do grupo, cinza e sem caixa-alta, e uma linha por
+ * agente, com o avatar e o contador do que espera a pessoa. No trilho, o avatar com um ponto e a dica.
+ *
+ * **O ponto e o contador só dizem que há algo esperando** (D59): não piscam, não crescem, não contam não lidas, e somem
+ * quando não há pendência. O avatar é círculo com ícone, nunca rosto (D58), desenhado aqui: a casca é da entrada, e as
+ * peças de `componentes/ia/` ficam fora do primeiro carregamento (`areas/navegacao.ts`, linha 4 do guia).
+ */
+export function SecaoDoTime({ agentes, esperando, trilho }: PropsDaSecaoDoTime) {
+  const [caminho] = useLocation()
+  const { fechar } = useContext(ContextoDaGaveta)
+  if (agentes.length === 0) return null
+  return (
+    <nav aria-label="Seu time">
+      {!trilho && <p className="px-3 pt-1 pb-1.5 text-sm text-sutil">Seu time</p>}
+      <ul className={`flex flex-col gap-0.5 ${trilho ? 'items-center' : ''}`}>
+        {agentes.map((item) => {
+          const aqui = estaNoItem(caminho, item)
+          const Icone = item.icone
+          // O que espera a pessoa é do agente que deixa entrega para decidir: os outros não levam contador nem ponto.
+          const espera = item.comEspera ? textoDoQueEspera(esperando) : undefined
+          return (
+            <li key={item.agente}>
+              <Link
+                to={item.caminho}
+                onClick={fechar}
+                aria-current={aqui ? 'page' : undefined}
+                className={`group relative flex items-center gap-3 rounded-linha text-base ${trilho ? 'size-11 justify-center' : `${ALTURA_DO_ITEM_ABERTO} px-3`} ${aqui ? 'bg-realce font-semibold text-tinta' : 'text-apoio hover:bg-realce-suave hover:text-tinta'}`}
+              >
+                {aqui && <span aria-hidden="true" data-filete="" className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-caramelo" />}
+                <span aria-hidden="true" className={`relative inline-flex size-6 shrink-0 items-center justify-center rounded-full ${item.avatar}`}>
+                  <Icone size={14} strokeWidth={1.75} />
+                  {trilho && espera !== undefined && <span data-ponto-de-espera="" className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full border-2 border-lateral bg-caramelo" />}
+                </span>
+                {trilho ? (
+                  <>
+                    <span className="sr-only">
+                      {item.rotulo}
+                      {espera !== undefined && `, ${espera}`}
+                    </span>
+                    <Dica>{espera === undefined ? item.rotulo : `${item.rotulo} · ${espera}`}</Dica>
+                  </>
+                ) : (
+                  <>
+                    <span className="min-w-0 flex-1 break-words">{item.rotulo}</span>
+                    {espera !== undefined && (
+                      <span data-contador-do-time="" className="shrink-0 rounded-full bg-pendente-cx px-1.5 text-[13px] font-semibold text-pendente tabular-nums">
+                        {esperando.quantidade}
+                        {esperando.haMais && '+'}
+                        <span className="sr-only"> esperando você</span>
+                      </span>
+                    )}
+                  </>
+                )}
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </nav>
   )
 }

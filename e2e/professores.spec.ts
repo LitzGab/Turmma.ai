@@ -1,7 +1,7 @@
 import type { Browser, BrowserContextOptions, Locator, Page, Route } from '@playwright/test'
 import { AVISO_DO_CONVITE_COM_SENHA_NOVA, MENSAGENS_DE_ERRO, mensagemDoConvite } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaConviteDeProfessor } from '../packages/shared/src/professores/professores.ts'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, esperarEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, abrirEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   convidarProfessorNoBanco,
@@ -168,7 +168,7 @@ function proximaLista(page: Page) {
 async function abrirProfessores(page: Page, coordenadora: EquipeDeTeste, hasTouch: boolean): Promise<void> {
   await page.goto('/entrar')
   await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-  await esperarEstrutura(page)
+  await abrirEstrutura(page, hasTouch)
   await irPelaNavegacao(page, 'Professores', hasTouch)
   await expect(page).toHaveURL(/\/coordenacao\/professores$/)
 }
@@ -241,7 +241,7 @@ test.describe('W4 (Professores): os quatro estados', () => {
     })
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
 
     // W2: o item da lateral leva à tela, com o título dela na aba e as pistas do selecionado.
     await irPelaNavegacao(page, 'Professores', hasTouch)
@@ -378,7 +378,7 @@ test.describe('cadastrar, copiar o link e o aceite do professor', () => {
     const semToken = vigiarAba(page)
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     // O caminho até Professores pelo roteiro da Estrutura (herdado da 13.0).
     const roteiro = principal(page).getByRole('region', { name: 'O que falta para a escola começar' })
     await acionar(roteiro.getByRole('link', { name: 'Professores' }), hasTouch)
@@ -497,9 +497,9 @@ test.describe('cadastrar, copiar o link e o aceite do professor', () => {
     await professor.getByLabel('E-mail').fill(`prof-${marca}@educa.invalid`)
     await professor.getByLabel('Senha').fill(SENHA_NOVA)
     await acionar(professor.getByRole('button', { name: /^Entrar$/ }), hasTouch)
-    await expect(professor.getByRole('heading', { name: `Olá, ${nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    // A página inicial dele aponta para Turmas, onde ele confirma o que a coordenação alocar.
-    await acionar(professor.getByRole('main').getByRole('link', { name: 'Turmas', exact: true }), hasTouch)
+    await esperarNovaConversa(professor, nome)
+    // Ele abre em "Nova conversa" (A2); Turmas, onde ele confirma o que a coordenação alocar, está na lateral.
+    await irPelaNavegacao(professor, 'Turmas', hasTouch)
     await expect(professor).toHaveURL(/\/professor\/turmas$/)
     await expect(professor.getByRole('main')).toContainText('A coordenação ainda não alocou você', { timeout: PRAZO_DA_ENTRADA_MS })
 
@@ -642,7 +642,7 @@ test.describe('clique duplo', () => {
     await montarEstruturaNoBanco(coordenadora.escolaId)
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     const alocacao = principal(page).getByRole('region', { name: 'Alocação' })
     await expect(alocacao).toContainText('Crie um professor primeiro', { timeout: PRAZO_DA_ENTRADA_MS })
     await acionar(alocacao.getByRole('link', { name: 'Ir para Professores' }), hasTouch)

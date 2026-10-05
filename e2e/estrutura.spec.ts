@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import type { Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, esperarEstrutura, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, abrirEstrutura, esperarEstrutura, esperarGovernanca, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   apagarDisciplinaNoBanco,
@@ -106,6 +106,9 @@ test.describe('W4 (Estrutura): do vazio ao roteiro, montando a escola pela tela'
     await convidarProfessorNoBanco(coordenadora.escolaId, 'pendente')
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
+    // A coordenação abre em Governança (A5) e chega à Estrutura pela lateral.
+    await esperarGovernanca(page)
+    await irPelaNavegacao(page, 'Estrutura', hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando a estrutura da escola…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page).toHaveTitle('Estrutura · Turmma')
     segurado.abrir()
@@ -303,7 +306,7 @@ test.describe('W4 (Estrutura): do vazio ao roteiro, montando a escola pela tela'
     await criarAnoLetivoNoBanco(coordenadora.escolaId, 2026, 'planejado')
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     await expect(principal(page).getByRole('heading', { name: 'Ano letivo' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     const anos = principal(page).getByRole('region', { name: 'Ano letivo' })
     await expect(anos.getByRole('listitem')).toContainText(['2026', '2025'])
@@ -393,7 +396,7 @@ test.describe('a lista maior que o que a tela lê', () => {
     })
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     const turmas = principal(page).getByRole('region', { name: 'Turmas de 2026' })
     await expect(turmas).toContainText('A lista é maior do que esta tela mostra', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(turmas.getByRole('listitem')).toHaveCount(10)
@@ -422,7 +425,7 @@ test.describe('renomear e excluir', () => {
     const outraDisciplinaId = await criarDisciplinaNoBanco(coordenadora.escolaId, outraDisciplina)
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     const turmas = principal(page).getByRole('region', { name: 'Turmas de 2026' })
     await expect(turmas).toContainText(vazia.nome, { timeout: PRAZO_DA_ENTRADA_MS })
     const disciplinas = principal(page).getByRole('region', { name: 'Disciplinas' })
@@ -601,7 +604,7 @@ test.describe('W10 e W4 (Lista): a lista de nomes da turma', () => {
     })
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     await expect(principal(page).getByRole('region', { name: 'Turmas de 2026' })).toContainText(turma.nome, { timeout: PRAZO_DA_ENTRADA_MS })
     await abrirTurma(page, turma.nome, hasTouch)
     await expect(page).toHaveTitle(`Turma ${turma.nome} · Turmma`)
@@ -751,7 +754,7 @@ test.describe('W10 e W4 (Lista): a lista de nomes da turma', () => {
     })
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     await expect(principal(page).getByRole('region', { name: 'Turmas de 2026' })).toContainText(turma.nome, { timeout: PRAZO_DA_ENTRADA_MS })
     await abrirTurma(page, turma.nome, hasTouch)
     const lista = principal(page).getByRole('region', { name: 'Nomes da turma' })
@@ -1020,10 +1023,10 @@ test.describe('W10 e W4 (Lista): a lista de nomes da turma', () => {
     await irPara(`/coordenacao/estrutura/turmas/${outraTurma.id}`)
     await expect(principal(page).getByRole('heading', { level: 1, name: `Turma ${outraTurma.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByLabel('Lista colada')).toHaveValue('')
-    // A página inicial leva a coordenação para a Estrutura sem ficar no histórico: o Voltar do navegador sai da Estrutura
-    // para a turma de antes, em vez de cair na página inicial e ser trazido de volta.
+    // A página inicial leva a coordenação para a Governança (A5) sem ficar no histórico: o Voltar do navegador sai da
+    // Governança para a turma de antes, em vez de cair na página inicial e ser trazido de volta.
     await irPara('/')
-    await esperarEstrutura(page)
+    await esperarGovernanca(page)
     await page.goBack()
     await expect(principal(page).getByRole('heading', { level: 1, name: `Turma ${outraTurma.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     // "Voltar para Estrutura" leva de volta à lista de turmas.
@@ -1093,7 +1096,7 @@ test.describe('W4 (Alocação): o professor com convite em aberto', () => {
     })
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     const alocacao = principal(page).getByRole('region', { name: 'Alocação' })
     const oQueFalta = principal(page).getByRole('region', { name: 'O que falta para a escola começar' })
     // Vazio: há turma e disciplina, mas não há professor alocável.
@@ -1244,7 +1247,7 @@ test.describe('W12: a Estrutura a 360 px e só com teclado', () => {
     await convidarProfessorNoBanco(coordenadora.escolaId, 'pendente')
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     const turmas = principal(page).getByRole('region', { name: 'Turmas de 2026' })
     await expect(turmas).toContainText(turma.nome, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('region', { name: 'Alocação' }).getByRole('button', { name: 'Alocar' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -1314,7 +1317,7 @@ test.describe('recomeço da Estrutura', () => {
     await porNaListaDaTurma(deA.escolaId, turmaDeA.id, [{ nome: nomeDeA, matricula: '550001' }])
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, deA, hasTouch)
-    await esperarEstrutura(page)
+    await abrirEstrutura(page, hasTouch)
     await expect(principal(page).getByRole('region', { name: 'Turmas de 2026' })).toContainText(turmaDeA.nome, { timeout: PRAZO_DA_ENTRADA_MS })
     await abrirTurma(page, turmaDeA.nome, hasTouch)
     await expect(principal(page)).toContainText(nomeDeA, { timeout: PRAZO_DA_ENTRADA_MS })
@@ -1330,6 +1333,10 @@ test.describe('recomeço da Estrutura', () => {
       await rota.continue()
     })
     await entrarComoCoordenacaoNaMesmaAba(page, deB, hasTouch)
+    // Ela abre em Governança (A5), que também não mostra nada de A, e vai à Estrutura pela lateral.
+    await esperarGovernanca(page)
+    for (const deOutra of [turmaDeA.nome, nomeDeA, estruturaDeA.disciplina.nome]) await expect(page.locator('body')).not.toContainText(deOutra)
+    await irPelaNavegacao(page, 'Estrutura', hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando a estrutura da escola…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     for (const deOutra of [turmaDeA.nome, nomeDeA, estruturaDeA.disciplina.nome]) await expect(page.locator('body')).not.toContainText(deOutra)
     segurada.abrir()

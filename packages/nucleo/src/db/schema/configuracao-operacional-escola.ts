@@ -17,6 +17,10 @@ export type VagasConfiguradas = Partial<Record<'interativa' | 'normal' | 'lote',
  *   urgente fica segurado; `inicio` é incluso e `fim`, exclusivo.
  * - A FK de `escola_id` entrou `NOT VALID` na tarefa 3.0 do F1: configuração de escola que não existe
  *   é recusada pelo banco.
+ * - `tutor_trocas_por_dia` e `tutor_trocas_por_mes` (MVP, migration 0022) são o freio diário por aluno e o
+ *   pacote do mês por aluno, somado na turma (D38). Nulo cai em `TROCAS_POR_DIA_PADRAO_DO_TUTOR` (60) e
+ *   `TROCAS_POR_MES_PADRAO_DO_TUTOR` (300), de `@educa/shared`: a rede pública configura menos (D41), e o
+ *   valor nunca é constante no código de quem aplica o freio (regra 30, item 8).
  */
 export const configuracaoOperacionalEscola = pgTable(
   'configuracao_operacional_escola',
@@ -33,10 +37,16 @@ export const configuracaoOperacionalEscola = pgTable(
     limiteReqUsuarioMin: integer(),
     limiteReqEscolaMin: integer(),
     vagas: jsonb().$type<VagasConfiguradas>(),
+    /** Trocas com o Tutor por aluno e por dia (D38). */
+    tutorTrocasPorDia: integer(),
+    /** Trocas com o Tutor por aluno e por mês, somadas na turma (D38). */
+    tutorTrocasPorMes: integer(),
   },
   (tabela) => [
     check('configuracao_operacional_limite_usuario_positivo', sql`${tabela.limiteReqUsuarioMin} > 0`),
     check('configuracao_operacional_limite_escola_positivo', sql`${tabela.limiteReqEscolaMin} > 0`),
+    check('configuracao_operacional_tutor_trocas_por_dia_positivo', sql`${tabela.tutorTrocasPorDia} > 0`),
+    check('configuracao_operacional_tutor_trocas_por_mes_positivo', sql`${tabela.tutorTrocasPorMes} > 0`),
     check(
       'configuracao_operacional_vagas_validas',
       sql`${tabela.vagas} is null or (

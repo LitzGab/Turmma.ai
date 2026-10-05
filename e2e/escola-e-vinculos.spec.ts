@@ -11,7 +11,7 @@ import {
   ligarContaExterna,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
-import { abrirNavegacao, abrirSeletorDeEscola, botaoDoSeletor, esperarEstrutura, irPelaNavegacao, lateral, linhaDoSeletor, nomeNoSeletor } from './__fixtures__/casca.ts'
+import { abrirNavegacao, abrirSeletorDeEscola, botaoDoSeletor, esperarGovernanca, irPelaNavegacao, lateral, linhaDoSeletor, nomeNoSeletor, esperarNovaConversa, esperarAtividades } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -53,10 +53,17 @@ async function entrarPorEmail(page: Page, equipe: EquipeDeTeste, hasTouch: boole
   await acionar(page, /^Entrar$/, hasTouch)
 }
 
-/** A área autenticada de uma escola: o nome de quem entrou e o nome dela. */
+/**
+ * A área autenticada de uma escola: o nome de quem entrou e o nome dela. A professora abre em "Nova conversa" (A2; D73),
+ * com o nome dela e o da escola na casca.
+ */
 async function esperarEscola(page: Page, nome: string, escolaNome: string): Promise<void> {
-  await expect(page.getByRole('heading', { name: `Olá, ${nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-  await expect(page.getByRole('main')).toContainText(escolaNome)
+  await esperarNovaConversa(page, nome, { escolaNome })
+}
+
+/** O aluno abre em "Atividades" (A3), com o nome dele e o da escola na lateral. */
+async function esperarEscolaDoAluno(page: Page, nome: string, escolaNome: string): Promise<void> {
+  await esperarAtividades(page, nome, { escolaNome })
 }
 
 /** O formulário do `oidc-falso`, que faz o papel da tela do Google: o nome digitado ali é o `subject` do usuário. */
@@ -115,7 +122,7 @@ test.describe('escolher e trocar de escola', () => {
     await page.keyboard.press('Enter')
 
     await esperarEscola(page, 'Professora sintética na outra escola', emB.escolaNome)
-    expect(new URL(page.url()).pathname).toBe('/')
+    expect(new URL(page.url()).pathname).toBe('/professor/nova-conversa')
     // O nome de A aparece no seletor, e só ali: é um acesso da própria conta. O nome de quem ela é em A, não.
     await expect(page.getByRole('main')).not.toContainText(emA.escolaNome)
     await expect(page.locator('body')).not.toContainText(emA.nome)
@@ -134,13 +141,25 @@ test.describe('escolher e trocar de escola', () => {
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByRole('main')).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
 
+    // A janela que importa: a lista de B segurada desde antes da troca. É nela que a turma de A apareceria se tivesse
+    // ficado no cliente — depois que a resposta de B chega, a ausência já não prova nada. A rota entra antes da troca
+    // porque a Nova conversa de B já lê os vínculos: segurada só depois, a de Turmas saía do cache, sem janela (falhou
+    // assim no celular, esteira `37250031803`).
+    let liberar: () => void = () => undefined
+    const segurada = new Promise<void>((resolver) => (liberar = resolver))
+    await page.route(ROTA_MEUS_VINCULOS, async (rota: Route) => {
+      await segurada
+      await rota.continue().catch(() => undefined)
+    })
+
     await abrirSeletorDeEscola(page, hasTouch)
     await esperarAlvoDeToque(linhaDoSeletor(page, nomeNoSeletor(emB, 'professor')), 'a escola de destino no seletor')
     await acionarNoSeletor(page, nomeNoSeletor(emB, 'professor'), hasTouch)
 
-    // A troca volta à página inicial, já da escola de destino.
+    // A troca volta à tela em que o professor abre, já da escola de destino, com a lista de B ainda a caminho.
     await esperarEscola(page, 'Professora sintética na outra escola', emB.escolaNome)
-    expect(new URL(page.url()).pathname).toBe('/')
+    expect(new URL(page.url()).pathname).toBe('/professor/nova-conversa')
+    await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     // Sem o esvaziamento do cache na troca, a turma de A continuaria no cliente e apareceria na tela de B. O nome da
     // escola A segue no seletor, e só nele: ele é um acesso da própria conta, e não dado da escola A.
     await expect(page.locator('body')).not.toContainText(alocacao.turmaNome)
@@ -150,14 +169,7 @@ test.describe('escolher e trocar de escola', () => {
     await page.goBack()
     await expect(page.locator('body')).not.toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
 
-    // A janela que importa: voltar aos vínculos, já em B, com a lista segurada. É aqui que a turma de A apareceria
-    // se tivesse ficado no cliente — depois que a resposta de B chega, a ausência já não prova nada.
-    let liberar: () => void = () => undefined
-    const segurada = new Promise<void>((resolver) => (liberar = resolver))
-    await page.route(ROTA_MEUS_VINCULOS, async (rota: Route) => {
-      await segurada
-      await rota.continue()
-    })
+    // Voltar aos vínculos, já em B, com a lista ainda segurada.
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('body')).not.toContainText(alocacao.turmaNome)
@@ -172,7 +184,7 @@ test.describe('escolher e trocar de escola', () => {
     await page.getByLabel('Matrícula').fill(aluno.matricula)
     await campoSenha(page).fill(aluno.senha)
     await acionar(page, /^Entrar$/, hasTouch)
-    await esperarEscola(page, aluno.nome, aluno.escolaNome)
+    await esperarEscolaDoAluno(page, aluno.nome, aluno.escolaNome)
 
     // O aluno entra por matrícula e não tem conta (regra 20, item 2): não há outra escola para listar, e é por isso
     // que a troca de escola nunca começa por ele. A lateral diz só onde ele está.
@@ -180,9 +192,10 @@ test.describe('escolher e trocar de escola', () => {
     await expect(botaoDoSeletor(page)).toHaveCount(0)
     await expect(lateral(page).getByRole('button', { expanded: false })).toHaveCount(0)
     await expect(lateral(page)).toContainText(`Escola: ${aluno.escolaNome}`)
-    // Vínculo é do professor: o aluno não confirma turma nenhuma (RF4); o item dele na A1 é "Minha turma" (W2).
+    // Vínculo é do professor: o aluno não confirma turma nenhuma (RF4); os itens dele são o Tutor, as Atividades (A3 e
+    // A4) e "Minha turma" (W2).
     await expect(page.getByRole('link', { name: 'Turmas', exact: true })).toHaveCount(0)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Minha turma'])
+    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Tutor', 'Atividades', 'Minha turma'])
     expect(await violacoesGraves(page)).toEqual([])
   })
 
@@ -218,8 +231,8 @@ test.describe('escolher e trocar de escola', () => {
     await page.getByLabel('Código do aplicativo').fill(codigoDoAutenticador(segredo, PASSO_SEGUINTE_SEGUNDOS))
     await acionar(page, /^Entrar$|Entrando/, hasTouch)
 
-    // Na escola onde coordena, ela abre em Estrutura (13.0), com a escola de destino no seletor.
-    await esperarEstrutura(page)
+    // Na escola onde coordena, ela abre em Governança (A5), com a escola de destino no seletor.
+    await esperarGovernanca(page)
     await expect(page.locator('body')).toContainText(emB.escolaNome)
     // Nada da escola onde ela dá aula pode aparecer dentro da escola onde ela coordena. O nome de A segue só no
     // seletor, que é acesso da própria conta.
@@ -255,7 +268,7 @@ test.describe('escolher e trocar de escola', () => {
     await page.goto(`/e/${emA.slug}`)
     await acionar(page, /Entrar com a conta Google/, hasTouch, 'link')
     await entrarNoProvedorFalso(page, CONTA_NO_PROVEDOR)
-    await expect(page.getByRole('heading', { name: `Olá, ${emA.nome}` })).toBeVisible({ timeout: PRAZO_DO_LOGIN_EXTERNO_MS })
+    await esperarNovaConversa(page, emA.nome, { timeout: PRAZO_DO_LOGIN_EXTERNO_MS })
 
     await abrirSeletorDeEscola(page, hasTouch)
     await acionarNoSeletor(page, nomeNoSeletor(emB, 'professor'), hasTouch)
