@@ -173,3 +173,4 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-10-05 15:19:24 | 2026-10-05 15:20:05 | `test-engineer` | 5 | REPROVADO | a816ec8da61adb18b |
 | 2026-10-05 15:19:27 | 2026-10-05 15:20:06 | `infra-guardian` | 5 | APROVADO | ae8c146f5daff582f |
 | 2026-10-05 15:20:22 | 2026-10-05 15:20:51 | `test-engineer` | 6 | APROVADO | aa5c05277ee9130e0 |
+| 2026-10-05 15:26:09 | 2026-10-05 15:30:46 | `test-engineer` | 7 | SEM VEREDITO | ace4d93e403e2ebb4 |

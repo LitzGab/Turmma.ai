@@ -1422,3 +1422,87 @@ VEREDITO: APROVADO
 **Arquivos:**
 - `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/techspec.md`
 - `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/cenarios.md`
+
+## test-engineer · 7ª rodada · SEM VEREDITO · 2026-10-05 15:30:46 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+Nenhum cenário de `cenarios.md` ficou sem tarefa. Seis linhas reúnem várias regras de tarefas diferentes e não cabem inteiras em nenhuma. Dividi cada uma em partes nomeadas, uma por tarefa. A proposta é quebrá-las em linhas próprias no `cenarios.md`.
+
+## Antes de distribuir: o que a ordem das tarefas quebra
+
+1. **A 5.0 não consegue testar o "pula agendado"** de `pessoa_desativada`. O `pedido_titular` só nasce na 11.0, e o estado `agendado` na 14.0. O cenário vai para a 14.0, que acrescenta a cláusula na consulta da 5.0.
+2. **"Anterior à 0024" e "depois da 0024" estão errados.** Com uma migration por tarefa, a coluna `consumo_ia.provedor` sai na 7.0, que não é a 0024. É preciso trocar o texto para "migration da 7.0". O teste não precisa parar no meio das migrations: a 7.0 só expande, então basta gravar no formato antigo (envio externo, sem `provedor`, com a data de agora) sobre o schema completo. Isso responde à recomendação "como o harness para na 0024".
+3. **A linha antiga de `consumo_ia` com expurgo e troca de nome** só pode ser testada na 15.0, a primeira tarefa em que existem as duas coisas.
+4. **Linhas que juntam várias tarefas** (divididas abaixo, com a parte indicada):
+   - os quatro alertas: 3.0, 9.0, 13.0 e 15.0;
+   - isolamento das rotas: 11.0, 13.0 e 14.0;
+   - arquitetura de `suboperador`/`incidente`: 8.0 e 9.0;
+   - quatro estados das telas: 6.0, 8.0, 10.0, 16.0 e 18.0;
+   - D64 de dois professores: a foto na 12.0, as datas da versão `completa` na 13.0;
+   - homônimo: a prévia na 11.0, a troca na 15.0.
+5. **Cenários repetidos:**
+   - "Encurtar em A mantém B" (RF4) e "expurgo de A não apaga B" (Isolamento): juntar numa linha só.
+   - O [F] de 24 h do RF9 e a parte "incidente" dos quatro alertas: são o mesmo teste.
+
+---
+
+### 1.0 Mover o ciclo de vida
+- [U] Um terceiro caminho que importa a `ContaGlobalRepository` faz o teste falhar.
+
+**Faltam:**
+- [U] O barrel do `@educa/nucleo` não exporta a `ContaGlobalRepository`.
+- [I] `eliminar` dentro de uma transação de quem chama que depois lança: o usuário continua lá. Sem isso, "aceitar a transação de quem chama" não está provado.
+- `ciclo-de-vida.int.test.ts` e `acesso-fim-do-vinculo.int.test.ts` mudam só de lugar, sem mudar nenhuma asserção.
+
+### 2.0 Catálogo, `retencao_escola`, `ops:retencao`, `GET retencao`
+- [I] Escola nova lê todas as categorias com origem "padrão".
+- [U] Uma tabela de migration fora da `CLASSIFICACAO_DAS_TABELAS` faz o teste falhar.
+- [I] Abaixo do piso e acima do teto dão `RETENCAO_FORA_DO_LIMITE`.
+- [I] Categoria fixa (registro de acesso, auditoria) é recusada.
+- [I] `texto_do_modelo` maior que `conversa_professor` é recusado.
+- [I] `consumo_por_aluno` maior que `conversa_tutor` dá `RETENCAO_FORA_DO_LIMITE`.
+- [I] `retencao.ajustada` vai para a auditoria com o operador e a referência.
+- [I] Ajuste em A não muda o `GET retencao` de B.
+- [I] Aluno e professor não chegam a `/v1/privacidade/*`.
+- [I] Coordenação sem MFA não chega.
+
+**Faltam:**
+- **Permissão que cobre as rotas futuras:** o teste percorre as rotas registradas em `/v1/privacidade` e falha se a lista vier vazia. Só assim as rotas das tarefas 8 a 17 entram nele sozinhas.
+- **Fronteira:** o piso exato é aceito e o piso menos 1 é recusado.
+- **Baixar o prazo da categoria-mãe é aceito.** Baixar `conversa_professor` para 3 meses com `texto_do_modelo` em 12 passa, porque o prazo efetivo é o menor dos dois. Sem esse cenário, a 4.0 fica impossível.
+- **Arquitetura:**
+  - falha se uma coluna de `COLUNAS_FORA_DO_ARQUIVO` não existir (evita erro de digitação silencioso);
+  - falha se alguma tabela não tiver o campo "entra no arquivo".
+- **Recomendações da rodada 6:**
+  - `mfa_ultimo_passo` e `mfa_chave_versao` entram em `COLUNAS_FORA_DO_ARQUIVO`;
+  - o `docs/lgpd.md` passa a dizer a retenção de `correcao.destaque_aberto_por`.
+- [I] Depois do ajuste, o `GET` mostra a origem "ajustada".
+
+### 3.0 Rotina noturna e categorias do Tutor e do professor
+- [I] Por categoria: um dia antes do prazo fica, um dia depois sai.
+- [I] Reexecutar não apaga mais nada.
+- [I] Encurtar em A tira a linha de A e mantém a de B, com a mesma idade.
+- [I] Aumentar o prazo depois não devolve nada.
+- [I] `expurgo_execucao` grava as contagens certas, só com ids e números.
+- [I] A janela abre no meio: a categoria interrompida fica `concluida=false`, e a noite seguinte termina com `true`.
+- [F] Duas noites parciais alertam; uma parcial seguida de uma completa não alerta.
+- [F] Quatro alertas, parte 1: duas noites sem todas as categorias concluídas, com o runbook.
+- [I] Expurgo de A não apaga B, mesmo com prazo menor em A.
+- [I] `thread_agente` que ainda tem mensagem dentro do prazo não sai.
+- [I] Job com chave e sem escola é recusado pelo banco.
+- [P] Duas chamadas com a mesma chave recebem o mesmo id.
+- [P] Dois `retencao.expurgar-escola` da mesma escola dão a soma certa.
+- [P] `sistema.expurgar-dado-pessoal` duas vezes na mesma noite cria um job por escola.
+
+**Faltam:**
+- **Parametrizar o prazo e o isolamento por `CATEGORIAS_DE_RETENCAO`,** com uma lista "pendente da tarefa N" que a 4.0 e a 5.0 esvaziam. A 5.0 afirma que a lista ficou vazia.
+- **Recomendações da rodada 6 (test-engineer):**
+  - toda categoria percorrida grava a linha, mesmo com zero;
+  - a categoria sem linha conta como não concluída no alerta;
+  - a primeira linha da noite seguinte é a da categoria pendente (afirmar a ordem, não só o total);
+  - a colisão que devolve nulo (job terminou no intervalo) é tratada como "já enfileirado", sem erro.
+- **Lote:** 5.001 linhas exigem dois lotes, o que prova o laço.
+- **Chave "escola + data local":** duas execuções, às 23h59 e às 0h01 no horário local, dão chaves diferentes. A 1h da noite em UTC não é a 1h de Joinville.
+- **Log:** capturar e afirmar só ids e contagens. Afirmar que o job vai para a fila de lote.
+
+### 4.0 Categorias de anonimização
+[… 271 linhas cortadas]
