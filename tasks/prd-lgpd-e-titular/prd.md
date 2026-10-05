@@ -48,12 +48,12 @@ dela e quais incidentes a afetaram.
 | | **Fatia 1 — Retenção e expurgo** | |
 | RF1 | Cada escola tem um prazo por categoria do mapa de `docs/lgpd.md`; o padrão é o do mapa. Toda tabela de pessoa pertence a uma categoria | Escola nova nasce com o padrão; teste de arquitetura quebra com tabela sem categoria |
 | RF2 | A operação ajusta por comando o prazo de uma categoria numa escola, citando o contrato, dentro de piso e teto. Registro de acesso (6 meses) e auditoria não se ajustam | Abaixo do piso: erro tipado; ajuste em A não muda B; fica na auditoria com operador e referência |
-| RF3 | A coordenação vê, em linguagem comum, o que se guarda, por quanto tempo e se o prazo é padrão | e2e |
+| RF3 | A coordenação vê, em linguagem comum, o que se guarda e por quanto tempo | e2e |
 | RF4 | Uma rotina de madrugada apaga, por escola e categoria, o que passou do prazo, e deixa só o que o mapa manda ficar. Cobre todas as tabelas do MVP e da A1 que hoje não têm expurgo | Relógio injetado: um dia antes fica, um dia depois sai; reexecutar não apaga mais |
 | RF5 | O expurgo é lote fora do horário letivo, com limite por escola, e não atrasa o interativo. Cada execução registra, sem conteúdo, quantas linhas saíram por escola e categoria; duas noites sem expurgo geram alerta com runbook | Isolamento; carga com expurgo grande em A e Tutor em B; ensaio do alerta |
 | | **Fatia 2 — Suboperadores e incidente** | |
 | RF6 | A operação cadastra e encerra por comando o suboperador: nome, finalidade, categorias de dado, país de processamento, contrato, se veda treinamento, vigência e escolas atendidas | Auditoria da operação; encerrado fica no histórico |
-| RF7 | A coordenação vê os suboperadores da escola, vigentes e passados, com o período | B não vê o que atende só A |
+| RF7 | A coordenação vê os suboperadores da escola, vigentes e passados | B não vê o que atende só A |
 | RF8 | A operação registra por comando o incidente com o conteúdo mínimo do art. 10 da Res. CD/ANPD 15/2024 (quando foi conhecido, circunstâncias, escolas, categorias de dado, número de titulares, risco, contenção, correção) | Registro sem dado de titular, guardado 5 anos |
 | RF9 | A coordenação da escola afetada vê o aviso ao entrar até confirmar o recebimento; guarda quem confirmou e quando, e mede as 24 h da detecção (prazo nosso, `docs/lgpd.md` 8; o legal, de 3 dias úteis, é da escola) | Outra escola não vê o aviso |
 | | **Fatia 3 — Pedido do titular** | |
@@ -63,12 +63,12 @@ dela e quais incidentes a afetaram.
 | RF13 | Compartilhamento: o pedido lista os suboperadores por onde passou dado do titular, com o período, a partir das chamadas a provedor externo. A lista vem também na eliminação e na correção, para a escola avisar cada um (LGPD, art. 18, § 6º) | Aluno com Tutor externo aparece com o provedor; sem uso, só com a hospedagem |
 | RF13b | Correção: a coordenação corrige o nome do titular no próprio pedido (regra 20, item 19) | A auditoria não traz o nome |
 | RF14 | Eliminação: na confirmação, o acesso cai na requisição seguinte; a eliminação de fato vem 7 dias depois, e até lá a coordenação cancela e o acesso volta | Relógio injetado: cancelado no 6º dia, nada sai; no 8º, tudo sai |
-| RF15 | A eliminação apaga tudo do titular na escola que o mapa não manda guardar, inclusive o tema e a entrada do modelo de que ele é autor. Nos campos livres da escola (tema, artefato, conversa do professor), troca o **nome completo** do aluno por marca neutra e devolve à coordenação só a contagem. O que o mapa manda guardar (auditoria, validação, decisão de entrega) fica com o id | Sentinela por tabela; nome completo semeado em três campos some; primeiro nome sozinho fica |
-| RF16 | O pedido tem estado (recebido, em preparação, pronto, concluído, cancelado), e a tela mostra quanto falta dos 15 dias da declaração completa, contados da chegada (LGPD, art. 19, II). Prazo em constante: a ANPD pode regulamentá-lo | Vencido fica destacado |
+| RF15 | A eliminação apaga tudo do titular na escola que o mapa não manda guardar, inclusive o tema e a entrada do modelo de que ele é autor. Nos campos livres da escola (tema, artefato, conversa do professor), troca o **nome completo** do aluno por marca neutra e diz à coordenação só se houve troca. O que o mapa manda guardar fica com o id | Sentinela por coluna; o primeiro nome sozinho fica |
+| RF16 | O pedido tem estado, e a tela mostra quanto falta dos 15 dias da declaração completa, contados da chegada (LGPD, art. 19, II). Prazo em constante: a ANPD pode regulamentá-lo | Vencido fica destacado |
 | RF17 | Cada passo fica na auditoria da escola com autor, finalidade e ids. O arquivo fica em storage privado com link curto, e nunca em log, cache, URL ou navegador. A operação vê só contagens | Varredura de log e respostas; sentinelas na operação (I6 da A0b) |
 | | **Transversais** | |
-| RF18 | Tudo de outra escola responde igual a inexistente (regra 10) | Isolamento por rota e rotina |
-| RF19 | Clique duplo, rotina rodando duas vezes e expurgo junto da eliminação não duplicam nem dão erro cru (regra 80) | Teste de concorrência |
+| RF18 | Tudo de outra escola responde igual a inexistente | Isolamento por rota e rotina |
+| RF19 | Clique duplo, rotina dupla e expurgo junto da eliminação não duplicam nem dão erro cru | Teste de concorrência |
 | RF20 | A coordenação ganha **Privacidade** no grupo Conformidade (Pedidos, Retenção, Suboperadores, Incidentes); aluno e professor ganham **Meus dados**. Quatro estados, teclado e toque | e2e em `chromebook` e `celular`, com acessibilidade |
 
 ## 6. Regras de negócio
@@ -76,15 +76,17 @@ dela e quais incidentes a afetaram.
 - O prazo não é mais curto que a obrigação da escola nem mais longo que o necessário: daí piso e teto. "Ano letivo + N" conta do encerramento do ano
 - A eliminação numa escola não toca outra nem a conta global que ainda serve a outra (F1, tarefa 17.0)
 - A conversa do professor nunca chega à coordenação, nem em arquivo (regra 70, item 8). A do Tutor só chega na versão
-  do titular sem conta ativa, auditada: exceção declarada à regra 20, item 14, pelo direito de acesso
+  do titular sem conta ativa, auditada: exceção declarada à regra 20, item 14, pelo direito de acesso. Pelo mesmo
+  direito, a versão do professor sem conta ativa traz o registro de uso dele (exceção à D64), também auditada
+- Antes de um pedido, nada do que a coordenação vê separa o professor que usou a IA do que não usou (D64)
 
 ## 7. Casos de borda
 
 | Caso | Comportamento esperado |
 |---|---|
-| Aluno transferido para outra escola cliente | O pedido em A não alcança B; a mesma matrícula em outra escola é outro titular |
+| Aluno transferido para outra escola cliente | O pedido em A não alcança B |
 | Outro aluno ativo com o mesmo nome completo | Não há troca nos campos livres, e a coordenação é avisada |
-| A única coordenadora quer a própria eliminação | Não registra para si: entra outra coordenação por convite da operação |
+| A única coordenadora quer a própria eliminação | Entra outra coordenação, por convite da operação |
 | A operação reduz um prazo | O expurgo seguinte o aplica; aumentar não traz de volta |
 | Responsável pede pelo aluno | O arquivo sai na conta do aluno |
 | Aluno que nunca reivindicou o nome | É atendido pela lista de nomes da A1, e a tela de Privacidade diz isso |
@@ -93,7 +95,7 @@ dela e quais incidentes a afetaram.
 
 | Dado | Titular | Finalidade | Retenção | Já está em `docs/lgpd.md`? |
 |---|---|---|---|---|
-| Pedido do titular (id, tipo, quem pediu por lista fechada, datas, estado, autor; sem nome nem texto) | aluno, professor | provar o atendimento | vigência + 5 anos (proposta), só com ids depois da eliminação | não: entra |
+| Pedido do titular (id, tipo, quem pediu, datas, estado, autor, foto do compartilhamento, se houve troca de nome; sem nome nem texto) | aluno, professor | provar o atendimento | vigência + 5 anos (proposta), só com ids depois da eliminação | não: entra |
 | Arquivo do titular | aluno, professor | acesso e portabilidade | 7 dias, ou até a eliminação de fato | não: entra |
 | Registro de incidente e confirmação (quem e quando) | coordenador | provar quando a escola soube | 5 anos (Res. CD/ANPD 15/2024, art. 10) | não: entra |
 
@@ -101,13 +103,13 @@ O resto (retenção, suboperador, registro do expurgo) não guarda pessoa.
 
 ## 8b. Risco regulatório
 
-Sem IA no caminho.
+Sem IA.
 
 ## 9. Métricas
 
 - Do pedido de acesso ao arquivo pronto: minutos; pedidos atendidos em 15 dias
 - Noites sem expurgo: zero
-- Da detecção do incidente à confirmação da escola: menos de 24 h
+- Da detecção à confirmação do incidente: menos de 24 h
 
 ## 10. Perguntas em aberto
 

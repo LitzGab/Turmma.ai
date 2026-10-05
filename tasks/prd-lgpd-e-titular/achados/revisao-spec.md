@@ -466,3 +466,459 @@ Esta é a revisão do desenho em `/home/joaquimdp/Documentos/git/Educa.ia/tasks/
 - **Prova do expurgo.** `expurgo_execucao` dura 90 dias, pouco para provar à escola que a retenção foi cumprida. Recomendo prazo maior, já que a tabela só tem contagens.
 - **Eliminação agendada.** Confirmar que o realtime (Tutor em sala) derruba a conexão aberta do titular com eliminação agendada, e não só a sessão HTTP.
 - **Exceção da conversa do Tutor (regra 20, item 14).** Está declarada e auditada, como o Joaquim decidiu. Vale limitar quantas vezes a coordenação baixa a mesma versão e levar esse evento ao relatório do dossiê, porque o caminho "desativar o aluno e depois pedir acesso" fica aberto a abuso.
+
+## frontend-reviewer · 2ª rodada · AJUSTES NECESSÁRIOS · 2026-10-05 14:59:55 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+VEREDITO: AJUSTES NECESSÁRIOS
+
+Dos seis bloqueantes da rodada 1, quatro foram resolvidos por completo (busca, Concluir, aviso de incidente e o vazio de "Meus dados"). Dois foram resolvidos só em parte, e as correções abriram um problema novo.
+
+**Conferência dos bloqueantes da rodada 1**
+
+| # | Bloqueante | Situação | Onde |
+|---|---|---|---|
+| 1 | Identificação do titular | **Parcial.** A busca traz matrícula e turma; a lista e o detalhe trazem nome, turma e "Titular eliminado"; a eliminação usa `perigo`; o e2e escolhe entre dois homônimos. Mas o diálogo promete o "aviso de homônimo" e nenhuma rota o fornece antes do pedido (bloqueante A) | 4, 9, cenarios.md |
+| 2 | Concluir, download da coordenação e correção | **Feito.** Concluir, o botão `oficial` com finalidade, Corrigir nome (RF13b), a consulta a cada 10 s que para com a aba escondida, e o e2e de download, Concluir e correção. O aviso de apagar o arquivo ficou só para o aluno (bloqueante B) | 4, 9, cenarios.md |
+| 3 | Vazio de "Meus dados" | **Feito.** A rota devolve estado, contagem e validade; o vazio convida; a tela diz que mostra só a escola ativa. Mas a entrada do aluno aponta para um item que não existe (bloqueante C) | 4, 9 |
+| 4 | Busca por envio | **Feito.** Dispara por Enter ou botão, anuncia o resultado por `aria-live`, a busca vai por `POST`, e a auditoria guarda os ids e nunca o termo | 4, 9, cenarios.md |
+| 5 | Aviso de incidente que prende | **Feito.** O diálogo mostra todos os campos do DTO, tem "Ver depois" com faixa fixa, o Sair continua alcançável, e o e2e passa por teclado e a 360 px | 4, 5, 9, cenarios.md |
+| 6 | Nome do arquivo baixado | **Parcial.** O arquivo se chama `meus-dados-AAAA-MM-DD.json`, sai com `attachment` e `no-store`, e o e2e confere o nome. O aviso de apagar do computador da escola falta no download da coordenação (bloqueante B) | 5, 9 |
+
+**Estados:** ok. Pedidos, Retenção, Suboperadores, Incidentes e "Meus dados" passam pelos quatro estados no e2e. O vazio de "Meus dados" convida. "Em preparação" e "Expirou" foram nomeados, mas sem texto (ver recomendações).
+
+**Acessibilidade:** a busca anuncia o resultado. O vencido não depende só de cor (tem texto e ícone). O aviso de incidente passa por teclado com rolagem dentro do diálogo, e o e2e de toda tela nova verifica acessibilidade.
+
+**Chromebook fraco:** ok. A busca não dispara a cada tecla, a lista é paginada em 50, a consulta de 10 s para com a aba escondida, não há upload e o JSON nunca é renderizado.
+
+**Celular:** ok na estrutura. A tabela vira lista abaixo de 768 px e o e2e roda nos dois projetos. A faixa de incidente e o Sair foram testados a 360 px. "Meus dados" do professor fica no `MenuDaPessoa`, que aparece inteiro na gaveta; no trilho, a pessoa abre a lateral. Nenhum fluxo exige o celular.
+
+**Ação oficial protegida:** sim para eliminação, download e confirmação de incidente. A ressalva é o aviso de homônimo, que não tem de onde vir (bloqueante A).
+
+**Bloqueantes**
+
+**A. Seção 9, linha 269, e seção 4, linhas 117 e 119: o aviso de homônimo não tem fonte antes do pedido.**
+- **O que está errado:** o diálogo de confirmação promete "a prévia e o aviso de homônimo". Mas `homonimo` só existe como coluna de `pedido_titular` (seção 3, linha 80). Ele é marcado na etapa 2 da eliminação e só volta no `GET pedidos/:id`. A prévia (linha 117) não o traz, e a busca não acha o "nome livre igual na lista", que é aluno só na lista de nomes. Resultado: a coordenadora confirma uma eliminação sem saber que a troca de nome não vai acontecer, que é exatamente o caso de borda do PRD, seção 7.
+- **Correção exigida:**
+  - O `GET titulares/:id/previa` devolve `homonimo: boolean`, calculado pela mesma regra da etapa 2 (aluno ativo ou nome livre igual na lista), sem identificar o outro aluno.
+  - O diálogo de eliminação mostra o texto do aviso, por exemplo: "Há outro aluno com o mesmo nome completo nesta escola. O nome não será trocado nos textos livres."
+  - Um cenário [I] em cenarios.md (RF15 ou RF17) prova que a prévia marca o homônimo tanto do aluno ativo quanto do nome livre na lista.
+
+**B. Seção 9, linhas 272 a 274: o download da coordenação não avisa para apagar o arquivo.**
+- **O que está errado:** a correção 6 da rodada 1 valia "para o aluno e para a coordenação". Só "Meus dados" (linha 288) ganhou o aviso de apagar. A versão da coordenação traz a conversa do Tutor de um menor (exceção da seção 5, linha 158). É o arquivo mais sensível do sistema, e vai para a pasta de downloads do computador da secretaria.
+- **Correção exigida:**
+  - O diálogo de "Baixar a versão da escola" diz, antes de confirmar, que o arquivo deve ser entregue ao titular e apagado do computador em seguida.
+  - O e2e "A coordenação baixa a versão da escola com a finalidade" confere o nome do arquivo, como já faz o do aluno.
+
+**C. Seção 9, linha 284: a entrada do aluno em "Meus dados" não existe.**
+- **O que está errado:** a spec diz "O aluno o acha em Privacidade, no rodapé". Hoje esse item não existe: `apps/web/src/areas/navegacao.ts:53` e `apps/web/src/areas/aluno/rotas.tsx:23` dizem que "Privacidade" só nasce com a tela dele, e o aviso de privacidade por faixa etária é do F9 (PRD, seção 3). Do jeito que está escrito, o aluno não tem caminho até o arquivo, e o RF12 quebra para ele.
+- **Correção exigida:**
+  - A seção 9 declara que esta fatia cria o item "Privacidade" no rodapé fixo da lateral do aluno (`docs/interface.md`, linha 1044), por enquanto só com "Meus dados", acessível também na gaveta a 360 px.
+  - O e2e do aluno chega a "Meus dados" pela navegação, não pelo endereço.
+
+**Recomendações**
+- **Textos de "Meus dados"** (seção 9, linha 286). "Em preparação" e "Expirou" precisam de texto. Sugestões:
+  - "Estamos preparando o seu arquivo. Volte em alguns minutos."
+  - "O arquivo ficou disponível por 7 dias e foi apagado. Para receber de novo, peça à coordenação."
+  - E dizer se a tela consulta a cada 10 s como a da coordenação.
+- **Texto do 429 da busca** (seção 9, linha 267). Escrever o texto, por exemplo "Muitas buscas seguidas. Espere um minuto e tente de novo.", e validar o mínimo de 3 letras no próprio campo.
+- **Corrigir nome** (seção 9, linha 272). O diálogo mostra o nome atual e o novo antes de confirmar. A tela aponta para a lista e a turma da A1 quando a correção pedida é de turma ou vínculo, já que o PRD manteve isso fora.
+- **Confirmação pela aba Incidentes** (seção 9, linha 279). Dizer que dá para confirmar o incidente também pela aba, além do diálogo.
+- **Professor na busca** (seção 4, linha 116). "Número de vínculos" não distingue dois professores homônimos. Mostrar disciplina ou turmas do vínculo.
+- **Resumo legível do RF11.** O formato do resumo, pergunta da seção 10 do PRD, segue sem resposta para o titular sem conta. A coordenação entrega só um JSON. Vale definir um resumo legível dentro do arquivo ou na tela do pedido.
+
+Arquivos citados:
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/techspec.md
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/cenarios.md
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/prd.md
+- /home/joaquimdp/Documentos/git/Educa.ia/apps/web/src/areas/navegacao.ts
+- /home/joaquimdp/Documentos/git/Educa.ia/apps/web/src/areas/aluno/rotas.tsx
+
+```
+VEREDITO: AJUSTES NECESSÁRIOS
+Estados: ok (vazio de "Meus dados" convida; "Em preparação" e "Expirou" nomeados, sem texto — recomendação)
+Acessibilidade: ok — busca com aria-live e disparo explícito; vencido com texto e ícone; aviso de incidente por teclado, com rolagem no diálogo; e2e de toda tela nova verifica acessibilidade
+Chromebook fraco: ok — busca sem disparo por tecla, lista de 50, consulta de 10 s que para com a aba escondida, sem upload, JSON não renderizado
+Celular: ok — lista abaixo de 768 px, faixa de incidente e Sair a 360 px, e2e nos dois projetos; nenhum fluxo exige celular
+Ação oficial protegida: sim, com a ressalva do aviso de homônimo sem fonte na API (bloqueante A)
+Bloqueantes:
+ A. techspec.md seção 9:269 e seção 4:117/119 — o diálogo de eliminação promete o aviso de homônimo, mas `homonimo` só existe depois do pedido. Correção: a prévia devolve `homonimo: boolean` pela regra da etapa 2, o diálogo mostra o aviso e um cenário [I] prova os dois casos (aluno ativo e nome livre na lista).
+ B. techspec.md seção 9:272-274 — o download da versão da escola (com a conversa do Tutor) não avisa para apagar o arquivo do computador. Correção: o aviso entra no diálogo, e o e2e da coordenação confere o nome do arquivo.
+ C. techspec.md seção 9:284 — "Privacidade, no rodapé" do aluno não existe (navegacao.ts:53, aluno/rotas.tsx:23; o aviso de privacidade é do F9). Correção: a fatia cria o item com só "Meus dados", alcançável na gaveta a 360 px, e o e2e do aluno chega por navegação.
+Recomendações: textos de "Em preparação" e "Expirou", e consulta em "Meus dados"; texto do 429 e mínimo de 3 letras no campo; Corrigir nome com antes e depois e indicação da A1 para turma e vínculo; confirmar incidente também pela aba; disciplina ou turmas do professor na busca; resumo legível do RF11 para o titular sem conta.
+```
+
+## test-engineer · 2ª rodada · REPROVADO · 2026-10-05 14:59:58 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Cenários exigidos**
+
+Os 16 bloqueantes da rodada 1, que estão por extenso na transcrição da minha rodada 1 (`achados/revisao-spec.md` está cortado do 8 em diante). Também os cenários das regras que a correção pôs na Tech Spec: travas entre categorias, `consumo_ia.provedor`, autor `rotina`, `pedido_titular` imutável e RF13b.
+
+**Cobertos** (os 16 da rodada 1, conferidos contra `cenarios.md`)
+
+1. RF2 por integração no `ops:retencao`: atendido.
+2. Encurtar em A tira a linha de A e mantém a de B; aumentar não devolve nada: atendido.
+3. Ano `em_curso` com `fim` vencido contra ano `encerrado`: atendido.
+4. `test:infra` dos alertas e contagens de `expurgo_execucao`: atendido.
+5. RF6 e RF7, inclusive B não ver o suboperador `lista` de A: atendido.
+6. Prazos fixos de 7/8 dias, 5 anos + 1 dia e `expurgo_execucao`: atendido.
+7. Versão `coordenacao` em integração, com sentinelas campo a campo, conta ativa e `titular.arquivo_baixado`: atendido.
+8. RF14, perda de acesso: atendido. Sobre o realtime, a seção 5 responde de forma condicional. Hoje só existe o namespace `/sistema` (`apps/realtime/src/sistema.gateway.ts`), sem canal com dado de pessoa, então serve.
+9. RF15 com sentinela por coluna, apóstrofo e metacaractere, caixa e os dois lados: atendido.
+10. Storage achado por `apagado_em`: atendido.
+11. RF16 por `chegou_em` e as transições: atendido.
+12. Varredura de log e de resposta e `chave_objeto`: atendido em parte, ver o bloqueante 8.
+13. Isolamento: `POST pedidos` de B com o mesmo corpo do inexistente, cancelar/concluir/arquivo de B, professor em A e B, "Meus dados" de B, transferido e mesma matrícula: atendido.
+14. Permissão, MFA, a própria eliminação pela conta e responsável legal: atendido.
+15. As nove corridas em paralelo, e a regra da chave de envio fixada na seção 5: atendido.
+16. RF20 com acessibilidade, Suboperadores, "Meus dados" do professor e incidente só por teclado: atendido.
+
+**Bloqueantes**
+
+1. **O rate limit da busca perdeu o teste (seção 7c e `cenarios.md`, Transversais).**
+   - A versão anterior da Tech Spec marcava "`rl:busca-titular` 30/min por usuário, recusa com 429 (teste)". Na mudança para o `cenarios.md`, o cenário sumiu.
+   - Exigido:
+     - um [I] com a 31ª busca no minuto dando 429, com o código tipado;
+     - um [I] com duas coordenadoras da mesma escola e do mesmo IP, cada uma com as suas 30. Ele prova que o limite é por usuário, e não por IP (regra 80, item 1).
+
+2. **`consumo_ia.provedor` sem nenhum cenário (seção 3, "`consumo_ia.provedor`").** As correções que o `llm-integrator` exigiu entraram no texto, mas os testes dele não foram para o `cenarios.md`. Exigido:
+   - [U] de configuração: a subida é recusada sem `IA_PROVEDOR_ID` com `openai_compat` e processamento não local, e o formato fora do padrão também é recusado;
+   - [U] do adaptador, sem provedor pago: o falso, o local e `regra_fixa` gravam nulo; o externo, com servidor falso, grava o id;
+   - [I] com os dois checks da 0024: `provedor` com `envio_externo = false` é recusado;
+   - [I] de que a gravação do consumo nunca falha por causa da coluna.
+
+3. **A trava `consumo_por_aluno ≤ conversa_tutor` não tem cenário (seção 3, "Travas entre categorias").**
+   - Só a trava do professor é testada (o ajuste recusado e o prazo efetivo de 3 meses). Se o código esquecer a trava do aluno, o teste continua verde.
+   - Exigido: com `conversa_tutor` ajustado para 6 meses, o `aluno_id` de `consumo_ia` com 7 meses é anulado. E o ajuste de `consumo_por_aluno` acima de `conversa_tutor` dá `RETENCAO_FORA_DO_LIMITE`.
+
+4. **O check do autor `rotina` em `auditoria` não tem cenário (seções 3 e 13).**
+   - A Tech Spec passou a confiar nele ("O check restringe as ações"), mas nada prova que ele existe.
+   - Exigido: [I] em que uma linha de auditoria com autor `rotina` e ação de aprovação de entrega, ou de validação de lote, é recusada pelo banco, e em que `usuario.eliminado` com `rotina` é aceita.
+
+5. **A imutabilidade de `pedido_titular.escola_id` e `titular_id` não tem cenário (seção 3, Migration 0024).**
+   - O gatilho é a segunda camada do isolamento do pedido. Se ele sair, nenhum teste quebra.
+   - Exigido: [I] em que um `UPDATE` que troca `escola_id` ou `titular_id` é recusado.
+
+6. **O RF13b abriu uma lacuna na eliminação (seção 5, "Eliminação", etapa 2; RF13b).**
+   - A troca de nome usa o nome lido dentro do job, que é o nome atual. Um aluno que teve o nome corrigido e depois pede a eliminação deixa o nome **anterior** nos campos livres (tema, artefato, conversa do professor, `entrega.justificativa`). A auditoria não guarda nome, então nada consegue achá-lo depois.
+   - A Tech Spec precisa decidir uma de duas saídas:
+     - a correção roda a troca de nome do anterior para o novo nos mesmos campos;
+     - ou fica declarado como limite conhecido na seção 13, com o aviso na tela.
+   - Seja qual for a escolha, entra um [I] que corrige o nome, elimina e procura o nome anterior.
+   - Falta também dizer em que estados do pedido de correção o `corrigir-nome` vale (depois de `concluido` ou `cancelado`?). E falta um [I] com nome vazio ou acima de 200 caracteres dando erro tipado, e não o 23514 cru do check `usuario_nome_preenchido`.
+
+7. **Um caso de borda do PRD sem cenário (PRD, seção 7, "Aluno que nunca reivindicou o nome"; Tech Spec, seções 4 e 9).**
+   - Exigido:
+     - [I] em que a busca não acha o nome que só está na `lista_nome` livre ou reivindicada;
+     - [E] em que a tela de Pedidos mostra o aviso apontando para a lista da turma;
+     - a referência ao teste da A1 que prova que tirar o nome da lista fica na auditoria. Se esse teste não existe, ele entra aqui.
+
+8. **`no-store` não é verificado (seção 5, "Arquivo"; RF17; bloqueante 12 da rodada 1).**
+   - A Tech Spec assina a URL com `no-store` e `attachment`, mas nenhum cenário confere isso.
+   - Além disso, o cenário "procura a URL assinada nas respostas" contradiz `POST pedidos/:id/arquivo`, cuja resposta é justamente a URL.
+   - Exigido: [I] de que as respostas de `arquivo` e de `baixar` levam `Cache-Control: no-store`, e de que a URL assinada leva `response-cache-control=no-store` e `content-disposition=attachment` com o nome `meus-dados-AAAA-MM-DD.json`. A varredura procura a URL em log e nas **outras** respostas.
+
+**Recomendações**
+
+- RF5: "Os dois alertas da fatia" cobre na verdade três (duas noites sem expurgo, `agendado` mais de 24 h depois de `eliminar_em`, `em_preparacao` por mais de 2 h), mais o de 24 h do RF9. Vale nomear os quatro, cada um com o parágrafo do runbook.
+- [I] de que o pedido com `eliminacao_enfileirada_em` há mais de 24 h é reenfileirado, e há menos de 24 h não é.
+- A carga do `cenarios.md` não traz "trocando nome", que a seção 7c traz. Vale incluir, com cada statement medido abaixo de 2 s, como o `infra-guardian` pediu.
+- O teste de arquitetura do `ContaGlobalRepository` também deve falhar com um terceiro caminho, e não só aceitar os dois.
+- RF15: um caso de fronteira de palavra, com o nome contido em outro (por exemplo "Ana Souza" dentro de "Mariana Souza"), que não pode ser trocado.
+- RF13: [I] com o pedido de correção listando o compartilhamento (o RF13 pede "na correção"), e um caso "sem uso, só hospedagem" explícito.
+- RF13b: a varredura do RF17 procura o nome antigo e o novo.
+- `conversa_professor`: um teste de que a `thread_agente` com mensagem ainda no prazo não sai.
+[… 7 linhas cortadas]
+
+## llm-integrator · 2ª rodada · AJUSTES NECESSÁRIOS · 2026-10-05 15:00:00 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+VEREDITO: AJUSTES NECESSÁRIOS
+
+Perfis usados: nenhum. A Tech Spec continua sem chamada de modelo (seção 8, "Não se aplica").
+
+Custo estimado por professor/mês: R$ 0 em modelo, porque são zero chamadas. O custo é de Postgres: o expurgo noturno e a troca de nome fazem `UPDATE` em lote fora do horário letivo.
+
+Prompt versionado: não se aplica.
+
+Validação de schema: não se aplica.
+
+Aprovação humana no caminho: não se aplica.
+
+**Como ficaram os três bloqueantes da rodada 1**
+
+1. **Checks de `execucao_agente` (seção 3, `techspec.md:48`): resolvido.**
+   - `entrada = {tarefa}` passa no `execucao_agente_entrada_da_tarefa`.
+   - Manter `resultado` e `erro` passa nos outros dois checks.
+   - Manter `resultado` não guarda texto do modelo. Ele grava só referência (`{tipo, artefatoId|mensagemId|resumoId}`), conferido em `apps/api/src/ia/execucao.repository.ts:42` e nos serviços que o produzem.
+   - O teste exigido está em `cenarios.md:28-30`.
+
+2. **Contrato de `consumo_ia.provedor` (seção 3, `techspec.md:94-104`): desenho resolvido, mas a correção criou um bug, e os testes exigidos não entraram.**
+   - O que ficou certo: a variável está no `esquemaAmbienteDeIa`, a regra de quando ela é obrigatória bate com `envioExterno = !processamentoLocal` em `adaptador-openai-compat.ts:94`, e o id vai pelo adaptador até o `ConsumoRepository`.
+   - O bug e a falta de testes viraram os bloqueantes A e B abaixo.
+
+3. **Foto do compartilhamento (seção 5, `techspec.md:164-172`): a foto existe, o provedor sem cadastro aparece e a reserva por período existe.** Mas a ordem da etapa de eliminação contradiz a própria correção (bloqueante C).
+
+**Bloqueantes:**
+
+A. **O check `NOT VALID` em `consumo_ia` quebra o expurgo e a troca de nome nas linhas antigas.**
+   - **Onde:** `techspec.md:94-95`, `techspec.md:168-169` e `cenarios.md:91`.
+   - **O problema:** no Postgres, `NOT VALID` só pula a verificação das linhas que já existem. Todo `UPDATE` posterior nessas linhas é conferido. Numa linha antiga com `envio_externo = true` e `provedor` nulo, falham:
+     - o `texto_do_modelo`, que anula `entrada` e `saida`;
+     - o `consumo_por_aluno`, que anula `aluno_id`;
+     - a troca de nome;
+     - a anonimização da eliminação.
+   - **Consequência:** é a mesma falha da rodada 1. O lote de 5.000 linhas falha inteiro, o alerta de duas noites dispara e a eliminação não conclui.
+   - **A spec prevê essas linhas e não consegue criá-las:** ela trata "linhas antigas sem `provedor`", e o cenário "sem `provedor`" de `cenarios.md:91` não pode ser montado, porque o próprio check recusa inserir essa linha. A falha é minha: fui eu que propus o `NOT VALID` na rodada 1.
+   - **Correção exigida:** a seção 3 escolhe um caminho que não falha em `UPDATE` de linha antiga. Duas opções:
+     - (a) um check com corte fixo: `not envio_externo or provedor is not null or em < '<instante da 0024>'`, válido já na criação;
+     - (b) tirar esse segundo check e garantir a regra pelo tipo (ver recomendação 1).
+   - **Teste exigido:** um teste de integração que expurga e troca o nome numa linha `envio_externo = true` sem `provedor`.
+
+B. **Os testes do contrato do provedor não estão em `cenarios.md`.**
+   - **Onde:** `techspec.md:99-104`; a Fatia 1 e as Transversais de `cenarios.md` não têm nenhum desses testes.
+   - **O que falta:** os testes exigidos na rodada 1.
+     - [U] O provedor resolvido com o adaptador falso, com o local e com o externo (servidor falso, sem provedor pago) é nulo, nulo e o id, nessa ordem. Com `regra_fixa` ou com zero tentativas, é nulo.
+     - [U] A configuração recusa a subida com `openai_compat` sem processamento local e sem `IA_PROVEDOR_ID`, e recusa um id fora do formato.
+     - [I] O `ConsumoRepository` grava o `provedor`, e a soma da governança não muda.
+   - **Correção exigida:** os três cenários entram em `cenarios.md`.
+
+C. **A foto do compartilhamento é refeita depois de os dados que a alimentam terem sido apagados.**
+   - **Onde:** `techspec.md:165` contra `techspec.md:190-191`.
+   - **A contradição:** a linha 165 diz "refeito na etapa 2, antes de eliminar". Mas a etapa 2 é a troca de nome, e a etapa 3 lista nesta ordem: anonimiza as execuções, roda `eliminar` e só depois refaz o compartilhamento.
+   - **Consequência:** a essa altura, a anonimização já zerou `solicitada_por`, que é a origem do professor. O `eliminar` já zerou `consumo_ia.aluno_id` pelo `ON DELETE SET NULL`. A foto cai na reserva por período e perde o provedor real.
+   - **O teste não pega:** o cenário `cenarios.md:93` ainda passa pela reserva, desde que o suboperador esteja cadastrado.
+   - **Correção exigida:**
+     - a etapa 3 começa por "refaz o compartilhamento" e só depois anonimiza e elimina;
+     - a linha 165 é corrigida para "etapa 3, antes de anonimizar";
+     - o cenário 93 usa um provedor **sem cadastro**, que a reserva por período não consegue produzir, e afirma `origem` diferente de `periodo`.
+
+**Recomendações:**
+1. Ligar `envioExterno` e `provedorId` no tipo, como união discriminada na porta: `{ envioExterno: true; provedorId: string } | { envioExterno: false; provedorId: null }`. A fixture `packages/nucleo/src/ia/__fixtures__/adaptador-roteirizado.ts:15`, que hoje declara `envioExterno = true`, também precisa passar a declarar um id.
+2. Dar a `suboperador.chave` o mesmo formato de `IA_PROVEDOR_ID`. Como a chave pode ser recadastrada (único só onde `fim is null`), a junção da foto deve ser por chave e pela vigência sobreposta a `primeiroEm` e `ultimoEm`.
+3. Calcular o compartilhamento pelos dois caminhos (`aluno_id` e `solicitada_por`) para os dois papéis. A execução do Tutor também é pedida pelo aluno.
+4. Dizer o que acontece com uma execução `pendente` anonimizada que o worker ainda pegue. O esperado é terminar `falhou` com código, sem erro cru.
+
+**Arquivos relevantes:**
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/techspec.md`
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/cenarios.md`
+- `/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/drizzle/0022_mvp_apresentacao.sql`
+- `/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/config/config-ia.ts`
+- `/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/ia/provedor.ts`
+
+## tenancy-guardian · 2ª rodada · REPROVADO · 2026-10-05 15:00:02 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+Tabelas verificadas: `retencao_escola`, `pedido_titular` (com `escola_id` e `titular_id` imutáveis), `arquivo_titular`, `suboperador`, `suboperador_escola`, `incidente`, `incidente_escola` (agora com números e textos por escola), `expurgo_execucao`, `usuario` (+`eliminacao_agendada_em`), `consumo_ia` (+`provedor`), `execucao_agente` (+`anonimizada_em`). Todo id novo é UUID. Toda tabela com dado da escola tem `escola_id`. `suboperador` e `incidente` são tabelas da operação e não têm escola.
+
+Queries verificadas: as quatro consultas `@SemEscopo` da seção 6, que são `EscolasDaRotinaRepository.listarIds`, `ContaGlobalRepository` (movida), `OperacaoPrivacidadeRepository` e `ExpurgoDeAcessoRepository.apagarLoteVencido('incidente')`. Também o job por escola tirado do `job_registro`, a busca por POST, a prévia, os pedidos com cancelar, concluir, corrigir-nome e arquivo, "Meus dados", a leitura e a confirmação do incidente, `GET suboperadores`, a foto do compartilhamento e a troca de nome.
+
+Teste de isolamento: presente e efetivo nos três que faltavam na rodada 1 (`cenarios.md:52`, `:17`, `:70`). Falta cobertura nos dois pontos dos bloqueantes abaixo.
+
+Situação dos bloqueantes da rodada 1:
+1. **Conta global:** resolvido em `techspec.md:211`.
+2. **Lista sem escopo:** resolvida só no lado da operação. A leitura pela escola continua sem dono, e isso virou o bloqueante novo 1.
+3. **Incidente:** resolvido em `techspec.md:88-90`, `:115` e `:199`, com teste em `cenarios.md:57-61`.
+4. **Três testes:** resolvido.
+
+Bloqueantes:
+
+1. **`techspec.md:216-217` (seção 6), `:114`, `:115` e `:164-171`: a escola lê `suboperador` e `incidente` sem repository declarado, e o compartilhamento pode citar suboperador de outra escola.**
+   - **O que está errado.** A seção 6 diz que as duas tabelas são "alcançadas só pelos repositórios acima", e os de cima são todos da operação. Só que `GET suboperadores`, `GET incidentes` (o `conhecidoEm` vem de `incidente`) e o cálculo do compartilhamento, na API e no worker, também leem essas tabelas.
+   - **Conflito com o teste de arquitetura.** O teste da `TABELAS_DA_OPERACAO` (`apps/api/test/arquitetura.test.ts:127-129`, `:201-205`) só aceita os arquivos de `QUEM_PODE_TOCAR_A_OPERACAO`. Do jeito que está, a implementação ou quebra esse teste, ou abre um leitor sem nome e sem prova de forma.
+   - **Leitura sem escopo.** A parte `alcance = todas` não passa pela junção, ao contrário do que diz a linha 217.
+   - **Vazamento entre escolas na seção 5.** A linha 169 ("As linhas antigas sem `provedor` listam os suboperadores de IA vigentes no período") não diz "da escola". O casamento de `consumo_ia.provedor` com `suboperador.chave` também não diz. Lido ao pé da letra, um suboperador `lista` que atende só B entra na foto do pedido de A, com o `suboperadorId`, e revela um contrato de B.
+   - **Correção exigida:**
+     - Nomear o repository da escola que lê as duas tabelas. Ele fica no `nucleo`, porque o worker também o usa. Põe-se na lista do teste de arquitetura com a garantia de que só lê.
+     - Escrever a forma da consulta: `alcance = 'todas' or exists (ligação com escola_id = contexto)`, entre parênteses, e o incidente só por junção com `incidente_escola.escola_id = contexto`.
+     - Declarar que todo uso no compartilhamento passa por ele: casamento por `provedor`, linhas sem `provedor` e `origem = periodo`.
+     - Teste com sentinela: um consumo de A cuja `provedor` é a chave de um suboperador só de B aparece como "provedor não cadastrado". As linhas sem `provedor` e a reserva por período não listam o suboperador só de B.
+
+2. **`techspec.md:33` (seção 2), `:290` (seção 9) e `cenarios.md:100`: o `ACESSO_SUSPENSO` no login revela que a matrícula existe.**
+   - **O que está errado.** Hoje o login por matrícula responde `NAO_AUTENTICADO` para slug inexistente, matrícula inexistente, aluno desativado e senha errada, com hash e contagem iguais (`apps/api/src/sessao/matricula.service.ts:57-58`). A spec cria um código distinto para quem tem eliminação agendada e não diz em que ponto ele sai. Se sair antes da senha conferida, qualquer um, a partir do endereço de qualquer escola, descobre que a matrícula existe e que há eliminação agendada.
+   - **Correção exigida:**
+     - O `ACESSO_SUSPENSO` só sai depois de a credencial ser conferida.
+     - Com senha errada, a conta suspensa responde exatamente como matrícula inexistente: mesmo `NAO_AUTENTICADO`, mesmo hash e mesma contagem no contador.
+     - Cenário em `cenarios.md`, RF14: a senha errada na conta suspensa dá o mesmo corpo e o mesmo status da matrícula inexistente.
+
+Recomendações:
+- **`ContaGlobalRepository`:** dizer de forma explícita que ela não sai pelo barrel do `@educa/nucleo` e que o teste lista quem a importa (o `CicloDeVidaService` e o `sessao`), não só que a tabela `conta` aceita dois caminhos.
+- **Justificativa do `EscolasDaRotinaRepository` (`techspec.md:210`):** "porque o `retencao` já tem três" soa como contorno da regra 10, item 9. Justificar pelo papel da rotina e registrar no `docs/modelo-de-dados.md`.
+- **Busca por POST (`techspec.md:116`):** dizer que o "número de vínculos" é contado nesta escola, nunca pela `conta`.
+- **Testes a mais, para a mesma conta com usuário em A e em B:**
+  - corrigir o nome em A não muda o `usuario` de B;
+  - o consumo feito em B não entra na foto do compartilhamento do pedido de A.
+- **Troca de escola e seletor:** tratar a escola com eliminação agendada como ausente, com o mesmo erro de vínculo inexistente, e pôr um cenário para isso.
+
+Arquivos: `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/techspec.md`, `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/cenarios.md`, `/home/joaquimdp/Documentos/git/Educa.ia/apps/api/test/arquitetura.test.ts`, `/home/joaquimdp/Documentos/git/Educa.ia/apps/api/src/sessao/matricula.service.ts`
+
+## infra-guardian · 2ª rodada · REPROVADO · 2026-10-05 15:00:51 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+VEREDITO: REPROVADO
+Caminho quente tocado: login (a guarda, os logins e a renovação passam a ler `eliminacao_agendada_em`), fila, migration
+Rate limit: ok. O balde por usuário e por escola do F0 continua, e a busca de titular ganhou `rl:busca-titular` com 30 por minuto por usuário (seção 7c). Nenhum limite é só por IP.
+Fila e prioridade: problema. Expurgo e eliminação vão para o lote, não urgentes, e o arquivo vai para a fila normal. Essa parte está certa. O problema é a chave "escola + noite": a spec a usa para evitar job em dobro, mas ela não existe (bloqueante 1).
+Concorrência: corrida em `tasks/prd-lgpd-e-titular/techspec.md:135-139` (bloqueante 1). As correções da rodada 1 estão feitas:
+- A chave de envio agora decide primeiro (linhas 175-177).
+- A etapa 1 confere o pedido com o `now()` do banco, e o cancelamento usa o mesmo relógio (linhas 180-183).
+- `eliminacao_enfileirada_em` é marcado na mesma transação do enfileiramento (linhas 142-144).
+- A troca de nome anda em faixas de 1.000 linhas de `(escola_id, id)` (linha 186).
+Índice e paginação: faltando um índice (bloqueante 2). Os da rodada 1 entraram: os três por titular, os quatro de anonimização com os dois de `consumo_ia` separados, e o `EXPLAIN` na tarefa da migration (linha 252).
+Degradação de IA: não se aplica
+Migration: compatível. As colunas novas aceitam nulo. Os checks entram `NOT VALID`, e o da `auditoria` depois passa por `VALIDATE`. O índice sem `concurrently` vale até o staging, com critério escrito, e o rollback está no runbook.
+Métrica e alerta: ok. Entraram os alertas de pedido `agendado` atrasado e de `em_preparacao` por mais de 2 h, cada um com runbook e linha no `test:infra`.
+
+Bloqueantes:
+1. **`techspec.md:135-136`, `:139` e `:251`, com a migration em `:73-97`.** A chave de idempotência "escola + noite" não existe em lugar nenhum:
+   - O `Enfileirador` não recebe chave (`/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/fila/enfileirador.ts:27`).
+   - O `job_registro` não tem coluna nem índice único para ela (`/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/db/schema/job-registro.ts`).
+   - A migration 0024 não acrescenta nada disso.
+   - O próprio disparo agendado admite que, quando a fila entrega o disparo de novo, ele grava um segundo job (`/home/joaquimdp/Documentos/git/Educa.ia/apps/worker/src/agendamentos.ts:73-75`).
+
+   Ou seja, rodar duas vezes na mesma noite cria dois jobs por escola, e o cenário "[P] duas vezes na mesma noite: um job por escola" (`cenarios.md:144`) não tem como passar. Há ainda uma contradição: se a chave existir como única, o "reenfileira-se" da linha 139 bate na chave do próprio job da mesma noite e é descartado. O expurgo daquela escola fica parado até a noite seguinte.
+   - **Correção exigida:** declarar o mecanismo na seção 3 e na seção 5. Por exemplo: `job_registro.chave_idempotencia` nula, com único parcial `(escola_id, tipo, chave_idempotencia) where chave_idempotencia is not null and estado not in ('concluido','falhou')`, um `enfileirar` com chave e `on conflict do nothing`, e a coluna na migration 0024.
+   - **Correção exigida:** dizer como o reenfileiramento convive com a chave. O caminho mais simples é o job voltar a própria linha a `aguardando` em vez de inserir outra.
+   - A alternativa é tirar a chave da spec e declarar que o job em dobro é tolerado pelo `skip locked`. Nesse caso, o cenário da linha 144 muda para "a soma das contagens fica certa".
+2. **`techspec.md:252`, com efeito nas linhas `:155`, `:167` e `:190-192`.** Falta `consumo_ia (escola_id, execucao_id)`. Hoje só existem `(escola_id, funcao, em)` e `(escola_id, aluno_id, em) where aluno_id is not null` (`/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/drizzle/0022_mvp_apresentacao.sql:424-425`). Três caminhos vão de `execucao_agente` (pelo novo índice de `solicitada_por`) até `consumo_ia` pela execução:
+   - o compartilhamento do professor, refeito dentro da transação da etapa 3;
+   - a anonimização do texto do consumo das execuções dele;
+   - o arquivo, que precisa tirar `entrada` e `saida` dessas execuções.
+
+   Sem o índice, a junção percorre todo o `consumo_ia` da escola, que cresce uma linha por troca do Tutor (centenas de milhares a milhões por ano, `docs/infra.md` 3.6). Com o `statement_timeout` de 2 s, a transação da etapa 3 falha sempre para professor, e a eliminação legal não termina.
+   - **Correção exigida:** incluir `consumo_ia (escola_id, execucao_id) where execucao_id is not null` na lista de índices da seção 7c.
+   - **Correção exigida:** o `EXPLAIN` da tarefa da migration cobre o compartilhamento e a anonimização do professor com volume de Tutor na mesma escola.
+
+Recomendações:
+- **`techspec.md:142-144` e `:190`:** o reenfileiramento após 24 h pode criar um segundo `titular.eliminar` enquanto o primeiro ainda espera na fila (segurado pela janela letiva ou pela vaga). A etapa 3 deveria começar com `select … for update` do pedido e conferir de novo `estado = 'agendado'`, terminando sem efeito se não estiver. Sem isso, o segundo job chama `eliminar` sobre usuário já apagado, sai `falhou` e gera ruído. Outra opção é reenfileirar só quando o job anterior estiver `falhou`, guardando o id dele no pedido.
+- **`techspec.md:190`:** o `CicloDeVidaService.eliminar` hoje abre a própria transação (`apps/api/src/sessao/ciclo-de-vida.service.ts:69-70`, `#naTransacao`). Para a ordem de travas pedido → usuário valer na mesma transação, ele precisa aceitar a transação de quem chama. Vale dizer isso na tarefa que move o ciclo de vida.
+- **`techspec.md:180-181` (Cancelar):** a spec não diz que o cancelamento zera `usuario.eliminacao_agendada_em` na mesma transação, com a trava pedido → usuário. Sem isso, o login fica com `ACESSO_SUSPENSO` para sempre. O cenário de `cenarios.md:101` pega o erro, mas o fluxo deveria estar escrito.
+- **`techspec.md:82-83`:** sem único `(escola_id, pedido_id, versao)` em `arquivo_titular`, os dois `titular.montar-arquivo` de `cenarios.md:145` gravam duas linhas. O caminho é único com `on conflict do update`, e a passagem `em_preparacao → pronto` condicional.
+- **`techspec.md:138-139`:** a janela letiva é conferida entre categorias, e não entre lotes. Uma categoria com 1 milhão de linhas tem 200 lotes e pode atravessar as 7h30. Conferir a cada lote. Também convém enfileirar as eliminações vencidas antes das categorias, para que um reenfileiramento não as adie uma noite.
+- **`titular.eliminar`, etapa 2:** ela não confere a janela letiva entre faixas. Um disparo atrasado pode passar a manhã varrendo `consumo_ia`.
+- **Troca de nome em `consumo_ia`:** a maioria das linhas tem `entrada` nula (o Tutor, pelo check da 0023). A faixa deveria contar as linhas examinadas no índice, e não 1.000 linhas com texto. Outra saída é um índice parcial `(escola_id, id) where entrada is not null or saida is not null`.
+- **`titular.nome_trocado` por linha:** gravar na mesma transação da faixa, a partir do `returning` do `update`. Assim, faixa e auditoria entram ou saem juntas.
+
+Arquivos relevantes: `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/techspec.md`, `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/cenarios.md`, `/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/fila/enfileirador.ts`, `/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/db/schema/job-registro.ts`, `/home/joaquimdp/Documentos/git/Educa.ia/apps/worker/src/agendamentos.ts`, `/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/db/schema/consumo-ia.ts`.
+
+## privacy-guardian · 2ª rodada · REPROVADO · 2026-10-05 15:01:02 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+**VEREDITO: REPROVADO**
+
+Rodada 2 da revisão da spec. Dos 6 bloqueantes da rodada 1, 4 foram resolvidos (1, 3, 4 e 5). O 2 e o 6 ficaram pela metade, e duas das correções criaram problemas novos: a lista de pedidos agora mostra o nome sem auditoria, e o login suspenso pode revelar o pedido a quem tenta entrar.
+
+**Bloqueantes da rodada 1, um a um**
+
+| # | Situação | Onde |
+|---|---|---|
+| 1. Auditoria da prévia e do detalhe | resolvido | techspec seção 4, linhas 117 e 119; seção 7, linha 228; cenários, linha 125 |
+| 2. Classificação de toda tabela | **parcial**: as 46 tabelas das migrations 0000 a 0023 estão classificadas, mas a spec ainda não diz quais entram no arquivo do titular (bloqueante A) | seção 3, linhas 62 a 71 |
+| 3. Prazos atrelados | resolvido: as travas valem no ajuste e no prazo efetivo, com teste. Conferi no mapa que `consumo_ia.entrada`/`saida` são nulas por check nas funções do Tutor, então basta atrelar à conversa do professor | seção 3, linhas 58 a 60; cenários, linhas 15 e 24 |
+| 4. O que fica fora da versão da coordenação | resolvido. O `resultado` da execução guarda só ids, conforme o mapa (linha 83) | seção 5, linhas 152 a 158; cenários, linhas 80 a 83 |
+| 5. Compartilhamento depois do expurgo | resolvido: foto no pedido, reserva por período e provedor sem cadastro aparecem | seção 5, linhas 164 a 172; cenários, linhas 91 a 93 |
+| 6. Aluno só na lista de nomes | **parcial** (bloqueante D) | seção 4, linhas 128 e 129; seção 9, linha 276 |
+
+```
+VEREDITO: REPROVADO
+Campos pessoais tocados: todos os do mapa, para ler, apagar, anonimizar, trocar e corrigir o nome. São novos: pedido_titular (com a foto do compartilhamento, nome_trocado e homonimo), arquivo_titular, incidente_escola.confirmado_por, usuario.eliminacao_agendada_em, consumo_ia.provedor e o apelido do operador em retencao_escola, suboperador e incidente. O usuario.nome passa a ser alterado pelo corrigir-nome; ele é por escola e não fica na conta global, então a correção em A não toca B.
+Fora da tabela de dados do docs/lgpd.md: os novos acima, prometidos para a tarefa da migration (seção 7, linha 226). Isso atende a regra 20, item 1.
+Autorização por objeto: ok no desenho (seção 4, linhas 124 a 127). O pedido sobre si mesmo é conferido pela conta, a conta ativa é por escola, e corrigir-nome está no teste de isolamento (cenários, linha 131).
+Logs: limpos no desenho (seção 7, linha 227). Os jobs levam só ids.
+Auditoria: ausente na listagem de pedidos (GET pedidos), que agora devolve nome e turma.
+Envio externo: nenhum. A funcionalidade não usa IA. O compartilhamento responde para onde o dado já foi, inclusive depois do expurgo.
+Seed/fixture: sintético. Os testes usam sentinelas e relógio injetado.
+Bloqueantes:
+ A. techspec.md seção 3, linhas 62-71, e seção 10, linhas 298-299; cenarios.md linha 74. O que está errado: continua sem dizer quais tabelas e colunas entram no arquivo do titular, e eu exigi isso na rodada 1. A classificação não tem o atributo "do titular", e a sentinela "em cada tabela classificada como do titular aparece no arquivo" pode empurrar segredo para dentro do JSON: credencial_matricula.senha_hash, conta.senha_hash e mfa_segredo_cifrado, codigo_recuperacao, os hashes de sessao, convite e acesso_turma, e reivindicacao.senha_hash. Esse JSON também chega à versão da coordenação. Correção exigida: (1) a CLASSIFICACAO_DAS_TABELAS marca, por tabela, se entra no arquivo; (2) uma lista fechada de colunas que nunca entram (hashes, segredos de MFA, códigos de recuperação, chave_envio, chave_objeto); (3) uma decisão escrita sobre o e-mail da conta global do professor (entra, como dado dele, na versão dele); (4) um cenário com sentinela em cada coluna proibida, que falha se ela aparecer em qualquer das duas versões.
+ B. techspec.md seção 4, linha 119; seção 7, linha 228; cenarios.md linha 119. O que está errado: a correção da rodada passou a mostrar nome e turma na lista de pedidos, e a listagem não é auditada. É leitura nominal de aluno pela coordenação (regra 20, item 10), e uma leitura que diz quais alunos pediram eliminação. Pelo padrão da própria A1, até a lista de nomes da turma grava turma.lista_lida com finalidade a cada leitura (apps/api/src/estrutura/lista.service.ts:167). Correção exigida: GET pedidos grava pedidos.listados com os ids da página e uma finalidade fixa, na mesma transação; entra na seção 7; e um cenário que falha sem esse registro.
+ C. techspec.md seção 2, linha 33; seção 9, linha 290; cenarios.md linha 100. O que está errado: o login responde ACESSO_SUSPENSO sem dizer em que ponto. Hoje o login por matrícula responde igual a aluno desativado, matrícula inexistente e senha errada, com NAO_AUTENTICADO e o mesmo hash (apps/api/src/sessao/matricula.service.ts:57). Se o código novo for conferido antes da senha, qualquer colega que saiba escola e matrícula fica sabendo que a matrícula existe e que há pedido de eliminação, e a mensagem "suspenso a pedido" aparece num Chromebook compartilhado. Isso fere a regra 20, item 6, e expõe um fato sobre o titular. Correção exigida: ACESSO_SUSPENSO só depois da credencial confirmada (a senha certa; na conta Google ou Microsoft, o token válido), pelo mesmo caminho de tempo e de contador; antes disso, a resposta comum. No login por e-mail, a escola com eliminação agendada simplesmente não entra entre as escolhas. Cenário: senha errada numa conta suspensa responde com o mesmo status e o mesmo corpo da matrícula inexistente.
+ D. techspec.md seção 4, linhas 128-129; seção 9, linha 276; cenarios.md (ausente). O que está errado: (1) a spec diz que a coordenação "edita e retira" o nome na lista, mas a A1 não tem edição; ela só tem retirar, e só para o nome livre: o reivindicado responde CONFLITO (lista.service.ts:143-151). O aluno com reivindicação pendente fica sem caminho escrito de eliminação nem de correção. (2) A correção da rodada 1 exigia teste, e nenhum cenário prova esse caminho. Correção exigida: escrever o caminho real. O acesso é a leitura auditada da lista (turma.lista_lida). A correção é retirar e acrescentar. Com reivindicação pendente, a coordenação decide primeiro (decidida_como coordenacao) e depois retira, e a reivindicacao segue a retenção do mapa. Cenários: [E] a tela de Privacidade mostra o aviso e a busca não encontra esse aluno; [I] o reivindicado passa por decidir e retirar com as duas auditorias.
+Recomendações:
+ - seção 5, linhas 164-165 contra 190: "refeito na etapa 2" e "refaz o compartilhamento" na etapa 3; alinhar o texto.
+ - seção 3, linha 68: "as seis da operação" são cinco fora a auditoria_operacao (operador, convite_operador, sessao_operador, acesso_operacao, codigo_recuperacao_operador). Nomear.
+ - PRD seção 8, linha 96: a linha do mapa de pedido_titular precisa citar a foto do compartilhamento, nome_trocado e homonimo, e que eles ficam depois da eliminação só com ids.
+ - O mapa diz que correcao.destaque_aberto_por fica vigência + 5 anos (lgpd.md linha 79), e a spec apaga correcao em cascata com trabalho_do_aluno. O registro de prova fica na validacao_do_lote, mas o mapa precisa ser ajustado (levar ao conformidade-reviewer).
+ - corrigir-nome: dizer em que estados do pedido vale (fora de concluído e cancelado), qual o DTO de resposta, e que o arquivo já gerado não é refeito.
+ - Prévia e detalhe: declarar a finalidade fixa gravada na auditoria (regra 20, item 10: autor, data e finalidade).
+ - Versão da coordenação de professor sem conta ativa: decidir se o artefato dele (titulo e conteudo, que vêm do tema) entra. Levar ao conformidade-reviewer pela regra 70, item 8.
+ - Segue aberta a da rodada 1: limitar quantas vezes a coordenação baixa a mesma versão e levar o evento ao relatório do dossiê.
+```
+
+Os arquivos revisados ficam em `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/`: `techspec.md`, `cenarios.md`, `prd.md` e `revisao-spec.md`.
+
+## conformidade-reviewer · 2ª rodada · REPROVADO · 2026-10-05 15:01:58 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+Caminhos de escrita em Nota: nenhum. A tabela `nota` não existe, e a spec não grava em lugar nenhum que faça as vezes dela; ela só apaga ou anonimiza `correcao`, por cascata da `tentativa_atividade`. Todos com autor humano? Sim, porque não há escrita.
+
+Decisão autônoma sobre aluno: ausente. A eliminação só acontece por pedido que a coordenação registra, e o expurgo aplica prazo, sem tocar em aprovação, reprovação ou encaminhamento.
+
+Aprovação registrada: ok.
+- Correção de lote não aprovado: nas duas versões do arquivo ela sai só como "em validação" ou "rejeitada" (techspec seção 5, l. 159-160; cenarios.md l. 77-78).
+- Troca de nome: cada linha alterada de artefato, entrega, execução e consumo grava `titular.nome_trocado` (seção 5, l. 189; cenarios.md l. 111).
+- `validacao_do_lote` e `entrega.decidida_por` continuam com os ids, porque a validação guarda uma cópia do que foi mostrado e não depende da correção apagada.
+
+Supervisão do tutor: ok. O piso de `conversa_tutor` e `sinal_tutor` subiu para 6 meses, e a spec não cria uso invisível do tutor.
+
+Autonomia declarada e visível: sim. A spec não cria agente nem função nova (seção 8).
+
+**Os 5 bloqueantes da rodada 1**
+1. **Tema e texto do modelo na versão da coordenação:** resolvido. A seção 5 (l. 152-156) lista campo a campo o que essa versão nunca traz, e cenarios.md (l. 80-83) testa com sentinela nas duas versões.
+2. **Prévia como medição nominal do professor:** resolvido só em parte. A contagem e a auditoria entraram, mas a forma que eu mesmo aceitei na rodada 1 ("no máximo que a categoria existe") ainda mede adoção. O compartilhamento do pedido reabriu o mesmo problema. Está no bloqueante 1 abaixo.
+3. **Checks de `execucao_agente`:** resolvido. `{tarefa}` passa no `execucao_agente_entrada_da_tarefa` (`packages/nucleo/src/db/schema/execucao-agente.ts:84`), e `resultado` e `erro` ficam. Os checks 87 e 91 continuam satisfeitos, e o cenário está em cenarios.md l. 29-30.
+4. **Correção de lote não aprovado no arquivo:** resolvido.
+5. **Troca de nome sem registro:** resolvido. A coordenação recebe só `nomeTrocado` (cenarios.md l. 112).
+
+**Bloqueantes**
+
+1. **O que a coordenação vê de um professor ainda separa quem usou a IA de quem não usou** (D64; regra 70, itens 8 e 9).
+   - **Prévia** (techspec.md:117): mostrar "se cada categoria existe" já é a medição. Para um professor, existir `conversa_professor`, `execucao_agente`, `texto_do_modelo` ou `autoria_de_artefato` quer dizer exatamente "usou o Assistente". A coordenação lê isso de qualquer professor, a qualquer hora, sem pedido nenhum. A seção 7b (l. 237-238) afirma que a prévia "não mede uso", e isso é falso.
+   - **Compartilhamento do professor** (techspec.md:77-81, 119, 164-167; problema novo desta rodada): a junção com `execucao_agente.solicitada_por` grava na foto do pedido `primeiroEm` e `ultimoEm` por provedor. Isso é o período nominal de uso da IA pelo professor.
+     - O `GET pedidos/:id` mostra esse período à coordenação.
+     - A foto fica pela retenção do pedido (vigência + 5 anos), muito além do prazo de `solicitada_por` (até 12 meses, travado ao de `conversa_professor`).
+     - É o "consumo por professor" que o schema proíbe de forma explícita (`packages/nucleo/src/db/schema/consumo-ia.ts:24`: "Não existe consumo por professor (D64)").
+     - A própria coordenação registra o pedido, e o solicitante é só declarado. Na prática, basta registrar um pedido de compartilhamento para ler quando o professor usou a IA.
+   - **Correção exigida:**
+     - Prévia e detalhe do pedido de um professor dão a mesma resposta para quem usou e para quem não usou a IA. Na prévia, as quatro categorias de uso não aparecem, ou aparecem com o mesmo texto fixo para todo professor.
+     - O compartilhamento de professor, tanto o mostrado à coordenação quanto o gravado na foto, sai só por período: os suboperadores de IA da escola vigentes durante o vínculo dele, com `origem = periodo`. Nunca pela junção com `solicitada_por`. Essa lista mais larga atende o art. 18, VII e o § 6º.
+     - As datas reais de uso vão só para a versão `completa`, que o próprio professor baixa.
+     - Ajustar a seção 7b.
+     - Teste de integração: dois professores da mesma escola, um que usou o Assistente com provedor externo e outro que nunca usou. A prévia, a foto e o `GET pedidos/:id` precisam sair iguais. Esse teste substitui o de cenarios.md l. 94/126 ou se soma a ele.
+
+2. **O autor `rotina` está na auditoria sem lista fechada de ações e sem teste** (regra 70, itens 3 e 6; regra 40).
+   - **Onde:** techspec.md:96 e 323. "As ações da retenção e da eliminação" não diz quais são. Hoje o `auditoria_operador_formato` (`packages/nucleo/src/db/schema/auditoria.ts`) já aceita `rotina` como `autor_operador` em qualquer ação. O check novo é a única garantia de que um autor que não é pessoa nunca aparece em aprovação. E cenarios.md não tem cenário para ele.
+   - **Correção exigida:**
+     - Enumerar na seção 3 a lista fechada de ações aceitas com `rotina`: pelo menos `titular.nome_trocado`, `usuario.eliminado` e a conclusão do pedido, mais as do expurgo, se houver.
+     - Somar um cenário [I] que tenta gravar `rotina` em `entrega.aprovada`, em `entrega.rejeitada` e na validação de lote, e é recusado pelo banco. O mesmo cenário mostra que as ações da eliminação passam com esse autor.
+
+**Os dois pontos que você pediu para conferir**
+- **Compartilhamento do professor pela junção com `solicitada_por`:** é o bloqueante 1.
+- **Correção de nome do professor pela coordenação:** não cria problema de conformidade. A auditoria guarda ids, e "quem aprovou" continua sendo resolvido pelo id; só o nome exibido muda. O que sobra está nas recomendações.
+
+**Recomendações**
+- **PRD, RF15** (prd.md:65): ainda diz "devolve à coordenação só a contagem". Alinhar com a Tech Spec ("só se houve troca"), para ninguém implementar a contagem, que inclui as ocorrências em `mensagem_agente`.
+- **Versão `coordenacao` de um professor sem conta ativa:** ela leva execuções (tarefa, datas), consumo e artefatos, ou seja, o registro de uso dele. Vale declarar isso no PRD, seção 6, como exceção à D64 pelo direito de acesso, auditada, como já foi feito com a conversa do Tutor.
+- **Consulta da auditoria (F12):** quando existir, ela não deve mostrar à coordenação as linhas de `titular.nome_trocado` sobre `execucao_agente` e `consumo_ia` de forma que se chegue a qual professor escreveu o nome do aluno no tema.
+- **Corrigir nome de aluno:** dizer se a correção chega à `lista_nome`. Se não chegar, uma troca de nome posterior não alcança o nome antigo nos campos livres.
+- **Operador chamado `rotina`:** reservar o apelido na criação de operador, para não colidir com o check.
+- **Texto:** "Em as duas versões" (techspec.md:159) vira "Nas duas versões".
+- **Arquivo do aluno:** dizer de forma explícita que ele não traz o conteúdo do artefato aplicado, que tem gabarito; o aluno nunca lê o artefato (`artefato.ts`, cabeçalho).
+
+Arquivos relevantes:
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/techspec.md
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/cenarios.md
+- /home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/prd.md
+- /home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/db/schema/consumo-ia.ts
+- /home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/db/schema/auditoria.ts
+- /home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/db/schema/execucao-agente.ts
+
+```
+VEREDITO: REPROVADO
+Caminhos de escrita em Nota: nenhum (só apaga ou anonimiza `correcao`) — todos com autor humano? sim
+Decisão autônoma sobre aluno: ausente
+Aprovação registrada: ok
+Supervisão do tutor: ok
+Autonomia declarada e visível: sim
+Bloqueantes: (1) techspec.md:117, 164-167, 77-81, 119, 237-238 — prévia e foto do compartilhamento separam o professor que usou a IA do que não usou (D64); exigido: resposta idêntica, compartilhamento de professor só por período, teste com dois professores. (2) techspec.md:96, 323 — check do autor `rotina` sem lista fechada de ações nem teste; exigido: lista enumerada e cenário [I] que recusa `rotina` em aprovação, rejeição e validação.
+Recomendações: alinhar RF15 do PRD; declarar a exceção da versão `coordenacao` de professor; nome_trocado sem apontar o professor na consulta do F12; correção de nome chegar à `lista_nome`; reservar o apelido `rotina`; corrigir "Em as duas versões"; arquivo do aluno sem conteúdo do artefato.
+```

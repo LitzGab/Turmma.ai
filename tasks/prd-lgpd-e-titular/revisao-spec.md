@@ -47,6 +47,31 @@
 - `expurgo_execucao` por mais tempo (privacy)
 - Realtime derruba o socket quando existir o modo sala (infra, privacy)
 
+## Rodada 2 — 05/10/2026
+
+**Veredito: REPROVADA** (convergindo: os bloqueantes da rodada 1 foram atendidos; os novos são pontuais)
+
+| Revisor | Veredito | Bloqueantes |
+|---|---|---|
+| `test-engineer` | REPROVADO | 8 (rate limit da busca; `consumo_ia.provedor`; trava do aluno; check `rotina`; imutabilidade do pedido; RF13b e eliminação; aluno da lista; `no-store`) |
+| `tenancy-guardian` | REPROVADO | 2 (leitura de `suboperador`/`incidente` pela escola sem repository declarado; `ACESSO_SUSPENSO` antes da senha) |
+| `privacy-guardian` | REPROVADO | 4 (o que entra no arquivo e as colunas proibidas; auditoria da listagem; `ACESSO_SUSPENSO`; caminho real do aluno da lista) |
+| `infra-guardian` | REPROVADO | 2 (a chave "escola + noite" não existe no `job_registro`; índice `consumo_ia (escola_id, execucao_id)`) |
+| `conformidade-reviewer` | REPROVADO | 2 (prévia e compartilhamento de professor separam quem usou a IA, D64; lista fechada e teste do autor `rotina`) |
+| `llm-integrator` | AJUSTES NECESSÁRIOS | 3 (check `NOT VALID` quebra o `UPDATE` de linha antiga; testes do provedor; foto refeita depois de anonimizar) |
+| `frontend-reviewer` | AJUSTES NECESSÁRIOS | 3 (homônimo na prévia; aviso de apagar no download da coordenação; Privacidade do aluno não existe) |
+
+### Correções aplicadas (Tech Spec, PRD e `cenarios.md`)
+- 3: `COLUNAS_FORA_DO_ARQUIVO` e o que entra no arquivo por tabela; check de `provedor` com corte fixo; `job_registro.chave_idempotencia`; único de `arquivo_titular`; lista fechada do autor `rotina`, com apelido reservado; tipo da porta une `envioExterno` e `provedorId`
+- 4: prévia com `homonimo`; prévia de professor igual para quem usou e quem não usou (D64); `pedidos.listados`; finalidade fixa; `corrigir-nome` com estados e limites; caminho real do aluno da lista; `ACESSO_SUSPENSO` só depois da credencial
+- 5: o `Enfileirador` com chave; eliminações e arquivos antes das categorias; janela letiva a cada lote e entre faixas; compartilhamento pelo `SuboperadorDaEscolaRepository`, refeito antes de anonimizar, e de professor só por período; cancelar zera `eliminacao_agendada_em`; etapa 3 com `for update`; o ciclo de vida aceita a transação de quem chama
+- 6: `SuboperadorDaEscolaRepository` e `IncidenteDaEscolaRepository` (só leitura), forma da consulta; barrel da `ContaGlobalRepository`
+- 7c: índice `consumo_ia (escola_id, execucao_id)`; `EXPLAIN` com volume de Tutor
+- 9: aviso de homônimo; aviso de apagar no download da coordenação; Privacidade do aluno criada nesta fatia; textos dos estados
+- 13: limite conhecido do nome anterior a uma correção; realtime
+- PRD: RF15 ("só se houve troca"); exceção da D64 na versão do professor sem conta ativa; foto do compartilhamento no mapa
+- `cenarios.md`: os cenários exigidos pelos sete revisores
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -62,3 +87,10 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-10-05 14:41:25 | 2026-10-05 14:45:08 | `conformidade-reviewer` | 1 | REPROVADO | a5b886e4b9a143052 |
 | 2026-10-05 14:41:19 | 2026-10-05 14:45:48 | `infra-guardian` | 1 | REPROVADO | a0b9d2e2faae2e388 |
 | 2026-10-05 14:41:17 | 2026-10-05 14:45:56 | `privacy-guardian` | 1 | REPROVADO | a90f932e360665986 |
+| 2026-10-05 14:58:04 | 2026-10-05 14:59:55 | `frontend-reviewer` | 2 | AJUSTES NECESSÁRIOS | acbd7014904d0fecb |
+| 2026-10-05 14:57:39 | 2026-10-05 14:59:58 | `test-engineer` | 2 | REPROVADO | a62449459c0f52a6b |
+| 2026-10-05 14:58:01 | 2026-10-05 15:00:00 | `llm-integrator` | 2 | AJUSTES NECESSÁRIOS | a41c83096dee7d225 |
+| 2026-10-05 14:57:44 | 2026-10-05 15:00:02 | `tenancy-guardian` | 2 | REPROVADO | a46fa838dca723f9d |
+| 2026-10-05 14:57:53 | 2026-10-05 15:00:51 | `infra-guardian` | 2 | REPROVADO | a8d745019ca6ade1d |
+| 2026-10-05 14:57:48 | 2026-10-05 15:01:02 | `privacy-guardian` | 2 | REPROVADO | a4b86d5626f44a3c0 |
+| 2026-10-05 14:57:57 | 2026-10-05 15:01:58 | `conformidade-reviewer` | 2 | REPROVADO | aeb7c9a1f7aec7c52 |

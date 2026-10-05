@@ -1,9 +1,9 @@
 # Tech Spec — LGPD e titular
 
 **PRD:** `tasks/prd-lgpd-e-titular/prd.md`
-**Status:** rascunho (rodada 2 da revisão)
+**Status:** rascunho (rodada 3 da revisão)
 
-> **Teto de 2.000 palavras excedido, com aceite do Joaquim (05/10/2026).** São três fatias independentes num documento
+> **Teto de 2.000 palavras excedido, com aceite do Joaquim de até ~3.700 (05/10/2026).** São três fatias independentes num documento
 > só, e a rodada 1 da revisão exigiu por escrito a classificação de toda tabela, as exceções de escopo e as travas.
 > Os cenários de teste ficam em `cenarios.md`. Cada tarefa lê só a seção dela.
 
@@ -65,10 +65,19 @@ arquitetura:
 | Classe | Tabelas |
 |---|---|
 | categoria acima | as doze linhas acima, mais `resposta_atividade`, `correcao` e `thread_agente` (cascata ou vazio) |
-| prazo fixo, com quem aplica | `registro_acesso`, `sessao`, `convite`, `acesso_turma`: `sistema.expurgar-acesso`. `conta`, `codigo_recuperacao`: limpeza da conta (F1). `credencial_matricula`, `conta_externa`: desativação e eliminação. `lista_nome`: virada do ano (A1) e eliminação. As seis da operação: A0 e `sistema.expurgar-acesso`. `job_registro`: 7 dias (F0). `auditoria`, `auditoria_operacao`, `entrega`, `validacao_do_lote`, `suspensao_de_funcao`, `atividade_aplicada`, `pedido_titular`: vigência + 5 anos, no fim de contrato (F12). `arquivo_titular`: 7 dias. `incidente` e `incidente_escola`: 5 anos. `expurgo_execucao`: 5 anos |
+| prazo fixo, com quem aplica | `registro_acesso`, `sessao`, `convite`, `acesso_turma`: `sistema.expurgar-acesso`. `conta`, `codigo_recuperacao`: limpeza da conta (F1). `credencial_matricula`, `conta_externa`: desativação e eliminação. `lista_nome`: virada do ano (A1) e eliminação. `operador`, `convite_operador`, `sessao_operador`, `acesso_operacao`, `codigo_recuperacao_operador`: A0 e `sistema.expurgar-acesso`. `job_registro`: 7 dias (F0). `auditoria`, `auditoria_operacao`, `entrega`, `validacao_do_lote`, `suspensao_de_funcao`, `atividade_aplicada`, `pedido_titular`: vigência + 5 anos, no fim de contrato (F12). `arquivo_titular`: 7 dias. `incidente` e `incidente_escola`: 5 anos. `expurgo_execucao`: 5 anos |
 | sem pessoa | `rede`, `escola`, `ano_letivo`, `serie`, `disciplina`, `turma`, `provedor_escola`, `configuracao_operacional_escola`, `uso_infra_diario`, `trecho`, `resumo_do_analista`, `retencao_escola`, `suboperador`, `suboperador_escola` |
 
 Também `usuario` ativo e `material` vigente ficam enquanto existem; saem pela eliminação e pelas duas categorias acima.
+
+Cada tabela da classificação diz se **entra no arquivo do titular** e por qual coluna se liga a ele. Entram: `usuario`,
+`credencial_matricula` (só a matrícula), `conta` (só o e-mail, nas duas versões), `conta_externa` (só o provedor),
+`vinculo`, `lista_nome`, `reivindicacao`, `sessao` e `registro_acesso` (datas e IP), as tabelas do Tutor, do trabalho
+do aluno, das execuções e do consumo, `artefato` (título; nunca o conteúdo de artefato aplicado, que tem gabarito),
+`entrega`, `atividade_aplicada`, `validacao_do_lote`, `material`, `suspensao_de_funcao` e a `auditoria` em que ele é
+autor. **Colunas que nunca entram**, em nenhuma versão (`COLUNAS_FORA_DO_ARQUIVO`): todo hash de senha, de token e de
+cookie, o segredo do segundo fator, os códigos de recuperação, `chave_envio`, `chave_objeto` e o `sub` da conta
+externa.
 
 **Migration 0024**, só de expansão:
 
@@ -91,16 +100,22 @@ incidente_escola    incidente_id*, escola_id*, circunstancias* (≤1000), catego
 expurgo_execucao    id uuid, escola_id*, categoria*, linhas*, em*
 execucao_agente     + anonimizada_em?
 usuario             + eliminacao_agendada_em?
-consumo_ia          + provedor?  check (provedor is null or envio_externo); check NOT VALID
-                    (not envio_externo or provedor is not null)
-auditoria           check do autor aceita `rotina` só com as ações da retenção e da eliminação (NOT VALID, VALIDATE)
+consumo_ia          + provedor?  check (provedor is null or envio_externo); check (not envio_externo or
+                    provedor is not null or em < <instante da 0024>), válido já na criação
+job_registro        + chave_idempotencia?  único parcial (escola_id, tipo, chave_idempotencia) onde não nula e o
+                    estado não é concluido nem falhou
+arquivo_titular     único (escola_id, pedido_id, versao)
+auditoria           check: `autor_operador = 'rotina'` só com `usuario.eliminado`, `acesso_turma.revogado`,
+                    `titular.nome_trocado` e `pedido.concluido` (NOT VALID, depois VALIDATE). O apelido `rotina` fica
+                    reservado na criação de operador
 ```
 
 **`consumo_ia.provedor`.**
 - `IA_PROVEDOR_ID` entra no `esquemaAmbienteDeIa`, com formato `^[a-z][a-z0-9_-]{1,39}$`, e é obrigatória com
   `openai_compat` sem processamento local. Sem ela, a subida é recusada.
-- O adaptador expõe `provedorId` ao lado de `envioExterno`, e o valor passa por `MedicaoDaGeracao`, `ConsumoDeIa` e
-  `ConsumoRepository`. A reserva futura terá o próprio id.
+- A porta tipa os dois juntos, `{ envioExterno: true; provedorId: string } | { envioExterno: false; provedorId: null }`,
+  e o valor passa por `MedicaoDaGeracao`, `ConsumoDeIa` e `ConsumoRepository`. A reserva futura terá o próprio id. A
+  `suboperador.chave` tem o mesmo formato.
 - Vazio, falso, local e `regra_fixa` gravam nulo. A gravação do consumo nunca falha por causa dessa coluna.
 
 ## 4. API
@@ -111,37 +126,43 @@ professor.
 | Rota | Detalhe |
 |---|---|
 | `GET retencao` | categorias e prazos fixos: descrição comum, meses, origem |
-| `GET suboperadores` | `alcance = todas` ou ligação da escola; nome, finalidade, país, categorias, veda treinamento, vigência |
+| `GET suboperadores` | pelo `SuboperadorDaEscolaRepository` (seção 6); nome, finalidade, país, categorias, veda treinamento, vigência |
 | `GET incidentes` · `POST incidentes/:id/confirmar` | DTO só da linha da escola: `conhecidoEm`, `circunstancias`, `categorias`, `titularesEstimados`, `risco`, `contencao`, `correcao`, `avisadoEm`, `confirmadoEm` e o texto fixo do prazo legal da escola; confirmar é `update … where confirmado_em is null`, 204 |
-| `POST titulares/busca` | `{ termo }` com 3 letras ou mais; até 20 resultados: id, nome, papel, matrícula, turma do ano ou número de vínculos, estado. Audita `titular.buscado` com os ids, nunca o termo |
-| `GET titulares/:id/previa` | aluno: contagem por categoria. Professor: só se cada categoria existe, sem contagem nem período (D64). Sem compartilhamento. Audita `titular.previa_lida` |
+| `POST titulares/busca` | `{ termo }` com 3 letras ou mais; até 20 resultados: id, nome, papel, matrícula, turma do ano (aluno) ou disciplinas e turmas desta escola (professor), estado. Audita `titular.buscado` com os ids e a finalidade fixa, nunca o termo |
+| `GET titulares/:id/previa` | aluno: contagem por categoria e `homonimo` (a mesma regra da troca de nome). Professor: só as categorias de cadastro e vínculo; as de uso da IA não aparecem, e a resposta é igual para quem usou e quem não usou (D64). Sem compartilhamento. Audita `titular.previa_lida` |
 | `POST pedidos` | `titularId`, `tipo`, `solicitante`, `chegouEm`, `chaveEnvio` |
-| `GET pedidos` · `GET pedidos/:id` | página de 50; nome e turma enquanto o titular existe, "Titular eliminado" depois; o detalhe traz o compartilhamento salvo, `nomeTrocado` e `homonimo`, e audita `pedido.lido` |
-| `POST pedidos/:id/cancelar` · `concluir` · `corrigir-nome` | cancelar só `agendado`; concluir acesso, portabilidade, compartilhamento e correção; corrigir nome com `{ nome }` só em pedido de correção, auditado com ids |
-| `POST pedidos/:id/arquivo` | `{ finalidade }`: URL de 5 min da versão `coordenacao`, auditada (`titular.arquivo_baixado`) |
+| `GET pedidos` · `GET pedidos/:id` | página de 50; nome e turma enquanto o titular existe, "Titular eliminado" depois. A lista audita `pedidos.listados` com os ids da página; o detalhe traz o compartilhamento salvo, `nomeTrocado` e `homonimo`, e audita `pedido.lido`. Finalidade fixa nas duas |
+| `POST pedidos/:id/cancelar` · `concluir` · `corrigir-nome` | cancelar só `agendado`; concluir acesso, portabilidade, compartilhamento e correção; corrigir nome com `{ nome }` (1 a 200 caracteres, erro tipado) só em pedido de correção `recebido` ou `pronto`, auditado com ids; o arquivo já gerado não é refeito |
+| `POST pedidos/:id/arquivo` | `{ finalidade }`: URL de 5 min da versão `coordenacao`, auditada (`titular.arquivo_baixado`); resposta com `no-store` |
 | `GET /v1/meus-dados` · `POST …/:id/baixar` | os pedidos do próprio usuário nesta escola, com estado, contagem por categoria e validade do arquivo; URL de 5 min |
 
 - **Mesmo que inexistente** (`NAO_ENCONTRADO`): titular, pedido, arquivo e incidente de outra escola ou de outra
   pessoa, a versão `coordenacao` quando ela não existe, e o pedido sobre si mesmo (mesma `conta_id`, não só o mesmo
   id). O corpo e o status são os do id inexistente.
 - **Conta ativa** é por escola: um usuário desta escola sem `desativado_em` nem `eliminacao_agendada_em`.
-- **Aluno só na lista de nomes.** A busca não o acha. A tela diz que nome e matrícula dele estão na lista da turma, que
-  a coordenação edita e retira com auditoria (A1).
+- **Aluno só na lista de nomes.** A busca não o acha, e a tela de Privacidade explica o caminho da A1. O acesso é a
+  leitura auditada da lista (`turma.lista_lida`). A correção é retirar o nome livre e acrescentar de novo. Com
+  reivindicação pendente, a coordenação primeiro a decide (`decidida_como = coordenacao`) e depois retira. Nada disso
+  é código novo.
+- **Login suspenso.** O `ACESSO_SUSPENSO` só sai depois de a credencial ser conferida (senha certa, ou token válido da
+  conta Google ou Microsoft), pelo mesmo caminho de tempo e de contador. Com senha errada, a resposta é igual à da
+  matrícula inexistente. No login por e-mail e no seletor, a escola com eliminação agendada não aparece.
 
 ## 5. Fluxo
 
 **Expurgo.**
 - `sistema.expurgar-dado-pessoal` roda à 1h, na fila de lote, e lista as escolas.
-- No contexto de cada escola, ele grava um `retencao.expurgar-escola` não urgente, com a chave de idempotência
-  "escola + noite". Rodar duas vezes na mesma noite não cria dois jobs.
-- O job da escola percorre as categorias com o prazo efetivo, em lotes de 5.000 (`for update skip locked`, uma
-  transação por lote), e grava `expurgo_execucao`. Entre uma categoria e outra, confere a janela letiva: se ela abriu,
-  reenfileira-se e para.
-- Depois:
-  - remove do storage os objetos dos `arquivo_titular` vencidos ou com `apagado_em`, e só então a linha;
+- No contexto de cada escola, ele grava um `retencao.expurgar-escola` não urgente pelo `Enfileirador`, que passa a
+  aceitar `chaveIdempotencia` (`on conflict do nothing`), com a chave "escola + data local". Rodar duas vezes na mesma
+  noite não cria dois jobs.
+- O job da escola, primeiro:
   - num `update … set eliminacao_enfileirada_em = now() where estado = 'agendado' and eliminar_em <= now() and
     (eliminacao_enfileirada_em is null or eliminacao_enfileirada_em < now() - interval '24 hours') returning id`,
-    enfileira um `titular.eliminar` por pedido, na mesma transação.
+    enfileira um `titular.eliminar` por pedido, na mesma transação;
+  - remove do storage os objetos dos `arquivo_titular` vencidos ou com `apagado_em`, e só então a linha.
+- Depois percorre as categorias com o prazo efetivo, em lotes de 5.000 (`for update skip locked`, uma transação por
+  lote), e grava `expurgo_execucao`. **A cada lote** confere a janela letiva: se ela abriu, para; o resto sai na noite
+  seguinte, e o alerta de duas noites pega a repetição.
 - O `incidente` com mais de 5 anos é alvo do `sistema.expurgar-acesso`.
 
 **Arquivo.**
@@ -156,19 +177,23 @@ professor.
   - `entrega.justificativa`.
 
   Ela traz a conversa do Tutor, pela exceção do PRD, seção 6.
-- Em **as duas versões**, a correção de lote não aprovado sai só como "em validação pelo professor" ou "rejeitada pelo
+- **Nas duas versões**, a correção de lote não aprovado sai só como "em validação pelo professor" ou "rejeitada pelo
   professor", sem acertos nem diagnóstico (regra 70, item 3).
-- A mesma chave do objeto sobrescreve o que ficou órfão.
-- A URL é assinada com `no-store` e `attachment`, e o nome do arquivo é `meus-dados-AAAA-MM-DD.json`.
+- O único `(escola_id, pedido_id, versao)` com `on conflict do update`, e a passagem condicional `em_preparacao →
+  pronto`, tornam dois jobs do mesmo pedido inofensivos; a mesma chave do objeto sobrescreve o órfão.
+- A URL é assinada com `response-cache-control=no-store` e `content-disposition=attachment`, com o nome
+  `meus-dados-AAAA-MM-DD.json`, e as respostas de `arquivo` e `baixar` levam `Cache-Control: no-store`.
 
 **Compartilhamento** (foto no pedido, sem pessoa: `{ suboperadorId | null, chave, primeiroEm, ultimoEm, origem }`).
-É gravado no registro e refeito na etapa 2 da eliminação, antes de eliminar.
-- **Aluno:** `consumo_ia.aluno_id` com envio externo.
-- **Professor:** a junção com `execucao_agente.solicitada_por`, na escola do contexto.
-- **Agrupamento:** por `provedor`. Um provedor sem cadastro aparece como "provedor não cadastrado". As linhas antigas
-  sem `provedor` listam os suboperadores de IA vigentes no período.
-- **Quando o rastro já expirou** (o titular tem período anterior ao prazo), soma os suboperadores da escola vigentes no
-  período dele, com `origem = periodo` e o rótulo "a escola usava X enquanto você estava nela".
+É gravado no registro e refeito no início da etapa 3 da eliminação, antes de anonimizar e de eliminar. Todo
+suboperador sai do `SuboperadorDaEscolaRepository`: nada de outra escola entra.
+- **Aluno:** o rastro, por `consumo_ia.aluno_id` e pela execução que ele pediu, com envio externo, agrupado por
+  `provedor` e casado com a `chave` vigente no período. Um provedor que não casa com suboperador da escola aparece como
+  "provedor não cadastrado". As linhas antigas sem `provedor` e o período anterior ao prazo (rastro expirado) somam os
+  suboperadores de IA da escola vigentes no período, com `origem = periodo` e o rótulo "a escola usava X enquanto você
+  estava nela".
+- **Professor:** **só por período** (os suboperadores de IA da escola vigentes durante o vínculo), na foto, na prévia e
+  no detalhe. As datas reais de uso saem só na versão `completa`, que ele mesmo baixa (D64).
 - A hospedagem aparece sempre.
 
 **Eliminação.**
@@ -177,22 +202,25 @@ professor.
   já `agendado` cai no único parcial e responde `PEDIDO_EM_ESTADO_INVALIDO`.
 - Na mesma transação: `eliminar_em = now() + 7 dias`, `usuario.eliminacao_agendada_em`, as sessões encerradas
   (`eliminacao_agendada`) e a auditoria.
-- **Cancelar.** `update … where estado = 'agendado' and eliminar_em > now() and eliminacao_enfileirada_em is null`:
-  sem linha, responde `PEDIDO_EM_ESTADO_INVALIDO`. O relógio é sempre o `now()` do banco.
+- **Cancelar.** `update … where estado = 'agendado' and eliminar_em > now() and eliminacao_enfileirada_em is null`,
+  e na mesma transação, com a trava pedido → usuário, `usuario.eliminacao_agendada_em` volta a nulo. Sem linha, responde
+  `PEDIDO_EM_ESTADO_INVALIDO`. O relógio é sempre o `now()` do banco.
 - **`titular.eliminar`, na fila de lote:**
   1. **Confere.** O pedido está `agendado` e com `eliminar_em <= now()`; senão, termina sem fazer nada.
   2. **Troca de nome.** Só se o titular é aluno e não há homônimo ativo nem nome livre igual na lista. Para cada coluna
      da lista (`execucao_agente.entrada`, `consumo_ia.entrada` e `saida`, `artefato.titulo` e `conteudo`,
-     `mensagem_agente.conteudo`, `entrega.justificativa`), percorre faixas de `(escola_id, id)` de 1.000 linhas, só
-     com texto não nulo, e troca o nome por `[nome removido]`, sem caixa e com fronteira de palavra. O nome é escapado
+     `mensagem_agente.conteudo`, `entrega.justificativa`), percorre faixas de 1.000 linhas **examinadas** num índice
+     `(escola_id, id)` parcial de texto não nulo, conferindo a janela letiva entre as faixas, e troca o nome por `[nome removido]`, sem caixa e com fronteira de palavra. O nome é escapado
      para JSON e para regex, e o resultado tem de ser JSON válido, senão o lote falha inteiro. Cada linha alterada de
-     artefato, entrega, execução e consumo grava `titular.nome_trocado` com a tabela, o id e o pedido.
-  3. **Transação**, com a ordem de travas pedido → usuário: anonimiza as execuções do titular e o texto do consumo
-     delas, roda `CicloDeVidaService.eliminar`, marca `apagado_em` nos arquivos dele, refaz o compartilhamento e
-     conclui o pedido. Autor: quem registrou, ou `rotina`.
+     artefato, entrega, execução e consumo grava `titular.nome_trocado` com a tabela, o id e o pedido, na mesma
+     transação da faixa, a partir do `returning`. O nome procurado é o atual: o nome anterior a uma correção não é
+     procurado (seção 13).
+  3. **Transação**, com a ordem de travas pedido → usuário: `select … for update` do pedido (fora de `agendado`,
+     termina sem efeito); refaz o compartilhamento; anonimiza as execuções do titular e o texto do consumo delas; roda
+     `CicloDeVidaService.eliminar`, que passa a aceitar a transação de quem chama; marca `apagado_em` nos arquivos
+     dele; conclui o pedido. Autor: quem registrou, ou `rotina`. Uma execução `pendente` anonimizada que o worker
+     ainda pegue termina `falhou` com código.
 - Os objetos saem do storage na noite seguinte, pelo `apagado_em`.
-- O realtime confere a sessão só no handshake. A tarefa da guarda confere se há canal com dado de pessoa hoje e, se
-  houver, derruba a conexão da sessão encerrada; o modo sala (F10) herda a regra.
 
 **Incidente.**
 - `ops:incidente registrar` lê um arquivo com uma seção por escola e grava as ligações no contexto de cada escola.
@@ -207,14 +235,21 @@ Todo repository novo tira a escola do contexto. O job da escola roda com a escol
 
 | Repository.método | O que faz | Justificativa |
 |---|---|---|
-| `EscolasDaRotinaRepository.listarIds` | ids das escolas, nada mais | a rotina noturna precisa abrir o contexto de cada escola. Fica num módulo próprio, porque o `retencao` já tem três |
+| `EscolasDaRotinaRepository.listarIds` | ids das escolas, nada mais | a rotina noturna precisa abrir o contexto de cada escola; é infraestrutura de rotina, não de retenção |
 | `ContaGlobalRepository.travarConta`, `limparContaSemUso` | os dois da conta global, **movidos** de `ResolucaoDeTenantRepository` | a conta é global por desenho; a exceção da `Conta` em `modelo-de-dados.md` passa a dizer "só `sessao` e `nucleo/ciclo-de-vida`", e o `arquitetura.test.ts` passa a aceitar os dois caminhos |
 | `OperacaoPrivacidadeRepository` (escrever `suboperador` e `incidente`, contagens por escola) | comandos da operação | mesma justificativa do painel; só ids, números e as tabelas da operação |
 | `ExpurgoDeAcessoRepository.apagarLoteVencido('incidente')` | incidente com mais de 5 anos, e a cascata das ligações | a justificativa do método passa a citar o incidente |
 
 Os comandos `ops:retencao`, `ops:suboperador` e `ops:incidente` abrem o contexto de cada escola antes de escrever a
-ligação ou o ajuste. `suboperador` e `incidente` entram em `TABELAS_DA_OPERACAO`, alcançadas só pelos repositórios
-acima e lidas pela escola só por junção com a ligação da escola do token.
+ligação ou o ajuste. `suboperador` e `incidente` entram em `TABELAS_DA_OPERACAO`. A escola as lê só por dois
+repositórios de leitura no `nucleo` (a API e o worker os usam), que entram em `QUEM_PODE_TOCAR_A_OPERACAO` como
+só-leitura:
+- `SuboperadorDaEscolaRepository`: `where (alcance = 'todas' or exists (ligação com escola_id = contexto))`, com os
+  parênteses;
+- `IncidenteDaEscolaRepository`: só por junção com `incidente_escola.escola_id = contexto`.
+
+A `ContaGlobalRepository` não sai pelo barrel do `@educa/nucleo`, e o teste lista quem a importa: o `CicloDeVidaService`
+e o `sessao`. A justificativa do `EscolasDaRotinaRepository` é o papel da rotina, registrada em `modelo-de-dados.md`.
 
 Os testes, cada um quebrando sem a cláusula de escopo, estão em `cenarios.md`, seção "Isolamento".
 
@@ -225,7 +260,7 @@ Os testes, cada um quebrando sem a cláusula de escopo, estão em `cenarios.md`,
 | Campos pessoais tocados | todos os do mapa, para ler, apagar, anonimizar, trocar nome e corrigir nome |
 | Novos campos | `pedido_titular`, `arquivo_titular`, `incidente_escola.confirmado_por`, `usuario.eliminacao_agendada_em`, `consumo_ia.provedor`, e o apelido do operador em `retencao_escola`, `suboperador` e `incidente`: no mapa **na tarefa da migration** |
 | O que vai para log | ids, categoria, contagens, estado. Nunca nome, termo, conteúdo, URL. Os jobs levam só ids |
-| O que entra em auditoria | `titular.buscado`, `titular.previa_lida`, `pedido.lido`, pedido registrado, agendado, cancelado, concluído, nome corrigido, `titular.nome_trocado`, `titular.arquivo_baixado`, `usuario.eliminado`; na operação: `retencao.ajustada`, `suboperador.cadastrado` e `encerrado`, `incidente.registrado`; e `incidente.confirmado` |
+| O que entra em auditoria | sempre com finalidade fixa: `titular.buscado`, `titular.previa_lida`, `pedidos.listados`, `pedido.lido`, pedido registrado, agendado, cancelado, concluído, nome corrigido, `titular.nome_trocado`, `titular.arquivo_baixado`, `usuario.eliminado`; na operação: `retencao.ajustada`, `suboperador.cadastrado` e `encerrado`, `incidente.registrado`; e `incidente.confirmado` |
 | Enviado a provedor externo | nada |
 | Retenção e expurgo | seção 3 |
 | Autorização por objeto | seção 4 |
@@ -234,8 +269,10 @@ Os testes, cada um quebrando sem a cláusula de escopo, estão em `cenarios.md`,
 ## 7b. Conformidade CNE
 
 Não há IA no caminho. O que a funcionalidade preserva:
-- **Regra 70, item 8.** A versão da coordenação não traz nada do que o professor escreveu ao Assistente, e a prévia de
-  professor não mede uso.
+- **Regra 70, itens 8 e 9; D64.** A versão da coordenação não traz nada do que o professor escreveu ao Assistente.
+  Antes de um pedido, a prévia, a foto e o detalhe dão a mesma resposta para o professor que usou a IA e para o que não
+  usou. O registro de uso dele só vai na versão da coordenação quando ele não tem conta ativa, por exceção declarada no
+  PRD.
 - **Regra 70, itens 3 e 6.** Correção não aprovada não chega ao aluno pelo arquivo. A entrega, a validação e a
   execução anonimizada ficam com os ids. A troca de nome em saída aprovada fica registrada por linha.
 
@@ -248,8 +285,8 @@ Não há IA no caminho. O que a funcionalidade preserva:
 | Fila e prioridade | expurgo e eliminação no lote; arquivo na normal |
 | Limite por escola | vaga do F0 (lote 2); lote de 5.000; faixa de 1.000 na troca de nome; `statement_timeout` de 2 s |
 | Rate limit | balde do F0; `rl:busca-titular` com 30 por minuto por usuário, que recusa com 429 |
-| Corridas de concorrência | seção 5: a chave de envio decide primeiro; o único parcial de `agendado`; cancelar contra enfileirar por `eliminacao_enfileirada_em`; travas pedido → usuário; `skip locked` no expurgo; chave "escola + noite"; confirmação do incidente por `where confirmado_em is null`. Cada uma com um cenário em paralelo em `cenarios.md` |
-| Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` se não existir. De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`; `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` onde falta. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação, da prévia e de cada lote |
+| Corridas de concorrência | seção 5: a chave de envio decide primeiro; a chave de idempotência do job por escola e noite; o único parcial de `agendado`; cancelar contra enfileirar por `eliminacao_enfileirada_em`; travas pedido → usuário; `skip locked` no expurgo; chave "escola + noite"; confirmação do incidente por `where confirmado_em is null`. Cada uma com um cenário em paralelo em `cenarios.md` |
+| Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` se não existir, e `consumo_ia (escola_id, execucao_id) where execucao_id is not null`. De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`; `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
 | Migration | compatível. Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
 | Quando cada dependência cai | banco: 503 tipado e nova tentativa; Redis de fila: aceito e despachado depois; storage: "em preparação", e baixar dá `INDISPONIVEL` |
 | Métrica e alerta | duas noites sem expurgo concluído; incidente sem confirmação em 24 h; pedido `agendado` mais de 24 h depois de `eliminar_em`; `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
@@ -266,12 +303,16 @@ Não se aplica.
   - "Registrar pedido" abre uma busca disparada por Enter ou botão, com o resultado anunciado por `aria-live` e o 429
     em texto;
   - na lista, cada titular aparece com turma ou vínculos;
-  - o diálogo de confirmação mostra nome, papel, turma, tipo, quem pediu, chegada, a prévia e o aviso de homônimo. Na
-    eliminação, ele usa a família `perigo` e explica os 7 dias e o que a escola guarda no sistema de gestão;
+  - o diálogo de confirmação mostra nome, papel, turma, tipo, quem pediu, chegada e a prévia. Com `homonimo`, avisa:
+    "Há outro aluno com o mesmo nome completo nesta escola. O nome não será trocado nos textos livres." Na eliminação,
+    usa a família `perigo` e explica os 7 dias e o que a escola guarda no sistema de gestão;
   - o detalhe tem o prazo ("faltam 4 dias, até 20/10"; vencido com texto e ícone), o compartilhamento, **Concluir**,
     **Cancelar** (com diálogo dizendo que o acesso volta), **Corrigir nome** (no pedido de correção) e **Baixar a
     versão da escola**. Este último é um botão `oficial` com diálogo que diz o que o arquivo contém, que traz a
-    conversa do Tutor, que pede a finalidade e que fica registrado;
+    conversa do Tutor, que pede a finalidade, que fica registrado, e que o arquivo deve ser entregue ao titular e
+    apagado do computador em seguida;
+  - **Corrigir nome** mostra o nome atual e o novo antes de confirmar, e aponta para a lista e a turma da A1 quando a
+    correção é de turma ou vínculo;
   - "em preparação" atualiza a cada 10 s, até ficar pronto, e para com a aba escondida;
   - a tela avisa que o aluno que nunca reivindicou o nome está na lista da turma.
 - **Por quanto tempo guardamos** (retenção).
@@ -281,9 +322,11 @@ Não se aplica.
 **Aviso de incidente.** É um diálogo com todos os campos do DTO, "Confirmo que recebi" e "Ver depois". Com "Ver
 depois", fica uma faixa fixa até a confirmação, e o Sair continua alcançável.
 
-**"Meus dados".** O aluno o acha em Privacidade, no rodapé; o professor, no menu da pessoa.
+**"Meus dados".** Esta fatia cria o item **Privacidade** no rodapé fixo do aluno (`docs/interface.md` 11.1), por
+enquanto só com "Meus dados", alcançável também na gaveta a 360 px. O professor o acha no menu da pessoa.
 - **Vazio:** "Para receber uma cópia dos seus dados, peça à coordenação da escola."
-- **Outros estados:** "Em preparação" e "Expirou".
+- **Outros estados:** "Estamos preparando o seu arquivo. Volte em alguns minutos." (atualiza a cada 10 s, como a da
+  coordenação) e "O arquivo ficou disponível por 7 dias e foi apagado. Para receber de novo, peça à coordenação."
 - **Escola:** a tela diz que mostra só os pedidos da escola ativa.
 - **Antes de baixar:** avisa o que o arquivo contém e que, em computador da escola, é preciso apagá-lo depois.
 
@@ -322,3 +365,7 @@ As regras 40 e 50 são atendidas sem desvio (`cenarios.md`; seção 9).
 - **Troca de nome em `jsonb::text`.** É coberta pelo teste com apóstrofo, acento e metacaractere.
 - **Autor `rotina`.** O check restringe as ações em que ele pode aparecer.
 - **Lote de `trabalho_do_aluno`** com a cascata pode passar de 2 s. A tarefa mede, e baixa o lote se precisar.
+- **Limite conhecido:** a troca de nome procura só o nome atual. O nome anterior a uma correção que tenha ficado em
+  texto livre só sai pelo expurgo, no prazo da categoria. A tela de Corrigir nome avisa isso.
+- **Realtime:** hoje só o namespace `/sistema`, sem dado de pessoa. O modo sala (F10) derruba o socket da sessão
+  encerrada.
