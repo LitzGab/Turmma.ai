@@ -10,13 +10,11 @@
 
 > Atualizada a cada commit. Quem retoma lê esta seção, `git log mvp/apresentacao` e `git status`.
 
-**Fase atual:** fechamento. **As quatro fases estão integradas** na `mvp/apresentacao` (`a0a06fd`, 04/10/2026), com o
-portão local verde (294 arquivos, 4115 testes) e **todos os revisores de todas as fases aprovando**. Falta a esteira
-final (`37245636814`) verde e o ensaio com o modelo local, que depende do Joaquim carregar o Qwen. O roteiro está em
-`docs/roteiro-da-demonstracao.md`, e o e2e dele, em `e2e/roteiro-da-demonstracao.spec.ts`. **Sem merge na `develop`**:
-é do Joaquim.
-
-Os worktrees e as branches dos pacotes foram removidos depois de integrados; tudo está na `mvp/apresentacao`.
+**Fase atual:** fechamento. As quatro fases estão integradas e revisadas na `mvp/apresentacao`. O **ensaio com o modelo
+local** foi feito em 04/10/2026 (tarefas chamadas direto contra o `qwen3.6-35b-a3b`) e as três correções que ele pediu
+estão no `ad7c3f0`, com o portão local verde (294 arquivos, 4120 testes). Falta a esteira `37253886556` verde e, para o
+roteiro inteiro com o modelo pela API em contêiner, a regra do `ufw` que só o dono da máquina põe (roteiro, seção 9).
+**Sem merge na `develop`**: é do Joaquim.
 
 **Feito**
 
@@ -96,6 +94,19 @@ tentativa, mostrado só ao professor para obrigá-lo a abrir antes de aprovar, e
 
 Na segunda passada (`2dad84d..1486cbd`), os dois aprovaram.
 
+**Ensaio com o modelo local** (04/10/2026, `qwen3.6-35b-a3b`; script fora do repositório, tarefas chamadas pelo
+adaptador OpenAI-compatível com o material de demonstração)
+
+- Primeira e segunda rodada: a versão adaptada falhava sempre (o modelo reescrevia os tipos de adaptação); a atividade
+  falhava às vezes (o modelo acrescentava `adaptacao`); o Tutor falhava em "é a letra B, né?" (recusava citando a
+  letra, e a conferência reprovava). Corrigidos no `ad7c3f0`, com teste.
+- Terceira rodada: tudo passou. Proposta de ferramenta 3 s, "só conversar" 5 s, atividade de 5 questões 21 s (de
+  cálculo, com página citada), versão adaptada 16 s, plano 21 s, turno do Tutor 2 a 7 s. Em 26 pedidos e dúvidas de
+  aluno, nenhuma resposta entregue; a classificação do pedido acertou 22 de 26. Um terço das chamadas usa a segunda
+  tentativa.
+- **O caminho da API em contêiner até o modelo não funciona sem uma regra no `ufw`**, que está ativo na máquina e barra
+  a entrada vinda das redes do Docker. O roteiro (seção 9) traz o comando; o Claude não tem `sudo` e não mexe no firewall.
+
 **Interrupções de 04/10/2026:** o limite de uso da sessão estourou duas vezes, por volta das 11h50 e das 17h20, e
 derrubou os agentes em curso no meio do trabalho. Nada se perdeu: cada worktree ficou com o que estava escrito, sem
 commit. Na primeira, os cinco foram retomados às 14h21. Na segunda (W, G e C), o W foi retomado às 18h20 com prioridade
@@ -148,7 +159,9 @@ Para os pacotes das fases 3 e 4, o que os revisores já pediram:
 | correções da fase 1 | `37220240549` | `1440e79` | verde, todos os jobs, inclusive infra |
 | fase 2 | `37227505570` | `5c1b53d` | vermelha em três e2e (o professor abrindo em Nova conversa num spec que ficou de fora, o cache da Home nova, um teste comprido demais no celular), corrigidos pelo W |
 | fases 2 e 3, com as correções | `37241713815` | `5f6dd03` | **verde**, todos os jobs |
-| fase 4 e fechamento | `37245636814` | `a0a06fd` | a conferir |
+| fase 4 e fechamento | `37245636814` | `a0a06fd` | vermelha: `areas.spec.ts:169` estourou 30 s nos dois projetos (cinco recarregamentos de página); dividido em dois testes, sem tirar asserção |
+| divisão do teste | `37250031803` | `8f31a68` | vermelha: dois e2e da troca de escola no celular, intermitentes (a lista de vínculos saía do cache da Nova conversa) |
+| ensaio e os dois e2e | `37253886556` | `ad7c3f0` | a conferir |
 
 **Modelo local do ensaio final:** `qwen3.6-35b-a3b` no `llama-server` (`GET /v1/models` em 04/10/2026; estava
 descarregado, e quem carrega é o Joaquim).
