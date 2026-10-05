@@ -5,8 +5,15 @@
 > telas em paralelo. As regras que importam continuam as mesmas. Os pacotes correm em worktrees irmãos
 > (`../Educa.ia-mvp-<pacote>`, branch `mvp/<pacote>`) e o merge na `mvp/apresentacao` é do orquestrador.
 > **Quem retoma o trabalho começa pela seção "Estado", logo abaixo.**
+>
+> **Histórico desde 05/10/2026.** A `mvp/apresentacao` entrou na `develop` (`13eab64`) e foi apagada, junto dos
+> worktrees dos pacotes. Nada aqui é plano em curso: o que ficou pendente está no `TODO.md`, e o que cada spec deixou
+> de fora, no `ROADMAP.md`.
 
 ## Estado
+
+**MVP mergeado na develop em 05/10/2026 (`13eab64`); este documento é histórico.** O que segue é o estado como ficou
+no fim da fatia, mantido para consulta.
 
 > Atualizada a cada commit. Quem retoma lê esta seção, `git log mvp/apresentacao` e `git status`.
 
@@ -127,7 +134,7 @@ ainda esperava "Olá, professora" na página inicial do professor; `troca-de-esc
 Integrados na branch de integração depois disso: as telas do aluno (X, `58f0cb5`), sem a tela da memória. G entregou a
 API da governança (`31582b0`, ainda não integrada) e foi interrompido nas telas.
 
-**Falta**
+**Falta** (lista de 04/10/2026, já cumprida antes do merge: ver as revisões e a esteira acima)
 
 - Fechar a fase 2: integrar a rodada 3 de P e a parte 1 da rodada 3 de W, portão, segunda passada do
   `conformidade-reviewer` e do `frontend-reviewer`.

@@ -101,11 +101,13 @@ recorte com um professor só conta como nominal (D45 revista). O detalhe por tur
 aluno só abre com auditoria (D45, D34). Alerta é hipótese com contexto, nunca veredito sobre o
 professor. Só avisa: nunca contata professor nem família.
 
-**O que isso pede do modelo de dados** (P01 de `docs/pendencias-dos-mockups.md`, a detalhar na
-Tech Spec da A2, que traz o runtime mínimo de agente): a função vira entidade própria,
-`FuncaoAgente → agente*, chave*, nome*, autonomia*, altoRisco*, ativo`; `Entrega` e
-`ExecucaoAgente` ganham `funcao*`, que também serve de filtro na thread do Assistente; e a
-suspensão vira registro próprio (`escola*, funcao*, suspensaPor*, em*, motivo`), com auditoria.
+**O que isso pede do modelo de dados** (P01 de `docs/pendencias-dos-mockups.md`): a função vira
+entidade própria, `FuncaoAgente → agente*, chave*, nome*, autonomia*, altoRisco*, ativo`;
+`Entrega` e `ExecucaoAgente` ganham `funcao*`, que também serve de filtro na thread do
+Assistente; e a suspensão vira registro próprio (`escola*, funcao*, suspensaPor*, em*, motivo`),
+com auditoria. **Entregue na migration 0022 e em `docs/mvp-contratos.md`**, com a função como
+catálogo em código (`FUNCOES`, `packages/shared/src/time/funcoes.ts`) em vez de tabela, e a
+suspensão na tabela `suspensao_de_funcao` (`docs/modelo-de-dados.md`).
 
 ### Detalhes que já estão decididos
 

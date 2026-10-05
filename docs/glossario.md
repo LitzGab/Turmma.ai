@@ -252,8 +252,8 @@ consequência automática, não existe fora de avaliação e não vira históric
 
 **Turmas** — O item do menu do professor em que ele vê as turmas dele: desempenho,
 dificuldades e alunos que precisam de atenção, e "Meu uso", o espelho dele (D45). Antes era a aba
-"Minhas turmas" de "Meu painel", que deixou de existir (D73). As abas da turma aberta fecham no
-PRD da A3. Nasce no F6 (D69).
+"Minhas turmas" de "Meu painel", que deixou de existir (D73). No MVP de apresentação a turma
+aberta tem Visão Geral e Alunos; as outras abas fecham antes do PRD do F6. O F6 a completa (D69).
 
 **Indicador do professor** — Medida de uso e do desempenho das turmas de um professor.
 Visível primeiro a ele; a coordenação vê agregado, só quando há dois ou mais professores no

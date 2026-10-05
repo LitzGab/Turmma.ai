@@ -13,7 +13,8 @@ antes dela. Quais funcionalidades formam a fatia do piloto está em aberto no `C
 **MVP de apresentação (D71).** Logo depois do F1 entram cinco specs, A1 a A5: fatias finas e
 reais do fluxo completo, numa escola sintética, para começarmos a demonstrar. Não é MVP de
 venda e não recebe dado real. Depois dele as fases seguem na ordem de antes, e cada uma
-**completa** a fatia que já existir em vez de começar do zero.
+**completa** a fatia que já existir em vez de começar do zero. Concluído em 05/10/2026: a A2 a
+A5 numa fatia só, pela D77 (`13eab64`).
 
 A ordem abaixo existe por um motivo diferente: reduzir retrabalho. Construir a base
 institucional depois dos agentes significaria refazer os agentes, porque eles dependem do
@@ -90,6 +91,13 @@ e que um professor com vínculo nas duas não leva dado de uma para a outra.
 
 > **Ratificado em 23/09/2026** (D71 revista). A direção de cada spec está abaixo; o detalhe
 > fecha no PRD dela.
+>
+> **Concluído em 05/10/2026.** A0, A0b e A1 passaram pelo processo completo, com PRD, Tech Spec e
+> `/validar`. A2 a A5 foram feitas como **uma fatia só, com processo enxuto** (D77): contratos
+> primeiro, plano e estado em `docs/mvp-rapido.md`, e a branch `mvp/apresentacao` entrou na
+> `develop` em 05/10/2026 pelo PR #1 (`13eab64`). O roteiro está em
+> `docs/roteiro-da-demonstracao.md`. Daqui em diante o trabalho volta à `develop` com o processo
+> completo (D23, D53).
 
 **O roteiro define o escopo.** Uns quinze minutos, com as três áreas e as quatro coisas da D24.
 Nada vem pronto: a escola nasce na frente de quem assiste, e tudo o que aparece foi digitado ou
@@ -113,7 +121,8 @@ enviado pelo próprio produto, com nomes inventados.
    sozinha, o consumo, e o resumo do **Analista de desempenho escolar**, em agregado.
 
 **Regras da fatia** (D71): dado 100% sintético; código do produto, não protótipo — mesmas
-regras 00 a 80 e mesmo processo; regra 70 inteira; fora tudo que não aparece no roteiro. **Sem
+regras 00 a 80 e mesmo processo na A0, na A0b e na A1, e na A2 a A5 o processo enxuto da D77,
+que não muda as regras 10, 20, 30, 40 e 70; regra 70 inteira; fora tudo que não aparece no roteiro. **Sem
 seed de escola pronta**: a escola é criada por nós no painel da operação (A0) e montada pela coordenação
 na tela; os fixtures ficam dentro dos testes. Os quatro afrouxamentos estão aceitos e valem só
 enquanto o dado for sintético: AIA com a etapa 1 antes do PRD da fatia, provedor de modelo
@@ -178,6 +187,10 @@ novas.
 ## A2 — `apresentacao-professor` [x]
 Concluída em 05/10/2026 na fatia única da D77 (merge da `mvp/apresentacao` pelo PR #1), sem PRD nem `/validar`:
 o critério foi a seção 6 de `docs/mvp-rapido.md`, e o estado está na seção Estado dele.
+Da direção abaixo não entraram: o consumo de IA no painel da operação, em tokens e em reais (D76; o `custo_micros` fica
+em zero, `TODO.md`); um adaptador Ollama separado (o OpenAI-compatível atende o Ollama pelo `/v1`); e o processador na
+fila do worker (a execução roda no processo da API, `TODO(fila)`, D77). Os avatares são o círculo com o ícone da
+função (`apps/web/src/componentes/ia/AvatarAgente.tsx`).
 **Depende de:** A1
 
 Camada de IA mínima: porta `LLMProvider`, adaptadores Ollama, OpenAI-compatível e falso,
@@ -200,6 +213,8 @@ a Adaptação não tem campo em que caiba um diagnóstico, e a versão adaptada 
 ## A3 — `apresentacao-atividade-e-correcao` [x]
 Concluída em 05/10/2026 na fatia única da D77 (merge da `mvp/apresentacao` pelo PR #1), sem PRD nem `/validar`:
 o critério foi a seção 6 de `docs/mvp-rapido.md`, e o estado está na seção Estado dele.
+A turma aberta ficou com Visão Geral e Alunos; as outras abas (P11, P28) fecham antes do PRD do F6. Não há relatório
+em texto da correção nesta fatia.
 **Depende de:** A2 · **pode correr em paralelo com A4**
 
 O aluno responde a atividade objetiva no navegador. A **função de correção do Assistente**
@@ -215,6 +230,8 @@ vezes sem duplicar aviso nem chamada de IA; e nada é gerado por IA sobre respos
 ## A4 — `apresentacao-tutor-e-sinais` [x]
 Concluída em 05/10/2026 na fatia única da D77 (merge da `mvp/apresentacao` pelo PR #1), sem PRD nem `/validar`:
 o critério foi a seção 6 de `docs/mvp-rapido.md`, e o estado está na seção Estado dele.
+Não entraram a tela do que o Tutor sabe, com a contestação do aluno (D66; a rota `GET /v1/tutor/memoria` existe), nem a
+política do Tutor por turma (D19): o Tutor fica ligado para todo aluno com turma (`TODO.md`).
 **Depende de:** A2 · **pode correr em paralelo com A3**
 
 **Tutor** socrático restrito ao material da turma, citando a página, com identidade de agente
@@ -230,6 +247,7 @@ nenhum outro; e nenhum campo guarda texto livre sobre o aluno.
 ## A5 — `apresentacao-coordenacao` [x]
 Concluída em 05/10/2026 na fatia única da D77 (merge da `mvp/apresentacao` pelo PR #1), sem PRD nem `/validar`:
 o critério foi a seção 6 de `docs/mvp-rapido.md`, e o estado está na seção Estado dele.
+O resumo do Analista é gerado a pedido da coordenação (`POST /v1/analista/gerar`), não toda semana.
 **Depende de:** A3, A4
 
 **Governança**: o que a IA gerou e quem aprovou, com o número; cada agente e cada função, o que
@@ -250,13 +268,13 @@ deixar auditoria, nem adoção nominal em lugar nenhum.
 | F2 | disciplinas e turmas na tela, lista de nomes por turma, alocação, convite do professor, reivindicação com aprovação | grade horária e calendário importados, Classroom (D48), reset de senha pelo coordenador, planilha suja em escala |
 | F3 | nada, porque o dado é sintético | tudo. Continua sem poder ser a última |
 | F4 | upload pela coordenação com licença, extração, trechos com página, busca, recusa sem licença | classificação BNCC completa, versionamento, reprocessamento, painel, adaptadores |
-| F5 | porta, três adaptadores, perfis, consumo, validação de schema | gateway com limitador, prioridade, reserva e degradação; orçamento e pacote do tutor; soberania (D62); avaliação de modelos |
-| F6 | atividade objetiva online, correção, diagnóstico, aprovação com registro, Turmas | prova resiliente, outros modos, rubrica e correção cega de discursiva, saída da aba (D70) |
+| F5 | porta, dois adaptadores (o falso e o OpenAI-compatível, que atende o Ollama e o `llama-server` pelo `/v1`), perfis, consumo em tokens, validação de schema | gateway com limitador, prioridade, reserva e degradação; orçamento, teto e custo em reais (o `custo_micros` fica em zero); consumo de IA no painel da operação (D76); pacote do tutor; soberania (D62); avaliação de modelos |
+| F6 | atividade objetiva online, correção, diagnóstico, aprovação com registro, Turmas com Visão Geral e Alunos | prova resiliente, outros modos, rubrica e correção cega de discursiva, saída da aba (D70), as outras abas da turma aberta (P11, P28), relatório em texto da correção |
 | F7 | Assistente de ensino, atividade e prova objetiva, plano de aula, Adaptação, artefato salvo, PDF | simulado ENEM, rubrica, apresentação, material didático, PPTX e XLSX, biblioteca e histórico completos, busca na web (D68) |
-| F9 | Tutor socrático, página citada, identidade, mensagem fixa, trava, memória | modo casa, busca em fontes aprovadas (D68), aviso etário, encaminhamento a quem notifica, teste adversário completo |
+| F9 | Tutor socrático, página citada, identidade, mensagem fixa, trava, memória (a rota) | modo casa e a política por turma (D19), a tela do que o Tutor sabe com a contestação (D66), busca em fontes aprovadas (D68), aviso etário, encaminhamento a quem notifica, teste adversário completo |
 | F10 | sinal chegando à conversa do Tutor do professor certo | WebSocket em duas instâncias, modo casa com resumo |
-| F11 | thread, função com autonomia declarada, entrega pendente, execução registrada, idempotência; Assistente (correção e adaptação) e Tutor | limite de passos e de custo, suspensão por função numa escola, "seu dia e sua semana", Analista por evento |
-| F12 | governança de IA, agentes e funções com autonomia, consumo, Analista semanal, nominal com auditoria; do lado nosso, o painel da operação (A0) | painel completo, Conformidade, Denúncias, Exportar, dossiê |
+| F11 | thread, função com autonomia declarada, entrega pendente, execução registrada, idempotência, suspensão por função numa escola; Assistente (correção e adaptação) e Tutor | execução na fila do worker (no MVP, no processo da API: `TODO(fila)`, D49), limite de passos e de custo, "seu dia e sua semana", Analista por evento |
+| F12 | governança de IA, agentes e funções com autonomia, consumo, resumo do Analista a pedido, nominal com auditoria; do lado nosso, o painel da operação (A0) | painel completo, resumo semanal do Analista, Conformidade, Denúncias, Exportar, dossiê |
 | F15 | roteiro, um comando que sobe o ambiente vazio | demonstração completa, com um bimestre e notas |
 | F8, F13, F14, F17, F16 | nada | tudo |
 
@@ -556,10 +574,11 @@ escolhido nesse momento (D31, D42).
 
 ## Paralelismo
 
-- O MVP de apresentação (A1 a A5) vem logo depois do F1; A3 e A4 podem correr em paralelo,
-  na `develop` (D23 revista). F2 e F3 são as primeiras depois dele, e o F2 completa o que a A1
-  começou
-- F5 corre desde o início, independente do domínio; a fatia mínima dela nasce na A2
+- O MVP de apresentação (A1 a A5) veio logo depois do F1 e está concluído: a A2 a A5 correram
+  numa fatia só, na branch `mvp/apresentacao`, com os pacotes em paralelo (D77), e entraram na
+  `develop` em 05/10/2026 (`13eab64`). F2 e F3 são as primeiras depois dele, de volta à
+  `develop` com o processo completo (D23, D53), e o F2 completa o que a A1 começou
+- F5 corre desde o início, independente do domínio; a fatia mínima dela nasceu na A2
 - F3 corre em paralelo com F4 e F5, e **não pode ser a última**
 - F10 depende só de F9; F13 pode correr junto de F12
 - F17 (nota oficial) corre depois de F6 e F11, em paralelo com F12 a F15
