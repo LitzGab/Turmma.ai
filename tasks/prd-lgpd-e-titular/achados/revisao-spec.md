@@ -1237,3 +1237,72 @@ Arquivos:
 - `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/cenarios.md`
 - `/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/src/ia/provedor.ts`
 - `/home/joaquimdp/Documentos/git/Educa.ia/packages/nucleo/drizzle/0000_job_registro.sql`
+
+## test-engineer · 4ª rodada · REPROVADO · 2026-10-05 15:17:05 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Cenários exigidos:** os dois bloqueantes da rodada 3 e as cláusulas novas do diff `46bd2d8..f30619b`. As cláusulas novas são: contração 0025, faixas da troca de nome com a janela letiva, falha na etapa 3, expurgo parcial, reenfileiramento em 20 h, devolução do id na colisão da chave, check de `chave_idempotencia` com `escola_id`, autor da etapa 3 (quem registrou ou `rotina`) e execução `pendente` encerrada pela varredura.
+
+**Cobertos:**
+- **Bloqueante 1 da rodada 3, resolvido** (seção 3, `techspec.md:103` e `:119-122`). `cenarios.md:61` prova que a 0024 aceita o insert no formato do código anterior. `cenarios.md:62` prova que a 0025 recusa externo sem `provedor` depois do corte. A cláusula `em < corte` também está coberta: se ela sumir, o `cenarios.md:27-28` quebra, porque nele expurgar e trocar o nome numa linha antiga não pode esbarrar no check.
+- **Bloqueante 2 da rodada 3, resolvido** (seção 5, `techspec.md:222-224`). `cenarios.md:149-150` cobre a janela abrindo entre faixas: o pedido não conclui, o nome continua só nas faixas não examinadas, e a execução seguinte termina a troca e elimina. `cenarios.md:151` cobre a falha no `CicloDeVidaService.eliminar`: ela desfaz a anonimização, e o pedido continua `agendado`. A retomada na noite seguinte depende do reenfileiramento em 20 h, que tem o par de fronteira em `cenarios.md:45`.
+- O expurgo parcial com a noite seguinte terminando o restante está em `cenarios.md:41-42`.
+- A deduplicação do job "escola + data local" está em `cenarios.md:189`, com chamadas em paralelo.
+
+**Bloqueantes:**
+1. **O autor da etapa 3 não tem cenário.** A regra está em `techspec.md:228-229` (seção 5, eliminação, etapa 3). O texto novo diz que o autor é quem registrou, se ainda é usuário ativo da escola, porque o gatilho da auditoria exige; senão, é `rotina`.
+   - Se o fallback para `rotina` sumir, a eliminação fica travada para sempre quando a coordenadora que registrou o pedido saiu da escola dentro dos 7 dias. É o caso de borda de quem sai no meio do período, e deixaria o RF14/RF15 sem cumprir. Nenhum cenário quebraria.
+   - O `cenarios.md:193-195` só prova que o banco aceita `rotina` em `pedido.concluido`. Não prova quem o código escolhe. A mutação "sempre `rotina`", que perde o autor humano da auditoria (regra 20, item 10), também passa.
+   - Correção exigida: em `cenarios.md`, RF16 ou "Autor `rotina`", um [I] com dois lados.
+     - (a) Coordenadora que registrou continua ativa: `pedido.concluido` e `usuario.eliminado` saem com o id dela.
+     - (b) Coordenadora desativada entre o agendamento e `eliminar_em`: o pedido conclui com autor `rotina`, sem erro do gatilho.
+
+**Recomendações:**
+- O check `chave_idempotencia is null or escola_id is not null` (`techspec.md:105`) não tem cenário. Um [I] curto, com o insert de chave sem escola recusado, fecha a mutação. Não bloqueia: a deduplicação real já é provada por `cenarios.md:189`.
+- "Na colisão, devolve o id do job que já existe" (`techspec.md:159`) não tem asserção. Vale acrescentar ao `cenarios.md:189` que as duas chamadas recebem o mesmo id.
+- A execução `pendente` de quem tem eliminação agendada, encerrada pela varredura do executor (`techspec.md:229`), não tem cenário próprio. Se a varredura já existe com teste de F anterior, cite-o. Senão, vale um [I].
+- `cenarios.md:61` exige o banco migrado só até a 0024. Declare na tarefa da migration como o harness para nela (migrar até a entrada do journal), para que o cenário não vire comparação de texto do SQL.
+
+Arquivos: `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/techspec.md`, `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/cenarios.md`
+
+## infra-guardian · 4ª rodada · REPROVADO · 2026-10-05 15:18:44 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+VEREDITO: REPROVADO
+Caminho quente tocado: IA, migration, fila
+Rate limit: ok
+Fila e prioridade: ok
+Concorrência: protegida
+Índice e paginação: ok
+Degradação de IA: não se aplica
+Migration: bloqueante
+Métrica e alerta: ok
+
+**Os dois bloqueantes da rodada 3**
+
+- **(2) Janela letiva: resolvido.** A seção 5 (`techspec.md:169-170`), a seção 7c (`:292`) e o `cenarios.md:41-42` agora dizem a mesma coisa: para no lote, grava a contagem parcial e a noite seguinte termina. A troca de nome também está coerente nas três: `techspec.md:222-224`, `cenarios.md:149-151` e o reenfileiramento em 20 h (`:165`).
+- **(1) Check de `provedor`: corrigido só em parte.** A 0024 ficou certa. O que travava passou da 0024 para a 0025, e a 0025 ainda quebra do mesmo jeito. O motivo está no bloqueante abaixo.
+
+**Bloqueantes**
+
+- **`techspec.md:119-122` (seção 3), `techspec.md:298` (7c) e `cenarios.md:62-63`.**
+  - **O que está errado.** A spec diz que a 0025 "é aplicada só quando o código que grava `provedor` estiver em todas as instâncias", mas não diz como isso é garantido. E o repositório não garante. O serviço `migrar` aplica todas as migrations pendentes da pasta antes de qualquer instância subir (`packages/nucleo/src/db/migrar.ts:62-75`). Como o cenário da 0025 está nesta funcionalidade, a 0025 entra no mesmo release que o código e é aplicada no mesmo deploy.
+  - **O efeito no rollback.** Se o código voltar para antes do F3 com a 0025 aplicada, o código anterior grava consumo com envio externo e `provedor` nulo, com `em` depois do corte. O banco recusa. O registro de consumo bem-sucedido não tem `catch` (`packages/nucleo/src/ia/provedor.ts:145`). Resultado: toda chamada externa que deu certo, e já foi paga ao provedor, falha e chega ao aluno como erro. É exatamente a falha do rollback que reprovou a rodada 3.
+  - **Os buracos no texto.**
+    - "O runbook de rollback cita isso" não diz o que o runbook manda fazer.
+    - O valor literal do corte não tem regra de escolha. Se for anterior ao momento em que todas as instâncias passaram a rodar o código novo, o `VALIDATE` falha.
+  - **Correção exigida.**
+    - A 0025 vai numa tarefa e num release **posteriores** ao release que leva o código que grava `provedor`, nunca no mesmo. O cenário de `cenarios.md:62-63` muda para essa tarefa.
+    - O corte é o instante a partir do qual todas as instâncias rodam o código do F3, tirado do registro do deploy.
+    - O parágrafo do runbook diz, como um comando só, que voltar o código para antes do F3 com a 0025 aplicada exige primeiro o `drop constraint` do check.
+    - Se preferirem manter a 0025 no F3, o mínimo é esse comando de rollback escrito no runbook e citado na 7c. Mesmo assim, a frase "a gravação do consumo nunca falha por causa dessa coluna" (`techspec.md:118`) deixa de ser verdade e tem de ser reescrita.
+
+**Recomendações**
+
+- **O `migrar` roda tudo numa transação** (`migrar.ts:70`). Por isso o `NOT VALID` seguido de `VALIDATE` no mesmo arquivo segura o bloqueio exclusivo da tabela durante toda a varredura, e o `NOT VALID` não serve para nada. Isso vale para a 0025 e para o check de `auditoria`. O check da 0024 (`provedor is null or envio_externo`) também varre a `consumo_ia` inteira. Quando houver staging, separem os arquivos ou usem `NOT VALID` também na 0024.
+- **`expurgo_execucao` não distingue execução parcial de completa** (seção 3). O alerta de "duas noites sem expurgo concluído" precisa de um marcador: uma coluna ou uma métrica de conclusão por escola.
+- **Chave de idempotência do job.**
+  - O `on conflict` em índice único parcial só funciona se o comando repetir o predicado do índice no alvo do conflito.
+  - Na colisão, "devolve o id existente" pede um `select` depois. Esse `select` pode não achar nada se o job concluiu no intervalo. Definam o que se devolve nesse caso (`techspec.md:159`).
+- **Alerta de `agendado` há mais de 24 h depois de `eliminar_em`.** Ele dispara já depois de uma única interrupção pela janela letiva. O parágrafo do runbook deveria cobrir esse caso como esperado.
+- **Linha "Corridas de concorrência" da 7c** (`techspec.md:296`). Ela cita a mesma chave duas vezes: "escola + data local" e "escola + noite". Deixem um nome só.

@@ -97,7 +97,7 @@ incidente           id uuid, conhecido_em*, registrado_por*, registrado_em*
 incidente_escola    incidente_id*, escola_id*, circunstancias* (≤1000), categorias* (lista fechada),
                     titulares_estimados*, risco* (baixo|relevante|alto), contencao* (≤1000), correcao* (≤1000),
                     avisado_em*, confirmado_em?, confirmado_por?
-expurgo_execucao    id uuid, escola_id*, categoria*, linhas*, em*
+expurgo_execucao    id uuid, escola_id*, categoria*, linhas*, concluida* (a categoria terminou ou parou pela janela), em*
 execucao_agente     + anonimizada_em?
 usuario             + eliminacao_agendada_em?
 consumo_ia          + provedor?  check (provedor is null or envio_externo), que o código anterior cumpre
@@ -116,10 +116,13 @@ auditoria           check: `autor_operador = 'rotina'` só com `usuario.eliminad
   e o valor passa por `MedicaoDaGeracao`, `ConsumoDeIa` e `ConsumoRepository`. A reserva futura terá o próprio id. A
   `suboperador.chave` tem o mesmo formato.
 - Vazio, falso, local e `regra_fixa` gravam nulo. A gravação do consumo nunca falha por causa dessa coluna.
-- **Contração, depois.** A exigência de `provedor` com envio externo é uma migration posterior, `0025`, com o check
-  `not envio_externo or provedor is not null or em < '<literal timestamptz do corte>'` `NOT VALID` e depois `VALIDATE`.
-  Ela é aplicada só quando o código que grava `provedor` estiver em todas as instâncias; até lá, quem garante é o tipo
-  da porta. O runbook de rollback cita isso.
+- **A contração fica fora do F3.** O `migrar` aplica toda migration pendente antes de as instâncias subirem, então um
+  check que exige `provedor` no mesmo release quebraria o rollback. A exigência vai numa migration de um release
+  **posterior** ao que leva o código do F3: o check `not envio_externo or provedor is not null or em < '<corte>'`, em
+  arquivo próprio, `NOT VALID` e depois `VALIDATE`. O `<corte>` é o instante, tirado do registro do deploy, a partir do
+  qual todas as instâncias rodam o código do F3. O runbook diz, num comando, que voltar o código para antes do F3 com
+  essa contração aplicada exige antes o `drop constraint` dela. Até lá, quem garante é o tipo da porta. A contração
+  entra no `TODO.md` quando o Joaquim propagar o recorte.
 
 ## 4. API
 
@@ -156,8 +159,9 @@ professor.
 **Expurgo.**
 - `sistema.expurgar-dado-pessoal` roda à 1h, na fila de lote, e lista as escolas.
 - No contexto de cada escola, ele grava um `retencao.expurgar-escola` não urgente pelo `Enfileirador`, que passa a
-  aceitar `chaveIdempotencia` (`on conflict do nothing`; na colisão, devolve o id do job que já existe), com a chave
-  "escola + data local". Um segundo job depois de o primeiro terminar é inofensivo, porque o expurgo é idempotente.
+  aceitar `chaveIdempotencia` (`on conflict` com o predicado do índice parcial, `do nothing`; na colisão, devolve o id
+  do job que já existe, ou nulo se ele terminou nesse intervalo, e quem chama trata os dois como "já enfileirado"), com
+  a chave "escola + data local". Um segundo job depois de o primeiro terminar é inofensivo, porque o expurgo é idempotente.
   Rodar duas vezes na mesma
   noite não cria dois jobs.
 - O job da escola, primeiro:
@@ -293,11 +297,11 @@ Não há IA no caminho. O que a funcionalidade preserva:
 | Fila e prioridade | expurgo e eliminação no lote; arquivo na normal |
 | Limite por escola | vaga do F0 (lote 2); lote de 5.000; faixa de 1.000 na troca de nome; `statement_timeout` de 2 s |
 | Rate limit | balde do F0; `rl:busca-titular` com 30 por minuto por usuário, que recusa com 429 |
-| Corridas de concorrência | seção 5: a chave de envio decide primeiro; a chave de idempotência "escola + data local"; o único parcial de `agendado`; cancelar contra enfileirar por `eliminacao_enfileirada_em`; travas pedido → usuário; `skip locked` no expurgo; chave "escola + noite"; confirmação do incidente por `where confirmado_em is null`. Cada uma com um cenário em paralelo em `cenarios.md` |
+| Corridas de concorrência | seção 5: a chave de envio decide primeiro; a chave de idempotência "escola + data local"; o único parcial de `agendado`; cancelar contra enfileirar por `eliminacao_enfileirada_em`; travas pedido → usuário; `skip locked` no expurgo; confirmação do incidente por `where confirmado_em is null`. Cada uma com um cenário em paralelo em `cenarios.md` |
 | Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` se não existir, e `consumo_ia (escola_id, execucao_id) where execucao_id is not null`. De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`; `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
-| Migration | compatível: a 0024 só expande, e a exigência de `provedor` fica para a contração `0025` (seção 3). Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
+| Migration | compatível: a 0024 só expande, e a exigência de `provedor` vai num release posterior (seção 3). O `migrar` roda numa transação, então `NOT VALID` seguido de `VALIDATE` no mesmo arquivo não alivia a trava: a partir do staging, cada check vai em arquivo próprio. Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
 | Quando cada dependência cai | banco: 503 tipado e nova tentativa; Redis de fila: aceito e despachado depois; storage: "em preparação", e baixar dá `INDISPONIVEL` |
-| Métrica e alerta | duas noites sem expurgo concluído; incidente sem confirmação em 24 h; pedido `agendado` mais de 24 h depois de `eliminar_em`; `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
+| Métrica e alerta | duas noites sem `expurgo_execucao.concluida` numa escola; incidente sem confirmação em 24 h; pedido `agendado` mais de 48 h depois de `eliminar_em` (uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
 | Cenário de teste de carga | o "justiça entre escolas" ganha uma escola expurgando 1 milhão de linhas e trocando nome enquanto outra usa o Tutor |
 
 ## 8. Uso de IA

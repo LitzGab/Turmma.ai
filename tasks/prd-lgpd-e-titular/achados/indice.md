@@ -29,3 +29,5 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-05 15:14:34 | `privacy-guardian` | 3ª | APROVADO | `revisao-spec` | techspec seção 4, GET pedidos: dizer que pedidos.listados e pedido.lido gravam na mesma transação da leitura, como turma.lista_lida em… |
 | 2026-10-05 15:14:45 | `llm-integrator` | 3ª | APROVADO | `revisao-spec` | Seção 3 e seção 7c ("Migration ... compatível"): o corte do check e a versão anterior do código. |
 | 2026-10-05 15:15:13 | `infra-guardian` | 3ª | REPROVADO | `revisao-spec` | Seção 3, l.103-104, e seção 7c, l.290 ("Migration: compatível") |
+| 2026-10-05 15:17:05 | `test-engineer` | 4ª | REPROVADO | `revisao-spec` | O autor da etapa 3 não tem cenário. A regra está em `techspec.md:228-229` (seção 5, eliminação, etapa 3). O texto novo diz que o autor é quem registrou, se… |
+| 2026-10-05 15:18:44 | `infra-guardian` | 4ª | REPROVADO | `revisao-spec` | `techspec.md:119-122` (seção 3), `techspec.md:298` (7c) e `cenarios.md:62-63`. |

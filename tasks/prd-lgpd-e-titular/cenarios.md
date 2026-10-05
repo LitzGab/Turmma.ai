@@ -41,7 +41,7 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] Com a janela letiva aberta no meio do job, ele para no lote em que ela abriu, o `expurgo_execucao` grava a
     contagem parcial, e o job da noite seguinte termina o restante.
   - [F] Os quatro alertas disparam, cada um ligado ao parágrafo do runbook: duas noites sem expurgo; `agendado` mais de
-    24 h depois de `eliminar_em`; `em_preparacao` por mais de 2 h; incidente sem confirmação em 24 h.
+    48 h depois de `eliminar_em`; `em_preparacao` por mais de 2 h; incidente sem confirmação em 24 h.
   - [I] O pedido com `eliminacao_enfileirada_em` há mais de 20 h é reenfileirado; com menos de 20 h, não é.
   - Carga: uma escola expurga 1 milhão de linhas e troca um nome enquanto outra usa o Tutor, com cada statement abaixo
     de 2 s.
@@ -59,8 +59,6 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
     servidor falso e sem provedor pago, é o id.
   - [I] `provedor` com `envio_externo = false` é recusado pelo banco.
   - [I] Depois da 0024, um insert no formato do código anterior (externo, sem `provedor`, `em` = agora) é aceito.
-  - [I] Depois da contração 0025, uma linha com `em` posterior ao corte, `envio_externo` verdadeiro e `provedor` nulo é
-    recusada pelo banco.
   - [I] O `ConsumoRepository` grava o `provedor`, e a soma da governança não muda.
   - [I] A gravação do consumo nunca falha por causa da coluna.
 - **RF6.**
@@ -194,6 +192,12 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] Auditoria com `rotina` em `entrega.aprovada`, em `entrega.rejeitada` ou na validação de lote é recusada pelo
     banco. Em `usuario.eliminado`, `acesso_turma.revogado`, `titular.nome_trocado` e `pedido.concluido`, é aceita.
   - [I] Criar operador com o apelido `rotina` é recusado.
+  - [I] Autor da etapa 3: com a coordenadora que registrou ainda ativa, `pedido.concluido` e `usuario.eliminado` saem
+    com o id dela; com ela desativada entre o agendamento e `eliminar_em`, o pedido conclui com `rotina`, sem erro do
+    gatilho.
+- **Chave de idempotência do job.**
+  - [I] Um job com chave e sem escola é recusado pelo banco.
+  - [P] As duas chamadas com a mesma chave recebem o mesmo id.
 - **Rate limit da busca.**
   - [I] A 31ª busca no minuto dá 429 tipado.
   - [I] Duas coordenadoras da mesma escola e do mesmo IP têm 30 cada uma.

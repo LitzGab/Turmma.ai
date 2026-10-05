@@ -92,6 +92,20 @@
 - 7b, 7c e PRD seção 6: "fora da versão `coordenacao` de professor sem conta ativa"; a carga não promete reenfileirar
 - `cenarios.md`: insert no formato antigo aceito depois da 0024; recusado depois da 0025; janela entre faixas; falha na etapa 3 desfaz tudo; expurgo parcial e noite seguinte; aluno no cenário do provedor sem cadastro; os repositórios da escola só leem
 
+## Rodada 4 — 05/10/2026
+
+**Veredito: REPROVADA** (só `test-engineer` e `infra-guardian` chamados; os dois bloqueantes da rodada 3 foram resolvidos em parte)
+
+| Revisor | Veredito | Bloqueantes |
+|---|---|---|
+| `test-engineer` | REPROVADO | 1 (o autor da etapa 3, quem registrou ou `rotina`, sem cenário) |
+| `infra-guardian` | REPROVADO | 1 (a contração do check de `provedor` no mesmo release ainda quebra o rollback, porque o `migrar` aplica tudo antes de as instâncias subirem) |
+
+### Correções aplicadas
+- 3: a contração sai do F3 e vai num release posterior, em arquivo próprio, com o corte tirado do registro do deploy e o `drop constraint` no runbook; o cenário da contração sai do `cenarios.md`; `expurgo_execucao.concluida` para o alerta
+- 5 e 7c: `on conflict` com o predicado do índice parcial; colisão devolve o id ou nulo; uma chave só, "escola + data local"; o alerta de `agendado` passa a 48 h; `NOT VALID` em arquivo próprio a partir do staging
+- `cenarios.md`: o autor da etapa 3 nos dois lados; a chave sem escola recusada; o mesmo id nas duas chamadas
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -121,3 +135,5 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-10-05 15:12:49 | 2026-10-05 15:14:34 | `privacy-guardian` | 3 | APROVADO | a9df14b29b445c306 |
 | 2026-10-05 15:13:00 | 2026-10-05 15:14:45 | `llm-integrator` | 3 | APROVADO | ac43cbc516bad8c33 |
 | 2026-10-05 15:12:53 | 2026-10-05 15:15:13 | `infra-guardian` | 3 | REPROVADO | ad7e2a329c9e41616 |
+| 2026-10-05 15:16:04 | 2026-10-05 15:17:05 | `test-engineer` | 4 | REPROVADO | a1028e83462c49214 |
+| 2026-10-05 15:16:08 | 2026-10-05 15:18:44 | `infra-guardian` | 4 | REPROVADO | a380fd950e0b9d173 |
