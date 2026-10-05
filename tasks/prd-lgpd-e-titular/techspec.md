@@ -1,9 +1,10 @@
 # Tech Spec — LGPD e titular
 
 **PRD:** `tasks/prd-lgpd-e-titular/prd.md`
-**Status:** rascunho (rodada 3 da revisão)
+**Status:** aprovado (revisão da spec, rodada 6, 05/10/2026)
 
-> **Teto de 2.000 palavras excedido, com aceite do Joaquim de até ~3.700 (05/10/2026).** São três fatias independentes num documento
+> **Teto de 2.000 palavras excedido, com aceite do Joaquim (05/10/2026): ~3.700 aceitas; as rodadas 2 a 5 da revisão
+> levaram a ~4.800, à espera de confirmação.** São três fatias independentes num documento
 > só, e a rodada 1 da revisão exigiu por escrito a classificação de toda tabela, as exceções de escopo e as travas.
 > Os cenários de teste ficam em `cenarios.md`. Cada tarefa lê só a seção dela.
 

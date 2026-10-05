@@ -1389,3 +1389,36 @@ Recomendações:
 Arquivos:
 - `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/techspec.md`
 - `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/cenarios.md`
+
+## test-engineer · 6ª rodada · APROVADO · 2026-10-05 15:20:51 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+VEREDITO: APROVADO
+
+**Cenários exigidos:** o bloqueante da rodada 5 sobre `expurgo_execucao.concluida`, nas três partes da correção, e as cláusulas novas do diff `26f774f..HEAD`:
+- a noite seguinte começa pela categoria que ficou pendente (seção 5);
+- o alerta passa a ser "duas noites seguidas sem todas as categorias da escola com `concluida = true`" (seção 7c).
+
+**Cobertos:** o bloqueante da rodada 5 está resolvido nas três partes.
+- **(a) Seção 3** (`techspec.md:100`). A coluna vale `true` só quando a categoria terminou e `false` quando parou pela janela. Não sobra outra leitura.
+- **(b) RF5** (`cenarios.md:41-43`). O [I] afirma `concluida = false` na categoria interrompida, `true` nas que terminaram e `true` na noite seguinte. Se o código gravar `true` sempre, o teste falha.
+- **(c) RF5** (`cenarios.md:44-45`). O par [F] tem os dois lados: duas noites parciais disparam o alerta, e uma parcial seguida de uma completa não dispara. Isso pega tanto o alerta que nunca dispara quanto o que dispara sempre. Semear zero linhas já não basta para passar.
+- **Seção 7c** (`techspec.md:304`) e o [F] dos quatro alertas (`cenarios.md:46`) usam o mesmo texto do alerta.
+
+**Bloqueantes:** nenhum.
+
+**Recomendações:**
+- **O [I] não prova que a noite seguinte começa pela pendente** (`cenarios.md:41-43`, seção 5 em `techspec.md:174`). As categorias anteriores já terminaram, então um código que sempre começa pela primeira passa por elas rápido, chega à pendente e também passa no [I]. Para provar a ordem, a segunda noite também precisa ser interrompida no primeiro lote, com volume novo numa categoria anterior. A asserção é que avançou a pendente, e não a anterior. Não bloqueia porque o alerta de duas noites já pega a escola que nunca termina.
+- **Categoria não alcançada e categoria sem nada a expurgar** (seção 7c, `techspec.md:304`).
+  - Deixem dito que toda categoria percorrida grava a linha de `expurgo_execucao`, mesmo com `linhas = 0` e `concluida = true`.
+  - Deixem dito que a categoria sem linha na noite conta como não concluída, porque o alerta compara com o catálogo e não só com as linhas gravadas.
+  - No [F] que dispara (`cenarios.md:44`), vale um caso em que a janela abre antes de as últimas categorias rodarem e elas ficam sem linha nenhuma.
+  - Sem isso, o alerta pode ser implementado olhando só as linhas gravadas e deixar passar justamente esse caso.
+- **Ficam de pé as recomendações da rodada 5:**
+  - a colisão que devolve nulo;
+  - a fronteira de 47 h e 48 h do alerta de `agendado`;
+  - a varredura do executor;
+  - como o harness da 0024 é parado.
+
+**Arquivos:**
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/techspec.md`
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/cenarios.md`

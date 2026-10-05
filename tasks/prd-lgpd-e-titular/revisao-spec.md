@@ -115,6 +115,30 @@
 - 5 e 7c: a noite seguinte começa pela categoria pendente; o alerta dispara com duas noites seguidas sem todas as categorias concluídas
 - `cenarios.md`: `concluida` falsa na interrompida e verdadeira na seguinte; duas noites parciais alertam, e uma parcial seguida de uma completa não alerta
 
+## Rodada 6 — 05/10/2026
+
+**Veredito: APROVADA**
+
+| Revisor | Veredito | Rodada da aprovação |
+|---|---|---|
+| `tenancy-guardian` | APROVADO | 3 |
+| `privacy-guardian` | APROVADO | 3 |
+| `conformidade-reviewer` | APROVADO | 3 |
+| `llm-integrator` | APROVADO | 3 |
+| `frontend-reviewer` | APROVADO | 3 |
+| `infra-guardian` | APROVADO | 5 |
+| `test-engineer` | APROVADO | 6 |
+
+### Recomendações que vão para as tarefas (subtarefa ou cenário)
+- Expurgo: provar que a noite seguinte começa pela categoria pendente; toda categoria percorrida grava a linha, mesmo com zero; a categoria sem linha conta como não concluída no alerta (test-engineer)
+- Colisão da chave que devolve nulo; fronteira de 47 h e 48 h do alerta de `agendado`; citar o teste da varredura do executor; dizer como o harness para na 0024 (test-engineer)
+- Teste de só-leitura dos repositórios da escola; correlação `suboperador_id` no `exists` (tenancy)
+- `pedidos.listados` e `pedido.lido` na mesma transação da leitura; a reivindicação decidida pela coordenação segue a categoria `reivindicacao_decidida`; `mfa_ultimo_passo` e `mfa_chave_versao` em `COLUNAS_FORA_DO_ARQUIVO`; avaliar se o arquivo do aluno traz as leituras da escola sobre ele; limitar quantas vezes a coordenação baixa a mesma versão; alinhar no `docs/lgpd.md` a retenção de `correcao.destaque_aberto_por` (privacy)
+- O fixture `AdaptadorRoteirizado` ganha `provedorId`; a 0024 sobe junto com o código que grava `provedor` (llm-integrator)
+- Lugar do rodapé fixo na casca do aluno e o `navegacao.test.ts`; e2e do professor até "Meus dados" pelo menu da pessoa; texto do 429 e o mínimo de 3 letras no campo; texto do aviso de nome anterior em Corrigir nome (frontend)
+- A contração do check de `provedor` entra no `TODO.md` com a pré-condição "release posterior ao F3", com o `VALIDATE` medido no volume do staging (infra)
+- Na consulta da auditoria do F12, `titular.nome_trocado` não leva a qual professor escreveu o nome (conformidade)
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -148,3 +172,4 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-10-05 15:16:08 | 2026-10-05 15:18:44 | `infra-guardian` | 4 | REPROVADO | a380fd950e0b9d173 |
 | 2026-10-05 15:19:24 | 2026-10-05 15:20:05 | `test-engineer` | 5 | REPROVADO | a816ec8da61adb18b |
 | 2026-10-05 15:19:27 | 2026-10-05 15:20:06 | `infra-guardian` | 5 | APROVADO | ae8c146f5daff582f |
+| 2026-10-05 15:20:22 | 2026-10-05 15:20:51 | `test-engineer` | 6 | APROVADO | aa5c05277ee9130e0 |

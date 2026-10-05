@@ -33,3 +33,4 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-05 15:18:44 | `infra-guardian` | 4ª | REPROVADO | `revisao-spec` | `techspec.md:119-122` (seção 3), `techspec.md:298` (7c) e `cenarios.md:62-63`. |
 | 2026-10-05 15:20:05 | `test-engineer` | 5ª | REPROVADO | `revisao-spec` | `expurgo_execucao.concluida` não tem cenário, e o texto que a define é ambíguo. Locais: `techspec.md:100` (seção 3), `techspec.md:174` e `:304` (seções 5 e… |
 | 2026-10-05 15:20:06 | `infra-guardian` | 5ª | APROVADO | `revisao-spec` | `techspec.md:100` (seção 3), definição de `expurgo_execucao.concluida`. O texto "a categoria terminou ou parou pela janela" admite duas leituras. Lido como… |
+| 2026-10-05 15:20:51 | `test-engineer` | 6ª | APROVADO | `revisao-spec` | O [I] não prova que a noite seguinte começa pela pendente (`cenarios.md:41-43`, seção 5 em `techspec.md:174`). As categorias anteriores já terminaram, então um… |
