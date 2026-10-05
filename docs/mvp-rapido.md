@@ -10,11 +10,17 @@
 
 > Atualizada a cada commit. Quem retoma lê esta seção, `git log mvp/apresentacao` e `git status`.
 
-**Fase atual:** fechamento. As quatro fases estão integradas e revisadas na `mvp/apresentacao`. O **ensaio com o modelo
-local** foi feito em 04/10/2026 (tarefas chamadas direto contra o `qwen3.6-35b-a3b`) e as três correções que ele pediu
-estão no `ad7c3f0`, com o portão local verde (294 arquivos, 4120 testes). A esteira `37253886556` ficou **verde** em todos os jobs. **Pronto para o merge na `develop`.** Para mostrar o modelo
-pela API em contêiner, falta só a regra do `ufw` que o dono da máquina põe (roteiro, seção 9).
-**Sem merge na `develop`**: é do Joaquim.
+**Fase atual:** concluída. As quatro fases estão integradas e revisadas, a etapa 1 das cinco AIAs foi fechada com as
+decisões do Joaquim (`16183f4`), e a esteira `37302975647` ficou **verde** no `16183f4` (na segunda tentativa: ver a
+tabela da esteira). A `mvp/apresentacao` entrou na `develop` em 05/10/2026 pelo
+[PR #1](https://github.com/LitzGab/Turmma.ai/pull/1), com merge autorizado pelo Joaquim. O **ensaio com o modelo local**
+foi feito em 04/10/2026 (tarefas chamadas direto contra o `qwen3.6-35b-a3b`) e as três correções que ele pediu estão
+no `ad7c3f0`, com o portão local verde (294 arquivos, 4120 testes). Para mostrar o modelo pela API em contêiner, falta
+só a regra do `ufw` que o dono da máquina põe (roteiro, seção 9).
+
+Daqui em diante o trabalho volta à `develop` com o processo completo (D23, D53); a D77 continua valendo só para o que
+já está aqui e só enquanto o dado for sintético. Antes do merge, o Joaquim ficou de conferir a revisão do Gabriel das
+AIAs, os limiares abaixo e o destaque `padrao_de_erro`.
 
 **Feito**
 
@@ -22,7 +28,8 @@ pela API em contêiner, falta só a regra do `ufw` que o dono da máquina põe (
 - Este documento corrigido (`a8d2fe1`), com as fases da seção 3, a trava do banco de teste e o passo a passo dos pacotes.
 - O marcador `(mvp: <resumo>)` em `tools/processo/revisoes.ts`, com nove casos em `revisoes.test.ts` (`8c054ce`).
 - Os contratos de `packages/shared` de time e assistente (`336a756`).
-- A etapa 1 das cinco AIAs em `docs/aia/` (`d23179a`), em rascunho, **esperando a revisão do Joaquim**.
+- A etapa 1 das cinco AIAs em `docs/aia/` (`d23179a`), fechada com as decisões do Joaquim de 05/10/2026 (`16183f4`);
+  a revisão do Gabriel vem depois.
 - **Fase 1 integrada** (`7fddb5f`), com o portão local verde (254 arquivos, 3353 testes): migration 0022 com 17 tabelas,
   schemas das 41 rotas, `MATRIZ`, códigos de erro, auditoria e `docs/mvp-contratos.md` (S); porta `LLMProvider`,
   adaptador falso e OpenAI-compatível, sete tarefas, `ExecutorDeAgente`, suspensão por função (L); peças da web e
@@ -162,6 +169,7 @@ Para os pacotes das fases 3 e 4, o que os revisores já pediram:
 | fase 4 e fechamento | `37245636814` | `a0a06fd` | vermelha: `areas.spec.ts:169` estourou 30 s nos dois projetos (cinco recarregamentos de página); dividido em dois testes, sem tirar asserção |
 | divisão do teste | `37250031803` | `8f31a68` | vermelha: dois e2e da troca de escola no celular, intermitentes (a lista de vínculos saía do cache da Nova conversa) |
 | ensaio e os dois e2e | `37253886556` | `ad7c3f0` | **verde**, todos os jobs |
+| AIAs na etapa 1, antes do PR | `37302975647` | `16183f4` | **verde na segunda tentativa**. Na primeira, só o e2e 1/4 caiu, num teste: `areas.spec.ts:381` ("segunda pessoa", chromebook) mostrou "Turmas" vazia em vez da turma da professora. Passou na `37253886556` e do `ad7c3f0` ao `16183f4` só mudou `docs/aia/`: intermitente, no `TODO.md` |
 
 **Modelo local do ensaio final:** `qwen3.6-35b-a3b` no `llama-server` (`GET /v1/models` em 04/10/2026; estava
 descarregado, e quem carrega é o Joaquim).
@@ -464,8 +472,8 @@ registra a mudança de processo. O que está em curso e o que vem depois fica na
    disparada à mão (`gh workflow run esteira --ref mvp/apresentacao`) e a fase seguinte não espera por ela. O e2e
    "W4: os estados de Turmas" é intermitente: se for o único vermelho, roda-se de novo o job antes de investigar.
 4. **Fechamento:** `docs/roteiro-da-demonstracao.md`, o PDF de demonstração (seção 9.5), o e2e do roteiro inteiro, o
-   ensaio com o modelo local, `typecheck`, `lint`, `test` e `test:e2e` verdes, e a esteira da branch verde. **Sem merge
-   na `develop`**: quem faz é o Joaquim, depois de avisado.
+   ensaio com o modelo local, `typecheck`, `lint`, `test` e `test:e2e` verdes, e a esteira da branch verde. O merge na
+   `develop` é do Joaquim: feito em 05/10/2026, pelo PR #1, com a autorização dele.
 
 Prioridade se o prazo apertar (cada uma é demonstrável sozinha): **A2 inteira → A3 → A4 → A5**. Dentro da A5, Governança
 e Agentes antes do Analista. O que cortar primeiro: Biblioteca em grade, Memória do aluno, abas além de Visão Geral e
