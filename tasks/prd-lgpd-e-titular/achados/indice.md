@@ -31,3 +31,5 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-05 15:15:13 | `infra-guardian` | 3ª | REPROVADO | `revisao-spec` | Seção 3, l.103-104, e seção 7c, l.290 ("Migration: compatível") |
 | 2026-10-05 15:17:05 | `test-engineer` | 4ª | REPROVADO | `revisao-spec` | O autor da etapa 3 não tem cenário. A regra está em `techspec.md:228-229` (seção 5, eliminação, etapa 3). O texto novo diz que o autor é quem registrou, se… |
 | 2026-10-05 15:18:44 | `infra-guardian` | 4ª | REPROVADO | `revisao-spec` | `techspec.md:119-122` (seção 3), `techspec.md:298` (7c) e `cenarios.md:62-63`. |
+| 2026-10-05 15:20:05 | `test-engineer` | 5ª | REPROVADO | `revisao-spec` | `expurgo_execucao.concluida` não tem cenário, e o texto que a define é ambíguo. Locais: `techspec.md:100` (seção 3), `techspec.md:174` e `:304` (seções 5 e… |
+| 2026-10-05 15:20:06 | `infra-guardian` | 5ª | APROVADO | `revisao-spec` | `techspec.md:100` (seção 3), definição de `expurgo_execucao.concluida`. O texto "a categoria terminou ou parou pela janela" admite duas leituras. Lido como… |

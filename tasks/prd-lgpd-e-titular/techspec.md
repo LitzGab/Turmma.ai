@@ -97,7 +97,7 @@ incidente           id uuid, conhecido_em*, registrado_por*, registrado_em*
 incidente_escola    incidente_id*, escola_id*, circunstancias* (≤1000), categorias* (lista fechada),
                     titulares_estimados*, risco* (baixo|relevante|alto), contencao* (≤1000), correcao* (≤1000),
                     avisado_em*, confirmado_em?, confirmado_por?
-expurgo_execucao    id uuid, escola_id*, categoria*, linhas*, concluida* (a categoria terminou ou parou pela janela), em*
+expurgo_execucao    id uuid, escola_id*, categoria*, linhas*, concluida* (`true` só quando a categoria terminou; `false` quando parou pela janela), em*
 execucao_agente     + anonimizada_em?
 usuario             + eliminacao_agendada_em?
 consumo_ia          + provedor?  check (provedor is null or envio_externo), que o código anterior cumpre
@@ -171,7 +171,7 @@ professor.
   - remove do storage os objetos dos `arquivo_titular` vencidos ou com `apagado_em`, e só então a linha.
 - Depois percorre as categorias com o prazo efetivo, em lotes de 5.000 (`for update skip locked`, uma transação por
   lote), e grava `expurgo_execucao`. **A cada lote** confere a janela letiva: se ela abriu, para; o resto sai na noite
-  seguinte, e o alerta de duas noites pega a repetição.
+  seguinte, que começa pela categoria que ficou pendente; o alerta de duas noites pega a repetição.
 - O `incidente` com mais de 5 anos é alvo do `sistema.expurgar-acesso`.
 
 **Arquivo.**
@@ -301,7 +301,7 @@ Não há IA no caminho. O que a funcionalidade preserva:
 | Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` se não existir, e `consumo_ia (escola_id, execucao_id) where execucao_id is not null`. De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`; `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
 | Migration | compatível: a 0024 só expande, e a exigência de `provedor` vai num release posterior (seção 3). O `migrar` roda numa transação, então `NOT VALID` seguido de `VALIDATE` no mesmo arquivo não alivia a trava: a partir do staging, cada check vai em arquivo próprio. Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
 | Quando cada dependência cai | banco: 503 tipado e nova tentativa; Redis de fila: aceito e despachado depois; storage: "em preparação", e baixar dá `INDISPONIVEL` |
-| Métrica e alerta | duas noites sem `expurgo_execucao.concluida` numa escola; incidente sem confirmação em 24 h; pedido `agendado` mais de 48 h depois de `eliminar_em` (uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
+| Métrica e alerta | duas noites seguidas sem todas as categorias da escola com `concluida = true`; incidente sem confirmação em 24 h; pedido `agendado` mais de 48 h depois de `eliminar_em` (uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
 | Cenário de teste de carga | o "justiça entre escolas" ganha uma escola expurgando 1 milhão de linhas e trocando nome enquanto outra usa o Tutor |
 
 ## 8. Uso de IA

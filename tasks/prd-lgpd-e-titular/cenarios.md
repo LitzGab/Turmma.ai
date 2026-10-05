@@ -38,9 +38,13 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] Com pedido `agendado`, ele é pulado.
 - **RF5.**
   - [I] O `expurgo_execucao` grava as contagens certas por escola e categoria, e só ids e números.
-  - [I] Com a janela letiva aberta no meio do job, ele para no lote em que ela abriu, o `expurgo_execucao` grava a
-    contagem parcial, e o job da noite seguinte termina o restante.
-  - [F] Os quatro alertas disparam, cada um ligado ao parágrafo do runbook: duas noites sem expurgo; `agendado` mais de
+  - [I] Com a janela letiva aberta no meio do job, ele para no lote em que ela abriu: a categoria interrompida grava
+    `concluida = false` com a contagem parcial, as que terminaram gravam `true`, e o job da noite seguinte começa pela
+    pendente, termina o restante e grava `true`.
+  - [F] Duas noites seguidas só com execução parcial (`concluida = false`) disparam o alerta; uma noite parcial seguida
+    de uma completa não dispara.
+  - [F] Os quatro alertas disparam, cada um ligado ao parágrafo do runbook: duas noites sem todas as categorias
+    concluídas; `agendado` mais de
     48 h depois de `eliminar_em`; `em_preparacao` por mais de 2 h; incidente sem confirmação em 24 h.
   - [I] O pedido com `eliminacao_enfileirada_em` há mais de 20 h é reenfileirado; com menos de 20 h, não é.
   - Carga: uma escola expurga 1 milhão de linhas e troca um nome enquanto outra usa o Tutor, com cada statement abaixo

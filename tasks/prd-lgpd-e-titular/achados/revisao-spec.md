@@ -1306,3 +1306,86 @@ Métrica e alerta: ok
   - Na colisão, "devolve o id existente" pede um `select` depois. Esse `select` pode não achar nada se o job concluiu no intervalo. Definam o que se devolve nesse caso (`techspec.md:159`).
 - **Alerta de `agendado` há mais de 24 h depois de `eliminar_em`.** Ele dispara já depois de uma única interrupção pela janela letiva. O parágrafo do runbook deveria cobrir esse caso como esperado.
 - **Linha "Corridas de concorrência" da 7c** (`techspec.md:296`). Ela cita a mesma chave duas vezes: "escola + data local" e "escola + noite". Deixem um nome só.
+
+## test-engineer · 5ª rodada · REPROVADO · 2026-10-05 15:20:05 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Cenários exigidos:** o bloqueante da rodada 4 (quem assina a etapa 3), as duas recomendações que entraram (chave sem escola, mesmo id nas duas chamadas), e as cláusulas novas do diff `f30619b..26f774f`:
+- a coluna `expurgo_execucao.concluida` e o alerta que passa a depender dela;
+- a colisão que devolve id ou nulo;
+- o alerta de `agendado` em 48 h;
+- a saída da contração de `provedor`.
+
+**Cobertos:**
+- **Bloqueante da rodada 4, resolvido.** Está em `cenarios.md:195-197`, seção "Autor `rotina`".
+  - O lado (a), com a coordenadora ainda ativa e o id dela em `pedido.concluido` e `usuario.eliminado`, derruba a mutação "sempre `rotina`".
+  - O lado (b), com ela desativada entre o agendamento e `eliminar_em`, conclusão com `rotina` e sem erro do gatilho, derruba a remoção do fallback.
+  - Os dois batem com `techspec.md:232-233`.
+- **Chave sem escola recusada.** `cenarios.md:199` prova o check de `techspec.md:105`.
+- **Mesmo id nas duas chamadas.** `cenarios.md:200` é [P], com chamadas em paralelo, e prova "na colisão, devolve o id" (`techspec.md:162`).
+- **Alerta de 48 h.** O `cenarios.md:43-44` acompanhou a mudança da `techspec.md:304`.
+- **Saída da contração, sem lacuna.**
+  - A 0024 continua provada: o formato antigo é aceito (`cenarios.md:61`) e `provedor` sem envio externo é recusado (`:60`).
+  - Que o código novo grava `provedor` continua provado em `cenarios.md:62`.
+  - A exigência no banco foi para um release posterior. O cenário dela vai junto e não precisa existir no F3. Não sobrou referência à 0025 na techspec nem no `cenarios.md`.
+
+**Bloqueantes:**
+1. **`expurgo_execucao.concluida` não tem cenário, e o texto que a define é ambíguo.** Locais: `techspec.md:100` (seção 3), `techspec.md:174` e `:304` (seções 5 e 7c), `cenarios.md:41-44` (RF5).
+   - **O que está errado no texto.** A coluna entrou para o alerta "duas noites sem `expurgo_execucao.concluida`" diferenciar a execução parcial da completa. Mas a definição diz "a categoria terminou ou parou pela janela". Dá para ler que é verdadeira nos dois casos.
+   - **O que está errado nos cenários.**
+     - O [I] de `cenarios.md:41-42` só fala em "grava a contagem parcial" e não afirma nada sobre `concluida`.
+     - O [F] de `:43` diz "duas noites sem expurgo", e um teste passa nele semeando zero linhas.
+   - **A mutação que passa.** Se o código gravar `concluida = true` sempre, nenhum cenário quebra. Aí a escola cuja janela letiva interrompe o expurgo toda noite nunca termina a retenção, e o alerta que a `techspec.md:174` promete ("o alerta de duas noites pega a repetição") nunca dispara. Isso deixa o RF5 e a regra 80, item 10, sem prova.
+   - **Correção exigida, em três partes:**
+     - (a) Em `techspec.md:100`, escrever sem ambiguidade: verdadeira só quando a categoria terminou, falsa quando parou pela janela.
+     - (b) Em `cenarios.md:41-42`, acrescentar: a categoria interrompida grava `concluida = false`, as que terminaram gravam `true`, e a noite seguinte que termina o restante grava `true`.
+     - (c) Em `cenarios.md:43`, deixar explícito o caso que justifica a coluna: duas noites com execuções só parciais (`concluida = false`) disparam o alerta; uma noite parcial seguida de uma completa não dispara.
+
+**Recomendações:**
+- **Colisão que devolve nulo.** O ramo "nulo se ele terminou nesse intervalo, e quem chama trata os dois como já enfileirado" (`techspec.md:162-163`) não tem cenário. Um [I] com o job já concluído entre o `on conflict` e o `select` fecha a mutação "nulo vira erro". A janela é estreita, então não bloqueia.
+- **Fronteira do alerta de 48 h.** Vale um par em `cenarios.md:43-44`:
+  - `agendado` 47 h depois de `eliminar_em`, com uma interrupção pela janela, não alerta;
+  - 48 h alerta.
+
+  É o motivo declarado da troca de 24 h para 48 h.
+- **Varredura do executor (repete a rodada 4).** A execução `pendente` de quem tem eliminação agendada, encerrada pela varredura (`techspec.md:233-234`), continua sem cenário próprio. Citem o teste do F anterior, se existir.
+- **Harness da 0024 (repete a rodada 4).** O `cenarios.md:61` continua sem dizer como o harness para na 0024. Declarem isso na tarefa da migration.
+
+Arquivos:
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/techspec.md`
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/cenarios.md`
+
+## infra-guardian · 5ª rodada · APROVADO · 2026-10-05 15:20:06 · `tasks/prd-lgpd-e-titular/revisao-spec.md`
+
+VEREDITO: APROVADO
+Caminho quente tocado: migration, fila
+Rate limit: ok
+Fila e prioridade: ok
+Concorrência: protegida
+Índice e paginação: ok
+Degradação de IA: não se aplica
+Migration: compatível
+Métrica e alerta: ok
+Bloqueantes: nenhum.
+
+O bloqueante da rodada 4 foi resolvido (seção 3, `techspec.md:119-125`, e 7c, `techspec.md:302`). A contração do check de `provedor` saiu do F3. Ela vai num release posterior, em arquivo próprio, com `NOT VALID` e depois `VALIDATE`. O corte sai do registro do deploy, e o `drop constraint` está no runbook como pré-condição do rollback. O cenário da contração saiu do `cenarios.md`. A frase "a gravação do consumo nunca falha por causa dessa coluna" (`techspec.md:118`, `cenarios.md:63`) volta a valer no F3, porque a 0024 só expande e o código anterior cumpre o check.
+
+As recomendações da rodada 4 foram aplicadas:
+- **`on conflict`** repete o predicado do índice parcial (`techspec.md:104-105` e `:161-164`).
+- **Na colisão**, a chamada devolve o id do job existente, ou nulo se ele terminou no intervalo, e quem chama trata os dois como "já enfileirado".
+- **A chave tem um nome só**, "escola + data local", na 7c.
+- **O alerta de `agendado`** passou para 48 h, com a interrupção pela janela letiva citada como esperada.
+- **O `NOT VALID` em arquivo próprio** vale a partir do staging (7c).
+- **Os cenários novos** cobrem a chave sem escola e o mesmo id nas duas chamadas.
+
+Recomendações:
+- **`techspec.md:100` (seção 3), definição de `expurgo_execucao.concluida`.** O texto "a categoria terminou ou parou pela janela" admite duas leituras. Lido como `true` nos dois casos, o alerta de duas noites nunca dispara. Escrevam que é `true` só quando a categoria terminou, e `false` quando parou pela janela.
+- **`techspec.md:304` (7c), escopo do alerta.** O marcador é por categoria, e a seção 5 percorre as categorias em ordem e para quando a janela abre. Se uma categoria do começo com grande volume parar toda noite, as seguintes não chegam a rodar. Uma leitura frouxa do alerta ("alguma linha concluída na noite") não pega isso. Definam o alerta como "duas noites seguidas sem todas as categorias da escola concluídas", ou comecem pela categoria que ficou pendente na noite anterior.
+- **`cenarios.md:41-44`, asserção do marcador.** O cenário do expurgo parcial deveria verificar `concluida = false` na noite interrompida e `true` na seguinte. O [F] ainda diz "duas noites sem expurgo", e ficaria mais claro como "duas noites sem `concluida`".
+- **`techspec.md:124-125` (seção 3), registro da contração.** Hoje ela só entra no `TODO.md` "quando o Joaquim propagar o recorte". Registrem já no `TODO.md`, ou no ROADMAP, com a pré-condição "release posterior ao F3". Sem esse registro, a garantia continua só no tipo da porta indefinidamente.
+- **Vale para a contração futura:** o `VALIDATE` varre a `consumo_ia` inteira. Na tarefa dela, peçam o tempo medido com o volume do staging, e que ela rode fora do horário letivo (regra 80, item 9).
+
+Arquivos:
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/techspec.md`
+- `/home/joaquimdp/Documentos/git/Educa.ia/tasks/prd-lgpd-e-titular/cenarios.md`

@@ -106,6 +106,15 @@
 - 5 e 7c: `on conflict` com o predicado do índice parcial; colisão devolve o id ou nulo; uma chave só, "escola + data local"; o alerta de `agendado` passa a 48 h; `NOT VALID` em arquivo próprio a partir do staging
 - `cenarios.md`: o autor da etapa 3 nos dois lados; a chave sem escola recusada; o mesmo id nas duas chamadas
 
+## Rodada 5 — 05/10/2026
+
+**Veredito: REPROVADA** (`infra-guardian` APROVADO; `test-engineer` REPROVADO com 1 bloqueante: `expurgo_execucao.concluida` ambígua e sem cenário)
+
+### Correções aplicadas
+- 3: `concluida` é `true` só quando a categoria terminou, e `false` quando parou pela janela
+- 5 e 7c: a noite seguinte começa pela categoria pendente; o alerta dispara com duas noites seguidas sem todas as categorias concluídas
+- `cenarios.md`: `concluida` falsa na interrompida e verdadeira na seguinte; duas noites parciais alertam, e uma parcial seguida de uma completa não alerta
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -137,3 +146,5 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-10-05 15:12:53 | 2026-10-05 15:15:13 | `infra-guardian` | 3 | REPROVADO | ad7e2a329c9e41616 |
 | 2026-10-05 15:16:04 | 2026-10-05 15:17:05 | `test-engineer` | 4 | REPROVADO | a1028e83462c49214 |
 | 2026-10-05 15:16:08 | 2026-10-05 15:18:44 | `infra-guardian` | 4 | REPROVADO | a380fd950e0b9d173 |
+| 2026-10-05 15:19:24 | 2026-10-05 15:20:05 | `test-engineer` | 5 | REPROVADO | a816ec8da61adb18b |
+| 2026-10-05 15:19:27 | 2026-10-05 15:20:06 | `infra-guardian` | 5 | APROVADO | ae8c146f5daff582f |
