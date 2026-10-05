@@ -78,7 +78,7 @@ dela e quais incidentes a afetaram.
 - A conversa do professor nunca chega à coordenação, nem em arquivo (regra 70, item 8). A do Tutor só chega na versão
   do titular sem conta ativa, auditada: exceção declarada à regra 20, item 14, pelo direito de acesso. Pelo mesmo
   direito, a versão do professor sem conta ativa traz o registro de uso dele (exceção à D64), também auditada
-- Antes de um pedido, nada do que a coordenação vê separa o professor que usou a IA do que não usou (D64)
+- Fora dessa versão, nada do que a coordenação vê separa o professor que usou a IA do que não usou (D64)
 
 ## 7. Casos de borda
 

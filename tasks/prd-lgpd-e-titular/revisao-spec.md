@@ -72,6 +72,26 @@
 - PRD: RF15 ("só se houve troca"); exceção da D64 na versão do professor sem conta ativa; foto do compartilhamento no mapa
 - `cenarios.md`: os cenários exigidos pelos sete revisores
 
+## Rodada 3 — 05/10/2026
+
+**Veredito: REPROVADA** (cinco aprovados; dois bloqueantes pontuais em dois revisores)
+
+| Revisor | Veredito | Bloqueantes |
+|---|---|---|
+| `tenancy-guardian` | APROVADO | — |
+| `privacy-guardian` | APROVADO | — |
+| `conformidade-reviewer` | APROVADO | — |
+| `llm-integrator` | APROVADO | — |
+| `frontend-reviewer` | APROVADO | — |
+| `test-engineer` | REPROVADO | 2 (segundo check de `provedor` sem cenário; janela letiva no meio da troca de nome) |
+| `infra-guardian` | REPROVADO | 2 (o check de `provedor` válido na 0024 quebra o código anterior no deploy; texto da janela letiva desalinhado) |
+
+### Correções aplicadas
+- 3: a 0024 leva só `provedor is null or envio_externo`; a exigência de `provedor` vai para a contração `0025` (`NOT VALID` e `VALIDATE`), aplicada com o código novo em todas as instâncias; check `chave_idempotencia is null or escola_id is not null`
+- 5: colisão da chave devolve o id existente; a troca de nome confere a janela entre faixas e, se ela abrir, termina sem a etapa 3, com o pedido `agendado`; reenfileiramento em 20 h; autor `rotina` só quando quem registrou não é mais usuário ativo; execução `pendente` encerrada pela varredura
+- 7b, 7c e PRD seção 6: "fora da versão `coordenacao` de professor sem conta ativa"; a carga não promete reenfileirar
+- `cenarios.md`: insert no formato antigo aceito depois da 0024; recusado depois da 0025; janela entre faixas; falha na etapa 3 desfaz tudo; expurgo parcial e noite seguinte; aluno no cenário do provedor sem cadastro; os repositórios da escola só leem
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -94,3 +114,10 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-10-05 14:57:53 | 2026-10-05 15:00:51 | `infra-guardian` | 2 | REPROVADO | a8d745019ca6ade1d |
 | 2026-10-05 14:57:48 | 2026-10-05 15:01:02 | `privacy-guardian` | 2 | REPROVADO | a4b86d5626f44a3c0 |
 | 2026-10-05 14:57:57 | 2026-10-05 15:01:58 | `conformidade-reviewer` | 2 | REPROVADO | aeb7c9a1f7aec7c52 |
+| 2026-10-05 15:12:46 | 2026-10-05 15:14:07 | `tenancy-guardian` | 3 | APROVADO | a56148fa267b57070 |
+| 2026-10-05 15:13:03 | 2026-10-05 15:14:08 | `frontend-reviewer` | 3 | APROVADO | a55e61df536312fab |
+| 2026-10-05 15:12:42 | 2026-10-05 15:14:14 | `test-engineer` | 3 | REPROVADO | a51c82c06a148f659 |
+| 2026-10-05 15:12:56 | 2026-10-05 15:14:19 | `conformidade-reviewer` | 3 | APROVADO | aaf6da52b19576287 |
+| 2026-10-05 15:12:49 | 2026-10-05 15:14:34 | `privacy-guardian` | 3 | APROVADO | a9df14b29b445c306 |
+| 2026-10-05 15:13:00 | 2026-10-05 15:14:45 | `llm-integrator` | 3 | APROVADO | ac43cbc516bad8c33 |
+| 2026-10-05 15:12:53 | 2026-10-05 15:15:13 | `infra-guardian` | 3 | REPROVADO | ad7e2a329c9e41616 |

@@ -100,10 +100,9 @@ incidente_escola    incidente_id*, escola_id*, circunstancias* (≤1000), catego
 expurgo_execucao    id uuid, escola_id*, categoria*, linhas*, em*
 execucao_agente     + anonimizada_em?
 usuario             + eliminacao_agendada_em?
-consumo_ia          + provedor?  check (provedor is null or envio_externo); check (not envio_externo or
-                    provedor is not null or em < <instante da 0024>), válido já na criação
+consumo_ia          + provedor?  check (provedor is null or envio_externo), que o código anterior cumpre
 job_registro        + chave_idempotencia?  único parcial (escola_id, tipo, chave_idempotencia) onde não nula e o
-                    estado não é concluido nem falhou
+                    estado não é concluido nem falhou; check (chave_idempotencia is null or escola_id is not null)
 arquivo_titular     único (escola_id, pedido_id, versao)
 auditoria           check: `autor_operador = 'rotina'` só com `usuario.eliminado`, `acesso_turma.revogado`,
                     `titular.nome_trocado` e `pedido.concluido` (NOT VALID, depois VALIDATE). O apelido `rotina` fica
@@ -117,6 +116,10 @@ auditoria           check: `autor_operador = 'rotina'` só com `usuario.eliminad
   e o valor passa por `MedicaoDaGeracao`, `ConsumoDeIa` e `ConsumoRepository`. A reserva futura terá o próprio id. A
   `suboperador.chave` tem o mesmo formato.
 - Vazio, falso, local e `regra_fixa` gravam nulo. A gravação do consumo nunca falha por causa dessa coluna.
+- **Contração, depois.** A exigência de `provedor` com envio externo é uma migration posterior, `0025`, com o check
+  `not envio_externo or provedor is not null or em < '<literal timestamptz do corte>'` `NOT VALID` e depois `VALIDATE`.
+  Ela é aplicada só quando o código que grava `provedor` estiver em todas as instâncias; até lá, quem garante é o tipo
+  da porta. O runbook de rollback cita isso.
 
 ## 4. API
 
@@ -153,11 +156,13 @@ professor.
 **Expurgo.**
 - `sistema.expurgar-dado-pessoal` roda à 1h, na fila de lote, e lista as escolas.
 - No contexto de cada escola, ele grava um `retencao.expurgar-escola` não urgente pelo `Enfileirador`, que passa a
-  aceitar `chaveIdempotencia` (`on conflict do nothing`), com a chave "escola + data local". Rodar duas vezes na mesma
+  aceitar `chaveIdempotencia` (`on conflict do nothing`; na colisão, devolve o id do job que já existe), com a chave
+  "escola + data local". Um segundo job depois de o primeiro terminar é inofensivo, porque o expurgo é idempotente.
+  Rodar duas vezes na mesma
   noite não cria dois jobs.
 - O job da escola, primeiro:
   - num `update … set eliminacao_enfileirada_em = now() where estado = 'agendado' and eliminar_em <= now() and
-    (eliminacao_enfileirada_em is null or eliminacao_enfileirada_em < now() - interval '24 hours') returning id`,
+    (eliminacao_enfileirada_em is null or eliminacao_enfileirada_em < now() - interval '20 hours') returning id`,
     enfileira um `titular.eliminar` por pedido, na mesma transação;
   - remove do storage os objetos dos `arquivo_titular` vencidos ou com `apagado_em`, e só então a linha.
 - Depois percorre as categorias com o prazo efetivo, em lotes de 5.000 (`for update skip locked`, uma transação por
@@ -192,8 +197,8 @@ suboperador sai do `SuboperadorDaEscolaRepository`: nada de outra escola entra.
   "provedor não cadastrado". As linhas antigas sem `provedor` e o período anterior ao prazo (rastro expirado) somam os
   suboperadores de IA da escola vigentes no período, com `origem = periodo` e o rótulo "a escola usava X enquanto você
   estava nela".
-- **Professor:** **só por período** (os suboperadores de IA da escola vigentes durante o vínculo), na foto, na prévia e
-  no detalhe. As datas reais de uso saem só na versão `completa`, que ele mesmo baixa (D64).
+- **Professor:** **só por período** (os suboperadores de IA da escola vigentes durante o vínculo), na foto e no
+  detalhe; a prévia não traz compartilhamento. As datas reais de uso saem só na versão `completa`, que ele mesmo baixa (D64).
 - A hospedagem aparece sempre.
 
 **Eliminação.**
@@ -210,16 +215,19 @@ suboperador sai do `SuboperadorDaEscolaRepository`: nada de outra escola entra.
   2. **Troca de nome.** Só se o titular é aluno e não há homônimo ativo nem nome livre igual na lista. Para cada coluna
      da lista (`execucao_agente.entrada`, `consumo_ia.entrada` e `saida`, `artefato.titulo` e `conteudo`,
      `mensagem_agente.conteudo`, `entrega.justificativa`), percorre faixas de 1.000 linhas **examinadas** num índice
-     `(escola_id, id)` parcial de texto não nulo, conferindo a janela letiva entre as faixas, e troca o nome por `[nome removido]`, sem caixa e com fronteira de palavra. O nome é escapado
+     `(escola_id, id)` parcial de texto não nulo, e troca o nome por `[nome removido]`, sem caixa e com fronteira de palavra. O nome é escapado
      para JSON e para regex, e o resultado tem de ser JSON válido, senão o lote falha inteiro. Cada linha alterada de
      artefato, entrega, execução e consumo grava `titular.nome_trocado` com a tabela, o id e o pedido, na mesma
      transação da faixa, a partir do `returning`. O nome procurado é o atual: o nome anterior a uma correção não é
-     procurado (seção 13).
+     procurado (seção 13). **Entre as faixas, confere a janela letiva:** se ela abriu, o job termina sem rodar a etapa
+     3, o pedido continua `agendado`, e o reenfileiramento da noite seguinte retoma a troca do começo (o que já foi
+     trocado não casa mais) e elimina.
   3. **Transação**, com a ordem de travas pedido → usuário: `select … for update` do pedido (fora de `agendado`,
      termina sem efeito); refaz o compartilhamento; anonimiza as execuções do titular e o texto do consumo delas; roda
      `CicloDeVidaService.eliminar`, que passa a aceitar a transação de quem chama; marca `apagado_em` nos arquivos
-     dele; conclui o pedido. Autor: quem registrou, ou `rotina`. Uma execução `pendente` anonimizada que o worker
-     ainda pegue termina `falhou` com código.
+     dele; conclui o pedido. Autor: quem registrou, se ainda é usuário ativo da escola (o gatilho da auditoria
+     exige); senão, `rotina`. Uma execução `pendente` de quem tem eliminação agendada já perdeu a sessão; a varredura
+     do executor a encerra.
 - Os objetos saem do storage na noite seguinte, pelo `apagado_em`.
 
 **Incidente.**
@@ -270,8 +278,8 @@ Os testes, cada um quebrando sem a cláusula de escopo, estão em `cenarios.md`,
 
 Não há IA no caminho. O que a funcionalidade preserva:
 - **Regra 70, itens 8 e 9; D64.** A versão da coordenação não traz nada do que o professor escreveu ao Assistente.
-  Antes de um pedido, a prévia, a foto e o detalhe dão a mesma resposta para o professor que usou a IA e para o que não
-  usou. O registro de uso dele só vai na versão da coordenação quando ele não tem conta ativa, por exceção declarada no
+  Em tudo o que a coordenação vê, fora da versão `coordenacao` de professor sem conta ativa, a resposta é a mesma para
+  o professor que usou a IA e para o que não usou. O registro de uso dele só vai na versão da coordenação quando ele não tem conta ativa, por exceção declarada no
   PRD.
 - **Regra 70, itens 3 e 6.** Correção não aprovada não chega ao aluno pelo arquivo. A entrega, a validação e a
   execução anonimizada ficam com os ids. A troca de nome em saída aprovada fica registrada por linha.
@@ -281,13 +289,13 @@ Não há IA no caminho. O que a funcionalidade preserva:
 | Item | Resposta |
 |---|---|
 | Está no caminho quente? | só a guarda, que lê uma coluna a mais da linha que já lê |
-| Carga na manhã de segunda | nenhuma: lote não urgente, que se reenfileira se a janela abrir |
+| Carga na manhã de segunda | nenhuma: lote não urgente, que para no lote em que a janela abre e termina na noite seguinte |
 | Fila e prioridade | expurgo e eliminação no lote; arquivo na normal |
 | Limite por escola | vaga do F0 (lote 2); lote de 5.000; faixa de 1.000 na troca de nome; `statement_timeout` de 2 s |
 | Rate limit | balde do F0; `rl:busca-titular` com 30 por minuto por usuário, que recusa com 429 |
-| Corridas de concorrência | seção 5: a chave de envio decide primeiro; a chave de idempotência do job por escola e noite; o único parcial de `agendado`; cancelar contra enfileirar por `eliminacao_enfileirada_em`; travas pedido → usuário; `skip locked` no expurgo; chave "escola + noite"; confirmação do incidente por `where confirmado_em is null`. Cada uma com um cenário em paralelo em `cenarios.md` |
+| Corridas de concorrência | seção 5: a chave de envio decide primeiro; a chave de idempotência "escola + data local"; o único parcial de `agendado`; cancelar contra enfileirar por `eliminacao_enfileirada_em`; travas pedido → usuário; `skip locked` no expurgo; chave "escola + noite"; confirmação do incidente por `where confirmado_em is null`. Cada uma com um cenário em paralelo em `cenarios.md` |
 | Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` se não existir, e `consumo_ia (escola_id, execucao_id) where execucao_id is not null`. De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`; `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
-| Migration | compatível. Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
+| Migration | compatível: a 0024 só expande, e a exigência de `provedor` fica para a contração `0025` (seção 3). Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
 | Quando cada dependência cai | banco: 503 tipado e nova tentativa; Redis de fila: aceito e despachado depois; storage: "em preparação", e baixar dá `INDISPONIVEL` |
 | Métrica e alerta | duas noites sem expurgo concluído; incidente sem confirmação em 24 h; pedido `agendado` mais de 24 h depois de `eliminar_em`; `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
 | Cenário de teste de carga | o "justiça entre escolas" ganha uma escola expurgando 1 milhão de linhas e trocando nome enquanto outra usa o Tutor |

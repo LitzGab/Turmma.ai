@@ -38,10 +38,11 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] Com pedido `agendado`, ele é pulado.
 - **RF5.**
   - [I] O `expurgo_execucao` grava as contagens certas por escola e categoria, e só ids e números.
-  - [I] Com a janela letiva aberta no meio do job, ele se reenfileira e para.
+  - [I] Com a janela letiva aberta no meio do job, ele para no lote em que ela abriu, o `expurgo_execucao` grava a
+    contagem parcial, e o job da noite seguinte termina o restante.
   - [F] Os quatro alertas disparam, cada um ligado ao parágrafo do runbook: duas noites sem expurgo; `agendado` mais de
     24 h depois de `eliminar_em`; `em_preparacao` por mais de 2 h; incidente sem confirmação em 24 h.
-  - [I] O pedido com `eliminacao_enfileirada_em` há mais de 24 h é reenfileirado; com menos de 24 h, não é.
+  - [I] O pedido com `eliminacao_enfileirada_em` há mais de 20 h é reenfileirado; com menos de 20 h, não é.
   - Carga: uma escola expurga 1 milhão de linhas e troca um nome enquanto outra usa o Tutor, com cada statement abaixo
     de 2 s.
 - **Prazos fixos.**
@@ -57,6 +58,9 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [U] O provedor resolvido pelo falso, pelo local, por `regra_fixa` e com zero tentativas é nulo. Pelo externo, com
     servidor falso e sem provedor pago, é o id.
   - [I] `provedor` com `envio_externo = false` é recusado pelo banco.
+  - [I] Depois da 0024, um insert no formato do código anterior (externo, sem `provedor`, `em` = agora) é aceito.
+  - [I] Depois da contração 0025, uma linha com `em` posterior ao corte, `envio_externo` verdadeiro e `provedor` nulo é
+    recusada pelo banco.
   - [I] O `ConsumoRepository` grava o `provedor`, e a soma da governança não muda.
   - [I] A gravação do consumo nunca falha por causa da coluna.
 - **RF6.**
@@ -114,10 +118,9 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] O compartilhamento é calculado com e sem `provedor`, e o provedor sem cadastro aparece como "não cadastrado".
   - [I] Depois do expurgo de 12 meses, o pedido ainda lista os suboperadores do período.
   - [I] O pedido de eliminação concluído ainda devolve o provedor.
-  - [I] A prévia e o compartilhamento de um professor não alcançam a execução de outra pessoa da escola.
   - [I] Dois professores da mesma escola, um que usou o Assistente com provedor externo e outro que nunca usou: a
     prévia, a foto e o `GET pedidos/:id` saem iguais (D64). As datas reais só aparecem na versão `completa`.
-  - [I] Com o provedor **sem cadastro**, a foto do pedido de eliminação concluído traz `origem` diferente de `periodo`,
+  - [I] Com um **aluno** e o provedor **sem cadastro**, a foto do pedido de eliminação concluído traz `origem` diferente de `periodo`,
     o que prova que foi refeita antes de anonimizar.
   - [I] Na mesma conta, o consumo feito em B não entra na foto do pedido de A.
 - **RF13b.**
@@ -143,6 +146,9 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] Um nome com apóstrofo, acento e metacaractere de regex dentro de `jsonb` sai, e o JSON continua válido.
   - [I] Com homônimo ativo ou nome livre igual na lista, não há troca, e o pedido marca `homonimo`. A prévia já marca
     `homonimo` nos dois casos.
+  - [I] Com a janela letiva abrindo entre duas faixas da troca, o pedido não conclui, o nome continua só nas faixas não
+    examinadas, e a execução seguinte termina a troca e elimina.
+  - [I] Uma falha no `CicloDeVidaService.eliminar` desfaz a anonimização da etapa 3, e o pedido continua `agendado`.
   - [I] Fronteira de palavra: "Ana Souza" contido em "Mariana Souza" não é trocado.
   - [I] Cada linha alterada de artefato, entrega, execução e consumo grava `titular.nome_trocado`.
   - [I] A coordenação recebe só `nomeTrocado`, sem contagem por tabela.
@@ -197,7 +203,8 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [E] A tela de Pedidos mostra o aviso que aponta para a lista da turma.
 - **Arquitetura.**
   - [U] O teste falha quando um terceiro caminho importa a `ContaGlobalRepository`.
-  - [U] O teste falha quando um terceiro caminho toca `suboperador` ou `incidente`.
+  - [U] O teste falha quando um caminho fora da lista toca `suboperador` ou `incidente`, e quando os dois repositórios da
+    escola escrevem nessas tabelas.
   - [I] A `thread_agente` que ainda tem mensagem no prazo não sai.
 - **Permissão.**
   - [I] O aluno e o professor em `/v1/privacidade/*` não chegam.
