@@ -12,8 +12,8 @@
 
 **Fase atual:** fechamento. As quatro fases estão integradas e revisadas na `mvp/apresentacao`. O **ensaio com o modelo
 local** foi feito em 04/10/2026 (tarefas chamadas direto contra o `qwen3.6-35b-a3b`) e as três correções que ele pediu
-estão no `ad7c3f0`, com o portão local verde (294 arquivos, 4120 testes). Falta a esteira `37253886556` verde e, para o
-roteiro inteiro com o modelo pela API em contêiner, a regra do `ufw` que só o dono da máquina põe (roteiro, seção 9).
+estão no `ad7c3f0`, com o portão local verde (294 arquivos, 4120 testes). A esteira `37253886556` ficou **verde** em todos os jobs. **Pronto para o merge na `develop`.** Para mostrar o modelo
+pela API em contêiner, falta só a regra do `ufw` que o dono da máquina põe (roteiro, seção 9).
 **Sem merge na `develop`**: é do Joaquim.
 
 **Feito**
@@ -161,7 +161,7 @@ Para os pacotes das fases 3 e 4, o que os revisores já pediram:
 | fases 2 e 3, com as correções | `37241713815` | `5f6dd03` | **verde**, todos os jobs |
 | fase 4 e fechamento | `37245636814` | `a0a06fd` | vermelha: `areas.spec.ts:169` estourou 30 s nos dois projetos (cinco recarregamentos de página); dividido em dois testes, sem tirar asserção |
 | divisão do teste | `37250031803` | `8f31a68` | vermelha: dois e2e da troca de escola no celular, intermitentes (a lista de vínculos saía do cache da Nova conversa) |
-| ensaio e os dois e2e | `37253886556` | `ad7c3f0` | a conferir |
+| ensaio e os dois e2e | `37253886556` | `ad7c3f0` | **verde**, todos os jobs |
 
 **Modelo local do ensaio final:** `qwen3.6-35b-a3b` no `llama-server` (`GET /v1/models` em 04/10/2026; estava
 descarregado, e quem carrega é o Joaquim).
