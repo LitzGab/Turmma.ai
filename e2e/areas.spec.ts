@@ -168,7 +168,7 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
 
   test('o professor no endereço da coordenação e do aluno cai em "não encontrada", sem baixar a área deles', async ({ page, hasTouch }) => {
     const pedidos = registrarChunks(page)
-    const professora = await entrarComoProfessora(page, hasTouch)
+    await entrarComoProfessora(page, hasTouch)
 
     // Os endereços da coordenação que têm tela: a Governança, onde ela abre (A5), uma turma aberta na Estrutura (13.0) e
     // Professores (14.0).
@@ -187,6 +187,14 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     // A área do aluno responderia "não encontrada" para o professor também sem a guarda (a "Minha turma" é só do aluno
     // na API): é o pedido do chunk que mostra que nenhuma das duas áreas foi baixada nem montada.
     expect(pedidos.filter((caminho) => CHUNK_DA_COORDENACAO.test(caminho) || CHUNK_DO_ALUNO.test(caminho))).toEqual([])
+  })
+
+  // Separado do anterior só pelo prazo: as cinco entradas de página por `page.goto`, no perfil de rede lenta e com o
+  // servidor do e2e sem compressão nem cache, passavam dos 30 s juntas (esteira `37245636814`). As asserções são as
+  // mesmas de antes; cada teste começa da entrada da professora.
+  test('o endereço que não existe na área do professor responde igual ao de outro papel, e "página inicial" volta à Nova conversa', async ({ page, hasTouch }) => {
+    const pedidos = registrarChunks(page)
+    const professora = await entrarComoProfessora(page, hasTouch)
 
     // Um endereço que não existe dentro da própria área responde igual: a tela não confirma o que é de outro papel.
     await page.goto('/professor/qualquer')
