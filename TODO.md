@@ -273,9 +273,13 @@ para o staging".
       `main` e esteira verde antes da tarefa seguinte; definir de qual branch sai o staging
 - [x] ~~MVP de apresentação (D71): aceitar ou recusar os três afrouxamentos~~ — aceitos em
       23/09/2026 (D71 revista)
-- [ ] **AIAs do MVP:** escrever a etapa 1 das AIAs de correção, diagnóstico, Tutor e sinais antes
+- [x] ~~**AIAs do MVP:** escrever a etapa 1 das AIAs de correção, diagnóstico, Tutor e sinais antes
       dos PRDs da A3, da A4 e da A5 (`docs/aia/`). A A1 e a A2 não têm função de alto risco além
-      da adaptação, cuja etapa 1 entra antes do PRD da A2
+      da adaptação, cuja etapa 1 entra antes do PRD da A2~~ — as cinco etapas 1 estão em `docs/aia/`
+      (`d23179a`), fechadas para o MVP com as decisões do Joaquim de 05/10/2026 (`16183f4`); a A2 a A5
+      não tiveram PRD (D77)
+- [ ] **AIAs depois do MVP:** a revisão do Gabriel das cinco etapas 1 e as etapas 2 a 6 de cada uma,
+      antes do primeiro aluno real (D60, D71; `docs/aia/README.md`)
 - [x] ~~Ratificar ou recusar as D55 a D71~~ — ratificadas em bloco pelo Joaquim em 23/09/2026,
       com as revisões da D1, D17, D23, D32, D45 e D60
 - [ ] **Avisar o Gabriel do que foi decidido em 23/09/2026:** a pele é uma só, a do ChatGPT, e
@@ -450,7 +454,8 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       também tira uma conexão. Destino: próxima tarefa que tocar `painel.repository.ts`
 - [ ] `apps/web/src/operacao/paginas/Uso.tsx`: o `VazioDoUso` (`:114`) repete o `EstadoVazio`; e o número longo com
       `wrap-anywhere` (`:75`, `:101`) pode quebrar no meio entre 640 e ~760 px (`revisor-geral` e `frontend-reviewer` da
-      8.0). Destino: próxima tarefa em `Uso.tsx` (a A2 traz o consumo de IA para esta tela)
+      8.0). Destino: próxima tarefa em `Uso.tsx` (a A2 deveria trazer o consumo de IA para esta tela e não trouxe: ver
+      "Consumo de IA no painel da operação", no fim)
 - [x] ~~`apps/web/src/rotas.tsx:53`: o `componentWillUnmount` da fronteira de erro não tem teste (`test-engineer` da
       10.0)~~ — feito na 11.0 da A1: a fronteira saiu para `apps/web/src/componentes/FronteiraDaArea.tsx`, o título da
       falha passou para o gancho `useTituloDaAba` da tela da falha, e o W5 de `e2e/areas.spec.ts` prova que sair dela pelo
@@ -556,10 +561,13 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 
 ## Material didático
 
-- [ ] **O documento que a coordenação sobe na demonstração** (D75): nosso ou de domínio
+- [x] ~~**O documento que a coordenação sobe na demonstração** (D75): nosso ou de domínio
       público, com a licença declarada, de uma disciplina que renda boa demonstração. Não é
       material pré-carregado: não há seed de escola nem de material (D71 revista). Antes do PRD
-      da A2 (D5)
+      da A2 (D5)~~ — feito no MVP: "Química 2, cap. 7 — Estequiometria", texto original da equipe
+      Turmma, em `tools/demonstracao/quimica-2-cap-7-estequiometria.pdf`, gerado por
+      `tools/demonstracao/gerar-material.ts`; a licença declarada na tela está no passo 1 de
+      `docs/roteiro-da-demonstracao.md`
 
 - [ ] Modelo de autorização escrita da escola para cada fonte de material
 - [ ] Parecer sobre direito autoral da ingestão (Lei 9.610, art. 29, IX; termos de Arco/SAS,
@@ -584,13 +592,14 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] **Catálogo de ferramentas (P22 a P25).** A regra e as quatro categorias estão na D74. Falta
       passar por `/descobrir` as oito ferramentas que a D67 não lista (planejamento do período,
       projeto, plano de recuperação, mapa mental, roteiro de experimento, avaliação diagnóstica,
-      proposta de redação, importar prova), uma a uma, antes de entrarem no F7. Na Tech Spec da A2:
-      ferramenta como dado, com o formulário derivado do schema do contrato (P23)
+      proposta de redação, importar prova), uma a uma, antes de entrarem no F7. A ferramenta como
+      dado (P23) entrou no MVP: um motor de formulário só, em
+      `apps/web/src/componentes/ia/motor-formulario.ts` e `MotorFormulario.tsx`
 - [ ] **Sétima e oitava rodadas dos mockups (P26 a P31).** A pele ficou uma só (D72), e como a do
       produto não copia a Teachy, a consulta ao advogado sobre cópia fiel (P31) só volta se alguém
-      propuser copiar de novo. No PRD da A1: o seletor de escola que troca o token (P30) e o
-      convite por link, WhatsApp e código (P27), que saíram do F2 para a A1 (D71 revista). Antes do
-      PRD da A3: a turma aberta com nove abas (P28). Por `/descobrir`: **ranking de participação**
+      propuser copiar de novo. O seletor de escola que troca o token (P30) e o convite por link,
+      WhatsApp e código (P27) entraram na A1. Antes do PRD do F6: as abas da turma aberta além de
+      Visão Geral e Alunos, as duas que o MVP entregou (P28). Por `/descobrir`: **ranking de participação**
       (P26, bate na 10.2 do `docs/interface.md` e na D57), **Recursos** e **Mural** (P28)
 - [x] A1 (antes era o F2): o vínculo de aluno criado pela lista de nomes precisa nascer com `decidido_em` preenchido. A lista de alunos do ano encerrado (10.0) só traz quem chegou confirmado ao fim do ano, e hoje só a fixture de teste grava esse campo: sem ele, o aluno some do histórico da turma — feito na tarefa 8.0 da A1 (`VinculoRepository.criarAlunoConfirmado`, E19)
 
@@ -604,8 +613,9 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       que entra como suboperador (D68). Antes do PRD do F9
 - [ ] Decidir de onde vêm as imagens da ferramenta de apresentação, e com que licença (D67, D5).
       Antes do PRD do F7
-- [ ] Fechar os indicadores de turma e aluno de Turmas **antes do PRD do F6** (D69, D73), e os
-      limiares que a A3 mostra antes do PRD dela.
+- [ ] Fechar os indicadores de turma e aluno de Turmas **antes do PRD do F6** (D69, D73), junto
+      com os limiares provisórios que o MVP mostra (sinais do Tutor, destaques da correção, 60% do
+      alerta do Analista; Estado de `docs/mvp-rapido.md`).
       Ponto de partida: percentual de erro e acerto por habilidade, e "concluiu o que foi
       atribuído". Tempo ocioso e navegação não entram
 - [ ] **Guia para a TI da escola** bloquear outras IAs no computador do aluno (Google Admin,
@@ -626,8 +636,11 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [x] ~~Landing page~~ — existe em `turmma.com` (fora deste repositório)
 - [x] ~~Trazer a paleta, a tipografia e o logo para o repositório~~ — já estão em `mockups/`
       (`src/index.css` e `public/marca/`), e a A1 leva de lá para o `apps/web` (D72)
-- [ ] **Antes da Tech Spec da A2:** o avatar de cada um dos **três agentes**, em SVG, por função:
-      Assistente de ensino, Tutor e Analista de desempenho escolar (D32 revista, D72)
+- [ ] O avatar de cada um dos **três agentes**, em SVG, por função: Assistente de ensino, Tutor e
+      Analista de desempenho escolar (D32 revista, D72). O prazo era a Tech Spec da A2, que não
+      existiu (D77); o MVP usa um círculo com o ícone da função
+      (`apps/web/src/componentes/ia/AvatarAgente.tsx`). Novo prazo, e se o SVG ainda substitui o
+      ícone, a definir pelo Gabriel e pelo Joaquim
 - [ ] Identificar no 21st.dev o autor e a licença das peças que o Gabriel colou direto no
       mockup (área de soltar arquivo, miniatura de arquivo, pasta animada, `leaderboard-*` e as duas
       da HextaUI) e conferir a do calendário `vaib215/event-manager`, antes de qualquer uma entrar no
@@ -736,3 +749,18 @@ qualquer dado real:
   torno da página inicial do professor e da troca de escola (os outros são "W4: os estados de Turmas" e os dois da troca
   de escola no celular): vale um `/corrigir` que olhe os quatro juntos antes de a esteira da `develop` voltar a
   ser por commit.
+
+## O que o MVP fez diferente de uma decisão ou regra (05/10/2026, na propagação da D77)
+
+Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvidos: cada um pede decisão do Joaquim.
+
+- [ ] **Consumo de IA no painel da operação.** A D76 e o "Pronto quando" da A2 no `ROADMAP.md` dizem que, com a A2, o
+  painel da operação mostra o consumo de IA por escola, em tokens e em reais contra o teto por aluno. Não entrou: a API da
+  operação (`apps/api/src/operacao/`) não lê `consumo_ia`, e `apps/web/src/operacao/paginas/Uso.tsx` ainda diz que o
+  consumo "entra com a A2". A coordenação vê o consumo na Governança; a operação, não. Falta decidir em que fase entra.
+- [ ] **Tutor sem política por turma (D19).** A D19 manda o Tutor fora da sala ser configuração da escola por turma,
+  **desligada por padrão**. No MVP o Tutor fica ligado para todo aluno com turma, a qualquer hora: o estado `fora` existe
+  no contrato e nunca é devolvido (`apps/api/src/tutor/tutor.service.ts`, `conversa`; decisão 27 de
+  `docs/mvp-rapido.md`). Com dado sintético não expõe ninguém; antes de aluno real, a D19 precisa valer.
+- [ ] **O aluno não vê nem contesta o que o Tutor sabe (D66; regra 70, item 4d).** A rota `GET /v1/tutor/memoria`
+  existe, mas não há tela, e não há caminho de contestação (decisão 27 de `docs/mvp-rapido.md`). Antes de aluno real.

@@ -1,5 +1,23 @@
 # Pendências que saíram dos mockups
 
+> **O que o MVP de apresentação entregou** (05/10/2026, `13eab64`; conferido no código). A A2 a A5
+> não tiveram PRD nem Tech Spec (D77): onde um item abaixo diz "PRD da A2", "da A3" ou "da A5", o
+> prazo passou com a fatia única do `docs/mvp-rapido.md`.
+>
+> - **Entregues:** P14 e P29 (Seu time em conversa, com filtro por função:
+>   `apps/web/src/areas/professor/Time.tsx`), P15 (Home com "Esperando você" só com pendência:
+>   `Home.tsx`), P16 (`apps/web/src/componentes/ia/Escolha.tsx`), P17 (o menu Ferramenta da caixa
+>   de pedido, só com o que existe: `CaixaDoAssistente.tsx`), P19
+>   (`apps/web/src/areas/coordenacao/Agentes.tsx`, com a suspensão por função), P23
+>   (`componentes/ia/motor-formulario.ts`) e P24 ("só conversar", `resposta: 'so_conversar'`). Na
+>   A1, antes: P18, P27 e P30.
+> - **Em parte:** P13 (a lista do que a professora gerou, em Ferramentas, sem a grade de
+>   miniaturas), P28 (a turma aberta com Visão Geral e Alunos: `professor/Turma.tsx`) e P10 (o
+>   aluno vê diagnóstico, e não existe nota: D46).
+> - **Não entregues, com o destino:** P06 (uma conversa só por professora, sem Histórico: F7), P11
+>   e o resto do P28 (antes do PRD do F6; Recursos e Mural por `/descobrir`), P13 e P25 (a grade
+>   e a página em duas colunas: F7). Os itens de `/descobrir` continuam como estavam.
+
 > Em 19 e 20/09/2026 o Gabriel revisou, em oito rodadas, os mockups da interface inteira. Eles
 > estão na pasta **`mockups/`** (como rodar: `mockups/README.md`), que entrou na `develop` em
 > 23/09/2026 vinda do branch `mockups/interface`. **A pasta é só para consulta: nada de lá é

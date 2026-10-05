@@ -415,8 +415,13 @@ um por pessoa da escola, a autonomia deixa de caber num campo do `Agente`: ela �
 `docs/pendencias-dos-mockups.md` pede `FuncaoAgente → agente*, chave*, nome*, autonomia*,
 altoRisco*, ativo`; `funcao*` em `Entrega` e em `ExecucaoAgente`, que também filtra a thread do
 Assistente; e a suspensão como registro próprio, `escola*, funcao*, suspensaPor*, em*, motivo`,
-com auditoria. **A detalhar na Tech Spec da A2**, que traz o runtime mínimo de agente; o bloco
-acima continua sendo o desenho do F1 até lá.
+com auditoria. **Entregue na migration 0022** (`packages/nucleo/drizzle/0022_mvp_apresentacao.sql`)
+e em `docs/mvp-contratos.md`, com uma diferença do P01: a função não virou tabela. O catálogo é
+código, `FUNCOES` em `packages/shared/src/time/funcoes.ts`, e `funcao` é texto com restrição de
+valor em `entrega`, `execucao_agente` e `consumo_ia`. A suspensão é a tabela `suspensao_de_funcao`
+(`escola_id`, `funcao`, `motivo` de lista fechada, `suspensa_por`, `suspensa_em`, `retomada_por`,
+`retomada_em`), com auditoria em `funcao.suspensa` e `funcao.retomada`. O bloco acima continua
+sendo o desenho do F1 no que a 0022 não tocou.
 
 ```
 AdaptacaoAluno*  → escola*, anoLetivo*, aluno*, tipos* (linguagem_direta | resposta_escrita |

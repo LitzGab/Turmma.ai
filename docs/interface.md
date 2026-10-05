@@ -77,8 +77,9 @@ O desenho visual desta casca, com medidas e componentes, está na seção 11.1.
   dele é agregado, e o nominal só abre com auditoria. A tela diz isso em português comum. A
   **turma aberta** mostra o desempenho da turma e de cada aluno por habilidade: nasce no F6 com o
   diagnóstico, ganha os sinais do Tutor no F10 e a comparação da série no F12 (D69). **Quais
-  abas ela tem** — as nove do mockup, a sala de carteiras, Recursos e Mural — fecha no PRD da A3
-  (P11, P28). Na A1 a turma já existe para o professor ver os alunos e aprovar quem reivindicou o
+  abas ela tem** — as nove do mockup, a sala de carteiras, Recursos e Mural — fecha antes do PRD
+  do F6 (P11, P28); o MVP de apresentação entregou só Visão Geral e Alunos
+  (`apps/web/src/areas/professor/Turma.tsx`). Na A1 a turma já existe para o professor ver os alunos e aprovar quem reivindicou o
   nome (D4, D71 revista). Ela abre pelo cartão do vínculo confirmado, em `/professor/turmas/:turmaId`, e começa pela
   seção **Acesso dos alunos** (tarefa 15.0; Tech Spec da A1, seção 9): gerar o link da sala e o código da turma com
   validade de 1, 7 ou 30 dias, projetar o código, copiar o link ou mandá-lo pelo WhatsApp, trocar por um novo e
@@ -93,7 +94,8 @@ O desenho visual desta casca, com medidas e componentes, está na seção 11.1.
 - **Histórico** lista as conversas do professor, agrupadas por data (hoje, ontem, 7 dias, mês),
   cada uma no próprio endereço. A coordenação nunca vê (regra 70, item 8; P06)
 - **Cada item só aparece quando a fase dele existir.** Pela D71 revista, a A1 abre com Turmas;
-  Nova conversa, Ferramentas, Seu time e Histórico entram com a A2; Calendário, com o F8.
+  Nova conversa, Ferramentas e Seu time entraram com a A2; o Histórico ficou fora do MVP, que tem
+  uma conversa só por professora (P06; decisão 19 de `docs/mvp-rapido.md`); Calendário, com o F8.
   **Projetos** e **Fixados** só entram se o `/descobrir` do P05 aceitar
 
 ### 1.1 Chat e ferramenta são o mesmo motor (D18)
@@ -165,8 +167,10 @@ calendário, e toda saída cita material e página. O artefato **exporta em PDF,
 onde vêm as imagens da apresentação está em aberto.
 
 No código, **a ferramenta é dado**: um contrato por ferramenta em `packages/shared`, e o
-formulário derivado do schema dele, em vez de uma tela escrita à mão por ferramenta (P23; Tech
-Spec da A2).
+formulário derivado dele, em vez de uma tela escrita à mão por ferramenta (P23). Entregue no MVP:
+a descrição de campos de cada ferramenta sai de `descricaoDaFerramenta`
+(`apps/web/src/areas/professor/ferramentas.ts`), e um motor só a desenha
+(`apps/web/src/componentes/ia/motor-formulario.ts` e `MotorFormulario.tsx`).
 
 ### 1.3 Seu time: os agentes do professor (F11)
 
@@ -343,7 +347,7 @@ obrigatório, e nenhuma pessoa de escola alcança estas telas.
 - **Nova rede** e **nova escola**: nome, tipo de rede e o endereço da escola
 - **Convite da coordenação**: cadastrar a primeira coordenadora, copiar o link, revogar e refazer
 - **Uso e custo**: por escola, no dia e no mês — o uso de infra desde já (D30), o consumo de IA
-  com a A2, contra o teto por aluno (D39)
+  contra o teto por aluno (D39), que a D76 previa com a A2 e o MVP não trouxe (`TODO.md`)
 
 A pele e a casca são as mesmas do produto (D72), com a marca de que ali é a operação, para
 ninguém confundir com a tela de uma escola.
@@ -385,18 +389,21 @@ ninguém confundir com a tela de uma escola.
   `docs/pendencias-dos-mockups.md`
 - **Continua em aberto, da mesma revisão:** Projetos (P05), anexo na conversa (P07), faltas e a
   aba Frequência (P08), ranking de participação (P26, que bate na 10.3), as abas da turma aberta
-  com Recursos e Mural (P28, antes do PRD da A3), as oito ferramentas novas do catálogo (P22) e a
+  com Recursos e Mural (P28, antes do PRD do F6), as oito ferramentas novas do catálogo (P22) e a
   licença das peças coladas no mockup (P20)
 - **Trazer para `apps/web`** os tokens da seção 9.9 e os SVGs da marca (`mockups/public/marca/`, em
   curvas, sem baixar a Fustat) — é a primeira tarefa de tela da A0 (D76), que migra também as telas
-  do F1; o avatar dos três agentes entra na A2 (D72 revista). Hoje a casca do F0 ainda usa a paleta `slate`
-- **Avatar dos três agentes**: há proposta na seção 9.7, tirada do mockup; o Gabriel fecha o
-  desenho antes da Tech Spec da A2. A landing page ainda lista os agentes antigos: alinhar junto
+  do F1; o avatar dos três agentes entrou na A2 como círculo com o ícone da função (D72 revista). Hoje a casca do F0 ainda usa a paleta `slate`
+- **Avatar dos três agentes**: há proposta na seção 9.7, tirada do mockup, e o MVP a usa — círculo
+  com o ícone da função, nunca rosto (`apps/web/src/componentes/ia/AvatarAgente.tsx`). O SVG do
+  Gabriel tinha prazo na Tech Spec da A2, que não existiu (D77); o novo prazo está em aberto
+  (`CLAUDE.md`). A landing page ainda lista os agentes antigos: alinhar junto
 - **Licença das duas peças marcadas "a conferir"** na seção 10.2 (`shadcn/item` e
   `shadcn/spinner`: o 21st.dev não declara, a origem shadcn/ui é MIT), antes de o código entrar
 - **Vestir a família Agent Elements**: 121 classes de cor fixa e 63 variantes `dark:` trocadas à
   mão nas sete peças do chat (10.2). O mockup apontou a rampa `neutral` para os cinzas do ChatGPT,
-  e esse atalho não entra no produto. Entra na estimativa da A2
+  e esse atalho não entra no produto. O MVP não trouxe a família: as peças do chat foram escritas
+  de novo em `apps/web/src/componentes/ia/` (seção 9.3 de `docs/mvp-rapido.md`)
 - **`color-mix()` no Chrome 109**: confirmar no projeto `chromebook` do e2e o que o build faz com
   modificador de opacidade, e reprovar `color-mix(` no CSS servido se ele não rebaixar (9.9)
 - **Onde moram os componentes trazidos do 21st.dev** dentro de `apps/web`, o `components.json`
@@ -853,7 +860,8 @@ acontece na adoção.
 2. **A família Agent Elements, que é a base do chat, não vem.** Tem zero classe semântica: nas
    sete peças adotadas são **121 classes `neutral-*` e 63 variantes `dark:`** em 1.167 linhas. O
    desenho é o melhor do catálogo e a dependência é quase nenhuma, mas vestir é troca à mão,
-   arquivo por arquivo. É o trabalho de tela mais caro da A2 e precisa estar na estimativa
+   arquivo por arquivo. Era o trabalho de tela mais caro da A2; o MVP escreveu as peças do chat de
+   novo em `apps/web/src/componentes/ia/`, sem a família
 3. **Dezesseis peças usam modificador de opacidade** (`bg-primary/90`, `bg-black/80`), inclusive
    `shadcn/button`, `dialog`, `sheet` e `alert-dialog`. Ver a regra nova na 10.1, item 4
 4. **Nenhuma animação em laço das peças respeita `prefers-reduced-motion`** (o brilho do
@@ -1276,6 +1284,11 @@ O roteiro do `ROADMAP.md` (D71 revista), passo a passo, com a tela e onde ela es
 Parte B vale desde a D72 e a D73 (23/09/2026). **Não existe seed com escola pronta**: tudo que a
 demonstração mostra entra pelo próprio produto, com dado inventado (D71 revista).
 
+**Entregue.** A A0, a A0b e a A1 pelo processo completo; a A2 a A5 numa fatia só, pela D77, que
+entrou na `develop` em 05/10/2026 (`13eab64`). O passo a passo que se apresenta, com os dados
+sintéticos, está em `docs/roteiro-da-demonstracao.md`; o que ficou de fora de cada spec está no
+`ROADMAP.md`.
+
 | Passo do roteiro | Tela | Desenho | Spec |
 |---|---|---|---|
 | Nós criamos a escola e convidamos a coordenação, no painel da operação | Painel da operação (5a) | — | A0b |
@@ -1287,7 +1300,7 @@ demonstração mostra entra pelo próprio produto, com dado inventado (D71 revis
 | 3. Aluno responde a atividade e abre o Tutor, que recusa, conduz e cita | Área do aluno | 11.6 | A3, A4 |
 | 4. Professora recebe do Tutor que oito travaram; o Assistente avisa que corrigiu e espera | Seu time | 11.4 | A3, A4 |
 | 4. Abre os destaques e aprova, com o registro da validação | Aprovar | 11.5 | A3 |
-| 4. Vê o acerto por habilidade | Turmas › a turma aberta (as abas fecham no PRD da A3, P28) | 1, 10.2 | A3 |
+| 4. Vê o acerto por habilidade | Turmas › a turma aberta, com Visão Geral e Alunos (as outras abas fecham antes do PRD do F6, P28) | 1, 10.2 | A3 |
 | 5. Coordenação abre a governança, os agentes com as funções, e o resumo do Analista | Governança e Agentes | 11.7 | A5 |
 
 Fora do MVP, com o lugar reservado no desenho: grade horária e "seu dia" (F2, F8), Calendário,

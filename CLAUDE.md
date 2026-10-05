@@ -81,7 +81,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D20 | Escola particular e rede pública são alvo juntas desde o início |
 | D21 | O banco público de questões vem das provas oficiais do ENEM e entra no F7 |
 | D22 | A ingestão começa pelo upload de PDF licenciado; adaptador de scraper só com escola real e licença |
-| D23 | O trabalho acontece na `develop`; `release` e `main` recebem por merge, que o Joaquim gerencia. O Gabriel abre branch própria e integra na `develop`. A esteira roda nas três branches. O portão de qualidade continua no processo (revista pela D53, em 19/09/2026 e em 21/09/2026) |
+| D23 | O trabalho acontece na `develop`; `release` e `main` recebem por merge, que o Joaquim gerencia. O Gabriel abre branch própria e integra na `develop`. A esteira roda nas três branches. O portão de qualidade continua no processo (revista pela D53, em 19/09/2026 e em 21/09/2026; revista pela D77 só no MVP) |
 | D24 | Na primeira semana a coordenação vê quatro coisas: escola cadastrada sem trabalho manual, governança de IA, prova e plano com página citada, tutor em sala com sinais |
 | D25 | Infra do primeiro ano para até dez escolas; API, realtime e worker separados e sem estado |
 | D26 | Banco, Redis e storage são serviços gerenciados |
@@ -111,7 +111,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D50 | Preço por aluno com faixas de pacote: base e completo com tutor |
 | D51 | Toda tela nasce responsiva e usável no celular, sem que nenhum fluxo dependa dele |
 | D52 | Testes de integração da infra fora do portão de toda tarefa, na esteira |
-| D53 | Processo enxugado onde repetia trabalho: `test-engineer` primeiro, caducidade pelo que o revisor audita, portão com carimbo, `revisor-geral`, `/revisar-spec`, `/corrigir` e `/retro` |
+| D53 | Processo enxugado onde repetia trabalho: `test-engineer` primeiro, caducidade pelo que o revisor audita, portão com carimbo, `revisor-geral`, `/revisar-spec`, `/corrigir` e `/retro` (revista pela D77 só no MVP) |
 | D54 | O nome do produto é Turmma; o código continua `educa` até uma renomeação própria |
 | D55 | Em discursiva e redação a IA não corrige, não avalia, não dá nota nem conceito, e não pré-corrige nem sugere nota ao professor (revisão da D46) |
 | D56 | Na objetiva, a validação humana é registrada: o que foi mostrado, o que foi aberto e quem confirmou (complementa a D33) |
@@ -222,7 +222,11 @@ com advogado junto da base legal da adaptação (`TODO.md`).
 piloto**, com escola real em 2027, que só entra depois do F2, do F3 e do portão da primeira
 escola real. **Sem seed de escola pronta** (D71 revista em 23/09/2026): a demonstração começa
 com a escola criada por nós no painel da operação (A0, D76) e montada pela coordenação na tela,
-com nomes inventados. Sintético é o dado, não o caminho.
+com nomes inventados. Sintético é o dado, não o caminho. A A2 a A5 saíram numa fatia só, com
+processo enxuto (D77), e entraram na `develop` em 05/10/2026 (`13eab64`); o processo completo
+voltou para o F2, o F3 e o portão do piloto. A composição de cada spec ficou no PRD da A1 e, da
+A2 a A5, no `docs/mvp-rapido.md`; o documento que a coordenação sobe na demonstração é um PDF
+original nosso, gerado por `tools/demonstracao/` (D75, D5).
 
 **Pele do produto.** Voltou três vezes: a da landing page (rejeitada vendo), a do ChatGPT (P02) e
 a cópia da Teachy em Ferramentas e Turmas (P31). Fica **uma só**, a do ChatGPT, em todas as
@@ -256,14 +260,12 @@ Todas têm dono e momento. Nenhuma trava o F0.
 | Decisão | Dono | Quando fecha |
 |---|---|---|
 | **Projetos** do professor, **anexo de documento na conversa** e **faltas** por aluno: pedidos do Gabriel que não existem em nenhuma fase (P05, P07, P08). O anexo esbarra na D5 e abre a porta para correção de discursiva por IA (D55); faltas não tem origem de dado nem linha na tabela da LGPD | Gabriel e Joaquim | `/descobrir` de cada um, antes de entrar em qualquer PRD; fora do MVP de apresentação até lá |
-| A **turma aberta com nove abas**, no modelo da Teachy, com a sala de carteiras como subaba de Alunos: revisa o conteúdo da D69 e depende dos limiares dos indicadores (P11, P28); e se o calendário e o seletor de turma juntam as duas escolas do professor ou mostram só a escola ativa (P12, P30, regra 10) | Joaquim e Gabriel | a turma, antes do PRD da A3; o seletor, no PRD da A1 (troca o token, P30); o calendário, no PRD do F8 |
+| A **turma aberta com nove abas**, no modelo da Teachy, com a sala de carteiras como subaba de Alunos: revisa o conteúdo da D69 e depende dos limiares dos indicadores (P11, P28); o MVP entregou só Visão Geral e Alunos. E se o calendário junta as duas escolas do professor ou mostra só a escola ativa (P12, regra 10); o seletor de escola fechou na A1, só com a escola ativa e trocando o token (P30, RF2 do PRD da A1) | Joaquim e Gabriel | as abas, antes do PRD do F6; o calendário, no PRD do F8 |
 | **Ranking de participação** (presença e entrega, com pódio), **Recursos** (enviar artefato à turma) e **Mural** da turma: pedidos do Gabriel que não existem em fase nenhuma. O ranking bate na proibição de placar e pódio do `docs/interface.md` 10.2 (D59) e chega perto de pontuação social (D57) (P26, P28) | Gabriel e Joaquim | `/descobrir` de cada um; fora do MVP de apresentação até lá |
 | As **oito ferramentas que a D67 não lista** — planejamento do período, projeto, plano de recuperação, mapa mental, roteiro de experimento, avaliação diagnóstica, proposta de redação e importar prova (P22). A regra e as categorias já estão na D74. O planejamento e o projeto dependem do F8; o plano de recuperação, do F6 | Gabriel propõe; Joaquim decide e estima | por `/descobrir`, uma a uma, antes do F7 |
 | Provedor de modelo principal e reserva | Joaquim | avaliação de `docs/avaliacao-de-modelos.md`, antes de a F5 ficar pronta (D37) |
 | Provedor de hospedagem | Joaquim | quando o staging for criado, antes da primeira demonstração externa ou do piloto (D42) |
-| Os avatares dos **três agentes** (Assistente de ensino, Tutor, Analista de desempenho escolar), em SVG. Tokens e logotipo já vêm de `mockups/` (D72) | Gabriel | antes da Tech Spec da A2 (D72 revista em 25/09/2026) |
-| O documento que a coordenação sobe na demonstração (D75): precisa ser nosso ou de domínio público, com a licença declarada (D5). Não há escola nem material pré-carregados (D71 revista) | Gabriel | antes do PRD da A2 |
-| Composição final de cada spec do MVP de apresentação (A1 a A5). A direção de cada uma está no `ROADMAP.md`, e os quatro afrouxamentos estão aceitos (D71 revista em 23/09/2026 e 25/09/2026) | Joaquim e Gabriel | no PRD de cada spec |
+| Os avatares dos **três agentes** (Assistente de ensino, Tutor, Analista de desempenho escolar), em SVG (D72). O MVP saiu sem eles: o avatar é um círculo com o ícone da função, nunca rosto (`apps/web/src/componentes/ia/AvatarAgente.tsx`, D58), e não trava nada. Falta decidir se o SVG do Gabriel ainda substitui o ícone | Gabriel | o prazo da D72 (Tech Spec da A2) passou sem Tech Spec (D77); novo prazo a definir |
 | Registro no INPI e do domínio `turmma.com` (o nome já está fechado, D54) | Gabriel | antes do material de venda e do piloto |
 | Se o art. 24 do ECA Digital exige conta de responsável vinculada para aluno de até 16 anos — e, se exigir, se o portal da família sai da fase posterior | Joaquim e Gabriel, com advogado | **antes do PRD do F9**; o vínculo já nasce no modelo de dados do F1 (`docs/regulacao.md` 2.2) |
 | Como os arts. 17 e 18 do ECA Digital (supervisão parental) se modulam pelo art. 39 no nosso caso | advogado | junto com o parecer do ECA Digital |
@@ -271,7 +273,7 @@ Todas têm dono e momento. Nenhuma trava o F0.
 | Sistemas de ensino das escolas-alvo, licença do material e primeiro adaptador | quem conduzir o piloto | nas entrevistas com escolas; até lá só upload de material com licença (D5, D22) |
 | Quais funcionalidades formam a fatia do piloto, e quais das quatro coisas da D24 ele precisa ter. Não confundir com o MVP de apresentação, que é sintético (D71) | Joaquim e Gabriel | com o MVP de apresentação de pé, antes de completar a primeira fase para escola real (D1 revista) |
 | Valores das faixas de preço e teto de IA do pacote base | Gabriel e Joaquim | com a planilha de custo por pacote, validados no piloto (D50, D39) |
-| Indicadores de desempenho do professor e do aluno (quais, limiar, texto do alerta). Ponto de partida: percentual de erro e acerto por habilidade e o sinal "concluiu o que foi atribuído"; tempo ocioso não entra (D69) | Joaquim e Gabriel | os de turma e aluno **antes do PRD do F6**, porque "Turmas" nasce lá (D69, D73); os de professor antes do PRD do F12 (D45, D46) |
+| Indicadores de desempenho do professor e do aluno (quais, limiar, texto do alerta). Ponto de partida: percentual de erro e acerto por habilidade e o sinal "concluiu o que foi atribuído"; tempo ocioso não entra (D69). O MVP mostra limiares provisórios (sinais do Tutor, destaques da correção, 60% do alerta do Analista), escolhidos na construção e listados no Estado de `docs/mvp-rapido.md`: entram nesta decisão | Joaquim e Gabriel | os de turma e aluno **antes do PRD do F6**, porque "Turmas" nasce lá (D69, D73); os de professor antes do PRD do F12 (D45, D46) |
 | Imagens da ferramenta de apresentação: de onde vêm e com que licença (D67, D5) | Gabriel e Joaquim | antes do PRD do F7 |
 | Lista padrão de fontes aprovadas da busca do Tutor, por faixa etária, e o provedor de busca (D68) | Gabriel (lista) e Joaquim (provedor) | antes do PRD do F9 |
 | Se ligar a busca para aluno de até 16 anos sem conta de responsável vinculada conta como rebaixar a proteção (ECA Digital, art. 24, § 5º; D68) | advogado | junto com o parecer do ECA Digital, antes do PRD do F9 |
