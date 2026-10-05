@@ -1,7 +1,7 @@
 # Cenários de teste — lgpd-e-titular
 
 Exigidos pela revisão da spec, rodada 1 (`revisao-spec.md`). Cada cenário diz o que precisa falhar se a regra sumir.
-I = integração com Postgres real e relógio injetado · U = unidade · E = e2e em `chromebook` e `celular` com
+Cada cenário cai numa tarefa do `tasks.md`, que diz qual. I = integração com Postgres real e relógio injetado · U = unidade · E = e2e em `chromebook` e `celular` com
 verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
 
 ## Fatia 1 — Retenção e expurgo
@@ -25,7 +25,7 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] Com `conversa_tutor` em 6 meses, o `aluno_id` de `consumo_ia` com 7 meses é anulado.
   - [I] Ajustar `consumo_por_aluno` acima de `conversa_tutor` dá `RETENCAO_FORA_DO_LIMITE`.
   - [I] Expurgar e trocar o nome numa linha antiga de `consumo_ia` (`envio_externo` verdadeiro, sem `provedor`,
-    anterior à 0024) não esbarra no check.
+    anterior à migration da 7.0) não esbarra no check (testado na 15.0).
 - **RF4, ano letivo.**
   - [I] Um ano com `fim` vencido além do prazo, mas `em_curso`, não perde nada.
   - [I] O mesmo ano `encerrado` perde.
@@ -62,7 +62,7 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [U] O provedor resolvido pelo falso, pelo local, por `regra_fixa` e com zero tentativas é nulo. Pelo externo, com
     servidor falso e sem provedor pago, é o id.
   - [I] `provedor` com `envio_externo = false` é recusado pelo banco.
-  - [I] Depois da 0024, um insert no formato do código anterior (externo, sem `provedor`, `em` = agora) é aceito.
+  - [I] Depois da migration da 7.0, um insert no formato do código anterior (externo, sem `provedor`, `em` = agora) é aceito.
   - [I] O `ConsumoRepository` grava o `provedor`, e a soma da governança não muda.
   - [I] A gravação do consumo nunca falha por causa da coluna.
 - **RF6.**

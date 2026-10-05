@@ -80,7 +80,7 @@ autor. **Colunas que nunca entram**, em nenhuma versão (`COLUNAS_FORA_DO_ARQUIV
 cookie, o segredo do segundo fator, os códigos de recuperação, `chave_envio`, `chave_objeto` e o `sub` da conta
 externa.
 
-**Migration 0024**, só de expansão:
+**Migrations de expansão**, uma por tarefa a partir da 0024, na ordem do `tasks.md` (o bloco abaixo é o conjunto):
 
 ```
 retencao_escola     escola_id*, categoria* (PK), meses*, referencia_contrato* (≤200), alterada_em*, alterada_por*
