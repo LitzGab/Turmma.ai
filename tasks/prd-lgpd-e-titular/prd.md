@@ -31,7 +31,7 @@ dela e quais incidentes a afetaram.
 - Eliminação no backup, que ainda não existe (D42, F16)
 - Fim de contrato e expurgo da auditoria (F12, com a exportação); aviso de privacidade por faixa etária (F9); RIPD,
   contrato, DPO e processo de incidente ensaiado (`TODO.md`)
-- Ferramenta nova de correção de dado; e-mail; pedido aberto pelo próprio titular no produto (ele pede à escola, D10)
+- Correção de turma e vínculo fora das telas da A1; e-mail; pedido aberto pelo titular no produto (pede à escola, D10)
 
 ## 4. Papéis envolvidos
 
@@ -61,6 +61,7 @@ dela e quais incidentes a afetaram.
 | RF11 | Acesso e portabilidade: fora da requisição, o sistema monta um arquivo aberto e legível por máquina, com tudo do titular na escola, em todas as categorias, e um resumo legível | Sentinela por tabela: todas aparecem, nada de outro titular |
 | RF12 | O arquivo completo só é baixado pelo titular logado, na área dele, por 7 dias. Sem conta ativa, a coordenação baixa uma versão que nunca traz a conversa do professor, com auditoria e finalidade | A versão da coordenação não traz a conversa; no 8º dia o arquivo não existe |
 | RF13 | Compartilhamento: o pedido lista os suboperadores por onde passou dado do titular, com o período, a partir das chamadas a provedor externo. A lista vem também na eliminação e na correção, para a escola avisar cada um (LGPD, art. 18, § 6º) | Aluno com Tutor externo aparece com o provedor; sem uso, só com a hospedagem |
+| RF13b | Correção: a coordenação corrige o nome do titular no próprio pedido (regra 20, item 19) | A auditoria não traz o nome |
 | RF14 | Eliminação: na confirmação, o acesso cai na requisição seguinte; a eliminação de fato vem 7 dias depois, e até lá a coordenação cancela e o acesso volta | Relógio injetado: cancelado no 6º dia, nada sai; no 8º, tudo sai |
 | RF15 | A eliminação apaga tudo do titular na escola que o mapa não manda guardar, inclusive o tema e a entrada do modelo de que ele é autor. Nos campos livres da escola (tema, artefato, conversa do professor), troca o **nome completo** do aluno por marca neutra e devolve à coordenação só a contagem. O que o mapa manda guardar (auditoria, validação, decisão de entrega) fica com o id | Sentinela por tabela; nome completo semeado em três campos some; primeiro nome sozinho fica |
 | RF16 | O pedido tem estado (recebido, em preparação, pronto, concluído, cancelado), e a tela mostra quanto falta dos 15 dias da declaração completa, contados da chegada (LGPD, art. 19, II). Prazo em constante: a ANPD pode regulamentá-lo | Vencido fica destacado |
@@ -72,9 +73,7 @@ dela e quais incidentes a afetaram.
 
 ## 6. Regras de negócio
 
-- Pedido que chegue a nós vai para a escola, controladora (D10)
-- O prazo não é mais curto que a obrigação da escola nem mais longo que o necessário (`docs/regulacao.md` 6): daí o
-  piso e o teto. "Ano letivo + N" conta do encerramento do ano
+- O prazo não é mais curto que a obrigação da escola nem mais longo que o necessário: daí piso e teto. "Ano letivo + N" conta do encerramento do ano
 - A eliminação numa escola não toca outra nem a conta global que ainda serve a outra (F1, tarefa 17.0)
 - A conversa do professor nunca chega à coordenação, nem em arquivo (regra 70, item 8). A do Tutor só chega na versão
   do titular sem conta ativa, auditada: exceção declarada à regra 20, item 14, pelo direito de acesso
@@ -84,10 +83,11 @@ dela e quais incidentes a afetaram.
 | Caso | Comportamento esperado |
 |---|---|
 | Aluno transferido para outra escola cliente | O pedido em A não alcança B; a mesma matrícula em outra escola é outro titular |
-| Outro aluno ativo com o mesmo nome completo | A troca nos campos livres não acontece, e a coordenação é avisada do homônimo |
+| Outro aluno ativo com o mesmo nome completo | Não há troca nos campos livres, e a coordenação é avisada |
 | A única coordenadora quer a própria eliminação | Não registra para si: entra outra coordenação por convite da operação |
-| A operação reduz um prazo | O expurgo seguinte o aplica ao que existe; aumentar não traz de volta o que saiu |
-| Responsável pede pelo aluno | "Responsável legal"; o arquivo sai na conta do aluno |
+| A operação reduz um prazo | O expurgo seguinte o aplica; aumentar não traz de volta |
+| Responsável pede pelo aluno | O arquivo sai na conta do aluno |
+| Aluno que nunca reivindicou o nome | É atendido pela lista de nomes da A1, e a tela de Privacidade diz isso |
 
 ## 8. Dado pessoal envolvido
 
@@ -105,14 +105,13 @@ Sem IA no caminho.
 
 ## 9. Métricas
 
-- Do pedido de acesso ao arquivo pronto: minutos (teste de fechamento da regra 20); pedidos atendidos em 15 dias
-- Noites sem expurgo e linhas além do prazo: zero
+- Do pedido de acesso ao arquivo pronto: minutos; pedidos atendidos em 15 dias
+- Noites sem expurgo: zero
 - Da detecção do incidente à confirmação da escola: menos de 24 h
 
 ## 10. Perguntas em aberto
 
-**Para a Tech Spec:** piso e teto de cada categoria (ela propõe, o Joaquim aprova); formato do arquivo e do resumo;
-como o pedido de correção aponta para o caminho que já existe.
+**Para a Tech Spec:** piso e teto de cada categoria (aprovados na revisão da spec); formato do arquivo e do resumo.
 
 **Dependem de advogado** (nada se decide aqui; os dois primeiros ainda não estão no `TODO.md`):
 - O que a escola guarda mesmo com eliminação (LGPD, art. 16, I; art. 18, VI). Não há prazo federal para o registro
