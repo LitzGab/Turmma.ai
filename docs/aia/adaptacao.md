@@ -4,8 +4,9 @@
 > propõem a versão adaptada de uma prova ou atividade a partir do **tipo de adaptação**.
 > **Função coberta** (`FUNCOES`, em `packages/shared/src/time/funcoes.ts`): `adaptacao` — agente
 > Assistente de ensino, autonomia 3 (propõe e espera aprovação), alto risco.
-> **Estado:** rascunho da **etapa 1**, escrito pelo Claude em 04/10/2026, a revisar pelo Joaquim e
-> depois pelo Gabriel. Nada aqui vale como avaliação concluída antes dessas duas revisões.
+> **Estado:** etapa 1 fechada para o MVP em 05/10/2026, com as decisões do Joaquim da seção 1.9;
+> revisão do Gabriel pendente; etapas 2 a 6 devidas antes do primeiro aluno real. O texto é do
+> Claude (04/10/2026); o Joaquim decidiu os itens listados em 1.9, não leu o texto inteiro.
 > **Etapas 2 a 6:** devidas antes do primeiro aluno real (D60, D71). Enquanto o dado for 100%
 > sintético, a etapa 1 basta para o MVP de apresentação.
 > **Sobre as fontes:** o ato do CNE de 01/09/2026 foi lido só por cobertura de imprensa
@@ -185,7 +186,7 @@ nem o Tutor. A suspensão vale no servidor: função suspensa recusa executar, e
 suspensa não nasce. Fica um registro próprio, com quem suspendeu, quando e o motivo, e com
 auditoria. A coordenação retoma pelo mesmo caminho.
 
-**O que acontece com o que a função já produziu — proposta desta AIA, a confirmar pelo Joaquim:**
+**O que acontece com o que a função já produziu — decidido pelo Joaquim em 05/10/2026 (1.9):**
 
 - pedido novo de adaptação é recusado, com mensagem que diz que a função está suspensa na escola;
 - entrega pendente continua pendente e não pode ser aprovada enquanto durar a suspensão; pode
@@ -203,18 +204,24 @@ auditoria. A coordenação retoma pelo mesmo caminho.
 3. **Para qual provedor esta função manda o texto.** A D66 diz que, no Tutor, o tipo de adaptação
    só viaja para provedor com processamento no Brasil. Para a função de adaptação não há decisão
    escrita. Depende do Joaquim, junto da escolha do provedor (D37).
-4. **A versão adaptada pode mudar o que é cobrado?** A D66 diz, sobre o Tutor, que a adaptação
+4. **Decidido para o MVP (1.9).** **A versão adaptada pode mudar o que é cobrado?** A D66 diz, sobre o Tutor, que a adaptação
    muda a forma e nunca o que é cobrado. Para esta função não há frase equivalente, e "enunciado
    simplificado" pode mudar a dificuldade. Falta decidir se a versão adaptada mantém, em cada
    questão, a mesma habilidade, a mesma página e o mesmo gabarito da original. Depende do
    Joaquim, com revisão pedagógica; pesa na equidade (etapa 5) e no diagnóstico por habilidade.
+   *Decisão:* mantém, em cada questão, a mesma habilidade, a mesma página citada e o mesmo gabarito
+   da original. A adaptação muda a forma, nunca o que é cobrado (mesmo espírito da D66). A
+   conferência já existe no código (1.9). A revisão pedagógica que o item pedia e a medição na
+   etapa 5 continuam devidas antes do primeiro aluno real.
 5. **A lista de tipos não é a mesma em todo lugar.** O contrato (`TIPOS_DE_ADAPTACAO`) tem seis
    tipos; a D67 cita "compatível com leitor de tela", que não está entre eles; "leitura de apoio"
    está no contrato e não é descrita em nenhum documento; e o mockup lista outros (enunciado
    direto, apoio visual, menos itens por página). Depende do Joaquim e do Gabriel.
-6. **A justificativa da rejeição é texto livre.** É o mesmo risco que a D67 tirou do formulário:
+6. **Decidido para o MVP (1.9; a rever antes do primeiro aluno real).** **A justificativa da rejeição é texto livre.** É o mesmo risco que a D67 tirou do formulário:
    o professor pode escrever ali a condição do aluno. Falta decidir se o campo vira lista de
    motivos, se fica texto com aviso, ou se fica como está. Depende do Joaquim.
+   *Decisão:* continua texto livre, com aviso na tela ao lado do campo. O risco residual, o
+   professor escrever ali a condição do aluno, fica registrado como aceito para o MVP.
 7. **Como a versão adaptada chega só ao aluno que precisa dela.** No contrato do MVP a atividade
    é aplicada à turma, e não está escrito como a versão adaptada é destinada a um aluno nem onde
    esse vínculo fica guardado. É esse vínculo que liga o dado sensível à pessoa. Depende do
@@ -222,6 +229,14 @@ auditoria. A coordenação retoma pelo mesmo caminho.
 8. **O tipo de adaptação em log.** A regra 20, item 9, lista o que nunca vai para log e não cita
    o tipo de adaptação pelo nome. Esta AIA propõe tratá-lo do mesmo jeito quando estiver ao lado
    de um identificador de aluno. A confirmar pelo Joaquim.
+
+Os itens restantes não bloqueiam o MVP de apresentação (dado sintético, D71); bloqueiam o primeiro aluno real (etapas 2 a 6).
+
+### 1.9 Decisões do Joaquim para o MVP (05/10/2026)
+
+1. **Suspensão (1.7).** Aceita a proposta de 1.7 tal como escrita: pedido novo é recusado; entrega pendente fica pendente e não pode ser aprovada durante a suspensão, só rejeitada; versão já aprovada continua valendo; o registro da validação nunca é apagado. Foi o que o MVP implementou, e a revisão da fase 4 aprovou.
+2. **A versão adaptada não muda o que é cobrado (1.8, item 4).** Em cada questão, mantém a mesma habilidade, a mesma página citada e o mesmo gabarito da original. Já é conferido no código: `exigirAdaptacaoFiel`, em `apps/api/src/artefato/conferencia.ts`, chamado por `apps/api/src/artefato/artefato.service.ts` ao gravar a versão. Ele exige o mesmo número e a mesma ordem de questões, o mesmo gabarito, o mesmo número de alternativas, a mesma habilidade (código e descrição) e a mesma citação (material, página e trecho), e que a `adaptacao` gravada seja exatamente a pedida (tipos e percentual de tempo). Fora disso lança `IA_SAIDA_INVALIDA`, e nem a versão nem a entrega nascem. O teste está em `apps/api/src/artefato/conferencia.test.ts`.
+3. **Justificativa da rejeição (1.8, item 6).** Continua texto livre, com aviso na tela. O aviso é `AVISO_DA_JUSTIFICATIVA`, definido em `apps/web/src/areas/professor/entregas.ts` e mostrado como dica do campo "Por que você está rejeitando?" em `apps/web/src/areas/professor/Time.tsx`. O texto real é: "Diga o que está errado na versão, para o Assistente refazer. Não escreva nome de aluno nem o motivo da adaptação." O risco residual (o professor escrever a condição do aluno mesmo assim) fica **aceito para o MVP e a rever antes do primeiro aluno real**.
 
 ---
 

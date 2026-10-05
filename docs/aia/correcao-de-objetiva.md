@@ -6,8 +6,9 @@
 > — agente Assistente de ensino, autonomia 2 (executa e avisa), alto risco. A mesma chave cobre o
 > diagnóstico por habilidade, que tem avaliação própria em `docs/aia/diagnostico-por-habilidade.md`.
 > A saída da aba não é função de agente e não tem chave em `FUNCOES` (ver 1.7).
-> **Estado:** rascunho da **etapa 1**, escrito pelo Claude em 04/10/2026, a revisar pelo Joaquim e
-> depois pelo Gabriel. Nada aqui vale como avaliação concluída antes dessas duas revisões.
+> **Estado:** etapa 1 fechada para o MVP em 05/10/2026, com as decisões do Joaquim da seção 1.9;
+> revisão do Gabriel pendente; etapas 2 a 6 devidas antes do primeiro aluno real. O texto é do
+> Claude (04/10/2026); o Joaquim decidiu os itens listados em 1.9, não leu o texto inteiro.
 > **Etapas 2 a 6:** devidas antes do primeiro aluno real (D60, D71). Enquanto o dado for 100%
 > sintético, a etapa 1 basta para o MVP de apresentação.
 > **Sobre as fontes:** o ato do CNE de 01/09/2026 foi lido só por cobertura de imprensa
@@ -226,14 +227,14 @@ A coordenação suspende `correcao_de_objetiva` sem desligar a conversa do profe
 vale no servidor: função suspensa recusa executar, e entrega de função suspensa não nasce. Fica
 um registro próprio, com quem suspendeu, quando e o motivo, e com auditoria.
 
-**Duas consequências do desenho atual, que o Joaquim precisa confirmar:**
+**Duas consequências do desenho atual, aceitas pelo Joaquim para o MVP em 05/10/2026 (1.9; a rever antes do primeiro aluno real):**
 
 - a chave `correcao_de_objetiva` cobre também o diagnóstico por habilidade. Suspender a correção
   suspende o diagnóstico, e não há como suspender só um dos dois;
 - a saída da aba não é função de agente e não tem chave. Suspender a correção **não** a desliga,
   e a D70 não diz se a escola pode desligá-la por configuração.
 
-**O que acontece com o que a função já produziu — proposta desta AIA, a confirmar pelo Joaquim:**
+**O que acontece com o que a função já produziu — decidido pelo Joaquim em 05/10/2026:**
 
 - com a função suspensa, encerrar a atividade não dispara a correção; as respostas continuam
   guardadas e o professor corrige do jeito dele;
@@ -254,7 +255,8 @@ um registro próprio, com quem suspendeu, quando e o motivo, e com auditoria.
    virtual e notificação do sistema também tiram o foco da aba, e o erro cai justamente no aluno
    com adaptação registrada (D70). A mitigação fica para as etapas 3 e 4: o texto que o professor
    lê ao lado do número, e se a contagem aparece para aluno com adaptação registrada. Depende do
-   Joaquim e do Gabriel, com o `conformidade-reviewer`.
+   Joaquim e do Gabriel, com o `conformidade-reviewer`. *A decisão de 1.9 sobre a chave não resolve
+   este item:* continua aberto, e sem poder desligar a contagem por escola o risco permanece.
 4. **O limiar de "muito fora do histórico" e o critério de "padrão de erro suspeito".** Fazem
    parte da decisão em aberto dos indicadores (`CLAUDE.md`, "Decisões em aberto"), do Joaquim e
    do Gabriel, antes do PRD do F6.
@@ -264,8 +266,17 @@ um registro próprio, com quem suspendeu, quando e o motivo, e com auditoria.
    nem grau de confiança. Esta AIA segue a D55 e a lista de `docs/agentes.md` (prova em branco,
    resultado longe do histórico, item com padrão de erro suspeito). O texto da D56 precisa de
    correção. Depende do Joaquim.
-7. **Se o diagnóstico ganha chave própria em `FUNCOES`,** e se a saída da aba pode ser desligada
+7. **Decidido para o MVP (1.9; a rever antes do primeiro aluno real).** **Se o diagnóstico ganha chave própria em `FUNCOES`,** e se a saída da aba pode ser desligada
    por escola (1.7). Depende do Joaquim.
+   *Decisão:* o diagnóstico fica sem chave própria, suspenso junto de `correcao_de_objetiva`; e a
+   saída da aba (D70) fica sem chave em `FUNCOES` e sem desligar por escola.
+
+Os itens restantes não bloqueiam o MVP de apresentação (dado sintético, D71); bloqueiam o primeiro aluno real (etapas 2 a 6).
+
+### 1.9 Decisões do Joaquim para o MVP (05/10/2026)
+
+1. **Suspensão (1.7).** Aceita a proposta de 1.7 tal como escrita: com a função suspensa, encerrar a atividade não dispara a correção e o professor corrige do jeito dele; lote pendente fica pendente e não pode ser aprovado durante a suspensão, só rejeitado; lote já aprovado continua valendo; o registro da validação nunca é apagado. Foi o que o MVP implementou, e a revisão da fase 4 aprovou.
+2. **Chaves (1.7 e 1.8, item 7), para o MVP:** (a) o diagnóstico por habilidade não tem chave própria e é suspenso junto de `correcao_de_objetiva`; (b) a saída da aba (D70) não tem chave em `FUNCOES` e a escola não a desliga por configuração. Os dois pontos ficam **a rever antes do primeiro aluno real**.
 
 ---
 

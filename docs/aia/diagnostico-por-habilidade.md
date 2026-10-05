@@ -6,8 +6,9 @@
 > de `correcao_de_objetiva` — agente Assistente de ensino, autonomia 2 (executa e avisa), alto
 > risco. **O diagnóstico não tem chave própria.** Quem lê o diagnóstico depois são
 > `tutor_com_o_aluno` (`docs/aia/tutor.md`) e `resumo_e_alerta` (`docs/aia/sinais-e-alertas.md`).
-> **Estado:** rascunho da **etapa 1**, escrito pelo Claude em 04/10/2026, a revisar pelo Joaquim e
-> depois pelo Gabriel. Nada aqui vale como avaliação concluída antes dessas duas revisões.
+> **Estado:** etapa 1 fechada para o MVP em 05/10/2026, com as decisões do Joaquim da seção 1.9;
+> revisão do Gabriel pendente; etapas 2 a 6 devidas antes do primeiro aluno real. O texto é do
+> Claude (04/10/2026); o Joaquim decidiu os itens listados em 1.9, não leu o texto inteiro.
 > **Etapas 2 a 6:** devidas antes do primeiro aluno real (D60, D71). Enquanto o dado for 100%
 > sintético, a etapa 1 basta para o MVP de apresentação.
 > **Sobre as fontes:** o ato do CNE de 01/09/2026 foi lido só por cobertura de imprensa
@@ -196,11 +197,11 @@ Analista, em agregado. Cada uma dessas saídas é tratada na AIA da função que
 decidida pela coordenação, com registro próprio (quem, quando, motivo) e auditoria, e vale no
 servidor.
 
-**A consequência do desenho atual:** o diagnóstico não tem chave própria. Ele é suspenso junto
+**A consequência do desenho atual (aceita pelo Joaquim para o MVP em 05/10/2026, 1.9):** o diagnóstico não tem chave própria. Ele é suspenso junto
 com a correção, pela chave `correcao_de_objetiva`, e não há como suspender um sem o outro. Se
 isso é aceitável ou se o diagnóstico ganha chave, é decisão do Joaquim (1.8, item 1).
 
-**O que acontece com o que já foi produzido — proposta desta AIA, a confirmar pelo Joaquim:**
+**O que acontece com o que já foi produzido — decidido pelo Joaquim em 05/10/2026:**
 
 - com a função suspensa, nenhum diagnóstico novo é calculado;
 - o diagnóstico de lote já aprovado continua visível ao professor e ao aluno, porque uma pessoa
@@ -213,15 +214,16 @@ isso é aceitável ou se o diagnóstico ganha chave, é decisão do Joaquim (1.8
 
 ### 1.8 O que está em aberto
 
-1. **Chave própria para o diagnóstico em `FUNCOES`**, ou suspensão sempre junto com a correção.
+1. **Decidido para o MVP (1.9; a rever antes do primeiro aluno real).** **Chave própria para o diagnóstico em `FUNCOES`**, ou suspensão sempre junto com a correção.
    Depende do Joaquim.
+   *Decisão:* sem chave própria, suspenso junto de `correcao_de_objetiva`.
 2. **Quais indicadores, com que limiar e com que texto.** É decisão em aberto no `CLAUDE.md`, do
    Joaquim e do Gabriel, a fechar antes do PRD do F6. Entra aí o **número mínimo de questões por
    habilidade** para o diagnóstico afirmar alguma coisa: com uma questão só, um erro vira "0% na
    habilidade".
 3. **O caminho de contestação**, para o aluno e para o professor, e a explicação em linguagem
    comum. Exigidos pela D60; ainda sem desenho. Etapas 4 e 6.
-4. **Retirar um diagnóstico já aprovado** (1.7). Depende do Joaquim.
+4. **Retirar um diagnóstico já aprovado** (1.7). Depende do Joaquim. **Continua em aberto:** a decisão de 1.9 sobre a chave não a resolve.
 5. **A retenção** de ano letivo + 1 ano é proposta, a confirmar com a escola (`docs/lgpd.md`).
 6. **O roteiro da demonstração e o N3.** No passo 3 de `docs/mvp-rapido.md`, o Tutor "lembra do
    que ele errou" antes de o professor aprovar a correção, que é o passo 4. Para o N3 valer, o
@@ -230,6 +232,13 @@ isso é aceitável ou se o diagnóstico ganha chave, é decisão do Joaquim (1.8
    (`TODO.md`; D45).
 8. **O método da etapa 5.** `docs/conformidade-mec.md`, seção 12, item 4, registra que não
    sabemos ainda qual é o método aceitável de validação desagregada sem coletar dado sensível.
+
+Os itens restantes não bloqueiam o MVP de apresentação (dado sintético, D71); bloqueiam o primeiro aluno real (etapas 2 a 6).
+
+### 1.9 Decisões do Joaquim para o MVP (05/10/2026)
+
+1. **Suspensão (1.7).** Aceita a proposta de 1.7 tal como escrita: com a função suspensa nenhum diagnóstico novo é calculado; o diagnóstico de lote já aprovado continua visível, porque uma pessoa o validou; o registro da validação nunca é apagado. Foi o que o MVP implementou, e a revisão da fase 4 aprovou. O jeito de **retirar** um diagnóstico aprovado não foi decidido (1.8, item 4).
+2. **Chave (1.8, item 1), para o MVP:** o diagnóstico por habilidade não tem chave própria e é suspenso junto de `correcao_de_objetiva`. **A rever antes do primeiro aluno real.**
 
 ---
 

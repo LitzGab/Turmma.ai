@@ -7,8 +7,9 @@
 > `sinais_para_o_professor` — agente Tutor, autonomia 2 (executa e avisa), alto risco; e
 > `resumo_e_alerta` — agente Analista de desempenho escolar, autonomia 2, alto risco. O "aluno
 > que precisa de atenção" em "Turmas" não tem chave em `FUNCOES` (ver 1.7).
-> **Estado:** rascunho da **etapa 1**, escrito pelo Claude em 04/10/2026, a revisar pelo Joaquim e
-> depois pelo Gabriel. Nada aqui vale como avaliação concluída antes dessas duas revisões.
+> **Estado:** etapa 1 fechada para o MVP em 05/10/2026, com as decisões do Joaquim da seção 1.9;
+> revisão do Gabriel pendente; etapas 2 a 6 devidas antes do primeiro aluno real. O texto é do
+> Claude (04/10/2026); o Joaquim decidiu os itens listados em 1.9, não leu o texto inteiro.
 > **Etapas 2 a 6:** devidas antes do primeiro aluno real (D60, D71). Enquanto o dado for 100%
 > sintético, a etapa 1 basta para o MVP de apresentação.
 > **Sobre as fontes:** o ato do CNE de 01/09/2026 foi lido só por cobertura de imprensa
@@ -264,20 +265,20 @@ decidida pela coordenação, com registro próprio (quem, quando, motivo) e audi
 servidor: função suspensa recusa executar. São duas chaves, suspensas uma sem a outra:
 `sinais_para_o_professor` e `resumo_e_alerta`.
 
-**Três pontos que o desenho atual deixa sem resposta, e que dependem do Joaquim:**
+**Três pontos que o desenho atual deixava sem resposta. Só o 2 foi decidido pelo Joaquim em 05/10/2026 (1.9); o 1 e o 3 continuam abertos:**
 
-1. **Tutor ligado com os sinais suspensos.** A D47 sustenta o Tutor sem aprovação prévia porque
+1. **(Aberto.)** **Tutor ligado com os sinais suspensos.** A D47 sustenta o Tutor sem aprovação prévia porque
    ele é supervisionado "com sinais ao vivo para o professor, registro, resumo". Com
    `sinais_para_o_professor` suspensa e `tutor_com_o_aluno` ligada, sobram o registro e a
    conversa visível. Falta decidir se isso ainda conta como supervisão, ou se suspender os sinais
    exige suspender o Tutor.
-2. **O sinal "precisa de atenção humana".** O texto de `sinais_para_o_professor` em `FUNCOES` não
+2. **(Decidido para o MVP, 1.9; a rever antes do primeiro aluno real.)** **O sinal "precisa de atenção humana".** O texto de `sinais_para_o_professor` em `FUNCOES` não
    o cita, e ele é salvaguarda do aluno (D36), não aviso pedagógico. Falta decidir se a suspensão
-   dos sinais o desliga. A proposta desta AIA é que **não desligue**.
-3. **"Aluno que precisa de atenção", em "Turmas".** Não tem chave em `FUNCOES`. Hoje nenhuma
+   dos sinais o desliga. O Joaquim decidiu que **não desliga**: suspender `sinais_para_o_professor` não desliga o sinal de atenção humana (D36).
+3. **(Aberto.)** **"Aluno que precisa de atenção", em "Turmas".** Não tem chave em `FUNCOES`. Hoje nenhuma
    suspensão o alcança.
 
-**O que acontece com o que a função já produziu — proposta desta AIA, a confirmar pelo Joaquim:**
+**O que acontece com o que a função já produziu — decidido pelo Joaquim em 05/10/2026 (1.9):**
 
 - com a função suspensa, nenhum sinal novo e nenhum resumo novo são gerados;
 - os sinais e os resumos já gerados continuam visíveis a quem já os via, e seguem a retenção;
@@ -314,7 +315,15 @@ servidor: função suspensa recusa executar. São duas chaves, suspensas uma sem
 8. **Protocolo de risco à vida:** como o sinal "precisa de atenção humana" chega a quem notifica
    o Conselho Tutelar. Depende da escola, de advogado e de orientação educacional; a detalhar no
    PRD do F9.
-9. **Os três pontos da suspensão** (1.7).
+9. **Os três pontos da suspensão** (1.7). **Parcialmente decidido (1.9):** o ponto 2 (atenção humana), para o MVP e a rever antes do primeiro aluno real. Os pontos 1 (Tutor ligado sem os sinais, e se isso ainda é supervisão, D47) e 3 (sem chave para "aluno que precisa de atenção" em "Turmas") continuam abertos, dependem do Joaquim, e valem como pergunta para o primeiro aluno real.
+
+Os itens restantes não bloqueiam o MVP de apresentação (dado sintético, D71); bloqueiam o primeiro aluno real (etapas 2 a 6).
+
+### 1.9 Decisões do Joaquim para o MVP (05/10/2026)
+
+1. **Suspensão (1.7), o que a função já produziu.** Aceita a proposta de 1.7 tal como escrita: com a função suspensa nenhum sinal novo e nenhum resumo novo são gerados; os já gerados continuam visíveis a quem já os via e seguem a retenção; a auditoria das leituras nominais nunca é apagada. Foi o que o MVP implementou, e a revisão da fase 4 aprovou.
+2. **Atenção humana (1.7, ponto 2).** Suspender `sinais_para_o_professor` **não** desliga o sinal "precisa de atenção humana" (D36). A rever antes do primeiro aluno real.
+3. **Não decidido, com franqueza:** os pontos 1 e 3 de 1.7 (Tutor ligado com os sinais suspensos; "aluno que precisa de atenção" em "Turmas" sem chave) seguem abertos. A decisão do Joaquim sobre chaves tratou do diagnóstico e da saída da aba, não destes.
 
 ---
 

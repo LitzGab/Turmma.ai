@@ -6,8 +6,9 @@
 > **Função coberta** (`FUNCOES`, em `packages/shared/src/time/funcoes.ts`): `tutor_com_o_aluno` —
 > agente Tutor, autonomia 2 (executa e avisa), alto risco. O que o Tutor avisa ao professor é
 > outra função, `sinais_para_o_professor`, e está em `docs/aia/sinais-e-alertas.md`.
-> **Estado:** rascunho da **etapa 1**, escrito pelo Claude em 04/10/2026, a revisar pelo Joaquim e
-> depois pelo Gabriel. Nada aqui vale como avaliação concluída antes dessas duas revisões.
+> **Estado:** etapa 1 fechada para o MVP em 05/10/2026, com as decisões do Joaquim da seção 1.9;
+> revisão do Gabriel pendente; etapas 2 a 6 devidas antes do primeiro aluno real. O texto é do
+> Claude (04/10/2026); o Joaquim decidiu os itens listados em 1.9, não leu o texto inteiro.
 > **Etapas 2 a 6:** devidas antes do primeiro aluno real (D60, D71). Enquanto o dado for 100%
 > sintético, a etapa 1 basta para o MVP de apresentação.
 > **Sobre as fontes:** o ato do CNE de 01/09/2026 foi lido só por cobertura de imprensa
@@ -295,7 +296,7 @@ suspendeu, quando e o motivo, e com auditoria. A busca tem as duas chaves própr
 o modo casa é configuração por turma (D19): desligar qualquer um dos dois não exige suspender o
 Tutor.
 
-**O que acontece com o que a função já produziu — proposta desta AIA, a confirmar pelo Joaquim:**
+**O que acontece com o que a função já produziu — decidido pelo Joaquim em 05/10/2026:**
 
 - o aluno vê o Tutor como indisponível, com texto simples, sem mensagem de erro;
 - a conversa em andamento para na mensagem seguinte; nada é apagado;
@@ -341,6 +342,14 @@ Tutor.
     D60 e pela D66; o desenho fecha nas etapas 4 e 6.
 14. **Responsabilidade por resposta errada do Tutor**, no contrato com a escola. Depende de
     advogado (`TODO.md`).
+
+Os itens restantes não bloqueiam o MVP de apresentação (dado sintético, D71); bloqueiam o primeiro aluno real (etapas 2 a 6).
+
+### 1.9 Decisões do Joaquim para o MVP (05/10/2026)
+
+1. **Suspensão (1.7).** Aceita a proposta de 1.7 tal como escrita: o aluno vê o Tutor como indisponível, com texto simples; a conversa em andamento para na mensagem seguinte e nada é apagado; conversas e resumos já gravados continuam visíveis ao professor da turma e seguem a retenção; o canal de aviso da D61, quando existir, não é desligado. Foi o que o MVP implementou, e a revisão da fase 4 aprovou.
+
+As decisões de 05/10/2026 sobre chaves, adaptação e justificativa da rejeição não alteram esta AIA.
 
 ---
 
