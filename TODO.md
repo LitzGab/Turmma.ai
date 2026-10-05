@@ -743,9 +743,11 @@ qualquer dado real:
   e2e comprimido e com cache, como a produção, é mudança de infra (contêiner `web` e borda), com `test:infra`.
 - [ ] **Ensaio de alertas intermitente** na esteira: a regra "Login recusado pelo semáforo do hash" ficou em `pending`
   até o prazo numa execução da `mvp/apresentacao` e passou na reexecução. Se voltar, entra por `/corrigir`.
-- [ ] **E2e intermitente "segunda pessoa"** (`e2e/areas.spec.ts:381`, chromebook): na esteira `37302975647` a coordenação
-  entrou na aba do professor e "Turmas" mostrou o estado vazio ("A coordenação ainda não alocou você") em vez da turma
-  da professora, e passou na reexecução, sem mudança de código. É o quarto e2e intermitente da `mvp/apresentacao` em
+- [ ] **E2e intermitente "segunda pessoa"** (`e2e/areas.spec.ts:381`, chromebook e celular): na esteira `37302975647` a
+  coordenação entrou na aba do professor e "Turmas" mostrou o estado vazio ("A coordenação ainda não alocou você") em vez
+  da turma da professora, e passou na reexecução, sem mudança de código. Voltou no projeto `celular` na esteira
+  `37324214757` da `develop` (`e98a21b`, merge do PR #2, que só mudou `.md`), com o mesmo estado vazio no lugar da
+  turma; o job e2e 3/4 foi reexecutado. É o quarto e2e intermitente da `mvp/apresentacao` em
   torno da página inicial do professor e da troca de escola (os outros são "W4: os estados de Turmas" e os dois da troca
   de escola no celular): vale um `/corrigir` que olhe os quatro juntos antes de a esteira da `develop` voltar a
   ser por commit.
