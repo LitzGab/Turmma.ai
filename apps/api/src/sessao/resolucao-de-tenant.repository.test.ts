@@ -1,6 +1,5 @@
 import { justificativaSemEscopo, TAMANHO_MINIMO_JUSTIFICATIVA_SEM_ESCOPO } from '@educa/nucleo'
 import { describe, expect, it } from 'vitest'
-import { CicloDeVidaRepository } from './ciclo-de-vida.repository.js'
 import { ConviteRepository } from './convite.repository.js'
 import { CriacaoDeSessaoRepository } from './criacao-de-sessao.repository.js'
 import { EuRepository } from './eu.repository.js'
@@ -26,17 +25,14 @@ describe('ResolucaoDeTenantRepository: toda operação sem escopo é marcada e j
       'conviteValidoPorHash',
       'criarContas',
       'definirSenhaNoAceite',
-      'encerrarSessoesDaConta',
       'escolaDoConviteParaOperador',
       'escolaDoUsuarioParaOperador',
       'escolaPorSlug',
       'escolasDaRedeDoIpDeSaida',
       'gravarFalhaDeLoginPorEmail',
       'gravarSegredoDeMfa',
-      'limparContaSemUso',
       'mfaDaConta',
       'sessaoParaRenovar',
-      'travarConta',
       'travarContaParaRedefinir',
       'usarCodigoDeRecuperacao',
       'usarConvitePorHash',
@@ -61,9 +57,6 @@ describe('ResolucaoDeTenantRepository: toda operação sem escopo é marcada e j
       'usarCodigoDeRecuperacao',
       'travarContaParaRedefinir',
       'apagarMfa',
-      'encerrarSessoesDaConta',
-      'travarConta',
-      'limparContaSemUso',
     ]) {
       expect(justificativas[metodo], metodo).toMatch(/credencial da equipe é global/)
     }
@@ -79,7 +72,7 @@ describe('ResolucaoDeTenantRepository: toda operação sem escopo é marcada e j
     for (const metodo of ['acessoDaSalaPorToken', 'acessoDaSalaPorCodigo']) expect(justificativas[metodo], metodo).toMatch(/link e o código da sala não dizem a escola/)
   })
 
-  it('a criação de usuário e sessão, o registro de acesso, o /v1/eu, as escritas da renovação, da atividade e da saída, o alvo da redefinição do MFA, o convite na escola, a sessão de origem da troca e a desativação e a eliminação não saem sem escopo: usam a escola do contexto', () => {
+  it('a criação de usuário e sessão, o registro de acesso, o /v1/eu, as escritas da renovação, da atividade e da saída, o alvo da redefinição do MFA, o convite na escola e a sessão de origem da troca não saem sem escopo: usam a escola do contexto', () => {
     for (const classe of [
       CriacaoDeSessaoRepository,
       RegistroDeAcessoRepository,
@@ -88,7 +81,6 @@ describe('ResolucaoDeTenantRepository: toda operação sem escopo é marcada e j
       RedefinicaoDeMfaRepository,
       ConviteRepository,
       SessaoDeOrigemRepository,
-      CicloDeVidaRepository,
     ]) {
       const metodos = metodosDe(classe)
       expect(metodos.length).toBeGreaterThan(0)

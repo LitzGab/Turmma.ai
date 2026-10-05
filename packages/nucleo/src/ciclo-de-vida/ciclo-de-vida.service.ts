@@ -1,11 +1,12 @@
-import { contextoAtual, ErroDeDominio, exigirEscolaDoContexto, RegistroDeAuditoria, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
 import { z } from 'zod'
-import { TurmaRepository } from '../estrutura/turma.repository.js'
-import { AcessoDaTurmaRepository } from '../sala/acesso-da-turma.repository.js'
+import { RegistroDeAuditoria } from '../auditoria/registro-de-auditoria.js'
+import { contextoAtual } from '../contexto/contexto.js'
+import { exigirEscolaDoContexto } from '../contexto/escola-do-contexto.js'
+import type { Banco, TransacaoBanco } from '../db/banco.js'
+import { ErroDeDominio } from '../erro/erro-de-dominio.js'
 import { CicloDeVidaRepository, type UsuarioDoCicloDeVida } from './ciclo-de-vida.repository.js'
-import { EscritaDeSessaoRepository } from './escrita-de-sessao.repository.js'
-import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
+import { ContaGlobalRepository } from './conta-global.repository.js'
 
 /** Quem pede a ação, quando não é a pessoa da sessão: alguém da nossa equipe, por comando, a pedido da escola. */
 export interface AutoriaDoCicloDeVida {
@@ -21,10 +22,18 @@ const naoEncontrado = () => new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
 /**
  * O fim do acesso de quem sai da escola (tarefa 17.0; Tech Spec, seção 5, "Ciclo de vida"; regra 20, itens 15 e 18).
  * Cada ação roda numa transação, com a auditoria dentro dela, e alcança só o que é da escola do contexto: a conta
- * global só é limpa quando não serve mais a escola nenhuma.
+ * global só é limpa quando não serve mais a escola nenhuma. Mora no `nucleo` desde o F3 (tarefa 1.0), para o worker
+ * alcançar a eliminação do titular; a API importa pelo subcaminho `@educa/nucleo/ciclo-de-vida`.
  *
  * Não há rota no F1 (a tela de estrutura é do F2, e o pedido do titular do F3): quem chama já conferiu a permissão, e
  * o contexto traz a escola e o autor, a pessoa da sessão ou o operador.
+ *
+ * **A transação de quem chama.** `desativar` e `eliminar` recebem, opcional, a transação de quem chama (a etapa 3 da
+ * eliminação do titular, o lote de `pessoa_desativada`): as travas, as escritas e a auditoria entram nela, e uma falha
+ * depois, em quem chama, desfaz também o que o ciclo de vida fez. Sem ela, cada ação abre a própria transação. Na
+ * transação de quem chama, o ciclo de vida não abre ponto de salvamento: um erro aqui sobe, e quem chama desfaz tudo.
+ * Um erro de SQL aborta a transação inteira de quem chama, que não pode capturá-lo e seguir nela; quem elimina em lote
+ * usa uma transação por titular. O `NAO_ENCONTRADO` sai antes de qualquer escrita e pode ser capturado.
  *
  * - **Desativar:** o usuário deixa de entrar na requisição seguinte (a guarda recusa usuário desativado) e deixa de ter
  *   credencial guardada nesta escola: as sessões dele aqui são encerradas, o hash da senha da matrícula é apagado e a
@@ -47,16 +56,16 @@ const naoEncontrado = () => new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
 export class CicloDeVidaService {
   constructor(private readonly banco: Banco) {}
 
-  async desativar(usuarioId: string, autoria: AutoriaDoCicloDeVida = {}): Promise<void> {
-    await this.#naTransacao(usuarioId, async (tx, alvo) => {
+  async desativar(usuarioId: string, autoria: AutoriaDoCicloDeVida = {}, transacao?: TransacaoBanco): Promise<void> {
+    await this.#naTransacao(usuarioId, transacao, async (tx, alvo) => {
       if (alvo.desativadoEm !== null) throw naoEncontrado()
       const repositorio = new CicloDeVidaRepository(tx)
       const desativadoEm = await repositorio.desativar(usuarioId)
       if (desativadoEm === undefined) throw naoEncontrado()
-      const sessoesEncerradas = await new EscritaDeSessaoRepository(tx).encerrarDoUsuario(usuarioId, 'desativacao')
+      const sessoesEncerradas = await repositorio.encerrarSessoesDoUsuario(usuarioId, 'desativacao')
       const credencialApagada = await repositorio.apagarSenhaDaMatricula(usuarioId)
       const contaExternaDesligada = (await repositorio.apagarContaExterna(usuarioId)) !== undefined
-      const contaLimpa = alvo.contaId !== null && (await new ResolucaoDeTenantRepository(tx).limparContaSemUso(alvo.contaId))
+      const contaLimpa = alvo.contaId !== null && (await new ContaGlobalRepository(tx).limparContaSemUso(alvo.contaId))
       await registro.gravar(tx, 'usuario.desativado', {
         entidadeId: usuarioId,
         antes: { papel: alvo.papel },
@@ -66,22 +75,22 @@ export class CicloDeVidaService {
     })
   }
 
-  async eliminar(usuarioId: string, autoria: AutoriaDoCicloDeVida = {}): Promise<void> {
-    await this.#naTransacao(usuarioId, async (tx, alvo) => {
+  async eliminar(usuarioId: string, autoria: AutoriaDoCicloDeVida = {}, transacao?: TransacaoBanco): Promise<void> {
+    await this.#naTransacao(usuarioId, transacao, async (tx, alvo) => {
       const repositorio = new CicloDeVidaRepository(tx)
       const sessoesApagadas = await repositorio.apagarSessoes(usuarioId)
       // As turmas dele em `FOR NO KEY UPDATE` antes de apagar os vínculos (turma → vínculo, como o encerrar e o excluir): o gerar que está no meio termina primeiro, e o acesso
       // dele cai abaixo; o que chega depois espera, reconfere o vínculo e sai `NAO_ENCONTRADO`. A revogação vem antes do
       // `delete` do usuário, que anula o `criado_por` pela FK.
-      await new TurmaRepository(tx).travarContraOGerarDoProfessor(usuarioId)
+      await repositorio.travarContraOGerarDoProfessor(usuarioId)
       const vinculosApagados = await repositorio.apagarVinculos(usuarioId)
-      const acessosRevogados = await new AcessoDaTurmaRepository(tx).revogarDeQuemSaiu(usuarioId)
+      const acessosRevogados = await repositorio.revogarDeQuemSaiu(usuarioId)
       for (const revogado of acessosRevogados) await registro.gravar(tx, 'acesso_turma.revogado', { entidadeId: revogado.id, depois: { turmaId: revogado.turmaId }, ...autoria })
       const credencialApagada = await repositorio.apagarCredencialDaMatricula(usuarioId)
       const contaExternaApagada = (await repositorio.apagarContaExterna(usuarioId)) !== undefined
       const { linhaDaListaApagada, pedidosApagados } = await repositorio.apagarDaListaDeNomes(usuarioId)
       await repositorio.apagarUsuario(usuarioId)
-      const contaLimpa = alvo.contaId !== null && (await new ResolucaoDeTenantRepository(tx).limparContaSemUso(alvo.contaId))
+      const contaLimpa = alvo.contaId !== null && (await new ContaGlobalRepository(tx).limparContaSemUso(alvo.contaId))
       await registro.gravar(tx, 'usuario.eliminado', {
         entidadeId: usuarioId,
         antes: { papel: alvo.papel, desativadoEm: alvo.desativadoEm?.toISOString() ?? null },
@@ -92,7 +101,7 @@ export class CicloDeVidaService {
   }
 
   async desligarContaExterna(usuarioId: string, autoria: AutoriaDoCicloDeVida = {}): Promise<void> {
-    await this.#naTransacao(usuarioId, async (tx, alvo) => {
+    await this.#naTransacao(usuarioId, undefined, async (tx, alvo) => {
       if (alvo.desativadoEm !== null) throw naoEncontrado()
       const desligada = await new CicloDeVidaRepository(tx).apagarContaExterna(usuarioId)
       if (desligada === undefined) throw naoEncontrado()
@@ -101,19 +110,21 @@ export class CicloDeVidaService {
   }
 
   /**
-   * Abre a transação, trava o usuário da escola do contexto e a conta dele, e só então roda a ação. O próprio usuário da
-   * sessão não se desativa nem se elimina: a escola ficaria sem quem pediu, e a resposta é a mesma do id de ninguém.
+   * Na transação de quem chama, ou numa própria quando não há, trava o usuário da escola do contexto e a conta dele, e só
+   * então roda a ação. O próprio usuário da sessão não se desativa nem se elimina: a escola ficaria sem quem pediu, e a
+   * resposta é a mesma do id de ninguém.
    */
-  async #naTransacao(usuarioId: string, acao: (tx: TransacaoBanco, alvo: UsuarioDoCicloDeVida) => Promise<void>): Promise<void> {
+  async #naTransacao(usuarioId: string, transacao: TransacaoBanco | undefined, acao: (tx: TransacaoBanco, alvo: UsuarioDoCicloDeVida) => Promise<void>): Promise<void> {
     exigirEscolaDoContexto()
     if (!esquemaId.safeParse(usuarioId).success) throw naoEncontrado()
     // O contexto guarda o id em minúsculas, como o Postgres o devolve: a comparação com o próprio usuário vale em qualquer caixa.
     if (contextoAtual()?.usuarioId === usuarioId.toLowerCase()) throw naoEncontrado()
-    await this.banco.transaction(async (tx) => {
+    const rodar = async (tx: TransacaoBanco): Promise<void> => {
       const alvo = await new CicloDeVidaRepository(tx).travarUsuario(usuarioId)
       if (alvo === undefined) throw naoEncontrado()
-      if (alvo.contaId !== null) await new ResolucaoDeTenantRepository(tx).travarConta(alvo.contaId)
+      if (alvo.contaId !== null) await new ContaGlobalRepository(tx).travarConta(alvo.contaId)
       await acao(tx, alvo)
-    })
+    }
+    await (transacao === undefined ? this.banco.transaction(rodar) : rodar(transacao))
   }
 }

@@ -78,6 +78,82 @@ describe('arquitetura: a resolução de tenant fica dentro do módulo de sessão
 })
 
 /**
+ * F3, tarefa 1.0 (Tech Spec do F3, seção 6; regra 10, item 9): as escritas na conta global que o ciclo de vida faz saíram
+ * da resolução de tenant para a `ContaGlobalRepository`, em `packages/nucleo/src/ciclo-de-vida`, quando o ciclo de vida
+ * foi para o `nucleo`. A exceção da `Conta` (`docs/modelo-de-dados.md`, regras transversais, item 1) passa a aceitar dois
+ * caminhos: o módulo `sessao` da API e a pasta do ciclo de vida. A classe não sai pelo barrel do pacote nem pelo
+ * subcaminho do ciclo de vida, só pelo `@educa/nucleo/conta-global`, e a lista de quem a importa é fechada aqui.
+ */
+const CAMINHOS_DA_CONTA_GLOBAL = [MODULO_SESSAO, 'packages/nucleo/src/ciclo-de-vida/']
+const ARQUIVO_DA_CONTA_GLOBAL = 'packages/nucleo/src/ciclo-de-vida/conta-global.repository.ts'
+/** Cita a classe, o arquivo dela ou o subcaminho do pacote: importação, reexportação ou `import()` dinâmico. */
+const USO_DA_CONTA_GLOBAL = /\bContaGlobalRepository\b|conta-global\.repository|@educa\/nucleo\/conta-global/
+
+/**
+ * Quem usa a `ContaGlobalRepository` no código, fora o próprio arquivo e este teste (que a importa por `import()` para
+ * conferir o barrel): citá-la num comentário não é usá-la.
+ */
+function quemUsaAContaGlobal(arquivos: readonly Arquivo[]): string[] {
+  return arquivos
+    .filter((arquivo) => arquivo.caminho !== ARQUIVO_DA_CONTA_GLOBAL && arquivo.caminho !== ESTE_ARQUIVO)
+    .filter((arquivo) => USO_DA_CONTA_GLOBAL.test(semComentarios(arquivo.texto)))
+    .map((arquivo) => arquivo.caminho)
+}
+
+/** Os que a citam fora dos dois caminhos da exceção da `Conta`. */
+function usosDaContaGlobalForaDosCaminhos(arquivos: readonly Arquivo[]): string[] {
+  return quemUsaAContaGlobal(arquivos).filter((caminho) => !CAMINHOS_DA_CONTA_GLOBAL.some((permitido) => caminho.startsWith(permitido)))
+}
+
+describe('arquitetura: a conta global só pelo módulo sessao e pelo ciclo de vida (F3, tarefa 1.0)', () => {
+  it('quem importa a ContaGlobalRepository é exatamente esta lista, e ninguém fora dos dois caminhos', () => {
+    const arquivos = arquivosDoRepositorio()
+    // A varredura enxerga o código: acha o próprio arquivo da classe.
+    expect(arquivos.filter((arquivo) => USO_DA_CONTA_GLOBAL.test(arquivo.texto)).map((arquivo) => arquivo.caminho)).toContain(ARQUIVO_DA_CONTA_GLOBAL)
+    expect(usosDaContaGlobalForaDosCaminhos(arquivos)).toEqual([])
+    expect(quemUsaAContaGlobal(arquivos).sort()).toEqual([
+      'apps/api/src/sessao/redefinicao-de-mfa.ts',
+      'apps/api/src/sessao/resolucao-de-tenant.repository.int.test.ts',
+      'packages/nucleo/src/ciclo-de-vida/ciclo-de-vida.repository.test.ts',
+      'packages/nucleo/src/ciclo-de-vida/ciclo-de-vida.service.ts',
+    ])
+  })
+
+  it('reprova o terceiro caminho que a importa, reexporta ou carrega por import dinâmico, e deixa os dois caminhos passarem', () => {
+    const fora = [
+      { caminho: 'apps/api/src/estrutura/vinculo.service.ts', texto: "import { ContaGlobalRepository } from '@educa/nucleo/conta-global'" },
+      { caminho: 'packages/nucleo/src/retencao/atalho.ts', texto: "export * from '../ciclo-de-vida/conta-global.repository.js'" },
+      { caminho: 'apps/worker/src/processadores/eliminar.ts', texto: "const { ContaGlobalRepository } = await import('@educa/nucleo/conta-global')" },
+      { caminho: 'apps/worker/src/processadores/expurgar.ts', texto: "import * as global from '@educa/nucleo/conta-global'" },
+    ]
+    const dentro = [
+      { caminho: 'apps/api/src/sessao/redefinicao-de-mfa.ts', texto: "import { ContaGlobalRepository } from '@educa/nucleo/conta-global'" },
+      { caminho: 'packages/nucleo/src/ciclo-de-vida/ciclo-de-vida.service.ts', texto: "import { ContaGlobalRepository } from './conta-global.repository.js'" },
+    ]
+    // Citar a classe num comentário, ou um texto que só contém "conta-global", fora dos dois caminhos, não é usá-la.
+    const inocentes = [
+      { caminho: 'packages/nucleo/src/db/schema/conta.ts', texto: '/** A `ContaGlobalRepository` escreve aqui. */\n// e o @educa/nucleo/conta-global também' },
+      { caminho: 'apps/api/src/telemetria/metricas.ts', texto: "const chave = 'metrica.conta-global.limpas'" },
+    ]
+    expect(usosDaContaGlobalForaDosCaminhos([...fora, ...dentro, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho))
+  })
+
+  it('nem o barrel do @educa/nucleo nem o subcaminho do ciclo de vida exportam a ContaGlobalRepository, com o nome dela ou outro', async () => {
+    const { ContaGlobalRepository } = await import('@educa/nucleo/conta-global')
+    const cicloDeVida = await import('@educa/nucleo/ciclo-de-vida')
+    for (const [nome, modulo] of [
+      ['@educa/nucleo', nucleo],
+      ['@educa/nucleo/ciclo-de-vida', cicloDeVida],
+    ] as const) {
+      expect(Object.keys(modulo), nome).not.toContain('ContaGlobalRepository')
+      expect(Object.values(modulo), nome).not.toContain(ContaGlobalRepository)
+    }
+    // O subcaminho do ciclo de vida é o que a API e o worker usam: o serviço sai por ele.
+    expect(Object.keys(cicloDeVida)).toContain('CicloDeVidaService')
+  })
+})
+
+/**
  * I1 (Tech Spec da A0b, seção 6; regra 10, item 9): a leitura entre escolas do painel mora num repository só, o
  * `PainelRepository`, com exatamente três métodos, cada um `@SemEscopo` com a justificativa do painel; e só o
  * `painel.service.ts` o usa. Um quarto método sem escopo, ou outro arquivo que o importe, é mudança da spec.

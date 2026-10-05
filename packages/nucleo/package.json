@@ -8,6 +8,16 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./ciclo-de-vida": {
+      "source": "./src/ciclo-de-vida/index.ts",
+      "types": "./dist/ciclo-de-vida/index.d.ts",
+      "default": "./dist/ciclo-de-vida/index.js"
+    },
+    "./conta-global": {
+      "source": "./src/ciclo-de-vida/conta-global.repository.ts",
+      "types": "./dist/ciclo-de-vida/conta-global.repository.d.ts",
+      "default": "./dist/ciclo-de-vida/conta-global.repository.js"
     }
   },
   "files": [

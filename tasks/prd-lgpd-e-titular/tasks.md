@@ -5,11 +5,11 @@
 
 ## Lista
 
-- [ ] **1.0 — O ciclo de vida mora no nucleo, sem mudar comportamento**
-  - [ ] 1.1 Mover serviço e repositórios; a API importa do `@educa/nucleo` (subcaminho), sem export no barrel da `ContaGlobalRepository`
-  - [ ] 1.2 `eliminar`/`desativar` aceitam `tx` opcional de quem chama; sem ela, abrem a própria transação como hoje
-  - [ ] 1.3 Teste de arquitetura: a exceção da `Conta` aceita só `sessao` e `nucleo/ciclo-de-vida`, e lista quem importa a `ContaGlobalRepository`; `docs/modelo-de-dados.md` atualizado
-  - [ ] 1.4 Testes: os de ciclo de vida e de fim de vínculo mudam só de lugar, sem mudar asserção
+- [x] **1.0 — O ciclo de vida mora no nucleo, sem mudar comportamento**
+  - [x] 1.1 Mover serviço e repositórios; a API importa do `@educa/nucleo` (subcaminho), sem export no barrel da `ContaGlobalRepository`
+  - [x] 1.2 `eliminar`/`desativar` aceitam `tx` opcional de quem chama; sem ela, abrem a própria transação como hoje
+  - [x] 1.3 Teste de arquitetura: a exceção da `Conta` aceita só `sessao` e `nucleo/ciclo-de-vida`, e lista quem importa a `ContaGlobalRepository`; `docs/modelo-de-dados.md` atualizado
+  - [x] 1.4 Testes: os de ciclo de vida e de fim de vínculo mudam só de lugar, sem mudar asserção
 
 - [ ] **2.0 — A retenção da escola existe e a operação a ajusta por comando**
   - [ ] 2.1 `packages/shared/src/privacidade`: `CATEGORIAS_DE_RETENCAO`, `PRAZOS_FIXOS`, `CLASSIFICACAO_DAS_TABELAS` (com "entra no arquivo" e a coluna de ligação), `COLUNAS_FORA_DO_ARQUIVO` (inclui `mfa_ultimo_passo` e `mfa_chave_versao`), erro `RETENCAO_FORA_DO_LIMITE`

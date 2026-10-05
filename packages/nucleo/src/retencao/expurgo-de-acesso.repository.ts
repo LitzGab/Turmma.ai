@@ -146,7 +146,7 @@ const SEM_USO = (agora: Date) => sql`
 
 /**
  * A conta da equipe que deixou de servir a qualquer escola depois da desativação, pelo mesmo critério da limpeza na
- * desativação (`limparContaSemUso`, na resolução de tenant), que adia a limpeza enquanto um convite a segura; quando o
+ * desativação (`limparContaSemUso`, no ciclo de vida), que adia a limpeza enquanto um convite a segura; quando o
  * convite vence ou é revogado, é aqui que a conta perde e-mail, senha e segundo fator, e as sessões abertas dela são
  * encerradas com motivo `conta_limpa`. A linha fica só com o id, que os usuários desativados apontam.
  *
@@ -188,7 +188,8 @@ const LIMPAR_TRAVADAS = (ids: readonly string[], agora: Date) => sql`
  * há mais de 30 dias e acesso da turma vencido ou revogado há mais de 30 dias (A1, tarefa 10.0) saem do banco, e com os
  * mesmos prazos o acesso, a sessão e o convite da operação Turmma (A0, tarefa 9.0); depois, a conta da
  * equipe sem uso perde a credencial. Mora em `retencao`, como o expurgo de jobs do F0, e seus
- * dois métodos são, com o dele, as exceções ao escopo fora da resolução de tenant (Tech Spec, seção 6): rotinas nossas,
+ * dois métodos são, com o dele, as exceções ao escopo fora da resolução de tenant e da conta global do ciclo de vida
+ * (Tech Spec, seção 6): rotinas nossas,
  * sem requisição de escola.
  */
 export class ExpurgoDeAcessoRepository {

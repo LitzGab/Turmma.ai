@@ -1,4 +1,5 @@
 import { ErroDeDominio, RegistroDeAuditoria, type Banco } from '@educa/nucleo'
+import { CicloDeVidaRepository } from '@educa/nucleo/ciclo-de-vida'
 import { Logger } from '@nestjs/common'
 import {
   CodigoDeErro,
@@ -20,7 +21,6 @@ import {
   type Vinculo,
   type VinculoDaCoordenacao,
 } from '@educa/shared'
-import { AcessoDaTurmaRepository } from '../sala/acesso-da-turma.repository.js'
 import { DisciplinaRepository } from './disciplina.repository.js'
 import { paginar } from './entrada.js'
 import { TurmaRepository } from './turma.repository.js'
@@ -132,7 +132,7 @@ export class VinculoService {
       if (antes.estado !== 'encerrado') {
         if (!(await vinculos.encerrar(id, pedido.motivo))) throw new ErroDeDominio(CodigoDeErro.CONFLITO)
         await registro.gravar(tx, 'vinculo.encerrado', { entidadeId: id, antes: { estado: antes.estado }, depois: { estado: 'encerrado', motivo: pedido.motivo } })
-        const revogados = await new AcessoDaTurmaRepository(tx).revogarDeQuemSaiu(antes.usuarioId, antes.turmaId)
+        const revogados = await new CicloDeVidaRepository(tx).revogarDeQuemSaiu(antes.usuarioId, antes.turmaId)
         for (const revogado of revogados) await registro.gravar(tx, 'acesso_turma.revogado', { entidadeId: revogado.id, depois: { turmaId: revogado.turmaId } })
         this.#logger.log('vinculo.encerrado')
       }

@@ -54,9 +54,17 @@ Convite          → escola*, tokenHash*, tipo (coordenador | professor), usuari
 **A identidade é global, os vínculos são por escola** (decidido na Tech Spec do F1). `Conta`
 não tem `escolaId` porque é o login; `Usuario` é a pessoa *naquela* escola, com o papel dela.
 Um professor em duas escolas é uma `Conta` com dois `Usuario`, e o escopo de tenant continua
-inteiro na regra 10: toda tabela de domínio tem `escolaId`, e quem resolve a fronteira é o
-único módulo autorizado a consultar sem escopo (`ResolucaoDeTenantRepository`, com
-`@SemEscopo` e teste de arquitetura que prova que só `sessao` a importa).
+inteiro na regra 10: toda tabela de domínio tem `escolaId`, e quem resolve a fronteira é a
+`ResolucaoDeTenantRepository`, com `@SemEscopo` e teste de arquitetura que prova que só `sessao`
+a importa. Ela não é mais a única a alcançar a `Conta` sem escopo: as três operações sobre a
+`Conta` global que o ciclo de vida faz (travar, limpar a conta sem uso e encerrar as sessões dela) moram
+na `ContaGlobalRepository`, em `packages/nucleo/src/ciclo-de-vida`, desde que o ciclo de vida foi
+para o `nucleo` (F3, tarefa 1.0): ela não sai pelo barrel do pacote, só pelo subcaminho
+`@educa/nucleo/conta-global`, e o teste de arquitetura lista quem a importa — o
+`CicloDeVidaService` e o `sessao` (a redefinição do MFA), e os testes deles. As três são exceções antigas que mudaram
+de lugar, mas já estão no ponto que a regra 10, item 9 aponta como sinal de desenho errado (a
+terceira no mesmo módulo): qualquer outra ali é mudança de spec, discutida antes, e não acréscimo
+de tarefa.
 
 **O aluno é `Usuario` sem `Conta`**, com `CredencialMatricula`. Não tem e-mail (regra 20).
 Matrícula é única por `(escolaId, matricula)`, nunca globalmente: dois alunos em escolas
@@ -586,7 +594,8 @@ liga a decisão sobre o professor (D45, regra 70 item 8). Os dois estão no mapa
    - o próprio tenant: `Escola` e a `Rede` acima dela — ver "Estrutura institucional";
    - tabela pública sem dono (habilidades da BNCC, banco de questões público);
    - a identidade de login (`Conta`, `CodigoRecuperacao`), que é global por desenho e só é
-     alcançada pelo módulo `sessao` — ver "Pessoas e vínculos";
+     alcançada pelo módulo `sessao` e pelo `nucleo/ciclo-de-vida` (a `ContaGlobalRepository`),
+     além da limpeza noturna do expurgo de acesso — ver "Pessoas e vínculos";
    - as tabelas da operação Turmma (`Operador`, `CodigoRecuperacaoOperador`, `ConviteOperador`,
      `SessaoOperador`, `AcessoOperacao`, `AuditoriaOperacao`), da nossa equipe e não de escola,
      só alcançadas pelo `OperadorRepository` e pelo expurgo — ver "Operação Turmma".

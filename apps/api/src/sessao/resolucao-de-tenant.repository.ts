@@ -1,6 +1,6 @@
-import { acessoTurma, anoLetivo, codigoRecuperacao, conta, convite, ErroDeDominio, escola, rede, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type MotivoDeEncerramento, type TipoDeConvite, type TransacaoBanco } from '@educa/nucleo'
+import { acessoTurma, anoLetivo, codigoRecuperacao, conta, convite, ErroDeDominio, escola, rede, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type TipoDeConvite, type TransacaoBanco } from '@educa/nucleo'
 import { CodigoDeErro, type PapelDeUsuario } from '@educa/shared'
-import { and, eq, exists, gt, gte, isNotNull, isNull, lt, ne, or, sql, type SQL } from 'drizzle-orm'
+import { and, eq, gt, gte, isNotNull, isNull, lt, ne, or, sql, type SQL } from 'drizzle-orm'
 
 /**
  * A sessão achada pelo hash do cookie, travada para a renovação decidir (tarefa 5.0): só ids, estado, datas, o papel
@@ -81,9 +81,11 @@ export interface AcessoDaSalaAchado {
 }
 
 /**
- * A fronteira da resolução de tenant, e a única do sistema (Tech Spec, seção 6): toda operação que acontece antes de
- * existir escola no contexto, ou que toca a `conta` global, que não tem escola. Cada método leva `@SemEscopo` com a
- * justificativa da tabela da seção 6, e devolve o mínimo para quem chama chegar à escola certa.
+ * A fronteira da resolução de tenant (Tech Spec, seção 6): toda operação que acontece antes de existir escola no
+ * contexto, e as da `conta` global, que não tem escola, fora as do ciclo de vida. Cada método leva `@SemEscopo` com a
+ * justificativa da tabela da seção 6, e devolve o mínimo para quem chama chegar à escola certa. As três escritas na conta
+ * global que o ciclo de vida faz (travar, limpar e encerrar as sessões dela) moram na `ContaGlobalRepository`, em
+ * `nucleo/ciclo-de-vida` (F3, tarefa 1.0), que o worker alcança.
  *
  * O desvio da regra 10, item 9 (mais de três exceções) fica contido por teste: só os arquivos de
  * `apps/api/src/sessao` importam esta classe (`apps/api/test/arquitetura.test.ts`). As tarefas seguintes
@@ -283,62 +285,6 @@ export class ResolucaoDeTenantRepository {
   async apagarMfa(contaId: string): Promise<void> {
     await this.banco.update(conta).set({ mfaSegredoCifrado: null, mfaChaveVersao: null, mfaAtivadoEm: null, mfaUltimoPasso: null }).where(eq(conta.id, contaId))
     await this.banco.delete(codigoRecuperacao).where(eq(codigoRecuperacao.contaId, contaId))
-  }
-
-  /**
-   * Encerra todas as sessões ainda abertas da conta, em todas as escolas dela, com o motivo dado: a redefinição do MFA
-   * (17.4) e a limpeza da conta sem usuário ativo (17.1). A sessão de aluno não tem conta e nunca é alcançada. Devolve
-   * só quantas, e quem chama não as põe em resposta nem em auditoria de escola nenhuma: seriam também de outra escola.
-   */
-  @SemEscopo('a credencial da equipe é global: redefinir o segundo fator ou limpar a conta encerra as sessões dela em todas as escolas, pelo conta_id já verificado, e devolve só a quantidade')
-  async encerrarSessoesDaConta(contaId: string, motivo: MotivoDeEncerramento): Promise<number> {
-    const encerradas = await this.banco
-      .update(sessao)
-      .set({ encerradaEm: sql`now()`, motivo })
-      .where(and(eq(sessao.contaId, contaId), isNull(sessao.encerradaEm)))
-      .returning({ id: sessao.id })
-    return encerradas.length
-  }
-
-  /**
-   * Trava a conta (`FOR UPDATE`) na transação da desativação ou da eliminação (17.0), antes de mexer no usuário ou na
-   * sessão: duas desativações de usuários da mesma conta, em A e em B, esperam uma pela outra, e a segunda, relendo,
-   * vê a primeira. É a mesma trava da redefinição do MFA, e na mesma ordem (conta, depois sessão).
-   */
-  @SemEscopo('a credencial da equipe é global: a desativação e a eliminação travam a conta do usuário da escola do contexto, pelo conta_id lido nela, e não devolvem nada')
-  async travarConta(contaId: string): Promise<void> {
-    await this.banco.select({ id: conta.id }).from(conta).where(eq(conta.id, contaId)).for('update')
-  }
-
-  /**
-   * Com a conta já travada (`travarConta`), limpa a conta que deixou de servir a qualquer escola (17.0; regra 20, item
-   * 18): apaga e-mail, senha, segredo e passo do TOTP e os códigos de recuperação, e encerra as sessões ainda abertas
-   * dela (motivo `conta_limpa`), que saem com o expurgo de 30 dias. A linha fica só com o id, que os usuários desativados ainda apontam.
-   *
-   * A conta serve enquanto tem um usuário ativo em alguma escola, ou um usuário que espera um convite ainda válido (não
-   * usado, não revogado e no prazo): apagar o e-mail agora deixaria o aceite desse convite sem login. Quando esse convite
-   * deixa de valer, o `sistema.expurgar-acesso` limpa a conta de madrugada, pelo mesmo critério. Devolve se limpou.
-   */
-  @SemEscopo('a credencial da equipe é global: depois de desativar ou eliminar um usuário, confere se a conta ainda tem usuário ativo ou convite válido em alguma escola e, se não tem, apaga a credencial dela; devolve só se limpou')
-  async limparContaSemUso(contaId: string): Promise<boolean> {
-    const conviteValido = this.banco
-      .select({ um: sql`1` })
-      .from(convite)
-      .where(and(eq(convite.escolaId, usuario.escolaId), eq(convite.usuarioId, usuario.id), isNull(convite.usadoEm), isNull(convite.revogadoEm), gt(convite.expiraEm, sql`now()`)))
-    const [emUso] = await this.banco
-      .select({ id: usuario.id })
-      .from(usuario)
-      .where(and(eq(usuario.contaId, contaId), or(isNull(usuario.desativadoEm), exists(conviteValido))))
-      .limit(1)
-    if (emUso !== undefined) return false
-    const limpas = await this.banco
-      .update(conta)
-      .set({ email: null, senhaHash: null, mfaSegredoCifrado: null, mfaChaveVersao: null, mfaAtivadoEm: null, mfaUltimoPasso: null })
-      .where(and(eq(conta.id, contaId), isNotNull(conta.email)))
-      .returning({ id: conta.id })
-    await this.banco.delete(codigoRecuperacao).where(eq(codigoRecuperacao.contaId, contaId))
-    await this.encerrarSessoesDaConta(contaId, 'conta_limpa')
-    return limpas.length === 1
   }
 
   /**

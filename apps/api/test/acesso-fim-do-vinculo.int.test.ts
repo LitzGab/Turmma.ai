@@ -1,12 +1,11 @@
 import { criarBanco, criarPool, executarNoContexto } from '@educa/nucleo'
+import { CicloDeVidaRepository, CicloDeVidaService } from '@educa/nucleo/ciclo-de-vida'
 import { CodigoDeErro, MENSAGENS_DE_ERRO } from '@educa/shared'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
-import { AcessoDaTurmaRepository } from '../src/sala/acesso-da-turma.repository.js'
 import { sortearCodigoDaTurma } from '../src/sala/codigo-da-sala.js'
-import { CicloDeVidaService } from '../src/sessao/ciclo-de-vida.service.js'
 import { chamar, subirApi, type ApiDeTeste } from './api-com-sessao.js'
 import { esperarNaTrava, GatilhoDeParada } from './gatilho-de-parada.js'
 import { FerramentasDaSala, semRequisicao, type SalaDeTeste } from './sala-de-teste.js'
@@ -169,6 +168,44 @@ describe('acesso da turma × fim do vínculo de quem o gerou (correção 2026-10
     expect(await revogadosNaAuditoria(s)).toEqual([])
   })
 
+  it('o colega confirmado em outra disciplina da mesma turma não segura o acesso de quem o gerou: encerrar e eliminar quem gerou revogam, com auditoria (F3, tarefa 1.0)', async () => {
+    // Encerrar: o vínculo de quem gerou acaba, e o colega de física continua confirmado na turma.
+    const s = await sala.montar()
+    const colega = await professorConfirmado(s, s.turma, s.fisica)
+    const [acesso] = await acessosDa(s, s.turma)
+    expect(acesso?.criado_por).toBe(s.professor.usuarioId)
+    expect((await encerrar(s, await vinculoDe(s, s.professor.usuarioId, s.turma))).status).toBe(200)
+    expect(await acessosDa(s, s.turma)).toEqual([expect.objectContaining({ id: acesso?.id, revogado_em: expect.any(Date) })])
+    await naoAbreASala(s)
+    expect(await revogadosNaAuditoria(s)).toEqual([{ entidade_id: acesso?.id, autor_usuario_id: s.coordenacao.usuarioId, depois: { turmaId: s.turma } }])
+    expect((await bancada.pool.query("select 1 from vinculo where escola_id = $1 and usuario_id = $2 and estado = 'confirmado'", [s.escolaId, colega.usuarioId])).rowCount).toBe(1)
+
+    // Eliminar: o mesmo, pela eliminação de quem gerou, com o colega ainda na turma.
+    const e = await sala.montar()
+    await professorConfirmado(e, e.turma, e.fisica)
+    const [acessoDeE] = await acessosDa(e, e.turma)
+    await executarNoContexto({ requisicaoId: randomUUID(), escolaId: e.escolaId, usuarioId: e.coordenacao.usuarioId, papel: 'coordenador' }, () => ciclo.eliminar(e.professor.usuarioId))
+    expect(await acessosDa(e, e.turma)).toEqual([{ id: acessoDeE?.id, criado_por: null, revogado_em: expect.any(Date) }])
+    await naoAbreASala(e)
+    expect(await revogadosNaAuditoria(e)).toEqual([{ entidade_id: acessoDeE?.id, autor_usuario_id: e.coordenacao.usuarioId, depois: { turmaId: e.turma } }])
+  })
+
+  it('um vínculo de aluno do mesmo usuário na turma não segura o acesso que ele gerou como professor (F3, tarefa 1.0)', async () => {
+    const s = await sala.montar()
+    // Só o banco cria este vínculo: o papel do vínculo não depende do papel do usuário, e é a cláusula de papel que o separa.
+    await bancada.pool.query("insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())", [
+      s.escolaId,
+      s.anoLetivoId,
+      s.professor.usuarioId,
+      s.turma,
+      s.coordenacao.usuarioId,
+    ])
+    const [acesso] = await acessosDa(s, s.turma)
+    expect((await encerrar(s, await vinculoDe(s, s.professor.usuarioId, s.turma))).status).toBe(200)
+    expect(await acessosDa(s, s.turma)).toEqual([expect.objectContaining({ id: acesso?.id, revogado_em: expect.any(Date) })])
+    await naoAbreASala(s)
+  })
+
   it('isolamento: o encerramento numa escola não toca o acesso de outra, e a coordenação de B não encerra o vínculo de A', async () => {
     const a = await sala.montar()
     const b = await sala.montar()
@@ -195,7 +232,7 @@ describe('acesso da turma × fim do vínculo de quem o gerou (correção 2026-10
 
     // Só a cláusula de escola separa: sem ela, o professor e a turma de B casariam.
     const revogados = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () =>
-      bancada.banco.transaction((tx) => new AcessoDaTurmaRepository(tx).revogarDeQuemSaiu(b.professor.usuarioId, b.turma)),
+      bancada.banco.transaction((tx) => new CicloDeVidaRepository(tx).revogarDeQuemSaiu(b.professor.usuarioId, b.turma)),
     )
 
     expect(revogados).toEqual([])
@@ -203,9 +240,31 @@ describe('acesso da turma × fim do vínculo de quem o gerou (correção 2026-10
     expect(await abreASala(b)).toEqual({ token: 200, codigo: 200 })
     // No contexto de B, o mesmo pedido revoga: o teste acima não passa por o acesso não casar com nada.
     const deB = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: b.escolaId }, () =>
-      bancada.banco.transaction((tx) => new AcessoDaTurmaRepository(tx).revogarDeQuemSaiu(b.professor.usuarioId, b.turma)),
+      bancada.banco.transaction((tx) => new CicloDeVidaRepository(tx).revogarDeQuemSaiu(b.professor.usuarioId, b.turma)),
     )
     expect(deB).toEqual([{ id: antesEmB[0]?.id, turmaId: b.turma }])
+  })
+
+  it('repository (F3, tarefa 1.0): com a turma, a revogação de quem saiu não alcança o acesso dele em outra turma, mesmo sem vínculo que o segure', async () => {
+    const s = await sala.montar()
+    await sala.gerar(s, s.outraTurma)
+    // Os dois vínculos encerrados pelo banco, sem passar pela revogação: os dois acessos ficam vigentes e sem vínculo que os segure.
+    for (const turmaId of [s.turma, s.outraTurma]) {
+      await bancada.pool.query("update vinculo set estado = 'encerrado', motivo_encerramento = 'desligamento', encerrado_em = now() where id = $1", [
+        await vinculoDe(s, s.professor.usuarioId, turmaId),
+      ])
+    }
+    const [daTurma] = await acessosDa(s, s.turma)
+    const daOutraTurma = await acessosDa(s, s.outraTurma)
+
+    const revogados = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: s.escolaId }, () =>
+      bancada.banco.transaction((tx) => new CicloDeVidaRepository(tx).revogarDeQuemSaiu(s.professor.usuarioId, s.turma)),
+    )
+
+    // Só a turma pedida: o acesso da outra turma, que casaria pelo professor, continua vigente.
+    expect(revogados).toEqual([{ id: daTurma?.id, turmaId: s.turma }])
+    expect(await acessosDa(s, s.outraTurma)).toEqual(daOutraTurma)
+    expect(daOutraTurma).toEqual([expect.objectContaining({ revogado_em: null })])
   })
 
   it('a eliminação do professor revoga o acesso que ele gerou, com auditoria, e o link e o código deixam de abrir a sala', async () => {

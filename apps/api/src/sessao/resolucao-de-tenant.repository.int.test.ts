@@ -1,4 +1,5 @@
 import { executarNoContexto, ExpurgoDeAcessoRepository, sessao } from '@educa/nucleo'
+import { ContaGlobalRepository } from '@educa/nucleo/conta-global'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
 import pg from 'pg'
@@ -219,10 +220,10 @@ describe('ResolucaoDeTenantRepository: a resolução antes de haver escola devol
       cliente.release()
     }
 
-    expect(await repositorio.encerrarSessoesDaConta(contaId, 'mfa_redefinido')).toBe(1)
+    expect(await new ContaGlobalRepository(bancada.banco).encerrarSessoesDaConta(contaId, 'mfa_redefinido')).toBe(1)
     const { rows: sessoes } = await bancada.pool.query<{ id: string; motivo: string | null }>('select id, motivo from sessao where id = any($1::uuid[]) order by id', [[professor.sessaoId, outro.sessaoId]])
     expect(sessoes).toEqual(expect.arrayContaining([{ id: professor.sessaoId, motivo: 'mfa_redefinido' }, { id: outro.sessaoId, motivo: null }]))
-    expect(await repositorio.encerrarSessoesDaConta(contaId, 'mfa_redefinido')).toBe(0)
+    expect(await new ContaGlobalRepository(bancada.banco).encerrarSessoesDaConta(contaId, 'mfa_redefinido')).toBe(0)
   })
 
   describe('concorrência (17.0): a limpeza da conta sem uso e o convite para o mesmo e-mail ao mesmo tempo', () => {

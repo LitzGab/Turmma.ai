@@ -1,6 +1,16 @@
-import { contaExterna, credencialMatricula, exigirEscolaDoContexto, listaNome, reivindicacao, sessao, usuario, vinculo, type ProvedorExterno, type TransacaoBanco } from '@educa/nucleo'
 import type { PapelDeUsuario } from '@educa/shared'
-import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, asc, eq, exists, gt, inArray, isNotNull, isNull, notExists, sql } from 'drizzle-orm'
+import { exigirEscolaDoContexto } from '../contexto/escola-do-contexto.js'
+import type { TransacaoBanco } from '../db/banco.js'
+import { acessoTurma } from '../db/schema/acesso-turma.js'
+import { contaExterna, type ProvedorExterno } from '../db/schema/conta-externa.js'
+import { credencialMatricula } from '../db/schema/credencial-matricula.js'
+import { listaNome } from '../db/schema/lista-nome.js'
+import { reivindicacao } from '../db/schema/reivindicacao.js'
+import { sessao, type MotivoDeEncerramento } from '../db/schema/sessao.js'
+import { turma } from '../db/schema/turma.js'
+import { usuario } from '../db/schema/usuario.js'
+import { vinculo } from '../db/schema/vinculo.js'
 
 /** O usuário alvo da desativação ou da eliminação: o papel, a conta e se já está desativado. Nunca o nome. */
 export interface UsuarioDoCicloDeVida {
@@ -12,10 +22,108 @@ export interface UsuarioDoCicloDeVida {
 /**
  * As escritas da desativação e da eliminação (tarefa 17.0) dentro da escola do contexto. Toda instrução leva a escola do
  * contexto na cláusula, nunca a de um argumento (regra 10, item 3): o usuário da mesma pessoa em outra escola é outro
- * `usuario_id`, e o id de outra escola não alcança nada. O que toca a conta global fica na resolução de tenant.
+ * `usuario_id`, e o id de outra escola não alcança nada. O que toca a conta global fica na `ContaGlobalRepository`.
+ *
+ * Mora no `nucleo` desde o F3 (tarefa 1.0), para o worker alcançar a eliminação. A trava das turmas do professor, o
+ * encerramento das sessões dele e a revogação do acesso que ele gerou vieram junto, da `TurmaRepository`, da
+ * `EscritaDeSessaoRepository` e da `AcessoDaTurmaRepository` da API, sem mudar a instrução: o `nucleo` não importa
+ * `apps/api`. O encerramento do vínculo pela coordenação (`VinculoService.encerrar`) usa a mesma revogação daqui.
  */
 export class CicloDeVidaRepository {
   constructor(private readonly tx: TransacaoBanco) {}
+
+  /**
+   * Encerra todas as sessões ainda abertas do usuário, só na escola do contexto (a desativação, 17.0): o usuário da
+   * mesma conta em outra escola é outro `usuario_id`, e a sessão dele lá não é alcançada. Devolve quantas encerrou.
+   */
+  async encerrarSessoesDoUsuario(usuarioId: string, motivo: MotivoDeEncerramento): Promise<number> {
+    const encerradas = await this.tx
+      .update(sessao)
+      .set({ encerradaEm: sql`now()`, motivo })
+      .where(and(eq(sessao.escolaId, exigirEscolaDoContexto()), eq(sessao.usuarioId, usuarioId), isNull(sessao.encerradaEm)))
+      .returning({ id: sessao.id })
+    return encerradas.length
+  }
+
+  /**
+   * Trava em `FOR NO KEY UPDATE`, em ordem de id, toda turma da escola do contexto em que o usuário tem vínculo de
+   * professor, em qualquer estado (a eliminação do professor, correção 2026-10-03-acesso-sobrevive-ao-vinculo): é a
+   * `TurmaRepository.travarContraOGerar` de cada turma dele, antes de apagar os vínculos e revogar o acesso que ele
+   * gerou. Qualquer estado, e não só o confirmado: o pendente que ele confirma entre esta trava e o `delete` dos vínculos
+   * daria acesso numa turma destravada. A ordem de id evita que duas eliminações se prendam uma à outra; a turma vem
+   * antes do vínculo, como no encerrar e no excluir. O escopo é só a escola: a eliminação pode rodar sem ano no contexto
+   * (o comando do operador), e o limite de tenant continua sendo a escola.
+   */
+  async travarContraOGerarDoProfessor(usuarioId: string): Promise<void> {
+    await this.tx
+      .select({ id: turma.id })
+      .from(turma)
+      .where(
+        and(
+          eq(turma.escolaId, exigirEscolaDoContexto()),
+          exists(
+            this.tx
+              .select({ um: vinculo.id })
+              .from(vinculo)
+              .where(
+                and(
+                  eq(vinculo.escolaId, turma.escolaId),
+                  eq(vinculo.anoLetivoId, turma.anoLetivoId),
+                  eq(vinculo.turmaId, turma.id),
+                  eq(vinculo.usuarioId, usuarioId),
+                  eq(vinculo.papel, 'professor'),
+                ),
+              ),
+          ),
+        ),
+      )
+      .orderBy(asc(turma.id))
+      .for('no key update')
+  }
+
+  /**
+   * Revoga o acesso vigente que o usuário gerou nas turmas em que ele não tem mais vínculo `confirmado` de professor, e
+   * devolve o id e a turma de cada um (correção 2026-10-03-acesso-sobrevive-ao-vinculo; regra 20, item 18). Roda na
+   * transação que encerra o vínculo (com `turmaId`, só aquela turma) ou que elimina o usuário (sem, todas), depois da
+   * trava da turma (`TurmaRepository.travarContraOGerar`) e da mudança no vínculo: o vínculo encerrado ou apagado já não
+   * conta. Outro vínculo confirmado dele na mesma turma (outra disciplina) segura o acesso; o acesso gerado por outro
+   * professor não é dele, e fica.
+   *
+   * O escopo é a escola do contexto, sem o ano: o limite de tenant continua sendo a escola (regra 10); o ano fica de fora
+   * porque a eliminação pode rodar sem ano no contexto (o comando do operador), e o acesso de um ano encerrado já foi
+   * revogado na virada. O vínculo que segura o acesso é o da escola, do ano e da turma
+   * do próprio acesso.
+   */
+  async revogarDeQuemSaiu(usuarioId: string, turmaId?: string): Promise<Array<{ readonly id: string; readonly turmaId: string }>> {
+    const escolaId = exigirEscolaDoContexto()
+    const vinculoQueSegura = this.tx
+      .select({ um: vinculo.id })
+      .from(vinculo)
+      .where(
+        and(
+          eq(vinculo.escolaId, acessoTurma.escolaId),
+          eq(vinculo.anoLetivoId, acessoTurma.anoLetivoId),
+          eq(vinculo.turmaId, acessoTurma.turmaId),
+          eq(vinculo.usuarioId, usuarioId),
+          eq(vinculo.papel, 'professor'),
+          eq(vinculo.estado, 'confirmado'),
+        ),
+      )
+    return this.tx
+      .update(acessoTurma)
+      .set({ revogadoEm: sql`now()` })
+      .where(
+        and(
+          eq(acessoTurma.escolaId, escolaId),
+          turmaId === undefined ? undefined : eq(acessoTurma.turmaId, turmaId),
+          eq(acessoTurma.criadoPor, usuarioId),
+          isNull(acessoTurma.revogadoEm),
+          gt(acessoTurma.expiraEm, sql`now()`),
+          notExists(vinculoQueSegura),
+        ),
+      )
+      .returning({ id: acessoTurma.id, turmaId: acessoTurma.turmaId })
+  }
 
   /**
    * Trava o usuário (`FOR NO KEY UPDATE`) e devolve papel, conta e desativação: duas desativações ou eliminações do

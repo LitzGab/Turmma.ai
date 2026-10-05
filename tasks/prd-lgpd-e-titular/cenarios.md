@@ -211,6 +211,15 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [E] A tela de Pedidos mostra o aviso que aponta para a lista da turma.
 - **Arquitetura.**
   - [U] O teste falha quando um terceiro caminho importa a `ContaGlobalRepository`.
+  - [U] Nem o barrel do `@educa/nucleo` nem o subcaminho `@educa/nucleo/ciclo-de-vida` exportam a
+    `ContaGlobalRepository`, com o nome dela ou outro (tarefa 1.0).
+  - [I] `eliminar` e `desativar` na transação de quem chama, que depois lança: os dois usuários, a conta e a auditoria
+    continuam como estavam; sem a falha, tudo sai no commit de quem chama (tarefa 1.0).
+  - [I] O que veio da API com o ciclo de vida (tarefa 1.0): a desativação não reencerra a sessão que já tinha saído; a
+    limpeza da conta encerra a sessão aberta que escapou em outra escola; a eliminação trava só as turmas em que o
+    usuário é professor, e nunca a outra turma do ano em que ele não tem vínculo; a revogação com turma não alcança o
+    acesso dele em outra turma; o colega confirmado em outra disciplina, e o vínculo de aluno do mesmo usuário, não
+    seguram o acesso de quem saiu; eliminar quem já tinha a conta limpa não a limpa de novo.
   - [U] O teste falha quando um caminho fora da lista toca `suboperador` ou `incidente`, e quando os dois repositórios da
     escola escrevem nessas tabelas.
   - [I] A `thread_agente` que ainda tem mensagem no prazo não sai.

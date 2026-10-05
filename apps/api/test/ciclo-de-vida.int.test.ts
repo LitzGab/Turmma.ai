@@ -1,12 +1,12 @@
-import { ErroDeDominio, executarNoContexto } from '@educa/nucleo'
+import { ErroDeDominio, executarNoContexto, type TransacaoBanco } from '@educa/nucleo'
+import { CicloDeVidaRepository, CicloDeVidaService } from '@educa/nucleo/ciclo-de-vida'
 import { CodigoDeErro, esquemaRespostaDecisao, type PapelDeUsuario } from '@educa/shared'
+import { sql } from 'drizzle-orm'
 import type { Redis } from 'ioredis'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { Secret, TOTP } from 'otpauth'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
-import { CicloDeVidaRepository } from '../src/sessao/ciclo-de-vida.repository.js'
-import { CicloDeVidaService } from '../src/sessao/ciclo-de-vida.service.js'
 import { CifraDoSegredo } from '../src/sessao/cifra-do-segredo.js'
 import { HashDeSenha } from '../src/sessao/hash-de-senha.js'
 import { gerarCodigosDeRecuperacao, gerarSegredo, hmacDaRecuperacao } from '../src/sessao/segundo-fator.js'
@@ -437,6 +437,143 @@ describe('ciclo de vida da conta: desativação, limpeza da conta global e elimi
     expect((await auditoriaDoCiclo(escolaB)).map((linha) => linha['depois'])).toEqual([
       { sessoesApagadas: 2, vinculosApagados: 1, credencialApagada: false, contaExternaApagada: true, linhaDaListaApagada: false, pedidosApagados: 0, contaLimpa: true },
     ])
+  })
+
+  it('na transação de quem chama (F3, tarefa 1.0): eliminar e desativar entram nela; a falha de quem chama depois desfaz as duas, com a conta e a auditoria; sem falha, saem no commit dela', async () => {
+    const escolaId = await bancada.escola()
+    const paula = await pessoa(escolaId)
+    const rui = await pessoa(escolaId)
+    const usuarioNoBanco = async (usuarioId: string) =>
+      (await bancada.pool.query<{ desativado: boolean }>('select desativado_em is not null as desativado from usuario where id = $1', [usuarioId])).rows[0]
+    const eliminadaNaTransacao = async (tx: TransacaoBanco) =>
+      (await tx.execute<{ total: number }>(sql`select count(*)::int as total from usuario where id = ${paula.usuarioId}`)).rows[0]?.total
+    const falhaDeQuemChama = new Error('quem chama falhou depois do ciclo de vida')
+
+    await expect(
+      peloOperador(escolaId, () =>
+        bancada.banco.transaction(async (tx) => {
+          await servico.eliminar(paula.usuarioId, { autorOperador: OPERADOR }, tx)
+          await servico.desativar(rui.usuarioId, { autorOperador: OPERADOR }, tx)
+          // Dentro da transação de quem chama, o efeito já está lá; fora dela, por outra conexão, ainda não.
+          expect(await eliminadaNaTransacao(tx)).toBe(0)
+          expect(await usuarioNoBanco(paula.usuarioId)).toEqual({ desativado: false })
+          expect(await usuarioNoBanco(rui.usuarioId)).toEqual({ desativado: false })
+          throw falhaDeQuemChama
+        }),
+      ),
+    ).rejects.toBe(falhaDeQuemChama)
+
+    // A falha de quem chama desfez tudo: os dois usuários, a conta da Paula e nenhuma auditoria.
+    expect(await usuarioNoBanco(paula.usuarioId)).toEqual({ desativado: false })
+    expect(await usuarioNoBanco(rui.usuarioId)).toEqual({ desativado: false })
+    expect(await contaNoBanco(paula.contaId)).toMatchObject({ email: paula.email, senha: true })
+    expect(await contaNoBanco(rui.contaId)).toMatchObject({ email: rui.email, senha: true })
+    expect(await auditoriaDoCiclo(escolaId)).toEqual([])
+
+    await peloOperador(escolaId, () =>
+      bancada.banco.transaction(async (tx) => {
+        await servico.eliminar(paula.usuarioId, { autorOperador: OPERADOR }, tx)
+        await servico.desativar(rui.usuarioId, { autorOperador: OPERADOR }, tx)
+      }),
+    )
+    expect(await usuarioNoBanco(paula.usuarioId)).toBeUndefined()
+    expect(await usuarioNoBanco(rui.usuarioId)).toEqual({ desativado: true })
+    expect(await contaNoBanco(paula.contaId)).toMatchObject({ email: null, senha: false })
+    expect(await contaNoBanco(rui.contaId)).toMatchObject({ email: null, senha: false })
+    expect((await auditoriaDoCiclo(escolaId)).map((linha) => [linha['acao'], linha['entidade_id'], linha['autor_operador']])).toEqual([
+      ['usuario.eliminado', paula.usuarioId, OPERADOR],
+      ['usuario.desativado', rui.usuarioId, OPERADOR],
+    ])
+  })
+
+  it('borda (F3, tarefa 1.0): a desativação encerra só as sessões ainda abertas; a que já tinha saído fica com o motivo dela e não conta', async () => {
+    const escolaId = await bancada.escola()
+    const matricula = `RA${randomBytes(4).toString('hex')}`
+    const aluno = await alunoComMatricula(escolaId, matricula)
+    await tokenDoAluno(escolaId, matricula)
+    await tokenDoAluno(escolaId, matricula)
+    const { rows } = await bancada.pool.query<{ id: string }>('select id from sessao where escola_id = $1 and usuario_id = $2 order by id limit 1', [escolaId, aluno])
+    await bancada.pool.query("update sessao set encerrada_em = now(), motivo = 'saida' where id = $1", [rows[0]?.id])
+
+    await peloOperador(escolaId, () => servico.desativar(aluno, { autorOperador: OPERADOR }))
+
+    expect((await sessoesDe(escolaId, aluno)).map((sessao) => sessao.motivo).sort()).toEqual(['desativacao', 'saida'])
+    expect((await auditoriaDoCiclo(escolaId)).map((linha) => linha['depois'])).toEqual([expect.objectContaining({ sessoesEncerradas: 1 })])
+  })
+
+  it('borda (F3, tarefa 1.0): eliminar quem já foi desativado, com a conta já limpa, não a limpa de novo: a auditoria diz contaLimpa falso', async () => {
+    const escolaId = await bancada.escola()
+    const lia = await pessoa(escolaId)
+    await peloOperador(escolaId, () => servico.desativar(lia.usuarioId, { autorOperador: OPERADOR }))
+    await peloOperador(escolaId, () => servico.eliminar(lia.usuarioId, { autorOperador: OPERADOR }))
+    expect((await auditoriaDoCiclo(escolaId)).map((linha) => [linha['acao'], (linha['depois'] as Record<string, unknown>)['contaLimpa']])).toEqual([
+      ['usuario.desativado', true],
+      ['usuario.eliminado', false],
+    ])
+  })
+
+  it('borda (F3, tarefa 1.0): limpar a conta encerra também a sessão aberta que tenha escapado em outra escola, com o motivo conta_limpa', async () => {
+    const escolaA = await bancada.escola()
+    const escolaB = await bancada.escola()
+    const paula = await pessoa(escolaA)
+    const paulaEmB = await naOutraEscola(paula, escolaB)
+    await entrarComo(paula, paula.usuarioId)
+    // A sessão de A escapou: o usuário de A saiu pelo banco, sem passar pelo ciclo de vida, e a sessão dele ficou aberta.
+    await bancada.pool.query('update usuario set desativado_em = now() where id = $1', [paula.usuarioId])
+    expect(await sessoesDe(escolaA, paula.usuarioId)).toEqual([{ encerrada: false, motivo: null }])
+
+    await peloOperador(escolaB, () => servico.desativar(paulaEmB, { autorOperador: OPERADOR }))
+
+    expect(await contaNoBanco(paula.contaId)).toMatchObject({ email: null, senha: false })
+    expect(await sessoesDe(escolaA, paula.usuarioId)).toEqual([{ encerrada: true, motivo: 'conta_limpa' }])
+  })
+
+  it('borda (F3, tarefa 1.0): a eliminação trava só as turmas em que o usuário é professor; a do vínculo de aluno e a turma em que ele não tem vínculo ficam livres', async () => {
+    const a = await montarEscolaComTurma(api, bancada)
+    const escolaId = a.coordenacao.escolaId
+    const aluno = await alunoComMatricula(escolaId, `RA${randomBytes(4).toString('hex')}`)
+    const professora = await pessoa(escolaId)
+    await bancada.pool.query("insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())", [
+      escolaId,
+      a.anoLetivoId,
+      aluno,
+      a.turma,
+      a.coordenacao.usuarioId,
+    ])
+    await bancada.pool.query("insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, estado, criado_por) values ($1, $2, $3, $4, $5, 'professor', 'pendente', $6)", [
+      escolaId,
+      a.anoLetivoId,
+      professora.usuarioId,
+      a.turma,
+      a.quimica,
+      a.coordenacao.usuarioId,
+    ])
+    /** Elimina com a turma travada por outra transação (o gerar do professor no meio), e espera no máximo 1 s pela trava. */
+    const eliminarComATurmaTravada = async (usuarioId: string, turmaTravada = a.turma): Promise<void> => {
+      const outra = await bancada.pool.connect()
+      try {
+        await outra.query('begin')
+        await outra.query('select id from turma where id = $1 for no key update', [turmaTravada])
+        await pela(a.coordenacao, () =>
+          bancada.banco.transaction(async (tx) => {
+            await tx.execute(sql`set local lock_timeout = '1s'`)
+            await servico.eliminar(usuarioId, {}, tx)
+          }),
+        )
+      } finally {
+        await outra.query('rollback')
+        outra.release()
+      }
+    }
+
+    await eliminarComATurmaTravada(aluno)
+    expect(await contar('usuario', escolaId, aluno)).toBe(0)
+    // A professora, com vínculo só pendente na mesma turma, espera a trava: a eliminação dela não passa enquanto o gerar segura a turma.
+    await expect(eliminarComATurmaTravada(professora.usuarioId)).rejects.toMatchObject({ cause: expect.objectContaining({ code: '55P03' }) })
+    expect(await contar('usuario', escolaId, professora.usuarioId)).toBe(1)
+    // A outra turma do mesmo ano, em que ela não tem vínculo, travada pelo gerar de outro professor: a eliminação não a espera.
+    await eliminarComATurmaTravada(professora.usuarioId, a.outraTurma)
+    expect(await contar('usuario', escolaId, professora.usuarioId)).toBe(0)
   })
 
   it('borda: a eliminação do coordenador que criou o vínculo de outra pessoa mantém o vínculo e a auditoria dele, e o banco continua recusando autor de outra escola na escrita', async () => {

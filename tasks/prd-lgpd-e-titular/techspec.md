@@ -25,7 +25,7 @@ Nada aqui usa IA.
 | Módulo | Novo ou alterado | O quê |
 |---|---|---|
 | `packages/shared/src/privacidade` | novo | catálogo, classificação das tabelas, contratos, erros (`RETENCAO_FORA_DO_LIMITE`, `PEDIDO_EM_ESTADO_INVALIDO`, `ACESSO_SUSPENSO`) |
-| `packages/nucleo/src/ciclo-de-vida` | movido de `apps/api/src/sessao` | `CicloDeVidaService`, repositórios e testes; a `ContaGlobalRepository` com os dois `@SemEscopo` da conta (seção 6) |
+| `packages/nucleo/src/ciclo-de-vida` | movido de `apps/api/src/sessao` | `CicloDeVidaService`, repositórios e testes; a `ContaGlobalRepository` com os `@SemEscopo` da conta (seção 6). Na tarefa 1.0: os três métodos que o serviço chamava em repositórios da API (`TurmaRepository.travarContraOGerarDoProfessor`, `EscritaDeSessaoRepository.encerrarDoUsuario`, agora `encerrarSessoesDoUsuario`, e `AcessoDaTurmaRepository.revogarDeQuemSaiu`) vieram para o `CicloDeVidaRepository` sem mudar a instrução, e o `VinculoService.encerrar` usa a revogação daqui; a API importa pelos subcaminhos `@educa/nucleo/ciclo-de-vida` e `@educa/nucleo/conta-global`. `desativar` e `eliminar` recebem a transação de quem chama como terceiro argumento, sem ponto de salvamento. Os testes de integração continuam em `apps/api/test`, porque provam o efeito pela API; só a importação mudou |
 | `packages/nucleo/src/retencao` | alterado | `ExpurgoDaEscolaRepository`, `RetencaoDaEscolaRepository` (escopo do contexto) |
 | `packages/nucleo/src/rotina` | novo | `EscolasDaRotinaRepository` |
 | `packages/nucleo/src/titular` | novo | `LeituraDoTitular`, `TrocaDeNome`, `Compartilhamento`, porta `ArmazemDeArquivos` (S3 e falso) |
@@ -249,7 +249,7 @@ Todo repository novo tira a escola do contexto. O job da escola roda com a escol
 | Repository.método | O que faz | Justificativa |
 |---|---|---|
 | `EscolasDaRotinaRepository.listarIds` | ids das escolas, nada mais | a rotina noturna precisa abrir o contexto de cada escola; é infraestrutura de rotina, não de retenção |
-| `ContaGlobalRepository.travarConta`, `limparContaSemUso` | os dois da conta global, **movidos** de `ResolucaoDeTenantRepository` | a conta é global por desenho; a exceção da `Conta` em `modelo-de-dados.md` passa a dizer "só `sessao` e `nucleo/ciclo-de-vida`", e o `arquitetura.test.ts` passa a aceitar os dois caminhos |
+| `ContaGlobalRepository.travarConta`, `limparContaSemUso`, `encerrarSessoesDaConta` | os três da conta global, **movidos** de `ResolucaoDeTenantRepository` (o terceiro na tarefa 1.0: o `limparContaSemUso` o chama, e a redefinição do MFA, no `sessao`, também) | a conta é global por desenho; a exceção da `Conta` em `modelo-de-dados.md` passa a dizer "só `sessao` e `nucleo/ciclo-de-vida`" (e o expurgo de acesso, que já a limpava), e o `arquitetura.test.ts` passa a aceitar os dois caminhos |
 | `OperacaoPrivacidadeRepository` (escrever `suboperador` e `incidente`, contagens por escola) | comandos da operação | mesma justificativa do painel; só ids, números e as tabelas da operação |
 | `ExpurgoDeAcessoRepository.apagarLoteVencido('incidente')` | incidente com mais de 5 anos, e a cascata das ligações | a justificativa do método passa a citar o incidente |
 
@@ -261,8 +261,8 @@ só-leitura:
   parênteses;
 - `IncidenteDaEscolaRepository`: só por junção com `incidente_escola.escola_id = contexto`.
 
-A `ContaGlobalRepository` não sai pelo barrel do `@educa/nucleo`, e o teste lista quem a importa: o `CicloDeVidaService`
-e o `sessao`. A justificativa do `EscolasDaRotinaRepository` é o papel da rotina, registrada em `modelo-de-dados.md`.
+A `ContaGlobalRepository` não sai pelo barrel do `@educa/nucleo` nem pelo subcaminho do ciclo de vida, só pelo
+`@educa/nucleo/conta-global`, e o teste lista quem a importa: o `CicloDeVidaService` e o `sessao` (a redefinição do MFA), e os testes deles. A justificativa do `EscolasDaRotinaRepository` é o papel da rotina, registrada em `modelo-de-dados.md`.
 
 Os testes, cada um quebrando sem a cláusula de escopo, estão em `cenarios.md`, seção "Isolamento".
 

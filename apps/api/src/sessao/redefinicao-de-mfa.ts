@@ -1,4 +1,5 @@
 import { contextoAtual, ErroDeDominio, executarNoContexto, RegistroDeAuditoria, sessaoDaRequisicao, type Banco } from '@educa/nucleo'
+import { ContaGlobalRepository } from '@educa/nucleo/conta-global'
 import { CodigoDeErro, FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR, type FinalidadeDaRedefinicaoDeMfa } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
@@ -40,7 +41,7 @@ export class RedefinicaoDeMfa {
         return
       }
       await resolucao.apagarMfa(contaId)
-      await resolucao.encerrarSessoesDaConta(contaId, 'mfa_redefinido')
+      await new ContaGlobalRepository(tx).encerrarSessoesDaConta(contaId, 'mfa_redefinido')
       await registro.gravar(tx, 'usuario.mfa_redefinido', { entidadeId: alvoId, antes: { mfaAtivo: conta.mfaAtivo }, depois: { mfaAtivo: false }, finalidade })
     })
   }
@@ -74,7 +75,7 @@ export async function redefinirMfaPeloOperador(banco: Banco, autor: ConferenciaD
         const conta = await resolucao.travarContaParaRedefinir(contaId)
         if (conta === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
         await resolucao.apagarMfa(contaId)
-        await resolucao.encerrarSessoesDaConta(contaId, 'mfa_redefinido')
+        await new ContaGlobalRepository(tx).encerrarSessoesDaConta(contaId, 'mfa_redefinido')
         const usuarios = await resolucao.usuariosAtivosDaConta(contaId)
         const porEscola = new Map<string, string>([[alvo.escolaId, usuarioId]])
         for (const ativo of usuarios) if (!porEscola.has(ativo.escolaId)) porEscola.set(ativo.escolaId, ativo.usuarioId)

@@ -102,42 +102,6 @@ export class TurmaRepository {
     return linha !== undefined
   }
 
-  /**
-   * Trava em `FOR NO KEY UPDATE`, em ordem de id, toda turma da escola do contexto em que o usuário tem vínculo de
-   * professor, em qualquer estado (a eliminação do professor, correção 2026-10-03-acesso-sobrevive-ao-vinculo): é a
-   * `travarContraOGerar` de cada turma dele, antes de apagar os vínculos e revogar o acesso que ele gerou. Qualquer
-   * estado, e não só o confirmado: o pendente que ele confirma entre esta trava e o `delete` dos vínculos daria acesso
-   * numa turma destravada. A ordem de id evita que duas eliminações se prendam uma à outra; a turma vem antes do vínculo,
-   * como no encerrar e no excluir. O escopo é só a escola: a eliminação pode rodar sem ano no contexto (o comando do
-   * operador), e o limite de tenant continua sendo a escola.
-   */
-  async travarContraOGerarDoProfessor(usuarioId: string): Promise<void> {
-    await this.banco
-      .select({ id: turma.id })
-      .from(turma)
-      .where(
-        and(
-          eq(turma.escolaId, exigirEscolaDoContexto()),
-          exists(
-            this.banco
-              .select({ um: vinculo.id })
-              .from(vinculo)
-              .where(
-                and(
-                  eq(vinculo.escolaId, turma.escolaId),
-                  eq(vinculo.anoLetivoId, turma.anoLetivoId),
-                  eq(vinculo.turmaId, turma.id),
-                  eq(vinculo.usuarioId, usuarioId),
-                  eq(vinculo.papel, 'professor'),
-                ),
-              ),
-          ),
-        ),
-      )
-      .orderBy(asc(turma.id))
-      .for('no key update')
-  }
-
   async criar(nova: NovaTurma): Promise<TurmaGravada> {
     const [criada] = await this.banco
       .insert(turma)
