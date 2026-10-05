@@ -1,4 +1,4 @@
-import type { ConteudoDeAtividade, ConteudoDePlanoDeAula } from '@educa/shared'
+import type { ConteudoDeAtividade, ConteudoDePlanoDeAula, TipoDeAdaptacao } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { AdaptadorRoteirizado } from '../__fixtures__/adaptador-roteirizado.js'
 import { atividadeDeEstequiometria, entradaDeAdaptacao, entradaDeAtividade, entradaDePlano, ESCOLA_A } from '../__fixtures__/entradas.js'
@@ -109,6 +109,14 @@ describe('gerar_atividade_objetiva, versão determinística', () => {
 })
 
 describe('gerar_atividade_objetiva, conferência da saída de qualquer modelo', () => {
+  it('o "adaptacao" que o modelo acrescentar à atividade comum sai antes do schema, e a atividade vale', async () => {
+    const comAdaptacao = { ...atividadeDeEstequiometria(), adaptacao: { tipos: ['fonte_ampliada'] } }
+    const adaptador = new AdaptadorRoteirizado([JSON.stringify(comAdaptacao)])
+    const { saida } = await provedorCom(adaptador).ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
+    expect(adaptador.chamadas).toBe(1)
+    expect(saida.adaptacao).toBeUndefined()
+  })
+
   const entrada = entradaDeAtividade()
   const boa = atividadeDeEstequiometria()
   const comPrimeira = (mudanca: Partial<ConteudoDeAtividade['questoes'][number]>): ConteudoDeAtividade => ({
@@ -203,6 +211,18 @@ describe('gerar_plano_de_aula', () => {
 })
 
 describe('adaptar_atividade', () => {
+  it('os tipos de adaptação são do professor: o que o modelo escrever no lugar deles é trocado pelo que veio na entrada, e a resposta vale', async () => {
+    // O caso do ensaio com o Qwen (04/10/2026): sem tempo adicional pedido, ele devolvia `tempoExtraPercentual: 0`, e o
+    // schema reprovava a versão adaptada inteira duas vezes.
+    const tipos: TipoDeAdaptacao[] = ['fonte_ampliada', 'linguagem_direta']
+    const entrada = { ...entradaDeAdaptacao(), adaptacao: { tipos } }
+    const doModelo = { ...entrada.conteudo, adaptacao: { tipos: ['enunciado_simplificado'], tempoExtraPercentual: 0 } }
+    const adaptador = new AdaptadorRoteirizado([JSON.stringify(doModelo)])
+    const { saida } = await provedorCom(adaptador).ia.gerar({ tarefa: adaptarAtividade, entrada, escolaId: ESCOLA_A })
+    expect(adaptador.chamadas).toBe(1)
+    expect(saida.adaptacao).toEqual({ tipos: ['fonte_ampliada', 'linguagem_direta'] })
+  })
+
   it('recebe só a atividade e os tipos: texto sobre o aluno, nome ou diagnóstico não têm onde entrar (D35, D67)', () => {
     const entrada = entradaDeAdaptacao()
     expect(adaptarAtividade.esquemaDeEntrada.safeParse(entrada).success).toBe(true)

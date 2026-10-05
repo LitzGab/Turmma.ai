@@ -141,13 +141,25 @@ test.describe('escolher e trocar de escola', () => {
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByRole('main')).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
 
+    // A janela que importa: a lista de B segurada desde antes da troca. É nela que a turma de A apareceria se tivesse
+    // ficado no cliente — depois que a resposta de B chega, a ausência já não prova nada. A rota entra antes da troca
+    // porque a Nova conversa de B já lê os vínculos: segurada só depois, a de Turmas saía do cache, sem janela (falhou
+    // assim no celular, esteira `37250031803`).
+    let liberar: () => void = () => undefined
+    const segurada = new Promise<void>((resolver) => (liberar = resolver))
+    await page.route(ROTA_MEUS_VINCULOS, async (rota: Route) => {
+      await segurada
+      await rota.continue().catch(() => undefined)
+    })
+
     await abrirSeletorDeEscola(page, hasTouch)
     await esperarAlvoDeToque(linhaDoSeletor(page, nomeNoSeletor(emB, 'professor')), 'a escola de destino no seletor')
     await acionarNoSeletor(page, nomeNoSeletor(emB, 'professor'), hasTouch)
 
-    // A troca volta à tela em que o professor abre, já da escola de destino.
+    // A troca volta à tela em que o professor abre, já da escola de destino, com a lista de B ainda a caminho.
     await esperarEscola(page, 'Professora sintética na outra escola', emB.escolaNome)
     expect(new URL(page.url()).pathname).toBe('/professor/nova-conversa')
+    await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     // Sem o esvaziamento do cache na troca, a turma de A continuaria no cliente e apareceria na tela de B. O nome da
     // escola A segue no seletor, e só nele: ele é um acesso da própria conta, e não dado da escola A.
     await expect(page.locator('body')).not.toContainText(alocacao.turmaNome)
@@ -157,14 +169,7 @@ test.describe('escolher e trocar de escola', () => {
     await page.goBack()
     await expect(page.locator('body')).not.toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
 
-    // A janela que importa: voltar aos vínculos, já em B, com a lista segurada. É aqui que a turma de A apareceria
-    // se tivesse ficado no cliente — depois que a resposta de B chega, a ausência já não prova nada.
-    let liberar: () => void = () => undefined
-    const segurada = new Promise<void>((resolver) => (liberar = resolver))
-    await page.route(ROTA_MEUS_VINCULOS, async (rota: Route) => {
-      await segurada
-      await rota.continue()
-    })
+    // Voltar aos vínculos, já em B, com a lista ainda segurada.
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('body')).not.toContainText(alocacao.turmaNome)

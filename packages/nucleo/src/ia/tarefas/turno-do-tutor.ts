@@ -479,6 +479,23 @@ export const turnoDoTutor = definirTarefa({
 
   conferir: problemasDoTurno,
 
+  /**
+   * Com questão em andamento, ou pedido de resposta reconhecido, o modelo que insiste em nomear a alternativa ao recusar
+   * ("não posso confirmar se a D está certa") falharia a execução, e o aluno ficaria sem resposta. A recusa por regra,
+   * que conduz por pergunta e aponta a página, responde no lugar. Fora disso, falhar continua sendo o certo.
+   */
+  reservaQuandoInvalida(entrada) {
+    if (ehAssuntoDelicado(entrada.duvida)) return undefined
+    if (!pedeRespostaPronta(entrada) && entrada.questao === undefined) return undefined
+    // A dúvida legítima com a questão aberta recebe o "vamos por partes" de sempre, e não uma recusa que ninguém pediu.
+    if (!pedeRespostaPronta(entrada)) return conduzirPorPerguntas(entrada, 'Vamos por partes.', 'normal')
+    return conduzirPorPerguntas(
+      entrada,
+      'Essa eu não respondo por você, e também não confirmo nem descarto alternativa: se eu contar, você não aprende a chegar lá.',
+      'pediu_resposta_pronta',
+    )
+  },
+
   falso(entrada): SaidaDoTutor {
     if (ehAssuntoDelicado(entrada.duvida)) return mensagemFixaDoAssuntoDelicado(entrada.duvida)
     const texto = normalizar(entrada.duvida)

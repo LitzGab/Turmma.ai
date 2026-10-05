@@ -37,7 +37,10 @@ const TENTATIVAS_MAXIMAS = 2
 const PROBLEMAS_MAXIMOS_NA_REPETICAO = 8
 export const MODELO_DA_REGRA_FIXA = 'regra_fixa'
 
-type Interpretacao<Saida> = { readonly ok: true; readonly saida: Saida } | { readonly ok: false; readonly problemas: readonly string[] }
+type Interpretacao<Saida> =
+  | { readonly ok: true; readonly saida: Saida }
+  // `naConferencia`: o JSON e o schema passaram, e quem reprovou foi a conferência da tarefa (o conteúdo, não a forma).
+  | { readonly ok: false; readonly problemas: readonly string[]; readonly naConferencia?: boolean }
 
 /** Do texto do modelo à saída que o domínio pode usar: JSON, schema, ajuste e conferência da tarefa, nesta ordem. */
 function interpretar<Entrada, Saida>(tarefa: DefinicaoDeTarefa<Entrada, Saida>, entrada: Entrada, texto: string): Interpretacao<Saida> {
@@ -48,7 +51,8 @@ function interpretar<Entrada, Saida>(tarefa: DefinicaoDeTarefa<Entrada, Saida>, 
     return { ok: false, problemas: ['A resposta não é um JSON válido: veio texto fora do objeto, ou o objeto veio cortado.'] }
   }
   // A tela mostra o texto como texto: a marcação que o modelo põe por hábito sai antes de validar.
-  return validar(tarefa, entrada, semMarcacao(bruto))
+  const limpo = semMarcacao(bruto)
+  return validar(tarefa, entrada, tarefa.prepararResposta?.(entrada, limpo) ?? limpo)
 }
 
 function validar<Entrada, Saida>(tarefa: DefinicaoDeTarefa<Entrada, Saida>, entrada: Entrada, bruto: unknown): Interpretacao<Saida> {
@@ -59,7 +63,7 @@ function validar<Entrada, Saida>(tarefa: DefinicaoDeTarefa<Entrada, Saida>, entr
   }
   const saida = tarefa.ajustar?.(entrada, lida.data) ?? lida.data
   const problemas = tarefa.conferir?.(entrada, saida) ?? []
-  return problemas.length === 0 ? { ok: true, saida } : { ok: false, problemas: problemas.slice(0, PROBLEMAS_MAXIMOS_NA_REPETICAO) }
+  return problemas.length === 0 ? { ok: true, saida } : { ok: false, problemas: problemas.slice(0, PROBLEMAS_MAXIMOS_NA_REPETICAO), naConferencia: true }
 }
 
 interface Gasto {
@@ -183,6 +187,7 @@ export class ProvedorDeIa implements LLMProvider {
   private async chamarAteValer<Entrada, Saida>(pedido: PedidoDeGeracao<Entrada, Saida>, entrada: Entrada, gasto: Gasto): Promise<Saida> {
     const { tarefa } = pedido
     let correcao: CorrecaoPedida | undefined
+    let reprovadaNaConferencia = false
     while (gasto.tentativas < TENTATIVAS_MAXIMAS) {
       gasto.tentativas += 1
       // Um prazo por chamada. O sinal de quem chamou (o executor) cancela junto.
@@ -195,6 +200,17 @@ export class ProvedorDeIa implements LLMProvider {
       const interpretada = interpretar(tarefa, entrada, resposta.texto)
       if (interpretada.ok) return interpretada.saida
       correcao = { respostaAnterior: resposta.texto, problemas: interpretada.problemas }
+      reprovadaNaConferencia = interpretada.naConferencia === true
+    }
+    // Só quando o modelo respondeu na forma certa e errou no conteúdo: modelo que devolve lixo continua sendo falha.
+    const reserva = reprovadaNaConferencia ? tarefa.reservaQuandoInvalida?.(entrada) : undefined
+    if (reserva !== undefined) {
+      const validada = validar(tarefa, entrada, reserva)
+      if (validada.ok) {
+        const tipo = tarefa.nome
+        this.dependencias.logger?.info({ evento: 'ia.geracao.reserva', tipo, escolaId: pedido.escolaId, execucaoId: pedido.execucaoId, tentativas: gasto.tentativas })
+        return validada.saida
+      }
     }
     throw new ErroDeIa('IA_SAIDA_INVALIDA')
   }

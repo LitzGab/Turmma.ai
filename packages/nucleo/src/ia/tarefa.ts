@@ -69,8 +69,21 @@ export interface DefinicaoDeTarefa<Entrada, Saida> {
    * texto do aluno não segue para o provedor como conversa a continuar.
    */
   semModelo?(entrada: Entrada): Saida | undefined
+  /**
+   * Antes do schema: põe na resposta crua o que é decisão de quem pediu, e não do modelo. É o caso da adaptação, em
+   * que os tipos escolhidos pelo professor voltam do modelo reescritos (um `tempoExtraPercentual: 0` que ninguém
+   * pediu reprovava a resposta inteira, no ensaio com o Qwen de 04/10/2026).
+   */
+  prepararResposta?(entrada: Entrada, bruto: unknown): unknown
   /** Troca o que o modelo não pode improvisar por texto fixo nosso, antes da conferência. */
   ajustar?(entrada: Entrada, saida: Saida): Saida
+  /**
+   * A resposta nossa quando o modelo insistiu duas vezes numa saída que a **conferência** reprova (JSON e schema
+   * certos, conteúdo errado; JSON quebrado continua sendo falha). Só onde falhar é pior
+   * que responder por regra: no Tutor, a recusa da resposta pronta que o modelo não soube escrever sem nomear a
+   * alternativa. Passa pelo schema e pela conferência como qualquer outra; reprovada, a chamada falha como antes.
+   */
+  reservaQuandoInvalida?(entrada: Entrada): Saida | undefined
   /**
    * O que o schema não alcança: página citada que não veio nos trechos, gabarito trocado na adaptação, Tutor
    * entregando a resposta. Devolve os problemas em texto fixo, que voltam ao modelo na repetição; lista vazia é aprovado.

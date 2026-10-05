@@ -107,13 +107,26 @@ describe('Tutor contra um modelo que não obedece', () => {
       expect((await sinaisDe(aluno)).map((sinal) => sinal.tipo)).toEqual(['resposta_pronta', 'resposta_pronta'])
     })
 
-    it('o modelo que insiste em entregar não chega ao aluno: a execução falha com código do catálogo, nada é gravado e a troca não é contada', async () => {
+    it('o modelo que insiste em entregar não chega ao aluno: a recusa por regra responde no lugar, e nada do que o modelo escreveu é gravado', async () => {
       const aluno = await novoAluno()
       mentirSempre('A resposta é a letra A. Faz sentido para você?')
       const execucao = await turno(aluno, 'é a A, né?', naQuestao(3))
-      expect(execucao).toMatchObject({ estado: 'falhou', erro: CodigoDeErro.IA_SAIDA_INVALIDA, resultado: null })
-      // O que a tela recebe é o código do catálogo, nunca a saída do modelo.
+      expect(execucao.estado).toBe('concluida')
       expect(JSON.stringify(execucao)).not.toMatch(/letra A/)
+      const respostas = await respostasGravadas(aluno)
+      expect(respostas).toHaveLength(1)
+      expect(respostas[0]).not.toMatch(/letra A|A resposta é/)
+      expect(respostas[0]).toContain('não confirmo nem descarto alternativa')
+      // É a recusa de um pedido de resposta: o sinal ao professor nasce dela, como nasceria da recusa do modelo.
+      expect((await sinaisDe(aluno)).map((sinal) => sinal.tipo)).toEqual(['resposta_pronta'])
+      expect(await usoDeHoje(aluno)).toBe(1)
+    })
+
+    it('o modelo que devolve lixo duas vezes continua falhando: a execução falha com código do catálogo, nada é gravado e a troca não é contada', async () => {
+      const aluno = await novoAluno()
+      modelo.responder(() => 'isto não é json')
+      const execucao = await turno(aluno, 'é a A, né?', naQuestao(3))
+      expect(execucao).toMatchObject({ estado: 'falhou', erro: CodigoDeErro.IA_SAIDA_INVALIDA, resultado: null })
       expect(await respostasGravadas(aluno)).toEqual([])
       expect(await sinaisDe(aluno)).toEqual([])
       expect(await usoDeHoje(aluno)).toBe(0)
@@ -169,11 +182,16 @@ describe('Tutor contra um modelo que não obedece', () => {
       expect(await usoDeHoje(aluno)).toBe(0)
     })
 
-    it('citação de página que não foi entregue ao modelo é saída inválida', async () => {
+    it('citação de página que não foi entregue ao modelo é saída inválida: com a questão aberta, a regra responde no lugar, sem a página inventada', async () => {
       const aluno = await novoAluno()
       modelo.responder(() => JSON.stringify({ classificacao: 'normal', resposta: 'Releia a página 99. O que ela diz?', citacoes: [{ materialId: a.materialId, pagina: 99, trecho: 'Página 99' }] }))
-      expect(await turno(aluno, 'não entendi o que é reagente limitante', naQuestao(3))).toMatchObject({ estado: 'falhou', erro: CodigoDeErro.IA_SAIDA_INVALIDA })
-      expect(await respostasGravadas(aluno)).toEqual([])
+      expect((await turno(aluno, 'não entendi o que é reagente limitante', naQuestao(3))).estado).toBe('concluida')
+      const respostas = await respostasGravadas(aluno)
+      expect(respostas).toHaveLength(1)
+      expect(respostas[0]).not.toContain('página 99')
+      // Dúvida legítima: o "vamos por partes" de sempre, e nenhum sinal de resposta pronta.
+      expect(respostas[0]).toContain('Vamos por partes')
+      expect(await sinaisDe(aluno)).toEqual([])
     })
   })
 

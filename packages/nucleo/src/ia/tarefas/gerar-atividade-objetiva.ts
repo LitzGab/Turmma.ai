@@ -237,6 +237,16 @@ export const gerarAtividadeObjetiva = definirTarefa({
   levaTextoLivreDePessoa: false,
   levaTextoDeAluno: false,
 
+  /**
+   * A atividade gerada nunca é versão adaptada: o `adaptacao` que o modelo acrescentar por conta própria sai antes do
+   * schema (no ensaio com o Qwen de 04/10/2026, ele vinha em parte das respostas e reprovava a atividade inteira).
+   */
+  prepararResposta(_entrada, bruto) {
+    if (typeof bruto !== 'object' || bruto === null || Array.isArray(bruto) || !('adaptacao' in bruto)) return bruto
+    const { adaptacao: _adaptacao, ...semAdaptacao } = bruto
+    return semAdaptacao
+  },
+
   montarPedido(entrada) {
     return {
       instrucao: `Monte uma atividade com ${entrada.quantidade} questões objetivas sobre o tema pedido, a partir dos trechos do material.`,

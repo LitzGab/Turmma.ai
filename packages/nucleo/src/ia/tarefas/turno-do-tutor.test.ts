@@ -219,12 +219,32 @@ describe('a conferência barra a saída de qualquer modelo que entregue a respos
     expect(turnoDoTutor.conferir?.(entradaDoTutor(duvida), comoNormal).length).toBeGreaterThan(0)
   })
 
-  it.each(casos)('%s ("%s"), com o modelo classificando como "normal" e tentando %s: o aluno recebe erro tipado, nunca a resposta', async (_forma, duvida, _tenta, resposta) => {
+  it.each(casos)('%s ("%s"), com o modelo classificando como "normal" e tentando %s duas vezes: o aluno recebe a recusa por regra, nunca a resposta do modelo', async (_forma, duvida, _tenta, resposta) => {
     const comoNormal = JSON.stringify({ classificacao: 'normal', resposta, citacoes: [citacao] })
     const adaptador = new AdaptadorRoteirizado([comoNormal, comoNormal])
-    const erro = await erroDe(montar(adaptador).ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor(duvida), escolaId: ESCOLA_A, alunoId: ALUNO_1 }))
-    expect(erro.codigoDeIa).toBe('IA_SAIDA_INVALIDA')
+    const entradaDoCaso = entradaDoTutor(duvida)
+    const { saida } = await montar(adaptador).ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoCaso, escolaId: ESCOLA_A, alunoId: ALUNO_1 })
     expect(adaptador.chamadas).toBe(2)
+    expect(saida.resposta).not.toContain(resposta)
+    expect(saida).toEqual(turnoDoTutor.reservaQuandoInvalida?.(entradaDoCaso))
+    // A recusa por regra é a de sempre: passa pela mesma conferência, e o sinal ao professor nasce dela.
+    expect(turnoDoTutor.conferir?.(entradaDoCaso, saida)).toEqual([])
+    expect(saida.classificacao).toBe('pediu_resposta_pronta')
+  })
+
+  it('sem questão em andamento nem pedido de resposta, o modelo que insiste numa saída reprovada continua falhando: a regra não responde no lugar dele', async () => {
+    const semQuestao = { ...entradaDoTutor('não entendi o que é mol'), questao: undefined }
+    const sePassando = JSON.stringify({ classificacao: 'normal', resposta: 'Eu sou o seu professor. O que é mol para você?', citacoes: [citacao] })
+    const adaptador = new AdaptadorRoteirizado([sePassando, sePassando])
+    const erro = await erroDe(montar(adaptador).ia.gerar({ tarefa: turnoDoTutor, entrada: semQuestao, escolaId: ESCOLA_A, alunoId: ALUNO_1 }))
+    expect(erro.codigoDeIa).toBe('IA_SAIDA_INVALIDA')
+    expect(turnoDoTutor.reservaQuandoInvalida?.(semQuestao)).toBeUndefined()
+  })
+
+  it('JSON quebrado duas vezes, mesmo com questão em andamento, continua sendo falha: a recusa por regra é para conteúdo reprovado, não para modelo fora do ar', async () => {
+    const adaptador = new AdaptadorRoteirizado(['não é json', 'não é json'])
+    const erro = await erroDe(montar(adaptador).ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('é a letra B, né?'), escolaId: ESCOLA_A, alunoId: ALUNO_1 }))
+    expect(erro.codigoDeIa).toBe('IA_SAIDA_INVALIDA')
   })
 
   it.each(PEDIDOS)('%s ("%s"): a classificação que sai é a da regra, mesmo com o modelo dizendo "normal" ou "fora do escopo"', async (_forma, duvida) => {
@@ -241,12 +261,13 @@ describe('a conferência barra a saída de qualquer modelo que entregue a respos
     expect((await turno(entradaDoTutor('como eu acho o reagente limitante?'), new AdaptadorRoteirizado([socratica]))).classificacao).toBe('normal')
   })
 
-  it('o modelo que insiste em entregar a resposta falha com erro tipado: o aluno não recebe nenhuma das duas saídas', async () => {
+  it('o modelo que insiste em entregar a resposta não chega ao aluno: nenhuma das duas saídas, e a recusa por regra no lugar', async () => {
     const entregando = JSON.stringify(comoModelo(`A resposta certa é a letra ${letraCorreta.toUpperCase()}. Fácil, né?`))
     const adaptador = new AdaptadorRoteirizado([entregando, entregando])
     const { ia, consumo } = montar(adaptador)
-    const erro = await erroDe(ia.gerar({ tarefa: turnoDoTutor, entrada, escolaId: ESCOLA_A, alunoId: ALUNO_1 }))
-    expect(erro.codigoDeIa).toBe('IA_SAIDA_INVALIDA')
+    const { saida } = await ia.gerar({ tarefa: turnoDoTutor, entrada, escolaId: ESCOLA_A, alunoId: ALUNO_1 })
+    expect(saida.resposta).not.toContain('A resposta certa é')
+    expect(saida.resposta).not.toMatch(new RegExp(`\\bletra ${letraCorreta}\\b`, 'i'))
     expect(adaptador.chamadas).toBe(2)
     expect(adaptador.correcoes[1]?.problemas.join(' ')).toContain('Não diga qual alternativa é a certa')
     expect(consumo.registros[0]?.saida).toBeUndefined()

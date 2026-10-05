@@ -283,6 +283,16 @@ contêiner `127.0.0.1` é o próprio contêiner: por isso o repasse abaixo, liga
    socat TCP-LISTEN:18080,bind=172.17.0.1,reuseaddr,fork TCP:127.0.0.1:8080
    ```
 
+   **Nesta máquina o `ufw` está ativo e barra a entrada vinda das redes do Docker**: sem uma regra, a API dentro do
+   contêiner esgota o tempo ao chamar o repasse (visto no ensaio de 04/10/2026). A regra abre só a porta do repasse, e
+   só para as redes do Docker; quem a põe é o dono da máquina:
+
+   ```bash
+   sudo ufw allow from 172.16.0.0/12 to any port 18080 proto tcp
+   ```
+
+   Para tirar depois da demonstração: `sudo ufw delete allow from 172.16.0.0/12 to any port 18080 proto tcp`.
+
 3. O `infra/compose.yml` passa as variáveis de IA à API, mas **não** mapeia `host.docker.internal`. Crie, **fora do
    repositório**, o arquivo `/tmp/turmma-modelo-local.yml`:
 
@@ -311,6 +321,13 @@ contêiner `127.0.0.1` é o próprio contêiner: por isso o repasse abaixo, liga
 5. Conferir: `docker compose logs api-1 | tail` sem erro de configuração, e uma conversa de teste na professora antes
    da reunião. Alternativa sem o arquivo do passo 3: `LLM_BASE_URL=http://172.17.0.1:18080/v1` (IP privado, também
    aceito como local).
+
+**O que esperar do Qwen** (ensaio de 04/10/2026, `qwen3.6-35b-a3b`, as tarefas chamadas direto com o material de
+demonstração): proposta de ferramenta e "só conversar" em 3 a 5 s; atividade de 5 questões em 20 a 35 s, com questões
+de cálculo (reagente limitante com massas, massa pura a 80% de pureza), todas citando a página; versão adaptada em
+16 a 33 s; plano de aula em 20 a 27 s; cada turno do Tutor em 2 a 7 s. Em 26 pedidos e dúvidas de aluno com a questão
+em andamento, o Tutor não entregou a resposta nenhuma vez. Perto de um terço das chamadas precisa da segunda
+tentativa (o modelo erra a forma, e a conferência devolve o problema): é isso que faz uma geração passar de 30 s.
 
 **Voltar ao adaptador falso** (a qualquer momento, inclusive no meio da reunião, uns 20 s):
 

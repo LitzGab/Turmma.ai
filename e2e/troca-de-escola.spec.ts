@@ -344,9 +344,10 @@ test.describe('recomeço da tela do seletor', () => {
     const emA = await criarEquipeComSenha()
     const emB = await criarUsuarioEmOutraEscola(emA.contaId)
     const deA = await criarAlocacaoDoProfessor(emA.escolaId, emA.usuarioId)
-    await entrarEmA(page, emA, hasTouch)
 
-    // Só a primeira leitura, a de A, fica presa; a de B, depois da troca, passa.
+    // Só a primeira leitura, a de A, fica presa; a de B, depois da troca, passa. A rota entra antes da entrada: a Nova
+    // conversa já lê os vínculos, e com a leitura dela livre a de Turmas saía do cache, sem janela nenhuma de
+    // carregamento (falhou assim no celular, esteira `37250031803`). Só telas do professor leem os vínculos.
     const segurada = portao()
     let leituras = 0
     await page.route(ROTA_MEUS_VINCULOS, async (rota: Route) => {
@@ -355,6 +356,7 @@ test.describe('recomeço da tela do seletor', () => {
       // A leitura de A pode ter sido cancelada pela troca: aí não há mais a quem responder.
       await rota.continue().catch(() => undefined)
     })
+    await entrarEmA(page, emA, hasTouch)
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
 

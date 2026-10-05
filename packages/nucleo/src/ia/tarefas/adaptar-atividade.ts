@@ -71,6 +71,11 @@ export const adaptarAtividade = definirTarefa({
   levaTextoLivreDePessoa: false,
   levaTextoDeAluno: false,
 
+  /** Os tipos e o tempo extra são do professor (D35, D67): o que o modelo escrever no lugar deles não vale. */
+  prepararResposta(entrada, bruto) {
+    return typeof bruto === 'object' && bruto !== null && !Array.isArray(bruto) ? { ...bruto, adaptacao: entrada.adaptacao } : bruto
+  },
+
   montarPedido(entrada) {
     return {
       instrucao: 'Prepare a versão adaptada da atividade, aplicando os tipos de adaptação recebidos.',
