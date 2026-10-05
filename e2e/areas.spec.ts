@@ -379,8 +379,14 @@ test.describe('W4: os estados de "Turmas"', () => {
 
 test.describe('recomeço da tela', () => {
   test('segunda pessoa: a coordenação entra na aba do professor sem o item nem o dado dele', async ({ page, hasTouch }) => {
-    const professora = await entrarComoProfessora(page, hasTouch)
+    // A alocação existe antes da entrada: a Nova conversa já lê os vínculos ao abrir, e a lista que ela leu fica fresca
+    // no cache por 30 s. Criada depois, a alocação perdia a corrida para essa leitura, e "Turmas" mostrava o vazio do
+    // cache (esteiras 37324214757 e 37330163372; correção 2026-10-05-segunda-pessoa-cache-dos-vinculos).
+    const professora = await criarEquipeComSenha()
     const alocacao = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId)
+    await page.goto('/entrar')
+    await entrarPorEmail(page, professora, hasTouch)
+    await esperarNovaConversa(page, professora.nome)
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByRole('main')).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
 

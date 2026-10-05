@@ -743,14 +743,28 @@ qualquer dado real:
   e2e comprimido e com cache, como a produção, é mudança de infra (contêiner `web` e borda), com `test:infra`.
 - [ ] **Ensaio de alertas intermitente** na esteira: a regra "Login recusado pelo semáforo do hash" ficou em `pending`
   até o prazo numa execução da `mvp/apresentacao` e passou na reexecução. Se voltar, entra por `/corrigir`.
-- [ ] **E2e intermitente "segunda pessoa"** (`e2e/areas.spec.ts:381`, chromebook e celular): na esteira `37302975647` a
+- [x] ~~**E2e intermitente "segunda pessoa"** (`e2e/areas.spec.ts:381`, chromebook e celular): na esteira `37302975647` a
   coordenação entrou na aba do professor e "Turmas" mostrou o estado vazio ("A coordenação ainda não alocou você") em vez
   da turma da professora, e passou na reexecução, sem mudança de código. Voltou no projeto `celular` na esteira
   `37324214757` da `develop` (`e98a21b`, merge do PR #2, que só mudou `.md`), com o mesmo estado vazio no lugar da
   turma; o job e2e 3/4 foi reexecutado. É o quarto e2e intermitente da `mvp/apresentacao` em
   torno da página inicial do professor e da troca de escola (os outros são "W4: os estados de Turmas" e os dois da troca
   de escola no celular): vale um `/corrigir` que olhe os quatro juntos antes de a esteira da `develop` voltar a
-  ser por commit.
+  ser por commit.~~ — corrigido em `tasks/correcoes/2026-10-05-segunda-pessoa-cache-dos-vinculos.md`. Falhou também na
+  reexecução e no chromebook da `37330163372`. A causa era a alocação criada depois de a Nova conversa já ter lido os
+  vínculos, que ficavam 30 s no cache: o teste agora aloca antes de entrar (20 de 20 depois). O W4 (10 de 10) e a troca
+  de escola (80 de 80) ficaram estáveis sem mudança; os dois da troca de escola já tinham sido corrigidos no `ad7c3f0`.
+- [ ] **E2e "W4: os estados de Turmas" sem causa conhecida** (`e2e/areas.spec.ts:315`). Declarado intermitente no plano
+  do MVP (`docs/mvp-rapido.md`, seção 8, item 3), e o item acima era o único que o acompanhava. Não reproduziu em 10
+  execuções em 05/10/2026, e o código dele não tem a corrida do "segunda pessoa": aloca depois de entrar, mas relê pelo
+  "Tentar de novo". Se voltar, entra por `/corrigir` com a execução da esteira em que falhou.
+- [ ] **Alocação nova demora até 30 s para aparecer em "Turmas"** (`test-engineer` da correção
+  `2026-10-05-segunda-pessoa-cache-dos-vinculos`). Não é requisito hoje, mas o vazio da Nova conversa manda a professora
+  a "Turmas" ("Ir para Turmas", `apps/web/src/areas/professor/Home.tsx`), que monta com a lista que a Nova conversa já
+  leu (`staleTime` de 30 s em `apps/web/src/api/cliente-de-consultas.ts`) e mostra "A coordenação ainda não alocou você";
+  e esse vazio não tem como reler (`Turmas.tsx`), só trocando de aba ou abrindo a tela de novo. Se mudar (por exemplo,
+  `refetchOnMount: 'always'` só na consulta de "Turmas"), o e2e que prova é "alocação feita com a Nova conversa aberta
+  aparece em Turmas sem recarregar". Decisão de produto: Joaquim.
 
 ## O que o MVP fez diferente de uma decisão ou regra (05/10/2026, na propagação da D77)
 
