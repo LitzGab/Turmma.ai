@@ -24,6 +24,18 @@ import {
 } from './material-de-teste.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 
+/** `quantidade` campos de texto que o contrato não tem, para encher o multipart. */
+function camposAMais(quantidade: number): Record<string, string> {
+  return Object.fromEntries(Array.from({ length: quantidade }, (_, indice) => [`a_mais_${indice}`, 'x']))
+}
+
+/**
+ * Um PDF um byte acima do teto de tamanho. No pedido que um teto de campo deve parar, ele distingue os dois caminhos:
+ * com o teto, o recebimento para no campo, antes do arquivo, e responde 400; sem ele, o arquivo chega ao `fileSize` e
+ * a resposta vira 413.
+ */
+const PDF_ACIMA_DO_TETO = Buffer.concat([PDF_DE_DEMONSTRACAO, Buffer.alloc(MAXIMO_DE_BYTES_DO_MATERIAL + 1 - PDF_DE_DEMONSTRACAO.byteLength, 0x20)])
+
 /**
  * As regras do material da escola (MVP, A2; D5, D22, D75; `docs/mvp-contratos.md`, seção 3 e linha M da seção 6): a
  * recusa por licença antes de abrir o arquivo, a extração por página, a busca, a exclusão, os tetos e o alcance do
@@ -258,6 +270,43 @@ describe('material da escola', () => {
       expect(erroDe(recusado)).toEqual({ status: 413, codigo: CodigoDeErro.ENTRADA_INVALIDA })
       expect(extrair).not.toHaveBeenCalled()
       expect(await materiaisDa(bancada, escola.coordenacao.escolaId)).toEqual([])
+    })
+
+    /**
+     * Os tetos de quantidade do recebimento (`recebimento.ts`), na rota de verdade. Fixados quando o `multer` foi para a
+     * 2.4.0 (correção 2026-10-06-audit-proxy-addr-e-multer), que mudou a contagem de `parts`, o `maxCount` diante do
+     * `fileFilter` e a mensagem do arquivo em campo inesperado. O que cada caso prova:
+     * - outro campo: o erro do `multer` traduzido pelo código (com o `@nestjs/platform-express` 12.0.1, que traduzia pela
+     *   mensagem, saía 500 `ERRO_INTERNO`);
+     * - dois arquivos: um arquivo só por pedido (o `single` do interceptor);
+     * - dois arquivos sem licença: o `files: 1`, porque o arquivo que o `fileFilter` descarta não conta no `maxCount`, e
+     *   sem o teto o pedido chegaria à recusa por licença, com auditoria;
+     * - dez campos: o pedido com exatamente as `parts` passa pelo recebimento, e quem recusa é o contrato estrito;
+     * - onze campos e o campo grande: o `fields` (com o `parts`, que pega a 12ª parte se só o `fields` sair) e o
+     *   `fieldSize` param o pedido no campo, antes do arquivo. O arquivo vai acima do teto de tamanho: sem esses tetos,
+     *   o contrato recusaria do mesmo jeito, mas só depois de o arquivo chegar, e a resposta seria 413.
+     */
+    it.each([
+      { caso: 'o arquivo em outro campo que não `arquivo`', campos: {}, opcoes: { campoDoArquivo: 'outro' } },
+      { caso: 'dois arquivos no campo `arquivo`', campos: {}, opcoes: { copias: 2 } },
+      // O teto de arquivos vale antes da licença: o `fileFilter` que descarta o arquivo não o tira da contagem.
+      { caso: 'dois arquivos num pedido que seria recusado por licença', campos: { licenca: 'sem_licenca' }, opcoes: { copias: 2 } },
+      // Os cinco campos que o pedido manda, mais cinco: dez campos e o arquivo, exatamente as `parts` do recebimento.
+      { caso: 'dez campos e o arquivo (no limite de partes; o contrato estrito recusa)', campos: { extra: camposAMais(5) }, opcoes: {} },
+      { caso: 'onze campos e o arquivo acima do teto (para nos campos, antes do arquivo)', campos: { extra: camposAMais(6) }, opcoes: { arquivo: PDF_ACIMA_DO_TETO } },
+      { caso: 'um campo de texto acima de 2 KiB e o arquivo acima do teto (para no campo, antes do arquivo)', campos: { titulo: 'a'.repeat(2 * 1024 + 1) }, opcoes: { arquivo: PDF_ACIMA_DO_TETO } },
+    ])('$caso: `ENTRADA_INVALIDA` no recebimento, e nada é gravado nem lido', async ({ campos, opcoes }) => {
+      const escola = await montarEscolaComTurma(api, bancada)
+      const extrair = vi.spyOn(api.app.get(ExtratorDePdf), 'extrair')
+
+      const recusado = await enviarMaterial(api, escola.coordenacao, { disciplinaId: escola.quimica, ...campos }, opcoes)
+      await esperarExtracao(api)
+
+      expect(erroDe(recusado)).toEqual({ status: 400, codigo: CodigoDeErro.ENTRADA_INVALIDA })
+      expect(extrair).not.toHaveBeenCalled()
+      expect(await materiaisDa(bancada, escola.coordenacao.escolaId)).toEqual([])
+      expect(await auditoriaDa(bancada, escola.coordenacao.escolaId, 'material.enviado')).toEqual([])
+      expect(await auditoriaDa(bancada, escola.coordenacao.escolaId, 'material.recusado')).toEqual([])
     })
 
     it('exatamente no tamanho máximo o arquivo é recebido', async () => {

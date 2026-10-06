@@ -56,14 +56,19 @@ export interface OpcoesDoEnvio {
   readonly tipo?: string
   /** O arquivo antes dos campos no multipart: o servidor só conhece a licença depois de já ter recebido os bytes. */
   readonly arquivoPrimeiro?: boolean
+  /** O nome do campo do arquivo no multipart; a tela manda `arquivo`. */
+  readonly campoDoArquivo?: string
+  /** Quantas vezes o arquivo vai no multipart, no mesmo campo; a tela manda uma. */
+  readonly copias?: number
 }
 
 /** `POST /v1/materiais` como a tela manda: multipart, com os campos antes do arquivo. */
 export async function enviarMaterial(api: ApiDeTeste, sessao: Pick<SessaoDeTeste, 'token'>, campos: CamposDoEnvio, opcoes: OpcoesDoEnvio = {}): Promise<RespostaHttp & { retryAfter: string | null }> {
-  const { arquivo = PDF_DE_DEMONSTRACAO, nomeDoArquivo = 'capitulo.pdf', tipo = 'application/pdf', arquivoPrimeiro = false } = opcoes
+  const { arquivo = PDF_DE_DEMONSTRACAO, nomeDoArquivo = 'capitulo.pdf', tipo = 'application/pdf', arquivoPrimeiro = false, campoDoArquivo = 'arquivo', copias = 1 } = opcoes
   const formulario = new FormData()
   const anexar = (): void => {
-    if (arquivo !== null) formulario.append('arquivo', new Blob([new Uint8Array(arquivo)], { type: tipo }), nomeDoArquivo)
+    if (arquivo === null) return
+    for (let copia = 0; copia < copias; copia += 1) formulario.append(campoDoArquivo, new Blob([new Uint8Array(arquivo)], { type: tipo }), nomeDoArquivo)
   }
   if (arquivoPrimeiro) anexar()
   const texto: Record<string, string | undefined> = {

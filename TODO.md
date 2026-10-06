@@ -281,6 +281,12 @@ para o staging".
       exigia o `arquitetura.test.ts` sem mudar; a asserção entra na próxima tarefa que tocar o teste, e prende também o
       `anoLetivoId` de `naEscolaSemUsuario` a `sessao/acesso-da-sala.ts`, o único caminho que põe o ano no contexto sem
       usuário (`privacy-guardian`, 2ª rodada) (dono: Joaquim)
+- [ ] **Alinhar os pacotes `@nestjs/*` na mesma versão** (`infra-guardian` na correção
+      `2026-10-06-audit-proxy-addr-e-multer`): o `@nestjs/platform-express` subiu para 12.1.2 para fechar o aviso do
+      `multer`, e `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-socket.io` e `@nestjs/websockets` ficaram em
+      12.0.1. Funciona porque o que a 12.1.2 importa de `@nestjs/common/internal` existe na 12.0.1, mas esse módulo é
+      interno do Nest, e um `npm update` de um lado só pode quebrar sem aviso de peer. Daqui em diante os pacotes do Nest
+      sobem juntos; o alinhamento entra na próxima tarefa que tocar dependência (dono: Joaquim)
 
 ## Processo e dívida do F0
 

@@ -5,8 +5,8 @@ nova sem reler o histórico.
 
 ## Agora
 
-- **Tarefa atual:** 3.0, iniciada em 05/10/2026
-- **Base:** `develop` em `96f6e82` (tarefa 2.0), esteira 37392249003 verde
+- **Tarefa atual:** correção da esteira da 3.0 (`npm audit`), depois a 4.0
+- **Base:** `develop` em `d581da6` (tarefa 3.0), esteira 37421284203 VERMELHA
 
 ## Concluídas
 
@@ -14,12 +14,32 @@ nova sem reler o histórico.
 |---|---|---|---|
 | 1.0 | `37df73d` | 37371939334 (verde na 2ª tentativa: falta de runner) | test-engineer reprovou 1 vez; duas divergências da spec registradas pelo subagente (3 métodos na `ContaGlobalRepository`, subcaminhos `ciclo-de-vida` e `conta-global`) |
 | 2.0 | `96f6e82` | 37392249003 | test-engineer reprovou 1 vez (operador inexistente em `ops:retencao`); retomada por subagente novo; quatro recomendações do privacy-guardian levadas à 13.0 (ligação ao aluno em jsonb, como `auditoria.depois.alunoId`) |
+| 3.0 | `d581da6` | 37421284203 (vermelha: `npm audit`, não teste) | interrompida pelo PC desligado e retomada; revisor-geral reprovou 1 vez (alerta não disparava com falha desde a 1ª noite) e test-engineer 1 vez (faltava o teste desse caso); seis divergências registradas |
 
 ## O que falhou
 
-Nada até agora.
+- **Esteira da 3.0 (37421284203), job `verificar`, passo `npm audit`:** todos os testes passaram (integração,
+  infra, e2e 1 a 4). Caiu por avisos de segurança publicados depois da esteira verde da 2.0 (00:37 UTC de
+  06/10), em dependência de produção, não pelo código da 3.0:
+  - `proxy-addr` 2.0.7 (via `express` 5.2.1), **crítico**, GHSA-jqcg-44mw-7w3h; corrigido na 2.0.8
+    (`npm audit fix`, só lockfile).
+  - `multer` 2.3.0 (fixado em `overrides` no `package.json`), moderado, GHSA-3pph-fpjx-jg34; o 2.4.0 existe,
+    e o `npm audit` propõe `@nestjs/platform-express` 12.1.2 (hoje fixado em 12.0.1 em `apps/api`).
+  Não é intermitente: reexecutar não muda nada. Parei e reportei, como o Joaquim pediu para falha que não
+  é um dos e2e intermitentes conhecidos.
 
 ## O que decidi sem perguntar
+
+- **Correção do `npm audit` com 3ª rodada do `test-engineer` (06/10):** ele reprovou duas vezes seguidas
+  (1ª: o override sozinho do `multer` 2.4.0 quebrava o 400 do campo errado, que virava 500, e faltavam os
+  tetos; 2ª: dois desses casos novos passariam sem o teto). A regra original mandava parar; a autorização
+  do Joaquim de 06/10 manda seguir e corrigir. Segui com uma 3ª rodada, porque a 2ª pedia só reforçar o
+  teste. Saída escolhida: `@nestjs/platform-express` 12.1.2 (o 12.0.1 reconhecia o erro do `multer` pela
+  mensagem), `proxy-addr` 2.0.8 e `multer` 2.4.0 pelo lockfile, sem override.
+
+- **Autorização do Joaquim (06/10):** "pode continuar fazendo tudo para terminar a spec, não precisa
+  parar; se for preciso corrigir, pode corrigir". Daqui em diante, esteira vermelha vira `/corrigir`
+  (com o processo completo) e a execução segue, sem parar para perguntar.
 
 - **3.0 interrompida pelo desligamento do PC (05/10, entre 22:26 e 23:19):** a implementação ficou na
   árvore, sem rodada de revisor e sem portão novo. Retomei o mesmo subagente pela transcrição salva,
