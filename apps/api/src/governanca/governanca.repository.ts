@@ -112,7 +112,8 @@ export class GovernancaRepository {
    * quem tem **dado** na série, não quem tem vínculo nela: o professor de cada entrega é quem criou o artefato (a versão
    * adaptada) ou quem aplicou a atividade (o lote de correção). Com dois professores alocados e só um gerando entrega, a
    * linha da série diria o que **ele** gerou e aprovou, e insinuaria que o outro não usa a ferramenta (D64). Conta
-   * professores distintos e não diz quais.
+   * professores distintos e não diz quais. Só vale porque olha o ano em curso: no ano encerrado, o expurgo anula
+   * `artefato.criado_por` (F3, tarefa 4.0), e o `coalesce` passaria a contar outros professores, ou nenhum.
    */
   #serieComGrupoMinimo(): SQL {
     return sql`(

@@ -48,7 +48,7 @@ Nada aqui usa IA.
 | `conversa_professor` | apaga `mensagem_agente`; a `thread_agente` vazia sai | mensagem | 12 | 3 | 24 |
 | `execucao_agente` | `entrada = {tarefa}`, `solicitada_por` nulo, `anonimizada_em`; mantém `resultado`, `erro` e a linha | criação | 12 | 3 | 24 |
 | `texto_do_modelo` | anula `consumo_ia.entrada` e `saida` | `em` | 12 | 1 | 12 |
-| `consumo_por_aluno` | anula `consumo_ia.aluno_id` | `em` | 12 | 3 | 24 |
+| `consumo_por_aluno` | anula `consumo_ia.aluno_id` e anonimiza a execução do Tutor (tarefa 4.0) | `em` (a execução, a criação) | 12 | 3 | 24 |
 | `trabalho_do_aluno` | apaga `tentativa_atividade` (resposta e correção em cascata) | `fim` do ano com `situacao = encerrado` | 12 | 6 | 60 |
 | `reivindicacao_decidida` | apaga | decisão | 60 | 12 | 60 |
 | `autoria_de_artefato` | anula `artefato.criado_por` | `fim` do ano encerrado | 60 | 12 | 60 |
@@ -58,7 +58,8 @@ Nada aqui usa IA.
 
 **Travas entre categorias.** O prazo efetivo de `execucao_agente` e de `texto_do_modelo` é o menor entre o deles e o de
 `conversa_professor`, e o de `consumo_por_aluno` é o menor entre o dele e o de `conversa_tutor`. Um ajuste que
-desrespeite isso dá `RETENCAO_FORA_DO_LIMITE`.
+desrespeite isso dá `RETENCAO_FORA_DO_LIMITE`. A execução do Tutor, que tem o aluno em `solicitada_por` e a que o consumo
+dele aponta, perde o aluno no menor entre o prazo de `execucao_agente` e o de `consumo_por_aluno` (tarefa 4.0).
 
 **Classificação de toda tabela** (`CLASSIFICACAO_DAS_TABELAS`), conferida contra as migrations por um teste de
 arquitetura:
@@ -176,9 +177,10 @@ professor.
     (eliminacao_enfileirada_em is null or eliminacao_enfileirada_em < now() - interval '20 hours') returning id`,
     enfileira um `titular.eliminar` por pedido, na mesma transação;
   - remove do storage os objetos dos `arquivo_titular` vencidos ou com `apagado_em`, e só então a linha.
-- Depois percorre as categorias com o prazo efetivo, em lotes de 5.000 (`for update skip locked`, uma transação por
-  lote), e grava `expurgo_execucao`. **A cada lote** confere a janela letiva: se ela abriu, para; o resto sai na noite
-  seguinte, que começa pela categoria que ficou pendente; o alerta de duas noites pega a repetição.
+- Depois percorre as categorias com o prazo efetivo, em lotes de 5.000 (`for update skip locked`, ou `for no key update
+  skip locked` nas de anonimização, uma transação por lote), e grava `expurgo_execucao`. **A cada lote** confere a janela
+  letiva: se ela abriu, para; o resto sai na noite seguinte, que começa pela categoria que ficou pendente; o alerta de
+  duas noites pega a repetição.
 - Tarefa 3.0, como ficou no código:
   - a categoria pendente é a da última linha de `expurgo_execucao` da escola (por `em`, e pelo id no empate), se ela ficou
     `false`; a noite começa por ela e dá a volta no catálogo (`ordemDaNoite`), então toda noite completa tem uma linha
@@ -194,6 +196,29 @@ professor.
     `id` nulo quando o job da chave terminou entre a colisão e a leitura: é o "id ou nulo" desta seção, com o "já
     enfileirado" dito no tipo;
   - o log leva a categoria sob `tipo` (a guarda de log não aceita `categoria` como chave operacional) e só contagens.
+- Tarefa 4.0, como ficou no código:
+  - as quatro categorias de anonimização entram em `CATEGORIAS_DO_EXPURGO` depois das três que apagam, na ordem do
+    catálogo, e o método do lote passa a se chamar `expurgarLote(alvo, prazo, limite)`, com `prazo = { agora, meses,
+    fuso }` (apaga ou anonimiza, como o alvo diz). Os alvos são `execucao_agente`, `consumo_ia_texto`,
+    `consumo_ia_aluno`, `execucao_agente_do_tutor` e `artefato_autoria`;
+  - o consumo por aluno anonimiza também a execução do Tutor (`execucao_agente_do_tutor`, só `funcao =
+    'tutor_com_o_aluno'`, pelo índice parcial dela): o consumo do Tutor aponta para ela, e ela tem o aluno; a contagem da
+    categoria soma consumos e execuções (correção exigida pelo `privacy-guardian`). O filtro é a função: hoje o Tutor é a
+    única que o aluno pede (o check `execucao_agente_tarefa_da_funcao` só tem `turno_do_tutor` nela); uma função nova pedida
+    pelo aluno entra neste filtro e no índice dele. O `resultado` da execução do Tutor anonimizada continua com ids de
+    `mensagem_tutor`; isso não traz o aluno de volta só porque a trava `consumo_por_aluno ≤ conversa_tutor` faz a mensagem
+    sair antes, e afrouxar a trava exige rever isto;
+  - cada lote lê só as linhas que ainda têm pessoa (`anonimizada_em is null`, `entrada is not null or saida is not null`,
+    `aluno_id is not null`, `criado_por is not null`), pelo índice parcial da 0026, e trava com **`for no key update skip
+    locked`**, e não `for update`: o update não muda coluna de índice único, então a conferência de FK de quem grava uma
+    mensagem, um consumo ou uma entrega apontando para a linha não segura o lote, nem o lote a pula;
+  - `anonimizada_em` recebe o `agora` do job, como o `em` de `expurgo_execucao`;
+  - na autoria, sai o artefato cujo ano está `encerrado` e cujo `fim`, somado o prazo, é anterior ao dia de `agora` no
+    fuso da escola (o do horário letivo, que o job passa ao lote em `PrazoDoLote`; o dia de UTC já virou às 21h de São
+    Paulo, e o job segurado pela janela pode rodar a essa hora); o lote trava só o artefato (`of a`); sem `order by`,
+    porque a idade é a do ano;
+  - são **sete** as FKs que apontam para `execucao_agente` (a 0023 trocou as de seis tabelas pela versão com o ano, e a de
+    `consumo_ia` ficou sem ano), e não oito: o teste lê a lista de `pg_constraint`.
 - O `incidente` com mais de 5 anos é alvo do `sistema.expurgar-acesso`.
 
 **Arquivo.**
@@ -320,7 +345,7 @@ Não há IA no caminho. O que a funcionalidade preserva:
 | Limite por escola | vaga do F0 (lote 2); lote de 5.000; faixa de 1.000 na troca de nome; `statement_timeout` de 2 s |
 | Rate limit | balde do F0; `rl:busca-titular` com 30 por minuto por usuário, que recusa com 429 |
 | Corridas de concorrência | seção 5: a chave de envio decide primeiro; a chave de idempotência "escola + data local"; o único parcial de `agendado`; cancelar contra enfileirar por `eliminacao_enfileirada_em`; dois `ops:retencao ajustar` da mesma escola em fila pela trava `for no key update` da escola (tarefa 2.0); travas pedido → usuário; `skip locked` no expurgo; confirmação do incidente por `where confirmado_em is null`. Cada uma com um cenário em paralelo em `cenarios.md` |
-| Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` se não existir, e `consumo_ia (escola_id, execucao_id) where execucao_id is not null`. De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`; `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
+| Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` se não existir, e `consumo_ia (escola_id, execucao_id) where execucao_id is not null`. De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`, e o mesmo com `and funcao = 'tutor_com_o_aluno'` (tarefa 4.0); `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
 | Migration | compatível: a 0024 só expande, e a exigência de `provedor` vai num release posterior (seção 3). O `migrar` roda numa transação, então `NOT VALID` seguido de `VALIDATE` no mesmo arquivo não alivia a trava: a partir do staging, cada check vai em arquivo próprio. Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
 | Quando cada dependência cai | banco: 503 tipado e nova tentativa; Redis de fila: aceito e despachado depois; storage: "em preparação", e baixar dá `INDISPONIVEL` |
 | Métrica e alerta | duas noites seguidas sem todas as categorias da escola com `concluida = true` (tarefa 3.0: `expurgo.noites_incompletas{escola_id}`, de 0 a 2, medida pelo worker-lote a cada 5 min; a noite é o dia local de `em` no fuso da escola, de ontem para trás; a categoria sem linha conta como não concluída; a noite anterior à primeira execução da escola não conta, e a escola que nunca rodou não tem série; a regra dispara com a série em 2 por 1 min, `infra/grafana/alertas/expurgo-noites-incompletas.yaml`; o lote que falha grava a categoria com `concluida = false` antes de o erro subir, para a escola cujo expurgo falha desde a primeira noite também ter série; numa escola a oeste de São Paulo, uma execução que passa da meia-noite local divide as categorias entre dois dias, pendência no `TODO.md`); incidente sem confirmação em 24 h; pedido `agendado` mais de 48 h depois de `eliminar_em` (uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |

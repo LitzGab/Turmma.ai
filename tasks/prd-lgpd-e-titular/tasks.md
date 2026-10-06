@@ -29,11 +29,11 @@
   - [x] 3.6 Métrica e alerta de duas noites, parágrafo no `docs/runbook.md`; `docs/modelo-de-dados.md` (exceção da rotina)
   - [x] 3.7 Testes, parametrizados por catálogo com a lista "pendente da tarefa N"
 
-- [ ] **4.0 — O expurgo anonimiza execução, texto do modelo, consumo por aluno e autoria**
-  - [ ] 4.1 Migration própria: `execucao_agente.anonimizada_em`; índices parciais de anonimização (seção 7c), dois em `consumo_ia`
-  - [ ] 4.2 Categorias `execucao_agente` (`entrada = {tarefa}`, `solicitada_por` nulo), `texto_do_modelo`, `consumo_por_aluno`, `autoria_de_artefato` (ano encerrado)
-  - [ ] 4.3 `EXPLAIN` de cada lote, anexado à tarefa
-  - [ ] 4.4 Testes
+- [x] **4.0 — O expurgo anonimiza execução, texto do modelo, consumo por aluno e autoria**
+  - [x] 4.1 Migration própria: `execucao_agente.anonimizada_em`; índices parciais de anonimização (seção 7c), dois em `consumo_ia`
+  - [x] 4.2 Categorias `execucao_agente` (`entrada = {tarefa}`, `solicitada_por` nulo), `texto_do_modelo`, `consumo_por_aluno`, `autoria_de_artefato` (ano encerrado)
+  - [x] 4.3 `EXPLAIN` de cada lote, anexado à tarefa
+  - [x] 4.4 Testes
 
 - [ ] **5.0 — O expurgo alcança trabalho do aluno, reivindicação, material, vínculo e pessoa desativada**
   - [ ] 5.1 Migration própria: índices `reivindicacao` (decididas), `material` (excluídos), `usuario (escola_id, desativado_em)`, `vinculo` (encerrados), `tentativa_atividade (escola_id, aluno_id)` se faltar

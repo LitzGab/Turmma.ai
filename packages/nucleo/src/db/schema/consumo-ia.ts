@@ -33,6 +33,9 @@ import { usuario } from './usuario.js'
  *   não cabe.
  * - Sem `ano_letivo_id`: é série no tempo, somada por mês, como `uso_infra_diario`.
  * - Índice `(escola_id, funcao, em)`: o consumo do mês por função começa pelo escopo (regra 80, item 8).
+ * - **Anonimizado no prazo** (F3, tarefa 4.0): o expurgo noturno da escola anula `entrada` e `saida` na categoria
+ *   `texto_do_modelo` e `aluno_id` na `consumo_por_aluno`, contadas de `em`, cada uma pelo seu índice parcial
+ *   `(escola_id, em)`. A linha e os números ficam: a soma da governança não muda.
  */
 export const consumoIa = pgTable(
   'consumo_ia',
@@ -67,6 +70,9 @@ export const consumoIa = pgTable(
     foreignKey({ name: 'consumo_ia_aluno_da_escola_fk', columns: [tabela.escolaId, tabela.alunoId], foreignColumns: [usuario.escolaId, usuario.id] }).onDelete('set null'),
     index('consumo_ia_funcao_idx').on(tabela.escolaId, tabela.funcao, tabela.em),
     index('consumo_ia_aluno_idx').on(tabela.escolaId, tabela.alunoId, tabela.em).where(sql`${tabela.alunoId} is not null`),
+    // Os dois lotes do expurgo da escola (F3, tarefa 4.0): o texto do modelo e o aluno, cada um pela idade da chamada.
+    index('consumo_ia_texto_a_anular_idx').on(tabela.escolaId, tabela.em).where(sql`${tabela.entrada} is not null or ${tabela.saida} is not null`),
+    index('consumo_ia_aluno_a_anular_idx').on(tabela.escolaId, tabela.em).where(sql`${tabela.alunoId} is not null`),
     check(
       'consumo_ia_funcao_valida',
       sql`${tabela.funcao} in ('conversa_e_ferramentas', 'correcao_de_objetiva', 'adaptacao', 'tutor_com_o_aluno', 'sinais_para_o_professor', 'resumo_e_alerta')`,

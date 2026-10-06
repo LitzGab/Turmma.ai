@@ -31,7 +31,9 @@ import { usuario } from './usuario.js'
  * - Índice único parcial `(escola_id, execucao_id)`: uma execução produz um artefato, e executar duas vezes não cria
  *   dois (D49; regra 80, item 7).
  * - `criado_por` por FK composta com a escola, `on delete set null (criado_por)` (escrito à mão na 0022): o artefato
- *   fica para a escola, com a atividade já aplicada.
+ *   fica para a escola, com a atividade já aplicada. No prazo da categoria `autoria_de_artefato`, contado do `fim` do ano
+ *   letivo **encerrado**, o expurgo noturno da escola também o anula (F3, tarefa 4.0), pelo índice parcial
+ *   `(escola_id, ano_letivo_id)` onde `criado_por is not null`; o ano em curso nunca perde a autoria.
  * - Índices pelo escopo (regra 80, item 8): `(escola_id, turma_id, id)` para a listagem paginada, e o parcial
  *   `(escola_id, origem_id)` para as versões adaptadas de um artefato.
  */
@@ -79,6 +81,7 @@ export const artefato = pgTable(
     uniqueIndex('artefato_um_por_execucao').on(tabela.escolaId, tabela.execucaoId).where(sql`${tabela.execucaoId} is not null`),
     index('artefato_turma_idx').on(tabela.escolaId, tabela.turmaId, tabela.id),
     index('artefato_origem_idx').on(tabela.escolaId, tabela.origemId).where(sql`${tabela.origemId} is not null`),
+    index('artefato_autoria_idx').on(tabela.escolaId, tabela.anoLetivoId).where(sql`${tabela.criadoPor} is not null`),
     check('artefato_tipo_valido', sql`${tabela.tipo} in ('atividade_objetiva', 'plano_de_aula')`),
     check('artefato_titulo_preenchido', sql`char_length(btrim(${tabela.titulo})) between 1 and 160`),
     check('artefato_conteudo_do_tipo', sql`jsonb_typeof(${tabela.conteudo}) = 'object' and coalesce(${tabela.conteudo} ->> 'tipo', '') = ${tabela.tipo}`),

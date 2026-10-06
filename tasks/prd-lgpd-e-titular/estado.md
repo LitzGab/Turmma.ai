@@ -5,8 +5,8 @@ nova sem reler o histórico.
 
 ## Agora
 
-- **Tarefa atual:** correção da esteira da 3.0 (`npm audit`), depois a 4.0
-- **Base:** `develop` em `d581da6` (tarefa 3.0), esteira 37421284203 VERMELHA
+- **Tarefa atual:** 4.0, iniciada em 06/10/2026
+- **Base:** `develop` em `ee0215d` (correção do `npm audit`), esteira 37455244514 verde
 
 ## Concluídas
 
@@ -15,6 +15,7 @@ nova sem reler o histórico.
 | 1.0 | `37df73d` | 37371939334 (verde na 2ª tentativa: falta de runner) | test-engineer reprovou 1 vez; duas divergências da spec registradas pelo subagente (3 métodos na `ContaGlobalRepository`, subcaminhos `ciclo-de-vida` e `conta-global`) |
 | 2.0 | `96f6e82` | 37392249003 | test-engineer reprovou 1 vez (operador inexistente em `ops:retencao`); retomada por subagente novo; quatro recomendações do privacy-guardian levadas à 13.0 (ligação ao aluno em jsonb, como `auditoria.depois.alunoId`) |
 | 3.0 | `d581da6` | 37421284203 (vermelha: `npm audit`, não teste) | interrompida pelo PC desligado e retomada; revisor-geral reprovou 1 vez (alerta não disparava com falha desde a 1ª noite) e test-engineer 1 vez (faltava o teste desse caso); seis divergências registradas |
+| correção `2026-10-06-audit-proxy-addr-e-multer` | `ee0215d` | 37455244514 | fecha a esteira vermelha da 3.0; `@nestjs/platform-express` 12.1.2, `proxy-addr` 2.0.8, `multer` 2.4.0; test-engineer só aprovou na 3ª rodada, revisor-geral na 2ª |
 
 ## O que falhou
 
@@ -25,8 +26,12 @@ nova sem reler o histórico.
     (`npm audit fix`, só lockfile).
   - `multer` 2.3.0 (fixado em `overrides` no `package.json`), moderado, GHSA-3pph-fpjx-jg34; o 2.4.0 existe,
     e o `npm audit` propõe `@nestjs/platform-express` 12.1.2 (hoje fixado em 12.0.1 em `apps/api`).
-  Não é intermitente: reexecutar não muda nada. Parei e reportei, como o Joaquim pediu para falha que não
-  é um dos e2e intermitentes conhecidos.
+  Não é intermitente: reexecutar não muda nada. Parei e reportei; o Joaquim autorizou corrigir e seguir.
+  Fechada pela correção `2026-10-06-audit-proxy-addr-e-multer` (`ee0215d`, esteira verde).
+- **Deslize de processo na correção:** o subagente reescreveu o documento da correção inteiro e apagou da
+  tabela "Revisões" (que é do hook) a linha da 1ª rodada do `test-engineer`. A rodada continua em
+  `tasks/correcoes/achados/indice.md`; por isso a tabela e a linha `Revisões:` do commit numeram diferente.
+  Fica para o `/retro`.
 
 ## O que decidi sem perguntar
 

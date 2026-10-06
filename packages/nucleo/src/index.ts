@@ -204,7 +204,7 @@ export {
   noitesSeguidasSemConcluir,
   ordemDaNoite,
 } from './retencao/expurgo-da-escola.repository.js'
-export type { AlvoDoExpurgoDaEscola, CategoriaDoExpurgo, LoteDoExpurgo, NoiteDoExpurgo } from './retencao/expurgo-da-escola.repository.js'
+export type { AlvoDoExpurgoDaEscola, CategoriaDoExpurgo, LoteDoExpurgo, NoiteDoExpurgo, PrazoDoLote } from './retencao/expurgo-da-escola.repository.js'
 export { EscolasDaRotinaRepository } from './rotina/escolas-da-rotina.repository.js'
 export * from './db/schema/mvp/tabelas.js'
 export { contaExterna, PROVEDORES_EXTERNOS } from './db/schema/conta-externa.js'

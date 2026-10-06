@@ -87,11 +87,19 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 ## Infra e operação
 
-- [ ] **Migration 0025 (F3, tarefa 3.0) antes do staging:** o check `job_registro_chave_so_com_escola` entrou direto e
-      percorre `job_registro` com a trava `ACCESS EXCLUSIVE` (a fila quente, 7 dias de jobs); e os índices
-      `(escola_id, <data>)` de `mensagem_tutor`, `sinal_tutor` e `mensagem_agente` entraram sem `concurrently`. Com dado
-      sintético, cabe; a partir do staging, cada check em arquivo próprio com `NOT VALID` e `VALIDATE`, e índice com
-      `concurrently` fora de transação (Tech Spec do F3, seção 7c; `infra-guardian` da 3.0)
+- [ ] **Migrations 0025 e 0026 (F3, tarefas 3.0 e 4.0) antes do staging:** o check `job_registro_chave_so_com_escola`
+      entrou direto e percorre `job_registro` com a trava `ACCESS EXCLUSIVE` (a fila quente, 7 dias de jobs); os índices
+      `(escola_id, <data>)` de `mensagem_tutor`, `sinal_tutor` e `mensagem_agente` (0025) e os cinco índices parciais de
+      anonimização em `execucao_agente`, `consumo_ia` e `artefato` (0026) entraram sem `concurrently`. Com dado
+      sintético, cabe; a partir do staging, **toda** migration nova leva cada check em arquivo próprio com `NOT VALID` e
+      `VALIDATE`, e índice com `concurrently` fora de transação (Tech Spec do F3, seção 7c). O `migrar` usa o
+      `statement_timeout` de 2 s da consulta (`packages/nucleo/src/db/migrar.ts`): com volume real, um `CREATE INDEX` em
+      `execucao_agente` ou `consumo_ia` passa disso e derruba o deploy, então o prazo do migrador muda junto
+      (`infra-guardian` da 3.0 e da 4.0)
+- [ ] **Escrita a mais por troca do Tutor (F3, 4.0):** `execucao_agente_a_anonimizar_idx`,
+      `execucao_agente_do_tutor_a_anonimizar_idx` e `consumo_ia_aluno_a_anular_idx` recebem quase toda linha recente, e
+      cada troca do Tutor passa a atualizar índices a mais nas duas tabelas. Medir no cenário de carga da 19.0
+      (`infra-guardian` da 4.0)
 - [ ] **Alerta de duas noites do expurgo (F3, 3.0):** a noite conta "de ontem para trás", então o alerta dispara à
       meia-noite local (umas 17 h depois de a segunda noite parcial ser conhecida) e segue ligado o dia em que uma noite
       completa roda; numa escola a oeste de São Paulo (Acre, o disparo da 1h cai às 23h locais), uma execução que passa da
@@ -743,8 +751,16 @@ qualquer dado real:
 - [ ] **Trava da D62 em código.** A marca "leva texto de aluno" da camada de IA não tem consumidor: texto de aluno com
   envio externo e sem contrato que vede treinamento e garanta processamento no Brasil precisa ser recusado
   (`privacy-guardian`).
-- [ ] **Expurgo** de `consumo_ia` (`entrada` e `saida`), de `execucao_agente` e das conversas, no prazo do mapa de
-  `docs/lgpd.md`, configurável por escola. O mapa cita o expurgo e ele não existe.
+- [x] **Expurgo** de `consumo_ia` (`entrada` e `saida`), de `execucao_agente` e das conversas, no prazo do mapa de
+  `docs/lgpd.md`, configurável por escola. Feito no F3: as conversas e os sinais saem (tarefa 3.0), e a execução, o texto
+  do modelo, o aluno do consumo e a autoria do artefato perdem a pessoa (tarefa 4.0), pelo `retencao.expurgar-escola`.
+- [ ] **Função nova pedida pelo aluno e o expurgo:** o lote `execucao_agente_do_tutor` filtra por
+  `funcao = 'tutor_com_o_aluno'`, a única que o aluno pede hoje (`FUNCOES_COM_ORCAMENTO_POR_ALUNO`). Pôr um teste que leia
+  essa lista e confira que cada função tem alvo e índice de anonimização, antes de existir a segunda (`privacy-guardian`
+  da F3, tarefa 4.0)
+- [ ] **Reenvio da chave de uma execução já anonimizada:** a API devolve `NAO_ENCONTRADO` (a releitura filtra por
+  `solicitada_por`, que ficou nulo), e nenhum teste de integração prova que não é 500 nem execução nova. Pôr o teste,
+  no Assistente e no Tutor, quando o fluxo for revisto para a escola real (`llm-integrator` da F3, tarefa 4.0)
 - [ ] **Aviso no campo de tema** das ferramentas, para não escrever nome nem condição de aluno, e busca textual nos
   campos livres no procedimento de eliminação do titular.
 - [ ] **Recusa do Tutor medida.** Conjunto fixo de amostras com taxa mínima declarada, rodado contra o modelo de

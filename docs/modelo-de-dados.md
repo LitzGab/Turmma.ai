@@ -502,7 +502,8 @@ Material*          → escola*, disciplina*, titulo*, titularidade*, licenciante
                      enviadoPor?, enviadoEm*, excluidoPor?, excluidoEm?
 Trecho*            → escola*, disciplina*, material*, pagina*, texto*, busca (tsvector, português)
 ExecucaoAgente*    → escola*, anoLetivo*, funcao*, tarefa*, solicitadaPor?, chaveEnvio*,
-                     estado* (pendente | rodando | concluida | falhou), entrada*, resultado?, erro?, datas
+                     estado* (pendente | rodando | concluida | falhou), entrada*, resultado?, erro?, datas,
+                     anonimizadaEm? (F3)
 ConsumoIa*         → escola*, aluno?, execucao?, tarefa*, funcao*, perfil*, origem*, modelo*, promptVersao*,
                      tokensDeEntrada*, tokensDeSaida*, custoMicros*, duracaoMs*, envioExterno*, tentativas*,
                      estado*, codigoDeErro?, entrada?, saida?, em*
@@ -592,6 +593,18 @@ Tutor, os sinais e a conversa do professor vencidos (a thread vazia e criada ant
 `ExpurgoExecucao` por categoria percorrida, mesmo com zero: `concluida` é `true` quando a categoria terminou e `false`
 quando a janela abriu no meio; a noite seguinte começa pela categoria pendente. `ExpurgoExecucao` guarda só a categoria e
 a contagem, sem pessoa, por 5 anos (tarefa 5.0), e é dela que o worker-lote mede as noites do alerta.
+
+**As categorias que mantêm a linha e anulam a pessoa (F3, tarefa 4.0).** No mesmo job, depois das três que apagam, o
+`ExpurgoDaEscolaRepository` anonimiza, cada uma pelo seu índice parcial da migration 0026 (só as linhas que ainda têm
+pessoa, então reexecutar não relê nada): `ExecucaoAgente` (`entrada` só com a tarefa, `solicitadaPor` nulo e
+`anonimizadaEm`; o estado, o resultado, o erro e as FKs de quem aponta para ela ficam), `ConsumoIa.entrada` e `saida`
+(`texto_do_modelo`), `ConsumoIa.aluno` e a execução do Tutor a que ele aponta (`consumo_por_aluno`) e
+`Artefato.criadoPor` do ano letivo **encerrado** (`autoria_de_artefato`, contada do `fim` do ano, no dia do fuso da
+escola). O prazo efetivo vem das travas: o tema e o texto do modelo não passam da conversa do professor, e o aluno do
+consumo não passa da conversa do Tutor. Os lotes travam com `for no key update skip locked`: a FK de quem aponta para a
+linha não segura o lote, e o lote não segura quem grava a mensagem nova. Uma execução ainda aberta (`pendente` ou
+`rodando`) e vencida também é anonimizada e não volta a rodar: a varredura do executor a encerra como `falhou`, e a
+releitura da entrada pela chave dá `NAO_ENCONTRADO`, porque `solicitadaPor` ficou nulo.
 
 `Evento` é o motor: nota aprovada, tarefa não entregue, aluno travado. A `Notificacao` é
 uma leitura dele. Isso permite construir o motor agora e ligar o canal da família depois

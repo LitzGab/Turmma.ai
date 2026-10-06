@@ -20,7 +20,7 @@ import { FalhaDeJob } from '../falha-de-job.js'
 export const TIPO_EXPURGAR_ESCOLA = 'retencao.expurgar-escola'
 
 export interface DependenciasDoExpurgoDaEscola {
-  repositorio: Pick<ExpurgoDaEscolaRepository, 'apagarLote' | 'registrar' | 'categoriaPendente'>
+  repositorio: Pick<ExpurgoDaEscolaRepository, 'expurgarLote' | 'registrar' | 'categoriaPendente'>
   retencao: Pick<RetencaoDaEscolaRepository, 'ajustes'>
   /** O horário letivo da escola do contexto: o expurgo confere a cada lote, e para quando ele abre. */
   janelaDaEscola: Pick<ConfiguracaoOperacional<JanelaLetiva>, 'daEscola'>
@@ -31,9 +31,11 @@ export interface DependenciasDoExpurgoDaEscola {
 }
 
 /**
- * `retencao.expurgar-escola` (F3, tarefa 3.0; Tech Spec do F3, seção 5): no contexto da escola do job, apaga o que passou
- * do prazo efetivo de cada categoria (`retencaoDaEscola`, com o ajuste da escola e as travas), em lotes de 5.000, uma
- * transação por lote, e grava uma linha de `expurgo_execucao` por categoria, mesmo com zero.
+ * `retencao.expurgar-escola` (F3, tarefas 3.0 e 4.0; Tech Spec do F3, seção 5): no contexto da escola do job, apaga ou
+ * anonimiza, como o catálogo diz, o que passou do prazo efetivo de cada categoria (`retencaoDaEscola`, com o ajuste da
+ * escola e as travas: o tema da execução e o texto do modelo não passam da conversa do professor, e o aluno do consumo não
+ * passa da conversa do Tutor), em lotes de 5.000, uma transação por lote, e grava uma linha de `expurgo_execucao` por
+ * categoria, mesmo com zero.
  *
  * - **O lote que falha** grava a linha da categoria com `concluida = false` antes de o erro subir, para a falha contar
  *   no alerta mesmo na primeira noite da escola.
@@ -41,9 +43,10 @@ export interface DependenciasDoExpurgoDaEscola {
  *   com o que já saiu, e o job termina sem passar às seguintes. A noite seguinte começa pela categoria pendente e dá a
  *   volta no catálogo; duas noites seguidas sem terminar disparam o alerta (`expurgo.noites_incompletas`).
  * - **O corte é contado de um `agora` só**, lido no começo: a execução inteira usa o mesmo prazo, e o teste o injeta.
- *   A janela usa o relógio a cada lote.
- * - Tolera reexecução e dois jobs da mesma escola ao mesmo tempo (D49): o que saiu não volta, e o `skip locked` dá a
- *   cada um linhas diferentes. Um job que morre no meio desfaz só o lote em andamento.
+ *   A janela usa o relógio a cada lote. O fuso do horário letivo vai junto ao lote: a autoria de artefato conta de uma
+ *   data, e o dia que vale é o da escola.
+ * - Tolera reexecução e dois jobs da mesma escola ao mesmo tempo (D49): o que saiu não volta, o que foi anonimizado não é
+ *   relido, e o `skip locked` dá a cada um linhas diferentes. Um job que morre no meio desfaz só o lote em andamento.
  * - Loga só a categoria (sob `tipo`) e as contagens; a escola vai pelo contexto, nunca uma linha.
  */
 export function criarExpurgoDaEscola({ repositorio, retencao, janelaDaEscola, relogio, logger, lote = LOTE_DO_EXPURGO }: DependenciasDoExpurgoDaEscola): Processador {
@@ -69,7 +72,7 @@ export function criarExpurgoDaEscola({ repositorio, retencao, janelaDaEscola, re
               logger.info({ evento: 'retencao.expurgo_interrompido', tipo, linhasDaCategoriaTotal, linhasTotal })
               return
             }
-            const doLote = await repositorio.apagarLote(alvo, agora, meses, lote)
+            const doLote = await repositorio.expurgarLote(alvo, { agora, meses, fuso: janela.fuso }, lote)
             linhasDaCategoriaTotal += doLote.linhas
             if (!doLote.cheio) break
           }

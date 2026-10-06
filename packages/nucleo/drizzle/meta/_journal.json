@@ -183,6 +183,13 @@
       "when": 1791247651240,
       "tag": "0025_expurgo_execucao",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791287744843,
+      "tag": "0026_anonimizacao",
+      "breakpoints": true
     }
   ]
 }

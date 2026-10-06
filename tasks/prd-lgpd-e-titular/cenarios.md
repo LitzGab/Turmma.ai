@@ -27,6 +27,9 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] Com `conversa_professor` em 3 meses, o tema em `execucao_agente` e em `consumo_ia` sai em 3 meses.
   - [I] Com `conversa_tutor` em 6 meses, o `aluno_id` de `consumo_ia` com 7 meses é anulado.
   - [I] Ajustar `consumo_por_aluno` acima de `conversa_tutor` dá `RETENCAO_FORA_DO_LIMITE`.
+  - [I] Com `conversa_tutor` em 6 meses, aos 7 meses nem `consumo_ia.aluno_id` nem a execução do Tutor a que o consumo aponta
+    alcançam o aluno; aos 5, os dois ficam; a execução do professor de 7 meses fica (tarefa 4.0, exigido pelo
+    `privacy-guardian`).
   - [I] Expurgar e trocar o nome numa linha antiga de `consumo_ia` (`envio_externo` verdadeiro, sem `provedor`,
     anterior à migration da 7.0) não esbarra no check (testado na 15.0).
 - **RF4, ano letivo.**
@@ -34,7 +37,12 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] O mesmo ano `encerrado` perde.
 - **RF4, `execucao_agente`.**
   - [I] Anonimizar uma linha `pendente`, uma `concluida` e uma `falhou` respeita os checks das migrations 0022 e 0023.
-  - [I] A linha fica, as oito FKs que apontam para ela continuam válidas, e a soma da governança não muda.
+  - [I] A linha fica, as sete FKs que apontam para ela (lidas de `pg_constraint`; a spec dizia oito, tarefa 4.0)
+    continuam válidas, e a soma da governança não muda.
+  - [I] O lote de anonimização não pula a linha que só tem a trava de FK (`for key share`) e pula, sem esperar, a que outra
+    transação travou para mudar (tarefa 4.0).
+  - [I] Reexecutar não mexe na execução já anonimizada (`anonimizada_em` fica com a data da primeira noite), e o texto do
+    modelo conta só as chamadas que tinham texto, com entrada ou só com saída (tarefa 4.0).
 - **RF4, `pessoa_desativada`.**
   - [I] O usuário desativado além do prazo é eliminado.
   - [I] Se ele está ativo em outra escola, a conta continua.

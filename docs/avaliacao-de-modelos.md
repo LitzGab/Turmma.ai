@@ -48,7 +48,8 @@ por trimestre: reconfira antes de assinar.
 ## 3. O que é avaliado
 
 Um conjunto fixo de amostras **sintéticas**, versionado no repositório. Nenhuma amostra usa
-dado real de aluno (regra 20).
+dado real de aluno (regra 20). E não há chamada real antiga para comparar: `consumo_ia.entrada` e `saida` vivem no
+máximo 12 meses (o teto da categoria `texto_do_modelo`), e o expurgo noturno as anula (F3, tarefa 4.0).
 
 | Tarefa | Perfil | Amostras | Passa quando |
 |---|---|---|---|

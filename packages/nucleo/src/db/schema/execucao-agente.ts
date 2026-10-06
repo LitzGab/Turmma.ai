@@ -39,6 +39,14 @@ import { usuario } from './usuario.js'
  * - Cresce com o Tutor (uma por troca). Lê-se por id ou pela chave. O índice parcial das abertas, `(escola_id, estado,
  *   criada_em)`, só tem as `pendente` e `rodando`: é por ele que a varredura da subida do processo (`falharInterrompidas`,
  *   rotina nossa entre escolas, `@SemEscopo`) encerra as que ficaram para trás, sem ler a tabela.
+ * - **Anonimizada no prazo** (F3, tarefa 4.0; categoria `execucao_agente` da retenção): o expurgo noturno da escola troca
+ *   a `entrada` por `{ tarefa }` (o que o check `execucao_agente_entrada_da_tarefa` exige), anula `solicitada_por` e
+ *   grava `anonimizada_em`. A linha, o estado, o `resultado` e o `erro` ficam, e com eles as FKs de quem aponta para ela:
+ *   o que a IA gerou continua ligado ao que foi aprovado (regra 70, item 6). O índice parcial `(escola_id, criada_em)`
+ *   onde `anonimizada_em is null` é o do lote, e a linha anonimizada sai dele: a noite seguinte não a relê. A execução do
+ *   Tutor tem o aluno em `solicitada_por`, e o consumo dela aponta para ela: ela é anonimizada também no prazo de
+ *   `consumo_por_aluno`, que nunca passa da conversa do Tutor, pelo índice parcial dela (`funcao = 'tutor_com_o_aluno'`).
+ *   Anonimizada, ela não responde a ninguém: a releitura pela chave filtra por `solicitada_por` e dá `NAO_ENCONTRADO`.
  */
 export const execucaoAgente = pgTable(
   'execucao_agente',
@@ -59,6 +67,7 @@ export const execucaoAgente = pgTable(
     criadaEm: timestamp({ withTimezone: true }).notNull().defaultNow(),
     iniciadaEm: timestamp({ withTimezone: true }),
     concluidaEm: timestamp({ withTimezone: true }),
+    anonimizadaEm: timestamp({ withTimezone: true }),
   },
   (tabela) => [
     unique('execucao_agente_escola_id_unico').on(tabela.escolaId, tabela.id),
@@ -68,6 +77,10 @@ export const execucaoAgente = pgTable(
     foreignKey({ name: 'execucao_agente_solicitada_por_da_escola_fk', columns: [tabela.escolaId, tabela.solicitadaPor], foreignColumns: [usuario.escolaId, usuario.id] }).onDelete('set null'),
     uniqueIndex('execucao_agente_chave_na_escola_unica').on(tabela.escolaId, tabela.chaveEnvio),
     index('execucao_agente_abertas_idx').on(tabela.escolaId, tabela.estado, tabela.criadaEm).where(sql`${tabela.estado} in ('pendente', 'rodando')`),
+    index('execucao_agente_a_anonimizar_idx').on(tabela.escolaId, tabela.criadaEm).where(sql`${tabela.anonimizadaEm} is null`),
+    index('execucao_agente_do_tutor_a_anonimizar_idx')
+      .on(tabela.escolaId, tabela.criadaEm)
+      .where(sql`${tabela.anonimizadaEm} is null and ${tabela.funcao} = 'tutor_com_o_aluno'`),
     check(
       'execucao_agente_funcao_valida',
       sql`${tabela.funcao} in ('conversa_e_ferramentas', 'correcao_de_objetiva', 'adaptacao', 'tutor_com_o_aluno', 'sinais_para_o_professor', 'resumo_e_alerta')`,
