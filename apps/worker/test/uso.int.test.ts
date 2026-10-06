@@ -14,9 +14,10 @@ import { FalhaDeJob } from '../src/falha-de-job.js'
 import { montarWorker, type WorkerMontado } from '../src/montagem.js'
 import { criarConsolidacaoDeUso, FALHAS_DE_STORAGE_SEGUIDAS_ATE_DESISTIR, TIPO_CONSOLIDAR_USO } from '../src/processadores/consolidar-uso.js'
 import { TIPO_EXPURGAR_ACESSO } from '../src/processadores/expurgar-acesso.js'
+import { TIPO_EXPURGAR_DADO_PESSOAL } from '../src/processadores/expurgar-dado-pessoal.js'
 import { TIPO_EXPURGAR_JOBS } from '../src/processadores/expurgar-jobs.js'
 import { criarClienteS3, MedidorDeStorage } from '../src/storage/medidor-de-storage.js'
-import { BancadaDeFila, configuracaoDoBanco, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
+import { BancadaDeFila, configuracaoDoBanco, janelaPadraoDoAmbiente, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
 
 // Contadores no Redis de fila, `uso_infra_diario` no Postgres e bytes no storage, todos do compose de
 // teste. Só o relógio é falso: é ele que marca às 23h59 de 31/12 e consolida às 2h do dia seguinte.
@@ -572,13 +573,14 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
       await fila.close()
     })
 
-    it('as rotinas são agendadas às 2h, às 3h30 e às 4h30 de São Paulo, e registrar de novo (a outra réplica) não duplica o agendador', async () => {
+    it('as rotinas são agendadas à 1h, às 2h, às 3h30 e às 4h30 de São Paulo, e registrar de novo (a outra réplica) não duplica o agendador', async () => {
       await registrarAgendamentos(fila)
       await registrarAgendamentos(fila)
       const agendadores = await fila.getJobSchedulers()
       expect(agendadores.map(({ key, pattern, tz }) => ({ key, pattern, tz })).sort((a, b) => a.key.localeCompare(b.key))).toEqual([
         { key: TIPO_CONSOLIDAR_USO, pattern: '0 2 * * *', tz: FUSO_DOS_AGENDAMENTOS },
         { key: TIPO_EXPURGAR_ACESSO, pattern: '30 4 * * *', tz: FUSO_DOS_AGENDAMENTOS },
+        { key: TIPO_EXPURGAR_DADO_PESSOAL, pattern: '0 1 * * *', tz: FUSO_DOS_AGENDAMENTOS },
         { key: TIPO_EXPURGAR_JOBS, pattern: '30 3 * * *', tz: FUSO_DOS_AGENDAMENTOS },
       ])
       const proximaConsolidacao = agendadores.find(({ key }) => key === TIPO_CONSOLIDAR_USO)?.next
@@ -608,7 +610,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
       onTestFinished(() => medidor.encerrar())
       agora = QUARTA_2H
       const worker = montarWorker(
-        { banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), pools: { lote: 2 }, vagasPadrao: vagasPadraoDoAmbiente(), threadsMaximo: 1, storage: STORAGE },
+        { banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), pools: { lote: 2 }, vagasPadrao: vagasPadraoDoAmbiente(), threadsMaximo: 1, storage: STORAGE, janelaPadrao: janelaPadraoDoAmbiente() },
         log.logger,
         { prefixo: bancada.prefixo, relogio, agendamentos: AGENDAMENTOS, medidor: medidor.medidor },
       )

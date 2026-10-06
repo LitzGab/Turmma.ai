@@ -129,6 +129,12 @@ describe('regras de alerta provisionadas', () => {
     expect(sala.for).toBe('5m')
     expect(expressao(sala)).toBe('sum (rate(sala_limite_atingido_total{job="educa/api", tipo="escola"}[1m])) * 60')
     expect(limiar(sala)).toEqual({ type: 'gt', params: [10] })
+
+    // F3, tarefa 3.0: por escola, em qualquer réplica do worker-lote, e só com duas noites seguidas (a série vai de 0 a 2).
+    const expurgo = regraPorUid(REGRAS_PROVISIONADAS.expurgoIncompleto).regra
+    expect(expurgo.for).toBe('1m')
+    expect(expressao(expurgo)).toBe('max by (escola_id) (expurgo_noites_incompletas{job="educa/worker"})')
+    expect(limiar(expurgo)).toEqual({ type: 'gt', params: [1] })
   })
 
   it('L11: a linha `sala.limite_atingido` que o limite da escola escreve traz o `escolaId` que o comando da entrada do runbook recebe', async () => {

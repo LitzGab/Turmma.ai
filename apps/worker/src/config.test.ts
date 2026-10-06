@@ -29,6 +29,14 @@ const storageValido = {
   STORAGE_CHAVE_SECRETA: 'segredo_sintetico_xyz',
 }
 
+/** O horário letivo padrão, que só o worker-lote lê (F3, tarefa 3.0): o expurgo da escola para quando ele abre. */
+const janelaValida = {
+  JANELA_LETIVA_FUSO: 'America/Sao_Paulo',
+  JANELA_LETIVA_DIAS: '1,2,3,4,5',
+  JANELA_LETIVA_INICIO: '07:00',
+  JANELA_LETIVA_FIM: '18:00',
+}
+
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
   try {
     lerConfiguracao(ambiente)
@@ -52,12 +60,12 @@ describe('lerConfiguracao do worker', () => {
   })
 
   it('o worker-lote atende só o lote, e o pool de outra fila no ambiente não liga a fila', () => {
-    const lote = { ...ambienteValido, ...storageValido, FILAS: 'lote', WORKER_POOL_LOTE: '10' }
+    const lote = { ...ambienteValido, ...storageValido, ...janelaValida, FILAS: 'lote', WORKER_POOL_LOTE: '10' }
     expect(lerConfiguracao(lote).pools).toEqual({ lote: 10 })
   })
 
   it('o worker-lote lê o storage, onde a consolidação mede os bytes; o worker-interativo não precisa dele', () => {
-    const lote = { ...ambienteValido, ...storageValido, FILAS: 'lote', WORKER_POOL_LOTE: '10' }
+    const lote = { ...ambienteValido, ...storageValido, ...janelaValida, FILAS: 'lote', WORKER_POOL_LOTE: '10' }
     expect(lerConfiguracao(lote).storage).toEqual({
       url: 'http://storage:8333',
       regiao: 'us-east-1',
@@ -68,13 +76,24 @@ describe('lerConfiguracao do worker', () => {
     expect(lerConfiguracao(ambienteValido).storage).toBeUndefined()
   })
 
+  it('o worker-lote lê o horário letivo padrão, que o expurgo da escola confere a cada lote; o worker-interativo não', () => {
+    const lote = { ...ambienteValido, ...storageValido, ...janelaValida, FILAS: 'lote', WORKER_POOL_LOTE: '10' }
+    expect(lerConfiguracao(lote).janelaPadrao).toEqual({ fuso: 'America/Sao_Paulo', diasLetivos: [1, 2, 3, 4, 5], inicio: '07:00', fim: '18:00' })
+    expect(lerConfiguracao(ambienteValido).janelaPadrao).toBeUndefined()
+  })
+
+  it.each(Object.keys(janelaValida))('o worker-lote não sobe sem %s', (variavel) => {
+    const lote = { ...ambienteValido, ...storageValido, ...janelaValida, FILAS: 'lote', WORKER_POOL_LOTE: '10', [variavel]: undefined }
+    expect(erroDe(lote).variaveis).toEqual([variavel])
+  })
+
   it.each(Object.keys(storageValido))('o worker-lote não sobe sem %s', (variavel) => {
-    const lote = { ...ambienteValido, ...storageValido, FILAS: 'lote', WORKER_POOL_LOTE: '10', [variavel]: undefined }
+    const lote = { ...ambienteValido, ...storageValido, ...janelaValida, FILAS: 'lote', WORKER_POOL_LOTE: '10', [variavel]: undefined }
     expect(erroDe(lote).variaveis).toEqual([variavel])
   })
 
   it('a mensagem do storage inválido cita só a variável, nunca o segredo', () => {
-    const erro = erroDe({ ...ambienteValido, ...storageValido, FILAS: 'lote', WORKER_POOL_LOTE: '10', STORAGE_URL: 'storage:8333', STORAGE_CHAVE_SECRETA: '' })
+    const erro = erroDe({ ...ambienteValido, ...storageValido, ...janelaValida, FILAS: 'lote', WORKER_POOL_LOTE: '10', STORAGE_URL: 'storage:8333', STORAGE_CHAVE_SECRETA: '' })
     expect(erro.variaveis).toEqual(['STORAGE_CHAVE_SECRETA', 'STORAGE_URL'])
     expect(erro.message).not.toContain(storageValido.STORAGE_CHAVE_SECRETA)
   })
@@ -99,7 +118,7 @@ describe('lerConfiguracao do worker', () => {
   })
 
   it('não sobe sem o pool de uma fila que atende', () => {
-    expect(erroDe({ ...ambienteValido, ...storageValido, FILAS: 'interativa,normal,lote' }).variaveis).toEqual(['WORKER_POOL_LOTE'])
+    expect(erroDe({ ...ambienteValido, ...storageValido, ...janelaValida, FILAS: 'interativa,normal,lote' }).variaveis).toEqual(['WORKER_POOL_LOTE'])
   })
 
   it.each(['', 'interativa,prioritaria', 'interativa,interativa', 'INTERATIVA'])('não sobe com FILAS=%j', (valor) => {

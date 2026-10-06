@@ -87,6 +87,27 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 ## Infra e operação
 
+- [ ] **Migration 0025 (F3, tarefa 3.0) antes do staging:** o check `job_registro_chave_so_com_escola` entrou direto e
+      percorre `job_registro` com a trava `ACCESS EXCLUSIVE` (a fila quente, 7 dias de jobs); e os índices
+      `(escola_id, <data>)` de `mensagem_tutor`, `sinal_tutor` e `mensagem_agente` entraram sem `concurrently`. Com dado
+      sintético, cabe; a partir do staging, cada check em arquivo próprio com `NOT VALID` e `VALIDATE`, e índice com
+      `concurrently` fora de transação (Tech Spec do F3, seção 7c; `infra-guardian` da 3.0)
+- [ ] **Alerta de duas noites do expurgo (F3, 3.0):** a noite conta "de ontem para trás", então o alerta dispara à
+      meia-noite local (umas 17 h depois de a segunda noite parcial ser conhecida) e segue ligado o dia em que uma noite
+      completa roda; numa escola a oeste de São Paulo (Acre, o disparo da 1h cai às 23h locais), uma execução que passa da
+      meia-noite divide as categorias entre dois dias e pode dar falso alerta. Avaliar contar a noite pela chave do job (a
+      data local do disparo) antes da primeira escola fora do fuso de São Paulo; e trocar a medição de uma consulta por
+      escola por uma agrupada quando passar de centenas de escolas (`infra-guardian` e `revisor-geral` da 3.0)
+- [ ] **Categoria que falha toda noite segura as seguintes (F3, 3.0):** a linha `false` do lote que falha vira a
+      categoria pendente, e a noite seguinte (e cada nova tentativa da fila) começa por ela; se o erro se repete ali, as
+      categorias que vêm depois deixam de rodar. O alerta de duas noites dispara, e o runbook cobre (causa 3). Separar a
+      linha de falha da de interrupção pela janela (só a interrupção define a pendente), ou seguir para as outras
+      categorias antes de subir o erro (`infra-guardian` da 3.0, 2ª rodada)
+- [ ] **Thread do Assistente apagada pelo expurgo no instante do envio (F3, 3.0):** a thread vazia e vencida que o expurgo
+      apaga enquanto o professor manda a primeira mensagem faz o envio falhar pela FK. Conferir que ele vê um erro tipado e
+      que pode reenviar, e não um 500 (`infra-guardian` da 3.0). A seleção da thread vazia filtra `(escola_id, criada_em)`
+      pelo índice único da thread, sem índice próprio: rever se a tabela crescer (`revisor-geral` da 3.0)
+
 - [ ] `lista_nome`: índice parcial `(escola_id, usuario_id) where usuario_id is not null`, para a busca da eliminação do
       aluno aprovado (`CicloDeVidaRepository.apagarDaListaDeNomes`) e a FK do `usuario_id` no `delete` do usuário; hoje as
       duas percorrem a lista da escola pelo prefixo de `lista_nome_turma_idx`. Na próxima migration de `lista_nome`

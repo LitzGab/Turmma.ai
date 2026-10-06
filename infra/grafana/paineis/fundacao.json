@@ -1530,6 +1530,56 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "Noites sem expurgo completo, por escola",
+      "description": "De ontem para trás, no fuso de cada escola, quantas noites seguidas o expurgo dela (retencao.expurgar-escola, à 1h) não terminou todas as categorias (F3, tarefa 3.0): 0, 1 ou 2, medido pelo worker-lote a cada 5 min a partir de expurgo_execucao. Uma noite em 1 é a janela letiva que abriu no meio; o alerta \"Expurgo incompleto por duas noites numa escola\" dispara em 2. Só a escola que já rodou o expurgo tem série. O que fazer está no runbook.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 115
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (escola_id) (expurgo_noites_incompletas)",
+          "legendFormat": "{{escola_id}}",
+          "range": true
+        }
+      ]
     }
   ]
 }

@@ -176,6 +176,13 @@
       "when": 1791238339685,
       "tag": "0024_retencao_escola",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791247651240,
+      "tag": "0025_expurgo_execucao",
+      "breakpoints": true
     }
   ]
 }

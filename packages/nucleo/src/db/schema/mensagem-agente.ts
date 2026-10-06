@@ -59,6 +59,8 @@ export const mensagemAgente = pgTable(
     foreignKey({ name: 'mensagem_agente_disciplina_da_escola_fk', columns: [tabela.escolaId, tabela.disciplinaId], foreignColumns: [disciplina.escolaId, disciplina.id] }),
     uniqueIndex('mensagem_agente_uma_por_execucao').on(tabela.escolaId, tabela.execucaoId, tabela.autor),
     index('mensagem_agente_thread_idx').on(tabela.escolaId, tabela.threadId, tabela.id),
+    // O expurgo da escola (F3, tarefa 3.0) apaga a conversa vencida pela data, em lotes.
+    index('mensagem_agente_criada_em_idx').on(tabela.escolaId, tabela.criadaEm),
     check('mensagem_agente_autor_valido', sql`${tabela.autor} in ('usuario', 'agente')`),
     check(
       'mensagem_agente_conteudo_do_autor',

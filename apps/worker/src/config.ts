@@ -1,12 +1,14 @@
 import {
   ConfiguracaoInvalida,
   lerConfiguracaoBanco,
+  lerJanelaPadrao,
   lerConfiguracaoTelemetria,
   lerVagasPadrao,
   lerVagasPorEscolaDesligadas,
   validarAmbiente,
   type ConfiguracaoBanco,
   type ConfiguracaoTelemetria,
+  type JanelaLetiva,
   type VagasPorFila,
 } from '@educa/nucleo'
 import { FILAS, type Fila } from '@educa/shared'
@@ -75,6 +77,12 @@ export interface ConfiguracaoWorker {
    * O worker-interativo não mede storage e não precisa da credencial.
    */
   storage?: ConfiguracaoStorage
+  /**
+   * Só na réplica que atende o lote: o horário letivo de toda escola sem horário próprio, o mesmo do despachante
+   * (`JANELA_LETIVA_*`). O expurgo da escola confere a janela a cada lote e para quando ela abre, e a rotina noturna tira
+   * do fuso da escola a data local da chave (F3, tarefa 3.0).
+   */
+  janelaPadrao?: JanelaLetiva
   /** Para onde e de quanto em quanto tempo as métricas vão. */
   telemetria: ConfiguracaoTelemetria
 }
@@ -101,6 +109,7 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const vagasDesligadas = ler(() => lerVagasPorEscolaDesligadas(ambiente))
   const atendeLote = filas?.FILAS.includes('lote') === true
   const storage = atendeLote ? ler(() => validarAmbiente(esquemaStorage, ambiente)) : undefined
+  const janelaPadrao = atendeLote ? ler(() => lerJanelaPadrao(ambiente)) : undefined
   const telemetria = ler(() => lerConfiguracaoTelemetria(ambiente))
   if (
     telemetria === undefined ||
@@ -110,7 +119,7 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     pools === undefined ||
     vagasPadrao === undefined ||
     vagasDesligadas === undefined ||
-    (atendeLote && storage === undefined)
+    (atendeLote && (storage === undefined || janelaPadrao === undefined))
   ) {
     throw new ConfiguracaoInvalida(problemas.flatMap((erro) => erro.variaveis).sort(), problemas.flatMap((erro) => erro.motivos))
   }
@@ -122,6 +131,7 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     threadsMaximo: proprio.WORKER_THREADS_MAXIMO,
     ...(vagasDesligadas ? { vagasPorEscolaDesligadas: true as const } : {}),
     telemetria,
+    ...(janelaPadrao === undefined ? {} : { janelaPadrao }),
     ...(storage === undefined
       ? {}
       : {

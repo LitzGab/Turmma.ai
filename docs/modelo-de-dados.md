@@ -566,6 +566,7 @@ SolicitacaoTitular → escola*, titular*, tipo (acesso | correcao | eliminacao |
 Incidente        → escola*, detectadoEm*, descricao, titularesAfetados, comunicadoEm?
 RetencaoEscola*  → escola* + categoria* (chave), meses*, referenciaContrato*, alteradaEm*,
                    alteradaPor* (apelido do operador)    (F3)
+ExpurgoExecucao* → escola*, categoria*, linhas*, concluida*, em*    (F3)
 ```
 
 `RetencaoEscola` guarda só o **ajuste** da escola numa categoria do catálogo de retenção (`CATEGORIAS_DE_RETENCAO`, em
@@ -576,6 +577,21 @@ contrato é inteiro, como o do pedido no `ops:redefinir-mfa`, porque vai também
 livre. Não varia por ano letivo. Toda tabela das migrations está em `CLASSIFICACAO_DAS_TABELAS` (categoria do expurgo,
 prazo fixo com quem o aplica, ou sem pessoa; se entra no arquivo do titular e por qual coluna se liga a ele), e as
 colunas de segredo, em `COLUNAS_FORA_DO_ARQUIVO`; o teste de arquitetura confere as duas listas contra as migrations.
+
+**O expurgo noturno da escola (F3, tarefa 3.0).** À 1h, a rotina do sistema `sistema.expurgar-dado-pessoal` lista as
+escolas pela `EscolasDaRotinaRepository` (em `packages/nucleo/src/rotina`), a **única consulta sem escopo do expurgo**:
+`listarIds`, `@SemEscopo` com a justificativa da rotina, devolve só os ids. Ela não é de retenção: é a infraestrutura de
+que a rotina, sem escola, precisa para abrir o contexto de cada escola, e o teste de arquitetura confere que só o
+worker-lote a usa (a rotina e a medição do alerta). No contexto de cada escola, a rotina grava um
+`retencao.expurgar-escola` na fila de lote, não urgente, pelo `Enfileirador.enfileirarUmaVez`, com a **chave de
+idempotência** "data local da noite" no fuso da escola: `JobRegistro.chaveIdempotencia`, única por escola e tipo entre os
+jobs não finalizados (índice parcial), e só em job de escola (check). O job da escola roda com a escola do
+`job_registro`, e o `ExpurgoDaEscolaRepository` tira o escopo do contexto, sem nenhum `@SemEscopo`: apaga a conversa do
+Tutor, os sinais e a conversa do professor vencidos (a thread vazia e criada antes do corte sai depois), em lotes de
+5.000 pelo índice `(escola_id, <data>)`, confere a janela letiva antes de cada lote e grava uma linha de
+`ExpurgoExecucao` por categoria percorrida, mesmo com zero: `concluida` é `true` quando a categoria terminou e `false`
+quando a janela abriu no meio; a noite seguinte começa pela categoria pendente. `ExpurgoExecucao` guarda só a categoria e
+a contagem, sem pessoa, por 5 anos (tarefa 5.0), e é dela que o worker-lote mede as noites do alerta.
 
 `Evento` é o motor: nota aprovada, tarefa não entregue, aluno travado. A `Notificacao` é
 uma leitura dele. Isso permite construir o motor agora e ligar o canal da família depois
@@ -610,6 +626,8 @@ liga a decisão sobre o professor (D45, regra 70 item 8). Os dois estão no mapa
    - as tabelas da operação Turmma (`Operador`, `CodigoRecuperacaoOperador`, `ConviteOperador`,
      `SessaoOperador`, `AcessoOperacao`, `AuditoriaOperacao`), da nossa equipe e não de escola,
      só alcançadas pelo `OperadorRepository` e pelo expurgo — ver "Operação Turmma".
+   A lista de escolas da rotina noturna (`EscolasDaRotinaRepository.listarIds`, F3) não é tabela sem escola: é a
+   consulta sem escopo que abre o contexto de cada escola — ver "Comunicação, conta e conformidade".
 2. Id é UUID. Nunca sequencial.
 3. Nada é apagado de verdade: exclusão é lógica, com data e autor — exceto em pedido de
    eliminação do titular, que apaga de fato e propaga para backup na próxima rotação, e no nome

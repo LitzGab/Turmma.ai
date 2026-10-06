@@ -49,6 +49,12 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [F] Os quatro alertas disparam, cada um ligado ao parágrafo do runbook: duas noites sem todas as categorias
     concluídas; `agendado` mais de
     48 h depois de `eliminar_em`; `em_preparacao` por mais de 2 h; incidente sem confirmação em 24 h.
+  - [I] A thread do professor sem mensagem sai só se foi criada antes do corte; a recém-aberta fica; a que ganhou mensagem
+    entre a escolha e a trava fica (tarefa 3.0).
+  - [I] O lote que falha grava a categoria com `concluida = false` antes de o erro subir; duas noites assim, desde a primeira
+    da escola, levam a série do alerta a 2 (tarefa 3.0).
+  - [I] A medição do alerta conta a noite no fuso da escola, ignora a noite anterior à primeira execução, e não dá série à
+    escola que nunca rodou (tarefa 3.0).
   - [I] O pedido com `eliminacao_enfileirada_em` há mais de 20 h é reenfileirado; com menos de 20 h, não é.
   - Carga: uma escola expurga 1 milhão de linhas e troca um nome enquanto outra usa o Tutor, com cada statement abaixo
     de 2 s.

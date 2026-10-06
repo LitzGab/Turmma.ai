@@ -385,6 +385,12 @@ services:
       STORAGE_BUCKET: ${STORAGE_BUCKET:?defina STORAGE_BUCKET}
       STORAGE_CHAVE_ACESSO: ${STORAGE_CHAVE_ACESSO:?defina STORAGE_CHAVE_ACESSO}
       STORAGE_CHAVE_SECRETA: ${STORAGE_CHAVE_SECRETA:?defina STORAGE_CHAVE_SECRETA}
+      # Só o worker-lote: o mesmo horário letivo padrão do despachante. O expurgo da escola confere a janela a cada lote
+      # e para quando ela abre, e a rotina noturna tira do fuso da escola a data local da chave (F3, tarefa 3.0).
+      JANELA_LETIVA_FUSO: ${JANELA_LETIVA_FUSO:?defina JANELA_LETIVA_FUSO}
+      JANELA_LETIVA_DIAS: ${JANELA_LETIVA_DIAS:?defina JANELA_LETIVA_DIAS}
+      JANELA_LETIVA_INICIO: ${JANELA_LETIVA_INICIO:?defina JANELA_LETIVA_INICIO}
+      JANELA_LETIVA_FIM: ${JANELA_LETIVA_FIM:?defina JANELA_LETIVA_FIM}
       VAGAS_ESCOLA_INTERATIVA: ${VAGAS_ESCOLA_INTERATIVA:?defina VAGAS_ESCOLA_INTERATIVA}
       VAGAS_ESCOLA_NORMAL: ${VAGAS_ESCOLA_NORMAL:?defina VAGAS_ESCOLA_NORMAL}
       VAGAS_ESCOLA_LOTE: ${VAGAS_ESCOLA_LOTE:?defina VAGAS_ESCOLA_LOTE}

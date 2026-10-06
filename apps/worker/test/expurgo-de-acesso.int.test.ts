@@ -11,7 +11,7 @@ import { AGENDAMENTOS, FILA_DOS_AGENDAMENTOS } from '../src/agendamentos.js'
 import type { ConfiguracaoStorage } from '../src/config.js'
 import { montarWorker, type WorkerMontado } from '../src/montagem.js'
 import { criarExpurgoDeAcesso, TIPO_EXPURGAR_ACESSO, type TotaisDoExpurgoDeAcesso } from '../src/processadores/expurgar-acesso.js'
-import { BancadaDeFila, configuracaoDoBanco, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
+import { BancadaDeFila, configuracaoDoBanco, janelaPadraoDoAmbiente, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
 
 // `registro_acesso`, `sessao` e `convite` do Postgres do compose de teste, com linhas de duas escolas (e a falha de
 // login sem escola) dos dois lados de cada prazo, e `acesso_operacao`, `sessao_operador` e `convite_operador` da
@@ -749,7 +749,7 @@ describe('sistema.expurgar-acesso', () => {
   it('trilha completa: o agendamento das 4h30 grava o job, o despachante o solta fora do horário letivo, e o worker de lote expurga', async () => {
     expect(AGENDAMENTOS).toContainEqual({ tipo: TIPO_EXPURGAR_ACESSO, padrao: '30 4 * * *' })
     const worker = montarWorker(
-      { banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), pools: { lote: 2 }, vagasPadrao: vagasPadraoDoAmbiente(), threadsMaximo: 1, storage: STORAGE },
+      { banco: configuracaoDoBanco(), redisFilaUrl: urlRedisDeFila(), pools: { lote: 2 }, vagasPadrao: vagasPadraoDoAmbiente(), threadsMaximo: 1, storage: STORAGE, janelaPadrao: janelaPadraoDoAmbiente() },
       log.logger,
       { prefixo: bancada.prefixo, relogio, agendamentos: AGENDAMENTOS },
     )

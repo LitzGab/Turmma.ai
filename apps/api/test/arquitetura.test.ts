@@ -1033,3 +1033,42 @@ describe('arquitetura: toda tabela das migrations está classificada para a rete
     expect(colunasDasTabelas([criada, 'DROP TABLE "nova";'])).toEqual(new Map())
   })
 })
+
+/** Cita a classe da rotina noturna ou o arquivo dela (F3, tarefa 3.0). */
+const USO_DA_ROTINA = /\bEscolasDaRotinaRepository\b|escolas-da-rotina\.repository/
+
+/**
+ * Fora dos testes, quem pode usar a lista de escolas da rotina: ela mesma, o barrel, e o worker-lote, que a usa na rotina
+ * noturna (para abrir o contexto de cada escola) e na medição das noites do expurgo. Uma rota da API que a importasse
+ * teria uma consulta sem escopo ao alcance de uma requisição.
+ */
+const QUEM_USA_A_ROTINA = [
+  'apps/worker/src/medicao-do-expurgo.ts',
+  'apps/worker/src/montagem.ts',
+  'apps/worker/src/processadores/expurgar-dado-pessoal.ts',
+  'packages/nucleo/src/index.ts',
+  'packages/nucleo/src/rotina/escolas-da-rotina.repository.ts',
+]
+
+describe('arquitetura: a rotina noturna é a única consulta sem escopo do expurgo da escola (F3, tarefa 3.0; Tech Spec do F3, seção 6)', () => {
+  it('a EscolasDaRotinaRepository tem um método só, `listarIds`, @SemEscopo com a justificativa da rotina', () => {
+    const metodos = Object.getOwnPropertyNames(nucleo.EscolasDaRotinaRepository.prototype).filter((metodo) => metodo !== 'constructor')
+    expect(metodos).toEqual(['listarIds'])
+    expect(nucleo.justificativaSemEscopo(nucleo.EscolasDaRotinaRepository, 'listarIds')).toMatch(/^rotina noturna: .*só os ids/)
+  })
+
+  it('o ExpurgoDaEscolaRepository não tem nenhum @SemEscopo: tudo nele vem da escola do contexto', () => {
+    const metodos = Object.getOwnPropertyNames(nucleo.ExpurgoDaEscolaRepository.prototype).filter((metodo) => metodo !== 'constructor')
+    expect(metodos.length).toBeGreaterThan(0)
+    expect(metodos.filter((metodo) => nucleo.justificativaSemEscopo(nucleo.ExpurgoDaEscolaRepository, metodo) !== undefined)).toEqual([])
+  })
+
+  it('fora dos testes, só o worker-lote usa a lista de escolas da rotina', () => {
+    for (const caminho of QUEM_USA_A_ROTINA) expect(existsSync(join(RAIZ, caminho)), caminho).toBe(true)
+    const usos = arquivosDoRepositorio()
+      .filter((arquivo) => !/(^|\/)test\//.test(arquivo.caminho) && !/\.test\.tsx?$/.test(arquivo.caminho))
+      .filter((arquivo) => USO_DA_ROTINA.test(arquivo.texto))
+      .map((arquivo) => arquivo.caminho)
+    expect(usos.sort()).toEqual([...QUEM_USA_A_ROTINA].sort())
+  })
+})

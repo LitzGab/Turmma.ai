@@ -66,7 +66,7 @@ arquitetura:
 | Classe | Tabelas |
 |---|---|
 | categoria acima | as doze linhas acima, mais `resposta_atividade`, `correcao` e `thread_agente` (cascata ou vazio) |
-| prazo fixo, com quem aplica | `registro_acesso`, `sessao`, `convite`, `acesso_turma`: `sistema.expurgar-acesso`. `conta`, `codigo_recuperacao`: limpeza da conta (F1). `credencial_matricula`, `conta_externa`: desativação e eliminação. `lista_nome`: virada do ano (A1) e eliminação. `operador`, `convite_operador`, `sessao_operador`, `acesso_operacao`, `codigo_recuperacao_operador`: A0 e `sistema.expurgar-acesso`. `job_registro`: 7 dias (F0). `auditoria`, `auditoria_operacao`, `entrega`, `validacao_do_lote`, `suspensao_de_funcao`, `atividade_aplicada`, `pedido_titular`: vigência + 5 anos, no fim de contrato (F12). `arquivo_titular`: 7 dias. `incidente` e `incidente_escola`: 5 anos. `expurgo_execucao`: 5 anos |
+| prazo fixo, com quem aplica | `registro_acesso`, `sessao`, `convite`, `acesso_turma`: `sistema.expurgar-acesso`. `conta`, `codigo_recuperacao`: limpeza da conta (F1). `credencial_matricula`, `conta_externa`: desativação e eliminação. `lista_nome`: virada do ano (A1) e eliminação. `operador`, `convite_operador`, `sessao_operador`, `acesso_operacao`, `codigo_recuperacao_operador`: A0 e `sistema.expurgar-acesso`. `job_registro`: 7 dias (F0). `auditoria`, `auditoria_operacao`, `entrega`, `validacao_do_lote`, `suspensao_de_funcao`, `atividade_aplicada`, `pedido_titular`: vigência + 5 anos, no fim de contrato (F12). `arquivo_titular`: 7 dias. `incidente` e `incidente_escola`: 5 anos. `expurgo_execucao`: 5 anos (tarefa 3.0: no grupo `registro_de_decisao` de `PRAZOS_FIXOS`, que são oito e fechados; quem aplica é o expurgo da escola, na 5.0) |
 | sem pessoa | `rede`, `escola`, `ano_letivo`, `serie`, `disciplina`, `turma`, `provedor_escola`, `configuracao_operacional_escola`, `uso_infra_diario`, `trecho`, `resumo_do_analista`, `retencao_escola`, `suboperador`, `suboperador_escola` |
 
 Também `usuario` ativo e `material` vigente ficam enquanto existem; saem pela eliminação e pelas duas categorias acima.
@@ -179,6 +179,21 @@ professor.
 - Depois percorre as categorias com o prazo efetivo, em lotes de 5.000 (`for update skip locked`, uma transação por
   lote), e grava `expurgo_execucao`. **A cada lote** confere a janela letiva: se ela abriu, para; o resto sai na noite
   seguinte, que começa pela categoria que ficou pendente; o alerta de duas noites pega a repetição.
+- Tarefa 3.0, como ficou no código:
+  - a categoria pendente é a da última linha de `expurgo_execucao` da escola (por `em`, e pelo id no empate), se ela ficou
+    `false`; a noite começa por ela e dá a volta no catálogo (`ordemDaNoite`), então toda noite completa tem uma linha
+    `true` de cada categoria;
+  - `em` é o relógio do job, e o corte é contado de um `agora` lido no começo; a janela, do relógio a cada lote, com o
+    horário letivo da escola (`configuracao_operacional_escola`, ou o padrão `JANELA_LETIVA_*`, que o worker-lote passa a
+    ler, como o despachante);
+  - a `thread_agente` vazia sai **só se foi criada antes do corte**: a thread que o professor acabou de abrir, ainda sem
+    mensagem, fica. Sai em duas instruções numa transação (trava as candidatas com `skip locked` e reconfere que estão
+    vazias antes do delete), para uma mensagem confirmada entre a visão da primeira instrução e a trava não sair em
+    cascata; `linhas` da conversa do professor soma as mensagens e as threads;
+  - o `Enfileirador.enfileirarUmaVez` devolve `{ situacao: 'enfileirado', id }` ou `{ situacao: 'ja_enfileirado', id }`, com
+    `id` nulo quando o job da chave terminou entre a colisão e a leitura: é o "id ou nulo" desta seção, com o "já
+    enfileirado" dito no tipo;
+  - o log leva a categoria sob `tipo` (a guarda de log não aceita `categoria` como chave operacional) e só contagens.
 - O `incidente` com mais de 5 anos é alvo do `sistema.expurgar-acesso`.
 
 **Arquivo.**
@@ -254,7 +269,7 @@ Todo repository novo tira a escola do contexto. O job da escola roda com a escol
 
 | Repository.método | O que faz | Justificativa |
 |---|---|---|
-| `EscolasDaRotinaRepository.listarIds` | ids das escolas, nada mais | a rotina noturna precisa abrir o contexto de cada escola; é infraestrutura de rotina, não de retenção |
+| `EscolasDaRotinaRepository.listarIds` | ids das escolas, nada mais | a rotina noturna precisa abrir o contexto de cada escola; é infraestrutura de rotina, não de retenção. Na tarefa 3.0, a medição do alerta de duas noites, no worker-lote, usa a mesma lista para abrir o contexto de cada escola e ler as noites dela pelo `ExpurgoDaEscolaRepository`, com escopo; o teste de arquitetura lista quem a usa (só o worker-lote) |
 | `ContaGlobalRepository.travarConta`, `limparContaSemUso`, `encerrarSessoesDaConta` | os três da conta global, **movidos** de `ResolucaoDeTenantRepository` (o terceiro na tarefa 1.0: o `limparContaSemUso` o chama, e a redefinição do MFA, no `sessao`, também) | a conta é global por desenho; a exceção da `Conta` em `modelo-de-dados.md` passa a dizer "só `sessao` e `nucleo/ciclo-de-vida`" (e o expurgo de acesso, que já a limpava), e o `arquitetura.test.ts` passa a aceitar os dois caminhos |
 | `OperacaoPrivacidadeRepository` (escrever `suboperador` e `incidente`, contagens por escola) | comandos da operação | mesma justificativa do painel; só ids, números e as tabelas da operação |
 | `ExpurgoDeAcessoRepository.apagarLoteVencido('incidente')` | incidente com mais de 5 anos, e a cascata das ligações | a justificativa do método passa a citar o incidente |
@@ -308,7 +323,7 @@ Não há IA no caminho. O que a funcionalidade preserva:
 | Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` se não existir, e `consumo_ia (escola_id, execucao_id) where execucao_id is not null`. De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`; `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
 | Migration | compatível: a 0024 só expande, e a exigência de `provedor` vai num release posterior (seção 3). O `migrar` roda numa transação, então `NOT VALID` seguido de `VALIDATE` no mesmo arquivo não alivia a trava: a partir do staging, cada check vai em arquivo próprio. Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
 | Quando cada dependência cai | banco: 503 tipado e nova tentativa; Redis de fila: aceito e despachado depois; storage: "em preparação", e baixar dá `INDISPONIVEL` |
-| Métrica e alerta | duas noites seguidas sem todas as categorias da escola com `concluida = true`; incidente sem confirmação em 24 h; pedido `agendado` mais de 48 h depois de `eliminar_em` (uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
+| Métrica e alerta | duas noites seguidas sem todas as categorias da escola com `concluida = true` (tarefa 3.0: `expurgo.noites_incompletas{escola_id}`, de 0 a 2, medida pelo worker-lote a cada 5 min; a noite é o dia local de `em` no fuso da escola, de ontem para trás; a categoria sem linha conta como não concluída; a noite anterior à primeira execução da escola não conta, e a escola que nunca rodou não tem série; a regra dispara com a série em 2 por 1 min, `infra/grafana/alertas/expurgo-noites-incompletas.yaml`; o lote que falha grava a categoria com `concluida = false` antes de o erro subir, para a escola cujo expurgo falha desde a primeira noite também ter série; numa escola a oeste de São Paulo, uma execução que passa da meia-noite local divide as categorias entre dois dias, pendência no `TODO.md`); incidente sem confirmação em 24 h; pedido `agendado` mais de 48 h depois de `eliminar_em` (uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
 | Cenário de teste de carga | o "justiça entre escolas" ganha uma escola expurgando 1 milhão de linhas e trocando nome enquanto outra usa o Tutor |
 
 ## 8. Uso de IA

@@ -5,20 +5,25 @@ nova sem reler o histórico.
 
 ## Agora
 
-- **Tarefa atual:** 2.0, iniciada em 05/10/2026
-- **Base:** `develop` em `37df73d` (tarefa 1.0), esteira 37371939334 verde na 2ª tentativa
+- **Tarefa atual:** 3.0, iniciada em 05/10/2026
+- **Base:** `develop` em `96f6e82` (tarefa 2.0), esteira 37392249003 verde
 
 ## Concluídas
 
 | Tarefa | Commit | Esteira | Observação |
 |---|---|---|---|
 | 1.0 | `37df73d` | 37371939334 (verde na 2ª tentativa: falta de runner) | test-engineer reprovou 1 vez; duas divergências da spec registradas pelo subagente (3 métodos na `ContaGlobalRepository`, subcaminhos `ciclo-de-vida` e `conta-global`) |
+| 2.0 | `96f6e82` | 37392249003 | test-engineer reprovou 1 vez (operador inexistente em `ops:retencao`); retomada por subagente novo; quatro recomendações do privacy-guardian levadas à 13.0 (ligação ao aluno em jsonb, como `auditoria.depois.alunoId`) |
 
 ## O que falhou
 
 Nada até agora.
 
 ## O que decidi sem perguntar
+
+- **3.0 interrompida pelo desligamento do PC (05/10, entre 22:26 e 23:19):** a implementação ficou na
+  árvore, sem rodada de revisor e sem portão novo. Retomei o mesmo subagente pela transcrição salva,
+  para continuar do portão local em diante sem descartar nada.
 
 - **2.0 retomada por um subagente novo (05/10, 20:20):** o primeiro subagente morreu com o reinício
   da sessão do orquestrador, com o trabalho na árvore, a 1ª rodada do `test-engineer` reprovada e a

@@ -5,7 +5,7 @@ import type { CategoriaDeRetencao, ChaveDePrazoFixo } from './retencao.js'
  * F3, seção 3, "Classificação de toda tabela"). O teste de arquitetura (`apps/api/test/arquitetura.test.ts`) confere esta
  * lista contra as migrations, nos dois sentidos: tabela criada sem classificação, ou classificação de tabela que não
  * existe, deixa o teste vermelho. Cada tarefa que cria tabela a classifica aqui na mesma tarefa: as do pedido do
- * titular, do suboperador, do incidente e do expurgo entram com as migrations delas (tarefas 3.0, 8.0, 9.0 e 11.0).
+ * titular, do suboperador e do incidente entram com as migrations delas (tarefas 8.0, 9.0 e 11.0); a do expurgo entrou na 3.0.
  *
  * As sentinelas do arquivo e da troca de nome (tarefas 13.0 e 15.0) saem desta lista, então uma tabela nova entra nelas
  * sozinha.
@@ -83,6 +83,9 @@ export const CLASSIFICACAO_DAS_TABELAS: Readonly<Record<string, ClassificacaoDaT
   validacao_do_lote: fixo('registro_de_decisao', FIM_DE_CONTRATO, 'confirmada_por'),
   suspensao_de_funcao: fixo('registro_de_decisao', FIM_DE_CONTRATO, 'suspensa_por', 'retomada_por'),
   atividade_aplicada: fixo('registro_de_decisao', FIM_DE_CONTRATO, 'aplicada_por'),
+  // O registro do que o expurgo da escola apagou, só com a categoria e a contagem: 5 anos, pelo próprio expurgo (tarefa
+  // 5.0). Sem pessoa, e fora do arquivo; fica no grupo do registro de decisão, que é o dos registros de prestação de contas.
+  expurgo_execucao: fixo('registro_de_decisao', 'expurgo da escola, 5 anos (tarefa 5.0)'),
 
   // Sem pessoa.
   rede: SEM_PESSOA,

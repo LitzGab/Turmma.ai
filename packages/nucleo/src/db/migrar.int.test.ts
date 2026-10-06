@@ -69,11 +69,22 @@ describe('migrar', () => {
     const { rows: indices } = await administrador.query<{ indexname: string; indexdef: string }>(
       `select indexname, indexdef from pg_indexes where tablename = 'job_registro' order by indexname`,
     )
-    expect(indices.map((indice) => indice.indexname)).toEqual(['job_registro_finalizados_idx', 'job_registro_pendentes_idx', 'job_registro_pendentes_urgentes_idx', 'job_registro_pkey'])
-    expect(indices[1]?.indexdef).toMatch(/\(fila, escola_id, criado_em\) WHERE \(estado <> ALL \(ARRAY\['concluido'::text, 'falhou'::text\]\)\)$/)
-    expect(indices[0]?.indexdef).toMatch(/\(concluido_em\) WHERE \(estado = ANY \(ARRAY\['concluido'::text, 'falhou'::text\]\)\)/)
+    expect(indices.map((indice) => indice.indexname)).toEqual([
+      'job_registro_chave_idempotencia_unica',
+      'job_registro_finalizados_idx',
+      'job_registro_pendentes_idx',
+      'job_registro_pendentes_urgentes_idx',
+      'job_registro_pkey',
+    ])
+    const definicao = (nome: string) => indices.find((indice) => indice.indexname === nome)?.indexdef
+    expect(definicao('job_registro_pendentes_idx')).toMatch(/\(fila, escola_id, criado_em\) WHERE \(estado <> ALL \(ARRAY\['concluido'::text, 'falhou'::text\]\)\)$/)
+    expect(definicao('job_registro_finalizados_idx')).toMatch(/\(concluido_em\) WHERE \(estado = ANY \(ARRAY\['concluido'::text, 'falhou'::text\]\)\)/)
     // O da reserva no horário letivo: só os urgentes pendentes.
-    expect(indices[2]?.indexdef).toMatch(/\(fila, escola_id, criado_em\) WHERE \(\(estado <> ALL \(ARRAY\['concluido'::text, 'falhou'::text\]\)\) AND \(NOT nao_urgente\)\)$/)
+    expect(definicao('job_registro_pendentes_urgentes_idx')).toMatch(/\(fila, escola_id, criado_em\) WHERE \(\(estado <> ALL \(ARRAY\['concluido'::text, 'falhou'::text\]\)\) AND \(NOT nao_urgente\)\)$/)
+    // A chave de idempotência (F3, tarefa 3.0): única por escola e tipo, só entre os que não terminaram.
+    expect(definicao('job_registro_chave_idempotencia_unica')).toMatch(
+      /UNIQUE INDEX .*\(escola_id, tipo, chave_idempotencia\) WHERE \(\(chave_idempotencia IS NOT NULL\) AND \(estado <> ALL \(ARRAY\['concluido'::text, 'falhou'::text\]\)\)\)$/,
+    )
 
     // Job de escola sem escola é recusado pelo próprio banco, mesmo por fora do repository.
     await expect(

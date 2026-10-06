@@ -114,12 +114,18 @@ export const METRICAS = {
   leituraDeSessao: 'sessao.leitura.duracao',
   /** p99 do atraso do event loop no intervalo, em segundos. */
   atrasoEventLoop: 'nodejs.eventloop.delay.p99',
+  /**
+   * Noites seguidas, de ontem para trás, em que o expurgo da escola não terminou todas as categorias (F3, tarefa 3.0),
+   * por `escola_id`, de 0 a 2: medida pelo worker-lote a partir de `expurgo_execucao`. Só a escola que já rodou o
+   * expurgo tem série. O alerta "Expurgo incompleto por duas noites numa escola" dispara em 2.
+   */
+  noitesIncompletasDoExpurgo: 'expurgo.noites_incompletas',
 } as const
 
 /**
  * As únicas métricas que levam `escola_id`: as de job e, fora de job, as três de login da Tech Spec da identidade (seção
- * 7c), com cardinalidade de uma série por escola: a espera pelo hash, as falhas e o rebaixamento. Nenhuma outra pode
- * levar escola, e nenhuma leva usuário.
+ * 7c), com cardinalidade de uma série por escola: a espera pelo hash, as falhas e o rebaixamento; e as noites sem
+ * expurgo (F3, tarefa 3.0). Nenhuma outra pode levar escola, e nenhuma leva usuário.
  */
 export const METRICAS_COM_ESCOLA: readonly string[] = [
   METRICAS.esperaMaisAntiga,
@@ -129,6 +135,7 @@ export const METRICAS_COM_ESCOLA: readonly string[] = [
   METRICAS.esperaPeloHash,
   METRICAS.falhasDeLogin,
   METRICAS.prioridadeRebaixada,
+  METRICAS.noitesIncompletasDoExpurgo,
 ]
 
 /** O rótulo da escola nas métricas de job. Rotina do sistema, sem escola, aparece como `sistema`, como na chave da vaga. */

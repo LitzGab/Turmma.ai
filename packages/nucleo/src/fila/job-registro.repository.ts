@@ -1,5 +1,5 @@
 import type { CodigoDeFalhaDeJob, EstadoDeJob, Fila } from '@educa/shared'
-import { and, eq, inArray, isNull, like, sql, type SQL } from 'drizzle-orm'
+import { and, eq, inArray, isNull, like, notInArray, sql, type SQL } from 'drizzle-orm'
 import { contextoAtual } from '../contexto/contexto.js'
 import type { Banco, TransacaoBanco } from '../db/banco.js'
 import { jobRegistro } from '../db/schema/job-registro.js'
@@ -24,6 +24,15 @@ export interface EstadoRegistrado {
   concluidoEm: Date | null
   codigoFalha: CodigoDeFalhaDeJob | null
 }
+
+/**
+ * O que `inserirUmaVez` fez com a chave: gravou o job, ou a chave já tinha um job não finalizado na escola. Na colisão,
+ * `id` é o desse job, ou nulo se ele terminou entre a colisão e a leitura; quem chama trata os dois como "já enfileirado".
+ */
+export type ResultadoDaChave = { situacao: 'enfileirado'; id: string } | { situacao: 'ja_enfileirado'; id: string | null }
+
+/** Os estados de um job que terminou: fora deles, a chave de idempotência ainda está tomada (o predicado do único parcial). */
+const ESTADOS_FINAIS: EstadoDeJob[] = ['concluido', 'falhou']
 
 /** Onde o job está antes de começar: a fila e a escola da linha persistida, que definem a vaga dele. */
 export interface JobParaExecutar {
@@ -74,6 +83,48 @@ export class JobRegistroRepository {
     if (inserida === undefined) throw new Error('insert em job_registro não devolveu linha')
     await tx.execute(sql`select pg_notify(${CANAL_NOTIFICACAO_JOB}, '')`)
     return inserida.id
+  }
+
+  /**
+   * Grava o job uma vez só por escola, tipo e chave (F3, tarefa 3.0), na transação de quem pediu. O `on conflict` usa o
+   * predicado do índice único parcial `job_registro_chave_idempotencia_unica`, `do nothing`: duas gravações da mesma
+   * chave ao mesmo tempo dão um job, e a segunda espera a primeira confirmar e cai na colisão. Na colisão, lê o job da
+   * chave que ainda não terminou, numa instrução nova, que já vê o que a outra transação confirmou.
+   *
+   * A chave só existe em job de escola: a escola vem do contexto, como em `inserir`, e o job de sistema é recusado (o
+   * check `job_registro_chave_so_com_escola` também o recusa no banco). O `pg_notify` só sai quando a linha entrou.
+   *
+   * `depoisDaColisao` é só do teste: é a janela entre a colisão e a leitura, em que o job pode terminar.
+   */
+  async inserirUmaVez(tx: TransacaoBanco, linha: LinhaNova, chaveIdempotencia: string, depoisDaColisao?: () => Promise<void>): Promise<ResultadoDaChave> {
+    const contexto = contextoAtual()
+    const escolaId = contexto?.escolaId
+    if (escolaId === undefined || linha.tipo.startsWith(PREFIXO_TIPO_SISTEMA)) throw new Error('chave de idempotência só em job de escola, com a escola no contexto')
+    const [inserida] = await tx
+      .insert(jobRegistro)
+      .values({ ...linha, escolaId, requisicaoId: contexto?.requisicaoId ?? null, chaveIdempotencia })
+      .onConflictDoNothing({
+        target: [jobRegistro.escolaId, jobRegistro.tipo, jobRegistro.chaveIdempotencia],
+        where: sql`chave_idempotencia is not null and estado not in ('concluido', 'falhou')`,
+      })
+      .returning({ id: jobRegistro.id })
+    if (inserida !== undefined) {
+      await tx.execute(sql`select pg_notify(${CANAL_NOTIFICACAO_JOB}, '')`)
+      return { situacao: 'enfileirado', id: inserida.id }
+    }
+    if (depoisDaColisao !== undefined) await depoisDaColisao()
+    const [existente] = await tx
+      .select({ id: jobRegistro.id })
+      .from(jobRegistro)
+      .where(
+        and(
+          eq(jobRegistro.escolaId, escolaId),
+          eq(jobRegistro.tipo, linha.tipo),
+          eq(jobRegistro.chaveIdempotencia, chaveIdempotencia),
+          notInArray(jobRegistro.estado, ESTADOS_FINAIS),
+        ),
+      )
+    return { situacao: 'ja_enfileirado', id: existente?.id ?? null }
   }
 
   /** O job da escola do token, ou `undefined` (inexistente ou de outra escola, sem distinção). */

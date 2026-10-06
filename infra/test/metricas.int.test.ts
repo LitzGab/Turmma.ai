@@ -216,7 +216,7 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
     }
   }, 120_000)
 
-  it('permissão: nenhuma série tem rótulo de usuário nem o id do usuário em rótulo algum, e `escola_id` só aparece nas métricas da lista fechada (job, espera pelo hash, falhas e rebaixamento do login)', async () => {
+  it('permissão: nenhuma série tem rótulo de usuário nem o id do usuário em rótulo algum, e `escola_id` só aparece nas métricas da lista fechada (job, espera pelo hash, falhas e rebaixamento do login, noites sem expurgo)', async () => {
     const { data: rotulos } = (await (await fetch(`${PROMETHEUS}/api/v1/labels`)).json()) as { data: string[] }
     expect(rotulos.filter((rotulo) => /usuario|user/i.test(rotulo))).toEqual([])
     expect(await consultar('{usuario_id!=""}')).toEqual([])
@@ -226,7 +226,7 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
 
     const comEscola = (await consultar('count by (__name__) ({escola_id!=""})')).map(({ metric }) => metric['__name__']).sort()
     expect(comEscola).toEqual(expect.arrayContaining(['job_espera_mais_antiga_s', 'job_pendentes', 'fila_vagas_em_uso']))
-    // A lista fechada de `METRICAS_COM_ESCOLA` (as de job e as três de login), com o nome do Prometheus.
+    // A lista fechada de `METRICAS_COM_ESCOLA` (as de job, as três de login e a do expurgo), com o nome do Prometheus.
     const admitidas = new Set<string>(
       (Object.keys(METRICAS) as Array<keyof typeof METRICAS>).filter((chave) => METRICAS_COM_ESCOLA.includes(METRICAS[chave])).flatMap((chave) => NOMES_NO_PROMETHEUS[chave]),
     )
@@ -240,6 +240,8 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
         // As duas de login da 15.0: as falhas e o rebaixamento, por escola (Tech Spec da identidade, seção 7c).
         ...NOMES_NO_PROMETHEUS.falhasDeLogin,
         ...NOMES_NO_PROMETHEUS.prioridadeRebaixada,
+        // As noites sem expurgo completo, por escola (F3, tarefa 3.0; Tech Spec do F3, seção 7c).
+        ...NOMES_NO_PROMETHEUS.noitesIncompletasDoExpurgo,
       ].sort(),
     )
     expect(comEscola.filter((nome) => !admitidas.has(nome ?? ''))).toEqual([])

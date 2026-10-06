@@ -432,11 +432,56 @@ repositório é público (`TODO.md`).
 durou mais de um dia ou voltou depois da revogação, registre como incidente e reveja a prioridade do balde próprio da
 sala no limite por IP (`rl:ip:sala`), previsto para o F2.
 
+## Expurgo incompleto por duas noites numa escola
+
+**Dispara quando:** nas duas últimas noites, contadas no fuso da escola, o expurgo dela não terminou todas as categorias,
+por 1 min (`max by (escola_id) (expurgo_noites_incompletas{job="educa/worker"}) > 1`, regra
+`infra/grafana/alertas/expurgo-noites-incompletas.yaml`; Tech Spec do F3, seção 7c). Uma noite está completa quando cada
+categoria do expurgo tem uma linha `concluida = true` em `expurgo_execucao` naquela data local; a categoria sem linha
+conta como não concluída. O worker-lote mede a cada 5 min, e o alerta traz o `escola_id`. A noite anterior à primeira
+execução da escola não conta: escola nova e a primeira noite depois do deploy não disparam.
+
+**Impacto:** nenhuma pessoa vê nada. O que está em jogo é a lei: conversa do Tutor, sinais e conversa do professor
+daquela escola ficam no banco além do prazo de `docs/lgpd.md`, e cada noite a mais aumenta o atraso. Uma noite
+interrompida pela janela letiva é esperada (o resto sai na seguinte); duas seguidas, não.
+
+**Primeiro olhar:** as noites da escola, só com contagens:
+`docker compose exec postgres psql -U educa -c "select categoria, linhas, concluida, em from expurgo_execucao where escola_id = '<escola_id>' order by em desc limit 20"`.
+Depois o job da escola em `job_registro` (`tipo = 'retencao.expurgar-escola'`, a chave é a data local) e o log do
+worker-lote: `docker compose logs --since 48h worker-lote-1 worker-lote-2 | grep -E 'retencao\.'` (`retencao.expurgada`,
+`retencao.expurgo_interrompido`, `retencao.rotina_disparada`, `retencao.escola_nao_enfileirada`, só com ids e contagens).
+
+**Causas prováveis:**
+1. Linhas com `concluida = false` nas duas noites, sempre na mesma categoria → a janela letiva abre antes de o volume da
+   escola acabar: o job começa à 1h, mas, com a vaga de lote da escola ocupada, só sai mais tarde. Confira o
+   `iniciado_em` dos jobs da escola. Se o volume é de um único dia de recuperação (escola nova com histórico, ou prazo
+   recém-encurtado pelo `ops:retencao`), deixe as noites seguintes terminarem: cada uma começa pela categoria pendente.
+   Se repete, é decisão: aumentar a vaga de lote da escola (`configuracao_operacional_escola`) ou o horário fora da
+   janela; registre.
+2. Nenhuma linha nas duas noites → o job da escola não rodou. Sem `retencao.expurgar-escola` da data em `job_registro`,
+   a rotina das 1h não enfileirou (veja `retencao.escola_nao_enfileirada` e o job `sistema.expurgar-dado-pessoal`); com o
+   job `falhou`, o `codigo_falha` e o log dizem por quê. O worker-lote parado ou a fila `agendamentos` sem agendador é a
+   seção "Rotina do sistema sem rodar", abaixo.
+3. O job da escola falha no meio (lote acima do `statement_timeout` de 2 s, erro de SQL) → a categoria em que ele falhou
+   grava `concluida = false` antes de o erro subir (inclusive na primeira noite da escola, que é o que faz o alerta valer
+   para ela), a fila tenta de novo, e a noite seguinte começa por ela. O log traz o `jobId` e o erro resumido (SQLSTATE e
+   restrição); se nem a linha `false` gravou, aparece `retencao.registro_nao_gravado`, e a noite fica sem linha (causa 2).
+   Uma categoria que falha toda noite segura as que vêm depois dela na ordem (`TODO.md`). Lote lento é índice faltando ou
+   tabela inchada: rode o `EXPLAIN` do lote (o teste do expurgo da escola mostra a instrução) antes de mudar o lote.
+
+**Se nada disso resolver:** rode o expurgo da escola à mão, fora do horário letivo, gravando um job dela não urgente
+(`retencao.expurgar-escola`, fila `lote`, com a data local como chave) pelo mesmo caminho da rotina: ele tolera reexecução
+(D49) e começa pela categoria pendente. A escola não precisa ser avisada enquanto o atraso for de dias; se passar de uma
+semana, registre como descumprimento de retenção no `TODO.md` e avise a coordenação (seção "Como avisar as escolas").
+
+**Depois:** registre no `TODO.md` a escola (id), as noites, as categorias e a causa, só com ids e contagens. Causa nova
+vira tarefa com teste que a reproduz.
+
 ## Rotina do sistema sem rodar (consolidação de uso, expurgo de jobs, expurgo do acesso)
 
 *A preencher antes da primeira escola real* (pendência em `TODO.md`). Hoje nada avisa se
 `sistema.consolidar-uso` (2h), `sistema.expurgar-jobs` (3h30) ou `sistema.expurgar-acesso` (4h30) param de
-rodar: o uso por escola deixa de ser consolidado, `job_registro` cresce sem expurgo, e registro de acesso
+rodar (o `sistema.expurgar-dado-pessoal`, à 1h, tem alerta próprio: "Expurgo incompleto por duas noites numa escola"): o uso por escola deixa de ser consolidado, `job_registro` cresce sem expurgo, e registro de acesso
 com mais de 6 meses, sessão e convite vencidos há mais de 30 dias ficam no banco além da retenção de
 `docs/lgpd.md`, o que é descumprimento da LGPD, e não só espaço. Primeira suspeita: o worker-lote ou a
 fila `agendamentos`. A última execução de cada uma aparece em `job_registro` (tipo e estado) e no log

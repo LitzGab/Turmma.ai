@@ -1,0 +1,65 @@
+# Alerta "Expurgo incompleto por duas noites numa escola" (Tech Spec do F3, seção 7c; runbook:
+# docs/runbook.md#expurgo-incompleto-por-duas-noites-numa-escola). Provisionado por arquivo no Grafana da observabilidade
+# local (infra/compose.yml monta esta pasta em provisioning/alerting).
+#
+# `expurgo.noites_incompletas{escola_id}` é medida pelo worker-lote a cada 5 min, de `expurgo_execucao`: de ontem para
+# trás, no fuso da escola, quantas noites seguidas o expurgo dela não terminou todas as categorias (0, 1 ou 2). A
+# categoria sem linha na noite conta como não concluída, e a noite anterior à primeira execução da escola não conta.
+# Dispara por escola quando a série fica em 2 por 1 min, em qualquer réplica: o valor muda uma vez por noite, e o minuto
+# só tira o susto de uma leitura isolada. O alerta traz a escola, nunca uma linha.
+#
+# Sem dado é normal: só a escola que já rodou o expurgo tem série, e o worker-lote sem a observabilidade não exporta.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: expurgo-noites-incompletas
+    folder: Educa.ia alertas
+    interval: 10s
+    rules:
+      - uid: educa-expurgo-noites-incompletas
+        title: Expurgo incompleto por duas noites numa escola
+        condition: C
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          area: retencao
+        annotations:
+          summary: 'O expurgo da escola {{ $labels.escola_id }} não terminou todas as categorias nas duas últimas noites'
+          description: Dado pessoal da escola está passando do prazo de retenção (LGPD). Siga o runbook.
+          runbook_url: https://github.com/LitzGab/Educa.ia/blob/main/docs/runbook.md#expurgo-incompleto-por-duas-noites-numa-escola
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: max by (escola_id) (expurgo_noites_incompletas{job="educa/worker"})
+              instant: true
+              range: false
+              intervalMs: 10000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - type: query
+                  evaluator:
+                    type: gt
+                    params: [1]

@@ -9,6 +9,8 @@ import {
   criarPool,
   EfeitoSinteticoRepository,
   Enfileirador,
+  EscolasDaRotinaRepository,
+  ExpurgoDaEscolaRepository,
   ExpurgoDeAcessoRepository,
   ExpurgoDeJobsRepository,
   JobRegistroRepository,
@@ -20,12 +22,15 @@ import {
   RETENCAO_JOB_CONCLUIDO_SEGUNDOS,
   RETENCAO_JOB_FALHO_SEGUNDOS,
   relogioDoSistema,
+  resolverJanela,
   resolverVagasDaEscola,
+  RetencaoDaEscolaRepository,
   UsoRepository,
   VagasPorEscola,
   type Banco,
   type Batimento,
   type DadosDoJobNaFila,
+  type JanelaLetiva,
   type LoggerBase,
   type Meter,
   type Relogio,
@@ -39,6 +44,9 @@ import { AvisoDeVagaLivre, ExecutorDeJobs, type Processador } from './executor.j
 import { criarConsolidacaoDeUso, TIPO_CONSOLIDAR_USO } from './processadores/consolidar-uso.js'
 import { criarExpurgoDeAcesso, TIPO_EXPURGAR_ACESSO } from './processadores/expurgar-acesso.js'
 import { criarExpurgoDeJobs, TIPO_EXPURGAR_JOBS } from './processadores/expurgar-jobs.js'
+import { criarRotinaDeExpurgo, TIPO_EXPURGAR_DADO_PESSOAL } from './processadores/expurgar-dado-pessoal.js'
+import { criarExpurgoDaEscola, TIPO_EXPURGAR_ESCOLA } from './processadores/expurgar-escola.js'
+import { MedicaoDoExpurgo } from './medicao-do-expurgo.js'
 import { criarProcessadorSintetico, SandboxDeCpu } from './processadores/sintetico.js'
 import { criarClienteS3, MedidorDeStorage } from './storage/medidor-de-storage.js'
 
@@ -55,7 +63,10 @@ export interface OpcoesDaMontagem {
   intervaloRenovacaoDaVagaMs?: number
   /** Validade da vaga. Só o teste troca, para ver a vaga vencer sem esperar 60 s. */
   validadeDaVagaMs?: number
-  /** Relógio do dia de uso (contador e consolidação) e do corte do expurgo do acesso. Só o teste troca, para marcar às 23h59 e consolidar às 2h. */
+  /**
+   * Relógio do dia de uso (contador e consolidação), do corte do expurgo do acesso e do expurgo da escola, e da janela
+   * conferida a cada lote. Só o teste troca, para marcar às 23h59 e consolidar às 2h.
+   */
   relogio?: Relogio
   /** Agendamentos registrados na réplica de lote. Só o teste troca, para não esperar as 2h. */
   agendamentos?: readonly Agendamento[]
@@ -111,7 +122,10 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
   }
   const aguardandoVaga = medidor?.createCounter(METRICAS.aguardandoVaga, { description: 'Jobs que chegaram ao worker sem vaga e voltaram a esperar' })
   const stalled = medidor?.createCounter(METRICAS.jobsStalled, { description: 'Jobs devolvidos à espera por lock vencido' })
-  const rotinas = config.pools.lote === undefined || config.storage === undefined ? undefined : montarRotinas(config.storage, banco, uso, relogio, logger, medidor)
+  const rotinas =
+    config.pools.lote === undefined || config.storage === undefined || config.janelaPadrao === undefined
+      ? undefined
+      : montarRotinas(config.storage, config.janelaPadrao, banco, uso, relogio, logger, medidor)
   const sandbox = new SandboxDeCpu(config.threadsMaximo)
   const repositorio = new JobRegistroRepository(banco)
   // Banco fora: o despachante acorda pela sondagem, e só.
@@ -179,7 +193,7 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
     // Depois dos workers: com graça, nenhum job ainda queima CPU; forçado, a thread morre com o job, que volta pelo stalled.
     await sandbox.encerrar()
     redisDasVagas.disconnect()
-    rotinas?.encerrar()
+    await rotinas?.encerrar()
     await pool.end()
   }
 
@@ -194,17 +208,29 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
 
 /**
  * As rotinas do sistema, que só a réplica de lote executa: consolidação de uso (com o storage),
- * expurgo de `job_registro` e expurgo do acesso (registro de acesso, sessão e convite, 17.0).
+ * expurgo de `job_registro`, expurgo do acesso (registro de acesso, sessão e convite, 17.0) e o expurgo do dado pessoal
+ * (F3, tarefa 3.0): a rotina que grava um job por escola, o job da escola, e, com o medidor, a medição das noites
+ * incompletas que o alerta lê.
  */
 function montarRotinas(
   storage: ConfiguracaoStorage,
+  janelaPadrao: JanelaLetiva,
   banco: Banco,
   contador: ContadorDeUso,
   relogio: Relogio,
   logger: LoggerBase,
   medidor: Meter | undefined,
-): { processadores: Record<string, Processador>; encerrar(): void } {
+): { processadores: Record<string, Processador>; encerrar(): Promise<void> } {
   const s3 = criarClienteS3(storage)
+  const avisarJanelaDescartada = avisoEspacado(() => logger.warn({ evento: 'worker.janela_da_escola_invalida' }))
+  // O horário letivo da escola, lido como o despachante lê: o lote não urgente que ele soltou fora da janela para quando ela abre.
+  const janelaDaEscola = new ConfiguracaoOperacional<JanelaLetiva>(new ConfiguracaoOperacionalRepository(banco), (linha) => resolverJanela(janelaPadrao, linha, avisarJanelaDescartada), {
+    aoFalhar: avisoEspacado(() => logger.warn({ evento: 'worker.configuracao_indisponivel' })),
+  })
+  const escolas = new EscolasDaRotinaRepository(banco)
+  const expurgoDaEscola = new ExpurgoDaEscolaRepository(banco)
+  const medicao = medidor === undefined ? undefined : new MedicaoDoExpurgo({ escolas, repositorio: expurgoDaEscola, janelaDaEscola, relogio, logger, medidor })
+  medicao?.iniciar()
   return {
     processadores: {
       [TIPO_CONSOLIDAR_USO]: criarConsolidacaoDeUso({
@@ -217,8 +243,13 @@ function montarRotinas(
       }),
       [TIPO_EXPURGAR_JOBS]: criarExpurgoDeJobs({ repositorio: new ExpurgoDeJobsRepository(banco), logger }),
       [TIPO_EXPURGAR_ACESSO]: criarExpurgoDeAcesso({ repositorio: new ExpurgoDeAcessoRepository(banco), relogio, logger }),
+      [TIPO_EXPURGAR_DADO_PESSOAL]: criarRotinaDeExpurgo({ escolas, banco, enfileirador: new Enfileirador(new JobRegistroRepository(banco)), janelaDaEscola, relogio, logger }),
+      [TIPO_EXPURGAR_ESCOLA]: criarExpurgoDaEscola({ repositorio: expurgoDaEscola, retencao: new RetencaoDaEscolaRepository(banco), janelaDaEscola, relogio, logger }),
     },
-    encerrar: () => s3.destroy(),
+    encerrar: async () => {
+      await medicao?.encerrar()
+      s3.destroy()
+    },
   }
 }
 

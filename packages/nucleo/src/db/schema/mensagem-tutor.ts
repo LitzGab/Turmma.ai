@@ -82,6 +82,8 @@ export const mensagemTutor = pgTable(
     foreignKey({ name: 'mensagem_tutor_material_da_escola_fk', columns: [tabela.escolaId, tabela.materialId], foreignColumns: [material.escolaId, material.id] }),
     uniqueIndex('mensagem_tutor_uma_por_execucao').on(tabela.escolaId, tabela.execucaoId, tabela.autor),
     index('mensagem_tutor_aluno_idx').on(tabela.escolaId, tabela.alunoId, tabela.id),
+    // O expurgo da escola (F3, tarefa 3.0) apaga a conversa vencida pela data, em lotes: desce por aqui, do escopo à idade.
+    index('mensagem_tutor_criada_em_idx').on(tabela.escolaId, tabela.criadaEm),
     index('mensagem_tutor_trocas_idx').on(tabela.escolaId, tabela.turmaId, tabela.criadaEm, tabela.alunoId).where(sql`${tabela.autor} = 'aluno'`),
     check('mensagem_tutor_autor_valido', sql`${tabela.autor} in ('aluno', 'tutor')`),
     check('mensagem_tutor_tipo_valido', sql`${tabela.tipo} in ('texto', 'assunto_delicado')`),

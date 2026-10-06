@@ -61,7 +61,7 @@ export { DONO_DAS_VAGAS_DO_SISTEMA, INTERVALO_RENOVACAO_DA_VAGA_MS, VagasPorEsco
 export { Enfileirador, PRIORIDADE_DA_FILA } from './fila/enfileirador.js'
 export type { PedidoDeJob } from './fila/enfileirador.js'
 export { CANAL_NOTIFICACAO_JOB, JobRegistroRepository, PREFIXO_TIPO_SISTEMA } from './fila/job-registro.repository.js'
-export type { EstadoRegistrado, JobParaExecutar, ResultadoDoInicio } from './fila/job-registro.repository.js'
+export type { EstadoRegistrado, JobParaExecutar, ResultadoDaChave, ResultadoDoInicio } from './fila/job-registro.repository.js'
 export { EfeitoSinteticoRepository, TABELA_DO_EFEITO_SINTETICO } from './fila/efeito-sintetico.repository.js'
 export type { EfeitoDaExecucao } from './fila/efeito-sintetico.repository.js'
 export { OuvinteDeJobs } from './fila/ouvinte-de-jobs.js'
@@ -194,6 +194,18 @@ export { reivindicacao } from './db/schema/reivindicacao.js'
 export { retencaoEscola } from './db/schema/retencao-escola.js'
 export { RetencaoDaEscolaRepository } from './retencao/retencao-da-escola.repository.js'
 export type { AjusteAGravar } from './retencao/retencao-da-escola.repository.js'
+export { expurgoExecucao } from './db/schema/expurgo-execucao.js'
+export {
+  ALVOS_DO_EXPURGO_DA_ESCOLA,
+  CATEGORIAS_DO_EXPURGO,
+  ExpurgoDaEscolaRepository,
+  instrucaoDoLoteDaEscola,
+  NOITES_DO_ALERTA,
+  noitesSeguidasSemConcluir,
+  ordemDaNoite,
+} from './retencao/expurgo-da-escola.repository.js'
+export type { AlvoDoExpurgoDaEscola, CategoriaDoExpurgo, LoteDoExpurgo, NoiteDoExpurgo } from './retencao/expurgo-da-escola.repository.js'
+export { EscolasDaRotinaRepository } from './rotina/escolas-da-rotina.repository.js'
 export * from './db/schema/mvp/tabelas.js'
 export { contaExterna, PROVEDORES_EXTERNOS } from './db/schema/conta-externa.js'
 export type { ProvedorExterno } from './db/schema/conta-externa.js'

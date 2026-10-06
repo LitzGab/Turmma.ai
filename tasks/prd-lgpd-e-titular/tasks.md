@@ -20,14 +20,14 @@
   - [x] 2.6 Teste de arquitetura da classificação; `docs/lgpd.md` (linhas do apelido do operador e retenção de `correcao.destaque_aberto_por`), `docs/modelo-de-dados.md`
   - [x] 2.7 Testes
 
-- [ ] **3.0 — A rotina noturna expurga a conversa e os sinais em cada escola**
-  - [ ] 3.1 Migration própria: `job_registro.chave_idempotencia` (único parcial e check com escola), `expurgo_execucao`, índices `(escola_id, <data>)` de `mensagem_tutor`, `sinal_tutor`, `mensagem_agente`
-  - [ ] 3.2 `Enfileirador` com `chaveIdempotencia` (`on conflict` com o predicado; devolve id ou nulo)
-  - [ ] 3.3 `EscolasDaRotinaRepository` (`@SemEscopo`, só ids) em `packages/nucleo/src/rotina`
-  - [ ] 3.4 `sistema.expurgar-dado-pessoal` (1h) e `retencao.expurgar-escola` (lote, não urgente, chave "escola + data local")
-  - [ ] 3.5 `ExpurgoDaEscolaRepository`: lotes de 5.000, janela a cada lote, começo pela categoria pendente, linha por categoria mesmo com zero; categorias `conversa_tutor`, `sinal_tutor`, `conversa_professor`
-  - [ ] 3.6 Métrica e alerta de duas noites, parágrafo no `docs/runbook.md`; `docs/modelo-de-dados.md` (exceção da rotina)
-  - [ ] 3.7 Testes, parametrizados por catálogo com a lista "pendente da tarefa N"
+- [x] **3.0 — A rotina noturna expurga a conversa e os sinais em cada escola**
+  - [x] 3.1 Migration própria: `job_registro.chave_idempotencia` (único parcial e check com escola), `expurgo_execucao`, índices `(escola_id, <data>)` de `mensagem_tutor`, `sinal_tutor`, `mensagem_agente`
+  - [x] 3.2 `Enfileirador` com `chaveIdempotencia` (`on conflict` com o predicado; devolve id ou nulo)
+  - [x] 3.3 `EscolasDaRotinaRepository` (`@SemEscopo`, só ids) em `packages/nucleo/src/rotina`
+  - [x] 3.4 `sistema.expurgar-dado-pessoal` (1h) e `retencao.expurgar-escola` (lote, não urgente, chave "escola + data local")
+  - [x] 3.5 `ExpurgoDaEscolaRepository`: lotes de 5.000, janela a cada lote, começo pela categoria pendente, linha por categoria mesmo com zero; categorias `conversa_tutor`, `sinal_tutor`, `conversa_professor`
+  - [x] 3.6 Métrica e alerta de duas noites, parágrafo no `docs/runbook.md`; `docs/modelo-de-dados.md` (exceção da rotina)
+  - [x] 3.7 Testes, parametrizados por catálogo com a lista "pendente da tarefa N"
 
 - [ ] **4.0 — O expurgo anonimiza execução, texto do modelo, consumo por aluno e autoria**
   - [ ] 4.1 Migration própria: `execucao_agente.anonimizada_em`; índices parciais de anonimização (seção 7c), dois em `consumo_ia`
