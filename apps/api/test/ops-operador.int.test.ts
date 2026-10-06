@@ -1,4 +1,5 @@
 import { criarPool, type PoolBanco } from '@educa/nucleo'
+import { CHAVES_DE_RETENCAO } from '@educa/shared'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -13,6 +14,7 @@ import { executarOpsConviteCoordenador } from '../src/ops/convite-coordenador.js
 import { executarOpsEscola } from '../src/ops/escola.js'
 import { executarOpsOperador } from '../src/ops/operador.js'
 import { executarOpsRedefinirMfa } from '../src/ops/redefinir-mfa.js'
+import { executarOpsRetencao } from '../src/ops/retencao.js'
 import { executarOpsRevogarAcessosSala } from '../src/ops/revogar-acessos-sala.js'
 import { executarOpsRevogarConvite } from '../src/ops/revogar-convite.js'
 import { executarOpsUso } from '../src/ops/uso.js'
@@ -239,6 +241,28 @@ describe('npm run ops:operador: o operador nasce, é reconvidado e é desativado
           expect((await pool.query(`select 1 from auditoria where escola_id = $1 and acao = 'acesso_turma.revogado'`, [escolaDaSala()])).rows).toEqual([])
         },
         passou: (execucao) => expect(execucao).toEqual({ codigo: 0, saida: `${JSON.stringify({ revogados: 1 })}\n`, erro: '' }),
+      },
+      {
+        nome: 'retencao ajustar',
+        comando: executarOpsRetencao,
+        argumentos: () => ['ajustar', '--escola', escolaDaSala(), '--categoria', 'conversa_tutor', '--meses', '6', '--contrato', '3'],
+        // Nenhum ajuste e nenhuma auditoria do ajuste na escola: quem saiu da equipe não muda o prazo de guarda dela (F3, 2.0).
+        nadaFeito: async () => {
+          expect((await pool.query('select 1 from retencao_escola where escola_id = $1', [escolaDaSala()])).rows).toEqual([])
+          expect((await pool.query(`select 1 from auditoria where escola_id = $1 and acao = 'retencao.ajustada'`, [escolaDaSala()])).rows).toEqual([])
+        },
+        passou: (execucao) => expect(execucao).toEqual({ codigo: 0, saida: `${JSON.stringify({ categoria: 'conversa_tutor', meses: 6, origem: 'ajustada', limitadaPor: null })}\n`, erro: '' }),
+      },
+      {
+        nome: 'retencao listar',
+        comando: executarOpsRetencao,
+        argumentos: () => ['listar', '--escola', escolaDaSala()],
+        nadaFeito: async () => undefined,
+        passou: (execucao) => {
+          expect(execucao).toMatchObject({ codigo: 0, erro: '' })
+          const { categorias } = JSON.parse(execucao.saida) as { categorias: Array<{ categoria: string }> }
+          expect(categorias.map(({ categoria }) => categoria)).toEqual([...CHAVES_DE_RETENCAO])
+        },
       },
       {
         nome: 'uso',

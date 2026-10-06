@@ -564,7 +564,18 @@ Auditoria*       → escola*, autorUsuario? | autorOperador?, acao*, entidade*, 
 SolicitacaoTitular → escola*, titular*, tipo (acesso | correcao | eliminacao |
                    portabilidade | compartilhamento), status, solicitadaEm*, atendidaEm?
 Incidente        → escola*, detectadoEm*, descricao, titularesAfetados, comunicadoEm?
+RetencaoEscola*  → escola* + categoria* (chave), meses*, referenciaContrato*, alteradaEm*,
+                   alteradaPor* (apelido do operador)    (F3)
 ```
+
+`RetencaoEscola` guarda só o **ajuste** da escola numa categoria do catálogo de retenção (`CATEGORIAS_DE_RETENCAO`, em
+`packages/shared/src/privacidade`): sem linha, vale o padrão do catálogo. Só o `ops:retencao` escreve, no contexto da
+escola, dentro do piso, do teto e das travas entre categorias, com `retencao.ajustada` na auditoria; o prazo efetivo
+sai de `retencaoDaEscola`, e a escola lê pelo `RetencaoDaEscolaRepository`, com o escopo do contexto. O número do
+contrato é inteiro, como o do pedido no `ops:redefinir-mfa`, porque vai também para a auditoria, que não aceita texto
+livre. Não varia por ano letivo. Toda tabela das migrations está em `CLASSIFICACAO_DAS_TABELAS` (categoria do expurgo,
+prazo fixo com quem o aplica, ou sem pessoa; se entra no arquivo do titular e por qual coluna se liga a ele), e as
+colunas de segredo, em `COLUNAS_FORA_DO_ARQUIVO`; o teste de arquitetura confere as duas listas contra as migrations.
 
 `Evento` é o motor: nota aprovada, tarefa não entregue, aluno travado. A `Notificacao` é
 uma leitura dele. Isso permite construir o motor agora e ligar o canal da família depois

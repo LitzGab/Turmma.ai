@@ -71,6 +71,11 @@ arquitetura:
 
 Também `usuario` ativo e `material` vigente ficam enquanto existem; saem pela eliminação e pelas duas categorias acima.
 
+Na tarefa 2.0 a classificação traz só as tabelas que já existem: o teste a confere contra as migrations nos dois
+sentidos, e cada tabela nova (as desta seção) entra na lista, e as colunas dela em `COLUNAS_FORA_DO_ARQUIVO`, na tarefa
+da migration dela. Os prazos fixos são oito grupos (`PRAZOS_FIXOS`: registro de acesso, sessão, convite e acesso da
+turma, credencial, lista de nomes, registro de decisão, tarefa em segundo plano e equipe Turmma).
+
 Cada tabela da classificação diz se **entra no arquivo do titular** e por qual coluna se liga a ele. Entram: `usuario`,
 `credencial_matricula` (só a matrícula), `conta` (só o e-mail, nas duas versões), `conta_externa` (só o provedor),
 `vinculo`, `lista_nome`, `reivindicacao`, `sessao` e `registro_acesso` (datas e IP), as tabelas do Tutor, do trabalho
@@ -83,7 +88,8 @@ externa.
 **Migrations de expansão**, uma por tarefa a partir da 0024, na ordem do `tasks.md` (o bloco abaixo é o conjunto):
 
 ```
-retencao_escola     escola_id*, categoria* (PK), meses*, referencia_contrato* (≤200), alterada_em*, alterada_por*
+retencao_escola     escola_id*, categoria* (PK), meses*, referencia_contrato* (inteiro > 0: o número do contrato, tarefa 2.0),
+                    alterada_em*, alterada_por*
 pedido_titular      id uuid, escola_id*, titular_id* (sem FK; gatilho confere na inserção, e escola_id e titular_id
                     imutáveis), papel_titular*, tipo*, solicitante* (titular|responsavel_legal), chegou_em* (date,
                     não futura), estado* (recebido|em_preparacao|pronto|agendado|concluido|cancelado), eliminar_em?,
@@ -132,7 +138,7 @@ professor.
 
 | Rota | Detalhe |
 |---|---|
-| `GET retencao` | categorias e prazos fixos: descrição comum, meses, origem |
+| `GET retencao` | categorias e prazos fixos: descrição comum, de quando conta, meses (o efetivo, com a trava), origem (`padrao` ou `ajustada`) e a categoria que a encurtou, se houver; sem quem ajustou nem o contrato |
 | `GET suboperadores` | pelo `SuboperadorDaEscolaRepository` (seção 6); nome, finalidade, país, categorias, veda treinamento, vigência |
 | `GET incidentes` · `POST incidentes/:id/confirmar` | DTO só da linha da escola: `conhecidoEm`, `circunstancias`, `categorias`, `titularesEstimados`, `risco`, `contencao`, `correcao`, `avisadoEm`, `confirmadoEm` e o texto fixo do prazo legal da escola; confirmar é `update … where confirmado_em is null`, 204 |
 | `POST titulares/busca` | `{ termo }` com 3 letras ou mais; até 20 resultados: id, nome, papel, matrícula, turma do ano (aluno) ou disciplinas e turmas desta escola (professor), estado. Audita `titular.buscado` com os ids e a finalidade fixa, nunca o termo |
@@ -273,7 +279,7 @@ Os testes, cada um quebrando sem a cláusula de escopo, estão em `cenarios.md`,
 | Campos pessoais tocados | todos os do mapa, para ler, apagar, anonimizar, trocar nome e corrigir nome |
 | Novos campos | `pedido_titular`, `arquivo_titular`, `incidente_escola.confirmado_por`, `usuario.eliminacao_agendada_em`, `consumo_ia.provedor`, e o apelido do operador em `retencao_escola`, `suboperador` e `incidente`: no mapa **na tarefa da migration** |
 | O que vai para log | ids, categoria, contagens, estado. Nunca nome, termo, conteúdo, URL. Os jobs levam só ids |
-| O que entra em auditoria | sempre com finalidade fixa: `titular.buscado`, `titular.previa_lida`, `pedidos.listados`, `pedido.lido`, pedido registrado, agendado, cancelado, concluído, nome corrigido, `titular.nome_trocado`, `titular.arquivo_baixado`, `usuario.eliminado`; na operação: `retencao.ajustada`, `suboperador.cadastrado` e `encerrado`, `incidente.registrado`; e `incidente.confirmado` |
+| O que entra em auditoria | sempre com finalidade fixa: `titular.buscado`, `titular.previa_lida`, `pedidos.listados`, `pedido.lido`, pedido registrado, agendado, cancelado, concluído, nome corrigido, `titular.nome_trocado`, `titular.arquivo_baixado`, `usuario.eliminado`; na operação: `retencao.ajustada` (entidade `retencao_escola`, id da escola, o prazo anterior e a origem dele, a categoria, os meses e o número do contrato; finalidade `contrato_da_escola`), `suboperador.cadastrado` e `encerrado`, `incidente.registrado`; e `incidente.confirmado` |
 | Enviado a provedor externo | nada |
 | Retenção e expurgo | seção 3 |
 | Autorização por objeto | seção 4 |
@@ -298,7 +304,7 @@ Não há IA no caminho. O que a funcionalidade preserva:
 | Fila e prioridade | expurgo e eliminação no lote; arquivo na normal |
 | Limite por escola | vaga do F0 (lote 2); lote de 5.000; faixa de 1.000 na troca de nome; `statement_timeout` de 2 s |
 | Rate limit | balde do F0; `rl:busca-titular` com 30 por minuto por usuário, que recusa com 429 |
-| Corridas de concorrência | seção 5: a chave de envio decide primeiro; a chave de idempotência "escola + data local"; o único parcial de `agendado`; cancelar contra enfileirar por `eliminacao_enfileirada_em`; travas pedido → usuário; `skip locked` no expurgo; confirmação do incidente por `where confirmado_em is null`. Cada uma com um cenário em paralelo em `cenarios.md` |
+| Corridas de concorrência | seção 5: a chave de envio decide primeiro; a chave de idempotência "escola + data local"; o único parcial de `agendado`; cancelar contra enfileirar por `eliminacao_enfileirada_em`; dois `ops:retencao ajustar` da mesma escola em fila pela trava `for no key update` da escola (tarefa 2.0); travas pedido → usuário; `skip locked` no expurgo; confirmação do incidente por `where confirmado_em is null`. Cada uma com um cenário em paralelo em `cenarios.md` |
 | Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` se não existir, e `consumo_ia (escola_id, execucao_id) where execucao_id is not null`. De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`; `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
 | Migration | compatível: a 0024 só expande, e a exigência de `provedor` vai num release posterior (seção 3). O `migrar` roda numa transação, então `NOT VALID` seguido de `VALIDATE` no mesmo arquivo não alivia a trava: a partir do staging, cada check vai em arquivo próprio. Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
 | Quando cada dependência cai | banco: 503 tipado e nova tentativa; Redis de fila: aceito e despachado depois; storage: "em preparação", e baixar dá `INDISPONIVEL` |

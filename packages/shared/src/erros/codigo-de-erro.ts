@@ -90,6 +90,12 @@ export const CodigoDeErro = {
    * regra 30, item 12).
    */
   MATERIAL_INSUFICIENTE: 'MATERIAL_INSUFICIENTE',
+  /**
+   * O ajuste de retenção pedido pela operação (`ops:retencao`; F3, RF2; 422) não cabe: abaixo do piso ou acima do teto
+   * da categoria, acima do prazo da categoria que a trava, ou numa categoria que não se ajusta (registro de acesso,
+   * auditoria e os outros prazos fixos). Nada é gravado.
+   */
+  RETENCAO_FORA_DO_LIMITE: 'RETENCAO_FORA_DO_LIMITE',
 } as const
 
 export type CodigoDeErro = (typeof CodigoDeErro)[keyof typeof CodigoDeErro]

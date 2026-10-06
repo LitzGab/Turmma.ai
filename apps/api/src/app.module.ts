@@ -32,6 +32,7 @@ import { IaModule } from './ia/ia.module.js'
 import { LIMITES_DA_ESCOLA, LimiteModule } from './limite.module.js'
 import { MaterialModule } from './material/material.module.js'
 import { OperacaoModule } from './operacao/operacao.module.js'
+import { PrivacidadeModule } from './privacidade/privacidade.module.js'
 import { ProfessoresModule } from './professores/professores.module.js'
 import type { SorteioDoCodigo } from './sala/codigo-da-sala.js'
 import { SalaModule } from './sala/sala.module.js'
@@ -90,6 +91,7 @@ export class AppModule {
         AtividadeModule,
         TutorModule,
         GovernancaModule,
+        PrivacidadeModule,
         SalaModule.com({
           config: config.sala,
           chaveContador: config.login.chaveContador,

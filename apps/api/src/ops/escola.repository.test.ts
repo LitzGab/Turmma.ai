@@ -63,7 +63,8 @@ describe('RedeEEscolaRepository: a criação de rede e escola é só do operador
   it('nenhum código fora do repository do operador cria rede ou escola, e só o comando ops:escola o importa', () => {
     const arquivos = arquivosDeCodigo()
     expect(arquivos.filter((arquivo) => CRIACAO_DE_REDE_OU_ESCOLA.test(arquivo.texto)).map((arquivo) => arquivo.caminho)).toEqual([REPOSITORY])
-    expect(arquivos.filter((arquivo) => /escola\.repository/.test(arquivo.texto)).map((arquivo) => arquivo.caminho)).toEqual([COMANDO])
+    // O caminho do arquivo, e não o fim de outro nome: `retencao-da-escola.repository` (F3, tarefa 2.0) é outro repository.
+    expect(arquivos.filter((arquivo) => /[/'"]escola\.repository\b/.test(arquivo.texto)).map((arquivo) => arquivo.caminho)).toEqual([COMANDO])
   })
 
   it('fora de teste, só o painel da operação e as bancadas importam o comando: criarRede e criarEscola chegam a uma rota só, a do operador', () => {

@@ -98,6 +98,7 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['rede', 'analista', 'ler_resumo', 'nunca'],
   ['rede', 'analista', 'gerar', 'nunca'],
   ['rede', 'analista', 'ler_nominal', 'nunca'],
+  ['rede', 'privacidade_retencao', 'ler', 'nunca'],
 
   // coordenador: a unidade; aluno e indicador nominal só com auditoria
   ['coordenador', 'sistema_contexto', 'ler', 'proprio'],
@@ -194,6 +195,7 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['coordenador', 'analista', 'ler_resumo', 'agregado'],
   ['coordenador', 'analista', 'gerar', 'unidade'],
   ['coordenador', 'analista', 'ler_nominal', 'nominal_auditado'],
+  ['coordenador', 'privacidade_retencao', 'ler', 'unidade'],
 
   // professor: as turmas dele e o próprio vínculo e indicador
   ['professor', 'sistema_contexto', 'ler', 'proprio'],
@@ -289,6 +291,7 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['professor', 'analista', 'ler_resumo', 'nunca'],
   ['professor', 'analista', 'gerar', 'nunca'],
   ['professor', 'analista', 'ler_nominal', 'nunca'],
+  ['professor', 'privacidade_retencao', 'ler', 'nunca'],
 
   // aluno: a si mesmo
   ['aluno', 'sistema_contexto', 'ler', 'proprio'],
@@ -383,4 +386,5 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['aluno', 'analista', 'ler_resumo', 'nunca'],
   ['aluno', 'analista', 'gerar', 'nunca'],
   ['aluno', 'analista', 'ler_nominal', 'nunca'],
+  ['aluno', 'privacidade_retencao', 'ler', 'nunca'],
 ]

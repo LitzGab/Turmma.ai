@@ -6,7 +6,7 @@ import { OperadorRepository, type ConferenciaDoAutor } from '../operacao/operado
 
 /**
  * O que os comandos do operador (`ops:escola`, `ops:redefinir-mfa`, `ops:convite-coordenador`, `ops:revogar-convite`,
- * `ops:uso`, `ops:revogar-acessos-sala` e `ops:operador`) têm em comum: o erro de argumento, que cita só a opção e nunca o valor; o nome aceito; o
+ * `ops:uso`, `ops:revogar-acessos-sala`, `ops:retencao` e `ops:operador`) têm em comum: o erro de argumento, que cita só a opção e nunca o valor; o nome aceito; o
  * `OPERADOR` que vai para a auditoria e a conferência dele contra os operadores ativos, dentro da transação da escrita; a
  * saída do terminal; o arquivo 0600 do token; e o banco de operação, com uma conexão só.
  */
@@ -40,8 +40,8 @@ export class OperadorRecusado extends Error {
 }
 
 /**
- * O autor dos seis comandos de escola (`ops:escola`, `ops:convite-coordenador`, `ops:revogar-convite`,
- * `ops:redefinir-mfa`, `ops:uso` e `ops:revogar-acessos-sala`), conferido como primeira instrução da transação do caso de uso (Tech Spec da A0b,
+ * O autor dos sete comandos de escola (`ops:escola`, `ops:convite-coordenador`, `ops:revogar-convite`,
+ * `ops:redefinir-mfa`, `ops:uso`, `ops:revogar-acessos-sala` e `ops:retencao`), conferido como primeira instrução da transação do caso de uso (Tech Spec da A0b,
  * seção 7c, "Autor ativo"):
  * - o `OPERADOR` é um operador ativo: a linha dele fica em `for share` até o fim da transação, e um `desativar` que
  *   chegue depois espera a escrita confirmar; o que chegou antes faz a escrita não o achar;

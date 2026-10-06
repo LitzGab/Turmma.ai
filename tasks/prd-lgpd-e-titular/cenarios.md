@@ -15,6 +15,9 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] Uma trava entre categorias desrespeitada é recusada: `texto_do_modelo` maior que `conversa_professor`.
   - [I] `retencao.ajustada` vai para a auditoria com o operador e a referência.
   - [I] O ajuste em A não muda o `GET retencao` de B.
+  - [P] Dois `ops:retencao ajustar` da mesma escola passam um de cada vez, e o segundo audita o primeiro como anterior
+    (tarefa 2.0).
+  - [I] O número do contrato é inteiro positivo; texto ou zero são recusados como argumento, sem gravar (tarefa 2.0).
 - **RF4, prazo.**
   - [I] Por categoria: um dia antes do prazo, a linha fica; um dia depois, sai, ou é anonimizada como diz o catálogo.
   - [I] Reexecutar não apaga mais nada.

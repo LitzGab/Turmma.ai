@@ -11,14 +11,14 @@
   - [x] 1.3 Teste de arquitetura: a exceção da `Conta` aceita só `sessao` e `nucleo/ciclo-de-vida`, e lista quem importa a `ContaGlobalRepository`; `docs/modelo-de-dados.md` atualizado
   - [x] 1.4 Testes: os de ciclo de vida e de fim de vínculo mudam só de lugar, sem mudar asserção
 
-- [ ] **2.0 — A retenção da escola existe e a operação a ajusta por comando**
-  - [ ] 2.1 `packages/shared/src/privacidade`: `CATEGORIAS_DE_RETENCAO`, `PRAZOS_FIXOS`, `CLASSIFICACAO_DAS_TABELAS` (com "entra no arquivo" e a coluna de ligação), `COLUNAS_FORA_DO_ARQUIVO` (inclui `mfa_ultimo_passo` e `mfa_chave_versao`), erro `RETENCAO_FORA_DO_LIMITE`
-  - [ ] 2.2 Migration própria: `retencao_escola`
-  - [ ] 2.3 `RetencaoDaEscolaRepository` (escopo do contexto) e prazo efetivo com as travas
-  - [ ] 2.4 `ops:retencao` (ajustar, listar), abrindo o contexto da escola; auditoria `retencao.ajustada`
-  - [ ] 2.5 Módulo `apps/api/src/privacidade` com `GET retencao` (coordenação, MFA) e DTO explícito
-  - [ ] 2.6 Teste de arquitetura da classificação; `docs/lgpd.md` (linhas do apelido do operador e retenção de `correcao.destaque_aberto_por`), `docs/modelo-de-dados.md`
-  - [ ] 2.7 Testes
+- [x] **2.0 — A retenção da escola existe e a operação a ajusta por comando**
+  - [x] 2.1 `packages/shared/src/privacidade`: `CATEGORIAS_DE_RETENCAO`, `PRAZOS_FIXOS`, `CLASSIFICACAO_DAS_TABELAS` (com "entra no arquivo" e a coluna de ligação), `COLUNAS_FORA_DO_ARQUIVO` (inclui `mfa_ultimo_passo` e `mfa_chave_versao`), erro `RETENCAO_FORA_DO_LIMITE`
+  - [x] 2.2 Migration própria: `retencao_escola`
+  - [x] 2.3 `RetencaoDaEscolaRepository` (escopo do contexto) e prazo efetivo com as travas
+  - [x] 2.4 `ops:retencao` (ajustar, listar), abrindo o contexto da escola; auditoria `retencao.ajustada`
+  - [x] 2.5 Módulo `apps/api/src/privacidade` com `GET retencao` (coordenação, MFA) e DTO explícito
+  - [x] 2.6 Teste de arquitetura da classificação; `docs/lgpd.md` (linhas do apelido do operador e retenção de `correcao.destaque_aberto_por`), `docs/modelo-de-dados.md`
+  - [x] 2.7 Testes
 
 - [ ] **3.0 — A rotina noturna expurga a conversa e os sinais em cada escola**
   - [ ] 3.1 Migration própria: `job_registro.chave_idempotencia` (único parcial e check com escola), `expurgo_execucao`, índices `(escola_id, <data>)` de `mensagem_tutor`, `sinal_tutor`, `mensagem_agente`

@@ -1,12 +1,14 @@
 import { z } from 'zod'
 import {
   CHAVES_DE_FUNCAO,
+  CHAVES_DE_RETENCAO,
   CONTESTACOES_DE_VINCULO,
   DECISORES_DA_REIVINDICACAO,
   ESTADOS_DE_MATERIAL,
   ESTADOS_DE_VINCULO,
   ESTADOS_EM_DECISAO,
   FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR,
+  FINALIDADE_DO_AJUSTE_DE_RETENCAO,
   FINALIDADES_DA_LEITURA_DE_ALUNOS,
   FINALIDADES_DA_LEITURA_NOMINAL,
   FINALIDADES_DA_REDEFINICAO_DE_MFA,
@@ -16,6 +18,7 @@ import {
   MOTIVOS_DE_DESTAQUE,
   MOTIVOS_DE_ENCERRAMENTO_PELA_COORDENACAO,
   MOTIVOS_DE_SUSPENSAO,
+  ORIGENS_DA_RETENCAO,
   PAPEIS_DE_USUARIO,
   PAPEIS_DE_VINCULO,
   TIPOS_DE_CONVITE,
@@ -529,6 +532,18 @@ export const ACOES_DE_AUDITORIA = {
     antes: null,
     depois: z.strictObject({ professores: z.number().int().nonnegative() }),
     finalidade: z.enum(FINALIDADES_DA_LEITURA_NOMINAL),
+  },
+  /**
+   * A operação ajustou o prazo de uma categoria da retenção da escola (F3, RF2; `ops:retencao`), gravado no contexto
+   * dela e sempre com `autor_operador`. `entidadeId` é a escola, que com a `categoria` identifica a linha de
+   * `retencao_escola`. `antes` é o prazo próprio da categoria antes do ajuste, e de onde ele vinha; `depois`, o ajuste e
+   * o número do contrato que o pede. Nunca texto do contrato.
+   */
+  'retencao.ajustada': {
+    entidade: 'retencao_escola',
+    antes: z.strictObject({ meses: z.number().int().positive(), origem: z.enum(ORIGENS_DA_RETENCAO) }),
+    depois: z.strictObject({ categoria: z.enum(CHAVES_DE_RETENCAO), meses: z.number().int().positive(), referenciaContrato: z.number().int().positive() }),
+    finalidade: z.enum([FINALIDADE_DO_AJUSTE_DE_RETENCAO]),
   },
 } as const satisfies Record<string, DefinicaoDeAcao>
 

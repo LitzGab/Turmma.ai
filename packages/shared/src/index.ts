@@ -787,3 +787,29 @@ export type {
   RespostaResumoDoAnalista,
   TipoDeAlertaDoAnalista,
 } from './governanca/analista.js'
+export {
+  ajusteDeRetencaoCabe,
+  CATEGORIAS_DE_RETENCAO,
+  CHAVES_DE_PRAZO_FIXO,
+  CHAVES_DE_RETENCAO,
+  esquemaPrazoFixo,
+  esquemaRespostaRetencao,
+  esquemaRetencaoDaCategoria,
+  FINALIDADE_DO_AJUSTE_DE_RETENCAO,
+  ORIGENS_DA_RETENCAO,
+  PRAZOS_FIXOS,
+  retencaoDaEscola,
+  TRAVAS_DE_RETENCAO,
+} from './privacidade/retencao.js'
+export type {
+  AjusteDeRetencao,
+  CategoriaDeRetencao,
+  ChaveDePrazoFixo,
+  DefinicaoDaCategoria,
+  DefinicaoDoPrazoFixo,
+  OrigemDaRetencao,
+  RespostaRetencao,
+  RetencaoDaCategoria,
+} from './privacidade/retencao.js'
+export { CLASSIFICACAO_DAS_TABELAS, COLUNAS_FORA_DO_ARQUIVO } from './privacidade/classificacao.js'
+export type { ArquivoDaTabela, ClasseDaTabela, ClassificacaoDaTabela } from './privacidade/classificacao.js'

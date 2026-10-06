@@ -37,6 +37,8 @@ export const STATUS_HTTP_DO_CODIGO: Readonly<Record<CodigoDeErro, number>> = {
   IA_ENTRADA_INVALIDA: 500,
   EXECUCAO_INTERROMPIDA: 503,
   MATERIAL_INSUFICIENTE: 422,
+  // F3, RF2: o pedido é bem formado, e o prazo não cabe no catálogo da retenção.
+  RETENCAO_FORA_DO_LIMITE: 422,
 }
 
 /**

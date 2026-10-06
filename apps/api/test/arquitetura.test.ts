@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 import * as nucleo from '@educa/nucleo'
-import { CodigoDeErro } from '@educa/shared'
+import { CHAVES_DE_RETENCAO, CLASSIFICACAO_DAS_TABELAS, CodigoDeErro, COLUNAS_FORA_DO_ARQUIVO } from '@educa/shared'
 import { Controller, Get, SetMetadata, type ExecutionContext, type Type } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { getTableName, is } from 'drizzle-orm'
@@ -843,5 +843,193 @@ describe('arquitetura: toda tabela sem escola_id está nas exceções do modelo 
       "ALTER TABLE \"x\" ADD CONSTRAINT \"x_nome\" CHECK (\"x\".\"nome\" <> 'create table fantasma (; ');",
     ].join('\n')
     expect(tabelasSemEscola([semDdl])).toEqual([])
+  })
+})
+
+/**
+ * F3, RF1 (Tech Spec do F3, seção 3, "Classificação de toda tabela"): toda tabela das migrations está em
+ * `CLASSIFICACAO_DAS_TABELAS`, com a classe que diz como ela sai e se entra no arquivo do titular, e nada fora das
+ * migrations está lá. A tabela nova que nasce sem classificação deixa a esteira vermelha: é como uma tabela de pessoa
+ * escaparia do expurgo e do arquivo do titular sem ninguém ver.
+ */
+const PALAVRAS_DE_RESTRICAO = new Set(['constraint', 'primary', 'unique', 'check', 'foreign', 'exclude'])
+
+/** O corpo do `CREATE TABLE` em itens, separando pelas vírgulas de fora dos parênteses. */
+function itensDoCorpo(corpo: string): string[] {
+  const itens: string[] = []
+  let profundidade = 0
+  let atual = ''
+  for (const caractere of corpo) {
+    if (caractere === '(') profundidade++
+    if (caractere === ')') profundidade--
+    if (caractere === ',' && profundidade === 0) {
+      itens.push(atual)
+      atual = ''
+      continue
+    }
+    atual += caractere
+  }
+  return [...itens, atual].map((item) => item.trim()).filter((item) => item !== '')
+}
+
+/** O nome da coluna de um item do corpo, ou de uma ação de `ALTER`, se não for restrição. */
+function nomeDeColuna(texto: string): string | undefined {
+  const nome = /^"?(\w+)"?/.exec(texto.trim())?.[1]
+  return nome === undefined || PALAVRAS_DE_RESTRICAO.has(nome.toLowerCase()) ? undefined : nome
+}
+
+/**
+ * As colunas de cada tabela como as migrations, na ordem, as deixam: o `CREATE TABLE`, e no `ALTER TABLE` o `ADD`,
+ * `DROP` e `RENAME COLUMN` e o `RENAME TO`; o `DROP TABLE` tira a tabela. Lê o mesmo DDL de `tabelasSemEscola`.
+ */
+function colunasDasTabelas(sqls: readonly string[]): Map<string, Set<string>> {
+  const tabelas = new Map<string, Set<string>>()
+  for (const sql of sqls) {
+    for (const comando of comandosDaMigration(sql)) {
+      const criacao = CRIACAO.exec(comando)
+      if (criacao !== null) {
+        tabelas.set(criacao[1] ?? '', new Set(itensDoCorpo(criacao[2] ?? '').flatMap((item) => nomeDeColuna(item) ?? [])))
+        continue
+      }
+      const alteracao = ALTERACAO.exec(comando)
+      if (alteracao !== null) {
+        const tabela = alteracao[1] ?? ''
+        const acoes = alteracao[2] ?? ''
+        const novoNome = new RegExp(String.raw`^rename\s+to\s+"?(\w+)"?$`, 'i').exec(acoes)?.[1]
+        const colunas = tabelas.get(tabela)
+        if (colunas === undefined) continue
+        if (novoNome !== undefined) {
+          tabelas.delete(tabela)
+          tabelas.set(novoNome, colunas)
+          continue
+        }
+        for (const acao of itensDoCorpo(acoes)) {
+          const renomeada = new RegExp(String.raw`^rename\s+(?:column\s+)?"?(\w+)"?\s+to\s+"?(\w+)"?$`, 'i').exec(acao)
+          if (renomeada !== null) {
+            colunas.delete(renomeada[1] ?? '')
+            colunas.add(renomeada[2] ?? '')
+            continue
+          }
+          const acrescentada = new RegExp(String.raw`^add\s+(?:column\s+)?(?:if\s+not\s+exists\s+)?([\s\S]+)$`, 'i').exec(acao)?.[1]
+          const apagada = new RegExp(String.raw`^drop\s+(?:column\s+)?(?:if\s+exists\s+)?([\s\S]+)$`, 'i').exec(acao)?.[1]
+          const nomeAcrescentado = acrescentada === undefined ? undefined : nomeDeColuna(acrescentada)
+          const nomeApagado = apagada === undefined ? undefined : nomeDeColuna(apagada)
+          if (nomeAcrescentado !== undefined) colunas.add(nomeAcrescentado)
+          if (nomeApagado !== undefined) colunas.delete(nomeApagado)
+        }
+        continue
+      }
+      const remocao = new RegExp(String.raw`^drop\s+table\s+(?:if\s+exists\s+)?([\s\S]+?)(?:\s+(?:cascade|restrict))?$`, 'i').exec(comando)
+      for (const nome of remocao?.[1]?.split(',') ?? []) tabelas.delete(new RegExp(`^\\s*${NOME_DE_TABELA}\\s*$`).exec(nome)?.[1] ?? '')
+    }
+  }
+  return tabelas
+}
+
+/**
+ * Nome de coluna que guarda segredo, chave, hash, o estado do segundo fator ou o identificador opaco da conta externa:
+ * nunca pode entrar no arquivo do titular. Só a data de ativação do segundo fator fica de fora do padrão.
+ */
+const NOME_DE_SEGREDO = /hash|hmac|segredo|chave_envio|chave_objeto|^mfa_(?!ativado_em$)|^sujeito$|^tenant$/
+
+/**
+ * O que está errado na classificação, contra as colunas das migrations: tabela sem classificação, classificação de
+ * tabela que não existe, tabela sem "entra no arquivo" (ou de classe desconhecida), tabela sem pessoa que entra no
+ * arquivo, tabela que entra sem coluna de ligação ou com ligação que não existe, coluna de `foraDoArquivo` que não
+ * existe, e coluna com nome de segredo fora de `foraDoArquivo`.
+ */
+function problemasDaClassificacao(classificacao: Readonly<Record<string, unknown>>, colunas: ReadonlyMap<string, ReadonlySet<string>>, foraDoArquivo: readonly string[]): string[] {
+  const problemas: string[] = []
+  for (const tabela of colunas.keys()) if (!Object.hasOwn(classificacao, tabela)) problemas.push(`${tabela}: sem classificação`)
+  for (const [tabela, valor] of Object.entries(classificacao)) {
+    const daTabela = colunas.get(tabela)
+    if (daTabela === undefined) {
+      problemas.push(`${tabela}: classificada e inexistente nas migrations`)
+      continue
+    }
+    const { classe, arquivo } = (valor ?? {}) as { classe?: unknown; arquivo?: { entra?: unknown; ligacao?: unknown } }
+    if (classe !== 'categoria' && classe !== 'prazo_fixo' && classe !== 'sem_pessoa') problemas.push(`${tabela}: classe desconhecida`)
+    if (arquivo === undefined || typeof arquivo.entra !== 'boolean') {
+      problemas.push(`${tabela}: sem "entra no arquivo"`)
+      continue
+    }
+    if (!arquivo.entra) continue
+    if (classe === 'sem_pessoa') problemas.push(`${tabela}: sem pessoa e no arquivo`)
+    const ligacao = Array.isArray(arquivo.ligacao) ? (arquivo.ligacao as unknown[]) : []
+    if (ligacao.length === 0) problemas.push(`${tabela}: no arquivo sem coluna de ligação`)
+    for (const coluna of ligacao) if (typeof coluna !== 'string' || !daTabela.has(coluna)) problemas.push(`${tabela}.${String(coluna)}: coluna de ligação inexistente`)
+  }
+  for (const proibida of foraDoArquivo) {
+    const [tabela = '', coluna = ''] = proibida.split('.')
+    if (colunas.get(tabela)?.has(coluna) !== true) problemas.push(`${proibida}: coluna fora do arquivo inexistente`)
+  }
+  for (const [tabela, daTabela] of colunas) {
+    for (const coluna of daTabela) if (NOME_DE_SEGREDO.test(coluna) && !foraDoArquivo.includes(`${tabela}.${coluna}`)) problemas.push(`${tabela}.${coluna}: segredo fora de COLUNAS_FORA_DO_ARQUIVO`)
+  }
+  return problemas
+}
+
+describe('arquitetura: toda tabela das migrations está classificada para a retenção e o arquivo do titular (F3, RF1)', () => {
+  const sqls = readdirSync(join(RAIZ, 'packages/nucleo/drizzle'))
+    .filter((arquivo) => arquivo.endsWith('.sql'))
+    .sort()
+    .map((arquivo) => readFileSync(join(RAIZ, 'packages/nucleo/drizzle', arquivo), 'utf8'))
+  const colunas = colunasDasTabelas(sqls)
+
+  it('a leitura das colunas enxerga as migrations: a criação, o ADD COLUMN do MVP e a tabela da retenção', () => {
+    expect([...colunas.keys()].toSorted()).toEqual([...TABELAS_FISICAS].toSorted())
+    expect(colunas.get('conta')).toEqual(new Set(['id', 'email', 'senha_hash', 'mfa_segredo_cifrado', 'mfa_chave_versao', 'mfa_ativado_em', 'mfa_ultimo_passo']))
+    expect(colunas.get('mensagem_tutor')?.has('pagina')).toBe(true)
+    expect(colunas.get('retencao_escola')).toEqual(new Set(['escola_id', 'categoria', 'meses', 'referencia_contrato', 'alterada_em', 'alterada_por']))
+  })
+
+  it('a CLASSIFICACAO_DAS_TABELAS confere com as migrations, nos dois sentidos, e as colunas fora do arquivo existem e cobrem todo segredo', () => {
+    expect(problemasDaClassificacao(CLASSIFICACAO_DAS_TABELAS, colunas, COLUNAS_FORA_DO_ARQUIVO)).toEqual([])
+  })
+
+  it('toda categoria do catálogo tem ao menos uma tabela', () => {
+    const usadas = new Set(Object.values(CLASSIFICACAO_DAS_TABELAS).flatMap((classificada) => (classificada.classe === 'categoria' ? classificada.categorias : [])))
+    expect([...CHAVES_DE_RETENCAO].filter((categoria) => !usadas.has(categoria))).toEqual([])
+  })
+
+  it('reprova a tabela de migration fora da classificação, a classificada que não existe e a sem "entra no arquivo"', () => {
+    const migrations = ['CREATE TABLE "pessoa" (\n\t"id" uuid PRIMARY KEY,\n\t"escola_id" uuid NOT NULL,\n\t"nome" text\n);', 'CREATE TABLE "nova" (\n\t"id" uuid\n);']
+    const lidas = colunasDasTabelas(migrations)
+    expect(problemasDaClassificacao({ pessoa: { classe: 'sem_pessoa', arquivo: { entra: false } } }, lidas, [])).toEqual(['nova: sem classificação'])
+    expect(
+      problemasDaClassificacao({ pessoa: { classe: 'sem_pessoa', arquivo: { entra: false } }, nova: { classe: 'sem_pessoa', arquivo: { entra: false } }, sumida: { classe: 'sem_pessoa', arquivo: { entra: false } } }, lidas, []),
+    ).toEqual(['sumida: classificada e inexistente nas migrations'])
+    expect(problemasDaClassificacao({ pessoa: { classe: 'categoria', categorias: ['conversa_tutor'] }, nova: { classe: 'sem_pessoa', arquivo: { entra: false } } }, lidas, [])).toEqual(['pessoa: sem "entra no arquivo"'])
+  })
+
+  it('reprova a ligação que falta ou não existe, a tabela sem pessoa no arquivo, a coluna fora do arquivo inexistente e o segredo fora da lista', () => {
+    const lidas = colunasDasTabelas(['CREATE TABLE "pessoa" (\n\t"id" uuid,\n\t"aluno_id" uuid,\n\t"token_hash" text,\n\t"mfa_ativado_em" timestamp\n);'])
+    const comArquivo = (arquivo: unknown, classe = 'categoria') => ({ pessoa: { classe, categorias: ['conversa_tutor'], arquivo } })
+    expect(problemasDaClassificacao(comArquivo({ entra: true, ligacao: ['aluno_id'] }), lidas, ['pessoa.token_hash'])).toEqual([])
+    expect(problemasDaClassificacao(comArquivo({ entra: true, ligacao: [] }), lidas, ['pessoa.token_hash'])).toEqual(['pessoa: no arquivo sem coluna de ligação'])
+    expect(problemasDaClassificacao(comArquivo({ entra: true, ligacao: ['usuario_id'] }), lidas, ['pessoa.token_hash'])).toEqual(['pessoa.usuario_id: coluna de ligação inexistente'])
+    expect(problemasDaClassificacao(comArquivo({ entra: true, ligacao: ['aluno_id'] }, 'sem_pessoa'), lidas, ['pessoa.token_hash'])).toEqual(['pessoa: sem pessoa e no arquivo'])
+    expect(problemasDaClassificacao(comArquivo({ entra: false }), lidas, ['pessoa.token_hash', 'pessoa.mfa_ultimo_passo'])).toEqual(['pessoa.mfa_ultimo_passo: coluna fora do arquivo inexistente'])
+    expect(problemasDaClassificacao(comArquivo({ entra: false }), lidas, [])).toEqual(['pessoa.token_hash: segredo fora de COLUNAS_FORA_DO_ARQUIVO'])
+    // O padrão pega o estado do segundo fator e o identificador da conta externa, e deixa passar só a data de ativação.
+    const segredos = colunasDasTabelas(['CREATE TABLE "conta_x" (\n\t"mfa_ultimo_passo" bigint,\n\t"mfa_chave_versao" smallint,\n\t"mfa_ativado_em" timestamp,\n\t"sujeito" text,\n\t"tenant" text\n);'])
+    expect(problemasDaClassificacao({ conta_x: { classe: 'sem_pessoa', arquivo: { entra: false } } }, segredos, [])).toEqual([
+      'conta_x.mfa_ultimo_passo: segredo fora de COLUNAS_FORA_DO_ARQUIVO',
+      'conta_x.mfa_chave_versao: segredo fora de COLUNAS_FORA_DO_ARQUIVO',
+      'conta_x.sujeito: segredo fora de COLUNAS_FORA_DO_ARQUIVO',
+      'conta_x.tenant: segredo fora de COLUNAS_FORA_DO_ARQUIVO',
+    ])
+    expect(problemasDaClassificacao(comArquivo({ entra: false }, 'apagada_um_dia'), lidas, ['pessoa.token_hash'])).toEqual(['pessoa: classe desconhecida'])
+  })
+
+  it('a leitura das colunas segue o ALTER: ADD, DROP e RENAME COLUMN, RENAME TO e DROP TABLE, e não confunde restrição com coluna', () => {
+    const criada = 'CREATE TABLE "nova" (\n\t"id" uuid,\n\t"velha" text,\n\tCONSTRAINT "nova_pk" PRIMARY KEY("id")\n);'
+    expect(colunasDasTabelas([criada])).toEqual(new Map([['nova', new Set(['id', 'velha'])]]))
+    expect(colunasDasTabelas([criada, 'ALTER TABLE "nova" ADD COLUMN "token_hash" text;'])).toEqual(new Map([['nova', new Set(['id', 'velha', 'token_hash'])]]))
+    expect(colunasDasTabelas([criada, 'alter table nova add column if not exists extra int, drop column velha;'])).toEqual(new Map([['nova', new Set(['id', 'extra'])]]))
+    expect(colunasDasTabelas([criada, 'ALTER TABLE "nova" RENAME COLUMN "velha" TO "chave_envio";'])).toEqual(new Map([['nova', new Set(['id', 'chave_envio'])]]))
+    expect(colunasDasTabelas([criada, 'ALTER TABLE "nova" ADD CONSTRAINT "nova_x" CHECK ("id" is not null);', 'ALTER TABLE "nova" DROP CONSTRAINT "nova_x";'])).toEqual(new Map([['nova', new Set(['id', 'velha'])]]))
+    expect(colunasDasTabelas([criada, 'ALTER TABLE "nova" RENAME TO "renomeada";'])).toEqual(new Map([['renomeada', new Set(['id', 'velha'])]]))
+    expect(colunasDasTabelas([criada, 'DROP TABLE "nova";'])).toEqual(new Map())
   })
 })

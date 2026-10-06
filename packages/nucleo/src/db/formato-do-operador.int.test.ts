@@ -11,7 +11,7 @@ import { criarPool, type PoolBanco } from './pool.js'
  * deles tem exatamente a expressão da constante. Mudar a constante sem a migration, ou a migration sem a constante,
  * deixa este teste vermelho.
  */
-const CHECKS_DO_FORMATO = ['auditoria_operacao_autor_formato', 'auditoria_operador_formato', 'operador_apelido_formato']
+const CHECKS_DO_FORMATO = ['auditoria_operacao_autor_formato', 'auditoria_operador_formato', 'operador_apelido_formato', 'retencao_escola_alterada_por_formato']
 
 describe('FORMATO_OPERADOR: a constante e os checks do banco', () => {
   let pool: PoolBanco
@@ -29,16 +29,16 @@ describe('FORMATO_OPERADOR: a constante e os checks do banco', () => {
   })
 
   it('todo check que confere apelido ou autor de operador usa exatamente a expressão de FORMATO_OPERADOR', async () => {
-    // Todo check com `~` sobre `apelido`, `autor` ou `autor_operador`, em qualquer tabela: um check novo com outra
-    // expressão também aparece aqui.
+    // Todo check com `~` sobre `apelido`, `autor`, `autor_operador` ou `alterada_por` (a retenção, F3), em qualquer
+    // tabela: um check novo com outra expressão também aparece aqui.
     const { rows } = await pool.query<{ nome: string; definicao: string }>(
       `select conname as nome, pg_get_constraintdef(oid) as definicao from pg_constraint
-        where contype = 'c' and connamespace = 'public'::regnamespace and pg_get_constraintdef(oid) ~ '\\m(apelido|autor|autor_operador) ~ '
+        where contype = 'c' and connamespace = 'public'::regnamespace and pg_get_constraintdef(oid) ~ '\\m(apelido|autor|autor_operador|alterada_por) ~ '
         order by conname`,
     )
     expect(rows.map((linha) => linha.nome)).toEqual(CHECKS_DO_FORMATO)
     for (const { nome, definicao } of rows) {
-      const expressoes = [...definicao.matchAll(/\b(?:apelido|autor|autor_operador) ~ '([^']*)'/g)].map((casada) => casada[1])
+      const expressoes = [...definicao.matchAll(/\b(?:apelido|autor|autor_operador|alterada_por) ~ '([^']*)'/g)].map((casada) => casada[1])
       expect(expressoes, nome).toEqual([FORMATO_OPERADOR.source])
     }
   })

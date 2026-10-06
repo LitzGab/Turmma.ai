@@ -146,6 +146,11 @@ export const RECURSOS = {
    * finalidade e auditoria.
    */
   analista: ['ler_resumo', 'gerar', 'ler_nominal'],
+  /**
+   * A privacidade da escola (F3), só da coordenação: `ler` é `GET /v1/privacidade/retencao`, o prazo de cada categoria,
+   * sem pessoa. Ajustar é só da operação, por comando (`ops:retencao`), e não tem rota.
+   */
+  privacidade_retencao: ['ler'],
 } as const satisfies Record<string, readonly string[]>
 
 export type Recurso = keyof typeof RECURSOS
@@ -189,6 +194,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     uso_do_tutor: { ler: 'nunca' },
     governanca: { ler_resumo: 'nunca', ler_funcoes: 'nunca', suspender_funcao: 'nunca', retomar_funcao: 'nunca', ler_consumo: 'nunca' },
     analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
+    privacidade_retencao: { ler: 'nunca' },
   },
   coordenador: {
     sistema_contexto: { ler: 'proprio' },
@@ -225,6 +231,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     uso_do_tutor: { ler: 'nunca' },
     governanca: { ler_resumo: 'agregado', ler_funcoes: 'unidade', suspender_funcao: 'unidade', retomar_funcao: 'unidade', ler_consumo: 'agregado' },
     analista: { ler_resumo: 'agregado', gerar: 'unidade', ler_nominal: 'nominal_auditado' },
+    privacidade_retencao: { ler: 'unidade' },
   },
   professor: {
     sistema_contexto: { ler: 'proprio' },
@@ -261,6 +268,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     uso_do_tutor: { ler: 'turma_vinculada' },
     governanca: { ler_resumo: 'nunca', ler_funcoes: 'nunca', suspender_funcao: 'nunca', retomar_funcao: 'nunca', ler_consumo: 'nunca' },
     analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
+    privacidade_retencao: { ler: 'nunca' },
   },
   aluno: {
     sistema_contexto: { ler: 'proprio' },
@@ -297,6 +305,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     uso_do_tutor: { ler: 'nunca' },
     governanca: { ler_resumo: 'nunca', ler_funcoes: 'nunca', suspender_funcao: 'nunca', retomar_funcao: 'nunca', ler_consumo: 'nunca' },
     analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
+    privacidade_retencao: { ler: 'nunca' },
   },
 }
 
