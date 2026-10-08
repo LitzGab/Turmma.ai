@@ -261,7 +261,7 @@ a segunda falha seguida da mesma tarefa.
 Ao parar:
 
 ```bash
-maestri note read "Fila do Joaquim"      # não existe? maestri note create --name "Fila do Joaquim"
+maestri note read "Fila do Joaquim"      # já existe no térreo; só se sumiu: maestri note create --name "Fila do Joaquim"
 maestri note edit ...                    # acrescente a entrada no fim; nunca reescreva a nota
 maestri floor status "<a pergunta, em uma linha>" --state blocked --floor "<andar>"
 maestri routine disable "Vigia do processo"
@@ -333,12 +333,14 @@ Verde: peça a retrospectiva ao `Arquiteto` e notifique o fim.
 
 ## 9. Vigia
 
-A rotina `Vigia do processo` manda `/seguir vigia` a cada 30 minutos. Crie-a uma vez, ligue-a
-enquanto houver trabalho correndo e desligue-a em toda parada e no fim:
+A rotina `Vigia do processo` manda `/seguir vigia` a cada 30 minutos. Ela já existe no workspace,
+pausada: ligue-a enquanto houver trabalho correndo e desligue-a em toda parada e no fim. Só a crie
+se `maestri routine list` não a mostrar, para não ficar com duas vigias:
 
 ```bash
-maestri routine create "Vigia do processo" --command "/seguir vigia" --every 30m --no-notify
+maestri routine list
 maestri routine enable "Vigia do processo"       # e disable ao parar
+maestri routine create "Vigia do processo" --command "/seguir vigia" --every 30m --no-notify   # só se não existir
 ```
 
 No `vigia`, seja barato: leia o `estado.md` do andar ativo e rode `maestri check` em **todos** os
