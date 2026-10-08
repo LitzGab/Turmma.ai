@@ -188,6 +188,13 @@ describe('lerValidacao e specAprovada', () => {
     expect(lerValidacao(duasRodadas)).toEqual({ veredito: 'APROVADA', ressalvasAceitas: false })
   })
 
+  it('a rodada de escopo de tarefa não vale como veredito da funcionalidade', () => {
+    const tarefa = '## Rodada 2 — 08/10/2026\n\n**Escopo:** tarefa 3.0\n**Veredito: APROVADA**\n\n'
+    const completa = '## Rodada 1 — 07/10/2026\n\n**Escopo:** funcionalidade completa (tarefas 1.0 a 6.0)\n**Veredito: REPROVADA**\n'
+    expect(lerValidacao(`# Validação\n\n${tarefa}${completa}`)).toEqual({ veredito: 'REPROVADA', ressalvasAceitas: false })
+    expect(lerValidacao(`# Validação\n\n${tarefa}`)).toBeNull()
+  })
+
   it('distingue a ressalva aceita da que ainda espera o Joaquim', () => {
     expect(lerValidacao('**Veredito: APROVADA COM RESSALVAS**\n')).toEqual({ veredito: 'APROVADA COM RESSALVAS', ressalvasAceitas: false })
     const aceita = '**Veredito: APROVADA COM RESSALVAS** — as quatro ressalvas maiores foram **aceitas por Joaquim em 20/09**\n'

@@ -902,8 +902,8 @@ const GIT_COMMIT = new RegExp(String.raw`(?:^|[;&|(\n])\s*${ATRIBUICOES}git((?:\
 const GIT_QUE_SO_PREPARA = ['add', 'rm', 'status', 'diff', 'log', 'show', 'rev-parse', 'fetch', 'branch']
 
 /** Os comandos do shell que vêm antes do `git commit`, um por trecho, e as opções do próprio commit. */
-function trechosAntesDoCommit(comando: string): { trechos: string[]; opcoes: string } | null {
-  const commit = GIT_COMMIT.exec(comando)
+function trechosAntesDoCommit(comando: string, padrao: RegExp = GIT_COMMIT): { trechos: string[]; opcoes: string } | null {
+  const commit = padrao.exec(comando)
   if (!commit) return null
   const trechos = comando
     .slice(0, commit.index)
@@ -953,8 +953,8 @@ function expandirCaminho(bruto: string, variaveis: Map<string, string>): string 
  * `indeterminado` quando um desses caminhos depende de variável que o comando não atribui: aí o hook não sabe em que
  * árvore o commit acontece, e avaliar a da sessão seria o furo que `arvoreDoCommit` fecha.
  */
-export function pastaDoCommit(comando: string, raiz: string, cwd?: string): { pasta: string } | { indeterminado: string } | null {
-  const antes = trechosAntesDoCommit(comando)
+export function pastaDoCommit(comando: string, raiz: string, cwd?: string, padrao: RegExp = GIT_COMMIT): { pasta: string } | { indeterminado: string } | null {
+  const antes = trechosAntesDoCommit(comando, padrao)
   if (!antes) return null
   const variaveis = new Map<string, string>()
   let pasta = cwd && existsSync(cwd) ? cwd : raiz
@@ -1000,8 +1000,61 @@ export function arvoreDoCommit(comando: string, raiz: string, cwd?: string): str
   return repositorio !== null && pastaDoGit(arvore, '--git-common-dir') === repositorio ? arvore : raiz
 }
 
-export function portao(entrada: EntradaHook, raizDaSessao: string): string | null {
+/** As branches que só recebem por pouso ou por merge do Joaquim (D23, D78). */
+export const BRANCHES_PROTEGIDAS = ['develop', 'release', 'main']
+/** Os papéis de terminal do time (`.claude/agents/`). O Orquestrador não tem papel: é o terminal Maestro do térreo. */
+export const PAPEIS_DO_TIME = ['arquiteto', 'implementador', 'mesa-de-revisao', 'validador']
+/** `git push` em posição de comando: as opções `-C` no grupo 1, e o resto do comando no grupo 2. */
+const GIT_PUSH = new RegExp(String.raw`(?:^|[;&|(\n])\s*${ATRIBUICOES}git((?:\s+-[Cc]\s+${CAMINHO})*)\s+push\b([^;&|\n]*)`)
+
+/**
+ * A branch protegida que o `git push` do comando alcançaria, ou `null`. Sem branch escrita (`git push`, `git push origin`,
+ * `HEAD`), o destino é a branch da árvore em que o push roda; `null` aí quer dizer que o hook não sabe qual é, e conta
+ * como protegida: na dúvida, quem empurra é o Orquestrador.
+ */
+export function destinoProtegidoDoPush(comando: string, branchDaArvore: string | null): string | null {
+  for (const push of comando.matchAll(new RegExp(GIT_PUSH.source, 'g'))) {
+    const argumentos = [...(push[2] ?? '').matchAll(/"[^"]*"|'[^']*'|\S+/g)].map((achado) => semAspas(achado[0]))
+    if (argumentos.some((argumento) => argumento === '--all' || argumento === '--mirror')) return 'todas as branches'
+    const destinos = argumentos
+      .filter((argumento) => !argumento.startsWith('-'))
+      .slice(1)
+      .map((referencia) => referencia.replace(/^\+/, '').split(':').pop() ?? '')
+    for (const destino of destinos.length > 0 ? destinos : ['HEAD']) {
+      const branch = destino === 'HEAD' || destino === '@' ? branchDaArvore : destino.replace(/^refs\/heads\//, '')
+      if (branch === null) return 'uma branch que o hook não sabe qual é'
+      if (BRANCHES_PROTEGIDAS.includes(branch)) return `\`${branch}\``
+    }
+  }
+  return null
+}
+
+/**
+ * O bloqueio do push de um agente do time numa branch protegida. A `develop` só recebe por pouso, com a palavra do
+ * Joaquim, e quem executa é o Orquestrador (D78). Até 08/10/2026 isso era só regra escrita, e o time roda sozinho à
+ * noite, sem pedir permissão para comando nenhum: a regra virou trava.
+ *
+ * O papel vem de `CLAUDE_CODE_AGENT`, que o Claude Code põe no ambiente da sessão iniciada com `--agent <papel>` e os
+ * subagentes dela herdam. O Orquestrador e a sessão de uma pessoa não têm essa variável, e passam. Pousar e apagar
+ * andar não entram aqui: o próprio Maestri recusa esses comandos a quem não é o terminal Maestro.
+ */
+export function pushDoTime(comando: string, raiz: string, cwd: string | undefined, papel: string | undefined): string | null {
+  if (!papel || !PAPEIS_DO_TIME.includes(papel) || !GIT_PUSH.test(comando)) return null
+  const onde = pastaDoCommit(comando, raiz, cwd, GIT_PUSH)
+  const pasta = onde && 'pasta' in onde && existsSync(onde.pasta) ? onde.pasta : null
+  const destino = destinoProtegidoDoPush(comando, pasta ? branchAtual(pasta) || null : null)
+  if (destino === null) return null
+  return (
+    `Push bloqueado: este comando empurra ${destino}, e as branches ${BRANCHES_PROTEGIDAS.join(', ')} só recebem por pouso, com a palavra do Joaquim ` +
+    `(D78). Quem faz isso é o Orquestrador, não o papel \`${papel}\`. O seu push é o da branch do andar: \`git push -u origin HEAD\`, dentro do ` +
+    'checkout do andar. Commit feito no térreo, na `develop`, fica sem push: o Orquestrador o leva.'
+  )
+}
+
+export function portao(entrada: EntradaHook, raizDaSessao: string, papel: string | undefined = process.env['CLAUDE_CODE_AGENT']): string | null {
   const comando = entrada.tool_input?.command ?? ''
+  const push = pushDoTime(comando, raizDaSessao, entrada.cwd, papel)
+  if (push !== null) return push
   if (!ehCommit(comando)) return null
   const estranho = antesDoCommit(comando)
   if (estranho !== null) {

@@ -181,7 +181,7 @@ Cada spec vive num **andar** do Maestri, com a branch `spec/<funcionalidade>`, e
 `develop` por pouso, com a sua palavra. A esteira roda uma vez, na branch, antes do pouso. O
 Orquestrador para em seis decisões: aprovação de PRD, Tech Spec e lista de tarefas; mudança de
 desenho ou de critério de aceite; ressalva da validação; propostas da retrospectiva; decisão de
-produto; e o pouso. O que espera você fica na nota "Fila do Joaquim".
+produto; e o pouso. O que espera você aparece no terminal do Orquestrador, com o andar marcado como bloqueado.
 
 Defeito avulso e decisão de produto você pede em texto ao Orquestrador. Como os agentes conversam
 está em `.claude/skills/seguir/protocolo.md`.

@@ -146,7 +146,9 @@ export function lerPorte(conteudoTask: string): Porte {
  * essas linhas como aceite pularia a parada que é dele.
  */
 export function lerValidacao(conteudo: string): { veredito: VereditoDaValidacao; ressalvasAceitas: boolean } | null {
-  const achado = /^\*\*Veredito: (APROVADA COM RESSALVAS|APROVADA|REPROVADA)\*\*(.*)$/m.exec(conteudo)
+  // Rodada de escopo de tarefa (`**Escopo:** tarefa N.0`) não diz nada da funcionalidade: fica de fora.
+  const rodadas = conteudo.split(/^(?=## Rodada )/m).filter((rodada) => !/^\*\*Escopo:\*\*\s*tarefa\b/im.test(rodada))
+  const achado = rodadas.map((rodada) => /^\*\*Veredito: (APROVADA COM RESSALVAS|APROVADA|REPROVADA)\*\*(.*)$/m.exec(rodada)).find((veredito) => veredito !== null)
   if (!achado) return null
   const resto = achado[2] ?? ''
   const aceitas = /\baceit[ao]s?\*{0,2}\s+por\s+\S/i.test(resto) && !/\bnão\b[^.;]*\baceit/i.test(resto)

@@ -82,7 +82,7 @@ Se o agente mexeu em outro arquivo, desfaça essa mudança e reporte.
 3. No `techspec.md`, troque o status para `implementada em <DD/MM/AAAA>`, mantendo o
    histórico de revisões entre parênteses.
 4. Leve as **pendências herdadas** ao destino de cada uma:
-   - decisão tomada no caminho e não registrada: é parada. Entra na Fila do Joaquim, e com a
+   - decisão tomada no caminho e não registrada: é parada do Joaquim (`/seguir`, passo 7), e com a
      resposta dele o Arquiteto registra (`registrar-decisao`);
    - item fora do código: `TODO.md`;
    - recomendação para uma funcionalidade futura: fica na seção 6 do `validacao.md`, e

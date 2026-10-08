@@ -19,7 +19,7 @@ Alvo opcional: `$ARGUMENTS`
    andar da spec criado (`maestri floor list`), rode dentro do checkout do andar: é o estado que vale
 2. `tasks/prd-<func>/estado.md` do andar, se existir — o diário do Orquestrador: o que ele espera, o
    que falhou e o que decidiu sem perguntar
-3. A nota "Fila do Joaquim" (`maestri note read "Fila do Joaquim"`) — o que espera decisão dele
+3. A seção "Esperando o Joaquim" desse `estado.md` — o que espera decisão dele
 4. `CLAUDE.md`, seção "Decisões em aberto" — só as que travam a funcionalidade da vez ou a próxima
 5. `TODO.md` — só os itens que bloqueiam a funcionalidade da vez ou a próxima
 6. `git log --oneline -5` do andar
@@ -36,7 +36,7 @@ Turmma — status em <data>
 
 Da vez:      F? <nome> — <fase> (<n> de <total> tarefas), no andar <andar>
 Concluídas:  F0, F1 ...
-Esperando o Joaquim: <entradas abertas da fila, uma linha cada, ou nada>
+Esperando o Joaquim: <as entradas abertas, uma linha cada, ou nada>
 Decisões em aberto que travam o caminho próximo:
 - <decisão> → trava <F?>
 Fora do código, com prazo:

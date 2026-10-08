@@ -67,8 +67,8 @@ como um prompt novo.
 
 O Validador só fala com o Orquestrador: ele não pode ouvir quem implementou.
 
-**Quem avisa o Joaquim.** O Orquestrador escreve na nota "Fila do Joaquim" e publica o status do
-andar da spec; o estado `blocked` já notifica, e a notificação avulsa fica para o fim da
+**Quem avisa o Joaquim.** O Orquestrador registra a parada no `estado.md` do andar, publica o status
+do andar da spec e faz a pergunta no próprio terminal; o estado `blocked` já notifica, e a notificação avulsa fica para o fim da
 funcionalidade. O Arquiteto, quando para para perguntar, publica ele mesmo, no térreo, que é onde o
 time mora: `maestri floor status "Arquiteto: <a pergunta, em uma linha>" --state blocked`, e limpa
 com `maestri floor status --clear` quando o Joaquim responde. Ninguém mais publica status nem
@@ -93,7 +93,8 @@ crie nem altere arquivo no mesmo Bash que faz o `git add` e o `git commit`.
 - Editar a seção "Revisões" de um documento ou qualquer coisa em `achados/`: quem escreve é o hook
 - `--no-verify`, `--amend`, `git add -A` no índice do repositório, `git stash`. A fotografia da Mesa
   usa um índice à parte (`GIT_INDEX_FILE`), que não prepara commit nenhum
-- Push na `release` ou no `main`, e push na `develop` fora da linha do Orquestrador acima
+- Push na `release` ou no `main`, e push na `develop` fora da linha do Orquestrador acima. O hook
+  bloqueia esses pushes em toda sessão iniciada com um papel do time
 - Pousar ou apagar andar: o pouso é do Joaquim, e quem executa é o Orquestrador, com a palavra dele
 - Rodar o portão local ou qualquer suíte enquanto outro agente roda a dele: o compose de teste
   (`educa-teste`) é um só na máquina. O Orquestrador é quem garante a fila

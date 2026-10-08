@@ -10,6 +10,7 @@ import {
   alteracoesDeCodigo,
   arquivosAlterados,
   arvoreDoCommit,
+  destinoProtegidoDoPush,
   arquivosDoCommit,
   avaliarCarimbo,
   avaliarCommitDoMvp,
@@ -1222,5 +1223,30 @@ describe('a árvore em que o commit acontece', () => {
     expect(portao(comando('git -C "$ANDAR" commit -am "x"'), terreo)).toMatch(/não sabe em que árvore este commit acontece, porque o caminho "\$ANDAR"/)
     expect(portao(comando('cd $(pwd)/../outro && git commit -am "x"'), terreo)).toMatch(/faz outra coisa antes/)
     expect(portao(comando('F=$(mktemp -d); git -C "$F" commit -am "x"'), terreo)).toMatch(/faz outra coisa antes/)
+  })
+
+  it('agente do time não empurra develop, release nem main; a branch do andar ele empurra', () => {
+    const { terreo, andar } = terreoEAndar()
+    const push = (command: string, raizDaSessao: string, papel: string | undefined) => portao(comando(command), raizDaSessao, papel)
+    // No térreo a árvore está na develop: push sem branch escrita, com HEAD, ou com a branch por extenso.
+    expect(push('git push', terreo, 'arquiteto')).toMatch(/Push bloqueado: este comando empurra `develop`.*papel `arquiteto`/)
+    expect(push('git push -u origin HEAD', terreo, 'implementador')).toMatch(/empurra `develop`/)
+    expect(push('git add docs.md && git commit -m "x" && git push origin develop', terreo, 'validador')).toMatch(/Push bloqueado/)
+    // Do andar, a branch da spec passa; o que aponta para uma protegida, não.
+    expect(push('git push -u origin HEAD', andar, 'implementador')).toBeNull()
+    expect(push('git push origin spec/exemplo', andar, 'implementador')).toBeNull()
+    expect(push('git push origin spec/exemplo:develop', andar, 'implementador')).toMatch(/empurra `develop`/)
+    expect(push('git push origin +refs/heads/main', andar, 'mesa-de-revisao')).toMatch(/empurra `main`/)
+    expect(push('git push origin HEAD:release --force', andar, 'implementador')).toMatch(/empurra `release`/)
+    expect(push('git push --all origin', andar, 'implementador')).toMatch(/empurra todas as branches/)
+    expect(push(`git -C ${terreo} push`, andar, 'implementador')).toMatch(/empurra `develop`/)
+    expect(push(`cd ${terreo} && git push origin HEAD`, andar, 'implementador')).toMatch(/empurra `develop`/)
+    expect(push('git -C "$OUTRO" push', andar, 'implementador')).toMatch(/uma branch que o hook não sabe qual é/)
+    // O Orquestrador e a sessão de uma pessoa não têm papel: o push da develop é deles, com a palavra do Joaquim.
+    expect(push('git push origin develop', terreo, undefined)).toBeNull()
+    expect(push('git push origin develop', terreo, 'general-purpose')).toBeNull()
+    // `git push` dentro de um texto não é push.
+    expect(push('git log --grep "git push origin develop"', terreo, 'implementador')).toBeNull()
+    expect(destinoProtegidoDoPush('git status', 'develop')).toBeNull()
   })
 })

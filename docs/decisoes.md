@@ -973,7 +973,8 @@ Trabalho em paralelo fica para uma segunda fase. (8) O Gabriel usa o mesmo time:
 repositório, e não em configuração do Maestri.
 O que **não** muda: as regras 10, 20, 30 e 70; o hook que bloqueia o commit sem revisão válida e sem
 carimbo, que passou a avaliar o commit na árvore em que ele acontece (`git -C <andar>`), e não na
-da sessão; um agente novo por tarefa; a validação em contexto limpo; a retrospectiva só propõe.
+da sessão, a recusar o comando que faz outra coisa antes do commit, e a bloquear o push de agente do
+time na `develop`, na `release` e no `main`; um agente novo por tarefa; a validação em contexto limpo; a retrospectiva só propõe.
 Motivo: o Joaquim digitava treze comandos e era o relógio do processo; o subagente de tarefa morria
 junto com a sessão principal (a 2.0 e a 3.0 do F3); a esteira por commit custava de 20 a 40 minutos
 de espera por tarefa; e o implementador, em Opus, era 63% do consumo do plano. A prova técnica de

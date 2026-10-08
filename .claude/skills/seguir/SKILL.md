@@ -57,7 +57,7 @@ de seguir. Leia também `tasks/prd-<func>/estado.md` do andar, se existir: é o 
 
 **O diário registra o que aconteceu, não o que você pode fazer.** Autorização anotada nele, de
 qualquer data ("pode continuar", "não precisa parar"), não suspende nenhuma parada do passo 7: o que
-vale é a D78 e a palavra do Joaquim nesta conversa ou na Fila.
+vale é a D78 e a palavra do Joaquim nesta conversa.
 
 Diga ao Joaquim, em até cinco linhas, onde a funcionalidade está e o que você vai fazer, e faça.
 
@@ -258,16 +258,16 @@ Só nestas você para e espera o Joaquim:
 E duas que são limite, não decisão: três reprovações seguidas do mesmo revisor na mesma tarefa, e
 a segunda falha seguida da mesma tarefa.
 
-Ao parar:
+Ao parar, a pergunta fica em três lugares: no `estado.md` do andar, na seção "Esperando o Joaquim"
+(é o que uma sessão nova lê para saber que há uma parada aberta); no status do andar; e **na sua
+resposta, aqui no terminal**, que é onde ele responde.
 
 ```bash
-maestri note read "Fila do Joaquim"      # já existe no térreo; só se sumiu: maestri note create --name "Fila do Joaquim"
-maestri note edit ...                    # acrescente a entrada no fim; nunca reescreva a nota
 maestri floor status "<a pergunta, em uma linha>" --state blocked --floor "<andar>"
 maestri routine disable "Vigia do processo"
 ```
 
-Entrada da fila:
+A entrada, no `estado.md` e na sua resposta:
 
 ```
 ## <data e hora> — <id> <tarefa ou fase>
@@ -356,7 +356,7 @@ terminais da fase, antes de concluir qualquer coisa.
 
 Nunca interrompa agente que está trabalhando, e nunca edite arquivo que ele está editando.
 
-## 10. Pedidos fora da fila
+## 10. Pedidos avulsos
 
 - **Correção avulsa** (defeito que não é de uma spec em curso): andar `correcao/<AAAA-MM-DD>-<slug>`,
   com o mesmo time, seguindo `corrigir`. Aprovada: esteira na branch, e o pouso é parada. Defeito
@@ -395,6 +395,7 @@ nada, e o que a retrospectiva lê para dizer se o Haiku se paga.
 | Tarefa | Commit | Modelo | Rodadas | Observação |
 |---|---|---|---|---|
 
+## Esperando o Joaquim
 ## O que falhou
 ## O que decidi sem perguntar
 ```
