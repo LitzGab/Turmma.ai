@@ -29,6 +29,10 @@ Documento: `$ARGUMENTS`
    `conformidade-reviewer`; login, fila, gateway de IA, migration grande ou ambiente pede
    `infra-guardian`; mais de 5 arquivos fora de `tasks/`, ou `.github/`, `tools/ci/` e
    `tools/processo/`, pede `revisor-geral`. Faltou um: é `DEVOLUÇÃO`, dizendo qual acrescentar.
+   **Correção no meio de uma tarefa:** o documento da correção traz a seção "Fora desta correção",
+   com os arquivos da tarefa em curso. Eles não contam aqui, não entram em "Arquivos alterados" do
+   prompt, e o prompt diz ao revisor que as outras mudanças da árvore são da tarefa em curso e não
+   estão em revisão.
    Quem implementa não escolhe quem o audita, e o hook só cobra o que está escrito na linha.
 3. Pergunte ao portão o que ainda falta, pela mesma conta do hook do commit:
 
@@ -55,8 +59,9 @@ Documento: `$ARGUMENTS`
    ```
 
    Anote a árvore que o comando imprime numa linha de `.processo/ordens/rodadas.md`:
-   `<documento> | rodada <n da Mesa> | <árvore> | <revisores chamados>`. O número da rodada da Mesa
-   é a quantidade de linhas desse documento que já estão lá, mais um.
+   `<documento> | rodada <n da Mesa> | <árvore> | <revisores a chamar>`. O número da rodada da Mesa
+   é a quantidade de linhas de rodada desse documento que já estão lá, mais um. Esse `git add -A`
+   vai para um índice à parte e não prepara commit: o índice do repositório não é tocado.
 
 ## 2. A ordem
 
@@ -130,7 +135,8 @@ Confira o carimbo e faça o commit.
 ### Reprovado
 
 Conte as reprovações **seguidas** do mesmo revisor neste documento, pelas últimas rodadas dele na
-seção "Revisões":
+seção "Revisões". Se `.processo/ordens/rodadas.md` tem uma linha `<documento> | destravado |
+<revisor> | depois da <n>ª rodada dele`, conte só as rodadas depois dessa:
 
 | Seguidas | O que você faz |
 |---|---|
@@ -138,7 +144,8 @@ seção "Revisões":
 | 2 | escreve a ordem e envia `ESCALADA` ao **Orquestrador**, que troca o Implementador de modelo e repassa a ordem |
 | 3 | não escreve ordem nova; envia `BLOQUEIO` ao Orquestrador. É parada do Joaquim |
 
-Depois de o Joaquim destravar um bloqueio, a contagem recomeça: o Orquestrador avisa no pedido.
+Depois de o Joaquim destravar um bloqueio, a contagem recomeça: é o Orquestrador quem escreve a
+linha `destravado` acima.
 
 ## 5. A ordem de correção
 

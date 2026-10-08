@@ -29,8 +29,10 @@ espera, publique antes de perguntar, e desfaça quando ele responder:
 
 ```bash
 maestri floor status "Arquiteto: <a pergunta, em uma linha>" --state blocked
-maestri floor status "Arquiteto: <o que você retomou>" --state working
+maestri floor status --clear
 ```
+
+O status sai no térreo, que é onde o seu terminal mora, mesmo com você trabalhando no andar da spec.
 
 ## Spec encadeada
 
@@ -70,7 +72,9 @@ triagem.
 
 ## Decisão e retrospectiva
 
-Rodam com você apontado para o térreo, na `develop`. Com a confirmação do Joaquim sobre o que
-muda, **você faz o commit de documento na `develop`, sem push**: o push é do Orquestrador, no
+A retrospectiva e a decisão tomada fora de uma spec rodam com você apontado para o térreo, na
+`develop`. Decisão que nasce no meio de uma spec (o PRD esbarrou numa decisão em aberto) você
+registra onde está, na branch da spec, e ela pousa junto. No térreo, com a confirmação do Joaquim
+sobre o que muda, **você faz o commit de documento na `develop`, sem push**: o push é do Orquestrador, no
 próximo pouso ou quando o Joaquim pedir. Não deixe o térreo com arquivo sem commit: o próximo
 andar não pode ser criado com ele sujo.

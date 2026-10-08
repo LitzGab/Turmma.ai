@@ -13,15 +13,16 @@ tarefa passou pelo portão dela, com os revisores dela, olhando um pedaço. Ning
 conferiu a funcionalidade inteira contra os RF, os casos de borda e o critério de pronto.
 É o último portão antes de marcar `[x]` no roadmap e começar a próxima em cima desta base.
 
-Quem conduz é o Orquestrador (`/seguir`, passo 7, D78). O agente `validador` roda como terminal
-próprio no andar da spec, e só fala com o Orquestrador.
+Quem conduz é o Orquestrador (`/seguir`, passo 8, D78). O agente `validador` roda no terminal fixo
+`Validador`, com a sessão reiniciada e apontada para o andar da spec, e só fala com o Orquestrador.
 
 <critical>A validação é feita pelo agente `validador`, em contexto limpo. Não valide você
 mesmo: quem acompanhou a execução tende a aceitar o que já leu no relatório.</critical>
 <critical>Evidência é arquivo, linha e teste executado. Nunca aceite "parece coberto".
 Qualquer portão vermelho reprova, mesmo que pareça intermitente.</critical>
-<critical>Não marque a funcionalidade como concluída sem veredito APROVADA e esteira verde
-no commit validado.</critical>
+<critical>Não marque a funcionalidade como concluída sem veredito APROVADA, sem a esteira verde na
+ponta da branch, ou com commit de código da spec depois do último commit validado. Correção depois
+da validação pede validação nova; o merge da `develop` pede só a esteira.</critical>
 
 Argumentos: `$ARGUMENTS`
 
@@ -87,8 +88,8 @@ Se o agente mexeu em outro arquivo, desfaça essa mudança e reporte.
    - recomendação para uma funcionalidade futura: fica na seção 6 do `validacao.md`, e
      `/criar-techspec` daquela funcionalidade precisa lê-la.
 5. Commit na branch da spec, com push: `Valida <funcionalidade> contra o PRD e fecha F? no
-   roadmap`, só com `validacao.md`, `ROADMAP.md`, `techspec.md` e `TODO.md`.
-6. Peça o pouso: é parada do Joaquim (`/seguir`, passos 6 e 7). Depois do pouso e da esteira da
+   roadmap`, só com `validacao.md`, `ROADMAP.md`, `techspec.md`, `TODO.md` e o `estado.md`.
+6. Peça o pouso: é parada do Joaquim (`/seguir`, passos 7 e 8). Depois do pouso e da esteira da
    `develop` verde, a retrospectiva (`retro`), antes do PRD da próxima.
 
 ### APROVADA, escopo de tarefa
@@ -100,7 +101,7 @@ Commit só do `validacao.md`. Nada muda no roadmap.
 Não feche a funcionalidade. Apresente os maiores ao usuário, com a correção sugerida de
 cada um, e pergunte:
 - corrigir agora e revalidar (recomendado quando o maior toca a próxima funcionalidade);
-- aceitar a ressalva. A aceitação vai escrita no `validacao.md`, **na própria linha do veredito**, no
+- aceitar a ressalva. Quem escreve é o Orquestrador, com a resposta do Joaquim. A aceitação vai no `validacao.md`, **na própria linha do veredito**, no
   formato `**Veredito: APROVADA COM RESSALVAS** — ressalvas aceitas por <quem> em <data>: <motivo>`,
   e só então a funcionalidade é fechada como no caso APROVADA. É por "aceitas por <quem>" nessa linha
   que `tools/processo/estado.ts` sabe que a parada foi respondida; sem isso a fase continua

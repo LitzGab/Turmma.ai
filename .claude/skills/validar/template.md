@@ -35,7 +35,7 @@ Provas de mutação:
 | `npm run test` | ✅ / ❌ (n passaram) |
 | `npm run test:e2e` | ✅ / ❌ / não se aplica |
 | `npm run test:infra` | ✅ / ❌ / não se aplica |
-| Esteira do GitHub no commit validado | ✅ / ❌ / pendente / não verificado |
+| Esteira do GitHub | roda no fechamento, depois desta validação (D78): não entra no veredito |
 | Revisões com veto registradas e aprovadas | ✅ / ❌ |
 
 ### 4. Achados

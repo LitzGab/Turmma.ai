@@ -75,6 +75,7 @@ Saiu de "em aberto": <item ou nenhum>
 Artefatos desatualizados (não editados): <tasks/prd-*/... ou nenhum>
 ```
 
-Com a confirmação do Joaquim, faça o commit de documento na `develop`, no térreo, sem push:
+Com a confirmação do Joaquim, faça o commit de documento, sem push: na `develop`, no térreo, quando a
+decisão foi tomada fora de uma spec; na branch da spec, quando nasceu dentro dela (aí ela pousa junto):
 `Registra a D<n>: <título>`. O push é do Orquestrador, no próximo pouso ou quando o Joaquim pedir
 (`.claude/skills/seguir/protocolo.md`, item 4). Térreo com arquivo sem commit impede abrir o próximo andar.

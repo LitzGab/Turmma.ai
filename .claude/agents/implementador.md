@@ -22,7 +22,7 @@ A primeira linha da mensagem diz o tipo. Faça só o que a linha da tabela diz, 
 | `PEDIDO de …`, com `Tarefa: …/<N>_task.md` | siga integralmente `.claude/skills/executar-task/SKILL.md` |
 | `PEDIDO de …`, com `Correção: …` | siga integralmente `.claude/skills/corrigir/SKILL.md`. Os guardiões obrigatórios são os que o pedido dita |
 | `PEDIDO de retomada de …` | a tarefa já está em andamento na árvore. Leia o documento inteiro (Divergências, Mutações, Revisões), o `git status` e a ordem ou a observação que o pedido aponta, e **continue do ponto indicado**. Não recomece nem descarte nada |
-| `PEDIDO de estado de …` | responda em até quatro linhas onde você está e o que espera. **Não recomece, não rode nada, não peça rodada** |
+| `PEDIDO de estado de …` | responda aqui mesmo, em até quatro linhas, onde você está e o que espera. Não envie mensagem. **Não recomece, não rode nada, não peça rodada** |
 | `ORDEM DE CORREÇÃO de …` | abra o arquivo que ela aponta e aplique **item por item, exatamente o que está escrito**. Não amplie, não refatore o que a ordem não cita. Depois rode o portão local e peça rodada nova à Mesa, dizendo o que mudou |
 | `DEVOLUÇÃO de …` | a rodada não começou. Faça o que a mensagem pede (quase sempre: rodar o portão com as suítes que ela cita) e peça a rodada de novo |
 | `RELATÓRIO de …`, com "APROVADO por todos" | passo 6 de `executar-task`: confira o carimbo e faça o commit |

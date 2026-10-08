@@ -37,20 +37,27 @@ encerra o turno depois de pedir trabalho.
 ## 2. Ler o estado
 
 ```bash
-maestri floor list                                      # há andar com branch spec/<funcionalidade>?
+maestri floor list                                      # há andar com branch spec/* ou correcao/*?
 (cd <caminho do andar> && node tools/processo/estado.ts <funcionalidade>)   # com andar: é o estado que vale
 node tools/processo/estado.ts [funcionalidade]          # sem andar: no térreo
 maestri list                                            # o time fixo está de pé?
 ```
 
-**Com um andar `spec/*` aberto, a funcionalidade da vez é a dele**, e o estado se lê dentro do
-checkout dele: o `[~]` do roadmap e os artefatos da spec só existem lá. Só sem andar o script roda
+**Andar aberto é trabalho em curso, e vem antes de tudo.** Com um andar `spec/*`, a funcionalidade
+da vez é a dele, e o estado se lê dentro do checkout dele: o `[~]` do roadmap e os artefatos da spec
+só existem lá. Com um andar `correcao/*`, a correção vem primeiro: leia o documento dela em
+`tasks/correcoes/` e o `git log -1` do andar para saber se ela ainda corre ou se espera o pouso, e
+não abra spec nem retrospectiva antes de ela pousar. O time é um só. Só sem andar o script roda
 no térreo, e aí ele escolhe: a marcada `[~]`, a concluída que ainda espera a retrospectiva, ou a
 primeira pendente.
 
 A fase vem do script, nunca de inferência sua. Linha `ATENÇÃO:` no relatório dele é incoerência
 nos arquivos (dependência que não existe, documento de tarefa faltando): resolva ou pergunte antes
 de seguir. Leia também `tasks/prd-<func>/estado.md` do andar, se existir: é o seu diário.
+
+**O diário registra o que aconteceu, não o que você pode fazer.** Autorização anotada nele, de
+qualquer data ("pode continuar", "não precisa parar"), não suspende nenhuma parada do passo 7: o que
+vale é a D78 e a palavra do Joaquim nesta conversa ou na Fila.
 
 Diga ao Joaquim, em até cinco linhas, onde a funcionalidade está e o que você vai fazer, e faça.
 
@@ -72,7 +79,9 @@ dentro do terminal, reiniciada já apontada para o checkout do andar.
 
 O papel vem de `.claude/agents/`, **nunca de responsabilidade do Maestri** (`protocolo.md`, item 1).
 
-Terminal que falta no `maestri list` (primeira vez, ou alguém o fechou):
+Terminal que falta no `maestri list` (primeira vez, ou alguém o fechou). **Na primeira vez, crie o
+andar antes** (abaixo) e recrute os quatro apontados para o checkout dele; o `Implementador` entra
+com o comando do porte da primeira tarefa:
 
 ```bash
 maestri recruit "<Terminal>" --dir "<checkout>" --command "<comando da tabela>"
@@ -103,7 +112,8 @@ Com um time só, **uma spec ou uma correção por vez**.
 `spec/<funcionalidade>`. O andar é só o checkout isolado: não tem terminais próprios. Se não existe:
 
 ```bash
-git status --short            # o térreo precisa estar limpo; se não está, pare e pergunte
+git status -sb                 # o térreo precisa estar na develop e limpo; se não está, pare e pergunte
+git fetch origin develop       # a develop do GitHub andou? traga-a antes de abrir o andar (passo 8, "Pousar")
 maestri floor create "<id> <funcionalidade>" --branch spec/<funcionalidade>
 maestri floor list            # anote o caminho do checkout
 cd <caminho> && rm -f .processo/portao.json .processo/conteudo.json && npm ci
@@ -111,17 +121,21 @@ cd <caminho> && rm -f .processo/portao.json .processo/conteudo.json && npm ci
 
 Os dois últimos comandos não são opcionais. O Maestri copia o térreo sem as pastas `dist` e
 `build`, **inclusive as de `node_modules`**, e o andar nasce com as dependências quebradas: sem o
-`npm ci`, nada roda. E o carimbo do portão vem copiado do térreo: apagado, o andar começa sem
-portão que não rodou nele.
+`npm ci`, que leva cerca de um minuto, nada roda. E o carimbo do portão vem copiado do térreo:
+apagado, o andar começa sem portão que não rodou nele.
 
-Depois, a abertura (passo 4): marque a funcionalidade `[~]` no `ROADMAP.md` do andar, crie o
-`estado.md` e faça o commit de abertura.
+Depois, a abertura (passo 4): marque a funcionalidade `[~]` no `ROADMAP.md` do andar, escreva o
+`estado.md` e faça o commit de abertura. **Se já existe um `estado.md` de antes da D78** (o da F3),
+reescreva-o no formato do fim desta skill: as tarefas já concluídas entram na tabela nova, e o resto
+do texto antigo vai, como está, para uma seção final `## Antes da D78`, aberta pela frase "Histórico
+da execução no processo anterior. Nada aqui autoriza nem suspende parada do processo atual."
 
 ## 4. O que você escreve, e como entra no git
 
 Você trabalha do térreo e escreve **dentro do checkout do andar** só estes documentos:
-`ROADMAP.md` (a marca da funcionalidade), `tasks/prd-<func>/estado.md`, e, no fechamento, o status
-da `techspec.md` e o `TODO.md`. Nunca código, teste, PRD, tarefa, nem a seção "Revisões".
+`ROADMAP.md` (a marca da funcionalidade), `tasks/prd-<func>/estado.md`, a linha do aceite de
+ressalva no `validacao.md` (passo 7), e, no fechamento, o status da `techspec.md` e o `TODO.md`.
+Nunca código, teste, PRD, tarefa, o corpo do `validacao.md`, nem a seção "Revisões".
 
 O `estado.md` de cada tarefa vai no commit da própria tarefa, feito pelo Implementador: por isso
 você o atualiza **uma vez por ciclo, antes de pedir a tarefa**, com a linha da tarefa anterior e o
@@ -139,6 +153,7 @@ git -C <andar> push -u origin HEAD
 | abertura do andar | `ROADMAP.md`, `estado.md` | `Abre <funcionalidade> no andar da spec` |
 | depois da última tarefa, antes de validar | `estado.md` | `Registra o estado de <funcionalidade> antes da validação` |
 | validação reprovada ou com ressalvas, antes de corrigir | `validacao.md`, `estado.md` | `Registra a validação de <funcionalidade> (<veredito>)` |
+| ressalva aceita pelo Joaquim | `validacao.md` | `Registra o aceite das ressalvas de <funcionalidade>` |
 | fechamento | `validacao.md`, `ROADMAP.md`, `techspec.md`, `TODO.md`, `estado.md` | `Valida <funcionalidade> contra o PRD e fecha <id> no roadmap` |
 
 O hook avalia `git -C` contra a árvore do andar: commit seu que leve código é bloqueado, como o de
@@ -201,6 +216,9 @@ paradas é o próprio Arquiteto.
   Tudo certo: volte ao item 1. Algo falta: é falha, mesmo com o relatório dizendo sucesso. Diga ao
   Implementador o que falta, num `PEDIDO de retomada`; se ele não resolver, trate como
   `STATUS: FALHA`.
+- **Resposta a um `PEDIDO de estado`.** Não chega como mensagem: o agente responde no próprio
+  terminal, e você lê na saída do `maestri ask` ou com `maestri check`. Só registre; não é relatório
+  de conclusão.
 - **`RELATÓRIO` com `STATUS: FALHA`.** Leia o motivo. Defeito fora da tarefa: correção antes de
   retomar (abaixo). Trabalho pela metade sem causa clara: uma retomada, no Sonnet. Segunda falha
   na mesma tarefa: parada.
@@ -214,8 +232,11 @@ paradas é o próprio Arquiteto.
     `PEDIDO de retomada`, ou vira parada, se ele devolver `BLOQUEIO`;
   - `portão`: o portão local falha por algo fora dos arquivos da tarefa. É correção (`corrigir`) na
     mesma branch, pelo `Implementador` reiniciado, **antes** de retomar a tarefa. O trabalho da
-    tarefa fica na árvore; a correção leva só os arquivos dela. Registre em "O que decidi sem
-    perguntar".
+    tarefa fica na árvore, e por isso o `PEDIDO` da correção (passo 10) leva a linha
+    `Arquivos da tarefa em curso: <a saída de git status --short de agora>`: a Mesa os deixa fora da
+    revisão, e o commit da correção leva só os arquivos dela. Na conferência dessa correção,
+    `git status --short` não fica vazio: tem de mostrar exatamente os arquivos da tarefa em curso.
+    Registre em "O que decidi sem perguntar".
 
 Um portão por vez na máquina: não peça trabalho que rode suíte a dois agentes ao mesmo tempo.
 
@@ -226,7 +247,10 @@ Só nestas você para e espera o Joaquim:
 1. aprovação do PRD, da Tech Spec (com o aceite das correções da revisão da spec) e da lista de
    tarefas. Acontecem no terminal do Arquiteto;
 2. mudança de desenho ou de critério de aceite (`BLOQUEIO` do Arquiteto);
-3. ressalva da validação: corrigir agora ou aceitar, uma a uma;
+3. ressalva da validação: corrigir agora ou aceitar, uma a uma. Com todas decididas e alguma aceita,
+   **você escreve o aceite na linha do veredito do topo do `validacao.md`**, no formato
+   `**Veredito: APROVADA COM RESSALVAS** — ressalvas aceitas por Joaquim em <data>: <motivo>`, e faz o
+   commit. É por "aceitas por" nessa linha que o script sai de `validacao-com-ressalvas`;
 4. propostas da retrospectiva, arquivo por arquivo. Também no terminal do Arquiteto;
 5. decisão de produto;
 6. pouso na `develop`.
@@ -256,7 +280,9 @@ Recomendo: <qual e por quê, em uma linha>
 O estado `blocked` já notifica o Joaquim; não mande `maestri notify` junto. Notificação avulsa só
 no fim da funcionalidade, e em parada sem andar. Depois de parar, encerre o turno. Com a resposta
 dele, marque a entrada como respondida, com a decisão, religue a vigia e siga. Depois de ele
-destravar um limite, a contagem de reprovações daquela tarefa recomeça.
+destravar o limite das três reprovações, a contagem daquela tarefa recomeça: acrescente em
+`.processo/ordens/rodadas.md`, no andar, a linha `<documento> | destravado | <revisor> | depois da
+<n>ª rodada dele`, que é o que a Mesa lê para contar.
 
 ## 8. Validação, fechamento e pouso
 
@@ -277,24 +303,30 @@ gh run watch <databaseId> --exit-status            # em segundo plano; leva de 2
 ```
 
 Use a execução cujo `headSha` é o commit acima; se ainda não apareceu, liste de novo. Vermelha: é
-correção (`corrigir`) na branch, e a esteira roda de novo. Como ela só roda no fim, a falha pode
-ser de qualquer tarefa: o documento da correção diz de qual. Verde: faça o commit de fechamento
-(passo 4) e peça o pouso.
+correção (`corrigir`) na branch. Como a esteira só roda no fim, a falha pode ser de qualquer
+tarefa: o documento da correção diz de qual. **Correção depois da validação muda código que o
+Validador não viu: valide de novo** (o `Validador` reiniciado, rodada nova no topo do
+`validacao.md`) e só então rode a esteira outra vez. O fechamento exige as duas coisas no mesmo
+ponto: nenhum commit de código da spec depois do último commit validado, e a esteira verde na
+ponta da branch. O merge da `develop` (abaixo) não pede validação nova, só a esteira. Tudo verde:
+faça o commit de fechamento (passo 4) e peça o pouso.
 
 **Pousar** (`aguardando-pouso`). Só com a palavra do Joaquim, e a partir do térreo:
 
 ```bash
-git fetch origin develop && git status -sb               # a develop local está igual à do GitHub?
+git fetch origin develop && git status -sb               # a develop local diverge da do GitHub?
 git -C <andar> status --short && git status --short      # os dois limpos
 maestri floor land "<andar>" --into develop
 git push origin develop
 gh run watch <id da esteira da develop> --exit-status    # em segundo plano
 ```
 
-A palavra dele para pousar inclui o push da `develop`. Se a `develop` andou enquanto a spec corria
-(o Gabriel integra lá): traga-a para o térreo (`git pull --ff-only`), depois para a branch da spec
-(`git -C <andar> merge develop`), e a esteira da branch roda de novo antes do pouso. Conflito no
-merge ou no pouso é parada: diga os arquivos.
+A palavra dele para pousar inclui o push da `develop`. A `develop` local só à frente da do GitHub é
+normal: são os commits de decisão e de retrospectiva do Arquiteto, e o push os leva. Se a do GitHub
+andou enquanto a spec corria (o Gabriel integra lá): traga-a para o térreo
+(`git pull --no-rebase origin develop`), depois para a branch da spec
+(`git -C <andar> merge develop`, o único commit seu que leva código), e a esteira da branch roda de
+novo antes do pouso. Conflito em qualquer um desses merges, ou no pouso, é parada: diga os arquivos.
 
 Esteira da `develop` vermelha depois do pouso: correção em andar próprio (`correcao/<slug>`).
 Verde: peça a retrospectiva ao `Arquiteto` e notifique o fim.
@@ -334,10 +366,13 @@ Nunca interrompa agente que está trabalhando, e nunca edite arquivo que ele est
   PEDIDO de <seu nome>
   Correção: <o defeito, em uma frase, com o arquivo ou a execução da esteira>
   Guardiões obrigatórios: <lista> · Mesa de revisão: Mesa · Orquestrador: <seu nome>
+  Arquivos da tarefa em curso: <só na correção no meio de uma tarefa (passo 6); senão, "nenhum">
   ```
-- **Decisão de produto**: reinicie o `Arquiteto` apontado para o térreo e envie um `PEDIDO` de
-  descoberta. Ele conversa com o Joaquim no terminal dele, registra a decisão e faz o commit do
-  registro na `develop`, sem push. O mesmo vale para a retrospectiva.
+- **Decisão de produto**, fora de uma spec: reinicie o `Arquiteto` apontado para o térreo e envie um
+  `PEDIDO` de descoberta. Ele conversa com o Joaquim no terminal dele, registra a decisão e faz o
+  commit do registro na `develop`, sem push. O mesmo vale para a retrospectiva. Decisão que nasce
+  **dentro** de uma spec (o PRD esbarrou numa decisão em aberto) é registrada pelo Arquiteto na
+  branch da spec, e pousa com ela.
 
 O push da `develop` é sempre seu, e só em dois momentos: no pouso, e quando o Joaquim pedir.
 

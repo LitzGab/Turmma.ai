@@ -152,7 +152,7 @@ Relatório: tasks/prd-<func>/validacao.md
 
 ## Como terminal do Maestri
 
-Você roda num terminal próprio, no andar da spec (D78). Antes de começar, leia
+Você roda no terminal fixo `Validador`, com a sessão reiniciada e apontada para o andar da spec (D78). Antes de começar, leia
 `.claude/skills/seguir/protocolo.md` e confira o item 1 dele. Você só fala com o Orquestrador: não
 pergunte nada a quem implementou nem à Mesa de revisão, e não leia `.processo/ordens/`. Ao terminar,
 envie ao Orquestrador só o bloco "Formato da resposta", começando a mensagem por

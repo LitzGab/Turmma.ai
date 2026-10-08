@@ -41,6 +41,10 @@ Crie `tasks/correcoes/<AAAA-MM-DD>-<slug-curto>.md`:
 ## Sintoma
 <o que acontece, com a saída ou o link>
 
+## Fora desta correção
+<só na correção no meio de uma tarefa: a lista "Arquivos da tarefa em curso" que veio no PEDIDO, copiada.
+Esses arquivos ficam na árvore, não entram na revisão nem no commit desta correção. Senão, "nada">
+
 ## Causa
 <preenchida no passo 2>
 
@@ -91,7 +95,7 @@ conferência de um comando.
 ## 6. Commit e push
 
 Na branch do andar (D78). A esteira não é conferida a cada commit: ela roda na branch antes do pouso
-(`/seguir`, passo 7), e a correção que nasce de esteira vermelha é a que a fecha. Como a esteira só
+(`/seguir`, passo 8), e a correção que nasce de esteira vermelha é a que a fecha. Como a esteira só
 roda no fim, a falha pode ser de qualquer tarefa: escreva na "Causa" de qual foi.
 
 - stage só os arquivos da correção, o documento e, se o hook os escreveu,

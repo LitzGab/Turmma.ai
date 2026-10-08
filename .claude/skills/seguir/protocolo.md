@@ -41,7 +41,7 @@ como um prompt novo.
   | Tipo | Primeira linha | De quem para quem |
   |---|---|---|
   | pedido de trabalho | `PEDIDO de <nome>` ou `PEDIDO de retomada de <nome>` | Orquestrador → todos; Implementador → Mesa |
-  | pedido de estado | `PEDIDO de estado de <nome>` | Orquestrador → quem deve um relatório. Responda onde está; **não recomece nada** |
+  | pedido de estado | `PEDIDO de estado de <nome>` | Orquestrador → quem deve um relatório. Responda **no próprio terminal**, em até quatro linhas, onde está; não envie mensagem e **não recomece nada** |
   | relatório | `/seguir RELATÓRIO de <nome>` | Implementador, Arquiteto, Validador → Orquestrador |
   | relatório da rodada | `RELATÓRIO de <nome>` | Mesa → Implementador |
   | ordem de correção | `ORDEM DE CORREÇÃO de <nome>` | Mesa → Implementador |
@@ -67,10 +67,12 @@ como um prompt novo.
 
 O Validador só fala com o Orquestrador: ele não pode ouvir quem implementou.
 
-**Quem avisa o Joaquim.** O Orquestrador escreve na nota "Fila do Joaquim", publica o status do
-andar da spec e manda notificação. O Arquiteto, quando para para perguntar, publica ele mesmo:
-`maestri floor status "Arquiteto: <a pergunta, em uma linha>" --state blocked`, e volta a
-`--state working` quando o Joaquim responde. Ninguém mais publica status nem notifica.
+**Quem avisa o Joaquim.** O Orquestrador escreve na nota "Fila do Joaquim" e publica o status do
+andar da spec; o estado `blocked` já notifica, e a notificação avulsa fica para o fim da
+funcionalidade. O Arquiteto, quando para para perguntar, publica ele mesmo, no térreo, que é onde o
+time mora: `maestri floor status "Arquiteto: <a pergunta, em uma linha>" --state blocked`, e limpa
+com `maestri floor status --clear` quando o Joaquim responde. Ninguém mais publica status nem
+notifica.
 
 ## 4. Commit e push
 
@@ -78,8 +80,9 @@ andar da spec e manda notificação. O Arquiteto, quando para para perguntar, pu
 |---|---|---|
 | Implementador | branch do andar | o commit da tarefa `(tarefa N.0)` ou da correção `(correção <slug>)`, com push |
 | Arquiteto | branch do andar | PRD, Tech Spec, revisão da spec e tarefas, um commit por etapa, com push |
-| Arquiteto | `develop`, no térreo | o registro de uma decisão e a retrospectiva: commit de documento, **sem push** |
+| Arquiteto | `develop`, no térreo | a retrospectiva e a decisão tomada fora de uma spec: commit de documento, **sem push**. Decisão que nasce dentro de uma spec entra na branch dela |
 | Orquestrador | branch do andar | os commits de documento do passo 4 do `/seguir`, com push |
+| Orquestrador | branch do andar | o merge da `develop`, antes do pouso, quando ela andou |
 | Orquestrador | `develop` | o pouso e o push, só com a palavra do Joaquim |
 
 **O arquivo existe antes do comando do commit.** O hook lê a árvore antes de o comando rodar: não
@@ -88,7 +91,8 @@ crie nem altere arquivo no mesmo Bash que faz o `git add` e o `git commit`.
 ## 5. O que ninguém faz
 
 - Editar a seção "Revisões" de um documento ou qualquer coisa em `achados/`: quem escreve é o hook
-- `--no-verify`, `--amend`, `git add -A`, `git stash`
+- `--no-verify`, `--amend`, `git add -A` no índice do repositório, `git stash`. A fotografia da Mesa
+  usa um índice à parte (`GIT_INDEX_FILE`), que não prepara commit nenhum
 - Push na `release` ou no `main`, e push na `develop` fora da linha do Orquestrador acima
 - Pousar ou apagar andar: o pouso é do Joaquim, e quem executa é o Orquestrador, com a palavra dele
 - Rodar o portão local ou qualquer suíte enquanto outro agente roda a dele: o compose de teste
