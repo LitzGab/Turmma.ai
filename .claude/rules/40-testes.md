@@ -100,9 +100,15 @@ Mexeu em infra, também `npm run test:infra` (D52): a tarefa com `infra-guardian
 obrigatório, e a que toca `infra/`, Dockerfile, `tools/testes/`, `tools/ci/compose.ts`,
 métricas, saúde, prontidão ou borda. São os testes que esperam o relógio real (alerta,
 sonda, exportação de métricas), uns 16 min. Fora do portão da tarefa eles não somem: a
-esteira os roda em todo push na `develop`, na `release` e no `main`, e vermelho lá segura a próxima
-tarefa.
+esteira os roda na branch da spec, antes do pouso, e em todo push na `develop`, na `release` e no
+`main` (D78), e vermelho lá segura o pouso.
 
-Cada commit de tarefa vai para o GitHub logo depois de feito, na `develop`, e a tarefa seguinte só
-commita com a esteira do commit anterior verde. Push em grupo e tarefa commitada em cima de esteira
-vermelha foram o que deixou três tarefas do F0 sem portão (validação do F0).
+Cada commit de tarefa vai para o GitHub logo depois de feito, **na branch da spec**
+(`spec/<funcionalidade>`, D78). A esteira não roda por tarefa: roda uma vez na branch, disparada pelo
+Orquestrador antes do pouso, e de novo na `develop` depois dele. Até lá, o que prova cada tarefa é o
+portão local carimbado e os revisores.
+
+O preço, aceito na D78: e2e e infra só rodam no portão das tarefas que os exigem, e uma falha neles
+no fim pode ser de qualquer tarefa da funcionalidade. A correção que fecha a esteira diz de qual foi.
+Do F0 à tarefa 4.0 do F3, cada commit tinha a sua execução na `develop`, e a tarefa seguinte só
+commitava com ela verde; isso custava de 20 a 40 minutos de espera por tarefa.

@@ -2,7 +2,9 @@
 
 **Funcionalidade:** [nome] · **Depende de:** [N.0 ou nenhuma]
 **Subagentes obrigatórios:** `...`
-<!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
+**Porte:** pequeno | grande
+<!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não.
+     O porte decide o modelo que começa a tarefa (criar-tasks, "Porte da tarefa"). -->
 
 ## Objetivo
 
@@ -67,9 +69,9 @@ recomendações na A0 (7.0, 8.0, 9.0) foram log sem teste do conteúdo.
 - [ ] Testes verdes, 100%
 - [ ] Portão local carimbado depois da última alteração (`node tools/processo/portao-local.ts`,
   com `--e2e` se tocou tela e `--infra` se mexeu em infra)
-- [ ] `test-engineer` aprovado primeiro; `revisor-geral` e os guardiões marcados com rodada que
-  vale para o código atual, e APROVADO nos que têm veto
-- [ ] Commit feito, só com os arquivos desta tarefa, com a linha `Revisões:`
+- [ ] Mesa de revisão respondeu "APROVADO por todos": `test-engineer` primeiro, `revisor-geral` e os
+  guardiões marcados com rodada que vale para o código atual, e APROVADO nos que têm veto
+- [ ] Commit feito na branch da spec, só com os arquivos desta tarefa, com a linha `Revisões:`, e push
 
 ## Fora do escopo desta tarefa
 

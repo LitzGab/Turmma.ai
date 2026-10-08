@@ -2,6 +2,7 @@
 name: criar-tasks
 description: Gera a lista de tarefas de uma funcionalidade, a partir do PRD e da Tech Spec
 argument-hint: <nome-funcionalidade em kebab-case>
+user-invocable: false
 ---
 
 Você vai transformar PRD e Tech Spec em uma lista de tarefas executável.
@@ -21,8 +22,8 @@ Funcionalidade alvo: `$ARGUMENTS`
 
 `tasks/prd-$ARGUMENTS/prd.md`, `tasks/prd-$ARGUMENTS/techspec.md` e `.claude/rules/`.
 
-`tasks/prd-$ARGUMENTS/revisao-spec.md` com veredito **APROVADA** (`/revisar-spec`). Sem ele, PARE
-e aponte `/revisar-spec $ARGUMENTS`: erro na Tech Spec contamina todas as tarefas, e é o momento
+`tasks/prd-$ARGUMENTS/revisao-spec.md` com veredito **APROVADA** (`/revisar-spec`). Sem ele, volte à
+skill `revisar-spec`: erro na Tech Spec contamina todas as tarefas, e é o momento
 mais barato de achá-lo.
 
 Leia também o `achados/indice.md` e o `retro.md` das funcionalidades anteriores, se existirem: o
@@ -56,8 +57,8 @@ Cada uma dessas pode ser demonstrada, testada e auditada sozinha.
    incluindo os casos de borda do domínio escolar. Os testes saem daí, não de improviso na
    hora de implementar.
 
-3. **Montar a estrutura**: sequenciamento, dependências, e os subagentes obrigatórios
-   marcados em cada tarefa.
+3. **Montar a estrutura**: sequenciamento, dependências, os subagentes obrigatórios marcados em
+   cada tarefa, e o porte de cada uma.
 
 4. **Mostrar a lista de alto nível e AGUARDAR aprovação.** Este passo não é formalidade: é
    o momento mais barato para corrigir o desenho.
@@ -79,6 +80,24 @@ Cada uma dessas pode ser demonstrada, testada e auditada sozinha.
 | qualquer tarefa | `test-engineer` (primeiro revisor) e `revisor-geral`, implícitos: o hook os exige mesmo sem marca |
 
 Na dúvida, marque. Auditoria a mais custa minutos; auditoria a menos custa o contrato.
+
+## Porte da tarefa
+
+Toda tarefa leva `**Porte:** pequeno` ou `**Porte:** grande` no cabeçalho do `N_task.md`. O porte
+decide o modelo que começa a tarefa (D78): a pequena no Haiku 5.5, a grande no Sonnet 5.5. Marque
+**grande** quando qualquer um destes vale:
+
+- três ou mais guardiões com veto marcados (`tenancy-guardian`, `privacy-guardian`,
+  `conformidade-reviewer`, `infra-guardian`);
+- migration em tabela que cresce com aluno, ou índice e restrição que pedem `EXPLAIN` ou prova de
+  concorrência;
+- corrida entre operações, trava, ou transação que atravessa mais de um repository;
+- mais de dez arquivos de código previstos, ou mudança que atravessa API, worker e web.
+
+O resto é pequena: uma tela que lê um endpoint pronto, um endpoint de leitura, um comando de
+operação simples, um documento. Na dúvida, grande: começar no modelo menor e reprovar duas vezes
+custa dois portões antes de a tarefa subir de modelo. Sem a linha, `tools/processo/estado.ts`
+infere o porte pela contagem de guardiões e avisa que inferiu.
 
 ## Diretrizes
 

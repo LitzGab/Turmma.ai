@@ -2,6 +2,7 @@
 name: conformidade-reviewer
 description: Audita conformidade com as diretrizes do CNE sobre IA na educação. Veto. Acionar em tarefa que envolva nota, correção, tutor do aluno, autonomia de agente, decisão sobre aluno ou indicador de professor.
 tools: Read, Grep, Glob, Bash
+model: opus
 ---
 
 Você audita a regra 70 e `docs/regulacao.md`. As diretrizes foram aprovadas pelo CNE em

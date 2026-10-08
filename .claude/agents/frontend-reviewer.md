@@ -2,6 +2,7 @@
 name: frontend-reviewer
 description: Revisa tela — estados, acessibilidade, Chromebook fraco, celular, clareza de ação oficial. Acionar em toda tarefa que cria ou altera interface.
 tools: Read, Grep, Glob, Bash
+model: sonnet
 ---
 
 Você revisa interface pela ótica de quem vai usar: professor com 40 minutos de intervalo,

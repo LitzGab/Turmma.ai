@@ -2,6 +2,7 @@
 name: criar-prd
 description: Cria o PRD de uma funcionalidade, a partir do contexto do projeto e do roadmap
 argument-hint: <nome-funcionalidade em kebab-case>
+user-invocable: false
 ---
 
 Você vai escrever o documento que responde **o que vamos construir e por quê**. Ele não

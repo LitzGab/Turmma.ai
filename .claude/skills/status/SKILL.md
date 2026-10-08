@@ -1,71 +1,50 @@
 ---
 name: status
-description: Diz onde o projeto está — funcionalidade em andamento, o que está bloqueado, decisões em aberto que travam o próximo passo, e qual comando rodar agora
+description: Procedimento interno — diz onde o projeto está, o que está bloqueado e qual é o próximo passo, sem alterar nada
 argument-hint: "[opcional: F? ou nome-funcionalidade para detalhar]"
+user-invocable: false
 ---
 
-Você responde uma pergunta só: **onde estamos e qual é o próximo passo?**
+Você responde uma pergunta só: **onde estamos e qual é o próximo passo?** É o que o Orquestrador
+faz no passo 2 do `/seguir`, e o que qualquer agente faz quando alguém pergunta o estado.
 
-A razão de este comando existir: o processo tem muitos artefatos (roadmap, PRD, Tech Spec,
-tarefas, decisões em aberto, TODO fora do código). Quem volta ao projeto depois de três dias
-não deveria ter que abrir oito arquivos para saber o que fazer. E o Claude, começando uma
-sessão limpa, também não.
-
-<critical>NÃO ALTERE NENHUM ARQUIVO. Este comando só lê e reporta.</critical>
+<critical>NÃO ALTERE NENHUM ARQUIVO. Este procedimento só lê e reporta.</critical>
 
 Alvo opcional: `$ARGUMENTS`
 
 ## O que ler
 
-1. `ROADMAP.md` — estado de cada funcionalidade (`[ ]`, `[~]`, `[x]`) e dependências
-2. `tasks/` — para cada pasta `prd-<func>/`, quais artefatos existem (`prd.md`,
-   `techspec.md`, `tasks.md`) e quantas tarefas estão `[x]`
-3. `CLAUDE.md` seção "Decisões em aberto"
-4. `TODO.md` — só os itens que bloqueiam a funcionalidade atual ou a próxima
-5. `git log --oneline -10` — o que foi feito por último
+1. `node tools/processo/estado.ts [funcionalidade]` — a fase, a contagem de tarefas, a tarefa da vez
+   com porte e revisores, e as rodadas já registradas. **A fase vem daqui, nunca de inferência.** Com
+   andar da spec criado (`maestri floor list`), rode dentro do checkout do andar: é o estado que vale
+2. `tasks/prd-<func>/estado.md` do andar, se existir — o diário do Orquestrador: o que ele espera, o
+   que falhou e o que decidiu sem perguntar
+3. A nota "Fila do Joaquim" (`maestri note read "Fila do Joaquim"`) — o que espera decisão dele
+4. `CLAUDE.md`, seção "Decisões em aberto" — só as que travam a funcionalidade da vez ou a próxima
+5. `TODO.md` — só os itens que bloqueiam a funcionalidade da vez ou a próxima
+6. `git log --oneline -5` do andar
 
-## Como decidir o próximo passo
-
-Para a funcionalidade em andamento (ou, se não houver, a primeira `[ ]` com todas as
-dependências `[x]`):
-
-| Situação | Próximo passo |
-|---|---|
-| Não existe `tasks/prd-<func>/prd.md` | `/criar-prd <func>` |
-| Existe PRD com status rascunho | revisar e aprovar o PRD |
-| PRD aprovado, sem Tech Spec | `/criar-techspec <func>` |
-| Tech Spec sem `revisao-spec.md` aprovada | `/revisar-spec <func>` |
-| Tech Spec revisada, sem `tasks.md` | `/criar-tasks <func>` |
-| `tasks.md` com pendentes | `/executar-tasks <func>` |
-| Todas as tarefas `[x]`, sem `validacao.md` aprovada | `/validar <func>` |
-| `validacao.md` com ressalvas ou reprovada | tratar os achados (`/corrigir`) e `/validar <func>` de novo |
-| `validacao.md` aprovada, sem `retro.md` | `/retro <func>` |
-
-Se uma **decisão em aberto** do `CLAUDE.md` impede o próximo passo (exemplo: o PRD de F11
-precisa da lista final de agentes), o próximo passo é `/descobrir <tema>`, não o PRD.
+Se uma **decisão em aberto** impede o próximo passo (exemplo: o PRD de F11 precisa da lista final
+de agentes), o próximo passo é a descoberta dessa decisão, não o PRD.
 
 ## Relatório
 
 Curto. Quem lê quer agir, não ler.
 
 ```
-Educa.ia — status em <data>
+Turmma — status em <data>
 
-Em andamento: F? <nome> — <etapa: PRD | Tech Spec | tarefas n/total>
-Concluídas:   F0, F1 ...
-Liberadas:    <funcionalidades com dependências prontas, que podem começar>
-Bloqueadas:   <F? — o que falta>
-
+Da vez:      F? <nome> — <fase> (<n> de <total> tarefas), no andar <andar>
+Concluídas:  F0, F1 ...
+Esperando o Joaquim: <entradas abertas da fila, uma linha cada, ou nada>
 Decisões em aberto que travam o caminho próximo:
 - <decisão> → trava <F?>
-
 Fora do código, com prazo:
 - <item do TODO.md que bloqueia algo próximo>
-
 Último commit: <hash mensagem>
 
-Próximo passo: <comando exato>
+Próximo passo: <o que o /seguir faz agora>
 ```
 
-Se `$ARGUMENTS` apontar uma funcionalidade, detalhe só ela: artefatos, tarefas pendentes
-com dependência, vetos que falharam no último relatório, e o próximo comando.
+Se `$ARGUMENTS` apontar uma funcionalidade, detalhe só ela: artefatos, tarefas pendentes com
+dependência, a última rodada de cada revisor na tarefa da vez, e o próximo passo.

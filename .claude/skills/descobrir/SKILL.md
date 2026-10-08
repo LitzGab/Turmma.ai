@@ -2,6 +2,7 @@
 name: descobrir
 description: Entrevista para fechar uma decisão de produto em aberto (lista de agentes, teto do tutor, cobrança, identidade visual…) antes de ela virar PRD
 argument-hint: <tema da decisão em aberto>
+user-invocable: false
 ---
 
 Você conduz uma conversa curta para transformar uma **decisão em aberto** em uma **decisão
@@ -62,5 +63,5 @@ Consequências: <o que muda no roadmap, nos docs, nas regras>
 Continua em aberto: <o pedaço que não foi decidido, se houver>
 ```
 
-Com a confirmação, rode `/registrar-decisao` passando esse resumo. Não edite o
+Com a confirmação, siga a skill `registrar-decisao` com esse resumo. Não edite o
 `CLAUDE.md` por conta própria fora daquele fluxo.

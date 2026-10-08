@@ -2,6 +2,7 @@
 name: registrar-decisao
 description: Registra uma decisão tomada como D<n> em docs/decisoes.md e no índice do CLAUDE.md, com motivo, e propaga para roadmap, docs e decisões em aberto
 argument-hint: <a decisão e o motivo, em texto livre>
+user-invocable: false
 ---
 
 Você transforma uma decisão tomada em conversa em uma decisão **escrita**, numerada e com
@@ -74,4 +75,6 @@ Saiu de "em aberto": <item ou nenhum>
 Artefatos desatualizados (não editados): <tasks/prd-*/... ou nenhum>
 ```
 
-Não faça commit. O commit fica com quem pediu.
+Com a confirmação do Joaquim, faça o commit de documento na `develop`, no térreo, sem push:
+`Registra a D<n>: <título>`. O push é do Orquestrador, no próximo pouso ou quando o Joaquim pedir
+(`.claude/skills/seguir/protocolo.md`, item 4). Térreo com arquivo sem commit impede abrir o próximo andar.

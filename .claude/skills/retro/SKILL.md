@@ -2,6 +2,7 @@
 name: retro
 description: Retrospectiva de uma funcionalidade concluída — mede rodadas e reprovações, agrupa o que os revisores exigiram e propõe mudanças nos templates, agentes e regras para o erro não voltar
 argument-hint: <nome-funcionalidade em kebab-case>
+user-invocable: false
 ---
 
 Você transforma o histórico de revisões de uma funcionalidade em mudança de processo.
@@ -24,6 +25,8 @@ Funcionalidade: `$ARGUMENTS`
 - `tasks/prd-$ARGUMENTS/achados/indice.md`: uma linha por rodada com o que cada revisor exigiu.
   Agrupe pelo índice e abra `achados/<documento>.md` só onde precisar do texto inteiro
 - `tasks/prd-$ARGUMENTS/revisao-spec.md` e `validacao.md`, se existirem
+- `tasks/prd-$ARGUMENTS/estado.md`: a tabela "Concluídas" traz o modelo que implementou cada tarefa,
+  as escaladas e o que o Orquestrador decidiu sem perguntar
 - `tasks/correcoes/*.md` com data dentro do período da funcionalidade
 - `git log --format='%h %ad %s' --date=iso` dos commits da funcionalidade
 
@@ -32,6 +35,7 @@ Funcionalidade: `$ARGUMENTS`
 ```
 Tarefas: <n> · Rodadas de revisor: <n> · Reprovações: <n> (<%>)
 Por revisor: <revisor: rodadas / reprovações>
+Por modelo do implementador: <modelo: tarefas / rodadas por tarefa / reprovações / escaladas para o Sonnet>
 Rodadas por tarefa: média <n>, pior <tarefa> com <n>
 Rodadas que caducaram sem reprovação (revisor aprovou e teve de rodar de novo): <n>
 Correções fora de tarefa: <n>
@@ -40,6 +44,10 @@ Ressalvas do /validar: <n críticos, n maiores>
 ```
 
 Compare com a retrospectiva anterior (`tasks/prd-*/retro.md` mais recente), se houver.
+
+A linha por modelo é a que decide a D78: se as tarefas do Haiku levam mais rodadas que as do Sonnet a
+ponto de custar mais portões do que poupam de consumo, a proposta é mudar o critério de porte do
+`criar-tasks`. O mesmo vale para os revisores com veto em Opus: proponha manter ou trocar, com o número.
 
 ## 3. Agrupar causas
 
@@ -79,7 +87,8 @@ Mostre as propostas e pergunte quais aplicar. Aplique só as aceitas.
 `tasks/prd-$ARGUMENTS/retro.md`, com as medidas, os grupos, as propostas e o que foi aceito ou
 recusado (com o motivo). O `/criar-tasks` da próxima funcionalidade lê esse arquivo.
 
-Commit direto na `develop` (D23 revista): `Faz a retrospectiva de <funcionalidade> e ajusta o processo`,
+Commit na `develop`, no térreo, depois do pouso da funcionalidade (D78), sem push (o push é do
+Orquestrador): `Faz a retrospectiva de <funcionalidade> e ajusta o processo`,
 só com `retro.md` e os arquivos de processo alterados.
 
 ## 7. Relatório

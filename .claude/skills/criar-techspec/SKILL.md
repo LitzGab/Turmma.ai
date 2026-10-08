@@ -2,6 +2,7 @@
 name: criar-techspec
 description: Cria a Tech Spec de uma funcionalidade, a partir do PRD
 argument-hint: <nome-funcionalidade em kebab-case>
+user-invocable: false
 ---
 
 Você vai escrever o documento que responde **como vamos construir**. O PRD já decidiu o quê.
@@ -107,8 +108,8 @@ implementador e os revisores lerem pedaços dela. Acima do teto:
 
 ### 8. Próximo passo
 
-Reporte o caminho, as palavras e o próximo comando: `/revisar-spec $ARGUMENTS`. As tarefas só são
-geradas com a Tech Spec revisada.
+Reporte o caminho e as palavras. Com a aprovação do Joaquim, o próximo passo é a revisão da spec
+(`revisar-spec`): as tarefas só são geradas com a Tech Spec revisada.
 
 ## Checklist
 
@@ -124,4 +125,4 @@ geradas com a Tech Spec revisada.
 - [ ] Comportamento em falha definido
 - [ ] Até 2.000 palavras, medido com `wc -w`, ou teto excedido com aceite escrito
 - [ ] Salvo em `tasks/prd-$ARGUMENTS/techspec.md`
-- [ ] Próximo passo apontado: `/revisar-spec $ARGUMENTS`
+- [ ] Próximo passo: a revisão da spec (`revisar-spec`)

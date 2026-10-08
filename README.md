@@ -96,7 +96,7 @@ sentido.
 7. **`ROADMAP.md`** — a ordem de construção e o que significa "pronto" em cada etapa.
 
 Os demais documentos são de consulta, não de leitura corrida. Para saber onde o projeto
-está agora, rode `/status`. Ao abrir uma sessão do Claude Code, um hook já mostra a
+está agora, rode `node tools/processo/estado.ts`, ou `/seguir`. Ao abrir uma sessão do Claude Code, um hook já mostra a
 funcionalidade em andamento e o próximo passo.
 
 ---
@@ -145,38 +145,46 @@ funcionalidade em andamento e o próximo passo.
 
 ## Como o fluxo funciona
 
+O processo roda no Maestri (D78). Você digita um comando só, no terminal Maestro do térreo:
+
 ```
-/status
-    Onde o projeto está e qual comando rodar agora. Só lê.
-
-/descobrir <tema>
-    Quando uma decisão em aberto trava o caminho (lista de agentes, teto do tutor,
-    cobrança). Entrevista curta com opções e custo de cada uma.
-    └── /registrar-decisao   escreve a D<n> no CLAUDE.md e propaga para roadmap e docs
-
-/criar-prd <funcionalidade>
-    O que vamos construir e por quê. Sem falar de tecnologia.
-    Saída: tasks/prd-<func>/prd.md
-
-/criar-techspec <funcionalidade>
-    Como vamos construir. Entidades, rotas, filas, o que acontece quando falha.
-    Saída: tasks/prd-<func>/techspec.md
-
-/criar-tasks <funcionalidade>
-    A lista de tarefas, cada uma entregável e testável.
-    Mostra a lista e espera aprovação antes de gerar arquivo.
-    Saída: tasks.md + um arquivo por tarefa
-
-/executar-tasks <funcionalidade>
-    Executa todas, uma de cada vez, cada uma em contexto limpo.
-        └── /executar-task <N_task.md>   uma tarefa
-             └── /executar-review        o portão de qualidade
-
-/validar <funcionalidade> [tarefa]
-    Confere a funcionalidade inteira contra o PRD, RF a RF, com evidência de código e
-    de teste, em contexto limpo. Aprovada e com a esteira verde, fecha no roadmap.
-    Saída: tasks/prd-<func>/validacao.md
+/seguir [funcionalidade]
+    O Orquestrador lê a fase (tools/processo/estado.ts), monta o time e conduz até a próxima
+    decisão que é sua. O mesmo comando começa, continua e retoma depois de uma queda.
 ```
+
+O time é fixo, no térreo: você vê sempre as mesmas cinco caixas (Orquestrador, Arquiteto,
+Implementador, Mesa e Validador). O que muda a cada tarefa ou fase é a sessão dentro de cada uma,
+reiniciada já apontada para o andar da spec. Cada fase tem o seu agente e o seu procedimento
+(`.claude/skills/<nome>/`):
+
+```
+Arquiteto (Opus), falando direto com você
+    criar-prd        o que vamos construir e por quê           → prd.md
+    criar-techspec   como vamos construir                      → techspec.md
+    revisar-spec     os guardiões auditam o desenho            → revisao-spec.md
+    criar-tasks      tarefas entregáveis, com o porte          → tasks.md + N_task.md
+
+Implementador (Haiku nas pequenas, Sonnet nas grandes) e Mesa de revisão (Sonnet)
+    executar-task    uma tarefa, em processo novo, com portão local
+    revisar-tarefa   a Mesa chama os revisores e devolve a ordem de correção exata
+    corrigir         defeito fora de tarefa, com teste que reproduz
+
+Validador (Opus), isolado de quem implementou
+    validar          a funcionalidade inteira contra o PRD, RF a RF → validacao.md
+
+Depois do pouso
+    retro            mede rodadas e reprovações, por revisor e por modelo, e propõe ajustes
+```
+
+Cada spec vive num **andar** do Maestri, com a branch `spec/<funcionalidade>`, e só entra na
+`develop` por pouso, com a sua palavra. A esteira roda uma vez, na branch, antes do pouso. O
+Orquestrador para em seis decisões: aprovação de PRD, Tech Spec e lista de tarefas; mudança de
+desenho ou de critério de aceite; ressalva da validação; propostas da retrospectiva; decisão de
+produto; e o pouso. O que espera você fica na nota "Fila do Joaquim".
+
+Defeito avulso e decisão de produto você pede em texto ao Orquestrador. Como os agentes conversam
+está em `.claude/skills/seguir/protocolo.md`.
 
 Cada etapa tem um motivo:
 
@@ -225,27 +233,30 @@ tarefa tocou tela.
 
 Suponha que a próxima funcionalidade seja `onboarding-por-convite`.
 
-1. Você roda `/criar-prd onboarding-por-convite`. O comando lê o contexto, confirma no
+1. Você roda `/seguir onboarding-por-convite`. O Orquestrador cria o andar da spec e põe o Arquiteto
+   para trabalhar. O Arquiteto lê o contexto, confirma no
    roadmap que `identidade-e-tenancy` está concluída, e faz perguntas sobre o que ficou em
    aberto. Não pergunta o que o `CLAUDE.md` já decidiu.
 2. Sai um PRD com os requisitos numerados, a matriz de quem pode fazer o quê, os casos de
    borda (aluno que chega em maio, dois nomes iguais na turma) e o dado pessoal envolvido.
-3. Você roda `/criar-techspec onboarding-por-convite`. O comando explora o código existente,
+3. Com o PRD aprovado, o Arquiteto segue para a Tech Spec: explora o código existente,
    pesquisa o que não sabe, e escreve como fazer: entidades de convite e lista de nomes,
    rotas, validade de token, o que vai para fila. As seções de isolamento, dado pessoal e
    conformidade são obrigatórias.
-4. Você roda `/criar-tasks onboarding-por-convite`. Ele consulta o `test-engineer` para
-   definir os cenários, monta a lista, e **mostra antes de gerar arquivo**. Você aprova ou
-   corrige.
-5. Você roda `/executar-tasks onboarding-por-convite`. Ele executa uma por vez. Se a tarefa
-   3 falhar no `privacy-guardian`, ele para ali e reporta. Não segue para a 4.
+4. Com a spec revisada pelos guardiões, o Arquiteto consulta o `test-engineer` para definir os
+   cenários, monta a lista com o porte de cada tarefa, e **mostra antes de gerar arquivo**. Você
+   aprova ou corrige.
+5. O Orquestrador executa uma tarefa por vez, sem você. Se a tarefa 3 reprovar no
+   `privacy-guardian`, a Mesa de revisão devolve a ordem de correção ao Implementador; na segunda
+   reprovação seguida a tarefa sobe de modelo, e na terceira o Orquestrador para e te chama. Não
+   segue para a 4 com a 3 aberta.
 
 ---
 
 ## Regras de convivência com este repositório
 
 - **Decisão nova vai para `docs/decisoes.md`**, com o motivo, e uma linha no índice do
-  `CLAUDE.md`, via `/registrar-decisao`. Decisão que não está escrita será rediscutida daqui a
+  `CLAUDE.md`, pelo procedimento `registrar-decisao`. Decisão que não está escrita será rediscutida daqui a
   duas semanas.
 - **Requisito que vem de lei cita a fonte.** `docs/regulacao.md` separa o que foi lido no
   texto oficial do que veio de imprensa, e marca o que está "a confirmar". Requisito legal sem
@@ -259,7 +270,7 @@ Suponha que a próxima funcionalidade seja `onboarding-por-convite`.
 
 ## Começando agora
 
-O F0 está concluído e o F1 está em andamento: rode `/status` para ver onde parou.
+Rode `/seguir` no terminal Maestro para ver onde o projeto parou e continuar.
 
 E não pule a `F3 — lgpd-e-titular` para o fim. Ela parece burocracia e é o que protege o
 negócio: exportação e eliminação por titular construídas depois viram retrabalho em todas

@@ -176,6 +176,11 @@ ela vale como portão do dia a dia: o `/executar-task`, o `/corrigir`, o `/valid
 `/revisar-spec`, o `/retro` e a regra 40 passaram a apontar para lá. De onde sai o staging fica com
 a D31, quando o staging existir.
 
+Revista em 08/10/2026 pela D78: o trabalho de uma spec deixa a `develop` e passa a acontecer num andar
+do Maestri, na branch `spec/<funcionalidade>`, que só entra na `develop` por pouso, com a palavra do
+Joaquim; a esteira roda uma vez por spec, na branch, antes do pouso. Decisão, retrospectiva e
+documento que não é de spec continuam na `develop`. O merge para `release` e `main` não muda.
+
 **D24 — Na primeira semana, a coordenação precisa ver quatro coisas funcionando.**
 A escola inteira cadastrada sem trabalho manual, o painel de governança de IA com 100% das
 notas aprovadas por humano, professores gerando prova e plano a partir da apostila com a
@@ -938,3 +943,43 @@ nada chega ao aluno sem aprovação registrada; e a D55, a D56, a D47, a D57, a 
 Motivo: a A1 levou cerca de sete dias, a esteira leva cerca de 30 a 40 min por commit, e o
 roteiro de demonstração precisa estar de pé em 06/10/2026. Revisão: o processo completo volta
 antes da primeira escola real — F2, F3 e o portão do piloto.
+
+**D78 — O processo roda no Maestri: um andar por spec, um comando, e modelo por papel.** *(decidida
+pelo Joaquim em 08/10/2026)*
+Revisa a D23 (onde o trabalho acontece e quando a esteira roda) e a D53 (quem chama os revisores e
+quais comandos existem). O que muda: (1) **cada spec roda num andar do Maestri**, com a branch
+`spec/<funcionalidade>`, do PRD à validação, e só entra na `develop` por pouso, com a palavra do
+Joaquim; correção avulsa vai em `correcao/<slug>`. (2) **A esteira roda uma vez por spec**, na
+branch, antes do pouso, e de novo na `develop` depois dele; por tarefa valem o portão local
+carimbado e os revisores (regra 40 atualizada). (3) **Um comando, `/seguir`**: o Orquestrador
+calcula a fase por `tools/processo/estado.ts` e conduz até a próxima parada; os outros comandos
+viram procedimento interno dos agentes. (4) **Um time fixo de cinco terminais, no térreo**: o Orquestrador, que é o terminal Maestro e segue
+o `/seguir`, e quatro papéis definidos em `.claude/agents/` e iniciados com `claude --agent`. Os
+terminais não são criados nem dispensados por spec, para o Joaquim ver sempre as mesmas caixas: o
+que muda a cada tarefa ou fase é a sessão, reiniciada já apontada para o checkout do andar.
+Orquestrador, Arquiteto e Validador em Opus 5.5; Implementador em Haiku 5.5 (esforço xhigh) nas
+tarefas de porte pequeno e em Sonnet 5.5 nas de porte grande; Mesa de revisão em Sonnet 5.5. O porte
+é marcado pelo Arquiteto no `N_task.md`. (5) **Quem
+chama os revisores é a Mesa de revisão**, que monta o prompt pela árvore e traduz cada reprovação em
+ordem de correção exata (arquivo, função, trecho, o que mudar), para o Haiku aplicar sem interpretar.
+Os revisores continuam subagentes, porque a rodada só é registrada pelo fim do subagente, e os seis
+com veto rodam em Opus, como teste a medir na retrospectiva. (6) **Autonomia:** falha técnica vira
+correção e a execução segue. O Orquestrador para em seis decisões — aprovação de PRD, Tech Spec e
+lista de tarefas; mudança de desenho ou de critério de aceite; ressalva da validação; propostas da
+retrospectiva; decisão de produto; pouso — e num limite: duas reprovações seguidas do mesmo revisor
+sobem a tarefa para o Sonnet, e três param. Push na branch do andar é livre; notificação, só em
+parada e no fim da spec. (7) Uma spec ou uma correção por vez: o time é um só, e o compose de teste é um só na máquina.
+Trabalho em paralelo fica para uma segunda fase. (8) O Gabriel usa o mesmo time: por isso os papéis ficam versionados no
+repositório, e não em configuração do Maestri.
+O que **não** muda: as regras 10, 20, 30 e 70; o hook que bloqueia o commit sem revisão válida e sem
+carimbo, que passou a avaliar o commit na árvore em que ele acontece (`git -C <andar>`), e não na
+da sessão; um agente novo por tarefa; a validação em contexto limpo; a retrospectiva só propõe.
+Motivo: o Joaquim digitava treze comandos e era o relógio do processo; o subagente de tarefa morria
+junto com a sessão principal (a 2.0 e a 3.0 do F3); a esteira por commit custava de 20 a 40 minutos
+de espera por tarefa; e o implementador, em Opus, era 63% do consumo do plano. A prova técnica de
+08/10/2026 fixou duas coisas: agente criado com *responsabilidade* do Maestri nasce fora da raiz do
+repositório e nenhum hook dispara, por isso o papel vem de `.claude/agents/`; e o Maestri copia o
+andar sem as pastas `dist`, por isso todo andar novo roda `npm ci`.
+Revisão: os modelos do Implementador e dos revisores se decidem pelos números da retrospectiva do F3
+(rodadas e reprovações por modelo); a esteira uma vez por spec volta à mesa na primeira vez em que
+uma falha no fim custar mais do que as esperas que ela poupou, e antes da primeira escola real.

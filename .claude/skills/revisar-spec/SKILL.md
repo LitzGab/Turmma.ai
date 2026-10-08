@@ -2,9 +2,11 @@
 name: revisar-spec
 description: Audita PRD e Tech Spec com os guardiões e o test-engineer antes de gerar as tarefas, e dá o veredito da spec
 argument-hint: <nome-funcionalidade em kebab-case>
+user-invocable: false
 ---
 
-Você obtém uma auditoria **independente** da Tech Spec antes de ela virar tarefa.
+Você obtém uma auditoria **independente** da Tech Spec antes de ela virar tarefa. Quem roda isto é o
+Arquiteto, no andar da spec (D78): ele chama os revisores como subagentes, e o hook registra as rodadas.
 
 Este comando existe porque erro de desenho é o mais caro do processo: uma Tech Spec que esquece
 o escopo de ano letivo, manda log com nome de aluno ou põe trabalho demorado dentro do request
@@ -20,7 +22,7 @@ Funcionalidade alvo: `$ARGUMENTS`
 
 ## 1. Preparar
 
-- `tasks/prd-$ARGUMENTS/prd.md` e `techspec.md` existem? Não: PARE e aponte `/criar-techspec`.
+- `tasks/prd-$ARGUMENTS/prd.md` e `techspec.md` existem? Não: volte à etapa que falta (`criar-prd` ou `criar-techspec`).
 - Meça: `wc -w tasks/prd-$ARGUMENTS/prd.md tasks/prd-$ARGUMENTS/techspec.md`. Acima de 2.000
   palavras sem aceite escrito no topo é achado **bloqueante** desta revisão.
 - Crie `tasks/prd-$ARGUMENTS/revisao-spec.md`, se ainda não existir:
@@ -88,14 +90,14 @@ correção exigida também: aqui corrigir custa pouco.
 ## 5. Agir
 
 - **REPROVADA:** apresente as correções ao usuário. Com o aceite, edite a Tech Spec (e o PRD, se
-  for o caso) e rode `/revisar-spec` de novo: a rodada nova chama **só os revisores que
+  for o caso) e repita esta skill: a rodada nova chama **só os revisores que
   reprovaram**, com as correções exigidas e o diff da Tech Spec no prompt.
   Mudança de desenho que afeta outro guardião (por exemplo, a correção de infra criou tabela
   nova): chame esse também.
-- **APROVADA:** próximo passo `/criar-tasks $ARGUMENTS`. As recomendações entram como subtarefa
+- **APROVADA:** siga para a skill `criar-tasks`. As recomendações entram como subtarefa
   ou cenário de teste lá.
 
-Commit direto na `develop` (D23 revista), só com `revisao-spec.md`, `techspec.md`, `prd.md` e, se
+Commit na branch do andar (D78), com push, só com `revisao-spec.md`, `techspec.md`, `prd.md` e, se
 o hook os escreveu, `achados/revisao-spec.md` e `achados/indice.md`:
 `Revisa a spec de <funcionalidade> com os guardiões`.
 

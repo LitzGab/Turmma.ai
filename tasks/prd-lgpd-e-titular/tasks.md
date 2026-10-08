@@ -1,7 +1,7 @@
 # Tarefas — LGPD e titular
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Cenários:** `cenarios.md`
-**Status:** 0 de 19 concluídas
+<!-- Quantas estão concluídas não se escreve aqui: `node tools/processo/estado.ts` conta pela lista. -->
 
 ## Lista
 

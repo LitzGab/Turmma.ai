@@ -1,10 +1,12 @@
 ---
 name: executar-task
-description: Processo de execução de UMA única tarefa
+description: Procedimento do Implementador — execução de UMA única tarefa
 argument-hint: <caminho do N_task.md>
+user-invocable: false
 ---
 
-Você implementa **uma única tarefa**. Não avança para outras.
+Você implementa **uma única tarefa**. Não avança para outras. Quem roda isto é o Implementador
+(`.claude/agents/implementador.md`), no andar da spec, a pedido do Orquestrador (`/seguir`, D78).
 
 Você provavelmente está começando com contexto limpo, e isso é de propósito: contexto
 acumulado de tarefas anteriores faz improvisar. Por isso o passo 1 não é opcional.
@@ -28,7 +30,9 @@ Leia, nesta ordem:
 Escreva um plano curto: arquivos a criar ou alterar, interfaces, e a lista de testes que
 vão provar a regra.
 
-Se o plano contradisser a Tech Spec, **PARE e reporte a divergência**. Não decida
+Se o plano contradisser a Tech Spec, **PARE e envie ao Orquestrador `/seguir DIVERGÊNCIA de Implementador`**,
+com `Motivo: desenho`, a seção da Tech Spec e o que o plano pede (o formato está em
+`.claude/agents/implementador.md`): quem tria é o Arquiteto. Não decida
 arquitetura sozinho: a Tech Spec foi escrita por alguém que olhou o sistema inteiro, e você
 está vendo um pedaço.
 
@@ -112,7 +116,8 @@ fazer, e as dos guardiões marcados:
   não o que ele deveria fazer
 - Sem `any`, sem `TODO` deixado para trás, sem teste comentado
 - Vocabulário do glossário no código e no banco
-- Descobriu que a Tech Spec está errada: PARE e reporte. Não improvise.
+- Descobriu que a Tech Spec está errada: PARE e envie `/seguir DIVERGÊNCIA de Implementador`, com
+  `Motivo: desenho`. Não improvise.
 
 ## 4. Portão local
 
@@ -140,97 +145,72 @@ Dockerfile, `tools/testes/`, `tools/ci/compose.ts`, métricas, saúde, prontidã
 dúvida, rode.
 
 Falhou algum, conserte. Não prossiga com teste vermelho, não desabilite teste, não use
-`.skip`. Teste vermelho é informação.
+`.skip`. Teste vermelho é informação. Se o que falha está **fora** dos arquivos da tarefa (um teste de
+outro módulo, a auditoria de dependências), não conserte aqui: envie `/seguir DIVERGÊNCIA de Implementador`,
+com `Motivo: portão`, e encerre o turno.
 
-Rode o portão antes dos revisores. Mexeu em código depois dele, rode de novo antes do commit.
+**Rode o portão em segundo plano** (`run_in_background`), e espere a notificação do fim: ele leva de
+10 a 25 minutos, mais que o limite de um comando em primeiro plano. Não use `sleep` para esperar.
+
+Rode o portão antes de pedir a revisão. Mexeu em código depois dele, rode de novo antes do commit.
 
 O `test` do portão começa derrubando o projeto de teste `educa-teste` com os volumes
 (`EDUCA_BANCO_NOVO=1`). Enquanto ele roda, nada mais usa o banco de teste: nem revisor com
 mutação, nem `npm run test:integracao` à mão, nem outro worktree.
 
-## 5. Revisores obrigatórios
+## 5. Revisão
 
 <critical>A tarefa não fecha sem os revisores obrigatórios. Não é recomendação: o hook
 `tools/processo/revisoes.ts` registra cada rodada na seção "Revisões" do `N_task.md` e
 BLOQUEIA o commit enquanto algum revisor obrigatório não tiver uma rodada que valha para o
 código atual, com APROVADO nos que têm veto.</critical>
 
-Obrigatórios são os marcados no `N_task.md` **mais `test-engineer` e `revisor-geral`, que
-toda tarefa tem**, marcados ou não:
+Obrigatórios são os marcados no `N_task.md` **mais `test-engineer` e `revisor-geral`, que toda
+tarefa tem**, marcados ou não.
 
-- `test-engineer` — sempre, e **primeiro**. Veto.
-- `revisor-geral` — sempre: escopo, aderência à Tech Spec, regras 00, 40, 50 e 60 e qualidade
-  de código, em contexto limpo. Veto. Substitui a autorrevisão.
-- `tenancy-guardian` — dado de escola. Veto.
-- `privacy-guardian` — dado pessoal ou de menor. Veto.
-- `conformidade-reviewer` — nota, correção, tutor ou autonomia. Veto.
-- `infra-guardian` — login, tutor, modo sala, prova online, fila, gateway de IA, migration
-  em tabela grande, deploy ou ambiente. Veto.
-- `llm-integrator` — chamada de modelo ou agente
-- `pedagogia-reviewer` — conteúdo pedagógico gerado
-- `frontend-reviewer` — tela
+**Quem chama os revisores é a Mesa de revisão, não você**
+(`.claude/skills/revisar-tarefa/SKILL.md`). Ela monta o prompt de cada um a partir da árvore, chama
+na ordem certa e devolve o resultado. Quem implementa não escreve o prompt de quem o revisa (D78).
 
-### Ordem
-
-1. **`test-engineer` sozinho, primeiro.** É ele quem mais reprova, e a correção de teste que
-   ele exige faria caducar a rodada de quem já tivesse aprovado. Reprovou: corrija, rode o
-   portão local e chame rodada nova dele.
-   **Tarefa com tela: com o `test-engineer` aprovado, o `frontend-reviewer` sozinho; os outros
-   em paralelo só depois dele sem ajustes.** Os ajustes dele mexem em código de tela e caducam
-   quem aprovou junto: na A0b foram 12 das 18 rodadas caducadas sem reprovação (4.0, 6.0, 7.0).
-2. **Com o `test-engineer` aprovado (e o `frontend-reviewer`, se a tarefa tem tela), todos os
-   outros em paralelo**: `revisor-geral` e os guardiões marcados. Não dependem um do outro.
-   Antes de cada rodada do `revisor-geral`, rode
-   `node tools/processo/portao-local.ts conferir tasks/prd-<funcionalidade>/<N>_task.md`. Se der
-   inválido, rode o portão com as suítes que a mensagem pede antes de chamar. Na A1, três rodadas
-   dele reprovaram só ou também pelo carimbo, que é uma conferência de um comando.
-3. **Espere TODOS terminarem antes de seguir.** Veredito que não chegou não existe. Anunciar
-   que vai esperar e fazer o commit antes (o que aconteceu na 5.0) é falha da tarefa.
-
-### Prompt de cada revisor
+Com o portão local verde, peça a rodada e **encerre o turno**
+(`.claude/skills/seguir/protocolo.md`, item 2). O nome da Mesa veio no pedido do Orquestrador:
 
 ```
+PEDIDO de Implementador
 Tarefa: tasks/prd-<funcionalidade>/<N>_task.md
-
-Arquivos alterados nesta tarefa:
-<saída de `git status --short`, só os desta tarefa>
-
-[Só em rodada nova:]
-Rodada anterior: <n>ª, <veredito>. Correções exigidas:
-<os bloqueantes da rodada anterior, copiados>
-Diff desde a rodada anterior:
-<saída de `git diff` dos arquivos que mudaram desde então>
+Rodada: primeira | nova, depois da ordem <arquivo>
+Orquestrador: <o nome que veio no pedido dele>
 ```
 
-A primeira linha é a que o hook usa para registrar a rodada: sem ela, a rodada não conta e o
-commit continua bloqueado. O diff na rodada nova é o que deixa o revisor auditar só o que
-mudou, em vez de refazer a tarefa inteira.
+### O que volta
 
-### Reprovação e caducidade
+- **`RELATÓRIO` com "APROVADO por todos":** a aprovação é final. Se a linha "Sem aplicar" aponta um
+  arquivo, copie a tabela dele para "Recomendações sem aplicar" do `N_task.md`, como está, e siga
+  para o passo 6. Quem decide o que se aplica e o destino do resto é a Mesa, não você.
+- **`ORDEM DE CORREÇÃO` com `Tipo: recomendações`:** os revisores aprovaram, e a Mesa escolheu as
+  recomendações baratas a aplicar. Aplique como qualquer ordem, rode o portão e peça rodada nova:
+  ela chama só quem caducou. Acontece uma vez por tarefa.
+- **`ORDEM DE CORREÇÃO` com `Tipo: bloqueantes`:** abra o arquivo que ela aponta (`.processo/ordens/…`) e aplique **item
+  por item, exatamente o que está escrito**: o arquivo, o trecho, a mudança e o teste que prova.
+  Não amplie e não refatore o que a ordem não cita. Cláusula que entra por causa da ordem ganha a
+  sua linha em "Mutações", como qualquer outra. Depois rode o portão local e peça rodada nova.
+- **`DEVOLUÇÃO`:** a rodada não começou. Faça o que a mensagem pede (quase sempre, rodar o portão com
+  as suítes que ela cita) e peça a rodada de novo.
+- **Item que não dá para aplicar** (não se aplica ao código, contradiz outro item, ou só se atende
+  baixando um critério de aceite): não improvise. Envie `/seguir DIVERGÊNCIA de Implementador`, com
+  `Motivo: ordem`, e encerre o turno.
 
-- **Reprovou: corrija e chame uma rodada nova com um revisor novo** (ferramenta Agent, não
-  mensagem para o anterior). O registro depende de o revisor terminar como subagente.
-- **Recomendação não reprova.** Fica em `achados/<documento>.md`, resumida em
-  `achados/indice.md`, escrito pelo hook, e o `/validar` e o `/retro` leem de lá.
-  Recomendação barata se aplica, também depois de aprovação: junte todas num lote, com todos os
-  revisores terminados, rode o portão e chame rodada nova só de quem o hook apontar, com o diff.
-  A que não for aplicada vai para "Recomendações sem aplicar" no `N_task.md`, com destino
-  (`TODO.md`, tarefa que toca o arquivo, ou recusada com motivo). "Anularia as aprovações" não é
-  motivo. Na A0b, nove ou mais ficaram para trás assim, entre elas o comentário falso de
-  `packages/shared/src/operacao/eu.ts` que quatro revisores apontaram na 1.0. Mudança só em
-  comentário de `.ts`/`.tsx` caduca só o `revisor-geral`, salvo comentário com diretiva (ver a
-  caducidade abaixo); o carimbo caduca sempre, e o portão roda de novo.
-- **Mexeu em código depois de uma aprovação, a aprovação caducou**, e o hook diz de quem.
-  A caducidade segue o que o revisor audita: mudança **só em arquivo de teste** (`*.test.ts`,
-  `*.spec.ts`, `test/`, `e2e/`, `__fixtures__/`) caduca só `test-engineer` e `revisor-geral`;
-  mudança em qualquer outro arquivo caduca todos. Mudança **só em comentário** de `.ts`/`.tsx`/
-  `.mts`/`.cts` (o arquivo sem comentários nem espaço é igual ao da rodada) caduca só o
-  `revisor-geral`, salvo quando o trecho mudado tem uma marca de `MARCAS_DE_DIRETIVA`
-  (`tools/processo/revisoes.ts`: `@ts-`, `eslint`, `/// <reference`, `@jsx`, `#!`, `@vitest-`), e aí
-  caduca todos. O carimbo não tem essa exceção: comentário muda lint (`no-irregular-whitespace`) e
-  teste que varre o texto do fonte. Por isso, na correção pedida pelo `test-engineer`, mexa só no
-  teste sempre que der.
-- **Não edite a seção "Revisões" nem nada dentro de `achados/`.** Quem escreve é o hook.
+### Caducidade
+
+Mexeu em código depois de uma aprovação, a aprovação caducou, e o hook diz de quem na hora do
+commit. A caducidade segue o que o revisor audita: mudança **só em arquivo de teste** (`*.test.ts`,
+`*.spec.ts`, `test/`, `e2e/`, `__fixtures__/`) caduca só `test-engineer` e `revisor-geral`; mudança
+**só em comentário** de `.ts`/`.tsx` caduca só o `revisor-geral`, salvo comentário com diretiva
+(`MARCAS_DE_DIRETIVA`, em `tools/processo/revisoes.ts`); qualquer outra caduca todos. O carimbo não
+tem exceção: mudou qualquer coisa, o portão roda de novo. Por isso, na correção pedida pelo
+`test-engineer`, mexa só no teste sempre que a ordem permitir.
+
+**Não edite a seção "Revisões" nem nada dentro de `achados/`.** Quem escreve é o hook.
 
 ## 6. Conferência final
 
@@ -241,43 +221,18 @@ node tools/processo/portao-local.ts conferir tasks/prd-<funcionalidade>/<N>_task
 ```
 
 Carimbo inválido: rode o portão local de novo. Se ele mexer em código (formatação, snapshot),
-volte ao passo 5 para os revisores que o hook apontar.
+volte ao passo 5 e peça à Mesa a rodada de quem o hook apontar.
 
 ## 7. Conclusão
 
-Só depois de tudo verde e todos os revisores obrigatórios aprovados:
+Só depois de tudo verde e de a Mesa responder "APROVADO por todos":
 
-- **Confira a esteira do commit anterior.** O trabalho acontece na `develop` (D23 revista) e
-  não há staging, então a esteira é o portão (D31), e um commit em cima de esteira vermelha
-  esconde de quem é o erro. Rode:
-
-  ```bash
-  git fetch origin develop
-  git rev-list --count origin/develop..develop   # precisa ser 0
-  git rev-parse origin/develop
-  gh run list --workflow esteira --branch develop --limit 1 --json databaseId,headSha,status,conclusion
-  ```
-
-  Só siga com as três condições juntas: `headSha` igual ao `origin/develop`, `status`
-  `completed` e `conclusion` `success`. Qualquer outro caso tem regra:
-  - `develop` local à frente do `origin/develop`: o commit anterior não foi enviado e não tem
-    esteira. Não faça o commit e reporte
-  - `headSha` igual e `status` diferente de `completed`: espere com
-    `gh run watch <databaseId> --exit-status`, em primeiro plano, e confira de novo
-  - `headSha` diferente do `origin/develop`: a execução do último commit ainda não foi
-    registrada, e a lista mostra a do commit anterior. Liste de novo a cada ~30 s; se em
-    2 minutos ela não aparecer, não faça o commit e reporte
-  - lista vazia: não faça o commit e reporte
-  - `conclusion` diferente de `success` (`failure`, `cancelled`, `skipped`, `timed_out`,
-    `startup_failure`, `action_required`): **não faça o commit.** Retorne `STATUS: FALHA`
-    com o commit, a conclusão e o job. Corrigir ou reexecutar a esteira não é escopo desta
-    tarefa. Deixe o trabalho na árvore, sem stash e sem descartar nada, e ponha no relatório
-    `Trabalho: pronto, sem commit`, com o `git status --short` dos arquivos da tarefa
-  - sem `gh` ou sem rede: não faça o commit e reporte
-- Marque a tarefa `[x]` em `tasks.md`
-- **Faça o commit da tarefa, direto na `develop`** (D23 revista). Stage apenas os arquivos desta
-  tarefa, incluindo o `N_task.md` com a seção "Revisões" e, se o hook os escreveu,
-  `achados/<N>_task.md` e `achados/indice.md`, nunca `git add -A`.
+- Marque a tarefa `[x]` em `tasks.md`, e leve o `tasks.md` no commit
+- **Faça o commit da tarefa na branch do andar** (`spec/<funcionalidade>`, D78). Stage apenas os
+  arquivos desta tarefa, incluindo o `N_task.md` com a seção "Revisões", o `estado.md` da pasta, que
+  o Orquestrador atualizou antes de pedir a tarefa, a `techspec.md` e o `cenarios.md` quando uma
+  divergência os mudou, e, se o hook os escreveu, `achados/<N>_task.md` e `achados/indice.md`, nunca
+  `git add -A`.
   O `achados/indice.md` é da pasta, não da tarefa: se outro trabalho registrou rodada enquanto esta
   corria, a linha dele vem junto. **Leve assim.** O arquivo é só acrescentado, então a linha extra
   entra um commit mais cedo e nada se perde; tirá-la à mão perderia o registro dela.
@@ -290,31 +245,38 @@ Só depois de tudo verde e todos os revisores obrigatórios aprovados:
   `Implementa reivindicação de nome pelo link da sala (tarefa 4.0)`, com a linha
   `Revisões: <revisor> <veredito> (<n>ª rodada), ...` no corpo. Um commit por tarefa, nunca
   `--amend` em commit existente, nunca `--no-verify`.
+  **O arquivo existe antes do comando do commit.** O hook lê a árvore antes de o comando rodar: não
+  crie nem altere arquivo no mesmo Bash que faz o `git add` e o `git commit`.
   Antes do commit, `git diff --cached --name-only` confere com a lista dos arquivos da tarefa (um
   `git add` que falha num caminho errado não prepara nada daquele comando). Depois do commit e antes
   do push, `git show --stat HEAD` e `git status --short`: nada da tarefa pode ter ficado de fora. Se
   ficou e o commit ainda não foi enviado, `git reset --soft HEAD~1`, prepare de novo e refaça. Na
   15.0 da A1, o commit saiu parcial e só foi refeito porque alguém olhou
 - **Commit bloqueado pelo hook:** a mensagem diz qual revisor falta, reprovou ou caducou.
-  Resolva o que ela aponta. Não contorne: o hook também bloqueia commit que leva código de
-  `apps/`, `packages/`, `infra/` ou `e2e/` sem `(tarefa N.0)` nem `(correção <slug>)`
-- **Faça o push logo depois do commit** (`git push origin develop`). Cada commit de tarefa tem a
-  sua execução da esteira; push em grupo deixa commit sem execução própria. Não espere a
-  esteira terminar: quem confere é a próxima tarefa, antes do commit dela
-- Retorne o relatório:
+  Resolva o que ela aponta, pedindo à Mesa a rodada que falta. Não contorne: o hook também bloqueia
+  commit que leva código de `apps/`, `packages/`, `infra/` ou `e2e/` sem `(tarefa N.0)` nem
+  `(correção <slug>)`
+- **Faça o push logo depois do commit**, para a branch do andar: `git push -u origin HEAD`. Nunca
+  para a `develop`: quem pousa é o Joaquim.
+  A esteira não roda por tarefa. Ela roda uma vez, na branch, antes do pouso da funcionalidade
+  (D78), e por isso o que prova a tarefa é o portão local e os revisores: e2e e infra só rodam aqui
+  quando a tarefa os exige, e uma falha neles no fim pode ser de qualquer tarefa
+- Envie o relatório ao Orquestrador (`.claude/skills/seguir/protocolo.md`, item 2), começando por
+  `/seguir RELATÓRIO de <seu nome>`, e encerre o turno:
 
 ```
+/seguir RELATÓRIO de <seu nome>
+Tarefa: tasks/prd-<funcionalidade>/<N>_task.md
 STATUS: SUCESSO | FALHA
-Implementado: <até 5 linhas>
-Testes: <n passando / n total>
-Typecheck: limpo | erros
-E2E: verde | não se aplica
+Modelo: <o seu, como aparece no cabeçalho do terminal>
+Commit e push: <hash> em spec/<funcionalidade>
 Revisões: <a mesma linha do commit, com todas as rodadas de cada revisor obrigatório>
-Portão local: carimbo válido (<suítes>)
-Esteira do commit anterior: verde em <hash>
-Push: <hash enviado>
-Motivo da falha: <se houver>
+Motivo da falha: <se houver, com o arquivo a abrir>
 ```
 
-Sem dump de código. Sem histórico de raciocínio. Quem lê o relatório é o orquestrador, e
-ele só precisa saber se pode seguir.
+`STATUS: FALHA` é para quando você não consegue concluir e não é caso de `DIVERGÊNCIA`: diga o que
+ficou feito, o que falta e o arquivo a abrir. O trabalho fica na árvore, sem descartar nada.
+
+Sem dump de código. Sem histórico de raciocínio. Quem lê o relatório é o Orquestrador, e ele só
+precisa saber se pode seguir. O que foi implementado, os testes e o portão ele confere nos
+arquivos.

@@ -81,7 +81,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D20 | Escola particular e rede pública são alvo juntas desde o início |
 | D21 | O banco público de questões vem das provas oficiais do ENEM e entra no F7 |
 | D22 | A ingestão começa pelo upload de PDF licenciado; adaptador de scraper só com escola real e licença |
-| D23 | O trabalho acontece na `develop`; `release` e `main` recebem por merge, que o Joaquim gerencia. O Gabriel abre branch própria e integra na `develop`. A esteira roda nas três branches. O portão de qualidade continua no processo (revista pela D53, em 19/09/2026 e em 21/09/2026; revista pela D77 só no MVP) |
+| D23 | O trabalho acontece na `develop`; `release` e `main` recebem por merge, que o Joaquim gerencia. O Gabriel abre branch própria e integra na `develop`. A esteira roda nas três branches. O portão de qualidade continua no processo (revista pela D53, em 19/09/2026 e em 21/09/2026; revista pela D77 só no MVP; revista pela D78: cada spec num andar com branch própria) |
 | D24 | Na primeira semana a coordenação vê quatro coisas: escola cadastrada sem trabalho manual, governança de IA, prova e plano com página citada, tutor em sala com sinais |
 | D25 | Infra do primeiro ano para até dez escolas; API, realtime e worker separados e sem estado |
 | D26 | Banco, Redis e storage são serviços gerenciados |
@@ -111,7 +111,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D50 | Preço por aluno com faixas de pacote: base e completo com tutor |
 | D51 | Toda tela nasce responsiva e usável no celular, sem que nenhum fluxo dependa dele |
 | D52 | Testes de integração da infra fora do portão de toda tarefa, na esteira |
-| D53 | Processo enxugado onde repetia trabalho: `test-engineer` primeiro, caducidade pelo que o revisor audita, portão com carimbo, `revisor-geral`, `/revisar-spec`, `/corrigir` e `/retro` (revista pela D77 só no MVP) |
+| D53 | Processo enxugado onde repetia trabalho: `test-engineer` primeiro, caducidade pelo que o revisor audita, portão com carimbo, `revisor-geral`, `/revisar-spec`, `/corrigir` e `/retro` (revista pela D77 só no MVP; revista pela D78) |
 | D54 | O nome do produto é Turmma; o código continua `educa` até uma renomeação própria |
 | D55 | Em discursiva e redação a IA não corrige, não avalia, não dá nota nem conceito, e não pré-corrige nem sugere nota ao professor (revisão da D46) |
 | D56 | Na objetiva, a validação humana é registrada: o que foi mostrado, o que foi aberto e quem confirmou (complementa a D33) |
@@ -136,6 +136,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D75 | O material da escola entra pela coordenação, com titularidade e licença declaradas; professor e aluno não sobem material para a base |
 | D76 | A equipe Turmma tem um painel de operação (A0 e A0b): cria rede e escola, convida a coordenação e acompanha uso e custo por escola, sem ver dado de pessoa |
 | D77 | O MVP de apresentação (A2 a A5) é uma fatia só, com processo enxuto, enquanto o dado for sintético: contratos primeiro, commit `(mvp: <resumo>)` com portão local, esteira disparada à mão por fase, revisores com veto numa passada por fase e IA no processo da API como dívida declarada; as regras 10, 20, 30, 40 e 70 não mudam, e o processo completo volta antes da primeira escola real (revisa a D71, a D23 e a D53 só para esta fatia) |
+| D78 | O processo roda no Maestri: um andar e uma branch por spec, que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando (`/seguir`); papéis de terminal em `.claude/agents/` com modelo por papel (Opus orquestra, desenha e valida; Haiku ou Sonnet implementa, pelo porte; Sonnet conduz a revisão); a Mesa de revisão chama os revisores e traduz a reprovação em ordem de correção; seis paradas são do Joaquim (revisa a D23 e a D53) |
 
 > **D54 a D71 estão ratificadas.** Saíram em 19/09/2026 da leitura das fontes de regulação e
 > da estrutura de agentes por papel; o Gabriel ratificou as dele no mesmo dia, e o Joaquim
@@ -191,7 +192,12 @@ ficaram (D23). O commit direto no `main` caiu em 19/09/2026, com a terceira pess
 merge que o Joaquim gerencia, o Gabriel abre branch própria e integra na `develop`, e a esteira roda
 nas três (D23 revista). Em 15/09/2026 o processo foi enxugado onde repetia trabalho, sem tirar revisão:
 `test-engineer` primeiro, caducidade pelo que o revisor audita, portão local com carimbo,
-`revisor-geral` no lugar da autorrevisão, `/revisar-spec`, `/corrigir` e `/retro` (D53).
+`revisor-geral` no lugar da autorrevisão, `/revisar-spec`, `/corrigir` e `/retro` (D53). Em 08/10/2026
+o processo passou a rodar no Maestri (D78): cada spec num andar com a branch `spec/<funcionalidade>`,
+que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando, `/seguir`;
+e a Mesa de revisão chamando os revisores. O hook, os vetos e o portão local não mudaram. **Papel de
+agente vem de `.claude/agents/`, nunca de responsabilidade do Maestri:** com ela o agente nasce fora
+da raiz e nenhum hook dispara.
 
 **Nome dos agentes.** O desenho da call tinha nomes próprios; os docs usam função. Fica a
 função (D17).
@@ -253,7 +259,8 @@ primeiro é sobre o que o fluxo exige, o segundo sobre onde a tela funciona.
 
 ## Decisões em aberto
 
-Use `/descobrir <tema>` para fechar uma, e `/registrar-decisao` para escrevê-la.
+Para fechar uma, peça ao Orquestrador (`/seguir`): o Arquiteto conduz a descoberta com você e
+registra a decisão.
 
 Todas têm dono e momento. Nenhuma trava o F0.
 
@@ -343,13 +350,21 @@ a regra explicitamente.
 
 ## Skills
 
-**Do processo** (nossas, em `.claude/skills/`), na ordem em que entram: `/status`,
-`/descobrir`, `/registrar-decisao`, `/criar-prd`, `/criar-techspec`, `/revisar-spec`,
-`/criar-tasks`, `/executar-tasks`, `/executar-task`, `/executar-review`, `/corrigir`, `/validar`,
-`/retro`.
+**Do processo** (nossas, em `.claude/skills/`): o comando é um só, **`/seguir`** (D78). O
+Orquestrador lê a fase em `tools/processo/estado.ts`, monta o time no Maestri e conduz até a próxima
+decisão que é do Joaquim. As outras são procedimento interno dos agentes, na ordem em que entram:
+`status`, `descobrir`, `registrar-decisao`, `criar-prd`, `criar-techspec`, `revisar-spec`,
+`criar-tasks`, `executar-task`, `revisar-tarefa`, `corrigir`, `validar`, `retro`. Como os agentes
+conversam está em `.claude/skills/seguir/protocolo.md`.
 
-**Revisores** (em `.claude/agents/`): em toda tarefa, `test-engineer` primeiro e depois
-`revisor-geral` com os guardiões marcados, em paralelo. O hook `tools/processo/revisoes.ts`
+**O time** é fixo, no térreo do Maestri: o Orquestrador (o terminal Maestro, em Opus) e quatro
+papéis de `.claude/agents/`, iniciados com `claude --agent <papel>`: `arquiteto` (Opus),
+`implementador` (Haiku nas tarefas pequenas, Sonnet nas grandes), `mesa-de-revisao` (Sonnet) e
+`validador` (Opus). Os terminais ficam; a sessão de cada um é reiniciada a cada tarefa ou fase, já
+apontada para o checkout do andar.
+
+**Revisores** (em `.claude/agents/`, subagentes chamados pela Mesa de revisão): em toda tarefa,
+`test-engineer` primeiro e depois `revisor-geral` com os guardiões marcados, em paralelo. O hook `tools/processo/revisoes.ts`
 registra as rodadas, guarda o que foi exigido em `achados/<documento>.md` com resumo de uma linha
 em `achados/indice.md` (leia o índice, abra o bloco), e bloqueia o commit sem
 revisão válida, sem portão local carimbado (`node tools/processo/portao-local.ts`), ou que leve

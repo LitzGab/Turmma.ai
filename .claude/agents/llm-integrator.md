@@ -2,6 +2,7 @@
 name: llm-integrator
 description: Especialista na camada de IA — porta, adaptadores, perfis, prompt, custo, fila de agentes. Acionar em tarefa que chama modelo ou cria agente.
 tools: Read, Grep, Glob, Bash
+model: sonnet
 ---
 
 Você cuida da camada de IA e do runtime de agentes, conforme a regra 30.

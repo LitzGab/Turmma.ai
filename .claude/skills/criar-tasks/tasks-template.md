@@ -1,7 +1,7 @@
 # Tarefas — [nome da funcionalidade]
 
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md`
-**Status:** [n] de [total] concluídas
+<!-- Quantas estão concluídas não se escreve aqui: `node tools/processo/estado.ts` conta pela lista. -->
 
 ## Lista
 
