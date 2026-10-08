@@ -1,5 +1,5 @@
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, utimesSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -8,6 +8,7 @@ import {
   alteracaoQueCaduca,
   alteracoesDeCodigo,
   arquivosAlterados,
+  arvoreDoCommit,
   arquivosDoCommit,
   avaliarCarimbo,
   avaliarCommitDoMvp,
@@ -1144,5 +1145,55 @@ describe('achados separados por documento, com índice', () => {
     expect(Math.max(...celulas.map((celula) => celula.length))).toBeLessThanOrEqual(161)
     // E o índice não perde rodada: uma linha para cada uma das 100.
     expect(linhasDoIndice(indice)).toHaveLength(100)
+  })
+})
+
+describe('a árvore em que o commit acontece', () => {
+  /** Um repositório com um andar: outra árvore de trabalho do mesmo repositório, em branch própria, com código sem commit. */
+  function terreoEAndar() {
+    const terreo = mkdtempSync(join(tmpdir(), 'terreo-'))
+    const git = (cwd: string, ...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd, stdio: 'pipe' })
+    git(terreo, 'init', '-q', '-b', 'develop')
+    writeFileSync(join(terreo, 'LEIAME.md'), 'x\n')
+    git(terreo, 'add', '-A')
+    git(terreo, 'commit', '-q', '-m', 'início')
+    const andar = join(mkdtempSync(join(tmpdir(), 'andares-')), 'spec')
+    git(terreo, 'worktree', 'add', '-q', '-b', 'spec/exemplo', andar)
+    mkdirSync(join(andar, 'apps'), { recursive: true })
+    writeFileSync(join(andar, 'apps/codigo.ts'), 'export const a = 1\n')
+    return { terreo, andar }
+  }
+  const comando = (command: string) => ({ tool_input: { command } })
+
+  it('commit com -C é avaliado contra a árvore do andar, e não contra a da sessão, que está limpa', () => {
+    const { terreo, andar } = terreoEAndar()
+    expect(arvoreDoCommit(`git -C ${andar} commit -m "x"`, terreo)).toBe(andar)
+    const motivo = portao(comando(`git -C ${andar} add -A && git -C ${andar} commit -m "fecha a spec"`), terreo)
+    expect(motivo).toMatch(/Commit bloqueado: ele leva código \(apps\/codigo\.ts\)/)
+    // O mesmo commit, só de documento, passa: é o fechamento que o Orquestrador faz no andar.
+    rmSync(join(andar, 'apps'), { recursive: true })
+    writeFileSync(join(andar, 'ROADMAP.md'), '# Roadmap\n')
+    expect(portao(comando(`git -C ${andar} add ROADMAP.md && git -C ${andar} commit -m "fecha a spec"`), terreo)).toBeNull()
+  })
+
+  it('vale também o cd dentro do comando, o cd de um comando anterior, e o caminho entre aspas', () => {
+    const { terreo, andar } = terreoEAndar()
+    expect(portao(comando(`cd ${andar} && git add -A && git commit -m "x"`), terreo)).toMatch(/leva código/)
+    expect(portao({ ...comando('git add -A && git commit -m "x"'), cwd: andar }, terreo)).toMatch(/leva código/)
+    expect(portao(comando(`git -C "${andar}" commit -am "x"`), terreo)).toMatch(/leva código/)
+    // O cd depois do commit não muda onde ele aconteceu.
+    expect(arvoreDoCommit(`git commit -m "x" && cd ${andar}`, terreo)).toBe(terreo)
+  })
+
+  it('subpasta da própria árvore, caminho que não existe e repositório alheio continuam na árvore da sessão', () => {
+    const { terreo, andar } = terreoEAndar()
+    expect(arvoreDoCommit('git -C apps commit -m "x"', andar)).toBe(andar)
+    expect(arvoreDoCommit('git -C /caminho/que/nao/existe commit -m "x"', terreo)).toBe(terreo)
+    const alheio = mkdtempSync(join(tmpdir(), 'alheio-'))
+    execFileSync('git', ['init', '-q'], { cwd: alheio })
+    mkdirSync(join(alheio, 'apps'))
+    writeFileSync(join(alheio, 'apps/outro.ts'), 'x\n')
+    expect(arvoreDoCommit(`git -C ${alheio} commit -m "x"`, terreo)).toBe(terreo)
+    expect(portao(comando(`git -C ${alheio} add -A && git -C ${alheio} commit -m "x"`), terreo)).toBeNull()
   })
 })

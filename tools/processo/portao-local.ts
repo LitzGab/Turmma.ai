@@ -5,6 +5,7 @@
 //
 //   node tools/processo/portao-local.ts [--e2e] [--infra]      roda e carimba
 //   node tools/processo/portao-local.ts conferir <documento>     diz se o carimbo vale para o código atual
+//   node tools/processo/portao-local.ts revisores <documento>    diz o que o commit ainda encontraria: quem falta, reprovou ou caducou
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -12,10 +13,12 @@ import {
   alteracoesDeCodigo,
   arquivosAlterados,
   avaliarCarimbo,
+  avaliarPortao,
   CHAVE_DO_PORTAO,
   carimbarSeNadaMudou,
   lerCarimbo,
   lerInstantaneos,
+  lerRevisoes,
   revisoresObrigatorios,
   suitesExigidas,
   tipoDoDocumento,
@@ -49,6 +52,28 @@ if (argumentos[0] === 'conferir') {
   const motivo = avaliarCarimbo(lerCarimbo(raiz), suitesExigidas(obrigatorios), alteracoesDeCodigo(raiz, arquivosAlterados(raiz)), lerInstantaneos(raiz)[CHAVE_DO_PORTAO])
   process.stdout.write(motivo ? `${motivo}\n` : `portão local válido para o código atual (${lerCarimbo(raiz)?.suites.join(', ')})\n`)
   process.exit(motivo ? 1 : 0)
+}
+
+if (argumentos[0] === 'revisores') {
+  const documento = argumentos[1]
+  if (!documento) {
+    process.stderr.write('uso: node tools/processo/portao-local.ts revisores <tasks/.../documento.md>\n')
+    process.exit(2)
+  }
+  // A mesma conta do hook do commit, sem o commit: é o que a Mesa de revisão lê para saber quem chamar, em vez de
+  // descobrir pela tentativa. A mensagem leva a linha `Revisões:` só para o portão não cobrá-la aqui.
+  const conteudo = readFileSync(join(raiz, documento), 'utf8')
+  const { bloqueios, linhaResumo } = avaliarPortao({
+    obrigatorios: revisoresObrigatorios(conteudo, tipoDoDocumento(documento)),
+    revisoes: lerRevisoes(conteudo),
+    alteracoes: alteracoesDeCodigo(raiz, arquivosAlterados(raiz)),
+    carimbo: lerCarimbo(raiz),
+    mensagemCommit: 'Revisões: conferência',
+    documento,
+    instantaneos: lerInstantaneos(raiz),
+  })
+  process.stdout.write(bloqueios.length > 0 ? `${bloqueios.map((bloqueio) => `- ${bloqueio}`).join('\n')}\n` : `nada pendente: ${linhaResumo}\n`)
+  process.exit(bloqueios.length > 0 ? 1 : 0)
 }
 
 const inicio = new Date().toISOString()

@@ -24,7 +24,8 @@ import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, statSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { basename, dirname, join } from 'node:path'
+import { homedir } from 'node:os'
+import { basename, dirname, join, resolve } from 'node:path'
 import type * as TS from 'typescript'
 
 export const REVISORES_COM_VETO = ['tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'infra-guardian', 'test-engineer', 'revisor-geral']
@@ -892,9 +893,48 @@ function arquivosPreparados(raiz: string): string[] {
   return execFileSync('git', ['diff', '--cached', '--name-only', '-z'], { cwd: raiz, encoding: 'utf8' }).split('\0').filter(Boolean)
 }
 
-export function portao(entrada: EntradaHook, raiz: string): string | null {
+const CAMINHO_NO_COMANDO = String.raw`("[^"]+"|'[^']+'|[^\s;&|()]+)`
+
+function pastaDoGit(pasta: string, argumento: string): string | null {
+  try {
+    const saida = execFileSync('git', ['rev-parse', '--path-format=absolute', argumento], { cwd: pasta, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+    return saida || null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * A árvore em que o commit vai acontecer, que nem sempre é a da sessão. O Orquestrador roda no térreo e fecha a spec
+ * no andar dela, com `git -C <andar> commit` (D78); um agente pode ter dado `cd` para outro checkout. Avaliar esses
+ * comandos contra a árvore da sessão deixaria passar código sem marca, sem revisor e sem carimbo: a sessão está limpa,
+ * e é só ela que o hook veria (revisão de coerência de 08/10/2026).
+ *
+ * Vale o último `cd` antes do commit e o `-C` do próprio `git commit`, a partir do diretório em que o comando roda. Só
+ * troca para outra árvore **do mesmo repositório**: commit em repositório alheio não é assunto deste portão.
+ */
+export function arvoreDoCommit(comando: string, raiz: string, cwd?: string): string {
+  const commit = new RegExp(String.raw`(?:^|[;&|(\n])\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*git((?:\s+-[Cc]\s+${CAMINHO_NO_COMANDO})*)\s+commit\b`).exec(comando)
+  if (!commit) return raiz
+  const expandir = (bruto: string) => semAspas(bruto).replace(/^~(?=\/|$)/, homedir())
+  let pasta = cwd && existsSync(cwd) ? cwd : raiz
+  for (const cd of comando.slice(0, commit.index + 1).matchAll(new RegExp(String.raw`(?:^|[;&|(\n])\s*cd\s+${CAMINHO_NO_COMANDO}`, 'g'))) {
+    pasta = resolve(pasta, expandir(cd[1] ?? ''))
+  }
+  for (const opcao of (commit[1] ?? '').matchAll(new RegExp(String.raw`-C\s+${CAMINHO_NO_COMANDO}`, 'g'))) {
+    pasta = resolve(pasta, expandir(opcao[1] ?? ''))
+  }
+  if (!existsSync(pasta)) return raiz
+  const arvore = pastaDoGit(pasta, '--show-toplevel')
+  if (!arvore || arvore === raiz) return raiz
+  const repositorio = pastaDoGit(raiz, '--git-common-dir')
+  return repositorio !== null && pastaDoGit(arvore, '--git-common-dir') === repositorio ? arvore : raiz
+}
+
+export function portao(entrada: EntradaHook, raizDaSessao: string): string | null {
   const comando = entrada.tool_input?.command ?? ''
   if (!ehCommit(comando)) return null
+  const raiz = arvoreDoCommit(comando, raizDaSessao, entrada.cwd)
   const arquivos = arquivosAlterados(raiz)
   const documento = documentoDoCommit(comando, raiz, arquivos)
   if (!documento) {
