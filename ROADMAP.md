@@ -294,7 +294,7 @@ grade e calendário importados, 35 alunos reivindicando nomes no mesmo minuto n�
 duplicidade nem erro cru, e o Assistente tem de onde abrir o dia do professor ("seu dia e sua
 semana", D32 revista).
 
-## F3 — `lgpd-e-titular` [ ]
+## F3 — `lgpd-e-titular` [~]
 **Depende de:** F1 · **pode correr em paralelo com F4 e F5**
 
 Auditoria, tabela de retenção por escola, rotina de expurgo, exportação e eliminação por

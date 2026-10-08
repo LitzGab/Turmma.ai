@@ -1,14 +1,47 @@
-# Estado da execução — LGPD e titular (F3)
+# Estado da execução — lgpd-e-titular
+
+## Agora
+- **Tarefa atual:** 5.0, iniciada em 08/10/2026 20:20, com o Implementador em Sonnet (porte grande, inferido dos guardiões)
+- **Espero:** relatório do Implementador
+- **Base:** `spec/lgpd-e-titular` em `a45754b` (a `develop` de 08/10/2026, esteira 37854552340 verde)
+
+## Concluídas
+| Tarefa | Commit | Modelo | Rodadas | Observação |
+|---|---|---|---|---|
+| 1.0 | `37df73d` | subagente do processo anterior | 7 | 1 reprovação registrada; detalhes em "Antes da D78" |
+| 2.0 | `96f6e82` | subagente do processo anterior | 9 | 1 reprovação registrada; retomada por subagente novo |
+| 3.0 | `d581da6` | subagente do processo anterior | 16 | 2 reprovações registradas; esteira vermelha por `npm audit`, fechada pela correção `ee0215d` |
+| 4.0 | `551a620` | subagente do processo anterior | 16 | 2 reprovações registradas; esteira 37486186937 verde na `develop` |
+
+## Esperando o Joaquim
+
+Nada.
+
+## O que falhou
+
+Nada no processo atual.
+
+## O que decidi sem perguntar
+
+- **Abertura do andar (08/10/2026):** a F3 começou na `develop`, antes da D78, com as tarefas 1.0 a 4.0
+  já lá. O andar `F3 lgpd-e-titular` nasce da `develop` em `a45754b` e a spec segue na branch
+  `spec/lgpd-e-titular` a partir da 5.0.
+- **Porte da 5.0:** o documento não tem a linha `**Porte:**`; vale o inferido pelo `estado.ts`
+  (grande, pelos guardiões), e por isso o Implementador começa no Sonnet.
+
+## Antes da D78
+
+Histórico da execução no processo anterior. Nada aqui autoriza nem suspende parada do processo atual.
 
 Escrito pelo orquestrador a cada tarefa e commitado junto dela. Serve para retomar numa conversa
 nova sem reler o histórico.
 
-## Agora
+### Agora
 
 - **Tarefa atual:** 4.0, iniciada em 06/10/2026
 - **Base:** `develop` em `ee0215d` (correção do `npm audit`), esteira 37455244514 verde
 
-## Concluídas
+### Concluídas
 
 | Tarefa | Commit | Esteira | Observação |
 |---|---|---|---|
@@ -17,7 +50,7 @@ nova sem reler o histórico.
 | 3.0 | `d581da6` | 37421284203 (vermelha: `npm audit`, não teste) | interrompida pelo PC desligado e retomada; revisor-geral reprovou 1 vez (alerta não disparava com falha desde a 1ª noite) e test-engineer 1 vez (faltava o teste desse caso); seis divergências registradas |
 | correção `2026-10-06-audit-proxy-addr-e-multer` | `ee0215d` | 37455244514 | fecha a esteira vermelha da 3.0; `@nestjs/platform-express` 12.1.2, `proxy-addr` 2.0.8, `multer` 2.4.0; test-engineer só aprovou na 3ª rodada, revisor-geral na 2ª |
 
-## O que falhou
+### O que falhou
 
 - **Esteira da 3.0 (37421284203), job `verificar`, passo `npm audit`:** todos os testes passaram (integração,
   infra, e2e 1 a 4). Caiu por avisos de segurança publicados depois da esteira verde da 2.0 (00:37 UTC de
@@ -33,7 +66,7 @@ nova sem reler o histórico.
   `tasks/correcoes/achados/indice.md`; por isso a tabela e a linha `Revisões:` do commit numeram diferente.
   Fica para o `/retro`.
 
-## O que decidi sem perguntar
+### O que decidi sem perguntar
 
 - **Correção do `npm audit` com 3ª rodada do `test-engineer` (06/10):** ele reprovou duas vezes seguidas
   (1ª: o override sozinho do `multer` 2.4.0 quebrava o 400 do campo errado, que virava 500, e faltavam os
@@ -67,7 +100,7 @@ nova sem reler o histórico.
   subagente, e o subagente o inclui no stage. Assim cada commit leva o estado com que a tarefa
   começou, e nenhum commit só de documento gera uma esteira a mais entre duas tarefas.
 
-## Sessões do Claude abertas nesta pasta no início (05/10/2026, 15:40)
+### Sessões do Claude abertas nesta pasta no início (05/10/2026, 15:40)
 
 PIDs 567867 (desde 05/10 07:17) e 897268 (desde 01/10), além desta (3666631). Nenhuma estava
 editando: a última entrada de cada transcrição era uma resposta encerrada. Não foram encerradas.
