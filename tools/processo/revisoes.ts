@@ -574,7 +574,7 @@ export function avaliarPortao(entrada: {
   for (const revisor of entrada.obrigatorios) {
     const ultima = entrada.revisoes.filter((revisao) => revisao.revisor === revisor).at(-1)
     if (!ultima) {
-      bloqueios.push(`${revisor}: nenhuma rodada registrada. Chame o revisor com a linha "Tarefa: <caminho do documento>" no início do prompt.`)
+      bloqueios.push(`${revisor}: nenhuma rodada registrada. Peça a rodada à Mesa de revisão; o prompt do revisor começa com a linha "Tarefa: <caminho do documento>".`)
       continue
     }
     resumo.push(`${revisor} ${ultima.veredito} (${ordinal(ultima.rodada)})`)
@@ -796,7 +796,7 @@ export function gravarCarimbo(raiz: string, carimbo: Carimbo): void {
 // `git commit` em posição de comando: início, ou depois de ; & | ( ou quebra de linha. Texto
 // dentro de string (echo, grep no log) não é commit.
 export function ehCommit(comando: string): boolean {
-  return /(?:^|[;&|(\n])\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*git(?:\s+-[Cc]\s+\S+)*\s+commit\b/.test(comando)
+  return GIT_COMMIT.test(comando)
 }
 
 const semAspas = (token: string) => token.replace(/^["']|["']$/g, '')
@@ -873,7 +873,7 @@ export function avaliarCommitDoMvp(entrada: {
   if (!entrada.branch.startsWith(PREFIXO_DAS_BRANCHES_DO_MVP)) {
     return (
       `Commit bloqueado: o marcador "(mvp: …)" só vale em branch ${PREFIXO_DAS_BRANCHES_DO_MVP}… (D77), e esta é ${entrada.branch || 'um HEAD solto'}. ` +
-      'Fora da fatia do MVP, código entra por /executar-task ou por /corrigir, que passam pelos revisores.'
+      'Fora da fatia do MVP, código entra por tarefa ou por correção, que passam pelos revisores.'
     )
   }
   const carimbo = avaliarCarimbo(entrada.carimbo, SUITES_DO_MVP, entrada.alteracoes, entrada.instantaneo)
@@ -893,7 +893,86 @@ function arquivosPreparados(raiz: string): string[] {
   return execFileSync('git', ['diff', '--cached', '--name-only', '-z'], { cwd: raiz, encoding: 'utf8' }).split('\0').filter(Boolean)
 }
 
-const CAMINHO_NO_COMANDO = String.raw`("[^"]+"|'[^']+'|[^\s;&|()]+)`
+const CAMINHO = String.raw`(?:"[^"]+"|'[^']+'|[^\s;&|()]+)`
+const ATRIBUICOES = String.raw`(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*`
+/** `git commit` em posição de comando, com as opções `-C`/`-c` que vêm antes dele no grupo 1. */
+const GIT_COMMIT = new RegExp(String.raw`(?:^|[;&|(\n])\s*${ATRIBUICOES}git((?:\s+-[Cc]\s+${CAMINHO})*)\s+commit\b`)
+
+/** O git que pode vir antes do commit no mesmo comando: o que prepara (inclusive a deleção, com `rm`) ou só lê, e não traz conteúdo novo para a árvore. */
+const GIT_QUE_SO_PREPARA = ['add', 'rm', 'status', 'diff', 'log', 'show', 'rev-parse', 'fetch', 'branch']
+
+/** Os comandos do shell que vêm antes do `git commit`, um por trecho, e as opções do próprio commit. */
+function trechosAntesDoCommit(comando: string): { trechos: string[]; opcoes: string } | null {
+  const commit = GIT_COMMIT.exec(comando)
+  if (!commit) return null
+  const trechos = comando
+    .slice(0, commit.index)
+    .replace(/[;&|(\s]+$/, '')
+    .split(/&&|\|\||;|\n/)
+    .map((trecho) => trecho.trim().replace(/^\(+\s*/, ''))
+    .filter((trecho) => trecho !== '' && !trecho.startsWith('#'))
+  return { trechos, opcoes: commit[1] ?? '' }
+}
+
+/**
+ * O trecho do comando que faz outra coisa antes do `git commit`, ou `null` quando ele só muda de pasta, guarda um
+ * caminho numa variável e prepara.
+ *
+ * O hook roda ANTES do comando: lê a árvore como ela está, e é contra ela que confere a marca, as rodadas e o
+ * carimbo. Arquivo criado ou alterado no mesmo comando do commit entra no commit sem ter sido visto. Na prova de
+ * 08/10/2026, `echo … > apps/x && git add apps/x && git commit` levou código para a branch sem marca nenhuma, e o
+ * mesmo vale para o commit marcado: o que o comando altera depois da última rodada não caduca ninguém. Por isso o
+ * comando do commit não faz mais nada antes dele.
+ */
+export function antesDoCommit(comando: string): string | null {
+  const antes = trechosAntesDoCommit(comando)
+  if (!antes) return null
+  const atribuicao = /^[A-Za-z_][A-Za-z0-9_]*=(?:"[^"$`]*"|'[^']*'|[^\s`$()<>|"']*)$/
+  const cd = new RegExp(`^cd\\s+${CAMINHO}$`)
+  // No resto do comando do git, `$VAR` passa e `$(…)` não: substituição de comando roda qualquer coisa.
+  const git = new RegExp(String.raw`^${ATRIBUICOES}git(?:\s+--no-pager)?(?:\s+-[Cc]\s+${CAMINHO})*\s+([a-z-]+)\b(?:[^<>|$\x60]|\$(?!\())*$`)
+  for (const trecho of antes.trechos) {
+    if (atribuicao.test(trecho) || cd.test(trecho)) continue
+    const subcomando = git.exec(trecho)?.[1]
+    if (subcomando && GIT_QUE_SO_PREPARA.includes(subcomando)) continue
+    return trecho.length > 90 ? `${trecho.slice(0, 87)}…` : trecho
+  }
+  return null
+}
+
+/** O caminho como o shell o entregaria: sem aspas, com `~` e as variáveis atribuídas no próprio comando. `null` quando depende de algo que o hook não sabe. */
+function expandirCaminho(bruto: string, variaveis: Map<string, string>): string | null {
+  const texto = semAspas(bruto)
+    .replace(/^~(?=\/|$)/, homedir())
+    .replace(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g, (tudo, nome: string) => variaveis.get(nome) ?? tudo)
+  return /[$`]/.test(texto) ? null : texto
+}
+
+/**
+ * A pasta em que o `git commit` roda: o diretório do comando, mais cada `cd` antes dele, mais o `-C` do próprio commit.
+ * `indeterminado` quando um desses caminhos depende de variável que o comando não atribui: aí o hook não sabe em que
+ * árvore o commit acontece, e avaliar a da sessão seria o furo que `arvoreDoCommit` fecha.
+ */
+export function pastaDoCommit(comando: string, raiz: string, cwd?: string): { pasta: string } | { indeterminado: string } | null {
+  const antes = trechosAntesDoCommit(comando)
+  if (!antes) return null
+  const variaveis = new Map<string, string>()
+  let pasta = cwd && existsSync(cwd) ? cwd : raiz
+  const caminhos: string[] = []
+  for (const trecho of antes.trechos) {
+    const atribuicao = /^([A-Za-z_][A-Za-z0-9_]*)=(\S*)$/.exec(trecho)
+    if (atribuicao?.[1]) variaveis.set(atribuicao[1], semAspas(atribuicao[2] ?? ''))
+    const cd = new RegExp(`^cd\\s+(${CAMINHO})$`).exec(trecho)
+    if (cd?.[1]) caminhos.push(cd[1])
+  }
+  for (const opcao of antes.opcoes.matchAll(new RegExp(String.raw`-C\s+(${CAMINHO})`, 'g'))) caminhos.push(opcao[1] ?? '')
+  for (const bruto of caminhos) {
+    const caminho = expandirCaminho(bruto, variaveis)
+    if (caminho === null) return { indeterminado: bruto }
+    pasta = resolve(pasta, caminho)
+  }
+  return { pasta }
+}
 
 function pastaDoGit(pasta: string, argumento: string): string | null {
   try {
@@ -910,22 +989,12 @@ function pastaDoGit(pasta: string, argumento: string): string | null {
  * comandos contra a árvore da sessão deixaria passar código sem marca, sem revisor e sem carimbo: a sessão está limpa,
  * e é só ela que o hook veria (revisão de coerência de 08/10/2026).
  *
- * Vale o último `cd` antes do commit e o `-C` do próprio `git commit`, a partir do diretório em que o comando roda. Só
- * troca para outra árvore **do mesmo repositório**: commit em repositório alheio não é assunto deste portão.
+ * Só troca para outra árvore **do mesmo repositório**: commit em repositório alheio não é assunto deste portão.
  */
 export function arvoreDoCommit(comando: string, raiz: string, cwd?: string): string {
-  const commit = new RegExp(String.raw`(?:^|[;&|(\n])\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*git((?:\s+-[Cc]\s+${CAMINHO_NO_COMANDO})*)\s+commit\b`).exec(comando)
-  if (!commit) return raiz
-  const expandir = (bruto: string) => semAspas(bruto).replace(/^~(?=\/|$)/, homedir())
-  let pasta = cwd && existsSync(cwd) ? cwd : raiz
-  for (const cd of comando.slice(0, commit.index + 1).matchAll(new RegExp(String.raw`(?:^|[;&|(\n])\s*cd\s+${CAMINHO_NO_COMANDO}`, 'g'))) {
-    pasta = resolve(pasta, expandir(cd[1] ?? ''))
-  }
-  for (const opcao of (commit[1] ?? '').matchAll(new RegExp(String.raw`-C\s+${CAMINHO_NO_COMANDO}`, 'g'))) {
-    pasta = resolve(pasta, expandir(opcao[1] ?? ''))
-  }
-  if (!existsSync(pasta)) return raiz
-  const arvore = pastaDoGit(pasta, '--show-toplevel')
+  const onde = pastaDoCommit(comando, raiz, cwd)
+  if (!onde || 'indeterminado' in onde || !existsSync(onde.pasta)) return raiz
+  const arvore = pastaDoGit(onde.pasta, '--show-toplevel')
   if (!arvore || arvore === raiz) return raiz
   const repositorio = pastaDoGit(raiz, '--git-common-dir')
   return repositorio !== null && pastaDoGit(arvore, '--git-common-dir') === repositorio ? arvore : raiz
@@ -934,6 +1003,22 @@ export function arvoreDoCommit(comando: string, raiz: string, cwd?: string): str
 export function portao(entrada: EntradaHook, raizDaSessao: string): string | null {
   const comando = entrada.tool_input?.command ?? ''
   if (!ehCommit(comando)) return null
+  const estranho = antesDoCommit(comando)
+  if (estranho !== null) {
+    return (
+      `Commit bloqueado: o comando faz outra coisa antes do \`git commit\` (${estranho}). O hook confere a árvore antes de o comando rodar, e o que ` +
+      'este comando criar ou alterar entraria no commit sem ter sido conferido. Faça as alterações num comando, e o `git add` com o `git commit` em ' +
+      'outro. Se o `git commit` está só dentro de um texto (uma mensagem para outro agente, o conteúdo de um arquivo), grave o texto num arquivo em ' +
+      'vez de escrevê-lo no comando.'
+    )
+  }
+  const onde = pastaDoCommit(comando, raizDaSessao, entrada.cwd)
+  if (onde && 'indeterminado' in onde) {
+    return (
+      `Commit bloqueado: o hook não sabe em que árvore este commit acontece, porque o caminho ${onde.indeterminado} depende de uma variável que o ` +
+      'comando não define. Escreva o caminho por extenso, ou atribua a variável no próprio comando (`F=/caminho; git -C "$F" commit …`).'
+    )
+  }
   const raiz = arvoreDoCommit(comando, raizDaSessao, entrada.cwd)
   const arquivos = arquivosAlterados(raiz)
   const documento = documentoDoCommit(comando, raiz, arquivos)
@@ -952,7 +1037,7 @@ export function portao(entrada: EntradaHook, raizDaSessao: string): string | nul
     }
     return (
       `Commit bloqueado: ele leva código (${codigo.slice(0, 3).join(', ')}${codigo.length > 3 ? ', …' : ''}) sem "(tarefa N.0)" nem "(correção <slug>)". ` +
-      'Código entra por /executar-task ou por /corrigir, que passam pelos revisores. ' +
+      'Código entra por tarefa ou por correção, que passam pelos revisores (o Orquestrador conduz, com /seguir). ' +
       `Na fatia do MVP de apresentação (D77), em branch ${PREFIXO_DAS_BRANCHES_DO_MVP}…, o marcador é "(mvp: <resumo>)", com o portão local carimbado.`
     )
   }

@@ -1,6 +1,7 @@
-# Esteira da Turmma. Enquanto não há staging (D31), ela é o portão de todo commit nas branches
-# integradoras. O trabalho acontece na `develop` (D23 revista); `release` e `main` recebem por
-# merge, e o Joaquim gerencia esse caminho.
+# Esteira da Turmma. Enquanto não há staging (D31), ela é o portão das branches integradoras. Cada
+# spec roda na branch dela e entra na `develop` por pouso (D78): a esteira é disparada à mão na
+# branch, antes do pouso (`gh workflow run esteira --ref spec/<funcionalidade>`), e roda sozinha no
+# push da `develop`; `release` e `main` recebem por merge, e o Joaquim gerencia esse caminho.
 # Toda lógica mora em `npm run ci:*` (tools/ci): o YAML só prepara o Node e chama o script.
 # Sem segredo do repositório: nada aqui depende de credencial além do token do próprio GitHub.
 name: esteira
@@ -8,7 +9,8 @@ name: esteira
 on:
   push:
     branches: [develop, release, main]
-  # Execução manual, usada para reexecutar um commit sem precisar de outro push.
+  # Execução manual: para rodar a esteira na branch de uma spec antes do pouso (D78), e para reexecutar
+  # um commit sem precisar de outro push.
   workflow_dispatch:
 
 permissions:

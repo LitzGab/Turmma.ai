@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   acrescentarRevisao,
+  antesDoCommit,
   alteracaoQueCaduca,
   alteracoesDeCodigo,
   arquivosAlterados,
@@ -1195,5 +1196,31 @@ describe('a árvore em que o commit acontece', () => {
     writeFileSync(join(alheio, 'apps/outro.ts'), 'x\n')
     expect(arvoreDoCommit(`git -C ${alheio} commit -m "x"`, terreo)).toBe(terreo)
     expect(portao(comando(`git -C ${alheio} add -A && git -C ${alheio} commit -m "x"`), terreo)).toBeNull()
+  })
+
+  it('o comando do commit não faz mais nada antes dele: o que ele criasse entraria sem o hook ter visto', () => {
+    const { terreo, andar } = terreoEAndar()
+    // O caso da prova de 08/10/2026: o arquivo nasce no mesmo comando, e o hook lia a árvore sem ele.
+    expect(portao(comando('echo prova > apps/novo.ts && git add apps/novo.ts && git commit -m "prova"'), terreo)).toMatch(/faz outra coisa antes do `git commit` \(echo prova > apps\/novo\.ts\)/)
+    expect(portao(comando('cat > apps/novo.ts <<EOF\nexport const a = 1\nEOF\ngit add -A && git commit -m "x (tarefa 9.0)"'), terreo)).toMatch(/faz outra coisa antes/)
+    expect(portao(comando('npm run lint -- --fix && git commit -am "x"'), terreo)).toMatch(/faz outra coisa antes do `git commit` \(npm run lint -- --fix\)/)
+    expect(portao(comando('git checkout outra -- apps && git commit -am "x"'), terreo)).toMatch(/faz outra coisa antes/)
+    expect(portao(comando('git add $(touch apps/z.ts; echo apps/z.ts) && git commit -m "x"'), terreo)).toMatch(/faz outra coisa antes/)
+    expect(portao(comando('git status --short | tee apps/saida.txt && git commit -am "x"'), terreo)).toMatch(/faz outra coisa antes/)
+    // Mudar de pasta, guardar um caminho, olhar e preparar não é "outra coisa", e o que vem depois do commit não conta.
+    writeFileSync(join(terreo, 'docs.md'), 'x\n')
+    expect(antesDoCommit('# fecha a spec\ngit status --short && git --no-pager diff --stat; git add docs.md && git commit -m "x"')).toBeNull()
+    expect(portao(comando('git status --short && git add docs.md && git commit -m "x" && echo ok > apps/depois.txt'), terreo)).toBeNull()
+    expect(portao(comando(`(cd ${andar} && git add -A && git commit -m "x")`), terreo)).toMatch(/leva código/)
+    expect(antesDoCommit('git log --oneline -3')).toBeNull()
+  })
+
+  it('caminho em variável: vale a atribuída no próprio comando, e a que o hook não conhece bloqueia', () => {
+    const { terreo, andar } = terreoEAndar()
+    expect(portao(comando(`F=${andar}; git -C "$F" add -A && git -C "$F" commit -m "x"`), terreo)).toMatch(/leva código \(apps\/codigo\.ts\)/)
+    expect(portao(comando(`F="${andar}"\ncd "\${F}" && git add -A && git commit -m "x"`), terreo)).toMatch(/leva código/)
+    expect(portao(comando('git -C "$ANDAR" commit -am "x"'), terreo)).toMatch(/não sabe em que árvore este commit acontece, porque o caminho "\$ANDAR"/)
+    expect(portao(comando('cd $(pwd)/../outro && git commit -am "x"'), terreo)).toMatch(/faz outra coisa antes/)
+    expect(portao(comando('F=$(mktemp -d); git -C "$F" commit -am "x"'), terreo)).toMatch(/faz outra coisa antes/)
   })
 })
