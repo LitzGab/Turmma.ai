@@ -2,6 +2,7 @@
 
 **Funcionalidade:** lgpd-e-titular · **Depende de:** 2.0 · **Paralelo com:** 3.0 a 7.0, 9.0
 **Subagentes obrigatórios:** `tenancy-guardian`, `privacy-guardian`, `frontend-reviewer`
+**Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
@@ -49,6 +50,15 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 | arquitetura | unidade | caminho fora da lista falha; o repositório da escola não escreve |
 | concorrência | integração [P] | dois cadastros da mesma chave: o único deixa um |
 | estados | e2e | quatro estados, `chromebook` e `celular`, acessibilidade |
+
+## Como testar
+
+- **comando, passado, isolamento:** molde de `apps/api/test/retencao.int.test.ts` (`rodar`, `bancada.escolaComSessao('coordenador')`, `chamar`), com `› isolamento: o ajuste em A não muda o GET de B`. Auditoria: `apps/api/test/ops-operador.int.test.ts › C4`. Ponha o comando na lista de `› C2`: a 2.0 reprovou por faltar.
+- **concorrência:** `retencao.int.test.ts › concorrência: dois ajustes da mesma escola…` (`GatilhoDeParada` no `insert` de `suboperador`, `esperarNaTrava`), nunca `Promise.all` solto.
+- **arquitetura:** `apps/api/test/arquitetura.test.ts › só o OperadorRepository e o expurgo tocam as seis tabelas` e `› reprova o repository que importa outra tabela…`.
+- **e2e:** `e2e/privacidade.spec.ts › os estados: carregando, erro…` (`portao`, `page.route`, `criarEquipeComSenha`, `violacoesGraves`); semeie como `ajustarRetencaoDaEscola` (`e2e/__fixtures__/sessao.ts`).
+- Armadilha: `suboperador` é global e o banco acumula. Chave aleatória por teste; afirme só sobre as chaves criadas. Um `todas` alheio aparece em toda escola: o vazio não sai do banco (sem precedente; `rota.fulfill`).
+- Rodar: `npx vitest run --project integracao <arquivo>`; `node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`.
 
 ## Critério de conclusão
 

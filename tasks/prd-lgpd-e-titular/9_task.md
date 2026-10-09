@@ -2,6 +2,7 @@
 
 **Funcionalidade:** lgpd-e-titular · **Depende de:** 2.0 · **Paralelo com:** 3.0 a 8.0
 **Subagentes obrigatórios:** `tenancy-guardian`, `privacy-guardian`, `infra-guardian`
+**Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
@@ -50,6 +51,16 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 | expurgo | integração | 5 anos e um dia sai, com as ligações |
 | alerta | infra [F] | 23 h não dispara, 25 h dispara |
 | arquitetura | unidade | parte `incidente` |
+
+## Como testar
+
+- **registro, isolamento, confirmação:** molde de `apps/api/test/retencao.int.test.ts` (`rodar`, `bancada.escolaComSessao('coordenador')`, `chamar`). Igual a inexistente: `apps/api/src/ia/ia.int.test.ts › de outra pessoa, de outra escola, inexistente…`. Ponha o comando em `apps/api/test/ops-operador.int.test.ts › C2`: a 2.0 reprovou por faltar.
+- **concorrência:** `retencao.int.test.ts › concorrência: dois ajustes da mesma escola…`, com `GatilhoDeParada` no `update` de `incidente_escola` e `esperarNaTrava`.
+- **expurgo:** `apps/worker/test/expurgo-de-acesso.int.test.ts › borda: nos limites de cada prazo…`. O alvo novo quebra `› alvo sem total` e `› log: cada contagem…`: atualize os dois.
+- **alerta:** `infra/test/alerta-do-expurgo.int.test.ts › duas noites parciais disparam…` (linha gravada antes do `composeAssincronoOuFalha`; `alertaCom`, `expect.poll`); a regra entra em `REGRAS_PROVISIONADAS` (`infra/scripts/ensaio-alertas.ts`).
+- **arquitetura:** `apps/api/test/arquitetura.test.ts › o expurgo toca da operação só o acesso, a sessão e o convite`.
+- Comando que lê arquivo: sem precedente; o mais próximo é `ops-operador.int.test.ts › C8`.
+- Rodar: `npx vitest run --project integracao <arquivo>`; `--project infra` no alerta.
 
 ## Critério de conclusão
 

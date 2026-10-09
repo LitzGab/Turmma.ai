@@ -2,6 +2,7 @@
 
 **Funcionalidade:** lgpd-e-titular · **Depende de:** nenhuma · **Paralelo com:** 1.0 a 6.0, 8.0 a 10.0
 **Subagentes obrigatórios:** `llm-integrator`, `infra-guardian`, `privacy-guardian`
+**Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
@@ -45,6 +46,15 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 | tipo | unidade | `@ts-expect-error` nos dois pares inválidos |
 | banco | integração | `provedor` sem envio externo recusado; formato antigo aceito |
 | gravação | integração | grava o `provedor`; a soma da governança não muda; nunca falha pela coluna |
+
+## Como testar
+
+- **configuração:** `packages/nucleo/src/config/config-ia.test.ts › openai_compat sem endereço…` (`erroDe`, `MOTIVO_*`). Armadilha: o `LLAMA` do arquivo é externo e sem id; `› em produção o adaptador falso é recusado` e `› por padrão a chamada conta como envio externo` passam a exigir `IA_PROVEDOR_ID`.
+- **provedor resolvido:** `packages/nucleo/src/ia/provedor.test.ts › assunto delicado não passa pelo orçamento` (regra fixa, zero tentativas, `AdaptadorRoteirizado`); externo: `adaptador-openai-compat.test.ts › fora da nossa rede…` (`subirServidorLlamaFalso`).
+- **tipo:** `apps/web/src/componentes/ia/assinatura.test.ts › não aceita agente e função juntos`.
+- **banco:** `packages/nucleo/src/db/schema/mvp/tabelas-do-mvp.int.test.ts › o consumo guarda como a chamada terminou` (`consumir`, `recusa`).
+- **gravação:** `apps/api/src/ia/ia.int.test.ts › grava na escola do registro…` (`consumoDe`); soma: `apps/api/src/governanca/governanca.int.test.ts › soma por função, no mês…`. "Nunca falha": sem precedente; o mais próximo é `ia.int.test.ts › nas funções do Tutor…`.
+- Rodar: `npx vitest run --project unidade <arquivo>`; `--project integracao` nos `.int.test.ts`.
 
 ## Critério de conclusão
 
