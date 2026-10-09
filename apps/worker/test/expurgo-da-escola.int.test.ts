@@ -887,7 +887,16 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
            from generate_series(1, 8000) as n`,
           [a.escolaId, idsDosAlunos, QUARTA_1H.toISOString()],
         )
-        for (const tabela of ['mensagem_tutor', 'sinal_tutor', 'mensagem_agente', 'execucao_agente', 'consumo_ia', 'artefato']) await cliente.query(`analyze ${tabela}`)
+        // As pessoas da escola: 2.000 ativas e 30 desativadas há mais de 12 meses. Sem elas, com a escola estimada em uma linha, o
+        // índice parcial `usuario_desativado_idx` e a chave única `(escola_id, conta_id, papel)` empatam no custo, e quem ganha é a
+        // estatística que o banco tinha de `usuario`: tabela nunca analisada ou com `reltuples` velho trocava o índice do lote.
+        // Com o volume e o `analyze`, ler as ativas pela chave única custa muito mais que ler só as 30 desativadas pelo parcial.
+        await cliente.query("insert into usuario (escola_id, papel, nome) select $1, 'aluno', 'Aluno ativo sintético ' || n from generate_series(1, 2000) as n", [a.escolaId])
+        await cliente.query(
+          "insert into usuario (escola_id, papel, nome, desativado_em) select $1, 'aluno', 'Aluno desativado sintético ' || n, $2::timestamptz - interval '13 months' - n * interval '1 day' from generate_series(1, 30) as n",
+          [a.escolaId, QUARTA_1H.toISOString()],
+        )
+        for (const tabela of ['usuario', 'mensagem_tutor', 'sinal_tutor', 'mensagem_agente', 'execucao_agente', 'consumo_ia', 'artefato']) await cliente.query(`analyze ${tabela}`)
         // Com a varredura sequencial proibida, o plano só usa o índice se ele servir à instrução.
         await cliente.query('set local enable_seqscan = off')
         const prazo: PrazoDoLote = { agora: QUARTA_1H, meses: 12, fuso: FUSO }
