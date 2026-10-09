@@ -1,0 +1,78 @@
+import { codigoDoPasso, escolaExiste, gravarVitrine, lerVitrine, montarVitrine, proximoPasso, resumo } from './escola.ts'
+
+// Os comandos da vitrine, a escola sintética do ambiente de teste que um agente abre para ver a tela (`./escola.ts`):
+//
+//   node tools/vitrine/vitrine.ts montar    monta a escola e escreve os logins em `.processo/vitrine.json`
+//   node tools/vitrine/vitrine.ts mostrar   repete os logins, ou avisa que o banco foi recriado
+//   node tools/vitrine/vitrine.ts codigo    o código do segundo fator da coordenação, para a entrada de agora
+//   node tools/vitrine/vitrine.ts foto <papel> <endereço>… [--clicar <seletor>]…
+//                                           entra como `coordenacao`, `professora` ou `aluno`, abre cada endereço e
+//                                           grava a foto da página inteira, no computador e no celular
+//
+// Precisa do ambiente de teste de pé, que é como o portão da tarefa com teste de tela o deixa
+// (`node tools/ci/e2e.ts --manter-ambiente`).
+
+const dizer = (texto: string): void => void process.stdout.write(`${texto}\n`)
+const avisar = (texto: string): void => void process.stderr.write(`${texto}\n`)
+
+const SEM_VITRINE = 'Não há vitrine montada neste checkout. Rode: node tools/vitrine/vitrine.ts montar'
+const RECRIADO = 'A escola da vitrine não existe mais: o banco de teste foi recriado. Rode: node tools/vitrine/vitrine.ts montar'
+
+async function principal(comando: string | undefined, argumentos: readonly string[]): Promise<number> {
+  if (comando === 'montar') {
+    const vitrine = await montarVitrine()
+    gravarVitrine(vitrine)
+    dizer(resumo(vitrine))
+    return 0
+  }
+  const vitrine = lerVitrine()
+  if (comando === 'mostrar') {
+    if (vitrine === null || !(await escolaExiste(vitrine.escola.id))) {
+      avisar(vitrine === null ? SEM_VITRINE : RECRIADO)
+      return 1
+    }
+    dizer(resumo(vitrine))
+    return 0
+  }
+  if (comando === 'codigo') {
+    if (vitrine === null) {
+      avisar(SEM_VITRINE)
+      return 1
+    }
+    if (vitrine.coordenacao.segredo === null) {
+      avisar('A coordenação da vitrine está sem segundo fator: a tela o configura no primeiro acesso.')
+      return 1
+    }
+    const { passo, esperarSegundos } = proximoPasso(Date.now(), vitrine.coordenacao.ultimoPasso)
+    // Grava antes de mostrar: o código mostrado é dado como usado, para o pedido seguinte nunca repetir o passo.
+    gravarVitrine({ ...vitrine, coordenacao: { ...vitrine.coordenacao, ultimoPasso: passo } })
+    if (esperarSegundos > 0) avisar(`Este código só vale daqui a ${String(esperarSegundos)} s: espere antes de digitar.`)
+    dizer(codigoDoPasso(vitrine.coordenacao.segredo, passo))
+    return 0
+  }
+  if (comando === 'foto') {
+    // O Playwright só carrega para quem pede foto: montar e mostrar não precisam do navegador.
+    const { ehPapel, fotografar, PAPEIS } = await import('./foto.ts')
+    const [papel, ...resto] = argumentos
+    const cliques = resto.flatMap((argumento, indice) => (resto[indice - 1] === '--clicar' ? [argumento] : []))
+    const caminhos = resto.filter((argumento, indice) => argumento !== '--clicar' && resto[indice - 1] !== '--clicar')
+    if (!ehPapel(papel) || caminhos.length === 0) {
+      avisar(`Uso: node tools/vitrine/vitrine.ts foto <${PAPEIS.join('|')}> <endereço>… [--clicar <seletor>]…`)
+      return 2
+    }
+    if (vitrine === null || !(await escolaExiste(vitrine.escola.id))) {
+      avisar(vitrine === null ? SEM_VITRINE : RECRIADO)
+      return 1
+    }
+    for (const foto of await fotografar(vitrine, papel, caminhos, cliques)) {
+      dizer(`${foto.arquivo}${foto.parouEm === new URL(foto.caminho, vitrine.url).pathname ? '' : `   (a página parou em ${foto.parouEm})`}`)
+    }
+    return 0
+  }
+  avisar('Uso: node tools/vitrine/vitrine.ts montar | mostrar | codigo | foto')
+  return 2
+}
+
+if (import.meta.filename === process.argv[1]) {
+  process.exitCode = await principal(process.argv[2], process.argv.slice(3))
+}

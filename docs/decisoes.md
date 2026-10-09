@@ -1014,3 +1014,12 @@ levar. Em vez de trocar de modelo, quem trava recebe mais contexto: o relatório
 segunda falha ou na segunda reprovação seguida, o diagnóstico do Arquiteto. Revisão: o Haiku volta às
 tarefas pequenas se a retrospectiva mostrar que, com o contexto de teste, ele não custa mais portões.
 
+Revista pela terceira vez em 09/10/2026, pelo Joaquim: **em tarefa com tela, quem implementa e quem
+revisa veem a tela, não só o código.** `tools/vitrine/` monta uma escola sintética no ambiente de teste,
+com um login de cada papel, e fotografa a página nos dois tamanhos de toda tela; o Implementador olha
+antes do portão, e o `frontend-reviewer`, na revisão. Não é seed do produto nem da demonstração (D71): a
+escola mora só no banco de teste e some quando o portão o recria. A foto sai do Chromium do Playwright,
+sem janela, porque a foto da página do canvas do Maestri só funciona com a janela dele visível, e o
+processo roda sem ninguém olhando; a página do canvas fica para navegar à mão. A falta da foto nunca
+bloqueia: sem ambiente de pé, a revisão segue pelo código. Motivo: a próxima spec é um refatoramento
+visual, e o e2e prova que a tela funciona, não que ela está bem resolvida.

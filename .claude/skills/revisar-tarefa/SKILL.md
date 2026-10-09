@@ -74,6 +74,18 @@ Entre os que o passo 1 mandou chamar:
 2. **Depois dele, todos os outros em paralelo, numa mensagem só, mesmo que ele tenha reprovado**:
    `revisor-geral`, os guardiões e, em tarefa com tela, o `frontend-reviewer`.
 
+**Em tarefa com tela, monte a vitrine antes do passo 2 da ordem**, com o `test-engineer` já de volta
+(ela usa o banco de teste, que durante o trabalho dele não é de mais ninguém):
+
+```bash
+node tools/vitrine/vitrine.ts mostrar || node tools/vitrine/vitrine.ts montar
+```
+
+É a escola sintética que o `frontend-reviewer` abre para fotografar as telas da tarefa
+(`tools/vitrine/`). Se o comando falhar (ambiente de teste fora do ar, tarefa de tela sem e2e
+alterado), não insista nem peça nada ao Implementador: o `frontend-reviewer` revisa pelo código, como
+sempre, e você diz no prompt dele que não há vitrine.
+
 Até 08/10/2026 a rodada acabava na reprovação do primeiro. Na 5.0 do F3 isso custou um ciclo inteiro:
 o `test-engineer` reprovou na 1ª rodada, e só na seguinte o `infra-guardian` reprovou outra coisa.
 Uma rodada de revisor leva de um a quatro minutos; o que custa é o ciclo de correção. O objetivo de
@@ -98,6 +110,9 @@ Diff desde a rodada anterior:
 
 A primeira linha é a que o hook usa para saber em qual documento registrar a rodada: escreva-a
 sempre, e não cite outro documento de tarefa no prompt.
+
+No prompt do `frontend-reviewer`, acrescente uma linha no fim: `Vitrine: montada` ou
+`Vitrine: indisponível (<o erro, em uma frase>)`.
 
 ## 4. Depois da rodada
 

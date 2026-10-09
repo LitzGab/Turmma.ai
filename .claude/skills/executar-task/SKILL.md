@@ -142,6 +142,25 @@ Mudou código da web ou da API depois de subir o ambiente do e2e: repita o coman
 `tools/ci/e2e.ts`, que reconstrói. Comando que passa de dois minutos roda em segundo plano
 (`run_in_background`), e você espera a notificação do fim; não use `sleep`.
 
+### Tarefa com tela: olhe a tela antes do portão
+
+Com o e2e da tarefa verde e o ambiente de pé, veja o que você fez. O teste prova que a tela funciona;
+só olhando se vê texto cortado, bloco desalinhado, estado vazio feio e tela de celular espremida.
+
+```bash
+node tools/vitrine/vitrine.ts mostrar || node tools/vitrine/vitrine.ts montar   # a escola sintética e os logins
+node tools/vitrine/vitrine.ts foto <coordenacao|professora|aluno> <endereço da tela>… [--clicar 'text=<aba ou botão>']
+```
+
+O endereço é o da área mais o da tela (`/coordenacao/…`, `/professor/…`, `/aluno/…`). O comando faz a
+entrada sozinho, abre cada endereço e grava a página inteira em `.processo/vitrine/`, no computador
+(1366 px) e no celular (360 px); página comprida sai em pedaços, e o que foi clicado entra no nome do
+arquivo. Leia cada arquivo com a
+ferramenta de leitura, como imagem, e corrija o que estiver errado antes do portão. A foto mostra o
+que o último `tools/ci/e2e.ts` construiu: mudou a web depois dele, reconstrua antes de fotografar. A
+vitrine usa o banco de teste: não fotografe com teste rodando. Se o ambiente não estiver de pé ou a
+foto falhar, siga sem ela e diga isso no relatório; não é motivo de `STATUS: FALHA`.
+
 **Duas tentativas seguidas no mesmo teste sem entender a causa: pare de tentar.** Leia o erro
 inteiro, um teste vizinho que já passa e o helper que ele usa (`e2e/__fixtures__/`,
 `apps/api/test/`). Se a terceira também falhar, não insista: envie o relatório do passo 7 com
