@@ -74,9 +74,19 @@ Depois dos RF, faça o mesmo, de forma mais curta, para:
 
 ## 4. Portão
 
-Rode, no código do escopo, com a árvore limpa. Antes, instale as dependências se o
-`node_modules` for anterior ao `package-lock.json`, e registre no relatório que precisou.
-Sem isso, um checkout desatualizado reprova o portão por TS2307 sem culpa do commit:
+O portão completo já rodou antes de você, a pedido do Orquestrador (D78, revista em 09/10/2026).
+Confira que ele vale para o código que você valida, em vez de rodar tudo de novo:
+
+```bash
+node tools/processo/portao-local.ts conferir --completo
+cat .processo/portao.json
+```
+
+Vale: registre no relatório o início e as suítes do carimbo, e não rode as suítes. **Não vale** (a
+resposta diz o que falta), ou o escopo é uma tarefa só: rode você, no código do escopo, com a árvore
+limpa. Antes, instale as dependências se o `node_modules` for anterior ao `package-lock.json`, e
+registre no relatório que precisou. Sem isso, um checkout desatualizado reprova o portão por TS2307
+sem culpa do commit:
 
 ```bash
 [ -f node_modules/.package-lock.json ] && [ ! package-lock.json -nt node_modules/.package-lock.json ] || npm ci

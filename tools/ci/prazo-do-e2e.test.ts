@@ -68,6 +68,10 @@ describe('prazo do e2e (tools/ci/prazo-do-e2e.ts)', () => {
     naMaquina.at(-1)?.aoTerminar?.(0, 30 * MINUTO)
     expect(escritos[1]).not.toContain('::warning')
     expect(() => etapasDoE2e(['--shard=5/4'], 45, true)).toThrow(/fatia do e2e inválida/)
+    // Com arquivos na linha de comando, o Playwright roda só eles: é o que o portão da tarefa usa. Opção não é arquivo.
+    const filtrado = etapasDoE2e(['--manter-ambiente', 'e2e/privacidade.spec.ts', 'e2e/areas.spec.ts'], 45, false)
+    expect(filtrado.at(-1)?.argumentos).toEqual(['playwright', 'test', 'e2e/privacidade.spec.ts', 'e2e/areas.spec.ts'])
+    expect(naMaquina.at(-1)?.argumentos).toEqual(['playwright', 'test'])
     // O build que o teto mede é o do e2e, com a galeria das peças; nenhuma outra etapa leva a variável.
     expect(etapas.filter((etapa) => etapa.ambiente !== undefined).map((etapa) => [etapa.nome, etapa.ambiente])).toEqual([['build da web', { VITE_COM_GALERIA: '1' }]])
   })

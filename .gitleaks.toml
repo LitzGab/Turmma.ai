@@ -4,6 +4,8 @@
 # segredo de verdade em qualquer arquivo, fixture de teste inclusive, reprova. Cada exceção é
 # um arquivo exato E a linha exata, com o motivo, e o teste de integração das guardas prova que
 # um segredo no mesmo arquivo, fora dessa linha, continua reprovando.
+# A única exceção por forma, e não por linha exata, é a do plano do Postgres, no fim: o texto que ela
+# aceita depois de `Key:` só pode ser nome de coluna.
 title = "Educa.ia"
 
 [extend]
@@ -29,3 +31,10 @@ condition = "AND"
 regexTarget = "line"
 paths = ['''^apps/api/test/convite\.int\.test\.ts$''', '''^tasks/correcoes/2026-09-18-gitleaks-le-senha-de-teste-do-convite\.md$''']
 regexes = ['''^\s*const \[emA, emB\] = await Promise\.all\(\[aceitar\(deA\.token, 'senha-escolhida-em-a-1'\), aceitar\(deB\.token, 'senha-escolhida-em-b-2'\)\]\)\s*$''']
+
+[[allowlists]]
+description = "Plano do Postgres (EXPLAIN) colado em documento de tarefa: a linha `Sort Key: tabela.coluna` é lida pelo generic-api-key como chave. Só passa nome de coluna: minúsculas, dígitos e sublinhado, em pedaços de até 20 caracteres, que é o que um segredo de verdade não é"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^tasks/prd-[a-z0-9-]+/\d+_task\.md$''']
+regexes = ['''^\s*(Sort|Group|Hash|Merge|Cache|Presorted) Key: [a-z][a-z0-9]{0,19}(_[a-z0-9]{1,20})*(\.[a-z][a-z0-9]{0,19}(_[a-z0-9]{1,20})*)?( DESC| ASC| NULLS FIRST| NULLS LAST)*(, [a-z][a-z0-9]{0,19}(_[a-z0-9]{1,20})*(\.[a-z][a-z0-9]{0,19}(_[a-z0-9]{1,20})*)?( DESC| ASC| NULLS FIRST| NULLS LAST)*)*\s*$''']

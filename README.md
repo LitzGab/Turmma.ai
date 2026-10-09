@@ -224,8 +224,9 @@ falha da tarefa, não sugestão.
 | `frontend-reviewer` | Tela que não funciona em Chromebook de escola ou no celular | não |
 | `domain-researcher` | Regra externa inventada em vez de pesquisada | não |
 
-E o portão automático, que roda sempre: `typecheck`, `test`, `lint`, e `test:e2e` quando a
-tarefa tocou tela.
+E o portão automático. Em cada tarefa, o **portão da tarefa**: tipos, lint, a unidade inteira e os
+testes que a tarefa alterou (`node tools/processo/portao-local.ts --tarefa`), em minutos. Uma vez por
+spec, antes da validação, o **portão completo**, com tudo, e depois a esteira.
 
 ---
 

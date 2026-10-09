@@ -8,6 +8,7 @@ import {
   antesDoCommit,
   alteracaoQueCaduca,
   alteracoesDeCodigo,
+  alvosDoPortao,
   arquivosAlterados,
   arvoreDoCommit,
   destinoProtegidoDoPush,
@@ -36,6 +37,8 @@ import {
   registrar,
   revisoresObrigatorios,
   SUITES_DO_MVP,
+  SUITES_DO_PORTAO_COMPLETO,
+  SUITES_DO_PORTAO_DA_TAREFA,
   type Carimbo,
   type Revisao,
 } from './revisoes.ts'
@@ -71,7 +74,7 @@ const tudoAprovadoAs10 = tarefaCom(
 )
 
 // O portão local passou às 09:59:30, com o e2e e o infra que o frontend-reviewer e o infra-guardian exigem.
-const carimboVerde: Carimbo = { inicio: new Date(lerHora('2026-09-13 09:59:30')).toISOString(), suites: ['typecheck', 'lint', 'test', 'e2e', 'infra'] }
+const carimboVerde: Carimbo = { inicio: new Date(lerHora('2026-09-13 09:59:30')).toISOString(), suites: ['typecheck', 'lint', 'segredo', 'dependencias', 'test', 'e2e', 'infra'] }
 
 const portaoDe = (
   conteudo: string,
@@ -189,16 +192,72 @@ describe('portão do commit', () => {
 
   it('bloqueia sem carimbo do portão local, com carimbo velho, e com carimbo sem a suíte que a tarefa exige', () => {
     expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, null).bloqueios).toEqual([
-      expect.stringMatching(/^portão local: nunca passou.*--e2e --infra/),
+      expect.stringMatching(/^portão local: nunca passou.*portao-local\.ts --tarefa/),
     ])
     const velho = { ...carimboVerde, inicio: new Date(lerHora('2026-09-13 09:58:00')).toISOString() }
     expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, velho).bloqueios).toEqual([
       expect.stringMatching(/^portão local: apps\/worker\/src\/executor.ts mudou/),
     ])
-    const semE2e = { ...carimboVerde, suites: ['typecheck', 'lint', 'test', 'infra'] }
-    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, semE2e).bloqueios).toEqual([
-      expect.stringMatching(/^portão local: o último não rodou e2e/),
+    const semTeste = { ...carimboVerde, suites: ['typecheck', 'lint', 'segredo', 'dependencias'] }
+    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, semTeste).bloqueios).toEqual([
+      expect.stringMatching(/^portão local: o último não rodou test\./),
     ])
+  })
+
+  it('o commit da tarefa aceita o portão da tarefa: e2e e infra inteiros ficam para o portão completo do fim da spec', () => {
+    // A tarefa do fixture marca frontend-reviewer e infra-guardian, que até 08/10/2026 exigiam e2e e infra inteiros.
+    const daTarefa = { ...carimboVerde, suites: [...SUITES_DO_PORTAO_DA_TAREFA], alvos: ['apps/worker/test/executor.int.test.ts'] }
+    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, daTarefa).bloqueios).toEqual([])
+    const semE2eNemInfra = { ...carimboVerde, suites: ['typecheck', 'lint', 'segredo', 'dependencias', 'test'] }
+    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, semE2eNemInfra).bloqueios).toEqual([])
+    // Os alvos sem a unidade inteira não valem por `test`, e a unidade sem os alvos também não.
+    for (const suites of [['typecheck', 'lint', 'segredo', 'dependencias', 'alvo'], ['typecheck', 'lint', 'segredo', 'dependencias', 'unidade']]) {
+      expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, { ...carimboVerde, suites }).bloqueios).toEqual([
+        expect.stringMatching(/^portão local: o último não rodou test\./),
+      ])
+    }
+    // As duas guardas da esteira que não são teste entram em todo portão: sem elas o commit não passa.
+    const semGuardas = { ...carimboVerde, suites: ['typecheck', 'lint', 'unidade', 'alvo'] }
+    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, semGuardas).bloqueios).toEqual([
+      expect.stringMatching(/^portão local: o último não rodou segredo, dependencias\./),
+    ])
+    // Mudou depois do portão da tarefa, ele caduca como o completo.
+    const velho = { ...daTarefa, inicio: new Date(lerHora('2026-09-13 09:58:00')).toISOString() }
+    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, velho).bloqueios).toEqual([
+      expect.stringMatching(/^portão local: apps\/worker\/src\/executor.ts mudou.*--tarefa/),
+    ])
+  })
+
+  it('o portão completo só é atendido pelo carimbo que rodou tudo, e o da tarefa não passa por ele', () => {
+    const completo: Carimbo = { inicio: '2026-09-13T12:59:30.000Z', suites: [...SUITES_DO_PORTAO_COMPLETO] }
+    expect(avaliarCarimbo(completo, SUITES_DO_PORTAO_COMPLETO, [])).toBeNull()
+    const daTarefa: Carimbo = { inicio: '2026-09-13T12:59:30.000Z', suites: [...SUITES_DO_PORTAO_DA_TAREFA] }
+    expect(avaliarCarimbo(daTarefa, SUITES_DO_PORTAO_COMPLETO, [])).toMatch(/^portão local: o último não rodou e2e, infra\. Rode `node tools\/processo\/portao-local\.ts --e2e --infra`/)
+    expect(avaliarCarimbo(null, SUITES_DO_PORTAO_COMPLETO, [])).toMatch(/nunca passou.*--e2e --infra/)
+  })
+
+  it('os alvos do portão da tarefa são os testes alterados, cada um na sua suíte, sem repetir', () => {
+    const alterados = [
+      'apps/worker/src/processadores/expurgar-escola.ts',
+      'apps/worker/test/expurgo-da-escola.int.test.ts',
+      'packages/nucleo/src/retencao/expurgo-da-escola.test.ts',
+      'packages/nucleo/src/retencao/retencao.int.test.ts',
+      'e2e/privacidade.spec.ts',
+      'e2e/__fixtures__/sessao.ts',
+      'infra/alertas/expurgo.int.test.ts',
+      'apps/api/dist/x.int.test.ts',
+      'node_modules/pacote/y.int.test.ts',
+      'tools/ci/fixtures/z.int.test.ts',
+      'docs/lgpd.md',
+      'e2e/privacidade.spec.ts',
+    ]
+    expect(alvosDoPortao(alterados)).toEqual({
+      integracao: ['apps/worker/test/expurgo-da-escola.int.test.ts', 'packages/nucleo/src/retencao/retencao.int.test.ts'],
+      e2e: ['e2e/privacidade.spec.ts'],
+      infra: ['infra/alertas/expurgo.int.test.ts'],
+    })
+    // Teste de unidade não é alvo: a unidade roda inteira sempre.
+    expect(alvosDoPortao(['packages/shared/src/a.test.ts', 'apps/web/src/b.test.tsx'])).toEqual({ integracao: [], e2e: [], infra: [] })
   })
 
   it('bloqueia correção feita enquanto a rodada corria, mesmo que o veredito tenha saído depois', () => {
@@ -319,7 +378,7 @@ describe('hooks sobre um repositório de verdade', () => {
       )
     }
     expect(portao(commit, raiz)).toMatch(/portão local: nunca passou/)
-    gravarCarimbo(raiz, { inicio: new Date('2026-09-13T10:11:00').toISOString(), suites: ['typecheck', 'lint', 'test', 'infra'] })
+    gravarCarimbo(raiz, { inicio: new Date('2026-09-13T10:11:00').toISOString(), suites: ['typecheck', 'lint', 'segredo', 'dependencias', 'test', 'infra'] })
     expect(portao(commit, raiz)).toBeNull()
   })
 
@@ -337,7 +396,7 @@ describe('hooks sobre um repositório de verdade', () => {
         new Date('2026-09-13T10:05:00'),
       )
     }
-    gravarCarimbo(raiz, { inicio: new Date('2026-09-13T10:06:00').toISOString(), suites: ['typecheck', 'lint', 'test', 'infra'] })
+    gravarCarimbo(raiz, { inicio: new Date('2026-09-13T10:06:00').toISOString(), suites: ['typecheck', 'lint', 'segredo', 'dependencias', 'test', 'infra'] })
     gravarInstantaneo(raiz, CHAVE_DO_PORTAO, alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
     expect(portao(commit, raiz)).toBeNull()
 
@@ -358,7 +417,7 @@ describe('hooks sobre um repositório de verdade', () => {
     const raiz = repositorio()
     corrigir(raiz, 'apps/codigo.ts', '2026-09-13T09:00:00', 'export const original = true\n')
     const noInicio = alteracoesDeCodigo(raiz, arquivosAlterados(raiz))
-    const carimbo = { inicio: new Date('2026-09-13T10:00:00').toISOString(), suites: ['typecheck', 'lint', 'test'] }
+    const carimbo = { inicio: new Date('2026-09-13T10:00:00').toISOString(), suites: ['typecheck', 'lint', 'segredo', 'dependencias', 'test'] }
 
     corrigir(raiz, 'apps/codigo.ts', '2026-09-13T10:00:30', 'export const editado_no_meio = true\n')
     expect(carimbarSeNadaMudou(raiz, carimbo, noInicio)).toMatch(/apps\/codigo.ts mudou enquanto o portão rodava/)
@@ -387,6 +446,8 @@ describe('hooks sobre um repositório de verdade', () => {
       const scripts = {
         typecheck: semBancoNovo,
         lint: semBancoNovo,
+        'guarda:segredo': semBancoNovo,
+        'guarda:dependencias': semBancoNovo,
         test: `test "$EDUCA_BANCO_NOVO" = 1 && ${comandoDoTeste}`,
         'test:e2e': semBancoNovo,
         'test:infra': semBancoNovo,
@@ -414,7 +475,7 @@ describe('hooks sobre um repositório de verdade', () => {
     // Sem edição, carimba — e o instantâneo é o conteúdo que as suítes rodaram.
     const limpo = comSuiteDeTeste('true')
     expect(limpo.saida.status).toBe(0)
-    expect(lerCarimbo(limpo.raiz)?.suites).toEqual(['typecheck', 'lint', 'test'])
+    expect(lerCarimbo(limpo.raiz)?.suites).toEqual(['typecheck', 'lint', 'segredo', 'dependencias', 'test'])
     expect(lerInstantaneos(limpo.raiz)[CHAVE_DO_PORTAO]).toEqual(limpo.noInicio)
 
     // O `conferir` que o revisor-geral roda não tem a exceção de comentário: comentário muda lint e teste que varre o
@@ -431,7 +492,7 @@ describe('hooks sobre um repositório de verdade', () => {
     // Com --e2e e --infra, a variável herdada não chega a nenhuma das duas.
     const completo = comSuiteDeTeste('true', ['--e2e', '--infra'])
     expect(completo.saida.status).toBe(0)
-    expect(lerCarimbo(completo.raiz)?.suites).toEqual(['typecheck', 'lint', 'test', 'e2e', 'infra'])
+    expect(lerCarimbo(completo.raiz)?.suites).toEqual(['typecheck', 'lint', 'segredo', 'dependencias', 'test', 'e2e', 'infra'])
   }, 60_000)
 
   it('correção passa pelo mesmo portão, com o documento em tasks/correcoes', () => {
@@ -591,7 +652,7 @@ describe('o que conta como alteração depois do portão e da rodada', () => {
   // As três correções vieram da retrospectiva do F1: 10 reprovações por carimbo, 6 delas sem nenhum
   // bloqueante de código, e 63 das 200 rodadas caducadas sem reprovação.
 
-  const carimbo: Carimbo = { inicio: '2026-09-20T10:00:00.000Z', suites: ['typecheck', 'lint', 'test'] }
+  const carimbo: Carimbo = { inicio: '2026-09-20T10:00:00.000Z', suites: ['typecheck', 'lint', 'segredo', 'dependencias', 'test'] }
   const exigidas = ['typecheck', 'lint', 'test']
 
   it('arquivo salvo no mesmo segundo, mas antes do início do portão, não invalida o carimbo', () => {

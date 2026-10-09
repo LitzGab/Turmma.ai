@@ -54,7 +54,8 @@ Escopo: funcionalidade completa | tarefa N.0 (tasks/prd-<func>/N_task.md)
 Commit a validar: <hash do HEAD>
 
 Escreva o relatório em tasks/prd-<func>/validacao.md e não altere nenhum outro arquivo.
-Rode cada suíte longa em segundo plano e espere a notificação do fim; só termine com o relatório escrito.
+O portão completo já rodou: confira com `node tools/processo/portao-local.ts conferir --completo` e só rode suíte se ele não valer.
+Suíte longa roda em segundo plano, e você espera a notificação do fim; só termine com o relatório escrito.
 A esteira do GitHub não entra no seu veredito: ela roda depois, no fechamento.
 Envie a <nome do Orquestrador> só o bloco "Formato da resposta", começando a mensagem por
 `/seguir RELATÓRIO de <seu nome>`, e encerre o turno.

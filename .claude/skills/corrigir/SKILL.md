@@ -69,11 +69,16 @@ documento por quê e qual evidência substitui o vermelho (por exemplo, 20 execu
 
 ## 4. Corrigir e passar o portão
 
-Corrija o mínimo. Rode o teste: verde. Depois o portão local com carimbo:
+Corrija o mínimo. Rode o teste isolado até ficar verde (os comandos estão no passo 4 de
+`.claude/skills/executar-task/SKILL.md`). Depois o portão da tarefa, uma vez, que grava o carimbo:
 
 ```bash
-node tools/processo/portao-local.ts   # com --e2e e --infra quando se aplicam
+node tools/processo/portao-local.ts --tarefa
 ```
+
+Correção de **teste intermitente** leva também a prova da estabilidade: o teste rodado sozinho dez
+vezes seguidas, e o número no documento. Correção que nasce do portão completo do fim da spec, ou da
+esteira, termina com o portão completo rodado de novo por quem o Orquestrador mandar, não por você.
 
 ## 5. Revisores
 

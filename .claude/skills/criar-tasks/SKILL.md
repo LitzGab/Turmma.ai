@@ -109,6 +109,9 @@ infere o porte pela contagem de guardiões e avisa que inferiu.
   ficaram de fora, e um deles foi o único achado maior do `/validar`
 - O leitor é um desenvolvedor júnior que não participou das conversas. Seja explícito sobre
   o contexto que ele precisa ler
+- **Toda tarefa diz como testar**, na seção "Como testar" do modelo: o teste existente a copiar e a
+  peça de apoio, achados abrindo o código, e não de memória. Na 6.0 do F3 o documento dizia só "e2e:
+  novo"; a tela saiu em 6 minutos e o teste levou cinco horas de tentativa
 - **Máximo 20 tarefas.** Se passar disso, a funcionalidade está grande demais e deveria ser
   dividida no roadmap
 - **Tarefa cabe numa rodada de revisão.** Mira de até ~15 arquivos de código alterados e um

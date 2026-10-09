@@ -63,12 +63,23 @@ o aviso ou o desafio da tentativa anterior sobrando depois de uma falha ou de a 
 A linha de log vale para toda linha de log nova, e sai quando a tarefa não escreve nenhuma: três
 recomendações na A0 (7.0, 8.0, 9.0) foram log sem teste do conteúdo.
 
+## Como testar
+
+Até 150 palavras. Quem implementa começa sem contexto e num modelo menor: diga o **como**, não só o
+quê.
+
+- Teste a copiar, por cenário que tem precedente: `arquivo › nome do caso`, e o que muda nele
+- Peça de apoio: a fixture, o helper ou a fábrica de dados, com o nome da função
+- Comando para rodar isolado: `npx vitest run --project integracao <arquivo>` ou
+  `node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`
+- Armadilhas já vistas nesta funcionalidade que valem aqui (do `achados/indice.md` e do `estado.md`)
+
 ## Critério de conclusão
 
 - [ ] Subtarefas concluídas
 - [ ] Testes verdes, 100%
-- [ ] Portão local carimbado depois da última alteração (`node tools/processo/portao-local.ts`,
-  com `--e2e` se tocou tela e `--infra` se mexeu em infra)
+- [ ] Portão da tarefa carimbado depois da última alteração
+  (`node tools/processo/portao-local.ts --tarefa`), com os testes desta tarefa entre os alvos
 - [ ] Mesa de revisão respondeu "APROVADO por todos": `test-engineer` primeiro, `revisor-geral` e os
   guardiões marcados com rodada que vale para o código atual, e APROVADO nos que têm veto
 - [ ] Commit feito na branch da spec, só com os arquivos desta tarefa, com a linha `Revisões:`, e push
