@@ -111,6 +111,8 @@ incidente_escola    incidente_id*, escola_id*, circunstancias* (≤1000), catego
 expurgo_execucao    id uuid, escola_id*, categoria*, linhas*, concluida* (`true` só quando a categoria terminou; `false` quando parou pela janela), em*
 execucao_agente     + anonimizada_em?
 usuario             + eliminacao_agendada_em?
+escola              + criada_em*  (correção da 8.0: `default now()`; nas que já existem, o `em` da auditoria
+                    `escola.criada`. Seção 6, "A vigência nunca é anterior à escola")
 consumo_ia          + provedor?  check (provedor is null or envio_externo), que o código anterior cumpre
 job_registro        + chave_idempotencia?  único parcial (escola_id, tipo, chave_idempotencia) onde não nula e o
                     estado não é concluido nem falhou; check (chave_idempotencia is null or escola_id is not null)
@@ -382,16 +384,32 @@ Tarefa 8.0, como ficou no código:
 - `SuboperadorDaEscolaRepository` (`packages/nucleo/src/titular/`): `(alcance = 'todas' or exists (ligação correlacionada com a
   escola do contexto))`, mais um `left join` com a ligação da escola só para trazer o início e o fim dela. A vigência da escola é o
   início da ligação (ou o do suboperador, em `todas`) e o mais cedo entre os dois `fim`.
-- **Em aberto, parada do Joaquim (triagem de 09/10/2026): a vigência anterior à existência da escola, na aba.** Como o
-  `todas` não tem ligação, a aba mostra como passada a empresa encerrada antes de a escola existir, e "Desde" com data
-  anterior à escola: a tela diz que recebeu dado da escola quem nunca recebeu. Corrigir exige saber desde quando a
-  escola existe, e `escola` não tem data de criação: é mudança de desenho, não detalhe. Alternativas: **(a)** coluna
-  `escola.criada_em` (migration de expansão, preenchida a partir da auditoria `escola.criada`), com o início sendo o
-  mais tarde entre o da empresa e o da escola, e o `todas` encerrado antes dela fora da lista, numa correção da 8.0:
-  é a recomendada; **(b)** ler a data da auditoria `escola.criada`, sem migration, mas o domínio passa a depender do
-  registro de auditoria; **(c)** deixar como está e dizer na aba que a data é a do contrato da empresa com a Turmma, o
-  que mantém na lista a passada que nunca atendeu a escola. O alcance `lista` não tem a lacuna (a ligação nasce depois
-  da escola), e o compartilhamento também não (seção 5, "O período é o do titular"): a 12.0 não espera esta decisão.
+- **A vigência nunca é anterior à escola (decisão do Joaquim em 09/10/2026; correção da 8.0).** Como o `todas` não tem
+  ligação, a aba mostrava como passada a empresa encerrada antes de a escola existir, e "Desde" com data anterior à
+  escola: dizia que recebeu dado da escola quem nunca recebeu. O que vale:
+  - **Coluna.** `escola.criada_em timestamptz not null default now()`. Nenhum código a informa nem a altera: o `insert`
+    do `RedeEEscolaRepository.criarEscola` não muda, e o valor é o instante da transação que cria a escola, a mesma
+    da auditoria `escola.criada`. Não é dado de pessoa e não entra em DTO nenhum.
+  - **Migration**, em arquivo próprio, só expande (regra 80, item 9): o código anterior insere sem a coluna e recebe o
+    padrão. Depois do `add column`, um `update` preenche as escolas que já existem com o `em` mais antigo da auditoria
+    `escola.criada` de cada uma, por subconsulta correlacionada em `auditoria.escola_id = escola.id` (o índice
+    `auditoria_escola_em_idx` começa pela escola). A escola sem essa linha fica com o instante da migration: só
+    acontece em banco local, porque ainda não há staging nem piloto.
+  - **Regra**, no `SuboperadorDaEscolaRepository.daEscola`, na mesma consulta, por junção com a `escola` do contexto
+    (`escola.id = contexto`), com a comparação feita no banco, e só para a linha **sem ligação** (alcance `todas`):
+    o início é `greatest(suboperador.inicio, escola.criada_em)`, e a linha com `suboperador.fim <= escola.criada_em`
+    não é devolvida (o igual também fica fora: não houve um instante em comum). O filtro novo entra no `and` com o
+    escopo, que continua entre parênteses.
+  - **Com ligação (alcance `lista`) nada muda:** a ligação nasce com `inicio = now()` depois de a escola existir (a
+    FK exige a escola), e o `ops:suboperador` não recebe data.
+  - **Todo método de leitura que o repositório ganhar** (o da 12.0, com o id e por período) aplica a mesma regra.
+  - **Arquitetura.** O leitor passa a ler `escola`, só a do contexto, e continua sem escrever. O teste do leitor
+    passa a afirmar que os schemas que o arquivo importa são exatamente `suboperador` e `escola`: o detector de
+    hoje não enxerga import por caminho relativo, e sem isso a tabela nova passaria sem ninguém ver.
+  - **Não muda:** o DTO, a tela, os textos, o e2e (a fixture só cadastra `lista`), o `OperacaoPrivacidadeRepository` e
+    o compartilhamento (seção 5, "O período é o do titular").
+  - `docs/modelo-de-dados.md` (a escola e "Os suboperadores") entra na mesma correção. Os cenários e o teste a copiar
+    estão em `cenarios.md`, RF7, "Correção da 8.0".
 - **Auditoria sem escola.** `suboperador.cadastrado` e `suboperador.encerrado` não têm escola no contexto (o ato é da operação, e a empresa
   pode atender toda escola; uma linha por escola seria uma linha por escola existente a cada cadastro de `todas`). Por isso o check da
   `auditoria` passou a aceitar sem escola, além da rede criada, a entidade `suboperador`, sempre por operador

@@ -120,12 +120,36 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
 - **RF7.**
   - [I] B não vê o suboperador `lista` que atende só A, e vê o de `todas`.
   - [I] Quando a ligação tem `fim`, o suboperador aparece como passado.
-  - [I] (tarefa 8.0) A vigência que a escola lê é o início da ligação (ou do suboperador, em `todas`) e o mais cedo entre os dois `fim`; a escola
+  - [I] (tarefa 8.0) A vigência que a escola lê é o início da ligação (ou do suboperador, em `todas`, nunca antes de a escola existir: a
+    correção abaixo) e o mais cedo entre os dois `fim`; a escola
     que saiu da lista vê passado, e a outra, vigente. O recadastrado vem antes do encerrado de mesma chave. O DTO não traz id, contrato,
     operador nem escola.
   - [E] (tarefa 8.0) A aba "Empresas que recebem dados" lê as vigentes e as passadas, nunca as de outra escola; os quatro estados (carregando,
     erro, vazio e dado, mais o "só passadas"), em `chromebook` e `celular`, com acessibilidade; a segunda pessoa na mesma aba não vê as
     empresas da anterior.
+  - **Correção da 8.0 (decisão do Joaquim, 09/10/2026): a vigência nunca é anterior à escola** (Tech Spec, seção 6). Os casos
+    de integração ficam em `apps/api/test/suboperador.int.test.ts`. A data da escola é posta por `update escola set criada_em`
+    com o `bancada.pool`, como o `update suboperador_escola` de `› RF7, passado`; o `todas` com data no passado, como o
+    `update suboperador set inicio` de `› RF7, vigência da escola` ou o `insert` de `› RF7, a ordem`.
+    - [I] O `todas` encerrado antes de a escola existir não aparece para ela, e aparece como passado para a escola que já
+      existia: duas escolas, uma com `criada_em` antes do início da empresa e outra depois do fim. Sem o filtro, ou com a
+      junção fora da escola do contexto, quebra.
+    - [I] O `todas` vigente cadastrado antes da escola: o `inicio` lido é o `criada_em` dela; para a escola mais antiga que a
+      empresa, é o início da empresa.
+    - [I] Borda: `fim` igual ao `criada_em` fica fora; um segundo depois, aparece como passado, com `inicio` igual ao
+      `criada_em`.
+    - [I] O `lista` não muda: `› RF7, vigência da escola` segue como está até a parte do `todas`, que dá lugar aos casos
+      acima (hoje ela espera o início da empresa numa escola criada depois).
+    - [I] `› RF7, a ordem` segue provando a ordem: a escola do teste recebe `criada_em` anterior às duas vigências, senão
+      as duas linhas somem.
+    - [I] A escola criada pelo `criarEscola` nasce com `criada_em` preenchida pelo banco, entre o antes e o depois da
+      chamada, sem o código informar: em `apps/api/test/ops-escola.int.test.ts › caminho feliz: cria rede e escola…`.
+    - [U] O leitor importa só os schemas `suboperador` e `escola`, e não escreve: em `apps/api/test/arquitetura.test.ts ›
+      o repositório da escola não escreve nas duas tabelas, nem em outra: só lê`.
+    - O `update` da migration não tem teste automatizado: nenhum teste roda migration, e o banco de teste já nasce com a
+      coluna. É conferido à mão numa transação desfeita, como o check da 0029 (tabela "Mutações" do `8_task.md`), e
+      registrado no documento da correção.
+    - Rodar: `npx vitest run --project integracao apps/api/test/suboperador.int.test.ts`. O e2e não muda.
   - [I] Um consumo de A cujo `provedor` é a chave de um suboperador só de B aparece como "provedor não cadastrado". As
     linhas sem `provedor` e a reserva por período não listam o suboperador só de B.
 - **RF8.**
