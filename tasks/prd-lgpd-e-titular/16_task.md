@@ -54,6 +54,7 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 - **recomeço:** a mesma chave em `e2e/turma-publica.spec.ts › o 503 reenvia a mesma chave até 3 vezes…` (`postDataJSON`); a rede cai com `rota.abort('internetdisconnected')`, nunca `context.setOffline` (`e2e/entrar.spec.ts`); segunda pessoa e resposta atrasada em `e2e/pedidos.spec.ts › resposta atrasada: a atualização que chega depois da decisão…`.
 - Titulares: `criarAlunoComMatricula` e `colocarAlunoNaTurma` (`e2e/__fixtures__/sessao.ts`).
 - Rodar: `node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`.
+- **Telas** (`coordenacao`, sem mockup): a aba, em `/coordenacao/privacidade/<id da aba nova>`; a busca, com `--clicar 'text=Registrar pedido'`. O diálogo de confirmação pede busca digitada, que a foto não faz: diga isso em "Telas vistas". A vitrine não tem pedido: a lista sai vazia nas duas escolas, até um ser registrado na cheia, pela tela.
 
 ## Critério de conclusão
 

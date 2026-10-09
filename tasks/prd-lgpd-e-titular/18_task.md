@@ -55,6 +55,7 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 - **estados:** `e2e/minha-turma.spec.ts › carregando, com dado…`; os 10 s com `page.clock`, como `e2e/inatividade.spec.ts`.
 - Apagado depois de 7 dias: semeie `apagado_em` no banco.
 - Rodar: `node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`.
+- **Telas:** `aluno`, de `/aluno/atividades`, com `--clicar 'text=Privacidade'` (rodapé da lateral); `professora`, de `/professor/nova-conversa`, com `--clicar 'text=Meus dados'` (menu da pessoa). Mockup: `mockups/src/areas/aluno/Privacidade.tsx`, só pelo lugar do item no rodapé; o conteúdo dele não é desta fatia. A vitrine não tem pedido: a foto é a do vazio, nas duas escolas.
 
 ## Critério de conclusão
 

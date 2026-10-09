@@ -54,6 +54,7 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 - **estados:** `e2e/governanca.spec.ts › os quatro estados…` (`portao`, `page.route`, `violacoesGraves`).
 - Semeie o incidente no banco, como `ajustarRetencaoDaEscola`. Dois incidentes: sem precedente.
 - Rodar: `node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`; depois, `npx playwright test e2e/<arquivo>.spec.ts`.
+- **Telas** (`coordenacao`, sem mockup): o diálogo, em `/coordenacao/governanca`; a faixa, com `--clicar 'text=Ver depois'`; a aba, em `/coordenacao/privacidade/<id da aba nova>`. A vitrine não tem incidente: semeie um na escola cheia (`escola.id` de `.processo/vitrine.json`), ou a foto sai vazia. Se o diálogo não voltar, apague `.processo/vitrine/sessao-coordenacao.json`: a foto guarda a sessão.
 
 ## Critério de conclusão
 

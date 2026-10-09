@@ -57,6 +57,7 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 - **prazo:** semeie o pedido no banco com `chegou_em` no passado, como `ajustarRetencaoDaEscola` (`e2e/__fixtures__/sessao.ts`).
 - Armadilha da 6.0: a linha de Mutações só vale se o e2e fica vermelho sem a cláusula; confira antes de escrever.
 - Rodar: `node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`.
+- **Telas** (`coordenacao`, sem mockup): o detalhe, da aba Pedidos (`/coordenacao/privacidade/<id da aba>`) com `--clicar` no pedido da lista, ou no endereço que a tarefa criar; cada diálogo, com mais um `--clicar`: `text=Concluir`, `text=Cancelar`, `text=Corrigir nome`, `text=Baixar a versão da escola`. A vitrine não tem pedido: registre um na escola cheia, pela tela da 16.0, antes de fotografar.
 
 ## Critério de conclusão
 
