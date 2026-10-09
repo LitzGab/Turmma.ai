@@ -789,6 +789,7 @@ export type {
 } from './governanca/analista.js'
 export {
   ajusteDeRetencaoCabe,
+  AUTOR_DA_ROTINA,
   CATEGORIAS_DE_RETENCAO,
   CHAVES_DE_PRAZO_FIXO,
   CHAVES_DE_RETENCAO,

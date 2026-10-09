@@ -592,7 +592,8 @@ Tutor, os sinais e a conversa do professor vencidos (a thread vazia e criada ant
 5.000 pelo índice `(escola_id, <data>)`, confere a janela letiva antes de cada lote e grava uma linha de
 `ExpurgoExecucao` por categoria percorrida, mesmo com zero: `concluida` é `true` quando a categoria terminou e `false`
 quando a janela abriu no meio; a noite seguinte começa pela categoria pendente. `ExpurgoExecucao` guarda só a categoria e
-a contagem, sem pessoa, por 5 anos (tarefa 5.0), e é dela que o worker-lote mede as noites do alerta.
+a contagem, sem pessoa, por 5 anos (o próprio expurgo apaga as linhas com mais que isso, no fim da noite, tarefa 5.0), e é dela
+que o worker-lote mede as noites do alerta.
 
 **As categorias que mantêm a linha e anulam a pessoa (F3, tarefa 4.0).** No mesmo job, depois das três que apagam, o
 `ExpurgoDaEscolaRepository` anonimiza, cada uma pelo seu índice parcial da migration 0026 (só as linhas que ainda têm
@@ -605,6 +606,18 @@ consumo não passa da conversa do Tutor. Os lotes travam com `for no key update 
 linha não segura o lote, e o lote não segura quem grava a mensagem nova. Uma execução ainda aberta (`pendente` ou
 `rodando`) e vencida também é anonimizada e não volta a rodar: a varredura do executor a encerra como `falhou`, e a
 releitura da entrada pela chave dá `NAO_ENCONTRADO`, porque `solicitadaPor` ficou nulo.
+
+**O trabalho do aluno e o cadastro (F3, tarefa 5.0).** No fim da ordem do catálogo o mesmo job apaga, cada um pelo seu índice
+parcial da migration 0027: a `TentativaAtividade` do ano letivo **encerrado** (a `RespostaAtividade` e a `Correcao` saem em
+cascata; o ano `em_curso` ou `planejado` nunca perde nada, e a atividade aplicada e o lote de correção, que são registro de
+decisão, ficam sem o aluno), a `Reivindicacao` que não está `pendente` (contada da decisão, e da solicitação no `encerrada`,
+que a virada do ano fecha sem decisão), o `Material` excluído (só o que nenhuma `MensagemTutor` nem `SinalTutor` ainda cita:
+as duas FKs não têm ação) e o `Vinculo` encerrado. A **pessoa desativada** além do prazo é eliminada pelo
+`CicloDeVidaService.eliminar`, numa transação por pessoa (a que o repositório do expurgo abre, trava e reconfere o prazo, e que o `eliminar` reutiliza) e em lotes de até 100, com a auditoria `usuario.eliminado` assinada
+pelo apelido `rotina` (`AUTOR_DA_ROTINA`): credencial, vínculos, conta externa, sessões e a linha da lista saem com ela, e
+a conta global só cai se não serve a escola nenhuma. A pessoa que sumiu entre a escolha do lote e a trava (eliminada por
+outro job) ou que voltou a ser ativa (convite aceito) é pulada sem erro, sem auditoria e fora da contagem. Os índices por `(escola_id, material_id)` em `MensagemTutor` e `SinalTutor` e por
+`(escola_id, aluno_id)` em `TentativaAtividade` servem à conferência das FKs de `Material` e de `Usuario`, e os de `(escola_id, solicitada_por)` em `ExecucaoAgente` e `(escola_id, criado_por)` em `Artefato`, à do `set null` da pessoa eliminada.
 
 `Evento` é o motor: nota aprovada, tarefa não entregue, aluno travado. A `Notificacao` é
 uma leitura dele. Isso permite construir o motor agora e ligar o canal da família depois

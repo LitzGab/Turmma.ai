@@ -7,7 +7,9 @@ import {
   EscolasDaRotinaRepository,
   executarNoContexto,
   ExpurgoDaEscolaRepository,
+  instrucaoDasPessoasDesativadas,
   instrucaoDoLoteDaEscola,
+  instrucaoDoRegistroDoExpurgo,
   LOTE_DO_EXPURGO,
   resolverJanela,
   RetencaoDaEscolaRepository,
@@ -17,7 +19,7 @@ import {
   type PrazoDoLote,
   type Relogio,
 } from '@educa/nucleo'
-import { CATEGORIAS_DE_RETENCAO, CHAVES_DE_RETENCAO, CodigoDeFalhaDeJob } from '@educa/shared'
+import { AUTOR_DA_ROTINA, CATEGORIAS_DE_RETENCAO, CHAVES_DE_RETENCAO, CodigoDeFalhaDeJob } from '@educa/shared'
 import { PgDialect } from 'drizzle-orm/pg-core'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest'
@@ -34,9 +36,11 @@ import { chaveDaNoite, criarRotinaDeExpurgo } from '../src/processadores/expurga
 import { criarExpurgoDaEscola, TIPO_EXPURGAR_ESCOLA } from '../src/processadores/expurgar-escola.js'
 import { BancadaDeFila, configuracaoDoBanco, janelaPadraoDoAmbiente, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
 
-// O expurgo noturno da escola (F3, tarefas 3.0 e 4.0), contra o Postgres do compose de teste: a conversa do Tutor, os
-// sinais e a conversa do professor, que saem, e a execução de agente, o texto do modelo, o consumo por aluno e a autoria
-// de artefato, que ficam sem a pessoa, de escolas sintéticas, dos dois lados de cada prazo, contados de um relógio injetado. A escola
+// O expurgo noturno da escola (F3, tarefas 3.0 a 5.0), contra o Postgres do compose de teste: a conversa do Tutor, os
+// sinais e a conversa do professor, que saem; a execução de agente, o texto do modelo, o consumo por aluno e a autoria
+// de artefato, que ficam sem a pessoa; e o trabalho do aluno, a reivindicação decidida, o material excluído, o vínculo
+// encerrado e a pessoa desativada, que saem pelo ciclo de vida, de escolas sintéticas, dos dois lados de cada prazo,
+// contados de um relógio injetado. A escola
 // usa o horário letivo padrão (São Paulo, de segunda a sexta, das 7h às 18h): quarta, 7/10/2026, à 1h está fora da
 // janela, e às 8h, dentro.
 
@@ -55,18 +59,6 @@ const QUINTA_1H = new Date('2026-10-08T01:00:00-03:00')
 /** O fuso do horário letivo padrão do teste, que o job passa ao lote. */
 const FUSO = 'America/Sao_Paulo'
 
-/**
- * As categorias do catálogo que esta tarefa ainda não apaga, com a tarefa que as traz. A tarefa 5.0 esvazia a lista: aí
- * o catálogo inteiro passa pelo expurgo, e o `it.each` do prazo cobre cada uma.
- */
-const PENDENTES_DA_TAREFA: Readonly<Record<string, '5.0'>> = {
-  trabalho_do_aluno: '5.0',
-  reivindicacao_decidida: '5.0',
-  material_excluido: '5.0',
-  vinculo_encerrado: '5.0',
-  pessoa_desativada: '5.0',
-}
-
 /** Um relógio que o teste avança. */
 function relogioEm(inicio: Date): Relogio & { atual: Date } {
   const relogio = { atual: inicio, agora: () => relogio.atual }
@@ -84,6 +76,7 @@ const CHAVES_DO_LOG = new Set([
   'tipo',
   'linhasDaCategoriaTotal',
   'linhasTotal',
+  'registroApagadoTotal',
   'categoriasTotal',
   'escolasTotal',
   'enfileiradosTotal',
@@ -316,6 +309,121 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
   }
 
   /**
+   * O trabalho de um aluno numa atividade objetiva já corrigida, no ano dado: a atividade aplicada (encerrada), o lote de
+   * correção, a tentativa do aluno, duas respostas e a correção dele. É o que o `trabalho_do_aluno` apaga em cascata, e o
+   * que ele deixa: a atividade e o lote ficam (registro de decisão).
+   */
+  async function trabalhoDoAluno(
+    escola: { escolaId: string },
+    ano: { anoId: string; turmaId: string; disciplinaId: string },
+    alunoId: string,
+  ): Promise<{ tentativaId: string; atividadeAplicadaId: string; entregaId: string }> {
+    const professorId = await professorNovo(escola)
+    const um = async (texto: string, valores: unknown[]): Promise<string> => {
+      const { rows } = await bancada.pool.query<{ id: string }>(texto, valores)
+      return rows[0]?.id ?? ''
+    }
+    const artefatoId = await um(
+      `insert into artefato (escola_id, ano_letivo_id, turma_id, disciplina_id, tipo, titulo, conteudo, criado_por)
+       values ($1, $2, $3, $4, 'atividade_objetiva', 'Atividade sintética', '{"tipo":"atividade_objetiva","titulo":"Atividade sintética"}', $5) returning id`,
+      [escola.escolaId, ano.anoId, ano.turmaId, ano.disciplinaId, professorId],
+    )
+    const atividadeAplicadaId = await um(
+      `insert into atividade_aplicada (escola_id, ano_letivo_id, turma_id, artefato_id, avaliativa, estado, aplicada_por, encerrada_em) values ($1, $2, $3, $4, false, 'encerrada', $5, now()) returning id`,
+      [escola.escolaId, ano.anoId, ano.turmaId, artefatoId, professorId],
+    )
+    const entregaId = await um(
+      `insert into entrega (escola_id, ano_letivo_id, turma_id, funcao, tipo, atividade_aplicada_id) values ($1, $2, $3, 'correcao_de_objetiva', 'lote_de_correcao', $4) returning id`,
+      [escola.escolaId, ano.anoId, ano.turmaId, atividadeAplicadaId],
+    )
+    const tentativaId = await um(
+      'insert into tentativa_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, enviada_em) values ($1, $2, $3, $4, now()) returning id',
+      [escola.escolaId, ano.anoId, atividadeAplicadaId, alunoId],
+    )
+    await bancada.pool.query(
+      'insert into resposta_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, questao, alternativa) select $1, $2, $3, $4, questao, 0 from generate_series(1, 2) as questao',
+      [escola.escolaId, ano.anoId, atividadeAplicadaId, alunoId],
+    )
+    await bancada.pool.query(
+      `insert into correcao (escola_id, ano_letivo_id, entrega_id, atividade_aplicada_id, aluno_id, acertos, total, em_branco, por_habilidade) values ($1, $2, $3, $4, $5, 1, 2, 0, '[]')`,
+      [escola.escolaId, ano.anoId, entregaId, atividadeAplicadaId, alunoId],
+    )
+    return { tentativaId, atividadeAplicadaId, entregaId }
+  }
+
+  /** Quantas respostas e correções do aluno na atividade aplicada ainda existem. */
+  async function restoDoTrabalho(atividadeAplicadaId: string): Promise<{ respostas: number; correcoes: number }> {
+    const { rows } = await bancada.pool.query<{ respostas: number; correcoes: number }>(
+      `select (select count(*)::int from resposta_atividade where atividade_aplicada_id = $1) as respostas, (select count(*)::int from correcao where atividade_aplicada_id = $1) as correcoes`,
+      [atividadeAplicadaId],
+    )
+    return rows[0] ?? { respostas: -1, correcoes: -1 }
+  }
+
+  /**
+   * Um pedido de reivindicação já fechado: a decisão, ou o encerramento sem decisão (`encerrada`, a virada do ano). A
+   * solicitação é 30 dias mais velha que a decisão, para o teste do prazo provar que ele conta da decisão.
+   */
+  async function reivindicacaoFechada(escola: Escola, agora: Date, ha: string, opcoes: { estado?: 'aprovada' | 'recusada' | 'encerrada'; como?: 'professor' | 'coordenacao' } = {}): Promise<string> {
+    const estado = opcoes.estado ?? 'aprovada'
+    const { rows } = await bancada.pool.query<{ id: string }>(
+      `insert into reivindicacao (escola_id, ano_letivo_id, turma_id, estado, solicitada_em, decidida_em, decidida_como)
+       values ($1, $2, $3, $4, $5::timestamptz - $6::interval - interval '30 days', case when $4 = 'encerrada' then null else $5::timestamptz - $6::interval end, case when $4 = 'encerrada' then null else $7 end) returning id`,
+      [escola.escolaId, escola.anoId, escola.turmaId, estado, agora.toISOString(), ha, opcoes.como ?? 'professor'],
+    )
+    return rows[0]?.id ?? ''
+  }
+
+  /** O pedido de reivindicação que ainda espera decisão, com o nome da lista, a senha e a chave que o estado `pendente` exige. */
+  async function reivindicacaoPendente(escola: Escola, agora: Date, ha: string): Promise<string> {
+    const { rows: nomes } = await bancada.pool.query<{ id: string }>(
+      "insert into lista_nome (escola_id, ano_letivo_id, turma_id, nome, matricula, estado) values ($1, $2, $3, 'Nome sintético da lista', $4, 'reivindicado') returning id",
+      [escola.escolaId, escola.anoId, escola.turmaId, `m-${randomUUID().slice(0, 8)}`],
+    )
+    const { rows } = await bancada.pool.query<{ id: string }>(
+      `insert into reivindicacao (escola_id, ano_letivo_id, turma_id, lista_nome_id, chave_envio, senha_hash, teve_matricula_errada, estado, solicitada_em)
+       values ($1, $2, $3, $4, $5, 'hash-sintetico', false, 'pendente', $6::timestamptz - $7::interval) returning id`,
+      [escola.escolaId, escola.anoId, escola.turmaId, nomes[0]?.id, randomUUID(), agora.toISOString(), ha],
+    )
+    return rows[0]?.id ?? ''
+  }
+
+  /** Um material da escola; `excluidoHa` o marca excluído há tanto tempo, e sem ele o material é vigente. */
+  async function materialDa(escola: { escolaId: string }, agora: Date, excluidoHa?: string): Promise<string> {
+    const { rows } = await bancada.pool.query<{ id: string }>(
+      `insert into material (escola_id, disciplina_id, titulo, titularidade, licenca, declaracao, sha256, tamanho_bytes, paginas, estado, excluido_em)
+       values ($1, $2, 'Apostila sintética', 'escola', 'autoria_da_escola', true, md5(random()::text) || md5(random()::text), 1000, 1, 'pronto', case when $4::text is null then null else $3::timestamptz - $4::interval end) returning id`,
+      [escola.escolaId, await disciplinaDa(escola.escolaId), agora.toISOString(), excluidoHa ?? null],
+    )
+    return rows[0]?.id ?? ''
+  }
+
+  /** O vínculo do aluno com a turma, no estado pedido; o encerrado tem o motivo e a data, `ha` antes do `agora`. */
+  async function vinculoDe(escola: Escola, estado: 'pendente' | 'confirmado' | 'contestado' | 'encerrado', agora: Date, ha: string, usuarioId = escola.alunoId): Promise<string> {
+    const { rows } = await bancada.pool.query<{ id: string }>(
+      `insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, contestacao, motivo_encerramento, criado_por, encerrado_em)
+       values ($1, $2, $3, $4, 'aluno', $5, case when $5 = 'contestado' then 'turma_errada' end, case when $5 = 'encerrado' then 'fim_do_ano' end, $3, case when $5 = 'encerrado' then $6::timestamptz - $7::interval end) returning id`,
+      [escola.escolaId, escola.anoId, usuarioId, escola.turmaId, estado, agora.toISOString(), ha],
+    )
+    return rows[0]?.id ?? ''
+  }
+
+  /** Um aluno da escola desativado `ha` antes do `agora`. */
+  async function alunoDesativado(escola: { escolaId: string }, agora: Date, ha: string): Promise<string> {
+    const { rows } = await bancada.pool.query<{ id: string }>(
+      "insert into usuario (escola_id, papel, nome, desativado_em) values ($1, 'aluno', 'Aluno desativado sintético', $2::timestamptz - $3::interval) returning id",
+      [escola.escolaId, agora.toISOString(), ha],
+    )
+    return rows[0]?.id ?? ''
+  }
+
+  /** Um aluno sem turma, só para dar dono ao trabalho. */
+  async function alunoNovo(escolaId: string): Promise<string> {
+    const { rows } = await bancada.pool.query<{ id: string }>("insert into usuario (escola_id, papel, nome) values ($1, 'aluno', 'Aluno sintético do trabalho') returning id", [escolaId])
+    return rows[0]?.id ?? ''
+  }
+
+  /**
    * Uma linha da categoria com a idade pedida, na tabela que o expurgo dela alcança. Objeto com o tipo declarado: categoria
    * nova sem semeadura é erro de compilação, e o `it.each` do prazo a cobre sozinho. Na autoria, a idade é a do `fim` do ano
    * encerrado do artefato.
@@ -333,6 +441,12 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
     texto_do_modelo: async (escola, agora, ha) => ({ tabela: 'consumo_ia', id: await consumo(escola, agora, ha, { de: 'ferramenta' }) }),
     consumo_por_aluno: async (escola, agora, ha) => ({ tabela: 'consumo_ia', id: await consumo(escola, agora, ha, { de: 'tutor' }) }),
     autoria_de_artefato: async (escola, agora, ha) => ({ tabela: 'artefato', id: await artefatoDe(escola.escolaId, await anoQueTerminou(escola, agora, ha), await professorNovo(escola)) }),
+    // A idade do trabalho é a do `fim` do ano encerrado da atividade, como a da autoria.
+    trabalho_do_aluno: async (escola, agora, ha) => ({ tabela: 'tentativa_atividade', id: (await trabalhoDoAluno(escola, await anoQueTerminou(escola, agora, ha), escola.alunoId)).tentativaId }),
+    reivindicacao_decidida: async (escola, agora, ha) => ({ tabela: 'reivindicacao', id: await reivindicacaoFechada(escola, agora, ha) }),
+    material_excluido: async (escola, agora, ha) => ({ tabela: 'material', id: await materialDa(escola, agora, ha) }),
+    vinculo_encerrado: async (escola, agora, ha) => ({ tabela: 'vinculo', id: await vinculoDe(escola, 'encerrado', agora, ha, await alunoDesativado(escola, agora, '1 day')) }),
+    pessoa_desativada: async (escola, agora, ha) => ({ tabela: 'usuario', id: await alunoDesativado(escola, agora, ha) }),
   }
   const threadsSemeadas = new Map<string, { threadId: string; professorId: string }>()
 
@@ -382,6 +496,12 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
       return linha.alunoId === null
     },
     autoria_de_artefato: async ({ id }) => (await lida<{ criadoPor: string | null }>('select criado_por as "criadoPor" from artefato where id = $1', id)).criadoPor === null,
+    // As cinco da tarefa 5.0 saem de verdade: a linha some.
+    trabalho_do_aluno: async ({ tabela, id }) => !(await existe(tabela, id)),
+    reivindicacao_decidida: async ({ tabela, id }) => !(await existe(tabela, id)),
+    material_excluido: async ({ tabela, id }) => !(await existe(tabela, id)),
+    vinculo_encerrado: async ({ tabela, id }) => !(await existe(tabela, id)),
+    pessoa_desativada: async ({ tabela, id }) => !(await existe(tabela, id)),
   }
 
   async function existe(tabela: string, id: string): Promise<boolean> {
@@ -451,14 +571,6 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
       [escolaId, categoria, meses],
     )
   }
-
-  describe('catálogo', () => {
-    it('toda categoria do catálogo passa pelo expurgo desta tarefa ou está pendente de uma tarefa nomeada, e nunca as duas', () => {
-      const pendentes = Object.keys(PENDENTES_DA_TAREFA)
-      expect(CATEGORIAS_DO_EXPURGO.filter((categoria) => pendentes.includes(categoria))).toEqual([])
-      expect([...CATEGORIAS_DO_EXPURGO, ...pendentes].sort()).toEqual([...CHAVES_DE_RETENCAO].sort())
-    })
-  })
 
   describe('prazo por categoria', () => {
     it.each(CATEGORIAS_DO_EXPURGO)('%s: um dia antes do prazo a linha fica, um dia depois sai (ou perde a pessoa), a de outra escola com a mesma idade fica, e reexecutar não mexe em mais nada', async (categoria) => {
@@ -600,7 +712,12 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
         { categoria: 'execucao_agente', linhas: 0, concluida: true },
         { categoria: 'texto_do_modelo', linhas: 0, concluida: true },
         { categoria: 'consumo_por_aluno', linhas: 0, concluida: true },
+        { categoria: 'trabalho_do_aluno', linhas: 0, concluida: true },
+        { categoria: 'reivindicacao_decidida', linhas: 0, concluida: true },
         { categoria: 'autoria_de_artefato', linhas: 0, concluida: true },
+        { categoria: 'material_excluido', linhas: 0, concluida: true },
+        { categoria: 'vinculo_encerrado', linhas: 0, concluida: true },
+        { categoria: 'pessoa_desativada', linhas: 0, concluida: true },
         { categoria: 'conversa_tutor', linhas: 1, concluida: true },
       ])
       expect(await quantas('sinal_tutor', a.escolaId)).toBe(0)
@@ -773,22 +890,126 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
         for (const tabela of ['mensagem_tutor', 'sinal_tutor', 'mensagem_agente', 'execucao_agente', 'consumo_ia', 'artefato']) await cliente.query(`analyze ${tabela}`)
         // Com a varredura sequencial proibida, o plano só usa o índice se ele servir à instrução.
         await cliente.query('set local enable_seqscan = off')
-        for (const [alvo, indice] of [
-          ['mensagem_tutor', 'mensagem_tutor_criada_em_idx'],
-          ['sinal_tutor', 'sinal_tutor_criado_em_idx'],
-          ['mensagem_agente', 'mensagem_agente_criada_em_idx'],
+        const prazo: PrazoDoLote = { agora: QUARTA_1H, meses: 12, fuso: FUSO }
+        const doLote = (alvo: Parameters<typeof instrucaoDoLoteDaEscola>[0]) => instrucaoDoLoteDaEscola(alvo, a.escolaId, prazo, LOTE_DO_EXPURGO)
+        for (const [alvo, indice, instrucao] of [
+          ['mensagem_tutor', 'mensagem_tutor_criada_em_idx', doLote('mensagem_tutor')],
+          ['sinal_tutor', 'sinal_tutor_criado_em_idx', doLote('sinal_tutor')],
+          ['mensagem_agente', 'mensagem_agente_criada_em_idx', doLote('mensagem_agente')],
           // Os de anonimização (tarefa 4.0), cada um pelo índice parcial da 0026.
-          ['execucao_agente', 'execucao_agente_a_anonimizar_idx'],
-          ['execucao_agente_do_tutor', 'execucao_agente_do_tutor_a_anonimizar_idx'],
-          ['consumo_ia_texto', 'consumo_ia_texto_a_anular_idx'],
-          ['consumo_ia_aluno', 'consumo_ia_aluno_a_anular_idx'],
-          ['artefato_autoria', 'artefato_autoria_idx'],
+          ['execucao_agente', 'execucao_agente_a_anonimizar_idx', doLote('execucao_agente')],
+          ['execucao_agente_do_tutor', 'execucao_agente_do_tutor_a_anonimizar_idx', doLote('execucao_agente_do_tutor')],
+          ['consumo_ia_texto', 'consumo_ia_texto_a_anular_idx', doLote('consumo_ia_texto')],
+          ['consumo_ia_aluno', 'consumo_ia_aluno_a_anular_idx', doLote('consumo_ia_aluno')],
+          ['artefato_autoria', 'artefato_autoria_idx', doLote('artefato_autoria')],
+          // Os da tarefa 5.0, cada um pelo índice parcial da 0027: o registro do expurgo desce pelo `(escola_id, em)` da 0025, e o
+          // trabalho do aluno, que desce pelo ano letivo, tem o teste dele logo abaixo, com volume.
+          ['reivindicacao', 'reivindicacao_decidida_idx', doLote('reivindicacao')],
+          ['material', 'material_excluido_idx', doLote('material')],
+          ['vinculo', 'vinculo_encerrado_idx', doLote('vinculo')],
+          ['usuario', 'usuario_desativado_idx', instrucaoDasPessoasDesativadas(a.escolaId, prazo, 100)],
+          ['expurgo_execucao', 'expurgo_execucao_escola_em_idx', instrucaoDoRegistroDoExpurgo(a.escolaId, QUARTA_1H, LOTE_DO_EXPURGO)],
         ] as const) {
-          const { sql: texto, params } = new PgDialect({ casing: 'snake_case' }).sqlToQuery(instrucaoDoLoteDaEscola(alvo, a.escolaId, { agora: QUARTA_1H, meses: 12, fuso: FUSO }, LOTE_DO_EXPURGO))
+          const { sql: texto, params } = new PgDialect({ casing: 'snake_case' }).sqlToQuery(instrucao)
           const { rows } = await cliente.query<{ 'QUERY PLAN': Array<{ Plan: NoDoPlano }> }>(`explain (format json) ${texto}`, params)
           const nos = nosDoPlano(rows[0]?.['QUERY PLAN'][0]?.Plan)
           expect(nos.map((no) => no['Index Name']).filter(Boolean), alvo).toContain(indice)
           expect(nos.map((no) => no['Node Type']), alvo).not.toContain('Seq Scan')
+        }
+      } finally {
+        await cliente.query('rollback')
+        cliente.release()
+      }
+    })
+
+    it('o lote do trabalho do aluno desce pelo ano letivo encerrado, pela chave única da tentativa, e não varre as tentativas da escola', async () => {
+      const a = await escolaNova()
+      const professorId = await professorNovo(a)
+      // Dois anos letivos da escola, um encerrado há 13 meses e o outro há 1, cada um com 30 atividades aplicadas e a tentativa
+      // de 40 alunos em todas (2.400 no total). Sem o volume, o plano de uma tabela vazia varreria as tentativas pelo índice do
+      // aluno, e não mostraria o caminho de uma escola com dados.
+      const anos = [await anoQueTerminou(a, QUARTA_1H, '13 months'), await anoQueTerminou(a, QUARTA_1H, '1 month')]
+      const alunos = (
+        await bancada.pool.query<{ id: string }>("insert into usuario (escola_id, papel, nome) select $1, 'aluno', 'Aluno sintético ' || n from generate_series(1, 40) as n returning id", [a.escolaId])
+      ).rows.map(({ id }) => id)
+      const cliente = await bancada.pool.connect()
+      try {
+        await cliente.query('begin')
+        for (const ano of anos) {
+          await cliente.query(
+            `with atividade as (
+               insert into artefato (escola_id, ano_letivo_id, turma_id, disciplina_id, tipo, titulo, conteudo)
+               values ($1, $2, $3, $4, 'atividade_objetiva', 'Atividade sintética', '{"tipo":"atividade_objetiva","titulo":"Atividade sintética"}') returning id
+             ), aplicadas as (
+               insert into atividade_aplicada (escola_id, ano_letivo_id, turma_id, artefato_id, avaliativa, estado, aplicada_por, encerrada_em)
+               select $1, $2, $3, atividade.id, false, 'encerrada', $5, now() from atividade cross join generate_series(1, 30) returning id
+             )
+             insert into tentativa_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, enviada_em)
+             select $1, $2, aplicadas.id, aluno, now() from aplicadas cross join unnest($6::uuid[]) as aluno`,
+            [a.escolaId, ano.anoId, ano.turmaId, ano.disciplinaId, professorId, alunos],
+          )
+        }
+        for (const tabela of ['tentativa_atividade', 'ano_letivo', 'atividade_aplicada']) await cliente.query(`analyze ${tabela}`)
+        await cliente.query('set local enable_seqscan = off')
+        const { sql: texto, params } = new PgDialect({ casing: 'snake_case' }).sqlToQuery(
+          instrucaoDoLoteDaEscola('tentativa_atividade', a.escolaId, { agora: QUARTA_1H, meses: 12, fuso: FUSO }, LOTE_DO_EXPURGO),
+        )
+        const { rows } = await cliente.query<{ 'QUERY PLAN': Array<{ Plan: NoDoPlano }> }>(`explain (format json) ${texto}`, params)
+        const nos = nosDoPlano(rows[0]?.['QUERY PLAN'][0]?.Plan)
+        const indices = nos.map((no) => no['Index Name']).filter(Boolean)
+        expect(indices).toContain('tentativa_atividade_uma_por_aluno')
+        expect(indices).not.toContain('tentativa_atividade_aluno_idx')
+        expect(nos.map((no) => no['Node Type'])).not.toContain('Seq Scan')
+
+        // A FK do aluno (`on delete cascade`) acha as tentativas dele por `(escola_id, aluno_id)`: é a consulta que a eliminação
+        // do aluno dispara por pessoa. Com o volume, ela desce pelo índice próprio, e não pela chave única do ano.
+        const { rows: porAluno } = await cliente.query<{ 'QUERY PLAN': Array<{ Plan: NoDoPlano }> }>(
+          'explain (format json) delete from only tentativa_atividade where escola_id = $1 and aluno_id = $2',
+          [a.escolaId, alunos[0]],
+        )
+        const nosDoAluno = nosDoPlano(porAluno[0]?.['QUERY PLAN'][0]?.Plan)
+        expect(nosDoAluno.map((no) => no['Index Name']).filter(Boolean)).toContain('tentativa_atividade_aluno_idx')
+        expect(nosDoAluno.map((no) => no['Node Type'])).not.toContain('Seq Scan')
+      } finally {
+        await cliente.query('rollback')
+        cliente.release()
+      }
+    })
+
+    it('as FKs `set null` da pessoa (execucao_agente.solicitada_por e artefato.criado_por) descem pelo índice próprio, e não leem todas as linhas da escola', async () => {
+      const a = await escolaNova()
+      const professorId = await professorNovo(a)
+      const outroProfessorId = await professorNovo(a)
+      const { anoId, turmaId, disciplinaId } = await anoQueTerminou(a, QUARTA_1H, '1 month')
+      const cliente = await bancada.pool.connect()
+      try {
+        await cliente.query('begin')
+        // Uma linha por turno do Tutor e um artefato por geração: as duas tabelas crescem com o uso, e sem o volume o plano de uma
+        // tabela vazia não mostraria o caminho de uma escola com dados. O outro professor tem quatro vezes mais: se todas as linhas
+        // da escola fossem da pessoa eliminada, o índice por escola e ano (`artefato_autoria_idx`) devolveria as mesmas linhas
+        // e, sendo menor, ganharia do índice por pessoa sem que ele fizesse falta.
+        await cliente.query(
+          `insert into artefato (escola_id, ano_letivo_id, turma_id, disciplina_id, tipo, titulo, conteudo, criado_por)
+           select $1, $2, $3, $4, 'plano_de_aula', 'Plano sintético', '{"tipo":"plano_de_aula","titulo":"Plano sintético"}', case when n <= 2000 then $5::uuid else $6::uuid end from generate_series(1, 10000) as n`,
+          [a.escolaId, anoId, turmaId, disciplinaId, professorId, outroProfessorId],
+        )
+        await cliente.query(
+          `insert into execucao_agente (escola_id, ano_letivo_id, funcao, tarefa, solicitada_por, chave_envio, entrada)
+           select $1, $2, 'tutor_com_o_aluno', 'turno_do_tutor', case when n <= 2000 then $3::uuid else $4::uuid end, gen_random_uuid(), '{"tarefa":"turno_do_tutor"}'::jsonb from generate_series(1, 10000) as n`,
+          [a.escolaId, anoId, professorId, outroProfessorId],
+        )
+        for (const tabela of ['artefato', 'execucao_agente']) await cliente.query(`analyze ${tabela}`)
+        // O `enable_seqscan = off` é intencional: quem prova a regra é o nome do índice no plano; a ausência de Seq Scan é só reforço. A escolha sem esse empurrão está no EXPLAIN do 5_task.md.
+        await cliente.query('set local enable_seqscan = off')
+        const consultas = [
+          { texto: 'update only execucao_agente set solicitada_por = null where escola_id = $1 and solicitada_por = $2', indice: 'execucao_agente_solicitada_por_idx' },
+          { texto: 'update only artefato set criado_por = null where escola_id = $1 and criado_por = $2', indice: 'artefato_criado_por_idx' },
+        ]
+        for (const { texto, indice } of consultas) {
+          const { rows } = await cliente.query<{ 'QUERY PLAN': Array<{ Plan: NoDoPlano }> }>(`explain (format json) ${texto}`, [a.escolaId, professorId])
+          const nos = nosDoPlano(rows[0]?.['QUERY PLAN'][0]?.Plan)
+          expect(nos.map((no) => no['Index Name']).filter(Boolean), texto).toContain(indice)
+          expect(nos.map((no) => no['Node Type']), texto).not.toContain('Seq Scan')
         }
       } finally {
         await cliente.query('rollback')
@@ -1016,6 +1237,88 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
       expect(await lote()).toEqual({ linhas: 1, cheio: false })
       expect(await lote()).toEqual({ linhas: 0, cheio: false })
       expect(await quantas(alvo, b.escolaId)).toBe(3)
+    })
+  })
+
+  describe('lote por tabela (tarefa 5.0)', () => {
+    const PRAZO = { agora: QUARTA_1H, meses: 12, fuso: FUSO } satisfies PrazoDoLote
+    const lote = (escolaId: string, alvo: Exclude<AlvoDoExpurgoDaEscola, 'thread_agente'>, limite: number) =>
+      executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => new ExpurgoDaEscolaRepository(bancada.banco).expurgarLote(alvo, PRAZO, limite))
+
+    /** Uma linha vencida do alvo, na idade pedida (para os alvos de data; o trabalho vai pelo `fim` do ano). */
+    async function semear(alvo: 'tentativa_atividade' | 'reivindicacao' | 'material' | 'vinculo', escola: Escola, idade: string): Promise<string> {
+      if (alvo === 'reivindicacao') return reivindicacaoFechada(escola, QUARTA_1H, idade)
+      if (alvo === 'material') return materialDa(escola, QUARTA_1H, idade)
+      if (alvo === 'vinculo') return vinculoDe(escola, 'encerrado', QUARTA_1H, idade)
+      return (await trabalhoDoAluno(escola, await anoQueTerminou(escola, QUARTA_1H, idade), await alunoDesativado(escola, QUARTA_1H, '1 day'))).tentativaId
+    }
+
+    it.each(['reivindicacao', 'material', 'vinculo'] as const)('%s: o lote leva primeiro a mais antiga, e pula, sem esperar, a linha que outra transação travou', async (alvo) => {
+      const a = await escolaNova()
+      // Fora da ordem da idade: entre as que não estão travadas, a mais antiga não é a primeira nem a última por id.
+      const recente = await semear(alvo, a, '13 months')
+      const antiga = await semear(alvo, a, '20 months')
+      const outraRecente = await semear(alvo, a, '14 months')
+      const travada = await semear(alvo, a, '30 months')
+      const outra = await bancada.pool.connect()
+      try {
+        await outra.query('begin')
+        await outra.query(`select 1 from ${alvo} where id = $1 for update`, [travada])
+        expect(await lote(a.escolaId, alvo, 1)).toEqual({ linhas: 1, cheio: true })
+        expect(await existe(alvo, antiga)).toBe(false)
+        for (const id of [recente, outraRecente, travada]) expect(await existe(alvo, id), id).toBe(true)
+      } finally {
+        await outra.query('rollback')
+        outra.release()
+      }
+    })
+
+    it('tentativa_atividade: o lote pula, sem esperar, a tentativa que outra transação travou, e leva a outra', async () => {
+      const a = await escolaNova()
+      const ano = await anoQueTerminou(a, QUARTA_1H, '13 months')
+      const livre = await trabalhoDoAluno(a, ano, await alunoNovo(a.escolaId))
+      const travada = await trabalhoDoAluno(a, ano, await alunoNovo(a.escolaId))
+      const outra = await bancada.pool.connect()
+      try {
+        await outra.query('begin')
+        await outra.query('select 1 from tentativa_atividade where id = $1 for update', [travada.tentativaId])
+        // Com limite 2 e duas candidatas, uma travada: sem `skip locked` o lote esperaria a trava até o prazo da instrução.
+        expect(await lote(a.escolaId, 'tentativa_atividade', 2)).toEqual({ linhas: 1, cheio: false })
+        expect(await existe('tentativa_atividade', livre.tentativaId)).toBe(false)
+        expect(await existe('tentativa_atividade', travada.tentativaId)).toBe(true)
+      } finally {
+        await outra.query('rollback')
+        outra.release()
+      }
+    })
+
+    it.each(['tentativa_atividade', 'reivindicacao', 'material', 'vinculo'] as const)('%s: o lote apaga no máximo o limite, diz que veio cheio, o seguinte leva o resto, e o de outra escola, mais antigo, não é tocado', async (alvo) => {
+      const a = await escolaNova()
+      const b = await escolaNova()
+      for (let indice = 0; indice < 3; indice += 1) await semear(alvo, a, '13 months')
+      const deB: string[] = []
+      for (let indice = 0; indice < 3; indice += 1) deB.push(await semear(alvo, b, '20 months'))
+      expect(await lote(a.escolaId, alvo, 2)).toEqual({ linhas: 2, cheio: true })
+      expect(await lote(a.escolaId, alvo, 2)).toEqual({ linhas: 1, cheio: false })
+      expect(await lote(a.escolaId, alvo, 2)).toEqual({ linhas: 0, cheio: false })
+      const tabela = alvo
+      for (const id of deB) expect(await existe(tabela, id), id).toBe(true)
+    })
+
+    it('[P] dois jobs da mesma escola ao mesmo tempo levam, nos quatro alvos que apagam, cada linha uma vez, e as contagens somam o total', async () => {
+      const a = await escolaNova()
+      const categorias = { tentativa_atividade: 'trabalho_do_aluno', reivindicacao: 'reivindicacao_decidida', material: 'material_excluido', vinculo: 'vinculo_encerrado' } as const
+      for (const alvo of Object.keys(categorias) as Array<keyof typeof categorias>) for (let indice = 0; indice < 8; indice += 1) await semear(alvo, a, '61 months')
+      await Promise.all([rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H), { lote: 3 })), rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H), { lote: 3 }))])
+      for (const [alvo, categoria] of Object.entries(categorias)) {
+        expect(await quantas(alvo, a.escolaId), alvo).toBe(0)
+        const linhas = (await execucoes(a.escolaId)).filter((linha) => linha.categoria === categoria)
+        expect(linhas, categoria).toHaveLength(2)
+        expect(
+          linhas.reduce((soma, linha) => soma + linha.linhas, 0),
+          categoria,
+        ).toBe(8)
+      }
     })
   })
 
@@ -1446,6 +1749,546 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
     })
   })
 
+  describe('trabalho do aluno e cadastro (tarefa 5.0)', () => {
+    /** O que a escola tem de uma categoria depois do job: a linha que ele gravou. */
+    async function linhaDaCategoria(escolaId: string, categoria: string): Promise<{ categoria: string; linhas: number; concluida: boolean } | undefined> {
+      return (await execucoes(escolaId)).findLast((linha) => linha.categoria === categoria)
+    }
+
+    describe('trabalho_do_aluno', () => {
+      it('o ano em curso ou planejado com o `fim` vencido não perde nada; o mesmo ano encerrado perde a tentativa, as respostas e a correção, e a atividade aplicada e o lote ficam', async () => {
+        const escolaId = await bancada.escola()
+        escolas.push(escolaId)
+        const alunoId = await alunoNovo(escolaId)
+        const emCurso = await anoQueTerminou({ escolaId }, QUARTA_1H, '6 years', 'em_curso')
+        const planejado = await anoQueTerminou({ escolaId }, QUARTA_1H, '7 years', 'planejado')
+        const doEmCurso = await trabalhoDoAluno({ escolaId }, emCurso, alunoId)
+        const doPlanejado = await trabalhoDoAluno({ escolaId }, planejado, alunoId)
+
+        await rodar(escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('tentativa_atividade', doEmCurso.tentativaId)).toBe(true)
+        expect(await existe('tentativa_atividade', doPlanejado.tentativaId)).toBe(true)
+        expect(await restoDoTrabalho(doEmCurso.atividadeAplicadaId)).toEqual({ respostas: 2, correcoes: 1 })
+        expect(await linhaDaCategoria(escolaId, 'trabalho_do_aluno')).toEqual({ categoria: 'trabalho_do_aluno', linhas: 0, concluida: true })
+
+        await bancada.pool.query("update ano_letivo set situacao = 'encerrado' where id = $1", [emCurso.anoId])
+        await rodar(escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('tentativa_atividade', doEmCurso.tentativaId)).toBe(false)
+        // Em cascata: a resposta e a correção do aluno saem com a tentativa.
+        expect(await restoDoTrabalho(doEmCurso.atividadeAplicadaId)).toEqual({ respostas: 0, correcoes: 0 })
+        // A atividade aplicada e o lote de correção são registro de decisão (5 anos, F12): ficam, sem o aluno.
+        expect(await existe('atividade_aplicada', doEmCurso.atividadeAplicadaId)).toBe(true)
+        expect(await existe('entrega', doEmCurso.entregaId)).toBe(true)
+        expect(await linhaDaCategoria(escolaId, 'trabalho_do_aluno')).toEqual({ categoria: 'trabalho_do_aluno', linhas: 1, concluida: true })
+        // O planejado continua inteiro.
+        expect(await existe('tentativa_atividade', doPlanejado.tentativaId)).toBe(true)
+        expect(await restoDoTrabalho(doPlanejado.atividadeAplicadaId)).toEqual({ respostas: 2, correcoes: 1 })
+      })
+
+      it('aluno transferido: o trabalho dele em A sai pelo ano de A, o de um ano mais novo na mesma escola fica, e o dele em B (outra escola, mesma idade) não é tocado', async () => {
+        const a = await escolaNova()
+        const b = await escolaNova()
+        const velhoEmA = await trabalhoDoAluno(a, await anoQueTerminou(a, QUARTA_1H, '13 months'), a.alunoId)
+        const novoEmA = await trabalhoDoAluno(a, await anoQueTerminou(a, QUARTA_1H, '2 months'), a.alunoId)
+        const velhoEmB = await trabalhoDoAluno(b, await anoQueTerminou(b, QUARTA_1H, '13 months'), b.alunoId)
+
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('tentativa_atividade', velhoEmA.tentativaId)).toBe(false)
+        expect(await restoDoTrabalho(velhoEmA.atividadeAplicadaId)).toEqual({ respostas: 0, correcoes: 0 })
+        expect(await existe('tentativa_atividade', novoEmA.tentativaId)).toBe(true)
+        expect(await restoDoTrabalho(novoEmA.atividadeAplicadaId)).toEqual({ respostas: 2, correcoes: 1 })
+        expect(await existe('tentativa_atividade', velhoEmB.tentativaId)).toBe(true)
+        expect(await restoDoTrabalho(velhoEmB.atividadeAplicadaId)).toEqual({ respostas: 2, correcoes: 1 })
+      })
+
+      it('o ajuste da escola vale: com 6 meses, o ano encerrado há 7 meses perde o trabalho, e com os 12 do padrão ele ficava', async () => {
+        const a = await escolaNova()
+        const trabalho = await trabalhoDoAluno(a, await anoQueTerminou(a, QUARTA_1H, '7 months'), a.alunoId)
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('tentativa_atividade', trabalho.tentativaId)).toBe(true)
+        await ajustar(a.escolaId, 'trabalho_do_aluno', 6)
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('tentativa_atividade', trabalho.tentativaId)).toBe(false)
+      })
+
+      it('o lote de trabalho com a cascata (20 respostas e a correção por tentativa) sai dentro dos 2 s do `statement_timeout`, no tamanho que o expurgo usa', async () => {
+        const escolaId = await bancada.escola()
+        escolas.push(escolaId)
+        // O lote inteiro do job: se a cascata passasse dos 2 s, o lote deste alvo teria de ser menor (`LOTE_MAXIMO_DO_ALVO`).
+        const lote = LOTE_DO_EXPURGO
+        const ano = await anoQueTerminou({ escolaId }, QUARTA_1H, '13 months')
+        // A estrutura (artefato, atividade aplicada e lote) de um aluno, e as `lote` tentativas a mais, de alunos novos, na mesma atividade.
+        const primeiro = await trabalhoDoAluno({ escolaId }, ano, await alunoNovo(escolaId))
+        await bancada.semear(
+          `with alunos as (
+             insert into usuario (escola_id, papel, nome) select $1, 'aluno', 'Aluno sintético ' || n from generate_series(1, $5::int) as n returning id
+           ), tentativas as (
+             insert into tentativa_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, enviada_em) select $1, $2, $3, id, now() from alunos returning aluno_id
+           ), respostas as (
+             insert into resposta_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, questao, alternativa)
+             select $1, $2, $3, aluno_id, questao, 0 from tentativas cross join generate_series(1, 20) as questao returning 1
+           )
+           insert into correcao (escola_id, ano_letivo_id, entrega_id, atividade_aplicada_id, aluno_id, acertos, total, em_branco, por_habilidade)
+           select $1, $2, $4, $3, aluno_id, 10, 20, 0, '[]' from tentativas`,
+          [escolaId, ano.anoId, primeiro.atividadeAplicadaId, primeiro.entregaId, lote],
+        )
+        expect(await quantas('tentativa_atividade', escolaId)).toBe(lote + 1)
+        expect(await quantas('resposta_atividade', escolaId)).toBe(2 + 20 * lote)
+        const repositorio = new ExpurgoDaEscolaRepository(bancada.banco)
+        const inicio = performance.now()
+        const doLote = await executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => repositorio.expurgarLote('tentativa_atividade', { agora: QUARTA_1H, meses: 12, fuso: FUSO }, lote))
+        const duracaoMs = performance.now() - inicio
+        expect(doLote).toEqual({ linhas: lote, cheio: true })
+        expect(duracaoMs).toBeLessThan(2_000)
+        // Sobra uma tentativa, a que o lote não levou (sem `order by`, qualquer uma), com as respostas e a correção dela.
+        expect(await quantas('tentativa_atividade', escolaId)).toBe(1)
+        expect(await quantas('resposta_atividade', escolaId)).toBe((await existe('tentativa_atividade', primeiro.tentativaId)) ? 2 : 20)
+        expect(await quantas('correcao', escolaId)).toBe(1)
+      })
+    })
+
+    describe('reivindicacao_decidida', () => {
+      it('sai a decidida por qualquer decisor e a encerrada sem decisão, pela data da decisão; a pendente nunca sai, e a de outra escola fica', async () => {
+        const a = await escolaNova()
+        const b = await escolaNova()
+        const peloProfessor = await reivindicacaoFechada(a, QUARTA_1H, '61 months', { estado: 'aprovada', como: 'professor' })
+        const pelaCoordenacao = await reivindicacaoFechada(a, QUARTA_1H, '61 months', { estado: 'recusada', como: 'coordenacao' })
+        const encerrada = await reivindicacaoFechada(a, QUARTA_1H, '61 months', { estado: 'encerrada' })
+        const encerradaRecente = await reivindicacaoFechada(a, QUARTA_1H, '59 months', { estado: 'encerrada' })
+        const decididaRecente = await reivindicacaoFechada(a, QUARTA_1H, '59 months', { estado: 'aprovada' })
+        const pendente = await reivindicacaoPendente(a, QUARTA_1H, '61 months')
+        const deB = await reivindicacaoFechada(b, QUARTA_1H, '61 months', { como: 'coordenacao' })
+
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('reivindicacao', peloProfessor)).toBe(false)
+        expect(await existe('reivindicacao', pelaCoordenacao)).toBe(false)
+        expect(await existe('reivindicacao', encerrada)).toBe(false)
+        expect(await existe('reivindicacao', encerradaRecente)).toBe(true)
+        expect(await existe('reivindicacao', decididaRecente)).toBe(true)
+        expect(await existe('reivindicacao', pendente)).toBe(true)
+        expect(await existe('reivindicacao', deB)).toBe(true)
+        expect(await linhaDaCategoria(a.escolaId, 'reivindicacao_decidida')).toEqual({ categoria: 'reivindicacao_decidida', linhas: 3, concluida: true })
+      })
+
+      it('o ajuste da escola vale: com 12 meses, a decidida há 13 sai e a de 11 fica', async () => {
+        const a = await escolaNova()
+        const velha = await reivindicacaoFechada(a, QUARTA_1H, '13 months')
+        const nova = await reivindicacaoFechada(a, QUARTA_1H, '11 months')
+        await ajustar(a.escolaId, 'reivindicacao_decidida', 12)
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('reivindicacao', velha)).toBe(false)
+        expect(await existe('reivindicacao', nova)).toBe(true)
+      })
+    })
+
+    describe('material_excluido', () => {
+      /** Uma pergunta do aluno que cita a página 1 do material. */
+      async function perguntaSobreOMaterial(escola: Escola, agora: Date, ha: string, materialId: string): Promise<string> {
+        const execucaoId = await execucao(escola, 'turno_do_tutor', escola.alunoId)
+        const { rows } = await bancada.pool.query<{ id: string }>(
+          `insert into mensagem_tutor (escola_id, ano_letivo_id, turma_id, aluno_id, execucao_id, autor, material_id, pagina, texto, criada_em)
+           values ($1, $2, $3, $4, $5, 'aluno', $6, 1, 'Pergunta sintética sobre a página', $7::timestamptz - $8::interval) returning id`,
+          [escola.escolaId, escola.anoId, escola.turmaId, escola.alunoId, execucaoId, materialId, agora.toISOString(), ha],
+        )
+        return rows[0]?.id ?? ''
+      }
+
+      /** Um sinal do Tutor que aponta para a página 1 do material. */
+      async function sinalSobreOMaterial(escola: Escola, agora: Date, ha: string, materialId: string): Promise<string> {
+        const { rows } = await bancada.pool.query<{ id: string }>(
+          `insert into sinal_tutor (escola_id, ano_letivo_id, turma_id, aluno_id, tipo, material_id, pagina, criado_em)
+           values ($1, $2, $3, $4, 'travou', $5, 1, $6::timestamptz - $7::interval) returning id`,
+          [escola.escolaId, escola.anoId, escola.turmaId, escola.alunoId, materialId, agora.toISOString(), ha],
+        )
+        return rows[0]?.id ?? ''
+      }
+
+      it('o vigente fica, mesmo velho; o excluído antes do prazo fica; o excluído além do prazo sai, com os trechos; o que uma pergunta ou um sinal do Tutor ainda cita fica até a conversa sair; a outra escola fica', async () => {
+        const a = await escolaNova()
+        const b = await escolaNova()
+        const vigente = await materialDa(a, QUARTA_1H)
+        await bancada.pool.query("update material set enviado_em = $2::timestamptz - interval '7 years' where id = $1", [vigente, QUARTA_1H.toISOString()])
+        const recente = await materialDa(a, QUARTA_1H, '59 months')
+        const vencido = await materialDa(a, QUARTA_1H, '61 months')
+        await bancada.pool.query("insert into trecho (escola_id, disciplina_id, material_id, pagina, texto) select escola_id, disciplina_id, id, 1, 'Página sintética.' from material where id = $1", [vencido])
+        const citadoPelaConversa = await materialDa(a, QUARTA_1H, '61 months')
+        const pergunta = await perguntaSobreOMaterial(a, QUARTA_1H, '1 day', citadoPelaConversa)
+        const citadoPeloSinal = await materialDa(a, QUARTA_1H, '61 months')
+        const sinalDele = await sinalSobreOMaterial(a, QUARTA_1H, '1 day', citadoPeloSinal)
+        const deB = await materialDa(b, QUARTA_1H, '61 months')
+
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('material', vencido)).toBe(false)
+        expect((await bancada.pool.query('select 1 from trecho where material_id = $1', [vencido])).rowCount).toBe(0)
+        for (const id of [vigente, recente, citadoPelaConversa, citadoPeloSinal, deB]) expect(await existe('material', id), id).toBe(true)
+        expect(await linhaDaCategoria(a.escolaId, 'material_excluido')).toEqual({ categoria: 'material_excluido', linhas: 1, concluida: true })
+
+        // A conversa passa do prazo (a pergunta e o sinal têm 13 meses): ela sai primeiro, e o material que só ela citava sai na mesma noite.
+        await bancada.pool.query("update mensagem_tutor set criada_em = $2::timestamptz - interval '13 months' where id = $1", [pergunta, QUARTA_1H.toISOString()])
+        await bancada.pool.query("update sinal_tutor set criado_em = $2::timestamptz - interval '13 months' where id = $1", [sinalDele, QUARTA_1H.toISOString()])
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('mensagem_tutor', pergunta)).toBe(false)
+        expect(await existe('sinal_tutor', sinalDele)).toBe(false)
+        expect(await existe('material', citadoPelaConversa)).toBe(false)
+        expect(await existe('material', citadoPeloSinal)).toBe(false)
+        expect(await existe('material', recente)).toBe(true)
+        expect(await existe('material', vigente)).toBe(true)
+        expect(await existe('material', deB)).toBe(true)
+        expect(await linhaDaCategoria(a.escolaId, 'material_excluido')).toEqual({ categoria: 'material_excluido', linhas: 2, concluida: true })
+      })
+    })
+
+    describe('vinculo_encerrado', () => {
+      it('só o vínculo encerrado além do prazo sai: o ativo, o pendente, o contestado e o encerrado recente ficam, mesmo velhos, e o de outra escola fica', async () => {
+        const a = await escolaNova()
+        const b = await escolaNova()
+        const encerradoVelho = await vinculoDe(a, 'encerrado', QUARTA_1H, '61 months', await alunoNovo(a.escolaId))
+        const encerradoRecente = await vinculoDe(a, 'encerrado', QUARTA_1H, '59 months', await alunoNovo(a.escolaId))
+        const confirmado = await vinculoDe(a, 'confirmado', QUARTA_1H, '61 months', await alunoNovo(a.escolaId))
+        const pendente = await vinculoDe(a, 'pendente', QUARTA_1H, '61 months', await alunoNovo(a.escolaId))
+        const contestado = await vinculoDe(a, 'contestado', QUARTA_1H, '61 months', await alunoNovo(a.escolaId))
+        const deB = await vinculoDe(b, 'encerrado', QUARTA_1H, '61 months', await alunoNovo(b.escolaId))
+        // O vínculo que a coordenação criou há anos continua o mesmo: a data do prazo é a do encerramento.
+        await bancada.pool.query("update vinculo set criado_em = $2::timestamptz - interval '10 years' where id = any($1::uuid[])", [[encerradoRecente, confirmado, pendente, contestado], QUARTA_1H.toISOString()])
+
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('vinculo', encerradoVelho)).toBe(false)
+        for (const id of [encerradoRecente, confirmado, pendente, contestado, deB]) expect(await existe('vinculo', id), id).toBe(true)
+        expect(await linhaDaCategoria(a.escolaId, 'vinculo_encerrado')).toEqual({ categoria: 'vinculo_encerrado', linhas: 1, concluida: true })
+      })
+    })
+
+    describe('pessoa_desativada', () => {
+      /** A auditoria `usuario.eliminado` do usuário: quem assinou. */
+      async function auditoriaDaEliminacao(usuarioId: string): Promise<Array<{ autorUsuarioId: string | null; autorOperador: string | null; escolaId: string; entidade: string }>> {
+        const { rows } = await bancada.pool.query<{ autorUsuarioId: string | null; autorOperador: string | null; escolaId: string; entidade: string }>(
+          `select autor_usuario_id as "autorUsuarioId", autor_operador as "autorOperador", escola_id as "escolaId", entidade from auditoria where acao = 'usuario.eliminado' and entidade_id = $1`,
+          [usuarioId],
+        )
+        return rows
+      }
+
+      it('o desativado além do prazo é eliminado pelo ciclo de vida (vínculo e credencial saem com ele), com a auditoria assinada pela rotina; o ativo e o desativado dentro do prazo ficam', async () => {
+        const a = await escolaNova()
+        const b = await escolaNova()
+        const desativado = await alunoDesativado(a, QUARTA_1H, '61 months')
+        await vinculoDe(a, 'confirmado', QUARTA_1H, '1 day', desativado)
+        await bancada.pool.query("insert into credencial_matricula (escola_id, usuario_id, matricula, senha_hash) values ($1, $2, 'm-expurgo-1', 'hash-sintetico')", [a.escolaId, desativado])
+        const dentroDoPrazo = await alunoDesativado(a, QUARTA_1H, '59 months')
+        const ativo = await alunoNovo(a.escolaId)
+        const deB = await alunoDesativado(b, QUARTA_1H, '61 months')
+        await bancada.pool.query("insert into credencial_matricula (escola_id, usuario_id, matricula, senha_hash) values ($1, $2, 'm-expurgo-1', 'hash-sintetico')", [b.escolaId, deB])
+
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('usuario', desativado)).toBe(false)
+        expect((await bancada.pool.query('select 1 from vinculo where usuario_id = $1', [desativado])).rowCount).toBe(0)
+        expect((await bancada.pool.query('select 1 from credencial_matricula where usuario_id = $1', [desativado])).rowCount).toBe(0)
+        // A mesma matrícula na escola B é de outra pessoa (a matrícula é única por escola) e continua.
+        expect((await bancada.pool.query('select 1 from credencial_matricula where usuario_id = $1', [deB])).rowCount).toBe(1)
+        for (const id of [dentroDoPrazo, ativo, deB]) expect(await existe('usuario', id), id).toBe(true)
+        expect(await auditoriaDaEliminacao(desativado)).toEqual([{ autorUsuarioId: null, autorOperador: AUTOR_DA_ROTINA, escolaId: a.escolaId, entidade: 'usuario' }])
+        expect(await auditoriaDaEliminacao(deB)).toEqual([])
+        expect(await linhaDaCategoria(a.escolaId, 'pessoa_desativada')).toEqual({ categoria: 'pessoa_desativada', linhas: 1, concluida: true })
+      })
+
+      it('o aluno desativado que ainda tem trabalho, conversa do Tutor e consumo de IA é eliminado pela rotina sem quebrar o lote: o trabalho e a conversa saem em cascata e o consumo perde só o aluno', async () => {
+        const a = await escolaNova()
+        const ano = await anoQueTerminou(a, QUARTA_1H, '1 month')
+        const { tentativaId } = await trabalhoDoAluno(a, ano, a.alunoId)
+        const mensagemId = await mensagemTutor(a, QUARTA_1H, '1 month')
+        const sinalId = await sinal(a, QUARTA_1H, '1 month')
+        const consumoId = await consumo(a, QUARTA_1H, '1 month', { de: 'tutor' })
+        await bancada.pool.query("update usuario set desativado_em = $2::timestamptz - interval '61 months' where id = $1", [a.alunoId, QUARTA_1H.toISOString()])
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('usuario', a.alunoId)).toBe(false)
+        expect(await existe('tentativa_atividade', tentativaId)).toBe(false)
+        expect(await existe('mensagem_tutor', mensagemId)).toBe(false)
+        expect(await existe('sinal_tutor', sinalId)).toBe(false)
+        expect(await existe('consumo_ia', consumoId)).toBe(true)
+        expect((await bancada.pool.query('select aluno_id from consumo_ia where id = $1', [consumoId])).rows[0]?.aluno_id).toBeNull()
+        expect(await linhaDaCategoria(a.escolaId, 'pessoa_desativada')).toEqual({ categoria: 'pessoa_desativada', linhas: 1, concluida: true })
+      })
+
+      it('a conta global continua quando o professor está ativo em outra escola, e é limpa quando a escola eliminada era a última', async () => {
+        const a = await escolaNova()
+        const b = await escolaNova()
+        const contaEmDuas = (await bancada.pool.query<{ id: string }>('insert into conta (email) values ($1) returning id', [`dupla-${randomUUID()}@expurgo.invalid`])).rows[0]?.id ?? ''
+        const contaSo = (await bancada.pool.query<{ id: string }>('insert into conta (email) values ($1) returning id', [`so-${randomUUID()}@expurgo.invalid`])).rows[0]?.id ?? ''
+        const inserir = async (escolaId: string, contaId: string, desativadoHa: string | null): Promise<string> =>
+          (
+            await bancada.pool.query<{ id: string }>(
+              "insert into usuario (escola_id, papel, nome, conta_id, desativado_em) values ($1, 'professor', 'Professor sintético', $2, case when $3::text is null then null else $4::timestamptz - $3::interval end) returning id",
+              [escolaId, contaId, desativadoHa, QUARTA_1H.toISOString()],
+            )
+          ).rows[0]?.id ?? ''
+        const emA = await inserir(a.escolaId, contaEmDuas, '61 months')
+        const emB = await inserir(b.escolaId, contaEmDuas, null)
+        const soEmA = await inserir(a.escolaId, contaSo, '61 months')
+        const email = async (contaId: string) => (await bancada.pool.query<{ email: string | null }>('select email from conta where id = $1', [contaId])).rows[0]?.email
+
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+        expect(await existe('usuario', emA)).toBe(false)
+        expect(await existe('usuario', soEmA)).toBe(false)
+        expect(await existe('usuario', emB)).toBe(true)
+        expect(await email(contaEmDuas)).not.toBeNull()
+        expect(await email(contaSo)).toBeNull()
+      })
+
+      it('a pessoa que sumiu entre a escolha do lote e a trava é pulada sem erro, a seguinte sai, e a contagem é só do que este job eliminou', async () => {
+        const a = await escolaNova()
+        const maisAntiga = await alunoDesativado(a, QUARTA_1H, '62 months')
+        const outra = await alunoDesativado(a, QUARTA_1H, '61 months')
+        const cliente = await bancada.pool.connect()
+        try {
+          // A mais antiga é a primeira do lote: o job para na trava dela até o teste a eliminar por fora.
+          await cliente.query('begin')
+          await cliente.query('select 1 from usuario where id = $1 for update', [maisAntiga])
+          const job = rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+          await esperarNaTrava(bancada.pool, '%"desativado_em" from "usuario"%no key update%')
+          await cliente.query('delete from usuario where id = $1', [maisAntiga])
+          await cliente.query('commit')
+          await job
+        } finally {
+          cliente.release()
+        }
+        expect(await existe('usuario', maisAntiga)).toBe(false)
+        expect(await existe('usuario', outra)).toBe(false)
+        expect(await auditoriaDaEliminacao(maisAntiga)).toEqual([])
+        expect(await auditoriaDaEliminacao(outra)).toHaveLength(1)
+        expect(await linhaDaCategoria(a.escolaId, 'pessoa_desativada')).toEqual({ categoria: 'pessoa_desativada', linhas: 1, concluida: true })
+      })
+
+      it('a pessoa reativada entre a escolha do lote e a trava não é eliminada: fica, sem auditoria, e a contagem é só das outras', async () => {
+        const a = await escolaNova()
+        const reativada = await alunoDesativado(a, QUARTA_1H, '62 months')
+        const outra = await alunoDesativado(a, QUARTA_1H, '61 months')
+        const cliente = await bancada.pool.connect()
+        try {
+          // A mais antiga é a primeira do lote: o job para na trava dela até o teste reativá-la por fora (convite aceito).
+          await cliente.query('begin')
+          await cliente.query('select 1 from usuario where id = $1 for update', [reativada])
+          const job = rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+          await esperarNaTrava(bancada.pool, '%"desativado_em" from "usuario"%no key update%')
+          await cliente.query('update usuario set desativado_em = null where id = $1', [reativada])
+          await cliente.query('commit')
+          await job
+        } finally {
+          cliente.release()
+        }
+        expect(await existe('usuario', reativada)).toBe(true)
+        expect(await existe('usuario', outra)).toBe(false)
+        expect(await auditoriaDaEliminacao(reativada)).toEqual([])
+        expect(await auditoriaDaEliminacao(outra)).toHaveLength(1)
+        expect(await linhaDaCategoria(a.escolaId, 'pessoa_desativada')).toEqual({ categoria: 'pessoa_desativada', linhas: 1, concluida: true })
+      })
+
+      it('a pessoa reativada e desativada de novo dentro do prazo, entre a escolha do lote e a trava, também não é eliminada', async () => {
+        const a = await escolaNova()
+        const reativada = await alunoDesativado(a, QUARTA_1H, '62 months')
+        const outra = await alunoDesativado(a, QUARTA_1H, '61 months')
+        const cliente = await bancada.pool.connect()
+        try {
+          // A mais antiga é a primeira do lote: o job para na trava dela até o teste reativá-la e desativá-la de novo agora, por fora (dentro do prazo).
+          await cliente.query('begin')
+          await cliente.query('select 1 from usuario where id = $1 for update', [reativada])
+          const job = rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+          await esperarNaTrava(bancada.pool, '%"desativado_em" from "usuario"%no key update%')
+          await cliente.query('update usuario set desativado_em = $2::timestamptz where id = $1', [reativada, QUARTA_1H.toISOString()])
+          await cliente.query('commit')
+          await job
+        } finally {
+          cliente.release()
+        }
+        expect(await existe('usuario', reativada)).toBe(true)
+        expect(await existe('usuario', outra)).toBe(false)
+        expect(await auditoriaDaEliminacao(reativada)).toEqual([])
+        expect(await auditoriaDaEliminacao(outra)).toHaveLength(1)
+        expect(await linhaDaCategoria(a.escolaId, 'pessoa_desativada')).toEqual({ categoria: 'pessoa_desativada', linhas: 1, concluida: true })
+      })
+
+      it('o lote leva as mais antigas primeiro: com 101 desativadas e o limite de 100, sobra a mais recente', async () => {
+        const a = await escolaNova()
+        await bancada.semear(
+          "insert into usuario (escola_id, papel, nome, desativado_em) select $1, 'aluno', 'Aluno desativado ' || n, $2::timestamptz - interval '61 months' - n * interval '1 day' from generate_series(1, 101) as n",
+          [a.escolaId, QUARTA_1H.toISOString()],
+        )
+        const doLote = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () =>
+          new ExpurgoDaEscolaRepository(bancada.banco).expurgarLote('usuario', { agora: QUARTA_1H, meses: 60, fuso: FUSO }, 1_000),
+        )
+        expect(doLote).toEqual({ linhas: 100, cheio: true })
+        const { rows } = await bancada.pool.query<{ nome: string }>('select nome from usuario where escola_id = $1 and desativado_em is not null', [a.escolaId])
+        // O n = 1 é o que foi desativado há menos tempo.
+        expect(rows).toEqual([{ nome: 'Aluno desativado 1' }])
+      })
+
+      it('o lote de A não escolhe a pessoa de B, mesmo a mais antiga: com o limite de 1, é a de A que sai', async () => {
+        const a = await escolaNova()
+        const b = await escolaNova()
+        const deB = await alunoDesativado(b, QUARTA_1H, '70 months')
+        const deA = await alunoDesativado(a, QUARTA_1H, '61 months')
+        const doLote = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () =>
+          new ExpurgoDaEscolaRepository(bancada.banco).expurgarLote('usuario', { agora: QUARTA_1H, meses: 60, fuso: FUSO }, 1),
+        )
+        expect(doLote).toEqual({ linhas: 1, cheio: true })
+        expect(await existe('usuario', deA)).toBe(false)
+        expect(await existe('usuario', deB)).toBe(true)
+      })
+
+      it('o lote diz `cheio` pelo número de pessoas que escolheu, e não pelo que eliminou: a que sumiu na trava não faz a noite parar com a fila ainda cheia', async () => {
+        const a = await escolaNova()
+        const maisAntiga = await alunoDesativado(a, QUARTA_1H, '63 months')
+        await alunoDesativado(a, QUARTA_1H, '62 months')
+        await alunoDesativado(a, QUARTA_1H, '61 months')
+        const cliente = await bancada.pool.connect()
+        try {
+          await cliente.query('begin')
+          await cliente.query('select 1 from usuario where id = $1 for update', [maisAntiga])
+          const doLote = executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () =>
+            new ExpurgoDaEscolaRepository(bancada.banco).expurgarLote('usuario', { agora: QUARTA_1H, meses: 60, fuso: FUSO }, 2),
+          )
+          await esperarNaTrava(bancada.pool, '%"desativado_em" from "usuario"%no key update%')
+          await cliente.query('delete from usuario where id = $1', [maisAntiga])
+          await cliente.query('commit')
+          // Escolheu duas (a que sumiu e a seguinte), eliminou uma: o lote veio cheio, e sobra mais uma para o seguinte.
+          expect(await doLote).toEqual({ linhas: 1, cheio: true })
+        } finally {
+          cliente.release()
+        }
+        expect((await bancada.pool.query('select 1 from usuario where escola_id = $1 and desativado_em is not null', [a.escolaId])).rowCount).toBe(1)
+      })
+
+      it('o erro que não é de pessoa que sumiu sobe: a categoria grava `false`, as eliminadas antes ficam eliminadas, e a noite seguinte começa por ela', async () => {
+        const a = await escolaNova()
+        const primeira = await alunoDesativado(a, QUARTA_1H, '63 months')
+        const quebra = await alunoDesativado(a, QUARTA_1H, '62 months')
+        const ultima = await alunoDesativado(a, QUARTA_1H, '61 months')
+        // Um gatilho só do banco de teste, que falha ao apagar a segunda pessoa: erro de SQL, e não `NAO_ENCONTRADO`.
+        const nome = `teste_falha_${randomUUID().replaceAll('-', '').slice(0, 12)}`
+        await bancada.pool.query(`create function ${nome}() returns trigger language plpgsql as $$ begin raise exception 'falha de teste'; end $$`)
+        await bancada.pool.query(`create trigger ${nome} before delete on usuario for each row when (old.id = '${quebra}') execute function ${nome}()`)
+        try {
+          await expect(rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))).rejects.toThrow()
+          expect(await existe('usuario', primeira)).toBe(false)
+          expect(await existe('usuario', quebra)).toBe(true)
+          expect(await existe('usuario', ultima)).toBe(true)
+          expect(await linhaDaCategoria(a.escolaId, 'pessoa_desativada')).toEqual({ categoria: 'pessoa_desativada', linhas: 0, concluida: false })
+        } finally {
+          await bancada.pool.query(`drop trigger ${nome} on usuario`)
+          await bancada.pool.query(`drop function ${nome}()`)
+        }
+        // Sem o gatilho, a noite seguinte começa pela categoria pendente e elimina as duas que sobraram.
+        await rodar(a.escolaId, expurgo(relogioEm(QUINTA_1H)))
+        expect(await existe('usuario', quebra)).toBe(false)
+        expect(await existe('usuario', ultima)).toBe(false)
+        expect((await execucoes(a.escolaId)).filter((linha) => linha.categoria === 'pessoa_desativada').at(-1)).toEqual({ categoria: 'pessoa_desativada', linhas: 2, concluida: true })
+      })
+
+      it('[P] dois jobs da mesma escola ao mesmo tempo eliminam cada pessoa uma vez, sem erro, e as contagens somam o total', async () => {
+        // Não garante que os dois jobs se cruzem na mesma pessoa; quem prova a corrida na trava é o teste de «sumiu entre a escolha do lote e a trava».
+        const a = await escolaNova()
+        const ids: string[] = []
+        for (let indice = 0; indice < 12; indice += 1) ids.push(await alunoDesativado(a, QUARTA_1H, '61 months'))
+        await Promise.all([rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H))), rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))])
+        for (const id of ids) {
+          expect(await existe('usuario', id), id).toBe(false)
+          expect(await auditoriaDaEliminacao(id), id).toHaveLength(1)
+        }
+        const linhas = (await execucoes(a.escolaId)).filter((linha) => linha.categoria === 'pessoa_desativada')
+        expect(linhas).toHaveLength(2)
+        expect(linhas.reduce((soma, linha) => soma + linha.linhas, 0)).toBe(12)
+      })
+
+      it('o lote da eliminação é de no máximo 100 pessoas, e o seguinte leva o resto', async () => {
+        const a = await escolaNova()
+        await bancada.semear(
+          "insert into usuario (escola_id, papel, nome, desativado_em) select $1, 'aluno', 'Aluno desativado ' || n, $2::timestamptz - interval '61 months' from generate_series(1, 101) as n",
+          [a.escolaId, QUARTA_1H.toISOString()],
+        )
+        const real = new ExpurgoDaEscolaRepository(bancada.banco)
+        const lotes: number[] = []
+        const contando = Object.assign(Object.create(real) as ExpurgoDaEscolaRepository, {
+          expurgarLote: async (alvo: AlvoDoExpurgoDaEscola, prazo: PrazoDoLote, limite: number) => {
+            const lote = await real.expurgarLote(alvo, prazo, limite)
+            if (alvo === 'usuario') lotes.push(lote.linhas)
+            return lote
+          },
+        })
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H), { repositorio: contando }))
+        expect(lotes).toEqual([100, 1])
+        expect((await bancada.pool.query("select 1 from usuario where escola_id = $1 and desativado_em is not null", [a.escolaId])).rowCount).toBe(0)
+        expect(await linhaDaCategoria(a.escolaId, 'pessoa_desativada')).toEqual({ categoria: 'pessoa_desativada', linhas: 101, concluida: true })
+      })
+    })
+
+    describe('expurgo_execucao', () => {
+      /** Uma linha do registro do expurgo, com `linhas` como marca para o teste achá-la. */
+      async function registro(escolaId: string, marca: number, ha: string): Promise<void> {
+        await bancada.pool.query("insert into expurgo_execucao (escola_id, categoria, linhas, concluida, em) values ($1, 'conversa_tutor', $2, true, $3::timestamptz - $4::interval)", [escolaId, marca, QUARTA_1H.toISOString(), ha])
+      }
+      const marcas = async (escolaId: string): Promise<number[]> =>
+        (await bancada.pool.query<{ linhas: number }>('select linhas from expurgo_execucao where escola_id = $1 and linhas >= 7000 order by linhas', [escolaId])).rows.map((linha) => linha.linhas)
+
+      it('com 5 anos e um dia o registro sai, com 5 anos menos um dia fica, o de outra escola fica, e as linhas desta noite não saem; vários lotes levam tudo', async () => {
+        const a = await escolaNova()
+        const b = await escolaNova()
+        for (let marca = 7001; marca <= 7005; marca += 1) await registro(a.escolaId, marca, '60 months 1 day')
+        await registro(a.escolaId, 7101, '60 months - 1 day')
+        await registro(b.escolaId, 7001, '60 months 1 day')
+
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H), { lote: 2 }))
+        expect(await marcas(a.escolaId)).toEqual([7101])
+        expect(await marcas(b.escolaId)).toEqual([7001])
+        // As doze linhas da noite que acabou de rodar ficam: o registro só apaga o que passou de 5 anos.
+        expect((await execucoes(a.escolaId)).filter((linha) => linha.linhas < 7000)).toHaveLength(CATEGORIAS_DO_EXPURGO.length)
+        expect(log.doEvento('retencao.expurgada').filter((linha) => linha['escolaId'] === a.escolaId)).toEqual([expect.objectContaining({ registroApagadoTotal: 5 })])
+      })
+
+      it('o lote do registro apaga no máximo o limite e diz se veio cheio, leva primeiro o mais antigo, e pula, sem esperar, a linha que outra transação travou', async () => {
+        const a = await escolaNova()
+        const b = await escolaNova()
+        for (let marca = 7001; marca <= 7005; marca += 1) await registro(a.escolaId, marca, `${String(60 + marca - 7000)} months`)
+        await registro(b.escolaId, 7001, '70 months')
+        const lote = (limite: number) => executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () => new ExpurgoDaEscolaRepository(bancada.banco).expurgarRegistroDoExpurgo(QUARTA_1H, limite))
+        // A 7005 é a mais antiga (65 meses), a 7001, a mais recente (61): o lote de 2 leva a 7005 e a 7004, e pula a travada.
+        const outra = await bancada.pool.connect()
+        try {
+          await outra.query('begin')
+          await outra.query('select 1 from expurgo_execucao where escola_id = $1 and linhas = 7004 for update', [a.escolaId])
+          expect(await lote(2)).toEqual({ linhas: 2, cheio: true })
+          expect(await marcas(a.escolaId)).toEqual([7001, 7002, 7004])
+        } finally {
+          await outra.query('rollback')
+          outra.release()
+        }
+        expect(await lote(2)).toEqual({ linhas: 2, cheio: true })
+        expect(await lote(2)).toEqual({ linhas: 1, cheio: false })
+        expect(await lote(2)).toEqual({ linhas: 0, cheio: false })
+        expect(await marcas(b.escolaId)).toEqual([7001])
+      })
+
+      it('se a janela letiva abre depois da última categoria, a noite fica completa e o registro vencido sai na noite seguinte', async () => {
+        const a = await escolaNova()
+        await registro(a.escolaId, 7001, '60 months 1 day')
+        const relogio = relogioEm(QUARTA_1H)
+        const real = new ExpurgoDaEscolaRepository(bancada.banco)
+        const abreDepoisDaUltima = Object.assign(Object.create(real) as ExpurgoDaEscolaRepository, {
+          expurgarLote: async (alvo: AlvoDoExpurgoDaEscola, prazo: PrazoDoLote, limite: number) => {
+            const lote = await real.expurgarLote(alvo, prazo, limite)
+            if (alvo === 'usuario') relogio.atual = QUARTA_8H
+            return lote
+          },
+        })
+        await rodar(a.escolaId, expurgo(relogio, { repositorio: abreDepoisDaUltima }))
+        expect(await marcas(a.escolaId)).toEqual([7001])
+        expect((await execucoes(a.escolaId)).filter((linha) => linha.linhas < 7000).every((linha) => linha.concluida)).toBe(true)
+        expect(log.doEvento('retencao.expurgo_interrompido').some((linha) => linha['escolaId'] === a.escolaId && linha['tipo'] === 'expurgo_execucao')).toBe(true)
+
+        await rodar(a.escolaId, expurgo(relogioEm(QUINTA_1H)))
+        expect(await marcas(a.escolaId)).toEqual([])
+      })
+    })
+  })
+
   describe('banco', () => {
     it('`expurgo_execucao` recusa categoria fora do catálogo e contagem negativa, e o check de categoria tem exatamente o catálogo', async () => {
       const a = await escolaNova()
@@ -1457,6 +2300,27 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
       const { rows } = await bancada.pool.query<{ definicao: string }>("select pg_get_constraintdef(oid) as definicao from pg_constraint where conname = 'expurgo_execucao_categoria_valida'")
       expect(rows).toHaveLength(1)
       expect([...(rows[0]?.definicao ?? '').matchAll(/'(\w+)'/g)].map((literal) => literal[1]).toSorted()).toEqual([...CHAVES_DE_RETENCAO].toSorted())
+    })
+  })
+
+  describe('índices da migration 0027', () => {
+    it('os nove existem, começam pelo escopo e têm o predicado que o lote ou a conferência da FK usa', async () => {
+      const { rows } = await bancada.pool.query<{ indexname: string; indexdef: string }>(
+        `select indexname, indexdef from pg_indexes where schemaname = 'public' and indexname = any($1::text[]) order by indexname`,
+        [['artefato_criado_por_idx', 'execucao_agente_solicitada_por_idx', 'material_excluido_idx', 'mensagem_tutor_material_idx', 'reivindicacao_decidida_idx', 'sinal_tutor_material_idx', 'tentativa_atividade_aluno_idx', 'usuario_desativado_idx', 'vinculo_encerrado_idx']],
+      )
+      const definicao = Object.fromEntries(rows.map((linha) => [linha.indexname, linha.indexdef.replace(/^.* USING btree /, '')]))
+      expect(definicao).toEqual({
+        artefato_criado_por_idx: '(escola_id, criado_por) WHERE (criado_por IS NOT NULL)',
+        execucao_agente_solicitada_por_idx: '(escola_id, solicitada_por) WHERE (solicitada_por IS NOT NULL)',
+        material_excluido_idx: '(escola_id, excluido_em) WHERE (excluido_em IS NOT NULL)',
+        mensagem_tutor_material_idx: '(escola_id, material_id) WHERE (material_id IS NOT NULL)',
+        reivindicacao_decidida_idx: "(escola_id, COALESCE(decidida_em, solicitada_em)) WHERE (estado <> 'pendente'::text)",
+        sinal_tutor_material_idx: '(escola_id, material_id) WHERE (material_id IS NOT NULL)',
+        tentativa_atividade_aluno_idx: '(escola_id, aluno_id)',
+        usuario_desativado_idx: '(escola_id, desativado_em) WHERE (desativado_em IS NOT NULL)',
+        vinculo_encerrado_idx: "(escola_id, encerrado_em) WHERE (estado = 'encerrado'::text)",
+      })
     })
   })
 

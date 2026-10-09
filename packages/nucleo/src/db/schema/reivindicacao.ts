@@ -67,6 +67,11 @@ export const reivindicacao = pgTable(
     uniqueIndex('reivindicacao_pendente_por_nome').on(tabela.escolaId, tabela.listaNomeId).where(sql`${tabela.estado} = 'pendente'`),
     index('reivindicacao_turma_idx').on(tabela.escolaId, tabela.turmaId, tabela.estado, tabela.solicitadaEm),
     index('reivindicacao_nome_idx').on(tabela.escolaId, tabela.listaNomeId),
+    // O expurgo da `reivindicacao_decidida` (F3, tarefa 5.0): o pedido decidido ou encerrado, pela data da decisão (ou, no
+    // encerrado, que não tem decisão, da solicitação), do mais antigo.
+    index('reivindicacao_decidida_idx')
+      .on(tabela.escolaId, sql`coalesce(${tabela.decididaEm}, ${tabela.solicitadaEm})`)
+      .where(sql`${tabela.estado} <> 'pendente'`),
     check('reivindicacao_estado_valido', sql`${tabela.estado} in ('pendente', 'aprovada', 'recusada', 'encerrada')`),
     check('reivindicacao_pendente_com_nome', sql`${tabela.estado} <> 'pendente' or ${tabela.listaNomeId} is not null`),
     check('reivindicacao_decidida_como_valida', sql`${tabela.decididaComo} is null or ${tabela.decididaComo} in ('professor', 'coordenacao')`),

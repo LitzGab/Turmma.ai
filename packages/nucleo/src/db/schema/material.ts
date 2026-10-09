@@ -21,8 +21,9 @@ import { usuario } from './usuario.js'
  *   pode ser enviado de novo, e o mesmo arquivo em outra escola é outro material.
  * - A disciplina por FK composta com a escola, sem ação: a disciplina com material não se exclui. `unique (escola_id,
  *   disciplina_id, id)` é o alvo do trecho, que carrega a disciplina para a busca.
- * - Exclusão lógica (`excluido_em`; regra 20, item 15): a linha fica, porque artefatos já citam o material, e os trechos
- *   saem na mesma transação. Quem enviou e quem excluiu viram nulo se a pessoa for eliminada (`on delete set null
+ * - Exclusão lógica (`excluido_em`; regra 20, item 15): a linha fica enquanto a conversa do Tutor ou um sinal ainda a
+ *   cita e até o prazo de `material_excluido` (F3, tarefa 5.0), e os trechos saem na mesma transação; depois disso a linha
+ *   sai, e o artefato que a citava mostra «material da escola». Quem enviou e quem excluiu viram nulo se a pessoa for eliminada (`on delete set null
  *   (coluna)`, escrito à mão na 0022), e a autoria fica na auditoria (`material.enviado`, `material.excluido`).
  * - Índice `(escola_id, disciplina_id, id)`: a listagem paginada, da coordenação e do professor pela disciplina dele.
  */
@@ -58,6 +59,8 @@ export const material = pgTable(
     foreignKey({ name: 'material_excluido_por_da_escola_fk', columns: [tabela.escolaId, tabela.excluidoPor], foreignColumns: [usuario.escolaId, usuario.id] }).onDelete('set null'),
     uniqueIndex('material_arquivo_na_escola_unico').on(tabela.escolaId, tabela.sha256).where(sql`${tabela.excluidoEm} is null and ${tabela.estado} <> 'falhou'`),
     index('material_disciplina_idx').on(tabela.escolaId, tabela.disciplinaId, tabela.id),
+    // O expurgo do `material_excluido` (F3, tarefa 5.0): só o excluído, do mais antigo.
+    index('material_excluido_idx').on(tabela.escolaId, tabela.excluidoEm).where(sql`${tabela.excluidoEm} is not null`),
     // 160 e 120 são `TAMANHO_MAXIMO_TITULO_DO_MATERIAL` e `TAMANHO_MAXIMO_DO_LICENCIANTE` do contrato (`packages/shared`).
     check('material_titulo_preenchido', sql`char_length(btrim(${tabela.titulo})) between 1 and 160`),
     check('material_titularidade_valida', sql`${tabela.titularidade} in ('escola', 'professor', 'terceiro_com_licenca', 'dominio_publico')`),

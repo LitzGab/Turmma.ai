@@ -2,8 +2,9 @@
 
 ## Agora
 - **Tarefa atual:** 5.0, iniciada em 08/10/2026 20:20, com o Implementador em Sonnet (porte grande, inferido dos guardiões)
-- **Espero:** relatório do Implementador
-- **Base:** `spec/lgpd-e-titular` em `a45754b` (a `develop` de 08/10/2026, esteira 37854552340 verde)
+- **Espero:** relatório do Implementador sobre a 5.0, retomada em 08/10/2026 21:50 no Sonnet, com a
+  implementação e as mutações na árvore e sem carimbo
+- **Base:** `spec/lgpd-e-titular` em `e89a4ec` (a correção do teste do hook)
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -12,6 +13,7 @@
 | 2.0 | `96f6e82` | subagente do processo anterior | 9 | 1 reprovação registrada; retomada por subagente novo |
 | 3.0 | `d581da6` | subagente do processo anterior | 16 | 2 reprovações registradas; esteira vermelha por `npm audit`, fechada pela correção `ee0215d` |
 | 4.0 | `551a620` | subagente do processo anterior | 16 | 2 reprovações registradas; esteira 37486186937 verde na `develop` |
+| correção `2026-10-08-teste-do-push-depende-do-papel` | `e89a4ec` | Haiku | 4 | no meio da 5.0, por `DIVERGÊNCIA` de portão; nenhuma reprovação: a 2ª rodada veio de recomendações aplicadas; o `revisor-geral` entrou pelo passo 5 do `corrigir` (toca `tools/processo/`), não pelo meu pedido; ficou um espaço faltando em `revisoes.test.ts:1230`, para a próxima tarefa do arquivo |
 
 ## Esperando o Joaquim
 
@@ -19,10 +21,21 @@ Nada.
 
 ## O que falhou
 
-Nada no processo atual.
+- **Portão local da 5.0 (08/10/2026, 21:07 a 21:25):** 4340 de 4341 testes verdes; o único vermelho é
+  `tools/processo/revisoes.test.ts`, "agente do time não empurra develop, release nem main; a branch do
+  andar ele empurra". O teste lê o papel da sessão (`CLAUDE_CODE_AGENT`) quando não recebe um, e por isso
+  só falha dentro de sessão de agente do time. Reproduzi no andar: vermelho com o papel, verde sem ele.
+  Veio com a trava de push da `a45754b`, não com a 5.0. O Implementador mandou `DIVERGÊNCIA`, motivo
+  portão.
 
 ## O que decidi sem perguntar
 
+- **Correção no meio da 5.0 (08/10/2026):** o portão falha por um teste do hook, fora dos arquivos da
+  tarefa. Pedi a correção `2026-10-08-teste-do-push-depende-do-papel` na mesma branch, no Haiku (não
+  toca as regras 10, 20 nem 70), sem guardião além do `test-engineer`: é teste de ferramenta do
+  processo, fora da tabela de `criar-tasks`. Recusei a saída de rodar o portão com a variável do papel
+  desligada: o portão tem de passar na sessão em que o agente trabalha. O trabalho da 5.0 fica na
+  árvore; a lista dele está em `.processo/ordens/arquivos-da-tarefa-5.txt`.
 - **Abertura do andar (08/10/2026):** a F3 começou na `develop`, antes da D78, com as tarefas 1.0 a 4.0
   já lá. O andar `F3 lgpd-e-titular` nasce da `develop` em `a45754b` e a spec segue na branch
   `spec/lgpd-e-titular` a partir da 5.0.

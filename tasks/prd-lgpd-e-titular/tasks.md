@@ -35,12 +35,12 @@
   - [x] 4.3 `EXPLAIN` de cada lote, anexado à tarefa
   - [x] 4.4 Testes
 
-- [ ] **5.0 — O expurgo alcança trabalho do aluno, reivindicação, material, vínculo e pessoa desativada**
-  - [ ] 5.1 Migration própria: índices `reivindicacao` (decididas), `material` (excluídos), `usuario (escola_id, desativado_em)`, `vinculo` (encerrados), `tentativa_atividade (escola_id, aluno_id)` se faltar
-  - [ ] 5.2 Categorias `trabalho_do_aluno` (só `situacao = encerrado`), `reivindicacao_decidida` (inclui `decidida_como = coordenacao`), `material_excluido`, `vinculo_encerrado`
-  - [ ] 5.3 `pessoa_desativada`: `CicloDeVidaService.eliminar` na transação do lote, autor `rotina` (a pulada por pedido agendado entra na 14.0)
-  - [ ] 5.4 Prazo fixo de `expurgo_execucao` (5 anos)
-  - [ ] 5.5 Testes; a lista "pendente da tarefa N" do 3.7 fica vazia
+- [x] **5.0 — O expurgo alcança trabalho do aluno, reivindicação, material, vínculo e pessoa desativada**
+  - [x] 5.1 Migration própria: índices `reivindicacao` (decididas), `material` (excluídos), `usuario (escola_id, desativado_em)`, `vinculo` (encerrados), `tentativa_atividade (escola_id, aluno_id)` se faltar
+  - [x] 5.2 Categorias `trabalho_do_aluno` (só `situacao = encerrado`), `reivindicacao_decidida` (inclui `decidida_como = coordenacao`), `material_excluido`, `vinculo_encerrado`
+  - [x] 5.3 `pessoa_desativada`: `CicloDeVidaService.eliminar` na transação do lote, autor `rotina` (a pulada por pedido agendado entra na 14.0)
+  - [x] 5.4 Prazo fixo de `expurgo_execucao` (5 anos)
+  - [x] 5.5 Testes; a lista "pendente da tarefa N" do 3.7 fica vazia
 
 - [ ] **6.0 — A coordenação vê por quanto tempo a escola guarda cada dado**
   - [ ] 6.1 Item Privacidade com abas no endereço; aba Retenção lendo `GET retencao`

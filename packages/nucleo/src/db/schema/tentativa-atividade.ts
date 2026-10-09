@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { check, foreignKey, pgTable, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
+import { check, foreignKey, index, pgTable, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 import { atividadeAplicada } from './atividade-aplicada.js'
 import { escola } from './escola.js'
 import { usuario } from './usuario.js'
@@ -40,6 +40,9 @@ export const tentativaAtividade = pgTable(
       foreignColumns: [atividadeAplicada.escolaId, atividadeAplicada.anoLetivoId, atividadeAplicada.id],
     }),
     foreignKey({ name: 'tentativa_atividade_aluno_da_escola_fk', columns: [tabela.escolaId, tabela.alunoId], foreignColumns: [usuario.escolaId, usuario.id] }).onDelete('cascade'),
+    // Por aluno: a eliminação dele (o `on delete cascade` da FK acima acha as tentativas por aqui) e o arquivo do titular. A
+    // chave única começa pelo ano e pela aplicação, e não serve a quem só tem o aluno (F3, tarefa 5.0).
+    index('tentativa_atividade_aluno_idx').on(tabela.escolaId, tabela.alunoId),
     check('tentativa_atividade_envio_depois_do_inicio', sql`${tabela.enviadaEm} is null or ${tabela.enviadaEm} >= ${tabela.iniciadaEm}`),
   ],
 )

@@ -61,6 +61,8 @@ export const vinculo = pgTable(
       .where(sql`${tabela.estado} <> 'encerrado'`),
     index('vinculo_usuario_idx').on(tabela.escolaId, tabela.anoLetivoId, tabela.usuarioId, tabela.estado),
     index('vinculo_turma_idx').on(tabela.escolaId, tabela.anoLetivoId, tabela.turmaId, tabela.estado),
+    // O expurgo do `vinculo_encerrado` (F3, tarefa 5.0): só o encerrado, do mais antigo.
+    index('vinculo_encerrado_idx').on(tabela.escolaId, tabela.encerradoEm).where(sql`${tabela.estado} = 'encerrado'`),
     check('vinculo_papel_valido', sql`${tabela.papel} in ('professor', 'aluno')`),
     check('vinculo_estado_valido', sql`${tabela.estado} in ('pendente', 'confirmado', 'contestado', 'encerrado')`),
     check(

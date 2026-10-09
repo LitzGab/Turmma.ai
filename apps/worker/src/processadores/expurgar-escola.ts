@@ -20,7 +20,7 @@ import { FalhaDeJob } from '../falha-de-job.js'
 export const TIPO_EXPURGAR_ESCOLA = 'retencao.expurgar-escola'
 
 export interface DependenciasDoExpurgoDaEscola {
-  repositorio: Pick<ExpurgoDaEscolaRepository, 'expurgarLote' | 'registrar' | 'categoriaPendente'>
+  repositorio: Pick<ExpurgoDaEscolaRepository, 'expurgarLote' | 'expurgarRegistroDoExpurgo' | 'registrar' | 'categoriaPendente'>
   retencao: Pick<RetencaoDaEscolaRepository, 'ajustes'>
   /** O horário letivo da escola do contexto: o expurgo confere a cada lote, e para quando ele abre. */
   janelaDaEscola: Pick<ConfiguracaoOperacional<JanelaLetiva>, 'daEscola'>
@@ -31,11 +31,12 @@ export interface DependenciasDoExpurgoDaEscola {
 }
 
 /**
- * `retencao.expurgar-escola` (F3, tarefas 3.0 e 4.0; Tech Spec do F3, seção 5): no contexto da escola do job, apaga ou
- * anonimiza, como o catálogo diz, o que passou do prazo efetivo de cada categoria (`retencaoDaEscola`, com o ajuste da
+ * `retencao.expurgar-escola` (F3, tarefas 3.0 a 5.0; Tech Spec do F3, seção 5): no contexto da escola do job, apaga,
+ * anonimiza ou elimina, como o catálogo diz, o que passou do prazo efetivo de cada categoria (`retencaoDaEscola`, com o ajuste da
  * escola e as travas: o tema da execução e o texto do modelo não passam da conversa do professor, e o aluno do consumo não
  * passa da conversa do Tutor), em lotes de 5.000, uma transação por lote, e grava uma linha de `expurgo_execucao` por
- * categoria, mesmo com zero.
+ * categoria, mesmo com zero. Terminadas as categorias, apaga o próprio registro do expurgo (`expurgo_execucao`) que passou
+ * de 5 anos, sem linha sobre isso.
  *
  * - **O lote que falha** grava a linha da categoria com `concluida = false` antes de o erro subir, para a falha contar
  *   no alerta mesmo na primeira noite da escola.
@@ -91,7 +92,20 @@ export function criarExpurgoDaEscola({ repositorio, retencao, janelaDaEscola, re
       await repositorio.registrar(categoria, linhasDaCategoriaTotal, true, relogio.agora())
       linhasTotal += linhasDaCategoriaTotal
     }
+    // O registro do próprio expurgo (prazo fixo de 5 anos) sai depois das categorias, também em lotes e sem passar da janela
+    // letiva. A noite já está completa (cada categoria gravou `true`): se a janela abrir aqui, o resto sai na seguinte.
+    let registroApagadoTotal = 0
+    for (;;) {
+      if (estaNaJanela(janela, relogio.agora())) {
+        const tipo = 'expurgo_execucao'
+        logger.info({ evento: 'retencao.expurgo_interrompido', tipo, registroApagadoTotal, linhasTotal })
+        return
+      }
+      const doLote = await repositorio.expurgarRegistroDoExpurgo(agora, lote)
+      registroApagadoTotal += doLote.linhas
+      if (!doLote.cheio) break
+    }
     const categoriasTotal = ordem.length
-    logger.info({ evento: 'retencao.expurgada', categoriasTotal, linhasTotal })
+    logger.info({ evento: 'retencao.expurgada', categoriasTotal, linhasTotal, registroApagadoTotal })
   }
 }

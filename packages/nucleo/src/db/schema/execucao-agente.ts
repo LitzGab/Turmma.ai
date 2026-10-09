@@ -76,6 +76,8 @@ export const execucaoAgente = pgTable(
     // A migration escreve `on delete set null ("solicitada_por")`: o `set null` inteiro anularia também a escola.
     foreignKey({ name: 'execucao_agente_solicitada_por_da_escola_fk', columns: [tabela.escolaId, tabela.solicitadaPor], foreignColumns: [usuario.escolaId, usuario.id] }).onDelete('set null'),
     uniqueIndex('execucao_agente_chave_na_escola_unica').on(tabela.escolaId, tabela.chaveEnvio),
+    // Por pessoa: a eliminação dela (o `on delete set null` da FK `execucao_agente_solicitada_por_da_escola_fk`) acha as execuções por aqui (F3, tarefa 5.0).
+    index('execucao_agente_solicitada_por_idx').on(tabela.escolaId, tabela.solicitadaPor).where(sql`${tabela.solicitadaPor} is not null`),
     index('execucao_agente_abertas_idx').on(tabela.escolaId, tabela.estado, tabela.criadaEm).where(sql`${tabela.estado} in ('pendente', 'rodando')`),
     index('execucao_agente_a_anonimizar_idx').on(tabela.escolaId, tabela.criadaEm).where(sql`${tabela.anonimizadaEm} is null`),
     index('execucao_agente_do_tutor_a_anonimizar_idx')

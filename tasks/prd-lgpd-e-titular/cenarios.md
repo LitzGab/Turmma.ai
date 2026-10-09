@@ -43,12 +43,35 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
     transação travou para mudar (tarefa 4.0).
   - [I] Reexecutar não mexe na execução já anonimizada (`anonimizada_em` fica com a data da primeira noite), e o texto do
     modelo conta só as chamadas que tinham texto, com entrada ou só com saída (tarefa 4.0).
+- **RF4, `trabalho_do_aluno`** (tarefa 5.0).
+  - [I] O ano `em_curso` ou `planejado` com o `fim` vencido não perde nada; o `encerrado` perde a tentativa, a resposta e a
+    correção, e a atividade aplicada e o lote de correção ficam.
+  - [I] Aluno transferido: o trabalho dele no ano antigo de A sai pelo ano de A, o de um ano mais novo fica, e o dele em B,
+    com a mesma idade, não é tocado.
+  - [I] O lote de 5.000 tentativas com a cascata (20 respostas e a correção cada) sai em menos de 2 s.
+- **RF4, cadastro** (tarefa 5.0).
+  - [I] `reivindicacao_decidida`: sai a decidida por qualquer decisor (`professor` ou `coordenacao`) e a `encerrada` sem
+    decisão; o `pendente` e a de outra escola ficam.
+  - [I] `material_excluido`: o vigente fica mesmo velho; o excluído sai com os trechos; o que uma pergunta ou um sinal do
+    Tutor ainda cita fica até a conversa sair, e sai na mesma noite em que ela sai.
+  - [I] `vinculo_encerrado`: o ativo, o pendente, o contestado e o encerrado recente ficam.
+  - [P] Dois jobs da mesma escola ao mesmo tempo levam cada linha uma vez nos quatro alvos que apagam.
 - **RF4, `pessoa_desativada`.**
-  - [I] O usuário desativado além do prazo é eliminado.
-  - [I] Se ele está ativo em outra escola, a conta continua.
-  - [I] Com pedido `agendado`, ele é pulado.
+  - [I] O usuário desativado além do prazo é eliminado pelo ciclo de vida (vínculo e credencial saem com ele), com a auditoria
+    `usuario.eliminado` assinada pelo apelido `rotina`.
+  - [I] Se ele está ativo em outra escola, a conta continua; se a escola eliminada era a última, a conta é limpa.
+  - [I] Quem sumiu entre a escolha do lote e a trava é pulado sem erro, e o lote diz `cheio` pelo número de escolhidos.
+  - [I] A pessoa reativada (convite aceito) entre a escolha do lote e a trava não é eliminada: fica, sem auditoria, e não entra na contagem.
+  - [I] O erro de SQL numa eliminação sobe: a categoria grava `false`, as eliminadas antes ficam, e a noite seguinte começa
+    por ela.
+  - [P] Dois jobs ao mesmo tempo eliminam cada pessoa uma vez, sem erro.
+  - [I] O lote é de no máximo 100 pessoas, as mais antigas primeiro, e não escolhe a de outra escola.
+  - [I] Com pedido `agendado`, ele é pulado (tarefa 14.0).
 - **RF5.**
   - [I] O `expurgo_execucao` grava as contagens certas por escola e categoria, e só ids e números.
+  - [I] O próprio `expurgo_execucao` com 5 anos e um dia sai, com 5 anos menos um dia fica, o de outra escola fica, e as
+    linhas da noite que acabou de rodar não saem (tarefa 5.0). Se a janela abre depois da última categoria, a noite fica
+    completa e o registro vencido sai na seguinte.
   - [I] Com a janela letiva aberta no meio do job, ele para no lote em que ela abriu: a categoria interrompida grava
     `concluida = false` com a contagem parcial, as que terminaram gravam `true`, e o job da noite seguinte começa pela
     pendente, termina o restante e grava `true`.

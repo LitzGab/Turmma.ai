@@ -190,6 +190,13 @@
       "when": 1791287744843,
       "tag": "0026_anonimizacao",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791501627459,
+      "tag": "0027_expurgo_do_cadastro",
+      "breakpoints": true
     }
   ]
 }

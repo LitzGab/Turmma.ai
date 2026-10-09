@@ -37,6 +37,8 @@ export const usuario = pgTable(
     unique('usuario_escola_conta_papel_unico').on(tabela.escolaId, tabela.contaId, tabela.papel),
     index('usuario_conta_idx').on(tabela.contaId).where(sql`conta_id is not null`),
     index('usuario_coordenador_ativo_idx').on(tabela.escolaId).where(sql`papel = 'coordenador' and desativado_em is null`),
+    // O expurgo da `pessoa_desativada` (F3, tarefa 5.0): só quem foi desativado, do mais antigo.
+    index('usuario_desativado_idx').on(tabela.escolaId, tabela.desativadoEm).where(sql`desativado_em is not null`),
     check('usuario_papel_valido', sql`${tabela.papel} in ('coordenador', 'professor', 'aluno')`),
     check('usuario_conta_so_falta_para_aluno', sql`${tabela.contaId} is not null or ${tabela.papel} = 'aluno'`),
     check('usuario_nome_preenchido', sql`char_length(btrim(${tabela.nome})) between 1 and 200`),

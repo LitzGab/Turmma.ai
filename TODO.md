@@ -14,10 +14,9 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       `reivindicacao` da A1, para a pergunta de fechamento da regra 20 continuar respondida por código: o pedido se liga
       ao aluno por `lista_nome_id` enquanto a linha da lista existe, e depois do `set null` já não se liga a ninguém
       (`privacy-guardian` na 6.0)
-- [ ] O expurgo dos pedidos de reivindicação decididos (e dos fechados como `encerrada` na virada do ano) depois de
-      "vigência + 5 anos" (`docs/lgpd.md`, linha "Reivindicação"): na A1 nenhuma rotina os apaga, e eles ficam, sem nome
-      nem segredo, até a eliminação do aluno aprovado ou uma rotina nova. Entra no F3, com a retenção configurável por
-      escola (regra 20, item 16), no `sistema.expurgar-acesso` ou numa rotina própria (A1, tarefa 10.0)
+- [x] O expurgo dos pedidos de reivindicação decididos (e dos fechados como `encerrada` na virada do ano), com a retenção
+      configurável por escola (regra 20, item 16). Feito no F3, tarefa 5.0: a categoria `reivindicacao_decidida` os apaga
+      60 meses (12 a 60) depois da decisão, ou da solicitação no `encerrada`, no `retencao.expurgar-escola` (A1, tarefa 10.0)
 - [ ] Escrever e ensaiar o processo de incidente
 - [ ] Parecer sobre o ECA Digital (Lei 15.211/2025) para plataforma contratada pela escola,
       com a avaliação de impacto que ele exige. Três perguntas precisam sair dele, nomeadas:
@@ -87,15 +86,19 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 ## Infra e operação
 
-- [ ] **Migrations 0025 e 0026 (F3, tarefas 3.0 e 4.0) antes do staging:** o check `job_registro_chave_so_com_escola`
+- [ ] **Migrations 0025, 0026 e 0027 (F3, tarefas 3.0 a 5.0) antes do staging:** o check `job_registro_chave_so_com_escola`
       entrou direto e percorre `job_registro` com a trava `ACCESS EXCLUSIVE` (a fila quente, 7 dias de jobs); os índices
-      `(escola_id, <data>)` de `mensagem_tutor`, `sinal_tutor` e `mensagem_agente` (0025) e os cinco índices parciais de
-      anonimização em `execucao_agente`, `consumo_ia` e `artefato` (0026) entraram sem `concurrently`. Com dado
+      `(escola_id, <data>)` de `mensagem_tutor`, `sinal_tutor` e `mensagem_agente` (0025), os cinco índices parciais de
+      anonimização em `execucao_agente`, `consumo_ia` e `artefato` (0026) e os nove da 0027 (`tentativa_atividade
+      (escola_id, aluno_id)`, `(escola_id, material_id)` em `mensagem_tutor` e `sinal_tutor`, e os parciais de
+      `reivindicacao`, `material`, `usuario` e `vinculo`, mais `execucao_agente (escola_id, solicitada_por)` e
+      `artefato (escola_id, criado_por)`) entraram sem `concurrently`. Com dado
       sintético, cabe; a partir do staging, **toda** migration nova leva cada check em arquivo próprio com `NOT VALID` e
       `VALIDATE`, e índice com `concurrently` fora de transação (Tech Spec do F3, seção 7c). O `migrar` usa o
       `statement_timeout` de 2 s da consulta (`packages/nucleo/src/db/migrar.ts`): com volume real, um `CREATE INDEX` em
-      `execucao_agente` ou `consumo_ia` passa disso e derruba o deploy, então o prazo do migrador muda junto
-      (`infra-guardian` da 3.0 e da 4.0)
+      `execucao_agente` ou `consumo_ia` passa disso e derruba o deploy, então o prazo do migrador muda junto.
+      Os índices de `execucao_agente` e de `mensagem_tutor` são os que mais pesam, porque as duas tabelas crescem por turno
+      do Tutor (`docs/infra.md` 3.6); o prazo é o portão do piloto (`infra-guardian` da 3.0, da 4.0 e da 5.0)
 - [ ] **Escrita a mais por troca do Tutor (F3, 4.0):** `execucao_agente_a_anonimizar_idx`,
       `execucao_agente_do_tutor_a_anonimizar_idx` e `consumo_ia_aluno_a_anular_idx` recebem quase toda linha recente, e
       cada troca do Tutor passa a atualizar índices a mais nas duas tabelas. Medir no cenário de carga da 19.0
@@ -110,7 +113,13 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       categoria pendente, e a noite seguinte (e cada nova tentativa da fila) começa por ela; se o erro se repete ali, as
       categorias que vêm depois deixam de rodar. O alerta de duas noites dispara, e o runbook cobre (causa 3). Separar a
       linha de falha da de interrupção pela janela (só a interrupção define a pendente), ou seguir para as outras
-      categorias antes de subir o erro (`infra-guardian` da 3.0, 2ª rodada)
+      categorias antes de subir o erro. Desde a 5.0, a falha pode vir de uma pessoa só em `pessoa_desativada`, e então as
+      outras categorias deixam de rodar toda noite. Tratar a separação entre linha de falha e linha de interrupção junto com
+      isso, antes do piloto, e não depois (`infra-guardian` da 3.0, 2ª rodada e da 5.0, 3ª rodada, e `revisor-geral` da 5.0)
+- [ ] **Ordem das travas entre convidar e eliminar (F3, 5.0):** o `convidar` (`apps/api/src/sessao/convite.service.ts`) trava a conta antes do usuário, e o `CicloDeVidaService` trava o usuário antes da conta. Se a coordenação convida de volta, pelo mesmo e-mail, quem o expurgo está eliminando no mesmo instante, sai deadlock (40P01): nada se corrompe, o expurgo grava `false` e tenta de novo, e o convite é refeito. Alinhar a ordem, ou responder `INDISPONIVEL_TENTE_DE_NOVO` no 40P01 (`infra-guardian` e `test-engineer` da 5.0)
+- [ ] **Tempo do lote de 100 pessoas (F3, 5.0):** o «tempo do lote» da 5.0 mediu só a cascata do `trabalho_do_aluno`. Medir o lote de `pessoa_desativada` inteiro (a escolha mais as 100 eliminações, uma transação cada) contra a janela letiva e o `statement_timeout`, com volume de Tutor na escola, antes do piloto (`infra-guardian` da 5.0)
+- [ ] **Medição do expurgo depois de o catálogo crescer (F3, 5.0):** `apps/worker/src/medicao-do-expurgo.ts` conta as noites contra o `CATEGORIAS_DO_EXPURGO` atual, que passou de 7 para 12. Num ambiente com noites gravadas com 7, as duas noites anteriores ao deploy contam como incompletas e `expurgo.noites_incompletas` fica em 2 por cerca de um dia e meio. Sem efeito hoje (não há staging); pôr um parágrafo no runbook quando houver (`revisor-geral` da 5.0)
+- [ ] **Prazo do `registro_de_decisao` (F3, 5.0):** `packages/shared/src/privacidade/retencao.ts` (`PRAZOS_FIXOS.registro_de_decisao`) promete à escola «enquanto durar o contrato com a escola, e mais 5 anos», mas o `expurgo_execucao` apaga o registro 5 anos depois de `em`, com o contrato valendo. O registro não tem dado de pessoa (só contagens e ids), então o risco é baixo. Decidir (Joaquim): alinhar o texto ao que o código faz, ou dar ao registro do expurgo uma linha própria em `PRAZOS_FIXOS` (`privacy-guardian` da 5.0)
 - [ ] **Thread do Assistente apagada pelo expurgo no instante do envio (F3, 3.0):** a thread vazia e vencida que o expurgo
       apaga enquanto o professor manda a primeira mensagem faz o envio falhar pela FK. Conferir que ele vê um erro tipado e
       que pode reenviar, e não um 500 (`infra-guardian` da 3.0). A seleção da thread vazia filtra `(escola_id, criada_em)`
@@ -752,8 +761,10 @@ qualquer dado real:
   envio externo e sem contrato que vede treinamento e garanta processamento no Brasil precisa ser recusado
   (`privacy-guardian`).
 - [x] **Expurgo** de `consumo_ia` (`entrada` e `saida`), de `execucao_agente` e das conversas, no prazo do mapa de
-  `docs/lgpd.md`, configurável por escola. Feito no F3: as conversas e os sinais saem (tarefa 3.0), e a execução, o texto
-  do modelo, o aluno do consumo e a autoria do artefato perdem a pessoa (tarefa 4.0), pelo `retencao.expurgar-escola`.
+  `docs/lgpd.md`, configurável por escola. Feito no F3: as conversas e os sinais saem (tarefa 3.0), a execução, o texto
+  do modelo, o aluno do consumo e a autoria do artefato perdem a pessoa (tarefa 4.0), e o trabalho do aluno, a
+  reivindicação decidida, o material excluído, o vínculo encerrado e a pessoa desativada saem (tarefa 5.0), pelo
+  `retencao.expurgar-escola`.
 - [ ] **Função nova pedida pelo aluno e o expurgo:** o lote `execucao_agente_do_tutor` filtra por
   `funcao = 'tutor_com_o_aluno'`, a única que o aluno pede hoje (`FUNCOES_COM_ORCAMENTO_POR_ALUNO`). Pôr um teste que leia
   essa lista e confira que cada função tem alvo e índice de anonimização, antes de existir a segunda (`privacy-guardian`

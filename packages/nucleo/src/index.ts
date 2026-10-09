@@ -199,10 +199,14 @@ export {
   ALVOS_DO_EXPURGO_DA_ESCOLA,
   CATEGORIAS_DO_EXPURGO,
   ExpurgoDaEscolaRepository,
+  instrucaoDasPessoasDesativadas,
   instrucaoDoLoteDaEscola,
+  instrucaoDoRegistroDoExpurgo,
+  LOTE_MAXIMO_DO_ALVO,
   NOITES_DO_ALERTA,
   noitesSeguidasSemConcluir,
   ordemDaNoite,
+  RETENCAO_EXPURGO_EXECUCAO_MESES,
 } from './retencao/expurgo-da-escola.repository.js'
 export type { AlvoDoExpurgoDaEscola, CategoriaDoExpurgo, LoteDoExpurgo, NoiteDoExpurgo, PrazoDoLote } from './retencao/expurgo-da-escola.repository.js'
 export { EscolasDaRotinaRepository } from './rotina/escolas-da-rotina.repository.js'

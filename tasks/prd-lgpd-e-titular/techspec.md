@@ -50,7 +50,7 @@ Nada aqui usa IA.
 | `texto_do_modelo` | anula `consumo_ia.entrada` e `saida` | `em` | 12 | 1 | 12 |
 | `consumo_por_aluno` | anula `consumo_ia.aluno_id` e anonimiza a execução do Tutor (tarefa 4.0) | `em` (a execução, a criação) | 12 | 3 | 24 |
 | `trabalho_do_aluno` | apaga `tentativa_atividade` (resposta e correção em cascata) | `fim` do ano com `situacao = encerrado` | 12 | 6 | 60 |
-| `reivindicacao_decidida` | apaga | decisão | 60 | 12 | 60 |
+| `reivindicacao_decidida` | apaga | decisão (solicitação, no `encerrada`) | 60 | 12 | 60 |
 | `autoria_de_artefato` | anula `artefato.criado_por` | `fim` do ano encerrado | 60 | 12 | 60 |
 | `material_excluido` | apaga a linha | `excluido_em` | 60 | 12 | 60 |
 | `vinculo_encerrado` | apaga o vínculo encerrado | fim do vínculo | 60 | 12 | 60 |
@@ -67,7 +67,7 @@ arquitetura:
 | Classe | Tabelas |
 |---|---|
 | categoria acima | as doze linhas acima, mais `resposta_atividade`, `correcao` e `thread_agente` (cascata ou vazio) |
-| prazo fixo, com quem aplica | `registro_acesso`, `sessao`, `convite`, `acesso_turma`: `sistema.expurgar-acesso`. `conta`, `codigo_recuperacao`: limpeza da conta (F1). `credencial_matricula`, `conta_externa`: desativação e eliminação. `lista_nome`: virada do ano (A1) e eliminação. `operador`, `convite_operador`, `sessao_operador`, `acesso_operacao`, `codigo_recuperacao_operador`: A0 e `sistema.expurgar-acesso`. `job_registro`: 7 dias (F0). `auditoria`, `auditoria_operacao`, `entrega`, `validacao_do_lote`, `suspensao_de_funcao`, `atividade_aplicada`, `pedido_titular`: vigência + 5 anos, no fim de contrato (F12). `arquivo_titular`: 7 dias. `incidente` e `incidente_escola`: 5 anos. `expurgo_execucao`: 5 anos (tarefa 3.0: no grupo `registro_de_decisao` de `PRAZOS_FIXOS`, que são oito e fechados; quem aplica é o expurgo da escola, na 5.0) |
+| prazo fixo, com quem aplica | `registro_acesso`, `sessao`, `convite`, `acesso_turma`: `sistema.expurgar-acesso`. `conta`, `codigo_recuperacao`: limpeza da conta (F1). `credencial_matricula`, `conta_externa`: desativação e eliminação. `lista_nome`: virada do ano (A1) e eliminação. `operador`, `convite_operador`, `sessao_operador`, `acesso_operacao`, `codigo_recuperacao_operador`: A0 e `sistema.expurgar-acesso`. `job_registro`: 7 dias (F0). `auditoria`, `auditoria_operacao`, `entrega`, `validacao_do_lote`, `suspensao_de_funcao`, `atividade_aplicada`, `pedido_titular`: vigência + 5 anos, no fim de contrato (F12). `arquivo_titular`: 7 dias. `incidente` e `incidente_escola`: 5 anos. `expurgo_execucao`: 5 anos (tarefa 3.0: no grupo `registro_de_decisao` de `PRAZOS_FIXOS`, que são oito e fechados; quem aplica é o expurgo da escola, no fim de cada noite: tarefa 5.0) |
 | sem pessoa | `rede`, `escola`, `ano_letivo`, `serie`, `disciplina`, `turma`, `provedor_escola`, `configuracao_operacional_escola`, `uso_infra_diario`, `trecho`, `resumo_do_analista`, `retencao_escola`, `suboperador`, `suboperador_escola` |
 
 Também `usuario` ativo e `material` vigente ficam enquanto existem; saem pela eliminação e pelas duas categorias acima.
@@ -219,6 +219,35 @@ professor.
     porque a idade é a do ano;
   - são **sete** as FKs que apontam para `execucao_agente` (a 0023 trocou as de seis tabelas pela versão com o ano, e a de
     `consumo_ia` ficou sem ano), e não oito: o teste lê a lista de `pg_constraint`.
+- Tarefa 5.0, como ficou no código:
+  - com ela, `CATEGORIAS_DO_EXPURGO` é o catálogo inteiro (as doze, na ordem de `CHAVES_DE_RETENCAO`) e a lista de pendentes de
+    tarefa deixa de existir: o teste de unidade confere a igualdade. Os alvos novos são `tentativa_atividade`,
+    `reivindicacao`, `material`, `vinculo` e `usuario`;
+  - **trabalho do aluno:** apaga a `tentativa_atividade` do ano `encerrado` cujo `fim`, somado o prazo, é anterior ao dia de
+    `agora` no fuso da escola, com a mesma regra da autoria (`ANO_ENCERRADO_ALEM_DO_PRAZO`, um fragmento só para os dois).
+    Trava só a tentativa (`for update of t skip locked`); a resposta e a correção saem em cascata, e a atividade aplicada e o
+    lote de correção ficam. O lote de 5.000 tentativas com 20 respostas e a correção cada (100.000 respostas) levou 78 ms no
+    compose de teste, contra os 2 s do `statement_timeout`: o lote fica no tamanho do job;
+  - **reivindicação:** apaga a que não está `pendente`, contada de `coalesce(decidida_em, solicitada_em)`, porque o
+    `encerrada` que a virada do ano gera não tem decisão. Qualquer decisor conta; o `pendente` nunca sai;
+  - **material:** apaga o `excluido_em` além do prazo que nenhuma `mensagem_tutor` nem `sinal_tutor` cita (as duas FKs para o
+    material não têm ação, e a conversa pode viver mais que o material: piso do material 12 meses, teto da conversa 24). O
+    material citado sai na noite em que a conversa sai, porque a conversa vem antes na ordem do catálogo. Os trechos saem em
+    cascata;
+  - **vínculo:** apaga o `encerrado` além do prazo, contado de `encerrado_em`;
+  - **pessoa desativada:** o lote escolhe até `LOTE_MAXIMO_DO_ALVO.usuario` (100) ids, do mais antigo, e chama
+    `CicloDeVidaService.eliminar` com `autorOperador: AUTOR_DA_ROTINA` (`'rotina'`, em `packages/shared`), uma pessoa por vez,
+    cada uma na transação que o repositório do expurgo abre, trava e reconfere o prazo, e que o `eliminar` reutiliza (a
+    transação é por pessoa, como diz a seção 5, e não do lote inteiro). O `NAO_ENCONTRADO` de quem sumiu entre a escolha e a
+    trava, ou que voltou a ser ativa (convite aceito) nesse intervalo, é pulado sem auditoria e fora da contagem; qualquer outro erro sobe e grava a categoria `false`. O
+    lote diz `cheio` pelo número de escolhidos. A pessoa com pedido `agendado` é pulada na tarefa 14.0;
+  - **`expurgo_execucao`:** depois das categorias, `expurgarRegistroDoExpurgo` apaga em lotes as linhas com mais de 5 anos (60
+    meses de `agora`), sem linha própria nem categoria, e confere a janela letiva a cada lote; o log leva
+    `registroApagadoTotal`;
+  - **migration 0027:** só índices, nove: um por alvo de data (`reivindicacao` pela expressão acima, `material`,
+    `usuario`, `vinculo`), `tentativa_atividade (escola_id, aluno_id)`, `(escola_id, material_id)` em `mensagem_tutor` e
+    `sinal_tutor`, e os dois do `set null` da pessoa eliminada, `execucao_agente (escola_id, solicitada_por)` e
+    `artefato (escola_id, criado_por)`. O trabalho do aluno desce pelo ano letivo, que a chave única da tentativa já cobre.
 - O `incidente` com mais de 5 anos é alvo do `sistema.expurgar-acesso`.
 
 **Arquivo.**
@@ -345,7 +374,7 @@ Não há IA no caminho. O que a funcionalidade preserva:
 | Limite por escola | vaga do F0 (lote 2); lote de 5.000; faixa de 1.000 na troca de nome; `statement_timeout` de 2 s |
 | Rate limit | balde do F0; `rl:busca-titular` com 30 por minuto por usuário, que recusa com 429 |
 | Corridas de concorrência | seção 5: a chave de envio decide primeiro; a chave de idempotência "escola + data local"; o único parcial de `agendado`; cancelar contra enfileirar por `eliminacao_enfileirada_em`; dois `ops:retencao ajustar` da mesma escola em fila pela trava `for no key update` da escola (tarefa 2.0); travas pedido → usuário; `skip locked` no expurgo; confirmação do incidente por `where confirmado_em is null`. Cada uma com um cenário em paralelo em `cenarios.md` |
-| Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` se não existir, e `consumo_ia (escola_id, execucao_id) where execucao_id is not null`. De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`, e o mesmo com `and funcao = 'tutor_com_o_aluno'` (tarefa 4.0); `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
+| Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` (não existia: a chave única começa pelo ano), e `consumo_ia (escola_id, execucao_id) where execucao_id is not null`; e, para as FKs sem ação do material, `mensagem_tutor` e `sinal_tutor (escola_id, material_id)` parciais (tarefa 5.0). De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`, e o mesmo com `and funcao = 'tutor_com_o_aluno'` (tarefa 4.0); `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
 | Migration | compatível: a 0024 só expande, e a exigência de `provedor` vai num release posterior (seção 3). O `migrar` roda numa transação, então `NOT VALID` seguido de `VALIDATE` no mesmo arquivo não alivia a trava: a partir do staging, cada check vai em arquivo próprio. Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
 | Quando cada dependência cai | banco: 503 tipado e nova tentativa; Redis de fila: aceito e despachado depois; storage: "em preparação", e baixar dá `INDISPONIVEL` |
 | Métrica e alerta | duas noites seguidas sem todas as categorias da escola com `concluida = true` (tarefa 3.0: `expurgo.noites_incompletas{escola_id}`, de 0 a 2, medida pelo worker-lote a cada 5 min; a noite é o dia local de `em` no fuso da escola, de ontem para trás; a categoria sem linha conta como não concluída; a noite anterior à primeira execução da escola não conta, e a escola que nunca rodou não tem série; a regra dispara com a série em 2 por 1 min, `infra/grafana/alertas/expurgo-noites-incompletas.yaml`; o lote que falha grava a categoria com `concluida = false` antes de o erro subir, para a escola cujo expurgo falha desde a primeira noite também ter série; numa escola a oeste de São Paulo, uma execução que passa da meia-noite local divide as categorias entre dois dias, pendência no `TODO.md`); incidente sem confirmação em 24 h; pedido `agendado` mais de 48 h depois de `eliminar_em` (uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |

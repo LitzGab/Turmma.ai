@@ -48,7 +48,7 @@ export const CATEGORIAS_DE_RETENCAO: Readonly<Record<CategoriaDeRetencao, Defini
   texto_do_modelo: { descricao: 'O que foi enviado ao modelo de IA e o que ele respondeu', contaDe: 'a chamada', padrao: 12, piso: 1, teto: 12 },
   consumo_por_aluno: { descricao: 'Quanto cada aluno usou da IA', contaDe: 'a chamada', padrao: 12, piso: 3, teto: 24 },
   trabalho_do_aluno: { descricao: 'Respostas, correção e diagnóstico das atividades do aluno', contaDe: 'o encerramento do ano letivo', padrao: 12, piso: 6, teto: 60 },
-  reivindicacao_decidida: { descricao: 'Pedidos de entrada do aluno na turma, depois de decididos', contaDe: 'a decisão', padrao: 60, piso: 12, teto: 60 },
+  reivindicacao_decidida: { descricao: 'Pedidos de entrada do aluno na turma, depois de decididos', contaDe: 'a decisão (ou a solicitação, no pedido fechado na virada do ano)', padrao: 60, piso: 12, teto: 60 },
   autoria_de_artefato: { descricao: 'Quem criou cada material gerado com a IA', contaDe: 'o encerramento do ano letivo', padrao: 60, piso: 12, teto: 60 },
   material_excluido: { descricao: 'Registro do material da escola que foi excluído', contaDe: 'a exclusão', padrao: 60, piso: 12, teto: 60 },
   vinculo_encerrado: { descricao: 'Vínculos de alunos e professores com as turmas, depois de encerrados', contaDe: 'o fim do vínculo', padrao: 60, piso: 12, teto: 60 },
@@ -101,6 +101,13 @@ export interface AjusteDeRetencao {
   readonly categoria: CategoriaDeRetencao
   readonly meses: number
 }
+
+/**
+ * O autor, na auditoria, do que a rotina noturna faz sem ninguém pedir: a eliminação da pessoa desativada além do prazo
+ * (`pessoa_desativada`, F3, tarefa 5.0). É o apelido de operador que a Tech Spec do F3 (seção 3) reserva à rotina e restringe, por
+ * check da auditoria, a quatro ações (tarefa 15.0): a auditoria exige um autor, e nenhuma pessoa decidiu.
+ */
+export const AUTOR_DA_ROTINA = 'rotina'
 
 /** A finalidade fixa do ajuste na auditoria (`retencao.ajustada`): cumprir o que o contrato da escola pede. */
 export const FINALIDADE_DO_AJUSTE_DE_RETENCAO = 'contrato_da_escola'

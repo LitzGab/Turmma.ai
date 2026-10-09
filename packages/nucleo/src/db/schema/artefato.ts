@@ -82,6 +82,8 @@ export const artefato = pgTable(
     index('artefato_turma_idx').on(tabela.escolaId, tabela.turmaId, tabela.id),
     index('artefato_origem_idx').on(tabela.escolaId, tabela.origemId).where(sql`${tabela.origemId} is not null`),
     index('artefato_autoria_idx').on(tabela.escolaId, tabela.anoLetivoId).where(sql`${tabela.criadoPor} is not null`),
+    // Por pessoa: a eliminação dela (o `on delete set null` da FK `artefato_criado_por_da_escola_fk`) acha os artefatos por aqui (F3, tarefa 5.0).
+    index('artefato_criado_por_idx').on(tabela.escolaId, tabela.criadoPor).where(sql`${tabela.criadoPor} is not null`),
     check('artefato_tipo_valido', sql`${tabela.tipo} in ('atividade_objetiva', 'plano_de_aula')`),
     check('artefato_titulo_preenchido', sql`char_length(btrim(${tabela.titulo})) between 1 and 160`),
     check('artefato_conteudo_do_tipo', sql`jsonb_typeof(${tabela.conteudo}) = 'object' and coalesce(${tabela.conteudo} ->> 'tipo', '') = ${tabela.tipo}`),

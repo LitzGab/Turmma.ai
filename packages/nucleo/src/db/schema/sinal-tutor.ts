@@ -70,6 +70,8 @@ export const sinalTutor = pgTable(
     index('sinal_tutor_aluno_idx').on(tabela.escolaId, tabela.alunoId, tabela.id),
     // O expurgo da escola (F3, tarefa 3.0) apaga o sinal vencido pela data, em lotes.
     index('sinal_tutor_criado_em_idx').on(tabela.escolaId, tabela.criadoEm),
+    // A FK para o material, sem ação: apagar o material excluído (F3, tarefa 5.0) a confere por aqui.
+    index('sinal_tutor_material_idx').on(tabela.escolaId, tabela.materialId).where(sql`${tabela.materialId} is not null`),
     check('sinal_tutor_tipo_valido', sql`${tabela.tipo} in ('travou', 'resposta_pronta', 'duvida_repetida', 'atencao_humana')`),
     check(
       'sinal_tutor_atencao_humana_sem_referencia',

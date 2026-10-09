@@ -441,8 +441,9 @@ categoria do expurgo tem uma linha `concluida = true` em `expurgo_execucao` naqu
 conta como não concluída. O worker-lote mede a cada 5 min, e o alerta traz o `escola_id`. A noite anterior à primeira
 execução da escola não conta: escola nova e a primeira noite depois do deploy não disparam.
 
-**Impacto:** nenhuma pessoa vê nada. O que está em jogo é a lei: conversa do Tutor, sinais e conversa do professor
-daquela escola ficam no banco além do prazo de `docs/lgpd.md`, e cada noite a mais aumenta o atraso. Uma noite
+**Impacto:** nenhuma pessoa vê nada. O que está em jogo é a lei: o dado de pessoa daquela escola que passou do prazo de
+`docs/lgpd.md` (conversa do Tutor, sinais, conversa do professor, pedidos à IA, trabalho do aluno, cadastro de quem foi
+desativado) fica no banco além dele, e cada noite a mais aumenta o atraso. Uma noite
 interrompida pela janela letiva é esperada (o resto sai na seguinte); duas seguidas, não.
 
 **Primeiro olhar:** as noites da escola, só com contagens:

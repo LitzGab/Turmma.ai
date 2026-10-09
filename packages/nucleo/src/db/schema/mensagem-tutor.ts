@@ -84,6 +84,8 @@ export const mensagemTutor = pgTable(
     index('mensagem_tutor_aluno_idx').on(tabela.escolaId, tabela.alunoId, tabela.id),
     // O expurgo da escola (F3, tarefa 3.0) apaga a conversa vencida pela data, em lotes: desce por aqui, do escopo à idade.
     index('mensagem_tutor_criada_em_idx').on(tabela.escolaId, tabela.criadaEm),
+    // A FK para o material, sem ação: apagar o material excluído (F3, tarefa 5.0) a confere por aqui.
+    index('mensagem_tutor_material_idx').on(tabela.escolaId, tabela.materialId).where(sql`${tabela.materialId} is not null`),
     index('mensagem_tutor_trocas_idx').on(tabela.escolaId, tabela.turmaId, tabela.criadaEm, tabela.alunoId).where(sql`${tabela.autor} = 'aluno'`),
     check('mensagem_tutor_autor_valido', sql`${tabela.autor} in ('aluno', 'tutor')`),
     check('mensagem_tutor_tipo_valido', sql`${tabela.tipo} in ('texto', 'assunto_delicado')`),
