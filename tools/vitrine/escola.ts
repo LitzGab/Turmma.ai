@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { Secret, TOTP } from 'otpauth'
 import { Client } from 'pg'
 import { montarEscolaComEntregas } from '../../e2e/__fixtures__/governanca.ts'
+import { criarEquipeComSenha, porNaListaDaTurma, type EquipeDeTeste } from '../../e2e/__fixtures__/sessao.ts'
 import { lerAmbienteDeTeste, urlDoBancoDeTeste, valorObrigatorio } from '../ci/compose.ts'
 import { raizRepositorio } from '../ci/executar.ts'
 
@@ -14,10 +15,13 @@ import { raizRepositorio } from '../ci/executar.ts'
 //
 // Os comandos estão em `tools/vitrine/vitrine.ts`.
 //
-// O miolo da escola vem da peça da governança do e2e (`e2e/__fixtures__/governanca.ts`): o que ela grava é o que os
-// testes de tela já provam que a tela sabe mostrar. Aqui entram a escola com a coordenadora e os logins que a peça não
-// dá (a professora e o aluno dela nascem sem senha). A escola não vem de `e2e/__fixtures__/sessao.ts` porque aquele
-// arquivo só carrega pelo Playwright: ele importa `packages/shared` pelo fonte, e o `node` não resolve o `.js` de lá.
+// As escolas nascem das peças de semente do e2e (`e2e/__fixtures__/`): a escola com a coordenadora, de `sessao.ts`, e o
+// miolo, de `governanca.ts`. O que elas gravam é o que os testes de tela já provam que a tela sabe mostrar. Aqui só entram
+// os logins que as peças não dão. **Nenhum código daqui cria rede nem escola:** fora do repository do operador, isso é
+// só da semente de teste, e a guarda da criação de rede e escola, em `apps/api/src/ops/`, varre esta pasta.
+//
+// `sessao.ts` importa `packages/shared` pelo fonte, com o `.js` que o `tsc` pede: no `node` puro este arquivo só
+// carrega depois de `./resolver.ts` registrado, que é o que `vitrine.ts` faz antes de importá-lo. No Vitest carrega direto.
 // Tudo sintético, com e-mail no domínio reservado `.invalid` (regra 20, item 17).
 
 export const ARQUIVO_DA_VITRINE = '.processo/vitrine.json'
@@ -95,44 +99,15 @@ async function id(banco: Client, instrucao: string, parametros: unknown[]): Prom
   return criado
 }
 
-interface Coordenadora {
-  readonly escolaId: string
-  readonly escolaNome: string
-  readonly slug: string
-  readonly usuarioId: string
-  readonly nome: string
-  readonly email: string
-  readonly senha: string
-}
-
-/** A rede, a escola com ano letivo em curso e a coordenadora com senha: os mesmos campos de `criarEquipeComSenha`, do e2e. */
-async function criarEscolaComCoordenadora(rotulo: 'cheia' | 'vazia'): Promise<Coordenadora> {
-  const marca = randomUUID()
-  const escolaNome = `Colégio sintético da vitrine ${rotulo === 'vazia' ? 'vazia ' : ''}${marca.slice(0, 8)}`
-  const slug = `vitrine-${rotulo === 'vazia' ? 'vazia-' : ''}${marca}`
-  const nome = `Coordenadora sintética ${marca.slice(0, 8)}`
-  const email = `coordenador-${marca}@educa.invalid`
-  const senha = `senha-sintetica-${marca}`
-  const senhaHash = await hashDaSenha(senha)
-  return comBanco(async (banco) => {
-    const redeId = await id(banco, "insert into rede (nome, tipo) values ($1, 'independente') returning id", [`Rede sintética da vitrine ${marca.slice(0, 8)}`])
-    const escolaId = await id(banco, 'insert into escola (rede_id, nome, slug) values ($1, $2, $3) returning id', [redeId, escolaNome, slug])
-    await banco.query("insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, 2026, '2026-02-01', '2026-12-18', 'em_curso')", [escolaId])
-    const contaId = await id(banco, 'insert into conta (email, senha_hash) values ($1, $2) returning id', [email, senhaHash])
-    const usuarioId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, 'coordenador', $3) returning id", [escolaId, contaId, nome])
-    return { escolaId, escolaNome, slug, usuarioId, nome, email, senha }
-  })
-}
-
-/** Nomes na lista da turma, livres ou já pedidos por um aluno: é o que a aba "Alunos" da professora mostra para aprovar. */
-async function porNaListaDaTurma(escolaId: string, turmaId: string, nomes: readonly { readonly nome: string; readonly matricula: string; readonly estado: 'livre' | 'reivindicado' }[]): Promise<void> {
-  await comBanco(async (banco) => {
-    for (const { nome, matricula, estado } of nomes)
-      await banco.query(
-        'insert into lista_nome (escola_id, ano_letivo_id, turma_id, nome, matricula, estado) select $1, ano_letivo_id, id, $3, $4, $5 from turma where escola_id = $1 and id = $2',
-        [escolaId, turmaId, nome, matricula, estado],
-      )
-  })
+/**
+ * A escola sintética com ano letivo em curso e a coordenadora com senha, pela semente do e2e, e o nome trocado para
+ * dizer qual das duas escolas da vitrine ela é: é o que aparece no topo de toda tela e de toda foto.
+ */
+async function criarEscolaComCoordenadora(rotulo: 'cheia' | 'vazia'): Promise<EquipeDeTeste> {
+  const coordenadora = await criarEquipeComSenha('coordenador')
+  const escolaNome = `Colégio sintético da vitrine ${rotulo} ${coordenadora.slug.slice(-8)}`
+  await comBanco((banco) => banco.query('update escola set nome = $2 where id = $1', [coordenadora.escolaId, escolaNome]))
+  return { ...coordenadora, escolaNome }
 }
 
 /** A senha da professora que a governança criou sem senha: devolve o e-mail da conta dela, que é com o que ela entra. */

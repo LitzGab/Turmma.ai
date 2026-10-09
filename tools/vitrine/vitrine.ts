@@ -1,4 +1,4 @@
-import { acessosDa, codigoDoPasso, comPassoGasto, escolaExiste, gravarVitrine, lerVitrine, montarVitrine, proximoPasso, resumo, urlDaWebDeTeste, webResponde } from './escola.ts'
+import { resolverFonteComJs } from './resolver.ts'
 
 // Os comandos da vitrine, a escola sintética do ambiente de teste que um agente abre para ver a tela (`./escola.ts`):
 //
@@ -14,6 +14,10 @@ import { acessosDa, codigoDoPasso, comPassoGasto, escolaExiste, gravarVitrine, l
 //
 // Precisa do ambiente de teste de pé, que é como o portão da tarefa com teste de tela o deixa
 // (`node tools/ci/e2e.ts --manter-ambiente`).
+
+// Antes de carregar `./escola.ts`, que traz as peças de semente do e2e: elas importam fonte com `.js` (`./resolver.ts`).
+resolverFonteComJs()
+const { acessosDa, codigoDoPasso, comPassoGasto, escolaExiste, gravarVitrine, lerVitrine, montarVitrine, proximoPasso, resumo, urlDaWebDeTeste, webResponde } = await import('./escola.ts')
 
 const dizer = (texto: string): void => void process.stdout.write(`${texto}\n`)
 const avisar = (texto: string): void => void process.stderr.write(`${texto}\n`)
