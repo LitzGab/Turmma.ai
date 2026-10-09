@@ -140,7 +140,8 @@ npx playwright test e2e/<arquivo>.spec.ts                      # de novo, com o 
 
 Mudou código da web ou da API depois de subir o ambiente do e2e: repita o comando do
 `tools/ci/e2e.ts`, que reconstrói. Comando que passa de dois minutos roda em segundo plano
-(`run_in_background`), e você espera a notificação do fim; não use `sleep`.
+(`run_in_background` no Claude Code, `background` no `shell` do opencode), e você espera a notificação
+do fim; não use `sleep`.
 
 ### Tarefa com tela: olhe a tela antes do portão
 

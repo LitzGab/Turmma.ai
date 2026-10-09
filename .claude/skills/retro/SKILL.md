@@ -35,7 +35,7 @@ Funcionalidade: `$ARGUMENTS`
 ```
 Tarefas: <n> · Rodadas de revisor: <n> · Reprovações: <n> (<%>)
 Por revisor: <revisor: rodadas / reprovações>
-Por modelo do implementador: <modelo: tarefas / rodadas por tarefa / reprovações / escaladas para o Sonnet>
+Por modelo do implementador: <modelo: tarefas / rodadas por tarefa / reprovações / diagnósticos do Arquiteto / tempo por tarefa>
 Rodadas por tarefa: média <n>, pior <tarefa> com <n>
 Rodadas que caducaram sem reprovação (revisor aprovou e teve de rodar de novo): <n>
 Correções fora de tarefa: <n>
@@ -45,10 +45,13 @@ Ressalvas do /validar: <n críticos, n maiores>
 
 Compare com a retrospectiva anterior (`tasks/prd-*/retro.md` mais recente), se houver.
 
-A linha por modelo é a que sustenta a D78: o Implementador está em Sonnet 5.5 em toda tarefa desde
-09/10/2026 (o Haiku levou mais de cinco horas na 6.0 do F3). Proponha voltar o Haiku às tarefas
-pequenas só com número que mostre que ele não custa mais portões do que poupa de consumo. O mesmo vale
-para os revisores com veto em Opus: proponha manter ou trocar, com o número.
+A linha por modelo é a que sustenta a D78. O Implementador passou por três: Haiku 5.5 nas pequenas (mais
+de cinco horas na 6.0 do F3), Sonnet 5.5 em toda tarefa, e, desde 09/10/2026, o MiMo-V2.6-Pro no
+opencode, para tirar o papel do consumo do Claude. O modelo de cada tarefa está na coluna "Modelo" do
+`estado.md`. **Compare o MiMo com o Sonnet em rodadas por tarefa e em tempo por tarefa**: cada rodada a
+mais custa revisor em Opus, e a troca só se paga se as rodadas não subirem. Com o número, proponha
+manter, voltar ao Sonnet (a reserva em `.claude/agents/implementador.md`) ou dividir por porte. O mesmo
+vale para os revisores com veto em Opus: proponha manter ou trocar, com o número.
 
 ## 3. Agrupar causas
 

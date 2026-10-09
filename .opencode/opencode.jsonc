@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // O opencode entra no processo por um papel só: o Implementador (D78, revista em 09/10/2026). O Orquestrador o
+  // inicia com `opencode --standalone --auto`, na raiz do checkout do andar (`.claude/skills/seguir/SKILL.md`, passo 3).
+  //
+  // A TUI do opencode 2 não tem `--agent` nem `--model`, e o `model` do arquivo do agente não escolhe o modelo da
+  // sessão (provado na 2.0.26): os dois vêm daqui. Por isso toda sessão do opencode aberta neste repositório nasce
+  // como Implementador; para outra coisa, troque de agente na própria TUI (shift+tab).
+  //
+  // O modelo é o da assinatura OpenCode Go. O mesmo modelo pela chave direta (`xiaomi/mimo-v2.6-pro`) cobra por token
+  // fora da assinatura.
+  "model": "opencode-go/mimo-v2.6-pro",
+  "default_agent": "implementador",
+}

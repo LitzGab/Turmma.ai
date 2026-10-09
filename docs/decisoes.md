@@ -1029,3 +1029,28 @@ abas quebrada em 360 px que a revisão pelo código tinha aprovado. A próxima s
 visual. O `frontend-reviewer` continua sem veto no hook: o que segura a tarefa é a Mesa, que trata o
 bloqueante dele como o de qualquer revisor. Revisão: dar a ele o veto no hook se a retrospectiva
 mostrar tela reprovada indo para o commit.
+
+Revista pela quarta vez em 09/10/2026, pelo Joaquim: **o Implementador sai do Claude Code e roda no
+opencode, com o MiMo-V2.6-Pro**, pela assinatura OpenCode Go. O objetivo é fazer o plano do Claude
+durar mais. A medição das primeiras 18 horas do processo no Maestri, ponderada por preço, deu:
+Implementador 31% do consumo, revisores em Opus 27%, Orquestrador 24%, Arquiteto 10% e Mesa 8%. O
+Implementador é o maior papel e o único que sai inteiro sem enfraquecer o portão: tudo o que ele
+escreve passa pelos revisores antes do commit, e os revisores, a Mesa, o Arquiteto, o Validador e o
+Orquestrador continuam no Claude. O que entra no repositório: `.opencode/opencode.jsonc` (o modelo e o
+agente com que a sessão nasce), `.opencode/agents/implementador.md` (o papel) e
+`.opencode/plugins/portao-de-revisoes.ts`, que faz no opencode o que o hook PreToolUse faz no Claude
+Code: entrega cada `git commit` e cada `git push` ao mesmo `tools/processo/hook-revisoes.ts` e veta a
+ferramenta com o motivo. `.claude/agents/implementador.md` fica como **reserva**, com o mesmo texto
+(um teste reprova a diferença): se o opencode não subir, o Orquestrador volta ao Sonnet com um
+comando. A prova técnica de 09/10/2026 fixou quatro coisas do opencode 2.0.26: a TUI não tem `--agent`
+nem `--model`, e o `model` do arquivo do agente não escolhe o modelo da sessão, por isso os dois vêm
+da configuração do projeto e toda sessão do opencode neste repositório nasce como Implementador; ele
+não lê o `CLAUDE.md` nem `.claude/rules/`, por isso o papel manda ler; ele lê `.claude/skills/`; e o
+erro lançado no gancho `execute.before` cancela a ferramenta e chega ao modelo com o texto. O preço
+aceito: pelo Artificial Analysis o MiMo empata com o Sonnet 5.5 em inteligência (46 contra 47), mas
+gera a 42 tokens por segundo contra 105 e escreve 2,7 vezes mais, então a tarefa demora mais; e cada
+rodada de revisão a mais custa cerca de US$ 5 em Opus, contra US$ 7 a 19 que uma tarefa custava de
+Implementador. O Joaquim decidiu trocar direto, sem piloto. O que **não** muda: o hook, os vetos, o
+portão da tarefa, a Mesa chamando os revisores e as seis paradas. Revisão: na retrospectiva do F3,
+pelas rodadas por tarefa e pelo tempo por tarefa do MiMo contra o Sonnet; se as rodadas subirem, o
+papel volta à reserva. Não medido ainda: o teto de uso da assinatura.
