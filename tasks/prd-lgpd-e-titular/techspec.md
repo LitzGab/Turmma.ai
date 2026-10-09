@@ -298,6 +298,15 @@ suboperador sai do `SuboperadorDaEscolaRepository`: nada de outra escola entra.
 - **Professor:** **só por período** (os suboperadores de IA da escola vigentes durante o vínculo), na foto e no
   detalhe; a prévia não traz compartilhamento. As datas reais de uso saem só na versão `completa`, que ele mesmo baixa (D64).
 - A hospedagem aparece sempre.
+- **O período é o do titular na escola, nunca o da empresa** (triagem de 09/10/2026, lacuna que a 8.0 deixou). Ele
+  começa na entrada do titular: no aluno, a mais antiga entre `credencial_matricula.criada_em` e
+  `conta_externa.ligada_em` dele (a aprovação da reivindicação cria a credencial; `usuario` não tem data de criação); no
+  professor, é o do vínculo, como acima. Com `origem = periodo`, `primeiroEm` e `ultimoEm` são a **interseção** da
+  vigência do suboperador para a escola com esse período, e a interseção vazia não entra na foto. No rastro, a `chave`
+  casa com o suboperador vigente na data da chamada (`consumo_ia.em`), não com o de hoje. Por isso o `todas` encerrado
+  antes de a escola existir, ou antes de o titular entrar, não aparece, e nenhuma data da foto é anterior à entrada
+  dele: o `inicio` e o `fim` que o `SuboperadorDaEscolaRepository` devolve nunca vão direto para a foto. O aluno sem
+  nenhuma das duas datas não tem período anterior ao rastro.
 
 **Eliminação.**
 - **Registro.** O `POST` faz `insert … on conflict (escola_id, chave_envio) do nothing`; se nada voltar, devolve o
@@ -373,6 +382,16 @@ Tarefa 8.0, como ficou no código:
 - `SuboperadorDaEscolaRepository` (`packages/nucleo/src/titular/`): `(alcance = 'todas' or exists (ligação correlacionada com a
   escola do contexto))`, mais um `left join` com a ligação da escola só para trazer o início e o fim dela. A vigência da escola é o
   início da ligação (ou o do suboperador, em `todas`) e o mais cedo entre os dois `fim`.
+- **Em aberto, parada do Joaquim (triagem de 09/10/2026): a vigência anterior à existência da escola, na aba.** Como o
+  `todas` não tem ligação, a aba mostra como passada a empresa encerrada antes de a escola existir, e "Desde" com data
+  anterior à escola: a tela diz que recebeu dado da escola quem nunca recebeu. Corrigir exige saber desde quando a
+  escola existe, e `escola` não tem data de criação: é mudança de desenho, não detalhe. Alternativas: **(a)** coluna
+  `escola.criada_em` (migration de expansão, preenchida a partir da auditoria `escola.criada`), com o início sendo o
+  mais tarde entre o da empresa e o da escola, e o `todas` encerrado antes dela fora da lista, numa correção da 8.0:
+  é a recomendada; **(b)** ler a data da auditoria `escola.criada`, sem migration, mas o domínio passa a depender do
+  registro de auditoria; **(c)** deixar como está e dizer na aba que a data é a do contrato da empresa com a Turmma, o
+  que mantém na lista a passada que nunca atendeu a escola. O alcance `lista` não tem a lacuna (a ligação nasce depois
+  da escola), e o compartilhamento também não (seção 5, "O período é o do titular"): a 12.0 não espera esta decisão.
 - **Auditoria sem escola.** `suboperador.cadastrado` e `suboperador.encerrado` não têm escola no contexto (o ato é da operação, e a empresa
   pode atender toda escola; uma linha por escola seria uma linha por escola existente a cada cadastro de `todas`). Por isso o check da
   `auditoria` passou a aceitar sem escola, além da rede criada, a entidade `suboperador`, sempre por operador

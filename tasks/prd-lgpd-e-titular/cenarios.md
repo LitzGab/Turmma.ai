@@ -173,6 +173,8 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
 - **RF13, compartilhamento.**
   - [I] O compartilhamento é calculado com e sem `provedor`, e o provedor sem cadastro aparece como "não cadastrado".
   - [I] Depois do expurgo de 12 meses, o pedido ainda lista os suboperadores do período.
+  - [I] (triagem de 09/10/2026) O período da reserva é o do titular na escola: o suboperador `todas` encerrado antes de o
+    aluno entrar não entra na foto, e `primeiroEm` nunca é anterior à entrada dele.
   - [I] O pedido de eliminação concluído ainda devolve o provedor.
   - [I] Dois professores da mesma escola, um que usou o Assistente com provedor externo e outro que nunca usou: a
     prévia, a foto e o `GET pedidos/:id` saem iguais (D64). As datas reais só aparecem na versão `completa`.
