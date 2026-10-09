@@ -16,6 +16,8 @@ Antes de qualquer coisa, leia `.claude/skills/seguir/protocolo.md` e confira o i
 |---|---|
 | spec de uma funcionalidade, a partir de uma fase | `criar-prd`, `criar-techspec`, `revisar-spec`, `criar-tasks`, nesta ordem, a partir da fase indicada |
 | divergência da Tech Spec numa tarefa | a seção "Divergência" abaixo |
+| contexto de teste das tarefas pendentes | a seção "Contexto das tarefas" abaixo |
+| diagnóstico de uma tarefa que falhou duas vezes | a seção "Diagnóstico" abaixo |
 | decisão de produto em aberto | `descobrir` e, com a decisão tomada, `registrar-decisao` |
 | retrospectiva | `retro` |
 
@@ -69,6 +71,46 @@ terceira):
 
 Na dúvida entre a segunda e a terceira, é a terceira. As regras 10, 20 e 70 não se afrouxam por
 triagem.
+
+## Contexto das tarefas
+
+O Implementador roda num modelo menor e começa cada tarefa sem contexto. O que mais custa a ele não é
+a regra, é o **como**: qual teste existente já faz o que ele precisa, e qual peça de apoio usar. Na 6.0
+do F3 o documento dizia só "e2e: novo" e "recomeço: troca de escola"; a tela saiu em 6 minutos, e o
+teste levou cinco horas de tentativa.
+
+Para cada `N_task.md` pendente que o pedido citar, **sem mudar objetivo, subtarefas, cenários nem
+critério de conclusão**, acrescente:
+
+1. a linha `**Porte:** pequeno` ou `**Porte:** grande` no cabeçalho, se faltar (o critério está em
+   `criar-tasks`, "Porte da tarefa");
+2. a seção `## Como testar`, logo depois de "Testes que provam a regra", com até 150 palavras:
+   - para cada cenário da tabela que tem precedente no repositório: o teste a copiar, como
+     `arquivo › nome do caso`, e o que muda nele;
+   - a peça de apoio certa: fixture, helper, fábrica de dados (`e2e/__fixtures__/…`, `apps/api/test/…`,
+     `GatilhoDeParada`), com o nome da função;
+   - o comando para rodar esse teste isolado (passo 4 de `executar-task`);
+   - as armadilhas que já apareceram nesta funcionalidade e valem para a tarefa: leia o
+     `achados/indice.md` e a seção "O que falhou" do `estado.md`, e cite só as que se aplicam.
+
+Abra o código para achar o precedente: não cite arquivo nem caso que você não abriu. Cenário sem
+precedente: diga isso, e aponte o mais próximo. O documento continua dentro das 800 palavras; se
+passar, corte o que repete a Tech Spec.
+
+O Implementador pode estar trabalhando na mesma árvore: não rode teste nem suíte, não toque em arquivo
+que não seja `N_task.md` de tarefa pendente, e no `git add` cite só os seus arquivos. Ao terminar,
+commit de documento na branch do andar, com push, e `/seguir RELATÓRIO de Arquiteto` ao Orquestrador,
+com as tarefas cobertas e as que ficaram sem precedente.
+
+## Diagnóstico
+
+O Implementador falhou duas vezes na mesma tarefa, a segunda já no modelo maior. Antes de isso virar
+parada do Joaquim, você diz o que está errado. Leia o relatório de falha que o pedido aponta, o teste,
+o erro inteiro e o código envolvido, e grave `.processo/ordens/diagnostico-<N>.md`, no formato da ordem
+de correção de `revisar-tarefa` (passo 5): a causa em uma frase, e para cada ponto o arquivo, o trecho
+exato que está lá, o que tem de ficar, por quê, e o teste que prova. Você não edita código nem teste.
+Responda ao Orquestrador com `/seguir RELATÓRIO de Arquiteto` e o caminho do arquivo. Se a causa for o
+desenho, é `/seguir BLOQUEIO de Arquiteto`, como na divergência.
 
 ## Decisão e retrospectiva
 

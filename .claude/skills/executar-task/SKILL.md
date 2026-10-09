@@ -24,6 +24,9 @@ Leia, nesta ordem:
 4. As regras aplicáveis em `.claude/rules/` — cada uma explica o porquê; o porquê é o que
    permite decidir os casos que a regra não previu
 5. `docs/glossario.md`
+6. A seção "Como testar" do `N_task.md`, quando existe: o teste que já faz o que você precisa e a
+   peça de apoio a usar. Abra esse teste **antes** de escrever o seu: copiar o padrão que funciona é o
+   que evita horas de tentativa
 
 ## 2. Planejar antes de codar
 

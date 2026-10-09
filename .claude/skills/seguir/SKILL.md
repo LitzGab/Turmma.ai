@@ -220,8 +220,14 @@ paradas é o próprio Arquiteto.
   terminal, e você lê na saída do `maestri ask` ou com `maestri check`. Só registre; não é relatório
   de conclusão.
 - **`RELATÓRIO` com `STATUS: FALHA`.** Leia o motivo. Defeito fora da tarefa: correção antes de
-  retomar (abaixo). Trabalho pela metade sem causa clara: uma retomada, no Sonnet. Segunda falha
-  na mesma tarefa: parada.
+  retomar (abaixo). Senão, a cada falha o Implementador volta com **mais contexto**, não só com outro
+  modelo:
+  - *primeira falha:* reinicie-o no Sonnet e envie um `PEDIDO de retomada` que repete o que o
+    relatório trouxe: o teste, o erro e o que já foi tentado;
+  - *segunda falha:* reinicie o `Arquiteto` no andar e peça o **diagnóstico** (a seção "Diagnóstico"
+    de `.claude/agents/arquiteto.md`), apontando os dois relatórios. Com a resposta, um
+    `PEDIDO de retomada` ao Implementador apontando `.processo/ordens/diagnostico-<N>.md`;
+  - *terceira falha:* parada.
 - **`ESCALADA` da Mesa** (duas reprovações seguidas do mesmo revisor). Reinicie o `Implementador`
   no Sonnet e envie um `PEDIDO de retomada` apontando a ordem da Mesa. Se ele já estava no Sonnet,
   envie o mesmo `PEDIDO de retomada` sem reiniciar. Registre no `estado.md`.
@@ -260,7 +266,7 @@ Só nestas você para e espera o Joaquim:
 6. pouso na `develop`.
 
 E duas que são limite, não decisão: três reprovações seguidas do mesmo revisor na mesma tarefa, e
-a segunda falha seguida da mesma tarefa.
+a terceira falha seguida da mesma tarefa, já com o diagnóstico do Arquiteto aplicado.
 
 Ao parar, a pergunta fica em três lugares: no `estado.md` do andar, na seção "Esperando o Joaquim"
 (é o que uma sessão nova lê para saber que há uma parada aberta); no status do andar; e **na sua
