@@ -190,7 +190,10 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
 - **RF10.**
   - [I] O `POST pedidos` com `titularId` de B devolve o mesmo status e o mesmo corpo de um UUID inexistente.
   - [I] O pedido sobre si mesmo dá `NAO_ENCONTRADO`, inclusive pelo `usuario` professor da mesma conta.
+  - [I] (tarefa 11.0) O pedido sobre a própria pessoa, registrado por **outra** coordenação, responde `NAO_ENCONTRADO` também nas rotas que o alcançam (`ler`, `concluir`, `corrigir-nome`) e não aparece na lista de quem é dele.
+  - [I] (tarefa 11.0) A coordenação não é titular de pedido: a busca não acha o papel dela e o pedido sobre ela responde como o inexistente. É a RF10 ("o pedido de aluno ou professor da escola"); o caso da PRD, seção 7 ("a única coordenadora"), fica para a tarefa da eliminação decidir, com a migration que ampliar `papel_titular` se precisar (techspec §4, "Tarefa 11.0, como ficou no código").
   - [I] `chegouEm` no futuro é recusado.
+  - [I] (tarefa 11.0) A chave de envio já usada só devolve o pedido que é este mesmo. Com outro titular, outro tipo, outro solicitante ou outra chegada (um caso para cada campo), ou registrada por outra coordenação da mesma escola, a resposta é `NAO_ENCONTRADO`, sem pedido nem auditoria novos e sem o nome do titular do pedido gravado (techspec §4, "A chave de envio é de quem registrou").
   - [I] Um `UPDATE` que troca o `escola_id` ou o `titular_id` do pedido é recusado.
 - **RF11, conteúdo do arquivo.**
   - [I] Uma sentinela em cada tabela classificada como do titular aparece no arquivo, e nada de outro titular ou de
@@ -282,7 +285,7 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] O aluno transferido, desativado em A e ativo em B, tem pedidos separados.
   - [I] A mesma matrícula em outra escola é outro titular.
 - **Concorrência (RF19).**
-  - [P] Mesma chave duas vezes devolve o mesmo pedido.
+  - [P] Mesma chave duas vezes, com o mesmo conteúdo e da mesma coordenação, devolve o mesmo pedido.
   - [P] Duas chaves diferentes de eliminação para o mesmo titular: uma fica `agendado`, a outra recebe
     `PEDIDO_EM_ESTADO_INVALIDO`.
   - [P] Dois `titular.eliminar` do mesmo pedido.

@@ -7,8 +7,10 @@ import {
   DECISORES_DA_REIVINDICACAO,
   ESTADOS_DE_MATERIAL,
   ESTADOS_DE_VINCULO,
+  ESTADOS_DO_PEDIDO,
   ESTADOS_EM_DECISAO,
   FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR,
+  FINALIDADE_DO_ATENDIMENTO_DO_TITULAR,
   FINALIDADE_DO_AJUSTE_DE_RETENCAO,
   FINALIDADE_DO_REGISTRO_DE_INCIDENTE,
   FINALIDADE_DO_REGISTRO_DE_SUBOPERADOR,
@@ -24,9 +26,12 @@ import {
   ORIGENS_DA_RETENCAO,
   PAPEIS_DE_USUARIO,
   PAPEIS_DE_VINCULO,
+  PAPEIS_DO_TITULAR,
   RISCOS_DO_INCIDENTE,
+  SOLICITANTES_DO_PEDIDO,
   TIPOS_DE_CONVITE,
   TIPOS_DE_ENTREGA,
+  TIPOS_DE_PEDIDO_DO_TITULAR,
   TITULARIDADES_DE_MATERIAL,
   VALIDADES_DO_ACESSO_DIAS,
 } from '@educa/shared'
@@ -589,6 +594,82 @@ export const ACOES_DE_AUDITORIA = {
     antes: null,
     depois: null,
     finalidade: z.enum([FINALIDADE_DO_REGISTRO_DE_INCIDENTE]),
+  },
+  /**
+   * A coordenação buscou titulares para atender um pedido (F3, RF10 e RF17; `POST /v1/privacidade/titulares/busca`),
+   * com a finalidade fixa. `entidadeId` é a escola, que é o alcance da busca, e `ids` os titulares que a resposta
+   * trouxe: **nunca o termo digitado**, que é nome de pessoa e não vai nem à auditoria nem ao log.
+   */
+  'titular.buscado': {
+    entidade: 'escola',
+    antes: null,
+    depois: z.strictObject({ ids: z.array(z.uuid()) }),
+    finalidade: z.enum([FINALIDADE_DO_ATENDIMENTO_DO_TITULAR]),
+  },
+  /**
+   * A coordenação abriu a prévia do titular, antes de registrar o pedido (`GET /v1/privacidade/titulares/:id/previa`;
+   * regra 20, item 10): leitura de dado de pessoa, sempre com a finalidade. `entidadeId` é o titular; a resposta nunca
+   * traz o nome do homônimo nem a contagem de uso de um professor (D64).
+   */
+  'titular.previa_lida': {
+    entidade: 'titular',
+    antes: null,
+    depois: null,
+    finalidade: z.enum([FINALIDADE_DO_ATENDIMENTO_DO_TITULAR]),
+  },
+  /**
+   * A coordenação listou os pedidos do titular da escola (`GET /v1/privacidade/pedidos`): `entidadeId` é a escola, o
+   * alcance da lista, e `ids` os pedidos da página, que trazem o nome de quem pediu.
+   */
+  'pedidos.listados': {
+    entidade: 'escola',
+    antes: null,
+    depois: z.strictObject({ ids: z.array(z.uuid()) }),
+    finalidade: z.enum([FINALIDADE_DO_ATENDIMENTO_DO_TITULAR]),
+  },
+  /** A coordenação abriu o detalhe de um pedido (`GET /v1/privacidade/pedidos/:id`), com a finalidade. */
+  'pedido.lido': {
+    entidade: 'pedido_titular',
+    antes: null,
+    depois: null,
+    finalidade: z.enum([FINALIDADE_DO_ATENDIMENTO_DO_TITULAR]),
+  },
+  /**
+   * A coordenação registrou o pedido do titular (F3, RF10 e RF17; `POST /v1/privacidade/pedidos`). `entidadeId` é o
+   * pedido; `depois` leva só ids, código e data: nunca nome, matrícula, o termo da busca nem quem pediu por escrito.
+   */
+  'pedido.registrado': {
+    entidade: 'pedido_titular',
+    antes: null,
+    depois: z.strictObject({
+      titularId: z.uuid(),
+      papelTitular: z.enum(PAPEIS_DO_TITULAR),
+      tipo: z.enum(TIPOS_DE_PEDIDO_DO_TITULAR),
+      solicitante: z.enum(SOLICITANTES_DO_PEDIDO),
+      chegouEm: z.iso.date(),
+    }),
+    finalidade: null,
+  },
+  /**
+   * A coordenação concluiu o pedido (F3, RF16; `POST /v1/privacidade/pedidos/:id/concluir`): o atendimento terminou,
+   * e quem concluiu sai no autor do registro. A eliminação conclui o pedido pelo job, com o autor `rotina` (15.0).
+   */
+  'pedido.concluido': {
+    entidade: 'pedido_titular',
+    antes: z.strictObject({ estado: z.enum(ESTADOS_DO_PEDIDO) }),
+    depois: z.strictObject({ estado: z.literal('concluido') }),
+    finalidade: null,
+  },
+  /**
+   * A coordenação corrigiu o nome do titular no pedido de correção (F3, RF13b; `POST
+   * /v1/privacidade/pedidos/:id/corrigir-nome`). **Nunca o nome, nem o anterior nem o novo**: só que a correção
+   * aconteceu, sobre qual pedido, e por quem.
+   */
+  'pedido.nome_corrigido': {
+    entidade: 'pedido_titular',
+    antes: null,
+    depois: null,
+    finalidade: null,
   },
 } as const satisfies Record<string, DefinicaoDeAcao>
 

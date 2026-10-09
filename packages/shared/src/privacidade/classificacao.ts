@@ -91,6 +91,10 @@ export const CLASSIFICACAO_DAS_TABELAS: Readonly<Record<string, ClassificacaoDaT
   // de pedido (PRD, seção 4), então a tabela fica fora do arquivo.
   incidente: fixo('registro_de_incidente', EXPURGO_DE_ACESSO),
   incidente_escola: fixo('registro_de_incidente', EXPURGO_DE_ACESSO),
+  // O pedido do titular à escola (F3, 11.0): id, tipo, quem pediu, datas, estado e a foto do compartilhamento, sem nome nem
+  // texto. Vigência + 5 anos, no fim de contrato (F12), como a auditoria que o registra; entra no arquivo do titular, e o
+  // registro também entra no de quem o registrou (o `autor` do mapa, `docs/lgpd.md`).
+  pedido_titular: fixo('registro_de_decisao', FIM_DE_CONTRATO, 'titular_id', 'registrado_por'),
 
   // Sem pessoa.
   rede: SEM_PESSOA,
@@ -137,6 +141,7 @@ export const COLUNAS_FORA_DO_ARQUIVO: readonly string[] = [
   'reivindicacao.senha_hash',
   'reivindicacao.chave_envio',
   'execucao_agente.chave_envio',
+  'pedido_titular.chave_envio',
   'operador.senha_hash',
   'operador.mfa_segredo_cifrado',
   'operador.mfa_chave_versao',

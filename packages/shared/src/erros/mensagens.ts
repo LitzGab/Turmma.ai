@@ -37,6 +37,7 @@ export const MENSAGENS_DE_ERRO: Readonly<Record<CodigoDeErro, string>> = {
   EXECUCAO_INTERROMPIDA: 'O pedido foi interrompido antes de terminar. Envie de novo.',
   MATERIAL_INSUFICIENTE: 'Não encontramos esse tema no material da escola. Confira o tema ou peça à coordenação para enviar o material.',
   RETENCAO_FORA_DO_LIMITE: 'Este prazo não pode ser usado nesta categoria. Confira o mínimo e o máximo dela, e o prazo da categoria que a limita.',
+  PEDIDO_EM_ESTADO_INVALIDO: 'Este pedido não aceita mais esta ação. Atualize a tela para ver como ele ficou.',
 }
 
 /**

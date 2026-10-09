@@ -186,6 +186,68 @@ professor.
   conta Google ou Microsoft), pelo mesmo caminho de tempo e de contador. Com senha errada, a resposta é igual à da
   matrícula inexistente. No login por e-mail e no seletor, a escola com eliminação agendada não aparece.
 
+**Tarefa 11.0, como ficou no código.**
+
+- **Migration `0032_pedido_titular`.** A tabela é a do bloco da seção 3, com as decisões que o texto não fechava:
+  - `titular_id` e `registrado_por` **sem FK**, como o autor da auditoria (0013), e conferidos na inserção pelos
+    gatilhos `pedido_titular_titular_da_escola` e `pedido_titular_registrado_por_da_escola`, que reaproveitam o
+    `exigir_usuario_da_escola` dela: o erro é o da FK, com o nome da restrição, e a eliminação da pessoa não apaga o
+    pedido, que fica pela retenção legal com os ids;
+  - `escola_id` e `titular_id` são **imutáveis**, pelo gatilho `pedido_titular_imutavel`, que recusa o `update` como
+    um check (23514) com o nome da restrição;
+  - `chegou_em` é `date`, com o check `pedido_titular_chegou_em_nao_futura` (o `current_date` do banco); o código
+    recusa antes, com `ENTRADA_INVALIDA`. Os outros checks — `papel_titular`, `tipo`, `solicitante`, `estado`, a
+    conclusão e o cancelamento com data e autor juntos, e o enfileiramento só depois do agendamento — e o único
+    `(escola_id, chave_envio)` são a segunda camada, provados por inserção crua no teste. Índices: `(escola_id, id)`
+    para a página, `(escola_id, titular_id)` para os pedidos da pessoa, e o parcial dos `agendados` para o job da
+    eliminação (15.0);
+  - `papel_titular` é `aluno` ou `professor`, como a RF10 ("o pedido de aluno ou professor da escola"). **O caso da
+    PRD, seção 7 ("a única coordenadora quer a própria eliminação") não cabe nesta lista**: ele pede um pedido cujo
+    titular é um coordenador, que a RF10 e a prévia abaixo não prevêem. Fica para a tarefa da eliminação decidir, com
+    a migration que ampliar o check se precisar;
+  - `CLASSIFICACAO_DAS_TABELAS` a coloca em `registro_de_decisao` (vigência + 5 anos, no fim de contrato), entra no
+    arquivo por `titular_id` e `registrado_por`, e a `chave_envio` entra em `COLUNAS_FORA_DO_ARQUIVO`.
+- **Prévia (D64).** A resposta é uma união discriminada por `papel`:
+  - **aluno:** `categorias: [{ categoria, quantidade }]`, com a contagem de cada categoria de retenção que tem linha
+    ligada a ele, na ordem do catálogo e só as com linha, mais `homonimo`;
+  - **professor:** `categorias: [categoria]` **sem contagem e sem período**, só `pessoa_desativada` e
+    `vinculo_encerrado` (as de cadastro e vínculo). As de uso da IA não aparecem, e a resposta é igual para quem usou
+    e para quem não usou (D64). O compartilhamento nunca vem na prévia, só no detalhe do pedido registrado;
+  - a contagem é das **linhas que o arquivo do titular leva** (a ligação de `CLASSIFICACAO_DAS_TABELAS`), agrupadas
+    pela categoria da tabela: um vínculo em curso conta em `vinculo_encerrado`, que é a categoria da tabela dele;
+  - `homonimo` é a mesma regra da etapa 2 da eliminação (15.0): outro aluno ativo com o mesmo nome completo nesta
+    escola, ou nome livre igual na lista, sem identificar o outro. A marca fica no registro e volta no detalhe.
+- **Rotas.** Sob `/v1/privacidade`, todas com `Cache-Control: no-store` e célula própria da matriz
+  (`privacidade_titulares: buscar, previa`; `privacidade_pedidos: registrar, listar, ler, concluir, corrigir_nome`),
+  só da coordenação. `POST titulares/busca` responde 200, leva o termo no corpo e o balde próprio
+  `rl:busca-titular` (`LIMITE_DA_BUSCA_DE_TITULARES_POR_MINUTO = 30`, em `@educa/shared`), **além** do balde do F0,
+  que continua valendo; `POST pedidos` responde 201, e `concluir` e `corrigir-nome`, 204.
+- **Estados.** O `POST pedidos` nasce `recebido`, com a foto do compartilhamento vazia (a 12.0 a preenche). `concluir`
+  aceita `recebido`, `em_preparacao` e `pronto` nos tipos acesso, portabilidade, compartilhamento e correção — a
+  eliminação conclui pelo job (15.0) — e `corrigir-nome` só em correção `recebido` ou `pronto`; fora daí,
+  `PEDIDO_EM_ESTADO_INVALIDO` (409). As duas decisões moram no `where` do `update`, que também decide o clique duplo:
+  só a chamada que mudou audita.
+- **Sobre si mesmo.** O pedido cujo titular é a própria pessoa de quem pediu (mesma `conta_id`, não só o mesmo id)
+  responde `NAO_ENCONTRADO` em toda rota que o alcança **e não aparece na lista**.
+- **A chave de envio é de quem registrou.** A chave repetida só devolve o pedido quando ele é do **mesmo**
+  `registrado_por` de quem pede **e** tem o mesmo titular, tipo, solicitante e chegada do corpo: é o reenvio. Em
+  qualquer outro caso (a chave de outra coordenação, ou a mesma chave com um desses quatro campos diferente) a resposta
+  é `NAO_ENCONTRADO`, sem gravar nem auditar nada, e o pedido gravado não é devolvido (regra 10, itens 4 e 6; regra 20,
+  itens 5 e 6). É `NAO_ENCONTRADO` também para a chave da própria pessoa com outro conteúdo, e não o `CONFLITO` da
+  execução de agente: uma resposta só para todo caso em que a chave não devolve este pedido. A tela (16.0) sorteia a
+  chave por diálogo de confirmação, que tem conteúdo fixo; a chave repetida com outro conteúdo é defeito da tela, e não
+  um fluxo.
+- **O `corrigir-nome` em clique duplo** aplica o mesmo nome e audita duas vezes; o nome final é o mesmo e o desenho
+  aceita isso.
+- **O "hoje" do `chegouEm`** é o dia de São Paulo (`diaDeUso`); o check `pedido_titular_chegou_em_nao_futura` usa o
+  `current_date` da sessão e é só a segunda camada, mais frouxa.
+- **Auditoria.** Sete ações novas: `titular.buscado` e `pedidos.listados` (entidade `escola`, que é o alcance da
+  leitura, com `depois.ids`), `titular.previa_lida` (entidade `titular`) e `pedido.lido`, `pedido.registrado`,
+  `pedido.concluido` e `pedido.nome_corrigido` (entidade `pedido_titular`). As quatro leituras levam a finalidade fixa
+  `atender_o_pedido_do_titular`; o registro, a conclusão e a correção de nome levam ids, estado e datas — **nunca o
+  nome, nem o anterior nem o novo, e nunca o termo da busca**, que também não vai a log (RF17). O harness de captura
+  do log e das respostas é `apps/api/test/captura-de-dado-pessoal.ts`, que a 13.0 reusa para a URL assinada.
+
 ## 5. Fluxo
 
 **Expurgo.**
@@ -316,7 +378,9 @@ suboperador sai do `SuboperadorDaEscolaRepository`: nada de outra escola entra.
 
 **Eliminação.**
 - **Registro.** O `POST` faz `insert … on conflict (escola_id, chave_envio) do nothing`; se nada voltar, devolve o
-  pedido daquela chave. A mesma chave é sempre o mesmo pedido, de qualquer tipo. Uma chave diferente para um titular
+  pedido daquela chave, quando ele é de quem pede e é o mesmo registro (seção 4, "A chave de envio é de quem
+  registrou"). A mesma chave, com o mesmo conteúdo e da mesma coordenação, é sempre o mesmo pedido, seja qual for o
+  tipo do pedido. Uma chave diferente para um titular
   já `agendado` cai no único parcial e responde `PEDIDO_EM_ESTADO_INVALIDO`.
 - Na mesma transação: `eliminar_em = now() + 7 dias`, `usuario.eliminacao_agendada_em`, as sessões encerradas
   (`eliminacao_agendada`) e a auditoria.

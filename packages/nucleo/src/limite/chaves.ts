@@ -29,6 +29,14 @@ export const PREFIXO_LIMITE_OPERADOR = 'rl:op'
  */
 export const PREFIXO_LIMITE_IP_OPERACAO = 'rl:ip:op'
 
+/**
+ * O limite da busca de titulares (`rl:busca-titular`, F3, tarefa 11.0; Tech Spec do F3, seção 7c): 30 por minuto **por
+ * usuário**, num balde próprio. O balde por usuário e por escola do F0 continua valendo junto; este é mais curto porque
+ * a busca acha nome de pessoa. É por usuário e nunca por IP (regra 80, item 1): duas coordenações da mesma escola, atrás
+ * do mesmo IP, têm 30 cada.
+ */
+export const PREFIXO_LIMITE_BUSCA_TITULAR = 'rl:busca-titular'
+
 /** Janela de todo limite. Os limites da configuração são "por minuto". */
 export const JANELA_LIMITE_SEGUNDOS = 60
 

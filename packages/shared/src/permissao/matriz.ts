@@ -163,6 +163,19 @@ export const RECURSOS = {
    * quando. Registrar é só da operação, por comando (`ops:incidente`), e não tem rota.
    */
   privacidade_incidentes: ['ler', 'confirmar'],
+  /**
+   * Achar o titular antes de registrar o pedido (F3, 11.0), só da coordenação: `buscar` é `POST
+   * /v1/privacidade/titulares/busca`, com o limite próprio `rl:busca-titular`; `previa`, `GET
+   * /v1/privacidade/titulares/:id/previa`, com finalidade e auditoria. Só quem é `usuario` da escola é achado: o aluno
+   * que só está na lista de nomes é atendido pela lista da turma (A1).
+   */
+  privacidade_titulares: ['buscar', 'previa'],
+  /**
+   * Os pedidos do titular (F3, 11.0), só da coordenação: `registrar`, `listar` e `ler` são `POST`, `GET` e `GET /:id` de
+   * `/v1/privacidade/pedidos`; `concluir` e `corrigir_nome`, os `POST /:id/concluir` e `/:id/corrigir-nome`. Cada leitura
+   * vai para a auditoria com finalidade, e nada alcança o pedido sobre a própria pessoa (mesma `conta_id`).
+   */
+  privacidade_pedidos: ['registrar', 'listar', 'ler', 'concluir', 'corrigir_nome'],
 } as const satisfies Record<string, readonly string[]>
 
 export type Recurso = keyof typeof RECURSOS
@@ -209,6 +222,8 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     privacidade_retencao: { ler: 'nunca' },
     privacidade_suboperadores: { ler: 'nunca' },
     privacidade_incidentes: { ler: 'nunca', confirmar: 'nunca' },
+    privacidade_titulares: { buscar: 'nunca', previa: 'nunca' },
+    privacidade_pedidos: { registrar: 'nunca', listar: 'nunca', ler: 'nunca', concluir: 'nunca', corrigir_nome: 'nunca' },
   },
   coordenador: {
     sistema_contexto: { ler: 'proprio' },
@@ -248,6 +263,8 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     privacidade_retencao: { ler: 'unidade' },
     privacidade_suboperadores: { ler: 'unidade' },
     privacidade_incidentes: { ler: 'unidade', confirmar: 'unidade' },
+    privacidade_titulares: { buscar: 'unidade', previa: 'unidade' },
+    privacidade_pedidos: { registrar: 'unidade', listar: 'unidade', ler: 'unidade', concluir: 'unidade', corrigir_nome: 'unidade' },
   },
   professor: {
     sistema_contexto: { ler: 'proprio' },
@@ -287,6 +304,8 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     privacidade_retencao: { ler: 'nunca' },
     privacidade_suboperadores: { ler: 'nunca' },
     privacidade_incidentes: { ler: 'nunca', confirmar: 'nunca' },
+    privacidade_titulares: { buscar: 'nunca', previa: 'nunca' },
+    privacidade_pedidos: { registrar: 'nunca', listar: 'nunca', ler: 'nunca', concluir: 'nunca', corrigir_nome: 'nunca' },
   },
   aluno: {
     sistema_contexto: { ler: 'proprio' },
@@ -326,6 +345,8 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     privacidade_retencao: { ler: 'nunca' },
     privacidade_suboperadores: { ler: 'nunca' },
     privacidade_incidentes: { ler: 'nunca', confirmar: 'nunca' },
+    privacidade_titulares: { buscar: 'nunca', previa: 'nunca' },
+    privacidade_pedidos: { registrar: 'nunca', listar: 'nunca', ler: 'nunca', concluir: 'nunca', corrigir_nome: 'nunca' },
   },
 }
 

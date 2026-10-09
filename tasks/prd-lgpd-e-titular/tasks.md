@@ -76,14 +76,14 @@
   - [x] 10.3 Aba Incidentes
   - [x] 10.4 Testes
 
-- [ ] **11.0 — A coordenação acha o titular e registra o pedido**
-  - [ ] 11.1 Migration própria: `pedido_titular` (gatilho de inserção, imutáveis, único de `chave_envio`, índices)
-  - [ ] 11.2 `POST titulares/busca` com `rl:busca-titular`; `GET titulares/:id/previa` (`homonimo`; D64)
-  - [ ] 11.3 `POST pedidos` (chave decide primeiro), `GET pedidos` e `GET pedidos/:id`, auditoria na mesma transação
-  - [ ] 11.4 `concluir` e `corrigir-nome`, com estados e erro tipado
-  - [ ] 11.5 Harness de captura de log (termo, nome atual e anterior)
-  - [ ] 11.6 `docs/lgpd.md` (linha do pedido)
-  - [ ] 11.7 Testes
+- [x] **11.0 — A coordenação acha o titular e registra o pedido**
+  - [x] 11.1 Migration própria: `pedido_titular` (gatilho de inserção, imutáveis, único de `chave_envio`, índices)
+  - [x] 11.2 `POST titulares/busca` com `rl:busca-titular`; `GET titulares/:id/previa` (`homonimo`; D64)
+  - [x] 11.3 `POST pedidos` (chave decide primeiro), `GET pedidos` e `GET pedidos/:id`, auditoria na mesma transação
+  - [x] 11.4 `concluir` e `corrigir-nome`, com estados e erro tipado
+  - [x] 11.5 Harness de captura de log (termo, nome atual e anterior)
+  - [x] 11.6 `docs/lgpd.md` (linha do pedido)
+  - [x] 11.7 Testes
 
 - [ ] **12.0 — O pedido guarda por quais empresas o dado do titular passou**
   - [ ] 12.1 `Compartilhamento` em `packages/nucleo/src/titular`, chamável pela API e pelo worker

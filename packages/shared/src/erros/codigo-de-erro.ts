@@ -96,6 +96,11 @@ export const CodigoDeErro = {
    * auditoria e os outros prazos fixos). Nada é gravado.
    */
   RETENCAO_FORA_DO_LIMITE: 'RETENCAO_FORA_DO_LIMITE',
+  /**
+   * O pedido do titular não está no estado que a ação pede (F3, RF16; 409): concluir um pedido já concluído ou
+   * cancelado, concluir a eliminação, ou corrigir o nome fora de um pedido de correção aberto. Nada é gravado.
+   */
+  PEDIDO_EM_ESTADO_INVALIDO: 'PEDIDO_EM_ESTADO_INVALIDO',
 } as const
 
 export type CodigoDeErro = (typeof CodigoDeErro)[keyof typeof CodigoDeErro]

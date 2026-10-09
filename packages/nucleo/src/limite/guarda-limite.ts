@@ -12,6 +12,7 @@ import { tokenDaRequisicao } from '../identidade/token-da-requisicao.js'
 import { extrairTokenBearer, verificarTokenDeOperador, type TokenDeOperadorVerificado } from '../identidade/verificar-token.js'
 import { ipDoCliente, segundosParaTentarDeNovo } from './chaves.js'
 import type { LimitadorDeRequisicoes } from './limitador.js'
+import { METADADO_LIMITE_DA_BUSCA_DE_TITULARES } from './limite-da-busca-de-titulares.decorator.js'
 import type { ProxiesConfiaveis } from './proxies-confiaveis.js'
 import { METADADO_LIMITE_QUE_REBAIXA, METADADO_SEM_LIMITE } from './rota-anonima.decorator.js'
 
@@ -81,6 +82,17 @@ export class GuardaDeLimite implements CanActivate {
       : await this.#consumirAutenticada(requisicao)
     if (!resultado.aceita) {
       throw new ErroDeDominio(CodigoDeErro.LIMITE_EXCEDIDO, undefined, segundosParaTentarDeNovo(resultado.msAteLiberar))
+    }
+    // A busca de titulares (`@LimiteDaBuscaDeTitulares`) conta ainda no balde próprio dela, por usuário: além do
+    // balde do F0, que continua valendo, ela tem o teto de 30 por minuto (Tech Spec do F3, seção 7c).
+    if (!anonima && this.reflector.getAllAndOverride<boolean | undefined>(METADADO_LIMITE_DA_BUSCA_DE_TITULARES, alvos) === true) {
+      const token = tokenDaRequisicao(requisicao)
+      // Sem token verificado (guarda fora de ordem), falha fechada, como no limite autenticado.
+      if (token === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+      const daBusca = await this.limitador.consumirDaBuscaDeTitulares(token.usuarioId)
+      if (!daBusca.aceita) {
+        throw new ErroDeDominio(CodigoDeErro.LIMITE_EXCEDIDO, undefined, segundosParaTentarDeNovo(daBusca.msAteLiberar))
+      }
     }
     return true
   }

@@ -1,11 +1,11 @@
 # Estado da execução — lgpd-e-titular
 
 ## Agora
-- **Tarefa atual:** 10.0, iniciada em 09/10/2026 14:42, com o Implementador em Sonnet 5.5; porte grande, com tela (`frontend-reviewer` e `privacy-guardian`)
-- **Espero:** relatório do Implementador
+- **Tarefa atual:** 11.0, iniciada em 09/10/2026 16:20, com o Implementador em MiMo-V2.6-Pro (opencode), a primeira tarefa nele; porte grande (`tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer` e `infra-guardian`)
+- **Espero:** relatório do Implementador; `PEDIDO de retomada` enviado às 19:50 de 09/10, apontando `.processo/ordens/diagnostico-11.md`, para a 3ª rodada
 - **Pendente para a validação:** as duas abas da Privacidade quebram em duas linhas em 360 px (vista na
   foto da vitrine); recomendação, não bloqueante
-- **Base:** `spec/lgpd-e-titular` em `fad6fef` (a tarefa 9.0), com a `develop` até `30f4765`
+- **Base:** `spec/lgpd-e-titular` em `fde4953` (o merge da `develop` depois da 10.0), com a `develop` até `9847fe7`
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -31,6 +31,8 @@
 | merge da `develop` (`30f4765`) | `b6e49d7` | Orquestrador | — | sem conflito; conserto da vitrine, que barrava o portão |
 | correção `2026-10-09-vigencia-anterior-a-escola` | `69a68e4` | Sonnet | 7 | decisão do Joaquim (coluna `escola.criada_em`, migration 0030); 2 reprovações na 1ª rodada (`test-engineer` e `revisor-geral`), uma ordem só; `DIVERGÊNCIA` de portão no meio, por defeito da vitrine vindo da `develop`; de 13:20 a 13:40 de 09/10 |
 | 9.0 | `fad6fef` | Sonnet | 10 | 2 reprovações na 1ª rodada (`test-engineer` e `revisor-geral`), uma ordem só de sete itens, os cinco aprovados na 2ª; sem escalada nem divergência; a tarefa não tem tela; três recomendações foram para o `TODO.md` e uma para a 15.0; de 13:45 a 14:38 de 09/10, 53 minutos |
+| 10.0 | `be559c0` | Sonnet | 10 | 3 rodadas: o `revisor-geral` reprovou na 1ª e o `test-engineer` na 2ª, uma reprovação de cada, sem escalada nem divergência; `frontend-reviewer` e `privacy-guardian` aprovaram nas duas em que entraram; telas vistas pelo Implementador (11 fotos) e pela Mesa (20); cinco recomendações foram para o `TODO.md`; de 14:42 a 16:15 de 09/10, 1 h 33 min, com a 1ª rodada aos 49 min |
+| merge da `develop` (`9847fe7`) | `fde4953` | Orquestrador | — | sem conflito; 15 arquivos de processo: `.opencode/` (papel, modelo e a trava do commit) e o `/seguir` com o Implementador no opencode |
 
 ## Esperando o Joaquim
 
@@ -59,6 +61,18 @@ Opções: ficar com o lado da branch, que é a união das linhas | abortar o mer
 Recomendo: ficar com o lado da branch; não se perde nenhuma linha e nada é escrito à mão no arquivo do hook.
 
 ## O que falhou
+
+- **11.0, `ESCALADA` da Mesa (09/10/2026 19:40):** `test-engineer` e `revisor-geral` reprovaram na 1ª e na
+  2ª rodada seguidas; `tenancy-guardian` e `privacy-guardian` reprovaram só na 1ª, e `conformidade-reviewer` e
+  `infra-guardian` aprovaram nas duas. Segundo a Mesa, falta o teste das três comparações da chave repetida
+  (tipo, solicitante, chegada) e texto da spec e de comentários. Ordem em `.processo/ordens/11_task-r2.md`,
+  achados em `achados/11_task.md`. A 1ª rodada só veio às 18:59, com 2 h 39 min de tarefa; a 2ª, às 19:34.
+  Diagnóstico pedido ao Arquiteto, reiniciado no andar, antes da terceira tentativa do Implementador.
+  **Diagnóstico (Arquiteto, 19:48):** não é o desenho nem o código. A ordem da 1ª rodada criou a regra da chave
+  de envio repetida com quatro comparações e pediu teste de uma só, sem cenário nem divergência; o Implementador
+  aplicou ao pé da letra. O diagnóstico substitui a `11_task-r2.md` e não muda linha de código: um bloco de
+  teste, quatro mutações, comentários e o `11_task.md`. O Arquiteto gravou `techspec.md` (§4 e §5) e
+  `cenarios.md` (RF10 e RF19), que vão no commit da tarefa. A retomada foi na mesma sessão do opencode.
 
 - **Portão da tarefa barrado por um defeito da `develop` (09/10/2026 13:25):** o merge de `34ae6fc`
   trouxe `tools/vitrine/escola.ts`, que faz `insert into escola` (linha 119), e o teste de arquitetura

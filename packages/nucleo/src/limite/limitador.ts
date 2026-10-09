@@ -1,3 +1,4 @@
+import { LIMITE_DA_BUSCA_DE_TITULARES_POR_MINUTO } from '@educa/shared'
 import { Logger } from '@nestjs/common'
 import type { Redis } from 'ioredis'
 import { RateLimiterMemory, RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
@@ -9,6 +10,7 @@ import type { Identidade } from '../identidade/verificar-token.js'
 import {
   JANELA_LIMITE_SEGUNDOS,
   limiteDoSeguro,
+  PREFIXO_LIMITE_BUSCA_TITULAR,
   PREFIXO_LIMITE_ESCOLA,
   PREFIXO_LIMITE_IP,
   PREFIXO_LIMITE_IP_LOGIN,
@@ -155,6 +157,7 @@ export class LimitadorDeRequisicoes {
   readonly #ipDoLogin: Limite
   readonly #ipDaOperacao: Limite
   readonly #operador: Limite
+  readonly #buscaDeTitulares: Limite
   readonly #proporcaoDoSeguro: ProporcaoEmJanela
   readonly #avisarAtivado = avisoEspacado(() => this.#logger.warn('limite.seguro_ativado'))
   readonly #avisarDesativado = avisoEspacado(() => this.#logger.log('limite.seguro_desativado'))
@@ -169,6 +172,7 @@ export class LimitadorDeRequisicoes {
     this.#ipDoLogin = criarLimite(cliente, PREFIXO_LIMITE_IP_LOGIN, config.porIpAnonimoMin, config.instancias)
     this.#ipDaOperacao = criarLimite(cliente, PREFIXO_LIMITE_IP_OPERACAO, config.porIpAnonimoMin, config.instancias)
     this.#operador = criarLimite(cliente, PREFIXO_LIMITE_OPERADOR, config.porOperadorMin, config.instancias)
+    this.#buscaDeTitulares = criarLimite(cliente, PREFIXO_LIMITE_BUSCA_TITULAR, LIMITE_DA_BUSCA_DE_TITULARES_POR_MINUTO, config.instancias)
   }
 
   /** 1 enquanto a última requisição limitada foi contada pelo seguro em memória. */
@@ -237,6 +241,15 @@ export class LimitadorDeRequisicoes {
    */
   async consumirDeOperador(operadorId: string): Promise<ResultadoDoLimite> {
     return this.#consumirUmaChave(this.#operador, operadorId)
+  }
+
+  /**
+   * O limite da busca de titulares (`rl:busca-titular:{usuarioId}`, F3, tarefa 11.0), por usuário: 30 por minuto,
+   * balde próprio. Conta **além** do limite do usuário e do da escola, que continuam valendo; duas coordenações da
+   * mesma escola, atrás do mesmo IP, têm 30 cada (regra 80, item 1).
+   */
+  async consumirDaBuscaDeTitulares(usuarioId: string): Promise<ResultadoDoLimite> {
+    return this.#consumirUmaChave(this.#buscaDeTitulares, usuarioId)
   }
 
   async #consumirUmaChave(limite: Limite, chave: string): Promise<ResultadoDoLimite> {

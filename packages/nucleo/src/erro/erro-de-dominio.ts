@@ -39,6 +39,8 @@ export const STATUS_HTTP_DO_CODIGO: Readonly<Record<CodigoDeErro, number>> = {
   MATERIAL_INSUFICIENTE: 422,
   // F3, RF2: o pedido é bem formado, e o prazo não cabe no catálogo da retenção.
   RETENCAO_FORA_DO_LIMITE: 422,
+  // F3, RF16: o pedido do titular não está no estado que a ação pede (fora de correção, já fechado, eliminação).
+  PEDIDO_EM_ESTADO_INVALIDO: 409,
 }
 
 /**

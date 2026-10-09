@@ -123,6 +123,7 @@ export {
   ipDoCliente,
   JANELA_LIMITE_SEGUNDOS,
   limiteDoSeguro,
+  PREFIXO_LIMITE_BUSCA_TITULAR,
   PREFIXO_LIMITE_ESCOLA,
   PREFIXO_LIMITE_IP,
   PREFIXO_LIMITE_IP_LOGIN,
@@ -136,6 +137,7 @@ export { LimitadorDeRequisicoes, lerConfiguracaoLimite } from './limite/limitado
 export type { ConfiguracaoLimite, ResultadoDoLimite } from './limite/limitador.js'
 export { ProxiesConfiaveis } from './limite/proxies-confiaveis.js'
 export { AceitaDesafio, LimiteQueRebaixa, METADADO_ROTA_ANONIMA, RotaAnonima, SemLimite } from './limite/rota-anonima.decorator.js'
+export { LimiteDaBuscaDeTitulares, METADADO_LIMITE_DA_BUSCA_DE_TITULARES } from './limite/limite-da-busca-de-titulares.decorator.js'
 export { criarClienteRedisDaApi, criarClienteRedisDaFila, TIMEOUT_COMANDO_REDIS_API_MS, TIMEOUT_COMANDO_REDIS_FILA_MS } from './redis/clientes.js'
 export { usoInfraDiario } from './db/schema/uso-infra-diario.js'
 export { diaAnterior, diaDeUso, diaValido, FORMATO_DIA, FORMATO_MES, FUSO_DO_USO, limitesDoMes } from './uso/dia-de-uso.js'
@@ -199,6 +201,7 @@ export type { SuboperadorLidoPelaEscola } from './titular/suboperador-da-escola.
 export { incidente, incidenteEscola } from './db/schema/incidente.js'
 export { IncidenteDaEscolaRepository } from './titular/incidente-da-escola.repository.js'
 export type { IncidenteLidoPelaEscola } from './titular/incidente-da-escola.repository.js'
+export { pedidoTitular } from './db/schema/pedido-titular.js'
 export { RetencaoDaEscolaRepository } from './retencao/retencao-da-escola.repository.js'
 export type { AjusteAGravar } from './retencao/retencao-da-escola.repository.js'
 export { expurgoExecucao } from './db/schema/expurgo-execucao.js'
