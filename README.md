@@ -228,10 +228,11 @@ E o portão automático. Em cada tarefa, o **portão da tarefa**: tipos, lint, a
 testes que a tarefa alterou (`node tools/processo/portao-local.ts --tarefa`), em minutos. Uma vez por
 spec, antes da validação, o **portão completo**, com tudo, e depois a esteira.
 
-Em tarefa com tela, o Implementador e o `frontend-reviewer` também **olham a tela**: `tools/vitrine/`
-monta uma escola sintética no ambiente de teste e fotografa a página como coordenação, professora ou
-aluno, no computador e no celular (`node tools/vitrine/vitrine.ts montar`, depois `foto <papel>
-<endereço>`). Serve também para você: `mostrar` dá os logins para abrir no navegador.
+Em tarefa com tela, a revisão **vê a tela**: `tools/vitrine/` monta duas escolas sintéticas no ambiente
+de teste, uma cheia e uma vazia, e fotografa a página como coordenação, professora ou aluno, no
+computador e no celular. O Implementador olha antes do portão, a Mesa entrega as fotos a todos os
+revisores, e o Validador fotografa cada requisito com tela no fim da spec. Serve também para você:
+`node tools/vitrine/vitrine.ts mostrar` dá os logins para abrir no navegador.
 
 ---
 

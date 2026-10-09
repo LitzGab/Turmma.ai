@@ -74,17 +74,43 @@ Entre os que o passo 1 mandou chamar:
 2. **Depois dele, todos os outros em paralelo, numa mensagem só, mesmo que ele tenha reprovado**:
    `revisor-geral`, os guardiões e, em tarefa com tela, o `frontend-reviewer`.
 
-**Em tarefa com tela, monte a vitrine antes do passo 2 da ordem**, com o `test-engineer` já de volta
-(ela usa o banco de teste, que durante o trabalho dele não é de mais ninguém):
+### Em tarefa com tela: fotografe antes de chamar os outros
 
-```bash
-node tools/vitrine/vitrine.ts mostrar || node tools/vitrine/vitrine.ts montar
-```
+Tarefa com `frontend-reviewer` entre os revisores tem tela, e tela se revisa **vendo**. Quem fotografa é
+você, uma vez, e as fotos vão para **todos** os revisores do passo 2: cada um olha a mesma tela pela
+regra dele. Faça isto com o `test-engineer` já de volta, porque a vitrine usa o banco de teste, que
+durante o trabalho dele não é de mais ninguém.
 
-É a escola sintética que o `frontend-reviewer` abre para fotografar as telas da tarefa
-(`tools/vitrine/`). Se o comando falhar (ambiente de teste fora do ar, tarefa de tela sem e2e
-alterado), não insista nem peça nada ao Implementador: o `frontend-reviewer` revisa pelo código, como
-sempre, e você diz no prompt dele que não há vitrine.
+1. **A vitrine**, as duas escolas sintéticas de `tools/vitrine/` (a cheia e a vazia):
+
+   ```bash
+   node tools/vitrine/vitrine.ts mostrar || node tools/vitrine/vitrine.ts montar
+   ```
+
+   Se o comando disser que a web não responde, suba-a com os specs de e2e que a árvore alterou
+   (`git status --short e2e/`), em segundo plano, e monte de novo quando terminar:
+   `node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`. É uma tentativa só.
+2. **As telas da tarefa.** A lista está na linha "Telas" do "Como testar" do documento. Se o documento
+   não a tem, tire-a do spec de e2e que a tarefa alterou (com que papel ele entra, que endereço abre,
+   em que aba ou botão clica) e de `apps/web/src/caminhos.ts`.
+3. **As fotos**, de cada tela, na escola cheia e na vazia:
+
+   ```bash
+   node tools/vitrine/vitrine.ts foto <coordenacao|professora|aluno> <endereço>… [--clicar 'text=<aba ou botão>']
+   node tools/vitrine/vitrine.ts foto <papel> <endereço>… [--clicar …] --vazia
+   ```
+
+   O comando imprime cada arquivo de `.processo/vitrine/`, no computador (1366 px) e no celular
+   (360 px), e avisa quando a página parou em outro endereço. Confira que cada foto é da tela pedida,
+   e não da entrada nem de uma tela de erro: abra uma delas como imagem.
+
+Em rodada nova depois de uma correção que mexeu em `apps/web`, fotografe de novo: o portão do
+Implementador reconstruiu a web, e as fotos da rodada anterior são da tela antiga.
+
+Se depois da tentativa do passo 1 ainda não houver vitrine, a rodada segue pelo código, você escreve
+`Fotos da tela: indisponíveis (<o erro, em uma frase>)` no prompt de cada revisor e repete isso no
+relatório da rodada. Não é parada: no fim da spec o Validador fotografa cada requisito com tela, e sem
+isso a funcionalidade não é aprovada.
 
 Até 08/10/2026 a rodada acabava na reprovação do primeiro. Na 5.0 do F3 isso custou um ciclo inteiro:
 o `test-engineer` reprovou na 1ª rodada, e só na seguinte o `infra-guardian` reprovou outra coisa.
@@ -111,8 +137,13 @@ Diff desde a rodada anterior:
 A primeira linha é a que o hook usa para saber em qual documento registrar a rodada: escreva-a
 sempre, e não cite outro documento de tarefa no prompt.
 
-No prompt do `frontend-reviewer`, acrescente uma linha no fim: `Vitrine: montada` ou
-`Vitrine: indisponível (<o erro, em uma frase>)`.
+Em tarefa com tela, o prompt de **cada** revisor do passo 2 termina com as fotos, uma linha por tela:
+
+```
+Fotos da tela (leia cada arquivo como imagem):
+<papel>, <endereço>[, depois de clicar em <o quê>], escola cheia: <arquivos>
+<papel>, <endereço>[, …], escola vazia: <arquivos>
+```
 
 ## 4. Depois da rodada
 
@@ -166,6 +197,7 @@ final:
 RELATÓRIO de Mesa
 Tarefa: <documento>
 Revisão: APROVADO por todos (<revisor rodada>, ...)
+Telas vistas: sim (<quantas fotos>, cheia e vazia) | não (<o erro>) | a tarefa não tem tela
 Sem aplicar: <arquivo da ordem com a seção "Sem aplicar", ou "nada">
 Confira o carimbo e faça o commit.
 ```

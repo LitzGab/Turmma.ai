@@ -2,7 +2,7 @@ import { chromium, type Page } from '@playwright/test'
 import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { raizRepositorio } from '../ci/executar.ts'
-import { codigoDoPasso, gravarVitrine, proximoPasso, type Vitrine } from './escola.ts'
+import { acessosDa, codigoDoPasso, comPassoGasto, gravarVitrine, proximoPasso, type Vitrine } from './escola.ts'
 
 // A foto da tela da vitrine: entra com o papel pedido, abre o endereço e grava a página inteira nos dois tamanhos de
 // toda tela (regra 50, D51). É o que o agente lê com a ferramenta de leitura de imagem para ver o que a tarefa fez.
@@ -46,11 +46,12 @@ const semSimbolo = (texto: string): string => texto.replace(/[^\p{L}\p{N}]+/gu, 
 /**
  * O começo do nome dos arquivos de uma foto: o papel, o endereço sem a consulta nem o fragmento, o que foi clicado e a
  * tela. O clique entra no nome porque duas abas da mesma página têm o mesmo endereço, e a segunda foto apagaria a primeira.
+ * A escola vazia leva a marca na frente, pelo mesmo motivo: o endereço é o mesmo da cheia.
  */
-export function baseDaFoto(papel: Papel, caminho: string, tela: string, cliques: readonly string[] = []): string {
+export function baseDaFoto(papel: Papel, caminho: string, tela: string, cliques: readonly string[] = [], vazia = false): string {
   const endereco = semSimbolo(caminho.replace(/[?#].*$/, ''))
   const clicado = cliques.map((clique) => semSimbolo(clique.replace(/^[a-z]+=/, ''))).join('-')
-  return `${papel}--${endereco === '' ? 'inicio' : endereco}${clicado === '' ? '' : `--${clicado}`}--${tela}`
+  return `${vazia ? 'vazia--' : ''}${papel}--${endereco === '' ? 'inicio' : endereco}${clicado === '' ? '' : `--${clicado}`}--${tela}`
 }
 
 /** O arquivo de uma foto: a base e, na página comprida, o número do pedaço. */
@@ -69,16 +70,17 @@ function estaNaEntrada(page: Page): boolean {
   return pathname === '/entrar' || pathname.startsWith('/e/')
 }
 
-async function entrar(page: Page, vitrine: Vitrine, papel: Papel, raiz: string): Promise<void> {
+async function entrar(page: Page, vitrine: Vitrine, vazia: boolean, papel: Papel, raiz: string): Promise<void> {
+  const acessos = acessosDa(vitrine, vazia)
   if (papel === 'aluno') {
-    await page.goto(`${vitrine.url}/e/${vitrine.escola.slug}`)
-    await page.getByLabel('Matrícula').fill(vitrine.aluno.matricula)
-    await page.getByLabel('Senha').fill(vitrine.aluno.senha)
+    await page.goto(`${vitrine.url}/e/${acessos.escola.slug}`)
+    await page.getByLabel('Matrícula').fill(acessos.aluno.matricula)
+    await page.getByLabel('Senha').fill(acessos.aluno.senha)
     await page.getByRole('button', { name: /^Entrar$/ }).click()
     await page.waitForURL(/\/aluno\//, { timeout: PRAZO_MS })
     return
   }
-  const pessoa = papel === 'coordenacao' ? vitrine.coordenacao : vitrine.professora
+  const pessoa = papel === 'coordenacao' ? acessos.coordenacao : acessos.professora
   await page.goto(`${vitrine.url}/entrar`)
   await page.getByLabel('E-mail').fill(pessoa.email)
   await page.getByLabel('Senha').fill(pessoa.senha)
@@ -87,13 +89,13 @@ async function entrar(page: Page, vitrine: Vitrine, papel: Papel, raiz: string):
     await page.waitForURL(/\/professor\//, { timeout: PRAZO_MS })
     return
   }
-  const { segredo, ultimoPasso } = vitrine.coordenacao
+  const { segredo, ultimoPasso } = acessos.coordenacao
   if (segredo === null) throw new Error('a coordenação da vitrine está sem segundo fator: monte a vitrine de novo com a API de pé')
   const campo = page.getByLabel(/Código do aplicativo|Digite o código que o aplicativo mostra/)
   await campo.waitFor({ timeout: PRAZO_MS })
   const { passo, esperarSegundos } = proximoPasso(Date.now(), ultimoPasso)
   // Grava antes de usar: o passo gasto não volta, nem se a entrada falhar depois.
-  gravarVitrine({ ...vitrine, coordenacao: { ...vitrine.coordenacao, ultimoPasso: passo } }, raiz)
+  gravarVitrine(comPassoGasto(vitrine, vazia, passo), raiz)
   if (esperarSegundos > 0) await page.waitForTimeout(esperarSegundos * 1_000)
   await campo.fill(codigoDoPasso(segredo, passo))
   await page.getByRole('button', { name: /^Entrar$/ }).click()
@@ -138,15 +140,23 @@ export interface Foto {
 /**
  * Fotografa cada endereço como aquele papel, nas duas telas. `cliques` são seletores do Playwright (`text=Alunos`,
  * `role=tab[name="Alunos"]`) acionados em ordem depois de a tela abrir, para a foto pegar a aba, o diálogo ou o estado
- * que a tarefa mexeu.
+ * que a tarefa mexeu. `vazia` fotografa a escola vazia da vitrine, onde cada tela abre sem dado.
  *
  * A sessão do papel fica guardada entre uma chamada e outra (`sessao-<papel>.json`): sem isso cada foto da coordenação
  * gastaria um código do segundo fator, e a terceira no mesmo meio minuto teria de esperar.
  */
-export async function fotografar(vitrine: Vitrine, papel: Papel, caminhos: readonly string[], cliques: readonly string[] = [], raiz = raizRepositorio): Promise<Foto[]> {
+export async function fotografar(
+  vitrine: Vitrine,
+  papel: Papel,
+  caminhos: readonly string[],
+  opcoes: { readonly cliques?: readonly string[]; readonly vazia?: boolean } = {},
+  raiz = raizRepositorio,
+): Promise<Foto[]> {
+  const cliques = opcoes.cliques ?? []
+  const vazia = opcoes.vazia === true
   const pasta = join(raiz, PASTA_DAS_FOTOS)
   mkdirSync(pasta, { recursive: true })
-  const sessao = join(pasta, `sessao-${papel}.json`)
+  const sessao = join(pasta, `sessao-${vazia ? 'vazia-' : ''}${papel}.json`)
   const [computador] = TELAS
   const navegador = await chromium.launch()
   try {
@@ -164,7 +174,7 @@ export async function fotografar(vitrine: Vitrine, papel: Papel, caminhos: reado
         await page.goto(caminho)
         await assentar(page)
         if (estaNaEntrada(page)) {
-          await entrar(page, vitrine, papel, raiz)
+          await entrar(page, vitrine, vazia, papel, raiz)
           await page.goto(caminho)
           await assentar(page)
         }
@@ -177,7 +187,7 @@ export async function fotografar(vitrine: Vitrine, papel: Papel, caminhos: reado
           await assentar(page)
           const partes = pedacos(await alturaDaPagina(page))
           const parouEm = new URL(page.url()).pathname
-          const base = baseDaFoto(papel, caminho, tela.nome, cliques)
+          const base = baseDaFoto(papel, caminho, tela.nome, cliques, vazia)
           // A foto de antes sai antes da nova: a página que encolheu deixaria pedaços velhos ao lado dos novos.
           for (const velha of fotosAnteriores(readdirSync(pasta), base)) rmSync(join(pasta, velha))
           try {

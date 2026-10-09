@@ -20,6 +20,11 @@ describe('o nome do arquivo da foto', () => {
     expect(clicada).toBe('coordenacao--coordenacao-privacidade--Empresas-que-recebem-dados--celular')
     expect(clicada).not.toBe(aberta)
   })
+
+  it('marca a escola vazia: a tela vazia e a cheia têm o mesmo endereço e não se apagam', () => {
+    expect(baseDaFoto('professora', '/professor/turmas', 'celular', [], true)).toBe('vazia--professora--professor-turmas--celular')
+    expect(fotosAnteriores(['vazia--professora--professor-turmas--celular.png'], baseDaFoto('professora', '/professor/turmas', 'celular'))).toEqual([])
+  })
 })
 
 describe('as fotos anteriores de uma tela', () => {

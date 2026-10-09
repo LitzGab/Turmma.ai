@@ -81,6 +81,42 @@ describe('a escola da vitrine', () => {
     expect(linhas.filter((linha) => !linha.email.endsWith('@educa.invalid'))).toEqual([])
   })
 
+  it('a escola vazia tem as três pessoas com login e a turma, e nenhum dado de tela', async () => {
+    const { vazia } = vitrine
+    expect(vazia.escola.id).not.toBe(vitrine.escola.id)
+    const professora = await consultar<{ senhaHash: string; turma: string; estado: string }>(
+      `select c.senha_hash as "senhaHash", t.nome as turma, v.estado
+         from conta c join usuario u on u.conta_id = c.id
+         join vinculo v on v.usuario_id = u.id and v.escola_id = u.escola_id and v.papel = 'professor'
+         join turma t on t.id = v.turma_id
+        where c.email = $1 and u.escola_id = $2`,
+      [vazia.professora.email, vazia.escola.id],
+    )
+    expect(professora).toHaveLength(1)
+    expect(professora[0]?.turma).toBe(vazia.professora.turma)
+    expect(professora[0]?.estado).toBe('confirmado')
+    expect(await verify(professora[0]?.senhaHash ?? '', vazia.professora.senha)).toBe(true)
+
+    const aluno = await consultar<{ senhaHash: string; turma: string }>(
+      `select m.senha_hash as "senhaHash", t.nome as turma
+         from credencial_matricula m join vinculo v on v.usuario_id = m.usuario_id and v.escola_id = m.escola_id and v.papel = 'aluno' and v.estado = 'confirmado'
+         join turma t on t.id = v.turma_id
+        where m.escola_id = $1 and m.matricula = $2`,
+      [vazia.escola.id, vazia.aluno.matricula],
+    )
+    expect(aluno).toHaveLength(1)
+    expect(aluno[0]?.turma).toBe(vazia.professora.turma)
+    expect(await verify(aluno[0]?.senhaHash ?? '', vazia.aluno.senha)).toBe(true)
+
+    // É o que a faz vazia: nada do que as telas listam. A cheia, montada pela mesma chamada, tem.
+    for (const tabela of ['artefato', 'entrega', 'atividade_aplicada', 'lista_nome', 'consumo_ia']) {
+      const naVazia = await consultar<{ total: number }>(`select count(*)::int as total from ${tabela} where escola_id = $1`, [vazia.escola.id])
+      const naCheia = await consultar<{ total: number }>(`select count(*)::int as total from ${tabela} where escola_id = $1`, [vitrine.escola.id])
+      expect(naVazia[0]?.total, tabela).toBe(0)
+      expect(naCheia[0]?.total, tabela).toBeGreaterThan(0)
+    }
+  })
+
   it('sabe dizer quando a escola do arquivo já não existe no banco, que o portão recria', async () => {
     expect(await escolaExiste(vitrine.escola.id)).toBe(true)
     expect(await escolaExiste(randomUUID())).toBe(false)

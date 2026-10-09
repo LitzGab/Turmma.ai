@@ -91,7 +91,10 @@ critério de conclusão**, acrescente:
      `GatilhoDeParada`), com o nome da função;
    - o comando para rodar esse teste isolado (passo 4 de `executar-task`);
    - as armadilhas que já apareceram nesta funcionalidade e valem para a tarefa: leia o
-     `achados/indice.md` e a seção "O que falhou" do `estado.md`, e cite só as que se aplicam.
+     `achados/indice.md` e a seção "O que falhou" do `estado.md`, e cite só as que se aplicam;
+   - em tarefa com tela, a linha **Telas**: para cada tela que a tarefa cria ou altera, o papel
+     (`coordenacao`, `professora` ou `aluno`), o endereço (`apps/web/src/caminhos.ts`), o clique que
+     leva ao estado e o mockup de referência, se houver. É o que o Implementador e a Mesa fotografam.
 
 Abra o código para achar o precedente: não cite arquivo nem caso que você não abriu. Cenário sem
 precedente: diga isso, e aponte o mais próximo. O documento continua dentro das 800 palavras; se

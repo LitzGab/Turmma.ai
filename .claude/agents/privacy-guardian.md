@@ -51,6 +51,13 @@ Veredito **APROVADO** ou **REPROVADO**. Reprovação é falha da tarefa.
 Se a secretaria de educação pedisse hoje tudo o que o sistema guarda sobre um aluno
 específico e para onde isso já foi enviado, o código responde? Se não responde, REPROVADO.
 
+## Quando o prompt traz fotos da tela
+
+Em tarefa com tela, o prompt termina com `Fotos da tela` e os arquivos, no computador e no celular,
+na escola cheia e na vazia. Leia-os como imagem: o que a tela mostra é o que a pessoa recebe, e o
+código nem sempre deixa ver. Confira ali o que o DTO promete: que dado de pessoa aparece, para qual papel, e se aparece nome, matrícula ou conteúdo onde a regra 20 pede id, agregado ou nada. Achado visto na foto leva o arquivo da foto e o `arquivo:linha`
+que o produz. A qualidade visual é do `frontend-reviewer`; você olha a sua regra.
+
 ## Severidade e rodada nova
 
 - **Bloqueante** é o que viola regra, é bug, vaza dado ou deixa a regra sem teste que a prove.

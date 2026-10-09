@@ -26,10 +26,8 @@ export const ARQUIVO_DA_VITRINE = '.processo/vitrine.json'
 const PERIODO_TOTP_MS = 30_000
 const JANELA_TOTP = 1
 
-export interface Vitrine {
-  readonly montadaEm: string
-  /** A web do ambiente de teste, vista da máquina: é o endereço que a página do Maestri abre. */
-  readonly url: string
+/** Uma escola da vitrine e o login de cada papel nela. */
+export interface Acessos {
   readonly escola: { readonly id: string; readonly nome: string; readonly slug: string }
   readonly coordenacao: {
     readonly nome: string
@@ -42,6 +40,28 @@ export interface Vitrine {
   }
   readonly professora: { readonly nome: string; readonly email: string; readonly senha: string; readonly turma: string; readonly disciplina: string }
   readonly aluno: { readonly nome: string; readonly matricula: string; readonly senha: string; readonly turma: string }
+}
+
+/**
+ * As duas escolas da vitrine. A cheia, nos campos de cima, tem dado em toda tela. A `vazia` tem as mesmas três pessoas e
+ * uma turma, e mais nada: é nela que se vê o estado vazio de cada tela, que é o que a escola nova encontra no primeiro dia.
+ */
+export interface Vitrine extends Acessos {
+  readonly montadaEm: string
+  /** A web do ambiente de teste, vista da máquina. */
+  readonly url: string
+  readonly vazia: Acessos
+}
+
+/** A escola pedida: a cheia, ou a vazia. */
+export function acessosDa(vitrine: Vitrine, vazia: boolean): Acessos {
+  return vazia ? vitrine.vazia : vitrine
+}
+
+/** A vitrine com aquele passo do segundo fator dado como gasto, na escola pedida. */
+export function comPassoGasto(vitrine: Vitrine, vazia: boolean, passo: number): Vitrine {
+  if (!vazia) return { ...vitrine, coordenacao: { ...vitrine.coordenacao, ultimoPasso: passo } }
+  return { ...vitrine, vazia: { ...vitrine.vazia, coordenacao: { ...vitrine.vazia.coordenacao, ultimoPasso: passo } } }
 }
 
 /** `Algorithm.Argon2id`: o enum do pacote é `const` e ambiente, e não se lê com `isolatedModules`. */
@@ -86,10 +106,10 @@ interface Coordenadora {
 }
 
 /** A rede, a escola com ano letivo em curso e a coordenadora com senha: os mesmos campos de `criarEquipeComSenha`, do e2e. */
-async function criarEscolaComCoordenadora(): Promise<Coordenadora> {
+async function criarEscolaComCoordenadora(rotulo: 'cheia' | 'vazia'): Promise<Coordenadora> {
   const marca = randomUUID()
-  const escolaNome = `Colégio sintético da vitrine ${marca.slice(0, 8)}`
-  const slug = `vitrine-${marca}`
+  const escolaNome = `Colégio sintético da vitrine ${rotulo === 'vazia' ? 'vazia ' : ''}${marca.slice(0, 8)}`
+  const slug = `vitrine-${rotulo === 'vazia' ? 'vazia-' : ''}${marca}`
   const nome = `Coordenadora sintética ${marca.slice(0, 8)}`
   const email = `coordenador-${marca}@educa.invalid`
   const senha = `senha-sintetica-${marca}`
@@ -187,22 +207,69 @@ export async function ativarSegundoFator(url: string, email: string, senha: stri
   return { segredo, passo }
 }
 
+/** A web do ambiente de teste responde? Tarefa só de integração sobe o banco e deixa a web fora do ar. */
+export async function webResponde(url: string): Promise<boolean> {
+  try {
+    return (await fetch(`${url}/entrar`, { signal: AbortSignal.timeout(5_000) })).ok
+  } catch {
+    return false
+  }
+}
+
 export function urlDaWebDeTeste(): string {
   return `http://127.0.0.1:${valorObrigatorio(lerAmbienteDeTeste(), 'WEB_PORTA_HOST')}`
 }
 
 /**
- * Monta a escola: a coordenadora com senha, a governança inteira (duas turmas do 2º ano, três professoras, alunos,
+ * A escola vazia: a coordenadora, uma professora com a turma dela confirmada e um aluno nessa turma. Sem lista de nomes,
+ * sem material, sem atividade, sem entrega e sem consumo de IA: cada tela abre no estado vazio.
+ */
+async function montarEscolaVazia(url: string, ativarMfa: boolean): Promise<Acessos> {
+  const coordenadora = await criarEscolaComCoordenadora('vazia')
+  const marca = randomUUID()
+  const professora = { nome: `Professora Sintética Rosa ${marca.slice(0, 8)}`, email: `professor-${marca}@educa.invalid`, senha: `senha-sintetica-${marca}` }
+  const aluno = { nome: `Aluno Sintético Téo ${marca.slice(0, 8)}`, matricula: String(Date.now() + 1).slice(-8), senha: `senha-sintetica-${randomUUID()}` }
+  const turma = `2ºA ${marca.slice(0, 8)}`
+  const hashDaProfessora = await hashDaSenha(professora.senha)
+  const hashDoAluno = await hashDaSenha(aluno.senha)
+  await comBanco(async (banco) => {
+    const { escolaId } = coordenadora
+    const anoLetivoId = await id(banco, "select id from ano_letivo where escola_id = $1 and situacao = 'em_curso'", [escolaId])
+    const serieId = await id(banco, "insert into serie (escola_id, etapa, ano) values ($1, 'em', 2) returning id", [escolaId])
+    const disciplinaId = await id(banco, 'insert into disciplina (escola_id, nome) values ($1, $2) returning id', [escolaId, 'Química'])
+    const turmaId = await id(banco, 'insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, $4) returning id', [escolaId, anoLetivoId, serieId, turma])
+    const contaId = await id(banco, 'insert into conta (email, senha_hash) values ($1, $2) returning id', [professora.email, hashDaProfessora])
+    const professoraId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, 'professor', $3) returning id", [escolaId, contaId, professora.nome])
+    const alunoId = await id(banco, "insert into usuario (escola_id, papel, nome) values ($1, 'aluno', $2) returning id", [escolaId, aluno.nome])
+    await banco.query('insert into credencial_matricula (escola_id, usuario_id, matricula, senha_hash) values ($1, $2, $3, $4)', [escolaId, alunoId, aluno.matricula, hashDoAluno])
+    // Quem cria vínculo é a coordenação (regra 60, item 8a), e os dois nascem confirmados: a professora já vê a turma.
+    for (const [usuarioId, daDisciplina, papel] of [
+      [professoraId, disciplinaId, 'professor'],
+      [alunoId, null, 'aluno'],
+    ] as const) {
+      await banco.query(
+        "insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, estado, decidido_em, criado_por) values ($1, $2, $3, $4, $5, $6, 'confirmado', now(), $7)",
+        [escolaId, anoLetivoId, usuarioId, turmaId, daDisciplina, papel, coordenadora.usuarioId],
+      )
+    }
+  })
+  const segundoFator = ativarMfa ? await ativarSegundoFator(url, coordenadora.email, coordenadora.senha) : null
+  return {
+    escola: { id: coordenadora.escolaId, nome: coordenadora.escolaNome, slug: coordenadora.slug },
+    coordenacao: { nome: coordenadora.nome, email: coordenadora.email, senha: coordenadora.senha, segredo: segundoFator?.segredo ?? null, ultimoPasso: segundoFator?.passo ?? 0 },
+    professora: { ...professora, turma, disciplina: 'Química' },
+    aluno: { ...aluno, turma },
+  }
+}
+
+/**
+ * A escola cheia: a coordenadora com senha, a governança inteira (duas turmas do 2º ano, três professoras, alunos,
  * listas corrigidas com o lote aprovado, uma versão adaptada esperando e o consumo de IA do mês), nomes livres na lista
  * da turma, e a senha da professora de Química do 2ºB e do aluno dela.
- *
- * `ativarMfa: false` é para quem só tem o banco de pé (o teste de integração): a coordenação fica sem segundo fator, e
- * a tela pede a configuração na entrada.
  */
-export async function montarVitrine(opcoes: { readonly ativarMfa?: boolean; readonly url?: string } = {}): Promise<Vitrine> {
-  const url = opcoes.url ?? urlDaWebDeTeste()
+async function montarEscolaCheia(url: string, ativarMfa: boolean): Promise<Acessos> {
   const marca = randomUUID()
-  const coordenadora = await criarEscolaComCoordenadora()
+  const coordenadora = await criarEscolaComCoordenadora('cheia')
   const escola = await montarEscolaComEntregas(coordenadora.escolaId, coordenadora.usuarioId)
   await porNaListaDaTurma(coordenadora.escolaId, escola.turmas.doB.id, [
     { nome: 'Aluna Sintética Bia Vitrine', matricula: '90000001', estado: 'livre' },
@@ -216,11 +283,8 @@ export async function montarVitrine(opcoes: { readonly ativarMfa?: boolean; read
   const senhaDoAluno = `senha-sintetica-${randomUUID()}`
   await darMatriculaAoAluno(coordenadora.escolaId, escola.aluno, matricula, senhaDoAluno)
 
-  const segundoFator = opcoes.ativarMfa === false ? null : await ativarSegundoFator(url, coordenadora.email, coordenadora.senha)
-
+  const segundoFator = ativarMfa ? await ativarSegundoFator(url, coordenadora.email, coordenadora.senha) : null
   return {
-    montadaEm: new Date().toISOString(),
-    url,
     escola: { id: coordenadora.escolaId, nome: coordenadora.escolaNome, slug: coordenadora.slug },
     coordenacao: { nome: coordenadora.nome, email: coordenadora.email, senha: coordenadora.senha, segredo: segundoFator?.segredo ?? null, ultimoPasso: segundoFator?.passo ?? 0 },
     professora: { nome: escola.professoras.quimicaDoB, email: emailDaProfessora, senha: senhaDaProfessora, turma: escola.turmas.doB.nome, disciplina: 'Química' },
@@ -228,34 +292,55 @@ export async function montarVitrine(opcoes: { readonly ativarMfa?: boolean; read
   }
 }
 
-/** O que o agente lê para entrar: um bloco por papel, com o endereço da entrada e o que digitar. */
-export function resumo(vitrine: Vitrine): string {
-  const { url, escola, coordenacao, professora, aluno } = vitrine
+/**
+ * Monta as duas escolas da vitrine, a cheia e a vazia.
+ *
+ * `ativarMfa: false` é para quem só tem o banco de pé (o teste de integração): a coordenação fica sem segundo fator, e
+ * a tela pede a configuração na entrada.
+ */
+export async function montarVitrine(opcoes: { readonly ativarMfa?: boolean; readonly url?: string } = {}): Promise<Vitrine> {
+  const url = opcoes.url ?? urlDaWebDeTeste()
+  const ativarMfa = opcoes.ativarMfa !== false
+  const cheia = await montarEscolaCheia(url, ativarMfa)
+  const vazia = await montarEscolaVazia(url, ativarMfa)
+  return { ...cheia, montadaEm: new Date().toISOString(), url, vazia }
+}
+
+function bloco(url: string, titulo: string, acessos: Acessos, sufixo: string): string[] {
+  const { escola, coordenacao, professora, aluno } = acessos
   const segundoFator =
     coordenacao.segredo === null
       ? 'segundo fator: ainda não configurado; a tela pede no primeiro acesso'
-      : `segundo fator: node tools/vitrine/vitrine.ts codigo   (um código por entrada)`
+      : `segundo fator: node tools/vitrine/vitrine.ts codigo${sufixo}   (um código por entrada)`
   return [
-    `Vitrine: escola sintética "${escola.nome}", montada em ${vitrine.montadaEm}`,
-    `Web do ambiente de teste: ${url}`,
+    `${titulo}: "${escola.nome}"`,
+    `  Coordenação — ${coordenacao.nome}`,
+    `    entrada: ${url}/entrar`,
+    `    e-mail: ${coordenacao.email}`,
+    `    senha: ${coordenacao.senha}`,
+    `    ${segundoFator}`,
+    `  Professora — ${professora.nome} (${professora.disciplina}, turma ${professora.turma})`,
+    `    entrada: ${url}/entrar`,
+    `    e-mail: ${professora.email}`,
+    `    senha: ${professora.senha}`,
+    `  Aluno — ${aluno.nome} (turma ${aluno.turma})`,
+    `    entrada: ${url}/e/${escola.slug}`,
+    `    matrícula: ${aluno.matricula}`,
+    `    senha: ${aluno.senha}`,
+  ]
+}
+
+/** O que se lê para entrar: as duas escolas, um bloco por papel, com o endereço da entrada e o que digitar. */
+export function resumo(vitrine: Vitrine): string {
+  return [
+    `Vitrine montada em ${vitrine.montadaEm}. Web do ambiente de teste: ${vitrine.url}`,
+    'Para ver uma tela, não é preciso digitar nada disto: `node tools/vitrine/vitrine.ts foto <papel> <endereço>` entra sozinho.',
     '',
-    `Coordenação — ${coordenacao.nome}`,
-    `  entrada: ${url}/entrar`,
-    `  e-mail: ${coordenacao.email}`,
-    `  senha: ${coordenacao.senha}`,
-    `  ${segundoFator}`,
+    ...bloco(vitrine.url, 'Escola cheia (dado em toda tela)', vitrine, ''),
     '',
-    `Professora — ${professora.nome} (${professora.disciplina}, turma ${professora.turma})`,
-    `  entrada: ${url}/entrar`,
-    `  e-mail: ${professora.email}`,
-    `  senha: ${professora.senha}`,
+    ...bloco(vitrine.url, 'Escola vazia (o estado vazio de cada tela; nos comandos, `--vazia`)', vitrine.vazia, ' --vazia'),
     '',
-    `Aluno — ${aluno.nome} (turma ${aluno.turma})`,
-    `  entrada: ${url}/e/${escola.slug}`,
-    `  matrícula: ${aluno.matricula}`,
-    `  senha: ${aluno.senha}`,
-    '',
-    'Tudo aqui é sintético e vive só no banco de teste: o portão que recria o banco apaga a escola, e aí é montar de novo.',
+    'Tudo aqui é sintético e vive só no banco de teste: o portão que recria o banco apaga as escolas, e aí é montar de novo.',
   ].join('\n')
 }
 
