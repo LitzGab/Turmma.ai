@@ -189,6 +189,19 @@ export async function definirInatividadeDaEscola(escolaId: string, minutos: { eq
   })
 }
 
+/**
+ * Um ajuste de retenção da escola, como o `ops:retencao` o grava (F3, 6.0): uma linha por escola e categoria, com o
+ * contrato e o operador de teste. O comando confere piso, teto e travas; o teste que precisa de um ajuste válido escolhe um.
+ */
+export async function ajustarRetencaoDaEscola(escolaId: string, categoria: string, meses: number): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query(
+      'insert into retencao_escola (escola_id, categoria, meses, referencia_contrato, alterada_por) values ($1, $2, $3, 1, $4) on conflict (escola_id, categoria) do update set meses = excluded.meses',
+      [escolaId, categoria, meses, 'equipe-de-teste'],
+    )
+  })
+}
+
 /** O domínio Google ou o tenant Microsoft que a escola liberou (13.0): é dado da instituição, não de pessoa. */
 export async function liberarProvedorDaEscola(escolaId: string, provedor: 'google' | 'microsoft', valor: string): Promise<void> {
   await comBanco(async (banco) => {

@@ -42,10 +42,10 @@
   - [x] 5.4 Prazo fixo de `expurgo_execucao` (5 anos)
   - [x] 5.5 Testes; a lista "pendente da tarefa N" do 3.7 fica vazia
 
-- [ ] **6.0 — A coordenação vê por quanto tempo a escola guarda cada dado**
-  - [ ] 6.1 Item Privacidade com abas no endereço; aba Retenção lendo `GET retencao`
-  - [ ] 6.2 `docs/interface.md` (o item no grupo Conformidade)
-  - [ ] 6.3 Testes
+- [x] **6.0 — A coordenação vê por quanto tempo a escola guarda cada dado**
+  - [x] 6.1 Item Privacidade com abas no endereço; aba Retenção lendo `GET retencao`
+  - [x] 6.2 `docs/interface.md` (o item no grupo Conformidade)
+  - [x] 6.3 Testes
 
 - [ ] **7.0 — Cada chamada externa de IA registra o provedor que a atendeu**
   - [ ] 7.1 `IA_PROVEDOR_ID` no `esquemaAmbienteDeIa`, obrigatória com `openai_compat` sem processamento local

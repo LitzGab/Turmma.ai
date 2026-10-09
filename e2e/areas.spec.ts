@@ -49,6 +49,7 @@ const ITENS_DO_PROFESSOR = [
 /**
  * Os itens da coordenação, como a mesma tabela os declara: "Estrutura" chegou na 13.0, "Professores", na 14.0, "Material",
  * no MVP de apresentação (A2), e "Governança", "Agentes" e "Analista", na A5, na frente: é na Governança que ela abre.
+ * "Privacidade" chega com a tarefa 6.0 da F3, no fim da lista.
  */
 const ITENS_DA_COORDENACAO = [
   { rotulo: 'Governança', caminho: '/coordenacao/governanca' },
@@ -57,6 +58,7 @@ const ITENS_DA_COORDENACAO = [
   { rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' },
   { rotulo: 'Professores', caminho: '/coordenacao/professores' },
   { rotulo: 'Material', caminho: '/coordenacao/material' },
+  { rotulo: 'Privacidade', caminho: '/coordenacao/privacidade' },
 ] as const
 /** Os itens do aluno, como a mesma tabela os declara: "Minha turma" chegou na 12.0; "Tutor" e "Atividades", no MVP (A3 e A4). */
 const ITENS_DO_ALUNO = [

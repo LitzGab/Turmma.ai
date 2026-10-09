@@ -75,6 +75,10 @@ export const ROTAS_DA_COORDENACAO = {
   professores: '/professores',
   /** O material da escola: enviar o PDF com a licença declarada e acompanhar a leitura (MVP, A2; D75). */
   material: '/material',
+  /** "Seus dados e a lei", no grupo Conformidade: as abas da Privacidade ficam no endereço (F3, 6.0; `docs/interface.md` 3). */
+  privacidade: '/privacidade',
+  /** Uma aba da Privacidade pelo endereço dela. Nesta tarefa só existe `retencao`; as outras chegam com as tarefas delas. */
+  privacidadeDaAba: '/privacidade/:aba',
 } as const
 
 /**
@@ -84,6 +88,14 @@ export const ROTAS_DA_COORDENACAO = {
 export function caminhoDaTurmaNaEstrutura(turmaId: string): string {
   return ROTAS_DA_COORDENACAO.turma.replace(':turmaId', encodeURIComponent(turmaId))
 }
+
+/** O endereço de uma aba da Privacidade, **relativo à área**, como `caminhoDaTurmaNaEstrutura`: é o que a aba usa para trocar de aba. */
+export function caminhoDaAbaDaPrivacidade(aba: string): string {
+  return ROTAS_DA_COORDENACAO.privacidadeDaAba.replace(':aba', encodeURIComponent(aba))
+}
+
+/** A aba que a Privacidade abre sem aba no endereço, ou com uma que não existe. É a primeira de `ABAS_DA_PRIVACIDADE`. */
+export const ABA_INICIAL_DA_PRIVACIDADE = 'retencao'
 
 /** As rotas da área do aluno, relativas à base dela. */
 export const ROTAS_DO_ALUNO = {
@@ -156,6 +168,8 @@ export const ROTAS = {
   professores: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.professores}`,
   /** Material da coordenação, pela raiz: é o endereço que a navegação usa (MVP, A2). */
   material: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.material}`,
+  /** Privacidade da coordenação, pela raiz: é o endereço que a navegação usa (F3, 6.0). */
+  privacidade: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.privacidade}`,
   /** O Tutor do aluno, pela raiz: é o endereço que a navegação usa. */
   tutor: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.tutor}`,
   /** "Atividades" do aluno, pela raiz: é onde ele abre (MVP, A3), e o endereço que a navegação usa. */

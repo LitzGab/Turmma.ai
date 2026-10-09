@@ -309,6 +309,10 @@ O desenho da área, e o que o design do aluno **não** herda do professor, está
   como o sistema funciona em linguagem simples, conformidade com LGPD e ECA Digital, relatório
   de uso exportável, e o material para conversar com professores e famílias (D61). É a tela
   que a coordenação abre na reunião, e a que responde ao checklist do MEC
+- **Privacidade** ("Seus dados e a lei", F3): as abas ficam no endereço, e a coordenação lê por quanto tempo a escola
+  guarda cada dado, de onde vem cada prazo e os prazos que não mudam (tarefa 6.0; RF20). Por quanto tempo guardamos é a
+  aba que existe hoje; Pedidos (8.0), Empresas que recebem dados (10.0) e Incidentes (16.0) chegam com as tarefas delas,
+  e nenhuma aparece antes da tela dela (D73). Só leitura: o ajuste de prazo é da operação, por comando
 - **Denúncias**: o canal de notificação de violação, com o que foi apontado, o que foi feito e
   o recurso, dizendo se a análise foi humana ou automatizada (D61)
 - **Exportar**: dado, artefato e histórico de uso em formato aberto, a qualquer momento, sem
@@ -319,7 +323,7 @@ O desenho da área, e o que o design do aluno **não** herda do professor, está
 
 MFA obrigatório para coordenação (F1).
 
-Como os onze itens se agrupam na lateral está na seção 11.1, e o desenho da Governança, na 11.7.
+Como os doze itens se agrupam na lateral está na seção 11.1, e o desenho da Governança, na 11.7.
 
 ---
 
@@ -1039,9 +1043,9 @@ ilustração da entrada em SVG ou WebP.
 
 **O que cada papel vê na lateral:**
 
-| Professor (**decidido**, D73; seção 1) | Aluno (*proposta*) | Coordenação (*proposta*: os onze itens da seção 3 em três grupos e um rodapé) |
+| Professor (**decidido**, D73; seção 1) | Aluno (*proposta*) | Coordenação (*proposta*: os doze itens da seção 3 em três grupos e um rodapé) |
 |---|---|---|
-| Nova conversa · Ferramentas · Calendário · Turmas · **Seu time** (Assistente, Tutor) · **Histórico** | Tutor · Atividades e provas · Meu desempenho · O que o Tutor sabe de mim · rodapé fixo: **Avisar um adulto** e Privacidade | **Escola:** Estrutura, Material, Adaptações · **IA e ensino:** Governança, Analista, Agentes · **Conformidade:** Conformidade, Denúncias, Auditoria, Exportar · rodapé: Configurações |
+| Nova conversa · Ferramentas · Calendário · Turmas · **Seu time** (Assistente, Tutor) · **Histórico** | Tutor · Atividades e provas · Meu desempenho · O que o Tutor sabe de mim · rodapé fixo: **Avisar um adulto** e Privacidade | **Escola:** Estrutura, Material, Adaptações · **IA e ensino:** Governança, Analista, Agentes · **Conformidade:** Conformidade, Privacidade, Denúncias, Auditoria, Exportar · rodapé: Configurações |
 
 A coordenação abre em **Governança**, não em chat: é a tela que fecha a venda — enquanto ela não
 existe (A5), abre em **Estrutura**, que é onde a escola se monta (A1). O aluno abre no **Tutor**

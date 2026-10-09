@@ -14,7 +14,7 @@ describe('navegação por papel', () => {
       { rotulo: 'Atividades', caminho: '/aluno/atividades' },
       { rotulo: 'Minha turma', caminho: '/aluno/minha-turma' },
     ])
-    // A5: a coordenação abre em Governança, e Agentes e Analista vêm com ela.
+    // A5: a coordenação abre em Governança, e Agentes e Analista vêm com ela. F3 (6.0): Privacidade fecha a lista.
     expect(NAVEGACAO.coordenador.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([
       { rotulo: 'Governança', caminho: '/coordenacao/governanca' },
       { rotulo: 'Agentes', caminho: '/coordenacao/agentes' },
@@ -22,7 +22,23 @@ describe('navegação por papel', () => {
       { rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' },
       { rotulo: 'Professores', caminho: '/coordenacao/professores' },
       { rotulo: 'Material', caminho: '/coordenacao/material' },
+      { rotulo: 'Privacidade', caminho: '/coordenacao/privacidade' },
     ])
+  })
+
+  it('U, F3 (6.0): "Privacidade" é da coordenação, e o professor e o aluno não a têm na lateral', () => {
+    expect(NAVEGACAO.coordenador.map((item) => item.rotulo)).toContain('Privacidade')
+    expect(NAVEGACAO.professor.map((item) => item.rotulo)).not.toContain('Privacidade')
+    expect(NAVEGACAO.aluno.map((item) => item.rotulo)).not.toContain('Privacidade')
+  })
+
+  it('F3 (6.0): a Privacidade fica selecionada nos endereços das abas dela, e não no de Governança', () => {
+    const privacidade = NAVEGACAO.coordenador.find((item) => item.rotulo === 'Privacidade')
+    const governanca = NAVEGACAO.coordenador.find((item) => item.rotulo === 'Governança')
+    if (privacidade === undefined || governanca === undefined) throw new Error('faltou item na navegação da coordenação')
+    expect(estaNoItem('/coordenacao/privacidade/retencao', privacidade)).toBe(true)
+    expect(estaNoItem('/coordenacao/privacidade', privacidade)).toBe(true)
+    expect(estaNoItem('/coordenacao/privacidade/retencao', governanca)).toBe(false)
   })
 
   it('D73: cada item só aparece com a fase dele — o professor não tem Calendário nem Histórico, e "Seu time" tem o Assistente de ensino e, desde a A4, o Tutor', () => {

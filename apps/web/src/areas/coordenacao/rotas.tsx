@@ -1,6 +1,6 @@
 import { lazy } from 'react'
-import { Route, Switch } from 'wouter'
-import { ROTAS_DA_COORDENACAO } from '../../caminhos'
+import { Redirect, Route, Switch } from 'wouter'
+import { ABA_INICIAL_DA_PRIVACIDADE, caminhoDaAbaDaPrivacidade, ROTAS_DA_COORDENACAO } from '../../caminhos'
 import { ConteudoNaoEncontrado } from '../../componentes/NaoEncontrada'
 import { Estrutura } from './Estrutura'
 import { ListaDaTurma } from './ListaDaTurma'
@@ -12,6 +12,8 @@ const Material = lazy(() => import('./Material'))
 const Governanca = lazy(() => import('./Governanca'))
 const Agentes = lazy(() => import('./Agentes'))
 const Analista = lazy(() => import('./Analista'))
+/** Privacidade (F3, 6.0): no pedaço dela (`tela-coordenacao-Privacidade-*.js`), e só quem abre o item a baixa. */
+const Privacidade = lazy(() => import('./privacidade/Privacidade'))
 
 /**
  * A área da coordenação, relativa a `/coordenacao`, num chunk próprio, `coordenacao-*.js` (`apps/web/nome-dos-chunks.ts`),
@@ -37,6 +39,11 @@ export default function RotasDaCoordenacao() {
       <Route path={ROTAS_DA_COORDENACAO.governanca} component={Governanca} />
       <Route path={ROTAS_DA_COORDENACAO.agentes} component={Agentes} />
       <Route path={ROTAS_DA_COORDENACAO.analista} component={Analista} />
+      {/* A Privacidade sem aba no endereço abre a primeira; com uma aba, é a tela dela (a aba que não existe cai na primeira). */}
+      <Route path={ROTAS_DA_COORDENACAO.privacidade}>
+        <Redirect to={caminhoDaAbaDaPrivacidade(ABA_INICIAL_DA_PRIVACIDADE)} replace />
+      </Route>
+      <Route path={ROTAS_DA_COORDENACAO.privacidadeDaAba}>{(parametros) => <Privacidade aba={parametros.aba} />}</Route>
       <Route>
         <ConteudoNaoEncontrado />
       </Route>

@@ -1,10 +1,16 @@
 # Estado da execução — lgpd-e-titular
 
 ## Agora
-- **Tarefa atual:** 5.0, iniciada em 08/10/2026 20:20, com o Implementador em Sonnet (porte grande, inferido dos guardiões)
-- **Espero:** relatório do Implementador sobre a 5.0, retomada em 08/10/2026 21:50 no Sonnet, com a
-  implementação e as mutações na árvore e sem carimbo
-- **Base:** `spec/lgpd-e-titular` em `e89a4ec` (a correção do teste do hook)
+- **Tarefa atual:** 6.0, iniciada em 09/10/2026 01:12 no Haiku; retomada em 09/10/2026 08:26 com o Implementador em Sonnet
+- **Espero:** relatório do Implementador sobre a 6.0 (a ordem da 2ª rodada, `.processo/ordens/6_task-r2.md`,
+  está aplicada na árvore; falta o portão e a rodada final)
+- **Base:** `spec/lgpd-e-titular` em `1a405d2` (a correção do teste de plano)
+- **Em paralelo (09/10/2026 09:15):** o Arquiteto, no andar, acrescenta a linha de Porte e a seção "Como
+  testar" às tarefas pendentes 7.0 a 19.0, começando pela 7.0, 8.0 e 9.0; só documento de tarefa, sem
+  rodar teste, com commit e push dele. Pedido do "Claude Code #2", a mando do Joaquim; a instrução está
+  em `.claude/agents/arquiteto.md` do térreo (`3c54da8`, só local), seção "Contexto das tarefas"
+- **Depois da 6.0, antes da 7.0:** trazer a `develop` para a branch (processo revisto, ver "O que decidi sem
+  perguntar") e abrir a correção da intermitência do alvo `execucao_agente_do_tutor`
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -14,6 +20,8 @@
 | 3.0 | `d581da6` | subagente do processo anterior | 16 | 2 reprovações registradas; esteira vermelha por `npm audit`, fechada pela correção `ee0215d` |
 | 4.0 | `551a620` | subagente do processo anterior | 16 | 2 reprovações registradas; esteira 37486186937 verde na `develop` |
 | correção `2026-10-08-teste-do-push-depende-do-papel` | `e89a4ec` | Haiku | 4 | no meio da 5.0, por `DIVERGÊNCIA` de portão; nenhuma reprovação: a 2ª rodada veio de recomendações aplicadas; o `revisor-geral` entrou pelo passo 5 do `corrigir` (toca `tools/processo/`), não pelo meu pedido; ficou um espaço faltando em `revisoes.test.ts:1230`, para a próxima tarefa do arquivo |
+| 5.0 | `1ad6e9f` | Sonnet | 19 | 2 reprovações, de revisores diferentes (`test-engineer` na 1ª rodada, `infra-guardian` na 1ª dele), sem escalada; a 3ª rodada aprovou com sete recomendações aplicadas, e a 4ª fechou; `DIVERGÊNCIA` de portão no meio (a correção da linha acima); quatro portões com `--infra`, uns 40 min cada; de 20:20 de 08/10 a 01:05 de 09/10 |
+| correção `2026-10-09-plano-do-expurgo-intermitente` | `1a405d2` | Sonnet | 4 | no meio da 6.0, por `DIVERGÊNCIA` de portão; os quatro revisores aprovaram na 1ª rodada, com uma recomendação aplicada; sem vermelho determinístico (a evidência é simulação em SQL e 30 execuções); três portões com `--infra`, o 1º caído num `statement timeout` de 2 s em `resposta_atividade`, que passou na repetição; de 06:45 a 08:20 |
 
 ## Esperando o Joaquim
 
@@ -21,6 +29,19 @@ Nada.
 
 ## O que falhou
 
+- **Outra intermitência no mesmo teste de plano (09/10/2026):** em 1 de 55 execuções falhou o alvo
+  `execucao_agente_do_tutor` (`execucao_agente_do_tutor_a_anonimizar_idx` ausente do plano), em
+  `apps/worker/test/expurgo-da-escola.int.test.ts`. Ficou fora da correção `1a405d2`, em "Fora desta
+  correção" do documento dela; quatro revisores a citaram. Pede correção própria.
+- **Portão local da 6.0 (09/10/2026, por volta das 06:30):** caiu na etapa `test`, em
+  `apps/worker/test/expurgo-da-escola.int.test.ts:916`, "o lote de cada alvo desce pelo índice dele": o
+  plano do Postgres usou `usuario_escola_conta_papel_unico` em vez de `usuario_desativado_idx`. O teste é
+  da 5.0, passou nos quatro portões dela e nos portões anteriores da 6.0, e a 6.0 não toca worker nem
+  banco: é teste de plano intermitente. O Implementador mandou `DIVERGÊNCIA`, motivo portão.
+- **A 6.0 no Haiku (09/10/2026, 01:12 a 06:30):** mais de cinco horas e ao menos dez portões com `--e2e`
+  numa tarefa de porte pequeno. O teste e2e novo (troca de escola, segundo fator) foi ajustado por
+  tentativa, um portão inteiro de cerca de 30 minutos por tentativa, porque o script de e2e não filtra
+  por arquivo. Uma reprovação só, do `test-engineer` na 1ª rodada. Fica para a retrospectiva.
 - **Portão local da 5.0 (08/10/2026, 21:07 a 21:25):** 4340 de 4341 testes verdes; o único vermelho é
   `tools/processo/revisoes.test.ts`, "agente do time não empurra develop, release nem main; a branch do
   andar ele empurra". O teste lê o papel da sessão (`CLAUDE_CODE_AGENT`) quando não recebe um, e por isso
@@ -30,6 +51,29 @@ Nada.
 
 ## O que decidi sem perguntar
 
+- **Processo revisto no meio da spec (09/10/2026):** o terminal "Claude Code #2" pediu, a mando do
+  Joaquim, que a branch receba a `develop` depois da 6.0. Conferi no repositório antes de aceitar: a
+  `develop` tem o `714520a` (no GitHub) e o `23dd9ea` (só local às 07:50), autor joaquimoiio, e a D78
+  está "Revista em 09/10/2026, pelo Joaquim" em `docs/decisoes.md`: portão da tarefa em minutos
+  (`portao-local.ts --tarefa`), portão completo uma vez antes da validação, test-engineer primeiro e os
+  outros revisores logo depois mesmo se ele reprovar, uma ordem de correção só; todo portão local roda
+  também `guarda:segredo` e `guarda:dependencias`, e o `.gitleaks.toml` perdoa linha de plano do Postgres
+  em documento de tarefa (o gitleaks reprovava a branch pela linha 182 do `5_task.md`). Ordem combinada:
+  não interromper a 6.0; com ela commitada e conferida, `git -C <andar> merge develop` sem portão
+  rodando, push da branch, reler o `/seguir` e o protocolo, e só então a 7.0. Às 09:04 a `develop` local
+  foi a `3c54da8`: o `/seguir` mudou no `STATUS: FALHA` (1ª falha: Sonnet com o relatório; 2ª:
+  diagnóstico do Arquiteto; 3ª: parada); reler no merge. Carimbo de antes do merge
+  não vale depois dele. O push da branch publica o `23dd9ea` antes de a `develop` ser enviada.
+- **Retomada da 6.0 no Sonnet (09/10/2026):** o porte é pequeno, mas o Haiku passou cinco horas
+  depurando um teste e2e com o portão inteiro. Falta o portão e a rodada final; se o e2e cair de novo,
+  não quero outro laço.
+- **Intermitência do alvo `execucao_agente_do_tutor`:** fica para depois do merge da `develop`, antes
+  da 7.0, já com o portão da tarefa, que roda em minutos. Abrir agora custaria mais portões inteiros.
+- **Correção no meio da 6.0 (09/10/2026):** o portão caiu num teste de plano da 5.0, fora dos arquivos
+  da 6.0. Pedi a correção `2026-10-09-plano-do-expurgo-intermitente` na mesma branch, no Sonnet (o teste
+  prova o índice do expurgo de pessoa desativada: regras 10, 20 e 80), com `infra-guardian`,
+  `tenancy-guardian` e `privacy-guardian`. O trabalho da 6.0 fica na árvore; a lista está em
+  `.processo/ordens/arquivos-da-tarefa-6.txt`.
 - **Correção no meio da 5.0 (08/10/2026):** o portão falha por um teste do hook, fora dos arquivos da
   tarefa. Pedi a correção `2026-10-08-teste-do-push-depende-do-papel` na mesma branch, no Haiku (não
   toca as regras 10, 20 nem 70), sem guardião além do `test-engineer`: é teste de ferramenta do

@@ -1,0 +1,59 @@
+import type { RespostaRetencao } from '@educa/shared'
+import { useQuery } from '@tanstack/react-query'
+import { consultaRetencao } from '../../../api/privacidade'
+import { EstadoCarregando, EstadoErro } from '../../../componentes/estado'
+import { Tabela, type ColunaDaTabela } from '../../../componentes/Tabela'
+import { CabecalhoDeSecao } from '../../../componentes/Tela'
+import { textoDaOrigem, textoDoPrazo } from './textos-da-retencao'
+
+type LinhaDaCategoria = RespostaRetencao['categorias'][number]
+type LinhaDoPrazoFixo = RespostaRetencao['prazosFixos'][number]
+
+const COLUNAS_DAS_CATEGORIAS: readonly [ColunaDaTabela<LinhaDaCategoria>, ...ColunaDaTabela<LinhaDaCategoria>[]] = [
+  { chave: 'dado', titulo: 'Dado', celula: (linha) => linha.descricao },
+  { chave: 'prazo', titulo: 'Prazo que vale', celula: (linha) => textoDoPrazo(linha.meses) },
+  { chave: 'contagem', titulo: 'Quando começa a contar', celula: (linha) => linha.contaDe },
+  { chave: 'origem', titulo: 'De onde vem', celula: (linha) => textoDaOrigem(linha) },
+]
+
+const COLUNAS_DOS_PRAZOS_FIXOS: readonly [ColunaDaTabela<LinhaDoPrazoFixo>, ...ColunaDaTabela<LinhaDoPrazoFixo>[]] = [
+  { chave: 'dado', titulo: 'Dado', celula: (linha) => linha.descricao },
+  { chave: 'prazo', titulo: 'Prazo', celula: (linha) => linha.prazo },
+]
+
+/**
+ * A aba "Por quanto tempo guardamos" (F3, 6.0; RF20): o prazo que vale hoje para cada dado da escola, de onde ele vem, e
+ * os prazos fixos, que a escola não ajusta. Só leitura: o ajuste é da operação, por comando (`ops:retencao`).
+ *
+ * Não tem estado vazio: toda escola tem todas as categorias, com o padrão quando não há ajuste. Os outros três estados
+ * valem: carregando, erro com "Tentar de novo" e o dado.
+ */
+export function Retencao() {
+  const retencao = useQuery(consultaRetencao)
+  if (retencao.isPending) return <EstadoCarregando rotulo="Carregando os prazos de guarda…" />
+  if (retencao.isError && retencao.data === undefined) {
+    return <EstadoErro erro={retencao.error} tentando={retencao.isFetching} aoTentarDeNovo={() => void retencao.refetch({ cancelRefetch: false })} />
+  }
+
+  const { categorias, prazosFixos } = retencao.data
+  return (
+    <div className="flex min-w-0 flex-col gap-8">
+      <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-das-categorias">
+        <CabecalhoDeSecao
+          id="titulo-das-categorias"
+          titulo="O que a escola guarda, e por quanto tempo"
+          apoio="O prazo que vale hoje para cada dado de pessoa da escola, e de onde ele vem. É por esse prazo que o sistema apaga o dado."
+        />
+        <Tabela rotulo="O que a escola guarda, e por quanto tempo" colunas={COLUNAS_DAS_CATEGORIAS} linhas={categorias} chaveDaLinha={(linha) => linha.categoria} />
+      </section>
+      <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-dos-prazos-fixos">
+        <CabecalhoDeSecao
+          id="titulo-dos-prazos-fixos"
+          titulo="Prazos que não mudam"
+          apoio="Vêm da lei ou de outra fase do sistema, e a escola não os ajusta. Aparecem aqui para a coordenação saber o que existe."
+        />
+        <Tabela rotulo="Prazos que não mudam" colunas={COLUNAS_DOS_PRAZOS_FIXOS} linhas={prazosFixos} chaveDaLinha={(linha) => linha.chave} />
+      </section>
+    </div>
+  )
+}
