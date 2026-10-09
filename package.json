@@ -18,6 +18,8 @@
     "test:integracao": "vitest run --project integracao",
     "test:infra": "vitest run --project infra",
     "test:e2e": "node tools/ci/e2e.ts --manter-ambiente",
+    "guarda:segredo": "node tools/ci/segredo.ts",
+    "guarda:dependencias": "npm audit --audit-level=high --omit=dev",
     "ci:verificar": "node tools/ci/verificar.ts",
     "ci:integracao": "node tools/ci/integracao.ts",
     "ci:infra": "node tools/ci/infra.ts",

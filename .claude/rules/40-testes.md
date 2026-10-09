@@ -93,14 +93,16 @@ desabilitar teste para "destravar a tarefa". Teste vermelho é informação, nã
 Há dois, e o que muda entre eles é o quanto roda (D78, revista em 09/10/2026).
 
 **O portão da tarefa**, em toda tarefa e em toda correção:
-`node tools/processo/portao-local.ts --tarefa`. Roda os tipos, o lint, a unidade inteira e os testes
-de integração, de e2e e de infra **que a árvore alterou**, e grava o carimbo que o hook exige antes do
+`node tools/processo/portao-local.ts --tarefa`. Roda os tipos, o lint, as duas guardas da esteira que
+não são teste (`guarda:segredo`, o gitleaks, e `guarda:dependencias`, o `npm audit`), a unidade
+inteira e os testes de integração, de e2e e de infra **que a árvore alterou**, e grava o carimbo que o hook exige antes do
 commit (D53). Leva minutos. Enquanto um teste não passa, ele se roda isolado; o portão não é
 ferramenta de depuração.
 
 **O portão completo**, uma vez por spec, antes da validação:
-`node tools/processo/portao-local.ts --e2e --infra`. É `npm run typecheck`, `npm run lint`,
-`npm run test`, `npm run test:e2e` e `npm run test:infra` (D52), tudo. Os testes de infra esperam o
+`node tools/processo/portao-local.ts --e2e --infra`. É `npm run typecheck`, `npm run lint`, as duas
+guardas, `npm run test`, `npm run test:e2e` e `npm run test:infra` (D52), tudo: o mesmo que a esteira
+roda, na sua máquina. Os testes de infra esperam o
 relógio real (alerta, sonda, exportação de métricas), uns 16 min. Depois dele vem a esteira, na
 branch da spec, antes do pouso, e de novo em todo push na `develop`, na `release` e no `main`.
 Vermelho em qualquer um segura o pouso.

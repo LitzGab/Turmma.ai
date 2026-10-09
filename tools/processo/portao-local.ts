@@ -95,11 +95,15 @@ const extras = argumentos.filter((argumento) => !argumento.startsWith('--') && e
 const alvos = alvosDoPortao([...arquivosAlterados(raiz), ...extras])
 const suites = daTarefa
   ? [...SUITES_DO_PORTAO_DA_TAREFA]
-  : ['typecheck', 'lint', 'test', ...(argumentos.includes('--e2e') ? ['e2e'] : []), ...(argumentos.includes('--infra') ? ['infra'] : [])]
+  : ['typecheck', 'lint', 'segredo', 'dependencias', 'test', ...(argumentos.includes('--e2e') ? ['e2e'] : []), ...(argumentos.includes('--infra') ? ['infra'] : [])]
 
 /** Os comandos de cada suíte. Lista vazia é suíte sem nada a rodar: o alvo de uma tarefa que não alterou teste nenhum. */
 function comandoDaSuite(suite: string): string[] {
   if (suite === 'unidade') return ['npm run test:unidade']
+  // As duas guardas da esteira que não são teste: o gitleaks e o `npm audit`. Segundos, e pegam na tarefa o que só a
+  // esteira do pouso pegaria.
+  if (suite === 'segredo') return ['npm run guarda:segredo']
+  if (suite === 'dependencias') return ['npm run guarda:dependencias']
   if (suite === 'e2e') return ['npm run test:e2e']
   if (suite === 'infra') return ['npm run test:infra']
   if (suite !== 'alvo') return [`npm run ${suite}`]
@@ -134,7 +138,7 @@ if (recusa) {
 }
 if (daTarefa) {
   const lista = todosOsAlvos.length > 0 ? todosOsAlvos.join(', ') : 'nenhum teste de integração, de e2e ou de infra alterado na árvore'
-  process.stdout.write(`\n✓ portão da tarefa verde (tipos, lint, unidade inteira; alvos: ${lista}). O portão completo roda no fim da spec.\n`)
+  process.stdout.write(`\n✓ portão da tarefa verde (tipos, lint, segredo, dependências, unidade inteira; alvos: ${lista}). O portão completo roda no fim da spec.\n`)
 } else {
   process.stdout.write(`\n✓ portão local verde (${suites.join(', ')}). Carimbo em .processo/portao.json, início ${inicio}.\n`)
 }

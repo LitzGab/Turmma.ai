@@ -150,9 +150,15 @@ inteiro, um teste vizinho que já passa e o helper que ele usa (`e2e/__fixtures_
 node tools/processo/portao-local.ts --tarefa
 ```
 
-Ele roda os tipos, o lint, a **unidade inteira** e os testes de integração, de e2e e de infra **que a
-árvore alterou** (cerca de dois minutos, mais o tempo desses testes), e grava o carimbo em
-`.processo/portao.json`. Para incluir um teste que você não alterou mas a tarefa pode ter quebrado
+Ele roda os tipos, o lint, as duas guardas da esteira que não são teste (segredo commitado e
+dependência com falha grave), a **unidade inteira** e os testes de integração, de e2e e de infra **que
+a árvore alterou** (cerca de dois minutos, mais o tempo desses testes), e grava o carimbo em
+`.processo/portao.json`.
+
+Plano do Postgres (`EXPLAIN`) colado no documento da tarefa pode reprovar a guarda de segredo: ela lê
+`Key: <valor>` como chave. As linhas `Sort Key`, `Group Key` e parecidas com nome de coluna já têm
+exceção no `.gitleaks.toml`; outra linha que reprove sem ser segredo é `DIVERGÊNCIA`, com
+`Motivo: portão`, e não se resolve apagando o plano. Para incluir um teste que você não alterou mas a tarefa pode ter quebrado
 (o do módulo que usa o que você mexeu), passe o arquivo:
 `node tools/processo/portao-local.ts --tarefa apps/api/test/<outro>.int.test.ts`.
 

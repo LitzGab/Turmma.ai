@@ -81,12 +81,12 @@ export interface Carimbo {
 }
 
 /** O portão completo: tudo, como a esteira. Roda uma vez por spec, antes da validação (D78 revista em 09/10/2026). */
-export const SUITES_DO_PORTAO_COMPLETO = ['typecheck', 'lint', 'test', 'e2e', 'infra']
+export const SUITES_DO_PORTAO_COMPLETO = ['typecheck', 'lint', 'segredo', 'dependencias', 'test', 'e2e', 'infra']
 /**
  * O portão da tarefa: tipos, lint, a unidade inteira e os testes de integração, de infra e de e2e que a árvore alterou.
  * `alvo` é a suíte desses arquivos; com `unidade`, vale por `test` no commit de tarefa e de correção.
  */
-export const SUITES_DO_PORTAO_DA_TAREFA = ['typecheck', 'lint', 'unidade', 'alvo']
+export const SUITES_DO_PORTAO_DA_TAREFA = ['typecheck', 'lint', 'segredo', 'dependencias', 'unidade', 'alvo']
 
 export interface AlvosDoPortao {
   integracao: string[]
@@ -549,9 +549,13 @@ export function alteracaoQueCaduca(
  * O que o commit de tarefa e de correção exige do carimbo. Até 08/10/2026 a tarefa com `frontend-reviewer` exigia o e2e
  * inteiro, e a com `infra-guardian`, a suíte de infra inteira. Agora os dois rodam inteiros uma vez, no portão completo
  * do fim da spec, e na tarefa rodam só os arquivos que ela alterou (`alvosDoPortao`).
+ *
+ * `segredo` (gitleaks) e `dependencias` (`npm audit`) são as duas guardas da esteira que não são teste. Levam segundos,
+ * e sem elas a surpresa ficava para o fim da spec: em 09/10/2026 o gitleaks já reprovava a branch da F3, por uma linha
+ * `Sort Key:` de um `EXPLAIN` colado no documento da 5.0, e ninguém saberia até a esteira do pouso.
  */
 export function suitesExigidas(): string[] {
-  return ['typecheck', 'lint', 'test']
+  return ['typecheck', 'lint', 'segredo', 'dependencias', 'test']
 }
 
 /** `test` vale pela suíte inteira ou, no portão da tarefa, pela unidade inteira mais os alvos. */

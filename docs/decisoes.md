@@ -999,6 +999,10 @@ recomendações baratas juntos; não há mais ciclo só para aplicar recomendaç
 Tarefas em paralelo foram avaliadas e ficaram de fora: o gargalo era o portão, que é um só na máquina,
 e o ganho estimado com dois ambientes de teste (de 1,1 a 1,4 vez) é menor que o de encurtar o portão.
 O preço aceito: o que uma tarefa quebra fora dos testes que alterou só aparece no fim da spec.
+(d) **As duas guardas da esteira que não são teste entram em todo portão local**: o gitleaks (segredo
+commitado) e o `npm audit`. Levam segundos, e sem elas a surpresa ficava para a esteira do pouso: em
+09/10/2026 o gitleaks já reprovava a branch do F3, por uma linha `Sort Key:` de um plano do Postgres
+colado no documento da 5.0, que ganhou exceção no `.gitleaks.toml`.
 Revisão: se o portão completo do fim do F3 trouxer falha que custe mais para achar do que o tempo
 poupado, entra um portão completo de conferência a cada quatro ou cinco tarefas.
 
