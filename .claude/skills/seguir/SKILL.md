@@ -355,6 +355,11 @@ andou enquanto a spec corria (o Gabriel integra lá): traga-a para o térreo
 (`git pull --no-rebase origin develop`), depois para a branch da spec
 (`git -C <andar> merge develop`, o único commit seu que leva código), e a esteira da branch roda de
 novo antes do pouso. Conflito em qualquer um desses merges, ou no pouso, é parada: diga os arquivos.
+A exceção é o conflito **só** em `achados/indice.md`, de tarefa ou de correção: é um registro que só
+cresce, escrito pelo hook, e os dois lados acrescentaram linhas no mesmo ponto. Fique com todas as
+linhas dos dois lados, sem repetir e sem escrever linha nova, conclua o merge e registre no
+`estado.md`. Em 09/10/2026 esse conflito parou a F3 por minutos à espera de uma resposta que só tinha
+uma opção.
 
 Esteira da `develop` vermelha depois do pouso: correção em andar próprio (`correcao/<slug>`).
 Verde: peça a retrospectiva ao `Arquiteto` e notifique o fim.
