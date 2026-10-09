@@ -2,6 +2,7 @@
 
 **Funcionalidade:** lgpd-e-titular · **Depende de:** 1.0, 11.0 · **Paralelo com:** 12.0, 13.0
 **Subagentes obrigatórios:** `tenancy-guardian`, `privacy-guardian`, `infra-guardian`
+**Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
@@ -50,6 +51,16 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 | rotina | integração | `pessoa_desativada` com pedido agendado é pulada |
 | isolamento | integração | `cancelar` de B como inexistente |
 | concorrência | integração [P] | duas chaves: uma `agendado`, outra erro; dois `cancelar` |
+
+## Como testar
+
+- **suspensão:** `apps/api/test/ciclo-de-vida.int.test.ts › caminho feliz (RF5; regra 20, item 18)…` (a sessão aberta dá 401 na requisição seguinte); renovação em `apps/api/test/renovacao.int.test.ts`; conta externa em `apps/api/test/sessao-externa.int.test.ts › borda: a professora ligada e depois desativada não entra mais pela conta`.
+- **não revela:** `apps/api/test/sessao-matricula.int.test.ts › privacidade (regra 20, item 6): slug inexistente…` (mesmo status, mesmo corpo, um hash cada).
+- **escolhas:** `apps/api/test/troca-de-escola.int.test.ts › caminho feliz (RF14)…`; e-mail em `apps/api/test/login-email.int.test.ts › permissão: aluno não entra por e-mail e senha…`.
+- **rotina:** `apps/worker/test/expurgo-da-escola.int.test.ts › a pessoa reativada entre a escolha do lote e a trava não é eliminada…` (`alunoDesativado`).
+- **concorrência:** `GatilhoDeParada` e `esperarNaTrava`, como `apps/api/test/retencao.int.test.ts › concorrência: dois ajustes da mesma escola…`.
+- Armadilha (`estado.md`): o teste de plano do expurgo depende de estatística (`1a405d2`). Mexeu no lote de `pessoa_desativada`, rode `› o lote de cada alvo desce pelo índice dele…`.
+- Rodar: `npx vitest run --project integracao <arquivo>`.
 
 ## Critério de conclusão
 

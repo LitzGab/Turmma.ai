@@ -2,6 +2,7 @@
 
 **Funcionalidade:** lgpd-e-titular · **Depende de:** 6.0, 11.0 · **Paralelo com:** 15.0
 **Subagentes obrigatórios:** `frontend-reviewer`, `privacy-guardian`
+**Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
@@ -44,6 +45,15 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 | aviso da lista | e2e | aponta para a lista da turma |
 | recomeço | e2e | rede cai no `POST` e o reenvio leva a mesma chave; segunda pessoa na aba; resposta atrasada segurada |
 | estados | e2e | quatro estados; lista abaixo de 768 px; `chromebook` e `celular`, acessibilidade |
+
+## Como testar
+
+- **estados e lista abaixo de 768 px:** `e2e/governanca.spec.ts › os quatro estados…`; a tabela que vira lista já é provada em `e2e/privacidade.spec.ts` (`linhaDa`: `tr` no chromebook, `li` no celular).
+- **homônimos e diálogo:** `e2e/pedidos.spec.ts › o 41º pedido não é marcável…` (dois cliques mandam um pedido só) e `› sem rolagem horizontal, também no diálogo…`.
+- **busca:** o 429 com texto em `e2e/casca.spec.ts › erro: a mensagem vem do catálogo pelo código…` (a função local `falharCom`).
+- **recomeço:** a mesma chave em `e2e/turma-publica.spec.ts › o 503 reenvia a mesma chave até 3 vezes…` (`postDataJSON`); a rede cai com `rota.abort('internetdisconnected')`, nunca `context.setOffline` (`e2e/entrar.spec.ts`); segunda pessoa e resposta atrasada em `e2e/pedidos.spec.ts › resposta atrasada: a atualização que chega depois da decisão…`.
+- Titulares: `criarAlunoComMatricula` e `colocarAlunoNaTurma` (`e2e/__fixtures__/sessao.ts`).
+- Rodar: `node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`.
 
 ## Critério de conclusão
 

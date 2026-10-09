@@ -2,6 +2,7 @@
 
 **Funcionalidade:** lgpd-e-titular · **Depende de:** 3.0, 11.0, 12.0 · **Paralelo com:** 14.0
 **Subagentes obrigatórios:** `tenancy-guardian`, `privacy-guardian`, `infra-guardian`, `conformidade-reviewer`
+**Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
@@ -55,6 +56,16 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 | falha | integração | armazém fora: "em preparação" e `INDISPONIVEL`; volta e conclui |
 | concorrência | integração [P] | dois `montar-arquivo` do mesmo pedido |
 | alerta | infra [F] | `em_preparacao` > 2 h |
+
+## Como testar
+
+- **storage real:** `apps/worker/test/uso.int.test.ts › borda: os bytes de escolas/{a}/ não somam…` (`S3Client`, `PutObjectCommand`); o bucket acumula pastas de outras execuções. Armazém falso e URL assinada: sem precedente.
+- **job e concorrência:** `apps/worker/test/reexecucao.int.test.ts › worker morto depois de gravar o efeito…` e `› oito gravações da mesma chave ao mesmo tempo…` (`BancadaDeFila`, `LogEmMemoria`).
+- **conteúdo e proibidas:** `apps/api/test/painel-leitura.int.test.ts › com sentinelas em cada tabela de pessoa…`.
+- **quem baixa:** `apps/api/src/ia/ia.int.test.ts › de outra pessoa, de outra escola, inexistente…`.
+- **validade:** `apps/worker/test/expurgo-da-escola.int.test.ts › com 5 anos e um dia o registro sai…` (`relogioEm`).
+- **alerta:** `infra/test/alerta-do-expurgo.int.test.ts`.
+- Rodar: `npx vitest run --project integracao <arquivo>`; `--project infra` no alerta.
 
 ## Critério de conclusão
 

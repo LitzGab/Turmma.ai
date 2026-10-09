@@ -2,6 +2,7 @@
 
 **Funcionalidade:** lgpd-e-titular · **Depende de:** 13.0 · **Paralelo com:** 17.0
 **Subagentes obrigatórios:** `frontend-reviewer`, `privacy-guardian`
+**Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
@@ -45,6 +46,15 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 | estados | e2e | vazio que convida; em preparação a cada 10 s; apagado depois de 7 dias; só a escola ativa |
 | recomeço | e2e | troca de escola e segunda pessoa não mostram o arquivo anterior |
 | projetos | e2e | `chromebook` e `celular`, acessibilidade |
+
+## Como testar
+
+- **navegação:** `e2e/areas.spec.ts › o aluno vê "Tutor", "Atividades" e "Minha turma"…` e `› o professor vê os itens da fase dele…` (o menu da pessoa); a gaveta a 360 px em `e2e/casca.spec.ts › W12: abaixo de 768 px…`; a unidade em `apps/web/src/areas/navegacao.test.ts`.
+- **caminho feliz:** a função local `outroNavegador`, de `e2e/escola-montada.spec.ts`, para a coordenação e o aluno; o download como em `e2e/a2-assistente.spec.ts` (`page.waitForEvent('download')`); `entrarComoAluno` (`e2e/__fixtures__/casca.ts`) e `criarAlunoComMatricula`.
+- **recomeço:** `e2e/minha-turma.spec.ts › segunda pessoa: o aluno seguinte no mesmo Chromebook…`; a troca de escola do professor em `e2e/troca-de-escola.spec.ts › depois da troca para B, nenhuma requisição leva o token de A…` (`criarUsuarioEmOutraEscola`).
+- **estados:** `e2e/minha-turma.spec.ts › carregando, com dado…`; os 10 s com `page.clock`, como `e2e/inatividade.spec.ts`.
+- Apagado depois de 7 dias: semeie `apagado_em` no banco.
+- Rodar: `node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`.
 
 ## Critério de conclusão
 

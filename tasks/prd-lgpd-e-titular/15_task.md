@@ -2,6 +2,7 @@
 
 **Funcionalidade:** lgpd-e-titular · **Depende de:** 4.0, 5.0, 12.0, 13.0, 14.0 · **Paralelo com:** 16.0
 **Subagentes obrigatórios:** `tenancy-guardian`, `privacy-guardian`, `infra-guardian`, `conformidade-reviewer`
+**Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
@@ -53,6 +54,15 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 | isolamento e log | integração | troca em A não toca B; log e respostas sem nome atual, anterior, termo nem URL |
 | concorrência | integração [P] | dois `eliminar`; cancelar contra enfileirar; `pessoa_desativada` com eliminação |
 | reenfileirar e alerta | integração e infra [F] | 20 h sim, menos não; 47 h não alerta, 48 h alerta |
+
+## Como testar
+
+- Molde: `apps/worker/test/expurgo-da-escola.int.test.ts` (`escolaNova`, `relogioEm`, `rodar`, `rodarRotina`). **janela:** `› a janela abre no meio…`; **faixas:** `› 5.001 linhas vencidas saem em dois lotes…`; **autor:** `› o desativado além do prazo é eliminado pelo ciclo de vida…`; **concorrência:** `› [P] dois jobs da mesma escola ao mesmo tempo eliminam cada pessoa uma vez…`.
+- **check:** `packages/nucleo/src/auditoria/auditoria.int.test.ts › registro sem autor nenhum é recusado…`.
+- **falha desfaz:** `apps/api/test/ciclo-de-vida.int.test.ts › na transação de quem chama…`.
+- **alerta:** `infra/test/alerta-do-expurgo.int.test.ts`.
+- Troca de nome: sem precedente.
+- Rodar: `npx vitest run --project integracao <arquivo>`; `--project infra` no alerta.
 
 ## Critério de conclusão
 

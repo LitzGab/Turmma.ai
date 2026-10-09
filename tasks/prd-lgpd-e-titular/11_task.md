@@ -2,6 +2,7 @@
 
 **Funcionalidade:** lgpd-e-titular · **Depende de:** 2.0 · **Paralelo com:** 12.0 (depois de 8.0)
 **Subagentes obrigatórios:** `tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer`, `infra-guardian`
+**Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
@@ -53,6 +54,16 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 | rate limit | integração | 31ª busca dá 429; duas coordenadoras do mesmo IP têm 30 cada |
 | isolamento | integração | pedido, prévia, busca, concluir e corrigir de B; transferido; mesma matrícula |
 | concorrência | integração [P] | mesma chave dá o mesmo pedido; clique duplo em concluir sem 500 |
+
+## Como testar
+
+- Molde: `apps/api/test/retencao.int.test.ts` (`subirApi`, `chamar`, `bancada.escolaComSessao`). Igual a inexistente: `apps/api/src/ia/ia.int.test.ts › de outra pessoa, de outra escola, inexistente…`.
+- **auditoria:** `apps/api/test/lista.int.test.ts › A2: cada leitura da lista grava…`; **aluno da lista:** `› retirar o nome livre apaga a linha…`.
+- **rate limit:** `apps/api/test/limite.int.test.ts › um usuário acima do próprio limite recebe 429…`.
+- **concorrência:** `ia.int.test.ts › a mesma chave de envio duas vezes ao mesmo tempo…`; o clique duplo com `GatilhoDeParada` (`apps/api/test/gatilho-de-parada.ts`).
+- **mesma conta:** `BancadaDeSessoes.sessaoDaMesmaConta`. **Log:** o terceiro argumento de `subirApi`, como `apps/api/test/acesso-da-escola.int.test.ts › privacidade: o log não traz o slug consultado`.
+- Imutabilidade por gatilho: sem precedente.
+- Rodar: `npx vitest run --project integracao <arquivo>`.
 
 ## Critério de conclusão
 

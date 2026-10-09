@@ -2,6 +2,7 @@
 
 **Funcionalidade:** lgpd-e-titular · **Depende de:** 7.0, 8.0, 11.0 · **Paralelo com:** 13.0, 14.0
 **Subagentes obrigatórios:** `tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer`, `llm-integrator`
+**Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
@@ -42,6 +43,16 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 | D64 | integração | dois professores, um que usou e outro não: foto e detalhe iguais |
 | mesma conta | integração | consumo feito em B não entra na foto de A |
 | sem uso e vigência | integração | aluno sem uso: só hospedagem; provedor fora da vigência não casa |
+
+## Como testar
+
+- Molde da escola e do consumo: `apps/worker/test/expurgo-da-escola.int.test.ts` (`escolaNova`, `consumo`, `execucaoDoTutor`, `professorNovo`), que grava `consumo_ia` com `em` no passado; a soma que não muda em `› o que fica: a execução, as sete FKs…`.
+- **escopo:** o teste de isolamento do `SuboperadorDaEscolaRepository`, que a 8.0 cria: copie de lá a montagem dos dois suboperadores.
+- **D64:** `apps/api/src/governanca/governanca.int.test.ts › a série com um professor só com entrega fica fora da lista…`; aqui, a foto e o detalhe dos dois professores comparados com `toEqual`.
+- **mesma conta:** `BancadaDeSessoes.sessaoDaMesmaConta` (`apps/api/test/sessao-de-teste.ts`).
+- Rastro expirado e vigência: sem precedente; o relógio é injetado, como o `relogioEm` do arquivo do worker.
+- Armadilha da 8.0: `suboperador` é global e o banco acumula; chave aleatória por teste.
+- Rodar: `npx vitest run --project integracao <arquivo>`.
 
 ## Critério de conclusão
 

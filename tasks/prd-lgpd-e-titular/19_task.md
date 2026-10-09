@@ -2,6 +2,7 @@
 
 **Funcionalidade:** lgpd-e-titular · **Depende de:** 3.0 a 18.0 · **Paralelo com:** nenhuma
 **Subagentes obrigatórios:** `infra-guardian`, `privacy-guardian`, `tenancy-guardian`
+**Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
@@ -41,6 +42,14 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 |---|---|---|
 | carga | carga | cada statement < 2 s; o p95 do Tutor de B não piora além do limite do cenário |
 | operação | integração | as saídas de `ops:privacidade` não trazem nenhuma sentinela |
+
+## Como testar
+
+- **operação:** `apps/api/test/painel-leitura.int.test.ts › com sentinelas em cada tabela de pessoa…`; a montagem da escola e do comando em `apps/api/test/ops-uso.int.test.ts › isolamento: a escola B com uso no mesmo dia não aparece…` (`BancadaDeSessoes`). Ponha o comando na lista de `apps/api/test/ops-operador.int.test.ts › C2`: a 2.0 reprovou por faltar.
+- **carga:** `infra/test/carga.test.ts › a espera da B acima da base + margem reprova o cenário…` e `infra/test/conferir-carga.int.test.ts › só olha as escolas do cenário…`. O cenário roda por `npm run carga`, fora do Vitest, com o adaptador falso.
+- **statement < 2 s:** `apps/worker/test/expurgo-da-escola.int.test.ts › o lote de trabalho com a cascata…`.
+- Armadilha (`estado.md`): plano do Postgres depende de estatística; sem volume e `analyze` na tabela, o teste fica intermitente (`1a405d2`).
+- Rodar: `npx vitest run --project integracao <arquivo>`; `--project unidade infra/test/carga.test.ts`; `--project infra` no `conferir-carga`.
 
 ## Critério de conclusão
 

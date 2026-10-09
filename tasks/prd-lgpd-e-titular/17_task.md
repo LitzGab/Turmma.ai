@@ -2,6 +2,7 @@
 
 **Funcionalidade:** lgpd-e-titular · **Depende de:** 13.0, 14.0, 16.0 · **Paralelo com:** 18.0
 **Subagentes obrigatórios:** `frontend-reviewer`, `privacy-guardian`
+**Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
 
 ## Objetivo
@@ -45,6 +46,17 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 | prazo | e2e | "faltam N dias" e vencido com ícone |
 | recomeço | e2e | falha com o diálogo aberto limpa foco e aviso; segunda pessoa; resposta atrasada |
 | estados | e2e | quatro estados, `chromebook` e `celular`, acessibilidade |
+
+## Como testar
+
+- **baixar:** `e2e/a2-assistente.spec.ts › a coordenação sobe o material; a professora pede a atividade…` (`page.waitForEvent('download')`, com o nome do arquivo).
+- **preparação:** a unidade em `apps/web/src/componentes/pedidos/atualizacao-dos-pedidos.test.ts › com a aba escondida, para…`; no e2e, `page.clock.install`, `fastForward` e o evento `visibilitychange`, como `e2e/acesso-da-turma.spec.ts › a releitura que cai com o código projetado…`.
+- **ações:** `e2e/pedidos.spec.ts › o 41º pedido não é marcável…` (dois cliques, um pedido).
+- **recomeço:** `e2e/pedidos.spec.ts › lista recarregada com o diálogo aberto…` e `› resposta atrasada: a atualização que chega depois da decisão…`.
+- **estados:** `e2e/governanca.spec.ts › os quatro estados…`.
+- **prazo:** semeie o pedido no banco com `chegou_em` no passado, como `ajustarRetencaoDaEscola` (`e2e/__fixtures__/sessao.ts`).
+- Armadilha da 6.0: a linha de Mutações só vale se o e2e fica vermelho sem a cláusula; confira antes de escrever.
+- Rodar: `node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`.
 
 ## Critério de conclusão
 
