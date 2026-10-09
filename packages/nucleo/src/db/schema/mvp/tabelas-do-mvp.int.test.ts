@@ -1214,9 +1214,11 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
         // O título e os metadados do material e do artefato, sobre conteúdo didático.
         { tabela: 'artefato', coluna: 'titulo' },
         // Códigos e nomes do catálogo da camada de IA, presos por formato: o código do erro, o modelo, a versão do prompt e a tarefa.
+        // O `provedor` é o id de quem recebeu o conteúdo (`IA_PROVEDOR_ID`, F3): vem de variável de ambiente nossa, não de pessoa; o formato dele é conferido na subida (`FORMATO_DO_PROVEDOR_ID`), não no banco.
         { tabela: 'consumo_ia', coluna: 'codigo_de_erro' },
         { tabela: 'consumo_ia', coluna: 'modelo' },
         { tabela: 'consumo_ia', coluna: 'prompt_versao' },
+        { tabela: 'consumo_ia', coluna: 'provedor' },
         { tabela: 'consumo_ia', coluna: 'tarefa' },
         // A justificativa do professor sobre a saída da IA (`docs/lgpd.md`).
         { tabela: 'entrega', coluna: 'justificativa' },
@@ -1407,6 +1409,16 @@ describe('tabelas do MVP de apresentação: o banco recusa o que o contrato pro�
       await expect(consumir(c, { estado: 'falhou', codigo_de_erro: 'IA_TEMPO_ESGOTADO', tentativas: 2 })).resolves.toMatchObject({ rowCount: 1 })
       // Toda tarefa do contrato cabe no formato do nome.
       for (const tarefa of TAREFAS_DE_IA) await expect(consumir(c, { tarefa, funcao: FUNCAO_DA_TAREFA_DE_IA[tarefa] }), tarefa).resolves.toMatchObject({ rowCount: 1 })
+    })
+
+    it('o provedor só existe onde houve envio externo; a linha no formato anterior à coluna continua entrando', async () => {
+      const c = await novoCenario()
+      expect(await recusa(consumir(c, { provedor: 'provedor-de-teste' }))).toEqual({ codigo: '23514', restricao: 'consumo_ia_provedor_so_no_envio_externo' })
+      await expect(consumir(c, { envio_externo: true, provedor: 'provedor-de-teste' })).resolves.toMatchObject({ rowCount: 1 })
+      // O código anterior não conhece a coluna: externo sem provedor, e local sem provedor, entram como entravam. A exigência
+      // contrária (externo sempre com provedor) só vem num release posterior, para o rollback não quebrar.
+      await expect(consumir(c, { envio_externo: true })).resolves.toMatchObject({ rowCount: 1 })
+      await expect(consumir(c)).resolves.toMatchObject({ rowCount: 1 })
     })
 
     it('D38: o freio diário do Tutor conta as chamadas do aluno no dia pelo índice parcial que começa pela escola e pelo aluno', async () => {

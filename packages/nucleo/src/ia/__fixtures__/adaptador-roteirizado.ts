@@ -1,5 +1,9 @@
 import type { AdaptadorDeModelo, ChamadaAoModelo, CorrecaoPedida, RespostaDoModelo } from '../adaptador.js'
 import type { Perfil } from '../perfis.js'
+import { SEM_ENVIO_EXTERNO, type EnvioDaChamada } from '../porta.js'
+
+/** O id do provedor de mentira: o teste que olha o `provedor` do registro compara com ele. */
+export const PROVEDOR_ROTEIRIZADO = 'provedor-roteirizado'
 
 /**
  * Um modelo de mentira que devolve, em ordem, os textos do roteiro: é como o teste põe na boca do "modelo" a saída
@@ -10,10 +14,14 @@ export class AdaptadorRoteirizado implements AdaptadorDeModelo {
   /** O que cada chamada recebeu de correção (`undefined` na primeira). */
   readonly correcoes: (CorrecaoPedida | undefined)[] = []
 
+  readonly envio: EnvioDaChamada
+
   constructor(
     private readonly roteiro: readonly (string | Error)[],
-    readonly envioExterno = true,
-  ) {}
+    envioExterno = true,
+  ) {
+    this.envio = envioExterno ? { envioExterno: true, provedorId: PROVEDOR_ROTEIRIZADO } : SEM_ENVIO_EXTERNO
+  }
 
   get chamadas(): number {
     return this.correcoes.length

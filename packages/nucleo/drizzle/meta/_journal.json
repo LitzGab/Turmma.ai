@@ -197,6 +197,13 @@
       "when": 1791501627459,
       "tag": "0027_expurgo_do_cadastro",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791548961213,
+      "tag": "0028_consumo_ia_provedor",
+      "breakpoints": true
     }
   ]
 }

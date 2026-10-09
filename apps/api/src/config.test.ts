@@ -49,7 +49,7 @@ const ambienteValido = {
  * A camada de IA como a produção a configura: o adaptador falso é recusado lá, e a API só sobe com o provedor declarado.
  * Endereço e modelo sintéticos.
  */
-const IA_DE_PRODUCAO = { IA_ADAPTADOR: 'openai_compat', LLM_BASE_URL: 'https://modelo.sintetico.example/v1', LLM_MODELO: 'modelo-sintetico' }
+const IA_DE_PRODUCAO = { IA_ADAPTADOR: 'openai_compat', LLM_BASE_URL: 'https://modelo.sintetico.example/v1', LLM_MODELO: 'modelo-sintetico', IA_PROVEDOR_ID: 'provedor-sintetico' }
 
 /** A chave AES-256 que o HKDF deriva do texto da variável, como a configuração faz. */
 function chaveDerivada(texto: string): Uint8Array {
@@ -132,13 +132,13 @@ describe('lerConfiguracao', () => {
     expect(Object.keys(ambienteValido).filter((variavel) => variavel.startsWith('IA_') || variavel.startsWith('LLM_'))).toEqual([])
     expect(lerConfiguracao({ ...ambienteValido, ...IA_DE_PRODUCAO, IA_EXECUCOES_POR_ESCOLA: '3' }).ia).toMatchObject({
       adaptador: 'openai_compat',
-      modelo: { baseUrl: IA_DE_PRODUCAO.LLM_BASE_URL, processamentoLocal: false },
+      modelo: { baseUrl: IA_DE_PRODUCAO.LLM_BASE_URL, processamentoLocal: false, provedorId: 'provedor-sintetico' },
       executor: { vagasPorEscola: 3 },
     })
     // O compose entrega a variável sem valor como texto vazio: vale como ausente.
     expect(lerConfiguracao({ ...ambienteValido, IA_ADAPTADOR: '', LLM_BASE_URL: '' }).ia.adaptador).toBe('falso')
     expect(erroDe({ ...ambienteValido, IA_ADAPTADOR: 'outro' }).variaveis).toEqual(['IA_ADAPTADOR'])
-    expect(erroDe({ ...ambienteValido, IA_ADAPTADOR: 'openai_compat' }).variaveis).toEqual(['LLM_BASE_URL', 'LLM_MODELO'])
+    expect(erroDe({ ...ambienteValido, IA_ADAPTADOR: 'openai_compat' }).variaveis).toEqual(['IA_PROVEDOR_ID', 'LLM_BASE_URL', 'LLM_MODELO'])
     // Somada às outras leituras, e sem repetir o AMBIENTE, que a identidade já aponta.
     expect(erroDe({ ...ambienteValido, API_PORTA: '0', LLM_TIMEOUT_MS: 'um minuto' }).variaveis).toEqual(['API_PORTA', 'LLM_TIMEOUT_MS'])
     expect(erroDe({ ...ambienteValido, AMBIENTE: 'homologacao' }).variaveis).toEqual(['AMBIENTE'])

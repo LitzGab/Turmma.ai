@@ -11,6 +11,7 @@ import {
   proporFerramenta,
   threadAgente,
   turnoDoTutor,
+  type ConsumoDeIa,
   type ContextoDaRequisicao,
   type ExecutorNoProcesso,
   type LLMProvider,
@@ -393,7 +394,8 @@ describe('camada de IA na API', () => {
       tokensDeEntrada: 120,
       tokensDeSaida: 80,
       duracaoMs: 15,
-      envioExterno: false,
+      envioExterno: false as const,
+      provedorId: null,
       tentativas: 1,
       estado: 'concluida' as const,
       entrada: { tema: 'estequiometria' },
@@ -407,6 +409,28 @@ describe('camada de IA na API', () => {
       await new ConsumoRepository(bancada.banco).registrar(consumoDe(a))
       expect(await contar('consumo_ia', a.escolaId)).toBe(antesA + 1)
       expect(await contar('consumo_ia', b.escolaId)).toBe(antesB)
+    })
+
+    it('grava o provedor de quem recebeu o conteúdo, e nulo onde nada saiu; as quatro formas válidas entram, e o par inválido o tipo da porta e o check do banco já barram', async () => {
+      const repositorio = new ConsumoRepository(bancada.banco)
+      const modelo = `modelo-${randomUUID()}`
+      const externo = { ...consumoDe(a), modelo, envioExterno: true as const, provedorId: 'provedor-de-teste' }
+      const chamadas: ConsumoDeIa[] = [
+        externo,
+        // O que falhou depois de sair também deixa o rastro do provedor.
+        { ...externo, provedorId: 'outro-provedor', origem: 'openai_compat', estado: 'falhou', codigoDeErro: 'IA_INDISPONIVEL' },
+        // Local, adaptador falso e regra fixa: nada saiu, e a linha entra como sempre entrou.
+        { ...consumoDe(a), modelo },
+        { ...consumoDe(a), modelo, origem: 'regra_fixa', tentativas: 0 },
+      ]
+      for (const chamada of chamadas) await expect(repositorio.registrar(chamada)).resolves.toBeUndefined()
+      const { rows } = await sql('select provedor, envio_externo from consumo_ia where escola_id = $1 and modelo = $2 order by provedor nulls last', [a.escolaId, modelo])
+      expect(rows).toEqual([
+        { provedor: 'outro-provedor', envio_externo: true },
+        { provedor: 'provedor-de-teste', envio_externo: true },
+        { provedor: null, envio_externo: false },
+        { provedor: null, envio_externo: false },
+      ])
     })
 
     it('o consumo de A não aponta para execução de B: o banco recusa', async () => {

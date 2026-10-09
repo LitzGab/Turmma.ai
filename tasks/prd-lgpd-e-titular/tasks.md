@@ -47,12 +47,12 @@
   - [x] 6.2 `docs/interface.md` (o item no grupo Conformidade)
   - [x] 6.3 Testes
 
-- [ ] **7.0 — Cada chamada externa de IA registra o provedor que a atendeu**
-  - [ ] 7.1 `IA_PROVEDOR_ID` no `esquemaAmbienteDeIa`, obrigatória com `openai_compat` sem processamento local
-  - [ ] 7.2 Tipo da porta `{ envioExterno: true; provedorId } | { envioExterno: false; provedorId: null }`; o fixture ganha id
-  - [ ] 7.3 Migration própria: `consumo_ia.provedor` com `check (provedor is null or envio_externo)`; sobe junto com o código
-  - [ ] 7.4 `MedicaoDaGeracao`, `ConsumoDeIa` e `ConsumoRepository` levam o valor
-  - [ ] 7.5 Testes
+- [x] **7.0 — Cada chamada externa de IA registra o provedor que a atendeu**
+  - [x] 7.1 `IA_PROVEDOR_ID` no `esquemaAmbienteDeIa`, obrigatória com `openai_compat` sem processamento local
+  - [x] 7.2 Tipo da porta `{ envioExterno: true; provedorId } | { envioExterno: false; provedorId: null }`; o fixture ganha id
+  - [x] 7.3 Migration própria: `consumo_ia.provedor` com `check (provedor is null or envio_externo)`; sobe junto com o código
+  - [x] 7.4 `MedicaoDaGeracao`, `ConsumoDeIa` e `ConsumoRepository` levam o valor
+  - [x] 7.5 Testes
 
 - [ ] **8.0 — A escola vê as empresas que recebem dados dela**
   - [ ] 8.1 Migration própria: `suboperador` (chave única onde `fim is null`), `suboperador_escola`

@@ -297,8 +297,8 @@ describe('Tutor e sinais', () => {
       expect(await sinaisDe(aluno)).toEqual([{ tipo: 'atencao_humana', atividade_aplicada_id: null, questao: null, material_id: null, pagina: null }])
 
       // No consumo, só a medição: regra fixa, sem modelo, sem entrada e sem saída.
-      const { rows: consumo } = await sql('select origem, modelo, entrada, saida, tokens_de_entrada, tokens_de_saida, envio_externo, estado from consumo_ia where escola_id = $1 and execucao_id = $2', [a.escolaId, execucao.execucaoId])
-      expect(consumo).toEqual([{ origem: 'regra_fixa', modelo: 'regra_fixa', entrada: null, saida: null, tokens_de_entrada: 0, tokens_de_saida: 0, envio_externo: false, estado: 'concluida' }])
+      const { rows: consumo } = await sql('select origem, modelo, entrada, saida, tokens_de_entrada, tokens_de_saida, envio_externo, provedor, estado from consumo_ia where escola_id = $1 and execucao_id = $2', [a.escolaId, execucao.execucaoId])
+      expect(consumo).toEqual([{ origem: 'regra_fixa', modelo: 'regra_fixa', entrada: null, saida: null, tokens_de_entrada: 0, tokens_de_saida: 0, envio_externo: false, provedor: null, estado: 'concluida' }])
       expect(await ondeVazou(a.escolaId, marca)).toEqual([])
 
       // O professor da turma vê o aviso com o tipo, o aluno e a hora, e mais nada; o agrupado não o soma.

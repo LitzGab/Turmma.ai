@@ -1,4 +1,5 @@
 import type { Perfil } from './perfis.js'
+import type { EnvioDaChamada } from './porta.js'
 import type { DefinicaoDeTarefa } from './tarefa.js'
 
 /** O que voltou errado na tentativa anterior, para o modelo corrigir. Só existe na repetição. */
@@ -29,7 +30,8 @@ export interface RespostaDoModelo {
  */
 export interface AdaptadorDeModelo {
   readonly origem: 'falso' | 'openai_compat'
-  readonly envioExterno: boolean
+  /** Se a chamada sai desta máquina e para qual provedor: nunca um sem o outro. */
+  readonly envio: EnvioDaChamada
   modeloDoPerfil(perfil: Perfil): string
   /** Falha com `ErroDeIa` (`IA_INDISPONIVEL` ou `IA_TEMPO_ESGOTADO`); nunca devolve nem lança erro cru do provedor. */
   chamar<Entrada, Saida>(chamada: ChamadaAoModelo<Entrada, Saida>): Promise<RespostaDoModelo>

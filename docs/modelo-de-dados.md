@@ -505,7 +505,8 @@ ExecucaoAgente*    → escola*, anoLetivo*, funcao*, tarefa*, solicitadaPor?, ch
                      estado* (pendente | rodando | concluida | falhou), entrada*, resultado?, erro?, datas,
                      anonimizadaEm? (F3)
 ConsumoIa*         → escola*, aluno?, execucao?, tarefa*, funcao*, perfil*, origem*, modelo*, promptVersao*,
-                     tokensDeEntrada*, tokensDeSaida*, custoMicros*, duracaoMs*, envioExterno*, tentativas*,
+                     tokensDeEntrada*, tokensDeSaida*, custoMicros*, duracaoMs*, envioExterno*, provedor? (F3: só com
+                     envioExterno; o id do provedor que recebeu o conteúdo), tentativas*,
                      estado*, codigoDeErro?, entrada?, saida?, em*
 ThreadAgente*      → escola*, anoLetivo*, usuario*, agente*
 MensagemAgente*    → escola*, anoLetivo*, thread*, execucao*, autor* (usuario | agente), conteudo*, turma?, disciplina?

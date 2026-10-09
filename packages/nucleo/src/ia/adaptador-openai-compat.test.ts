@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import type { ConfiguracaoDoModelo } from '../config/config-ia.js'
+import { MOTIVO_SEM_PROVEDOR_ID, type ConfiguracaoDoModelo } from '../config/config-ia.js'
 import { ALUNO_1, atividadeDeEstequiometria, entradaDeAtividade, entradaDoTutor, ESCOLA_A } from './__fixtures__/entradas.js'
 import { MATERIAL_DE_ESTEQUIOMETRIA } from './__fixtures__/estequiometria.js'
 import { respostaDoChat, subirServidorLlamaFalso, type PedidoRecebido, type RespostaRoteirizada, type ServidorLlamaFalso } from './__fixtures__/servidor-llama-falso.js'
+import { ConfiguracaoInvalida } from '../config/validar-config.js'
 import { AdaptadorOpenAICompat } from './adaptador-openai-compat.js'
 import { ConsumoEmMemoria, OrcamentoEmMemoria } from './consumo.js'
 import { ErroDeIa } from './erros.js'
@@ -92,15 +93,29 @@ describe('AdaptadorOpenAICompat: resposta boa', () => {
     const { ia, consumo, pedidos } = await montar(() => ({ corpo: respostaDoChat(TEXTO_BOM, { uso: USO, modelo: 'qwen3-8b-q4' }) }))
     const { saida, medicao } = await gerarAtividade(ia)
     expect(saida).toEqual(BOA)
-    expect(medicao).toMatchObject({ origem: 'openai_compat', perfil: 'padrao', modelo: 'qwen3-8b-q4', tokensDeEntrada: 1200, tokensDeSaida: 300, tentativas: 1, envioExterno: false })
+    expect(medicao).toMatchObject({ origem: 'openai_compat', perfil: 'padrao', modelo: 'qwen3-8b-q4', tokensDeEntrada: 1200, tokensDeSaida: 300, tentativas: 1, envioExterno: false, provedorId: null })
     expect(pedidos).toHaveLength(1)
     expect(consumo.registros).toMatchObject([{ estado: 'concluida', modelo: 'qwen3-8b-q4', tokensDeEntrada: 1200, tokensDeSaida: 300 }])
   })
 
   it('fora da nossa rede, a medição e o registro dizem que houve envio externo', async () => {
-    const { ia, consumo } = await montar(() => ({ corpo: respostaDoChat(TEXTO_BOM) }), { config: { processamentoLocal: false } })
-    expect((await gerarAtividade(ia)).medicao.envioExterno).toBe(true)
-    expect(consumo.registros[0]?.envioExterno).toBe(true)
+    const { ia, consumo } = await montar(() => ({ corpo: respostaDoChat(TEXTO_BOM) }), { config: { processamentoLocal: false, provedorId: 'provedor-de-teste' } })
+    expect((await gerarAtividade(ia)).medicao).toMatchObject({ envioExterno: true, provedorId: 'provedor-de-teste' })
+    expect(consumo.registros).toMatchObject([{ envioExterno: true, provedorId: 'provedor-de-teste' }])
+  })
+
+  it('com processamento local não há provedor, mesmo que a configuração traga um id', async () => {
+    const { ia, consumo } = await montar(() => ({ corpo: respostaDoChat(TEXTO_BOM) }), { config: { processamentoLocal: true, provedorId: 'provedor-de-teste' } })
+    expect((await gerarAtividade(ia)).medicao).toMatchObject({ envioExterno: false, provedorId: null })
+    expect(consumo.registros).toMatchObject([{ envioExterno: false, provedorId: null }])
+  })
+
+  it('fora da nossa rede o adaptador não nasce sem o id do provedor: quem monta a configuração à mão não escapa da exigência da subida', () => {
+    const base = { baseUrl: 'https://provedor.example/v1', modelos: MODELOS, recuoMs: RECUO_MS }
+    expect(() => new AdaptadorOpenAICompat({ ...base, processamentoLocal: false })).toThrow(ConfiguracaoInvalida)
+    expect(() => new AdaptadorOpenAICompat({ ...base, processamentoLocal: false })).toThrow(/IA_PROVEDOR_ID/)
+    expect(() => new AdaptadorOpenAICompat({ ...base, processamentoLocal: false })).toThrow(expect.objectContaining({ motivos: [MOTIVO_SEM_PROVEDOR_ID] }))
+    expect(new AdaptadorOpenAICompat({ ...base, processamentoLocal: true }).envio).toEqual({ envioExterno: false, provedorId: null })
   })
 
   it('sem contagem do servidor, os tokens são estimados em vez de ficarem zerados', async () => {

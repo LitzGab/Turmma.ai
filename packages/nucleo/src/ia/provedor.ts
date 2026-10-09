@@ -11,7 +11,7 @@ import { AdaptadorOpenAICompat } from './adaptador-openai-compat.js'
 import type { ConsumoDeIa, OrcamentoDeIa, RegistroDeConsumo } from './consumo.js'
 import { ErroDeIa, type CodigoDeErroDeIa } from './erros.js'
 import { semMarcacao } from './limpar-saida.js'
-import type { LLMProvider, MedicaoDaGeracao, PedidoDeGeracao, ResultadoDaGeracao } from './porta.js'
+import { SEM_ENVIO_EXTERNO, type LLMProvider, type MedicaoDaGeracao, type PedidoDeGeracao, type ResultadoDaGeracao } from './porta.js'
 import { exigirFuncaoAtiva, type SuspensaoDeFuncao } from './suspensao.js'
 import type { DefinicaoDeTarefa } from './tarefa.js'
 
@@ -225,9 +225,10 @@ export class ProvedorDeIa implements LLMProvider {
       tokensDeEntrada: gasto.tokensDeEntrada,
       tokensDeSaida: gasto.tokensDeSaida,
       duracaoMs: Math.round(performance.now() - inicio),
-      // Só há envio externo se alguma chamada chegou a sair para um provedor de fora.
-      envioExterno: !regraFixa && gasto.tentativas > 0 && adaptador.envioExterno,
       tentativas: gasto.tentativas,
+      // Só há envio externo se alguma chamada chegou a sair para um provedor de fora, e então o provedor vai junto. A regra
+      // fixa não chama ninguém: as tentativas ficam em 0, e é isso que a deixa sem envio.
+      ...(gasto.tentativas > 0 ? adaptador.envio : SEM_ENVIO_EXTERNO),
     }
   }
 

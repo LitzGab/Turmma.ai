@@ -27,7 +27,19 @@ export interface PedidoDeGeracao<Entrada, Saida> {
   readonly sinal?: AbortSignal
 }
 
-export interface MedicaoDaGeracao {
+/**
+ * Se o conteúdo saiu desta máquina e para quem. Os dois andam juntos: com envio externo há sempre o id do provedor, e
+ * sem ele não há (o check `consumo_ia_provedor_so_no_envio_externo` é o espelho disto no banco). Enquanto o banco não
+ * exige o `provedor` das linhas externas (contração fora do F3, Tech Spec seção 3), quem garante é este tipo.
+ */
+export type EnvioDaChamada =
+  | { readonly envioExterno: true; readonly provedorId: string }
+  | { readonly envioExterno: false; readonly provedorId: null }
+
+/** Nada saiu: adaptador falso, modelo local, regra fixa e chamada que nem chegou a sair. */
+export const SEM_ENVIO_EXTERNO: EnvioDaChamada = { envioExterno: false, provedorId: null }
+
+interface DadosDaMedicao {
   readonly origem: OrigemDaSaida
   readonly perfil: Perfil
   readonly modelo: string
@@ -35,11 +47,12 @@ export interface MedicaoDaGeracao {
   readonly tokensDeEntrada: number
   readonly tokensDeSaida: number
   readonly duracaoMs: number
-  /** O conteúdo saiu desta máquina para um provedor de fora (`LLM_PROCESSAMENTO_LOCAL=false`). */
-  readonly envioExterno: boolean
   /** Chamadas ao modelo: 0 na regra fixa, 2 quando a primeira saída foi inválida. */
   readonly tentativas: number
 }
+
+/** `envioExterno`: o conteúdo saiu desta máquina para um provedor de fora (`LLM_PROCESSAMENTO_LOCAL=false`), e `provedorId` diz qual. */
+export type MedicaoDaGeracao = DadosDaMedicao & EnvioDaChamada
 
 export interface ResultadoDaGeracao<Saida> {
   /** Já validada pelo schema e pela conferência da tarefa. */

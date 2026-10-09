@@ -2,6 +2,7 @@ import { setTimeout as esperar } from 'node:timers/promises'
 import type { AdaptadorDeModelo, ChamadaAoModelo, RespostaDoModelo } from './adaptador.js'
 import { ErroDeIa } from './erros.js'
 import type { Perfil } from './perfis.js'
+import { SEM_ENVIO_EXTERNO } from './porta.js'
 import { MaterialSemConteudoAproveitavel, type DefinicaoDeTarefa } from './tarefa.js'
 
 export const MODELO_FALSO = 'falso-deterministico'
@@ -32,7 +33,7 @@ export interface OpcoesDoAdaptadorFalso {
  */
 export class AdaptadorFalso implements AdaptadorDeModelo {
   readonly origem = 'falso'
-  readonly envioExterno = false
+  readonly envio = SEM_ENVIO_EXTERNO
 
   constructor(private readonly opcoes: OpcoesDoAdaptadorFalso = {}) {}
 

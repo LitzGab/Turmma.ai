@@ -1,11 +1,13 @@
 import { setTimeout as esperar } from 'node:timers/promises'
 import { z } from 'zod'
-import type { ConfiguracaoDoModelo } from '../config/config-ia.js'
+import { MOTIVO_SEM_PROVEDOR_ID, type ConfiguracaoDoModelo } from '../config/config-ia.js'
+import { ConfiguracaoInvalida } from '../config/validar-config.js'
 import type { AdaptadorDeModelo, ChamadaAoModelo, RespostaDoModelo } from './adaptador.js'
 import { estimarTokens } from './adaptador-falso.js'
 import { ErroDeIa } from './erros.js'
 import { limparSaidaDoModelo } from './limpar-saida.js'
 import type { Perfil } from './perfis.js'
+import { SEM_ENVIO_EXTERNO, type EnvioDaChamada } from './porta.js'
 import { ABRE_DADO, FECHA_DADO, pedidoDeCorrecao, REGRAS_COMUNS } from './prompts/comum.js'
 import type { Dado, DefinicaoDeTarefa } from './tarefa.js'
 
@@ -87,11 +89,14 @@ function esperaSugerida(resposta: Response): number | undefined {
  */
 export class AdaptadorOpenAICompat implements AdaptadorDeModelo {
   readonly origem = 'openai_compat'
-  readonly envioExterno: boolean
+  readonly envio: EnvioDaChamada
   private readonly endereco: string
 
+  /** Fora da nossa rede o provedor tem de ter id: a subida já o exige (`IA_PROVEDOR_ID`), e quem monta a configuração à mão não escapa. */
   constructor(private readonly config: ConfiguracaoDoModelo) {
-    this.envioExterno = !config.processamentoLocal
+    if (config.processamentoLocal) this.envio = SEM_ENVIO_EXTERNO
+    else if (config.provedorId === undefined) throw new ConfiguracaoInvalida(['IA_PROVEDOR_ID'], [MOTIVO_SEM_PROVEDOR_ID])
+    else this.envio = { envioExterno: true, provedorId: config.provedorId }
     this.endereco = `${config.baseUrl.replace(/\/+$/, '')}/chat/completions`
   }
 

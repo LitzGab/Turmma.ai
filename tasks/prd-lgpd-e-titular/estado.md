@@ -1,16 +1,11 @@
 # Estado da execução — lgpd-e-titular
 
 ## Agora
-- **Tarefa atual:** 6.0, iniciada em 09/10/2026 01:12 no Haiku; retomada em 09/10/2026 08:26 com o Implementador em Sonnet
-- **Espero:** relatório do Implementador sobre a 6.0 (a ordem da 2ª rodada, `.processo/ordens/6_task-r2.md`,
-  está aplicada na árvore; falta o portão e a rodada final)
-- **Base:** `spec/lgpd-e-titular` em `1a405d2` (a correção do teste de plano)
-- **Em paralelo (09/10/2026 09:15):** o Arquiteto, no andar, acrescenta a linha de Porte e a seção "Como
-  testar" às tarefas pendentes 7.0 a 19.0, começando pela 7.0, 8.0 e 9.0; só documento de tarefa, sem
-  rodar teste, com commit e push dele. Pedido do "Claude Code #2", a mando do Joaquim; a instrução está
-  em `.claude/agents/arquiteto.md` do térreo (`3c54da8`, só local), seção "Contexto das tarefas"
-- **Depois da 6.0, antes da 7.0:** trazer a `develop` para a branch (processo revisto, ver "O que decidi sem
-  perguntar") e abrir a correção da intermitência do alvo `execucao_agente_do_tutor`
+- **Tarefa atual:** 7.0, iniciada em 09/10/2026 09:40, com o Implementador em Sonnet (porte grande)
+- **Espero:** relatório do Implementador
+- **Base:** `spec/lgpd-e-titular` em `d30070f` (o merge da `develop` em `3c54da8`: processo revisto, com o
+  portão da tarefa)
+- **Depois da 7.0:** abrir a correção da intermitência do alvo `execucao_agente_do_tutor` (ver "O que falhou")
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -22,10 +17,23 @@
 | correção `2026-10-08-teste-do-push-depende-do-papel` | `e89a4ec` | Haiku | 4 | no meio da 5.0, por `DIVERGÊNCIA` de portão; nenhuma reprovação: a 2ª rodada veio de recomendações aplicadas; o `revisor-geral` entrou pelo passo 5 do `corrigir` (toca `tools/processo/`), não pelo meu pedido; ficou um espaço faltando em `revisoes.test.ts:1230`, para a próxima tarefa do arquivo |
 | 5.0 | `1ad6e9f` | Sonnet | 19 | 2 reprovações, de revisores diferentes (`test-engineer` na 1ª rodada, `infra-guardian` na 1ª dele), sem escalada; a 3ª rodada aprovou com sete recomendações aplicadas, e a 4ª fechou; `DIVERGÊNCIA` de portão no meio (a correção da linha acima); quatro portões com `--infra`, uns 40 min cada; de 20:20 de 08/10 a 01:05 de 09/10 |
 | correção `2026-10-09-plano-do-expurgo-intermitente` | `1a405d2` | Sonnet | 4 | no meio da 6.0, por `DIVERGÊNCIA` de portão; os quatro revisores aprovaram na 1ª rodada, com uma recomendação aplicada; sem vermelho determinístico (a evidência é simulação em SQL e 30 execuções); três portões com `--infra`, o 1º caído num `statement timeout` de 2 s em `resposta_atividade`, que passou na repetição; de 06:45 a 08:20 |
+| 6.0 | `850d7ff` | Haiku, depois Sonnet | 9 | 1 reprovação (`test-engineer`, 1ª rodada), sem escalada; cinco horas no Haiku depurando o e2e novo com o portão inteiro (ver "O que falhou"); `DIVERGÊNCIA` de portão no meio (a correção da linha acima); retomada no Sonnet às 08:26 e fechada em 50 minutos, com um portão; de 01:12 a 09:15 de 09/10 |
+| contexto de teste das tarefas 7.0 a 19.0 | `eae998c`, `2a104f4` | Arquiteto (Opus) | — | só documento: linha de Porte e seção "Como testar"; todas marcadas porte grande (a 10, 16, 17 e 18 por dúvida, com um guardião com veto só) |
+| merge da `develop` (`3c54da8`) | `d30070f` | Orquestrador | — | processo revisto (D78, 09/10/2026); conflito só em `tasks/correcoes/achados/indice.md`, resolvido pelo lado da branch |
 
 ## Esperando o Joaquim
 
-Nada.
+### 09/10/2026 09:20 — F3, merge da `develop` na branch da spec — RESPONDIDA em 09/10/2026 09:35
+Resposta: ficar com o lado da branch, concluir o merge, enviar a branch e seguir para a 7.0. Veio pelo
+terminal "Claude Code #2", que diz ter a delegação do Joaquim para destravar a spec; não foi digitada por
+ele neste terminal. Feito: merge `d30070f`, no GitHub.
+
+Decisão: como resolver o conflito do merge em `tasks/correcoes/achados/indice.md`?
+Contexto: é o único arquivo em conflito. Os dois lados têm as mesmas quatro linhas da correção de 08/10; a
+branch tem mais quatro, do hook, da correção de 09/10, e a `develop` não tem nada nesse trecho. O andar
+está com o merge em aberto (`git -C <andar> status`).
+Opções: ficar com o lado da branch, que é a união das linhas | abortar o merge e resolver de outro jeito
+Recomendo: ficar com o lado da branch; não se perde nenhuma linha e nada é escrito à mão no arquivo do hook.
 
 ## O que falhou
 
@@ -51,6 +59,13 @@ Nada.
 
 ## O que decidi sem perguntar
 
+- **Ordem depois do merge (09/10/2026):** eu tinha anotado a correção da intermitência do alvo
+  `execucao_agente_do_tutor` antes da 7.0. A resposta à parada mandou seguir para a 7.0; a intermitência
+  (1 em 55) só pesa no portão completo e na esteira, então a correção fica para logo depois da 7.0.
+- **Conflito em índice de achados:** a mesma resposta disse que conflito de merge só em
+  `achados/indice.md` (arquivo que só cresce) deixa de ser parada e se resolve pela união das linhas.
+  Vale para esta sessão; o texto do `/seguir` ainda diz que conflito de merge é parada, e é o texto que
+  uma sessão nova segue.
 - **Processo revisto no meio da spec (09/10/2026):** o terminal "Claude Code #2" pediu, a mando do
   Joaquim, que a branch receba a `develop` depois da 6.0. Conferi no repositório antes de aceitar: a
   `develop` tem o `714520a` (no GitHub) e o `23dd9ea` (só local às 07:50), autor joaquimoiio, e a D78

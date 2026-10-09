@@ -3,7 +3,7 @@ import { relogioDoSistema, type Relogio } from '../relogio.js'
 import { diaDeUso } from '../uso/dia-de-uso.js'
 import type { CodigoDeErroDeIa } from './erros.js'
 import type { Perfil } from './perfis.js'
-import type { OrigemDaSaida } from './porta.js'
+import type { EnvioDaChamada, OrigemDaSaida } from './porta.js'
 
 /**
  * O que toda execução de IA deixa registrado (regra 30, item 4): é o que sustenta a cobrança, o consumo da
@@ -14,7 +14,7 @@ import type { OrigemDaSaida } from './porta.js'
  * registro da conversa é `mensagem_tutor` ou `mensagem_agente`, com o dono, o acesso restrito e a retenção de lá
  * (regra 20, item 14; regra 70, item 8), e `consumo_ia`, que a coordenação consulta, não vira uma cópia dela.
  */
-export interface ConsumoDeIa {
+interface DadosDoConsumo {
   readonly escolaId: string
   /** Só no Tutor. O id, nunca o nome. */
   readonly alunoId?: string
@@ -32,12 +32,14 @@ export interface ConsumoDeIa {
   readonly tokensDeEntrada: number
   readonly tokensDeSaida: number
   readonly duracaoMs: number
-  readonly envioExterno: boolean
   readonly tentativas: number
   readonly estado: EstadoDeConsumoDeIa
   readonly codigoDeErro?: CodigoDeErroDeIa
   readonly em: Date
 }
+
+/** Com `envioExterno`, o `provedorId` de quem recebeu o conteúdo; sem ele, nulo (`consumo_ia.provedor`). */
+export type ConsumoDeIa = DadosDoConsumo & EnvioDaChamada
 
 /** Porta do registro. A implementação em Postgres grava em `consumo_ia`, com o escopo da escola do próprio registro. */
 export interface RegistroDeConsumo {

@@ -440,6 +440,27 @@ describe('governança de IA da coordenação', () => {
       expect(deB.total.chamadas).not.toBe(consumo.total.chamadas)
     })
 
+    it('a chamada com provedor entra na soma como qualquer outra, e o provedor não sai pela governança', async () => {
+      const antes = esquemaRespostaConsumo.parse((await get(a.coordenacao, '/v1/governanca/consumo')).corpo)
+      const provedor = `provedor-${randomUUID().slice(0, 8)}`
+      const chamada = (externo: boolean, provedorDaLinha: string | null) =>
+        sql(
+          `insert into consumo_ia (escola_id, tarefa, funcao, perfil, origem, modelo, prompt_versao, tokens_de_entrada, tokens_de_saida, duracao_ms, envio_externo, provedor, tentativas, estado)
+           values ($1, 'gerar_atividade_objetiva', 'conversa_e_ferramentas', 'padrao', 'openai_compat', 'modelo-de-teste', '2026-10-04', 1000, 500, 20, $2, $3, 1, 'concluida')`,
+          [a.escolaId, externo, provedorDaLinha],
+        )
+      await chamada(true, provedor)
+      await chamada(false, null)
+      const resposta = await get(a.coordenacao, '/v1/governanca/consumo')
+      const depois = esquemaRespostaConsumo.parse(resposta.corpo)
+      expect(depois.total.chamadas).toBe(antes.total.chamadas + 2)
+      expect(depois.total.tokensDeEntrada).toBe(antes.total.tokensDeEntrada + 2000)
+      expect(depois.total.tokensDeSaida).toBe(antes.total.tokensDeSaida + 1000)
+      expect(depois.total.comEnvioExterno).toBe(antes.total.comEnvioExterno + 1)
+      expect(JSON.stringify(resposta.corpo)).not.toContain(provedor)
+      expect(JSON.stringify(resposta.corpo)).not.toContain('provedor')
+    })
+
     it('o mês sem consumo responde zerado, e o pacote do Tutor soma os alunos das turmas', async () => {
       const passado = esquemaRespostaConsumo.parse((await get(a.coordenacao, '/v1/governanca/consumo?mes=2020-01')).corpo)
       expect(passado).toMatchObject({ mes: '2020-01', total: { chamadas: 0, tokensDeEntrada: 0, tokensDeSaida: 0, custoMicros: 0, comEnvioExterno: 0 }, porFuncao: [], tutor: { trocasNoMes: 0 } })

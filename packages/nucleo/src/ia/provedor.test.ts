@@ -1,12 +1,13 @@
 import { CodigoDeErro } from '@educa/shared'
 import { describe, expect, it, vi } from 'vitest'
 import { executarNoContexto } from '../contexto/contexto.js'
-import { AdaptadorRoteirizado } from './__fixtures__/adaptador-roteirizado.js'
+import { AdaptadorRoteirizado, PROVEDOR_ROTEIRIZADO } from './__fixtures__/adaptador-roteirizado.js'
 import { ALUNO_1, ALUNO_2, atividadeDeEstequiometria, entradaDeAtividade, entradaDoAssistente, entradaDoRelatorio, entradaDoTutor, ESCOLA_A, ESCOLA_B } from './__fixtures__/entradas.js'
 import type { AdaptadorDeModelo } from './adaptador.js'
 import { AdaptadorFalso, MODELO_FALSO } from './adaptador-falso.js'
-import { ConsumoEmMemoria, OrcamentoEmMemoria, type OrcamentoDeIa, type RegistroDeConsumo } from './consumo.js'
+import { ConsumoEmMemoria, OrcamentoEmMemoria, type ConsumoDeIa, type OrcamentoDeIa, type RegistroDeConsumo } from './consumo.js'
 import { CODIGOS_DE_ERRO_DE_IA, ErroDeIa } from './erros.js'
+import type { EnvioDaChamada, MedicaoDaGeracao } from './porta.js'
 import { criarProvedorDeIa, MODELO_DA_REGRA_FIXA, ProvedorDeIa, type RegistradorDeIa } from './provedor.js'
 import { exigirFuncaoAtiva, SuspensoesEmMemoria, type SuspensaoDeFuncao } from './suspensao.js'
 import type { DefinicaoDeTarefa } from './tarefa.js'
@@ -53,7 +54,7 @@ describe('ProvedorDeIa: saída validada e medição', () => {
     const { ia } = montar()
     const { saida, medicao } = await ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
     expect(saida).toEqual(atividadeDeEstequiometria())
-    expect(medicao).toMatchObject({ origem: 'falso', perfil: 'padrao', modelo: MODELO_FALSO, promptVersao: gerarAtividadeObjetiva.prompt.versao, envioExterno: false, tentativas: 1 })
+    expect(medicao).toMatchObject({ origem: 'falso', perfil: 'padrao', modelo: MODELO_FALSO, promptVersao: gerarAtividadeObjetiva.prompt.versao, envioExterno: false, provedorId: null, tentativas: 1 })
     expect(medicao.tokensDeEntrada).toBeGreaterThan(0)
     expect(medicao.tokensDeSaida).toBeGreaterThan(0)
     expect(medicao.duracaoMs).toBeGreaterThanOrEqual(0)
@@ -64,6 +65,59 @@ describe('ProvedorDeIa: saída validada e medição', () => {
     const { medicao } = await ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
     expect(medicao.envioExterno).toBe(true)
     expect(consumo.registros[0]?.envioExterno).toBe(true)
+  })
+
+  it('com envio externo, o id do provedor que atendeu vai junto na medição e no registro; sem envio, o provedor é nulo', async () => {
+    const externo = montar({ adaptador: new AdaptadorRoteirizado([JSON.stringify(atividadeDeEstequiometria())], true) })
+    const { medicao } = await externo.ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
+    expect(medicao).toMatchObject({ envioExterno: true, provedorId: PROVEDOR_ROTEIRIZADO })
+    expect(externo.consumo.registros).toMatchObject([{ envioExterno: true, provedorId: PROVEDOR_ROTEIRIZADO }])
+    // Modelo local: a chamada aconteceu, e nada saiu daqui.
+    const local = montar({ adaptador: new AdaptadorRoteirizado([JSON.stringify(atividadeDeEstequiometria())], false) })
+    const { medicao: daLocal } = await local.ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
+    expect(daLocal).toMatchObject({ envioExterno: false, provedorId: null })
+    expect(local.consumo.registros).toMatchObject([{ envioExterno: false, provedorId: null }])
+  })
+
+  it('a chamada que falhou depois de sair para o provedor também registra qual foi', async () => {
+    const { ia, consumo } = montar({ adaptador: new AdaptadorRoteirizado([new Error('provedor fora')]) })
+    await erroDe(ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A }))
+    expect(consumo.registros).toMatchObject([{ estado: 'falhou', tentativas: 1, envioExterno: true, provedorId: PROVEDOR_ROTEIRIZADO }])
+  })
+
+  it('a falha antes de qualquer chamada não conta como envio, mesmo com adaptador externo: a regra fixa defeituosa não leva provedor', async () => {
+    const adaptador = new AdaptadorRoteirizado([])
+    const regraFixaDefeituosa = { ...turnoDoTutor, semModelo: () => ({ classificacao: 'normal' as const, resposta: '', citacoes: [] }) }
+    const { ia, consumo } = montar({ adaptador })
+    await erroDe(ia.gerar({ tarefa: regraFixaDefeituosa, entrada: entradaDoTutor('não entendi'), escolaId: ESCOLA_A, alunoId: ALUNO_1 }))
+    expect(adaptador.chamadas).toBe(0)
+    expect(consumo.registros).toMatchObject([{ estado: 'falhou', codigoDeErro: 'IA_SAIDA_INVALIDA', tentativas: 0, envioExterno: false, provedorId: null }])
+  })
+
+  it('o tipo da porta só aceita os dois pares possíveis: com envio externo, o provedor; sem envio, nulo', () => {
+    const medida = { origem: 'openai_compat', perfil: 'padrao', modelo: 'm', promptVersao: 'v', tokensDeEntrada: 1, tokensDeSaida: 1, duracaoMs: 1, tentativas: 1 } as const
+    const consumida = { ...medida, escolaId: ESCOLA_A, tarefa: 'gerar_atividade_objetiva', funcao: 'conversa_e_ferramentas', estado: 'concluida', em: new Date() } as const
+    const externo: EnvioDaChamada = { envioExterno: true, provedorId: 'maritaca' }
+    const local: EnvioDaChamada = { envioExterno: false, provedorId: null }
+    const medicoes: MedicaoDaGeracao[] = [
+      { ...medida, ...externo },
+      { ...medida, ...local },
+    ]
+    const consumos: ConsumoDeIa[] = [
+      { ...consumida, ...externo },
+      { ...consumida, ...local },
+    ]
+    expect([...medicoes, ...consumos].map((item) => item.provedorId)).toEqual(['maritaca', null, 'maritaca', null])
+
+    // @ts-expect-error envio externo sem provedor: a escola não saberia para onde o dado foi
+    const semProvedor: EnvioDaChamada = { envioExterno: true, provedorId: null }
+    // @ts-expect-error provedor sem envio externo: o banco recusa (consumo_ia_provedor_so_no_envio_externo)
+    const provedorSemEnvio: EnvioDaChamada = { envioExterno: false, provedorId: 'maritaca' }
+    // @ts-expect-error a medição leva o mesmo par
+    const medicaoSemProvedor: MedicaoDaGeracao = { ...medida, envioExterno: true, provedorId: null }
+    // @ts-expect-error o registro de consumo leva o mesmo par
+    const consumoSemEnvio: ConsumoDeIa = { ...consumida, envioExterno: false, provedorId: 'maritaca' }
+    expect([semProvedor, provedorSemEnvio, medicaoSemProvedor, consumoSemEnvio]).toHaveLength(4)
   })
 
   it('criarProvedorDeIa: sem nada configurado, a porta é a do adaptador falso', async () => {
@@ -304,7 +358,8 @@ describe('ProvedorDeIa: orçamento consultado antes de gastar (D14, D38)', () =>
     const { saida } = await ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('eu quero morrer'), escolaId: ESCOLA_A, alunoId: ALUNO_1 })
     expect(saida.resposta).toContain('188')
     expect(consultar).not.toHaveBeenCalled()
-    expect(consumo.registros).toMatchObject([{ origem: 'regra_fixa', modelo: MODELO_DA_REGRA_FIXA, tentativas: 0, estado: 'concluida' }])
+    // O adaptador deste teste é externo: a regra fixa não chama ninguém, e por isso não leva provedor.
+    expect(consumo.registros).toMatchObject([{ origem: 'regra_fixa', modelo: MODELO_DA_REGRA_FIXA, tentativas: 0, estado: 'concluida', envioExterno: false, provedorId: null }])
     // A dúvida comum, com o mesmo orçamento esgotado, é recusada.
     expect((await erroDe(ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('não entendi'), escolaId: ESCOLA_A, alunoId: ALUNO_1 }))).codigoDeIa).toBe('LIMITE_DIARIO_DO_TUTOR')
   })

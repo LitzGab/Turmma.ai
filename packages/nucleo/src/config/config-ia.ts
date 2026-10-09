@@ -14,6 +14,10 @@ export type AdaptadorDeIa = (typeof ADAPTADORES_DE_IA)[number]
 export const MOTIVO_ADAPTADOR_FALSO_EM_PRODUCAO =
   'IA_ADAPTADOR=falso é proibido com AMBIENTE=producao: o adaptador falso devolve conteúdo determinístico de demonstração, e escola real receberia isso como se fosse a IA'
 export const MOTIVO_LLM_SEM_ENDERECO = 'IA_ADAPTADOR=openai_compat precisa de LLM_BASE_URL, em http ou https'
+export const MOTIVO_SEM_PROVEDOR_ID =
+  'IA_PROVEDOR_ID é obrigatória com IA_ADAPTADOR=openai_compat fora do processamento local: o registro de consumo guarda qual provedor recebeu cada chamada, para a escola saber para onde o dado do aluno foi (LGPD, art. 18, VII)'
+export const MOTIVO_PROVEDOR_ID_DE_EXEMPLO =
+  'IA_PROVEDOR_ID=provedor-de-exemplo é o valor do .env.example e só vale com AMBIENTE=local: fora dele, o registro de consumo gravaria um provedor que não recebeu o conteúdo (LGPD, art. 18, VII)'
 export const MOTIVO_LLM_SEM_MODELO = 'IA_ADAPTADOR=openai_compat precisa de LLM_MODELO, ou de LLM_MODELO_<PERFIL> para os quatro perfis'
 export const MOTIVO_PROCESSAMENTO_LOCAL_EM_ENDERECO_DE_FORA =
   'LLM_PROCESSAMENTO_LOCAL=true só vale com LLM_BASE_URL nesta máquina ou em rede privada: declarar local um provedor de fora apagaria o registro de envio externo'
@@ -21,6 +25,12 @@ export const MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA =
   'IA_EXECUCAO_TIMEOUT_MS precisa ser maior que LLM_TIMEOUT_MS: senão a execução estoura antes de a chamada ao modelo terminar'
 export const MOTIVO_RECUO_MAIOR_QUE_O_PRAZO = 'LLM_RECUO_MS precisa ser menor que LLM_TIMEOUT_MS: a repetição acontece dentro do prazo da chamada, não depois dele'
 export const MOTIVO_VAGAS_DE_IA_INCOERENTES = 'IA_EXECUCOES_POR_ESCOLA não pode passar de IA_EXECUCOES_TOTAL: uma escola sozinha ocuparia todas as vagas'
+
+/** O mesmo formato da chave do suboperador (Tech Spec do F3, seção 3): é por ela que a chamada se liga ao cadastro. */
+export const FORMATO_DO_PROVEDOR_ID = /^[a-z][a-z0-9_-]{1,39}$/
+
+/** O placeholder do `.env.example`: vale em `local`, e fora dele gravaria em `consumo_ia.provedor` quem não recebeu o conteúdo. */
+export const PROVEDOR_ID_DE_EXEMPLO = 'provedor-de-exemplo'
 
 /** O compose entrega variável sem valor como texto vazio: vale como ausente, e o padrão entra. */
 const opcional = <Esquema extends z.ZodType>(esquema: Esquema) => z.preprocess((valor) => (valor === '' ? undefined : valor), esquema)
@@ -71,6 +81,8 @@ export const esquemaAmbienteDeIa = z
     /** Quanto esperar antes da única repetição depois de um 429 ou de um 5xx do provedor. */
     LLM_RECUO_MS: inteiro(0, 60_000, 500),
     LLM_PROCESSAMENTO_LOCAL: opcional(z.enum(['true', 'false']).default('false')),
+    /** Quem recebe o conteúdo quando ele sai da nossa rede. Não é segredo: vai para `consumo_ia.provedor`. */
+    IA_PROVEDOR_ID: opcional(z.string().regex(FORMATO_DO_PROVEDOR_ID).optional()),
     IA_EXECUCOES_POR_ESCOLA: inteiro(1, 100, 2),
     IA_EXECUCOES_TOTAL: inteiro(1, 1_000, 8),
     IA_EXECUCAO_TIMEOUT_MS: inteiro(1_000, 3_600_000, 150_000),
@@ -86,6 +98,8 @@ export const esquemaAmbienteDeIa = z
     else if (valores.LLM_PROCESSAMENTO_LOCAL === 'true' && !enderecoDaNossaRede(valores.LLM_BASE_URL)) {
       problema('LLM_PROCESSAMENTO_LOCAL', MOTIVO_PROCESSAMENTO_LOCAL_EM_ENDERECO_DE_FORA)
     }
+    if (valores.LLM_PROCESSAMENTO_LOCAL !== 'true' && valores.IA_PROVEDOR_ID === undefined) problema('IA_PROVEDOR_ID', MOTIVO_SEM_PROVEDOR_ID)
+    if (valores.LLM_PROCESSAMENTO_LOCAL !== 'true' && valores.AMBIENTE !== 'local' && valores.IA_PROVEDOR_ID === PROVEDOR_ID_DE_EXEMPLO) problema('IA_PROVEDOR_ID', MOTIVO_PROVEDOR_ID_DE_EXEMPLO)
     const porPerfil = [valores.LLM_MODELO_RAPIDO, valores.LLM_MODELO_PADRAO, valores.LLM_MODELO_COMPLEXO, valores.LLM_MODELO_VISAO]
     if (valores.LLM_MODELO === undefined && porPerfil.includes(undefined)) problema('LLM_MODELO', MOTIVO_LLM_SEM_MODELO)
   })
@@ -98,6 +112,8 @@ export interface ConfiguracaoDoModelo {
   readonly chaveApi?: string
   /** O modelo roda na nossa máquina ou rede: não há envio externo. */
   readonly processamentoLocal: boolean
+  /** O id do provedor que recebe o conteúdo (`IA_PROVEDOR_ID`). Obrigatório quando o processamento não é local; o local não tem provedor. */
+  readonly provedorId?: string
   /** Espera antes da única repetição em 429 e 5xx (regra 30, item 8). */
   readonly recuoMs: number
 }
@@ -142,6 +158,7 @@ export function lerConfiguracaoDeIa(ambiente: Record<string, string | undefined>
       modelos,
       ...(valores.LLM_CHAVE_API === undefined ? {} : { chaveApi: valores.LLM_CHAVE_API }),
       processamentoLocal: valores.LLM_PROCESSAMENTO_LOCAL === 'true',
+      ...(valores.IA_PROVEDOR_ID === undefined ? {} : { provedorId: valores.IA_PROVEDOR_ID }),
       recuoMs: valores.LLM_RECUO_MS,
     },
   }

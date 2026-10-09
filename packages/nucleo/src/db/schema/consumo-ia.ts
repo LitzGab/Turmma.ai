@@ -57,6 +57,7 @@ export const consumoIa = pgTable(
     custoMicros: bigint({ mode: 'number' }).notNull().default(0),
     duracaoMs: integer().notNull(),
     envioExterno: boolean().notNull(),
+    provedor: text(),
     tentativas: integer().notNull(),
     estado: text().$type<EstadoDeConsumoDeIa>().notNull(),
     codigoDeErro: text().$type<CodigoDeErro>(),
@@ -88,6 +89,9 @@ export const consumoIa = pgTable(
       'consumo_ia_numeros_validos',
       sql`${tabela.tokensDeEntrada} >= 0 and ${tabela.tokensDeSaida} >= 0 and ${tabela.custoMicros} >= 0 and ${tabela.duracaoMs} >= 0 and ${tabela.tentativas} >= 0`,
     ),
+    // Quem recebeu o conteúdo só existe onde ele saiu. A exigência no sentido contrário (envio externo sempre com
+    // provedor) fica para um release posterior ao do F3: ela quebraria o rollback (Tech Spec do F3, seção 3).
+    check('consumo_ia_provedor_so_no_envio_externo', sql`${tabela.provedor} is null or ${tabela.envioExterno}`),
     // `FORMATO_DO_CODIGO_DE_ERRO` do contrato (`packages/shared`).
     check('consumo_ia_erro_e_codigo', sql`${tabela.codigoDeErro} is null or ${tabela.codigoDeErro} ~ '^[A-Z][A-Z0-9_]{2,63}$'`),
     check('consumo_ia_erro_so_no_que_falhou', sql`(${tabela.estado} = 'falhou') = (${tabela.codigoDeErro} is not null)`),

@@ -98,7 +98,9 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       `statement_timeout` de 2 s da consulta (`packages/nucleo/src/db/migrar.ts`): com volume real, um `CREATE INDEX` em
       `execucao_agente` ou `consumo_ia` passa disso e derruba o deploy, então o prazo do migrador muda junto.
       Os índices de `execucao_agente` e de `mensagem_tutor` são os que mais pesam, porque as duas tabelas crescem por turno
-      do Tutor (`docs/infra.md` 3.6); o prazo é o portão do piloto (`infra-guardian` da 3.0, da 4.0 e da 5.0)
+      do Tutor (`docs/infra.md` 3.6); o prazo é o portão do piloto (`infra-guardian` da 3.0, da 4.0 e da 5.0). A 0028 (tarefa 7.0) soma o check
+      `consumo_ia_provedor_so_no_envio_externo` em `consumo_ia`, também sem `NOT VALID`: a partir do staging, ele vai em
+      arquivo próprio, com `NOT VALID` e depois `VALIDATE` (`infra-guardian` da 7.0)
 - [ ] **Escrita a mais por troca do Tutor (F3, 4.0):** `execucao_agente_a_anonimizar_idx`,
       `execucao_agente_do_tutor_a_anonimizar_idx` e `consumo_ia_aluno_a_anular_idx` recebem quase toda linha recente, e
       cada troca do Tutor passa a atualizar índices a mais nas duas tabelas. Medir no cenário de carga da 19.0

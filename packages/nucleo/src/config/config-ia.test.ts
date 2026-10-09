@@ -9,13 +9,17 @@ import {
   MOTIVO_LLM_SEM_ENDERECO,
   MOTIVO_LLM_SEM_MODELO,
   MOTIVO_PROCESSAMENTO_LOCAL_EM_ENDERECO_DE_FORA,
+  MOTIVO_PROVEDOR_ID_DE_EXEMPLO,
   MOTIVO_RECUO_MAIOR_QUE_O_PRAZO,
+  MOTIVO_SEM_PROVEDOR_ID,
   MOTIVO_VAGAS_DE_IA_INCOERENTES,
 } from './config-ia.js'
 import { ConfiguracaoInvalida } from './validar-config.js'
 
 const LOCAL = { AMBIENTE: 'local' }
-const LLAMA = { ...LOCAL, IA_ADAPTADOR: 'openai_compat', LLM_BASE_URL: 'http://127.0.0.1:8080/v1', LLM_MODELO: 'qwen3-8b' }
+/** Fora da nossa rede (o padrão) o provedor tem de ter id; o teste que prova a exigência o tira. */
+const LLAMA = { ...LOCAL, IA_ADAPTADOR: 'openai_compat', LLM_BASE_URL: 'http://127.0.0.1:8080/v1', LLM_MODELO: 'qwen3-8b', IA_PROVEDOR_ID: 'provedor-de-teste' }
+const SEM_PROVEDOR = { IA_PROVEDOR_ID: undefined }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
   try {
@@ -56,7 +60,7 @@ describe('lerConfiguracaoDeIa', () => {
   })
 
   it('o modelo local: endereço, um id comum para os quatro perfis e processamento local declarado', () => {
-    expect(lerConfiguracaoDeIa({ ...LLAMA, LLM_PROCESSAMENTO_LOCAL: 'true', LLM_TIMEOUT_MS: '45000' })).toEqual({
+    expect(lerConfiguracaoDeIa({ ...LLAMA, ...SEM_PROVEDOR, LLM_PROCESSAMENTO_LOCAL: 'true', LLM_TIMEOUT_MS: '45000' })).toEqual({
       adaptador: 'openai_compat',
       timeoutMs: 45_000,
       executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 150_000 },
@@ -88,6 +92,33 @@ describe('lerConfiguracaoDeIa', () => {
     expect(erro.motivos).toEqual([MOTIVO_LLM_SEM_MODELO])
   })
 
+  it('fora da nossa rede, o provedor precisa de id: sem IA_PROVEDOR_ID, ou com id fora do formato, a subida é recusada', () => {
+    expect(erroDe({ ...LLAMA, ...SEM_PROVEDOR })).toMatchObject({ variaveis: ['IA_PROVEDOR_ID'], motivos: [MOTIVO_SEM_PROVEDOR_ID] })
+    // O compose entrega a variável sem valor como texto vazio: vale como ausente.
+    expect(erroDe({ ...LLAMA, IA_PROVEDOR_ID: '' })).toMatchObject({ variaveis: ['IA_PROVEDOR_ID'], motivos: [MOTIVO_SEM_PROVEDOR_ID] })
+    // O formato é o da chave do suboperador: minúscula na frente, de 2 a 40 caracteres, sem nome de pessoa nem ponto.
+    for (const invalido of ['Maritaca', '1maritaca', 'm', 'a'.repeat(41), 'maritaca.ai', 'maritaca ai', '-maritaca']) {
+      expect(erroDe({ ...LLAMA, IA_PROVEDOR_ID: invalido }), invalido).toMatchObject({ variaveis: ['IA_PROVEDOR_ID'], motivos: [] })
+    }
+    for (const valido of ['ma', 'maritaca', 'google-vertex', 'provedor_reserva_2', 'a'.repeat(40)]) {
+      expect(lerConfiguracaoDeIa({ ...LLAMA, IA_PROVEDOR_ID: valido }).modelo?.provedorId, valido).toBe(valido)
+    }
+  })
+
+  it('o id de exemplo do .env.example só vale em local: em staging e produção, com envio externo, a subida é recusada', () => {
+    for (const ambiente of ['staging', 'producao']) {
+      expect(erroDe({ ...LLAMA, AMBIENTE: ambiente, IA_PROVEDOR_ID: 'provedor-de-exemplo' }), ambiente).toMatchObject({ variaveis: ['IA_PROVEDOR_ID'], motivos: [MOTIVO_PROVEDOR_ID_DE_EXEMPLO] })
+    }
+    expect(lerConfiguracaoDeIa({ ...LLAMA, AMBIENTE: 'local', IA_PROVEDOR_ID: 'provedor-de-exemplo' }).modelo?.provedorId).toBe('provedor-de-exemplo')
+    expect(() => lerConfiguracaoDeIa({ ...LLAMA, AMBIENTE: 'producao', LLM_PROCESSAMENTO_LOCAL: 'true', IA_PROVEDOR_ID: 'provedor-de-exemplo' })).not.toThrow()
+  })
+
+  it('com processamento local não há provedor a declarar: a variável é dispensada', () => {
+    expect(lerConfiguracaoDeIa({ ...LLAMA, ...SEM_PROVEDOR, LLM_PROCESSAMENTO_LOCAL: 'true' }).modelo).not.toHaveProperty('provedorId')
+    // O id errado continua apontado: o formato vale com ou sem processamento local.
+    expect(erroDe({ ...LLAMA, LLM_PROCESSAMENTO_LOCAL: 'true', IA_PROVEDOR_ID: 'Maritaca' }).variaveis).toEqual(['IA_PROVEDOR_ID'])
+  })
+
   it('openai_compat sem endereço, ou com endereço que não é http, não sobe', () => {
     expect(erroDe({ ...LLAMA, LLM_BASE_URL: undefined })).toMatchObject({ variaveis: ['LLM_BASE_URL'], motivos: [MOTIVO_LLM_SEM_ENDERECO] })
     expect(erroDe({ ...LLAMA, LLM_BASE_URL: 'ftp://127.0.0.1/v1' }).variaveis).toEqual(['LLM_BASE_URL'])
@@ -95,7 +126,7 @@ describe('lerConfiguracaoDeIa', () => {
   })
 
   it('por padrão a chamada conta como envio externo; local só vale para endereço da nossa máquina ou rede', () => {
-    expect(lerConfiguracaoDeIa(LLAMA).modelo?.processamentoLocal).toBe(false)
+    expect(lerConfiguracaoDeIa({ ...LLAMA }).modelo?.processamentoLocal).toBe(false)
     for (const endereco of ['http://127.0.0.1:8080/v1', 'http://localhost:8080/v1', 'http://host.docker.internal:8080/v1', 'http://llama:8080/v1', 'http://192.168.0.20:8080/v1', 'http://10.1.2.3/v1']) {
       expect(lerConfiguracaoDeIa({ ...LLAMA, LLM_BASE_URL: endereco, LLM_PROCESSAMENTO_LOCAL: 'true' }).modelo?.processamentoLocal, endereco).toBe(true)
     }
@@ -142,7 +173,7 @@ describe('lerConfiguracaoDeIa', () => {
   it('a chave do provedor entra na configuração e nunca na mensagem de erro', () => {
     const chave = 'chave-sintetica-que-nao-pode-vazar'
     expect(lerConfiguracaoDeIa({ ...LLAMA, LLM_CHAVE_API: chave }).modelo?.chaveApi).toBe(chave)
-    expect(lerConfiguracaoDeIa(LLAMA).modelo).not.toHaveProperty('chaveApi')
+    expect(lerConfiguracaoDeIa({ ...LLAMA }).modelo).not.toHaveProperty('chaveApi')
     const erro = erroDe({ ...LLAMA, LLM_CHAVE_API: chave, LLM_TIMEOUT_MS: 'abc' })
     expect(erro.variaveis).toEqual(['LLM_TIMEOUT_MS'])
     expect(`${erro.message} ${JSON.stringify(erro.motivos)}`).not.toContain(chave)

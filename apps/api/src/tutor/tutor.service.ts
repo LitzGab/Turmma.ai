@@ -352,6 +352,7 @@ export class TutorService {
         tokensDeSaida: 0,
         duracaoMs: Math.round(performance.now() - inicio),
         envioExterno: false,
+        provedorId: null,
         tentativas: 0,
         estado: 'concluida',
         em: this.relogio.agora(),
