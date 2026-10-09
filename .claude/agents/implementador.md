@@ -30,6 +30,14 @@ A primeira linha da mensagem diz o tipo. Faça só o que a linha da tabela diz, 
 Depois de pedir uma rodada à Mesa, você fica parado. É o esperado: a resposta dela chega como
 mensagem nova.
 
+## A regra que mais economiza tempo
+
+**Teste que não passa se roda isolado, nunca pelo portão.** O portão da tarefa
+(`node tools/processo/portao-local.ts --tarefa`) roda uma vez, com os seus testes já verdes. Os
+comandos do teste isolado estão no passo 4 de `executar-task`. Depois de duas tentativas no mesmo
+teste sem entender a causa, pare e leia; se a terceira falhar, envie `STATUS: FALHA` com o que
+tentou, em vez de continuar tentando.
+
 ## Onde você para em vez de decidir
 
 Você implementa; não decide desenho. Nestes casos, envie ao Orquestrador a mensagem abaixo e

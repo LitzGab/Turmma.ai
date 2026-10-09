@@ -80,16 +80,26 @@ export function fatiaDosArgumentos(argumentos: readonly string[]): string | null
  * execução (`::warning`), que aparece no resumo dela; na máquina, uma linha no log. Avisa também quando a etapa
  * fica vermelha: lentidão e falha juntas são justamente o caso em que o prazo mais importa.
  */
+/**
+ * Os arquivos de teste pedidos na linha de comando (`node tools/ci/e2e.ts --manter-ambiente e2e/x.spec.ts`): o que não é
+ * opção. Sem nenhum, o e2e roda inteiro. Existe para o portão da tarefa rodar só o que a tarefa alterou: na 6.0 do F3
+ * cada tentativa de acertar um teste custou o e2e inteiro, uns 30 minutos, porque não havia como pedir um arquivo.
+ */
+export function arquivosDosArgumentos(argumentos: readonly string[]): string[] {
+  return argumentos.filter((argumento) => !argumento.startsWith('-'))
+}
+
 export function etapaDosTestesDoE2e(
   fatia: string | null,
   teto: number,
   naEsteira: boolean,
   escrever: (texto: string) => void = (texto) => process.stdout.write(texto),
+  arquivos: readonly string[] = [],
 ): Etapa {
   return {
     nome: fatia === null ? 'testes e2e' : `testes e2e, fatia ${fatia}`,
     comando: 'npx',
-    argumentos: ['playwright', 'test', ...(fatia === null ? [] : [`--shard=${fatia}`])],
+    argumentos: ['playwright', 'test', ...(fatia === null ? [] : [`--shard=${fatia}`]), ...arquivos],
     aoTerminar: (_codigo, duracaoMs) => {
       const aviso = avisoDePrazoDoE2e(duracaoMs, teto)
       if (aviso !== null) escrever(naEsteira ? `::warning title=e2e perto do teto::${aviso}\n` : `\n⚠ ${aviso}\n`)
@@ -121,6 +131,6 @@ export function etapasDoE2e(
     { nome: 'build da web', comando: 'npm', argumentos: ['run', 'build', '-w', '@educa/web'], ambiente: { VITE_COM_GALERIA: '1' } },
     { nome: 'teto do bundle da web', comando: 'npx', argumentos: ['size-limit'] },
     etapaCompose('subir o ambiente completo', 'up', '--detach', '--build', '--wait'),
-    etapaDosTestesDoE2e(fatia, teto, naEsteira, escrever),
+    etapaDosTestesDoE2e(fatia, teto, naEsteira, escrever, arquivosDosArgumentos(argumentos)),
   ]
 }

@@ -119,44 +119,63 @@ fazer, e as dos guardiões marcados:
 - Descobriu que a Tech Spec está errada: PARE e envie `/seguir DIVERGÊNCIA de Implementador`, com
   `Motivo: desenho`. Não improvise.
 
-## 4. Portão local
+## 4. Portão da tarefa
+
+<critical>O portão não é ferramenta de depuração. Enquanto um teste seu não passa, rode SÓ ele,
+quantas vezes precisar; o portão roda uma vez, com os testes da tarefa já verdes. Na 6.0 do F3 a
+tarefa foi escrita em 6 minutos e levou cinco horas, porque cada tentativa de acertar um e2e rodou o
+portão inteiro, de uns 30 minutos.</critical>
+
+### Enquanto implementa: o teste isolado
 
 ```bash
-node tools/processo/portao-local.ts            # typecheck, lint e test
-node tools/processo/portao-local.ts --e2e      # se tocou tela (frontend-reviewer marcado)
-node tools/processo/portao-local.ts --infra    # se mexeu em infra (regra 40, D52)
+npx vitest run --project unidade <arquivo.test.ts>
+npx vitest run --project integracao <arquivo.int.test.ts>      # sobe o compose de teste
+node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts   # constrói a web, sobe o ambiente e roda só esse arquivo
+npx playwright test e2e/<arquivo>.spec.ts                      # de novo, com o ambiente de pé e só o spec alterado
 ```
 
-Com `--e2e`, os specs que a tarefa criou ou alterou rodam também repetidos, com os trabalhadores da
-esteira, sobre o ambiente que o `test:e2e` deixou de pé:
-`npx playwright test <specs da tarefa> --repeat-each 3 --workers 2`. A máquina roda o e2e com 6
-trabalhadores e a esteira com 2. O W6 da 16.0 da A1 passou em três portões locais e caiu na esteira
-por uma ordem de entrega que só a máquina lenta produziu (correção
-`2026-10-03-decididos-continuam-marcados`, que reproduziu com `--repeat-each 3`).
+Mudou código da web ou da API depois de subir o ambiente do e2e: repita o comando do
+`tools/ci/e2e.ts`, que reconstrói. Comando que passa de dois minutos roda em segundo plano
+(`run_in_background`), e você espera a notificação do fim; não use `sleep`.
 
-O script instala as dependências se o `node_modules` for anterior ao lock, roda as suítes e,
-se tudo passar, grava o carimbo em `.processo/portao.json`. **O hook bloqueia o commit sem
-carimbo mais novo que a última alteração**, com as suítes que os revisores marcados exigem
-(`--e2e` com `frontend-reviewer`, `--infra` com `infra-guardian`). O `revisor-geral` confere o
-carimbo em vez de rodar tudo de novo.
+**Duas tentativas seguidas no mesmo teste sem entender a causa: pare de tentar.** Leia o erro
+inteiro, um teste vizinho que já passa e o helper que ele usa (`e2e/__fixtures__/`,
+`apps/api/test/`). Se a terceira também falhar, não insista: envie o relatório do passo 7 com
+`STATUS: FALHA`, dizendo o teste, o erro e o que você já tentou. Outro modelo retoma de onde parou.
 
-"Mexeu em infra" é a tarefa com `infra-guardian` obrigatório, ou a que toca `infra/`,
-Dockerfile, `tools/testes/`, `tools/ci/compose.ts`, métricas, saúde, prontidão ou borda. Na
-dúvida, rode.
+### Com os testes da tarefa verdes: o portão, uma vez
 
-Falhou algum, conserte. Não prossiga com teste vermelho, não desabilite teste, não use
-`.skip`. Teste vermelho é informação. Se o que falha está **fora** dos arquivos da tarefa (um teste de
-outro módulo, a auditoria de dependências), não conserte aqui: envie `/seguir DIVERGÊNCIA de Implementador`,
+```bash
+node tools/processo/portao-local.ts --tarefa
+```
+
+Ele roda os tipos, o lint, a **unidade inteira** e os testes de integração, de e2e e de infra **que a
+árvore alterou** (cerca de dois minutos, mais o tempo desses testes), e grava o carimbo em
+`.processo/portao.json`. Para incluir um teste que você não alterou mas a tarefa pode ter quebrado
+(o do módulo que usa o que você mexeu), passe o arquivo:
+`node tools/processo/portao-local.ts --tarefa apps/api/test/<outro>.int.test.ts`.
+
+O e2e inteiro e a suíte de infra inteira **não** rodam por tarefa. Rodam uma vez, no portão completo
+do fim da spec, antes da validação (D78, revista em 09/10/2026). A consequência é sua: a regra da
+tarefa só é provada pelos testes que estão entre os alvos. Regra cujo teste não foi criado nem
+alterado nesta tarefa não passou por portão nenhum até o fim da spec.
+
+Spec de e2e criado ou alterado roda também repetido, com os trabalhadores da esteira, sobre o
+ambiente de pé: `npx playwright test <specs da tarefa> --repeat-each 3 --workers 2`. A máquina roda o
+e2e com 6 trabalhadores e a esteira com 2. O W6 da 16.0 da A1 passou em três portões locais e caiu na
+esteira por uma ordem de entrega que só a máquina lenta produziu.
+
+**O hook bloqueia o commit sem carimbo mais novo que a última alteração.** Mexeu em qualquer arquivo
+depois do portão, rode de novo: agora custa minutos.
+
+Falhou algum, conserte. Não prossiga com teste vermelho, não desabilite teste, não use `.skip`.
+Teste vermelho é informação. Se o que falha está **fora** dos arquivos da tarefa (um teste de outro
+módulo, a auditoria de dependências), não conserte aqui: envie `/seguir DIVERGÊNCIA de Implementador`,
 com `Motivo: portão`, e encerre o turno.
 
-**Rode o portão em segundo plano** (`run_in_background`), e espere a notificação do fim: ele leva de
-10 a 25 minutos, mais que o limite de um comando em primeiro plano. Não use `sleep` para esperar.
-
-Rode o portão antes de pedir a revisão. Mexeu em código depois dele, rode de novo antes do commit.
-
-O `test` do portão começa derrubando o projeto de teste `educa-teste` com os volumes
-(`EDUCA_BANCO_NOVO=1`). Enquanto ele roda, nada mais usa o banco de teste: nem revisor com
-mutação, nem `npm run test:integracao` à mão, nem outro worktree.
+Enquanto um teste de integração ou de e2e roda, nada mais usa o banco de teste: nem outro agente, nem
+outro comando seu em paralelo.
 
 ## 5. Revisão
 
@@ -187,10 +206,10 @@ Orquestrador: <o nome que veio no pedido dele>
 - **`RELATÓRIO` com "APROVADO por todos":** a aprovação é final. Se a linha "Sem aplicar" aponta um
   arquivo, copie a tabela dele para "Recomendações sem aplicar" do `N_task.md`, como está, e siga
   para o passo 6. Quem decide o que se aplica e o destino do resto é a Mesa, não você.
-- **`ORDEM DE CORREÇÃO` com `Tipo: recomendações`:** os revisores aprovaram, e a Mesa escolheu as
-  recomendações baratas a aplicar. Aplique como qualquer ordem, rode o portão e peça rodada nova:
-  ela chama só quem caducou. Acontece uma vez por tarefa.
-- **`ORDEM DE CORREÇÃO` com `Tipo: bloqueantes`:** abra o arquivo que ela aponta (`.processo/ordens/…`) e aplique **item
+- **`ORDEM DE CORREÇÃO` só com recomendações:** os revisores aprovaram, e a Mesa escolheu as
+  recomendações baratas a aplicar. Aplique como qualquer ordem, rode o portão da tarefa e peça rodada
+  nova: ela chama só quem caducou.
+- **`ORDEM DE CORREÇÃO` com bloqueantes** (e, quase sempre, recomendações junto): abra o arquivo que ela aponta (`.processo/ordens/…`) e aplique **item
   por item, exatamente o que está escrito**: o arquivo, o trecho, a mudança e o teste que prova.
   Não amplie e não refatore o que a ordem não cita. Cláusula que entra por causa da ordem ganha a
   sua linha em "Mutações", como qualquer outra. Depois rode o portão local e peça rodada nova.
@@ -207,7 +226,7 @@ commit. A caducidade segue o que o revisor audita: mudança **só em arquivo de 
 `*.spec.ts`, `test/`, `e2e/`, `__fixtures__/`) caduca só `test-engineer` e `revisor-geral`; mudança
 **só em comentário** de `.ts`/`.tsx` caduca só o `revisor-geral`, salvo comentário com diretiva
 (`MARCAS_DE_DIRETIVA`, em `tools/processo/revisoes.ts`); qualquer outra caduca todos. O carimbo não
-tem exceção: mudou qualquer coisa, o portão roda de novo. Por isso, na correção pedida pelo
+tem exceção: mudou qualquer coisa, o portão da tarefa roda de novo. Por isso, na correção pedida pelo
 `test-engineer`, mexa só no teste sempre que a ordem permitir.
 
 **Não edite a seção "Revisões" nem nada dentro de `achados/`.** Quem escreve é o hook.

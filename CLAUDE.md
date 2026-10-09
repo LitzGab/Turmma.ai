@@ -136,7 +136,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D75 | O material da escola entra pela coordenação, com titularidade e licença declaradas; professor e aluno não sobem material para a base |
 | D76 | A equipe Turmma tem um painel de operação (A0 e A0b): cria rede e escola, convida a coordenação e acompanha uso e custo por escola, sem ver dado de pessoa |
 | D77 | O MVP de apresentação (A2 a A5) é uma fatia só, com processo enxuto, enquanto o dado for sintético: contratos primeiro, commit `(mvp: <resumo>)` com portão local, esteira disparada à mão por fase, revisores com veto numa passada por fase e IA no processo da API como dívida declarada; as regras 10, 20, 30, 40 e 70 não mudam, e o processo completo volta antes da primeira escola real (revisa a D71, a D23 e a D53 só para esta fatia) |
-| D78 | O processo roda no Maestri: um andar e uma branch por spec, que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando (`/seguir`); papéis de terminal em `.claude/agents/` com modelo por papel (Opus orquestra, desenha e valida; Haiku ou Sonnet implementa, pelo porte; Sonnet conduz a revisão); a Mesa de revisão chama os revisores e traduz a reprovação em ordem de correção; seis paradas são do Joaquim (revisa a D23 e a D53) |
+| D78 | O processo roda no Maestri: um andar e uma branch por spec, que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando (`/seguir`); papéis de terminal em `.claude/agents/` com modelo por papel (Opus orquestra, desenha e valida; Haiku ou Sonnet implementa, pelo porte; Sonnet conduz a revisão); a Mesa de revisão chama os revisores e traduz a reprovação em ordem de correção; seis paradas são do Joaquim (revisa a D23 e a D53; revista em 09/10/2026: na tarefa roda só o portão da tarefa, com os testes que ela alterou, e o portão completo roda uma vez por spec, antes da validação) |
 
 > **D54 a D71 estão ratificadas.** Saíram em 19/09/2026 da leitura das fontes de regulação e
 > da estrutura de agentes por papel; o Gabriel ratificou as dele no mesmo dia, e o Joaquim
@@ -367,7 +367,7 @@ apontada para o checkout do andar.
 `test-engineer` primeiro e depois `revisor-geral` com os guardiões marcados, em paralelo. O hook `tools/processo/revisoes.ts`
 registra as rodadas, guarda o que foi exigido em `achados/<documento>.md` com resumo de uma linha
 em `achados/indice.md` (leia o índice, abra o bloco), e bloqueia o commit sem
-revisão válida, sem portão local carimbado (`node tools/processo/portao-local.ts`), ou que leve
+revisão válida, sem portão da tarefa carimbado (`node tools/processo/portao-local.ts --tarefa`), ou que leve
 código sem `(tarefa N.0)` nem `(correção <slug>)` (D53).
 
 **Técnicas** (de terceiros, instaladas via skills.sh, versões em `skills-lock.json`):

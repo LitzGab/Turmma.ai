@@ -41,7 +41,8 @@ Documento: `$ARGUMENTS`
    ```
 
    - linha `portão local: …`: o carimbo não vale para o código atual. Não chame revisor. É
-     `DEVOLUÇÃO`, com o comando que a linha manda rodar. Três rodadas do `revisor-geral` na A1
+     `DEVOLUÇÃO`, com o comando que a linha manda rodar (o portão da tarefa,
+     `node tools/processo/portao-local.ts --tarefa`). Três rodadas do `revisor-geral` na A1
      reprovaram só pelo carimbo;
    - linha por revisor (`nenhuma rodada`, `a última rodada terminou …`, `… mudou depois do início
      da … rodada`): **são esses, e só esses, que você chama nesta rodada**;
@@ -67,16 +68,16 @@ Documento: `$ARGUMENTS`
 
 Entre os que o passo 1 mandou chamar:
 
-1. **`test-engineer` sozinho, primeiro.** É quem mais reprova, e a correção de teste que ele exige
-   faria caducar quem já tivesse aprovado.
-2. **Tarefa com tela: com o `test-engineer` aprovado, o `frontend-reviewer` sozinho.** Os ajustes
-   dele mexem em código de tela e caducam quem aprovou junto: na A0b foram 12 das 18 rodadas
-   caducadas sem reprovação.
-3. **Com eles aprovados e sem ajustes, todos os outros em paralelo**, numa mensagem só:
-   `revisor-geral` e os guardiões.
+1. **`test-engineer` sozinho, primeiro.** Ele prova as guardas mutando arquivo e rodando teste:
+   enquanto ele trabalha, a árvore e o banco de teste não são de mais ninguém. Outro revisor ao mesmo
+   tempo leria código mutado, ou veria um teste vermelho que não existe.
+2. **Depois dele, todos os outros em paralelo, numa mensagem só, mesmo que ele tenha reprovado**:
+   `revisor-geral`, os guardiões e, em tarefa com tela, o `frontend-reviewer`.
 
-Se quem roda sozinho reprova ou pede ajustes, a rodada acaba ali: vá ao passo 4 sem chamar os
-seguintes.
+Até 08/10/2026 a rodada acabava na reprovação do primeiro. Na 5.0 do F3 isso custou um ciclo inteiro:
+o `test-engineer` reprovou na 1ª rodada, e só na seguinte o `infra-guardian` reprovou outra coisa.
+Uma rodada de revisor leva de um a quatro minutos; o que custa é o ciclo de correção. O objetivo de
+cada rodada é sair com **todos** os achados de uma vez.
 
 ## 3. O prompt de cada revisor
 
@@ -102,27 +103,49 @@ sempre, e não cite outro documento de tarefa no prompt.
 
 Rode `node tools/processo/portao-local.ts revisores <documento>` de novo e leia a seção "Revisões".
 
-- **Revisor que terminou `SEM VEREDITO`:** a rodada dele não vale. Chame um revisor novo, uma vez,
-  com o mesmo prompt. Se repetir, é `BLOQUEIO`.
-- **`nada pendente`:** todos aprovaram. Vá a "Aprovado".
-- **Alguém reprovou** (`REPROVADO`, ou `AJUSTES NECESSÁRIOS`, que conta igual, com ou sem veto):
-  vá a "Reprovado".
+**Revisor que terminou `SEM VEREDITO`:** a rodada dele não vale. Chame um revisor novo, uma vez, com
+o mesmo prompt. Se repetir, é `BLOQUEIO`.
 
-### Aprovado
+Depois junte, de **todos** os revisores da rodada:
 
-Junte as recomendações de todas as rodadas deste documento (`achados/<documento>.md`) e decida
-**você** o destino de cada uma. Quem implementa não escolhe.
+- **os bloqueantes** de quem reprovou (`REPROVADO`, ou `AJUSTES NECESSÁRIOS`, que conta igual, com ou
+  sem veto);
+- **as recomendações**, de quem aprovou e de quem reprovou. O destino de cada uma é decisão **sua**,
+  não de quem implementa:
+  - *aplicar*: a que é barata, isto é, cabe em poucas linhas, em arquivo que a tarefa já toca, e não
+    muda comportamento nem contrato. "Anularia as aprovações" não é motivo para não aplicar: na A0b
+    nove ficaram para trás assim;
+  - *não aplicar, com destino*: `TODO.md`, a tarefa futura que toca o arquivo, ou recusada, com o
+    motivo.
 
-- **Aplicar**: a que é barata, isto é, cabe em poucas linhas, em arquivo que a tarefa já toca, e
-  não muda comportamento nem contrato. "Anularia as aprovações" não é motivo para não aplicar: na
-  A0b nove ficaram para trás assim
-- **Não aplicar, com destino**: `TODO.md`, a tarefa futura que toca o arquivo, ou recusada, com o
-  motivo
+### Há o que corrigir ou aplicar
 
-**Uma rodada de recomendações por documento.** Se há recomendação a aplicar e ainda não houve essa
-rodada, escreva a ordem (passo 5, `Tipo: recomendações`, com a seção "Sem aplicar") e envie
-`ORDEM DE CORREÇÃO`: o Implementador aplica, roda o portão e pede rodada nova, e você chama só quem
-caducou. Depois dela, ou se não há nada a aplicar, a aprovação é final:
+**Uma ordem só, com tudo**: os bloqueantes primeiro, depois as recomendações a aplicar, e a seção
+"Sem aplicar" (passo 5). O Implementador aplica tudo num ciclo, roda o portão da tarefa, que agora
+leva minutos, e pede rodada nova; você chama só quem o comando `revisores` apontar.
+
+As recomendações entram em ordem **uma vez por documento**: na primeira ordem que você escrever. Nas
+rodadas seguintes só entra recomendação de revisor que **reprovou** naquela rodada; as outras vão
+direto para "Sem aplicar", com destino. Na 5.0 do F3 um ciclo inteiro foi gasto só para aplicar
+recomendação depois de tudo aprovado.
+
+Antes de enviar, conte as reprovações **seguidas** do mesmo revisor neste documento, pelas últimas
+rodadas dele na seção "Revisões". Se `.processo/ordens/rodadas.md` tem uma linha
+`<documento> | destravado | <revisor> | depois da <n>ª rodada dele`, conte só as rodadas depois dessa:
+
+| Seguidas | O que você faz |
+|---|---|
+| nenhuma (só recomendações) ou 1 | envia `ORDEM DE CORREÇÃO` ao Implementador |
+| 2 | escreve a ordem e envia `ESCALADA` ao **Orquestrador**, que troca o Implementador de modelo e repassa a ordem |
+| 3 | não escreve ordem nova; envia `BLOQUEIO` ao Orquestrador. É parada do Joaquim |
+
+Depois de o Joaquim destravar um bloqueio, a contagem recomeça: é o Orquestrador quem escreve a
+linha `destravado` acima.
+
+### Nada a corrigir nem a aplicar
+
+O comando `revisores` responde `nada pendente`, e não sobrou recomendação a aplicar. A aprovação é
+final:
 
 ```
 RELATÓRIO de Mesa
@@ -131,21 +154,6 @@ Revisão: APROVADO por todos (<revisor rodada>, ...)
 Sem aplicar: <arquivo da ordem com a seção "Sem aplicar", ou "nada">
 Confira o carimbo e faça o commit.
 ```
-
-### Reprovado
-
-Conte as reprovações **seguidas** do mesmo revisor neste documento, pelas últimas rodadas dele na
-seção "Revisões". Se `.processo/ordens/rodadas.md` tem uma linha `<documento> | destravado |
-<revisor> | depois da <n>ª rodada dele`, conte só as rodadas depois dessa:
-
-| Seguidas | O que você faz |
-|---|---|
-| 1 | escreve a ordem de correção e envia `ORDEM DE CORREÇÃO` ao Implementador |
-| 2 | escreve a ordem e envia `ESCALADA` ao **Orquestrador**, que troca o Implementador de modelo e repassa a ordem |
-| 3 | não escreve ordem nova; envia `BLOQUEIO` ao Orquestrador. É parada do Joaquim |
-
-Depois de o Joaquim destravar um bloqueio, a contagem recomeça: é o Orquestrador quem escreve a
-linha `destravado` acima.
 
 ## 5. A ordem de correção
 
@@ -158,7 +166,7 @@ item precisa bastar sozinho:
 
 ```
 # Ordem de correção — <documento>, rodada <n>
-Tipo: bloqueantes | recomendações
+Tipo: bloqueantes | recomendações | bloqueantes e recomendações
 
 ## 1. <o defeito, em uma frase>
 Revisor: <quem exigiu> (<rodada>ª)
@@ -177,7 +185,8 @@ Prova: <o teste que tem de existir ou mudar: arquivo, nome do caso, o que ele af
 
 ## Depois de aplicar
 - Atualize a seção "Mutações" do documento para cada cláusula nova
-- Rode: <o comando do portão, com as suítes que este documento exige>, em segundo plano
+- Rode o teste de cada item isolado, até ficar verde, e depois o portão da tarefa, uma vez:
+  `node tools/processo/portao-local.ts --tarefa`
 - Peça rodada nova à Mesa
 ```
 

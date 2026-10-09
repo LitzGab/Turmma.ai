@@ -8,6 +8,7 @@ import {
   antesDoCommit,
   alteracaoQueCaduca,
   alteracoesDeCodigo,
+  alvosDoPortao,
   arquivosAlterados,
   arvoreDoCommit,
   destinoProtegidoDoPush,
@@ -36,6 +37,8 @@ import {
   registrar,
   revisoresObrigatorios,
   SUITES_DO_MVP,
+  SUITES_DO_PORTAO_COMPLETO,
+  SUITES_DO_PORTAO_DA_TAREFA,
   type Carimbo,
   type Revisao,
 } from './revisoes.ts'
@@ -189,16 +192,67 @@ describe('portão do commit', () => {
 
   it('bloqueia sem carimbo do portão local, com carimbo velho, e com carimbo sem a suíte que a tarefa exige', () => {
     expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, null).bloqueios).toEqual([
-      expect.stringMatching(/^portão local: nunca passou.*--e2e --infra/),
+      expect.stringMatching(/^portão local: nunca passou.*portao-local\.ts --tarefa/),
     ])
     const velho = { ...carimboVerde, inicio: new Date(lerHora('2026-09-13 09:58:00')).toISOString() }
     expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, velho).bloqueios).toEqual([
       expect.stringMatching(/^portão local: apps\/worker\/src\/executor.ts mudou/),
     ])
-    const semE2e = { ...carimboVerde, suites: ['typecheck', 'lint', 'test', 'infra'] }
-    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, semE2e).bloqueios).toEqual([
-      expect.stringMatching(/^portão local: o último não rodou e2e/),
+    const semTeste = { ...carimboVerde, suites: ['typecheck', 'lint'] }
+    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, semTeste).bloqueios).toEqual([
+      expect.stringMatching(/^portão local: o último não rodou test\./),
     ])
+  })
+
+  it('o commit da tarefa aceita o portão da tarefa: e2e e infra inteiros ficam para o portão completo do fim da spec', () => {
+    // A tarefa do fixture marca frontend-reviewer e infra-guardian, que até 08/10/2026 exigiam e2e e infra inteiros.
+    const daTarefa = { ...carimboVerde, suites: [...SUITES_DO_PORTAO_DA_TAREFA], alvos: ['apps/worker/test/executor.int.test.ts'] }
+    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, daTarefa).bloqueios).toEqual([])
+    const semE2eNemInfra = { ...carimboVerde, suites: ['typecheck', 'lint', 'test'] }
+    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, semE2eNemInfra).bloqueios).toEqual([])
+    // Os alvos sem a unidade inteira não valem por `test`, e a unidade sem os alvos também não.
+    for (const suites of [['typecheck', 'lint', 'alvo'], ['typecheck', 'lint', 'unidade']]) {
+      expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, { ...carimboVerde, suites }).bloqueios).toEqual([
+        expect.stringMatching(/^portão local: o último não rodou test\./),
+      ])
+    }
+    // Mudou depois do portão da tarefa, ele caduca como o completo.
+    const velho = { ...daTarefa, inicio: new Date(lerHora('2026-09-13 09:58:00')).toISOString() }
+    expect(portaoDe(tudoAprovadoAs10, '2026-09-13 09:59:00', undefined, undefined, velho).bloqueios).toEqual([
+      expect.stringMatching(/^portão local: apps\/worker\/src\/executor.ts mudou.*--tarefa/),
+    ])
+  })
+
+  it('o portão completo só é atendido pelo carimbo que rodou tudo, e o da tarefa não passa por ele', () => {
+    const completo: Carimbo = { inicio: '2026-09-13T12:59:30.000Z', suites: [...SUITES_DO_PORTAO_COMPLETO] }
+    expect(avaliarCarimbo(completo, SUITES_DO_PORTAO_COMPLETO, [])).toBeNull()
+    const daTarefa: Carimbo = { inicio: '2026-09-13T12:59:30.000Z', suites: [...SUITES_DO_PORTAO_DA_TAREFA] }
+    expect(avaliarCarimbo(daTarefa, SUITES_DO_PORTAO_COMPLETO, [])).toMatch(/^portão local: o último não rodou e2e, infra\. Rode `node tools\/processo\/portao-local\.ts --e2e --infra`/)
+    expect(avaliarCarimbo(null, SUITES_DO_PORTAO_COMPLETO, [])).toMatch(/nunca passou.*--e2e --infra/)
+  })
+
+  it('os alvos do portão da tarefa são os testes alterados, cada um na sua suíte, sem repetir', () => {
+    const alterados = [
+      'apps/worker/src/processadores/expurgar-escola.ts',
+      'apps/worker/test/expurgo-da-escola.int.test.ts',
+      'packages/nucleo/src/retencao/expurgo-da-escola.test.ts',
+      'packages/nucleo/src/retencao/retencao.int.test.ts',
+      'e2e/privacidade.spec.ts',
+      'e2e/__fixtures__/sessao.ts',
+      'infra/alertas/expurgo.int.test.ts',
+      'apps/api/dist/x.int.test.ts',
+      'node_modules/pacote/y.int.test.ts',
+      'tools/ci/fixtures/z.int.test.ts',
+      'docs/lgpd.md',
+      'e2e/privacidade.spec.ts',
+    ]
+    expect(alvosDoPortao(alterados)).toEqual({
+      integracao: ['apps/worker/test/expurgo-da-escola.int.test.ts', 'packages/nucleo/src/retencao/retencao.int.test.ts'],
+      e2e: ['e2e/privacidade.spec.ts'],
+      infra: ['infra/alertas/expurgo.int.test.ts'],
+    })
+    // Teste de unidade não é alvo: a unidade roda inteira sempre.
+    expect(alvosDoPortao(['packages/shared/src/a.test.ts', 'apps/web/src/b.test.tsx'])).toEqual({ integracao: [], e2e: [], infra: [] })
   })
 
   it('bloqueia correção feita enquanto a rodada corria, mesmo que o veredito tenha saído depois', () => {

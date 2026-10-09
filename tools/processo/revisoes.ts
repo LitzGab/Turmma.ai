@@ -76,6 +76,39 @@ export interface Alteracao {
 export interface Carimbo {
   inicio: string
   suites: string[]
+  /** Só no portão da tarefa: os arquivos de teste que ele rodou, além da unidade inteira. */
+  alvos?: string[]
+}
+
+/** O portão completo: tudo, como a esteira. Roda uma vez por spec, antes da validação (D78 revista em 09/10/2026). */
+export const SUITES_DO_PORTAO_COMPLETO = ['typecheck', 'lint', 'test', 'e2e', 'infra']
+/**
+ * O portão da tarefa: tipos, lint, a unidade inteira e os testes de integração, de infra e de e2e que a árvore alterou.
+ * `alvo` é a suíte desses arquivos; com `unidade`, vale por `test` no commit de tarefa e de correção.
+ */
+export const SUITES_DO_PORTAO_DA_TAREFA = ['typecheck', 'lint', 'unidade', 'alvo']
+
+export interface AlvosDoPortao {
+  integracao: string[]
+  e2e: string[]
+  infra: string[]
+}
+
+/**
+ * Os testes que o portão da tarefa roda, tirados do que está alterado na árvore: o teste novo ou mexido é o que prova a
+ * regra da tarefa. O resto do sistema fica para o portão completo, no fim da spec.
+ *
+ * Na noite de 08/10/2026 o portão inteiro levou de 30 a 40 minutos e foi de 70% a quase 100% do tempo de cada tarefa:
+ * a 6.0 foi escrita em 6 minutos e passou cinco horas rodando o portão inteiro a cada tentativa de acertar um e2e.
+ */
+export function alvosDoPortao(arquivos: string[]): AlvosDoPortao {
+  const fora = /(^|\/)(node_modules|dist)\/|^tools\/ci\/fixtures\//
+  const validos = [...new Set(arquivos)].filter((arquivo) => !fora.test(arquivo)).sort()
+  return {
+    integracao: validos.filter((arquivo) => /\.int\.test\.ts$/.test(arquivo) && !arquivo.startsWith('infra/') && !arquivo.startsWith('e2e/')),
+    e2e: validos.filter((arquivo) => /^e2e\/.*\.spec\.ts$/.test(arquivo)),
+    infra: validos.filter((arquivo) => /^infra\/.*\.int\.test\.ts$/.test(arquivo)),
+  }
 }
 
 /**
@@ -512,20 +545,26 @@ export function alteracaoQueCaduca(
     .reduce<Alteracao | null>((maisRecente, alteracao) => (!maisRecente || alteracao.quando > maisRecente.quando ? alteracao : maisRecente), null)
 }
 
-export function suitesExigidas(obrigatorios: string[]): string[] {
-  return [
-    'typecheck',
-    'lint',
-    'test',
-    ...(obrigatorios.includes('frontend-reviewer') ? ['e2e'] : []),
-    ...(obrigatorios.includes('infra-guardian') ? ['infra'] : []),
-  ]
+/**
+ * O que o commit de tarefa e de correção exige do carimbo. Até 08/10/2026 a tarefa com `frontend-reviewer` exigia o e2e
+ * inteiro, e a com `infra-guardian`, a suíte de infra inteira. Agora os dois rodam inteiros uma vez, no portão completo
+ * do fim da spec, e na tarefa rodam só os arquivos que ela alterou (`alvosDoPortao`).
+ */
+export function suitesExigidas(): string[] {
+  return ['typecheck', 'lint', 'test']
+}
+
+/** `test` vale pela suíte inteira ou, no portão da tarefa, pela unidade inteira mais os alvos. */
+function carimboCobre(carimbo: Carimbo, suite: string): boolean {
+  if (carimbo.suites.includes(suite)) return true
+  return suite === 'test' && carimbo.suites.includes('unidade') && carimbo.suites.includes('alvo')
 }
 
 export function avaliarCarimbo(carimbo: Carimbo | null, exigidas: string[], alteracoes: Alteracao[], instantaneo?: Record<string, string>): string | null {
-  const comando = `node tools/processo/portao-local.ts${exigidas.includes('e2e') ? ' --e2e' : ''}${exigidas.includes('infra') ? ' --infra' : ''}`
+  const completo = exigidas.includes('e2e') || exigidas.includes('infra')
+  const comando = completo ? 'node tools/processo/portao-local.ts --e2e --infra' : 'node tools/processo/portao-local.ts --tarefa'
   if (!carimbo) return `portão local: nunca passou nesta árvore. Rode \`${comando}\`.`
-  const faltando = exigidas.filter((suite) => !carimbo.suites.includes(suite))
+  const faltando = exigidas.filter((suite) => !carimboCobre(carimbo, suite))
   if (faltando.length > 0) return `portão local: o último não rodou ${faltando.join(', ')}. Rode \`${comando}\`.`
   // Em milissegundos, não em segundo inteiro: o carimbo guarda o instante com precisão de ms, e
   // truncar fazia o arquivo salvo no mesmo segundo — inclusive 39 ms **antes** do portão começar —
@@ -592,7 +631,7 @@ export function avaliarPortao(entrada: {
       )
     }
   }
-  const carimbo = avaliarCarimbo(entrada.carimbo, suitesExigidas(entrada.obrigatorios), entrada.alteracoes, entrada.instantaneos[CHAVE_DO_PORTAO])
+  const carimbo = avaliarCarimbo(entrada.carimbo, suitesExigidas(), entrada.alteracoes, entrada.instantaneos[CHAVE_DO_PORTAO])
   if (carimbo) bloqueios.push(carimbo)
   const linhaResumo = `Revisões: ${resumo.join(', ')}`
   // A linha só é cobrada com os revisores em ordem: antes disso, o exemplo sairia incompleto.

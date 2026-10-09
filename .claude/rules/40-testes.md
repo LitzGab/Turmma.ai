@@ -90,25 +90,30 @@ desabilitar teste para "destravar a tarefa". Teste vermelho é informação, nã
 
 ## O portão
 
-`npm run typecheck`, `npm run test` e `npm run lint` limpos. Tocou tela, também
-`npm run test:e2e`.
+Há dois, e o que muda entre eles é o quanto roda (D78, revista em 09/10/2026).
 
-Na tarefa e na correção, o portão roda por `node tools/processo/portao-local.ts` (com `--e2e`
-e `--infra` quando se aplicam), que grava o carimbo que o hook exige antes do commit (D53).
+**O portão da tarefa**, em toda tarefa e em toda correção:
+`node tools/processo/portao-local.ts --tarefa`. Roda os tipos, o lint, a unidade inteira e os testes
+de integração, de e2e e de infra **que a árvore alterou**, e grava o carimbo que o hook exige antes do
+commit (D53). Leva minutos. Enquanto um teste não passa, ele se roda isolado; o portão não é
+ferramenta de depuração.
 
-Mexeu em infra, também `npm run test:infra` (D52): a tarefa com `infra-guardian`
-obrigatório, e a que toca `infra/`, Dockerfile, `tools/testes/`, `tools/ci/compose.ts`,
-métricas, saúde, prontidão ou borda. São os testes que esperam o relógio real (alerta,
-sonda, exportação de métricas), uns 16 min. Fora do portão da tarefa eles não somem: a
-esteira os roda na branch da spec, antes do pouso, e em todo push na `develop`, na `release` e no
-`main` (D78), e vermelho lá segura o pouso.
+**O portão completo**, uma vez por spec, antes da validação:
+`node tools/processo/portao-local.ts --e2e --infra`. É `npm run typecheck`, `npm run lint`,
+`npm run test`, `npm run test:e2e` e `npm run test:infra` (D52), tudo. Os testes de infra esperam o
+relógio real (alerta, sonda, exportação de métricas), uns 16 min. Depois dele vem a esteira, na
+branch da spec, antes do pouso, e de novo em todo push na `develop`, na `release` e no `main`.
+Vermelho em qualquer um segura o pouso.
 
 Cada commit de tarefa vai para o GitHub logo depois de feito, **na branch da spec**
-(`spec/<funcionalidade>`, D78). A esteira não roda por tarefa: roda uma vez na branch, disparada pelo
-Orquestrador antes do pouso, e de novo na `develop` depois dele. Até lá, o que prova cada tarefa é o
-portão local carimbado e os revisores.
+(`spec/<funcionalidade>`, D78).
 
-O preço, aceito na D78: e2e e infra só rodam no portão das tarefas que os exigem, e uma falha neles
-no fim pode ser de qualquer tarefa da funcionalidade. A correção que fecha a esteira diz de qual foi.
-Do F0 à tarefa 4.0 do F3, cada commit tinha a sua execução na `develop`, e a tarefa seguinte só
-commitava com ela verde; isso custava de 20 a 40 minutos de espera por tarefa.
+O preço, aceito na D78: o que uma tarefa quebra **fora** dos testes que ela alterou só aparece no
+portão completo, no fim da spec, e pode ser de qualquer tarefa. A correção que fecha o portão ou a
+esteira diz de qual foi. Por isso a regra da tarefa precisa de teste criado ou alterado na própria
+tarefa: é o único que roda antes do fim.
+
+Por que mudou: até 08/10/2026 toda tarefa rodava o portão inteiro, com e2e e infra quando tinha tela
+ou infra. Na primeira noite do processo no Maestri ele levou de 30 a 40 minutos por execução e foi de
+70% a quase 100% do tempo de cada tarefa. Do F0 à tarefa 4.0 do F3 havia ainda a esteira por commit
+na `develop`, com mais 20 a 40 minutos de espera por tarefa.

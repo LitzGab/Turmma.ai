@@ -984,3 +984,21 @@ andar sem as pastas `dist`, por isso todo andar novo roda `npm ci`.
 Revisão: os modelos do Implementador e dos revisores se decidem pelos números da retrospectiva do F3
 (rodadas e reprovações por modelo); a esteira uma vez por spec volta à mesa na primeira vez em que
 uma falha no fim custar mais do que as esperas que ela poupou, e antes da primeira escola real.
+
+Revista em 09/10/2026, pelo Joaquim, com os números da primeira noite (tarefas 5.0 e 6.0 do F3): o
+portão local inteiro levou de 30 a 40 minutos por execução e foi de 70% a quase 100% do tempo de
+cada tarefa, enquanto a rodada de revisão levou de um a quatro minutos; a 6.0 foi escrita em 6
+minutos e passou cinco horas rodando o portão inteiro a cada tentativa de acertar um teste. O que
+muda: (a) **na tarefa e na correção roda o portão da tarefa** — tipos, lint, a unidade inteira e só
+os testes de integração, de e2e e de infra que a árvore alterou —, e **o portão completo roda uma vez
+por spec**, antes da validação, seguido da esteira; teste que não passa se roda isolado, nunca pelo
+portão. (b) O `test-engineer` continua sozinho e primeiro, porque muta arquivo e usa o banco de teste
+enquanto revisa, mas **os outros revisores rodam logo depois dele mesmo quando ele reprova**, para
+cada rodada sair com todos os achados. (c) **Uma ordem de correção só**, com os bloqueantes e as
+recomendações baratas juntos; não há mais ciclo só para aplicar recomendação depois de tudo aprovado.
+Tarefas em paralelo foram avaliadas e ficaram de fora: o gargalo era o portão, que é um só na máquina,
+e o ganho estimado com dois ambientes de teste (de 1,1 a 1,4 vez) é menor que o de encurtar o portão.
+O preço aceito: o que uma tarefa quebra fora dos testes que alterou só aparece no fim da spec.
+Revisão: se o portão completo do fim do F3 trouxer falha que custe mais para achar do que o tempo
+poupado, entra um portão completo de conferência a cada quatro ou cinco tarefas.
+

@@ -240,6 +240,10 @@ paradas é o próprio Arquiteto.
 
 Um portão por vez na máquina: não peça trabalho que rode suíte a dois agentes ao mesmo tempo.
 
+**Tempo é sinal.** Com o portão da tarefa (minutos, e não mais meia hora), uma tarefa pequena chega à
+primeira rodada de revisão em menos de uma hora, e uma grande, em menos de duas. Tarefa que passa do
+dobro disso sem pedir rodada está presa: a vigia do passo 9 trata.
+
 ## 7. As paradas
 
 Só nestas você para e espera o Joaquim:
@@ -286,9 +290,27 @@ destravar o limite das três reprovações, a contagem daquela tarefa recomeça:
 
 ## 8. Validação, fechamento e pouso
 
-**Validar** (`sem-validacao`). Faça o commit de documento "antes da validação" (passo 4), confira
-`git -C <andar> status --short` vazio, reinicie o `Validador` apontado para o andar e envie o
-prompt do passo 2 de `.claude/skills/validar/SKILL.md`. Enquanto ele roda, ninguém mais usa o
+**Portão completo** (`sem-validacao`, antes de validar). Durante a spec cada tarefa rodou só os
+testes que alterou; é aqui, uma vez, que tudo roda junto (D78, revista em 09/10/2026). Faça o commit
+de documento "antes da validação" (passo 4), reinicie o `Implementador` no Sonnet, apontado para o
+andar, e envie:
+
+```
+PEDIDO de <seu nome>
+Portão completo de <funcionalidade>: rode `node tools/processo/portao-local.ts --e2e --infra`, em
+segundo plano, e não altere nenhum arquivo.
+Verde: /seguir RELATÓRIO de Implementador, STATUS: SUCESSO.
+Vermelho: /seguir RELATÓRIO de Implementador, STATUS: FALHA, com cada teste que caiu (arquivo e caso).
+```
+
+Vermelho: uma correção (`corrigir`) por teste ou por causa, na branch, cada uma com o portão da
+tarefa e os revisores, e depois o portão completo de novo. A falha pode ser de qualquer tarefa da
+spec: o documento da correção diz de qual. Só siga com
+`(cd <andar> && node tools/processo/portao-local.ts conferir --completo)` respondendo que vale.
+
+**Validar.** Com o portão completo valendo e `git -C <andar> status --short` vazio, reinicie o
+`Validador` apontado para o andar e envie o prompt do passo 2 de
+`.claude/skills/validar/SKILL.md`. Enquanto ele roda, ninguém mais usa o
 compose de teste. Ao receber o `RELATÓRIO`, confira que o `validacao.md` existe e que `git status`
 do andar mostra só ele. O Validador não confere a esteira: ela ainda não rodou.
 
@@ -350,6 +372,7 @@ terminais da fase, antes de concluir qualquer coisa.
 |---|---|
 | alguém trabalhando | nada; responda em uma linha. `Implementador` parado com a `Mesa` trabalhando é o normal: ele espera a rodada |
 | todos parados no prompt, e você espera um relatório há mais de uma vigia | um `PEDIDO de estado` a quem deve o relatório. Não é pedido de trabalho: ele só responde onde está |
+| o `Implementador` trabalhando, mas a tarefa pequena passou de 2 horas, ou a grande de 4, sem a primeira rodada de revisão | um `PEDIDO de estado`. Se a resposta mostra tentativa repetida no mesmo teste, ou o portão usado para depurar, reinicie-o no Sonnet com `PEDIDO de retomada`, dizendo o teste e o que já foi tentado. Registre no `estado.md` |
 | uma pergunta, um menu ou um erro na tela | resolva se for mecânico (`maestri ask --raw`); se for decisão, é parada |
 | o terminal sumiu ou o processo morreu | recrie ou reinicie (passo 3) e envie `PEDIDO de retomada`: o trabalho está na árvore |
 | o `Arquiteto` esperando o Joaquim | nada |
