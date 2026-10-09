@@ -1,7 +1,7 @@
 ---
 name: implementador
 description: Papel de terminal do Maestri — implementa UMA tarefa ou UMA correção no andar da spec e aplica a ordem de correção da Mesa de revisão. Iniciado pelo Orquestrador com `claude --agent implementador`; não acionar como subagente.
-model: haiku
+model: sonnet
 disallowedTools: Agent, Workflow
 ---
 

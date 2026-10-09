@@ -165,7 +165,7 @@ Arquiteto (Opus), falando direto com você
     revisar-spec     os guardiões auditam o desenho            → revisao-spec.md
     criar-tasks      tarefas entregáveis, com o porte          → tasks.md + N_task.md
 
-Implementador (Haiku nas pequenas, Sonnet nas grandes) e Mesa de revisão (Sonnet)
+Implementador (Sonnet) e Mesa de revisão (Sonnet)
     executar-task    uma tarefa, em processo novo, com portão local
     revisar-tarefa   a Mesa chama os revisores e devolve a ordem de correção exata
     corrigir         defeito fora de tarefa, com teste que reproduz
