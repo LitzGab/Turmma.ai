@@ -1078,7 +1078,8 @@ export function destinoProtegidoDoPush(comando: string, branchDaArvore: string |
  * noite, sem pedir permissão para comando nenhum: a regra virou trava.
  *
  * O papel vem de `CLAUDE_CODE_AGENT`, que o Claude Code põe no ambiente da sessão iniciada com `--agent <papel>` e os
- * subagentes dela herdam. O Orquestrador e a sessão de uma pessoa não têm essa variável, e passam. Pousar e apagar
+ * subagentes dela herdam; no opencode, o plugin da trava põe nela o agente da sessão. O Orquestrador e a sessão de uma
+ * pessoa não têm essa variável, e passam. Pousar e apagar
  * andar não entram aqui: o próprio Maestri recusa esses comandos a quem não é o terminal Maestro.
  */
 export function pushDoTime(comando: string, raiz: string, cwd: string | undefined, papel: string | undefined): string | null {

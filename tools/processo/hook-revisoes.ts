@@ -1,6 +1,10 @@
 // Entrada dos hooks de revisão (.claude/settings.json). A lógica e o teste ficam em revisoes.ts.
 //   node tools/processo/hook-revisoes.ts registrar   ← SubagentStop
 //   node tools/processo/hook-revisoes.ts portao      ← PreToolUse do Bash
+//
+// O modo `portao` tem um segundo chamador: o plugin do opencode (.opencode/plugins/portao-de-revisoes.ts), que entrega a
+// mesma entrada e as mesmas duas variáveis de ambiente (`CLAUDE_PROJECT_DIR`, `CLAUDE_CODE_AGENT`) e lê a mesma saída.
+// Mudar esse contrato é mudar os dois (tools/processo/opencode.test.ts).
 import { readFileSync } from 'node:fs'
 import { portao, registrar } from './revisoes.ts'
 

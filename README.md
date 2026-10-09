@@ -153,6 +153,11 @@ O processo roda no Maestri (D78). Você digita um comando só, no terminal Maest
     decisão que é sua. O mesmo comando começa, continua e retoma depois de uma queda.
 ```
 
+O Implementador roda no [opencode](https://opencode.ai) 2, com o MiMo-V2.6-Pro, e os outros papéis no
+Claude Code (D78). Quem roda o processo precisa do `opencode` instalado e com a assinatura OpenCode Go
+conectada (`opencode auth`); a configuração do papel está em `.opencode/`. Sem isso, o Orquestrador
+cai na reserva, que é o mesmo papel em Sonnet.
+
 O time é fixo, no térreo: você vê sempre as mesmas cinco caixas (Orquestrador, Arquiteto,
 Implementador, Mesa e Validador). O que muda a cada tarefa ou fase é a sessão dentro de cada uma,
 reiniciada já apontada para o andar da spec. Cada fase tem o seu agente e o seu procedimento
@@ -165,7 +170,7 @@ Arquiteto (Opus), falando direto com você
     revisar-spec     os guardiões auditam o desenho            → revisao-spec.md
     criar-tasks      tarefas entregáveis, com o porte          → tasks.md + N_task.md
 
-Implementador (Sonnet) e Mesa de revisão (Sonnet)
+Implementador (opencode, MiMo-V2.6-Pro) e Mesa de revisão (Sonnet)
     executar-task    uma tarefa, em processo novo, com portão local
     revisar-tarefa   a Mesa chama os revisores e devolve a ordem de correção exata
     corrigir         defeito fora de tarefa, com teste que reproduz

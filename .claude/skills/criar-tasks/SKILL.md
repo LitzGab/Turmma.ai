@@ -85,8 +85,7 @@ Na dúvida, marque. Auditoria a mais custa minutos; auditoria a menos custa o co
 
 Toda tarefa leva `**Porte:** pequeno` ou `**Porte:** grande` no cabeçalho do `N_task.md`. O porte
 diz quanto a tarefa deve levar, e é por ele que a vigia do `/seguir` sabe quando uma tarefa está presa.
-Não escolhe mais o modelo: o Implementador roda em Sonnet 5.5 em toda tarefa (D78, revista em
-09/10/2026). Marque **grande** quando qualquer um destes vale:
+Não escolhe o modelo: o Implementador roda no mesmo em toda tarefa (D78, revista em 09/10/2026). Marque **grande** quando qualquer um destes vale:
 
 - três ou mais guardiões com veto marcados (`tenancy-guardian`, `privacy-guardian`,
   `conformidade-reviewer`, `infra-guardian`);

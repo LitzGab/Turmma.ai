@@ -72,15 +72,36 @@ dentro do terminal, reiniciada já apontada para o checkout do andar.
 | Terminal | Papel | Comando (`--command`) |
 |---|---|---|
 | `Arquiteto` | spec, divergência, decisão, retro | `claude --dangerously-skip-permissions --agent arquiteto --effort high` |
-| `Implementador` | uma tarefa ou correção | `claude --dangerously-skip-permissions --agent implementador --model sonnet --effort high` |
+| `Implementador` | uma tarefa ou correção | `opencode --standalone --auto` |
 | `Mesa` | rodadas de revisão | `claude --dangerously-skip-permissions --agent mesa-de-revisao --effort high` |
 | `Validador` | validação | `claude --dangerously-skip-permissions --agent validador --effort high` |
 
 O papel vem de `.claude/agents/`, **nunca de responsabilidade do Maestri** (`protocolo.md`, item 1).
 
+**O `Implementador` roda no opencode, com o MiMo-V2.6-Pro** (D78, revista em 09/10/2026), fora do
+consumo do Claude. O comando dele não leva papel nem modelo: os dois vêm de `.opencode/opencode.jsonc`,
+no checkout em que ele abre, o papel está em `.opencode/agents/implementador.md`, e a trava do commit e
+do push é o plugin `.opencode/plugins/portao-de-revisoes.ts`, que consulta o mesmo hook. Por isso,
+**antes de reiniciá-lo, confira que o checkout tem o papel**:
+
+```bash
+ls <checkout>/.opencode/agents/implementador.md
+```
+
+Não tem (andar aberto antes de 09/10/2026): com `git -C <checkout> status --short` vazio, traga a
+`develop` (`git -C <checkout> merge develop`, depois `git -C <checkout> push`) e confira de novo.
+Conflito nesse merge é parada, como no pouso (passo 8).
+
+**A reserva** é o mesmo papel no Claude Code, em Sonnet:
+`claude --dangerously-skip-permissions --agent implementador --model sonnet --effort high`. Use-a só
+quando o opencode não serve: o checkout continua sem o papel depois do merge, o cabeçalho não bate
+depois de dois reinícios, ou a sessão responde com erro de modelo, de assinatura ou de limite de uso.
+Não é parada: reinicie na reserva, reenvie o pedido como `PEDIDO de retomada`, e registre no
+`estado.md`, na coluna "Modelo" da tarefa e em "O que falhou".
+
 Terminal que falta no `maestri list` (primeira vez, ou alguém o fechou). **Na primeira vez, crie o
-andar antes** (abaixo) e recrute os quatro apontados para o checkout dele; o `Implementador` entra
-com o comando do porte da primeira tarefa:
+andar antes** (abaixo) e recrute os quatro apontados para o checkout dele, cada um com o comando da
+tabela:
 
 ```bash
 maestri recruit "<Terminal>" --dir "<checkout>" --command "<comando da tabela>"
@@ -97,6 +118,12 @@ maestri check "<Terminal>"
 **Confira o cabeçalho depois de todo reinício**: o modelo esperado, o `@papel` e o caminho do
 checkout certo, sem `.maestri/roles`. Terminal apontado para o lugar errado editaria o checkout
 errado; fora da raiz, nenhum hook dispara. Se o cabeçalho não bate, reinicie de novo.
+
+No `Implementador` o cabeçalho é o do opencode: sob a caixa de texto, a linha
+`Implementador auto · MiMo-V2.6-Pro OpenCode Go`, e no rodapé o caminho do checkout, abreviado, que
+termina em `:spec/<funcionalidade>` (a branch do andar). `Build` no lugar de `Implementador`, ou outro
+modelo, quer dizer que o opencode abriu num checkout sem `.opencode/`: é o merge acima, e não outro
+reinício.
 
 Quando reiniciar: o `Implementador` e a `Mesa`, a cada tarefa e a cada correção ; o `Arquiteto`, a cada pedido; o `Validador`, **sempre** antes
 de validar ou revalidar, porque ele precisa chegar sem nada da rodada anterior. Terminal que não é
@@ -180,9 +207,12 @@ paradas é o próprio Arquiteto.
 
 1. **Escolha.** A tarefa da vez é a do `estado.ts`: a primeira pendente com as dependências
    concluídas. Nenhuma liberada com pendentes: pare e reporte.
-2. **Modelo.** O Implementador roda em Sonnet 5.5 em toda tarefa (D78, revista em 09/10/2026: o Haiku
-   saiu depois da 6.0). O porte do documento não escolhe modelo: diz quanto a tarefa deve levar, que
-   é o que a vigia usa. Sem a linha `**Porte:**`, vale o porte inferido que o script mostra.
+2. **Modelo.** O Implementador roda no MiMo-V2.6-Pro, pelo opencode, em toda tarefa (D78, revista em
+   09/10/2026: o Haiku saiu depois da 6.0, e o Sonnet virou a reserva). O porte do documento não
+   escolhe modelo: diz quanto a tarefa deve levar, que é o que a vigia usa. Sem a linha
+   `**Porte:**`, vale o porte inferido que o script mostra. No `estado.md`, o modelo da tarefa é
+   `MiMo-V2.6-Pro (opencode)`, ou `Sonnet 5.5 (reserva)` quando ela rodou na reserva: é por essa
+   coluna que a retrospectiva compara os dois.
 3. **Diário.** Atualize o `estado.md` do andar (formato no fim): a linha da tarefa anterior em
    "Concluídas", e em "Agora" a tarefa atual, o modelo, a hora e o que você espera.
 4. **Sessões novas.** Reinicie a `Mesa` e o `Implementador`, apontados
@@ -201,6 +231,10 @@ paradas é o próprio Arquiteto.
    Tarefa retomada (o script mostra rodadas registradas ou código alterado no andar): a primeira
    linha é `PEDIDO de retomada`, e a observação diz o ponto, por exemplo "o `test-engineer` reprovou
    na 1ª rodada; a ordem está em `.processo/ordens/…`", ou "implementação na árvore, sem portão".
+
+   Depois de pedir, um `maestri check "Implementador"`, uma vez: o pedido tem de aparecer enviado, com
+   ele trabalhando. Se o texto ficou parado na caixa do opencode, envie o Enter
+   (`maestri ask "Implementador" --raw "\n"`) e confira de novo.
 6. **Encerre o turno.** A resposta chega como prompt novo.
 
 ### O que pode chegar
@@ -387,6 +421,7 @@ terminais da fase, antes de concluir qualquer coisa.
 | o `Implementador` trabalhando, mas a tarefa pequena passou de 2 horas, ou a grande de 4, sem a primeira rodada de revisão | um `PEDIDO de estado`. Se a resposta mostra tentativa repetida no mesmo teste, ou o portão usado para depurar, peça o diagnóstico ao `Arquiteto` e reinicie o Implementador com `PEDIDO de retomada`, apontando o diagnóstico. Registre no `estado.md` |
 | uma pergunta, um menu ou um erro na tela | resolva se for mecânico (`maestri ask --raw`); se for decisão, é parada |
 | o terminal sumiu ou o processo morreu | recrie ou reinicie (passo 3) e envie `PEDIDO de retomada`: o trabalho está na árvore |
+| o `Implementador` mostra erro de modelo, de assinatura ou de limite de uso do opencode | reinicie-o na **reserva** (passo 3) e envie `PEDIDO de retomada`: o trabalho está na árvore. Registre no `estado.md` |
 | o `Arquiteto` esperando o Joaquim | nada |
 
 Nunca interrompa agente que está trabalhando, e nunca edite arquivo que ele está editando.
@@ -434,5 +469,5 @@ nada, e o que a retrospectiva lê para medir tempo e rodadas por tarefa.
 ## O que decidi sem perguntar
 ```
 
-Em "Observação" entram as escaladas para o Sonnet e as divergências. Correção avulsa não tem
+Em "Observação" entram os diagnósticos do Arquiteto, a queda para a reserva e as divergências. Correção avulsa não tem
 `estado.md`: o registro dela é o próprio documento em `tasks/correcoes/`.
