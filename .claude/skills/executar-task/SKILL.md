@@ -142,6 +142,30 @@ Mudou código da web ou da API depois de subir o ambiente do e2e: repita o coman
 `tools/ci/e2e.ts`, que reconstrói. Comando que passa de dois minutos roda em segundo plano
 (`run_in_background`), e você espera a notificação do fim; não use `sleep`.
 
+### Tarefa com tela: olhe a tela antes do portão
+
+Com o e2e da tarefa verde e o ambiente de pé, veja o que você fez. O teste prova que a tela funciona;
+só olhando se vê texto cortado, bloco desalinhado, barra de abas que quebra, tela vazia em branco e
+celular espremido. Entregar tela sem ter olhado é entregar pela metade: a Mesa fotografa as mesmas
+telas, e o que você não viu volta como ordem de correção, com um ciclo a mais.
+
+```bash
+node tools/vitrine/vitrine.ts mostrar || node tools/vitrine/vitrine.ts montar   # as escolas sintéticas, cheia e vazia
+node tools/vitrine/vitrine.ts foto <coordenacao|professora|aluno> <endereço da tela>… [--clicar 'text=<aba ou botão>']
+node tools/vitrine/vitrine.ts foto <papel> <endereço da tela>… --vazia           # a mesma tela, sem dado nenhum
+```
+
+O endereço é o da área mais o da tela (`/coordenacao/…`, `/professor/…`, `/aluno/…`). O comando faz a
+entrada sozinho, abre cada endereço e grava a página inteira em `.processo/vitrine/`, no computador
+(1366 px) e no celular (360 px); página comprida sai em pedaços, e o que foi clicado entra no nome do
+arquivo. Leia **cada** arquivo com a ferramenta de leitura, como imagem, e corrija antes do portão o
+que o `frontend-reviewer` reprovaria (a lista está em `.claude/agents/frontend-reviewer.md`, "É
+bloqueante o que se vê e se mede").
+
+A foto mostra o que o último `tools/ci/e2e.ts` construiu: mudou a web depois dele, reconstrua antes de
+fotografar. A vitrine usa o banco de teste: não fotografe com teste rodando. Se a foto falhar, siga e
+diga o erro na linha "Telas vistas" do relatório; não é motivo de `STATUS: FALHA`.
+
 **Duas tentativas seguidas no mesmo teste sem entender a causa: pare de tentar.** Leia o erro
 inteiro, um teste vizinho que já passa e o helper que ele usa (`e2e/__fixtures__/`,
 `apps/api/test/`). Se a terceira também falhar, não insista: envie o relatório do passo 7 com
@@ -300,6 +324,7 @@ STATUS: SUCESSO | FALHA
 Modelo: <o seu, como aparece no cabeçalho do terminal>
 Commit e push: <hash> em spec/<funcionalidade>
 Revisões: <a mesma linha do commit, com todas as rodadas de cada revisor obrigatório>
+Telas vistas: sim, por mim e pela Mesa (<quantas fotos>) | não (<o erro>) | a tarefa não tem tela
 Motivo da falha: <se houver, com o arquivo a abrir>
 ```
 

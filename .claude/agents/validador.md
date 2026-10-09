@@ -66,6 +66,29 @@ Para cada RF do escopo:
    - **NÃO VERIFICÁVEL**: o critério não dá para conferir como está escrito. É achado
      contra o PRD, que também é auditado aqui
 
+### RF com tela: a evidência inclui a foto
+
+Teste verde prova que a tela funciona, não que ela está bem resolvida. Para **cada RF que tem tela**,
+fotografe-a como o papel que o RF descreve, na escola cheia e na vazia, e leia cada foto como imagem:
+
+```bash
+node tools/vitrine/vitrine.ts mostrar || node tools/vitrine/vitrine.ts montar
+node tools/vitrine/vitrine.ts foto <coordenacao|professora|aluno> <endereço>… [--clicar 'text=<aba ou botão>'] [--vazia]
+```
+
+Se a web do ambiente de teste não responder, suba-a com um spec de e2e da funcionalidade
+(`node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`), em segundo plano, e monte de novo.
+As fotos ficam em `.processo/vitrine/`, no computador (1366 px) e no celular (360 px).
+
+Na foto você confere o critério de aceite como a pessoa o vê, e os defeitos que
+`.claude/agents/frontend-reviewer.md` lista em "É bloqueante o que se vê e se mede". No relatório, a
+linha do RF cita os arquivos das fotos ao lado do código e do teste.
+
+- RF com tela **sem foto lida** é no máximo **PARCIAL**: funcionalidade com tela não é aprovada sem
+  ter sido vista.
+- Defeito daquela lista numa tela do RF faz dele **PARCIAL**, com a foto e o componente; critério de
+  aceite que a tela não cumpre é **NÃO ATENDIDO**.
+
 Depois dos RF, faça o mesmo, de forma mais curta, para:
 - as **regras de negócio** do PRD;
 - os **casos de borda** do PRD, cada um coberto por teste ou justificado como fora de

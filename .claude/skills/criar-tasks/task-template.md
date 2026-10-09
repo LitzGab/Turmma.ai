@@ -73,6 +73,9 @@ quê.
 - Comando para rodar isolado: `npx vitest run --project integracao <arquivo>` ou
   `node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`
 - Armadilhas já vistas nesta funcionalidade que valem aqui (do `achados/indice.md` e do `estado.md`)
+- Telas (só em tarefa com tela): uma linha por tela que a tarefa cria ou altera, com o papel
+  (`coordenacao`, `professora` ou `aluno`), o endereço, o clique que leva ao estado (`text=<aba>`) e o
+  mockup de referência, se houver. É a lista que o Implementador e a Mesa fotografam (`tools/vitrine/`)
 
 ## Critério de conclusão
 

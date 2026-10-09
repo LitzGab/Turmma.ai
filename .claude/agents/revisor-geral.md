@@ -65,6 +65,13 @@ node tools/processo/portao-local.ts conferir <documento>
 
 Carimbo ausente, velho ou sem a suíte exigida é bloqueante, com o comando que a mensagem indica.
 
+## Quando o prompt traz fotos da tela
+
+Em tarefa com tela, o prompt termina com `Fotos da tela` e os arquivos, no computador e no celular,
+na escola cheia e na vazia. Leia-os como imagem: o que a tela mostra é o que a pessoa recebe, e o
+código nem sempre deixa ver. Confira ali a aderência: a tela entrega o que o RF e a Tech Spec descrevem, com os nomes do glossário, e não entrega nada que a tarefa não pediu. Achado visto na foto leva o arquivo da foto e o `arquivo:linha`
+que o produz. A qualidade visual é do `frontend-reviewer`; você olha a sua regra.
+
 ## Severidade e rodada nova
 
 - **Bloqueante** é o que viola regra, é bug, invade escopo, diverge da Tech Spec em silêncio ou

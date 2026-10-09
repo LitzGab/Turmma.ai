@@ -1014,3 +1014,18 @@ levar. Em vez de trocar de modelo, quem trava recebe mais contexto: o relatório
 segunda falha ou na segunda reprovação seguida, o diagnóstico do Arquiteto. Revisão: o Haiku volta às
 tarefas pequenas se a retrospectiva mostrar que, com o contexto de teste, ele não custa mais portões.
 
+Revista pela terceira vez em 09/10/2026, pelo Joaquim: **tela se revisa vendo, e quem revisa responde
+pela entrega.** `tools/vitrine/` monta duas escolas sintéticas no ambiente de teste, uma cheia e uma
+vazia, com um login de cada papel, e fotografa a página nos dois tamanhos de toda tela. Em tarefa com
+tela: o Implementador olha antes do portão; a Mesa fotografa as telas da tarefa uma vez e entrega as
+fotos a **todos** os revisores da rodada, cada um pela regra dele; o `frontend-reviewer` começa pela
+foto e tem uma lista do que é bloqueante por ser visível e mensurável; e, no fim da spec, o Validador
+fotografa cada RF com tela, e RF com tela sem foto lida é no máximo parcial. Não é seed do produto nem
+da demonstração (D71): as escolas moram só no banco de teste e somem quando o portão o recria. A foto
+sai do Chromium do Playwright, sem janela, porque a foto da página do canvas do Maestri só funciona com
+a janela dele visível, e o processo roda sem ninguém olhando. Motivo: o e2e prova que a tela funciona,
+não que ela está bem resolvida; no primeiro ensaio a foto achou, na tela da 8.0 do F3, uma barra de
+abas quebrada em 360 px que a revisão pelo código tinha aprovado. A próxima spec é um refatoramento
+visual. O `frontend-reviewer` continua sem veto no hook: o que segura a tarefa é a Mesa, que trata o
+bloqueante dele como o de qualquer revisor. Revisão: dar a ele o veto no hook se a retrospectiva
+mostrar tela reprovada indo para o commit.
