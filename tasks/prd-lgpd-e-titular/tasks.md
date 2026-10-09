@@ -62,7 +62,7 @@
   - [x] 8.5 Arquitetura e `docs/modelo-de-dados.md`
   - [x] 8.6 Testes
 
-- [ ] **9.0 — A operação registra incidente e a escola afetada confirma o recebimento**
+- [x] **9.0 — A operação registra incidente e a escola afetada confirma o recebimento**
   - [ ] 9.1 Migration própria: `incidente`, `incidente_escola`, índice de pendentes
   - [ ] 9.2 `ops:incidente registrar` (seção por escola; recusa nome ou id de outra escola, com caixa e acento)
   - [ ] 9.3 `IncidenteDaEscolaRepository`, `GET incidentes` e `POST incidentes/:id/confirmar`, auditoria `incidente.confirmado`

@@ -10,6 +10,7 @@ import {
   ESTADOS_EM_DECISAO,
   FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR,
   FINALIDADE_DO_AJUSTE_DE_RETENCAO,
+  FINALIDADE_DO_REGISTRO_DE_INCIDENTE,
   FINALIDADE_DO_REGISTRO_DE_SUBOPERADOR,
   FINALIDADES_DA_LEITURA_DE_ALUNOS,
   FINALIDADES_DA_LEITURA_NOMINAL,
@@ -23,6 +24,7 @@ import {
   ORIGENS_DA_RETENCAO,
   PAPEIS_DE_USUARIO,
   PAPEIS_DE_VINCULO,
+  RISCOS_DO_INCIDENTE,
   TIPOS_DE_CONVITE,
   TIPOS_DE_ENTREGA,
   TITULARIDADES_DE_MATERIAL,
@@ -565,6 +567,28 @@ export const ACOES_DE_AUDITORIA = {
     antes: z.strictObject({ alcance: z.enum(ALCANCES_DO_SUBOPERADOR) }),
     depois: z.strictObject({ ligacoesEncerradas: z.number().int().nonnegative() }),
     finalidade: z.enum([FINALIDADE_DO_REGISTRO_DE_SUBOPERADOR]),
+  },
+  /**
+   * A operação registrou o incidente na seção da escola (F3, RF8; `ops:incidente registrar`), no contexto dela e sempre com
+   * `autor_operador`. `entidadeId` é a seção da escola (`incidente_escola.id`), o id que ela vê. `depois` é o risco e o número de
+   * titulares estimados dela: um número, nunca quais. Nunca o texto da seção, nem as outras escolas.
+   */
+  'incidente.registrado': {
+    entidade: 'incidente_escola',
+    antes: null,
+    depois: z.strictObject({ risco: z.enum(RISCOS_DO_INCIDENTE), titularesEstimados: z.number().int().nonnegative() }),
+    finalidade: z.enum([FINALIDADE_DO_REGISTRO_DE_INCIDENTE]),
+  },
+  /**
+   * A coordenação confirmou o recebimento do aviso do incidente (F3, RF9; `POST /v1/privacidade/incidentes/:id/confirmar`): quem
+   * e quando saem do autor e da data do registro. `entidadeId` é a seção da escola. Só a chamada que confirmou de fato é
+   * auditada; a segunda, que não muda nada, não grava de novo.
+   */
+  'incidente.confirmado': {
+    entidade: 'incidente_escola',
+    antes: null,
+    depois: null,
+    finalidade: z.enum([FINALIDADE_DO_REGISTRO_DE_INCIDENTE]),
   },
 } as const satisfies Record<string, DefinicaoDeAcao>
 

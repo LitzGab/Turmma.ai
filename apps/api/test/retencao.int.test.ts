@@ -368,10 +368,14 @@ describe('retenção da escola: a operação ajusta por comando, e a coordenaç�
   })
 
   it('permissão: aluno, professor e a coordenação sem MFA não chegam a nenhuma rota de /v1/privacidade; a coordenação chega', async () => {
-    // O teste percorre todas as rotas de /v1/privacidade: a da retenção e a das empresas que recebem dados (F3, 8.0). Rota nova
-    // do módulo entra aqui sozinha, e a lista abaixo impede que uma delas saia sem o teste reclamar.
-    const rotas = rotasDe(controladoresDoModulo(AppModule.com(configuracaoDeTeste()))).filter((rota) => rota.caminho.startsWith('/v1/privacidade/'))
-    expect(rotas.map((rota) => rota.caminho)).toEqual(expect.arrayContaining(['/v1/privacidade/retencao', '/v1/privacidade/suboperadores']))
+    // O teste percorre as rotas de leitura de /v1/privacidade: a da retenção, a das empresas que recebem dados (F3, 8.0) e a dos
+    // incidentes (F3, 9.0). Rota de leitura nova do módulo entra aqui sozinha, e a lista abaixo impede que uma delas saia sem o teste
+    // reclamar. As de escrita respondem 404 à coordenação quando o id é de ninguém, o que não a distingue de quem a guarda barrou:
+    // cada uma tem a permissão provada no teste do módulo dela (`incidente.int.test.ts`, "permissão").
+    const todas = rotasDe(controladoresDoModulo(AppModule.com(configuracaoDeTeste()))).filter((rota) => rota.caminho.startsWith('/v1/privacidade/'))
+    const rotas = todas.filter((rota) => rota.verbo === 'GET')
+    expect(rotas.map((rota) => rota.caminho)).toEqual(expect.arrayContaining(['/v1/privacidade/retencao', '/v1/privacidade/suboperadores', '/v1/privacidade/incidentes']))
+    expect(todas.filter((rota) => rota.verbo !== 'GET').map((rota) => `${rota.verbo} ${rota.caminho}`)).toEqual(['POST /v1/privacidade/incidentes/:id/confirmar'])
     const escolaId = await bancada.escola()
     const coordenacao = await bancada.sessao(escolaId, 'coordenador')
     const professor = await bancada.sessao(escolaId, 'professor')

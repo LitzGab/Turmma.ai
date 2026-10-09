@@ -5,7 +5,7 @@ import type { CategoriaDeRetencao, ChaveDePrazoFixo } from './retencao.js'
  * F3, seção 3, "Classificação de toda tabela"). O teste de arquitetura (`apps/api/test/arquitetura.test.ts`) confere esta
  * lista contra as migrations, nos dois sentidos: tabela criada sem classificação, ou classificação de tabela que não
  * existe, deixa o teste vermelho. Cada tarefa que cria tabela a classifica aqui na mesma tarefa: as do pedido do
- * titular e do incidente entram com as migrations delas (tarefas 9.0 e 11.0); as do suboperador entraram na 8.0; a do expurgo entrou na 3.0.
+ * titular entram com a migration dela (tarefa 11.0); as do incidente entraram na 9.0 e as do suboperador, na 8.0; a do expurgo entrou na 3.0.
  *
  * As sentinelas do arquivo e da troca de nome (tarefas 13.0 e 15.0) saem desta lista, então uma tabela nova entra nelas
  * sozinha.
@@ -86,6 +86,11 @@ export const CLASSIFICACAO_DAS_TABELAS: Readonly<Record<string, ClassificacaoDaT
   // O registro do que o expurgo da escola apagou, só com a categoria e a contagem: 5 anos, pelo próprio expurgo (tarefa
   // 5.0). Sem pessoa, e fora do arquivo; fica no grupo do registro de decisão, que é o dos registros de prestação de contas.
   expurgo_execucao: fixo('registro_de_decisao', 'expurgo da escola, 5 anos (tarefa 5.0)'),
+  // O incidente de segurança e a seção de cada escola, com quem da escola confirmou o aviso (F3, 9.0): 5 anos do registro, pelo
+  // `sistema.expurgar-acesso`, que apaga o incidente e leva as ligações em cascata. Quem confirma é coordenação, que não é titular
+  // de pedido (PRD, seção 4), então a tabela fica fora do arquivo.
+  incidente: fixo('registro_de_incidente', EXPURGO_DE_ACESSO),
+  incidente_escola: fixo('registro_de_incidente', EXPURGO_DE_ACESSO),
 
   // Sem pessoa.
   rede: SEM_PESSOA,

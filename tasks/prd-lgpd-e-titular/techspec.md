@@ -67,15 +67,15 @@ arquitetura:
 | Classe | Tabelas |
 |---|---|
 | categoria acima | as doze linhas acima, mais `resposta_atividade`, `correcao` e `thread_agente` (cascata ou vazio) |
-| prazo fixo, com quem aplica | `registro_acesso`, `sessao`, `convite`, `acesso_turma`: `sistema.expurgar-acesso`. `conta`, `codigo_recuperacao`: limpeza da conta (F1). `credencial_matricula`, `conta_externa`: desativação e eliminação. `lista_nome`: virada do ano (A1) e eliminação. `operador`, `convite_operador`, `sessao_operador`, `acesso_operacao`, `codigo_recuperacao_operador`: A0 e `sistema.expurgar-acesso`. `job_registro`: 7 dias (F0). `auditoria`, `auditoria_operacao`, `entrega`, `validacao_do_lote`, `suspensao_de_funcao`, `atividade_aplicada`, `pedido_titular`: vigência + 5 anos, no fim de contrato (F12). `arquivo_titular`: 7 dias. `incidente` e `incidente_escola`: 5 anos. `expurgo_execucao`: 5 anos (tarefa 3.0: no grupo `registro_de_decisao` de `PRAZOS_FIXOS`, que são oito e fechados; quem aplica é o expurgo da escola, no fim de cada noite: tarefa 5.0) |
+| prazo fixo, com quem aplica | `registro_acesso`, `sessao`, `convite`, `acesso_turma`: `sistema.expurgar-acesso`. `conta`, `codigo_recuperacao`: limpeza da conta (F1). `credencial_matricula`, `conta_externa`: desativação e eliminação. `lista_nome`: virada do ano (A1) e eliminação. `operador`, `convite_operador`, `sessao_operador`, `acesso_operacao`, `codigo_recuperacao_operador`: A0 e `sistema.expurgar-acesso`. `job_registro`: 7 dias (F0). `auditoria`, `auditoria_operacao`, `entrega`, `validacao_do_lote`, `suspensao_de_funcao`, `atividade_aplicada`, `pedido_titular`: vigência + 5 anos, no fim de contrato (F12). `arquivo_titular`: 7 dias. `incidente` e `incidente_escola`: 5 anos do registro, no prazo fixo `registro_de_incidente` (tarefa 9.0: o nono de `PRAZOS_FIXOS`, com texto próprio na tela de Retenção, porque "enquanto durar o contrato, e mais 5 anos" do `registro_de_decisao` não descreve o incidente), aplicado pelo `sistema.expurgar-acesso`, fora do arquivo do titular (quem confirma é coordenação). `expurgo_execucao`: 5 anos (tarefa 3.0: no grupo `registro_de_decisao` de `PRAZOS_FIXOS`, que são nove e fechados; quem aplica é o expurgo da escola, no fim de cada noite: tarefa 5.0) |
 | sem pessoa | `rede`, `escola`, `ano_letivo`, `serie`, `disciplina`, `turma`, `provedor_escola`, `configuracao_operacional_escola`, `uso_infra_diario`, `trecho`, `resumo_do_analista`, `retencao_escola`, `suboperador`, `suboperador_escola` |
 
 Também `usuario` ativo e `material` vigente ficam enquanto existem; saem pela eliminação e pelas duas categorias acima.
 
 Na tarefa 2.0 a classificação traz só as tabelas que já existem: o teste a confere contra as migrations nos dois
 sentidos, e cada tabela nova (as desta seção) entra na lista, e as colunas dela em `COLUNAS_FORA_DO_ARQUIVO`, na tarefa
-da migration dela. Os prazos fixos são oito grupos (`PRAZOS_FIXOS`: registro de acesso, sessão, convite e acesso da
-turma, credencial, lista de nomes, registro de decisão, tarefa em segundo plano e equipe Turmma).
+da migration dela. Os prazos fixos são nove grupos (`PRAZOS_FIXOS`: registro de acesso, sessão, convite e acesso da
+turma, credencial, lista de nomes, registro de decisão, tarefa em segundo plano, equipe Turmma e registro de incidente).
 
 Cada tabela da classificação diz se **entra no arquivo do titular** e por qual coluna se liga a ele. Entram: `usuario`,
 `credencial_matricula` (só a matrícula), `conta` (só o e-mail, nas duas versões), `conta_externa` (só o provedor),
@@ -104,10 +104,14 @@ suboperador         id uuid, chave*, nome*, finalidade*, categorias*, pais*, con
                     é o código ISO de duas letras, `contrato` é um código curto e nunca texto)
 suboperador_escola  suboperador_id*, escola_id*, inicio*, fim?   (tarefa 8.0: chave primária `(escola_id, suboperador_id)`,
                     índice por `suboperador_id`)
-incidente           id uuid, conhecido_em*, registrado_por*, registrado_em*
+incidente           id uuid, conhecido_em*, registrado_por*, registrado_em*   (tarefa 9.0: `conhecido_em <= registrado_em`;
+                    `registrado_por` é o apelido do operador; sem `escola_id`)
 incidente_escola    incidente_id*, escola_id*, circunstancias* (≤1000), categorias* (lista fechada),
                     titulares_estimados*, risco* (baixo|relevante|alto), contencao* (≤1000), correcao* (≤1000),
-                    avisado_em*, confirmado_em?, confirmado_por?
+                    avisado_em*, confirmado_em?, confirmado_por?   (tarefa 9.0, migration 0031: `id uuid` próprio, o que a escola
+                    vê e confirma, e único `(escola_id, incidente_id)`; `incidente_id` com `on delete cascade`; `confirmado_por` por FK
+                    composta com a escola, `on delete set null ("confirmado_por")`, e só existe com `confirmado_em`; 0 a 100 milhões
+                    de titulares; os três textos de 1 a 1.000 caracteres; `avisado_em` é o `now()` do registro)
 expurgo_execucao    id uuid, escola_id*, categoria*, linhas*, concluida* (`true` só quando a categoria terminou; `false` quando parou pela janela), em*
 execucao_agente     + anonimizada_em?
 usuario             + eliminacao_agendada_em?
@@ -161,7 +165,7 @@ professor.
 |---|---|
 | `GET retencao` | categorias e prazos fixos: descrição comum, de quando conta, meses (o efetivo, com a trava), origem (`padrao` ou `ajustada`) e a categoria que a encurtou, se houver; sem quem ajustou nem o contrato |
 | `GET suboperadores` | pelo `SuboperadorDaEscolaRepository` (seção 6); nome, finalidade, país, categorias, veda treinamento, vigência |
-| `GET incidentes` · `POST incidentes/:id/confirmar` | DTO só da linha da escola: `conhecidoEm`, `circunstancias`, `categorias`, `titularesEstimados`, `risco`, `contencao`, `correcao`, `avisadoEm`, `confirmadoEm` e o texto fixo do prazo legal da escola; confirmar é `update … where confirmado_em is null`, 204 |
+| `GET incidentes` · `POST incidentes/:id/confirmar` | DTO só da linha da escola: `id` (o da seção, tarefa 9.0), `conhecidoEm`, `circunstancias`, `categorias`, `titularesEstimados`, `risco`, `contencao`, `correcao`, `avisadoEm`, `confirmadoEm` e o texto fixo do prazo legal da escola; confirmar é `update … where confirmado_em is null`, 204 |
 | `POST titulares/busca` | `{ termo }` com 3 letras ou mais; até 20 resultados: id, nome, papel, matrícula, turma do ano (aluno) ou disciplinas e turmas desta escola (professor), estado. Audita `titular.buscado` com os ids e a finalidade fixa, nunca o termo |
 | `GET titulares/:id/previa` | aluno: contagem por categoria e `homonimo` (a mesma regra da troca de nome). Professor: só as categorias de cadastro e vínculo; as de uso da IA não aparecem, e a resposta é igual para quem usou e quem não usou (D64). Sem compartilhamento. Audita `titular.previa_lida` |
 | `POST pedidos` | `titularId`, `tipo`, `solicitante`, `chegouEm`, `chaveEnvio` |
@@ -343,6 +347,16 @@ suboperador sai do `SuboperadorDaEscolaRepository`: nada de outra escola entra.
 - `ops:incidente registrar` lê um arquivo com uma seção por escola e grava as ligações no contexto de cada escola.
 - O comando recusa texto que cite o nome ou o id de outra escola afetada.
 - A casca da coordenação lê os pendentes uma vez por sessão.
+- **Tarefa 9.0, como ficou no código.** O arquivo é um JSON `{ conhecidoEm, escolas: [{ escola, circunstancias, categorias, titularesEstimados, risco, contencao, correcao }] }`,
+  de até 256 KB, 200 escolas e 1.000 caracteres por texto, conferido antes de abrir o banco (o erro cita o caminho do campo, nunca o
+  valor). A transação começa pelo autor, lê o nome de cada escola no contexto dela (inexistente: `NAO_ENCONTRADO`, e desfaz tudo),
+  confere os textos e só então grava o incidente, uma seção por escola no contexto dela e `incidente.registrado` na auditoria
+  dela. O texto de uma seção cita outra escola afetada quando contém o **nome inteiro** dela (sem caixa nem acento, entre
+  fronteiras de palavra, depois de tirar o nome da própria escola do texto) ou o **id** dela (com ou sem hífen); é erro de argumento
+  (código 2), com a posição da seção. `conhecidoEm` não pode ser futuro. Confirmar é `update … where confirmado_em is null`: a
+  chamada que confirma audita `incidente.confirmado`; a que chega depois responde 204 igual, sem segunda linha; o id que não é da
+  escola, o inexistente e o que nem é UUID respondem o mesmo `NAO_ENCONTRADO`. A resposta de `GET incidentes` traz o `id` da seção
+  (não o do incidente, que as escolas dividem), os sem confirmação primeiro e até 50.
 
 ## 6. Isolamento (obrigatório)
 
@@ -355,7 +369,7 @@ Todo repository novo tira a escola do contexto. O job da escola roda com a escol
 | `EscolasDaRotinaRepository.listarIds` | ids das escolas, nada mais | a rotina noturna precisa abrir o contexto de cada escola; é infraestrutura de rotina, não de retenção. Na tarefa 3.0, a medição do alerta de duas noites, no worker-lote, usa a mesma lista para abrir o contexto de cada escola e ler as noites dela pelo `ExpurgoDaEscolaRepository`, com escopo; o teste de arquitetura lista quem a usa (só o worker-lote) |
 | `ContaGlobalRepository.travarConta`, `limparContaSemUso`, `encerrarSessoesDaConta` | os três da conta global, **movidos** de `ResolucaoDeTenantRepository` (o terceiro na tarefa 1.0: o `limparContaSemUso` o chama, e a redefinição do MFA, no `sessao`, também) | a conta é global por desenho; a exceção da `Conta` em `modelo-de-dados.md` passa a dizer "só `sessao` e `nucleo/ciclo-de-vida`" (e o expurgo de acesso, que já a limpava), e o `arquitetura.test.ts` passa a aceitar os dois caminhos |
 | `OperacaoPrivacidadeRepository` (escrever `suboperador` e `incidente`, contagens por escola) | comandos da operação | mesma justificativa do painel; só ids, números e as tabelas da operação |
-| `ExpurgoDeAcessoRepository.apagarLoteVencido('incidente')` | incidente com mais de 5 anos, e a cascata das ligações | a justificativa do método passa a citar o incidente |
+| `ExpurgoDeAcessoRepository.apagarLoteVencido('incidente')` | incidente com mais de 5 anos do `registrado_em`, e a cascata das ligações | a justificativa do método passa a citar o incidente (tarefa 9.0) |
 
 Os comandos `ops:retencao`, `ops:suboperador` e `ops:incidente` abrem o contexto de cada escola antes de escrever a
 ligação ou o ajuste. `suboperador` e `incidente` entram em `TABELAS_DA_OPERACAO`. A escola as lê só por dois
@@ -363,7 +377,10 @@ repositórios de leitura no `nucleo` (a API e o worker os usam), que entram em `
 só-leitura:
 - `SuboperadorDaEscolaRepository`: `where (alcance = 'todas' or exists (ligação com escola_id = contexto))`, com os
   parênteses;
-- `IncidenteDaEscolaRepository`: só por junção com `incidente_escola.escola_id = contexto`.
+- `IncidenteDaEscolaRepository`: só por junção com `incidente_escola.escola_id = contexto`. **Tarefa 9.0:** ele não é só de leitura (a
+  confirmação é um `update` da `incidente_escola` no escopo da escola, pois a tabela tem `escola_id`); o que ele nunca faz é escrever
+  em `incidente`, e nenhum método dele é `@SemEscopo`. O `OperacaoPrivacidadeRepository` ganha `registrarIncidente` e
+  `ligarEscolaAoIncidente`, e o teste de arquitetura tem um grupo próprio (escritor, leitor da escola e expurgo).
 
 A `ContaGlobalRepository` não sai pelo barrel do `@educa/nucleo` nem pelo subcaminho do ciclo de vida, só pelo
 `@educa/nucleo/conta-global`, e o teste lista quem a importa: o `CicloDeVidaService` e o `sessao` (a redefinição do MFA), e os testes deles. A justificativa do `EscolasDaRotinaRepository` é o papel da rotina, registrada em `modelo-de-dados.md`.
@@ -457,7 +474,7 @@ Não há IA no caminho. O que a funcionalidade preserva:
 | Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` (não existia: a chave única começa pelo ano), e `consumo_ia (escola_id, execucao_id) where execucao_id is not null`; e, para as FKs sem ação do material, `mensagem_tutor` e `sinal_tutor (escola_id, material_id)` parciais (tarefa 5.0). De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`, e o mesmo com `and funcao = 'tutor_com_o_aluno'` (tarefa 4.0); `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
 | Migration | compatível: a 0024 e a 0028 (`consumo_ia_provedor`: a coluna `provedor` e o check que a prende ao envio externo) só expandem, e a exigência de `provedor` vai num release posterior (seção 3). O `migrar` roda numa transação, então `NOT VALID` seguido de `VALIDATE` no mesmo arquivo não alivia a trava: a partir do staging, cada check vai em arquivo próprio. Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
 | Quando cada dependência cai | banco: 503 tipado e nova tentativa; Redis de fila: aceito e despachado depois; storage: "em preparação", e baixar dá `INDISPONIVEL` |
-| Métrica e alerta | duas noites seguidas sem todas as categorias da escola com `concluida = true` (tarefa 3.0: `expurgo.noites_incompletas{escola_id}`, de 0 a 2, medida pelo worker-lote a cada 5 min; a noite é o dia local de `em` no fuso da escola, de ontem para trás; a categoria sem linha conta como não concluída; a noite anterior à primeira execução da escola não conta, e a escola que nunca rodou não tem série; a regra dispara com a série em 2 por 1 min, `infra/grafana/alertas/expurgo-noites-incompletas.yaml`; o lote que falha grava a categoria com `concluida = false` antes de o erro subir, para a escola cujo expurgo falha desde a primeira noite também ter série; numa escola a oeste de São Paulo, uma execução que passa da meia-noite local divide as categorias entre dois dias, pendência no `TODO.md`); incidente sem confirmação em 24 h; pedido `agendado` mais de 48 h depois de `eliminar_em` (uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
+| Métrica e alerta | duas noites seguidas sem todas as categorias da escola com `concluida = true` (tarefa 3.0: `expurgo.noites_incompletas{escola_id}`, de 0 a 2, medida pelo worker-lote a cada 5 min; a noite é o dia local de `em` no fuso da escola, de ontem para trás; a categoria sem linha conta como não concluída; a noite anterior à primeira execução da escola não conta, e a escola que nunca rodou não tem série; a regra dispara com a série em 2 por 1 min, `infra/grafana/alertas/expurgo-noites-incompletas.yaml`; o lote que falha grava a categoria com `concluida = false` antes de o erro subir, para a escola cujo expurgo falha desde a primeira noite também ter série; numa escola a oeste de São Paulo, uma execução que passa da meia-noite local divide as categorias entre dois dias, pendência no `TODO.md`); incidente sem confirmação em 24 h (tarefa 9.0: `incidente.horas_sem_confirmacao{escola_id}`, medida pelo worker-lote a cada 5 min, em horas desde o `conhecido_em` do incidente mais antigo da escola sem confirmação, e só a escola com pendente tem série; a regra `infra/grafana/alertas/incidente-sem-confirmacao.yaml` dispara acima de 24 por 1 min; a base `MedicaoPorEscola` é do laço, da lista de escolas e da exportação, e a medição do expurgo passou a herdar dela); pedido `agendado` mais de 48 h depois de `eliminar_em` (uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
 | Cenário de teste de carga | o "justiça entre escolas" ganha uma escola expurgando 1 milhão de linhas e trocando nome enquanto outra usa o Tutor |
 
 ## 8. Uso de IA

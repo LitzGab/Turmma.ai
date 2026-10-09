@@ -1,14 +1,11 @@
 # Estado da execução — lgpd-e-titular
 
 ## Agora
-- **Tarefa atual:** 8.0, iniciada em 09/10/2026 11:50, com o Implementador em Sonnet 5.5
-- **Espero:** relatório do Implementador sobre a 8.0, retomada às 12:35 de 09/10/2026 na mesma sessão,
-  depois de uma falha por falta de memória (ver "O que falhou"): falta repetir só o spec novo, o portão
-  da tarefa e a Mesa
-- **Depois da 8.0, antes da 9.0:** correção `2026-10-09-plano-do-lote-por-custo`, com o diagnóstico do
-  Arquiteto (`.processo/ordens/diagnostico-plano-do-lote.md`); guardião: `infra-guardian`. É a terceira
-  tentativa nesse defeito: se falhar com o diagnóstico aplicado, é parada
-- **Base:** `spec/lgpd-e-titular` em `1362595` (merge da `develop` em `5d63ba3`)
+- **Tarefa atual:** 9.0, iniciada em 09/10/2026 13:45, com o Implementador em Sonnet 5.5
+- **Espero:** relatório do Implementador
+- **Pendente para a validação:** as duas abas da Privacidade quebram em duas linhas em 360 px (vista na
+  foto da vitrine); recomendação, não bloqueante
+- **Base:** `spec/lgpd-e-titular` em `69a68e4` (a correção da aba da 8.0), com a `develop` até `30f4765`
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -26,8 +23,27 @@
 | 7.0 | `ab5b9d6` | Sonnet | 10 | primeira no processo revisto; 2 reprovações na 1ª rodada (`privacy-guardian` e `revisor-geral`), uma ordem só, todos aprovados na 2ª; sem escalada nem divergência; de 09:27 a 09:55 de 09/10, 28 minutos |
 | correções `2026-10-09-plano-do-tutor-intermitente` e `2026-10-09-plano-do-lote-sem-estatistica` | nenhum | Sonnet | 0 | duas falhas, sem commit, de 09:57 a 11:40: ver "O que falhou"; a árvore voltou a ficar só com o `estado.md` |
 | merge da `develop` (`5d63ba3`) | ver `git log` | Orquestrador | — | sem conflito; 11 arquivos de processo |
+| 8.0 | `b875e52` | Sonnet | 10 | 2 reprovações na 1ª rodada (`test-engineer` e `revisor-geral`), uma ordem só, todos aprovados na 2ª; 1 falha por falta de memória no meio (ver "O que falhou"), retomada na mesma sessão; divergência registrada (auditoria do suboperador sem escola, check 0029); deixou uma lacuna da Tech Spec para decidir antes da 12.0; de 11:44 a 12:58 de 09/10 |
+| triagem da lacuna da 8.0 e registro da decisão | `36757fd`, `6a4a813` | Arquiteto (Opus) | — | só documento; a 12.0 liberada; a parada da aba respondida com a opção (a) |
+| correção `2026-10-09-plano-do-lote-por-custo` | `d44e951` | Sonnet | 4 | terceira tentativa, feita pelo diagnóstico do Arquiteto; os quatro revisores aprovaram na 1ª rodada; vermelho no banco inflado e verde depois, mutação sem `enable_sort` vermelha, 50 voltas sem falha; de 13:00 a 13:18 de 09/10 |
+| merge da `develop` (`34ae6fc`) | `a17b5ac` | Orquestrador | — | sem conflito; `tools/vitrine/` e a foto da tela na revisão |
+| linha "Telas" das tarefas 10, 16, 17 e 18 | `75baeb1` | Arquiteto (Opus) | — | só documento; a vitrine não tem incidente nem pedido, então a foto dessas telas é a do vazio |
+| merge da `develop` (`30f4765`) | `b6e49d7` | Orquestrador | — | sem conflito; conserto da vitrine, que barrava o portão |
+| correção `2026-10-09-vigencia-anterior-a-escola` | `69a68e4` | Sonnet | 7 | decisão do Joaquim (coluna `escola.criada_em`, migration 0030); 2 reprovações na 1ª rodada (`test-engineer` e `revisor-geral`), uma ordem só; `DIVERGÊNCIA` de portão no meio, por defeito da vitrine vindo da `develop`; de 13:20 a 13:40 de 09/10 |
 
 ## Esperando o Joaquim
+
+### 09/10/2026 13:15 — F3, aba de suboperadores da 8.0 (BLOQUEIO do Arquiteto) — RESPONDIDA em 09/10/2026 13:25
+Resposta do Joaquim, neste terminal: "faça o melhor para o projeto". Vale a opção (a), a recomendada:
+coluna `escola.criada_em`, numa correção da 8.0. O Arquiteto registra a decisão na Tech Spec e nos
+cenários; a correção vai ao Implementador depois da correção do teste de plano, antes da 9.0.
+
+Decisão: como a aba de empresas trata o suboperador de alcance "todas" cuja vigência começa antes de a escola existir?
+Contexto: hoje a aba mostra como passada a empresa encerrada antes de a escola existir, e "Desde" com data
+anterior à escola: diz que recebeu dado da escola quem nunca recebeu. `escola` não tem data de criação, então
+corrigir muda o desenho. Abrir `tasks/prd-lgpd-e-titular/techspec.md` §6, "Em aberto, parada do Joaquim".
+Opções: (a) coluna `escola.criada_em`, numa correção da 8.0 | (b) ler a data da auditoria `escola.criada`, sem migration | (c) deixar como está e dizer na aba que a data é a do contrato da empresa com a Turmma
+Recomendo: (a), a do Arquiteto: a tela para de afirmar um compartilhamento que não houve, sem pôr o domínio a depender da auditoria.
 
 ### 09/10/2026 09:20 — F3, merge da `develop` na branch da spec — RESPONDIDA em 09/10/2026 09:35
 Resposta: ficar com o lado da branch, concluir o merge, enviar a branch e seguir para a 7.0. Veio pelo
@@ -43,6 +59,12 @@ Recomendo: ficar com o lado da branch; não se perde nenhuma linha e nada é esc
 
 ## O que falhou
 
+- **Portão da tarefa barrado por um defeito da `develop` (09/10/2026 13:25):** o merge de `34ae6fc`
+  trouxe `tools/vitrine/escola.ts`, que faz `insert into escola` (linha 119), e o teste de arquitetura
+  `apps/api/src/ops/escola.repository.test.ts:65` ("nenhum código fora do repository do operador cria
+  rede ou escola") fica vermelho. Reproduzi no andar e na `develop` do térreo. A correção
+  `2026-10-09-vigencia-anterior-a-escola` está pronta na árvore, verde nos alvos dela, sem carimbo. O
+  Implementador mandou `DIVERGÊNCIA`, motivo portão.
 - **8.0, primeira falha (09/10/2026 12:16): o e2e repetido foi morto por falta de memória.** O
   Implementador errou o filtro e o Playwright rodou os 544 testes de todos os specs com 6 trabalhadores;
   a máquina tinha 3,8 GB livres de 31. Nada commitado, árvore inteira; 8.1 a 8.6 codificadas, testes da
@@ -96,6 +118,29 @@ Recomendo: ficar com o lado da branch; não se perde nenhuma linha e nada é esc
 
 ## O que decidi sem perguntar
 
+- **Defeito da vitrine, não corrigido na branch (09/10/2026 13:30):** o `/seguir` manda corrigir na
+  branch o que barra o portão. Não fiz: o defeito nasceu na `develop`, a saída (liberar o arquivo no
+  teste ou criar a escola pelo repository do operador) é desenho de quem fez a vitrine, e corrigir aqui
+  faria a branch divergir. Avisei o "Claude Code #2" e espero o hash do conserto na `develop` para
+  trazê-lo ao andar; a correção da aba e a 9.0 esperam por isso. Chegou às 13:28 (`30f4765`, sem tocar a
+  guarda); merge no andar em `b6e49d7`, e o teste passou de novo.
+- **Foto da tela na revisão (09/10/2026 13:25):** o "Claude Code #2", a mando do Joaquim, avisou que a
+  revisão de tela foi reformulada na `develop` (`34ae6fc`, que já está no andar): em tarefa com tela a
+  Mesa fotografa as telas, na escola cheia e na vazia, e entrega a todos os revisores; o relatório do
+  Implementador ganha a linha "Telas vistas: sim | não (<erro>) | a tarefa não tem tela", e o "não" vai
+  para a observação da tarefa aqui, sem parada; na validação, RF com tela sem foto lida pelo Validador é
+  no máximo parcial; o Arquiteto escreve a linha "Telas" no "Como testar" de tarefa com tela. Reler
+  `revisar-tarefa` e `validar` antes da validação.
+- **Vitrine e foto da tela (09/10/2026 13:35):** o "Claude Code #2", a mando do Joaquim, avisou que a
+  `develop` local foi a `f162411`: entrou `tools/vitrine/` (escola sintética no ambiente de teste e foto
+  da tela em 1366 px e 360 px) e mudaram o `executar-task`, o `revisar-tarefa` e o papel
+  `frontend-reviewer`; a falta da foto nunca bloqueia nem vira parada. Conferi o commit no térreo.
+  Combinado: sem interromper a correção em curso, e antes da próxima tarefa ou correção que toque
+  `apps/web`, trago a `develop` para o andar (merge e push da branch) e reinicio Implementador e Mesa.
+- **Abas da Privacidade em 360 px:** ele viu na foto da vitrine que as duas abas ("Por quanto tempo
+  guardamos" e "Empresas que recebem dados") quebram em duas linhas. Não é bloqueante. Entra na correção
+  `2026-10-09-vigencia-anterior-a-escola` só se ela já tocar `apps/web`; se ela ficar no backend, não puxo
+  tela para dentro dela e a quebra fica como recomendação para a validação.
 - **Retomada da 8.0 sem reiniciar a sessão (09/10/2026 12:35):** o `/seguir` manda reiniciar o
   Implementador na primeira falha. Mantive a sessão: a causa foi de máquina (memória), o que falta são
   três comandos, e uma sessão nova gastaria minutos relendo a tarefa. Pedi o spec novo sozinho, com 2

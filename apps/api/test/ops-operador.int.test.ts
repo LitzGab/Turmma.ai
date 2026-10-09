@@ -12,6 +12,7 @@ import { CHAVE_DA_TRAVA_DOS_OPERADORES } from '../src/operacao/operador.reposito
 import type { BancoDoComando, SaidaDoComando } from '../src/ops/comando.js'
 import { executarOpsConviteCoordenador } from '../src/ops/convite-coordenador.js'
 import { executarOpsEscola } from '../src/ops/escola.js'
+import { executarOpsIncidente } from '../src/ops/incidente.js'
 import { executarOpsOperador } from '../src/ops/operador.js'
 import { executarOpsRedefinirMfa } from '../src/ops/redefinir-mfa.js'
 import { executarOpsRetencao } from '../src/ops/retencao.js'
@@ -210,6 +211,8 @@ describe('npm run ops:operador: o operador nasce, é reconvidado e é desativado
       await pool.query(`delete from auditoria where entidade = 'suboperador' and entidade_id in ${dasChaves}`, [chaves])
       await pool.query(`delete from suboperador_escola where suboperador_id in ${dasChaves}`, [chaves])
       await pool.query('delete from suboperador where chave = any($1::text[])', [chaves])
+      // O incidente que o `ops:incidente registrar` do operador ativo gravou na escola da sala; as seções saem em cascata.
+      await pool.query('delete from incidente where id in (select incidente_id from incidente_escola where escola_id = $1)', [escolaDaSala()])
       await api?.app.close()
       await bancada.fechar()
       await medidor.encerrar()
@@ -298,6 +301,25 @@ describe('npm run ops:operador: o operador nasce, é reconvidado e é desativado
         passou: async (execucao) => {
           expect(execucao).toMatchObject({ codigo: 0, erro: '' })
           expect((await pool.query('select 1 from suboperador where chave = $1 and fim is null', [CHAVE_DO_C2_ENCERRAMENTO])).rows).toEqual([])
+        },
+      },
+      {
+        nome: 'incidente registrar',
+        comando: executarOpsIncidente,
+        argumentos: () => {
+          const caminho = arquivoNovo()
+          const secao = { escola: escolaDaSala(), circunstancias: 'Circunstância sintética.', categorias: ['cadastro'], titularesEstimados: 3, risco: 'baixo', contencao: 'Contenção sintética.', correcao: 'Correção sintética.' }
+          writeFileSync(caminho, JSON.stringify({ conhecidoEm: new Date(Date.now() - 3_600_000).toISOString(), escolas: [secao] }))
+          return ['registrar', '--arquivo', caminho]
+        },
+        // Nenhuma seção e nenhuma auditoria na escola: quem saiu da equipe não registra incidente que a coordenação vai ler (F3, 9.0).
+        nadaFeito: async () => {
+          expect((await pool.query('select 1 from incidente_escola where escola_id = $1', [escolaDaSala()])).rows).toEqual([])
+          expect((await pool.query(`select 1 from auditoria where escola_id = $1 and acao = 'incidente.registrado'`, [escolaDaSala()])).rows).toEqual([])
+        },
+        passou: async (execucao) => {
+          expect(execucao).toMatchObject({ codigo: 0, erro: '' })
+          expect((await pool.query('select 1 from incidente_escola where escola_id = $1', [escolaDaSala()])).rows).toHaveLength(1)
         },
       },
       {

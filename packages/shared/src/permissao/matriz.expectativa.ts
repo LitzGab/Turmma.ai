@@ -100,6 +100,8 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['rede', 'analista', 'ler_nominal', 'nunca'],
   ['rede', 'privacidade_retencao', 'ler', 'nunca'],
   ['rede', 'privacidade_suboperadores', 'ler', 'nunca'],
+  ['rede', 'privacidade_incidentes', 'ler', 'nunca'],
+  ['rede', 'privacidade_incidentes', 'confirmar', 'nunca'],
 
   // coordenador: a unidade; aluno e indicador nominal só com auditoria
   ['coordenador', 'sistema_contexto', 'ler', 'proprio'],
@@ -198,6 +200,8 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['coordenador', 'analista', 'ler_nominal', 'nominal_auditado'],
   ['coordenador', 'privacidade_retencao', 'ler', 'unidade'],
   ['coordenador', 'privacidade_suboperadores', 'ler', 'unidade'],
+  ['coordenador', 'privacidade_incidentes', 'ler', 'unidade'],
+  ['coordenador', 'privacidade_incidentes', 'confirmar', 'unidade'],
 
   // professor: as turmas dele e o próprio vínculo e indicador
   ['professor', 'sistema_contexto', 'ler', 'proprio'],
@@ -295,6 +299,8 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['professor', 'analista', 'ler_nominal', 'nunca'],
   ['professor', 'privacidade_retencao', 'ler', 'nunca'],
   ['professor', 'privacidade_suboperadores', 'ler', 'nunca'],
+  ['professor', 'privacidade_incidentes', 'ler', 'nunca'],
+  ['professor', 'privacidade_incidentes', 'confirmar', 'nunca'],
 
   // aluno: a si mesmo
   ['aluno', 'sistema_contexto', 'ler', 'proprio'],
@@ -391,4 +397,6 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['aluno', 'analista', 'ler_nominal', 'nunca'],
   ['aluno', 'privacidade_retencao', 'ler', 'nunca'],
   ['aluno', 'privacidade_suboperadores', 'ler', 'nunca'],
+  ['aluno', 'privacidade_incidentes', 'ler', 'nunca'],
+  ['aluno', 'privacidade_incidentes', 'confirmar', 'nunca'],
 ]

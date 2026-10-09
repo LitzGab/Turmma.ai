@@ -223,6 +223,30 @@ describe('sistema.expurgar-acesso', () => {
       ha,
     ])
 
+  /**
+   * Um incidente registrado `ha` antes do `AGORA` (conhecido uma hora antes de registrado, como o check do banco pede), com uma
+   * seção para cada escola dada: o prazo de 5 anos conta do `registrado_em`, e as seções saem em cascata.
+   */
+  const incidente = async (ha: string, escolas: readonly string[]) => {
+    const id = await inserir(
+      `insert into incidente (conhecido_em, registrado_por, registrado_em)
+       values ($1::timestamptz - $2::interval - interval '1 hour', 'equipe-de-teste', $1::timestamptz - $2::interval) returning id`,
+      [AGORA.toISOString(), ha],
+    )
+    for (const escolaId of escolas) {
+      await bancada.pool.query(
+        `insert into incidente_escola (incidente_id, escola_id, circunstancias, categorias, titulares_estimados, risco, contencao, correcao)
+         values ($1, $2, 'Circunstância sintética', array['cadastro'], 3, 'baixo', 'Contenção sintética', 'Correção sintética')`,
+        [id, escolaId],
+      )
+    }
+    return id
+  }
+
+  /** As seções (de qualquer escola) dos incidentes dados que ainda existem. */
+  const secoesDos = async (ids: readonly string[]): Promise<number> =>
+    (await bancada.pool.query<{ n: number }>('select count(*)::int as n from incidente_escola where incidente_id = any($1::uuid[])', [ids])).rows[0]?.n ?? -1
+
   let operadoresDoCaso: string[] = []
   const novoDesativado = async () => {
     const id = await operador(false)
@@ -277,7 +301,8 @@ describe('sistema.expurgar-acesso', () => {
   async function semear(): Promise<Semeado> {
     const vazio = () => Object.fromEntries(ALVOS_DO_EXPURGO_DE_ACESSO.map((alvo) => [alvo, [] as string[]])) as Record<AlvoDoExpurgoDeAcesso, string[]>
     const resultado: Semeado = { sai: vazio(), fica: vazio(), operadores: [], auditorias: [] }
-    for (const escolaId of [await bancada.escola(), await bancada.escola()]) {
+    const escolas = [await bancada.escola(), await bancada.escola()]
+    for (const escolaId of escolas) {
       const aluno = await usuario(escolaId)
       const { sai, fica } = resultado
       // Registro de acesso: 6 meses do Marco Civil, contados do relógio injetado.
@@ -343,6 +368,9 @@ describe('sistema.expurgar-acesso', () => {
     resultado.sai.registro_acesso.push(await registro(null, null, 'login_falho', '6 months 1 day'))
     resultado.fica.registro_acesso.push(await registro(null, null, 'login_falho', '6 months -1 day'))
     await semearOperacao(resultado)
+    // O incidente de segurança (F3, 9.0): 5 anos do registro, com uma seção em cada uma das duas escolas.
+    resultado.fica.incidente.push(await incidente('5 years -1 day', escolas), await incidente('5 years -1 hour', escolas), await incidente('1 day', escolas))
+    resultado.sai.incidente.push(await incidente('5 years 1 day', escolas), await incidente('5 years 1 hour', escolas), await incidente('50 years', escolas))
     return resultado
   }
 
@@ -357,6 +385,9 @@ describe('sistema.expurgar-acesso', () => {
       expect(await restantes(alvo, semeado.sai[alvo]), `${alvo}: vencidos`).toEqual([])
       expect(await restantes(alvo, semeado.fica[alvo]), `${alvo}: no prazo`).toEqual([...semeado.fica[alvo]].sort())
     }
+    // A seção de cada escola sai com o incidente dela, e fica com o que está no prazo: duas escolas por incidente.
+    expect(await secoesDos(semeado.sai.incidente), 'incidente_escola: das vencidas').toBe(0)
+    expect(await secoesDos(semeado.fica.incidente), 'incidente_escola: das no prazo').toBe(semeado.fica.incidente.length * 2)
   }
 
   /** Só o lado da operação do `conferir`. */
@@ -422,7 +453,7 @@ describe('sistema.expurgar-acesso', () => {
     const eventos = log.doEvento('acesso.expurgado')
     expect(eventos).toHaveLength(1)
     const [linha] = eventos
-    for (const chave of ['registrosDeAcessoTotal', 'sessoesTotal', 'convitesTotal', 'acessosDaTurmaTotal', 'acessosDaOperacaoTotal', 'sessoesDeOperadorTotal', 'convitesDeOperadorTotal']) {
+    for (const chave of ['registrosDeAcessoTotal', 'sessoesTotal', 'convitesTotal', 'acessosDaTurmaTotal', 'acessosDaOperacaoTotal', 'sessoesDeOperadorTotal', 'convitesDeOperadorTotal', 'incidentesTotal']) {
       expect(linha?.[chave], chave).toEqual(expect.any(Number))
     }
     const texto = log.linhas.join('\n')
@@ -449,13 +480,14 @@ describe('sistema.expurgar-acesso', () => {
       acessosDaOperacaoTotal: porAlvo.acesso_operacao,
       sessoesDeOperadorTotal: porAlvo.sessao_operador,
       convitesDeOperadorTotal: porAlvo.convite_operador,
+      incidentesTotal: porAlvo.incidente,
       contasLimpasTotal: 7,
     })
   })
 
   it('alvo sem total (A0b, tarefa 9.0): o objeto dos totais do processador é conferido alvo a alvo pelo compilador', () => {
-    // @ts-expect-error falta o total de `convite_operador`: sem a afirmação `as Record`, o compilador recusa o objeto.
-    const semUmAlvo: TotaisDoExpurgoDeAcesso = { registro_acesso: 0, sessao: 0, convite: 0, acesso_turma: 0, acesso_operacao: 0, sessao_operador: 0 }
+    // @ts-expect-error falta o total de `incidente` (F3, 9.0): sem a afirmação `as Record`, o compilador recusa o objeto.
+    const semUmAlvo: TotaisDoExpurgoDeAcesso = { registro_acesso: 0, sessao: 0, convite: 0, acesso_turma: 0, acesso_operacao: 0, sessao_operador: 0, convite_operador: 0 }
     expect(Object.keys(semUmAlvo)).toHaveLength(ALVOS_DO_EXPURGO_DE_ACESSO.length - 1)
   })
 
@@ -475,6 +507,71 @@ describe('sistema.expurgar-acesso', () => {
     expect(await existem()).toEqual([cem])
     expect(await repositorio.apagarLoteVencido('convite_operador', AGORA, 1)).toBe(1)
     expect(await existem()).toEqual([])
+  })
+
+  it('lote ordenado (F3, tarefa 9.0): com o lote menor que o total, o de `incidente` leva primeiro o mais antigo, mesmo semeado fora da ordem do prazo, e a seção sai com ele', async () => {
+    const escolas = [await bancada.escola()]
+    // Muito além de qualquer linha semeada ou deixada por outro caso, e inseridos fora da ordem do prazo: o mais antigo por último.
+    const duzentos = await incidente('200 years', escolas)
+    const cem = await incidente('100 years', escolas)
+    const trezentos = await incidente('300 years', escolas)
+    semeado.sai.incidente.push(duzentos, cem, trezentos)
+    const repositorio = new ExpurgoDeAcessoRepository(bancada.banco)
+    const existem = async () => (await restantes('incidente', [duzentos, cem, trezentos])).sort()
+
+    expect(await repositorio.apagarLoteVencido('incidente', AGORA, 1)).toBe(1)
+    expect(await existem()).toEqual([duzentos, cem].sort())
+    expect(await secoesDos([trezentos])).toBe(0)
+    expect(await secoesDos([duzentos, cem])).toBe(2)
+    expect(await repositorio.apagarLoteVencido('incidente', AGORA, 1)).toBe(1)
+    expect(await existem()).toEqual([cem])
+    expect(await repositorio.apagarLoteVencido('incidente', AGORA, 1)).toBe(1)
+    expect(await existem()).toEqual([])
+    expect(await secoesDos([duzentos, cem, trezentos])).toBe(0)
+  })
+
+  it('skip locked (F3, tarefa 9.0): o incidente vencido que outra transação segura não faz o lote esperar, e o lote leva o seguinte', async () => {
+    const escolas = [await bancada.escola()]
+    const maisAntigo = await incidente('400 years', escolas)
+    const seguinte = await incidente('399 years', escolas)
+    semeado.sai.incidente.push(maisAntigo, seguinte)
+    const segurador = await bancada.pool.connect()
+    try {
+      await segurador.query('begin')
+      await segurador.query('select id from incidente where id = $1 for update', [maisAntigo])
+      // Com o lote de 1, o mais antigo seria o escolhido: preso, ele é pulado, e o lote apaga o seguinte sem esperar o segurador.
+      expect(await new ExpurgoDeAcessoRepository(bancada.banco).apagarLoteVencido('incidente', AGORA, 1)).toBe(1)
+      expect(await restantes('incidente', [maisAntigo, seguinte])).toEqual([maisAntigo])
+    } finally {
+      await segurador.query('rollback')
+      segurador.release()
+    }
+    expect(await new ExpurgoDeAcessoRepository(bancada.banco).apagarLoteVencido('incidente', AGORA, 1)).toBe(1)
+    expect(await restantes('incidente', [maisAntigo, seguinte])).toEqual([])
+  })
+
+  it('concorrência (F3, tarefa 9.0): dois expurgos em paralelo apagam cada incidente vencido uma vez só, e a soma das duas contagens é o que havia vencido', async () => {
+    const vencidos = async () =>
+      (await bancada.pool.query<{ n: number }>(`select count(*)::int as n from incidente where registrado_em < $1::timestamptz - interval '5 years'`, [AGORA.toISOString()])).rows[0]?.n ?? -1
+    const antes = await vencidos()
+    expect(antes).toBeGreaterThanOrEqual(semeado.sai.incidente.length)
+    const repositorio = new ExpurgoDeAcessoRepository(bancada.banco)
+    // Lote de 1: as duas execuções disputam linha a linha.
+    const execucao = async () => {
+      let total = 0
+      for (;;) {
+        const doLote = await repositorio.apagarLoteVencido('incidente', AGORA, 1)
+        total += doLote
+        if (doLote < 1) return total
+      }
+    }
+    const [uma, outra] = await Promise.all([execucao(), execucao()])
+    expect(uma + outra).toBe(antes)
+    expect(await vencidos()).toBe(0)
+    expect(await restantes('incidente', semeado.sai.incidente)).toEqual([])
+    expect(await restantes('incidente', semeado.fica.incidente)).toEqual([...semeado.fica.incidente].sort())
+    expect(await secoesDos(semeado.sai.incidente)).toBe(0)
+    expect(await secoesDos(semeado.fica.incidente)).toBe(semeado.fica.incidente.length * 2)
   })
 
   it('lote ordenado (A1, tarefa 10.0): com o lote menor que o total, o de `convite` e o de `acesso_turma` levam primeiro o mais antigo, mesmo semeado fora da ordem do prazo', async () => {
@@ -538,6 +635,7 @@ describe('sistema.expurgar-acesso', () => {
       ['acesso_operacao', 0],
       ['sessao_operador', 0],
       ['convite_operador', 0],
+      ['incidente', 0],
       ['conta', 0],
     ])
     await conferir()
@@ -549,7 +647,7 @@ describe('sistema.expurgar-acesso', () => {
     await Promise.all([expurgar(primeira), expurgar(segunda)])
     await conferir()
     // Juntas, as duas apagaram pelo menos os vencidos semeados (o banco de teste pode ter outros), e nenhuma falhou.
-    for (const alvo of ['registro_acesso', 'sessao', 'convite', 'acesso_turma'] as const) {
+    for (const alvo of ['registro_acesso', 'sessao', 'convite', 'acesso_turma', 'incidente'] as const) {
       const soma = [...primeira, ...segunda].filter(([deQual]) => deQual === alvo).reduce((total, [, apagadas]) => total + apagadas, 0)
       expect(soma, alvo).toBeGreaterThanOrEqual(semeado.sai[alvo].length)
     }
@@ -624,6 +722,7 @@ describe('sistema.expurgar-acesso', () => {
       'acesso_operacao',
       'sessao_operador',
       'convite_operador',
+      'incidente',
       'conta',
     ])
     await conferir()

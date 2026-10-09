@@ -13,6 +13,7 @@ import {
   ExpurgoDaEscolaRepository,
   ExpurgoDeAcessoRepository,
   ExpurgoDeJobsRepository,
+  IncidenteDaEscolaRepository,
   JobRegistroRepository,
   METRICAS,
   nomeDaFilaBullMQ,
@@ -47,6 +48,7 @@ import { criarExpurgoDeJobs, TIPO_EXPURGAR_JOBS } from './processadores/expurgar
 import { criarRotinaDeExpurgo, TIPO_EXPURGAR_DADO_PESSOAL } from './processadores/expurgar-dado-pessoal.js'
 import { criarExpurgoDaEscola, TIPO_EXPURGAR_ESCOLA } from './processadores/expurgar-escola.js'
 import { MedicaoDoExpurgo } from './medicao-do-expurgo.js'
+import { MedicaoDoIncidente } from './medicao-do-incidente.js'
 import { criarProcessadorSintetico, SandboxDeCpu } from './processadores/sintetico.js'
 import { criarClienteS3, MedidorDeStorage } from './storage/medidor-de-storage.js'
 
@@ -231,6 +233,8 @@ function montarRotinas(
   const expurgoDaEscola = new ExpurgoDaEscolaRepository(banco)
   const medicao = medidor === undefined ? undefined : new MedicaoDoExpurgo({ escolas, repositorio: expurgoDaEscola, janelaDaEscola, relogio, logger, medidor })
   medicao?.iniciar()
+  const medicaoDoIncidente = medidor === undefined ? undefined : new MedicaoDoIncidente({ escolas, repositorio: new IncidenteDaEscolaRepository(banco), relogio, logger, medidor })
+  medicaoDoIncidente?.iniciar()
   return {
     processadores: {
       [TIPO_CONSOLIDAR_USO]: criarConsolidacaoDeUso({
@@ -248,6 +252,7 @@ function montarRotinas(
     },
     encerrar: async () => {
       await medicao?.encerrar()
+      await medicaoDoIncidente?.encerrar()
       s3.destroy()
     },
   }

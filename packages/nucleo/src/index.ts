@@ -170,6 +170,7 @@ export {
   ExpurgoDeAcessoRepository,
   instrucaoDoLoteDeAcesso,
   RETENCAO_CONVITE_DIAS,
+  RETENCAO_INCIDENTE_ANOS,
   RETENCAO_REGISTRO_ACESSO_MESES,
   RETENCAO_SESSAO_DIAS,
 } from './retencao/expurgo-de-acesso.repository.js'
@@ -195,6 +196,9 @@ export { retencaoEscola } from './db/schema/retencao-escola.js'
 export { suboperador, suboperadorEscola } from './db/schema/suboperador.js'
 export { SuboperadorDaEscolaRepository } from './titular/suboperador-da-escola.repository.js'
 export type { SuboperadorLidoPelaEscola } from './titular/suboperador-da-escola.repository.js'
+export { incidente, incidenteEscola } from './db/schema/incidente.js'
+export { IncidenteDaEscolaRepository } from './titular/incidente-da-escola.repository.js'
+export type { IncidenteLidoPelaEscola } from './titular/incidente-da-escola.repository.js'
 export { RetencaoDaEscolaRepository } from './retencao/retencao-da-escola.repository.js'
 export type { AjusteAGravar } from './retencao/retencao-da-escola.repository.js'
 export { expurgoExecucao } from './db/schema/expurgo-execucao.js'

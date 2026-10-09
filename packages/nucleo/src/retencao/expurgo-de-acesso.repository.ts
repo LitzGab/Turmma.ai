@@ -18,14 +18,18 @@ export const RETENCAO_CONVITE_DIAS = 30
 /** Por quantos dias o acesso da turma fica depois de vencido ou revogado (`docs/lgpd.md`, "Acesso da turma"; A1). */
 export const RETENCAO_ACESSO_TURMA_DIAS = 30
 
+/** Por quantos anos o incidente fica depois de registrado (Resolução CD/ANPD 15/2024, art. 10; `docs/lgpd.md`, seção 8). */
+export const RETENCAO_INCIDENTE_ANOS = 5
+
 /**
- * As sete tabelas que o `sistema.expurgar-acesso` apaga por prazo, na ordem em que ele passa; a conta vem depois. As
+ * As oito tabelas que o `sistema.expurgar-acesso` apaga por prazo, na ordem em que ele passa; a conta vem depois. As
  * quatro primeiras são das escolas: registro de acesso, sessão e convite (tarefa 17.0), e o acesso da turma (A1, tarefa
- * 10.0); as três últimas, da operação Turmma (A0, tarefa 9.0), com os mesmos prazos. A `auditoria_operacao` (vigência + 5
+ * 10.0); as três seguintes, da operação Turmma (A0, tarefa 9.0), com os mesmos prazos; a última, o incidente de segurança
+ * (F3, tarefa 9.0), que é da operação mas leva as seções das escolas em cascata. A `auditoria_operacao` (vigência + 5
  * anos) e o `operador` (o dado pessoal sai no `desativar`) nunca são alvo, nem os pedidos de reivindicação (vigência + 5
  * anos, sem expurgo na A1).
  */
-export const ALVOS_DO_EXPURGO_DE_ACESSO = ['registro_acesso', 'sessao', 'convite', 'acesso_turma', 'acesso_operacao', 'sessao_operador', 'convite_operador'] as const
+export const ALVOS_DO_EXPURGO_DE_ACESSO = ['registro_acesso', 'sessao', 'convite', 'acesso_turma', 'acesso_operacao', 'sessao_operador', 'convite_operador', 'incidente'] as const
 export type AlvoDoExpurgoDeAcesso = (typeof ALVOS_DO_EXPURGO_DE_ACESSO)[number]
 
 /**
@@ -54,6 +58,8 @@ export type AlvoDoExpurgoDeAcesso = (typeof ALVOS_DO_EXPURGO_DE_ACESSO)[number]
  *   contrário dele, com `order by` por essa expressão (tarefa 9.0 da A0b): o lote que não cabe inteiro leva os mais
  *   antigos. Um por operador de cada vez, dezenas no total: sem índice próprio, a ordenação é a de uma tabela pequena,
  *   lida inteira.
+ * - **Incidente** (F3, tarefa 9.0): 5 anos depois de registrado, do mais antigo, e as seções das escolas (`incidente_escola`)
+ *   saem junto, pela cascata da FK: este arquivo não cita a tabela delas. Poucos por ano, sem índice próprio.
  */
 const APAGAR_LOTE: Record<AlvoDoExpurgoDeAcesso, (agora: Date, limite: number) => SQL> = {
   registro_acesso: (agora, limite) => sql`
@@ -122,6 +128,16 @@ const APAGAR_LOTE: Record<AlvoDoExpurgoDeAcesso, (agora: Date, limite: number) =
       select id from convite_operador
       where least(usado_em, revogado_em, expira_em) < ${agora.toISOString()}::timestamptz - make_interval(days => ${RETENCAO_CONVITE_DIAS})
       order by least(usado_em, revogado_em, expira_em)
+      limit ${limite}
+      for update skip locked
+    ))
+  `,
+  incidente: (agora, limite) => sql`
+    delete from incidente
+    where id = any(array(
+      select id from incidente
+      where registrado_em < ${agora.toISOString()}::timestamptz - make_interval(years => ${RETENCAO_INCIDENTE_ANOS})
+      order by registrado_em
       limit ${limite}
       for update skip locked
     ))
@@ -202,7 +218,8 @@ export class ExpurgoDeAcessoRepository {
   @SemEscopo(
     'o expurgo é rotina nossa e aplica o mesmo prazo de registro de acesso, sessão, convite (de coordenador e de professor) ' +
       'e acesso da turma (link e código da sala) a todas as escolas (e à falha de login sem escola), e às tabelas de acesso, ' +
-      'sessão e convite da operação Turmma, que são da equipe e não têm escola; não devolve linha, só a quantidade apagada, ' +
+      'sessão e convite da operação Turmma, que são da equipe e não têm escola, e ao incidente de segurança, que também não tem ' +
+      'escola e leva as seções delas em cascata; não devolve linha, só a quantidade apagada, ' +
       'e não atende requisição de escola nenhuma',
   )
   async apagarLoteVencido(alvo: AlvoDoExpurgoDeAcesso, agora: Date, limite: number = LOTE_DO_EXPURGO): Promise<number> {

@@ -1,0 +1,64 @@
+# Alerta "Incidente sem confirmação em 24 h" (Tech Spec do F3, seção 7c; runbook:
+# docs/runbook.md#incidente-sem-confirmação-em-24-h). Provisionado por arquivo no Grafana da observabilidade local
+# (infra/compose.yml monta esta pasta em provisioning/alerting).
+#
+# `incidente.horas_sem_confirmacao{escola_id}` é medida pelo worker-lote a cada 5 min, de `incidente_escola`: as horas desde que
+# a Turmma soube do incidente mais antigo da escola que a coordenação ainda não confirmou ter recebido. Dispara por escola quando
+# passa de 24 h (o prazo nosso de avisar a escola, `docs/lgpd.md`, seção 8), em qualquer réplica, por 1 min: o valor sobe devagar,
+# e o minuto só tira o susto de uma leitura isolada. O alerta traz a escola, nunca o incidente: nenhum texto, nenhum id dele.
+#
+# Sem dado é normal: só a escola com incidente sem confirmação tem série, e some quando a coordenação confirma.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: incidente-sem-confirmacao
+    folder: Educa.ia alertas
+    interval: 10s
+    rules:
+      - uid: educa-incidente-sem-confirmacao
+        title: Incidente sem confirmação em 24 h
+        condition: C
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          area: incidente
+        annotations:
+          summary: 'A coordenação da escola {{ $labels.escola_id }} não confirmou o aviso de incidente 24 h depois de a Turmma saber'
+          description: O prazo nosso de avisar a escola do incidente está estourado (LGPD, art. 48). Siga o runbook.
+          runbook_url: https://github.com/LitzGab/Educa.ia/blob/main/docs/runbook.md#incidente-sem-confirmação-em-24-h
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: max by (escola_id) (incidente_horas_sem_confirmacao{job="educa/worker"})
+              instant: true
+              range: false
+              intervalMs: 10000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - type: query
+                  evaluator:
+                    type: gt
+                    params: [24]

@@ -568,7 +568,6 @@ Auditoria*       → escola*, autorUsuario? | autorOperador?, acao*, entidade*, 
                    antes?, depois?, finalidade?, requisicaoId*, em*    (F1)
 SolicitacaoTitular → escola*, titular*, tipo (acesso | correcao | eliminacao |
                    portabilidade | compartilhamento), status, solicitadaEm*, atendidaEm?
-Incidente        → escola*, detectadoEm*, descricao, titularesAfetados, comunicadoEm?
 RetencaoEscola*  → escola* + categoria* (chave), meses*, referenciaContrato*, alteradaEm*,
                    alteradaPor* (apelido do operador)    (F3)
 ExpurgoExecucao* → escola*, categoria*, linhas*, concluida*, em*    (F3)
@@ -576,6 +575,9 @@ Suboperador      chave* (única entre os vigentes), nome*, finalidade*, categori
                  contrato* (código, nunca texto), vedaTreinamento*, alcance* (todas | lista), inicio*, fim?,
                  registradoPor* (apelido do operador)    (F3, sem escolaId)
 SuboperadorEscola → escola* + suboperador* (chave), inicio*, fim?    (F3, só no alcance "lista")
+Incidente        conhecidoEm*, registradoPor* (apelido do operador), registradoEm*    (F3, sem escolaId)
+IncidenteEscola  → escola* + incidente*, circunstancias*, categorias* (lista fechada), titularesEstimados*,
+                 risco* (baixo | relevante | alto), contencao*, correcao*, avisadoEm*, confirmadoEm?, confirmadoPor?    (F3)
 ```
 
 `RetencaoEscola` guarda só o **ajuste** da escola numa categoria do catálogo de retenção (`CATEGORIAS_DE_RETENCAO`, em
@@ -598,6 +600,20 @@ as outras a vê como passada. **A vigência nunca é anterior à escola** (corre
 `SuboperadorDaEscolaRepository` compara, no banco e só para essa linha, com o `escola.criada_em` da escola do contexto: o início
 é o maior entre o da empresa e o `criada_em`, e a empresa cujo `fim` é igual ou anterior ao `criada_em` não é devolvida, porque
 nunca recebeu dado da escola. Com ligação (`lista`) nada muda.
+
+**O incidente de segurança (F3, tarefa 9.0).** `Incidente` é o que as escolas afetadas dividem — quando a Turmma soube e quem da
+equipe registrou — e **não tem `escolaId`**. Só o `ops:incidente registrar` o escreve, pelo `OperacaoPrivacidadeRepository`, com
+uma seção por escola. `IncidenteEscola` é a seção de cada uma: os números e os textos **dela**, a categoria de dado alcançada
+(lista fechada do mapa de dados), o risco, a contenção, a correção e a confirmação de quem, da coordenação, recebeu o aviso. Tem
+`escolaId` e é escrita no contexto da escola, aberto antes; a escola lê e confirma pelo `IncidenteDaEscolaRepository`, que começa
+toda consulta por ela. O `id` que a escola vê e confirma é o da **seção**, nunca o do incidente: o do incidente é dividido, e
+mostrá-lo diria a uma escola que outra foi alcançada. O registro **não guarda dado de titular**: nem nome, nem matrícula, nem
+conversa; só um número estimado. O comando recusa texto que cite o nome ou o id de outra escola afetada do mesmo registro.
+`confirmadoPor` é a pessoa da coordenação (FK composta com a escola, `on delete set null`): a eliminação dela deixa a data e a
+seção. A confirmação é `update … where confirmado_em is null`: a primeira fica, e a segunda responde igual, sem gravar de novo.
+Retenção: 5 anos do `registradoEm` (Resolução CD/ANPD 15/2024, art. 10), pelo `sistema.expurgar-acesso`, que apaga o incidente e
+leva as seções em cascata. A auditoria (`incidente.registrado`, pela operação, e `incidente.confirmado`, pela coordenação) é da
+escola, com a seção por id e a finalidade fixa, e leva só o risco e o número estimado.
 O encerrado **fica**, como histórico: a escola precisa dizer ao titular por onde o dado passou, mesmo depois de a empresa sair, e a
 chave encerrada pode ser cadastrada de novo. A `chave` tem o formato do `IA_PROVEDOR_ID`
 (tarefa 7.0), que é como o compartilhamento do titular casa uma chamada com o suboperador; o `contrato` é um código de
@@ -682,7 +698,10 @@ liga a decisão sobre o professor (D45, regra 70 item 8). Os dois estão no mapa
      só alcançadas pelo `OperadorRepository` e pelo expurgo — ver "Operação Turmma";
    - o `Suboperador` (F3), a empresa que recebe dado da escola, da nossa operação: atende toda escola ou só as listadas em
      `SuboperadorEscola` (esta tem `escolaId`), e só o `OperacaoPrivacidadeRepository` escreve e o
-     `SuboperadorDaEscolaRepository` lê — ver "Comunicação, conta e conformidade".
+     `SuboperadorDaEscolaRepository` lê — ver "Comunicação, conta e conformidade";
+   - o `Incidente` (F3), o que as escolas afetadas por um incidente de segurança dividem, da nossa operação: só o
+     `OperacaoPrivacidadeRepository` escreve, o `IncidenteDaEscolaRepository` lê pela `IncidenteEscola` (esta tem `escolaId`) e
+     o expurgo de acesso apaga por prazo — ver "Comunicação, conta e conformidade".
    A lista de escolas da rotina noturna (`EscolasDaRotinaRepository.listarIds`, F3) não é tabela sem escola: é a
    consulta sem escopo que abre o contexto de cada escola — ver "Comunicação, conta e conformidade".
 2. Id é UUID. Nunca sequencial.

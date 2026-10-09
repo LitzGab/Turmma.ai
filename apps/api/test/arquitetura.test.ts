@@ -205,7 +205,7 @@ const EXPURGO_DA_OPERACAO = 'packages/nucleo/src/retencao/expurgo-de-acesso.repo
 const QUEM_PODE_TOCAR_A_OPERACAO = [REPOSITORY_DA_OPERACAO, EXPURGO_DA_OPERACAO]
 /** O que o expurgo pode tocar da operação: nunca `operador`, `codigo_recuperacao_operador` nem `auditoria_operacao`. */
 const EXPURGAVEIS_DA_OPERACAO = ['acesso_operacao', 'convite_operador', 'sessao_operador']
-const FORA_DA_VARREDURA = ['packages/nucleo/src/db/schema/operador.ts', 'packages/nucleo/src/db/schema/suboperador.ts', 'packages/nucleo/src/index.ts']
+const FORA_DA_VARREDURA = ['packages/nucleo/src/db/schema/operador.ts', 'packages/nucleo/src/db/schema/suboperador.ts', 'packages/nucleo/src/db/schema/incidente.ts', 'packages/nucleo/src/index.ts']
 const TABELAS_DA_OPERACAO = [nucleo.operador, nucleo.codigoRecuperacaoOperador, nucleo.conviteOperador, nucleo.sessaoOperador, nucleo.acessoOperacao, nucleo.auditoriaOperacao]
 
 /** Nome exportado pelo `@educa/nucleo` → nome físico, de toda tabela que o pacote exporta. */
@@ -229,6 +229,25 @@ const FISICOS_DO_SUBOPERADOR = new Set<string>(TABELAS_DO_SUBOPERADOR.map((tabel
 const EXPORTS_DO_SUBOPERADOR = new Set([...TABELAS_EXPORTADAS].filter(([, fisico]) => FISICOS_DO_SUBOPERADOR.has(fisico)).map(([nome]) => nome))
 const GRUPO_DO_SUBOPERADOR: GrupoDeTabelas = { exports: EXPORTS_DO_SUBOPERADOR, fisicos: FISICOS_DO_SUBOPERADOR, schema: 'suboperador' }
 
+/**
+ * F3, tarefa 9.0 (Tech Spec do F3, seção 6): o incidente e a seção de cada escola. `incidente` não tem `escola_id` (exceção do item 1
+ * de `docs/modelo-de-dados.md`), então a cerca é: o `OperacaoPrivacidadeRepository` escreve nas duas (`ops:incidente`), o
+ * `IncidenteDaEscolaRepository` lê as duas pela escola do contexto e só escreve na seção da escola (a confirmação), e o expurgo de
+ * acesso apaga o `incidente`, que leva as seções em cascata.
+ */
+const LEITOR_DO_INCIDENTE = 'packages/nucleo/src/titular/incidente-da-escola.repository.ts'
+const QUEM_PODE_TOCAR_O_INCIDENTE = [ESCRITOR_DO_SUBOPERADOR, LEITOR_DO_INCIDENTE, EXPURGO_DA_OPERACAO]
+const TABELAS_DO_INCIDENTE = [nucleo.incidente, nucleo.incidenteEscola]
+const FISICOS_DO_INCIDENTE = new Set<string>(TABELAS_DO_INCIDENTE.map((tabela) => getTableName(tabela)))
+const EXPORTS_DO_INCIDENTE = new Set([...TABELAS_EXPORTADAS].filter(([, fisico]) => FISICOS_DO_INCIDENTE.has(fisico)).map(([nome]) => nome))
+const GRUPO_DO_INCIDENTE: GrupoDeTabelas = { exports: EXPORTS_DO_INCIDENTE, fisicos: FISICOS_DO_INCIDENTE, schema: 'incidente' }
+/** O escritor da operação de privacidade escreve nas duas famílias: o suboperador e o incidente, e em nenhuma outra tabela. */
+const GRUPO_DO_ESCRITOR_DA_PRIVACIDADE: GrupoDeTabelas = {
+  exports: new Set([...EXPORTS_DO_SUBOPERADOR, ...EXPORTS_DO_INCIDENTE]),
+  fisicos: new Set([...FISICOS_DO_SUBOPERADOR, ...FISICOS_DO_INCIDENTE]),
+  schema: 'suboperador',
+}
+
 /** Toda tabela criada nas migrations, inclusive as que o pacote não exporta (`auditoria`). */
 const TABELAS_FISICAS: readonly string[] = readdirSync(join(RAIZ, 'packages/nucleo/drizzle'))
   .filter((arquivo) => arquivo.endsWith('.sql'))
@@ -249,7 +268,7 @@ interface GrupoDeTabelas {
 
 /** Os nomes que o texto importa (ou reexporta) do `@educa/nucleo` ou do schema da operação, sem o `as` e o `type`. */
 function nomesImportados(texto: string): string[] {
-  return [...texto.matchAll(/(?:import|export)\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"](@educa\/nucleo|[^'"]*schema\/(?:operador|suboperador)(?:\.js|\.ts)?)['"]/g)].flatMap((importacao) =>
+  return [...texto.matchAll(/(?:import|export)\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"](@educa\/nucleo|[^'"]*schema\/(?:operador|suboperador|incidente)(?:\.js|\.ts)?)['"]/g)].flatMap((importacao) =>
     (importacao[1] ?? '')
       .split(',')
       .map((nome) => nome.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0] ?? '')
@@ -400,14 +419,14 @@ describe('arquitetura: o suboperador só pelo OperacaoPrivacidadeRepository, que
     // O escritor, ao contrário, escreve (a varredura enxerga a escrita) e não toca outra tabela.
     const escritor = arquivos.find((arquivo) => arquivo.caminho === ESCRITOR_DO_SUBOPERADOR)
     expect(escritor && ESCREVE_NO_BANCO.test(semComentarios(escritor.texto))).toBe(true)
-    expect(escritor && tabelasDeForaNoRepository(escritor.texto, GRUPO_DO_SUBOPERADOR)).toEqual([])
+    expect(escritor && tabelasDeForaNoRepository(escritor.texto, GRUPO_DO_ESCRITOR_DA_PRIVACIDADE)).toEqual([])
     expect(escritor && usosDaOperacao(escritor.texto)).toEqual([])
   })
 
   it('o único @SemEscopo é o encerramento das ligações em todas as escolas; a leitura da escola não tem nenhum', async () => {
     const escritor = await import('../src/ops/operacao-privacidade.repository.js')
     const metodos = Object.getOwnPropertyNames(escritor.OperacaoPrivacidadeRepository.prototype).filter((metodo) => metodo !== 'constructor')
-    expect(metodos.toSorted()).toEqual(['cadastrar', 'encerrar', 'encerrarLigacoes', 'ligarEscola', 'travarVigente'])
+    expect(metodos.toSorted()).toEqual(['cadastrar', 'encerrar', 'encerrarLigacoes', 'ligarEscola', 'ligarEscolaAoIncidente', 'registrarIncidente', 'travarVigente'])
     expect(metodos.filter((metodo) => nucleo.justificativaSemEscopo(escritor.OperacaoPrivacidadeRepository, metodo) !== undefined)).toEqual(['encerrarLigacoes'])
     const leitura = Object.getOwnPropertyNames(nucleo.SuboperadorDaEscolaRepository.prototype).filter((metodo) => metodo !== 'constructor')
     expect(leitura).toEqual(['daEscola'])
@@ -442,6 +461,75 @@ describe('arquitetura: o suboperador só pelo OperacaoPrivacidadeRepository, que
     expect(tabelasDeForaNoRepository("sql`select 1 from sessao`; sql`select 1 from suboperador`", GRUPO_DO_SUBOPERADOR)).toEqual(['sessao'])
     // O OperadorRepository, que não é do grupo, também não pode tocar o suboperador.
     expect(tabelasDeForaNoRepository("import { operador, suboperador } from '@educa/nucleo'")).toEqual(['suboperador'])
+  })
+})
+
+/** Quem, fora de teste e do schema, alcança `incidente` ou `incidente_escola`: por import, por namespace, pelo arquivo do schema ou em SQL. */
+function quemTocaOIncidente(arquivos: readonly Arquivo[]): string[] {
+  return arquivos
+    .filter((arquivo) => !deTeste(arquivo.caminho) && !FORA_DA_VARREDURA.includes(arquivo.caminho))
+    .filter((arquivo) => usosDoGrupo(arquivo.texto, GRUPO_DO_INCIDENTE).length > 0)
+    .map((arquivo) => arquivo.caminho)
+}
+
+/** As chamadas de escrita do código sem comentário, com a tabela de cada uma: `.insert(incidente)`, `.update(incidenteEscola)`. */
+const escritasDoCodigo = (texto: string): string[] => [...semComentarios(texto).matchAll(/\.(?:insert|update|delete)\s*\(\s*\w+\s*\)/g)].map((escrita) => escrita[0].replace(/\s+/g, ''))
+
+describe('arquitetura: o incidente só pelo OperacaoPrivacidadeRepository, pelo IncidenteDaEscolaRepository e pelo expurgo de acesso (F3, tarefa 9.0)', () => {
+  it('as duas tabelas vêm do pacote e das migrations, e nenhuma é do operador nem do suboperador', () => {
+    expect([...FISICOS_DO_INCIDENTE].sort()).toEqual(['incidente', 'incidente_escola'])
+    expect(EXPORTS_DO_INCIDENTE.size).toBe(2)
+    for (const tabela of FISICOS_DO_INCIDENTE) {
+      expect(TABELAS_FISICAS).toContain(tabela)
+      expect(FISICOS_DA_OPERACAO.has(tabela)).toBe(false)
+      expect(FISICOS_DO_SUBOPERADOR.has(tabela)).toBe(false)
+    }
+  })
+
+  it('só o escritor, o leitor da escola e o expurgo tocam as duas tabelas, por import, por namespace, pelo arquivo do schema ou pelo nome em SQL', () => {
+    for (const caminho of QUEM_PODE_TOCAR_O_INCIDENTE) expect(existsSync(join(RAIZ, caminho)), caminho).toBe(true)
+    expect(quemTocaOIncidente(arquivosDoRepositorio()).sort()).toEqual([...QUEM_PODE_TOCAR_O_INCIDENTE].sort())
+  })
+
+  it('o expurgo toca só o `incidente` (a seção sai em cascata), e apaga; o escritor insere nas duas e nunca apaga nem altera', () => {
+    const arquivos = arquivosDoRepositorio()
+    const expurgo = arquivos.find((arquivo) => arquivo.caminho === EXPURGO_DA_OPERACAO)
+    expect(expurgo && [...new Set(usosDoGrupo(expurgo.texto, GRUPO_DO_INCIDENTE))]).toEqual(['incidente'])
+    const escritor = arquivos.find((arquivo) => arquivo.caminho === ESCRITOR_DO_SUBOPERADOR)
+    const escritas = escritasDoCodigo(escritor?.texto ?? '').filter((escrita) => /incidente/i.test(escrita))
+    expect(escritas.toSorted()).toEqual(['.insert(incidente)', '.insert(incidenteEscola)'])
+  })
+
+  it('o leitor da escola lê as duas, escreve só na seção da escola (a confirmação), nunca no incidente, e nenhum método dele é @SemEscopo', () => {
+    const leitor = arquivosDoRepositorio().find((arquivo) => arquivo.caminho === LEITOR_DO_INCIDENTE)
+    expect(leitor && usosDoGrupo(leitor.texto, GRUPO_DO_INCIDENTE).length).toBeGreaterThan(0)
+    expect(escritasDoCodigo(leitor?.texto ?? '')).toEqual(['.update(incidenteEscola)'])
+    // Todo SQL escrito à mão ficaria fora da conta acima: o leitor não tem nenhum.
+    expect(semComentarios(leitor?.texto ?? '')).not.toMatch(/\bsql`\s*(?:insert|update|delete)\b/i)
+    expect(leitor && tabelasDeForaNoRepository(leitor.texto, GRUPO_DO_INCIDENTE)).toEqual([])
+    const metodos = Object.getOwnPropertyNames(nucleo.IncidenteDaEscolaRepository.prototype).filter((metodo) => metodo !== 'constructor')
+    expect(metodos.toSorted()).toEqual(['confirmar', 'conhecidoEmDoPendenteMaisAntigo', 'daEscola', 'existe'])
+    for (const metodo of metodos) expect(nucleo.justificativaSemEscopo(nucleo.IncidenteDaEscolaRepository, metodo), metodo).toBeUndefined()
+  })
+
+  it('a varredura pega o uso em qualquer forma, e não confunde variável, comentário nem teste com tabela', () => {
+    const fora = [
+      { caminho: 'apps/api/src/privacidade/privacidade.service.ts', texto: "import { and, incidente } from '@educa/nucleo'" },
+      { caminho: 'apps/api/src/privacidade/alias.ts', texto: "import { type Banco, incidenteEscola as secao } from '@educa/nucleo'" },
+      { caminho: 'apps/api/src/privacidade/ns.ts', texto: "import * as n from '@educa/nucleo'\nn.incidenteEscola" },
+      { caminho: 'apps/api/src/privacidade/reexporta.ts', texto: "export { incidente } from '@educa/nucleo'" },
+      { caminho: 'apps/api/src/privacidade/schema.ts', texto: "import { incidente as i } from '../../../../packages/nucleo/src/db/schema/incidente.js'" },
+      { caminho: 'apps/worker/src/sql.ts', texto: "pool.query('delete from incidente_escola where confirmado_em is null')" },
+      { caminho: 'apps/worker/src/sql-aspas.ts', texto: 'sql`update "public"."incidente" set conhecido_em = now()`' },
+    ]
+    const inocentes = [
+      { caminho: 'apps/api/src/ops/incidente.ts', texto: "import { OperacaoPrivacidadeRepository } from './operacao-privacidade.repository.js'\nconst incidente = lerPedido()\n// a tabela incidente" },
+      { caminho: 'apps/api/test/incidente.int.test.ts', texto: "pool.query('select 1 from incidente')" },
+      { caminho: 'packages/nucleo/src/index.ts', texto: "export { incidente } from './db/schema/incidente.js'" },
+      { caminho: 'packages/nucleo/src/db/schema/incidente.ts', texto: 'export const incidente = pgTable()' },
+    ]
+    expect(quemTocaOIncidente([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho))
+    expect(escritasDoCodigo('await this.banco.update(incidente).set(x)\n// .delete(incidente)\nawait this.banco.insert( incidenteEscola ).values(y)')).toEqual(['.update(incidente)', '.insert(incidenteEscola)'])
   })
 })
 
@@ -1150,11 +1238,14 @@ const USO_DA_ROTINA = /\bEscolasDaRotinaRepository\b|escolas-da-rotina\.reposito
 
 /**
  * Fora dos testes, quem pode usar a lista de escolas da rotina: ela mesma, o barrel, e o worker-lote, que a usa na rotina
- * noturna (para abrir o contexto de cada escola) e na medição das noites do expurgo. Uma rota da API que a importasse
+ * noturna (para abrir o contexto de cada escola) e nas medições por escola: as noites do expurgo e as horas do incidente sem
+ * confirmação (a base `MedicaoPorEscola`, F3, tarefa 9.0). Uma rota da API que a importasse
  * teria uma consulta sem escopo ao alcance de uma requisição.
  */
 const QUEM_USA_A_ROTINA = [
   'apps/worker/src/medicao-do-expurgo.ts',
+  'apps/worker/src/medicao-do-incidente.ts',
+  'apps/worker/src/medicao-por-escola.ts',
   'apps/worker/src/montagem.ts',
   'apps/worker/src/processadores/expurgar-dado-pessoal.ts',
   'packages/nucleo/src/index.ts',

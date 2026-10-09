@@ -120,12 +120,18 @@ export const METRICAS = {
    * expurgo tem série. O alerta "Expurgo incompleto por duas noites numa escola" dispara em 2.
    */
   noitesIncompletasDoExpurgo: 'expurgo.noites_incompletas',
+  /**
+   * Horas desde que a Turmma soube do incidente mais antigo da escola ainda sem confirmação de recebimento (F3, tarefa 9.0), por
+   * `escola_id`: medida pelo worker-lote a partir de `incidente_escola`. Só a escola com incidente sem confirmação tem série; ao
+   * confirmar, a série some. O alerta "Incidente sem confirmação em 24 h" dispara acima de 24.
+   */
+  horasDoIncidenteSemConfirmacao: 'incidente.horas_sem_confirmacao',
 } as const
 
 /**
  * As únicas métricas que levam `escola_id`: as de job e, fora de job, as três de login da Tech Spec da identidade (seção
  * 7c), com cardinalidade de uma série por escola: a espera pelo hash, as falhas e o rebaixamento; e as noites sem
- * expurgo (F3, tarefa 3.0). Nenhuma outra pode levar escola, e nenhuma leva usuário.
+ * expurgo (F3, tarefa 3.0) e as horas do incidente sem confirmação (F3, tarefa 9.0). Nenhuma outra pode levar escola, e nenhuma leva usuário.
  */
 export const METRICAS_COM_ESCOLA: readonly string[] = [
   METRICAS.esperaMaisAntiga,
@@ -136,6 +142,7 @@ export const METRICAS_COM_ESCOLA: readonly string[] = [
   METRICAS.falhasDeLogin,
   METRICAS.prioridadeRebaixada,
   METRICAS.noitesIncompletasDoExpurgo,
+  METRICAS.horasDoIncidenteSemConfirmacao,
 ]
 
 /** O rótulo da escola nas métricas de job. Rotina do sistema, sem escola, aparece como `sistema`, como na chave da vaga. */

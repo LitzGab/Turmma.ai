@@ -5,8 +5,8 @@ import { PrivacidadeController } from './privacidade.controller.js'
 import { PrivacidadeService } from './privacidade.service.js'
 
 /**
- * A privacidade da escola (F3; Tech Spec do F3, seção 4): a retenção e os suboperadores que a coordenação lê. Os pedidos do
- * titular e os incidentes entram aqui nas tarefas deles. Só a coordenação alcança estas rotas.
+ * A privacidade da escola (F3; Tech Spec do F3, seção 4): a retenção, os suboperadores e os incidentes que a coordenação lê (e confirma, no caso dos incidentes). Os pedidos do
+ * titular entram aqui na tarefa deles. Só a coordenação alcança estas rotas.
  */
 @Module({
   controllers: [PrivacidadeController],

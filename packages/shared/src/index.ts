@@ -828,3 +828,17 @@ export {
   MAXIMO_DO_NOME_DO_SUBOPERADOR,
 } from './privacidade/suboperador.js'
 export type { AlcanceDoSuboperador, CategoriaDeDadoDoSuboperador, RespostaSuboperadores, SuboperadorDaEscola } from './privacidade/suboperador.js'
+export {
+  CATEGORIAS_DE_DADO_DO_INCIDENTE,
+  CHAVES_DE_CATEGORIA_DO_INCIDENTE,
+  esquemaIncidenteDaEscola,
+  esquemaRespostaIncidentes,
+  FINALIDADE_DO_REGISTRO_DE_INCIDENTE,
+  HORAS_PARA_A_ESCOLA_CONFIRMAR,
+  MAXIMO_DE_ESCOLAS_DO_INCIDENTE,
+  MAXIMO_DE_TITULARES_ESTIMADOS,
+  MAXIMO_DO_TEXTO_DO_INCIDENTE,
+  RISCOS_DO_INCIDENTE,
+  TEXTO_DO_PRAZO_LEGAL_DO_INCIDENTE,
+} from './privacidade/incidente.js'
+export type { CategoriaDeDadoDoIncidente, IncidenteDaEscola, RespostaIncidentes, RiscoDoIncidente } from './privacidade/incidente.js'

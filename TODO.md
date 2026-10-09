@@ -121,6 +121,24 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] **Ordem das travas entre convidar e eliminar (F3, 5.0):** o `convidar` (`apps/api/src/sessao/convite.service.ts`) trava a conta antes do usuário, e o `CicloDeVidaService` trava o usuário antes da conta. Se a coordenação convida de volta, pelo mesmo e-mail, quem o expurgo está eliminando no mesmo instante, sai deadlock (40P01): nada se corrompe, o expurgo grava `false` e tenta de novo, e o convite é refeito. Alinhar a ordem, ou responder `INDISPONIVEL_TENTE_DE_NOVO` no 40P01 (`infra-guardian` e `test-engineer` da 5.0)
 - [ ] **Tempo do lote de 100 pessoas (F3, 5.0):** o «tempo do lote» da 5.0 mediu só a cascata do `trabalho_do_aluno`. Medir o lote de `pessoa_desativada` inteiro (a escolha mais as 100 eliminações, uma transação cada) contra a janela letiva e o `statement_timeout`, com volume de Tutor na escola, antes do piloto (`infra-guardian` da 5.0)
 - [ ] **Medição do expurgo depois de o catálogo crescer (F3, 5.0):** `apps/worker/src/medicao-do-expurgo.ts` conta as noites contra o `CATEGORIAS_DO_EXPURGO` atual, que passou de 7 para 12. Num ambiente com noites gravadas com 7, as duas noites anteriores ao deploy contam como incompletas e `expurgo.noites_incompletas` fica em 2 por cerca de um dia e meio. Sem efeito hoje (não há staging); pôr um parágrafo no runbook quando houver (`revisor-geral` da 5.0)
+- [ ] **`NAO_ENCONTRADO` do `ops:incidente` sem a posição da seção (F3, 9.0):** o comando responde `NAO_ENCONTRADO: escola não encontrada`
+      e não diz qual das escolas do arquivo falhou; num incidente de dezenas de escolas, o operador procura à mão. Citar a posição
+      (`a seção N`) muda a saída fixa que `apps/api/test/incidente.int.test.ts` afirma (contrato do comando); fazer quando houver
+      operador reclamando.
+- [ ] **Encerramento da medição do incidente sem teste (F3, 9.0):** `await medicaoDoIncidente?.encerrar()` em
+      `apps/worker/src/montagem.ts` não tem teste próprio (a classe tem; a montagem não): o intervalo de 5 min não é injetável por
+      `montarWorker`. Provar exige tornar o intervalo opção da montagem, que é mudança de contrato do worker.
+- [ ] **Troca de nome da eliminação e o incidente (F3, 15.0):** conferir que `incidente` e `incidente_escola` não precisam entrar
+      na troca de nome da eliminação do 8º dia: o registro não guarda texto sobre pessoa, e a regra "nenhum dado de titular" é
+      disciplina de quem escreve (runbook, "Ao registrar o incidente"). Se a 15.0 enumerar as colunas de texto livre, a lista
+      deve dizer por que estas ficam de fora.
+- [ ] **Migration 0031 fora do horário letivo (F3, 9.0):** `incidente_escola` tem FK para `usuario` e para `escola`, e o `migrar`
+      roda numa transação. Antes do staging, aplicar fora do horário letivo e com `lock_timeout`, junto dos índices
+      `concurrently` pendentes das migrations 0025 a 0027 (Tech Spec do F3, seção 7c).
+- [ ] **Casos de borda do `citaOutraEscola` (F3, 9.0):** `apps/api/src/ops/incidente.test.ts` não fixa três casos em que o
+      comportamento de hoje é o lado seguro (recusa): duas escolas do arquivo com o mesmo nome; "Escola Alfa" contra "Alfa Norte"
+      num texto "Escola Alfa Norte"; o nome da própria com a fronteira quebrada ("Colégio Ametista Nortex"). Escrever os testes
+      quando a função mudar.
 - [ ] **Prazo do `registro_de_decisao` (F3, 5.0):** `packages/shared/src/privacidade/retencao.ts` (`PRAZOS_FIXOS.registro_de_decisao`) promete à escola «enquanto durar o contrato com a escola, e mais 5 anos», mas o `expurgo_execucao` apaga o registro 5 anos depois de `em`, com o contrato valendo. O registro não tem dado de pessoa (só contagens e ids), então o risco é baixo. Decidir (Joaquim): alinhar o texto ao que o código faz, ou dar ao registro do expurgo uma linha própria em `PRAZOS_FIXOS` (`privacy-guardian` da 5.0)
 - [ ] **Thread do Assistente apagada pelo expurgo no instante do envio (F3, 3.0):** a thread vazia e vencida que o expurgo
       apaga enquanto o professor manda a primeira mensagem faz o envio falhar pela FK. Conferir que ele vê um erro tipado e

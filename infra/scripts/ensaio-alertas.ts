@@ -51,12 +51,14 @@ export type UidDaRegra = (typeof REGRAS_DO_ENSAIO)[keyof typeof REGRAS_DO_ENSAIO
  * Todas as regras de `infra/grafana/alertas/`: as que o ensaio provoca e as que têm prova própria no teste de
  * alertas (`infra/test/alertas.int.test.ts`), como o reuso de refresh, que precisa de sessões renovadas e não de
  * serviço parado, e o expurgo incompleto (F3, tarefa 3.0), que precisa de duas noites gravadas em `expurgo_execucao`
- * (`infra/test/alerta-do-expurgo.int.test.ts`).
+ * (`infra/test/alerta-do-expurgo.int.test.ts`), e o incidente sem confirmação em 24 h (F3, tarefa 9.0), que precisa de seções gravadas em
+ * `incidente_escola` (`infra/test/alerta-do-incidente.int.test.ts`).
  */
 export const REGRAS_PROVISIONADAS = {
   ...REGRAS_DO_ENSAIO,
   reusoDeRefresh: 'educa-reuso-de-refresh',
   expurgoIncompleto: 'educa-expurgo-noites-incompletas',
+  incidenteSemConfirmacao: 'educa-incidente-sem-confirmacao',
 } as const
 
 export const WORKERS_INTERATIVOS = ['worker-interativo-1', 'worker-interativo-2'] as const

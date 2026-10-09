@@ -1,5 +1,5 @@
-import { exigirEscolaDoContexto, SemEscopo, suboperador, suboperadorEscola, type Banco, type TransacaoBanco } from '@educa/nucleo'
-import type { AlcanceDoSuboperador, CategoriaDeDadoDoSuboperador } from '@educa/shared'
+import { exigirEscolaDoContexto, incidente, incidenteEscola, SemEscopo, suboperador, suboperadorEscola, type Banco, type TransacaoBanco } from '@educa/nucleo'
+import type { AlcanceDoSuboperador, CategoriaDeDadoDoIncidente, CategoriaDeDadoDoSuboperador, RiscoDoIncidente } from '@educa/shared'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 
 /** O que o `ops:suboperador cadastrar` grava: a empresa, e quem da equipe a cadastrou. */
@@ -21,11 +21,23 @@ export interface SuboperadorVigente {
   readonly alcance: AlcanceDoSuboperador
 }
 
+/** A seção do incidente de uma escola, como o `ops:incidente registrar` a grava: os números e os textos dela, e nada de titular. */
+export interface SecaoDoIncidente {
+  readonly circunstancias: string
+  readonly categorias: readonly CategoriaDeDadoDoIncidente[]
+  readonly titularesEstimados: number
+  readonly risco: RiscoDoIncidente
+  readonly contencao: string
+  readonly correcao: string
+}
+
 /**
- * O que os comandos da operação do F3 escrevem (Tech Spec do F3, seções 2 e 6): hoje o suboperador e a ligação dele com as
- * escolas (`ops:suboperador`); o incidente entra na tarefa 9.0. É o único arquivo de produção que escreve em `suboperador` e
- * `suboperador_escola`, e o `SuboperadorDaEscolaRepository` (nucleo), o único que lê: um teste de arquitetura procura outro
- * uso (`arquitetura.test.ts`, "as tabelas do suboperador").
+ * O que os comandos da operação do F3 escrevem (Tech Spec do F3, seções 2 e 6): o suboperador e a ligação dele com as
+ * escolas (`ops:suboperador`, tarefa 8.0) e o incidente e a seção de cada escola afetada (`ops:incidente`, tarefa 9.0). É o
+ * único arquivo de produção que escreve em `suboperador`, `suboperador_escola` e `incidente`, e o `SuboperadorDaEscolaRepository`
+ * (nucleo) o único que lê as duas primeiras: um teste de arquitetura procura outro uso (`arquitetura.test.ts`, "as tabelas do
+ * suboperador" e "o incidente"). A seção da escola (`incidente_escola`) também é escrita pelo `IncidenteDaEscolaRepository`, mas só
+ * para confirmar o recebimento, no escopo da escola.
  *
  * - `suboperador` é da operação e não tem `escola_id` (`docs/modelo-de-dados.md`, regra 10, item 1): os métodos dela não
  *   têm escopo a aplicar, como os do `OperadorRepository`.
@@ -86,6 +98,31 @@ export class OperacaoPrivacidadeRepository {
   /** Encerra o suboperador agora (o `travarVigente` acabou de achá-lo vigente e o segura). Ele fica como histórico. */
   async encerrar(suboperadorId: string): Promise<void> {
     await this.banco.update(suboperador).set({ fim: sql`now()` }).where(eq(suboperador.id, suboperadorId))
+  }
+
+  /**
+   * Registra o incidente e devolve o id. `conhecidoEm` é quando a Turmma soube e não passa do instante da transação (o check do
+   * banco recusa). `registradoPor` é o apelido do operador que o comando já conferiu. Sem escola: é a parte do incidente que as
+   * escolas afetadas dividem; a de cada uma é a `ligarEscolaAoIncidente`.
+   */
+  async registrarIncidente(conhecidoEm: Date, registradoPor: string): Promise<string> {
+    const [criado] = await this.banco.insert(incidente).values({ conhecidoEm, registradoPor }).returning({ id: incidente.id })
+    if (criado === undefined) throw new Error('incidente não gravado')
+    return criado.id
+  }
+
+  /**
+   * Grava a seção do incidente da escola do contexto, que o comando abriu para ela (regra 10, item 3), e devolve o id dela: o que a
+   * escola vê e confirma. A escola aparece uma vez só por incidente (o único `(escola_id, incidente_id)` recusa a repetição, que é
+   * erro de programação: o comando confere antes).
+   */
+  async ligarEscolaAoIncidente(incidenteId: string, secao: SecaoDoIncidente): Promise<string> {
+    const [criada] = await this.banco
+      .insert(incidenteEscola)
+      .values({ incidenteId, escolaId: exigirEscolaDoContexto(), ...secao, categorias: [...secao.categorias] })
+      .returning({ id: incidenteEscola.id })
+    if (criada === undefined) throw new Error('seção do incidente não gravada')
+    return criada.id
   }
 
   /** Encerra, em todas as escolas, as ligações abertas do suboperador, e diz quantas eram. */

@@ -478,6 +478,46 @@ semana, registre como descumprimento de retenção no `TODO.md` e avise a coorde
 **Depois:** registre no `TODO.md` a escola (id), as noites, as categorias e a causa, só com ids e contagens. Causa nova
 vira tarefa com teste que a reproduz.
 
+## Incidente sem confirmação em 24 h
+
+**Dispara quando:** a Turmma soube de um incidente de segurança que afetou a escola há mais de 24 h e a coordenação dela ainda
+não confirmou ter recebido o aviso, por 1 min (`max by (escola_id) (incidente_horas_sem_confirmacao{job="educa/worker"}) > 24`,
+regra `infra/grafana/alertas/incidente-sem-confirmacao.yaml`; Tech Spec do F3, seção 7c). A métrica é o número de horas desde o
+`conhecido_em` do incidente mais antigo da escola em `incidente`, entre os que têm a seção da escola em `incidente_escola` com
+`confirmado_em` nulo; o worker-lote a mede a cada 5 min, e o alerta traz o `escola_id`, nunca o incidente. Sem incidente
+pendente a escola não tem série, e ela some quando a coordenação confirma.
+
+**Impacto:** a escola é a controladora (D10) e tem 3 dias úteis, contados do conhecimento dela, para comunicar a ANPD e os
+titulares (Resolução CD/ANPD nº 15/2024); o prazo nosso, de 24 h da detecção, é o que dá a ela esses dias inteiros
+(`docs/lgpd.md`, seção 8). Passado, o risco é a escola descobrir tarde ou ficar sem tempo de avisar as famílias. Nenhuma
+pessoa vê nada na tela além do aviso que a coordenação ainda não abriu.
+
+**Primeiro olhar:** as seções pendentes da escola, só com ids e datas (nunca o texto):
+`docker compose exec postgres psql -U educa -c "select ie.id, i.conhecido_em, ie.avisado_em from incidente_escola ie join incidente i on i.id = ie.incidente_id where ie.escola_id = '<escola_id>' and ie.confirmado_em is null order by i.conhecido_em"`.
+A coordenação lê o aviso e o confirma pela API (`GET /v1/privacidade/incidentes` e `POST /v1/privacidade/incidentes/:id/confirmar`);
+a tela dela, em Privacidade, Incidentes, e o aviso que abre ao entrar são da tarefa 10.0.
+
+**Causas prováveis:**
+1. Ninguém da coordenação entrou desde o aviso → avise por fora do sistema (telefone ou o canal que a escola indicou no
+   contrato; a seção "Como avisar as escolas" ainda é "a definir antes do piloto") e diga só que há um aviso de segurança
+   esperando na tela de Privacidade. Não mande o conteúdo do incidente por e-mail nem por mensagem.
+2. A única coordenação não passou do segundo fator, ou perdeu o acesso → peça o convite novo ou a redefinição do segundo fator
+   pelos comandos da operação (`ops:convite-coordenador`, `ops:redefinir-mfa`), que têm o próprio fluxo de conferência.
+3. A coordenação confirmou e a série continua → confira `confirmado_em` na consulta acima. Se está preenchido, a medição
+   está atrasada ou o worker-lote não mede (log `worker.medicao_do_incidente_indisponivel`: o Postgres respondeu com erro);
+   a série some na volta seguinte de 5 min.
+4. O incidente foi registrado com `conhecidoEm` muito antes do registro → o relógio das 24 h já vinha estourado quando a seção
+   chegou à escola. Não é falha do alerta: registre a causa do atraso entre a detecção e o registro (próximo passo).
+
+**Se nada disso resolver:** a confirmação é um ato da escola e **não há comando nosso que a faça por ela**: não escreva
+`confirmado_em` no banco. Escale ao dono do produto e à pessoa de contato da escola; o que fica provado é a tentativa de avisar.
+
+**Ao registrar o incidente (`ops:incidente`):** descreva o caminho e o volume, nunca quem: nenhum nome de aluno, professor ou responsável nos três textos (`circunstancias`, `contencao`, `correcao`). O comando recusa o nome inteiro e o id de outra escola do mesmo arquivo, mas não o nome parcial dela ("Ametista" sem "Colégio") nem o de uma pessoa: leia cada seção como se fosse a coordenação da escola dela antes de rodar. O comando não tem chave de idempotência: rodar o mesmo arquivo duas vezes grava dois incidentes, com dois alertas, e o segundo não se desfaz pela API.
+
+**Depois:** registre no `TODO.md` a escola (id), o incidente (a data em que soubemos), quando e como a coordenação foi avisada
+por fora e quando confirmou, só com ids e datas. O atraso entre a detecção e o registro, se foi ele, vira tarefa do processo de
+incidente (`docs/lgpd.md`, seção 8).
+
 ## Rotina do sistema sem rodar (consolidação de uso, expurgo de jobs, expurgo do acesso)
 
 *A preencher antes da primeira escola real* (pendência em `TODO.md`). Hoje nada avisa se

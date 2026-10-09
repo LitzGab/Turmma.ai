@@ -1,6 +1,7 @@
 import { Permite } from '@educa/nucleo'
-import type { RespostaRetencao, RespostaSuboperadores } from '@educa/shared'
-import { Controller, Get, Header } from '@nestjs/common'
+import { esquemaPedidoSemCorpo, type RespostaIncidentes, type RespostaRetencao, type RespostaSuboperadores } from '@educa/shared'
+import { Body, Controller, Get, Header, HttpCode, HttpStatus, Param, Post } from '@nestjs/common'
+import { idDoCaminho, lerEntrada } from '../estrutura/entrada.js'
 import { PrivacidadeService } from './privacidade.service.js'
 
 /**
@@ -26,5 +27,25 @@ export class PrivacidadeController {
   @Header('Cache-Control', 'no-store')
   suboperadores(): Promise<RespostaSuboperadores> {
     return this.privacidade.suboperadores()
+  }
+
+  /** Os incidentes de segurança que afetaram a escola, só a seção dela: os sem confirmação primeiro, com o prazo legal dela em texto fixo. */
+  @Get('incidentes')
+  @Permite('privacidade_incidentes', 'ler')
+  @Header('Cache-Control', 'no-store')
+  incidentes(): Promise<RespostaIncidentes> {
+    return this.privacidade.incidentes()
+  }
+
+  /**
+   * A coordenação confirma que recebeu o aviso. Quem e quando ficam na seção da escola; confirmar de novo não muda nada e responde
+   * igual. O id de outra escola, o inexistente e o que nem é um id respondem o mesmo `NAO_ENCONTRADO` (regra 10, item 6).
+   */
+  @Post('incidentes/:id/confirmar')
+  @Permite('privacidade_incidentes', 'confirmar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  confirmarIncidente(@Param('id') id: string, @Body() corpo: unknown): Promise<void> {
+    lerEntrada(esquemaPedidoSemCorpo, corpo)
+    return this.privacidade.confirmarIncidente(idDoCaminho(id))
   }
 }

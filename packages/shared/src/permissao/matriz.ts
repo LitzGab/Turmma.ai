@@ -157,6 +157,12 @@ export const RECURSOS = {
    * (`ops:suboperador`), e não tem rota.
    */
   privacidade_suboperadores: ['ler'],
+  /**
+   * Os incidentes de segurança que afetaram a escola (F3, 9.0), só da coordenação: `ler` é `GET /v1/privacidade/incidentes`,
+   * só a seção da escola dela; `confirmar`, `POST /v1/privacidade/incidentes/:id/confirmar`, que guarda quem recebeu o aviso e
+   * quando. Registrar é só da operação, por comando (`ops:incidente`), e não tem rota.
+   */
+  privacidade_incidentes: ['ler', 'confirmar'],
 } as const satisfies Record<string, readonly string[]>
 
 export type Recurso = keyof typeof RECURSOS
@@ -202,6 +208,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
     privacidade_retencao: { ler: 'nunca' },
     privacidade_suboperadores: { ler: 'nunca' },
+    privacidade_incidentes: { ler: 'nunca', confirmar: 'nunca' },
   },
   coordenador: {
     sistema_contexto: { ler: 'proprio' },
@@ -240,6 +247,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     analista: { ler_resumo: 'agregado', gerar: 'unidade', ler_nominal: 'nominal_auditado' },
     privacidade_retencao: { ler: 'unidade' },
     privacidade_suboperadores: { ler: 'unidade' },
+    privacidade_incidentes: { ler: 'unidade', confirmar: 'unidade' },
   },
   professor: {
     sistema_contexto: { ler: 'proprio' },
@@ -278,6 +286,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
     privacidade_retencao: { ler: 'nunca' },
     privacidade_suboperadores: { ler: 'nunca' },
+    privacidade_incidentes: { ler: 'nunca', confirmar: 'nunca' },
   },
   aluno: {
     sistema_contexto: { ler: 'proprio' },
@@ -316,6 +325,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
     privacidade_retencao: { ler: 'nunca' },
     privacidade_suboperadores: { ler: 'nunca' },
+    privacidade_incidentes: { ler: 'nunca', confirmar: 'nunca' },
   },
 }
 

@@ -13,6 +13,7 @@ import { lerEscolaARevogar, OPCAO_DA_ESCOLA } from '../../apps/api/src/ops/revog
 import { EVENTO_DO_LIMITE_DA_SALA, JANELA_DOS_LIMITES_DA_SALA_MS, LimitesDaSala, TETO_DE_CODIGOS_ERRADOS_POR_ESCOLA } from '../../apps/api/src/sala/limites-da-sala.ts'
 import { ContadorEmJanela } from '../../apps/api/src/sessao/senha/contador-em-janela.ts'
 import { LIMITES_DO_HISTOGRAMA_HTTP_S } from '../../packages/nucleo/src/telemetria/metricas.ts'
+import { HORAS_PARA_A_ESCOLA_CONFIRMAR } from '../../packages/shared/src/privacidade/incidente.ts'
 import { lerAmbienteExemplo } from '../../tools/ci/compose.ts'
 import {
   codigoSorteado,
@@ -135,6 +136,12 @@ describe('regras de alerta provisionadas', () => {
     expect(expurgo.for).toBe('1m')
     expect(expressao(expurgo)).toBe('max by (escola_id) (expurgo_noites_incompletas{job="educa/worker"})')
     expect(limiar(expurgo)).toEqual({ type: 'gt', params: [1] })
+
+    // F3, tarefa 9.0: por escola, em qualquer réplica do worker-lote, e só acima de 24 h da detecção (HORAS_PARA_A_ESCOLA_CONFIRMAR).
+    const incidente = regraPorUid(REGRAS_PROVISIONADAS.incidenteSemConfirmacao).regra
+    expect(incidente.for).toBe('1m')
+    expect(expressao(incidente)).toBe('max by (escola_id) (incidente_horas_sem_confirmacao{job="educa/worker"})')
+    expect(limiar(incidente)).toEqual({ type: 'gt', params: [HORAS_PARA_A_ESCOLA_CONFIRMAR] })
   })
 
   it('L11: a linha `sala.limite_atingido` que o limite da escola escreve traz o `escolaId` que o comando da entrada do runbook recebe', async () => {

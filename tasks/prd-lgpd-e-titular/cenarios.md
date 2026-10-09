@@ -161,7 +161,17 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] Confirmar em A não confirma a linha de B.
   - [I] `POST incidentes/:id/confirmar` num incidente só de B dá `NAO_ENCONTRADO`.
   - [P] Duas confirmações ao mesmo tempo mantêm a primeira, sem erro cru.
-  - [F] O alerta de 24 h sem confirmação dispara.
+  - [F] O alerta de 24 h sem confirmação dispara: 23 h não dispara, 25 h dispara (tarefa 9.0, `infra/test/alerta-do-incidente.int.test.ts`).
+  - **Tarefa 9.0, onde cada um está.** `apps/api/test/incidente.int.test.ts`: registro (os números e os textos por escola, a auditoria
+    de cada uma, as colunas das duas tabelas sem nada de titular), o texto que cita outra escola (nome em três grafias, id em três
+    formas, nos três textos; o nome da própria escola passa), o arquivo e a escola (escola inexistente desfaz tudo, e cada campo
+    inválido recusado sem o conteúdo), o banco (checks, único, FK da confirmação), isolamento (a lista, o id de outra escola, o
+    inexistente e o que nem é id respondem igual), confirmação (quem, quando, uma auditoria, a lista com os pendentes primeiro),
+    concorrência (`GatilhoDeParada` no `update`), permissão por papel e sem segundo fator, eliminação de quem confirmou e expurgo de
+    5 anos. `apps/worker/test/expurgo-de-acesso.int.test.ts`: o alvo `incidente` (5 anos mais um dia sai com as seções, menos um dia
+    fica; lote ordenado; duas execuções em paralelo). `apps/worker/test/medicao-do-incidente.int.test.ts`: a série por escola.
+    `apps/api/test/ops-operador.int.test.ts` (C2): operador inexistente ou desativado é recusado. `apps/api/test/arquitetura.test.ts`:
+    a parte `incidente`.
   - [E] O aviso aparece e é confirmado só com o teclado e a 360 px, com rolagem dentro do diálogo. "Ver depois" deixa a
     faixa fixa, e o Sair continua alcançável.
 
