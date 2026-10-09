@@ -6,7 +6,7 @@ import { criarBanco, type Banco } from '../db/banco.js'
 import { criarPool, type PoolBanco } from '../db/pool.js'
 import { AuditoriaRepository } from './auditoria.repository.js'
 import { AuditoriaRecusada } from './auditoria-recusada.js'
-import { RegistroDeAuditoria } from './registro-de-auditoria.js'
+import { RegistroDeAuditoria, type DadosDaAuditoria } from './registro-de-auditoria.js'
 
 const registro = new RegistroDeAuditoria()
 
@@ -17,6 +17,8 @@ describe('auditoria no banco', () => {
   let escolaA: string
   let escolaB: string
   const sufixo = randomUUID().slice(0, 8)
+  /** Os suboperadores que o teste audita sem escola: a limpeza os apaga pelo id. */
+  const suboperadoresAuditados: string[] = []
 
   const criarEscola = async (slug: string): Promise<string> => {
     const { rows } = await pool.query<{ id: string }>(`insert into escola (rede_id, nome, slug) values ($1, 'Escola Sintética', $2) returning id`, [redeId, slug])
@@ -40,7 +42,7 @@ describe('auditoria no banco', () => {
   })
 
   afterAll(async () => {
-    await pool.query('delete from auditoria where escola_id = any($1::uuid[]) or entidade_id = $2', [[escolaA, escolaB], redeId])
+    await pool.query('delete from auditoria where escola_id = any($1::uuid[]) or entidade_id = any($2::uuid[])', [[escolaA, escolaB], [redeId, ...suboperadoresAuditados]])
     await pool.query('delete from usuario where escola_id = any($1::uuid[])', [[escolaA, escolaB]])
     await pool.query('delete from escola where id = any($1::uuid[])', [[escolaA, escolaB]])
     await pool.query('delete from rede where id = $1', [redeId])
@@ -122,6 +124,31 @@ describe('auditoria no banco', () => {
     ).rejects.toEqual(new AuditoriaRecusada('sem_escola'))
   })
 
+  it('o suboperador cadastrado ou encerrado pelo operador também grava sem escola (F3, 8.0); com usuário no contexto, ou outra entidade, é recusado', async () => {
+    const suboperadorId = randomUUID()
+    suboperadoresAuditados.push(suboperadorId)
+    const finalidade = 'informar_o_compartilhamento'
+    await executarNoContexto({ requisicaoId: randomUUID() }, () =>
+      banco.transaction(async (tx) => {
+        await registro.gravar(tx, 'suboperador.cadastrado', { entidadeId: suboperadorId, depois: { alcance: 'todas', escolas: 0 }, finalidade, autorOperador: 'operador-teste' })
+        await registro.gravar(tx, 'suboperador.encerrado', { entidadeId: suboperadorId, antes: { alcance: 'todas' }, depois: { ligacoesEncerradas: 0 }, finalidade, autorOperador: 'operador-teste' })
+      }),
+    )
+    const { rows } = await pool.query('select escola_id, autor_operador, acao, entidade from auditoria where entidade_id = $1 order by em, acao', [suboperadorId])
+    expect(rows).toEqual([
+      { escola_id: null, autor_operador: 'operador-teste', acao: 'suboperador.cadastrado', entidade: 'suboperador' },
+      { escola_id: null, autor_operador: 'operador-teste', acao: 'suboperador.encerrado', entidade: 'suboperador' },
+    ])
+    await expect(
+      executarNoContexto({ requisicaoId: randomUUID(), usuarioId: randomUUID() }, () =>
+        registro.gravar(banco, 'suboperador.cadastrado', { entidadeId: suboperadorId, depois: { alcance: 'todas', escolas: 0 }, finalidade }),
+      ),
+    ).rejects.toEqual(new AuditoriaRecusada('sem_escola'))
+    // Texto livre não entra: nem a chave da empresa, nem o nome dela.
+    const comNome = { entidadeId: suboperadorId, depois: { alcance: 'todas', escolas: 0, nome: 'Empresa' }, finalidade, autorOperador: 'operador-teste' } as unknown as DadosDaAuditoria<'suboperador.cadastrado'>
+    await expect(executarNoContexto({ requisicaoId: randomUUID() }, () => registro.gravar(banco, 'suboperador.cadastrado', comNome))).rejects.toEqual(new AuditoriaRecusada('dados_fora_do_schema'))
+  })
+
   describe('checks do banco, mesmo por fora do RegistroDeAuditoria', () => {
     interface ColunasDoTeste {
       escolaId: string | null
@@ -140,14 +167,21 @@ describe('auditoria no banco', () => {
     it('escola nula com autor usuário é recusada, mesmo com entidade rede', async () => {
       await expect(inserir({ escolaId: null, autorUsuarioId: randomUUID(), autorOperador: null, entidade: 'rede' })).rejects.toMatchObject({
         code: '23514',
-        constraint: 'auditoria_escola_ou_rede_pelo_operador',
+        constraint: 'auditoria_escola_ou_operacao_global',
       })
     })
 
-    it('escola nula com operador e entidade diferente de rede é recusada', async () => {
+    it('escola nula com operador é aceita para a rede e para o suboperador, e só para eles (F3, 8.0)', async () => {
+      for (const entidade of ['rede', 'suboperador']) {
+        await inserir({ escolaId: null, autorUsuarioId: null, autorOperador: 'operador-teste', entidade })
+      }
+      await pool.query(`delete from auditoria where acao = 'teste.check' and escola_id is null`)
+    })
+
+    it('escola nula com operador e entidade diferente de rede e de suboperador é recusada', async () => {
       await expect(inserir({ escolaId: null, autorUsuarioId: null, autorOperador: 'operador-teste', entidade: 'escola' })).rejects.toMatchObject({
         code: '23514',
-        constraint: 'auditoria_escola_ou_rede_pelo_operador',
+        constraint: 'auditoria_escola_ou_operacao_global',
       })
     })
 

@@ -368,10 +368,10 @@ describe('retenção da escola: a operação ajusta por comando, e a coordenaç�
   })
 
   it('permissão: aluno, professor e a coordenação sem MFA não chegam a nenhuma rota de /v1/privacidade; a coordenação chega', async () => {
-    // Hoje só o GET da retenção: a rota nova de /v1/privacidade (tarefas 8.0 em diante) traz aqui o status que a coordenação
-    // recebe, em vez dos 200 de agora.
+    // O teste percorre todas as rotas de /v1/privacidade: a da retenção e a das empresas que recebem dados (F3, 8.0). Rota nova
+    // do módulo entra aqui sozinha, e a lista abaixo impede que uma delas saia sem o teste reclamar.
     const rotas = rotasDe(controladoresDoModulo(AppModule.com(configuracaoDeTeste()))).filter((rota) => rota.caminho.startsWith('/v1/privacidade/'))
-    expect(rotas.length).toBeGreaterThan(0)
+    expect(rotas.map((rota) => rota.caminho)).toEqual(expect.arrayContaining(['/v1/privacidade/retencao', '/v1/privacidade/suboperadores']))
     const escolaId = await bancada.escola()
     const coordenacao = await bancada.sessao(escolaId, 'coordenador')
     const professor = await bancada.sessao(escolaId, 'professor')

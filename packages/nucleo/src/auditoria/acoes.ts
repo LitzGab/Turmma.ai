@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  ALCANCES_DO_SUBOPERADOR,
   CHAVES_DE_FUNCAO,
   CHAVES_DE_RETENCAO,
   CONTESTACOES_DE_VINCULO,
@@ -9,6 +10,7 @@ import {
   ESTADOS_EM_DECISAO,
   FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR,
   FINALIDADE_DO_AJUSTE_DE_RETENCAO,
+  FINALIDADE_DO_REGISTRO_DE_SUBOPERADOR,
   FINALIDADES_DA_LEITURA_DE_ALUNOS,
   FINALIDADES_DA_LEITURA_NOMINAL,
   FINALIDADES_DA_REDEFINICAO_DE_MFA,
@@ -544,6 +546,25 @@ export const ACOES_DE_AUDITORIA = {
     antes: z.strictObject({ meses: z.number().int().positive(), origem: z.enum(ORIGENS_DA_RETENCAO) }),
     depois: z.strictObject({ categoria: z.enum(CHAVES_DE_RETENCAO), meses: z.number().int().positive(), referenciaContrato: z.number().int().positive() }),
     finalidade: z.enum([FINALIDADE_DO_AJUSTE_DE_RETENCAO]),
+  },
+  /**
+   * A operação cadastrou um suboperador (F3, RF6; `ops:suboperador cadastrar`). Acima do tenant, sem escola no contexto, e
+   * sempre com `autor_operador` (`ENTIDADES_DE_AUDITORIA_SEM_ESCOLA`): `entidadeId` é o suboperador, que a chave, o nome e o
+   * contrato dele identificam na tabela. `depois` é o alcance e quantas escolas a lista traz (zero em `todas`). A auditoria
+   * não aceita texto livre, então nunca a chave, o nome da empresa, o número do contrato nem as escolas.
+   */
+  'suboperador.cadastrado': {
+    entidade: 'suboperador',
+    antes: null,
+    depois: z.strictObject({ alcance: z.enum(ALCANCES_DO_SUBOPERADOR), escolas: z.number().int().nonnegative() }),
+    finalidade: z.enum([FINALIDADE_DO_REGISTRO_DE_SUBOPERADOR]),
+  },
+  /** A operação encerrou o suboperador vigente (`ops:suboperador encerrar`): o que ele era e quantas ligações com escola se encerraram junto. */
+  'suboperador.encerrado': {
+    entidade: 'suboperador',
+    antes: z.strictObject({ alcance: z.enum(ALCANCES_DO_SUBOPERADOR) }),
+    depois: z.strictObject({ ligacoesEncerradas: z.number().int().nonnegative() }),
+    finalidade: z.enum([FINALIDADE_DO_REGISTRO_DE_SUBOPERADOR]),
   },
 } as const satisfies Record<string, DefinicaoDeAcao>
 

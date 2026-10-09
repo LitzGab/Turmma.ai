@@ -17,8 +17,9 @@ export { FORMATO_OPERADOR }
  * - Só grava por `RegistroDeAuditoria.gravar`, que confere `antes`, `depois` e `finalidade` contra a lista
  *   fechada da ação: ids, estados, códigos e datas, nunca nome, e-mail, matrícula, complemento, hash ou
  *   segredo. O insert fica num módulo fora do `index.ts` do pacote, e um teste procura outra escrita.
- * - `escola_id` só é nulo quando o operador cria a rede, que ainda não tem escola, e o check garante isso
- *   no banco mesmo por fora do código.
+ * - `escola_id` só é nulo quando o operador faz algo acima do tenant, que não pertence a uma escola: criar a rede (que
+ *   ainda não tem escola) e cadastrar ou encerrar um suboperador, que pode atender toda escola (F3, 8.0). O check garante
+ *   isso no banco mesmo por fora do código.
  * - Todo registro tem um autor, e só um: a pessoa da escola (`autor_usuario_id`) ou alguém da nossa
  *   equipe (`autor_operador`).
  * - Sem `unique (escola_id, id)`: nenhuma tabela referencia a auditoria, então não há FK composta a apoiar.
@@ -46,7 +47,8 @@ export const auditoria = pgTable(
   },
   (tabela) => [
     index('auditoria_escola_em_idx').on(tabela.escolaId, tabela.em),
-    check('auditoria_escola_ou_rede_pelo_operador', sql`escola_id is not null or (autor_operador is not null and entidade = 'rede')`),
+    // Sem escola, só o que a operação faz acima do tenant: a rede criada e o suboperador cadastrado ou encerrado (F3, 8.0).
+    check('auditoria_escola_ou_operacao_global', sql`escola_id is not null or (autor_operador is not null and entidade in ('rede', 'suboperador'))`),
     // Um autor e só um: a pessoa da escola, ou alguém da nossa equipe em rotina de operador.
     check('auditoria_um_autor', sql`(autor_usuario_id is not null) <> (autor_operador is not null)`),
     check('auditoria_operador_formato', sql`autor_operador is null or autor_operador ~ '^[a-z][a-z0-9-]{1,31}$'`),

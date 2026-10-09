@@ -17,6 +17,7 @@ import { executarOpsRedefinirMfa } from '../src/ops/redefinir-mfa.js'
 import { executarOpsRetencao } from '../src/ops/retencao.js'
 import { executarOpsRevogarAcessosSala } from '../src/ops/revogar-acessos-sala.js'
 import { executarOpsRevogarConvite } from '../src/ops/revogar-convite.js'
+import { executarOpsSuboperador } from '../src/ops/suboperador.js'
 import { executarOpsUso } from '../src/ops/uso.js'
 import { subirApi, type ApiDeTeste } from './api-com-sessao.js'
 import { FerramentasDaSala, type SalaDeTeste } from './sala-de-teste.js'
@@ -41,6 +42,10 @@ async function rodarComando(comando: Comando, argumentos: string[], operador: st
 }
 
 const rodar = (argumentos: string[], operador: string) => rodarComando(executarOpsOperador, argumentos, operador)
+
+/** Chaves de suboperador do C2, novas a cada execução: o banco acumula, e `suboperador` é global. */
+const CHAVE_DO_C2_CADASTRO = `c2-${randomUUID().slice(0, 8)}`
+const CHAVE_DO_C2_ENCERRAMENTO = `c2-${randomUUID().slice(0, 8)}`
 
 const sha256 = (texto: string) => createHash('sha256').update(texto).digest('hex')
 
@@ -186,6 +191,12 @@ describe('npm run ops:operador: o operador nasce, é reconvidado e é desativado
     let acessoVigente = ''
 
     beforeAll(async () => {
+      // O suboperador vigente que o `ops:suboperador encerrar` recusado não pode encerrar (F3, 8.0).
+      await pool.query(
+        `insert into suboperador (chave, nome, finalidade, categorias, pais, contrato, veda_treinamento, alcance, registrado_por)
+         values ($1, 'Empresa Sintética do C2', 'Hospedagem', array['cadastro'], 'BR', 'DPA-C2', true, 'todas', 'equipe-de-teste')`,
+        [CHAVE_DO_C2_ENCERRAMENTO],
+      )
       api = await subirApi(medidor.medidor, { ambiente: { LIMITE_PROXIES_CONFIAVEIS: '127.0.0.1' } })
       const ferramentas = new FerramentasDaSala(api, bancada)
       sala = await ferramentas.montar()
@@ -193,13 +204,19 @@ describe('npm run ops:operador: o operador nasce, é reconvidado e é desativado
     })
 
     afterAll(async () => {
+      // Um suboperador `todas` aparece em toda escola, também nas telas do e2e: o do C2 não fica.
+      const dasChaves = `(select id from suboperador where chave = any($1::text[]))`
+      const chaves = [CHAVE_DO_C2_CADASTRO, CHAVE_DO_C2_ENCERRAMENTO]
+      await pool.query(`delete from auditoria where entidade = 'suboperador' and entidade_id in ${dasChaves}`, [chaves])
+      await pool.query(`delete from suboperador_escola where suboperador_id in ${dasChaves}`, [chaves])
+      await pool.query('delete from suboperador where chave = any($1::text[])', [chaves])
       await api?.app.close()
       await bancada.fechar()
       await medidor.encerrar()
     })
 
     const escolaDaSala = () => sala?.escolaId ?? ''
-    const casos: { nome: string; comando: Comando; argumentos: () => string[]; nadaFeito: () => Promise<void>; passou: (execucao: Execucao) => void }[] = [
+    const casos: { nome: string; comando: Comando; argumentos: () => string[]; nadaFeito: () => Promise<void>; passou: (execucao: Execucao) => void | Promise<void> }[] = [
       {
         nome: 'escola',
         comando: executarOpsEscola,
@@ -265,6 +282,25 @@ describe('npm run ops:operador: o operador nasce, é reconvidado e é desativado
         },
       },
       {
+        nome: 'suboperador cadastrar',
+        comando: executarOpsSuboperador,
+        argumentos: () => ['cadastrar', '--chave', CHAVE_DO_C2_CADASTRO, '--nome', 'Empresa Sintética do C2', '--finalidade', 'Hospedagem', '--pais', 'BR', '--categorias', 'cadastro', '--contrato', 'DPA-C2', '--veda-treinamento', 'sim', '--todas'],
+        // Nenhum suboperador, e nenhuma auditoria dele: quem saiu da equipe não cadastra empresa que recebe dado das escolas (F3, 8.0).
+        nadaFeito: async () => expect((await pool.query('select 1 from suboperador where chave = $1', [CHAVE_DO_C2_CADASTRO])).rows).toEqual([]),
+        passou: (execucao) => expect(execucao).toMatchObject({ codigo: 0, erro: '' }),
+      },
+      {
+        nome: 'suboperador encerrar',
+        comando: executarOpsSuboperador,
+        argumentos: () => ['encerrar', '--chave', CHAVE_DO_C2_ENCERRAMENTO],
+        // O suboperador vigente continua vigente: o `encerrar` recusado não pode ter tocado nele.
+        nadaFeito: async () => expect((await pool.query('select fim from suboperador where chave = $1 and fim is null', [CHAVE_DO_C2_ENCERRAMENTO])).rows).toHaveLength(1),
+        passou: async (execucao) => {
+          expect(execucao).toMatchObject({ codigo: 0, erro: '' })
+          expect((await pool.query('select 1 from suboperador where chave = $1 and fim is null', [CHAVE_DO_C2_ENCERRAMENTO])).rows).toEqual([])
+        },
+      },
+      {
         nome: 'uso',
         comando: executarOpsUso,
         argumentos: () => ['--escola', randomUUID()],
@@ -319,7 +355,7 @@ describe('npm run ops:operador: o operador nasce, é reconvidado e é desativado
       }
 
       // O operador ativo passa pela conferência: o resultado é o do próprio comando.
-      passou(await rodarComando(comando, argumentos(), 'ana'))
+      await passou(await rodarComando(comando, argumentos(), 'ana'))
     })
   })
 

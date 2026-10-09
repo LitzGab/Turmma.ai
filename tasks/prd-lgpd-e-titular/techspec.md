@@ -99,8 +99,11 @@ pedido_titular      id uuid, escola_id*, titular_id* (sem FK; gatilho confere na
 arquivo_titular     id uuid, escola_id*, pedido_id*, versao* (completa|coordenacao), chave_objeto*, bytes*, pronto_em*,
                     expira_em*, apagado_em?
 suboperador         id uuid, chave*, nome*, finalidade*, categorias*, pais*, contrato*, veda_treinamento*,
-                    alcance* (todas|lista), inicio*, fim?, registrado_por*   (chave única onde fim is null)
-suboperador_escola  suboperador_id*, escola_id*, inicio*, fim?
+                    alcance* (todas|lista), inicio*, fim?, registrado_por*   (chave única onde fim is null; tarefa 8.0: a
+                    chave tem o formato do `IA_PROVEDOR_ID`, `categorias` é a lista fechada de oito de `@educa/shared`, `pais`
+                    é o código ISO de duas letras, `contrato` é um código curto e nunca texto)
+suboperador_escola  suboperador_id*, escola_id*, inicio*, fim?   (tarefa 8.0: chave primária `(escola_id, suboperador_id)`,
+                    índice por `suboperador_id`)
 incidente           id uuid, conhecido_em*, registrado_por*, registrado_em*
 incidente_escola    incidente_id*, escola_id*, circunstancias* (≤1000), categorias* (lista fechada),
                     titulares_estimados*, risco* (baixo|relevante|alto), contencao* (≤1000), correcao* (≤1000),
@@ -112,6 +115,9 @@ consumo_ia          + provedor?  check (provedor is null or envio_externo), que 
 job_registro        + chave_idempotencia?  único parcial (escola_id, tipo, chave_idempotencia) onde não nula e o
                     estado não é concluido nem falhou; check (chave_idempotencia is null or escola_id is not null)
 arquivo_titular     único (escola_id, pedido_id, versao)
+auditoria           tarefa 8.0: `auditoria_escola_ou_operacao_global` no lugar de `auditoria_escola_ou_rede_pelo_operador`:
+                    sem escola, além da rede criada, só o `suboperador` cadastrado ou encerrado, sempre por operador (migration
+                    0029, mais larga que o check anterior, então compatível com o código anterior).
 auditoria           check: `autor_operador = 'rotina'` só com `usuario.eliminado`, `acesso_turma.revogado`,
                     `titular.nome_trocado` e `pedido.concluido` (NOT VALID, depois VALIDATE). O apelido `rotina` fica
                     reservado na criação de operador
@@ -351,6 +357,31 @@ só-leitura:
 A `ContaGlobalRepository` não sai pelo barrel do `@educa/nucleo` nem pelo subcaminho do ciclo de vida, só pelo
 `@educa/nucleo/conta-global`, e o teste lista quem a importa: o `CicloDeVidaService` e o `sessao` (a redefinição do MFA), e os testes deles. A justificativa do `EscolasDaRotinaRepository` é o papel da rotina, registrada em `modelo-de-dados.md`.
 
+Tarefa 8.0, como ficou no código:
+- `OperacaoPrivacidadeRepository` (`apps/api/src/ops/operacao-privacidade.repository.ts`): `cadastrar`, `ligarEscola`, `travarVigente`,
+  `encerrar` e `encerrarLigacoes`. Só o último é `@SemEscopo` (fecha as ligações de um suboperador em todas as escolas, por id); as
+  demais ou tocam só `suboperador`, que não tem escola, ou escrevem a ligação no contexto da escola que o comando abriu.
+  `cadastrar` é `insert … on conflict do nothing`, sem alvo nem predicado: o único índice único além da chave primária é o
+  parcial da chave vigente (`fim is null`), então o alvo era redundante. Dois cadastros da mesma chave não dão erro cru:
+  o segundo não insere e o comando responde `CONFLITO`. Risco aceito: um índice único novo em `suboperador` passa a ser
+  engolido do mesmo jeito e respondido como `CONFLITO`; quem criar o índice troca por um alvo explícito.
+- **As duas tabelas ficam num grupo à parte no teste de arquitetura**, e não dentro das seis do operador (`TABELAS_DA_OPERACAO`): os
+  testes das seis afirmam que só o `OperadorRepository` e o expurgo as tocam e que o `OperadorRepository` não toca outra. O
+  grupo do suboperador tem a lista fechada `OperacaoPrivacidadeRepository` (escreve) e `SuboperadorDaEscolaRepository` (lê, sem
+  nenhum `insert`, `update` nem `delete`, conferido sobre o código sem comentário). `suboperador` entra na exceção do item 1 de
+  `docs/modelo-de-dados.md`.
+- `SuboperadorDaEscolaRepository` (`packages/nucleo/src/titular/`): `(alcance = 'todas' or exists (ligação correlacionada com a
+  escola do contexto))`, mais um `left join` com a ligação da escola só para trazer o início e o fim dela. A vigência da escola é o
+  início da ligação (ou o do suboperador, em `todas`) e o mais cedo entre os dois `fim`.
+- **Auditoria sem escola.** `suboperador.cadastrado` e `suboperador.encerrado` não têm escola no contexto (o ato é da operação, e a empresa
+  pode atender toda escola; uma linha por escola seria uma linha por escola existente a cada cadastro de `todas`). Por isso o check da
+  `auditoria` passou a aceitar sem escola, além da rede criada, a entidade `suboperador`, sempre por operador
+  (`ENTIDADES_DE_AUDITORIA_SEM_ESCOLA`). A auditoria não aceita texto livre, então leva só o alcance e contagens (`escolas`,
+  `ligacoesEncerradas`); a chave, o nome e o contrato ficam na tabela, pelo `entidade_id`.
+- `GET /v1/privacidade/suboperadores` é o recurso `privacidade_suboperadores` da matriz (coordenação: unidade; os outros: nunca); o
+  DTO é `{ chave, nome, finalidade, pais, categorias, vedaTreinamento, inicio, fim }`, sem id, contrato, operador nem as outras escolas
+  da lista. A `chave` vai porque é o que distingue as linhas na tela (a mesma empresa pode ter saído e voltado: a chave mais o início).
+
 Os testes, cada um quebrando sem a cláusula de escopo, estão em `cenarios.md`, seção "Isolamento".
 
 ## 7. Dado pessoal (obrigatório)
@@ -360,7 +391,7 @@ Os testes, cada um quebrando sem a cláusula de escopo, estão em `cenarios.md`,
 | Campos pessoais tocados | todos os do mapa, para ler, apagar, anonimizar, trocar nome e corrigir nome |
 | Novos campos | `pedido_titular`, `arquivo_titular`, `incidente_escola.confirmado_por`, `usuario.eliminacao_agendada_em`, `consumo_ia.provedor`, e o apelido do operador em `retencao_escola`, `suboperador` e `incidente`: no mapa **na tarefa da migration** |
 | O que vai para log | ids, categoria, contagens, estado. Nunca nome, termo, conteúdo, URL. Os jobs levam só ids |
-| O que entra em auditoria | sempre com finalidade fixa: `titular.buscado`, `titular.previa_lida`, `pedidos.listados`, `pedido.lido`, pedido registrado, agendado, cancelado, concluído, nome corrigido, `titular.nome_trocado`, `titular.arquivo_baixado`, `usuario.eliminado`; na operação: `retencao.ajustada` (entidade `retencao_escola`, id da escola, o prazo anterior e a origem dele, a categoria, os meses e o número do contrato; finalidade `contrato_da_escola`), `suboperador.cadastrado` e `encerrado`, `incidente.registrado`; e `incidente.confirmado` |
+| O que entra em auditoria | sempre com finalidade fixa: `titular.buscado`, `titular.previa_lida`, `pedidos.listados`, `pedido.lido`, pedido registrado, agendado, cancelado, concluído, nome corrigido, `titular.nome_trocado`, `titular.arquivo_baixado`, `usuario.eliminado`; na operação: `retencao.ajustada` (entidade `retencao_escola`, id da escola, o prazo anterior e a origem dele, a categoria, os meses e o número do contrato; finalidade `contrato_da_escola`), `suboperador.cadastrado` e `encerrado` (sem escola, só o alcance e contagens: tarefa 8.0), `incidente.registrado`; e `incidente.confirmado` |
 | Enviado a provedor externo | nada |
 | Retenção e expurgo | seção 3 |
 | Autorização por objeto | seção 4 |

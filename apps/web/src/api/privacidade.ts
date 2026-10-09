@@ -1,4 +1,4 @@
-import { esquemaRespostaRetencao } from '@educa/shared'
+import { esquemaRespostaRetencao, esquemaRespostaSuboperadores } from '@educa/shared'
 import { queryOptions } from '@tanstack/react-query'
 import { buscarComSessao } from './sessao'
 
@@ -17,4 +17,10 @@ export const CHAVE_DA_PRIVACIDADE = ['privacidade'] as const
 export const consultaRetencao = queryOptions({
   queryKey: [...CHAVE_DA_PRIVACIDADE, 'retencao'],
   queryFn: ({ signal }) => buscarComSessao('/v1/privacidade/retencao', esquemaRespostaRetencao, signal),
+})
+
+/** As empresas que recebem dado da escola, vigentes e passadas (F3, 8.0). */
+export const consultaSuboperadores = queryOptions({
+  queryKey: [...CHAVE_DA_PRIVACIDADE, 'suboperadores'],
+  queryFn: ({ signal }) => buscarComSessao('/v1/privacidade/suboperadores', esquemaRespostaSuboperadores, signal),
 })

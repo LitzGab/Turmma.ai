@@ -202,6 +202,43 @@ export async function ajustarRetencaoDaEscola(escolaId: string, categoria: strin
   })
 }
 
+/** Um suboperador de teste (F3, 8.0): a empresa que recebe dado da escola, como o `ops:suboperador` a grava. */
+export interface SuboperadorDeTeste {
+  readonly nome: string
+  readonly finalidade?: string
+  readonly pais?: string
+  readonly categorias?: readonly string[]
+  readonly vedaTreinamento?: boolean
+  /** As escolas que ele atende (`lista`), ou `todas`. */
+  readonly escolas: readonly string[] | 'todas'
+  /** `encerrado` é o histórico: começou há 30 dias e acabou há 10. */
+  readonly encerrado?: boolean
+}
+
+/**
+ * Cadastra o suboperador direto no banco, como o `ops:suboperador` o deixa: a linha, e a ligação com cada escola da lista.
+ * O nome é do teste (único), porque `suboperador` é global e um de "todas" aparece em toda escola. Devolve a chave.
+ */
+export async function cadastrarSuboperadorDeTeste(dados: SuboperadorDeTeste): Promise<string> {
+  const chave = `e2e-${randomUUID().slice(0, 8)}`
+  return comBanco(async (banco) => {
+    const inicio = dados.encerrado === true ? "now() - interval '30 days'" : 'now()'
+    const fim = dados.encerrado === true ? "now() - interval '10 days'" : 'null'
+    const suboperadorId = await id(
+      banco,
+      `insert into suboperador (chave, nome, finalidade, categorias, pais, contrato, veda_treinamento, alcance, inicio, fim, registrado_por)
+       values ($1, $2, $3, $4, $5, 'DPA-E2E', $6, $7, ${inicio}, ${fim}, 'equipe-de-teste') returning id`,
+      [chave, dados.nome, dados.finalidade ?? 'Hospedagem do banco e dos arquivos', dados.categorias ?? ['cadastro'], dados.pais ?? 'BR', dados.vedaTreinamento ?? true, dados.escolas === 'todas' ? 'todas' : 'lista'],
+    )
+    if (dados.escolas !== 'todas') {
+      for (const escolaId of dados.escolas) {
+        await banco.query(`insert into suboperador_escola (escola_id, suboperador_id, inicio, fim) values ($1, $2, ${inicio}, ${fim})`, [escolaId, suboperadorId])
+      }
+    }
+    return chave
+  })
+}
+
 /** O domínio Google ou o tenant Microsoft que a escola liberou (13.0): é dado da instituição, não de pessoa. */
 export async function liberarProvedorDaEscola(escolaId: string, provedor: 'google' | 'microsoft', valor: string): Promise<void> {
   await comBanco(async (banco) => {

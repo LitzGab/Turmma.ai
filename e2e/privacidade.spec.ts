@@ -1,7 +1,7 @@
 import type { Locator, Page, Route } from '@playwright/test'
 import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, escolherNoSeletor, esperarGovernanca, irPelaNavegacao, lateral, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { ajustarRetencaoDaEscola, codigoDoAutenticador, criarEquipeComSenha, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
+import { ajustarRetencaoDaEscola, cadastrarSuboperadorDeTeste, codigoDoAutenticador, criarEquipeComSenha, criarEscolaSintetica, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
@@ -203,5 +203,172 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     segurada.abrir()
     await expect(categorias(page)).toContainText('Padrão do sistema', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).not.toContainText(AJUSTADO)
+  })
+})
+
+/**
+ * A aba "Empresas que recebem dados" (F3, 8.0; RF7 e RF20): os suboperadores da escola, vigentes e passados. `suboperador`
+ * é global e o banco acumula, então toda empresa de teste tem nome único, e a tela se confere só pelos nomes que o teste
+ * criou: o vazio, que o banco não produz, vem de `rota.fulfill`.
+ */
+const NOME_DA_ABA_DAS_EMPRESAS = 'Empresas que recebem dados'
+const ENDERECO_DAS_EMPRESAS = /\/coordenacao\/privacidade\/suboperadores$/
+const CARREGANDO_AS_EMPRESAS = 'Carregando as empresas que recebem dados…'
+const SECAO_DAS_VIGENTES = 'Empresas que recebem dado da escola hoje'
+const SECAO_DAS_PASSADAS = 'Empresas que já receberam dado da escola'
+const VAZIO_DAS_EMPRESAS = 'Nenhuma empresa recebe dado desta escola'
+
+const secao = (page: Page, nome: string) => principal(page).getByRole('region', { name: nome }).first()
+/** A linha de uma empresa pelo nome dela: `tr` no chromebook, `li` no celular. */
+const linhaDaEmpresa = (page: Page, nome: string) => principal(page).locator('tr, li').filter({ hasText: nome })
+const marca = () => Math.random().toString(36).slice(2, 10)
+
+/** A coordenadora entra e abre a aba das empresas pelo endereço da aba, depois de entrar na Privacidade pela navegação. */
+async function abrirAsEmpresas(page: Page, hasTouch: boolean, pessoa: EquipeDeTeste): Promise<void> {
+  await entrarNaPrivacidade(page, hasTouch, pessoa)
+  await acionar(page.getByRole('tab', { name: NOME_DA_ABA_DAS_EMPRESAS }), hasTouch)
+  await expect(page).toHaveURL(ENDERECO_DAS_EMPRESAS, { timeout: PRAZO_DA_ENTRADA_MS })
+}
+
+test.describe('Privacidade: as empresas que recebem dados da escola', () => {
+  test('a coordenação lê as empresas vigentes e as passadas da escola dela, com o que cada uma faz, recebe e processa, e não lê as de outra escola', async ({ page, hasTouch }) => {
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    const outra = await criarEscolaSintetica()
+    const m = marca()
+    const hospedagem = `Hospedagem ${m}`
+    const provedor = `Provedor de IA ${m}`
+    const antiga = `Antiga ${m}`
+    const deOutraEscola = `Só da outra escola ${m}`
+    await cadastrarSuboperadorDeTeste({ nome: hospedagem, escolas: [coordenadora.escolaId], pais: 'BR', categorias: ['cadastro', 'conta_de_acesso'], vedaTreinamento: true, finalidade: 'Guarda o banco e os arquivos da escola' })
+    await cadastrarSuboperadorDeTeste({ nome: provedor, escolas: [coordenadora.escolaId], pais: 'US', categorias: ['conversa_do_aluno'], vedaTreinamento: false })
+    await cadastrarSuboperadorDeTeste({ nome: antiga, escolas: [coordenadora.escolaId], encerrado: true })
+    await cadastrarSuboperadorDeTeste({ nome: deOutraEscola, escolas: [outra.escolaId] })
+    await abrirAsEmpresas(page, hasTouch, coordenadora)
+
+    await expect(page.getByRole('tab', { name: NOME_DA_ABA_DAS_EMPRESAS })).toHaveAttribute('aria-selected', 'true')
+    await expect(secao(page, SECAO_DAS_VIGENTES)).toContainText(hospedagem, { timeout: PRAZO_DA_ENTRADA_MS })
+
+    const daHospedagem = linhaDaEmpresa(page, hospedagem)
+    await expect(daHospedagem).toHaveCount(1)
+    await expect(daHospedagem).toContainText('Guarda o banco e os arquivos da escola')
+    await expect(daHospedagem).toContainText('Cadastro de alunos, professores e turmas; E-mail e senha de acesso de professores e da coordenação')
+    await expect(daHospedagem).toContainText('Brasil')
+    await expect(daHospedagem).toContainText('O contrato proíbe usar o dado para treinar IA')
+    await expect(daHospedagem).toContainText(/Desde \d{2}\/\d{2}\/\d{4}/)
+    // O contrato que não proíbe é dito, e o país que não é o Brasil também.
+    const doProvedor = linhaDaEmpresa(page, provedor)
+    await expect(doProvedor).toHaveCount(1)
+    await expect(doProvedor).toContainText('Conversa do aluno com o Tutor')
+    await expect(doProvedor).toContainText('Estados Unidos')
+    await expect(doProvedor).toContainText('O contrato não proíbe usar o dado para treinar IA')
+    // A encerrada fica à parte, com o começo e o fim; não está entre as vigentes.
+    await expect(secao(page, SECAO_DAS_VIGENTES)).not.toContainText(antiga)
+    const daAntiga = secao(page, SECAO_DAS_PASSADAS).locator('tr, li').filter({ hasText: antiga })
+    await expect(daAntiga).toHaveCount(1)
+    await expect(daAntiga).toContainText(/De \d{2}\/\d{2}\/\d{4} até \d{2}\/\d{2}\/\d{4}/)
+    // Nada da outra escola, e nada que seja da operação.
+    await expect(principal(page)).not.toContainText(deOutraEscola)
+    await expect(principal(page)).not.toContainText('DPA-E2E')
+    await expect(principal(page)).not.toContainText('equipe-de-teste')
+
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  test('as duas abas se alternam pelo clique ou toque, e o endereço guarda a aba', async ({ page, hasTouch }) => {
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    const nome = `Hospedagem ${marca()}`
+    await cadastrarSuboperadorDeTeste({ nome, escolas: [coordenadora.escolaId] })
+    await abrirAsEmpresas(page, hasTouch, coordenadora)
+    await expect(secao(page, SECAO_DAS_VIGENTES)).toContainText(nome, { timeout: PRAZO_DA_ENTRADA_MS })
+
+    await page.reload()
+    await expect(page).toHaveURL(ENDERECO_DAS_EMPRESAS)
+    await expect(page.getByRole('tab', { name: NOME_DA_ABA_DAS_EMPRESAS })).toHaveAttribute('aria-selected', 'true')
+    await expect(secao(page, SECAO_DAS_VIGENTES)).toContainText(nome, { timeout: PRAZO_DA_ENTRADA_MS })
+
+    await acionar(page.getByRole('tab', { name: NOME_DA_ABA }), hasTouch)
+    await expect(page).toHaveURL(ENDERECO_DA_RETENCAO)
+    await expect(categorias(page)).toBeVisible()
+    await expect(principal(page)).not.toContainText(nome)
+  })
+
+  test('os estados: carregando, erro com "Tentar de novo", vazio, só passadas e com dado', async ({ page, hasTouch }) => {
+    const segurada = portao()
+    let modo: 'erro' | 'vazio' | 'so_passadas' | 'real' = 'erro'
+    const passada = { chave: 'antiga-do-estado', nome: `Antiga do estado ${marca()}`, finalidade: 'Hospedagem', pais: 'BR', categorias: ['cadastro'], vedaTreinamento: true, inicio: '2026-01-05T12:00:00.000Z', fim: '2026-02-20T12:00:00.000Z' }
+    await page.route(
+      (url) => url.pathname === '/v1/privacidade/suboperadores',
+      async (rota: Route) => {
+        await segurada.aberta
+        if (modo === 'erro') return rota.fulfill({ status: 503, contentType: 'application/json', body: INDISPONIVEL })
+        if (modo === 'vazio') return rota.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ suboperadores: [] }) })
+        if (modo === 'so_passadas') return rota.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ suboperadores: [passada] }) })
+        return rota.continue()
+      },
+    )
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    const real = `Hospedagem real ${marca()}`
+    await cadastrarSuboperadorDeTeste({ nome: real, escolas: [coordenadora.escolaId] })
+    await abrirAsEmpresas(page, hasTouch, coordenadora)
+
+    await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO_AS_EMPRESAS })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    segurada.abrir()
+    await expect(principal(page).getByRole('alert')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page).getByRole('button', { name: 'Tentar de novo' })).toBeVisible()
+
+    // Vazio: nenhuma empresa recebe dado da escola, e a tela diz isso; não há seção de passadas.
+    modo = 'vazio'
+    await acionar(principal(page).getByRole('button', { name: 'Tentar de novo' }), hasTouch)
+    await expect(principal(page).getByText(VAZIO_DAS_EMPRESAS)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page).getByRole('alert')).toHaveCount(0)
+    await expect(principal(page).getByRole('region', { name: SECAO_DAS_PASSADAS })).toHaveCount(0)
+
+    // Só passadas: o vazio das vigentes continua, e a passada aparece com o período.
+    modo = 'so_passadas'
+    await page.reload()
+    await expect(principal(page).getByText(VAZIO_DAS_EMPRESAS)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    const daPassada = secao(page, SECAO_DAS_PASSADAS).locator('tr, li').filter({ hasText: passada.nome })
+    await expect(daPassada).toHaveCount(1, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(daPassada).toContainText('De 05/01/2026 até 20/02/2026')
+
+    // Com dado: a resposta real, com a empresa que o teste cadastrou, e sem o vazio.
+    modo = 'real'
+    await page.reload()
+    await expect(secao(page, SECAO_DAS_VIGENTES)).toContainText(real, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page).getByText(VAZIO_DAS_EMPRESAS)).toHaveCount(0)
+  })
+
+  test('a segunda pessoa na mesma aba não vê as empresas da anterior, nem enquanto as dela não chegaram', async ({ page, hasTouch }) => {
+    const primeira = await criarEquipeComSenha('coordenador')
+    const daPrimeira = `Só da primeira escola ${marca()}`
+    await cadastrarSuboperadorDeTeste({ nome: daPrimeira, escolas: [primeira.escolaId] })
+    await abrirAsEmpresas(page, hasTouch, primeira)
+    await expect(secao(page, SECAO_DAS_VIGENTES)).toContainText(daPrimeira, { timeout: PRAZO_DA_ENTRADA_MS })
+
+    await abrirNavegacao(page, hasTouch)
+    await acionar(lateral(page).getByRole('button', { name: 'Sair' }), hasTouch)
+    await expect(page).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
+
+    const segunda = await criarEquipeComSenha('coordenador')
+    // A resposta da segunda pessoa fica segurada: enquanto ela não chega, a tela não pode mostrar a empresa da primeira.
+    const segurada = portao()
+    await page.route(
+      (url) => url.pathname === '/v1/privacidade/suboperadores',
+      async (rota: Route) => {
+        await segurada.aberta
+        return rota.continue()
+      },
+    )
+    await entrarComoCoordenacaoNaMesmaAba(page, segunda, hasTouch)
+    await esperarGovernanca(page)
+    await irPelaNavegacao(page, 'Privacidade', hasTouch)
+    await acionar(page.getByRole('tab', { name: NOME_DA_ABA_DAS_EMPRESAS }), hasTouch)
+    await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO_AS_EMPRESAS })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page)).not.toContainText(daPrimeira)
+
+    segurada.abrir()
+    await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO_AS_EMPRESAS })).toHaveCount(0, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page)).not.toContainText(daPrimeira)
   })
 })

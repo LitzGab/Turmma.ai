@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { formatarData, formatarDataHora, formatarDiaEHora, formatarQuantidade } from './formatar'
+import { formatarData, formatarDataHora, formatarDiaDoInstante, formatarDiaEHora, formatarQuantidade } from './formatar'
 
 describe('formatação pt-BR', () => {
   it('data sem hora não volta um dia por causa do fuso', () => {
     expect(formatarData('2026-09-13')).toBe('13 de setembro de 2026')
     expect(formatarData('2026-01-01')).toBe('1 de janeiro de 2026')
+  })
+
+  it('o dia de um instante, sem hora, no formato brasileiro e no fuso do navegador', () => {
+    // Meio-dia de UTC cai no mesmo dia em qualquer fuso de -12 a +11, então o dia não depende da máquina do teste.
+    expect(formatarDiaDoInstante('2026-10-09T12:00:00.000Z')).toBe('09/10/2026')
+    expect(formatarDiaDoInstante('2026-01-05T12:00:00.000Z')).toBe('05/01/2026')
   })
 
   it('data e hora no formato brasileiro', () => {

@@ -21,7 +21,8 @@ export interface LinhaNovaDeAuditoria {
  * e um teste varre o código atrás de outra escrita na tabela.
  *
  * Grava na escola do contexto, com o `requisicaoId` dele. Sem escola no contexto, a linha sai com escola
- * nula, e o check `auditoria_escola_ou_rede_pelo_operador` só a aceita para a rede criada pelo operador.
+ * nula, e o check `auditoria_escola_ou_operacao_global` só a aceita para a rede criada e para o suboperador cadastrado ou
+ * encerrado, sempre pelo operador.
  */
 export async function inserirAuditoria(executor: ExecutorDeAuditoria, linha: LinhaNovaDeAuditoria): Promise<void> {
   const contexto = contextoAtual()

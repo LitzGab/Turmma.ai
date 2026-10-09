@@ -54,13 +54,13 @@
   - [x] 7.4 `MedicaoDaGeracao`, `ConsumoDeIa` e `ConsumoRepository` levam o valor
   - [x] 7.5 Testes
 
-- [ ] **8.0 — A escola vê as empresas que recebem dados dela**
-  - [ ] 8.1 Migration própria: `suboperador` (chave única onde `fim is null`), `suboperador_escola`
-  - [ ] 8.2 `OperacaoPrivacidadeRepository` e `ops:suboperador` (cadastrar, encerrar), com auditoria da operação
-  - [ ] 8.3 `SuboperadorDaEscolaRepository` (só leitura, `exists` correlacionado, parênteses) e `GET suboperadores`
-  - [ ] 8.4 Aba "Empresas que recebem dados"
-  - [ ] 8.5 Arquitetura e `docs/modelo-de-dados.md`
-  - [ ] 8.6 Testes
+- [x] **8.0 — A escola vê as empresas que recebem dados dela**
+  - [x] 8.1 Migration própria: `suboperador` (chave única onde `fim is null`), `suboperador_escola`
+  - [x] 8.2 `OperacaoPrivacidadeRepository` e `ops:suboperador` (cadastrar, encerrar), com auditoria da operação
+  - [x] 8.3 `SuboperadorDaEscolaRepository` (só leitura, `exists` correlacionado, parênteses) e `GET suboperadores`
+  - [x] 8.4 Aba "Empresas que recebem dados"
+  - [x] 8.5 Arquitetura e `docs/modelo-de-dados.md`
+  - [x] 8.6 Testes
 
 - [ ] **9.0 — A operação registra incidente e a escola afetada confirma o recebimento**
   - [ ] 9.1 Migration própria: `incidente`, `incidente_escola`, índice de pendentes

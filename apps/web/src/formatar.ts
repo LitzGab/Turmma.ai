@@ -4,6 +4,7 @@ const dataHora = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyl
 // Data sem hora (`2026-09-13`) é lida em UTC e mostrada em UTC: senão o fuso a leva para o dia anterior.
 const dataSemHora = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long', timeZone: 'UTC' })
 const numero = new Intl.NumberFormat('pt-BR')
+const dia = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 /** `2026-09-14T13:05:00.000Z` → `14/09/2026, 10:05`, no fuso do navegador. */
 export function formatarDataHora(iso: string): string {
@@ -13,6 +14,11 @@ export function formatarDataHora(iso: string): string {
 /** `2026-09-13` → `13 de setembro de 2026`. */
 export function formatarData(data: string): string {
   return dataSemHora.format(new Date(`${data}T00:00:00Z`))
+}
+
+/** `2026-09-14T23:05:00.000Z` → `14/09/2026`, o dia no fuso do navegador, sem a hora: o começo e o fim de uma vigência. */
+export function formatarDiaDoInstante(iso: string): string {
+  return dia.format(new Date(iso))
 }
 
 /** `1234` → `1.234`: número inteiro no formato local, sem unidade. */

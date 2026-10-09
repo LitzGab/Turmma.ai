@@ -1,11 +1,14 @@
 # Estado da execução — lgpd-e-titular
 
 ## Agora
-- **Tarefa atual:** 7.0, iniciada em 09/10/2026 09:40, com o Implementador em Sonnet (porte grande)
-- **Espero:** relatório do Implementador
-- **Base:** `spec/lgpd-e-titular` em `d30070f` (o merge da `develop` em `3c54da8`: processo revisto, com o
-  portão da tarefa)
-- **Depois da 7.0:** abrir a correção da intermitência do alvo `execucao_agente_do_tutor` (ver "O que falhou")
+- **Tarefa atual:** 8.0, iniciada em 09/10/2026 11:50, com o Implementador em Sonnet 5.5
+- **Espero:** relatório do Implementador sobre a 8.0, retomada às 12:35 de 09/10/2026 na mesma sessão,
+  depois de uma falha por falta de memória (ver "O que falhou"): falta repetir só o spec novo, o portão
+  da tarefa e a Mesa
+- **Depois da 8.0, antes da 9.0:** correção `2026-10-09-plano-do-lote-por-custo`, com o diagnóstico do
+  Arquiteto (`.processo/ordens/diagnostico-plano-do-lote.md`); guardião: `infra-guardian`. É a terceira
+  tentativa nesse defeito: se falhar com o diagnóstico aplicado, é parada
+- **Base:** `spec/lgpd-e-titular` em `1362595` (merge da `develop` em `5d63ba3`)
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -20,6 +23,9 @@
 | 6.0 | `850d7ff` | Haiku, depois Sonnet | 9 | 1 reprovação (`test-engineer`, 1ª rodada), sem escalada; cinco horas no Haiku depurando o e2e novo com o portão inteiro (ver "O que falhou"); `DIVERGÊNCIA` de portão no meio (a correção da linha acima); retomada no Sonnet às 08:26 e fechada em 50 minutos, com um portão; de 01:12 a 09:15 de 09/10 |
 | contexto de teste das tarefas 7.0 a 19.0 | `eae998c`, `2a104f4` | Arquiteto (Opus) | — | só documento: linha de Porte e seção "Como testar"; todas marcadas porte grande (a 10, 16, 17 e 18 por dúvida, com um guardião com veto só) |
 | merge da `develop` (`3c54da8`) | `d30070f` | Orquestrador | — | processo revisto (D78, 09/10/2026); conflito só em `tasks/correcoes/achados/indice.md`, resolvido pelo lado da branch |
+| 7.0 | `ab5b9d6` | Sonnet | 10 | primeira no processo revisto; 2 reprovações na 1ª rodada (`privacy-guardian` e `revisor-geral`), uma ordem só, todos aprovados na 2ª; sem escalada nem divergência; de 09:27 a 09:55 de 09/10, 28 minutos |
+| correções `2026-10-09-plano-do-tutor-intermitente` e `2026-10-09-plano-do-lote-sem-estatistica` | nenhum | Sonnet | 0 | duas falhas, sem commit, de 09:57 a 11:40: ver "O que falhou"; a árvore voltou a ficar só com o `estado.md` |
+| merge da `develop` (`5d63ba3`) | ver `git log` | Orquestrador | — | sem conflito; 11 arquivos de processo |
 
 ## Esperando o Joaquim
 
@@ -37,6 +43,37 @@ Recomendo: ficar com o lado da branch; não se perde nenhuma linha e nada é esc
 
 ## O que falhou
 
+- **8.0, primeira falha (09/10/2026 12:16): o e2e repetido foi morto por falta de memória.** O
+  Implementador errou o filtro e o Playwright rodou os 544 testes de todos os specs com 6 trabalhadores;
+  a máquina tinha 3,8 GB livres de 31. Nada commitado, árvore inteira; 8.1 a 8.6 codificadas, testes da
+  tarefa e `e2e/privacidade.spec` (18/18) verdes na 1ª rodada. A memória está tomada por um
+  `llama-server` (alias `qwen3.6-35b-a3b`, contexto de 262144) que o Joaquim subiu às 11:10: 13,7 GB de
+  memória do sistema como memória de vídeo compartilhada (`mem_info_gtt_used`), que não aparece na
+  lista de processos. Os testes não usam esse modelo.
+- **Diagnóstico da intermitência do teste de plano (Arquiteto, 09/10/2026 12:05):** o teste deixa o
+  custo escolher o índice; com a escola em 1 linha quem desempata é o tamanho físico do índice, e na
+  `reivindicacao` o volume não ajuda (índice parcial de expressão não tem estatística lida). Não é
+  desenho. Correção só no teste: `enable_sort` e `enable_bitmapscan` desligados, asserção sem `Sort` e o
+  plano na mensagem; o volume do rascunho não entra. O teste da árvore falha no banco acumulado. Ele
+  leu o banco só em leitura. Arquivos em `.processo/ordens/diagnostico-plano-do-lote*`.
+- **Correção `2026-10-09-plano-do-lote-sem-estatistica` (09/10/2026, 11:02 a 11:40): `STATUS: FALHA`, sem
+  commit.** A tentativa (volume e `analyze` em reivindicação, material e vínculo) deu 0 falhas em 60
+  voltas com banco acumulado e, com banco novo (`EDUCA_BANCO_NOVO=1`, como no portão e na esteira), 0 em
+  80 voltas isoladas e 0 em 25 do arquivo inteiro. Mas um laço de 220 voltas com a correção falhou no
+  alvo `reivindicacao` nas voltas 9 a 16 seguidas, sem plano capturado, depois de o Implementador ter
+  forçado `reltuples` no banco; a causa ficou sem explicação e ele não afirma que o volume resolve. Antes
+  da correção, o banco acumulado dava 4 falhas em 220 (voltas 21 a 23). Dei limite até 12:00 e ele
+  devolveu falha com o teste revertido. O achado está em `.processo/ordens/achado-plano-do-lote.md` e a
+  tentativa em `.processo/ordens/teste-com-volume-reivindicacao-material-vinculo.int.test.ts.txt`: são
+  arquivos locais do andar, fora do git, e somem no pouso; quem retomar leva o conteúdo para o
+  documento da correção.
+- **Correção `2026-10-09-plano-do-tutor-intermitente` (09/10/2026, 09:57 a 11:02): `STATUS: FALHA`, sem
+  mudança.** O alvo `execucao_agente_do_tutor` não falhou em cerca de 450 execuções (150 do teste
+  isolado, 80 com banco novo, 220 do arquivo inteiro); medido em SQL, o índice do Tutor custa metade do
+  genérico, então só estatística muito errada o tira do plano. Sem causa, o Implementador não escreveu
+  correção. Nada foi commitado. O que ele achou e reproduz: o alvo `reivindicacao` falha em cerca de 2%
+  do arquivo inteiro (4 em 220), porque sem volume nem `analyze` o planejador estima 1 linha e escolhe
+  `reivindicacao_nome_idx` no lugar de `reivindicacao_decidida_idx`; material e vínculo estão no mesmo caso.
 - **Outra intermitência no mesmo teste de plano (09/10/2026):** em 1 de 55 execuções falhou o alvo
   `execucao_agente_do_tutor` (`execucao_agente_do_tutor_a_anonimizar_idx` ausente do plano), em
   `apps/worker/test/expurgo-da-escola.int.test.ts`. Ficou fora da correção `1a405d2`, em "Fora desta
@@ -59,6 +96,25 @@ Recomendo: ficar com o lado da branch; não se perde nenhuma linha e nada é esc
 
 ## O que decidi sem perguntar
 
+- **Retomada da 8.0 sem reiniciar a sessão (09/10/2026 12:35):** o `/seguir` manda reiniciar o
+  Implementador na primeira falha. Mantive a sessão: a causa foi de máquina (memória), o que falta são
+  três comandos, e uma sessão nova gastaria minutos relendo a tarefa. Pedi o spec novo sozinho, com 2
+  trabalhadores, e conferir a memória antes.
+- **Depois da segunda falha na intermitência do plano (09/10/2026 11:45):** o Joaquim disse, neste
+  terminal, para fazer o melhor para o projeto e terminar logo a spec. A falha só apareceu com banco
+  acumulado de laço; com banco novo, como no portão e na esteira, não apareceu. Por isso a 8.0 segue
+  agora, e o diagnóstico do Arquiteto (o degrau da segunda falha) roda em paralelo, só lendo. A correção
+  volta com o diagnóstico numa virada de tarefa, e em todo caso antes do portão completo.
+- **Depois da falha da correção do tutor (09/10/2026 11:02):** fechei-a sem mudança e pedi outra,
+  `2026-10-09-plano-do-lote-sem-estatistica`, para o que se reproduz: volume e `analyze` em
+  reivindicação, material e vínculo, o mesmo remédio da `1a405d2`. O alvo do tutor entra no documento
+  como não reproduzido; se o mesmo `analyze` couber a ele, entra dito como prevenção. Mantive a sessão
+  do Implementador, em vez de reiniciar, porque é a mesma investigação e as medições estão nela.
+- **Correção da intermitência do tutor (09/10/2026 10:00):** pedida depois da 7.0, como anotado abaixo,
+  no Sonnet (mesmo arquivo de teste da correção `1a405d2`), só com o `infra-guardian`: os quatro
+  revisores da correção anterior aprovaram na 1ª rodada e o `tenancy-guardian` e o `privacy-guardian`
+  não tinham o que auditar num ajuste de teste de plano. Se ela tocar repository, schema ou migration,
+  os dois entram.
 - **Ordem depois do merge (09/10/2026):** eu tinha anotado a correção da intermitência do alvo
   `execucao_agente_do_tutor` antes da 7.0. A resposta à parada mandou seguir para a 7.0; a intermitência
   (1 em 55) só pesa no portão completo e na esteira, então a correção fica para logo depois da 7.0.

@@ -5,7 +5,7 @@ import type { CategoriaDeRetencao, ChaveDePrazoFixo } from './retencao.js'
  * F3, seção 3, "Classificação de toda tabela"). O teste de arquitetura (`apps/api/test/arquitetura.test.ts`) confere esta
  * lista contra as migrations, nos dois sentidos: tabela criada sem classificação, ou classificação de tabela que não
  * existe, deixa o teste vermelho. Cada tarefa que cria tabela a classifica aqui na mesma tarefa: as do pedido do
- * titular, do suboperador e do incidente entram com as migrations delas (tarefas 8.0, 9.0 e 11.0); a do expurgo entrou na 3.0.
+ * titular e do incidente entram com as migrations delas (tarefas 9.0 e 11.0); as do suboperador entraram na 8.0; a do expurgo entrou na 3.0.
  *
  * As sentinelas do arquivo e da troca de nome (tarefas 13.0 e 15.0) saem desta lista, então uma tabela nova entra nelas
  * sozinha.
@@ -101,6 +101,10 @@ export const CLASSIFICACAO_DAS_TABELAS: Readonly<Record<string, ClassificacaoDaT
   resumo_do_analista: SEM_PESSOA,
   // Guarda o apelido do operador que ajustou, da nossa equipe, e nenhuma pessoa da escola.
   retencao_escola: SEM_PESSOA,
+  // A empresa que recebe dado da escola (F3, 8.0): nome, finalidade, país e contrato dela, mais o apelido do operador que a
+  // cadastrou. Nenhuma pessoa da escola.
+  suboperador: SEM_PESSOA,
+  suboperador_escola: SEM_PESSOA,
 }
 
 /**

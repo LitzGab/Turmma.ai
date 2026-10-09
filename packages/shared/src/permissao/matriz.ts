@@ -151,6 +151,12 @@ export const RECURSOS = {
    * sem pessoa. Ajustar é só da operação, por comando (`ops:retencao`), e não tem rota.
    */
   privacidade_retencao: ['ler'],
+  /**
+   * Os suboperadores da escola (F3, 8.0), só da coordenação: `ler` é `GET /v1/privacidade/suboperadores`, as empresas que
+   * recebem dado da escola dela, vigentes e passadas, sem pessoa. Cadastrar e encerrar é só da operação, por comando
+   * (`ops:suboperador`), e não tem rota.
+   */
+  privacidade_suboperadores: ['ler'],
 } as const satisfies Record<string, readonly string[]>
 
 export type Recurso = keyof typeof RECURSOS
@@ -195,6 +201,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     governanca: { ler_resumo: 'nunca', ler_funcoes: 'nunca', suspender_funcao: 'nunca', retomar_funcao: 'nunca', ler_consumo: 'nunca' },
     analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
     privacidade_retencao: { ler: 'nunca' },
+    privacidade_suboperadores: { ler: 'nunca' },
   },
   coordenador: {
     sistema_contexto: { ler: 'proprio' },
@@ -232,6 +239,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     governanca: { ler_resumo: 'agregado', ler_funcoes: 'unidade', suspender_funcao: 'unidade', retomar_funcao: 'unidade', ler_consumo: 'agregado' },
     analista: { ler_resumo: 'agregado', gerar: 'unidade', ler_nominal: 'nominal_auditado' },
     privacidade_retencao: { ler: 'unidade' },
+    privacidade_suboperadores: { ler: 'unidade' },
   },
   professor: {
     sistema_contexto: { ler: 'proprio' },
@@ -269,6 +277,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     governanca: { ler_resumo: 'nunca', ler_funcoes: 'nunca', suspender_funcao: 'nunca', retomar_funcao: 'nunca', ler_consumo: 'nunca' },
     analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
     privacidade_retencao: { ler: 'nunca' },
+    privacidade_suboperadores: { ler: 'nunca' },
   },
   aluno: {
     sistema_contexto: { ler: 'proprio' },
@@ -306,6 +315,7 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     governanca: { ler_resumo: 'nunca', ler_funcoes: 'nunca', suspender_funcao: 'nunca', retomar_funcao: 'nunca', ler_consumo: 'nunca' },
     analista: { ler_resumo: 'nunca', gerar: 'nunca', ler_nominal: 'nunca' },
     privacidade_retencao: { ler: 'nunca' },
+    privacidade_suboperadores: { ler: 'nunca' },
   },
 }
 

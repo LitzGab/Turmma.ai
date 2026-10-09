@@ -814,3 +814,17 @@ export type {
 } from './privacidade/retencao.js'
 export { CLASSIFICACAO_DAS_TABELAS, COLUNAS_FORA_DO_ARQUIVO } from './privacidade/classificacao.js'
 export type { ArquivoDaTabela, ClasseDaTabela, ClassificacaoDaTabela } from './privacidade/classificacao.js'
+export {
+  ALCANCES_DO_SUBOPERADOR,
+  CATEGORIAS_DE_DADO_DO_SUBOPERADOR,
+  CHAVES_DE_CATEGORIA_DO_SUBOPERADOR,
+  esquemaRespostaSuboperadores,
+  esquemaSuboperadorDaEscola,
+  FINALIDADE_DO_REGISTRO_DE_SUBOPERADOR,
+  FORMATO_DA_CHAVE_DO_SUBOPERADOR,
+  FORMATO_DO_CONTRATO_DO_SUBOPERADOR,
+  FORMATO_DO_PAIS_DO_SUBOPERADOR,
+  MAXIMO_DA_FINALIDADE_DO_SUBOPERADOR,
+  MAXIMO_DO_NOME_DO_SUBOPERADOR,
+} from './privacidade/suboperador.js'
+export type { AlcanceDoSuboperador, CategoriaDeDadoDoSuboperador, RespostaSuboperadores, SuboperadorDaEscola } from './privacidade/suboperador.js'

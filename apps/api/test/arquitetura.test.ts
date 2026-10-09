@@ -205,7 +205,7 @@ const EXPURGO_DA_OPERACAO = 'packages/nucleo/src/retencao/expurgo-de-acesso.repo
 const QUEM_PODE_TOCAR_A_OPERACAO = [REPOSITORY_DA_OPERACAO, EXPURGO_DA_OPERACAO]
 /** O que o expurgo pode tocar da operação: nunca `operador`, `codigo_recuperacao_operador` nem `auditoria_operacao`. */
 const EXPURGAVEIS_DA_OPERACAO = ['acesso_operacao', 'convite_operador', 'sessao_operador']
-const FORA_DA_VARREDURA = ['packages/nucleo/src/db/schema/operador.ts', 'packages/nucleo/src/index.ts']
+const FORA_DA_VARREDURA = ['packages/nucleo/src/db/schema/operador.ts', 'packages/nucleo/src/db/schema/suboperador.ts', 'packages/nucleo/src/index.ts']
 const TABELAS_DA_OPERACAO = [nucleo.operador, nucleo.codigoRecuperacaoOperador, nucleo.conviteOperador, nucleo.sessaoOperador, nucleo.acessoOperacao, nucleo.auditoriaOperacao]
 
 /** Nome exportado pelo `@educa/nucleo` → nome físico, de toda tabela que o pacote exporta. */
@@ -214,6 +214,20 @@ const TABELAS_EXPORTADAS = new Map<string, string>(
 )
 const FISICOS_DA_OPERACAO = new Set<string>(TABELAS_DA_OPERACAO.map((tabela) => getTableName(tabela)))
 const EXPORTS_DA_OPERACAO = new Set([...TABELAS_EXPORTADAS].filter(([, fisico]) => FISICOS_DA_OPERACAO.has(fisico)).map(([nome]) => nome))
+const GRUPO_DO_OPERADOR: GrupoDeTabelas = { exports: EXPORTS_DA_OPERACAO, fisicos: FISICOS_DA_OPERACAO, schema: 'operador' }
+
+/**
+ * F3, tarefa 8.0 (Tech Spec do F3, seção 6): o suboperador e a ligação dele com a escola. `suboperador` não tem `escola_id`
+ * (exceção do item 1 de `docs/modelo-de-dados.md`), então o que impede que vire atalho é a cerca: só o
+ * `OperacaoPrivacidadeRepository` escreve nas duas, e só o `SuboperadorDaEscolaRepository` as lê, sem escrever.
+ */
+const ESCRITOR_DO_SUBOPERADOR = 'apps/api/src/ops/operacao-privacidade.repository.ts'
+const LEITOR_DO_SUBOPERADOR = 'packages/nucleo/src/titular/suboperador-da-escola.repository.ts'
+const QUEM_PODE_TOCAR_O_SUBOPERADOR = [ESCRITOR_DO_SUBOPERADOR, LEITOR_DO_SUBOPERADOR]
+const TABELAS_DO_SUBOPERADOR = [nucleo.suboperador, nucleo.suboperadorEscola]
+const FISICOS_DO_SUBOPERADOR = new Set<string>(TABELAS_DO_SUBOPERADOR.map((tabela) => getTableName(tabela)))
+const EXPORTS_DO_SUBOPERADOR = new Set([...TABELAS_EXPORTADAS].filter(([, fisico]) => FISICOS_DO_SUBOPERADOR.has(fisico)).map(([nome]) => nome))
+const GRUPO_DO_SUBOPERADOR: GrupoDeTabelas = { exports: EXPORTS_DO_SUBOPERADOR, fisicos: FISICOS_DO_SUBOPERADOR, schema: 'suboperador' }
 
 /** Toda tabela criada nas migrations, inclusive as que o pacote não exporta (`auditoria`). */
 const TABELAS_FISICAS: readonly string[] = readdirSync(join(RAIZ, 'packages/nucleo/drizzle'))
@@ -225,9 +239,17 @@ function tabelasEmSql(texto: string): string[] {
   return [...texto.matchAll(/\b(?:from|into|update|join|table|truncate)\s+(?:"?public"?\.)?"?(\w+)"?/gi)].map((uso) => uso[1] ?? '').filter((nome) => TABELAS_FISICAS.includes(nome))
 }
 
+/** Um grupo de tabelas da operação: os nomes que o pacote exporta, os nomes físicos, e o arquivo do schema dele. */
+interface GrupoDeTabelas {
+  readonly exports: ReadonlySet<string>
+  readonly fisicos: ReadonlySet<string>
+  /** O nome do arquivo do schema, sem extensão: `operador`, `suboperador`. */
+  readonly schema: string
+}
+
 /** Os nomes que o texto importa (ou reexporta) do `@educa/nucleo` ou do schema da operação, sem o `as` e o `type`. */
 function nomesImportados(texto: string): string[] {
-  return [...texto.matchAll(/(?:import|export)\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"](@educa\/nucleo|[^'"]*schema\/operador(?:\.js|\.ts)?)['"]/g)].flatMap((importacao) =>
+  return [...texto.matchAll(/(?:import|export)\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"](@educa\/nucleo|[^'"]*schema\/(?:operador|suboperador)(?:\.js|\.ts)?)['"]/g)].flatMap((importacao) =>
     (importacao[1] ?? '')
       .split(',')
       .map((nome) => nome.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0] ?? '')
@@ -235,15 +257,18 @@ function nomesImportados(texto: string): string[] {
   )
 }
 
-/** As tabelas da operação que o arquivo alcança: por nome importado, por namespace do pacote, pelo arquivo do schema ou em SQL. */
-function usosDaOperacao(texto: string): string[] {
-  const porImport = nomesImportados(texto).filter((nome) => EXPORTS_DA_OPERACAO.has(nome))
+/** As tabelas do grupo que o arquivo alcança: por nome importado, por namespace do pacote, pelo arquivo do schema ou em SQL. */
+function usosDoGrupo(texto: string, grupo: GrupoDeTabelas): string[] {
+  const porImport = nomesImportados(texto).filter((nome) => grupo.exports.has(nome))
   const namespaces = [...texto.matchAll(/import\s+\*\s+as\s+(\w+)\s+from\s+['"]@educa\/nucleo['"]/g)].map((uso) => uso[1] ?? '')
-  const porNamespace = namespaces.flatMap((ns) => [...texto.matchAll(new RegExp(`\\b${ns}\\.(\\w+)`, 'g'))].map((uso) => uso[1] ?? '').filter((nome) => EXPORTS_DA_OPERACAO.has(nome)))
-  const peloArquivo = /['"][^'"]*db\/schema\/operador(?:\.js|\.ts)?['"]/.test(texto) ? ['schema/operador'] : []
-  const porSql = tabelasEmSql(texto).filter((nome) => FISICOS_DA_OPERACAO.has(nome))
+  const porNamespace = namespaces.flatMap((ns) => [...texto.matchAll(new RegExp(`\\b${ns}\\.(\\w+)`, 'g'))].map((uso) => uso[1] ?? '').filter((nome) => grupo.exports.has(nome)))
+  const peloArquivo = new RegExp(`['"][^'"]*db\\/schema\\/${grupo.schema}(?:\\.js|\\.ts)?['"]`).test(texto) ? [`schema/${grupo.schema}`] : []
+  const porSql = tabelasEmSql(texto).filter((nome) => grupo.fisicos.has(nome))
   return [...porImport, ...porNamespace, ...peloArquivo, ...porSql]
 }
+
+/** As seis tabelas da operação que o arquivo alcança. */
+const usosDaOperacao = (texto: string): string[] => usosDoGrupo(texto, GRUPO_DO_OPERADOR)
 
 /**
  * Teste e apoio de teste (`*.test.ts`, o que mora numa pasta `test/`, como a bancada de operadores da tarefa 4.0, e o
@@ -260,10 +285,10 @@ function quemTocaAOperacao(arquivos: readonly Arquivo[]): string[] {
     .map((arquivo) => arquivo.caminho)
 }
 
-/** O que o repository toca fora das seis: tabela importada do pacote que não é da operação, e tabela de fora em SQL. */
-function tabelasDeForaNoRepository(texto: string): string[] {
-  const importadas = nomesImportados(texto).filter((nome) => TABELAS_EXPORTADAS.has(nome) && !EXPORTS_DA_OPERACAO.has(nome))
-  const emSql = tabelasEmSql(texto).filter((nome) => !FISICOS_DA_OPERACAO.has(nome))
+/** O que o repository toca fora do grupo dele: tabela importada do pacote que não é do grupo, e tabela de fora em SQL. */
+function tabelasDeForaNoRepository(texto: string, grupo: GrupoDeTabelas = GRUPO_DO_OPERADOR): string[] {
+  const importadas = nomesImportados(texto).filter((nome) => TABELAS_EXPORTADAS.has(nome) && !grupo.exports.has(nome))
+  const emSql = tabelasEmSql(texto).filter((nome) => !grupo.fisicos.has(nome))
   return [...importadas, ...emSql]
 }
 
@@ -331,6 +356,86 @@ describe('arquitetura: as seis tabelas da operação só pelo OperadorRepository
   it('reprova o repository que importa outra tabela do pacote ou cita outra tabela em SQL', () => {
     expect(tabelasDeForaNoRepository("import { conta, operador } from '@educa/nucleo'")).toEqual(['conta'])
     expect(tabelasDeForaNoRepository("sql`select 1 from escola`; sql`insert into auditoria (x)`; sql`update operador set x = 1`")).toEqual(['escola', 'auditoria'])
+  })
+})
+
+/** Quem, fora de teste e do schema, alcança `suboperador` ou `suboperador_escola`: por import, por namespace, pelo arquivo do schema ou em SQL. */
+function quemTocaOSuboperador(arquivos: readonly Arquivo[]): string[] {
+  return arquivos
+    .filter((arquivo) => !deTeste(arquivo.caminho) && !FORA_DA_VARREDURA.includes(arquivo.caminho))
+    .filter((arquivo) => usosDoGrupo(arquivo.texto, GRUPO_DO_SUBOPERADOR).length > 0)
+    .map((arquivo) => arquivo.caminho)
+}
+
+/** O código sem comentário, para procurar escrita: citar `insert` num docblock não é escrever. */
+const ESCREVE_NO_BANCO = /\.(?:insert|update|delete)\s*\(|\b(?:insert\s+into|update|delete\s+from)\s+"?\w+"?/i
+
+describe('arquitetura: o suboperador só pelo OperacaoPrivacidadeRepository, que escreve, e pelo SuboperadorDaEscolaRepository, que lê (F3, tarefa 8.0)', () => {
+  it('as duas tabelas vêm do pacote e das migrations, e nenhuma é uma das seis do operador', () => {
+    expect([...FISICOS_DO_SUBOPERADOR].sort()).toEqual(['suboperador', 'suboperador_escola'])
+    expect(EXPORTS_DO_SUBOPERADOR.size).toBe(2)
+    for (const tabela of FISICOS_DO_SUBOPERADOR) {
+      expect(TABELAS_FISICAS).toContain(tabela)
+      expect(FISICOS_DA_OPERACAO.has(tabela)).toBe(false)
+    }
+  })
+
+  it('só os dois repositórios tocam as duas tabelas, por import, por namespace, pelo arquivo do schema ou pelo nome em SQL', () => {
+    for (const caminho of QUEM_PODE_TOCAR_O_SUBOPERADOR) expect(existsSync(join(RAIZ, caminho)), caminho).toBe(true)
+    expect(quemTocaOSuboperador(arquivosDoRepositorio()).sort()).toEqual([...QUEM_PODE_TOCAR_O_SUBOPERADOR].sort())
+  })
+
+  it('o repositório da escola não escreve nas duas tabelas, nem em outra: só lê', () => {
+    const arquivos = arquivosDoRepositorio()
+    const leitor = arquivos.find((arquivo) => arquivo.caminho === LEITOR_DO_SUBOPERADOR)
+    expect(leitor && usosDoGrupo(leitor.texto, GRUPO_DO_SUBOPERADOR).length).toBeGreaterThan(0)
+    expect(leitor && ESCREVE_NO_BANCO.test(semComentarios(leitor.texto))).toBe(false)
+    expect(leitor && tabelasDeForaNoRepository(leitor.texto, GRUPO_DO_SUBOPERADOR)).toEqual([])
+    // O escritor, ao contrário, escreve (a varredura enxerga a escrita) e não toca outra tabela.
+    const escritor = arquivos.find((arquivo) => arquivo.caminho === ESCRITOR_DO_SUBOPERADOR)
+    expect(escritor && ESCREVE_NO_BANCO.test(semComentarios(escritor.texto))).toBe(true)
+    expect(escritor && tabelasDeForaNoRepository(escritor.texto, GRUPO_DO_SUBOPERADOR)).toEqual([])
+    expect(escritor && usosDaOperacao(escritor.texto)).toEqual([])
+  })
+
+  it('o único @SemEscopo é o encerramento das ligações em todas as escolas; a leitura da escola não tem nenhum', async () => {
+    const escritor = await import('../src/ops/operacao-privacidade.repository.js')
+    const metodos = Object.getOwnPropertyNames(escritor.OperacaoPrivacidadeRepository.prototype).filter((metodo) => metodo !== 'constructor')
+    expect(metodos.toSorted()).toEqual(['cadastrar', 'encerrar', 'encerrarLigacoes', 'ligarEscola', 'travarVigente'])
+    expect(metodos.filter((metodo) => nucleo.justificativaSemEscopo(escritor.OperacaoPrivacidadeRepository, metodo) !== undefined)).toEqual(['encerrarLigacoes'])
+    const leitura = Object.getOwnPropertyNames(nucleo.SuboperadorDaEscolaRepository.prototype).filter((metodo) => metodo !== 'constructor')
+    expect(leitura).toEqual(['daEscola'])
+    expect(nucleo.justificativaSemEscopo(nucleo.SuboperadorDaEscolaRepository, 'daEscola')).toBeUndefined()
+  })
+
+  it('a varredura pega o uso em qualquer forma, e não confunde variável, comentário nem teste com tabela', () => {
+    const fora = [
+      { caminho: 'apps/api/src/privacidade/privacidade.service.ts', texto: "import { and, suboperador } from '@educa/nucleo'" },
+      { caminho: 'apps/api/src/privacidade/alias.ts', texto: "import { type Banco, suboperadorEscola as ligacao } from '@educa/nucleo'" },
+      { caminho: 'apps/api/src/privacidade/ns.ts', texto: "import * as n from '@educa/nucleo'\nn.suboperador" },
+      { caminho: 'apps/api/src/privacidade/reexporta.ts', texto: "export { suboperadorEscola } from '@educa/nucleo'" },
+      { caminho: 'apps/api/src/privacidade/schema.ts', texto: "import { suboperador as s } from '../../../../packages/nucleo/src/db/schema/suboperador.js'" },
+      { caminho: 'apps/worker/src/sql.ts', texto: "pool.query('delete from suboperador_escola where fim < now()')" },
+      { caminho: 'apps/worker/src/sql-aspas.ts', texto: 'sql`update "public"."suboperador" set fim = now()`' },
+    ]
+    const inocentes = [
+      { caminho: 'apps/api/src/ops/suboperador.ts', texto: "import { OperacaoPrivacidadeRepository } from './operacao-privacidade.repository.js'\nconst suboperador = lerPedido()\n// a tabela suboperador" },
+      { caminho: 'apps/api/test/suboperador.int.test.ts', texto: "pool.query('select 1 from suboperador')" },
+      { caminho: 'packages/nucleo/src/index.ts', texto: "export { suboperador } from './db/schema/suboperador.js'" },
+      { caminho: 'packages/nucleo/src/db/schema/suboperador.ts', texto: 'export const suboperador = pgTable()' },
+    ]
+    expect(quemTocaOSuboperador([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho))
+  })
+
+  it('reprova o repositório de leitura que escreve, e o de escrita que toca outra tabela', () => {
+    for (const escrita of ['await this.banco.insert(suboperador).values(x)', 'await this.banco.update(suboperadorEscola).set(x)', 'await this.banco.delete(suboperador)', "sql`delete from suboperador`", "sql`insert into suboperador_escola (x) values (1)`"]) {
+      expect(ESCREVE_NO_BANCO.test(semComentarios(escrita)), escrita).toBe(true)
+    }
+    expect(ESCREVE_NO_BANCO.test(semComentarios('/** não faz insert nem update */\nawait this.banco.select().from(suboperador)'))).toBe(false)
+    expect(tabelasDeForaNoRepository("import { suboperador, conta } from '@educa/nucleo'", GRUPO_DO_SUBOPERADOR)).toEqual(['conta'])
+    expect(tabelasDeForaNoRepository("sql`select 1 from sessao`; sql`select 1 from suboperador`", GRUPO_DO_SUBOPERADOR)).toEqual(['sessao'])
+    // O OperadorRepository, que não é do grupo, também não pode tocar o suboperador.
+    expect(tabelasDeForaNoRepository("import { operador, suboperador } from '@educa/nucleo'")).toEqual(['suboperador'])
   })
 })
 

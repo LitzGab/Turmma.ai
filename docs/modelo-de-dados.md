@@ -569,6 +569,10 @@ Incidente        → escola*, detectadoEm*, descricao, titularesAfetados, comuni
 RetencaoEscola*  → escola* + categoria* (chave), meses*, referenciaContrato*, alteradaEm*,
                    alteradaPor* (apelido do operador)    (F3)
 ExpurgoExecucao* → escola*, categoria*, linhas*, concluida*, em*    (F3)
+Suboperador      chave* (única entre os vigentes), nome*, finalidade*, categorias* (lista fechada), pais*,
+                 contrato* (código, nunca texto), vedaTreinamento*, alcance* (todas | lista), inicio*, fim?,
+                 registradoPor* (apelido do operador)    (F3, sem escolaId)
+SuboperadorEscola → escola* + suboperador* (chave), inicio*, fim?    (F3, só no alcance "lista")
 ```
 
 `RetencaoEscola` guarda só o **ajuste** da escola numa categoria do catálogo de retenção (`CATEGORIAS_DE_RETENCAO`, em
@@ -579,6 +583,22 @@ contrato é inteiro, como o do pedido no `ops:redefinir-mfa`, porque vai também
 livre. Não varia por ano letivo. Toda tabela das migrations está em `CLASSIFICACAO_DAS_TABELAS` (categoria do expurgo,
 prazo fixo com quem o aplica, ou sem pessoa; se entra no arquivo do titular e por qual coluna se liga a ele), e as
 colunas de segredo, em `COLUNAS_FORA_DO_ARQUIVO`; o teste de arquitetura confere as duas listas contra as migrations.
+
+**Os suboperadores (F3, tarefa 8.0).** `Suboperador` é a empresa que recebe dado da escola (hospedagem, provedor de IA, e-mail,
+busca) e **não tem `escolaId`**: a hospedagem atende toda escola, e uma linha por escola seria a mesma linha cem vezes. Só o
+`ops:suboperador` escreve (`cadastrar` e `encerrar`), pelo `OperacaoPrivacidadeRepository`, e a escola lê pelo
+`SuboperadorDaEscolaRepository`, que filtra por `(alcance = 'todas' or exists (ligação com a escola do contexto))` e é só
+leitura; o teste de arquitetura procura outro uso, por import e por SQL. `SuboperadorEscola` liga o de alcance `lista` a cada
+escola, escrita no contexto dela (o `escola_id` vem do contexto, nunca de argumento). A vigência que a escola lê é a da
+ligação ou, em `todas`, a do suboperador, com o `fim` mais cedo entre os dois: quem saiu da lista com a empresa seguindo para
+as outras a vê como passada. O encerrado **fica**, como histórico: a escola precisa dizer ao titular por onde o dado passou,
+mesmo depois de a empresa sair, e a chave encerrada pode ser cadastrada de novo. A `chave` tem o formato do `IA_PROVEDOR_ID`
+(tarefa 7.0), que é como o compartilhamento do titular casa uma chamada com o suboperador; o `contrato` é um código de
+referência, nunca texto, e não sai para a escola. Nenhuma pessoa da escola: as duas tabelas são `sem_pessoa` na classificação.
+A auditoria (`suboperador.cadastrado` e `suboperador.encerrado`) é **sem escola**, porque o ato é da operação e a empresa pode
+atender toda escola: o check `auditoria_escola_ou_operacao_global` aceita sem escola, além da rede criada, a entidade
+`suboperador`, sempre com `autor_operador`; ela leva só o alcance e contagens, porque a auditoria não aceita texto livre
+(a chave, o nome e o contrato ficam na tabela, pelo id).
 
 **O expurgo noturno da escola (F3, tarefa 3.0).** À 1h, a rotina do sistema `sistema.expurgar-dado-pessoal` lista as
 escolas pela `EscolasDaRotinaRepository` (em `packages/nucleo/src/rotina`), a **única consulta sem escopo do expurgo**:
@@ -652,7 +672,10 @@ liga a decisão sobre o professor (D45, regra 70 item 8). Os dois estão no mapa
      além da limpeza noturna do expurgo de acesso — ver "Pessoas e vínculos";
    - as tabelas da operação Turmma (`Operador`, `CodigoRecuperacaoOperador`, `ConviteOperador`,
      `SessaoOperador`, `AcessoOperacao`, `AuditoriaOperacao`), da nossa equipe e não de escola,
-     só alcançadas pelo `OperadorRepository` e pelo expurgo — ver "Operação Turmma".
+     só alcançadas pelo `OperadorRepository` e pelo expurgo — ver "Operação Turmma";
+   - o `Suboperador` (F3), a empresa que recebe dado da escola, da nossa operação: atende toda escola ou só as listadas em
+     `SuboperadorEscola` (esta tem `escolaId`), e só o `OperacaoPrivacidadeRepository` escreve e o
+     `SuboperadorDaEscolaRepository` lê — ver "Comunicação, conta e conformidade".
    A lista de escolas da rotina noturna (`EscolasDaRotinaRepository.listarIds`, F3) não é tabela sem escola: é a
    consulta sem escopo que abre o contexto de cada escola — ver "Comunicação, conta e conformidade".
 2. Id é UUID. Nunca sequencial.

@@ -109,9 +109,23 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] `ops:suboperador` cadastra e encerra o suboperador, com auditoria da operação.
   - [I] O encerrado fica no histórico com o período.
   - [I] Uma chave encerrada pode ser recadastrada.
+  - [I] (tarefa 8.0) A auditoria do cadastro e do encerramento é sem escola, com o autor, o alcance e as contagens, e nunca a chave, o
+    nome nem o contrato; a `auditoria` aceita sem escola só a rede e o suboperador, e só por operador (banco e `RegistroDeAuditoria`).
+  - [I] (tarefa 8.0) Já há vigente com a chave: `CONFLITO`, sem gravar nada. Escola inexistente na lista: `NAO_ENCONTRADO`, e a ligação das
+    que existem se desfaz. Encerrar sem vigente: `NAO_ENCONTRADO`. Encerrar fecha as ligações abertas e diz quantas.
+  - [P] (tarefa 8.0) Dois cadastros da mesma chave deixam um só e o outro dá `CONFLITO`; dois encerramentos passam um de cada vez.
+  - [I] (tarefa 8.0) O banco recusa, por fora do comando, o que o comando recusa (formato da chave, do país e do contrato, categoria fora da
+    lista, vigência invertida, duas vigentes da mesma chave, ligação repetida, escola ou suboperador inexistente); a lista de categorias
+    do check é a de `CHAVES_DE_CATEGORIA_DO_SUBOPERADOR`.
 - **RF7.**
   - [I] B não vê o suboperador `lista` que atende só A, e vê o de `todas`.
   - [I] Quando a ligação tem `fim`, o suboperador aparece como passado.
+  - [I] (tarefa 8.0) A vigência que a escola lê é o início da ligação (ou do suboperador, em `todas`) e o mais cedo entre os dois `fim`; a escola
+    que saiu da lista vê passado, e a outra, vigente. O recadastrado vem antes do encerrado de mesma chave. O DTO não traz id, contrato,
+    operador nem escola.
+  - [E] (tarefa 8.0) A aba "Empresas que recebem dados" lê as vigentes e as passadas, nunca as de outra escola; os quatro estados (carregando,
+    erro, vazio e dado, mais o "só passadas"), em `chromebook` e `celular`, com acessibilidade; a segunda pessoa na mesma aba não vê as
+    empresas da anterior.
   - [I] Um consumo de A cujo `provedor` é a chave de um suboperador só de B aparece como "provedor não cadastrado". As
     linhas sem `provedor` e a reserva por período não listam o suboperador só de B.
 - **RF8.**

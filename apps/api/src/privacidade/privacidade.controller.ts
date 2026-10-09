@@ -1,5 +1,5 @@
 import { Permite } from '@educa/nucleo'
-import type { RespostaRetencao } from '@educa/shared'
+import type { RespostaRetencao, RespostaSuboperadores } from '@educa/shared'
 import { Controller, Get, Header } from '@nestjs/common'
 import { PrivacidadeService } from './privacidade.service.js'
 
@@ -18,5 +18,13 @@ export class PrivacidadeController {
   @Header('Cache-Control', 'no-store')
   retencao(): Promise<RespostaRetencao> {
     return this.privacidade.retencao()
+  }
+
+  /** As empresas que recebem dado da escola: vigentes e passadas, com o que fazem, onde processam e o que recebem. */
+  @Get('suboperadores')
+  @Permite('privacidade_suboperadores', 'ler')
+  @Header('Cache-Control', 'no-store')
+  suboperadores(): Promise<RespostaSuboperadores> {
+    return this.privacidade.suboperadores()
   }
 }
