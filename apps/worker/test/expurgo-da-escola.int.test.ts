@@ -897,8 +897,18 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
           [a.escolaId, QUARTA_1H.toISOString()],
         )
         for (const tabela of ['usuario', 'mensagem_tutor', 'sinal_tutor', 'mensagem_agente', 'execucao_agente', 'consumo_ia', 'artefato']) await cliente.query(`analyze ${tabela}`)
-        // Com a varredura sequencial proibida, o plano só usa o índice se ele servir à instrução.
+        // O teste afirma que o índice SERVE ao lote (predicado e ordem), e não que o planejador o prefere pelo custo. Com a
+        // varredura sequencial, a ordenação e o bitmap desligados, o único plano sem nó desabilitado é o que desce pelo índice
+        // cuja chave é `(escola_id, <data>)`: nos alvos com `order by`, só o índice do lote dá essa ordem. Sem isso a escolha
+        // era por custo, e com a escola estimada em uma linha quem desempatava era o tamanho físico do índice que as outras
+        // execuções deixaram (12 linhas em 20 páginas custam uma página a mais); na `reivindicacao` nem o volume resolve,
+        // porque o planejador não lê estatística de índice parcial de expressão. `enable_sort` não desliga a ordenação
+        // incremental, que é a do lote de pessoas (`order by desativado_em, id`). `enable_bitmapscan` protege os alvos sem
+        // `order by`, onde o bitmap seria o outro caminho; não o tire por parecer redundante. O que fica fora do teste é a
+        // escolha real do índice em produção, com a estatística de uma escola grande: aqui só se prova que ele serve.
         await cliente.query('set local enable_seqscan = off')
+        await cliente.query('set local enable_sort = off')
+        await cliente.query('set local enable_bitmapscan = off')
         const prazo: PrazoDoLote = { agora: QUARTA_1H, meses: 12, fuso: FUSO }
         const doLote = (alvo: Parameters<typeof instrucaoDoLoteDaEscola>[0]) => instrucaoDoLoteDaEscola(alvo, a.escolaId, prazo, LOTE_DO_EXPURGO)
         for (const [alvo, indice, instrucao] of [
@@ -922,8 +932,15 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
           const { sql: texto, params } = new PgDialect({ casing: 'snake_case' }).sqlToQuery(instrucao)
           const { rows } = await cliente.query<{ 'QUERY PLAN': Array<{ Plan: NoDoPlano }> }>(`explain (format json) ${texto}`, params)
           const nos = nosDoPlano(rows[0]?.['QUERY PLAN'][0]?.Plan)
-          expect(nos.map((no) => no['Index Name']).filter(Boolean), alvo).toContain(indice)
-          expect(nos.map((no) => no['Node Type']), alvo).not.toContain('Seq Scan')
+          // O plano resumido vai na mensagem: a falha que não repete precisa deixar o plano que falhou.
+          const resumo = `${alvo}: ${nos.map((no) => `${no['Node Type'] ?? '?'} ${no['Index Name'] ?? '-'} (custo ${String(no['Total Cost'])}, ${String(no['Plan Rows'])} linhas)`).join(' > ')}`
+          const tipos = nos.map((no) => no['Node Type'])
+          expect(nos.map((no) => no['Index Name']).filter(Boolean), resumo).toContain(indice)
+          expect(tipos, resumo).not.toContain('Seq Scan')
+          // O lote desce pelo índice já na ordem e para no limite: ordenar depois de ler é ler a escola inteira. A comparação é
+          // pelo tipo exato do nó, então `Incremental Sort` passa: é a ordenação do lote de pessoas (`usuario`), e só dele; nos
+          // outros alvos o nome do índice, exigido acima, é o que fecha esse furo.
+          expect(tipos, resumo).not.toContain('Sort')
         }
       } finally {
         await cliente.query('rollback')
@@ -2581,6 +2598,8 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
 interface NoDoPlano {
   'Index Name'?: string
   'Node Type'?: string
+  'Total Cost'?: number
+  'Plan Rows'?: number
   Plans?: NoDoPlano[]
 }
 
