@@ -391,6 +391,12 @@ describe('arquitetura: o suboperador só pelo OperacaoPrivacidadeRepository, que
     expect(leitor && usosDoGrupo(leitor.texto, GRUPO_DO_SUBOPERADOR).length).toBeGreaterThan(0)
     expect(leitor && ESCREVE_NO_BANCO.test(semComentarios(leitor.texto))).toBe(false)
     expect(leitor && tabelasDeForaNoRepository(leitor.texto, GRUPO_DO_SUBOPERADOR)).toEqual([])
+    // Correção da 8.0: o leitor também lê a `escola` do contexto (a vigência nunca é anterior a ela). O detector acima não enxerga
+    // import por caminho relativo, então a lista dos schemas importados é conferida aqui: uma tabela nova passaria sem ninguém ver.
+    // Limite: a regex só enxerga import relativo `…/db/schema/<tabela>`; import por `@educa/nucleo` ou por barrel passaria. Se o repositório
+    // passar a importar assim, amplie a regex.
+    const schemasImportados = [...semComentarios(leitor?.texto ?? '').matchAll(/from\s+['"](?:\.\.?\/)+db\/schema\/(\w+)(?:\.js|\.ts)?['"]/g)].map((importacao) => importacao[1])
+    expect(schemasImportados.toSorted()).toEqual(['escola', 'suboperador'])
     // O escritor, ao contrário, escreve (a varredura enxerga a escrita) e não toca outra tabela.
     const escritor = arquivos.find((arquivo) => arquivo.caminho === ESCRITOR_DO_SUBOPERADOR)
     expect(escritor && ESCREVE_NO_BANCO.test(semComentarios(escritor.texto))).toBe(true)

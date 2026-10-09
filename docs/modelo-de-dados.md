@@ -16,6 +16,9 @@ Disciplina*      → escola*, nome, area? (área da BNCC)
 
 Tudo isso existe desde o F1. `slug` é o endereço de entrada da escola (`/e/:slug`), e a
 inatividade da sessão é configurável por escola, com padrão diferente para aluno e equipe.
+`criada_em` (F3, correção da 8.0) é o instante em que a escola passou a existir: `timestamptz not null default now()`, preenchido
+pelo banco na transação que cria a escola, a mesma da auditoria `escola.criada`; nenhum código a informa nem a altera, e não é
+dado de pessoa. Existe para a vigência do suboperador de alcance `todas` nunca começar antes da escola (abaixo, "Os suboperadores").
 `situacao` tem unicidade parcial: um `em_curso` por escola. `Periodo` (bimestre), `inep`,
 `endereco` e a configuração de retenção entram quando a funcionalidade que os usa chegar.
 
@@ -591,8 +594,12 @@ busca) e **não tem `escolaId`**: a hospedagem atende toda escola, e uma linha p
 leitura; o teste de arquitetura procura outro uso, por import e por SQL. `SuboperadorEscola` liga o de alcance `lista` a cada
 escola, escrita no contexto dela (o `escola_id` vem do contexto, nunca de argumento). A vigência que a escola lê é a da
 ligação ou, em `todas`, a do suboperador, com o `fim` mais cedo entre os dois: quem saiu da lista com a empresa seguindo para
-as outras a vê como passada. O encerrado **fica**, como histórico: a escola precisa dizer ao titular por onde o dado passou,
-mesmo depois de a empresa sair, e a chave encerrada pode ser cadastrada de novo. A `chave` tem o formato do `IA_PROVEDOR_ID`
+as outras a vê como passada. **A vigência nunca é anterior à escola** (correção da 8.0): como o `todas` não tem ligação, o
+`SuboperadorDaEscolaRepository` compara, no banco e só para essa linha, com o `escola.criada_em` da escola do contexto: o início
+é o maior entre o da empresa e o `criada_em`, e a empresa cujo `fim` é igual ou anterior ao `criada_em` não é devolvida, porque
+nunca recebeu dado da escola. Com ligação (`lista`) nada muda.
+O encerrado **fica**, como histórico: a escola precisa dizer ao titular por onde o dado passou, mesmo depois de a empresa sair, e a
+chave encerrada pode ser cadastrada de novo. A `chave` tem o formato do `IA_PROVEDOR_ID`
 (tarefa 7.0), que é como o compartilhamento do titular casa uma chamada com o suboperador; o `contrato` é um código de
 referência, nunca texto, e não sai para a escola. Nenhuma pessoa da escola: as duas tabelas são `sem_pessoa` na classificação.
 A auditoria (`suboperador.cadastrado` e `suboperador.encerrado`) é **sem escola**, porque o ato é da operação e a empresa pode

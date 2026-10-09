@@ -1,8 +1,9 @@
 import type { CategoriaDeDadoDoSuboperador } from '@educa/shared'
 import { alias } from 'drizzle-orm/pg-core'
-import { and, asc, desc, eq, exists, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, exists, gt, isNull, ne, or, sql } from 'drizzle-orm'
 import { exigirEscolaDoContexto } from '../contexto/escola-do-contexto.js'
 import type { Banco, TransacaoBanco } from '../db/banco.js'
+import { escola } from '../db/schema/escola.js'
 import { suboperador, suboperadorEscola } from '../db/schema/suboperador.js'
 
 /**
@@ -33,6 +34,13 @@ export interface SuboperadorLidoPelaEscola {
  *
  * A vigência da escola vem da ligação (`lista`) ou do suboperador (`todas`, que não tem ligação); o `fim` é o mais cedo
  * entre os dois, e a escola que saiu da lista com a empresa seguindo para as outras a vê como passada.
+ *
+ * **A vigência nunca é anterior à escola** (Tech Spec do F3, seção 6; correção da 8.0). O `todas` não tem ligação, e sem esta
+ * regra a escola leria como sua a empresa que saiu antes de ela existir. Só para a linha sem ligação (alcance `todas`), e com a
+ * comparação feita no banco, contra a `escola` do contexto (`escola.id = contexto`): o início é o maior entre o da empresa e o
+ * `criada_em` da escola, e a linha cujo `fim` é igual ou anterior ao `criada_em` não é devolvida (o igual também fica fora: não
+ * houve um instante em comum). Com ligação (`lista`) nada muda: ela nasce depois da escola, pela FK. Todo método de leitura que
+ * este repositório ganhar aplica a mesma regra.
  */
 export class SuboperadorDaEscolaRepository {
   constructor(private readonly banco: Banco | TransacaoBanco) {}
@@ -50,24 +58,30 @@ export class SuboperadorDaEscolaRepository {
         pais: suboperador.pais,
         categorias: suboperador.categorias,
         vedaTreinamento: suboperador.vedaTreinamento,
-        inicioDoSuboperador: suboperador.inicio,
+        inicioDoSuboperador: sql<Date>`case when ${suboperador.alcance} = 'todas' then greatest(${suboperador.inicio}, ${escola.criadaEm}) else ${suboperador.inicio} end`.mapWith(suboperador.inicio),
         fimDoSuboperador: suboperador.fim,
         inicioDaLigacao: ligacao.inicio,
         fimDaLigacao: ligacao.fim,
       })
       .from(suboperador)
+      .innerJoin(escola, eq(escola.id, escolaId))
       .leftJoin(ligacao, and(eq(ligacao.suboperadorId, suboperador.id), eq(ligacao.escolaId, escolaId)))
       .where(
-        or(
-          eq(suboperador.alcance, 'todas'),
-          exists(
-            this.banco
-              .select({ um: sql`1` })
-              .from(outra)
-              .where(and(eq(outra.suboperadorId, suboperador.id), eq(outra.escolaId, escolaId))),
+        and(
+          or(
+            eq(suboperador.alcance, 'todas'),
+            exists(
+              this.banco
+                .select({ um: sql`1` })
+                .from(outra)
+                .where(and(eq(outra.suboperadorId, suboperador.id), eq(outra.escolaId, escolaId))),
+            ),
           ),
+          // A empresa de `todas` encerrada até o instante em que a escola passou a existir nunca recebeu dado dela.
+          or(ne(suboperador.alcance, 'todas'), isNull(suboperador.fim), gt(suboperador.fim, escola.criadaEm)),
         ),
       )
+      // O `desc(suboperador.inicio)` basta: o `greatest` com o `criada_em` não muda a ordem entre linhas do mesmo nome.
       .orderBy(asc(suboperador.nome), desc(suboperador.inicio))
     return linhas.map((linha) => ({
       chave: linha.chave,

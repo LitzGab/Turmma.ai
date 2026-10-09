@@ -60,7 +60,9 @@ describe('npm run ops:escola: rede e escola nascem só por comando do operador',
     expect(redeId).toMatch(UUID)
     redes.push(redeId)
 
+    const antes = (await pool.query<{ t: Date }>('select clock_timestamp() as t')).rows[0]?.t
     const escola = await rodar(['escola', 'criar', '--rede', redeId, '--nome', 'Colégio Sintético Horizonte', '--slug', slug], ambiente)
+    const depois = (await pool.query<{ t: Date }>('select clock_timestamp() as t')).rows[0]?.t
     expect(escola).toMatchObject({ codigo: 0, erro: '' })
     const resposta = JSON.parse(escola.saida) as { escolaId: string }
     expect(Object.keys(resposta)).toEqual(['escolaId'])
@@ -71,6 +73,16 @@ describe('npm run ops:escola: rede e escola nascem só por comando do operador',
 
     const { rows: criadas } = await pool.query('select rede_id, nome, slug, inatividade_aluno_min, inatividade_equipe_min from escola where id = $1', [resposta.escolaId])
     expect(criadas).toEqual([{ rede_id: redeId, nome: 'Colégio Sintético Horizonte', slug, inatividade_aluno_min: 30, inatividade_equipe_min: 120 }])
+
+    // A vigência de um suboperador de "todas" nunca é anterior à escola (F3, correção da 8.0): `criada_em` é preenchida pelo banco,
+    // sem o código informar, e é o instante da transação que cria a escola, o mesmo da auditoria `escola.criada`.
+    const { rows: instante } = await pool.query<{ criada_em: Date; igual_ao_da_auditoria: boolean }>(
+      `select e.criada_em, e.criada_em = (select min(a.em) from auditoria a where a.escola_id = e.id and a.acao = 'escola.criada') as igual_ao_da_auditoria from escola e where e.id = $1`,
+      [resposta.escolaId],
+    )
+    expect(instante[0]?.igual_ao_da_auditoria).toBe(true)
+    expect(instante[0]?.criada_em.getTime()).toBeGreaterThanOrEqual(antes?.getTime() ?? Number.POSITIVE_INFINITY)
+    expect(instante[0]?.criada_em.getTime()).toBeLessThanOrEqual(depois?.getTime() ?? Number.NEGATIVE_INFINITY)
 
     const { rows: registroDaRede } = await pool.query('select escola_id, autor_operador, autor_usuario_id, acao, entidade, antes, depois from auditoria where entidade_id = $1', [redeId])
     expect(registroDaRede).toEqual([

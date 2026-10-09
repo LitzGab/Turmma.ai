@@ -18,6 +18,7 @@ import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
  */
 
 const OPERADOR = 'operador-teste'
+const AGORA = Math.floor(Date.now() / 1_000) * 1_000
 const ambienteDeTeste = lerAmbienteDeTeste()
 const TODAS_AS_CATEGORIAS = [...CHAVES_DE_CATEGORIA_DO_SUBOPERADOR].join(',')
 
@@ -117,6 +118,21 @@ describe('suboperadores: a operação cadastra e encerra por comando, e a coorde
   }
 
   const encerrar = (chave: string) => rodar(['encerrar', '--chave', chave])
+  /** A data da escola é posta direto no banco, como o `update suboperador_escola` de `RF7, passado`: o código não a informa nem a altera. */
+  const definirCriadaEm = (escolaId: string, criadaEm: Date) => bancada.pool.query('update escola set criada_em = $2 where id = $1', [escolaId, criadaEm])
+  /** Relativo a um instante só, tirado uma vez: chamar `dias(-30)` duas vezes dá a mesma data, mesmo que o relógio mude de segundo no meio. */
+  const dias = (n: number) => new Date(AGORA + n * 86_400_000)
+  /** Um suboperador de "todas" com a vigência que o teste quiser, como o `insert` de `RF7, a ordem`. */
+  async function inserirDeTodas(inicio: Date, fim: Date | null): Promise<{ chave: string; nome: string }> {
+    const chave = chaveNova()
+    const nome = nomeNovo()
+    await bancada.pool.query(
+      `insert into suboperador (chave, nome, finalidade, categorias, pais, contrato, veda_treinamento, alcance, inicio, fim, registrado_por)
+       values ($1, $2, 'Hospedagem', array['cadastro'], 'BR', 'DPA-1', true, 'todas', $3, $4, $5)`,
+      [chave, nome, inicio, fim, OPERADOR],
+    )
+    return { chave, nome }
+  }
   const idDoCadastro = (execucao: Execucao) => (JSON.parse(execucao.saida) as { suboperadorId: string }).suboperadorId
 
   async function linhasDa(chave: string): Promise<LinhaDoSuboperador[]> {
@@ -325,8 +341,7 @@ describe('suboperadores: a operação cadastra e encerra por comando, e a coorde
     const a = await bancada.escolaComSessao('coordenador')
     const lista = cadastrar({ alcance: [a.escolaId] })
     const id = idDoCadastro(await lista)
-    const doDia = (dias: number) => new Date(Math.floor(Date.now() / 1_000) * 1_000 + dias * 86_400_000)
-    const [inicioDoSuboperador, inicioDaLigacao, fimCedo, fimTarde] = [doDia(-30), doDia(-20), doDia(5), doDia(10)]
+    const [inicioDoSuboperador, inicioDaLigacao, fimCedo, fimTarde] = [dias(-30), dias(-20), dias(5), dias(10)]
     const gravar = (sql: string, valor: Date) => bancada.pool.query(sql, [valor, id])
     await gravar('update suboperador set inicio = $1 where id = $2', inicioDoSuboperador)
     await gravar('update suboperador_escola set inicio = $1 where suboperador_id = $2', inicioDaLigacao)
@@ -347,13 +362,68 @@ describe('suboperadores: a operação cadastra e encerra por comando, e a coorde
     await gravar('update suboperador_escola set fim = $1 where suboperador_id = $2', fimTarde)
     expect((await leitura(a, lista.chave))[0]?.fim).toBe(fimTarde.toISOString())
 
-    // O suboperador de "todas" não tem ligação: o início é o dele.
+    // O suboperador de "todas" não tem ligação: o início é o dele, quando a escola é mais antiga que ele (a escola mais nova que
+    // ele lê o `criada_em` dela: `RF7, a vigência nunca é anterior à escola`).
+    await definirCriadaEm(a.escolaId, dias(-40))
     const deTodas = cadastrar({ alcance: 'todas' })
     const idDeTodas = idDoCadastro(await deTodas)
     await bancada.pool.query('update suboperador set inicio = $1 where id = $2', [inicioDoSuboperador, idDeTodas])
     expect((await leitura(a, deTodas.chave))[0]?.inicio).toBe(inicioDoSuboperador.toISOString())
     await encerrar(deTodas.chave)
     await encerrar(lista.chave)
+  })
+
+  it('RF7, a vigência nunca é anterior à escola: o "todas" encerrado antes de ela existir não aparece, e aparece como passado para a que já existia', async () => {
+    const [antiga, nova, nolimite] = [await bancada.escolaComSessao('coordenador'), await bancada.escolaComSessao('coordenador'), await bancada.escolaComSessao('coordenador')]
+    await definirCriadaEm(antiga.escolaId, dias(-90))
+    await definirCriadaEm(nova.escolaId, dias(-40))
+    await definirCriadaEm(nolimite.escolaId, dias(-55))
+    const encerrada = await inserirDeTodas(dias(-60), dias(-50))
+
+    // A que já existia recebeu: passado, com a vigência da empresa.
+    expect(await leitura(antiga, encerrada.chave)).toMatchObject([{ nome: encerrada.nome, inicio: dias(-60).toISOString(), fim: dias(-50).toISOString() }])
+    // A que nasceu depois de a empresa sair nunca recebeu dado dela: a empresa nem aparece.
+    expect(await leitura(nova, encerrada.chave)).toEqual([])
+    // A que nasceu no meio da vigência lê a vigência a partir do dia em que passou a existir.
+    expect(await leitura(nolimite, encerrada.chave)).toMatchObject([{ inicio: dias(-55).toISOString(), fim: dias(-50).toISOString() }])
+  })
+
+  it('RF7, a vigência nunca é anterior à escola: o "todas" vigente cadastrado antes dela começa para ela no dia em que ela existiu', async () => {
+    const [antiga, nova] = [await bancada.escolaComSessao('coordenador'), await bancada.escolaComSessao('coordenador')]
+    await definirCriadaEm(antiga.escolaId, dias(-45))
+    await definirCriadaEm(nova.escolaId, dias(-10))
+    const vigente = await inserirDeTodas(dias(-30), null)
+
+    // Para a escola mais antiga que a empresa, o início é o da empresa; para a mais nova, o `criada_em` dela.
+    expect((await leitura(antiga, vigente.chave)).map((lido) => ({ inicio: lido.inicio, fim: lido.fim }))).toEqual([{ inicio: dias(-30).toISOString(), fim: null }])
+    expect((await leitura(nova, vigente.chave)).map((lido) => ({ inicio: lido.inicio, fim: lido.fim }))).toEqual([{ inicio: dias(-10).toISOString(), fim: null }])
+  })
+
+  it('RF7, a vigência nunca é anterior à escola: o "lista" não muda, nem o início nem a presença da linha, mesmo com o fim da empresa anterior ao dia em que a escola existiu', async () => {
+    const nova = await bancada.escolaComSessao('coordenador')
+    await definirCriadaEm(nova.escolaId, dias(-10))
+    const lista = cadastrar({ alcance: [nova.escolaId] })
+    const id = idDoCadastro(await lista)
+    // A escola é "mais nova" que a ligação e que o fim da empresa, de propósito: com a ligação, nada é empurrado para o `criada_em`
+    // nem escondido por ele. O `inicio` da empresa vem antes do fim dela (`suboperador_vigencia_ordenada`).
+    await bancada.pool.query('update suboperador_escola set inicio = $1, fim = $2 where suboperador_id = $3', [dias(-20), dias(-15), id])
+    await bancada.pool.query('update suboperador set inicio = $1, fim = $2 where id = $3', [dias(-30), dias(-12), id])
+    // Ficam o início da ligação e o fim mais cedo entre os dois (-15, o da ligação). Sem o `ne(alcance, 'todas')` do repositório,
+    // o `fim` da empresa (-12) é anterior ao `criada_em` (-10) e a linha some.
+    expect((await leitura(nova, lista.chave)).map((lido) => ({ inicio: lido.inicio, fim: lido.fim }))).toEqual([{ inicio: dias(-20).toISOString(), fim: dias(-15).toISOString() }])
+  })
+
+  it('RF7, a vigência nunca é anterior à escola, borda: o fim igual ao dia em que ela existiu fica fora; um segundo depois aparece como passado, a partir desse dia', async () => {
+    const [igual, umSegundoDepois] = [await bancada.escolaComSessao('coordenador'), await bancada.escolaComSessao('coordenador')]
+    const fim = dias(-50)
+    await definirCriadaEm(igual.escolaId, fim)
+    await definirCriadaEm(umSegundoDepois.escolaId, new Date(fim.getTime() - 1_000))
+    const encerrada = await inserirDeTodas(dias(-60), fim)
+
+    expect(await leitura(igual, encerrada.chave)).toEqual([])
+    expect((await leitura(umSegundoDepois, encerrada.chave)).map((lido) => ({ inicio: lido.inicio, fim: lido.fim }))).toEqual([
+      { inicio: new Date(fim.getTime() - 1_000).toISOString(), fim: fim.toISOString() },
+    ])
   })
 
   it('RF7, o que a escola lê: só os campos do DTO, ordenados pelo nome, sem id, contrato, operador nem escola; resposta sem cache', async () => {
@@ -384,7 +454,8 @@ describe('suboperadores: a operação cadastra e encerra por comando, e a coorde
     const coordenacao = await bancada.escolaComSessao('coordenador')
     const chave = chaveNova()
     const nome = nomeNovo()
-    const dias = (n: number) => new Date(Math.floor(Date.now() / 1_000) * 1_000 + n * 86_400_000)
+    // A escola é anterior às duas vigências: senão a regra "nunca anterior à escola" tira as duas linhas da leitura.
+    await definirCriadaEm(coordenacao.escolaId, dias(-90))
     // O mais antigo é gravado primeiro: a ordem de gravação é a contrária da que a escola deve ler.
     for (const [inicio, fim] of [[dias(-60), dias(-50)], [dias(-30), dias(-20)]] as const) {
       await bancada.pool.query(
