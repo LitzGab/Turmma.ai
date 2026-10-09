@@ -45,9 +45,10 @@ Ressalvas do /validar: <n críticos, n maiores>
 
 Compare com a retrospectiva anterior (`tasks/prd-*/retro.md` mais recente), se houver.
 
-A linha por modelo é a que decide a D78: se as tarefas do Haiku levam mais rodadas que as do Sonnet a
-ponto de custar mais portões do que poupam de consumo, a proposta é mudar o critério de porte do
-`criar-tasks`. O mesmo vale para os revisores com veto em Opus: proponha manter ou trocar, com o número.
+A linha por modelo é a que sustenta a D78: o Implementador está em Sonnet 5.5 em toda tarefa desde
+09/10/2026 (o Haiku levou mais de cinco horas na 6.0 do F3). Proponha voltar o Haiku às tarefas
+pequenas só com número que mostre que ele não custa mais portões do que poupa de consumo. O mesmo vale
+para os revisores com veto em Opus: proponha manter ou trocar, com o número.
 
 ## 3. Agrupar causas
 

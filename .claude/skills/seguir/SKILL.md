@@ -72,8 +72,7 @@ dentro do terminal, reiniciada já apontada para o checkout do andar.
 | Terminal | Papel | Comando (`--command`) |
 |---|---|---|
 | `Arquiteto` | spec, divergência, decisão, retro | `claude --dangerously-skip-permissions --agent arquiteto --effort high` |
-| `Implementador`, tarefa pequena | uma tarefa ou correção | `claude --dangerously-skip-permissions --agent implementador --effort xhigh` |
-| `Implementador`, tarefa grande ou escalada | idem | `claude --dangerously-skip-permissions --agent implementador --model sonnet --effort high` |
+| `Implementador` | uma tarefa ou correção | `claude --dangerously-skip-permissions --agent implementador --model sonnet --effort high` |
 | `Mesa` | rodadas de revisão | `claude --dangerously-skip-permissions --agent mesa-de-revisao --effort high` |
 | `Validador` | validação | `claude --dangerously-skip-permissions --agent validador --effort high` |
 
@@ -99,8 +98,7 @@ maestri check "<Terminal>"
 checkout certo, sem `.maestri/roles`. Terminal apontado para o lugar errado editaria o checkout
 errado; fora da raiz, nenhum hook dispara. Se o cabeçalho não bate, reinicie de novo.
 
-Quando reiniciar: o `Implementador` e a `Mesa`, a cada tarefa e a cada correção (e o
-`Implementador` na troca de modelo); o `Arquiteto`, a cada pedido; o `Validador`, **sempre** antes
+Quando reiniciar: o `Implementador` e a `Mesa`, a cada tarefa e a cada correção ; o `Arquiteto`, a cada pedido; o `Validador`, **sempre** antes
 de validar ou revalidar, porque ele precisa chegar sem nada da rodada anterior. Terminal que não é
 da fase fica parado, e não gasta nada.
 
@@ -182,11 +180,12 @@ paradas é o próprio Arquiteto.
 
 1. **Escolha.** A tarefa da vez é a do `estado.ts`: a primeira pendente com as dependências
    concluídas. Nenhuma liberada com pendentes: pare e reporte.
-2. **Modelo.** Porte `pequeno` começa no Haiku; `grande` começa no Sonnet. Sem a linha `**Porte:**`
-   no documento, vale o porte inferido que o script mostra.
+2. **Modelo.** O Implementador roda em Sonnet 5.5 em toda tarefa (D78, revista em 09/10/2026: o Haiku
+   saiu depois da 6.0). O porte do documento não escolhe modelo: diz quanto a tarefa deve levar, que
+   é o que a vigia usa. Sem a linha `**Porte:**`, vale o porte inferido que o script mostra.
 3. **Diário.** Atualize o `estado.md` do andar (formato no fim): a linha da tarefa anterior em
    "Concluídas", e em "Agora" a tarefa atual, o modelo, a hora e o que você espera.
-4. **Sessões novas.** Reinicie a `Mesa` e o `Implementador`, este no modelo do porte, apontados
+4. **Sessões novas.** Reinicie a `Mesa` e o `Implementador`, apontados
    para o andar, e confira os cabeçalhos. Publique: `maestri floor status "tarefa N.0"
    --progress <feitas>/<total> --floor "<andar>"`.
 5. **Peça**, ao `Implementador`:
@@ -222,15 +221,17 @@ paradas é o próprio Arquiteto.
 - **`RELATÓRIO` com `STATUS: FALHA`.** Leia o motivo. Defeito fora da tarefa: correção antes de
   retomar (abaixo). Senão, a cada falha o Implementador volta com **mais contexto**, não só com outro
   modelo:
-  - *primeira falha:* reinicie-o no Sonnet e envie um `PEDIDO de retomada` que repete o que o
-    relatório trouxe: o teste, o erro e o que já foi tentado;
+  - *primeira falha:* reinicie-o e envie um `PEDIDO de retomada` que repete o que o relatório
+    trouxe: o teste, o erro e o que já foi tentado;
   - *segunda falha:* reinicie o `Arquiteto` no andar e peça o **diagnóstico** (a seção "Diagnóstico"
     de `.claude/agents/arquiteto.md`), apontando os dois relatórios. Com a resposta, um
     `PEDIDO de retomada` ao Implementador apontando `.processo/ordens/diagnostico-<N>.md`;
   - *terceira falha:* parada.
-- **`ESCALADA` da Mesa** (duas reprovações seguidas do mesmo revisor). Reinicie o `Implementador`
-  no Sonnet e envie um `PEDIDO de retomada` apontando a ordem da Mesa. Se ele já estava no Sonnet,
-  envie o mesmo `PEDIDO de retomada` sem reiniciar. Registre no `estado.md`.
+- **`ESCALADA` da Mesa** (duas reprovações seguidas do mesmo revisor). O Implementador já tentou duas
+  vezes a partir da ordem da Mesa: antes da terceira, reinicie o `Arquiteto` no andar e peça o
+  **diagnóstico** (a seção "Diagnóstico" de `.claude/agents/arquiteto.md`), apontando a ordem e os
+  achados. Com a resposta, um `PEDIDO de retomada` ao Implementador apontando a ordem e
+  `.processo/ordens/diagnostico-<N>.md`. Registre no `estado.md`.
 - **`BLOQUEIO` da Mesa** (três). Parada (passo 7).
 - **`DIVERGÊNCIA`**, com a linha `Motivo:`:
   - `desenho` ou `ordem`: reinicie o `Arquiteto` no andar e envie um `PEDIDO` de triagem com o
@@ -298,7 +299,7 @@ destravar o limite das três reprovações, a contagem daquela tarefa recomeça:
 
 **Portão completo** (`sem-validacao`, antes de validar). Durante a spec cada tarefa rodou só os
 testes que alterou; é aqui, uma vez, que tudo roda junto (D78, revista em 09/10/2026). Faça o commit
-de documento "antes da validação" (passo 4), reinicie o `Implementador` no Sonnet, apontado para o
+de documento "antes da validação" (passo 4), reinicie o `Implementador`, apontado para o
 andar, e envie:
 
 ```
@@ -355,6 +356,11 @@ andou enquanto a spec corria (o Gabriel integra lá): traga-a para o térreo
 (`git pull --no-rebase origin develop`), depois para a branch da spec
 (`git -C <andar> merge develop`, o único commit seu que leva código), e a esteira da branch roda de
 novo antes do pouso. Conflito em qualquer um desses merges, ou no pouso, é parada: diga os arquivos.
+A exceção é o conflito **só** em `achados/indice.md`, de tarefa ou de correção: é um registro que só
+cresce, escrito pelo hook, e os dois lados acrescentaram linhas no mesmo ponto. Fique com todas as
+linhas dos dois lados, sem repetir e sem escrever linha nova, conclua o merge e registre no
+`estado.md`. Em 09/10/2026 esse conflito parou a F3 por minutos à espera de uma resposta que só tinha
+uma opção.
 
 Esteira da `develop` vermelha depois do pouso: correção em andar próprio (`correcao/<slug>`).
 Verde: peça a retrospectiva ao `Arquiteto` e notifique o fim.
@@ -378,7 +384,7 @@ terminais da fase, antes de concluir qualquer coisa.
 |---|---|
 | alguém trabalhando | nada; responda em uma linha. `Implementador` parado com a `Mesa` trabalhando é o normal: ele espera a rodada |
 | todos parados no prompt, e você espera um relatório há mais de uma vigia | um `PEDIDO de estado` a quem deve o relatório. Não é pedido de trabalho: ele só responde onde está |
-| o `Implementador` trabalhando, mas a tarefa pequena passou de 2 horas, ou a grande de 4, sem a primeira rodada de revisão | um `PEDIDO de estado`. Se a resposta mostra tentativa repetida no mesmo teste, ou o portão usado para depurar, reinicie-o no Sonnet com `PEDIDO de retomada`, dizendo o teste e o que já foi tentado. Registre no `estado.md` |
+| o `Implementador` trabalhando, mas a tarefa pequena passou de 2 horas, ou a grande de 4, sem a primeira rodada de revisão | um `PEDIDO de estado`. Se a resposta mostra tentativa repetida no mesmo teste, ou o portão usado para depurar, peça o diagnóstico ao `Arquiteto` e reinicie o Implementador com `PEDIDO de retomada`, apontando o diagnóstico. Registre no `estado.md` |
 | uma pergunta, um menu ou um erro na tela | resolva se for mecânico (`maestri ask --raw`); se for decisão, é parada |
 | o terminal sumiu ou o processo morreu | recrie ou reinicie (passo 3) e envie `PEDIDO de retomada`: o trabalho está na árvore |
 | o `Arquiteto` esperando o Joaquim | nada |
@@ -389,8 +395,7 @@ Nunca interrompa agente que está trabalhando, e nunca edite arquivo que ele est
 
 - **Correção avulsa** (defeito que não é de uma spec em curso): andar `correcao/<AAAA-MM-DD>-<slug>`,
   com o mesmo time, seguindo `corrigir`. Aprovada: esteira na branch, e o pouso é parada. Defeito
-  de uma spec em curso se corrige na branch dela. Toda correção começa no Haiku, salvo a que toca
-  as regras 10, 20 ou 70, que começa no Sonnet. No `PEDIDO`, **você dita os guardiões**, pela tabela
+  de uma spec em curso se corrige na branch dela. No `PEDIDO`, **você dita os guardiões**, pela tabela
   de `criar-tasks`: quem implementa não escolhe quem o audita.
 
   ```
@@ -410,7 +415,7 @@ O push da `develop` é sempre seu, e só em dois momentos: no pouso, e quando o 
 ## O `estado.md`
 
 Fica em `tasks/prd-<func>/estado.md`, no andar. É o que deixa uma sessão nova retomar sem reler
-nada, e o que a retrospectiva lê para dizer se o Haiku se paga.
+nada, e o que a retrospectiva lê para medir tempo e rodadas por tarefa.
 
 ```
 # Estado da execução — <funcionalidade>

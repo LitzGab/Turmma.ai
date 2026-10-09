@@ -1006,3 +1006,11 @@ colado no documento da 5.0, que ganhou exceção no `.gitleaks.toml`.
 Revisão: se o portão completo do fim do F3 trouxer falha que custe mais para achar do que o tempo
 poupado, entra um portão completo de conferência a cada quatro ou cinco tarefas.
 
+Revista de novo em 09/10/2026, pelo Joaquim: **o Implementador roda em Sonnet 5.5 em toda tarefa**, e o
+Haiku sai. Na 6.0 do F3 o Haiku escreveu a tela em 6 minutos e passou mais de cinco horas ajustando um
+teste por tentativa; a 7.0, em Sonnet e já com o portão da tarefa e o contexto de teste no documento,
+fechou em 30 minutos. O porte da tarefa deixa de escolher modelo e passa a dizer só quanto ela deve
+levar. Em vez de trocar de modelo, quem trava recebe mais contexto: o relatório do que tentou e, na
+segunda falha ou na segunda reprovação seguida, o diagnóstico do Arquiteto. Revisão: o Haiku volta às
+tarefas pequenas se a retrospectiva mostrar que, com o contexto de teste, ele não custa mais portões.
+

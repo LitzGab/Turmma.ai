@@ -127,8 +127,8 @@ export interface Porte {
 }
 
 /**
- * O porte decide o modelo que começa a tarefa: grande no Sonnet, pequena no Haiku. Quem marca é o Arquiteto, no
- * `N_task.md`. Tarefa escrita antes de a linha existir (as da F3) cai na contagem de guardiões com veto.
+ * O porte diz quanto a tarefa deve levar, que é o que a vigia do `/seguir` usa; até 09/10/2026 escolhia também o modelo
+ * do Implementador, que hoje é um só. Quem marca é o Arquiteto, no `N_task.md`. Tarefa escrita antes de a linha existir (as da F3) cai na contagem de guardiões com veto.
  */
 export function lerPorte(conteudoTask: string): Porte {
   // Até o fim da linha: `pequeno | grande`, o texto do modelo deixado sem preencher, não declara nada.

@@ -145,7 +145,8 @@ Mudou código da web ou da API depois de subir o ambiente do e2e: repita o coman
 **Duas tentativas seguidas no mesmo teste sem entender a causa: pare de tentar.** Leia o erro
 inteiro, um teste vizinho que já passa e o helper que ele usa (`e2e/__fixtures__/`,
 `apps/api/test/`). Se a terceira também falhar, não insista: envie o relatório do passo 7 com
-`STATUS: FALHA`, dizendo o teste, o erro e o que você já tentou. Outro modelo retoma de onde parou.
+`STATUS: FALHA`, dizendo o teste, o erro e o que você já tentou. Quem retoma recebe isso como contexto
+e, na segunda falha, um diagnóstico do Arquiteto com o ponto exato.
 
 ### Com os testes da tarefa verdes: o portão, uma vez
 

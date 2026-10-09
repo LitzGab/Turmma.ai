@@ -104,9 +104,9 @@ com as tarefas cobertas e as que ficaram sem precedente.
 
 ## Diagnóstico
 
-O Implementador falhou duas vezes na mesma tarefa, a segunda já no modelo maior. Antes de isso virar
-parada do Joaquim, você diz o que está errado. Leia o relatório de falha que o pedido aponta, o teste,
-o erro inteiro e o código envolvido, e grave `.processo/ordens/diagnostico-<N>.md`, no formato da ordem
+O Implementador falhou duas vezes na mesma tarefa, ou o mesmo revisor o reprovou duas vezes seguidas.
+Antes de isso virar parada do Joaquim, você diz o que está errado. Leia o que o pedido aponta (o relatório de falha, ou a ordem
+da Mesa e os achados do revisor), o teste, o erro inteiro e o código envolvido, e grave `.processo/ordens/diagnostico-<N>.md`, no formato da ordem
 de correção de `revisar-tarefa` (passo 5): a causa em uma frase, e para cada ponto o arquivo, o trecho
 exato que está lá, o que tem de ficar, por quê, e o teste que prova. Você não edita código nem teste.
 Responda ao Orquestrador com `/seguir RELATÓRIO de Arquiteto` e o caminho do arquivo. Se a causa for o

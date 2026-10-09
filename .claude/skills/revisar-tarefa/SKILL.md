@@ -136,7 +136,7 @@ rodadas dele na seção "Revisões". Se `.processo/ordens/rodadas.md` tem uma li
 | Seguidas | O que você faz |
 |---|---|
 | nenhuma (só recomendações) ou 1 | envia `ORDEM DE CORREÇÃO` ao Implementador |
-| 2 | escreve a ordem e envia `ESCALADA` ao **Orquestrador**, que troca o Implementador de modelo e repassa a ordem |
+| 2 | escreve a ordem e envia `ESCALADA` ao **Orquestrador**, que pede o diagnóstico ao Arquiteto e repassa a ordem com ele |
 | 3 | não escreve ordem nova; envia `BLOQUEIO` ao Orquestrador. É parada do Joaquim |
 
 Depois de o Joaquim destravar um bloqueio, a contagem recomeça: é o Orquestrador quem escreve a

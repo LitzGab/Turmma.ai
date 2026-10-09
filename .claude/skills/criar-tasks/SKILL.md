@@ -84,8 +84,9 @@ Na dúvida, marque. Auditoria a mais custa minutos; auditoria a menos custa o co
 ## Porte da tarefa
 
 Toda tarefa leva `**Porte:** pequeno` ou `**Porte:** grande` no cabeçalho do `N_task.md`. O porte
-decide o modelo que começa a tarefa (D78): a pequena no Haiku 5.5, a grande no Sonnet 5.5. Marque
-**grande** quando qualquer um destes vale:
+diz quanto a tarefa deve levar, e é por ele que a vigia do `/seguir` sabe quando uma tarefa está presa.
+Não escolhe mais o modelo: o Implementador roda em Sonnet 5.5 em toda tarefa (D78, revista em
+09/10/2026). Marque **grande** quando qualquer um destes vale:
 
 - três ou mais guardiões com veto marcados (`tenancy-guardian`, `privacy-guardian`,
   `conformidade-reviewer`, `infra-guardian`);
@@ -95,8 +96,7 @@ decide o modelo que começa a tarefa (D78): a pequena no Haiku 5.5, a grande no 
 - mais de dez arquivos de código previstos, ou mudança que atravessa API, worker e web.
 
 O resto é pequena: uma tela que lê um endpoint pronto, um endpoint de leitura, um comando de
-operação simples, um documento. Na dúvida, grande: começar no modelo menor e reprovar duas vezes
-custa dois portões antes de a tarefa subir de modelo. Sem a linha, `tools/processo/estado.ts`
+operação simples, um documento. Na dúvida, grande. Sem a linha, `tools/processo/estado.ts`
 infere o porte pela contagem de guardiões e avisa que inferiu.
 
 ## Diretrizes
