@@ -312,9 +312,12 @@ O desenho da área, e o que o design do aluno **não** herda do professor, está
 - **Privacidade** ("Seus dados e a lei", F3): as abas ficam no endereço, e a coordenação lê por quanto tempo a escola
   guarda cada dado, de onde vem cada prazo e os prazos que não mudam (tarefa 6.0; RF20), e quais empresas recebem dado dela,
   vigentes e passadas, com o que cada uma faz, o que recebe, onde processa e o que o contrato diz sobre treinar IA com o
-  dado (tarefa 8.0; RF7). Por quanto tempo guardamos e Empresas que recebem dados são as abas que existem hoje; Incidentes
-  (10.0) e Pedidos (16.0) chegam com as tarefas delas, e nenhuma aparece antes da tela dela (D73). Só leitura: o ajuste de
-  prazo e o cadastro da empresa são da operação, por comando
+  dado (tarefa 8.0; RF7), e os incidentes de segurança que a afetaram, com todos os campos e a confirmação do recebimento
+  (tarefa 10.0; RF9). Por quanto tempo guardamos, Empresas que recebem dados e Incidentes são as abas que existem hoje; Pedidos
+  (16.0) chega com a tarefa dela, e nenhuma aparece antes da tela dela (D73). Retenção e empresas são só leitura: o ajuste de
+  prazo e o cadastro da empresa são da operação, por comando. **O aviso de incidente** aparece ao entrar, em diálogo, para a
+  coordenação da escola afetada; "Ver depois" deixa uma faixa fixa, sem botão de fechar, até a confirmação, e o "Sair" nunca fica
+  fora de alcance (D59)
 - **Denúncias**: o canal de notificação de violação, com o que foi apontado, o que foi feito e
   o recurso, dizendo se a análise foi humana ou automatizada (D61)
 - **Exportar**: dado, artefato e histórico de uso em formato aberto, a qualquer momento, sem

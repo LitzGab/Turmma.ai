@@ -1,11 +1,11 @@
 # Estado da execução — lgpd-e-titular
 
 ## Agora
-- **Tarefa atual:** 9.0, iniciada em 09/10/2026 13:45, com o Implementador em Sonnet 5.5
+- **Tarefa atual:** 10.0, iniciada em 09/10/2026 14:42, com o Implementador em Sonnet 5.5; porte grande, com tela (`frontend-reviewer` e `privacy-guardian`)
 - **Espero:** relatório do Implementador
 - **Pendente para a validação:** as duas abas da Privacidade quebram em duas linhas em 360 px (vista na
   foto da vitrine); recomendação, não bloqueante
-- **Base:** `spec/lgpd-e-titular` em `69a68e4` (a correção da aba da 8.0), com a `develop` até `30f4765`
+- **Base:** `spec/lgpd-e-titular` em `fad6fef` (a tarefa 9.0), com a `develop` até `30f4765`
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -30,6 +30,7 @@
 | linha "Telas" das tarefas 10, 16, 17 e 18 | `75baeb1` | Arquiteto (Opus) | — | só documento; a vitrine não tem incidente nem pedido, então a foto dessas telas é a do vazio |
 | merge da `develop` (`30f4765`) | `b6e49d7` | Orquestrador | — | sem conflito; conserto da vitrine, que barrava o portão |
 | correção `2026-10-09-vigencia-anterior-a-escola` | `69a68e4` | Sonnet | 7 | decisão do Joaquim (coluna `escola.criada_em`, migration 0030); 2 reprovações na 1ª rodada (`test-engineer` e `revisor-geral`), uma ordem só; `DIVERGÊNCIA` de portão no meio, por defeito da vitrine vindo da `develop`; de 13:20 a 13:40 de 09/10 |
+| 9.0 | `fad6fef` | Sonnet | 10 | 2 reprovações na 1ª rodada (`test-engineer` e `revisor-geral`), uma ordem só de sete itens, os cinco aprovados na 2ª; sem escalada nem divergência; a tarefa não tem tela; três recomendações foram para o `TODO.md` e uma para a 15.0; de 13:45 a 14:38 de 09/10, 53 minutos |
 
 ## Esperando o Joaquim
 

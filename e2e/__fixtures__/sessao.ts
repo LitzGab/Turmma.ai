@@ -927,3 +927,65 @@ export async function tomarNomeNoBanco(escolaId: string, listaNomeId: string): P
     if (rowCount !== 1) throw new Error('o nome do e2e não foi tomado: id da lista não encontrado')
   })
 }
+
+/** Um incidente de teste (F3, 10.0): o aviso que a operação registraria pelo `ops:incidente`, gravado direto no banco. */
+export interface IncidenteDeTeste {
+  /** As escolas afetadas: uma seção para cada. */
+  readonly escolas: readonly string[]
+  /** O que a seção diz em `circunstancias`. Os testes põem uma marca única aqui, para achar o aviso na tela. */
+  readonly circunstancias?: string
+  readonly contencao?: string
+  readonly correcao?: string
+  readonly titularesEstimados?: number
+  readonly risco?: 'baixo' | 'relevante' | 'alto'
+  readonly categorias?: readonly string[]
+  /** Há quantas horas a Turmma soube. Sem isto, 2. */
+  readonly conhecidoHaHoras?: number
+  /** A seção já nasce confirmada: é o segundo dado que mostra que a tela separa quem espera de quem já foi confirmado. */
+  readonly confirmado?: boolean
+}
+
+/**
+ * Registra o incidente direto no banco, como o `ops:incidente registrar` o deixa: a linha global e uma seção por escola, com os
+ * números e os textos dela. `incidente` é global e o banco de teste acumula, então toda escola do teste é nova e o texto leva uma
+ * marca única. Devolve o id da seção de cada escola, que é o que a coordenação vê e confirma.
+ */
+export async function criarIncidenteNoBanco(dados: IncidenteDeTeste): Promise<Readonly<Record<string, string>>> {
+  return comBanco(async (banco) => {
+    const horas = dados.conhecidoHaHoras ?? 2
+    const incidenteId = await id(
+      banco,
+      "insert into incidente (conhecido_em, registrado_por, registrado_em) values (now() - ($1 || ' hours')::interval, 'equipe-de-teste', now()) returning id",
+      [String(horas)],
+    )
+    const secoes: Record<string, string> = {}
+    for (const escolaId of dados.escolas) {
+      secoes[escolaId] = await id(
+        banco,
+        `insert into incidente_escola (incidente_id, escola_id, circunstancias, categorias, titulares_estimados, risco, contencao, correcao, confirmado_em)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, ${dados.confirmado === true ? 'now()' : 'null'}) returning id`,
+        [
+          incidenteId,
+          escolaId,
+          dados.circunstancias ?? 'Acesso indevido ao armazenamento de arquivos por uma credencial vazada.',
+          dados.categorias ?? ['cadastro', 'conversa_do_aluno'],
+          dados.titularesEstimados ?? 120,
+          dados.risco ?? 'relevante',
+          dados.contencao ?? 'A credencial foi revogada e o acesso foi bloqueado.',
+          dados.correcao ?? 'Todas as credenciais estão sendo trocadas.',
+        ],
+      )
+    }
+    return secoes
+  })
+}
+
+/** Quem confirmou o aviso e quando, como a API deixou na seção: o que o teste confere depois de a tela confirmar. */
+export async function confirmacaoDoIncidenteNoBanco(secaoId: string): Promise<{ readonly confirmadoEm: Date | null; readonly confirmadoPor: string | null }> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ confirmado_em: Date | null; confirmado_por: string | null }>('select confirmado_em, confirmado_por from incidente_escola where id = $1', [secaoId])
+    const linha = rows[0]
+    if (linha === undefined) throw new Error('a seção do incidente não existe')
+    return { confirmadoEm: linha.confirmado_em, confirmadoPor: linha.confirmado_por }
+  })
+}

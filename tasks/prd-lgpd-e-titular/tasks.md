@@ -70,11 +70,11 @@
   - [ ] 9.5 Alerta de 24 h e runbook; `docs/lgpd.md` (linhas do incidente)
   - [ ] 9.6 Testes
 
-- [ ] **10.0 — A coordenação vê o aviso de incidente e confirma o recebimento**
-  - [ ] 10.1 Diálogo na casca, uma leitura por sessão
-  - [ ] 10.2 Faixa fixa até a confirmação
-  - [ ] 10.3 Aba Incidentes
-  - [ ] 10.4 Testes
+- [x] **10.0 — A coordenação vê o aviso de incidente e confirma o recebimento**
+  - [x] 10.1 Diálogo na casca, uma leitura por sessão
+  - [x] 10.2 Faixa fixa até a confirmação
+  - [x] 10.3 Aba Incidentes
+  - [x] 10.4 Testes
 
 - [ ] **11.0 — A coordenação acha o titular e registra o pedido**
   - [ ] 11.1 Migration própria: `pedido_titular` (gatilho de inserção, imutáveis, único de `chave_envio`, índices)

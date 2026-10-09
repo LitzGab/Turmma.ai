@@ -139,6 +139,22 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       comportamento de hoje é o lado seguro (recusa): duas escolas do arquivo com o mesmo nome; "Escola Alfa" contra "Alfa Norte"
       num texto "Escola Alfa Norte"; o nome da própria com a fronteira quebrada ("Colégio Ametista Nortex"). Escrever os testes
       quando a função mudar.
+- [ ] **(F3, 10.0) Faixa quando a leitura do aviso de incidente falha:** hoje, se `GET /v1/privacidade/incidentes` falha, a
+      coordenação não vê aviso nem faixa (a aba Incidentes tem o erro com "Tentar de novo"). Mostrar uma faixa discreta, "Não foi
+      possível conferir os avisos de incidente. Abra Privacidade › Incidentes", muda o comportamento da tela e o texto fica a
+      decidir com o Gabriel (`frontend-reviewer` da 10.0).
+- [ ] **(F3, 10.0) e2e da troca de escola com o aviso pendente na segunda:** a Tech Spec §9 e o comentário de
+      `AvisoDeIncidente.tsx` dizem que a troca de escola desfaz o adiamento. O caso pede duas escolas e o segundo fator de novo, mais
+      de um minuto de relógio, como `e2e/privacidade.spec.ts › a troca de escola não mostra a retenção…`; o reset do cache na troca
+      já é provado ali, com a retenção (`test-engineer` e `revisor-geral` da 10.0).
+- [ ] **(F3, 10.0) e2e do professor com incidente pendente na escola:** sem aviso, sem faixa e sem a leitura da lista. Hoje é
+      estrutural (a área só monta para a coordenação, e a API recusa pelo papel: `apps/api/test/incidente.int.test.ts`, 9.0); passa
+      a valer se alguém mover o aviso para a `CascaDaEscola` (`test-engineer` da 10.0).
+- [ ] **(F3, 10.0) "Ficam registrados quem confirmou e quando" sem tela do "quem":** o texto de `TEXTO_DO_QUE_CONFIRMAR_FAZ` promete
+      um "quem" que a coordenação não lê em tela nenhuma. Dizer onde ele aparece quando a tela de auditoria da escola existir
+      (`privacy-guardian` da 10.0).
+- [ ] **(F3, 10.0) Semente de incidente da vitrine:** a foto da tela de incidentes semeia o aviso por SQL solto. Se virar script em
+      `tools/vitrine/`, manter texto inventado, sem dado de pessoa (`privacy-guardian` da 10.0).
 - [ ] **Prazo do `registro_de_decisao` (F3, 5.0):** `packages/shared/src/privacidade/retencao.ts` (`PRAZOS_FIXOS.registro_de_decisao`) promete à escola «enquanto durar o contrato com a escola, e mais 5 anos», mas o `expurgo_execucao` apaga o registro 5 anos depois de `em`, com o contrato valendo. O registro não tem dado de pessoa (só contagens e ids), então o risco é baixo. Decidir (Joaquim): alinhar o texto ao que o código faz, ou dar ao registro do expurgo uma linha própria em `PRAZOS_FIXOS` (`privacy-guardian` da 5.0)
 - [ ] **Thread do Assistente apagada pelo expurgo no instante do envio (F3, 3.0):** a thread vazia e vencida que o expurgo
       apaga enquanto o professor manda a primeira mensagem faz o envio falhar pela FK. Conferir que ele vê um erro tipado e

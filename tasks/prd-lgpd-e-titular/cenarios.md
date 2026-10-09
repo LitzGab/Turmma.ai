@@ -174,6 +174,16 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
     a parte `incidente`.
   - [E] O aviso aparece e é confirmado só com o teclado e a 360 px, com rolagem dentro do diálogo. "Ver depois" deixa a
     faixa fixa, e o Sair continua alcançável.
+  - **Tarefa 10.0, onde cada um está** (`e2e/incidentes.spec.ts`, nos projetos `chromebook` e `celular`; os textos em
+    `apps/web/src/areas/coordenacao/privacidade/textos-dos-incidentes.test.ts`). O aviso com todos os campos, sem o já
+    confirmado, confirmado só com o teclado, o foco começando no texto, o foco preso, a rolagem dentro do diálogo e a gravação de
+    quem e quando: `› o aviso traz todos os campos…`. "Ver depois", o Esc, a faixa que não fecha, o foco em "Ver o aviso", o Sair
+    à mostra, a faixa em outra tela, a leitura única (relógio avançado e aba voltando) e a aba que relê e confirma:
+    `› "Ver depois" e o Esc…`. Sair e entrar de novo traz o diálogo: `› sair com o aviso adiado…`. Duas coordenadoras (a faixa da
+    segunda some ao abrir a aba; a que confirma depois da outra não recebe erro, e vale a primeira confirmação):
+    `› duas coordenadoras…`, duas vezes. Dois incidentes (faixa e fila contam os dois, a aba mostra os dois, um por vez no diálogo,
+    o foco no texto): `› dois incidentes…`, duas vezes. O clique duplo manda uma confirmação, e a falha diz o que fazer:
+    `› o clique duplo…`. Os quatro estados da aba, com acessibilidade e sem rolagem de lado: `› carregando, erro…`.
 
 ## Fatia 3 — Pedido do titular
 

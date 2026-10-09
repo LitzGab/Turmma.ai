@@ -346,7 +346,7 @@ suboperador sai do `SuboperadorDaEscolaRepository`: nada de outra escola entra.
 **Incidente.**
 - `ops:incidente registrar` lê um arquivo com uma seção por escola e grava as ligações no contexto de cada escola.
 - O comando recusa texto que cite o nome ou o id de outra escola afetada.
-- A casca da coordenação lê os pendentes uma vez por sessão.
+- A casca da coordenação lê os pendentes uma vez por sessão (tarefa 10.0: a leitura é do aviso da área da coordenação, seção 9).
 - **Tarefa 9.0, como ficou no código.** O arquivo é um JSON `{ conhecidoEm, escolas: [{ escola, circunstancias, categorias, titularesEstimados, risco, contencao, correcao }] }`,
   de até 256 KB, 200 escolas e 1.000 caracteres por texto, conferido antes de abrir o banco (o erro cita o caminho do campo, nunca o
   valor). A transação começa pelo autor, lê o nome de cada escola no contexto dela (inexistente: `NAO_ENCONTRADO`, e desfaz tudo),
@@ -502,10 +502,29 @@ Não se aplica.
   - a tela avisa que o aluno que nunca reivindicou o nome está na lista da turma.
 - **Por quanto tempo guardamos** (retenção).
 - **Empresas que recebem dados** (suboperadores).
-- **Incidentes.**
+- **Incidentes.** Tarefa 10.0, como ficou no código: os incidentes da escola (os sem confirmação primeiro), um cartão por
+  incidente com todos os campos do DTO, o estado dito por extenso ("Aguardando a confirmação da coordenação" ou "Recebimento
+  confirmado em <data e hora>") e, nos que esperam, "Confirmo que recebi". O prazo legal da escola vem em texto fixo, numa
+  faixa `info` no alto. **Sempre relê ao abrir** (`refetchOnMount: 'always'`), porque o aviso da coordenação lê uma vez por
+  sessão e outra pessoa pode ter confirmado desde então. Quatro estados: carregando, erro com "Tentar de novo", vazio
+  ("Nenhum incidente afetou esta escola") e o dado.
 
 **Aviso de incidente.** É um diálogo com todos os campos do DTO, "Confirmo que recebi" e "Ver depois". Com "Ver
 depois", fica uma faixa fixa até a confirmação, e o Sair continua alcançável.
+- **Tarefa 10.0, como ficou no código.** O aviso mora na **área da coordenação** (`areas/coordenacao/rotas.tsx`, num pedaço
+  próprio por `import()`), e não na `CascaDaEscola`, que é dos três papéis: a área só monta para a coordenação, e a casca ficaria
+  com a leitura e o diálogo de um papel só. Aparece antes de qualquer tela da coordenação.
+- **Uma leitura por sessão** é `staleTime: Infinity` na consulta do aviso; a sessão nova esvazia o cache (`main.tsx`), a aba
+  Incidentes relê ao abrir e a confirmação relê. A consulta é a mesma nos dois lugares (`consultaIncidentes`), e a confirmação
+  numa delas atualiza a outra.
+- **Um aviso por vez.** Com mais de um pendente, o diálogo mostra o primeiro da lista com "N avisos esperam a sua confirmação.
+  Este é o primeiro." e, confirmado, o seguinte; a faixa conta quantos esperam.
+- **"Ver depois"** e o Esc fecham o diálogo e deixam a faixa (`role="region"`, sem botão de fechar), com "Ver o aviso", que reabre
+  o diálogo e recebe o foco. O adiamento é estado da área: sair, entrar de novo (a coordenação sempre passa pelo segundo fator, que
+  é tela própria) e trocar de escola o desfazem. "Sair" fica à mostra na casca (barra do topo a 360 px, lateral no computador).
+- **O foco começa no texto**, e não no botão que confirma. Os dois botões têm o mesmo tamanho. Falha da confirmação aparece no
+  diálogo (ou no cartão) em texto do catálogo, sem fechar nada. Se a leitura falha, o aviso não aparece e a tela não quebra: a
+  aba tem o erro e o "Tentar de novo".
 
 **"Meus dados".** Esta fatia cria o item **Privacidade** no rodapé fixo do aluno (`docs/interface.md` 11.1), por
 enquanto só com "Meus dados", alcançável também na gaveta a 360 px. O professor o acha no menu da pessoa.
