@@ -2,7 +2,7 @@ import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   acrescentarRevisao,
   antesDoCommit,
@@ -1227,7 +1227,7 @@ describe('a árvore em que o commit acontece', () => {
 
   it('agente do time não empurra develop, release nem main; a branch do andar ele empurra', () => {
     const { terreo, andar } = terreoEAndar()
-    const push = (command: string, raizDaSessao: string, papel: string | undefined) => portao(comando(command), raizDaSessao, papel)
+    const push =(command: string, raizDaSessao: string, papel: string) => portao(comando(command), raizDaSessao, papel)
     // No térreo a árvore está na develop: push sem branch escrita, com HEAD, ou com a branch por extenso.
     expect(push('git push', terreo, 'arquiteto')).toMatch(/Push bloqueado: este comando empurra `develop`.*papel `arquiteto`/)
     expect(push('git push -u origin HEAD', terreo, 'implementador')).toMatch(/empurra `develop`/)
@@ -1243,10 +1243,23 @@ describe('a árvore em que o commit acontece', () => {
     expect(push(`cd ${terreo} && git push origin HEAD`, andar, 'implementador')).toMatch(/empurra `develop`/)
     expect(push('git -C "$OUTRO" push', andar, 'implementador')).toMatch(/uma branch que o hook não sabe qual é/)
     // O Orquestrador e a sessão de uma pessoa não têm papel: o push da develop é deles, com a palavra do Joaquim.
-    expect(push('git push origin develop', terreo, undefined)).toBeNull()
+    // Sem papel é '' e não undefined: undefined cairia no padrão de `portao`, que lê CLAUDE_CODE_AGENT da sessão que roda o teste.
+    expect(push('git push origin develop', terreo, '')).toBeNull()
     expect(push('git push origin develop', terreo, 'general-purpose')).toBeNull()
     // `git push` dentro de um texto não é push.
     expect(push('git log --grep "git push origin develop"', terreo, 'implementador')).toBeNull()
     expect(destinoProtegidoDoPush('git status', 'develop')).toBeNull()
+  })
+
+  it('sem papel passado, portao lê o papel de CLAUDE_CODE_AGENT, que é o caminho do hook', () => {
+    const { terreo } = terreoEAndar()
+    try {
+      vi.stubEnv('CLAUDE_CODE_AGENT', 'implementador')
+      expect(portao(comando('git push origin develop'), terreo)).toMatch(/empurra `develop`.*papel `implementador`/)
+      vi.stubEnv('CLAUDE_CODE_AGENT', '')
+      expect(portao(comando('git push origin develop'), terreo)).toBeNull()
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 })
