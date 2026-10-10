@@ -42,6 +42,21 @@ a rodada deles caducar. Seja completo na primeira rodada: diga tudo que falta de
 6. Operação que pode acontecer duas vezes ao mesmo tempo tem teste de concorrência de
    verdade (duas chamadas em paralelo), e não só duas chamadas em sequência?
 
+## Os comandos que você roda
+
+Você roda como subagente, e ninguém vê o seu terminal. Comando que o Claude Code não consegue
+conferir abre um "Do you want to proceed?" que ninguém responde, e a rodada inteira fica parada. Na
+13.0 do F3 foram dois, e a rodada levou 56 minutos, até a vigia do Orquestrador passar.
+
+- **Um comando simples por Bash:** o teste (`npx vitest run <arquivo>`), a mutação, o `git diff`, o
+  `git checkout -- <arquivo>` que desfaz a mutação. Sem laço, sem processo em segundo plano (`&`), e
+  sem `kill`, `pkill` nem `rm` no meio de um comando composto. Para repetir um teste, rode o mesmo
+  comando outra vez
+- **Não ponha a máquina sob carga** (CPU saturada, laço vazio) para ver se um teste de prazo ou de
+  corrida aguenta. Prazo se prova dentro do teste, com relógio falso ou com um servidor de teste que
+  demora. Se o teste só passa com a máquina folgada, isso é um bloqueante a escrever, com o motivo, e
+  não um experimento a rodar
+
 ## Severidade e rodada nova
 
 - **Bloqueante** é o que viola regra, é bug, vaza dado ou deixa a regra sem teste que a prove.
