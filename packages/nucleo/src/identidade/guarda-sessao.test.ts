@@ -21,6 +21,7 @@ const linhaValida: LinhaDaSessao = {
   usuarioId: token.usuarioId,
   papel: 'professor',
   desativadoEm: null,
+  eliminacaoAgendadaEm: null,
   encerradaEm: null,
   expiraEm: new Date(agora.getTime() + 3_600_000),
   ultimoUsoEm: agora,

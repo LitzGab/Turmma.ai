@@ -653,6 +653,29 @@ export const ACOES_DE_AUDITORIA = {
     finalidade: null,
   },
   /**
+   * A eliminação do titular ficou agendada (F3, tarefa 14.0; RF14; `POST /v1/privacidade/pedidos`, tipo `eliminacao`): o
+   * acesso da pessoa nesta escola está suspenso até o cancelamento ou o 8º dia. Grava junto de `pedido.registrado`, na mesma
+   * transação. `eliminarEm` é o instante em que a eliminação passa a poder acontecer; `sessoesEncerradas`, quantas sessões
+   * abertas da pessoa o registro encerrou (com o motivo `eliminacao_agendada`). Nunca o nome.
+   */
+  'pedido.agendado': {
+    entidade: 'pedido_titular',
+    antes: null,
+    depois: z.strictObject({ eliminarEm: z.iso.datetime(), sessoesEncerradas: z.number().int().nonnegative() }),
+    finalidade: null,
+  },
+  /**
+   * A coordenação cancelou a eliminação agendada (F3, tarefa 14.0; RF14; `POST /v1/privacidade/pedidos/:id/cancelar`): o
+   * acesso da pessoa volta com a mesma senha. `acessoDevolvido` diz se havia pessoa a quem devolver (a que a rotina já
+   * eliminou por outro caminho não tem). Só a chamada que cancelou grava; o clique duplo não grava de novo.
+   */
+  'pedido.cancelado': {
+    entidade: 'pedido_titular',
+    antes: z.strictObject({ estado: z.literal('agendado') }),
+    depois: z.strictObject({ estado: z.literal('cancelado'), acessoDevolvido: z.boolean() }),
+    finalidade: null,
+  },
+  /**
    * A coordenação concluiu o pedido (F3, RF16; `POST /v1/privacidade/pedidos/:id/concluir`): o atendimento terminou,
    * e quem concluiu sai no autor do registro. A eliminação conclui o pedido pelo job, com o autor `rotina` (15.0).
    */

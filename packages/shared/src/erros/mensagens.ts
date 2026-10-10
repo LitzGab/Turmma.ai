@@ -38,6 +38,7 @@ export const MENSAGENS_DE_ERRO: Readonly<Record<CodigoDeErro, string>> = {
   MATERIAL_INSUFICIENTE: 'Não encontramos esse tema no material da escola. Confira o tema ou peça à coordenação para enviar o material.',
   RETENCAO_FORA_DO_LIMITE: 'Este prazo não pode ser usado nesta categoria. Confira o mínimo e o máximo dela, e o prazo da categoria que a limita.',
   PEDIDO_EM_ESTADO_INVALIDO: 'Este pedido não aceita mais esta ação. Atualize a tela para ver como ele ficou.',
+  ACESSO_SUSPENSO: 'Seu acesso está suspenso a pedido. Fale com a coordenação da escola.',
 }
 
 /**
@@ -149,6 +150,7 @@ export const AVISO_DA_TROCA_RECUSADA =
 export const MENSAGENS_DA_FALHA_EXTERNA: Readonly<Record<FalhaDoLoginExterno, string>> = {
   provedor: 'Não foi possível entrar com a conta da escola. Pode ser que a escola ainda não tenha liberado o aplicativo. Entre com a sua matrícula ou procure o professor.',
   conta_externa_nao_ligada: MENSAGENS_DE_ERRO.CONTA_EXTERNA_NAO_LIGADA,
+  acesso_suspenso: MENSAGENS_DE_ERRO.ACESSO_SUSPENSO,
 }
 
 /**
@@ -156,7 +158,9 @@ export const MENSAGENS_DA_FALHA_EXTERNA: Readonly<Record<FalhaDoLoginExterno, st
  * tela nunca fica sem explicação porque alguém digitou outra coisa na barra.
  */
 export function mensagemDaFalhaExterna(valor: string): string {
-  return valor === 'conta_externa_nao_ligada' ? MENSAGENS_DA_FALHA_EXTERNA.conta_externa_nao_ligada : MENSAGENS_DA_FALHA_EXTERNA.provedor
+  if (valor === 'conta_externa_nao_ligada') return MENSAGENS_DA_FALHA_EXTERNA.conta_externa_nao_ligada
+  if (valor === 'acesso_suspenso') return MENSAGENS_DA_FALHA_EXTERNA.acesso_suspenso
+  return MENSAGENS_DA_FALHA_EXTERNA.provedor
 }
 
 /**

@@ -8,18 +8,21 @@ export interface ChaveDaContaExterna {
   readonly sujeito: string
 }
 
-/** A ligação achada: o usuário da escola, se está ativo, e a conta dele (nula para aluno). */
+/** A ligação achada: o usuário da escola, se está ativo, se a eliminação dele está agendada (14.0) e a conta dele (nula para aluno). */
 export interface LigacaoDaContaExterna {
   readonly usuarioId: string
   readonly contaId: string | null
   readonly ativo: boolean
+  /** A eliminação está agendada: a conta do provedor está certa, e a resposta é `acesso_suspenso`, sem sessão. */
+  readonly suspenso: boolean
 }
 
-/** O professor ativo da escola com aquele e-mail na conta, e se ele já tem uma conta externa ligada. */
+/** O professor ativo da escola com aquele e-mail na conta, se ele já tem uma conta externa ligada e se a eliminação dele está agendada (14.0). */
 export interface ProfessorPeloEmail {
   readonly usuarioId: string
   readonly contaId: string
   readonly jaLigado: boolean
+  readonly suspenso: boolean
 }
 
 /**
@@ -59,7 +62,7 @@ export class ContaExternaRepository {
   async ligacao(chave: ChaveDaContaExterna): Promise<LigacaoDaContaExterna | undefined> {
     const escolaId = exigirEscolaDoContexto()
     const [linha] = await this.banco
-      .select({ usuarioId: contaExterna.usuarioId, contaId: usuario.contaId, desativadoEm: usuario.desativadoEm })
+      .select({ usuarioId: contaExterna.usuarioId, contaId: usuario.contaId, desativadoEm: usuario.desativadoEm, eliminacaoAgendadaEm: usuario.eliminacaoAgendadaEm })
       .from(contaExterna)
       .innerJoin(usuario, and(eq(usuario.escolaId, contaExterna.escolaId), eq(usuario.id, contaExterna.usuarioId)))
       .where(
@@ -72,7 +75,7 @@ export class ContaExternaRepository {
       )
       .limit(1)
     if (linha === undefined) return undefined
-    return { usuarioId: linha.usuarioId, contaId: linha.contaId, ativo: linha.desativadoEm === null }
+    return { usuarioId: linha.usuarioId, contaId: linha.contaId, ativo: linha.desativadoEm === null, suspenso: linha.eliminacaoAgendadaEm !== null }
   }
 
   /**
@@ -87,6 +90,7 @@ export class ContaExternaRepository {
         usuarioId: usuario.id,
         contaId: conta.id,
         jaLigado: sql<boolean>`exists (select 1 from ${contaExterna} where ${contaExterna.escolaId} = ${usuario.escolaId} and ${contaExterna.usuarioId} = ${usuario.id})`,
+        suspenso: sql<boolean>`${usuario.eliminacaoAgendadaEm} is not null`,
       })
       .from(usuario)
       .innerJoin(conta, eq(conta.id, usuario.contaId))

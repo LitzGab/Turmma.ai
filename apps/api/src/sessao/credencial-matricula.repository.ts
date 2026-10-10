@@ -5,6 +5,8 @@ import { and, eq, isNull } from 'drizzle-orm'
 export interface CredencialDoAluno {
   readonly usuarioId: string
   readonly senhaHash: string | null
+  /** A eliminação está agendada (F3, 14.0): com a senha certa, a resposta é `ACESSO_SUSPENSO`, e nada é emitido. */
+  readonly suspenso: boolean
 }
 
 /**
@@ -17,17 +19,19 @@ export class CredencialMatriculaRepository {
 
   /**
    * A credencial de aluno ativo com a matrícula, na escola do contexto. Usuário desativado (aluno transferido), que não
-   * é aluno, ou matrícula que não existe dão `undefined`, e quem chama responde igual à senha errada.
+   * é aluno, ou matrícula que não existe dão `undefined`, e quem chama responde igual à senha errada. O aluno com a
+   * eliminação agendada **vem**, com `suspenso`: a senha dele é conferida como a de qualquer um (mesmo hash, mesmo
+   * contador), e só com ela certa a resposta é `ACESSO_SUSPENSO`.
    */
   async doAlunoAtivo(matricula: string): Promise<CredencialDoAluno | undefined> {
     const escolaId = exigirEscolaDoContexto()
     const [linha] = await this.banco
-      .select({ usuarioId: credencialMatricula.usuarioId, senhaHash: credencialMatricula.senhaHash })
+      .select({ usuarioId: credencialMatricula.usuarioId, senhaHash: credencialMatricula.senhaHash, eliminacaoAgendadaEm: usuario.eliminacaoAgendadaEm })
       .from(credencialMatricula)
       .innerJoin(usuario, and(eq(usuario.escolaId, credencialMatricula.escolaId), eq(usuario.id, credencialMatricula.usuarioId)))
       .where(and(eq(credencialMatricula.escolaId, escolaId), eq(credencialMatricula.matricula, matricula), eq(usuario.papel, 'aluno'), isNull(usuario.desativadoEm)))
       .limit(1)
-    return linha
+    return linha === undefined ? undefined : { usuarioId: linha.usuarioId, senhaHash: linha.senhaHash, suspenso: linha.eliminacaoAgendadaEm !== null }
   }
 
   /** Grava credenciais de alunos da escola do contexto: o seed sintético (e, no F2, a reivindicação). */

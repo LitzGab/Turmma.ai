@@ -23,8 +23,21 @@ describe('CredencialMatriculaRepository: a matrícula é lida só na escola do c
     const [alunoDeB] = await bancada.alunosComMatricula(escolaB, [{ matricula, senhaHash: HASH_SINTETICO }])
     const repositorio = new CredencialMatriculaRepository(bancada.banco)
     expect(await naEscola(escolaA, () => repositorio.doAlunoAtivo(matricula))).toBeUndefined()
-    expect(await naEscola(escolaB, () => repositorio.doAlunoAtivo(matricula))).toEqual({ usuarioId: alunoDeB, senhaHash: HASH_SINTETICO })
+    expect(await naEscola(escolaB, () => repositorio.doAlunoAtivo(matricula))).toEqual({ usuarioId: alunoDeB, senhaHash: HASH_SINTETICO, suspenso: false })
     await expect(executarNoContexto({ requisicaoId: randomUUID() }, () => repositorio.doAlunoAtivo(matricula))).rejects.toThrow('consulta com escopo sem escola no contexto')
+  })
+
+  it('eliminação agendada (14.0): o aluno é achado, com `suspenso`, para o login conferir a senha antes de dizer que o acesso está suspenso', async () => {
+    const escola = await bancada.escola()
+    const [agendado, comum] = await bancada.alunosComMatricula(escola, [
+      { matricula: '3333', senhaHash: HASH_SINTETICO },
+      { matricula: '4444', senhaHash: HASH_SINTETICO },
+    ])
+    await bancada.pool.query('update usuario set eliminacao_agendada_em = now() where escola_id = $1 and id = $2', [escola, agendado])
+    const repositorio = new CredencialMatriculaRepository(bancada.banco)
+
+    expect(await naEscola(escola, () => repositorio.doAlunoAtivo('3333'))).toEqual({ usuarioId: agendado, senhaHash: HASH_SINTETICO, suspenso: true })
+    expect(await naEscola(escola, () => repositorio.doAlunoAtivo('4444'))).toEqual({ usuarioId: comum, senhaHash: HASH_SINTETICO, suspenso: false })
   })
 
   it('borda: aluno desativado e credencial de usuário que não é aluno não são achados', async () => {

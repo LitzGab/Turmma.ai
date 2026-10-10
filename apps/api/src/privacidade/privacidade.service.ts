@@ -10,6 +10,7 @@ import {
   TENTE_DE_NOVO_PADRAO_SEGUNDOS,
   diaDeUso,
   identidadeDaRequisicao,
+  erroDoPostgresEm,
   relogioDoSistema,
   type ArmazemDeArquivos,
   type ArquivoLido,
@@ -17,6 +18,7 @@ import {
   type Enfileirador,
   type Relogio,
 } from '@educa/nucleo'
+import { CicloDeVidaService } from '@educa/nucleo/ciclo-de-vida'
 import {
   CATEGORIAS_DE_RETENCAO,
   CHAVES_DE_PRAZO_FIXO,
@@ -210,7 +212,10 @@ export class PrivacidadeService {
    * no momento do registro (F3, tarefa 12.0) e o `homonimo`. **A chave de envio decide primeiro**: a mesma chave, com o
    * mesmo conteúdo e da mesma coordenação, devolve sempre o mesmo pedido, mesmo em paralelo; com outro titular, tipo,
    * solicitante ou chegada, ou de outra coordenação, responde `NAO_ENCONTRADO` sem gravar. Só quem gravou registra
-   * `pedido.registrado`, na mesma transação. A chegada no futuro é recusada com
+   * `pedido.registrado`, na mesma transação. **A eliminação nasce `agendado`** (F3, tarefa 14.0): `eliminar_em` em 7 dias, o
+   * acesso da pessoa suspenso e as sessões abertas dela encerradas, tudo na mesma transação do pedido, com `pedido.agendado`
+   * depois do `pedido.registrado`. Uma segunda eliminação do mesmo titular, com outra chave, responde
+   * `PEDIDO_EM_ESTADO_INVALIDO` (o único parcial decide a corrida). A chegada no futuro é recusada com
    * `ENTRADA_INVALIDA` antes de qualquer escrita, **pelo dia de São Paulo (`diaDeUso`)**; o check do banco, pelo
    * `current_date` da sessão, é só a segunda camada e mais frouxa.
    */
@@ -223,15 +228,23 @@ export class PrivacidadeService {
       const pedidos = new PedidosRepository(tx)
       const compartilhamento = await new Compartilhamento(tx).doTitular({ titularId: titular.id, papel: titular.papel })
       // Acesso e portabilidade geram arquivo: nascem `em_preparacao` e enfileiram o job **na mesma transação**, então o pedido
-      // existe se, e somente se, o job existe. Os outros três não têm o que montar e nascem `recebido`.
+      // existe se, e somente se, o job existe. A eliminação nasce `agendado`, com o acesso suspenso na mesma transação (14.0).
+      // Compartilhamento e correção não têm o que montar e nascem `recebido`.
       const geraArquivo = TIPOS_DE_PEDIDO_COM_ARQUIVO.some((tipo) => tipo === pedido.tipo)
-      const id = await pedidos.registrar({ ...pedido, papelTitular: titular.papel, homonimo, compartilhamento, estado: geraArquivo ? 'em_preparacao' : 'recebido' })
-      if (id !== undefined) {
-        if (geraArquivo) await this.dependencias.enfileirador.enfileirar(tx, { tipo: TIPO_DO_JOB_MONTAR_ARQUIVO, fila: 'normal', dados: { pedidoId: id }, naoUrgente: false })
+      const estado = geraArquivo ? 'em_preparacao' : pedido.tipo === 'eliminacao' ? 'agendado' : 'recebido'
+      const registrado = await this.#gravarPedido(pedidos, { ...pedido, papelTitular: titular.papel, homonimo, compartilhamento, estado })
+      const id = registrado?.id
+      if (registrado !== undefined) {
+        if (geraArquivo) await this.dependencias.enfileirador.enfileirar(tx, { tipo: TIPO_DO_JOB_MONTAR_ARQUIVO, fila: 'normal', dados: { pedidoId: registrado.id }, naoUrgente: false })
         await registro.gravar(tx, 'pedido.registrado', {
-          entidadeId: id,
+          entidadeId: registrado.id,
           depois: { titularId: titular.id, papelTitular: titular.papel, tipo: pedido.tipo, solicitante: pedido.solicitante, chegouEm: pedido.chegouEm },
         })
+        if (registrado.eliminarEm !== null) {
+          // Pedido → usuário, nesta ordem (a mesma do cancelar): o pedido acabou de ser inserido, e só então o usuário é travado.
+          const { sessoesEncerradas } = await new CicloDeVidaService(this.banco).agendarEliminacao(titular.id, tx)
+          await registro.gravar(tx, 'pedido.agendado', { entidadeId: registrado.id, depois: { eliminarEm: registrado.eliminarEm.toISOString(), sessoesEncerradas } })
+        }
       }
       const lido = id === undefined ? await pedidos.daChave(pedido.chaveEnvio) : await pedidos.de(id)
       if (lido === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
@@ -289,6 +302,24 @@ export class PrivacidadeService {
       const anterior = await pedidos.concluir(pedido.id)
       if (anterior === undefined) throw pedidoEmEstadoInvalido()
       await registro.gravar(tx, 'pedido.concluido', { entidadeId: pedido.id, antes: { estado: anterior }, depois: { estado: 'concluido' } })
+    })
+  }
+
+  /**
+   * `POST /v1/privacidade/pedidos/:id/cancelar` (F3, tarefa 14.0; RF14): a coordenação cancela a eliminação agendada, e o
+   * acesso da pessoa volta com a mesma senha (as sessões que o registro encerrou não voltam: ela entra de novo). Só vale em
+   * `agendado`, **antes de `eliminar_em` e antes de enfileirado**: o `where` do `update` decide, e fora disso (concluído, já
+   * cancelado, depois do prazo, enfileirado, ou outro tipo de pedido) responde `PEDIDO_EM_ESTADO_INVALIDO`. A ordem das
+   * travas é pedido → usuário, a do registro. O clique duplo não cancela nem audita de novo.
+   */
+  async cancelarPedido(id: string): Promise<void> {
+    await this.banco.transaction(async (tx) => {
+      const pedidos = new PedidosRepository(tx)
+      const pedido = await this.#pedidoAlvo(pedidos, new TitularesRepository(tx), id)
+      const cancelado = await pedidos.cancelar(pedido.id)
+      if (cancelado === undefined) throw pedidoEmEstadoInvalido()
+      const acessoDevolvido = await new CicloDeVidaService(this.banco).cancelarEliminacao(cancelado.titularId, tx)
+      await registro.gravar(tx, 'pedido.cancelado', { entidadeId: pedido.id, antes: { estado: 'agendado' }, depois: { estado: 'cancelado', acessoDevolvido } })
     })
   }
 
@@ -375,6 +406,20 @@ export class PrivacidadeService {
       })
     })
     return resposta
+  }
+
+  /**
+   * Grava o pedido. A segunda eliminação `agendada` do mesmo titular (outra chave de envio) cai no único parcial e responde
+   * `PEDIDO_EM_ESTADO_INVALIDO`, sem dizer o que existe. Qualquer outro erro do banco segue como veio.
+   */
+  async #gravarPedido(pedidos: PedidosRepository, pedido: Parameters<PedidosRepository['registrar']>[0]): ReturnType<PedidosRepository['registrar']> {
+    try {
+      return await pedidos.registrar(pedido)
+    } catch (erro) {
+      const doBanco = erroDoPostgresEm(erro)
+      if (doBanco?.code === '23505' && doBanco.constraint === 'pedido_titular_agendado_unico') throw pedidoEmEstadoInvalido()
+      throw erro
+    }
   }
 
   /** O arquivo ainda vale: não foi apagado e não venceu. */

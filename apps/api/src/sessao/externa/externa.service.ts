@@ -50,9 +50,19 @@ export function enderecoDaFalha(slug: string | undefined, falha: FalhaDoLoginExt
   return slug === undefined ? `/${consulta}` : `/e/${encodeURIComponent(slug)}${consulta}`
 }
 
-type Decisao = { readonly tipo: 'entrar'; readonly ligacao: Pick<LigacaoDaContaExterna, 'usuarioId' | 'contaId'> } | { readonly tipo: 'recusar' }
+type Decisao =
+  | { readonly tipo: 'entrar'; readonly ligacao: Pick<LigacaoDaContaExterna, 'usuarioId' | 'contaId'> }
+  | { readonly tipo: 'recusar' }
+  /** A conta do provedor está certa e a pessoa tem a eliminação agendada (14.0): sem sessão e sem ligar nada. */
+  | { readonly tipo: 'suspenso' }
 
 const RECUSA: Decisao = { tipo: 'recusar' }
+const SUSPENSO: Decisao = { tipo: 'suspenso' }
+
+/** A ligação que entra, ou a suspensão se a pessoa tem a eliminação agendada: uma só decisão para toda ligação achada. */
+function entrarSeNaoSuspensa(ligacao: Pick<LigacaoDaContaExterna, 'usuarioId' | 'contaId' | 'suspenso'>): Decisao {
+  return ligacao.suspenso ? SUSPENSO : { tipo: 'entrar', ligacao }
+}
 
 /**
  * O login pela conta Google ou Microsoft da escola (RF8, RF9, RF10; Tech Spec, seção 5, "Externo").
@@ -63,7 +73,9 @@ const RECUSA: Decisao = { tipo: 'recusar' }
  *   nada. O cookie é apagado sempre. O código vira a conta no provedor, com as conferências da biblioteca.
  * - **Domínio:** o `hd` (Google) ou o `tid` (Microsoft) precisa estar liberado pela escola do cookie. Conta pessoal
  *   não tem `hd`, e o tenant de conta pessoal da Microsoft nunca vale.
- * - **Com ligação:** a conta ligada a usuário ativo dessa escola entra, com sessão `externo`.
+ * - **Com ligação:** a conta ligada a usuário ativo dessa escola entra, com sessão `externo`. Se a pessoa tem a eliminação
+ *   agendada (F3, 14.0), a conta do provedor certa não abre sessão: o redirecionamento é `?falha=acesso_suspenso`, com um
+ *   `login_falho` sem usuário. O professor agendado ainda sem ligação também não é ligado.
  * - **Sem ligação:** só o professor ativo dessa escola cujo e-mail bate, com o e-mail verificado (a claim no Google, o
  *   tenant conferido na Microsoft), e que ainda não tem conta externa, é ligado, com auditoria. Dois retornos juntos do
  *   mesmo professor criam uma ligação só, e os dois entram; uma segunda conta com o mesmo e-mail é recusada.
@@ -128,10 +140,10 @@ export class LoginExterno {
         return this.#falhaDoProvedor(emAndamento.slug, apagar)
       }
       const decisao = await this.#decidir(emAndamento.escolaId, contaNoProvedor)
-      if (decisao.tipo === 'recusar') {
+      if (decisao.tipo !== 'entrar') {
         await new RegistroDeAcessoRepository(this.dependencias.banco).gravarFalha(ipParaRegistro(origem.ip))
         this.#resultados.add(1, { resultado: 'recusado' })
-        return { endereco: enderecoDaFalha(emAndamento.slug, 'conta_externa_nao_ligada'), cookies: [apagar] }
+        return { endereco: enderecoDaFalha(emAndamento.slug, decisao.tipo === 'suspenso' ? 'acesso_suspenso' : 'conta_externa_nao_ligada'), cookies: [apagar] }
       }
       const entrada = await this.dependencias.conclusao.entrarPorContaExterna({ usuarioId: decisao.ligacao.usuarioId, escolaId: emAndamento.escolaId }, decisao.ligacao.contaId, origem)
       this.#resultados.add(1, { resultado: 'entrou' })
@@ -152,7 +164,12 @@ export class LoginExterno {
 
     const chave: ChaveDaContaExterna = { provedor: conta.provedor, tenant: conta.tenant, sujeito: conta.sujeito }
     const ligada = await repositorio.ligacao(chave)
-    if (ligada !== undefined) return ligada.ativo ? { tipo: 'entrar', ligacao: ligada } : RECUSA
+    if (ligada !== undefined) {
+      if (!ligada.ativo) return RECUSA
+      // A conta do provedor está certa e a eliminação, agendada: é só agora, e só para quem provou a conta, que a resposta
+      // diz que o acesso está suspenso (14.0).
+      return entrarSeNaoSuspensa(ligada)
+    }
 
     // Sem ligação, só o professor, pelo e-mail verificado. No Google, `email_verified`; na Microsoft, o tenant já
     // conferido contra a lista da escola é o que dá o e-mail por bom (Tech Spec, seção 5).
@@ -160,13 +177,16 @@ export class LoginExterno {
     if (conta.email === undefined || !emailValido) return RECUSA
     const professor = await repositorio.professorPeloEmail(conta.email)
     if (professor === undefined) return RECUSA
+    // O professor com a eliminação agendada não é ligado agora: o cancelamento devolve o acesso, e a ligação vem no login seguinte.
+    if (professor.suspenso) return SUSPENSO
 
     if (!professor.jaLigado && (await this.#ligar(escolaId, professor.usuarioId, chave))) return { tipo: 'entrar', ligacao: professor }
     // Já ligado, ou o banco recusou a ligação: ou outro retorno do mesmo professor ligou esta mesma conta um instante
     // antes (entre a leitura da ligação, lá em cima, e esta), e ele entra; ou o professor tem outra conta externa, e
     // esta é recusada.
     const relida = await repositorio.ligacao(chave)
-    return relida?.ativo === true && relida.usuarioId === professor.usuarioId ? { tipo: 'entrar', ligacao: relida } : RECUSA
+    if (relida?.ativo !== true || relida.usuarioId !== professor.usuarioId) return RECUSA
+    return entrarSeNaoSuspensa(relida)
   }
 
   /**

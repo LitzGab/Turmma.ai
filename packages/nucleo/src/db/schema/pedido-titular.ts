@@ -1,6 +1,6 @@
 import type { Compartilhamento, EstadoDoPedido, PapelDoTitular, SolicitanteDoPedido, TipoDePedidoDoTitular } from '@educa/shared'
 import { sql } from 'drizzle-orm'
-import { boolean, check, index, jsonb, pgTable, text, timestamp, unique, uuid, date } from 'drizzle-orm/pg-core'
+import { boolean, check, index, jsonb, pgTable, text, timestamp, unique, uniqueIndex, uuid, date } from 'drizzle-orm/pg-core'
 import { escola } from './escola.js'
 
 /**
@@ -25,7 +25,13 @@ import { escola } from './escola.js'
  * - `nome_trocado` e `homonimo` são marcas da eliminação (15.0): se o nome foi trocado nos textos livres, e se havia
  *   homônimo (quando não há troca). `homonimo` também é calculado na prévia e guardado no registro.
  * - `eliminar_em` e `eliminacao_enfileirada_em` são da eliminação agendada (14.0 e 15.0): os 7 dias e a trava contra
- *   enfileirar duas vezes.
+ *   enfileirar duas vezes. **O pedido de eliminação nasce `agendado`** (14.0), com `eliminar_em = now() + 7 dias`, e a
+ *   pessoa fica com o acesso suspenso (`usuario.eliminacao_agendada_em`) até o cancelamento ou o 8º dia. `cancelar` só
+ *   vale em `agendado`, antes de `eliminar_em` e antes de enfileirado; o único parcial `pedido_titular_agendado_unico`
+ *   impede duas eliminações agendadas da mesma pessoa.
+ * - `cancelado_por` passa pelo mesmo gatilho do `registrado_por` (14.0, recomendação da 11.0): quem cancelou é usuário da
+ *   escola do pedido, conferido na escrita. O `concluido_por` não: o job da eliminação (15.0) conclui com o autor
+ *   `rotina` quando quem registrou já saiu, e o gatilho o impediria.
  * - **`registrado_por`, `concluido_por` e `cancelado_por` não entram no arquivo do titular** (13.0): são o id de quem da
  *   coordenação atendeu o pedido, outra pessoa. O arquivo traz o pedido pelo `titular_id`, com o tipo, o estado e as datas.
  * - Retenção: vigência + 5 anos, no fim de contrato (F12), como a auditoria; a classe é `registro_de_decisao` em
@@ -69,6 +75,11 @@ export const pedidoTitular = pgTable(
     index('pedido_titular_agendado_idx')
       .on(tabela.escolaId, tabela.eliminarEm)
       .where(sql`estado = 'agendado'`),
+    // Uma eliminação agendada por titular (F3, 14.0; RF19): duas chaves de envio diferentes para a mesma pessoa não agendam
+    // duas vezes. A segunda cai aqui e responde `PEDIDO_EM_ESTADO_INVALIDO`.
+    uniqueIndex('pedido_titular_agendado_unico')
+      .on(tabela.escolaId, tabela.titularId)
+      .where(sql`estado = 'agendado'`),
     check('pedido_titular_papel_valido', sql`${tabela.papelTitular} in ('aluno', 'professor')`),
     check('pedido_titular_tipo_valido', sql`${tabela.tipo} in ('acesso', 'portabilidade', 'compartilhamento', 'correcao', 'eliminacao')`),
     check('pedido_titular_solicitante_valido', sql`${tabela.solicitante} in ('titular', 'responsavel_legal')`),
@@ -79,6 +90,8 @@ export const pedidoTitular = pgTable(
     check('pedido_titular_concluido_so_com_data', sql`(${tabela.concluidoEm} is null) = (${tabela.concluidoPor} is null)`),
     check('pedido_titular_cancelado_so_com_data', sql`(${tabela.canceladoEm} is null) = (${tabela.canceladoPor} is null)`),
     // A eliminação é agendada com o instante dela; a marca de enfileiramento só existe depois do agendamento.
+    // Só a eliminação fica `agendado`, e sempre com o instante dela (14.0): a segunda camada do registro e do cancelamento.
+    check('pedido_titular_agendado_com_prazo', sql`${tabela.estado} <> 'agendado' or (${tabela.tipo} = 'eliminacao' and ${tabela.eliminarEm} is not null)`),
     check('pedido_titular_enfileirado_so_agendado', sql`${tabela.eliminacaoEnfileiradaEm} is null or ${tabela.eliminarEm} is not null`),
   ],
 )

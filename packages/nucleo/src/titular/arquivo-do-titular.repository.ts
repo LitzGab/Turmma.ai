@@ -80,11 +80,11 @@ export class ArquivoDoTitularRepository {
    */
   async contaAtiva(titularId: string): Promise<boolean | undefined> {
     const [linha] = await this.banco
-      .select({ desativadoEm: usuario.desativadoEm })
+      .select({ desativadoEm: usuario.desativadoEm, eliminacaoAgendadaEm: usuario.eliminacaoAgendadaEm })
       .from(usuario)
       .where(and(eq(usuario.escolaId, exigirEscolaDoContexto()), eq(usuario.id, titularId)))
       .limit(1)
-    return linha === undefined ? undefined : linha.desativadoEm === null
+    return linha === undefined ? undefined : linha.desativadoEm === null && linha.eliminacaoAgendadaEm === null
   }
 
   /**

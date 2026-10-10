@@ -31,6 +31,13 @@ export const usuario = pgTable(
     papel: text().$type<PapelDeUsuario>().notNull(),
     nome: text().notNull(),
     desativadoEm: timestamp({ withTimezone: true }),
+    /**
+     * Quando a coordenação registrou o pedido de eliminação da pessoa (F3, tarefa 14.0; RF14): do registro até a eliminação
+     * de fato (7 dias) ou o cancelamento, a pessoa **não entra** (guarda, renovação, login e seletor recusam), e a conta, a
+     * senha e as turmas ficam como estavam. É uma data, e não pessoa nem conteúdo. Diferente de `desativado_em`: quem sai
+     * da escola tem a credencial apagada, e quem tem a eliminação agendada a mantém para o cancelamento devolver o acesso.
+     */
+    eliminacaoAgendadaEm: timestamp({ withTimezone: true }),
   },
   (tabela) => [
     unique('usuario_escola_id_unico').on(tabela.escolaId, tabela.id),

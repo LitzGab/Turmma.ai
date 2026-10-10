@@ -85,7 +85,11 @@ export const LEITURAS_DO_ARQUIVO: Readonly<Record<string, LeituraDaTabela>> = {
   usuario: {
     descricao: 'O seu cadastro na escola',
     colunas: ['id', 'papel', 'nome', 'desativado_em'],
-    fora: { escola_id: ESCOPO, conta_id: 'ligação interna com a conta global; o e-mail da conta vem em `conta`' },
+    fora: {
+      escola_id: ESCOPO,
+      conta_id: 'ligação interna com a conta global; o e-mail da conta vem em `conta`',
+      eliminacao_agendada_em: 'espelho do pedido de eliminação (14.0): a data do pedido e o `eliminar_em` dele já estão em `pedido_titular`',
+    },
     consultas: ({ escolaId, titularId }) => [
       sql`select ${colunasDoSelect('id', 'papel', 'nome', 'desativado_em')} from usuario t where t.escola_id = ${escolaId} and t.id = ${titularId}`,
     ],

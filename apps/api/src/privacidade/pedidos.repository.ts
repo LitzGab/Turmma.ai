@@ -1,6 +1,7 @@
 import { exigirEscolaDoContexto, identidadeDaRequisicao, pedidoTitular, usuario, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { Compartilhamento, EstadoDoPedido, SolicitanteDoPedido, TipoDePedidoDoTitular } from '@educa/shared'
-import { and, asc, eq, gt, ne, sql, type SQL } from 'drizzle-orm'
+import { PRAZO_DA_ELIMINACAO_DIAS } from '@educa/shared'
+import { and, asc, eq, gt, isNull, ne, sql, type SQL } from 'drizzle-orm'
 
 /** O que o registro do pedido grava, além do que vem da requisição. */
 export interface PedidoParaRegistrar {
@@ -13,9 +14,10 @@ export interface PedidoParaRegistrar {
   readonly homonimo: boolean
   /**
    * O estado em que o pedido nasce: `em_preparacao` quando gera arquivo (acesso e portabilidade, que enfileiram o job na
-   * mesma transação), `recebido` nos outros três (F3, tarefa 13.0).
+   * mesma transação), `recebido` na compartilhamento e na correção (F3, tarefa 13.0), e `agendado` na eliminação (14.0), com
+   * `eliminar_em` em 7 dias pelo relógio do banco.
    */
-  readonly estado: 'recebido' | 'em_preparacao'
+  readonly estado: 'recebido' | 'em_preparacao' | 'agendado'
   /** A foto do compartilhamento no momento do registro (F3, tarefa 12.0): é ela que sobrevive ao expurgo do titular. */
   readonly compartilhamento: Compartilhamento
 }
@@ -67,11 +69,15 @@ export class PedidosRepository {
   constructor(private readonly banco: Banco | TransacaoBanco) {}
 
   /**
-   * Grava o pedido `recebido` e devolve o id. Com a chave de envio já usada na escola, não grava e devolve
-   * `undefined`: quem chama devolve o pedido daquela chave, que é sempre o mesmo, e confere que ele é o pedido que foi
-   * pedido (Tech Spec do F3, seções 4 e 5).
+   * Grava o pedido no estado que `pedido.estado` diz e devolve o id e, na eliminação, o instante `eliminar_em`. Com a chave
+   * de envio já usada na escola, não grava e devolve `undefined`: quem chama devolve o pedido daquela chave, que é sempre o
+   * mesmo, e confere que ele é o pedido que foi pedido (Tech Spec do F3, seções 4 e 5).
+   *
+   * **A eliminação `agendado` só entra uma por titular**: o único parcial `pedido_titular_agendado_unico` recusa a segunda
+   * (com outra chave de envio) com 23505, e quem chama a traduz em `PEDIDO_EM_ESTADO_INVALIDO`. O `eliminar_em` é o `now()`
+   * do banco mais `PRAZO_DA_ELIMINACAO_DIAS`: o relógio é um só, o da transação.
    */
-  async registrar(pedido: PedidoParaRegistrar): Promise<string | undefined> {
+  async registrar(pedido: PedidoParaRegistrar): Promise<{ readonly id: string; readonly eliminarEm: Date | null } | undefined> {
     const { usuarioId } = identidadeDaRequisicao()
     const [gravado] = await this.banco
       .insert(pedidoTitular)
@@ -83,14 +89,40 @@ export class PedidosRepository {
         solicitante: pedido.solicitante,
         chegouEm: pedido.chegouEm,
         estado: pedido.estado,
+        ...(pedido.estado === 'agendado' ? { eliminarEm: sql`now() + make_interval(days => ${PRAZO_DA_ELIMINACAO_DIAS})` } : {}),
         compartilhamento: pedido.compartilhamento,
         homonimo: pedido.homonimo,
         registradoPor: usuarioId,
         chaveEnvio: pedido.chaveEnvio,
       })
       .onConflictDoNothing({ target: [pedidoTitular.escolaId, pedidoTitular.chaveEnvio] })
-      .returning({ id: pedidoTitular.id })
-    return gravado?.id
+      .returning({ id: pedidoTitular.id, eliminarEm: pedidoTitular.eliminarEm })
+    return gravado
+  }
+
+  /**
+   * Cancela a eliminação agendada e devolve quem ela era (o titular), ou `undefined` quando o pedido não está mais em
+   * condição de ser cancelado: não está `agendado` (só a eliminação fica, pelo check `pedido_titular_agendado_com_prazo`), **já passou de `eliminar_em`** ou o job da 15.0 **já o
+   * enfileirou**. O `where` decide a corrida do clique duplo e a do 8º dia, e a linha fica travada até o fim da transação:
+   * quem chama devolve o acesso depois, na mesma transação (pedido → usuário). A tabela também recusa o estado `cancelado` sem
+   * `cancelado_em` e `cancelado_por` juntos.
+   */
+  async cancelar(id: string): Promise<{ readonly titularId: string } | undefined> {
+    const { usuarioId } = identidadeDaRequisicao()
+    const [cancelado] = await this.banco
+      .update(pedidoTitular)
+      .set({ estado: 'cancelado', canceladoEm: sql`now()`, canceladoPor: usuarioId })
+      .where(
+        and(
+          eq(pedidoTitular.escolaId, exigirEscolaDoContexto()),
+          eq(pedidoTitular.id, id),
+          eq(pedidoTitular.estado, 'agendado'),
+          sql`${pedidoTitular.eliminarEm} > now()`,
+          isNull(pedidoTitular.eliminacaoEnfileiradaEm),
+        ),
+      )
+      .returning({ titularId: pedidoTitular.titularId })
+    return cancelado
   }
 
   /**

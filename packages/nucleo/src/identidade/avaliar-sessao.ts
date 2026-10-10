@@ -18,16 +18,17 @@ export function inatividadeDoPapel(linha: Pick<LinhaDaSessao, 'papel' | 'inativi
 /** O que decide se uma sessão ainda vale, sem olhar o token: a guarda e a renovação conferem o mesmo. */
 export type EstadoDaSessao = Pick<
   LinhaDaSessao,
-  'papel' | 'desativadoEm' | 'encerradaEm' | 'expiraEm' | 'ultimoUsoEm' | 'inatividadeAlunoMin' | 'inatividadeEquipeMin' | 'agora'
+  'papel' | 'desativadoEm' | 'eliminacaoAgendadaEm' | 'encerradaEm' | 'expiraEm' | 'ultimoUsoEm' | 'inatividadeAlunoMin' | 'inatividadeEquipeMin' | 'agora'
 >
 
 /**
- * Se a sessão ainda vale agora (a hora do banco): não encerrada, usuário ativo, dentro das 12 h absolutas, e com o
+ * Se a sessão ainda vale agora (a hora do banco): não encerrada, usuário ativo e sem eliminação agendada (F3, 14.0: o
+ * registro já encerrou as sessões abertas, e a condição repete, para a sessão que nascesse no meio nunca valer), dentro das 12 h absolutas, e com o
  * último uso dentro da inatividade do papel mais a tolerância. A renovação confere o mesmo que a guarda: um cookie
  * de sessão vencida por inatividade não renova (o Chromebook do carrinho não entrega a conta anterior).
  */
 export function sessaoAindaVale(linha: EstadoDaSessao): boolean {
-  if (linha.encerradaEm !== null || linha.desativadoEm !== null) return false
+  if (linha.encerradaEm !== null || linha.desativadoEm !== null || linha.eliminacaoAgendadaEm !== null) return false
   const agora = linha.agora.getTime()
   if (linha.expiraEm.getTime() <= agora) return false
   const limiteDeInatividadeMs = (inatividadeDoPapel(linha) + TOLERANCIA_DE_INATIVIDADE_MIN) * MS_POR_MINUTO
@@ -49,7 +50,7 @@ export function tokenDaUltimaRenovacao(token: TokenVerificado, linha: Pick<Linha
  * - sessão inexistente para `(esc, sid)`;
  * - `sessao.usuario_id` diferente do `sub` do token;
  * - sessão encerrada, ou expirada (`expira_em` já passou);
- * - usuário desativado;
+ * - usuário desativado, ou com a eliminação agendada (14.0);
  * - inatividade vencida: `ultimo_uso_em` mais a inatividade do papel e a tolerância já passou.
  */
 export function avaliarSessao(token: TokenVerificado, linha: LinhaDaSessao | undefined): SessaoDaRequisicao | undefined {

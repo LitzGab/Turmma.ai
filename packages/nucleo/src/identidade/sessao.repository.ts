@@ -12,6 +12,8 @@ export interface LinhaDaSessao {
   readonly usuarioId: string
   readonly papel: PapelDeUsuario
   readonly desativadoEm: Date | null
+  /** A eliminação agendada (F3, 14.0): enquanto não é nula, a sessão não vale, mesmo que ainda esteja aberta. */
+  readonly eliminacaoAgendadaEm: Date | null
   readonly encerradaEm: Date | null
   readonly expiraEm: Date
   readonly ultimoUsoEm: Date
@@ -43,6 +45,7 @@ export class SessaoRepository {
         usuarioId: sessao.usuarioId,
         papel: usuario.papel,
         desativadoEm: usuario.desativadoEm,
+        eliminacaoAgendadaEm: usuario.eliminacaoAgendadaEm,
         encerradaEm: sessao.encerradaEm,
         expiraEm: sessao.expiraEm,
         ultimoUsoEm: sessao.ultimoUsoEm,

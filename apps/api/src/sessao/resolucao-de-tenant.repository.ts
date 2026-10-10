@@ -1,4 +1,4 @@
-import { acessoTurma, anoLetivo, codigoRecuperacao, conta, convite, ErroDeDominio, escola, rede, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type TipoDeConvite, type TransacaoBanco } from '@educa/nucleo'
+import { acessoTurma, anoLetivo, codigoRecuperacao, conta, convite, ErroDeDominio, escola, rede, registroAcesso, SemEscopo, sessao, usuario, type Banco, type EstadoDaSessao, type MotivoDeEncerramento, type TipoDeConvite, type TransacaoBanco } from '@educa/nucleo'
 import { CodigoDeErro, type PapelDeUsuario } from '@educa/shared'
 import { and, eq, gt, gte, isNotNull, isNull, lt, ne, or, sql, type SQL } from 'drizzle-orm'
 
@@ -14,6 +14,7 @@ export interface SessaoParaRenovar extends EstadoDaSessao {
   readonly pelo: 'atual' | 'anterior'
   readonly atualApresentado: boolean
   readonly rotacionadoEm: Date | null
+  readonly motivo: MotivoDeEncerramento | null
 }
 
 /** A credencial achada pelo e-mail: o id, o hash (nulo enquanto a conta não tem senha) e se o MFA está ativo. Nunca o e-mail. */
@@ -111,10 +112,12 @@ export class ResolucaoDeTenantRepository {
         atualApresentado: sessao.atualApresentado,
         rotacionadoEm: sessao.rotacionadoEm,
         encerradaEm: sessao.encerradaEm,
+        motivo: sessao.motivo,
         expiraEm: sessao.expiraEm,
         ultimoUsoEm: sessao.ultimoUsoEm,
         papel: usuario.papel,
         desativadoEm: usuario.desativadoEm,
+        eliminacaoAgendadaEm: usuario.eliminacaoAgendadaEm,
         inatividadeAlunoMin: escola.inatividadeAlunoMin,
         inatividadeEquipeMin: escola.inatividadeEquipeMin,
         agora: sql<Date>`now()`.mapWith(sessao.expiraEm),
@@ -130,19 +133,40 @@ export class ResolucaoDeTenantRepository {
     return { ...resto, pelo: atual === refreshHash ? 'atual' : 'anterior' }
   }
 
+  /**
+   * Os usuários com que a conta entra: ativos e **sem eliminação agendada** (F3, 14.0). A escola em que a pessoa tem a
+   * eliminação agendada não é escolha nem destino do login por e-mail, da troca de escola e do segundo fator, e a pessoa
+   * continua entrando nas outras. `comSuspensos` devolve também os agendados: só a redefinição do MFA pelo operador o usa, para
+   * que a coordenação de cada escola da conta saiba que o segundo fator foi redefinido.
+   */
   @SemEscopo('a credencial da equipe é global: depois da senha verificada, lista em que escolas a conta tem usuário ativo, só com id, escola e papel')
-  usuariosAtivosDaConta(contaId: string): Promise<UsuarioAtivoDaConta[]> {
+  usuariosAtivosDaConta(contaId: string, opcoes: { readonly comSuspensos?: boolean } = {}): Promise<UsuarioAtivoDaConta[]> {
     return this.banco
       .select({ usuarioId: usuario.id, escolaId: usuario.escolaId, papel: usuario.papel })
       .from(usuario)
-      .where(and(eq(usuario.contaId, contaId), isNull(usuario.desativadoEm)))
+      .where(and(eq(usuario.contaId, contaId), isNull(usuario.desativadoEm), ...(opcoes.comSuspensos === true ? [] : [isNull(usuario.eliminacaoAgendadaEm)])))
       .orderBy(usuario.escolaId, usuario.id)
+  }
+
+  /**
+   * Se a conta tem usuário de equipe ativo com a eliminação agendada (F3, 14.0). Só depois da senha certa e só quando nenhum
+   * usuário da conta pode entrar: é o que decide entre `ACESSO_SUSPENSO` e a resposta única do login.
+   */
+  @SemEscopo('a credencial da equipe é global: depois da senha verificada e sem usuário que possa entrar, diz se a conta tem uma escola com a eliminação agendada, sem dizer qual')
+  async temAcessoSuspenso(contaId: string): Promise<boolean> {
+    const [linha] = await this.banco
+      .select({ id: usuario.id })
+      .from(usuario)
+      .where(and(eq(usuario.contaId, contaId), isNull(usuario.desativadoEm), isNotNull(usuario.eliminacaoAgendadaEm), ne(usuario.papel, 'aluno')))
+      .limit(1)
+    return linha !== undefined
   }
 
   /**
    * Os acessos da conta para o `/v1/eu` (12.0 do F1; o seletor da A1, 12.0) e para a etapa `escolher` do login (20.0):
    * cada usuário ativo de equipe, com o nome da escola, o nome da rede dela e o papel. O usuário desativado (saiu da
-   * escola) e o que ainda espera o convite (inativo até o login que o ativa, 7.0) não aparecem. Nada da outra escola além
+   * escola), o que ainda espera o convite (inativo até o login que o ativa, 7.0) e o que tem a eliminação agendada (14.0)
+   * não aparecem. Nada da outra escola além
    * do nome dela e do da rede: nem id, nem turma, nem número de turmas, nem vínculo.
    */
   @SemEscopo('a credencial da equipe é global: o /v1/eu e a etapa escolher listam, pela conta já verificada, em que escolas ela tem usuário ativo, só com id, nome da escola, nome da rede e papel')
@@ -152,7 +176,7 @@ export class ResolucaoDeTenantRepository {
       .from(usuario)
       .innerJoin(escola, eq(escola.id, usuario.escolaId))
       .innerJoin(rede, eq(rede.id, escola.redeId))
-      .where(and(eq(usuario.contaId, contaId), isNull(usuario.desativadoEm), ne(usuario.papel, 'aluno')))
+      .where(and(eq(usuario.contaId, contaId), isNull(usuario.desativadoEm), isNull(usuario.eliminacaoAgendadaEm), ne(usuario.papel, 'aluno')))
       .orderBy(escola.nome, usuario.id)
   }
 

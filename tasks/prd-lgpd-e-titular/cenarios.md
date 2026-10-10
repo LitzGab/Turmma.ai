@@ -296,6 +296,10 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] No login por e-mail e no seletor, a escola com eliminação agendada não aparece.
   - [I] Depois de cancelar, a mesma senha volta a entrar.
   - [I] O professor com eliminação agendada em A continua entrando em B.
+  - [I] A conta com a escola agendada como único acesso, com a senha certa, recebe `ACESSO_SUSPENSO`, e com a senha errada, a resposta de sempre; com outra escola ativa, entra nela sem a agendada.
+  - [I] O cookie de renovação vencido, encerrado por saída ou já rotacionado de quem tem a eliminação agendada dá 401, como o desconhecido; nunca `ACESSO_SUSPENSO`.
+  - [I] O aluno desativado com a eliminação registrada: a renovação e o login por matrícula respondem como a matrícula inexistente.
+  - [I] A redefinição do segundo fator também registra a escola em que a pessoa tem a eliminação agendada.
 - **RF14, prazo de 7 dias.**
   - [I] Cancelado no 6º dia, nada sai. No 8º dia, tudo sai.
   - [I] Cancelar depois de `eliminar_em`, ou depois de enfileirado, dá `PEDIDO_EM_ESTADO_INVALIDO`.

@@ -46,6 +46,7 @@ const naoEncontrado = () => new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
  *   vigente que ele gerou é revogado antes, com `acesso_turma.revogado`: os vínculos dele saíram, e o link e o código não
  *   continuam abrindo a sala (correção 2026-10-03-acesso-sobrevive-ao-vinculo). Se era o último usuário da conta, a
  *   mesma limpeza.
+ * - **Agendar a eliminação e cancelá-la** (F3, tarefa 14.0): suspende o acesso sem apagar nada, e devolve.
  * - **Desligar a conta externa:** a coordenação desliga a conta Google ou Microsoft de um usuário ativo, e ele liga a
  *   nova no login seguinte (decidido na 13.0).
  *
@@ -100,6 +101,38 @@ export class CicloDeVidaService {
     })
   }
 
+  /**
+   * Suspende o acesso da pessoa e encerra as sessões abertas dela nesta escola, com o motivo `eliminacao_agendada` (F3, tarefa
+   * 14.0; RF14; Tech Spec do F3, seção 5, "Eliminação"). **Só roda na transação de quem chama**, a do registro do pedido, depois
+   * de o pedido ser inserido (a ordem de travas é pedido → usuário): a auditoria é do pedido (`pedido.agendado`), e uma falha
+   * depois desfaz também a suspensão. A conta global não é travada nem tocada, e a credencial, os vínculos e a conta externa
+   * ficam como estavam: o cancelamento devolve o acesso com a mesma senha.
+   *
+   * O próprio usuário da sessão não se agenda (a mesma regra do `desativar`), e a pessoa que não é desta escola responde
+   * `NAO_ENCONTRADO`. Se ela já estava agendada, responde `PEDIDO_EM_ESTADO_INVALIDO`: o registro nunca agenda duas vezes.
+   */
+  async agendarEliminacao(usuarioId: string, transacao: TransacaoBanco): Promise<{ readonly agendadaEm: Date; readonly sessoesEncerradas: number }> {
+    this.#conferirAlvo(usuarioId)
+    const repositorio = new CicloDeVidaRepository(transacao)
+    if ((await repositorio.travarUsuario(usuarioId)) === undefined) throw naoEncontrado()
+    const agendadaEm = await repositorio.suspender(usuarioId)
+    if (agendadaEm === undefined) throw new ErroDeDominio(CodigoDeErro.PEDIDO_EM_ESTADO_INVALIDO)
+    return { agendadaEm, sessoesEncerradas: await repositorio.encerrarSessoesDoUsuario(usuarioId, 'eliminacao_agendada') }
+  }
+
+  /**
+   * Devolve o acesso da pessoa cuja eliminação foi cancelada (F3, tarefa 14.0): apaga `eliminacao_agendada_em` na transação
+   * do cancelamento, depois de o pedido ser atualizado (pedido → usuário). Devolve `false` quando não há a quem devolver: a
+   * pessoa já saiu da escola (eliminada por outro caminho, como a rotina de `pessoa_desativada`), e o cancelamento do pedido
+   * vale mesmo assim. As sessões que o registro encerrou **não** voltam: a pessoa entra de novo com a senha.
+   */
+  async cancelarEliminacao(usuarioId: string, transacao: TransacaoBanco): Promise<boolean> {
+    this.#conferirAlvo(usuarioId)
+    const repositorio = new CicloDeVidaRepository(transacao)
+    if ((await repositorio.travarUsuario(usuarioId)) === undefined) return false
+    return repositorio.devolverAcesso(usuarioId)
+  }
+
   async desligarContaExterna(usuarioId: string, autoria: AutoriaDoCicloDeVida = {}): Promise<void> {
     await this.#naTransacao(usuarioId, undefined, async (tx, alvo) => {
       if (alvo.desativadoEm !== null) throw naoEncontrado()
@@ -107,6 +140,13 @@ export class CicloDeVidaService {
       if (desligada === undefined) throw naoEncontrado()
       await registro.gravar(tx, 'conta_externa.desligada', { entidadeId: desligada.id, antes: { usuarioId, provedor: desligada.provedor }, ...autoria })
     })
+  }
+
+  /** A escola do contexto, um id bem formado e que não é o da própria sessão: o que o agendamento e o cancelamento exigem antes de travar. */
+  #conferirAlvo(usuarioId: string): void {
+    exigirEscolaDoContexto()
+    if (!esquemaId.safeParse(usuarioId).success) throw naoEncontrado()
+    if (contextoAtual()?.usuarioId === usuarioId.toLowerCase()) throw naoEncontrado()
   }
 
   /**

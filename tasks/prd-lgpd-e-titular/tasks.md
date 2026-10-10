@@ -99,13 +99,13 @@
   - [x] 13.6 Expurgo dos arquivos vencidos ou com `apagado_em` na rotina; alerta `em_preparacao` > 2 h
   - [x] 13.7 Testes
 
-- [ ] **14.0 — A eliminação fica agendada por 7 dias, com o acesso suspenso e o cancelamento**
-  - [ ] 14.1 Migration própria: `usuario.eliminacao_agendada_em`; único parcial de `agendado`
-  - [ ] 14.2 Registro de eliminação (sessões encerradas com `eliminacao_agendada`); cancelar com a trava pedido → usuário
-  - [ ] 14.3 Guarda, renovação e logins: `ACESSO_SUSPENSO` só depois da credencial; e-mail e seletor sem a escola
-  - [ ] 14.4 `pessoa_desativada` pula quem tem pedido `agendado` (5.0)
-  - [ ] 14.5 Runbook do rollback
-  - [ ] 14.6 Testes
+- [x] **14.0 — A eliminação fica agendada por 7 dias, com o acesso suspenso e o cancelamento**
+  - [x] 14.1 Migration própria: `usuario.eliminacao_agendada_em`; único parcial de `agendado`
+  - [x] 14.2 Registro de eliminação (sessões encerradas com `eliminacao_agendada`); cancelar com a trava pedido → usuário
+  - [x] 14.3 Guarda, renovação e logins: `ACESSO_SUSPENSO` só depois da credencial; e-mail e seletor sem a escola
+  - [x] 14.4 `pessoa_desativada` pula quem tem pedido `agendado` (5.0)
+  - [x] 14.5 Runbook do rollback
+  - [x] 14.6 Testes
 
 - [ ] **15.0 — No 8º dia a eliminação acontece, com o nome trocado nos textos livres**
   - [ ] 15.1 Migration própria: check do autor `rotina` (NOT VALID, VALIDATE); apelido reservado; índices `(escola_id, id)` parciais de texto

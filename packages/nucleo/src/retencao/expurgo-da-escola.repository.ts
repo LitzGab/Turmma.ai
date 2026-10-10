@@ -279,10 +279,17 @@ const INSTRUCAO_DO_LOTE: Record<Exclude<AlvoDoExpurgoDaEscola, 'thread_agente' |
   `,
 }
 
-/** As pessoas da escola desativadas há mais de `meses` meses, as mais antigas primeiro: o lote da eliminação da pessoa. */
+/**
+ * As pessoas da escola desativadas há mais de `meses` meses, as mais antigas primeiro: o lote da eliminação da pessoa.
+ * **Fica de fora quem tem a eliminação agendada** (F3, 14.0): o pedido `agendado` tem o prazo de 7 dias e o job dele
+ * (15.0) elimina e conclui com o autor `rotina`; a rotina por prazo não passa na frente, e o pedido não perde a pessoa.
+ * O filtro está na escolha e não só no pulo, para a pessoa agendada não encher o lote e parar a noite.
+ */
 const PESSOAS_DESATIVADAS = (escolaId: string, { agora, meses }: PrazoDoLote, limite: number): SQL => sql`
   select id from usuario
   where escola_id = ${escolaId} and desativado_em < ${corte(agora, meses)}
+    and eliminacao_agendada_em is null
+    and not exists (select 1 from pedido_titular p where p.escola_id = usuario.escola_id and p.titular_id = usuario.id and p.estado = 'agendado')
   order by desativado_em, id
   limit ${limite}
 `
@@ -384,7 +391,8 @@ export class ExpurgoDaEscolaRepository {
    * erro sobe: o job grava a categoria `false`, e a fila tenta de novo.
    *
    * A conta global só cai se não serve a escola nenhuma: o usuário ativo em outra escola mantém a dele (o ciclo de vida
-   * confere). A pessoa com pedido de eliminação `agendado` será pulada aqui na tarefa 14.0.
+   * confere). A pessoa com a eliminação `agendada` (14.0) não entra na escolha, e a que foi agendada entre a escolha e a
+   * trava é pulada: o prazo dela é o do pedido, e quem a elimina é o job da 15.0.
    */
   async #eliminarPessoasDesativadas(escolaId: string, prazo: PrazoDoLote, limite: number): Promise<LoteDoExpurgo> {
     const escolhidos = await this.banco.execute<{ id: string }>(PESSOAS_DESATIVADAS(escolaId, prazo, limite))
@@ -395,7 +403,17 @@ export class ExpurgoDaEscolaRepository {
           const [ainda] = await tx
             .select({ desativadoEm: usuario.desativadoEm })
             .from(usuario)
-            .where(and(eq(usuario.escolaId, escolaId), eq(usuario.id, id), sql`${usuario.desativadoEm} < ${corte(prazo.agora, prazo.meses)}`))
+            .where(
+              and(
+                eq(usuario.escolaId, escolaId),
+                eq(usuario.id, id),
+                sql`${usuario.desativadoEm} < ${corte(prazo.agora, prazo.meses)}`,
+                // A pessoa que teve a eliminação agendada entre a escolha e a trava (14.0) é pulada como a que voltou a ser
+                // ativa: a coluna é lida com a linha travada, e o pedido `agendado` cobre a linha sem a marca.
+                sql`${usuario.eliminacaoAgendadaEm} is null`,
+                sql`not exists (select 1 from pedido_titular p where p.escola_id = ${usuario.escolaId} and p.titular_id = ${usuario.id} and p.estado = 'agendado')`,
+              ),
+            )
             .limit(1)
             .for('no key update')
           if (ainda === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)

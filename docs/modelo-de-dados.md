@@ -38,7 +38,8 @@ seção 3 da Tech Spec do F1 (`tasks/prd-identidade-e-tenancy/techspec.md`); aqu
 Conta            email?, senhaHash?, mfaSegredoCifrado?, mfaAtivadoEm?, mfaUltimoPasso?
                  (global, sem escola: é a identidade de login da equipe)
 CodigoRecuperacao* → conta*, hmac*, usadoEm?
-Usuario*         → escola*, conta? (nulo no aluno), papel*, nome*, desativadoEm?
+Usuario*         → escola*, conta? (nulo no aluno), papel*, nome*, desativadoEm?,
+                   eliminacaoAgendadaEm? (F3: a data do registro da eliminação; o acesso fica suspenso)
 CredencialMatricula* → escola*, usuario*, matricula*, senhaHash*
 ContaExterna*    → escola*, usuario*, provedor* (google | microsoft), tenant?, sujeito*
 ProvedorEscola*  → escola*, provedor*, valor* (hd | tid), removidoEm?
@@ -53,6 +54,18 @@ RegistroAcesso*  → escola?, usuario?, evento* (login | login_falho | renovacao
 Convite          → escola*, tokenHash*, tipo (coordenador | professor), usuario*, expiraEm,
                    usadoEm?, revogadoEm?
 ```
+
+**A eliminação agendada** (F3, tarefa 14.0). O pedido de eliminação do titular nasce `agendado`, com
+`eliminar_em = now() + 7 dias` pelo relógio do banco, e o mesmo registro grava `usuario.eliminacao_agendada_em` e
+encerra as sessões abertas da pessoa naquela escola (motivo `eliminacao_agendada`). A coluna é o espelho do pedido,
+na mesma transação: a guarda de sessão, a renovação, o login por matrícula, por e-mail e por conta externa e o seletor de
+escola a leem, e a pessoa não entra enquanto ela existir; a credencial e o vínculo ficam, para o cancelamento devolver o
+acesso. A unidade é o titular, não o pedido: o índice único parcial `pedido_titular_agendado_unico (escola_id, titular_id)
+where estado = 'agendado'` decide, no banco, duas eliminações ao mesmo tempo, e a segunda responde
+`PEDIDO_EM_ESTADO_INVALIDO`. O cancelamento trava o pedido e depois o usuário (a ordem do registro), só vale antes de
+`eliminar_em` e antes de o job da eliminação ser enfileirado, e apaga a coluna. O expurgo de `pessoa_desativada` pula quem
+tem pedido `agendado`: a pessoa sai pelo prazo do pedido, nunca pelo da desativação. Rollback do código: runbook, "Voltar o
+código com eliminação agendada em curso".
 
 **A identidade é global, os vínculos são por escola** (decidido na Tech Spec do F1). `Conta`
 não tem `escolaId` porque é o login; `Usuario` é a pessoa *naquela* escola, com o papel dela.

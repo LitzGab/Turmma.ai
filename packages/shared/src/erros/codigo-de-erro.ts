@@ -101,6 +101,13 @@ export const CodigoDeErro = {
    * cancelado, concluir a eliminação, ou corrigir o nome fora de um pedido de correção aberto. Nada é gravado.
    */
   PEDIDO_EM_ESTADO_INVALIDO: 'PEDIDO_EM_ESTADO_INVALIDO',
+  /**
+   * O acesso desta pessoa está suspenso porque a escola registrou o pedido de eliminação dela (F3, RF14; 403): os 7 dias
+   * até a eliminação de fato, em que a coordenação ainda pode cancelar. **Só sai depois da credencial conferida** (a
+   * senha certa, o refresh da sessão ou a conta Google ou Microsoft validada pelo provedor): com a senha errada, a
+   * resposta é a da matrícula que não existe, e quem não tem a credencial nunca sabe que há pedido (regra 10, item 6).
+   */
+  ACESSO_SUSPENSO: 'ACESSO_SUSPENSO',
 } as const
 
 export type CodigoDeErro = (typeof CodigoDeErro)[keyof typeof CodigoDeErro]

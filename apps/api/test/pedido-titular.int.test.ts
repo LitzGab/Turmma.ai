@@ -822,9 +822,28 @@ describe('pedido do titular (F3, tarefa 11.0): busca, prévia, registro, lista, 
         ['conclusão sem autor', '23514 pedido_titular_concluido_so_com_data', { concluidoEm: new Date().toISOString() }],
         ['cancelamento sem autor', '23514 pedido_titular_cancelado_so_com_data', { canceladoEm: new Date().toISOString() }],
         ['enfileirado sem agendamento', '23514 pedido_titular_enfileirado_so_agendado', { eliminacaoEnfileiradaEm: new Date().toISOString() }],
+        // O estado `agendado` é só da eliminação e sempre com o instante dela (14.0): a segunda camada do registro.
+        ['agendado que não é eliminação', '23514 pedido_titular_agendado_com_prazo', { estado: 'agendado', tipo: 'acesso', eliminarEm: new Date(Date.now() + 86_400_000).toISOString() }],
+        ['agendado sem o instante da eliminação', '23514 pedido_titular_agendado_com_prazo', { estado: 'agendado', tipo: 'eliminacao' }],
       ] as const) {
         expect(await inserir(sobrescrita), oQue).toBe(esperado)
       }
+      // Uma eliminação agendada por titular (14.0): a segunda cai no único parcial, e a cancelada não conta.
+      const agendada = { estado: 'agendado', tipo: 'eliminacao', eliminarEm: new Date(Date.now() + 7 * 86_400_000).toISOString() } as const
+      expect(await inserir(agendada)).toBe('ok')
+      expect(await inserir(agendada)).toBe('23505 pedido_titular_agendado_unico')
+      expect(await inserir({ estado: 'cancelado', tipo: 'eliminacao', eliminarEm: agendada.eliminarEm, canceladoEm: new Date().toISOString(), canceladoPor: a.coordenacao.usuarioId })).toBe('ok')
+      // Quem cancelou é usuário da escola do pedido (gatilho, 14.0), na inserção e na troca do `cancelado_por`.
+      expect(await inserir({ estado: 'cancelado', tipo: 'eliminacao', eliminarEm: agendada.eliminarEm, canceladoEm: new Date().toISOString(), canceladoPor: b.coordenacao.usuarioId })).toBe(
+        '23503 pedido_titular_cancelado_por_da_escola_fk',
+      )
+      const trocaDeCancelador = await bancada.pool
+        .query('update pedido_titular set cancelado_por = $1 where id = $2', [b.coordenacao.usuarioId, ultimoId])
+        .then(
+          () => 'ok',
+          (erro: { code?: string; constraint?: string }) => `${String(erro.code)} ${String(erro.constraint ?? '')}`,
+        )
+      expect(trocaDeCancelador).toBe('23503 pedido_titular_cancelado_por_da_escola_fk')
       // O titular e quem registrou são conferidos pelo gatilho, que mantém o que a FK garantia: o de outra escola
       // responde o erro dela, na inserção e na troca do `registrado_por`.
       expect(await inserir({ titularId: alunoDeB.id })).toBe('23503 pedido_titular_titular_da_escola_fk')

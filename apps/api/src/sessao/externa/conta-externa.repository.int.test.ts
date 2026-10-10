@@ -25,8 +25,8 @@ describe('ContaExternaRepository: ligação, domínio e professor lidos só na e
     const chave = chaveGoogle()
     await naEscola(escolaA, () => repositorio.ligar(alunoDeA, chave))
     await naEscola(escolaB, () => repositorio.ligar(alunoDeB, chave))
-    expect(await naEscola(escolaA, () => repositorio.ligacao(chave))).toEqual({ usuarioId: alunoDeA, contaId: null, ativo: true })
-    expect(await naEscola(escolaB, () => repositorio.ligacao(chave))).toEqual({ usuarioId: alunoDeB, contaId: null, ativo: true })
+    expect(await naEscola(escolaA, () => repositorio.ligacao(chave))).toEqual({ usuarioId: alunoDeA, contaId: null, ativo: true, suspenso: false })
+    expect(await naEscola(escolaB, () => repositorio.ligacao(chave))).toEqual({ usuarioId: alunoDeB, contaId: null, ativo: true, suspenso: false })
     await expect(executarNoContexto({ requisicaoId: randomUUID() }, () => repositorio.ligacao(chave))).rejects.toThrow('consulta com escopo sem escola no contexto')
   })
 
@@ -66,7 +66,7 @@ describe('ContaExternaRepository: ligação, domínio e professor lidos só na e
     const email = emailSintetico()
     const professorDeB = await bancada.equipeComEmail(escolaB, email)
     expect(await naEscola(escolaA, () => repositorio.professorPeloEmail(email))).toBeUndefined()
-    expect(await naEscola(escolaB, () => repositorio.professorPeloEmail(email.toUpperCase()))).toEqual({ ...professorDeB, jaLigado: false })
+    expect(await naEscola(escolaB, () => repositorio.professorPeloEmail(email.toUpperCase()))).toEqual({ ...professorDeB, jaLigado: false, suspenso: false })
   })
 
   it('isolamento: a mesma conta professora em A e em B, ligada só em B, aparece em A como não ligada', async () => {
@@ -76,8 +76,8 @@ describe('ContaExternaRepository: ligação, domínio e professor lidos só na e
     const professorDeA = await bancada.equipeComEmail(escolaA, email)
     const professorDeB = await bancada.equipeComEmail(escolaB, email)
     await naEscola(escolaB, () => repositorio.ligar(professorDeB.usuarioId, chaveGoogle()))
-    expect(await naEscola(escolaA, () => repositorio.professorPeloEmail(email))).toEqual({ ...professorDeA, jaLigado: false })
-    expect(await naEscola(escolaB, () => repositorio.professorPeloEmail(email))).toEqual({ ...professorDeB, jaLigado: true })
+    expect(await naEscola(escolaA, () => repositorio.professorPeloEmail(email))).toEqual({ ...professorDeA, jaLigado: false, suspenso: false })
+    expect(await naEscola(escolaB, () => repositorio.professorPeloEmail(email))).toEqual({ ...professorDeB, jaLigado: true, suspenso: false })
   })
 
   it('só professor ativo: coordenador com o e-mail e professor desativado não aparecem', async () => {
@@ -116,6 +116,20 @@ describe('ContaExternaRepository: ligação, domínio e professor lidos só na e
     const chave = chaveGoogle()
     await naEscola(escola, () => repositorio.ligar(aluno, chave))
     await bancada.pool.query('update usuario set desativado_em = now() where escola_id = $1 and id = $2', [escola, aluno])
-    expect(await naEscola(escola, () => repositorio.ligacao(chave))).toEqual({ usuarioId: aluno, contaId: null, ativo: false })
+    expect(await naEscola(escola, () => repositorio.ligacao(chave))).toEqual({ usuarioId: aluno, contaId: null, ativo: false, suspenso: false })
+  })
+  it('eliminação agendada (14.0): a ligação e o professor pelo e-mail dizem `suspenso`, só da pessoa agendada e só na escola dela', async () => {
+    const [escolaA, escolaB] = [await bancada.escola(), await bancada.escola()]
+    const email = `suspenso-${randomUUID()}@escola.invalid`
+    const professorDeA = await bancada.equipeComEmail(escolaA, email)
+    const professorDeB = await bancada.equipeComEmail(escolaB, email)
+    const chave = chaveGoogle()
+    await naEscola(escolaA, () => repositorio.ligar(professorDeA.usuarioId, chave))
+    await bancada.pool.query('update usuario set eliminacao_agendada_em = now() where id = $1', [professorDeA.usuarioId])
+
+    expect(await naEscola(escolaA, () => repositorio.ligacao(chave))).toEqual({ usuarioId: professorDeA.usuarioId, contaId: professorDeA.contaId, ativo: true, suspenso: true })
+    expect(await naEscola(escolaA, () => repositorio.professorPeloEmail(email))).toMatchObject({ usuarioId: professorDeA.usuarioId, suspenso: true })
+    // O professor da mesma conta em B não está suspenso: a marca é do usuário, não da conta.
+    expect(await naEscola(escolaB, () => repositorio.professorPeloEmail(email))).toMatchObject({ usuarioId: professorDeB.usuarioId, suspenso: false })
   })
 })

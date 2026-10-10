@@ -1,5 +1,5 @@
-import { FORMATO_SLUG, TAMANHO_MAXIMO_SLUG, type Banco, type Meter } from '@educa/nucleo'
-import type { PedidoLoginMatricula } from '@educa/shared'
+import { ErroDeDominio, FORMATO_SLUG, TAMANHO_MAXIMO_SLUG, type Banco, type Meter } from '@educa/nucleo'
+import { CodigoDeErro, type PedidoLoginMatricula } from '@educa/shared'
 import type { ConclusaoDeLogin } from './conclusao-de-login.js'
 import type { ContadorDeTentativas } from './contador-de-tentativas.js'
 import type { CookieDeDispositivo } from './cookie-dispositivo.js'
@@ -60,6 +60,9 @@ export function identificadorDoAluno(escolaId: string, matricula: string): strin
  * - **Segura por conta, nunca por IP** (regra 80, item 1): a chave do contador é o HMAC de `escola_id|matricula`, com o
  *   sufixo `conhecido` quando o navegador tem o `educa_dispositivo` dessa conta. Errar a senha segura só a matrícula
  *   daquela escola; os colegas atrás do mesmo IP, e a mesma matrícula em outra escola, continuam entrando.
+ * - **Eliminação agendada** (F3, 14.0): a credencial do aluno é conferida como a de qualquer um, e só com a senha certa a
+ *   resposta é `ACESSO_SUSPENSO`. Senha errada na conta suspensa é igual à matrícula inexistente: mesmo status, mesmo corpo,
+ *   mesmo contador, um hash cada.
  * - **Acerto:** zera o contador e vai direto a `pronta` (o aluno tem um usuário só, sem conta nem segundo fator), com
  *   sessão de método `matricula`, `registro_acesso` e os cookies `educa_sessao` e `educa_dispositivo`.
  * - **Log:** nada aqui escreve matrícula nem o slug digitado; o filtro de erro registra só o código.
@@ -108,6 +111,12 @@ export class LoginPorMatricula {
       }
 
       await contador.zerar(chave)
+      // A eliminação agendada (F3, 14.0): a senha está certa, e é só agora que se diz que o acesso está suspenso. Nada é
+      // emitido e nenhuma sessão nasce; o registro de acesso é o de uma tentativa que não entrou.
+      if (credencial.suspenso) {
+        await new RegistroDeAcessoRepository(banco).gravarFalha(ipParaRegistro(origem.ip))
+        throw new ErroDeDominio(CodigoDeErro.ACESSO_SUSPENSO)
+      }
       return conclusao.entrarComoAluno({ usuarioId: credencial.usuarioId, escolaId }, identificador, origem)
     })
   }

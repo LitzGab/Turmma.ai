@@ -2115,6 +2115,106 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
         expect(await linhaDaCategoria(a.escolaId, 'pessoa_desativada')).toEqual({ categoria: 'pessoa_desativada', linhas: 1, concluida: true })
       })
 
+      /** O pedido de eliminação `agendado` do titular, como o registro o grava (14.0), com o autor sendo outra pessoa da escola. */
+      async function eliminacaoAgendada(escolaId: string, titularId: string, { marcar }: { marcar: boolean }): Promise<void> {
+        const autor = await alunoNovo(escolaId)
+        await bancada.pool.query(
+          `insert into pedido_titular (escola_id, titular_id, papel_titular, tipo, solicitante, chegou_em, estado, eliminar_em, compartilhamento, registrado_por, chave_envio)
+           values ($1, $2, 'aluno', 'eliminacao', 'titular', current_date, 'agendado', now() + interval '7 days', '[]'::jsonb, $3, $4)`,
+          [escolaId, titularId, autor, randomUUID()],
+        )
+        if (marcar) await bancada.pool.query('update usuario set eliminacao_agendada_em = now() where id = $1', [titularId])
+      }
+
+      it('a pessoa com a eliminação agendada não entra no lote, pelo pedido `agendado` ou pela marca do usuário, e a do mesmo lote sem agendamento sai', async () => {
+        const a = await escolaNova()
+        const soOPedido = await alunoDesativado(a, QUARTA_1H, '63 months')
+        const soAMarca = await alunoDesativado(a, QUARTA_1H, '62 months')
+        const outra = await alunoDesativado(a, QUARTA_1H, '61 months')
+        await eliminacaoAgendada(a.escolaId, soOPedido, { marcar: false })
+        await bancada.pool.query('update usuario set eliminacao_agendada_em = now() where id = $1', [soAMarca])
+        // O pedido de outra pessoa não protege `outra`: é por titular.
+        await eliminacaoAgendada(a.escolaId, a.alunoId, { marcar: true })
+
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+
+        expect(await existe('usuario', soOPedido)).toBe(true)
+        expect(await existe('usuario', soAMarca)).toBe(true)
+        expect(await existe('usuario', outra)).toBe(false)
+        expect(await auditoriaDaEliminacao(soOPedido)).toEqual([])
+        expect(await auditoriaDaEliminacao(soAMarca)).toEqual([])
+        expect(await auditoriaDaEliminacao(outra)).toHaveLength(1)
+        // A contagem é só do que o job eliminou, e o lote não fica "cheio" pelas duas que ficaram.
+        expect(await linhaDaCategoria(a.escolaId, 'pessoa_desativada')).toEqual({ categoria: 'pessoa_desativada', linhas: 1, concluida: true })
+      })
+
+      it('a pessoa agendada não ocupa o lote: com o limite de 1 e a mais antiga agendada, pelo pedido ou pela marca, quem sai é a seguinte', async () => {
+        for (const { marcar } of [{ marcar: false }, { marcar: true }]) {
+          const a = await escolaNova()
+          const agendada = await alunoDesativado(a, QUARTA_1H, '63 months')
+          const outra = await alunoDesativado(a, QUARTA_1H, '61 months')
+          // No primeiro giro, só o pedido `agendado`; no segundo, só a marca do usuário.
+          if (marcar) await bancada.pool.query('update usuario set eliminacao_agendada_em = now() where id = $1', [agendada])
+          else await eliminacaoAgendada(a.escolaId, agendada, { marcar: false })
+
+          const doLote = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () =>
+            new ExpurgoDaEscolaRepository(bancada.banco).expurgarLote('usuario', { agora: QUARTA_1H, meses: 60, fuso: FUSO }, 1),
+          )
+
+          expect(doLote).toEqual({ linhas: 1, cheio: true })
+          expect(await existe('usuario', agendada)).toBe(true)
+          expect(await existe('usuario', outra)).toBe(false)
+        }
+      })
+
+      it('a eliminação agendada entre a escolha do lote e a trava também protege: a pessoa fica, sem auditoria, e a seguinte sai', async () => {
+        const a = await escolaNova()
+        const agendada = await alunoDesativado(a, QUARTA_1H, '62 months')
+        const outra = await alunoDesativado(a, QUARTA_1H, '61 months')
+        const cliente = await bancada.pool.connect()
+        try {
+          // A mais antiga é a primeira do lote: o job para na trava dela até o teste registrar a eliminação por fora (14.0).
+          await cliente.query('begin')
+          await cliente.query('select 1 from usuario where id = $1 for update', [agendada])
+          const job = rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+          await esperarNaTrava(bancada.pool, '%"desativado_em" from "usuario"%no key update%')
+          await cliente.query('update usuario set eliminacao_agendada_em = now() where id = $1', [agendada])
+          await cliente.query('commit')
+          await job
+        } finally {
+          cliente.release()
+        }
+        expect(await existe('usuario', agendada)).toBe(true)
+        expect(await existe('usuario', outra)).toBe(false)
+        expect(await auditoriaDaEliminacao(agendada)).toEqual([])
+        expect(await linhaDaCategoria(a.escolaId, 'pessoa_desativada')).toEqual({ categoria: 'pessoa_desativada', linhas: 1, concluida: true })
+      })
+
+      it('o pedido agendado registrado depois da escolha do lote, e antes da trava da própria pessoa, também a protege: a trava relê o pedido', async () => {
+        const a = await escolaNova()
+        const primeira = await alunoDesativado(a, QUARTA_1H, '63 months')
+        const agendada = await alunoDesativado(a, QUARTA_1H, '62 months')
+        const outra = await alunoDesativado(a, QUARTA_1H, '61 months')
+        const cliente = await bancada.pool.connect()
+        try {
+          // A mais antiga segura o job na trava dela; enquanto isso o pedido da segunda é registrado e confirmado, sem a marca.
+          await cliente.query('begin')
+          await cliente.query('select 1 from usuario where id = $1 for update', [primeira])
+          const job = rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+          await esperarNaTrava(bancada.pool, '%"desativado_em" from "usuario"%no key update%')
+          await eliminacaoAgendada(a.escolaId, agendada, { marcar: false })
+          await cliente.query('commit')
+          await job
+        } finally {
+          cliente.release()
+        }
+        expect(await existe('usuario', primeira)).toBe(false)
+        expect(await existe('usuario', agendada)).toBe(true)
+        expect(await existe('usuario', outra)).toBe(false)
+        expect(await auditoriaDaEliminacao(agendada)).toEqual([])
+        expect(await linhaDaCategoria(a.escolaId, 'pessoa_desativada')).toEqual({ categoria: 'pessoa_desativada', linhas: 2, concluida: true })
+      })
+
       it('a pessoa reativada e desativada de novo dentro do prazo, entre a escolha do lote e a trava, também não é eliminada', async () => {
         const a = await escolaNova()
         const reativada = await alunoDesativado(a, QUARTA_1H, '62 months')

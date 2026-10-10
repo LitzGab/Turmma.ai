@@ -42,6 +42,8 @@ const DADOS_DA_ALUNA_NO_PROVEDOR = ['aluna.ficticia.a@escola-a.educa-sintetica.t
 
 const FALHA_DO_PROVEDOR = 'falha=provedor'
 const RECUSA = 'falha=conta_externa_nao_ligada'
+/** A eliminação agendada (14.0): a conta do provedor está certa, e a falha é outra que a da conta não ligada. */
+const SUSPENSO = 'falha=acesso_suspenso'
 /** Senha sintética do aluno do login por matrícula, que tem de continuar entrando com o provedor fora. */
 const SENHA_SINTETICA_DO_ALUNO = 'senha-sintetica-do-aluno-13'
 
@@ -319,6 +321,69 @@ describe('login pela conta Google ou Microsoft da escola, contra o oidc-falso do
     await bancada.pool.query('update usuario set desativado_em = now() where escola_id = $1 and id = $2', [escolaId, professora.usuarioId])
     esperarRecusa(await entrar(slug, PROFESSORA_A), slug)
     expect(await sessoesDe(professora.usuarioId)).toHaveLength(1)
+  })
+
+  /** A eliminação agendada, como o registro a deixa: a coluna do usuário (o pedido e as sessões são da 14.0, em outro teste). */
+  const agendarEliminacao = (escolaId: string, usuarioId: string) =>
+    bancada.pool.query('update usuario set eliminacao_agendada_em = now() where escola_id = $1 and id = $2', [escolaId, usuarioId])
+  const cancelarEliminacao = (escolaId: string, usuarioId: string) =>
+    bancada.pool.query('update usuario set eliminacao_agendada_em = null where escola_id = $1 and id = $2', [escolaId, usuarioId])
+
+  function esperarSuspenso(resposta: Redirecionamento, slug: string): void {
+    expect(resposta.status).toBe(302)
+    expect(resposta.location).toBe(`/e/${slug}?${SUSPENSO}`)
+    // O cookie do provedor é apagado e nenhum cookie de sessão sai.
+    expect(resposta.setCookie).toEqual([expect.stringMatching(/^educa_oidc=; Path=\/v1\/sessao\/externa; HttpOnly; SameSite=Lax; Max-Age=0$/)])
+  }
+
+  it('eliminação agendada: a professora ligada, com a conta do provedor certa, recebe a falha acesso_suspenso e nenhuma sessão nasce; cancelada, entra', async () => {
+    const { escolaId, slug } = await escola()
+    const professora = await bancada.equipeComEmail(escolaId, EMAIL_PROFESSORA_A)
+    expect((await entrar(slug, PROFESSORA_A)).location).toBe('/')
+    const sessoesAntes = (await sessoesDe(professora.usuarioId)).length
+    await agendarEliminacao(escolaId, professora.usuarioId)
+    const recusadosAntes = await retornosContados('recusado')
+
+    const suspensa = await entrar(slug, PROFESSORA_A)
+
+    esperarSuspenso(suspensa, slug)
+    expect(await sessoesDe(professora.usuarioId)).toHaveLength(sessoesAntes)
+    expect((await retornosContados('recusado')) - recusadosAntes).toBe(1)
+    // A conta que não é dela continua com a falha de sempre: o suspenso não vaza para quem não provou a conta.
+    esperarRecusa(await entrar(slug, PESSOAL_COM_EMAIL_DA_PROFESSORA), slug)
+
+    await cancelarEliminacao(escolaId, professora.usuarioId)
+    expect((await entrar(slug, PROFESSORA_A)).location).toBe('/')
+    expect(await sessoesDe(professora.usuarioId)).toHaveLength(sessoesAntes + 1)
+  })
+
+  it('eliminação agendada: a professora ainda sem ligação não é ligada, e o login dela diz acesso_suspenso', async () => {
+    const { escolaId, slug } = await escola()
+    const professora = await bancada.equipeComEmail(escolaId, EMAIL_PROFESSORA_A)
+    await agendarEliminacao(escolaId, professora.usuarioId)
+
+    esperarSuspenso(await entrar(slug, PROFESSORA_A), slug)
+
+    expect(await ligacoesDa(escolaId)).toEqual([])
+    expect(await auditoriasDeLigacao(escolaId)).toEqual([])
+    expect(await sessoesDe(professora.usuarioId)).toEqual([])
+  })
+
+  it('eliminação agendada: a aluna ligada à conta da escola também recebe acesso_suspenso, e o login dela por matrícula diz o mesmo', async () => {
+    const { escolaId, slug } = await escola()
+    const aluna = await alunaLigada(escolaId)
+    await agendarEliminacao(escolaId, aluna.usuarioId)
+
+    esperarSuspenso(await entrar(slug, ALUNA_A), slug)
+
+    expect(await sessoesDe(aluna.usuarioId)).toEqual([])
+    const porMatricula = await fetch(`${api.url}/v1/sessao/matricula`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug, matricula: aluna.matricula, senha: SENHA_SINTETICA_DO_ALUNO }),
+    })
+    expect(porMatricula.status).toBe(403)
+    expect(((await porMatricula.json()) as { erro: { codigo: string } }).erro.codigo).toBe(CodigoDeErro.ACESSO_SUSPENSO)
   })
 
   it('borda: a escola com dois domínios Google aceita conta de qualquer um deles', async () => {

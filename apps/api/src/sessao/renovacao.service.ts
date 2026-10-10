@@ -49,8 +49,12 @@ export interface ResultadoDaRenovacaoHttp {
 
 /** O erro da renovação recusada, com o `Set-Cookie` que apaga o cookie que não vale mais. */
 export class RenovacaoRecusada extends ErroDeDominio {
-  constructor(readonly cookies: readonly string[]) {
-    super(CodigoDeErro.NAO_AUTENTICADO)
+  /** `ACESSO_SUSPENSO` quando o cookie é de uma pessoa com a eliminação agendada (14.0); `NAO_AUTENTICADO` em todo o resto. */
+  constructor(
+    readonly cookies: readonly string[],
+    codigo: CodigoDeErro = CodigoDeErro.NAO_AUTENTICADO,
+  ) {
+    super(codigo)
   }
 }
 
@@ -63,7 +67,9 @@ export interface DependenciasDaRenovacao {
 
 type Decisao =
   | { readonly resultado: 'ok' | 'resposta_perdida'; readonly sessao: SessaoParaRenovar; readonly rotacionadoEm: Date; readonly novoRefresh: string }
-  | { readonly resultado: 'ja_renovado' | 'reuso' | 'recusada' }
+  | { readonly resultado: 'ja_renovado' | 'reuso' }
+  /** `suspenso`: o cookie é de quem tem a eliminação agendada (14.0), e a resposta é `ACESSO_SUSPENSO`, não a recusa de sempre. */
+  | { readonly resultado: 'recusada'; readonly suspenso?: boolean }
 
 /**
  * `POST /v1/sessao/renovar` (Tech Spec, seção 5, "Renovar"). Numa transação, trava a sessão do cookie e decide:
@@ -76,6 +82,8 @@ type Decisao =
  * - **Cookie anterior, token novo já usado**: até 30 s, 409 `JA_RENOVADO` (outra aba renovou). Depois, é reuso: encerra
  *   a família, grava a auditoria `sessao.reuso_de_refresh` e responde 401.
  * - Sessão que não vale, cookie desconhecido ou fora do formato: 401, e o cookie é apagado.
+ * - Cookie atual de quem tem a eliminação agendada, de sessão que valeria sem a suspensão (F3, 14.0): 403 `ACESSO_SUSPENSO`, e o
+ *   cookie é apagado. Qualquer outro cookie dele (vencido, encerrado por outro motivo, já rotacionado) é o 401 de sempre.
  *
  * Renovar não move `ultimo_uso_em` (não é uso) nem `expira_em`, e grava `renovacao` no registro de acesso.
  */
@@ -99,7 +107,10 @@ export class RenovacaoService {
         throw new ErroDeDominio(CodigoDeErro.JA_RENOVADO)
       case 'reuso':
       case 'recusada':
-        throw new RenovacaoRecusada([serializarCookie(COOKIE_SESSAO, '', { ambiente: this.dependencias.ambiente, maxAgeSegundos: 0 })])
+        throw new RenovacaoRecusada(
+          [serializarCookie(COOKIE_SESSAO, '', { ambiente: this.dependencias.ambiente, maxAgeSegundos: 0 })],
+          decisao.resultado === 'recusada' && decisao.suspenso === true ? CodigoDeErro.ACESSO_SUSPENSO : undefined,
+        )
       default:
         return this.#emitir(decisao)
     }
@@ -110,7 +121,19 @@ export class RenovacaoService {
     const requisicaoId = contextoAtual()?.requisicaoId ?? randomUUID()
     return this.dependencias.banco.transaction(async (tx): Promise<Decisao> => {
       const achada = await new ResolucaoDeTenantRepository(tx).sessaoParaRenovar(refreshHash)
-      if (achada === undefined || !sessaoAindaVale(achada)) return { resultado: 'recusada' }
+      if (achada === undefined) return { resultado: 'recusada' }
+      // O cookie é a credencial da renovação, e só vale como tal o que valeria sem a suspensão: o cookie atual, de sessão
+      // aberta (ou encerrada pelo próprio registro da eliminação), dentro das 12 h e da inatividade. O cookie vencido, o
+      // encerrado por outro motivo e o já rotacionado respondem 401, como o desconhecido: o Chromebook do carrinho não
+      // conta a suspensão de quem o usou antes (14.0).
+      if (achada.eliminacaoAgendadaEm !== null) {
+        const valeriaSemASuspensao =
+          achada.pelo === 'atual' &&
+          (achada.encerradaEm === null || achada.motivo === 'eliminacao_agendada') &&
+          sessaoAindaVale({ ...achada, encerradaEm: null, eliminacaoAgendadaEm: null })
+        return valeriaSemASuspensao ? { resultado: 'recusada', suspenso: true } : { resultado: 'recusada' }
+      }
+      if (!sessaoAindaVale(achada)) return { resultado: 'recusada' }
       // Daqui em diante, a escola e o usuário da sessão travada são o contexto: toda escrita é na escola dela.
       return executarNoContexto({ requisicaoId, escolaId: achada.escolaId, usuarioId: achada.usuarioId }, async () => {
         const sessoes = new EscritaDeSessaoRepository(tx)

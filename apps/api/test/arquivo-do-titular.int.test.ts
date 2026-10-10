@@ -707,6 +707,25 @@ describe('arquivo do titular (F3, tarefa 13.0): do pedido ao download', () => {
     })
   })
 
+  describe('eliminação agendada (14.0): o acesso suspenso é o mesmo que não ter conta ativa', () => {
+    it('com a eliminação agendada o titular não tem conta ativa: o job faz a versão da escola, e ela vale enquanto a eliminação segue agendada', async () => {
+      const cenario = await novaEscola()
+      const professor = await pessoa(cenario, 'professor', 'Professor')
+      await semearProfessor(cenario, professor)
+      await bancada.pool.query('update usuario set eliminacao_agendada_em = now() where id = $1', [professor.id])
+      const pedidoId = await pedidoPronto(cenario, professor)
+      expect(armazem.objetos.has(`titular/${cenario.escolaId}/${pedidoId}/coordenacao.json`)).toBe(true)
+
+      const durante = await arquivoDaEscola(cenario.coordenacao, pedidoId)
+      // Cancelada a eliminação, ele volta a ter conta ativa: a versão da escola deixa de ser entregue por ela.
+      await bancada.pool.query('update usuario set eliminacao_agendada_em = null where id = $1', [professor.id])
+      const depois = await arquivoDaEscola(cenario.coordenacao, pedidoId)
+
+      expect(durante.status).toBe(200)
+      expect(depois.status).toBe(404)
+    })
+  })
+
   describe('correção de lote (RF11, regra 70, item 3)', () => {
     it('o lote pendente ou rejeitado sai só como estado, sem acertos nem diagnóstico, nas duas versões; o aprovado traz o resultado', async () => {
       const cenario = await novaEscola()

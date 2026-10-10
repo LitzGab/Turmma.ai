@@ -17,6 +17,7 @@ function linha(ajuste: Partial<LinhaDaSessao> = {}): LinhaDaSessao {
     usuarioId: token.usuarioId,
     papel: 'aluno',
     desativadoEm: null,
+    eliminacaoAgendadaEm: null,
     encerradaEm: null,
     expiraEm: new Date(AGORA.getTime() + 3_600_000),
     ultimoUsoEm: minutosAntes(1),
@@ -44,6 +45,9 @@ describe('avaliarSessao', () => {
     ['sessão de outro usuário (sessao.usuario_id ≠ sub)', linha({ usuarioId: '0190f5a0-0000-7000-8000-0000000000a2' })],
     ['sessão encerrada', linha({ encerradaEm: minutosAntes(1) })],
     ['usuário desativado', linha({ desativadoEm: minutosAntes(1) })],
+    // A eliminação agendada (F3, 14.0) tira o acesso mesmo com a sessão aberta: o registro encerra as sessões, e a guarda
+    // não confia só nisso para a sessão que nascesse no meio.
+    ['usuário com a eliminação agendada, sessão ainda aberta', linha({ eliminacaoAgendadaEm: minutosAntes(1) })],
     ['sessão expirada', linha({ expiraEm: minutosAntes(1) })],
     ['sessão expirando neste instante', linha({ expiraEm: AGORA })],
   ])('recusa %s', (_caso, lida) => {
@@ -82,6 +86,7 @@ describe('sessaoAindaVale: o que a renovação confere, igual à guarda', () => 
     expect(sessaoAindaVale(linha())).toBe(true)
     expect(sessaoAindaVale(linha({ encerradaEm: minutosAntes(1) }))).toBe(false)
     expect(sessaoAindaVale(linha({ desativadoEm: minutosAntes(1) }))).toBe(false)
+    expect(sessaoAindaVale(linha({ eliminacaoAgendadaEm: minutosAntes(1) }))).toBe(false)
     expect(sessaoAindaVale(linha({ expiraEm: AGORA }))).toBe(false)
     expect(sessaoAindaVale(linha({ ultimoUsoEm: minutosAntes(30 + TOLERANCIA_DE_INATIVIDADE_MIN - 1) }))).toBe(true)
     expect(sessaoAindaVale(linha({ ultimoUsoEm: minutosAntes(30 + TOLERANCIA_DE_INATIVIDADE_MIN) }))).toBe(false)

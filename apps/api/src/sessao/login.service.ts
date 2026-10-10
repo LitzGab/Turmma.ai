@@ -136,7 +136,15 @@ export class LoginService {
       return this.dependencias.conclusao.pedirSegundoFator(credencial.id, conviteId)
     }
     if (usuarios.length === 0) {
-      if (conviteId === undefined) return this.#recusar(tentativa, reserva, origem)
+      if (conviteId === undefined) {
+        // A senha está certa e nenhum usuário pode entrar: se é porque a eliminação está agendada (14.0), é só agora que a
+        // resposta diz que o acesso está suspenso. Conta sem usuário ativo nenhum segue como a senha errada.
+        if (await this.dependencias.resolucao.temAcessoSuspenso(credencial.id)) {
+          await contador.zerar(chave)
+          throw new ErroDeDominio(CodigoDeErro.ACESSO_SUSPENSO)
+        }
+        return this.#recusar(tentativa, reserva, origem)
+      }
       // A senha certa, com o bilhete desta conta, de um convite que já não ativa (revogado, ou trocado por um gerar que
       // venceu a trava) e sem outro usuário ativo: não houve acesso, e não foi senha errada. Nem `login` nem
       // `login_falho`, e o contador volta ao que era antes (Tech Spec da A0b, seção 5).

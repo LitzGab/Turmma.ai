@@ -625,6 +625,20 @@ describe('MFA do coordenador: configurar, ativar, entrar com o código e redefin
       }
     })
 
+    it('eliminação agendada (14.0): a escola em que a pessoa está agendada também recebe o registro da redefinição, porque o usuário continua sendo dela', async () => {
+      const escolaA = await bancada.escola()
+      const escolaB = await bancada.escola()
+      const coordenador = await pessoa(escolaA)
+      const usuarioEmB = await naOutraEscola(coordenador, escolaB)
+      await comMfaAtivo(coordenador)
+      await bancada.pool.query('update usuario set eliminacao_agendada_em = now() where id = $1', [usuarioEmB])
+
+      expect(await rodar(['--usuario', coordenador.usuarioId, '--pedido', '5150'])).toEqual({ codigo: 0, saida: 'ok\n', erro: '' })
+
+      expect(await auditoriaDeMfa(escolaA)).toHaveLength(1)
+      expect(await auditoriaDeMfa(escolaB)).toEqual([expect.objectContaining({ entidade_id: usuarioEmB, depois: { mfaAtivo: false, pedidoDoOperador: 5150 } })])
+    })
+
     it('caminho feliz (17.4): a redefinição pelo operador encerra as sessões abertas da conta em A e em B, e as duas dão 401; a sessão de outra pessoa continua', async () => {
       const escolaA = await bancada.escola()
       const escolaB = await bancada.escola()

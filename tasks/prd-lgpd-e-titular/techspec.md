@@ -31,7 +31,7 @@ Nada aqui usa IA.
 | `packages/nucleo/src/titular` | novo | `LeituraDoTitular`, `TrocaDeNome`, `Compartilhamento`, porta `ArmazemDeArquivos` (S3 e falso) |
 | `packages/nucleo/src/config` e `ia` | alterado | `IA_PROVEDOR_ID` e o caminho até `consumo_ia.provedor` (seção 3) |
 | `apps/api/src/privacidade` | novo | rotas da seção 4 |
-| `apps/api/src/sessao` | alterado | guarda, logins e renovação recusam `eliminacao_agendada_em` com `ACESSO_SUSPENSO` |
+| `apps/api/src/sessao` | alterado | a guarda recusa `eliminacao_agendada_em` com 401; logins e renovação, com `ACESSO_SUSPENSO` depois da credencial |
 | `apps/api/src/ops` | alterado | `ops:retencao`, `ops:suboperador`, `ops:incidente`, `ops:privacidade`, e a `OperacaoPrivacidadeRepository` |
 | `apps/worker` | alterado | processadores e agendamento da seção 5 |
 | `apps/web` | alterado | seção 9 |
@@ -488,6 +488,25 @@ na 15.0, pelo `titular.eliminar`, com o relógio injetado):
   pelo worker-lote a cada 5 min), a regra `infra/grafana/alertas/arquivo-em-preparacao.yaml` dispara acima de 2 por 1 min, e o
   parágrafo do runbook diz o que fazer. O pedido de acesso de um titular eliminado depois de pedir fica `em_preparacao` e dispara
   o alerta: é o sinal previsto, e a coordenação o conclui (a 15.0 pode decidir de outro jeito).
+
+**Tarefa 14.0, como ficou no código.**
+- **O gatilho `exigir_usuario_da_escola` entrou em `cancelado_por`, e não em `concluido_por`** (migration `0035_eliminacao_agendada`):
+  o job da eliminação (15.0) conclui com o autor `rotina` quando quem registrou já saiu da escola, e o gatilho o impediria.
+- **A marca `usuario.eliminacao_agendada_em` é gravada na mesma transação do registro**, pelo `CicloDeVidaService.agendarEliminacao`
+  (que trava o usuário, grava a marca e encerra as sessões com o motivo `eliminacao_agendada`), e o pedido nasce `agendado` já
+  com `eliminar_em = now() + 7 dias`, pelo relógio do banco. O cancelamento trava o pedido e depois o usuário.
+- **O `ACESSO_SUSPENSO` do login por e-mail sai só quando a conta não tem nenhuma escola utilizável e tem uma suspensa**; com
+  outra escola ativa, a pessoa entra nela, sem a suspensa no seletor (seção 4, "Login suspenso").
+- **A renovação responde `ACESSO_SUSPENSO` pelo cookie de renovação** (a credencial dela), e a senha errada na matrícula
+  suspensa é idêntica à matrícula inexistente (status, corpo, hash e contador).
+- **A redefinição do segundo fator usa `usuariosAtivosDaConta(contaId, { comSuspensos: true })`**: a auditoria lista todos os
+  acessos da conta, inclusive o suspenso, que a guarda recusa mas que existe.
+- **A tela "Login suspenso" (seção 9) não está em nenhuma tarefa da 14.0 à 19.0**, e hoje o 403 da renovação cai em
+  `indisponivel` em `apps/web/src/api/sessao.ts`: o Arquiteto aloca a tela em uma tarefa antes da validação. A API entrega o
+  código `ACESSO_SUSPENSO` (403) e, na conta externa, `?falha=acesso_suspenso`, com o texto do catálogo compartilhado.
+- **A renovação só diz `ACESSO_SUSPENSO` ao cookie que valeria sem a suspensão** (o atual, de sessão aberta ou encerrada com
+  `eliminacao_agendada`, dentro de `expira_em` e da inatividade); o vencido, o encerrado por outro motivo e o já rotacionado dão
+  401, como o desconhecido (seção 4, "Login suspenso").
 
 **Eliminação.**
 - **Registro.** O `POST` faz `insert … on conflict (escola_id, chave_envio) do nothing`; se nada voltar, devolve o

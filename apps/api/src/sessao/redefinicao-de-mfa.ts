@@ -76,7 +76,8 @@ export async function redefinirMfaPeloOperador(banco: Banco, autor: ConferenciaD
         if (conta === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
         await resolucao.apagarMfa(contaId)
         await new ContaGlobalRepository(tx).encerrarSessoesDaConta(contaId, 'mfa_redefinido')
-        const usuarios = await resolucao.usuariosAtivosDaConta(contaId)
+        // Com os agendados para eliminação (14.0): a coordenação de cada escola da conta é avisada, entre em ela ou não.
+        const usuarios = await resolucao.usuariosAtivosDaConta(contaId, { comSuspensos: true })
         const porEscola = new Map<string, string>([[alvo.escolaId, usuarioId]])
         for (const ativo of usuarios) if (!porEscola.has(ativo.escolaId)) porEscola.set(ativo.escolaId, ativo.usuarioId)
         for (const [escolaId, entidadeId] of porEscola) {

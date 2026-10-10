@@ -152,6 +152,31 @@ export class CicloDeVidaRepository {
   }
 
   /**
+   * Suspende o acesso da pessoa para a eliminação agendada (F3, tarefa 14.0; RF14): grava `eliminacao_agendada_em` com o
+   * `now()` do banco, **só se ainda não estava agendada**, e devolve a hora. `undefined` quando já estava (a segunda chamada
+   * não grava de novo nem mexe na data). Não toca em credencial, vínculo nem conta: o cancelamento devolve o acesso com a
+   * mesma senha.
+   */
+  async suspender(usuarioId: string): Promise<Date | undefined> {
+    const [linha] = await this.tx
+      .update(usuario)
+      .set({ eliminacaoAgendadaEm: sql`now()` })
+      .where(and(eq(usuario.escolaId, exigirEscolaDoContexto()), eq(usuario.id, usuarioId), isNull(usuario.eliminacaoAgendadaEm)))
+      .returning({ eliminacaoAgendadaEm: usuario.eliminacaoAgendadaEm })
+    return linha?.eliminacaoAgendadaEm ?? undefined
+  }
+
+  /** Devolve o acesso: apaga `eliminacao_agendada_em`. Devolve se havia suspensão a desfazer. */
+  async devolverAcesso(usuarioId: string): Promise<boolean> {
+    const devolvidos = await this.tx
+      .update(usuario)
+      .set({ eliminacaoAgendadaEm: null })
+      .where(and(eq(usuario.escolaId, exigirEscolaDoContexto()), eq(usuario.id, usuarioId), isNotNull(usuario.eliminacaoAgendadaEm)))
+      .returning({ id: usuario.id })
+    return devolvidos.length > 0
+  }
+
+  /**
    * Apaga o hash da senha da matrícula (regra 20, item 18): a linha fica, com a matrícula, que é registro escolar, e o
    * login responde como senha errada. Devolve se havia hash.
    */

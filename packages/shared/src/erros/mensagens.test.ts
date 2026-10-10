@@ -142,6 +142,11 @@ describe('mensagemDaFalhaExterna', () => {
     expect(mensagemDaFalhaExterna('conta_externa_nao_ligada')).not.toBe(MENSAGENS_DA_FALHA_EXTERNA.provedor)
   })
 
+  it('a conta suspensa pela eliminação agendada tem o texto do catálogo, e não o do provedor (F3, 14.0)', () => {
+    expect(mensagemDaFalhaExterna('acesso_suspenso')).toBe(MENSAGENS_DE_ERRO.ACESSO_SUSPENSO)
+    expect(mensagemDaFalhaExterna('acesso_suspenso')).not.toBe(MENSAGENS_DA_FALHA_EXTERNA.provedor)
+  })
+
   it('toda falha declarada no contrato tem mensagem, e nenhuma mostra código nem status', () => {
     for (const falha of FALHAS_DO_LOGIN_EXTERNO) {
       const mensagem = mensagemDaFalhaExterna(falha)

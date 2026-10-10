@@ -30,6 +30,12 @@ export type SolicitanteDoPedido = (typeof SOLICITANTES_DO_PEDIDO)[number]
 export const ESTADOS_DO_PEDIDO = ['recebido', 'em_preparacao', 'pronto', 'agendado', 'concluido', 'cancelado'] as const
 export type EstadoDoPedido = (typeof ESTADOS_DO_PEDIDO)[number]
 
+/**
+ * Quantos dias a eliminação fica agendada, com o acesso suspenso, antes de acontecer de fato (F3, RF14; Tech Spec do F3,
+ * seção 5): é o tempo em que a coordenação ainda cancela e o acesso volta. Conta do `now()` do banco, nunca do cliente.
+ */
+export const PRAZO_DA_ELIMINACAO_DIAS = 7
+
 /** Os estados de `concluir` e `corrigir_nome`: o pedido aberto, que a coordenação ainda atende. */
 export const ESTADOS_ABERTOS_DO_PEDIDO = ['recebido', 'em_preparacao', 'pronto'] as const
 

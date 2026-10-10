@@ -41,6 +41,8 @@ export const STATUS_HTTP_DO_CODIGO: Readonly<Record<CodigoDeErro, number>> = {
   RETENCAO_FORA_DO_LIMITE: 422,
   // F3, RF16: o pedido do titular não está no estado que a ação pede (fora de correção, já fechado, eliminação).
   PEDIDO_EM_ESTADO_INVALIDO: 409,
+  // F3, RF14: a credencial está certa, mas a eliminação da pessoa está agendada. 403, e não 401: a web não tenta renovar nem deslogar em laço.
+  ACESSO_SUSPENSO: 403,
 }
 
 /**

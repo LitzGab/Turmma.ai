@@ -127,6 +127,20 @@ export class PrivacidadeController {
     return this.privacidade.concluirPedido(idDoCaminho(id))
   }
 
+  /**
+   * O cancelamento da eliminação agendada (F3, tarefa 14.0; RF14): o acesso volta com a mesma senha. Só em `agendado`, antes
+   * de `eliminar_em` e antes de enfileirado; fora disso, `PEDIDO_EM_ESTADO_INVALIDO`. O pedido de outra escola e o inexistente
+   * respondem `NAO_ENCONTRADO`.
+   */
+  @Post('pedidos/:id/cancelar')
+  @Permite('privacidade_pedidos', 'cancelar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Header('Cache-Control', 'no-store')
+  cancelarPedido(@Param('id') id: string, @Body() corpo: unknown): Promise<void> {
+    lerEntrada(esquemaPedidoSemCorpo, corpo)
+    return this.privacidade.cancelarPedido(idDoCaminho(id))
+  }
+
   /** A correção do nome do titular, só em pedido de correção aberto, auditada sem o nome. */
   @Post('pedidos/:id/corrigir-nome')
   @Permite('privacidade_pedidos', 'corrigir_nome')

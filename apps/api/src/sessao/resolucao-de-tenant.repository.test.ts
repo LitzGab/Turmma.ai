@@ -33,6 +33,7 @@ describe('ResolucaoDeTenantRepository: toda operação sem escopo é marcada e j
       'gravarSegredoDeMfa',
       'mfaDaConta',
       'sessaoParaRenovar',
+      'temAcessoSuspenso',
       'travarContaParaRedefinir',
       'usarCodigoDeRecuperacao',
       'usarConvitePorHash',

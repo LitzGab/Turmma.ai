@@ -561,6 +561,37 @@ arquivo atrasou, sem mandar conteúdo por mensagem.
 **Depois:** registre no `TODO.md` a escola (id), o pedido (id), quando foi registrado e a causa, só com ids e datas. Causa nova vira
 tarefa com teste que a reproduz.
 
+## Voltar o código com eliminação agendada em curso (rollback)
+
+*Procedimento, não alerta: não há regra em `infra/grafana/alertas/`. Vale para qualquer volta de versão que passe pela migration
+`0035_eliminacao_agendada` (F3, tarefa 14.0; Tech Spec do F3, seção 5).*
+
+**O que a migration deixou:** a coluna `usuario.eliminacao_agendada_em` (a data do registro da eliminação), o estado
+`pedido_titular.estado = 'agendado'` (com `eliminar_em` e a trava de um por titular) e o motivo de sessão `eliminacao_agendada`.
+Tudo só expande: o código anterior roda sobre ela sem erro. **Não reverta a 0035**: apagar a coluna, o estado ou o motivo
+com pedido em curso apaga a única marca de que aquela pessoa não pode entrar.
+
+**O que o código anterior faz com elas:** ignora a coluna. Ele não conhece o `agendado`, não recusa o login, a renovação nem a
+guarda do usuário com a eliminação agendada, e não pula esse usuário no expurgo de `pessoa_desativada`. Durante a volta, quem
+tinha pedido agendado **entra de novo**, e o prazo de 7 dias (que é o do banco, em `eliminar_em`) segue correndo.
+
+**Antes de voltar:** liste o que está agendado, só ids e datas (nunca nome nem matrícula):
+`docker compose exec postgres psql -U educa -c "select p.escola_id, p.id as pedido_id, p.titular_id, p.registrado_em, p.eliminar_em from pedido_titular p where p.estado = 'agendado' order by p.eliminar_em"`.
+Nenhum desses pedidos se cancela nem se conclui à mão. Se a volta passa de algumas horas, avise a coordenação de cada escola da
+lista (ela é quem cancela pela tela) de que, até a versão voltar, a pessoa não está com o acesso suspenso.
+
+**Na volta para a versão nova (roll-forward):** a marca continua na coluna. A guarda, a renovação, o login e o seletor voltam a
+recusar sozinhos, sem comando: a sessão que a pessoa abriu enquanto o código anterior rodava deixa de valer na próxima
+requisição (a guarda lê a marca, não só a sessão). O prazo de `eliminar_em` não se move: o pedido
+`agendado` cujo prazo venceu durante a volta é o que o job da eliminação (tarefa 15.0) pega na primeira passada depois dela.
+
+**Não faça:** gravar `eliminacao_agendada_em` à mão (a marca é espelho do pedido, e o cancelamento a apaga junto), nem mudar o
+`estado` do pedido por `update`: o cancelamento e a conclusão pelo caso de uso gravam a auditoria que responde "quem cancelou e
+quando".
+
+**Depois:** registre no `TODO.md` a janela (de quando a quando), as escolas avisadas e quantos pedidos `agendado` estavam em curso,
+só com ids e datas.
+
 ## Rotina do sistema sem rodar (consolidação de uso, expurgo de jobs, expurgo do acesso)
 
 *A preencher antes da primeira escola real* (pendência em `TODO.md`). Hoje nada avisa se
