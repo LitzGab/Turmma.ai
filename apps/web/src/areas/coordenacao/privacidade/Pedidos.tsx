@@ -12,7 +12,7 @@ import { Estado } from '../../../componentes/SeloDeEstado'
 import { Tabela, type ColunaDaTabela } from '../../../componentes/Tabela'
 import { CabecalhoDeSecao } from '../../../componentes/Tela'
 import { mensagemDoErro } from '../../../api/cliente'
-import { ROTAS_DA_COORDENACAO } from '../../../caminhos'
+import { caminhoDoPedidoDoTitular, ROTAS_DA_COORDENACAO } from '../../../caminhos'
 import { formatarData } from '../../../formatar'
 import { RegistrarPedido } from './RegistrarPedido'
 import {
@@ -29,7 +29,16 @@ import {
 const TEXTO_SEM_TURMA_DO_ELIMINADO = 'Não consta'
 
 const COLUNAS_DOS_PEDIDOS: readonly [ColunaDaTabela<ItemDoPedido>, ...ColunaDaTabela<ItemDoPedido>[]] = [
-  { chave: 'pessoa', titulo: 'Pessoa', celula: (pedido) => pedido.titular?.nome ?? TEXTO_DO_TITULAR_ELIMINADO },
+  {
+    chave: 'pessoa',
+    titulo: 'Pessoa',
+    // O link abre o detalhe do pedido (17.0). O nome é o texto do link, e o endereço leva só o id do pedido.
+    celula: (pedido) => (
+      <Link to={caminhoDoPedidoDoTitular(pedido.id)} className="inline-flex min-h-11 items-center text-caramelo-texto underline">
+        {pedido.titular?.nome ?? TEXTO_DO_TITULAR_ELIMINADO}
+      </Link>
+    ),
+  },
   { chave: 'turma', titulo: 'Turma', celula: (pedido) => (pedido.titular === null ? TEXTO_SEM_TURMA_DO_ELIMINADO : textoDasTurmas(pedido.titular.turmas)) },
   { chave: 'tipo', titulo: 'Pedido', celula: (pedido) => ROTULO_DO_TIPO[pedido.tipo] },
   { chave: 'solicitante', titulo: 'Quem pediu', celula: (pedido) => ROTULO_DE_QUEM_PEDIU[pedido.solicitante] },
@@ -46,7 +55,7 @@ const COLUNAS_DOS_PEDIDOS: readonly [ColunaDaTabela<ItemDoPedido>, ...ColunaDaTa
 
 /**
  * A aba "Pedidos" (F3, 16.0; RF10, RF14 e RF16): os pedidos dos titulares desta escola, o mais recente primeiro, e o
- * "Registrar pedido" que abre a busca e a confirmação. O detalhe de cada pedido é da 17.0.
+ * "Registrar pedido" que abre a busca e a confirmação. O nome da pessoa abre o detalhe do pedido (17.0, `DetalheDoPedido.tsx`).
  *
  * - **Sempre relê ao abrir**: a lista não fica guardada fora da tela (`gcTime: 0`, em `api/privacidade.ts`), então cada
  *   abertura é uma leitura nova. Outra pessoa da coordenação pode ter registrado, e a eliminação muda de estado sozinha (o
@@ -71,7 +80,7 @@ export function Pedidos() {
       <CabecalhoDeSecao
         id="titulo-dos-pedidos"
         titulo="Pedidos dos titulares"
-        apoio="Acesso, portabilidade, compartilhamento, correção e eliminação de dados, pedidos pela própria pessoa ou pelo responsável."
+        apoio="Acesso, portabilidade, compartilhamento, correção e eliminação de dados, pedidos pela própria pessoa ou pelo responsável. O prazo de cada um aparece no detalhe."
         acao={<RegistrarPedido aoRegistrado={definirAnuncio} />}
       />
       <Anuncio texto={anuncio} />

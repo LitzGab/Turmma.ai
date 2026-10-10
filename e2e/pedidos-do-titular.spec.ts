@@ -1,6 +1,30 @@
-import type { Locator, Page, Route } from '@playwright/test'
+import type { Route } from '@playwright/test'
 import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, esperarGovernanca, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
+import {
+  abrirABusca,
+  acionar,
+  busca,
+  buscarPor,
+  campoDoTermo,
+  comoNaTela,
+  confirmacao,
+  COR_DO_OFICIAL,
+  COR_DO_PERIGO,
+  doisCliquesNoMesmoInstante,
+  ELIMINADO,
+  ENDERECO_DA_ABA,
+  entrarNosPedidos,
+  escolherEPedir,
+  HOMONIMO,
+  hoje,
+  INDISPONIVEL,
+  linhaDa,
+  linhas,
+  marca,
+  portao,
+  principal,
+} from './__fixtures__/pedidos-do-titular.ts'
 import {
   colocarAlunoNaTurma,
   convidarProfessorNoBanco,
@@ -10,7 +34,6 @@ import {
   criarPedidoDeTitularEliminadoNoBanco,
   criarPedidosDoTitularNoBanco,
   pedidosDoTitularNoBanco,
-  type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
 import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -20,84 +43,14 @@ import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './
  * API real, nos projetos `chromebook` e `celular`. O que o clique fez se confere **no banco**, e não só no que a tela diz.
  */
 
-const ENDERECO_DA_ABA = /\/coordenacao\/privacidade\/pedidos$/
-const TITULO_DA_BUSCA = 'Registrar pedido de titular'
 const CARREGANDO = 'Carregando os pedidos…'
 const VAZIO = 'Nenhum pedido registrado'
-const HOMONIMO = 'Há outro aluno com o mesmo nome completo nesta escola. O nome não será trocado nos textos livres.'
-const ELIMINADO = 'Titular eliminado'
 const TEXTO_DO_ALUNO_DA_LISTA = 'O aluno que ainda não reivindicou o nome não tem conta e não aparece na busca'
 const LIMITE_DE_BUSCAS = 'Muitas buscas em pouco tempo. Aguarde um minuto e busque de novo.'
 const NINGUEM = 'Nenhuma pessoa encontrada com esse nome.'
 const CURTO = 'Digite pelo menos 3 letras do nome.'
 const QUEDA_DO_REGISTRO = 'Não foi possível confirmar o registro agora. Tente de novo: o pedido não será registrado duas vezes.'
-const INDISPONIVEL = JSON.stringify({ erro: { codigo: 'INDISPONIVEL_TENTE_DE_NOVO', mensagem: 'texto que a tela não usa', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } })
 const LIMITE = JSON.stringify({ erro: { codigo: 'LIMITE_EXCEDIDO', mensagem: 'texto que a tela não usa', requisicaoId: '0190f5a0-0000-7000-8000-000000000002' } })
-/** O vermelho do `perigo` (`--color-erro`, #b42318) e o preto da decisão oficial (`--color-noite`, #0d0d0d). */
-const COR_DO_PERIGO = 'rgb(180, 35, 24)'
-const COR_DO_OFICIAL = 'rgb(13, 13, 13)'
-
-const principal = (page: Page) => page.getByRole('main')
-const busca = (page: Page) => page.getByRole('dialog', { name: TITULO_DA_BUSCA })
-const confirmacao = (page: Page, titulo: string) => page.getByRole('alertdialog', { name: titulo, exact: true })
-const campoDoTermo = (page: Page) => busca(page).getByLabel('Nome do aluno ou do professor')
-const marca = () => Math.random().toString(36).slice(2, 10)
-/** As linhas da lista de pedidos: `tr` do corpo no chromebook, `li` da lista no celular. */
-const linhas = (page: Page) => principal(page).locator('tbody tr, ul[data-tabela="lista"] > li')
-const linhaDa = (page: Page, texto: string | RegExp) => linhas(page).filter({ hasText: texto })
-const hoje = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
-/** O dia como a tela o escreve: "9 de outubro de 2026". */
-const comoNaTela = (dia: string) => new Date(`${dia}T12:00:00Z`).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
-
-async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
-  if (hasTouch) await alvo.tap()
-  else await alvo.click()
-}
-
-function portao(): { aberta: Promise<void>; abrir: () => void } {
-  let abrir: () => void = () => undefined
-  const aberta = new Promise<void>((resolver) => {
-    abrir = resolver
-  })
-  return { aberta, abrir }
-}
-
-/** Os dois cliques de um clique duplo no mesmo instante, antes de a tela desligar o botão. */
-async function doisCliquesNoMesmoInstante(botao: Locator): Promise<void> {
-  await botao.evaluate((elemento: HTMLButtonElement) => {
-    elemento.click()
-    elemento.click()
-  })
-}
-
-/** A coordenadora entra e abre a Privacidade pela navegação: a aba que abre é a dos pedidos. */
-async function entrarNosPedidos(page: Page, hasTouch: boolean, pessoa: EquipeDeTeste): Promise<void> {
-  await page.goto('/entrar')
-  await entrarComoCoordenacaoNaMesmaAba(page, pessoa, hasTouch)
-  await esperarGovernanca(page)
-  await irPelaNavegacao(page, 'Privacidade', hasTouch)
-  await expect(page).toHaveURL(ENDERECO_DA_ABA, { timeout: PRAZO_DA_ENTRADA_MS })
-  await expect(principal(page).getByRole('button', { name: 'Registrar pedido', exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-}
-
-async function abrirABusca(page: Page, hasTouch: boolean): Promise<void> {
-  await acionar(principal(page).getByRole('button', { name: 'Registrar pedido', exact: true }), hasTouch)
-  await expect(busca(page)).toBeVisible()
-}
-
-/** Digita o termo e busca pelo Enter, que é como a coordenação busca no teclado. */
-async function buscarPor(page: Page, termo: string): Promise<void> {
-  await campoDoTermo(page).fill(termo)
-  await campoDoTermo(page).press('Enter')
-}
-
-/** Escolhe a pessoa (radio) e preenche o pedido, e segue para a confirmação. */
-async function escolherEPedir(page: Page, hasTouch: boolean, pessoa: RegExp, tipo: string, quemPediu = 'A própria pessoa'): Promise<void> {
-  await busca(page).getByRole('radio', { name: pessoa }).check()
-  await busca(page).getByLabel('Tipo do pedido').selectOption({ label: tipo })
-  await busca(page).getByLabel('Quem pediu').selectOption({ label: quemPediu })
-  await acionar(busca(page).getByRole('button', { name: 'Continuar', exact: true }), hasTouch)
-}
 
 test.describe('Pedidos: registrar o pedido de um titular', () => {
   test('dois alunos com o mesmo nome: escolhe o certo pela turma, o diálogo avisa do homônimo, a eliminação vai em perigo e dois cliques registram um pedido só', async ({ page, hasTouch }) => {

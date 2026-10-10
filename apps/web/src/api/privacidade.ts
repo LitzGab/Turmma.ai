@@ -1,14 +1,17 @@
 import {
   esquemaPedidoDoTitular,
   esquemaRespostaBuscaDeTitulares,
+  esquemaRespostaDoArquivo,
   esquemaRespostaIncidentes,
   esquemaRespostaPedidos,
   esquemaRespostaPreviaDoTitular,
   esquemaRespostaRetencao,
   esquemaRespostaSuboperadores,
+  type FinalidadeDoArquivo,
   type PedidoDoTitular,
   type RegistroDePedido,
   type RespostaBuscaDeTitulares,
+  type RespostaDoArquivo,
 } from '@educa/shared'
 import { infiniteQueryOptions, queryOptions, type QueryClient } from '@tanstack/react-query'
 import { SEM_CORPO } from './cliente'
@@ -118,4 +121,62 @@ export function registrarPedidoDoTitular(registro: RegistroDePedido): Promise<Pe
 /** Relê a lista de pedidos depois de um registro, e só então o diálogo termina: o que aparece é o que o servidor tem. */
 export function relerPedidosDoTitular(cliente: QueryClient): Promise<void> {
   return cliente.invalidateQueries({ queryKey: consultaPedidosDoTitular.queryKey })
+}
+
+/**
+ * O detalhe de um pedido: o prazo, a foto do compartilhamento e o que a eliminação fez com o nome (F3, 17.0; RF16). Cada
+ * leitura é auditada em nome da coordenação (`pedido.lido`, regra 20, item 10), e por isso o detalhe não se relê sozinho:
+ * nem ao voltar o foco da janela, nem quando a rede volta. Quem relê é a mutação que terminou, o botão "Atualizar" e, só com o
+ * arquivo em preparação, o relógio de 10 s (`preparacao-do-arquivo.ts`).
+ *
+ * Fora da tela o pedido não fica guardado (`gcTime: 0`): nome e turma do titular não ficam na memória do computador
+ * compartilhado da secretaria. A chave leva o id, e outro pedido é outra consulta.
+ */
+export function consultaPedidoDoTitular(pedidoId: string) {
+  return queryOptions({
+    queryKey: [...CHAVE_DA_PRIVACIDADE, 'pedido', pedidoId],
+    queryFn: ({ signal }) => buscarComSessao(`${CAMINHO_DOS_PEDIDOS}/${encodeURIComponent(pedidoId)}`, esquemaPedidoDoTitular, signal),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    gcTime: 0,
+  })
+}
+
+function caminhoDoPedido(pedidoId: string, acao: string): string {
+  return `${CAMINHO_DOS_PEDIDOS}/${encodeURIComponent(pedidoId)}/${acao}`
+}
+
+/**
+ * `POST pedidos/:id/concluir`: o fim do atendimento do pedido de acesso, portabilidade, compartilhamento ou correção. Quem
+ * concluiu e quando ficam na API e na auditoria. O clique duplo decide no banco: o segundo recebe `PEDIDO_EM_ESTADO_INVALIDO`.
+ */
+export function concluirPedidoDoTitular(pedidoId: string): Promise<void> {
+  return chamarComSessao(caminhoDoPedido(pedidoId, 'concluir'), SEM_CORPO, { metodo: 'POST', corpo: {} })
+}
+
+/** `POST pedidos/:id/cancelar`: só a eliminação agendada, antes dos 7 dias; o acesso da pessoa volta. */
+export function cancelarPedidoDoTitular(pedidoId: string): Promise<void> {
+  return chamarComSessao(caminhoDoPedido(pedidoId, 'cancelar'), SEM_CORPO, { metodo: 'POST', corpo: {} })
+}
+
+/** `POST pedidos/:id/corrigir-nome`: o nome novo vai **no corpo**, nunca na URL; o nome anterior não volta em resposta nenhuma. */
+export function corrigirNomeDoTitular(pedidoId: string, nome: string): Promise<void> {
+  return chamarComSessao(caminhoDoPedido(pedidoId, 'corrigir-nome'), SEM_CORPO, { metodo: 'POST', corpo: { nome } })
+}
+
+/**
+ * `POST pedidos/:id/arquivo`: a URL de 5 minutos da versão da escola, com a finalidade, que a API grava na auditoria
+ * (`titular.arquivo_baixado`). É `POST` e não consulta: cada clique é um download registrado, e a resposta nunca é guardada.
+ */
+export function pedirArquivoDaEscola(pedidoId: string, finalidade: Exclude<FinalidadeDoArquivo, 'acesso_do_proprio_titular'>): Promise<RespostaDoArquivo> {
+  return chamarComSessao(caminhoDoPedido(pedidoId, 'arquivo'), esquemaRespostaDoArquivo, { metodo: 'POST', corpo: { finalidade } })
+}
+
+/**
+ * Relê o detalhe depois de uma ação, e só então o diálogo termina: o estado que aparece é o do servidor, e a leitura que
+ * estava no ar antes da ação é cancelada (`invalidateQueries`), para a resposta atrasada de antes não vencer. A lista não
+ * entra: ela não está na tela (a página do pedido é outra rota) e não fica guardada (`gcTime: 0`), e a abertura seguinte lê de novo.
+ */
+export function relerPedidoDoTitular(cliente: QueryClient, pedidoId: string): Promise<void> {
+  return cliente.invalidateQueries({ queryKey: consultaPedidoDoTitular(pedidoId).queryKey })
 }

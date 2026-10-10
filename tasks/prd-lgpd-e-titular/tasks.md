@@ -122,7 +122,7 @@
   - [ ] 16.4 Aviso do aluno da lista
   - [ ] 16.5 Testes
 
-- [ ] **17.0 — A coordenação conduz o pedido até o fim pela tela**
+- [x] **17.0 — A coordenação conduz o pedido até o fim pela tela**
   - [ ] 17.1 Prazo ("faltam N dias", vencido com ícone) e compartilhamento
   - [ ] 17.2 Concluir, Cancelar (diz que o acesso volta), Corrigir nome (antes e depois, aviso do nome anterior)
   - [ ] 17.3 Baixar a versão da escola (`oficial`, finalidade, entregar e apagar)

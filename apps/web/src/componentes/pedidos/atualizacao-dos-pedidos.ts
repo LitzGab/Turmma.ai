@@ -25,12 +25,12 @@ export interface AbaDoNavegador {
 }
 
 /**
- * Relê a lista a cada 15 s enquanto a aba está à vista, e para com ela escondida: a aba esquecida atrás de outra não fica
- * batendo na API (regra 80). Quando a aba volta, relê na hora e recomeça a contagem. Para a coordenação não agenda nada.
- * Devolve como parar, para quando a lista sai da tela.
+ * Relê de `intervaloMs` em `intervaloMs` enquanto a aba está à vista, e para com ela escondida: a aba esquecida atrás de
+ * outra não fica batendo na API (regra 80). Quando a aba volta, relê na hora e recomeça a contagem. Devolve como parar, para
+ * quando a tela sai da página. É a regra de quem se atualiza sozinho: a lista do professor (15 s, abaixo) e o detalhe do
+ * pedido do titular em preparação (10 s, `areas/coordenacao/privacidade/preparacao-do-arquivo.ts`).
  */
-export function agendarAtualizacao(quem: DecisorDaReivindicacao, atualizar: () => void, aba: AbaDoNavegador): () => void {
-  if (!atualizaSozinha(quem)) return () => undefined
+export function agendarRelitura(atualizar: () => void, aba: AbaDoNavegador, intervaloMs: number): () => void {
   let relogio: ReturnType<typeof setInterval> | undefined
   function parar(): void {
     if (relogio !== undefined) clearInterval(relogio)
@@ -38,7 +38,7 @@ export function agendarAtualizacao(quem: DecisorDaReivindicacao, atualizar: () =
   }
   function comecar(): void {
     parar()
-    if (aba.visibilityState === 'visible') relogio = setInterval(atualizar, INTERVALO_DA_ATUALIZACAO_MS)
+    if (aba.visibilityState === 'visible') relogio = setInterval(atualizar, intervaloMs)
   }
   function aoMudarDeVista(): void {
     if (aba.visibilityState === 'visible') atualizar()
@@ -50,6 +50,15 @@ export function agendarAtualizacao(quem: DecisorDaReivindicacao, atualizar: () =
     parar()
     aba.removeEventListener('visibilitychange', aoMudarDeVista)
   }
+}
+
+/**
+ * Relê a lista a cada 15 s enquanto a aba está à vista, e para com ela escondida (`agendarRelitura`). Para a coordenação
+ * não agenda nada. Devolve como parar, para quando a lista sai da tela.
+ */
+export function agendarAtualizacao(quem: DecisorDaReivindicacao, atualizar: () => void, aba: AbaDoNavegador): () => void {
+  if (!atualizaSozinha(quem)) return () => undefined
+  return agendarRelitura(atualizar, aba, INTERVALO_DA_ATUALIZACAO_MS)
 }
 
 /**

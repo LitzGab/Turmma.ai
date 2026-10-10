@@ -447,3 +447,32 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
       escola, não vê os pedidos da anterior nem enquanto a lista dela não chegou;
     - estados: carregando, erro com "Tentar de novo", vazio e com dado, com o titular eliminado, a página de 50 com "Ver mais
       pedidos" e a ordem pela chegada; sem violação grave de acessibilidade e sem rolagem de lado.
+  - **Tarefa 17.0, onde cada um está** (`e2e/pedido-do-titular.spec.ts`, nos projetos `chromebook` e `celular`, com o worker e o
+    armazém de verdade; `apps/web/src/areas/coordenacao/privacidade/textos-do-pedido.test.ts` e `preparacao-do-arquivo.test.ts`
+    para as regras sem React e o relógio de 10 s; `apps/web/src/api/privacidade.test.ts` para as leituras e as ações):
+    - prazo: faltam 4 dias com a data, vencido há 5 dias com o ícone do erro, e o concluído sem prazo; cada abertura é uma
+      leitura auditada (`pedido.lido`, com a finalidade fixa); o dia do vencimento ainda é prazo (unidade);
+    - compartilhamento: a empresa pelo nome do cadastro, a que não está cadastrada dita como tal, a origem de cada linha e o
+      aviso de que a escola precisa avisá-las; a chave nunca é o texto quando há nome;
+    - concluir: o diálogo mostra quem, o quê, a situação e o que fica registrado; com o pedido no ar o botão fica desligado
+      ("Concluindo…") e o clique duplo conclui uma vez; o banco tem `concluido_por`, e a auditoria, o `antes` e o `depois`; a
+      segunda pessoa que concluiu antes recebe o texto do que mudou, sem o botão, e a página já relida;
+    - resposta atrasada: a leitura que estava no ar quando a conclusão terminou chega depois e não desfaz o resultado;
+    - corrigir o nome: o nome atual e o novo antes de confirmar, o aviso do nome anterior, o igual ao atual recusado, o
+      cadastro corrigido e a auditoria sem nenhum dos dois nomes; fora do pedido de correção (ou concluído) o botão não existe;
+    - eliminação: o detalhe da agendada diz que o acesso está suspenso e o prazo; o cancelamento diz que o acesso volta, o
+      botão que fecha diz "Manter a eliminação"; o banco tem `cancelado` e o nome intacto; o cancelamento que já não vale diz por
+      quê e não se oferece de novo;
+    - baixar: a finalidade é escolha da lista e sem ela o botão não liga; o diálogo diz que traz a conversa do Tutor, que fica
+      registrado e que o arquivo se entrega e se apaga; o download tem o nome `meus-dados-AAAA-MM-DD.json` e o conteúdo da pessoa
+      pedida; a auditoria traz a finalidade e a versão `coordenacao`; com conta ativa a falha diz que ela baixa o dela, e nada
+      é registrado; o endereço assinado não fica na página;
+    - preparação: com o relógio simulado, relê a cada 10 s, para com a aba escondida (nenhuma leitura em um minuto), relê na
+      hora ao voltar, mostra "pronto" e anuncia sem recarregar a página (um marcador na janela sobrevive), e para de reler;
+    - estados: carregando, erro com "Tentar de novo", dado e o pedido que não se acha (título da aba sem nome); o titular
+      eliminado, sem nome, sem turma e sem ações.
+    - trocar de pedido: ir a outro pedido pelo histórico, com o diálogo aberto, fecha o diálogo, e o aviso do que terminou no
+      primeiro não vai para o segundo; os dois pedidos ficam como o banco os tem (`e2e/pedido-do-titular.spec.ts`);
+    - o endereço e o download (unidade): o id vai escapado no caminho da API e no endereço da tela
+      (`apps/web/src/caminhos.test.ts`, `api/privacidade.test.ts`); a âncora do download leva o endereço, o nome e o `rel`
+      seguro, e sai da página (`componentes/baixar-por-url.test.ts`).

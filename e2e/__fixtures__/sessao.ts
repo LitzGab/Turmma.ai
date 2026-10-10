@@ -1068,3 +1068,102 @@ export async function criarPedidoDeTitularEliminadoNoBanco(escolaId: string, reg
     return pedidoId
   })
 }
+
+/** O que o teste do detalhe do pedido semeia (F3, 17.0): o que muda de um pedido para outro, com o resto no valor de sempre. */
+export interface PedidoDoTitularSemeado {
+  readonly escolaId: string
+  readonly titularId: string
+  readonly registradoPor: string
+  readonly tipo: 'acesso' | 'portabilidade' | 'compartilhamento' | 'correcao' | 'eliminacao'
+  readonly estado: 'recebido' | 'em_preparacao' | 'pronto' | 'agendado' | 'concluido' | 'cancelado'
+  /** Quantos dias antes de hoje o pedido chegou à escola: é o que o prazo do detalhe conta. */
+  readonly chegouHaDias?: number
+  readonly solicitante?: 'titular' | 'responsavel_legal'
+  /** A foto do compartilhamento, como o `POST pedidos` a grava. */
+  readonly compartilhamento?: readonly {
+    readonly suboperadorId: string | null
+    readonly chave: string
+    readonly primeiroEm: string
+    readonly ultimoEm: string
+    readonly origem: 'rastro' | 'periodo'
+  }[]
+}
+
+/**
+ * Um pedido do titular com o estado e a chegada que o teste quer, direto no banco: atalho só do e2e para o que o
+ * relógio ou o worker levariam dias ou minutos para produzir. O pedido que passa pelo caminho de verdade nasce pela tela
+ * (16.0). Concluído ou cancelado leva o autor e a data, como o check do banco exige. Devolve o id.
+ */
+export async function criarPedidoDoTitularNoBanco(pedido: PedidoDoTitularSemeado): Promise<string> {
+  return comBanco((banco) =>
+    id(
+      banco,
+      `insert into pedido_titular (escola_id, titular_id, papel_titular, tipo, solicitante, chegou_em, estado, compartilhamento, registrado_por, chave_envio, eliminar_em, concluido_em, concluido_por, cancelado_em, cancelado_por)
+       values ($1, $2, 'aluno', $3, $4, (now() at time zone 'America/Sao_Paulo')::date - $5::int, $6, $7::jsonb, $8, $9,
+               case when $6 = 'agendado' then now() + interval '6 days' end,
+               case when $6 = 'concluido' then now() end, case when $6 = 'concluido' then $8::uuid end,
+               case when $6 = 'cancelado' then now() end, case when $6 = 'cancelado' then $8::uuid end) returning id`,
+      [
+        pedido.escolaId,
+        pedido.titularId,
+        pedido.tipo,
+        pedido.solicitante ?? 'titular',
+        pedido.chegouHaDias ?? 0,
+        pedido.estado,
+        JSON.stringify(pedido.compartilhamento ?? []),
+        pedido.registradoPor,
+        randomUUID(),
+      ],
+    ),
+  )
+}
+
+/** O estado do pedido no banco, e quem o concluiu ou cancelou: o que o clique fez, conferido por fora da tela. */
+export async function situacaoDoPedidoNoBanco(escolaId: string, pedidoId: string): Promise<{ readonly estado: string; readonly concluidoPor: string | null; readonly canceladoPor: string | null }> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ estado: string; concluido_por: string | null; cancelado_por: string | null }>(
+      'select estado, concluido_por, cancelado_por from pedido_titular where escola_id = $1 and id = $2',
+      [escolaId, pedidoId],
+    )
+    const linha = rows[0]
+    if (linha === undefined) throw new Error('o pedido não existe no banco')
+    return { estado: linha.estado, concluidoPor: linha.concluido_por, canceladoPor: linha.cancelado_por }
+  })
+}
+
+/** Outra pessoa da coordenação, ou o worker, muda o estado do pedido com a tela aberta: o teste do recomeço. */
+export async function mudarEstadoDoPedidoNoBanco(escolaId: string, pedidoId: string, estado: PedidoDoTitularSemeado['estado']): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('update pedido_titular set estado = $3 where escola_id = $1 and id = $2', [escolaId, pedidoId, estado])
+  })
+}
+
+/** O nome que o cadastro da escola tem hoje: a correção do nome se confere aqui, e não no que a tela diz. */
+export async function nomeDoUsuarioNoBanco(escolaId: string, usuarioId: string): Promise<string> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ nome: string }>('select nome from usuario where escola_id = $1 and id = $2', [escolaId, usuarioId])
+    const linha = rows[0]
+    if (linha === undefined) throw new Error('o usuário não existe no banco')
+    return linha.nome
+  })
+}
+
+/** Uma linha da auditoria do pedido: a ação, quem a fez, a finalidade e o que ficou registrado. */
+export interface LinhaDaAuditoriaDoPedido {
+  readonly acao: string
+  readonly autor: string | null
+  readonly finalidade: string | null
+  readonly antes: unknown
+  readonly depois: unknown
+}
+
+/** A auditoria da escola sobre o pedido, em ordem: `pedido.lido`, `pedido.concluido`, `titular.arquivo_baixado`… */
+export async function auditoriaDoPedidoNoBanco(escolaId: string, pedidoId: string): Promise<LinhaDaAuditoriaDoPedido[]> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ acao: string; autor: string | null; finalidade: string | null; antes: unknown; depois: unknown }>(
+      'select acao, autor_usuario_id as autor, finalidade, antes, depois from auditoria where escola_id = $1 and entidade_id = $2 order by em, id',
+      [escolaId, pedidoId],
+    )
+    return rows
+  })
+}

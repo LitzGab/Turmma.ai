@@ -1,4 +1,4 @@
-import { focusManager, InfiniteQueryObserver, onlineManager, QueryClient } from '@tanstack/react-query'
+import { focusManager, InfiniteQueryObserver, onlineManager, QueryClient, QueryObserver } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
@@ -98,6 +98,119 @@ describe('a lista dos pedidos de titular na web (F3, 16.0)', () => {
     await esperar()
 
     expect(cliente.getQueryCache().find({ queryKey: m.privacidade.consultaPedidosDoTitular.queryKey })).toBeUndefined()
+    cliente.unmount()
+  })
+})
+
+const PEDIDO = '0197f3b0-6f3e-7c11-9a3e-5d1c2b7a8e40'
+const PEDIDO_DO_TITULAR = {
+  id: PEDIDO,
+  tipo: 'acesso',
+  solicitante: 'titular',
+  chegouEm: '2026-10-01',
+  estado: 'em_preparacao',
+  titular: { nome: 'Ana Souza', turmas: ['6º A'] },
+  homonimo: null,
+  nomeTrocado: null,
+  compartilhamento: [],
+  concluidoEm: null,
+}
+
+describe('o detalhe do pedido de titular na web (F3, 17.0)', () => {
+  it('o detalhe não relê ao voltar o foco nem ao voltar a rede: cada leitura é auditada em nome da coordenação', async () => {
+    fila.push({ status: 200, corpo: PEDIDO_DO_TITULAR })
+    const cliente = new QueryClient({ defaultOptions: { queries: { staleTime: 0, retry: false } } })
+    cliente.mount()
+    const observador = new QueryObserver(cliente, m.privacidade.consultaPedidoDoTitular(PEDIDO))
+    const desinscrever = observador.subscribe(() => undefined)
+    await vi.waitFor(() => expect(observador.getCurrentResult().isSuccess).toBe(true))
+    expect(chamadas).toEqual([{ caminho: `/v1/privacidade/pedidos/${PEDIDO}`, metodo: 'GET' }])
+
+    focusManager.setFocused(false)
+    focusManager.setFocused(true)
+    onlineManager.setOnline(false)
+    onlineManager.setOnline(true)
+    await esperar()
+
+    expect(chamadas).toHaveLength(1)
+    desinscrever()
+    cliente.unmount()
+  })
+
+  it('o pedido do titular não fica no cache depois que a tela sai: nome e turma não ficam na memória do computador', async () => {
+    fila.push({ status: 200, corpo: PEDIDO_DO_TITULAR })
+    const cliente = new QueryClient({ defaultOptions: { queries: { staleTime: 0, retry: false } } })
+    cliente.mount()
+    const consulta = m.privacidade.consultaPedidoDoTitular(PEDIDO)
+    const observador = new QueryObserver(cliente, consulta)
+    const desinscrever = observador.subscribe(() => undefined)
+    await vi.waitFor(() => expect(observador.getCurrentResult().isSuccess).toBe(true))
+    expect(cliente.getQueryCache().find({ queryKey: consulta.queryKey })).toBeDefined()
+
+    desinscrever()
+    await esperar()
+
+    expect(cliente.getQueryCache().find({ queryKey: consulta.queryKey })).toBeUndefined()
+    cliente.unmount()
+  })
+
+  it('cada ação é um POST na rota dela: concluir e cancelar, a correção do nome e o arquivo da escola', async () => {
+    fila.push(
+      { status: 204 },
+      { status: 204 },
+      { status: 204 },
+      { status: 200, corpo: { url: 'http://127.0.0.1:28343/arquivos/x', nome: 'meus-dados-2026-10-10.json', validaAte: '2026-10-10T15:05:00.000Z' } },
+    )
+    await m.privacidade.concluirPedidoDoTitular(PEDIDO)
+    await m.privacidade.cancelarPedidoDoTitular(PEDIDO)
+    await m.privacidade.corrigirNomeDoTitular(PEDIDO, 'Ana Souza Lima')
+    const arquivo = await m.privacidade.pedirArquivoDaEscola(PEDIDO, 'entregar_ao_titular')
+
+    expect(chamadas).toEqual([
+      { caminho: `/v1/privacidade/pedidos/${PEDIDO}/concluir`, metodo: 'POST' },
+      { caminho: `/v1/privacidade/pedidos/${PEDIDO}/cancelar`, metodo: 'POST' },
+      { caminho: `/v1/privacidade/pedidos/${PEDIDO}/corrigir-nome`, metodo: 'POST' },
+      { caminho: `/v1/privacidade/pedidos/${PEDIDO}/arquivo`, metodo: 'POST' },
+    ])
+    expect(arquivo.nome).toBe('meus-dados-2026-10-10.json')
+  })
+
+  it('o nome novo e a finalidade vão no corpo da chamada, e nunca na URL', async () => {
+    fila.push({ status: 204 }, { status: 200, corpo: { url: 'http://127.0.0.1:28343/arquivos/x', nome: 'meus-dados-2026-10-10.json', validaAte: '2026-10-10T15:05:00.000Z' } })
+    await m.privacidade.corrigirNomeDoTitular(PEDIDO, 'Ana Souza Lima')
+    await m.privacidade.pedirArquivoDaEscola(PEDIDO, 'entregar_ao_responsavel_legal')
+
+    // A primeira chamada do `fetch` é a abertura da sessão do `beforeEach`, que não faz parte do que se mede.
+    const corpos = vi
+      .mocked(fetch)
+      .mock.calls.slice(1)
+      .map(([, opcoes]) => (typeof opcoes?.body === 'string' ? (JSON.parse(opcoes.body) as unknown) : undefined))
+    expect(corpos).toEqual([{ nome: 'Ana Souza Lima' }, { finalidade: 'entregar_ao_responsavel_legal' }])
+    expect(chamadas.every(({ caminho }) => !caminho.includes('Ana') && !caminho.includes('entregar'))).toBe(true)
+  })
+
+  it('o id do pedido vai escapado no caminho: o que vem do endereço da aba não muda a rota da API', async () => {
+    fila.push({ status: 204 })
+    await m.privacidade.concluirPedidoDoTitular('../auditoria?x=1')
+
+    expect(chamadas).toEqual([{ caminho: '/v1/privacidade/pedidos/..%2Fauditoria%3Fx%3D1/concluir', metodo: 'POST' }])
+  })
+
+  it('depois da ação, a página relê e o estado que aparece é o do servidor', async () => {
+    const cliente = new QueryClient({ defaultOptions: { queries: { staleTime: 0, retry: false } } })
+    cliente.mount()
+    fila.push(
+      { status: 200, corpo: PEDIDO_DO_TITULAR },
+      { status: 200, corpo: { ...PEDIDO_DO_TITULAR, estado: 'concluido', concluidoEm: '2026-10-10T15:00:00.000Z' } },
+    )
+    const observador = new QueryObserver(cliente, m.privacidade.consultaPedidoDoTitular(PEDIDO))
+    const desinscrever = observador.subscribe(() => undefined)
+    await vi.waitFor(() => expect(observador.getCurrentResult().isSuccess).toBe(true))
+
+    await m.privacidade.relerPedidoDoTitular(cliente, PEDIDO)
+
+    expect(observador.getCurrentResult().data?.estado).toBe('concluido')
+    desinscrever()
     cliente.unmount()
   })
 })

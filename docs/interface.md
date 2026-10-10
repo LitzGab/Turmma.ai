@@ -320,7 +320,14 @@ O desenho da área, e o que o design do aluno **não** herda do professor, está
   resultado anunciado por `aria-live`, 429 em texto), em que cada pessoa se escolhe pela turma e pela matrícula, e depois a
   confirmação, com a prévia do que a escola guarda e o aviso de homônimo; a eliminação vai em `perigo`, com os 7 dias e o que
   a escola guarda fora do sistema. Uma faixa fixa diz que o aluno que nunca reivindicou o nome está na lista da turma. O
-  detalhe do pedido é da 17.0. Retenção e empresas são só leitura: o ajuste de prazo e o cadastro da empresa são da operação,
+  nome da pessoa abre o **detalhe do pedido** (tarefa 17.0; RF12, RF13, RF13b, RF14 e RF16), uma página do pedido (não um
+  diálogo), com o título da aba sem nome: o pedido e a situação em texto, o **prazo** da declaração completa (15 dias da
+  chegada: "Faltam N dias, até DD/MM", e o vencido diz há quantos dias, com o ícone), as **empresas** por onde passou dado da
+  pessoa e as ações que valem para o tipo e o estado: **Concluir**, **Cancelar eliminação** (o diálogo diz que o acesso volta;
+  o botão que fecha é "Manter a eliminação"), **Corrigir nome** (nome atual e novo antes de confirmar, com o aviso do nome
+  anterior) e **Baixar a versão da escola** (`oficial`, com a finalidade escolhida da lista, o que o arquivo traz, que fica
+  registrado e que se entrega e se apaga do computador). O arquivo em preparação se atualiza a cada 10 s e para com a aba
+  escondida. Retenção e empresas são só leitura: o ajuste de prazo e o cadastro da empresa são da operação,
   por comando. **O aviso de incidente** aparece ao entrar, em diálogo, para a
   coordenação da escola afetada; "Ver depois" deixa uma faixa fixa, sem botão de fechar, até a confirmação, e o "Sair" nunca fica
   fora de alcance (D59)

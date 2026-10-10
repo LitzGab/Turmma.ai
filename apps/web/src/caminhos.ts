@@ -79,6 +79,8 @@ export const ROTAS_DA_COORDENACAO = {
   privacidade: '/privacidade',
   /** Uma aba da Privacidade pelo endereço dela. Hoje existem `pedidos`, `retencao`, `suboperadores` e `incidentes`. */
   privacidadeDaAba: '/privacidade/:aba',
+  /** Um pedido de titular aberto, dentro da aba Pedidos da Privacidade (F3, 17.0). O id é o do pedido, nunca nome nem matrícula. */
+  pedidoDoTitular: '/privacidade/pedidos/:pedidoId',
 } as const
 
 /**
@@ -92,6 +94,11 @@ export function caminhoDaTurmaNaEstrutura(turmaId: string): string {
 /** O endereço de uma aba da Privacidade, **relativo à área**, como `caminhoDaTurmaNaEstrutura`: é o que a aba usa para trocar de aba. */
 export function caminhoDaAbaDaPrivacidade(aba: string): string {
   return ROTAS_DA_COORDENACAO.privacidadeDaAba.replace(':aba', encodeURIComponent(aba))
+}
+
+/** O endereço do pedido de titular aberto, **relativo à área**. O id vai codificado: nada além dele entra no endereço (regra 20, item 9). */
+export function caminhoDoPedidoDoTitular(pedidoId: string): string {
+  return ROTAS_DA_COORDENACAO.pedidoDoTitular.replace(':pedidoId', encodeURIComponent(pedidoId))
 }
 
 /** A aba que a Privacidade abre sem aba no endereço, ou com uma que não existe. É a primeira de `ABAS_DA_PRIVACIDADE`. */

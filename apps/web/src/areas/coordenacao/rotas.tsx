@@ -14,6 +14,8 @@ const Agentes = lazy(() => import('./Agentes'))
 const Analista = lazy(() => import('./Analista'))
 /** Privacidade (F3, 6.0): no pedaço dela (`tela-coordenacao-Privacidade-*.js`), e só quem abre o item a baixa. */
 const Privacidade = lazy(() => import('./privacidade/Privacidade'))
+/** O detalhe do pedido de titular (F3, 17.0): num pedaço só dele, para a aba Pedidos não pagar pelos diálogos de quem não abre um pedido. */
+const DetalheDoPedido = lazy(() => import('./privacidade/DetalheDoPedido'))
 /** O aviso de incidente (F3, 10.0): o diálogo e a faixa, num pedaço próprio, para a fachada da área não crescer (`.size-limit.json`). */
 const AvisoDeIncidente = lazy(() => import('./privacidade/AvisoDeIncidente'))
 
@@ -50,6 +52,8 @@ export default function RotasDaCoordenacao() {
         <Route path={ROTAS_DA_COORDENACAO.privacidade}>
           <Redirect to={caminhoDaAbaDaPrivacidade(ABA_INICIAL_DA_PRIVACIDADE)} replace />
         </Route>
+        {/* Antes da aba: `/privacidade/pedidos/<id>` tem um trecho a mais que `/privacidade/<aba>`, e o `Switch` fica com a primeira que casa. */}
+        <Route path={ROTAS_DA_COORDENACAO.pedidoDoTitular}>{(parametros) => <DetalheDoPedido key={parametros.pedidoId} pedidoId={parametros.pedidoId} />}</Route>
         <Route path={ROTAS_DA_COORDENACAO.privacidadeDaAba}>{(parametros) => <Privacidade aba={parametros.aba} />}</Route>
         <Route>
           <ConteudoNaoEncontrado />

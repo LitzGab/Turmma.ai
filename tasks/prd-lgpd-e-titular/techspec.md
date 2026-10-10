@@ -780,6 +780,54 @@ Não se aplica.
     - **Testes:** `textos-dos-pedidos.test.ts` (as regras sem React) e `e2e/pedidos-do-titular.spec.ts`, nos projetos
       `chromebook` e `celular`; `e2e/privacidade.spec.ts` passou a abrir a retenção pela aba. O que o clique fez se confere no
       banco (`pedido_titular`), e não só na tela.
+  - **Tarefa 17.0, como ficou no código** (`apps/web/src/areas/coordenacao/privacidade/`: `DetalheDoPedido.tsx`,
+    `AcoesDoPedido.tsx`, `textos-do-pedido.ts` e `preparacao-do-arquivo.ts`; `apps/web/src/api/privacidade.ts`):
+    - **O detalhe é uma rota**, `/coordenacao/privacidade/pedidos/<id do pedido>`, aberta pelo nome da pessoa na lista, num
+      pedaço (`lazy`) só dele para a aba não pagar pelos diálogos. O endereço leva só o id; o título da aba é "Pedido de
+      titular" e nunca diz o nome. "Voltar para os pedidos" volta à aba.
+    - **Cada leitura do detalhe é auditada** (`pedido.lido`), e por isso a consulta não relê ao voltar o foco nem quando a
+      rede volta, e o pedido não fica guardado fora da tela (`gcTime: 0`). Lê ao abrir, depois de cada ação e no
+      "Atualizar". A única leitura sozinha é a do pedido **`em_preparacao`**: a cada 10 s e só com a aba à vista
+      (`agendarPreparacao`, que usa a mesma `agendarRelitura` dos 15 s da lista do professor). Ao ficar pronto, anuncia "O
+      arquivo ficou pronto." e deixa de reler.
+    - **O que cada seção diz.** "O pedido": pessoa e turma (ou "Titular eliminado"), tipo, quem pediu, chegada, situação em
+      texto com o selo, e a orientação do tipo e do estado (a eliminação agendada diz que o acesso está suspenso e que o
+      cancelamento o devolve; a concluída diz se o nome foi trocado nos textos livres, sem dizer onde, RF15). "Prazo da
+      declaração completa": 15 dias de calendário contados da chegada (`PRAZO_DA_DECLARACAO_COMPLETA_DIAS`, LGPD, art. 19, II),
+      "Faltam N dias, até DD/MM/AAAA" em `pendente`, o dia do vencimento ainda é prazo, o vencido diz "vencido há N dias" em
+      `erro` com o ícone do selo, e o concluído ou cancelado diz que não há prazo. "Empresas que receberam dado desta
+      pessoa": a foto do pedido em tabela (vira lista abaixo de 768 px), com o nome pelo cadastro da escola (casa pela chave, e
+      na chave recadastrada vale a empresa vigente na última chamada), "Provedor não cadastrado: <chave>" quando não há, o
+      período e a origem (rastro ou período), e o aviso de que a escola precisa avisar cada uma (LGPD, art. 18, § 6º).
+    - **As ações dependem do tipo e do estado**, as mesmas regras da API (`acoesDoPedido`): **Concluir** em acesso,
+      portabilidade, compartilhamento e correção abertos; **Cancelar eliminação** só em `agendado`; **Corrigir nome** no
+      pedido de correção `recebido` ou `pronto`, com a pessoa ainda existindo; **Baixar a versão da escola** em acesso e
+      portabilidade `pronto`. O que a API recusaria a tela não oferece.
+    - **Os diálogos** são o `DialogoDeConfirmacao` (o foco começa no texto, o botão de recusar tem o mesmo tamanho): o
+      resumo (quem, pedido, quem pediu, chegada, situação), o efeito e o aviso do que fica registrado. Concluir e baixar são
+      `oficial`. O cancelamento diz que o acesso volta com a mesma senha e que nada é apagado, e o botão que fecha se chama
+      "Manter a eliminação", porque "Cancelar" ao lado de "Cancelar a eliminação" não diria qual desfaz o quê. Corrigir o
+      nome mostra "Nome atual" e "Nome novo" no resumo enquanto se digita, recusa o nome igual ao atual e avisa que o nome
+      anterior em texto livre só sai quando o prazo de guarda dele passa (seção 13). Baixar pede a **finalidade**, em lista
+      fechada (entregar à própria pessoa ou ao responsável legal), diz o que o arquivo traz, que traz a conversa do Tutor e
+      nunca a do professor com o Assistente, que o download fica registrado e que o arquivo se entrega e se apaga do
+      computador em seguida.
+    - **O download** é um `POST pedidos/:id/arquivo` (cada clique é um registro), e a URL assinada de 5 minutos vai direto a
+      um link temporário clicado (`baixarPorUrl`): não passa por estado, texto da tela nem endereço. O anúncio depois
+      diz o nome do arquivo e repete o que fazer com ele.
+    - **A ação só termina com a leitura nova**: a mutação espera `invalidateQueries` do detalhe (que cancela a leitura
+      que estava no ar, e por isso a resposta atrasada de antes não vence), e só então o diálogo fecha com o anúncio; a lista
+      não entra: está em outra rota, tem `gcTime: 0` e é relida quando a aba abre de novo. Um
+      clique só decide (`useEnvioUnico`). A falha que diz que o pedido mudou (`PEDIDO_EM_ESTADO_INVALIDO`, `NAO_ENCONTRADO`) relê a
+      página, deixa o diálogo com o texto do que mudou e só "Fechar", e a página mostra a situação de agora. O foco, quando o
+      botão que abriu o diálogo saiu junto com a ação, fica no bloco do pedido.
+    - **O que o DTO não traz**, e a tela por isso não diz: o papel do titular, o dia da eliminação (`eliminarEm`) e se a pessoa
+      tem conta ativa. A orientação fala em "7 dias depois do registro" e não numa data; a versão da escola que não existe
+      (conta ativa, ou arquivo com mais de 7 dias) é a falha do download, com o texto dos dois casos, e não um botão escondido.
+    - **Testes:** `textos-do-pedido.test.ts` (prazo, ações por tipo e estado, nome novo, textos da eliminação e das empresas),
+      `preparacao-do-arquivo.test.ts` (o relógio de 10 s e a aba escondida), `api/privacidade.test.ts` (as leituras que não
+      saem sozinhas e as ações) e `e2e/pedido-do-titular.spec.ts`, nos projetos `chromebook` e `celular`, com o worker de
+      verdade e a auditoria conferida no banco.
 - **Por quanto tempo guardamos** (retenção).
 - **Empresas que recebem dados** (suboperadores).
 - **Incidentes.** Tarefa 10.0, como ficou no código: os incidentes da escola (os sem confirmação primeiro), um cartão por
