@@ -1074,3 +1074,35 @@ contador do opencode). Por isso nada sai do repositório: `.opencode/` e o teste
 `/seguir` usa o opencode enquanto o `estado.md` trouxer `**Implementador:** opencode` em "Agora".
 Sobra para a retrospectiva do F3: os revisores com veto em Opus e a vigia do Orquestrador são hoje a
 maior parte do consumo de uma tarefa, e é neles que está o corte que não custa tempo.
+
+Revista pela sexta vez em 10/10/2026, a pedido do Joaquim: **o contexto de cada agente passa a ter
+teto, e a vigia deixa de recarregar o `/seguir`.** Nenhum modelo e nenhum revisor mudou. A medição,
+de 09/10 às 9h a 10/10 à 1h30, ponderada por preço: Implementador 108, Orquestrador 104, revisores 97,
+Arquiteto 38, Mesa 23. Três desperdícios, cada um com a sua correção.
+(1) **Nenhuma sessão compactava**, porque a janela de compactação do Claude Code vinha em 1 milhão de
+tokens. O Implementador da 13.0 chegou a 948 mil em 282 chamadas e custou 42, e 77% do que o
+Implementador gasta é reler o próprio contexto a cada chamada. Agora `autoCompactWindow` é 400 mil, em
+`.claude/settings.json`, para todo o time. Simulado sobre as mesmas sessões: Implementador −30%, com
+uma compactação em tarefa grande e três na 13.0; Orquestrador −46%; Mesa e Arquiteto iguais, porque
+não chegam lá. Com 300 mil o Implementador ganharia mais seis pontos, ao preço do triplo de
+compactações, e a Mesa e o Arquiteto passariam a compactar sem ganho. O que protege o trabalho depois
+da compactação é o hook de início de sessão, que diz a cada papel o que reler (a tarefa e a ordem, a
+seção "Revisões", o `/seguir` e o `estado.md`).
+(2) **A vigia recarregava o `/seguir` inteiro a cada 30 minutos**: 24 vezes em doze horas, 71% do que
+entrou no contexto do Orquestrador, que foi de 87 mil a 509 mil tokens com cada turno custando o triplo
+do começo. A vigia ganhou skill própria e curta (`/vigia`). A medição mostrou também que as mensagens
+`/seguir RELATÓRIO` dos agentes chegam coladas e nunca executaram a skill: quem devolve o procedimento
+à sessão limpa ou compactada do Orquestrador passa a ser o mesmo hook.
+(3) **Os revisores gravavam o cache pelo preço de uma hora** (o dobro do normal), herança de quando o
+executor era subagente e esperava o portão. Hoje subagente é só revisor: 78 execuções, o maior
+intervalo entre duas chamadas foi de 66 segundos, a primeira chamada lê do cache 3 mil dos 38 mil
+tokens com que começa, e 70% do custo deles é essa escrita. `subagentPromptCacheTtl` volta a `5m`:
+−26% nos revisores. O que o papel de terminal grava continua em uma hora, porque ele espera a rodada.
+Somado, a estimativa é de uns 28% a menos de consumo do Claude no processo, sem mexer em tempo nem em
+portão. Provado num diretório de rascunho, com o Haiku: a janela do projeto vale para sessão com
+`--agent`, o agente compactou quatro vezes no meio de uma tarefa e a terminou certa, o aviso do hook
+chegou a ele, e o subagente gravou em cinco minutos. **Sem prova:** a qualidade de uma tarefa real do
+Implementador depois de compactar, e a edição da rotina pelo Orquestrador. A retrospectiva do F3
+compara as tarefas antes e depois, por reprovações na primeira rodada. A base fixa (`CLAUDE.md` e
+regras, 31 mil tokens em toda sessão e em todo revisor) ficou como está: é um terço do custo de cada
+revisão, e enxugá-la é decisão de conteúdo, não de configuração.

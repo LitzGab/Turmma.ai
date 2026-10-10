@@ -1,7 +1,7 @@
 ---
 name: seguir
 description: O comando do processo — o Orquestrador lê o estado, põe o time fixo do Maestri para trabalhar e conduz a funcionalidade até a próxima decisão que é do Joaquim
-argument-hint: "[funcionalidade | vigia | pedido em texto livre]"
+argument-hint: "[funcionalidade | pedido em texto livre]"
 disable-model-invocation: true
 ---
 
@@ -29,7 +29,7 @@ encerra o turno depois de pedir trabalho.
 | Entrada | O que é |
 |---|---|
 | vazia, ou o nome ou id de uma funcionalidade | conduzir a funcionalidade (passo 2) |
-| `vigia` | a rotina de 30 minutos (passo 9) |
+| `vigia` | a rotina de 30 minutos, que hoje chega como `/vigia`: faça o que `.claude/skills/vigia/SKILL.md` diz, e troque o comando da rotina (passo 9) |
 | começa com `RELATÓRIO`, `ESCALADA`, `BLOQUEIO` ou `DIVERGÊNCIA` | resposta de um agente, que chega como `/seguir <tipo> de <nome>`: continue o ciclo (passos 5 e 6) |
 | um defeito em texto livre | correção avulsa (passo 10) |
 | uma decisão de produto a tomar | descoberta (passo 10) |
@@ -405,30 +405,32 @@ uma opção.
 Esteira da `develop` vermelha depois do pouso: correção em andar próprio (`correcao/<slug>`).
 Verde: peça a retrospectiva ao `Arquiteto` e notifique o fim.
 
-## 9. Vigia
+## 9. Vigia e contexto
 
-A rotina `Vigia do processo` manda `/seguir vigia` a cada 30 minutos. Ela já existe no workspace,
+A rotina `Vigia do processo` manda **`/vigia`** a cada 30 minutos: uma skill própria e curta
+(`.claude/skills/vigia/SKILL.md`), com o que olhar e o que fazer. Ela já existe no workspace,
 pausada: ligue-a enquanto houver trabalho correndo e desligue-a em toda parada e no fim. Só a crie
 se `maestri routine list` não a mostrar, para não ficar com duas vigias:
 
 ```bash
 maestri routine list
+maestri routine show "Vigia do processo"         # o comando dela é /vigia?
+maestri routine edit "Vigia do processo" --command "/vigia"      # se ainda for /seguir vigia
 maestri routine enable "Vigia do processo"       # e disable ao parar
-maestri routine create "Vigia do processo" --command "/seguir vigia" --every 30m --no-notify   # só se não existir
+maestri routine create "Vigia do processo" --command "/vigia" --every 30m --no-notify   # só se não existir
 ```
 
-No `vigia`, seja barato: leia o `estado.md` do andar ativo e rode `maestri check` em **todos** os
-terminais da fase, antes de concluir qualquer coisa.
+Por que não é mais `/seguir vigia`: cada `/seguir` põe este texto inteiro de novo no seu contexto.
+Em 09/10/2026 a vigia foi 80% do que entrou no contexto do Orquestrador, que chegou a 509 mil tokens
+em doze horas, com cada turno custando o triplo do começo (D78, revista em 10/10/2026). As mensagens
+dos agentes continuam chegando como `/seguir <tipo>`: são poucas por tarefa, e é o que devolve o
+procedimento a uma sessão compactada.
 
-| O que os terminais mostram | O que você faz |
-|---|---|
-| alguém trabalhando | nada; responda em uma linha. `Implementador` parado com a `Mesa` trabalhando é o normal: ele espera a rodada |
-| todos parados no prompt, e você espera um relatório há mais de uma vigia | um `PEDIDO de estado` a quem deve o relatório. Não é pedido de trabalho: ele só responde onde está |
-| o `Implementador` trabalhando, mas a tarefa pequena passou de 2 horas, ou a grande de 4, sem a primeira rodada de revisão | um `PEDIDO de estado`. Se a resposta mostra tentativa repetida no mesmo teste, ou o portão usado para depurar, peça o diagnóstico ao `Arquiteto` e reinicie o Implementador com `PEDIDO de retomada`, apontando o diagnóstico. Registre no `estado.md` |
-| uma pergunta, um menu ou um erro na tela | resolva se for mecânico (`maestri ask --raw`); se for decisão, é parada |
-| o terminal sumiu ou o processo morreu | recrie ou reinicie (passo 3) e envie `PEDIDO de retomada`: o trabalho está na árvore |
-| no modo econômico, o `Implementador` mostra erro de modelo, de assinatura ou de limite de uso do opencode | reinicie-o com o comando da tabela, em Sonnet (passo 3), e envie `PEDIDO de retomada`: o trabalho está na árvore. Registre no `estado.md` |
-| o `Arquiteto` esperando o Joaquim | nada |
+**O seu contexto é compactado sozinho** ao chegar perto de 400 mil tokens (`autoCompactWindow`, em
+`.claude/settings.json`), e o de todo o time também. Nada se perde se o `estado.md` do andar estiver
+em dia: é ele que você relê, não a conversa. Por isso, **antes de encerrar qualquer turno em que algo
+mudou** (um pedido enviado, uma resposta recebida, uma decisão sua), o "Agora" do `estado.md` diz o
+que você espera e de quem. O que só está na conversa pode não estar mais lá no turno seguinte.
 
 Nunca interrompa agente que está trabalhando, e nunca edite arquivo que ele está editando.
 

@@ -23,6 +23,11 @@ e quem está ligado a quem. Tudo aqui saiu da prova técnica de 08/10/2026 e da 
   `.opencode/plugins/portao-de-revisoes.ts`, que consulta o mesmo `tools/processo/revisoes.ts`. O
   opencode abre na raiz do checkout, como todo papel. Onde este protocolo diz "o hook", para ele é o
   plugin; onde diz Bash, é a ferramenta `shell`
+- **O contexto é compactado sozinho** perto de 400 mil tokens (`autoCompactWindow`, em
+  `.claude/settings.json`; D78, revista em 10/10/2026). A sessão continua o mesmo trabalho com um
+  resumo no lugar da conversa, e o hook de início de sessão diz a cada papel o que reler. Por isso o
+  que importa fica em arquivo (o documento da tarefa, a ordem de correção, o `estado.md`), nunca só
+  na conversa. Depois de compactar, releia o que o aviso manda antes do próximo passo
 - **Só no seu checkout.** Não edite arquivo de outro checkout. A única exceção é o Orquestrador,
   que roda no térreo e escreve, no andar da spec, os documentos de estado listados no passo 4 do
   `/seguir`, sempre com `git -C <andar>`
@@ -41,8 +46,10 @@ como um prompt novo.
   local, uma suíte) roda em segundo plano, e a notificação do fim chega sozinha
 - Mensagem tem até seis linhas e **aponta arquivo**. Nunca cole diff, log nem código nela: o texto
   é digitado no terminal do outro, e o que não cabe na tela se perde
-- A primeira linha diz o tipo e quem manda. **Para o Orquestrador, ela começa com `/seguir `**: é o
-  que recarrega o procedimento dele quando a sessão foi compactada ou é nova
+- A primeira linha diz o tipo e quem manda. **Para o Orquestrador, ela começa com `/seguir `**: marca
+  a mensagem como do processo. Ela chega colada no terminal dele, e texto colado **não** executa a
+  skill (medido em 10/10/2026): quem devolve o procedimento a uma sessão limpa ou compactada é o aviso
+  do hook de início de sessão, que manda reler o `/seguir`
 
   | Tipo | Primeira linha | De quem para quem |
   |---|---|---|
