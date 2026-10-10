@@ -69,6 +69,20 @@ revisão). Meça cada uma e proponha com o número, ou diga que o número não s
   dele na 2ª rodada parecia só falta de prova ("o prazo de 5 s não está provado") e era defeito: o
   prazo não existia no código. Reprovação por falta de prova não é sinônimo de rigor demais
 
+E três que a oitava revisão da D78 deixou, do mesmo dia:
+
+- **Passar de primeira:** rodadas por tarefa e reprovações na 1ª rodada, da 16.0 à 20.0 do F3 contra a
+  11.0 à 15.0 (nenhuma passou de primeira; 3 de 5 e 4 de 6 revisores reprovaram na 14.0 e na 15.0). Se
+  as três conferências do `executar-task` antes da primeira rodada não mexeram no número, o texto não
+  resolve, e a proposta é conferência mecânica: o portão da tarefa recusar linha de "Mutações" sem
+  teste que exista
+- **A parada que não segura a linha:** quantas paradas abriram com tarefa correndo, quanto tempo de
+  espera isso poupou, e se algum documento foi escrito no andar no meio de uma tarefa
+- **As listas fechadas e o portão da tarefa:** quantos vermelhos o portão completo achou que eram de
+  tarefa anterior. Se ainda houver, o portão da tarefa passa a rodar a integração inteira (10 minutos
+  no F3), ou as suítes completas rodam sempre que a linha para. E **duas tarefas em paralelo**: o que
+  falta é um ambiente de teste por checkout (`PROJETO_TESTE` e as portas, em `tools/ci/compose.ts`)
+
 ## 3. Agrupar causas
 
 Leia cada achado e agrupe pela **causa**, não pelo revisor. Exemplos de causa: "teste de

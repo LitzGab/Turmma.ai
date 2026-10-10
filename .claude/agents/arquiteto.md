@@ -72,6 +72,17 @@ terceira):
 Na dúvida entre a segunda e a terceira, é a terceira. As regras 10, 20 e 70 não se afrouxam por
 triagem.
 
+## Resposta do Joaquim com tarefa correndo
+
+Durante a construção, o Orquestrador segue com a tarefa que não depende da pergunta que você abriu ao
+Joaquim (`/seguir`, passo 7). Por isso, **depois da resposta dele e antes de escrever qualquer
+arquivo**, rode `git status --short`. Se houver arquivo alterado em `apps/`, `packages/`, `infra/` ou
+`e2e/`, há uma tarefa em curso neste checkout, e você não escreve nem commita agora: o seu commit
+levaria o `tasks.md` dela pela metade, e os revisores dela leriam os seus documentos como parte do
+diff. Envie ao Orquestrador `/seguir RELATÓRIO de Arquiteto`, com a decisão do Joaquim em uma linha e
+"aplico com o andar limpo", e encerre o turno. O Orquestrador devolve um `PEDIDO de retomada` depois
+do commit da tarefa, nesta mesma sessão. Com o andar limpo, siga como sempre.
+
 ## Contexto das tarefas
 
 O Implementador roda num modelo menor e começa cada tarefa sem contexto. O que mais custa a ele não é

@@ -191,6 +191,22 @@ exceção no `.gitleaks.toml`; outra linha que reprove sem ser segredo é `DIVER
 (o do módulo que usa o que você mexeu), passe o arquivo:
 `node tools/processo/portao-local.ts --tarefa apps/api/test/<outro>.int.test.ts`.
 
+**Lista fechada.** Alguns testes enumeram tudo o que existe de um tipo, e ficam vermelhos quando a
+tarefa cria mais um: as rotas de um módulo, as métricas com `escola_id`, os arquivos que podem tocar
+uma tabela, as ações de auditoria, as permissões. Eles não estão entre os alvos, porque você não
+alterou o arquivo deles. Se a tarefa criou rota, métrica, permissão, ação de auditoria, tabela, ou
+arquivo que lê tabela de outro módulo, procure quem enumera os vizinhos que já existiam, atualize a
+lista nesta tarefa e passe o arquivo ao portão:
+
+```bash
+grep -rln "<um vizinho que já existia: a rota irmã, a métrica irmã, o arquivo irmão>" --include='*.test.ts' apps packages infra e2e
+```
+
+Se entrar na lista parece contrariar a regra que o teste cita, não atualize: é `DIVERGÊNCIA`, com
+`Motivo: desenho`. No F3, a 11.0, a 13.0, a 14.0 e a 15.0 deixaram três listas vermelhas
+(`apps/api/test/retencao.int.test.ts`, `apps/api/src/assistente/assistente.int.test.ts` e
+`infra/test/metricas.int.test.ts`), que só apareceram com a suíte inteira, quatro tarefas depois.
+
 O e2e inteiro e a suíte de infra inteira **não** rodam por tarefa. Rodam uma vez, no portão completo
 do fim da spec, antes da validação (D78, revista em 09/10/2026). A consequência é sua: a regra da
 tarefa só é provada pelos testes que estão entre os alvos. Regra cujo teste não foi criado nem
@@ -225,6 +241,20 @@ tarefa tem**, marcados ou não.
 **Quem chama os revisores é a Mesa de revisão, não você**
 (`.claude/skills/revisar-tarefa/SKILL.md`). Ela monta o prompt de cada um a partir da árvore, chama
 na ordem certa e devolve o resultado. Quem implementa não escreve o prompt de quem o revisa (D78).
+
+**Antes de pedir a primeira rodada, três conferências, nesta árvore e não de memória.** No F3 nenhuma
+das quinze primeiras tarefas passou de primeira; em onze delas o `test-engineer` reprovou por regra ou
+cláusula sem teste que falhe sem ela, e a 15.0 escalou porque a seção "Mutações" foi preenchida sem
+rodar. Cada reprovação custa de 25 a 45 minutos.
+
+1. **Cada linha de "Mutações" foi vista vermelha depois da última edição do código que ela cita?**
+   Linha escrita no plano e não rodada, ou rodada antes de o código mudar, não vale (6.0, e duas vezes
+   na 15.0). Refaça agora as que você não viu vermelhas nesta árvore: apague a cláusula, rode o teste
+   citado, veja-o vermelho, restaure. Se ele não fica vermelho, falta o teste, e não a linha
+2. **Toda cláusula do diff tem linha?** Percorra o `git diff` de ponta a ponta: condição de `where`,
+   `if` de guarda, cada termo de condição composta, restrição de migration. A cláusula sem linha é a
+   primeira coisa que o `test-engineer` procura
+3. **A tarefa entrou em alguma lista fechada?** (passo 4, "Lista fechada")
 
 Com o portão local verde, peça a rodada e **encerre o turno**
 (`.claude/skills/seguir/protocolo.md`, item 2). O nome da Mesa veio no pedido do Orquestrador:
