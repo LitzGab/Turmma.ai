@@ -12,6 +12,8 @@ import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.t
 
 const INDISPONIVEL = JSON.stringify({ erro: { codigo: 'INDISPONIVEL_TENTE_DE_NOVO', mensagem: 'texto que a tela não usa', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } })
 const ENDERECO_DA_RETENCAO = /\/coordenacao\/privacidade\/retencao$/
+const ENDERECO_DOS_PEDIDOS = /\/coordenacao\/privacidade\/pedidos$/
+const NOME_DA_ABA_DOS_PEDIDOS = 'Pedidos'
 const AJUSTADO = 'Ajustado pela escola'
 const CARREGANDO = 'Carregando os prazos de guarda…'
 const NOME_DA_ABA = 'Por quanto tempo guardamos'
@@ -43,13 +45,23 @@ async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
   else await alvo.click()
 }
 
-/** A coordenadora entra e abre a Privacidade pela navegação, na aba de retenção. */
+/**
+ * A Privacidade abre na aba dos pedidos (F3, 16.0), que é o que a coordenação faz ali: a retenção é a segunda aba. Quem
+ * quer a retenção a abre pelo nome, e o endereço dela passa a ser o da aba.
+ */
+async function abrirARetencao(page: Page, hasTouch: boolean): Promise<void> {
+  await expect(page).toHaveURL(ENDERECO_DOS_PEDIDOS, { timeout: PRAZO_DA_ENTRADA_MS })
+  await acionar(page.getByRole('tab', { name: NOME_DA_ABA }), hasTouch)
+  await expect(page).toHaveURL(ENDERECO_DA_RETENCAO, { timeout: PRAZO_DA_ENTRADA_MS })
+}
+
+/** A coordenadora entra e abre a Privacidade pela navegação e, nela, a aba de retenção. */
 async function entrarNaPrivacidade(page: Page, hasTouch: boolean, pessoa: EquipeDeTeste): Promise<void> {
   await page.goto('/entrar')
   await entrarComoCoordenacaoNaMesmaAba(page, pessoa, hasTouch)
   await esperarGovernanca(page)
   await irPelaNavegacao(page, 'Privacidade', hasTouch)
-  await expect(page).toHaveURL(ENDERECO_DA_RETENCAO, { timeout: PRAZO_DA_ENTRADA_MS })
+  await abrirARetencao(page, hasTouch)
 }
 
 test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
@@ -86,17 +98,17 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
-  test('o endereço sem aba, e um endereço com aba que não existe, abrem a aba de retenção', async ({ page, hasTouch }) => {
+  test('o endereço sem aba, e um endereço com aba que não existe, abrem a aba dos pedidos', async ({ page, hasTouch }) => {
     const coordenadora = await criarEquipeComSenha('coordenador')
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
     await esperarGovernanca(page)
 
     await page.goto('/coordenacao/privacidade')
-    await expect(page).toHaveURL(ENDERECO_DA_RETENCAO, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page).toHaveURL(ENDERECO_DOS_PEDIDOS, { timeout: PRAZO_DA_ENTRADA_MS })
     await page.goto('/coordenacao/privacidade/nao-existe')
-    await expect(page).toHaveURL(ENDERECO_DA_RETENCAO, { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(page.getByRole('tab', { name: NOME_DA_ABA })).toHaveAttribute('aria-selected', 'true')
+    await expect(page).toHaveURL(ENDERECO_DOS_PEDIDOS, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.getByRole('tab', { name: NOME_DA_ABA_DOS_PEDIDOS, exact: true })).toHaveAttribute('aria-selected', 'true')
   })
 
   test('os estados: carregando, erro com "Tentar de novo", e com dado', async ({ page, hasTouch }) => {
@@ -116,6 +128,7 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
     await esperarGovernanca(page)
     await irPelaNavegacao(page, 'Privacidade', hasTouch)
+    await abrirARetencao(page, hasTouch)
 
     await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     segurada.abrir()
@@ -166,6 +179,7 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     await acionar(page.getByRole('button', { name: /^Entrar$|Entrando/ }), hasTouch)
     await esperarGovernanca(page)
     await irPelaNavegacao(page, 'Privacidade', hasTouch)
+    await abrirARetencao(page, hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).not.toContainText(AJUSTADO)
 
@@ -197,6 +211,7 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     await entrarComoCoordenacaoNaMesmaAba(page, segunda, hasTouch)
     await esperarGovernanca(page)
     await irPelaNavegacao(page, 'Privacidade', hasTouch)
+    await abrirARetencao(page, hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).not.toContainText(AJUSTADO)
 
@@ -225,7 +240,12 @@ const marca = () => Math.random().toString(36).slice(2, 10)
 
 /** A coordenadora entra e abre a aba das empresas pelo endereço da aba, depois de entrar na Privacidade pela navegação. */
 async function abrirAsEmpresas(page: Page, hasTouch: boolean, pessoa: EquipeDeTeste): Promise<void> {
-  await entrarNaPrivacidade(page, hasTouch, pessoa)
+  // Direto da aba dos pedidos, que é a que a Privacidade abre: passar antes pela retenção leria a retenção à toa.
+  await page.goto('/entrar')
+  await entrarComoCoordenacaoNaMesmaAba(page, pessoa, hasTouch)
+  await esperarGovernanca(page)
+  await irPelaNavegacao(page, 'Privacidade', hasTouch)
+  await expect(page).toHaveURL(ENDERECO_DOS_PEDIDOS, { timeout: PRAZO_DA_ENTRADA_MS })
   await acionar(page.getByRole('tab', { name: NOME_DA_ABA_DAS_EMPRESAS }), hasTouch)
   await expect(page).toHaveURL(ENDERECO_DAS_EMPRESAS, { timeout: PRAZO_DA_ENTRADA_MS })
 }
@@ -294,6 +314,8 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
   })
 
   test('os estados: carregando, erro com "Tentar de novo", vazio, só passadas e com dado', async ({ page, hasTouch }) => {
+    // Quatro cargas de página sob o perfil do celular: a entrada abre na aba dos pedidos (F3, 16.0), que lê a lista antes de a coordenação trocar de aba.
+    test.setTimeout(90_000)
     const segurada = portao()
     let modo: 'erro' | 'vazio' | 'so_passadas' | 'real' = 'erro'
     const passada = { chave: 'antiga-do-estado', nome: `Antiga do estado ${marca()}`, finalidade: 'Hospedagem', pais: 'BR', categorias: ['cadastro'], vedaTreinamento: true, inicio: '2026-01-05T12:00:00.000Z', fim: '2026-02-20T12:00:00.000Z' }

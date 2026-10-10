@@ -309,13 +309,19 @@ O desenho da área, e o que o design do aluno **não** herda do professor, está
   como o sistema funciona em linguagem simples, conformidade com LGPD e ECA Digital, relatório
   de uso exportável, e o material para conversar com professores e famílias (D61). É a tela
   que a coordenação abre na reunião, e a que responde ao checklist do MEC
-- **Privacidade** ("Seus dados e a lei", F3): as abas ficam no endereço, e a coordenação lê por quanto tempo a escola
-  guarda cada dado, de onde vem cada prazo e os prazos que não mudam (tarefa 6.0; RF20), e quais empresas recebem dado dela,
-  vigentes e passadas, com o que cada uma faz, o que recebe, onde processa e o que o contrato diz sobre treinar IA com o
-  dado (tarefa 8.0; RF7), e os incidentes de segurança que a afetaram, com todos os campos e a confirmação do recebimento
-  (tarefa 10.0; RF9). Por quanto tempo guardamos, Empresas que recebem dados e Incidentes são as abas que existem hoje; Pedidos
-  (16.0) chega com a tarefa dela, e nenhuma aparece antes da tela dela (D73). Retenção e empresas são só leitura: o ajuste de
-  prazo e o cadastro da empresa são da operação, por comando. **O aviso de incidente** aparece ao entrar, em diálogo, para a
+- **Privacidade** ("Seus dados e a lei", F3): as abas ficam no endereço, e a coordenação registra e acompanha os **pedidos dos
+  titulares** (tarefa 16.0; RF10, RF14 e RF16), lê por quanto tempo a escola guarda cada dado, de onde vem cada prazo e os
+  prazos que não mudam (tarefa 6.0; RF20), e quais empresas recebem dado dela, vigentes e passadas, com o que cada uma faz, o
+  que recebe, onde processa e o que o contrato diz sobre treinar IA com o dado (tarefa 8.0; RF7), e os incidentes de
+  segurança que a afetaram, com todos os campos e a confirmação do recebimento (tarefa 10.0; RF9). **Pedidos** é a aba que
+  abre, porque é o que a coordenação faz ali; as outras três seguem. Nenhuma aparece antes da tela dela (D73). **Pedidos**:
+  a lista, a mais recente primeiro, com pessoa, turma, pedido, quem pediu, chegada e situação em texto ("Titular eliminado" e
+  "Não consta" quando a pessoa já saiu); "Registrar pedido" abre a busca por nome (Enter ou botão, a partir de 3 letras,
+  resultado anunciado por `aria-live`, 429 em texto), em que cada pessoa se escolhe pela turma e pela matrícula, e depois a
+  confirmação, com a prévia do que a escola guarda e o aviso de homônimo; a eliminação vai em `perigo`, com os 7 dias e o que
+  a escola guarda fora do sistema. Uma faixa fixa diz que o aluno que nunca reivindicou o nome está na lista da turma. O
+  detalhe do pedido é da 17.0. Retenção e empresas são só leitura: o ajuste de prazo e o cadastro da empresa são da operação,
+  por comando. **O aviso de incidente** aparece ao entrar, em diálogo, para a
   coordenação da escola afetada; "Ver depois" deixa uma faixa fixa, sem botão de fechar, até a confirmação, e o "Sair" nunca fica
   fora de alcance (D59)
 - **Denúncias**: o canal de notificação de violação, com o que foi apontado, o que foi feito e

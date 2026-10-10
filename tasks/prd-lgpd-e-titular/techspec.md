@@ -744,6 +744,42 @@ Não se aplica.
     correção é de turma ou vínculo;
   - "em preparação" atualiza a cada 10 s, até ficar pronto, e para com a aba escondida;
   - a tela avisa que o aluno que nunca reivindicou o nome está na lista da turma.
+  - **Tarefa 16.0, como ficou no código** (`apps/web/src/areas/coordenacao/privacidade/`: `Pedidos.tsx`, `RegistrarPedido.tsx` e
+    `textos-dos-pedidos.ts`; `apps/web/src/api/privacidade.ts`):
+    - **A aba `pedidos` é a primeira e a que a Privacidade abre** (`ABA_INICIAL_DA_PRIVACIDADE`); a retenção, as empresas e os
+      incidentes seguem na ordem em que nasceram. Endereço sem aba, ou com aba que não existe, abre os pedidos.
+    - **A lista** é `useInfiniteQuery` sobre `GET pedidos` (a lista não fica guardada fora da tela, `gcTime: 0`, e por isso cada
+      abertura lê de novo: outra pessoa da coordenação pode ter registrado, e a eliminação muda de estado na fila, não na tela;
+      nenhuma leitura sai sozinha depois, nem ao voltar o foco nem quando a rede volta, porque cada uma é auditada). Cada linha tem pessoa, turma, pedido, quem pediu,
+      chegada e a situação em texto com o selo (Recebido, Em preparação, Pronto, Eliminação agendada, Concluído, Cancelado). O
+      titular que já saiu aparece como "Titular eliminado", com "Não consta" na turma. A API pagina por id (uuid), que não é
+      ordem para quem lê: a tela **ordena pelas páginas já lidas**, a chegada mais recente primeiro e o id no empate, e
+      "Ver mais pedidos" lê a seguinte (50 por página). Quatro estados: carregando, erro com "Tentar de novo", vazio (o
+      convite a registrar) e o dado. O aviso do aluno da lista é uma faixa fixa, com o link para a Estrutura.
+    - **A busca** é `POST titulares/busca`, disparada **só** por Enter ou pelo botão, e só com 3 letras ou mais (o campo diz
+      o que falta; nenhuma requisição sai). O resultado mora **só no estado do diálogo** (`useEnvioUnico`, `gcTime: 0`), nunca
+      no cache de consultas, e é anunciado por região viva (`role="status"`, "N pessoas encontradas"). Cada pessoa é um
+      `radio` com o nome, o papel, a turma e a matrícula, que separam dois homônimos. O 429 (`LIMITE_EXCEDIDO`) tem texto
+      próprio que diz esperar um minuto.
+    - **O pedido tem três campos** (tipo, quem pediu, o dia em que chegou, que começa em hoje no fuso de São Paulo e não passa
+      de hoje, como a API), conferidos antes de abrir a confirmação (`validarOPedido`, com o dia que não existe, como o 31/02,
+      recusado). O pedido nasce com a pessoa escolhida, e escolher outra recomeça tipo e quem pediu. O que a pessoa digitou e escolheu não passa de um diálogo para o seguinte.
+    - **A confirmação** é o `DialogoDeConfirmacao`: quem, papel, turma, pedido, quem pediu e chegada, o efeito de cada tipo e
+      a **prévia lida na hora** (`GET previa`, `gcTime: 0`, porque cada leitura é auditada e traz o que a escola guarda da pessoa). O botão só liga
+      com a prévia na tela, que é onde mora o `homonimo`; a prévia que falha mostra o erro com "Tentar de novo" e mantém o
+      botão desligado. Aluno: contagem por categoria; professor: só as categorias de cadastro e vínculo, **sem número**
+      (D64). A eliminação é `perigo`, com os 7 dias e o aviso do que a escola guarda fora do sistema; os outros tipos são
+      `oficial`. Cancelar fecha tudo e não registra.
+    - **A `chaveEnvio` nasce quando a confirmação abre** (`sortearIdDoPedido`, agora em `componentes/id-do-pedido.ts`, com o
+      reexport em `operacao/pedidos-do-painel.ts`, para a escola não baixar o chunk da operação) e vale até o diálogo fechar:
+      o clique duplo e o reenvio depois de a rede cair levam a mesma chave e o servidor devolve o mesmo pedido; uma abertura
+      nova sorteia outra. A queda de rede diz que o pedido não será registrado duas vezes.
+    - **Depois do registro**, a mutação espera `invalidateQueries` da lista (que cancela a leitura que estava no ar: a resposta
+      atrasada de antes não vence) e só então o diálogo fecha, com o anúncio "Pedido registrado: <tipo>, de <nome>." e o foco
+      de volta no botão "Registrar pedido".
+    - **Testes:** `textos-dos-pedidos.test.ts` (as regras sem React) e `e2e/pedidos-do-titular.spec.ts`, nos projetos
+      `chromebook` e `celular`; `e2e/privacidade.spec.ts` passou a abrir a retenção pela aba. O que o clique fez se confere no
+      banco (`pedido_titular`), e não só na tela.
 - **Por quanto tempo guardamos** (retenção).
 - **Empresas que recebem dados** (suboperadores).
 - **Incidentes.** Tarefa 10.0, como ficou no código: os incidentes da escola (os sem confirmação primeiro), um cartão por

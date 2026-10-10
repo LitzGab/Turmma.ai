@@ -1,5 +1,16 @@
-import { esquemaRespostaIncidentes, esquemaRespostaRetencao, esquemaRespostaSuboperadores } from '@educa/shared'
-import { queryOptions, type QueryClient } from '@tanstack/react-query'
+import {
+  esquemaPedidoDoTitular,
+  esquemaRespostaBuscaDeTitulares,
+  esquemaRespostaIncidentes,
+  esquemaRespostaPedidos,
+  esquemaRespostaPreviaDoTitular,
+  esquemaRespostaRetencao,
+  esquemaRespostaSuboperadores,
+  type PedidoDoTitular,
+  type RegistroDePedido,
+  type RespostaBuscaDeTitulares,
+} from '@educa/shared'
+import { infiniteQueryOptions, queryOptions, type QueryClient } from '@tanstack/react-query'
 import { SEM_CORPO } from './cliente'
 import { buscarComSessao, chamarComSessao } from './sessao'
 
@@ -50,4 +61,61 @@ export function confirmarIncidente(id: string): Promise<void> {
  */
 export function relerIncidentes(cliente: QueryClient): Promise<void> {
   return cliente.invalidateQueries({ queryKey: consultaIncidentes.queryKey })
+}
+
+const CAMINHO_DOS_PEDIDOS = '/v1/privacidade/pedidos'
+
+/**
+ * Os pedidos de titular da escola, a página de 50 como a API entrega (`?pagina=<id>`; F3, 16.0; RF16). Cada página lida é
+ * auditada (`pedidos.listados`, com os ids), e por isso a aba relê ao abrir e não a cada foco da janela. Nenhuma leitura sai
+ * sozinha: nem ao voltar para a aba, nem quando a rede volta (a mesma regra de `consultaPedidosDaTurma`, em `api/pedidos.ts`).
+ *
+ * Fora da tela a lista não fica guardada (`gcTime: 0`): nomes e turmas de titulares não ficam na memória do computador
+ * compartilhado da secretaria; a troca de sessão já limpa o resto.
+ */
+export const consultaPedidosDoTitular = infiniteQueryOptions({
+  queryKey: [...CHAVE_DA_PRIVACIDADE, 'pedidos'],
+  queryFn: ({ pageParam, signal }) =>
+    buscarComSessao(pageParam === undefined ? CAMINHO_DOS_PEDIDOS : `${CAMINHO_DOS_PEDIDOS}?pagina=${encodeURIComponent(pageParam)}`, esquemaRespostaPedidos, signal),
+  initialPageParam: undefined as string | undefined,
+  getNextPageParam: (ultima) => ultima.proxima,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  gcTime: 0,
+})
+
+/**
+ * `POST /v1/privacidade/titulares/busca`: até 20 pessoas da escola pelo nome. O termo vai **no corpo**, e nunca na URL: nem
+ * a API nem a web o guardam (regra 20, itens 9 e 10; RF17). É `POST` e não consulta, para o nome digitado e as pessoas
+ * achadas ficarem só no estado da tela que as pediu, e não no cache de consultas.
+ */
+export function buscarTitulares(termo: string): Promise<RespostaBuscaDeTitulares> {
+  return chamarComSessao('/v1/privacidade/titulares/busca', esquemaRespostaBuscaDeTitulares, { metodo: 'POST', corpo: { termo } })
+}
+
+/**
+ * `GET /v1/privacidade/titulares/:id/previa`: o que a escola guarda da pessoa antes de registrar o pedido (aluno: a
+ * contagem por categoria; professor: só cadastro e vínculo, sem contagem, D64) e se há homônimo. Cada leitura é auditada
+ * (`titular.previa_lida`) e traz o que a escola guarda de uma pessoa: por isso a prévia **não fica no cache** depois que o
+ * diálogo sai (`gcTime: 0`), e a abertura seguinte lê de novo, com o diálogo em "consultando" e o botão desligado.
+ */
+export function consultaPreviaDoTitular(titularId: string) {
+  return queryOptions({
+    queryKey: [...CHAVE_DA_PRIVACIDADE, 'previa', titularId],
+    queryFn: ({ signal }) => buscarComSessao(`/v1/privacidade/titulares/${encodeURIComponent(titularId)}/previa`, esquemaRespostaPreviaDoTitular, signal),
+    gcTime: 0,
+  })
+}
+
+/**
+ * `POST /v1/privacidade/pedidos`: registra o pedido. A `chaveEnvio` é sorteada por diálogo de confirmação, e a mesma chave
+ * com o mesmo conteúdo devolve o mesmo pedido: o reenvio depois de uma queda de rede não duplica (Tech Spec do F3, seção 4).
+ */
+export function registrarPedidoDoTitular(registro: RegistroDePedido): Promise<PedidoDoTitular> {
+  return chamarComSessao(CAMINHO_DOS_PEDIDOS, esquemaPedidoDoTitular, { metodo: 'POST', corpo: registro })
+}
+
+/** Relê a lista de pedidos depois de um registro, e só então o diálogo termina: o que aparece é o que o servidor tem. */
+export function relerPedidosDoTitular(cliente: QueryClient): Promise<void> {
+  return cliente.invalidateQueries({ queryKey: consultaPedidosDoTitular.queryKey })
 }

@@ -115,7 +115,7 @@
   - [x] 15.5 Alerta `agendado` > 48 h e runbook
   - [x] 15.6 Testes
 
-- [ ] **16.0 — A coordenação registra um pedido pela tela**
+- [x] **16.0 — A coordenação registra um pedido pela tela**
   - [ ] 16.1 Lista com nome e turma, "Titular eliminado"
   - [ ] 16.2 Busca por Enter ou botão, `aria-live`, 429 e mínimo de 3 letras
   - [ ] 16.3 Diálogo de registro com prévia; `chaveEnvio` por diálogo

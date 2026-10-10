@@ -77,7 +77,7 @@ export const ROTAS_DA_COORDENACAO = {
   material: '/material',
   /** "Seus dados e a lei", no grupo Conformidade: as abas da Privacidade ficam no endereço (F3, 6.0; `docs/interface.md` 3). */
   privacidade: '/privacidade',
-  /** Uma aba da Privacidade pelo endereço dela. Hoje existem `retencao`, `suboperadores` e `incidentes`; a dos pedidos chega com a tarefa dela. */
+  /** Uma aba da Privacidade pelo endereço dela. Hoje existem `pedidos`, `retencao`, `suboperadores` e `incidentes`. */
   privacidadeDaAba: '/privacidade/:aba',
 } as const
 
@@ -95,7 +95,7 @@ export function caminhoDaAbaDaPrivacidade(aba: string): string {
 }
 
 /** A aba que a Privacidade abre sem aba no endereço, ou com uma que não existe. É a primeira de `ABAS_DA_PRIVACIDADE`. */
-export const ABA_INICIAL_DA_PRIVACIDADE = 'retencao'
+export const ABA_INICIAL_DA_PRIVACIDADE = 'pedidos'
 
 /** As rotas da área do aluno, relativas à base dela. */
 export const ROTAS_DO_ALUNO = {

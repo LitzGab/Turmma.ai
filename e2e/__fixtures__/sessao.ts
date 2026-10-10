@@ -160,12 +160,12 @@ export async function criarEscolaSintetica(): Promise<EscolaDeTeste> {
  * Um aluno com matrícula e senha na escola dada (ou numa nova). A matrícula pode repetir entre escolas de propósito:
  * é com isso que o teste de isolamento prova que a senha de uma não abre a outra (RF7, regra 60, item 6).
  */
-export async function criarAlunoComMatricula(opcoes: { escola?: EscolaDeTeste; matricula?: string; senha?: string } = {}): Promise<AlunoDeTeste> {
+export async function criarAlunoComMatricula(opcoes: { escola?: EscolaDeTeste; matricula?: string; senha?: string; nome?: string } = {}): Promise<AlunoDeTeste> {
   const marca = randomUUID()
   const escola = opcoes.escola ?? (await criarEscolaSintetica())
   const matricula = opcoes.matricula ?? String(Date.now()).slice(-8)
   const senha = opcoes.senha ?? `senha-sintetica-${marca}`
-  const nome = `Aluno sintético ${marca.slice(0, 8)}`
+  const nome = opcoes.nome ?? `Aluno sintético ${marca.slice(0, 8)}`
   const senhaHash = await hashDaSenha(senha)
   return comBanco(async (banco) => {
     const usuarioId = await id(banco, "insert into usuario (escola_id, papel, nome) values ($1, 'aluno', $2) returning id", [escola.escolaId, nome])
@@ -987,5 +987,84 @@ export async function confirmacaoDoIncidenteNoBanco(secaoId: string): Promise<{ 
     const linha = rows[0]
     if (linha === undefined) throw new Error('a seção do incidente não existe')
     return { confirmadoEm: linha.confirmado_em, confirmadoPor: linha.confirmado_por }
+  })
+}
+
+/** O pedido do titular como o banco o guarda: é o que o teste confere depois do clique, sem confiar no que a tela diz. */
+export interface PedidoDoTitularNoBanco {
+  readonly id: string
+  readonly titularId: string
+  readonly papelTitular: string
+  readonly tipo: string
+  readonly solicitante: string
+  readonly chegouEm: string
+  readonly estado: string
+  readonly chaveEnvio: string
+  readonly registradoPor: string
+}
+
+/** Os pedidos do titular da escola, do mais antigo ao mais novo (F3, 16.0). */
+export async function pedidosDoTitularNoBanco(escolaId: string): Promise<PedidoDoTitularNoBanco[]> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{
+      id: string
+      titular_id: string
+      papel_titular: string
+      tipo: string
+      solicitante: string
+      chegou_em: string
+      estado: string
+      chave_envio: string
+      registrado_por: string
+    }>(
+      "select id, titular_id, papel_titular, tipo, solicitante, to_char(chegou_em, 'YYYY-MM-DD') as chegou_em, estado, chave_envio, registrado_por from pedido_titular where escola_id = $1 order by id",
+      [escolaId],
+    )
+    return rows.map((linha) => ({
+      id: linha.id,
+      titularId: linha.titular_id,
+      papelTitular: linha.papel_titular,
+      tipo: linha.tipo,
+      solicitante: linha.solicitante,
+      chegouEm: linha.chegou_em,
+      estado: linha.estado,
+      chaveEnvio: linha.chave_envio,
+      registradoPor: linha.registrado_por,
+    }))
+  })
+}
+
+/**
+ * Pedidos já registrados de um titular, direto no banco, do mais antigo ao mais novo: o da posição `i` chegou
+ * `maisRecenteHaDias + quantidade - 1 - i` dias antes de hoje, e o id (uuidv7) segue a ordem de inserção, que é a ordem em que a API pagina. Atalho só do e2e: o pedido de
+ * verdade nasce pela tela (16.0), que é onde o teste dele o registra.
+ */
+export async function criarPedidosDoTitularNoBanco(escolaId: string, titularId: string, registradoPor: string, quantidade: number, maisRecenteHaDias = 0): Promise<void> {
+  await comBanco(async (banco) => {
+    for (let posicao = 0; posicao < quantidade; posicao += 1) {
+      await banco.query(
+        `insert into pedido_titular (escola_id, titular_id, papel_titular, tipo, solicitante, chegou_em, estado, compartilhamento, registrado_por, chave_envio)
+         values ($1, $2, 'aluno', 'acesso', 'titular', current_date - $3::int, 'recebido', '[]'::jsonb, $4, $5)`,
+        [escolaId, titularId, maisRecenteHaDias + quantidade - 1 - posicao, registradoPor, randomUUID()],
+      )
+    }
+  })
+}
+
+/**
+ * Um pedido concluído de alguém que já não existe: o `usuario` do titular foi apagado e o pedido ficou só com os ids, que é o
+ * que a eliminação deixa (F3, RF14 e RF15). Devolve o id do pedido.
+ */
+export async function criarPedidoDeTitularEliminadoNoBanco(escolaId: string, registradoPor: string, chegouHaDias = 9): Promise<string> {
+  return comBanco(async (banco) => {
+    const titularId = await id(banco, "insert into usuario (escola_id, papel, nome) values ($1, 'aluno', $2) returning id", [escolaId, `Eliminada ${randomUUID().slice(0, 8)}`])
+    const pedidoId = await id(
+      banco,
+      `insert into pedido_titular (escola_id, titular_id, papel_titular, tipo, solicitante, chegou_em, estado, compartilhamento, registrado_por, chave_envio, concluido_em, concluido_por)
+       values ($1, $2, 'aluno', 'eliminacao', 'responsavel_legal', current_date - $5::int, 'concluido', '[]'::jsonb, $3, $4, now(), $3) returning id`,
+      [escolaId, titularId, registradoPor, randomUUID(), chegouHaDias],
+    )
+    await banco.query('delete from usuario where escola_id = $1 and id = $2', [escolaId, titularId])
+    return pedidoId
   })
 }

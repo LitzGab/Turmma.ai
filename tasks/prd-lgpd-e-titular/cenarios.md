@@ -432,3 +432,18 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [E] "Em preparação" vira "pronto" sem recarregar.
   - [E] A coordenação conclui um pedido e corrige um nome.
   - [E] A coordenação registra uma eliminação e a cancela.
+  - **Tarefa 16.0, onde cada um está** (`e2e/pedidos-do-titular.spec.ts`, nos projetos `chromebook` e `celular`;
+    `apps/web/src/areas/coordenacao/privacidade/textos-dos-pedidos.test.ts` para as regras sem React):
+    - dois alunos com o mesmo nome em turmas diferentes: escolhe pela turma e pela matrícula, o diálogo avisa do homônimo, a
+      eliminação sai em `perigo` com os 7 dias, dois cliques registram um pedido só, e o banco tem o titular escolhido;
+    - o pedido que não é eliminação confirma em `oficial`, sem aviso de homônimo quando não há; cancelar em qualquer etapa não
+      registra nada, e a abertura seguinte começa vazia;
+    - o professor na busca, com a prévia sem número e sem as categorias do uso da IA (D64); a prévia que falha impede
+      confirmar e a que vem sem categoria diz que não há dado;
+    - a busca: duas letras não saem, digitar não busca, o 429 diz esperar um minuto, e quem não existe é dito pela região
+      viva, com o caminho do aluno da lista; o aviso da aba aponta para a Estrutura;
+    - recomeço: a resposta do registro se perde na rede e o reenvio leva a mesma chave (um pedido no banco); o diálogo novo
+      leva outra chave; a leitura atrasada da segunda página, que chega depois do registro, não vence a lista lida depois dele; a segunda pessoa na mesma aba, de outra
+      escola, não vê os pedidos da anterior nem enquanto a lista dela não chegou;
+    - estados: carregando, erro com "Tentar de novo", vazio e com dado, com o titular eliminado, a página de 50 com "Ver mais
+      pedidos" e a ordem pela chegada; sem violação grave de acessibilidade e sem rolagem de lado.
