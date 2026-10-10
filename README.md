@@ -182,6 +182,9 @@ Validador (Opus), isolado de quem implementou
 
 Depois do pouso
     retro            mede rodadas e reprovações, por revisor e por modelo, e propõe ajustes
+
+Orquestrador (Opus), enquanto o time trabalha
+    vigia            a cada 30 minutos, confere se alguém está preso, sumiu ou espera resposta
 ```
 
 Cada spec vive num **andar** do Maestri, com a branch `spec/<funcionalidade>`, e só entra na

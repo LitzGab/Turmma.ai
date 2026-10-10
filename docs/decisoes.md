@@ -1074,3 +1074,57 @@ contador do opencode). Por isso nada sai do repositório: `.opencode/` e o teste
 `/seguir` usa o opencode enquanto o `estado.md` trouxer `**Implementador:** opencode` em "Agora".
 Sobra para a retrospectiva do F3: os revisores com veto em Opus e a vigia do Orquestrador são hoje a
 maior parte do consumo de uma tarefa, e é neles que está o corte que não custa tempo.
+
+Revista pela sexta vez em 10/10/2026, a pedido do Joaquim: **o contexto de cada agente passa a ter
+teto, e a vigia deixa de recarregar o `/seguir`.** Nenhum modelo e nenhum revisor mudou. A medição,
+de 09/10 às 9h a 10/10 à 1h30, ponderada por preço: Implementador 108, Orquestrador 104, revisores 97,
+Arquiteto 38, Mesa 23. Três desperdícios, cada um com a sua correção.
+(1) **Nenhuma sessão compactava**, porque a janela de compactação do Claude Code vinha em 1 milhão de
+tokens. O Implementador da 13.0 chegou a 948 mil em 282 chamadas e custou 42, e 77% do que o
+Implementador gasta é reler o próprio contexto a cada chamada. Agora `autoCompactWindow` é 400 mil, em
+`.claude/settings.json`, para todo o time. Simulado sobre as mesmas sessões: Implementador −30%, com
+uma compactação em tarefa grande e três na 13.0; Orquestrador −46%; Mesa e Arquiteto iguais, porque
+não chegam lá. Com 300 mil o Implementador ganharia mais seis pontos, ao preço do triplo de
+compactações, e a Mesa e o Arquiteto passariam a compactar sem ganho. O que protege o trabalho depois
+da compactação é o hook de início de sessão, que diz a cada papel o que reler (a tarefa e a ordem, a
+seção "Revisões", o `/seguir` e o `estado.md`).
+(2) **A vigia recarregava o `/seguir` inteiro a cada 30 minutos**: 24 vezes em doze horas, 71% do que
+entrou no contexto do Orquestrador, que foi de 87 mil a 509 mil tokens com cada turno custando o triplo
+do começo. A vigia ganhou skill própria e curta (`/vigia`). A medição mostrou também que as mensagens
+`/seguir RELATÓRIO` dos agentes chegam coladas e nunca executaram a skill: quem devolve o procedimento
+à sessão limpa ou compactada do Orquestrador passa a ser o mesmo hook.
+(3) **Os revisores gravavam o cache pelo preço de uma hora** (o dobro do normal), herança de quando o
+executor era subagente e esperava o portão. Hoje subagente é só revisor: 78 execuções, o maior
+intervalo entre duas chamadas foi de 66 segundos, a primeira chamada lê do cache 3 mil dos 38 mil
+tokens com que começa, e 70% do custo deles é essa escrita. `subagentPromptCacheTtl` volta a `5m`:
+−26% nos revisores. O que o papel de terminal grava continua em uma hora, porque ele espera a rodada.
+Somado, a estimativa é de uns 28% a menos de consumo do Claude no processo, sem mexer em tempo nem em
+portão. Provado num diretório de rascunho, com o Haiku: a janela do projeto vale para sessão com
+`--agent`, o agente compactou quatro vezes no meio de uma tarefa e a terminou certa, o aviso do hook
+chegou a ele, e o subagente gravou em cinco minutos. **Sem prova:** a qualidade de uma tarefa real do
+Implementador depois de compactar, e a edição da rotina pelo Orquestrador. A retrospectiva do F3
+compara as tarefas antes e depois, por reprovações na primeira rodada. A base fixa (`CLAUDE.md` e
+regras, 31 mil tokens em toda sessão e em todo revisor) ficou como está: é um terço do custo de cada
+revisão, e enxugá-la é decisão de conteúdo, não de configuração.
+
+Revista pela sétima vez em 10/10/2026, por proposta do Joaquim: **o Orquestrador limpa o próprio
+contexto a cada tarefa.** O time já recomeçava a sessão a cada tarefa; ele era o único que carregava a
+funcionalidade inteira na conversa. Medido nas duas sessões dele no F3 (08 a 10/10): 82% do que ele
+custou foi reler a conversa a cada chamada (76 de 92, ponderado por preço), com o contexto saindo de 85
+mil tokens e passando de 500 mil. O teto de 400 mil da revisão anterior não pegou nele: a sessão era
+anterior à configuração e chegou a 548 mil. Simulado sobre as mesmas sessões: o teto sozinho daria uns
+35% a menos, e a limpeza por tarefa, uns 50%. A limpeza também é melhor que a compactação pelo que ele
+relê: o arquivo como está, e não um resumo da conversa. Como funciona: depois de pedir uma tarefa nova,
+o portão completo ou a validação, e com o "Agora" do `estado.md` em dia, ele solta um processo que
+espera o turno acabar e dispara a rotina `Limpa o Orquestrador`, que digita `/clear` no terminal dele.
+Na sessão limpa, o hook de início de sessão manda reler o `/seguir`, o protocolo e as seções "Agora" e
+"Esperando o Joaquim" do diário, e não mais o arquivo inteiro, que no F3 passou de 37 mil caracteres;
+"Agora" ganhou a linha "Devo ainda". Provado no F3, às 02:10 de 10/10: a rotina disparada de dentro do
+turno é pulada, porque o Maestri não dispara em terminal ocupado; disparada 25 segundos depois, por um
+processo solto, limpou a sessão; e `/clear` enviado por outro terminal ligado a ele também limpa.
+Nenhum modelo, revisor ou portão mudou. **Sem prova ainda:** uma tarefa inteira conduzida da sessão
+limpa, do relatório ao pedido seguinte. Revisão: na retrospectiva do F3, pelo custo do Orquestrador por
+tarefa antes e depois, e por qualquer coisa que ele tenha deixado de fazer por não estar no "Agora".
+Ficou para a mesma retrospectiva, com o número que decide cada uma: o Orquestrador em Sonnet, a vigia
+que só acorda o modelo quando há algo preso, e um teto de tamanho por tarefa (as três do F3 com
+documento acima de 200 linhas foram as três com quatro rodadas ou escalada).

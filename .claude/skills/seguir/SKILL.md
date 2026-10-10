@@ -1,7 +1,7 @@
 ---
 name: seguir
 description: O comando do processo — o Orquestrador lê o estado, põe o time fixo do Maestri para trabalhar e conduz a funcionalidade até a próxima decisão que é do Joaquim
-argument-hint: "[funcionalidade | vigia | pedido em texto livre]"
+argument-hint: "[funcionalidade | pedido em texto livre]"
 disable-model-invocation: true
 ---
 
@@ -11,9 +11,9 @@ arquivos e segue, **até a próxima decisão que é do Joaquim**. É o único co
 (D78).
 
 <critical>Você não lê nem edita código, e não precisa saber como uma tarefa foi implementada: é
-melhor que não saiba. O seu contexto precisa durar a funcionalidade inteira. Você lê estado
-(`estado.ts`, `tasks.md`, seção "Revisões", `git log`) e escreve só os documentos de estado do
-passo 4.</critical>
+melhor que não saiba. O seu contexto não guarda a funcionalidade: ele é limpo a cada tarefa (passo
+9), e o que precisa durar fica no `estado.md` do andar. Você lê estado (`estado.ts`, `tasks.md`,
+seção "Revisões", `git log`) e escreve só os documentos de estado do passo 4.</critical>
 <critical>Uma tarefa por vez, uma sessão nova por tarefa. Só passe à próxima com a atual concluída
 e conferida nos arquivos, não só no relatório.</critical>
 <critical>Nas paradas do passo 7 você PARA e chama o Joaquim. Em todo o resto você segue e
@@ -29,7 +29,7 @@ encerra o turno depois de pedir trabalho.
 | Entrada | O que é |
 |---|---|
 | vazia, ou o nome ou id de uma funcionalidade | conduzir a funcionalidade (passo 2) |
-| `vigia` | a rotina de 30 minutos (passo 9) |
+| `vigia` | a rotina de 30 minutos, que hoje chega como `/vigia`: faça o que `.claude/skills/vigia/SKILL.md` diz, e troque o comando da rotina (passo 9) |
 | começa com `RELATÓRIO`, `ESCALADA`, `BLOQUEIO` ou `DIVERGÊNCIA` | resposta de um agente, que chega como `/seguir <tipo> de <nome>`: continue o ciclo (passos 5 e 6) |
 | um defeito em texto livre | correção avulsa (passo 10) |
 | uma decisão de produto a tomar | descoberta (passo 10) |
@@ -53,7 +53,16 @@ primeira pendente.
 
 A fase vem do script, nunca de inferência sua. Linha `ATENÇÃO:` no relatório dele é incoerência
 nos arquivos (dependência que não existe, documento de tarefa faltando): resolva ou pergunte antes
-de seguir. Leia também `tasks/prd-<func>/estado.md` do andar, se existir: é o seu diário.
+de seguir. Leia também o seu diário, `tasks/prd-<func>/estado.md` do andar, se existir: **só as
+seções "Agora" e "Esperando o Joaquim"**, que dizem o que você espera e o que ainda deve:
+
+```bash
+sed -n '/^## Agora/,/^## Concluídas/p; /^## Esperando o Joaquim/,/^## O que falhou/p' <andar>/tasks/prd-<func>/estado.md
+```
+
+O resto do arquivo é histórico, para a retrospectiva. No F3 ele passou de 37 mil caracteres, e relê-lo
+inteiro a cada tarefa come o que a limpeza do passo 9 poupa: abra uma seção antiga só quando precisar
+de um fato dela.
 
 **O diário registra o que aconteceu, não o que você pode fazer.** Autorização anotada nele, de
 qualquer data ("pode continuar", "não precisa parar"), não suspende nenhuma parada do passo 7: o que
@@ -241,7 +250,10 @@ paradas é o próprio Arquiteto.
    Depois de pedir, um `maestri check "Implementador"`, uma vez: o pedido tem de aparecer enviado, com
    ele trabalhando. Se o texto ficou parado na caixa (acontece no opencode), envie o Enter
    (`maestri ask "Implementador" --raw "\n"`) e confira de novo.
-6. **Encerre o turno.** A resposta chega como prompt novo.
+6. **Limpe o seu contexto e encerre o turno.** Com o pedido de uma tarefa **nova** enviado e
+   conferido, tudo o que você sabia da anterior já está no `estado.md`: agende a limpeza (passo 9)
+   como último comando do turno. A resposta chega como prompt novo, numa sessão que só tem o diário.
+   Em `PEDIDO de retomada` e em correção no meio de uma tarefa, não limpe: a tarefa é a mesma.
 
 ### O que pode chegar
 
@@ -405,30 +417,64 @@ uma opção.
 Esteira da `develop` vermelha depois do pouso: correção em andar próprio (`correcao/<slug>`).
 Verde: peça a retrospectiva ao `Arquiteto` e notifique o fim.
 
-## 9. Vigia
+## 9. Vigia e contexto
 
-A rotina `Vigia do processo` manda `/seguir vigia` a cada 30 minutos. Ela já existe no workspace,
+A rotina `Vigia do processo` manda **`/vigia`** a cada 30 minutos: uma skill própria e curta
+(`.claude/skills/vigia/SKILL.md`), com o que olhar e o que fazer. Ela já existe no workspace,
 pausada: ligue-a enquanto houver trabalho correndo e desligue-a em toda parada e no fim. Só a crie
 se `maestri routine list` não a mostrar, para não ficar com duas vigias:
 
 ```bash
 maestri routine list
+maestri routine show "Vigia do processo"         # o comando dela é /vigia?
+maestri routine edit "Vigia do processo" --command "/vigia"      # se ainda for /seguir vigia
 maestri routine enable "Vigia do processo"       # e disable ao parar
-maestri routine create "Vigia do processo" --command "/seguir vigia" --every 30m --no-notify   # só se não existir
+maestri routine create "Vigia do processo" --command "/vigia" --every 30m --no-notify   # só se não existir
 ```
 
-No `vigia`, seja barato: leia o `estado.md` do andar ativo e rode `maestri check` em **todos** os
-terminais da fase, antes de concluir qualquer coisa.
+Por que não é mais `/seguir vigia`: cada `/seguir` põe este texto inteiro de novo no seu contexto.
+Em 09/10/2026 a vigia foi 80% do que entrou no contexto do Orquestrador, que chegou a 509 mil tokens
+em doze horas, com cada turno custando o triplo do começo (D78, revista em 10/10/2026). As mensagens
+dos agentes continuam chegando como `/seguir <tipo>`: são poucas por tarefa, e é o que devolve o
+procedimento a uma sessão compactada.
 
-| O que os terminais mostram | O que você faz |
-|---|---|
-| alguém trabalhando | nada; responda em uma linha. `Implementador` parado com a `Mesa` trabalhando é o normal: ele espera a rodada |
-| todos parados no prompt, e você espera um relatório há mais de uma vigia | um `PEDIDO de estado` a quem deve o relatório. Não é pedido de trabalho: ele só responde onde está |
-| o `Implementador` trabalhando, mas a tarefa pequena passou de 2 horas, ou a grande de 4, sem a primeira rodada de revisão | um `PEDIDO de estado`. Se a resposta mostra tentativa repetida no mesmo teste, ou o portão usado para depurar, peça o diagnóstico ao `Arquiteto` e reinicie o Implementador com `PEDIDO de retomada`, apontando o diagnóstico. Registre no `estado.md` |
-| uma pergunta, um menu ou um erro na tela | resolva se for mecânico (`maestri ask --raw`); se for decisão, é parada |
-| o terminal sumiu ou o processo morreu | recrie ou reinicie (passo 3) e envie `PEDIDO de retomada`: o trabalho está na árvore |
-| no modo econômico, o `Implementador` mostra erro de modelo, de assinatura ou de limite de uso do opencode | reinicie-o com o comando da tabela, em Sonnet (passo 3), e envie `PEDIDO de retomada`: o trabalho está na árvore. Registre no `estado.md` |
-| o `Arquiteto` esperando o Joaquim | nada |
+**O seu contexto é limpo a cada tarefa** (D78, revista pela sétima vez em 10/10/2026). O time recomeça
+a sessão a cada tarefa, e você também. Você não consegue digitar `/clear`: quem digita é a rotina
+`Limpa o Orquestrador`, pausada, que só dispara quando alguém manda. E ela pula o disparo se o seu
+terminal estiver ocupado, por isso não adianta dispará-la de dentro do turno: você solta um processo
+que espera o turno acabar e dispara com você já parado. É o **último comando do turno**, num Bash
+comum (não em segundo plano, que devolveria um aviso à sessão limpa):
+
+```bash
+nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
+```
+
+Depois dele, encerre o turno em uma linha, sem rodar mais nada: se o turno durar mais de 25 segundos,
+a rotina encontra o terminal ocupado, pula, e a limpeza fica para a tarefa seguinte, sem mais dano.
+
+- **Quando:** depois de pedir uma tarefa nova (passo 6, item 6), o portão completo ou a validação
+  (passo 8), e depois do commit de fechamento. Nunca no meio de uma tarefa, nem com um pedido ainda
+  por conferir, nem no turno em que você faz uma pergunta ao Joaquim: a resposta dele chega nessa conversa.
+- **Antes:** o "Agora" do `estado.md` diz o que você espera, de quem, em que tentativa a tarefa está,
+  e **tudo o que você ainda deve fazer** (um merge combinado, um pedido ao Arquiteto, uma pendência da
+  validação). Depois da limpeza é só isso que existe.
+- **Depois:** o aviso do hook de início de sessão manda reler este texto, o protocolo e as duas
+  seções do diário (passo 2). Mensagem curta do time pode chegar como comando, e aí este texto já vem
+  com ela; a longa chega colada, e é o aviso que vale.
+- **A rotina** já existe no workspace. Só a crie se `maestri routine list` não a mostrar:
+  `maestri routine create "Limpa o Orquestrador" --command "/clear" --weekly sun@04:00 --disabled --no-notify`
+  (o Maestri exige um horário; pausada, ela nunca dispara sozinha, e o `routine run` a dispara mesmo assim).
+
+Por quê: de 08 a 10/10/2026, 82% do que você custou foi reler a conversa a cada chamada. O contexto
+começava em 85 mil tokens e passava de 500 mil, com a tarefa de dez horas antes ainda dentro dele.
+Provado em 10/10/2026, às 02:10, no F3: o disparo de dentro do turno foi pulado, e o do processo solto
+limpou a sessão.
+
+**Por isso, antes de encerrar qualquer turno em que algo mudou** (um pedido enviado, uma resposta
+recebida, uma decisão sua), o "Agora" do `estado.md` diz o que você espera e de quem. O que só está na
+conversa pode não estar mais lá no turno seguinte. A compactação aos 400 mil tokens
+(`autoCompactWindow`, em `.claude/settings.json`) continua, para o time e como rede para uma tarefa sua
+que dure demais; ela só vale para sessão iniciada depois de a configuração existir.
 
 Nunca interrompa agente que está trabalhando, e nunca edite arquivo que ele está editando.
 
@@ -464,6 +510,7 @@ nada, e o que a retrospectiva lê para medir tempo e rodadas por tarefa.
 ## Agora
 - **Tarefa atual:** N.0, iniciada em <data e hora>, com o Implementador em <modelo>
 - **Espero:** <relatório do Implementador | resposta do Joaquim sobre …>
+- **Devo ainda:** <o que ficou combinado e não está feito: um merge, um pedido ao Arquiteto, uma pendência da validação | nada>
 - **Base:** `spec/<func>` em `<hash>`
 
 ## Concluídas
@@ -474,6 +521,9 @@ nada, e o que a retrospectiva lê para medir tempo e rodadas por tarefa.
 ## O que falhou
 ## O que decidi sem perguntar
 ```
+
+"Agora" e "Esperando o Joaquim" são as duas seções que você relê depois de cada limpeza (passo 9): o
+que não está nelas, para você não existe. As outras são histórico, e só crescem.
 
 Em "Observação" entram os diagnósticos do Arquiteto, a saída do modo econômico no meio da tarefa e as divergências. Correção avulsa não tem
 `estado.md`: o registro dela é o próprio documento em `tasks/correcoes/`.

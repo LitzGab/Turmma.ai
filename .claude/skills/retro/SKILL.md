@@ -54,6 +54,21 @@ Claude por tarefa**, e proponha com o número se o modo econômico continua exis
 vale para os revisores com veto em Opus e para a vigia do Orquestrador, que são a maior parte do
 consumo de uma tarefa: proponha manter ou trocar, com o número.
 
+Quatro medidas que a avaliação do processo de 10/10/2026 deixou para esta retrospectiva (D78, sétima
+revisão). Meça cada uma e proponha com o número, ou diga que o número não sustenta:
+
+- **O Orquestrador depois da limpeza por tarefa:** o custo dele por tarefa antes e depois da 13.0 do
+  F3, e o que ele deixou de fazer por não estar no "Agora" do `estado.md`. Com isso, se ele passa a
+  Sonnet: não lê código e segue um roteiro
+- **A vigia:** quantos turnos dela não acharam nada a fazer. Se for a maioria, a rotina ganha um
+  `--pre-run` que só acorda o modelo quando há terminal parado ou tarefa fora do prazo
+- **O tamanho da tarefa:** linhas do `N_task.md` e número de guardiões contra rodadas e escaladas. No
+  F3, até a 13.0, as três com documento acima de 200 linhas (5.0, 11.0 e 13.0) foram as três com quatro
+  rodadas ou escalada. Se o resto confirmar, o `criar-tasks` ganha um teto
+- **O modelo dos revisores:** antes de propor baixar o `test-engineer`, leia a 13.0 do F3. A reprovação
+  dele na 2ª rodada parecia só falta de prova ("o prazo de 5 s não está provado") e era defeito: o
+  prazo não existia no código. Reprovação por falta de prova não é sinônimo de rigor demais
+
 ## 3. Agrupar causas
 
 Leia cada achado e agrupe pela **causa**, não pelo revisor. Exemplos de causa: "teste de
