@@ -10,6 +10,7 @@ import { EstadoCarregando, EstadoErro } from './componentes/estado'
 import { FronteiraDaArea } from './componentes/FronteiraDaArea'
 import { LoginPorCima } from './componentes/LoginPorCima'
 import { ConteudoNaoEncontrado, PaginaNaoEncontrada } from './componentes/NaoEncontrada'
+import { AcessoSuspenso } from './paginas/AcessoSuspenso'
 import { Casca } from './paginas/Casca'
 import { ConfigurarMfa } from './paginas/ConfigurarMfa'
 import { Convite } from './paginas/Convite'
@@ -71,6 +72,9 @@ const FALHA_DA_AREA = {
  * Com a sessão vencida, a tela continua montada e o login abre por cima dela: a professora pode estar no meio de uma
  * contestação, e o relógio não pode apagar o que ela escreveu (regra 80, item 6). Só o "Sair" e a aba que abriu sem
  * sessão levam à entrada.
+ *
+ * Com o acesso suspenso (a renovação respondeu `ACESSO_SUSPENSO`, F3, 20.0), a área sai e a tela "Acesso suspenso" toma
+ * o lugar dela: sem login por cima, porque a senha certa daria a mesma recusa, e sem "Tentar de novo".
  */
 function Protegida({ children }: { children: ReactNode }) {
   const estado = useSyncExternalStore(assinarSessao, estadoDaSessao)
@@ -88,6 +92,7 @@ function Protegida({ children }: { children: ReactNode }) {
       </>
     )
   if (estado === 'anonima') return <Redirect to={ROTAS.entrar} replace />
+  if (estado === 'suspensa') return <AcessoSuspenso />
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-6 sm:px-6">
       {estado === 'indisponivel' ? (

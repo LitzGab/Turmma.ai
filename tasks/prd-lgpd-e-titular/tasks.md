@@ -143,11 +143,11 @@
   - [ ] 19.4 Pendências para o `TODO.md`: a contração de `provedor` (release posterior), recomendações abertas
   - [ ] 19.5 Testes
 
-- [ ] **20.0 — Quem tem a eliminação agendada vê que o acesso está suspenso**
-  - [ ] 20.1 Sessão da web: o `ACESSO_SUSPENSO` da renovação tratado em `renovarSessao` (estado `suspensa`, token esquecido, cache esvaziado); "Sair" sem aviso pendente
-  - [ ] 20.2 Tela "Acesso suspenso" em `Protegida`: o texto do catálogo e o link para a entrada, sem "Tentar de novo" nem formulário
-  - [ ] 20.3 Peças de apoio do e2e: `agendarEliminacaoNoBanco` e `cancelarEliminacaoNoBanco`
-  - [ ] 20.4 Testes
+- [x] **20.0 — Quem tem a eliminação agendada vê que o acesso está suspenso**
+  - [x] 20.1 Sessão da web: o `ACESSO_SUSPENSO` da renovação tratado em `renovarSessao` (estado `suspensa`, token esquecido, cache esvaziado); "Sair" sem aviso pendente
+  - [x] 20.2 Tela "Acesso suspenso" em `Protegida`: o texto do catálogo e o link para a entrada, sem "Tentar de novo" nem formulário
+  - [x] 20.3 Peças de apoio do e2e: `agendarEliminacaoNoBanco` e `cancelarEliminacaoNoBanco`
+  - [x] 20.4 Testes
 
 ## Dependências e paralelismo
 

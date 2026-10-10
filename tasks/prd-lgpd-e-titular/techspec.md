@@ -907,6 +907,14 @@ enquanto só com "Meus dados", alcançável também na gaveta a 360 px. O profes
 - **O que não muda:** 5xx e queda de rede continuam `indisponivel`, sem deslogar ninguém (regra 80, item 6), e o 401 continua
   como era. Em `suspensa` nenhuma chamada sai da aba, e o "Sair" não deixa aviso de saída pendente: a API já encerrou as
   sessões e apagou o cookie.
+- **Como ficou no código (tarefa 20.0).** `suspensa` é um destino de `encerrarLocalmente` (`apps/web/src/api/sessao.ts`),
+  com o cache esvaziado uma vez e a memória de quem estava (`quemEstaNaSessao`) mantida, para o link saber o caminho. Vale
+  de qualquer estado **menos `anonima`**: a renovação que estava no ar quando a pessoa clicou em "Sair" e volta 403 depois
+  dele não devolve a aba à tela, porque a saída é final (a mesma barreira que o `vencida` já tem). Em `suspensa`,
+  `renovarSessao` e `chamarComSessao` recusam sem chamar a API com `ACESSO_SUSPENSO` (a consulta, a renovação e o aviso de
+  atividade), `abrirSessaoPeloCookie` não tenta de novo, e o `ACESSO_SUSPENSO` da renovação no "Sair" é tratado como o
+  `NAO_AUTENTICADO` (a API já encerrou, não há o que avisar). O link "Ir para a entrada" chama `sairDaSessaoSuspensa`, que só
+  age em `suspensa`, e troca a entrada do histórico (`replace`), para o Voltar não levar à área de quem estava.
 - **Limite declarado:** a segunda aba do mesmo navegador não mostra a tela. O 403 da primeira apagou o cookie, a renovação da
   segunda recebe 401 e abre o login por cima, em que a senha certa mostra o mesmo texto.
 

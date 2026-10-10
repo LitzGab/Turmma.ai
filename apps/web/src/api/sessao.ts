@@ -59,9 +59,13 @@ export const ESPERA_ENTRE_TENTATIVAS_DE_SAIDA_MS = 1_000
  * - `vencida`: havia sessão nesta aba e ela acabou (inatividade, ou `NAO_AUTENTICADO` que persistiu depois da
  *   renovação). A tela continua montada e o login abre por cima dela, para ninguém perder o que estava escrevendo
  *   (regra 80, item 6);
- * - `indisponivel`: a API não respondeu (5xx ou sem rede). Não é logout: o caminho é tentar de novo.
+ * - `indisponivel`: a API não respondeu (5xx ou sem rede). Não é logout: o caminho é tentar de novo;
+ * - `suspensa`: a renovação respondeu `ACESSO_SUSPENSO` (F3, 20.0): quem estava aqui tem a eliminação agendada, e a API
+ *   já encerrou as sessões e apagou o cookie. Não há token, o cache saiu, e a rota protegida mostra "Acesso suspenso",
+ *   sem "Tentar de novo": repetir não adianta. É fim de sessão como o `vencida`, mas sem login por cima da tela, porque
+ *   a senha certa daria o mesmo `ACESSO_SUSPENSO`.
  */
-export type EstadoDaSessao = 'desconhecida' | 'abrindo' | 'aberta' | 'anonima' | 'vencida' | 'indisponivel'
+export type EstadoDaSessao = 'desconhecida' | 'abrindo' | 'aberta' | 'anonima' | 'vencida' | 'indisponivel' | 'suspensa'
 
 /**
  * O token de acesso vive só aqui, em variável de módulo, e some quando a aba fecha ou recarrega (regra 50, item 7):
@@ -286,26 +290,31 @@ function limparDadosDaEscola(): void {
  *   entrada, e nada desta aba continua;
  * - `vencida` é o fim que chegou sozinho (inatividade, sessão encerrada no servidor): a tela continua montada e o
  *   login abre por cima dela, porque a professora pode estar no meio de uma contestação e perder o que escreveu por
- *   causa do relógio é o mesmo erro de perder resposta de prova (regra 80, item 6).
+ *   causa do relógio é o mesmo erro de perder resposta de prova (regra 80, item 6);
+ * - `suspensa` é o fim que a API decidiu (a eliminação agendada, F3): a área sai, o cache sai, e o que a aba mostra é
+ *   a tela "Acesso suspenso". Vale de qualquer estado menos `anonima`, pela mesma razão do `vencida`.
  *
  * Ir para `anonima` vale de qualquer estado: é a saída pedida pela pessoa, e ela chega tanto da sessão aberta quanto
- * da vencida ("Entrar com outra conta") ou da aba que nem abriu direito. **O único destino barrado é `vencida`
- * quando a sessão não está aberta:** a saída é final, e um pedido atrasado que volta 401 depois dela devolveria a
- * aba ao estado vencido — com o Voltar do navegador remontando a tela da pessoa anterior com o diálogo por cima, em
- * vez da entrada.
+ * da vencida ("Entrar com outra conta"), da suspensa ("Ir para a entrada") ou da aba que nem abriu direito. **Os
+ * destinos barrados são `vencida` quando a sessão não está aberta, e `suspensa` quando a aba já está `anonima`:** a
+ * saída é final, e um pedido atrasado que volta 401 (ou a renovação que volta 403) depois dela devolveria a aba ao
+ * estado vencido ou suspenso — com o Voltar do navegador remontando a tela da pessoa anterior, em vez da entrada.
  *
  * Idempotente por destino: o cache limpo faz a tela que ainda estava montada buscar de novo e receber outro
  * `NAO_AUTENTICADO`, e um segundo encerramento no mesmo destino não pode reiniciar a limpeza.
  */
-function encerrarLocalmente(destino: 'anonima' | 'vencida'): void {
+function encerrarLocalmente(destino: 'anonima' | 'vencida' | 'suspensa'): void {
   // Só a sessão aberta vence sozinha: depois do "Sair", nada mais devolve esta aba à área autenticada.
   if (destino === 'vencida' && estado !== 'aberta') return
+  // A renovação que estava no ar quando a pessoa clicou em "Sair" e volta 403 depois dele: a saída é final.
+  if (destino === 'suspensa' && estado === 'anonima') return
   // Idempotente por destino: o segundo `NAO_AUTENTICADO` de uma tela ainda montada não reinicia a limpeza.
   if (token === undefined && estado === destino) return
   token = undefined
   expiraEm = undefined
   estado = destino
   usuarioAntesDeVencer = destino === 'vencida' ? quemEstaNaAba?.usuarioId : undefined
+  // Na `suspensa` a memória fica: é ela que diz à tela se o caminho de volta é o endereço da escola (aluno) ou a entrada.
   if (destino === 'anonima') quemEstaNaAba = undefined
   // Avisa antes de limpar: assim o React já tem o desmonte da área autenticada agendado quando o cache esvazia, e
   // nenhum observador ainda montado recria a consulta que acabou de sair.
@@ -321,6 +330,19 @@ function esquecerSessao(): void {
 /** O fim de sessão que chegou sozinho: o login abre por cima da tela, que continua montada. */
 function vencerSessao(): void {
   encerrarLocalmente('vencida')
+}
+
+/** O fim de sessão que a API decidiu: a eliminação agendada (F3, 20.0). A tela "Acesso suspenso" toma o lugar da área. */
+function suspenderSessao(): void {
+  encerrarLocalmente('suspensa')
+}
+
+/**
+ * "Ir para a entrada", na tela "Acesso suspenso": a aba deixa de ser `suspensa` e passa a `anonima`, e a rota protegida
+ * já não a mostra. Só vale em `suspensa`: o link não encerra uma sessão aberta que por acaso exista.
+ */
+export function sairDaSessaoSuspensa(): void {
+  if (estado === 'suspensa') esquecerSessao()
 }
 
 /**
@@ -412,8 +434,15 @@ export function renovarSessao(): Promise<void> {
   // `vencida`, renovar devolveria a área autenticada por baixo do diálogo de login sem ninguém ter entrado. Quem abre
   // a aba de novo passa por `abrirSessaoPeloCookie`, que sai de `desconhecida`, e o login passa por `guardarToken`.
   if (estado === 'anonima' || estado === 'vencida') return Promise.reject(new ErroDaApi(CodigoDeErro.NAO_AUTENTICADO))
+  // `suspensa`: a API já recusou, e repetir o pedido só renderia outro 403 (regra 80: nenhuma chamada sai da aba).
+  if (estado === 'suspensa') return Promise.reject(new ErroDaApi(CodigoDeErro.ACESSO_SUSPENSO))
   renovacaoEmAndamento ??= comTravaDeRenovacao(pedirRenovacao)
-    .then(guardarToken)
+    .then(guardarToken, (erro: unknown) => {
+      // O lugar único do `ACESSO_SUSPENSO` (Tech Spec, seção 9, "Login suspenso"): serve à aba que abre pelo cookie, à
+      // chamada que voltou 401 e ao "Sair". A sessão acaba aqui, e quem chamou ainda recebe o erro.
+      if (ehCodigo(erro, CodigoDeErro.ACESSO_SUSPENSO)) suspenderSessao()
+      throw erro
+    })
     .finally(() => {
       renovacaoEmAndamento = undefined
     })
@@ -426,15 +455,21 @@ export function renovarSessao(): Promise<void> {
  *
  * - Sessão válida: fica `aberta`.
  * - `NAO_AUTENTICADO`: fica `anonima`, e a rota protegida leva à entrada.
+ * - `ACESSO_SUSPENSO`: fica `suspensa` (20.0), e a rota protegida mostra "Acesso suspenso".
  * - Qualquer outra falha (5xx, sem rede): fica `indisponivel`. Ninguém é mandado para o login por causa de uma
  *   queda do Postgres ou da rede da escola (Tech Spec, seção 7c; regra 80, item 6).
  */
 export async function abrirSessaoPeloCookie(): Promise<void> {
   if (token !== undefined) return
+  // Suspensa, a aba não tenta de novo: a tela é final, e o único caminho é o link dela.
+  if (estado === 'suspensa') return
   definirEstado('abrindo')
   try {
     await renovarSessao()
   } catch (erro) {
+    // O `ACESSO_SUSPENSO` já deixou a aba `suspensa` dentro da renovação: não é queda da API, e `indisponivel` aqui
+    // traria de volta o "Tentar de novo" que não adianta. Lido por `estadoDaSessao()`, que a guarda de cima não restringe.
+    if (estadoDaSessao() === 'suspensa') return
     ultimoErro = erro
     definirEstado(ehCodigo(erro, CodigoDeErro.NAO_AUTENTICADO) ? 'anonima' : 'indisponivel')
   }
@@ -450,8 +485,9 @@ export type OpcoesComSessao = Omit<OpcoesDaChamada, 'token'>
 export async function chamarComSessao<T>(caminho: string, esquema: EsquemaDeResposta<T>, opcoes: OpcoesComSessao = {}): Promise<T> {
   // Sem sessão, a chamada nem sai: às 10h a inatividade vence em muitas abas ao mesmo tempo, e cada tela ainda
   // montada mandaria as consultas dela à API só para ouvir 401 (regra 80). Quem entra de novo passa pelo login, que
-  // não usa este caminho.
+  // não usa este caminho. Na `suspensa` vale o mesmo, com o código que diz por quê.
   if (estado === 'anonima' || estado === 'vencida') throw new ErroDaApi(CodigoDeErro.NAO_AUTENTICADO)
+  if (estado === 'suspensa') throw new ErroDaApi(CodigoDeErro.ACESSO_SUSPENSO)
   // O token já vencido é renovado antes: a requisição que só serviria para receber 401 não chega a sair.
   if (token !== undefined && expiraEm !== undefined && expiraEm <= Date.now()) await renovarComTokenVencido(token)
   const usado = token
@@ -463,7 +499,7 @@ export async function chamarComSessao<T>(caminho: string, esquema: EsquemaDeResp
     // uma requisição sem credencial nenhuma à API, para ouvir o mesmo 401. Lido por `estadoDaSessao()` de propósito:
     // o estado pode ter mudado durante o `await`, e a variável já estava restringida pela guarda do começo.
     const durante = estadoDaSessao()
-    if (durante === 'anonima' || durante === 'vencida') throw erro
+    if (durante === 'anonima' || durante === 'vencida' || durante === 'suspensa') throw erro
     await renovarComTokenVencido(usado)
     try {
       return await chamarApi(caminho, esquema, { ...opcoes, token })
@@ -579,8 +615,10 @@ async function encerrarNaApi(): Promise<void> {
     try {
       await renovarSessao()
     } catch (erro) {
-      // Cookie recusado: a sessão acabou mesmo, e não há o que encerrar. Qualquer outra falha é falha da saída.
-      if (ehCodigo(erro, CodigoDeErro.NAO_AUTENTICADO)) return
+      // Cookie recusado: a sessão acabou mesmo, e não há o que encerrar. Com `ACESSO_SUSPENSO` é igual: a API já
+      // encerrou as sessões e apagou o cookie, e avisar "não foi possível sair" aí seria aviso à toa (20.0). Qualquer
+      // outra falha é falha da saída.
+      if (ehCodigo(erro, CodigoDeErro.NAO_AUTENTICADO) || ehCodigo(erro, CodigoDeErro.ACESSO_SUSPENSO)) return
       throw erro
     }
   }

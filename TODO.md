@@ -414,6 +414,16 @@ para o staging".
 - [ ] **(F3, 18.0) A releitura de 10 s de "Meus dados" não tem teto de tentativas** (`frontend-reviewer`, 1ª rodada): o relógio é
       o `agendarRelitura` da 16.0, compartilhado com a tela da coordenação; teto ou espaçamento crescente é decisão dos dois
       usos, pela regra 80 (dono: Joaquim)
+- [ ] **(F3, 20.0) `INTERVALO_DA_ATIVIDADE_MIN` copiado em dois specs de e2e** (`test-engineer` e `revisor-geral`, 1ª rodada):
+      `e2e/acesso-suspenso.spec.ts` e `e2e/inatividade.spec.ts` repetem o 5 min do relógio de inatividade, que vive em
+      `apps/web/src/sessao/inatividade.ts` (importa React e `api/sessao`, e não carrega no Node do Playwright). Vale quando a
+      constante for para `packages/shared` (dono: Joaquim)
+- [ ] **(F3, 20.0) Teste de `deveTentarDeNovo` com `ACESSO_SUSPENSO`** (`infra-guardian`, 1ª rodada): a garantia de "nenhuma nova
+      tentativa" depende só da lista fechada de códigos de `apps/web/src/api/cliente-de-consultas.ts`; um teste dela, com
+      `ACESSO_SUSPENSO`, a prende. O arquivo não é da 20.0: a tarefa que o tocar cobre (dono: Joaquim)
+- [ ] **(F3, 20.0) Componente comum para `SemDesafio` e `AcessoSuspenso`** (`revisor-geral` e `frontend-reviewer`, 1ª rodada): o
+      link "Ir para a entrada" e o aviso com o token `pendente` se repetem nas duas telas; um componente comum, ou um
+      token/variante "aviso", vale quando houver uma terceira tela igual (dono: Joaquim)
 
 ## Processo e dívida do F0
 

@@ -307,6 +307,28 @@ export async function desativarUsuario(usuarioId: string): Promise<void> {
 }
 
 /**
+ * A coordenação agendou a eliminação da pessoa (F3, 14.0): a marca que a guarda e a renovação leem, posta direto no
+ * banco. Sem o pedido e sem o encerramento das sessões, de propósito — é o que a API faz com a marca, e não com o
+ * registro: a requisição seguinte da aba recebe 401 e a renovação, 403 `ACESSO_SUSPENSO`, com a sessão ainda aberta no
+ * servidor. É isso que prova que a recusa não depende de o registro ter encerrado nada.
+ */
+export async function agendarEliminacaoNoBanco(usuarioId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('update usuario set eliminacao_agendada_em = now() where id = $1', [usuarioId])
+  })
+}
+
+/**
+ * A coordenação cancelou o pedido dentro do prazo: a marca sai, e a mesma senha volta a entrar. O que foi encerrado
+ * enquanto ela esteve posta não volta (a sessão da aba era a anterior ao agendamento), e é por isso que o teste entra de novo.
+ */
+export async function cancelarEliminacaoNoBanco(usuarioId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('update usuario set eliminacao_agendada_em = null where id = $1', [usuarioId])
+  })
+}
+
+/**
  * O operador revoga o convite da coordenação, depois do aceite e antes da primeira entrada (A0b, estado `aceito`), como
  * o painel faz: o convite usado ganha `revogado_em`, e o bilhete do aceite deixa de ativar. Só o convite daquele usuário
  * convidado, na escola dele.

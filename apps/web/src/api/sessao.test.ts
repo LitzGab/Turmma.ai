@@ -649,3 +649,213 @@ describe('fim de sessão', () => {
     expect(limpezas).toBe(1)
   })
 })
+
+/**
+ * A renovação que responde `ACESSO_SUSPENSO` (F3, 20.0; Tech Spec, seção 9, "Login suspenso"): quem estava na aba tem a
+ * eliminação agendada, e a API já encerrou as sessões e apagou o cookie. A aba esquece o token, esvazia o cache e deixa
+ * de chamar a API, e quem decide o que mostrar é a rota protegida, pelo estado `suspensa`.
+ */
+describe('acesso suspenso', () => {
+  const esquemaQualquer = { safeParse: (valor: unknown) => ({ success: true as const, data: valor }) }
+  const suspenso = { status: 403, corpo: envelope(CodigoDeErro.ACESSO_SUSPENSO) }
+
+  /** A aba que abre pelo cookie de quem tem a eliminação agendada: a primeira renovação já é recusada. */
+  async function abrirSuspensa(): Promise<void> {
+    responderCom(suspenso)
+    await sessao.abrirSessaoPeloCookie()
+    expect(sessao.estadoDaSessao()).toBe('suspensa')
+    chamadas.length = 0
+  }
+
+  it('a aba que abre pelo cookie fica suspensa, sem token, com o cache esvaziado uma vez e sem "Tentar de novo"', async () => {
+    let limpezas = 0
+    sessao.aoTrocarDeSessao(() => limpezas++)
+    responderCom(suspenso)
+
+    await sessao.abrirSessaoPeloCookie()
+
+    // `indisponivel` aqui devolveria à tela o "Tentar de novo" que repete um pedido que a API vai recusar sempre.
+    expect(sessao.estadoDaSessao()).toBe('suspensa')
+    expect(sessao.tokenDeAcesso()).toBeUndefined()
+    expect(limpezas).toBe(1)
+    expect(chamadas).toHaveLength(1)
+  })
+
+  it('a aba com a sessão aberta, cujo token vencido é renovado e recusado, fica suspensa sem mandar a consulta', async () => {
+    await comSessaoVencida()
+    let limpezas = 0
+    sessao.aoTrocarDeSessao(() => limpezas++)
+    responderCom(suspenso)
+
+    const erro = await erroDe(sessao.buscarComSessao('/v1/eu', esquemaQualquer))
+
+    expect(erro.codigo).toBe(CodigoDeErro.ACESSO_SUSPENSO)
+    expect(sessao.estadoDaSessao()).toBe('suspensa')
+    expect(sessao.tokenDeAcesso()).toBeUndefined()
+    expect(limpezas).toBe(1)
+    expect(chamadas.map((chamada) => chamada.caminho)).toEqual([sessao.CAMINHO_DA_RENOVACAO])
+  })
+
+  it('a consulta recusada com 401 e depois a renovação recusada com 403 também deixam a aba suspensa', async () => {
+    await comSessaoAberta()
+    responderCom({ status: 401, corpo: envelope(CodigoDeErro.NAO_AUTENTICADO) }, suspenso)
+
+    const erro = await erroDe(sessao.buscarComSessao('/v1/eu', esquemaQualquer))
+
+    expect(erro.codigo).toBe(CodigoDeErro.ACESSO_SUSPENSO)
+    expect(sessao.estadoDaSessao()).toBe('suspensa')
+    expect(chamadas.map((chamada) => chamada.caminho)).toEqual(['/v1/eu', sessao.CAMINHO_DA_RENOVACAO])
+  })
+
+  it('duas consultas que caem em 401 juntas esperam a mesma renovação recusada: as duas recebem ACESSO_SUSPENSO, uma renovação, um esvaziamento', async () => {
+    await comSessaoAberta()
+    let limpezas = 0
+    sessao.aoTrocarDeSessao(() => limpezas++)
+    responderCom({ status: 401, corpo: envelope(CodigoDeErro.NAO_AUTENTICADO) }, { status: 401, corpo: envelope(CodigoDeErro.NAO_AUTENTICADO) }, suspenso)
+
+    const [a, b] = await Promise.all([erroDe(sessao.buscarComSessao('/v1/a', esquemaQualquer)), erroDe(sessao.buscarComSessao('/v1/b', esquemaQualquer))])
+
+    expect(a.codigo).toBe(CodigoDeErro.ACESSO_SUSPENSO)
+    expect(b.codigo).toBe(CodigoDeErro.ACESSO_SUSPENSO)
+    expect(sessao.estadoDaSessao()).toBe('suspensa')
+    expect(limpezas).toBe(1)
+    // Nenhuma das duas repete o pedido, e a renovação sai uma vez só.
+    expect(chamadas.map((chamada) => chamada.caminho)).toEqual(['/v1/a', '/v1/b', sessao.CAMINHO_DA_RENOVACAO])
+  })
+
+  it('5xx na renovação continua indisponível, e a sessão aberta segue de pé: só o 403 do catálogo suspende', async () => {
+    await comSessaoAberta()
+    responderCom({ status: 503, corpo: envelope(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO) })
+
+    const erro = await erroDe(sessao.renovarSessao())
+
+    expect(erro.codigo).toBe(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO)
+    expect(sessao.estadoDaSessao()).toBe('aberta')
+    expect(sessao.tokenDeAcesso()).toBe('token-1')
+  })
+
+  it('suspensa, nenhuma chamada sai da aba: nem consulta, nem renovação, nem abertura pelo cookie, nem aviso de atividade', async () => {
+    await abrirSuspensa()
+
+    expect((await erroDe(sessao.buscarComSessao('/v1/eu', esquemaQualquer))).codigo).toBe(CodigoDeErro.ACESSO_SUSPENSO)
+    expect((await erroDe(sessao.renovarSessao())).codigo).toBe(CodigoDeErro.ACESSO_SUSPENSO)
+    expect((await erroDe(sessao.registrarAtividade())).codigo).toBe(CodigoDeErro.ACESSO_SUSPENSO)
+    await sessao.abrirSessaoPeloCookie()
+
+    expect(chamadas).toHaveLength(0)
+    expect(sessao.estadoDaSessao()).toBe('suspensa')
+  })
+
+  it('o 401 que volta atrasado, depois de a aba ficar suspensa, não repete a chamada nem muda o estado', async () => {
+    await comSessaoAberta()
+    // A consulta saiu antes da suspensão e só volta depois dela: a resposta é segurada até a renovação ser recusada.
+    let soltar401: () => void = () => undefined
+    let primeira = true
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (caminho: string, opcoes?: RequestInit) => {
+        chamadas.push({ caminho, metodo: opcoes?.method ?? 'GET', autorizacao: null, quando: Date.now() })
+        if (caminho === '/v1/vinculos' && primeira) {
+          primeira = false
+          await new Promise<void>((resolver) => (soltar401 = resolver))
+          return new Response(JSON.stringify(envelope(CodigoDeErro.NAO_AUTENTICADO)), { status: 401 })
+        }
+        if (caminho === '/v1/vinculos') return new Response(JSON.stringify(envelope(CodigoDeErro.NAO_AUTENTICADO)), { status: 401 })
+        return new Response(JSON.stringify(envelope(CodigoDeErro.ACESSO_SUSPENSO)), { status: 403 })
+      }),
+    )
+    const atrasada = erroDe(sessao.buscarComSessao('/v1/vinculos', esquemaQualquer))
+    await erroDe(sessao.renovarSessao())
+    expect(sessao.estadoDaSessao()).toBe('suspensa')
+
+    soltar401()
+
+    expect((await atrasada).codigo).toBe(CodigoDeErro.NAO_AUTENTICADO)
+    expect(sessao.estadoDaSessao()).toBe('suspensa')
+    // Uma consulta e uma renovação: o 401 atrasado não repetiu nada, e nada saiu sem credencial.
+    expect(chamadas.map((chamada) => chamada.caminho)).toEqual(['/v1/vinculos', sessao.CAMINHO_DA_RENOVACAO])
+  })
+
+  it('o "Sair" da aba suspensa não deixa aviso de saída pendente: a API já encerrou as sessões, e nenhuma chamada sai', async () => {
+    await abrirSuspensa()
+
+    await sessao.sair()
+
+    expect(chamadas).toHaveLength(0)
+    expect(sessao.saidaPendente()).toBe(false)
+    expect(sessao.estadoDaSessao()).toBe('anonima')
+  })
+
+  it('o "Sair" cujo token vencido é renovado e recusado também não deixa aviso pendente, e nada é repetido', async () => {
+    await comSessaoVencida()
+    responderCom(suspenso)
+
+    await sessao.sair()
+
+    // Só a renovação saiu: o `DELETE` não tem o que encerrar, e "não foi possível sair" aí seria aviso à toa.
+    expect(chamadas.map((chamada) => chamada.metodo)).toEqual(['POST'])
+    expect(chamadas.map((chamada) => chamada.caminho)).toEqual([sessao.CAMINHO_DA_RENOVACAO])
+    expect(sessao.saidaPendente()).toBe(false)
+    expect(sessao.estadoDaSessao()).toBe('anonima')
+  })
+
+  it('a inatividade que vence na aba suspensa não deixa saída pendente nem troca a tela pelo login por cima', async () => {
+    await abrirSuspensa()
+
+    await sessao.encerrarPorInatividade()
+
+    expect(sessao.saidaPendente()).toBe(false)
+    // `vencida` abriria o login por cima da tela, e a senha certa devolveria o mesmo `ACESSO_SUSPENSO`.
+    expect(sessao.estadoDaSessao()).toBe('suspensa')
+    expect(chamadas).toHaveLength(0)
+  })
+
+  it('a renovação que estava no ar e volta 403 depois do "Sair" não devolve a aba a suspensa: a saída é final', async () => {
+    const travas = instalarWebLocks()
+    await comSessaoAberta()
+    const liberarARenovacao = travas.segurar(sessao.NOME_DA_TRAVA_DE_RENOVACAO)
+    // A renovação já pedida, esperando a vez, e o "Sair" que chega primeiro.
+    responderCom({ status: 204 }, suspenso)
+    const renovacao = erroDe(sessao.renovarSessao())
+
+    await sessao.sair()
+    expect(sessao.estadoDaSessao()).toBe('anonima')
+    liberarARenovacao()
+    expect((await renovacao).codigo).toBe(CodigoDeErro.ACESSO_SUSPENSO)
+
+    expect(sessao.estadoDaSessao()).toBe('anonima')
+    expect(sessao.saidaPendente()).toBe(false)
+  })
+
+  it('a memória de quem estava fica na aba suspensa, para o link saber o caminho, e o link a esquece e deixa a aba anônima', async () => {
+    await comSessaoAberta()
+    sessao.lembrarQuemEsta({ usuarioId: 'aluno-1', papel: 'aluno', escola: { slug: 'escola-do-aluno' } })
+    responderCom({ status: 401, corpo: envelope(CodigoDeErro.NAO_AUTENTICADO) }, suspenso)
+    await erroDe(sessao.buscarComSessao('/v1/eu', esquemaQualquer))
+    expect(sessao.quemEstaNaSessao()).toEqual({ usuarioId: 'aluno-1', papel: 'aluno', escolaSlug: 'escola-do-aluno' })
+
+    sessao.sairDaSessaoSuspensa()
+
+    expect(sessao.estadoDaSessao()).toBe('anonima')
+    expect(sessao.quemEstaNaSessao()).toBeUndefined()
+  })
+
+  it('o link da tela não encerra uma sessão que por acaso está aberta', async () => {
+    await comSessaoAberta()
+
+    sessao.sairDaSessaoSuspensa()
+
+    expect(sessao.estadoDaSessao()).toBe('aberta')
+    expect(sessao.tokenDeAcesso()).toBe('token-1')
+  })
+
+  it('a entrada que depois é aceita abre a sessão e tira a aba de suspensa: cancelada a eliminação, a mesma senha entra', async () => {
+    await abrirSuspensa()
+    responderCom({ status: 200, corpo: { etapa: 'pronta', ...tokenDe('token-3') } })
+
+    await sessao.entrarPorEmail({ email: 'camila@escola.test', senha: 'segredo-da-camila' })
+
+    expect(sessao.estadoDaSessao()).toBe('aberta')
+    expect(sessao.tokenDeAcesso()).toBe('token-3')
+  })
+})

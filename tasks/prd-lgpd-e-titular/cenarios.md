@@ -303,6 +303,11 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [U] (tarefa 20.0) O 403 `ACESSO_SUSPENSO` da renovação deixa a aba `suspensa`, sem token e com o cache esvaziado, na
     aba que abre pelo cookie e na que tinha a sessão aberta; 5xx continua `indisponivel`.
   - [U] (tarefa 20.0) Em `suspensa` nenhuma chamada sai, o 401 atrasado não muda o estado, e o "Sair" não fica pendente.
+  - [U] (tarefa 20.0) A renovação que estava no ar e volta 403 depois do "Sair" não devolve a aba a `suspensa`, e o link
+    "Ir para a entrada" só encerra a aba que está `suspensa`, guardando antes a memória de quem estava para o caminho dele.
+  - [E] (tarefa 20.0) O link "Ir para a entrada" troca a entrada do histórico e deixa a aba anônima: um endereço protegido
+    aberto em seguida, sem recarregar, leva à entrada, e não à tela de novo; o link é `/entrar` para quem a aba sabia ser
+    da equipe.
   - [E] (tarefa 20.0) O aluno suspenso com a aba aberta vê a tela "Acesso suspenso", sem "Tentar de novo", sem campo e sem
     o nome dele, com o link para `/e/<slug>`; a senha certa mostra o mesmo texto e não entra; cancelado, a mesma senha entra.
   - [E] (tarefa 20.0) No Chromebook do carrinho, o colega que entra em seguida não vê nada do suspenso.
