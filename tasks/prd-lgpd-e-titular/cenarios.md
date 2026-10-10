@@ -300,6 +300,15 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] O cookie de renovação vencido, encerrado por saída ou já rotacionado de quem tem a eliminação agendada dá 401, como o desconhecido; nunca `ACESSO_SUSPENSO`.
   - [I] O aluno desativado com a eliminação registrada: a renovação e o login por matrícula respondem como a matrícula inexistente.
   - [I] A redefinição do segundo fator também registra a escola em que a pessoa tem a eliminação agendada.
+  - [U] (tarefa 20.0) O 403 `ACESSO_SUSPENSO` da renovação deixa a aba `suspensa`, sem token e com o cache esvaziado, na
+    aba que abre pelo cookie e na que tinha a sessão aberta; 5xx continua `indisponivel`.
+  - [U] (tarefa 20.0) Em `suspensa` nenhuma chamada sai, o 401 atrasado não muda o estado, e o "Sair" não fica pendente.
+  - [E] (tarefa 20.0) O aluno suspenso com a aba aberta vê a tela "Acesso suspenso", sem "Tentar de novo", sem campo e sem
+    o nome dele, com o link para `/e/<slug>`; a senha certa mostra o mesmo texto e não entra; cancelado, a mesma senha entra.
+  - [E] (tarefa 20.0) No Chromebook do carrinho, o colega que entra em seguida não vê nada do suspenso.
+  - [E] (tarefa 20.0) A professora suspensa em A recarrega a aba, vê a tela e entra em B pelo e-mail, sem nada de A.
+  - [E] (tarefa 20.0) Com duas abas, a primeira mostra a tela e a segunda, o login por cima, em que a senha certa mostra o
+    texto e não abre sessão.
 - **RF14, prazo de 7 dias.**
   - [I] Cancelado no 6º dia, nada sai. No 8º dia, tudo sai.
   - [I] Cancelar depois de `eliminar_em`, ou depois de enfileirado, dá `PEDIDO_EM_ESTADO_INVALIDO`.

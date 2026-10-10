@@ -501,9 +501,10 @@ na 15.0, pelo `titular.eliminar`, com o relógio injetado):
   suspensa é idêntica à matrícula inexistente (status, corpo, hash e contador).
 - **A redefinição do segundo fator usa `usuariosAtivosDaConta(contaId, { comSuspensos: true })`**: a auditoria lista todos os
   acessos da conta, inclusive o suspenso, que a guarda recusa mas que existe.
-- **A tela "Login suspenso" (seção 9) não está em nenhuma tarefa da 14.0 à 19.0**, e hoje o 403 da renovação cai em
-  `indisponivel` em `apps/web/src/api/sessao.ts`: o Arquiteto aloca a tela em uma tarefa antes da validação. A API entrega o
-  código `ACESSO_SUSPENSO` (403) e, na conta externa, `?falha=acesso_suspenso`, com o texto do catálogo compartilhado.
+- **A tela "Login suspenso" (seção 9) não estava em nenhuma tarefa da 14.0 à 19.0**, e o 403 da renovação caía em
+  `indisponivel` em `apps/web/src/api/sessao.ts`: em 10/10/2026 ela ficou com a **tarefa 20.0** (seção 9, "Login suspenso"). A
+  API entrega o código `ACESSO_SUSPENSO` (403) e, na conta externa, `?falha=acesso_suspenso`, com o texto do catálogo
+  compartilhado.
 - **A renovação só diz `ACESSO_SUSPENSO` ao cookie que valeria sem a suspensão** (o atual, de sessão aberta ou encerrada com
   `eliminacao_agendada`, dentro de `expira_em` e da inatividade); o vencido, o encerrado por outro motivo e o já rotacionado dão
   401, como o desconhecido (seção 4, "Login suspenso").
@@ -778,6 +779,21 @@ enquanto só com "Meus dados", alcançável também na gaveta a 360 px. O profes
 - **Antes de baixar:** avisa o que o arquivo contém e que, em computador da escola, é preciso apagá-lo depois.
 
 **Login suspenso.** "Seu acesso está suspenso a pedido. Fale com a coordenação da escola."
+(`MENSAGENS_DE_ERRO.ACESSO_SUSPENSO`). É a tarefa 20.0, e nada muda na API.
+- **Nas entradas, é o texto da falha, onde a falha da entrada já aparece:** o e-mail, a matrícula, o login por cima da tela e a
+  volta da conta Google ou Microsoft (`?falha=acesso_suspenso`). O código já chega lá pelo catálogo; a 20.0 só prova.
+- **Na renovação, a sessão da aba acaba.** O 403 `ACESSO_SUSPENSO` de `POST /v1/sessao/renovar` é tratado num lugar só, em
+  `renovarSessao` (`apps/web/src/api/sessao.ts`), que serve à aba que abre pelo cookie, à chamada com o token vencido e ao
+  "Sair": a aba esquece o token, esvazia o cache de consultas e passa ao estado `suspensa`. Até a 20.0 ele caía em
+  `indisponivel`, com um "Tentar de novo" que não adianta, ou subia como erro de cada consulta, com o dado da pessoa em cache.
+- **A tela "Acesso suspenso"** é o que `Protegida` mostra em `suspensa`: o texto, sem "Tentar de novo" e sem formulário, e o
+  link "Ir para a entrada", que deixa a aba `anonima`. O link leva a `/e/<slug>` quando a aba sabe que quem estava era aluno,
+  e a `/entrar` no resto, inclusive depois de recarregar, quando a memória já não tem o endereço da escola.
+- **O que não muda:** 5xx e queda de rede continuam `indisponivel`, sem deslogar ninguém (regra 80, item 6), e o 401 continua
+  como era. Em `suspensa` nenhuma chamada sai da aba, e o "Sair" não deixa aviso de saída pendente: a API já encerrou as
+  sessões e apagou o cookie.
+- **Limite declarado:** a segunda aba do mesmo navegador não mostra a tela. O 403 da primeira apagou o cookie, a renovação da
+  segunda recebe 401 e abre o login por cima, em que a senha certa mostra o mesmo texto.
 
 **Peças da A1.** Tabela que vira lista abaixo de 768 px, diálogos e os quatro estados. O JSON nunca é renderizado.
 

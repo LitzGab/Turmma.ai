@@ -143,6 +143,12 @@
   - [ ] 19.4 Pendências para o `TODO.md`: a contração de `provedor` (release posterior), recomendações abertas
   - [ ] 19.5 Testes
 
+- [ ] **20.0 — Quem tem a eliminação agendada vê que o acesso está suspenso**
+  - [ ] 20.1 Sessão da web: o `ACESSO_SUSPENSO` da renovação tratado em `renovarSessao` (estado `suspensa`, token esquecido, cache esvaziado); "Sair" sem aviso pendente
+  - [ ] 20.2 Tela "Acesso suspenso" em `Protegida`: o texto do catálogo e o link para a entrada, sem "Tentar de novo" nem formulário
+  - [ ] 20.3 Peças de apoio do e2e: `agendarEliminacaoNoBanco` e `cancelarEliminacaoNoBanco`
+  - [ ] 20.4 Testes
+
 ## Dependências e paralelismo
 
 | Tarefa | Depende de | Pode correr em paralelo com |
@@ -165,10 +171,13 @@
 | 16.0 | 6.0, 11.0 | 15.0 |
 | 17.0 | 13.0, 14.0, 16.0 | 18.0 |
 | 18.0 | 13.0 | 17.0 |
-| 19.0 | 3.0 a 18.0 | nenhuma |
+| 19.0 | 3.0 a 18.0, 20.0 | nenhuma |
+| 20.0 | 14.0 | 16.0 a 18.0 |
 
 Cada tarefa traz a própria migration, no próximo número livre a partir da 0024 (`techspec.md` seção 3).
 A contração que exige `consumo_ia.provedor` não é tarefa do F3: vai num release posterior (19.4).
+A 20.0 entrou em 10/10/2026, depois da 14.0: a tela "Login suspenso" da `techspec.md` seção 9 não estava em nenhuma
+tarefa. Roda depois da 18.0 e antes da 19.0, que fecha o F3.
 
 ## Subagentes por tarefa
 
@@ -193,6 +202,7 @@ A contração que exige `consumo_ia.provedor` não é tarefa do F3: vai num rele
 | 17.0 | `frontend-reviewer`, `privacy-guardian` (mais `test-engineer` e `revisor-geral`) |
 | 18.0 | `frontend-reviewer`, `privacy-guardian` (mais `test-engineer` e `revisor-geral`) |
 | 19.0 | `infra-guardian`, `privacy-guardian`, `tenancy-guardian` (mais `test-engineer` e `revisor-geral`) |
+| 20.0 | `frontend-reviewer`, `privacy-guardian`, `infra-guardian` (mais `test-engineer` e `revisor-geral`) |
 
 ## Critério de pronto da funcionalidade
 

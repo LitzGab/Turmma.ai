@@ -1,6 +1,6 @@
 # Tarefa 19.0 — A carga prova que o expurgo não atrapalha a aula, e os documentos fecham o F3
 
-**Funcionalidade:** lgpd-e-titular · **Depende de:** 3.0 a 18.0 · **Paralelo com:** nenhuma
+**Funcionalidade:** lgpd-e-titular · **Depende de:** 3.0 a 18.0, 20.0 · **Paralelo com:** nenhuma
 **Subagentes obrigatórios:** `infra-guardian`, `privacy-guardian`, `tenancy-guardian`
 **Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não. -->
