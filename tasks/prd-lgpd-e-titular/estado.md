@@ -1,11 +1,11 @@
 # Estado da execução — lgpd-e-titular
 
 ## Agora
-- **Tarefa atual:** 11.0, iniciada em 09/10/2026 16:20, com o Implementador em MiMo-V2.6-Pro (opencode), a primeira tarefa nele; porte grande (`tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer` e `infra-guardian`)
-- **Espero:** relatório do Implementador; `PEDIDO de retomada` enviado às 19:50 de 09/10, apontando `.processo/ordens/diagnostico-11.md`, para a 3ª rodada
+- **Tarefa atual:** 12.0, iniciada em 09/10/2026 20:08, com o Implementador em MiMo-V2.6-Pro (opencode); porte grande (`tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer` e `llm-integrator`)
+- **Espero:** relatório do Implementador, que aplica a ordem `.processo/ordens/12_task-r1.md` com a decisão do Arquiteto (o índice fica na 13.0), enviada às 22:51 de 09/10. **Depois do commit da 12.0, `13_task.md` e `tasks.md` ficam alterados na árvore: são do Arquiteto e entram num commit de documento antes da 13.0**
 - **Pendente para a validação:** as duas abas da Privacidade quebram em duas linhas em 360 px (vista na
   foto da vitrine); recomendação, não bloqueante
-- **Base:** `spec/lgpd-e-titular` em `fde4953` (o merge da `develop` depois da 10.0), com a `develop` até `9847fe7`
+- **Base:** `spec/lgpd-e-titular` em `399fedc` (a tarefa 11.0), com a `develop` até `9847fe7`
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -33,6 +33,7 @@
 | 9.0 | `fad6fef` | Sonnet | 10 | 2 reprovações na 1ª rodada (`test-engineer` e `revisor-geral`), uma ordem só de sete itens, os cinco aprovados na 2ª; sem escalada nem divergência; a tarefa não tem tela; três recomendações foram para o `TODO.md` e uma para a 15.0; de 13:45 a 14:38 de 09/10, 53 minutos |
 | 10.0 | `be559c0` | Sonnet | 10 | 3 rodadas: o `revisor-geral` reprovou na 1ª e o `test-engineer` na 2ª, uma reprovação de cada, sem escalada nem divergência; `frontend-reviewer` e `privacy-guardian` aprovaram nas duas em que entraram; telas vistas pelo Implementador (11 fotos) e pela Mesa (20); cinco recomendações foram para o `TODO.md`; de 14:42 a 16:15 de 09/10, 1 h 33 min, com a 1ª rodada aos 49 min |
 | merge da `develop` (`9847fe7`) | `fde4953` | Orquestrador | — | sem conflito; 15 arquivos de processo: `.opencode/` (papel, modelo e a trava do commit) e o `/seguir` com o Implementador no opencode |
+| 11.0 | `399fedc` | MiMo-V2.6-Pro (opencode) | 14 | a primeira no opencode; 3 rodadas: quatro reprovações na 1ª (`test-engineer`, `tenancy-guardian`, `privacy-guardian`, `revisor-geral`), duas na 2ª (`test-engineer` e `revisor-geral`), e a 3ª aprovou os dois; `ESCALADA` da Mesa e diagnóstico do Arquiteto (`.processo/ordens/diagnostico-11.md`: a ordem da 1ª rodada criou regra com quatro comparações e pediu teste de uma), aplicado em 6 minutos na mesma sessão; o Arquiteto gravou `techspec.md` §4 e §5 e `cenarios.md` RF10 e RF19 no commit; sem divergência nem queda para a reserva; a 1ª rodada só aos 2 h 39 min; de 16:20 a 20:04 de 09/10, 3 h 44 min; a sessão fechou com 63% do contexto e US$ 1,13 no contador do opencode |
 
 ## Esperando o Joaquim
 
@@ -61,6 +62,18 @@ Opções: ficar com o lado da branch, que é a união das linhas | abortar o mer
 Recomendo: ficar com o lado da branch; não se perde nenhuma linha e nada é escrito à mão no arquivo do hook.
 
 ## O que falhou
+
+- **12.0, `DIVERGÊNCIA` de desenho da Mesa (09/10/2026 22:44):** na 1ª rodada (22:32 a 22:38, com 2 h 24 min de
+  tarefa) reprovaram `test-engineer`, `privacy-guardian` e `revisor-geral`; aprovaram `conformidade-reviewer`,
+  `tenancy-guardian` e `llm-integrator`. O bloqueante 3 do `revisor-geral` exige índice novo em `consumo_ia`
+  nesta tarefa, com migration e `infra-guardian`; a triagem da 11.0 (`11_task.md`, "Recomendações sem aplicar")
+  e o `llm-integrator` mandam o índice para a 13.0. A Mesa enviou a ordem sem esse item, e o Implementador a
+  aplica. Triagem pedida ao Arquiteto, reiniciado no andar.
+  **Triagem (Arquiteto, 22:49):** detalhe que a spec não previu, sem mudar desenho nem aceite. O índice fica na
+  13.0 (subtarefa 13.1), com o rastro em `union all` e o teste de plano. Registrado em `techspec.md` §5 ("O
+  índice do rastro") e 7c, `13_task.md` e `tasks.md`, sem commit. O `techspec.md` vai no commit da 12.0; os
+  outros dois, num commit de documento depois dela. A decisão foi ao Implementador com ele ainda aplicando a
+  ordem, para chegar antes do pedido da 2ª rodada.
 
 - **11.0, `ESCALADA` da Mesa (09/10/2026 19:40):** `test-engineer` e `revisor-geral` reprovaram na 1ª e na
   2ª rodada seguidas; `tenancy-guardian` e `privacy-guardian` reprovaram só na 1ª, e `conformidade-reviewer` e

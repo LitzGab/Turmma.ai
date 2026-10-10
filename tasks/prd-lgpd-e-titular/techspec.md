@@ -222,7 +222,7 @@ professor.
   só da coordenação. `POST titulares/busca` responde 200, leva o termo no corpo e o balde próprio
   `rl:busca-titular` (`LIMITE_DA_BUSCA_DE_TITULARES_POR_MINUTO = 30`, em `@educa/shared`), **além** do balde do F0,
   que continua valendo; `POST pedidos` responde 201, e `concluir` e `corrigir-nome`, 204.
-- **Estados.** O `POST pedidos` nasce `recebido`, com a foto do compartilhamento vazia (a 12.0 a preenche). `concluir`
+- **Estados.** O `POST pedidos` nasce `recebido`, com a foto do compartilhamento calculada no registro (12.0). `concluir`
   aceita `recebido`, `em_preparacao` e `pronto` nos tipos acesso, portabilidade, compartilhamento e correção — a
   eliminação conclui pelo job (15.0) — e `corrigir-nome` só em correção `recebido` ou `pronto`; fora daí,
   `PEDIDO_EM_ESTADO_INVALIDO` (409). As duas decisões moram no `where` do `update`, que também decide o clique duplo:
@@ -375,6 +375,47 @@ suboperador sai do `SuboperadorDaEscolaRepository`: nada de outra escola entra.
   antes de a escola existir, ou antes de o titular entrar, não aparece, e nenhuma data da foto é anterior à entrada
   dele: o `inicio` e o `fim` que o `SuboperadorDaEscolaRepository` devolve nunca vão direto para a foto. O aluno sem
   nenhuma das duas datas não tem período anterior ao rastro.
+
+**Tarefa 12.0, como ficou no código** (`packages/nucleo/src/titular/compartilhamento.ts`, a regra; as consultas, em
+`compartilhamento.repository.ts`; chamado pelo `POST pedidos` e,
+na 15.0, pelo `titular.eliminar`, com o relógio injetado):
+
+- **A hospedagem** é a empresa de `alcance = 'todas'` (a que atende toda escola, como o `ops:suboperador` e
+  `packages/shared` dizem), e a linha `periodo` dela entra sempre que a vigência corta o período do titular. As de
+  `lista` entram pelo rastro ou pela reserva. O modelo não tem outra marca de hospedagem: é o `alcance` que separa a
+  empresa que sempre esteve com o dado da contratada, e a linha do `todas` não se repete na reserva.
+- **A reserva entra** quando: (i) há chamada atribuível ao titular com `envio_externo` e sem `provedor` (a linha antiga,
+  anterior à 7.0); (ii) a entrada do titular é conhecida e anterior ao horizonte do rastro (é o "período anterior ao
+  prazo" do rastro expirado); (iii) o titular é professor, sempre (D64). Sem data de entrada, o titular não tem período
+  anterior ao rastro: para ele a reserva só entra pelas linhas antigas.
+- **O horizonte do rastro** é o prazo de `consumo_por_aluno` da escola (a categoria que `docs/lgpd.md` liga à lista de
+  compartilhamento), pela aritmética de calendário do banco.
+- **O período sem data de entrada começa no horizonte**, e o fim é o fim do dia de uso (São Paulo) — o que torna a foto
+  igual para dois titulares no mesmo dia (D64); com o vínculo encerrado, vale o `encerrado_em` dele.
+- **O casamento do rastro** é por (`provedor`, suboperador vigente na data da chamada): a chave encerrada e
+  recadastrada casa com a empresa de cada época, e o mesmo `provedor` pode render duas linhas. A chamada sem casa é a
+  "não cadastrada" (`suboperadorId: null`), com a chave do provedor.
+- **A atribuição do rastro** é por `consumo_ia.aluno_id` e pela execução que o titular pediu (`solicitada_por`), sempre
+  na escola do contexto; o professor não tem rastro nenhum, e a chamada sem `envio_externo` não sai de casa.
+- **O índice do rastro** (triagem de 09/10/2026, 1ª rodada da 12.0) nasce na **tarefa 13.0**, subtarefa 13.1, e não
+  na 12.0.
+  - **O que falta.** A consulta do rastro nasce na 12.0 como `aluno_id = … or execucao_id in (as execuções que ele
+    pediu)`. O `or` com subconsulta não desce pelo `consumo_ia_aluno_idx`, e `consumo_ia (escola_id, execucao_id)`
+    ainda não existe: a consulta lê o consumo da escola inteiro (regra 80, item 8). Esse índice já está na seção 7c
+    ("Índices novos") e ficou sem tarefa dona na lista de tarefas.
+  - **O que a 13.0 entrega.** (i) O índice `consumo_ia (escola_id, execucao_id) where execucao_id is not null`, na
+    migration dela e no schema, sem `concurrently` (seção 7c, "Migration"). (ii) O rastro em `union all` de dois ramos,
+    os dois com `escola_id` do contexto e `envio_externo`: o do `aluno_id`, pelo `consumo_ia_aluno_idx`, e o da
+    execução, por junção com `execucao_agente` pelo `execucao_agente_solicitada_por_idx` e pelo índice novo. (iii) O
+    teste de plano dos dois ramos e da contagem `texto_do_modelo` da prévia (11.0, `titulares.repository.ts ›
+    contagemPorCategoria`), que usa a mesma junção e hoje também não tem índice.
+  - **O que não muda.** A foto: a chamada do Tutor que casa pelos dois ramos vem repetida, e o agrupamento só usa a
+    primeira e a última data de cada (`provedor`, suboperador). As chamadas continuam vindo uma a uma para a memória,
+    porque o casamento é pelo instante de cada uma; o teto é o de um aluno dentro do horizonte (300 trocas por mês,
+    D38). Os testes da 12.0 continuam valendo como estão.
+  - **Por que na 13.0.** É a tarefa seguinte, depende da 12.0, já tem migration própria e `infra-guardian`, e a triagem
+    da 11.0 já tinha mandado o mesmo índice para ela. A spec pousa inteira e com dado sintético: nenhum ambiente recebe
+    a 12.0 sem a 13.0. Até lá o `statement_timeout` de 2 s limita a consulta.
 
 **Eliminação.**
 - **Registro.** O `POST` faz `insert … on conflict (escola_id, chave_envio) do nothing`; se nada voltar, devolve o
@@ -535,7 +576,7 @@ Não há IA no caminho. O que a funcionalidade preserva:
 | Limite por escola | vaga do F0 (lote 2); lote de 5.000; faixa de 1.000 na troca de nome; `statement_timeout` de 2 s |
 | Rate limit | balde do F0; `rl:busca-titular` com 30 por minuto por usuário, que recusa com 429 |
 | Corridas de concorrência | seção 5: a chave de envio decide primeiro; a chave de idempotência "escola + data local"; o único parcial de `agendado`; cancelar contra enfileirar por `eliminacao_enfileirada_em`; dois `ops:retencao ajustar` da mesma escola em fila pela trava `for no key update` da escola (tarefa 2.0); travas pedido → usuário; `skip locked` no expurgo; confirmação do incidente por `where confirmado_em is null`. Cada uma com um cenário em paralelo em `cenarios.md` |
-| Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` (não existia: a chave única começa pelo ano), e `consumo_ia (escola_id, execucao_id) where execucao_id is not null`; e, para as FKs sem ação do material, `mensagem_tutor` e `sinal_tutor (escola_id, material_id)` parciais (tarefa 5.0). De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`, e o mesmo com `and funcao = 'tutor_com_o_aluno'` (tarefa 4.0); `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
+| Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` (não existia: a chave única começa pelo ano), e `consumo_ia (escola_id, execucao_id) where execucao_id is not null` (tarefa 13.0: seção 5, "O índice do rastro"); e, para as FKs sem ação do material, `mensagem_tutor` e `sinal_tutor (escola_id, material_id)` parciais (tarefa 5.0). De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`, e o mesmo com `and funcao = 'tutor_com_o_aluno'` (tarefa 4.0); `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
 | Migration | compatível: a 0024 e a 0028 (`consumo_ia_provedor`: a coluna `provedor` e o check que a prende ao envio externo) só expandem, e a exigência de `provedor` vai num release posterior (seção 3). O `migrar` roda numa transação, então `NOT VALID` seguido de `VALIDATE` no mesmo arquivo não alivia a trava: a partir do staging, cada check vai em arquivo próprio. Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
 | Quando cada dependência cai | banco: 503 tipado e nova tentativa; Redis de fila: aceito e despachado depois; storage: "em preparação", e baixar dá `INDISPONIVEL` |
 | Métrica e alerta | duas noites seguidas sem todas as categorias da escola com `concluida = true` (tarefa 3.0: `expurgo.noites_incompletas{escola_id}`, de 0 a 2, medida pelo worker-lote a cada 5 min; a noite é o dia local de `em` no fuso da escola, de ontem para trás; a categoria sem linha conta como não concluída; a noite anterior à primeira execução da escola não conta, e a escola que nunca rodou não tem série; a regra dispara com a série em 2 por 1 min, `infra/grafana/alertas/expurgo-noites-incompletas.yaml`; o lote que falha grava a categoria com `concluida = false` antes de o erro subir, para a escola cujo expurgo falha desde a primeira noite também ter série; numa escola a oeste de São Paulo, uma execução que passa da meia-noite local divide as categorias entre dois dias, pendência no `TODO.md`); incidente sem confirmação em 24 h (tarefa 9.0: `incidente.horas_sem_confirmacao{escola_id}`, medida pelo worker-lote a cada 5 min, em horas desde o `conhecido_em` do incidente mais antigo da escola sem confirmação, e só a escola com pendente tem série; a regra `infra/grafana/alertas/incidente-sem-confirmacao.yaml` dispara acima de 24 por 1 min; a base `MedicaoPorEscola` é do laço, da lista de escolas e da exportação, e a medição do expurgo passou a herdar dela); pedido `agendado` mais de 48 h depois de `eliminar_em` (uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |

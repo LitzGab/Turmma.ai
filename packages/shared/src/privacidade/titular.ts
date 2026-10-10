@@ -68,7 +68,7 @@ export type OrigemDoCompartilhamento = (typeof ORIGENS_DO_COMPARTILHAMENTO)[numb
 
 /**
  * Uma empresa por onde passou dado do titular, com o período. Sem pessoa: a chave do suboperador e as datas.
- * É o que a 12.0 grava no registro e o que o detalhe do pedido devolve; nesta tarefa a foto nasce vazia.
+ * É o que o `POST pedidos` calcula e grava no registro (tarefa 12.0), e o que o detalhe do pedido devolve.
  */
 export const esquemaLinhaDoCompartilhamento = z.strictObject({
   suboperadorId: z.uuid().nullable(),

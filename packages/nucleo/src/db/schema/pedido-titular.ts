@@ -20,8 +20,8 @@ import { escola } from './escola.js'
  * - **`chave_envio`** é a chave que o navegador sorteia por diálogo e que decide a corrida: o `POST pedidos` faz
  *   `insert … on conflict (escola_id, chave_envio) do nothing` e, sem linha, devolve o pedido daquela chave. É a mesma
  *   regra da `execucao_agente.chave_envio`, e nunca entra no arquivo do titular (`COLUNAS_FORA_DO_ARQUIVO`).
- * - **`compartilhamento`** é a foto de por quais empresas o dado do titular passou, sem pessoa. Nasce vazia e é
- *   preenchida no registro (tarefa 12.0) e refeita na eliminação (15.0).
+ * - **`compartilhamento`** é a foto de por quais empresas o dado do titular passou, sem pessoa. É calculada e gravada no
+ *   registro (`POST pedidos`, tarefa 12.0) e refeita na eliminação (15.0).
  * - `nome_trocado` e `homonimo` são marcas da eliminação (15.0): se o nome foi trocado nos textos livres, e se havia
  *   homônimo (quando não há troca). `homonimo` também é calculado na prévia e guardado no registro.
  * - `eliminar_em` e `eliminacao_enfileirada_em` são da eliminação agendada (14.0 e 15.0): os 7 dias e a trava contra

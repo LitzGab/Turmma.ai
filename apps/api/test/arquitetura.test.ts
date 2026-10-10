@@ -464,6 +464,26 @@ describe('arquitetura: o suboperador só pelo OperacaoPrivacidadeRepository, que
   })
 })
 
+describe('arquitetura: o Compartilhamento é só regra, e o banco é do CompartilhamentoRepository (F3, tarefa 12.0)', () => {
+  it('compartilhamento.ts não consulta o banco', () => {
+    const regra = arquivosDoRepositorio().find((arquivo) => arquivo.caminho === 'packages/nucleo/src/titular/compartilhamento.ts')
+    expect(regra).toBeDefined()
+    const texto = semComentarios(regra?.texto ?? '')
+    expect(texto).not.toMatch(/\.(execute|select|insert|update|delete)\(/)
+    expect(texto).not.toMatch(/from\s+['"]drizzle-orm['"]/)
+    expect(texto).not.toMatch(/db\/schema\//)
+  })
+
+  it('o repository lê a escola do contexto e nenhum método a recebe', () => {
+    const leitor = arquivosDoRepositorio().find((arquivo) => arquivo.caminho === 'packages/nucleo/src/titular/compartilhamento.repository.ts')
+    expect(leitor).toBeDefined()
+    const texto = semComentarios(leitor?.texto ?? '')
+    expect(texto).toContain('exigirEscolaDoContexto()')
+    expect(texto).not.toMatch(/\(\s*escolaId\s*[:,)]/)
+    expect(texto).not.toMatch(/,\s*escolaId\s*:\s*string/)
+  })
+})
+
 /** Quem, fora de teste e do schema, alcança `incidente` ou `incidente_escola`: por import, por namespace, pelo arquivo do schema ou em SQL. */
 function quemTocaOIncidente(arquivos: readonly Arquivo[]): string[] {
   return arquivos

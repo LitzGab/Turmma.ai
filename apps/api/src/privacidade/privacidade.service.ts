@@ -1,4 +1,5 @@
 import {
+  Compartilhamento,
   ErroDeDominio,
   IncidenteDaEscolaRepository,
   RegistroDeAuditoria,
@@ -169,11 +170,11 @@ export class PrivacidadeService {
   }
 
   /**
-   * `POST /v1/privacidade/pedidos` (F3, RF10): registra o pedido `recebido`, com a foto do compartilhamento (vazia até
-   * a 12.0) e o `homonimo`. **A chave de envio decide primeiro**: a mesma chave, com o mesmo conteúdo e da mesma
-   * coordenação, devolve sempre o mesmo pedido, mesmo em paralelo; com outro titular, tipo, solicitante ou chegada, ou
-   * de outra coordenação, responde `NAO_ENCONTRADO` sem gravar. Só quem gravou registra `pedido.registrado`, na mesma
-   * transação. A chegada no futuro é recusada com
+   * `POST /v1/privacidade/pedidos` (F3, RF10): registra o pedido `recebido`, com a foto do compartilhamento calculada
+   * no momento do registro (F3, tarefa 12.0) e o `homonimo`. **A chave de envio decide primeiro**: a mesma chave, com o
+   * mesmo conteúdo e da mesma coordenação, devolve sempre o mesmo pedido, mesmo em paralelo; com outro titular, tipo,
+   * solicitante ou chegada, ou de outra coordenação, responde `NAO_ENCONTRADO` sem gravar. Só quem gravou registra
+   * `pedido.registrado`, na mesma transação. A chegada no futuro é recusada com
    * `ENTRADA_INVALIDA` antes de qualquer escrita, **pelo dia de São Paulo (`diaDeUso`)**; o check do banco, pelo
    * `current_date` da sessão, é só a segunda camada e mais frouxa.
    */
@@ -184,7 +185,8 @@ export class PrivacidadeService {
       const titular = await this.#titularAlvo(titulares, pedido.titularId)
       const homonimo = await titulares.homonimo(titular.id, titular.nome.trim().toLowerCase())
       const pedidos = new PedidosRepository(tx)
-      const id = await pedidos.registrar({ ...pedido, papelTitular: titular.papel, homonimo })
+      const compartilhamento = await new Compartilhamento(tx).doTitular({ titularId: titular.id, papel: titular.papel })
+      const id = await pedidos.registrar({ ...pedido, papelTitular: titular.papel, homonimo, compartilhamento })
       if (id !== undefined) {
         await registro.gravar(tx, 'pedido.registrado', {
           entidadeId: id,

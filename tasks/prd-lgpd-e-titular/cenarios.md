@@ -228,6 +228,20 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] Com um **aluno** e o provedor **sem cadastro**, a foto do pedido de eliminação concluído traz `origem` diferente de `periodo`,
     o que prova que foi refeita antes de anonimizar.
   - [I] Na mesma conta, o consumo feito em B não entra na foto do pedido de A.
+  - [I] (tarefa 12.0) O aluno sem uso externo mostra só a hospedagem — o uso local não sai de casa nem vira reserva —, e o
+    provedor que estava fora da vigência na data da chamada não casa: a linha é "não cadastrado", e a empresa não ganha
+    linha.
+  - [I] (tarefa 12.0) O período do professor encerrado fecha no `encerrado_em`, e a entrada do aluno é a mais antiga
+    entre a conta externa e a credencial de matrícula.
+  - **Tarefa 12.0, onde cada um está.** `apps/api/test/compartilhamento.int.test.ts`: escopo (o suboperador só de B, com
+    a reserva sem o de B), com e sem `provedor` (o agrupamento e as duas vias de atribuição), a chave recadastrada (o
+    mesmo provedor em duas empresas rende duas linhas, e a chamada depois do `fim` da ligação é "não cadastrado"),
+    rastro expirado (com a expiração simulada pelo `aluno_id` anulado, como o expurgo da 4.0 deixa), D64 (com o
+    terceiro professor que saiu), o professor com dois vínculos (o encerrado do ano passado e o aberto deste, e a foto
+    vai até o fim do dia, não até o `encerrado_em`), mesma conta, sem uso e vigência, o aluno sem data de entrada (o
+    período começa no horizonte do rastro, sem reserva), o grupo do rastro todo antes da entrada (que não entra na
+    foto) e o fim do dia no fuso de São Paulo (a chamada de hoje depois das 21h UTC entra no rastro). O "o pedido de
+    eliminação concluído ainda devolve o provedor" fica para a 15.0, que refaz a foto.
 - **RF13b.**
   - [I] O nome corrigido muda, e a auditoria não traz o nome.
   - [I] Corrigir o nome fora de um pedido de correção, ou com o pedido `concluido` ou `cancelado`, dá

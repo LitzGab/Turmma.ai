@@ -1,4 +1,4 @@
-import type { CategoriaDeDadoDoSuboperador } from '@educa/shared'
+import type { AlcanceDoSuboperador, CategoriaDeDadoDoSuboperador } from '@educa/shared'
 import { alias } from 'drizzle-orm/pg-core'
 import { and, asc, desc, eq, exists, gt, isNull, ne, or, sql } from 'drizzle-orm'
 import { exigirEscolaDoContexto } from '../contexto/escola-do-contexto.js'
@@ -7,10 +7,16 @@ import { escola } from '../db/schema/escola.js'
 import { suboperador, suboperadorEscola } from '../db/schema/suboperador.js'
 
 /**
- * O suboperador como a escola o lê: o que a coordenação vê, e nada do que é da operação (id, contrato, quem cadastrou, as
+ * O suboperador como a escola o lê: o que a coordenação vê, e nada do que é da operação (contrato, quem cadastrou, as
  * outras escolas da lista). `inicio` e `fim` são a vigência **para esta escola**.
+ *
+ * O `id` e o `alcance` são da leitura interna: a foto do compartilhamento (12.0) precisa do id para assinar a linha e
+ * do alcance para a regra "a hospedagem (`todas`) aparece sempre". O DTO da rota (`GET suboperadores`) monta a resposta
+ * campo a campo e não os expõe.
  */
 export interface SuboperadorLidoPelaEscola {
+  readonly id: string
+  readonly alcance: AlcanceDoSuboperador
   readonly chave: string
   readonly nome: string
   readonly finalidade: string
@@ -52,6 +58,8 @@ export class SuboperadorDaEscolaRepository {
     const outra = alias(suboperadorEscola, 'ligacao_da_escola')
     const linhas = await this.banco
       .select({
+        id: suboperador.id,
+        alcance: suboperador.alcance,
         chave: suboperador.chave,
         nome: suboperador.nome,
         finalidade: suboperador.finalidade,
@@ -84,6 +92,8 @@ export class SuboperadorDaEscolaRepository {
       // O `desc(suboperador.inicio)` basta: o `greatest` com o `criada_em` não muda a ordem entre linhas do mesmo nome.
       .orderBy(asc(suboperador.nome), desc(suboperador.inicio))
     return linhas.map((linha) => ({
+      id: linha.id,
+      alcance: linha.alcance,
       chave: linha.chave,
       nome: linha.nome,
       finalidade: linha.finalidade,

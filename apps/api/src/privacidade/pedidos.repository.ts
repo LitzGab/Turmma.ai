@@ -11,6 +11,8 @@ export interface PedidoParaRegistrar {
   readonly chegouEm: string
   readonly chaveEnvio: string
   readonly homonimo: boolean
+  /** A foto do compartilhamento no momento do registro (F3, tarefa 12.0): é ela que sobrevive ao expurgo do titular. */
+  readonly compartilhamento: Compartilhamento
 }
 
 /**
@@ -76,7 +78,7 @@ export class PedidosRepository {
         solicitante: pedido.solicitante,
         chegouEm: pedido.chegouEm,
         estado: 'recebido',
-        compartilhamento: [],
+        compartilhamento: pedido.compartilhamento,
         homonimo: pedido.homonimo,
         registradoPor: usuarioId,
         chaveEnvio: pedido.chaveEnvio,
