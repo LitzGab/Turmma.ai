@@ -216,7 +216,7 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
     }
   }, 120_000)
 
-  it('permissão: nenhuma série tem rótulo de usuário nem o id do usuário em rótulo algum, e `escola_id` só aparece nas métricas da lista fechada (job, espera pelo hash, falhas e rebaixamento do login, noites sem expurgo, horas do incidente sem confirmação)', async () => {
+  it('permissão: nenhuma série tem rótulo de usuário nem o id do usuário em rótulo algum, e `escola_id` só aparece nas métricas da lista fechada (job, espera pelo hash, falhas e rebaixamento do login, noites sem expurgo, horas do incidente sem confirmação, do arquivo em preparação e da eliminação vencida)', async () => {
     const { data: rotulos } = (await (await fetch(`${PROMETHEUS}/api/v1/labels`)).json()) as { data: string[] }
     expect(rotulos.filter((rotulo) => /usuario|user/i.test(rotulo))).toEqual([])
     expect(await consultar('{usuario_id!=""}')).toEqual([])
@@ -226,7 +226,8 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
 
     const comEscola = (await consultar('count by (__name__) ({escola_id!=""})')).map(({ metric }) => metric['__name__']).sort()
     expect(comEscola).toEqual(expect.arrayContaining(['job_espera_mais_antiga_s', 'job_pendentes', 'fila_vagas_em_uso']))
-    // A lista fechada de `METRICAS_COM_ESCOLA` (as de job, as três de login, a do expurgo e a do incidente), com o nome do Prometheus.
+    // A lista fechada de `METRICAS_COM_ESCOLA` (as de job, as três de login, a do expurgo, a do incidente, a do arquivo em preparação e a
+    // da eliminação vencida), com o nome do Prometheus.
     const admitidas = new Set<string>(
       (Object.keys(METRICAS) as Array<keyof typeof METRICAS>).filter((chave) => METRICAS_COM_ESCOLA.includes(METRICAS[chave])).flatMap((chave) => NOMES_NO_PROMETHEUS[chave]),
     )
@@ -244,6 +245,10 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
         ...NOMES_NO_PROMETHEUS.noitesIncompletasDoExpurgo,
         // As horas do incidente sem confirmação, por escola (F3, tarefa 9.0; Tech Spec do F3, seção 7c).
         ...NOMES_NO_PROMETHEUS.horasDoIncidenteSemConfirmacao,
+        // As horas do pedido de acesso em preparação, por escola (F3, tarefa 13.0; Tech Spec do F3, seção 7c).
+        ...NOMES_NO_PROMETHEUS.horasDoArquivoEmPreparacao,
+        // As horas da eliminação agendada vencida, por escola (F3, tarefa 15.0; Tech Spec do F3, seção 7c).
+        ...NOMES_NO_PROMETHEUS.horasDaEliminacaoVencida,
       ].sort(),
     )
     expect(comEscola.filter((nome) => !admitidas.has(nome ?? ''))).toEqual([])

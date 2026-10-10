@@ -309,16 +309,28 @@ describe('Assistente de ensino', () => {
       expect(await contarNaEscola(bancada, 'consumo_ia', b.escolaId, `execucao_id = '${execucaoId}'`)).toBe(0)
     })
 
-    it('fora de teste, só o repository da conversa e a leitura da execução de quem pediu tocam a thread e as mensagens do Assistente', () => {
+    it('fora de teste, só o repository da conversa, a leitura da execução de quem pediu e a contagem do titular tocam a thread e as mensagens do Assistente, e a contagem nunca lê o conteúdo', () => {
       const raiz = fileURLToPath(new URL('../../../../', import.meta.url))
       const pasta = join(raiz, 'apps/api/src')
+      const semComentarios = (arquivo: string): string => readFileSync(join(pasta, arquivo), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
       const tocam = (readdirSync(pasta, { recursive: true }) as string[])
         .filter((arquivo) => arquivo.endsWith('.ts') && !arquivo.endsWith('.test.ts'))
-        .filter((arquivo) => /\b(mensagemAgente|threadAgente)\b|\b(mensagem_agente|thread_agente)\b/.test(readFileSync(join(pasta, arquivo), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')))
+        .filter((arquivo) => /\b(mensagemAgente|threadAgente)\b|\b(mensagem_agente|thread_agente)\b/.test(semComentarios(arquivo)))
         .map((arquivo) => relative(raiz, join(pasta, arquivo)).split(sep).join('/'))
         .sort()
-      // Nenhum módulo da coordenação, da governança ou do Analista lê a conversa do professor (regra 70, item 8).
-      expect(tocam).toEqual(['apps/api/src/assistente/conversa.repository.ts', 'apps/api/src/ia/execucao.repository.ts'])
+      // Nenhum módulo da coordenação, da governança ou do Analista lê a conversa do professor (regra 70, item 8). O terceiro da
+      // lista é a contagem por categoria do titular (F3, RF11): conta as linhas do titular para o "Meus dados" da própria pessoa e
+      // para a prévia de aluno; a prévia de professor volta antes de chegar a ele (D64). Ele conta; não lê.
+      expect(tocam).toEqual(['apps/api/src/assistente/conversa.repository.ts', 'apps/api/src/ia/execucao.repository.ts', 'apps/api/src/privacidade/titulares.repository.ts'])
+      // Com um arquivo do módulo da coordenação na lista, a sentinela deixaria de acusar uma leitura nova feita nele: por isso a
+      // contagem não pode nem citar a coluna do que o professor escreveu, e o arquivo fica preso à forma da contagem: uma
+      // ocorrência da tabela, em `count(*)`, sem identificador do drizzle e sem `*`.
+      const contagem = semComentarios('privacidade/titulares.repository.ts')
+      expect(contagem, 'a contagem do titular lê `conteudo` da mensagem do professor').not.toMatch(/conteudo/i)
+      expect(contagem, 'o repository do titular usa a tabela da conversa do professor pelo drizzle').not.toMatch(/\b(mensagemAgente|threadAgente)\b/)
+      expect(contagem.match(/\bmensagem_agente\b/g) ?? [], 'o repository do titular lê a mensagem do professor em mais de um lugar').toHaveLength(1)
+      expect(contagem, 'a leitura de `mensagem_agente` no repository do titular não é a contagem').toMatch(/count\(\*\)::int from mensagem_agente m\b/)
+      expect(contagem, 'o repository do titular seleciona colunas da conversa do professor com `*`').not.toMatch(/\bm\.\*|\bselect\s+\*/i)
     })
   })
 
