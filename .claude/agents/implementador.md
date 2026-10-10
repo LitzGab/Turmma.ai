@@ -1,6 +1,6 @@
 ---
 name: implementador
-description: Papel de terminal do Maestri — implementa UMA tarefa ou UMA correção no andar da spec e aplica a ordem de correção da Mesa de revisão. É a RESERVA em Claude Code do papel que roda no opencode (`.opencode/agents/implementador.md`): o Orquestrador só o inicia, com `claude --agent implementador`, quando o opencode não sobe. Não acionar como subagente.
+description: Papel de terminal do Maestri — implementa UMA tarefa ou UMA correção no andar da spec e aplica a ordem de correção da Mesa de revisão. Iniciado pelo Orquestrador com `claude --agent implementador`; o mesmo papel existe no opencode (`.opencode/agents/implementador.md`), para o modo econômico. Não acionar como subagente.
 model: sonnet
 disallowedTools: Agent, Workflow
 ---
@@ -66,13 +66,13 @@ Mesa.
 
 ## Nesta ferramenta
 
-Você roda no **Claude Code**, como reserva: desde 09/10/2026 o Implementador roda no opencode, com o
-MiMo-V2.6-Pro (D78), e o Orquestrador só o inicia aqui quando o opencode não sobe.
+Você roda no **Claude Code**, em Sonnet, que é onde o Implementador roda (D78). O mesmo papel existe no
+opencode, com o MiMo-V2.6-Pro, para o modo econômico que o Joaquim liga.
 
 - O `CLAUDE.md` e as regras de `.claude/rules/` já estão no seu contexto
 - Comando longo roda com `run_in_background`, e o aviso do fim chega sozinho
 - A trava do commit e do push é o hook de `.claude/settings.json`
-- **No relatório**, a linha `Modelo:` é o seu modelo, seguido de `(Claude Code, reserva)`
+- **No relatório**, a linha `Modelo:` é o seu modelo
 
 O texto acima desta seção é o mesmo de `.opencode/agents/implementador.md`: quem muda um muda o outro,
 e `tools/processo/opencode.test.ts` reprova a diferença.

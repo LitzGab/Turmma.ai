@@ -1054,3 +1054,23 @@ Implementador. O Joaquim decidiu trocar direto, sem piloto. O que **não** muda:
 portão da tarefa, a Mesa chamando os revisores e as seis paradas. Revisão: na retrospectiva do F3,
 pelas rodadas por tarefa e pelo tempo por tarefa do MiMo contra o Sonnet; se as rodadas subirem, o
 papel volta à reserva. Não medido ainda: o teto de uso da assinatura.
+
+Revista pela quinta vez em 09/10/2026: **o Implementador volta ao Sonnet, e o opencode fica como modo
+econômico, que o Joaquim liga.** O Joaquim pediu a medição da troca, com o tempo por tarefa, e deixou a
+decisão com o Claude caso ela viesse ruim. Duas tarefas do F3 rodaram no MiMo, as duas de porte grande
+e com seis revisores. A 11.0 (2.444 linhas de código) levou 3 h 47 min, pediu a primeira rodada aos
+2 h 43 min, teve quatro reprovações na primeira rodada e fechou na terceira; a 12.0 (808 linhas) levou
+3 h 08 min, pediu a primeira rodada aos 2 h 25 min, teve três reprovações na primeira e fechou na
+segunda. Em Sonnet, a 9.0 (2.414 linhas) levou 57 minutos e a 10.0 (1.134 linhas), 93 minutos. O
+consumo do Claude por tarefa, ponderado por preço, não caiu: 35,2 e 26,9 no MiMo, contra 36,0 e 27,7
+em Sonnet. O que a troca alcança caiu, como previsto (Implementador, Mesa e Orquestrador somados
+foram de 24,2 e 18,6 para 10,9 e 10,7), mas revisores e Arquiteto subiram de 11,8 e 9,1 para 24,3 e
+16,3, porque as duas tarefas tinham mais revisores e cada uma pediu o Arquiteto uma vez, e a vigia do
+Orquestrador custou o dobro por durar o triplo. Lida a favor do MiMo, a economia é de uns 25% do Claude
+por tarefa, em troca de duas horas a mais em cada uma: só compensa se o que limita o trabalho for o
+teto semanal do plano, e não o relógio. O processo em si funcionou nas duas: o pedido chegou, a trava do
+commit segurou, nenhuma queda para o Sonnet, e a assinatura não acusou limite (US$ 1,18 e 1,05 no
+contador do opencode). Por isso nada sai do repositório: `.opencode/` e o teste continuam, e o
+`/seguir` usa o opencode enquanto o `estado.md` trouxer `**Implementador:** opencode` em "Agora".
+Sobra para a retrospectiva do F3: os revisores com veto em Opus e a vigia do Orquestrador são hoje a
+maior parte do consumo de uma tarefa, e é neles que está o corte que não custa tempo.
