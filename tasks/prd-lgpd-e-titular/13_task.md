@@ -20,7 +20,7 @@ O pedido de acesso gera o JSON fora da requisição, no storage privado, e "Meus
 
 ## Subtarefas
 
-- [ ] 13.1 — Migration própria: `arquivo_titular` (único `(escola_id, pedido_id, versao)`, índice de validade)
+- [ ] 13.1 — Migration própria: `arquivo_titular` (§3); e `consumo_ia (escola_id, execucao_id)`, com o rastro em `union all` (§5, "O índice do rastro")
 - [ ] 13.2 — Porta `ArmazemDeArquivos` (S3 e falso); confirmar a URL assinada no SeaweedFS (seção 12)
 - [ ] 13.3 — `LeituraDoTitular` a partir da classificação; `titular.montar-arquivo` (normal, só ids no job)
 - [ ] 13.4 — Versões `completa` e `coordenacao` (conta ativa por escola); correção não aprovada só como estado
@@ -32,7 +32,7 @@ O pedido de acesso gera o JSON fora da requisição, no storage privado, e "Meus
 
 | Arquivo | Novo ou alterado |
 |---|---|
-| migration e schema | novo |
+| migration, schema e `compartilhamento.repository.ts` | novo/alterado |
 | `packages/nucleo/src/titular/leitura-do-titular.ts`, `armazem-*.ts` | novo |
 | `apps/worker/src/processadores/montar-arquivo.ts` | novo |
 | rotas em `privacidade` e `meus-dados` | novo/alterado |
@@ -56,16 +56,17 @@ Definidos com o `test-engineer` a partir do `cenarios.md`.
 | falha | integração | armazém fora: "em preparação" e `INDISPONIVEL`; volta e conclui |
 | concorrência | integração [P] | dois `montar-arquivo` do mesmo pedido |
 | alerta | infra [F] | `em_preparacao` > 2 h |
+| plano | integração | rastro e `texto_do_modelo` pelo índice novo |
 
 ## Como testar
 
-- **storage real:** `apps/worker/test/uso.int.test.ts › borda: os bytes de escolas/{a}/ não somam…` (`S3Client`, `PutObjectCommand`); o bucket acumula pastas de outras execuções. Armazém falso e URL assinada: sem precedente.
-- **job e concorrência:** `apps/worker/test/reexecucao.int.test.ts › worker morto depois de gravar o efeito…` e `› oito gravações da mesma chave ao mesmo tempo…` (`BancadaDeFila`, `LogEmMemoria`).
-- **conteúdo e proibidas:** `apps/api/test/painel-leitura.int.test.ts › com sentinelas em cada tabela de pessoa…`.
-- **quem baixa:** `apps/api/src/ia/ia.int.test.ts › de outra pessoa, de outra escola, inexistente…`.
-- **validade:** `apps/worker/test/expurgo-da-escola.int.test.ts › com 5 anos e um dia o registro sai…` (`relogioEm`).
-- **alerta:** `infra/test/alerta-do-expurgo.int.test.ts`.
-- Rodar: `npx vitest run --project integracao <arquivo>`; `--project infra` no alerta.
+- **storage real:** `apps/worker/test/uso.int.test.ts › borda: os bytes…` (`S3Client`, `PutObjectCommand`); o bucket acumula outras execuções. Armazém falso e URL assinada: sem precedente.
+- **job, concorrência:** `apps/worker/test/reexecucao.int.test.ts › worker morto…` e `› oito gravações…` (`BancadaDeFila`, `LogEmMemoria`).
+- **conteúdo, proibidas:** `apps/api/test/painel-leitura.int.test.ts › com sentinelas…`.
+- **quem baixa:** `apps/api/src/ia/ia.int.test.ts › de outra pessoa, de outra escola…`.
+- **validade, plano:** `apps/worker/test/expurgo-da-escola.int.test.ts › com 5 anos e um dia…` (`relogioEm`) e `› as FKs set null…` (`explain`).
+- **alerta:** `infra/test/alerta-do-expurgo.int.test.ts`, com `--project infra`.
+- Rodar: `npx vitest run --project integracao <arquivo>`.
 
 ## Critério de conclusão
 

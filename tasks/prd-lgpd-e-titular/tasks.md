@@ -85,13 +85,13 @@
   - [x] 11.6 `docs/lgpd.md` (linha do pedido)
   - [x] 11.7 Testes
 
-- [ ] **12.0 — O pedido guarda por quais empresas o dado do titular passou**
-  - [ ] 12.1 `Compartilhamento` em `packages/nucleo/src/titular`, chamável pela API e pelo worker
-  - [ ] 12.2 Gravado no `POST pedidos` e devolvido no detalhe
-  - [ ] 12.3 Testes
+- [x] **12.0 — O pedido guarda por quais empresas o dado do titular passou**
+  - [x] 12.1 `Compartilhamento` em `packages/nucleo/src/titular`, chamável pela API e pelo worker
+  - [x] 12.2 Gravado no `POST pedidos` e devolvido no detalhe
+  - [x] 12.3 Testes
 
 - [ ] **13.0 — O titular baixa o próprio arquivo, e a escola a versão dela**
-  - [ ] 13.1 Migration própria: `arquivo_titular` (único `(escola_id, pedido_id, versao)`, índice de validade)
+  - [ ] 13.1 Migration própria: `arquivo_titular` (único `(escola_id, pedido_id, versao)`, índice de validade); e o índice `consumo_ia (escola_id, execucao_id)`, com o rastro da 12.0 em `union all` (`techspec.md` §5, "O índice do rastro")
   - [ ] 13.2 Porta `ArmazemDeArquivos` (S3 e falso); confirmar a URL assinada no SeaweedFS (seção 12)
   - [ ] 13.3 `LeituraDoTitular` a partir da classificação; `titular.montar-arquivo` (normal, só ids no job)
   - [ ] 13.4 Versões `completa` e `coordenacao` (conta ativa por escola); correção não aprovada só como estado

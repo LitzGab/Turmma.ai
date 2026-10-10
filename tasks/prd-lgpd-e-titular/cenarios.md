@@ -242,6 +242,11 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
     período começa no horizonte do rastro, sem reserva), o grupo do rastro todo antes da entrada (que não entra na
     foto) e o fim do dia no fuso de São Paulo (a chamada de hoje depois das 21h UTC entra no rastro). O "o pedido de
     eliminação concluído ainda devolve o provedor" fica para a 15.0, que refaz a foto.
+  - [I] (tarefa 13.0, triagem de 09/10/2026) Plano do rastro: os dois ramos do `union all` — o do `aluno_id` e o da
+    execução que o titular pediu — e a contagem `texto_do_modelo` da prévia descem por índice que começa em
+    `escola_id` (`consumo_ia_aluno_idx`, `execucao_agente_solicitada_por_idx` e o novo `consumo_ia (escola_id,
+    execucao_id)`), e não leem o consumo da escola inteiro. Sem o índice novo, ou com o `or` de volta na consulta, o
+    teste falha (techspec §5, "O índice do rastro"). Na tabela da 13.0, é o cenário "plano".
 - **RF13b.**
   - [I] O nome corrigido muda, e a auditoria não traz o nome.
   - [I] Corrigir o nome fora de um pedido de correção, ou com o pedido `concluido` ou `cancelado`, dá
