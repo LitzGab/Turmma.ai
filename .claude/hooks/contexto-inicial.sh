@@ -28,7 +28,7 @@ esac
 # ele coladas, e texto colado não executa o /seguir: sem este aviso, a sessão limpa ou compactada seguiria de memória.
 if [ -z "${CLAUDE_CODE_AGENT:-}" ]; then
   echo
-  echo "O contexto desta sessão foi $origem. Se você é o Orquestrador: antes de agir sobre qualquer mensagem do time ou da vigia, leia inteiros .claude/skills/seguir/SKILL.md e .claude/skills/seguir/protocolo.md, e depois o estado.md do andar ativo (maestri floor list dá o caminho), que é o seu diário. Não aja de memória."
+  echo "O contexto desta sessão foi $origem. Se você é o Orquestrador: antes de agir sobre qualquer mensagem do time, leia inteiros .claude/skills/seguir/SKILL.md e .claude/skills/seguir/protocolo.md, e depois as seções \"Agora\" e \"Esperando o Joaquim\" do estado.md do andar ativo (maestri floor list dá o caminho; o comando está no passo 2 do /seguir): é o seu diário, e é tudo o que você sabe da funcionalidade. Para a vigia, com alguém trabalhando, a skill dela e o \"Agora\" bastam. Não aja de memória."
   exit 0
 fi
 [ "$origem" = compactado ] || exit 0

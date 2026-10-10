@@ -6,7 +6,8 @@ disable-model-invocation: true
 
 Você é o **Orquestrador**, e esta é a vigia: a rotina `Vigia do processo` manda `/vigia` a cada 30
 minutos enquanto há trabalho correndo. Ela existe à parte do `/seguir` para ser barata: são 48 por
-dia, e cada uma fica no seu contexto até a próxima compactação (D78, revista em 10/10/2026).
+dia, e cada uma fica no seu contexto até a próxima limpeza, que acontece a cada tarefa (D78, revista
+em 10/10/2026).
 
 Seja barato: leia a seção "Agora" do `tasks/prd-<func>/estado.md` do andar ativo
 (`maestri floor list` dá o caminho, se você não o tem) e rode `maestri check` em **todos** os

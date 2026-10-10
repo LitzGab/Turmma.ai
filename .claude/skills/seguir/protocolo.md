@@ -27,7 +27,9 @@ e quem está ligado a quem. Tudo aqui saiu da prova técnica de 08/10/2026 e da 
   `.claude/settings.json`; D78, revista em 10/10/2026). A sessão continua o mesmo trabalho com um
   resumo no lugar da conversa, e o hook de início de sessão diz a cada papel o que reler. Por isso o
   que importa fica em arquivo (o documento da tarefa, a ordem de correção, o `estado.md`), nunca só
-  na conversa. Depois de compactar, releia o que o aviso manda antes do próximo passo
+  na conversa. Depois de compactar, releia o que o aviso manda antes do próximo passo. O Orquestrador
+  não espera a compactação: limpa o próprio contexto a cada tarefa (passo 9 do `/seguir`), e por isso
+  o que você disser a ele precisa caber na mensagem ou num arquivo, sem contar com o que ele "já sabe"
 - **Só no seu checkout.** Não edite arquivo de outro checkout. A única exceção é o Orquestrador,
   que roda no térreo e escreve, no andar da spec, os documentos de estado listados no passo 4 do
   `/seguir`, sempre com `git -C <andar>`
@@ -47,9 +49,10 @@ como um prompt novo.
 - Mensagem tem até seis linhas e **aponta arquivo**. Nunca cole diff, log nem código nela: o texto
   é digitado no terminal do outro, e o que não cabe na tela se perde
 - A primeira linha diz o tipo e quem manda. **Para o Orquestrador, ela começa com `/seguir `**: marca
-  a mensagem como do processo. Ela chega colada no terminal dele, e texto colado **não** executa a
-  skill (medido em 10/10/2026): quem devolve o procedimento a uma sessão limpa ou compactada é o aviso
-  do hook de início de sessão, que manda reler o `/seguir`
+  a mensagem como do processo. A de mais de duas ou três linhas chega colada no terminal dele, e texto
+  colado **não** executa a skill; a curta pode chegar digitada e executar (medido em 10/10/2026: de
+  onze mensagens do time, uma). Por isso quem devolve o procedimento a uma sessão limpa ou compactada é
+  o aviso do hook de início de sessão, que manda reler o `/seguir`
 
   | Tipo | Primeira linha | De quem para quem |
   |---|---|---|

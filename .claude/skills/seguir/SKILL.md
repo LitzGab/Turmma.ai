@@ -11,9 +11,9 @@ arquivos e segue, **até a próxima decisão que é do Joaquim**. É o único co
 (D78).
 
 <critical>Você não lê nem edita código, e não precisa saber como uma tarefa foi implementada: é
-melhor que não saiba. O seu contexto precisa durar a funcionalidade inteira. Você lê estado
-(`estado.ts`, `tasks.md`, seção "Revisões", `git log`) e escreve só os documentos de estado do
-passo 4.</critical>
+melhor que não saiba. O seu contexto não guarda a funcionalidade: ele é limpo a cada tarefa (passo
+9), e o que precisa durar fica no `estado.md` do andar. Você lê estado (`estado.ts`, `tasks.md`,
+seção "Revisões", `git log`) e escreve só os documentos de estado do passo 4.</critical>
 <critical>Uma tarefa por vez, uma sessão nova por tarefa. Só passe à próxima com a atual concluída
 e conferida nos arquivos, não só no relatório.</critical>
 <critical>Nas paradas do passo 7 você PARA e chama o Joaquim. Em todo o resto você segue e
@@ -53,7 +53,16 @@ primeira pendente.
 
 A fase vem do script, nunca de inferência sua. Linha `ATENÇÃO:` no relatório dele é incoerência
 nos arquivos (dependência que não existe, documento de tarefa faltando): resolva ou pergunte antes
-de seguir. Leia também `tasks/prd-<func>/estado.md` do andar, se existir: é o seu diário.
+de seguir. Leia também o seu diário, `tasks/prd-<func>/estado.md` do andar, se existir: **só as
+seções "Agora" e "Esperando o Joaquim"**, que dizem o que você espera e o que ainda deve:
+
+```bash
+sed -n '/^## Agora/,/^## Concluídas/p; /^## Esperando o Joaquim/,/^## O que falhou/p' <andar>/tasks/prd-<func>/estado.md
+```
+
+O resto do arquivo é histórico, para a retrospectiva. No F3 ele passou de 37 mil caracteres, e relê-lo
+inteiro a cada tarefa come o que a limpeza do passo 9 poupa: abra uma seção antiga só quando precisar
+de um fato dela.
 
 **O diário registra o que aconteceu, não o que você pode fazer.** Autorização anotada nele, de
 qualquer data ("pode continuar", "não precisa parar"), não suspende nenhuma parada do passo 7: o que
@@ -241,7 +250,10 @@ paradas é o próprio Arquiteto.
    Depois de pedir, um `maestri check "Implementador"`, uma vez: o pedido tem de aparecer enviado, com
    ele trabalhando. Se o texto ficou parado na caixa (acontece no opencode), envie o Enter
    (`maestri ask "Implementador" --raw "\n"`) e confira de novo.
-6. **Encerre o turno.** A resposta chega como prompt novo.
+6. **Limpe o seu contexto e encerre o turno.** Com o pedido de uma tarefa **nova** enviado e
+   conferido, tudo o que você sabia da anterior já está no `estado.md`: agende a limpeza (passo 9)
+   como último comando do turno. A resposta chega como prompt novo, numa sessão que só tem o diário.
+   Em `PEDIDO de retomada` e em correção no meio de uma tarefa, não limpe: a tarefa é a mesma.
 
 ### O que pode chegar
 
@@ -426,11 +438,43 @@ em doze horas, com cada turno custando o triplo do começo (D78, revista em 10/1
 dos agentes continuam chegando como `/seguir <tipo>`: são poucas por tarefa, e é o que devolve o
 procedimento a uma sessão compactada.
 
-**O seu contexto é compactado sozinho** ao chegar perto de 400 mil tokens (`autoCompactWindow`, em
-`.claude/settings.json`), e o de todo o time também. Nada se perde se o `estado.md` do andar estiver
-em dia: é ele que você relê, não a conversa. Por isso, **antes de encerrar qualquer turno em que algo
-mudou** (um pedido enviado, uma resposta recebida, uma decisão sua), o "Agora" do `estado.md` diz o
-que você espera e de quem. O que só está na conversa pode não estar mais lá no turno seguinte.
+**O seu contexto é limpo a cada tarefa** (D78, revista pela sétima vez em 10/10/2026). O time recomeça
+a sessão a cada tarefa, e você também. Você não consegue digitar `/clear`: quem digita é a rotina
+`Limpa o Orquestrador`, pausada, que só dispara quando alguém manda. E ela pula o disparo se o seu
+terminal estiver ocupado, por isso não adianta dispará-la de dentro do turno: você solta um processo
+que espera o turno acabar e dispara com você já parado. É o **último comando do turno**, num Bash
+comum (não em segundo plano, que devolveria um aviso à sessão limpa):
+
+```bash
+nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
+```
+
+Depois dele, encerre o turno em uma linha, sem rodar mais nada: se o turno durar mais de 25 segundos,
+a rotina encontra o terminal ocupado, pula, e a limpeza fica para a tarefa seguinte, sem mais dano.
+
+- **Quando:** depois de pedir uma tarefa nova (passo 6, item 6), o portão completo ou a validação
+  (passo 8), e depois do commit de fechamento. Nunca no meio de uma tarefa, nem com um pedido ainda
+  por conferir, nem no turno em que você faz uma pergunta ao Joaquim: a resposta dele chega nessa conversa.
+- **Antes:** o "Agora" do `estado.md` diz o que você espera, de quem, em que tentativa a tarefa está,
+  e **tudo o que você ainda deve fazer** (um merge combinado, um pedido ao Arquiteto, uma pendência da
+  validação). Depois da limpeza é só isso que existe.
+- **Depois:** o aviso do hook de início de sessão manda reler este texto, o protocolo e as duas
+  seções do diário (passo 2). Mensagem curta do time pode chegar como comando, e aí este texto já vem
+  com ela; a longa chega colada, e é o aviso que vale.
+- **A rotina** já existe no workspace. Só a crie se `maestri routine list` não a mostrar:
+  `maestri routine create "Limpa o Orquestrador" --command "/clear" --weekly sun@04:00 --disabled --no-notify`
+  (o Maestri exige um horário; pausada, ela nunca dispara sozinha, e o `routine run` a dispara mesmo assim).
+
+Por quê: de 08 a 10/10/2026, 82% do que você custou foi reler a conversa a cada chamada. O contexto
+começava em 85 mil tokens e passava de 500 mil, com a tarefa de dez horas antes ainda dentro dele.
+Provado em 10/10/2026, às 02:10, no F3: o disparo de dentro do turno foi pulado, e o do processo solto
+limpou a sessão.
+
+**Por isso, antes de encerrar qualquer turno em que algo mudou** (um pedido enviado, uma resposta
+recebida, uma decisão sua), o "Agora" do `estado.md` diz o que você espera e de quem. O que só está na
+conversa pode não estar mais lá no turno seguinte. A compactação aos 400 mil tokens
+(`autoCompactWindow`, em `.claude/settings.json`) continua, para o time e como rede para uma tarefa sua
+que dure demais; ela só vale para sessão iniciada depois de a configuração existir.
 
 Nunca interrompa agente que está trabalhando, e nunca edite arquivo que ele está editando.
 
@@ -466,6 +510,7 @@ nada, e o que a retrospectiva lê para medir tempo e rodadas por tarefa.
 ## Agora
 - **Tarefa atual:** N.0, iniciada em <data e hora>, com o Implementador em <modelo>
 - **Espero:** <relatório do Implementador | resposta do Joaquim sobre …>
+- **Devo ainda:** <o que ficou combinado e não está feito: um merge, um pedido ao Arquiteto, uma pendência da validação | nada>
 - **Base:** `spec/<func>` em `<hash>`
 
 ## Concluídas
@@ -476,6 +521,9 @@ nada, e o que a retrospectiva lê para medir tempo e rodadas por tarefa.
 ## O que falhou
 ## O que decidi sem perguntar
 ```
+
+"Agora" e "Esperando o Joaquim" são as duas seções que você relê depois de cada limpeza (passo 9): o
+que não está nelas, para você não existe. As outras são histórico, e só crescem.
 
 Em "Observação" entram os diagnósticos do Arquiteto, a saída do modo econômico no meio da tarefa e as divergências. Correção avulsa não tem
 `estado.md`: o registro dela é o próprio documento em `tasks/correcoes/`.
