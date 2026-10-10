@@ -1,4 +1,4 @@
-// O Implementador roda no opencode (D78, revista em 09/10/2026), que não lê `.claude/settings.json`. O que este
+// O Implementador pode rodar no opencode, no modo econômico (D78, revista em 09/10/2026), que não lê `.claude/settings.json`. O que este
 // arquivo prova: a trava do commit e do push continua valendo lá, pelo plugin, e o papel é o mesmo nas duas ferramentas.
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
@@ -141,7 +141,7 @@ describe('o papel do Implementador nas duas ferramentas', () => {
   }
   const SECAO = '## Nesta ferramenta'
 
-  it('tem o mesmo texto no opencode e na reserva do Claude Code, fora da seção de cada ferramenta', () => {
+  it('tem o mesmo texto no opencode e no Claude Code, fora da seção de cada ferramenta', () => {
     const noOpencode = corpo('.opencode/agents/implementador.md')
     const noClaude = corpo('.claude/agents/implementador.md')
     expect(noOpencode).toContain(SECAO)

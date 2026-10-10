@@ -136,7 +136,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D75 | O material da escola entra pela coordenação, com titularidade e licença declaradas; professor e aluno não sobem material para a base |
 | D76 | A equipe Turmma tem um painel de operação (A0 e A0b): cria rede e escola, convida a coordenação e acompanha uso e custo por escola, sem ver dado de pessoa |
 | D77 | O MVP de apresentação (A2 a A5) é uma fatia só, com processo enxuto, enquanto o dado for sintético: contratos primeiro, commit `(mvp: <resumo>)` com portão local, esteira disparada à mão por fase, revisores com veto numa passada por fase e IA no processo da API como dívida declarada; as regras 10, 20, 30, 40 e 70 não mudam, e o processo completo volta antes da primeira escola real (revisa a D71, a D23 e a D53 só para esta fatia) |
-| D78 | O processo roda no Maestri: um andar e uma branch por spec, que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando (`/seguir`); papéis de terminal em `.claude/agents/` com modelo por papel (Opus orquestra, desenha e valida; Sonnet conduz a revisão; o MiMo-V2.6-Pro implementa, no opencode); a Mesa de revisão chama os revisores e traduz a reprovação em ordem de correção; seis paradas são do Joaquim (revisa a D23 e a D53; revista em 09/10/2026: na tarefa roda só o portão da tarefa, com os testes que ela alterou, e o portão completo roda uma vez por spec, antes da validação; e o Implementador saiu do Claude Code para o opencode, com a reserva em Sonnet) |
+| D78 | O processo roda no Maestri: um andar e uma branch por spec, que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando (`/seguir`); papéis de terminal em `.claude/agents/` com modelo por papel (Opus orquestra, desenha e valida; Sonnet implementa e conduz a revisão); a Mesa de revisão chama os revisores e traduz a reprovação em ordem de correção; seis paradas são do Joaquim (revisa a D23 e a D53; revista em 09/10/2026: na tarefa roda só o portão da tarefa, com os testes que ela alterou, e o portão completo roda uma vez por spec, antes da validação; e o Implementador rodou duas tarefas no opencode, com o MiMo-V2.6-Pro, e voltou ao Sonnet, com o opencode como modo econômico que o Joaquim liga) |
 
 > **D54 a D71 estão ratificadas.** Saíram em 19/09/2026 da leitura das fontes de regulação e
 > da estrutura de agentes por papel; o Gabriel ratificou as dele no mesmo dia, e o Joaquim
@@ -198,7 +198,9 @@ que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um
 e a Mesa de revisão chamando os revisores. O hook, os vetos e o portão local não mudaram. **Papel de
 agente vem de `.claude/agents/`, nunca de responsabilidade do Maestri:** com ela o agente nasce fora
 da raiz e nenhum hook dispara. Em 09/10/2026 o Implementador passou para o opencode, com o
-MiMo-V2.6-Pro, para o plano do Claude durar mais (D78 revista): o papel dele vem de
+MiMo-V2.6-Pro, para o plano do Claude durar mais, e voltou ao Sonnet no mesmo dia, depois de duas
+tarefas medidas: cada uma levou de duas a quatro vezes o tempo e o consumo do Claude por tarefa não
+caiu (D78 revista). O opencode ficou como modo econômico, que o Joaquim liga: o papel vem de
 `.opencode/agents/`, e a trava do commit, de um plugin que consulta o mesmo hook.
 
 **Nome dos agentes.** O desenho da call tinha nomes próprios; os docs usam função. Fica a
@@ -343,7 +345,7 @@ AIA precisa ter; uma por funcionalidade, antes do PRD dela)
 **Para escolher modelo e medir custo de IA:** `docs/avaliacao-de-modelos.md`
 **Para saber o que já foi decidido, por extenso:** `docs/decisoes.md`
 **Para trabalhar:** `README.md`, `ROADMAP.md`, `TODO.md`, `.claude/rules/`, `.claude/skills/`, e
-`.opencode/` (o Implementador no opencode: configuração, papel e a trava do commit)
+`.opencode/` (o Implementador no opencode, o modo econômico: configuração, papel e a trava do commit)
 
 As regras 30 (IA) e 50 (frontend) carregam sozinhas só quando se lê arquivo do caminho delas
 (`paths:` no topo de cada uma). Quem escreve PRD, Tech Spec ou tarefa que envolve IA ou tela lê
@@ -361,12 +363,12 @@ decisão que é do Joaquim. As outras são procedimento interno dos agentes, na 
 conversam está em `.claude/skills/seguir/protocolo.md`.
 
 **O time** é fixo, no térreo do Maestri: o Orquestrador (o terminal Maestro, em Opus) e quatro
-papéis. Três rodam no Claude Code, de `.claude/agents/`, iniciados com `claude --agent <papel>`:
-`arquiteto` (Opus), `mesa-de-revisao` (Sonnet) e `validador` (Opus). O `implementador` roda no
-**opencode**, com o MiMo-V2.6-Pro (D78, revista em 09/10/2026): o papel está em
-`.opencode/agents/implementador.md`, a trava do commit e do push é o plugin
-`.opencode/plugins/portao-de-revisoes.ts`, e `.claude/agents/implementador.md` é a reserva em Sonnet,
-com o mesmo texto. Os terminais ficam; a sessão de cada um é reiniciada a cada tarefa ou fase, já
+papéis, que rodam no Claude Code, de `.claude/agents/`, iniciados com `claude --agent <papel>`:
+`arquiteto` (Opus), `implementador` (Sonnet), `mesa-de-revisao` (Sonnet) e `validador` (Opus). O
+`implementador` tem um **modo econômico**, que o Joaquim liga: o **opencode**, com o MiMo-V2.6-Pro
+(D78, revista em 09/10/2026), mais lento e fora do consumo do Claude. Nele o papel está em
+`.opencode/agents/implementador.md`, com o mesmo texto, e a trava do commit e do push é o plugin
+`.opencode/plugins/portao-de-revisoes.ts`. Os terminais ficam; a sessão de cada um é reiniciada a cada tarefa ou fase, já
 apontada para o checkout do andar.
 
 **Revisores** (em `.claude/agents/`, subagentes chamados pela Mesa de revisão): em toda tarefa,

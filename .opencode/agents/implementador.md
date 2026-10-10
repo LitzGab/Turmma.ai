@@ -1,5 +1,5 @@
 ---
-description: Papel de terminal do Maestri — implementa UMA tarefa ou UMA correção no andar da spec e aplica a ordem de correção da Mesa de revisão. Iniciado pelo Orquestrador com `opencode --standalone --auto`, na raiz do checkout; o modelo vem de `.opencode/opencode.jsonc`.
+description: Papel de terminal do Maestri — implementa UMA tarefa ou UMA correção no andar da spec e aplica a ordem de correção da Mesa de revisão. É o modo econômico do papel que roda no Claude Code (`.claude/agents/implementador.md`): o Orquestrador o inicia com `opencode --standalone --auto`, na raiz do checkout, quando o Joaquim liga; o modelo vem de `.opencode/opencode.jsonc`.
 mode: primary
 permissions:
   # Quem chama os revisores é a Mesa de revisão, e uma tarefa não se delega a outro agente.

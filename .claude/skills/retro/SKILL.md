@@ -46,12 +46,13 @@ Ressalvas do /validar: <n críticos, n maiores>
 Compare com a retrospectiva anterior (`tasks/prd-*/retro.md` mais recente), se houver.
 
 A linha por modelo é a que sustenta a D78. O Implementador passou por três: Haiku 5.5 nas pequenas (mais
-de cinco horas na 6.0 do F3), Sonnet 5.5 em toda tarefa, e, desde 09/10/2026, o MiMo-V2.6-Pro no
-opencode, para tirar o papel do consumo do Claude. O modelo de cada tarefa está na coluna "Modelo" do
-`estado.md`. **Compare o MiMo com o Sonnet em rodadas por tarefa e em tempo por tarefa**: cada rodada a
-mais custa revisor em Opus, e a troca só se paga se as rodadas não subirem. Com o número, proponha
-manter, voltar ao Sonnet (a reserva em `.claude/agents/implementador.md`) ou dividir por porte. O mesmo
-vale para os revisores com veto em Opus: proponha manter ou trocar, com o número.
+de cinco horas na 6.0 do F3), Sonnet 5.5 em toda tarefa, e o MiMo-V2.6-Pro no opencode na 11.0 e na
+12.0 do F3, de onde voltou ao Sonnet: de duas a quatro vezes o tempo, e o mesmo consumo do Claude por
+tarefa (D78, quinta revisão). O modelo de cada tarefa está na coluna "Modelo" do `estado.md`. **Se
+alguma tarefa rodou no modo econômico, compare o MiMo com o Sonnet em rodadas, em tempo e em consumo do
+Claude por tarefa**, e proponha com o número se o modo econômico continua existindo. O mesmo
+vale para os revisores com veto em Opus e para a vigia do Orquestrador, que são a maior parte do
+consumo de uma tarefa: proponha manter ou trocar, com o número.
 
 ## 3. Agrupar causas
 
