@@ -16,8 +16,9 @@ melhor que não saiba. O seu contexto não guarda a funcionalidade: ele é limpo
 seção "Revisões", `git log`) e escreve só os documentos de estado do passo 4.</critical>
 <critical>Uma tarefa por vez, uma sessão nova por tarefa. Só passe à próxima com a atual concluída
 e conferida nos arquivos, não só no relatório.</critical>
-<critical>Nas paradas do passo 7 você PARA e chama o Joaquim. Em todo o resto você segue e
-corrige, sem perguntar (D78).</critical>
+<critical>Nas paradas do passo 7 você PARA o que depende da resposta e chama o Joaquim, e nunca
+responde por ele. A tarefa da vez que não depende da pergunta segue (passo 7, "A parada segura só o
+que depende dela"). Em todo o resto você segue e corrige, sem perguntar (D78).</critical>
 
 Entrada: `$ARGUMENTS`
 
@@ -215,7 +216,8 @@ qualquer agente. Sem esses commits a árvore do andar fica suja, e a validação
 
 Enquanto o `Arquiteto` conversa com o Joaquim, você não tem nada a fazer: registre no `estado.md`
 "aguardando o Joaquim no terminal do Arquiteto" e encerre o turno. Quem avisa o Joaquim nessas
-paradas é o próprio Arquiteto.
+paradas é o próprio Arquiteto. Durante a construção, com tarefa pendente que a conversa não alcança,
+vale o passo 7: a tarefa segue.
 
 ## 6. O ciclo de uma tarefa
 
@@ -347,6 +349,32 @@ destravar o limite das três reprovações, a contagem daquela tarefa recomeça:
 `.processo/ordens/rodadas.md`, no andar, a linha `<documento> | destravado | <revisor> | depois da
 <n>ª rodada dele`, que é o que a Mesa lê para contar.
 
+**A parada segura só o que depende dela** (D78, revista pela oitava vez em 10/10/2026). Na madrugada
+de 10/10 a pergunta da tela "Login suspenso" ficou 3 h 10 aberta, e a 16.0 do F3, que não mudava em
+nenhuma das três opções, esperou junto. Vale para as paradas 1, 2 e 5 abertas durante a construção,
+com tarefa pendente. Não vale para a ressalva da validação, a retrospectiva, o pouso, o conflito de
+merge nem os dois limites, que são da própria tarefa.
+
+- **A pergunta que você se faz:** a tarefa da vez (a do `estado.ts`) muda em alguma das opções, ou
+  depende de tarefa ou de seção da Tech Spec que muda? Confira no documento dela e na tabela de
+  dependências do `tasks.md`. Na dúvida, depende, e você espera como sempre
+- **Não depende:** registre a parada nos três lugares, deixe a vigia ligada e siga o ciclo dessa
+  tarefa (passo 6). Na entrada do `estado.md`, diga qual tarefa seguiu e por que não depende. A
+  pergunta continua aberta e continua do Joaquim: você não escolhe opção nem adianta nada que dependa
+  dela. Terminada a tarefa, refaça a pergunta para a seguinte
+- **Ninguém escreve documento no andar com tarefa correndo.** Se a resposta do Joaquim chega ao
+  `Arquiteto` no meio de uma tarefa, ele avisa você com `/seguir RELATÓRIO de Arquiteto`, com a
+  decisão e "aplico com o andar limpo" (`.claude/agents/arquiteto.md`, "Resposta do Joaquim com tarefa
+  correndo"). Marque a entrada como respondida, anote no "Devo ainda" e, depois do commit da tarefa em
+  curso, envie a ele um `PEDIDO de retomada`. Só com o commit de documento dele conferido você pede a
+  tarefa seguinte. O mesmo vale para a resposta que chega a você: o `PEDIDO` ao `Arquiteto` para
+  registrar a decisão espera o commit da tarefa
+- **Não reinicie o `Arquiteto` com a pergunta aberta no terminal dele:** é a sessão dele que guarda a
+  pergunta e recebe a resposta. Escalada ou divergência da tarefa em curso que precise dele espera a
+  resposta do Joaquim; diga isso na entrada da parada
+- **O status do andar** fica `blocked` enquanto a pergunta estiver aberta, mesmo com tarefa correndo:
+  é ele que avisa o Joaquim
+
 ## 8. Validação, fechamento e pouso
 
 **Portão completo** (`sem-validacao`, antes de validar). Durante a spec cada tarefa rodou só os
@@ -421,7 +449,8 @@ Verde: peça a retrospectiva ao `Arquiteto` e notifique o fim.
 
 A rotina `Vigia do processo` manda **`/vigia`** a cada 30 minutos: uma skill própria e curta
 (`.claude/skills/vigia/SKILL.md`), com o que olhar e o que fazer. Ela já existe no workspace,
-pausada: ligue-a enquanto houver trabalho correndo e desligue-a em toda parada e no fim. Só a crie
+pausada: ligue-a enquanto houver trabalho correndo e desligue-a no fim e em toda parada em que
+nenhuma tarefa segue (passo 7). Só a crie
 se `maestri routine list` não a mostrar, para não ficar com duas vigias:
 
 ```bash

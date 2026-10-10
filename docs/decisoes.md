@@ -1128,3 +1128,36 @@ tarefa antes e depois, e por qualquer coisa que ele tenha deixado de fazer por n
 Ficou para a mesma retrospectiva, com o número que decide cada uma: o Orquestrador em Sonnet, a vigia
 que só acorda o modelo quando há algo preso, e um teto de tamanho por tarefa (as três do F3 com
 documento acima de 200 linhas foram as três com quatro rodadas ou escalada).
+
+Revista pela oitava vez em 10/10/2026, a pedido do Joaquim, que perguntou por que o processo demora
+depois de ficar mais barato. Medido na 14.0 e na 15.0 do F3, as duas primeiras com a revisão anterior:
+o Orquestrador custou de 2,3 a 4,2 por tarefa (antes, de 7,5 a 11), sem deixar de fazer nada; o
+Implementador, 16,6 e 22,6, contra 44,5 na 13.0; e as tarefas levaram 70 e 105 minutos. O tempo vai em
+três lugares: a fila é uma só; nenhuma das quinze primeiras tarefas passou de primeira na revisão, o
+que custa de 25 a 45 minutos em cada uma; e a linha inteira espera o Joaquim em toda parada. Duas
+mudanças:
+
+**A parada segura só o que depende dela.** A pergunta da tela "Login suspenso", aberta às 06:10, ficou
+3 h 10 sem resposta, mais do que as duas tarefas da madrugada somadas, e a 16.0, que não mudava em
+nenhuma das três opções, esperou junto. Agora, com uma parada de aprovação de tarefas, de desenho ou de
+produto aberta, o Orquestrador confere se a tarefa da vez depende dela; se não depende, a tarefa segue,
+com a pergunta aberta e o andar marcado como bloqueado. As seis paradas continuam do Joaquim: ninguém
+escolhe por ele, e nada que dependa da resposta é adiantado. Com tarefa correndo, ninguém escreve
+documento no andar: o Arquiteto guarda a resposta e aplica depois do commit da tarefa. Validação,
+retrospectiva, pouso, conflito de merge e os dois limites continuam parando tudo.
+
+**O Implementador confere três coisas antes de pedir a primeira rodada:** cada linha de "Mutações"
+vista vermelha na árvore atual (a 15.0 escalou por linha preenchida sem rodar), cada cláusula do diff
+com a sua linha (em onze das quinze tarefas o `test-engineer` reprovou por regra sem teste que falhe
+sem ela), e as listas fechadas. Estas são testes que enumeram rotas, métricas ou arquivos, e que o
+portão da tarefa não roda: a 11.0, a 13.0, a 14.0 e a 15.0 deixaram três vermelhas, que só apareceram
+quando as suítes inteiras rodaram com o andar parado, e viraram uma correção antes da 16.0. O
+procedimento ganhou a busca pelo vizinho que já existia, para achar quem enumera.
+
+**Avaliado e não feito: duas tarefas ao mesmo tempo.** É o maior ganho de tempo (a 16.0 e a 18.0 não
+dependem uma da outra), mas o ambiente de teste é um só por máquina (`educa-teste`, com portas fixas e
+banco limpo a cada portão), e duas suítes juntas se destroem. Pede um segundo ambiente de teste por
+checkout, um segundo andar e a regra de como as duas branches se encontram: trabalho próprio, antes da
+próxima spec, e não no meio desta. **Sem prova ainda:** uma parada aberta com tarefa correndo, e uma
+tarefa que passe de primeira. Revisão: na retrospectiva do F3, pelas rodadas e pelo tempo da 16.0 à
+20.0 contra a 11.0 à 15.0.
