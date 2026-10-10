@@ -3,6 +3,7 @@ import {
   disciplina,
   exigirAnoEmCurso,
   exigirEscolaDoContexto,
+  haHomonimoDoTitular,
   identidadeDaRequisicao,
   turma,
   usuario,
@@ -152,26 +153,12 @@ export class TitularesRepository {
   }
 
   /**
-   * O `homonimo` da prévia e do registro (a mesma regra da troca de nome, tarefa 15.0): outro aluno ativo com o mesmo
-   * nome completo nesta escola, ou um nome livre igual na lista. `nome` já vem sem caixa e sem espaço nas pontas, e a
-   * resposta nunca diz quem é o outro.
+   * O `homonimo` da prévia e do registro: a regra **da troca de nome** da eliminação (F3, tarefa 15.0), que mora no `nucleo` e
+   * é uma só para os três lugares. Outro aluno ativo com o mesmo nome completo nesta escola, ou um nome livre igual na lista;
+   * a resposta nunca diz quem é o outro.
    */
-  async homonimo(titularId: string, nome: string): Promise<boolean> {
-    const escolaId = exigirEscolaDoContexto()
-    const { rows } = await this.banco.execute<{ homonimo: boolean }>(sql`
-      select (
-        exists (
-          select 1 from usuario u
-          where u.escola_id = ${escolaId} and u.id <> ${titularId} and u.papel = 'aluno' and u.desativado_em is null
-            and lower(btrim(u.nome)) = ${nome}
-        )
-        or exists (
-          select 1 from lista_nome l
-          where l.escola_id = ${escolaId} and l.estado = 'livre' and lower(btrim(l.nome)) = ${nome}
-        )
-      ) as homonimo
-    `)
-    return rows[0]?.homonimo ?? false
+  async homonimo(titularId: string): Promise<boolean> {
+    return haHomonimoDoTitular(this.banco, titularId)
   }
 
   /**

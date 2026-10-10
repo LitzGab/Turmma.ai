@@ -77,7 +77,9 @@ export const operador = pgTable(
   (tabela) => [
     // O `FORMATO_OPERADOR` de `@educa/shared`, escrito por extenso porque o drizzle-kit lê o pacote pelo `dist`, que pode estar atrás; o
     // teste `formato-do-operador.int.test.ts` compara o check do banco com a constante. Nunca o autor reservado do nascimento.
-    check('operador_apelido_formato', sql`${tabela.apelido} ~ '^[a-z][a-z0-9-]{1,31}$' and ${tabela.apelido} <> 'bootstrap'`),
+    // `rotina` também é reservado (F3, tarefa 15.0): é o autor do job da eliminação e do expurgo, e a auditoria só o aceita
+    // em quatro ações (`auditoria_rotina_so_nas_acoes`). Um operador com esse apelido assinaria como se fosse o sistema.
+    check('operador_apelido_formato', sql`${tabela.apelido} ~ '^[a-z][a-z0-9-]{1,31}$' and ${tabela.apelido} <> 'bootstrap' and ${tabela.apelido} <> 'rotina'`),
     check('operador_nome_curto', sql`${tabela.nome} is null or char_length(${tabela.nome}) between 1 and 200`),
     check('operador_email_formato', sql`char_length(${tabela.email}) between 3 and 254 and position('@' in ${tabela.email}) > 1`),
     check('operador_ativo_com_nome_e_email', sql`${tabela.desativadoEm} is not null or (${tabela.nome} is not null and ${tabela.email} is not null)`),

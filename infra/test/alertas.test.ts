@@ -14,6 +14,7 @@ import { EVENTO_DO_LIMITE_DA_SALA, JANELA_DOS_LIMITES_DA_SALA_MS, LimitesDaSala,
 import { ContadorEmJanela } from '../../apps/api/src/sessao/senha/contador-em-janela.ts'
 import { LIMITES_DO_HISTOGRAMA_HTTP_S } from '../../packages/nucleo/src/telemetria/metricas.ts'
 import { HORAS_EM_PREPARACAO_PARA_ALERTAR } from '../../packages/shared/src/privacidade/arquivo.ts'
+import { HORAS_AGENDADO_PARA_ALERTAR } from '../../packages/shared/src/privacidade/titular.ts'
 import { HORAS_PARA_A_ESCOLA_CONFIRMAR } from '../../packages/shared/src/privacidade/incidente.ts'
 import { lerAmbienteExemplo } from '../../tools/ci/compose.ts'
 import {
@@ -149,6 +150,12 @@ describe('regras de alerta provisionadas', () => {
     expect(arquivo.for).toBe('1m')
     expect(expressao(arquivo)).toBe('max by (escola_id) (arquivo_horas_em_preparacao{job="educa/worker"})')
     expect(limiar(arquivo)).toEqual({ type: 'gt', params: [HORAS_EM_PREPARACAO_PARA_ALERTAR] })
+
+    // F3, tarefa 15.0: por escola, em qualquer réplica do worker-lote, e só acima de 48 h do prazo da eliminação (HORAS_AGENDADO_PARA_ALERTAR).
+    const eliminacao = regraPorUid(REGRAS_PROVISIONADAS.eliminacaoVencida).regra
+    expect(eliminacao.for).toBe('1m')
+    expect(expressao(eliminacao)).toBe('max by (escola_id) (eliminacao_horas_vencida{job="educa/worker"})')
+    expect(limiar(eliminacao)).toEqual({ type: 'gt', params: [HORAS_AGENDADO_PARA_ALERTAR] })
   })
 
   it('L11: a linha `sala.limite_atingido` que o limite da escola escreve traz o `escolaId` que o comando da entrada do runbook recebe', async () => {

@@ -8,6 +8,7 @@ import {
   type ArmazemDeArquivos,
   type ArquivoDoTitularRepository,
   type ConfiguracaoOperacional,
+  type Enfileirador,
   type ExpurgoDaEscolaRepository,
   type JanelaLetiva,
   type LoggerBase,
@@ -25,7 +26,9 @@ export const TIPO_EXPURGAR_ESCOLA = 'retencao.expurgar-escola'
 export const LOTE_DOS_ARQUIVOS_DO_TITULAR = 100
 
 export interface DependenciasDoExpurgoDaEscola {
-  repositorio: Pick<ExpurgoDaEscolaRepository, 'expurgarLote' | 'expurgarRegistroDoExpurgo' | 'registrar' | 'categoriaPendente'>
+  repositorio: Pick<ExpurgoDaEscolaRepository, 'expurgarLote' | 'expurgarRegistroDoExpurgo' | 'registrar' | 'categoriaPendente' | 'enfileirarEliminacoes'>
+  /** A porta de entrada do trabalho demorado: o job `titular.eliminar` de cada pedido de eliminação vencido sai por ela (F3, tarefa 15.0). */
+  enfileirador: Pick<Enfileirador, 'enfileirarUmaVez'>
   /** Os arquivos do titular vencidos ou marcados `apagado_em` (F3, tarefa 13.0): o objeto sai do storage, e só então a linha. */
   arquivos: Pick<ArquivoDoTitularRepository, 'aApagar' | 'apagarLinhas'>
   armazem: Pick<ArmazemDeArquivos, 'apagar'>
@@ -56,12 +59,19 @@ export interface DependenciasDoExpurgoDaEscola {
  *   data, e o dia que vale é o da escola.
  * - Tolera reexecução e dois jobs da mesma escola ao mesmo tempo (D49): o que saiu não volta, o que foi anonimizado não é
  *   relido, e o `skip locked` dá a cada um linhas diferentes. Um job que morre no meio desfaz só o lote em andamento.
+ * - **Primeiro, as eliminações vencidas** (F3, tarefa 15.0): o pedido `agendado` com `eliminar_em` passado, ainda sem job ou com o
+ *   job enfileirado há mais de 20 h, vira um `titular.eliminar` na fila de lote, não urgente, na transação que marca
+ *   `eliminacao_enfileirada_em` (a trava do cancelamento). O trabalho em si é do job `titular.eliminar`.
  * - Loga só a categoria (sob `tipo`) e as contagens; a escola vai pelo contexto, nunca uma linha.
  */
-export function criarExpurgoDaEscola({ repositorio, arquivos, armazem, retencao, janelaDaEscola, relogio, logger, lote = LOTE_DO_EXPURGO }: DependenciasDoExpurgoDaEscola): Processador {
+export function criarExpurgoDaEscola({ repositorio, arquivos, armazem, retencao, janelaDaEscola, enfileirador, relogio, logger, lote = LOTE_DO_EXPURGO }: DependenciasDoExpurgoDaEscola): Processador {
   return async () => {
     if (contextoAtual()?.escolaId === undefined) throw new FalhaDeJob(CodigoDeFalhaDeJob.DADOS_INVALIDOS, true)
     const agora = relogio.agora()
+    // Primeiro, as eliminações vencidas (F3, tarefa 15.0): cada pedido `agendado` com `eliminar_em` passado vira um
+    // `titular.eliminar` na fila de lote, na mesma transação da marca `eliminacao_enfileirada_em`. É só gravar linhas: o
+    // job faz o trabalho pesado, e a janela letiva já o segura (não urgente). Falhar aqui falha o job da escola, e a fila repete.
+    const { enfileirados: eliminacoesTotal, jaEnfileirados: eliminacoesJaEnfileiradasTotal } = await repositorio.enfileirarEliminacoes(enfileirador)
     const prazos = new Map(retencaoDaEscola(await retencao.ajustes()).map(({ categoria, meses }) => [categoria, meses]))
     const janela = await janelaDaEscola.daEscola()
     // Primeiro os arquivos do titular (F3, tarefa 13.0): o objeto sai do storage e só então a linha. O que o storage não
@@ -117,7 +127,16 @@ export function criarExpurgoDaEscola({ repositorio, arquivos, armazem, retencao,
       if (!doLote.cheio) break
     }
     const categoriasTotal = ordem.length
-    logger.info({ evento: 'retencao.expurgada', categoriasTotal, linhasTotal, registroApagadoTotal, arquivosApagadosTotal, arquivosNaoApagadosTotal })
+    logger.info({
+      evento: 'retencao.expurgada',
+      categoriasTotal,
+      linhasTotal,
+      registroApagadoTotal,
+      arquivosApagadosTotal,
+      arquivosNaoApagadosTotal,
+      eliminacoesTotal,
+      eliminacoesJaEnfileiradasTotal,
+    })
   }
 }
 

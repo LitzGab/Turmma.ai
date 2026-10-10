@@ -198,7 +198,7 @@ export class PrivacidadeService {
       const titulares = new TitularesRepository(tx)
       const titular = await this.#titularAlvo(titulares, titularId)
       await registro.gravar(tx, 'titular.previa_lida', { entidadeId: titular.id, finalidade: FINALIDADE_DO_ATENDIMENTO_DO_TITULAR })
-      const base = { id: titular.id, nome: titular.nome, homonimo: await titulares.homonimo(titular.id, titular.nome.trim().toLowerCase()) }
+      const base = { id: titular.id, nome: titular.nome, homonimo: await titulares.homonimo(titular.id) }
       if (titular.papel === 'professor') {
         return esquemaRespostaPreviaDoTitular.parse({ ...base, papel: 'professor', categorias: [...titulares.categoriasDoProfessor()] })
       }
@@ -224,7 +224,7 @@ export class PrivacidadeService {
     return this.banco.transaction(async (tx) => {
       const titulares = new TitularesRepository(tx)
       const titular = await this.#titularAlvo(titulares, pedido.titularId)
-      const homonimo = await titulares.homonimo(titular.id, titular.nome.trim().toLowerCase())
+      const homonimo = await titulares.homonimo(titular.id)
       const pedidos = new PedidosRepository(tx)
       const compartilhamento = await new Compartilhamento(tx).doTitular({ titularId: titular.id, papel: titular.papel })
       // Acesso e portabilidade geram arquivo: nascem `em_preparacao` e enfileiram o job **na mesma transação**, então o pedido

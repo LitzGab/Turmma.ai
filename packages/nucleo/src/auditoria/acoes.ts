@@ -48,6 +48,13 @@ export const CAMPOS_PROIBIDOS_NA_AUDITORIA = ['nome', 'email', 'matricula', 'com
 
 type EsquemaDeEstado = z.ZodObject
 
+/**
+ * As tabelas cuja linha alterada pela troca de nome do titular grava `titular.nome_trocado` (F3, 15.0): a execução do
+ * agente, o consumo de IA, o artefato e a entrega, que são o que a IA gerou e o que o professor aprovou. A conversa do
+ * professor (`mensagem_agente`) também é trocada, mas sem entrada por linha.
+ */
+export const TABELAS_AUDITADAS_NA_TROCA_DE_NOME = ['execucao_agente', 'consumo_ia', 'artefato', 'entrega'] as const
+
 export interface DefinicaoDeAcao {
   /** A entidade do registro. A de `rede` é a única gravada sem escola, e só pelo operador. */
   readonly entidade: string
@@ -707,6 +714,20 @@ export const ACOES_DE_AUDITORIA = {
     antes: null,
     depois: z.strictObject({ versao: z.enum(VERSOES_DO_ARQUIVO) }),
     finalidade: z.enum(FINALIDADES_DO_ARQUIVO),
+  },
+  /**
+   * O nome completo do titular foi trocado por `[nome removido]` numa linha de texto livre que a IA ou uma pessoa gerou
+   * (F3, tarefa 15.0; RF15; regra 70, item 6): uma entrada por linha alterada de execução, consumo, artefato e entrega, na
+   * transação da faixa. `entidadeId` é a **linha** que mudou; `depois` diz de qual tabela e por qual pedido. **Nunca o nome,
+   * nem o anterior nem o novo, nem o trecho**: a auditoria responde "o que a IA gerou, quem aprovou e quando" também
+   * depois da troca, e a saída aprovada que mudou fica registrada por linha. A conversa do professor (`mensagem_agente`)
+   * é trocada sem entrada por linha: não é saída aprovada.
+   */
+  'titular.nome_trocado': {
+    entidade: 'texto_livre',
+    antes: null,
+    depois: z.strictObject({ tabela: z.enum(TABELAS_AUDITADAS_NA_TROCA_DE_NOME), pedidoId: z.uuid() }),
+    finalidade: null,
   },
 } as const satisfies Record<string, DefinicaoDeAcao>
 

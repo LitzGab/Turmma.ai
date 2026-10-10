@@ -561,6 +561,54 @@ arquivo atrasou, sem mandar conteúdo por mensagem.
 **Depois:** registre no `TODO.md` a escola (id), o pedido (id), quando foi registrado e a causa, só com ids e datas. Causa nova vira
 tarefa com teste que a reproduz.
 
+## Eliminação do titular agendada há mais de 48 h do prazo
+
+**Dispara quando:** o pedido de eliminação `agendado` mais antigo de uma escola venceu (`eliminar_em`) há mais de 48 h e ainda não
+foi concluído, por 1 min (`max by (escola_id) (eliminacao_horas_vencida{job="educa/worker"}) > 48`, regra
+`infra/grafana/alertas/eliminacao-vencida.yaml`; Tech Spec do F3, seção 7c). A métrica é o número de horas desde o `eliminar_em`
+do pedido `agendado` já vencido mais antigo da escola em `pedido_titular`; o worker-lote a mede a cada 5 min, e o alerta traz o
+`escola_id`, nunca o pedido nem o titular. A escola sem eliminação vencida não tem série, e ela some quando o job conclui o
+pedido. Uma noite em que a janela letiva interrompeu a troca de nome é esperada e cabe nas 48 h: o alerta é a segunda noite sem
+concluir.
+
+**Impacto:** a eliminação é direito do titular (LGPD, art. 18, VI), e o 8º dia é o prazo que a escola anunciou. Vencido, a pessoa
+continua com o acesso suspenso e o dado dela continua guardado, sem que ninguém peça. Nada vaza e nada se perde: o pedido segue
+`agendado`, a troca de nome é idempotente e a etapa 3 só vale inteira.
+
+**Primeiro olhar:** o pedido e o job dele, só com ids, estados e datas (nunca nome nem texto):
+`docker compose exec postgres psql -U educa -c "select p.id, p.eliminar_em, p.eliminacao_enfileirada_em, j.estado as job, j.tentativas, j.codigo_falha from pedido_titular p left join job_registro j on j.escola_id = p.escola_id and j.tipo = 'titular.eliminar' and j.dados->>'pedidoId' = p.id::text where p.escola_id = '<escola_id>' and p.estado = 'agendado' and p.eliminar_em <= now() order by p.eliminar_em"`.
+O log do worker traz `titular.eliminacao` com o resultado (`concluida`, `sem_efeito`, `interrompida_pela_janela`) e, quando falha,
+`job.tentativa_falhou` com o código e o erro resumido, nunca o texto trocado.
+
+**Causas prováveis:**
+1. A rotina da noite não enfileirou (`eliminacao_enfileirada_em` nulo e nenhum job) → a rotina `sistema.expurgar-dado-pessoal`
+   não rodou ou falhou para a escola; veja "Rotina do sistema sem rodar". Com a rotina de volta, a noite seguinte enfileira.
+2. O job está esperando vaga ou não foi despachado (`job` em `aguardando`, `reservado` ou `publicado`) → o `worker-lote` ou o
+   `despachante` está parado, ou a escola está com o horário letivo aberto o dia todo e a fila de lote não roda; confira o
+   horário letivo da escola antes de mexer em qualquer coisa.
+3. A janela letiva abriu no meio da troca de nome em toda noite (`interrompida_pela_janela` sempre) → uma escola com tanto texto que
+   a troca não termina fora do horário: a noite seguinte retoma do começo e só altera o que sobrou, então confira se o número de
+   linhas trocadas por noite cai. Se não cai, abra correção: o tamanho da faixa e o índice parcial da 0036 são o que se ajusta.
+4. A troca de nome quebrou o JSON de uma linha, ou o `eliminar` da pessoa falhou (`job.tentativa_falhou` com `22P02` ou o código do
+   gatilho) em toda tentativa → o job esgota as tentativas e vira `falhou`; **a etapa 3 foi desfeita inteira**, e o pedido segue
+   `agendado`. Não edite o texto à mão nem apague a pessoa: abra correção com o `sqlstate` e o `constraint` do `job.tentativa_falhou` e o `id` do pedido,
+   nunca com a mensagem, o DETAIL nem o CONTEXT do Postgres, que citam o texto da linha; para achar a linha, use o `id` dela, sem
+   colar o conteúdo. A rotina reenfileira com 20 h, então a correção publicada conclui sozinha.
+5. O pedido foi concluído e a série continua → o `estado` já não é `agendado`: a medição está atrasada, ou o worker-lote não mede
+   (log `worker.medicao_da_eliminacao_indisponivel`: o Postgres respondeu com erro). A série some na volta seguinte de 5 min.
+6. A troca de nome passou do `statement_timeout` (`job.tentativa_falhou` com `sqlstate` `57014`) em toda tentativa → a escola tem
+   linhas de texto muito grandes (material e apresentações em `consumo_ia` e `artefato`) e uma faixa não coube nos 2 s, mesmo com o
+   teto de `ORCAMENTO_DA_FAIXA_EM_BYTES` (uma linha sozinha acima dele é o caso). Não suba o `statement_timeout` (regra 80, item 3):
+   abra correção com o `id` do pedido, a tabela e o tamanho da maior linha (`octet_length`), nunca o conteúdo; a correção ajusta o
+   orçamento ou a coluna.
+
+**Se nada disso resolver:** a pessoa não se elimina à mão, nem o `estado` do pedido se muda por `update`: o caso de uso grava a
+auditoria que responde "quem eliminou e quando" e anonimiza o que a pessoa fez. Escale ao dono do produto e avise a coordenação da
+escola de que a eliminação atrasou, sem mandar o nome nem o pedido por mensagem.
+
+**Depois:** registre no `TODO.md` a escola (id), o pedido (id), o `eliminar_em` e a causa, só com ids e datas. Causa nova vira
+tarefa com teste que a reproduz.
+
 ## Voltar o código com eliminação agendada em curso (rollback)
 
 *Procedimento, não alerta: não há regra em `infra/grafana/alertas/`. Vale para qualquer volta de versão que passe pela migration
@@ -583,7 +631,8 @@ lista (ela é quem cancela pela tela) de que, até a versão voltar, a pessoa n�
 **Na volta para a versão nova (roll-forward):** a marca continua na coluna. A guarda, a renovação, o login e o seletor voltam a
 recusar sozinhos, sem comando: a sessão que a pessoa abriu enquanto o código anterior rodava deixa de valer na próxima
 requisição (a guarda lê a marca, não só a sessão). O prazo de `eliminar_em` não se move: o pedido
-`agendado` cujo prazo venceu durante a volta é o que o job da eliminação (tarefa 15.0) pega na primeira passada depois dela.
+`agendado` cujo prazo venceu durante a volta é o que a rotina da noite enfileira e o job `titular.eliminar` (tarefa 15.0) elimina na
+primeira passada depois dela.
 
 **Não faça:** gravar `eliminacao_agendada_em` à mão (a marca é espelho do pedido, e o cancelamento a apaga junto), nem mudar o
 `estado` do pedido por `update`: o cancelamento e a conclusão pelo caso de uso gravam a auditoria que responde "quem cancelou e

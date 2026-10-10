@@ -253,6 +253,13 @@
       "when": 1791612670424,
       "tag": "0035_eliminacao_agendada",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791617209977,
+      "tag": "0036_eliminacao_do_titular",
+      "breakpoints": true
     }
   ]
 }

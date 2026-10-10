@@ -26,6 +26,7 @@ describe('guarda: alerta tem runbook', () => {
     const arquivos = arquivosDeAlertaDoRepositorio()
     expect(arquivos.map((arquivo) => arquivo.caminho)).toEqual([
       'infra/grafana/alertas/arquivo-em-preparacao.yaml',
+      'infra/grafana/alertas/eliminacao-vencida.yaml',
       'infra/grafana/alertas/expurgo-noites-incompletas.yaml',
       'infra/grafana/alertas/incidente-sem-confirmacao.yaml',
       'infra/grafana/alertas/job-interativo-esperando.yaml',
@@ -41,6 +42,7 @@ describe('guarda: alerta tem runbook', () => {
     expect(problemasDeRunbook(arquivos, runbookDoRepositorio)).toEqual([])
     expect(arquivos.flatMap(regrasDoArquivo).map((regra) => regra.titulo)).toEqual([
       'Arquivo do titular em preparação há mais de 2 h',
+      'Eliminação do titular agendada há mais de 48 h do prazo',
       'Expurgo incompleto por duas noites numa escola',
       'Incidente sem confirmação em 24 h',
       'Job interativo esperando',

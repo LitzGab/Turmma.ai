@@ -1348,6 +1348,7 @@ const USO_DA_ROTINA = /\bEscolasDaRotinaRepository\b|escolas-da-rotina\.reposito
  * teria uma consulta sem escopo ao alcance de uma requisição.
  */
 const QUEM_USA_A_ROTINA = [
+  'apps/worker/src/medicao-da-eliminacao.ts',
   'apps/worker/src/medicao-do-arquivo.ts',
   'apps/worker/src/medicao-do-expurgo.ts',
   'apps/worker/src/medicao-do-incidente.ts',
@@ -1378,5 +1379,25 @@ describe('arquitetura: a rotina noturna é a única consulta sem escopo do expur
       .filter((arquivo) => USO_DA_ROTINA.test(arquivo.texto))
       .map((arquivo) => arquivo.caminho)
     expect(usos.sort()).toEqual([...QUEM_USA_A_ROTINA].sort())
+  })
+})
+
+describe('arquitetura: o que a auditoria diz de outra pessoa não entra no arquivo de quem é só autor (F3, 13.0 e 15.0)', () => {
+  /**
+   * O arquivo do titular (13.0) lista a auditoria em que ele é o autor. A ação com `entidade: 'usuario'` tem como `entidade_id` o
+   * id de **outra pessoa** (a desativada, a eliminada, a que teve o segundo fator redefinido): se um professor ou um aluno a
+   * assinasse, o arquivo dele carregaria o id de outra pessoa. A lista é a das ações que **só a coordenação, a operação e a
+   * rotina** assinam, mais `usuario.ativado_por_convite`, em que quem assina é a própria pessoa e o id é o dela. Ação nova com
+   * `entidade: 'usuario'` obriga a quem a cria a ler este comentário e a decidir quem a assina.
+   */
+  const COORDENACAO_OPERACAO_E_ROTINA = ['professor.cadastrado', 'usuario.desativado', 'usuario.eliminado', 'usuario.mfa_redefinicao_recusada', 'usuario.mfa_redefinido']
+  const A_PROPRIA_PESSOA = ['usuario.ativado_por_convite']
+
+  it('as ações sobre `usuario` são exatamente estas, e nenhuma é de professor ou aluno sobre outra pessoa', () => {
+    const doUsuario = Object.entries(nucleo.ACOES_DE_AUDITORIA)
+      .filter(([, definicao]) => definicao.entidade === 'usuario')
+      .map(([acao]) => acao)
+      .sort()
+    expect(doUsuario).toEqual([...COORDENACAO_OPERACAO_E_ROTINA, ...A_PROPRIA_PESSOA].sort())
   })
 })

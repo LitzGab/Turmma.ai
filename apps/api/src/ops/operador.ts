@@ -10,7 +10,7 @@ import {
   type Banco,
   type Relogio,
 } from '@educa/nucleo'
-import { CodigoDeErro, TAMANHO_MAXIMO_EMAIL } from '@educa/shared'
+import { AUTOR_DA_ROTINA, CodigoDeErro, TAMANHO_MAXIMO_EMAIL } from '@educa/shared'
 import { rm } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -75,9 +75,12 @@ const OPCOES_DA_ACAO: Record<PedidoDeOperador['acao'], readonly (keyof typeof OP
   convite: ['apelido', 'saida'],
 }
 
-/** O apelido segue o formato do `OPERADOR` (`FORMATO_OPERADOR`) e nunca é o autor reservado do nascimento. */
+/**
+ * O apelido segue o formato do `OPERADOR` (`FORMATO_OPERADOR`) e nunca é um autor reservado: o do nascimento (`bootstrap`)
+ * nem o da rotina (`rotina`, F3 tarefa 15.0), que assina a eliminação e o expurgo e que o banco só aceita em quatro ações.
+ */
 function apelidoValido(valor: string | undefined): string {
-  if (valor === undefined || !FORMATO_OPERADOR.test(valor) || valor === AUTOR_BOOTSTRAP) throw new ArgumentoInvalido('--apelido')
+  if (valor === undefined || !FORMATO_OPERADOR.test(valor) || valor === AUTOR_BOOTSTRAP || valor === AUTOR_DA_ROTINA) throw new ArgumentoInvalido('--apelido')
   return valor
 }
 

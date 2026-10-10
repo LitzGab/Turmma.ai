@@ -538,6 +538,53 @@ na 15.0, pelo `titular.eliminar`, com o relógio injetado):
      exige); senão, `rotina`. Uma execução `pendente` de quem tem eliminação agendada já perdeu a sessão; a varredura
      do executor a encerra.
 - Os objetos saem do storage na noite seguinte, pelo `apagado_em`.
+- **Tarefa 15.0, como ficou no código.**
+  - **Migration `0036_eliminacao_do_titular`**, num arquivo só (o `migrar` roda numa transação, e a trava de `NOT VALID` seguido de
+    `VALIDATE` não alivia nela; a partir do staging, cada check vai em arquivo próprio): `auditoria_rotina_so_nas_acoes`
+    (`autor_operador is distinct from 'rotina' or acao in ('usuario.eliminado', 'acesso_turma.revogado', 'titular.nome_trocado',
+    'pedido.concluido')`), `operador_apelido_formato` redefinido com `apelido <> 'rotina'` (o `apelidoValido` do `ops:operador` já
+    o recusava), e os quatro índices `(escola_id, id)` parciais de texto não nulo que a troca percorre
+    (`consumo_ia` entrada e saída, `entrega` justificativa, `mensagem_agente`; `execucao_agente` e `artefato` já têm o índice
+    pela escola e pelo `id`).
+  - **O enfileiramento é da rotina da escola**, no primeiro passo do `retencao.expurgar-escola` (e não um job novo): numa
+    transação, `update pedido_titular set eliminacao_enfileirada_em = now()` nos `agendado` vencidos sem marca ou com marca de
+    mais de 20 h, até 500 por noite, do `eliminar_em` mais antigo, em `for update skip locked`, e o `titular.eliminar` (fila de
+    lote, não urgente, `{ pedidoId }`, chave `eliminacao:<pedido>`) gravado nela. O cancelamento em curso fica para a noite
+    seguinte; o que passa de 500 também.
+  - **A troca de nome** é a `TrocaDeNome`: por coluna, faixas de 1.000 linhas examinadas por `id`, uma transação por faixa, com a
+    janela conferida antes de cada uma. O padrão é montado no Node, sem a flag `i` (cada letra vira `[aA]`, para não depender
+    da configuração de caractere do banco), com fronteira de palavra por `lookaround`; no `jsonb` o nome é escapado para JSON
+    antes de virar regex, aceita começar depois de `\n`, `\t` e afins e não casa o que termina uma **chave** (`"nome":`); em
+    `text` com limite (`artefato.titulo`, 160; `entrega.justificativa`, 500) o resultado é cortado no limite, para o check não
+    derrubar a eliminação. **`titular.nome_trocado` grava uma entrada por linha** (tabela e id), mesmo quando duas colunas da
+    linha mudam, e não uma por coluna; a conversa do professor (`mensagem_agente`) é trocada sem entrada por linha. A
+    entidade da ação é `texto_livre` (não `usuario`: o `entidade_id` é de uma linha de texto).
+  - **A faixa da troca de nome tem dois tetos**: 1.000 linhas examinadas e 4 MB de texto (`ORCAMENTO_DA_FAIXA_EM_BYTES`), com ao
+    menos uma linha por faixa. O custo do regex cresce com os bytes: 1.000 linhas de ~50 KB passam do `statement_timeout` de 2 s
+    (medido pelo infra-guardian na 1ª rodada). A faixa cortada pelo orçamento não é o fim da coluna: o cursor é o último `id` que
+    entrou, e a faixa seguinte continua dele.
+  - **A chave** de um documento JSON que é igual ao nome completo fica na coluna; só os **valores** são trocados (a chave é do
+    formato que o schema estrito de cada tarefa fixa).
+  - **O que a lista de colunas deixa de fora, e por quê**, está no comentário de `COLUNAS_DA_TROCA_DE_NOME`: `incidente` e
+    `incidente_escola` (texto da nossa equipe; a regra "nenhum dado de titular" é do runbook, "Ao registrar o incidente"), a
+    conversa do Tutor e os sinais (saem inteiros, em cascata, com o aluno), a lista de nomes e a matrícula (saem pelo ciclo de
+    vida), o texto da contestação do vínculo e o complemento do pedido (que não existe).
+  - **O homônimo é uma consulta só, em SQL** (`haHomonimoDoTitular`): outro aluno **ativo** com o mesmo `lower(btrim(nome))`, ou
+    nome livre igual na lista de qualquer turma. A prévia, o registro e o job a chamam; a comparação em JS saiu. Dois homônimos
+    eliminados no mesmo minuto podem, cada um, não ver o outro (a eliminação do primeiro ainda não tinha saído quando o segundo
+    leu): os dois ficam com `homonimo = true` e sem troca. É o lado seguro, e o texto fica até o prazo da categoria.
+  - **O autor é decidido sob a trava**: `registrado_por` se ainda é usuário ativo da escola (`for key share`, como o gatilho da
+    auditoria), senão `rotina`. `concluido_por` fica sempre `registrado_por` (sem gatilho nessa coluna, 0035). O pedido sobre
+    a pessoa que já saiu da escola conclui sem `usuario.eliminado` e sem refazer a foto.
+  - **Os outros pedidos abertos do titular** (`recebido`, `em_preparacao`, `pronto`) são concluídos na mesma transação, cada um
+    com `pedido.concluido`: o de acesso `em_preparacao` ficaria disparando o alerta de 2 h (pendência da 13.0).
+  - **A pessoa que sai por outro caminho entre a leitura e a trava** faz o `eliminar` responder `NAO_ENCONTRADO`: o job falha, a
+    etapa 3 desfaz, e a tentativa seguinte conclui o pedido sem eliminar. Não há `catch` para isso.
+  - **A coordenação como titular** não existe nesta fase: `pedido_titular.papel_titular` segue `aluno` ou `professor`
+    (divergência da 11.0, decidida aqui). A única coordenadora que quer a própria eliminação fala com a operação (`TODO.md`).
+  - **A medição** é `eliminacao.horas_vencida{escola_id}`, do `ExpurgoDaEscolaRepository.vencimentoDoAgendadoMaisAntigo` (o
+    `min(eliminar_em)` dos `agendado` já vencidos), a cada 5 min no worker-lote, e a regra
+    `infra/grafana/alertas/eliminacao-vencida.yaml` dispara acima de 48 por 1 min.
 
 **Incidente.**
 - `ops:incidente registrar` lê um arquivo com uma seção por escola e grava as ligações no contexto de cada escola.
@@ -664,13 +711,13 @@ Não há IA no caminho. O que a funcionalidade preserva:
 | Está no caminho quente? | só a guarda, que lê uma coluna a mais da linha que já lê |
 | Carga na manhã de segunda | nenhuma: lote não urgente, que para no lote em que a janela abre e termina na noite seguinte |
 | Fila e prioridade | expurgo e eliminação no lote; arquivo na normal |
-| Limite por escola | vaga do F0 (lote 2); lote de 5.000; faixa de 1.000 na troca de nome; `statement_timeout` de 2 s |
+| Limite por escola | vaga do F0 (lote 2); lote de 5.000; faixa de 1.000 linhas e 4 MB de texto na troca de nome, com ao menos uma linha por faixa; `statement_timeout` de 2 s |
 | Rate limit | balde do F0; `rl:busca-titular` com 30 por minuto por usuário, que recusa com 429 |
 | Corridas de concorrência | seção 5: a chave de envio decide primeiro; a chave de idempotência "escola + data local"; o único parcial de `agendado`; cancelar contra enfileirar por `eliminacao_enfileirada_em`; dois `ops:retencao ajustar` da mesma escola em fila pela trava `for no key update` da escola (tarefa 2.0); travas pedido → usuário; `skip locked` no expurgo; confirmação do incidente por `where confirmado_em is null`. Cada uma com um cenário em paralelo em `cenarios.md` |
 | Índices novos | por titular, parciais `is not null`: `execucao_agente (escola_id, solicitada_por)`, `artefato (escola_id, criado_por)`, `tentativa_atividade (escola_id, aluno_id)` (não existia: a chave única começa pelo ano), e `consumo_ia (escola_id, execucao_id) where execucao_id is not null` (tarefa 13.0: seção 5, "O índice do rastro"); e, para as FKs sem ação do material, `mensagem_tutor` e `sinal_tutor (escola_id, material_id)` parciais (tarefa 5.0). De anonimização: `execucao_agente (escola_id, criada_em) where anonimizada_em is null`, e o mesmo com `and funcao = 'tutor_com_o_aluno'` (tarefa 4.0); `consumo_ia (escola_id, em) where entrada is not null or saida is not null`; `consumo_ia (escola_id, em) where aluno_id is not null`; `artefato (escola_id, ano_letivo_id) where criado_por is not null`. De data: `(escola_id, <data>)` em `mensagem_tutor`, `sinal_tutor` e `mensagem_agente`; `reivindicacao` (decididas); `material` (excluídos); `usuario (escola_id, desativado_em)` parcial; `vinculo` (encerrados). Troca de nome: `(escola_id, id)` parcial de texto não nulo em cada coluna da lista. Novas: as de `pedido_titular`, `arquivo_titular (escola_id, expira_em)`, `incidente_escola (escola_id) where confirmado_em is null`. A tarefa da migration entrega o `EXPLAIN` da eliminação (aluno e professor, com volume de Tutor na escola), da prévia e de cada lote |
 | Migration | compatível: a 0024 e a 0028 (`consumo_ia_provedor`: a coluna `provedor` e o check que a prende ao envio externo) só expandem, e a exigência de `provedor` vai num release posterior (seção 3). O `migrar` roda numa transação, então `NOT VALID` seguido de `VALIDATE` no mesmo arquivo não alivia a trava: a partir do staging, cada check vai em arquivo próprio. Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
 | Quando cada dependência cai | banco: 503 tipado e nova tentativa; Redis de fila: aceito e despachado depois; storage: "em preparação", e baixar dá `INDISPONIVEL` |
-| Métrica e alerta | duas noites seguidas sem todas as categorias da escola com `concluida = true` (tarefa 3.0: `expurgo.noites_incompletas{escola_id}`, de 0 a 2, medida pelo worker-lote a cada 5 min; a noite é o dia local de `em` no fuso da escola, de ontem para trás; a categoria sem linha conta como não concluída; a noite anterior à primeira execução da escola não conta, e a escola que nunca rodou não tem série; a regra dispara com a série em 2 por 1 min, `infra/grafana/alertas/expurgo-noites-incompletas.yaml`; o lote que falha grava a categoria com `concluida = false` antes de o erro subir, para a escola cujo expurgo falha desde a primeira noite também ter série; numa escola a oeste de São Paulo, uma execução que passa da meia-noite local divide as categorias entre dois dias, pendência no `TODO.md`); incidente sem confirmação em 24 h (tarefa 9.0: `incidente.horas_sem_confirmacao{escola_id}`, medida pelo worker-lote a cada 5 min, em horas desde o `conhecido_em` do incidente mais antigo da escola sem confirmação, e só a escola com pendente tem série; a regra `infra/grafana/alertas/incidente-sem-confirmacao.yaml` dispara acima de 24 por 1 min; a base `MedicaoPorEscola` é do laço, da lista de escolas e da exportação, e a medição do expurgo passou a herdar dela); pedido `agendado` mais de 48 h depois de `eliminar_em` (uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
+| Métrica e alerta | duas noites seguidas sem todas as categorias da escola com `concluida = true` (tarefa 3.0: `expurgo.noites_incompletas{escola_id}`, de 0 a 2, medida pelo worker-lote a cada 5 min; a noite é o dia local de `em` no fuso da escola, de ontem para trás; a categoria sem linha conta como não concluída; a noite anterior à primeira execução da escola não conta, e a escola que nunca rodou não tem série; a regra dispara com a série em 2 por 1 min, `infra/grafana/alertas/expurgo-noites-incompletas.yaml`; o lote que falha grava a categoria com `concluida = false` antes de o erro subir, para a escola cujo expurgo falha desde a primeira noite também ter série; numa escola a oeste de São Paulo, uma execução que passa da meia-noite local divide as categorias entre dois dias, pendência no `TODO.md`); incidente sem confirmação em 24 h (tarefa 9.0: `incidente.horas_sem_confirmacao{escola_id}`, medida pelo worker-lote a cada 5 min, em horas desde o `conhecido_em` do incidente mais antigo da escola sem confirmação, e só a escola com pendente tem série; a regra `infra/grafana/alertas/incidente-sem-confirmacao.yaml` dispara acima de 24 por 1 min; a base `MedicaoPorEscola` é do laço, da lista de escolas e da exportação, e a medição do expurgo passou a herdar dela); pedido `agendado` mais de 48 h depois de `eliminar_em` (tarefa 15.0: `eliminacao.horas_vencida{escola_id}`, em horas desde o `eliminar_em` do mais antigo já vencido, medida pelo worker-lote a cada 5 min, e só a escola com eliminação vencida tem série; `infra/grafana/alertas/eliminacao-vencida.yaml` dispara acima de 48 por 1 min; uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
 | Cenário de teste de carga | o "justiça entre escolas" ganha uma escola expurgando 1 milhão de linhas e trocando nome enquanto outra usa o Tutor |
 
 ## 8. Uso de IA
@@ -764,8 +811,10 @@ As regras 40 e 50 são atendidas sem desvio (`cenarios.md`; seção 9).
 ## 13. Riscos técnicos
 
 - **Mover o ciclo de vida** quebra importações. É a primeira tarefa, sem mudar comportamento.
-- **Troca de nome em `jsonb::text`.** É coberta pelo teste com apóstrofo, acento e metacaractere.
-- **Autor `rotina`.** O check restringe as ações em que ele pode aparecer.
+- **Troca de nome em `jsonb::text`.** É coberta pelo teste com apóstrofo, acento e metacaractere (15.0: o padrão é testado no
+  próprio Postgres, com aspas, barra invertida e colchetes; o resultado que não é JSON falha a faixa e o job).
+- **Autor `rotina`.** O check restringe as ações em que ele pode aparecer (0036, testado nas quatro aceitas e em cinco recusadas); o apelido
+  `rotina` é recusado na criação de operador, no comando e no check da tabela.
 - **Lote de `trabalho_do_aluno`** com a cascata pode passar de 2 s. A tarefa mede, e baixa o lote se precisar.
 - **Limite conhecido:** a troca de nome procura só o nome atual. O nome anterior a uma correção que tenha ficado em
   texto livre só sai pelo expurgo, no prazo da categoria. A tela de Corrigir nome avisa isso.

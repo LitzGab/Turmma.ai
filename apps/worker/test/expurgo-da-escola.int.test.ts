@@ -12,6 +12,7 @@ import {
   instrucaoDasPessoasDesativadas,
   instrucaoDoLoteDaEscola,
   instrucaoDoRegistroDoExpurgo,
+  LIMITE_DE_ELIMINACOES_ENFILEIRADAS_POR_NOITE,
   LOTE_DO_EXPURGO,
   resolverJanela,
   RetencaoDaEscolaRepository,
@@ -82,6 +83,8 @@ const CHAVES_DO_LOG = new Set([
   'registroApagadoTotal',
   'arquivosApagadosTotal',
   'arquivosNaoApagadosTotal',
+  'eliminacoesTotal',
+  'eliminacoesJaEnfileiradasTotal',
   'categoriasTotal',
   'escolasTotal',
   'enfileiradosTotal',
@@ -536,6 +539,7 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
       armazem: opcoes.armazem ?? new ArmazemEmMemoria(),
       retencao: new RetencaoDaEscolaRepository(bancada.banco),
       janelaDaEscola: janelaDaEscola(),
+      enfileirador: bancada.enfileirador,
       relogio,
       logger: log.logger,
       ...(opcoes.lote === undefined ? {} : { lote: opcoes.lote }),
@@ -1556,6 +1560,18 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
       expect(rows.map(({ id, alunoId, entrada, saida }) => ({ id, alunoId, entrada, saida })).sort((x, y) => x.id.localeCompare(y.id))).toEqual(
         [doTutor, soEntrada, soSaida].map((id) => ({ id, alunoId: null, entrada: null, saida: null })).sort((x, y) => x.id.localeCompare(y.id)),
       )
+    })
+
+    it('a linha antiga do consumo (envio externo e sem `provedor`, de antes da migration 0031) passa pelo expurgo sem esbarrar no check, e a linha fica', async () => {
+      const a = await escolaNova()
+      const antiga = await consumo(a, QUARTA_1H, '13 months', { de: 'ferramenta' })
+      await bancada.pool.query('update consumo_ia set envio_externo = true, provedor = null where id = $1', [antiga])
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+      const { rows } = await bancada.pool.query<{ entrada: unknown; saida: unknown; envioExterno: boolean; provedor: string | null }>(
+        'select entrada, saida, envio_externo as "envioExterno", provedor from consumo_ia where id = $1',
+        [antiga],
+      )
+      expect(rows[0]).toEqual({ entrada: null, saida: null, envioExterno: true, provedor: null })
     })
 
     it('o que fica: a execução, as sete FKs que apontam para ela e a soma da governança são as mesmas depois da anonimização', async () => {
@@ -2795,6 +2811,159 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
         expect(await existe('arquivo_titular', arquivoId)).toBe(false)
         expect(armazem.objetos.has(chave)).toBe(false)
       }
+    })
+  })
+
+  describe('eliminações vencidas (F3, tarefa 15.0): o job `titular.eliminar` de cada pedido, uma vez por noite e a cada 20 h', () => {
+    /** O pedido de eliminação `agendado` de um aluno novo da escola, com o `eliminar_em` e a marca de enfileiramento dados (SQL de intervalo). */
+    async function pedidoAgendado(escolaId: string, opcoes: { eliminarEm?: string; enfileiradaHa?: string } = {}): Promise<{ pedidoId: string; titularId: string }> {
+      const titularId = await alunoNovo(escolaId)
+      const registrador = await alunoNovo(escolaId)
+      const { rows } = await bancada.pool.query<{ id: string }>(
+        `insert into pedido_titular (escola_id, titular_id, papel_titular, tipo, solicitante, chegou_em, estado, eliminar_em, eliminacao_enfileirada_em, compartilhamento, registrado_por, chave_envio)
+         values ($1, $2, 'aluno', 'eliminacao', 'titular', current_date, 'agendado', ${opcoes.eliminarEm ?? "now() - interval '1 hour'"},
+           ${opcoes.enfileiradaHa === undefined ? 'null' : `now() - interval '${opcoes.enfileiradaHa}'`}, '[]'::jsonb, $3, $4) returning id`,
+        [escolaId, titularId, registrador, randomUUID()],
+      )
+      return { pedidoId: rows[0]?.id ?? '', titularId }
+    }
+
+    async function jobsDeEliminacao(escolaId: string): Promise<Array<{ chave: string; fila: string; naoUrgente: boolean; dados: unknown; estado: string }>> {
+      const { rows } = await bancada.pool.query<{ chave: string; fila: string; naoUrgente: boolean; dados: unknown; estado: string }>(
+        `select chave_idempotencia as chave, fila, nao_urgente as "naoUrgente", dados, estado from job_registro where escola_id = $1 and tipo = 'titular.eliminar' order by criado_em, id`,
+        [escolaId],
+      )
+      return rows
+    }
+
+    async function marca(pedidoId: string): Promise<Date | null> {
+      return (await bancada.pool.query<{ marca: Date | null }>('select eliminacao_enfileirada_em as marca from pedido_titular where id = $1', [pedidoId])).rows[0]?.marca ?? null
+    }
+
+    it('o pedido vencido vira um job na fila de lote, não urgente, só com o id do pedido, e ganha a marca; o ainda no prazo, o cancelado e o concluído não', async () => {
+      const a = await escolaNova()
+      const vencido = await pedidoAgendado(a.escolaId)
+      const noPrazo = await pedidoAgendado(a.escolaId, { eliminarEm: "now() + interval '1 day'" })
+      const cancelado = await pedidoAgendado(a.escolaId)
+      await bancada.pool.query("update pedido_titular set estado = 'cancelado', cancelado_em = now(), cancelado_por = registrado_por where id = $1", [cancelado.pedidoId])
+      const concluido = await pedidoAgendado(a.escolaId)
+      await bancada.pool.query("update pedido_titular set estado = 'concluido', concluido_em = now(), concluido_por = registrado_por where id = $1", [concluido.pedidoId])
+
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+
+      expect(await jobsDeEliminacao(a.escolaId)).toEqual([
+        { chave: `eliminacao:${vencido.pedidoId}`, fila: 'lote', naoUrgente: true, dados: { pedidoId: vencido.pedidoId }, estado: 'aguardando' },
+      ])
+      expect(await marca(vencido.pedidoId)).not.toBeNull()
+      expect(await marca(noPrazo.pedidoId)).toBeNull()
+      expect(await marca(cancelado.pedidoId)).toBeNull()
+      expect(await marca(concluido.pedidoId)).toBeNull()
+    })
+
+    it('enfileirado há menos de 20 h espera; há mais de 20 h entra de novo, com a marca renovada', async () => {
+      const a = await escolaNova()
+      const recente = await pedidoAgendado(a.escolaId, { enfileiradaHa: '19 hours' })
+      const velho = await pedidoAgendado(a.escolaId, { enfileiradaHa: '21 hours' })
+      const marcaDoRecente = await marca(recente.pedidoId)
+
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+
+      expect((await jobsDeEliminacao(a.escolaId)).map(({ chave }) => chave)).toEqual([`eliminacao:${velho.pedidoId}`])
+      expect(await marca(recente.pedidoId)).toEqual(marcaDoRecente)
+      expect((await marca(velho.pedidoId))?.getTime()).toBeGreaterThan(Date.now() - 60_000)
+    })
+
+    it('o job ainda não terminado do mesmo pedido conta como já enfileirado: a noite seguinte não grava outro', async () => {
+      const a = await escolaNova()
+      const { pedidoId } = await pedidoAgendado(a.escolaId)
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+      // A marca de 21 h atrás, com o job ainda `enfileirado`: reenfileira a marca, e a chave devolve o mesmo job.
+      await bancada.pool.query("update pedido_titular set eliminacao_enfileirada_em = now() - interval '21 hours' where id = $1", [pedidoId])
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+      expect(await jobsDeEliminacao(a.escolaId)).toHaveLength(1)
+      expect((await marca(pedidoId))?.getTime()).toBeGreaterThan(Date.now() - 60_000)
+    })
+
+    it('o job que terminou pela janela (`concluido`) e o pedido ainda `agendado` 21 h depois: a mesma chave grava um job novo', async () => {
+      const a = await escolaNova()
+      const { pedidoId } = await pedidoAgendado(a.escolaId)
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+      // O job terminou (a troca parou na janela, o pedido segue `agendado`), e a marca já tem mais de 20 h.
+      await bancada.pool.query("update job_registro set estado = 'concluido', concluido_em = now() where escola_id = $1 and tipo = 'titular.eliminar'", [a.escolaId])
+      await bancada.pool.query("update pedido_titular set eliminacao_enfileirada_em = now() - interval '21 hours' where id = $1", [pedidoId])
+
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+
+      const jobs = await jobsDeEliminacao(a.escolaId)
+      expect(jobs.map(({ chave, estado }) => ({ chave, estado }))).toEqual([
+        { chave: `eliminacao:${pedidoId}`, estado: 'concluido' },
+        { chave: `eliminacao:${pedidoId}`, estado: 'aguardando' },
+      ])
+    })
+
+    it('a noite leva no máximo 500 pedidos, os de prazo mais antigo primeiro; os que sobram entram na seguinte', async () => {
+      const a = await escolaNova()
+      const registrador = await alunoNovo(a.escolaId)
+      const total = LIMITE_DE_ELIMINACOES_ENFILEIRADAS_POR_NOITE + 1
+      await bancada.pool.query(
+        `with novos as (
+           insert into usuario (escola_id, papel, nome) select $1, 'aluno', 'Aluno em massa ' || g from generate_series(1, $2::int) g returning id
+         ), numerados as (select id, row_number() over (order by id) as n from novos)
+         insert into pedido_titular (escola_id, titular_id, papel_titular, tipo, solicitante, chegou_em, estado, eliminar_em, compartilhamento, registrado_por, chave_envio)
+         select $1, id, 'aluno', 'eliminacao', 'titular', current_date, 'agendado', now() - interval '2 days' - n * interval '1 second', '[]'::jsonb, $3, gen_random_uuid() from numerados`,
+        [a.escolaId, total, registrador],
+      )
+      const { rows: mais } = await bancada.pool.query<{ id: string }>("select id from pedido_titular where escola_id = $1 order by eliminar_em desc limit 1", [a.escolaId])
+
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+      expect(await jobsDeEliminacao(a.escolaId)).toHaveLength(LIMITE_DE_ELIMINACOES_ENFILEIRADAS_POR_NOITE)
+      expect(await marca(mais[0]?.id ?? '')).toBeNull()
+
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+      // Os 500 já têm a marca de agora (menos de 20 h): só o que sobrou entra.
+      expect(await jobsDeEliminacao(a.escolaId)).toHaveLength(total)
+      expect(await marca(mais[0]?.id ?? '')).not.toBeNull()
+    })
+
+    it('o expurgo de A não enfileira o pedido de B, e o log leva só as contagens', async () => {
+      const a = await escolaNova()
+      const b = await escolaNova()
+      await pedidoAgendado(a.escolaId)
+      const deB = await pedidoAgendado(b.escolaId)
+      const antes = log.linhas.length
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+      expect(await jobsDeEliminacao(b.escolaId)).toEqual([])
+      expect(await marca(deB.pedidoId)).toBeNull()
+      const final = log.linhas.slice(antes).map((linha) => JSON.parse(linha) as Record<string, unknown>).find((linha) => linha['evento'] === 'retencao.expurgada')
+      expect(final).toMatchObject({ eliminacoesTotal: 1, eliminacoesJaEnfileiradasTotal: 0 })
+    })
+
+    it('[P] dois jobs da mesma escola ao mesmo tempo levam pedidos diferentes: um job de eliminação por pedido', async () => {
+      const a = await escolaNova()
+      const pedidos = await Promise.all([1, 2, 3, 4, 5, 6].map(() => pedidoAgendado(a.escolaId)))
+      await Promise.all([rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H))), rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))])
+      const chaves = (await jobsDeEliminacao(a.escolaId)).map(({ chave }) => chave).sort()
+      expect(chaves).toEqual(pedidos.map(({ pedidoId }) => `eliminacao:${pedidoId}`).sort())
+    })
+
+    it('[P] o pedido que o cancelamento está tocando fica para a noite seguinte; cancelado, nunca vira job', async () => {
+      const a = await escolaNova()
+      const { pedidoId } = await pedidoAgendado(a.escolaId)
+      const cliente = await bancada.pool.connect()
+      try {
+        // O cancelamento, como o repository o faz, segura a linha no meio da transação.
+        await cliente.query('begin')
+        await cliente.query("update pedido_titular set estado = 'cancelado', cancelado_em = now(), cancelado_por = registrado_por where id = $1", [pedidoId])
+        // Com a linha presa, o enfileiramento não espera por ela: termina agora, sem levar o pedido.
+        await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+        await cliente.query('commit')
+      } finally {
+        cliente.release()
+      }
+      expect(await jobsDeEliminacao(a.escolaId)).toEqual([])
+      expect(await marca(pedidoId)).toBeNull()
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H)))
+      expect(await jobsDeEliminacao(a.escolaId)).toEqual([])
     })
   })
 

@@ -88,6 +88,8 @@ export const entrega = pgTable(
       .where(sql`${tabela.atividadeAplicadaId} is not null and ${tabela.estado} <> 'rejeitada'`),
     index('entrega_turma_idx').on(tabela.escolaId, tabela.turmaId, tabela.estado, tabela.id),
     index('entrega_ano_idx').on(tabela.escolaId, tabela.anoLetivoId, tabela.id),
+    // A faixa da troca de nome (F3, tarefa 15.0) lê só as entregas rejeitadas, que são as que têm justificativa.
+    index('entrega_justificativa_idx').on(tabela.escolaId, tabela.id).where(sql`${tabela.justificativa} is not null`),
     check('entrega_estado_valido', sql`${tabela.estado} in ('pendente', 'aprovada', 'rejeitada')`),
     check('entrega_tipo_valido', sql`${tabela.tipo} in ('versao_adaptada', 'lote_de_correcao')`),
     check('entrega_funcao_do_tipo', sql`(${tabela.tipo}, ${tabela.funcao}) in (('versao_adaptada', 'adaptacao'), ('lote_de_correcao', 'correcao_de_objetiva'))`),

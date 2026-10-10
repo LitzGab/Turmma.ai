@@ -227,6 +227,50 @@ describe('auditoria no banco', () => {
     })
   })
 
+  describe('o autor `rotina` (F3, tarefa 15.0): o banco o aceita só nas quatro ações da eliminação', () => {
+    const comoRotina = (acao: string, entidade: string) =>
+      pool.query(
+        `insert into auditoria (escola_id, autor_usuario_id, autor_operador, acao, entidade, entidade_id, requisicao_id)
+         values ($1, null, 'rotina', $2, $3, $4, $5)`,
+        [escolaA, acao, entidade, randomUUID(), randomUUID()],
+      )
+
+    it.each([
+      ['usuario.eliminado', 'usuario'],
+      ['acesso_turma.revogado', 'acesso_turma'],
+      ['titular.nome_trocado', 'texto_livre'],
+      ['pedido.concluido', 'pedido_titular'],
+    ])('aceita %s', async (acao, entidade) => {
+      await comoRotina(acao, entidade)
+      const { rows } = await pool.query('select autor_operador from auditoria where escola_id = $1 and acao = $2', [escolaA, acao])
+      expect(rows).toEqual([{ autor_operador: 'rotina' }])
+    })
+
+    it.each([
+      ['entrega.decidida', 'entrega'],
+      ['lote.aprovado', 'lote_de_correcao'],
+      ['escola.criada', 'escola'],
+      ['pedido.cancelado', 'pedido_titular'],
+      ['usuario.desativado', 'usuario'],
+    ])('recusa %s: aprovar, rejeitar e validar são de pessoa, e a rotina não assina', async (acao, entidade) => {
+      await expect(comoRotina(acao, entidade)).rejects.toMatchObject({ code: '23514', constraint: 'auditoria_rotina_so_nas_acoes' })
+    })
+
+    it('outro operador assina qualquer ação: o check é só da rotina', async () => {
+      await pool.query(
+        `insert into auditoria (escola_id, autor_usuario_id, autor_operador, acao, entidade, entidade_id, requisicao_id)
+         values ($1, null, 'operador-teste', 'entrega.decidida', 'entrega', $2, $3)`,
+        [escolaA, randomUUID(), randomUUID()],
+      )
+    })
+
+    it('o apelido `rotina` não entra na tabela de operadores, nem por fora do comando', async () => {
+      await expect(
+        pool.query(`insert into operador (apelido, nome, email) values ('rotina', 'Pessoa Sintética', $1)`, [`rotina-${randomUUID()}@turmma.invalid`]),
+      ).rejects.toMatchObject({ code: '23514', constraint: 'operador_apelido_formato' })
+    })
+  })
+
   it('rede: tipo fora da lista e nome em branco são recusados pelo banco', async () => {
     await expect(pool.query(`insert into rede (nome, tipo) values ('Rede Sintética', 'municipal')`)).rejects.toMatchObject({ code: '23514', constraint: 'rede_tipo_valido' })
     await expect(pool.query(`insert into rede (nome, tipo) values ('   ', 'grupo')`)).rejects.toMatchObject({ code: '23514', constraint: 'rede_nome_preenchido' })

@@ -67,6 +67,17 @@ where estado = 'agendado'` decide, no banco, duas eliminações ao mesmo tempo, 
 tem pedido `agendado`: a pessoa sai pelo prazo do pedido, nunca pelo da desativação. Rollback do código: runbook, "Voltar o
 código com eliminação agendada em curso".
 
+**A eliminação no 8º dia** (F3, tarefa 15.0). A rotina da noite da escola marca `pedido_titular.eliminacao_enfileirada_em` (a
+trava do cancelamento) e grava o job `titular.eliminar` na mesma transação, para o pedido `agendado` vencido que ainda não tem
+marca ou cuja marca tem mais de 20 h, até 500 por noite. O job troca o nome completo do aluno por `[nome removido]` em
+`execucao_agente.entrada`, `consumo_ia.entrada` e `saida`, `artefato.titulo` e `conteudo`, `mensagem_agente.conteudo` e
+`entrega.justificativa`, em faixas de 1.000 linhas, com a janela letiva conferida entre elas, e grava `titular.nome_trocado` por
+linha de execução, consumo, artefato e entrega. Depois, numa transação só, na ordem pedido → usuário: refaz o compartilhamento,
+anonimiza as execuções do titular, elimina a pessoa, marca `apagado_em` nos arquivos dele, conclui os outros pedidos abertos e
+conclui o pedido. O autor é quem registrou, se ainda é usuário ativo da escola, ou `rotina` (`autor_operador`, só em
+`usuario.eliminado`, `acesso_turma.revogado`, `titular.nome_trocado` e `pedido.concluido`, por check do banco). O pedido guarda
+só o id do titular e as duas marcas, `nome_trocado` e `homonimo`.
+
 **A identidade é global, os vínculos são por escola** (decidido na Tech Spec do F1). `Conta`
 não tem `escolaId` porque é o login; `Usuario` é a pessoa *naquela* escola, com o papel dela.
 Um professor em duas escolas é uma `Conta` com dois `Usuario`, e o escopo de tenant continua

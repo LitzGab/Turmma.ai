@@ -132,12 +132,19 @@ export const METRICAS = {
    * O alerta "Arquivo do titular em preparação há mais de 2 h" dispara acima de 2.
    */
   horasDoArquivoEmPreparacao: 'arquivo.horas_em_preparacao',
+  /**
+   * Horas desde que o pedido de eliminação `agendado` mais antigo da escola venceu (`eliminar_em`, F3, tarefa 15.0), por
+   * `escola_id`: medida pelo worker-lote a partir de `pedido_titular`. Só a escola com eliminação vencida e ainda `agendada`
+   * tem série; ao concluir, a série some. O prazo dos 7 dias não conta, e a interrupção pela janela letiva cabe nas 48 h. O
+   * alerta "Eliminação do titular agendada há mais de 48 h do prazo" dispara acima de 48.
+   */
+  horasDaEliminacaoVencida: 'eliminacao.horas_vencida',
 } as const
 
 /**
  * As únicas métricas que levam `escola_id`: as de job e, fora de job, as três de login da Tech Spec da identidade (seção
  * 7c), com cardinalidade de uma série por escola: a espera pelo hash, as falhas e o rebaixamento; e as noites sem
- * expurgo (F3, tarefa 3.0) as horas do incidente sem confirmação (F3, tarefa 9.0) e as do arquivo em preparação (F3, tarefa 13.0). Nenhuma outra pode levar escola, e nenhuma leva usuário.
+ * expurgo (F3, tarefa 3.0) as horas do incidente sem confirmação (F3, tarefa 9.0) as do arquivo em preparação (F3, tarefa 13.0) e as da eliminação vencida (F3, tarefa 15.0). Nenhuma outra pode levar escola, e nenhuma leva usuário.
  */
 export const METRICAS_COM_ESCOLA: readonly string[] = [
   METRICAS.esperaMaisAntiga,
@@ -150,6 +157,7 @@ export const METRICAS_COM_ESCOLA: readonly string[] = [
   METRICAS.noitesIncompletasDoExpurgo,
   METRICAS.horasDoIncidenteSemConfirmacao,
   METRICAS.horasDoArquivoEmPreparacao,
+  METRICAS.horasDaEliminacaoVencida,
 ]
 
 /** O rótulo da escola nas métricas de job. Rotina do sistema, sem escola, aparece como `sistema`, como na chave da vaga. */

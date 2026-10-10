@@ -199,6 +199,12 @@ export { suboperador, suboperadorEscola } from './db/schema/suboperador.js'
 export { SuboperadorDaEscolaRepository } from './titular/suboperador-da-escola.repository.js'
 export type { SuboperadorLidoPelaEscola } from './titular/suboperador-da-escola.repository.js'
 export { Compartilhamento } from './titular/compartilhamento.js'
+export { haHomonimoDoTitular } from './titular/homonimo.js'
+export { COLUNAS_DA_TROCA_DE_NOME, FAIXA_DA_TROCA_DE_NOME, NOME_REMOVIDO, padraoDoNome, TrocaDeNome } from './titular/troca-de-nome.js'
+export type { ColunaDaTroca, PedidoDeTroca, ResultadoDaTroca } from './titular/troca-de-nome.js'
+export { EliminacaoDoTitular } from './titular/eliminacao-do-titular.js'
+export { EliminacaoDoTitularRepository } from './titular/eliminacao-do-titular.repository.js'
+export type { OpcoesDaEliminacao, ResultadoDaEliminacao } from './titular/eliminacao-do-titular.js'
 export { instrucaoDoRastroDoAluno } from './titular/compartilhamento.repository.js'
 export type { AlvoDoCompartilhamento } from './titular/compartilhamento.js'
 export { incidente, incidenteEscola } from './db/schema/incidente.js'
@@ -222,13 +228,14 @@ export {
   instrucaoDasPessoasDesativadas,
   instrucaoDoLoteDaEscola,
   instrucaoDoRegistroDoExpurgo,
+  LIMITE_DE_ELIMINACOES_ENFILEIRADAS_POR_NOITE,
   LOTE_MAXIMO_DO_ALVO,
   NOITES_DO_ALERTA,
   noitesSeguidasSemConcluir,
   ordemDaNoite,
   RETENCAO_EXPURGO_EXECUCAO_MESES,
 } from './retencao/expurgo-da-escola.repository.js'
-export type { AlvoDoExpurgoDaEscola, CategoriaDoExpurgo, LoteDoExpurgo, NoiteDoExpurgo, PrazoDoLote } from './retencao/expurgo-da-escola.repository.js'
+export type { AlvoDoExpurgoDaEscola, CategoriaDoExpurgo, EliminacoesEnfileiradas, LoteDoExpurgo, NoiteDoExpurgo, PrazoDoLote } from './retencao/expurgo-da-escola.repository.js'
 export { EscolasDaRotinaRepository } from './rotina/escolas-da-rotina.repository.js'
 export * from './db/schema/mvp/tabelas.js'
 export { contaExterna, PROVEDORES_EXTERNOS } from './db/schema/conta-externa.js'

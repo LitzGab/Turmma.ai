@@ -1,9 +1,11 @@
-import { AUTOR_DA_ROTINA, CodigoDeErro, type CategoriaDeRetencao } from '@educa/shared'
+import { AUTOR_DA_ROTINA, CodigoDeErro, HORAS_PARA_REENFILEIRAR_A_ELIMINACAO, TIPO_DO_JOB_ELIMINAR_TITULAR, type CategoriaDeRetencao } from '@educa/shared'
 import { and, desc, eq, sql, type SQL } from 'drizzle-orm'
 import { CicloDeVidaService } from '../ciclo-de-vida/ciclo-de-vida.service.js'
 import { exigirEscolaDoContexto } from '../contexto/escola-do-contexto.js'
 import type { Banco } from '../db/banco.js'
+import type { Enfileirador } from '../fila/enfileirador.js'
 import { expurgoExecucao } from '../db/schema/expurgo-execucao.js'
+import { pedidoTitular } from '../db/schema/pedido-titular.js'
 import { usuario } from '../db/schema/usuario.js'
 import { ErroDeDominio } from '../erro/erro-de-dominio.js'
 
@@ -73,6 +75,18 @@ export interface PrazoDoLote {
  */
 export const LOTE_MAXIMO_DO_ALVO: Readonly<Partial<Record<AlvoDoExpurgoDaEscola, number>>> = {
   usuario: 100,
+}
+
+/**
+ * Quantos pedidos de eliminação vencidos o job da escola enfileira por noite: o resto fica para a noite seguinte, que o pega
+ * pela mesma regra. Mil eliminações vencidas na mesma noite de uma escola só não existem; o teto protege a transação.
+ */
+export const LIMITE_DE_ELIMINACOES_ENFILEIRADAS_POR_NOITE = 500
+
+/** O que o enfileiramento da noite fez: quantos jobs gravou e quantos já havia (a chave de idempotência colidiu). */
+export interface EliminacoesEnfileiradas {
+  readonly enfileirados: number
+  readonly jaEnfileirados: number
 }
 
 /** Quanto tempo o registro do próprio expurgo (`expurgo_execucao`) fica: 5 anos, o prazo fixo dos registros de prestação de contas. */
@@ -425,6 +439,65 @@ export class ExpurgoDaEscolaRepository {
       }
     }
     return { linhas: eliminadas, cheio: escolhidos.rows.length >= limite }
+  }
+
+  /**
+   * Enfileira a eliminação de cada pedido **vencido** da escola do contexto (F3, tarefa 15.0; Tech Spec do F3, seção 5): o
+   * pedido `agendado` com `eliminar_em <= now()` cujo `eliminacao_enfileirada_em` é nulo ou tem mais de
+   * `HORAS_PARA_REENFILEIRAR_A_ELIMINACAO` (20 h: o job que a janela letiva interrompeu, ou que se perdeu, volta na noite
+   * seguinte; o que foi enfileirado há menos pode estar rodando). **Uma transação**: o `update` marca o instante e o job
+   * `titular.eliminar` (fila de lote, não urgente, só com o id do pedido, chave de idempotência `eliminacao:<pedido>`) é
+   * gravado nela, então não há pedido marcado sem job nem job sem marca.
+   *
+   * **A marca é a trava do cancelamento**: `cancelar` só vale com `eliminacao_enfileirada_em` nulo, e o `update` daqui só
+   * pega o `agendado`: cancelar e enfileirar na fronteira do prazo têm um vencedor só, decidido pela linha. O relógio é o
+   * do banco. `for update skip locked` entre as candidatas: a que o cancelamento está tocando agora fica para a noite
+   * seguinte, e dois jobs da mesma escola ao mesmo tempo levam pedidos diferentes. A mesma chave colide só com o job ainda
+   * não terminado do mesmo pedido, e conta como "já enfileirado".
+   */
+  async enfileirarEliminacoes(enfileirador: Pick<Enfileirador, 'enfileirarUmaVez'>): Promise<EliminacoesEnfileiradas> {
+    const escolaId = exigirEscolaDoContexto()
+    return this.banco.transaction(async (tx) => {
+      const marcados = await tx.execute<{ id: string }>(sql`
+        update pedido_titular
+        set eliminacao_enfileirada_em = now()
+        where escola_id = ${escolaId} and estado = 'agendado' and eliminar_em <= now() and id = any(array(
+          select id from pedido_titular
+          where escola_id = ${escolaId} and estado = 'agendado' and eliminar_em <= now()
+            and (eliminacao_enfileirada_em is null or eliminacao_enfileirada_em < now() - make_interval(hours => ${HORAS_PARA_REENFILEIRAR_A_ELIMINACAO}))
+          order by eliminar_em, id
+          limit ${LIMITE_DE_ELIMINACOES_ENFILEIRADAS_POR_NOITE}
+          for update skip locked
+        ))
+        returning id
+      `)
+      let enfileirados = 0
+      let jaEnfileirados = 0
+      for (const { id } of marcados.rows) {
+        const resultado = await enfileirador.enfileirarUmaVez(
+          tx,
+          { tipo: TIPO_DO_JOB_ELIMINAR_TITULAR, fila: 'lote', naoUrgente: true, dados: { pedidoId: id } },
+          `eliminacao:${id}`,
+        )
+        if (resultado.situacao === 'enfileirado') enfileirados += 1
+        else jaEnfileirados += 1
+      }
+      return { enfileirados, jaEnfileirados }
+    })
+  }
+
+  /**
+   * Quando venceu o pedido `agendado` mais antigo da escola (o `eliminar_em` dele), ou `undefined` sem nenhum vencido. É o
+   * que o alerta lê (Tech Spec do F3, seção 7c): as horas desde então passam de `HORAS_AGENDADO_PARA_ALERTAR`. O pedido
+   * ainda dentro dos 7 dias não conta, e a escola sem eliminação vencida não tem série. O relógio da comparação é o do banco.
+   */
+  async vencimentoDoAgendadoMaisAntigo(): Promise<Date | undefined> {
+    const [linha] = await this.banco
+      .select({ vencimento: sql<Date | string | null>`min(${pedidoTitular.eliminarEm})` })
+      .from(pedidoTitular)
+      .where(and(eq(pedidoTitular.escolaId, exigirEscolaDoContexto()), eq(pedidoTitular.estado, 'agendado'), sql`${pedidoTitular.eliminarEm} <= now()`))
+    const valor = linha?.vencimento
+    return valor === null || valor === undefined ? undefined : valor instanceof Date ? valor : new Date(valor)
   }
 
   /**

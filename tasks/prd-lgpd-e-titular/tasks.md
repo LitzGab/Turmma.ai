@@ -107,13 +107,13 @@
   - [x] 14.5 Runbook do rollback
   - [x] 14.6 Testes
 
-- [ ] **15.0 — No 8º dia a eliminação acontece, com o nome trocado nos textos livres**
-  - [ ] 15.1 Migration própria: check do autor `rotina` (NOT VALID, VALIDATE); apelido reservado; índices `(escola_id, id)` parciais de texto
-  - [ ] 15.2 Enfileiramento pela rotina (`eliminacao_enfileirada_em`, 20 h)
-  - [ ] 15.3 `TrocaDeNome`: faixas de 1.000 examinadas, janela entre faixas, escapes, `titular.nome_trocado` no `returning`
-  - [ ] 15.4 Etapa 3 com `for update`, foto, anonimização, `eliminar` na transação, `apagado_em`, autor
-  - [ ] 15.5 Alerta `agendado` > 48 h e runbook
-  - [ ] 15.6 Testes
+- [x] **15.0 — No 8º dia a eliminação acontece, com o nome trocado nos textos livres**
+  - [x] 15.1 Migration própria: check do autor `rotina` (NOT VALID, VALIDATE); apelido reservado; índices `(escola_id, id)` parciais de texto
+  - [x] 15.2 Enfileiramento pela rotina (`eliminacao_enfileirada_em`, 20 h)
+  - [x] 15.3 `TrocaDeNome`: faixas de 1.000 examinadas, janela entre faixas, escapes, `titular.nome_trocado` no `returning`
+  - [x] 15.4 Etapa 3 com `for update`, foto, anonimização, `eliminar` na transação, `apagado_em`, autor
+  - [x] 15.5 Alerta `agendado` > 48 h e runbook
+  - [x] 15.6 Testes
 
 - [ ] **16.0 — A coordenação registra um pedido pela tela**
   - [ ] 16.1 Lista com nome e turma, "Titular eliminado"

@@ -1,0 +1,64 @@
+# Alerta "Eliminação do titular agendada há mais de 48 h do prazo" (Tech Spec do F3, seção 7c; runbook:
+# docs/runbook.md#eliminação-do-titular-agendada-há-mais-de-48-h-do-prazo). Provisionado por arquivo no Grafana da observabilidade
+# local (infra/compose.yml monta esta pasta em provisioning/alerting).
+#
+# `eliminacao.horas_vencida{escola_id}` é medida pelo worker-lote a cada 5 min, de `pedido_titular`: as horas desde o `eliminar_em` do
+# pedido de eliminação `agendado` mais antigo da escola que já venceu e ainda não foi concluído. Dispara por escola quando passa de 48 h
+# (HORAS_AGENDADO_PARA_ALERTAR), em qualquer réplica, por 1 min. A interrupção do job pela janela letiva (a troca de nome para quando
+# o horário letivo abre) é esperada e cabe nas 48 h: a noite seguinte retoma. O alerta traz a escola, nunca o pedido nem o titular.
+#
+# Sem dado é normal: só a escola com eliminação vencida e ainda agendada tem série, e some quando o job conclui o pedido.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: eliminacao-vencida
+    folder: Educa.ia alertas
+    interval: 10s
+    rules:
+      - uid: educa-eliminacao-vencida
+        title: Eliminação do titular agendada há mais de 48 h do prazo
+        condition: C
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          area: eliminacao-do-titular
+        annotations:
+          summary: 'A eliminação de um titular da escola {{ $labels.escola_id }} venceu há mais de 48 h e não foi concluída'
+          description: O pedido de eliminação passou do 8º dia e o job não o concluiu (LGPD, art. 18, VI). Siga o runbook.
+          runbook_url: https://github.com/LitzGab/Educa.ia/blob/main/docs/runbook.md#eliminação-do-titular-agendada-há-mais-de-48-h-do-prazo
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: max by (escola_id) (eliminacao_horas_vencida{job="educa/worker"})
+              instant: true
+              range: false
+              intervalMs: 10000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - type: query
+                  evaluator:
+                    type: gt
+                    params: [48]

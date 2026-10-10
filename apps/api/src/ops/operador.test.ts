@@ -41,6 +41,13 @@ describe('ops:operador: leitura do pedido (U1: o apelido segue o FORMATO_OPERADO
     expect(lerPedidoDeOperador(['desativar', '--apelido', `j${'a'.repeat(30)}-`]).apelido).toHaveLength(32)
   })
 
+  it('"rotina" está no formato, mas é o autor reservado da eliminação e do expurgo e não vira apelido', () => {
+    for (const acao of ['criar', 'desativar', 'convite']) {
+      const resto = acao === 'criar' ? ['--nome', NOME, '--email', EMAIL, '--saida', 'x.txt'] : acao === 'convite' ? ['--saida', 'x.txt'] : []
+      expect(() => lerPedidoDeOperador([acao, '--apelido', 'rotina', ...resto]), acao).toThrow(new ArgumentoInvalido('--apelido'))
+    }
+  })
+
   it('"bootstrap" está no formato, mas é o autor reservado do nascimento e não vira apelido', () => {
     expect(() => lerPedidoDeOperador(['criar', '--apelido', 'bootstrap', '--nome', NOME, '--email', EMAIL, '--saida', 'x.txt'])).toThrow(new ArgumentoInvalido('--apelido'))
   })

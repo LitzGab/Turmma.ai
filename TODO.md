@@ -132,10 +132,56 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] **Encerramento da medição do incidente sem teste (F3, 9.0):** `await medicaoDoIncidente?.encerrar()` em
       `apps/worker/src/montagem.ts` não tem teste próprio (a classe tem; a montagem não): o intervalo de 5 min não é injetável por
       `montarWorker`. Provar exige tornar o intervalo opção da montagem, que é mudança de contrato do worker.
-- [ ] **Troca de nome da eliminação e o incidente (F3, 15.0):** conferir que `incidente` e `incidente_escola` não precisam entrar
+- [x] **Troca de nome da eliminação e o incidente (F3, 15.0):** *resolvido na 15.0: `incidente` e `incidente_escola` ficam fora, com o motivo em `COLUNAS_DA_TROCA_DE_NOME` e em `docs/lgpd.md`.* conferir que `incidente` e `incidente_escola` não precisam entrar
       na troca de nome da eliminação do 8º dia: o registro não guarda texto sobre pessoa, e a regra "nenhum dado de titular" é
       disciplina de quem escreve (runbook, "Ao registrar o incidente"). Se a 15.0 enumerar as colunas de texto livre, a lista
       deve dizer por que estas ficam de fora.
+- [ ] **(F3, 15.0) A coordenação como titular:** `pedido_titular.papel_titular` segue `aluno` ou `professor`, e a única coordenadora
+      de uma escola que quer a própria eliminação não tem tela nem pedido: a operação a atende pelo ciclo de vida, com o apelido do
+      operador. Se virar pedido real, a migration amplia o check, e a prévia dela segue a regra do professor, sem contagem de uso
+      (`conformidade-reviewer`, 1ª rodada da 11.0). Decidido na 15.0 como "fora do F3"; reabrir com o primeiro caso.
+- [ ] **(F3, 15.0) VALIDATE do check do autor `rotina` em arquivo próprio antes do staging:** a 0036 grava `NOT VALID` e `VALIDATE` no
+      mesmo arquivo (o `migrar` roda numa transação), e a `auditoria` é a tabela que mais cresce. A partir do staging, o `VALIDATE`
+      de `auditoria_rotina_so_nas_acoes` vai em migration própria, fora do horário letivo, junto dos índices `concurrently`
+      pendentes (Tech Spec do F3, seção 7c).
+- [ ] **(F3, 15.0) Dois homônimos eliminados no mesmo minuto:** cada job lê o outro como ainda ativo e os dois ficam `homonimo = true`,
+      sem troca. É o lado seguro; se aparecer caso real, a troca roda depois do primeiro (a lista de homônimos relida na etapa 3).
+- [ ] **(F3, 15.0) `eliminar` com `NAO_ENCONTRADO` falha o job em vez de concluir:** a pessoa que sai por outro caminho entre a leitura
+      e a trava faz a tentativa falhar uma vez (a etapa 3 desfaz), e a seguinte conclui. Raro, e sem efeito além de uma linha de
+      `job.tentativa_falhou`; só tratar se o alerta de 48 h aparecer por isso.
+- [ ] **(F3, 15.0) Mutações da 15.0 que ficam equivalentes sob a trava:** o `where estado = 'agendado'` do `concluir` do repositório da
+      eliminação e a conferência do mesmo `agendado` em `travarVencido` já são garantidos pelo `FOR UPDATE`; ficam como segunda camada
+      (a primeira é provada no isolamento por método, `eliminar-titular.int.test.ts`).
+- [ ] **(F3, 15.0) `entidadeId` de `titular.nome_trocado` na leitura da coordenação:** a entrada de auditoria da troca guarda o id da
+      execução e do consumo do aluno eliminado. Quando a consulta da auditoria for aberta à coordenação, ou o dossiê (D61) a exportar,
+      esconder o `entidadeId` dessa ação ou agregá-la por pedido. Hoje nenhuma rota expõe a auditoria (`conformidade-reviewer`, 15.0, 1ª rodada).
+- [ ] **(F3, 15.0) O check do autor `rotina` não exige `autor_usuario_id` em `entrega.decidida` e `lote.aprovado`:** o teste "outro
+      operador assina qualquer ação" pede revisão se o check ampliar; o gatilho `entrega_decidida_por_da_equipe` já protege a decisão
+      real. Muda o contrato da 0036 (`conformidade-reviewer`, 15.0, 1ª rodada).
+- [ ] **(F3, 15.0) Autoria da conclusão em `docs/lgpd.md` e na tela do pedido (16.0):** quando a coordenadora que registrou foi
+      desativada, `concluido_por` é dela e a auditoria diz `rotina`. A tela mostra o autor da auditoria, e não `concluido_por`; dizer
+      isso em `docs/lgpd.md` na 16.0 (`conformidade-reviewer`, 15.0, 1ª rodada).
+- [ ] **(F3, 15.0) A entrega `pendente` continua `pendente` depois do job:** sem teste que o fixe; pede fixture de entrega e de artefato
+      `pendente`. O job não decide entrega (regra 70, item 3) (`conformidade-reviewer`, 15.0, 1ª rodada).
+- [ ] **(F3, 15.0) Erro tipado no `pedido de eliminação não concluído sob a trava`:** é `new Error` (regra 00, item 9). Invariante
+      inalcançável sob a trava; tipar com `FalhaDeJob` muda a política de repetição do job e pede decisão (`revisor-geral`, 15.0, 1ª rodada).
+- [ ] **(F3, 15.0) `origem: 'periodo'` na foto do professor eliminado:** o teste do professor não afirma o valor; depende de o cenário
+      ter suboperador vigente para o período dele. O valor é provado em `compartilhamento.int.test.ts` (`privacy-guardian`, 15.0, 1ª rodada).
+- [ ] **(F3, 16.0) Leitura de `GET pedidos/:id` depois do job, fim a fim pela API:** `titular: null`, `nomeTrocado` e o provedor na
+      foto. É a 16.0 que lê esse DTO na tela (`test-engineer` e `privacy-guardian`, 15.0, 1ª rodada).
+- [ ] **(F3, 15.0) Texto de ano `encerrado` na troca de nome:** a troca não filtra por ano (é por escola), mas nenhum teste mostra uma
+      linha de ano encerrado trocada; pede fixture de ano encerrado (`test-engineer`, 15.0, 1ª rodada).
+- [ ] **(F3, 15.0) Cursor da troca de nome guardado por coluna no pedido:** a noite seguinte a uma interrupção recomeça da primeira
+      faixa e só altera o que sobrou. Se a escola tiver tanto texto que a noite não alcança o fim, a coluna nova no pedido guarda o
+      cursor (muda o modelo de dados; a causa 3 do runbook cobre o sintoma) (`infra-guardian`, 15.0, 1ª rodada).
+- [ ] **(F3, 15.0) Ordem de trava pedido → usuário contra o job de arquivo da 13.0:** travar todos os pedidos do titular logo depois
+      de `travarVencido` evitaria uma inversão de ordem com o job do arquivo. Sem deadlock medido, e a fila repete (D49); muda a ordem
+      de trava de `concluirOutrosAbertos` (`infra-guardian`, 15.0, 1ª rodada).
+- [ ] **(F3, 15.0) `#examinar` da troca de nome converte o `jsonb` inteiro a cada faixa:** `octet_length(campo::text)` relê e converte as até 1.000 linhas, e a faixa cortada pelo orçamento relê o mesmo bloco várias vezes. Medido em 574 ms para 1.000 linhas de ~1 MB, dentro dos 2 s; rever com volume real no piloto (`pg_column_size`, ou `limit` menor depois de uma faixa cortada) (`infra-guardian`, 15.0, 2ª rodada).
+- [ ] **(F3, 15.0) Migration 0036 fora do horário letivo e com `lock_timeout`:** `auditoria` cresce com o aluno, e o `VALIDATE` do check do autor `rotina` a varre sob trava. Fecha junto do item da 0031, logo abaixo (`infra-guardian`, 15.0, 2ª rodada).
+- [ ] **(F3, 15.0) Consulta pronta na causa 6 do runbook da eliminação:** deixar escrita a consulta que devolve só `id` e `octet_length` da maior linha por tabela da escola, para quem opera não montar a query na hora e selecionar a coluna de texto (`privacy-guardian`, 15.0, 2ª rodada).
+- [ ] **(F3, 15.0 → 16.0) Registrador desativado entre a leitura e a faixa, na etapa 2 da eliminação:** a faixa falha e a tentativa seguinte assina como `rotina`; sem teste próprio. Entra com a 16.0, quando a tela mostrar o autor (`privacy-guardian`, 15.0, 2ª rodada).
+- [ ] **(F3, 15.0) Linha de ~4,9 MB do teste da guarda de bytes da troca de nome:** o teste `a linha sozinha acima do orçamento da faixa…` roda o regex numa faixa só contra o `statement_timeout` de 2 s (margem medida de cerca de dez vezes). Se ficar instável na esteira da spec, baixar a linha para pouco acima de 4 MB (`test-engineer` e `revisor-geral`, 15.0, 3ª rodada).
 - [ ] **Migration 0031 fora do horário letivo (F3, 9.0):** `incidente_escola` tem FK para `usuario` e para `escola`, e o `migrar`
       roda numa transação. Antes do staging, aplicar fora do horário letivo e com `lock_timeout`, junto dos índices
       `concurrently` pendentes das migrations 0025 a 0027 (Tech Spec do F3, seção 7c).
@@ -805,7 +851,7 @@ qualquer dado real:
       pedir a URL de 5 minutos quantas vezes quiser; cada pedido é auditado com autor e finalidade, e a versão só existe enquanto o
       titular está sem conta ativa. Um teto por versão e por dia não está nos requisitos (RF12) e ficou fora; se o Joaquim o quiser,
       entra com `LIMITE_DE_DOWNLOADS_DA_VERSAO_DA_ESCOLA` e erro tipado.
-- [ ] **(F3, 13.0) Pedido de acesso `em_preparacao` de titular que foi eliminado (F3, 15.0):** o job termina sem efeito quando o
+- [x] **(F3, 13.0) Pedido de acesso `em_preparacao` de titular que foi eliminado (F3, 15.0):** *resolvido na 15.0: a eliminação conclui os outros pedidos abertos do titular na mesma transação, cada um com `pedido.concluido`.* o job termina sem efeito quando o
       titular já não existe na escola (log `titular.arquivo_sem_titular`), e o pedido segue `em_preparacao` até a coordenação
       concluí-lo, e dispara o alerta de 2 h enquanto isso. A 15.0, que conclui o pedido de eliminação, decide se conclui os de acesso
       abertos do mesmo titular na mesma transação (o autor `rotina` já vale para `pedido.concluido`).
@@ -822,7 +868,7 @@ qualquer dado real:
 - [ ] **(F3, 13.0) Testes do arquivo que prometem mais do que afirmam, e três provas que faltam (`test-engineer`):** (i) o teste de conteúdo não prende o SQL à declaração (as chaves de cada linha do JSON contidas em `LEITURAS_DO_ARQUIVO[t].colunas`); (ii) "B não lista A" usa outra pessoa em B, e não o mesmo professor logado em B (`sessaoDaMesmaConta`); (iii) virada de ano letivo: um registro de ano anterior tem de aparecer no arquivo, e hoje um filtro por `ano_letivo_id` nas leituras passaria; (iv-bis) o `POST pedidos/:id/arquivo` no pedido sobre a própria pessoa da coordenação (usuário desativado com a mesma `conta_id` de quem chama) cai no `#pedidoAlvo`, e nenhum teste prova isso nesta rota; (iv) os títulos "com ou sem segundo fator" (token só) e "cada arquivo uma vez" (não conta as chamadas de `apagar`) prometem mais do que afirmam.
 - [ ] **(F3, 13.0) Duas perguntas de alcance do arquivo para a Tech Spec antes da 18.0 (`privacy-guardian`, `conformidade-reviewer`):** (i) a versão completa do professor com conta ativa traz `consumo_ia.entrada/saida` e `mensagem_agente.conteudo` também de turmas cujo vínculo já terminou (regra 20, item 18): é texto que ele escreveu, mas o prompt do Analista pode levar ids e desempenho de alunos que ele já não alcança; (ii) `artefato.titulo` entra na versão da escola do professor sem conta ativa: se o título vier do tema que ele escreveu ao Assistente, é um pedaço da conversa dele chegando à coordenação (regra 70, item 8); hoje está coberto pela exceção "registro de uso (execuções, consumo sem texto e artefatos)" do PRD, seção 6.
 - [ ] **Ressalvas da 14.0 (F3, `test-engineer`, `infra-guardian`, `revisor-geral`, 1ª rodada):** (i) `temAcessoSuspenso`: os filtros `isNull(desativadoEm)` e `ne(papel, 'aluno')` não têm teste que os derrube (hoje inalcançáveis); (ii) o `Cache-Control: no-store` e o corpo vazio do `cancelar` não são afirmados; (iii) os [P] de `eliminacao-agendada.int.test.ts` (dois `cancelar`, duas chaves, cancelar e registrar) usam `Promise.all` sem forçar o entrelaçamento: segurar a primeira transação com `GatilhoDeParada` e `esperarNaTrava`, como `retencao.int.test.ts`; (iv) falta o [P] da eliminação com a **mesma** chave de envio nas duas chamadas: o `ON CONFLICT` só arbitra `(escola_id, chave_envio)` e o único parcial `pedido_titular_agendado_unico` é outro índice, então numa janela curta o reenvio pode receber `PEDIDO_EM_ESTADO_INVALIDO` em vez do mesmo pedido (a tela 16.0 sorteia a chave por diálogo); (v) o ramo suspenso do login por e-mail não grava a falha no registro de acesso (`gravarFalhaDeLoginPorEmail`), e os da matrícula e da conta externa gravam: alinhar, com teste do registro de escola nula; (vi) em `login.service.ts`, a consulta `temAcessoSuspenso` roda fora do `.catch` que chama `contador.desfazer`: se o banco falhar ali a reserva fica contada como senha errada; (vii) a renovação recusada por eliminação agendada entra na métrica como `recusada`: separar `suspensa` em `RESULTADOS_DA_RENOVACAO`; (viii) a sessão que um agendamento anterior, já cancelado, encerrou com `motivo = 'eliminacao_agendada'` volta a receber `ACESSO_SUSPENSO`, e não o 401, se a pessoa for agendada de novo dentro das 12 h e da inatividade: comparar `encerradaEm` da sessão com o `eliminacaoAgendadaEm` atual e cobrir com teste (cancelar, agendar de novo, usar o cookie antigo); risco pequeno, o cookie é da própria pessoa, da mesma escola; (ix) o teste da inatividade da renovação usa `now() - 1 day` e deve provar a fronteira (logo depois de "inatividade do papel + tolerância"), como `avaliar-sessao.test.ts` faz para a guarda; (x) no teste do aluno transferido, comparar também o `setCookie` da renovação com o do desconhecido, e dizer em comentário que é cenário de comportamento (passa por duas defesas: o motivo `desativacao` e `desativadoEm` em `sessaoAindaVale`), e não a prova de uma cláusula.
-- [ ] **Acesso e portabilidade do titular cobrindo as tabelas da fase 3.** A rota do pedido do titular (F3,
+- [x] **Acesso e portabilidade do titular cobrindo as tabelas da fase 3.** *Resolvido: o arquivo (13.0, `LEITURAS_DO_ARQUIVO`) lê cada uma, e a eliminação (15.0) as alcança pelas FKs (`mensagem_tutor`, `sinal_tutor` e `tentativa_atividade` em cascata, `consumo_ia` com o aluno nulo); teste em `apps/worker/test/expurgo-da-escola.int.test.ts` (desativado com trabalho, conversa e consumo) e em `eliminar-titular.int.test.ts`.* A rota do pedido do titular (F3,
   `ciclo-de-vida.service.ts`) precisa alcançar, por aluno: `mensagem_tutor`, `sinal_tutor`, `resposta_atividade`,
   `tentativa_atividade`, `correcao`, `validacao_do_lote` (o aluno do destaque, pelo id) e `consumo_ia` com
   `envio_externo` (o que foi a provedor externo e quando), para a pergunta de fechamento da regra 20 continuar

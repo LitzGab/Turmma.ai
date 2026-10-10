@@ -1678,6 +1678,55 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 37,
+      "type": "timeseries",
+      "title": "Horas da eliminação do titular vencida, por escola",
+      "description": "Horas desde que o pedido de eliminação agendado mais antigo da escola passou do 8º dia e ainda não foi concluído (F3, tarefa 15.0), medido pelo worker-lote a cada 5 min a partir de pedido_titular. O alerta \"Eliminação do titular agendada há mais de 48 h do prazo\" dispara acima de 48. Só a escola com eliminação vencida tem série, e ela some quando o job conclui o pedido. O que fazer está no runbook.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 123
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (escola_id) (eliminacao_horas_vencida)",
+          "legendFormat": "{{escola_id}}",
+          "range": true
+        }
+      ]
     }
   ]
 }

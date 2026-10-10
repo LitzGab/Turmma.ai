@@ -31,7 +31,7 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
     alcançam o aluno; aos 5, os dois ficam; a execução do professor de 7 meses fica (tarefa 4.0, exigido pelo
     `privacy-guardian`).
   - [I] Expurgar e trocar o nome numa linha antiga de `consumo_ia` (`envio_externo` verdadeiro, sem `provedor`,
-    anterior à migration da 7.0) não esbarra no check (testado na 15.0).
+    anterior à migration da 7.0) não esbarra no check (testado na 15.0, no job `titular.eliminar` e no expurgo).
 - **RF4, ano letivo.**
   - [I] Um ano com `fim` vencido além do prazo, mas `em_curso`, não perde nada.
   - [I] O mesmo ano `encerrado` perde.
@@ -313,11 +313,35 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
     examinadas, e a execução seguinte termina a troca e elimina.
   - [I] Uma falha no `CicloDeVidaService.eliminar` desfaz a anonimização da etapa 3, e o pedido continua `agendado`.
   - [I] Fronteira de palavra: "Ana Souza" contido em "Mariana Souza" não é trocado.
+  - [I] (tarefa 15.0) Mil linhas de texto grande (~60 KB) passam do orçamento de 4 MB da faixa, e a troca termina em várias
+    faixas, dentro do `statement_timeout` de 2 s.
+  - [I] (tarefa 15.0) A faixa leva só as linhas que cabem no orçamento: com a janela abrindo depois da primeira faixa, a
+    linha que passaria dos 4 MB continua com o nome, e a execução seguinte a troca.
+  - [I] (tarefa 15.0) Uma linha sozinha acima do orçamento da faixa entra sozinha nela, e a troca segue para as linhas
+    seguintes: nenhuma fica com o nome, e o pedido conclui.
   - [I] Cada linha alterada de artefato, entrega, execução e consumo grava `titular.nome_trocado`.
   - [I] A coordenação recebe só `nomeTrocado`, sem contagem por tabela.
   - [I] O que o mapa manda guardar continua lá, só com o id. A sentinela afirma os dois lados.
 - **RF15, storage.**
   - [I] O armazém falso falha ao apagar, e a noite seguinte remove o objeto pelo `apagado_em`.
+  - **Tarefa 15.0, onde cada um está.** `apps/worker/test/eliminar-titular.int.test.ts` (o job inteiro): a expressão do nome no próprio
+    Postgres (aspas, barra invertida, colchetes, chave igual ao nome, `\n` antes do nome, "Ana Souza" em "Mariana Souza"); prazo
+    (antes de `eliminar_em`, cancelado, concluído, outra escola, dados inválidos); troca (uma sentinela por coluna, caixa, acento e
+    apóstrofo, primeiro nome fica, auditoria por linha e sem entrada para a conversa do professor, outra escola intocada, limite
+    de 160 e de 500, 1.001 linhas em duas faixas, 1.000 linhas de ~60 KB que passam do orçamento de 4 MB da faixa, a faixa
+    cortada pelo orçamento com a janela abrindo depois dela, a linha sozinha acima do orçamento, linha antiga de `consumo_ia`);
+    homônimo (ativo, lista livre, desativado);
+    professor sem troca; janela abrindo entre faixas e a execução seguinte terminando; falha no `eliminar` desfazendo a etapa 3;
+    autor (coordenação ativa e desativada → `rotina`); o que fica (execução anonimizada, consumo sem texto, arquivo marcado,
+    outros pedidos concluídos, foto refeita com o provedor sem cadastro, o nome em nenhuma linha de pedido nem de auditoria);
+    log só com `evento` e `status`; isolamento por método do repositório e da camada do arquivo; [P] dois jobs do mesmo pedido,
+    cancelar contra a trava, a eliminação junto do expurgo da escola.
+    `apps/worker/test/expurgo-da-escola.int.test.ts › eliminações vencidas`: enfileirar (prazo, 20 h, 500 por noite, outra escola,
+    log, [P] dois jobs da escola, [P] o cancelamento segurando a linha) e a linha antiga de `consumo_ia` pelo expurgo.
+    `apps/worker/test/medicao-da-eliminacao.int.test.ts` e `infra/test/alerta-da-eliminacao.int.test.ts` (47 h não dispara, 48 h
+    dispara). `packages/nucleo/src/auditoria/auditoria.int.test.ts` (o autor `rotina` nas quatro ações e recusado nas outras),
+    `apps/api/src/ops/operador.test.ts` e o mesmo arquivo (apelido `rotina`), e `apps/api/test/arquitetura.test.ts` (as ações sobre
+    `usuario` e a lista de quem usa a rotina).
 - **RF16.**
   - [I] O prazo conta de `chegou_em`: com `chegouEm` no passado, o pedido já aparece vencido.
   - [I] `concluir` uma eliminação e `cancelar` fora de `agendado` dão `PEDIDO_EM_ESTADO_INVALIDO`.

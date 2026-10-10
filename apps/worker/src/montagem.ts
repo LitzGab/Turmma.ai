@@ -49,7 +49,9 @@ import { criarConsolidacaoDeUso, TIPO_CONSOLIDAR_USO } from './processadores/con
 import { criarExpurgoDeAcesso, TIPO_EXPURGAR_ACESSO } from './processadores/expurgar-acesso.js'
 import { criarExpurgoDeJobs, TIPO_EXPURGAR_JOBS } from './processadores/expurgar-jobs.js'
 import { criarRotinaDeExpurgo, TIPO_EXPURGAR_DADO_PESSOAL } from './processadores/expurgar-dado-pessoal.js'
+import { criarEliminacaoDoTitular, TIPO_ELIMINAR_TITULAR } from './processadores/eliminar-titular.js'
 import { criarExpurgoDaEscola, TIPO_EXPURGAR_ESCOLA } from './processadores/expurgar-escola.js'
+import { MedicaoDaEliminacao } from './medicao-da-eliminacao.js'
 import { MedicaoDoArquivo } from './medicao-do-arquivo.js'
 import { MedicaoDoExpurgo } from './medicao-do-expurgo.js'
 import { MedicaoDoIncidente } from './medicao-do-incidente.js'
@@ -251,6 +253,8 @@ function montarRotinas(
   const arquivos = new ArquivoDoTitularRepository(banco)
   const medicaoDoArquivo = medidor === undefined ? undefined : new MedicaoDoArquivo({ escolas, repositorio: arquivos, relogio, logger, medidor })
   medicaoDoArquivo?.iniciar()
+  const medicaoDaEliminacao = medidor === undefined ? undefined : new MedicaoDaEliminacao({ escolas, repositorio: expurgoDaEscola, relogio, logger, medidor })
+  medicaoDaEliminacao?.iniciar()
   return {
     processadores: {
       [TIPO_CONSOLIDAR_USO]: criarConsolidacaoDeUso({
@@ -264,12 +268,23 @@ function montarRotinas(
       [TIPO_EXPURGAR_JOBS]: criarExpurgoDeJobs({ repositorio: new ExpurgoDeJobsRepository(banco), logger }),
       [TIPO_EXPURGAR_ACESSO]: criarExpurgoDeAcesso({ repositorio: new ExpurgoDeAcessoRepository(banco), relogio, logger }),
       [TIPO_EXPURGAR_DADO_PESSOAL]: criarRotinaDeExpurgo({ escolas, banco, enfileirador: new Enfileirador(new JobRegistroRepository(banco)), janelaDaEscola, relogio, logger }),
-      [TIPO_EXPURGAR_ESCOLA]: criarExpurgoDaEscola({ repositorio: expurgoDaEscola, arquivos, armazem, retencao: new RetencaoDaEscolaRepository(banco), janelaDaEscola, relogio, logger }),
+      [TIPO_EXPURGAR_ESCOLA]: criarExpurgoDaEscola({
+        repositorio: expurgoDaEscola,
+        arquivos,
+        armazem,
+        retencao: new RetencaoDaEscolaRepository(banco),
+        janelaDaEscola,
+        enfileirador: new Enfileirador(new JobRegistroRepository(banco)),
+        relogio,
+        logger,
+      }),
+      [TIPO_ELIMINAR_TITULAR]: criarEliminacaoDoTitular({ banco, janelaDaEscola, relogio, logger }),
     },
     encerrar: async () => {
       await medicao?.encerrar()
       await medicaoDoIncidente?.encerrar()
       await medicaoDoArquivo?.encerrar()
+      await medicaoDaEliminacao?.encerrar()
       s3.destroy()
     },
   }

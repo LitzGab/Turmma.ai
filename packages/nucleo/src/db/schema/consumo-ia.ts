@@ -77,6 +77,11 @@ export const consumoIa = pgTable(
     // Os dois lotes do expurgo da escola (F3, tarefa 4.0): o texto do modelo e o aluno, cada um pela idade da chamada.
     index('consumo_ia_texto_a_anular_idx').on(tabela.escolaId, tabela.em).where(sql`${tabela.entrada} is not null or ${tabela.saida} is not null`),
     index('consumo_ia_aluno_a_anular_idx').on(tabela.escolaId, tabela.em).where(sql`${tabela.alunoId} is not null`),
+    // A troca do nome do titular percorre cada coluna de texto em faixas de 1.000 linhas por `id` (F3, tarefa 15.0): sem estes,
+    // a faixa leria o consumo da escola inteira para achar o que tem texto (regra 80, item 8). Parciais: o Tutor e a proposta
+    // de ferramenta não guardam texto, e o texto anulado pelo expurgo sai do índice.
+    index('consumo_ia_entrada_idx').on(tabela.escolaId, tabela.id).where(sql`${tabela.entrada} is not null`),
+    index('consumo_ia_saida_idx').on(tabela.escolaId, tabela.id).where(sql`${tabela.saida} is not null`),
     check(
       'consumo_ia_funcao_valida',
       sql`${tabela.funcao} in ('conversa_e_ferramentas', 'correcao_de_objetiva', 'adaptacao', 'tutor_com_o_aluno', 'sinais_para_o_professor', 'resumo_e_alerta')`,
