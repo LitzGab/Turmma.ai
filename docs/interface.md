@@ -1069,6 +1069,14 @@ A coordenação abre em **Governança**, não em chat: é a tela que fecha a ven
 existe (A5), abre em **Estrutura**, que é onde a escola se monta (A1). O aluno abre no **Tutor**
 quando ele está ligado para a turma, e em **Atividades e provas** quando não está.
 
+**O pé da lateral, em duas peças (F3, tarefa 18.0).** A lista de seções não leva "Meus dados", e o lugar dele é diferente por
+papel: no **aluno**, o item **Privacidade** é o do rodapé fixo (acima do menu da pessoa, num bloco `nav` de nome "Rodapé", com o
+mesmo tamanho e o mesmo foco dos itens), e abre a tela do aluno com a seção **Meus dados** dentro dela; no **professor**, é o
+link **Meus dados** do **menu da pessoa** (um bloco `nav` de nome "Sua conta", com o link antes do "Sair", sem menu para abrir:
+o nome, o papel e o "Sair" já ficavam à vista, P18). A coordenação não tem nenhum dos dois, porque ela não é titular de
+pedido: o que ela faz é registrá-los, em Privacidade (seção 3). Na gaveta a 360 px o rodapé do aluno aparece com a gaveta aberta, sem rolar, e os dois links têm alvo de 44 px. O item do rodapé e o link do menu ficam selecionados no endereço deles, e nenhuma seção
+fica selecionada ali.
+
 **Responsivo** (D51):
 
 | Largura | Casca |
@@ -1253,6 +1261,20 @@ A mesma casca, mais calma:
   pisca; no fim, diz com calma que por hoje acabou e que amanhã volta (D38, D59)
 - **"Avisar um adulto"** fica sempre no rodapé da lateral, com o mesmo peso de qualquer item
   (D61)
+- **Privacidade** fica no rodapé da lateral, e a **seção "Meus dados"** abre dentro dela (F3, tarefa 18.0; RF12 e RF20). A tela
+  é a mesma do professor (menu da pessoa), com o mesmo texto, escrito para quem está no 6º ano: **os pedidos da própria pessoa na
+  escola ativa**, o mais recente primeiro, cada um com o que é ("Cópia dos seus dados"), o dia em que chegou à escola, o selo em
+  texto e uma explicação; e **"O que a escola guarda de você"**, a contagem de registros por categoria, com o nome de cada categoria dito a quem é
+  titular, na segunda pessoa (e não o do catálogo de retenção da coordenação, que diz a regra de guarda), sem o conteúdo (que
+  vem no arquivo). A pessoa **não pede** nada ali: o pedido é da escola (D10), e o
+  vazio é o convite a pedir à coordenação. Os estados do arquivo: **em preparação** ("Estamos preparando o seu arquivo. Volte
+  em alguns minutos."; a tela se relê a cada 10 s com a aba à vista e anuncia quando fica pronto), **pronto para baixar**
+  (com "o arquivo fica disponível até DD/MM/AAAA, HH:MM") e **arquivo apagado** (passou dos 7 dias: diz para pedir de novo à
+  coordenação). "Baixar meus dados" é `secundario`, e a decisão fica no diálogo: o que o arquivo traz, o formato aberto (JSON), o
+  **aviso do computador compartilhado** ("Se este computador é da escola, apague o arquivo dele depois de usar e saia da sua
+  conta") e que o download fica registrado na escola; **Cancelar** tem o mesmo peso de **Baixar o arquivo**, e o arquivo sai
+  como `meus-dados-AAAA-MM-DD.json`. Nada do arquivo aparece na tela: ele sai como arquivo, pela URL assinada de 5 minutos.
+  Troca de escola ou de pessoa não deixa nada da anterior (a resposta não fica guardada fora da tela)
 - **Tutor travado em avaliação**, ou desligado fora da sala, é tela que explica, com ícone e uma
   frase. Não parece erro (D19)
 - A assinatura do Tutor é a mesma dos outros agentes: avatar, "Tutor", selo "IA". Perguntado, ele

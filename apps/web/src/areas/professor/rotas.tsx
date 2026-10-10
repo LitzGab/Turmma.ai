@@ -18,13 +18,19 @@ const Artefato = lazy(() => import('./Artefato'))
 const Time = lazy(() => import('./Time'))
 const Tutor = lazy(() => import('./Tutor'))
 const Aprovar = lazy(() => import('./Aprovar'))
+/**
+ * "Meus dados" é a mesma tela do professor e do aluno, e por isso mora em `componentes/` (a tela de uma área não importa
+ * módulo de outra, `areas/navegacao.ts`, linha 5): sai num pedaço `parte-*` só por `import()`, que nenhuma entrada baixa.
+ */
+const MeusDados = lazy(() => import('../../componentes/meus-dados/MeusDados'))
 
 /**
  * A área do professor, relativa a `/professor` (o `Route` aninhado de `apps/web/src/rotas.tsx`), num chunk próprio,
  * `professor-*.js` (`apps/web/nome-dos-chunks.ts`), que só se baixa depois de a guarda conferir o papel. Na A2 (D73) ela
  * tem "Nova conversa" (a Home, onde o professor abre, e a conversa com o Assistente), "Ferramentas" (o catálogo, o
- * formulário de cada uma e o artefato aberto), "Turmas", com a turma aberta dentro dela (A1), e, no "Seu time", a
- * conversa do Assistente de ensino. O item da lateral continua selecionado nas telas de dentro (`estaNoItem`).
+ * formulário de cada uma e o artefato aberto), "Turmas", com a turma aberta dentro dela (A1), "Meus dados" (F3, 18.0, no
+ * menu da pessoa) e, no "Seu time", a conversa do Assistente de ensino. O item da lateral continua selecionado nas telas
+ * de dentro (`estaNoItem`).
  *
  * **Tela nova entra por `lazy(() => import('./Tela'))`**, e não por `import` direto: as cinco linhas da convenção estão
  * no topo de `areas/navegacao.ts`. Turmas e a turma aberta são da A1, e ficam na fachada como estavam.
@@ -44,6 +50,10 @@ export default function RotasDoProfessor() {
       {/* A `key` pela atividade: outra correção é outra tela, sem os destaques abertos nem o diálogo da anterior. */}
       <Route path={ROTAS_DO_PROFESSOR.aprovar}>{(parametros) => <Aprovar key={parametros.atividadeAplicadaId} atividadeAplicadaId={parametros.atividadeAplicadaId} />}</Route>
       <Route path={ROTAS_DO_PROFESSOR.turmas} component={Turmas} />
+      {/* No menu da pessoa, e não na lista de seções: o link dele é o que fica selecionado, e nenhuma seção. */}
+      <Route path={ROTAS_DO_PROFESSOR.meusDados}>
+        <MeusDados titulo="Meus dados" />
+      </Route>
       {/*
         A `key` pela turma: outra turma é outra tela. Sem ela, ir de uma turma aberta para outra pelo histórico manteria
         o diálogo da anterior, com o link e o código dela, por cima da turma nova.

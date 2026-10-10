@@ -476,3 +476,26 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
     - o endereço e o download (unidade): o id vai escapado no caminho da API e no endereço da tela
       (`apps/web/src/caminhos.test.ts`, `api/privacidade.test.ts`); a âncora do download leva o endereço, o nome e o `rel`
       seguro, e sai da página (`componentes/baixar-por-url.test.ts`).
+  - **Tarefa 18.0, onde cada um está** (`e2e/meus-dados.spec.ts`, nos projetos `chromebook` e `celular`, com o worker e o armazém
+    de verdade; `apps/web/src/componentes/meus-dados/regras.test.ts` para as regras sem React e o relógio de 10 s;
+    `apps/web/src/api/meus-dados.test.ts` para a leitura e o download; `apps/web/src/areas/navegacao.test.ts` para o lugar de cada
+    item; `e2e/areas.spec.ts` e `e2e/casca.spec.ts` para as listas da lateral e a ordem do foco):
+    - caminho feliz: a coordenação registra o acesso do aluno e o da professora; o worker monta; o aluno, pelo rodapé, e a
+      professora, pelo menu da pessoa, esperam o "Pronto para baixar" sem recarregar e baixam `meus-dados-AAAA-MM-DD.json`, cada
+      um com o conteúdo dele e nunca o do outro; a auditoria tem `titular.arquivo_baixado`, com a pessoa como autora e a
+      finalidade `acesso_do_proprio_titular`;
+    - o diálogo antes de baixar diz o que o arquivo traz, o formato aberto, o aviso do computador da escola e que o download
+      fica registrado; sem violação grave e sem estouro de largura;
+    - o arquivo apagado enquanto a pessoa lia: o clique diz que ele não está mais disponível, o botão se desliga, a lista passa a
+      "Arquivo apagado" com "peça à coordenação", e depois de recarregar continua assim (`apagado_em` semeado no banco);
+    - navegação: o aluno acha Privacidade no rodapé (fora da lista de seções, com alvo de 44 px e à vista, sem rolar, na gaveta a
+      360 px) e a tela abre com "Meus dados" dentro; o professor acha "Meus dados" no menu da pessoa, antes do "Sair"; cada
+      link fica selecionado no endereço dele e nenhuma seção fica selecionada ali; a coordenação não tem nenhum dos dois;
+    - estados: vazio que convida a pedir à coordenação, com o nome da escola e sem botão de pedir; carregando; erro com
+      "Tentar de novo" que volta ao erro enquanto falha e ao dado quando o servidor volta; com dado, a ordem pela chegada e o
+      pedido que não gera arquivo sem botão;
+    - em preparação: com o relógio simulado, relê a cada 10 s (nada aos 9 s), para com a aba escondida, relê na hora ao
+      voltar, mostra "Pronto" e anuncia "O seu arquivo ficou pronto." sem recarregar, e para de reler;
+    - só a escola ativa e o recomeço: a professora de duas escolas vê só os pedidos da escola em que entrou; depois da troca para
+      B a leitura segurada não mostra nada de A; a segunda pessoa na mesma aba, com a leitura segurada, não vê o pedido nem o
+      nome da anterior.

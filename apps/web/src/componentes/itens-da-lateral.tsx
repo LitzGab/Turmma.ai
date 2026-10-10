@@ -69,6 +69,31 @@ export function ItemDaLateral({ item, trilho }: { item: ItemDaNavegacao; trilho:
   )
 }
 
+interface PropsDaListaDeItens {
+  readonly itens: readonly ItemDaNavegacao[]
+  /** O nome do grupo para o leitor de tela: `Seções` já é de quem tem os itens principais, e este não se confunde com ele. */
+  readonly rotulo: string
+  readonly trilho: boolean
+}
+
+/**
+ * Os itens do pé da lateral — o rodapé fixo do aluno e os links do menu da pessoa —, numa navegação com nome próprio, para
+ * `Seções` continuar sendo só os itens principais do papel. Sem item, não existe nem a região. Cada um é o mesmo
+ * `ItemDaLateral`: as três pistas do selecionado, 44 px de altura e, no trilho, o ícone com a dica.
+ */
+export function ListaDeItens({ itens, rotulo, trilho }: PropsDaListaDeItens) {
+  if (itens.length === 0) return null
+  return (
+    <nav aria-label={rotulo}>
+      <ul className={`flex flex-col gap-0.5 ${trilho ? 'items-center' : ''}`}>
+        {itens.map((item) => (
+          <ItemDaLateral key={item.caminho} item={item} trilho={trilho} />
+        ))}
+      </ul>
+    </nav>
+  )
+}
+
 /** O que espera a pessoa naquele agente: quantas entregas pendentes a leitura trouxe, e se há mais além da página. */
 export interface EsperandoNoTime {
   readonly quantidade: number

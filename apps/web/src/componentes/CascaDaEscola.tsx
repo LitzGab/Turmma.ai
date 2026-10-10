@@ -5,12 +5,12 @@ import { Link, useLocation } from 'wouter'
 import { consultaEntregasPendentes, quantasEsperam } from '../api/entregas'
 import { consultaEu } from '../api/eu'
 import { assinarSessao, estadoDaSessao, lembrarQuemEsta, sair } from '../api/sessao'
-import { NAVEGACAO, SEU_TIME, type AgenteDaLateral } from '../areas/navegacao'
+import { MENU_DA_PESSOA, NAVEGACAO, NOME_DO_RODAPE, RODAPE_DA_LATERAL, SEU_TIME, type AgenteDaLateral, type ItemDaNavegacao } from '../areas/navegacao'
 import { ROTAS } from '../caminhos'
 import { NOME_DO_PAPEL } from '../papeis'
 import { useInatividade } from '../sessao/inatividade'
 import { ContextoDaGaveta, type Gaveta } from './gaveta'
-import { Dica, ItemDaLateral, SecaoDoTime, type EsperandoNoTime } from './itens-da-lateral'
+import { Dica, ItemDaLateral, ListaDeItens, SecaoDoTime, type EsperandoNoTime } from './itens-da-lateral'
 import { Marca } from './Marca'
 import { MenuDaPessoa } from './MenuDaPessoa'
 import { SeletorDeEscola } from './SeletorDeEscola'
@@ -79,6 +79,9 @@ interface PropsDaLateralAberta {
   /** "Seu time": os agentes que o papel acompanha e o que espera a pessoa (A2). Vazio para quem não tem o grupo. */
   readonly time: readonly AgenteDaLateral[]
   readonly esperando: EsperandoNoTime
+  /** O rodapé fixo (aluno: "Privacidade") e os links do menu da pessoa (professor: "Meus dados"); vazios, nada aparece. */
+  readonly rodape: readonly ItemDaNavegacao[]
+  readonly menuDaPessoa: readonly ItemDaNavegacao[]
   readonly seletor: ReactNode
   /** O botão do topo, ao lado da marca: "Recolher a lateral" no computador, "Fechar o menu" na gaveta. */
   readonly botaoDoTopo: ReactNode
@@ -87,7 +90,7 @@ interface PropsDaLateralAberta {
 }
 
 /** A lateral aberta, de 260 px no computador e dentro da gaveta: marca, escola, navegação e a pessoa no rodapé. */
-function LateralAberta({ pessoa, itens, time, esperando, seletor, botaoDoTopo, aoSair, saindo }: PropsDaLateralAberta) {
+function LateralAberta({ pessoa, itens, time, esperando, rodape, menuDaPessoa, seletor, botaoDoTopo, aoSair, saindo }: PropsDaLateralAberta) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-2">
       <div className="flex items-center justify-between gap-2">
@@ -107,8 +110,9 @@ function LateralAberta({ pessoa, itens, time, esperando, seletor, botaoDoTopo, a
         </nav>
       )}
       <SecaoDoTime agentes={time} esperando={esperando} trilho={false} />
-      <div className="mt-auto">
-        <MenuDaPessoa nome={pessoa?.nome} papel={pessoa?.papel} aoSair={aoSair} saindo={saindo} />
+      <div className="mt-auto flex flex-col gap-2">
+        <ListaDeItens itens={rodape} rotulo={NOME_DO_RODAPE} trilho={false} />
+        <MenuDaPessoa nome={pessoa?.nome} papel={pessoa?.papel} aoSair={aoSair} saindo={saindo} itens={menuDaPessoa} />
       </div>
     </div>
   )
@@ -118,6 +122,8 @@ interface PropsDoTrilho {
   readonly itens: (typeof NAVEGACAO)[keyof typeof NAVEGACAO]
   readonly time: readonly AgenteDaLateral[]
   readonly esperando: EsperandoNoTime
+  readonly rodape: readonly ItemDaNavegacao[]
+  readonly menuDaPessoa: readonly ItemDaNavegacao[]
   readonly botaoDeAbrir: RefObject<HTMLButtonElement | null>
   readonly aoAbrir: () => void
   readonly lateralAberta: boolean
@@ -129,7 +135,7 @@ interface PropsDoTrilho {
  * O trilho de 56 px: a pinta, o "Abrir a lateral", os ícones com a dica de cada um e o "Sair". Nenhum rótulo sobra
  * cortado (P04): ou aparece inteiro, na dica, ou não aparece.
  */
-function Trilho({ itens, time, esperando, botaoDeAbrir, aoAbrir, lateralAberta, aoSair, saindo }: PropsDoTrilho) {
+function Trilho({ itens, time, esperando, rodape, menuDaPessoa, botaoDeAbrir, aoAbrir, lateralAberta, aoSair, saindo }: PropsDoTrilho) {
   return (
     <div className="sticky top-0 z-10 flex h-screen w-14 shrink-0 flex-col items-center gap-3 self-start border-r border-linha bg-lateral py-2">
       <Link to={ROTAS.inicio} aria-label="Turmma, página inicial" className="flex size-11 items-center justify-center rounded-linha hover:bg-realce-suave">
@@ -150,8 +156,9 @@ function Trilho({ itens, time, esperando, botaoDeAbrir, aoAbrir, lateralAberta, 
         </nav>
       )}
       <SecaoDoTime agentes={time} esperando={esperando} trilho />
-      <div className="mt-auto">
-        <MenuDaPessoa aoSair={aoSair} saindo={saindo} trilho />
+      <div className="mt-auto flex flex-col items-center gap-0.5">
+        <ListaDeItens itens={rodape} rotulo={NOME_DO_RODAPE} trilho />
+        <MenuDaPessoa aoSair={aoSair} saindo={saindo} itens={menuDaPessoa} trilho />
       </div>
     </div>
   )
@@ -256,6 +263,8 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
   const time = dados === undefined ? [] : SEU_TIME[dados.papel]
   const pendentes = useQuery({ ...consultaEntregasPendentes, enabled: time.length > 0 })
   const esperando = quantasEsperam(pendentes.data)
+  const rodape = dados === undefined ? [] : RODAPE_DA_LATERAL[dados.papel]
+  const menuDaPessoa = dados === undefined ? [] : MENU_DA_PESSOA[dados.papel]
   const pessoa = dados === undefined ? undefined : { nome: dados.nome, papel: NOME_DO_PAPEL[dados.papel] }
   const seletor = dados !== undefined && <SeletorDeEscola escolaAtual={dados.escola.nome} acessos={dados.acessos} usuarioAtual={dados.usuarioId} />
 
@@ -280,6 +289,8 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
         itens={itens}
         time={time}
         esperando={esperando}
+        rodape={rodape}
+        menuDaPessoa={menuDaPessoa}
         seletor={seletor}
         aoSair={aoSair}
         saindo={saindo}
@@ -329,6 +340,8 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
               itens={itens}
               time={time}
               esperando={esperando}
+              rodape={rodape}
+              menuDaPessoa={menuDaPessoa}
               seletor={seletor}
               aoSair={aoSair}
               saindo={saindo}
@@ -346,6 +359,8 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
               itens={itens}
               time={time}
               esperando={esperando}
+              rodape={rodape}
+              menuDaPessoa={menuDaPessoa}
               botaoDeAbrir={botaoDeAbrir}
               // No computador, abrir desfaz a escolha de recolher; entre 768 e 1023 px, a lateral abre por cima.
               aoAbrir={() => (faixa === 'larga' ? recolher(false) : abrirGaveta())}

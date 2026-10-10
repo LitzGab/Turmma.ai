@@ -131,6 +131,9 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await expect(lateral(page)).toContainText(professora.nome)
     await expect(lateral(page)).toContainText('professor')
     await expect(lateral(page).getByRole('button', { name: 'Sair' })).toBeVisible()
+    // F3 (18.0): "Meus dados" é o link do menu da pessoa, e não item da lista de seções; o professor não tem rodapé.
+    await expect(lateral(page).getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link')).toHaveText(['Meus dados'])
+    await expect(lateral(page).getByRole('navigation', { name: 'Rodapé', exact: true })).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
 
     // Nenhum item da tabela leva a tela que não existe.
@@ -237,6 +240,9 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(ITENS_DO_ALUNO.map(({ rotulo }) => rotulo))
     await expect(lateral(page)).toContainText(aluno.nome)
     await expect(lateral(page)).toContainText('aluno')
+    // F3 (18.0): "Privacidade" é do rodapé fixo, e não da lista de seções; o aluno não tem link no menu da pessoa.
+    await expect(lateral(page).getByRole('navigation', { name: 'Rodapé', exact: true }).getByRole('link')).toHaveText(['Privacidade'])
+    await expect(lateral(page).getByRole('navigation', { name: 'Sua conta', exact: true })).toHaveCount(0)
 
     // Nenhum item da tabela leva a tela que não existe.
     for (const item of ITENS_DO_ALUNO) {

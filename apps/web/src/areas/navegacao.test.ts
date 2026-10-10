@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estaNoItem, NAVEGACAO, SEU_TIME } from './navegacao'
+import { estaNoItem, MENU_DA_PESSOA, NAVEGACAO, RODAPE_DA_LATERAL, SEU_TIME } from './navegacao'
 
 describe('navegação por papel', () => {
   it('W2: "Estrutura" e "Professores" da coordenação, "Minha turma" do aluno e, na A2, "Nova conversa", "Ferramentas" e "Turmas" do professor têm tela', () => {
@@ -26,10 +26,39 @@ describe('navegação por papel', () => {
     ])
   })
 
-  it('U, F3 (6.0): "Privacidade" é da coordenação, e o professor e o aluno não a têm na lateral', () => {
+  it('U, F3 (6.0): "Privacidade" é da coordenação, e o professor e o aluno não a têm na lista de seções', () => {
     expect(NAVEGACAO.coordenador.map((item) => item.rotulo)).toContain('Privacidade')
     expect(NAVEGACAO.professor.map((item) => item.rotulo)).not.toContain('Privacidade')
+    // O do aluno é do rodapé fixo (F3, 18.0), e não da lista: "Seções" continua sendo só Tutor, Atividades e Minha turma.
     expect(NAVEGACAO.aluno.map((item) => item.rotulo)).not.toContain('Privacidade')
+  })
+
+  it('F3 (18.0): o aluno tem "Privacidade" no rodapé fixo, o professor tem "Meus dados" no menu da pessoa, e a coordenação não tem nenhum dos dois', () => {
+    expect(RODAPE_DA_LATERAL.aluno.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([{ rotulo: 'Privacidade', caminho: '/aluno/privacidade' }])
+    expect(MENU_DA_PESSOA.professor.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([{ rotulo: 'Meus dados', caminho: '/professor/meus-dados' }])
+    // Cada papel só tem o seu: o aluno não tem menu da pessoa com links, o professor não tem rodapé, e a coordenação não é titular de pedido.
+    expect(MENU_DA_PESSOA.aluno).toEqual([])
+    expect(RODAPE_DA_LATERAL.professor).toEqual([])
+    expect(RODAPE_DA_LATERAL.coordenador).toEqual([])
+    expect(MENU_DA_PESSOA.coordenador).toEqual([])
+    // Nenhum item do pé da lateral repete um da lista de seções do mesmo papel: seriam duas linhas para a mesma tela.
+    for (const papel of ['aluno', 'professor', 'coordenador'] as const) {
+      const secoes = new Set(NAVEGACAO[papel].map((item) => item.caminho))
+      for (const item of [...RODAPE_DA_LATERAL[papel], ...MENU_DA_PESSOA[papel]]) expect(secoes.has(item.caminho)).toBe(false)
+    }
+  })
+
+  it('F3 (18.0): "Privacidade" e "Meus dados" ficam selecionados no endereço deles, e nenhuma seção fica selecionada ali', () => {
+    const [privacidade] = RODAPE_DA_LATERAL.aluno
+    const [meusDados] = MENU_DA_PESSOA.professor
+    if (privacidade === undefined || meusDados === undefined) throw new Error('faltou item no pé da lateral')
+    expect(estaNoItem('/aluno/privacidade', privacidade)).toBe(true)
+    expect(estaNoItem('/professor/meus-dados', meusDados)).toBe(true)
+    for (const item of NAVEGACAO.aluno) expect(estaNoItem('/aluno/privacidade', item)).toBe(false)
+    for (const item of NAVEGACAO.professor) expect(estaNoItem('/professor/meus-dados', item)).toBe(false)
+    // Um endereço que só começa com as mesmas letras é outra tela.
+    expect(estaNoItem('/aluno/privacidade-antiga', privacidade)).toBe(false)
+    expect(estaNoItem('/aluno/atividades', privacidade)).toBe(false)
   })
 
   it('F3 (6.0): a Privacidade fica selecionada nos endereços das abas dela, e não no de Governança', () => {

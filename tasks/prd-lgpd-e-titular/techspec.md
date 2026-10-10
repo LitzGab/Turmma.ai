@@ -861,6 +861,37 @@ enquanto só com "Meus dados", alcançável também na gaveta a 360 px. O profes
   coordenação) e "O arquivo ficou disponível por 7 dias e foi apagado. Para receber de novo, peça à coordenação."
 - **Escola:** a tela diz que mostra só os pedidos da escola ativa.
 - **Antes de baixar:** avisa o que o arquivo contém e que, em computador da escola, é preciso apagá-lo depois.
+- **Tarefa 18.0, como ficou no código** (`apps/web/src/componentes/meus-dados/`: `MeusDados.tsx` e `regras.ts`;
+  `apps/web/src/api/meus-dados.ts`). Uma tela só para as duas áreas, em `componentes/` (a convenção dos pedaços: tela de duas
+  áreas não mora em uma delas, e vira `parte-*`), com o `titulo` e a `secao` que cada área dá: "Privacidade", com a seção "Meus
+  dados" dentro, no aluno (`/aluno/privacidade`); "Meus dados", no professor (`/professor/meus-dados`).
+  - **O lugar.** `areas/navegacao.ts` ganhou `RODAPE_DA_LATERAL` (o aluno tem "Privacidade") e `MENU_DA_PESSOA` (o professor tem
+    "Meus dados"), e a coordenação não tem nenhum. A casca os desenha em dois `nav` com nome ("Rodapé", "Sua conta"), com o mesmo
+    `ItemDaLateral` das seções: mesmo alvo, mesmo foco e, no trilho, o ícone com a dica. Nenhum dos dois entra em `NAVEGACAO`, e o
+    `navegacao.test.ts` prova que nenhum caminho do pé repete o de uma seção.
+  - **A leitura.** `consultaMeusDados` (`GET /v1/meus-dados`, `gcTime: 0`): a resposta é de uma pessoa sobre ela mesma e não
+    fica na memória do computador depois de a tela sair; a troca de pessoa ou de escola esvazia o cache (`main.tsx`). A lista é
+    ordenada na tela, pela chegada, porque a API entrega pelo id (uuidv7), que não é a chegada.
+  - **O resumo.** `linhasDoResumo` devolve só as categorias com registro, na ordem do catálogo de retenção, com o rótulo do
+    titular (`ROTULO_DA_CATEGORIA_PARA_O_TITULAR`, em `regras.ts`): segunda pessoa e o que existe da pessoa. É a variante da
+    `ROTULO_DA_CATEGORIA_NA_PREVIA` da prévia da coordenação (`areas/coordenacao/privacidade/textos-dos-pedidos.ts`, que fala da
+    pessoa em terceira); a `descricao` do catálogo de retenção é a regra de guarda e não aparece nesta tela.
+    Cada rótulo é conferido contra a cláusula de `contagemPorCategoria` (`apps/api/src/privacidade/titulares.repository.ts`), para
+    o aluno e para o professor: onde a contagem liga a linha à pessoa por dois caminhos (`reivindicacao_decidida`: o pedido feito
+    no nome dela na lista, ou o que ela decidiu; `material_excluido`: o que ela enviou ou excluiu), o rótulo diz os dois.
+  - **Os estados do arquivo** (`situacaoDoArquivo`): `preparando` (acesso ou portabilidade `em_preparacao`, sem arquivo);
+    `disponivel` (a API diz que vale **e** o `expiraEm` ainda não passou: a aba aberta por dias não oferece o botão de um
+    arquivo que já saiu); `apagado` (`expirado` na API, ou passou); `nenhum` (compartilhamento, correção, eliminação). O botão
+    só existe em `disponivel`. O relógio de 10 s (`agendarPreparacao`) reaproveita `agendarRelitura` da coordenação: só com
+    pedido `em_preparacao`, com a aba à vista, relendo na hora ao voltar; o anúncio "O seu arquivo ficou pronto." sai quando um
+    pedido que estava em preparação passa a `pronto`.
+  - **O download.** `baixarMeuArquivo` é `POST /v1/meus-dados/:id/baixar` com corpo `{}`, com o id escapado; o endereço assinado
+    de 5 minutos sai direto para `baixarPorUrl` (sem estado, sem texto, sem endereço da tela). O diálogo é o
+    `DialogoDeConfirmacao` em `oficial`, com o resumo (o pedido, a chegada, "Disponível até"), o que o arquivo traz e o aviso do
+    computador compartilhado; o clique duplo manda uma chamada só (`useEnvioUnico`). O `NAO_ENCONTRADO` (o arquivo saiu enquanto
+    a pessoa lia) diz que ele não está mais disponível, desliga o botão e relê a lista.
+  - **Nenhuma regra nova no servidor.** A API é a da 13.0; a leitura de "Meus dados" não é auditada, e o download é
+    (`titular.arquivo_baixado`, finalidade `acesso_do_proprio_titular`).
 
 **Login suspenso.** "Seu acesso está suspenso a pedido. Fale com a coordenação da escola."
 (`MENSAGENS_DE_ERRO.ACESSO_SUSPENSO`). É a tarefa 20.0, e nada muda na API.

@@ -83,6 +83,27 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
         entra quando o e2e da lista for dividido
       - `Cache-Control: no-store` nas respostas nominais da API (`/retro` da A1, registrado no `2_task.md`): a web já
         pede sem cache (`cache: 'no-store'` no `chamarApi`, 13.0); falta o cabeçalho, para qualquer outro cliente
+- [ ] **(F3, 18.0) O resumo de "Meus dados" conta só as categorias de prazo configurável** (`privacy-guardian`, 1ª rodada):
+      credencial, sessão e registro de acesso com IP (`retencao.ts:91-100`) ficam fora da contagem. Decidir com a 13.0 entre
+      dizer na tela que o arquivo traz também esses registros e contá-los na API; depende do que o arquivo realmente contém
+      (dono: Joaquim)
+- [ ] **(F3, 18.0) Conferir o `EFEITO_DE_BAIXAR` contra o arquivo montado na 13.0** (`privacy-guardian`, 1ª rodada): o texto diz
+      "as suas conversas com a IA" aos dois papéis; confirmar que o arquivo do aluno traz a conversa do Tutor dentro da
+      retenção. A tela não muda sem essa conferência (dono: Joaquim)
+- [ ] **(F3, 18.0) Rever os rótulos mais técnicos do resumo de "Meus dados"** (`frontend-reviewer`, 2ª rodada; diagnóstico do
+      Arquiteto): "As chamadas ao modelo de IA que o seu uso gerou" e "Os materiais da escola que você enviou ou excluiu"; e
+      "As suas respostas e as correções das suas atividades", cuja contagem é a de atividades começadas
+      (`tentativa_atividade`), e não a de respostas. Rever junto da conferência do arquivo da 13.0, no item acima
+      (dono: Joaquim)
+- [ ] **(F3, 13.0) O resumo do arquivo do titular diz "Os pedidos de entrada na turma que você fez ou decidiu"**
+      (`packages/nucleo/src/titular/leitura-do-titular.ts`, `LEITURAS_DO_ARQUIVO.reivindicacao.descricao`), e a consulta do
+      aluno traz todo pedido feito no nome dele na lista, inclusive o recusado antes, que pode ser de outra pessoa (a recusa
+      devolve o nome a `livre` e o pedido continua na linha: `devolverNome`, `apps/api/src/sala/decisao.repository.ts`). A
+      tela da 18.0 diz "feitos com o seu nome ou decididos por você": alinhar o texto do arquivo e o comentário da consulta
+      ("o pedido que o aprovou") por `/corrigir`, antes da validação do F3. Ao alinhar, escreva na consulta que o pedido
+      recusado antes naquele nome entra de propósito e não identifica outra pessoa (`privacy-guardian`, 3ª rodada).
+      Considere um rótulo por papel na tela: o aluno nunca decide um pedido, e "…ou decididos por você" só vale para o
+      professor (`frontend-reviewer`, 3ª rodada) (diagnóstico do Arquiteto, 18.0)
 
 ## Infra e operação
 
@@ -390,6 +411,9 @@ para o staging".
       12.0.1. Funciona porque o que a 12.1.2 importa de `@nestjs/common/internal` existe na 12.0.1, mas esse módulo é
       interno do Nest, e um `npm update` de um lado só pode quebrar sem aviso de peer. Daqui em diante os pacotes do Nest
       sobem juntos; o alinhamento entra na próxima tarefa que tocar dependência (dono: Joaquim)
+- [ ] **(F3, 18.0) A releitura de 10 s de "Meus dados" não tem teto de tentativas** (`frontend-reviewer`, 1ª rodada): o relógio é
+      o `agendarRelitura` da 16.0, compartilhado com a tela da coordenação; teto ou espaçamento crescente é decisão dos dois
+      usos, pela regra 80 (dono: Joaquim)
 
 ## Processo e dívida do F0
 

@@ -129,7 +129,7 @@
   - [ ] 17.4 "Em preparação" a cada 10 s, parando com a aba escondida
   - [ ] 17.5 Testes
 
-- [ ] **18.0 — Aluno e professor baixam os próprios dados**
+- [x] **18.0 — Aluno e professor baixam os próprios dados**
   - [ ] 18.1 Lugar do rodapé fixo na casca do aluno; item Privacidade com "Meus dados"
   - [ ] 18.2 Link no menu da pessoa do professor
   - [ ] 18.3 Tela com resumo, estados, aviso e download

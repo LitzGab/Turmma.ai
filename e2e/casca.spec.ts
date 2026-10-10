@@ -354,6 +354,8 @@ test.describe('casca da escola', () => {
     expect(ondeFoi).not.toContain('atrás')
     expect(ondeFoi).toContain('gaveta')
     await esperarAlvoDeToqueEm(gaveta(page).getByRole('link', { name: 'Turmas' }))
+    // F3 (18.0): o "Meus dados" do professor, no menu da pessoa, é alvo de 44 px na gaveta, como o "Sair" que vem depois dele.
+    await esperarAlvoDeToqueEm(gaveta(page).getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link', { name: 'Meus dados' }))
     await esperarAlvoDeToqueEm(gaveta(page).getByRole('button', { name: 'Sair' }))
     await esperarAlvoDeToqueEm(gaveta(page).getByRole('button', { name: 'Fechar o menu' }))
     expect(await larguraExcedente(page)).toBe(0)
@@ -387,6 +389,8 @@ test.describe('casca da escola', () => {
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }),
       page.getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: 'Assistente de ensino' }),
       page.getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: 'Tutor' }),
+      // F3 (18.0): o menu da pessoa tem "Meus dados" antes do "Sair", no pé da lateral.
+      page.getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link', { name: 'Meus dados' }),
       page.getByRole('button', { name: 'Sair' }),
     ]
     await page.locator('body').focus()

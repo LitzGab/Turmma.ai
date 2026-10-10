@@ -1079,6 +1079,8 @@ export interface PedidoDoTitularSemeado {
   /** Quantos dias antes de hoje o pedido chegou à escola: é o que o prazo do detalhe conta. */
   readonly chegouHaDias?: number
   readonly solicitante?: 'titular' | 'responsavel_legal'
+  /** O papel da pessoa na escola: o aluno é o padrão, e o professor tem a mesma tela de "Meus dados" (F3, 18.0). */
+  readonly papelDoTitular?: 'aluno' | 'professor'
   /** A foto do compartilhamento, como o `POST pedidos` a grava. */
   readonly compartilhamento?: readonly {
     readonly suboperadorId: string | null
@@ -1099,7 +1101,7 @@ export async function criarPedidoDoTitularNoBanco(pedido: PedidoDoTitularSemeado
     id(
       banco,
       `insert into pedido_titular (escola_id, titular_id, papel_titular, tipo, solicitante, chegou_em, estado, compartilhamento, registrado_por, chave_envio, eliminar_em, concluido_em, concluido_por, cancelado_em, cancelado_por)
-       values ($1, $2, 'aluno', $3, $4, (now() at time zone 'America/Sao_Paulo')::date - $5::int, $6, $7::jsonb, $8, $9,
+       values ($1, $2, $10, $3, $4, (now() at time zone 'America/Sao_Paulo')::date - $5::int, $6, $7::jsonb, $8, $9,
                case when $6 = 'agendado' then now() + interval '6 days' end,
                case when $6 = 'concluido' then now() end, case when $6 = 'concluido' then $8::uuid end,
                case when $6 = 'cancelado' then now() end, case when $6 = 'cancelado' then $8::uuid end) returning id`,
@@ -1113,6 +1115,7 @@ export async function criarPedidoDoTitularNoBanco(pedido: PedidoDoTitularSemeado
         JSON.stringify(pedido.compartilhamento ?? []),
         pedido.registradoPor,
         randomUUID(),
+        pedido.papelDoTitular ?? 'aluno',
       ],
     ),
   )
@@ -1135,6 +1138,32 @@ export async function situacaoDoPedidoNoBanco(escolaId: string, pedidoId: string
 export async function mudarEstadoDoPedidoNoBanco(escolaId: string, pedidoId: string, estado: PedidoDoTitularSemeado['estado']): Promise<void> {
   await comBanco(async (banco) => {
     await banco.query('update pedido_titular set estado = $3 where escola_id = $1 and id = $2', [escolaId, pedidoId, estado])
+  })
+}
+
+/**
+ * O arquivo montado do pedido, como o worker o deixa (F3, 13.0), direto no banco e **sem o objeto no armazém**: serve às
+ * telas que só mostram o estado dele ("pronto para baixar", "disponível até") e ao diálogo de baixar com a API simulada na
+ * resposta. Pronto há 1 dia, válido por mais 6 dias (7 no total). O download de verdade é o do worker e do armazém.
+ */
+export async function criarArquivoDoTitularNoBanco(escolaId: string, pedidoId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query(
+      `insert into arquivo_titular (escola_id, pedido_id, versao, chave_objeto, bytes, pronto_em, expira_em)
+       values ($1::uuid, $2::uuid, 'completa', $3, 120, now() - interval '1 day', now() + interval '6 days')`,
+      [escolaId, pedidoId, `titular/${escolaId}/${pedidoId}/completa.json`],
+    )
+  })
+}
+
+/**
+ * O arquivo do pedido que a escola apagou (a expiração ou a eliminação, F3, 13.0), direto no banco: o que levaria 7 dias.
+ * `apagado_em` é o que a API lê como "expirado" (`situacao`), e o `baixar` passa a responder `NAO_ENCONTRADO` (18.0).
+ */
+export async function apagarArquivoDoTitularNoBanco(escolaId: string, pedidoId: string): Promise<void> {
+  await comBanco(async (banco) => {
+    const { rowCount } = await banco.query('update arquivo_titular set apagado_em = now() where escola_id = $1 and pedido_id = $2', [escolaId, pedidoId])
+    if (rowCount === 0) throw new Error('o pedido não tem arquivo no banco')
   })
 }
 

@@ -12,6 +12,11 @@ import { MinhaTurma } from './MinhaTurma'
 const Atividades = lazy(() => import('./Atividades'))
 const Atividade = lazy(() => import('./Atividade'))
 const Tutor = lazy(() => import('./Tutor'))
+/**
+ * "Meus dados" é a mesma tela do aluno e do professor, e por isso mora em `componentes/` (a tela de uma área não importa
+ * módulo de outra, `areas/navegacao.ts`, linha 5): sai num pedaço `parte-*` só por `import()`, que nenhuma entrada baixa.
+ */
+const MeusDados = lazy(() => import('../../componentes/meus-dados/MeusDados'))
 
 /** O id que vem no endereço só vai à API se for um UUID: o resto é endereço que não existe. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -19,9 +24,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 /**
  * A área do aluno, relativa a `/aluno`, num chunk próprio, `aluno-*.js` (`apps/web/nome-dos-chunks.ts`), que só se baixa
  * depois de a guarda de `apps/web/src/rotas.tsx` conferir o papel. Tem o Tutor (a escolha da atividade e a conversa por
- * atividade), "Atividades" (a lista, onde o aluno abre, e a atividade aberta) e "Minha turma" (A1, 12.0); qualquer outro
- * endereço daqui responde "Página não encontrada". "Meu desempenho", "Privacidade" e "Avisar um adulto" não existem
- * nesta fatia.
+ * atividade), "Atividades" (a lista, onde o aluno abre, e a atividade aberta), "Minha turma" (A1, 12.0) e, no rodapé da
+ * lateral, "Privacidade" com "Meus dados" (F3, 18.0); qualquer outro endereço daqui responde "Página não encontrada".
+ * "Meu desempenho" e "Avisar um adulto" não existem nesta fatia.
  *
  * **Tela nova entra por `lazy(() => import('./Tela'))`**, e não por `import` direto: as cinco linhas da convenção estão
  * no topo de `areas/navegacao.ts`. "Minha turma" é da A1, e fica na fachada como estava.
@@ -41,6 +46,10 @@ export default function RotasDoAluno() {
         {(parametros) => (UUID.test(parametros.atividadeAplicadaId) ? <Atividade key={parametros.atividadeAplicadaId} atividadeAplicadaId={parametros.atividadeAplicadaId} /> : <ConteudoNaoEncontrado />)}
       </Route>
       <Route path={ROTAS_DO_ALUNO.minhaTurma} component={MinhaTurma} />
+      {/* A tela é uma só com a do professor; o título da aba e o nome da seção são o do aluno ("Privacidade", com "Meus dados"). */}
+      <Route path={ROTAS_DO_ALUNO.privacidade}>
+        <MeusDados titulo="Privacidade" secao="Meus dados" />
+      </Route>
       <Route>
         <ConteudoNaoEncontrado />
       </Route>

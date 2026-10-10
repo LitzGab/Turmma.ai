@@ -1,5 +1,5 @@
 import { NOMES_DOS_AGENTES, type Agente, type PapelDeUsuario } from '@educa/shared'
-import { Blocks, BookOpen, Bot, ChartColumn, ClipboardList, GraduationCap, LayoutGrid, Lock, MessageCircleQuestion, MessagesSquare, School, ShieldCheck, SquarePen, UsersRound, type LucideIcon } from 'lucide-react'
+import { Blocks, BookOpen, Bot, ChartColumn, ClipboardList, FolderLock, GraduationCap, LayoutGrid, Lock, MessageCircleQuestion, MessagesSquare, School, ShieldCheck, SquarePen, UsersRound, type LucideIcon } from 'lucide-react'
 import { ROTAS } from '../caminhos'
 
 /*
@@ -52,15 +52,41 @@ export const NAVEGACAO: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao
     { rotulo: 'Ferramentas', caminho: ROTAS.ferramentas, icone: LayoutGrid, tambemEm: [ROTAS.artefatos] },
     { rotulo: 'Turmas', caminho: ROTAS.turmas, icone: UsersRound },
   ],
-  // A3 e A4: Tutor, Atividades e Minha turma. "Meu desempenho", "Privacidade" e "Avisar um adulto" nascem com a tela de
-  // cada um: nesta fatia não existem, e por isso não aparecem. A conversa do Tutor e a atividade aberta ficam abaixo do
-  // endereço do item delas, que continua selecionado.
+  // A3 e A4: Tutor, Atividades e Minha turma. "Meu desempenho" e "Avisar um adulto" nascem com a tela de cada um: nesta
+  // fatia não existem, e por isso não aparecem. "Privacidade" é do rodapé fixo (`RODAPE_DA_LATERAL`), e não desta lista. A
+  // conversa do Tutor e a atividade aberta ficam abaixo do endereço do item delas, que continua selecionado.
   aluno: [
     { rotulo: 'Tutor', caminho: ROTAS.tutor, icone: MessageCircleQuestion },
     { rotulo: 'Atividades', caminho: ROTAS.atividades, icone: ClipboardList },
     { rotulo: 'Minha turma', caminho: ROTAS.minhaTurma, icone: School },
   ],
 }
+
+/**
+ * O rodapé fixo da lateral (`docs/interface.md` 11.1): os itens que ficam **embaixo**, acima da pessoa, e não entram na
+ * lista de seções. Só o aluno tem rodapé, e por enquanto só com "Privacidade" (F3, 18.0), que abre "Meus dados"; "Avisar
+ * um adulto" nasce com a tela dele. O item vale na lateral aberta, no trilho e na gaveta a 360 px.
+ */
+export const RODAPE_DA_LATERAL: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao[]>> = {
+  coordenador: [],
+  professor: [],
+  aluno: [{ rotulo: 'Privacidade', caminho: ROTAS.privacidadeDoAluno, icone: Lock }],
+}
+
+/**
+ * O que o menu da pessoa, no rodapé da lateral, leva além do "Sair" (P18; `docs/interface.md` 11.1): os links dela. O
+ * "Sair" nunca entra aqui, porque é o último e está sempre à vista (D59). O professor tem "Meus dados" desde o F3 (18.0).
+ * A coordenação não é titular de pedido (a API não lhe dá `meus_dados`), e o aluno acha os dados dele no rodapé fixo.
+ */
+export const MENU_DA_PESSOA: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao[]>> = {
+  coordenador: [],
+  professor: [{ rotulo: 'Meus dados', caminho: ROTAS.meusDadosDoProfessor, icone: FolderLock }],
+  aluno: [],
+}
+
+/** O nome de cada um desses grupos para o leitor de tela: o que a navegação "Seções" e "Seu time" já fazem. */
+export const NOME_DO_RODAPE = 'Rodapé'
+export const NOME_DO_MENU_DA_PESSOA = 'Sua conta'
 
 /** Uma linha de "Seu time": o agente, o endereço da conversa dele e o ícone do avatar (círculo com ícone, nunca rosto: D58). */
 export interface AgenteDaLateral {

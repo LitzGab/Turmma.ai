@@ -29,6 +29,8 @@ export const ROTAS_DO_PROFESSOR = {
   turmas: '/turmas',
   /** Uma turma aberta dentro de Turmas, com o acesso dos alunos (A1, 15.0; RF9) e, na 16.0, os pedidos. */
   turma: '/turmas/:turmaId',
+  /** "Meus dados", no menu da pessoa: os pedidos de cópia dos próprios dados e o arquivo, para baixar (F3, 18.0; RF12 e RF20). */
+  meusDados: '/meus-dados',
 } as const
 
 /** O endereço da turma aberta pelo professor, **relativo à área**, como o da Estrutura (`caminhoDaTurmaNaEstrutura`). */
@@ -116,6 +118,8 @@ export const ROTAS_DO_ALUNO = {
   atividade: '/atividades/:atividadeAplicadaId',
   /** A turma do aluno aprovado, com a escola e a série, sem colegas (A1, 12.0; RF13). */
   minhaTurma: '/minha-turma',
+  /** "Privacidade", no rodapé fixo da lateral: por enquanto só com "Meus dados" (F3, 18.0; RF12 e RF20; `docs/interface.md` 11.1). */
+  privacidade: '/privacidade',
 } as const
 
 /** O endereço de uma atividade aberta pelo aluno, **relativo à área**. */
@@ -163,6 +167,8 @@ export const ROTAS = {
   timeDoTutor: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.timeDoTutor}`,
   /** "Turmas" do professor, pela raiz: é o endereço que a navegação usa. */
   turmas: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.turmas}`,
+  /** "Meus dados" do professor, pela raiz: é o endereço do link do menu da pessoa (F3, 18.0). */
+  meusDadosDoProfessor: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.meusDados}`,
   /** Governança da coordenação, pela raiz: é o endereço que a navegação usa, e onde a coordenação abre (MVP, A5). */
   governanca: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.governanca}`,
   /** Agentes da coordenação, pela raiz (MVP, A5). */
@@ -183,6 +189,8 @@ export const ROTAS = {
   atividades: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.atividades}`,
   /** "Minha turma" do aluno, pela raiz: é o endereço que a navegação usa. */
   minhaTurma: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.minhaTurma}`,
+  /** "Privacidade" do aluno, pela raiz: é o endereço do item do rodapé da lateral (F3, 18.0). */
+  privacidadeDoAluno: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.privacidade}`,
   /** O convite da coordenação e o do professor. O token vai no fragmento `#`, e nunca no caminho nem na consulta. */
   convite: '/convite',
   /** Estado do sistema, público: é a tela que se abre justamente quando não se consegue entrar. */
