@@ -43,6 +43,11 @@ const ambienteValido = {
   IDENTIDADE_CHAVE_CIFRA_V1: 'chave_sintetica_da_cifra_do_mfa_com_32_caracteres',
   IDENTIDADE_CHAVE_RECUPERACAO: 'chave_sintetica_da_recuperacao_com_32_caracteres',
   SALA_CHAVE_CODIGO: 'chave_sintetica_do_codigo_da_turma_com_32_caracteres',
+  STORAGE_URL: 'http://storage:8333',
+  STORAGE_REGIAO: 'us-east-1',
+  STORAGE_BUCKET: 'educa-local',
+  STORAGE_CHAVE_ACESSO: 'chave_sintetica',
+  STORAGE_CHAVE_SECRETA: 'segredo_sintetico_do_storage',
 }
 
 /**
@@ -125,7 +130,27 @@ describe('lerConfiguracao', () => {
       sala: { chaveCodigo: new TextEncoder().encode(ambienteValido.SALA_CHAVE_CODIGO) },
       // Sem nenhuma variável de IA, o adaptador falso, com os padrões do prazo e das vagas.
       ia: { adaptador: 'falso', timeoutMs: 60_000, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 150_000 } },
+      // O storage do arquivo do titular (F3, tarefa 13.0): sem `STORAGE_URL_PUBLICA`, a assinatura vale o endereço interno.
+      // Uma tentativa e prazo de 5 s: o cliente da API espera a resposta (o do worker repete, com o prazo dele).
+      armazem: {
+        url: 'http://storage:8333',
+        regiao: 'us-east-1',
+        bucket: 'educa-local',
+        chaveAcesso: 'chave_sintetica',
+        chaveSecreta: 'segredo_sintetico_do_storage',
+        tentativas: 1,
+        timeoutRequisicaoMs: 5000,
+      },
     })
+  })
+
+  it('o armazém do arquivo do titular (F3, tarefa 13.0): o endereço público entra na configuração, e a falta ou o valor inválido são apontados pelo nome, sem o segredo', () => {
+    expect(lerConfiguracao({ ...ambienteValido, STORAGE_URL_PUBLICA: 'http://127.0.0.1:58333' }).armazem).toMatchObject({ url: 'http://storage:8333', urlPublica: 'http://127.0.0.1:58333' })
+    expect(erroDe({ ...ambienteValido, STORAGE_URL: undefined }).variaveis).toEqual(['STORAGE_URL'])
+    expect(erroDe({ ...ambienteValido, STORAGE_BUCKET: undefined, STORAGE_CHAVE_SECRETA: '' }).variaveis).toEqual(['STORAGE_BUCKET', 'STORAGE_CHAVE_SECRETA'])
+    const recusada = erroDe({ ...ambienteValido, STORAGE_URL_PUBLICA: 'armazem:8333', STORAGE_CHAVE_SECRETA: '' })
+    expect(recusada.variaveis).toEqual(['STORAGE_CHAVE_SECRETA', 'STORAGE_URL_PUBLICA'])
+    expect(recusada.message).not.toContain(ambienteValido.STORAGE_CHAVE_SECRETA)
   })
 
   it('a camada de IA é lida aqui, com as outras: nenhuma variável é obrigatória, a inválida é apontada pelo nome, e o adaptador falso não sobe em produção', () => {

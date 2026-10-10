@@ -208,6 +208,16 @@ services:
       IA_EXECUCOES_POR_ESCOLA: ${IA_EXECUCOES_POR_ESCOLA:?defina IA_EXECUCOES_POR_ESCOLA}
       IA_EXECUCOES_TOTAL: ${IA_EXECUCOES_TOTAL:?defina IA_EXECUCOES_TOTAL}
       IA_EXECUCAO_TIMEOUT_MS: ${IA_EXECUCAO_TIMEOUT_MS:?defina IA_EXECUCAO_TIMEOUT_MS}
+      # O arquivo do titular (F3, tarefa 13.0): a API confere que o objeto existe e assina a URL de download de 5 minutos.
+      # `STORAGE_URL` é por onde ela alcança o storage; `STORAGE_URL_PUBLICA`, o endereço que entra na assinatura e que o
+      # navegador abre (a assinatura cobre o host, e `storage:8333` não resolve fora do compose). Sem depends_on: com o
+      # storage fora, baixar responde `INDISPONIVEL_TENTE_DE_NOVO`, e o resto da API segue.
+      STORAGE_URL: http://storage:8333
+      STORAGE_URL_PUBLICA: http://127.0.0.1:${STORAGE_PORTA_HOST:?defina STORAGE_PORTA_HOST}
+      STORAGE_REGIAO: ${STORAGE_REGIAO:?defina STORAGE_REGIAO}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:?defina STORAGE_BUCKET}
+      STORAGE_CHAVE_ACESSO: ${STORAGE_CHAVE_ACESSO:?defina STORAGE_CHAVE_ACESSO}
+      STORAGE_CHAVE_SECRETA: ${STORAGE_CHAVE_SECRETA:?defina STORAGE_CHAVE_SECRETA}
     # Acima de DRENAGEM_PRAZO_MS: o Docker só manda SIGKILL depois de a drenagem ter tido o prazo inteiro.
     stop_grace_period: 15s
     ports:
@@ -346,6 +356,13 @@ services:
       VAGAS_ESCOLA_NORMAL: ${VAGAS_ESCOLA_NORMAL:?defina VAGAS_ESCOLA_NORMAL}
       VAGAS_ESCOLA_LOTE: ${VAGAS_ESCOLA_LOTE:?defina VAGAS_ESCOLA_LOTE}
       VAGAS_POR_ESCOLA_DESLIGADAS: ${VAGAS_POR_ESCOLA_DESLIGADAS:?defina VAGAS_POR_ESCOLA_DESLIGADAS}
+      # A fila normal monta o arquivo do titular (F3, tarefa 13.0) e o grava no storage. Sem depends_on: storage fora faz o job
+      # tentar de novo, com o pedido `em_preparacao`, e só.
+      STORAGE_URL: http://storage:8333
+      STORAGE_REGIAO: ${STORAGE_REGIAO:?defina STORAGE_REGIAO}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:?defina STORAGE_BUCKET}
+      STORAGE_CHAVE_ACESSO: ${STORAGE_CHAVE_ACESSO:?defina STORAGE_CHAVE_ACESSO}
+      STORAGE_CHAVE_SECRETA: ${STORAGE_CHAVE_SECRETA:?defina STORAGE_CHAVE_SECRETA}
       # Métricas OTLP para a observabilidade local. Sem depends_on: fora do ar, perde-se a métrica, e só.
       TELEMETRIA_OTLP_URL: http://observabilidade:4318
       TELEMETRIA_INTERVALO_MS: ${TELEMETRIA_INTERVALO_MS:?defina TELEMETRIA_INTERVALO_MS}

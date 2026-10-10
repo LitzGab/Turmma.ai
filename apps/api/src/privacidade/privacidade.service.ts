@@ -1,13 +1,21 @@
 import {
+  ArmazemIndisponivel,
+  ArquivoDoTitularRepository,
   Compartilhamento,
   ErroDeDominio,
   IncidenteDaEscolaRepository,
   RegistroDeAuditoria,
   RetencaoDaEscolaRepository,
   SuboperadorDaEscolaRepository,
+  TENTE_DE_NOVO_PADRAO_SEGUNDOS,
   diaDeUso,
   identidadeDaRequisicao,
+  relogioDoSistema,
+  type ArmazemDeArquivos,
+  type ArquivoLido,
   type Banco,
+  type Enfileirador,
+  type Relogio,
 } from '@educa/nucleo'
 import {
   CATEGORIAS_DE_RETENCAO,
@@ -20,14 +28,25 @@ import {
   esquemaRespostaPreviaDoTitular,
   esquemaRespostaRetencao,
   esquemaRespostaSuboperadores,
+  esquemaRespostaDoArquivo,
+  esquemaRespostaMeusDados,
+  FINALIDADE_DO_ARQUIVO_DO_PROPRIO_TITULAR,
   FINALIDADE_DO_ATENDIMENTO_DO_TITULAR,
   FINALIDADE_DO_REGISTRO_DE_INCIDENTE,
+  nomeDoArquivoDoTitular,
   PRAZOS_FIXOS,
   retencaoDaEscola,
   TEXTO_DO_PRAZO_LEGAL_DO_INCIDENTE,
+  TIPO_DO_JOB_MONTAR_ARQUIVO,
+  TIPOS_DE_PEDIDO_COM_ARQUIVO,
+  VALIDADE_DA_URL_DO_ARQUIVO_SEGUNDOS,
+  type FinalidadeDoArquivo,
   type ItemDoPedido,
   type ConsultaPaginada,
   type PedidoDoTitular,
+  type RespostaDoArquivo,
+  type RespostaMeusDados,
+  type VersaoDoArquivo,
   type RegistroDePedido,
   type RespostaBuscaDeTitulares,
   type RespostaIncidentes,
@@ -40,6 +59,16 @@ import { PedidosRepository, type PedidoAchado } from './pedidos.repository.js'
 import { TitularesRepository, type TitularAchadoNoBanco, type TitularParaOPedido } from './titulares.repository.js'
 
 const registro = new RegistroDeAuditoria()
+
+/** Quantos pedidos "Meus dados" lista: a pessoa tem poucos, e a lista é paginada pelo teto (regra 80, item 8). */
+const PEDIDOS_EM_MEUS_DADOS = 50
+
+/** O que o serviço precisa de fora do banco: a fila de jobs, o armazém do arquivo e o relógio (injetado nos testes). */
+export interface DependenciasDoPrivacidadeService {
+  readonly enfileirador: Pick<Enfileirador, 'enfileirar'>
+  readonly armazem: Pick<ArmazemDeArquivos, 'existe' | 'urlDeDownload'>
+  readonly relogio?: Relogio
+}
 
 /** O erro do pedido que não está no estado que a ação pede: tipado, sem dizer o estado de quem (F3, RF16). */
 const pedidoEmEstadoInvalido = (): ErroDeDominio => new ErroDeDominio(CodigoDeErro.PEDIDO_EM_ESTADO_INVALIDO)
@@ -56,7 +85,14 @@ const pedidoEmEstadoInvalido = (): ErroDeDominio => new ErroDeDominio(CodigoDeEr
  * qualquer rota, inclusive na lista: quem atende um pedido nunca é quem o pediu.
  */
 export class PrivacidadeService {
-  constructor(private readonly banco: Banco) {}
+  readonly #relogio: Relogio
+
+  constructor(
+    private readonly banco: Banco,
+    private readonly dependencias: DependenciasDoPrivacidadeService,
+  ) {
+    this.#relogio = dependencias.relogio ?? relogioDoSistema
+  }
 
   async retencao(): Promise<RespostaRetencao> {
     const categorias = retencaoDaEscola(await new RetencaoDaEscolaRepository(this.banco).ajustes())
@@ -186,8 +222,12 @@ export class PrivacidadeService {
       const homonimo = await titulares.homonimo(titular.id, titular.nome.trim().toLowerCase())
       const pedidos = new PedidosRepository(tx)
       const compartilhamento = await new Compartilhamento(tx).doTitular({ titularId: titular.id, papel: titular.papel })
-      const id = await pedidos.registrar({ ...pedido, papelTitular: titular.papel, homonimo, compartilhamento })
+      // Acesso e portabilidade geram arquivo: nascem `em_preparacao` e enfileiram o job **na mesma transação**, então o pedido
+      // existe se, e somente se, o job existe. Os outros três não têm o que montar e nascem `recebido`.
+      const geraArquivo = TIPOS_DE_PEDIDO_COM_ARQUIVO.some((tipo) => tipo === pedido.tipo)
+      const id = await pedidos.registrar({ ...pedido, papelTitular: titular.papel, homonimo, compartilhamento, estado: geraArquivo ? 'em_preparacao' : 'recebido' })
       if (id !== undefined) {
+        if (geraArquivo) await this.dependencias.enfileirador.enfileirar(tx, { tipo: TIPO_DO_JOB_MONTAR_ARQUIVO, fila: 'normal', dados: { pedidoId: id }, naoUrgente: false })
         await registro.gravar(tx, 'pedido.registrado', {
           entidadeId: id,
           depois: { titularId: titular.id, papelTitular: titular.papel, tipo: pedido.tipo, solicitante: pedido.solicitante, chegouEm: pedido.chegouEm },
@@ -245,8 +285,10 @@ export class PrivacidadeService {
     await this.banco.transaction(async (tx) => {
       const pedidos = new PedidosRepository(tx)
       const pedido = await this.#pedidoAlvo(pedidos, new TitularesRepository(tx), id)
-      if (!(await pedidos.concluir(pedido.id))) throw pedidoEmEstadoInvalido()
-      await registro.gravar(tx, 'pedido.concluido', { entidadeId: pedido.id, antes: { estado: pedido.estado }, depois: { estado: 'concluido' } })
+      // O estado anterior vem do próprio `update`: o job do arquivo (13.0) passa `em_preparacao` para `pronto` por fora.
+      const anterior = await pedidos.concluir(pedido.id)
+      if (anterior === undefined) throw pedidoEmEstadoInvalido()
+      await registro.gravar(tx, 'pedido.concluido', { entidadeId: pedido.id, antes: { estado: anterior }, depois: { estado: 'concluido' } })
     })
   }
 
@@ -263,6 +305,97 @@ export class PrivacidadeService {
       if (!(await pedidos.corrigirNome(pedido.id, nome))) throw pedidoEmEstadoInvalido()
       await registro.gravar(tx, 'pedido.nome_corrigido', { entidadeId: pedido.id })
     })
+  }
+
+  /**
+   * `POST /v1/privacidade/pedidos/:id/arquivo` (F3, tarefa 13.0; RF12 e RF17): a URL de 5 minutos da **versão da escola** do
+   * arquivo, para a coordenação entregar a quem pediu. Só existe para o titular **sem conta ativa nesta escola**: com conta
+   * ativa, ele baixa o próprio arquivo em "Meus dados", e a coordenação não tem caminho para a versão completa. A versão que
+   * não existe, a vencida, a apagada, a de outra escola, a do pedido sobre quem pede e o id de ninguém respondem igual
+   * (`NAO_ENCONTRADO`, regra 10, item 6). Auditada como `titular.arquivo_baixado`, com a finalidade, na mesma transação.
+   */
+  async arquivoDaEscola(pedidoId: string, finalidade: FinalidadeDoArquivo): Promise<RespostaDoArquivo> {
+    // Leitura curta, sem transação: nenhuma conexão do pool fica presa enquanto o storage responde (regra 80, item 3).
+    const pedido = await this.#pedidoAlvo(new PedidosRepository(this.banco), new TitularesRepository(this.banco), pedidoId)
+    const arquivos = new ArquivoDoTitularRepository(this.banco)
+    const arquivo = await arquivos.doPedido(pedido.id, 'coordenacao')
+    const agora = this.#relogio.agora()
+    // A versão da escola só vale enquanto o titular segue sem conta ativa: se ela voltou, ele baixa o dele.
+    if (arquivo === undefined || !this.#vale(arquivo, agora) || (await arquivos.contaAtiva(pedido.titularId)) !== false) {
+      throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+    }
+    const resposta = await this.#assinar(arquivo, agora)
+    // A auditoria é a transação curta, e vem antes de a resposta sair: se ela falhar, a URL não sai.
+    await this.banco.transaction(async (tx) => {
+      await registro.gravar(tx, 'titular.arquivo_baixado', { entidadeId: pedido.id, depois: { versao: 'coordenacao' satisfies VersaoDoArquivo }, finalidade })
+    })
+    return resposta
+  }
+
+  /**
+   * `GET /v1/meus-dados` (F3, tarefa 13.0; RF12 e RF20): os pedidos da própria pessoa na escola ativa, com o estado e a
+   * validade do arquivo, e a contagem do que a escola guarda dela por categoria. Só o que é dela (`usuario_id` da sessão):
+   * o pedido de um colega nunca entra. A leitura é da própria pessoa sobre si, e não vai para a auditoria.
+   */
+  async meusDados(): Promise<RespostaMeusDados> {
+    const { usuarioId } = identidadeDaRequisicao()
+    const agora = this.#relogio.agora()
+    const pedidos = await new ArquivoDoTitularRepository(this.banco).pedidosDoUsuario(usuarioId, PEDIDOS_EM_MEUS_DADOS)
+    const categorias = await new TitularesRepository(this.banco).contagemPorCategoria(usuarioId)
+    return esquemaRespostaMeusDados.parse({
+      pedidos: pedidos.map(({ id, tipo, estado, chegouEm, arquivo }) => ({
+        id,
+        tipo,
+        estado,
+        chegouEm,
+        arquivo: arquivo === null ? null : { situacao: arquivo.apagadoEm === null && arquivo.expiraEm > agora ? 'disponivel' : 'expirado', expiraEm: arquivo.expiraEm.toISOString() },
+      })),
+      categorias: categorias.map(({ categoria, quantidade }) => ({ categoria, quantidade })),
+    })
+  }
+
+  /**
+   * `POST /v1/meus-dados/:id/baixar` (F3, tarefa 13.0; RF12): a URL de 5 minutos da **versão completa** do arquivo do próprio
+   * usuário. O pedido é o dele (`titular_id` da sessão): o do colega, o de outra escola e o inexistente respondem igual, e o
+   * arquivo vencido ou apagado também. Quem pediu pelo titular (o responsável legal) recebe na conta do aluno: o arquivo é
+   * sempre dele. Auditada como `titular.arquivo_baixado`.
+   */
+  async baixarMeuArquivo(pedidoId: string): Promise<RespostaDoArquivo> {
+    const { usuarioId } = identidadeDaRequisicao()
+    // Leitura curta, sem transação: a consulta ao storage não segura conexão do pool (regra 80, item 3).
+    const arquivo = await new ArquivoDoTitularRepository(this.banco).arquivoCompletoDoUsuario(usuarioId, pedidoId)
+    const agora = this.#relogio.agora()
+    if (arquivo === undefined || !this.#vale(arquivo, agora)) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+    const resposta = await this.#assinar(arquivo, agora)
+    await this.banco.transaction(async (tx) => {
+      await registro.gravar(tx, 'titular.arquivo_baixado', {
+        entidadeId: pedidoId,
+        depois: { versao: 'completa' satisfies VersaoDoArquivo },
+        finalidade: FINALIDADE_DO_ARQUIVO_DO_PROPRIO_TITULAR,
+      })
+    })
+    return resposta
+  }
+
+  /** O arquivo ainda vale: não foi apagado e não venceu. */
+  #vale(arquivo: ArquivoLido, agora: Date): boolean {
+    return arquivo.apagadoEm === null && arquivo.expiraEm > agora
+  }
+
+  /**
+   * Confere que o objeto está no armazém e assina a URL de 5 minutos. Armazém fora, ou objeto que a linha diz que existe e o
+   * storage não tem: `INDISPONIVEL_TENTE_DE_NOVO`, nunca o erro do SDK nem a chave do objeto. A chave não sai daqui.
+   */
+  async #assinar(arquivo: ArquivoLido, agora: Date): Promise<RespostaDoArquivo> {
+    try {
+      if (!(await this.dependencias.armazem.existe(arquivo.chaveObjeto))) throw new ArmazemIndisponivel()
+      const nome = nomeDoArquivoDoTitular(diaDeUso(agora))
+      const url = await this.dependencias.armazem.urlDeDownload(arquivo.chaveObjeto, { nome, validadeSegundos: VALIDADE_DA_URL_DO_ARQUIVO_SEGUNDOS })
+      return esquemaRespostaDoArquivo.parse({ url, nome, validaAte: new Date(agora.getTime() + VALIDADE_DA_URL_DO_ARQUIVO_SEGUNDOS * 1_000).toISOString() })
+    } catch (erro) {
+      if (erro instanceof ArmazemIndisponivel) throw new ErroDeDominio(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO, undefined, TENTE_DE_NOVO_PADRAO_SEGUNDOS)
+      throw erro
+    }
   }
 
   /** O titular do pedido, ou `NAO_ENCONTRADO` como o inexistente: outra escola, o de quem pediu e o id de ninguém. */

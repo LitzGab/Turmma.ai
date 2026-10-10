@@ -373,7 +373,7 @@ describe('retenção da escola: a operação ajusta por comando, e a coordenaç�
     // lista abaixo impede que uma delas saia sem o teste reclamar. As de escrita e as de leitura por `:id` (a prévia do titular e o
     // detalhe do pedido, 11.0) respondem 404 à coordenação quando o id é de ninguém, o que não as distingue de quem a guarda
     // barrou: cada uma tem a permissão provada no teste do módulo dela (`incidente.int.test.ts` e `pedido-titular.int.test.ts`,
-    // "permissão").
+    // "permissão"; a do arquivo da escola, 13.0, também no segundo).
     const todas = rotasDe(controladoresDoModulo(AppModule.com(configuracaoDeTeste()))).filter((rota) => rota.caminho.startsWith('/v1/privacidade/'))
     const rotas = todas.filter((rota) => rota.verbo === 'GET' && !rota.caminho.includes(':'))
     expect(todas.filter((rota) => rota.verbo === 'GET').map((rota) => rota.caminho)).toEqual(
@@ -392,6 +392,7 @@ describe('retenção da escola: a operação ajusta por comando, e a coordenaç�
       'POST /v1/privacidade/pedidos',
       'POST /v1/privacidade/pedidos/:id/concluir',
       'POST /v1/privacidade/pedidos/:id/corrigir-nome',
+      'POST /v1/privacidade/pedidos/:id/arquivo',
     ])
     const escolaId = await bancada.escola()
     const coordenacao = await bancada.sessao(escolaId, 'coordenador')

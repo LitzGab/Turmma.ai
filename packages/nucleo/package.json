@@ -18,6 +18,11 @@
       "source": "./src/ciclo-de-vida/conta-global.repository.ts",
       "types": "./dist/ciclo-de-vida/conta-global.repository.d.ts",
       "default": "./dist/ciclo-de-vida/conta-global.repository.js"
+    },
+    "./armazem-s3": {
+      "source": "./src/titular/armazem-s3.ts",
+      "types": "./dist/titular/armazem-s3.d.ts",
+      "default": "./dist/titular/armazem-s3.js"
     }
   },
   "files": [
@@ -28,6 +33,8 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1131.0",
+    "@aws-sdk/s3-request-presigner": "3.1131.0",
     "@educa/shared": "0.0.0",
     "@opentelemetry/api": "1.9.1",
     "@opentelemetry/exporter-metrics-otlp-http": "0.222.0",

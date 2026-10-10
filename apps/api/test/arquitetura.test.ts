@@ -1253,6 +1253,91 @@ describe('arquitetura: toda tabela das migrations está classificada para a rete
   })
 })
 
+/**
+ * F3, tarefa 13.0 (Tech Spec do F3, seção 3 e seção 5, "Arquivo"): o arquivo do titular lê exatamente as tabelas que a
+ * `CLASSIFICACAO_DAS_TABELAS` diz que entram, e **cada coluna delas tem um destino**: ou entra, ou está em `fora` com o motivo.
+ * Coluna nova numa tabela do arquivo deixa a esteira vermelha até alguém decidir se ela é do titular; o que
+ * `COLUNAS_FORA_DO_ARQUIVO` proíbe nunca está entre as que entram, em nenhuma tabela.
+ */
+interface LeituraDaTabelaParaConferir {
+  readonly colunas: readonly string[]
+  readonly derivadas?: readonly string[]
+  readonly fora: Readonly<Record<string, string>>
+}
+
+function problemasDaLeitura(
+  leituras: Readonly<Record<string, LeituraDaTabelaParaConferir>>,
+  classificacao: Readonly<Record<string, { arquivo: { entra: boolean } }>>,
+  colunas: ReadonlyMap<string, ReadonlySet<string>>,
+  foraDoArquivo: readonly string[],
+): string[] {
+  const problemas: string[] = []
+  for (const [tabela, { arquivo }] of Object.entries(classificacao)) {
+    if (arquivo.entra && !Object.hasOwn(leituras, tabela)) problemas.push(`${tabela}: entra no arquivo e não tem leitura`)
+  }
+  for (const [tabela, leitura] of Object.entries(leituras)) {
+    if (classificacao[tabela]?.arquivo.entra !== true) problemas.push(`${tabela}: tem leitura e a classificação não a põe no arquivo`)
+    const daTabela = colunas.get(tabela)
+    if (daTabela === undefined) {
+      problemas.push(`${tabela}: leitura de tabela que não existe`)
+      continue
+    }
+    const entram = new Set(leitura.colunas)
+    const de_fora = new Set(Object.keys(leitura.fora))
+    for (const coluna of daTabela) {
+      if (!entram.has(coluna) && !de_fora.has(coluna)) problemas.push(`${tabela}.${coluna}: coluna sem destino (nem entra, nem está em fora)`)
+      if (entram.has(coluna) && de_fora.has(coluna)) problemas.push(`${tabela}.${coluna}: entra e está em fora`)
+    }
+    for (const coluna of [...entram, ...de_fora]) {
+      if (!daTabela.has(coluna) && !(leitura.derivadas ?? []).includes(coluna)) problemas.push(`${tabela}.${coluna}: coluna que a tabela não tem`)
+    }
+    for (const coluna of entram) if (foraDoArquivo.includes(`${tabela}.${coluna}`)) problemas.push(`${tabela}.${coluna}: está em COLUNAS_FORA_DO_ARQUIVO e entra`)
+    for (const proibida of foraDoArquivo) {
+      const [daProibida = '', coluna = ''] = proibida.split('.')
+      if (daProibida === tabela && !de_fora.has(coluna)) problemas.push(`${proibida}: proibida e sem motivo em fora`)
+    }
+  }
+  return problemas
+}
+
+describe('arquitetura: o arquivo do titular lê as tabelas da classificação, e toda coluna delas tem destino (F3, tarefa 13.0)', () => {
+  const sqls = readdirSync(join(RAIZ, 'packages/nucleo/drizzle'))
+    .filter((arquivo) => arquivo.endsWith('.sql'))
+    .sort()
+    .map((arquivo) => readFileSync(join(RAIZ, 'packages/nucleo/drizzle', arquivo), 'utf8'))
+  const colunas = colunasDasTabelas(sqls)
+
+  it('as tabelas lidas são exatamente as que a classificação põe no arquivo, e nenhuma coluna fica sem destino', () => {
+    expect(problemasDaLeitura(nucleo.LEITURAS_DO_ARQUIVO, CLASSIFICACAO_DAS_TABELAS, colunas, COLUNAS_FORA_DO_ARQUIVO)).toEqual([])
+    const lidas = Object.keys(nucleo.LEITURAS_DO_ARQUIVO).toSorted()
+    const esperadas = Object.entries(CLASSIFICACAO_DAS_TABELAS)
+      .filter(([, { arquivo }]) => arquivo.entra)
+      .map(([tabela]) => tabela)
+      .toSorted()
+    expect(lidas).toEqual(esperadas)
+  })
+
+  it('reprova a tabela sem leitura, a leitura sem classificação, a coluna sem destino ou duplicada, e a proibida que entra', () => {
+    const lidas = colunasDasTabelas(['CREATE TABLE "pessoa" (\n\t"id" uuid,\n\t"nome" text,\n\t"senha_hash" text\n);'])
+    const classificacao = { pessoa: { arquivo: { entra: true } } }
+    const boa = { pessoa: { colunas: ['id', 'nome'], fora: { senha_hash: 'segredo' } } }
+    expect(problemasDaLeitura(boa, classificacao, lidas, ['pessoa.senha_hash'])).toEqual([])
+    expect(problemasDaLeitura({}, classificacao, lidas, [])).toEqual(['pessoa: entra no arquivo e não tem leitura'])
+    expect(problemasDaLeitura(boa, { pessoa: { arquivo: { entra: false } } }, lidas, ['pessoa.senha_hash'])).toEqual(['pessoa: tem leitura e a classificação não a põe no arquivo'])
+    expect(problemasDaLeitura({ pessoa: { colunas: ['id'], fora: { senha_hash: 'segredo' } } }, classificacao, lidas, ['pessoa.senha_hash'])).toEqual(['pessoa.nome: coluna sem destino (nem entra, nem está em fora)'])
+    expect(problemasDaLeitura({ pessoa: { colunas: ['id', 'nome', 'senha_hash'], fora: { senha_hash: 'segredo' } } }, classificacao, lidas, ['pessoa.senha_hash'])).toEqual([
+      'pessoa.senha_hash: entra e está em fora',
+      'pessoa.senha_hash: está em COLUNAS_FORA_DO_ARQUIVO e entra',
+    ])
+    expect(problemasDaLeitura({ pessoa: { colunas: ['id', 'nome', 'fantasma'], fora: { senha_hash: 'segredo' } } }, classificacao, lidas, ['pessoa.senha_hash'])).toEqual(['pessoa.fantasma: coluna que a tabela não tem'])
+    expect(problemasDaLeitura({ pessoa: { colunas: ['id', 'nome', 'situacao'], derivadas: ['situacao'], fora: { senha_hash: 'segredo' } } }, classificacao, lidas, ['pessoa.senha_hash'])).toEqual([])
+    expect(problemasDaLeitura({ pessoa: { colunas: ['id', 'nome'], fora: {} } }, classificacao, lidas, ['pessoa.senha_hash'])).toEqual([
+      'pessoa.senha_hash: coluna sem destino (nem entra, nem está em fora)',
+      'pessoa.senha_hash: proibida e sem motivo em fora',
+    ])
+  })
+})
+
 /** Cita a classe da rotina noturna ou o arquivo dela (F3, tarefa 3.0). */
 const USO_DA_ROTINA = /\bEscolasDaRotinaRepository\b|escolas-da-rotina\.repository/
 
@@ -1263,6 +1348,7 @@ const USO_DA_ROTINA = /\bEscolasDaRotinaRepository\b|escolas-da-rotina\.reposito
  * teria uma consulta sem escopo ao alcance de uma requisição.
  */
 const QUEM_USA_A_ROTINA = [
+  'apps/worker/src/medicao-do-arquivo.ts',
   'apps/worker/src/medicao-do-expurgo.ts',
   'apps/worker/src/medicao-do-incidente.ts',
   'apps/worker/src/medicao-por-escola.ts',

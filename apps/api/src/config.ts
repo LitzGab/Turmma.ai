@@ -16,6 +16,7 @@ import {
 } from '@educa/nucleo'
 import { esquemaAviso, MAXIMO_DE_AVISOS, type Aviso } from '@educa/shared'
 import { z } from 'zod'
+import { lerConfiguracaoDoArmazem, type ConfiguracaoDoArmazemDaApi } from './privacidade/configuracao-do-armazem.js'
 import { lerConfiguracaoSala, type ConfiguracaoSala } from './sala/configuracao-da-sala.js'
 import { lerConfiguracaoLogin, type ConfiguracaoLogin } from './sessao/configuracao-de-login.js'
 import { lerConfiguracaoLoginExterno, type ConfiguracaoLoginExterno } from './sessao/externa/configuracao-externa.js'
@@ -96,6 +97,11 @@ export interface ConfiguracaoApi {
    * falso é recusado.
    */
   ia: ConfiguracaoDeIa
+  /**
+   * O storage privado do arquivo do titular (F3, tarefa 13.0): a API confere que o objeto existe e assina a URL de
+   * download de 5 minutos. O worker grava e apaga; a API só assina e confere.
+   */
+  armazem: ConfiguracaoDoArmazemDaApi
 }
 
 /** Executa a leitura e devolve o erro de configuração em vez de lançar, para somar os problemas. */
@@ -123,8 +129,9 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const limite = tentar(() => lerConfiguracaoLimite(ambiente))
   const telemetria = tentar(() => lerConfiguracaoTelemetria(ambiente))
   const ia = tentar(() => lerConfiguracaoDeIa(ambiente))
-  if ('erro' in api || 'erro' in banco || 'erro' in identidade || 'erro' in login || 'erro' in loginExterno || 'erro' in sala || 'erro' in drenagem || 'erro' in limite || 'erro' in telemetria || 'erro' in ia) {
-    const erros = [api, banco, identidade, login, loginExterno, sala, drenagem, limite, telemetria, ia].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
+  const armazem = tentar(() => lerConfiguracaoDoArmazem(ambiente))
+  if ('erro' in api || 'erro' in banco || 'erro' in identidade || 'erro' in login || 'erro' in loginExterno || 'erro' in sala || 'erro' in drenagem || 'erro' in limite || 'erro' in telemetria || 'erro' in ia || 'erro' in armazem) {
+    const erros = [api, banco, identidade, login, loginExterno, sala, drenagem, limite, telemetria, ia, armazem].flatMap((leitura) => ('erro' in leitura ? [leitura.erro] : []))
     throw new ConfiguracaoInvalida(
       // Sem repetir: o `AMBIENTE` é validado pela identidade e de novo pela IA, que o lê para a trava de produção.
       [...new Set(erros.flatMap((erro) => erro.variaveis))].sort(),
@@ -146,5 +153,6 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     limite: limite.valor,
     telemetria: telemetria.valor,
     ia: ia.valor,
+    armazem: armazem.valor,
   }
 }

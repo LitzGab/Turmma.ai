@@ -22,6 +22,18 @@ import {
 } from '@educa/shared'
 import { and, eq, inArray, ne, sql, type SQL } from 'drizzle-orm'
 
+/**
+ * A contagem do texto do modelo da prévia, por junção com as execuções que a pessoa pediu: desce pelo
+ * `execucao_agente_solicitada_por_idx` e pelo `consumo_ia_execucao_idx` (13.0), e não lê o consumo da escola inteira. Fora da
+ * classe para o teste de plano usar a mesma instrução que a prévia roda; a escola é a do contexto.
+ */
+export function instrucaoDoTextoDoModelo(titularId: string): SQL {
+  const escolaId = exigirEscolaDoContexto()
+  return sql`select 'texto_do_modelo', count(*)::int from consumo_ia c
+        join execucao_agente e on e.escola_id = c.escola_id and e.id = c.execucao_id
+        where c.escola_id = ${escolaId} and e.solicitada_por = ${titularId} and (c.entrada is not null or c.saida is not null)`
+}
+
 /** O titular, como o pedido e a prévia o acham: id, nome, papel e a conta, que decide o "pedido sobre si mesmo". */
 export interface TitularAchadoNoBanco {
   readonly id: string
@@ -176,9 +188,7 @@ export class TitularesRepository {
         join thread_agente t on t.escola_id = m.escola_id and t.id = m.thread_id
         where m.escola_id = ${escolaId} and t.usuario_id = ${titularId}
       union all select 'execucao_agente', count(*)::int from execucao_agente where escola_id = ${escolaId} and solicitada_por = ${titularId}
-      union all select 'texto_do_modelo', count(*)::int from consumo_ia c
-        join execucao_agente e on e.escola_id = c.escola_id and e.id = c.execucao_id
-        where c.escola_id = ${escolaId} and e.solicitada_por = ${titularId} and (c.entrada is not null or c.saida is not null)
+      union all ${instrucaoDoTextoDoModelo(titularId)}
       union all select 'consumo_por_aluno', count(*)::int from consumo_ia where escola_id = ${escolaId} and aluno_id = ${titularId}
       union all select 'trabalho_do_aluno', count(*)::int from tentativa_atividade where escola_id = ${escolaId} and aluno_id = ${titularId}
       union all select 'reivindicacao_decidida', count(*)::int from reivindicacao r

@@ -1629,6 +1629,55 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 36,
+      "type": "timeseries",
+      "title": "Horas do arquivo do titular em preparação, por escola",
+      "description": "Horas que o pedido de acesso ou de portabilidade mais antigo da escola espera o arquivo ficar pronto (F3, tarefa 13.0), medido pelo worker-lote a cada 5 min a partir de pedido_titular. O alerta \"Arquivo do titular em preparação há mais de 2 h\" dispara acima de 2. Só a escola com pedido em preparação tem série, e ela some quando o job termina. O que fazer está no runbook.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 123
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (escola_id) (arquivo_horas_em_preparacao)",
+          "legendFormat": "{{escola_id}}",
+          "range": true
+        }
+      ]
     }
   ]
 }

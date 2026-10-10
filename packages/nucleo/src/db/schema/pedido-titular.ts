@@ -26,6 +26,8 @@ import { escola } from './escola.js'
  *   homônimo (quando não há troca). `homonimo` também é calculado na prévia e guardado no registro.
  * - `eliminar_em` e `eliminacao_enfileirada_em` são da eliminação agendada (14.0 e 15.0): os 7 dias e a trava contra
  *   enfileirar duas vezes.
+ * - **`registrado_por`, `concluido_por` e `cancelado_por` não entram no arquivo do titular** (13.0): são o id de quem da
+ *   coordenação atendeu o pedido, outra pessoa. O arquivo traz o pedido pelo `titular_id`, com o tipo, o estado e as datas.
  * - Retenção: vigência + 5 anos, no fim de contrato (F12), como a auditoria; a classe é `registro_de_decisao` em
  *   `CLASSIFICACAO_DAS_TABELAS`.
  * - Índices começando pelo escopo (regra 80, item 8): `(escola_id, id)` para a página de pedidos, `(escola_id,
@@ -60,6 +62,8 @@ export const pedidoTitular = pgTable(
   },
   (tabela) => [
     unique('pedido_titular_chave_envio_unico').on(tabela.escolaId, tabela.chaveEnvio),
+    // O apoio da FK composta do `arquivo_titular` (13.0): o arquivo aponta para o pedido da própria escola.
+    unique('pedido_titular_da_escola_unico').on(tabela.escolaId, tabela.id),
     index('pedido_titular_escola_id_idx').on(tabela.escolaId, tabela.id),
     index('pedido_titular_escola_titular_idx').on(tabela.escolaId, tabela.titularId),
     index('pedido_titular_agendado_idx')

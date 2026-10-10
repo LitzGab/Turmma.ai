@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { check, foreignKey, pgTable, smallint, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { check, foreignKey, index, pgTable, smallint, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { escola } from './escola.js'
 import { tentativaAtividade } from './tentativa-atividade.js'
 
@@ -40,6 +40,8 @@ export const respostaAtividade = pgTable(
       foreignColumns: [tentativaAtividade.escolaId, tentativaAtividade.anoLetivoId, tentativaAtividade.atividadeAplicadaId, tentativaAtividade.alunoId],
     }).onDelete('cascade'),
     uniqueIndex('resposta_atividade_uma_por_questao').on(tabela.escolaId, tabela.anoLetivoId, tabela.atividadeAplicadaId, tabela.alunoId, tabela.questao),
+    // O que o arquivo do titular lê: as respostas de um aluno, pela escola e pela pessoa (F3, 13.0; regra 80, item 8).
+    index('resposta_atividade_aluno_idx').on(tabela.escolaId, tabela.alunoId),
     // 20 é `MAXIMO_DE_QUESTOES_POR_ATIVIDADE`, e 0 a 3, as `ALTERNATIVAS_POR_QUESTAO` do contrato (`packages/shared`).
     check('resposta_atividade_questao_valida', sql`${tabela.questao} between 1 and 20`),
     check('resposta_atividade_alternativa_valida', sql`${tabela.alternativa} between 0 and 3`),

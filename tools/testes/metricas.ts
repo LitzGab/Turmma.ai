@@ -91,4 +91,5 @@ export const NOMES_NO_PROMETHEUS = {
   atrasoEventLoop: ['nodejs_eventloop_delay_p99_seconds'],
   noitesIncompletasDoExpurgo: ['expurgo_noites_incompletas'],
   horasDoIncidenteSemConfirmacao: ['incidente_horas_sem_confirmacao'],
+  horasDoArquivoEmPreparacao: ['arquivo_horas_em_preparacao'],
 } as const satisfies Record<keyof typeof METRICAS, readonly string[]>

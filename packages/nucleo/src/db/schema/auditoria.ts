@@ -47,6 +47,10 @@ export const auditoria = pgTable(
   },
   (tabela) => [
     index('auditoria_escola_em_idx').on(tabela.escolaId, tabela.em),
+    // O que o arquivo do titular lê: a auditoria em que ele é o autor, pela escola e pela pessoa (F3, 13.0; regra 80, item 8).
+    index('auditoria_escola_autor_idx')
+      .on(tabela.escolaId, tabela.autorUsuarioId, tabela.em)
+      .where(sql`${tabela.autorUsuarioId} is not null`),
     // Sem escola, só o que a operação faz acima do tenant: a rede criada e o suboperador cadastrado ou encerrado (F3, 8.0).
     check('auditoria_escola_ou_operacao_global', sql`escola_id is not null or (autor_operador is not null and entidade in ('rede', 'suboperador'))`),
     // Um autor e só um: a pessoa da escola, ou alguém da nossa equipe em rotina de operador.

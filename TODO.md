@@ -788,6 +788,35 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 O MVP de apresentação corre com dado sintético (D71, D77). Os revisores apontaram o que precisa existir antes de
 qualquer dado real:
 
+- [ ] **(F3, 13.0) `STORAGE_URL_PUBLICA` no staging e na produção:** a URL assinada do arquivo do titular leva o host na assinatura,
+      e o compose local aponta para `127.0.0.1:${STORAGE_PORTA_HOST}`. Quando o staging for criado (D42), a variável tem de ser o
+      endereço `https` do storage gerenciado que o navegador alcança, e a API não deve subir com `AMBIENTE=staging` ou `producao`
+      sem ela (hoje cai no endereço interno, que não abre fora da rede). Entra junto da escolha do provedor de hospedagem.
+- [ ] **(F3, 13.0) Índices `auditoria_escola_autor_idx`, `consumo_ia_execucao_idx`, `resposta_atividade_aluno_idx`,
+      `registro_acesso_usuario_idx` e `correcao_destaque_aberto_por_idx` com `concurrently` antes do staging:** as
+      migrations 0033 e 0034 os criam sem `concurrently`, como a Tech Spec do F3, seção 7c, aceita enquanto não há staging nem piloto.
+      `auditoria` é a tabela que mais cresce: a partir do staging, o índice novo vai em arquivo próprio, fora de transação (junto dos
+      pendentes das migrations 0025 a 0027).
+- [ ] **(F3, 13.0) Limite de downloads da versão da escola (`privacy-guardian`, rodada 6 da revisão da spec):** a coordenação pode
+      pedir a URL de 5 minutos quantas vezes quiser; cada pedido é auditado com autor e finalidade, e a versão só existe enquanto o
+      titular está sem conta ativa. Um teto por versão e por dia não está nos requisitos (RF12) e ficou fora; se o Joaquim o quiser,
+      entra com `LIMITE_DE_DOWNLOADS_DA_VERSAO_DA_ESCOLA` e erro tipado.
+- [ ] **(F3, 13.0) Pedido de acesso `em_preparacao` de titular que foi eliminado (F3, 15.0):** o job termina sem efeito quando o
+      titular já não existe na escola (log `titular.arquivo_sem_titular`), e o pedido segue `em_preparacao` até a coordenação
+      concluí-lo, e dispara o alerta de 2 h enquanto isso. A 15.0, que conclui o pedido de eliminação, decide se conclui os de acesso
+      abertos do mesmo titular na mesma transação (o autor `rotina` já vale para `pedido.concluido`).
+- [ ] **(F3, 13.0) Pedido `em_preparacao` cujo job `falhou` não volta sozinho:** o BullMQ esgota as tentativas e o job fica
+      `falhou`; o runbook manda concluir o pedido e registrar outro. Um reenfileiramento pela rotina da noite (os `em_preparacao` com
+      mais de 2 h, uma vez, com chave de idempotência) tiraria o passo manual; fica para depois da primeira escola real, com o número
+      de casos que aparecerem.
+- [ ] **(F3, 13.0) Corrida entre o expurgo do arquivo e o job repetido:** o expurgo apaga o objeto, o job repetido o regrava e faz o `on conflict do update` na mesma linha, e o expurgo apaga a linha: o objeto fica órfão no storage, com dado do titular, sem ninguém que o varra. Rara (job repetido depois de pronto, na noite do 8º dia), mas é dado de menor fora do prazo. Saídas: `apagarLinhas` só apaga se `expira_em`/`apagado_em` ainda forem os lidos, ou o expurgo trava a linha (`for update skip locked`) antes de apagar o objeto (`infra-guardian`, 1ª rodada da 13.0).
+- [ ] **(F3, 13.0) Índices que faltam por turma:** `entrega (decidida_por)`, `atividade_aplicada (aplicada_por)` e `validacao_do_lote (confirmada_por)` são lidos pelo arquivo do professor e não têm índice; crescem por turma, não por aluno. Avaliar com volume real, junto dos três da migration 0034 (`infra-guardian`, 1ª rodada da 13.0).
+- [ ] **(F3, 13.0) `apagarArquivosDoTitular` repete o mesmo objeto que falhou em cada lote e soma `naoApagados` mais de uma vez para ele:** guardar os ids que falharam e tirá-los da leitura seguinte do lote (`infra-guardian`).
+- [ ] **(F3, 13.0) Um cliente S3 só entre o núcleo e o worker:** `criarClienteS3` (worker) e `criarClienteDoArmazem` (núcleo) são duas fábricas; o `worker-lote` abre dois clientes. Juntar na do núcleo, com os prazos por configuração (`revisor-geral`).
+- [ ] **(F3, 13.0) O prazo de requisição do medidor de storage só avisa:** `criarClienteS3` (`apps/worker/src/storage/medidor-de-storage.ts`) passa `requestTimeout` ao handler do SDK sem `throwOnRequestTimeout: true`, e nessa versão do handler (`@smithy/node-http-handler` 4.x) o prazo estourado vira só um aviso: o storage que aceita a conexão e não responde segura a medição sem limite. `criarClienteDoArmazem` foi corrigido na 13.0; este fecha junto do item acima, quando as duas fábricas virarem uma (diagnóstico do Arquiteto, 2ª rodada da 13.0).
+- [ ] **(F3, 13.0) Índice redundante em `pedido_titular`:** `pedido_titular_da_escola_unico (escola_id, id)` repete o `pedido_titular_escola_id_idx`; contrair o segundo numa migration futura (`revisor-geral`).
+- [ ] **(F3, 13.0) Testes do arquivo que prometem mais do que afirmam, e três provas que faltam (`test-engineer`):** (i) o teste de conteúdo não prende o SQL à declaração (as chaves de cada linha do JSON contidas em `LEITURAS_DO_ARQUIVO[t].colunas`); (ii) "B não lista A" usa outra pessoa em B, e não o mesmo professor logado em B (`sessaoDaMesmaConta`); (iii) virada de ano letivo: um registro de ano anterior tem de aparecer no arquivo, e hoje um filtro por `ano_letivo_id` nas leituras passaria; (iv-bis) o `POST pedidos/:id/arquivo` no pedido sobre a própria pessoa da coordenação (usuário desativado com a mesma `conta_id` de quem chama) cai no `#pedidoAlvo`, e nenhum teste prova isso nesta rota; (iv) os títulos "com ou sem segundo fator" (token só) e "cada arquivo uma vez" (não conta as chamadas de `apagar`) prometem mais do que afirmam.
+- [ ] **(F3, 13.0) Duas perguntas de alcance do arquivo para a Tech Spec antes da 18.0 (`privacy-guardian`, `conformidade-reviewer`):** (i) a versão completa do professor com conta ativa traz `consumo_ia.entrada/saida` e `mensagem_agente.conteudo` também de turmas cujo vínculo já terminou (regra 20, item 18): é texto que ele escreveu, mas o prompt do Analista pode levar ids e desempenho de alunos que ele já não alcança; (ii) `artefato.titulo` entra na versão da escola do professor sem conta ativa: se o título vier do tema que ele escreveu ao Assistente, é um pedaço da conversa dele chegando à coordenação (regra 70, item 8); hoje está coberto pela exceção "registro de uso (execuções, consumo sem texto e artefatos)" do PRD, seção 6.
 - [ ] **Acesso e portabilidade do titular cobrindo as tabelas da fase 3.** A rota do pedido do titular (F3,
   `ciclo-de-vida.service.ts`) precisa alcançar, por aluno: `mensagem_tutor`, `sinal_tutor`, `resposta_atividade`,
   `tentativa_atividade`, `correcao`, `validacao_do_lote` (o aluno do destaque, pelo id) e `consumo_ia` com

@@ -29,6 +29,8 @@ export const registroAcesso = pgTable(
   (tabela) => [
     index('registro_acesso_escola_em_idx').on(tabela.escolaId, tabela.em),
     index('registro_acesso_em_idx').on(tabela.em),
+    // O que o arquivo do titular lê: os acessos de uma pessoa, pela escola (F3, 13.0; regra 80, item 8).
+    index('registro_acesso_usuario_idx').on(tabela.escolaId, tabela.usuarioId, tabela.em),
     check('registro_acesso_evento_valido', sql`${tabela.evento} in ('login', 'login_falho', 'renovacao', 'saida')`),
     check('registro_acesso_escola_so_falta_na_falha_sem_usuario', sql`escola_id is not null or (evento = 'login_falho' and usuario_id is null)`),
   ],

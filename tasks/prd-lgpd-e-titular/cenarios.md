@@ -199,6 +199,11 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] Uma sentinela em cada tabela classificada como do titular aparece no arquivo, e nada de outro titular ou de
     outra escola aparece.
   - [I] O professor que também está em B não leva nada de B no arquivo de A.
+  - [I] (tarefa 13.0) O ato do professor sobre outro aluno (o destaque que abriu, a reivindicação que decidiu, o lote que
+    confirmou) entra só como ato, nas duas versões: sem o diagnóstico, o resumo do lote, o id, o nome e a linha da lista
+    desse aluno, e sem o `antes` e o `depois` da auditoria (techspec §5, 13.0, "Pedido e quem o atendeu").
+  - [I] (tarefa 13.0) O arquivo do aluno não leva o id da coordenação que atendeu o pedido, nem a auditoria em que ele é o
+    alvo (`titular.previa_lida`, `pedido.lido`), nas duas versões, mesmo com a prévia e o pedido lidos antes de o job montar.
 - **RF11, correção de lote.**
   - [I] A correção de um lote pendente ou rejeitado não aparece como resultado, em nenhuma das duas versões.
 - **RF11, colunas proibidas.**
@@ -217,6 +222,36 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
   - [I] A coordenação não baixa a versão `completa`, e o colega da turma não baixa o arquivo do outro.
   - [I] "Meus dados" logado em B não lista o arquivo de A.
   - [I] Quando quem pede é o responsável legal, o arquivo sai na conta do aluno.
+  - [I] (tarefa 13.0) A conferência do objeto e a assinatura da URL acontecem sem transação aberta, nas duas rotas de
+    download, e a auditoria `titular.arquivo_baixado` é gravada antes de a resposta sair: o storage lento não prende conexão
+    do banco (techspec §5, 13.0, "O download").
+  - [U] (tarefa 13.0) O prazo do cliente do armazém corta a chamada: o storage que demora mais que ele vira
+    `ArmazemIndisponivel`, e o que responde dentro dele é atendido. O cliente da API tem uma tentativa e 5 s; o padrão do
+    worker, três tentativas e 10 s.
+  - [I] (tarefa 13.0) As leituras do arquivo em `resposta_atividade`, `registro_acesso` e `correcao` (os destaques que o
+    professor abriu) descem pelos três índices da `0034_indices_da_leitura_do_arquivo`, com volume, sem ler a tabela da
+    escola inteira (regra 80, item 8).
+  - **Tarefa 13.0, onde cada um está** (`apps/api/test/arquivo-do-titular.int.test.ts`, salvo o que diz outro arquivo; o job roda
+    como o worker o roda, com o armazém falso e o relógio injetados). **Conteúdo:** uma sentinela por tabela do aluno e do professor,
+    com outro aluno, o colega e a escola B no mesmo banco, e o professor com a mesma conta em B; o ato do professor sobre outro
+    aluno sem o dado dele, e o arquivo do aluno sem o id da coordenação nem a leitura que ela fez. **Colunas proibidas:** as oito
+    colunas de `COLUNAS_FORA_DO_ARQUIVO` que o titular alcança, nas duas versões; o conteúdo do artefato nunca sai.
+    **Versão da escola:** o Tutor entra, e a conversa do professor, o tema, o texto do modelo e a justificativa não; com conta ativa
+    a rota responde como o inexistente; ativo em B e desativado em A tem a versão em A; a versão apagada, vencida ou de pedido em
+    preparação responde igual. **Correção:** lote aprovado, pendente e rejeitado, nas duas versões. **Quem baixa:** o próprio aluno,
+    o colega, a coordenação e a escola B; "Meus dados" só lista o que é dele; o responsável legal baixa na conta do aluno.
+    **D64:** dois professores, um que usou e outro que não, com a versão da escola igual e o `usoReal` só na completa. **Validade:**
+    o 6º dia baixa e o 8º não, e a URL vale 300 s. **Cabeçalhos:** `no-store`, o nome `meus-dados-AAAA-MM-DD.json`, nenhum campo com
+    a chave do objeto, a auditoria com a finalidade e a URL fora do log. **Falha:** o armazém fora (a montagem lança e o pedido segue
+    `em_preparacao`; o download dá 503), o objeto perdido e o retorno; o storage consultado fora de transação, nas duas rotas; e o
+    prazo do cliente, que corta a chamada (`packages/nucleo/src/titular/armazem-s3.test.ts`). **Concorrência:** dois `montar-arquivo` do mesmo pedido
+    (`apps/worker/test/montar-arquivo.int.test.ts`), o `concluir` que espera o job (o `antes` da auditoria é `pronto`) e o clique duplo
+    (`pedido-titular.int.test.ts`). **Plano:** o rastro, a contagem do texto do modelo, a leitura da auditoria e as três leituras
+    da `0034` (respostas, acessos e destaques abertos). **Expurgo**
+    (`apps/worker/test/expurgo-da-escola.int.test.ts`): 7 dias fica e 8 sai (objeto e linha), `apagado_em`, a falha ao apagar que a
+    noite seguinte repara, 205 arquivos em três lotes e dois jobs ao mesmo tempo. **Alerta:** a medição
+    (`apps/worker/test/medicao-do-arquivo.int.test.ts`) e a regra no Grafana (`infra/test/alerta-do-arquivo.int.test.ts`). **S3 de
+    verdade:** `packages/nucleo/src/titular/armazem-s3.int.test.ts`, que confirma a premissa da seção 12.
 - **RF13, compartilhamento.**
   - [I] O compartilhamento é calculado com e sem `provedor`, e o provedor sem cadastro aparece como "não cadastrado".
   - [I] Depois do expurgo de 12 meses, o pedido ainda lista os suboperadores do período.

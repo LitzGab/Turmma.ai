@@ -5,6 +5,8 @@ import {
   LOTE_DO_EXPURGO,
   ordemDaNoite,
   resumirErro,
+  type ArmazemDeArquivos,
+  type ArquivoDoTitularRepository,
   type ConfiguracaoOperacional,
   type ExpurgoDaEscolaRepository,
   type JanelaLetiva,
@@ -19,8 +21,14 @@ import { FalhaDeJob } from '../falha-de-job.js'
 /** O job da escola que a rotina noturna grava, um por escola e noite (`sistema.expurgar-dado-pessoal`). */
 export const TIPO_EXPURGAR_ESCOLA = 'retencao.expurgar-escola'
 
+/** Quantos arquivos do titular o expurgo apaga por volta: cada um é uma chamada ao storage, e são poucos por escola. */
+export const LOTE_DOS_ARQUIVOS_DO_TITULAR = 100
+
 export interface DependenciasDoExpurgoDaEscola {
   repositorio: Pick<ExpurgoDaEscolaRepository, 'expurgarLote' | 'expurgarRegistroDoExpurgo' | 'registrar' | 'categoriaPendente'>
+  /** Os arquivos do titular vencidos ou marcados `apagado_em` (F3, tarefa 13.0): o objeto sai do storage, e só então a linha. */
+  arquivos: Pick<ArquivoDoTitularRepository, 'aApagar' | 'apagarLinhas'>
+  armazem: Pick<ArmazemDeArquivos, 'apagar'>
   retencao: Pick<RetencaoDaEscolaRepository, 'ajustes'>
   /** O horário letivo da escola do contexto: o expurgo confere a cada lote, e para quando ele abre. */
   janelaDaEscola: Pick<ConfiguracaoOperacional<JanelaLetiva>, 'daEscola'>
@@ -50,12 +58,15 @@ export interface DependenciasDoExpurgoDaEscola {
  *   relido, e o `skip locked` dá a cada um linhas diferentes. Um job que morre no meio desfaz só o lote em andamento.
  * - Loga só a categoria (sob `tipo`) e as contagens; a escola vai pelo contexto, nunca uma linha.
  */
-export function criarExpurgoDaEscola({ repositorio, retencao, janelaDaEscola, relogio, logger, lote = LOTE_DO_EXPURGO }: DependenciasDoExpurgoDaEscola): Processador {
+export function criarExpurgoDaEscola({ repositorio, arquivos, armazem, retencao, janelaDaEscola, relogio, logger, lote = LOTE_DO_EXPURGO }: DependenciasDoExpurgoDaEscola): Processador {
   return async () => {
     if (contextoAtual()?.escolaId === undefined) throw new FalhaDeJob(CodigoDeFalhaDeJob.DADOS_INVALIDOS, true)
     const agora = relogio.agora()
     const prazos = new Map(retencaoDaEscola(await retencao.ajustes()).map(({ categoria, meses }) => [categoria, meses]))
     const janela = await janelaDaEscola.daEscola()
+    // Primeiro os arquivos do titular (F3, tarefa 13.0): o objeto sai do storage e só então a linha. O que o storage não
+    // deixou apagar fica com a linha e é tentado de novo na noite seguinte (pelo `apagado_em` ou pelo vencimento).
+    const { apagados: arquivosApagadosTotal, naoApagados: arquivosNaoApagadosTotal } = await apagarArquivosDoTitular({ arquivos, armazem, janela, relogio, agora, logger })
     const ordem = ordemDaNoite(await repositorio.categoriaPendente())
     let linhasTotal = 0
     for (const categoria of ordem) {
@@ -106,6 +117,49 @@ export function criarExpurgoDaEscola({ repositorio, retencao, janelaDaEscola, re
       if (!doLote.cheio) break
     }
     const categoriasTotal = ordem.length
-    logger.info({ evento: 'retencao.expurgada', categoriasTotal, linhasTotal, registroApagadoTotal })
+    logger.info({ evento: 'retencao.expurgada', categoriasTotal, linhasTotal, registroApagadoTotal, arquivosApagadosTotal, arquivosNaoApagadosTotal })
   }
+}
+
+interface DependenciasDoApagarArquivos {
+  arquivos: DependenciasDoExpurgoDaEscola['arquivos']
+  armazem: DependenciasDoExpurgoDaEscola['armazem']
+  janela: JanelaLetiva
+  relogio: Relogio
+  agora: Date
+  logger: LoggerBase
+}
+
+/**
+ * Apaga os arquivos do titular que venceram ou foram marcados `apagado_em` (a eliminação do titular, 15.0), em lotes, do mais
+ * antigo, **sem passar da janela letiva**: o objeto sai do storage e, só depois, a linha. Falha ao apagar um objeto não
+ * derruba o job nem os outros arquivos: a linha fica, e a noite seguinte o tenta de novo. O lote em que nenhum objeto saiu
+ * para o laço, porque os mesmos voltariam; o laço termina quando a leitura volta vazia. O arquivo com 7 dias fica e o com 8 sai
+ * (a comparação do repositório é estrita).
+ */
+async function apagarArquivosDoTitular({ arquivos, armazem, janela, relogio, agora, logger }: DependenciasDoApagarArquivos): Promise<{ apagados: number; naoApagados: number }> {
+  let apagados = 0
+  let naoApagados = 0
+  for (;;) {
+    const doLote = await arquivos.aApagar(agora, LOTE_DOS_ARQUIVOS_DO_TITULAR)
+    if (doLote.length === 0) break
+    // A janela só é conferida quando há o que apagar: a escola sem arquivo vencido não gasta uma leitura do relógio.
+    if (estaNaJanela(janela, relogio.agora())) break
+    const sairam: string[] = []
+    for (const arquivo of doLote) {
+      try {
+        await armazem.apagar(arquivo.chaveObjeto)
+        sairam.push(arquivo.id)
+      } catch (erro) {
+        naoApagados += 1
+        // Nem a chave do objeto nem o texto do erro vão ao log: só que um objeto ficou, e o motivo resumido.
+        logger.warn({ evento: 'retencao.arquivo_nao_apagado', erro: resumirErro(erro) })
+      }
+    }
+    const linhasApagadas = await arquivos.apagarLinhas(sairam)
+    apagados += linhasApagadas
+    // Nenhum objeto saiu, ou nenhuma linha saiu com eles: o mesmo lote voltaria, e a noite seguinte tenta de novo.
+    if (sairam.length === 0 || linhasApagadas === 0) break
+  }
+  return { apagados, naoApagados }
 }

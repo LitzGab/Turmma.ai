@@ -1,14 +1,38 @@
-import { and, asc, eq, inArray, or, sql } from 'drizzle-orm'
+import { sql, type SQL } from 'drizzle-orm'
 import { exigirEscolaDoContexto } from '../contexto/escola-do-contexto.js'
 import type { Banco, TransacaoBanco } from '../db/banco.js'
-import { consumoIa } from '../db/schema/consumo-ia.js'
-import { execucaoAgente } from '../db/schema/execucao-agente.js'
 import { FUSO_DO_USO, diaDeUso } from '../uso/dia-de-uso.js'
 
 /** Uma chamada com envio externo atribuível ao titular: o `provedor` é nulo na linha anterior à migration da 7.0. */
 export interface ChamadaDoRastro {
   readonly provedor: string | null
   readonly em: Date
+}
+
+/**
+ * O rastro do aluno em dois ramos de `union all` (F3, tarefa 13.0; Tech Spec do F3, seção 5, "O índice do rastro"): o do
+ * `aluno_id`, que desce pelo `consumo_ia_aluno_idx`, e o da execução que ele pediu, que desce pelo
+ * `execucao_agente_solicitada_por_idx` e pelo `consumo_ia_execucao_idx`, os dois começando pela escola. Fica fora da classe
+ * para o teste de plano usar a mesma instrução que o código roda; a escola é a do contexto, e nunca um argumento.
+ */
+export function instrucaoDoRastroDoAluno(titularId: string): SQL {
+  const escolaId = exigirEscolaDoContexto()
+  return sql`
+      select c.provedor, c.em from consumo_ia c
+      where c.escola_id = ${escolaId} and c.envio_externo and c.aluno_id = ${titularId}
+      union all
+      select c.provedor, c.em from consumo_ia c
+      join execucao_agente x on x.escola_id = c.escola_id and x.id = c.execucao_id
+      where c.escola_id = ${escolaId} and c.envio_externo and x.solicitada_por = ${titularId}
+      order by em
+    `
+}
+
+/** O uso real de um provedor pelo professor: a primeira e a última chamada com envio externo. */
+export interface UsoRealPorProvedor {
+  readonly provedor: string | null
+  readonly primeiro: Date
+  readonly ultimo: Date
 }
 
 /** O vínculo do titular como professor: quando ele saiu, e se algum segue aberto. */
@@ -22,7 +46,10 @@ export interface VinculosDoProfessor {
  * o banco). A regra — período, rastro, reserva e hospedagem — fica no `Compartilhamento`, que chama este.
  *
  * **Cada método lê a escola do contexto e nenhum a recebe por parâmetro** (regra 10, item 3): quem chamou não decide
- * o escopo, e não existe caminho para ler o dado de outra escola.
+ * o escopo, e não existe caminho para ler o dado de outra escola. O filtro por `escola_id` das consultas é a segunda camada,
+ * atrás das FKs compostas (`consumo_ia_aluno_da_escola_fk`, `consumo_ia_execucao_da_escola_fk`,
+ * `execucao_agente_solicitada_por_da_escola_fk` e as de `vinculo`, `credencial_matricula` e `conta_externa`), que já impedem
+ * a linha de outra escola de apontar para o titular: ele fica para quem alterar a consulta.
  */
 export class CompartilhamentoRepository {
   constructor(private readonly banco: Banco | TransacaoBanco) {}
@@ -74,18 +101,33 @@ export class CompartilhamentoRepository {
   /**
    * As chamadas com envio externo atribuíveis ao titular, na escola do contexto: as que levam o `aluno_id` dele e as
    * das execuções que ele pediu. A linha sem `provedor` é a antiga, anterior à migration da 7.0.
+   *
+   * **Dois ramos em `union all`, e não um `or` com subconsulta** (triagem de 09/10/2026; Tech Spec do F3, seção 5, "O
+   * índice do rastro"): o `or` não desce por índice e lê o consumo da escola inteira (regra 80, item 8). O ramo do
+   * `aluno_id` desce pelo `consumo_ia_aluno_idx`; o da execução, pelo `execucao_agente_solicitada_por_idx` e pelo
+   * `consumo_ia_execucao_idx`, os dois por `escola_id`. A chamada do Tutor casa pelos dois ramos e vem repetida: o
+   * agrupamento usa só a primeira e a última data de cada (`provedor`, suboperador), e a repetição não muda nenhuma.
    */
   async rastroDoAluno(titularId: string): Promise<ChamadaDoRastro[]> {
+    const { rows } = await this.banco.execute<{ provedor: string | null; em: Date | string }>(instrucaoDoRastroDoAluno(titularId))
+    return rows.map(({ provedor, em }) => ({ provedor, em: dataDoBanco(em) ?? new Date(NaN) }))
+  }
+
+  /**
+   * O uso real da IA por empresa de um professor, na escola do contexto: por `provedor`, a primeira e a última chamada com
+   * envio externo das execuções que ele pediu. **Só o arquivo completo do próprio professor o lê** (D64): a coordenação
+   * nunca vê quando um professor usou a IA, e a foto do pedido dele é só por período. A linha sem `provedor` é a antiga.
+   */
+  async usoRealDoProfessor(titularId: string): Promise<UsoRealPorProvedor[]> {
     const escolaId = exigirEscolaDoContexto()
-    // O filtro de escola é a segunda camada: as FKs compostas (`consumo_ia_aluno_da_escola_fk`,
-    // `consumo_ia_execucao_da_escola_fk`, `execucao_agente_solicitada_por_da_escola_fk`) já impedem que a linha de
-    // outra escola aponte para o titular, e ele fica para quem alterar a consulta (regra 10).
-    const pedidas = this.banco.select({ id: execucaoAgente.id }).from(execucaoAgente).where(and(eq(execucaoAgente.escolaId, escolaId), eq(execucaoAgente.solicitadaPor, titularId)))
-    return this.banco
-      .select({ provedor: consumoIa.provedor, em: consumoIa.em })
-      .from(consumoIa)
-      .where(and(eq(consumoIa.escolaId, escolaId), eq(consumoIa.envioExterno, true), or(eq(consumoIa.alunoId, titularId), inArray(consumoIa.execucaoId, pedidas))))
-      .orderBy(asc(consumoIa.em))
+    const { rows } = await this.banco.execute<{ provedor: string | null; primeiro: Date | string; ultimo: Date | string }>(sql`
+      select c.provedor, min(c.em) as primeiro, max(c.em) as ultimo from consumo_ia c
+      join execucao_agente x on x.escola_id = c.escola_id and x.id = c.execucao_id
+      where c.escola_id = ${escolaId} and c.envio_externo and x.solicitada_por = ${titularId}
+      group by c.provedor
+      order by min(c.em), c.provedor
+    `)
+    return rows.map(({ provedor, primeiro, ultimo }) => ({ provedor, primeiro: dataDoBanco(primeiro) ?? new Date(NaN), ultimo: dataDoBanco(ultimo) ?? new Date(NaN) }))
   }
 }
 

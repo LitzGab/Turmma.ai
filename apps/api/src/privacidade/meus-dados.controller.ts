@@ -1,0 +1,36 @@
+import { Permite } from '@educa/nucleo'
+import { esquemaPedidoSemCorpo, type RespostaDoArquivo, type RespostaMeusDados } from '@educa/shared'
+import { Body, Controller, Get, Header, HttpCode, HttpStatus, Param, Post } from '@nestjs/common'
+import { idDoCaminho, lerEntrada } from '../estrutura/entrada.js'
+import { PrivacidadeService } from './privacidade.service.js'
+
+/**
+ * `/v1/meus-dados` (F3, tarefa 13.0; Tech Spec do F3, seção 4): do **aluno** e do **professor**, só sobre si mesmos. A
+ * coordenação não é titular de pedido e não tem a célula na matriz. Nada aqui recebe o id da pessoa: ele vem da sessão
+ * (regra 10, item 4), e a resposta de "não é seu" é a do inexistente (regra 10, item 6).
+ */
+@Controller('v1/meus-dados')
+export class MeusDadosController {
+  constructor(private readonly privacidade: PrivacidadeService) {}
+
+  /** Os pedidos da própria pessoa na escola ativa, com o estado e a validade do arquivo, e o que a escola guarda dela por categoria. */
+  @Get()
+  @Permite('meus_dados', 'listar')
+  @Header('Cache-Control', 'no-store')
+  meusDados(): Promise<RespostaMeusDados> {
+    return this.privacidade.meusDados()
+  }
+
+  /**
+   * A URL de 5 minutos da versão completa do arquivo do próprio usuário: o nome `meus-dados-AAAA-MM-DD.json`, `attachment` e
+   * `no-store` assinados. O pedido do colega, o de outra escola e o inexistente respondem igual. Auditada.
+   */
+  @Post(':id/baixar')
+  @Permite('meus_dados', 'baixar')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  baixar(@Param('id') id: string, @Body() corpo: unknown): Promise<RespostaDoArquivo> {
+    lerEntrada(esquemaPedidoSemCorpo, corpo)
+    return this.privacidade.baixarMeuArquivo(idDoCaminho(id))
+  }
+}

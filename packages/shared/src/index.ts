@@ -812,6 +812,23 @@ export type {
   RespostaRetencao,
   RetencaoDaCategoria,
 } from './privacidade/retencao.js'
+export {
+  esquemaBaixarArquivoDaEscola,
+  esquemaPedidoDeMeusDados,
+  esquemaRespostaDoArquivo,
+  esquemaRespostaMeusDados,
+  FINALIDADE_DO_ARQUIVO_DO_PROPRIO_TITULAR,
+  FINALIDADES_DO_ARQUIVO,
+  FINALIDADES_DO_ARQUIVO_DA_ESCOLA,
+  HORAS_EM_PREPARACAO_PARA_ALERTAR,
+  nomeDoArquivoDoTitular,
+  TIPO_DO_JOB_MONTAR_ARQUIVO,
+  TIPOS_DE_PEDIDO_COM_ARQUIVO,
+  VALIDADE_DA_URL_DO_ARQUIVO_SEGUNDOS,
+  VALIDADE_DO_ARQUIVO_DIAS,
+  VERSOES_DO_ARQUIVO,
+} from './privacidade/arquivo.js'
+export type { BaixarArquivoDaEscola, FinalidadeDoArquivo, PedidoDeMeusDados, RespostaDoArquivo, RespostaMeusDados, VersaoDoArquivo } from './privacidade/arquivo.js'
 export { CLASSIFICACAO_DAS_TABELAS, COLUNAS_FORA_DO_ARQUIVO } from './privacidade/classificacao.js'
 export type { ArquivoDaTabela, ClasseDaTabela, ClassificacaoDaTabela } from './privacidade/classificacao.js'
 export {

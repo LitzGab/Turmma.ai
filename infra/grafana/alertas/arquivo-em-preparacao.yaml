@@ -1,0 +1,64 @@
+# Alerta "Arquivo do titular em preparação há mais de 2 h" (Tech Spec do F3, seção 7c; runbook:
+# docs/runbook.md#arquivo-do-titular-em-preparação-há-mais-de-2-h). Provisionado por arquivo no Grafana da observabilidade local
+# (infra/compose.yml monta esta pasta em provisioning/alerting).
+#
+# `arquivo.horas_em_preparacao{escola_id}` é medida pelo worker-lote a cada 5 min, de `pedido_titular`: as horas desde que o pedido
+# de acesso ou de portabilidade mais antigo da escola foi registrado e ainda espera o arquivo ficar pronto. Dispara por escola quando
+# passa de 2 h (HORAS_EM_PREPARACAO_PARA_ALERTAR), em qualquer réplica, por 1 min: o valor sobe devagar, e o minuto só tira o susto de
+# uma leitura isolada. O alerta traz a escola, nunca o pedido nem o titular.
+#
+# Sem dado é normal: só a escola com pedido `em_preparacao` tem série, e some quando o job termina e o pedido fica `pronto`.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: arquivo-em-preparacao
+    folder: Educa.ia alertas
+    interval: 10s
+    rules:
+      - uid: educa-arquivo-em-preparacao
+        title: Arquivo do titular em preparação há mais de 2 h
+        condition: C
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          area: arquivo-do-titular
+        annotations:
+          summary: 'O arquivo do titular da escola {{ $labels.escola_id }} está em preparação há mais de 2 h'
+          description: O pedido de acesso ou de portabilidade não ficou pronto no prazo (LGPD, art. 19, II). Siga o runbook.
+          runbook_url: https://github.com/LitzGab/Educa.ia/blob/main/docs/runbook.md#arquivo-do-titular-em-preparação-há-mais-de-2-h
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: max by (escola_id) (arquivo_horas_em_preparacao{job="educa/worker"})
+              instant: true
+              range: false
+              intervalMs: 10000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - type: query
+                  evaluator:
+                    type: gt
+                    params: [2]

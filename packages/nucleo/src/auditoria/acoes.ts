@@ -15,6 +15,7 @@ import {
   FINALIDADE_DO_REGISTRO_DE_INCIDENTE,
   FINALIDADE_DO_REGISTRO_DE_SUBOPERADOR,
   FINALIDADES_DA_LEITURA_DE_ALUNOS,
+  FINALIDADES_DO_ARQUIVO,
   FINALIDADES_DA_LEITURA_NOMINAL,
   FINALIDADES_DA_REDEFINICAO_DE_MFA,
   LICENCAS_DE_MATERIAL,
@@ -34,6 +35,7 @@ import {
   TIPOS_DE_PEDIDO_DO_TITULAR,
   TITULARIDADES_DE_MATERIAL,
   VALIDADES_DO_ACESSO_DIAS,
+  VERSOES_DO_ARQUIVO,
 } from '@educa/shared'
 import { PROVEDORES_EXTERNOS } from '../db/schema/conta-externa.js'
 import { TIPOS_DE_REDE } from '../db/schema/rede.js'
@@ -670,6 +672,18 @@ export const ACOES_DE_AUDITORIA = {
     antes: null,
     depois: null,
     finalidade: null,
+  },
+  /**
+   * Alguém pediu a URL do arquivo do titular (F3, 13.0; RF12 e RF17): o próprio titular, em "Meus dados" (versão
+   * `completa`), ou a coordenação, para a versão da escola de quem não tem conta ativa. `entidadeId` é o pedido; `depois`
+   * diz só qual versão, e a finalidade sai de lista fechada. **Nunca a URL nem a chave do objeto**: nada que dê acesso ao
+   * arquivo vai à auditoria. Grava na mesma transação que confere o arquivo e assina, antes de a resposta sair.
+   */
+  'titular.arquivo_baixado': {
+    entidade: 'pedido_titular',
+    antes: null,
+    depois: z.strictObject({ versao: z.enum(VERSOES_DO_ARQUIVO) }),
+    finalidade: z.enum(FINALIDADES_DO_ARQUIVO),
   },
 } as const satisfies Record<string, DefinicaoDeAcao>
 

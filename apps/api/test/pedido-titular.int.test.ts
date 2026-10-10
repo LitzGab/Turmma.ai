@@ -464,8 +464,9 @@ describe('pedido do titular (F3, tarefa 11.0): busca, prévia, registro, lista, 
           finalidade: null,
         },
       ])
+      // O pedido de acesso nasce `em_preparacao` desde a 13.0 (gera arquivo), e o `antes` é o estado que o `update` trocou.
       expect(await auditoriasDa(a.escolaId, 'pedido.concluido')).toEqual([
-        { entidade: 'pedido_titular', entidade_id: id, autor_usuario_id: a.coordenacao.usuarioId, antes: { estado: 'recebido' }, depois: { estado: 'concluido' }, finalidade: null },
+        { entidade: 'pedido_titular', entidade_id: id, autor_usuario_id: a.coordenacao.usuarioId, antes: { estado: 'em_preparacao' }, depois: { estado: 'concluido' }, finalidade: null },
       ])
       // O termo da busca não vai à auditoria (RF17).
       expect(JSON.stringify(await auditoriasDa(a.escolaId, 'titular.buscado'))).not.toContain(termo)
@@ -502,6 +503,8 @@ describe('pedido do titular (F3, tarefa 11.0): busca, prévia, registro, lista, 
         ['GET', `/v1/privacidade/pedidos/${pedidoId}`],
         ['POST', `/v1/privacidade/pedidos/${pedidoId}/concluir`, {}],
         ['POST', `/v1/privacidade/pedidos/${pedidoId}/corrigir-nome`, { nome: 'Qualquer' }],
+        // A versão da escola do arquivo (13.0): só a coordenação com segundo fator chega; o conteúdo é de `arquivo-do-titular.int.test.ts`.
+        ['POST', `/v1/privacidade/pedidos/${pedidoId}/arquivo`, { finalidade: 'entregar_ao_titular' }],
       ]
       for (const [verbo, caminho, corpo] of rotas) {
         const pedir = (token: string | undefined) => chamar(api.url, verbo, caminho, token, corpo)
@@ -982,6 +985,12 @@ describe('pedido do titular (F3, tarefa 11.0): busca, prévia, registro, lista, 
       expect(segunda.corpo['id']).toBe(primeira.corpo['id'])
       expect(await pedidosNoBanco(a.escolaId)).toHaveLength(1)
       expect(await auditoriasDa(a.escolaId, 'pedido.registrado')).toHaveLength(1)
+      // O pedido de acesso enfileira o job do arquivo uma vez só: o reenvio simultâneo não grava um segundo (regra 80, item 7).
+      const { rows: jobs } = await bancada.pool.query<{ total: number }>(
+        `select count(*)::int as total from job_registro where escola_id = $1 and tipo = 'titular.montar-arquivo'`,
+        [a.escolaId],
+      )
+      expect(jobs[0]?.total).toBe(1)
     })
 
     it('a chave de envio devolve só o pedido que é este mesmo: o de quem pediu, do mesmo titular, tipo, solicitante e chegada', async () => {
@@ -1051,7 +1060,7 @@ describe('pedido do titular (F3, tarefa 11.0): busca, prévia, registro, lista, 
         const promessaPrimeira = concluir(a.coordenacao, id)
         await gatilho.esperarParadas()
         const promessaSegunda = concluir(a.coordenacao, id)
-        await esperarNaTrava(bancada.pool, '%update "pedido_titular"%')
+        await esperarNaTrava(bancada.pool, '%update pedido_titular p%')
         await gatilho.soltar()
         primeira = await promessaPrimeira
         segunda = await promessaSegunda

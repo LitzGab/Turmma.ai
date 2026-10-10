@@ -58,6 +58,8 @@ export function configuracaoDeTeste(sobreposicao: SobreposicaoDeTeste = {}): Con
     REDIS_FILA_URL: `redis://127.0.0.1:${valorObrigatorio(ambiente, 'REDIS_FILA_PORTA_HOST')}`,
     // A do compose. No teste nada é exportado: a aplicação montada sem telemetria mede num medidor vazio.
     TELEMETRIA_OTLP_URL: 'http://observabilidade:4318',
+    // O storage do compose de teste, visto da máquina (F3, tarefa 13.0): o mesmo endereço para falar com ele e para assinar.
+    STORAGE_URL: `http://127.0.0.1:${valorObrigatorio(ambiente, 'STORAGE_PORTA_HOST')}`,
     // O oidc-falso do compose de teste, visto da máquina: o emissor é o endereço que a API usa, e o ID token sai com ele.
     LOGIN_EXTERNO_GOOGLE_EMISSOR: `${urlDoOidcFalso(ambiente)}/google`,
     LOGIN_EXTERNO_MICROSOFT_EMISSOR: `${urlDoOidcFalso(ambiente)}/microsoft`,

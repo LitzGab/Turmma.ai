@@ -232,6 +232,20 @@
       "when": 1791575793569,
       "tag": "0032_pedido_titular",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791599752431,
+      "tag": "0033_arquivo_titular",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791606189431,
+      "tag": "0034_indices_da_leitura_do_arquivo",
+      "breakpoints": true
     }
   ]
 }

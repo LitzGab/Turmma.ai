@@ -13,6 +13,7 @@ import { lerEscolaARevogar, OPCAO_DA_ESCOLA } from '../../apps/api/src/ops/revog
 import { EVENTO_DO_LIMITE_DA_SALA, JANELA_DOS_LIMITES_DA_SALA_MS, LimitesDaSala, TETO_DE_CODIGOS_ERRADOS_POR_ESCOLA } from '../../apps/api/src/sala/limites-da-sala.ts'
 import { ContadorEmJanela } from '../../apps/api/src/sessao/senha/contador-em-janela.ts'
 import { LIMITES_DO_HISTOGRAMA_HTTP_S } from '../../packages/nucleo/src/telemetria/metricas.ts'
+import { HORAS_EM_PREPARACAO_PARA_ALERTAR } from '../../packages/shared/src/privacidade/arquivo.ts'
 import { HORAS_PARA_A_ESCOLA_CONFIRMAR } from '../../packages/shared/src/privacidade/incidente.ts'
 import { lerAmbienteExemplo } from '../../tools/ci/compose.ts'
 import {
@@ -142,6 +143,12 @@ describe('regras de alerta provisionadas', () => {
     expect(incidente.for).toBe('1m')
     expect(expressao(incidente)).toBe('max by (escola_id) (incidente_horas_sem_confirmacao{job="educa/worker"})')
     expect(limiar(incidente)).toEqual({ type: 'gt', params: [HORAS_PARA_A_ESCOLA_CONFIRMAR] })
+
+    // F3, tarefa 13.0: por escola, em qualquer réplica do worker-lote, e só acima de 2 h esperando o arquivo (HORAS_EM_PREPARACAO_PARA_ALERTAR).
+    const arquivo = regraPorUid(REGRAS_PROVISIONADAS.arquivoEmPreparacao).regra
+    expect(arquivo.for).toBe('1m')
+    expect(expressao(arquivo)).toBe('max by (escola_id) (arquivo_horas_em_preparacao{job="educa/worker"})')
+    expect(limiar(arquivo)).toEqual({ type: 'gt', params: [HORAS_EM_PREPARACAO_PARA_ALERTAR] })
   })
 
   it('L11: a linha `sala.limite_atingido` que o limite da escola escreve traz o `escolaId` que o comando da entrada do runbook recebe', async () => {

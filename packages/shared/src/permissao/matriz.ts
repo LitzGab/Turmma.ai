@@ -173,9 +173,17 @@ export const RECURSOS = {
   /**
    * Os pedidos do titular (F3, 11.0), só da coordenação: `registrar`, `listar` e `ler` são `POST`, `GET` e `GET /:id` de
    * `/v1/privacidade/pedidos`; `concluir` e `corrigir_nome`, os `POST /:id/concluir` e `/:id/corrigir-nome`. Cada leitura
-   * vai para a auditoria com finalidade, e nada alcança o pedido sobre a própria pessoa (mesma `conta_id`).
+   * vai para a auditoria com finalidade, e nada alcança o pedido sobre a própria pessoa (mesma `conta_id`). `arquivo` é
+   * `POST /:id/arquivo` (13.0): a URL de 5 minutos da versão da escola do titular sem conta ativa, com a finalidade e a
+   * auditoria `titular.arquivo_baixado`. A versão completa **nunca** sai por aqui.
    */
-  privacidade_pedidos: ['registrar', 'listar', 'ler', 'concluir', 'corrigir_nome'],
+  privacidade_pedidos: ['registrar', 'listar', 'ler', 'concluir', 'corrigir_nome', 'arquivo'],
+  /**
+   * "Meus dados", do aluno e do professor (F3, 13.0): `listar` é `GET /v1/meus-dados`, os pedidos da própria pessoa na
+   * escola ativa; `baixar`, `POST /v1/meus-dados/:id/baixar`, a URL de 5 minutos da versão completa do arquivo dela. É o
+   * único caminho da versão completa. A coordenação não é titular de pedido, então não tem a célula.
+   */
+  meus_dados: ['listar', 'baixar'],
 } as const satisfies Record<string, readonly string[]>
 
 export type Recurso = keyof typeof RECURSOS
@@ -223,7 +231,8 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     privacidade_suboperadores: { ler: 'nunca' },
     privacidade_incidentes: { ler: 'nunca', confirmar: 'nunca' },
     privacidade_titulares: { buscar: 'nunca', previa: 'nunca' },
-    privacidade_pedidos: { registrar: 'nunca', listar: 'nunca', ler: 'nunca', concluir: 'nunca', corrigir_nome: 'nunca' },
+    privacidade_pedidos: { registrar: 'nunca', listar: 'nunca', ler: 'nunca', concluir: 'nunca', corrigir_nome: 'nunca', arquivo: 'nunca' },
+    meus_dados: { listar: 'nunca', baixar: 'nunca' },
   },
   coordenador: {
     sistema_contexto: { ler: 'proprio' },
@@ -264,7 +273,8 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     privacidade_suboperadores: { ler: 'unidade' },
     privacidade_incidentes: { ler: 'unidade', confirmar: 'unidade' },
     privacidade_titulares: { buscar: 'unidade', previa: 'unidade' },
-    privacidade_pedidos: { registrar: 'unidade', listar: 'unidade', ler: 'unidade', concluir: 'unidade', corrigir_nome: 'unidade' },
+    privacidade_pedidos: { registrar: 'unidade', listar: 'unidade', ler: 'unidade', concluir: 'unidade', corrigir_nome: 'unidade', arquivo: 'unidade' },
+    meus_dados: { listar: 'nunca', baixar: 'nunca' },
   },
   professor: {
     sistema_contexto: { ler: 'proprio' },
@@ -305,7 +315,8 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     privacidade_suboperadores: { ler: 'nunca' },
     privacidade_incidentes: { ler: 'nunca', confirmar: 'nunca' },
     privacidade_titulares: { buscar: 'nunca', previa: 'nunca' },
-    privacidade_pedidos: { registrar: 'nunca', listar: 'nunca', ler: 'nunca', concluir: 'nunca', corrigir_nome: 'nunca' },
+    privacidade_pedidos: { registrar: 'nunca', listar: 'nunca', ler: 'nunca', concluir: 'nunca', corrigir_nome: 'nunca', arquivo: 'nunca' },
+    meus_dados: { listar: 'proprio', baixar: 'proprio' },
   },
   aluno: {
     sistema_contexto: { ler: 'proprio' },
@@ -346,7 +357,8 @@ export const MATRIZ: { readonly [P in Papel]: CelulasDoPapel } = {
     privacidade_suboperadores: { ler: 'nunca' },
     privacidade_incidentes: { ler: 'nunca', confirmar: 'nunca' },
     privacidade_titulares: { buscar: 'nunca', previa: 'nunca' },
-    privacidade_pedidos: { registrar: 'nunca', listar: 'nunca', ler: 'nunca', concluir: 'nunca', corrigir_nome: 'nunca' },
+    privacidade_pedidos: { registrar: 'nunca', listar: 'nunca', ler: 'nunca', concluir: 'nunca', corrigir_nome: 'nunca', arquivo: 'nunca' },
+    meus_dados: { listar: 'proprio', baixar: 'proprio' },
   },
 }
 

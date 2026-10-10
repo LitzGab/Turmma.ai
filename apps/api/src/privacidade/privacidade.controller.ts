@@ -1,10 +1,12 @@
 import { LimiteDaBuscaDeTitulares, Permite } from '@educa/nucleo'
 import {
+  esquemaBaixarArquivoDaEscola,
   esquemaBuscaDeTitulares,
   esquemaCorrecaoDeNome,
   esquemaPedidoSemCorpo,
   esquemaRegistroDePedido,
   type RespostaBuscaDeTitulares,
+  type RespostaDoArquivo,
   type RespostaIncidentes,
   type RespostaPedidos,
   type RespostaPreviaDoTitular,
@@ -132,5 +134,18 @@ export class PrivacidadeController {
   @Header('Cache-Control', 'no-store')
   corrigirNome(@Param('id') id: string, @Body() corpo: unknown): Promise<void> {
     return this.privacidade.corrigirNomeDoPedido(idDoCaminho(id), lerEntrada(esquemaCorrecaoDeNome, corpo).nome)
+  }
+
+  /**
+   * A URL de 5 minutos da versão da escola do arquivo (F3, tarefa 13.0; RF12), para o titular **sem conta ativa** nesta
+   * escola. Com conta ativa, a versão não existe e a resposta é a do id inexistente; a completa nunca sai por aqui.
+   * Auditada com a finalidade, e a resposta nunca é guardada (`no-store`).
+   */
+  @Post('pedidos/:id/arquivo')
+  @Permite('privacidade_pedidos', 'arquivo')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  arquivoDoPedido(@Param('id') id: string, @Body() corpo: unknown): Promise<RespostaDoArquivo> {
+    return this.privacidade.arquivoDaEscola(idDoCaminho(id), lerEntrada(esquemaBaixarArquivoDaEscola, corpo).finalidade)
   }
 }

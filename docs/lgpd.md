@@ -99,6 +99,21 @@ deveria existir.
 | Registro de acesso à aplicação (IP, data e hora) | todos | segurança | obrigação legal (Marco Civil, art. 15) | 6 meses, inclusive a falha de login sem escola; apagado pelo `sistema.expurgar-acesso` (17.0); fica depois da eliminação do usuário, com o id |
 | Auditoria (quem fez o quê, com finalidade; só ids, estados e datas, e na decisão da reivindicação o `alunoId` que a aprovação criou, o elo que liga o aluno à aprovação da identidade dele na pergunta de fechamento da regra 20) | todos | prestação de contas à escola e ao titular | execução de contrato e obrigação da escola | vigência + 5 anos |
 | Pedido do titular (`pedido_titular`: o tipo do pedido, quem pediu — titular ou responsável legal, lista fechada —, quando chegou à escola, o estado, quem registrou, a foto de por quais empresas o dado passou e as marcas de homônimo e de nome trocado; **nenhuma coluna de nome, matrícula ou texto**: o nome do titular vive no `usuario`, e a lista e o detalhe o mostram só enquanto ele existe — depois, "Titular eliminado") | aluno, professor | registrar e conduzir o pedido de acesso, portabilidade, compartilhamento, correção e eliminação, e provar que ele foi atendido | execução de contrato e obrigação da escola (LGPD, arts. 18 e 19) | vigência + 5 anos (proposta), como a auditoria (grupo `registro_de_decisao`): a eliminação do titular não apaga o pedido, que fica com os ids, e a `chave_envio` nunca entra no arquivo do titular (F3, tarefa 11.0) |
+| Arquivo do titular (`arquivo_titular`: de qual pedido e de qual versão — `completa` ou `coordenacao` —, onde o JSON está no storage privado, o tamanho e quando ficou pronto e até quando fica; **nenhum dado do titular na linha**: o conteúdo mora no objeto, e o campo `chave_objeto` nunca sai pela API (a URL assinada leva o caminho do objeto, que só tem ids)) | aluno, professor | entregar ao titular a cópia dos dados que a escola guarda dele (LGPD, art. 18, II e V): ele baixa a versão completa em "Meus dados", e a coordenação baixa a versão da escola só quando ele não tem conta ativa | obrigação da escola (LGPD, art. 18) | 7 dias depois de pronto, ou até a eliminação do titular (`apagado_em`): a rotina da escola apaga o objeto do storage e só então a linha; a noite seguinte repete o que o storage não deixou apagar (F3, tarefa 13.0) |
+
+**O arquivo do titular (F3, tarefa 13.0).** O pedido de acesso ou de portabilidade monta, fora da requisição, um JSON no storage
+privado (`titular/<escola>/<pedido>/<versao>.json`) e passa o pedido de `em_preparacao` para `pronto`. O titular o baixa em "Meus dados"
+por uma URL assinada de 5 minutos, com `no-store` e `attachment`, e a escola nunca o guarda em log, cache nem navegador. Duas versões:
+a **completa**, só do titular, e a **da coordenação**, que só existe quando ele não tem conta ativa nesta escola e **nunca** traz a
+conversa dele com o Assistente de ensino, o tema que ele escreveu nos pedidos, o texto enviado ao modelo nem a justificativa das
+entregas (regra 70, item 8); ela traz a conversa do Tutor, por exceção declarada no PRD, e o registro de uso do professor, por
+exceção à D64, e as duas leituras são auditadas com finalidade. O critério de cada coluna é de lista permitida: entra o que é do
+titular; o id de outra pessoa da escola (`criado_por`, `decidida_por`, `registrado_por`...) fica na auditoria; hash, segredo, chave
+de envio, chave de objeto e `sub` da conta externa nunca entram; a correção de um lote que o professor não aprovou sai só como
+"em validação" ou "rejeitada", sem acertos nem diagnóstico; o conteúdo de artefato nunca sai. O que **não** entra, e por quê: as
+leituras que a coordenação fez sobre o titular (`titular.previa_lida`, `pedido.lido`), porque trariam o id de quem leu — a
+auditoria em que ele é o autor entra, só com o ato (a ação, a entidade, a finalidade e o instante), sem o `antes` e o
+`depois`, que podem levar o id e o motivo de outra pessoa.
 
 **Retenção por escola (F3).** Os prazos marcados como ajustáveis vivem num catálogo em código (`CATEGORIAS_DE_RETENCAO`,
 em `packages/shared/src/privacidade`), com padrão, piso e teto aprovados em 05/10/2026: a conversa do Tutor e os sinais

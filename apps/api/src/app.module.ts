@@ -13,10 +13,12 @@ import {
   medidorGlobal,
   ProxiesConfiaveis,
   SessaoRepository,
+  type ArmazemDeArquivos,
   type Banco,
   type LimitesDeRequisicao,
   type LoggerBase,
   type Meter,
+  type Relogio,
 } from '@educa/nucleo'
 import { Module, type DynamicModule } from '@nestjs/common'
 import { APP_GUARD, APP_INTERCEPTOR, DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core'
@@ -53,6 +55,13 @@ export interface OpcoesDeMontagem {
   readonly prazoDoRedisDeLoginMs?: number
   /** O sorteio do código da turma que o teste da colisão (C6) repete. */
   readonly sortearCodigoDaSala?: SorteioDoCodigo
+  /**
+   * O armazém do arquivo do titular que o teste usa no lugar do S3 da configuração (F3, 13.0): o falso, que o teste também
+   * entrega ao processador do worker, para conferir o que foi gravado e derrubar o storage. Nunca vem do ambiente.
+   */
+  readonly armazemDeArquivos?: ArmazemDeArquivos
+  /** O relógio do arquivo do titular (validade de 7 dias e da URL), que o teste injeta. Nunca vem do ambiente. */
+  readonly relogioDaPrivacidade?: Relogio
 }
 
 @Module({})
@@ -91,7 +100,11 @@ export class AppModule {
         AtividadeModule,
         TutorModule,
         GovernancaModule,
-        PrivacidadeModule,
+        PrivacidadeModule.com({
+          armazem: config.armazem,
+          ...(opcoes.armazemDeArquivos === undefined ? {} : { armazemDeTeste: opcoes.armazemDeArquivos }),
+          ...(opcoes.relogioDaPrivacidade === undefined ? {} : { relogio: opcoes.relogioDaPrivacidade }),
+        }),
         SalaModule.com({
           config: config.sala,
           chaveContador: config.login.chaveContador,

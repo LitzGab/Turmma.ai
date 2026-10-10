@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { MOTIVO_VAGAS_DESLIGADAS_EM_PRODUCAO } from '@educa/nucleo'
 import { ConfiguracaoInvalida, lerConfiguracao } from './config.js'
 
+const storageValido = {
+  STORAGE_URL: 'http://storage:8333',
+  STORAGE_REGIAO: 'us-east-1',
+  STORAGE_BUCKET: 'educa-local',
+  STORAGE_CHAVE_ACESSO: 'chave_sintetica',
+  STORAGE_CHAVE_SECRETA: 'segredo_sintetico_xyz',
+}
+
 const ambienteValido = {
+  ...storageValido,
   AMBIENTE: 'local',
   VAGAS_POR_ESCOLA_DESLIGADAS: 'false',
   WORKER_THREADS_MAXIMO: '2',
@@ -21,13 +30,8 @@ const ambienteValido = {
   TELEMETRIA_INTERVALO_MS: '5000',
 }
 
-const storageValido = {
-  STORAGE_URL: 'http://storage:8333',
-  STORAGE_REGIAO: 'us-east-1',
-  STORAGE_BUCKET: 'educa-local',
-  STORAGE_CHAVE_ACESSO: 'chave_sintetica',
-  STORAGE_CHAVE_SECRETA: 'segredo_sintetico_xyz',
-}
+/** A réplica que atende só a fila interativa: a única que não toca o storage. */
+const soInterativa = { FILAS: 'interativa' }
 
 /** O horário letivo padrão, que só o worker-lote lê (F3, tarefa 3.0): o expurgo da escola para quando ele abre. */
 const janelaValida = {
@@ -56,6 +60,7 @@ describe('lerConfiguracao do worker', () => {
       vagasPadrao: { interativa: 5, normal: 5, lote: 2 },
       threadsMaximo: 2,
       telemetria: { otlpUrl: 'http://observabilidade:4318', intervaloMs: 5000 },
+      storage: { url: 'http://storage:8333', regiao: 'us-east-1', bucket: 'educa-local', chaveAcesso: 'chave_sintetica', chaveSecreta: 'segredo_sintetico_xyz' },
     })
   })
 
@@ -64,7 +69,7 @@ describe('lerConfiguracao do worker', () => {
     expect(lerConfiguracao(lote).pools).toEqual({ lote: 10 })
   })
 
-  it('o worker-lote lê o storage, onde a consolidação mede os bytes; o worker-interativo não precisa dele', () => {
+  it('quem atende o lote (a consolidação mede os bytes, o expurgo apaga o arquivo) ou a fila normal (monta o arquivo do titular) lê o storage; quem atende só a interativa, não', () => {
     const lote = { ...ambienteValido, ...storageValido, ...janelaValida, FILAS: 'lote', WORKER_POOL_LOTE: '10' }
     expect(lerConfiguracao(lote).storage).toEqual({
       url: 'http://storage:8333',
@@ -73,7 +78,17 @@ describe('lerConfiguracao do worker', () => {
       chaveAcesso: 'chave_sintetica',
       chaveSecreta: 'segredo_sintetico_xyz',
     })
-    expect(lerConfiguracao(ambienteValido).storage).toBeUndefined()
+    expect(lerConfiguracao(ambienteValido).storage).toEqual(lerConfiguracao(lote).storage)
+    expect(lerConfiguracao({ ...ambienteValido, ...soInterativa }).storage).toBeUndefined()
+  })
+
+  it.each(Object.keys(storageValido))('quem atende a fila normal não sobe sem %s: o arquivo do titular é gravado no storage (F3, tarefa 13.0)', (variavel) => {
+    expect(erroDe({ ...ambienteValido, [variavel]: undefined }).variaveis).toEqual([variavel])
+  })
+
+  it('quem atende só a interativa sobe sem nenhuma variável do storage', () => {
+    const semStorage = Object.fromEntries(Object.keys(storageValido).map((variavel) => [variavel, undefined]))
+    expect(lerConfiguracao({ ...ambienteValido, ...semStorage, ...soInterativa })).toMatchObject({ pools: { interativa: 50 } })
   })
 
   it('o worker-lote lê o horário letivo padrão, que o expurgo da escola confere a cada lote; o worker-interativo não', () => {

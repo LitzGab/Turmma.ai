@@ -518,6 +518,49 @@ a tela dela, em Privacidade, Incidentes, e o aviso que abre ao entrar são da ta
 por fora e quando confirmou, só com ids e datas. O atraso entre a detecção e o registro, se foi ele, vira tarefa do processo de
 incidente (`docs/lgpd.md`, seção 8).
 
+## Arquivo do titular em preparação há mais de 2 h
+
+**Dispara quando:** o pedido de acesso ou de portabilidade mais antigo de uma escola está `em_preparacao` há mais de 2 h, por 1
+min (`max by (escola_id) (arquivo_horas_em_preparacao{job="educa/worker"}) > 2`, regra
+`infra/grafana/alertas/arquivo-em-preparacao.yaml`; Tech Spec do F3, seção 7c). A métrica é o número de horas desde o
+`registrado_em` do pedido `em_preparacao` mais antigo da escola em `pedido_titular`; o worker-lote a mede a cada 5 min, e o alerta
+traz o `escola_id`, nunca o pedido nem o titular. Sem pedido em preparação a escola não tem série, e ela some quando o job termina
+e o pedido fica `pronto`.
+
+**Impacto:** a escola tem 15 dias, contados da chegada do pedido, para a declaração completa (LGPD, art. 19, II), e o arquivo é
+a resposta. Duas horas sem arquivo não estouram o prazo, mas dizem que o job não está terminando, e o titular ou a coordenação
+esperam sem saber. Nada vaza: o arquivo só existe depois de pronto.
+
+**Primeiro olhar:** o pedido e o job dele, só com ids, estados e datas (nunca o conteúdo):
+`docker compose exec postgres psql -U educa -c "select p.id, p.tipo, p.estado, p.registrado_em, j.estado as job, j.codigo_falha from pedido_titular p left join job_registro j on j.escola_id = p.escola_id and j.tipo = 'titular.montar-arquivo' and j.dados->>'pedidoId' = p.id::text where p.escola_id = '<escola_id>' and p.estado = 'em_preparacao' order by p.registrado_em"`.
+O log do worker traz `job.tentativa_falhou` com o código e o erro resumido, e nunca a chave do objeto nem a URL.
+
+**Causas prováveis:**
+1. O storage está fora ou recusa a credencial → `docker compose ps storage` e o log do `worker-interativo`
+   (`job.tentativa_falhou`, `erro: armazem_indisponivel`). O job repete até esgotar as tentativas; com o storage de volta, um job que
+   ainda tem tentativa conclui sozinho. Se o job já `falhou` (`codigo_falha = ERRO_INTERNO`), o pedido segue `em_preparacao` e não
+   volta sozinho: a coordenação o conclui e **registra outro pedido** do mesmo titular, que gera o arquivo do zero (o objeto é
+   sobrescrito; não há nada a limpar).
+2. O job está esperando vaga ou não foi despachado (`job_registro.estado` em `aguardando`, `reservado` ou `publicado`) → o
+   `worker-interativo` ou o `despachante` está parado; veja "Job interativo esperando".
+3. O titular foi eliminado depois de pedir (log `titular.arquivo_sem_titular`) → não há o que montar, e o pedido de acesso fica
+   `em_preparacao`. A coordenação o conclui pela tela; é o caminho previsto.
+4. A leitura do arquivo estoura o `statement_timeout` de uma escola grande → o log do `worker-interativo` traz `job.tentativa_falhou` com o código da
+   consulta (`57014`, cancelamento por tempo) em toda tentativa. O job esgota as tentativas e o pedido segue `em_preparacao`. Confira, com
+   `explain`, se a leitura da tabela citada desce pelo índice (`resposta_atividade_aluno_idx`, `registro_acesso_usuario_idx`,
+   `correcao_destaque_aberto_por_idx`, `auditoria_escola_autor_idx`, `consumo_ia_execucao_idx`) e abra a correção; enquanto isso a coordenação
+   conclui o pedido pela tela.
+5. O pedido foi concluído antes de o job terminar e a série continua → o `estado` já não é `em_preparacao`: a medição está
+   atrasada, ou o worker-lote não mede (log `worker.medicao_do_arquivo_indisponivel`: o Postgres respondeu com erro). A série some
+   na volta seguinte de 5 min.
+
+**Se nada disso resolver:** o arquivo não se escreve à mão no storage nem no banco: o `arquivo_titular` e o objeto são do job, e uma
+linha sem objeto faz o download responder `INDISPONIVEL_TENTE_DE_NOVO`. Escale ao dono do produto e avise a coordenação de que o
+arquivo atrasou, sem mandar conteúdo por mensagem.
+
+**Depois:** registre no `TODO.md` a escola (id), o pedido (id), quando foi registrado e a causa, só com ids e datas. Causa nova vira
+tarefa com teste que a reproduz.
+
 ## Rotina do sistema sem rodar (consolidação de uso, expurgo de jobs, expurgo do acesso)
 
 *A preencher antes da primeira escola real* (pendência em `TODO.md`). Hoje nada avisa se

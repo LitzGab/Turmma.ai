@@ -1,5 +1,7 @@
 import 'reflect-metadata'
 import {
+  ArmazemEmMemoria,
+  ArquivoDoTitularRepository,
   CATEGORIAS_DO_EXPURGO,
   ConfiguracaoOperacional,
   contextoAtual,
@@ -14,6 +16,7 @@ import {
   resolverJanela,
   RetencaoDaEscolaRepository,
   type AlvoDoExpurgoDaEscola,
+  type ArmazemDeArquivos,
   type CategoriaDoExpurgo,
   type JanelaLetiva,
   type PrazoDoLote,
@@ -77,6 +80,8 @@ const CHAVES_DO_LOG = new Set([
   'linhasDaCategoriaTotal',
   'linhasTotal',
   'registroApagadoTotal',
+  'arquivosApagadosTotal',
+  'arquivosNaoApagadosTotal',
   'categoriasTotal',
   'escolasTotal',
   'enfileiradosTotal',
@@ -524,9 +529,11 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
   /** O horário letivo da escola do contexto, lido como o worker-lote lê. */
   const janelaDaEscola = () => new ConfiguracaoOperacional<JanelaLetiva>(new ConfiguracaoOperacionalRepository(bancada.banco), (linha) => resolverJanela(janelaPadraoDoAmbiente(), linha))
 
-  function expurgo(relogio: Relogio, opcoes: { lote?: number; repositorio?: ExpurgoDaEscolaRepository } = {}): Processador {
+  function expurgo(relogio: Relogio, opcoes: { lote?: number; repositorio?: ExpurgoDaEscolaRepository; armazem?: ArmazemDeArquivos } = {}): Processador {
     return criarExpurgoDaEscola({
       repositorio: opcoes.repositorio ?? new ExpurgoDaEscolaRepository(bancada.banco),
+      arquivos: new ArquivoDoTitularRepository(bancada.banco),
+      armazem: opcoes.armazem ?? new ArmazemEmMemoria(),
       retencao: new RetencaoDaEscolaRepository(bancada.banco),
       janelaDaEscola: janelaDaEscola(),
       relogio,
@@ -2557,11 +2564,146 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
     })
   })
 
+  describe('arquivo do titular (F3, tarefa 13.0): o objeto sai do storage e só então a linha', () => {
+    /**
+     * Um pedido de acesso do aluno da escola e a versão do arquivo dele, pronta `ha` antes do `agora` (a validade é de 7 dias
+     * dessa data), com o objeto gravado no armazém falso. `apagadoEm` marca o que a eliminação do titular marcaria (15.0).
+     */
+    async function arquivoPronto(
+      escola: Escola,
+      armazem: ArmazemEmMemoria,
+      agora: Date,
+      ha: string,
+      opcoes: { versao?: 'completa' | 'coordenacao'; apagadoEm?: Date; pedidoId?: string } = {},
+    ): Promise<{ pedidoId: string; chave: string; arquivoId: string }> {
+      const versao = opcoes.versao ?? 'completa'
+      let pedidoId = opcoes.pedidoId
+      if (pedidoId === undefined) {
+        const registrador = await professorNovo(escola)
+        const { rows } = await bancada.pool.query<{ id: string }>(
+          `insert into pedido_titular (escola_id, titular_id, papel_titular, tipo, solicitante, chegou_em, estado, compartilhamento, registrado_por, chave_envio)
+           values ($1, $2, 'aluno', 'acesso', 'titular', current_date, 'pronto', '[]'::jsonb, $3, $4) returning id`,
+          [escola.escolaId, escola.alunoId, registrador, randomUUID()],
+        )
+        pedidoId = rows[0]?.id ?? ''
+      }
+      const chave = `titular/${escola.escolaId}/${pedidoId}/${versao}.json`
+      const { rows } = await bancada.pool.query<{ id: string }>(
+        `insert into arquivo_titular (escola_id, pedido_id, versao, chave_objeto, bytes, pronto_em, expira_em, apagado_em)
+         values ($1, $2, $3, $4, 100, $5::timestamptz - $6::interval, $5::timestamptz - $6::interval + interval '7 days', $7) returning id`,
+        [escola.escolaId, pedidoId, versao, chave, agora.toISOString(), ha, opcoes.apagadoEm ?? null],
+      )
+      await armazem.guardar(chave, '{}')
+      return { pedidoId, chave, arquivoId: rows[0]?.id ?? '' }
+    }
+
+    it('com 7 dias o arquivo fica; com 8 saem o objeto e a linha; o de B, com a mesma idade, não é tocado', async () => {
+      const a = await escolaNova()
+      const b = await escolaNova()
+      const armazem = new ArmazemEmMemoria()
+      const seteDias = await arquivoPronto(a, armazem, QUARTA_1H, '7 days')
+      const oitoDias = await arquivoPronto(a, armazem, QUARTA_1H, '8 days')
+      const oitoDiasEmB = await arquivoPronto(b, armazem, QUARTA_1H, '8 days')
+
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H), { armazem }))
+
+      expect(await existe('arquivo_titular', seteDias.arquivoId)).toBe(true)
+      expect(armazem.objetos.has(seteDias.chave)).toBe(true)
+      expect(await existe('arquivo_titular', oitoDias.arquivoId)).toBe(false)
+      expect(armazem.objetos.has(oitoDias.chave)).toBe(false)
+      expect(await existe('arquivo_titular', oitoDiasEmB.arquivoId)).toBe(true)
+      expect(armazem.objetos.has(oitoDiasEmB.chave)).toBe(true)
+      // O arquivo vencido de B sai no job de B, e só no dele.
+      await rodar(b.escolaId, expurgo(relogioEm(QUARTA_1H), { armazem }))
+      expect(await existe('arquivo_titular', oitoDiasEmB.arquivoId)).toBe(false)
+      expect(armazem.objetos.has(oitoDiasEmB.chave)).toBe(false)
+    })
+
+    it('o arquivo marcado `apagado_em` sai mesmo dentro dos 7 dias, e o que falha ao apagar fica com a linha para a noite seguinte', async () => {
+      const a = await escolaNova()
+      const armazem = new ArmazemEmMemoria()
+      const marcado = await arquivoPronto(a, armazem, QUARTA_1H, '1 day', { apagadoEm: QUARTA_1H })
+      const intacto = await arquivoPronto(a, armazem, QUARTA_1H, '1 day')
+      armazem.falhaAoApagar = true
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H), { armazem }))
+      // O storage recusou: o objeto e a linha ficam, o job termina e as categorias do expurgo rodaram.
+      expect(armazem.objetos.has(marcado.chave)).toBe(true)
+      expect(await existe('arquivo_titular', marcado.arquivoId)).toBe(true)
+      expect((await execucoes(a.escolaId)).every(({ concluida }) => concluida)).toBe(true)
+      expect(log.registros().some((linha) => linha['evento'] === 'retencao.arquivo_nao_apagado')).toBe(true)
+
+      armazem.falhaAoApagar = false
+      await rodar(a.escolaId, expurgo(relogioEm(QUINTA_1H), { armazem }))
+      expect(armazem.objetos.has(marcado.chave)).toBe(false)
+      expect(await existe('arquivo_titular', marcado.arquivoId)).toBe(false)
+      // O que não venceu nem foi marcado fica.
+      expect(armazem.objetos.has(intacto.chave)).toBe(true)
+      expect(await existe('arquivo_titular', intacto.arquivoId)).toBe(true)
+    })
+
+    it('com o storage fora de vez, nenhum arquivo sai, e o job não falha por causa disso', async () => {
+      const a = await escolaNova()
+      const armazem = new ArmazemEmMemoria()
+      const vencido = await arquivoPronto(a, armazem, QUARTA_1H, '9 days')
+      armazem.fora = true
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H), { armazem }))
+      expect(await existe('arquivo_titular', vencido.arquivoId)).toBe(true)
+      armazem.fora = false
+      expect(armazem.objetos.has(vencido.chave)).toBe(true)
+    })
+
+    it('com a janela letiva aberta nenhum arquivo é apagado: o lote não urgente espera a noite', async () => {
+      const a = await escolaNova()
+      const armazem = new ArmazemEmMemoria()
+      const vencido = await arquivoPronto(a, armazem, QUARTA_8H, '9 days')
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_8H), { armazem }))
+      expect(await existe('arquivo_titular', vencido.arquivoId)).toBe(true)
+      expect(armazem.objetos.has(vencido.chave)).toBe(true)
+    })
+
+    it('mais de um lote de arquivos vencidos: 205 saem na mesma noite, em lotes de 100, e o recente fica', async () => {
+      const a = await escolaNova()
+      const armazem = new ArmazemEmMemoria()
+      const registrador = await professorNovo(a)
+      const { rows: pedidos } = await bancada.pool.query<{ id: string }>(
+        `insert into pedido_titular (escola_id, titular_id, papel_titular, tipo, solicitante, chegou_em, estado, compartilhamento, registrado_por, chave_envio)
+         select $1, $2, 'aluno', 'acesso', 'titular', current_date, 'pronto', '[]'::jsonb, $3, gen_random_uuid() from generate_series(1, 206) returning id`,
+        [a.escolaId, a.alunoId, registrador],
+      )
+      const ids = pedidos.map(({ id }) => id)
+      // 205 vencidos (9 dias) e o último com 1 dia.
+      await bancada.pool.query(
+        `insert into arquivo_titular (escola_id, pedido_id, versao, chave_objeto, bytes, pronto_em, expira_em)
+         select $1::uuid, p, 'completa', 'titular/' || $1::text || '/' || p::text || '/completa.json', 100,
+                $2::timestamptz - case when n <= 205 then interval '9 days' else interval '1 day' end,
+                $2::timestamptz - case when n <= 205 then interval '9 days' else interval '1 day' end + interval '7 days'
+         from unnest($3::uuid[]) with ordinality as t(p, n)`,
+        [a.escolaId, QUARTA_1H.toISOString(), ids],
+      )
+      for (const id of ids) await armazem.guardar(`titular/${a.escolaId}/${id}/completa.json`, '{}')
+      await rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H), { armazem }))
+      expect(await quantas('arquivo_titular', a.escolaId)).toBe(1)
+      expect(armazem.objetos.size).toBe(1)
+    })
+
+    it('[P] dois jobs da mesma escola ao mesmo tempo apagam cada arquivo uma vez, sem erro', async () => {
+      const a = await escolaNova()
+      const armazem = new ArmazemEmMemoria()
+      const vencidos = await Promise.all([1, 2, 3].map(() => arquivoPronto(a, armazem, QUARTA_1H, '10 days')))
+      await Promise.all([rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H), { armazem })), rodar(a.escolaId, expurgo(relogioEm(QUARTA_1H), { armazem }))])
+      for (const { arquivoId, chave } of vencidos) {
+        expect(await existe('arquivo_titular', arquivoId)).toBe(false)
+        expect(armazem.objetos.has(chave)).toBe(false)
+      }
+    })
+  })
+
   describe('log', () => {
     it('toda linha `retencao.*` que este arquivo produziu, de todos os testes acima, só tem as chaves permitidas: ids e contagens', () => {
       const daRetencao = log.registros().filter((linha) => String(linha['evento']).startsWith('retencao.'))
       const eventos = new Set(daRetencao.map((linha) => String(linha['evento'])))
       expect([...eventos].sort()).toEqual([
+        'retencao.arquivo_nao_apagado',
         'retencao.escola_nao_enfileirada',
         'retencao.expurgada',
         'retencao.expurgo_interrompido',

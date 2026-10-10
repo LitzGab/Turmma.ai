@@ -1,4 +1,5 @@
 import {
+  ArquivoDoTitularRepository,
   avisoEspacado,
   ConfiguracaoOperacional,
   ConfiguracaoOperacionalRepository,
@@ -28,6 +29,7 @@ import {
   RetencaoDaEscolaRepository,
   UsoRepository,
   VagasPorEscola,
+  type ArmazemDeArquivos,
   type Banco,
   type Batimento,
   type DadosDoJobNaFila,
@@ -37,6 +39,7 @@ import {
   type Relogio,
 } from '@educa/nucleo'
 import type { Fila } from '@educa/shared'
+import { ArmazemS3 } from '@educa/nucleo/armazem-s3'
 import { Queue, Worker } from 'bullmq'
 import { Redis } from 'ioredis'
 import { AGENDAMENTOS, criarDisparoDeAgendamento, FILA_DOS_AGENDAMENTOS, registrarAgendamentos, type Agendamento } from './agendamentos.js'
@@ -47,8 +50,10 @@ import { criarExpurgoDeAcesso, TIPO_EXPURGAR_ACESSO } from './processadores/expu
 import { criarExpurgoDeJobs, TIPO_EXPURGAR_JOBS } from './processadores/expurgar-jobs.js'
 import { criarRotinaDeExpurgo, TIPO_EXPURGAR_DADO_PESSOAL } from './processadores/expurgar-dado-pessoal.js'
 import { criarExpurgoDaEscola, TIPO_EXPURGAR_ESCOLA } from './processadores/expurgar-escola.js'
+import { MedicaoDoArquivo } from './medicao-do-arquivo.js'
 import { MedicaoDoExpurgo } from './medicao-do-expurgo.js'
 import { MedicaoDoIncidente } from './medicao-do-incidente.js'
+import { criarMontagemDoArquivo, TIPO_MONTAR_ARQUIVO } from './processadores/montar-arquivo.js'
 import { criarProcessadorSintetico, SandboxDeCpu } from './processadores/sintetico.js'
 import { criarClienteS3, MedidorDeStorage } from './storage/medidor-de-storage.js'
 
@@ -124,10 +129,16 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
   }
   const aguardandoVaga = medidor?.createCounter(METRICAS.aguardandoVaga, { description: 'Jobs que chegaram ao worker sem vaga e voltaram a esperar' })
   const stalled = medidor?.createCounter(METRICAS.jobsStalled, { description: 'Jobs devolvidos à espera por lock vencido' })
+  // O armazém do arquivo do titular (F3, tarefa 13.0): a réplica da fila normal grava o JSON, e a do lote apaga o vencido.
+  const armazemS3 = config.storage === undefined ? undefined : ArmazemS3.criar(config.storage)
   const rotinas =
-    config.pools.lote === undefined || config.storage === undefined || config.janelaPadrao === undefined
+    config.pools.lote === undefined || config.storage === undefined || config.janelaPadrao === undefined || armazemS3 === undefined
       ? undefined
-      : montarRotinas(config.storage, config.janelaPadrao, banco, uso, relogio, logger, medidor)
+      : montarRotinas(config.storage, config.janelaPadrao, banco, uso, relogio, logger, medidor, armazemS3.armazem)
+  const montagemDoArquivo =
+    config.pools.normal === undefined || armazemS3 === undefined
+      ? undefined
+      : { [TIPO_MONTAR_ARQUIVO]: criarMontagemDoArquivo({ banco, armazem: armazemS3.armazem, relogio, logger }) }
   const sandbox = new SandboxDeCpu(config.threadsMaximo)
   const repositorio = new JobRegistroRepository(banco)
   // Banco fora: o despachante acorda pela sondagem, e só.
@@ -135,7 +146,7 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
   const executor = new ExecutorDeJobs({
     repositorio,
     aoLiberarVaga: avisoDeVagaLivre.avisar,
-    processadores: opcoes.processadores ?? { sintetico: criarProcessadorSintetico(sandbox, new EfeitoSinteticoRepository(banco)), ...rotinas?.processadores },
+    processadores: opcoes.processadores ?? { sintetico: criarProcessadorSintetico(sandbox, new EfeitoSinteticoRepository(banco)), ...rotinas?.processadores, ...montagemDoArquivo },
     logger,
     uso,
     ...(aguardandoVaga === undefined ? {} : { aoAguardarVaga: (fila: Fila, escolaId: string | null) => aguardandoVaga.add(1, { fila, escola_id: escolaId ?? DONO_DAS_VAGAS_DO_SISTEMA }) }),
@@ -196,6 +207,7 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
     await sandbox.encerrar()
     redisDasVagas.disconnect()
     await rotinas?.encerrar()
+    armazemS3?.encerrar()
     await pool.end()
   }
 
@@ -222,6 +234,7 @@ function montarRotinas(
   relogio: Relogio,
   logger: LoggerBase,
   medidor: Meter | undefined,
+  armazem: ArmazemDeArquivos,
 ): { processadores: Record<string, Processador>; encerrar(): Promise<void> } {
   const s3 = criarClienteS3(storage)
   const avisarJanelaDescartada = avisoEspacado(() => logger.warn({ evento: 'worker.janela_da_escola_invalida' }))
@@ -235,6 +248,9 @@ function montarRotinas(
   medicao?.iniciar()
   const medicaoDoIncidente = medidor === undefined ? undefined : new MedicaoDoIncidente({ escolas, repositorio: new IncidenteDaEscolaRepository(banco), relogio, logger, medidor })
   medicaoDoIncidente?.iniciar()
+  const arquivos = new ArquivoDoTitularRepository(banco)
+  const medicaoDoArquivo = medidor === undefined ? undefined : new MedicaoDoArquivo({ escolas, repositorio: arquivos, relogio, logger, medidor })
+  medicaoDoArquivo?.iniciar()
   return {
     processadores: {
       [TIPO_CONSOLIDAR_USO]: criarConsolidacaoDeUso({
@@ -248,11 +264,12 @@ function montarRotinas(
       [TIPO_EXPURGAR_JOBS]: criarExpurgoDeJobs({ repositorio: new ExpurgoDeJobsRepository(banco), logger }),
       [TIPO_EXPURGAR_ACESSO]: criarExpurgoDeAcesso({ repositorio: new ExpurgoDeAcessoRepository(banco), relogio, logger }),
       [TIPO_EXPURGAR_DADO_PESSOAL]: criarRotinaDeExpurgo({ escolas, banco, enfileirador: new Enfileirador(new JobRegistroRepository(banco)), janelaDaEscola, relogio, logger }),
-      [TIPO_EXPURGAR_ESCOLA]: criarExpurgoDaEscola({ repositorio: expurgoDaEscola, retencao: new RetencaoDaEscolaRepository(banco), janelaDaEscola, relogio, logger }),
+      [TIPO_EXPURGAR_ESCOLA]: criarExpurgoDaEscola({ repositorio: expurgoDaEscola, arquivos, armazem, retencao: new RetencaoDaEscolaRepository(banco), janelaDaEscola, relogio, logger }),
     },
     encerrar: async () => {
       await medicao?.encerrar()
       await medicaoDoIncidente?.encerrar()
+      await medicaoDoArquivo?.encerrar()
       s3.destroy()
     },
   }

@@ -71,6 +71,9 @@ export const consumoIa = pgTable(
     foreignKey({ name: 'consumo_ia_aluno_da_escola_fk', columns: [tabela.escolaId, tabela.alunoId], foreignColumns: [usuario.escolaId, usuario.id] }).onDelete('set null'),
     index('consumo_ia_funcao_idx').on(tabela.escolaId, tabela.funcao, tabela.em),
     index('consumo_ia_aluno_idx').on(tabela.escolaId, tabela.alunoId, tabela.em).where(sql`${tabela.alunoId} is not null`),
+    // O ramo da execução do rastro e da contagem do texto do modelo, que descem pelas execuções que a pessoa pediu (F3, 13.0):
+    // sem ele, a consulta lê o consumo da escola inteira (regra 80, item 8).
+    index('consumo_ia_execucao_idx').on(tabela.escolaId, tabela.execucaoId).where(sql`${tabela.execucaoId} is not null`),
     // Os dois lotes do expurgo da escola (F3, tarefa 4.0): o texto do modelo e o aluno, cada um pela idade da chamada.
     index('consumo_ia_texto_a_anular_idx').on(tabela.escolaId, tabela.em).where(sql`${tabela.entrada} is not null or ${tabela.saida} is not null`),
     index('consumo_ia_aluno_a_anular_idx').on(tabela.escolaId, tabela.em).where(sql`${tabela.alunoId} is not null`),

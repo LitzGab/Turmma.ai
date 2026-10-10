@@ -417,6 +417,78 @@ na 15.0, pelo `titular.eliminar`, com o relógio injetado):
     da 11.0 já tinha mandado o mesmo índice para ela. A spec pousa inteira e com dado sintético: nenhum ambiente recebe
     a 12.0 sem a 13.0. Até lá o `statement_timeout` de 2 s limita a consulta.
 
+**Tarefa 13.0, como ficou no código** (`packages/nucleo/src/titular/`: `leitura-do-titular.ts`, `arquivo-do-titular.repository.ts`,
+`armazem-de-arquivos.ts`, `armazem-s3.ts`; o job, em `apps/worker/src/processadores/montar-arquivo.ts`):
+
+- **O pedido nasce `em_preparacao`, e só para acesso e portabilidade.** O `POST pedidos` grava o estado e enfileira o
+  `titular.montar-arquivo` (fila `normal`, `{ pedidoId }`) **na mesma transação**, e só quando gravou (o reenvio da chave não
+  enfileira de novo). Compartilhamento e correção nascem `recebido`, sem job (RF11 fala só de acesso e portabilidade). O `concluir`
+  devolve o estado anterior do próprio `update` (uma subconsulta `for update` na mesma instrução), e é ele que vai para o `antes` da
+  auditoria: o job passa `em_preparacao` para `pronto` por fora, e um estado lido antes da escrita podia não ser o trocado.
+- **A migration é a `0033_arquivo_titular`**: a tabela, o único `(escola_id, pedido_id, versao)`, o check que amarra `chave_objeto` a
+  `titular/<escola>/<pedido>/<versao>.json`, a FK composta com `pedido_titular (escola_id, id)` (para isso o pedido ganha `unique
+  (escola_id, id)`), e três índices: `arquivo_titular (escola_id, expira_em)`, `consumo_ia (escola_id, execucao_id) where
+  execucao_id is not null` (o "índice do rastro", acima) e `auditoria (escola_id, autor_usuario_id, em) where autor_usuario_id is
+  not null`, o terceiro porque o arquivo lê a auditoria em que a pessoa é autora e, sem ele, lê a da escola inteira. Sem
+  `concurrently`, como a seção 7c manda enquanto não há staging. A leitura do arquivo ainda pede três índices em tabelas que crescem com o aluno (`resposta_atividade (escola_id, aluno_id)`,
+  `registro_acesso (escola_id, usuario_id, em)` e `correcao (escola_id, destaque_aberto_por)` parcial), que entram na
+  `0034_indices_da_leitura_do_arquivo`, também sem `concurrently`.
+- **O rastro e a contagem do texto do modelo** passam a ser instruções exportadas (`instrucaoDoRastroDoAluno`,
+  `instrucaoDoTextoDoModelo`), o rastro em `union all` de dois ramos, e o plano dos dois é testado com os índices que servem a
+  consulta (o teste desliga a varredura sequencial, o bitmap, o hash e o merge: ele prova que o índice serve, e não que o
+  planejador o prefere pelo custo).
+- **O que entra no arquivo é lista permitida, por coluna** (`LEITURAS_DO_ARQUIVO`), e a conferência contra as migrations
+  (`arquitetura.test.ts`) exige que toda coluna de toda tabela do arquivo ou entre ou esteja em `fora`, com o motivo. O critério:
+  1. **só o que é do titular**; 2. **o id de outra pessoa não entra** (`criado_por`, `decidida_por`, `registrado_por`,
+  `concluido_por`, `cancelado_por`...), e, quando o titular é o **autor** de um ato sobre outra pessoa (o professor que decidiu uma
+  reivindicação ou abriu um destaque), a linha entra só com o ato, sem o dado da outra pessoa; 3. nunca o que
+  `COLUNAS_FORA_DO_ARQUIVO` lista; 4. a correção de lote que o professor não aprovou sai só como `em_validacao_pelo_professor` ou
+  `rejeitada_pelo_professor`, **nas duas versões**, e o conteúdo do artefato nunca sai (só o título); 5. a versão da coordenação não
+  traz `thread_agente`, `mensagem_agente`, a `entrada` das execuções, a `entrada` e a `saida` do consumo nem a `justificativa` da
+  entrega. O `apresentado` e o `aberto` da `validacao_do_lote` ficam fora (trazem o id e o motivo de outros alunos), e o `licenciante`
+  do material também (é de terceiro).
+- **Pedido e quem o atendeu.** `pedido_titular` entra pelo `titular_id`; `registrado_por`, `concluido_por` e `cancelado_por` ficam de
+  fora (a decisão que a 11.0 deixou para esta tarefa), e a `classificacao.ts` passa a ligar só `titular_id`. A auditoria entra pelo
+  `autor_usuario_id`; **as leituras da coordenação sobre o titular** (`titular.previa_lida`, `pedido.lido`) **não entram**, porque
+  trariam o id de quem leu, que é de outra pessoa (critério 2). A auditoria entra **sem `antes` e `depois`**: o `depois` de
+  `correcao.destaque_aberto`, `reivindicacao.decidida` e dos convites leva o id e o motivo de outra pessoa (critério 2);
+  ficam a ação, a entidade, o id da entidade, a finalidade e o instante.
+- **O arquivo tem `resumo` legível** (uma linha por tabela que tem registro, com a descrição em português e a quantidade) e
+  `compartilhamento`: `empresas` é a foto do pedido, a mesma que a coordenação vê (por período, para o professor), e `usoReal`, só na
+  versão **completa do professor**, é a primeira e a última chamada com envio externo de cada empresa (as datas reais de uso da D64).
+  O registro de uso do professor (execuções, consumo sem texto e artefatos) vai também na versão da escola, por exceção declarada no
+  PRD, seção 6.
+- **"Conta ativa" é `usuario.desativado_em is null`** nesta escola, num só lugar (`ArquivoDoTitularRepository.contaAtiva`). A 14.0, que
+  cria `eliminacao_agendada_em`, soma a coluna ali. A versão da escola é gerada só quando o titular está sem conta ativa **no
+  momento do job**, e a rota ainda confere de novo, na hora de baixar, que ele segue sem ela: se voltou a ter, ele baixa a dele.
+- **O job** grava todos os objetos antes da transação que grava as linhas e passa o pedido para `pronto` (`update … where estado =
+  'em_preparacao'`): o objeto órfão de uma tentativa que morreu é sobrescrito pela mesma chave, e dois jobs do mesmo pedido deixam uma
+  linha por versão. O titular que já não existe, o pedido que não gera arquivo e o pedido de outra escola terminam sem efeito. O job
+  repetido depois de pronto grava a mesma linha e **conta os 7 dias de novo** (a entrega é pelo menos uma vez, D49); `apagado_em`
+  nunca é limpo por ele.
+- **O download** (`POST pedidos/:id/arquivo`, `POST meus-dados/:id/baixar`) confere que o arquivo vale (`apagado_em` nulo e `expira_em`
+  depois de agora), que o objeto existe no armazém e só então assina; armazém fora, ou objeto que a linha diz que existe e o storage
+  não tem, dá `INDISPONIVEL_TENTE_DE_NOVO` (503). A auditoria `titular.arquivo_baixado` leva a versão e a finalidade, de lista
+  fechada: `entregar_ao_titular` e `entregar_ao_responsavel_legal` na coordenação, `acesso_do_proprio_titular` em "Meus dados".
+  A conferência do objeto e a assinatura acontecem **fora de transação** (a leitura do pedido e do arquivo é curta e solta a conexão; a
+  auditoria é a transação seguinte, antes de a resposta sair), e o cliente S3 da API usa uma tentativa só e prazo de 5 s: o storage lento
+  não prende conexão do pool de todas as escolas (regra 80, itens 3 e 4). O do worker repete, com o prazo dele.
+  A URL assinada leva o caminho do objeto, como toda URL de storage, e nele só há ids; nenhum campo de resposta traz a chave.
+- **`GET /v1/meus-dados`** lista os pedidos da própria pessoa (todos os tipos, até 50), com a validade do arquivo (`disponivel` ou
+  `expirado`), mais a contagem do que a escola guarda dela por categoria. A célula da matriz é `meus_dados` (`proprio` para aluno e
+  professor, `nunca` para a coordenação e a rede), e `privacidade_pedidos.arquivo`, só da coordenação.
+- **A API ganha as variáveis do storage** (`STORAGE_URL`, `STORAGE_URL_PUBLICA`, `STORAGE_REGIAO`, `STORAGE_BUCKET`,
+  `STORAGE_CHAVE_ACESSO`, `STORAGE_CHAVE_SECRETA`): `STORAGE_URL_PUBLICA` é o endereço que entra na assinatura (a assinatura cobre o
+  host, e `storage:8333` não resolve fora do compose). O `worker-interativo`, que atende a fila `normal`, também lê o storage; a
+  réplica que atende só a interativa, não.
+- **O expurgo** apaga os arquivos vencidos (`expira_em` antes do `agora`, comparação estrita: com 7 dias fica, com 8 sai) ou com
+  `apagado_em`, **primeiro** no job da escola, em lotes de 100, sem passar da janela letiva: o objeto sai do armazém e só então a
+  linha. Falha ao apagar um objeto não derruba o job (log `retencao.arquivo_nao_apagado`), e a noite seguinte repete.
+- **O alerta** é `arquivo.horas_em_preparacao{escola_id}` (as horas do pedido `em_preparacao` mais antigo, pelo `registrado_em`, medido
+  pelo worker-lote a cada 5 min), a regra `infra/grafana/alertas/arquivo-em-preparacao.yaml` dispara acima de 2 por 1 min, e o
+  parágrafo do runbook diz o que fazer. O pedido de acesso de um titular eliminado depois de pedir fica `em_preparacao` e dispara
+  o alerta: é o sinal previsto, e a coordenação o conclui (a 15.0 pode decidir de outro jeito).
+
 **Eliminação.**
 - **Registro.** O `POST` faz `insert … on conflict (escola_id, chave_envio) do nothing`; se nada voltar, devolve o
   pedido daquela chave, quando ele é de quem pede e é o mesmo registro (seção 4, "A chave de envio é de quem
@@ -664,8 +736,10 @@ As regras 40 e 50 são atendidas sem desvio (`cenarios.md`; seção 9).
 
 ## 12. Premissas não verificadas
 
-- ⚠️ **NÃO VERIFICADO:** que o SeaweedFS assine a URL de GET com o SDK S3 do worker. Se não assinar, a API serve o
-  objeto com `no-store`. A porta tem uma implementação falsa.
+- ✅ **VERIFICADO na 13.0** (`packages/nucleo/src/titular/armazem-s3.int.test.ts`, contra o SeaweedFS do compose): o SDK S3 assina a
+  URL de GET, o SeaweedFS a aceita, devolve `Cache-Control: no-store` e `Content-Disposition: attachment; filename="…"` pelos
+  `response-*` assinados, recusa a URL de outra chave e a vencida, e não abre o objeto sem assinatura. A API assina (não serve o
+  objeto), com o endereço público (`STORAGE_URL_PUBLICA`); a porta tem uma implementação falsa (`ArmazemEmMemoria`).
 - A portabilidade não tem regulamento da ANPD (LGPD, art. 18, V).
 
 ## 13. Riscos técnicos

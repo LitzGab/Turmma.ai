@@ -67,7 +67,13 @@ para o `nucleo` (F3, tarefa 1.0): ela não sai pelo barrel do pacote, só pelo s
 `CicloDeVidaService` e o `sessao` (a redefinição do MFA), e os testes deles. As três são exceções antigas que mudaram
 de lugar, mas já estão no ponto que a regra 10, item 9 aponta como sinal de desenho errado (a
 terceira no mesmo módulo): qualquer outra ali é mudança de spec, discutida antes, e não acréscimo
-de tarefa.
+de tarefa. A única leitura nova (F3, tarefa 13.0) é a do e-mail da `Conta` pelo arquivo do titular
+(`LeituraDoTitular`, tabela `conta`, que a Tech Spec do F3, seção 3, manda levar "só o e-mail, nas duas
+versões"): ela **não é consulta sem escopo**, porque junta o `Usuario` da escola do contexto pelo id do
+titular e devolve só `id` e `email` da conta dele; a conta de outra pessoa, ou a de quem não é usuário desta
+escola, nunca chega. Por isso não passa pela `ContaGlobalRepository`, e o teste de arquitetura do arquivo
+(`o arquivo do titular lê as tabelas da classificação`) confere que a leitura declara toda coluna da `Conta`
+como entra ou fora (`senha_hash`, `mfa_*`).
 
 **O aluno é `Usuario` sem `Conta`**, com `CredencialMatricula`. Não tem e-mail (regra 20).
 Matrícula é única por `(escolaId, matricula)`, nunca globalmente: dois alunos em escolas

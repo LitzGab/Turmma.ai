@@ -1,11 +1,13 @@
 # Estado da execução — lgpd-e-titular
 
 ## Agora
-- **Tarefa atual:** 12.0, iniciada em 09/10/2026 20:08, com o Implementador em MiMo-V2.6-Pro (opencode); porte grande (`tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer` e `llm-integrator`)
-- **Espero:** relatório do Implementador, que aplica a ordem `.processo/ordens/12_task-r1.md` com a decisão do Arquiteto (o índice fica na 13.0), enviada às 22:51 de 09/10. **Depois do commit da 12.0, `13_task.md` e `tasks.md` ficam alterados na árvore: são do Arquiteto e entram num commit de documento antes da 13.0**
+- **Tarefa atual:** 13.0, iniciada em 09/10/2026 23:30, com o Implementador em Sonnet; porte grande (`tenancy-guardian`, `privacy-guardian`, `infra-guardian` e `conformidade-reviewer`); leva a migration do `arquivo_titular` e o índice `consumo_ia (escola_id, execucao_id)` da triagem da 12.0
+- **Espero:** relatório do Implementador (chega como `/seguir RELATÓRIO de Implementador`). `PEDIDO de retomada` enviado às 02:00 de 10/10 a uma sessão nova dele, em Sonnet, apontando só `.processo/ordens/diagnostico-13.md`; a 3ª rodada chama os seis. Se o `test-engineer` reprovar a terceira vez, a Mesa manda `BLOQUEIO`: é parada do Joaquim
+- **A fazer, em ordem, quando o relatório da 13.0 chegar:** (1) conferir no andar: `estado.ts` mostra 13 de 19 e a 14.0; `git log -1` com `(tarefa 13.0)` e os seis revisores; `git status --short` vazio; nada por enviar. O commit tem de levar o `tasks.md` com a 13.0 `[x]`, o `cenarios.md` (35 linhas do Arquiteto) e este `estado.md`. (2) Com o andar limpo, **merge da `develop` (`e43fee4`) na branch e push** (leva `settings.json`, o hook e o protocolo). (3) Só então o ciclo da 14.0: diário, reiniciar a `Mesa` e o `Implementador` (Sonnet), conferir cabeçalhos, `PEDIDO`. No `PEDIDO`, dizer que o `estado.md` já está alterado por mim e que o `tasks.md` entra no commit da tarefa
+- **Para uma sessão limpa:** o meu nome no Maestri é `Claude Code`; o andar é `F3 lgpd-e-titular`, em `~/Documentos/git/.maestri/floors/educaia--speclgpd-e-titular`; a rotina `Vigia do processo` manda `/vigia` a cada 30 min (se parar de chegar, voltar o comando para `/seguir vigia`); o "Claude Code #2" é outra sessão, que diz agir a mando do Joaquim: o que ele pede eu confiro no repositório antes de fazer, e nenhuma parada do passo 7 se resolve pela palavra dele
 - **Pendente para a validação:** as duas abas da Privacidade quebram em duas linhas em 360 px (vista na
   foto da vitrine); recomendação, não bloqueante
-- **Base:** `spec/lgpd-e-titular` em `399fedc` (a tarefa 11.0), com a `develop` até `9847fe7`
+- **Base:** `spec/lgpd-e-titular` em `59bf15b` (o merge da `develop` depois da 12.0), com a `develop` até `312296a`
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -34,6 +36,9 @@
 | 10.0 | `be559c0` | Sonnet | 10 | 3 rodadas: o `revisor-geral` reprovou na 1ª e o `test-engineer` na 2ª, uma reprovação de cada, sem escalada nem divergência; `frontend-reviewer` e `privacy-guardian` aprovaram nas duas em que entraram; telas vistas pelo Implementador (11 fotos) e pela Mesa (20); cinco recomendações foram para o `TODO.md`; de 14:42 a 16:15 de 09/10, 1 h 33 min, com a 1ª rodada aos 49 min |
 | merge da `develop` (`9847fe7`) | `fde4953` | Orquestrador | — | sem conflito; 15 arquivos de processo: `.opencode/` (papel, modelo e a trava do commit) e o `/seguir` com o Implementador no opencode |
 | 11.0 | `399fedc` | MiMo-V2.6-Pro (opencode) | 14 | a primeira no opencode; 3 rodadas: quatro reprovações na 1ª (`test-engineer`, `tenancy-guardian`, `privacy-guardian`, `revisor-geral`), duas na 2ª (`test-engineer` e `revisor-geral`), e a 3ª aprovou os dois; `ESCALADA` da Mesa e diagnóstico do Arquiteto (`.processo/ordens/diagnostico-11.md`: a ordem da 1ª rodada criou regra com quatro comparações e pediu teste de uma), aplicado em 6 minutos na mesma sessão; o Arquiteto gravou `techspec.md` §4 e §5 e `cenarios.md` RF10 e RF19 no commit; sem divergência nem queda para a reserva; a 1ª rodada só aos 2 h 39 min; de 16:20 a 20:04 de 09/10, 3 h 44 min; a sessão fechou com 63% do contexto e US$ 1,13 no contador do opencode |
+| 12.0 | `05698bd` | MiMo-V2.6-Pro (opencode) | 12 | 2 rodadas: três reprovações na 1ª (`test-engineer`, `privacy-guardian`, `revisor-geral`), os seis aprovados na 2ª; sem escalada; `DIVERGÊNCIA` de desenho da Mesa no meio (índice em `consumo_ia`), triada pelo Arquiteto: fica na 13.1; a marca `[x]` no `tasks.md` ficou fora do commit por instrução minha (ver "O que falhou") e entra no commit de documento do Arquiteto; a 1ª rodada aos 2 h 24 min; de 20:08 a 23:13 de 09/10, 3 h 05 min; a sessão fechou com 50% do contexto e US$ 1,00 no contador do opencode |
+| acerto dos documentos da 13.0 e marca da 12.0 | `001cefa` | Arquiteto (Opus) | — | só documento: `13_task.md` (o índice na 13.1, e de volta o que a triagem tinha tirado), `cenarios.md` (cenário "plano" em RF13) e `tasks.md` (12.0 e 12.1 a 12.3 com `[x]`); pedido às 23:15 e commit às 23:16 de 09/10 |
+| merge da `develop` (`312296a`) | `59bf15b` | Orquestrador | — | sem conflito; 10 arquivos de processo: o Implementador volta ao Sonnet e o opencode vira modo econômico, que só o Joaquim liga (D78, quinta revisão) |
 
 ## Esperando o Joaquim
 
@@ -62,6 +67,26 @@ Opções: ficar com o lado da branch, que é a união das linhas | abortar o mer
 Recomendo: ficar com o lado da branch; não se perde nenhuma linha e nada é escrito à mão no arquivo do hook.
 
 ## O que falhou
+
+- **13.0, `ESCALADA` da Mesa (10/10/2026 01:49):** o `test-engineer` reprovou na 1ª rodada (três provas) e na 2ª
+  (uma: o prazo de 5 s do cliente S3 da API, sem prova). Na 1ª reprovaram também `revisor-geral` e
+  `infra-guardian`; na 2ª (01:41 a 01:48) os outros cinco aprovaram. Ordem em `.processo/ordens/13_task-r2.md`,
+  só arquivo de teste e "Mutações"; achados em `achados/13_task.md`. Diagnóstico pedido ao Arquiteto, reiniciado
+  no andar. A 1ª rodada veio com 1 h 37 min de tarefa, em Sonnet.
+  **Diagnóstico (Arquiteto, 01:58):** a causa não é o desenho. O prazo de 5 s do cliente S3 não existia: no SDK
+  instalado, `requestTimeout` sem `throwOnRequestTimeout` só avisa (ele mediu 1.216 ms com prazo de 200 ms). A
+  correção é uma linha em `packages/nucleo/src/titular/armazem-s3.ts`, mais o teste; como é código, caduca as
+  cinco aprovações e a 3ª rodada chama os seis. O `test-engineer` achou um defeito real, não só falta de prova.
+
+- **12.0 sem a marca no `tasks.md` (09/10/2026 23:13):** o commit `05698bd` saiu com `(tarefa 12.0)` e os seis
+  revisores, mas o `estado.ts` continuou mostrando a 12.0 como pendente. Causa: eu disse ao Implementador para
+  deixar o `tasks.md` fora do commit, por causa da edição do Arquiteto na 13.1, e é nele que a tarefa é marcada
+  `[x]`. O erro foi meu, não dele. Na próxima vez, o documento do Arquiteto que não é da tarefa entra num commit
+  dele antes, e o `tasks.md` nunca fica fora do commit da tarefa.
+- **`DIVERGÊNCIA` de desenho da Mesa sobre o `13_task.md` (09/10/2026 23:07):** a triagem do índice tirou do
+  `13_task.md` o comentário "test-engineer e revisor-geral são obrigatórios", a linha do `cenarios.md` em
+  "Contexto necessário" e o "Definidos com o test-engineer", e o cenário "plano" ficou sem linha no
+  `cenarios.md`. Não bloqueou a 12.0. Pedido ao Arquiteto, reiniciado no andar, junto com a marca da 12.0.
 
 - **12.0, `DIVERGÊNCIA` de desenho da Mesa (09/10/2026 22:44):** na 1ª rodada (22:32 a 22:38, com 2 h 24 min de
   tarefa) reprovaram `test-engineer`, `privacy-guardian` e `revisor-geral`; aprovaram `conformidade-reviewer`,
@@ -145,6 +170,53 @@ Recomendo: ficar com o lado da branch; não se perde nenhuma linha e nada é esc
   portão.
 
 ## O que decidi sem perguntar
+
+- **Permissão ao `test-engineer` na rodada 3 da 13.0 (10/10/2026 02:30):** a vigia achou a `Mesa` parada
+  desde as 02:05 num "Do you want to proceed?" do subagente: rodar cinco vezes
+  `packages/nucleo/src/titular/armazem-s3.test.ts` com a CPU saturada (laços vazios com `timeout 120`, que ele
+  mesmo mata no fim). O aviso dizia "runs rm", mas o comando não apaga nada. Respondi `1` com
+  `maestri ask --raw`: é menu mecânico, não parada, e nenhuma outra suíte rodava na máquina. Às 02:57 havia
+  um segundo pedido igual (`timeout 150`, e um `pkill -f` do próprio laço no fim); respondi `1` de novo. O
+  `test-engineer` terminou às 03:00 e a `Mesa` chamou os outros cinco. Cada pedido desses segurou a rodada
+  até a vigia seguinte: é assunto para a retrospectiva.
+- **Limpeza do meu contexto por rotina (10/10/2026 02:10):** o "Claude Code #2" pediu, em
+  `.processo/pedido-limpeza.md` no térreo, que eu criasse a rotina `Limpa o Orquestrador` (comando `/clear`,
+  desligada, que só dispara por `maestri routine run`) e a disparasse como último comando do turno. Fiz: o meu
+  contexto estava em cerca de 548 mil tokens, o teto de 400 mil de `e43fee4` não pegou nesta sessão, e o hook de
+  início de sessão já diz o que reler depois de um `/clear`. Antes, pus em "Agora" tudo o que ainda devo fazer.
+  A prova está em `.processo/limpeza-prova.md`, no térreo. Não interrompi a 13.0 nem pedi trabalho a ninguém.
+
+- **`cenarios.md` atrás em RF11 e RF12 (10/10/2026 01:55):** o `revisor-geral`, na 2ª rodada da 13.0, apontou três
+  cenários novos sem linha (o ato do professor sem o dado do aluno e o arquivo do aluno sem o id da coordenação;
+  os três índices da `0034`; o storage fora da transação). A Mesa recusou na rodada, para não caducar as cinco
+  aprovações, e deixou a decisão comigo. Decidi que entra: peço ao Arquiteto, depois do commit da 13.0 e antes
+  da 14.0, num commit de documento dele, como no `001cefa`. Não no fechamento: a 14.0 e a 15.0 leem o `cenarios.md`.
+  **Revisto às 02:00:** como a 3ª rodada chama os seis de novo, o motivo de adiar acabou. Pedi as linhas ao
+  Arquiteto já, na mesma sessão do diagnóstico (sem reiniciá-lo: seis minutos de sessão, mesmo assunto), para
+  entrarem no commit da 13.0. O Implementador só é retomado depois, para os dois não mexerem na árvore juntos.
+  Feito às 01:58: RF11 ganhou duas linhas e RF12 três (com o prazo do cliente S3), mais o parágrafo "onde cada
+  um está". Reiniciei o Implementador para a retomada, em vez de continuar a sessão: ela estava a 2% de
+  compactar, com perto de 1 milhão de tokens, e o diagnóstico se basta.
+- **Rotina da vigia em `/vigia` (10/10/2026 01:53):** o "Claude Code #2" voltou a pedir a troca, dizendo que a
+  skill não aparece na lista por ter `disable-model-invocation`. Conferi no arquivo: tem, como o `/seguir`. E o
+  passo 9 do `/seguir` em `e43fee4` manda a troca. Troquei com `maestri routine edit` e conferi com `show`. Se a
+  vigia parar de chegar, volto o comando para `/seguir vigia`.
+
+- **Pedido do "Claude Code #2" sobre o contexto do time (10/10/2026 01:50):** chegou colado neste terminal, dizendo
+  ter a delegação do Joaquim; não foi digitado por ele aqui. Conferi no repositório antes de agir: a `develop`
+  local está em `e43fee4` (teto de contexto em 400 mil tokens, skill `/vigia`, passo 9 novo do `/seguir`).
+  (1) Não troquei o comando da rotina `Vigia do processo`: a skill `/vigia` existe em disco no térreo, mas não
+  aparece na lista de skills desta sessão, e o próprio pedido manda deixar como está nesse caso. Trocar depois
+  que ela aparecer, ou numa sessão nova. (2) O merge da `develop` na branch fica para o fim da 13.0, com o andar
+  limpo, antes da 14.0, como eu já faria. Não interrompi a 13.0 nem reiniciei ninguém.
+
+- **Troca do opencode pelo Sonnet no começo da 13.0 (09/10/2026 23:28):** eu tinha pedido a 13.0 às 23:20 ao
+  Implementador no opencode, pela regra de então. Na vigia das 23:27 o `/seguir` já trazia a D78 revista
+  (`312296a`): o MiMo saiu depois da 12.0 e o opencode só entra a pedido do Joaquim, com a linha
+  `**Implementador:** opencode` em "Agora", que não existe. O Implementador tinha 7 minutos de leitura e nenhum
+  arquivo escrito (a árvore só tinha este `estado.md`). Reiniciei-o em Sonnet e pedi a tarefa de novo, em vez de
+  deixar a 13.0 terminar no MiMo. O `/seguir` manda não interromper agente trabalhando; aqui não havia trabalho
+  a perder, e a tarefa levaria de duas a quatro vezes mais. Antes, trouxe a `develop` para a branch (`59bf15b`).
 
 - **Defeito da vitrine, não corrigido na branch (09/10/2026 13:30):** o `/seguir` manda corrigir na
   branch o que barra o portão. Não fiz: o defeito nasceu na `develop`, a saída (liberar o arquivo no

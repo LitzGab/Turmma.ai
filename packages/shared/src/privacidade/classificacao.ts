@@ -94,7 +94,15 @@ export const CLASSIFICACAO_DAS_TABELAS: Readonly<Record<string, ClassificacaoDaT
   // O pedido do titular à escola (F3, 11.0): id, tipo, quem pediu, datas, estado e a foto do compartilhamento, sem nome nem
   // texto. Vigência + 5 anos, no fim de contrato (F12), como a auditoria que o registra; entra no arquivo do titular, e o
   // registro também entra no de quem o registrou (o `autor` do mapa, `docs/lgpd.md`).
-  pedido_titular: fixo('registro_de_decisao', FIM_DE_CONTRATO, 'titular_id', 'registrado_por'),
+  //
+  // A ligação é só `titular_id`, o critério da 13.0 para `registrado_por`, `concluido_por` e `cancelado_por`: o id de quem da
+  // coordenação atendeu o pedido é de **outra pessoa**, e não entra no arquivo de quem pediu. A coordenação não é titular
+  // de pedido (PRD, seção 4), então o registro dela não tem arquivo para entrar.
+  pedido_titular: fixo('registro_de_decisao', FIM_DE_CONTRATO, 'titular_id'),
+  // O próprio arquivo do titular (F3, 13.0): o JSON no storage privado, só com a chave do objeto e as datas. 7 dias depois de
+  // pronto, apagado do storage e da tabela pela rotina da escola (`retencao.expurgar-escola`); a eliminação da pessoa marca
+  // `apagado_em` e os objetos saem na noite seguinte (15.0). Fora do arquivo: seria o arquivo dentro do arquivo.
+  arquivo_titular: fixo('arquivo_do_titular', 'retencao.expurgar-escola (13.0)'),
 
   // Sem pessoa.
   rede: SEM_PESSOA,
@@ -121,8 +129,7 @@ export const CLASSIFICACAO_DAS_TABELAS: Readonly<Record<string, ClassificacaoDaT
  * token e de cookie, o segredo do segundo fator e o que o acompanha, os códigos de recuperação, a chave de envio e o
  * identificador opaco da conta externa (`sujeito` e `tenant`). Como `tabela.coluna`; o teste de arquitetura confere que
  * cada uma existe, e que toda coluna com nome de segredo (inclusive o estado do segundo fator, `mfa_*`, menos a data de
- * ativação) está aqui. A `chave_objeto` do arquivo e a `chave_envio` do
- * pedido entram com as tabelas deles.
+ * ativação) está aqui. A `chave_objeto` do arquivo (13.0) e a `chave_envio` do pedido (11.0) entraram com as tabelas deles.
  */
 export const COLUNAS_FORA_DO_ARQUIVO: readonly string[] = [
   'conta.senha_hash',
@@ -142,6 +149,7 @@ export const COLUNAS_FORA_DO_ARQUIVO: readonly string[] = [
   'reivindicacao.chave_envio',
   'execucao_agente.chave_envio',
   'pedido_titular.chave_envio',
+  'arquivo_titular.chave_objeto',
   'operador.senha_hash',
   'operador.mfa_segredo_cifrado',
   'operador.mfa_chave_versao',

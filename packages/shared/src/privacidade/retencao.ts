@@ -77,6 +77,7 @@ export const CHAVES_DE_PRAZO_FIXO = [
   'tarefa_em_segundo_plano',
   'equipe_turmma',
   'registro_de_incidente',
+  'arquivo_do_titular',
 ] as const
 export type ChaveDePrazoFixo = (typeof CHAVES_DE_PRAZO_FIXO)[number]
 
@@ -96,6 +97,7 @@ export const PRAZOS_FIXOS: Readonly<Record<ChaveDePrazoFixo, DefinicaoDoPrazoFix
   tarefa_em_segundo_plano: { descricao: 'Registro técnico das tarefas feitas em segundo plano, só com códigos', prazo: '7 dias' },
   equipe_turmma: { descricao: 'Contas e acessos da equipe Turmma ao painel da operação, sem dado da escola', prazo: 'acesso, 6 meses; conta, até a desativação; registro, enquanto durar o contrato, e mais 5 anos' },
   registro_de_incidente: { descricao: 'Registro dos incidentes de segurança que afetaram a escola e de quem confirmou o aviso (Resolução CD/ANPD nº 15/2024, art. 10)', prazo: '5 anos do registro' },
+  arquivo_do_titular: { descricao: 'A cópia dos dados que o aluno ou o professor baixa em "Meus dados" depois de pedir acesso à escola', prazo: '7 dias depois de pronta, ou até a eliminação da pessoa' },
 }
 
 /** O ajuste da escola numa categoria, como a `retencao_escola` o guarda. */

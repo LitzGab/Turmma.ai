@@ -44,7 +44,10 @@ const esquemaStorage = z.object({
   STORAGE_CHAVE_SECRETA: z.string().min(1),
 })
 
-/** Acesso ao storage S3-compatível, só leitura de listagem: a consolidação de uso mede os bytes de cada escola. */
+/**
+ * Acesso ao storage S3-compatível. O worker-lote lista (a consolidação de uso mede os bytes de cada escola) e apaga (o
+ * expurgo remove os arquivos do titular vencidos); o que atende a fila normal grava o arquivo do titular (F3, tarefa 13.0).
+ */
 export interface ConfiguracaoStorage {
   url: string
   regiao: string
@@ -73,8 +76,9 @@ export interface ConfiguracaoWorker {
    */
   vagasPorEscolaDesligadas?: true
   /**
-   * Só na réplica que atende o lote, onde rodam as rotinas do sistema (consolidação de uso e expurgo).
-   * O worker-interativo não mede storage e não precisa da credencial.
+   * Só na réplica que atende o lote, onde rodam as rotinas do sistema (consolidação de uso e expurgo), ou a fila normal,
+   * onde se monta o arquivo do titular (F3, tarefa 13.0). A que atende só a interativa não toca o storage e não precisa
+   * da credencial.
    */
   storage?: ConfiguracaoStorage
   /**
@@ -108,7 +112,8 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
   const vagasPadrao = ler(() => lerVagasPadrao(ambiente))
   const vagasDesligadas = ler(() => lerVagasPorEscolaDesligadas(ambiente))
   const atendeLote = filas?.FILAS.includes('lote') === true
-  const storage = atendeLote ? ler(() => validarAmbiente(esquemaStorage, ambiente)) : undefined
+  const atendeStorage = atendeLote || filas?.FILAS.includes('normal') === true
+  const storage = atendeStorage ? ler(() => validarAmbiente(esquemaStorage, ambiente)) : undefined
   const janelaPadrao = atendeLote ? ler(() => lerJanelaPadrao(ambiente)) : undefined
   const telemetria = ler(() => lerConfiguracaoTelemetria(ambiente))
   if (
@@ -119,7 +124,8 @@ export function lerConfiguracao(ambiente: Record<string, string | undefined>): C
     pools === undefined ||
     vagasPadrao === undefined ||
     vagasDesligadas === undefined ||
-    (atendeLote && (storage === undefined || janelaPadrao === undefined))
+    (atendeStorage && storage === undefined) ||
+    (atendeLote && janelaPadrao === undefined)
   ) {
     throw new ConfiguracaoInvalida(problemas.flatMap((erro) => erro.variaveis).sort(), problemas.flatMap((erro) => erro.motivos))
   }

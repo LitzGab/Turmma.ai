@@ -11,6 +11,11 @@ export interface PedidoParaRegistrar {
   readonly chegouEm: string
   readonly chaveEnvio: string
   readonly homonimo: boolean
+  /**
+   * O estado em que o pedido nasce: `em_preparacao` quando gera arquivo (acesso e portabilidade, que enfileiram o job na
+   * mesma transação), `recebido` nos outros três (F3, tarefa 13.0).
+   */
+  readonly estado: 'recebido' | 'em_preparacao'
   /** A foto do compartilhamento no momento do registro (F3, tarefa 12.0): é ela que sobrevive ao expurgo do titular. */
   readonly compartilhamento: Compartilhamento
 }
@@ -77,7 +82,7 @@ export class PedidosRepository {
         tipo: pedido.tipo,
         solicitante: pedido.solicitante,
         chegouEm: pedido.chegouEm,
-        estado: 'recebido',
+        estado: pedido.estado,
         compartilhamento: pedido.compartilhamento,
         homonimo: pedido.homonimo,
         registradoPor: usuarioId,
@@ -119,24 +124,29 @@ export class PedidosRepository {
 
   /**
    * Conclui o pedido aberto de acesso, portabilidade, compartilhamento ou correção: `estado`, `concluido_em` e
-   * `concluido_por` juntos, e **só a chamada que mudou** devolve `true` (o `where` decide a corrida do clique duplo).
-   * A eliminação não conclui por aqui: é o job dela (tarefa 15.0), que assina com o autor `rotina`.
+   * `concluido_por` juntos, e **só a chamada que mudou** devolve o estado em que o pedido estava (o `where` decide a
+   * corrida do clique duplo). O estado anterior sai do próprio `update`, de uma subconsulta que **trava a linha**: o job
+   * do arquivo (13.0) passa `em_preparacao` para `pronto` por fora, e um estado lido antes do `update` poderia não ser o
+   * que foi trocado (a auditoria diria `pronto` de um pedido que estava `em_preparacao`). A eliminação não conclui por
+   * aqui: é o job dela (tarefa 15.0), que assina com o autor `rotina`.
    */
-  async concluir(id: string): Promise<boolean> {
+  async concluir(id: string): Promise<EstadoDoPedido | undefined> {
     const { usuarioId } = identidadeDaRequisicao()
-    const [concluido] = await this.banco
-      .update(pedidoTitular)
-      .set({ estado: 'concluido', concluidoEm: new Date(), concluidoPor: usuarioId })
-      .where(
-        and(
-          eq(pedidoTitular.escolaId, exigirEscolaDoContexto()),
-          eq(pedidoTitular.id, id),
-          sql`${pedidoTitular.tipo} in ('acesso', 'portabilidade', 'compartilhamento', 'correcao')`,
-          sql`${pedidoTitular.estado} in ('recebido', 'em_preparacao', 'pronto')`,
-        ),
-      )
-      .returning({ id: pedidoTitular.id })
-    return concluido !== undefined
+    const escolaId = exigirEscolaDoContexto()
+    const concluidoEm = new Date()
+    const { rows } = await this.banco.execute<{ anterior: EstadoDoPedido }>(sql`
+      update pedido_titular p set estado = 'concluido', concluido_em = ${concluidoEm.toISOString()}::timestamptz, concluido_por = ${usuarioId}
+      from (
+        select a.id, a.estado from pedido_titular a
+        where a.escola_id = ${escolaId} and a.id = ${id}
+          and a.tipo in ('acesso', 'portabilidade', 'compartilhamento', 'correcao')
+          and a.estado in ('recebido', 'em_preparacao', 'pronto')
+        for update
+      ) anterior
+      where p.escola_id = ${escolaId} and p.id = anterior.id
+      returning anterior.estado as anterior
+    `)
+    return rows[0]?.anterior
   }
 
   /**

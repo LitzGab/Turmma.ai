@@ -109,6 +109,9 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['rede', 'privacidade_pedidos', 'ler', 'nunca'],
   ['rede', 'privacidade_pedidos', 'concluir', 'nunca'],
   ['rede', 'privacidade_pedidos', 'corrigir_nome', 'nunca'],
+  ['rede', 'privacidade_pedidos', 'arquivo', 'nunca'],
+  ['rede', 'meus_dados', 'listar', 'nunca'],
+  ['rede', 'meus_dados', 'baixar', 'nunca'],
 
   // coordenador: a unidade; aluno e indicador nominal só com auditoria
   ['coordenador', 'sistema_contexto', 'ler', 'proprio'],
@@ -216,6 +219,9 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['coordenador', 'privacidade_pedidos', 'ler', 'unidade'],
   ['coordenador', 'privacidade_pedidos', 'concluir', 'unidade'],
   ['coordenador', 'privacidade_pedidos', 'corrigir_nome', 'unidade'],
+  ['coordenador', 'privacidade_pedidos', 'arquivo', 'unidade'],
+  ['coordenador', 'meus_dados', 'listar', 'nunca'],
+  ['coordenador', 'meus_dados', 'baixar', 'nunca'],
 
   // professor: as turmas dele e o próprio vínculo e indicador
   ['professor', 'sistema_contexto', 'ler', 'proprio'],
@@ -322,6 +328,9 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['professor', 'privacidade_pedidos', 'ler', 'nunca'],
   ['professor', 'privacidade_pedidos', 'concluir', 'nunca'],
   ['professor', 'privacidade_pedidos', 'corrigir_nome', 'nunca'],
+  ['professor', 'privacidade_pedidos', 'arquivo', 'nunca'],
+  ['professor', 'meus_dados', 'listar', 'proprio'],
+  ['professor', 'meus_dados', 'baixar', 'proprio'],
 
   // aluno: a si mesmo
   ['aluno', 'sistema_contexto', 'ler', 'proprio'],
@@ -427,4 +436,7 @@ export const EXPECTATIVA_DA_MATRIZ: ReadonlyArray<readonly [papel: string, recur
   ['aluno', 'privacidade_pedidos', 'ler', 'nunca'],
   ['aluno', 'privacidade_pedidos', 'concluir', 'nunca'],
   ['aluno', 'privacidade_pedidos', 'corrigir_nome', 'nunca'],
+  ['aluno', 'privacidade_pedidos', 'arquivo', 'nunca'],
+  ['aluno', 'meus_dados', 'listar', 'proprio'],
+  ['aluno', 'meus_dados', 'baixar', 'proprio'],
 ]

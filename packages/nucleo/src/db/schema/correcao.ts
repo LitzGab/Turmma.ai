@@ -60,6 +60,8 @@ export const correcao = pgTable(
     }).onDelete('cascade'),
     uniqueIndex('correcao_uma_por_aluno_no_lote').on(tabela.escolaId, tabela.entregaId, tabela.alunoId),
     index('correcao_aluno_idx').on(tabela.escolaId, tabela.alunoId, tabela.id),
+    // O que o arquivo do professor lê: os destaques que ele abriu (F3, 13.0; regra 80, item 8). Parcial: a maioria é nula.
+    index('correcao_destaque_aberto_por_idx').on(tabela.escolaId, tabela.destaqueAbertoPor).where(sql`${tabela.destaqueAbertoPor} is not null`),
     check('correcao_contagem_valida', sql`${tabela.total} between 1 and 20 and ${tabela.acertos} >= 0 and ${tabela.emBranco} >= 0 and ${tabela.acertos} + ${tabela.emBranco} <= ${tabela.total}`),
     check('correcao_por_habilidade_e_lista', sql`jsonb_typeof(${tabela.porHabilidade}) = 'array'`),
     check('correcao_destaques_validos', sql`${tabela.destaques} <@ array['em_branco', 'fora_do_historico', 'padrao_de_erro']::text[]`),
