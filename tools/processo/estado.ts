@@ -208,14 +208,14 @@ export function funcionalidadeDaVez(roadmap: ItemDoRoadmap[], temPrd: (nome: str
 /** O que o orquestrador faz em cada fase. Em português comum: é o texto que o Joaquim lê no `/seguir`. */
 export const PROXIMO_PASSO: Record<Fase, string> = {
   'sem-prd': 'o Arquiteto escreve o PRD; para nas perguntas e na aprovação do Joaquim',
-  'sem-techspec': 'o Arquiteto escreve a Tech Spec; para nas perguntas e na aprovação do Joaquim',
-  'sem-revisao-da-spec': 'o Arquiteto roda a revisão da spec com os guardiões; para no aceite das correções',
-  'sem-tarefas': 'o Arquiteto gera as tarefas, com o porte de cada uma; para na aprovação da lista',
+  'sem-techspec': 'o Arquiteto escreve a Tech Spec; para nas perguntas, mostra o resumo ao Joaquim e segue',
+  'sem-revisao-da-spec': 'o Arquiteto roda a revisão da spec com os guardiões; só para na correção que muda o desenho',
+  'sem-tarefas': 'o Arquiteto gera as tarefas, com o porte de cada uma, e mostra a lista; a construção começa 30 minutos depois',
   construindo: 'o Implementador executa a próxima tarefa, com a Mesa de revisão',
   'sem-validacao': 'o Validador confere a funcionalidade contra o PRD',
   'validacao-reprovada': 'corrigir os achados da validação e validar de novo',
   'validacao-com-ressalvas': 'parada: o Joaquim decide entre corrigir e aceitar cada ressalva',
-  validada: 'rodar a esteira na branch, fechar no roadmap e pedir o pouso ao Joaquim',
+  validada: 'conferir a esteira do último commit de código, fechar no roadmap e pedir o pouso ao Joaquim',
   'aguardando-pouso': 'parada: o pouso na develop é do Joaquim',
   'sem-retro': 'o Arquiteto roda a retrospectiva no térreo e apresenta as propostas ao Joaquim',
   concluida: 'nada a fazer nesta funcionalidade',
