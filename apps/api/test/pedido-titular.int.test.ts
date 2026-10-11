@@ -1057,6 +1057,86 @@ describe('pedido do titular (F3, tarefa 11.0): busca, prévia, registro, lista, 
     })
   })
 
+  describe('virada de ano letivo: a escola sem ano em curso atende o titular (regra 40; C1 da validação)', () => {
+    it('depois de encerrar o ano, a busca, o registro, a lista, o detalhe, o corrigir nome, o concluir e o cancelar respondem, só sem turma nem disciplina; e B continua sem alcançar A', async () => {
+      const a = await escolaComPessoas()
+      const b = await escolaComPessoas()
+      const aluno = a.alunos[0]
+      const professor = a.professores[0]
+      const alunoDeB = b.alunos[0]
+      if (aluno === undefined || professor === undefined || alunoDeB === undefined) throw new Error('pessoa de teste não criada')
+      // Com o ano em curso: a correção do professor e a eliminação agendada do aluno, para o concluir e o cancelar de depois.
+      const doProfessor = await registrar(a.coordenacao, professor.id, { tipo: 'correcao' })
+      const daEliminacao = await registrar(a.coordenacao, aluno.id, { tipo: 'eliminacao' })
+      expect([doProfessor.status, daEliminacao.status]).toEqual([201, 201])
+      const idDoProfessor = doProfessor.corpo['id'] as string
+      const idDaEliminacao = daEliminacao.corpo['id'] as string
+      expect(((await buscar(a.coordenacao, termoDe(professor.nome))).corpo as { titulares: Array<{ turmas: unknown[] }> }).titulares[0]?.turmas).toHaveLength(1)
+
+      // A virada: a coordenação encerra o ano (pela API, como faz) e o seguinte ainda não abriu.
+      expect((await pedir(a.coordenacao, 'POST', `/v1/anos-letivos/${a.anoLetivoId}/encerrar`)).status).toBe(200)
+      const { rows: emCurso } = await bancada.pool.query('select id from ano_letivo where escola_id = $1 and situacao = $2', [a.escolaId, 'em_curso'])
+      expect(emCurso).toEqual([])
+      // O que o encerramento deixou de pé: um vínculo ainda `confirmado` num ano que não está em curso (montado pelo banco, como em
+      // `acesso-da-turma.int.test.ts`, porque pela API o encerrar leva todos a `encerrado`). Se a leitura caísse num ano qualquer
+      // quando não há ano em curso, a turma 2ºC e a disciplina apareceriam abaixo.
+      for (const [usuarioId, papel, disciplinaId] of [
+        [professor.id, 'professor', a.fisica],
+        [aluno.id, 'aluno', null],
+      ] as const) {
+        await bancada.pool.query(
+          `insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, $5, $6, 'confirmado', $7, now())`,
+          [a.escolaId, a.anoLetivoId, usuarioId, a.outraTurma, disciplinaId, papel, a.coordenacao.usuarioId],
+        )
+      }
+
+      // A busca acha as duas pessoas; sem ano em curso, a linha vem sem turma e sem disciplina, e nunca com as de um ano qualquer.
+      const doProfessorAchado = await buscar(a.coordenacao, termoDe(professor.nome))
+      expect(doProfessorAchado.status).toBe(200)
+      expect(doProfessorAchado.corpo).toMatchObject({ titulares: [{ id: professor.id, nome: professor.nome, turmas: [], disciplinas: [] }] })
+      const doAlunoAchado = await buscar(a.coordenacao, termoDe(aluno.nome))
+      expect(doAlunoAchado.status).toBe(200)
+      expect(doAlunoAchado.corpo).toMatchObject({ titulares: [{ id: aluno.id, nome: aluno.nome, turmas: [], disciplinas: [] }] })
+
+      // O registro grava, devolve o pedido com o nome do titular e sem turma, e não desfaz a transação.
+      const novo = await registrar(a.coordenacao, aluno.id, { tipo: 'compartilhamento' })
+      expect(novo.status).toBe(201)
+      expect(novo.corpo).toMatchObject({ titular: { nome: aluno.nome, turmas: [] } })
+      const idDoNovo = novo.corpo['id'] as string
+      expect((await pedidosNoBanco(a.escolaId)).map((linha) => linha['id'])).toContain(idDoNovo)
+
+      // A lista e o detalhe mostram os pedidos com o nome, sem 404.
+      const lista = await listar(a.coordenacao)
+      expect(lista.status).toBe(200)
+      const itens = (lista.corpo as { itens: Array<{ id: string; titular: { nome: string } | null }> }).itens
+      expect(itens.map(({ id }) => id).sort()).toEqual([idDoProfessor, idDaEliminacao, idDoNovo].sort())
+      expect(itens.find(({ id }) => id === idDoProfessor)?.titular?.nome).toBe(professor.nome)
+      const detalhe = await ler(a.coordenacao, idDaEliminacao)
+      expect(detalhe.status).toBe(200)
+      expect(detalhe.corpo).toMatchObject({ id: idDaEliminacao, estado: 'agendado', titular: { nome: aluno.nome, turmas: [] } })
+
+      // O corrigir nome e o concluir do professor, e o cancelar da eliminação dentro dos 7 dias: o que o ano encerrado não pode tirar.
+      const corrigido = nome('Professora corrigida na virada')
+      expect(resposta(await corrigir(a.coordenacao, idDoProfessor, corrigido))).toEqual({ status: 204, corpo: {} })
+      expect(resposta(await concluir(a.coordenacao, idDoProfessor))).toEqual({ status: 204, corpo: {} })
+      expect(resposta(await pedir(a.coordenacao, 'POST', `/v1/privacidade/pedidos/${idDaEliminacao}/cancelar`, {}))).toEqual({ status: 204, corpo: {} })
+      expect((await ler(a.coordenacao, idDaEliminacao)).corpo).toMatchObject({ estado: 'cancelado' })
+      // A auditoria de cada passo ficou gravada: sem ano em curso a resposta não cai, e a transação, com a auditoria dentro, não se desfaz.
+      expect(await auditoriasDa(a.escolaId, 'pedido.registrado')).toHaveLength(3)
+      expect(await auditoriasDa(a.escolaId, 'pedido.nome_corrigido')).toHaveLength(1)
+      expect(await auditoriasDa(a.escolaId, 'pedido.concluido')).toHaveLength(1)
+      expect(await auditoriasDa(a.escolaId, 'pedido.cancelado')).toHaveLength(1)
+
+      // O isolamento não afrouxa: a escola B, com o ano dela em curso, não alcança o pedido de A, e A não alcança o de B.
+      const deB = await registrar(b.coordenacao, alunoDeB.id)
+      expect(deB.status).toBe(201)
+      expect(resposta(await ler(b.coordenacao, idDaEliminacao))).toEqual(NAO_ENCONTRADO)
+      expect(resposta(await ler(a.coordenacao, deB.corpo['id'] as string))).toEqual(NAO_ENCONTRADO)
+      // A busca de A, sem ano em curso, também não acha a pessoa de B: o escopo da escola vale na leitura que a correção mexeu.
+      expect(await buscar(a.coordenacao, termoDe(alunoDeB.nome))).toMatchObject({ status: 200, corpo: { titulares: [] } })
+    })
+  })
+
   describe('concorrência (regra 80, item 7)', () => {
     it('[P] a mesma chave de envio duas vezes ao mesmo tempo grava um pedido só, e as duas chamadas devolvem o mesmo', async () => {
       const a = await escolaComPessoas()

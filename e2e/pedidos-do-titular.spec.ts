@@ -14,6 +14,7 @@ import {
   doisCliquesNoMesmoInstante,
   ELIMINADO,
   ENDERECO_DA_ABA,
+  ENDERECO_DO_DETALHE,
   entrarNosPedidos,
   escolherEPedir,
   HOMONIMO,
@@ -24,6 +25,7 @@ import {
   marca,
   portao,
   principal,
+  registrarPeloFluxo,
 } from './__fixtures__/pedidos-do-titular.ts'
 import {
   colocarAlunoNaTurma,
@@ -686,5 +688,42 @@ test.describe('Pedidos: a lista e os quatro estados', () => {
     await acionar(page.getByRole('tab', { name: 'Pedidos', exact: true }), hasTouch)
     await expect(linhas(page)).toHaveCount(50, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('button', { name: 'Ver mais pedidos' })).toBeVisible()
+  })
+})
+
+test.describe('Pedidos: a escola entre dois anos letivos', () => {
+  test('sem ano em curso (a escola ainda não abriu o ano letivo), a lista, a busca, o registro e o detalhe funcionam, só sem a turma', async ({ page, hasTouch }) => {
+    test.setTimeout(120_000)
+    // A escola não tem ano em curso, como entre o fim de um ano e a abertura do seguinte: é quando o responsável pede o acesso ou a eliminação (regra 40, virada de ano). O fixture cria a escola sem ano; o encerramento pela API é provado na integração (pedido-titular.int.test.ts).
+    const coordenadora = await criarEquipeComSenha('coordenador', { semAnoLetivo: true })
+    const anterior = await criarAlunoComMatricula({ escola: coordenadora, nome: `Iara ${marca()} Teles`, matricula: `3${marca()}` })
+    await criarPedidosDoTitularNoBanco(coordenadora.escolaId, anterior.usuarioId, coordenadora.usuarioId, 1)
+    const novo = await criarAlunoComMatricula({ escola: coordenadora, nome: `Caio ${marca()} Neves`, matricula: `4${marca()}` })
+    await entrarNosPedidos(page, hasTouch, coordenadora)
+
+    // A lista traz o pedido que já existia, com a pessoa e a situação, e não o "Não encontramos" que a escola sem ano via.
+    const doAnterior = linhaDa(page, anterior.nome)
+    await expect(doAnterior).toHaveCount(1, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(doAnterior).toContainText('Acesso aos dados')
+    await expect(doAnterior).toContainText('Recebido')
+    await expect(principal(page).getByRole('alert')).toHaveCount(0)
+    await expect(principal(page)).not.toContainText('Não encontramos')
+
+    // A busca acha a pessoa e o registro grava: o pedido volta para a lista e fica no banco.
+    await registrarPeloFluxo(page, hasTouch, { nome: novo.nome, pessoa: new RegExp(novo.nome), tipo: 'Correção de dados', confirmar: 'Registrar pedido' })
+    const doNovo = linhaDa(page, novo.nome)
+    await expect(doNovo).toHaveCount(1, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(doNovo).toContainText('Correção de dados')
+    expect((await pedidosDoTitularNoBanco(coordenadora.escolaId)).filter(({ titularId }) => titularId === novo.usuarioId)).toEqual([expect.objectContaining({ tipo: 'correcao', estado: 'recebido' })])
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+
+    // O detalhe abre: o nome da pessoa é o título, e a página não cai em "não está mais disponível".
+    await acionar(doNovo.getByRole('link', { name: novo.nome, exact: true }), hasTouch)
+    await expect(page).toHaveURL(ENDERECO_DO_DETALHE, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page).getByRole('heading', { level: 1, name: novo.nome, exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page)).not.toContainText('não está mais disponível')
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
   })
 })

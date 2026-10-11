@@ -1,7 +1,7 @@
 import {
+  contextoAtual,
   credencialMatricula,
   disciplina,
-  exigirAnoEmCurso,
   exigirEscolaDoContexto,
   haHomonimoDoTitular,
   identidadeDaRequisicao,
@@ -201,9 +201,17 @@ export class TitularesRepository {
     return CATEGORIAS_DE_CADASTRO_E_VINCULO
   }
 
-  /** As turmas e as disciplinas do ano em curso de cada pessoa, na ordem do nome da turma. */
+  /**
+   * As turmas e as disciplinas do ano em curso de cada pessoa, na ordem do nome da turma. **Sem ano em curso** (entre o
+   * encerramento de um ano e a abertura do seguinte, quando o pedido de acesso e o de eliminação mais chegam) não há
+   * vínculo a mostrar: a virada já os encerrou, e o mapa vem vazio. Turma e disciplina só completam a linha; o pedido, a
+   * busca e a lista não dependem delas, e nunca caem num ano qualquer (regra 10, item 2). A escola continua exigida do
+   * contexto, e sem ela a chamada falha como antes.
+   */
   async #vinculosDe(usuarioIds: readonly string[]): Promise<Map<string, { turmas: Array<{ id: string; nome: string }>; disciplinas: Array<{ id: string; nome: string }> }>> {
-    if (usuarioIds.length === 0) return new Map()
+    const escolaId = exigirEscolaDoContexto()
+    const anoLetivoId = contextoAtual()?.anoLetivoId
+    if (usuarioIds.length === 0 || typeof anoLetivoId !== 'string') return new Map()
     const linhas = await this.banco
       .select({ usuarioId: vinculo.usuarioId, turmaId: turma.id, turma: turma.nome, disciplinaId: disciplina.id, disciplina: disciplina.nome })
       .from(vinculo)
@@ -211,8 +219,8 @@ export class TitularesRepository {
       .leftJoin(disciplina, and(eq(disciplina.escolaId, vinculo.escolaId), eq(disciplina.id, vinculo.disciplinaId)))
       .where(
         and(
-          eq(vinculo.escolaId, exigirEscolaDoContexto()),
-          eq(vinculo.anoLetivoId, exigirAnoEmCurso()),
+          eq(vinculo.escolaId, escolaId),
+          eq(vinculo.anoLetivoId, anoLetivoId),
           ne(vinculo.estado, 'encerrado'),
           inArray(vinculo.usuarioId, [...usuarioIds]),
         ),
