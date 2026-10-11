@@ -416,6 +416,16 @@ com os tempos da seção 3.2.
 Roda antes da primeira escola real, e de novo sempre que uma funcionalidade mexer no
 caminho quente.
 
+**Cenário "justiça entre escolas" com o expurgo (F3, tarefa 19.0)**, local, em `npm run carga`: uma escola, a A, expurga
+**1 milhão de linhas** vencidas e troca um nome (o `retencao.expurgar-escola` e o `titular.eliminar`, pelo worker de lote) enquanto a
+B usa a fila interativa **e o Tutor pela rota** `POST /v1/tutor/mensagens` (30 alunos sintéticos, 1,5 turno por segundo, com o
+adaptador falso de latência simulada: `IA_LATENCIA_FALSA_MS=300` em `infra/carga.env`, regra 80, item 11). **Passa quando**
+nenhum statement chega a 1,5 s no `pg_stat_statements` e nenhum é cancelado pelo `statement_timeout` de 2 s (o cancelado não
+entra no `max_exec_time`; ele aparece no log do Postgres), o p95 da espera da B e o p95 do turno do Tutor da B (da criação da
+execução à conclusão) durante o trabalho da A ficam até 500 ms acima da base, tudo o que venceu sai e o nome some. A escrita
+a mais dos índices por troca do Tutor é medida por linha, só para informar (`TODO.md`, "Escrita a mais por troca do Tutor").
+Procedimento e critérios: `docs/runbook.md`, "Rodar o cenário de carga".
+
 ---
 
 ## 11. Portão da primeira escola real

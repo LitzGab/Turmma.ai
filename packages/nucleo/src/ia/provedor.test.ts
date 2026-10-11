@@ -126,6 +126,23 @@ describe('ProvedorDeIa: saída validada e medição', () => {
     const { medicao } = await ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
     expect(medicao.origem).toBe('falso')
   })
+
+  it('criarProvedorDeIa: com latenciaFalsaMs a chamada do adaptador falso espera pelo menos isso, e sem ela não espera', async () => {
+    const config = { adaptador: 'falso' as const, timeoutMs: 5_000, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 10_000 } }
+    const portas = { registro: new ConsumoEmMemoria(), orcamento: SEMPRE, suspensao: new SuspensoesEmMemoria() }
+    const chamar = async (latenciaFalsaMs?: number): Promise<number> => {
+      const ia = criarProvedorDeIa(latenciaFalsaMs === undefined ? config : { ...config, latenciaFalsaMs }, portas)
+      const inicio = performance.now()
+      await ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
+      return performance.now() - inicio
+    }
+    // A chamada com latência primeiro: o custo da primeira chamada do arquivo só soma a ela.
+    const com = await chamar(200)
+    const sem = await chamar()
+    expect(com).toBeGreaterThanOrEqual(190)
+    // Sem a opção não há espera: a chamada termina antes da que espera 200 ms, qualquer que seja a velocidade da máquina.
+    expect(sem).toBeLessThan(com)
+  })
 })
 
 describe('ProvedorDeIa: toda execução registra (regra 30, item 4)', () => {

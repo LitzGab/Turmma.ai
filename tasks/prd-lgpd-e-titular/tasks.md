@@ -136,12 +136,12 @@
   - [ ] 18.4 `docs/interface.md`
   - [ ] 18.5 Testes
 
-- [ ] **19.0 — A carga prova que o expurgo não atrapalha a aula, e os documentos fecham o F3**
-  - [ ] 19.1 Cenário de carga com o adaptador falso de latência simulada; p95 do Tutor de B com e sem o lote de A; statements medidos no Postgres
-  - [ ] 19.2 `ops:privacidade` (contagens por escola) com sentinelas
-  - [ ] 19.3 `docs/lgpd.md`, `modelo-de-dados.md`, `arquitetura.md`, `runbook.md` conferidos
-  - [ ] 19.4 Pendências para o `TODO.md`: a contração de `provedor` (release posterior), recomendações abertas
-  - [ ] 19.5 Testes
+- [x] **19.0 — A carga prova que o expurgo não atrapalha a aula, e os documentos fecham o F3**
+  - [x] 19.1 Cenário de carga com o adaptador falso de latência simulada; p95 do Tutor de B com e sem o lote de A; statements medidos no Postgres
+  - [x] 19.2 `ops:privacidade` (contagens por escola) com sentinelas
+  - [x] 19.3 `docs/lgpd.md`, `modelo-de-dados.md`, `arquitetura.md`, `runbook.md` conferidos
+  - [x] 19.4 Pendências para o `TODO.md`: a contração de `provedor` (release posterior), recomendações abertas
+  - [x] 19.5 Testes
 
 - [x] **20.0 — Quem tem a eliminação agendada vê que o acesso está suspenso**
   - [x] 20.1 Sessão da web: o `ACESSO_SUSPENSO` da renovação tratado em `renovarSessao` (estado `suspensa`, token esquecido, cache esvaziado); "Sair" sem aviso pendente

@@ -32,7 +32,7 @@ Nada aqui usa IA.
 | `packages/nucleo/src/config` e `ia` | alterado | `IA_PROVEDOR_ID` e o caminho até `consumo_ia.provedor` (seção 3) |
 | `apps/api/src/privacidade` | novo | rotas da seção 4 |
 | `apps/api/src/sessao` | alterado | a guarda recusa `eliminacao_agendada_em` com 401; logins e renovação, com `ACESSO_SUSPENSO` depois da credencial |
-| `apps/api/src/ops` | alterado | `ops:retencao`, `ops:suboperador`, `ops:incidente`, `ops:privacidade`, e a `OperacaoPrivacidadeRepository` |
+| `apps/api/src/ops` | alterado | `ops:retencao`, `ops:suboperador`, `ops:incidente`, `ops:privacidade`, a `OperacaoPrivacidadeRepository` (escreve) e a `ContagensDePrivacidadeRepository` (as contagens do `ops:privacidade`, tarefa 19.0) |
 | `apps/worker` | alterado | processadores e agendamento da seção 5 |
 | `apps/web` | alterado | seção 9 |
 | `docs/` | alterado | `lgpd.md` (na tarefa da migration); `modelo-de-dados.md` (exceções); `arquitetura.md`; `interface.md` (Privacidade); `runbook.md` |
@@ -612,7 +612,8 @@ Todo repository novo tira a escola do contexto. O job da escola roda com a escol
 |---|---|---|
 | `EscolasDaRotinaRepository.listarIds` | ids das escolas, nada mais | a rotina noturna precisa abrir o contexto de cada escola; é infraestrutura de rotina, não de retenção. Na tarefa 3.0, a medição do alerta de duas noites, no worker-lote, usa a mesma lista para abrir o contexto de cada escola e ler as noites dela pelo `ExpurgoDaEscolaRepository`, com escopo; o teste de arquitetura lista quem a usa (só o worker-lote) |
 | `ContaGlobalRepository.travarConta`, `limparContaSemUso`, `encerrarSessoesDaConta` | os três da conta global, **movidos** de `ResolucaoDeTenantRepository` (o terceiro na tarefa 1.0: o `limparContaSemUso` o chama, e a redefinição do MFA, no `sessao`, também) | a conta é global por desenho; a exceção da `Conta` em `modelo-de-dados.md` passa a dizer "só `sessao` e `nucleo/ciclo-de-vida`" (e o expurgo de acesso, que já a limpava), e o `arquitetura.test.ts` passa a aceitar os dois caminhos |
-| `OperacaoPrivacidadeRepository` (escrever `suboperador` e `incidente`, contagens por escola) | comandos da operação | mesma justificativa do painel; só ids, números e as tabelas da operação |
+| `OperacaoPrivacidadeRepository` (escrever `suboperador` e `incidente`) | comandos da operação | mesma justificativa do painel; só ids, números e as tabelas da operação |
+| `ContagensDePrivacidadeRepository.doAtendimento` | contagens de `pedido_titular`, `arquivo_titular` e `expurgo_execucao` de **uma** escola, para o `ops:privacidade` (tarefa 19.0) | só estado, datas e categoria, nenhuma coluna de pessoa; o `escola_id` é o do contexto que o comando abriu, e nenhum método é `@SemEscopo`. Fica fora do `OperacaoPrivacidadeRepository`: as três tabelas não são da operação, e o teste de arquitetura dá dono único às tabelas dela |
 | `ExpurgoDeAcessoRepository.apagarLoteVencido('incidente')` | incidente com mais de 5 anos do `registrado_em`, e a cascata das ligações | a justificativa do método passa a citar o incidente (tarefa 9.0) |
 
 Os comandos `ops:retencao`, `ops:suboperador` e `ops:incidente` abrem o contexto de cada escola antes de escrever a
@@ -719,7 +720,33 @@ Não há IA no caminho. O que a funcionalidade preserva:
 | Migration | compatível: a 0024 e a 0028 (`consumo_ia_provedor`: a coluna `provedor` e o check que a prende ao envio externo) só expandem, e a exigência de `provedor` vai num release posterior (seção 3). O `migrar` roda numa transação, então `NOT VALID` seguido de `VALIDATE` no mesmo arquivo não alivia a trava: a partir do staging, cada check vai em arquivo próprio. Índice sem `concurrently` enquanto não há staging nem piloto; a partir do staging, `concurrently` fora de transação. Rollback: o código anterior ignora `eliminacao_agendada_em`, e isso fica no runbook |
 | Quando cada dependência cai | banco: 503 tipado e nova tentativa; Redis de fila: aceito e despachado depois; storage: "em preparação", e baixar dá `INDISPONIVEL` |
 | Métrica e alerta | duas noites seguidas sem todas as categorias da escola com `concluida = true` (tarefa 3.0: `expurgo.noites_incompletas{escola_id}`, de 0 a 2, medida pelo worker-lote a cada 5 min; a noite é o dia local de `em` no fuso da escola, de ontem para trás; a categoria sem linha conta como não concluída; a noite anterior à primeira execução da escola não conta, e a escola que nunca rodou não tem série; a regra dispara com a série em 2 por 1 min, `infra/grafana/alertas/expurgo-noites-incompletas.yaml`; o lote que falha grava a categoria com `concluida = false` antes de o erro subir, para a escola cujo expurgo falha desde a primeira noite também ter série; numa escola a oeste de São Paulo, uma execução que passa da meia-noite local divide as categorias entre dois dias, pendência no `TODO.md`); incidente sem confirmação em 24 h (tarefa 9.0: `incidente.horas_sem_confirmacao{escola_id}`, medida pelo worker-lote a cada 5 min, em horas desde o `conhecido_em` do incidente mais antigo da escola sem confirmação, e só a escola com pendente tem série; a regra `infra/grafana/alertas/incidente-sem-confirmacao.yaml` dispara acima de 24 por 1 min; a base `MedicaoPorEscola` é do laço, da lista de escolas e da exportação, e a medição do expurgo passou a herdar dela); pedido `agendado` mais de 48 h depois de `eliminar_em` (tarefa 15.0: `eliminacao.horas_vencida{escola_id}`, em horas desde o `eliminar_em` do mais antigo já vencido, medida pelo worker-lote a cada 5 min, e só a escola com eliminação vencida tem série; `infra/grafana/alertas/eliminacao-vencida.yaml` dispara acima de 48 por 1 min; uma interrupção pela janela letiva é esperada e cabe nas 48 h); `em_preparacao` por mais de 2 h. Cada um com parágrafo no runbook e linha no `test:infra` |
-| Cenário de teste de carga | o "justiça entre escolas" ganha uma escola expurgando 1 milhão de linhas e trocando nome enquanto outra usa o Tutor |
+| Cenário de teste de carga | o "justiça entre escolas" ganha uma fase, entre a base e a carga (`infra/scripts/expurgo-da-carga.ts`, chamada por `infra/scripts/carga.ts`): a escola A expurga 1 milhão de linhas vencidas e troca um nome, pelo worker de lote, enquanto a B usa a fila interativa e o Tutor pela rota, com o adaptador falso de latência simulada (`IA_LATENCIA_FALSA_MS`). |
+
+Tarefa 19.0, como ficou no código:
+- **A semente da A** é SQL (`semearEscolaA`): 250 mil execuções do Tutor, as 500 mil mensagens delas e 250 mil consumos com texto,
+  todos de 13 meses atrás (acima do padrão de 12), o ano de uso de um titular (execuções do Tutor, trocas recentes, artefatos e
+  execuções do professor com o nome) e o `pedido_titular` de eliminação `agendado` e vencido. A A fica sem dia letivo na fase
+  (`liberarJanelaDaA`), para o lote rodar na hora.
+- **O job do expurgo da A** é gravado em `job_registro` como a rotina da noite o grava (lote, prioridade 3, não urgente, a data da
+  noite como chave), 10 s depois de o k6 começar; o worker de lote o executa e enfileira o `titular.eliminar`. O k6 da fase é o da
+  carga da B, com o p95 da base mais 500 ms no threshold.
+- **O que reprova**, em `julgarResultadoDoExpurgo`: `statement_acima_de_2s` (o `max_exec_time` do `pg_stat_statements`, que o compose
+  de carga carrega, a partir de `TETO_DA_MEDIDA_MS` = 1,5 s, abaixo do `statement_timeout`; **ou** statement cancelado pelo
+  `statement_timeout`, contado no log do Postgres da fase por `contarStatementsCancelados`, porque o cancelado não entra no
+  `max_exec_time` e o executor repete o job), `statements_sem_amostra` (inclui o log que não foi lido), `espera_b_no_expurgo` (o p95
+  dos jobs da B **criados durante o trabalho da A**, e não o dos dois minutos do k6, porque o trabalho dura segundos),
+  `turno_b_no_expurgo` (o p95 do turno do Tutor da B nesse intervalo, na base mais 500 ms), `sem_amostra_da_b` (menos de 10 jobs da
+  B, ou menos de 5 turnos do Tutor da B, nesse intervalo), `expurgo_incompleto`, `troca_de_nome_incompleta` e `job_da_a`.
+- **O Tutor da B** exerce o turno pela rota `POST /v1/tutor/mensagens`, lido em `GET /v1/execucoes/:id`, com 30 alunos sintéticos
+  (grupo `b_tutor` de `ops:sessao-sintetica`), 1,5 turno por segundo na `base` e na `expurgo` (não na `carga`), com o adaptador falso de
+  latência simulada: a variável nova `IA_LATENCIA_FALSA_MS` (`config-ia.ts`, `provedor.ts`, `infra/compose.yml`, `.env.example`; 300
+  em `infra/carga.env`). A semente é SQL (`semearTutorDaB`): o ano em curso, uma turma e o vínculo confirmado de cada aluno da B; sem
+  sala, atividade nem material, o turno não lê trechos. O mínimo de 5 turnos vem do teto de 120 pedidos de IA por minuto por
+  escola. O `turno_b` do k6 vai do POST à conclusão (a API não devolve datas) e o critério da fase lê `criada_em` a `concluida_em`
+  no banco (`lerTurnoDaBNaJanela`). O cenário "Tutor em sala", com sala e material, segue em `TODO.md`.
+- **O controle negativo** (`VAGAS_POR_ESCOLA_DESLIGADAS=true`) não roda a fase: ela não depende da vaga por escola.
+- **A escrita a mais dos índices** de anonimização por turno do Tutor (4.0) é medida por linha, em `execucao_agente` e `consumo_ia`, e
+  só informada (`medirEscritaDosIndices`).
 
 ## 8. Uso de IA
 

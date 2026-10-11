@@ -25,6 +25,7 @@ export const MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA =
   'IA_EXECUCAO_TIMEOUT_MS precisa ser maior que LLM_TIMEOUT_MS: senão a execução estoura antes de a chamada ao modelo terminar'
 export const MOTIVO_RECUO_MAIOR_QUE_O_PRAZO = 'LLM_RECUO_MS precisa ser menor que LLM_TIMEOUT_MS: a repetição acontece dentro do prazo da chamada, não depois dele'
 export const MOTIVO_VAGAS_DE_IA_INCOERENTES = 'IA_EXECUCOES_POR_ESCOLA não pode passar de IA_EXECUCOES_TOTAL: uma escola sozinha ocuparia todas as vagas'
+export const MOTIVO_LATENCIA_FALSA_MAIOR_QUE_O_PRAZO = 'IA_LATENCIA_FALSA_MS precisa ser menor que LLM_TIMEOUT_MS: senão toda chamada ao adaptador falso estoura o prazo'
 
 /** O mesmo formato da chave do suboperador (Tech Spec do F3, seção 3): é por ela que a chamada se liga ao cadastro. */
 export const FORMATO_DO_PROVEDOR_ID = /^[a-z][a-z0-9_-]{1,39}$/
@@ -86,6 +87,11 @@ export const esquemaAmbienteDeIa = z
     IA_EXECUCOES_POR_ESCOLA: inteiro(1, 100, 2),
     IA_EXECUCOES_TOTAL: inteiro(1, 1_000, 8),
     IA_EXECUCAO_TIMEOUT_MS: inteiro(1_000, 3_600_000, 150_000),
+    /**
+     * Espera simulada de cada chamada do adaptador **falso**, para o teste de carga e o ensaio sem provedor (regra 80,
+     * item 11). Zero (o padrão) não espera. O adaptador `openai_compat` a ignora: a latência dele é a do provedor.
+     */
+    IA_LATENCIA_FALSA_MS: inteiro(0, 60_000, 0),
   })
   .superRefine((valores, contexto) => {
     const problema = (variavel: string, message: string): void => contexto.addIssue({ code: 'custom', path: [variavel], message })
@@ -93,6 +99,7 @@ export const esquemaAmbienteDeIa = z
     if (valores.LLM_RECUO_MS >= valores.LLM_TIMEOUT_MS) problema('LLM_RECUO_MS', MOTIVO_RECUO_MAIOR_QUE_O_PRAZO)
     if (valores.IA_EXECUCAO_TIMEOUT_MS <= valores.LLM_TIMEOUT_MS) problema('IA_EXECUCAO_TIMEOUT_MS', MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA)
     if (valores.IA_EXECUCOES_POR_ESCOLA > valores.IA_EXECUCOES_TOTAL) problema('IA_EXECUCOES_POR_ESCOLA', MOTIVO_VAGAS_DE_IA_INCOERENTES)
+    if (valores.IA_LATENCIA_FALSA_MS >= valores.LLM_TIMEOUT_MS) problema('IA_LATENCIA_FALSA_MS', MOTIVO_LATENCIA_FALSA_MAIOR_QUE_O_PRAZO)
     if (valores.IA_ADAPTADOR !== 'openai_compat') return
     if (valores.LLM_BASE_URL === undefined) problema('LLM_BASE_URL', MOTIVO_LLM_SEM_ENDERECO)
     else if (valores.LLM_PROCESSAMENTO_LOCAL === 'true' && !enderecoDaNossaRede(valores.LLM_BASE_URL)) {
@@ -133,6 +140,8 @@ export interface ConfiguracaoDeIa {
   /** Prazo de cada chamada ao modelo. */
   readonly timeoutMs: number
   readonly executor: ConfiguracaoDoExecutor
+  /** Só do adaptador falso: a espera simulada de cada chamada (`IA_LATENCIA_FALSA_MS`). Ausente é sem espera. */
+  readonly latenciaFalsaMs?: number
 }
 
 export function lerConfiguracaoDeIa(ambiente: Record<string, string | undefined>): ConfiguracaoDeIa {
@@ -141,6 +150,7 @@ export function lerConfiguracaoDeIa(ambiente: Record<string, string | undefined>
     adaptador: valores.IA_ADAPTADOR,
     timeoutMs: valores.LLM_TIMEOUT_MS,
     executor: { vagasPorEscola: valores.IA_EXECUCOES_POR_ESCOLA, vagasNoTotal: valores.IA_EXECUCOES_TOTAL, timeoutMs: valores.IA_EXECUCAO_TIMEOUT_MS },
+    ...(valores.IA_LATENCIA_FALSA_MS > 0 ? { latenciaFalsaMs: valores.IA_LATENCIA_FALSA_MS } : {}),
   }
   if (valores.IA_ADAPTADOR !== 'openai_compat' || valores.LLM_BASE_URL === undefined) return base
   const doPerfil: Readonly<Record<Perfil, string | undefined>> = {

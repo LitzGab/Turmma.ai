@@ -269,6 +269,8 @@ export interface PortasDoProvedor {
 /** Monta a porta a partir da configuração: é aqui, e só aqui, que `IA_ADAPTADOR` escolhe o adaptador. */
 export function criarProvedorDeIa(config: ConfiguracaoDeIa, portas: PortasDoProvedor): LLMProvider {
   if (config.adaptador === 'openai_compat' && config.modelo === undefined) throw new ConfiguracaoInvalida(['LLM_BASE_URL', 'LLM_MODELO'])
-  const adaptador = config.modelo === undefined ? new AdaptadorFalso() : new AdaptadorOpenAICompat(config.modelo)
+  // A latência simulada é só do adaptador falso (teste de carga, regra 80, item 11): o do provedor tem a do provedor.
+  const adaptador =
+    config.modelo === undefined ? new AdaptadorFalso(config.latenciaFalsaMs === undefined ? {} : { latenciaMs: config.latenciaFalsaMs }) : new AdaptadorOpenAICompat(config.modelo)
   return new ProvedorDeIa({ adaptador, timeoutMs: config.timeoutMs, ...portas })
 }

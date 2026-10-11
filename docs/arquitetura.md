@@ -50,6 +50,11 @@ listados com a justificativa em `docs/modelo-de-dados.md` ("Operação Turmma").
 módulo lê fora da escola do token, e credencial de escola não alcança rota do painel (teste C46). O desenho está na Tech Spec da A0b
 (`tasks/prd-apresentacao-painel/techspec.md`, seções 6 e 11).
 
+O F3 acrescentou **um** `@SemEscopo` aos comandos `ops:*`: o `ops:suboperador encerrar`, que fecha as ligações de uma
+empresa em todas as escolas e devolve só a contagem (`OperacaoPrivacidadeRepository.encerrarLigacoes`). O `ops:privacidade`
+(tarefa 19.0) não ganhou nenhum: abre o contexto da escola do pedido e lê só contagens, pelo repository de contagens e
+pelos leitores que a escola já usa (`docs/modelo-de-dados.md`, "A leitura da operação").
+
 ## Autenticação e identidade
 
 - **Coordenador, professor, responsável:** e-mail + senha. Segundo fator para coordenador.
@@ -81,6 +86,13 @@ módulo lê fora da escola do token, e credencial de escola não alcança rota d
 Nada demorado em request. Filas: `ingestao`, `agentes`, `correcao`, `notificacao`,
 `expurgo`, `exportacao-titular`, com três prioridades (interativa, normal, lote) e limite de
 concorrência por escola. Lote não urgente roda fora do horário letivo.
+
+No F3, o expurgo noturno (`retencao.expurgar-escola`, um job por escola, à 1h) e a eliminação do titular (`titular.eliminar`,
+que o expurgo enfileira quando o prazo de 7 dias vence) são lote não urgente; a montagem do arquivo do titular
+(`titular.montar-arquivo`) é da fila normal. O cenário de carga "justiça entre escolas" prova, com 1 milhão de linhas
+vencidas e uma troca de nome na escola A, que nada disso atrasa o interativo da B nem o turno do Tutor dela (pela rota, com o
+adaptador falso de latência simulada) e que nenhum statement chega a 1,5 s nem é cancelado pelo `statement_timeout` de 2 s
+(`docs/infra.md`, seção 10).
 
 A entrega é **pelo menos uma vez** (D49): o job nasce no Postgres, o despachante publica no
 BullMQ quando a escola tem vaga, e a reconciliação republica o que o Redis perdeu. Por isso

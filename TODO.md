@@ -128,8 +128,43 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       horário letivo e com `lock_timeout`.
 - [ ] **Escrita a mais por troca do Tutor (F3, 4.0):** `execucao_agente_a_anonimizar_idx`,
       `execucao_agente_do_tutor_a_anonimizar_idx` e `consumo_ia_aluno_a_anular_idx` recebem quase toda linha recente, e
-      cada troca do Tutor passa a atualizar índices a mais nas duas tabelas. Medir no cenário de carga da 19.0
-      (`infra-guardian` da 4.0)
+      cada troca do Tutor passa a atualizar índices a mais nas duas tabelas (`infra-guardian` da 4.0). **A 19.0 mediu o custo
+      por linha**, e não o do turno inteiro: a fase do expurgo do `npm run carga` insere 20 mil linhas de Tutor com e sem os
+      índices, na mesma transação, e imprime os microssegundos a mais por linha (`medirEscritaDosIndices`, informativo, sem
+      limite na Tech Spec). **O turno do Tutor da B entrou na fase** (rodada 1 da 19.0): a rota `POST /v1/tutor/mensagens`, com 30
+      alunos sintéticos, 1,5 turno por segundo e o adaptador falso de latência simulada (`IA_LATENCIA_FALSA_MS=300`), com o p95
+      do turno durante o trabalho da A até 500 ms acima da base. O que **segue aberto** é o cenário "Tutor em sala"
+      (`docs/infra.md` 3.2): a semente da B tem só ano, turma e vínculos, sem sala, atividade nem material, então o turno não
+      lê trechos do material, e a medida é a de conclusão da execução, não a do primeiro token. Abrir antes do piloto, com o
+      p95 do primeiro token. Junto: a fase `base` não exige um mínimo de turnos **no banco** (só o `count>0` do k6), e uma base
+      com 1 ou 2 turnos dá um p95 de pouco valor; entra com critério e teste de unidade próprios (`test-engineer` da 19.0).
+- [ ] **(F3, 19.0) Contração do check de `provedor` em release posterior ao F3:** a 0028 só expandiu (coluna `consumo_ia.provedor` e o
+      check que a prende ao envio externo, validado na própria migration porque toda linha existente tem `provedor` nulo). A
+      exigência de `provedor` em toda linha com `envio_externo` vai numa migration de um release **posterior** ao que leva o código do
+      F3, em arquivo próprio: `not envio_externo or provedor is not null or em < '<corte>'`, `NOT VALID` e depois `VALIDATE`. O
+      `<corte>` é o instante, tirado do registro do deploy, a partir do qual todas as instâncias rodam o código do F3. **O `VALIDATE`
+      se mede no volume do staging**: `consumo_ia` é a tabela que mais cresce depois de `execucao_agente`, e o `migrar` roda com o
+      `statement_timeout` de 2 s da consulta (`packages/nucleo/src/db/migrar.ts`), então o prazo do migrador muda junto. Pré-condição
+      do rollback, já no runbook ("Voltar o código com eliminação agendada em curso"): com a contração aplicada, voltar o código para
+      antes do F3 exige antes o `drop constraint` dela (Tech Spec do F3, seção 3; `infra-guardian` da revisão da spec).
+- [ ] **(F3, 19.0) O expurgo de 1 milhão de linhas dura segundos, e a fase mede a B durante eles:** no `npm run carga`, o expurgo e a troca de
+      nome da escola A terminam em menos de 15 s com 2 CPUs no Postgres; por isso a fase confere a espera da B **só nos jobs que
+      nasceram durante o trabalho da A** (pelo menos 10, e 5 turnos do Tutor, que a escola limita a 120 pedidos de IA por minuto),
+      e não nos dois minutos do k6. Se o volume do piloto passar de 10 milhões de linhas por escola, subir `VOLUME_DA_A` em
+      `infra/scripts/expurgo-da-carga.ts` e rodar de novo; a fase reprova sozinha com poucas amostras da B. O corte do statement
+      é de 1,5 s, abaixo do `statement_timeout`, e o statement cancelado pelo timeout (que não aparece no `max_exec_time`) reprova
+      pela leitura do log do Postgres. Ainda desse cenário (`infra-guardian`, `revisor-geral`, `tenancy-guardian` e
+      `privacy-guardian` da 19.0): (a) o runbook, em "Rodar o cenário de carga", dizer que o statement mostrado na saída é o
+      primeiro lugar a olhar, já que o log cobre a fase inteira; (b) `lerStatements(...).catch(() => undefined)` descarta o erro
+      sem imprimir, como já fazia o `prepararMedicaoDeStatements` antes da 19.0: imprimir o motivo; (c) `lerStatements` imprime
+      até 160 caracteres do texto normalizado com `track=all` e `formasDosStatementsCancelados` imprime o `STATEMENT:` bruto do
+      log: só servem ao projeto `educa-carga`, com dado sintético, e reabrem (filtrar `toplevel`, deixar de fora o que não é
+      DML) se algum dia rodarem fora dele.
+- [ ] **(F3, 19.0) `incidentes.avisados` do `ops:privacidade` herda o teto da lista da coordenação:** o comando conta pelo
+      `IncidenteDaEscolaRepository.daEscola`, que limita a `LIMITE_DA_LISTA_DE_INCIDENTES`; uma escola com mais incidentes que o
+      teto vê um número menor que o real. Trocar por um `count(*)` no leitor (que é da tarefa da coordenação) quando a primeira
+      escola chegar perto do teto; o teto está declarado no comentário de `apps/api/src/ops/privacidade.ts` (`privacy-guardian` e
+      `tenancy-guardian` da 19.0)
 - [ ] **Alerta de duas noites do expurgo (F3, 3.0):** a noite conta "de ontem para trás", então o alerta dispara à
       meia-noite local (umas 17 h depois de a segunda noite parcial ser conhecida) e segue ligado o dia em que uma noite
       completa roda; numa escola a oeste de São Paulo (Acre, o disparo da 1h cai às 23h locais), uma execução que passa da
@@ -176,6 +211,8 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] **(F3, 15.0) `entidadeId` de `titular.nome_trocado` na leitura da coordenação:** a entrada de auditoria da troca guarda o id da
       execução e do consumo do aluno eliminado. Quando a consulta da auditoria for aberta à coordenação, ou o dossiê (D61) a exportar,
       esconder o `entidadeId` dessa ação ou agregá-la por pedido. Hoje nenhuma rota expõe a auditoria (`conformidade-reviewer`, 15.0, 1ª rodada).
+      Na mesma consulta (F12), `titular.nome_trocado` também **não deve dizer qual professor escreveu o nome** que foi trocado
+      (`conformidade-reviewer` da revisão da spec, recomendação que a 19.0 registra aqui).
 - [ ] **(F3, 15.0) O check do autor `rotina` não exige `autor_usuario_id` em `entrega.decidida` e `lote.aprovado`:** o teste "outro
       operador assina qualquer ação" pede revisão se o check ampliar; o gatilho `entrega_decidida_por_da_equipe` já protege a decisão
       real. Muda o contrato da 0036 (`conformidade-reviewer`, 15.0, 1ª rodada).

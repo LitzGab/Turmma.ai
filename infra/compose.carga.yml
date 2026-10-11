@@ -30,6 +30,9 @@ x-worker-lote-carga: &worker-lote-carga
 services:
   postgres:
     cpus: 2
+    # O `pg_stat_statements` carregado: a fase do expurgo (F3, tarefa 19.0) mede o tempo de cada statement do lote, da
+    # troca de nome e da B, e reprova o que passa dos 2 s do `statement_timeout`. O resto do comando é o de infra/compose.yml.
+    command: [postgres, -c, 'max_connections=${POSTGRES_CONEXOES_MAXIMAS:?defina POSTGRES_CONEXOES_MAXIMAS}', -c, shared_preload_libraries=pg_stat_statements, -c, pg_stat_statements.track=all]
   redis-fila:
     cpus: 0.5
   redis-cache:

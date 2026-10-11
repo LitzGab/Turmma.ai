@@ -14,6 +14,7 @@ import { executarOpsConviteCoordenador } from '../src/ops/convite-coordenador.js
 import { executarOpsEscola } from '../src/ops/escola.js'
 import { executarOpsIncidente } from '../src/ops/incidente.js'
 import { executarOpsOperador } from '../src/ops/operador.js'
+import { executarOpsPrivacidade } from '../src/ops/privacidade.js'
 import { executarOpsRedefinirMfa } from '../src/ops/redefinir-mfa.js'
 import { executarOpsRetencao } from '../src/ops/retencao.js'
 import { executarOpsRevogarAcessosSala } from '../src/ops/revogar-acessos-sala.js'
@@ -328,6 +329,17 @@ describe('npm run ops:operador: o operador nasce, é reconvidado e é desativado
         argumentos: () => ['--escola', randomUUID()],
         nadaFeito: async () => undefined,
         passou: (execucao) => expect(execucao).toMatchObject({ codigo: 0, erro: '' }),
+      },
+      {
+        nome: 'privacidade',
+        comando: executarOpsPrivacidade,
+        argumentos: () => ['--escola', escolaDaSala()],
+        // Só lê: a recusa não grava nada, e a leitura do operador ativo é a única que devolve as contagens da escola (F3, 19.0).
+        nadaFeito: async () => undefined,
+        passou: (execucao) => {
+          expect(execucao).toMatchObject({ codigo: 0, erro: '' })
+          expect(JSON.parse(execucao.saida)).toMatchObject({ escolaId: escolaDaSala() })
+        },
       },
       {
         nome: 'operador criar',

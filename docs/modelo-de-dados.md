@@ -621,7 +621,9 @@ colunas de segredo, em `COLUNAS_FORA_DO_ARQUIVO`; o teste de arquitetura confere
 
 **Os suboperadores (F3, tarefa 8.0).** `Suboperador` é a empresa que recebe dado da escola (hospedagem, provedor de IA, e-mail,
 busca) e **não tem `escolaId`**: a hospedagem atende toda escola, e uma linha por escola seria a mesma linha cem vezes. Só o
-`ops:suboperador` escreve (`cadastrar` e `encerrar`), pelo `OperacaoPrivacidadeRepository`, e a escola lê pelo
+`ops:suboperador` escreve (`cadastrar` e `encerrar`), pelo `OperacaoPrivacidadeRepository` (o `encerrar` fecha as ligações de uma
+empresa em todas as escolas, e é o **único `@SemEscopo`** do F3 nos comandos `ops:*`: grava só a data de fim e devolve só a
+contagem), e a escola lê pelo
 `SuboperadorDaEscolaRepository`, que filtra por `(alcance = 'todas' or exists (ligação com a escola do contexto))` e é só
 leitura; o teste de arquitetura procura outro uso, por import e por SQL. `SuboperadorEscola` liga o de alcance `lista` a cada
 escola, escrita no contexto dela (o `escola_id` vem do contexto, nunca de argumento). A vigência que a escola lê é a da
@@ -652,6 +654,17 @@ A auditoria (`suboperador.cadastrado` e `suboperador.encerrado`) é **sem escola
 atender toda escola: o check `auditoria_escola_ou_operacao_global` aceita sem escola, além da rede criada, a entidade
 `suboperador`, sempre com `autor_operador`; ela leva só o alcance e contagens, porque a auditoria não aceita texto livre
 (a chave, o nome e o contrato ficam na tabela, pelo id).
+
+**A leitura da operação (F3, tarefa 19.0).** O `ops:privacidade --escola <id>` mostra à equipe, para uma escola, só **contagens**:
+os pedidos do titular por estado (`recebido`, `em_preparacao`, `pronto`, `agendado`, `concluido`, `cancelado`), as eliminações
+agendadas e quantas já venceram, os arquivos ativos e os vencidos que a rotina ainda não apagou, os suboperadores vigentes
+para a escola, os incidentes avisados e os sem confirmação, e, do expurgo, quantas categorias terminaram na última execução,
+quantas pararam e quando foi a mais recente. Não há nome, id de titular, texto de pedido nem chave de objeto na saída, e o
+erro não repete o que o operador digitou. Abre o contexto da escola do pedido, na mesma transação que confere o `OPERADOR`, e
+lê pelo `ContagensDePrivacidadeRepository` (`pedido_titular`, `arquivo_titular` e `expurgo_execucao`, cada leitura com o
+`escola_id` do contexto, nenhuma coluna de pessoa) e pelos leitores que a escola já usa, `SuboperadorDaEscolaRepository` e
+`IncidenteDaEscolaRepository`, que ele só conta: **nenhum `@SemEscopo` novo**, e as quatro tabelas da operação continuam
+com dono único no teste de arquitetura. Escola que não existe responde `NAO_ENCONTRADO`, igual a qualquer outra.
 
 **O expurgo noturno da escola (F3, tarefa 3.0).** À 1h, a rotina do sistema `sistema.expurgar-dado-pessoal` lista as
 escolas pela `EscolasDaRotinaRepository` (em `packages/nucleo/src/rotina`), a **única consulta sem escopo do expurgo**:

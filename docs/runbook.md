@@ -446,7 +446,10 @@ execução da escola não conta: escola nova e a primeira noite depois do deploy
 desativado) fica no banco além dele, e cada noite a mais aumenta o atraso. Uma noite
 interrompida pela janela letiva é esperada (o resto sai na seguinte); duas seguidas, não.
 
-**Primeiro olhar:** as noites da escola, só com contagens:
+**Primeiro olhar:** a escola de relance, só com contagens, num JSON só: `OPERADOR=<seu apelido> npm run -s ops:privacidade -- --escola <escola_id>`
+(pedidos por estado, eliminações agendadas e vencidas, arquivos ativos e vencidos, suboperadores vigentes, incidentes avisados e
+sem confirmação, e em `expurgo` quantas categorias terminaram na última execução, quantas pararam e quando foi a mais
+recente; nunca nome nem id de titular). Depois as noites da escola, também só com contagens:
 `docker compose exec postgres psql -U educa -c "select categoria, linhas, concluida, em from expurgo_execucao where escola_id = '<escola_id>' order by em desc limit 20"`.
 Depois o job da escola em `job_registro` (`tipo = 'retencao.expurgar-escola'`, a chave é a data local) e o log do
 worker-lote: `docker compose logs --since 48h worker-lote-1 worker-lote-2 | grep -E 'retencao\.'` (`retencao.expurgada`,
@@ -761,6 +764,40 @@ qualquer outra coisa, e confirme com `npm run carga:controle-negativo`, que prec
 reprovando (sem a vaga por escola, o cenário tem de quebrar). 429 fora do usuário abusivo é o rate
 limit tratando escola como IP. `k6_base` ou `k6_carga` é o ambiente que não rodou até o fim: veja os
 logs que o script imprime.
+
+**A fase do expurgo e da troca de nome (F3, tarefa 19.0).** Entre a base e a carga, o cenário semeia a escola A com 1 milhão de
+linhas vencidas (250 mil execuções do Tutor, as 500 mil mensagens delas e 250 mil consumos com texto), o ano de uso de um titular
+e o pedido de eliminação dele, agendado e vencido; grava o `retencao.expurgar-escola` da A, como a rotina da noite o grava, dez
+segundos depois de o k6 começar a carga da B; e o worker de lote expurga e troca o nome **de verdade**. O Postgres do cenário
+carrega o `pg_stat_statements` (`infra/compose.carga.yml`), e a saída imprime os cinco statements mais lentos. Ao lado do job
+sintético, a escola B exerce o **turno do Tutor pela rota** (`POST /v1/tutor/mensagens`, lido em `GET /v1/execucoes/:id`),
+com 30 alunos sintéticos, 1,5 turno por segundo e o adaptador falso com `IA_LATENCIA_FALSA_MS=300` (`infra/carga.env`). O
+`turno_b` do k6 mede do POST à execução concluída (a API não devolve datas), e o critério da fase usa `criada_em` a
+`concluida_em` do banco, só dos turnos criados durante o trabalho da A. Reprova (critério, e o que olhar):
+
+- `statement_acima_de_2s`: um statement da fase chegou a 1,5 s (`TETO_DA_MEDIDA_MS`, abaixo do `statement_timeout` de 2 s) no
+  `max_exec_time`, **ou** o log do Postgres da fase tem statement cancelado pelo `statement_timeout`. O cancelado não entra no
+  `max_exec_time` e o executor repete o job, por isso o log é lido (`canceling statement due to statement timeout`). Olhe o
+  lote do alvo que a saída mostra (`LOTE_DO_EXPURGO`, `LOTE_MAXIMO_DO_ALVO` e a faixa de 1.000 linhas da troca de nome) e o
+  `EXPLAIN` do índice dele;
+- `turno_b_no_expurgo`: o p95 do turno do Tutor da B **durante o trabalho da A** passou do p95 do mesmo turno na base mais
+  500 ms. Olhe a escrita do Tutor nas tabelas que o expurgo atualiza em lote (`execucao_agente`, `mensagem_tutor`,
+  `consumo_ia`) e o tamanho do lote;
+- `espera_b_no_expurgo`: o p95 da espera da B **durante o trabalho da A** passou da base mais 500 ms. É a mesma regra do k6
+  aplicada só à janela em que o expurgo rodava, porque ele dura segundos e o p95 dos dois minutos o diluiria;
+- `sem_amostra_da_b`: menos de 10 jobs da B, ou menos de 5 turnos do Tutor da B, nasceram durante o trabalho da A, e a
+  medida não diz nada. O mínimo do turno é menor porque a escola tem teto de 120 pedidos de IA por minuto e o trabalho dura uns
+  10 s. Suba `VOLUME_DA_A` (`infra/scripts/expurgo-da-carga.ts`) ou veja se o job do expurgo demorou a começar;
+- `expurgo_incompleto` e `troca_de_nome_incompleta`: sobrou linha vencida, o pedido não concluiu, alguma das 12 categorias não
+  terminou, o nome ainda aparece ou o titular ainda existe: o job de uma das duas rotinas falhou ou parou na janela letiva (a
+  escola A fica sem dia letivo na fase, de propósito);
+- `job_da_a`: um job da A falhou, não terminou em 15 min, ou o expurgo não enfileirou a eliminação;
+- `statements_sem_amostra`: o `pg_stat_statements` não respondeu, não viu uma das tabelas do expurgo, ou o log do Postgres da
+  fase não foi lido. A saída diz por que a medição ficou indisponível (`medição de statements indisponível: …`).
+
+A fase não roda no controle negativo (`npm run carga:controle-negativo`): ela não depende da vaga por escola. Mede também, só
+para informar, quanto os índices parciais da anonimização (`execucao_agente` e `consumo_ia`) custam a mais por linha de Tutor
+inserida (`TODO.md`, "Escrita a mais por troca do Tutor").
 
 ## Rodar o cenário de login
 

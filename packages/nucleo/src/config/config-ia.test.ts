@@ -6,6 +6,7 @@ import {
   lerConfiguracaoDeIa,
   MOTIVO_ADAPTADOR_FALSO_EM_PRODUCAO,
   MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA,
+  MOTIVO_LATENCIA_FALSA_MAIOR_QUE_O_PRAZO,
   MOTIVO_LLM_SEM_ENDERECO,
   MOTIVO_LLM_SEM_MODELO,
   MOTIVO_PROCESSAMENTO_LOCAL_EM_ENDERECO_DE_FORA,
@@ -183,6 +184,25 @@ describe('lerConfiguracaoDeIa', () => {
     expect(erroDe({ ...LOCAL, LLM_TIMEOUT_MS: '60000', IA_EXECUCAO_TIMEOUT_MS: '60000' })).toMatchObject({ variaveis: ['IA_EXECUCAO_TIMEOUT_MS'], motivos: [MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA] })
     expect(erroDe({ ...LOCAL, IA_EXECUCOES_POR_ESCOLA: '9', IA_EXECUCOES_TOTAL: '8' })).toMatchObject({ variaveis: ['IA_EXECUCOES_POR_ESCOLA'], motivos: [MOTIVO_VAGAS_DE_IA_INCOERENTES] })
     expect(lerConfiguracaoDeIa({ ...LOCAL, IA_EXECUCOES_POR_ESCOLA: '3', IA_EXECUCOES_TOTAL: '12', IA_EXECUCAO_TIMEOUT_MS: '90000' }).executor).toEqual({ vagasPorEscola: 3, vagasNoTotal: 12, timeoutMs: 90_000 })
+  })
+
+  it('a latência simulada do adaptador falso (teste de carga, regra 80, item 11): ausente ou zero não espera, e precisa caber no prazo da chamada', () => {
+    expect(lerConfiguracaoDeIa({ ...LOCAL, IA_LATENCIA_FALSA_MS: '250' }).latenciaFalsaMs).toBe(250)
+    expect(lerConfiguracaoDeIa({ ...LOCAL }).latenciaFalsaMs).toBeUndefined()
+    expect(lerConfiguracaoDeIa({ ...LOCAL, IA_LATENCIA_FALSA_MS: '0' }).latenciaFalsaMs).toBeUndefined()
+    // O compose entrega a variável sem valor como texto vazio: vale como ausente.
+    expect(lerConfiguracaoDeIa({ ...LOCAL, IA_LATENCIA_FALSA_MS: '' }).latenciaFalsaMs).toBeUndefined()
+    expect(erroDe({ ...LOCAL, IA_LATENCIA_FALSA_MS: '-1' }).variaveis).toEqual(['IA_LATENCIA_FALSA_MS'])
+    expect(erroDe({ ...LOCAL, IA_LATENCIA_FALSA_MS: '60001' }).variaveis).toEqual(['IA_LATENCIA_FALSA_MS'])
+    // Com o prazo da chamada maior que o teto, é o teto da variável (60 s) que recusa, e não a comparação com o prazo.
+    const comPrazoLongo = { ...LOCAL, LLM_TIMEOUT_MS: '120000', IA_EXECUCAO_TIMEOUT_MS: '300000' }
+    expect(lerConfiguracaoDeIa({ ...comPrazoLongo, IA_LATENCIA_FALSA_MS: '60000' }).latenciaFalsaMs).toBe(60_000)
+    expect(erroDe({ ...comPrazoLongo, IA_LATENCIA_FALSA_MS: '60001' }).variaveis).toEqual(['IA_LATENCIA_FALSA_MS'])
+    expect(erroDe({ ...LOCAL, LLM_TIMEOUT_MS: '5000', IA_LATENCIA_FALSA_MS: '5000' })).toMatchObject({
+      variaveis: ['IA_LATENCIA_FALSA_MS'],
+      motivos: [MOTIVO_LATENCIA_FALSA_MAIOR_QUE_O_PRAZO],
+    })
+    expect(lerConfiguracaoDeIa({ ...LOCAL, LLM_TIMEOUT_MS: '5000', IA_LATENCIA_FALSA_MS: '4999' }).latenciaFalsaMs).toBe(4_999)
   })
 
   it.each([

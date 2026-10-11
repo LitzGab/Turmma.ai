@@ -88,7 +88,10 @@ verificação de acessibilidade · F = `test:infra` · P = chamadas em paralelo.
     escola que nunca rodou (tarefa 3.0).
   - [I] O pedido com `eliminacao_enfileirada_em` há mais de 20 h é reenfileirado; com menos de 20 h, não é.
   - Carga: uma escola expurga 1 milhão de linhas e troca um nome enquanto outra usa o Tutor, com cada statement abaixo
-    de 2 s.
+    de 2 s. (Tarefa 19.0: a outra escola exerce o turno do Tutor pela rota `POST /v1/tutor/mensagens`, com o adaptador falso
+    de latência simulada, ao lado do job interativo do F0; o p95 do turno e a espera dela são medidos nos que nasceram
+    durante o trabalho da primeira, contra a base. O corte do statement é 1,5 s, e o statement cancelado pelo
+    `statement_timeout` reprova pelo log do Postgres. O cenário "Tutor em sala", com sala e material, segue no `TODO.md`.)
 - **Prazos fixos.**
   - [I] O arquivo com 7 dias fica; com 8, somem o objeto e a linha.
   - [I] O incidente com 5 anos mais um dia sai pelo `sistema.expurgar-acesso`.
