@@ -41,7 +41,7 @@ Pela natureza da funcionalidade, com a mesma tabela do `/criar-tasks`:
 
 | Se a spec... | Revisor |
 |---|---|
-| sempre | `test-engineer`: a estratégia de testes prova cada RF? Cada caso de borda do PRD tem teste previsto? Concorrência com teste em paralelo? |
+| sempre | `test-engineer`: a estratégia de testes prova cada RF? Cada caso de borda do PRD tem teste previsto? Concorrência com teste em paralelo? Cada rota nova tem cenário na escola sem ano letivo em curso e, se lê vínculo ou turma, com um vínculo encerrado e outro aberto? |
 | cria tabela, repository, query ou endpoint com dado de escola | `tenancy-guardian` |
 | toca dado de pessoa, log, storage, exportação ou envio externo | `privacy-guardian` |
 | envolve nota, correção, tutor, autonomia de agente, decisão sobre aluno ou indicador de professor | `conformidade-reviewer` |

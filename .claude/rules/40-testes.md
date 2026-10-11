@@ -69,8 +69,8 @@ prova · 35 logins do mesmo IP em um minuto · provedor de IA recusando por limi
 aula · uma escola ingerindo 300 apostilas enquanto outra usa o tutor.
 
 E o do próprio ambiente de teste: banco de teste com milhares de escolas de outras execuções (a
-lista global se filtra pelo que o teste criou; nunca se percorre inteira nem se supõe a ordem do
-id, que é v4). O portão local começa com o banco limpo (`EDUCA_BANCO_NOVO=1`), mas só no `test`: o
+lista global se filtra pelo que o teste criou; nunca se percorre inteira, e o id, que é v7, segue o
+instante da criação: não é a ordem de negócio nem desempata duas linhas do mesmo milissegundo). O portão local começa com o banco limpo (`EDUCA_BANCO_NOVO=1`), mas só no `test`: o
 e2e e o infra do portão rodam sobre o que a integração daquela execução deixou, e quem roda
 `npm run test` sozinho acumula. Na esteira, cada job começa vazio. O teste precisa passar nos três.
 

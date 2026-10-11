@@ -45,43 +45,9 @@ Ressalvas do /validar: <n críticos, n maiores>
 
 Compare com a retrospectiva anterior (`tasks/prd-*/retro.md` mais recente), se houver.
 
-A linha por modelo é a que sustenta a D78. O Implementador passou por três: Haiku 5.5 nas pequenas (mais
-de cinco horas na 6.0 do F3), Sonnet 5.5 em toda tarefa, e o MiMo-V2.6-Pro no opencode na 11.0 e na
-12.0 do F3, de onde voltou ao Sonnet: de duas a quatro vezes o tempo, e o mesmo consumo do Claude por
-tarefa (D78, quinta revisão). O modelo de cada tarefa está na coluna "Modelo" do `estado.md`. **Se
-alguma tarefa rodou no modo econômico, compare o MiMo com o Sonnet em rodadas, em tempo e em consumo do
-Claude por tarefa**, e proponha com o número se o modo econômico continua existindo. O mesmo
-vale para os revisores com veto em Opus e para a vigia do Orquestrador, que são a maior parte do
-consumo de uma tarefa: proponha manter ou trocar, com o número.
-
-Quatro medidas que a avaliação do processo de 10/10/2026 deixou para esta retrospectiva (D78, sétima
-revisão). Meça cada uma e proponha com o número, ou diga que o número não sustenta:
-
-- **O Orquestrador depois da limpeza por tarefa:** o custo dele por tarefa antes e depois da 13.0 do
-  F3, e o que ele deixou de fazer por não estar no "Agora" do `estado.md`. Com isso, se ele passa a
-  Sonnet: não lê código e segue um roteiro
-- **A vigia:** quantos turnos dela não acharam nada a fazer. Se for a maioria, a rotina ganha um
-  `--pre-run` que só acorda o modelo quando há terminal parado ou tarefa fora do prazo
-- **O tamanho da tarefa:** linhas do `N_task.md` e número de guardiões contra rodadas e escaladas. No
-  F3, até a 13.0, as três com documento acima de 200 linhas (5.0, 11.0 e 13.0) foram as três com quatro
-  rodadas ou escalada. Se o resto confirmar, o `criar-tasks` ganha um teto
-- **O modelo dos revisores:** antes de propor baixar o `test-engineer`, leia a 13.0 do F3. A reprovação
-  dele na 2ª rodada parecia só falta de prova ("o prazo de 5 s não está provado") e era defeito: o
-  prazo não existia no código. Reprovação por falta de prova não é sinônimo de rigor demais
-
-E três que a oitava revisão da D78 deixou, do mesmo dia:
-
-- **Passar de primeira:** rodadas por tarefa e reprovações na 1ª rodada, da 16.0 à 20.0 do F3 contra a
-  11.0 à 15.0 (nenhuma passou de primeira; 3 de 5 e 4 de 6 revisores reprovaram na 14.0 e na 15.0). Se
-  as três conferências do `executar-task` antes da primeira rodada não mexeram no número, o texto não
-  resolve, e a proposta é conferência mecânica: o portão da tarefa recusar linha de "Mutações" sem
-  teste que exista
-- **A parada que não segura a linha:** quantas paradas abriram com tarefa correndo, quanto tempo de
-  espera isso poupou, e se algum documento foi escrito no andar no meio de uma tarefa
-- **As listas fechadas e o portão da tarefa:** quantos vermelhos o portão completo achou que eram de
-  tarefa anterior. Se ainda houver, o portão da tarefa passa a rodar a integração inteira (10 minutos
-  no F3), ou as suítes completas rodam sempre que a linha para. E **duas tarefas em paralelo**: o que
-  falta é um ambiente de teste por checkout (`PROJETO_TESTE` e as portas, em `tools/ci/compose.ts`)
+O modelo de cada tarefa está na coluna "Modelo" do `estado.md`. Repita as medidas da seção "As medidas
+que a D78 deixou para esta retrospectiva" da retro do F3 (`tasks/prd-lgpd-e-titular/retro.md`) que ainda
+valem, com o número de agora ao lado do de lá, e proponha com o número, ou diga que ele não sustenta.
 
 ## 3. Agrupar causas
 

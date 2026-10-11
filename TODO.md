@@ -498,10 +498,9 @@ para o staging".
 - [ ] **(F3, validação, m8) A vitrine não semeia nada da Privacidade:** `tools/vitrine/escola.ts` monta a escola sem pedido,
       incidente nem empresa, e o `Validador` semeou à mão, nas duas rodadas, para fotografar as telas. Junta-se à semente de
       incidente da 10.0, acima: texto inventado, sem dado de pessoa (dono: Joaquim)
-- [ ] **(F3, fechamento) "Critério de conclusão" com as caixas em branco em três documentos de tarefa:** `9_task.md`,
-      `16_task.md` e `17_task.md`, em `tasks/prd-lgpd-e-titular/`, ficaram com `- [ ]` nessa seção, com as tarefas
-      concluídas e validadas. É só documento; o `Arquiteto` os deixou fora do pedido da validação. Levar à retrospectiva do
-      F3: se a seção não é marcada por ninguém, o modelo de tarefa a perde ou alguém passa a marcá-la (dono: Joaquim)
+- [x] ~~(F3, fechamento) "Critério de conclusão" com as caixas em branco em documentos de tarefa~~ — resolvido na
+      retrospectiva do F3 (11/10/2026): eram oito documentos, não três, e a seção saiu do modelo de tarefa
+      (`tasks/prd-lgpd-e-titular/retro.md`, proposta 5). Os documentos antigos ficam como estão
 - [ ] **(F3, fechamento) Comentários que falam em "grupo Conformidade":** `apps/web/src/areas/navegacao.ts:38` e
       `apps/web/src/caminhos.ts:80` descrevem um grupo que a lateral não tem (a decisão dos grupos está em "Marca e
       interface", abaixo, até o PRD do F12). Acertar o comentário na próxima tarefa ou correção que abrir esses arquivos
@@ -509,6 +508,24 @@ para o staging".
 
 ## Processo e dívida do F0
 
+- [ ] **(F3, retro, M1) O portão da tarefa confere as mutações:** a maior causa de reprovação do F3 (17 em 14
+      tarefas) é regra ou cláusula sem teste que falhe sem ela, e três rodadas de texto não a moveram. A seção
+      "Mutações" ganha formato que máquina lê, e `tools/processo/portao-local.ts --tarefa` aplica cada linha, roda o
+      teste citado, exige vermelho e restaura. Correção própria, com teste; sem prova de quanto o portão cresce.
+      Desenho em `tasks/prd-lgpd-e-titular/retro.md`, proposta M1 (dono: Joaquim)
+- [ ] **(F3, retro, M2) Fuso nos testes:** o projeto `unidade` do `vitest.config.ts` não fixa `TZ`, e o teste que
+      esquece `America/Sao_Paulo` passa nesta máquina; e nada declara o fuso da sessão do banco de teste (o
+      `current_date` de duas fábricas do e2e saía em UTC). Três reprovações
+      (12.0, 16.0, 17.0) e um e2e vermelho das 21 h à meia-noite (correção `b6f7c1d`). Correção própria: `TZ` longe de
+      -03 na unidade, fuso declarado no banco de teste, e um caso que prove os dois (dono: Joaquim)
+- [ ] **(F3, retro) 26 `@SemEscopo` em `resolucao-de-tenant.repository.ts`:** o `tenancy-guardian` apontou na 14.0
+      que o número passa do sinal da regra 10, item 9. Declarar a exceção na regra ou partir o módulo é decisão de
+      desenho sobre a regra 10, e não se resolve por retrospectiva: entra na Tech Spec da próxima spec que tocar sessão
+      (dono: Joaquim)
+- [ ] **(F3, retro) Recomendações de código e de teste que as tarefas deixaram "para o /retro":** a retrospectiva não
+      altera código. A lista, com a tarefa de cada uma, está em `tasks/prd-lgpd-e-titular/retro.md`, "Pendências fora
+      das propostas": sete reforços de teste (8.0, 9.0, 15.0, 18.0, 19.0, `e13311f`, `9d2887f`) e o lint que recuse
+      `.skip` e `.only`. Cada uma entra na próxima tarefa ou correção que abrir o arquivo (dono: Joaquim)
 - [ ] **Quando o F1 fechar: criar `release` e `develop`** (D23 revista). Ordem combinada: o
       branch de documentação entra no `main` quando o Joaquim avisar, depois `main` → `release`
       e `release` → `develop`. Atenção: o `docs/direcionamento-regulatorio` já conflita com a

@@ -77,16 +77,6 @@ quê.
   (`coordenacao`, `professora` ou `aluno`), o endereço, o clique que leva ao estado (`text=<aba>`) e o
   mockup de referência, se houver. É a lista que o Implementador e a Mesa fotografam (`tools/vitrine/`)
 
-## Critério de conclusão
-
-- [ ] Subtarefas concluídas
-- [ ] Testes verdes, 100%
-- [ ] Portão da tarefa carimbado depois da última alteração
-  (`node tools/processo/portao-local.ts --tarefa`), com os testes desta tarefa entre os alvos
-- [ ] Mesa de revisão respondeu "APROVADO por todos": `test-engineer` primeiro, `revisor-geral` e os
-  guardiões marcados com rodada que vale para o código atual, e APROVADO nos que têm veto
-- [ ] Commit feito na branch da spec, só com os arquivos desta tarefa, com a linha `Revisões:`, e push
-
 ## Fora do escopo desta tarefa
 
 O que pertence a outra tarefa e não deve ser implementado aqui.
