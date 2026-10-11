@@ -1058,7 +1058,8 @@ export async function pedidosDoTitularNoBanco(escolaId: string): Promise<PedidoD
 
 /**
  * Pedidos já registrados de um titular, direto no banco, do mais antigo ao mais novo: o da posição `i` chegou
- * `maisRecenteHaDias + quantidade - 1 - i` dias antes de hoje, e o id (uuidv7) segue a ordem de inserção, que é a ordem em que a API pagina. Atalho só do e2e: o pedido de
+ * `maisRecenteHaDias + quantidade - 1 - i` dias antes de hoje (o dia de São Paulo, o mesmo de `hoje()` e do que a API aceita como chegada:
+ * entre 21h e meia-noite, o `current_date` do banco, em UTC, já é o dia seguinte), e o id (uuidv7) segue a ordem de inserção. Atalho só do e2e: o pedido de
  * verdade nasce pela tela (16.0), que é onde o teste dele o registra.
  */
 export async function criarPedidosDoTitularNoBanco(escolaId: string, titularId: string, registradoPor: string, quantidade: number, maisRecenteHaDias = 0): Promise<void> {
@@ -1066,7 +1067,7 @@ export async function criarPedidosDoTitularNoBanco(escolaId: string, titularId: 
     for (let posicao = 0; posicao < quantidade; posicao += 1) {
       await banco.query(
         `insert into pedido_titular (escola_id, titular_id, papel_titular, tipo, solicitante, chegou_em, estado, compartilhamento, registrado_por, chave_envio)
-         values ($1, $2, 'aluno', 'acesso', 'titular', current_date - $3::int, 'recebido', '[]'::jsonb, $4, $5)`,
+         values ($1, $2, 'aluno', 'acesso', 'titular', (now() at time zone 'America/Sao_Paulo')::date - $3::int, 'recebido', '[]'::jsonb, $4, $5)`,
         [escolaId, titularId, maisRecenteHaDias + quantidade - 1 - posicao, registradoPor, randomUUID()],
       )
     }
@@ -1083,7 +1084,7 @@ export async function criarPedidoDeTitularEliminadoNoBanco(escolaId: string, reg
     const pedidoId = await id(
       banco,
       `insert into pedido_titular (escola_id, titular_id, papel_titular, tipo, solicitante, chegou_em, estado, compartilhamento, registrado_por, chave_envio, concluido_em, concluido_por)
-       values ($1, $2, 'aluno', 'eliminacao', 'responsavel_legal', current_date - $5::int, 'concluido', '[]'::jsonb, $3, $4, now(), $3) returning id`,
+       values ($1, $2, 'aluno', 'eliminacao', 'responsavel_legal', (now() at time zone 'America/Sao_Paulo')::date - $5::int, 'concluido', '[]'::jsonb, $3, $4, now(), $3) returning id`,
       [escolaId, titularId, registradoPor, randomUUID(), chegouHaDias],
     )
     await banco.query('delete from usuario where escola_id = $1 and id = $2', [escolaId, titularId])

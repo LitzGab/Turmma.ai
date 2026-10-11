@@ -169,7 +169,7 @@ professor.
 | `POST titulares/busca` | `{ termo }` com 3 letras ou mais; até 20 resultados: id, nome, papel, matrícula, turma do ano (aluno) ou disciplinas e turmas desta escola (professor), estado. Audita `titular.buscado` com os ids e a finalidade fixa, nunca o termo |
 | `GET titulares/:id/previa` | aluno: contagem por categoria e `homonimo` (a mesma regra da troca de nome). Professor: só as categorias de cadastro e vínculo; as de uso da IA não aparecem, e a resposta é igual para quem usou e quem não usou (D64). Sem compartilhamento. Audita `titular.previa_lida` |
 | `POST pedidos` | `titularId`, `tipo`, `solicitante`, `chegouEm`, `chaveEnvio` |
-| `GET pedidos` · `GET pedidos/:id` | página de 50; nome e turma enquanto o titular existe, "Titular eliminado" depois. A lista audita `pedidos.listados` com os ids da página; o detalhe traz o compartilhamento salvo, `nomeTrocado` e `homonimo`, e audita `pedido.lido`. Finalidade fixa nas duas |
+| `GET pedidos` · `GET pedidos/:id` | página de 50, a chegada mais recente primeiro e o id no empate (o cursor `pagina` é o id do último item, e o de outra escola, o que não existe ou o do pedido sobre a própria pessoa de quem lê devolve a página vazia); nome e turma enquanto o titular existe, "Titular eliminado" depois. A lista audita `pedidos.listados` com os ids da página; o detalhe traz o compartilhamento salvo, `nomeTrocado` e `homonimo`, e audita `pedido.lido`. Finalidade fixa nas duas |
 | `POST pedidos/:id/cancelar` · `concluir` · `corrigir-nome` | cancelar só `agendado`; concluir acesso, portabilidade, compartilhamento e correção; corrigir nome com `{ nome }` (1 a 200 caracteres, erro tipado) só em pedido de correção `recebido` ou `pronto`, auditado com ids; o arquivo já gerado não é refeito |
 | `POST pedidos/:id/arquivo` | `{ finalidade }`: URL de 5 min da versão `coordenacao`, auditada (`titular.arquivo_baixado`); resposta com `no-store` |
 | `GET /v1/meus-dados` · `POST …/:id/baixar` | os pedidos do próprio usuário nesta escola, com estado, contagem por categoria e validade do arquivo; URL de 5 min |
@@ -779,9 +779,10 @@ Não se aplica.
       abertura lê de novo: outra pessoa da coordenação pode ter registrado, e a eliminação muda de estado na fila, não na tela;
       nenhuma leitura sai sozinha depois, nem ao voltar o foco nem quando a rede volta, porque cada uma é auditada). Cada linha tem pessoa, turma, pedido, quem pediu,
       chegada e a situação em texto com o selo (Recebido, Em preparação, Pronto, Eliminação agendada, Concluído, Cancelado). O
-      titular que já saiu aparece como "Titular eliminado", com "Não consta" na turma. A API pagina por id (uuid), que não é
-      ordem para quem lê: a tela **ordena pelas páginas já lidas**, a chegada mais recente primeiro e o id no empate, e
-      "Ver mais pedidos" lê a seguinte (50 por página). Quatro estados: carregando, erro com "Tentar de novo", vazio (o
+      titular que já saiu aparece como "Titular eliminado", com "Não consta" na turma. A API entrega a página **na chegada mais
+      recente primeiro e no id no empate** (correção `2026-10-10-ordem-da-lista-de-pedidos`, que fechou a dívida desta tarefa:
+      até ela a API paginava por id e a tela só ordenava as páginas já lidas); a tela mantém a mesma chave, e o pedido
+      recém-registrado abre a primeira página. "Ver mais pedidos" lê a seguinte (50 por página). Quatro estados: carregando, erro com "Tentar de novo", vazio (o
       convite a registrar) e o dado. O aviso do aluno da lista é uma faixa fixa, com o link para a Estrutura.
     - **A busca** é `POST titulares/busca`, disparada **só** por Enter ou pelo botão, e só com 3 letras ou mais (o campo diz
       o que falta; nenhuma requisição sai). O resultado mora **só no estado do diálogo** (`useEnvioUnico`, `gcTime: 0`), nunca

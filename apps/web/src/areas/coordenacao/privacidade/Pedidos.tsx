@@ -61,7 +61,8 @@ const COLUNAS_DOS_PEDIDOS: readonly [ColunaDaTabela<ItemDoPedido>, ...ColunaDaTa
  *   abertura é uma leitura nova. Outra pessoa da coordenação pode ter registrado, e a eliminação muda de estado sozinha (o
  *   prazo de 7 dias passa na fila, não na tela). Nenhuma leitura sai sozinha depois: nem pelo foco, nem pela rede.
  * - **Os quatro estados**: carregando, erro com "Tentar de novo", vazio (um convite: nenhum pedido ainda) e o dado.
- * - **Páginas de 50**: "Ver mais pedidos" lê a seguinte; a ordem vale entre as páginas já lidas, porque a API pagina por id.
+ * - **Páginas de 50**: "Ver mais pedidos" lê a seguinte. A API entrega cada página na chegada mais recente primeiro, com o id no
+ *   empate, que é a ordem da tela: o pedido recém-registrado abre a primeira página, e a seguinte só traz os mais antigos.
  * - **Aviso fixo** do aluno da lista: ele não tem conta e não aparece na busca, e o caminho dele é a lista da turma.
  */
 export function Pedidos() {

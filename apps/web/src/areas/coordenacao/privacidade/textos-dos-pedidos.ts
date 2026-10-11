@@ -206,9 +206,8 @@ export function hojeEmSaoPaulo(agora: Date = new Date()): string {
 }
 
 /**
- * A ordem da lista: a chegada mais recente primeiro, e o id no empate. A API devolve a página por id (UUID v7, que segue a
- * ordem do registro, e não a do dia em que o pedido chegou), que não é a ordem de quem lê; a ordenação vale entre as
- * páginas já carregadas.
+ * A ordem da lista: a chegada mais recente primeiro, e o id no empate. É a chave em que a API entrega cada página (`proxima` é o
+ * id do último item dela): a tela a repete sobre as páginas já lidas, e por isso "Ver mais pedidos" só acrescenta no fim.
  */
 export function ordenarOsPedidos(itens: readonly ItemDoPedido[]): ItemDoPedido[] {
   return [...itens].sort((a, b) => (a.chegouEm === b.chegouEm ? a.id.localeCompare(b.id) : a.chegouEm < b.chegouEm ? 1 : -1))

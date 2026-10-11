@@ -454,7 +454,8 @@ test.describe('Pedidos: recomeço', () => {
   test('a leitura atrasada da segunda página, que chega depois do registro, não vence a lista lida depois dele', async ({ page, hasTouch }) => {
     test.setTimeout(150_000)
     const coordenadora = await criarEquipeComSenha('coordenador')
-    // 50 pedidos de um aluno e um de titular eliminado: a lista tem uma segunda página, que é a leitura que fica no ar.
+    // 50 pedidos de um aluno e um de titular eliminado: a lista tem uma segunda página, que é a leitura que fica no ar. A API entrega
+    // a chegada mais recente primeiro: a primeira página é o eliminado, de hoje, e os 49 mais recentes do aluno; a segunda, o mais antigo.
     const antigo = await criarAlunoComMatricula({ escola: coordenadora, nome: `Heitor ${marca()} Lopes`, matricula: `5${marca()}` })
     await colocarAlunoNaTurma(antigo)
     await criarPedidosDoTitularNoBanco(coordenadora.escolaId, antigo.usuarioId, coordenadora.usuarioId, 50, 1)
@@ -520,23 +521,27 @@ test.describe('Pedidos: recomeço', () => {
     await expect(linhaDa(page, aluno.nome)).toHaveCount(0)
     depoisDoRegistro.abrir()
     await expect(dialogo).toHaveCount(0, { timeout: PRAZO_DA_ENTRADA_MS })
-    // A lista foi relida: tem a primeira página, e a segunda, a que estava no ar, saiu. O pedido novo, pela ordem do id, está na
-    // segunda página, que a coordenação ainda não leu de novo (a dívida da ordem, nas divergências desta tarefa).
+    // A lista foi relida: tem a primeira página, e a segunda, a que estava no ar, saiu. O pedido novo chegou hoje e está **na primeira
+    // página**, sem que a coordenação peça a segunda; a segunda, com os dois mais antigos, ela ainda não leu de novo.
     await expect(linhas(page)).toHaveCount(50, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(linhaDa(page, aluno.nome)).toHaveCount(1)
+    await expect(linhaDa(page, ELIMINADO)).toHaveCount(1)
     await expect(principal(page).getByRole('button', { name: 'Ver mais pedidos' })).toBeVisible()
 
-    // A leitura de antes chega agora, com a lista como ela era: ela não pode vencer.
+    // A leitura de antes chega agora, com a lista como ela era (a segunda página tinha uma linha, a do pedido mais antigo): ela não
+    // pode vencer, e a lista continua com as 50 de depois do registro, e não com 51.
     segurada.abrir()
     await entregue
     await page.evaluate(() => new Promise((resolver) => requestAnimationFrame(() => requestAnimationFrame(() => resolver(undefined)))))
     await expect(linhas(page)).toHaveCount(50)
-    await expect(linhaDa(page, ELIMINADO)).toHaveCount(0)
+    await expect(linhaDa(page, aluno.nome)).toHaveCount(1)
 
-    // A segunda página, lida agora, traz o pedido novo.
+    // A segunda página, lida agora, traz os dois mais antigos: as 52 linhas, cada pedido uma vez.
     await acionar(principal(page).getByRole('button', { name: 'Ver mais pedidos' }), hasTouch)
     await expect(linhas(page)).toHaveCount(52, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(linhaDa(page, aluno.nome)).toHaveCount(1)
     await expect(linhaDa(page, ELIMINADO)).toHaveCount(1)
+    await expect(principal(page).getByRole('button', { name: 'Ver mais pedidos' })).toHaveCount(0)
   })
 
   test('a segunda pessoa na mesma aba, de outra escola, não vê os pedidos da anterior nem enquanto a lista dela não chegou', async ({ page, hasTouch }) => {
@@ -626,7 +631,8 @@ test.describe('Pedidos: a lista e os quatro estados', () => {
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
-    // Com dado: 50 pedidos de um aluno, de ontem para trás, e um do titular eliminado, de hoje, que a API entrega na segunda página.
+    // Com dado: 50 pedidos de um aluno, de ontem para trás, e um do titular eliminado, de hoje. A API entrega a chegada mais recente
+    // primeiro: o de hoje abre a primeira página, e a segunda tem só o mais antigo (o registrado antes de todos, e o último da lista).
     const aluno = await criarAlunoComMatricula({ escola: coordenadora, nome: `Gabriela ${marca()} Moura`, matricula: `7${marca()}` })
     const turma = await colocarAlunoNaTurma(aluno)
     await criarPedidosDoTitularNoBanco(coordenadora.escolaId, aluno.usuarioId, coordenadora.usuarioId, 50, 1)
@@ -634,18 +640,19 @@ test.describe('Pedidos: a lista e os quatro estados', () => {
     await page.reload()
     await expect(linhas(page)).toHaveCount(50, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByText(VAZIO)).toHaveCount(0)
-    await expect(linhaDa(page, ELIMINADO)).toHaveCount(0)
+    // A mais recente primeiro, na primeira página: a primeira linha é a do titular eliminado, de hoje, e a segunda é a de ontem.
+    await expect(linhas(page).first()).toContainText(ELIMINADO)
+    await expect(linhaDa(page, ELIMINADO)).toHaveCount(1)
     // Cada linha diz a pessoa, a turma, o pedido, quem pediu, a chegada e a situação em texto.
-    const primeiraLinha = linhas(page).first()
-    await expect(primeiraLinha).toContainText(aluno.nome)
-    await expect(primeiraLinha).toContainText(turma.turmaNome)
-    await expect(primeiraLinha).toContainText('Acesso aos dados')
-    await expect(primeiraLinha).toContainText('A própria pessoa')
-    await expect(primeiraLinha).toContainText('Recebido')
-    // A mais recente primeiro: a primeira linha é a de ontem.
+    const linhaDeOntem = linhas(page).nth(1)
+    await expect(linhaDeOntem).toContainText(aluno.nome)
+    await expect(linhaDeOntem).toContainText(turma.turmaNome)
+    await expect(linhaDeOntem).toContainText('Acesso aos dados')
+    await expect(linhaDeOntem).toContainText('A própria pessoa')
+    await expect(linhaDeOntem).toContainText('Recebido')
     const ontem = new Date(`${hoje()}T12:00:00Z`)
     ontem.setUTCDate(ontem.getUTCDate() - 1)
-    await expect(primeiraLinha).toContainText(comoNaTela(ontem.toISOString().slice(0, 10)))
+    await expect(linhaDeOntem).toContainText(comoNaTela(ontem.toISOString().slice(0, 10)))
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
@@ -657,7 +664,7 @@ test.describe('Pedidos: a lista e os quatro estados', () => {
     await expect(principal(page).getByRole('alert')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(linhas(page)).toHaveCount(50)
     await expect(principal(page).getByRole('button', { name: 'Ver mais pedidos' })).toBeVisible()
-    // Tentar de novo lê de verdade, e a ordem vale entre as páginas lidas: o de hoje passa a ser o primeiro.
+    // Tentar de novo lê de verdade: a segunda página traz o pedido mais antigo, que fica no fim, e o de hoje continua o primeiro.
     await acionar(principal(page).getByRole('button', { name: 'Ver mais pedidos' }), hasTouch)
     await expect(linhas(page)).toHaveCount(51, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('alert')).toHaveCount(0)
@@ -669,6 +676,7 @@ test.describe('Pedidos: a lista e os quatro estados', () => {
     await expect(doEliminado).toContainText('O responsável legal')
     await expect(doEliminado).toContainText('Concluído')
     await expect(linhas(page).first()).toContainText(ELIMINADO)
+    await expect(linhas(page).last()).toContainText(aluno.nome)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 

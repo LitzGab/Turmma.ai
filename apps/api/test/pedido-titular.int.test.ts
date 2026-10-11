@@ -305,33 +305,98 @@ describe('pedido do titular (F3, tarefa 11.0): busca, prévia, registro, lista, 
       expect(((paraEla.corpo as { itens: Array<Record<string, unknown>> }).itens ?? []).map(({ id }) => id)).toEqual([idSobreEla])
     })
 
-    it('a lista pagina em ordem de id: a auditoria leva só os ids da página, e a segunda página não repete nem traz próxima', async () => {
+    it('a lista pagina pela chegada mais recente primeiro e pelo id no empate: o registrado por último com a chegada antiga não abre a lista, a auditoria leva só os ids da página e nenhuma página repete nem pula', async () => {
       const a = await escolaComPessoas()
       const aluno = a.alunos[0]
       if (aluno === undefined) throw new Error('aluno de teste não criado')
-      const ids: string[] = []
-      for (let vez = 0; vez < 3; vez++) {
-        const criado = await registrar(a.coordenacao, aluno.id)
+      const haDias = (dias: number): string => diaDeUso(new Date(Date.now() - dias * 86_400_000))
+      // A ordem do registro (que é a do id) não é a da chegada: o último a ser registrado é o que chegou há mais tempo, e dois
+      // chegaram no mesmo dia. Com a página por id, a primeira trazia os dois primeiros registrados, e o de hoje ficava na segunda.
+      const registrados: Array<{ readonly id: string; readonly chegouEm: string }> = []
+      for (const chegouEm of [3, 1, 1, 0, 5].map((dias) => haDias(dias))) {
+        const criado = await registrar(a.coordenacao, aluno.id, { chegouEm })
         expect(criado.status).toBe(201)
-        ids.push(criado.corpo['id'] as string)
+        registrados.push({ id: criado.corpo['id'] as string, chegouEm })
       }
-      // A ordem esperada vem do `sort()` dos ids, e não da versão do UUID: a lista ordena por `asc(id)`, qualquer que seja ela.
-      const ordenados = [...ids].sort()
+      // A ordem esperada é a da chave da tela: chegada decrescente e id crescente no empate. O id se ordena como texto, e não pela
+      // versão do UUID: o que importa é o `asc(id)` do banco.
+      const esperados = [...registrados]
+        .sort((x, y) => (x.chegouEm === y.chegouEm ? (x.id < y.id ? -1 : 1) : x.chegouEm < y.chegouEm ? 1 : -1))
+        .map(({ id }) => id)
+      const emOrdemDeRegistro = [...registrados].map(({ id }) => id)
+      expect(esperados).not.toEqual([...emOrdemDeRegistro].sort())
       const finalidade = { finalidade: FINALIDADE_DO_ATENDIMENTO_DO_TITULAR }
+      const idsDe = (corpo: unknown): string[] => ((corpo as { itens: Array<{ id: string }> }).itens ?? []).map(({ id }) => id)
 
       const pagina1 = await listar(a.coordenacao, '?limite=2')
-      expect(((pagina1.corpo as { itens: Array<{ id: string }> }).itens ?? []).map(({ id }) => id)).toEqual(ordenados.slice(0, 2))
-      expect((pagina1.corpo as { proxima?: string }).proxima).toBe(ordenados[1])
+      expect(idsDe(pagina1.corpo)).toEqual(esperados.slice(0, 2))
+      expect((pagina1.corpo as { proxima?: string }).proxima).toBe(esperados[1])
       expect(await auditoriasDa(a.escolaId, 'pedidos.listados')).toEqual([
-        { entidade: 'escola', entidade_id: a.escolaId, autor_usuario_id: a.coordenacao.usuarioId, antes: null, depois: { ids: ordenados.slice(0, 2) }, ...finalidade },
+        { entidade: 'escola', entidade_id: a.escolaId, autor_usuario_id: a.coordenacao.usuarioId, antes: null, depois: { ids: esperados.slice(0, 2) }, ...finalidade },
       ])
 
-      const pagina2 = await listar(a.coordenacao, `?limite=2&pagina=${String(ordenados[1])}`)
-      expect(((pagina2.corpo as { itens: Array<{ id: string }> }).itens ?? []).map(({ id }) => id)).toEqual([ordenados[2]])
-      expect(pagina2.corpo).not.toHaveProperty('proxima')
+      const pagina2 = await listar(a.coordenacao, `?limite=2&pagina=${String(esperados[1])}`)
+      expect(idsDe(pagina2.corpo)).toEqual(esperados.slice(2, 4))
+      expect((pagina2.corpo as { proxima?: string }).proxima).toBe(esperados[3])
+
+      const pagina3 = await listar(a.coordenacao, `?limite=2&pagina=${String(esperados[3])}`)
+      expect(idsDe(pagina3.corpo)).toEqual([esperados[4]])
+      expect(pagina3.corpo).not.toHaveProperty('proxima')
+
       const listagens = await auditoriasDa(a.escolaId, 'pedidos.listados')
-      expect(listagens).toHaveLength(2)
-      expect(listagens[1]?.depois).toEqual({ ids: [ordenados[2]] })
+      expect(listagens.map(({ depois }) => depois)).toEqual([{ ids: esperados.slice(0, 2) }, { ids: esperados.slice(2, 4) }, { ids: [esperados[4]] }])
+      // Sem repetir nem pular: as três páginas, juntas, são a lista toda, uma vez cada.
+      expect([...idsDe(pagina1.corpo), ...idsDe(pagina2.corpo), ...idsDe(pagina3.corpo)]).toEqual(esperados)
+      // E a lista sem limite entrega a mesma ordem de uma vez só.
+      expect(idsDe((await listar(a.coordenacao)).corpo)).toEqual(esperados)
+    })
+
+    it('o cursor de um pedido de outra escola, o inexistente e o do pedido sobre a própria pessoa respondem a mesma página vazia, sem próxima', async () => {
+      const a = await escolaComPessoas()
+      const b = await escolaComPessoas()
+      const alunoDeA = a.alunos[0]
+      const alunoDeB = b.alunos[0]
+      if (alunoDeA === undefined || alunoDeB === undefined) throw new Error('aluno de teste não criado')
+      // O pedido de B, que existe, e o pedido sobre a própria pessoa de quem lê (o professor da mesma conta da coordenação, registrado
+      // por outra coordenação): para A, os dois são o id que não existe.
+      const { rows: contas } = await bancada.pool.query<{ conta_id: string }>('select conta_id from usuario where id = $1', [a.coordenacao.usuarioId])
+      await bancada.pool.query('insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, $3, $4)', [a.escolaId, contas[0]?.conta_id, 'professor', nome('Professor da mesma conta')])
+      const { rows: daMesmaConta } = await bancada.pool.query<{ id: string }>('select id from usuario where escola_id = $1 and papel = $2 and conta_id = $3', [a.escolaId, 'professor', contas[0]?.conta_id])
+      const professorDaMesmaConta = daMesmaConta[0]?.id
+      if (professorDaMesmaConta === undefined) throw new Error('usuário da mesma conta não criado')
+      const [outraCoordenacao] = await bancada.sessoes(a.escolaId, { papel: 'coordenador', quantidade: 1 })
+      if (outraCoordenacao === undefined) throw new Error('coordenação de teste não criada')
+
+      // Os dois vêm antes do pedido do aluno na chave da lista (mesmo dia, id menor): o cursor de qualquer um deles, se fosse achado,
+      // teria o pedido do aluno depois de si, e a página não sairia vazia. E o pedido sobre ela é o primeiro da lista de A: se o
+      // filtro dela viesse depois do limite, a página de um item sairia vazia, com próxima.
+      const deB = await registrar(b.coordenacao, alunoDeB.id)
+      const sobreEla = await registrar(outraCoordenacao, professorDaMesmaConta)
+      const doAluno = await registrar(a.coordenacao, alunoDeA.id)
+      // E dois que vêm **depois** dele (chegaram antes): o de B, que a escola A nunca alcança, e o sobre ela, que a lista dela nunca traz.
+      // Sem o escopo e sem o filtro na página que segue o cursor, a página depois do pedido do aluno deixaria de ser vazia.
+      const deBDepois = await registrar(b.coordenacao, alunoDeB.id, { chegouEm: diaDeUso(new Date(Date.now() - 3 * 86_400_000)) })
+      const sobreElaDepois = await registrar(outraCoordenacao, professorDaMesmaConta, { chegouEm: diaDeUso(new Date(Date.now() - 2 * 86_400_000)) })
+      for (const criado of [doAluno, deB, sobreEla, deBDepois, sobreElaDepois]) expect(criado.status).toBe(201)
+      const idDeB = deB.corpo['id'] as string
+      const idSobreEla = sobreEla.corpo['id'] as string
+
+      // O pedido do aluno é o único que A lê, e o cursor dele é válido: com `limite=1` a página é a dele, e depois dele não há mais nada
+      // (nem o de B, nem o sobre ela, que chegaram depois na chave).
+      const lida = await listar(a.coordenacao, '?limite=1')
+      expect(((lida.corpo as { itens: Array<{ id: string }> }).itens ?? []).map(({ id }) => id)).toEqual([doAluno.corpo['id']])
+      const depoisDoSeu = await listar(a.coordenacao, `?limite=1&pagina=${String(doAluno.corpo['id'])}`)
+      expect(depoisDoSeu.corpo).toEqual({ itens: [] })
+
+      const vazia = { status: 200, corpo: { itens: [] } }
+      for (const [oQue, cursor] of [
+        ['de outra escola', idDeB],
+        ['inexistente', randomUUID()],
+        ['do pedido sobre si mesmo', idSobreEla],
+      ] as const) {
+        const lidaComOCursor = await listar(a.coordenacao, `?pagina=${cursor}`)
+        expect({ status: lidaComOCursor.status, corpo: lidaComOCursor.corpo }, oQue).toEqual(vazia)
+      }
     })
   })
 

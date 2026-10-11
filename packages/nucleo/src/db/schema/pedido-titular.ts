@@ -36,7 +36,12 @@ import { escola } from './escola.js'
  *   coordenação atendeu o pedido, outra pessoa. O arquivo traz o pedido pelo `titular_id`, com o tipo, o estado e as datas.
  * - Retenção: vigência + 5 anos, no fim de contrato (F12), como a auditoria; a classe é `registro_de_decisao` em
  *   `CLASSIFICACAO_DAS_TABELAS`.
- * - Índices começando pelo escopo (regra 80, item 8): `(escola_id, id)` para a página de pedidos, `(escola_id,
+ * - A página por cursor (`proxima`, o id do último item) só é estável porque nenhum caminho muda `chegou_em` depois do registro
+ *   e nenhum apaga a linha: hoje só há `update` de estado e das marcas da eliminação. Expurgo que passe a apagar pedido faz o
+ *   cursor que apontava para ele devolver a página vazia, e a tela para de paginar no meio da lista.
+ * - Índices começando pelo escopo (regra 80, item 8): `(escola_id, id)` para a página de pedidos, que sai na chegada mais recente
+ *   primeiro e no id no empate: a ordenação roda sobre os pedidos de uma escola (dezenas por ano), e por isso não tem índice
+ *   próprio (correção `2026-10-10-ordem-da-lista-de-pedidos`); `(escola_id,
  *   titular_id)` para os pedidos da pessoa, o único `(escola_id, chave_envio)` e o parcial dos agendados para o job da
  *   eliminação.
  */

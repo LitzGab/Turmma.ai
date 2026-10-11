@@ -1,7 +1,7 @@
 import { exigirEscolaDoContexto, identidadeDaRequisicao, pedidoTitular, usuario, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { Compartilhamento, EstadoDoPedido, SolicitanteDoPedido, TipoDePedidoDoTitular } from '@educa/shared'
 import { PRAZO_DA_ELIMINACAO_DIAS } from '@educa/shared'
-import { and, asc, eq, gt, isNull, ne, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, isNull, lt, ne, or, sql, type SQL } from 'drizzle-orm'
 
 /** O que o registro do pedido grava, além do que vem da requisição. */
 export interface PedidoParaRegistrar {
@@ -139,19 +139,31 @@ export class PedidosRepository {
   }
 
   /**
-   * A página de pedidos da escola, em ordem de id, começando depois de `depoisDe` (o `proxima` da página anterior).
-   * `limite + 1` linhas: a mais só diz que há próxima página. O nome e as turmas do titular entram por quem chama,
-   * porque o titular pode já não existir ("Titular eliminado"). **O pedido sobre a própria pessoa de quem pediu não
-   * entra**: ele responde como inexistente em toda rota, e quem atende um pedido nunca é quem o pediu.
+   * A página de pedidos da escola, **na chave da tela** (`ordenarOsPedidos`, da web): a chegada mais recente primeiro e o id
+   * crescente no empate. `depoisDe` é o id do último item da página anterior (o `proxima`); o repository acha a chegada dele
+   * **na escola do contexto, e entre os pedidos que a pessoa pode ler**, e devolve o que vem depois dele na chave. O cursor de
+   * outra escola, o que não existe e o do pedido sobre a própria pessoa de quem lê respondem a mesma coisa, a página vazia
+   * (regra 10, item 6), e nunca a primeira página de novo: a tela leria em laço. `limite + 1` linhas: a mais só diz que há próxima
+   * página. O nome e as turmas do titular entram por quem chama, porque o titular pode já não existir ("Titular eliminado"). **O
+   * pedido sobre a própria pessoa de quem pediu não entra**: ele responde como inexistente em toda rota, e quem atende um pedido
+   * nunca é quem o pediu. O filtro vem antes do limite, senão a página sairia menor e a `proxima` erraria.
+   *
+   * A chave não tem índice próprio, de propósito: o `(escola_id, id)` já filtra pelo escopo, e a ordenação roda sobre os pedidos de
+   * **uma escola**, que são dezenas por ano e não crescem com o uso do aluno (regra 80, item 8).
    */
   async listar(depoisDe: string | undefined, limite: number, deQuemPediu: { readonly usuarioId: string; readonly contaId: string | null }): Promise<PedidoAchado[]> {
-    const criterio = and(
+    const daLista = and(
       eq(pedidoTitular.escolaId, exigirEscolaDoContexto()),
       ne(pedidoTitular.titularId, deQuemPediu.usuarioId),
       ...(deQuemPediu.contaId === null ? [] : [sql`(${usuario.contaId} is null or ${usuario.contaId} <> ${deQuemPediu.contaId})`]),
-      ...(depoisDe === undefined ? [] : [gt(pedidoTitular.id, depoisDe)]),
     )
-    return this.#vários(criterio, limite + 1)
+    if (depoisDe === undefined) return this.#vários(daLista, limite + 1)
+    // O cursor é achado por `#vários`, e não por `#um` ou `de`: é a junção com `usuario` e o `daLista` que aplicam a escola e a
+    // exclusão pela conta. Uma busca só pelo id devolveria o cursor de outra escola ou do pedido sobre quem lê.
+    const [cursor] = await this.#vários(and(daLista, eq(pedidoTitular.id, depoisDe)), 1)
+    if (cursor === undefined) return []
+    const depoisDele = or(lt(pedidoTitular.chegouEm, cursor.chegouEm), and(eq(pedidoTitular.chegouEm, cursor.chegouEm), gt(pedidoTitular.id, cursor.id)))
+    return this.#vários(and(daLista, depoisDele), limite + 1)
   }
 
   /**
@@ -217,7 +229,7 @@ export class PedidosRepository {
       .from(pedidoTitular)
       .leftJoin(usuario, and(eq(usuario.escolaId, pedidoTitular.escolaId), eq(usuario.id, pedidoTitular.titularId)))
       .where(criterio)
-      .orderBy(asc(pedidoTitular.id))
+      .orderBy(desc(pedidoTitular.chegouEm), asc(pedidoTitular.id))
       .limit(limite)
   }
 }

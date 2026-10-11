@@ -467,6 +467,16 @@ para o staging".
 - [ ] **(F3, 20.0) Componente comum para `SemDesafio` e `AcessoSuspenso`** (`revisor-geral` e `frontend-reviewer`, 1ª rodada): o
       link "Ir para a entrada" e o aviso com o token `pendente` se repetem nas duas telas; um componente comum, ou um
       token/variante "aviso", vale quando houver uma terceira tela igual (dono: Joaquim)
+- [ ] **(F3, correção da ordem da lista de pedidos) `ne(titularId)` sem teste que o distinga da exclusão pela conta**
+      (`test-engineer`, `privacy-guardian`, `tenancy-guardian` e `revisor-geral`, 1ª rodada): em
+      `apps/api/src/privacidade/pedidos.repository.ts`, `listar`, a cláusula `ne(pedidoTitular.titularId, deQuemPediu.usuarioId)`
+      apagada deixa tudo verde, porque a exclusão pela conta cobre o mesmo caso; só se distinguem quando quem lê não tem
+      `conta_id`, e `escolaComPessoas` não semeia isso. Falta um caso de integração com quem lê sem conta, para a cláusula não
+      sair por engano. A cláusula é da 11.0 e não é do diff da correção. Momento: validação do F3 (dono: Joaquim)
+- [ ] **(F3, correção da ordem da lista de pedidos) Índice `(escola_id, chegou_em, id)` em `pedido_titular`**
+      (`infra-guardian`, 1ª rodada): a página de pedidos ordena por `(chegou_em desc, id)` sem índice próprio, sobre os pedidos
+      de uma escola (dezenas por ano). Se o volume de rede pública mostrar custo, é migration de expansão só com o índice.
+      Gatilho: `EXPLAIN` com dado sintético no volume de rede pública (dono: Joaquim)
 
 ## Processo e dívida do F0
 
