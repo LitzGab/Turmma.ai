@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { parseEnv } from 'node:util'
 import { executarEtapas, raizRepositorio, type Etapa } from './executar.ts'
 
@@ -7,9 +7,90 @@ import { executarEtapas, raizRepositorio, type Etapa } from './executar.ts'
  * Testes e esteira sobem um projeto compose próprio (`educa-teste`), com os valores de
  * `.env.example` e as portas de `infra/teste.env`. Nada depende de um `.env` local, e parar
  * o Postgres num teste nunca derruba o ambiente de desenvolvimento.
+ *
+ * Esse é o ambiente de teste 0, o da esteira e o de quem não escolheu outro. Cada checkout pode ter o seu
+ * (`numeroDoAmbienteDeTeste`): com o número N, de 1 a 3, o projeto é `educa-teste-N` e toda porta publicada sobe
+ * N × 1000. A escolha é feita aqui e só aqui; quem precisa do projeto, dos argumentos do compose ou de uma porta lê
+ * deste arquivo (`PROJETO_TESTE`, `ARGUMENTOS_COMPOSE`, `lerAmbienteDeTeste`, `urlDoBancoDeTeste`).
  */
-export const PROJETO_TESTE = 'educa-teste'
+const PROJETO_DO_AMBIENTE_ZERO = 'educa-teste'
 export const ARQUIVOS_AMBIENTE_TESTE = ['.env.example', 'infra/teste.env'] as const
+
+/** De onde vem o número do ambiente de teste: a variável vence o arquivo, que fica na pasta que o git ignora. */
+export const VARIAVEL_DO_AMBIENTE_DE_TESTE = 'EDUCA_AMBIENTE_TESTE'
+export const ARQUIVO_DO_NUMERO_DO_AMBIENTE = '.processo/ambiente'
+export const ULTIMO_AMBIENTE_DE_TESTE = 3
+/**
+ * Quanto cada ambiente desloca as portas do anterior. As de `infra/teste.env` vão de 23010 a 29100: com 3 × 1000 a
+ * maior fica em 32100, abaixo da faixa efêmera do Linux (32768), e nenhuma cai sobre a de outro ambiente, sobre as do
+ * desenvolvimento (`.env.example`) nem sobre as do cenário de carga (`infra/carga.env`). O teste confere os três.
+ */
+export const PORTAS_POR_AMBIENTE = 1000
+const SUFIXO_DE_PORTA_PUBLICADA = '_PORTA_HOST'
+
+function lerArquivoDoNumero(): string | undefined {
+  const caminho = join(raizRepositorio, ARQUIVO_DO_NUMERO_DO_AMBIENTE)
+  return existsSync(caminho) ? readFileSync(caminho, 'utf8') : undefined
+}
+
+function numeroValido(texto: string, origem: string): number {
+  const limpo = texto.trim()
+  const numero = /^(0|[1-9]\d*)$/.test(limpo) ? Number(limpo) : Number.NaN
+  if (!(numero >= 0 && numero <= ULTIMO_AMBIENTE_DE_TESTE)) {
+    throw new Error(
+      `número do ambiente de teste inválido em ${origem}: ${JSON.stringify(limpo)} (esperado um inteiro de 0 a ${String(ULTIMO_AMBIENTE_DE_TESTE)})`,
+    )
+  }
+  return numero
+}
+
+/**
+ * O número do ambiente de teste deste checkout: o de `EDUCA_AMBIENTE_TESTE` ou, sem ela, o de `.processo/ambiente`,
+ * que contém só o número. Sem os dois, 0.
+ *
+ * Valor que não é inteiro de 0 a 3 é erro, e nunca vira 0: o 0 é o ambiente que os outros checkouts da máquina
+ * dividem, e cair nele calado é derrubar o banco de quem está no meio de um teste (`EDUCA_BANCO_NOVO=1`). Vale
+ * também para a variável definida e vazia, que é como chega `EDUCA_AMBIENTE_TESTE=$N` com o `N` esquecido.
+ */
+export function numeroDoAmbienteDeTeste(
+  ambiente: Readonly<Record<string, string | undefined>> = process.env,
+  lerArquivo: () => string | undefined = lerArquivoDoNumero,
+): number {
+  const daVariavel = ambiente[VARIAVEL_DO_AMBIENTE_DE_TESTE]
+  if (daVariavel !== undefined) return numeroValido(daVariavel, VARIAVEL_DO_AMBIENTE_DE_TESTE)
+  const doArquivo = lerArquivo()
+  return doArquivo === undefined ? 0 : numeroValido(doArquivo, ARQUIVO_DO_NUMERO_DO_AMBIENTE)
+}
+
+export function projetoDeTeste(numero: number): string {
+  return numero === 0 ? PROJETO_DO_AMBIENTE_ZERO : `${PROJETO_DO_AMBIENTE_ZERO}-${String(numero)}`
+}
+
+/**
+ * O arquivo de ambiente que leva ao compose as portas do ambiente N, gerado em `.processo/` a partir dos dois
+ * versionados (`gravarAmbienteDerivado`). O ambiente 0 não tem: sobe só com os versionados, como sempre subiu.
+ */
+export function arquivoDoAmbienteDerivado(numero: number): string | null {
+  return numero === 0 ? null : `.processo/ambiente-de-teste-${String(numero)}.env`
+}
+
+/**
+ * Os argumentos de todo `docker compose` do ambiente N. O arquivo derivado vai por último entre os `--env-file`: no
+ * compose o último sobrepõe o anterior, e é assim que as portas dele vencem as de `infra/teste.env`. Por arquivo, e
+ * não pelo ambiente do processo do `docker`: quem chama o compose com o ambiente limpo (`tools/ci/compose.int.test.ts`)
+ * continua falando com o projeto e as portas certas.
+ */
+export function argumentosDoCompose(numero: number): string[] {
+  const derivado = arquivoDoAmbienteDerivado(numero)
+  return [
+    'compose',
+    '--project-name',
+    projetoDeTeste(numero),
+    ...[...ARQUIVOS_AMBIENTE_TESTE, ...(derivado === null ? [] : [derivado])].flatMap((arquivo) => ['--env-file', arquivo]),
+    '-f',
+    'infra/compose.yml',
+  ]
+}
 
 /**
  * Os arquivos com que o cenário de carga sobe o projeto `educa-carga`. Mora aqui, e não em
@@ -20,14 +101,14 @@ export const ARQUIVOS_AMBIENTE_TESTE = ['.env.example', 'infra/teste.env'] as co
  */
 export const ARQUIVOS_AMBIENTE_CARGA = ['.env.example', 'infra/carga.env'] as const
 
-export const ARGUMENTOS_COMPOSE = [
-  'compose',
-  '--project-name',
-  PROJETO_TESTE,
-  ...ARQUIVOS_AMBIENTE_TESTE.flatMap((arquivo) => ['--env-file', arquivo]),
-  '-f',
-  'infra/compose.yml',
-] as const
+/**
+ * O ambiente de teste deste checkout, decidido uma vez, na carga do módulo: número inválido reprova aqui, antes de
+ * qualquer `docker`. O arquivo derivado é gravado no mesmo instante, para existir quando o primeiro compose o ler.
+ */
+export const AMBIENTE_DE_TESTE = numeroDoAmbienteDeTeste()
+export const PROJETO_TESTE = projetoDeTeste(AMBIENTE_DE_TESTE)
+export const ARGUMENTOS_COMPOSE: readonly string[] = argumentosDoCompose(AMBIENTE_DE_TESTE)
+gravarAmbienteDerivado(AMBIENTE_DE_TESTE)
 
 /**
  * O que os testes de integração sobem: os dados e o `oidc-falso`, no lugar do Google e da Microsoft no login pela conta
@@ -106,9 +187,70 @@ export function lerAmbienteExemplo(): Record<string, string> {
   return lerArquivoAmbiente('.env.example')
 }
 
-/** Valores com que o compose de teste sobe: o último arquivo sobrepõe o anterior, como no compose. */
+/**
+ * O ambiente `base` com as portas do ambiente N: toda `*_PORTA_HOST` somada de N × 1000, e todo endereço da própria
+ * máquina que aponta para uma delas (`LOGIN_EXTERNO_RETORNO_URL`, que leva a porta da web) acompanhando. Endereço de
+ * dentro da rede do compose (`oidc-falso:8080`) e porta que não é publicada por nós (a do `LLM_BASE_URL`) ficam como
+ * estão. Separado da leitura dos arquivos para ter teste com um ambiente escrito à mão.
+ */
+export function deslocarPortas(base: Readonly<Record<string, string>>, numero: number): Record<string, string> {
+  if (numero === 0) return { ...base }
+  const deslocadas = new Map<string, string>()
+  for (const [chave, valor] of Object.entries(base)) {
+    if (!chave.endsWith(SUFIXO_DE_PORTA_PUBLICADA)) continue
+    if (!/^\d+$/.test(valor)) throw new Error(`ambiente de teste com ${chave} que não é porta: ${JSON.stringify(valor)}`)
+    deslocadas.set(valor, String(Number(valor) + numero * PORTAS_POR_AMBIENTE))
+  }
+  return Object.fromEntries(
+    Object.entries(base).map(([chave, valor]) => [
+      chave,
+      chave.endsWith(SUFIXO_DE_PORTA_PUBLICADA)
+        ? (deslocadas.get(valor) ?? valor)
+        : valor.replace(/(?<=\b(?:127\.0\.0\.1|localhost):)\d+/g, (porta) => deslocadas.get(porta) ?? porta),
+    ]),
+  )
+}
+
+/** Valores com que o compose de teste do ambiente N sobe: o último arquivo sobrepõe o anterior, como no compose. */
+export function ambienteDeTesteDo(numero: number): Record<string, string> {
+  return deslocarPortas(Object.assign({}, ...ARQUIVOS_AMBIENTE_TESTE.map(lerArquivoAmbiente)) as Record<string, string>, numero)
+}
+
+/** O mesmo, para o ambiente de teste deste checkout: é o que a integração, o e2e e a vitrine leem. */
 export function lerAmbienteDeTeste(): Record<string, string> {
-  return Object.assign({}, ...ARQUIVOS_AMBIENTE_TESTE.map(lerArquivoAmbiente)) as Record<string, string>
+  return ambienteDeTesteDo(AMBIENTE_DE_TESTE)
+}
+
+/** O texto do arquivo derivado do ambiente N: só o que muda em relação ao ambiente 0. */
+export function conteudoDoAmbienteDerivado(numero: number): string {
+  const zero = ambienteDeTesteDo(0)
+  const linhas = Object.entries(ambienteDeTesteDo(numero))
+    .filter(([chave, valor]) => zero[chave] !== valor)
+    .map(([chave, valor]) => `${chave}=${valor}`)
+  return [
+    `# Gerado por tools/ci/compose.ts a partir de ${ARQUIVOS_AMBIENTE_TESTE.join(' e ')}: não edite.`,
+    `# As portas do ambiente de teste ${String(numero)} (projeto compose \`${projetoDeTeste(numero)}\`), cada uma ${String(numero * PORTAS_POR_AMBIENTE)} acima da do ambiente 0.`,
+    ...linhas,
+    '',
+  ].join('\n')
+}
+
+/**
+ * Grava o arquivo derivado do ambiente N em `.processo/`, e devolve o caminho dele (`null` no ambiente 0, que não
+ * tem). Só escreve quando o conteúdo muda, e troca o arquivo de uma vez (`rename`): os processos do Vitest e do
+ * Playwright carregam este módulo ao mesmo tempo, e nenhum pode ler o arquivo pela metade.
+ */
+export function gravarAmbienteDerivado(numero: number, raiz: string = raizRepositorio): string | null {
+  const relativo = arquivoDoAmbienteDerivado(numero)
+  if (relativo === null) return null
+  const caminho = join(raiz, relativo)
+  const conteudo = conteudoDoAmbienteDerivado(numero)
+  if (existsSync(caminho) && readFileSync(caminho, 'utf8') === conteudo) return caminho
+  mkdirSync(dirname(caminho), { recursive: true })
+  const provisorio = `${caminho}.${String(process.pid)}.tmp`
+  writeFileSync(provisorio, conteudo)
+  renameSync(provisorio, caminho)
+  return caminho
 }
 
 /**
@@ -120,9 +262,12 @@ export function lerAmbienteDeCarga(): Record<string, string> {
   return Object.assign({}, ...ARQUIVOS_AMBIENTE_CARGA.map(lerArquivoAmbiente)) as Record<string, string>
 }
 
-/** URL do Postgres do compose de teste, vista da máquina: a mesma para a integração e para o seed do e2e. */
-export function urlDoBancoDeTeste(): string {
-  const ambiente = lerAmbienteDeTeste()
+/**
+ * URL do Postgres do compose de teste, vista da máquina: a mesma para a integração e para o seed do e2e. Sem
+ * argumento, a do ambiente de teste deste checkout.
+ */
+export function urlDoBancoDeTeste(numero: number = AMBIENTE_DE_TESTE): string {
+  const ambiente = ambienteDeTesteDo(numero)
   const usuario = valorObrigatorio(ambiente, 'POSTGRES_USUARIO')
   const senha = valorObrigatorio(ambiente, 'POSTGRES_SENHA')
   const banco = valorObrigatorio(ambiente, 'POSTGRES_BANCO')

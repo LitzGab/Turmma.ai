@@ -524,6 +524,12 @@ para o staging".
       para o fluxo: na 18.0 do F3, 110 dos 188 minutos foram Playwright. Correção própria, pelo time, antes da próxima
       spec de tela; depois dela, a linha "estados da tela" do modelo de tarefa passa a pedir teste de componente
       (dono: Joaquim)
+- [ ] **(D79) Imagens do compose de teste com nome fixo:** o ambiente de teste por checkout existe
+      (`EDUCA_AMBIENTE_TESTE` ou `.processo/ambiente`, em `tools/ci/compose.ts`), e duas integrações em paralelo
+      levaram o mesmo que uma. Mas `infra/compose.yml` (linhas 115, 134, 243, 291 e 339) dá às imagens o nome
+      `educa-<serviço>:local`, igual em todo projeto: com código diferente em cada checkout, um e2e testaria a imagem
+      do outro. A etiqueta precisa levar o projeto. E dois e2e no mesmo checkout dividem `test-results/`. Correção
+      própria, pelo time, antes da linha dupla (dono: Joaquim)
 - [ ] **(D79) Duas tarefas da mesma spec em paralelo:** desenhado e não implementado. Pede um par a mais de
       Implementador e Mesa, um checkout por linha com o ambiente de teste dele, e a branch da linha entrando na da spec
       a cada tarefa. Decidir depois de a próxima spec rodar com a D79 (dono: Joaquim)

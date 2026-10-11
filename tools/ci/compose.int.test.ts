@@ -4,7 +4,7 @@ import { createServer, type Server } from 'node:net'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { compose, composeOuFalha, recriarDoZero } from '../testes/compose.ts'
-import { ARGUMENTOS_COMPOSE, ETAPA_DO_LOG_DA_FALHA, lerAmbienteDeTeste, valorObrigatorio } from './compose.ts'
+import { AMBIENTE_DE_TESTE, ARGUMENTOS_COMPOSE, ETAPA_DO_LOG_DA_FALHA, PROJETO_TESTE, lerAmbienteDeTeste, valorObrigatorio } from './compose.ts'
 import { raizRepositorio } from './executar.ts'
 
 /** Ambiente mínimo, sem nenhuma variável do projeto herdada do shell de quem roda. */
@@ -55,6 +55,35 @@ describe('ambiente do compose', () => {
     }
     for (const porta of portas) {
       expect(porta.host_ip).toBe('127.0.0.1')
+    }
+  })
+
+  it('o compose sobe o projeto e publica as portas do ambiente de teste deste checkout, e de nenhum outro', () => {
+    // O que o Docker resolve, e não o que `compose.ts` calcula: com o ambiente limpo, o projeto e as portas só podem
+    // ter vindo dos argumentos. É o elo entre o número do ambiente (`EDUCA_AMBIENTE_TESTE` ou `.processo/ambiente`)
+    // e o que de fato sobe: um `--env-file` fora de ordem deixaria o `educa-teste-2` nas portas do ambiente 0, e
+    // os testes, que leem as portas de `lerAmbienteDeTeste`, falariam com o serviço de outro checkout.
+    const resultado = dockerLimpo([...ARGUMENTOS_COMPOSE, 'config', '--format', 'json'])
+    expect(resultado.status, resultado.stderr).toBe(0)
+    const configuracao = JSON.parse(resultado.stdout) as {
+      name: string
+      services: Record<string, { ports?: PortaPublicada[]; environment?: Record<string, string> }>
+    }
+    expect(configuracao.name).toBe(PROJETO_TESTE)
+    expect(configuracao.name).toBe(AMBIENTE_DE_TESTE === 0 ? 'educa-teste' : `educa-teste-${String(AMBIENTE_DE_TESTE)}`)
+
+    const ambiente = lerAmbienteDeTeste()
+    const esperadas = Object.entries(ambiente).filter(([chave]) => chave.endsWith('_PORTA_HOST')).map(([, valor]) => valor)
+    const publicadas = Object.values(configuracao.services).flatMap((servico) => servico.ports ?? []).map((porta) => porta.published)
+    expect(publicadas.length).toBeGreaterThan(10)
+    expect([...publicadas].sort()).toEqual([...esperadas].sort())
+
+    // O que deriva de porta dentro dos serviços acompanha: o retorno do login, que leva a da web, e o endereço
+    // público do storage, que o navegador usa para baixar o arquivo.
+    for (const api of ['api-1', 'api-2']) {
+      const variaveis = configuracao.services[api]?.environment ?? {}
+      expect(variaveis['LOGIN_EXTERNO_RETORNO_URL'], api).toBe(`http://127.0.0.1:${valorObrigatorio(ambiente, 'WEB_PORTA_HOST')}/v1/sessao/externa/retorno`)
+      expect(variaveis['STORAGE_URL_PUBLICA'], api).toBe(`http://127.0.0.1:${valorObrigatorio(ambiente, 'STORAGE_PORTA_HOST')}`)
     }
   })
 

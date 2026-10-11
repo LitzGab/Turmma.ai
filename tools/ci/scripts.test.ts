@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process'
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
+import { parseEnv } from 'node:util'
 import { afterEach, describe, expect, it } from 'vitest'
 import { argumentosGitleaks, IMAGEM_GITLEAKS } from './etapas-de-guarda.ts'
 import { raizRepositorio } from './executar.ts'
@@ -21,7 +22,12 @@ interface Execucao {
   chamadas: string[]
 }
 
-function rodarScript(script: string, falharQuandoContem: string | null, argumentos: string[] = []): Execucao {
+/**
+ * `ambienteDeTeste` é o `EDUCA_AMBIENTE_TESTE` do script. O padrão é o 0, o da esteira, escrito aqui e não herdado:
+ * é dele que as linhas afirmadas abaixo falam, e o checkout que roda este teste pode estar noutro número
+ * (`.processo/ambiente`).
+ */
+function rodarScript(script: string, falharQuandoContem: string | null, argumentos: string[] = [], ambienteDeTeste = '0'): Execucao {
   const diretorio = mkdtempSync(join(tmpdir(), 'educa-esteira-'))
   diretorios.push(diretorio)
   const registro = join(diretorio, 'chamadas.log')
@@ -47,6 +53,7 @@ function rodarScript(script: string, falharQuandoContem: string | null, argument
     env: {
       ...process.env,
       CI: 'true',
+      EDUCA_AMBIENTE_TESTE: ambienteDeTeste,
       PATH: `${diretorio}${delimiter}${process.env['PATH'] ?? ''}`,
       IMITACAO_REGISTRO: registro,
       IMITACAO_FALHAR: falharQuandoContem ?? '',
@@ -199,6 +206,35 @@ describe('scripts ci:* reais', () => {
       expect(chamada).toContain(
         'docker compose --project-name educa-teste --env-file .env.example --env-file infra/teste.env -f infra/compose.yml',
       )
+    }
+  })
+
+  it.each(['integracao.ts', 'infra.ts', 'e2e.ts'])('com EDUCA_AMBIENTE_TESTE=2, todo compose de %s fala com o projeto e as portas do ambiente 2', (script) => {
+    const { codigo, chamadas } = rodarScript(script, null, [], '2')
+    expect(codigo).toBe(0)
+    const composes = chamadas.filter((chamada) => chamada.startsWith('docker compose'))
+    expect(composes.length).toBeGreaterThan(0)
+    for (const chamada of composes) {
+      // A linha inteira até o `-f`, escrita à mão: com o projeto do ambiente 2 e sem o arquivo dele, ou com o
+      // arquivo antes de `infra/teste.env`, o script subiria o `educa-teste-2` nas portas do ambiente 0.
+      expect(chamada).toContain(
+        'docker compose --project-name educa-teste-2 --env-file .env.example --env-file infra/teste.env' +
+          ' --env-file .processo/ambiente-de-teste-2.env -f infra/compose.yml ',
+      )
+    }
+    // O arquivo que a linha cita existe quando o compose roda, e leva a web 2000 acima da do ambiente 0.
+    const base = parseEnv(readFileSync(join(raizRepositorio, 'infra/teste.env'), 'utf8'))
+    const derivado = parseEnv(readFileSync(join(raizRepositorio, '.processo/ambiente-de-teste-2.env'), 'utf8'))
+    expect(derivado['WEB_PORTA_HOST']).toBe(String(Number(base['WEB_PORTA_HOST']) + 2000))
+    expect(derivado['POSTGRES_PORTA_HOST']).toBe(String(Number(base['POSTGRES_PORTA_HOST']) + 2000))
+  })
+
+  it.each(['integracao.ts', 'infra.ts', 'e2e.ts'])('com número de ambiente inválido, %s reprova antes de chamar o compose', (script) => {
+    // Cair no ambiente 0 calado derrubaria o banco de outro checkout no `down --volumes` do fim.
+    for (const invalido of ['4', 'dois', '']) {
+      const { codigo, chamadas } = rodarScript(script, null, [], invalido)
+      expect(codigo, invalido).not.toBe(0)
+      expect(chamadas, invalido).toEqual([])
     }
   })
 })

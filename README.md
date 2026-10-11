@@ -52,6 +52,17 @@ Testes e esteira sobem um projeto compose separado, `educa-teste`, com as portas
 provar a saúde da API, e os `ci:*` apagam os volumes dele no fim, sem tocar no ambiente de
 desenvolvimento.
 
+Dois checkouts na mesma máquina não dividem esse projeto: cada um escolhe o seu **número de
+ambiente de teste**, de 0 a 3, na variável `EDUCA_AMBIENTE_TESTE` ou, sem ela, no arquivo
+`.processo/ambiente` da raiz do checkout (só o número; a pasta é ignorada pelo git). Sem os
+dois vale o 0, que é o `educa-teste` acima e o da esteira. Com N de 1 a 3 o projeto é
+`educa-teste-N` e toda porta de `infra/teste.env` sobe N × 1000 (a web do ambiente 1 fica em
+`127.0.0.1:29090`). Número inválido é erro, e não cai no 0. Quem decide é
+`tools/ci/compose.ts`, e integração, e2e e vitrine leem de lá. Medido em 11/10/2026: duas
+integrações inteiras em paralelo levaram o mesmo que uma (709 e 711 s contra 726). **Ainda não vale
+para e2e e infra com código diferente em cada checkout:** as imagens de `infra/compose.yml` têm nome
+fixo (`educa-api:local`), e um checkout testaria a imagem que o outro construiu (`TODO.md`).
+
 | Comando | O que faz |
 |---|---|
 | `npm run typecheck` | tipos de todos os pacotes |
