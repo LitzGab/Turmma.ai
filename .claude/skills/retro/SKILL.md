@@ -48,6 +48,9 @@ Compare com a retrospectiva anterior (`tasks/prd-*/retro.md` mais recente), se h
 O modelo de cada tarefa está na coluna "Modelo" do `estado.md`. Repita as medidas da seção "As medidas
 que a D78 deixou para esta retrospectiva" da retro do F3 (`tasks/prd-lgpd-e-titular/retro.md`) que ainda
 valem, com o número de agora ao lado do de lá, e proponha com o número, ou diga que ele não sustenta.
+A D79 deixou cinco para a primeira spec depois dela: a mediana do pedido ao commit (era 99 min); as
+tarefas sem reprovação (1 de 20); as reprovações do grupo A, agora que o portão prova as mutações (17);
+os vermelhos da esteira por push e quanto cada um custou; e do último commit ao pedido de pouso (5 h 29).
 
 ## 3. Agrupar causas
 
