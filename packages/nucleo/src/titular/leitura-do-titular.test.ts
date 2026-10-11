@@ -61,6 +61,14 @@ describe('LEITURAS_DO_ARQUIVO: a forma das leituras', () => {
     expect(instrucao).toMatch(/join entrega e on e\.escola_id = t\.escola_id and e\.id = t\.entrega_id/)
   })
 
+  it('o resumo do pedido de entrada na turma diz os dois caminhos, o nome da pessoa na lista e a decisão dela, e não que ela fez o pedido', () => {
+    // A consulta do aluno liga o pedido pelo nome dele na lista, e o recusado antes naquele nome entra: pode ser de outra pessoa.
+    // O texto é o da tela "Meus dados" (`reivindicacao_decidida`, em `apps/web`): a mesma pessoa lê os dois.
+    const descricao = LEITURAS_DO_ARQUIVO['reivindicacao']?.descricao
+    expect(descricao).toBe('Os pedidos de entrada na turma feitos com o seu nome ou decididos por você')
+    expect(descricao).not.toMatch(/que você fez/)
+  })
+
   it('cada coluna de ligação que a classificação dá à tabela é lida: a leitura não ignora uma das formas de a linha chegar ao titular', () => {
     const dialeto = new PgDialect()
     for (const [tabela, classificada] of Object.entries(CLASSIFICACAO_DAS_TABELAS)) {

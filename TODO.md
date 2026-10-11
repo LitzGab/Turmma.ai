@@ -95,7 +95,7 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       "As suas respostas e as correções das suas atividades", cuja contagem é a de atividades começadas
       (`tentativa_atividade`), e não a de respostas. Rever junto da conferência do arquivo da 13.0, no item acima
       (dono: Joaquim)
-- [ ] **(F3, 13.0) O resumo do arquivo do titular diz "Os pedidos de entrada na turma que você fez ou decidiu"**
+- [x] **(F3, 13.0) O resumo do arquivo do titular diz "Os pedidos de entrada na turma que você fez ou decidiu"** — *resolvido na correção `2026-10-10-resumo-do-arquivo-do-pedido-de-entrada`: o texto do arquivo é o da tela, e a consulta diz que o pedido recusado antes entra de propósito. O rótulo por papel ficou de fora: o texto com os dois caminhos é verdadeiro para os dois, e um por papel muda a forma de `LeituraDaTabela` (desenho).*
       (`packages/nucleo/src/titular/leitura-do-titular.ts`, `LEITURAS_DO_ARQUIVO.reivindicacao.descricao`), e a consulta do
       aluno traz todo pedido feito no nome dele na lista, inclusive o recusado antes, que pode ser de outra pessoa (a recusa
       devolve o nome a `livre` e o pedido continua na linha: `devolverNome`, `apps/api/src/sala/decisao.repository.ts`). A
@@ -104,6 +104,12 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       recusado antes naquele nome entra de propósito e não identifica outra pessoa (`privacy-guardian`, 3ª rodada).
       Considere um rótulo por papel na tela: o aluno nunca decide um pedido, e "…ou decididos por você" só vale para o
       professor (`frontend-reviewer`, 3ª rodada) (diagnóstico do Arquiteto, 18.0)
+      - Sobrou da correção, para a **validação do F3** (`test-engineer` e `privacy-guardian`, 1ª rodada): (a) o mesmo texto da
+        `descricao` vive em `leitura-do-titular.ts` e em `apps/web/src/componentes/meus-dados/regras.ts`, cada um com seu teste, e
+        nada confere que os dois são iguais: fonte única em `packages/shared` ou teste que confronte os dois, junto da decisão
+        de desenho da forma de `LeituraDaTabela`; (b) teste de integração em que o aluno aprovado depois de uma recusa no mesmo
+        nome recebe os dois pedidos no arquivo, sem `decidida_por` nem `teve_matricula_errada` (o seed de
+        `apps/api/test/pedido-titular.int.test.ts` só tem o pedido aprovado).
 
 ## Infra e operação
 

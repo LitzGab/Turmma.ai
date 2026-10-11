@@ -139,7 +139,7 @@ export const LEITURAS_DO_ARQUIVO: Readonly<Record<string, LeituraDaTabela>> = {
     ],
   },
   reivindicacao: {
-    descricao: 'Os pedidos de entrada na turma que você fez ou decidiu',
+    descricao: 'Os pedidos de entrada na turma feitos com o seu nome ou decididos por você',
     colunas: ['id', 'ano_letivo_id', 'turma_id', 'lista_nome_id', 'estado', 'solicitada_em', 'decidida_em', 'decidida_como'],
     fora: {
       escola_id: ESCOPO,
@@ -149,7 +149,12 @@ export const LEITURAS_DO_ARQUIVO: Readonly<Record<string, LeituraDaTabela>> = {
       decidida_por: OUTRA_PESSOA,
     },
     consultas: ({ escolaId, titularId }) => [
-      // O aluno: o pedido que o aprovou, ligado à linha dele na lista de nomes.
+      // O aluno: todo pedido ligado à linha dele na lista de nomes (`lista_nome.usuario_id`): o que o aprovou e também o
+      // recusado antes naquele nome, que pode ter sido de outra pessoa. A recusa devolve o nome a `livre` e o pedido continua
+      // apontando para a linha (`devolverNome`, `apps/api/src/sala/decisao.repository.ts`). Entra de propósito, e não
+      // identifica ninguém: a linha leva `id`, `ano_letivo_id`, `turma_id`, `lista_nome_id`, o estado, as datas e `decidida_como`,
+      // e `decidida_por`, `chave_envio`, `senha_hash` e `teve_matricula_errada` ficam na `fora`.
+      // Por isso o texto diz "feitos com o seu nome", e não "que você fez".
       sql`select ${colunasDoSelect('id', 'ano_letivo_id', 'turma_id', 'lista_nome_id', 'estado', 'solicitada_em', 'decidida_em', 'decidida_como')} from reivindicacao t
           where t.escola_id = ${escolaId} and t.lista_nome_id in (select l.id from lista_nome l where l.escola_id = ${escolaId} and l.usuario_id = ${titularId})`,
       // Quem decidiu (o professor): só o ato. A turma e a linha da lista são do aluno que pediu (critério 2).
