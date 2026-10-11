@@ -67,15 +67,17 @@ arquitetura:
 | Classe | Tabelas |
 |---|---|
 | categoria acima | as doze linhas acima, mais `resposta_atividade`, `correcao` e `thread_agente` (cascata ou vazio) |
-| prazo fixo, com quem aplica | `registro_acesso`, `sessao`, `convite`, `acesso_turma`: `sistema.expurgar-acesso`. `conta`, `codigo_recuperacao`: limpeza da conta (F1). `credencial_matricula`, `conta_externa`: desativação e eliminação. `lista_nome`: virada do ano (A1) e eliminação. `operador`, `convite_operador`, `sessao_operador`, `acesso_operacao`, `codigo_recuperacao_operador`: A0 e `sistema.expurgar-acesso`. `job_registro`: 7 dias (F0). `auditoria`, `auditoria_operacao`, `entrega`, `validacao_do_lote`, `suspensao_de_funcao`, `atividade_aplicada`, `pedido_titular`: vigência + 5 anos, no fim de contrato (F12). `arquivo_titular`: 7 dias. `incidente` e `incidente_escola`: 5 anos do registro, no prazo fixo `registro_de_incidente` (tarefa 9.0: o nono de `PRAZOS_FIXOS`, com texto próprio na tela de Retenção, porque "enquanto durar o contrato, e mais 5 anos" do `registro_de_decisao` não descreve o incidente), aplicado pelo `sistema.expurgar-acesso`, fora do arquivo do titular (quem confirma é coordenação). `expurgo_execucao`: 5 anos (tarefa 3.0: no grupo `registro_de_decisao` de `PRAZOS_FIXOS`, que são nove e fechados; quem aplica é o expurgo da escola, no fim de cada noite: tarefa 5.0) |
+| prazo fixo, com quem aplica | `registro_acesso`, `sessao`, `convite`, `acesso_turma`: `sistema.expurgar-acesso`. `conta`, `codigo_recuperacao`: limpeza da conta (F1). `credencial_matricula`, `conta_externa`: desativação e eliminação. `lista_nome`: virada do ano (A1) e eliminação. `operador`, `convite_operador`, `sessao_operador`, `acesso_operacao`, `codigo_recuperacao_operador`: A0 e `sistema.expurgar-acesso`. `job_registro`: 7 dias (F0). `auditoria`, `auditoria_operacao`, `entrega`, `validacao_do_lote`, `suspensao_de_funcao`, `atividade_aplicada`, `pedido_titular`: vigência + 5 anos, no fim de contrato (F12). `arquivo_titular`: 7 dias, no prazo fixo `arquivo_do_titular` (tarefa 13.0: o décimo de `PRAZOS_FIXOS`). `incidente` e `incidente_escola`: 5 anos do registro, no prazo fixo `registro_de_incidente` (tarefa 9.0: o nono de `PRAZOS_FIXOS`, com texto próprio na tela de Retenção, porque "enquanto durar o contrato, e mais 5 anos" do `registro_de_decisao` não descreve o incidente), aplicado pelo `sistema.expurgar-acesso`, fora do arquivo do titular (quem confirma é coordenação). `expurgo_execucao`: 5 anos (tarefa 3.0: no grupo `registro_de_decisao` de `PRAZOS_FIXOS`, que são dez e fechados; quem aplica é o expurgo da escola, no fim de cada noite: tarefa 5.0) |
 | sem pessoa | `rede`, `escola`, `ano_letivo`, `serie`, `disciplina`, `turma`, `provedor_escola`, `configuracao_operacional_escola`, `uso_infra_diario`, `trecho`, `resumo_do_analista`, `retencao_escola`, `suboperador`, `suboperador_escola` |
 
 Também `usuario` ativo e `material` vigente ficam enquanto existem; saem pela eliminação e pelas duas categorias acima.
 
 Na tarefa 2.0 a classificação traz só as tabelas que já existem: o teste a confere contra as migrations nos dois
 sentidos, e cada tabela nova (as desta seção) entra na lista, e as colunas dela em `COLUNAS_FORA_DO_ARQUIVO`, na tarefa
-da migration dela. Os prazos fixos são nove grupos (`PRAZOS_FIXOS`: registro de acesso, sessão, convite e acesso da
-turma, credencial, lista de nomes, registro de decisão, tarefa em segundo plano, equipe Turmma e registro de incidente).
+da migration dela. Os prazos fixos são dez grupos (`PRAZOS_FIXOS`: registro de acesso, sessão, convite e acesso da
+turma, credencial, lista de nomes, registro de decisão, tarefa em segundo plano, equipe Turmma, registro de incidente
+e arquivo do titular; eram nove até a tarefa 13.0, que trouxe o último com a tabela dele), e a tela de Retenção mostra
+os dez.
 
 Cada tabela da classificação diz se **entra no arquivo do titular** e por qual coluna se liga a ele. Entram: `usuario`,
 `credencial_matricula` (só a matrícula), `conta` (só o e-mail, nas duas versões), `conta_externa` (só o provedor),
@@ -755,6 +757,12 @@ Não se aplica.
 ## 9. Frontend
 
 **Coordenação.** O item **Privacidade** ("Seus dados e a lei") entra no grupo Conformidade, com a aba no endereço:
+- **Onde o item fica (validação, rodada 1, M2).** A lateral da coordenação é uma lista plana desde o MVP: os três grupos
+  de `docs/interface.md` 11.1 são *proposta*, e nenhum item tem grupo (`apps/web/src/areas/navegacao.ts`). Por isso
+  Privacidade entrou no **fim da lista**, que é onde o grupo Conformidade fica, sem rótulo de grupo, e passa a ele
+  quando a lateral ganhar os grupos (`TODO.md`, "Marca e interface"). O RF20 não muda: o item, as quatro abas e a
+  prova dele (e2e em `chromebook` e `celular`, com acessibilidade) são os mesmos. Construir os grupos mexe na casca de
+  todos os itens da coordenação e não é desta funcionalidade.
 - **Pedidos:**
   - "Registrar pedido" abre uma busca disparada por Enter ou botão, com o resultado anunciado por `aria-live` e o 429
     em texto;

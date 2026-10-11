@@ -63,12 +63,12 @@
   - [x] 8.6 Testes
 
 - [x] **9.0 — A operação registra incidente e a escola afetada confirma o recebimento**
-  - [ ] 9.1 Migration própria: `incidente`, `incidente_escola`, índice de pendentes
-  - [ ] 9.2 `ops:incidente registrar` (seção por escola; recusa nome ou id de outra escola, com caixa e acento)
-  - [ ] 9.3 `IncidenteDaEscolaRepository`, `GET incidentes` e `POST incidentes/:id/confirmar`, auditoria `incidente.confirmado`
-  - [ ] 9.4 Alvo `incidente` no `sistema.expurgar-acesso`, justificativa reescrita
-  - [ ] 9.5 Alerta de 24 h e runbook; `docs/lgpd.md` (linhas do incidente)
-  - [ ] 9.6 Testes
+  - [x] 9.1 Migration própria: `incidente`, `incidente_escola`, índice de pendentes
+  - [x] 9.2 `ops:incidente registrar` (seção por escola; recusa nome ou id de outra escola, com caixa e acento)
+  - [x] 9.3 `IncidenteDaEscolaRepository`, `GET incidentes` e `POST incidentes/:id/confirmar`, auditoria `incidente.confirmado`
+  - [x] 9.4 Alvo `incidente` no `sistema.expurgar-acesso`, justificativa reescrita
+  - [x] 9.5 Alerta de 24 h e runbook; `docs/lgpd.md` (linhas do incidente)
+  - [x] 9.6 Testes
 
 - [x] **10.0 — A coordenação vê o aviso de incidente e confirma o recebimento**
   - [x] 10.1 Diálogo na casca, uma leitura por sessão
@@ -116,25 +116,25 @@
   - [x] 15.6 Testes
 
 - [x] **16.0 — A coordenação registra um pedido pela tela**
-  - [ ] 16.1 Lista com nome e turma, "Titular eliminado"
-  - [ ] 16.2 Busca por Enter ou botão, `aria-live`, 429 e mínimo de 3 letras
-  - [ ] 16.3 Diálogo de registro com prévia; `chaveEnvio` por diálogo
-  - [ ] 16.4 Aviso do aluno da lista
-  - [ ] 16.5 Testes
+  - [x] 16.1 Lista com nome e turma, "Titular eliminado"
+  - [x] 16.2 Busca por Enter ou botão, `aria-live`, 429 e mínimo de 3 letras
+  - [x] 16.3 Diálogo de registro com prévia; `chaveEnvio` por diálogo
+  - [x] 16.4 Aviso do aluno da lista
+  - [x] 16.5 Testes
 
 - [x] **17.0 — A coordenação conduz o pedido até o fim pela tela**
-  - [ ] 17.1 Prazo ("faltam N dias", vencido com ícone) e compartilhamento
-  - [ ] 17.2 Concluir, Cancelar (diz que o acesso volta), Corrigir nome (antes e depois, aviso do nome anterior)
-  - [ ] 17.3 Baixar a versão da escola (`oficial`, finalidade, entregar e apagar)
-  - [ ] 17.4 "Em preparação" a cada 10 s, parando com a aba escondida
-  - [ ] 17.5 Testes
+  - [x] 17.1 Prazo ("faltam N dias", vencido com ícone) e compartilhamento
+  - [x] 17.2 Concluir, Cancelar (diz que o acesso volta), Corrigir nome (antes e depois, aviso do nome anterior)
+  - [x] 17.3 Baixar a versão da escola (`oficial`, finalidade, entregar e apagar)
+  - [x] 17.4 "Em preparação" a cada 10 s, parando com a aba escondida
+  - [x] 17.5 Testes
 
 - [x] **18.0 — Aluno e professor baixam os próprios dados**
-  - [ ] 18.1 Lugar do rodapé fixo na casca do aluno; item Privacidade com "Meus dados"
-  - [ ] 18.2 Link no menu da pessoa do professor
-  - [ ] 18.3 Tela com resumo, estados, aviso e download
-  - [ ] 18.4 `docs/interface.md`
-  - [ ] 18.5 Testes
+  - [x] 18.1 Lugar do rodapé fixo na casca do aluno; item Privacidade com "Meus dados"
+  - [x] 18.2 Link no menu da pessoa do professor
+  - [x] 18.3 Tela com resumo, estados, aviso e download
+  - [x] 18.4 `docs/interface.md`
+  - [x] 18.5 Testes
 
 - [x] **19.0 — A carga prova que o expurgo não atrapalha a aula, e os documentos fecham o F3**
   - [x] 19.1 Cenário de carga com o adaptador falso de latência simulada; p95 do Tutor de B com e sem o lote de A; statements medidos no Postgres
@@ -201,7 +201,7 @@ tarefa. Roda depois da 18.0 e antes da 19.0, que fecha o F3.
 | 16.0 | `frontend-reviewer`, `privacy-guardian` (mais `test-engineer` e `revisor-geral`) |
 | 17.0 | `frontend-reviewer`, `privacy-guardian` (mais `test-engineer` e `revisor-geral`) |
 | 18.0 | `frontend-reviewer`, `privacy-guardian` (mais `test-engineer` e `revisor-geral`) |
-| 19.0 | `infra-guardian`, `privacy-guardian`, `tenancy-guardian` (mais `test-engineer` e `revisor-geral`) |
+| 19.0 | `infra-guardian`, `llm-integrator`, `privacy-guardian`, `tenancy-guardian` (mais `test-engineer` e `revisor-geral`) |
 | 20.0 | `frontend-reviewer`, `privacy-guardian`, `infra-guardian` (mais `test-engineer` e `revisor-geral`) |
 
 ## Critério de pronto da funcionalidade

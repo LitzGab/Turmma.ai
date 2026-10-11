@@ -297,18 +297,32 @@ semana", D32 revista).
 ## F3 — `lgpd-e-titular` [~]
 **Depende de:** F1 · **pode correr em paralelo com F4 e F5**
 
-Auditoria, tabela de retenção por escola, rotina de expurgo, exportação e eliminação por
-titular, registro de suboperadores, registro de incidente, guarda de registro de acesso por
-6 meses separada da auditoria (Marco Civil), obrigações do ECA Digital conforme parecer.
-Seed sintético. Entram também: **exportação em formato aberto** de dado, artefato e histórico
-de uso, feita pela própria coordenação (D63); **canal de notificação de violação** com
-retirada de conteúdo e recurso, dizendo se a análise foi humana ou automatizada (D61, ECA
-arts. 28 a 30); e o **registro da validação humana** como entidade de auditoria, que o F6 e o
-F17 vão preencher (D56).
+Três fatias, no recorte de 05/10/2026 (PRD, `tasks/prd-lgpd-e-titular/prd.md`):
 
-**Pronto quando:** um pedido de acesso e um de eliminação são atendidos por comando, com
-rastro; a coordenação exporta tudo em formato aberto sem depender de nós; e uma notificação de
-violação percorre o caminho até a resposta, com recurso. Ver `docs/lgpd.md` seção 7.
+- **Retenção e expurgo.** Cada escola tem um prazo por categoria do mapa de `docs/lgpd.md`, que a
+  operação ajusta por comando, dentro de piso e teto; a coordenação lê os prazos em linguagem
+  comum; e uma rotina noturna apaga, por escola, o que venceu, fora do horário letivo. O registro
+  de acesso (6 meses, Marco Civil) e a auditoria têm prazo fixo
+- **Suboperadores e incidente.** A operação registra por comando as empresas que recebem dado e
+  os incidentes; a coordenação vê os da escola dela e confirma o recebimento do aviso
+- **Pedido do titular.** A coordenação registra e conduz o pedido de acesso, portabilidade,
+  compartilhamento, correção e eliminação de aluno ou professor. O arquivo sai em formato aberto
+  para o próprio titular, em "Meus dados", e a eliminação vem 7 dias depois, cancelável até lá.
+  Cada passo fica na auditoria da escola
+
+Seed sintético. **Saíram no recorte, cada um com a fase dele:** a exportação da escola em
+formato aberto (D63) foi para o F12; o canal de notificação de violação (D61), para o F9 e o
+F12; e o registro da validação humana como entidade geral (D56), para o F6. O que depende de
+parecer (ECA Digital, arts. 17, 18 e 24, e o que a escola guarda mesmo com a eliminação) não
+mudou nada aqui e segue em aberto (PRD, seção 10).
+
+**Pronto quando:** um pedido de acesso e um de eliminação são atendidos pela coordenação, sem
+nós, com rastro: o arquivo sai em formato aberto para o titular, e a eliminação apaga no 8º dia
+tudo que o mapa não manda guardar; todo dado pessoal sai no prazo da escola, por rotina noturna
+que não toca outra escola nem o horário de aula, com a classificação de toda tabela conferida
+por teste; a escola vê a retenção, os suboperadores e os incidentes que a afetaram, e confirma o
+recebimento; e nada do que a coordenação vê separa o professor que usou a IA do que não usou
+(D64), nem a conversa do professor chega a ela. Ver `docs/lgpd.md` seção 7.
 
 > Esta funcionalidade parece burocracia e é a que protege o negócio. Não empurre para o fim.
 
@@ -353,7 +367,9 @@ objetiva, diagnóstico por habilidade, relatório por questão, aprovação do q
 pelo professor (D46). **Em discursiva e redação a IA não corrige, não avalia, não dá nota nem
 conceito e não escreve devolutiva, nem como rascunho para o professor** (D55): o que a
 ferramenta entrega é rubrica e critérios antes da aplicação, organização do lote e correção
-cega. **A validação humana da objetiva é registrada** (D56). Prova online resiliente: resposta
+cega. **A validação humana da objetiva é registrada** (D56), como entidade de auditoria que o
+F17 também preenche: veio do F3, no recorte de 05/10/2026, e no MVP é a `validacao_do_lote`.
+Prova online resiliente: resposta
 salva por item, relógio no servidor, retomada após queda (D27). A nota oficial e o boletim
 ficam no F17. AIA da correção e do diagnóstico escritas antes (D60).
 
@@ -410,7 +426,9 @@ que o aluno vê e contesta (D66). **Busca em fontes aprovadas**, com as duas cha
 e continuando socrático (D68). O Tutor mantém identidade de
 agente e **nunca se passa por pessoa** (D58); **nenhum mecanismo de uso excessivo e nenhum
 padrão manipulativo** (D59); filtro de conteúdo inadequado; aviso de privacidade em linguagem
-de faixa etária; e o canal para o aluno avisar um adulto (D61). Linguagem adequada do 6º ano
+de faixa etária; e o canal para o aluno avisar um adulto (D61), que é a entrada dele no canal
+de notificação de violação: o canal saiu do F3 no recorte de 05/10/2026 e fecha no F12, com a
+resposta e o recurso. Linguagem adequada do 6º ano
 ao Ensino Médio (D43). Encaminhamento de assunto delicado que chega a quem notifica o
 Conselho Tutelar (`docs/regulacao.md` seção 7). Avaliação de impacto dos sinais antes de
 existirem. Acesso fora da sala configurado pela escola por turma, desligado por padrão
@@ -475,10 +493,17 @@ funcionamento em linguagem simples, LGPD e ECA artigo por artigo, relatório de 
 material de comunicação), **Denúncias** e **Exportar** (D61, D63), e o resumo da AIA em cada
 função de alto risco (D60).
 
+Vieram do F3, no recorte de 05/10/2026: a **exportação em formato aberto** de dado, artefato e
+histórico de uso, feita pela própria coordenação (D63), com o fim de contrato e o expurgo da
+auditoria; e o **canal de notificação de violação**, com retirada de conteúdo e recurso, dizendo
+se a análise foi humana ou automatizada (D61, ECA arts. 28 a 30), cuja entrada do aluno nasce no
+F9. O arquivo de cada titular já sai em formato aberto desde o F3.
+
 **Pronto quando:** a escola responde "o que a IA faz aqui e quem aprovou" em uma tela,
 **imprime o dossiê que a secretaria pede** a partir dela, e teste prova que a coordenação não
 vê indicador nominal de professor sem deixar auditoria nem enxerga adoção nominal em lugar
-nenhum.
+nenhum. E, com o que veio do F3: a coordenação exporta tudo em formato aberto sem depender de
+nós, e uma notificação de violação percorre o caminho até a resposta, com recurso.
 
 > É o que nenhum concorrente entrega. Não trate como painel secundário.
 

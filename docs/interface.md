@@ -1065,6 +1065,10 @@ ilustração da entrada em SVG ou WebP.
 |---|---|---|
 | Nova conversa · Ferramentas · Calendário · Turmas · **Seu time** (Assistente, Tutor) · **Histórico** | Tutor · Atividades e provas · Meu desempenho · O que o Tutor sabe de mim · rodapé fixo: **Avisar um adulto** e Privacidade | **Escola:** Estrutura, Material, Adaptações · **IA e ensino:** Governança, Analista, Agentes · **Conformidade:** Conformidade, Privacidade, Denúncias, Auditoria, Exportar · rodapé: Configurações |
 
+Enquanto a proposta da coordenação não vira decisão, a lateral dela é uma **lista plana, sem rótulo de grupo**
+(`apps/web/src/areas/navegacao.ts`): Governança, Agentes, Analista, Estrutura, Professores, Material e, no fim,
+Privacidade (F3). Item novo entra na posição do grupo dele, sem o rótulo (validação do F3, 11/10/2026).
+
 A coordenação abre em **Governança**, não em chat: é a tela que fecha a venda — enquanto ela não
 existe (A5), abre em **Estrutura**, que é onde a escola se monta (A1). O aluno abre no **Tutor**
 quando ele está ligado para a turma, e em **Atividades e provas** quando não está.

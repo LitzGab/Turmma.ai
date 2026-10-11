@@ -858,6 +858,12 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       existiu (D77); o MVP usa um círculo com o ícone da função
       (`apps/web/src/componentes/ia/AvatarAgente.tsx`). Novo prazo, e se o SVG ainda substitui o
       ícone, a definir pelo Gabriel e pelo Joaquim
+- [ ] **Grupos da lateral da coordenação (F3, validação, M2):** `docs/interface.md` 11.1 propõe três grupos (Escola, IA
+      e ensino, Conformidade) e um rodapé, e a lateral é uma lista plana desde o MVP
+      (`apps/web/src/areas/navegacao.ts`), hoje com sete itens. O RF20 do F3 pedia Privacidade "no grupo Conformidade", e
+      o item entrou no fim da lista, sem rótulo (Tech Spec do F3, seção 9). Decidir se a proposta vale e construir os
+      grupos na casca, para todos os itens de uma vez: o mais tardar no PRD do F12, que traz Conformidade, Denúncias e
+      Exportar para o mesmo grupo (Joaquim e Gabriel)
 - [ ] Identificar no 21st.dev o autor e a licença das peças que o Gabriel colou direto no
       mockup (área de soltar arquivo, miniatura de arquivo, pasta animada, `leaderboard-*` e as duas
       da HextaUI) e conferir a do calendário `vaib215/event-manager`, antes de qualquer uma entrar no

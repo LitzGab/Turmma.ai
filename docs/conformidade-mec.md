@@ -58,7 +58,7 @@ hoje — inclusive onde ela é ruim.
 | Há protocolo de revisão técnica do conteúdo gerado antes do uso? | Sim: toda saída que chega ao aluno passa por aprovação humana registrada (D7, D47) | por desenho |
 | A adoção fragiliza soluções pedagógicas já usadas no território? | Somos neutros em relação ao material: trabalhamos com o que a escola já usa (D5) | por desenho |
 | As cláusulas e o orçamento são transparentes e não levam à dependência? | Preço por aluno com uso incluso, sem crédito visível (D40); e a D63 obriga exportação em formato aberto a qualquer momento | por desenho |
-| **O recurso permite baixar dados e histórico de uso em formato aberto?** | Sim (D63). Era ponto fraco antes desta revisão | decidido, a implementar (F3) |
+| **O recurso permite baixar dados e histórico de uso em formato aberto?** | Sim (D63). Era ponto fraco antes desta revisão | decidido: o arquivo de cada titular sai em formato aberto desde o F3; a exportação da escola, a implementar (F12) |
 
 ### Critério 2 — Bem-estar e desenvolvimento dos estudantes
 
@@ -302,12 +302,12 @@ com métrica, cronograma e reversibilidade).
 
 | Fase | O que esta leitura acrescenta |
 |---|---|
-| **F3 — LGPD e titular** | exportação em formato aberto de dado e histórico de uso (D63); canal de denúncia e retirada com recurso (D61); registro da validação humana |
+| **F3 — LGPD e titular** | retenção por escola com expurgo noturno; suboperadores e incidentes à vista da coordenação; pedido do titular atendido pela coordenação, com o arquivo de cada titular em formato aberto. No recorte de 05/10/2026 saíram daqui a exportação da escola (F12), o canal de denúncia (F9 e F12) e o registro da validação humana (F6) |
 | **F5 — camada de IA** | critério de equidade e de português brasileiro na avaliação de modelos; roteamento por soberania: conversa de aluno em provedor no Brasil (D62) |
-| **F6 — avaliação e correção** | fim da devolutiva de discursiva por IA até parecer (D55); registro de validação qualificada na objetiva (D56) |
-| **F9 — ambiente do aluno** | agente com identidade que nunca se passa por pessoa (D58); sem design de uso excessivo (D59); filtro de conteúdo; AIA do Tutor antes de existir |
+| **F6 — avaliação e correção** | fim da devolutiva de discursiva por IA até parecer (D55); registro de validação qualificada na objetiva, como entidade de auditoria (D56) |
+| **F9 — ambiente do aluno** | agente com identidade que nunca se passa por pessoa (D58); sem design de uso excessivo (D59); filtro de conteúdo; AIA do Tutor antes de existir; a entrada do aluno no canal de denúncia (D61) |
 | **F11 — agentes** | AIA por agente de alto risco; procedimento de suspensão de agente |
-| **F12 — governança** | o dossiê é esta tela exportada; explicação e contestação em linguagem comum; adoção só agregada (D64) |
+| **F12 — governança** | o dossiê é esta tela exportada; explicação e contestação em linguagem comum; adoção só agregada (D64); exportação em formato aberto de dado e histórico de uso, pela coordenação (D63); canal de denúncia e retirada com recurso (D61) |
 | **F16 — hardening e conformidade** | RIPD + AIA assinados; teste adversário; revisão do dossiê |
 
 ---
