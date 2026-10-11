@@ -89,17 +89,27 @@ export function arquivosDosArgumentos(argumentos: readonly string[]): string[] {
   return argumentos.filter((argumento) => !argumento.startsWith('-'))
 }
 
+/**
+ * As opções do Playwright que passam adiante: o caso (`--grep=<nome>`) e o projeto (`--project=<nome>`). Com elas o
+ * portão da tarefa reconstrói a web e roda um caso só, que é o que a conferência de uma mutação de tela pede
+ * (`tools/processo/mutacoes.ts`). Sempre com `=`: o valor solto seria lido como arquivo.
+ */
+export function opcoesDoPlaywright(argumentos: readonly string[]): string[] {
+  return argumentos.filter((argumento) => /^--(grep|project)=./.test(argumento))
+}
+
 export function etapaDosTestesDoE2e(
   fatia: string | null,
   teto: number,
   naEsteira: boolean,
   escrever: (texto: string) => void = (texto) => process.stdout.write(texto),
   arquivos: readonly string[] = [],
+  opcoes: readonly string[] = [],
 ): Etapa {
   return {
     nome: fatia === null ? 'testes e2e' : `testes e2e, fatia ${fatia}`,
     comando: 'npx',
-    argumentos: ['playwright', 'test', ...(fatia === null ? [] : [`--shard=${fatia}`]), ...arquivos],
+    argumentos: ['playwright', 'test', ...(fatia === null ? [] : [`--shard=${fatia}`]), ...opcoes, ...arquivos],
     aoTerminar: (_codigo, duracaoMs) => {
       const aviso = avisoDePrazoDoE2e(duracaoMs, teto)
       if (aviso !== null) escrever(naEsteira ? `::warning title=e2e perto do teto::${aviso}\n` : `\n⚠ ${aviso}\n`)
@@ -131,6 +141,6 @@ export function etapasDoE2e(
     { nome: 'build da web', comando: 'npm', argumentos: ['run', 'build', '-w', '@educa/web'], ambiente: { VITE_COM_GALERIA: '1' } },
     { nome: 'teto do bundle da web', comando: 'npx', argumentos: ['size-limit'] },
     etapaCompose('subir o ambiente completo', 'up', '--detach', '--build', '--wait'),
-    etapaDosTestesDoE2e(fatia, teto, naEsteira, escrever, arquivosDosArgumentos(argumentos)),
+    etapaDosTestesDoE2e(fatia, teto, naEsteira, escrever, arquivosDosArgumentos(argumentos), opcoesDoPlaywright(argumentos)),
   ]
 }

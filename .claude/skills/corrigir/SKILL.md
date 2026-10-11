@@ -73,18 +73,18 @@ Corrija o mínimo. Rode o teste isolado até ficar verde (os comandos estão no 
 `.claude/skills/executar-task/SKILL.md`). Depois o portão da tarefa, uma vez, que grava o carimbo:
 
 ```bash
-node tools/processo/portao-local.ts --tarefa
+node tools/processo/portao-local.ts --tarefa tasks/correcoes/<AAAA-MM-DD>-<slug>.md
 ```
 
-Correção de **teste intermitente** leva também a prova da estabilidade: o teste rodado sozinho dez
-vezes seguidas, e o número no documento. Correção que nasce do portão completo do fim da spec, ou da
-esteira, termina com o portão completo rodado de novo por quem o Orquestrador mandar, não por você.
+Cláusula que a correção acrescenta ganha o seu bloco `mutacao` no documento, numa seção "Mutações"
+(`executar-task`, passo 2): o portão a prova. Correção de **teste intermitente** leva também a prova
+da estabilidade: o teste rodado sozinho dez vezes seguidas, e o número no documento. Correção que
+nasce da esteira se confere na esteira do push dela, que o Orquestrador lê, não você.
 
 ## 5. Revisores
 
 Mesma mecânica do passo 5 de `.claude/skills/executar-task/SKILL.md`: você pede a rodada à Mesa de
-revisão, com o documento da correção, e ela chama o `test-engineer` primeiro e sozinho e depois os
-guardiões marcados em paralelo. `revisor-geral` é obrigatório quando a correção altera mais de 5 arquivos fora de
+revisão, com o documento da correção, e ela chama o `test-engineer` e os guardiões marcados, juntos. `revisor-geral` é obrigatório quando a correção altera mais de 5 arquivos fora de
 `tasks/`, ou toca `.github/`, `tools/ci/` ou `tools/processo/`. Escreva-o, entre crases, na linha
 "Subagentes obrigatórios" do documento, no passo 1 ou assim que passar do limite: é dessa linha que o
 hook tira quem cobra. Na A1, duas correções

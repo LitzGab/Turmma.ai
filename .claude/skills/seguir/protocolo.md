@@ -17,12 +17,6 @@ e quem está ligado a quem. Tudo aqui saiu da prova técnica de 08/10/2026 e da 
   `.maestri/roles/<id>/`, e ali **nenhum hook dispara**: o commit sem revisão passa e a rodada do
   revisor não é registrada (provado em 08/10/2026). Por isso o papel vem de
   `.claude/agents/<papel>.md`, com `claude --agent <papel>`, e nunca de responsabilidade do Maestri
-- **O Implementador pode rodar no opencode**, no modo econômico que o Joaquim liga (D78, revista em
-  09/10/2026), e lá vale a mesma coisa por outros arquivos: o papel vem de `.opencode/agents/implementador.md`, o modelo de
-  `.opencode/opencode.jsonc`, e a trava do commit e do push, do plugin
-  `.opencode/plugins/portao-de-revisoes.ts`, que consulta o mesmo `tools/processo/revisoes.ts`. O
-  opencode abre na raiz do checkout, como todo papel. Onde este protocolo diz "o hook", para ele é o
-  plugin; onde diz Bash, é a ferramenta `shell`
 - **O contexto é compactado sozinho** perto de 400 mil tokens (`autoCompactWindow`, em
   `.claude/settings.json`; D78, revista em 10/10/2026). A sessão continua o mesmo trabalho com um
   resumo no lugar da conversa, e o hook de início de sessão diz a cada papel o que reler. Por isso o

@@ -380,6 +380,15 @@ describe('hooks sobre um repositório de verdade', () => {
     expect(portao(commit, raiz)).toMatch(/portão local: nunca passou/)
     gravarCarimbo(raiz, { inicio: new Date('2026-09-13T10:11:00').toISOString(), suites: ['typecheck', 'lint', 'segredo', 'dependencias', 'test', 'infra'] })
     expect(portao(commit, raiz)).toBeNull()
+    // A conferência a mais de quem chama (a das mutações) segura o commit que os revisores e o carimbo liberariam, e
+    // recebe o carimbo, o documento e o conteúdo dele.
+    const vista: unknown[] = []
+    const comConferencia = portao(commit, raiz, undefined, (carimbo, documento, conteudo) => {
+      vista.push(carimbo?.suites.length, documento, conteudo.includes('Subagentes obrigatórios'))
+      return 'portão local: as mutações não foram conferidas'
+    })
+    expect(comConferencia).toMatch(/^Commit bloqueado: revisões de tasks\/prd-exemplo\/9_task\.md incompletas\.\n- portão local: as mutações não foram conferidas$/)
+    expect(vista).toEqual([6, 'tasks/prd-exemplo/9_task.md', true])
   })
 
   it('o hook, no repositório de verdade, deixa passar o arquivo mutado e restaurado, e barra o editado durante o portão', () => {

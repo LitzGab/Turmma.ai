@@ -97,32 +97,23 @@ Depois dos RF, faça o mesmo, de forma mais curta, para:
 
 ## 4. Portão
 
-O portão completo já rodou antes de você, a pedido do Orquestrador (D78, revista em 09/10/2026).
-Confira que ele vale para o código que você valida, em vez de rodar tudo de novo:
+As suítes inteiras rodam na esteira do GitHub a cada push da spec (D79), e a do commit que você valida
+corre em paralelo com você. Com o escopo na funcionalidade completa, você **não roda suíte inteira** e
+não espera a esteira: quem confere que ela ficou verde no commit validado é o Orquestrador, no
+fechamento. Escreva "esteira: conferida no fechamento".
 
-```bash
-node tools/processo/portao-local.ts conferir --completo
-cat .processo/portao.json
-```
+O que você roda é o teste que serve de evidência a um requisito, isolado, e o que for preciso para
+exercitar um caso de borda da regra 40 (o crítico do F3 apareceu pondo o ano letivo da escola em
+`encerrado`, em 14 minutos). Vermelho reprova, mesmo que pareça intermitente ou "de ambiente":
+registre o arquivo, o caso e a saída. Intermitência é achado, não desculpa.
 
-Vale: registre no relatório o início e as suítes do carimbo, e não rode as suítes. **Não vale** (a
-resposta diz o que falta), ou o escopo é uma tarefa só: rode você, no código do escopo, com a árvore
-limpa. Antes, instale as dependências se o `node_modules` for anterior ao `package-lock.json`, e
-registre no relatório que precisou. Sem isso, um checkout desatualizado reprova o portão por TS2307
-sem culpa do commit:
+Escopo de uma tarefa só: rode o portão dela, com a árvore limpa. Antes, instale as dependências se o
+`node_modules` for anterior ao `package-lock.json`, e registre no relatório que precisou:
 
 ```bash
 [ -f node_modules/.package-lock.json ] && [ ! package-lock.json -nt node_modules/.package-lock.json ] || npm ci
-npm run typecheck && npm run lint && npm run test
-npm run test:e2e     # se a funcionalidade tem tela
-npm run test:infra   # se a funcionalidade mexe em infra (regra 40, D52)
+node tools/processo/portao-local.ts --tarefa
 ```
-
-- Qualquer vermelho reprova, mesmo que pareça intermitente ou "de ambiente". Registre o
-  arquivo, o caso e a saída. Intermitência é achado, não desculpa.
-- **Esteira do GitHub: não é sua.** Ela roda uma vez por spec, na branch, **depois** da sua
-  validação e antes do pouso (D78), disparada pelo Orquestrador. Não a espere, não a confira e não
-  a ponha no veredito: escreva "esteira: roda no fechamento".
 
 ## 5. Processo
 
@@ -143,7 +134,7 @@ npm run test:infra   # se a funcionalidade mexe em infra (regra 40, D52)
 ## 6. Classificação
 
 - **CRÍTICO**: RF não atendido ou parcial, violação das regras 10, 20, 70 ou 80, bug,
-  vazamento, critério de aceite sem teste, portão vermelho, revisor com veto sem rodada
+  vazamento, critério de aceite sem teste, teste vermelho, revisor com veto sem rodada
   aprovada
 - **MAIOR**: violação das demais regras, desvio da Tech Spec sem registro, teste frágil ou
   intermitente, doc em `docs/` contradizendo o código, caso de borda do PRD sem teste nem
@@ -164,10 +155,10 @@ Esse arquivo é a única coisa que você escreve. Não edite código, teste, PRD
 
 **Veredito:**
 - **APROVADA**: todo RF ATENDIDO, critério de pronto cumprido, zero crítico e zero maior,
-  portão verde no commit validado
-- **APROVADA COM RESSALVAS**: zero crítico, portão verde, e maiores pontuais que não
+  nenhum teste vermelho entre os que você rodou
+- **APROVADA COM RESSALVAS**: zero crítico, nenhum teste vermelho, e maiores pontuais que não
   bloqueiam a próxima funcionalidade
-- **REPROVADA**: qualquer crítico, ou portão vermelho
+- **REPROVADA**: qualquer crítico, ou teste vermelho
 
 ## Formato da resposta
 
@@ -177,7 +168,7 @@ Escopo: funcionalidade completa | tarefa N.0
 Commit validado: <hash>
 RF: <n> atendidos, <n> parciais, <n> não atendidos, <n> não verificáveis
 Critério de pronto: <cumprido | faltando: ...>
-Portão: typecheck / lint / test / e2e / infra (a esteira roda no fechamento)
+Testes rodados: <os que serviram de evidência, e o resultado> (a esteira é conferida no fechamento)
 Críticos: <lista curta ou nenhum>
 Maiores: <lista curta ou nenhum>
 Relatório: tasks/prd-<func>/validacao.md

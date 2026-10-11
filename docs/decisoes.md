@@ -1161,3 +1161,41 @@ checkout, um segundo andar e a regra de como as duas branches se encontram: trab
 próxima spec, e não no meio desta. **Sem prova ainda:** uma parada aberta com tarefa correndo, e uma
 tarefa que passe de primeira. Revisão: na retrospectiva do F3, pelas rodadas e pelo tempo da 16.0 à
 20.0 contra a 11.0 à 15.0.
+
+**D79 — O processo é revisto para tempo: a esteira em todo push, o portão prova as mutações, os
+revisores rodam juntos, e dois avisos no lugar de duas paradas.** *(decidida em 11/10/2026, com a
+aprovação antecipada do Joaquim: ao mandar executar o redesenho do processo, depois da retrospectiva
+do F3, ele escreveu "aprovo tudo")*
+Revisa a D78. Motivo, pelos números do F3 (`tasks/prd-lgpd-e-titular/retro.md`): 55 horas de relógio
+para 16 tarefas e 9 correções; mediana de 99 minutos por tarefa; uma tarefa em vinte sem reprovação;
+4 h 52 do último commit de tarefa à validação aprovada, metade delas no portão completo, que rodou
+duas vezes; e três listas fechadas vermelhas por até quatro tarefas sem ninguém ver. Na 18.0, de tela,
+110 dos 188 minutos foram Playwright. O que muda: (1) **A esteira roda em todo push** de `spec/**` e
+de `correcao/**`, e ninguém espera por ela: o Orquestrador lê o veredito ao fechar a tarefa seguinte
+(`tools/processo/esteira.ts`), e vermelho vira correção antes de a linha andar. O portão completo
+local deixa de ser etapa do fim da spec; a validação começa logo depois do último commit, em paralelo
+com a esteira dele, e o fechamento exige as duas no último commit que alterou código. Sem GitHub, o
+portão completo local vale no lugar. (2) **O portão da tarefa prova as mutações**: a seção "Mutações"
+do documento vira bloco que máquina lê, e o portão aplica cada um, roda o teste citado, exige vermelho
+e restaura (`tools/processo/mutacoes.ts`); o carimbo guarda a impressão dos blocos, e o commit é
+bloqueado se eles mudaram depois. Saem as conferências em texto da oitava revisão da D78, que não
+mexeram no número (59% de reprovação na primeira rodada, antes e depois). O lint passa a recusar
+`.skip`, `.only` e parecidos em teste. (3) **Os revisores rodam juntos**, com o `test-engineer` entre
+eles: ele não muta mais arquivo. A ordem de correção da Mesa leva o achado com as palavras do revisor
+e o ponto exato, e não dita regra, texto de tela nem código: três das cinco escaladas do F3 nasceram
+de ordem que ditou sem conferir. (4) **Tarefa e spec menores**: uma tarefa entrega um comportamento e
+marca até três guardiões com veto; a spec mira doze tarefas; e o Implementador lê da Tech Spec e do
+PRD o que o documento da tarefa aponta. (5) **Dois avisos no lugar de duas paradas**: a Tech Spec
+pronta e a lista de tarefas. O Arquiteto mostra e segue, e a construção começa 30 minutos depois da
+lista, sem objeção. O PRD, a mudança de desenho, a ressalva da validação, as propostas da
+retrospectiva, a decisão de produto, o pouso e os dois limites continuam parada. (6) **Spec fora da
+sequência** entra como item `X<n>` do `ROADMAP.md`, escrito pelo Arquiteto antes do PRD, na posição
+que diz a ordem dela. (7) **Sai o modo econômico** (o opencode com o MiMo-V2.6-Pro): duas tarefas
+medidas, o dobro do tempo, o mesmo consumo do Claude, e um papel mantido em dobro. O que **não** muda:
+as seis regras, o veto das regras 10, 20 e 70, o hook do commit, o dado sintético, e o que é do
+Joaquim (nota, pouso, push e decisão de produto). **Avaliado e não feito:** duas tarefas da mesma spec
+em paralelo, que é a mudança de maior risco para a orquestração e só uma spec prova; a vigia com
+`--pre-run`, que poupa custo e não tempo; e modelo menor para o Orquestrador e para os revisores, que
+a retrospectiva mediu e não sustentou. **Sem prova ainda:** quantas tarefas passam de primeira com o
+portão novo, e o efeito do teto de tarefa, que só uma spec inteira mede. Revisão: na retrospectiva da
+próxima spec, com as mesmas medidas da retrospectiva do F3.

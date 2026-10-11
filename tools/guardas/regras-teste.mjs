@@ -81,3 +81,43 @@ export const esperarServicoDoCompose = {
     }
   },
 }
+
+/**
+ * Guarda do teste desligado (regra 40, "O que é proibido").
+ *
+ * `.skip`, `.only`, `.fixme` e `.todo` tiram um teste da corrida sem deixar nada vermelho, e a regra que ele provava
+ * passa a valer só no papel. `.only` é pior: desliga o resto do arquivo. Até 11/10/2026 quem via isso era só o
+ * `test-engineer`, na revisão: na 18.0 do F3 um `test.skip` num e2e custou uma rodada inteira (grupo I da
+ * retrospectiva). `skipIf` e `runIf` entram pelo mesmo motivo: a condição que desliga o teste é a que ninguém confere.
+ */
+const QUEM_DECLARA_TESTE = new Set(['it', 'test', 'describe', 'suite'])
+const MARCAS_QUE_DESLIGAM = new Set(['skip', 'only', 'fixme', 'todo', 'skipIf', 'runIf'])
+
+export const MENSAGEM_TESTE_DESLIGADO =
+  'Teste desligado ou isolado (`{{marca}}`). Teste vermelho é informação: conserte o teste ou a regra, e não o tire da corrida (regra 40).'
+
+/** A raiz de `test.describe.skip` é `test`: desce pela cadeia de membros até o identificador. */
+function raizDaCadeia(no) {
+  let atual = no
+  while (atual.type === 'MemberExpression') atual = atual.object
+  return atual.type === 'Identifier' ? atual.name : null
+}
+
+export const testeSemDesligar = {
+  meta: {
+    type: 'problem',
+    docs: { description: 'Proíbe .skip, .only, .fixme, .todo, .skipIf e .runIf em teste (regra 40).' },
+    schema: [],
+    messages: { desligado: MENSAGEM_TESTE_DESLIGADO },
+  },
+  create(context) {
+    return {
+      MemberExpression(no) {
+        if (no.computed || no.property.type !== 'Identifier' || !MARCAS_QUE_DESLIGAM.has(no.property.name)) return
+        const raiz = raizDaCadeia(no.object)
+        if (raiz === null || !QUEM_DECLARA_TESTE.has(raiz)) return
+        context.report({ node: no.property, messageId: 'desligado', data: { marca: `.${no.property.name}` } })
+      },
+    }
+  },
+}

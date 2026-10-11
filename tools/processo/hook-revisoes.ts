@@ -1,11 +1,8 @@
 // Entrada dos hooks de revisão (.claude/settings.json). A lógica e o teste ficam em revisoes.ts.
 //   node tools/processo/hook-revisoes.ts registrar   ← SubagentStop
 //   node tools/processo/hook-revisoes.ts portao      ← PreToolUse do Bash
-//
-// O modo `portao` tem um segundo chamador: o plugin do opencode (.opencode/plugins/portao-de-revisoes.ts), que entrega a
-// mesma entrada e as mesmas duas variáveis de ambiente (`CLAUDE_PROJECT_DIR`, `CLAUDE_CODE_AGENT`) e lê a mesma saída.
-// Mudar esse contrato é mudar os dois (tools/processo/opencode.test.ts).
 import { readFileSync } from 'node:fs'
+import { avaliarMutacoes } from './mutacoes.ts'
 import { portao, registrar } from './revisoes.ts'
 
 function lerEntrada(): Parameters<typeof registrar>[0] {
@@ -30,7 +27,8 @@ if (modo === 'registrar') {
 } else if (modo === 'portao') {
   let motivo: string | null
   try {
-    motivo = portao(entrada, raiz)
+    // Com a conferência das mutações: o commit de tarefa só passa se o último portão conferiu os blocos como estão agora.
+    motivo = portao(entrada, raiz, undefined, avaliarMutacoes)
   } catch (erro) {
     motivo = `Commit bloqueado: o portão de revisões falhou (${(erro as Error).message}). Avise o Joaquim.`
   }

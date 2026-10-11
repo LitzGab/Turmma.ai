@@ -33,6 +33,7 @@ encerra o turno depois de pedir trabalho.
 | `vigia` | a rotina de 30 minutos, que hoje chega como `/vigia`: faça o que `.claude/skills/vigia/SKILL.md` diz, e troque o comando da rotina (passo 9) |
 | começa com `RELATÓRIO`, `ESCALADA`, `BLOQUEIO` ou `DIVERGÊNCIA` | resposta de um agente, que chega como `/seguir <tipo> de <nome>`: continue o ciclo (passos 5 e 6) |
 | um defeito em texto livre | correção avulsa (passo 10) |
+| um nome que o `estado.ts` diz não estar no roadmap, com uma frase do que é | spec fora da sequência (passo 10) |
 | uma decisão de produto a tomar | descoberta (passo 10) |
 
 ## 2. Ler o estado
@@ -88,32 +89,6 @@ dentro do terminal, reiniciada já apontada para o checkout do andar.
 
 O papel vem de `.claude/agents/`, **nunca de responsabilidade do Maestri** (`protocolo.md`, item 1).
 
-**O `Implementador` roda no Claude Code, em Sonnet** (D78, revista pela quinta vez em 09/10/2026). O
-opencode com o MiMo-V2.6-Pro rodou a 11.0 e a 12.0 do F3: o processo funcionou, mas cada tarefa levou
-de duas a quatro vezes o tempo do Sonnet e o consumo do Claude por tarefa não caiu
-(`docs/decisoes.md`, D78). Ele fica como **modo econômico, que só o Joaquim liga**: quando ele pedir
-("Implementador no opencode"), anote em "Agora", no `estado.md`, a linha `**Implementador:** opencode`,
-e enquanto ela estiver lá o comando do `Implementador` é `opencode --standalone --auto`. Sem a linha,
-vale a tabela.
-
-No modo econômico, o comando não leva papel nem modelo: os dois vêm de `.opencode/opencode.jsonc`, no
-checkout em que ele abre, o papel está em `.opencode/agents/implementador.md`, e a trava do commit e do
-push é o plugin `.opencode/plugins/portao-de-revisoes.ts`, que consulta o mesmo hook. Por isso, **antes
-de reiniciá-lo no opencode, confira que o checkout tem o papel**:
-
-```bash
-ls <checkout>/.opencode/agents/implementador.md
-```
-
-Não tem (andar aberto antes de 09/10/2026): com `git -C <checkout> status --short` vazio, traga a
-`develop` (`git -C <checkout> merge develop`, depois `git -C <checkout> push`) e confira de novo.
-Conflito nesse merge é parada, como no pouso (passo 8).
-
-Quando o opencode não serve (o checkout continua sem o papel depois do merge, o cabeçalho não bate
-depois de dois reinícios, ou a sessão responde com erro de modelo, de assinatura ou de limite de uso),
-volte ao comando da tabela. Não é parada: reinicie, reenvie o pedido como `PEDIDO de retomada`, e
-registre no `estado.md`, na coluna "Modelo" da tarefa e em "O que falhou".
-
 Terminal que falta no `maestri list` (primeira vez, ou alguém o fechou). **Na primeira vez, crie o
 andar antes** (abaixo) e recrute os quatro apontados para o checkout dele, cada um com o comando da
 tabela:
@@ -133,12 +108,6 @@ maestri check "<Terminal>"
 **Confira o cabeçalho depois de todo reinício**: o modelo esperado, o `@papel` e o caminho do
 checkout certo, sem `.maestri/roles`. Terminal apontado para o lugar errado editaria o checkout
 errado; fora da raiz, nenhum hook dispara. Se o cabeçalho não bate, reinicie de novo.
-
-No modo econômico, o cabeçalho do `Implementador` é o do opencode: sob a caixa de texto, a linha
-`Implementador auto · MiMo-V2.6-Pro OpenCode Go`, e no rodapé o caminho do checkout, abreviado, que
-termina em `:spec/<funcionalidade>` (a branch do andar). `Build` no lugar de `Implementador`, ou outro
-modelo, quer dizer que o opencode abriu num checkout sem `.opencode/`: é o merge acima, e não outro
-reinício.
 
 Quando reiniciar: o `Implementador` e a `Mesa`, a cada tarefa e a cada correção ; o `Arquiteto`, a cada pedido; o `Validador`, **sempre** antes
 de validar ou revalidar, porque ele precisa chegar sem nada da rodada anterior. Terminal que não é
@@ -204,7 +173,7 @@ qualquer agente. Sem esses commits a árvore do andar fica suja, e a validação
 
 | Fase (`estado.ts`) | Quem trabalha | O que você faz |
 |---|---|---|
-| `sem-prd`, `sem-techspec`, `sem-revisao-da-spec`, `sem-tarefas` | `Arquiteto`, no andar | um `PEDIDO` só, com a fase de partida; ele encadeia até as tarefas e para sozinho nas aprovações do Joaquim, no terminal dele |
+| `sem-prd`, `sem-techspec`, `sem-revisao-da-spec`, `sem-tarefas` | `Arquiteto`, no andar | um `PEDIDO` só, com a fase de partida; ele encadeia até as tarefas, para sozinho nas perguntas e na aprovação do PRD, e avisa da Tech Spec e da lista de tarefas (passo 7) |
 | `construindo` | `Implementador` e `Mesa`, no andar | o ciclo do passo 6 |
 | `sem-validacao` | `Validador`, no andar | o passo 8 |
 | `validacao-reprovada` | `Implementador` e `Mesa` | uma correção por achado crítico ou maior (`corrigir`), depois valida de novo; **não é parada**. Achado que muda o desenho vira tarefa nova, pelo `Arquiteto` |
@@ -223,13 +192,9 @@ vale o passo 7: a tarefa segue.
 
 1. **Escolha.** A tarefa da vez é a do `estado.ts`: a primeira pendente com as dependências
    concluídas. Nenhuma liberada com pendentes: pare e reporte.
-2. **Modelo.** O Implementador roda em Sonnet 5.5 em toda tarefa (D78, revista em 09/10/2026: o
-   Haiku saiu depois da 6.0, e o MiMo-V2.6-Pro, pelo opencode, depois da 12.0, para o modo
-   econômico do passo 3). O porte do documento não
-   escolhe modelo: diz quanto a tarefa deve levar, que é o que a vigia usa. Sem a linha
-   `**Porte:**`, vale o porte inferido que o script mostra. No `estado.md`, o modelo da tarefa é
-   `Sonnet`, ou `MiMo-V2.6-Pro (opencode)` quando ela rodou no modo econômico: é por essa
-   coluna que a retrospectiva compara os dois.
+2. **Porte.** O Implementador roda em Sonnet em toda tarefa. O porte do documento diz quanto ela
+   deve levar, que é o que a vigia usa; sem a linha `**Porte:**`, vale o porte inferido que o script
+   mostra.
 3. **Diário.** Atualize o `estado.md` do andar (formato no fim): a linha da tarefa anterior em
    "Concluídas", e em "Agora" a tarefa atual, o modelo, a hora e o que você espera.
 4. **Sessões novas.** Reinicie a `Mesa` e o `Implementador`, apontados
@@ -250,7 +215,7 @@ vale o passo 7: a tarefa segue.
    na 1ª rodada; a ordem está em `.processo/ordens/…`", ou "implementação na árvore, sem portão".
 
    Depois de pedir, um `maestri check "Implementador"`, uma vez: o pedido tem de aparecer enviado, com
-   ele trabalhando. Se o texto ficou parado na caixa (acontece no opencode), envie o Enter
+   ele trabalhando. Se o texto ficou parado na caixa, envie o Enter
    (`maestri ask "Implementador" --raw "\n"`) e confira de novo.
 6. **Limpe o seu contexto e encerre o turno.** Com o pedido de uma tarefa **nova** enviado e
    conferido, tudo o que você sabia da anterior já está no `estado.md`: agende a limpeza (passo 9)
@@ -264,7 +229,11 @@ vale o passo 7: a tarefa segue.
   - `git log -1` traz `(tarefa N.0)`, ou `(correção <slug>)`, e a linha `Revisões:` com todos os
     obrigatórios;
   - `git status --short` vazio;
-  - `git rev-list --count origin/spec/<func>..HEAD` igual a zero (o push foi feito).
+  - `git rev-list --count origin/spec/<func>..HEAD` igual a zero (o push foi feito);
+  - `(cd <andar> && node tools/processo/esteira.ts)` não responde `VERMELHA`. O push de cada tarefa
+    dispara a esteira, que roda as suítes inteiras sem ninguém esperar (D79): o veredito de um commit
+    chega com a tarefa seguinte correndo, e é aqui que você o lê. Vermelha: correção (`corrigir`) na
+    branch, **antes** da tarefa seguinte, e o documento dela diz de qual tarefa foi.
 
   Tudo certo: volte ao item 1. Algo falta: é falha, mesmo com o relatório dizendo sucesso. Diga ao
   Implementador o que falta, num `PEDIDO de retomada`; se ele não resolver, trate como
@@ -309,8 +278,7 @@ dobro disso sem pedir rodada está presa: a vigia do passo 9 trata.
 
 Só nestas você para e espera o Joaquim:
 
-1. aprovação do PRD, da Tech Spec (com o aceite das correções da revisão da spec) e da lista de
-   tarefas. Acontecem no terminal do Arquiteto;
+1. aprovação do PRD, no terminal do Arquiteto;
 2. mudança de desenho ou de critério de aceite (`BLOQUEIO` do Arquiteto);
 3. ressalva da validação: corrigir agora ou aceitar, uma a uma. Com todas decididas e alguma aceita,
    **você escreve o aceite na linha do veredito do topo do `validacao.md`**, no formato
@@ -322,6 +290,14 @@ Só nestas você para e espera o Joaquim:
 
 E duas que são limite, não decisão: três reprovações seguidas do mesmo revisor na mesma tarefa, e
 a terceira falha seguida da mesma tarefa, já com o diagnóstico do Arquiteto aplicado.
+
+**Dois avisos, que não são parada** (D79): a Tech Spec e a lista de tarefas. O Arquiteto mostra o
+resumo da Tech Spec no terminal dele e segue para a revisão da spec, sem esperar: é o tempo que o
+Joaquim tem para objetar. Com a lista de tarefas pronta, ele envia o `RELATÓRIO`. Você avisa
+(`maestri notify "<func>: tarefas prontas; a construção começa às <agora + 30 min>"`), anota a hora
+em "Agora" e encerra o turno, com a vigia ligada. Na primeira vigia depois da hora, sem palavra do
+Joaquim no seu terminal nem no do Arquiteto, comece a primeira tarefa. Objeção depois disso é
+mudança de desenho (item 2).
 
 Ao parar, a pergunta fica em três lugares: no `estado.md` do andar, na seção "Esperando o Joaquim"
 (é o que uma sessão nova lê para saber que há uma parada aberta); no status do andar; e **na sua
@@ -377,48 +353,31 @@ merge nem os dois limites, que são da própria tarefa.
 
 ## 8. Validação, fechamento e pouso
 
-**Portão completo** (`sem-validacao`, antes de validar). Durante a spec cada tarefa rodou só os
-testes que alterou; é aqui, uma vez, que tudo roda junto (D78, revista em 09/10/2026). Faça o commit
-de documento "antes da validação" (passo 4), reinicie o `Implementador`, apontado para o
-andar, e envie:
+Não há portão completo no fim: a esteira rodou as suítes inteiras a cada push da spec (D79), e a do
+último commit de tarefa corre enquanto o Validador trabalha.
 
-```
-PEDIDO de <seu nome>
-Portão completo de <funcionalidade>: rode `node tools/processo/portao-local.ts --e2e --infra`, em
-segundo plano, e não altere nenhum arquivo.
-Verde: /seguir RELATÓRIO de Implementador, STATUS: SUCESSO.
-Vermelho: /seguir RELATÓRIO de Implementador, STATUS: FALHA, com cada teste que caiu (arquivo e caso).
-```
+**Validar** (`sem-validacao`). Faça o commit de documento "antes da validação" (passo 4). Com
+`git -C <andar> status --short` vazio, reinicie o `Validador` apontado para o andar e envie o prompt
+do passo 2 de `.claude/skills/validar/SKILL.md`. Enquanto ele roda, ninguém mais usa o compose de
+teste. Ao receber o `RELATÓRIO`, confira que o `validacao.md` existe e que `git status` do andar
+mostra só ele.
 
-Vermelho: uma correção (`corrigir`) por teste ou por causa, na branch, cada uma com o portão da
-tarefa e os revisores, e depois o portão completo de novo. A falha pode ser de qualquer tarefa da
-spec: o documento da correção diz de qual. Só siga com
-`(cd <andar> && node tools/processo/portao-local.ts conferir --completo)` respondendo que vale.
-
-**Validar.** Com o portão completo valendo e `git -C <andar> status --short` vazio, reinicie o
-`Validador` apontado para o andar e envie o prompt do passo 2 de
-`.claude/skills/validar/SKILL.md`. Enquanto ele roda, ninguém mais usa o
-compose de teste. Ao receber o `RELATÓRIO`, confira que o `validacao.md` existe e que `git status`
-do andar mostra só ele. O Validador não confere a esteira: ela ainda não rodou.
-
-**Fechar** (`validada`). Siga o passo 3 de `validar/SKILL.md`. A esteira roda **na branch**, antes
-do pouso, e é a única execução dela na spec (D78):
+**Fechar** (`validada`). Siga o passo 3 de `validar/SKILL.md`. O fechamento exige as duas coisas no
+mesmo ponto: a validação aprovada sobre o último commit que alterou código, e a esteira verde nele.
 
 ```bash
-git -C <andar> rev-parse HEAD                      # o commit que a esteira precisa ter rodado
-gh workflow run esteira --ref spec/<func>
-gh run list --workflow esteira --branch spec/<func> --limit 3 --json databaseId,headSha,status
-gh run watch <databaseId> --exit-status            # em segundo plano; leva de 20 a 40 minutos
+(cd <andar> && node tools/processo/esteira.ts --fechamento)
 ```
 
-Use a execução cujo `headSha` é o commit acima; se ainda não apareceu, liste de novo. Vermelha: é
-correção (`corrigir`) na branch. Como a esteira só roda no fim, a falha pode ser de qualquer
-tarefa: o documento da correção diz de qual. **Correção depois da validação muda código que o
-Validador não viu: valide de novo** (o `Validador` reiniciado, rodada nova no topo do
-`validacao.md`) e só então rode a esteira outra vez. O fechamento exige as duas coisas no mesmo
-ponto: nenhum commit de código da spec depois do último commit validado, e a esteira verde na
-ponta da branch. O merge da `develop` (abaixo) não pede validação nova, só a esteira. Tudo verde:
-faça o commit de fechamento (passo 4) e peça o pouso.
+Ainda rodando: espere com o `gh run watch` que a resposta traz, em segundo plano. Vermelha: correção
+(`corrigir`) na branch, e o documento dela diz de qual tarefa foi. **Correção depois da validação muda
+código que o Validador não viu: valide de novo** (o `Validador` reiniciado, rodada nova no topo do
+`validacao.md`), em paralelo com a esteira do commit da correção. Sem GitHub (a resposta diz que não
+conseguiu ler), o portão completo local vale no lugar: peça ao `Implementador`, reiniciado,
+`node tools/processo/portao-local.ts --e2e --infra`, em segundo plano e sem alterar arquivo, e siga
+com `node tools/processo/portao-local.ts conferir --completo` respondendo que vale. O merge da
+`develop` (abaixo) não pede validação nova, só a esteira. Tudo verde: faça o commit de fechamento
+(passo 4) e peça o pouso.
 
 **Pousar** (`aguardando-pouso`). Só com a palavra do Joaquim, e a partir do térreo:
 
@@ -434,8 +393,8 @@ A palavra dele para pousar inclui o push da `develop`. A `develop` local só à 
 normal: são os commits de decisão e de retrospectiva do Arquiteto, e o push os leva. Se a do GitHub
 andou enquanto a spec corria (o Gabriel integra lá): traga-a para o térreo
 (`git pull --no-rebase origin develop`), depois para a branch da spec
-(`git -C <andar> merge develop`, o único commit seu que leva código), e a esteira da branch roda de
-novo antes do pouso. Conflito em qualquer um desses merges, ou no pouso, é parada: diga os arquivos.
+(`git -C <andar> merge develop`, o único commit seu que leva código), e a esteira do push desse
+merge tem de ficar verde antes do pouso. Conflito em qualquer um desses merges, ou no pouso, é parada: diga os arquivos.
 A exceção é o conflito **só** em `achados/indice.md`, de tarefa ou de correção: é um registro que só
 cresce, escrito pelo hook, e os dois lados acrescentaram linhas no mesmo ponto. Fique com todas as
 linhas dos dois lados, sem repetir e sem escrever linha nova, conclua o merge e registre no
@@ -481,8 +440,8 @@ nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/
 Depois dele, encerre o turno em uma linha, sem rodar mais nada: se o turno durar mais de 25 segundos,
 a rotina encontra o terminal ocupado, pula, e a limpeza fica para a tarefa seguinte, sem mais dano.
 
-- **Quando:** depois de pedir uma tarefa nova (passo 6, item 6), o portão completo ou a validação
-  (passo 8), e depois do commit de fechamento. Nunca no meio de uma tarefa, nem com um pedido ainda
+- **Quando:** depois de pedir uma tarefa nova (passo 6, item 6) ou a validação (passo 8), e depois
+  do commit de fechamento. Nunca no meio de uma tarefa, nem com um pedido ainda
   por conferir, nem no turno em que você faz uma pergunta ao Joaquim: a resposta dele chega nessa conversa.
 - **Antes:** o "Agora" do `estado.md` diz o que você espera, de quem, em que tentativa a tarefa está,
   e **tudo o que você ainda deve fazer** (um merge combinado, um pedido ao Arquiteto, uma pendência da
@@ -526,6 +485,14 @@ Nunca interrompa agente que está trabalhando, e nunca edite arquivo que ele est
   **dentro** de uma spec (o PRD esbarrou numa decisão em aberto) é registrada pelo Arquiteto na
   branch da spec, e pousa com ela.
 
+- **Spec fora da sequência** (o Joaquim deu um nome que o roadmap não tem, e disse o que ela é):
+  reinicie o `Arquiteto` no térreo e envie um `PEDIDO` para abrir o item no `ROADMAP.md`: o título
+  `## X<n> — \`<nome>\` [ ]`, com o próximo `X` livre, um parágrafo do que é nas palavras do Joaquim e
+  a linha "Pronto quando", **na posição que diz a ordem dela**: antes da primeira pendente, se ele
+  disse que ela é a próxima. Commit de documento na `develop`, sem push. Daí em diante ela é uma
+  funcionalidade como as outras (passo 2): o `estado.ts` a acha pelo nome, e o `/seguir` sem nome a
+  escolhe quando ela é a primeira pendente.
+
 O push da `develop` é sempre seu, e só em dois momentos: no pouso, e quando o Joaquim pedir.
 
 ## O `estado.md`
@@ -554,5 +521,5 @@ nada, e o que a retrospectiva lê para medir tempo e rodadas por tarefa.
 "Agora" e "Esperando o Joaquim" são as duas seções que você relê depois de cada limpeza (passo 9): o
 que não está nelas, para você não existe. As outras são histórico, e só crescem.
 
-Em "Observação" entram os diagnósticos do Arquiteto, a saída do modo econômico no meio da tarefa e as divergências. Correção avulsa não tem
+Em "Observação" entram os diagnósticos do Arquiteto e as divergências. Correção avulsa não tem
 `estado.md`: o registro dela é o próprio documento em `tasks/correcoes/`.

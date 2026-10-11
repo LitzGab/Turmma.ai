@@ -66,20 +66,18 @@ Documento: `$ARGUMENTS`
 
 ## 2. A ordem
 
-Entre os que o passo 1 mandou chamar:
-
-1. **`test-engineer` sozinho, primeiro.** Ele prova as guardas mutando arquivo e rodando teste:
-   enquanto ele trabalha, a árvore e o banco de teste não são de mais ninguém. Outro revisor ao mesmo
-   tempo leria código mutado, ou veria um teste vermelho que não existe.
-2. **Depois dele, todos os outros em paralelo, numa mensagem só, mesmo que ele tenha reprovado**:
-   `revisor-geral`, os guardiões e, em tarefa com tela, o `frontend-reviewer`.
+**Todos os que o passo 1 mandou chamar, em paralelo, numa mensagem só**: o `test-engineer`, o
+`revisor-geral`, os guardiões e, em tarefa com tela, o `frontend-reviewer`. O `test-engineer` não muta
+mais arquivo: as mutações do documento foram provadas pelo portão (`tools/processo/mutacoes.ts`), e
+por isso ele lê a mesma árvore que os outros, ao mesmo tempo. Uma rodada de revisor leva de um a
+quatro minutos; o que custa é o ciclo de correção. O objetivo de cada rodada é sair com **todos** os
+achados de uma vez.
 
 ### Em tarefa com tela: fotografe antes de chamar os outros
 
 Tarefa com `frontend-reviewer` entre os revisores tem tela, e tela se revisa **vendo**. Quem fotografa é
-você, uma vez, e as fotos vão para **todos** os revisores do passo 2: cada um olha a mesma tela pela
-regra dele. Faça isto com o `test-engineer` já de volta, porque a vitrine usa o banco de teste, que
-durante o trabalho dele não é de mais ninguém.
+você, uma vez, **antes de chamar qualquer revisor**, e as fotos vão para todos: cada um olha a mesma
+tela pela regra dele. A vitrine usa o banco de teste, e por isso vem antes de alguém rodar teste.
 
 1. **A vitrine**, as duas escolas sintéticas de `tools/vitrine/` (a cheia e a vazia):
 
@@ -112,11 +110,6 @@ Se depois da tentativa do passo 1 ainda não houver vitrine, a rodada segue pelo
 relatório da rodada. Não é parada: no fim da spec o Validador fotografa cada requisito com tela, e sem
 isso a funcionalidade não é aprovada.
 
-Até 08/10/2026 a rodada acabava na reprovação do primeiro. Na 5.0 do F3 isso custou um ciclo inteiro:
-o `test-engineer` reprovou na 1ª rodada, e só na seguinte o `infra-guardian` reprovou outra coisa.
-Uma rodada de revisor leva de um a quatro minutos; o que custa é o ciclo de correção. O objetivo de
-cada rodada é sair com **todos** os achados de uma vez.
-
 ## 3. O prompt de cada revisor
 
 Monte você, a partir da árvore. Não use descrição do Implementador sobre o que ele fez.
@@ -137,7 +130,7 @@ Diff desde a rodada anterior:
 A primeira linha é a que o hook usa para saber em qual documento registrar a rodada: escreva-a
 sempre, e não cite outro documento de tarefa no prompt.
 
-Em tarefa com tela, o prompt de **cada** revisor do passo 2 termina com as fotos, uma linha por tela:
+Em tarefa com tela, o prompt de **cada** revisor termina com as fotos, uma linha por tela:
 
 ```
 Fotos da tela (leia cada arquivo como imagem):
@@ -208,8 +201,9 @@ Grave em `.processo/ordens/<nome do documento sem extensão>-r<número da rodada
 pasta `.processo/` não entra no git: a ordem é de trabalho, e o que os revisores exigiram já fica
 em `achados/`, escrito pelo hook.
 
-O Implementador roda num modelo menor e vai aplicar o que estiver escrito, sem interpretar. Cada
-item precisa bastar sozinho:
+Cada item leva o Implementador ao ponto exato e diz o que o revisor exigiu, com as palavras dele. O
+código e o teste da correção quem escreve é o Implementador: três das cinco escaladas do F3 nasceram
+de ordem que ditou regra, texto de tela ou código de teste sem conferir (11.0, 18.0, 19.0).
 
 ```
 # Ordem de correção — <documento>, rodada <n>
@@ -219,10 +213,8 @@ Tipo: bloqueantes | recomendações | bloqueantes e recomendações
 Revisor: <quem exigiu> (<rodada>ª)
 Arquivo: <caminho>
 Onde: <função ou bloco> › <o trecho exato que está lá hoje, copiado>
-Mude para: <o que tem de ficar, em código ou em regra precisa>
+Exigido: <o bloqueante do revisor, copiado de achados/<documento>.md, sem resumir nem completar>
 Por quê: <a regra que o trecho viola, com o número dela>
-Prova: <o teste que tem de existir ou mudar: arquivo, nome do caso, o que ele afirma, e que ele
-       fica vermelho sem a mudança>
 
 ## 2. ...
 
@@ -231,9 +223,9 @@ Prova: <o teste que tem de existir ou mudar: arquivo, nome do caso, o que ele af
 (o Implementador copia esta tabela para "Recomendações sem aplicar" do documento)
 
 ## Depois de aplicar
-- Atualize a seção "Mutações" do documento para cada cláusula nova
+- Cada cláusula nova ganha o seu bloco em "Mutações"
 - Rode o teste de cada item isolado, até ficar verde, e depois o portão da tarefa, uma vez:
-  `node tools/processo/portao-local.ts --tarefa`
+  `node tools/processo/portao-local.ts --tarefa <documento>`
 - Peça rodada nova à Mesa
 ```
 
@@ -244,8 +236,8 @@ Regras da ordem:
   que não existe no código, não vira item: é `DIVERGÊNCIA` ao Orquestrador, com `Motivo: ordem`
 - Um item por defeito. Dois revisores com o mesmo achado viram um item, com os dois nomes
 - Achados que se contradizem não vão para o Implementador: `DIVERGÊNCIA`, com os dois textos
-- Não acrescente exigência sua. Se achar que faltou algo, o lugar é o prompt do revisor na próxima
-  rodada
+- **Não acrescente exigência, regra, texto de tela nem código seu.** `Exigido` é cópia. Se achar que
+  faltou algo, o lugar é o prompt do revisor na próxima rodada
 - Correção exigida pelo `test-engineer`: sempre que der, a ordem mexe **só em arquivo de teste**,
   para não caducar os outros
 - Nenhum item baixa critério de aceite, desliga teste ou edita documento para acomodar o resultado.
@@ -260,7 +252,7 @@ ORDEM DE CORREÇÃO de Mesa                 |  DEVOLUÇÃO de Mesa
 Tarefa: <documento>                       |  Tarefa: <documento>
 Reprovou: <revisor (rodada)>, ...         |  A rodada não começou: <carimbo inválido | falta o guardião X>
 Ordem: .processo/ordens/<arquivo>.md      |  Faça: <o comando, ou a linha a corrigir>
-Aplique item por item, rode o portão e    |  Depois peça a rodada de novo.
+Atenda item por item, rode o portão e     |  Depois peça a rodada de novo.
 peça rodada nova.                         |
 ```
 

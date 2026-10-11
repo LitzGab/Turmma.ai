@@ -78,7 +78,16 @@ export interface Carimbo {
   suites: string[]
   /** Só no portão da tarefa: os arquivos de teste que ele rodou, além da unidade inteira. */
   alvos?: string[]
+  /** As mutações que o portão da tarefa conferiu, e de que documento (`tools/processo/mutacoes.ts`). */
+  mutacoes?: { documento: string; impressao: string; total: number }
 }
+
+/**
+ * Conferência a mais sobre o documento do commit, que quem chama o portão entrega. Existe para este arquivo continuar
+ * sem importar nenhum outro: ele roda sozinho, antes do `npm ci` (`impressaoSemComentarios`, e o teste que o copia para
+ * fora do repositório). Hoje é a das mutações (`avaliarMutacoes`), entregue por `hook-revisoes.ts` e `portao-local.ts`.
+ */
+export type ConferenciaDoDocumento = (carimbo: Carimbo | null, documento: string, conteudo: string) => string | null
 
 /** O portão completo: tudo, como a esteira. Roda uma vez por spec, antes da validação (D78 revista em 09/10/2026). */
 export const SUITES_DO_PORTAO_COMPLETO = ['typecheck', 'lint', 'segredo', 'dependencias', 'test', 'e2e', 'infra']
@@ -1078,8 +1087,7 @@ export function destinoProtegidoDoPush(comando: string, branchDaArvore: string |
  * noite, sem pedir permissão para comando nenhum: a regra virou trava.
  *
  * O papel vem de `CLAUDE_CODE_AGENT`, que o Claude Code põe no ambiente da sessão iniciada com `--agent <papel>` e os
- * subagentes dela herdam; no opencode, o plugin da trava põe nela o agente da sessão. O Orquestrador e a sessão de uma
- * pessoa não têm essa variável, e passam. Pousar e apagar
+ * subagentes dela herdam. O Orquestrador e a sessão de uma pessoa não têm essa variável, e passam. Pousar e apagar
  * andar não entram aqui: o próprio Maestri recusa esses comandos a quem não é o terminal Maestro.
  */
 export function pushDoTime(comando: string, raiz: string, cwd: string | undefined, papel: string | undefined): string | null {
@@ -1095,7 +1103,12 @@ export function pushDoTime(comando: string, raiz: string, cwd: string | undefine
   )
 }
 
-export function portao(entrada: EntradaHook, raizDaSessao: string, papel: string | undefined = process.env['CLAUDE_CODE_AGENT']): string | null {
+export function portao(
+  entrada: EntradaHook,
+  raizDaSessao: string,
+  papel: string | undefined = process.env['CLAUDE_CODE_AGENT'],
+  conferencia: ConferenciaDoDocumento = () => null,
+): string | null {
   const comando = entrada.tool_input?.command ?? ''
   const push = pushDoTime(comando, raizDaSessao, entrada.cwd, papel)
   if (push !== null) return push
@@ -1149,6 +1162,8 @@ export function portao(entrada: EntradaHook, raizDaSessao: string, papel: string
     documento: documento.caminho,
     instantaneos: lerInstantaneos(raiz),
   })
+  const aMais = conferencia(lerCarimbo(raiz), documento.caminho, conteudo)
+  if (aMais !== null) bloqueios.push(aMais)
   if (bloqueios.length === 0) return null
   return `Commit bloqueado: revisões de ${documento.caminho} incompletas.\n- ${bloqueios.join('\n- ')}`
 }

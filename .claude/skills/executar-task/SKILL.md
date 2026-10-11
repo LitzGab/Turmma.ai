@@ -17,16 +17,17 @@ Tarefa alvo: `$ARGUMENTS`
 
 Leia, nesta ordem:
 
-1. `docs/visao-produto.md` — o que é este produto. Sem isso você implementa software
-   escolar genérico
-2. `prd.md` e `techspec.md` da pasta da funcionalidade
-3. O `N_task.md` da tarefa
-4. As regras aplicáveis em `.claude/rules/` — cada uma explica o porquê; o porquê é o que
-   permite decidir os casos que a regra não previu
-5. `docs/glossario.md`
-6. A seção "Como testar" do `N_task.md`, quando existe: o teste que já faz o que você precisa e a
-   peça de apoio a usar. Abra esse teste **antes** de escrever o seu: copiar o padrão que funciona é o
-   que evita horas de tentativa
+1. O `N_task.md` da tarefa, inteiro
+2. O que a seção "Contexto necessário" dele aponta: as seções da `techspec.md`, os requisitos do
+   `prd.md`, as regras de `.claude/rules/` (cada uma explica o porquê, e o porquê é o que permite
+   decidir os casos que a regra não previu) e o código. A Tech Spec inteira, só quando o documento
+   não aponta seção: a do F3 passava de cem mil caracteres, e lê-la toda é começar com a janela cheia
+3. O teste que a seção "Como testar" manda copiar, **antes** de escrever o seu: copiar o padrão que
+   funciona é o que evita horas de tentativa
+4. `docs/glossario.md`, para todo nome novo que a tarefa cria no código, no banco ou na tela
+
+O que é o produto está no `CLAUDE.md`, que já está no seu contexto. O `estado.md` da pasta é o diário
+do Orquestrador: você o leva no commit, e não precisa lê-lo.
 
 ## 2. Planejar antes de codar
 
@@ -56,19 +57,28 @@ O `test-engineer` é quem mais reprova (38% das rodadas no F0 e no começo do F1
 reprovação custa uma rodada nova. Responda no plano, por escrito, as perguntas que ele vai
 fazer, e as dos guardiões marcados:
 
-- **Rode a mutação, não só imagine.** Liste cada cláusula que o diff acrescenta — condição de
-  `where`, `if` de guarda, `catch` que traduz erro, restrição ou índice de migration, trava de
-  clique, classe CSS que o e2e diz provar —, inclusive as que a tabela de testes não cita e as
-  cópias da mesma regra em outro arquivo. Para cada uma: apague, rode, veja vermelho, restaure
-  (`git checkout --`). Trava se prova pelo efeito (dois registros), não pela espera. Registre na
-  seção "Mutações" do `N_task.md`: `arquivo` › função › trecho da cláusula → teste vermelho, sem
-  número de linha, que muda a cada edição (o `test-engineer` apontou linha deslocada em quatro
-  rodadas da A1). Na A0b foram seis reprovações (4.0, 5.0, 6.0 duas vezes, 7.0, 9.0) por cláusula
-  sem teste, todas fora da lista que o implementador tinha conferido.
-  Condição composta (`a && b && c`) se muta termo a termo: trocar a expressão inteira por `true`
-  deixou dois de três termos sem teste na 17.0 da A1. E a mutação vale para a cláusula que entra
-  depois, para atender um revisor: na 11.0 e na 13.0 da A1, a condição posta pelo ajuste do
-  `frontend-reviewer` chegou sem linha nova em "Mutações" e o `test-engineer` reprovou.
+- **Declare a mutação de cada cláusula; quem a prova é o portão.** Liste cada cláusula que o diff
+  acrescenta — condição de `where`, `if` de guarda, `catch` que traduz erro, restrição ou índice de
+  migration, trava de clique, cada termo de uma condição composta (`a && b && c` são três) —,
+  inclusive as que a tabela de testes não cita, as cópias da mesma regra em outro arquivo e as que
+  entram depois, para atender um revisor. Cada uma ganha um bloco na seção "Mutações" do `N_task.md`:
+
+  ````
+  ```mutacao
+  arquivo: apps/api/src/<módulo>/<nome>.repository.ts
+  teste: apps/api/test/<nome>.int.test.ts › <nome do caso>
+    .where(and(
+  -   eq(tabela.escolaId, escolaId),
+      eq(tabela.id, id),
+  ```
+  ````
+
+  Linha que começa com `-` sai, com `+` entra, e com espaço é contexto: fica, e serve para o trecho
+  existir uma vez só no arquivo. O portão da tarefa aplica cada bloco, roda o teste citado, exige
+  vermelho e restaura (`tools/processo/mutacoes.ts`). Bloco cujo teste continua verde reprova o portão:
+  falta o teste, e não o bloco. Trava se prova pelo efeito (dois registros), não pela espera. No F3,
+  17 reprovações foram cláusula sem teste que falhe sem ela, e em cinco a seção afirmava um vermelho
+  que não acontecia.
 - **O cenário tem o segundo dado que torna a cláusula observável?** Foi a maior causa técnica de
   reprovação no F1, catorze vezes: a regra está no código, mas o teste tem uma turma só, uma escola
   só, um estado só, ou o valor padrão só — e apagar a cláusula não deixa nada vermelho. Se o
@@ -140,8 +150,7 @@ npx playwright test e2e/<arquivo>.spec.ts                      # de novo, com o 
 
 Mudou código da web ou da API depois de subir o ambiente do e2e: repita o comando do
 `tools/ci/e2e.ts`, que reconstrói. Comando que passa de dois minutos roda em segundo plano
-(`run_in_background` no Claude Code, `background` no `shell` do opencode), e você espera a notificação
-do fim; não use `sleep`.
+(`run_in_background`), e você espera a notificação do fim; não use `sleep`.
 
 ### Tarefa com tela: olhe a tela antes do portão
 
@@ -176,13 +185,14 @@ e, na segunda falha, um diagnóstico do Arquiteto com o ponto exato.
 ### Com os testes da tarefa verdes: o portão, uma vez
 
 ```bash
-node tools/processo/portao-local.ts --tarefa
+node tools/processo/portao-local.ts --tarefa tasks/prd-<funcionalidade>/<N>_task.md
 ```
 
 Ele roda os tipos, o lint, as duas guardas da esteira que não são teste (segredo commitado e
-dependência com falha grave), a **unidade inteira** e os testes de integração, de e2e e de infra **que
-a árvore alterou** (cerca de dois minutos, mais o tempo desses testes), e grava o carimbo em
-`.processo/portao.json`.
+dependência com falha grave), a **unidade inteira**, os testes de integração, de e2e e de infra **que
+a árvore alterou** e, por fim, **as mutações do documento** (cerca de dois minutos, mais o tempo desses
+testes), e grava o carimbo em `.processo/portao.json`. Mexeu na seção "Mutações" depois dele, o
+carimbo deixa de valer para ela.
 
 Plano do Postgres (`EXPLAIN`) colado no documento da tarefa pode reprovar a guarda de segredo: ela lê
 `Key: <valor>` como chave. As linhas `Sort Key`, `Group Key` e parecidas com nome de coluna já têm
@@ -207,10 +217,10 @@ Se entrar na lista parece contrariar a regra que o teste cita, não atualize: é
 (`apps/api/test/retencao.int.test.ts`, `apps/api/src/assistente/assistente.int.test.ts` e
 `infra/test/metricas.int.test.ts`), que só apareceram com a suíte inteira, quatro tarefas depois.
 
-O e2e inteiro e a suíte de infra inteira **não** rodam por tarefa. Rodam uma vez, no portão completo
-do fim da spec, antes da validação (D78, revista em 09/10/2026). A consequência é sua: a regra da
-tarefa só é provada pelos testes que estão entre os alvos. Regra cujo teste não foi criado nem
-alterado nesta tarefa não passou por portão nenhum até o fim da spec.
+O e2e inteiro e a suíte de infra inteira **não** rodam no portão da tarefa. Rodam na esteira do
+GitHub, que o push do seu commit dispara e ninguém espera (D79): o que a tarefa quebrar fora dos alvos
+aparece ali uma tarefa depois, e volta como correção. A consequência é sua: antes do commit, a regra
+da tarefa só é provada pelos testes que estão entre os alvos.
 
 Spec de e2e criado ou alterado roda também repetido, com os trabalhadores da esteira, sobre o
 ambiente de pé: `npx playwright test <specs da tarefa> --repeat-each 3 --workers 2`. A máquina roda o
@@ -242,20 +252,6 @@ tarefa tem**, marcados ou não.
 (`.claude/skills/revisar-tarefa/SKILL.md`). Ela monta o prompt de cada um a partir da árvore, chama
 na ordem certa e devolve o resultado. Quem implementa não escreve o prompt de quem o revisa (D78).
 
-**Antes de pedir a primeira rodada, três conferências, nesta árvore e não de memória.** No F3 nenhuma
-das quinze primeiras tarefas passou de primeira; em onze delas o `test-engineer` reprovou por regra ou
-cláusula sem teste que falhe sem ela, e a 15.0 escalou porque a seção "Mutações" foi preenchida sem
-rodar. Cada reprovação custa de 25 a 45 minutos.
-
-1. **Cada linha de "Mutações" foi vista vermelha depois da última edição do código que ela cita?**
-   Linha escrita no plano e não rodada, ou rodada antes de o código mudar, não vale (6.0, e duas vezes
-   na 15.0). Refaça agora as que você não viu vermelhas nesta árvore: apague a cláusula, rode o teste
-   citado, veja-o vermelho, restaure. Se ele não fica vermelho, falta o teste, e não a linha
-2. **Toda cláusula do diff tem linha?** Percorra o `git diff` de ponta a ponta: condição de `where`,
-   `if` de guarda, cada termo de condição composta, restrição de migration. A cláusula sem linha é a
-   primeira coisa que o `test-engineer` procura
-3. **A tarefa entrou em alguma lista fechada?** (passo 4, "Lista fechada")
-
 Com o portão local verde, peça a rodada e **encerre o turno**
 (`.claude/skills/seguir/protocolo.md`, item 2). O nome da Mesa veio no pedido do Orquestrador:
 
@@ -274,10 +270,11 @@ Orquestrador: <o nome que veio no pedido dele>
 - **`ORDEM DE CORREÇÃO` só com recomendações:** os revisores aprovaram, e a Mesa escolheu as
   recomendações baratas a aplicar. Aplique como qualquer ordem, rode o portão da tarefa e peça rodada
   nova: ela chama só quem caducou.
-- **`ORDEM DE CORREÇÃO` com bloqueantes** (e, quase sempre, recomendações junto): abra o arquivo que ela aponta (`.processo/ordens/…`) e aplique **item
-  por item, exatamente o que está escrito**: o arquivo, o trecho, a mudança e o teste que prova.
-  Não amplie e não refatore o que a ordem não cita. Cláusula que entra por causa da ordem ganha a
-  sua linha em "Mutações", como qualquer outra. Depois rode o portão local e peça rodada nova.
+- **`ORDEM DE CORREÇÃO` com bloqueantes** (e, quase sempre, recomendações junto): abra o arquivo que
+  ela aponta (`.processo/ordens/…`) e atenda **item por item**. Cada item traz o arquivo, o trecho como
+  está hoje e o que o revisor exigiu, com as palavras dele; o código e o teste da correção são seus.
+  Não amplie e não refatore o que a ordem não cita. Cláusula que entra por causa da ordem ganha o seu
+  bloco em "Mutações", como qualquer outra. Depois rode o portão local e peça rodada nova.
 - **`DEVOLUÇÃO`:** a rodada não começou. Faça o que a mensagem pede (quase sempre, rodar o portão com
   as suítes que ela cita) e peça a rodada de novo.
 - **Item que não dá para aplicar** (não se aplica ao código, contradiz outro item, ou só se atende
@@ -342,9 +339,8 @@ Só depois de tudo verde e de a Mesa responder "APROVADO por todos":
   `(correção <slug>)`
 - **Faça o push logo depois do commit**, para a branch do andar: `git push -u origin HEAD`. Nunca
   para a `develop`: quem pousa é o Joaquim.
-  A esteira não roda por tarefa. Ela roda uma vez, na branch, antes do pouso da funcionalidade
-  (D78), e por isso o que prova a tarefa é o portão local e os revisores: e2e e infra só rodam aqui
-  quando a tarefa os exige, e uma falha neles no fim pode ser de qualquer tarefa
+  O push dispara a esteira, e você não espera por ela: quem lê o veredito é o Orquestrador, ao fechar
+  a tarefa seguinte (D79)
 - Envie o relatório ao Orquestrador (`.claude/skills/seguir/protocolo.md`, item 2), começando por
   `/seguir RELATÓRIO de <seu nome>`, e encerre o turno:
 

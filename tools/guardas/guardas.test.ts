@@ -87,6 +87,19 @@ describe('guarda de espera do serviço do compose', () => {
   })
 })
 
+describe('guarda do teste desligado', () => {
+  it.each(['apps/api/test/correcao.int.test.ts', 'apps/web/src/componentes/tela.test.tsx', 'e2e/entrar.spec.ts'])(
+    'reprova .skip, .only, .fixme, .todo, .skipIf e .runIf em %s, em qualquer ponto da cadeia, e deixa passar o teste que roda',
+    async (caminho) => {
+      expect(await lintar(eslint, 'teste-desligado.ts', caminho)).toEqual(marcasDeViolacao('teste-desligado.ts'))
+    },
+  )
+
+  it('não vale fora de teste: `skip` e `only` são nomes comuns de método', async () => {
+    expect(await lintar(eslint, 'teste-desligado.ts', 'apps/api/src/fila/paginacao.ts')).toEqual([])
+  })
+})
+
 describe('guarda de log com dado pessoal', () => {
   it.each([
     'apps/api/src/sistema/correcao.service.ts',

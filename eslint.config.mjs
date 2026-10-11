@@ -15,6 +15,8 @@ export default tseslint.config(
       'tools/guardas/__fixtures__/**',
       // Protótipo só de front-end, com projeto e lint próprios (mockups/LEIAME.md); não é código do produto.
       'mockups/**',
+      // Checkouts inteiros do repositório, os de subagente: cada um tem o seu lint, na árvore dele.
+      '.claude/worktrees/**',
     ],
   },
   js.configs.recommended,

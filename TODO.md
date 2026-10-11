@@ -508,24 +508,36 @@ para o staging".
 
 ## Processo e dívida do F0
 
-- [ ] **(F3, retro, M1) O portão da tarefa confere as mutações:** a maior causa de reprovação do F3 (17 em 14
-      tarefas) é regra ou cláusula sem teste que falhe sem ela, e três rodadas de texto não a moveram. A seção
-      "Mutações" ganha formato que máquina lê, e `tools/processo/portao-local.ts --tarefa` aplica cada linha, roda o
-      teste citado, exige vermelho e restaura. Correção própria, com teste; sem prova de quanto o portão cresce.
-      Desenho em `tasks/prd-lgpd-e-titular/retro.md`, proposta M1 (dono: Joaquim)
+- [x] **(F3, retro, M1) O portão da tarefa confere as mutações:** feito em 11/10/2026 (D79,
+      `tools/processo/mutacoes.ts`). Medido no térreo: três mutações, uma delas de integração, somaram 15 s ao portão.
+      Falta a prova numa tarefa inteira: quantas reprovações do `test-engineer` ele evita
 - [ ] **(F3, retro, M2) Fuso nos testes:** o projeto `unidade` do `vitest.config.ts` não fixa `TZ`, e o teste que
       esquece `America/Sao_Paulo` passa nesta máquina; e nada declara o fuso da sessão do banco de teste (o
-      `current_date` de duas fábricas do e2e saía em UTC). Três reprovações
-      (12.0, 16.0, 17.0) e um e2e vermelho das 21 h à meia-noite (correção `b6f7c1d`). Correção própria: `TZ` longe de
-      -03 na unidade, fuso declarado no banco de teste, e um caso que prove os dois (dono: Joaquim)
+      `current_date` de duas fábricas do e2e saía em UTC). Três reprovações (12.0, 16.0, 17.0) e um e2e vermelho das
+      21 h à meia-noite (correção `b6f7c1d`). Medido em 11/10/2026: com `TZ=Asia/Tokyo` a unidade tem um vermelho,
+      `apps/web/src/areas/coordenacao/privacidade/textos-do-pedido.test.ts` ("o período é o dia…": o texto do período
+      sai pelo fuso do computador). Com `Pacific/Kiritimati` caem 34, mas os testes da web declaram valer de -12 a +11.
+      Correção própria, pelo time: `TZ=Asia/Tokyo` na unidade, o defeito acima, o fuso declarado no banco de teste, e
+      um caso que prove os dois (dono: Joaquim)
+- [ ] **(F3, retro, M4) Condição de tela provada sem navegador:** a web não tem teste de componente (`jsdom` e
+      `testing-library`). Com ele, estado da tela, rótulo e o que cada papel vê se provam em segundos, e o e2e fica
+      para o fluxo: na 18.0 do F3, 110 dos 188 minutos foram Playwright. Correção própria, pelo time, antes da próxima
+      spec de tela; depois dela, a linha "estados da tela" do modelo de tarefa passa a pedir teste de componente
+      (dono: Joaquim)
+- [ ] **(D79) Duas tarefas da mesma spec em paralelo:** desenhado e não implementado. Pede um par a mais de
+      Implementador e Mesa, um checkout por linha com o ambiente de teste dele, e a branch da linha entrando na da spec
+      a cada tarefa. Decidir depois de a próxima spec rodar com a D79 (dono: Joaquim)
+- [ ] **(F3, retro, M3) A vigia só acorda o modelo quando há o que fazer:** `--pre-run` na rotina. Poupa custo (96
+      de 100 turnos sem ação no F3, 2,7% do período), não tempo (dono: Joaquim)
 - [ ] **(F3, retro) 26 `@SemEscopo` em `resolucao-de-tenant.repository.ts`:** o `tenancy-guardian` apontou na 14.0
       que o número passa do sinal da regra 10, item 9. Declarar a exceção na regra ou partir o módulo é decisão de
       desenho sobre a regra 10, e não se resolve por retrospectiva: entra na Tech Spec da próxima spec que tocar sessão
       (dono: Joaquim)
 - [ ] **(F3, retro) Recomendações de código e de teste que as tarefas deixaram "para o /retro":** a retrospectiva não
       altera código. A lista, com a tarefa de cada uma, está em `tasks/prd-lgpd-e-titular/retro.md`, "Pendências fora
-      das propostas": sete reforços de teste (8.0, 9.0, 15.0, 18.0, 19.0, `e13311f`, `9d2887f`) e o lint que recuse
-      `.skip` e `.only`. Cada uma entra na próxima tarefa ou correção que abrir o arquivo (dono: Joaquim)
+      das propostas": sete reforços de teste (8.0, 9.0, 15.0, 18.0, 19.0, `e13311f`, `9d2887f`). Cada uma entra na
+      próxima tarefa ou correção que abrir o arquivo. O lint que recusa `.skip` e `.only` entrou em 11/10/2026
+      (guarda `teste-sem-desligar`) (dono: Joaquim)
 - [ ] **Quando o F1 fechar: criar `release` e `develop`** (D23 revista). Ordem combinada: o
       branch de documentação entra no `main` quando o Joaquim avisar, depois `main` → `release`
       e `release` → `develop`. Atenção: o `docs/direcionamento-regulatorio` já conflita com a

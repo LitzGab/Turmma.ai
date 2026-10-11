@@ -1,7 +1,7 @@
 import comentarios from '@eslint-community/eslint-plugin-eslint-comments'
 import { logSemConteudoMontado, logSemDadoPessoal } from './regras-log.mjs'
 import { MENSAGEM_SDK_DE_IA, PASTA_DOS_ADAPTADORES, REGEX_SDK_DE_IA, sdkDeIaSoNoAdaptador } from './regras-ia.mjs'
-import { esperarServicoDoCompose } from './regras-teste.mjs'
+import { esperarServicoDoCompose, testeSemDesligar } from './regras-teste.mjs'
 
 /**
  * Guardas da esteira (RF11): o que as regras 20 e 30 proíbem reprova no lint, sem depender de
@@ -15,6 +15,7 @@ export const guardas = {
     'log-sem-conteudo-montado': logSemConteudoMontado,
     'sdk-de-ia-so-no-adaptador': sdkDeIaSoNoAdaptador,
     'esperar-servico-do-compose': esperarServicoDoCompose,
+    'teste-sem-desligar': testeSemDesligar,
   },
 }
 
@@ -22,9 +23,12 @@ export const REGRAS_DE_LOG = ['guardas/log-sem-dado-pessoal', 'guardas/log-sem-c
 export const REGRAS_DE_SDK_DE_IA = ['@typescript-eslint/no-restricted-imports', 'guardas/sdk-de-ia-so-no-adaptador']
 /** Guardas que valem em todo arquivo do repositório. */
 export const REGRAS_EM_TODO_ARQUIVO = [...REGRAS_DE_LOG, ...REGRAS_DE_SDK_DE_IA]
-export const REGRAS_DE_TESTE = ['guardas/esperar-servico-do-compose']
-/** Só em teste: a justificativa é o orçamento do teste. Cenário de carga derruba serviço de propósito. */
-export const ARQUIVOS_DE_TESTE = ['**/*.test.ts', 'e2e/**/*.spec.ts']
+export const REGRAS_DE_TESTE = ['guardas/esperar-servico-do-compose', 'guardas/teste-sem-desligar']
+/**
+ * Só em teste: a espera do serviço se justifica pelo orçamento do teste (cenário de carga derruba serviço de
+ * propósito), e `.skip` fora de teste é só o nome de um método.
+ */
+export const ARQUIVOS_DE_TESTE = ['**/*.test.{ts,tsx}', 'e2e/**/*.spec.ts']
 export const REGRAS_DAS_GUARDAS = [...REGRAS_DE_LOG, ...REGRAS_DE_SDK_DE_IA, ...REGRAS_DE_TESTE]
 
 const TODOS_OS_ARQUIVOS = ['**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}']
@@ -77,7 +81,7 @@ export const configuracaoDasGuardas = [
   },
   {
     files: ARQUIVOS_DE_TESTE,
-    rules: { 'guardas/esperar-servico-do-compose': 'error' },
+    rules: Object.fromEntries(REGRAS_DE_TESTE.map((regra) => [regra, 'error'])),
   },
   ...EXCECOES_DAS_GUARDAS.map(({ files, regras }) => ({
     files,

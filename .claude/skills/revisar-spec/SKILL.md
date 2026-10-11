@@ -89,8 +89,9 @@ correção exigida também: aqui corrigir custa pouco.
 
 ## 5. Agir
 
-- **REPROVADA:** apresente as correções ao usuário. Com o aceite, edite a Tech Spec (e o PRD, se
-  for o caso) e repita esta skill: a rodada nova chama **só os revisores que
+- **REPROVADA:** mostre as correções ao Joaquim e, sem esperar, edite a Tech Spec e repita esta
+  skill (aviso, não parada: D79). Correção que muda o desenho ou um critério de aceite do PRD é a
+  exceção: essa espera a palavra dele. Na repetição, a rodada nova chama **só os revisores que
   reprovaram**, com as correções exigidas e o diff da Tech Spec no prompt.
   Mudança de desenho que afeta outro guardião (por exemplo, a correção de infra criou tabela
   nova): chame esse também.

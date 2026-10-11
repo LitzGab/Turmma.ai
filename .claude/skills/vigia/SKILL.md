@@ -20,8 +20,8 @@ terminais da fase, antes de concluir qualquer coisa. Não releia o que não mudo
 | o `Implementador` trabalhando, mas a tarefa pequena passou de 2 horas, ou a grande de 4, sem a primeira rodada de revisão | um `PEDIDO de estado`. Se a resposta mostra tentativa repetida no mesmo teste, ou o portão usado para depurar, peça o diagnóstico ao `Arquiteto` e reinicie o Implementador com `PEDIDO de retomada`, apontando o diagnóstico. Registre no `estado.md` |
 | uma pergunta, um menu ou um erro na tela | resolva se for mecânico (`maestri ask --raw`); se for decisão, é parada |
 | o terminal sumiu ou o processo morreu | recrie ou reinicie e envie `PEDIDO de retomada`: o trabalho está na árvore |
-| no modo econômico, o `Implementador` mostra erro de modelo, de assinatura ou de limite de uso do opencode | reinicie-o com o comando da tabela do `/seguir`, em Sonnet, e envie `PEDIDO de retomada`: o trabalho está na árvore. Registre no `estado.md` |
 | o `Arquiteto` esperando o Joaquim | nada |
+| "Agora" diz que a construção começa numa hora que já passou, e o Joaquim não escreveu nada no seu terminal nem no do `Arquiteto` | comece a primeira tarefa (`/seguir`, passo 6) |
 
 Nunca interrompa agente que está trabalhando, e nunca edite arquivo que ele está editando.
 

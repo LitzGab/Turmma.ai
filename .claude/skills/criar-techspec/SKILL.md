@@ -108,8 +108,9 @@ implementador e os revisores lerem pedaços dela. Acima do teto:
 
 ### 8. Próximo passo
 
-Reporte o caminho e as palavras. Com a aprovação do Joaquim, o próximo passo é a revisão da spec
-(`revisar-spec`): as tarefas só são geradas com a Tech Spec revisada.
+Reporte o caminho e as palavras, mostre o resumo do desenho ao Joaquim e siga para a revisão da spec
+(`revisar-spec`) sem esperar: é aviso, não parada (D79), e as tarefas só são geradas com a Tech Spec
+revisada.
 
 ## Checklist
 

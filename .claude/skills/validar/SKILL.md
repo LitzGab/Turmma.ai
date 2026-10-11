@@ -54,9 +54,9 @@ Escopo: funcionalidade completa | tarefa N.0 (tasks/prd-<func>/N_task.md)
 Commit a validar: <hash do HEAD>
 
 Escreva o relatório em tasks/prd-<func>/validacao.md e não altere nenhum outro arquivo.
-O portão completo já rodou: confira com `node tools/processo/portao-local.ts conferir --completo` e só rode suíte se ele não valer.
-Suíte longa roda em segundo plano, e você espera a notificação do fim; só termine com o relatório escrito.
-A esteira do GitHub não entra no seu veredito: ela roda depois, no fechamento.
+As suítes inteiras rodam na esteira do GitHub, a cada push: não rode suíte inteira nem espere a esteira.
+Rode só o teste que serve de evidência a um requisito, isolado; só termine com o relatório escrito.
+A esteira não entra no seu veredito: quem a confere é o Orquestrador, no fechamento.
 Envie a <nome do Orquestrador> só o bloco "Formato da resposta", começando a mensagem por
 `/seguir RELATÓRIO de <seu nome>`, e encerre o turno.
 ```
@@ -74,10 +74,10 @@ Se o agente mexeu em outro arquivo, desfaça essa mudança e reporte.
 
 ### APROVADA, funcionalidade completa
 
-1. Esteira verde **na branch da spec**, no commit validado. Ela não rodou por tarefa (D78), e esta é
-   a execução que vale: `gh workflow run esteira --ref spec/<func>`, depois
-   `gh run watch <id> --exit-status`, em segundo plano. Vermelha: `corrigir` na branch, e esteira de
-   novo. O push da branch do andar é livre.
+1. Esteira verde **na branch da spec**, no último commit que alterou código: ela rodou sozinha no
+   push dele (D79), e quem responde é `node tools/processo/esteira.ts --fechamento`, no andar. Ainda
+   rodando: espere com o `gh run watch` que a resposta traz, em segundo plano. Vermelha: `corrigir` na
+   branch, e validação de novo. O push da branch do andar é livre.
 2. No `ROADMAP.md`, marque a funcionalidade `[x]` e acrescente abaixo do título
    `Concluída em <DD/MM/AAAA>, validada em tasks/prd-<func>/validacao.md.`
 3. No `techspec.md`, troque o status para `implementada em <DD/MM/AAAA>`, mantendo o

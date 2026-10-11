@@ -72,6 +72,10 @@ describe('prazo do e2e (tools/ci/prazo-do-e2e.ts)', () => {
     const filtrado = etapasDoE2e(['--manter-ambiente', 'e2e/privacidade.spec.ts', 'e2e/areas.spec.ts'], 45, false)
     expect(filtrado.at(-1)?.argumentos).toEqual(['playwright', 'test', 'e2e/privacidade.spec.ts', 'e2e/areas.spec.ts'])
     expect(naMaquina.at(-1)?.argumentos).toEqual(['playwright', 'test'])
+    // O caso e o projeto passam adiante, antes dos arquivos: é o que a mutação de tela usa para reconstruir e rodar um
+    // caso só. Só com `=`, e nenhuma outra opção vai junto.
+    const umCaso = etapasDoE2e(['--manter-ambiente', 'e2e/areas.spec.ts', '--grep=o aluno acha', '--project=chromebook', '--headed'], 45, false)
+    expect(umCaso.at(-1)?.argumentos).toEqual(['playwright', 'test', '--grep=o aluno acha', '--project=chromebook', 'e2e/areas.spec.ts'])
     // O build que o teto mede é o do e2e, com a galeria das peças; nenhuma outra etapa leva a variável.
     expect(etapas.filter((etapa) => etapa.ambiente !== undefined).map((etapa) => [etapa.nome, etapa.ambiente])).toEqual([['build da web', { VITE_COM_GALERIA: '1' }]])
   })

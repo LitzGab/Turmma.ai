@@ -7,12 +7,11 @@ user-invocable: false
 
 Você vai transformar PRD e Tech Spec em uma lista de tarefas executável.
 
-A razão de as tarefas serem pequenas: cada uma passa por um portão de qualidade, com
-auditoria de isolamento, de dado pessoal e de conformidade. Vinte tarefas de um dia recebem
-vinte auditorias; quatro tarefas de uma semana recebem quatro, e quando uma falha, muita
-coisa já foi construída em cima dela.
+A razão de as tarefas serem pequenas: cada uma passa por um portão de qualidade, com auditoria de
+isolamento, de dado pessoal e de conformidade, e quando uma grande falha, muita coisa já foi
+construída em cima dela.
 
-<critical>MOSTRE A LISTA DE ALTO NÍVEL E AGUARDE APROVAÇÃO ANTES DE GERAR ARQUIVO</critical>
+<critical>MOSTRE A LISTA DE ALTO NÍVEL ANTES DE GERAR ARQUIVO. É AVISO, NÃO PARADA (D79): MOSTRE E GERE</critical>
 <critical>NÃO IMPLEMENTE NADA</critical>
 <critical>CADA TAREFA É UM ENTREGÁVEL FUNCIONAL, NÃO UMA CAMADA</critical>
 
@@ -60,10 +59,11 @@ Cada uma dessas pode ser demonstrada, testada e auditada sozinha.
 3. **Montar a estrutura**: sequenciamento, dependências, os subagentes obrigatórios marcados em
    cada tarefa, e o porte de cada uma.
 
-4. **Mostrar a lista de alto nível e AGUARDAR aprovação.** Este passo não é formalidade: é
-   o momento mais barato para corrigir o desenho.
+4. **Mostrar a lista de alto nível**, com a hora. É o momento mais barato para o Joaquim corrigir o
+   desenho, e ele tem até 30 minutos depois de os arquivos existirem: o Orquestrador só começa a
+   primeira tarefa passado esse prazo (`/seguir`, passo 7).
 
-5. **Gerar os arquivos** depois da aprovação.
+5. **Gerar os arquivos**, sem esperar.
 
 ## Subagentes obrigatórios por natureza da tarefa
 
@@ -77,7 +77,7 @@ Cada uma dessas pode ser demonstrada, testada e auditada sozinha.
 | gera ou corrige conteúdo pedagógico | `pedagogia-reviewer` |
 | cria ou altera tela | `frontend-reviewer` |
 | depende de regra externa ou API de terceiro | `domain-researcher` |
-| qualquer tarefa | `test-engineer` (primeiro revisor) e `revisor-geral`, implícitos: o hook os exige mesmo sem marca |
+| qualquer tarefa | `test-engineer` e `revisor-geral`, implícitos: o hook os exige mesmo sem marca |
 
 Na dúvida, marque. Auditoria a mais custa minutos; auditoria a menos custa o contrato.
 
@@ -85,7 +85,7 @@ Na dúvida, marque. Auditoria a mais custa minutos; auditoria a menos custa o co
 
 Toda tarefa leva `**Porte:** pequeno` ou `**Porte:** grande` no cabeçalho do `N_task.md`. O porte
 diz quanto a tarefa deve levar, e é por ele que a vigia do `/seguir` sabe quando uma tarefa está presa.
-Não escolhe o modelo: o Implementador roda no mesmo em toda tarefa (D78, revista em 09/10/2026). Marque **grande** quando qualquer um destes vale:
+Marque **grande** quando qualquer um destes vale:
 
 - três ou mais guardiões com veto marcados (`tenancy-guardian`, `privacy-guardian`,
   `conformidade-reviewer`, `infra-guardian`);
@@ -109,16 +109,17 @@ infere o porte pela contagem de guardiões e avisa que inferiu.
 - O leitor é um desenvolvedor júnior que não participou das conversas. Seja explícito sobre
   o contexto que ele precisa ler
 - **Toda tarefa diz como testar**, na seção "Como testar" do modelo: o teste existente a copiar e a
-  peça de apoio, achados abrindo o código, e não de memória. Na 6.0 do F3 o documento dizia só "e2e:
-  novo"; a tela saiu em 6 minutos e o teste levou cinco horas de tentativa
-- **Máximo 20 tarefas.** Se passar disso, a funcionalidade está grande demais e deveria ser
-  dividida no roadmap
-- **Tarefa cabe numa rodada de revisão.** Mira de até ~15 arquivos de código alterados e um
-  `N_task.md` de até 800 palavras. Tarefa que passa disso vira duas: diff grande é onde o
-  revisor deixa passar coisa e onde a rodada nova custa mais. Tarefa de tela conta as telas: uma
-  tela, ou um diálogo grande, por tarefa, com o e2e dela. A 13.0 da A1 juntou Estrutura, Lista e
-  Alocação, previa 11 arquivos e levou 53, com 17 rodadas e 7 do `test-engineer`. A 11.0, a 14.0 e
-  a 15.0 também passaram de 25
+  peça de apoio, achados abrindo o código, e não de memória
+- **Mire em até 12 tarefas, e nunca mais de 20.** Passou de 12, mostre junto com a lista o corte em
+  duas specs que pousam separadas (o F3, com 20, levou 55 horas de relógio)
+- **O "Contexto necessário" aponta a seção da Tech Spec e o requisito do PRD pelo número.** É só o que
+  o Implementador lê dos dois (`executar-task`, passo 1)
+- **Tarefa cabe numa rodada de revisão: um comportamento, e até três guardiões com veto.** A que
+  marcaria os quatro vira duas, cortada por comportamento. No F3, as três tarefas com quatro guardiões
+  (11.0, 13.0 e 15.0) foram à terceira rodada com diagnóstico do Arquiteto, e a única que passou de
+  primeira foi a 20.0, de uma tela e um ramo. Contar arquivo não serve de teto: a previsão erra (a
+  13.0 previa seis linhas de arquivo e alterou 60). Tarefa de tela conta as telas: uma tela, ou um
+  diálogo grande, por tarefa. O `N_task.md` nasce com até 800 palavras
 - Formato `X.0` para tarefa principal, `X.Y` para subtarefa
 - Marque o que pode correr em paralelo
 

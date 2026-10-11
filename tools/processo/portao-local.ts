@@ -3,8 +3,10 @@
 // carimbo mais novo que a última alteração, e o revisor-geral confere o carimbo em vez de rodar tudo
 // de novo sobre a mesma árvore.
 //
-//   node tools/processo/portao-local.ts --tarefa [testes...]    o portão da tarefa: tipos, lint, unidade e os testes alterados
-//   node tools/processo/portao-local.ts --e2e --infra           o portão completo: uma vez por spec, antes da validação
+//   node tools/processo/portao-local.ts --tarefa [documento.md] [testes...]
+//                                                               o portão da tarefa: tipos, lint, unidade, os testes alterados
+//                                                               e as mutações do documento (tools/processo/mutacoes.ts)
+//   node tools/processo/portao-local.ts --e2e --infra           o portão completo, na máquina: o que a esteira roda a cada push
 //   node tools/processo/portao-local.ts conferir <documento>     diz se o carimbo vale para o código atual
 //   node tools/processo/portao-local.ts conferir --completo      diz se o portão completo vale para o código atual
 //   node tools/processo/portao-local.ts revisores <documento>    diz o que o commit ainda encontraria: quem falta, reprovou ou caducou
@@ -12,6 +14,7 @@ import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
+import { avaliarMutacoes, conferirMutacoes, comandoDoTeste, impressaoDasMutacoes, lerMutacoes, pedeReconstrucao, rodarCalado } from './mutacoes.ts'
 import {
   alteracoesDeCodigo,
   alvosDoPortao,
@@ -56,7 +59,9 @@ if (argumentos[0] === 'conferir') {
   }
   // `--completo` é a pergunta do fim da spec: o portão inteiro (e2e e infra junto) rodou sobre este código?
   const exigidas = documento === '--completo' ? SUITES_DO_PORTAO_COMPLETO : suitesExigidas()
-  const motivo = avaliarCarimbo(lerCarimbo(raiz), exigidas, alteracoesDeCodigo(raiz, arquivosAlterados(raiz)), lerInstantaneos(raiz)[CHAVE_DO_PORTAO])
+  const motivo =
+    avaliarCarimbo(lerCarimbo(raiz), exigidas, alteracoesDeCodigo(raiz, arquivosAlterados(raiz)), lerInstantaneos(raiz)[CHAVE_DO_PORTAO]) ??
+    (documento === '--completo' ? null : avaliarMutacoes(lerCarimbo(raiz), documento, readFileSync(join(raiz, documento), 'utf8')))
   process.stdout.write(motivo ? `${motivo}\n` : `portão local válido para o código atual (${lerCarimbo(raiz)?.suites.join(', ')})\n`)
   process.exit(motivo ? 1 : 0)
 }
@@ -79,6 +84,8 @@ if (argumentos[0] === 'revisores') {
     documento,
     instantaneos: lerInstantaneos(raiz),
   })
+  const mutacoes = avaliarMutacoes(lerCarimbo(raiz), documento, conteudo)
+  if (mutacoes !== null) bloqueios.push(mutacoes)
   process.stdout.write(bloqueios.length > 0 ? `${bloqueios.map((bloqueio) => `- ${bloqueio}`).join('\n')}\n` : `nada pendente: ${linhaResumo}\n`)
   process.exit(bloqueios.length > 0 ? 1 : 0)
 }
@@ -91,7 +98,19 @@ const noInicio = alteracoesDeCodigo(raiz, arquivosAlterados(raiz))
 const daTarefa = argumentos.includes('--tarefa')
 // No portão da tarefa, os alvos são os testes alterados na árvore, mais os que vierem na linha de comando (o teste de
 // outro módulo que a tarefa pode ter quebrado, quando quem implementa ou quem revisa sabe qual é).
-const extras = argumentos.filter((argumento) => !argumento.startsWith('--') && existsSync(join(raiz, argumento)))
+const extras = argumentos.filter((argumento) => !argumento.startsWith('--') && !argumento.endsWith('.md') && existsSync(join(raiz, argumento)))
+/**
+ * O documento cujas mutações o portão confere: o que veio na linha de comando ou, sem ele, o único documento de tarefa
+ * ou de correção alterado na árvore que traz bloco `mutacao`. Com dois, quem roda diz qual.
+ */
+function documentoDasMutacoes(): string | null {
+  const pedido = argumentos.find((argumento) => argumento.endsWith('.md') && existsSync(join(raiz, argumento)))
+  if (pedido) return pedido
+  const candidatos = arquivosAlterados(raiz)
+    .filter((arquivo) => /^tasks\/(prd-[^/]+\/\d+_task|correcoes\/[^/]+)\.md$/.test(arquivo) && existsSync(join(raiz, arquivo)))
+    .filter((arquivo) => readFileSync(join(raiz, arquivo), 'utf8').includes('```mutacao'))
+  return candidatos.length === 1 ? (candidatos[0] ?? null) : null
+}
 const alvos = alvosDoPortao([...arquivosAlterados(raiz), ...extras])
 const suites = daTarefa
   ? [...SUITES_DO_PORTAO_DA_TAREFA]
@@ -127,9 +146,42 @@ if (falhou) {
   process.stdout.write(`\n✗ portão local vermelho em ${falhou}. Nenhum carimbo gravado.\n`)
   process.exit(1)
 }
+// As mutações do documento, depois das suítes: só com os testes verdes um teste vermelho quer dizer que a cláusula tem
+// quem a prove. Cada uma é aplicada, o teste citado roda, tem de cair, e o arquivo volta ao que era.
+let carimboDasMutacoes: { documento: string; impressao: string; total: number } | undefined
+const documento = daTarefa ? documentoDasMutacoes() : null
+if (documento) {
+  const { mutacoes, erros } = lerMutacoes(readFileSync(join(raiz, documento), 'utf8'))
+  if (erros.length > 0) {
+    process.stdout.write(`\n✗ portão local vermelho nas mutações de ${documento}: ${erros.join('; ')}. Nenhum carimbo gravado.\n`)
+    process.exit(1)
+  }
+  if (mutacoes.length > 0) {
+    process.stdout.write(`\n▶ mutações de ${documento} (${String(mutacoes.length)})\n`)
+    const rodarMutacao = rodarCalado(raiz)
+    const resultados = conferirMutacoes(raiz, mutacoes, rodarMutacao, (texto) => process.stdout.write(texto))
+    // O e2e roda contra imagens construídas: a última mutação de tela deixou no ar a web mutada. Reconstrói do fonte
+    // restaurado, com o teste dela verde, para a vitrine e a Mesa fotografarem a tela de verdade.
+    const comReconstrucao = mutacoes.filter(pedeReconstrucao).at(-1)
+    const limpo = comReconstrucao ? comandoDoTeste(comReconstrucao) : null
+    const reconstruiu = limpo === null || rodarMutacao(limpo)
+    const falhas = resultados.filter((resultado) => resultado.veredito !== 'vermelho')
+    if (falhas.length > 0 || !reconstruiu) {
+      const motivo = falhas.length > 0 ? `${String(falhas.length)} de ${String(mutacoes.length)} mutações não deixaram o teste vermelho ou foram recusadas` : 'a web não reconstruiu depois das mutações'
+      process.stdout.write(`\n✗ portão local vermelho nas mutações de ${documento}: ${motivo}. Nenhum carimbo gravado.\n`)
+      process.exit(1)
+    }
+    carimboDasMutacoes = { documento, impressao: impressaoDasMutacoes(mutacoes), total: mutacoes.length }
+  }
+}
+
 // Carimba o conteúdo do início, que é o que as suítes provaram, ou recusa se alguém editou no meio da corrida.
 const todosOsAlvos = [...alvos.integracao, ...alvos.e2e, ...alvos.infra]
-const recusa = carimbarSeNadaMudou(raiz, daTarefa ? { inicio, suites, alvos: todosOsAlvos } : { inicio, suites }, noInicio)
+const recusa = carimbarSeNadaMudou(
+  raiz,
+  daTarefa ? { inicio, suites, alvos: todosOsAlvos, ...(carimboDasMutacoes ? { mutacoes: carimboDasMutacoes } : {}) } : { inicio, suites },
+  noInicio,
+)
 if (recusa) {
   // O comando sai daqui, e não da função: quem sabe as flags é o script. Quem lê esta linha acabou de perder os
   // ~20 min das suítes, e precisa saber que é só rodar de novo.
@@ -138,7 +190,8 @@ if (recusa) {
 }
 if (daTarefa) {
   const lista = todosOsAlvos.length > 0 ? todosOsAlvos.join(', ') : 'nenhum teste de integração, de e2e ou de infra alterado na árvore'
-  process.stdout.write(`\n✓ portão da tarefa verde (tipos, lint, segredo, dependências, unidade inteira; alvos: ${lista}). O portão completo roda no fim da spec.\n`)
+  const conferidas = carimboDasMutacoes ? `; ${String(carimboDasMutacoes.total)} mutações de ${carimboDasMutacoes.documento}, todas vermelhas` : '; nenhuma mutação declarada'
+  process.stdout.write(`\n✓ portão da tarefa verde (tipos, lint, segredo, dependências, unidade inteira; alvos: ${lista}${conferidas}). O resto roda na esteira do push.\n`)
 } else {
   process.stdout.write(`\n✓ portão local verde (${suites.join(', ')}). Carimbo em .processo/portao.json, início ${inicio}.\n`)
 }

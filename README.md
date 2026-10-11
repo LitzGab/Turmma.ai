@@ -156,10 +156,7 @@ O processo roda no Maestri (D78). Você digita um comando só, no terminal Maest
     decisão que é sua. O mesmo comando começa, continua e retoma depois de uma queda.
 ```
 
-Todos os papéis rodam no Claude Code (D78). O Implementador tem um modo econômico, no
-[opencode](https://opencode.ai) 2 com o MiMo-V2.6-Pro, mais lento e fora do consumo do Claude: só quem
-vai ligá-lo precisa do `opencode` instalado e com a assinatura OpenCode Go conectada (`opencode auth`).
-A configuração do papel está em `.opencode/`.
+Todos os papéis rodam no Claude Code (D78).
 
 O time é fixo, no térreo: você vê sempre as mesmas cinco caixas (Orquestrador, Arquiteto,
 Implementador, Mesa e Validador). O que muda a cada tarefa ou fase é a sessão dentro de cada uma,
@@ -235,9 +232,10 @@ falha da tarefa, não sugestão.
 | `frontend-reviewer` | Tela que não funciona em Chromebook de escola ou no celular | não |
 | `domain-researcher` | Regra externa inventada em vez de pesquisada | não |
 
-E o portão automático. Em cada tarefa, o **portão da tarefa**: tipos, lint, a unidade inteira e os
-testes que a tarefa alterou (`node tools/processo/portao-local.ts --tarefa`), em minutos. Uma vez por
-spec, antes da validação, o **portão completo**, com tudo, e depois a esteira.
+E o portão automático. Em cada tarefa, o **portão da tarefa**: tipos, lint, a unidade inteira, os
+testes que a tarefa alterou e as mutações que ela declara (`node tools/processo/portao-local.ts
+--tarefa`), em minutos. Em cada push da branch da spec, a **esteira**, com tudo, sem ninguém esperar
+por ela (D79).
 
 Em tarefa com tela, a revisão **vê a tela**: `tools/vitrine/` monta duas escolas sintéticas no ambiente
 de teste, uma cheia e uma vazia, e fotografa a página como coordenação, professora ou aluno, no

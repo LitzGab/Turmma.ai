@@ -90,10 +90,11 @@ const scripts = (JSON.parse(readFileSync(join(raizRepositorio, 'package.json'), 
   .scripts
 
 describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
-  it('roda em todo push nas branches integradoras, e só em push ou execução manual', () => {
-    // O trabalho acontece na `develop` (D23 revista). Sem ela aqui, nada do que se constrói é
-    // testado até o merge — e a D52 e a regra 40 dependem de a esteira rodar onde se trabalha.
-    expect(workflow.on.push?.branches).toEqual(['develop', 'release', 'main'])
+  it('roda em todo push nas branches integradoras e nas de spec e de correção, e só em push ou execução manual', () => {
+    // O trabalho acontece na branch da spec, que entra na `develop` por pouso (D78). A esteira de cada push dela é o
+    // portão completo de cada tarefa, sem espera (D79): sem `spec/**` e `correcao/**` aqui, o que uma tarefa quebra
+    // fora dos testes que alterou só apareceria no fim da spec, e a D52 e a regra 40 contam com isso.
+    expect(workflow.on.push?.branches).toEqual(['develop', 'release', 'main', 'spec/**', 'correcao/**'])
     expect(Object.keys(workflow.on).sort()).toEqual(['push', 'workflow_dispatch'])
   })
 

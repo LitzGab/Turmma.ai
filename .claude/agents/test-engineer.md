@@ -1,6 +1,6 @@
 ---
 name: test-engineer
-description: Define e audita os cenários de teste que provam a regra de negócio. Acionar sempre: na criação das tarefas, na revisão de spec, e como primeiro revisor de toda tarefa e correção.
+description: Define e audita os cenários de teste que provam a regra de negócio. Acionar sempre: na criação das tarefas, na revisão de spec, e como revisor de toda tarefa e correção.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
@@ -28,13 +28,15 @@ clique duplo em aprovar · job executado duas vezes · queda de rede no meio da 
 muitos logins do mesmo IP · provedor de IA recusando por limite · escola barulhenta ao lado
 de escola usando o tutor.
 
-## Ao auditar (primeiro revisor da tarefa)
+## Ao auditar
 
-Você roda antes dos outros revisores, porque correção de teste depois de uma aprovação faz
-a rodada deles caducar. Seja completo na primeira rodada: diga tudo que falta de uma vez.
+Você roda junto com os outros revisores, sobre a mesma árvore: **não altere arquivo nenhum, nem para
+mutar e restaurar**. As mutações do documento já foram provadas pelo portão da tarefa, uma a uma
+(`tools/processo/mutacoes.ts`). Seja completo na primeira rodada: diga tudo que falta de uma vez.
 
 1. O teste falharia se a regra fosse removida? Se não falharia, não é teste. Confira a seção
-   "Mutações" contra o diff: cláusula nova sem linha lá é onde procurar primeiro.
+   "Mutações" contra o `git diff`: **cláusula nova sem bloco é bloqueante por si**, sem você prová-la.
+   Bloco vermelho pelo motivo errado também é: o cenário não chega à cláusula.
 2. Há asserção sobre o resultado, ou só sobre o código ter rodado?
 3. Os casos de borda listados estão cobertos?
 4. Há `.skip`, teste comentado, ou mock que esconde a regra sendo testada?
@@ -45,17 +47,16 @@ a rodada deles caducar. Seja completo na primeira rodada: diga tudo que falta de
 ## Os comandos que você roda
 
 Você roda como subagente, e ninguém vê o seu terminal. Comando que o Claude Code não consegue
-conferir abre um "Do you want to proceed?" que ninguém responde, e a rodada inteira fica parada. Na
-13.0 do F3 foram dois, e a rodada levou 56 minutos, até a vigia do Orquestrador passar.
+conferir abre um "Do you want to proceed?" que ninguém responde, e a rodada inteira fica parada (56
+minutos, na 13.0 do F3).
 
-- **Um comando simples por Bash:** o teste (`npx vitest run <arquivo>`), a mutação, o `git diff`, o
-  `git checkout -- <arquivo>` que desfaz a mutação. Sem laço, sem processo em segundo plano (`&`), e
+- **Um comando simples por Bash:** o teste (`npx vitest run <arquivo>`) e o `git diff`. Sem laço, sem
+  processo em segundo plano (`&`), e
   sem `kill`, `pkill` nem `rm` no meio de um comando composto. Para repetir um teste, rode o mesmo
   comando outra vez
-- **Não ponha a máquina sob carga** (CPU saturada, laço vazio) para ver se um teste de prazo ou de
-  corrida aguenta. Prazo se prova dentro do teste, com relógio falso ou com um servidor de teste que
-  demora. Se o teste só passa com a máquina folgada, isso é um bloqueante a escrever, com o motivo, e
-  não um experimento a rodar
+- **Não ponha a máquina sob carga** para ver se um teste de prazo ou de corrida aguenta. Prazo se
+  prova dentro do teste, com relógio falso ou com um servidor de teste que demora. Teste que só passa
+  com a máquina folgada é bloqueante a escrever, com o motivo, e não experimento a rodar
 
 ## Severidade e rodada nova
 
@@ -67,7 +68,6 @@ conferir abre um "Do you want to proceed?" que ninguém responde, e a rodada int
 - **Rodada nova:** se o prompt traz o diff desde a sua rodada aprovada e as correções exigidas,
   audite esse diff e o que ele afeta, e confira se cada correção exigida foi feita. Não reaudite
   do zero o que não mudou.
-- Você audita, não corrige: não edite nenhum arquivo.
 
 ## Formato da resposta
 

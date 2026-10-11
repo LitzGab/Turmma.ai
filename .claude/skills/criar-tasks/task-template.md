@@ -4,7 +4,7 @@
 **Subagentes obrigatórios:** `...`
 **Porte:** pequeno | grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não.
-     O porte decide o modelo que começa a tarefa (criar-tasks, "Porte da tarefa"). -->
+     O porte diz quanto a tarefa deve levar (criar-tasks, "Porte da tarefa"). -->
 
 ## Objetivo
 
@@ -13,11 +13,11 @@ não funcionava.
 
 ## Contexto necessário
 
-Quem implementa esta tarefa começa com contexto limpo e não participou de nenhuma conversa.
-Liste tudo que ele precisa ler antes de escrever a primeira linha:
+Quem implementa esta tarefa começa com contexto limpo e não participou de nenhuma conversa. Da Tech
+Spec e do PRD ele lê só o que estiver apontado aqui, pelo número:
 
-- `docs/visao-produto.md` (sempre)
 - `techspec.md` seção [n]
+- `prd.md` RF[n]
 - `.claude/rules/[quais e por quê]`
 - Fluxo relacionado em `docs/fluxos.md`, se houver
 - Código existente relevante: `caminho/arquivo.ts` — e o que olhar nele
@@ -93,14 +93,17 @@ reprovações na A1). Sem nenhuma, escreva "nenhuma".
 
 ## Mutações
 
-Preenchida por quem implementa, antes dos revisores (`/executar-task`, passo 2). Uma linha por
-cláusula que o diff acrescenta — condição de `where`, `if` de guarda, `catch` que traduz erro,
-restrição ou índice de migration, trava de clique, classe CSS que o e2e diz provar —, inclusive as
-que a tabela de testes não cita e as cópias da mesma regra em outro arquivo. Apagada, rodada,
-vermelha, restaurada.
+Preenchida por quem implementa (`/executar-task`, passo 2): um bloco por cláusula que o diff
+acrescenta, inclusive as que a tabela de testes não cita e as cópias da mesma regra em outro arquivo.
+O portão da tarefa aplica cada bloco, roda o teste citado e exige vermelho. Linha com `-` sai, com
+`+` entra, com espaço é contexto. Sem cláusula nova, escreva "nenhuma".
 
-| Cláusula (`arquivo` › função › o texto da condição) | Teste que ficou vermelho |
-|---|---|
+```mutacao
+arquivo: [caminho do arquivo que tem a cláusula]
+teste: [caminho do teste] › [nome do caso]
+  [linha de contexto, que fica]
+- [a cláusula que sai]
+```
 
 ## Recomendações sem aplicar
 
