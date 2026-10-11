@@ -1,7 +1,7 @@
 # Tech Spec — LGPD e titular
 
 **PRD:** `tasks/prd-lgpd-e-titular/prd.md`
-**Status:** aprovado (revisão da spec, rodada 6, 05/10/2026)
+**Status:** implementada em 11/10/2026 (aprovada na revisão da spec, rodada 6, 05/10/2026)
 
 > **Teto de 2.000 palavras excedido, com aceite do Joaquim (05/10/2026): ~3.700 aceitas; as rodadas 2 a 5 da revisão
 > levaram a ~4.800, à espera de confirmação.** São três fatias independentes num documento

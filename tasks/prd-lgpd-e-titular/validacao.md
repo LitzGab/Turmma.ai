@@ -1,5 +1,192 @@
 # Validação — lgpd-e-titular (F3)
 
+## Rodada 2 — 11/10/2026
+
+**Escopo:** funcionalidade completa
+**Commit validado:** `0021957`
+**Veredito: APROVADA**
+
+O crítico da rodada 1 está corrigido e provado: na escola sem ano letivo em curso, a coordenação lista, busca, registra,
+abre, corrige, conclui e cancela pedidos, só sem a turma na linha. Os dois maiores foram tratados nos documentos. Os 21
+RF estão atendidos, o portão completo vale para este commit e não há crítico nem maior.
+
+O que mudou desde a rodada 1 (`git diff 2b653d7..0021957`): um arquivo de código
+(`apps/api/src/privacidade/titulares.repository.ts`), dois de teste (`apps/api/test/pedido-titular.int.test.ts`,
+`e2e/pedidos-do-titular.spec.ts`) e documentos. `apps/web`, `apps/worker`, `packages` e `infra` não mudaram.
+
+Como conferi nesta rodada:
+
+- Li de novo o PRD, a Tech Spec inteira, o `tasks.md`, o bloco do F3 no `ROADMAP.md`, o documento e os achados da
+  correção (`tasks/correcoes/2026-10-11-pedidos-sem-ano-em-curso.md`), o repository corrigido por inteiro e o service
+  que o chama.
+- Fiz 3 provas de mutação, todas vermelhas, e rodei o arquivo de integração inteiro no código real (24 de 24).
+- Rodei `e2e/pedidos-do-titular.spec.ts` contra o ambiente de teste: 24 de 24, nos projetos `chromebook` e `celular`,
+  com o caso novo da escola sem ano.
+- Fotografei e li as telas de todo RF com tela, no computador (1366 px) e no celular (360 px), na escola cheia e na
+  vazia, e de novo com o ano da escola em `encerrado`.
+- Com o ano em `encerrado`, registrei pela API de teste uma eliminação, uma portabilidade e um acesso: os três
+  responderam 201, o detalhe abriu, o cancelamento respondeu 204 e o worker montou os dois arquivos (`pronto`).
+- Conferi que cada linha de teste citada na rodada 1 ainda aponta para o caso certo. Duas mudaram de lugar, porque o
+  arquivo ganhou 80 linhas: a concorrência do pedido está agora em `pedido-titular.int.test.ts:1141` e `:1212`.
+- Procurei outra dependência de ano em curso no código do F3 (`apps/api/src/privacidade`, `packages/nucleo/src/titular`,
+  `retencao`, `ciclo-de-vida` e os processadores do worker): não há nenhuma chamada a `exigirAnoEmCurso`.
+
+### 1. RF a RF
+
+Para os RF cujo código não mudou, o código e o teste são os da rodada 1 (tabela abaixo dela), que continuam valendo
+linha a linha. Aqui ficam a situação de cada um e o que vi nesta rodada. As fotos estão em `.processo/vitrine/`.
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF1 | ATENDIDO | `packages/shared/src/privacidade/classificacao.ts`, `retencao.ts` | `apps/api/test/arquitetura.test.ts:1205`, `:1214`, `:1224`; `apps/api/test/retencao.int.test.ts:100` | Sem mudança |
+| RF2 | ATENDIDO | `apps/api/src/ops/retencao.ts` | `apps/api/test/retencao.int.test.ts:119`, `:278`, `:303` | Sem mudança |
+| RF3 | ATENDIDO | `apps/web/src/areas/coordenacao/privacidade/Retencao.tsx` | `e2e/privacidade.spec.ts:68`, `:114` | Fotos: `coordenacao--coordenacao-privacidade-retencao--Ver-depois--computador-1.png` e `--celular-1.png`. Doze categorias com prazo, início da contagem e origem, e os prazos que não mudam; no celular vira cartão |
+| RF4 | ATENDIDO | `packages/nucleo/src/retencao/expurgo-da-escola.repository.ts` | `apps/worker/test/expurgo-da-escola.int.test.ts:587` | Sem mudança. Mutação da rodada 1 |
+| RF5 | ATENDIDO | `apps/worker/src/processadores/expurgar-escola.ts`; `infra/grafana/alertas/expurgo-noites-incompletas.yaml` | `apps/worker/test/expurgo-da-escola.int.test.ts:695`, `:838`, `:1058`, `:2476`, `:2505`; `infra/test/alerta-do-expurgo.int.test.ts:83` | Sem mudança |
+| RF6 | ATENDIDO | `apps/api/src/ops/suboperador.ts` | `apps/api/test/suboperador.int.test.ts:170` | Sem mudança |
+| RF7 | ATENDIDO | `packages/nucleo/src/titular/suboperador-da-escola.repository.ts`; `EmpresasQueRecebemDados.tsx` | `apps/api/test/suboperador.int.test.ts:292`, `:309`; `e2e/privacidade.spec.ts:254`, `:316` | Fotos: `coordenacao--coordenacao-privacidade-suboperadores--Ver-depois--computador.png`, `--celular-1.png` e `vazia--coordenacao--coordenacao-privacidade-suboperadores--celular.png`. Vigentes e passadas separadas, com o selo do treinamento em texto e ícone. A escola vazia mostra só a empresa que atende todas, que semeei; o estado sem empresa nenhuma fica com o e2e (`:316`) |
+| RF8 | ATENDIDO | `apps/api/src/ops/incidente.ts` | `apps/api/test/incidente.int.test.ts:171`, `:207`, `:568` | Sem mudança |
+| RF9 | ATENDIDO | `packages/nucleo/src/titular/incidente-da-escola.repository.ts`; `AvisoDeIncidente.tsx`, `Incidentes.tsx` | `apps/api/test/incidente.int.test.ts:398`, `:490`; `infra/test/alerta-do-incidente.int.test.ts:81`; `e2e/incidentes.spec.ts` | Fotos: `coordenacao--coordenacao-governanca--computador.png` e `--celular-1.png` (o aviso ao entrar), a faixa "Ver o aviso" em todas as fotos `--Ver-depois--`, `coordenacao--coordenacao-privacidade-incidentes--Ver-depois--computador.png` e `--celular-1.png`, `vazia--coordenacao--coordenacao-privacidade-incidentes--computador.png` |
+| RF10 | **ATENDIDO** (era PARCIAL) | `apps/api/src/privacidade/titulares.repository.ts:211-214` (`#vinculosDe`: sem ano em curso, o mapa vem vazio e não há consulta); `apps/api/src/privacidade/privacidade.service.ts:222-290` | `apps/api/test/pedido-titular.int.test.ts:1061` ("depois de encerrar o ano, a busca, o registro, a lista, o detalhe, o corrigir nome, o concluir e o cancelar respondem, só sem turma nem disciplina; e B continua sem alcançar A"); `e2e/pedidos-do-titular.spec.ts:695` ("sem ano em curso…, a lista, a busca, o registro e o detalhe funcionam, só sem a turma"); `apps/api/test/pedido-titular.int.test.ts:260`, `:977` | Mutações 1, 2 e 3. Fotos com ano em curso: `coordenacao--coordenacao-privacidade-pedidos--Ver-depois--computador.png`, `--celular-1.png`, `…--Ver-depois-Registrar-pedido--computador.png`, `--celular-1.png`, `vazia--coordenacao--coordenacao-privacidade-pedidos--computador.png`, `--celular.png`. Sem ano em curso: `sem-ano-r2/sem-ano--coordenacao--coordenacao-privacidade-pedidos--Ver-depois--computador.png` e `--celular-1.png`: os cinco pedidos aparecem, com "Sem turma neste ano" |
+| RF11 | ATENDIDO | `packages/nucleo/src/titular/leitura-do-titular.ts`; `apps/worker/src/processadores/montar-arquivo.ts` | `apps/api/test/arquivo-do-titular.int.test.ts:418`, `:462`, `:730`; `apps/api/test/arquitetura.test.ts:1310` | Sem mudança. Com o ano encerrado, o worker montou o arquivo do acesso e o da portabilidade que registrei pela API |
+| RF12 | ATENDIDO | `packages/nucleo/src/titular/arquivo-do-titular.repository.ts`; `apps/web/src/componentes/meus-dados/MeusDados.tsx` | `apps/api/test/arquivo-do-titular.int.test.ts:629`, `:754`, `:931`, `:979`; `e2e/meus-dados.spec.ts` | Fotos: `aluno--aluno-privacidade--computador.png`, `aluno--aluno-privacidade--Baixar-meus-dados--celular.png` (o diálogo diz o que o arquivo traz e manda apagar no computador da escola), `professora--professor-meus-dados--computador.png`, `--celular.png`, `vazia--aluno--aluno-privacidade--celular.png`, `vazia--professora--professor-meus-dados--computador.png`. Sem ano em curso: `sem-ano-r2/sem-ano--aluno--aluno-privacidade--celular.png` e `sem-ano--professora--professor-meus-dados--computador.png`, iguais às de ano em curso |
+| RF13 | ATENDIDO | `packages/nucleo/src/titular/compartilhamento.ts` | `apps/api/test/compartilhamento.int.test.ts:203`, `:284`, `:427` | Foto: `coordenacao--coordenacao-privacidade-pedidos-01a1299e-ffff-7000-8000-0000000000a2--Ver-depois--celular-1.png` e `--celular-2.png`: empresas pelo nome do cadastro, com período e origem, "Provedor não cadastrado: <chave>" e o aviso do art. 18, § 6º |
+| RF13b | ATENDIDO | `apps/api/src/privacidade/privacidade.service.ts:332` | `apps/api/test/pedido-titular.int.test.ts:454`, `:591`; e, sem ano em curso, `:1061` | Foto: `…-0000000000a3--Ver-depois--celular.png` ("Corrigir nome", "Ir para a Estrutura") |
+| RF14 | ATENDIDO | `packages/nucleo/src/identidade/avaliar-sessao.ts:31`; `privacidade.service.ts:315` | `apps/api/test/eliminacao-agendada.int.test.ts:185`, `:450`, `:575`, `:613`, `:629`; `apps/worker/test/eliminar-titular.int.test.ts:274`; e o cancelamento sem ano em curso em `pedido-titular.int.test.ts:1061` | Fotos: `…-0000000000a4--Ver-depois--computador.png` e `--celular.png` (eliminação agendada, com "Cancelar eliminação"), as mesmas duas em `sem-ano-r2/` (o detalhe abre e o botão está lá), e `suspenso/acesso-suspenso--aluno--computador.png`, `--celular.png` (da rodada 1; a web não mudou) |
+| RF15 | ATENDIDO | `packages/nucleo/src/titular/eliminacao-do-titular.ts`, `troca-de-nome.ts`, `homonimo.ts` | `apps/worker/test/eliminar-titular.int.test.ts:331`, `:571`, `:612`, `:753` | Sem mudança |
+| RF16 | ATENDIDO | `apps/web/src/areas/coordenacao/privacidade/textos-do-pedido.ts:28` | `textos-do-pedido.test.ts`; `e2e/pedido-do-titular.spec.ts:118` | Fotos: `…-0000000000a2--Ver-depois--celular-1.png` ("Faltam 4 dias, até 15/10/2026") e `…-0000000000a3--Ver-depois--celular.png` ("Prazo vencido há 5 dias (venceu em 06/10/2026)", em vermelho, com ícone) |
+| RF17 | ATENDIDO | `apps/api/src/privacidade/privacidade.service.ts`; `apps/api/src/ops/privacidade.ts` | `apps/api/test/pedido-titular.int.test.ts:502`, `:591`; `arquivo-do-titular.int.test.ts:979`, `:1029`; `ops-privacidade.int.test.ts:131`; `apps/worker/test/eliminar-titular.int.test.ts:974` | O caso da virada confere também a auditoria de cada passo sem ano em curso |
+| RF18 | ATENDIDO | escopo pela escola do contexto em todo repository do F3 | `pedido-titular.int.test.ts:977`; `arquivo-do-titular.int.test.ts:776`; `eliminacao-agendada.int.test.ts:750`; `incidente.int.test.ts:398`; `suboperador.int.test.ts:292`; `eliminar-titular.int.test.ts:893`; `expurgo-da-escola.int.test.ts:2476` | Mutação 3 desta rodada e mutação 1 da rodada 1 |
+| RF19 | ATENDIDO | chave de envio, `for update`, `skip locked` | `pedido-titular.int.test.ts:1141`, `:1212`; `eliminacao-agendada.int.test.ts:718`; `eliminar-titular.int.test.ts:801`, `:812`; `incidente.int.test.ts:490` | Sem mudança de código; as duas primeiras linhas mudaram de lugar |
+| RF20 | ATENDIDO | `apps/web/src/areas/navegacao.ts`; `Privacidade.tsx`; `MeusDados.tsx` | os seis specs de e2e do F3, em `chromebook` e `celular`, com os quatro estados e a varredura de acessibilidade | Todas as fotos acima. Nenhum defeito da lista de bloqueantes do `frontend-reviewer`: sem rolagem de lado a 360 px, tabela vira cartão, estado vazio diz o próximo passo, ação oficial mostra o que vai acontecer. O item fica no fim da lista plana, desvio agora registrado (Tech Spec, seção 9) |
+
+Provas de mutação (as três ficaram vermelhas; cada arquivo foi restaurado com `git checkout --` e a árvore terminou
+limpa, com o carimbo do portão ainda válido):
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF10 (o C1) | A correção inteira: `titulares.repository.ts` de volta ao de `2b653d7`, com `exigirAnoEmCurso()` em `#vinculosDe` | `apps/api/test/pedido-titular.int.test.ts` › "depois de encerrar o ano, a busca, o registro, a lista…" (`expected 404 to be 200`, linha 1095) |
+| RF10, regra 10, item 2 | A guarda `typeof anoLetivoId !== 'string'` e o filtro do ano quando não há ano, em `titulares.repository.ts:214` e `:223` | O mesmo caso: a busca devolveu a turma "2ºC" do ano encerrado onde se esperava `turmas: []` (linha 1096) |
+| RF18 | `eq(pedidoTitular.escolaId, exigirEscolaDoContexto())` da leitura do pedido por id, em `apps/api/src/privacidade/pedidos.repository.ts:138` | `pedido-titular.int.test.ts` › "a prévia, a busca, o detalhe, o concluir e o corrigir de B, a partir de A, respondem como inexistente" e o caso da virada (`expected { status: 200 … } to deeply equal { status: 404 … }`) |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regras de negócio do PRD, seção 6 (as oito linhas da rodada 1) | cumpridas | O código e os testes delas não mudaram; as linhas citadas na rodada 1 seguem certas |
+| Regra 10, item 2: a leitura nunca cai num ano qualquer | cumprida | Mutação 2: um vínculo `confirmado` no ano encerrado não aparece |
+| Borda da regra 40: virada de ano letivo | **coberta** (era sem teste) | `pedido-titular.int.test.ts:1061`, com o ano encerrado pela API; `e2e/pedidos-do-titular.spec.ts:695`, na escola sem ano; fotos em `sem-ano-r2/` |
+| Bordas do PRD, seção 7 (transferido, homônimo, redução de prazo, responsável, aluno só na lista) | cobertas | Como na rodada 1 |
+| Borda: a única coordenadora quer a própria eliminação | justificada | Fora do escopo, na Tech Spec e no `TODO.md` |
+| Pronto (tasks.md): acesso e eliminação atendidos pela coordenação, com rastro, arquivo aberto e eliminação no 8º dia | **cumprido** (era faltando) | Vale com e sem ano em curso: RF10 a RF15, e o registro pela API com o ano encerrado |
+| Pronto (tasks.md): expurgo no prazo da escola, sem tocar outra escola nem o horário letivo; classificação testada | cumprido | RF1, RF4, RF5 |
+| Pronto (tasks.md): a escola vê retenção, empresas e incidentes, e confirma | cumprido | RF3, RF7, RF9, com fotos |
+| Pronto (tasks.md): nada separa o professor que usou IA, e a conversa dele não chega à coordenação | cumprido | `pedido-titular.int.test.ts:621`; `arquivo-do-titular.int.test.ts:629`, `:890` |
+| Pronto (tasks.md): o que saiu do F3 não conta | cumprido | Nada disso foi implementado |
+| Pronto quando (`ROADMAP.md:319-325`) | **cumprido** (era faltando, por texto desatualizado) | O bloco do F3 foi reescrito com as três fatias e o "Pronto quando" é o mesmo do `tasks.md`; a exportação e o canal estão no "Pronto quando" do F12 (`ROADMAP.md:505`) |
+
+### 3. Portão
+
+O portão completo rodou antes desta validação e vale para o código validado: `node tools/processo/portao-local.ts
+conferir --completo` respondeu "portão local válido para o código atual", no começo e depois das mutações. Carimbo
+(`.processo/portao.json`): início `2026-10-11T04:59:39.807Z`, suítes `typecheck`, `lint`, `segredo`, `dependencias`,
+`test`, `e2e`, `infra`. Não rodei as suítes de novo. Rodei só o que a prova pedia: um arquivo de integração (para as
+mutações e o controle) e um spec de e2e (para subir o ambiente das fotos), os dois verdes no código real.
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck` | ✅ (carimbo) |
+| `npm run lint` | ✅ (carimbo) |
+| `npm run test` | ✅ (carimbo) |
+| `npm run test:e2e` | ✅ (carimbo) |
+| `npm run test:infra` | ✅ (carimbo) |
+| Esteira do GitHub | roda no fechamento, depois desta validação (D78): não entra no veredito |
+| Revisões com veto registradas e aprovadas | ✅ |
+
+Processo:
+
+- As 20 tarefas e as 8 correções do F3 têm, na seção "Revisões", rodada de todo revisor obrigatório, e a última de
+  cada um é APROVADO. A correção do C1 (`99958a7`) tem `test-engineer` (2ª rodada), `tenancy-guardian` e
+  `privacy-guardian` aprovados.
+- Nenhum commit desde 05/10/2026 levou código de `apps`, `packages`, `infra` ou `e2e` sem `(tarefa N.0)` nem
+  `(correção <slug>)`. O `916320c` só mexe em documento.
+- `revisao-spec.md` segue com veredito APROVADA.
+- As duas divergências da rodada 1 estão registradas: o M2 na Tech Spec, seção 9, com linha no `TODO.md:861`; o m1 na
+  Tech Spec, seção 3.
+
+### 4. Achados
+
+**Críticos**
+
+Nenhum. O C1 da rodada 1 está resolvido (`apps/api/src/privacidade/titulares.repository.ts:211-214`), com teste de
+integração e de e2e que ficam vermelhos sem a correção.
+
+**Maiores**
+
+Nenhum.
+
+- O M1 está resolvido: `ROADMAP.md:297-325` descreve as três fatias e o "Pronto quando" do recorte, a exportação e o
+  canal foram para o F12 e o F9, e `docs/conformidade-mec.md:61` e `:305` estão alinhados.
+- O M2 está resolvido como desvio registrado: `tasks/prd-lgpd-e-titular/techspec.md:760-765` e `docs/interface.md:1068`
+  dizem que a lateral é lista plana e que Privacidade fica no fim, e o `TODO.md:861` guarda a decisão dos grupos para
+  o PRD do F12.
+
+**Menores**
+
+- **m1.** `apps/api/test/pedido-titular.int.test.ts:1061`: depois do encerramento do ano, o caso registra só um pedido
+  de compartilhamento, e o e2e, um de correção. Nenhum teste registra eliminação, acesso ou portabilidade nesse
+  estado. Conferi os três à mão pela API e funcionam; vale acrescentar ao caso uma eliminação e um acesso registrados
+  depois do encerramento, para a prova não depender de leitura de código.
+- **m2.** `apps/web/src/areas/coordenacao/privacidade/textos-dos-pedidos.ts:58`: sem ano em curso a linha diz "Sem
+  turma neste ano", quando não há ano nenhum (fotos em `sem-ano-r2/`). Texto: "Sem turma" basta.
+- **m3.** `apps/web/src/areas/coordenacao/privacidade/Pedidos.tsx:84`: a lista não mostra o prazo nem destaca o pedido
+  vencido (era o m3 da rodada 1). Na foto, a correção vencida há 5 dias aparece só como "Recebido".
+- **m4.** `packages/shared/src/privacidade/titular.ts`: o DTO do pedido não leva `eliminarEm`, e o detalhe diz "7 dias
+  depois do registro" sem dizer o dia (era o m4).
+- **m5.** `apps/web/src/areas/coordenacao/privacidade/AcoesDoPedido.tsx:279`: "Baixar a versão da escola" aparece
+  também quando o titular tem conta ativa, e aí sempre falha com o texto certo (era o m5).
+- **m6.** `apps/web/src/componentes/meus-dados/MeusDados.tsx:189-191`: na área do professor a tela não tem título à
+  vista (era o m6; foto `professora--professor-meus-dados--celular.png`).
+- **m7.** `infra/compose.yml:211`: `IA_LATENCIA_FALSA_MS` obrigatória sem aviso no `README.md` (era o m7).
+- **m8.** `tools/vitrine/escola.ts`: a vitrine não semeia nada da Privacidade; semeei de novo à mão, só no banco de
+  teste (era o m8; o `TODO.md:270` cobre só o incidente).
+- **m9.** Os menores m3 a m8 só têm destino escrito neste arquivo. No fechamento, levar cada um ao `TODO.md`, para não
+  dependerem de alguém reler a validação.
+
+O m1 e o m2 da rodada 1 (os dez prazos fixos na Tech Spec e as subtarefas marcadas no `tasks.md`) foram resolvidos no
+`916320c`.
+
+**Positivos**
+
+- O teste da correção põe um vínculo `confirmado` no ano encerrado antes de afirmar `turmas: []`: sem isso a mutação
+  "cair num ano qualquer" passaria, e o documento da correção diz que o Implementador viu isso acontecer e consertou.
+- O documento da correção registra as mutações que rodou, e as duas que repeti deram o mesmo vermelho.
+- A correção ficou no menor lugar possível (uma função de leitura) e deixou o `exigirAnoEmCurso` falhando fechado para
+  o resto do sistema.
+
+### 5. Conclusão
+
+APROVADA. Todo RF está atendido, o critério de pronto do `tasks.md` e o "Pronto quando" do roadmap estão cumpridos, não
+há crítico nem maior, e o portão completo está verde no commit validado. O que resta são nove menores, nenhum deles
+impede a próxima funcionalidade.
+
+Próximo passo, do Orquestrador: a esteira na branch da spec e o pouso, com a palavra do Joaquim.
+
+### 6. Pendências herdadas
+
+- Exportação da escola em formato aberto (D63): F12. Canal de notificação de violação (D61): F9 e F12. Validação
+  humana como entidade (D56): F6. Estão no `ROADMAP.md`, cada uma na fase dela.
+- Grupos da lateral da coordenação: `TODO.md:861`, até o PRD do F12.
+- Contração do check de `provedor`, a coordenação como titular e o prazo do `registro_de_decisao`: no `TODO.md`, como
+  na rodada 1.
+- Os menores: m1 e m2 para a próxima correção ou tarefa que mexer nos Pedidos; m3 a m6 para a spec de refatoramento
+  visual ou a próxima que tocar as telas da Privacidade; m7 no `README.md`; m8 em `tools/vitrine/`; m9 no fechamento.
+- Estado do ambiente de teste depois desta validação: a escola cheia da vitrine ficou com dado sintético que semeei
+  (dois incidentes, uma aluna a mais e oito pedidos, três deles registrados pela API) e com o ano de volta em
+  `em_curso`. As três empresas que semeei para as fotos, uma delas de alcance "todas", eu apaguei no fim, para não
+  aparecerem nas outras escolas do banco de teste. Nada disso está no repositório; o portão que recria o banco apaga
+  tudo, e `node tools/vitrine/vitrine.ts montar` refaz a vitrine.
+
 ## Rodada 1 — 11/10/2026
 
 **Escopo:** funcionalidade completa

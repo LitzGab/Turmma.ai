@@ -477,6 +477,35 @@ para o staging".
       (`infra-guardian`, 1ª rodada): a página de pedidos ordena por `(chegou_em desc, id)` sem índice próprio, sobre os pedidos
       de uma escola (dezenas por ano). Se o volume de rede pública mostrar custo, é migration de expansão só com o índice.
       Gatilho: `EXPLAIN` com dado sintético no volume de rede pública (dono: Joaquim)
+- [ ] **(F3, validação, rodada 2, m1) Pedido registrado depois do encerramento do ano, por tipo:** em
+      `apps/api/test/pedido-titular.int.test.ts:1061` o caso registra só um pedido de compartilhamento, e o e2e, um de
+      correção. Nenhum teste registra eliminação, acesso ou portabilidade com o ano `encerrado`; o `Validador` conferiu os
+      três à mão pela API. Acrescentar uma eliminação e um acesso ao caso, na próxima correção ou tarefa que mexer nos
+      Pedidos (dono: Joaquim)
+- [ ] **(F3, validação, rodada 2, m2) "Sem turma neste ano" quando não há ano em curso:**
+      `apps/web/src/areas/coordenacao/privacidade/textos-dos-pedidos.ts:58`. "Sem turma" basta. Na próxima correção ou
+      tarefa que mexer nos Pedidos (dono: Joaquim)
+- [ ] **(F3, validação, m3 a m6) Telas da Privacidade, para a spec de refatoramento visual ou a próxima que tocar nelas:**
+      (m3) a lista de pedidos não mostra o prazo nem destaca o vencido
+      (`apps/web/src/areas/coordenacao/privacidade/Pedidos.tsx:84`): a correção vencida há 5 dias aparece só como
+      "Recebido"; (m4) o DTO do pedido não leva `eliminarEm` (`packages/shared/src/privacidade/titular.ts`), e o detalhe diz
+      "7 dias depois do registro" sem dizer o dia; (m5) "Baixar a versão da escola" aparece também com o titular de conta
+      ativa, e aí sempre falha, com o texto certo (`AcoesDoPedido.tsx:279`); (m6) na área do professor, "Meus dados" não tem
+      título à vista (`apps/web/src/componentes/meus-dados/MeusDados.tsx:189-191`). Fotos e detalhe em
+      `tasks/prd-lgpd-e-titular/validacao.md`, seção 4 das duas rodadas (dono: Joaquim)
+- [ ] **(F3, validação, m7) `IA_LATENCIA_FALSA_MS` obrigatória sem aviso no `README.md`:** `infra/compose.yml:211` exige a
+      variável, e quem sobe o compose pela primeira vez não é avisado. Uma linha no `README.md` (dono: Joaquim)
+- [ ] **(F3, validação, m8) A vitrine não semeia nada da Privacidade:** `tools/vitrine/escola.ts` monta a escola sem pedido,
+      incidente nem empresa, e o `Validador` semeou à mão, nas duas rodadas, para fotografar as telas. Junta-se à semente de
+      incidente da 10.0, acima: texto inventado, sem dado de pessoa (dono: Joaquim)
+- [ ] **(F3, fechamento) "Critério de conclusão" com as caixas em branco em três documentos de tarefa:** `9_task.md`,
+      `16_task.md` e `17_task.md`, em `tasks/prd-lgpd-e-titular/`, ficaram com `- [ ]` nessa seção, com as tarefas
+      concluídas e validadas. É só documento; o `Arquiteto` os deixou fora do pedido da validação. Levar à retrospectiva do
+      F3: se a seção não é marcada por ninguém, o modelo de tarefa a perde ou alguém passa a marcá-la (dono: Joaquim)
+- [ ] **(F3, fechamento) Comentários que falam em "grupo Conformidade":** `apps/web/src/areas/navegacao.ts:38` e
+      `apps/web/src/caminhos.ts:80` descrevem um grupo que a lateral não tem (a decisão dos grupos está em "Marca e
+      interface", abaixo, até o PRD do F12). Acertar o comentário na próxima tarefa ou correção que abrir esses arquivos
+      (dono: Joaquim)
 
 ## Processo e dívida do F0
 

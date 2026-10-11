@@ -294,7 +294,8 @@ grade e calendário importados, 35 alunos reivindicando nomes no mesmo minuto n�
 duplicidade nem erro cru, e o Assistente tem de onde abrir o dia do professor ("seu dia e sua
 semana", D32 revista).
 
-## F3 — `lgpd-e-titular` [~]
+## F3 — `lgpd-e-titular` [x]
+Concluída em 11/10/2026, validada em tasks/prd-lgpd-e-titular/validacao.md.
 **Depende de:** F1 · **pode correr em paralelo com F4 e F5**
 
 Três fatias, no recorte de 05/10/2026 (PRD, `tasks/prd-lgpd-e-titular/prd.md`):
