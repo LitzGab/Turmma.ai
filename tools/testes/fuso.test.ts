@@ -21,7 +21,8 @@ describe('o fuso do ambiente de teste', () => {
     expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toBe('Asia/Tokyo')
     const instante = new Date('2026-10-10T01:00:00Z')
     expect(instante.getTimezoneOffset()).toBe(-540)
-    // 01 h de UTC é 10 h do dia 10 em Tóquio e 22 h do dia 9 em São Paulo: o dia do computador não é o da escola.
+    // 01 h de UTC é 10 h do dia 10 em Tóquio (o que se confere abaixo); em São Paulo seriam 22 h do dia 9, e é por isso que o
+    // instante foi escolhido: o dia do computador não é o da escola. O dia de São Paulo não é conferido aqui.
     expect(instante.getDate()).toBe(10)
   })
 

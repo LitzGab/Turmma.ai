@@ -266,3 +266,87 @@ Conferência das correções da rodada nova (diff `00dbc6c` → `b672788`):
 
 Recomendações:
 - A observação favorável do `frontend-reviewer` e o dia que a tela mostra (o do navegador, `formatarDiaDoInstante`, que pode virar o de São Paulo) já estão na tabela "Recomendações sem aplicar" como decisão de produto. Para o `/validar` e o `/retro`: a coordenação pode ver um dia diferente do que a escola vive se o computador dela estiver em outro fuso, o que é raro, mas pesa na auditoria da privacidade.
+
+## test-engineer · 3ª rodada · APROVADO · 2026-10-12 00:56:35 · `tasks/correcoes/2026-10-12-fuso-nos-testes.md`
+
+VEREDITO: APROVADO
+
+Cenários exigidos: os mesmos da 2ª rodada, sem mudança. Esta rodada mexe só em comentário e no documento. Nenhuma regra ou asserção nova, e nenhuma cláusula sem bloco de mutação.
+
+Cobertos:
+- Rodei `npx vitest run tools/testes/fuso.test.ts` e deu verde, 2 de 2. As asserções não mudaram: o fuso `Asia/Tokyo`, o deslocamento `-540` e `getDate() === 10`.
+- Minha recomendação (a) foi aplicada. A frase de "Teste que reproduz" em `tasks/correcoes/2026-10-12-fuso-nos-testes.md:53` agora bate com o que o teste confere: o dia do computador é 10, e o 9 de São Paulo aparece só como contraste, sem asserção.
+- Minha recomendação (b) foi aplicada. O comentário em `tools/testes/fuso.test.ts:24-25` diz que o dia de São Paulo não é conferido ali. Comentário e asserção concordam.
+- A recomendação do `revisor-geral` também foi aplicada. Conferi o novo comentário de `infra/compose.carga.yml:34-37` com `git grep` em `infra/scripts`: o único `current_date` do cenário de carga é `infra/scripts/expurgo-da-carga.ts:211`. A frase deixou de ser falsa.
+- A largura da linha também foi corrigida: o comentário foi requebrado em até 120 colunas.
+
+Bloqueantes: nenhum.
+
+Recomendações:
+- `infra/scripts/expurgo-da-carga.ts:370` cria o ano letivo com `extract(year from now())` no UTC do contêiner. Não é `current_date`, então o comentário continua literalmente correto. Mas entre 21 h e 24 h de 31/12 em São Paulo o UTC já está no ano seguinte, e o ano letivo da semente sairia trocado. Só importa se alguém rodar a carga nessa janela. Vale registrar, para o `/retro` ou para a tarefa futura que tocar a carga, junto do caso que a tabela da 1ª rodada já registra para `infra/test/carga.test.ts`.
+
+Arquivos auditados:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--correcao2026-10-12-fuso-nos-testes/tools/testes/fuso.test.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--correcao2026-10-12-fuso-nos-testes/infra/compose.carga.yml
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--correcao2026-10-12-fuso-nos-testes/tasks/correcoes/2026-10-12-fuso-nos-testes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--correcao2026-10-12-fuso-nos-testes/infra/scripts/expurgo-da-carga.ts
+
+## revisor-geral · 3ª rodada · APROVADO · 2026-10-12 00:56:55 · `tasks/correcoes/2026-10-12-fuso-nos-testes.md`
+
+VEREDITO: APROVADO
+Escopo: respeitado
+Aderência à Tech Spec: ok (é correção, sem Tech Spec; o documento e a tabela de recomendações batem com o diff)
+Portão local: carimbo válido ("portão local válido para o código atual (typecheck, lint, segredo, dependencias, unidade, alvo)")
+Bloqueantes: nenhum
+
+Conferi as quatro correções pedidas na 2ª rodada. Todas foram feitas.
+
+- **(a) Comentário falso de `current_date`:** o novo comentário em `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--correcao2026-10-12-fuso-nos-testes/infra/compose.carga.yml:34-37` agora está certo. No cenário de carga, a única leitura de `current_date` é `infra/scripts/expurgo-da-carga.ts:211`. As outras duas ocorrências na pasta `infra/` estão em `infra/test/alerta-do-arquivo.int.test.ts:31` e `infra/test/alerta-da-eliminacao.int.test.ts:32`. Elas rodam sobre o `infra/compose.yml`, que declara o fuso, e não sobre o compose de carga.
+- **(b) Linha longa:** o comentário foi requebrado em linhas de até 120 colunas. A linha 38 ainda tem 192 colunas, mas é o `command`, que não mudou nesta rodada.
+- **Frase do documento (pedido do `test-engineer`):** agora descreve o que a asserção confere: o dia do computador é o 10, e o de São Paulo não é verificado.
+- **Comentário de `fuso.test.ts` (pedido do `test-engineer`):** diz agora que o dia de São Paulo não é conferido ali, e o caso continua sem asserção sobre ele.
+
+Recomendações:
+- A linha 24 de `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--correcao2026-10-12-fuso-nos-testes/tools/testes/fuso.test.ts` (o comentário novo) tem 126 colunas. Seis outras linhas do arquivo já passavam de 120, então não destoa do resto. Se o projeto quiser 120 como limite, o arquivo inteiro precisa ser ajustado.
+
+## privacy-guardian · 3ª rodada · APROVADO · 2026-10-12 00:57:30 · `tasks/correcoes/2026-10-12-fuso-nos-testes.md`
+
+VEREDITO: APROVADO
+
+Campos pessoais tocados: nenhum. Esta rodada mudou só comentários (`/home/joaquimdp/Documentos/git/.maestri/floors/educaia--correcao2026-10-12-fuso-nos-testes/infra/compose.carga.yml:33-37` e `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--correcao2026-10-12-fuso-nos-testes/tools/testes/fuso.test.ts:24-25`) e o texto do documento da correção. Não há migration, DTO, rota, log nem envio novo.
+
+Fora da tabela de dados do docs/lgpd.md: nada.
+
+Autorização por objeto: ok. Nenhuma rota nem repository foi tocado.
+
+Logs: limpos. Nenhum log novo.
+
+Auditoria: presente. Nenhuma ação desta rodada pede auditoria.
+
+Envio externo: nenhum.
+
+Seed/fixture: sintético. O comentário novo cita a semente do expurgo da carga. Confirmei em `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--correcao2026-10-12-fuso-nos-testes/infra/scripts/expurgo-da-carga.ts:209-212`: o único `current_date` do cenário é o `chegou_em` do `pedido_titular` sintético, com o resto em `now()`. A afirmação do comentário está correta, e a afirmação falsa que o `revisor-geral` apontou saiu. Não há outro `current_date` no compose da carga.
+
+Bloqueantes: nenhum.
+
+Recomendações: nenhuma nova. A recomendação da 2ª rodada (o teste de infra que confere `current_setting('TimeZone')` no staging) segue na tabela do documento como tarefa do staging, e não entra aqui.
+
+## frontend-reviewer · 3ª rodada · APROVADO · 2026-10-12 00:57:47 · `tasks/correcoes/2026-10-12-fuso-nos-testes.md`
+
+VEREDITO: APROVADO
+Tela vista: não (nenhuma tela alterada: o diff desta rodada é um comentário de `infra/compose.carga.yml`, um comentário de `tools/testes/fuso.test.ts` e o documento da correção; não há foto nem arquivo de `apps/web` alterado)
+Estados: não se aplica (sem tela)
+Acessibilidade: não se aplica
+Chromebook fraco: não se aplica; o diff não muda código executável nem configuração de teste
+Celular: não se aplica
+Ação oficial protegida: não se aplica (nenhuma ação oficial tocada)
+
+Conferi o que o diff afirma:
+- `infra/compose.carga.yml`: o comentário corrigido diz que o único `current_date` do cenário é o `chegou_em` da semente do expurgo. Isso confere com `infra/scripts/expurgo-da-carga.ts:211`, que é a única ocorrência de `current_date` no arquivo. A linha foi requebrada em até 120 colunas e o valor de `command` não mudou.
+- `tools/testes/fuso.test.ts:24-25`: o comentário diz que o dia de São Paulo não é conferido ali. Isso bate com as asserções, que cobrem o fuso do processo, o deslocamento de Tóquio e `getDate() === 10`. Nenhuma asserção mudou.
+- O documento (`tasks/correcoes/2026-10-12-fuso-nos-testes.md`) traz a frase corrigida e as linhas novas na tabela de recomendações. As duas recomendações do `frontend-reviewer` da 2ª rodada ficaram registradas como decisão de produto, sem virar bloqueante.
+
+Bloqueantes: nenhum
+
+Recomendações (sem mudança em relação à 2ª rodada, para o `/validar` e o `/retro`):
+- A tela da coordenação mostra o dia pelo relógio do navegador, não pelo de São Paulo. Se o computador da escola estiver em outro fuso, ela pode ver um dia diferente do que a escola vive. É decisão de produto do Joaquim (`formatarDiaDoInstante`, item M2 do `TODO.md`), e o documento já registra isso.
