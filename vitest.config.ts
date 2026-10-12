@@ -33,6 +33,11 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unidade',
+          // Longe do -03 da escola e do UTC da esteira: o teste que lê o dia ou a hora do computador, em vez de declarar o
+          // fuso (`America/Sao_Paulo`, ou meio-dia de UTC), fica vermelho na primeira corrida, e não só depois das 21 h ou
+          // na máquina de outra pessoa. Quem prova o fuso de São Paulo o declara no próprio teste. A integração e o e2e
+          // herdam o do computador, e o Postgres de teste declara o dele (`POSTGRES_FUSO`).
+          env: { TZ: 'Asia/Tokyo' },
           include: ['**/*.test.ts'],
           exclude: [...ignorados, '**/*.int.test.ts'],
         },

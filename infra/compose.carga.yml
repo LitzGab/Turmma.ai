@@ -31,7 +31,8 @@ services:
   postgres:
     cpus: 2
     # O `pg_stat_statements` carregado: a fase do expurgo (F3, tarefa 19.0) mede o tempo de cada statement do lote, da
-    # troca de nome e da B, e reprova o que passa dos 2 s do `statement_timeout`. O resto do comando é o de infra/compose.yml.
+    # troca de nome e da B, e reprova o que passa dos 2 s do `statement_timeout`. O `max_connections` é o de infra/compose.yml. O `timezone=` dele **não**
+    # vem: o cenário de carga continua no UTC do contêiner, e nenhuma consulta dele lê `current_date` (o expurgo declara o fuso).
     command: [postgres, -c, 'max_connections=${POSTGRES_CONEXOES_MAXIMAS:?defina POSTGRES_CONEXOES_MAXIMAS}', -c, shared_preload_libraries=pg_stat_statements, -c, pg_stat_statements.track=all]
   redis-fila:
     cpus: 0.5

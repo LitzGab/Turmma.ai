@@ -511,14 +511,18 @@ para o staging".
 - [x] **(F3, retro, M1) O portão da tarefa confere as mutações:** feito em 11/10/2026 (D79,
       `tools/processo/mutacoes.ts`). Medido no térreo: três mutações, uma delas de integração, somaram 15 s ao portão.
       Falta a prova numa tarefa inteira: quantas reprovações do `test-engineer` ele evita
-- [ ] **(F3, retro, M2) Fuso nos testes:** o projeto `unidade` do `vitest.config.ts` não fixa `TZ`, e o teste que
-      esquece `America/Sao_Paulo` passa nesta máquina; e nada declara o fuso da sessão do banco de teste (o
-      `current_date` de duas fábricas do e2e saía em UTC). Três reprovações (12.0, 16.0, 17.0) e um e2e vermelho das
-      21 h à meia-noite (correção `b6f7c1d`). Medido em 11/10/2026: com `TZ=Asia/Tokyo` a unidade tem um vermelho,
-      `apps/web/src/areas/coordenacao/privacidade/textos-do-pedido.test.ts` ("o período é o dia…": o texto do período
-      sai pelo fuso do computador). Com `Pacific/Kiritimati` caem 34, mas os testes da web declaram valer de -12 a +11.
-      Correção própria, pelo time: `TZ=Asia/Tokyo` na unidade, o defeito acima, o fuso declarado no banco de teste, e
-      um caso que prove os dois (dono: Joaquim)
+- [x] **(F3, retro, M2) Fuso nos testes:** feito em 12/10/2026
+      (`tasks/correcoes/2026-10-12-fuso-nos-testes.md`). A unidade roda em `TZ=Asia/Tokyo` (`vitest.config.ts`); o
+      vermelho de `textos-do-pedido.test.ts` era do teste (13 h e 18 h de UTC são o mesmo dia só em São Paulo); o
+      Postgres do compose declara `timezone=America/Sao_Paulo` na linha de comando (`POSTGRES_FUSO`, no `.env.example`),
+      e `tools/testes/fuso.test.ts` e `fuso.int.test.ts` provam a unidade e o banco vivo. Ficam de fora, de propósito:
+      o fuso da **integração** (herda o do computador; fixar um longe de -03 ali é um lote vermelho que ninguém mediu),
+      o do `compose.carga.yml` (troca o `command` inteiro) e o dia que a web mostra, que é o do navegador
+      (`formatarDiaDoInstante`) e, se virar o de São Paulo, é decisão de produto. **Falta, no staging (D42):** o Postgres
+      gerenciado (D26) costuma vir em UTC; declarar nele `timezone=America/Sao_Paulo`, para o banco que a escola usa seguir o
+      mesmo dia do banco em que o teste roda. Sem isso, o `check` de `pedido_titular.chegou_em` (`0032_pedido_titular.sql`)
+      aceita, entre 21 h e meia-noite, um dia de São Paulo à frente (a API recusa antes: `privacidade.service.ts`), e
+      um `current_date` ou `::date` que entre sem fuso declarado muda de dia na produção sem o teste ver (dono: Joaquim)
 - [ ] **(F3, retro, M4) Condição de tela provada sem navegador:** a web não tem teste de componente (`jsdom` e
       `testing-library`). Com ele, estado da tela, rótulo e o que cada papel vê se provam em segundos, e o e2e fica
       para o fluxo: na 18.0 do F3, 110 dos 188 minutos foram Playwright. Correção própria, pelo time, antes da próxima
