@@ -20,6 +20,7 @@ import {
   MAXIMO_DE_LINHAS,
   partida,
   porQueNaoJuntas,
+  quadro,
   seSobrepoem,
   situacaoDasPendentes,
   textoDoQuadro,
@@ -232,6 +233,8 @@ describe('partida, encontro e fechamento, em repositórios de verdade', () => {
     expect(abrir(spec, 3, l2, { instalar: false }).texto).toMatch(/a linha 3 é a spec\/exemplo--l3/)
     // Do checkout de uma linha, nada: o quadro mora no andar da spec.
     expect(abrir(l2, 1, l2, { instalar: false }).texto).toMatch(/roda no andar da spec/)
+    expect(quadro(l2)).toEqual({ codigo: 1, texto: expect.stringMatching(/^RECUSADO: este comando roda no andar da spec/) as string })
+    expect(quadro(spec).codigo).toBe(0)
   })
 
   it('o quadro diz quem parte, e a partida recusa o que não corre junto', () => {

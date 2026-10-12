@@ -457,13 +457,19 @@ export function textoDoQuadro(raiz: string): string {
   return texto.join('\n')
 }
 
+/** O quadro como comando: fora do andar da spec é recusa, com saída de erro, e não um quadro vazio. */
+export function quadro(raiz: string): Resultado {
+  const texto = textoDoQuadro(raiz)
+  return { codigo: texto.startsWith('RECUSADO') ? 1 : 0, texto }
+}
+
 if (import.meta.filename === process.argv[1]) {
   const raiz = process.cwd()
   const [comando, primeiro = '', segundo = ''] = process.argv.slice(2)
   const numero = Number(primeiro)
   const resultado: Resultado =
     comando === undefined
-      ? { codigo: 0, texto: textoDoQuadro(raiz) }
+      ? quadro(raiz)
       : comando === 'abrir'
         ? abrir(raiz, numero, segundo)
         : comando === 'partida'
