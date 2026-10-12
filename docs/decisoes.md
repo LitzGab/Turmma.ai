@@ -1199,3 +1199,26 @@ em paralelo, que é a mudança de maior risco para a orquestração e só uma sp
 a retrospectiva mediu e não sustentou. **Sem prova ainda:** quantas tarefas passam de primeira com o
 portão novo, e o efeito do teto de tarefa, que só uma spec inteira mede. Revisão: na retrospectiva da
 próxima spec, com as mesmas medidas da retrospectiva do F3.
+**Revista em 11/10/2026, no mesmo dia, a pedido do Joaquim** (sobre as tarefas em paralelo: "não
+precisa ser só 2 tasks, podem ser mais"; e depois: "aplique o que vai melhorar o projeto"). Entram dois
+dos três itens avaliados e não feitos. (8) **A construção corre por linhas.** Cada linha é um andar com
+a branch `spec/<func>--l<n>`, o ambiente de teste `n` e um par de Implementador e Mesa; a linha 1 usa o
+par de sempre. O teto é três, o de ambientes de teste da máquina. Quem autoriza duas tarefas juntas é o
+Arquiteto, na coluna "Pode correr em paralelo com" do `tasks.md`; `tools/processo/linhas.ts` confere
+pelos "Arquivos previstos" das duas, que passam a levar caminho de verdade, e nunca põe juntas duas
+tarefas com migration, schema ou contrato compartilhado. Sem autorização, corre uma tarefa por vez, na
+linha 1. O Orquestrador não escolhe nem confere de memória: o quadro diz quem parte (`partida`), e o
+`encontro` de cada tarefa exige a marca e a linha `Revisões:` em todo commit novo com código, traz a
+branch da spec para a linha, avança a da spec e faz o push, que dispara a esteira sobre a soma. Conflito
+de código para o encontro e vira correção na própria linha, e o hook cobra dela só o que divergiu dos
+dois lados (`arquivosAlterados`, com merge em curso): o que veio igual da outra linha já passou por
+revisão lá. No andar da spec ninguém implementa. `achados/indice.md` se junta por união
+(`.gitattributes`). A imagem que o compose de teste constrói leva a etiqueta do ambiente
+(`.processo/compose-de-teste-N.yml`, gerado por `tools/ci/compose.ts`): provado com um e2e verde no
+ambiente 1, em 68 segundos, sobre imagens `educa-*:teste-1`. (9) **A vigia só acorda o Orquestrador
+quando há o que olhar**: a rotina roda antes `tools/processo/vigia.ts`, que não imprime nada com alguém
+do time trabalhando há menos de duas horas, e na dúvida acorda. O veto, o hook, o portão da tarefa e as
+paradas não mudam. **Sem prova ainda:** os comandos do Maestri para o andar e o par de uma linha a
+mais, o e2e de três linhas ao mesmo tempo nesta máquina, o consumo por hora do plano com mais de um par,
+quanto tempo de spec as linhas tiram, e se o comando vazio da rotina de fato não acorda o modelo. Para
+desfazer sem mexer em código: não autorizar paralelo no `tasks.md`.

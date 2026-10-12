@@ -136,8 +136,8 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D75 | O material da escola entra pela coordenação, com titularidade e licença declaradas; professor e aluno não sobem material para a base |
 | D76 | A equipe Turmma tem um painel de operação (A0 e A0b): cria rede e escola, convida a coordenação e acompanha uso e custo por escola, sem ver dado de pessoa |
 | D77 | O MVP de apresentação (A2 a A5) é uma fatia só, com processo enxuto, enquanto o dado for sintético: contratos primeiro, commit `(mvp: <resumo>)` com portão local, esteira disparada à mão por fase, revisores com veto numa passada por fase e IA no processo da API como dívida declarada; as regras 10, 20, 30, 40 e 70 não mudam, e o processo completo volta antes da primeira escola real (revisa a D71, a D23 e a D53 só para esta fatia) |
-| D78 | O processo roda no Maestri: um andar e uma branch por spec, que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando (`/seguir`); papéis de terminal em `.claude/agents/` com modelo por papel (Opus orquestra, desenha e valida; Sonnet implementa e conduz a revisão); a Mesa de revisão chama os revisores e traduz a reprovação em ordem de correção; seis paradas são do Joaquim (revisa a D23 e a D53; revista em 09/10/2026: na tarefa roda só o portão da tarefa, com os testes que ela alterou, e o portão completo roda uma vez por spec, antes da validação; e o Implementador rodou duas tarefas no opencode, com o MiMo-V2.6-Pro, e voltou ao Sonnet, com o opencode como modo econômico que o Joaquim liga; revista em 10/10/2026: o contexto de todo o time é compactado aos 400 mil tokens, a vigia do Orquestrador tem skill própria, e o Orquestrador limpa o próprio contexto a cada tarefa; e a parada segura só a tarefa que depende dela, com o Implementador conferindo mutações e listas fechadas antes da primeira rodada) |
-| D79 | O processo é revisto para tempo, depois do F3: a esteira roda em todo push da spec e ninguém espera por ela; o portão da tarefa prova as mutações; os revisores rodam juntos e a ordem de correção não dita código; tarefa de um comportamento e até três guardiões; a Tech Spec e a lista de tarefas viram aviso com prazo; spec fora da sequência entra no roadmap como `X<n>`; e o modo econômico sai (revisa a D78) |
+| D78 | O processo roda no Maestri: um andar e uma branch por spec, que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando (`/seguir`); papéis de terminal em `.claude/agents/` com modelo por papel (Opus orquestra, desenha e valida; Sonnet implementa e conduz a revisão); a Mesa de revisão chama os revisores e traduz a reprovação em ordem de correção; seis paradas são do Joaquim (revisa a D23 e a D53; revista em 09/10/2026: na tarefa roda só o portão da tarefa, com os testes que ela alterou, e o portão completo roda uma vez por spec, antes da validação; e o opencode foi testado no Implementador e saiu (D79); revista em 10/10/2026: o contexto de todo o time é compactado aos 400 mil tokens, a vigia do Orquestrador tem skill própria, e o Orquestrador limpa o próprio contexto a cada tarefa; e a parada segura só a tarefa que depende dela) |
+| D79 | O processo é revisto para tempo, depois do F3: a esteira roda em todo push da spec e ninguém espera por ela; o portão da tarefa prova as mutações; os revisores rodam juntos e a ordem de correção não dita código; tarefa de um comportamento e até três guardiões; a Tech Spec e a lista de tarefas viram aviso com prazo; spec fora da sequência entra no roadmap como `X<n>`; e o modo econômico sai (revisa a D78; revista em 11/10/2026: a construção corre por linhas, até três tarefas ao mesmo tempo, e a vigia só acorda o Orquestrador com o que olhar) |
 
 > **D54 a D71 estão ratificadas.** Saíram em 19/09/2026 da leitura das fontes de regulação e
 > da estrutura de agentes por papel; o Gabriel ratificou as dele no mesmo dia, e o Joaquim
@@ -198,10 +198,9 @@ o processo passou a rodar no Maestri (D78): cada spec num andar com a branch `sp
 que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando, `/seguir`;
 e a Mesa de revisão chamando os revisores. O hook, os vetos e o portão local não mudaram. **Papel de
 agente vem de `.claude/agents/`, nunca de responsabilidade do Maestri:** com ela o agente nasce fora
-da raiz e nenhum hook dispara. Em 09/10/2026 o Implementador rodou duas tarefas no opencode, com o
-MiMo-V2.6-Pro, e voltou ao Sonnet: cada uma levou de duas a quatro vezes o tempo e o consumo do Claude
-por tarefa não caiu. Em 11/10/2026, com o F3 medido, o processo foi revisto para tempo (D79), e o
-opencode saiu.
+da raiz e nenhum hook dispara. Em 11/10/2026, com o F3 medido, o processo foi revisto para tempo
+(D79): o opencode, testado em duas tarefas, saiu, e as tarefas que não se tocam passaram a correr ao
+mesmo tempo, em linhas.
 
 **Nome dos agentes.** O desenho da call tinha nomes próprios; os docs usam função. Fica a
 função (D17).
@@ -365,8 +364,9 @@ rotina de 30 minutos do Orquestrador. Como os agentes conversam está em
 **O time** é fixo, no térreo do Maestri: o Orquestrador (o terminal Maestro, em Opus) e quatro
 papéis, que rodam no Claude Code, de `.claude/agents/`, iniciados com `claude --agent <papel>`:
 `arquiteto` (Opus), `implementador` (Sonnet), `mesa-de-revisao` (Sonnet) e `validador` (Opus). Os
-terminais ficam; a sessão de cada um é reiniciada a cada tarefa ou fase, já
-apontada para o checkout do andar. Sessão que passa de 400 mil tokens é compactada sozinha
+terminais ficam; a sessão de cada um é reiniciada a cada tarefa ou fase, já apontada para o checkout
+em que vai trabalhar: na construção, o de uma linha da spec, cada uma com o seu par de Implementador
+e Mesa (D79). Sessão que passa de 400 mil tokens é compactada sozinha
 (`autoCompactWindow`, em `.claude/settings.json`), e `.claude/hooks/contexto-inicial.sh` diz a cada
 papel o que reler depois. O Orquestrador não espera por isso: limpa o próprio contexto a cada tarefa,
 e o que ele sabe da funcionalidade é o "Agora" do `estado.md` do andar.

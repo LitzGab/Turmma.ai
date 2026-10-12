@@ -76,14 +76,10 @@ triagem.
 
 ## Resposta do Joaquim com tarefa correndo
 
-Durante a construção, o Orquestrador segue com a tarefa que não depende da pergunta que você abriu ao
-Joaquim (`/seguir`, passo 7). Por isso, **depois da resposta dele e antes de escrever qualquer
-arquivo**, rode `git status --short`. Se houver arquivo alterado em `apps/`, `packages/`, `infra/` ou
-`e2e/`, há uma tarefa em curso neste checkout, e você não escreve nem commita agora: o seu commit
-levaria o `tasks.md` dela pela metade, e os revisores dela leriam os seus documentos como parte do
-diff. Envie ao Orquestrador `/seguir RELATÓRIO de Arquiteto`, com a decisão do Joaquim em uma linha e
-"aplico com o andar limpo", e encerre o turno. O Orquestrador devolve um `PEDIDO de retomada` depois
-do commit da tarefa, nesta mesma sessão. Com o andar limpo, siga como sempre.
+Durante a construção, as tarefas correm nos checkouts das linhas (`/seguir`, passo 3), e no andar da
+spec ninguém implementa. Com a resposta dele, escreva e faça o commit de documento no andar da spec,
+como sempre: cada linha recebe o seu commit na partida seguinte. Avise o Orquestrador com
+`/seguir RELATÓRIO de Arquiteto`, com a decisão em uma linha.
 
 ## Contexto das tarefas
 

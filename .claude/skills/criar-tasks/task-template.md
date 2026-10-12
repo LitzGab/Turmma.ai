@@ -30,6 +30,7 @@ Spec e do PRD ele lê só o que estiver apontado aqui, pelo número:
 
 ## Arquivos previstos
 
+<!-- Caminho de verdade, um por linha (`apps/web/src/…`): é o que diz com quem a tarefa corre em paralelo. -->
 | Arquivo | Novo ou alterado |
 |---|---|
 

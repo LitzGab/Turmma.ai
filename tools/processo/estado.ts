@@ -87,19 +87,32 @@ export function expandirTarefas(celula: string): number[] {
   return [...numeros]
 }
 
-/** A coluna "Depende de" da tabela de dependências do `tasks.md`, por tarefa. */
-export function lerDependencias(conteudoTasks: string): Map<number, number[]> {
+/** Uma coluna da tabela "Dependências e paralelismo" do `tasks.md`, por tarefa. */
+function lerColunaDeTarefas(conteudoTasks: string, coluna: number): Map<number, number[]> {
   const inicio = conteudoTasks.indexOf('\n## Dependências e paralelismo')
   if (inicio === -1) return new Map()
   const fim = conteudoTasks.indexOf('\n## ', inicio + 1)
   const secao = conteudoTasks.slice(inicio, fim === -1 ? undefined : fim)
-  const dependencias = new Map<number, number[]>()
+  const lidas = new Map<number, number[]>()
   for (const linha of secao.split('\n')) {
     const celulas = linha.split('|').map((celula) => celula.trim())
     const tarefa = /^(\d+)\.0$/.exec(celulas[1] ?? '')
-    if (tarefa) dependencias.set(Number(tarefa[1]), expandirTarefas(celulas[2] ?? ''))
+    if (tarefa) lidas.set(Number(tarefa[1]), expandirTarefas(celulas[coluna] ?? ''))
   }
-  return dependencias
+  return lidas
+}
+
+/** A coluna "Depende de" da tabela de dependências do `tasks.md`, por tarefa. */
+export function lerDependencias(conteudoTasks: string): Map<number, number[]> {
+  return lerColunaDeTarefas(conteudoTasks, 2)
+}
+
+/**
+ * A coluna "Pode correr em paralelo com", por tarefa. É a autorização do Arquiteto para duas tarefas correrem em linhas
+ * diferentes (`tools/processo/linhas.ts`); vale nos dois sentidos, escrita num só. Sem ela, a tarefa corre sozinha.
+ */
+export function lerParalelismo(conteudoTasks: string): Map<number, number[]> {
+  return lerColunaDeTarefas(conteudoTasks, 3)
 }
 
 export interface Escolha {
@@ -242,6 +255,8 @@ export interface Estado {
    * suíte lê. Com tarefa em curso, é o trabalho dela; o `estado.md` e o `ROADMAP.md`, que o Orquestrador edita, não contam.
    */
   alteradosNaArvore: number
+  /** O `tasks.md` autoriza tarefas em paralelo: a construção corre por linhas, e quem escolhe é `linhas.ts`. */
+  emLinhas: boolean
   /** O que está incoerente nos arquivos e o Orquestrador não deve atravessar calado. */
   avisos: string[]
 }
@@ -304,7 +319,7 @@ export function lerEstado(raiz: string, nome?: string): Estado {
         (candidata) => existsSync(join(pasta(candidata), 'estado.md')) && !existsSync(join(pasta(candidata), 'retro.md')),
       )
   const branch = branchAtual(raiz)
-  const vazio = { branch, feitas: 0, total: 0, tarefa: null, bloqueadas: [], alteradosNaArvore: contarAlterados(raiz), avisos: [] }
+  const vazio = { branch, feitas: 0, total: 0, tarefa: null, bloqueadas: [], alteradosNaArvore: contarAlterados(raiz), emLinhas: false, avisos: [] }
   if (!funcionalidade) {
     return { ...vazio, funcionalidade: null, fase: null, proximoPasso: nome ? `"${nome}" não está no ROADMAP.md` : 'nenhuma funcionalidade pendente no ROADMAP.md' }
   }
@@ -343,6 +358,7 @@ export function lerEstado(raiz: string, nome?: string): Estado {
           }
         : null,
     bloqueadas: escolha.bloqueadas.map(({ tarefa, falta }) => ({ numero: tarefa.numero, falta })),
+    emLinhas: [...lerParalelismo(conteudoTasks ?? '').values()].some((paralelas) => paralelas.length > 0),
     avisos: avisosDaLista({ marca: funcionalidade.marca, tarefas: tarefas ?? [], dependencias, proxima: escolha.proxima, temDocumento: conteudoTask !== null }),
   }
 }
@@ -366,6 +382,9 @@ export function relatorio(estado: Estado): string {
   } else if (estado.fase === 'construindo' && estado.bloqueadas.length > 0 && estado.avisos.every((aviso) => !aviso.includes('está liberada'))) {
     linhas.push(`Nenhuma tarefa liberada: ${estado.bloqueadas.map(({ numero, falta }) => `${numero}.0 espera ${falta.map((n) => `${n}.0`).join(', ')}`).join('; ')}`)
   }
+  if (estado.fase === 'construindo' && estado.emLinhas) {
+    linhas.push('Linhas: o tasks.md autoriza tarefas em paralelo. Quem diz a tarefa de cada linha é `node tools/processo/linhas.ts`.')
+  }
   for (const aviso of estado.avisos) linhas.push(`ATENÇÃO: ${aviso}`)
   linhas.push(`Arquivos de código alterados na árvore: ${estado.alteradosNaArvore}`)
   linhas.push(`Próximo passo: ${estado.proximoPasso}`)
@@ -380,7 +399,8 @@ export function resumo(raiz: string): string {
   const linhas = ['Turmma — contexto da sessão', `Concluídas: ${concluidas.join(' ') || 'nenhuma'}`]
   if (estado.funcionalidade && estado.fase) {
     const tarefas = estado.total > 0 ? `, ${estado.feitas} de ${estado.total} tarefas` : ''
-    const proxima = estado.tarefa ? `; próxima: ${estado.tarefa.numero}.0` : ''
+    // Com tarefas em paralelo, a primeira pendente da lista não é a de quem lê: a de cada linha está no pedido dela.
+    const proxima = estado.tarefa && !estado.emLinhas ? `; próxima: ${estado.tarefa.numero}.0` : ''
     linhas.push(`Da vez: ${estado.funcionalidade.id} ${estado.funcionalidade.nome} — ${estado.fase}${tarefas}${proxima}`)
     linhas.push(`Próximo passo: ${estado.proximoPasso} (quem conduz é o Orquestrador, com /seguir ${estado.funcionalidade.nome})`)
   }

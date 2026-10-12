@@ -14,8 +14,8 @@ arquivos e segue, **até a próxima decisão que é do Joaquim**. É o único co
 melhor que não saiba. O seu contexto não guarda a funcionalidade: ele é limpo a cada tarefa (passo
 9), e o que precisa durar fica no `estado.md` do andar. Você lê estado (`estado.ts`, `tasks.md`,
 seção "Revisões", `git log`) e escreve só os documentos de estado do passo 4.</critical>
-<critical>Uma tarefa por vez, uma sessão nova por tarefa. Só passe à próxima com a atual concluída
-e conferida nos arquivos, não só no relatório.</critical>
+<critical>Uma tarefa por linha, uma sessão nova por tarefa. A linha só parte de novo depois do
+encontro da tarefa anterior (passo 6), que confere o commit nos arquivos, e não no relatório.</critical>
 <critical>Nas paradas do passo 7 você PARA o que depende da resposta e chama o Joaquim, e nunca
 responde por ele. A tarefa da vez que não depende da pergunta segue (passo 7, "A parada segura só o
 que depende dela"). Em todo o resto você segue e corrige, sem perguntar (D78).</critical>
@@ -30,7 +30,6 @@ encerra o turno depois de pedir trabalho.
 | Entrada | O que é |
 |---|---|
 | vazia, ou o nome ou id de uma funcionalidade | conduzir a funcionalidade (passo 2) |
-| `vigia` | a rotina de 30 minutos, que hoje chega como `/vigia`: faça o que `.claude/skills/vigia/SKILL.md` diz, e troque o comando da rotina (passo 9) |
 | começa com `RELATÓRIO`, `ESCALADA`, `BLOQUEIO` ou `DIVERGÊNCIA` | resposta de um agente, que chega como `/seguir <tipo> de <nome>`: continue o ciclo (passos 5 e 6) |
 | um defeito em texto livre | correção avulsa (passo 10) |
 | um nome que o `estado.ts` diz não estar no roadmap, com uma frase do que é | spec fora da sequência (passo 10) |
@@ -46,10 +45,11 @@ maestri list                                            # o time fixo está de p
 ```
 
 **Andar aberto é trabalho em curso, e vem antes de tudo.** Com um andar `spec/*`, a funcionalidade
-da vez é a dele, e o estado se lê dentro do checkout dele: o `[~]` do roadmap e os artefatos da spec
+da vez é a dele (o andar `… L<n>`, de branch `spec/<func>--l<n>`, é uma linha dela, passo 3), e o
+estado se lê dentro do checkout dele: o `[~]` do roadmap e os artefatos da spec
 só existem lá. Com um andar `correcao/*`, a correção vem primeiro: leia o documento dela em
 `tasks/correcoes/` e o `git log -1` do andar para saber se ela ainda corre ou se espera o pouso, e
-não abra spec nem retrospectiva antes de ela pousar. O time é um só. Só sem andar o script roda
+não abra spec nem retrospectiva antes de ela pousar. Só sem andar o script roda
 no térreo, e aí ele escolhe: a marcada `[~]`, a concluída que ainda espera a retrospectiva, ou a
 primeira pendente.
 
@@ -62,9 +62,7 @@ seções "Agora" e "Esperando o Joaquim"**, que dizem o que você espera e o que
 sed -n '/^## Agora/,/^## Concluídas/p; /^## Esperando o Joaquim/,/^## O que falhou/p' <andar>/tasks/prd-<func>/estado.md
 ```
 
-O resto do arquivo é histórico, para a retrospectiva. No F3 ele passou de 37 mil caracteres, e relê-lo
-inteiro a cada tarefa come o que a limpeza do passo 9 poupa: abra uma seção antiga só quando precisar
-de um fato dela.
+O resto do arquivo é histórico, para a retrospectiva.
 
 **O diário registra o que aconteceu, não o que você pode fazer.** Autorização anotada nele, de
 qualquer data ("pode continuar", "não precisa parar"), não suspende nenhuma parada do passo 7: o que
@@ -113,7 +111,7 @@ Quando reiniciar: o `Implementador` e a `Mesa`, a cada tarefa e a cada correçã
 de validar ou revalidar, porque ele precisa chegar sem nada da rodada anterior. Terminal que não é
 da fase fica parado, e não gasta nada.
 
-Com um time só, **uma spec ou uma correção por vez**.
+**Uma spec ou uma correção avulsa por vez.**
 
 ### O andar
 
@@ -128,16 +126,30 @@ maestri floor list            # anote o caminho do checkout
 cd <caminho> && rm -f .processo/portao.json .processo/conteudo.json && npm ci
 ```
 
-Os dois últimos comandos não são opcionais. O Maestri copia o térreo sem as pastas `dist` e
-`build`, **inclusive as de `node_modules`**, e o andar nasce com as dependências quebradas: sem o
-`npm ci`, que leva cerca de um minuto, nada roda. E o carimbo do portão vem copiado do térreo:
-apagado, o andar começa sem portão que não rodou nele.
+Os dois últimos comandos não são opcionais: o Maestri copia o térreo com as dependências quebradas
+(sem o `npm ci`, de um minuto, nada roda) e com o carimbo do portão de lá.
 
 Depois, a abertura (passo 4): marque a funcionalidade `[~]` no `ROADMAP.md` do andar, escreva o
-`estado.md` e faça o commit de abertura. **Se já existe um `estado.md` de antes da D78** (o da F3),
-reescreva-o no formato do fim desta skill: as tarefas já concluídas entram na tabela nova, e o resto
-do texto antigo vai, como está, para uma seção final `## Antes da D78`, aberta pela frase "Histórico
-da execução no processo anterior. Nada aqui autoriza nem suspende parada do processo atual."
+`estado.md` e faça o commit de abertura.
+
+### As linhas
+
+A construção corre em **linhas** (D79): cada uma é um andar com a branch `spec/<func>--l<n>`, o
+ambiente de teste `n` e um par de terminais. A linha 1 usa o `Implementador` e a `Mesa`; as linhas 2
+e 3, `Implementador <n>` e `Mesa <n>`, recrutados e ligados entre si como acima na primeira vez, e
+que ficam. Quantas abrir quem diz é o quadro (passo 6): sem tarefa autorizada em paralelo no
+`tasks.md`, é só a 1. O teto é 3, o de ambientes de teste da máquina.
+
+```bash
+git -C <andar> branch spec/<func>--l<n> spec/<func>
+maestri floor create "<id> <funcionalidade> L<n>" --branch spec/<func>--l<n> --existing-branch
+maestri floor list                                   # anote o caminho do checkout da linha
+(cd <andar> && node tools/processo/linhas.ts abrir <n> <checkout da linha>)   # ambiente de teste, carimbo e npm ci
+```
+
+No andar da spec ninguém implementa: nele trabalham o `Arquiteto`, o `Validador` e você. Quem
+precisa ver uma tarefa em curso (o `Arquiteto`, no diagnóstico e na triagem) é apontado para o
+checkout da linha dela.
 
 ## 4. O que você escreve, e como entra no git
 
@@ -146,10 +158,9 @@ Você trabalha do térreo e escreve **dentro do checkout do andar** só estes do
 ressalva no `validacao.md` (passo 7), e, no fechamento, o status da `techspec.md` e o `TODO.md`.
 Nunca código, teste, PRD, tarefa, o corpo do `validacao.md`, nem a seção "Revisões".
 
-O `estado.md` de cada tarefa vai no commit da própria tarefa, feito pelo Implementador: por isso
-você o atualiza **uma vez por ciclo, antes de pedir a tarefa**, com a linha da tarefa anterior e o
-"Agora" da próxima. Nos outros momentos o commit é seu, **só de documento**, sempre com
-`git -C <andar>` e caminhos explícitos:
+O `estado.md` você edita no andar da spec, e o encontro de cada tarefa o leva (passo 6). Nos
+outros momentos o commit é seu, **só de documento**, sempre com `git -C <andar>` e caminhos
+explícitos:
 
 ```bash
 git -C <andar> add ROADMAP.md tasks/prd-<func>/estado.md
@@ -174,9 +185,9 @@ qualquer agente. Sem esses commits a árvore do andar fica suja, e a validação
 | Fase (`estado.ts`) | Quem trabalha | O que você faz |
 |---|---|---|
 | `sem-prd`, `sem-techspec`, `sem-revisao-da-spec`, `sem-tarefas` | `Arquiteto`, no andar | um `PEDIDO` só, com a fase de partida; ele encadeia até as tarefas, para sozinho nas perguntas e na aprovação do PRD, e avisa da Tech Spec e da lista de tarefas (passo 7) |
-| `construindo` | `Implementador` e `Mesa`, no andar | o ciclo do passo 6 |
+| `construindo` | o par de cada linha, no checkout dela | o ciclo do passo 6 |
 | `sem-validacao` | `Validador`, no andar | o passo 8 |
-| `validacao-reprovada` | `Implementador` e `Mesa` | uma correção por achado crítico ou maior (`corrigir`), depois valida de novo; **não é parada**. Achado que muda o desenho vira tarefa nova, pelo `Arquiteto` |
+| `validacao-reprovada` | o par de uma linha | uma correção por achado crítico ou maior (`corrigir`), que parte e se encontra como tarefa (passo 6), depois valida de novo; **não é parada**. Achado que muda o desenho vira tarefa nova, pelo `Arquiteto` |
 | `validacao-com-ressalvas` | — | parada (passo 7) |
 | `validada` | você | fechamento e pedido de pouso (passo 8) |
 | `aguardando-pouso` | — | parada (passo 7) |
@@ -190,54 +201,61 @@ vale o passo 7: a tarefa segue.
 
 ## 6. O ciclo de uma tarefa
 
-1. **Escolha.** A tarefa da vez é a do `estado.ts`: a primeira pendente com as dependências
-   concluídas. Nenhuma liberada com pendentes: pare e reporte.
-2. **Porte.** O Implementador roda em Sonnet em toda tarefa. O porte do documento diz quanto ela
-   deve levar, que é o que a vigia usa; sem a linha `**Porte:**`, vale o porte inferido que o script
-   mostra.
-3. **Diário.** Atualize o `estado.md` do andar (formato no fim): a linha da tarefa anterior em
-   "Concluídas", e em "Agora" a tarefa atual, o modelo, a hora e o que você espera.
-4. **Sessões novas.** Reinicie a `Mesa` e o `Implementador`, apontados
-   para o andar, e confira os cabeçalhos. Publique: `maestri floor status "tarefa N.0"
-   --progress <feitas>/<total> --floor "<andar>"`.
-5. **Peça**, ao `Implementador`:
+Quem diz o que cada linha faz é o quadro, não você: ele lê as dependências, o paralelo que o
+Arquiteto autorizou e os arquivos previstos.
+
+1. **Quadro.** `(cd <andar> && node tools/processo/linhas.ts)` mostra cada linha, o que **parte
+   agora** e se cabe abrir outra. Abra a que ele pedir (passo 3; na primeira tarefa, a 1) e rode de
+   novo. "NENHUMA TAREFA LIBERADA": pare e reporte. Sem nada a partir, encerre o turno: o relatório
+   de quem corre o acorda.
+2. **Partida**, para cada linha que parte: `(cd <andar> && node tools/processo/linhas.ts partida <n> <N>)`.
+   Ela traz a linha à ponta da spec e recusa a tarefa que não corre junto com as em curso.
+3. **Porte e diário.** O Implementador roda em Sonnet em toda tarefa. O porte do documento
+   (`**Porte:**`; sem a linha, o inferido que o `estado.ts` mostra) diz quanto ela deve levar, que é
+   o que a vigia usa. No "Agora" do `estado.md` (formato no fim), o que você espera de cada linha; em
+   "Concluídas", a tarefa que acabou de se encontrar.
+4. **Sessões novas.** Reinicie o par da linha, apontado para o **checkout da linha**, e confira os
+   cabeçalhos. Publique: `maestri floor status "tarefa N.0" --progress <feitas>/<total> --floor "<andar>"`.
+5. **Peça**, ao Implementador da linha:
 
    ```
    PEDIDO de <seu nome>
    Tarefa: tasks/prd-<func>/<N>_task.md
-   Mesa de revisão: Mesa · Orquestrador: <seu nome>
-   Ao terminar, envie a <seu nome>: /seguir RELATÓRIO de Implementador …
+   Mesa de revisão: <a Mesa da linha> · Orquestrador: <seu nome>
+   Ao terminar, envie a <seu nome>: /seguir RELATÓRIO de <o Implementador da linha> …
    Observação: <só se houver: achado de execução anterior, decisão do Arquiteto>
    ```
 
-   Tarefa retomada (o script mostra rodadas registradas ou código alterado no andar): a primeira
+   Tarefa retomada (o quadro já mostra a linha com ela, e não há partida nova): a primeira
    linha é `PEDIDO de retomada`, e a observação diz o ponto, por exemplo "o `test-engineer` reprovou
    na 1ª rodada; a ordem está em `.processo/ordens/…`", ou "implementação na árvore, sem portão".
 
-   Depois de pedir, um `maestri check "Implementador"`, uma vez: o pedido tem de aparecer enviado, com
+   Depois de pedir, um `maestri check` no terminal, uma vez: o pedido tem de aparecer enviado, com
    ele trabalhando. Se o texto ficou parado na caixa, envie o Enter
-   (`maestri ask "Implementador" --raw "\n"`) e confira de novo.
-6. **Limpe o seu contexto e encerre o turno.** Com o pedido de uma tarefa **nova** enviado e
-   conferido, tudo o que você sabia da anterior já está no `estado.md`: agende a limpeza (passo 9)
+   (`maestri ask "<terminal>" --raw "\n"`) e confira de novo.
+6. **Limpe o seu contexto e encerre o turno.** Com o pedido da última partida do turno enviado e
+   conferido, tudo o que você sabia já está no `estado.md` e no quadro: agende a limpeza (passo 9)
    como último comando do turno. A resposta chega como prompt novo, numa sessão que só tem o diário.
    Em `PEDIDO de retomada` e em correção no meio de uma tarefa, não limpe: a tarefa é a mesma.
 
 ### O que pode chegar
 
-- **`RELATÓRIO` com `STATUS: SUCESSO`.** Confira nos arquivos, no andar:
-  - o script mostra a tarefa `[x]` e a próxima;
-  - `git log -1` traz `(tarefa N.0)`, ou `(correção <slug>)`, e a linha `Revisões:` com todos os
-    obrigatórios;
-  - `git status --short` vazio;
-  - `git rev-list --count origin/spec/<func>..HEAD` igual a zero (o push foi feito);
-  - `(cd <andar> && node tools/processo/esteira.ts)` não responde `VERMELHA`. O push de cada tarefa
-    dispara a esteira, que roda as suítes inteiras sem ninguém esperar (D79): o veredito de um commit
-    chega com a tarefa seguinte correndo, e é aqui que você o lê. Vermelha: correção (`corrigir`) na
-    branch, **antes** da tarefa seguinte, e o documento dela diz de qual tarefa foi.
-
-  Tudo certo: volte ao item 1. Algo falta: é falha, mesmo com o relatório dizendo sucesso. Diga ao
-  Implementador o que falta, num `PEDIDO de retomada`; se ele não resolver, trate como
-  `STATUS: FALHA`.
+- **`RELATÓRIO` com `STATUS: SUCESSO`**, da linha `<n>`. Rode o encontro, que confere e junta:
+  `(cd <andar> && node tools/processo/linhas.ts encontro <n>)`. Ele exige a marca e a linha
+  `Revisões:` em todo commit novo com código e a árvore limpa, traz a spec para a linha, avança a
+  spec com o `estado.md` e faz o push. Pela saída:
+  - **feito:** rode `(cd <andar> && node tools/processo/esteira.ts)`. O push do encontro dispara
+    a esteira sobre a soma das linhas, e ninguém espera por ela (D79): é aqui que você lê o
+    veredito dos pushes anteriores. `VERMELHA`: correção (`corrigir`) numa linha ociosa, com
+    `partida <n> correcao:<slug>`, **antes** de qualquer partida de tarefa, e o documento dela diz
+    de qual tarefa foi. Volte ao item 1;
+  - **`RECUSADO`:** é falha, mesmo com o relatório dizendo sucesso. Diga ao Implementador da linha
+    o que a saída diz, num `PEDIDO de retomada`; se ele não resolver, trate como `STATUS: FALHA`;
+  - **`O PUSH FALHOU`:** `git -C <andar> push origin spec/<func>` antes de seguir;
+  - **`CONFLITO`:** duas linhas mexeram no mesmo arquivo, e nada mudou. É correção na própria
+    linha (passo 10), com os arquivos que a saída lista: o Implementador traz a spec
+    (`git merge spec/<func>`), resolve, passa o portão e a Mesa, e fecha o merge com o commit da
+    correção. Depois, o encontro de novo. Registre em "O que falhou".
 - **Resposta a um `PEDIDO de estado`.** Não chega como mensagem: o agente responde no próprio
   terminal, e você lê na saída do `maestri ask` ou com `maestri check`. Só registre; não é relatório
   de conclusão.
@@ -261,18 +279,14 @@ vale o passo 7: a tarefa segue.
     documento e a seção. A resposta dele volta ao Implementador como observação de um
     `PEDIDO de retomada`, ou vira parada, se ele devolver `BLOQUEIO`;
   - `portão`: o portão local falha por algo fora dos arquivos da tarefa. É correção (`corrigir`) na
-    mesma branch, pelo `Implementador` reiniciado, **antes** de retomar a tarefa. O trabalho da
+    mesma linha, pelo Implementador dela reiniciado, **antes** de retomar a tarefa. O trabalho da
     tarefa fica na árvore, e por isso o `PEDIDO` da correção (passo 10) leva a linha
     `Arquivos da tarefa em curso: <a saída de git status --short de agora>`: a Mesa os deixa fora da
-    revisão, e o commit da correção leva só os arquivos dela. Na conferência dessa correção,
-    `git status --short` não fica vazio: tem de mostrar exatamente os arquivos da tarefa em curso.
-    Registre em "O que decidi sem perguntar".
+    revisão, e o commit da correção leva só os arquivos dela. Ela não tem encontro próprio: o
+    commit fica na linha e segue com o da tarefa. Registre em "O que decidi sem perguntar".
 
-Um portão por vez na máquina: não peça trabalho que rode suíte a dois agentes ao mesmo tempo.
-
-**Tempo é sinal.** Com o portão da tarefa (minutos, e não mais meia hora), uma tarefa pequena chega à
-primeira rodada de revisão em menos de uma hora, e uma grande, em menos de duas. Tarefa que passa do
-dobro disso sem pedir rodada está presa: a vigia do passo 9 trata.
+Cada linha tem o seu ambiente de teste, e as linhas rodam portão ao mesmo tempo. No andar da spec e
+no térreo, que dividem o ambiente 0, um por vez.
 
 ## 7. As paradas
 
@@ -325,26 +339,21 @@ destravar o limite das três reprovações, a contagem daquela tarefa recomeça:
 `.processo/ordens/rodadas.md`, no andar, a linha `<documento> | destravado | <revisor> | depois da
 <n>ª rodada dele`, que é o que a Mesa lê para contar.
 
-**A parada segura só o que depende dela** (D78, revista pela oitava vez em 10/10/2026). Na madrugada
-de 10/10 a pergunta da tela "Login suspenso" ficou 3 h 10 aberta, e a 16.0 do F3, que não mudava em
-nenhuma das três opções, esperou junto. Vale para as paradas 1, 2 e 5 abertas durante a construção,
+**A parada segura só o que depende dela** (D78). Vale para as paradas 1, 2 e 5 abertas durante a construção,
 com tarefa pendente. Não vale para a ressalva da validação, a retrospectiva, o pouso, o conflito de
 merge nem os dois limites, que são da própria tarefa.
 
-- **A pergunta que você se faz:** a tarefa da vez (a do `estado.ts`) muda em alguma das opções, ou
+- **A pergunta que você se faz:** a tarefa que vai partir (a do quadro) muda em alguma das opções, ou
   depende de tarefa ou de seção da Tech Spec que muda? Confira no documento dela e na tabela de
   dependências do `tasks.md`. Na dúvida, depende, e você espera como sempre
 - **Não depende:** registre a parada nos três lugares, deixe a vigia ligada e siga o ciclo dessa
   tarefa (passo 6). Na entrada do `estado.md`, diga qual tarefa seguiu e por que não depende. A
   pergunta continua aberta e continua do Joaquim: você não escolhe opção nem adianta nada que dependa
   dela. Terminada a tarefa, refaça a pergunta para a seguinte
-- **Ninguém escreve documento no andar com tarefa correndo.** Se a resposta do Joaquim chega ao
-  `Arquiteto` no meio de uma tarefa, ele avisa você com `/seguir RELATÓRIO de Arquiteto`, com a
-  decisão e "aplico com o andar limpo" (`.claude/agents/arquiteto.md`, "Resposta do Joaquim com tarefa
-  correndo"). Marque a entrada como respondida, anote no "Devo ainda" e, depois do commit da tarefa em
-  curso, envie a ele um `PEDIDO de retomada`. Só com o commit de documento dele conferido você pede a
-  tarefa seguinte. O mesmo vale para a resposta que chega a você: o `PEDIDO` ao `Arquiteto` para
-  registrar a decisão espera o commit da tarefa
+- **Documento muda no andar da spec, com as linhas correndo.** A resposta do Joaquim que chega ao
+  `Arquiteto` ele aplica e commita lá, e avisa você com `/seguir RELATÓRIO de Arquiteto`; a que chega
+  a você vira `PEDIDO` a ele na hora. Marque a entrada como respondida: cada linha recebe o commit
+  na partida seguinte
 - **Não reinicie o `Arquiteto` com a pergunta aberta no terminal dele:** é a sessão dele que guarda a
   pergunta e recebe a resposta. Escalada ou divergência da tarefa em curso que precise dele espera a
   resposta do Joaquim; diga isso na entrada da parada
@@ -356,10 +365,10 @@ merge nem os dois limites, que são da própria tarefa.
 Não há portão completo no fim: a esteira rodou as suítes inteiras a cada push da spec (D79), e a do
 último commit de tarefa corre enquanto o Validador trabalha.
 
-**Validar** (`sem-validacao`). Faça o commit de documento "antes da validação" (passo 4). Com
-`git -C <andar> status --short` vazio, reinicie o `Validador` apontado para o andar e envie o prompt
-do passo 2 de `.claude/skills/validar/SKILL.md`. Enquanto ele roda, ninguém mais usa o compose de
-teste. Ao receber o `RELATÓRIO`, confira que o `validacao.md` existe e que `git status` do andar
+**Validar** (`sem-validacao`). Com o quadro dizendo "Todas as tarefas concluídas", faça o commit de
+documento "antes da validação" (passo 4). Com `git -C <andar> status --short` vazio, reinicie o `Validador` apontado para o andar e envie o prompt
+do passo 2 de `.claude/skills/validar/SKILL.md`. Enquanto ele roda, ninguém usa o ambiente de teste
+0, o do andar da spec e do térreo. Ao receber o `RELATÓRIO`, confira que o `validacao.md` existe e que `git status` do andar
 mostra só ele.
 
 **Fechar** (`validada`). Siga o passo 3 de `validar/SKILL.md`. O fechamento exige as duas coisas no
@@ -373,11 +382,12 @@ Ainda rodando: espere com o `gh run watch` que a resposta traz, em segundo plano
 (`corrigir`) na branch, e o documento dela diz de qual tarefa foi. **Correção depois da validação muda
 código que o Validador não viu: valide de novo** (o `Validador` reiniciado, rodada nova no topo do
 `validacao.md`), em paralelo com a esteira do commit da correção. Sem GitHub (a resposta diz que não
-conseguiu ler), o portão completo local vale no lugar: peça ao `Implementador`, reiniciado,
-`node tools/processo/portao-local.ts --e2e --infra`, em segundo plano e sem alterar arquivo, e siga
-com `node tools/processo/portao-local.ts conferir --completo` respondendo que vale. O merge da
-`develop` (abaixo) não pede validação nova, só a esteira. Tudo verde: faça o commit de fechamento
-(passo 4) e peça o pouso.
+conseguiu ler), o portão completo local vale no lugar: peça ao `Implementador`, reiniciado no andar
+da spec, `node tools/processo/portao-local.ts --e2e --infra`, em segundo plano e sem alterar arquivo,
+e siga com `node tools/processo/portao-local.ts conferir --completo` respondendo que vale. O merge
+da `develop` (abaixo) não pede validação nova, só a esteira. Tudo verde:
+`(cd <andar> && node tools/processo/linhas.ts fechar)`, o commit de fechamento (passo 4) e o pedido
+de pouso. Depois do pouso, desfaça o andar de cada linha (`maestri floor delete "<andar> L<n>"`).
 
 **Pousar** (`aguardando-pouso`). Só com a palavra do Joaquim, e a partir do térreo:
 
@@ -395,38 +405,30 @@ andou enquanto a spec corria (o Gabriel integra lá): traga-a para o térreo
 (`git pull --no-rebase origin develop`), depois para a branch da spec
 (`git -C <andar> merge develop`, o único commit seu que leva código), e a esteira do push desse
 merge tem de ficar verde antes do pouso. Conflito em qualquer um desses merges, ou no pouso, é parada: diga os arquivos.
-A exceção é o conflito **só** em `achados/indice.md`, de tarefa ou de correção: é um registro que só
-cresce, escrito pelo hook, e os dois lados acrescentaram linhas no mesmo ponto. Fique com todas as
-linhas dos dois lados, sem repetir e sem escrever linha nova, conclua o merge e registre no
-`estado.md`. Em 09/10/2026 esse conflito parou a F3 por minutos à espera de uma resposta que só tinha
-uma opção.
 
 Esteira da `develop` vermelha depois do pouso: correção em andar próprio (`correcao/<slug>`).
 Verde: peça a retrospectiva ao `Arquiteto` e notifique o fim.
 
 ## 9. Vigia e contexto
 
-A rotina `Vigia do processo` manda **`/vigia`** a cada 30 minutos: uma skill própria e curta
-(`.claude/skills/vigia/SKILL.md`), com o que olhar e o que fazer. Ela já existe no workspace,
-pausada: ligue-a enquanto houver trabalho correndo e desligue-a no fim e em toda parada em que
-nenhuma tarefa segue (passo 7). Só a crie
-se `maestri routine list` não a mostrar, para não ficar com duas vigias:
+A rotina `Vigia do processo` roda a cada 30 minutos e só manda **`/vigia`** quando há o que olhar:
+antes de acordar você, ela roda `tools/processo/vigia.ts`, que não imprime nada com o time
+trabalhando. A skill da vigia é própria e curta (`.claude/skills/vigia/SKILL.md`). Ligue a rotina
+enquanto houver trabalho correndo e desligue-a no fim e em toda parada em que nenhuma tarefa segue
+(passo 7). Só a crie se `maestri routine list` não a mostrar, para não ficar com duas:
 
 ```bash
-maestri routine list
-maestri routine show "Vigia do processo"         # o comando dela é /vigia?
-maestri routine edit "Vigia do processo" --command "/vigia"      # se ainda for /seguir vigia
+maestri routine show "Vigia do processo"         # o comando é {{output}}, com o --pre-run abaixo?
+maestri routine edit "Vigia do processo" --command "{{output}}" --pre-run "node $PWD/tools/processo/vigia.ts"
 maestri routine enable "Vigia do processo"       # e disable ao parar
-maestri routine create "Vigia do processo" --command "/vigia" --every 30m --no-notify   # só se não existir
+maestri routine create "Vigia do processo" --command "{{output}}" --pre-run "node $PWD/tools/processo/vigia.ts" --every 30m --no-notify   # só se não existir
 ```
 
-Por que não é mais `/seguir vigia`: cada `/seguir` põe este texto inteiro de novo no seu contexto.
-Em 09/10/2026 a vigia foi 80% do que entrou no contexto do Orquestrador, que chegou a 509 mil tokens
-em doze horas, com cada turno custando o triplo do começo (D78, revista em 10/10/2026). As mensagens
-dos agentes continuam chegando como `/seguir <tipo>`: são poucas por tarefa, e é o que devolve o
-procedimento a uma sessão compactada.
+Na primeira vez com o `--pre-run`, dispare-a com alguém trabalhando (`maestri routine run`): nada
+pode chegar ao seu terminal. Se chegar texto que não é `/vigia`, volte o comando para `/vigia`, sem
+`--pre-run`, e registre em "O que falhou".
 
-**O seu contexto é limpo a cada tarefa** (D78, revista pela sétima vez em 10/10/2026). O time recomeça
+**O seu contexto é limpo a cada tarefa** (D78). O time recomeça
 a sessão a cada tarefa, e você também. Você não consegue digitar `/clear`: quem digita é a rotina
 `Limpa o Orquestrador`, pausada, que só dispara quando alguém manda. E ela pula o disparo se o seu
 terminal estiver ocupado, por isso não adianta dispará-la de dentro do turno: você solta um processo
@@ -453,11 +455,6 @@ a rotina encontra o terminal ocupado, pula, e a limpeza fica para a tarefa segui
   `maestri routine create "Limpa o Orquestrador" --command "/clear" --weekly sun@04:00 --disabled --no-notify`
   (o Maestri exige um horário; pausada, ela nunca dispara sozinha, e o `routine run` a dispara mesmo assim).
 
-Por quê: de 08 a 10/10/2026, 82% do que você custou foi reler a conversa a cada chamada. O contexto
-começava em 85 mil tokens e passava de 500 mil, com a tarefa de dez horas antes ainda dentro dele.
-Provado em 10/10/2026, às 02:10, no F3: o disparo de dentro do turno foi pulado, e o do processo solto
-limpou a sessão.
-
 **Por isso, antes de encerrar qualquer turno em que algo mudou** (um pedido enviado, uma resposta
 recebida, uma decisão sua), o "Agora" do `estado.md` diz o que você espera e de quem. O que só está na
 conversa pode não estar mais lá no turno seguinte. A compactação aos 400 mil tokens
@@ -469,7 +466,9 @@ Nunca interrompa agente que está trabalhando, e nunca edite arquivo que ele est
 ## 10. Pedidos avulsos
 
 - **Correção avulsa** (defeito que não é de uma spec em curso): andar `correcao/<AAAA-MM-DD>-<slug>`,
-  com o mesmo time, seguindo `corrigir`. Aprovada: esteira na branch, e o pouso é parada. Defeito
+  com o `Implementador` e a `Mesa`, seguindo `corrigir`. Ao receber o `RELATÓRIO`:
+  `(cd <andar> && node tools/processo/linhas.ts conferir)`, que exige a marca, a linha `Revisões:`,
+  a árvore limpa e o push. Aprovada: esteira na branch, e o pouso é parada. Defeito
   de uma spec em curso se corrige na branch dela. No `PEDIDO`, **você dita os guardiões**, pela tabela
   de `criar-tasks`: quem implementa não escolhe quem o audita.
 
@@ -504,8 +503,7 @@ nada, e o que a retrospectiva lê para medir tempo e rodadas por tarefa.
 # Estado da execução — <funcionalidade>
 
 ## Agora
-- **Tarefa atual:** N.0, iniciada em <data e hora>, com o Implementador em <modelo>
-- **Espero:** <relatório do Implementador | resposta do Joaquim sobre …>
+- **Espero:** <o relatório de cada linha em curso, e em que tentativa cada tarefa está | resposta do Joaquim sobre …>
 - **Devo ainda:** <o que ficou combinado e não está feito: um merge, um pedido ao Arquiteto, uma pendência da validação | nada>
 - **Base:** `spec/<func>` em `<hash>`
 
@@ -519,7 +517,7 @@ nada, e o que a retrospectiva lê para medir tempo e rodadas por tarefa.
 ```
 
 "Agora" e "Esperando o Joaquim" são as duas seções que você relê depois de cada limpeza (passo 9): o
-que não está nelas, para você não existe. As outras são histórico, e só crescem.
+que não está nelas nem no quadro (que tarefa cada linha faz, e desde quando), para você não existe. As outras são histórico, e só crescem.
 
 Em "Observação" entram os diagnósticos do Arquiteto e as divergências. Correção avulsa não tem
 `estado.md`: o registro dela é o próprio documento em `tasks/correcoes/`.

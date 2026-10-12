@@ -111,17 +111,21 @@ infere o porte pela contagem de guardiões e avisa que inferiu.
 - **Toda tarefa diz como testar**, na seção "Como testar" do modelo: o teste existente a copiar e a
   peça de apoio, achados abrindo o código, e não de memória
 - **Mire em até 12 tarefas, e nunca mais de 20.** Passou de 12, mostre junto com a lista o corte em
-  duas specs que pousam separadas (o F3, com 20, levou 55 horas de relógio)
+  duas specs que pousam separadas
 - **O "Contexto necessário" aponta a seção da Tech Spec e o requisito do PRD pelo número.** É só o que
   o Implementador lê dos dois (`executar-task`, passo 1)
 - **Tarefa cabe numa rodada de revisão: um comportamento, e até três guardiões com veto.** A que
-  marcaria os quatro vira duas, cortada por comportamento. No F3, as três tarefas com quatro guardiões
-  (11.0, 13.0 e 15.0) foram à terceira rodada com diagnóstico do Arquiteto, e a única que passou de
-  primeira foi a 20.0, de uma tela e um ramo. Contar arquivo não serve de teto: a previsão erra (a
+  marcaria os quatro vira duas, cortada por comportamento. Contar arquivo não serve de teto: a previsão erra (a
   13.0 previa seis linhas de arquivo e alterou 60). Tarefa de tela conta as telas: uma tela, ou um
   diálogo grande, por tarefa. O `N_task.md` nasce com até 800 palavras
 - Formato `X.0` para tarefa principal, `X.Y` para subtarefa
-- Marque o que pode correr em paralelo
+- **Autorize o paralelo**, na coluna "Pode correr em paralelo com" do `tasks.md`: as tarefas
+  autorizadas correm ao mesmo tempo, em linhas (`/seguir`, passo 3), e é o que mais encurta a spec.
+  Autorize o par que não depende um do outro nem toca o mesmo arquivo. `tools/processo/linhas.ts`
+  confere pelos "Arquivos previstos" das duas, que por isso levam **caminho de verdade**, com o
+  arquivo de registro que as duas editariam (rotas, navegação, módulo): sem caminho, a tarefa corre
+  sozinha. Duas tarefas com migration, schema ou `packages/shared` não correm juntas: ponha o tronco
+  cedo, em poucas tarefas, e deixe as telas e os endpoints de folha para o paralelo
 
 ## Saída
 

@@ -909,6 +909,62 @@ describe('mudança só de comentário', () => {
   })
 })
 
+describe('alterações com um merge em curso', () => {
+  // O conserto de um encontro de linhas: a linha traz a branch da spec, o merge para no conflito e o Implementador
+  // resolve. O que a outra linha fez já passou pelo hook lá; o que o hook cobra aqui é o que divergiu dos dois lados.
+  function duasLinhas() {
+    const raiz = mkdtempSync(join(tmpdir(), 'merge-'))
+    const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=teste', '-c', 'user.email=teste@exemplo.invalid', ...args], { cwd: raiz, stdio: 'pipe' })
+    const escrever = (arquivo: string, conteudo: string) => {
+      mkdirSync(dirname(join(raiz, arquivo)), { recursive: true })
+      writeFileSync(join(raiz, arquivo), conteudo)
+    }
+    git('init', '-q', '-b', 'spec/exemplo')
+    escrever('apps/registro.ts', 'a\nb\nc\nd\ne\nf\ng\n')
+    escrever('apps/base.ts', 'base\n')
+    git('add', '-A')
+    git('commit', '-q', '-m', 'base')
+    git('checkout', '-q', '-b', 'spec/exemplo--l2')
+    escrever('apps/da-linha.ts', 'linha\n')
+    escrever('apps/registro.ts', 'a\nb\nc\nd\ne\nf\ng da linha\n')
+    escrever('apps/conflito.ts', 'linha\n')
+    git('add', '-A')
+    git('commit', '-q', '-m', 'tarefa da linha')
+    git('checkout', '-q', 'spec/exemplo')
+    escrever('apps/da-spec.ts', 'spec\n')
+    escrever('apps/registro.ts', 'a da spec\nb\nc\nd\ne\nf\ng\n')
+    escrever('apps/conflito.ts', 'spec\n')
+    git('add', '-A')
+    git('commit', '-q', '-m', 'tarefa da outra linha')
+    git('checkout', '-q', 'spec/exemplo--l2')
+    return { raiz, git, escrever }
+  }
+
+  it('o que veio igual do outro lado não conta; o conflito e o arquivo que os dois tocaram, sim', () => {
+    const { raiz, git, escrever } = duasLinhas()
+    expect(() => git('merge', '--no-edit', 'spec/exemplo')).toThrow()
+    expect(arquivosAlterados(raiz).sort()).toEqual(['apps/conflito.ts', 'apps/registro.ts'])
+    // Resolvido e no índice, continua sendo o que o commit do conserto leva de novo; e o arquivo criado no conserto entra.
+    escrever('apps/conflito.ts', 'linha e spec\n')
+    escrever('apps/novo-no-conserto.ts', 'novo\n')
+    git('add', 'apps/conflito.ts')
+    expect(arquivosAlterados(raiz).sort()).toEqual(['apps/conflito.ts', 'apps/novo-no-conserto.ts', 'apps/registro.ts'])
+  })
+
+  it('arquivo do outro lado editado no conserto volta a contar', () => {
+    const { raiz, git, escrever } = duasLinhas()
+    expect(() => git('merge', '--no-edit', 'spec/exemplo')).toThrow()
+    escrever('apps/da-spec.ts', 'spec, mexido no conserto\n')
+    expect(arquivosAlterados(raiz)).toContain('apps/da-spec.ts')
+  })
+
+  it('sem merge em curso, nada muda: o alterado é o alterado', () => {
+    const { raiz, escrever } = duasLinhas()
+    escrever('apps/base.ts', 'mexido\n')
+    expect(arquivosAlterados(raiz)).toEqual(['apps/base.ts'])
+  })
+})
+
 describe('achados separados por documento, com índice', () => {
   // O arquivo único da pasta chegou a 646 KB / 158 rodadas no F1, e o passo 2 do /executar-task
   // manda lê-lo antes de cada tarefa. Ou não era lido, ou consumia a janela antes de começar.

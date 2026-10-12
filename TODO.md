@@ -524,17 +524,17 @@ para o staging".
       para o fluxo: na 18.0 do F3, 110 dos 188 minutos foram Playwright. Correção própria, pelo time, antes da próxima
       spec de tela; depois dela, a linha "estados da tela" do modelo de tarefa passa a pedir teste de componente
       (dono: Joaquim)
-- [ ] **(D79) Imagens do compose de teste com nome fixo:** o ambiente de teste por checkout existe
-      (`EDUCA_AMBIENTE_TESTE` ou `.processo/ambiente`, em `tools/ci/compose.ts`), e duas integrações em paralelo
-      levaram o mesmo que uma. Mas `infra/compose.yml` (linhas 115, 134, 243, 291 e 339) dá às imagens o nome
-      `educa-<serviço>:local`, igual em todo projeto: com código diferente em cada checkout, um e2e testaria a imagem
-      do outro. A etiqueta precisa levar o projeto. E dois e2e no mesmo checkout dividem `test-results/`. Correção
-      própria, pelo time, antes da linha dupla (dono: Joaquim)
-- [ ] **(D79) Duas tarefas da mesma spec em paralelo:** desenhado e não implementado. Pede um par a mais de
-      Implementador e Mesa, um checkout por linha com o ambiente de teste dele, e a branch da linha entrando na da spec
-      a cada tarefa. Decidir depois de a próxima spec rodar com a D79 (dono: Joaquim)
-- [ ] **(F3, retro, M3) A vigia só acorda o modelo quando há o que fazer:** `--pre-run` na rotina. Poupa custo (96
-      de 100 turnos sem ação no F3, 2,7% do período), não tempo (dono: Joaquim)
+- [x] **(D79) Imagens do compose de teste com nome fixo:** feito em 11/10/2026, sem tocar em `infra/`: fora do
+      ambiente 0, `tools/ci/compose.ts` gera `.processo/compose-de-teste-N.yml`, que dá a cada imagem construída a
+      etiqueta `teste-N`. Provado com um e2e no ambiente 1 (68 s, verde, sobre `educa-api:teste-1`)
+- [ ] **(D79) Linhas: prova numa spec.** As tarefas autorizadas em paralelo correm em linhas
+      (`tools/processo/linhas.ts`, `/seguir`, passos 3 e 6), com teto de três. Provado em repositório de teste: partida,
+      encontro, conflito e conserto. Sem prova: os comandos do Maestri para o andar e o par de uma linha a mais, três
+      e2e ao mesmo tempo nesta máquina, o consumo por hora do plano, e quanto tempo de spec as linhas tiram. Medir na
+      retrospectiva da próxima spec (dono: Joaquim)
+- [ ] **(F3, retro, M3) A vigia só acorda o modelo quando há o que fazer:** feito em 11/10/2026
+      (`tools/processo/vigia.ts`, como `--pre-run` da rotina). Falta o Orquestrador trocar o comando da rotina
+      (`/seguir`, passo 9) e conferir que a saída vazia não acorda o modelo (dono: Joaquim)
 - [ ] **(F3, retro) 26 `@SemEscopo` em `resolucao-de-tenant.repository.ts`:** o `tenancy-guardian` apontou na 14.0
       que o número passa do sinal da regra 10, item 9. Declarar a exceção na regra ou partir o módulo é decisão de
       desenho sobre a regra 10, e não se resolve por retrospectiva: entra na Tech Spec da próxima spec que tocar sessão

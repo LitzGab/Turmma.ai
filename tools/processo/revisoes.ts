@@ -728,9 +728,32 @@ export function registrar(entrada: EntradaHook, raiz: string, agora = new Date()
   return relativo
 }
 
+/**
+ * Com um merge em curso, o que diverge do outro lado: o conflito resolvido e o arquivo que os dois lados tocaram.
+ * `null` sem merge em curso.
+ */
+function diferentesDoOutroLado(raiz: string): Set<string> | null {
+  try {
+    execFileSync('git', ['rev-parse', '-q', '--verify', 'MERGE_HEAD'], { cwd: raiz, stdio: ['ignore', 'pipe', 'ignore'] })
+  } catch {
+    return null
+  }
+  const saida = execFileSync('git', ['diff', '--name-only', '-z', 'MERGE_HEAD'], { cwd: raiz, encoding: 'utf8' })
+  return new Set(saida.split('\0').filter((arquivo) => arquivo !== ''))
+}
+
+/**
+ * Os arquivos que esta árvore alterou em relação ao HEAD.
+ *
+ * Com um merge em curso, o que veio do outro lado **sem mudar** não é alteração daqui: já entrou por commit de tarefa
+ * na branch de onde veio, com os revisores e o portão de lá. Sobra o que diverge dos dois lados, que é o que ninguém
+ * auditou: o conflito resolvido à mão e o arquivo que as duas linhas tocaram. É o que faz o conserto de um encontro
+ * (`tools/processo/linhas.ts`) custar a revisão dos arquivos em conflito, e não a da spec inteira.
+ */
 export function arquivosAlterados(raiz: string): string[] {
   const saida = execFileSync('git', ['status', '--porcelain=v1', '-z', '-uall'], { cwd: raiz, encoding: 'utf8' })
   const partes = saida.split('\0')
+  const outroLado = diferentesDoOutroLado(raiz)
   const arquivos: string[] = []
   for (let i = 0; i < partes.length; i++) {
     const item = partes[i] ?? ''
@@ -738,7 +761,9 @@ export function arquivosAlterados(raiz: string): string[] {
     const estado = item.slice(0, 2)
     if (estado.startsWith('R') || estado.startsWith('C')) i++ // -z: o nome de origem vem na parte seguinte
     if (estado.includes('D')) continue
-    arquivos.push(item.slice(3))
+    const arquivo = item.slice(3)
+    if (outroLado && estado !== '??' && !outroLado.has(arquivo)) continue
+    arquivos.push(arquivo)
   }
   return arquivos
 }

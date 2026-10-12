@@ -59,9 +59,10 @@ dois vale o 0, que é o `educa-teste` acima e o da esteira. Com N de 1 a 3 o pro
 `educa-teste-N` e toda porta de `infra/teste.env` sobe N × 1000 (a web do ambiente 1 fica em
 `127.0.0.1:29090`). Número inválido é erro, e não cai no 0. Quem decide é
 `tools/ci/compose.ts`, e integração, e2e e vitrine leem de lá. Medido em 11/10/2026: duas
-integrações inteiras em paralelo levaram o mesmo que uma (709 e 711 s contra 726). **Ainda não vale
-para e2e e infra com código diferente em cada checkout:** as imagens de `infra/compose.yml` têm nome
-fixo (`educa-api:local`), e um checkout testaria a imagem que o outro construiu (`TODO.md`).
+integrações inteiras em paralelo levaram o mesmo que uma (709 e 711 s contra 726). Fora do ambiente
+0, a imagem que o compose constrói leva a etiqueta do ambiente (`educa-api:teste-1`), para o e2e de
+um checkout não rodar sobre o código de outro. É o que deixa as tarefas de uma spec correrem ao
+mesmo tempo, cada uma na sua linha (D79).
 
 | Comando | O que faz |
 |---|---|
@@ -197,10 +198,12 @@ Orquestrador (Opus), enquanto o time trabalha
 ```
 
 Cada spec vive num **andar** do Maestri, com a branch `spec/<funcionalidade>`, e só entra na
-`develop` por pouso, com a sua palavra. A esteira roda uma vez, na branch, antes do pouso. O
-Orquestrador para em seis decisões: aprovação de PRD, Tech Spec e lista de tarefas; mudança de
-desenho ou de critério de aceite; ressalva da validação; propostas da retrospectiva; decisão de
-produto; e o pouso. O que espera você aparece no terminal do Orquestrador, com o andar marcado como bloqueado.
+`develop` por pouso, com a sua palavra. As tarefas correm em **linhas**, cada uma num andar próprio:
+as que o Arquiteto autorizou em paralelo, até três ao mesmo tempo, e as outras uma por vez (D79). A
+esteira roda em todo push da branch. O Orquestrador para em seis decisões: aprovação do PRD; mudança
+de desenho ou de critério de aceite; ressalva da validação; propostas da retrospectiva; decisão de
+produto; e o pouso. A Tech Spec e a lista de tarefas são aviso: a construção começa 30 minutos
+depois da lista, sem objeção sua. O que espera você aparece no terminal do Orquestrador, com o andar marcado como bloqueado.
 
 Defeito avulso e decisão de produto você pede em texto ao Orquestrador. Como os agentes conversam
 está em `.claude/skills/seguir/protocolo.md`.

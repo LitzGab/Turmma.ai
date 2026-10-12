@@ -10,6 +10,7 @@ import {
   expandirTarefas,
   funcionalidadeDaVez,
   lerDependencias,
+  lerParalelismo,
   lerEstado,
   lerPorte,
   lerRoadmap,
@@ -134,6 +135,14 @@ describe('lerTarefas e dependências', () => {
     expect(dependencias.get(5)).toEqual([3, 4])
     expect(dependencias.get(6)).toEqual([3, 4, 5])
     expect(dependencias.has(9)).toBe(false)
+  })
+
+  it('lê a coluna "Pode correr em paralelo com", que é a autorização do Arquiteto', () => {
+    const paralelas = lerParalelismo(TASKS)
+    expect(paralelas.get(1)).toEqual([4])
+    expect(paralelas.get(3)).toEqual([4, 5])
+    expect(paralelas.get(5)).toEqual([])
+    expect(lerParalelismo('# Tarefas\n\n- [ ] **1.0 — a**\n').size).toBe(0)
   })
 })
 
@@ -491,7 +500,14 @@ describe('lerEstado e os textos, do disco', () => {
   it('o resumo em construção traz a contagem e a próxima, e sem CLAUDE.md não inventa a linha de decisões', () => {
     const raiz = repositorio({ 'ROADMAP.md': ROADMAP, ...pasta({ 'tasks.md': TASKS, '3_task.md': '# Tarefa 3.0\n' }) })
     const linhas = resumo(raiz).split('\n')
-    expect(linhas).toContain('Da vez: F3 lgpd-e-titular — construindo, 2 de 6 tarefas; próxima: 3.0')
+    // A lista dos testes autoriza tarefas em paralelo: a primeira pendente não é a de quem lê, e o resumo não a diz.
+    expect(linhas).toContain('Da vez: F3 lgpd-e-titular — construindo, 2 de 6 tarefas')
+    expect(relatorio(lerEstado(raiz))).toContain('Linhas: o tasks.md autoriza tarefas em paralelo.')
+    const semParalelo = TASKS.replace(/\| ([^|\n]+) \|\n/g, (linha, celula: string) => (/\d\.0/.test(celula) ? linha.replace(`| ${celula} |\n`, '| — |\n') : linha))
+    expect(lerParalelismo(semParalelo).get(3)).toEqual([])
+    const umaPorVez = repositorio({ 'ROADMAP.md': ROADMAP, ...pasta({ 'tasks.md': semParalelo, '3_task.md': '# Tarefa 3.0\n' }) })
+    expect(resumo(umaPorVez).split('\n')).toContain('Da vez: F3 lgpd-e-titular — construindo, 2 de 6 tarefas; próxima: 3.0')
+    expect(relatorio(lerEstado(umaPorVez))).not.toContain('Linhas:')
     expect(linhas.some((linha) => linha.startsWith('Decisões em aberto'))).toBe(false)
     const nada = repositorio({ 'ROADMAP.md': '# Roadmap\n\n## F2 — `onboarding-por-convite` [ ]\n' })
     expect(resumo(nada).split('\n')).toContain('Concluídas: nenhuma')

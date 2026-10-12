@@ -100,8 +100,9 @@ que o documento declara: aplica cada uma, roda o teste citado, exige vermelho e 
 (`tools/processo/mutacoes.ts`). Grava o carimbo que o hook exige antes do commit (D53). Leva minutos.
 Enquanto um teste não passa, ele se roda isolado; o portão não é ferramenta de depuração.
 
-**A esteira**, em todo push. Cada commit de tarefa vai para o GitHub logo depois de feito, **na branch
-da spec** (`spec/<funcionalidade>`, D78), e o push dispara tudo: `npm run typecheck`, `npm run lint`,
+**A esteira**, em todo push. Cada commit de tarefa vai para o GitHub logo depois de feito, na branch
+da linha, e **a da spec** (`spec/<funcionalidade>`) recebe a soma das linhas no encontro
+(`tools/processo/linhas.ts`, D79). Cada push dispara tudo: `npm run typecheck`, `npm run lint`,
 as duas guardas, `npm run test`, `npm run test:e2e` e `npm run test:infra` (D52). Ninguém espera por
 ela: o Orquestrador lê o veredito ao fechar a tarefa seguinte (`tools/processo/esteira.ts`), e vermelho
 vira correção antes de a linha andar. A spec só fecha com a esteira verde no último commit que alterou

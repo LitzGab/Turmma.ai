@@ -5,20 +5,20 @@ revisão e Validador. Os revisores (`test-engineer`, `revisor-geral`, guardiões
 continuam subagentes, chamados pela Mesa de revisão ou pelo Arquiteto.
 
 O processo mora no git (`.claude/`, `tools/processo/`, `tasks/`). O Maestri guarda só os terminais
-e quem está ligado a quem. Tudo aqui saiu da prova técnica de 08/10/2026 e da D78.
+e quem está ligado a quem (D78).
 
 ## 1. Onde você roda
 
 - **Os terminais são fixos, no térreo; a sessão é que muda.** A cada tarefa ou fase o Orquestrador
-  reinicia a sua sessão já apontada para o checkout em que você vai trabalhar: o andar da spec, o
-  de uma correção, ou o térreo. Você começa sem memória da sessão anterior, de propósito
+  reinicia a sua sessão já apontada para o checkout em que você vai trabalhar: o andar da spec, uma
+  linha dela, o de uma correção, ou o térreo. Você começa sem memória da sessão anterior, de propósito
 - **Na raiz do checkout.** `pwd` tem de ser igual a `git rev-parse --show-toplevel`. Se não for,
   PARE e avise o Orquestrador. Agente criado com uma *responsabilidade* do Maestri nasce em
   `.maestri/roles/<id>/`, e ali **nenhum hook dispara**: o commit sem revisão passa e a rodada do
   revisor não é registrada (provado em 08/10/2026). Por isso o papel vem de
   `.claude/agents/<papel>.md`, com `claude --agent <papel>`, e nunca de responsabilidade do Maestri
 - **O contexto é compactado sozinho** perto de 400 mil tokens (`autoCompactWindow`, em
-  `.claude/settings.json`; D78, revista em 10/10/2026). A sessão continua o mesmo trabalho com um
+  `.claude/settings.json`). A sessão continua o mesmo trabalho com um
   resumo no lugar da conversa, e o hook de início de sessão diz a cada papel o que reler. Por isso o
   que importa fica em arquivo (o documento da tarefa, a ordem de correção, o `estado.md`), nunca só
   na conversa. Depois de compactar, releia o que o aviso manda antes do próximo passo. O Orquestrador
@@ -44,8 +44,7 @@ como um prompt novo.
   é digitado no terminal do outro, e o que não cabe na tela se perde
 - A primeira linha diz o tipo e quem manda. **Para o Orquestrador, ela começa com `/seguir `**: marca
   a mensagem como do processo. A de mais de duas ou três linhas chega colada no terminal dele, e texto
-  colado **não** executa a skill; a curta pode chegar digitada e executar (medido em 10/10/2026: de
-  onze mensagens do time, uma). Por isso quem devolve o procedimento a uma sessão limpa ou compactada é
+  colado **não** executa a skill; a curta pode chegar digitada e executar. Por isso quem devolve o procedimento a uma sessão limpa ou compactada é
   o aviso do hook de início de sessão, que manda reler o `/seguir`
 
   | Tipo | Primeira linha | De quem para quem |

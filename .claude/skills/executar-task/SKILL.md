@@ -27,7 +27,7 @@ Leia, nesta ordem:
 4. `docs/glossario.md`, para todo nome novo que a tarefa cria no código, no banco ou na tela
 
 O que é o produto está no `CLAUDE.md`, que já está no seu contexto. O `estado.md` da pasta é o diário
-do Orquestrador: você o leva no commit, e não precisa lê-lo.
+do Orquestrador: não é seu, nem para ler nem para editar.
 
 ## 2. Planejar antes de codar
 
@@ -309,9 +309,9 @@ volte ao passo 5 e peça à Mesa a rodada de quem o hook apontar.
 Só depois de tudo verde e de a Mesa responder "APROVADO por todos":
 
 - Marque a tarefa `[x]` em `tasks.md`, e leve o `tasks.md` no commit
-- **Faça o commit da tarefa na branch do andar** (`spec/<funcionalidade>`, D78). Stage apenas os
-  arquivos desta tarefa, incluindo o `N_task.md` com a seção "Revisões", o `estado.md` da pasta, que
-  o Orquestrador atualizou antes de pedir a tarefa, a `techspec.md` e o `cenarios.md` quando uma
+- **Faça o commit da tarefa na branch do seu checkout** (a da linha, `spec/<funcionalidade>--l<n>`,
+  D79). Stage apenas os arquivos desta tarefa, incluindo o `N_task.md` com a seção "Revisões", a
+  `techspec.md` e o `cenarios.md` quando uma
   divergência os mudou, e, se o hook os escreveu, `achados/<N>_task.md` e `achados/indice.md`, nunca
   `git add -A`.
   O `achados/indice.md` é da pasta, não da tarefa: se outro trabalho registrou rodada enquanto esta
@@ -337,7 +337,7 @@ Só depois de tudo verde e de a Mesa responder "APROVADO por todos":
   Resolva o que ela aponta, pedindo à Mesa a rodada que falta. Não contorne: o hook também bloqueia
   commit que leva código de `apps/`, `packages/`, `infra/` ou `e2e/` sem `(tarefa N.0)` nem
   `(correção <slug>)`
-- **Faça o push logo depois do commit**, para a branch do andar: `git push -u origin HEAD`. Nunca
+- **Faça o push logo depois do commit**, para a branch do seu checkout: `git push -u origin HEAD`. Nunca
   para a `develop`: quem pousa é o Joaquim.
   O push dispara a esteira, e você não espera por ela: quem lê o veredito é o Orquestrador, ao fechar
   a tarefa seguinte (D79)
