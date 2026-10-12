@@ -4,7 +4,7 @@ import { criarOperadorComSegundoFator as criarOperador, removerOperador, type Op
 import { criarRedeDoPainel, definirUsoDaEscolaSemeada, escolasComOEndereco, nomeQueVemPrimeiro, removerPainel, semearPainel, type PainelSemeado } from './__fixtures__/painel.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { acionar, entrarNaOperacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/tela-da-operacao.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * Uso (A0b, tarefa 8.0; cenários W6, W7 e a data de referência), nos projetos `chromebook` e `celular`. A lista é de todas
@@ -244,7 +244,7 @@ test.describe('Uso (A0b, tarefa 8.0)', () => {
     await page.goto('/operacao/uso')
     await expect(page.getByRole('alert')).toHaveText(TEXTO_DO_503, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page).toHaveURL(/\/operacao\/uso$/)
-    await expect(page.getByRole('main')).not.toContainText('503')
+    await expect(page.getByRole('main')).not.toContainText(codigoCru('503'))
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 

@@ -6,7 +6,7 @@ import { codigoDoOperador, criarOperadorComSegundoFator as criarOperador, encerr
 import { criarRedeDoPainel, escolasComOEndereco, nomeDeRedeQueVemPrimeiro, redesComONome, removerPainel, semearPainel, type PainelSemeado } from './__fixtures__/painel.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { acionar, entrarNaOperacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/tela-da-operacao.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * Escolas, Nova rede e Nova escola (A0b, tarefa 6.0; cenários W6, W7, W8 e W10), nos projetos `chromebook` e `celular`.
@@ -228,7 +228,7 @@ test.describe('Escolas, Nova rede e Nova escola (A0b, tarefa 6.0)', () => {
     await page.reload()
     await expect(page.getByRole('alert')).toHaveText(TEXTO_DO_503, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page).toHaveURL(/\/operacao$/)
-    await expect(page.getByRole('main')).not.toContainText('503')
+    await expect(page.getByRole('main')).not.toContainText(codigoCru('503'))
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 

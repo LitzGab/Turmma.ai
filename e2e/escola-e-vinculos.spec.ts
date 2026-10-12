@@ -13,7 +13,7 @@ import {
 } from './__fixtures__/sessao.ts'
 import { abrirNavegacao, abrirSeletorDeEscola, botaoDoSeletor, esperarGovernanca, irPelaNavegacao, lateral, linhaDoSeletor, nomeNoSeletor, esperarNovaConversa, esperarAtividades } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 const ROTA_MEUS_VINCULOS = '**/v1/meus-vinculos*'
 const ROTA_CONFIRMAR = '**/v1/vinculos/*/confirmar'
@@ -275,7 +275,7 @@ test.describe('escolher e trocar de escola', () => {
 
     // A API recusa a troca de uma sessão que não é de e-mail, e a tela diz o que fazer em vez de mostrar o código.
     await expect(page.getByRole('alert')).toContainText(AVISO_DA_TROCA_RECUSADA, { timeout: PRAZO_DA_ENTRADA_MS })
-    for (const proibido of ['NAO_ENCONTRADO', '404']) await expect(page.locator('body')).not.toContainText(proibido)
+    for (const proibido of ['NAO_ENCONTRADO', codigoCru('404')]) await expect(page.locator('body')).not.toContainText(proibido)
     // E continua na escola em que estava, com a sessão de pé.
     await esperarEscola(page, emA.nome, emA.escolaNome)
   })

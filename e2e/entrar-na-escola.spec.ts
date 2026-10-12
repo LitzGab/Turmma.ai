@@ -3,7 +3,7 @@ import { MENSAGENS_DE_ERRO, mensagemDaEntradaPorMatricula, mensagemDaFalhaExtern
 import { criarAlunoComMatricula, criarEscolaSintetica, liberarProvedorDaEscola, ligarContaExterna, type AlunoDeTeste } from './__fixtures__/sessao.ts'
 import { esperarAtividades } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 const ROTA_MATRICULA = '**/v1/sessao/matricula'
 /** O Chromebook com CPU ×4 e rede Fast 3G carrega a página e ainda faz o hash da senha no servidor. */
@@ -169,7 +169,7 @@ test.describe('entrada do aluno pelo endereço da escola', () => {
     // A mensagem da conta segurada diz a espera por extenso, e nunca o código nem o status.
     await expect(alerta).toContainText('Muitas tentativas com senha errada nesta conta')
     await expect(alerta).toContainText(/segundos|minutos/)
-    for (const proibido of ['429', 'CONTA_SEGURADA', 'Retry-After']) {
+    for (const proibido of [codigoCru('429'), 'CONTA_SEGURADA', 'Retry-After']) {
       await expect(page.locator('body')).not.toContainText(proibido)
     }
 

@@ -4,7 +4,7 @@ import { encaminhamento, erroDaApi, minhaAtividade, perguntaDoAluno, portao, pro
 import { entrarComoAluno, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula, type AlunoDeTeste } from './__fixtures__/sessao.ts'
-import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { codigoCru, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * O Tutor do aluno (MVP, A4, pacote X; `docs/interface.md` 11.6): a escolha da atividade e a conversa por atividade.
@@ -140,7 +140,7 @@ test.describe('o Tutor pelo item da lateral e a conversa por atividade', () => {
     await recarregar(page)
     await expect(principal(page).getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_TELA_MS })
     await expect(faixa(page).getByRole('note')).toHaveText(SUPERVISAO)
-    for (const cru of ['503', 'INDISPONIVEL']) await expect(page.locator('body')).not.toContainText(cru)
+    for (const cru of [codigoCru('503'), 'INDISPONIVEL']) await expect(page.locator('body')).not.toContainText(cru)
 
     // Com mensagens: a fala do aluno, e a do Tutor assinada, com o selo "IA" e o chip da página.
     api.conversas.set(atividade.id, [
@@ -285,7 +285,7 @@ test.describe('o Tutor pausado explica, não parece erro, e não trava a caixa',
     await expect(pausa(page)).toHaveAttribute('data-pausa-do-tutor', 'avaliacao')
     await expect(principal(page).getByRole('alert')).toHaveCount(0)
     await expect(principal(page).locator('[data-falha-do-tutor]')).toHaveCount(0)
-    for (const cru of ['409', 'TUTOR_PAUSADO', MENSAGENS_DE_ERRO.ERRO_INTERNO]) await expect(page.locator('body')).not.toContainText(cru)
+    for (const cru of [codigoCru('409'), 'TUTOR_PAUSADO', MENSAGENS_DE_ERRO.ERRO_INTERNO]) await expect(page.locator('body')).not.toContainText(cru)
     await expect(caixa(page)).toBeEnabled()
 
     // O assunto delicado passa na frente: a API aceita e responde com a mensagem fixa, mesmo com o Tutor pausado.
@@ -339,7 +339,7 @@ test.describe('o Tutor pausado explica, não parece erro, e não trava a caixa',
     await expect(conversa(page)).toContainText('O Tutor não recebeu esta mensagem.', { timeout: PRAZO_DA_TELA_MS })
     await expect(pausa(page)).toHaveAttribute('data-pausa-do-tutor', 'limite_do_dia')
     await expect(principal(page).getByRole('alert')).toHaveCount(0)
-    for (const cru of ['429', 'LIMITE_DIARIO']) await expect(page.locator('body')).not.toContainText(cru)
+    for (const cru of [codigoCru('429'), 'LIMITE_DIARIO']) await expect(page.locator('body')).not.toContainText(cru)
 
     // O assunto delicado ainda é atendido; a mensagem fixa que não traz o número ganha a linha do 188.
     api.trocar('mensagens', (entrada) => api.aceitarPergunta(entrada.corpo))
@@ -371,7 +371,7 @@ test.describe('o Tutor pausado explica, não parece erro, e não trava a caixa',
     const falha = conversa(page).locator('[data-falha-do-tutor="tentar"]')
     await expect(falha).toContainText('O Tutor não conseguiu responder agora. Tente de novo.', { timeout: PRAZO_DA_TELA_MS })
     await expect(conversa(page).getByText('Você: como acho a massa molar?')).toHaveCount(1)
-    for (const cru of ['IA_INDISPONIVEL', '503', MENSAGENS_DE_ERRO.IA_INDISPONIVEL]) await expect(page.locator('body')).not.toContainText(cru)
+    for (const cru of ['IA_INDISPONIVEL', codigoCru('503'), MENSAGENS_DE_ERRO.IA_INDISPONIVEL]) await expect(page.locator('body')).not.toContainText(cru)
     // A pergunta que falhou não conta no uso do dia.
     await expect(usoDoDia(page)).toContainText('Hoje: 12 de 60 perguntas')
     expect(await violacoesGraves(page)).toEqual([])

@@ -12,7 +12,7 @@ import {
   type AcessoDaSalaDeTeste,
   type EscolaDeTeste,
 } from './__fixtures__/sessao.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * A página pública da turma, `/e/<slug>/turma` (A1, tarefa 17.0; `tasks/prd-apresentacao-escola/cenarios.md`): W8, W11,
@@ -379,7 +379,7 @@ test.describe('W8 e W4 (Pública): pelo código, e o texto de cada caminho', () 
     resposta = 'cheio'
     await acionar(principal(page).getByRole('button', { name: 'Tentar de novo' }), hasTouch)
     await expect(aviso(page)).toHaveText(TEXTO_CHEIO, { timeout: PRAZO_DA_ENTRADA_MS })
-    for (const proibido of ['503', 'INDISPONIVEL', 'computador']) await expect(page.locator('body')).not.toContainText(proibido)
+    for (const proibido of [codigoCru('503'), 'INDISPONIVEL', 'computador']) await expect(page.locator('body')).not.toContainText(proibido)
     expect(page.url()).not.toContain('#')
     resposta = 'normal'
     await acionar(principal(page).getByRole('button', { name: 'Tentar de novo' }), hasTouch)

@@ -37,7 +37,7 @@ import {
   criarPedidosDoTitularNoBanco,
   pedidosDoTitularNoBanco,
 } from './__fixtures__/sessao.ts'
-import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { codigoCru, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * A aba "Pedidos" da Privacidade da coordenação (F3, 16.0; RF10, RF14, RF16 e RF20; `docs/interface.md` 3): a lista dos
@@ -312,7 +312,7 @@ test.describe('Pedidos: a busca', () => {
     segurada.abrir()
     await expect(busca(page).getByRole('alert')).toContainText(LIMITE_DE_BUSCAS, { timeout: PRAZO_DA_ENTRADA_MS })
     expect(buscas).toBe(1)
-    await expect(busca(page)).not.toContainText('429')
+    await expect(busca(page)).not.toContainText(codigoCru('429'))
     await expect(busca(page)).not.toContainText('LIMITE_EXCEDIDO')
 
     // O botão faz a mesma busca; sem ninguém, a região viva diz, e o texto aponta a lista da turma.

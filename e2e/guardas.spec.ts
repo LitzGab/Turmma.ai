@@ -2,12 +2,15 @@ import { expect, test } from './__fixtures__/perfis.ts'
 import {
   PAGINA_BOTOES_DE_16_PX,
   PAGINA_BOTOES_DE_44_PX,
+  PAGINA_COM_503_NO_NOME_DA_ESCOLA,
   PAGINA_COM_CONTRASTE,
+  PAGINA_COM_O_503_COLADO_AO_BOTAO,
+  PAGINA_COM_O_503_CRU,
   PAGINA_DENTRO_DA_LARGURA,
   PAGINA_MAIS_LARGA,
   PAGINA_SEM_CONTRASTE,
 } from './__fixtures__/paginas.ts'
-import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { codigoCru, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 // As verificações que a casca usa, aplicadas a páginas com a violação de propósito. Se uma delas deixar
 // de pegar, este spec fica vermelho, e não a casca verde por engano.
@@ -37,6 +40,21 @@ test.describe('guardas de celular e acessibilidade pegam de fato', () => {
 
     await page.setContent(PAGINA_COM_CONTRASTE)
     expect(await violacoesGraves(page)).toEqual([])
+  })
+})
+
+test.describe('a guarda do código cru de erro', () => {
+  test('o 503 que mora no nome sintético da escola não conta; o da tela, em linha própria ou colado ao botão, conta', async ({ page }) => {
+    // O nome sintético vem de oito caracteres hexadecimais, e dois deles trouxeram "503" na esteira de 12/10/2026
+    // (`fa5030ac`, `a2503562`). A busca pela substring acusa a escola; a guarda procura o código, e não o pedaço.
+    await page.setContent(PAGINA_COM_503_NO_NOME_DA_ESCOLA)
+    await expect(page.locator('body')).toContainText('503')
+    await expect(page.locator('body')).not.toContainText(codigoCru('503'))
+
+    for (const comErro of [PAGINA_COM_O_503_CRU, PAGINA_COM_O_503_COLADO_AO_BOTAO]) {
+      await page.setContent(comErro)
+      await expect(page.locator('body')).toContainText(codigoCru('503'))
+    }
   })
 })
 

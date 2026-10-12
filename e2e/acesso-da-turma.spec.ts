@@ -17,7 +17,7 @@ import {
   type AlocacaoDeTeste,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * O acesso da turma do professor (A1, tarefa 15.0; `tasks/prd-apresentacao-escola/cenarios.md`): W7, W4 e W12 de
@@ -353,7 +353,7 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     await expect(acessoAtivo(page)).toHaveCount(0)
     // O "Gerar acesso" do vazio saiu da seção: o foco vai para o título dela, e não para o `body`.
     await expect(tituloDaSecao(page)).toBeFocused()
-    for (const proibido of ['503', 'INDISPONIVEL_TENTE_DE_NOVO']) await expect(principal(page)).not.toContainText(proibido)
+    for (const proibido of [codigoCru('503'), 'INDISPONIVEL_TENTE_DE_NOVO']) await expect(principal(page)).not.toContainText(proibido)
     expect(await violacoesGraves(page)).toEqual([])
     falhar = false
     await tocar(secao(page), 'Tentar de novo', hasTouch)
@@ -834,7 +834,7 @@ test.describe('recomeço da tela do acesso', () => {
     for (const dias of ['1 dia', '7 dias', '30 dias']) await expect(validade(page, dias)).toBeDisabled()
     await expect(campoDoLink(page)).toHaveCount(0)
     await expect(noDialogo(page)).not.toContainText('CONFLITO')
-    await expect(noDialogo(page)).not.toContainText('409')
+    await expect(noDialogo(page)).not.toContainText(codigoCru('409'))
     await conferirDialogo(page)
     await page.unroute(ehOAcesso, recusar)
     // Sem link em risco, "Fechar" fecha na hora. O "Gerar acesso" do vazio saiu com a seção recarregada: o foco vai para

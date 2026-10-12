@@ -29,3 +29,23 @@ export const PAGINA_BOTOES_DE_44_PX = pagina(
 /** Texto cinza-claro sobre branco: `color-contrast` é violação `serious`. */
 export const PAGINA_SEM_CONTRASTE = pagina('<p style="color: #d0d0d0">texto que quase não se lê</p>')
 export const PAGINA_COM_CONTRASTE = pagina('<p style="color: #333">texto que se lê</p>')
+
+/**
+ * O cabeçalho de uma tela do aluno com nomes sintéticos como o e2e os gera (`marca.slice(0, 8)`, oito caracteres
+ * hexadecimais minúsculos), todos com "503" por acaso e nenhum erro na tela. Os nomes ficam colados no texto vizinho, como
+ * o `textContent` de elementos seguidos. Cada um tem o "503" num lugar, para cada vizinho hexadecimal ser provado sozinho:
+ * `fa5030ac` e `a2503562` são os da esteira de 12/10/2026 (hexadecimal dos dois lados); `503a1c9d` abre com o 503 e vem
+ * depois de espaço (só o vizinho de trás é não hexadecimal); `9fe1c503` fecha com ele e vem antes do botão "Sair" (só o da
+ * frente).
+ */
+export const PAGINA_COM_503_NO_NOME_DA_ESCOLA = pagina(
+  '<header><span>Colégio sintético fa5030ac</span><button>Sair</button></header><p>Escola: Colégio sintético a2503562</p>' +
+    '<p>Aluno sintético 503a1c9d</p><p><span>Aluno sintético 9fe1c503</span><button>Sair</button></p>',
+)
+
+/** A mesma tela com o erro de verdade: o código cru da API, em linha própria. */
+export const PAGINA_COM_O_503_CRU = pagina('<header><span>Colégio sintético fa5030ac</span></header><p role="alert">Erro 503</p>')
+/** E com o código colado ao texto do botão que vem depois, como o `textContent` o entrega: "Erro 503Tentar de novo". */
+export const PAGINA_COM_O_503_COLADO_AO_BOTAO = pagina(
+  '<header><span>Colégio sintético fa5030ac</span></header><p>Erro 503</p><button>Tentar de novo</button>',
+)

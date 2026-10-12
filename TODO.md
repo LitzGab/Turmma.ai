@@ -541,6 +541,18 @@ para o staging".
         limite de 40 marcados, "há mais pedidos" e o anúncio dos pedidos novos na região viva;
       - o `engines` da raiz (`>=22.18.0 <23`) fica abaixo do piso do `jsdom` 30.1.1 (`^22.22.2`): subir o piso para
         22.22.2 junto de quem tocar o `package.json` da raiz; esteira e `.nvmrc` (22.23.2) passam (dono: Joaquim)
+- [ ] **(correção 2026-10-12-codigo-cru-no-nome-sintetico) Fechar a guarda do código cru de erro no e2e** (`revisor-geral`,
+      `test-engineer` e `frontend-reviewer`, 1ª e 2ª rodadas; `tasks/correcoes/2026-10-12-codigo-cru-no-nome-sintetico.md`):
+      `codigoCru` (`e2e/__fixtures__/verificacoes.ts`) trata como nome sintético qualquer `503` com vizinho hexadecimal, e
+      por isso não vê o código cru colado a minúscula de `a` a `f` ou a dígito. Duas pontas soltas, na mesma mão:
+      - **a trava contra a substring:** um teste de unidade ou regra de lint que reprove `not.toContainText('<três
+        dígitos>')` em `e2e/`, com exceção de `guardas.spec.ts`, para o próximo spec não voltar a procurar o código como
+        substring. Dentro dela: restringir o parâmetro de `codigoCru` a `` `${number}` `` ou validar `/^\d{3}$/` (hoje o
+        `codigo` entra na `RegExp` sem escape), e a docstring citar os cinco códigos em uso (`404`, `409`, `429`, `500`,
+        `503`) ou dizer "código HTTP de três dígitos";
+      - **a expressão presa ao formato:** a exceção valer só para o código dentro de uma sequência de oito hexadecimais, e
+        não para qualquer vizinho hexadecimal. Refaz as cinco mutações e o contrato do helper; só vale se aparecer um botão
+        ou aviso em minúscula de `a` a `f` logo depois de um erro (gatilho do `/retro`).
 - [x] **(D79) Imagens do compose de teste com nome fixo:** feito em 11/10/2026, sem tocar em `infra/`: fora do
       ambiente 0, `tools/ci/compose.ts` gera `.processo/compose-de-teste-N.yml`, que dá a cada imagem construída a
       etiqueta `teste-N`. Provado com um e2e no ambiente 1 (68 s, verde, sobre `educa-api:teste-1`)

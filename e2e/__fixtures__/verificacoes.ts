@@ -54,3 +54,21 @@ export function focoVisivel(page: Page, seletorAtivo = ':focus-visible'): Promis
     return contorno || estilo.boxShadow !== 'none'
   }, seletorAtivo)
 }
+
+/**
+ * O código numérico de erro (`503`, `409`, `429`) como texto cru na tela, para `not.toContainText` (regra 50, item 12:
+ * erro diz o que fazer, não o código).
+ *
+ * Não é a substring: o nome sintético da escola e da pessoa vem de oito caracteres hexadecimais minúsculos
+ * (`marca.slice(0, 8)`), e `fa5030ac` ou `a2503562` trazem "503" sem erro nenhum na tela (esteira de 12/10/2026, duas
+ * vezes). Em oito caracteres, um código de três tem sempre um vizinho hexadecimal; o do erro de verdade vem entre espaço,
+ * pontuação ou o texto do botão vizinho, que o `textContent` cola sem espaço ("Erro 503Tentar de novo").
+ *
+ * **O que a guarda deixa de ver:** o código cru colado a uma letra minúscula de `a` a `f` ou a um dígito ("503de novo",
+ * "5031"), porque para a expressão ele é indistinguível de um pedaço de nome sintético. Os botões e avisos de hoje
+ * começam em maiúscula, então o risco é baixo; um botão que comece em minúscula de `a` a `f` e venha logo depois do erro
+ * pede outra guarda, e não o afrouxamento desta.
+ */
+export function codigoCru(codigo: string): RegExp {
+  return new RegExp(`(?<![0-9a-f])${codigo}(?![0-9a-f])`)
+}

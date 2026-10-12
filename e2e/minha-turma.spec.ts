@@ -3,7 +3,7 @@ import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { abrirNavegacao, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarAtividades } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula, type AlunoDeTeste } from './__fixtures__/sessao.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * "Minha turma" do aluno (A1, tarefa 12.0; RF13): a escola, a turma e a série dele, sem colegas. Os estados do W4 —
@@ -76,7 +76,7 @@ test.describe('W4: os estados de "Minha turma"', () => {
     await page.reload()
     await expect(principal.getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal).not.toContainText(turma.turmaNome)
-    for (const proibido of ['503', 'INDISPONIVEL']) await expect(page.locator('body')).not.toContainText(proibido)
+    for (const proibido of [codigoCru('503'), 'INDISPONIVEL']) await expect(page.locator('body')).not.toContainText(proibido)
     expect(await violacoesGraves(page)).toEqual([])
 
     // A API volta: "Tentar de novo" traz a turma.

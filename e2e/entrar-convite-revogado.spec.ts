@@ -2,7 +2,7 @@ import { AVISO_DO_CONVITE_PARA_CONTA_EXISTENTE, mensagemDaEntrada, mensagemDoCon
 import { expect, test } from './__fixtures__/perfis.ts'
 import { campoCodigo, configurarSegundoFator } from './__fixtures__/segundo-fator.ts'
 import { codigoDoAutenticador, criarConviteDeCoordenador, criarEquipeComSenha, desativarUsuario, revogarConvite } from './__fixtures__/sessao.ts'
-import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { codigoCru, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 const PRAZO_DA_TELA_MS = 20_000
 
@@ -49,7 +49,7 @@ test.describe('entrada com o convite que já não vale', () => {
     await expect(page.getByRole('alert').filter({ hasText: AVISO_DO_CONVITE_PARA_CONTA_EXISTENTE })).toHaveCount(0)
     // Nada da escola que convidou, nem código ou status do erro na tela.
     await expect(page.locator('body')).not.toContainText(convite.escolaNome)
-    await expect(page.locator('body')).not.toContainText(/NAO_ENCONTRADO|404/)
+    for (const proibido of ['NAO_ENCONTRADO', codigoCru('404')]) await expect(page.locator('body')).not.toContainText(proibido)
     await expect(page).toHaveURL(/\/entrar$/)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])

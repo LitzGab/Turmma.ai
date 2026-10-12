@@ -2,7 +2,7 @@ import type { Locator, Page, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { entrarComoProfessora, gaveta, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 const ROTA_ESTADO = '**/v1/sistema/estado'
 const ROTA_AVISOS = '**/v1/sistema/avisos'
@@ -161,7 +161,7 @@ test.describe('casca da web', () => {
     await expect(secaoAvisos(page).getByRole('button', { name: 'Tentar de novo' })).toBeVisible()
 
     const tela = page.locator('body')
-    for (const proibido of ['500', '429', 'INDISPONIVEL_TENTE_DE_NOVO', 'LIMITE_EXCEDIDO', 'mensagem da API']) {
+    for (const proibido of [codigoCru('500'), codigoCru('429'), 'INDISPONIVEL_TENTE_DE_NOVO', 'LIMITE_EXCEDIDO', 'mensagem da API']) {
       await expect(tela).not.toContainText(proibido)
     }
     expect(await larguraExcedente(page)).toBe(0)

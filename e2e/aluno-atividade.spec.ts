@@ -4,7 +4,7 @@ import { diagnosticoDa, erroDaApi, minhaAtividade, portao, provaDa, QUEM_APROVA,
 import { entrarComoAluno, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula, type AlunoDeTeste } from './__fixtures__/sessao.ts'
-import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { codigoCru, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * As telas da atividade do aluno (MVP, A3, pacote X): "Atividades" e a atividade aberta. **Os estados de cada tela**, com
@@ -95,7 +95,7 @@ test.describe('Atividades: os quatro estados', () => {
     api.trocar('atividades', () => erroDaApi(503, 'INDISPONIVEL_TENTE_DE_NOVO'))
     await recarregar(page)
     await expect(principal(page).getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_TELA_MS })
-    for (const cru of ['503', 'INDISPONIVEL']) await expect(page.locator('body')).not.toContainText(cru)
+    for (const cru of [codigoCru('503'), 'INDISPONIVEL']) await expect(page.locator('body')).not.toContainText(cru)
 
     // Com dado: cada atividade com o estado em texto, e a avaliação avisada antes de abrir.
     api.atividades = [
@@ -234,7 +234,7 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
     await expect(principal(page).getByRole('radio', { name: /^D\./ })).toBeChecked()
     await expect(mapa(page).getByRole('button', { name: 'Questão 1, resposta ainda não salva' })).toBeVisible()
     expect(api.provas.get(atividade.id)?.respostas).toEqual([])
-    for (const cru of ['503', 'INDISPONIVEL']) await expect(page.locator('body')).not.toContainText(cru)
+    for (const cru of [codigoCru('503'), 'INDISPONIVEL']) await expect(page.locator('body')).not.toContainText(cru)
 
     // Com resposta não salva, o envio é segurado, e o diálogo diz por quê.
     await acionar(principal(page).getByRole('button', { name: 'Enviar a atividade' }), hasTouch)

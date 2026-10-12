@@ -3,7 +3,7 @@ import { MENSAGENS_DE_ERRO, mensagemDaEntrada } from '../packages/shared/src/err
 import { criarEquipeComSenha, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
 import { esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 const ROTA_ENTRAR = '**/v1/sessao/email'
 const ROTA_RENOVAR = '**/v1/sessao/renovar'
@@ -401,7 +401,7 @@ test.describe('entrada da equipe por e-mail e senha', () => {
     await expect(alerta).toHaveText(mensagemDaEntrada('CONTA_SEGURADA', 90), { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(alerta).toContainText('2 minutos')
     const tela = page.locator('body')
-    for (const proibido of ['429', 'CONTA_SEGURADA', 'mensagem da API']) {
+    for (const proibido of [codigoCru('429'), 'CONTA_SEGURADA', 'mensagem da API']) {
       await expect(tela).not.toContainText(proibido)
     }
     expect(await violacoesGraves(page)).toEqual([])

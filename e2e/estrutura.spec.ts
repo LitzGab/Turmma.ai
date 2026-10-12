@@ -17,7 +17,7 @@ import {
   porNaListaDaTurma,
   vencerConviteNoBanco,
 } from './__fixtures__/sessao.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * A Estrutura da coordenação (A1, tarefa 13.0; `tasks/prd-apresentacao-escola/cenarios.md`): W4 de Estrutura, Lista e
@@ -326,7 +326,7 @@ test.describe('W4 (Estrutura): do vazio ao roteiro, montando a escola pela tela'
     falhar = true
     await page.reload()
     await expect(principal(page).getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_ENTRADA_MS })
-    for (const proibido of ['503', 'INDISPONIVEL']) await expect(page.locator('body')).not.toContainText(proibido)
+    for (const proibido of [codigoCru('503'), 'INDISPONIVEL']) await expect(page.locator('body')).not.toContainText(proibido)
     expect(await violacoesGraves(page)).toEqual([])
 
     falhar = false
