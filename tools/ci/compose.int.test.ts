@@ -67,10 +67,17 @@ describe('ambiente do compose', () => {
     expect(resultado.status, resultado.stderr).toBe(0)
     const configuracao = JSON.parse(resultado.stdout) as {
       name: string
-      services: Record<string, { ports?: PortaPublicada[]; environment?: Record<string, string> }>
+      services: Record<string, { image?: string; ports?: PortaPublicada[]; environment?: Record<string, string> }>
     }
     expect(configuracao.name).toBe(PROJETO_TESTE)
     expect(configuracao.name).toBe(AMBIENTE_DE_TESTE === 0 ? 'educa-teste' : `educa-teste-${String(AMBIENTE_DE_TESTE)}`)
+
+    // A imagem que o compose constrói é deste ambiente: com o nome do ambiente 0 num checkout de outro número, o e2e
+    // daqui rodaria sobre o código de quem construiu por último. O que o Docker resolve cobre a âncora (`api-2`).
+    const etiqueta = AMBIENTE_DE_TESTE === 0 ? ':local' : `:teste-${String(AMBIENTE_DE_TESTE)}`
+    const nossas = Object.entries(configuracao.services).filter(([, servico]) => servico.image?.startsWith('educa-'))
+    expect(nossas.length).toBeGreaterThanOrEqual(11)
+    for (const [nome, servico] of nossas) expect(servico.image?.endsWith(etiqueta), `${nome}: ${servico.image ?? ''}`).toBe(true)
 
     const ambiente = lerAmbienteDeTeste()
     const esperadas = Object.entries(ambiente).filter(([chave]) => chave.endsWith('_PORTA_HOST')).map(([, valor]) => valor)

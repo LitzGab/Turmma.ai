@@ -10,8 +10,9 @@ import { executarEtapas, raizRepositorio, type Etapa } from './executar.ts'
  *
  * Esse é o ambiente de teste 0, o da esteira e o de quem não escolheu outro. Cada checkout pode ter o seu
  * (`numeroDoAmbienteDeTeste`): com o número N, de 1 a 3, o projeto é `educa-teste-N` e toda porta publicada sobe
- * N × 1000. A escolha é feita aqui e só aqui; quem precisa do projeto, dos argumentos do compose ou de uma porta lê
- * deste arquivo (`PROJETO_TESTE`, `ARGUMENTOS_COMPOSE`, `lerAmbienteDeTeste`, `urlDoBancoDeTeste`).
+ * N × 1000, e toda imagem que o compose constrói leva a etiqueta `teste-N` (`arquivoDasImagensDoAmbiente`). A escolha
+ * é feita aqui e só aqui; quem precisa do projeto, dos argumentos do compose ou de uma porta lê deste arquivo
+ * (`PROJETO_TESTE`, `ARGUMENTOS_COMPOSE`, `lerAmbienteDeTeste`, `urlDoBancoDeTeste`).
  */
 const PROJETO_DO_AMBIENTE_ZERO = 'educa-teste'
 export const ARQUIVOS_AMBIENTE_TESTE = ['.env.example', 'infra/teste.env'] as const
@@ -27,6 +28,9 @@ export const ULTIMO_AMBIENTE_DE_TESTE = 3
  */
 export const PORTAS_POR_AMBIENTE = 1000
 const SUFIXO_DE_PORTA_PUBLICADA = '_PORTA_HOST'
+const COMPOSE = 'infra/compose.yml'
+/** As imagens que o compose constrói com nome fixo, as únicas que precisam de etiqueta por ambiente. */
+const IMAGEM_CONSTRUIDA = /^educa-[a-z-]+:local$/
 
 function lerArquivoDoNumero(): string | undefined {
   const caminho = join(raizRepositorio, ARQUIVO_DO_NUMERO_DO_AMBIENTE)
@@ -75,20 +79,31 @@ export function arquivoDoAmbienteDerivado(numero: number): string | null {
 }
 
 /**
+ * O arquivo de compose que dá às imagens construídas a etiqueta do ambiente N, gerado em `.processo/`
+ * (`gravarAmbienteDerivado`). O ambiente 0 não tem. Sem ele, `infra/compose.yml` chama a imagem da API de
+ * `educa-api:local` em todo projeto: dois checkouts com código diferente construiriam por cima um do outro, e o e2e
+ * de um testaria a imagem do outro.
+ */
+export function arquivoDasImagensDoAmbiente(numero: number): string | null {
+  return numero === 0 ? null : `.processo/compose-de-teste-${String(numero)}.yml`
+}
+
+/**
  * Os argumentos de todo `docker compose` do ambiente N. O arquivo derivado vai por último entre os `--env-file`: no
- * compose o último sobrepõe o anterior, e é assim que as portas dele vencem as de `infra/teste.env`. Por arquivo, e
- * não pelo ambiente do processo do `docker`: quem chama o compose com o ambiente limpo (`tools/ci/compose.int.test.ts`)
- * continua falando com o projeto e as portas certas.
+ * compose o último sobrepõe o anterior, e é assim que as portas dele vencem as de `infra/teste.env`. O das imagens vai
+ * depois de `infra/compose.yml`, pelo mesmo motivo. Por arquivo, e não pelo ambiente do processo do `docker`: quem
+ * chama o compose com o ambiente limpo (`tools/ci/compose.int.test.ts`) continua falando com o projeto, as portas e
+ * as imagens certas.
  */
 export function argumentosDoCompose(numero: number): string[] {
   const derivado = arquivoDoAmbienteDerivado(numero)
+  const imagens = arquivoDasImagensDoAmbiente(numero)
   return [
     'compose',
     '--project-name',
     projetoDeTeste(numero),
     ...[...ARQUIVOS_AMBIENTE_TESTE, ...(derivado === null ? [] : [derivado])].flatMap((arquivo) => ['--env-file', arquivo]),
-    '-f',
-    'infra/compose.yml',
+    ...[COMPOSE, ...(imagens === null ? [] : [imagens])].flatMap((arquivo) => ['-f', arquivo]),
   ]
 }
 
@@ -236,21 +251,75 @@ export function conteudoDoAmbienteDerivado(numero: number): string {
 }
 
 /**
- * Grava o arquivo derivado do ambiente N em `.processo/`, e devolve o caminho dele (`null` no ambiente 0, que não
- * tem). Só escreve quando o conteúdo muda, e troca o arquivo de uma vez (`rename`): os processos do Vitest e do
- * Playwright carregam este módulo ao mesmo tempo, e nenhum pode ler o arquivo pela metade.
+ * A imagem de cada serviço de um compose, com a âncora resolvida: `api-2`, que é `<<: *api`, tem a imagem da `api-1`.
+ * Lido do texto, e não de `docker compose config`: este módulo é carregado por todo processo do Vitest e do
+ * Playwright, e nenhum deles pode esperar o `docker` para saber com que ambiente fala. O teste de integração do
+ * compose confere o resultado contra o `config` de verdade.
  */
-export function gravarAmbienteDerivado(numero: number, raiz: string = raizRepositorio): string | null {
-  const relativo = arquivoDoAmbienteDerivado(numero)
-  if (relativo === null) return null
-  const caminho = join(raiz, relativo)
-  const conteudo = conteudoDoAmbienteDerivado(numero)
-  if (existsSync(caminho) && readFileSync(caminho, 'utf8') === conteudo) return caminho
+export function imagensDosServicos(conteudoCompose: string): Map<string, string> {
+  const declarado = new Map<string, { imagem?: string; ancora?: string; herda?: string }>()
+  let servico: string | null = null
+  let dentro = false
+  for (const linha of conteudoCompose.split('\n')) {
+    if (/^\S/.test(linha)) dentro = linha.startsWith('services:')
+    if (!dentro) continue
+    const cabecalho = /^ {2}([a-z0-9-]+):(?:\s+&([a-z0-9-]+))?\s*$/.exec(linha)
+    if (cabecalho) {
+      servico = cabecalho[1] ?? null
+      if (servico !== null) declarado.set(servico, cabecalho[2] === undefined ? {} : { ancora: cabecalho[2] })
+      continue
+    }
+    const atual = servico === null ? undefined : declarado.get(servico)
+    if (!atual) continue
+    const imagem = /^ {4}image:\s*(\S+)\s*$/.exec(linha)
+    if (imagem?.[1] !== undefined) atual.imagem = imagem[1]
+    const herda = /^ {4}<<:\s*\*([a-z0-9-]+)\s*$/.exec(linha)
+    if (herda?.[1] !== undefined) atual.herda = herda[1]
+  }
+  const porAncora = new Map([...declarado.values()].filter((item) => item.ancora !== undefined).map((item) => [item.ancora, item]))
+  const resolver = (item: { imagem?: string; herda?: string } | undefined, saltos = 0): string | undefined =>
+    item === undefined || saltos > declarado.size ? undefined : (item.imagem ?? (item.herda === undefined ? undefined : resolver(porAncora.get(item.herda), saltos + 1)))
+  const imagens = new Map<string, string>()
+  for (const [nome, item] of declarado) {
+    const imagem = resolver(item)
+    if (imagem !== undefined) imagens.set(nome, imagem)
+  }
+  return imagens
+}
+
+/** O texto do arquivo das imagens do ambiente N: cada serviço que o compose constrói, com a etiqueta `teste-N`. */
+export function conteudoDasImagensDoAmbiente(numero: number, conteudoCompose: string = readFileSync(join(raizRepositorio, COMPOSE), 'utf8')): string {
+  const construidas = [...imagensDosServicos(conteudoCompose)].filter(([, imagem]) => IMAGEM_CONSTRUIDA.test(imagem))
+  return [
+    `# Gerado por tools/ci/compose.ts a partir de ${COMPOSE}: não edite.`,
+    `# As imagens que o ambiente de teste ${String(numero)} constrói, com etiqueta própria: o código deste checkout não cai sobre o de outro.`,
+    'services:',
+    ...construidas.flatMap(([servico, imagem]) => [`  ${servico}:`, `    image: ${imagem.replace(/:local$/, `:teste-${String(numero)}`)}`]),
+    '',
+  ].join('\n')
+}
+
+function gravarSeMudou(caminho: string, conteudo: string): void {
+  if (existsSync(caminho) && readFileSync(caminho, 'utf8') === conteudo) return
   mkdirSync(dirname(caminho), { recursive: true })
   const provisorio = `${caminho}.${String(process.pid)}.tmp`
   writeFileSync(provisorio, conteudo)
   renameSync(provisorio, caminho)
-  return caminho
+}
+
+/**
+ * Grava em `.processo/` os dois arquivos derivados do ambiente N, o das portas e o das imagens, e devolve o caminho
+ * do primeiro (`null` no ambiente 0, que não tem nenhum). Só escreve quando o conteúdo muda, e troca o arquivo de uma
+ * vez (`rename`): os processos do Vitest e do Playwright carregam este módulo ao mesmo tempo, e nenhum pode ler o
+ * arquivo pela metade.
+ */
+export function gravarAmbienteDerivado(numero: number, raiz: string = raizRepositorio): string | null {
+  const relativo = arquivoDoAmbienteDerivado(numero)
+  const imagens = arquivoDasImagensDoAmbiente(numero)
+  if (relativo === null || imagens === null) return null
+  gravarSeMudou(join(raiz, relativo), conteudoDoAmbienteDerivado(numero))
+  gravarSeMudou(join(raiz, imagens), conteudoDasImagensDoAmbiente(numero))
+  return join(raiz, relativo)
 }
 
 /**

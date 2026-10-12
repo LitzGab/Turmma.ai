@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -9,10 +10,13 @@ import {
   PROJETO_TESTE,
   ambienteDeTesteDo,
   argumentosDoCompose,
+  arquivoDasImagensDoAmbiente,
   arquivoDoAmbienteDerivado,
+  conteudoDasImagensDoAmbiente,
   conteudoDoAmbienteDerivado,
   deslocarPortas,
   gravarAmbienteDerivado,
+  imagensDosServicos,
   lerAmbienteDeTeste,
   numeroDoAmbienteDeTeste,
   projetoDeTeste,
@@ -234,7 +238,7 @@ describe('arquivo de ambiente derivado', () => {
     expect(argumentosDoCompose(2)).toEqual([
       'compose', '--project-name', 'educa-teste-2',
       '--env-file', '.env.example', '--env-file', 'infra/teste.env', '--env-file', '.processo/ambiente-de-teste-2.env',
-      '-f', 'infra/compose.yml',
+      '-f', 'infra/compose.yml', '-f', '.processo/compose-de-teste-2.yml',
     ])
     expect(new Set([1, 2, 3].map(arquivoDoAmbienteDerivado)).size).toBe(3)
   })
@@ -263,6 +267,85 @@ describe('arquivo de ambiente derivado', () => {
   })
 })
 
+describe('imagens construídas, por ambiente', () => {
+  // Escrito à mão, com as três formas que `infra/compose.yml` usa: imagem declarada, âncora herdada e âncora de âncora.
+  const COMPOSE_DE_EXEMPLO = [
+    'name: educa',
+    'services:',
+    '  postgres:',
+    '    image: pgvector/pgvector:0.8.6',
+    '  migrar:',
+    '    image: educa-api:local',
+    '  api-1: &api',
+    '    image: educa-api:local',
+    '    environment:',
+    '      image: nao-e-imagem',
+    '  api-2:',
+    '    <<: *api',
+    '  worker-interativo-1: &worker-interativo',
+    '    image: educa-worker:local',
+    '  worker-lote-1: &worker-lote',
+    '    <<: *worker-interativo',
+    '  worker-lote-2:',
+    '    <<: *worker-lote',
+    '  web:',
+    '    build: .',
+    'volumes:',
+    '  migrar:',
+    '    image: educa-volume:local',
+  ].join('\n')
+
+  it('a imagem de cada serviço sai com a âncora resolvida, e o que não é serviço fica de fora', () => {
+    expect(Object.fromEntries(imagensDosServicos(COMPOSE_DE_EXEMPLO))).toEqual({
+      postgres: 'pgvector/pgvector:0.8.6',
+      migrar: 'educa-api:local',
+      'api-1': 'educa-api:local',
+      'api-2': 'educa-api:local',
+      'worker-interativo-1': 'educa-worker:local',
+      'worker-lote-1': 'educa-worker:local',
+      'worker-lote-2': 'educa-worker:local',
+    })
+  })
+
+  it('só a imagem que o compose constrói troca de etiqueta, e a de terceiro continua a mesma', () => {
+    const texto = conteudoDasImagensDoAmbiente(2, COMPOSE_DE_EXEMPLO)
+    expect(texto.split('\n').filter((linha) => !linha.startsWith('#'))).toEqual([
+      'services:',
+      '  migrar:', '    image: educa-api:teste-2',
+      '  api-1:', '    image: educa-api:teste-2',
+      '  api-2:', '    image: educa-api:teste-2',
+      '  worker-interativo-1:', '    image: educa-worker:teste-2',
+      '  worker-lote-1:', '    image: educa-worker:teste-2',
+      '  worker-lote-2:', '    image: educa-worker:teste-2',
+      '',
+    ])
+  })
+
+  it('no compose de verdade, nenhum serviço fica com a imagem do ambiente 0 e dois ambientes não dividem etiqueta', () => {
+    const construidas = [...imagensDosServicos(lerArquivo('infra/compose.yml'))].filter(([, imagem]) => imagem.startsWith('educa-'))
+    // Os onze serviços nossos com imagem de nome fixo: o `migrar` e os cinco pares. A `web` não declara nome, e o compose já a chama pelo projeto.
+    expect(construidas.length).toBeGreaterThanOrEqual(11)
+    for (const numero of [1, 2, 3]) {
+      const texto = conteudoDasImagensDoAmbiente(numero)
+      for (const [servico] of construidas) expect(texto).toContain(`  ${servico}:\n    image: educa-`)
+      expect(texto).not.toContain(':local')
+      expect(texto.match(/:teste-\d/g)?.every((etiqueta) => etiqueta === `:teste-${String(numero)}`)).toBe(true)
+    }
+    expect(arquivoDasImagensDoAmbiente(0)).toBeNull()
+    expect(argumentosDoCompose(0).filter((argumento) => argumento === '-f')).toHaveLength(1)
+  })
+
+  it('é gravado junto com o das portas, em .processo/', () => {
+    const raiz = mkdtempSync(join(tmpdir(), 'educa-imagens-'))
+    try {
+      gravarAmbienteDerivado(1, raiz)
+      expect(readFileSync(join(raiz, '.processo/compose-de-teste-1.yml'), 'utf8')).toBe(conteudoDasImagensDoAmbiente(1))
+    } finally {
+      rmSync(raiz, { recursive: true, force: true })
+    }
+  })
+})
+
 describe('o que o resto do repositório lê', () => {
   it('projeto, argumentos do compose, portas e banco saem todos do número deste checkout', () => {
     // A integração, o e2e, o Playwright e a vitrine importam estes quatro. Um deles calculado por fora falaria com
@@ -272,6 +355,19 @@ describe('o que o resto do repositório lê', () => {
     expect([...ARGUMENTOS_COMPOSE]).toEqual(argumentosDoCompose(AMBIENTE_DE_TESTE))
     expect(lerAmbienteDeTeste()).toEqual(ambienteDeTesteDo(AMBIENTE_DE_TESTE))
     expect(urlDoBancoDeTeste()).toBe(urlDoBancoDeTeste(AMBIENTE_DE_TESTE))
+  })
+
+  it('o módulo carrega fora do ambiente 0, que é quando ele grava os derivados na própria carga', () => {
+    // O checkout dos testes é o ambiente 0, e nele a carga não grava nada: uma constante declarada depois da
+    // gravação só quebrava nos outros ambientes, com tudo verde aqui.
+    const resultado = spawnSync(process.execPath, ['--input-type=module', '-e', "const m = await import('./tools/ci/compose.ts'); process.stdout.write(m.PROJETO_TESTE)"], {
+      cwd: raizRepositorio,
+      encoding: 'utf8',
+      env: { ...process.env, EDUCA_AMBIENTE_TESTE: '3' },
+    })
+    expect(resultado.stderr).toBe('')
+    expect(resultado.stdout).toBe('educa-teste-3')
+    expect(lerArquivo('.processo/compose-de-teste-3.yml')).toBe(conteudoDasImagensDoAmbiente(3))
   })
 
   it('fora do ambiente 0, o arquivo que os argumentos do compose citam já existe, com as portas do ambiente', () => {
