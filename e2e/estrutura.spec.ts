@@ -729,7 +729,7 @@ test.describe('W10 e W4 (Lista): a lista de nomes da turma', () => {
     expect(guardado.caches).toEqual([])
   })
 
-  test('a lista paginada, sem releitura ao voltar para a aba; o que a tela segura antes de enviar; a resposta atrasada; a gravação recusada; o avulso e a retirada; o erro', async ({
+  test('a lista paginada, sem releitura ao voltar para a aba; o que a tela segura antes de enviar; a resposta atrasada; a gravação recusada; o avulso e a retirada; a turma aberta pelo histórico e a volta para a Estrutura', async ({
     page,
     hasTouch,
   }) => {
@@ -1032,7 +1032,35 @@ test.describe('W10 e W4 (Lista): a lista de nomes da turma', () => {
     // "Voltar para Estrutura" leva de volta à lista de turmas.
     await acionar(principal(page).getByRole('link', { name: 'Voltar para Estrutura' }), hasTouch)
     await esperarEstrutura(page)
+  })
+
+  test('o erro da leitura da lista com "Tentar de novo"; a turma aberta com o seu carregando e o seu erro; a turma que outra pessoa excluiu entre a prévia e o "Gravar lista"', async ({
+    page,
+    hasTouch,
+  }) => {
+    // Caso próprio, com a sua escola: o de cima já enche a maior parte do limite do `test.slow()`, e o que vem daqui
+    // não depende do que ele fez além da turma e do nome.
+    test.slow()
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    const estrutura = await montarEstruturaNoBanco(coordenadora.escolaId, ['7A'])
+    const [turma] = estrutura.turmas
+    if (turma === undefined) throw new Error('estrutura sem a turma')
+    const marca = randomUUID().slice(0, 8)
+    await porNaListaDaTurma(coordenadora.escolaId, turma.id, [
+      { nome: `Primeira da lista ${marca}`, matricula: '660001' },
+      { nome: `Segunda da lista ${marca}`, matricula: '660002' },
+    ])
+    await page.goto('/entrar')
+    await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
+    await abrirEstrutura(page, hasTouch)
+    await expect(principal(page).getByRole('region', { name: 'Turmas de 2026' })).toContainText(turma.nome, { timeout: PRAZO_DA_ENTRADA_MS })
     await abrirTurma(page, turma.nome, hasTouch)
+    const lista = principal(page).getByRole('region', { name: 'Nomes da turma' })
+    await expect(lista).toContainText(`Primeira da lista ${marca}`, { timeout: PRAZO_DA_ENTRADA_MS })
+    const campo = principal(page).getByLabel('Lista colada')
+    const verPrevia = principal(page).getByRole('button', { name: 'Ver a prévia' })
+    const subir = principal(page).getByRole('region', { name: 'Subir a lista de nomes' })
+    const previa = principal(page).getByRole('region', { name: 'Prévia' })
 
     // Erro: a leitura da lista cai, e a seção diz o que fazer, com "Tentar de novo".
     let falhar = true
