@@ -523,11 +523,24 @@ para o staging".
       mesmo dia do banco em que o teste roda. Sem isso, o `check` de `pedido_titular.chegou_em` (`0032_pedido_titular.sql`)
       aceita, entre 21 h e meia-noite, um dia de São Paulo à frente (a API recusa antes: `privacidade.service.ts`), e
       um `current_date` ou `::date` que entre sem fuso declarado muda de dia na produção sem o teste ver (dono: Joaquim)
-- [ ] **(F3, retro, M4) Condição de tela provada sem navegador:** a web não tem teste de componente (`jsdom` e
-      `testing-library`). Com ele, estado da tela, rótulo e o que cada papel vê se provam em segundos, e o e2e fica
-      para o fluxo: na 18.0 do F3, 110 dos 188 minutos foram Playwright. Correção própria, pelo time, antes da próxima
-      spec de tela; depois dela, a linha "estados da tela" do modelo de tarefa passa a pedir teste de componente
-      (dono: Joaquim)
+- [x] **(F3, retro, M4) Condição de tela provada sem navegador:** feito em 12/10/2026
+      (`tasks/correcoes/2026-10-12-teste-de-componente.md`). `jsdom` e `testing-library` entram como dependência de
+      desenvolvimento do `@educa/web`, e o projeto `unidade` passa a incluir `*.test.tsx`: o portão da tarefa, a esteira
+      e as mutações já o alcançam. O arquivo pede o ambiente na primeira linha (`// @vitest-environment jsdom`), e a
+      unidade da API e dos pacotes continua no Node. O auxiliar `apps/web/src/__fixtures__/tela.tsx` dá a rede falsa, a
+      sessão aberta e o cliente de consultas da aba; o primeiro caso é o de `ListaDePedidos.test.tsx` (estados, rótulo e
+      o que cada papel vê, em 1 s). **Falta, por outra mão:** a linha "estados da tela" do modelo de tarefa
+      (`.claude/skills/criar-tasks/`) passar a pedir teste de componente para a condição e e2e para o fluxo; e o `jsdom`
+      não faz layout, então "texto cortado" e "celular espremido" continuam sendo da vitrine e do e2e. Da revisão da
+      correção, **para quem pegar o resto**:
+      - quando a linha "estados da tela" mudar, ela deve citar `apps/web/src/__fixtures__/tela.tsx`, para não nascer um
+        segundo auxiliar, e conferir se o `jsdom` 30 já cobre o `showModal` do `DialogoDeDecisao` (hoje o diálogo fica
+        no e2e);
+      - a primeira tarefa que alterar a `ListaDePedidos` ou o `DialogoDeDecisao` leva os casos que a correção deixou:
+        dois alunos com o mesmo nome (a marcação é por id), releitura que falha com a lista na tela ou lida e vazia, o
+        limite de 40 marcados, "há mais pedidos" e o anúncio dos pedidos novos na região viva;
+      - o `engines` da raiz (`>=22.18.0 <23`) fica abaixo do piso do `jsdom` 30.1.1 (`^22.22.2`): subir o piso para
+        22.22.2 junto de quem tocar o `package.json` da raiz; esteira e `.nvmrc` (22.23.2) passam (dono: Joaquim)
 - [x] **(D79) Imagens do compose de teste com nome fixo:** feito em 11/10/2026, sem tocar em `infra/`: fora do
       ambiente 0, `tools/ci/compose.ts` gera `.processo/compose-de-teste-N.yml`, que dá a cada imagem construída a
       etiqueta `teste-N`. Provado com um e2e no ambiente 1 (68 s, verde, sobre `educa-api:teste-1`)

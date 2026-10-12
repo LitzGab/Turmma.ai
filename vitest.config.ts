@@ -38,7 +38,12 @@ export default defineConfig({
           // na máquina de outra pessoa. Quem prova o fuso de São Paulo o declara no próprio teste. A integração e o e2e
           // herdam o do computador, e o Postgres de teste declara o dele (`POSTGRES_FUSO`).
           env: { TZ: 'Asia/Tokyo' },
-          include: ['**/*.test.ts'],
+          // `.test.tsx` é o teste de componente da web: renderiza a peça no `jsdom` com a `testing-library`, e o arquivo
+          // pede o ambiente na primeira linha (`// @vitest-environment jsdom`). O ambiente é do arquivo, e não do projeto, para
+          // a unidade da API, do worker e dos pacotes continuar no Node, sem pagar o `jsdom`. Arquivo sem a linha cai no
+          // `document is not defined`, e não passa calado. Roda no mesmo projeto que o resto da unidade, e por isso o portão
+          // da tarefa, a esteira e as mutações (`tipoDoTeste`) já o alcançam, sem suíte nova.
+          include: ['**/*.test.{ts,tsx}'],
           exclude: [...ignorados, '**/*.int.test.ts'],
         },
       },
