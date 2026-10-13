@@ -6,8 +6,8 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** o `RELATÓRIO` do `Implementador`, da **2.0** (porte grande), na **linha 1**, 1ª tentativa, pedida em
-  13/10/2026 às 08h35. Checkout da linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch
+- **Espero:** o `RELATÓRIO` do `Implementador`, da **3.0** (porte grande), na **linha 1**, 1ª tentativa, pedida em
+  13/10/2026 às 10h00 (a 2.0 se encontrou às 09h58, em `080f90c`). Checkout da linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch
   `spec/pele-e-casca--l1`, ambiente de teste 1, com o `Implementador` e a `Mesa`. O pedido foi com a observação
   **"sem push"**: o commit da tarefa fica local
 - **Devo ainda:** (1) **tudo local, por decisão do Joaquim** (13/10, 08h50: "pode ficar local"): nenhum push, de
@@ -16,8 +16,8 @@
   na frente do `node`), e a saída esperada é "O PUSH FALHOU", que aqui é o certo: o encontro está feito. Não rodar o
   `esteira.ts`: sem branch no GitHub não há esteira. No lugar dela, o portão completo local
   (`portao-local.ts --e2e --infra`) uma vez, antes da validação (passo 8 do `/seguir`, "Sem GitHub"). Todo `PEDIDO`
-  de tarefa leva a observação "sem push"; (2) depois da 2.0, a 3.0, também tronco, em
-  série, na linha 1; da 4.0 em diante o quadro autoriza linhas, mas **uma linha só** até o Joaquim dizer o contrário
+  de tarefa leva a observação "sem push"; (2) a 3.0 é tronco e segura as outras doze; da 4.0 em diante o quadro
+  autoriza linhas, mas **uma linha só** até o Joaquim dizer o contrário
   (limite de uso); (3) nada mais sobre a revisão de spec da X3 e da X4: as duas **já têm revisão aprovada** pelos
   seis guardiões, quatro rodadas cada, feita pelo "Claude Code #2" a pedido do Joaquim e trazida para esta branch em
   13/10/2026 (`2f63ce0`, `7334f79`, `92cc7e5`; o Joaquim deu a palavra neste terminal: "pode"). Não repetir antes de
@@ -35,8 +35,8 @@
   "X1 pele-e-casca" nasceu da branch que já existia (`--existing-branch`), em
   `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca`, e a `develop` (`e278845`) entrou por merge, sem
   conflito (`65ab3b1`). A 1.0 e a spec correram fora do Maestri, num checkout avulso já desfeito
-- **Base:** `spec/pele-e-casca` em `92cc7e5` (a linha 1 saiu de `65ab3b1`, antes dos três commits de documento da
-  X3 e da X4, e os recebe no encontro da 2.0). Nada foi enviado ao GitHub: push é do Joaquim
+- **Base:** `spec/pele-e-casca` em `13977c9`, com a 2.0 e os três commits de documento da X3 e da X4; a linha 1
+  partiu dela para a 3.0. Nada foi enviado ao GitHub: push é do Joaquim
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
