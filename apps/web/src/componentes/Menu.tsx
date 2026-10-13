@@ -12,7 +12,7 @@ export interface ItemDoMenu {
   readonly icone?: LucideIcon
   /** Aparece, mas não dá para escolher. O foco pula. */
   readonly desabilitado?: boolean
-  /** Ação de perigo (excluir, revogar): texto em `erro`. A confirmação é de quem usa (`DialogoDeConfirmacao`). */
+  /** Ação de perigo (excluir, revogar): texto em `vermelho-texto`. A confirmação é de quem usa (`DialogoDeConfirmacao`). */
   readonly perigo?: boolean
 }
 
@@ -61,7 +61,10 @@ function focarItem(lista: HTMLElement | null, indice: number | undefined): void 
  * de volta no botão ao fechar por qualquer caminho.
  *
  * - **Abre por clique, toque, Enter, Espaço e seta**. Nada só no hover, nada só no teclado (regra 50, item 2a).
- * - **Cada item tem 44 px**, com o rótulo e, se houver, o ícone e uma frase.
+ * - **Cada item tem 44 px**, com o rótulo e, se houver, o ícone e uma frase. A caixa é a da D80 (`docs/interface.md` 10.2):
+ *   canto de 16 px, a borda de 2 px e o degrau sólido de 4 px em `borda` (`shadow-flutua`); o item, de canto 10, em 15 px
+ *   e peso 500, realça em `fundo-suave`, e a ação de perigo escreve em `vermelho-texto`. O item desligado perde o
+ *   realce e escreve em `sutil`, com `aria-disabled`: a cor sozinha não o diria.
  * - **Não passa da janela a 360 px**: a posição é medida na abertura (`flutuante.ts`).
  * - **O Tab fecha** e devolve o foco ao botão: o item que some com o foco em cima o jogaria no `body`.
  * - **A rolagem por fora fecha**, com o foco de volta no botão: o menu não corre atrás dele pela tela.
@@ -175,7 +178,7 @@ export function Menu({ rotulo, prefixo, icone: Icone, soIcone = false, itens, ao
           className="fixed z-30 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-0.5 overflow-y-auto rounded-cartao bg-superficie p-1.5 text-left shadow-flutua"
         >
           {titulo !== undefined && (
-            <p aria-hidden="true" className="px-2.5 pt-1.5 pb-1 text-[13px] font-medium text-sutil">
+            <p aria-hidden="true" className="t-selo px-2.5 pt-1.5 pb-1 text-sutil">
               {titulo}
             </p>
           )}
@@ -195,14 +198,14 @@ export function Menu({ rotulo, prefixo, icone: Icone, soIcone = false, itens, ao
                 // alcançável pelo teclado dentro dela. O Tab não passeia por eles: ele fecha o menu (acima).
                 tabIndex={desligadoAqui ? -1 : 0}
                 onClick={() => escolher(item)}
-                className={`flex min-h-11 w-full min-w-0 shrink-0 items-center gap-3 rounded-linha px-2.5 py-2 text-left text-base -outline-offset-2 ${
-                  desligadoAqui ? 'text-inativo' : `hover:bg-realce-suave focus-visible:bg-realce-suave ${item.perigo === true ? 'text-erro' : 'text-tinta'}`
-                } ${marcado ? 'font-semibold' : ''}`}
+                className={`t-apoio flex min-h-11 w-full min-w-0 shrink-0 items-center gap-3 rounded-linha px-2.5 py-2 text-left -outline-offset-2 ${
+                  desligadoAqui ? 'text-sutil' : `hover:bg-fundo-suave focus-visible:bg-fundo-suave ${item.perigo === true ? 'text-vermelho-texto' : 'text-tinta'}`
+                } ${marcado ? 'font-bold' : ''}`}
               >
-                {ItemIcone !== undefined && <ItemIcone aria-hidden="true" size={18} strokeWidth={1.75} className="shrink-0" />}
+                {ItemIcone !== undefined && <ItemIcone aria-hidden="true" size={18} strokeWidth={1.75} className={`shrink-0 ${item.perigo === true && !desligadoAqui ? '' : 'text-sutil'}`} />}
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="break-words">{item.rotulo}</span>
-                  {item.descricao !== undefined && <span className={`text-sm font-normal break-words ${desligadoAqui ? 'text-inativo' : 'text-sutil'}`}>{item.descricao}</span>}
+                  {item.descricao !== undefined && <span className="text-sm font-medium break-words text-sutil">{item.descricao}</span>}
                 </span>
                 {marcado && <Check aria-hidden="true" size={16} strokeWidth={2.4} className="shrink-0" />}
               </button>

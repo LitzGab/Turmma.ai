@@ -11,8 +11,8 @@ interface PropsDoDialogoDeConfirmacao {
   /** O que está sendo decidido, com o objeto: "Aprovar 32 correções", "Suspender a correção de objetiva". */
   readonly titulo: string
   /**
-   * `oficial` é a decisão oficial (aprovar, publicar, confirmar envio): o botão que confirma é o preto. `perigo` é a
-   * ação que desfaz ou tira algo (rejeitar, excluir, revogar, suspender): o botão é o `erro` cheio.
+   * `oficial` é a decisão oficial (aprovar, publicar, confirmar envio): o botão que confirma é o grafite. `perigo` é a
+   * ação que desfaz ou tira algo (rejeitar, excluir, revogar, suspender): o botão é o `vermelho` cheio.
    */
   readonly familia: 'oficial' | 'perigo'
   /**
@@ -50,9 +50,11 @@ interface PropsDoDialogoDeConfirmacao {
  *
  * - **Mostra o que vai acontecer antes** (regra 50, item 8): o resumo e o efeito são obrigatórios.
  * - **O foco começa no texto, e não no botão que confirma**: um Enter a mais não decide nada sem a pessoa ter lido.
- * - **Cancelar tem o mesmo tamanho de confirmar**, e vem ao lado: recusar nunca é mais difícil que aceitar (D59).
- * - **O botão que confirma não se parece com nenhum outro**: preto na decisão oficial, `erro` cheio no perigo. É o único
- *   lugar do produto onde o `perigo` cheio aparece (11.1).
+ * - **Cancelar tem o mesmo tamanho de confirmar**, em duas colunas iguais que empilham abaixo de 640 px, e **vem antes**:
+ *   recusar nunca é mais difícil que aceitar (D59), e o Tab chega nele primeiro. A coluna igual vale também para o rótulo
+ *   comprido: os dois botões crescem juntos, e nenhum fica menor que o outro.
+ * - **O botão que confirma não se parece com nenhum outro**: grafite na decisão oficial, `vermelho` cheio no perigo. O
+ *   cheio só existe aqui, na `ConfirmacaoDePerigo` e na decisão dos pedidos de nome (`perigo-cheio.test.ts`).
  */
 export function DialogoDeConfirmacao({
   titulo,
@@ -78,11 +80,11 @@ export function DialogoDeConfirmacao({
     <Dialogo titulo={titulo} aoFechar={aoFechar} focoInicial={inicio} papel="alertdialog" descritoPor={idDaDescricao} {...(focoDeReserva === undefined ? {} : { focoDeReserva })}>
       <div className="mt-4 flex min-w-0 flex-col gap-4">
         <div ref={inicio} id={idDaDescricao} tabIndex={-1} className="flex min-w-0 flex-col gap-3">
-          <dl className="flex min-w-0 flex-col gap-1.5 rounded-controle border border-linha p-3">
+          <dl className="flex min-w-0 flex-col gap-1.5 rounded-controle border-2 border-borda p-3">
             {resumo.map((linha) => (
               <div key={linha.rotulo} className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3">
-                <dt className="text-sm text-sutil">{linha.rotulo}</dt>
-                <dd className="min-w-0 font-medium break-words text-tinta">{linha.valor}</dd>
+                <dt className="t-apoio text-sutil">{linha.rotulo}</dt>
+                <dd className="t-apoio min-w-0 break-words text-tinta">{linha.valor}</dd>
               </div>
             ))}
           </dl>
@@ -94,19 +96,19 @@ export function DialogoDeConfirmacao({
         <p role="alert" className="rounded-controle bg-erro-cx p-3 break-words text-erro empty:hidden">
           {falha}
         </p>
-        <div className="flex flex-wrap gap-3">
+        <div data-botoes-da-confirmacao="" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Botao variante="secundario" onClick={aoFechar} className="w-full min-w-0">
+            {rotuloDeCancelar}
+          </Botao>
           {familia === 'oficial' ? (
-            <Botao variante="oficial" onClick={aoConfirmar} disabled={confirmando || impedido}>
+            <Botao variante="oficial" onClick={aoConfirmar} disabled={confirmando || impedido} className="w-full min-w-0">
               {rotulo}
             </Botao>
           ) : (
-            <Botao variante="perigo" cheio onClick={aoConfirmar} disabled={confirmando || impedido}>
+            <Botao variante="perigo" cheio onClick={aoConfirmar} disabled={confirmando || impedido} className="w-full min-w-0">
               {rotulo}
             </Botao>
           )}
-          <Botao variante="secundario" onClick={aoFechar}>
-            {rotuloDeCancelar}
-          </Botao>
         </div>
         <span role="status" className="sr-only">
           {confirmando ? rotulo : ''}

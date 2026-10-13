@@ -90,7 +90,7 @@ function EtapaDoLink({
   const campo = useRef<HTMLInputElement>(null)
   return (
     <div className="mt-4 flex flex-col gap-4">
-      <h3 ref={titulo} tabIndex={-1} className="font-semibold">
+      <h3 ref={titulo} tabIndex={-1} className="t-cartao">
         Copie o link do convite
       </h3>
       <p className="text-apoio">
@@ -98,7 +98,7 @@ function EtapaDoLink({
       </p>
       <CampoDoLink ref={campo} rotulo="Link do convite" link={link} aoCopiarAMao={aoCopiarAMao} />
       <AvisoDaCopia texto={copia} vez={vezDaCopia} copiado={copiado} />
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap justify-end gap-3">
         <Botao onClick={() => aoCopiar(campo.current)}>Copiar link</Botao>
         <button type="button" onClick={aoFechar} className={CLASSES_DO_BOTAO_SECUNDARIO}>
           Fechar
@@ -237,7 +237,7 @@ export function DialogoDeConviteNovo<Pedido, Resposta extends { readonly token: 
     const falha = gerar.isError ? textoDaFalha(gerar.error) : undefined
     return dialogo(
       <div className="mt-4 flex flex-col gap-4">
-        <h3 ref={tituloDaEtapaDeRevisao} tabIndex={-1} className="font-semibold">
+        <h3 ref={tituloDaEtapaDeRevisao} tabIndex={-1} className="t-cartao">
           {tituloDaRevisao}
         </h3>
         <dl className="grid gap-3">
@@ -254,7 +254,7 @@ export function DialogoDeConviteNovo<Pedido, Resposta extends { readonly token: 
           ))}
         </ul>
         {falha !== undefined && <Falha texto={falha.texto} erro={gerar.error} />}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap justify-end gap-3">
           {falha?.listaMudou !== true && (
             <>
               <Botao onClick={confirmar} disabled={gerar.isPending}>
@@ -304,7 +304,7 @@ export function DialogoDeConviteNovo<Pedido, Resposta extends { readonly token: 
         onChange={(evento) => definirEmail(evento.target.value)}
         erro={erros.email}
       />
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap justify-end gap-3">
         <Botao type="submit">Revisar</Botao>
         <button type="button" onClick={fechamento.pedirParaFechar} className={CLASSES_DO_BOTAO_SECUNDARIO}>
           Cancelar
@@ -404,7 +404,7 @@ export function DialogoDeConviteRefeito<Resposta extends { readonly token: strin
         ))}
       </ul>
       {falha !== undefined && <Falha texto={falha.texto} erro={refazer.error} />}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap justify-end gap-3">
         {falha?.listaMudou !== true && (
           <Botao onClick={confirmar} disabled={refazer.isPending}>
             {refazer.isPending ? acao.confirmando : acao.confirmar}

@@ -1,9 +1,15 @@
 import { TAMANHO_MAXIMO_DA_JUSTIFICATIVA, TAMANHO_MINIMO_DA_JUSTIFICATIVA } from '@educa/shared'
 import { useRef, useState } from 'react'
 import { Botao } from '../../componentes/Botao'
+import { Campo } from '../../componentes/Campo'
 import { CampoLongo } from '../../componentes/CampoLongo'
+import { Dialogo } from '../../componentes/Dialogo'
 import { DialogoDeConfirmacao } from '../../componentes/DialogoDeConfirmacao'
+import { ConfirmacaoDePerigo, DialogoDeFormulario } from '../../componentes/dialogos'
+import { Menu } from '../../componentes/Menu'
+import { PainelLado } from '../../componentes/PainelLado'
 import { problemaDoTexto } from '../../componentes/texto-longo'
+import { TURMAS } from '../dados'
 import { Secao } from '../Secao'
 
 type Confirmacao = 'aprovar' | 'suspender' | 'andamento' | 'falha' | 'rejeitar'
@@ -94,10 +100,169 @@ function DemonstracaoDaConfirmacao() {
   )
 }
 
+type DialogoDaCaixa = 'formulario' | 'perigo' | 'menu'
+
+/**
+ * O diálogo comum nos três jeitos que as telas o usam: o formulário (os campos e os dois botões à direita), a confirmação
+ * de perigo (o cheio vermelho, ao lado do "Cancelar" do mesmo tamanho) e o diálogo que carrega um menu dentro, onde o Esc
+ * é do menu e não do diálogo. Nomes inventados (regra 20, item 17).
+ */
+function DemonstracaoDoDialogo() {
+  const [dialogo, definirDialogo] = useState<DialogoDaCaixa | undefined>(undefined)
+  const [disciplina, definirDisciplina] = useState('')
+  const [turma, definirTurma] = useState(TURMAS[0]?.valor ?? '')
+  const [resultado, definirResultado] = useState('')
+  const textoDoResultado = useRef<HTMLParagraphElement>(null)
+  const fechar = () => definirDialogo(undefined)
+  const rotuloDaTurma = TURMAS.find((item) => item.valor === turma)?.rotulo ?? ''
+  return (
+    <>
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
+        <Botao variante="secundario" onClick={() => definirDialogo('formulario')}>
+          Nova disciplina
+        </Botao>
+        {/* Depois de excluir, o gatilho desliga: o foco não tem como voltar para ele, e vai para o resultado. */}
+        <Botao variante="perigo" disabled={resultado === 'Turma excluída: 2ºB'} onClick={() => definirDialogo('perigo')}>
+          Excluir a turma 2ºB
+        </Botao>
+        <Botao variante="secundario" onClick={() => definirDialogo('menu')}>
+          Atribuir à turma
+        </Botao>
+      </div>
+      <p ref={textoDoResultado} tabIndex={-1} role="status" data-dialogo-resultado="" className="min-h-6 text-sm text-sutil">
+        {resultado}
+      </p>
+      {dialogo === 'formulario' && (
+        <DialogoDeFormulario
+          titulo="Nova disciplina"
+          aoFechar={fechar}
+          aoEnviar={() => {
+            definirResultado(`Disciplina criada: ${disciplina}`)
+            definirDialogo(undefined)
+          }}
+          enviando={false}
+          rotuloDoEnvio="Criar disciplina"
+          rotuloEnviando="Criando…"
+          falha={undefined}
+        >
+          <Campo rotulo="Nome da disciplina" value={disciplina} onChange={(evento) => definirDisciplina(evento.target.value)} />
+        </DialogoDeFormulario>
+      )}
+      {dialogo === 'perigo' && (
+        <ConfirmacaoDePerigo
+          titulo="Excluir a turma 2ºB"
+          texto="A turma 2ºB e as atividades dela saem da lista. Os alunos continuam no cadastro da escola."
+          rotuloDaAcao="Excluir a turma"
+          rotuloEmAndamento="Excluindo…"
+          acao={() => Promise.resolve()}
+          aoFechar={fechar}
+          aoConcluir={() => {
+            definirResultado('Turma excluída: 2ºB')
+            definirDialogo(undefined)
+          }}
+          aoTerminar={() => undefined}
+          textosDaFalha={{}}
+          focoDeReserva={() => textoDoResultado.current?.focus()}
+        />
+      )}
+      {dialogo === 'menu' && (
+        <Dialogo titulo="Atribuir à turma" aoFechar={fechar}>
+          <div className="mt-4 flex min-w-0 flex-col gap-4">
+            <p className="text-apoio">Escolha a turma que recebe a atividade. O Esc de dentro do menu fecha só o menu.</p>
+            <Menu rotulo={rotuloDaTurma} prefixo="Turma" titulo="Turmas" itens={TURMAS.map((item) => ({ id: item.valor, rotulo: item.rotulo }))} escolhido={turma} aoEscolher={definirTurma} />
+            <div className="flex flex-wrap justify-end gap-3">
+              <Botao variante="secundario" onClick={fechar}>
+                Fechar
+              </Botao>
+            </div>
+          </div>
+        </Dialogo>
+      )}
+    </>
+  )
+}
+
+/**
+ * O painel que abre ao lado da tela: a 768 px ou mais, 480 px colados à direita; abaixo, folha de baixo. O miolo é
+ * comprido de propósito, para rolar por dentro, e leva um menu, para o Esc dele não fechar o painel. Nomes inventados.
+ */
+function DemonstracaoDoPainel() {
+  const [aberto, definirAberto] = useState(false)
+  const [decisao, definirDecisao] = useState('')
+  const [ordem, definirOrdem] = useState('nome')
+  const resultado = useRef<HTMLParagraphElement>(null)
+  const fechar = () => definirAberto(false)
+  return (
+    <>
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
+        {/* Depois de aplicar, o gatilho desliga: o foco vai para o resultado, pelo `focoDeReserva`. */}
+        <Botao variante="secundario" disabled={decisao !== ''} onClick={() => definirAberto(true)}>
+          Abrir o painel da turma 2ºB
+        </Botao>
+      </div>
+      <p ref={resultado} tabIndex={-1} role="status" data-painel-resultado="" className="min-h-6 text-sm text-sutil">
+        {decisao}
+      </p>
+      {aberto && (
+        <PainelLado
+          titulo="Turma 2ºB · Química"
+          aoFechar={fechar}
+          focoDeReserva={() => resultado.current?.focus()}
+          rodape={
+            <>
+              <Botao variante="secundario" onClick={fechar}>
+                Cancelar
+              </Botao>
+              <Botao
+                onClick={() => {
+                  definirDecisao('Painel aplicado: ordem por ' + ordem)
+                  definirAberto(false)
+                }}
+              >
+                Aplicar
+              </Botao>
+            </>
+          }
+        >
+          <div className="flex min-w-0 flex-col gap-4">
+            <p className="text-apoio">Quem está na turma, na ordem escolhida. O painel não fecha ao tocar fora dele.</p>
+            <Menu
+              rotulo={ordem === 'nome' ? 'Ordem por nome' : 'Ordem por entrega'}
+              titulo="Ordem da lista"
+              itens={[
+                { id: 'nome', rotulo: 'Ordem por nome' },
+                { id: 'entrega', rotulo: 'Ordem por entrega' },
+              ]}
+              escolhido={ordem}
+              aoEscolher={definirOrdem}
+            />
+            <Campo rotulo="Buscar na turma" />
+            <ul className="flex min-w-0 flex-col gap-2">
+              {Array.from({ length: 24 }, (_, indice) => (
+                <li key={indice} className="min-w-0 rounded-controle border-2 border-borda p-3 break-words">
+                  Aluna Exemplo {String(indice + 1).padStart(2, '0')}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </PainelLado>
+      )}
+    </>
+  )
+}
+
 export default function SecoesDeSobrepor() {
   return (
-    <Secao nome="confirmacao" titulo="Diálogo de confirmação">
-      <DemonstracaoDaConfirmacao />
-    </Secao>
+    <>
+      <Secao nome="confirmacao" titulo="Diálogo de confirmação">
+        <DemonstracaoDaConfirmacao />
+      </Secao>
+      <Secao nome="dialogo" titulo="Diálogo">
+        <DemonstracaoDoDialogo />
+      </Secao>
+      <Secao nome="painel-lado" titulo="Painel ao lado">
+        <DemonstracaoDoPainel />
+      </Secao>
+    </>
   )
 }

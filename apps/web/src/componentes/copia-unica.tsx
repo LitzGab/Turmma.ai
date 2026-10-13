@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type Ref, type RefObject } from 're
 import { Botao } from './Botao'
 import { CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
 import { copiarLink } from './link-do-convite'
+import { CAIXA_DO_CAMPO } from './seletor'
 
 /**
  * As peças do diálogo cujo link aparece uma vez só: a pergunta antes de fechar sem copiar, a cópia e o que é dito dela, o
@@ -65,11 +66,11 @@ export function Pergunta({
 }) {
   return (
     <div className="mt-4 flex flex-col gap-4">
-      <h3 ref={titulo} tabIndex={-1} className="font-semibold">
+      <h3 ref={titulo} tabIndex={-1} className="t-cartao">
         Fechar sem copiar o link?
       </h3>
       <p className="text-apoio">{texto}</p>
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap justify-end gap-3">
         <Botao onClick={aoVoltar}>{rotuloDeVoltar}</Botao>
         <button type="button" onClick={aoFecharDeVez} className={CLASSES_DO_BOTAO_SECUNDARIO}>
           Fechar sem copiar
@@ -113,13 +114,14 @@ export function useCopia() {
 
 /**
  * O link, uma vez, num campo de leitura que se seleciona inteiro ao receber o foco. A cópia feita à mão no campo (Ctrl+C,
- * ou o menu do toque) também conta, pelo evento `copy`.
+ * ou o menu do toque) também conta, pelo evento `copy`. A caixa é a do `Campo` (`seletor.ts`: borda de 2 px em
+ * `borda-campo`, fundo `campo`, 48 px), para o campo de leitura e o de escrita não se parecerem com peças diferentes.
  */
 export function CampoDoLink({ rotulo, link, aoCopiarAMao, ref }: { rotulo: string; link: string; aoCopiarAMao: () => void; ref: Ref<HTMLInputElement> }) {
   const idDoCampo = useId()
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={idDoCampo} className="font-medium">
+      <label htmlFor={idDoCampo} className="t-apoio font-bold text-tinta">
         {rotulo}
       </label>
       <input
@@ -132,7 +134,7 @@ export function CampoDoLink({ rotulo, link, aoCopiarAMao, ref }: { rotulo: strin
         spellCheck={false}
         onFocus={(evento) => evento.currentTarget.select()}
         onCopy={aoCopiarAMao}
-        className="min-h-11 w-full min-w-0 rounded-controle border border-borda-campo bg-fundo px-3 py-2 text-base text-tinta"
+        className={`min-h-12 w-full min-w-0 px-3.5 py-2 t-corpo ${CAIXA_DO_CAMPO}`}
       />
     </div>
   )

@@ -103,7 +103,7 @@ export function DialogoDeFormulario({ titulo, aoFechar, aoEnviar, enviando, rotu
       <form className="mt-4 flex min-w-0 flex-col gap-4" onSubmit={enviar} noValidate>
         {children}
         {falha !== undefined && <AlertaDaFalha texto={falha} />}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap justify-end gap-3">
           {!semNovaTentativa && (
             <Botao type="submit" disabled={enviando}>
               {enviando ? rotuloEnviando : rotuloDoEnvio}
@@ -166,7 +166,7 @@ export function ConfirmacaoDePerigo({ titulo, texto, rotuloDaAcao, rotuloEmAndam
           {texto}
         </p>
         {falha !== undefined && <AlertaDaFalha texto={falha} />}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap justify-end gap-3">
           {!mudou && (
             <button type="button" onClick={() => enviar(undefined)} disabled={mutacao.isPending} className={CLASSES_DO_BOTAO_PERIGO_CHEIO}>
               {mutacao.isPending ? rotuloEmAndamento : rotuloDaAcao}

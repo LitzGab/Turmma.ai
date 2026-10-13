@@ -158,6 +158,14 @@ describe('nome dos chunks', () => {
     for (const daEntrada of ['Campo.tsx', 'CampoDeSenha.tsx', 'seletor.ts']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
   })
 
+  it('o painel ao lado (X1, 7.0) está fora da entrada, e o que ele divide com o `Dialogo` (`dialogo-modal`) fica dentro', () => {
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/PainelLado.tsx')).toBe(true)
+    // O `Dialogo` é da entrada, e o que o painel divide com ele não pode morar numa peça que a entrada não baixa.
+    for (const daEntrada of ['Dialogo.tsx', 'dialogo-modal.ts', 'LoginPorCima.tsx', 'DialogoDoConvite.tsx']) {
+      expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
+    }
+  })
+
   it('as peças novas de estado (X1, 6.0) estão fora da entrada, e os três de `estado/` e o `Botao` que eles usam, dentro', () => {
     for (const nova of ['Aviso.tsx', 'Contador.tsx', 'Toque.tsx']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${nova}`), nova).toBe(true)
     for (const daEntrada of ['estado/EstadoCarregando.tsx', 'estado/EstadoErro.tsx', 'estado/EstadoVazio.tsx', 'Botao.tsx']) {

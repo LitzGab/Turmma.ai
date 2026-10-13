@@ -46,10 +46,10 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 6.2 As peças novas `Aviso`, `Contador` e `Toque`
   - [x] 6.3 Testes: texto ou ícone em todo estado; abas pelo teclado; o vazio, o carregando e o erro nos dois temas
 
-- [ ] **7.0 — Diálogo, confirmação, menu e painel ao lado na pele nova**
-  - [ ] 7.1 `Dialogo`, `DialogoDeConfirmacao`, `dialogos.tsx`, `copia-unica.tsx`, `DialogoDoConvite.tsx`, `Menu` e `LoginPorCima` revestidos
-  - [ ] 7.2 A peça nova `PainelLado`: 480 px ao lado e folha de baixo no celular, sobre `<dialog>`
-  - [ ] 7.3 Testes, no navegador: foco preso e devolvido; Esc; os dois botões da confirmação do mesmo tamanho; perigo cheio só na confirmação
+- [x] **7.0 — Diálogo, confirmação, menu e painel ao lado na pele nova**
+  - [x] 7.1 `Dialogo`, `DialogoDeConfirmacao`, `dialogos.tsx`, `copia-unica.tsx`, `DialogoDoConvite.tsx`, `Menu` e `LoginPorCima` revestidos
+  - [x] 7.2 A peça nova `PainelLado`: 480 px ao lado e folha de baixo no celular, sobre `<dialog>`
+  - [x] 7.3 Testes, no navegador: foco preso e devolvido; Esc; os dois botões da confirmação do mesmo tamanho; perigo cheio só na confirmação
 
 - [ ] **8.0 — A onça é o avatar dos três agentes, sempre com a função e o selo**
   - [ ] 8.1 `componentes/onca/CabecaOnca.tsx`: um desenho, expressão neutra, parado; só a cabeça (a onça inteira não entra na X1)

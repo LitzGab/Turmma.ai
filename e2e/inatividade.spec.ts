@@ -11,7 +11,8 @@ import {
 } from './__fixtures__/sessao.ts'
 import { irPelaNavegacao, esperarNovaConversa, esperarAtividades } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { desenho } from './__fixtures__/galeria.ts'
+import { corDoToken, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 const ROTA_ATIVIDADE = '**/v1/sessao/atividade'
 const ROTA_EU = '**/v1/eu'
@@ -92,6 +93,21 @@ test.describe('inatividade e login por cima da tela', () => {
 
     await expect(dialogo(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(dialogo(page)).toContainText('Sua sessão expirou')
+    // O véu do login por cima é o forte (preto a 75%) nos dois temas, e não o `veu` de 35% e 60% dos outros diálogos: atrás
+    // dele fica a tela de quem estava antes. Com o tema escuro, a regra do escuro tem a mesma especificidade e só a ordem
+    // do arquivo decide.
+    const veuDoLogin = () => dialogo(page).evaluate((elemento) => getComputedStyle(elemento, '::backdrop').backgroundColor)
+    const temaDeAntes = await page.evaluate(() => document.documentElement.getAttribute('data-tema') ?? 'claro')
+    for (const tema of ['claro', 'escuro']) {
+      await page.evaluate((valor) => document.documentElement.setAttribute('data-tema', valor), tema)
+      expect(await veuDoLogin(), `véu do login no tema ${tema}`).toBe('rgba(13, 13, 13, 0.75)')
+    }
+    await page.evaluate((valor) => document.documentElement.setAttribute('data-tema', valor), temaDeAntes)
+    // Os campos do login por cima têm a pele da D80: borda de 2 px em `borda-campo` e fundo `campo`.
+    const [bordaDeCampo, fundoDeCampo] = [await corDoToken(page, 'borda-campo'), await corDoToken(page, 'campo')]
+    for (const campo of [campoEmail(page), campoSenha(page)]) {
+      expect(await desenho(campo)).toMatchObject({ borda: `2px solid ${bordaDeCampo}`, fundo: fundoDeCampo })
+    }
     // O login por cima é modal: o foco fica preso nele, e o que estava atrás não é alcançável por engano.
     await page.keyboard.press('Tab')
     await page.keyboard.press('Tab')

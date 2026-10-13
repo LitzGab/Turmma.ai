@@ -14,7 +14,8 @@ import {
   type EstadoDoProfessorDeTeste,
   type ProfessorDeTeste,
 } from './__fixtures__/sessao.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { desenho } from './__fixtures__/galeria.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, corDoToken, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * A tela Professores da coordenação (A1, tarefa 14.0; `tasks/prd-apresentacao-escola/cenarios.md`): W4 e W12 de
@@ -430,6 +431,11 @@ test.describe('cadastrar, copiar o link e o aceite do professor', () => {
     const origem = new URL(page.url()).origin
     expect(anterior).toMatch(new RegExp(`^${origem.replaceAll('.', '\\.')}/convite#[A-Za-z0-9_-]{43}$`))
     await expect(noDialogo(page).getByLabel('Link do convite')).toHaveAttribute('readonly', '')
+    // O campo do link tem a pele da D80, a mesma do campo de escrita: borda de 2 px em `borda-campo` e fundo `campo`.
+    expect(await desenho(noDialogo(page).getByLabel('Link do convite'))).toMatchObject({
+      borda: `2px solid ${await corDoToken(page, 'borda-campo')}`,
+      fundo: await corDoToken(page, 'campo'),
+    })
     // A quem mandar, com o e-mail com que a pessoa entra: a tela do convite e a entrada não o dizem.
     await expect(noDialogo(page)).toContainText(`Mande o link a ${nome}, que entra com o e-mail prof-${marca}@educa.invalid. O convite vale 7 dias e entra uma vez só.`)
     await conferirDialogo(page)

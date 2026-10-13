@@ -334,17 +334,32 @@
   }
 
   /*
-   * O login por cima da tela (sessão vencida) é um `dialog` modal: o navegador prende o foco nele e deixa o resto
-   * inerte. O fundo escurecido é a `tinta` com transparência em `rgba()` literal, e não em `color-mix()` nem em
-   * `oklch()`, pelo mesmo motivo da paleta acima; e literal, e não `var()`, porque no Chrome anterior ao 122 o
-   * `::backdrop` não herda variável do `:root`, e o fundo sairia transparente. O véu mais leve da D80 (`veu`) entra com
-   * as peças de diálogo; o do login por cima continua forte, porque atrás dele fica a tela de quem estava antes. A
-   * centralização é explícita porque o `margin` do `dialog` é zerado pelo reset.
+   * O véu atrás de todo `dialog` modal é o `veu` da D80 (`docs/interface.md` 9.1): preto a 35% no claro e a 60% no escuro.
+   * O valor vai escrito por extenso, em `rgba()`, e não por `var(--color-veu)`: no Chrome anterior ao 122 o `::backdrop`
+   * não herda variável do `:root`, e o fundo sairia transparente. `estilos.test.ts` confere que cada valor é o `veu` do
+   * bloco do tema dele. O `data-tema` do `<html>` é sempre `claro` ou `escuro` (`index.html`), e por isso a regra do
+   * escuro não precisa de `@media`.
    */
   dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.35);
+  }
+
+  :root[data-tema='escuro'] dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+
+  /*
+   * O login por cima da tela (sessão vencida) é um `dialog` modal: o navegador prende o foco nele e deixa o resto
+   * inerte. O véu dele continua o forte de antes, porque atrás dele fica a tela de quem estava antes. A cor é a `tinta`
+   * com transparência em `rgba()` literal, e não em `color-mix()` nem em `oklch()`, pelo mesmo motivo da paleta acima, e
+   * literal, e não `var()`, pelo motivo do véu de cima. O `:root` na frente dá a esta regra a especificidade da do
+   * escuro, e ela vem depois: vence nos dois temas.
+   */
+  :root dialog[data-sessao-vencida]::backdrop {
     background-color: rgba(13, 13, 13, 0.75);
   }
 
+  /* A centralização é explícita porque o `margin` do `dialog` é zerado pelo reset. */
   dialog[open] {
     margin: auto;
   }

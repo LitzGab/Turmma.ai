@@ -5,6 +5,10 @@ import { ErroDaApi } from '../api/cliente'
 import { descartarSessaoVencida, entrarPorEmail, entrarPorMatricula, quemEstaNaSessao } from '../api/sessao'
 import { ROTA_DA_ETAPA, ROTAS } from '../caminhos'
 import { Botao } from './Botao'
+import { CAIXA_DO_CAMPO } from './seletor'
+
+/** O campo do login, igual ao do `Campo`: 48 px, canto de 12, borda de 2 px em `borda-campo` e fundo `campo`. */
+const CLASSES_DO_CAMPO_DO_LOGIN = `min-h-12 px-3.5 py-2 t-corpo ${CAIXA_DO_CAMPO}`
 
 /**
  * A sessão venceu, e a tela continua atrás do diálogo. Quem volta é quase sempre a mesma pessoa, pelo mesmo caminho
@@ -12,6 +16,10 @@ import { Botao } from './Botao'
  *
  * O `dialog` nativo é o que prende o foco e deixa o resto da página inerte sem nenhum JavaScript nosso — e o Esc não
  * fecha, porque não há para onde fechar: atrás dele não há sessão nenhuma.
+ *
+ * A caixa é a do `Dialogo` (`docs/interface.md` 10.2, "na mesma caixa"): canto de 16 px, borda de 2 px e degrau sólido de
+ * 4 px (`shadow-flutua`). O véu é outro, de propósito: `data-sessao-vencida` o pede forte em `estilos.css`, e o `Dialogo`
+ * usa o `veu`.
  */
 export function LoginPorCima() {
   const [, navegar] = useLocation()
@@ -72,8 +80,14 @@ export function LoginPorCima() {
   }
 
   return (
-    <dialog ref={dialogo} aria-labelledby={titulo} onCancel={(evento) => evento.preventDefault()} className="w-full max-w-md rounded-caixa border border-linha bg-superficie p-6 text-tinta shadow-flutua">
-      <h2 id={titulo} className="text-lg font-semibold">
+    <dialog
+      ref={dialogo}
+      aria-labelledby={titulo}
+      data-sessao-vencida=""
+      onCancel={(evento) => evento.preventDefault()}
+      className="max-h-[calc(100svh-2rem)] w-[min(32.5rem,calc(100%-2rem))] overflow-y-auto rounded-caixa bg-superficie p-6 text-tinta shadow-flutua"
+    >
+      <h2 id={titulo} className="t-secao">
         Sua sessão expirou
       </h2>
       <p className="mt-2 text-apoio">
@@ -83,7 +97,7 @@ export function LoginPorCima() {
       </p>
       <form className="mt-4 flex flex-col gap-4" onSubmit={(evento) => void enviar(evento)}>
         <div className="flex flex-col gap-1">
-          <label htmlFor={campoIdentificador} className="font-medium">
+          <label htmlFor={campoIdentificador} className="t-apoio font-bold text-tinta">
             {porMatricula ? 'Matrícula' : 'E-mail'}
           </label>
           <input
@@ -98,11 +112,11 @@ export function LoginPorCima() {
             maxLength={porMatricula ? TAMANHO_MAXIMO_MATRICULA : TAMANHO_MAXIMO_EMAIL}
             value={identificador}
             onChange={(evento) => definirIdentificador(evento.target.value)}
-            className="min-h-11 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta"
+            className={CLASSES_DO_CAMPO_DO_LOGIN}
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor={campoSenha} className="font-medium">
+          <label htmlFor={campoSenha} className="t-apoio font-bold text-tinta">
             Senha
           </label>
           <input
@@ -114,7 +128,7 @@ export function LoginPorCima() {
             maxLength={TAMANHO_MAXIMO_SENHA}
             value={senha}
             onChange={(evento) => definirSenha(evento.target.value)}
-            className="min-h-11 rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta"
+            className={CLASSES_DO_CAMPO_DO_LOGIN}
           />
         </div>
         {falha !== undefined && (

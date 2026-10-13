@@ -1,6 +1,7 @@
+import type { Locator } from '@playwright/test'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { abrirGaleria, acionar, caixa, conferirQueOFocoNaoCaiu, desenho, secao } from './__fixtures__/galeria.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, corDoToken, focoVisivel, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * As peças do MVP de apresentação (`docs/mvp-rapido.md` 9.3; `docs/interface.md` 11.1 e 11.3), na galeria (`/galeria`),
@@ -18,6 +19,13 @@ const RGB = {
   vermelhoTexto: 'rgb(184, 64, 69)',
   superficie: 'rgb(255, 255, 255)',
 } as const
+
+const TEMAS = ['claro', 'escuro'] as const
+
+/** O foco do teclado está dentro do elemento (o diálogo ou o painel): é o que a prisão do foco promete. */
+function estaDentro(alvo: Locator): Promise<boolean> {
+  return alvo.evaluate((elemento) => elemento.contains(document.activeElement))
+}
 
 test.describe('peças do MVP de apresentação, na galeria', () => {
   test('abas e menu pelo teclado: uma parada só no Tab, setas, item desligado pulado, e o Esc devolve o foco', async ({ page, hasTouch }) => {
@@ -259,4 +267,346 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await expect(decisao).toBeFocused()
     await conferirQueOFocoNaoCaiu(page)
   })
+  test('o diálogo comum: o Tab e o Shift+Tab não saem dele, o Esc fecha e o foco volta ao botão que abriu', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    const bloco = secao(page, 'dialogo')
+    const gatilho = bloco.getByRole('button', { name: 'Nova disciplina' })
+    await acionar(gatilho, hasTouch)
+    const dialogo = page.getByRole('dialog', { name: 'Nova disciplina' })
+    await expect(dialogo).toBeVisible()
+
+    // O foco está dentro, e o Tab volta ao primeiro controle depois do último, nos dois sentidos: voltas e meia a mais
+    // do que há de controles, para o Tab passar pelo limite das duas pontas.
+    const controles = await dialogo.locator('input, button').count()
+    expect(controles).toBe(3)
+    for (let passo = 0; passo < controles * 2 + 1; passo++) {
+      await page.keyboard.press('Tab')
+      expect(await estaDentro(dialogo), `Tab ${String(passo + 1)}`).toBe(true)
+    }
+    for (let passo = 0; passo < controles * 2 + 1; passo++) {
+      await page.keyboard.press('Shift+Tab')
+      expect(await estaDentro(dialogo), `Shift+Tab ${String(passo + 1)}`).toBe(true)
+    }
+    expect(await larguraExcedenteDoDialogo(page)).toBe(0)
+
+    // A caixa tem até 520 px (`Dialogo`, `docs/interface.md` 10.2) e, na janela estreita, a janela menos duas margens de
+    // 16 px. O rodapé fica à direita: o último botão termina na borda do miolo, que é o enchimento de 24 px (20 abaixo de 640).
+    const janela = page.viewportSize()
+    if (janela === null) throw new Error('o projeto não tem janela')
+    const medidaDoDialogo = await caixa(dialogo)
+    // O `max-width` do próprio `dialog` modal no navegador (`100% - 6px - 2em`) tira 6 px a mais que a margem de 16 px.
+    const larguraEsperada = Math.min(520, janela.width - 32)
+    expect(medidaDoDialogo.width).toBeLessThanOrEqual(larguraEsperada)
+    expect(medidaDoDialogo.width).toBeGreaterThanOrEqual(larguraEsperada - 8)
+    const enchimento = janela.width >= 640 ? 24 : 20
+    const ultimoBotao = await caixa(dialogo.getByRole('button', { name: 'Cancelar' }))
+    expect(Math.abs(ultimoBotao.x + ultimoBotao.width - (medidaDoDialogo.x + medidaDoDialogo.width - enchimento))).toBeLessThanOrEqual(0.5)
+    // Os dois botões ficam juntos no fim da linha: sobra espaço à esquerda do primeiro, e não à direita do último.
+    const primeiroBotao = await caixa(dialogo.getByRole('button', { name: 'Criar disciplina' }))
+    expect(primeiroBotao.x - (medidaDoDialogo.x + enchimento)).toBeGreaterThan(40)
+    expect(primeiroBotao.x).toBeLessThan(ultimoBotao.x)
+
+    // O que foi digitado vai ao resultado, e o foco volta ao botão que abriu.
+    await dialogo.getByLabel('Nome da disciplina').fill('Química orgânica')
+    await acionar(dialogo.getByRole('button', { name: 'Criar disciplina' }), hasTouch)
+    await expect(dialogo).toHaveCount(0)
+    await expect(bloco.locator('[data-dialogo-resultado]')).toHaveText('Disciplina criada: Química orgânica')
+    await expect(gatilho).toBeFocused()
+
+    // O Esc cancela, sem criar nada, e o foco volta ao mesmo botão.
+    await acionar(gatilho, hasTouch)
+    await expect(dialogo).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(dialogo).toHaveCount(0)
+    await expect(gatilho).toBeFocused()
+    await expect(bloco.locator('[data-dialogo-resultado]')).toHaveText('Disciplina criada: Química orgânica')
+  })
+
+  test('o Esc de dentro do menu fecha o menu, e não o diálogo atrás: o seguinte é que fecha o diálogo', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    const bloco = secao(page, 'dialogo')
+    const gatilho = bloco.getByRole('button', { name: 'Atribuir à turma' })
+    await acionar(gatilho, hasTouch)
+    const dialogo = page.getByRole('dialog', { name: 'Atribuir à turma' })
+    await expect(dialogo).toBeVisible()
+
+    const botao = dialogo.getByRole('button', { name: /2ºB · Química/ })
+    await acionar(botao, hasTouch)
+    const menu = page.getByRole('menu')
+    await expect(menu).toBeVisible()
+    // O menu aberto dentro do diálogo cabe na janela, e o Esc é dele.
+    expect(await larguraExcedenteDoDialogo(page)).toBe(0)
+    await page.keyboard.press('Escape')
+    await expect(menu).toHaveCount(0)
+    await expect(dialogo).toBeVisible()
+    await expect(botao).toBeFocused()
+
+    // Escolher fecha o menu, troca o rótulo e deixa o diálogo onde estava.
+    await acionar(botao, hasTouch)
+    await acionar(menu.getByRole('menuitemradio', { name: '1ºA · Química' }), hasTouch)
+    await expect(menu).toHaveCount(0)
+    await expect(dialogo.getByRole('button', { name: /1ºA · Química/ })).toBeFocused()
+    await expect(dialogo).toBeVisible()
+
+    // Com o menu fechado, o Esc é do diálogo, e o foco volta a quem abriu.
+    await page.keyboard.press('Escape')
+    await expect(dialogo).toHaveCount(0)
+    await expect(gatilho).toBeFocused()
+  })
+
+  test('a confirmação de perigo: o foco começa no texto, os dois botões têm a mesma altura e, depois de excluir, o foco vai ao resultado', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    const bloco = secao(page, 'dialogo')
+    const resultado = bloco.locator('[data-dialogo-resultado]')
+    const gatilho = bloco.getByRole('button', { name: 'Excluir a turma 2ºB' })
+    await acionar(gatilho, hasTouch)
+    const confirmacao = page.getByRole('dialog', { name: 'Excluir a turma 2ºB' })
+    await expect(confirmacao).toBeVisible()
+    const excluir = confirmacao.getByRole('button', { name: 'Excluir a turma' })
+    const cancelar = confirmacao.getByRole('button', { name: 'Cancelar' })
+    await expect(excluir).not.toBeFocused()
+    await expect(cancelar).not.toBeFocused()
+    expect(await confirmacao.evaluate((alvo) => alvo.contains(document.activeElement))).toBe(true)
+    // O perigo cheio, e o botão ao lado com a mesma altura (D59). Esta confirmação tem os botões à direita, cada um com a
+    // largura do próprio rótulo: as duas colunas iguais são da `DialogoDeConfirmacao`, provadas no caso seguinte.
+    expect(await desenho(excluir)).toMatchObject({ fundo: RGB.vermelho })
+    expect((await caixa(excluir)).height).toBe((await caixa(cancelar)).height)
+    expect(await larguraExcedenteDoDialogo(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+
+    await acionar(excluir, hasTouch)
+    await expect(confirmacao).toHaveCount(0)
+    await expect(resultado).toHaveText('Turma excluída: 2ºB')
+    // O gatilho desligou com o que fez: o foco não cai no `body`, vai para o resultado.
+    await expect(gatilho).toBeDisabled()
+    await expect(resultado).toBeFocused()
+  })
+
+  test('a confirmação oficial e a de perigo: dois botões do mesmo tamanho, cancelar antes de confirmar, lado a lado no computador e empilhados no celular', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    const bloco = secao(page, 'confirmacao')
+    const largura = page.viewportSize()?.width ?? 0
+    const casos = [
+      { gatilho: 'Aprovar 32 correções', dialogo: 'Aprovar 32 correções', confirmar: 'Aprovar 32 correções' },
+      { gatilho: 'Suspender a função', dialogo: 'Suspender a correção de objetiva', confirmar: 'Suspender a função' },
+    ] as const
+    for (const caso of casos) {
+      await acionar(bloco.getByRole('button', { name: caso.gatilho }), hasTouch)
+      const confirmacao = page.getByRole('alertdialog', { name: caso.dialogo })
+      await expect(confirmacao).toBeVisible()
+      const botoes = confirmacao.locator('[data-botoes-da-confirmacao] button')
+      // Cancelar vem antes de confirmar, na tela e na ordem do Tab.
+      await expect(botoes).toHaveText(['Cancelar', caso.confirmar])
+      const cancelar = botoes.first()
+      const confirmar = botoes.last()
+      const [medidaDeCancelar, medidaDeConfirmar] = [await caixa(cancelar), await caixa(confirmar)]
+      expect(medidaDeCancelar.height, caso.gatilho).toBe(medidaDeConfirmar.height)
+      expect(Math.abs(medidaDeCancelar.width - medidaDeConfirmar.width), caso.gatilho).toBeLessThanOrEqual(0.5)
+      expect(medidaDeCancelar.height).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+      if (largura >= 640) {
+        // Duas colunas iguais: o mesmo alto, um ao lado do outro.
+        expect(medidaDeCancelar.y).toBe(medidaDeConfirmar.y)
+        expect(medidaDeCancelar.x).toBeLessThan(medidaDeConfirmar.x)
+      } else {
+        // Empilhados, cada um com a largura inteira da caixa, e o cancelar em cima.
+        expect(medidaDeCancelar.x).toBe(medidaDeConfirmar.x)
+        expect(medidaDeCancelar.y).toBeLessThan(medidaDeConfirmar.y)
+      }
+      expect(await larguraExcedenteDoDialogo(page)).toBe(0)
+      await expect(cancelar).not.toBeFocused()
+      await expect(confirmar).not.toBeFocused()
+      // O foco começa no texto, que está fora da ordem do Tab e antes dos dois botões: o Shift+Tab, que não tem controle
+      // antes dele, vai ao último, o que confirma, e não sai da caixa para a barra do navegador.
+      await page.keyboard.press('Shift+Tab')
+      await expect(confirmar).toBeFocused()
+      expect(await estaDentro(confirmacao), caso.gatilho).toBe(true)
+      // O Tab no último volta ao primeiro: a ordem é Cancelar e depois o que confirma, e ela fecha o círculo.
+      await page.keyboard.press('Tab')
+      await expect(cancelar).toBeFocused()
+      expect(await estaDentro(confirmacao), caso.gatilho).toBe(true)
+      await page.keyboard.press('Tab')
+      await expect(confirmar).toBeFocused()
+      await page.keyboard.press('Tab')
+      await expect(cancelar).toBeFocused()
+      expect(await estaDentro(confirmacao), caso.gatilho).toBe(true)
+      await page.keyboard.press('Escape')
+      await expect(confirmacao).toHaveCount(0)
+    }
+  })
+
+  test('o painel ao lado: 480 px colados à direita no computador, folha de baixo no celular, e o foco entra no miolo', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    const bloco = secao(page, 'painel-lado')
+    const gatilho = bloco.getByRole('button', { name: 'Abrir o painel da turma 2ºB' })
+    await acionar(gatilho, hasTouch)
+    const painel = page.getByRole('dialog', { name: 'Turma 2ºB · Química' })
+    await expect(painel).toBeVisible()
+    const janela = page.viewportSize()
+    if (janela === null) throw new Error('o projeto não tem janela')
+    const medida = await caixa(painel)
+
+    if (janela.width >= 768) {
+      // O painel de 480 px, colado à direita e na altura da janela.
+      expect(medida.width).toBe(480)
+      expect(medida.x + medida.width).toBe(janela.width)
+      expect(medida.y).toBe(0)
+      expect(medida.height).toBe(janela.height)
+    } else {
+      // A folha de baixo: a largura da janela, encostada no pé, com até 88% da altura.
+      expect(medida.x).toBe(0)
+      expect(medida.width).toBe(janela.width)
+      expect(medida.y + medida.height).toBe(janela.height)
+      expect(medida.height).toBeLessThanOrEqual(janela.height * 0.88 + 1)
+    }
+    expect(await larguraExcedenteDoDialogo(page)).toBe(0)
+    expect(await larguraExcedente(page)).toBe(0)
+
+    // O foco entra no miolo, e não no "Fechar"; o miolo é comprido e rola por dentro, sem a página junto.
+    const miolo = painel.locator('[data-painel-miolo]')
+    await expect(miolo).toBeFocused()
+    await expect(painel.getByRole('button', { name: 'Fechar' })).not.toBeFocused()
+    expect(await miolo.evaluate((alvo) => alvo.scrollHeight > alvo.clientHeight)).toBe(true)
+    // O cabeçalho tem 64 px, e o "Fechar" é um alvo de toque de 44.
+    const fechar = await caixa(painel.getByRole('button', { name: 'Fechar' }))
+    expect(fechar.width).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+    expect(fechar.height).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+    const cabecalho = await painel.getByRole('heading', { name: 'Turma 2ºB · Química' }).evaluate((titulo) => titulo.parentElement?.getBoundingClientRect().height ?? 0)
+    expect(cabecalho).toBeGreaterThanOrEqual(64)
+    expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  test('o painel ao lado: foco preso, o Esc do menu é do menu, o toque fora não fecha, e o foco volta a quem abriu ou ao resultado', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    const bloco = secao(page, 'painel-lado')
+    const gatilho = bloco.getByRole('button', { name: 'Abrir o painel da turma 2ºB' })
+    const resultado = bloco.locator('[data-painel-resultado]')
+    await acionar(gatilho, hasTouch)
+    const painel = page.getByRole('dialog', { name: 'Turma 2ºB · Química' })
+    await expect(painel).toBeVisible()
+
+    // O Tab e o Shift+Tab não saem do painel: passam de uma ponta à outra e voltam.
+    const controles = await painel.locator('a[href], button:not([disabled]), input:not([disabled])').count()
+    expect(controles).toBeGreaterThanOrEqual(4)
+    for (let passo = 0; passo < controles + 2; passo++) {
+      await page.keyboard.press('Tab')
+      expect(await estaDentro(painel), `Tab ${String(passo + 1)}`).toBe(true)
+    }
+    for (let passo = 0; passo < controles + 2; passo++) {
+      await page.keyboard.press('Shift+Tab')
+      expect(await estaDentro(painel), `Shift+Tab ${String(passo + 1)}`).toBe(true)
+    }
+
+    // O Esc do menu de dentro fecha o menu, e o painel fica.
+    const ordem = painel.getByRole('button', { name: /Ordem por nome/ })
+    await acionar(ordem, hasTouch)
+    const menu = page.getByRole('menu')
+    await expect(menu).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(menu).toHaveCount(0)
+    await expect(painel).toBeVisible()
+    await expect(ordem).toBeFocused()
+
+    // O toque fora do painel não o fecha: ele guardaria o que a pessoa digitou.
+    const janela = page.viewportSize()
+    if (janela === null) throw new Error('o projeto não tem janela')
+    const [x, y] = janela.width >= 768 ? [20, 20] : [janela.width / 2, 8]
+    await (hasTouch ? page.touchscreen.tap(x, y) : page.mouse.click(x, y))
+    await expect(painel).toBeVisible()
+
+    // O "Fechar" fecha, e o foco volta ao botão que abriu.
+    await acionar(painel.getByRole('button', { name: 'Fechar' }), hasTouch)
+    await expect(painel).toHaveCount(0)
+    await expect(gatilho).toBeFocused()
+
+    // O Esc também fecha, e o foco volta ao mesmo botão.
+    await acionar(gatilho, hasTouch)
+    await expect(painel).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(painel).toHaveCount(0)
+    await expect(gatilho).toBeFocused()
+
+    // Aplicar fecha com o botão que abriu desligado: o foco não cai no `body`, vai para o resultado (`focoDeReserva`).
+    await acionar(gatilho, hasTouch)
+    await acionar(painel.getByRole('button', { name: 'Aplicar' }), hasTouch)
+    await expect(painel).toHaveCount(0)
+    await expect(resultado).toHaveText('Painel aplicado: ordem por nome')
+    await expect(gatilho).toBeDisabled()
+    await expect(resultado).toBeFocused()
+    await conferirQueOFocoNaoCaiu(page)
+  })
+
+  test('o item do menu e o "Fechar" do painel têm 44 px de alto, e o menu aberto no painel cabe na janela', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    await acionar(secao(page, 'painel-lado').getByRole('button', { name: 'Abrir o painel da turma 2ºB' }), hasTouch)
+    const painel = page.getByRole('dialog', { name: 'Turma 2ºB · Química' })
+    await acionar(painel.getByRole('button', { name: /Ordem por nome/ }), hasTouch)
+    const itens = page.getByRole('menu').getByRole('menuitemradio')
+    await expect(itens).toHaveCount(2)
+    for (const item of await itens.all()) {
+      expect((await caixa(item)).height).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+    }
+    const janela = page.viewportSize()
+    const menu = await caixa(page.getByRole('menu'))
+    expect(menu.x).toBeGreaterThanOrEqual(0)
+    expect(menu.x + menu.width).toBeLessThanOrEqual(janela?.width ?? 0)
+    expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  for (const tema of TEMAS) {
+    test(`o diálogo, a confirmação e o painel, no tema ${tema}: borda de 2 px com degrau, véu do tema, sem violação do axe`, async ({ page, hasTouch }) => {
+      await abrirGaleria(page)
+      await page.evaluate((valor) => document.documentElement.setAttribute('data-tema', valor), tema)
+      const veuEsperado = tema === 'claro' ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.6)'
+      const borda = await corDoToken(page, 'borda')
+
+      const abertos = [
+        { bloco: 'dialogo', gatilho: 'Nova disciplina', alvo: page.getByRole('dialog', { name: 'Nova disciplina' }), confirmar: undefined },
+        { bloco: 'confirmacao', gatilho: 'Aprovar 32 correções', alvo: page.getByRole('alertdialog', { name: 'Aprovar 32 correções' }), confirmar: 'oficial' },
+        { bloco: 'confirmacao', gatilho: 'Suspender a função', alvo: page.getByRole('alertdialog', { name: 'Suspender a correção de objetiva' }), confirmar: 'perigo' },
+        { bloco: 'painel-lado', gatilho: 'Abrir o painel da turma 2ºB', alvo: page.getByRole('dialog', { name: 'Turma 2ºB · Química' }), confirmar: undefined },
+      ] as const
+      for (const aberto of abertos) {
+        await acionar(secao(page, aberto.bloco).getByRole('button', { name: aberto.gatilho }), hasTouch)
+        await expect(aberto.alvo).toBeVisible()
+        const estilo = await aberto.alvo.evaluate((dialogo) => {
+          const caixaDoDialogo = getComputedStyle(dialogo)
+          return {
+            veu: getComputedStyle(dialogo, '::backdrop').backgroundColor,
+            sombra: caixaDoDialogo.boxShadow,
+            fundo: caixaDoDialogo.backgroundColor,
+            bordaDeCima: caixaDoDialogo.borderTopWidth,
+            bordaDaEsquerda: caixaDoDialogo.borderLeftWidth,
+            bordaDeBaixo: caixaDoDialogo.borderBottomWidth,
+            canto: caixaDoDialogo.borderTopLeftRadius,
+          }
+        })
+        expect(estilo.veu, `${aberto.bloco}: véu`).toBe(veuEsperado)
+        expect(estilo.fundo, `${aberto.bloco}: fundo`).toBe(await corDoToken(page, 'superficie'))
+        if (aberto.bloco === 'painel-lado') {
+          // O painel é colado à janela: a borda de 2 px é a de um lado só (à esquerda no computador, em cima na folha), sem degrau.
+          const janela = page.viewportSize()
+          if ((janela?.width ?? 0) >= 768) expect(estilo.bordaDaEsquerda).toBe('2px')
+          else expect(estilo.bordaDeCima).toBe('2px')
+        } else {
+          // Anel de 2 px mais o degrau sólido de 4 px, os dois em `borda`, e o canto de 16 px.
+          // O navegador devolve antes delas as sombras transparentes do anel do Tailwind: só as duas últimas são nossas.
+          const degrau = `${borda} 0px 0px 0px 2px, ${borda} 0px 4px 0px 0px`
+          expect(estilo.sombra.slice(-degrau.length), `${aberto.bloco}: borda e degrau`).toBe(degrau)
+          expect(estilo.canto, `${aberto.bloco}: canto`).toBe('16px')
+        }
+        // O botão que confirma, nos dois temas: o `perigo` cheio é o `vermelho` do tema, e o oficial não o é.
+        if (aberto.confirmar === 'perigo') {
+          const cheio = await desenho(aberto.alvo.getByRole('button', { name: aberto.gatilho }))
+          expect(cheio.fundo, `${aberto.gatilho}: perigo cheio`).toBe(await corDoToken(page, 'vermelho'))
+        }
+        if (aberto.confirmar === 'oficial') {
+          const oficial = await desenho(aberto.alvo.getByRole('button', { name: aberto.gatilho }))
+          expect(oficial.fundo, `${aberto.gatilho}: oficial`).not.toBe(await corDoToken(page, 'vermelho'))
+        }
+        expect(await violacoesGraves(page), `${aberto.bloco}: axe`).toEqual([])
+        await page.keyboard.press('Escape')
+        await expect(aberto.alvo).toHaveCount(0)
+      }
+    })
+  }
 })

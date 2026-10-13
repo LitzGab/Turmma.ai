@@ -605,16 +605,23 @@ describe('guarda de cor em apps/web/src (U3)', () => {
     expect([...cssDoProduto().matchAll(/::selection\s*\{/g)]).toHaveLength(1)
   })
 
-  it('fora dos dois blocos de token, o estilos.css escreve cor uma vez só: o véu do diálogo', () => {
+  it('fora dos dois blocos de token, o estilos.css escreve cor só no véu do diálogo: o `veu` de cada tema e o forte do login por cima', () => {
     // Toda regra do CSS pinta por variável, e é isso que a faz virar com o tema. O véu é a exceção: antes do Chrome
-    // 122 o `::backdrop` não herda variável, e a regra ficaria sem cor nenhuma.
+    // 122 o `::backdrop` não herda variável, e a regra ficaria sem cor nenhuma. Por isso o valor é escrito por extenso, e
+    // o teste o confere contra o `veu` do bloco do tema dele: trocar o token sem trocar a regra reprova.
     const css = cssDoProduto()
     const claro = css.indexOf(ABERTURA_DO_CLARO)
     const escuro = css.search(/:root\[data-tema='escuro'\]\s*\{/)
     const semTokens = [miolo(css, claro), miolo(css, escuro)].reduce((resto, bloco) => resto.replace(bloco, ''), css)
     const semComentario = semTokens.replace(/\/\*[\s\S]*?\*\//g, '')
-    expect([...semComentario.matchAll(COR_ESCRITA)].map(([cor]) => cor)).toEqual(['rgba('])
-    expect(semComentario).toMatch(/dialog::backdrop\s*\{\s*background-color:\s*rgba\(13, 13, 13, 0\.75\);\s*\}/)
+    expect([...semComentario.matchAll(COR_ESCRITA)].map(([cor]) => cor)).toEqual(['rgba(', 'rgba(', 'rgba('])
+
+    const veus = veusDoBackdrop(semComentario)
+    const { claro: paletaClara, escuro: paletaEscura } = blocosDe(css)
+    expect([...veus.keys()].sort()).toEqual([':root dialog[data-sessao-vencida]::backdrop', ":root[data-tema='escuro'] dialog::backdrop", 'dialog::backdrop'])
+    expect(veus.get('dialog::backdrop')).toBe(rgbaDoHexDeOito(paletaClara.get('veu') ?? ''))
+    expect(veus.get(":root[data-tema='escuro'] dialog::backdrop")).toBe(rgbaDoHexDeOito(paletaEscura.get('veu') ?? ''))
+    expect(veus.get(':root dialog[data-sessao-vencida]::backdrop')).toBe('rgba(13, 13, 13, 0.75)')
   })
 
   it('o QR é a única exceção, e só nele: branco fixo e cor em linha passam no arquivo da lista', () => {
@@ -623,6 +630,25 @@ describe('guarda de cor em apps/web/src (U3)', () => {
     expect(classesReprovadas('componentes/Outro.tsx', qr)).toEqual(['componentes/Outro.tsx: bg-white (não muda com o tema)', 'componentes/Outro.tsx: fill #0d0d0d (cor em linha)'])
   })
 })
+
+/** `#rrggbbaa` como o `rgba(r, g, b, a)` que `estilos.css` escreve no `::backdrop`, com a transparência em duas casas. */
+function rgbaDoHexDeOito(hex: string): string {
+  if (!/^#[0-9a-f]{8}$/.test(hex)) throw new Error(`o véu não é hex de oito dígitos: ${hex}`)
+  const canais = [1, 3, 5].map((posicao) => Number.parseInt(hex.slice(posicao, posicao + 2), 16))
+  const alfa = Number((Number.parseInt(hex.slice(7, 9), 16) / 255).toFixed(2))
+  return `rgba(${canais.join(', ')}, ${String(alfa)})`
+}
+
+/** Cada regra de `::backdrop` do CSS (sem comentário): o seletor, com o espaço em branco normalizado, e o `background-color`. */
+function veusDoBackdrop(css: string): Map<string, string> {
+  const veus = new Map<string, string>()
+  for (const [, seletor = '', corpo = ''] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!seletor.includes('::backdrop')) continue
+    const cor = /background-color\s*:\s*([^;]+);/.exec(corpo)?.[1]
+    veus.set(seletor.trim().replace(/\s+/g, ' '), (cor ?? '').trim())
+  }
+  return veus
+}
 
 /** O CSS sem os comentários, para a conferência não ler a explicação como se fosse regra. */
 function cssSemComentario(): string {

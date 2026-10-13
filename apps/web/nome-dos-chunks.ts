@@ -113,6 +113,7 @@ export const PECAS_FORA_DA_ENTRADA = [
   'midia',
   'NumeroPainel',
   'Opcao',
+  'PainelLado',
   'Selecao',
   'SeloDeEstado',
   'Tabela',

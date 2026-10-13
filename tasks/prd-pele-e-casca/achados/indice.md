@@ -67,3 +67,9 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-13 15:08:14 | `test-engineer` | 2ª | APROVADO | `6_task` | Em `e2e/pecas-estado.spec.ts:220-226`, o laço que acha o primeiro fundo pintado só serve a este caso. Se outro caso de contraste precisar dele, vale levá-lo… |
 | 2026-10-13 15:08:27 | `revisor-geral` | 2ª | APROVADO | `6_task` | `docs/interface.md:1374` diz "o vazio tracejado (`borda-campo`) centraliza; o vazio de lista continua à esquerda". Mas em… |
 | 2026-10-13 15:08:38 | `frontend-reviewer` | 2ª | APROVADO | `6_task` | Placeholder da `CaixaPedido` cortado a 360 px: em `professora--galeria--celular-7.png`, "Peça uma atividade, um plano de aula…" quebra e a segunda linha some… |
+| 2026-10-13 16:31:01 | `infra-guardian` | 1ª | APROVADO | `7_task` | `apps/web/src/componentes/dialogo-modal.ts` agora carrega a prisão e a devolução do foco que o `Dialogo`, o `LoginPorCima` (sessão vencida) e o `PainelLado`… |
+| 2026-10-13 16:32:25 | `frontend-reviewer` | 1ª | APROVADO | `7_task` | Ordem dos botões do rodapé: ela difere entre as peças, e as fotos mostram os quatro jeitos. |
+| 2026-10-13 16:33:05 | `test-engineer` | 1ª | REPROVADO | `7_task` | O véu forte do login por cima não tem teste que o prove. A cláusula nova está em `apps/web/src/componentes/LoginPorCima.tsx:86` (`data-sessao-vencida=""`). |
+| 2026-10-13 16:33:15 | `revisor-geral` | 1ª | REPROVADO | `7_task` | Onde: `docs/interface.md:1405`, com `tasks/prd-pele-e-casca/7_task.md:103`. |
+| 2026-10-13 17:06:40 | `revisor-geral` | 2ª | APROVADO | `7_task` | `docs/interface.md:1404`: o texto diz "a gaveta da casca (12.0 e 13.0)", mas no `tasks.md` a gaveta é só da 13.0 (13.2). A 12.0 é a casca no computador, sem… |
+| 2026-10-13 17:06:44 | `test-engineer` | 2ª | APROVADO | `7_task` | `e2e/pecas-sobrepor.spec.ts:601-604`: o botão oficial só é provado como "não vermelho". Comparar com o token do `oficial` (`corDoToken(page, '<token do… |

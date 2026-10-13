@@ -36,6 +36,21 @@ export function larguraExcedente(page: Page): Promise<number> {
 }
 
 /**
+ * A cor de um token da D80 (`--color-<nome>`) como o navegador a devolve no estilo calculado, lida da própria página por
+ * uma sonda: vale nos dois temas, sem repetir o hex no teste.
+ */
+export function corDoToken(page: Page, token: string): Promise<string> {
+  return page.evaluate((nome) => {
+    const sonda = document.createElement('span')
+    sonda.style.color = `var(--color-${nome})`
+    document.body.append(sonda)
+    const cor = getComputedStyle(sonda).color
+    sonda.remove()
+    return cor
+  }, token)
+}
+
+/**
  * Quantos px o conteúdo do diálogo aberto passa da largura dele. O `dialog` modal fica na camada de cima, fixo, e o que
  * transborda dele não aumenta o documento: vira rolagem horizontal dentro do próprio diálogo, que a `larguraExcedente`
  * não enxerga. Zero é sem rolagem; sem diálogo aberto, falha alto.
