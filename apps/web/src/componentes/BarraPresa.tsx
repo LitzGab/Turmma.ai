@@ -10,7 +10,7 @@ interface PropsDaBarraPresa {
   readonly informacao?: ReactNode
   /** As ações, à direita: o `oficial` da tela e a alternativa dele; ou a `CaixaPedido`. */
   readonly children: ReactNode
-  /** A linha de cima, que separa a barra da lista. A barra da caixa de pedido não leva: a caixa já tem a borda dela. */
+  /** O fio de 2 px de cima, que separa a barra da lista. A barra da caixa de pedido não leva: a caixa já tem a borda dela. */
   readonly semLinha?: boolean
 }
 
@@ -38,7 +38,9 @@ function blocoQueRola(elemento: HTMLElement): HTMLElement {
  * a parar o controle focado acima dela. Ao sair da tela, o bloco volta a ser o que era.
  *
  * A 360 px a informação e as ações quebram em duas linhas, e os botões continuam com 44 px. O fundo é cheio (`fundo`):
- * sem vidro fosco nem transparência, que custam quadro no Chromebook e deixariam o texto da lista vazar por trás.
+ * sem vidro fosco nem transparência, que custam quadro no Chromebook e deixariam o texto da lista vazar por trás. O fio
+ * de cima é de 2 px em `borda`, como toda peça da D80. O degrau dos botões de dentro (4 px de sombra e de margem) fica
+ * dentro da barra: ela cresce com a margem, e `scroll-padding-bottom` mede a altura que ficou.
  */
 export function BarraPresa({ rotulo, informacao, children, semLinha = false }: PropsDaBarraPresa) {
   const barra = useRef<HTMLDivElement>(null)
@@ -61,7 +63,7 @@ export function BarraPresa({ rotulo, informacao, children, semLinha = false }: P
   }, [])
 
   return (
-    <div ref={barra} role="group" aria-label={rotulo} data-barra-presa="" className={`sticky bottom-0 z-10 flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 bg-fundo py-3 ${semLinha ? '' : 'border-t border-linha'}`}>
+    <div ref={barra} role="group" aria-label={rotulo} data-barra-presa="" className={`sticky bottom-0 z-10 flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 bg-fundo py-3 ${semLinha ? '' : 'border-t-2 border-borda'}`}>
       {informacao !== undefined && <div className="min-w-0 text-sm break-words text-apoio">{informacao}</div>}
       <div className={`flex min-w-0 flex-wrap items-center gap-3 ${informacao === undefined ? 'w-full' : 'ml-auto'}`}>{children}</div>
     </div>

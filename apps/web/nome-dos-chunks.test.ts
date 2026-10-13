@@ -157,6 +157,12 @@ describe('nome dos chunks', () => {
     for (const nova of ['Busca.tsx', 'Interruptor.tsx', 'Opcao.tsx']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${nova}`), nova).toBe(true)
     for (const daEntrada of ['Campo.tsx', 'CampoDeSenha.tsx', 'seletor.ts']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
   })
+
+  it('a peça nova de lista (X1, 5.0) está fora da entrada, e o `Linha` do `Tabela` não é um arquivo', () => {
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/Linha.tsx')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/Linha.test.tsx')).toBe(false)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/areas/professor/Linha.tsx')).toBe(false)
+  })
 })
 
 /** Os módulos de `src/areas/<papel>/` que um chunk leva. */

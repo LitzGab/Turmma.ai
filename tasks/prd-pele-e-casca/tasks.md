@@ -36,10 +36,10 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 4.2 As peças novas `Busca`, `Interruptor` e `Opcao`
   - [x] 4.3 Testes: rótulo, dica e erro ligados ao campo; teclado; foco; alvo de toque; contraste da borda
 
-- [ ] **5.0 — Cartão, linha clicável, tabela e número na pele nova**
-  - [ ] 5.1 `Cartao`, `Tabela`, `NumeroPainel`, `BarraRotulada` e `BarraPresa` revestidos
-  - [ ] 5.2 A peça nova `Linha`: a linha inteira é o alvo, com chevron
-  - [ ] 5.3 Testes: a tabela ainda vira lista a 360 px; a barra de acerto continua neutra; a linha é um alvo só
+- [x] **5.0 — Cartão, linha clicável, tabela e número na pele nova**
+  - [x] 5.1 `Cartao`, `Tabela`, `NumeroPainel`, `BarraRotulada` e `BarraPresa` revestidos
+  - [x] 5.2 A peça nova `Linha`: a linha inteira é o alvo, com chevron
+  - [x] 5.3 Testes: a tabela ainda vira lista a 360 px; a barra de acerto continua neutra; a linha é um alvo só
 
 - [ ] **6.0 — Selo, contador, aviso e abas dizem o estado sem depender da cor**
   - [ ] 6.1 `Estado`, `Faixa`, `Abas` e os três de `estado/` revestidos

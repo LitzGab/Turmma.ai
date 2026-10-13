@@ -13,19 +13,22 @@ interface PropsDoCartao {
 }
 
 /**
- * O cartão do produto (`docs/interface.md` 9.3): **linha fina, sem sombra**, canto de 16 px, 16 px por dentro e 20 px a
- * partir de 1024 px. A hierarquia vem de tom e de linha, não de elevação: sombra em cada cartão custa pintura no
- * computador fraco da escola e não diz nada (regra 50, item 1).
+ * O cartão do produto (`docs/interface.md` 9.3 e 10.2): **borda de 2 px em `borda`, sem sombra e sem degrau**, canto de
+ * 16 px, 16 px por dentro e 20 px a partir de 1024 px. O cartão de leitura não é botão: o degrau é a marca de que a peça
+ * se aperta, e este não se aperta. A hierarquia vem de tom e de linha, não de elevação: sombra em cada cartão custa
+ * pintura no computador fraco da escola e não diz nada (regra 50, item 1).
+ *
+ * O cartão clicável é a `Linha`; aqui só se lê.
  */
 export function Cartao({ titulo, nivel = 2, acao, children, className = '' }: PropsDoCartao) {
   const idDoTitulo = useId()
   const Titulo = `h${nivel}` as const
-  const classes = `min-w-0 rounded-cartao border border-linha bg-superficie p-4 lg:p-5 ${className}`
+  const classes = `min-w-0 rounded-cartao border-2 border-borda bg-superficie p-4 lg:p-5 ${className}`
   if (titulo === undefined) return <div className={classes}>{children}</div>
   return (
     <section aria-labelledby={idDoTitulo} className={classes}>
       <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <Titulo id={idDoTitulo} className="min-w-0 text-base leading-snug font-semibold break-words text-tinta">
+        <Titulo id={idDoTitulo} className="t-cartao min-w-0 break-words text-tinta">
           {titulo}
         </Titulo>
         {acao}

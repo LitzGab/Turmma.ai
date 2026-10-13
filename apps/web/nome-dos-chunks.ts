@@ -106,6 +106,7 @@ export const PECAS_FORA_DA_ENTRADA = [
   'Faixa',
   'flutuante',
   'Interruptor',
+  'Linha',
   'Menu',
   'midia',
   'NumeroPainel',

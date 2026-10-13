@@ -134,7 +134,10 @@ os tokens das outras peças desligadas (`fundo-suave`, borda `borda`, bolinha `b
 mostrar peça desligada vale mais que dois, e a opacidade derrubava a borda de 3:1 sem dizer o estado; o erro
 do campo leva ícone ao lado do texto e é descrição do campo (`aria-describedby`), sem `role="alert"`: o aviso do envio
 já é região própria (`descritoTambemPor`), e dois alertas o anunciariam duas vezes; o hover do botão troca a cor de
-fundo, sem `filter`; a lateral não anima a largura; `apagado` nunca é cor de texto; nada depende de
+fundo, sem `filter`; a `BarraRotulada` mantém o trilho `ia-cx` e o enchimento `sutil` de hoje (só a forma muda: 12 px e ponta
+redonda), continua desenho `aria-hidden` com o valor escrito ao lado, e não ganha `role="progressbar"` nem `scaleX`; o
+fio de 2 px entre as `Linha` é da moldura que as junta (`divide-y-2`), e não de cada uma; a lateral não anima a
+largura; `apagado` nunca é cor de texto; nada depende de
 `:has()`, `scrollbar-width` nem `color-mix`, nem em estilo em linha.
 
 **Foco.** Anel de 3 px em `foco` (`#146EAA` no claro, `#60B9F4` no escuro), afastado 2 px; por dentro (−3 px) em

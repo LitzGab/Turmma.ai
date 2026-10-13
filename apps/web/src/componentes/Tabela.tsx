@@ -24,6 +24,10 @@ interface PropsDaTabela<Linha> {
  * uma tabela de verdade, com cabeçalho de coluna e de linha; abaixo disso, uma lista em que cada linha é um bloco, com o
  * título da coluna ao lado de cada valor. A 360 px ninguém rola uma tabela de seis colunas de lado para achar o estado.
  *
+ * - **A pele (D80)**: moldura de canto 16 e borda de 2 px em `borda`, sem sombra e sem degrau (peça de leitura); o
+ *   cabeçalho de 44 px em `t-selo`, e a linha de 64 px, separada da de cima por 2 px. No celular, cada linha é um cartão
+ *   da mesma borda, com a primeira coluna em `t-cartao` e o nome das outras em `t-selo`. A tabela não ordena, de propósito,
+ *   e a linha que abre é da X2.
  * - **Uma estrutura de cada vez no documento**, escolhida pela largura (`useMidia`): pôr as duas e esconder uma com CSS
  *   dobraria os nós de uma tabela longa no Chromebook, e os controles de dentro das células existiriam duas vezes.
  * - **Na tabela, o cabeçalho é acessível**: `caption`, `th` de coluna e a primeira célula como `th` de linha. Quando ela
@@ -55,16 +59,16 @@ export function Tabela<Linha>({ rotulo, colunas, linhas, chaveDaLinha }: PropsDa
     return (
       <ul aria-label={rotulo} data-tabela="lista" className="flex min-w-0 flex-col gap-3">
         {linhas.map((linha) => (
-          <li key={chaveDaLinha(linha)} className="min-w-0 rounded-cartao border border-linha bg-superficie p-4">
-            <div className="min-w-0 font-medium break-words text-tinta">
+          <li key={chaveDaLinha(linha)} className="min-w-0 rounded-cartao border-2 border-borda bg-superficie p-4">
+            <div className="t-cartao min-w-0 break-words text-tinta">
               <span className="sr-only">{primeira.titulo}: </span>
               {primeira.celula(linha)}
             </div>
-            <dl className="mt-2 flex min-w-0 flex-col gap-1.5">
+            <dl className="mt-3 flex min-w-0 flex-col gap-2">
               {outras.map((coluna) => (
                 <div key={coluna.chave} className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3">
-                  <dt className="text-sm text-sutil">{coluna.titulo}</dt>
-                  <dd className="min-w-0 break-words text-tinta">{coluna.celula(linha)}</dd>
+                  <dt className="t-selo text-sutil">{coluna.titulo}</dt>
+                  <dd className="t-apoio min-w-0 break-words text-tinta">{coluna.celula(linha)}</dd>
                 </div>
               ))}
             </dl>
@@ -75,13 +79,13 @@ export function Tabela<Linha>({ rotulo, colunas, linhas, chaveDaLinha }: PropsDa
 
   return (
     // Com sobra, a região recebe foco e nome: a tabela que rola de lado precisa ser rolável pelo teclado.
-    <div ref={regiao} {...(sobra ? { role: 'region', 'aria-label': rotulo, tabIndex: 0 } : {})} data-tabela="tabela" className="min-w-0 overflow-x-auto rounded-cartao border border-linha">
-      <table className="w-full border-collapse text-left text-sm">
+    <div ref={regiao} {...(sobra ? { role: 'region', 'aria-label': rotulo, tabIndex: 0 } : {})} data-tabela="tabela" className="min-w-0 overflow-x-auto rounded-cartao border-2 border-borda">
+      <table className="w-full border-collapse text-left">
         <caption className="sr-only">{rotulo}</caption>
         <thead>
-          <tr className="border-b border-linha bg-lateral">
+          <tr className="h-11 border-b-2 border-borda">
             {colunas.map((coluna) => (
-              <th key={coluna.chave} scope="col" className={`px-4 py-2.5 text-[13px] font-medium whitespace-nowrap text-sutil ${coluna.alinhamento === 'fim' ? 'text-right' : ''}`}>
+              <th key={coluna.chave} scope="col" className={`t-selo px-4 whitespace-nowrap text-sutil ${coluna.alinhamento === 'fim' ? 'text-right' : ''}`}>
                 {coluna.titulo}
               </th>
             ))}
@@ -89,12 +93,12 @@ export function Tabela<Linha>({ rotulo, colunas, linhas, chaveDaLinha }: PropsDa
         </thead>
         <tbody>
           {linhas.map((linha) => (
-            <tr key={chaveDaLinha(linha)} className="border-b border-linha last:border-b-0">
-              <th scope="row" className={`px-4 py-3 font-medium text-tinta ${primeira.alinhamento === 'fim' ? 'text-right' : ''}`}>
+            <tr key={chaveDaLinha(linha)} className="h-16 border-b-2 border-borda last:border-b-0">
+              <th scope="row" className={`t-apoio px-4 py-3 text-tinta ${primeira.alinhamento === 'fim' ? 'text-right' : ''}`}>
                 {primeira.celula(linha)}
               </th>
               {outras.map((coluna) => (
-                <td key={coluna.chave} className={`px-4 py-3 text-tinta ${coluna.alinhamento === 'fim' ? 'text-right tabular-nums' : ''}`}>
+                <td key={coluna.chave} className={`t-apoio px-4 py-3 text-tinta ${coluna.alinhamento === 'fim' ? 'text-right tabular-nums' : ''}`}>
                   {coluna.celula(linha)}
                 </td>
               ))}

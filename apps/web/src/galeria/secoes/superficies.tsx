@@ -1,10 +1,16 @@
-import { Ellipsis, FileDown } from 'lucide-react'
+import { Ellipsis, FileDown, FileText } from 'lucide-react'
+import { useState } from 'react'
 import { Botao } from '../../componentes/Botao'
 import { BarraPresa } from '../../componentes/BarraPresa'
+import { BarraRotulada } from '../../componentes/BarraRotulada'
+import { Cartao } from '../../componentes/Cartao'
 import type { Aprovacao } from '../../componentes/ia/aprovacao'
 import { AssinaturaIA } from '../../componentes/ia/AssinaturaIA'
 import { LinhaAprovacao } from '../../componentes/ia/LinhaAprovacao'
+import { Linha } from '../../componentes/Linha'
 import { Menu } from '../../componentes/Menu'
+import { NumeroPainel } from '../../componentes/NumeroPainel'
+import { Estado } from '../../componentes/SeloDeEstado'
 import { Tabela, type ColunaDaTabela } from '../../componentes/Tabela'
 import { QUANDO } from '../dados'
 import { Secao } from '../Secao'
@@ -42,9 +48,78 @@ const COLUNAS: readonly [ColunaDaTabela<Registro>, ...ColunaDaTabela<Registro>[]
   },
 ]
 
+/** A moldura da lista de linhas: borda de 2 px, canto de 16 e o fio de 2 px entre uma linha e a de cima. */
+const MOLDURA_DA_LISTA = 'm-0 min-w-0 list-none divide-y-2 divide-borda overflow-hidden rounded-cartao border-2 border-borda p-0'
+
+const TITULO_COMPRIDO =
+  'Relatório de laboratório sobre a titulação ácido-base com indicador de repolho roxo, entregue em três partes: o roteiro, as medidas da bureta e a discussão dos resultados com a turma inteira'
+
+/** As quatro formas da linha: link, botão, só de leitura e com título comprido. O botão diz, em texto, o que abriu. */
+function LinhasDeExemplo() {
+  const [aberta, definirAberta] = useState<string | null>(null)
+  return (
+    <>
+      <ul data-linhas="" className={MOLDURA_DA_LISTA}>
+        <li>
+          <Linha
+            para="/galeria"
+            titulo="Lista de estequiometria"
+            abaixo="2ºB · entregas até 24/10"
+            inicio={<FileText aria-hidden="true" className="size-6 text-sutil" />}
+            fim={<Estado familia="pendente">Esperando você</Estado>}
+          />
+        </li>
+        <li>
+          <Linha aoAcionar={() => definirAberta('Resultado da lista 3')} titulo="Resultado da lista 3" abaixo="Corrigida em 19/09" />
+        </li>
+        <li>
+          <Linha titulo="Camila Souza" abaixo="Professora de Química, 2ºB e 1ºA" />
+        </li>
+        <li>
+          <Linha para="/galeria" titulo={TITULO_COMPRIDO} abaixo="1ºA · Química" />
+        </li>
+      </ul>
+      <p role="status" data-linha-aberta="" className="t-apoio text-sutil">
+        {aberta === null ? 'Nenhuma linha aberta.' : `Aberta: ${aberta}`}
+      </p>
+    </>
+  )
+}
+
 export default function SecoesDeSuperficies() {
   return (
     <>
+      <Secao nome="cartao-e-numero" titulo="Cartão e número de painel">
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+          <Cartao titulo="Atividades da semana" acao={<Botao variante="discreto" tamanho="compacto">Ver todas</Botao>}>
+            <p className="t-apoio text-sutil">Quatro atividades aplicadas, duas esperando a sua aprovação.</p>
+          </Cartao>
+          <Cartao>
+            <p className="t-apoio text-sutil">Um cartão sem título é só a caixa.</p>
+          </Cartao>
+        </div>
+        <div data-numeros="" className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
+          <NumeroPainel rotulo="Gerado por IA" valor={1284} apoio="Atividades, planos e correções" />
+          <NumeroPainel rotulo="Média de acertos" valor="61%" apoio={<BarraRotulada rotulo="Turma 2ºB" valor={61} />} />
+          <NumeroPainel rotulo="Esperando o professor" valor="—" />
+        </div>
+      </Secao>
+
+      <Secao nome="barra-rotulada" titulo="Barra rotulada, sempre neutra">
+        <Cartao>
+          <div data-barras="" className="flex min-w-0 flex-col gap-4">
+            <BarraRotulada rotulo="Habilidade EM13CNT101" valor={72} texto="72%" detalhe="3 questões" />
+            <BarraRotulada rotulo="Consumo do mês" valor={188} maximo={300} texto="188 de 300 trocas" />
+            <BarraRotulada rotulo="Hoje" valor={60} maximo={60} texto="60 de 60 perguntas" />
+            <BarraRotulada rotulo="Ainda sem acerto" valor={0} texto="0%" />
+          </div>
+        </Cartao>
+      </Secao>
+
+      <Secao nome="linha" titulo="Linha de lista">
+        <LinhasDeExemplo />
+      </Secao>
+
       <Secao nome="barra-presa" titulo="Barra presa embaixo">
         {/* A lista rola dentro desta caixa, e a barra é o último filho dela: gruda no pé e não cobre o último item. */}
         <div data-rolagem="" className="flex h-64 min-w-0 flex-col overflow-y-auto rounded-cartao border border-linha px-4">

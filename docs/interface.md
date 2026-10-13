@@ -1367,7 +1367,7 @@ prova isso (RF6 da X1).
 | Peça | Desenho | Estados e teclado |
 |---|---|---|
 | `Cartao` (R) | Canto 16, borda 2, face `fundo`, 16 px por dentro (20 a partir de 768). De leitura, sem degrau. A cor de família vai no ladrilho e no selo de dentro, nunca no fundo inteiro | Clicável: degrau, hover `fundo-suave`. Selecionado: `azul-claro` com `azul-borda` |
-| `Linha` (N) | A linha inteira clicável: mínimo de 64 px, separada da de cima por 2 px. Título em `t-cartao`, numa linha com reticências; embaixo, `t-apoio`; no fim, chevron de 20 em `apagado` | Link, botão ou só leitura. Hover `fundo-suave` |
+| `Linha` (N) | A linha inteira clicável: mínimo de 64 px. Título em `t-cartao`, numa linha com reticências (o `title` guarda o texto inteiro); embaixo, `t-apoio`; no fim, chevron de 20 em `apagado`, decoração. O fio de 2 px entre uma linha e a de cima é de quem junta as linhas, com `divide-y-2 divide-borda` na moldura (produto): a linha sozinha não sabe se é a primeira | Link, botão ou só leitura (sem foco e sem chevron). Hover `fundo-suave`; o anel de foco por dentro (−3 px) |
 | `Tabela` (R) | Moldura de canto 16. Cabeçalho de 44 px em `t-selo`; linha de 64 px, 15 px em 500. Abaixo de 768 px cada linha vira um cartão | Linha ativa em `azul-claro`. Linha que abre: inteira, por Enter e espaço. Não ordena |
 | `Abas` (R) | Linha de 48 px sobre um fio de 2 px (44 no cabeçalho de página). Rótulo em `t-rotulo`, `sutil`; a ativa em `azul-texto`, com sublinhado de 3 px em `azul`. **Até três** | Teclado de `teclado-das-abas.ts` |
 | `Tela` (R) | A moldura de toda tela, com o título e as larguras (11.2) | — |
@@ -1382,7 +1382,7 @@ prova isso (RF6 da X1).
 | `Contador` (N) | Pílula na face da família, texto `sobre-cor` em 700, tabular. 22, 24 ou 28 px | `role="img"`, com o número e o que ele conta. Sem item, não aparece |
 | `Aviso` (N) | Canto 12, borda 2 na `borda` da família, fundo `claro`, sem degrau. Glifo num círculo de 28. Título em `t-cartao`; corpo em 15 / 21 px, `tinta`. Informação azul, atenção amarelo, erro vermelho, certo verde | `role="alert"` só no erro que acabou de acontecer |
 | `Faixa` (R) | O aviso permanente, que não fecha (D8), na família `info` | `role="note"`. Não tem botão |
-| `BarraRotulada` (R) | Trilho em `borda`, de 16 ou 12 px, preenchido por `scaleX`. O texto ("2 de 8") vai fora. Só mede o que tem fim | `role="progressbar"`. Barra de acerto é neutra |
+| `BarraRotulada` (R) | Trilho em `ia-cx` (produto), de 12 px e ponta redonda, com o enchimento em `sutil`: a mesma cor nos dois, vazia ou cheia. O texto ("2 de 8") vai fora. Só mede o que tem fim | Só desenho, `aria-hidden` (produto): o valor está escrito ao lado, e `role="progressbar"` o diria duas vezes. Barra de acerto é neutra |
 | `NumeroPainel` (R) | O valor em `t-numero`, o rótulo em `t-selo`, `sutil` | Sem variação "boa" ou "ruim" em cor |
 | As de `componentes/ia/` (R) | O avatar da 9.7; o nome da função em 15 px e 700; o selo "IA" neutro; o chip de página, pílula de 28 px; o chip "da web", com a borda tracejada; a linha de quem aprovou, em `ok` | O chip abre por clique e por teclado |
 
