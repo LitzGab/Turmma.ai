@@ -339,6 +339,20 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       `infra-guardian` da correção `2026-10-02-teto-do-e2e-na-esteira`). Destino: correção própria por `/corrigir`,
       antes da próxima tarefa que acrescentar teste com espera de relógio em `infra/**/*.int.test.ts`
 
+- [ ] **`npm ci` das imagens na esteira sem nova tentativa.** Em 12/10/2026 o job `e2e 3/4` caiu duas vezes na
+      construção das imagens, antes de qualquer teste, com `npm error code ECONNRESET` e `network aborted`: na
+      execução 38261610727, 1ª tentativa (`4956a51`; imagem `despachante`, `npm ci --omit=dev`), e na 38279991501,
+      1ª tentativa (`bbae49e`; imagem `worker-lote`, `npm ci --ignore-scripts`). A segunda passou na 2ª tentativa sem
+      mudança de código. Os nove `RUN npm ci` de `infra/docker/*.Dockerfile` (linhas 12 e 30 de `api`, `worker`,
+      `realtime` e `despachante`; linha 15 de `web`) rodam uma vez só, e a esteira constrói as imagens do zero em cada
+      job que sobe o compose (`up --build`, `tools/ci/prazo-do-e2e.ts:143`): uma queda de rede do registro derruba o
+      job e custa uma reexecução à mão, com a esteira vermelha no meio. Saídas, a medir numa correção por `/corrigir`
+      (`infra-guardian`): `fetch-retries` e `fetch-retry-maxtimeout` do npm maiores nesses `RUN`; cache do npm no
+      BuildKit (`--mount=type=cache`), com cache de camada na esteira; ou nova tentativa da construção em quem a
+      chama. Nenhuma pode esconder falha que não é de rede: a nova tentativa vale só para erro de rede, com teto, e
+      deixa a linha no log. O `npm ci` dos próprios jobs (`.github/workflows/ci.yml:34,50,67,97`) tem o mesmo risco,
+      e `tools/ci/esteira.test.ts:130` fixa os comandos de cada job
+
 **Ao ligar HTTPS na borda do staging, as quatro coisas abaixo são da mesma tarefa.** Estão separadas
 porque item único vira execução parcial. Motivo e medição de cada uma em
 `tasks/correcoes/2026-09-22-log-da-borda-afogado-pela-sonda-do-proprio-container.md`, seção "O que fica
@@ -561,9 +575,19 @@ para o staging".
       encontro, conflito e conserto. Sem prova: os comandos do Maestri para o andar e o par de uma linha a mais, três
       e2e ao mesmo tempo nesta máquina, o consumo por hora do plano, e quanto tempo de spec as linhas tiram. Medir na
       retrospectiva da próxima spec (dono: Joaquim)
-- [ ] **(F3, retro, M3) A vigia só acorda o modelo quando há o que fazer:** feito em 11/10/2026
-      (`tools/processo/vigia.ts`, como `--pre-run` da rotina). Falta o Orquestrador trocar o comando da rotina
-      (`/seguir`, passo 9) e conferir que a saída vazia não acorda o modelo (dono: Joaquim)
+- [ ] **(F3, retro, M3) A pré-execução da vigia não enxerga o time, e a rotina voltou ao `/vigia`:** o
+      `tools/processo/vigia.ts` (11/10/2026) foi ligado como `--pre-run` da rotina e acordou o Orquestrador em todo
+      disparo. A rotina roda a pré-execução sem as variáveis `MAESTRI_*` do terminal (relato do Orquestrador,
+      12/10/2026). Conferido no mesmo dia: sem `MAESTRI_SOCKET`, o `maestri list` responde "only available inside
+      Maestri terminals"; `nomesDoTime` não acha terminal nenhum, e `decidir` devolve "nenhum terminal do time ligado"
+      (`vigia.ts:39`), que imprime `/vigia`. Se o comando falhar, o `catch` da linha 64 imprime o mesmo. Nesse caminho,
+      cada disparo ainda regrava `.processo/vigia.json` vazio (linha 63), e o relógio das duas horas se perde. A rotina
+      voltou ao comando `/vigia`, sem `--pre-run`, que é a saída que o passo 9 do `/seguir` dá para a prova que falha;
+      o passo 9 e `.claude/skills/vigia/SKILL.md` ainda descrevem a pré-execução. Falta: achar como a pré-execução
+      recebe o ambiente de um terminal (o soquete e o id gravados em arquivo pelo Orquestrador, ou opção do
+      `maestri routine`), provar com alguém trabalhando que a saída vazia não acorda o modelo, e só então religar e
+      acertar os dois textos. Até lá, toda vigia acorda o Orquestrador: no F3, 96 de 100 foram "nada a fazer"
+      (dono: Joaquim)
 - [ ] **(F3, retro) 26 `@SemEscopo` em `resolucao-de-tenant.repository.ts`:** o `tenancy-guardian` apontou na 14.0
       que o número passa do sinal da regra 10, item 9. Declarar a exceção na regra ou partir o módulo é decisão de
       desenho sobre a regra 10, e não se resolve por retrospectiva: entra na Tech Spec da próxima spec que tocar sessão
@@ -933,6 +957,32 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       produto não faz (D70). Entra no dossiê (D61)
 - [ ] Texto da mensagem fixa de acolhimento do tutor, revisado por uma orientadora
       educacional de verdade (D36)
+- [ ] **O encaminhamento do assunto delicado (D36) gasta uma das 60 trocas do dia (D38)?** Em 12/10/2026 o Joaquim
+      ficou com **"gasta, por ora"**; a resposta definitiva segue aberta. O que o código faz (`develop` em `bbae49e`,
+      verificação do Arquiteto):
+      - **com o freio esgotado, o texto que casa com os gatilhos é encaminhado e recebe o 188:**
+        `apps/api/src/tutor/tutor.service.ts:164` vem antes do orçamento (175-176), e o `#encaminhar` (318) não
+        consulta o freio. Provado em `apps/api/src/tutor/tutor.int.test.ts:322` e, na tela, em
+        `e2e/aluno-tutor.spec.ts:316` (API simulada)
+      - **o que os gatilhos não pegam, no limite, não chega ao modelo** (`tutor.service.ts:175-176`): o aluno vê
+        "Por hoje acabou", sem o 188, sem a indicação de um adulto e sem sinal ao professor
+        (`apps/web/src/areas/aluno/tutor.ts:65-70`). Vale igual com avaliação aberta, pacote esgotado e função
+        suspensa. Decidir junto se o aviso de pausa ganha uma linha fixa apontando para um adulto e para o 188
+      - **o encaminhamento conta:** a pergunta entra com `autor = 'aluno'` e a execução `concluida`
+        (`tutor.service.ts:335-340`), e as quatro contas leem essa linha sem olhar o tipo do turno: o freio e o
+        pacote do mês (`apps/api/src/ia/orcamento.repository.ts:63`), o "Hoje: N de 60" do aluno
+        (`apps/api/src/tutor/tutor.repository.ts:390`) e as duas do professor
+        (`apps/api/src/tutor/supervisao.repository.ts:278` e `:298`). Na 59ª troca, o encaminhamento ocupa a 60ª; no
+        limite, a conta passa de 60 e a tela a prende em "60 de 60"; cada um tira uma troca do pacote da turma
+      - **contar não limita nada:** o encaminhamento passa na frente do freio e custa zero token; o laço segue sem
+        teto próprio (item "Assunto delicado sem teto de IA", abaixo)
+      - **nenhum teste fixa a conta**, e `e2e/aluno-fluxo.spec.ts:199` afirma `Hoje: 0 de 60 perguntas` depois do
+        encaminhamento: com "gasta" o certo é 1, e a linha só passa quando lê a barra antes de a conversa ser relida.
+        Enquanto valer o "por ora": `/corrigir` para o e2e esperar 1 e um caso de integração fixar o número
+      - **se a resposta virar "não gasta":** as quatro consultas mudam juntas, pelo `tipo` da resposta do turno, como
+        `turnosParaATarefa` já filtra (`tutor.repository.ts:349`); é código do Tutor (`infra-guardian` e
+        `conformidade-reviewer`) e muda o número que o professor vê (D8)
+      (dono: Joaquim)
 - [x] ~~Definir teto de uso do tutor por aluno e orçamento de tokens~~ — D38, D39, D41
 - [x] ~~Decidir o modelo de cobrança~~ — por aluno, uso incluso, sem crédito (D40)
 - [x] ~~Decidir se o aluno acessa de casa desde o início~~ — escola decide por turma (D19)
