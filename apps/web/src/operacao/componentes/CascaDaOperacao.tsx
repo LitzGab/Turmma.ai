@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link, useRoute } from 'wouter'
+import { Aparencia } from '../../componentes/Aparencia'
 import { Botao } from '../../componentes/Botao'
 import { INICIO_DA_OPERACAO, ROTAS_DA_OPERACAO, USO_DA_OPERACAO } from '../caminhos'
 import { textoDaFalha } from '../textos'
@@ -46,7 +47,7 @@ function ItemDaNavegacao({ rotulo, rota, endereco }: PropsDoItem) {
 function Faixa({ children }: { children?: ReactNode }) {
   return (
     <header className="bg-noite text-sobre-grafite">
-      <div className="mx-auto flex min-h-14 max-w-5xl items-center justify-between gap-3 px-4 py-2 sm:px-6">
+      <div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2 sm:px-6">
         <p className="inline-flex shrink-0 items-center gap-2 text-lg font-semibold">
           <img src="/marca/turmma-pinta.svg" alt="" width={24} height={24} className="h-6 w-6 shrink-0" />
           Operação Turmma
@@ -88,12 +89,18 @@ interface PropsDaCasca {
  * A casca da operação com a sessão aberta: a faixa com o nome de quem entrou e o **Sair** a um clique, em toda tela,
  * do mesmo tamanho de qualquer outra ação (D59; PRD da A0, seção 6), e embaixo dela a navegação do painel (A0b). A aba
  * não tem título visível: a navegação já diz onde a pessoa está (`docs/interface.md` 6, P03).
+ *
+ * A **Aparência** (RF3) fica na faixa, ao lado do nome e do "Sair", com o nome só para o leitor de tela: a faixa não tem
+ * lateral, e é o menu da conta do operador. Quando a largura não dá, a conta desce para uma segunda linha, e nada passa
+ * da largura da tela (regra 50, item 2a). As telas de fora da sessão (entrar e o segundo fator) seguem o sistema, sem
+ * controle: ninguém escolheu nada ainda.
  */
 export function CascaDaOperacao({ titulo, nome, aoSair, saindo, children }: PropsDaCasca) {
   return (
     <div className="min-h-screen bg-fundo text-tinta">
       <Faixa>
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <Aparencia rotuloVisivel={false} />
           {nome !== undefined && <span className="min-w-0 truncate text-creme">{nome}</span>}
           <button
             type="button"

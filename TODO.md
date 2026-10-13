@@ -999,6 +999,17 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 
 ## Marca e interface
 
+- [ ] **O script do tema em linha entra por hash quando o F16 servir política de segurança de conteúdo** (X1,
+      tarefa 2.0): o `apps/web/index.html` tem um `<script>` em linha, sem `type="module"`, que escreve o `data-tema`
+      no `<html>` antes do primeiro quadro (`educa.aparencia`; `src/tema.ts` repete a conta). Hoje o `Caddyfile`
+      não serve nenhuma política (`Content-Security-Policy`), e o script roda. Com uma política de `script-src` sem
+      `'unsafe-inline'`, o script precisa do hash `sha256` dele em `script-src`, calculado no build, e o teste de
+      `tema.test.ts` (que extrai o script do arquivo) é o que garante que o hash e o arquivo continuam o mesmo. Sem
+      o hash o tema volta a ser aplicado só depois do React, e a página pisca no escuro (RF3). Ao servir a política,
+      conferir que o hash em `script-src` não abre caminho para `'unsafe-inline'`. E, junto, pôr no `docs/lgpd.md` uma
+      linha que diga que o navegador guarda só preferência de aparelho (`educa.aparencia` e `educa.lateral-recolhida`),
+      sem identificador, e que aponte para `docs/interface.md` seção 6: não é dado pessoal, e a tabela de dados não
+      ganha linha
 - [x] ~~Identidade visual (paleta, tipografia, logo)~~ — existe e está fora deste repositório:
       manual da marca Turmma, com caramelo `#E8732E`, azul-noite `#16233E`, creme `#FFF3E2` e
       papel `#FDFBF7` (D54). É a pele da landing page; a do produto é a da D72

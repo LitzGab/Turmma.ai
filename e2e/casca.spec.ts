@@ -402,6 +402,8 @@ test.describe('casca da escola', () => {
       page.getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: 'Tutor' }),
       // F3 (18.0): o menu da pessoa tem "Meus dados" antes do "Sair", no pé da lateral.
       page.getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link', { name: 'Meus dados' }),
+      // X1 (2.0): a Aparência é uma parada só, a opção marcada, entre os links da conta e o "Sair", que continua o último.
+      page.getByRole('radiogroup', { name: 'Aparência' }).getByRole('radio', { checked: true }),
       page.getByRole('button', { name: 'Sair' }),
     ]
     await page.locator('body').focus()

@@ -38,7 +38,9 @@ Nenhuma rota.
 
 **O tema.** Um `<script>` em linha no `<head>` do `index.html` lê `localStorage['educa.aparencia']` dentro de
 `try/catch`, cai no `prefers-color-scheme` e escreve `data-tema` no `<html>`, antes de o CSS pintar;
-`<meta name="color-scheme" content="light dark">` cobre o intervalo sem CSS. O script só escreve `claro` ou
+`<meta name="color-scheme" content="light dark">` cobre o intervalo sem CSS; e, com o CSS, `:root[data-tema='claro']`
+declara `color-scheme: light` (e o bloco do escuro, `dark`), para o Claro escolhido sobre um aparelho escuro não deixar
+o documento escuro (barra de rolagem, controle nativo). O script só escreve `claro` ou
 `escuro`, nunca o texto lido: valor desconhecido é Sistema. `src/tema.ts` repete a conta em função pura
 (`resolverTema`), ouve a mudança do sistema e o evento `storage`, e expõe `useAparencia()`. **Só a escolha explícita
 grava**, e grava só `claro` ou `escuro`; voltar a Sistema apaga a chave. Leitura ou gravação que lança cai em
@@ -172,7 +174,7 @@ barra de topo de 56 e barra de baixo de 68 mais a área segura. Ficam **como est
 menu", "Recolher a lateral", "Abrir a lateral" e "Sair"; o seletor `/^Escola: /`; o link "Turmma, página inicial".
 Um rótulo muda: "Nova conversa" vira **"Início"**, no mesmo endereço. Item sem ícone ilustrado usa o `lucide`
 num `Ladrilho`. "Sair" fica **visível sem abrir nada**, do tamanho dos vizinhos, no pé da lateral, no trilho e na
-barra de topo; a `Aparencia` entra em "Sua conta". No celular, a barra de topo mostra a escola ativa (regra 50,
+barra de topo; a `Aparencia` entra em "Sua conta", entre "Meus dados" e "Sair", na lateral aberta e na gaveta (no trilho de 56 px, só de ícones, ela não aparece: a pessoa a alcança abrindo a lateral). No celular, a barra de topo mostra a escola ativa (regra 50,
 item 13), e o `<main>` guarda embaixo a altura da barra de baixo mais a área segura: o último botão da tela nunca
 fica atrás dela.
 
@@ -181,7 +183,10 @@ formulário à direita) e empilha abaixo; a da operação troca a faixa preta po
 de campo e mensagens não mudam.
 
 **Galeria.** `galeria/secoes/*.tsx`, por `import.meta.glob`, para duas tarefas não editarem o mesmo arquivo; no
-topo, a `Aparencia`.
+topo, a `Aparencia`. Os auxiliares comuns dos blocos moram em `galeria/Secao.tsx` e `galeria/dados.ts`, e os dos specs, em
+`e2e/__fixtures__/galeria.ts`. Os casos de `pecas.spec.ts` saem inteiros, sem partir nenhum, em cinco arquivos (`pecas-ia`,
+`pecas-galeria`, `pecas-botoes`, `pecas-sobrepor`, `pecas-superficies`); `pecas-estado` e `pecas-campos` nascem com as
+tarefas que têm caso para pôr neles.
 
 **Chromebook.** Nenhuma fonte, nenhuma biblioteca. Só `transform` e `opacity` animam, com a regra global de
 `prefers-reduced-motion`.

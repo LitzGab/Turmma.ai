@@ -46,12 +46,13 @@ const semSimbolo = (texto: string): string => texto.replace(/[^\p{L}\p{N}]+/gu, 
 /**
  * O começo do nome dos arquivos de uma foto: o papel, o endereço sem a consulta nem o fragmento, o que foi clicado e a
  * tela. O clique entra no nome porque duas abas da mesma página têm o mesmo endereço, e a segunda foto apagaria a primeira.
- * A escola vazia leva a marca na frente, pelo mesmo motivo: o endereço é o mesmo da cheia.
+ * A escola vazia leva a marca na frente, pelo mesmo motivo: o endereço é o mesmo da cheia. O aparelho escuro leva a dele, e
+ * vem antes da marca da vazia: a foto no escuro e a no claro da mesma tela não se apagam.
  */
-export function baseDaFoto(papel: Papel, caminho: string, tela: string, cliques: readonly string[] = [], vazia = false): string {
+export function baseDaFoto(papel: Papel, caminho: string, tela: string, cliques: readonly string[] = [], vazia = false, escuro = false): string {
   const endereco = semSimbolo(caminho.replace(/[?#].*$/, ''))
   const clicado = cliques.map((clique) => semSimbolo(clique.replace(/^[a-z]+=/, ''))).join('-')
-  return `${vazia ? 'vazia--' : ''}${papel}--${endereco === '' ? 'inicio' : endereco}${clicado === '' ? '' : `--${clicado}`}--${tela}`
+  return `${escuro ? 'escuro--' : ''}${vazia ? 'vazia--' : ''}${papel}--${endereco === '' ? 'inicio' : endereco}${clicado === '' ? '' : `--${clicado}`}--${tela}`
 }
 
 /** O arquivo de uma foto: a base e, na página comprida, o número do pedaço. */
@@ -140,7 +141,8 @@ export interface Foto {
 /**
  * Fotografa cada endereço como aquele papel, nas duas telas. `cliques` são seletores do Playwright (`text=Alunos`,
  * `role=tab[name="Alunos"]`) acionados em ordem depois de a tela abrir, para a foto pegar a aba, o diálogo ou o estado
- * que a tarefa mexeu. `vazia` fotografa a escola vazia da vitrine, onde cada tela abre sem dado.
+ * que a tarefa mexeu. `vazia` fotografa a escola vazia da vitrine, onde cada tela abre sem dado. `escuro` abre o navegador
+ * com o aparelho no tema escuro (`prefers-color-scheme: dark`), que é o que a aparência Sistema segue (X1, RF3).
  *
  * A sessão do papel fica guardada entre uma chamada e outra (`sessao-<papel>.json`): sem isso cada foto da coordenação
  * gastaria um código do segundo fator, e a terceira no mesmo meio minuto teria de esperar.
@@ -149,11 +151,12 @@ export async function fotografar(
   vitrine: Vitrine,
   papel: Papel,
   caminhos: readonly string[],
-  opcoes: { readonly cliques?: readonly string[]; readonly vazia?: boolean } = {},
+  opcoes: { readonly cliques?: readonly string[]; readonly vazia?: boolean; readonly escuro?: boolean } = {},
   raiz = raizRepositorio,
 ): Promise<Foto[]> {
   const cliques = opcoes.cliques ?? []
   const vazia = opcoes.vazia === true
+  const escuro = opcoes.escuro === true
   const pasta = join(raiz, PASTA_DAS_FOTOS)
   mkdirSync(pasta, { recursive: true })
   const sessao = join(pasta, `sessao-${vazia ? 'vazia-' : ''}${papel}.json`)
@@ -164,6 +167,7 @@ export async function fotografar(
       baseURL: vitrine.url,
       viewport: { width: computador.largura, height: computador.altura },
       locale: 'pt-BR',
+      colorScheme: escuro ? 'dark' : 'light',
       ...(existsSync(sessao) ? { storageState: sessao } : {}),
     })
     const page = await contexto.newPage()
@@ -187,7 +191,7 @@ export async function fotografar(
           await assentar(page)
           const partes = pedacos(await alturaDaPagina(page))
           const parouEm = new URL(page.url()).pathname
-          const base = baseDaFoto(papel, caminho, tela.nome, cliques, vazia)
+          const base = baseDaFoto(papel, caminho, tela.nome, cliques, vazia, escuro)
           // A foto de antes sai antes da nova: a página que encolheu deixaria pedaços velhos ao lado dos novos.
           for (const velha of fotosAnteriores(readdirSync(pasta), base)) rmSync(join(pasta, velha))
           try {

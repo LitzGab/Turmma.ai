@@ -5,11 +5,16 @@ import { aoAbrirSessao, aoTrocarDeSessao } from './api/sessao'
 import { criarClienteDeConsultas } from './api/cliente-de-consultas'
 import './estilos.css'
 import { Rotas } from './rotas'
+import { iniciarTema } from './tema'
 
 const elementoRaiz = document.getElementById('raiz')
 if (!elementoRaiz) {
   throw new Error('Elemento #raiz ausente em index.html')
 }
+
+// O tema já foi escrito no `<html>` pelo script do `index.html`, antes do primeiro quadro. Aqui a página passa a acompanhar
+// o aparelho (em Sistema) e as outras abas, em toda tela, também nas públicas, que não têm controle (`tema.ts`).
+iniciarTema()
 
 const clienteConsultas = criarClienteDeConsultas()
 

@@ -1,5 +1,6 @@
 import { LogOut } from 'lucide-react'
 import { NOME_DO_MENU_DA_PESSOA, type ItemDaNavegacao } from '../areas/navegacao'
+import { Aparencia } from './Aparencia'
 import { ALTURA_DO_ITEM_ABERTO, CLASSE_DO_ITEM, Dica, ListaDeItens } from './itens-da-lateral'
 
 interface Props {
@@ -16,9 +17,12 @@ interface Props {
 
 /**
  * O menu da pessoa, no rodapé da lateral (P18; `docs/interface.md` 11.1): o nome, o papel, os links dela (o professor tem
- * "Meus dados") e **Sair**. Nada fica atrás de um clique a mais: os links e o "Sair" estão à vista, com o mesmo tamanho e o
- * mesmo desenho dos itens da navegação, e o "Sair" é sempre o último (D59, "sair nunca é mais difícil que entrar"). As
- * outras entradas do menu do ChatGPT nascem cada uma com a fase dela (P09).
+ * "Meus dados"), a **Aparência** e **Sair**. Nada fica atrás de um clique a mais: os links e o "Sair" estão à vista, com o
+ * mesmo tamanho e o mesmo desenho dos itens da navegação, e o "Sair" é sempre o último (D59, "sair nunca é mais difícil que
+ * entrar"). As outras entradas do menu do ChatGPT nascem cada uma com a fase dela (P09).
+ *
+ * A Aparência (RF3) fica entre os links e o "Sair", e é uma parada só no Tab. No trilho de 56 px, onde só cabem ícones, ela
+ * não aparece: a pessoa a alcança abrindo a lateral, que o trilho tem a um clique (e, de 768 a 1023 px, abre por cima).
  */
 export function MenuDaPessoa({ nome, papel, aoSair, saindo, itens = [], trilho = false }: Props) {
   const rotulo = saindo ? 'Saindo…' : 'Sair'
@@ -42,6 +46,9 @@ export function MenuDaPessoa({ nome, papel, aoSair, saindo, itens = [], trilho =
         </p>
       )}
       <ListaDeItens itens={itens} rotulo={NOME_DO_MENU_DA_PESSOA} trilho={false} />
+      <div className="px-3 py-1">
+        <Aparencia />
+      </div>
       <button type="button" onClick={aoSair} disabled={saindo} className={`${CLASSE_DO_ITEM} ${ALTURA_DO_ITEM_ABERTO} w-full`}>
         <LogOut aria-hidden="true" size={18} strokeWidth={1.75} className="shrink-0" />
         {rotulo}

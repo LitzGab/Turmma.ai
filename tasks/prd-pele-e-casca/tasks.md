@@ -16,12 +16,12 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 1.4 A guarda de cor: nomes novos; `white` e `black` só em lista fechada; a variante `dark:`; o texto que não acompanha a face forte; a cor escrita à mão em qualquer lugar do arquivo e a cor pelo nome entre aspas
   - [x] 1.5 Testes: os dois blocos iguais aos do documento, com o mesmo conjunto de nomes; o contraste de cada linha da tabela de pares, nos dois temas; o CSS servido nos dois temas; a medida do CSS em brotli, antes e depois
 
-- [ ] **2.0 — A pessoa escolhe a aparência, e ela vale antes de a primeira tela desenhar**
-  - [ ] 2.1 O script do `index.html`, o `meta color-scheme` e `src/tema.ts` (`resolverTema`, `useAparencia`)
-  - [ ] 2.2 As peças `Segmentado` e `Aparencia`; a `Aparencia` em "Sua conta", na barra de topo da operação e na galeria
-  - [ ] 2.3 A galeria vira `galeria/secoes/*.tsx` e o `e2e/pecas.spec.ts` vira um arquivo por grupo, sem mudar asserção
-  - [ ] 2.4 `playwright.config.ts` fixa o tema claro; a vitrine fotografa também no escuro; a linha do `TODO.md` sobre o script em linha
-  - [ ] 2.5 Testes: o tema no primeiro quadro; o script do `index.html` igual a `resolverTema`; Sistema acompanha o aparelho e apaga a chave; o conteúdo exato do armazenamento com duas pessoas no mesmo navegador (RF24); duas abas; o escuro nas telas de verdade, por papel, com axe
+- [x] **2.0 — A pessoa escolhe a aparência, e ela vale antes de a primeira tela desenhar**
+  - [x] 2.1 O script do `index.html`, o `meta color-scheme` e `src/tema.ts` (`resolverTema`, `useAparencia`)
+  - [x] 2.2 As peças `Segmentado` e `Aparencia`; a `Aparencia` em "Sua conta", na barra de topo da operação e na galeria
+  - [x] 2.3 A galeria vira `galeria/secoes/*.tsx` e o `e2e/pecas.spec.ts` vira um arquivo por grupo, sem mudar asserção
+  - [x] 2.4 `playwright.config.ts` fixa o tema claro; a vitrine fotografa também no escuro; a linha do `TODO.md` sobre o script em linha
+  - [x] 2.5 Testes: o tema no primeiro quadro; o script do `index.html` igual a `resolverTema`; Sistema acompanha o aparelho e apaga a chave; o conteúdo exato do armazenamento com duas pessoas no mesmo navegador (RF24); duas abas; o escuro nas telas de verdade, por papel, com axe
 
 - [ ] **3.0 — O botão ganha o degrau e os seis desenhos da D80, em todo o produto**
   - [ ] 3.1 `estilos.css`: a tipografia `t-*`, o degrau, o anel de foco e a regra de movimento reduzido

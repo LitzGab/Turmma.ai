@@ -1,0 +1,362 @@
+import { expect, test } from './__fixtures__/perfis.ts'
+import { abrirGaleria, acionar, caixa, conferirQueCabeNaJanela, conferirQueOFocoNaoCaiu, desenho, secao } from './__fixtures__/galeria.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+
+/**
+ * As peças do MVP de apresentação (`docs/mvp-rapido.md` 9.3; `docs/interface.md` 11.1 e 11.3), na galeria (`/galeria`),
+ * nos projetos `chromebook` e `celular`: o que a regra de cada peça promete, visto no navegador. A galeria não chama a
+ * API e não tem sessão; o dado é inventado, escrito nela.
+ *
+ * Este arquivo é o grupo `ia` do antigo `pecas.spec.ts` (tarefa 2.0 da X1): cada caso veio inteiro, com a mesma
+ * asserção, e só mudou de arquivo. Os auxiliares comuns estão em `__fixtures__/galeria.ts`.
+ */
+
+/** Os hex da 9.1 do `docs/interface.md`, como o navegador os devolve no estilo calculado: só os que este arquivo afirma. */
+const RGB = {
+  caramelo: 'rgb(232, 115, 46)',
+  noite: 'rgb(13, 13, 13)',
+  superficie: 'rgb(255, 255, 255)',
+  iaFundo: 'rgb(240, 240, 240)',
+  iaTexto: 'rgb(66, 66, 66)',
+  okFundo: 'rgb(233, 245, 238)',
+  pendenteFundo: 'rgb(253, 240, 232)',
+  erroFundo: 'rgb(253, 236, 236)',
+} as const
+
+test.describe('peças do MVP de apresentação, na galeria', () => {
+  test('o selo de IA e a assinatura: o texto "IA" em toda saída de IA, um desenho só, e avatar em círculo com ícone, nunca rosto', async ({ page }) => {
+    await abrirGaleria(page)
+    const seloDeIa = secao(page, 'selo-de-ia')
+
+    // A assinatura: o nome da função e o selo com o texto "IA", para o agente e para a função dele.
+    for (const nome of ['Assistente de ensino', 'Tutor', 'Analista de desempenho escolar', 'Assistente · correção de objetiva']) {
+      const assinatura = seloDeIa.locator('p', { hasText: nome }).filter({ has: page.locator('[data-agente]') })
+      await expect(assinatura, nome).toHaveCount(1)
+      await expect(assinatura.getByText('IA', { exact: true }), nome).toBeVisible()
+    }
+
+    // Um conjunto só, igual em todo o produto: todo selo "IA" da tela tem o mesmo desenho, em família `ia`. O que a sigla
+    // quer dizer está em texto, para o leitor de tela, e não num `title`, que só existe no hover.
+    const selos = page.locator('[data-selo-ia]')
+    expect(await selos.count()).toBeGreaterThanOrEqual(10)
+    const desenhos = new Set<string>()
+    for (const selo of await selos.all()) {
+      await expect(selo.locator('[aria-hidden="true"]')).toHaveText('IA')
+      await expect(selo).toHaveText('IAgerado por inteligência artificial')
+      await expect(selo).not.toHaveAttribute('title')
+      desenhos.add(JSON.stringify(await desenho(selo)))
+    }
+    expect([...desenhos]).toHaveLength(1)
+    expect(await desenho(selos.first())).toMatchObject({ fundo: RGB.iaFundo, texto: RGB.iaTexto })
+
+    // Toda mensagem de IA da conversa assina: avatar, nome e selo. Nas duas variantes e no "preparando a resposta".
+    const mensagensDeIa = secao(page, 'conversa')
+      .locator('article')
+      .filter({ has: page.locator('[data-agente]') })
+    expect(await mensagensDeIa.count()).toBe(5)
+    for (const mensagem of await mensagensDeIa.all()) await expect(mensagem.getByText('IA', { exact: true })).toBeVisible()
+    await expect(mensagensDeIa.filter({ hasText: 'Corrigi as 32 atividades' }).getByText('Assistente · correção de objetiva')).toBeVisible()
+    await expect(mensagensDeIa.filter({ hasText: 'Oito alunos travaram' }).getByText('Tutor · sinais para o professor')).toBeVisible()
+
+    // O avatar: círculo com um ícone desenhado, um por agente, e nenhuma imagem dentro (D58).
+    const avatares = page.locator('[data-agente]')
+    for (const agente of ['assistente_de_ensino', 'tutor', 'analista_de_desempenho_escolar']) expect(await page.locator(`[data-agente="${agente}"]`).count(), agente).toBeGreaterThan(0)
+    for (const avatar of await avatares.all()) {
+      const medida = await caixa(avatar)
+      expect(medida.width).toBe(medida.height)
+      expect(Number.parseFloat((await desenho(avatar)).canto)).toBeGreaterThanOrEqual(medida.width / 2)
+      await expect(avatar.locator('svg')).toHaveCount(1)
+      await expect(avatar.locator('img, image, picture')).toHaveCount(0)
+    }
+    expect(await desenho(page.locator('[data-agente="assistente_de_ensino"]').first())).toMatchObject({ fundo: RGB.noite })
+    expect(await desenho(page.locator('[data-agente="tutor"]').first())).toMatchObject({ fundo: RGB.caramelo })
+
+    // A linha da aprovação: quem aprovou e quando, em `ok`; a pendente e a rejeitada com o motivo. O ano só aparece
+    // quando não é o de agora, e por isso é opcional aqui.
+    const aprovada = seloDeIa.locator('[data-aprovacao="aprovada"]')
+    await expect(aprovada).toHaveText(/^Aprovado por Camila Souza · 19\/09(\/2026)?, 10h42$/)
+    await expect(aprovada.locator('svg')).toHaveCount(1)
+    await expect(seloDeIa.locator('[data-aprovacao="pendente"]')).toHaveText('Esperando você')
+    const rejeitada = seloDeIa.locator('[data-aprovacao="rejeitada"]')
+    // A rejeição é escrita com a pessoa como sujeito: não depende do gênero de quem rejeitou nem do que foi rejeitado.
+    await expect(rejeitada).toContainText(/Camila Souza rejeitou · 19\/09(\/2026)?, 10h42/)
+    await expect(rejeitada).toContainText('Motivo: A questão 3 não é do capítulo 7.')
+
+    // A linha da aprovação é o selo de estado, e não um segundo desenho: mesma cor, mesmo canto, mesmo respiro.
+    const selosDeEstado = secao(page, 'estado')
+    for (const [estado, familia, fundo] of [
+      ['aprovada', 'ok', RGB.okFundo],
+      ['pendente', 'pendente', RGB.pendenteFundo],
+      ['rejeitada', 'erro', RGB.erroFundo],
+    ] as const) {
+      const daLinha = await desenho(seloDeIa.locator(`[data-aprovacao="${estado}"] [data-estado]`))
+      expect(daLinha, estado).toEqual(await desenho(selosDeEstado.locator(`[data-estado="${familia}"]`)))
+      expect(daLinha.fundo, estado).toBe(fundo)
+    }
+
+    // Na mensagem, a aprovação tem lugar fixo: depois do conteúdo e antes das ações.
+    const comAprovacao = mensagensDeIa.filter({ has: page.locator('[data-texto-da-ia]') })
+    const daMensagem = comAprovacao.locator('[data-aprovacao="aprovada"]')
+    await expect(daMensagem).toHaveText(/^Aprovada por Camila Souza · /)
+    const [texto, linha, acao] = [await caixa(comAprovacao.locator('[data-texto-da-ia]')), await caixa(daMensagem), await caixa(comAprovacao.getByRole('button', { name: 'Copiar' }))]
+    expect(texto.y + texto.height).toBeLessThanOrEqual(linha.y)
+    expect(linha.y + linha.height).toBeLessThanOrEqual(acao.y)
+  })
+
+  test('a Escolha da D18: duas opções do mesmo tamanho e do mesmo desenho, nenhuma primária, e o foco vai para a linha da escolha', async ({ page }) => {
+    await abrirGaleria(page)
+    const escolha = page.getByRole('group', { name: 'Posso fazer isso com a ferramenta Atividade, ou só conversar.' })
+    const opcoes = escolha.getByRole('button')
+    await expect(opcoes).toHaveCount(2)
+    const ferramenta = opcoes.filter({ hasText: 'Usar a ferramenta Atividade' })
+    const conversa = opcoes.filter({ hasText: 'Só conversar' })
+
+    // Mesmo tamanho, lado a lado no Chromebook e empilhadas no celular.
+    const [medidaDaFerramenta, medidaDaConversa] = [await caixa(ferramenta), await caixa(conversa)]
+    expect(medidaDaFerramenta.width).toBeCloseTo(medidaDaConversa.width, 0)
+    expect(medidaDaFerramenta.height).toBeCloseTo(medidaDaConversa.height, 0)
+    expect(medidaDaFerramenta.height).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+
+    // Mesmo desenho, e nenhum é o da ação primária (laranja) nem o da decisão oficial (preto): nenhuma é a "certa" (D59).
+    const [desenhoDaFerramenta, desenhoDaConversa] = [await desenho(ferramenta), await desenho(conversa)]
+    expect(desenhoDaFerramenta).toEqual(desenhoDaConversa)
+    expect(desenhoDaFerramenta.fundo).toBe(RGB.superficie)
+    expect([RGB.caramelo, RGB.noite]).not.toContain(desenhoDaFerramenta.fundo)
+    // Nenhuma vem com o foco: o Enter de quem chega não escolhe por ela.
+    expect(await opcoes.evaluateAll((botoes) => botoes.some((botao) => botao === document.activeElement))).toBe(false)
+
+    // Pelo teclado: o botão escolhido some com o cartão, e o foco vai para a linha que diz o que foi escolhido.
+    await conversa.focus()
+    await page.keyboard.press('Enter')
+    const feita = secao(page, 'conversa').locator('[data-escolha="feita"]')
+    await expect(feita).toHaveText('Você escolheu: Só conversar')
+    await expect(escolha).toHaveCount(0)
+    await expect(feita).toBeFocused()
+    await conferirQueOFocoNaoCaiu(page)
+    // Uma linha: o cartão de duas opções deu lugar a uma pílula da altura de um texto.
+    expect((await caixa(feita)).height).toBeLessThan(medidaDaConversa.height)
+  })
+
+  test('o texto da IA entra como texto, com os chips no fim; o ChipFonte abre pelo teclado e pelo toque e fecha quando o foco sai', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    const texto = secao(page, 'conversa').locator('[data-texto-da-ia]')
+
+    // O que o modelo devolveu com cara de HTML está escrito, e não virou marcação.
+    await expect(texto).toContainText('Use <b>massa molar</b> e a proporção da equação balanceada.')
+    await expect(texto.locator('b, strong, em, script, img, h1, h2, h3, pre, code')).toHaveCount(0)
+    await expect(texto.locator('> ul, > ol')).toHaveCount(0)
+    // A marcação de Markdown que o modelo mandou sai, sem virar título nem lista: `###`, `**` e o marcador somem, o item
+    // de lista vira parágrafo, e a quebra de linha simples fica dentro do parágrafo dela.
+    await expect(texto.locator('p').first()).toHaveText('Lista de estequiometria')
+    await expect(texto.locator('p').nth(1)).toContainText('Questão 1. Qual a massa de CO₂ formada na queima de 24 g de carbono?')
+    await expect(texto.locator('p').nth(1)).toContainText('Questão 2. Qual é o reagente limitante quando sobra oxigênio?')
+    expect(await texto.textContent()).not.toMatch(/\*\*|###/)
+    // O asterisco que é conteúdo fica: a conta continua uma conta.
+    await expect(texto.locator('p').nth(2)).toHaveText('Lembre: 2 * 12 = 24 g de carbono.')
+    // Um chip por fonte, sem repetir a página citada duas vezes.
+    const chips = texto.getByRole('button', { name: /^Fonte: / })
+    await expect(chips).toHaveCount(3)
+    await expect(chips).toHaveText([/p\. 142$/, /p\. 145$/, /p\. 151$/])
+
+    const chip = page.getByRole('button', { name: 'Fonte: Química 2, cap. 7, p. 142' })
+    await expect(chip).toHaveAttribute('aria-expanded', 'false')
+    expect((await caixa(chip)).height).toBeGreaterThanOrEqual(24)
+
+    await chip.focus()
+    await page.keyboard.press('Enter')
+    await expect(chip).toHaveAttribute('aria-expanded', 'true')
+    const cartao = page.getByRole('group', { name: 'Fonte: Química 2, cap. 7, p. 142' })
+    await expect(cartao).toBeVisible()
+    await expect(cartao).toContainText('Química 2, cap. 7')
+    await expect(cartao).toContainText('Página 142')
+    await expect(cartao).toContainText('A proporção entre as quantidades de matéria de reagentes e produtos é dada pelos coeficientes da equação balanceada.')
+    await conferirQueCabeNaJanela(page, cartao)
+    expect(await violacoesGraves(page)).toEqual([])
+
+    // O Esc fecha e devolve o foco ao chip, com o anel à vista.
+    await page.keyboard.press('Escape')
+    await expect(cartao).toHaveCount(0)
+    await expect(chip).toBeFocused()
+    expect(await focoVisivel(page)).toBe(true)
+
+    // O Tab que segue adiante não deixa o cartão aberto para trás.
+    await page.keyboard.press('Enter')
+    await expect(cartao).toBeVisible()
+    await page.keyboard.press('Tab')
+    await expect(cartao).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Fonte: Química 2, cap. 7, p. 145' })).toBeFocused()
+
+    // Pelo toque (ou pelo clique) abre do mesmo jeito; tocar no trecho não fecha, e o toque fora fecha.
+    await acionar(chip, hasTouch)
+    await expect(cartao).toBeVisible()
+    await acionar(cartao.getByText('A proporção entre as quantidades'), hasTouch)
+    await expect(cartao).toBeVisible()
+    await acionar(page.getByRole('heading', { level: 1, name: 'Galeria de peças' }), hasTouch)
+    await expect(cartao).toHaveCount(0)
+
+    // A lista de fontes: a linha recolhida já diz as páginas, sem repetir a que foi citada duas vezes.
+    const fontes = secao(page, 'conversa').locator('summary')
+    await expect(fontes).toHaveText('Fontes (3): Química 2, cap. 7, p. 142 · p. 145 · p. 151')
+    await fontes.focus()
+    await page.keyboard.press('Enter')
+    const lista = secao(page, 'conversa').locator('details li')
+    await expect(lista).toHaveCount(3)
+    await expect(lista.nth(1)).toContainText('O reagente limitante é o que acaba primeiro')
+    expect(await larguraExcedente(page)).toBe(0)
+  })
+
+  test('a CaixaPedido: com teclado, Enter envia e Shift+Enter quebra a linha; com o dedo, Enter quebra a linha e o envio é o botão; o foco volta ao campo', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    const doProfessor = secao(page, 'caixa-pedido')
+    const campo = doProfessor.getByLabel('Pedido ao Assistente de ensino')
+    const enviar = doProfessor.getByRole('button', { name: 'Enviar' })
+    const parar = doProfessor.getByRole('button', { name: 'Parar' })
+    const enviado = doProfessor.locator('[data-enviado]')
+
+    // O ponteiro do projeto é o que decide o que o Enter faz: fino no Chromebook, grosso no celular.
+    expect(await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches)).toBe(hasTouch)
+    await expect(campo).toHaveAttribute('enterkeyhint', hasTouch ? 'enter' : 'send')
+    // O campo não aceita mais do que o contrato da API aceita.
+    await expect(campo).toHaveAttribute('maxlength', '2000')
+
+    // Vazia, não envia: o botão está desligado.
+    await expect(enviar).toBeDisabled()
+    await acionar(campo, hasTouch)
+    await page.keyboard.type('monta uma atividade')
+    const alturaDeUmaLinha = (await caixa(campo)).height
+
+    if (hasTouch) {
+      // No teclado virtual não existe Shift+Enter: o Enter quebra a linha, e o pedido não sai pela metade.
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('de estequiometria')
+      await expect(campo).toHaveValue('monta uma atividade\nde estequiometria')
+      await expect(enviado).toHaveText('')
+      await expect(parar).toHaveCount(0)
+      await expect.poll(async () => (await caixa(campo)).height).toBeGreaterThan(alturaDeUmaLinha)
+      // O envio é o botão, com o toque.
+      await enviar.tap()
+    } else {
+      await page.keyboard.press('Shift+Enter')
+      await page.keyboard.type('de estequiometria')
+      await expect(campo).toHaveValue('monta uma atividade\nde estequiometria')
+      await expect(enviado).toHaveText('')
+      await expect.poll(async () => (await caixa(campo)).height).toBeGreaterThan(alturaDeUmaLinha)
+      // O botão de enviar é o primário da tela, redondo, com 44 px.
+      expect(await desenho(enviar)).toMatchObject({ fundo: RGB.caramelo })
+      const medidaDoEnviar = await caixa(enviar)
+      expect(medidaDoEnviar.width).toBe(ALVO_DE_TOQUE_PRINCIPAL_PX)
+      expect(medidaDoEnviar.height).toBe(ALVO_DE_TOQUE_PRINCIPAL_PX)
+      await page.keyboard.press('Enter')
+    }
+    // Sai com as duas linhas, o campo esvazia, e o foco fica nele: o enviar deu lugar ao "Parar" sem o foco cair.
+    await expect(enviado).toHaveText('Enviado: monta uma atividade de estequiometria')
+    expect(await enviado.textContent()).toBe('Enviado: monta uma atividade\nde estequiometria')
+    await expect(campo).toHaveValue('')
+    await expect(campo).toBeFocused()
+
+    // Enquanto a resposta chega, enviar vira "Parar", e um segundo pedido não sai, nem pelo Enter.
+    await expect(parar).toBeVisible()
+    await expect(enviar).toHaveCount(0)
+    await page.keyboard.type('outro pedido')
+    await page.keyboard.press('Enter')
+    await expect(enviado).toHaveText('Enviado: monta uma atividade de estequiometria')
+    // O "Parar" ligado e o desligado não são o mesmo desenho; aqui ele está ligado, com o contorno do secundário.
+    expect(await desenho(parar)).toMatchObject({ fundo: RGB.superficie })
+
+    // Parar pelo teclado: só para — o pedido escrito não sai junto —, e o foco volta ao campo em vez de cair no `body`.
+    await parar.focus()
+    await page.keyboard.press('Enter')
+    await expect(enviar).toBeEnabled()
+    await expect(campo).toBeFocused()
+    await conferirQueOFocoNaoCaiu(page)
+    await expect(enviado).toHaveText('Enviado: monta uma atividade de estequiometria')
+
+    // Enviar pelo botão, acionado pelo teclado: o botão some, e o foco volta ao campo.
+    await enviar.focus()
+    await page.keyboard.press('Enter')
+    await expect(enviado).toHaveText(/^Enviado: outro pedido$/)
+    await expect(campo).toBeFocused()
+    await conferirQueOFocoNaoCaiu(page)
+
+    // Os encaixes: o menu de ferramenta à esquerda e a turma à direita, passados por quem usa.
+    await expect(doProfessor.getByRole('button', { name: 'Ferramenta: Só conversar' })).toBeVisible()
+    await expect(doProfessor.getByLabel('Turma do pedido')).toHaveValue('turma-2b')
+
+    // A do aluno é só texto e enviar: sem menu, sem seleção, sem mais nenhum controle.
+    const doAluno = secao(page, 'caixa-do-aluno')
+    await expect(doAluno.locator('[data-caixa-pedido="so-texto"]')).toHaveCount(1)
+    await expect(doAluno.locator('[data-caixa-pedido] select')).toHaveCount(0)
+    await expect(doAluno.locator('[data-caixa-pedido] button')).toHaveCount(1)
+    await expect(doAluno.getByLabel('Pergunta para o Tutor')).toHaveAttribute('maxlength', '2000')
+    await doAluno.getByLabel('Pergunta para o Tutor').fill('o que é reagente limitante?')
+    await acionar(doAluno.getByRole('button', { name: 'Enviar' }), hasTouch)
+    await expect(doAluno.locator('[data-enviado]')).toHaveText('Enviado: o que é reagente limitante?')
+    await expect(doAluno.getByLabel('Pergunta para o Tutor')).toBeFocused()
+  })
+
+  test('o motor de formulário diz o que falta e o que é obrigatório, entrega os valores validados, não perde o foco, e a Adaptação não tem campo de texto', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    const motor = secao(page, 'motor')
+    const gerar = motor.getByRole('button', { name: 'Gerar atividade' })
+    // O botão que gera é o primário, e o de cancelar tem o mesmo tamanho.
+    expect(await desenho(gerar)).toMatchObject({ fundo: RGB.caramelo })
+    expect((await caixa(motor.getByRole('button', { name: 'Cancelar' }))).height).toBe((await caixa(gerar)).height)
+    // O que é obrigatório está escrito no rótulo e dito ao leitor de tela; o opcional não leva marca.
+    await expect(motor.getByText('Turma (obrigatório)')).toBeVisible()
+    await expect(motor.getByText('Tema (obrigatório)')).toBeVisible()
+    await expect(motor.getByText('Questões (obrigatório)')).toHaveCount(0)
+    await expect(motor.getByLabel('Turma')).toHaveAttribute('aria-required', 'true')
+    await expect(motor.getByLabel('Tema')).toHaveAttribute('aria-required', 'true')
+    await expect(motor.getByLabel('Questões')).not.toHaveAttribute('aria-required')
+
+    // Gerar com o que falta não sai: a tela diz o que falta, e o foco vai ao primeiro campo pendente.
+    await acionar(gerar, hasTouch)
+    await expect(motor.getByRole('alert')).toHaveText('Para gerar, confira: Turma, Tema.')
+    await expect(motor.getByLabel('Turma')).toBeFocused()
+    await expect(motor.getByText('Escolha uma opção em "Turma".')).toBeVisible()
+    await expect(motor.getByText('Preencha "Tema".')).toBeVisible()
+    await expect(motor.locator('[data-pedido]')).toHaveText('')
+
+    await motor.getByLabel('Turma').selectOption('turma-2b')
+    await motor.getByLabel('Tema').fill('  Estequiometria ')
+    // Número fora da faixa também não sai.
+    await motor.getByLabel('Questões').fill('40')
+    await acionar(gerar, hasTouch)
+    await expect(motor.getByRole('alert')).toHaveText('Para gerar, confira: Questões.')
+    await expect(motor.getByText('Use um número inteiro de 1 a 20 em "Questões".')).toBeVisible()
+    await motor.getByLabel('Questões').fill('8')
+
+    // Gerar pelo teclado: o botão some com o formulário, e o foco vai para a linha do pedido.
+    await gerar.focus()
+    await page.keyboard.press('Enter')
+    await expect(motor.locator('[data-motor="gerando"]')).toContainText('Atividade objetiva · 2ºB · Química · Estequiometria · Questões: 8')
+    await expect(motor.getByRole('status').filter({ hasText: 'Gerando…' })).toBeVisible()
+    await conferirQueOFocoNaoCaiu(page)
+    expect(await page.evaluate(() => document.activeElement?.closest('[data-motor="gerando"]') !== null)).toBe(true)
+    expect(JSON.parse((await motor.locator('[data-pedido]').textContent()) ?? '')).toEqual({ turmaId: 'turma-2b', tema: 'Estequiometria', quantidade: 8 })
+    await acionar(motor.getByRole('button', { name: 'Simular a resposta' }), hasTouch)
+    await expect(motor.locator('[data-motor="pronto"]')).toContainText('O artefato gerado aparece aqui')
+
+    // "Editar os campos" pelo teclado: o botão some com o pedido recolhido, e o foco vai para o título do formulário.
+    await motor.getByRole('button', { name: 'Editar os campos' }).focus()
+    await page.keyboard.press('Enter')
+    await expect(motor.getByRole('heading', { level: 3, name: 'Atividade objetiva' })).toBeFocused()
+    await conferirQueOFocoNaoCaiu(page)
+    // Voltar a editar traz o que foi preenchido.
+    await expect(motor.getByLabel('Tema')).toHaveValue('  Estequiometria ')
+
+    // A Adaptação: só a lista fechada de tipos. Nenhum campo de texto, nem de uma linha nem de várias (D35, D67).
+    const adaptacao = secao(page, 'motor-da-adaptacao')
+    await expect(adaptacao.locator('form input[type="checkbox"]')).toHaveCount(6)
+    await expect(adaptacao.locator('form input:not([type="checkbox"]), form textarea, form [contenteditable]')).toHaveCount(0)
+    await expect(adaptacao.getByText('Tipo de adaptação (obrigatório)')).toBeVisible()
+    await acionar(adaptacao.getByRole('button', { name: 'Gerar versão adaptada' }), hasTouch)
+    await expect(adaptacao.getByRole('alert')).toHaveText('Para gerar, confira: Tipo de adaptação.')
+    await adaptacao.getByLabel('Tempo adicional').check()
+    await adaptacao.getByLabel('Fonte ampliada').check()
+    await acionar(adaptacao.getByRole('button', { name: 'Gerar versão adaptada' }), hasTouch)
+    // Os tipos saem na ordem da lista, e não na do clique.
+    expect(JSON.parse((await adaptacao.locator('[data-pedido]').textContent()) ?? '')).toEqual({ tipos: ['fonte_ampliada', 'tempo_adicional'] })
+    expect(await larguraExcedente(page)).toBe(0)
+  })
+})

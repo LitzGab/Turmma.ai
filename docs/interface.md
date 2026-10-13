@@ -466,6 +466,11 @@ para ninguém confundir com a tela de uma escola. As medidas estão na seção 1
 - **Claro e escuro** (D80, item 2): a pessoa escolhe entre Sistema, Claro e Escuro, em qualquer
   área. A escolha fica no navegador, sem identificador, e vale antes de a primeira tela desenhar.
   Nenhuma tela escreve cor por tema: quem usa token muda sozinho (9.1 e 9.10)
+- **O que o navegador guarda é lista fechada** (regra 50, item 7; Tech Spec da X1, seção 7): duas chaves de
+  `localStorage`, `educa.aparencia` (`claro` ou `escuro`; Sistema **apaga** a chave) e `educa.lateral-recolhida` (`sim`;
+  aberta apaga a chave). Nenhuma chave nem valor leva pessoa, escola, papel nem identificador, e nada vai para o
+  `sessionStorage`. A aparência é do aparelho: fica para a próxima pessoa do mesmo computador, e mais nada fica. Chave
+  nova é decisão, com a regra 20 junto, e o e2e de `aparencia.spec.ts` (duas pessoas no mesmo navegador) a reprova
 
 ## 7. Em aberto
 

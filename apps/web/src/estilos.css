@@ -273,6 +273,16 @@
   --color-veu: #00000099;
 }
 
+/*
+ * O claro escolhido num aparelho escuro: o `color-scheme` do documento acompanha o tema da pessoa, e não o do sistema.
+ * Sem esta regra, quem escolheu Claro com o sistema no escuro teria a barra de rolagem e os controles nativos escuros
+ * sobre uma página clara. O `<meta name="color-scheme">` do `index.html` cobre só o intervalo sem CSS. Fora de camada,
+ * como o bloco do escuro, e sem cor nenhuma: as cores do claro continuam sendo as do `@theme static`.
+ */
+:root[data-tema='claro'] {
+  color-scheme: light;
+}
+
 @layer base {
   /*
    * O chão e o texto da página, antes de qualquer tela desenhar: cada casca pinta o próprio fundo, mas até o React

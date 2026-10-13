@@ -31,6 +31,9 @@ export default defineConfig<OpcoesDoPerfil>({
   use: {
     baseURL: urlBase,
     locale: 'pt-BR',
+    // A aparência Sistema segue o aparelho (X1, RF3): sem fixar, o oráculo em `rgb()` de cada spec dependeria da máquina que
+    // roda. O escuro é pedido por teste, com `emulateMedia`, ou por `data-tema`.
+    colorScheme: 'light',
     timezoneId: 'America/Sao_Paulo',
     trace: 'retain-on-failure',
     launchOptions: { args: [`--host-resolver-rules=${regraDeNomeDoOidcFalso}`] },

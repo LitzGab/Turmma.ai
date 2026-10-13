@@ -25,6 +25,12 @@ describe('o nome do arquivo da foto', () => {
     expect(baseDaFoto('professora', '/professor/turmas', 'celular', [], true)).toBe('vazia--professora--professor-turmas--celular')
     expect(fotosAnteriores(['vazia--professora--professor-turmas--celular.png'], baseDaFoto('professora', '/professor/turmas', 'celular'))).toEqual([])
   })
+
+  it('marca o aparelho escuro: a foto no escuro e a no claro da mesma tela não se apagam', () => {
+    expect(baseDaFoto('aluno', '/aluno/atividades', 'computador', [], false, true)).toBe('escuro--aluno--aluno-atividades--computador')
+    expect(baseDaFoto('aluno', '/aluno/atividades', 'computador', [], true, true)).toBe('escuro--vazia--aluno--aluno-atividades--computador')
+    expect(fotosAnteriores(['escuro--aluno--aluno-atividades--computador.png'], baseDaFoto('aluno', '/aluno/atividades', 'computador'))).toEqual([])
+  })
 })
 
 describe('as fotos anteriores de uma tela', () => {

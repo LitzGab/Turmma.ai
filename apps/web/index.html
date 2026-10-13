@@ -4,8 +4,31 @@
     <meta charset="UTF-8" />
     <!-- Sem maximum-scale nem user-scalable=no: quem precisa ampliar a tela precisa conseguir (D51). -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Cobre o intervalo sem CSS: o navegador já pinta o chão e os controles no tema do aparelho (D80, item 2). -->
+    <meta name="color-scheme" content="light dark" />
     <title>Turmma</title>
     <link rel="icon" type="image/svg+xml" href="/marca/turmma-icone.svg" />
+    <!--
+      O tema antes do primeiro quadro (Tech Spec da X1, seção 5). Em linha e sem `type="module"`, para rodar antes de o CSS
+      pintar e sem esperar o pacote do React. Lê a escolha da pessoa (`claro` ou `escuro`), cai no que o aparelho diz e
+      escreve `data-tema` no <html>: só `claro` ou `escuro`, nunca o texto que leu. Nunca lança: armazenamento que recusa e
+      navegador sem `matchMedia` caem no claro. `src/tema.ts` repete esta conta em `resolverTema`, e `tema.test.ts` roda
+      este script contra ela. Entra por hash quando a borda servir política de segurança de conteúdo (`TODO.md`, F16).
+    -->
+    <script>
+      ;(function () {
+        var escolha = null
+        var escuro = false
+        try {
+          escolha = window.localStorage.getItem('educa.aparencia')
+        } catch (erro) {}
+        try {
+          escuro = window.matchMedia('(prefers-color-scheme: dark)').matches
+        } catch (erro) {}
+        var tema = escolha === 'claro' || escolha === 'escuro' ? escolha : escuro ? 'escuro' : 'claro'
+        document.documentElement.setAttribute('data-tema', tema)
+      })()
+    </script>
   </head>
   <body>
     <div id="raiz"></div>

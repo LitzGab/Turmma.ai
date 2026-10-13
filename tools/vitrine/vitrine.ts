@@ -7,10 +7,11 @@ import { resolverFonteComJs } from './resolver.ts'
 //   node tools/vitrine/vitrine.ts mostrar   repete os logins, ou avisa que o banco foi recriado
 //   node tools/vitrine/vitrine.ts codigo [--vazia]
 //                                           o código do segundo fator da coordenação, para a entrada de agora
-//   node tools/vitrine/vitrine.ts foto <papel> <endereço>… [--clicar <seletor>]… [--vazia]
+//   node tools/vitrine/vitrine.ts foto <papel> <endereço>… [--clicar <seletor>]… [--vazia] [--escuro]
 //                                           entra como `coordenacao`, `professora` ou `aluno`, abre cada endereço e
 //                                           grava a foto da página inteira, no computador e no celular; com
-//                                           `--vazia`, na escola sem dado, para ver o estado vazio
+//                                           `--vazia`, na escola sem dado, para ver o estado vazio; com `--escuro`,
+//                                           com o aparelho no tema escuro, que é o que a aparência Sistema segue
 //
 // Precisa do ambiente de teste de pé, que é como o portão da tarefa com teste de tela o deixa
 // (`node tools/ci/e2e.ts --manter-ambiente`).
@@ -48,6 +49,7 @@ async function principal(comando: string | undefined, argumentos: readonly strin
     return 0
   }
   const vazia = argumentos.includes('--vazia')
+  const escuro = argumentos.includes('--escuro')
   if (comando === 'codigo') {
     if (vitrine === null) {
       avisar(SEM_VITRINE)
@@ -68,18 +70,18 @@ async function principal(comando: string | undefined, argumentos: readonly strin
   if (comando === 'foto') {
     // O Playwright só carrega para quem pede foto: montar e mostrar não precisam do navegador.
     const { ehPapel, fotografar, PAPEIS } = await import('./foto.ts')
-    const [papel, ...resto] = argumentos.filter((argumento) => argumento !== '--vazia')
+    const [papel, ...resto] = argumentos.filter((argumento) => argumento !== '--vazia' && argumento !== '--escuro')
     const cliques = resto.flatMap((argumento, indice) => (resto[indice - 1] === '--clicar' ? [argumento] : []))
     const caminhos = resto.filter((argumento, indice) => argumento !== '--clicar' && resto[indice - 1] !== '--clicar')
     if (!ehPapel(papel) || caminhos.length === 0) {
-      avisar(`Uso: node tools/vitrine/vitrine.ts foto <${PAPEIS.join('|')}> <endereço>… [--clicar <seletor>]… [--vazia]`)
+      avisar(`Uso: node tools/vitrine/vitrine.ts foto <${PAPEIS.join('|')}> <endereço>… [--clicar <seletor>]… [--vazia] [--escuro]`)
       return 2
     }
     if (vitrine === null || !(await escolaExiste(vitrine.escola.id))) {
       avisar(vitrine === null ? SEM_VITRINE : RECRIADO)
       return 1
     }
-    for (const foto of await fotografar(vitrine, papel, caminhos, { cliques, vazia })) {
+    for (const foto of await fotografar(vitrine, papel, caminhos, { cliques, vazia, escuro })) {
       dizer(`${foto.arquivo}${foto.parouEm === new URL(foto.caminho, vitrine.url).pathname ? '' : `   (a página parou em ${foto.parouEm})`}`)
     }
     return 0
