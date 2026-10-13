@@ -45,6 +45,7 @@ gravar nada que ele não escolheu.
 |---|---|---|
 | antes do primeiro quadro | e2e | com "Maior" guardado, `data-letra` já está no `<html>` no `DOMContentLoaded` (`addInitScript`) e o `font-size` é 20 px |
 | só grava ao escolher | componente + e2e | sem escolha, `localStorage` segue `'[]'` depois do login, de Eu e do diálogo; escolher "Padrão" apaga a chave |
+| a escolha não sai do navegador | e2e | com "Maior" escolhido, nenhuma requisição à API leva `educa.letra` nem o valor dela, em endereço, cabeçalho ou corpo: a preferência não é dado da pessoa no servidor |
 | armazenamento recusando | unidade | `getItem` e `setItem` que lançam: Padrão na leitura, a escolha vale na sessão, nenhum erro na tela |
 | valor inválido | unidade | `xyz` na chave vira Padrão |
 | só no aluno | e2e | a mesma chave não muda a letra no professor nem na coordenação; ao sair do `/aluno`, o atributo some |

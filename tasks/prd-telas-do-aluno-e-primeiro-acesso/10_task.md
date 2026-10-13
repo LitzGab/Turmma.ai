@@ -47,13 +47,15 @@ Caminhos em `apps/web/src/`, salvo `e2e/`.
 | primeira entrada pelo convite | e2e | professora convidada cria a senha, entra e cai em `/professor/bem-vindo` |
 | pular | componente + e2e | "Pular" no passo 1 grava a data e vai ao primeiro lugar; a entrada seguinte não volta |
 | botões iguais | componente | "Pular" e "Continuar" com a mesma classe |
+| falas (regra 70, item 4a; D58) | unidade | texto fixo em `.ts`; reprova afirmar ser pessoa, professor ou amigo, prometer voltar, esperar ou estar sempre ali, e termos de vínculo ou saudade |
+| quatro estados da `BemVindo` | componente | carregando (a fala do passo 1, "Sair" à vista, sem "Fechar" nem "Pular"); erro com `EstadoErro`, "Tentar de novo", "Voltar para a abertura" e "Sair"; data desconhecida vale o modo primeira vez; com dado, os passos |
 | rever | e2e | menu da pessoa › "Rever a introdução": todo passo fecha, a data não muda |
 | duas escolas | e2e | concluída na escola A, a troca para B (pelo seletor) não reabre |
 | sair no meio | componente | "Sair" não grava |
 | recomeço da tela | e2e | a professora seguinte no mesmo computador vê a introdução dela |
 | 360 px | e2e | sem rolagem lateral, botões de 44 px |
 
-Isolamento e concorrência da data são da 1.0; carregando e erro são os da `Inicio`.
+Isolamento e concorrência da data são da 1.0; carregando e erro do desvio em `/`, os da `Inicio`; os da `BemVindo`, a linha da tabela.
 
 ## Como testar
 

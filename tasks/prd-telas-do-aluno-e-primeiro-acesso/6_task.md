@@ -46,6 +46,7 @@ Não edita `roteiro-da-demonstracao.spec.ts` nem `aluno-fluxo.spec.ts`: "Ativida
 | não aparece no resultado nem na encerrada | componente | a tarefa com resultado e a encerrada pela professora abrem sem comemoração |
 | envio que falha | componente | `ATIVIDADE_ENCERRADA` e erro de rede: nenhuma comemoração |
 | nunca de nota nem de acerto | componente | a comemoração não traz número, acerto, tempo nem "parabéns"; só o fato da entrega |
+| falas (regra 70, item 4a; D58) | unidade | o texto da `Comemoracao` passa no teste de falas: não afirma ser pessoa, não promete voltar nem esperar, sem vínculo ou saudade |
 | movimento reduzido | e2e | com `reducedMotion: 'reduce'` o `animationName` é `none` |
 | quatro estados | componente | carregando, não disponível, erro com "Tentar de novo", com dado |
 | recomeço da tela | e2e | o aluno seguinte no mesmo computador não herda a comemoração nem a fila do anterior |

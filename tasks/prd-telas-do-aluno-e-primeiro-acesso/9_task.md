@@ -19,11 +19,14 @@ pode rever em Eu.
 ## Subtarefas
 
 - [ ] 9.1 — `aviso-de-privacidade.ts` e `textos-da-introducao.ts`, em `areas/aluno/`. O aviso: "Veja o que a escola
-  guarda de você." "Guardamos seu nome, sua turma e sua matrícula." "Guardamos suas tarefas, suas notas aprovadas e o que você estudou
-  com o Tutor." "Não temos seu e-mail, telefone, CPF, foto, endereço nem data de nascimento." "Quem dá a aula acompanha como você usa o
-  Tutor." (`TEXTO_DA_SUPERVISAO`) "A coordenação vê os números da turma toda. Ver algo seu fica registrado." "Seus colegas não veem
-  nada seu." "Seus dados não treinam IA." "Para ver seus dados, abra Eu e depois Privacidade." "Para pedir mais, fale com quem dá a aula
-  ou com a coordenação."
+  guarda de você." "Guardamos seu nome, sua turma e sua matrícula." "Guardamos suas tarefas e o resultado delas." "Guardamos o que
+  você escreve para o Tutor e o que ele responde." "A conversa com o Tutor fica de 6 a 24 meses; a escola escolhe." "Suas tarefas ficam pelo tempo que a escola escolhe." "Não temos seu
+  e-mail, telefone, CPF, foto, endereço nem data de nascimento." "O professor da turma vê suas tarefas e o resultado." "Quem dá a aula
+  acompanha como você usa o Tutor." (`TEXTO_DA_SUPERVISAO`) "A coordenação vê os números da turma toda. Ver algo seu fica
+  registrado." "Seus colegas não veem nada seu." "O que você escreve ao Tutor e as habilidades a rever passam por um programa de IA de uma empresa contratada."
+  "Seus dados não treinam IA." "Para ver seus dados, abra Eu e depois Privacidade." "Para pedir mais, fale com quem dá a aula ou com a
+  coordenação." Frases de até 15 palavras. O passo 1 diz que o Tutor é um programa e pode errar. Falas fixas, sem variar com
+  presença, ausência, acerto ou tempo de uso
 - [ ] 9.2 — `BemVindo.tsx` (`lazy()`, `tela-aluno-BemVindo`) e a rota de 2.1. Passos 1 a 3: sem "Pular", sem X, Esc não sai; o 4 tem "Pular"
   igual ao "Continuar". "Começar" e "Pular" chamam `concluirIntroducao()` e vão a `/aluno/inicio`, mesmo se a gravação falhar.
   "Sair" não grava. Revendo, todo passo fecha. O desvio em `paginas/Inicio.tsx` é uma tabela por papel só com o aluno: a 10.0 e a 11.0
@@ -43,15 +46,19 @@ pode rever em Eu.
 
 | Cenário | Tipo | O que prova |
 |---|---|---|
-| texto do aviso (RF14) | unidade | até 15 palavras por frase; sem "titular", "controlador", "LGPD", "consentimento", "tratamento"; cita os seis dados que não temos; diz que não treina IA; a supervisão é o `TEXTO_DA_SUPERVISAO`; sem fala de sentimento |
+| texto do aviso (RF14) | unidade | até 15 palavras por frase; sem "titular", "controlador", "LGPD", "consentimento", "tratamento" **e sem "nota"**; **uma asserção por elemento**: o que guardamos (resultado das tarefas; o que escreve ao Tutor e a resposta), o prazo (a conversa com o Tutor, com piso e teto lidos de `CATEGORIAS_DE_RETENCAO.conversa_tutor`; o intervalo não aparece numa frase sem "Tutor"; as tarefas, sem número), o que não temos (os seis dados), quem vê (professor, coordenação com registro, colegas não), IA de uma empresa contratada, não treina IA, como pedir os dados; a supervisão é o `TEXTO_DA_SUPERVISAO`; apagar qualquer frase deixa vermelho |
+| passo 1 e passos obrigatórios (RF13) | unidade | o passo 1 diz que o Tutor é um programa e pode errar; os três primeiros passos têm `obrigatorio: true` |
+| falas (regra 70, item 4a; D58) | unidade | texto fixo em `.ts`; reprova afirmar ser pessoa, professor ou amigo, prometer voltar, esperar ou estar sempre ali, e termos de vínculo ou saudade |
+| quatro estados da `BemVindo` | componente | carregando (a fala do passo 1, "Sair" à vista, sem "Fechar" nem "Pular"); erro com `EstadoErro`, "Tentar de novo", "Voltar para a abertura" e "Sair"; data desconhecida vale o modo primeira vez; com dado, os passos |
+| passo 4 (RF11) | componente + e2e | seguir ou pular sem escolher deixa o `localStorage` vazio; escolher "Maior" aplica na hora e guarda; a 360 px, com "Maior", sem rolagem lateral e com "Continuar" e "Pular" alcançáveis |
 | avisos sem "Pular" | componente | passos 1 a 3 sem "Pular" nem X; o 4 com "Pular" do mesmo tamanho |
 | sair no meio; POST que falha | componente + e2e | "Sair" e fechar a aba não gravam e a introdução volta; se o POST falha, a pessoa segue |
-| primeira e segunda entrada | e2e | pessoa `introducao: 'por_ver'` cai na introdução; depois de concluir, vai ao Início |
+| primeira e segunda entrada | e2e | pessoa `introducao: 'por_ver'` cai na introdução; depois de concluir, vai ao Início; a segunda entrada em `browser.newContext()`, sem marca da introdução no armazenamento ("em nenhum computador") |
 | rever; duplo clique | e2e | todo passo fecha e a data não muda; dois cliques em "Começar", um POST |
 | recomeço da tela | e2e | o aluno seguinte no mesmo computador vê a introdução dele |
 | 360 px | e2e | sem rolagem lateral, botões de 44 px |
 
-Isolamento e concorrência da data são da 1.0; carregando e erro são os da `Inicio`.
+Isolamento e concorrência da data são da 1.0; carregando e erro do desvio em `/`, os da `Inicio`; os da `BemVindo`, a linha da tabela.
 
 ## Como testar
 

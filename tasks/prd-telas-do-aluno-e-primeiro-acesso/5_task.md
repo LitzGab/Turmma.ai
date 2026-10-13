@@ -21,10 +21,12 @@ em três poses.
 ## Subtarefas
 
 - [ ] 5.1 — `componentes/onca/Onca.tsx`: props `pose` (`acenando`, `apontando` ou `comemorando`; **sem "acolhendo"**), `agente` e `tamanho`.
-  SVG parado e igual em qualquer render, sempre com o nome da função e o selo "IA" no mesmo bloco, `data-pose`, sem temporizador
+  As três poses usam **o mesmo rosto neutro da cabeça da X1** (olhos e boca); só o corpo muda. SVG parado e igual em qualquer
+  render, sempre com o nome da função e o selo "IA" no mesmo bloco, `data-pose`, sem temporizador. A `comemorando` só é desenhada
+  pela `Comemoracao`; a introdução usa acenando e apontando e termina parada, sem `Comemoracao`
 - [ ] 5.2 — `TelaDeFoco` (barra de passo e "Sair" à vista, pelo contexto da casca; sem segundo `<main>`); `Balao` (a fala é o `h1`); `Comemoracao` (um salto, `@keyframes` em CSS ao lado, só `transform` e `opacity`, uma
   iteração, parada com "reduzir movimento", sem som e sem número); `introducao/Introducao`: passos
-  (`pose`, `fala`, `conteudo`, `obrigatorio`), "Passo N de M" para o leitor de tela, foco no `h1` a cada passo, Enter continua,
+  (`pose`, tipada `Exclude<Pose, 'comemorando'>`, `fala`, `conteudo`, `obrigatorio`), "Passo N de M" para o leitor de tela, foco no `h1` a cada passo, Enter continua,
   "Continuar" e "Pular" iguais, sem "Pular" no passo obrigatório, "Fechar" em todo passo quando revendo, e `aoConcluir` ou `aoPular`
   para quem chama.
 - [ ] 5.3 — `CascaDaEscola` nos endereços de `ehTelaDeFoco`: sem lateral nem barras; mantém `<main>`, `useInatividade` e `lembrarQuemEsta`
@@ -49,9 +51,10 @@ em três poses.
 |---|---|---|
 | ordem e foco | componente | o `h1` recebe o foco, Enter continua, o leitor ouve "Passo 2 de 4" |
 | botões iguais (RF16) | componente | "Continuar" e "Pular" saem com a mesma classe, tamanho e peso |
-| passo obrigatório | componente | sem "Pular", sem "Fechar" e Esc não sai; revendo, todo passo fecha |
+| passo obrigatório | componente | sem "Pular", sem "Fechar" e Esc não sai; revendo, todo passo fecha, com `['eu']` do cache e depois de erro seguido de "Tentar de novo" |
 | onça (RF19) | componente | só as três poses; sempre com função e selo "IA"; nenhum texto de sentimento; nome acessível nunca é "onça" |
-| arquitetura | unidade | só `Introducao`, `Comemoracao` e os `BemVindo` importam a onça de corpo inteiro; a entrada não |
+| rosto neutro (D80, item 3) | componente | o rosto de cada pose é igual ao da cabeça neutra da X1. **Mutação:** trocar a boca de uma pose deixa vermelho |
+| arquitetura | unidade | só `Introducao`, `Comemoracao` e os `BemVindo` importam a onça de corpo inteiro; a entrada não. A pose `comemorando` só é desenhada pela `Comemoracao`, e a `Comemoracao` só é importada por `areas/aluno/Atividade.tsx` |
 | movimento | componente + e2e | uma iteração, nunca `infinite`; com "reduzir movimento" o `animationName` é `none` |
 | casca em foco | componente | sem lateral nem barras, um `<main>`, "Sair" à vista, inatividade ligada |
 
@@ -67,7 +70,7 @@ Quatro estados, concorrência e log não se aplicam: peças sem dado e sem chama
 ## Fora do escopo desta tarefa
 
 Os textos e as rotas de cada papel (9.0 a 11.0); a pose "acolhendo"; onça no Início, no Eu ou em estado vazio; som.
-Se o `conformidade-reviewer` vetar a onça de corpo inteiro ou a comemoração, a peça sai e o fim da introdução fica parado.
+Se o `conformidade-reviewer` vetar a onça de corpo inteiro ou a comemoração, a peça sai.
 
 ## Divergências resolvidas nesta tarefa
 
