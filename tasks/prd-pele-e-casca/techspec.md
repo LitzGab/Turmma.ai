@@ -128,8 +128,13 @@ sobre face colorida usa `sobre-cor`, e sobre o oficial, `sobre-grafite`. A varia
 documento é a fonte: os dois testes de token passam a ler os dois blocos da seção de tokens do `docs/interface.md`.
 
 **Desvios do mockup, de propósito** (D80, item 7): `borda-campo` com 3:1 nos dois temas, também em caixa de
-marcar e interruptor desligado; o campo em foco leva o anel, e não só a borda mais clara; o hover do botão troca a
-cor de fundo, sem `filter`; a lateral não anima a largura; `apagado` nunca é cor de texto; nada depende de
+marcar e interruptor desligado; o campo em foco leva o anel, e não só a borda mais clara, colado à borda (afastamento 0), e o hover não leva a
+borda a `borda-forte`, que não chega a 3:1; o interruptor fora de uso não usa a opacidade de 50% do mockup, e sim
+os tokens das outras peças desligadas (`fundo-suave`, borda `borda`, bolinha `borda-campo`), porque um jeito só de
+mostrar peça desligada vale mais que dois, e a opacidade derrubava a borda de 3:1 sem dizer o estado; o erro
+do campo leva ícone ao lado do texto e é descrição do campo (`aria-describedby`), sem `role="alert"`: o aviso do envio
+já é região própria (`descritoTambemPor`), e dois alertas o anunciariam duas vezes; o hover do botão troca a cor de
+fundo, sem `filter`; a lateral não anima a largura; `apagado` nunca é cor de texto; nada depende de
 `:has()`, `scrollbar-width` nem `color-mix`, nem em estilo em linha.
 
 **Foco.** Anel de 3 px em `foco` (`#146EAA` no claro, `#60B9F4` no escuro), afastado 2 px; por dentro (−3 px) em

@@ -1,5 +1,6 @@
 import { useId, type Ref } from 'react'
-import { MarcaDeObrigatorio } from './Campo'
+import { MarcaDeObrigatorio, MensagemDeErro } from './Campo'
+import { CAIXA_DO_CAMPO } from './seletor'
 import { limitarTexto, textoDoContador, type LimitesDoTexto } from './texto-longo'
 
 interface PropsDoCampoLongo extends LimitesDoTexto {
@@ -19,14 +20,15 @@ interface PropsDoCampoLongo extends LimitesDoTexto {
 
 /**
  * O campo de várias linhas, com rótulo, dica, contador e erro: a justificativa de quem rejeita uma entrega (de 8 a 500
- * caracteres) e de quem contesta. É o `Campo` do produto com `textarea`: mesma borda, mesma altura mínima de toque.
+ * caracteres) e de quem contesta. É o `Campo` do produto com `textarea`: a mesma caixa (`CAIXA_DO_CAMPO`), com no mínimo
+ * 96 px de altura.
  *
  * - **O contador é texto** ("12 de 500"), ligado ao campo por `aria-describedby`: o leitor de tela o ouve ao chegar no
  *   campo, e não a cada tecla. Não muda de cor perto do limite: o campo simplesmente não aceita mais. **A conta é uma
  *   só**, a da API, sem o espaço das pontas (`texto-longo.ts`): o limite do campo é o do contador, e não o `maxLength`
  *   do navegador, que contaria o texto cru.
  * - **Só cresce para baixo** (`resize-y`): arrastado para o lado, o campo estouraria a largura da tela.
- * - **O erro diz o que fazer**, embaixo, e o campo fica `aria-invalid`.
+ * - **O erro diz o que fazer**, embaixo e com o ícone (`MensagemDeErro`), e o campo fica `aria-invalid`.
  *
  * **Não é campo de ferramenta.** O `MotorFormulario` não tem texto longo, e a Adaptação não tem texto nenhum: texto
  * livre sobre aluno é onde o diagnóstico entraria no sistema (D35, D67).
@@ -39,12 +41,12 @@ export function CampoLongo({ rotulo, valor, aoMudar, dica, erro, obrigatorio = f
   const descritoPor = [dica === undefined ? undefined : idDaDica, erro === undefined ? undefined : idDoErro, idDoContador].filter((id) => id !== undefined).join(' ')
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <label htmlFor={campo} className="font-medium">
+      <label htmlFor={campo} className="t-apoio font-bold text-tinta">
         {rotulo}
         {obrigatorio && <MarcaDeObrigatorio />}
       </label>
       {dica !== undefined && (
-        <p id={idDaDica} className="text-sm text-apoio">
+        <p id={idDaDica} className="t-apoio text-apoio">
           {dica}
         </p>
       )}
@@ -58,12 +60,10 @@ export function CampoLongo({ rotulo, valor, aoMudar, dica, erro, obrigatorio = f
         aria-describedby={descritoPor}
         {...(erro === undefined ? {} : { 'aria-invalid': true })}
         {...(obrigatorio ? { 'aria-required': true } : {})}
-        className="min-h-11 w-full min-w-0 resize-y rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta disabled:text-inativo"
+        className={`min-h-24 w-full min-w-0 resize-y px-3.5 py-2 t-corpo ${CAIXA_DO_CAMPO}`}
       />
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-1">
-        <p id={idDoErro} className="min-w-0 text-sm break-words text-erro empty:hidden">
-          {erro}
-        </p>
+        {erro !== undefined && <MensagemDeErro id={idDoErro}>{erro}</MensagemDeErro>}
         <p id={idDoContador} className="ml-auto shrink-0 text-sm text-sutil tabular-nums">
           {textoDoContador(valor, minimo === undefined ? { maximo } : { minimo, maximo })}
           <span className="sr-only"> caracteres</span>

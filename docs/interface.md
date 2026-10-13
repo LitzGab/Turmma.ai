@@ -1390,10 +1390,10 @@ prova isso (RF6 da X1).
 
 | Peça | Desenho | Estados e teclado |
 |---|---|---|
-| `Campo`, `CampoDeSenha`, `CampoLongo`, `Selecao` (R) | 48 px (o longo, no mínimo 96), canto 12, borda 2 em `borda-campo` (produto), fundo `campo`, 17 px em 500. Rótulo de 15 px em 700; dica em `t-apoio` | Foco: o anel (produto). Inválido: borda e mensagem em `vermelho-texto`, com ícone e `role="alert"`. Desligado: `fundo-suave` |
+| `Campo`, `CampoDeSenha`, `CampoLongo`, `Selecao` (R) | 48 px (o longo, no mínimo 96), canto 12, borda 2 em `borda-campo` (produto), fundo `campo`, 17 px em 500. Rótulo de 15 px em 700; dica em `t-apoio` | Foco: o anel, colado à borda (produto). Inválido: borda e mensagem em `vermelho-texto`, com ícone ao lado do texto; a mensagem é descrição do campo (`aria-describedby`), sem `role="alert"` (produto: o aviso do envio já é uma região própria, e o campo o lê ao receber o foco). Desligado: `fundo-suave` com texto `apoio` |
 | `Busca` (N) | 44 px, letra de 16, lupa de 20 à esquerda | O rótulo é só para leitor de tela |
-| `Opcao` (N) | Um `<label>` com o `<input>` de verdade: degrau, canto 12, mínimo de 64 px. Texto em `t-cartao`; à direita, um círculo de 24 com o visto. Marcada em `azul-claro`, `azul-borda`, `azul-texto` | Teclado nativo. Quem usa põe o `fieldset` e a `legend` |
-| `Interruptor` (N) | Trilho de 52 × 32 px, com alvo de toque de 44 px de altura abaixo de 768. Desligado: `borda`, com borda `borda-campo` (produto). Ligado: `azul`, com borda `azul-degrau`. Bolinha de 24 em `fundo` (produto) | `role="switch"`. Muda na hora |
+| `Opcao` (N) | Um `<label>` com o `<input>` de verdade: degrau, canto 12, mínimo de 64 px. Texto em `t-cartao`; à direita, um círculo de 24 com o visto. Marcada em `azul-claro`, `azul-borda`, `azul-texto`. Desligada: `borda`, `fundo-suave`, texto `apoio` (4,5:1), sem degrau; o círculo, marcado ou não, sem cor de ação (o visto fica, em `apoio`) | Teclado nativo. Quem usa põe o `fieldset` e a `legend` |
+| `Interruptor` (N) | Trilho de 52 × 32 px, com alvo de toque de 44 px de altura abaixo de 768. Desligado: `borda`, com borda `borda-campo` (produto). Ligado: `azul`, com borda `azul-degrau`. Bolinha de 24 em `fundo` (produto). Fora de uso: `fundo-suave` com borda `borda` e bolinha `borda-campo`, sem opacidade (produto); a posição da bolinha continua dizendo o estado | `role="switch"`. Muda na hora |
 | `Segmentado` (N) | Grupo de 44 px, borda 2, canto 12. A opção ativa em `azul-claro`, `azul-borda`, `azul-texto`. Até quatro. Troca o jeito de ver; não é aba | `radiogroup`, com as setas, Home e End |
 | `Aparencia` (N) | O `Segmentado` Sistema · Claro · Escuro, em "Sua conta" | Só a escolha explícita grava; voltar a Sistema apaga a chave. Sem armazenamento, vale o sistema, calado |
 

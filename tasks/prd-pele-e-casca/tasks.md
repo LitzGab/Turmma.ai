@@ -31,10 +31,10 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 3.5 O teto de `pecas-*` sobe de 26 para 40 kB (`.size-limit.json` e `tools/ci/tamanho-web.test.ts`), no tronco, antes das linhas
   - [x] 3.6 Testes: o oficial não se parece com nenhum outro, pela cor resolvida em cada tema; desligado legível; 44 px; apertado sem hover; movimento reduzido
 
-- [ ] **4.0 — Os campos na pele nova, com busca, interruptor e opção**
-  - [ ] 4.1 `Campo`, `CampoDeSenha`, `CampoLongo`, `Selecao` e `seletor.ts`: borda de 2 px em `borda-campo`, fundo `campo`, anel no foco
-  - [ ] 4.2 As peças novas `Busca`, `Interruptor` e `Opcao`
-  - [ ] 4.3 Testes: rótulo, dica e erro ligados ao campo; teclado; foco; alvo de toque; contraste da borda
+- [x] **4.0 — Os campos na pele nova, com busca, interruptor e opção**
+  - [x] 4.1 `Campo`, `CampoDeSenha`, `CampoLongo`, `Selecao` e `seletor.ts`: borda de 2 px em `borda-campo`, fundo `campo`, anel no foco
+  - [x] 4.2 As peças novas `Busca`, `Interruptor` e `Opcao`
+  - [x] 4.3 Testes: rótulo, dica e erro ligados ao campo; teclado; foco; alvo de toque; contraste da borda
 
 - [ ] **5.0 — Cartão, linha clicável, tabela e número na pele nova**
   - [ ] 5.1 `Cartao`, `Tabela`, `NumeroPainel`, `BarraRotulada` e `BarraPresa` revestidos

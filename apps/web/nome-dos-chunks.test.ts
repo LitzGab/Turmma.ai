@@ -152,6 +152,11 @@ describe('nome dos chunks', () => {
       expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/areas/professor/Menu.tsx')).toBe(false)
   })
+
+  it('as peças novas de campo (X1, 4.0) estão fora da entrada, e as que ela já usava continuam dentro', () => {
+    for (const nova of ['Busca.tsx', 'Interruptor.tsx', 'Opcao.tsx']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${nova}`), nova).toBe(true)
+    for (const daEntrada of ['Campo.tsx', 'CampoDeSenha.tsx', 'seletor.ts']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
+  })
 })
 
 /** Os módulos de `src/areas/<papel>/` que um chunk leva. */

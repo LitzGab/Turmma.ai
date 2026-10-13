@@ -1,6 +1,6 @@
 import { useId, type Ref } from 'react'
-import { MarcaDeObrigatorio } from './Campo'
-import { CLASSES_DO_SELETOR } from './seletor'
+import { MarcaDeObrigatorio, MensagemDeErro } from './Campo'
+import { CLASSES_DO_SELETOR, FACE_DO_CAMPO } from './seletor'
 
 export interface OpcaoDeSelecao {
   readonly valor: string
@@ -48,12 +48,12 @@ export function Selecao({ rotulo, opcoes, valor, aoMudar, marcador, dica, erro, 
   const pilula = variante === 'pilula'
   return (
     <div className={`flex min-w-0 flex-col gap-1 ${pilula ? '' : 'w-full'}`}>
-      <label htmlFor={campo} className={rotuloOculto || pilula ? 'sr-only' : 'font-medium'}>
+      <label htmlFor={campo} className={rotuloOculto || pilula ? 'sr-only' : 't-apoio font-bold text-tinta'}>
         {rotulo}
         {obrigatoria && <MarcaDeObrigatorio />}
       </label>
       {dica !== undefined && (
-        <p id={idDaDica} className="text-sm text-apoio">
+        <p id={idDaDica} className="t-apoio text-apoio">
           {dica}
         </p>
       )}
@@ -68,8 +68,8 @@ export function Selecao({ rotulo, opcoes, valor, aoMudar, marcador, dica, erro, 
         {...(obrigatoria ? { 'aria-required': true } : {})}
         className={
           pilula
-            ? 'min-h-11 max-w-full min-w-0 rounded-full border border-borda-campo bg-superficie px-3 py-1.5 text-sm text-tinta disabled:text-inativo md:min-h-9'
-            : `${CLASSES_DO_SELETOR} w-full disabled:text-inativo`
+            ? `min-h-11 max-w-full min-w-0 rounded-full px-3 py-1.5 text-sm md:min-h-9 ${FACE_DO_CAMPO}`
+            : `${CLASSES_DO_SELETOR} w-full`
         }
       >
         {marcador !== undefined && <option value="">{marcador}</option>}
@@ -79,11 +79,7 @@ export function Selecao({ rotulo, opcoes, valor, aoMudar, marcador, dica, erro, 
           </option>
         ))}
       </select>
-      {erro !== undefined && (
-        <p id={idDoErro} className="text-sm text-erro">
-          {erro}
-        </p>
-      )}
+      {erro !== undefined && <MensagemDeErro id={idDoErro}>{erro}</MensagemDeErro>}
     </div>
   )
 }
