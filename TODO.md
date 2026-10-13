@@ -499,7 +499,7 @@ para o staging".
 - [ ] **(F3, validação, rodada 2, m2) "Sem turma neste ano" quando não há ano em curso:**
       `apps/web/src/areas/coordenacao/privacidade/textos-dos-pedidos.ts:58`. "Sem turma" basta. Na próxima correção ou
       tarefa que mexer nos Pedidos (dono: Joaquim)
-- [ ] **(F3, validação, m3 a m6) Telas da Privacidade, para a spec de refatoramento visual ou a próxima que tocar nelas:**
+- [ ] **(F3, validação, m3 a m6) Telas da Privacidade:** com destino desde a D80: m3 e m5 na X2 (`telas-da-coordenacao`), m6 na X1 (tarefa 11.0, título visível em toda tela); m4 pede campo no DTO e continua sem spec.
       (m3) a lista de pedidos não mostra o prazo nem destaca o vencido
       (`apps/web/src/areas/coordenacao/privacidade/Pedidos.tsx:84`): a correção vencida há 5 dias aparece só como
       "Recebido"; (m4) o DTO do pedido não leva `eliminarEm` (`packages/shared/src/privacidade/titular.ts`), e o detalhe diz
@@ -996,17 +996,10 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [x] ~~Landing page~~ — existe em `turmma.com` (fora deste repositório)
 - [x] ~~Trazer a paleta, a tipografia e o logo para o repositório~~ — já estão em `mockups/`
       (`src/index.css` e `public/marca/`), e a A1 leva de lá para o `apps/web` (D72)
-- [ ] O avatar de cada um dos **três agentes**, em SVG, por função: Assistente de ensino, Tutor e
-      Analista de desempenho escolar (D32 revista, D72). O prazo era a Tech Spec da A2, que não
-      existiu (D77); o MVP usa um círculo com o ícone da função
-      (`apps/web/src/componentes/ia/AvatarAgente.tsx`). Novo prazo, e se o SVG ainda substitui o
-      ícone, a definir pelo Gabriel e pelo Joaquim
-- [ ] **Grupos da lateral da coordenação (F3, validação, M2):** `docs/interface.md` 11.1 propõe três grupos (Escola, IA
-      e ensino, Conformidade) e um rodapé, e a lateral é uma lista plana desde o MVP
-      (`apps/web/src/areas/navegacao.ts`), hoje com sete itens. O RF20 do F3 pedia Privacidade "no grupo Conformidade", e
-      o item entrou no fim da lista, sem rótulo (Tech Spec do F3, seção 9). Decidir se a proposta vale e construir os
-      grupos na casca, para todos os itens de uma vez: o mais tardar no PRD do F12, que traz Conformidade, Denúncias e
-      Exportar para o mesmo grupo (Joaquim e Gabriel)
+- [x] ~~O avatar de cada um dos três agentes~~ — decidido na D80 (12/10/2026): a cabeça da onça, com o anel na cor
+      do agente, sempre com o nome da função e o selo "IA". Entra na X1 (`pele-e-casca`, tarefa 8.0)
+- [x] ~~Grupos da lateral da coordenação (F3, validação, M2)~~ — decidido na D80 (12/10/2026): quatro lugares (Painel,
+      Analista, Escola e Registros), com Privacidade dentro de Registros. Entra na X2 (`telas-da-coordenacao`)
 - [ ] Identificar no 21st.dev o autor e a licença das peças que o Gabriel colou direto no
       mockup (área de soltar arquivo, miniatura de arquivo, pasta animada, `leaderboard-*` e as duas
       da HextaUI) e conferir a do calendário `vaib215/event-manager`, antes de qualquer uma entrar no
@@ -1063,6 +1056,15 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] Busca e depósito no INPI da marca Turmma, e registro do domínio `turmma.com` (e do
       `@turmma.ai`). É o único risco que sobra do nome: se o INPI negar, a troca é de marca,
       não de código
+- [ ] **(D80) Parecer sobre a pele nova, junto do INPI:** a pele toma a técnica visual do Duolingo (ilustração chapada,
+      botão com degrau), com mascote, cores, ícones e fonte nossos. Confirmar com advogado que não há risco de
+      concorrência desleal (a D72 recusou a cópia da Teachy por isso), antes do material de venda (Gabriel e Joaquim)
+- [ ] **(D80) A onça como avatar de agente conversacional para menor:** levar ao advogado, com o parecer do ECA
+      Digital (Decreto 12.880, arts. 10 e 11). As condições que a spec fixa estão na D80, item 3; as poses e a
+      comemoração da X4 dependem do mesmo parecer (Joaquim)
+- [ ] **(D80) Trazer o mockup de outubro para `mockups/`:** ele mora no repositório privado `Prototipo_Turmma`, do
+      Gabriel, e a pasta `mockups/` daqui é a versão de setembro. Este repositório é público: decidir se entra, e
+      conferir antes a licença das peças coladas do 21st.dev (P20) (Gabriel e Joaquim)
 
 ## Fase posterior
 

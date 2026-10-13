@@ -757,6 +757,9 @@ Revista em 23/09/2026 (D73): "Meu painel" deixa de existir. "Minhas turmas" vira
 **Turmas** da navegação do professor, com a lista das turmas dele e o **Meu uso** (o espelho da
 D45) ali dentro. O que a turma aberta mostra — as abas desenhadas no mockup — fecha no PRD da
 A3 (`docs/pendencias-dos-mockups.md`, P11 e P28). Continua nascendo no F6, com uma fatia na A3.
+Revista em 12/10/2026 pela D80: a turma aberta tem três abas, **Hoje, Atividades e Alunos**, e o
+**Meu uso** sai de Turmas e vai para a conta do professor. Frequência, Ranking, Recursos e Mural não
+entram: continuam sem fase e sem decisão (`CLAUDE.md`, decisões em aberto).
 
 **D70 — Sair da aba durante a prova é fato mostrado ao professor, e só durante a avaliação.**
 *(ratificada pelo Joaquim em 23/09/2026; AIA e `conformidade-reviewer` antes de existir)*
@@ -862,6 +865,11 @@ Revista em 25/09/2026, pelo Joaquim: os avatares dos três agentes e "Seu time" 
 A2, onde os agentes nascem, e a casca da A1 não reserva o lugar. Motivo: na A1 não existe agente, e
 pela D73 item de fase que não existe não aparece; manter o prazo na A1 travava a Tech Spec dela sem
 nada a mostrar na demonstração.
+Revista em 12/10/2026 pela D80: a pele passa a ser o sistema Turmma do mockup de outubro (cor por
+família, borda de 2 px com degrau, ícone ilustrado, a onça, modo escuro), e toda tela da lateral
+ganha título visível. Continua valendo que a pele é **uma só** em todas as telas, que a fonte é a do
+sistema, que o laranja é o da pinta e que a decisão oficial tem um botão que não se parece com os
+outros. As medidas tiradas do ChatGPT (pílula, canto de 28, item de 36) saem.
 
 **D73 — A navegação do professor é a do mockup: a caixa de pedido em primeiro lugar, o time e o
 histórico na lateral.** *(decidida pelo Gabriel em 20/09/2026, vista em mockup; ratificada pelo
@@ -876,6 +884,10 @@ uso** dentro (revisão do nome na D69). O menu da pessoa segue o P18, com "Sair"
 mesmo tamanho dos outros (D59). Motivo: o professor abre o produto para pedir alguma coisa, e a
 navegação da call punha na frente páginas que ele raramente abre; o Gabriel reprovou o desenho
 antigo vendo, e o novo tem menos itens e nenhum que exista sem fase.
+Revista em 12/10/2026 pela D80: a lateral do professor passa a **Início · Turmas · Ferramentas ·
+Criados**, com as Conversas embaixo; "Seu time" sai da lateral e vira "Esperando você", no sino; o
+Calendário deixa de ser lugar e, quando o F8 existir, é a visão Semana de Turmas. Continua valendo que
+lugar sem tela não aparece.
 
 **D74 — É ferramenta o que entrega um output próprio; o resto é pedido ao Assistente.**
 *(decidida pelo Gabriel em 20/09/2026; ratificada pelo Joaquim em 23/09/2026)*
@@ -1222,3 +1234,69 @@ paradas não mudam. **Sem prova ainda:** os comandos do Maestri para o andar e o
 mais, o e2e de três linhas ao mesmo tempo nesta máquina, o consumo por hora do plano com mais de um par,
 quanto tempo de spec as linhas tiram, e se o comando vazio da rotina de fato não acorda o modelo. Para
 desfazer sem mexer em código: não autorizar paralelo no `tasks.md`.
+
+**D80 — A pele do produto é o sistema Turmma do mockup de outubro: cor por família, borda de 2 px
+com degrau sólido, ícone ilustrado, a onça como mascote, modo escuro, e até quatro lugares por
+papel.** *(decidida em 12/10/2026, com a delegação do Joaquim: ao pedir as specs que deixam o produto
+igual ao mockup novo do Gabriel, ele escreveu "você pode tomar todas as decisões para o projeto, eu
+Joaquim permito"; o Gabriel desenhou e escolheu a pele nas rodadas 10 a 14, de 04 a 07/10/2026)*
+Revisa a D72 (a pele e o padrão de espaço), a D73 (a navegação do professor) e a D69 (onde mora o
+Meu uso), e fecha três decisões em aberto: os avatares dos agentes, as abas da turma aberta e o modo
+escuro. O mockup é o de `Prototipo_Turmma`, branch `mockups/interface`, commit `a95568d`; os números
+de decisão citados nos comentários dele (D61, D70, D78 a D80) **não** são os deste documento.
+(1) **A pele.** Branco no chão, dez famílias de cor (laranja, azul, verde, amarelo, vermelho, roxo,
+turquesa, anil, lima e rosa), cada uma com face, degrau, claro, borda e texto; borda de 2 px e degrau
+sólido de 4 px no lugar de linha fina e sombra borrada; canto de 12 px no botão e de 16 no cartão;
+fonte do sistema em peso 500 no corpo e 700 no resto, com rótulo de ação em caixa-alta; foco em anel
+azul de 3 px. O **laranja** é a ação de criar e pedir, com texto escuro em cima; o **grafite** é a
+decisão oficial (aprovar, confirmar), que continua sem se parecer com nenhum outro botão (regra 50,
+item 8); o **azul** é seleção e link. Um botão cheio por tela. Os valores estão no bloco da seção 9.9
+do `docs/interface.md`, que o teste da web lê.
+(2) **Modo escuro**, nos tons do mockup: Sistema, Claro ou Escuro, escolha guardada no navegador. Nenhuma
+tela escreve cor por tema: quem usa token muda sozinho.
+(3) **A onça é a mascote e o avatar dos três agentes** (o anel do Assistente em azul, o do Tutor em
+laranja, o do Analista em anil), sempre com o nome da função e o selo "IA" à vista no mesmo bloco. É
+um animal desenhado, com uma expressão neutra só: não tem nome próprio nem traço de pessoa, não fala
+por conta própria, não diz que sente, não reage à presença, à ausência, ao acerto nem ao tempo de uso
+de ninguém, e não simula vínculo (D58; Decreto 12.880, arts. 10 e 11). O círculo com o ícone da
+função sai. Pose, expressão e movimento da onça só entram com parecer do `conformidade-reviewer`, na
+spec que os trouxer.
+(4) **Ícone ilustrado** nos lugares da navegação, nas matérias, nos tipos da fila e nas ferramentas,
+desenhado por nós; o resto continua `lucide-react`.
+(5) **Até quatro lugares por papel**, iguais na lateral e na barra de baixo do celular. Aluno: Início
+(a conversa com o Tutor), Tarefas, Eu e Avisar um adulto. Professor: Início (a caixa de pedido),
+Turmas, Ferramentas e Criados, com as Conversas embaixo. Coordenação: Painel, Analista, Escola e
+Registros. Operação: uma tela, com barra de topo. Rede: Painel, Analista e Escolas, quando o F14
+existir. "Seu time" sai da lateral: o que um agente deixa esperando vira item de **"Esperando você"**,
+no sino do professor e da coordenação, e o agente continua assinando o que fez. O **Meu uso** sai de
+Turmas e vai para a conta do professor. A turma aberta tem três abas: **Hoje, Atividades e Alunos**.
+Continua valendo o que a D73 fixou: lugar sem tela não aparece.
+(6) **Padrão de página.** Toda tela da lateral tem título visível, menos a conversa (revê o P03); até
+três abas, nunca uma dentro da outra; linha inteira clicável; o detalhe abre num painel ao lado, de
+480 px, e como folha de baixo no celular; quatro tipos de página, com as larguras da seção 9.3 do
+`docs/interface.md`.
+(7) **O que do mockup não entra, de propósito.** Regra vence desenho. (a) Mecânica de uso compulsivo:
+sequência de dias, pontos por tempo, vidas, ranking, pódio, notificação insistente e recompensa
+variável (D59, D57). A comemoração aparece uma vez, só na entrega de uma tarefa, nunca em nota nem em
+tempo de uso, e some com `prefers-reduced-motion`. (b) Onde o mockup afrouxa uma proteção que o
+produto já tem, vale o produto: "Sair" sempre à vista (D59); a faixa de que o professor acompanha o
+Tutor continua presa (D8); a caixa do Tutor nunca some, para o assunto delicado receber a mensagem
+fixa (D36); a entrada da escola responde igual para matrícula errada e pedido pendente; o convite não
+mostra e-mail; o segundo fator mostra o segredo em texto (regra 50, item 2); não existe busca pública
+de escola; borda de campo e de caixa de marcar com contraste de 3:1; e toda tela tem carregando e
+erro (regra 50, item 5). (c) O que depende de dado ou de fase que não existe fica na fase dele:
+frequência, faltas, nota do diário oficial, APOIA e os painéis que os leem; o Analista em conversa; os
+avisos e o encaminhamento; Auditoria, Exportar e Dossiê; a área da rede; a prova em tela de foco; a
+conversa livre com histórico; e as ferramentas que o catálogo ainda não tem.
+(8) **Como entra:** quatro specs fora da sequência, antes do F2 — X1 `pele-e-casca`, X2
+`telas-da-coordenacao`, X3 `telas-do-professor` e X4 `telas-do-aluno-e-primeiro-acesso` —, cada uma
+com o processo completo. Nenhuma muda regra de negócio nem contrato da API além do que a X4 declara.
+Motivo: o Gabriel reprovou a décima rodada vendo ("extremamente confuso: muita informação, muita aba,
+muita coisa"; "muito texto, pouco contraste e cara de site") e escolheu este sistema; o Joaquim pediu
+o produto igual ao mockup, com foco no visual e sem perder o que já foi construído; e fazer a pele
+antes do F2 evita desenhar duas vezes as telas que o F2, o F6, o F7, o F9 e o F12 ainda vão abrir.
+O preço: a D72 dizia que copiar medida de concorrente abre risco de concorrência desleal. Aqui o que
+se toma é a técnica (ilustração chapada, botão com degrau), e não a marca de ninguém: a mascote, as
+cores, os ícones e a fonte são nossos, e o verde não é a cor principal. O parecer sobre isso entra
+junto do registro no INPI (`TODO.md`). O mockup de outubro mora num repositório privado do Gabriel;
+a pasta `mockups/` daqui continua na versão de setembro até os dois decidirem trazê-lo.

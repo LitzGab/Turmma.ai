@@ -278,6 +278,108 @@ deixar auditoria, nem adoção nominal em lugar nenhum.
 | F15 | roteiro, um comando que sobe o ambiente vazio | demonstração completa, com um bimestre e notas |
 | F8, F13, F14, F17, F16 | nada | tudo |
 
+## A pele nova — X1 a X4 (D80)
+
+> **Decidido em 12/10/2026** (D80). O Gabriel redesenhou o produto inteiro em mockup, de 04 a
+> 07/10/2026, e o Joaquim pediu o produto igual a ele, com foco no visual e sem perder o que já foi
+> construído. São quatro specs fora da sequência, que vêm **antes do F2**, cada uma com o processo
+> completo e pouso próprio. O mockup de referência é o de `Prototipo_Turmma` (branch
+> `mockups/interface`, commit `a95568d`); nada de lá é copiado para o `apps/web`.
+
+**O que as quatro têm em comum.** Nenhuma muda regra de negócio, permissão nem contrato da API, fora
+o que a X4 declara. Toda tela continua com os quatro estados, com o e2e que já prova a regra dela e
+com o que a lei pede e o mockup afrouxou (D80, item 7). O que o mockup mostra e depende de dado ou de
+fase que não existe **não é construído aqui**: fica na fase dele, que encolhe (tabela abaixo).
+
+## X1 — `pele-e-casca` [ ]
+**Depende de:** F3
+
+A pele e a casca do produto inteiro. Os tokens novos, no claro e no escuro, com a escolha de
+aparência; a tipografia, o degrau e o movimento; as peças de base revestidas (botão, campo, cartão,
+selo, aviso, diálogo, abas, tabela) e as novas (linha clicável, ladrilho, segmentado, toque,
+interruptor, progresso, painel ao lado, número grande, estado vazio com a onça); a onça e os ícones
+ilustrados; a galeria com tudo, nos dois temas; os tipos de página com título visível; a casca nova da
+escola (lateral branca com os lugares, trilho, barra de topo e barra de baixo no celular, menu da
+pessoa com "Sair" à vista), a pública e a da operação. As telas continuam com a estrutura, os itens e
+os endereços de hoje: mudam de pele pelas peças e pelos tokens, e os lugares de cada papel são
+reagrupados na spec da área.
+
+**Pronto quando:** toda tela do `apps/web` aparece na pele nova, no claro e no escuro, sem cor fora
+dos tokens, sem `oklch(` nem `color-mix(` no CSS servido e com o contraste de cada par de texto
+conferido por teste; a pessoa escolhe a aparência e a escolha vale na próxima visita, sem a tela
+piscar; cada papel navega pela lateral nova e, no celular, pela barra de baixo quando os itens cabem
+nela; nenhum endereço muda; "Sair" está a um clique em toda tela; o primeiro carregamento continua
+dentro do teto; e o e2e inteiro que existia continua verde, nos projetos `chromebook` e `celular`.
+
+## X2 — `telas-da-coordenacao` [ ]
+**Depende de:** X1
+
+As telas da coordenação e da operação, recompostas como no mockup, com o que o produto já sabe.
+**Painel**: o que espera a coordenação e os números que o produto mede (o que a IA gerou e quem
+aprovou, o consumo, o que falta para terminar a escola). **Analista**: o resumo de hoje, na página
+de conversa, sem perguntas livres. **Escola**: Turmas, Professores e Material como abas, a lista em
+tabela com linha clicável, a alocação no painel do professor e a lista da turma. **Registros**: IA
+(com "Como cada IA trabalha" ao lado) e os pedidos dos titulares, com retenção, empresas e incidentes
+a um clique. O **sino** com "Esperando você" da coordenação. A **operação** numa página com Escolas e
+Uso. Frequência, nota do diário, APOIA, Analista em conversa, Avisos, Auditoria, Exportar, Dossiê e
+Configurações da escola ficam nas fases deles.
+
+**Pronto quando:** a coordenação faz, pelos quatro lugares e pelo sino, tudo o que faz hoje pelos
+sete itens, sem nenhum caminho mais longo que o de hoje; nenhuma tela mostra indicador nominal de
+professor nem contagem de grupo pequeno que o servidor já não mostrasse (D45, D64); cada tela cabe em
+1366 × 768 sem rolar a página e funciona a 360 px; e o e2e da A0b, da A1, da A5 e do F3 continua
+provando as mesmas regras.
+
+## X3 — `telas-do-professor` [ ]
+**Depende de:** X1 · **pode correr em paralelo com X2**
+
+As telas do professor, recompostas como no mockup. **Início**: a saudação com a onça, a caixa de
+pedido e os atalhos das ferramentas que existem. **Conversa** e cartão da ferramenta na pele nova.
+**Ferramentas**: o catálogo por categoria (D74) e o formulário com a folha "Como vai sair".
+**Criados**: o que a professora já gerou, por turma, com o estado, e o documento aberto em folha.
+**Turmas**: os cartões e "Confirme sua turma"; a turma aberta em **Hoje, Atividades e Alunos**, com o
+acesso da turma e os pedidos de nome num diálogo. **Aprovar** na pele nova, com a ação oficial em
+grafite. O **sino** com "Esperando você" do professor, que recebe o que hoje mora em "Seu time"
+(entregas esperando e sinais do Tutor). A aula ao vivo, a visão Semana, o histórico de conversas e as
+ferramentas novas ficam nas fases deles.
+
+**Pronto quando:** a professora faz, pelos quatro lugares e pelo sino, tudo o que faz hoje; nada do
+que estava em "Seu time" some, e o lote continua sem liberar com destaque fechado (D33, D56); a tela
+do professor não ganha ranking, tempo ocioso nem texto livre sobre aluno; cada tela cabe em 1366 ×
+768 e funciona a 360 px; e o e2e da A1 à A4 continua provando as mesmas regras.
+
+## X4 — `telas-do-aluno-e-primeiro-acesso` [ ]
+**Depende de:** X1 · **pode correr em paralelo com X2 e X3**
+
+As telas do aluno, e a primeira vez de cada papel. **Início**: o Tutor com a onça, a faixa de que o
+professor acompanha e as tarefas em que ele ajuda. **Tarefas**: Para fazer, Entregues e Corrigidas,
+e a tarefa aberta. **Eu**: como estou indo, por assunto, do que o professor já aprovou, e a porta
+para Privacidade ("Meus dados", do F3) e para os ajustes de aparência e de tamanho de letra. E a
+**introdução** de aluno, professor e coordenação: o que a IA é e que pode errar, quem vê o quê, e o
+tamanho da letra, uma vez por pessoa, com "Rever a introdução". É a única das quatro que grava dado
+novo: a data em que a pessoa viu a introdução. A introdução da operação e a da rede não entram.
+
+**Pronto quando:** o aluno faz, pelos lugares novos, tudo o que faz hoje, com "Sair" à vista e a
+faixa de supervisão presa; nenhuma tela do aluno mostra dado de colega, sequência de dias, pontos ou
+ranking (D59; regra 50, item 9); a introdução aparece uma vez por pessoa, pode ser pulada onde não
+é aviso obrigatório e pode ser revista; o aviso de privacidade está em linguagem de 11 anos; e o e2e
+do aluno e das páginas públicas continua provando as mesmas regras.
+
+### O que as fases seguintes deixam de fazer por causa das X
+
+| Fase | O que já chega pronto | O que continua sendo dela |
+|---|---|---|
+| F2 | a casca, a aba Turmas de Escola, o painel do professor e o lugar de "Grade e calendário" no menu de Escola | importar grade e calendário, Classroom, reset de senha, a escala |
+| F4 | a aba Material, na tabela nova | o painel de estado da ingestão, versões, reprocessamento |
+| F6 | as três abas da turma aberta (decididas na D80), a tela de Aprovar, Tarefas do aluno | prova em tela de foco, saída da aba (D70), os outros modos, os indicadores |
+| F7 | o catálogo, o formulário, Criados e a folha do documento | as ferramentas que faltam, PPTX e XLSX, histórico de conversas, busca na web |
+| F8 | nada de casca: o calendário é a visão **Semana** de Turmas, e não um lugar | a visão Semana e o que a grade alimenta |
+| F9 | a casca do aluno, Início, Tarefas, Eu e a introdução com o aviso em linguagem da idade | Avisar um adulto, modo casa, o que o Tutor lembra com contestação, busca em fontes |
+| F10 | o lugar dos sinais do Tutor na aba Hoje e no sino | a aula ao vivo, o tempo real em duas instâncias |
+| F11 | "Esperando você" no lugar de "Seu time" | o runtime na fila, limite de passos e de custo |
+| F12 | o Painel, Registros e "Como cada IA trabalha" | os painéis de desempenho, Auditoria, Exportar, Dossiê, Avisos, Configurações da escola |
+| F14 | as peças de painel e a casca | a área da rede inteira |
+
 ## F2 — `onboarding-por-convite` [ ]
 **Depende de:** F1
 

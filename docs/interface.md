@@ -1,8 +1,8 @@
 # Interface — design, navegação e telas
 
 > O mapa das telas por papel, o comportamento das peças que aparecem em todo lugar (chat,
-> ferramenta, feed de agentes, aprovação) **e o design visual**: direção, cor, tipografia,
-> movimento, componentes e a casca.
+> ferramenta, a fila "Esperando você", aprovação) **e o design visual**: direção, cor, tipografia,
+> movimento, peças e a casca.
 >
 > As regras que limitam tudo aqui estão em `.claude/rules/50-frontend.md`: computador fraco
 > de escola, responsiva até o celular sem depender dele (D51), quatro estados por tela, ação
@@ -13,20 +13,22 @@ partida para o PRD da funcionalidade, que pode mudar.
 
 **Como este documento se organiza.** A **Parte A** (seções 1 a 7) é o mapa das telas por
 papel. A numeração dela não muda, porque tarefas do F1 já citam as seções 1, 2, 3 e 6. A
-**Parte B** (seções 8 a 12) é o design. A direção foi dada pelo Gabriel em 19/09/2026 e revista
-por ele em mockup, em oito rodadas, em 19 e 20/09/2026 (`docs/pendencias-dos-mockups.md`). Em
-23/09/2026 a pele, o padrão de espaço e a navegação do professor viraram decisão (D72, D73). O
-que ainda é proposta está marcado como tal, e o que falta decidir está na seção 7.
+**Parte B** (seções 8 a 12) é o design. A pele, a navegação e o padrão de página são os da **D80**
+(12/10/2026), que revê a D72, a D73 e a D69: o sistema que o Gabriel desenhou em mockup de 04 a
+07/10/2026. O produto chega a ele em quatro specs fora da sequência (`ROADMAP.md`): a **X1**
+(`pele-e-casca`) troca a pele e a casca, com os itens e as telas de hoje; a **X2**, a **X3** e a
+**X4** recompõem as telas da coordenação, do professor e do aluno. Cada seção diz o que já existe
+e o que nasce em qual spec ou fase. O que falta decidir está na seção 7.
 
 | Parte | Seção | O que tem |
 |---|---|---|
-| A | 1 a 5 | Áreas do professor, do aluno, da coordenação, da rede e da família |
+| A | 1 a 5 | Áreas do professor, do aluno, da coordenação, da rede, da família e da operação |
 | A | 6 | O que vale em toda tela |
 | A | 7 | Em aberto |
-| B | 8 | Direção de design: de onde vem, o que pegamos e o que não pegamos |
-| B | 9 | Fundamentos visuais: cor, tipografia, forma, ícones, movimento, marca, avatares, tom, tokens |
-| B | 10 | Componentes: o protocolo do 21st.dev, o mapa de peças, o que é proibido, o orçamento |
-| B | 11 | A casca e as telas-chave, desenhadas |
+| B | 8 | Direção de design: de onde vem, o que tomamos, o que não tomamos, os princípios e a régua |
+| B | 9 | Fundamentos visuais: cor, tipografia, forma, ícones, movimento, marca, a onça, tom, tokens |
+| B | 10 | Peças: as nossas, o catálogo da X1, o que é proibido, o orçamento |
+| B | 11 | A casca, os tipos de página e as telas-chave |
 | B | 12 | As telas do MVP de apresentação (A1 a A5) |
 
 ---
@@ -35,73 +37,80 @@ que ainda é proposta está marcado como tal, e o que falta decidir está na se�
 
 ## 1. Área do professor
 
-**Decidido** (D73, 23/09/2026), a partir do mockup que o Gabriel revisou em 19 e 20/09/2026
-(`docs/pendencias-dos-mockups.md`, P04). Substitui o desenho da call:
+**Decidido** (D80, 12/10/2026, que revê a D73 e a D69), a partir do mockup de outubro do Gabriel:
+quatro lugares, as conversas embaixo e o sino.
 
 ```
-┌──────────────────────┬──────────────────────────────────────────────────┐
-│ ◉ Turmma           ⇤ │                                                  │
-│ [ Escola ▾ ]         │                                                  │
-│                      │                                                  │
-│ ✎ Nova conversa      │           conteúdo da seção selecionada          │
-│ ▦ Ferramentas        │                                                  │
-│ ▤ Calendário         │                                                  │
-│ ◫ Turmas             │                                                  │
-│                      │                                                  │
-│ Seu time           ˅ │                                                  │
-│  ▣ Assistente    (3) │                                                  │
-│  ▣ Tutor         (2) │                                                  │
-│ Histórico          ˅ │                                                  │
-│  Hoje                │                                                  │
-│   · Prova de estequ… │                                                  │
-└──────────────────────┴──────────────────────────────────────────────────┘
+┌──────────────────────────┬────────────────────────────────────────────────────┐
+│ ◉ Turmma               ⇤ │ Turmas                                   (sino: 3) │
+│ [ CA  Colégio Aurora ⇅ ] │                                                    │
+│                          │                                                    │
+│ ▣ INÍCIO                 │                                                    │
+│ ▣ TURMAS                 │           conteúdo do lugar selecionado            │
+│ ▣ FERRAMENTAS            │                                                    │
+│ ▣ CRIADOS                │                                                    │
+│ ──────────────────────── │                                                    │
+│ ✎ Nova conversa          │                                                    │
+│ Hoje                     │                                                    │
+│  Prova de estequiometr…  │                                                    │
+│ ──────────────────────── │                                                    │
+│ (CS) Camila Souza        │                                                    │
+│ ⇥ Sair                   │                                                    │
+└──────────────────────────┴────────────────────────────────────────────────────┘
 ```
 
-O desenho visual desta casca, com medidas e componentes, está na seção 11.1.
+O desenho desta casca, com medidas e peças, está na seção 11.1. Cada item abaixo diz o que já
+existe e onde nasce o que falta: a **X1** troca a pele e a casca com os itens de hoje, e a **X3**
+(`telas-do-professor`) traz os lugares.
 
-- **Seletor de escola no topo**, no formato de seletor de espaço de trabalho: sigla, rede, turno e
-  número de turmas. Professor dá aula em mais de uma escola (regra 50, item 13). **Trocar de
-  escola troca o token** para a nova escola ativa e descarta o cache da anterior inteiro; nenhuma
-  lista junta turmas de duas escolas (regra 10; P30)
-- **Nova conversa** abre a Home, que é a caixa de pedido do **Assistente de ensino** (D32
-  revista), com contexto de turma e material. Tudo que existe em Ferramentas pode ser pedido por
-  aqui
-- **Ferramentas** é o catálogo em quatro categorias (D74, seção 1.2), com os mesmos fluxos em
-  formato de formulário para quem não quer conversar, e a **Biblioteca** com o que já foi gerado
-  (P13)
-- **Calendário** mostra a semana e o dia por escola e turma: aulas, avaliações, entregas e o que
-  o Assistente concluiu. Deriva da estrutura da escola: o professor não monta nem move aula
-  (regra 60, item 8). Nasce no F8 (P12)
-- **Turmas** (antes "Meu painel", com a aba "Minhas turmas"; D69 e D73) é a lista das turmas do
-  professor e, ao lado, **Meu uso**, o espelho da D45: é dele primeiro, o que a coordenação vê
-  dele é agregado, e o nominal só abre com auditoria. A tela diz isso em português comum. A
-  **turma aberta** mostra o desempenho da turma e de cada aluno por habilidade: nasce no F6 com o
-  diagnóstico, ganha os sinais do Tutor no F10 e a comparação da série no F12 (D69). **Quais
-  abas ela tem** — as nove do mockup, a sala de carteiras, Recursos e Mural — fecha antes do PRD
-  do F6 (P11, P28); o MVP de apresentação entregou só Visão Geral e Alunos
-  (`apps/web/src/areas/professor/Turma.tsx`). Na A1 a turma já existe para o professor ver os alunos e aprovar quem reivindicou o
+- **Seletor de escola no topo**, para quem dá aula em mais de uma escola (regra 50, item 13).
+  **Trocar de escola troca o token** para a nova escola ativa e descarta o cache da anterior
+  inteiro; nenhuma lista junta turmas de duas escolas (regra 10; P30). Existe desde a A1; a X1 só
+  troca a moldura
+- **Início** é a caixa de pedido do **Assistente de ensino** (D32 revista), com contexto de turma e
+  material. Tudo que existe em Ferramentas pode ser pedido por aqui. Existe desde a A2, com o
+  rótulo "Nova conversa": a X1 troca o rótulo, no mesmo endereço, e a X3 recompõe a tela, com a
+  saudação e os atalhos das ferramentas que existem
+- **Turmas** (D69 revista) é a lista das turmas do professor. A **turma aberta** tem três abas,
+  **Hoje, Atividades e Alunos** (D80), e mostra o desempenho da turma e de cada aluno por
+  habilidade: nasce no F6 com o diagnóstico, ganha os sinais do Tutor no F10 e a comparação da
+  série no F12. Frequência, Ranking, Recursos e Mural não entram: continuam sem fase e sem decisão
+  (seção 7). A lista existe desde a A1 e a turma aberta, desde a A3, com Visão Geral e Alunos
+  (`apps/web/src/areas/professor/Turma.tsx`); as três abas nascem na X3, com o que o produto já
+  sabe. Na A1 a turma já existe para o professor ver os alunos e aprovar quem reivindicou o
   nome (D4, D71 revista). Ela abre pelo cartão do vínculo confirmado, em `/professor/turmas/:turmaId`, e começa pela
   seção **Acesso dos alunos** (tarefa 15.0; Tech Spec da A1, seção 9): gerar o link da sala e o código da turma com
   validade de 1, 7 ou 30 dias, projetar o código, copiar o link ou mandá-lo pelo WhatsApp, trocar por um novo e
   revogar. Embaixo, a seção **Pedidos de nome** (tarefa 16.0): cada pedido com o nome, a hora e, se houve, a marca da
   tentativa com matrícula errada; a lista se atualiza sozinha a cada 15 s, com a aba à vista; o professor marca até 40 e
   aprova (`oficial`) ou recusa (`perigo`) depois de revisar a turma, os nomes e o efeito, e cada pedido termina com o
-  resultado em texto. Não existe "aprovar todos"
-- **Seu time** é um grupo da lateral com os dois agentes que o professor vê: o **Assistente de
-  ensino**, por onde chegam as funções que trabalham sozinhas (correção de objetiva, adaptação,
-  "seu dia e sua semana"), e o **Tutor**, que o professor supervisiona (D8, D47). Cada um abre a
-  própria conversa em tela cheia, com o contador do que espera o professor (seção 1.3)
-- **Histórico** lista as conversas do professor, agrupadas por data (hoje, ontem, 7 dias, mês),
-  cada uma no próprio endereço. A coordenação nunca vê (regra 70, item 8; P06)
-- **Cada item só aparece quando a fase dele existir.** Pela D71 revista, a A1 abre com Turmas;
-  Nova conversa, Ferramentas e Seu time entraram com a A2; o Histórico ficou fora do MVP, que tem
-  uma conversa só por professora (P06; decisão 19 de `docs/mvp-rapido.md`); Calendário, com o F8.
-  **Projetos** e **Fixados** só entram se o `/descobrir` do P05 aceitar
+  resultado em texto. Não existe "aprovar todos". Na X3 o acesso e os pedidos passam para um
+  diálogo dentro da turma, com as mesmas regras
+- **Ferramentas** é o catálogo em quatro categorias (D74, seção 1.2), com os mesmos fluxos em
+  formato de formulário para quem não quer conversar. Existe desde a A2; a X3 recompõe o catálogo
+  e o formulário
+- **Criados** é o que a professora já gerou, por turma, com o estado de cada coisa, e o documento
+  aberto em folha (P13). Hoje o artefato abre dentro de Ferramentas; o lugar nasce na X3
+- **Conversas**, embaixo dos lugares, lista as conversas do professor, agrupadas por data (hoje,
+  ontem, 7 dias, mais antigas), cada uma no próprio endereço. A coordenação nunca vê (regra 70,
+  item 8; P06). O MVP tem uma conversa só por professora (decisão 19 de `docs/mvp-rapido.md`); a
+  lista nasce com o histórico de conversas, no F7
+- **O sino "Esperando você"** fica no canto de cima da área de conteúdo e toma o lugar de "Seu
+  time": o que um agente deixa esperando o professor vira item de uma fila só, e o agente continua
+  assinando o que fez (seção 1.3). "Seu time" continua na lateral até a X3, que traz o sino
+- **O Calendário deixa de ser lugar** (D73 revista). Quando o F8 existir, ele é a visão **Semana**
+  de Turmas: aulas, avaliações, entregas e o que o Assistente concluiu, por escola e turma. Deriva
+  da estrutura da escola: o professor não monta nem move aula (regra 60, item 8; P12)
+- **Meu uso**, o espelho da D45, sai de Turmas e vai para a **conta do professor** (D69 revista): é
+  dele primeiro, o que a coordenação vê dele é agregado, e o nominal só abre com auditoria. A tela
+  diz isso em português comum. Nasce no F12; a conta já tem "Meus dados", do F3
+- **Lugar sem tela não aparece** (D73, que continua valendo). **Projetos** e **Fixados** só entram
+  se o `/descobrir` do P05 aceitar
 
 ### 1.1 Chat e ferramenta são o mesmo motor (D18)
 
 O professor pode escolher a ferramenta no próprio chat: no menu **Ferramenta** da caixa de
-pedido, que lê o mesmo catálogo da página (P17), ou digitando `/` (desenho na seção 11.2).
+pedido, que lê o mesmo catálogo da página (P17), ou digitando `/` (seção 11.5).
 
 Quando ele **não escolheu** e o pedido corresponde a uma ferramenta, o chat pergunta antes
 de gerar:
@@ -172,25 +181,31 @@ a descrição de campos de cada ferramenta sai de `descricaoDaFerramenta`
 (`apps/web/src/areas/professor/ferramentas.ts`), e um motor só a desenha
 (`apps/web/src/componentes/ia/motor-formulario.ts` e `MotorFormulario.tsx`).
 
-### 1.3 Seu time: os agentes do professor (F11)
+### 1.3 Esperando você: o que os agentes deixam para o professor (F11)
 
-- **Dois agentes na lateral: o Assistente de ensino e o Tutor** (D17, D32 revista). Corretor,
-  Planejador e Adaptador deixaram de ser agentes: são **funções do Assistente** — correção de
-  objetiva, adaptação, e "seu dia e sua semana", que abre o dia com o que já existe e só gera
-  plano quando o professor pede
-- **A conversa do Assistente** junta o que as funções fizeram, com filtro: tudo · esperando você ·
-  correção · adaptação · seu dia (P14). Cada mensagem diz o que foi feito e, quando aplicável,
-  **o que está esperando**: "Corrigi as 32 provas do 2ºB, média 6,4. Esperando você aprovar"
-- **A conversa do Tutor** é onde o professor recebe o que o Tutor viu no uso da turma: quem
-  travou e onde, quem errou muito, quem pediu resposta pronta, a principal dificuldade, a
-  dúvida que se repetiu. Dentro do horário útil da escola (D59)
+- **Dois agentes trabalham para o professor: o Assistente de ensino e o Tutor** (D17, D32 revista).
+  Corretor, Planejador e Adaptador deixaram de ser agentes: são **funções do Assistente** —
+  correção de objetiva, adaptação, e "seu dia e sua semana", que abre o dia com o que já existe e
+  só gera plano quando o professor pede
+- **Até a X3, "Seu time" é um grupo da lateral**, e cada agente abre a própria conversa em tela
+  cheia. A do Assistente junta o que as funções fizeram, com filtro: tudo · esperando você ·
+  correção · adaptação · seu dia (P14). A do Tutor mostra o que ele viu no uso da turma
+- **Da X3 em diante, o que espera o professor mora no sino** (D80): uma fila só, em que cada item
+  diz o que foi feito e **o que está esperando**: "Corrigi as 32 provas do 2ºB, média 6,4.
+  Esperando você aprovar". O número do sino é o tamanho da fila; sem item, sem número. **Nada do que
+  estava em "Seu time" some**
+- **O que o Tutor viu no uso da turma** chega pela mesma fila: quem travou e onde, quem errou
+  muito, quem pediu resposta pronta, a principal dificuldade, a dúvida que se repetiu. Dentro do
+  horário útil da escola (D59)
 - **A autonomia é mostrada por função**, em português comum ("corrigir objetiva: faz e avisa;
   diagnóstico ao aluno: espera você"), e a coordenação suspende uma função sem desligar o chat
   (D9 e D60 revistas)
-- **Nunca aparece vazio** para professor com turma (regra 50, item 6). Com grade (F2, F8), "seu
-  dia" abre o dia com as aulas e as avaliações; antes dela, a conversa do Assistente abre com o
-  que já existe na turma e um convite para pedir
-- O formato de conversa, com a caixa de resposta, está na seção 11.4 (P29)
+- **O professor com turma nunca abre o produto e encontra só um chat vazio** (regra 50, item 6).
+  Com grade (F2, F8), "seu dia" abre o dia com as aulas e as avaliações; antes dela, a primeira
+  tela mostra o que já existe na turma e um convite para pedir
+- **Abrir um item** leva à tela dele ou abre o detalhe no painel ao lado. A ação de dentro chama o
+  mesmo caso de uso da aprovação registrada (regra 70, item 3): não é atalho em volta dela.
+  Responder a um agente é pedido novo, pela porta, com perfil e orçamento (regra 30, D14; P29)
 
 ### 1.4 Aprovar nota
 
@@ -236,41 +251,78 @@ escola, quando existe, ou por escola + matrícula + senha (D48). A mesma área s
 ao 3º do Ensino Médio; a linguagem do tutor e os textos precisam funcionar para um aluno de
 11 anos (D43).
 
-*Proposta de navegação:*
+**Decidido** (D80): quatro lugares, iguais na lateral e na barra de baixo do celular. Hoje os itens
+são Tutor, Atividades e Minha turma, com Privacidade no rodapé, e a X1 os mantém na casca nova. Os
+lugares nascem na **X4** (`telas-do-aluno-e-primeiro-acesso`); o que depende do F9 fica com ele.
 
-- **Tutor**, restrito ao conteúdo da turma, citando a página do material. Travado durante
-  avaliação em andamento. Se apresenta pela função, como os outros agentes do time (D17, D58);
-  **nunca afirma ser uma pessoa** e, perguntado sobre si, explica o que é, como funciona e que
-  pode errar, em linguagem da faixa etária (D65)
+- **Início** é a conversa com o **Tutor**, restrito ao conteúdo da turma, citando a página do
+  material. Travado durante avaliação em andamento. Se apresenta pela função, como os outros
+  agentes do time (D17, D58); **nunca afirma ser uma pessoa** e, perguntado sobre si, explica o que
+  é, como funciona e que pode errar, em linguagem da faixa etária (D65)
 - **Pesquisa em fontes aprovadas**, quando a escola liberou e o professor ligou para a turma
   (D68): o Tutor traz a fonte, pede para comparar, pergunta de volta, e não escreve o trabalho.
   A tela diz de onde veio cada informação, e que a pesquisa é vista pelo professor
-- **O Tutor lembra de tudo que o aluno já fez no sistema** — atividades, trabalhos, avaliações
-  e sessões (D66) —, e o aluno consegue ver o que o Tutor sabe sobre o trabalho dele e contestar
 - **Quanto ainda dá para usar hoje**, do pacote do tutor (D38), mostrado como salvaguarda e
   não como punição, com o ponto de parada visível (D59)
-- **Aviso de privacidade em linguagem de faixa etária** e caminho para **avisar um adulto**
-  sobre algo errado no sistema — o canal de notificação do ECA Digital, art. 28 (D61)
-- **Atividades e provas** atribuídas pelo professor
-- **Meu desempenho**, só do próprio aluno
-- Aviso visível e permanente de que o professor acompanha o uso do tutor (D8)
+- **O aviso, visível e permanente, de que o professor acompanha o uso do Tutor** (D8). A faixa
+  continua presa no alto da conversa e não fecha, mesmo onde o mockup a soltou (D80, item 7)
+- **A caixa de escrever nunca some**, nem depois de um assunto delicado: é por ela que a mensagem
+  fixa chega, com o caminho para um adulto (D36; D80, item 7)
+- **Tarefas** são as atividades e as provas atribuídas pelo professor, em Para fazer, Entregues e
+  Corrigidas, e a tarefa aberta. Hoje o item se chama Atividades
+- **Eu** é como estou indo, só do próprio aluno, por assunto, a partir do que o professor já
+  aprovou; a porta para **Privacidade** ("Meus dados", do F3) e para os ajustes de aparência e de
+  tamanho da letra; e, com o F9, **o que o Tutor lembra**: tudo que o aluno já fez no sistema —
+  atividades, trabalhos, avaliações e sessões (D66) —, que ele consegue ver e contestar. Toma o
+  lugar de "Minha turma"
+- **Avisar um adulto** é o caminho para avisar sobre algo errado no sistema: o canal de notificação
+  do ECA Digital, art. 28 (D61). **Só aparece quando o canal existir** (F9; D73)
+- **"Sair" fica sempre à vista**, a um clique e do tamanho dos vizinhos (D59). O mockup tirou o
+  menu do aluno; o produto não tira a saída (D80, item 7)
+- **Aviso de privacidade em linguagem de faixa etária**: na introdução do aluno, uma vez, com
+  "Rever a introdução" (X4), e sempre ao alcance, em Eu
 
 Proibido na tela do aluno: ranking, média da turma que permita deduzir nota de colega, lista
 de quem entregou (regra 50, item 9). Proibido também, por lei (Decreto 12.880, arts. 9º e 10;
-D59): recompensa por tempo de uso, sequência de dias, conteúdo que começa sozinho, rolagem
-infinita, notificação fora do horário útil, esconder o ponto de parada, e qualquer caminho de
-sair, revogar ou ajustar privacidade que seja mais longo que o de aceitar.
+D59): recompensa por tempo de uso, sequência de dias, pontos, vidas, pódio, recompensa variável,
+conteúdo que começa sozinho, rolagem infinita, notificação fora do horário útil, esconder o ponto
+de parada, e qualquer caminho de sair, revogar ou ajustar privacidade que seja mais longo que o de
+aceitar. Nada disso vem junto com a pele (D80, item 7; seção 10.3).
 
 Fora da sala, o tutor só aparece se a escola ligou o modo casa para aquela turma (D19).
 Desligado, a tela explica que o tutor funciona em sala, sem parecer erro.
 
-O desenho da área, e o que o design do aluno **não** herda do professor, está na seção 11.6.
+O que continua valendo do desenho da área, e o que ela **não** herda do professor, está na seção
+11.5.
 
 ---
 
 ## 3. Área da coordenação
 
-*Proposta de navegação:*
+**Decidido** (D80): quatro lugares, **Painel · Analista · Escola · Registros**, e o sino. Até a
+**X2** (`telas-da-coordenacao`) a lateral é a lista plana de hoje, com sete itens (Governança,
+Agentes, Analista, Estrutura, Professores, Material e Privacidade), na casca nova da X1. O que cada
+lugar recebe:
+
+**Painel** é onde a coordenação abre, e a tela que fecha a venda. Recebe os números da Governança
+de hoje (A5), que o F12 completa:
+
+- o que espera a coordenação, e o que falta para terminar de montar a escola
+- uso de IA por série e disciplina; por professor só com abertura auditada (D45). **Sem
+  ranking, sem lista nominal de adoção e sem alerta de professor que não usa** (D64)
+- o que a IA gerou e quem aprovou, com o número; notas aprovadas por humano quando a nota
+  oficial existir (D46)
+- desempenho por série, turma e habilidade
+- alertas em agregado, como hipótese com contexto: média fora da curva, habilidade em
+  queda, aluno em risco. Nada de ranking de professor
+- consumo de IA do mês contra o orçamento
+
+**Analista** é o **Analista de desempenho escolar**: resumo de segunda de manhã e alertas na hora,
+em agregado; recorte com um professor só conta como nominal (D32 e D45 revistas). Hoje existe o
+resumo (A5); a X2 o põe na página de conversa, sem perguntas livres.
+
+**Escola** tem três abas, **Turmas, Professores e Material**, que recebem os itens Estrutura,
+Professores e Material de hoje. Grade horária e calendário entram pelo menu de Escola, com o F2.
 
 - **Estrutura**: séries, turmas, listas de nomes, grade horária e calendário importados,
   alocação de professor × turma × disciplina, convites de professor e conexão opcional com
@@ -288,27 +340,19 @@ O desenho da área, e o que o design do aluno **não** herda do professor, está
   sobem (D75). Fontes com titularidade e licença, upload, estado da ingestão com o que entrou,
   o que falhou, o que está pendente e o que foi recusado por falta de licença (F4,
   D5 revista)
-- **Governança** (F12), a tela que fecha a venda:
-  - uso de IA por série e disciplina; por professor só com abertura auditada (D45). **Sem
-    ranking, sem lista nominal de adoção e sem alerta de professor que não usa** (D64)
-  - o que a IA gerou e quem aprovou, com o número; notas aprovadas por humano quando a nota
-    oficial existir (D46)
-  - desempenho por série, turma e habilidade
-  - alertas em agregado, como hipótese com contexto: média fora da curva, habilidade em
-    queda, aluno em risco. Nada de ranking de professor
-  - consumo de IA do mês contra o orçamento
-- **Analista de desempenho escolar**: resumo de segunda de manhã e alertas na hora, em
-  agregado; recorte com um professor só conta como nominal (D32 e D45 revistas)
-- **Adaptações**: registro da adaptação necessária por aluno, nunca diagnóstico (D35)
-- **Agentes**: os três agentes e **as funções de cada um**, com o que cada função faz sozinha e o
-  que espera aprovação, em português comum (D9 revista). É a tela para apontar quando alguém
-  pergunta "o que essa IA faz sozinha?". Cada função de alto risco mostra o **resumo da avaliação
-  de impacto**, o que ela **não** faz e o botão de **suspender só aquela função**, sem desligar o
-  resto (D60 revista; P19)
-- **Conformidade**: o dossiê da escola em um lugar — declaração de propósito e faixas etárias,
-  como o sistema funciona em linguagem simples, conformidade com LGPD e ECA Digital, relatório
-  de uso exportável, e o material para conversar com professores e famílias (D61). É a tela
-  que a coordenação abre na reunião, e a que responde ao checklist do MEC
+
+**Registros** tem três abas, **IA, Pedidos e Privacidade**, que recebem a tabela da Governança, o
+item Agentes e o item Privacidade de hoje.
+
+- **IA**: o que a IA gerou e quem aprovou, na tabela que hoje está na Governança (regra 70, item
+  6). Ao lado, **"Como cada IA trabalha"**: os três agentes e **as funções de cada um**, com o que
+  cada função faz sozinha e o que espera aprovação, em português comum (D9 revista). É a tela para
+  apontar quando alguém pergunta "o que essa IA faz sozinha?". Cada função de alto risco mostra o
+  **resumo da avaliação de impacto**, o que ela **não** faz e o botão de **suspender só aquela
+  função**, sem desligar o resto (D60 revista; P19)
+- **Pedidos** e **Privacidade** recebem as quatro abas de "Seus dados e a lei", do F3: os pedidos
+  dos titulares numa, e retenção, empresas e incidentes na outra. O que cada uma faz não muda, e é
+  o que o item seguinte descreve
 - **Privacidade** ("Seus dados e a lei", F3): as abas ficam no endereço, e a coordenação registra e acompanha os **pedidos dos
   titulares** (tarefa 16.0; RF10, RF14 e RF16), lê por quanto tempo a escola guarda cada dado, de onde vem cada prazo e os
   prazos que não mudam (tarefa 6.0; RF20), e quais empresas recebem dado dela, vigentes e passadas, com o que cada uma faz, o
@@ -331,6 +375,18 @@ O desenho da área, e o que o design do aluno **não** herda do professor, está
   por comando. **O aviso de incidente** aparece ao entrar, em diálogo, para a
   coordenação da escola afetada; "Ver depois" deixa uma faixa fixa, sem botão de fechar, até a confirmação, e o "Sair" nunca fica
   fora de alcance (D59)
+
+**O sino "Esperando você"** da coordenação nasce na X2, com o que espera uma decisão dela e o
+produto já sabe. A lista fecha no PRD da X2.
+
+**Fica na fase de cada um, e não aparece antes dela** (D73; D80, item 7): Adaptações, o Dossiê
+(Conformidade), os Avisos (Denúncias), Exportar, Auditoria e Configurações da escola.
+
+- **Adaptações**: registro da adaptação necessária por aluno, nunca diagnóstico (D35)
+- **Conformidade**: o dossiê da escola em um lugar — declaração de propósito e faixas etárias,
+  como o sistema funciona em linguagem simples, conformidade com LGPD e ECA Digital, relatório
+  de uso exportável, e o material para conversar com professores e famílias (D61). É a tela
+  que a coordenação abre na reunião, e a que responde ao checklist do MEC
 - **Denúncias**: o canal de notificação de violação, com o que foi apontado, o que foi feito e
   o recurso, dizendo se a análise foi humana ou automatizada (D61)
 - **Exportar**: dado, artefato e histórico de uso em formato aberto, a qualquer momento, sem
@@ -341,14 +397,16 @@ O desenho da área, e o que o design do aluno **não** herda do professor, está
 
 MFA obrigatório para coordenação (F1).
 
-Como os doze itens se agrupam na lateral está na seção 11.1, e o desenho da Governança, na 11.7.
+Como os lugares aparecem na lateral está na seção 11.1, e o que continua valendo do desenho da
+Governança, na 11.5.
 
 ---
 
 ## 4. Área da rede (F14)
 
 Consolidado por escola, comparativo e adoção. **Nunca** dado individual de aluno, nunca
-conversa de tutor (regra 10, item 8).
+conversa de tutor (regra 10, item 8). Os lugares, quando o F14 existir, são Painel, Analista e
+Escolas (D80).
 
 ## 5. Área da família
 
@@ -359,7 +417,12 @@ Fase posterior (D11). Nota, entrega e alerta, alimentados pelo motor de eventos 
 Não é área da escola: é a nossa. Só o operador Turmma entra, com conta própria e segundo fator
 obrigatório, e nenhuma pessoa de escola alcança estas telas.
 
-- **Escolas**: a lista de redes e escolas, com o estado da primeira coordenação e contagens de
+**Uma tela só, sem lateral** (D80): uma barra de topo, com a marca, "Equipe Turmma" e a conta do
+operador com "Sair", e duas abas, **Escolas** e **Uso**. Uma linha fixa diz que a operação não vê
+dado de aluno nem de professor. Hoje a operação tem uma faixa preta no topo: a X1 a troca pela
+barra clara, e a X2 põe as duas abas na página.
+
+- **Aba Escolas**: a lista de redes e escolas, com o estado da primeira coordenação e contagens de
   turmas, alunos e professores ativos do ano em curso. Só número, nunca nome. Os estados são sete, e
   a tela os diz em texto, sem o identificador: sem convite, convite enviado e ainda não aberto,
   vencido, revogado, aceito sem o primeiro acesso, sem coordenação ativa, e ativa. Os textos exatos,
@@ -368,11 +431,11 @@ obrigatório, e nenhuma pessoa de escola alcança estas telas.
   da Tech Spec da A0b
 - **Nova rede** e **nova escola**: nome, tipo de rede e o endereço da escola
 - **Convite da coordenação**: cadastrar a primeira coordenadora, copiar o link, revogar e refazer
-- **Uso e custo**: por escola, no dia e no mês — o uso de infra desde já (D30), o consumo de IA
+- **Aba Uso**: por escola, no dia e no mês — o uso de infra desde já (D30), o consumo de IA
   contra o teto por aluno (D39), que a D76 previa com a A2 e o MVP não trouxe (`TODO.md`)
 
-A pele e a casca são as mesmas do produto (D72), com a marca de que ali é a operação, para
-ninguém confundir com a tela de uma escola.
+A pele é a mesma do produto (D80), e a barra com "Equipe Turmma" é a marca de que ali é a operação,
+para ninguém confundir com a tela de uma escola. As medidas estão na seção 11.4.
 
 ---
 
@@ -384,60 +447,63 @@ ninguém confundir com a tela de uma escola.
 - Navegação por teclado, foco visível, contraste, rótulo em campo
 - Lista longa virtualizada. Nada que assuma máquina boa
 - **Toda saída de IA é rotulada como tal**, com a fonte e a página quando vem do material, e
-  com quem aprovou quando já passou por aprovação (o selo está desenhado na seção 11.3)
+  com quem aprovou quando já passou por aprovação (o selo está descrito na seção 11.5)
 - **Sem padrão manipulativo** (D59): nenhuma urgência fabricada, nenhum botão que esconde a
   ação menos lucrativa para nós, e o caminho de recusar do mesmo tamanho do de aceitar
 - **Responsiva desde a primeira versão** (D51): do computador da escola ao celular, a
-  partir de 360 px. No celular, o menu lateral da área do professor vira navegação
-  recolhível, e o chat, o feed e as ferramentas cabem numa coluna. Toque em vez de hover,
+  partir de 360 px. Abaixo de 768 px os lugares ficam numa barra de baixo e o resto, numa gaveta
+  (11.1); a conversa, a fila e as ferramentas cabem numa coluna. Toque em vez de hover,
   alvo de toque de 44 px na ação principal. Nenhum fluxo exige o celular
-- **Padrão de espaço** (D72; P03): aba de navegação **não tem título nem descrição** — a lateral
-  já diz onde a pessoa está. O `<h1>` existe só para leitor de tela, e cada rota tem o próprio
-  `document.title` (regra 50, item 11). Só tela de **objeto** mostra nome: uma prova aberta, o
-  formulário de uma ferramenta, o modo sala. As medidas estão na seção 9.3
-- **Tela de trabalho cabe na janela** e rola por dentro: Calendário, Turmas, Seu time. O Gabriel
-  revisou numa janela de uns 780 px de altura útil, e no Chromebook de 1366 × 768 sobra menos: o
-  e2e do projeto `chromebook` prova que a grade continua legível, e, se não couber, ela rola por
-  dentro em vez de espremer
+- **Padrão de página** (D80, item 6, que revê o P03): **toda tela aberta por um lugar da lateral
+  tem título visível**, que é o `<h1>`, e título próprio na aba do navegador (regra 50, item 11). A
+  conversa é a exceção: o `<h1>` dela existe só para leitor de tela. **Até três abas**, nunca uma
+  dentro da outra. **Linha inteira clicável**, sem "Ver" repetido. O detalhe abre num **painel ao
+  lado, de 480 px**, e como folha de baixo no celular. **Um botão cheio por tela.** As medidas
+  estão na 9.3 e os tipos de página, na 11.2
+- **Tela de trabalho cabe na janela** e rola por dentro. No Chromebook de 1366 × 768 sobra pouca
+  altura: o e2e do projeto `chromebook` prova que a tela continua legível, e, se não couber, ela
+  rola por dentro em vez de espremer
+- **Claro e escuro** (D80, item 2): a pessoa escolhe entre Sistema, Claro e Escuro, em qualquer
+  área. A escolha fica no navegador, sem identificador, e vale antes de a primeira tela desenhar.
+  Nenhuma tela escreve cor por tema: quem usa token muda sozinho (9.1 e 9.10)
 
 ## 7. Em aberto
 
-- **A revisão do Gabriel, em mockup (19 e 20/09/2026, oito rodadas), foi decidida em 23/09/2026
-  no que travava a A1 e a A2**: um agente por pessoa (P01 → D32, D9 e D60 revistas), a pele do
-  ChatGPT em tudo, com o padrão de espaço (P02, P03 e P31 → D72), a navegação do professor (P04
-  → D73) e a regra "ferramenta ou chat", com as quatro categorias (P22 → D74). As seções 1, 6, 8,
-  9, 11 e 12 já descrevem a versão decidida. O mockup está na pasta `mockups/`, só para consulta:
-  nada de lá é copiado para o `apps/web`. O registro item por item continua em
+- **A D80 (12/10/2026) fechou** a pele, a navegação dos quatro papéis, o padrão de página, os
+  avatares dos agentes, as abas da turma aberta e o modo escuro. As seções 1 a 6 e a Parte B já
+  descrevem a versão decidida. O registro item por item da revisão de setembro continua em
   `docs/pendencias-dos-mockups.md`
-- **Continua em aberto, da mesma revisão:** Projetos (P05), anexo na conversa (P07), faltas e a
-  aba Frequência (P08), ranking de participação (P26, que bate na 10.3), as abas da turma aberta
-  com Recursos e Mural (P28, antes do PRD do F6), as oito ferramentas novas do catálogo (P22) e a
-  licença das peças coladas no mockup (P20)
-- **Trazer para `apps/web`** os tokens da seção 9.9 e os SVGs da marca (`mockups/public/marca/`, em
-  curvas, sem baixar a Fustat) — é a primeira tarefa de tela da A0 (D76), que migra também as telas
-  do F1; o avatar dos três agentes entrou na A2 como círculo com o ícone da função (D72 revista). Hoje a casca do F0 ainda usa a paleta `slate`
-- **Avatar dos três agentes**: há proposta na seção 9.7, tirada do mockup, e o MVP a usa — círculo
-  com o ícone da função, nunca rosto (`apps/web/src/componentes/ia/AvatarAgente.tsx`). O SVG do
-  Gabriel tinha prazo na Tech Spec da A2, que não existiu (D77); o novo prazo está em aberto
-  (`CLAUDE.md`). A landing page ainda lista os agentes antigos: alinhar junto
-- **Licença das duas peças marcadas "a conferir"** na seção 10.2 (`shadcn/item` e
-  `shadcn/spinner`: o 21st.dev não declara, a origem shadcn/ui é MIT), antes de o código entrar
-- **Vestir a família Agent Elements**: 121 classes de cor fixa e 63 variantes `dark:` trocadas à
-  mão nas sete peças do chat (10.2). O mockup apontou a rampa `neutral` para os cinzas do ChatGPT,
-  e esse atalho não entra no produto. O MVP não trouxe a família: as peças do chat foram escritas
-  de novo em `apps/web/src/componentes/ia/` (seção 9.3 de `docs/mvp-rapido.md`)
-- **`color-mix()` no Chrome 109**: confirmar no projeto `chromebook` do e2e o que o build faz com
-  modificador de opacidade, e reprovar `color-mix(` no CSS servido se ele não rebaixar (9.9)
-- **Onde moram os componentes trazidos do 21st.dev** dentro de `apps/web`, o `components.json`
-  e a troca de roteador, se houver (Joaquim, na Tech Spec da A1)
-- **Orçamento de JS** com markdown, calendário e gráfico fora do primeiro carregamento (seção
-  10.4): o limite de 150 kB de hoje mede o build inteiro, porque a casca do F0 não tem import
-  dinâmico (Joaquim)
-- Ilustração do painel da tela de entrada (seção 11.8)
-- Modo escuro: fora. Os tokens são semânticos para ele poder existir depois sem reescrever tela
-- Detalhe de navegação do aluno e da coordenação, a fechar nos PRDs da A1, do F9 e do F12
-- Indicadores da turma aberta e do Meu uso: quais, limiar e texto do alerta (decisão em aberto no
-  `CLAUDE.md`; o ponto de partida do mockup está no P11)
+- **Parecer de trade dress.** A pele toma uma técnica conhecida (ilustração chapada, botão com
+  degrau, mascote). A marca, a mascote, as cores, os ícones e a fonte são nossos, e o verde não é a
+  cor principal; ainda assim o parecer entra junto do registro no INPI (D80; `TODO.md`)
+- **Trazer o mockup de outubro para `mockups/`.** Ele mora num repositório privado do Gabriel
+  (`Prototipo_Turmma`, commit `a95568d`); a pasta daqui continua na versão de setembro até os dois
+  decidirem. Até lá a fonte de valores é esta Parte B e o inventário em
+  `tasks/prd-pele-e-casca/mockup.md`. Nada de lá é copiado para o `apps/web`
+- **A comemoração na entrega e a onça "acolhendo"** dependem do parecer do `conformidade-reviewer`,
+  na X4: a primeira por encostar em recompensa (D59), a segunda por pôr expressão de preocupação no
+  lugar onde o Tutor encaminha um assunto delicado (D58; regra 70, item 4a). Sem parecer, a entrega
+  termina com texto e a onça fica parada (9.5 e 9.7)
+- **Duas camadas do mockup ficam fora**, porque o LEIAME dele não as descreve e ninguém as decidiu:
+  a "15ª rodada" da conversa (voto, refazer e editar em toda resposta, anexo na caixa), que mexe no
+  registro que o professor supervisiona e cria dado novo de menor; e os painéis de gestão, que
+  pintam "melhoraram" de verde e "pioraram" de vermelho, contra a regra de cor por categoria (9.1)
+- **A cor do Assistente e a do Tutor.** O texto da D80, item 3, diz Assistente em laranja e Tutor
+  em azul; o mockup e a Tech Spec da X1 dizem o contrário, e é o Tutor que já é laranja no produto.
+  Este documento segue o mockup (9.7). Falta acertar a frase da decisão
+- **O rótulo em caixa-alta de 15 px na lateral**, medido na fonte do ChromeOS: se cortar, desce a
+  14 px (Tech Spec da X1, seção 12)
+- **O script do tema diante de uma política de segurança de conteúdo**: quando o F16 trouxer uma,
+  ele entra por hash (`TODO.md`)
+- **O ícone do navegador** (`turmma-icone.svg`) ainda tem o fundo azul-noite da pele da landing
+  page. A landing page ainda lista os agentes antigos: alinhar junto (Gabriel)
+- **Continua em aberto, da revisão de setembro:** Projetos (P05), anexo na conversa (P07), faltas e
+  Frequência (P08), ranking de participação (P26, que bate na 10.3), Recursos e Mural (P28) e as
+  oito ferramentas novas do catálogo (P22)
+- **Indicadores da turma aberta e do Meu uso**: quais, limiar e texto do alerta (decisão em aberto
+  no `CLAUDE.md`; o ponto de partida está no P11)
+- **O que entra na fila "Esperando você"** de cada papel, e a composição de cada tela: fecham nos
+  PRDs da X2, da X3 e da X4
 - Imagens da ferramenta de apresentação (D67)
 
 ---
@@ -448,75 +514,85 @@ ninguém confundir com a tela de uma escola.
 
 ### 8.1 De onde vem
 
-**Decidido** (D72, 23/09/2026). A direção de 19/09/2026 tinha três fontes; a revisão em mockup
-trocou a pele e juntou uma quarta referência, só de estrutura.
+**Decidido** (D80, 12/10/2026). O Gabriel viu o produto na pele de setembro e reprovou: "muita
+informação, muita aba, muita coisa"; "muito texto, pouco contraste e cara de site". De 04 a
+07/10/2026 ele redesenhou tudo em mockup: a décima rodada deu a estrutura, a 11ª deu a pele, a 12ª
+e a 13ª, as peças, e a 14ª, os tipos de página e o modo escuro.
 
 | Fonte | O que ela dá | O que ela não dá |
 |---|---|---|
-| **ChatGPT** (tema claro de `chatgpt.com`, medido em 19/09/2026) | A **pele**: superfícies brancas, a rampa de cinzas, a fonte do sistema, botão em pílula, item de menu de 36 px com canto de 10, caixa de pedido com canto de 28 e sombra suave, a pergunta centralizada na Home | Seletor de modelo e o que é de produto aberto ao público (8.3) |
-| **Mulerun** (`mulerun.com/pt-BR/chat`) | A **estrutura** da casca: lateral recolhível, Home que é uma caixa de pedido no centro, histórico na lateral, tela de entrada dividida | Cor, fonte, tom e qualquer coisa de modelo de IA |
-| **A marca** (manual em `~/Code/turmma-marca`; os arquivos em `mockups/public/marca/`) | A **pinta**, o logotipo em Fustat e o **laranja** `#E8732E` | A pele da landing page — papel, creme, azul-noite, Fustat nos títulos —, que continua só na landing page |
-| **Teachy** | A **estrutura** de Ferramentas e de Turmas: o catálogo em categorias e a turma aberta com abas (P28) | A pele: fonte, canto, medidas e ícones copiados ficam de fora (8.3; P31) |
-| **21st.dev** | As **peças**: todo componente de interface sai do catálogo (seção 10), vestido com os nossos tokens | Decisão de produto. O catálogo tem coisa que aqui é proibida por lei (seção 10.3) |
+| **O mockup de outubro** (`Prototipo_Turmma`, commit `a95568d`; inventário em `tasks/prd-pele-e-casca/mockup.md`) | Os valores de cor, as medidas, o desenho das peças, a casca e os tipos de página | Código. Ele não fala com servidor, usa bibliotecas que o produto não tem (10.1) e afrouxa proteções que o produto cumpre (8.3) |
+| **Duolingo** | A **técnica**: ilustração chapada, borda grossa com degrau sólido, cor por família, mascote, contraste alto | A marca, a mascote, o verde, a fonte e as mecânicas de uso (8.3) |
+| **A marca** (`apps/web/public/marca/`) | A pinta, o logotipo, o laranja `#E8732E` e a onça | A pele da landing page, que continua só lá |
+| **O produto que já existe** | As regras, os quatro estados, os textos, os nomes acessíveis e o e2e que prova cada regra | — |
 
-### 8.2 O que pegamos do ChatGPT e do Mulerun
+**Regra vence desenho** (D80, item 7): onde o mockup e uma proteção do produto discordam, vale o
+produto.
 
-Medido nas telas públicas em 19/09/2026:
+### 8.2 O que tomamos
 
-- **Duas regiões.** Lateral de **260 px** em `lateral`, um degrau abaixo do branco, sem borda
-  pesada; conteúdo no branco. A lateral recolhe por um botão no topo dela
-- **Anatomia da lateral**, de cima para baixo: marca e botão de recolher · seletor de escola ·
-  "Nova conversa" · itens de navegação com ícone e rótulo, em linhas de **36 px** com canto de
-  **10 px** · os grupos "Seu time" e "Histórico", com rótulo cinza e sem caixa-alta · rodapé com
-  a pessoa
-- **Home = uma pergunta.** Coluna central de **~760 px**: a pergunta em 28 px e peso normal, a
-  caixa de pedido grande com canto de **28 px** e a sombra suave do ChatGPT, e embaixo só o que
-  espera a professora (11.2)
-- **A caixa de pedido tem barra própria**: à esquerda o que se acrescenta ao pedido
-  (ferramenta, web), à direita o seletor de turma e o botão redondo de enviar
-- **Quase sem sombra.** A hierarquia vem de tom de fundo e de linha fina, não de elevação
-- **Botão em pílula**, 14 px em peso 500
-- **Entrada dividida**: o painel da marca de um lado, o formulário do outro
+Borda de 2 px e degrau sólido no lugar de linha fina e sombra borrada: a pista de que algo se
+aperta aparece até na tela lavada de um Chromebook de entrada, e não custa quadro. Cor por família,
+que diz **categoria** e nunca julgamento. Ícone ilustrado e a onça da marca. Letra maior e mais
+pesada. Modo escuro. E até quatro lugares por papel, com uma fila só para o que espera a pessoa.
 
-### 8.3 O que não pegamos
+### 8.3 O que não tomamos
 
-- **Seletor de modelo** ("Pro ▾"). Perfil de modelo é interno (regra 30). No lugar dele entra o
-  **seletor de turma**, que é o contexto que o professor de fato escolhe
-- **Adesivo de novidade** sobre botão ("GPT Image 2") e selo "Beta" espalhado: urgência e
-  novidade fabricadas não entram (D59)
-- **Emoji na moldura da interface** (o aceno da saudação). Renderiza diferente em cada sistema
-  e tira a sobriedade que a marca pede para a mesa da coordenação
-- **Cor em `oklch()`**. Não existe no Chrome 109 do laboratório, e o e2e já reprova `oklch()` no
-  CSS servido. Tudo aqui é hex
-- **Animação decorativa em laço** (o brilho que fica passando na pílula). Ver 9.5
-- "Baixar apps", "Entrar" flutuante no canto, vitrine de casos de uso: são de produto aberto ao
-  público, e aqui não existe cadastro público (D2)
-- **Da Teachy, a pele** (P31): Quicksand e Inter, canto de 8 px, título em toda aba, as medidas
-  tiradas da tela deles e ícones com acentos fora da paleta. Duas peles dobram o trabalho da A1 e
-  da A2, duas fontes a mais pesam no Chromebook, e copiar layout e medida de concorrente direto
-  abre risco de concorrência desleal (trade dress)
-- **Da landing page, a pele** (P02): papel, creme, azul-noite e Fustat nos títulos. O Gabriel viu
-  dentro do produto e rejeitou; ela continua valendo na landing page
+- **Do Duolingo, nada além da técnica.** A mascote, as cores, os ícones e a fonte são nossos, e o
+  verde não é a cor principal. Copiar marca ou medida de outro produto abre risco de concorrência
+  desleal (trade dress): o parecer está na seção 7
+- **As mecânicas de uso compulsivo**: sequência de dias, pontos por tempo, vidas, ranking, pódio,
+  notificação insistente e recompensa variável (D59, D57; Decreto 12.880, arts. 9º e 10; 10.3)
+- **O que o mockup afrouxa** (D80, item 7): "Sair" fora de alcance, a faixa de supervisão do Tutor
+  solta, a caixa do Tutor sumindo depois do assunto delicado, a entrada da escola respondendo
+  diferente para matrícula errada e pedido pendente, e-mail no convite, segundo fator só em QR,
+  busca pública de escola, e tela sem carregando e sem erro
+- **O que reprova contraste ou custa quadro**: borda de campo clara, foco só pela cor da borda e
+  texto em `apagado` (9.1); hover com `filter`, largura animada e `zoom` na página (9.5)
+- **As bibliotecas do mockup**: as peças são nossas (10.1)
+- **`oklch()` e `color-mix()`**, que não existem no Chrome 109 do laboratório, e **emoji** na
+  moldura, que renderiza diferente em cada sistema
+- **Da pele de setembro**: o botão em pílula, o canto de 28 px, o item de menu de 36 px e a aba sem
+  título. Fica o que a D72 revista manteve: uma pele só, a fonte do sistema, o laranja da pinta e
+  um botão de decisão oficial que não se parece com nenhum outro
 
 ### 8.4 Os seis princípios
 
 1. **Uma tela, uma pergunta.** A professora tem quarenta minutos e uma xícara de café na mão
-   (regra 50). A Home é uma caixa de pedido; cada outra tela tem uma ação principal, e só uma
-2. **Branco no chão, preto na decisão, laranja no que espera você.** O chão é branco e cinza.
-   O **preto fica reservado para a decisão oficial**: aprovar, publicar, confirmar. O botão de
-   aprovar não se parece com nenhum outro botão do produto, e isso é de propósito: é o que
-   combate o clique reflexo (regra 50, item 8). O **laranja aparece pouco** — a pinta, o
-   enviar, o contador, o que espera a pessoa —, e por isso chama quando aparece
-3. **A IA sempre assina.** Toda saída de IA leva o avatar do agente, o selo "IA", a fonte com
-   página e, depois de aprovada, quem aprovou (regra 70; D58). Nunca um texto solto na tela
+   (regra 50). O Início é uma caixa de pedido; cada outra tela tem um título e uma ação principal
+2. **Laranja cria e pede, grafite decide, azul seleciona.** O **laranja** é a ação de criar e
+   pedir, com texto escuro em cima. O **grafite** fica reservado para a decisão oficial: aprovar,
+   publicar, confirmar. O botão de aprovar não se parece com nenhum outro, nos dois temas, e isso é
+   de propósito: é o que combate o clique reflexo (regra 50, item 8). O **azul** é o selecionado,
+   o link e o foco
+3. **A IA sempre assina.** Toda saída de IA leva o avatar do agente, o nome da função, o selo
+   "IA", a fonte com página e, depois de aprovada, quem aprovou (regra 70; D58)
 4. **Calmo por lei.** Nada pisca para chamar de volta, nada comemora tempo de uso, nada começa
-   sozinho (D59). Na área do aluno o movimento é só resposta ao que ele fez
-5. **Leve por contrato.** O alvo é o Chromebook de entrada em rede de escola. CSS antes de
-   JavaScript, `transform` e `opacity` antes de qualquer outra propriedade, e o que pesa
-   carrega só na tela que usa (10.4)
-6. **Nada genérico, nada solto.** Peça de interface vem do 21st.dev e é vestida com os tokens
-   da Turmma. Não se escreve do zero o que o catálogo tem, e não entra peça com a cor de fábrica.
-   **Uma pele só** em todas as telas (D72)
+   sozinho (D59). A pele é viva na cor e no desenho, não no apelo
+5. **Leve por contrato.** O alvo é o Chromebook de entrada em rede de escola: nenhuma fonte web,
+   nenhuma biblioteca de animação, só `transform` e `opacity` animam, e o que pesa carrega só na
+   tela que usa (10.4)
+6. **Uma pele só**, em todas as telas e nos dois temas (D72 revista). Tela nova usa peça do
+   catálogo (10.2) e token da 9.10: não se escreve cor, medida nem peça solta
+
+### 8.5 A régua
+
+A régua do mockup (R1 a R12), ajustada ao que o produto já decidiu. Vale para toda tela.
+
+| # | Regra |
+|---|---|
+| R1 | No máximo **quatro lugares** por papel, iguais na lateral e na barra de baixo. Ação não é lugar |
+| R2 | **Dois níveis**: lugar, tela e detalhe. O detalhe abre ao lado (480 px) ou como folha de baixo. Só o objeto grande vira página, com voltar |
+| R3 | No máximo **três abas**, nunca uma dentro da outra. Jeito de ver é `Segmentado`. Um filtro visível por tela |
+| R4 | **Um botão cheio** por tela: laranja para criar e pedir, grafite para decidir. O raro vai para "Mais opções" |
+| R5 | **Linha inteira clicável**, com chevron. Nada de "Ver" repetido |
+| R6 | **Título sim, descrição não** (revê o P03). A explicação fica onde a dúvida nasce, em uma linha |
+| R7 | **Texto curto**: rótulo de uma ou duas palavras, botão com verbo e objeto, frase para o aluno com até doze palavras |
+| R8 | **Fila vazia é uma linha** ("Tudo em dia"). Tela vazia continua sendo convite para agir (regra 50, item 5) |
+| R9 | **Contador só onde há ação**: o sino e, no aluno, Tarefas e Avisar. Nada conta tempo, sequência ou novidade |
+| R10 | **Cabe na janela**: a 1366 × 768 a tela de trabalho não rola a página; a 360 px nada rola de lado |
+| R11 | **Voltar é previsível**: "‹ origem" no alto, painel que fecha com X e Esc, o endereço guardando aba e painel, e trocar de aba sem empilhar histórico |
+| R12 | **Nada na tela existe para demonstrar.** O dado sintético entra pelo produto (D71), e as peças com todos os estados moram na galeria |
 
 ---
 
@@ -524,206 +600,387 @@ Medido nas telas públicas em 19/09/2026:
 
 ### 9.1 Cor
 
-**Três cores e mais nenhuma** (D72): branco, preto e o laranja da pinta `#E8732E`. Verde e
-vermelho só aparecem em estado. Os valores são os medidos no mockup (`mockups/src/index.css`),
-com os **nomes** de token que a interface já usava — `noite` virou preto e `creme` virou cinza, e
-o nome ficou. Tudo em **hex**. Contraste medido (WCAG 2.1) entre parênteses.
+**Branco no chão, dez famílias de cor e três papéis fixos** (D80, item 1): laranja cria e pede,
+grafite decide, azul seleciona. Os valores são os do `index.css` do mockup, salvo os desvios
+listados adiante. Tudo em **hex**, nos **dois temas**. O contraste (WCAG 2.1) foi calculado para
+este documento sobre estes valores, e o teste da X1 refaz a conta pela tabela de pares.
 
-**Chão e estrutura** — a rampa de cinzas do ChatGPT:
+**Neutros** (claro e escuro; nas medidas, a primeira é a do claro):
 
-| Token | Hex | Uso |
-|---|---|---|
-| `fundo` | `#FFFFFF` | Fundo do app |
-| `superficie` | `#FFFFFF` | Cartão, caixa de pedido, campo, menu. Separa do fundo pela linha, não pelo tom |
-| `lateral` | `#F9F9F9` | Fundo da lateral |
-| `realce` | `#ECECEC` | Selecionado: item da lateral, linha de tabela. Dá 1,1:1 contra a lateral e 1,2:1 contra o branco — perceptível, mas discreto, então **selecionado nunca é só o fundo** (11.1) |
-| `realce-suave` | `#F4F4F4` | Hover de botão, de item de menu e de linha |
-| `linha` | `#E8E8E8` | Divisor e borda de cartão. Decorativa: nunca é a única pista de um controle |
-| `borda-campo` | `#8F8F8F` | Borda de campo e de botão secundário (3,2:1 no branco, 3,1:1 na lateral — passa o 3:1 de componente). **O mockup usa `#D9D9D9`, que dá 1,4:1 e reprova**: a borda do ChatGPT não serve para campo de formulário de escola |
-
-**Texto:**
-
-| Token | Hex | Uso |
-|---|---|---|
-| `tinta` | `#0D0D0D` | Texto principal (19,4:1 no branco; 18,5:1 na lateral) |
-| `apoio` | `#424242` | Texto de apoio (10,0:1 no branco; 9,5:1 na lateral) |
-| `sutil` | `#5D5D5D` | Placeholder, metadado, rótulo de grupo, segunda linha da pergunta (6,6:1 no branco; 6,3:1 na lateral; 5,6:1 no realce). É o piso: nada de texto mais claro que isto |
-| `inativo` | `#8F8F8F` | Só controle desabilitado (3,2:1) |
-
-**Marca e decisão:**
-
-| Token | Hex | Uso |
-|---|---|---|
-| `caramelo` | `#E8732E` | O laranja. Preenchimento da ação primária **com texto `tinta` em cima** (6,4:1), a pinta, o ladrilho do Tutor, o contador do que espera você. Aparece pouco, de propósito |
-| `caramelo-claro` | `#EE8747` | Hover da ação primária (7,6:1 com `tinta`) |
-| `caramelo-fundo` | `#D4651F` | Pressionado (5,3:1 com `tinta`) |
-| `caramelo-texto` | `#B4520F` | Laranja **como texto** e link (5,1:1 no branco) |
-| `caramelo-noite` | `#F2A25B` | Anel de foco sobre fundo preto (9,3:1) |
-| `noite` | `#0D0D0D` | O preto: ação oficial, dica flutuante, anel de foco (branco em cima: 19,4:1) |
-| `noite-alto` | `#2F2F2F` | Hover da ação oficial (13,4:1) |
-| `noite-baixo` | `#000000` | Pressionado da ação oficial |
-| `creme` | `#F4F4F4` | Bolha de quem escreve, como a do ChatGPT |
-| `papel` | `#F4F3F0` | Só o painel da tela de entrada (11.8) |
-
-Duas proibições que a landing page já pagou para aprender continuam: **laranja nunca é texto**
-sobre claro (3,0:1 no branco; para isso existe `caramelo-texto`) e **branco nunca vai em cima do
-laranja** (3,0:1). Por isso a ação primária é laranja com texto preto.
-
-**Estado** — cada família é um fundo e um texto:
-
-| Família | Fundo | Texto | Quando |
+| Token | Claro | Escuro | Uso |
 |---|---|---|---|
-| `pendente` | `#FDF0E8` | `#8A3E0C` (6,8:1) | "Esperando você". Nesta marca pendência é laranja, não âmbar |
-| `ok` | `#E9F5EE` | `#0B6B47` (5,8:1) | Aprovado, conferido, salvo. É a segunda voz do produto: metade do argumento é "um humano aprovou" |
-| `erro` | `#FDECEC` | `#B42318` (5,8:1) | Erro, rejeição, ação destrutiva |
-| `info` | `#F4F4F4` | `#0D0D0D` (17,7:1) | Aviso permanente (o professor acompanha o Tutor), explicação de autonomia. Cinza: aviso não é alarme |
-| `ia` | `#F0F0F0` | `#424242` (8,8:1) | O selo "IA" e o chip de fonte. Neutro de propósito: o selo informa, não chama |
+| `fundo` | `#FFFFFF` | `#131F24` | O chão e a face de tudo o que é "branco": cartão, botão secundário, diálogo, menu, lateral |
+| `fundo-suave` | `#F7F7F7` | `#202F36` | Hover de linha e de peça branca, selo neutro, campo desligado |
+| `campo` | `#FFFFFF` | `#202F36` | Fundo de campo de texto e da caixa de pedido |
+| `mesa` | `#F7F7F7` | `#0E181C` | O fundo atrás da folha do documento (X3) |
+| `borda` | `#E5E5E5` | `#37464F` | A borda de 2 px e o degrau de peça branca. Decorativa (1,3:1 e 1,7:1): nunca é a única pista de um controle |
+| `borda-forte` | `#D7D7D7` | `#52656D` | Hover da borda de peça branca |
+| `borda-campo` | `#8F8F8F` | `#6B7F88` | Borda de campo, de caixa de marcar e de interruptor desligado (3,2:1; no escuro, 4,0:1 no chão e 3,3:1 contra o campo) |
+| `apagado` | `#AFAFAF` | `#52656D` | Chevron e série tracejada. **Não é cor de texto** (2,2:1 e 2,8:1) |
+| `tinta` | `#0D0D0D` | `#F1F7FB` | Texto principal (19,4:1 e 15,6:1) |
+| `apoio` | `#424242` | `#DCE6EC` | Texto de apoio (10,0:1 e 13,3:1) |
+| `sutil` | `#5D5D5D` | `#8FA3AD` | Segunda linha, rótulo, exemplo de campo (6,6:1 e 6,4:1). É o piso: nada de texto mais claro |
+| `sobre-cor` | `#0D0D0D` | `#131F24` | Texto e glifo em cima de face colorida. Escuro nos dois temas |
+| `grafite` · `grafite-degrau` | `#333333` · `#0D0D0D` | `#F1F7FB` · `#8FA3AD` | A face e o degrau do botão oficial. Invertem no escuro |
+| `sobre-grafite` | `#FFFFFF` | `#131F24` | Texto em cima do oficial (12,6:1 e 15,6:1) |
+| `icone-papel` · `icone-linha` | `#EFEFEF` · `#D7D7D7` | `#37464F` · `#52656D` | O papel dos ícones ilustrados e as linhas dele |
+| `veu` | `#00000059` | `#00000099` | O véu atrás do diálogo e do painel ao lado: preto a 35% e a 60%, em hex de oito dígitos. No `::backdrop` o valor vai escrito por extenso, porque antes do Chrome 122 ele não herda variável |
+| `foco` | `#146EAA` | `#60B9F4` | O anel de foco, de 3 px (5,4:1 no chão claro; 8,3:1 no escuro) |
+| `white` · `black` | `#FFFFFF` · `#000000` | os mesmos | Não mudam com o tema. Não servem de face nem de texto de peça |
 
-Do mockup **não entram**: `marca-cx`, `marca-cx-forte`, `rank-1` a `rank-3` e as fontes
-`font-teachy` e `font-teachy-corpo`, que são da pele da Teachy e do ranking (P26, P31).
+**As dez famílias**, cada uma com cinco tons: **face** (o preenchimento), **degrau** (sob o que se
+aperta), **claro** (fundo de selo e de selecionado), **borda** (a do claro) e **texto** (para
+escrever no chão e no claro). A medida traz o `texto` no chão, o `texto` no `claro` e o `sobre-cor`
+na face. No claro:
 
-Estado nunca é só cor: vem sempre com texto ou ícone (regra 50, item 11). Só tema claro.
+| Família | face | degrau | claro | borda | texto | Medida | Uso |
+|---|---|---|---|---|---|---|---|
+| `laranja` | `#E8732E` | `#BA5C25` | `#FDEBDD` | `#F5C0A1` | `#A85220` | 5,4 · 4,7 · 6,4 | A marca e a ação de criar e pedir. Nunca em matéria |
+| `azul` | `#1C9BEF` | `#167CBF` | `#DFF1FD` | `#99D2F8` | `#146EAA` | 5,5 · 4,7 · 6,5 | Selecionado, link e foco · Assistente de ensino · Matemática |
+| `verde` | `#2FBF5B` | `#269949` | `#E2F6E8` | `#A1E2B5` | `#1F7C3B` | 5,2 · 4,6 · 8,1 | Certo, aprovado, feito · Ciências, Biologia |
+| `amarelo` | `#FFC31F` | `#E0A000` | `#FFF7E0` | `#FFE49A` | `#8C6B11` | 5,0 · 4,6 · 12,1 | Esperando você · História, Filosofia |
+| `vermelho` | `#F2545B` | `#C24349` | `#FDE7E8` | `#F9B2B5` | `#B84045` | 5,4 · 4,6 · 5,7 | Problema, prazo, perigo · Língua Inglesa |
+| `roxo` | `#A56EF5` | `#8458C4` | `#F2EBFE` | `#D6BEFA` | `#7D54BA` | 5,5 · 4,7 · 5,7 | Cuidado com pessoa · Língua Portuguesa |
+| `turquesa` | `#1DBFAE` | `#17998B` | `#DFF6F4` | `#99E2DB` | `#137A6F` | 5,2 · 4,6 · 8,4 | Turma · Química |
+| `anil` | `#6A85F7` | `#556AC6` | `#EAEEFE` | `#BCC8FB` | `#5165BC` | 5,3 · 4,6 · 5,8 | Analista de desempenho escolar · Física |
+| `lima` | `#9ACD2E` | `#7FB01C` | `#F1F8E2` | `#D2E8A1` | `#59771B` | 5,1 · 4,7 · 10,3 | Geografia, Sociologia |
+| `rosa` | `#F57CB5` | `#C46391` | `#FEEDF5` | `#FAC4DE` | `#A25277` | 5,2 · 4,7 · 7,8 | Arte, Educação Física |
+
+No escuro, em que o degrau não muda:
+
+| Família | face | degrau | claro | borda | texto | Medida |
+|---|---|---|---|---|---|---|
+| `laranja` | `#EB8447` | `#BA5C25` | `#352C26` | `#734528` | `#EF9D6D` | 7,8 · 6,3 · 6,3 |
+| `azul` | `#37A7F1` | `#167CBF` | `#143344` | `#17577F` | `#60B9F4` | 7,8 · 6,1 · 6,4 |
+| `verde` | `#48C76F` | `#269949` | `#17392D` | `#20673D` | `#6DD28C` | 9,0 · 6,8 · 7,7 |
+| `amarelo` | `#FFC31F` | `#E0A000` | `#393923` | `#7D6922` | `#FFD562` | 12,0 · 8,4 · 10,5 |
+| `vermelho` | `#F4696F` | `#C24349` | `#37272D` | `#77373D` | `#F6878C` | 7,0 · 5,9 · 5,7 |
+| `roxo` | `#B07FF6` | `#8458C4` | `#2A2C45` | `#554382` | `#C09AF8` | 7,4 · 6,0 · 5,8 |
+| `turquesa` | `#38C7B8` | `#17998B` | `#15393A` | `#186762` | `#61D2C6` | 9,2 · 6,9 · 8,0 |
+| `anil` | `#7C94F8` | `#556AC6` | `#212F46` | `#3A4D83` | `#97AAF9` | 7,6 · 6,0 · 6,0 |
+| `lima` | `#9ACD2E` | `#7FB01C` | `#293B26` | `#506D28` | `#B8DC6D` | 10,8 · 7,7 · 8,9 |
+| `rosa` | `#F68CBE` | `#C46391` | `#372E3B` | `#794965` | `#F8A3CB` | 8,9 · 6,9 · 7,5 |
+
+**Nenhuma face aceita texto branco**: em cima dela o texto é `sobre-cor`. E a face não é cor de
+texto: o laranja no chão claro dá 3,0:1, e para isso existe o `laranja-texto`.
+
+**Cor é categoria, nunca julgamento.** Nenhuma barra, número ou gráfico fica verde porque subiu e
+vermelho porque caiu, e a barra de acerto é neutra.
+
+- **Matérias:** Matemática azul · Língua Portuguesa roxo · Ciências e Biologia verde · Química
+  turquesa · Física anil · História e Filosofia amarelo · Geografia e Sociologia lima · Língua
+  Inglesa vermelho · Arte e Educação Física rosa. O laranja nunca vai em matéria
+- **Agentes:** Tutor laranja · Assistente de ensino azul · Analista anil (9.7)
+- **Tipos da fila** (X2 e X3): cada tipo de item tem a família dele, fixa
+  (`tasks/prd-pele-e-casca/mockup.md`, seção 1.2)
+
+**Os nomes de antes da D80 ficam**, porque as telas não mudam uma classe na X1. Peça nova usa o
+nome novo.
+
+| Token | Claro | Escuro | O que é agora |
+|---|---|---|---|
+| `superficie` · `lateral` | `#FFFFFF` | `#131F24` | Apelidos de `fundo`. A lateral era `#F9F9F9` |
+| `linha` | `#E5E5E5` | `#37464F` | Apelido de `borda` (era `#E8E8E8`) |
+| `realce` | `#ECECEC` | `#202F36` | O selecionado das telas de antes. Na pele nova é `azul-claro`, `azul-borda` e `azul-texto` |
+| `realce-suave` · `creme` | `#F4F4F4` | `#202F36` | Hover e balão de quem escreve. Peça nova usa `fundo-suave` |
+| `papel` | `#F4F3F0` | `#202F36` | Só o painel da casca pública (11.3) |
+| `inativo` | `#8F8F8F` | `#52656D` | Só controle desligado das telas de antes |
+| `caramelo` | `#E8732E` | `#EB8447` | Apelido de `laranja` |
+| `caramelo-claro` · `caramelo-fundo` | `#EE8747` · `#D4651F` | `#EF9D6D` · `#D4651F` | Hover e pressionado da face laranja. No escuro o pressionado não é o `#BA5C25` do mockup: é face com texto em cima, e precisa de 4,5:1 |
+| `caramelo-texto` | `#B4520F` | `#EF9D6D` | Laranja como texto (5,1:1 e 7,8:1). Peça nova usa `laranja-texto` |
+| `caramelo-noite` | `#F2A25B` | `#F2A25B` | Sem uso: o foco é um só (10.1) |
+| `noite` · `noite-alto` · `noite-baixo` | `#0D0D0D` · `#2F2F2F` · `#000000` | `#F1F7FB` · `#DCE6EC` · `#FFFFFF` | O preto de antes, que inverte. O oficial passa a `grafite`, com `noite-alto` no hover |
+| `pendente-cx` · `pendente` | `#FDF0E8` · `#8A3E0C` | `#352C26` · `#EF9D6D` | "Esperando você" (6,8:1 e 6,3:1) |
+| `ok-cx` · `ok` | `#E9F5EE` · `#0B6B47` | `#17392D` · `#6DD28C` | Aprovado, conferido, salvo (5,8:1 e 6,8:1) |
+| `erro-cx` · `erro` | `#FDECEC` · `#B42318` | `#37272D` · `#F6878C` | Erro, recusa (5,8:1 e 5,9:1) |
+| `info-cx` · `info` | `#F4F4F4` · `#0D0D0D` | `#202F36` · `#F1F7FB` | Aviso permanente (17,7:1 e 12,8:1). Cinza: aviso não é alarme |
+| `ia-cx` · `ia` | `#F0F0F0` · `#424242` | `#202F36` · `#DCE6EC` | O selo "IA" e o chip de fonte (8,8:1 e 10,9:1). Neutro: o selo informa, não chama |
+
+**Onde o produto se afasta do mockup, de propósito** (D80, item 7; Tech Spec da X1, seção 9):
+
+1. **`borda-campo` continua `#8F8F8F`** no claro, e é `#6B7F88` no escuro, valor escolhido aqui
+   entre os dois cinzas vizinhos do mockup. O mockup usa a `borda` comum, que dá 1,3:1 e 1,7:1 e
+   reprova o 3:1 de componente
+2. **`apagado` nunca é texto.** Peça desligada é face `borda` com texto `sutil`
+3. **Texto sobre face colorida é `sobre-cor`; sobre o oficial, `sobre-grafite`.** O mockup escreve
+   `white` nos dois e conta com ele virar escuro no tema escuro
+4. **`white` e `black` não mudam com o tema.** Por isso `bg-white` e `text-white` saem das telas
+   na X1: no escuro, `white` sobre `noite` daria 1,1:1, e `tinta` sobre `caramelo`, 2,5:1
+5. **O campo em foco leva o anel**, e não só a borda em `azul-borda`, que dá 1,6:1 (10.1)
+6. **Campo inválido tem borda em `vermelho-texto`** (5,4:1), e não em `vermelho-borda` (1,7:1)
+7. **O hover troca a cor da face** por outro token, sem `filter` (9.5)
+8. **Não entram** os tokens mortos do mockup: `rank-*`, `marca-cx*`, a rampa `neutral`, a ponte
+   com o shadcn, `capa*` e as fontes `font-teachy*`
+
+Estado nunca é só cor: selo, aviso e item selecionado levam texto ou ícone (regra 50, item 11).
+
+#### Pares de contraste
+
+Cada par de texto e fundo que a pele usa, com o mínimo que ele cumpre **nos dois temas**: 4,5 para
+texto, 3 para a borda que é a única pista de um controle. O teste de contraste da X1 lê esta
+tabela e os dois blocos da 9.10. Par novo entra aqui na mesma tarefa que o usa.
+
+| par | texto | fundo | mínimo |
+|---|---|---|---|
+| tinta, chão | `tinta` | `fundo` | 4,5 |
+| tinta, fundo suave | `tinta` | `fundo-suave` | 4,5 |
+| tinta, campo | `tinta` | `campo` | 4,5 |
+| apoio, chão | `apoio` | `fundo` | 4,5 |
+| apoio, fundo suave | `apoio` | `fundo-suave` | 4,5 |
+| apoio, campo | `apoio` | `campo` | 4,5 |
+| sutil, chão | `sutil` | `fundo` | 4,5 |
+| sutil, fundo suave | `sutil` | `fundo-suave` | 4,5 |
+| sutil, campo | `sutil` | `campo` | 4,5 |
+| link, aba ativa e botão discreto | `azul-texto` | `fundo` | 4,5 |
+| o mesmo, no hover | `azul-texto` | `fundo-suave` | 4,5 |
+| botão perigo e erro de campo | `vermelho-texto` | `fundo` | 4,5 |
+| laranja, selo e selecionado | `laranja-texto` | `laranja-claro` | 4,5 |
+| azul, selo e selecionado | `azul-texto` | `azul-claro` | 4,5 |
+| verde, selo e selecionado | `verde-texto` | `verde-claro` | 4,5 |
+| amarelo, selo e selecionado | `amarelo-texto` | `amarelo-claro` | 4,5 |
+| vermelho, selo e selecionado | `vermelho-texto` | `vermelho-claro` | 4,5 |
+| roxo, selo e selecionado | `roxo-texto` | `roxo-claro` | 4,5 |
+| turquesa, selo e selecionado | `turquesa-texto` | `turquesa-claro` | 4,5 |
+| anil, selo e selecionado | `anil-texto` | `anil-claro` | 4,5 |
+| lima, selo e selecionado | `lima-texto` | `lima-claro` | 4,5 |
+| rosa, selo e selecionado | `rosa-texto` | `rosa-claro` | 4,5 |
+| laranja, sobre a face | `sobre-cor` | `laranja` | 4,5 |
+| azul, sobre a face | `sobre-cor` | `azul` | 4,5 |
+| verde, sobre a face | `sobre-cor` | `verde` | 4,5 |
+| amarelo, sobre a face | `sobre-cor` | `amarelo` | 4,5 |
+| vermelho, sobre a face | `sobre-cor` | `vermelho` | 4,5 |
+| roxo, sobre a face | `sobre-cor` | `roxo` | 4,5 |
+| turquesa, sobre a face | `sobre-cor` | `turquesa` | 4,5 |
+| anil, sobre a face | `sobre-cor` | `anil` | 4,5 |
+| lima, sobre a face | `sobre-cor` | `lima` | 4,5 |
+| rosa, sobre a face | `sobre-cor` | `rosa` | 4,5 |
+| aviso de informação, corpo | `tinta` | `azul-claro` | 4,5 |
+| aviso de atenção, corpo | `tinta` | `amarelo-claro` | 4,5 |
+| aviso de erro, corpo | `tinta` | `vermelho-claro` | 4,5 |
+| aviso de certo, corpo | `tinta` | `verde-claro` | 4,5 |
+| botão primário, hover | `sobre-cor` | `caramelo-claro` | 4,5 |
+| botão oficial | `sobre-grafite` | `grafite` | 4,5 |
+| botão oficial, hover | `sobre-grafite` | `noite-alto` | 4,5 |
+| estado pendente | `pendente` | `pendente-cx` | 4,5 |
+| estado ok | `ok` | `ok-cx` | 4,5 |
+| estado erro | `erro` | `erro-cx` | 4,5 |
+| estado info | `info` | `info-cx` | 4,5 |
+| selo de IA | `ia` | `ia-cx` | 4,5 |
+| erro como texto | `erro` | `fundo` | 4,5 |
+| laranja como texto | `caramelo-texto` | `fundo` | 4,5 |
+| tinta, realce | `tinta` | `realce` | 4,5 |
+| sutil, realce | `sutil` | `realce` | 4,5 |
+| tinta, realce suave | `tinta` | `realce-suave` | 4,5 |
+| sutil, realce suave | `sutil` | `realce-suave` | 4,5 |
+| balão de quem escreve | `tinta` | `creme` | 4,5 |
+| tinta, painel da entrada | `tinta` | `papel` | 4,5 |
+| sutil, painel da entrada | `sutil` | `papel` | 4,5 |
+| borda de campo, chão | `borda-campo` | `fundo` | 3 |
+| borda de campo, campo | `borda-campo` | `campo` | 3 |
+| interruptor ligado | `azul-degrau` | `fundo` | 3 |
+| anel de foco, chão | `foco` | `fundo` | 3 |
+| anel de foco, fundo suave | `foco` | `fundo-suave` | 3 |
+| anel de foco, selecionado | `foco` | `azul-claro` | 3 |
+| botão primário | `sobre-cor` | `caramelo` | 4,5 |
+| botão primário pressionado | `sobre-cor` | `caramelo-fundo` | 4,5 |
+| botão oficial de antes | `sobre-grafite` | `noite` | 4,5 |
+| perigo cheio de antes | `sobre-grafite` | `erro` | 4,5 |
+| desligado da D80 | `apoio` | `borda` | 4,5 |
+| desligado de antes | `tinta` | `inativo` | 4,5 |
+
+O anel de foco tem token próprio, `foco`, com o valor do `azul-texto`. O desligado da D80 é a face `borda`
+com texto `apoio`: com `sutil` ele não chega a 4,5:1 no escuro. Os pares "de antes" são os das telas que
+ainda não foram recompostas, e saem da tabela com a última delas.
 
 ### 9.2 Tipografia
 
-**A fonte do sistema**, como no ChatGPT: `ui-sans-serif, -apple-system, system-ui, "Segoe UI",
-Helvetica, Arial, sans-serif`. No Chromebook ela cai na fonte do próprio ChromeOS, sem baixar
-nada. A **Fustat 600** (12 KB, `woff2` com subconjunto latino, servida pelo próprio app) fica
-**só no logotipo** "Turmma" (D72). Não entra outra fonte web: o primeiro carregamento fica mais
-leve que com as duas fontes da landing page (regra 50).
+**A fonte do sistema**: `ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, Arial,
+sans-serif`. No Chromebook ela cai na fonte do ChromeOS, sem baixar nada. O logotipo vem em curvas:
+**o produto não serve nenhuma fonte** (regra 50). **Dois pesos**: 500 no corpo e 700 no resto; onde
+a fonte do sistema não tem o 500, o navegador usa o regular.
 
-| Papel | Peso | Tamanho / entrelinha | Onde |
-|---|---|---|---|
-| Pergunta da Home | 400 | `clamp(24px, 3vw, 28px)` / 1,25 · −0,01em | Home |
-| Título de objeto | 600 | 22 / 1,25 · −0,015em | Só tela de objeto (seção 6; 9.3) |
-| Título de cartão | 600 | 16 / 1,35 | Cartão, conversa, diálogo |
-| Número de painel | 600 | 28 / 1 · `tabular-nums` | Governança, Turmas |
-| Corpo | 400 | 16 / 1,5 | Conversa, formulário, texto do aluno |
-| Interface densa | 400–500 | 14 / 1,45 | Tabela, metadado, botão, item de menu |
-| Rótulo de grupo | 500 | 13 / 1,2 · **sem caixa-alta**, em `sutil` | "Seu time", "Histórico", cabeçalho de tabela |
+| Classe | Tamanho / altura | Peso | Caixa | Onde |
+|---|---|---|---|---|
+| `t-titulo` | 24 / 30 px | 700 | −0,01em | O `h1` de toda tela |
+| `t-secao` | 20 / 26 px | 700 | | Título de seção, de diálogo e de painel ao lado |
+| `t-balao` | 20 / 26 px | 500 | | A fala no balão da introdução (X4) |
+| `t-cartao` | 17 / 22 px | 700 | | Título de cartão, de linha e de aviso |
+| `t-corpo` | 17 / 25 px | 500 | | Corpo: conversa, formulário, texto do aluno |
+| `t-apoio` | 15 / 20 px | 500 | | Segunda linha e dica, em `sutil` |
+| `t-rotulo` | 15 / 18 px | 700 | caixa-alta, 0,04em | Rótulo de botão, de lugar da lateral e de aba |
+| `t-selo` | 13 / 16 px | 700 | caixa-alta, 0,04em | Selo, cabeçalho de tabela, título de grupo, o "voltar" |
+| `t-numero` | 28 / 32 px | 700 | `tabular-nums` | Número de painel |
+| `t-numero-g` | 36 / 40 px | 700 | `tabular-nums` | Número em destaque |
 
-Na área do aluno o corpo nunca desce de 16 px (o leitor tem 11 anos, D43). Em nenhuma área
-existe texto menor que 12 px. Coluna de leitura de até 72 caracteres.
-
-**Número em Fustat não leva `tabular-nums`**: nela o recurso alarga ponto e vírgula ("3 . 412").
-Se um número um dia for para a Fustat, fica proporcional (P02).
+- **O piso é 14 px.** 13 px só em `t-selo`; 12 px só no rótulo da barra de baixo do celular. A
+  etiqueta de 11 px do mockup não entra
+- **A caixa-alta é do CSS**: o texto vai escrito normal, para o leitor de tela
+- Na área do aluno o corpo nunca desce de 16 px (o leitor tem 11 anos, D43). Coluna de leitura de
+  até 72 caracteres
+- As telas ainda não recompostas ficam com os tamanhos de hoje até a spec da área; o título delas
+  já é `t-titulo` (11.2)
 
 ### 9.3 Forma, espaço e elevação
 
-- **Canto:** 8 px em chip e selo · 10 px em item de menu e da lateral · 12 px em campo · 16 px em
-  cartão, bolha e menu flutuante · 28 px na caixa de pedido e em diálogo · **botão em pílula** ·
-  círculo em botão de enviar, avatar de pessoa e contador
-- **Margem da página** (P03): 16 px no celular e 24 px a partir de 768 px; topo de 16 a 20 px, fim
-  de 32 px
-- **Vãos:** grade de 4 px. 16 px entre blocos, 12 px entre cartões de uma grade, 16 px dentro do
-  cartão (20 px a partir de 1024 px)
-- **Uma barra de 36 px no topo** com os controles da página — abas, filtros, busca. Ela é o
-  cabeçalho: aba de navegação não tem título nem descrição (seção 6)
-- **Largura fluida** até 1480 px em grade e tabela, 1040 px em formulário, 760 px em leitura e
-  conversa
-- **Tela de trabalho** (Calendário, Turmas, Seu time) ocupa a altura da janela e rola por dentro;
-  linha de grade tem sempre a mesma altura, com ou sem conteúdo
+- **Borda de 2 px** em toda peça, em `borda`. É ela, e não uma sombra, que separa a peça do chão
+- **Canto:** 8 px em selo e célula · 12 px em botão, campo, opção, aviso e lugar da lateral (10 px
+  em item de menu) · 16 px em cartão, tabela, diálogo, menu e caixa de pedido · 20 px no alto da
+  folha de baixo · círculo em botão só de ícone, avatar e contador
+- **O degrau** é a marca de que a peça se aperta: uma faixa sólida embaixo dela. No toque a peça
+  desce e a faixa encolhe; o espaço fica reservado, e nada em volta se mexe. Peça de leitura não
+  tem degrau, e peça desligada perde o dela. É uma classe só, `degrau`, para `<button>` e `<a>`:
+  sombra sólida de `--altura-degrau` na cor `--lado`, margem de baixo igual e `translateY` no
+  apertado. A cor vem de cinco classes fixas (`degrau-laranja`, `degrau-grafite`, `degrau-borda`,
+  `degrau-vermelho`, `degrau-azul`)
+
+| Peça | Face | Degrau | Desce |
+|---|---|---|---|
+| Botão `principal` · `compacto` | 46 · 38 px | 4 | 4 |
+| Botão só de ícone, `Toque` | 40 px (o botão, também 44 e 48) | 3 | 3 |
+| Cartão clicável, `Opcao` (no mínimo 64 px), seletor de escola (48 px) | livre | 4 | 2 |
+
+- **Elevação: nenhuma sombra com desfoque.** O que flutua tem a borda de 2 px e um degrau sólido
+  de 4 px em `borda` (`shadow-flutua`), sobre o `veu` quando é modal
+- **Margem da página:** 16 px no celular e 32 px a partir de 768 px. Do topo ao cabeçalho, 24 px;
+  do cabeçalho ao corpo, 16 px; fim do corpo, 32 px
+- **Vãos**, na grade de 4 px: 16 px entre blocos e entre cartões · 16 px dentro do cartão (20 px a
+  partir de 768 px) · 8 px entre os lugares da lateral · 12 px do título de seção ao bloco · 24 px
+  entre as mensagens da conversa
+- **Largura.** Toda página fica numa **moldura de 1200 px**, e a coluna começa na borda esquerda
+  dela, para o título não pular ao trocar de lugar. São quatro tipos de página (11.2):
+
+| Tipo de página | Coluna | Na `Tela` |
+|---|---|---|
+| Conversa | 768 px | `conversa` (era 760) |
+| Leitura | 880 px | `leitura`, nova |
+| Painel | 1200 px, a moldura inteira | `grade` (era 1480) |
+| Documento | 1080 px, com a folha de 760 px | nasce na X3 |
+
+  A largura `formulario`, de 1040 px, continua nas telas de formulário de hoje
+- **A tela de trabalho ocupa a altura da janela e rola por dentro**; no celular a página inteira
+  rola, e o rodapé de ação fica preso embaixo
 - **Grade CSS com `minmax(0, 1fr)`**, nunca `1fr` sozinho: com texto que não quebra, a coluna
   estoura a 360 px (P02)
-- **Altura de controle:** 44 px em toda ação principal e em tudo no celular (regra 50, item
-  2a); 36 px em controle secundário no computador, nunca com alvo de toque menor que 24 px
-- **Elevação:** o padrão é **linha fina, sem sombra**. A caixa de pedido leva a sombra suave do
-  ChatGPT, `0 0 0 1px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.04), 0 4px 80px 8px rgba(0,0,0,.024)`.
-  O que flutua — menu, dica, diálogo, aviso temporário — leva uma só:
-  `0 0 0 1px rgba(0,0,0,.05), 0 8px 28px -6px rgba(0,0,0,.16)`
-- **Fora:** vidro fosco (`backdrop-filter`), degradê animado, brilho de borda, fundo em canvas,
-  WebGL ou shader. Custam quadro no Chromebook e não dizem nada
+- **Altura de controle:** alvo de 44 px em toda ação principal e em tudo no celular (regra 50,
+  item 2a); o botão `compacto` é de barra e de linha, no computador
+- **Fora:** sombra borrada, vidro fosco (`backdrop-filter`), degradê, brilho de borda, fundo em
+  canvas, WebGL ou shader. Custam quadro no Chromebook e não dizem nada
 
 ### 9.4 Ícones
 
-- **Uma biblioteca só: `lucide-react`**, importada ícone a ícone. É a que a landing page já usa
-  e a que quase todo componente do 21st.dev traz. O 21st.dev não tem conjunto de ícones
-  próprio: quando a peça vier com outra (`@tabler/icons-react` em parte dos Agent Elements,
-  `@remixicon/react`, `@hugeicons`, `@radix-ui/react-icons`), o ícone é **trocado pelo
-  equivalente do lucide na adoção**. Duas bibliotecas de ícone no pacote é reprovação de revisão
-- Traço de 1,75 px. 18 px na lateral, 16 px dentro de texto e chip, 20 px em botão só de ícone
-- **Na navegação, ícone sempre com rótulo.** Botão só de ícone leva `aria-label` e dica, e a
-  dica não é o único jeito de descobrir o que ele faz no celular (sem hover): ali o rótulo aparece
-- Logo de terceiro (Google e Microsoft na entrada) vem do `21st logo`, em SVG, seguindo a regra
-  de marca de cada um
-- **Ícone ilustrado só em Ferramentas** (P17): no cartão e na página de cada ferramenta, o ícone
-  é ilustração em SVG feita por nós, chapada, sem contorno, sem sombra e sem ladrilho, e **dentro
-  das três cores** (D72) — os acentos verde-água, amarelo, rosa, roxo e azul da oitava rodada do
-  mockup saem. São cerca de 25 kB de código na rota de Ferramentas, fora do primeiro carregamento
-  (10.4). Em tamanho pequeno, e no resto do produto, continua lucide
+Dois conjuntos, e nenhum outro.
+
+**Ilustrados, desenhados por nós** (D80, item 4), onde o ícone identifica um lugar ou uma
+categoria. SVG de 48 × 48, chapado, de duas a três cores, sem contorno, sem degradê e sem sombra.
+A cor dominante é a face da família, lida do token, e o papel e as linhas são `icone-papel` e
+`icone-linha`: nenhum hex dentro do ícone, e por isso ele acompanha o tema. De 24 a 48 px. São 48:
+
+| Grupo | Ícones (família) | Nasce |
+|---|---|---|
+| Lugares (12) | início (laranja), tarefas (azul), eu (verde), avisar (roxo), turmas (turquesa), agenda (vermelho), criados (amarelo), escola (azul), ia (anil), registros (amarelo), rede (anil), painel (anil) | X1: início, turmas e tarefas, que ilustra Atividades. Os outros, com o lugar de cada um |
+| Ações (1) | os quatro quadradinhos, que ilustram Ferramentas | X1 |
+| Fila (13) | um por tipo de item, na família do tipo | Com o sino (X2 e X3) |
+| Tarefas (3) · Matérias (13) | prova, lista e leitura, e uma por matéria, na família dela | Com a tela que os mostra (X3 e X4) |
+| Métricas (6) | alunos, tutor, aprovado, acerto, pacote, corrigidas | Com o painel que mostra o número (X2) |
+
+Lugar que a D80 não ilustrou (os itens de hoje da coordenação, Minha turma) usa o ícone do
+`lucide` num `Ladrilho`, até a spec da área. Os ícones de lugar moram na entrada e têm teto de
+4 kB em brotli; acima disso viram um arquivo de `public/`, usado por `<use>`.
+
+**`lucide-react`** no resto, importado ícone a ícone: traço de 2,5 px; 16 px em selo, 18 px em item
+de menu, 20 px em botão.
+
+- **Na navegação, ícone sempre com rótulo.** No trilho, o lugar tem nome acessível e dica
+- Botão só de ícone leva `aria-label`, e a dica não é o único jeito de descobrir o que ele faz
+- Logo de terceiro (Google e Microsoft na entrada) vem em SVG, na regra de marca de cada um
 
 ### 9.5 Movimento
 
-As curvas são as da landing page, para o produto e a página terem a mesma mão; a entrada ficou
-mais curta no mockup (420 ms, contra os 640 da landing page):
-
-| Intenção | Duração | Curva | Exemplos |
+| Token | Duração | Curva | Para |
 |---|---|---|---|
-| Estado | 150 ms | `cubic-bezier(.2,0,0,1)` | Hover, pressionar, foco, marcar |
-| Gesto | 260 ms | `cubic-bezier(.2,0,0,1)` | Abrir menu, recolher a lateral, trocar de aba, expandir cartão |
-| Entrada | até 420 ms | `cubic-bezier(.22,1,.36,1)` | Pergunta da Home, mensagem nova, cartão de ferramenta |
+| `t-toque` | 100 ms | linear | A peça com degrau descendo e voltando |
+| `t-estado` | 150 ms | `curva-estado` | A bolinha do interruptor, o chevron da linha no hover |
+| `t-gesto` | 260 ms | `curva-estado` | Abrir menu, diálogo e painel ao lado |
+| `t-barra` | 400 ms | `ease-out` | O preenchimento da barra de progresso, por `scaleX` |
+| `t-entrada` | 420 ms | `curva-entrada` | Mensagem nova na conversa, passo da introdução |
+| `t-salto` | 600 ms | `curva-quique` | A comemoração (X4) |
 
-Regras:
-
-1. **Só `transform` e `opacity`.** Nada de animar `blur`, `height`, `box-shadow` ou
-   `background-position` em área grande: são as que travam máquina fraca
-2. **CSS primeiro.** A biblioteca `motion` (ex-Framer Motion) **não entra no primeiro
-   carregamento**. Peça do 21st.dev que dependa dela é portada para CSS na adoção — a landing
-   page já tem a técnica pronta (revelar palavra a palavra, cascata, cursor em degrau) — ou não
-   é adotada. Se um dia um gesto exigir JavaScript, entra por `LazyMotion`, em pedaço separado
-3. **Nenhum laço decorativo.** Em laço só roda o que mostra trabalho acontecendo: o cursor do
-   texto chegando, os três pontos de "pensando", o esqueleto de carregamento (pulso de
-   opacidade, não faixa de brilho correndo)
-4. **A pergunta da Home entra uma vez por sessão**, palavra a palavra, e nenhum brilho fica
-   passando
-5. **Texto da IA chega em fluxo, sem efeito por letra.** Enquanto chega, o botão de enviar vira
-   "Parar"
-6. **`prefers-reduced-motion`** desliga tudo que desloca; sobra só troca de opacidade de até
-   150 ms
-7. **Área do aluno: só as linhas "Estado" e "Gesto", mais o carregamento.** Sem coreografia de
-   entrada, sem número subindo, sem confete, sem nada que premie ficar (D59)
+1. **Só `transform` e `opacity` animam.** Cor, borda e sombra trocam na hora, e o teste do CSS
+   servido confere as propriedades animadas (RF8 da X1)
+2. **Só CSS.** Nenhuma biblioteca de animação entra, nem `tw-animate-css`: a abertura do menu, do
+   diálogo e do painel ao lado é regra nossa
+3. **Nenhum laço decorativo.** Em laço só roda o que mostra trabalho acontecendo: os três pontos de
+   "pensando" e o esqueleto de carregamento, os dois em pulso de opacidade
+4. **Do mockup não entram**: o hover com `filter: brightness()`, que repinta a face; a largura da
+   lateral animada, que recalcula a página (ela recolhe seca); a transição de linhas de grade na
+   caixa de pedido; o `zoom` na página; e a onça piscando por temporizador
+5. **Texto da IA chega em fluxo, sem efeito por letra.** Enquanto chega, o enviar vira "Parar"
+6. **`prefers-reduced-motion`** desliga tudo o que desloca, por uma regra global: sobra só a troca
+   de opacidade
+7. **A comemoração** aparece uma vez, só na **entrega** de uma tarefa, nunca em nota, em acerto ou
+   em tempo de uso, e some com `prefers-reduced-motion` (D80, item 7; D59). Nasce na X4, se o
+   parecer do `conformidade-reviewer` aceitar (seção 7)
+8. **Área do aluno:** sem número subindo, sem selo de conquista, sem nada que premie ficar (D59)
 
 ### 9.6 A marca na interface
 
-- **Pinta + "Turmma" em Fustat** no topo da lateral; recolhida, fica só a pinta. `favicon` e
-  ícone de aplicativo são o `turmma-icone.svg`. Os arquivos da marca (`turmma-icone.svg`,
-  `turmma-negativo.svg`, `turmma-pinta.svg`) vêm de `mockups/public/marca/` e são do manual: é a
-  única coisa da pasta que entra no `apps/web` como está
-- A pinta **não gira, não estica e não troca de cor** fora das versões do manual. Não vira
-  indicador de carregamento
-- **Cada turma tem a pinta dela** (manual da marca): o sistema gera uma pinta própria, sempre a
-  mesma para aquela turma, e ela é o avatar da turma no seletor, no calendário e nos cartões.
-  *Proposta:* entra na A1, que é onde a turma passa a ser criada (D71 revista)
-- A roseta pode aparecer como padrão estático, bem apagada, no painel da tela de entrada. Em
-  nenhuma outra tela do produto há textura de fundo
+- **A pinta e "Turmma"** no topo da lateral, com 24 px de altura; no trilho, só a pinta de 36 px, e
+  na barra de topo do celular, de 28 px. O logotipo é SVG em curvas e é link para a página inicial
+  do papel ("Turmma, página inicial")
+- A pinta é laranja, e **não gira, não estica e não troca de cor** fora das versões do manual. Não
+  vira indicador de carregamento
+- **A turma se reconhece pela cor da matéria**, no selo e no ladrilho, e não por um avatar próprio:
+  a proposta de uma pinta por turma sai
+- A pinta pode aparecer parada, bem apagada, no painel da casca pública (11.3). Em nenhuma outra
+  tela há textura de fundo
 
-### 9.7 Avatar dos agentes
+### 9.7 A onça e o avatar dos agentes
 
-*Proposta do mockup; o Gabriel fecha o desenho antes da Tech Spec da A1.* São **três** agentes
-(D32 revista). O agente tem identidade de função e **nunca parece uma pessoa** (D17, D58): sem
-rosto, sem foto, sem nome próprio, sem mascote. O avatar é um **ladrilho** com o mesmo canto do
-ícone da marca (24% do lado), dentro das três cores, com o **ícone da função** dentro. Quem
-conversa tem cor cheia:
+**Decidido** (D80, item 3). A onça da marca é a mascote do produto e o avatar dos três agentes. É
+um **animal desenhado**, em três formas, sem contorno e sem degradê. As cores dela são fixas nos
+dois temas: pelagem `#E8732E`, sombra `#D75F18`, realce `#ED935D`, creme `#FDEBDD`, roseta
+`#7A3412`, pupila `#16233E`, olho `#FFFFFF`, nariz `#E5838C` e língua `#FF9FB0`.
 
-| Agente | Ladrilho | Ícone (lucide) | Cor do ícone |
-|---|---|---|---|
-| Assistente de ensino | `#0D0D0D` | `messages-square` | branco (19,4:1) |
-| Tutor | `#E8732E` | `message-circle-question` | tinta (6,4:1) |
-| Analista de desempenho escolar | `#F0F0F0` | `chart-column` | tinta (17,1:1) |
+**O avatar** (`AvatarAgente`) é a cabeça da onça num círculo `fundo`, com anel de 2 px na cor do
+agente: **Tutor `laranja`, Assistente de ensino `azul`, Analista de desempenho escolar `anil`**. O
+círculo com o ícone da função sai das telas. O avatar é `aria-hidden` e **só aparece com o nome da
+função e o selo "IA" visíveis no mesmo bloco**. Isso é garantido por estrutura, e não por
+combinado: só duas peças o desenham, `AssinaturaIA` e o balão de `MensagemIA`, e um teste reprova
+outro arquivo que importe a cabeça. Na lateral e no trilho, "Seu time" mostra o ícone da função
+num ladrilho, sem a onça: a casca mora na entrada, e no trilho não há lugar para o nome. As funções
+do Assistente não têm avatar próprio, e aparecem pelo nome ("Assistente · correção de objetiva").
+Tamanhos: 24 px na linha da mensagem, 32 na assinatura, 40 e 48 no cabeçalho.
 
-As **funções** do Assistente não têm avatar próprio. O ícone delas — `clipboard-check` na
-correção de objetiva, `sliders-horizontal` na adaptação, `calendar-days` em "seu dia e sua
-semana" — aparece no filtro da conversa e no cartão de entrega, sempre com o nome ao lado
-("Assistente · correção de objetiva").
+O avatar é **um desenho só por agente, com uma expressão neutra, parado**. As props são o agente e
+o tamanho. Não tem pose, "pensando", temporizador nem animação, e não muda com quem usa: nem com a
+presença, nem com a ausência, nem com acerto, erro, tempo de uso ou assunto da conversa.
 
-Tamanhos: 24 px na linha da mensagem, 32 px na lateral, 48 px no cabeçalho da conversa e na tela
-Agentes da coordenação. A cor ajuda, mas o **nome da função aparece sempre ao lado**: o avatar
-nunca é a única identificação. O ponto de estado ao lado do avatar diz só que há algo esperando
-você, nunca "online" — agente não fica "online" como gente (D59; P29).
+**A onça de corpo inteiro não aparece na X1.** Cada pose entra na spec que a usa, com parecer
+próprio do `conformidade-reviewer`, e nenhuma pisca, acena em laço ou reage a quem usa:
+
+| Pose | Onde | Nasce |
+|---|---|---|
+| Dormindo | O vazio "Tudo em dia" do sino | X2, com parecer |
+| Acenando · apontando | Os passos da introdução | X4, com parecer |
+| Comemorando | A entrega de uma tarefa (9.5, regra 7) | X4, com parecer; sai se ele vetar |
+| Acolhendo (expressão de preocupação) | — | não entra (D80, item 3) |
+
+O que a onça **nunca** é, em nenhuma spec (D58; Decreto 12.880, art. 11; regra 70, item 4a):
+
+- **Nunca tem nome próprio.** Quem assina é a função: "Tutor", "Assistente de ensino"
+- **Nunca tem traço de pessoa**: sem roupa, sem mão humana, sem rosto de gente, sem foto
+- **Nunca fala de afeto nem de si**: não diz que sente, que sentiu falta, que ficou triste ou
+  orgulhosa. Nenhum texto é atribuído à onça, e "onça" nunca é o nome acessível de um agente. A
+  fala ao lado dela é a do agente, na primeira pessoa da função (9.8)
+- **Nunca é agressiva**, e **nunca fica "online"**: ponto ao lado do avatar só diz que há algo
+  esperando a pessoa (D59)
+
+A onça fica fora do primeiro carregamento (10.4), e o caminho da pinta, que as rosetas repetem, é
+declarado uma vez, e não copiado em cada avatar.
 
 ### 9.8 Tom da interface
 
-- **Frase curta, verbo na frente, sem ponto de exclamação e sem "Ops".** "Salvo na biblioteca."
+- **Frase curta, verbo na frente, sem ponto de exclamação e sem "Ops".** "Salvo em Criados."
   "Não foi possível salvar. Tente de novo em instantes."
 - **O agente fala na primeira pessoa da função** e diz o que fez e o que espera: "Corrigi as 32
   provas do 2ºB, média 6,4. Esperando você aprovar." Nunca simula afeto ("senti sua falta") nem
@@ -732,12 +989,14 @@ você, nunca "online" — agente não fica "online" como gente (D59; P29).
   em PDF", não "OK"
 - **Vazio convida:** "Nenhuma prova ainda. Peça uma ao Assistente de ensino ou abra a ferramenta
   Prova." (regra 50, item 5)
-- **Aluno:** palavra de 11 anos, sem jargão, sem ironia. "O Tutor é um programa de computador.
-  Ele pode errar. Seu professor vê como você usa."
+- **Aluno:** palavra de 11 anos, frase de até doze palavras, sem jargão, sem ironia. "O Tutor é um
+  programa de computador. Ele pode errar. Seu professor vê como você usa."
 - **Número, data e hora** no formato local; autonomia de agente em português comum ("faz e
   avisa", "prepara e espera você"), nunca "nível 2"
 
 ### 9.9 Os tokens, como entram no código
+
+Vale até a tarefa 1.0 da X1 (`pele-e-casca`), que troca os dois testes para lerem a 9.10 e apaga este bloco.
 
 No Tailwind 4 de `apps/web` a paleta de fábrica já é zerada e só volta cor em hex (casca do F0).
 A paleta `slate`/`blue` de hoje dá lugar a esta, que é a do mockup com uma troca só, a
@@ -787,291 +1046,487 @@ A paleta `slate`/`blue` de hoje dá lugar a esta, que é a do mockup com uma tro
 }
 ```
 
-**A ponte com o 21st.dev.** As peças do catálogo são escritas no vocabulário do shadcn
-(`bg-background`, `text-muted-foreground`, `border-border`…). Em vez de reescrever classe por
-classe, esse vocabulário vira **apelido** dos nossos tokens, no mesmo `@theme`.
+**Modificador de opacidade em cor não entra** (`bg-tinta/80`, `text-apoio/50`). Conferido no
+Tailwind 4.3.3 do repositório: ele vira `color-mix()` nos dois ramos que o Tailwind gera, e
+`color-mix()` só existe a partir do Chrome 111. No Chrome 109 do laboratório a declaração é
+descartada: o hover não muda, e o fundo escurecido do diálogo simplesmente não aparece.
 
-A lista abaixo é a dos nomes que as peças do mapa (10.2) **de fato usam**, tirada do código
-delas:
+No lugar dele, troca-se por token em hex (os hovers já têm o deles) ou pelo `veu`, em `rgba()`, no
+fundo de diálogo. `estilos.test.ts` reprova a classe com modificador, o build para quando sobra
+`color-mix(` ou `oklch(` no CSS (`rebaixar-cor.ts`), e o e2e reprova as duas no CSS servido.
 
-| Nome do shadcn | Aponta para | Nome do shadcn | Aponta para |
-|---|---|---|---|
-| `background` | `fundo` | `primary`, `sidebar-primary` | `noite` |
-| `foreground`, `card-foreground`, `popover-foreground` | `tinta` | `primary-foreground`, `sidebar-primary-foreground` | branco |
-| `card`, `popover` | `superficie` | `secondary`, `muted`, `accent` | `realce-suave` |
-| `muted-foreground` | `sutil` | `secondary-foreground`, `accent-foreground` | `tinta` |
-| `border`, `sidebar-border` | `linha` | `input` | `borda-campo` |
-| `ring`, `sidebar-ring` | `noite` | `destructive` · `destructive-foreground` | `erro` · branco (6,6:1) |
-| `sidebar` | `lateral` | `sidebar-accent` | `realce` |
-| `sidebar-foreground`, `sidebar-accent-foreground` | `tinta` | | |
+### 9.10 Os tokens da D80
 
-**`primary` do shadcn aponta para o preto, não para o laranja.** Nas peças do catálogo, `primary`
-é o botão cheio de sempre, e o laranja aqui é raro de propósito: a nossa ação primária é a
-variante `primario` do botão (11.1). `accent` é o fundo de hover e de item em foco nos menus do
-shadcn, e por isso aponta para `realce-suave`.
+Os dois blocos abaixo são o `estilos.css` da X1. A tarefa 1.0 os copia para o código, e a partir
+dela `estilos.test.ts` e `e2e/tokens.spec.ts` leem **esta** seção: nome ou valor diferente entre o
+documento e o CSS reprova.
 
-Peça que usa cor de fábrica direta (`neutral-200`, `zinc-900`, variante `dark:`) **sai sem cor
-nenhuma**, porque a paleta é zerada — é assim que a revisão pega peça não vestida. O mockup
-apontou a rampa `neutral` para os cinzas do ChatGPT para vestir as peças de uma vez; no produto,
-esse atalho não entra (7). **Foco:** contorno de 2 px em `noite` com 2 px de afastamento; sobre
-fundo preto, `caramelo-noite` (9,3:1). Várias peças trazem `outline-none` no campo de texto: sai,
-para o foco global valer.
+O primeiro é o tema claro: os 33 nomes de hoje, com valor novo onde a D80 mudou (`lateral`,
+`linha`, `radius-caixa` e as duas sombras), mais os nomes novos. `static` faz o Tailwind emitir
+todas as variáveis, e não só as que alguma classe usa: as peças leem a cor da família por
+variável. `veu` é a única cor fora do hex de seis dígitos: é hex de oito, com a transparência no fim.
 
-**Modificador de opacidade em cor não entra** (`bg-primary/90`, `bg-black/80`, `text-tinta/50`).
-Conferido no Tailwind 4.3.3 do repositório: ele vira `color-mix()` nos dois ramos que o Tailwind
-gera, e `color-mix()` só existe a partir do Chrome 111. Se o build não rebaixar isso para cor
-fixa, no Chrome 109 do laboratório a declaração é descartada: o hover não muda, e o fundo
-escurecido do diálogo simplesmente não aparece. Na adoção, troca-se por token em hex (os hovers
-já têm: `caramelo-claro`, `noite-alto`, `realce-suave`) ou por `rgba()` literal no fundo de
-diálogo. Vale pedir ao e2e que reprove `color-mix(` no CSS servido, como já reprova `oklch(`
-(Joaquim).
+```css
+@theme static {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* chão e estrutura */
+  --color-fundo: #ffffff;
+  --color-fundo-suave: #f7f7f7;
+  --color-campo: #ffffff;
+  --color-mesa: #f7f7f7;
+  --color-borda: #e5e5e5;
+  --color-borda-forte: #d7d7d7;
+  --color-borda-campo: #8f8f8f;
+  --color-apagado: #afafaf;
+  --color-icone-papel: #efefef;
+  --color-icone-linha: #d7d7d7;
+  --color-foco: #146eaa;
+  --color-veu: #00000059;
+  /* texto */
+  --color-tinta: #0d0d0d;
+  --color-apoio: #424242;
+  --color-sutil: #5d5d5d;
+  --color-sobre-cor: #0d0d0d;
+  /* a decisão oficial */
+  --color-grafite: #333333;
+  --color-grafite-degrau: #0d0d0d;
+  --color-sobre-grafite: #ffffff;
+  /* as dez famílias: face, degrau, claro, borda e texto */
+  --color-laranja: #e8732e;
+  --color-laranja-degrau: #ba5c25;
+  --color-laranja-claro: #fdebdd;
+  --color-laranja-borda: #f5c0a1;
+  --color-laranja-texto: #a85220;
+  --color-azul: #1c9bef;
+  --color-azul-degrau: #167cbf;
+  --color-azul-claro: #dff1fd;
+  --color-azul-borda: #99d2f8;
+  --color-azul-texto: #146eaa;
+  --color-verde: #2fbf5b;
+  --color-verde-degrau: #269949;
+  --color-verde-claro: #e2f6e8;
+  --color-verde-borda: #a1e2b5;
+  --color-verde-texto: #1f7c3b;
+  --color-amarelo: #ffc31f;
+  --color-amarelo-degrau: #e0a000;
+  --color-amarelo-claro: #fff7e0;
+  --color-amarelo-borda: #ffe49a;
+  --color-amarelo-texto: #8c6b11;
+  --color-vermelho: #f2545b;
+  --color-vermelho-degrau: #c24349;
+  --color-vermelho-claro: #fde7e8;
+  --color-vermelho-borda: #f9b2b5;
+  --color-vermelho-texto: #b84045;
+  --color-roxo: #a56ef5;
+  --color-roxo-degrau: #8458c4;
+  --color-roxo-claro: #f2ebfe;
+  --color-roxo-borda: #d6befa;
+  --color-roxo-texto: #7d54ba;
+  --color-turquesa: #1dbfae;
+  --color-turquesa-degrau: #17998b;
+  --color-turquesa-claro: #dff6f4;
+  --color-turquesa-borda: #99e2db;
+  --color-turquesa-texto: #137a6f;
+  --color-anil: #6a85f7;
+  --color-anil-degrau: #556ac6;
+  --color-anil-claro: #eaeefe;
+  --color-anil-borda: #bcc8fb;
+  --color-anil-texto: #5165bc;
+  --color-lima: #9acd2e;
+  --color-lima-degrau: #7fb01c;
+  --color-lima-claro: #f1f8e2;
+  --color-lima-borda: #d2e8a1;
+  --color-lima-texto: #59771b;
+  --color-rosa: #f57cb5;
+  --color-rosa-degrau: #c46391;
+  --color-rosa-claro: #feedf5;
+  --color-rosa-borda: #fac4de;
+  --color-rosa-texto: #a25277;
+  /* os nomes de antes da D80, que as telas ainda usam (9.1) */
+  --color-superficie: #ffffff;
+  --color-lateral: #ffffff;
+  --color-linha: #e5e5e5;
+  --color-realce: #ececec;
+  --color-realce-suave: #f4f4f4;
+  --color-creme: #f4f4f4;
+  --color-papel: #f4f3f0;
+  --color-inativo: #8f8f8f;
+  --color-caramelo: #e8732e;
+  --color-caramelo-claro: #ee8747;
+  --color-caramelo-fundo: #d4651f;
+  --color-caramelo-texto: #b4520f;
+  --color-caramelo-noite: #f2a25b;
+  --color-noite: #0d0d0d;
+  --color-noite-alto: #2f2f2f;
+  --color-noite-baixo: #000000;
+  /* estado: fundo e texto */
+  --color-pendente-cx: #fdf0e8;
+  --color-pendente: #8a3e0c;
+  --color-ok-cx: #e9f5ee;
+  --color-ok: #0b6b47;
+  --color-erro-cx: #fdecec;
+  --color-erro: #b42318;
+  --color-info-cx: #f4f4f4;
+  --color-info: #0d0d0d;
+  --color-ia-cx: #f0f0f0;
+  --color-ia: #424242;
+
+  --font-corpo: ui-sans-serif, -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-titulo: ui-sans-serif, -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif;
+
+  --radius-selo: 8px;
+  --radius-linha: 10px;
+  --radius-controle: 12px;
+  --radius-botao: 12px;
+  --radius-cartao: 16px;
+  --radius-caixa: 16px;
+
+  /* nenhuma sombra com desfoque: anel de 2 px e degrau sólido de 4 px */
+  --shadow-caixa: 0 0 0 2px var(--color-borda);
+  --shadow-flutua: 0 0 0 2px var(--color-borda), 0 4px 0 0 var(--color-borda);
+
+  --t-toque: 100ms;
+  --t-estado: 150ms;
+  --t-gesto: 260ms;
+  --t-barra: 400ms;
+  --t-entrada: 420ms;
+  --t-salto: 600ms;
+  --curva-estado: cubic-bezier(0.2, 0, 0, 1);
+  --curva-entrada: cubic-bezier(0.22, 1, 0.36, 1);
+  --curva-quique: cubic-bezier(0.35, 1.8, 0.35, 0.83);
+}
+```
+
+O segundo é o tema escuro: os mesmos nomes de cor, menos `white` e `black`. Fica **fora de
+camada**, para vencer o `@layer theme` do Tailwind, e vale quando o `<html>` leva
+`data-tema="escuro"` (11.1). As sombras leem `--color-borda` e mudam junto. A variante `dark:`
+continua sem uso: nenhuma tela escreve cor por tema.
+
+```css
+:root[data-tema='escuro'] {
+  color-scheme: dark;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  /* chão e estrutura */
+  --color-fundo: #131f24;
+  --color-fundo-suave: #202f36;
+  --color-campo: #202f36;
+  --color-mesa: #0e181c;
+  --color-borda: #37464f;
+  --color-borda-forte: #52656d;
+  --color-borda-campo: #6b7f88;
+  --color-apagado: #52656d;
+  --color-icone-papel: #37464f;
+  --color-icone-linha: #52656d;
+  --color-foco: #60b9f4;
+  --color-veu: #00000099;
+  /* texto */
+  --color-tinta: #f1f7fb;
+  --color-apoio: #dce6ec;
+  --color-sutil: #8fa3ad;
+  --color-sobre-cor: #131f24;
+  /* a decisão oficial */
+  --color-grafite: #f1f7fb;
+  --color-grafite-degrau: #8fa3ad;
+  --color-sobre-grafite: #131f24;
+  /* as dez famílias: face, degrau, claro, borda e texto */
+  --color-laranja: #eb8447;
+  --color-laranja-degrau: #ba5c25;
+  --color-laranja-claro: #352c26;
+  --color-laranja-borda: #734528;
+  --color-laranja-texto: #ef9d6d;
+  --color-azul: #37a7f1;
+  --color-azul-degrau: #167cbf;
+  --color-azul-claro: #143344;
+  --color-azul-borda: #17577f;
+  --color-azul-texto: #60b9f4;
+  --color-verde: #48c76f;
+  --color-verde-degrau: #269949;
+  --color-verde-claro: #17392d;
+  --color-verde-borda: #20673d;
+  --color-verde-texto: #6dd28c;
+  --color-amarelo: #ffc31f;
+  --color-amarelo-degrau: #e0a000;
+  --color-amarelo-claro: #393923;
+  --color-amarelo-borda: #7d6922;
+  --color-amarelo-texto: #ffd562;
+  --color-vermelho: #f4696f;
+  --color-vermelho-degrau: #c24349;
+  --color-vermelho-claro: #37272d;
+  --color-vermelho-borda: #77373d;
+  --color-vermelho-texto: #f6878c;
+  --color-roxo: #b07ff6;
+  --color-roxo-degrau: #8458c4;
+  --color-roxo-claro: #2a2c45;
+  --color-roxo-borda: #554382;
+  --color-roxo-texto: #c09af8;
+  --color-turquesa: #38c7b8;
+  --color-turquesa-degrau: #17998b;
+  --color-turquesa-claro: #15393a;
+  --color-turquesa-borda: #186762;
+  --color-turquesa-texto: #61d2c6;
+  --color-anil: #7c94f8;
+  --color-anil-degrau: #556ac6;
+  --color-anil-claro: #212f46;
+  --color-anil-borda: #3a4d83;
+  --color-anil-texto: #97aaf9;
+  --color-lima: #9acd2e;
+  --color-lima-degrau: #7fb01c;
+  --color-lima-claro: #293b26;
+  --color-lima-borda: #506d28;
+  --color-lima-texto: #b8dc6d;
+  --color-rosa: #f68cbe;
+  --color-rosa-degrau: #c46391;
+  --color-rosa-claro: #372e3b;
+  --color-rosa-borda: #794965;
+  --color-rosa-texto: #f8a3cb;
+  /* os nomes de antes da D80, que as telas ainda usam (9.1) */
+  --color-superficie: #131f24;
+  --color-lateral: #131f24;
+  --color-linha: #37464f;
+  --color-realce: #202f36;
+  --color-realce-suave: #202f36;
+  --color-creme: #202f36;
+  --color-papel: #202f36;
+  --color-inativo: #52656d;
+  --color-caramelo: #eb8447;
+  --color-caramelo-claro: #ef9d6d;
+  --color-caramelo-fundo: #d4651f;
+  --color-caramelo-texto: #ef9d6d;
+  --color-caramelo-noite: #f2a25b;
+  --color-noite: #f1f7fb;
+  --color-noite-alto: #dce6ec;
+  --color-noite-baixo: #ffffff;
+  /* estado: fundo e texto */
+  --color-pendente-cx: #352c26;
+  --color-pendente: #ef9d6d;
+  --color-ok-cx: #17392d;
+  --color-ok: #6dd28c;
+  --color-erro-cx: #37272d;
+  --color-erro: #f6878c;
+  --color-info-cx: #202f36;
+  --color-info: #f1f7fb;
+  --color-ia-cx: #202f36;
+  --color-ia: #dce6ec;
+}
+```
 
 ---
 
-## 10. Componentes: tudo vem do 21st.dev
+## 10. Peças
 
-### 10.1 O protocolo de adoção
+### 10.1 As peças são nossas
 
-**Direção dada:** nenhuma peça de interface genérica, e nada escrito do zero que o catálogo
-tenha. Como isso convive com as regras do repositório:
+**O produto não usa Radix, shadcn nem catálogo de terceiro** (revê a direção de setembro, que
+mandava vestir peças do 21st.dev). As dependências da web continuam sendo React, TanStack Query,
+`wouter`, `lucide-react` e `qrcode-generator`: não entram `@radix-ui/*`,
+`class-variance-authority`, `clsx`, `tailwind-merge` nem `tw-animate-css`. O mockup usa todas, e
+por isso é referência de desenho, não de código. O primeiro carregamento tem teto (10.4), o
+laboratório tem Chrome 109, e o produto já tem diálogo, menu e abas feitos à mão, com teste de
+teclado.
 
-1. **Procurar antes de escrever.** `21st search "<o que é>"`. O PRD ou a tarefa de tela registra
-   qual peça foi usada (`autor/slug`). Só se escreve do zero o que é do nosso domínio e não
-   existe lá (o registro da validação, o selo de IA), e mesmo isso é montado sobre peças de lá
-2. **Licença declarada e permissiva**: MIT, Apache-2.0 ou ISC, anotada na tarefa. Peça **sem
-   licença** no catálogo é "todos os direitos reservados" e **não entra**; copyleft (MPL, GPL)
-   também não. É a mesma disciplina do material didático (D5): o que não tem licença não entra
-   por nenhum caminho
-3. **Dependência na lista.** Livre: `clsx`, `tailwind-merge`, `class-variance-authority`,
-   primitivos `@radix-ui/react-*`, `lucide-react`, e `tw-animate-css` — é só CSS, e é o que dá a
-   abertura e o fechamento de menu, diálogo, seletor e dica do shadcn (`animate-in`,
-   `fade-in-0`…); sem ele tudo funciona, só abre seco. **Só em pedaço carregado sob demanda:**
-   `react-markdown`, `remark-gfm`, `date-fns`, `react-day-picker`, `recharts`, `sonner`, `cmdk`,
-   `react-dropzone`. **Fora:** `motion`/`framer-motion` no primeiro carregamento, segunda
-   biblioteca de primitivos (`@heroui`, `@ark-ui`, `@base-ui-components`, `antd`, `@mui`),
-   segunda biblioteca de ícones, `three` e afins, e qualquer `next/*` — somos SPA com Vite
-4. **Vestir.** A peça entra com os tokens da 9.9, as fontes da 9.2 e os ícones da 9.4. Sem cor
-   de fábrica, sem `oklch()`, sem variante `dark:`, **sem modificador de opacidade em cor** (9.9)
-   e sem `outline-none` que apague o foco. Peça no vocabulário do shadcn se veste sozinha pela
-   ponte; peça com cor fixa é troca à mão, e o tamanho dessa troca entra na estimativa da tarefa
-5. **Passar na regra 50.** Teclado e foco visível, alvo de 44 px na ação principal, 360 px sem
-   rolagem horizontal, **nada que só apareça no hover**, os quatro estados, `motion-reduce` em
-   toda animação em laço, e o teste com CPU e rede limitadas. O `frontend-reviewer` audita como
-   qualquer tela
-6. **Peça pronta grande perde para peça pequena montada.** Se o bloco pronto não tem lugar para
-   o que é nosso (cartão de ferramenta, citação, selo de IA, registro da validação), ele vira
-   referência, e a tela é composta com as peças menores do mesmo catálogo. Foi o que a leitura
-   do código decidiu para a conversa, a pergunta da D18, a citação e a entrada (10.2)
-7. **O código da peça é nosso depois de entrar.** Vai para o repositório, é revisado e testado
-   como código do produto (D71: fatia fina não é atalho). A conta do 21st.dev está no plano
-   pago: busca e código sem limite. A geração por IA do 21st não está ligada, e não faz falta
+1. **Teclado, foco e ARIA são nossos.** Cada peça declara o padrão que segue, e o teste o percorre:
+   diálogo modal (foco preso, Esc, foco devolvido a quem abriu), menu, abas, grupo de rádio,
+   interruptor e campo nativo. O que o mockup deixou de fora (Home e End, o `tabpanel`, o papel de
+   grade na tabela) a peça do produto tem
+2. **Um anel de foco só**: contorno de 3 px em `foco`, com 2 px de afastamento, em tudo o que
+   recebe foco pelo teclado, nos dois temas. No campo de texto o afastamento é zero; na linha de
+   tabela o anel vai por dentro. Nenhuma peça apaga o contorno, nem depende de `:has()` para
+   mostrá-lo
+3. **Os quatro estados** (regra 50, item 5). O mockup não fala com servidor e não desenha
+   carregando nem erro: valem os três de `componentes/estado/`, e botão que dispara pedido não
+   aceita o segundo clique
+4. **Teste de componente por peça** (jsdom e testing-library): estados, nome acessível e teclado.
+   E a **galeria** (`/galeria`) mostra cada peça com todos os estados, nos dois temas, e passa pelo
+   axe nos projetos `chromebook` e `celular`
+5. **Só token.** Nenhuma cor fora da 9.10, nenhum modificador de opacidade, nenhuma variante `dark:`
+6. **Nada só no hover** (regra 50, item 2a): o que aparece ao passar o mouse aparece também no foco
+   e fica sempre à vista no toque
+7. **Peça revestida não muda de props.** A X1 troca o desenho por dentro, e a tela que a usa não é
+   tocada: é o que deixa a pele entrar por baixo das telas
 
-### 10.2 O mapa de peças
+### 10.2 O catálogo das peças da X1
 
-Levantado no catálogo em 19/09/2026 e **conferido no código**: as peças foram baixadas pelo CLI
-(`21st get <id>`) e lidas contra o protocolo da 10.1 — o que cada uma importa, cor de fábrica,
-variante `dark:`, modificador de opacidade, `motion`, `next/*`, biblioteca de ícones, o que só
-aparece no hover e o que respeita `prefers-reduced-motion`. A licença vem da página da peça. O
-número ao lado do endereço é o id para `21st get`. A conferência de acessibilidade em tela
-acontece na adoção.
+**R** é peça que já existe e é revestida, sem mudar props; **N** é peça nova, uma por arquivo, com
+teste de componente. As medidas vêm do inventário do mockup; "(produto)" marca um desvio da 9.1.
 
-**O que a leitura do código mostrou, em quatro linhas:**
+**Ação**
 
-1. **As peças do shadcn já vêm no vocabulário semântico** (`bg-background`, `text-muted-foreground`),
-   sem cor de fábrica e sem `dark:`. A ponte da 9.9 veste todas sem tocar no arquivo
-2. **A família Agent Elements, que é a base do chat, não vem.** Tem zero classe semântica: nas
-   sete peças adotadas são **121 classes `neutral-*` e 63 variantes `dark:`** em 1.167 linhas. O
-   desenho é o melhor do catálogo e a dependência é quase nenhuma, mas vestir é troca à mão,
-   arquivo por arquivo. Era o trabalho de tela mais caro da A2; o MVP escreveu as peças do chat de
-   novo em `apps/web/src/componentes/ia/`, sem a família
-3. **Dezesseis peças usam modificador de opacidade** (`bg-primary/90`, `bg-black/80`), inclusive
-   `shadcn/button`, `dialog`, `sheet` e `alert-dialog`. Ver a regra nova na 10.1, item 4
-4. **Nenhuma animação em laço das peças respeita `prefers-reduced-motion`** (o brilho do
-   "gerando…", os três pontos, o pulso do esqueleto). Entra `motion-reduce:` na adoção
+| Peça | Desenho | Estados e teclado |
+|---|---|---|
+| `Botao` (R) | Canto 12, rótulo em `t-rotulo` numa linha, glifo de 20 px à esquerda. `principal`: face de 46 px. `compacto`: face de 38 px, letra de 14 | Hover troca a face; apertado desce o degrau, também no toque; desligado sem degrau, face `borda`, texto `sutil` |
+| `Toque` (N) | Pílula com face de 40 px, borda 2, 15 px em 700. Escolhido em `azul-claro`, `azul-borda`, `azul-texto` | `aria-pressed`. É filtro e sugestão, não aba |
+| `Menu` (R) | Caixa flutuante de canto 16, largura mínima de 224 px. Item de 44 px, canto 10, 15 px em 500, glifo de 18 em `sutil` | Realçado em `fundo-suave`, perigoso em `vermelho-texto`. Teclado de `teclado-do-menu.ts` |
 
-**A casca**
+Os seis desenhos do botão, e nenhum outro (RF5 da X1):
 
-| Para | Peça (`autor/slug` · id) | Depende de | Licença | Ao adotar |
-|---|---|---|---|---|
-| Lateral dos três papéis, trilho recolhido, gaveta no celular | `shadcn/sidebar` · 1627 | Radix (dialog, tooltip, separator, slot), lucide; traz `sheet`, `skeleton`, `tooltip`, `separator`, `button`, `input` | MIT | 764 linhas, toda semântica. Trocar as constantes: `SIDEBAR_WIDTH` de 16rem para **260px**, `SIDEBAR_WIDTH_ICON` de 3rem para **56px** (alvo de toque). Já vem com atalho Ctrl/⌘+B e guarda aberto/fechado num cookie `sidebar_state` de 7 dias: é preferência de tela, não dado sensível, mas é cookie — o Joaquim decide se fica ou vai para memória |
-| Gaveta do celular | `shadcn/sheet` | Radix dialog | MIT | Vem junto com a lateral. O fundo escurecido usa `bg-black/80`: trocar (10.1, item 4) |
-| Seletor de escola, menu da pessoa | `shadcn/dropdown-menu` · 1574 | Radix | MIT | — |
-| Dica de botão só de ícone | `shadcn/tooltip` · 1277 | Radix | MIT | Nunca é a única fonte do rótulo |
-| Buscar (atalho de teclado) | `shadcn/command` · 714 | `cmdk`, Radix dialog | MIT | Sob demanda. Fora do MVP |
+| Variante | Face | Degrau | Texto | Hover | Para |
+|---|---|---|---|---|---|
+| `primario` | `laranja` | `laranja-degrau` | `sobre-cor` | `caramelo-claro` | **A** ação de criar e pedir. No máximo um por tela |
+| `oficial` | `grafite` | `grafite-degrau` | `sobre-grafite` | `noite-alto` | **Só decisão oficial**: aprovar, publicar, confirmar |
+| `secundario` | `fundo`, borda `borda` | `borda` | `apoio` | `fundo-suave` | A alternativa, e as duas opções de uma escolha de peso igual |
+| `discreto` | transparente | não tem | `azul-texto` | `fundo-suave` | Ação de linha, de barra, de cartão |
+| `perigo` | `fundo`, borda `vermelho-borda` | `vermelho-borda` | `vermelho-texto` | `fundo-suave` | Recusar, excluir, revogar |
+| `perigo` cheio | `vermelho` | `vermelho-degrau` | `sobre-cor` | não muda | Só o botão que confirma, dentro do diálogo |
 
-**O chat — do Assistente de ensino e do Tutor.** A conversa é **montada por nós com peças
-pequenas**, e não adotada como um bloco só. A peça pronta do catálogo, `serafimcloud/agent-chat`
-(12402), foi lida e **não serve como moldura**: a mensagem dela só aceita texto e erro (não há
-lugar para cartão de ferramenta, citação nem selo), ela não expõe a barra da caixa de pedido, e
-carrega dentro uma cópia da `input-bar`. Fica como referência de composição.
+A face e o degrau do `oficial` não são os de nenhuma outra variante, nos dois temas, e um teste
+prova isso (RF6 da X1).
 
-As peças da família Agent Elements aparecem no site sob o time `@21st`, mas **o endereço de
-instalação é o do autor**: `21st add serafimcloud/<slug>`.
+**Conter e listar**
 
-| Para | Peça (`autor/slug` · id) | Depende de | Licença | Ao adotar |
-|---|---|---|---|---|
-| **Moldura de cada mensagem**: avatar, cabeçalho (nome do agente + selo "IA"), conteúdo, rodapé de ações, alinhamento | `shadcn/message` · 19072 | — | MIT | Semântica, 95 linhas. É onde mora a assinatura da IA (11.3) |
-| **Caixa de pedido** com barra | `serafimcloud/input-bar` · 12399 | `clsx`, `tailwind-merge` | MIT | Tem o que precisamos: `leftActions` e `rightActions` (Ferramenta, Web, turma), `status` e `onStop` (enviar vira Parar), `placeholder`. Vestir: 32 `neutral-*`, 17 `dark:`. **Corrigir:** o botão de remover anexo só aparece no hover e tem 16 a 20 px — fica sempre visível, com 24 px no mínimo (regra 50, item 2a). Anexo fora do MVP |
-| Seletor de ferramenta e de turma | `serafimcloud/mode-selector` · 12356 | + `@tabler/icons-react` | MIT | Ícones para lucide. Vestir: 21 `neutral-*` |
-| Atalhos de ferramenta | `serafimcloud/suggestions` · 12342 | — | MIT | 62 linhas, sem ícone próprio. Quebra em duas linhas no celular |
-| Mensagem de quem escreve | `serafimcloud/user-message` · 12353 | — | MIT | Bolha em `creme` |
-| Resposta da IA em fluxo, com tabela e link | `serafimcloud/markdown` · 12396 | `react-markdown`, `remark-gfm` | MIT | Sob demanda. É a que mais custa vestir: 44 `neutral-*`, 23 `dark:` |
-| "Pensando" | `jakobhoeg/message-loading` · 1380 | — | MIT | SVG puro, 48 linhas. Acrescentar `motion-reduce` |
-| "Gerando a prova…" | `serafimcloud/generic-tool` · 12376 | — | MIT | Ícone, título e detalhe; o título ganha brilho enquanto `isPending`. O brilho é laço que mostra trabalho (9.5, regra 3), em área do tamanho de uma linha. Acrescentar `motion-reduce` |
-| Erro e **degradação declarada** (regra 80, item 4) | `serafimcloud/error-message` · 12394 | — | MIT | 35 linhas. Texto nosso: "Muita gente usando agora. Sua resposta sai em instantes." |
-| **A pergunta da D18** ("Quer usar a ferramenta Prova?") | `shadcn/card` · 1551 + dois `shadcn/button` | — | MIT | **Um clique, dois botões do mesmo peso** (D59). A peça de pergunta do catálogo (`serafimcloud/question-tool`, 12420) foi lida e descartada: pede selecionar a opção **e depois** enviar, tem 585 linhas e 60 `neutral-*`, para resolver o que dois botões resolvem |
-| **Cartão de ferramenta** dentro da conversa | `shadcn/card` · 1551 + os campos de "Ferramentas, em formulário" | — | MIT | É o mesmo formulário da ferramenta, não um segundo. A peça que parecia servir de base (`serafimcloud/edit-tool`, 12388) é um visualizador de diff de código: dela só vale a ideia do rodapé com duas ações |
-| **Citação de página** dentro do texto | `shadcn/popover` · 1320 + o selo (`sean0205/badge-2`) | Radix popover | MIT | Abre por **clique e por teclado**, e por isso funciona no toque. A peça pronta (`vercel-crawled/inline-citation`, 5249) abre por hover e arrasta `embla-carousel-react` e onze arquivos: descartada |
-| Lista de fontes ao fim da resposta | `shadcn/collapsible` · 847 | Radix collapsible | MIT | Duas variantes de linha: "material da escola, p. X" e "da web" (D68). Referência de desenho: `vercel-crawled/sources` (5257), que é cópia rastreada e não declara licença |
+| Peça | Desenho | Estados e teclado |
+|---|---|---|
+| `Cartao` (R) | Canto 16, borda 2, face `fundo`, 16 px por dentro (20 a partir de 768). De leitura, sem degrau. A cor de família vai no ladrilho e no selo de dentro, nunca no fundo inteiro | Clicável: degrau, hover `fundo-suave`. Selecionado: `azul-claro` com `azul-borda` |
+| `Linha` (N) | A linha inteira clicável: mínimo de 64 px, separada da de cima por 2 px. Título em `t-cartao`, numa linha com reticências; embaixo, `t-apoio`; no fim, chevron de 20 em `apagado` | Link, botão ou só leitura. Hover `fundo-suave` |
+| `Tabela` (R) | Moldura de canto 16. Cabeçalho de 44 px em `t-selo`; linha de 64 px, 15 px em 500. Abaixo de 768 px cada linha vira um cartão | Linha ativa em `azul-claro`. Linha que abre: inteira, por Enter e espaço. Não ordena |
+| `Abas` (R) | Linha de 48 px sobre um fio de 2 px (44 no cabeçalho de página). Rótulo em `t-rotulo`, `sutil`; a ativa em `azul-texto`, com sublinhado de 3 px em `azul`. **Até três** | Teclado de `teclado-das-abas.ts` |
+| `Tela` (R) | A moldura de toda tela, com o título e as larguras (11.2) | — |
+| Os três de `estado/` (R) | Coluna centrada, título em `t-secao` e uma ação. O vazio "Tudo em dia" leva a onça dormindo | Carregando em pulso de opacidade; o erro diz o que fazer |
 
-**Seu time e a aprovação**
+**Marcar e informar**
 
-| Para | Peça (`autor/slug` · id) | Depende de | Licença | Ao adotar |
-|---|---|---|---|---|
-| Linha de agente na lateral; cartão de entrega (o que fez, o que espera, ações) | `shadcn/item` · 8669 | Radix (slot, avatar, separator, dropdown) | a conferir (o 21st não declara; a origem, shadcn/ui, é MIT) | Semântica. O cartão de entrega usa `shadcn/card` quando precisa de corpo |
-| Base do avatar de agente e da pinta da turma | `shadcn/avatar` · 707 | Radix avatar | MIT | Ladrilho da 9.7, não círculo |
-| Contador de não lidos, selo de estado, selo "IA", chip de fonte | `sean0205/badge-2` · 3560 | `radix-ui` | MIT | Trocar o pacote único pelo primitivo avulso. Vem com 56 classes de cor viva e 26 `dark:` para uma dúzia de variantes: **ficam só as cinco famílias da 9.1** (`pendente`, `ok`, `erro`, `info`, `ia`) e o resto sai |
-| Destaque fora da curva, aviso permanente do aluno | `shadcn/alert` · 1170 | `cva` | MIT | 60 linhas, semântica; as variantes são as famílias `pendente` e `info`. (A `sean0205/alert-1`, 3587, faz o mesmo com 264 linhas e 32 cores vivas) |
-| Lote de correções, governança, auditoria | `shadcn/table` · 721 | — | MIT | Vira lista no celular; virtualizada quando longa (regra 50) |
-| Confirmar ação oficial | `shadcn/alert-dialog` · 705 | Radix | MIT | Mostra aluno, avaliação e valor (regra 50, item 8). Fundo escurecido: trocar a opacidade |
-| Rejeitar com justificativa, detalhes | `shadcn/dialog` · 1248 | Radix | MIT | Idem |
+| Peça | Desenho | Estados e teclado |
+|---|---|---|
+| `Ladrilho` (N) | Quadrado de canto 12, fundo no `claro` da família, ícone a 72% do lado. De 32 a 56 px | `role="img"` com rótulo; sem ele, `aria-hidden` |
+| `Estado`, o selo (R) | 24 px de altura, canto 8, `t-selo`, glifo de 16. Neutro: `fundo-suave` com `apoio`. De família: `claro` com `texto`. As famílias de hoje (`pendente`, `ok`, `erro`, `info`) continuam | Sempre com texto ou glifo |
+| `Contador` (N) | Pílula na face da família, texto `sobre-cor` em 700, tabular. 22, 24 ou 28 px | `role="img"`, com o número e o que ele conta. Sem item, não aparece |
+| `Aviso` (N) | Canto 12, borda 2 na `borda` da família, fundo `claro`, sem degrau. Glifo num círculo de 28. Título em `t-cartao`; corpo em 15 / 21 px, `tinta`. Informação azul, atenção amarelo, erro vermelho, certo verde | `role="alert"` só no erro que acabou de acontecer |
+| `Faixa` (R) | O aviso permanente, que não fecha (D8), na família `info` | `role="note"`. Não tem botão |
+| `BarraRotulada` (R) | Trilho em `borda`, de 16 ou 12 px, preenchido por `scaleX`. O texto ("2 de 8") vai fora. Só mede o que tem fim | `role="progressbar"`. Barra de acerto é neutra |
+| `NumeroPainel` (R) | O valor em `t-numero`, o rótulo em `t-selo`, `sutil` | Sem variação "boa" ou "ruim" em cor |
+| As de `componentes/ia/` (R) | O avatar da 9.7; o nome da função em 15 px e 700; o selo "IA" neutro; o chip de página, pílula de 28 px; o chip "da web", com a borda tracejada; a linha de quem aprovou, em `ok` | O chip abre por clique e por teclado |
 
-**Ferramentas, em formulário**
+**Formulário**
 
-| Para | Peça (`autor/slug` · id) | Depende de | Licença | Ao adotar |
-|---|---|---|---|---|
-| Botão, nas cinco variantes da 11.1 | `shadcn/button` · 1323 | Radix slot, `cva` | MIT | Variante `oficial` é nossa. O hover de fábrica é `bg-primary/90`: trocar por `caramelo-claro` e `noite-alto` |
-| Botão trabalhando | `shadcn/spinner` · 8677 | lucide | a conferir | 17 linhas |
-| Campos | `shadcn/input` · 1442, `textarea` · 1281, `select` · 788, `checkbox` · 1289, `radio-group` · 1410, `switch` · 1364, `label` · 1549 | Radix | MIT | Borda em `borda-campo`; `inputmode` e `autocomplete` certos |
-| Importação da coordenação em passos | `originui/stepper` · 778 | `@radix-ui/react-icons` | MIT | Ícones para lucide |
-| Envio de material com licença | `haydenbleasel/dropzone` · 542 | `react-dropzone` | MIT | Sob demanda; recusa sem licença antes de enviar (D5) |
-| Abas de Turmas e da turma aberta | `shadcn/tabs` · 953 | Radix | MIT | — |
+| Peça | Desenho | Estados e teclado |
+|---|---|---|
+| `Campo`, `CampoDeSenha`, `CampoLongo`, `Selecao` (R) | 48 px (o longo, no mínimo 96), canto 12, borda 2 em `borda-campo` (produto), fundo `campo`, 17 px em 500. Rótulo de 15 px em 700; dica em `t-apoio` | Foco: o anel (produto). Inválido: borda e mensagem em `vermelho-texto`, com ícone e `role="alert"`. Desligado: `fundo-suave` |
+| `Busca` (N) | 44 px, letra de 16, lupa de 20 à esquerda | O rótulo é só para leitor de tela |
+| `Opcao` (N) | Um `<label>` com o `<input>` de verdade: degrau, canto 12, mínimo de 64 px. Texto em `t-cartao`; à direita, um círculo de 24 com o visto. Marcada em `azul-claro`, `azul-borda`, `azul-texto` | Teclado nativo. Quem usa põe o `fieldset` e a `legend` |
+| `Interruptor` (N) | Trilho de 52 × 32 px. Desligado: `borda`, com borda `borda-campo` (produto). Ligado: `azul`, com borda `azul-degrau`. Bolinha de 24 em `fundo` (produto) | `role="switch"`. Muda na hora |
+| `Segmentado` (N) | Grupo de 44 px, borda 2, canto 12. A opção ativa em `azul-claro`, `azul-borda`, `azul-texto`. Até quatro. Troca o jeito de ver; não é aba | `radiogroup`, com as setas, Home e End |
+| `Aparencia` (N) | O `Segmentado` Sistema · Claro · Escuro, em "Sua conta" | Só a escolha explícita grava; voltar a Sistema apaga a chave. Sem armazenamento, vale o sistema, calado |
 
-**Painéis, calendário e estados**
+**Sobrepor**
 
-| Para | Peça (`autor/slug` · id) | Depende de | Licença | Ao adotar |
-|---|---|---|---|---|
-| Acerto por habilidade, consumo contra orçamento, uso do dia do aluno | `shadcn/progress` · 826 | Radix | MIT | Barra com rótulo e número ao lado; no aluno, cor neutra |
-| Gráfico de série no tempo | `shadcn/chart` · 982 | `recharts` | MIT | Sob demanda, e só quando houver série de verdade (F12). O MVP vive de barra |
-| Calendário do professor | `ahmedmayara/fullscreen-calendar` · 640 | `date-fns` | MIT | Sob demanda. É visão de mês, sem localidade ligada: passar `ptBR` do `date-fns`; semana e dia são adaptação nossa. Fora do MVP |
-| Vazio que convida | `serafimcloud/empty-state` · 1435 | lucide | MIT | Semântica. Veste o `EstadoVazio` que já existe |
-| Carregando | `shadcn/skeleton` · 1588 | — | MIT | Pulso de opacidade. Acrescentar `motion-reduce` |
-| Aviso temporário ("Salvo", "Exportado") | `shadcn/sonner` · 886 | `sonner` | MIT | Sob demanda. Nunca para erro que pede ação |
-| Entrada | `shadcn/card`, `input`, `label`, `button` | — | MIT | Montada com os nossos campos. A peça de entrada do catálogo (`preetsuthar17/clean-minimal-sign-in`, 2110) é um formulário de e-mail e senha com texto em inglês e cor fixa: serve de **referência de layout**, não de base — o aluno aqui nem tem e-mail (D48) |
+| Peça | Desenho | Estados e teclado |
+|---|---|---|
+| `Dialogo` (R) | Sobre o `veu`. Caixa centrada de até 520 px, canto 16, borda 2 e degrau 4. Cabeçalho de no mínimo 64 px, com o título em `t-secao`; miolo com 24 px, que rola por dentro; rodapé com os botões à direita | Ao abrir, o foco vai ao primeiro campo ou ao primeiro botão do rodapé |
+| `DialogoDeConfirmacao`, `dialogos.tsx` (R) | 460 px. **Dois botões do mesmo tamanho**: o `secundario` à esquerda e o que confirma à direita, em `oficial` ou em `perigo` cheio | O que vai acontecer está escrito antes dos botões (regra 50, item 8) |
+| `LoginPorCima` (R) | O diálogo da sessão vencida, na mesma caixa | Funciona com outro diálogo aberto por baixo |
+| `PainelLado` (N) | A partir de 768 px, entra pela direita com 480 px e a altura da janela. Abaixo, folha de baixo de até 88% da altura, com canto de 20 em cima. Cabeçalho de 64 px | Diálogo modal. Fecha com o X e com Esc |
 
-**Referência de movimento** — o desenho vem do catálogo, a implementação é CSS (9.5). As duas
-foram lidas e dependem de `motion`, como esperado: saudação, de `tom_ui/blur-reveal` (18544,
-MIT), sem o desfoque; brilho de uma passada na pílula, de `preetsuthar17/shining-text` (1865, MIT).
+O que o mockup tem e a X1 não traz nasce com a tela que usa (X2 a X4).
 
-### 10.3 O que o catálogo tem e aqui é proibido
+### 10.3 O que é proibido
 
-Não é questão de gosto: cada linha bate em regra ou em lei.
+Não é questão de gosto: cada linha bate em regra ou em lei. Vale para peça nossa, para o que o
+mockup desenhou e para o que qualquer catálogo oferecer.
 
-| O que aparece no catálogo | Por que não entra |
+| O que não entra | Por quê |
 |---|---|
-| Selo de sequência de dias, placar, pódio, tabela de classificação (`streak-badge`, `leaderboard-*`) | D59 e Decreto 12.880, arts. 9º e 10 (recompensa por uso); regra 50, item 9 (ranking de aluno); D64 (ranking de professor) |
-| Contagem regressiva, "só hoje", adesivo de novidade | D59: urgência fabricada |
+| Sequência de dias, pontos, vidas, placar, pódio, tabela de classificação, recompensa variável | D59 e Decreto 12.880, arts. 9º e 10; regra 50, item 9 (ranking de aluno); D64 (ranking de professor); D80, item 7 |
+| Comemoração de nota, de acerto ou de tempo de uso | D59. A única comemoração é a da entrega, uma vez (9.5) |
+| Contagem regressiva, "só hoje", adesivo de novidade, notificação insistente | D59: urgência fabricada |
 | Seletor de humor ou de emoção, histórico de comportamento | Regra 70, item 7, e D57: o produto não infere nem registra estado emocional |
-| Avatar de IA com rosto, foto ou nome de gente; "orbe" que pulsa como presença viva | D58 e Decreto 12.880, art. 11: o agente não se passa por pessoa nem simula vínculo. Os orbes ainda são canvas e WebGL (9.3) |
-| Letreiro correndo, rolagem infinita, carrossel que anda sozinho | D59: conteúdo que começa sozinho, rolagem infinita |
-| Fundo de shader, globo 3D, brilho de borda animado, vidro fosco | Regra 50, item 1: custa quadro no Chromebook |
-| Moldura de celular e de notebook para exibir tela | É peça de landing page e de material de venda, não de produto |
-| Qualquer peça sem licença, ou com `next/*`, ou com biblioteca de primitivos própria | 10.1, itens 2 e 3 |
+| Avatar de IA com rosto, foto ou nome de gente; mascote com nome próprio ou que diz que sente; "orbe" que pulsa como presença viva | D58 e Decreto 12.880, art. 11: o agente não se passa por pessoa nem simula vínculo (9.7) |
+| Verde para "melhorou" e vermelho para "piorou" | Cor é categoria, nunca julgamento (9.1) |
+| Letreiro correndo, rolagem infinita, carrossel que anda sozinho | D59: conteúdo que começa sozinho |
+| Fundo de shader, globo 3D, brilho de borda animado, vidro fosco, sombra borrada | Regra 50, item 1: custa quadro no Chromebook |
+| Peça de catálogo de terceiro, segunda biblioteca de ícones, biblioteca de animação | 10.1 |
 
 ### 10.4 Orçamento
 
-O limite de hoje é **150 kB de JS (brotli)**, medido sobre o build inteiro porque a casca do F0
-não tem import dinâmico. Com telas de verdade, *proposta para a Tech Spec da A1*: o limite
-continua valendo para o **primeiro carregamento** (casca, entrada, lateral, Home vazia), e cada
-área pesada vira pedaço próprio, carregado quando a pessoa chega nela:
+O limite é **150 kB de JS (brotli) no primeiro carregamento**: a entrada e os pedaços que ela
+importa estaticamente, medidos no build de verdade (`apps/web/nome-dos-chunks.test.ts`). Hoje são
+perto de 127 kB, e o teto **não sobe** com a pele (RF22 da X1).
 
 | Pedaço | O que carrega | Quando |
 |---|---|---|
-| Inicial | React, TanStack Query, roteador, lateral, caixa de pedido, botões, estados | Sempre |
-| Conversa | `react-markdown`, `remark-gfm`, citação, cartões | Na primeira resposta da IA |
-| Painéis | `recharts`, quando existir | Ao abrir Turmas ou Governança |
-| Ferramentas | os ícones ilustrados (9.4) e o motor do formulário (P23) | Ao abrir Ferramentas |
-| Calendário | `date-fns`, a peça do calendário | Ao abrir Calendário |
-| Material | `react-dropzone` | Ao abrir Material (coordenação) |
+| Entrada | React, TanStack Query, roteador, as páginas públicas, a casca, o tema e os ícones de lugar (até 4 kB) | Sempre |
+| Área do papel | As rotas da área e as telas dela, cada tela num pedaço de até 30 kB | Depois da guarda de papel |
+| Peças | As peças novas, as de `componentes/ia/` e a onça (o teto do pedaço sobe de 26 para até 40 kB) | Na primeira tela que usa |
+| Galeria | Todas as peças, nos dois temas | Só com a variável do build ligada |
 
-Fonte: só a Fustat do logotipo, 12 KB, com `preload`. Nenhuma imagem decorativa acima de 30 KB;
-ilustração da entrada em SVG ou WebP.
+- **A casca mora na entrada**, e por isso não importa peça de fora dela: nem a onça, nem peça de
+  `componentes/ia/`
+- **A área de um papel não baixa ícone nem peça de outro**
+- **Nenhuma fonte.** Nenhuma imagem decorativa acima de 30 KB; ilustração é SVG
 
 ---
 
-## 11. A casca e as telas-chave
+## 11. A casca e os tipos de página
 
-### 11.1 A casca, igual nos três papéis
+### 11.1 A casca da escola
+
+Uma só para coordenação, professor e aluno. A lateral do professor, como fica na X1:
 
 ```
-┌────────────────────────┬──────────────────────────────────────────────────────────┐
-│ ◉ Turmma             ⇤ │ (barra de 36 px: abas, filtros e busca da seção)         │
-│ [ Escola ▾ ]           │                                                          │
-│                        │                                                          │
-│ ✎  Nova conversa       │              conteúdo da seção, em coluna                │
-│ ▦  Ferramentas         │      de até 760 px (conversa), 1040 px (formulário)      │
-│ ▤  Calendário          │               ou 1480 px (grade e tabela)                │
-│ ◫  Turmas              │                                                          │
-│                        │                                                          │
-│ Seu time             ˅ │                                                          │
-│  ▣ Assistente      (3) │                                                          │
-│  ▣ Tutor           (2) │                                                          │
-│ Histórico            ˅ │                                                          │
-│  Hoje                  │                                                          │
-│   Prova de estequiom…  │                                                          │
-│                        │                                                          │
-│ (CS) Camila Souza    ⋯ │                                                          │
-└────────────────────────┴──────────────────────────────────────────────────────────┘
-  lateral · 260 px · `lateral`            conteúdo · `fundo`
+┌──────────────────────────┬────────────────────────────────────────────────────┐
+│ ◉ Turmma               ⇤ │ Turmas                   (o título, que é o h1)    │
+│ [ CA  Colégio Aurora ⇅ ] │                                                    │
+│                          │                                                    │
+│ ▣ INÍCIO                 │   conteúdo, na coluna do tipo de página (9.3),     │
+│ ▣ FERRAMENTAS            │   dentro da moldura de 1200 px                     │
+│ ▣ TURMAS                 │                                                    │
+│ ──────────────────────── │                                                    │
+│ Seu time                 │                                                    │
+│  (onça) Assistente   (3) │                                                    │
+│  (onça) Tutor            │                                                    │
+│ ──────────────────────── │                                                    │
+│ (CS) Camila Souza        │                                                    │
+│ ⇥ Sair                   │                                                    │
+└──────────────────────────┴────────────────────────────────────────────────────┘
+  lateral · 256 px · `fundo`, borda de 2 px       conteúdo · `fundo`
 ```
 
-- **Topo da lateral:** pinta + "Turmma" em Fustat, o botão de recolher, e logo abaixo o
-  **seletor de escola**, no formato de seletor de espaço de trabalho: sigla, rede, turno, turmas e
-  a marca de escolhido (regra 50, item 13; P30). Para quem tem uma escola só, ele mostra o nome e
-  não abre. Na A1 (tarefa 12.0) ele mostra escola, rede e papel, com a marca de escolhido; sigla e
-  turno não existem no modelo, e o número de turmas seria dado da outra escola (Tech Spec da A1,
-  seção 11)
-- **"Nova conversa"** é item da lista, como no ChatGPT, e não botão cheio: o laranja da tela é do
-  botão de enviar
-- **Itens** em linhas de 44 px, também no computador (A1, tarefa 11.0: o "Sair" é ação principal e tem o tamanho dos
-  itens), canto de 10 px, ícone de 18 px + rótulo.
-  Selecionado tem **três pistas, não uma**: fundo `realce`, texto `tinta` em peso 600 e um
-  filete de 3 px em `caramelo` na borda esquerda — o fundo sozinho dá 1,1:1 e some na tela de um
-  Chromebook de entrada. O mockup mostra só o fundo; o produto leva as três
-- **Seu time**: uma linha por agente, com avatar e contador — em `caramelo` quando há algo
-  esperando o professor, em `tinta` quando é só mensagem não lida (P14). O rótulo do grupo é
-  cinza, sem caixa-alta
-- **Histórico** recolhível, agrupado por data, só o título de cada conversa, com vazio próprio
-  ("Nenhuma conversa ainda")
-- **Rodapé:** a pessoa, o papel e o menu dela, no modelo do ChatGPT (P18): o nome, "Personalizar
-  o Assistente", "Configurações", "Como a IA funciona aqui", "Ajuda" e **Sair** — a um clique, do
-  mesmo tamanho de qualquer outro item (D59). Cada entrada nasce com a fase dela; a A1 tem "Como a
-  IA funciona aqui" e "Sair" (P09)
-- **Recolhida**, a lateral vira trilho de 56 px com os ícones, os avatares e um ponto no agente
-  que tem pendência, e a dica de cada um. Nenhum rótulo sobra cortado (P04)
-- **Botões**, cinco variantes e nenhuma outra, todas em pílula:
+- **A lateral** tem 256 px, face `fundo` e borda direita de 2 px. No topo, a marca e o botão de
+  recolher; embaixo, o **seletor de escola**, para quem tem mais de uma (regra 50, item 13; P30):
+  um cartão com degrau, com a escola, a rede e o papel. Sigla e turno não existem no modelo, e o
+  número de turmas seria dado da outra escola (Tech Spec da A1, seção 11)
+- **Os lugares** são links de 52 px, canto 12 e borda 2: o ícone ilustrado de 32 px numa caixa de
+  36, e o rótulo em `t-rotulo`. **Aceso** tem borda `azul-borda`, fundo `azul-claro`, texto
+  `azul-texto` e `aria-current`; apagado tem texto `sutil`, e `fundo-suave` com `tinta` no hover
+- **O trilho** tem 88 px e só os ícones, cada um com nome acessível e dica. A lateral recolhe para
+  ele por escolha, que o navegador lembra, e **não anima a largura**
+- **O pé** tem a pessoa (as iniciais, o nome e o papel), os links dela, a `Aparencia` e o **Sair**,
+  que fica à vista no pé da lateral, no trilho e na barra de topo do celular, a um clique e do
+  tamanho dos vizinhos (D59; RF15 da X1)
+- **O tema** é escrito no `<html>` (`data-tema`) por um script em linha, antes de o CSS pintar. No
+  navegador ficam só duas chaves, `educa.aparencia` e `educa.lateral-recolhida`, sem identificador
+  (regra 50, item 7)
 
-| Variante | Aparência | Para |
-|---|---|---|
-| `primario` | fundo `caramelo`, texto `tinta` | **A** ação da tela: enviar, gerar, salvar. No máximo um por tela |
-| `oficial` | fundo `noite` (o preto), texto branco | **Só decisão oficial**: aprovar, publicar, confirmar envio (8.4, princípio 2) |
-| `secundario` | fundo `superficie`, borda `borda-campo`, texto `tinta`; hover `realce-suave` | A alternativa, e as duas opções de uma escolha de peso igual |
-| `discreto` | sem fundo, texto `sutil`; hover `realce-suave` e texto `tinta` | Ação de linha, de barra, de cartão |
-| `perigo` | texto `erro`; cheio em `erro`, com texto branco, só dentro do diálogo de confirmação | Rejeitar, excluir, revogar |
+**Responsivo** (D51), com uma navegação por vez na página:
 
-**O que cada papel vê na lateral:**
+| Largura | Casca |
+|---|---|
+| ≥ 1024 px (o Chromebook de 1366 × 768 cai aqui) | Lateral aberta de 256 px; recolhe para o trilho por escolha |
+| 768 a 1023 px | O trilho de 88 px |
+| < 768 px, a partir de 360 px | Barra de topo de 56 px, com a pinta, a escola, o botão do menu e o **Sair**. Papel com até quatro itens tem a **barra de baixo**, fixa, de 68 px mais a área segura; o resto (escola, "Seu time", conta) abre na gaveta. Com mais de quatro, os itens continuam na gaveta. Nada rola de lado |
 
-| Professor (**decidido**, D73; seção 1) | Aluno (*proposta*) | Coordenação (*proposta*: os doze itens da seção 3 em três grupos e um rodapé) |
-|---|---|---|
-| Nova conversa · Ferramentas · Calendário · Turmas · **Seu time** (Assistente, Tutor) · **Histórico** | Tutor · Atividades e provas · Meu desempenho · O que o Tutor sabe de mim · rodapé fixo: **Avisar um adulto** e Privacidade | **Escola:** Estrutura, Material, Adaptações · **IA e ensino:** Governança, Analista, Agentes · **Conformidade:** Conformidade, Privacidade, Denúncias, Auditoria, Exportar · rodapé: Configurações |
+Na barra de baixo cada lugar é uma coluna: o ícone de 28 px numa pílula de 48 × 36, e o rótulo de
+12 px em 700, caixa-alta. Nome comprido corta com reticências. Na conversa, em qualquer largura, a
+caixa de pedido fica presa embaixo e a lista rola por trás.
 
-Enquanto a proposta da coordenação não vira decisão, a lateral dela é uma **lista plana, sem rótulo de grupo**
-(`apps/web/src/areas/navegacao.ts`): Governança, Agentes, Analista, Estrutura, Professores, Material e, no fim,
-Privacidade (F3). Item novo entra na posição do grupo dele, sem o rótulo (validação do F3, 11/10/2026).
+**O que cada papel vê.** Na X1 os itens são os de hoje, na ordem e nos endereços de hoje (RF16 e
+RF18); os lugares da D80 chegam com a spec da área. Lugar sem tela não aparece (D73).
 
-A coordenação abre em **Governança**, não em chat: é a tela que fecha a venda — enquanto ela não
-existe (A5), abre em **Estrutura**, que é onde a escola se monta (A1). O aluno abre no **Tutor**
-quando ele está ligado para a turma, e em **Atividades e provas** quando não está.
+| Papel | Na X1 | Os lugares da D80 | Chegam na |
+|---|---|---|---|
+| Professor | Início (era "Nova conversa") · Ferramentas · Turmas, e o grupo "Seu time" | Início · Turmas · Ferramentas · Criados, as Conversas embaixo e o sino | X3 |
+| Aluno | Tutor · Atividades · Minha turma, e Privacidade no rodapé | Início · Tarefas · Eu · Avisar um adulto (este, com o F9) | X4 |
+| Coordenação | Governança · Agentes · Analista · Estrutura · Professores · Material · Privacidade. São sete: no celular ficam na gaveta | Painel · Analista · Escola · Registros, e o sino | X2 |
+| Rede | — | Painel · Analista · Escolas | F14 |
+
+A coordenação abre em Governança (depois, no Painel). O aluno abre no Tutor quando ele está ligado
+para a turma, e em Atividades quando não está.
+
+**O sino** (X2 e X3) fica no canto de cima à direita da área de conteúdo, e na barra de topo no
+celular. O contador é laranja, e é o único número da casca do professor e da coordenação. A lista
+abre num painel de 400 px ancorado no sino, e como `PainelLado` no celular.
 
 **O pé da lateral, em duas peças (F3, tarefa 18.0).** A lista de seções não leva "Meus dados", e o lugar dele é diferente por
 papel: no **aluno**, o item **Privacidade** é o do rodapé fixo (acima do menu da pessoa, num bloco `nav` de nome "Rodapé", com o
@@ -1081,167 +1536,102 @@ o nome, o papel e o "Sair" já ficavam à vista, P18). A coordenação não tem 
 pedido: o que ela faz é registrá-los, em Privacidade (seção 3). Na gaveta a 360 px o rodapé do aluno aparece com a gaveta aberta, sem rolar, e os dois links têm alvo de 44 px. O item do rodapé e o link do menu ficam selecionados no endereço deles, e nenhuma seção
 fica selecionada ali.
 
-**Responsivo** (D51):
+Na X4 o aluno passa a achar a Privacidade dentro de Eu, com as mesmas regras.
 
-| Largura | Casca |
-|---|---|
-| ≥ 1024 px (o Chromebook de 1366 × 768 cai aqui) | Lateral aberta de 260 px; recolhe para o trilho por escolha, e a escolha fica guardada |
-| 768 a 1023 px | Trilho de 56 px por padrão; abre por cima do conteúdo |
-| < 768 px, a partir de 360 px | Barra de 56 px no topo com o botão do menu, a pinta, a escola e o **Sair**, a um toque (D59; A1, tarefa 11.0); a lateral vira gaveta; conteúdo em uma coluna com 16 px de margem; tabela vira lista |
+**Os nomes acessíveis não mudam**: o e2e navega por eles (Tech Spec da X1, seção 9). São as
+navegações "Seções", "Seu time", "Rodapé" e "Sua conta"; o diálogo "Menu"; os botões "Abrir o
+menu", "Fechar o menu", "Recolher a lateral", "Abrir a lateral" e "Sair"; o seletor que começa por
+"Escola: "; e o link "Turmma, página inicial". Um rótulo muda: "Nova conversa" vira "Início", no
+mesmo endereço.
 
-Na conversa, em qualquer largura, a caixa de pedido fica presa embaixo e a lista rola por trás.
+### 11.2 Os tipos de página e o cabeçalho
 
-### 11.2 Home do professor
+Quatro tipos, quatro larguras (9.3) e um cabeçalho. Na X1 toda tela continua na `Tela`, que passa a
+mostrar o título e ganha as larguras novas; a composição de cada tipo chega com a spec da área.
 
-```
-              Bom dia, Camila.
-              O que vamos preparar hoje?
+| Tipo | Para | Como é |
+|---|---|---|
+| **Conversa** | O Início e a conversa com cada agente | Barra de 64 px (56 no celular). Vazia: a saudação, a caixa e as sugestões juntas, a 40% da altura. Com mensagens: coluna de 768 px, vão de 24, a caixa presa embaixo |
+| **Leitura** | Lista, formulário curto, a conta, um pedido aberto | Coluna de 880 px |
+| **Painel** | O Painel, Turmas, Escola, Registros, a operação | A moldura inteira, em grade de 12 colunas com vão de 16; seção solta com título em `t-secao` |
+| **Documento** | O que a professora gerou, aberto (X3) | Cabeçalho na coluna de 1080 px; embaixo, a `mesa` de ponta a ponta, com a folha de 760 px e o sumário, só a partir de 1200 px de janela |
 
-   ┌──────────────────────────────────────────────────────────────────────┐
-   │ Peça uma prova, uma atividade, um plano de aula…                     │
-   │                                                                      │
-   │ [ ▦ Ferramenta ▾ ]  [ ◎ Web: desligada ]    [ 2ºB · Química ▾ ]  (↑) │
-   └──────────────────────────────────────────────────────────────────────┘
+**O cabeçalho** de toda tela aberta por um lugar da lateral:
 
-   Esperando você
-   ┌──────────────────────────────────┐ ┌──────────────────────────────────┐
-   │ ☑ Correção de objetiva           │ │ ⚙ Adaptação                      │
-   │ 32 provas do 2ºB corrigidas.     │ │ Versão com fonte ampliada da     │
-   │ Abra os 5 destaques. [ Revisar ] │ │ lista 3 pronta.      [ Abrir ]   │
-   └──────────────────────────────────┘ └──────────────────────────────────┘
+- **O título é o `h1`, visível, em `t-titulo`**, numa linha de no mínimo 64 px, e cada tela tem o
+  título dela na aba do navegador (RF12 da X1). Na conversa o `h1` existe só para leitor de tela.
+  O texto do `h1` das telas de hoje não muda, e a página continua com um `<main>` só
+- **À direita**, a ação da tela (no máximo uma cheia) e o menu "Mais opções"
+- **Tela de objeto tem o voltar** numa linha própria, de 28 px, em cima do título: "‹ origem", em
+  `t-selo`, `sutil`
+- **As abas** ficam embaixo do título, com 44 px; o endereço guarda a aba, e trocar de aba não
+  empilha histórico
 
-   Hoje: 3 aulas e 1 entrega em atraso  → Calendário
-```
+Fora da casca ficam as **telas de foco**, cada uma na fase dela: a introdução (X4), a prova (F6) e
+a aula ao vivo (F10). Topo de 64 px com o sair, o miolo rolando por dentro e o rodapé preso.
 
-- **A pergunta** vem pela hora, com o primeiro nome, em 28 px e peso normal; a segunda linha em
-  `sutil`. Entra uma vez por sessão (9.5)
-- **Caixa de pedido:** à esquerda, o que muda o pedido — **Ferramenta** (D18) e **Web** (D68,
-  desligada por padrão e dizendo isso no próprio botão). À direita, o contexto — a **turma**, no
-  lugar onde o ChatGPT põe o modelo — e enviar. O menu **Ferramenta**, e o mesmo menu aberto
-  digitando `/`, leem o catálogo da página (P17): um retângulo de 320 px por até 292 px que rola
-  por dentro e vira para cima quando a janela é baixa. O anexo fica fora do MVP (P07); o lugar
-  dele está reservado
-- **Sem atalhos em pílula** abaixo da caixa (P15): as ferramentas já estão no menu dela
-- **"Esperando você"** são as entregas que esperam a professora, em cartões com o ícone da
-  função, o que foi feito e a ação. Só existe quando há entrega pendente. Sem pendência, não há
-  cartão — e não há enfeite no lugar dele
-- **A linha do dia** ("seu dia e sua semana") é atalho para o Calendário, e só existe quando
-  houver grade (F2, F8). É o que faz a primeira tela mostrar o time trabalhando (regra 50, item
-  6), no lugar onde o Mulerun põe anúncio de novidade. Uma só, sem laço de brilho
+### 11.3 A casca pública
 
-### 11.3 A conversa, o selo de IA e os cartões
+A entrada, o convite, a reivindicação de nome e a verificação em duas etapas, no tema do sistema.
 
-```
-                                          ┌──────────────────────────────────────┐
-                                          │ monta uma prova de estequiometria    │
-                                          │ pro 2ºB, dez questões                │
-                                          └──────────────────────────────────────┘
-  ▣ Assistente de ensino  [ IA ]
-  Posso fazer isso com a ferramenta Prova, ou só conversar.
-  ┌──────────────────────────────┬──────────────────────────────┐
-  │ ▦ Usar a ferramenta Prova    │ ◌ Só conversar               │
-  │ Salva na biblioteca, liga ao │ Respondo aqui, sem salvar    │
-  │ 2ºB e cita a página.         │ nada.                        │
-  └──────────────────────────────┴──────────────────────────────┘
+- **A partir de 1024 px a tela se divide**: à esquerda, o painel em `papel`, com a marca e a pinta
+  parada; à direita, o cartão do formulário. **Abaixo disso, empilha**
+- **O formulário.** Aluno: "Entrar com a conta da escola" (Google ou Microsoft, quando a escola
+  tem) ou escola, matrícula e senha (D48). Professor e coordenação: o que o F1 definiu, com o
+  segundo fator da coordenação. Não existe "Cadastre-se" (D2), nem busca pública de escola. Um
+  `primario` só: "Entrar"
+- **Textos, ordem de campo e mensagens não mudam** (RF20 da X1), e as proteções ficam: a entrada
+  responde igual para matrícula errada e pedido pendente, o convite não mostra e-mail, e o segundo
+  fator mostra o segredo em texto, além do QR (D80, item 7; regra 50, item 2)
 
-  ┌ ▦ Prova · rascunho ────────────────────────────────────────────────────────────┐
-  │ Turma  [ 2ºB ▾ ]    Tema  [ Estequiometria        ]    Questões  [ 10 ]        │
-  │ Material  [ Química 2 — cap. 7 ▾ ]    Versões  [ 1 ▾ ]    Gabarito  [✓]        │
-  │                                                 [ Cancelar ]   [ Gerar prova ] │
-  └────────────────────────────────────────────────────────────────────────────────┘
+### 11.4 A operação
 
-  ▣ Assistente de ensino  [ IA ]
-  1. Qual a massa de CO₂ formada na queima de 24 g de carbono? [ p. 142 ]
-  …
-  ▸ Fontes (3): Química 2, p. 142 · p. 145 · p. 151
-  [ Copiar ]  [ Abrir na biblioteca ]  [ Exportar em PDF ]
-```
+Uma tela só, sem lateral (seção 5a).
 
-- **Toda mensagem usa a mesma moldura** (`shadcn/message`, 10.2): avatar, cabeçalho, conteúdo e
-  rodapé de ações. O conteúdo é que muda — texto, pergunta, cartão de ferramenta, aviso de fila
-- **Quem escreve** fica à direita, em bolha `creme`. **A IA não tem bolha**: texto na largura da
-  coluna, e no cabeçalho a **assinatura** — avatar do agente, nome da função e o **selo "IA"**
-- **O selo de IA** (seção 6) é um conjunto só, igual em todo o produto: `[ IA ]` em família `ia`
-  ao lado do nome do agente; o **chip de fonte** `[ p. 142 ]` dentro do texto, que abre material,
-  página e trecho; e, depois da aprovação, a linha **"Aprovado por Camila Souza · 19/09, 10h42"**
-  em família `ok`. Fonte de fora leva o chip **"da web"** com o link, de desenho diferente do chip
-  de página (D68)
-- **A pergunta da D18** é uma frase do Assistente e um cartão estreito com **duas opções do
-  mesmo peso** — ícone, título e uma frase —, que encolhe para uma linha depois da escolha (P16).
-  Nenhuma das duas é a "certa" (D59)
+- **Barra de topo** de 72 px (56 no celular), face `fundo`, borda de baixo de 2: a marca, um fio
+  vertical e "Equipe Turmma" em 17 px e 700; à direita, a conta do operador, com a `Aparencia` e o
+  **Sair**. Troca a faixa preta de hoje (X1)
+- **O corpo** é uma página de painel, com o título "Operação", a linha fixa de que a operação não vê
+  dado de aluno nem de professor, e as abas **Escolas** e **Uso** (X2)
+
+### 11.5 Telas-chave, até a spec da área
+
+As seções 11.2 a 11.8 da versão de setembro desenhavam estas telas na pele antiga. O desenho sai; o
+que segue é o que continua verdade, até a spec da área recompor a tela. Código e teste que citam o
+número antigo acham aqui o assunto.
+
+**Início do professor** (era 11.2; X3). A saudação vem pela hora, com o primeiro nome, e embaixo
+fica a caixa de pedido. Nela, **Ferramenta** (D18) e **Web** (D68, desligada por padrão e dizendo
+isso no próprio botão) mudam o pedido, a **turma** é o contexto, e o enviar é o `primario` da tela.
+O menu Ferramenta, e o mesmo menu aberto digitando `/`, leem o catálogo da página (P17). O anexo
+continua fora (P07). A linha do dia só existe quando houver grade (F2, F8).
+
+**A conversa, o selo de IA e os cartões** (era 11.3; X3).
+
+- **Quem escreve** fica à direita, em balão. **A IA não tem balão**: texto na largura da coluna, e
+  em cima a **assinatura** — o avatar do agente, o nome da função e o selo "IA"
+- **O selo de IA** (seção 6) é um conjunto só, igual em todo o produto: "IA" ao lado do nome do
+  agente; o **chip de fonte** "p. 142" dentro do texto, que abre material, página e trecho; e,
+  depois da aprovação, a linha **"Aprovado por Camila Souza · 19/09, 10h42"**. Fonte de fora leva o
+  chip **"da web"** com o link, de desenho diferente do chip de página (D68)
+- **A pergunta da D18** é uma frase do Assistente e um cartão com **duas opções do mesmo peso**,
+  que encolhe para uma linha depois da escolha (P16). Nenhuma das duas é a "certa" (D59)
 - **O cartão de ferramenta** é o formulário da própria ferramenta dentro da conversa: mesmos
-  campos, mesmo contrato (seção 1.1). "Gerar" é `primario`. Na **Adaptação** o cartão tem a
-  lista de **tipos de adaptação** e nenhum campo de texto livre (D35, D67)
-- **As ações da resposta ficam sempre visíveis**, em `discreto`. Nada aparece só no hover
-- Enquanto o texto chega, enviar vira **Parar**. Fila cheia ou provedor lento vira aviso dentro
-  da conversa, nunca erro cru (regra 80, item 4)
+  campos, mesmo contrato (seção 1.1). "Gerar" é `primario`. Na **Adaptação** o cartão tem a lista
+  de **tipos de adaptação** e nenhum campo de texto livre (D35, D67)
+- **As ações da resposta ficam sempre visíveis.** Enquanto o texto chega, enviar vira **Parar**.
+  Fila cheia ou provedor lento vira aviso dentro da conversa, nunca erro cru (regra 80, item 4)
 
-### 11.4 Seu time
+**Seu time** (era 11.4; até a X3). Cada agente abre a própria conversa em tela cheia, e a entrega
+é um cartão com o que foi feito, o que está esperando e o estado em selo. A conversa do Tutor
+mostra **sinal, não conversa de aluno** (regra 50, item 10): o nome do aluno aparece só para o
+professor da turma (D34), e abrir a conversa de um aluno é ação à parte, com aviso de que fica em
+auditoria. O resto está na seção 1.3.
 
-Cada agente abre a **própria conversa, em tela cheia**, pela linha dele na lateral; a coluna com a
-lista de threads saiu (P14). No celular, a lateral e depois a conversa, com voltar.
-
-```
-┌ ▣ Assistente de ensino · o que cada função faz sozinha ⓘ ─────────────────────────┐
-│ [ Tudo ] [ Esperando você 1 ] [ Correção ] [ Adaptação ] [ Seu dia ]              │
-│ ┌ Esperando você ────────────────────────────────────────────────────────────────┐│
-│ │ ☑ Correção de objetiva · 32 provas do 2ºB, 5 destaques         [ Revisar → ]  ││
-│ └────────────────────────────────────────────────────────────────────────────────┘│
-│  Hoje                                                                             │
-│  ▣ ┌──────────────────────────────────────────────────┐                           │
-│    │ Corrigi as 32 provas de estequiometria do 2ºB.   │                           │
-│    │ Média 6,4. 5 casos fora da curva para abrir.     │                           │
-│    └──────────────────────────────────────────────────┘                           │
-│      [ Ver resumo ]  [ Revisar → ]                                                │
-│                               ┌──────────────────────────────────────────────┐    │
-│                               │ na próxima, faz com oito questões            │    │
-│                               └──────────────────────────────────────────────┘    │
-│ ┌──────────────────────────────────────────────────────────────────────────────┐  │
-│ │ Responder ao Assistente…                                                (↑)  │  │
-│ └──────────────────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────────────────────┘
-```
-
-- **Formato de conversa** (P29): o agente fala em balão à esquerda e a professora responde à
-  direita, com anexos e ações embaixo do balão. Aqui, e só aqui, a mensagem do agente tem balão;
-  na conversa da Home a IA continua sem bolha (11.3). A faixa **"Esperando você"** fica presa no
-  alto, e a caixa de resposta, no pé
-- **Na conversa do Assistente, filtro por função**: tudo · esperando você · correção · adaptação ·
-  seu dia (P14). Endereço antigo de agente (`/time/corretor`) abre o Assistente já filtrado
-- **Responder ao agente é pedido novo**: é chamada de modelo, pela porta, com perfil e orçamento
-  (regra 30, D14). Se esta conversa e a da Home são a mesma ou duas com fronteira clara, fecha no
-  PRD do F11 (P29)
-- **Ação dentro do balão** ("Revisar", "Aprovar") chama o mesmo caso de uso da aprovação
-  registrada (regra 70, item 3): não é atalho em volta dela
-- **O cabeçalho diz a autonomia por função**, em português comum (D9 revista), com o ⓘ abrindo o
-  que cada função faz sozinha, o que espera aprovação e o que nunca faz
-- **A entrega é um cartão** com o que foi feito, o que está esperando e o estado em selo:
-  `pendente` "Esperando você", `ok` "Aprovado por…", `erro` "Rejeitado: <motivo>"
-- A conversa do **Tutor** mostra **sinal, não conversa de aluno** (regra 50, item 10): o nome do
-  aluno aparece só para o professor da turma (D34), e abrir a conversa de um aluno é ação à
-  parte, com aviso de que fica em auditoria
-- **Ponto de estado e não lidas não viram pressão de uso** (D59): o ponto só diz que há algo
-  esperando você
-
-### 11.5 Aprovar
-
-```
-┌ Revisar correções · Prova de estequiometria · 2ºB ───────────────────────────────────┐
-│  32 provas   média 6,4   ▁▂▅▇▅▂▁   Assistente · correção de objetiva [ IA ]          │
-│                                                                                      │
-│  Abra estes 5 antes de aprovar                                                       │
-│  !  Nota muito abaixo do histórico · Ana B. · 2,0 (costuma tirar 7,5)       [ Abrir ]│
-│  !  Prova em branco · Caio M. · sem respostas                               [ Abrir ]│
-│  ✓  Questão 7 com erro em 28 de 32 · aberto às 10h38                                 │
-│                                                                                      │
-│  As outras 27                                                       ( tabela )       │
-├──────────────────────────────────────────────────────────────────────────────────────┤
-│  3 de 5 destaques abertos        [ Rejeitar… ]    [ Aprovar 32 correções ]  (inativo)│
-└──────────────────────────────────────────────────────────────────────────────────────┘
-```
+**Aprovar** (era 11.5; X3, com a ação oficial em grafite).
 
 - **O botão de aprovar é o único `oficial` da tela**, mora numa barra presa embaixo, e fica
-  inativo até o último destaque ser aberto — com o **contador ao lado dizendo por quê** (D33)
+  desligado até o último destaque ser aberto — com o **contador ao lado dizendo por quê** (D33)
 - Destaque fechado é `pendente`; aberto vira `ok`, com a hora. É a interface mostrando o que o
   **registro da validação** vai guardar (D56)
 - Confirmar abre diálogo com **o que vai acontecer**: avaliação, turma, quantas correções, e que
@@ -1252,19 +1642,14 @@ lista de threads saiu (P14). No celular, a lateral e depois a conversa, com volt
   campo do professor (D55)
 - No MVP (A3) o que se aprova é **diagnóstico**, não nota (D46). O desenho é o mesmo
 
-### 11.6 Área do aluno
+**Área do aluno** (era 11.6; X4). A mesma casca, mais calma:
 
-A mesma casca, mais calma:
-
-- **Faixa fixa no topo do Tutor**, em família `info`: "Seu professor acompanha como você usa o
-  Tutor." Não fecha (D8)
+- **Faixa fixa no alto do Tutor**: "Seu professor acompanha como você usa o Tutor." Não fecha (D8)
 - **A caixa de pedido é só texto e enviar.** Sem seletor, sem anexo, sem texto de exemplo que
   troca sozinho. Atalho, só para o que o professor atribuiu ("Continuar a atividade de
   estequiometria")
 - **"Hoje: 12 de 60 perguntas"** em texto, com barra fina em cor neutra. Não fica vermelha, não
   pisca; no fim, diz com calma que por hoje acabou e que amanhã volta (D38, D59)
-- **"Avisar um adulto"** fica sempre no rodapé da lateral, com o mesmo peso de qualquer item
-  (D61)
 - **Privacidade** fica no rodapé da lateral, e a **seção "Meus dados"** abre dentro dela (F3, tarefa 18.0; RF12 e RF20). A tela
   é a mesma do professor (menu da pessoa), com o mesmo texto, escrito para quem está no 6º ano: **os pedidos da própria pessoa na
   escola ativa**, o mais recente primeiro, cada um com o que é ("Cópia dos seus dados"), o dia em que chegou à escola, o selo em
@@ -1283,50 +1668,28 @@ A mesma casca, mais calma:
   frase. Não parece erro (D19)
 - A assinatura do Tutor é a mesma dos outros agentes: avatar, "Tutor", selo "IA". Perguntado, ele
   diz o que é (D58, D65)
-- **Não existe nesta área:** saudação animada, pílula, número subindo, selo de conquista,
-  qualquer lista de colegas (regra 50, item 9; seção 9.5, regra 7)
+- **Não existe nesta área:** saudação animada, número subindo, selo de conquista, qualquer lista
+  de colegas (regra 50, item 9; 9.5, regra 8)
 
-### 11.7 Coordenação: Governança
+**Coordenação: Governança** (era 11.7; X2, no Painel e em Registros).
 
-```
-┌ Governança de IA · setembro ─────────────────────────────────────────────────────────┐
-│  ┌ Gerado por IA ┐  ┌ Aprovado por gente ┐  ┌ Esperando ┐  ┌ Consumo do mês ────────┐│
-│  │  412          │  │  389               │  │  23       │  │ 61% do orçamento ▓▓▓░░ ││
-│  └───────────────┘  └────────────────────┘  └───────────┘  └────────────────────────┘│
-│                                                                                      │
-│  O que a IA gerou e quem aprovou                          [ Exportar ]               │
-│  ( tabela: quando · agente e função · o quê · turma · estado · aprovado por )        │
-│                                                                                      │
-│  Uso por série e disciplina                ( barras, em agregado )                   │
-└──────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-- Quatro números em 28 px, peso 600, `tabular-nums`, com rótulo em cima. Sem gráfico onde um
-  número basta
+- Os números em `t-numero`, com rótulo em cima. Sem gráfico onde um número basta
 - A tabela é a consulta da regra 70, item 6. "Aprovado por" em `ok`, "Esperando" em `pendente`
 - **Nenhuma coluna, filtro ou ordenação por professor** (D45, D64). Abrir o nominal é botão
   `oficial` à parte, com diálogo dizendo que fica em auditoria
-- **Agentes** são três cartões, um por agente: avatar de 48 px, nome e três listas — *faz
-  sozinho*, *espera aprovação*, *nunca faz*. O cartão do Assistente lista **as funções**, cada uma
-  com a autonomia em português comum, o selo de alto risco, o resumo da AIA e o botão de
-  **suspender só aquela função**. No registro, a linha diz "Assistente · correção de objetiva"
-  (D9 e D60 revistas; P19)
+- **Agentes** são três cartões, um por agente: o avatar, o nome e três listas — *faz sozinho*,
+  *espera aprovação*, *nunca faz*. O cartão do Assistente lista **as funções**, cada uma com a
+  autonomia em português comum, o selo de alto risco, o resumo da AIA e o botão de **suspender só
+  aquela função** (D9 e D60 revistas; P19)
 
-### 11.8 Entrada
-
-Tela dividida, como a do Mulerun, mas página inteira e não janela:
-
-- **Esquerda (metade, some abaixo de 768 px e vira faixa de 96 px):** fundo `papel`, a roseta em
-  padrão estático bem apagado, a marca e uma frase da landing page. Ilustração em
-  aberto (seção 7)
-- **Direita:** o formulário. **Aluno:** "Entrar com a conta da escola" (Google ou Microsoft,
-  quando a escola tem) ou escola + matrícula + senha (D48). **Professor e coordenação:** o que o
-  F1 definiu, com o segundo fator da coordenação. Não existe "Cadastre-se" (D2)
-- Um `primario` só: "Entrar"
+**Entrada** (era 11.8): está na 11.3.
 
 ---
 
 ## 12. As telas do MVP de apresentação (A1 a A5)
+
+As telas deste roteiro mudam de pele na X1 e de estrutura nas X2 a X4 (D80). A coluna "Desenho"
+cita as seções 11.2 a 11.8 da versão de setembro: o que delas continua valendo está na 11.5.
 
 O roteiro do `ROADMAP.md` (D71 revista), passo a passo, com a tela e onde ela está desenhada. A
 Parte B vale desde a D72 e a D73 (23/09/2026). **Não existe seed com escola pronta**: tudo que a

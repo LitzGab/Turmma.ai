@@ -127,17 +127,18 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D66 | O Tutor tem memória de tudo que o aluno fez no sistema (atividades, trabalhos, avaliações, sessões), feita do registro do trabalho e nunca de texto sobre a pessoa; recebe contexto estruturado do professor e lê a adaptação registrada |
 | D67 | Entram as ferramentas de apresentação e de material didático; o artefato exporta em PDF, PPTX e XLSX; a ferramenta se chama Adaptação e recebe o tipo de adaptação, nunca texto livre sobre o aluno |
 | D68 | Busca na web por ativação do professor: para ele no Assistente de ensino, e para o aluno no Tutor só em fontes aprovadas, com duas chaves, socrático, só em sala |
-| D69 | "Turmas" é item da navegação do professor, com "Meu uso" dentro, e nasce no F6; tempo ocioso do aluno não é indicador (revista pela D73) |
+| D69 | "Turmas" é item da navegação do professor e nasce no F6; tempo ocioso do aluno não é indicador (revista pela D73 e pela D80: três abas na turma aberta, e o "Meu uso" na conta do professor) |
 | D70 | Sair da aba durante a prova é fato mostrado só ao professor, com o aluno avisado, sem consequência automática nem histórico; fora de avaliação não existe |
 | D71 | Depois do F1 vem o MVP de apresentação: cinco specs (A1 a A5), fatias finas e reais do fluxo completo, dado 100% sintético, mesmas regras e mesmo processo (na A2 a A5, o processo enxuto da D77). A A1 é a escola montada pela coordenação, sem seed de escola pronta; os quatro afrouxamentos valem só enquanto o dado for sintético (revista em 23/09/2026 e 25/09/2026); a A0, painel da operação, vem antes da A1 (D76) |
-| D72 | A pele do produto é o sistema do ChatGPT em branco, preto e laranja, uma só em todas as telas, com o padrão de espaço do P03; tokens e logotipo vêm de `mockups/` |
-| D73 | Navegação do professor: Nova conversa, Ferramentas, Calendário e Turmas, com Seu time e Histórico na lateral; cada item só aparece com a fase dele |
+| D72 | A pele do produto é uma só em todas as telas, com a fonte do sistema e o laranja da pinta (revista pela D80, que troca o sistema do ChatGPT pelo do mockup de outubro) |
+| D73 | Cada item da navegação só aparece com a fase dele (os lugares de cada papel são os da D80) |
 | D74 | É ferramenta o que entrega um output próprio; o resto é pedido ao Assistente. Quatro categorias: Planejar, Preparar a aula, Avaliar, Corrigir |
 | D75 | O material da escola entra pela coordenação, com titularidade e licença declaradas; professor e aluno não sobem material para a base |
 | D76 | A equipe Turmma tem um painel de operação (A0 e A0b): cria rede e escola, convida a coordenação e acompanha uso e custo por escola, sem ver dado de pessoa |
 | D77 | O MVP de apresentação (A2 a A5) é uma fatia só, com processo enxuto, enquanto o dado for sintético: contratos primeiro, commit `(mvp: <resumo>)` com portão local, esteira disparada à mão por fase, revisores com veto numa passada por fase e IA no processo da API como dívida declarada; as regras 10, 20, 30, 40 e 70 não mudam, e o processo completo volta antes da primeira escola real (revisa a D71, a D23 e a D53 só para esta fatia) |
 | D78 | O processo roda no Maestri: um andar e uma branch por spec, que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando (`/seguir`); papéis de terminal em `.claude/agents/` com modelo por papel (Opus orquestra, desenha e valida; Sonnet implementa e conduz a revisão); a Mesa de revisão chama os revisores e traduz a reprovação em ordem de correção; seis paradas são do Joaquim (revisa a D23 e a D53; revista em 09/10/2026: na tarefa roda só o portão da tarefa, com os testes que ela alterou, e o portão completo roda uma vez por spec, antes da validação; e o opencode foi testado no Implementador e saiu (D79); revista em 10/10/2026: o contexto de todo o time é compactado aos 400 mil tokens, a vigia do Orquestrador tem skill própria, e o Orquestrador limpa o próprio contexto a cada tarefa; e a parada segura só a tarefa que depende dela) |
 | D79 | O processo é revisto para tempo, depois do F3: a esteira roda em todo push da spec e ninguém espera por ela; o portão da tarefa prova as mutações; os revisores rodam juntos e a ordem de correção não dita código; tarefa de um comportamento e até três guardiões; a Tech Spec e a lista de tarefas viram aviso com prazo; spec fora da sequência entra no roadmap como `X<n>`; e o modo econômico sai (revisa a D78; revista em 11/10/2026: a construção corre por linhas, até três tarefas ao mesmo tempo, e a vigia só acorda o Orquestrador com o que olhar) |
+| D80 | A pele é o sistema Turmma do mockup de outubro: cor por família, borda de 2 px com degrau, ícone ilustrado, a onça como mascote e avatar dos agentes, modo escuro e até quatro lugares por papel; o que o mockup afrouxa de regra ou depende de fase que não existe não entra; chega em quatro specs, X1 a X4, antes do F2 (revisa a D72, a D73 e a D69) |
 
 > **D54 a D71 estão ratificadas.** Saíram em 19/09/2026 da leitura das fontes de regulação e
 > da estrutura de agentes por papel; o Gabriel ratificou as dele no mesmo dia, e o Joaquim
@@ -237,11 +238,11 @@ voltou para o F2, o F3 e o portão do piloto. A composição de cada spec ficou 
 A2 a A5, no `docs/mvp-rapido.md`; o documento que a coordenação sobe na demonstração é um PDF
 original nosso, gerado por `tools/demonstracao/` (D75, D5).
 
-**Pele do produto.** Voltou três vezes: a da landing page (rejeitada vendo), a do ChatGPT (P02) e
-a cópia da Teachy em Ferramentas e Turmas (P31). Fica **uma só**, a do ChatGPT, em todas as
-telas (D72): duas peles dobram o trabalho, duas fontes a mais pesam no Chromebook, e copiar
-medida de concorrente é risco de trade dress. A estrutura que a Teachy inspirou pode ficar; a
-pele dela, não.
+**Pele do produto.** Voltou quatro vezes: a da landing page (rejeitada vendo), a do ChatGPT (P02), a
+cópia da Teachy (P31) e, em outubro de 2026, o sistema que o Gabriel desenhou no estilo do Duolingo.
+Fica **uma só**, a de outubro, em todas as telas (D80): a técnica é tomada, a marca não (mascote,
+cores, ícones e fonte são nossos), e a mecânica de uso compulsivo fica de fora por lei (D59). Onde o
+mockup afrouxa uma proteção que o produto já tem, vale o produto.
 
 **Vigiar a navegação do aluno.** Pedido em 19/09/2026: alertar o professor quando o aluno sai
 do sistema para usar outra IA, e medir tempo ocioso. Ficou: saída da aba só durante a prova,
@@ -270,12 +271,11 @@ Todas têm dono e momento. Nenhuma trava o F0.
 | Decisão | Dono | Quando fecha |
 |---|---|---|
 | **Projetos** do professor, **anexo de documento na conversa** e **faltas** por aluno: pedidos do Gabriel que não existem em nenhuma fase (P05, P07, P08). O anexo esbarra na D5 e abre a porta para correção de discursiva por IA (D55); faltas não tem origem de dado nem linha na tabela da LGPD | Gabriel e Joaquim | `/descobrir` de cada um, antes de entrar em qualquer PRD; fora do MVP de apresentação até lá |
-| A **turma aberta com nove abas**, no modelo da Teachy, com a sala de carteiras como subaba de Alunos: revisa o conteúdo da D69 e depende dos limiares dos indicadores (P11, P28); o MVP entregou só Visão Geral e Alunos. E se o calendário junta as duas escolas do professor ou mostra só a escola ativa (P12, regra 10); o seletor de escola fechou na A1, só com a escola ativa e trocando o token (P30, RF2 do PRD da A1) | Joaquim e Gabriel | as abas, antes do PRD do F6; o calendário, no PRD do F8 |
+| Se o calendário junta as duas escolas do professor ou mostra só a escola ativa (P12, regra 10); o seletor de escola fechou na A1, só com a escola ativa e trocando o token (P30) | Joaquim e Gabriel | no PRD do F8 |
 | **Ranking de participação** (presença e entrega, com pódio), **Recursos** (enviar artefato à turma) e **Mural** da turma: pedidos do Gabriel que não existem em fase nenhuma. O ranking bate na proibição de placar e pódio do `docs/interface.md` 10.2 (D59) e chega perto de pontuação social (D57) (P26, P28) | Gabriel e Joaquim | `/descobrir` de cada um; fora do MVP de apresentação até lá |
 | As **oito ferramentas que a D67 não lista** — planejamento do período, projeto, plano de recuperação, mapa mental, roteiro de experimento, avaliação diagnóstica, proposta de redação e importar prova (P22). A regra e as categorias já estão na D74. O planejamento e o projeto dependem do F8; o plano de recuperação, do F6 | Gabriel propõe; Joaquim decide e estima | por `/descobrir`, uma a uma, antes do F7 |
 | Provedor de modelo principal e reserva | Joaquim | avaliação de `docs/avaliacao-de-modelos.md`, antes de a F5 ficar pronta (D37) |
 | Provedor de hospedagem | Joaquim | quando o staging for criado, antes da primeira demonstração externa ou do piloto (D42) |
-| Os avatares dos **três agentes** (Assistente de ensino, Tutor, Analista de desempenho escolar), em SVG (D72). O MVP saiu sem eles: o avatar é um círculo com o ícone da função, nunca rosto (`apps/web/src/componentes/ia/AvatarAgente.tsx`, D58), e não trava nada. Falta decidir se o SVG do Gabriel ainda substitui o ícone | Gabriel | o prazo da D72 (Tech Spec da A2) passou sem Tech Spec (D77); novo prazo a definir |
 | Registro no INPI e do domínio `turmma.com` (o nome já está fechado, D54) | Gabriel | antes do material de venda e do piloto |
 | Se o art. 24 do ECA Digital exige conta de responsável vinculada para aluno de até 16 anos — e, se exigir, se o portal da família sai da fase posterior | Joaquim e Gabriel, com advogado | **antes do PRD do F9**; o vínculo já nasce no modelo de dados do F1 (`docs/regulacao.md` 2.2) |
 | Como os arts. 17 e 18 do ECA Digital (supervisão parental) se modulam pelo art. 39 no nosso caso | advogado | junto com o parecer do ECA Digital |
@@ -326,9 +326,9 @@ no Brasil, se um contrato exigir.
 
 **Para entender o produto:** `docs/visao-produto.md`, `docs/fluxos.md`, `docs/glossario.md`
 **Para entender a interface:** `docs/interface.md`
-**Para ver a interface desenhada:** a pasta `mockups/` (protótipo só de front-end, com dado sintético e
-projeto próprio, fora do build, do lint e dos testes da raiz; veio do branch `mockups/interface` para a
-`develop` em 23/09/2026). **Nada de lá é copiado para o `apps/web`** nem para os `packages/`
+**Para ver a interface desenhada:** o mockup de outubro, no repositório `Prototipo_Turmma` do Gabriel
+(branch `mockups/interface`; D80). A pasta `mockups/` daqui é a versão de setembro, anterior à pele
+nova. **Nada de mockup é copiado para o `apps/web`** nem para os `packages/`
 **Para saber o que a revisão dos mockups mudou e ainda não virou decisão:**
 `docs/pendencias-dos-mockups.md` (31 itens, com o que cada um pede de tela, API, dado, regra e teste)
 **Para entender o negócio:** `docs/negocio.md` (mercado, preço, concorrência). Não é leitura
