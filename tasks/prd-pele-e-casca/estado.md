@@ -6,16 +6,13 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero (14h40 de 13/10):** o `RELATÓRIO` do `Implementador`, da **6.0**, na linha 1, em `PEDIDO de retomada`
-  (ainda 1ª tentativa: a parada foi divergência de portão, e não falha). A implementação dela está **na árvore, sem
-  commit**; falta o portão da tarefa e a Mesa. A correção `quinta-fatia-do-e2e` que a destravou está na linha, em
-  `71ff60f` (três revisores aprovados na 2ª rodada, sem push), e segue com o commit da 6.0 no encontro. **Para a
-  validação:** os revisores deixaram ao `/validar` conferir que a correção não pousa sem a 6.0 (estão na mesma
-  branch) e as recomendações recusadas na tabela de `tasks/correcoes/2026-10-13-quinta-fatia-do-e2e.md`
-- **Antes disso, o pedido original:** o `RELATÓRIO` do `Implementador`, da **6.0** (porte grande), na **linha 1**, 1ª tentativa, pedida em
-  13/10/2026 às 13h57 (a 5.0 se encontrou às 13h55, em `3ba0608`). Checkout da linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch
-  `spec/pele-e-casca--l1`, ambiente de teste 1, com o `Implementador` e a `Mesa`. O pedido foi com a observação
-  **"sem push"**: o commit da tarefa fica local
+- **Espero:** nada em curso: a **7.0** se encontrou em 13/10/2026 às 17h10 (`dc02f60`), e a próxima é a que o quadro
+  disser que parte (`linhas.ts`), na **linha 1**. Checkout da
+  linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch `spec/pele-e-casca--l1`, ambiente
+  de teste 1, com o `Implementador` e a `Mesa`. Todo pedido vai com a observação **"sem push"**: o commit da tarefa
+  fica local. **Para a validação:** a 7.0 deixou ao `/validar` o caso direto de `fechadoPeloNavegador` sob
+  `StrictMode` ("Recomendações sem aplicar" do `7_task.md`); e os revisores da correção `quinta-fatia-do-e2e` (`71ff60f`, já na spec com a 6.0)
+  deixaram ao `/validar` as recomendações recusadas na tabela de `tasks/correcoes/2026-10-13-quinta-fatia-do-e2e.md`
 - **Devo ainda:** (1) **tudo local, por decisão do Joaquim** (13/10, 08h50: "pode ficar local"): nenhum push, de
   ninguém, até ele mandar. O `linhas.ts encontro` não tem opção sem push: rodá-lo com o endereço de push trocado só
   naquele comando (`GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=remote.origin.pushurl GIT_CONFIG_VALUE_0=/dev/null/sem-push`
@@ -25,7 +22,15 @@
   de tarefa leva a observação "sem push"; (2) a 3.0 é tronco e segura as outras doze; da 4.0 em diante o quadro
   autoriza linhas, mas **uma linha só** até o Joaquim dizer o contrário
   (limite de uso); (2a) o `PEDIDO` da **10.0** leva a observação: "o placeholder da `CaixaPedido` fica cortado a
-  360 px; está em 'Sem aplicar' do `5_task.md`"; (3) nada mais sobre a revisão de spec da X3 e da X4: as duas **já têm revisão aprovada** pelos
+  360 px; está em 'Sem aplicar' do `5_task.md`"; e o da **12.0**: "quando o `Contador` ganhar a lateral, manter o chunk
+  `pecas-estado`; está em 'Recomendações sem aplicar' do `6_task.md`"; e o da **13.0**: "o `docs/interface.md`, na
+  10.2, cita '12.0 e 13.0' para a gaveta da casca, e ela é só da 13.0; está em 'Recomendações sem aplicar' do
+  `7_task.md`"; (2b) **no fechamento, levar ao `TODO.md`**, em "Marca e interface", o que a 7.0 deixou com esse
+  destino e ainda não está lá: seis linhas, na tabela "Recomendações sem aplicar" do `7_task.md` e em
+  `.processo/ordens/7_task-r2.md` da linha 1 (a lista do perigo cheio por arquivo e o detector textual; a ordem dos
+  botões do rodapé entre as peças; o texto técnico da galeria; a cor do botão oficial só provada como "não
+  vermelho"; o Tab preso do login por cima); e, para o Arquiteto ao escrever a tela que usar o `PainelLado` na X2 e
+  na X3: `infra-guardian` obrigatório e foto do menu aberto dentro do diálogo; (3) nada mais sobre a revisão de spec da X3 e da X4: as duas **já têm revisão aprovada** pelos
   seis guardiões, quatro rodadas cada, feita pelo "Claude Code #2" a pedido do Joaquim e trazida para esta branch em
   13/10/2026 (`2f63ce0`, `7334f79`, `92cc7e5`; o Joaquim deu a palavra neste terminal: "pode"). Não repetir antes de
   cada uma começar. As decisões de desenho tomadas por delegação nelas estão na seção 12 da Tech Spec de cada uma
@@ -42,8 +47,9 @@
   "X1 pele-e-casca" nasceu da branch que já existia (`--existing-branch`), em
   `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca`, e a `develop` (`e278845`) entrou por merge, sem
   conflito (`65ab3b1`). A 1.0 e a spec correram fora do Maestri, num checkout avulso já desfeito
-- **Base:** `spec/pele-e-casca` em `8449020`, com a 5.0; a linha 1 partiu dela para a 6.0. O quadro pede mais uma
-  linha para a 9.0: não abrir (uma linha só, item 2 acima). Nada foi enviado ao GitHub: push é do Joaquim
+- **Base:** `spec/pele-e-casca` no commit de estado do encontro da 7.0 (`git -C <andar> log -1`), com a 7.0
+  (`dc02f60`). Se o quadro pedir mais uma linha: não abrir (uma linha só, item 2 acima). Nada foi enviado ao GitHub:
+  push é do Joaquim
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -55,6 +61,8 @@
 | 3.0 | `76e3a02` | Sonnet 5.5 | 2 | linha 1, das 09h58 às 12h15 de 13/10; na 1ª rodada o `conformidade-reviewer`, o `revisor-geral` e o `test-engineer` reprovaram (a guarda "grafite só onde é oficial", os cenários U3 e U4, nove cláusulas sem bloco de mutação), na 2ª os quatro aprovaram; `--repeat-each 3` dos e2e alterados com 492 de 492; sem push |
 | 4.0 | `6627aea` | Sonnet 5.5 | 3 | linha 1, das 12h15 às 13h11 de 13/10; o `frontend-reviewer` aprovou na 1ª e na 2ª; o `test-engineer` reprovou na 1ª (a opção desligada sem asserção nem bloco de mutação) e aprovou na 2ª; o `revisor-geral` aprovou na 1ª, reprovou na 2ª e aprovou na 3ª, chamado sozinho; o contexto do Implementador compactou aos 15 minutos; primeiro carregamento em 128,3 kB brotli (teto 150); 55 mutações vermelhas; sem push |
 | 5.0 | `3ba0608` | Sonnet 5.5 | 2 | linha 1, das 13h13 às 13h54 de 13/10; o `frontend-reviewer` e o `revisor-geral` aprovaram na 1ª e na 2ª; o `test-engineer` reprovou na 1ª e aprovou na 2ª; a Mesa viu 58 fotos (galeria clara e escura, celular e computador); primeiro carregamento em 128,2 kB brotli (teto 150), `pecas-*` em 14,6 kB (teto 40); 42 mutações vermelhas; desvios do mockup (trilho da barra, fio da moldura) na Tech Spec, nos cenários e no `docs/interface.md`; ficou para a 10.0 o placeholder da `CaixaPedido` cortado a 360 px ("Sem aplicar" do `5_task.md`); sem push |
+| 6.0 | `542e583` | Sonnet 5.5 | 2 | linha 1, das 13h57 às 15h10 de 13/10, com a correção `2026-10-13-quinta-fatia-do-e2e` no meio (`71ff60f`, 2 rodadas, `infra-guardian`): `DIVERGÊNCIA` de portão às 14h22, porque os 42 casos do `e2e/pecas-estado.spec.ts` levaram a suíte a 818 e o teto do e2e não cabia em quatro fatias; retomada às 14h40; o `frontend-reviewer` e o `revisor-geral` aprovaram, o `test-engineer` reprovou na 1ª (asserção que sempre passa em `Aviso.test.tsx`) e aprovou na 2ª; a Mesa viu 59 fotos; ficou para a 10.0 o mesmo placeholder da `CaixaPedido`, e para a 12.0 manter `pecas-estado` quando o `Contador` ganhar a lateral; sem push |
+| 7.0 | `dc02f60` | Sonnet 5.5 | 2 | linha 1, das 15h10 às 17h07 de 13/10; o `frontend-reviewer` e o `infra-guardian` aprovaram na 1ª; o `test-engineer` e o `revisor-geral` reprovaram na 1ª (o véu forte do login por cima sem e2e, o Tab preso da confirmação, e a 10.2 dizendo dois lugares para o perigo cheio com o teste provando seis arquivos) e aprovaram na 2ª; 34 mutações vermelhas; `--repeat-each 3` de `pecas-sobrepor`, `inatividade` e `professores` antes da 2ª rodada; o `PainelLado` nasceu sem consumidor (X2 e X3); seis recomendações com destino no `TODO.md`, ainda por escrever lá (item 2b do "Agora"); sem push |
 | PRD, Tech Spec e tarefas da X1 à X4 | `2ed7829` | Opus (as tarefas 8 a 15 da X1, 4 a 14 da X3 e 3 a 11 da X4, por agentes em Sonnet) | 4 da spec da X1 | só documento; a X2, a X3 e a X4 sem revisão de spec |
 
 ## Esperando o Joaquim
