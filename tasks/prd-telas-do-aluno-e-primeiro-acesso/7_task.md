@@ -19,13 +19,14 @@ Eu mostra a turma, "Como estou indo" com as tarefas de correção aprovada e as 
 
 ## Subtarefas
 
-- [ ] 7.1 — `consultaMemoriaDoTutor`, em `api/memoria-do-tutor.ts`: `GET /v1/tutor/memoria`, com `select` que devolve só os `trabalhos`
-  com `resultado` não nulo e **descarta os `sinais`** antes de chegarem à tela. Chave própria; esvaziada com a sessão, nunca em
-  armazenamento do navegador
+- [ ] 7.1 — `consultaMemoriaDoTutor`, em `api/memoria-do-tutor.ts`: `GET /v1/tutor/memoria`, com a `queryFn` (não o `select`) devolvendo só
+  os `trabalhos` com `resultado` não nulo e **descartando os `sinais`**, para não irem ao cache. Chave própria; esvaziada com a sessão,
+  nunca em armazenamento do navegador. Mostra os 50 mais recentes (o teto da API). Aluno sem turma (`NAO_ENCONTRADO`) é "sem resultado"
 - [ ] 7.2 — "Como estou indo" em `ComoEstouIndo.tsx`: uma linha por tarefa corrigida, com o título, "N de M certas" (texto e
   `BarraRotulada` neutra) e as habilidades a rever **como a API mandou** (`aReforcar`, código e descrição), na ordem dela. Sem
   limiar, sem "Vale revisar", sem matéria, sem professor. O vazio: "Nada corrigido ainda" e "Depois que quem dá a aula aprovar a
-  primeira correção, ela aparece aqui." Eu fica na ordem: cartão da turma, "Como estou indo", linhas
+  primeira correção, ela aparece aqui." Uma linha "Achou algo errado? Fale com quem dá a aula." (contestação até o F9, regra 70, item 4d). Eu fica na ordem: cartão da turma,
+  "Como estou indo", linhas
 - [ ] 7.3 — Testes
 
 ## Arquivos previstos

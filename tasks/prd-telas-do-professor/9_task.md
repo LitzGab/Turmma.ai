@@ -25,8 +25,8 @@ e contestar. A contestação abre num painel ao lado. Cada cartão diz o que esp
 - [ ] 9.1 — `Turmas.tsx`: o `h1` "Turmas" visível; a faixa de cada vínculo em decisão, com a região "Confirme suas
   turmas", o texto "Confirme sua turma · 7ºA · Matemática" e os botões "Confirmar" e "Contestar"; a grade de cartões
   em "Suas turmas" (um por turma e disciplina), cada um com ladrilho, nome, série e o estado em texto. O que espera
-  vem da fila do sino (as mesmas consultas, nenhuma leitura a mais): "N esperando você", e nada quando a leitura da
-  turma falhou. Só o vínculo confirmado abre a turma
+  vem da fila do sino (as mesmas consultas, nenhuma leitura a mais): "N esperando você". A turma que o sino não leu
+  (falha, recusa ou além das 12) diz "não lida", nunca "em dia". Só o vínculo confirmado abre a turma
 - [ ] 9.2 — A contestação no `PainelLado` (folha de baixo a 360 px): o motivo em lista fechada, o complemento com o aviso
   de não escrever sobre aluno e o efeito escrito antes de enviar. O texto fica no estado da página, como hoje
 - [ ] 9.3 — Testes
@@ -53,8 +53,8 @@ Definidos com o `test-engineer`. Não improvise aqui.
 | duas disciplinas na mesma turma | componente | dois cartões, cada um com o seu estado; confirmar um não muda o outro |
 | contestar | componente e e2e | sem motivo não envia; o aviso de não escrever nome de aluno e o efeito aparecem antes do envio; o contestado sai da faixa e não conta para o sino |
 | o texto sobrevive | componente | a lista relida (`invalidateQueries`) com o painel aberto não apaga motivo nem complemento; Esc fecha e devolve o foco ao botão "Contestar" |
-| o que espera | componente | o selo "N esperando você" soma entrega, versão adaptada e pedidos de nome da turma; leitura parcial não mostra "em dia" |
-| recomeço | e2e | a segunda pessoa na mesma aba não vê painel nem texto; a sessão vencida com o painel aberto volta com o texto; trocar de escola esvazia a lista. Log: o complemento nunca vai a log nem ao endereço (privacy-guardian) |
+| o que espera | componente | o selo "N esperando você" soma entrega, versão adaptada e pedidos de nome da turma, e a conta de chamadas é a do sino (nenhuma a mais); leitura parcial e turma além das 12 mostram "não lida", nunca "em dia". Mutação: mostrar "em dia" na turma não lida. Os dois cartões da mesma turma abrem a mesma turma |
+| recomeço | e2e | a segunda pessoa na mesma aba não vê painel nem texto; a sessão vencida com o painel aberto volta com o texto; trocar de escola esvazia a lista. Log: o complemento nunca vai a log nem ao endereço (privacy-guardian). O "Texto da pessoa" sai junto quando entra outra pessoa |
 | 360 px | e2e | o painel vira folha de baixo, sem rolar de lado; a faixa quebra; alvos de 44 px |
 
 ## Como testar

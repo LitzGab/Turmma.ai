@@ -53,7 +53,7 @@ nenhuma regra mude.
 | RF13 | O **documento aberto** mostra o conteúdo numa folha, com a página de cada questão, e mantém renomear, exportar em PDF, pedir versão adaptada, quem decidiu cada versão, aplicar com "é avaliativa?" e encerrar | Os e2e do artefato e da aplicação |
 | RF14 | **Turmas** mostra um cartão por turma e disciplina confirmada e, antes, "Confirme sua turma", com confirmar e contestar. Só o confirmado abre a turma | e2e de vínculos |
 | RF15 | A **turma aberta** tem três abas, **Hoje, Atividades e Alunos**, guardadas no endereço (`?aba=`); sem aba, abre em Hoje | e2e recarrega e volta pelo histórico |
-| RF16 | **Hoje** mostra a atenção humana, sem conteúdo (D36); os sinais em agregado; o detalhe e o uso do Tutor por aluno a um clique; e o acerto por habilidade, só de correção aprovada | Teste de componente; e2e |
+| RF16 | **Hoje** mostra a atenção humana, sem conteúdo e sem nome; o nome por "Ver quem" (D36); os sinais em agregado; o detalhe e o uso do Tutor por aluno a um clique; e o acerto por habilidade, só de correção aprovada | Teste de componente; e2e |
 | RF17 | **Atividades** lista as atividades aplicadas, com o estado e os envios, e leva a aplicar, encerrar e "Revisar a correção" | Teste de componente; e2e |
 | RF18 | **Alunos** mostra os alunos em ordem de nome, com os acertos de correção aprovada, o estado do acesso e os pedidos de nome, com as regras de hoje | Teste de componente; e2e de pedidos |
 | RF19 | "Convidar alunos" abre num diálogo. Gerar, gerar novo e revogar continuam, e **o link e o código aparecem uma vez** | Os e2e do acesso |
@@ -103,12 +103,12 @@ Nenhum dado novo é gravado.
 ## 8b. Risco regulatório (quando há IA no caminho do aluno)
 
 Nenhuma função de IA muda. Correção de objetiva e sinais continuam de alto risco, e o Tutor, de cuidados
-adicionais (regra 70). A aprovação humana fica onde está: a entrega da versão adaptada, "Aplicar à turma" e o lote
-com os destaques abertos. A supervisão do Tutor passa de "Seu time" para a aba Hoje, com o mesmo conteúdo (D8).
+adicionais. A aprovação humana fica onde está: a entrega da versão adaptada, "Aplicar à turma" e o lote
+com os destaques abertos. A supervisão do Tutor passa para a aba Hoje (D8).
 
 ## 9. Métricas
 
-- Cliques do sino até a decisão, por tipo de item
+- Cliques do sino até a decisão, por tipo: medidos no e2e, nunca por professor
 - O e2e da A1 à A4 verde nos dois projetos, sem perder caso
 - A foto de cada tela ao lado do mockup: o Gabriel aprova ou aponta
 

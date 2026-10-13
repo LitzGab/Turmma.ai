@@ -7,11 +7,11 @@
 
 - [ ] **1.0 — A pessoa marca que viu a introdução, e o `/v1/eu` devolve a data**
   - [ ] 1.1 Coluna `usuario.introducao_vista_em`, migration e a coluna no arquivo do titular
-  - [ ] 1.2 `GET /v1/eu` devolve `introducaoVistaEm`, valendo a data mais antiga do mesmo papel na mesma conta
-  - [ ] 1.3 `POST /v1/eu/introducao`, idempotente, com a ação `eu.concluir_introducao` na matriz
+  - [ ] 1.2 `GET /v1/eu` devolve `introducaoVistaEm`, a mais antiga do mesmo papel na conta, e, se a data veio de outra escola e a própria linha está nula, grava `now()` nela, nunca o valor emprestado
+  - [ ] 1.3 `POST /v1/eu/introducao`, idempotente e sem ano letivo, com a ação `eu.concluir_introducao` na matriz
   - [ ] 1.4 `concluirIntroducao()` no cliente da web; fixtures do e2e e vitrine criam pessoa com a introdução vista
   - [ ] 1.5 `docs/lgpd.md` (linha nova no mapa) e `docs/modelo-de-dados.md`
-  - [ ] 1.6 Testes: repetida, em paralelo, isolamento, duas escolas, dois papéis, arquivo do titular
+  - [ ] 1.6 Testes: repetida, em paralelo, dois usuários da mesma escola, sem ano em curso, vínculo encerrado, duas escolas, dois papéis, arquivo do titular
 
 - [ ] **2.0 — O aluno navega por Início, Tarefas e Eu, e abre no Início**
   - [ ] 2.1 Os endereços novos em `caminhos.ts` (inclusive os três `bem-vindo` e `ehTelaDeFoco`)
@@ -21,10 +21,10 @@
   - [ ] 2.5 `docs/interface.md` 11.1 e `docs/glossario.md`
   - [ ] 2.6 Testes: os lugares, cada endereço antigo, o redirecionamento, "Sair" e a segunda pessoa
 
-- [ ] **3.0 — O Início mostra o Tutor, a faixa de supervisão, as próximas tarefas e o uso do dia**
-  - [ ] 3.1 `consultaUsoDoTutor` (a conversa sem atividade, com `limite=1`)
-  - [ ] 3.2 A tela: saudação, faixa presa, "Para fazer", os caminhos até o Tutor, o uso do dia e a pausa
-  - [ ] 3.3 Testes: os quatro estados, as três pausas, a avaliativa, o aluno sem turma e a varredura de texto
+- [ ] **3.0 — O Início mostra o Tutor, a faixa de supervisão e as próximas tarefas**
+  - [ ] 3.1 O seed de `infra/scripts/carga-login.ts` com ano em curso, turma e atividades, e `infra/k6/login-7h30.js`: o aluno faz `/v1/eu` e `minhas-atividades` depois do login, com o p95 das autenticadas valendo na rajada
+  - [ ] 3.2 A tela: saudação fixa, faixa presa, "Para fazer", os caminhos até o Tutor e o aviso da avaliação (sem `tutor/conversa`)
+  - [ ] 3.3 Testes: os quatro estados, a rede sem `tutor/conversa`, a avaliativa, o aluno sem turma, a varredura de texto e o k6
 
 - [ ] **4.0 — Tarefas em três grupos: Para fazer, Entregues e Corrigidas**
   - [ ] 4.1 `separarAtividades` em três grupos e os textos de estado
@@ -33,11 +33,11 @@
   - [ ] 4.4 Testes: a separação, os quatro estados, "Corrigida" só com correção aprovada
 
 - [ ] **5.0 — As peças da introdução: tela de foco, balão, comemoração e a onça em três poses**
-  - [ ] 5.1 As poses acenando, apontando e comemorando em `componentes/onca/`
+  - [ ] 5.1 As poses acenando, apontando e comemorando em `componentes/onca/`, com o mesmo rosto neutro
   - [ ] 5.2 `TelaDeFoco`, `Balao`, `Comemoracao` e `introducao/Introducao`
   - [ ] 5.3 A casca em modo de foco nos endereços de `ehTelaDeFoco`
   - [ ] 5.4 A seção da galeria, nos dois temas
-  - [ ] 5.5 Testes: ordem, foco, botões iguais, passo obrigatório, movimento reduzido, a casca em foco
+  - [ ] 5.5 Testes: ordem, foco, botões iguais, passo obrigatório, movimento reduzido, rosto das poses, quem importa a onça e a `Comemoracao`, a casca em foco
 
 - [ ] **6.0 — A tarefa aberta na pele nova, com a comemoração na entrega**
   - [ ] 6.1 A moldura da tarefa aberta com as peças da X1, sem mudar o fluxo
@@ -60,17 +60,17 @@
   - [ ] 9.2 `BemVindo.tsx` do aluno, a rota e o desvio da primeira entrada em `paginas/Inicio.tsx`
   - [ ] 9.3 "Rever a introdução" em Eu
   - [ ] 9.4 `docs/aia/tutor.md`, `docs/lgpd.md` (seção 9) e `docs/conformidade-mec.md`
-  - [ ] 9.5 Testes: primeira e segunda entrada, avisos sem "pular", sair no meio, rever, o texto do aviso
+  - [ ] 9.5 Testes: primeira e segunda entrada (contexto novo), avisos sem "pular", passo 4, sair no meio, rever, estados da `BemVindo`, o texto do aviso
 
 - [ ] **10.0 — A introdução do professor**
   - [ ] 10.1 `textos-da-introducao.ts` e `BemVindo.tsx` do professor, com a rota
   - [ ] 10.2 "Rever a introdução" no menu da pessoa
-  - [ ] 10.3 Testes: primeira entrada pelo convite, pular, rever, o professor de duas escolas
+  - [ ] 10.3 Testes: primeira entrada pelo convite, pular, rever, estados da `BemVindo`, o professor de duas escolas
 
 - [ ] **11.0 — A introdução da coordenação**
   - [ ] 11.1 `textos-da-introducao.ts` e `BemVindo.tsx` da coordenação, com a rota
   - [ ] 11.2 "Rever a introdução" no menu da pessoa
-  - [ ] 11.3 Testes: primeira entrada pelo convite e pelo segundo fator, pular, rever, o aviso de incidente por cima
+  - [ ] 11.3 Testes: primeira entrada pelo convite e pelo segundo fator, pular, rever, estados da `BemVindo`, o aviso de incidente por cima
 
 ## Dependências e paralelismo
 

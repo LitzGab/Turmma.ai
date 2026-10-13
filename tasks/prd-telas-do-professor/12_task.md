@@ -26,7 +26,8 @@ de nome no alto, com as regras de hoje. A web passa a ler `GET /v1/turmas/:id/al
   começando por `alunos-da-turma`. `AlunosDaTurma.tsx`: a lista em ordem de nome (`localeCompare` em `pt-BR`, empate
   pelo id), com os acertos de cada aluno vindos do desempenho aprovado; o aluno sem correção aprovada diz "Sem
   correção aprovada". Confira a rota em `apps/api/test/turma-acesso.int.test.ts` (paginação, auditoria `turma.alunos_lidos`,
-  se a leitura do professor leva finalidade) antes de chamar
+  se a leitura do professor leva finalidade) antes de chamar. A web não envia `?anoLetivoId`; lê com `limite=100`
+  e reordena por nome tudo o que já foi carregado, também depois de "Ver mais" (teste de componente: sem `?anoLetivoId`, com `limite=100`). Aluno transferido ou com acesso desativado tem estado próprio
 - [ ] 12.2 — Os pedidos de nome no alto da aba, com a `ListaDePedidos` e as regras de hoje (40 por vez, sem "aprovar todos",
   a confirmação que diz o efeito). O acesso da turma segue como está até a 13.0
 - [ ] 12.3 — Testes
@@ -49,6 +50,8 @@ Definidos com o `test-engineer`. Não improvise aqui.
 |---|---|---|
 | a ordem de nome | unidade | a lista chega em ordem de id e sai em ordem de nome; dois alunos de mesmo nome ficam em duas linhas, em ordem estável |
 | aluno sem correção aprovada | unidade e componente | aparece com "Sem correção aprovada", e não some nem vira "0 de 0"; correção pendente ou rejeitada não entra na conta |
+| aluno transferido ou desativado | componente | aparece com o estado próprio, sem número de acerto inventado |
+| vocabulário | unidade | "Média de acertos" vira "acerto médio"; nenhuma palavra de nota ou ranking |
 | nenhuma ordem por acerto | componente | nenhum controle ordena por acerto; a ordem não muda com os números (D69) |
 | estados | componente | carregando; erro com "Tentar de novo"; vazio ("A lista ainda não chegou", com o caminho para a coordenação); mais de uma página, com "Ver mais"; com dado |
 | a lista não fica no cache | componente | ao sair da aba e voltar, a lista é lida de novo (`gcTime: 0`); nada do nome em `localStorage`, `sessionStorage` ou endereço |

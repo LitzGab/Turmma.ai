@@ -26,7 +26,7 @@ ou por `?convidar=1`, e oferecido logo depois de confirmar a turma. O link e o c
   sem acesso, a validade (1, 7 ou 30 dias, 7 de início) e "Gerar acesso"; depois de gerar, "Acesso gerado" com o link,
   o código em dois grupos ("Código da turma"), copiar, projetar e o WhatsApp de hoje; com acesso vigente, só "até
   quando vale", "Gerar novo acesso" e "Revogar o acesso", cada um com a pergunta de hoje. Os títulos de cada passo e o
-  envio único não mudam. A seção "Acesso dos alunos" fica na aba como resumo e leva o botão "Convidar alunos"
+  envio único não mudam. O passo "Acesso gerado" é **tela inteira** (largura e altura da janela, fundo `fundo` por classe de token, nenhuma cor nova no `::backdrop`), porque é projetado. A seção "Acesso dos alunos" fica na aba como resumo e leva o botão "Convidar alunos"
 - [ ] 13.2 — `?convidar=1` abre o diálogo na aba Alunos e fechar tira o parâmetro (`replace`). Depois de "Confirmar" em
   Turmas, o `Aviso` "Turma 7ºA confirmada" leva "Gerar o acesso" a `…/turmas/:id?aba=alunos&convidar=1`. O endereço
   nunca leva token, link nem código
@@ -39,6 +39,7 @@ ou por `?convidar=1`, e oferecido logo depois de confirmar a turma. O link e o c
 | `apps/web/src/areas/professor/ConvidarAlunos.tsx`, `ConvidarAlunos.test.tsx` | novo |
 | `apps/web/src/areas/professor/AcessoDaTurma.tsx`, `AlunosDaTurma.tsx`, `Turmas.tsx` | alterado (em `apps/web/src/areas/professor/`; a 9.0 e a 12.0 já passaram) |
 | `apps/web/src/areas/professor/acesso-da-turma.test.ts` | alterado |
+| `apps/web/src/componentes/Dialogo.tsx` | alterado (a variante `inteira`; "Gerar" e "Acesso vigente" continuam em 560 px, e a troca de largura não anima) |
 | `e2e/acesso-da-turma.spec.ts` | alterado (os nove casos) |
 
 ## Testes que provam a regra
@@ -54,6 +55,7 @@ Definidos com o `test-engineer`. Não improvise aqui.
 | o endereço | componente e e2e | `?convidar=1` abre; fechar tira o parâmetro; o endereço nunca tem token nem código; vínculo pendente ou de outra turma não abre o diálogo |
 | depois de confirmar | e2e | "Turma 7ºA confirmada" com "Gerar o acesso" leva à aba Alunos com o diálogo aberto; o aviso some ao sair |
 | concorrência | e2e | dois cliques em "Gerar acesso" mandam um pedido só; o `CONFLITO` recarrega a seção e deixa só "Fechar" |
+| nada legível atrás de "Acesso gerado" | e2e | com a turma com alunos e acertos, enquanto o passo "Acesso gerado" está aberto: o passo é tela inteira. A caixa do `<dialog>` cobre a janela inteira, e o fundo calculado do `<dialog>` (o elemento que leva a classe `bg-fundo`) é a cor do token `fundo`, com alfa 1, no claro e no escuro: no escuro ela difere do `Canvas` que o navegador dá ao diálogo, e por isso o teste não passa sem a classe (não `toBeVisible`). Mutações, cada uma vermelha sozinha: tirar a classe de tela inteira; e, com a tela inteira mantida, trocar `bg-fundo` por fundo transparente. O passo "Gerar" tem 560 px de largura: aplicar `inteira` em todos os passos deixa o teste vermelho |
 | recomeço | e2e | a sessão vence com o convite aberto: o diálogo sai com o link e o código, e a volta mostra só a validade; a segunda pessoa e outra turma não herdam o diálogo. Log: nenhum token em log nem em URL |
 | 360 px e teclado | e2e | sem rolar de lado, também com o código grande; foco preso e devolvido ao botão "Convidar alunos" |
 
