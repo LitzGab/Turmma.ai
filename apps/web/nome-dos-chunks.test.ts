@@ -158,6 +158,13 @@ describe('nome dos chunks', () => {
     for (const daEntrada of ['Campo.tsx', 'CampoDeSenha.tsx', 'seletor.ts']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
   })
 
+  it('as peças novas de estado (X1, 6.0) estão fora da entrada, e os três de `estado/` e o `Botao` que eles usam, dentro', () => {
+    for (const nova of ['Aviso.tsx', 'Contador.tsx', 'Toque.tsx']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${nova}`), nova).toBe(true)
+    for (const daEntrada of ['estado/EstadoCarregando.tsx', 'estado/EstadoErro.tsx', 'estado/EstadoVazio.tsx', 'Botao.tsx']) {
+      expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
+    }
+  })
+
   it('a peça nova de lista (X1, 5.0) está fora da entrada, e o `Linha` do `Tabela` não é um arquivo', () => {
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/Linha.tsx')).toBe(true)
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/Linha.test.tsx')).toBe(false)

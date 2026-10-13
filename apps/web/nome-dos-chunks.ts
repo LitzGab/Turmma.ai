@@ -96,12 +96,14 @@ const PASTA_DAS_PECAS_DE_IA = '/apps/web/src/componentes/ia/'
  */
 export const PECAS_FORA_DA_ENTRADA = [
   'Abas',
+  'Aviso',
   'barra',
   'BarraPresa',
   'BarraRotulada',
   'Busca',
   'CampoLongo',
   'Cartao',
+  'Contador',
   'DialogoDeConfirmacao',
   'Faixa',
   'flutuante',
@@ -118,6 +120,7 @@ export const PECAS_FORA_DA_ENTRADA = [
   'teclado-do-menu',
   'Tela',
   'texto-longo',
+  'Toque',
 ] as const
 
 /** O módulo é uma peça que fica fora do primeiro carregamento? */

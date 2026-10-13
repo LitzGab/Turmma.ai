@@ -136,7 +136,11 @@ do campo leva ícone ao lado do texto e é descrição do campo (`aria-described
 já é região própria (`descritoTambemPor`), e dois alertas o anunciariam duas vezes; o hover do botão troca a cor de
 fundo, sem `filter`; a `BarraRotulada` mantém o trilho `ia-cx` e o enchimento `sutil` de hoje (só a forma muda: 12 px e ponta
 redonda), continua desenho `aria-hidden` com o valor escrito ao lado, e não ganha `role="progressbar"` nem `scaleX`; o
-fio de 2 px entre as `Linha` é da moldura que as junta (`divide-y-2`), e não de cada uma; a lateral não anima a
+fio de 2 px entre as `Linha` é da moldura que as junta (`divide-y-2`), e não de cada uma; o `Contador` diz o que conta em
+texto escondido depois do número, e não por `role="img"` com `aria-label`, para a aba e a linha lerem o mesmo texto; o `Aviso`
+só tem papel vivo no erro, e só no texto dele (o `status` do mockup em texto parado é ruído), e as `Abas` têm 44 px em
+todo tamanho (as abas de página do mockup, que levam o número); o `EstadoVazio` de lista continua à esquerda, e só o
+tracejado centraliza; a lateral não anima a
 largura; `apagado` nunca é cor de texto; nada depende de
 `:has()`, `scrollbar-width` nem `color-mix`, nem em estilo em linha.
 

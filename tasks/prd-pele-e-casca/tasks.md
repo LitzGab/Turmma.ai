@@ -41,10 +41,10 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 5.2 A peça nova `Linha`: a linha inteira é o alvo, com chevron
   - [x] 5.3 Testes: a tabela ainda vira lista a 360 px; a barra de acerto continua neutra; a linha é um alvo só
 
-- [ ] **6.0 — Selo, contador, aviso e abas dizem o estado sem depender da cor**
-  - [ ] 6.1 `Estado`, `Faixa`, `Abas` e os três de `estado/` revestidos
-  - [ ] 6.2 As peças novas `Aviso`, `Contador` e `Toque`
-  - [ ] 6.3 Testes: texto ou ícone em todo estado; abas pelo teclado; o vazio, o carregando e o erro nos dois temas
+- [x] **6.0 — Selo, contador, aviso e abas dizem o estado sem depender da cor**
+  - [x] 6.1 `Estado`, `Faixa`, `Abas` e os três de `estado/` revestidos
+  - [x] 6.2 As peças novas `Aviso`, `Contador` e `Toque`
+  - [x] 6.3 Testes: texto ou ícone em todo estado; abas pelo teclado; o vazio, o carregando e o erro nos dois temas
 
 - [ ] **7.0 — Diálogo, confirmação, menu e painel ao lado na pele nova**
   - [ ] 7.1 `Dialogo`, `DialogoDeConfirmacao`, `dialogos.tsx`, `copia-unica.tsx`, `DialogoDoConvite.tsx`, `Menu` e `LoginPorCima` revestidos

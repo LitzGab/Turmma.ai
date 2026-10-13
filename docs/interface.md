@@ -1369,9 +1369,9 @@ prova isso (RF6 da X1).
 | `Cartao` (R) | Canto 16, borda 2, face `fundo`, 16 px por dentro (20 a partir de 768). De leitura, sem degrau. A cor de família vai no ladrilho e no selo de dentro, nunca no fundo inteiro | Clicável: degrau, hover `fundo-suave`. Selecionado: `azul-claro` com `azul-borda` |
 | `Linha` (N) | A linha inteira clicável: mínimo de 64 px. Título em `t-cartao`, numa linha com reticências (o `title` guarda o texto inteiro); embaixo, `t-apoio`; no fim, chevron de 20 em `apagado`, decoração. O fio de 2 px entre uma linha e a de cima é de quem junta as linhas, com `divide-y-2 divide-borda` na moldura (produto): a linha sozinha não sabe se é a primeira | Link, botão ou só leitura (sem foco e sem chevron). Hover `fundo-suave`; o anel de foco por dentro (−3 px) |
 | `Tabela` (R) | Moldura de canto 16. Cabeçalho de 44 px em `t-selo`; linha de 64 px, 15 px em 500. Abaixo de 768 px cada linha vira um cartão | Linha ativa em `azul-claro`. Linha que abre: inteira, por Enter e espaço. Não ordena |
-| `Abas` (R) | Linha de 48 px sobre um fio de 2 px (44 no cabeçalho de página). Rótulo em `t-rotulo`, `sutil`; a ativa em `azul-texto`, com sublinhado de 3 px em `azul`. **Até três** | Teclado de `teclado-das-abas.ts` |
+| `Abas` (R) | Linha de 44 px (produto: as abas de página do mockup, que levam o número; a de 48 px é a do mockup solta) sobre um fio de 2 px. Rótulo em `t-rotulo`, `sutil`; a ativa em `azul-texto`, com sublinhado de 3 px em `azul`. **Até três** | Teclado de `teclado-das-abas.ts`; `aria-selected` e `aria-controls` |
 | `Tela` (R) | A moldura de toda tela, com o título e as larguras (11.2) | — |
-| Os três de `estado/` (R) | Coluna centrada, título em `t-secao` e uma ação. Sem onça na X1: a dormindo é da X2, com parecer (9.7) | Carregando parado, sem pulso; o erro diz o que fazer |
+| Os três de `estado/` (R) | Caixa de 2 px, título em `t-secao` e uma ação. O vazio tracejado (`borda-campo`) centraliza; o vazio de lista continua à esquerda (produto: ele mora dentro de lista e de cartão, e a tela é que recompõe). Sem onça na X1: a dormindo é da X2, com parecer (9.7) | Carregando é texto parado em `status`, sem pulso; o erro tem `alert` só na mensagem, e o botão e o "Tentando de novo…" ficam fora dele |
 
 **Marcar e informar**
 
@@ -1379,8 +1379,8 @@ prova isso (RF6 da X1).
 |---|---|---|
 | `Ladrilho` (N) | Quadrado de canto 12, fundo no `claro` da família, ícone a 72% do lado. De 32 a 56 px | `role="img"` com rótulo; sem ele, `aria-hidden` |
 | `Estado`, o selo (R) | 24 px de altura, canto 8, `t-selo`, glifo de 16. Neutro: `fundo-suave` com `apoio`. De família: `claro` com `texto`. As famílias de hoje (`pendente`, `ok`, `erro`, `info`) continuam | Sempre com texto ou glifo |
-| `Contador` (N) | Pílula na face da família, texto `sobre-cor` em 700, tabular. 22, 24 ou 28 px | `role="img"`, com o número e o que ele conta. Sem item, não aparece |
-| `Aviso` (N) | Canto 12, borda 2 na `borda` da família, fundo `claro`, sem degrau. Glifo num círculo de 28. Título em `t-cartao`; corpo em 15 / 21 px, `tinta`. Informação azul, atenção amarelo, erro vermelho, certo verde | `role="alert"` só no erro que acabou de acontecer |
+| `Contador` (N) | Pílula na face da família, texto `sobre-cor` em 700, tabular, de 24 px (produto: um tamanho só) | O que ele conta é texto escondido depois do número (produto: não `role="img"`, para a aba e a linha lerem o mesmo texto). Sem item, não aparece, e não pisca |
+| `Aviso` (N) | Canto 12, borda 2 na `borda` da família, fundo `claro`, sem degrau. Glifo num círculo de 28, uma forma por tom. Título em `t-cartao`; corpo em 15 / 21 px, `tinta`. Informação azul, atenção amarelo, erro vermelho, certo verde | `role="alert"` só no erro, e só no texto dele (a ação fica fora). Os outros três tons não têm papel vivo (produto: o `status` do mockup em texto parado é ruído). Não fecha |
 | `Faixa` (R) | O aviso permanente, que não fecha (D8), na família `info` | `role="note"`. Não tem botão |
 | `BarraRotulada` (R) | Trilho em `ia-cx` (produto), de 12 px e ponta redonda, com o enchimento em `sutil`: a mesma cor nos dois, vazia ou cheia. O texto ("2 de 8") vai fora. Só mede o que tem fim | Só desenho, `aria-hidden` (produto): o valor está escrito ao lado, e `role="progressbar"` o diria duas vezes. Barra de acerto é neutra |
 | `NumeroPainel` (R) | O valor em `t-numero`, o rótulo em `t-selo`, `sutil` | Sem variação "boa" ou "ruim" em cor |

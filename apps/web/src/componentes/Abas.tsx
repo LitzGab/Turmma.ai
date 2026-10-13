@@ -1,4 +1,5 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react'
+import { Contador } from './Contador'
 import { abaDaTecla, abaNaOrdemDoTab } from './teclado-das-abas'
 
 export interface Aba {
@@ -27,14 +28,18 @@ interface PropsDasAbas {
  * - **Uma parada só no Tab**: a aba ativa. As setas trocam de aba (e dão a volta), `Home` e `End` vão às pontas, e o
  *   Tab seguinte entra no painel.
  * - **Clique e toque** trocam do mesmo jeito: nada aqui depende de teclado nem de hover (regra 50, item 2a).
- * - **A ativa tem três pistas** (11.1): o texto em `tinta` com peso 600, o filete embaixo e o `aria-selected`. Só a cor
- *   não diria nada num Chromebook de entrada.
+ * - **A ativa tem três pistas** (`docs/interface.md` 10.2): o texto em `azul-texto`, o sublinhado de 3 px em `azul` sobre
+ *   o fio de 2 px da lista, e o `aria-selected`. Só a cor não diria nada num Chromebook de entrada, e por isso a forma
+ *   (o sublinhado) e o estado (o ARIA) vão juntos.
  * - **A lista quebra de linha** quando não cabe: a 360 px todas as abas ficam à vista, em duas linhas se for preciso. A
  *   lista que rola de lado esconde a aba que ficou para fora, e nada diria que ela existe.
  * - **A ativa que não está na lista** (o id que veio errado do endereço) não deixa a lista sem parada no Tab: a primeira
  *   aba fica alcançável, e o painel fica sem dono até a pessoa escolher uma.
+ * - **O número ao lado do rótulo** é o `Contador`: com o que ele conta escrito para o leitor de tela, e sem desenho
+ *   nenhum quando é zero.
  *
- * 44 px de altura no celular e 36 px a partir de 768 px, que é a barra de controles da 9.3.
+ * 44 px de altura em todo tamanho de tela, no computador também: é a das abas da página (`AbasDaPagina` do mockup), que
+ * levam o número, e é a que a 10.2 pede. Os 48 px são os da linha de abas solta do mockup, que esta peça não desenha.
  */
 export function Abas({ rotulo, abas, ativa, aoMudar, children }: PropsDasAbas) {
   const base = useId()
@@ -57,7 +62,7 @@ export function Abas({ rotulo, abas, ativa, aoMudar, children }: PropsDasAbas) {
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <div ref={lista} role="tablist" aria-label={rotulo} onKeyDown={aoTeclar} className="flex min-w-0 flex-wrap gap-x-1 border-b border-linha">
+      <div ref={lista} role="tablist" aria-label={rotulo} onKeyDown={aoTeclar} className="flex min-w-0 flex-wrap gap-x-1 border-b-2 border-borda">
         {abas.map((aba) => {
           const selecionada = aba.id === ativa
           return (
@@ -70,16 +75,11 @@ export function Abas({ rotulo, abas, ativa, aoMudar, children }: PropsDasAbas) {
               aria-controls={idDoPainel}
               tabIndex={aba.id === daParada ? 0 : -1}
               onClick={() => aoMudar(aba.id)}
-              className={`relative inline-flex min-h-11 shrink-0 items-center gap-2 px-3 text-sm whitespace-nowrap md:min-h-9 ${selecionada ? 'font-semibold text-tinta' : 'text-sutil hover:text-tinta'}`}
+              className={`t-rotulo relative inline-flex min-h-11 shrink-0 items-center gap-2 px-3 whitespace-nowrap ${selecionada ? 'text-azul-texto' : 'text-sutil hover:text-tinta'}`}
             >
               {aba.rotulo}
-              {aba.contador !== undefined && aba.contador > 0 && (
-                <span className="rounded-full bg-pendente-cx px-1.5 text-[13px] font-semibold text-pendente tabular-nums">
-                  {aba.contador}
-                  <span className="sr-only"> {aba.oQueConta ?? 'esperando você'}</span>
-                </span>
-              )}
-              {selecionada && <span aria-hidden="true" className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-tinta" />}
+              {aba.contador !== undefined && <Contador n={aba.contador} oQueConta={aba.oQueConta ?? 'esperando você'} />}
+              {selecionada && <span aria-hidden="true" className="absolute inset-x-2 -bottom-0.5 h-0.75 rounded-full bg-azul" />}
             </button>
           )
         })}
