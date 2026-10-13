@@ -6,14 +6,17 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** o `RELATÓRIO` do `Implementador`, da **8.0** (porte pequeno; `frontend-reviewer` e
-  `conformidade-reviewer`), na **linha 1**, 1ª tentativa, pedida em 13/10/2026 às 17h15 (a 7.0 se encontrou às
-  17h10, em `dc02f60`). Checkout da
+- **Espero:** o `RELATÓRIO` do `Implementador`, da **9.0** (porte pequeno; `frontend-reviewer` e
+  `infra-guardian`), na **linha 1**, 1ª tentativa, pedida em 13/10/2026 às 18h25 (a 8.0 se encontrou às
+  18h20, em `eb3a181`). Depois dela o quadro deve soltar a **10.0** (porte grande), na mesma linha. Checkout da
   linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch `spec/pele-e-casca--l1`, ambiente
   de teste 1, com o `Implementador` e a `Mesa`. Todo pedido vai com a observação **"sem push"**: o commit da tarefa
   fica local. **Para a validação:** a 7.0 deixou ao `/validar` o caso direto de `fechadoPeloNavegador` sob
   `StrictMode` ("Recomendações sem aplicar" do `7_task.md`); e os revisores da correção `quinta-fatia-do-e2e` (`71ff60f`, já na spec com a 6.0)
-  deixaram ao `/validar` as recomendações recusadas na tabela de `tasks/correcoes/2026-10-13-quinta-fatia-do-e2e.md`
+  deixaram ao `/validar` as recomendações recusadas na tabela de `tasks/correcoes/2026-10-13-quinta-fatia-do-e2e.md`;
+  e a 8.0 deixou ao `/validar` ("Recomendações sem aplicar" do `8_task.md`): fotografar o RF10 com uma conversa do
+  Tutor aberta, o botão "Abrir dado nominal de uma turma" quebrando em duas linhas a 360 px, e
+  `/professor/nova-conversa` nos dois temas
 - **Devo ainda:** (1) **tudo local, por decisão do Joaquim** (13/10, 08h50: "pode ficar local"): nenhum push, de
   ninguém, até ele mandar. O `linhas.ts encontro` não tem opção sem push: rodá-lo com o endereço de push trocado só
   naquele comando (`GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=remote.origin.pushurl GIT_CONFIG_VALUE_0=/dev/null/sem-push`
@@ -23,14 +26,23 @@
   de tarefa leva a observação "sem push"; (2) a 3.0 é tronco e segura as outras doze; da 4.0 em diante o quadro
   autoriza linhas, mas **uma linha só** até o Joaquim dizer o contrário
   (limite de uso); (2a) o `PEDIDO` da **10.0** leva a observação: "o placeholder da `CaixaPedido` fica cortado a
-  360 px; está em 'Sem aplicar' do `5_task.md`"; e o da **12.0**: "quando o `Contador` ganhar a lateral, manter o chunk
+  360 px; está em 'Sem aplicar' do `5_task.md`", e mais: "a 8.0 mudou o balão da `MensagemIA`, que agora usa a
+  `AssinaturaIA` como cabeçalho, no lugar do avatar ao lado: muda o `Time.tsx` e o `Tutor.tsx` do professor; leia
+  'Divergências' e 'Recomendações sem aplicar' do `8_task.md`, que também deixam para a 10.0 o `ml-1` e o
+  `align-middle` da casca do selo, se ela tocar a `AssinaturaIA`". O `8_task.md` pede que esse aviso passe pelo
+  `Arquiteto` antes de a 10.0 começar: **antes da partida da 10.0**, reiniciar o `Arquiteto` no andar da spec com um
+  `PEDIDO` curto de triagem (o `10_task.md` contra as linhas do balão em "Divergências" do `8_task.md`: ajusta o
+  documento ou responde que a observação basta); e o da **12.0**: "quando o `Contador` ganhar a lateral, manter o chunk
   `pecas-estado`; está em 'Recomendações sem aplicar' do `6_task.md`"; e o da **13.0**: "o `docs/interface.md`, na
   10.2, cita '12.0 e 13.0' para a gaveta da casca, e ela é só da 13.0; está em 'Recomendações sem aplicar' do
   `7_task.md`"; (2b) **no fechamento, levar ao `TODO.md`**, em "Marca e interface", o que a 7.0 deixou com esse
   destino e ainda não está lá: seis linhas, na tabela "Recomendações sem aplicar" do `7_task.md` e em
   `.processo/ordens/7_task-r2.md` da linha 1 (a lista do perigo cheio por arquivo e o detector textual; a ordem dos
   botões do rodapé entre as peças; o texto técnico da galeria; a cor do botão oficial só provada como "não
-  vermelho"; o Tab preso do login por cima); e, para o Arquiteto ao escrever a tela que usar o `PainelLado` na X2 e
+  vermelho"; o Tab preso do login por cima); e o que a **8.0** deixou com o mesmo destino ("Recomendações sem aplicar" do
+  `8_task.md`): fechar `QUEM_IMPORTA_O_AVATAR` só na `AssinaturaIA`, com o aperto na `techspec.md` 7b (é do
+  Arquiteto, e da retrospectiva), e o espaço dobrado (`ml-1`) e o `align-middle` sem asserção na casca do selo,
+  se a 10.0 não os fechar; e, para o Arquiteto ao escrever a tela que usar o `PainelLado` na X2 e
   na X3: `infra-guardian` obrigatório e foto do menu aberto dentro do diálogo; (3) nada mais sobre a revisão de spec da X3 e da X4: as duas **já têm revisão aprovada** pelos
   seis guardiões, quatro rodadas cada, feita pelo "Claude Code #2" a pedido do Joaquim e trazida para esta branch em
   13/10/2026 (`2f63ce0`, `7334f79`, `92cc7e5`; o Joaquim deu a palavra neste terminal: "pode"). Não repetir antes de
@@ -48,7 +60,7 @@
   "X1 pele-e-casca" nasceu da branch que já existia (`--existing-branch`), em
   `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca`, e a `develop` (`e278845`) entrou por merge, sem
   conflito (`65ab3b1`). A 1.0 e a spec correram fora do Maestri, num checkout avulso já desfeito
-- **Base:** `spec/pele-e-casca` em `798b508`, com a 7.0 (`dc02f60`); a linha 1 partiu dela para a 8.0. Se o quadro
+- **Base:** `spec/pele-e-casca` em `17ccd02`, com a 8.0 (`eb3a181`); a linha 1 partiu dela para a 9.0. Se o quadro
   pedir mais uma linha: não abrir (uma linha só, item 2 acima). Nada foi enviado ao GitHub:
   push é do Joaquim
 
