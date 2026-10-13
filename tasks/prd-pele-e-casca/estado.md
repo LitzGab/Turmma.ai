@@ -6,8 +6,8 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** o `RELATÓRIO` do `Implementador`, da **4.0** (porte grande), na **linha 1**, 1ª tentativa, pedida em
-  13/10/2026 às 12h16 (a 3.0 se encontrou às 12h15, em `76e3a02`). Checkout da linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch
+- **Espero:** o `RELATÓRIO` do `Implementador`, da **5.0** (porte grande), na **linha 1**, 1ª tentativa, pedida em
+  13/10/2026 às 13h13 (a 4.0 se encontrou às 13h11, em `6627aea`). Checkout da linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch
   `spec/pele-e-casca--l1`, ambiente de teste 1, com o `Implementador` e a `Mesa`. O pedido foi com a observação
   **"sem push"**: o commit da tarefa fica local
 - **Devo ainda:** (1) **tudo local, por decisão do Joaquim** (13/10, 08h50: "pode ficar local"): nenhum push, de
@@ -35,7 +35,7 @@
   "X1 pele-e-casca" nasceu da branch que já existia (`--existing-branch`), em
   `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca`, e a `develop` (`e278845`) entrou por merge, sem
   conflito (`65ab3b1`). A 1.0 e a spec correram fora do Maestri, num checkout avulso já desfeito
-- **Base:** `spec/pele-e-casca` em `8f7624a`, com a 3.0; a linha 1 partiu dela para a 4.0. O quadro pede mais uma
+- **Base:** `spec/pele-e-casca` em `e1927a3`, com a 4.0; a linha 1 partiu dela para a 5.0. O quadro pede mais uma
   linha para a 9.0: não abrir (uma linha só, item 2 acima). Nada foi enviado ao GitHub: push é do Joaquim
 
 ## Concluídas
@@ -47,6 +47,7 @@
 | 2.0 | `080f90c` | Sonnet 5.5 | 2 | linha 1, das 08h29 às 09h58 de 13/10; na 1ª rodada o `revisor-geral` e o `test-engineer` reprovaram (sete itens: `colorScheme` e vitrine sem dono, a medida em brotli, cláusulas sem bloco de mutação), na 2ª os quatro aprovaram; 29 mutações vermelhas; sem push |
 | 3.0 | `76e3a02` | Sonnet 5.5 | 2 | linha 1, das 09h58 às 12h15 de 13/10; na 1ª rodada o `conformidade-reviewer`, o `revisor-geral` e o `test-engineer` reprovaram (a guarda "grafite só onde é oficial", os cenários U3 e U4, nove cláusulas sem bloco de mutação), na 2ª os quatro aprovaram; `--repeat-each 3` dos e2e alterados com 492 de 492; sem push |
 | 4.0 | `6627aea` | Sonnet 5.5 | 3 | linha 1, das 12h15 às 13h11 de 13/10; o `frontend-reviewer` aprovou na 1ª e na 2ª; o `test-engineer` reprovou na 1ª (a opção desligada sem asserção nem bloco de mutação) e aprovou na 2ª; o `revisor-geral` aprovou na 1ª, reprovou na 2ª e aprovou na 3ª, chamado sozinho; o contexto do Implementador compactou aos 15 minutos; primeiro carregamento em 128,3 kB brotli (teto 150); 55 mutações vermelhas; sem push |
+| 5.0 | `3ba0608` | Sonnet 5.5 | 2 | linha 1, das 13h13 às 13h54 de 13/10; o `frontend-reviewer` e o `revisor-geral` aprovaram na 1ª e na 2ª; o `test-engineer` reprovou na 1ª e aprovou na 2ª; a Mesa viu 58 fotos (galeria clara e escura, celular e computador); primeiro carregamento em 128,2 kB brotli (teto 150), `pecas-*` em 14,6 kB (teto 40); 42 mutações vermelhas; desvios do mockup (trilho da barra, fio da moldura) na Tech Spec, nos cenários e no `docs/interface.md`; ficou para a 10.0 o placeholder da `CaixaPedido` cortado a 360 px ("Sem aplicar" do `5_task.md`); sem push |
 | PRD, Tech Spec e tarefas da X1 à X4 | `2ed7829` | Opus (as tarefas 8 a 15 da X1, 4 a 14 da X3 e 3 a 11 da X4, por agentes em Sonnet) | 4 da spec da X1 | só documento; a X2, a X3 e a X4 sem revisão de spec |
 
 ## Esperando o Joaquim
