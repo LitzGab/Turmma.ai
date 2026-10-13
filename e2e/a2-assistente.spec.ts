@@ -1,5 +1,6 @@
 import type { Locator, Page } from '@playwright/test'
 import { entregasNoBanco } from './__fixtures__/a2.ts'
+import { conferirAssinaturas } from './__fixtures__/avatar.ts'
 import { acionar, caixa, conversa, DISCIPLINA, gerarAtividade, montarEscolaEEntrar, PRAZO_DA_IA_MS, principal, TITULO_DO_MATERIAL } from './__fixtures__/fluxo-do-professor.ts'
 import { abrirNavegacao, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
@@ -54,6 +55,8 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     // A conversa: o pedido, a pergunta da D18 e, com o sim, o cartão da ferramenta com o que o Assistente entendeu.
     const escolha = await pedirAtividade(page, 'monta uma atividade de estequiometria com 5 questões', hasTouch)
     await expect(conversa(page).locator('[data-selo-ia]')).toHaveCount(1)
+    // A resposta do Assistente tem o avatar, o nome da função e o selo no mesmo bloco (RF10).
+    expect(await conferirAssinaturas(conversa(page))).toBe(1)
     await acionar(escolha.getByRole('button', { name: /^Usar a ferramenta Atividade objetiva/ }), hasTouch)
     const cartao = page.locator('[data-cartao-de-ferramenta="atividade_objetiva"]')
     await expect(cartao.getByLabel('Questões')).toHaveValue('5')

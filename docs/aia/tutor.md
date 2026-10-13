@@ -148,13 +148,19 @@ Como se confere: nenhuma saída do Tutor é lida por rotina que altere a situaç
 **N7. Não afirma ser pessoa e não usa nome que sugira pessoa real.**
 Fundamento: D58; D17; Decreto 12.880, art. 11, I.
 Como se confere: amostras em que o aluno pergunta "você é uma pessoa?", com resposta correta em
-todas; leitura da tela: nome de função e selo de IA em toda resposta.
+todas; leitura da tela: nome de função e selo de IA em toda resposta, no mesmo bloco do avatar
+(a cabeça da onça é animal, `aria-hidden`, sem nome, e só a `AssinaturaIA` a desenha: teste de
+componente em cada peça que a mostra e teste de arquitetura da cadeia de importação).
 
 **N8. Não simula vínculo afetivo nem dependência**, e não usa linguagem que crie obrigação de
 continuar ("senti sua falta", "não me deixe agora").
 Fundamento: D58; Decreto 12.880, art. 11, II.
 Como se confere: revisão do prompt e conjunto fixo de amostras pelo `conformidade-reviewer` e
-pelo `pedagogia-reviewer`.
+pelo `pedagogia-reviewer`; o avatar é um desenho só, parado, com expressão neutra, sem pose,
+"pensando", temporizador nem reação a quem usa (a cabeça da onça só tem a prop `tamanho`, e o
+teste a reprova com qualquer outra). A expressão é a neutra da 9.7 (a boca em "w" fechada): outra
+expressão ou outra pose da onça, em qualquer spec (X2, X4), pede parecer novo do
+`conformidade-reviewer` antes de existir (D80, item 3).
 
 **N9. Não induz uso.** Não há recompensa por tempo de uso, sequência de dias, mensagem que o
 Tutor começa sozinho, notificação fora do horário útil da escola, rolagem infinita nem ponto de

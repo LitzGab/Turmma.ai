@@ -88,8 +88,12 @@ const NOMES_DE_COR = new Set(blocosDe(cssDoProduto()).claro.keys())
 /** `white` e `black` não mudam com o tema: classe com eles fica errada no escuro. Só o QR, que precisa ficar claro, pode. */
 const ARQUIVOS_COM_BRANCO_FIXO = ['componentes/CodigoQr.tsx']
 
-/** Os arquivos que podem escrever cor à mão. A onça entra aqui com a tarefa dela; o ícone ilustrado lê token e não entra. */
-const ARQUIVOS_COM_COR_EM_LINHA = ['componentes/CodigoQr.tsx']
+/**
+ * Os arquivos que podem escrever cor à mão: o QR, que precisa de preto e branco, e a cabeça da onça, cujas nove cores são
+ * fixas nos dois temas (`docs/interface.md` 9.7). A lista é **esses dois, e só eles**: o ícone ilustrado lê token e não
+ * entra, e a onça de corpo inteiro, quando vier, ou lê as cores da cabeça ou entra aqui com parecer.
+ */
+const ARQUIVOS_COM_COR_EM_LINHA = ['componentes/CodigoQr.tsx', 'componentes/onca/CabecaOnca.tsx']
 
 /** As sombras do `@theme` (`shadow-caixa`, `shadow-flutua`): `shadow-<nome>` com elas é sombra, não cor. */
 function sombrasDeclaradas(): Set<string> {
@@ -306,15 +310,10 @@ const FACE_DO_OFICIAL: Readonly<Record<string, UsoDaFaceDoOficial>> = {
     justificativa: 'o avatar do Assistente na linha de "Seu time" da lateral',
     sai: '12.0 (12.2: o ícone da função num ladrilho)',
   },
-  'componentes/ia/AvatarAgente.tsx': {
-    classes: ['bg-noite'],
-    justificativa: 'o avatar do Assistente de ensino na conversa e nos cartões',
-    sai: '8.0 (a onça é o avatar dos três agentes)',
-  },
 }
 
 /** Sobe só com decisão: a lista do oficial é a de hoje, e cada tarefa que tira um uso a faz encolher. */
-const TETO_DA_LISTA_DO_OFICIAL = 8
+const TETO_DA_LISTA_DO_OFICIAL = 7
 
 function listaDoOficialCresceu(lista: Readonly<Record<string, UsoDaFaceDoOficial>>): boolean {
   return Object.keys(lista).length > TETO_DA_LISTA_DO_OFICIAL
@@ -563,6 +562,12 @@ describe('guarda de cor em apps/web/src (U3)', () => {
     // O oficial é o único que fica: nenhum uso de antes diz "não sai".
     expect(Object.entries(FACE_DO_OFICIAL).filter(([, { sai }]) => sai.startsWith('não sai')).map(([arquivo]) => arquivo)).toEqual(['componentes/botao-secundario.ts'])
     expect(listaDoOficialCresceu(FACE_DO_OFICIAL), 'a lista fechada do oficial só encolhe').toBe(false)
+    // O teto é o tamanho de hoje: quem tira um uso (a 8.0 tirou o avatar) baixa o teto junto, e a lista não ganha folga.
+    expect(TETO_DA_LISTA_DO_OFICIAL).toBe(Object.keys(FACE_DO_OFICIAL).length)
+  })
+
+  it('a cor escrita à mão é de duas peças só: o QR e a cabeça da onça', () => {
+    expect([...ARQUIVOS_COM_COR_EM_LINHA].sort()).toEqual(['componentes/CodigoQr.tsx', 'componentes/onca/CabecaOnca.tsx'])
   })
 
   it('a guarda da face do oficial reprova o arquivo novo e a classe que a entrada não cita, e aceita só o que a lista diz', () => {

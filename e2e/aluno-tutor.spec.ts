@@ -1,5 +1,6 @@
 import type { Locator, Page } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
+import { conferirAssinaturas, conferirQueAOncaNaoTemNome } from './__fixtures__/avatar.ts'
 import { encaminhamento, erroDaApi, minhaAtividade, perguntaDoAluno, portao, provaDa, respostaDoTutor, simularAluno, type ApiDoAluno } from './__fixtures__/aluno.ts'
 import { entrarComoAluno, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
@@ -153,6 +154,10 @@ test.describe('o Tutor pelo item da lateral e a conversa por atividade', () => {
     await expect(conversa(page).getByText('Você: qual é a resposta da questão 2?')).toHaveCount(1, { timeout: PRAZO_DA_TELA_MS })
     const respostas = conversa(page).locator('article').filter({ has: page.locator('[data-selo-ia]') })
     await expect(respostas).toHaveCount(7)
+    // Cada resposta do Tutor assina com a onça, o nome "Tutor" e o selo "IA" no mesmo bloco (RF10).
+    expect(await conferirAssinaturas(conversa(page))).toBeGreaterThanOrEqual(7)
+    // Nada da conversa do aluno se chama "onça": o avatar é desenho, e quem assina é o Tutor (A28).
+    await conferirQueAOncaNaoTemNome(page)
     await expect(respostas.first()).toContainText('Tutor')
     await expect(respostas.first()).toContainText('quantos mols há em 54 g de alumínio?')
     await expect(respostas.first().getByRole('button', { name: 'Fonte: Material da escola, p. 142' })).toBeVisible()

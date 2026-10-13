@@ -112,6 +112,7 @@ export const PECAS_FORA_DA_ENTRADA = [
   'Menu',
   'midia',
   'NumeroPainel',
+  'onca/CabecaOnca',
   'Opcao',
   'PainelLado',
   'Selecao',

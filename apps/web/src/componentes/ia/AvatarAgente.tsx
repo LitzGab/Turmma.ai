@@ -1,24 +1,25 @@
 import type { Agente } from '@educa/shared'
-import { ChartColumn, MessageCircleQuestion, MessagesSquare, type LucideIcon } from 'lucide-react'
+import { CabecaOnca } from '../onca/CabecaOnca'
 
 /**
- * A cor e o ícone de cada agente (`docs/interface.md` 9.7), dentro das três cores da D72. Quem conversa tem cor cheia: o
- * Assistente em preto com ícone branco (19,4:1), o Tutor no laranja da pinta com ícone `tinta` (6,4:1). O Analista, que
- * não conversa, fica no cinza do selo "IA", com ícone `tinta` (17,1:1).
+ * O anel de cada agente (`docs/interface.md` 9.7): a cor dele no produto inteiro. Quem conversa com o professor é azul, o
+ * Tutor é laranja, e o Analista, que só avisa a coordenação, é anil. O mapa é literal, nome por nome: o Tailwind só gera a
+ * classe que acha escrita por inteiro.
  */
-const APARENCIA_DO_AGENTE: Readonly<Record<Agente, { readonly icone: LucideIcon; readonly cor: string }>> = {
-  assistente_de_ensino: { icone: MessagesSquare, cor: 'bg-noite text-sobre-grafite' },
-  tutor: { icone: MessageCircleQuestion, cor: 'bg-caramelo text-sobre-cor' },
-  analista_de_desempenho_escolar: { icone: ChartColumn, cor: 'bg-ia-cx text-tinta' },
+const ANEL_DO_AGENTE: Readonly<Record<Agente, string>> = {
+  assistente_de_ensino: 'border-azul',
+  tutor: 'border-laranja',
+  analista_de_desempenho_escolar: 'border-anil',
 }
 
-/** 24 px na linha da mensagem, 32 px na lateral, 48 px no cabeçalho da conversa e na tela Agentes da coordenação. */
-const TAMANHO_DO_AVATAR = {
-  24: { caixa: 'size-6', icone: 14 },
-  32: { caixa: 'size-8', icone: 18 },
-  48: { caixa: 'size-12', icone: 26 },
+/** 24 px na linha da mensagem, 32 px na assinatura, 40 e 48 px no cabeçalho de uma conversa e no cartão de agente. */
+const CAIXA_DO_AVATAR = {
+  24: 'size-6',
+  32: 'size-8',
+  40: 'size-10',
+  48: 'size-12',
 } as const
-export type TamanhoDoAvatar = keyof typeof TAMANHO_DO_AVATAR
+export type TamanhoDoAvatar = keyof typeof CAIXA_DO_AVATAR
 
 interface PropsDoAvatar {
   readonly agente: Agente
@@ -26,18 +27,20 @@ interface PropsDoAvatar {
 }
 
 /**
- * O avatar do agente: **círculo com o ícone da função, nunca rosto** — nem foto, nem mascote, nem nada que pareça uma
- * pessoa (D17, D58; Decreto 12.880, art. 11). O agente tem identidade de função, e não se passa por gente.
+ * O avatar do agente: **a cabeça da onça num círculo `fundo`, com o anel de 2 px na cor do agente** (D80, item 3). A onça
+ * é animal, nunca pessoa — sem rosto de gente, sem foto, sem nome próprio (D17, D58; Decreto 12.880, art. 11) — e o agente
+ * tem identidade de função: quem assina é o nome dela, ao lado.
  *
- * É enfeite para o leitor de tela (`aria-hidden`): o avatar nunca é a única identificação, e o nome da função vem sempre
- * ao lado (`AssinaturaIA`). Não tem ponto de "online": agente não fica online como gente (D59).
+ * **As props são só `agente` e `tamanho`**, e o desenho não muda com quem usa: nenhuma pose, nenhum "pensando", nenhum
+ * ponto de "online" (D59). É enfeite para o leitor de tela (`aria-hidden`): o avatar nunca é a única identificação.
+ *
+ * **Quem o desenha é só a `AssinaturaIA`** (e o balão da `MensagemIA`, que a usa), e é por isso que ele nunca aparece sem
+ * o nome da função e o selo "IA" no mesmo bloco: `ia/avatar-so-nas-duas-pecas.test.ts` reprova outro arquivo que o importe.
  */
 export function AvatarAgente({ agente, tamanho = 24 }: PropsDoAvatar) {
-  const { icone: Icone, cor } = APARENCIA_DO_AGENTE[agente]
-  const medida = TAMANHO_DO_AVATAR[tamanho]
   return (
-    <span aria-hidden="true" data-agente={agente} className={`inline-flex shrink-0 items-center justify-center rounded-full ${medida.caixa} ${cor}`}>
-      <Icone size={medida.icone} strokeWidth={1.75} />
+    <span aria-hidden="true" data-agente={agente} className={`inline-flex shrink-0 rounded-full border-2 bg-fundo ${ANEL_DO_AGENTE[agente]} ${CAIXA_DO_AVATAR[tamanho]}`}>
+      <CabecaOnca tamanho={tamanho} />
     </span>
   )
 }

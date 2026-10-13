@@ -978,8 +978,12 @@ dois temas: pelagem `#E8732E`, sombra `#D75F18`, realce `#ED935D`, creme `#FDEBD
 agente: **Tutor `laranja`, Assistente de ensino `azul`, Analista de desempenho escolar `anil`**. O
 círculo com o ícone da função sai das telas. O avatar é `aria-hidden` e **só aparece com o nome da
 função e o selo "IA" visíveis no mesmo bloco**. Isso é garantido por estrutura, e não por
-combinado: só duas peças o desenham, `AssinaturaIA` e o balão de `MensagemIA`, e um teste reprova
-outro arquivo que importe o avatar ou qualquer coisa da pasta da onça. Na lateral e no trilho, "Seu time" mostra o ícone da função
+combinado: só a `AssinaturaIA` o desenha (o balão de `MensagemIA` a usa como cabeçalho, e a tela
+Agentes a usa com o nome da função em `h2`), e um teste reprova outro arquivo que importe o avatar
+ou qualquer coisa da pasta da onça. O bloco é o `data-assinatura`, e o teste confere que cada
+`data-agente` tem, nele, o nome da função em texto visível e um `data-selo-ia`. O cartão de cada
+agente na tela Agentes leva `data-cartao-do-agente`, e não `data-agente`, que é só do avatar.
+Na lateral e no trilho, "Seu time" mostra o ícone da função
 num ladrilho, sem a onça: a casca mora na entrada, e no trilho não há lugar para o nome. As funções
 do Assistente não têm avatar próprio, e aparecem pelo nome ("Assistente · correção de objetiva").
 Tamanhos: 24 px na linha da mensagem, 32 na assinatura, 40 e 48 no cabeçalho.
@@ -1419,7 +1423,7 @@ mockup desenhou e para o que qualquer catálogo oferecer.
 | Comemoração de nota, de acerto ou de tempo de uso | D59. A única comemoração é a da entrega, uma vez (9.5) |
 | Contagem regressiva, "só hoje", adesivo de novidade, notificação insistente | D59: urgência fabricada |
 | Seletor de humor ou de emoção, histórico de comportamento | Regra 70, item 7, e D57: o produto não infere nem registra estado emocional |
-| Avatar de IA com rosto, foto ou nome de gente; mascote com nome próprio ou que diz que sente; "orbe" que pulsa como presença viva | D58 e Decreto 12.880, art. 11: o agente não se passa por pessoa nem simula vínculo (9.7) |
+| Avatar de IA com rosto de gente, foto ou nome de gente; mascote com nome próprio ou que diz que sente; "orbe" que pulsa como presença viva. A cabeça da onça é animal, e entra (9.7) | D58 e Decreto 12.880, art. 11: o agente não se passa por pessoa nem simula vínculo (9.7) |
 | Verde para "melhorou" e vermelho para "piorou" | Cor é categoria, nunca julgamento (9.1) |
 | Letreiro correndo, rolagem infinita, carrossel que anda sozinho | D59: conteúdo que começa sozinho |
 | Fundo de shader, globo 3D, brilho de borda animado, vidro fosco, sombra borrada | Regra 50, item 1: custa quadro no Chromebook |

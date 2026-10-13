@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Botao } from '../../componentes/Botao'
 import { Cartao } from '../../componentes/Cartao'
 import { AssinaturaIA, SeloIA } from '../../componentes/ia/AssinaturaIA'
-import { AvatarAgente } from '../../componentes/ia/AvatarAgente'
 import { AvisoFila } from '../../componentes/ia/AvisoFila'
 import { CaixaPedido } from '../../componentes/ia/CaixaPedido'
 import { Escolha } from '../../componentes/ia/Escolha'
@@ -157,9 +156,6 @@ export default function SecoesDeIA() {
     <>
       <Secao nome="selo-de-ia" titulo="Selo de IA e assinatura">
         <div className="flex min-w-0 flex-wrap items-center gap-4">
-          <AvatarAgente agente="assistente_de_ensino" tamanho={48} />
-          <AvatarAgente agente="tutor" tamanho={32} />
-          <AvatarAgente agente="analista_de_desempenho_escolar" />
           <SeloIA />
         </div>
         <AssinaturaIA agente="assistente_de_ensino" />

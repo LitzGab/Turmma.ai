@@ -1,6 +1,7 @@
 import { expect, test } from './__fixtures__/perfis.ts'
+import { conferirAssinaturas } from './__fixtures__/avatar.ts'
 import { abrirGaleria, acionar, caixa, conferirQueCabeNaJanela, conferirQueOFocoNaoCaiu, desenho, secao } from './__fixtures__/galeria.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, corDoToken, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * As peças do MVP de apresentação (`docs/mvp-rapido.md` 9.3; `docs/interface.md` 11.1 e 11.3), na galeria (`/galeria`),
@@ -14,7 +15,6 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGra
 /** Os hex da 9.1 do `docs/interface.md`, como o navegador os devolve no estilo calculado: só os que este arquivo afirma. */
 const RGB = {
   caramelo: 'rgb(232, 115, 46)',
-  noite: 'rgb(13, 13, 13)',
   grafite: 'rgb(51, 51, 51)',
   superficie: 'rgb(255, 255, 255)',
   iaFundo: 'rgb(240, 240, 240)',
@@ -25,13 +25,13 @@ const RGB = {
 } as const
 
 test.describe('peças do MVP de apresentação, na galeria', () => {
-  test('o selo de IA e a assinatura: o texto "IA" em toda saída de IA, um desenho só, e avatar em círculo com ícone, nunca rosto', async ({ page }) => {
+  test('o selo de IA e a assinatura: o texto "IA" em toda saída de IA, um desenho só, e avatar da onça em círculo com anel, nunca pessoa', async ({ page }) => {
     await abrirGaleria(page)
     const seloDeIa = secao(page, 'selo-de-ia')
 
     // A assinatura: o nome da função e o selo com o texto "IA", para o agente e para a função dele.
     for (const nome of ['Assistente de ensino', 'Tutor', 'Analista de desempenho escolar', 'Assistente · correção de objetiva']) {
-      const assinatura = seloDeIa.locator('p', { hasText: nome }).filter({ has: page.locator('[data-agente]') })
+      const assinatura = seloDeIa.locator('[data-assinatura]', { hasText: nome }).filter({ has: page.locator('[data-agente]') })
       await expect(assinatura, nome).toHaveCount(1)
       await expect(assinatura.getByText('IA', { exact: true }), nome).toBeVisible()
     }
@@ -59,7 +59,8 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await expect(mensagensDeIa.filter({ hasText: 'Corrigi as 32 atividades' }).getByText('Assistente · correção de objetiva')).toBeVisible()
     await expect(mensagensDeIa.filter({ hasText: 'Oito alunos travaram' }).getByText('Tutor · sinais para o professor')).toBeVisible()
 
-    // O avatar: círculo com um ícone desenhado, um por agente, e nenhuma imagem dentro (D58).
+    // O avatar: a cabeça da onça num círculo `fundo` com o anel de 2 px na cor do agente, um por agente, e nenhuma
+    // imagem dentro (D58). Quem é o agente e a função dele está no bloco, e nunca só na cor: A28 e RF10.
     const avatares = page.locator('[data-agente]')
     for (const agente of ['assistente_de_ensino', 'tutor', 'analista_de_desempenho_escolar']) expect(await page.locator(`[data-agente="${agente}"]`).count(), agente).toBeGreaterThan(0)
     for (const avatar of await avatares.all()) {
@@ -69,8 +70,12 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
       await expect(avatar.locator('svg')).toHaveCount(1)
       await expect(avatar.locator('img, image, picture')).toHaveCount(0)
     }
-    expect(await desenho(page.locator('[data-agente="assistente_de_ensino"]').first())).toMatchObject({ fundo: RGB.noite })
-    expect(await desenho(page.locator('[data-agente="tutor"]').first())).toMatchObject({ fundo: RGB.caramelo })
+    const [fundo, azul, laranja, anil] = await Promise.all(['fundo', 'azul', 'laranja', 'anil'].map((token) => corDoToken(page, token)))
+    expect(await desenho(page.locator('[data-agente="assistente_de_ensino"]').first())).toMatchObject({ fundo, borda: `2px solid ${azul}` })
+    expect(await desenho(page.locator('[data-agente="tutor"]').first())).toMatchObject({ fundo, borda: `2px solid ${laranja}` })
+    expect(await desenho(page.locator('[data-agente="analista_de_desempenho_escolar"]').first())).toMatchObject({ fundo, borda: `2px solid ${anil}` })
+    // Todo avatar da galeria tem, no bloco dele, o nome da função em texto visível e um selo "IA".
+    expect(await conferirAssinaturas(page)).toBe(await avatares.count())
 
     // A linha da aprovação: quem aprovou e quando, em `ok`; a pendente e a rejeitada com o motivo. O ano só aparece
     // quando não é o de agora, e por isso é opcional aqui.

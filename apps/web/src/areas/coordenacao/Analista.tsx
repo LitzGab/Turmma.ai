@@ -8,7 +8,7 @@ import { BarraRotulada } from '../../componentes/BarraRotulada'
 import { Botao } from '../../componentes/Botao'
 import { Cartao } from '../../componentes/Cartao'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
-import { AvatarAgente } from '../../componentes/ia/AvatarAgente'
+import { AssinaturaIA } from '../../componentes/ia/AssinaturaIA'
 import { AvisoFila } from '../../componentes/ia/AvisoFila'
 import { NumeroPainel } from '../../componentes/NumeroPainel'
 import { Estado } from '../../componentes/SeloDeEstado'
@@ -73,12 +73,9 @@ export default function Analista() {
 
   return (
     <Tela titulo="Analista" acoes={acoes}>
-      <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-cartao border border-linha bg-superficie p-4">
-        <AvatarAgente agente="analista_de_desempenho_escolar" tamanho={48} />
-        <div className="min-w-0 flex-1 basis-56">
-          <p className="font-semibold break-words text-tinta">Analista de desempenho escolar</p>
-          <p className="break-words text-apoio">Resume o desempenho por série e disciplina, a partir do que os professores já aprovaram. Só avisa a coordenação: nunca contata professor nem família.</p>
-        </div>
+      <div className="flex min-w-0 flex-col gap-3 rounded-cartao border border-linha bg-superficie p-4">
+        <AssinaturaIA agente="analista_de_desempenho_escolar" tamanho={48} />
+        <p className="break-words text-apoio">Resume o desempenho por série e disciplina, a partir do que os professores já aprovaram. Só avisa a coordenação: nunca contata professor nem família.</p>
       </div>
 
       <div className="flex min-w-0 flex-col gap-3 empty:hidden">

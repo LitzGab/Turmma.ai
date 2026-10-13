@@ -1,5 +1,6 @@
 import type { Locator, Page, Route } from '@playwright/test'
 import { entrarComoCoordenacaoNaMesmaAba, esperarGovernanca, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { conferirAssinaturas, conferirQueAOncaNaoTemNome, conferirTamanhoDoAvatar } from './__fixtures__/avatar.ts'
 import { auditoriasNoBanco, montarEscolaComEntregas, suspensoesNoBanco, type EscolaComEntregas } from './__fixtures__/governanca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { criarEquipeComSenha, type EquipeDeTeste } from './__fixtures__/sessao.ts'
@@ -157,6 +158,15 @@ test.describe('Agentes', () => {
     await irPelaNavegacao(page, 'Agentes', hasTouch)
     await expect(page).toHaveURL(/\/coordenacao\/agentes$/)
     for (const agente of ['Assistente de ensino', 'Tutor', 'Analista de desempenho escolar']) await expect(principal(page).getByRole('heading', { level: 2, name: agente })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // Cada cartão é de um agente: o título é o nome da função, e a cabeça da onça vem com ele e com o selo "IA" no mesmo
+    // bloco (RF10). O atributo do cartão é próprio (`data-cartao-do-agente`): `[data-agente]` é só o avatar.
+    await expect(principal(page).locator('[data-cartao-do-agente]')).toHaveCount(3)
+    for (const agente of ['assistente_de_ensino', 'tutor', 'analista_de_desempenho_escolar'])
+      await expect(principal(page).locator(`[data-cartao-do-agente="${agente}"] [data-agente="${agente}"]`)).toHaveCount(1)
+    expect(await conferirAssinaturas(principal(page))).toBe(3)
+    // O avatar do cartão é o de 48 px, e a tela inteira não chama nada de "onça" (A28).
+    expect(await conferirTamanhoDoAvatar(principal(page), 48)).toBe(3)
+    await conferirQueAOncaNaoTemNome(page)
     const correcao = principal(page).locator('[data-funcao="correcao_de_objetiva"]')
     await expect(correcao).toContainText('Faz sozinha')
     await expect(correcao).toContainText('Espera aprovação')
@@ -202,6 +212,9 @@ test.describe('Analista', () => {
     await expect(page).toHaveURL(/\/coordenacao\/analista$/)
     // Vazio: nenhum resumo gerado ainda.
     await expect(principal(page)).toContainText('Nenhum resumo gerado ainda', { timeout: PRAZO_DA_ENTRADA_MS })
+    // O Analista assina com o avatar, o nome da função e o selo "IA" no mesmo bloco (RF10).
+    expect(await conferirAssinaturas(principal(page))).toBe(1)
+    expect(await conferirTamanhoDoAvatar(principal(page), 48)).toBe(1)
     expect(await violacoesGraves(page)).toEqual([])
 
     await acionar(principal(page).getByRole('button', { name: 'Gerar resumo' }), hasTouch)

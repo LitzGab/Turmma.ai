@@ -51,7 +51,7 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 7.2 A peça nova `PainelLado`: 480 px ao lado e folha de baixo no celular, sobre `<dialog>`
   - [x] 7.3 Testes, no navegador: foco preso e devolvido; Esc; os dois botões da confirmação do mesmo tamanho; perigo cheio só na confirmação
 
-- [ ] **8.0 — A onça é o avatar dos três agentes, sempre com a função e o selo**
+- [x] **8.0 — A onça é o avatar dos três agentes, sempre com a função e o selo**
   - [ ] 8.1 `componentes/onca/CabecaOnca.tsx`: um desenho, expressão neutra, parado; só a cabeça (a onça inteira não entra na X1)
   - [ ] 8.2 `ia/AvatarAgente` com a cabeça e o anel do agente; `SeloIA` e `AssinaturaIA` na pele nova; `Agentes.tsx` e `Analista.tsx` passam à `AssinaturaIA`
   - [ ] 8.3 `docs/interface.md` 9.7 e 10.3, `docs/aia/tutor.md` e os comentários "nunca rosto"

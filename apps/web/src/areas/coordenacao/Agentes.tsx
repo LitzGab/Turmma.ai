@@ -7,7 +7,7 @@ import { Cartao } from '../../componentes/Cartao'
 import { DialogoDeConfirmacao } from '../../componentes/DialogoDeConfirmacao'
 import { Anuncio, useEnvioUnico } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro } from '../../componentes/estado'
-import { AvatarAgente } from '../../componentes/ia/AvatarAgente'
+import { AssinaturaIA } from '../../componentes/ia/AssinaturaIA'
 import { Selecao } from '../../componentes/Selecao'
 import { Estado } from '../../componentes/SeloDeEstado'
 import { Tela } from '../../componentes/Tela'
@@ -152,11 +152,9 @@ interface PropsDoCartaoDoAgente {
 
 function CartaoDoAgente({ agente, nome, funcoes, retomando, aoSuspender, aoRetomar }: PropsDoCartaoDoAgente) {
   return (
-    <section data-agente={agente} aria-label={nome} className="flex min-w-0 flex-col gap-4 rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
-      <div className="flex min-w-0 items-center gap-3">
-        <AvatarAgente agente={agente} tamanho={48} />
-        <h2 className="min-w-0 text-lg leading-tight font-semibold break-words text-tinta">{nome}</h2>
-      </div>
+    <section data-cartao-do-agente={agente} aria-label={nome} className="flex min-w-0 flex-col gap-4 rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
+      {/* O nome da função é o título do cartão (`h2`), e vem com o avatar e o selo "IA" no mesmo bloco (RF10). */}
+      <AssinaturaIA agente={agente} tamanho={48} titulo={2} />
       <ul className="flex min-w-0 flex-col gap-4">
         {funcoes.map((funcao) => (
           <li key={funcao.chave} data-funcao={funcao.chave} className="flex min-w-0 flex-col gap-2 border-t border-linha pt-4">

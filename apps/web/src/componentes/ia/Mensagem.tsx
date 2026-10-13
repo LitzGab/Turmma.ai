@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
-import { agenteDe, nomeDaAssinatura, type QuemAssina } from './assinatura'
-import { AssinaturaIA, SeloIA } from './AssinaturaIA'
-import { AvatarAgente } from './AvatarAgente'
+import type { QuemAssina } from './assinatura'
+import { AssinaturaIA } from './AssinaturaIA'
 import { LinhaAprovacao, type PropsDaLinhaDeAprovacao } from './LinhaAprovacao'
 
 type PropsDaMensagemIA = QuemAssina & {
@@ -19,7 +18,7 @@ type PropsDaMensagemIA = QuemAssina & {
   readonly acoes?: ReactNode
   /**
    * `coluna` é a mensagem da conversa: **sem bolha**, na largura da coluna, com a assinatura em cima. `balao` é a do
-   * Seu time, e só de lá (11.4): o agente fala em balão à esquerda, com o avatar ao lado.
+   * Seu time, e só de lá (11.4): o agente fala em balão à esquerda, com a assinatura em cima e o balão logo abaixo dela.
    */
   readonly variante?: 'coluna' | 'balao'
 }
@@ -41,18 +40,11 @@ export function MensagemIA({ children, aprovacao, acoes, variante = 'coluna', ..
   )
   if (variante === 'balao')
     return (
-      <article className="flex min-w-0 items-start gap-2.5">
-        <span className="mt-0.5">
-          <AvatarAgente agente={agenteDe(quem)} />
-        </span>
-        <div className="flex max-w-[calc(100%-2.125rem)] min-w-0 flex-col items-start gap-1.5 sm:max-w-[85%]">
-          <p className="flex min-w-0 items-center gap-2">
-            <span className="min-w-0 text-sm font-medium break-words text-tinta">{nomeDaAssinatura(quem)}</span>
-            <SeloIA />
-          </p>
-          <div className="max-w-full min-w-0 rounded-cartao border border-linha bg-superficie px-4 py-3 text-base leading-normal break-words text-tinta">{children}</div>
-          {rodape}
-        </div>
+      <article className="flex min-w-0 flex-col items-start gap-1.5">
+        {/* O cabeçalho do balão é a assinatura inteira: o avatar, o nome da função e o selo, num bloco só (RF10). */}
+        <AssinaturaIA {...quem} />
+        <div className="max-w-full min-w-0 rounded-cartao border border-linha bg-superficie px-4 py-3 text-base leading-normal break-words text-tinta sm:max-w-[85%]">{children}</div>
+        {rodape}
       </article>
     )
   return (

@@ -173,6 +173,14 @@ describe('nome dos chunks', () => {
     }
   })
 
+  it('a cabeça da onça (X1, 8.0) está fora da entrada, com a pasta dela, e o avatar que a desenha já era peça de ia', () => {
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/onca/CabecaOnca.tsx')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ia/AvatarAgente.tsx')).toBe(true)
+    // Só o arquivo da lista: outra pasta com o mesmo nome de arquivo, ou outro arquivo da pasta da onça, não é peça sem entrar nela.
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/areas/professor/onca/CabecaOnca.tsx')).toBe(false)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/onca/OncaInteira.tsx')).toBe(false)
+  })
+
   it('a peça nova de lista (X1, 5.0) está fora da entrada, e o `Linha` do `Tabela` não é um arquivo', () => {
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/Linha.tsx')).toBe(true)
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/Linha.test.tsx')).toBe(false)
