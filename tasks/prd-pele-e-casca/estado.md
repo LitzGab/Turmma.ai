@@ -6,8 +6,9 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** nada em curso: a **7.0** se encontrou em 13/10/2026 às 17h10 (`dc02f60`), e a próxima é a que o quadro
-  disser que parte (`linhas.ts`), na **linha 1**. Checkout da
+- **Espero:** o `RELATÓRIO` do `Implementador`, da **8.0** (porte pequeno; `frontend-reviewer` e
+  `conformidade-reviewer`), na **linha 1**, 1ª tentativa, pedida em 13/10/2026 às 17h15 (a 7.0 se encontrou às
+  17h10, em `dc02f60`). Checkout da
   linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch `spec/pele-e-casca--l1`, ambiente
   de teste 1, com o `Implementador` e a `Mesa`. Todo pedido vai com a observação **"sem push"**: o commit da tarefa
   fica local. **Para a validação:** a 7.0 deixou ao `/validar` o caso direto de `fechadoPeloNavegador` sob
@@ -47,8 +48,8 @@
   "X1 pele-e-casca" nasceu da branch que já existia (`--existing-branch`), em
   `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca`, e a `develop` (`e278845`) entrou por merge, sem
   conflito (`65ab3b1`). A 1.0 e a spec correram fora do Maestri, num checkout avulso já desfeito
-- **Base:** `spec/pele-e-casca` no commit de estado do encontro da 7.0 (`git -C <andar> log -1`), com a 7.0
-  (`dc02f60`). Se o quadro pedir mais uma linha: não abrir (uma linha só, item 2 acima). Nada foi enviado ao GitHub:
+- **Base:** `spec/pele-e-casca` em `798b508`, com a 7.0 (`dc02f60`); a linha 1 partiu dela para a 8.0. Se o quadro
+  pedir mais uma linha: não abrir (uma linha só, item 2 acima). Nada foi enviado ao GitHub:
   push é do Joaquim
 
 ## Concluídas
@@ -63,6 +64,7 @@
 | 5.0 | `3ba0608` | Sonnet 5.5 | 2 | linha 1, das 13h13 às 13h54 de 13/10; o `frontend-reviewer` e o `revisor-geral` aprovaram na 1ª e na 2ª; o `test-engineer` reprovou na 1ª e aprovou na 2ª; a Mesa viu 58 fotos (galeria clara e escura, celular e computador); primeiro carregamento em 128,2 kB brotli (teto 150), `pecas-*` em 14,6 kB (teto 40); 42 mutações vermelhas; desvios do mockup (trilho da barra, fio da moldura) na Tech Spec, nos cenários e no `docs/interface.md`; ficou para a 10.0 o placeholder da `CaixaPedido` cortado a 360 px ("Sem aplicar" do `5_task.md`); sem push |
 | 6.0 | `542e583` | Sonnet 5.5 | 2 | linha 1, das 13h57 às 15h10 de 13/10, com a correção `2026-10-13-quinta-fatia-do-e2e` no meio (`71ff60f`, 2 rodadas, `infra-guardian`): `DIVERGÊNCIA` de portão às 14h22, porque os 42 casos do `e2e/pecas-estado.spec.ts` levaram a suíte a 818 e o teto do e2e não cabia em quatro fatias; retomada às 14h40; o `frontend-reviewer` e o `revisor-geral` aprovaram, o `test-engineer` reprovou na 1ª (asserção que sempre passa em `Aviso.test.tsx`) e aprovou na 2ª; a Mesa viu 59 fotos; ficou para a 10.0 o mesmo placeholder da `CaixaPedido`, e para a 12.0 manter `pecas-estado` quando o `Contador` ganhar a lateral; sem push |
 | 7.0 | `dc02f60` | Sonnet 5.5 | 2 | linha 1, das 15h10 às 17h07 de 13/10; o `frontend-reviewer` e o `infra-guardian` aprovaram na 1ª; o `test-engineer` e o `revisor-geral` reprovaram na 1ª (o véu forte do login por cima sem e2e, o Tab preso da confirmação, e a 10.2 dizendo dois lugares para o perigo cheio com o teste provando seis arquivos) e aprovaram na 2ª; 34 mutações vermelhas; `--repeat-each 3` de `pecas-sobrepor`, `inatividade` e `professores` antes da 2ª rodada; o `PainelLado` nasceu sem consumidor (X2 e X3); seis recomendações com destino no `TODO.md`, ainda por escrever lá (item 2b do "Agora"); sem push |
+| 8.0 | `eb3a181` | Sonnet 5.5 | 2 | linha 1, das 17h08 às 18h18 de 13/10; os quatro revisores (`frontend-reviewer`, `conformidade-reviewer`, `test-engineer`, `revisor-geral`) aprovaram na 1ª rodada, com 9 recomendações a aplicar, e de novo na 2ª; a Mesa viu 86 fotos nos dois temas; 83 mutações vermelhas; 18 divergências e ajustes no `8_task.md`, entre eles o balão da `MensagemIA` passar a usar a `AssinaturaIA` como cabeçalho (muda o `Time.tsx` e o `Tutor.tsx` do professor, que são da 10.0); recomendações sem aplicar com destino na 10.0, no `TODO.md` e no `/validar`; sem push |
 | PRD, Tech Spec e tarefas da X1 à X4 | `2ed7829` | Opus (as tarefas 8 a 15 da X1, 4 a 14 da X3 e 3 a 11 da X4, por agentes em Sonnet) | 4 da spec da X1 | só documento; a X2, a X3 e a X4 sem revisão de spec |
 
 ## Esperando o Joaquim
