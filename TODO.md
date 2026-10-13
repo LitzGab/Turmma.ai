@@ -1074,6 +1074,19 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] **(D80) Trazer o mockup de outubro para `mockups/`:** ele mora no repositório privado `Prototipo_Turmma`, do
       Gabriel, e a pasta `mockups/` daqui é a versão de setembro. Este repositório é público: decidir se entra, e
       conferir antes a licença das peças coladas do 21st.dev (P20) (Gabriel e Joaquim)
+- [ ] **(D80, revisão das specs X2 a X4) O que os guardiões mandaram para fora das specs:** (a) a tela Material relê a
+      cada 1,5 s enquanto houver material `processando`, e a ingestão pode esperar horas na fila de lote: rever o
+      intervalo (`api/material.ts`; `infra-guardian`, X2); (b) `orcamento.consultar` e `usoDeHoje` contam as trocas do
+      dia duas vezes na mesma requisição de `GET /v1/tutor/conversa` (`infra-guardian`, X4); (c) uma contagem agregada
+      de pedidos de nome por professor, na API, tiraria do sino do professor as até 12 leituras por turma
+      (`infra-guardian` e `privacy-guardian`, X3); (d) o texto "Aprovado por gente", na governança, soa estranho: a
+      X2 recompõe a tela (`frontend-reviewer`, tarefa 1.0 da X1); (e) o staging precisa servir `/assets/*` com cache
+      longo e o `index.html` sem cache, porque o script do tema mora nele (`infra-guardian`, X1)
+- [ ] **(D80) Decisões que tomei por delegação nas specs X2 a X4, para o Joaquim rever:** estão na seção 12 da Tech
+      Spec de cada uma (12b na X4). As que mudam o desenho do mockup: a onça fora do vazio do sino (X2); o aviso de
+      atenção humana em Hoje sem nome, com "Ver quem", e o "Acesso gerado" em tela inteira (X3); o Início do aluno
+      sem "Hoje: N de 60" e sem os avisos de pausa, a introdução "uma vez só" com ressalva, o texto do aviso de
+      privacidade e a onça de rosto neutro, com comemoração só na entrega (X4)
 
 ## Fase posterior
 

@@ -28,7 +28,10 @@ gravar nada que ele não escolheu.
 - [ ] 8.2 — `componentes/TamanhoDaLetra.tsx`: três `Opcao` em grupo de rádio (setas, uma parada de Tab), "Padrão", "Grande" e "Maior", e a
   prévia "Assim fica a minha letra." Em Eu, a linha "Ajustes" abre um `Dialogo` com a `Aparencia` e o `TamanhoDaLetra`. **Grava só ao
   escolher**: montar, abrir o diálogo ou entrar na área não escreve nada
-- [ ] 8.3 — `docs/interface.md`: a chave e a regra "só por escolha"
+- [ ] 8.3 — `docs/interface.md`: a chave e a regra "só por escolha". A lista fechada de chaves do navegador (11.1 do
+  `docs/interface.md`; Tech Spec da X1, seção 7) ganha `educa.letra`, com valor de conjunto fechado (`grande` ou `maior`), e
+  o e2e do armazenamento da X1 (RF24, `e2e/aparencia.spec.ts`) passa a conhecer a terceira chave. O `docs/lgpd.md` registra que
+  a preferência fica só no navegador, sem identificador de pessoa nem de escola
 - [ ] 8.4 — Testes
 
 ## Arquivos previstos
