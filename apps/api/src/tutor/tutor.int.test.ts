@@ -328,6 +328,50 @@ describe('Tutor e sinais', () => {
       expect((await conversaDe(aluno, `?atividadeAplicadaId=${atividade}`)).estado).toBe('limite')
     })
 
+    // O encaminhamento gasta uma troca, por ora (decisão do Joaquim em 12/10/2026, D36 e D38): a pergunta entra em
+    // `mensagem_tutor` como a de qualquer aluno e as quatro contas leem a mesma linha. Os três casos abaixo fixam o número
+    // nas quatro: o freio do dia, a barra do aluno, o dia e o mês que a professora vê. Se a decisão mudar, mudam juntos.
+    describe('o encaminhamento gasta uma troca, por ora', () => {
+      const naConversa = (aluno: SessaoDeTeste) => conversaDe(aluno, `?atividadeAplicadaId=${atividade}`)
+      const trocasDaProfessora = async (aluno: SessaoDeTeste) => (await usoPara(a.professora, a.turma)).alunos.find((linha) => linha.aluno.id === aluno.usuarioId)?.trocasHoje
+
+      it('a barra do aluno, a lista da professora e o mês da turma passam de 0 a 1 depois do encaminhamento', async () => {
+        const aluno = await novoAluno(a)
+        expect(await naConversa(aluno)).toMatchObject({ estado: 'ligado', uso: { hoje: 0, limiteDoDia: TROCAS_POR_DIA_PADRAO_DO_TUTOR } })
+        // O mês da turma é lido antes e depois, e a diferença é 1: a turma tem as trocas dos outros casos do arquivo. Só erra se o
+        // caso cruzar a virada do mês no fuso de São Paulo entre as duas leituras, o que o teste não controla.
+        const noMesAntes = (await usoPara(a.professora, a.turma)).trocasDaTurmaNoMes
+
+        expect(resposta(await turno(aluno, 'sofro bullying na escola', naQuestao(3)))).toMatchObject({ tipo: 'assunto_delicado', texto: MENSAGEM_DE_ASSUNTO_DELICADO })
+
+        expect(await naConversa(aluno)).toMatchObject({ estado: 'ligado', uso: { hoje: 1, limiteDoDia: TROCAS_POR_DIA_PADRAO_DO_TUTOR } })
+        expect(await trocasDaProfessora(aluno)).toBe(1)
+        expect((await usoPara(a.professora, a.turma)).trocasDaTurmaNoMes).toBe(noMesAntes + 1)
+      })
+
+      it('com 59 trocas feitas, o encaminhamento é a 60ª: o estado vira limite e a dúvida comum seguinte é recusada', async () => {
+        const aluno = await novoAluno(a)
+        await trocasJaFeitas(bancada, a, aluno.usuarioId, TROCAS_POR_DIA_PADRAO_DO_TUTOR - 1)
+        expect(await naConversa(aluno)).toMatchObject({ estado: 'ligado', uso: { hoje: TROCAS_POR_DIA_PADRAO_DO_TUTOR - 1 } })
+
+        expect(resposta(await turno(aluno, 'sofro bullying na escola', naQuestao(3)))).toMatchObject({ tipo: 'assunto_delicado' })
+
+        expect(await naConversa(aluno)).toMatchObject({ estado: 'limite', uso: { hoje: TROCAS_POR_DIA_PADRAO_DO_TUTOR, limiteDoDia: TROCAS_POR_DIA_PADRAO_DO_TUTOR } })
+        expect(await enviar(aluno, { texto: 'não entendi a questão', ...naQuestao(3) })).toMatchObject({ status: 429, corpo: { erro: { codigo: 'LIMITE_DIARIO_DO_TUTOR' } } })
+      })
+
+      it('no limite, o encaminhamento passa e a conta segue: 60 mais 1, com o estado limite, na barra do aluno e na lista da professora', async () => {
+        const aluno = await novoAluno(a)
+        await trocasJaFeitas(bancada, a, aluno.usuarioId, TROCAS_POR_DIA_PADRAO_DO_TUTOR)
+        expect(await naConversa(aluno)).toMatchObject({ estado: 'limite', uso: { hoje: TROCAS_POR_DIA_PADRAO_DO_TUTOR } })
+
+        expect(resposta(await turno(aluno, 'não tô bem, ninguém gosta de mim', naQuestao(3)))).toMatchObject({ tipo: 'assunto_delicado' })
+
+        expect(await naConversa(aluno)).toMatchObject({ estado: 'limite', uso: { hoje: TROCAS_POR_DIA_PADRAO_DO_TUTOR + 1, limiteDoDia: TROCAS_POR_DIA_PADRAO_DO_TUTOR } })
+        expect(await trocasDaProfessora(aluno)).toBe(TROCAS_POR_DIA_PADRAO_DO_TUTOR + 1)
+      })
+    })
+
     it('passa na frente do limite de pedidos por minuto: no teto, o aluno recebe o encaminhamento, e a dúvida comum dele continua recusada', async () => {
       const aluno = await novoAluno(a)
       for (let pedido = 0; pedido < TETO_DE_PEDIDOS_DE_IA_POR_USUARIO; pedido += 1) expect((await enviar(aluno, { texto: 'o que é mol?', ...naQuestao(1) })).status).toBe(202)
