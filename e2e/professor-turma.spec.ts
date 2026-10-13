@@ -103,7 +103,7 @@ test.describe('aplicar à turma e encerrar, no artefato (A3)', () => {
     const aplicar = page.getByRole('button', { name: 'Aplicar à turma' })
     // Decisão da professora, registrada: o botão é o preto. O ponteiro sai de cima dele: o "Tentar de novo" estava ali.
     if (!hasTouch) await page.mouse.move(0, 0)
-    expect(await aplicar.evaluate((botao) => getComputedStyle(botao).backgroundColor)).toBe('rgb(13, 13, 13)')
+    expect(await aplicar.evaluate((botao) => getComputedStyle(botao).backgroundColor)).toBe('rgb(51, 51, 51)')
     await acionar(aplicar, hasTouch)
     const dialogo = page.getByRole('alertdialog', { name: 'Aplicar à turma' })
     await expect(dialogo).toContainText(atividade.titulo)
@@ -275,7 +275,7 @@ test.describe('aprovar a correção (11.5)', () => {
     await acionar(bruno.getByRole('button', { name: /^Abrir/ }), hasTouch)
     await expect(contador).toHaveText('2 de 2 destaques abertos. Tudo aberto: a aprovação está liberada.', { timeout: PRAZO_DA_TELA_MS })
     await expect(aprovar).toBeEnabled()
-    expect(await aprovar.evaluate((botao) => getComputedStyle(botao).backgroundColor)).toBe('rgb(13, 13, 13)')
+    expect(await aprovar.evaluate((botao) => getComputedStyle(botao).backgroundColor)).toBe('rgb(51, 51, 51)')
 
     // A confirmação diz a atividade, a turma, quantas correções, e que o diagnóstico chega aos alunos.
     await acionar(aprovar, hasTouch)

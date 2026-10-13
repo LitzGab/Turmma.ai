@@ -693,7 +693,7 @@ nome novo.
 | `caramelo` | `#E8732E` | `#EB8447` | Apelido de `laranja` |
 | `caramelo-claro` · `caramelo-fundo` | `#EE8747` · `#D4651F` | `#EF9D6D` · `#D4651F` | Hover e pressionado da face laranja. No escuro o pressionado não é o `#BA5C25` do mockup: é face com texto em cima, e precisa de 4,5:1 |
 | `caramelo-texto` | `#B4520F` | `#EF9D6D` | Laranja como texto (5,1:1 e 7,8:1). Peça nova usa `laranja-texto` |
-| `caramelo-noite` | `#F2A25B` | `#F2A25B` | Sem uso: o foco é um só (10.1) |
+| `caramelo-noite` | `#F2A25B` | `#F2A25B` | Sem uso: o foco é um só (10.1). Sobre a `noite` do escuro o anel é o `sobre-grafite`, e não ele |
 | `noite` · `noite-alto` · `noite-baixo` | `#0D0D0D` · `#2F2F2F` · `#000000` | `#F1F7FB` · `#DCE6EC` · `#FFFFFF` | O preto de antes, que inverte. O oficial passa a `grafite`, com `noite-alto` no hover |
 | `pendente-cx` · `pendente` | `#FDF0E8` · `#8A3E0C` | `#352C26` · `#EF9D6D` | "Esperando você" (6,8:1 e 6,3:1) |
 | `ok-cx` · `ok` | `#E9F5EE` · `#0B6B47` | `#17392D` · `#6DD28C` | Aprovado, conferido, salvo (5,8:1 e 6,8:1) |
@@ -858,8 +858,10 @@ a fonte do sistema não tem o 500, o navegador usa o regular.
   desce e a faixa encolhe; o espaço fica reservado, e nada em volta se mexe. Peça de leitura não
   tem degrau, e peça desligada perde o dela. É uma classe só, `degrau`, para `<button>` e `<a>`:
   sombra sólida de `--altura-degrau` na cor `--lado`, margem de baixo igual e `translateY` no
-  apertado. A cor vem de cinco classes fixas (`degrau-laranja`, `degrau-grafite`, `degrau-borda`,
-  `degrau-vermelho`, `degrau-azul`)
+  apertado. A cor vem de seis classes fixas (`degrau-laranja`, `degrau-grafite`, `degrau-borda`,
+  `degrau-vermelho`, `degrau-vermelho-borda` e `degrau-azul`): cada uma é o token `<família>-degrau`, menos
+  `degrau-borda` (a `borda`) e `degrau-vermelho-borda` (a `vermelho-borda`, do `perigo`, que tem a borda da família).
+  O botão só de ícone põe `--altura-degrau` em 3 px, e o resto fica em 4
 
 | Peça | Face | Degrau | Desce |
 |---|---|---|---|
@@ -1319,7 +1321,8 @@ teclado.
 2. **Um anel de foco só**: contorno de 3 px em `foco`, com 2 px de afastamento, em tudo o que
    recebe foco pelo teclado, nos dois temas. No campo de texto o afastamento é zero; na linha de
    tabela o anel vai por dentro. Nenhuma peça apaga o contorno, nem depende de `:has()` para
-   mostrá-lo
+   mostrá-lo. A única exceção é a face `noite` no escuro, onde ela é clara e o `foco` dá 1,99:1: ali o
+   anel é o `sobre-grafite`, o texto da própria face (e volta ao `foco` dentro de peça com chão próprio)
 3. **Os quatro estados** (regra 50, item 5). O mockup não fala com servidor e não desenha
    carregando nem erro: valem os três de `componentes/estado/`, e botão que dispara pedido não
    aceita o segundo clique

@@ -21,9 +21,10 @@ export const INDISPONIVEL = JSON.stringify({
     requisicaoId: '0190f5a0-0000-7000-8000-000000000001',
   },
 })
-/** O vermelho do `perigo` (`--color-erro`, #b42318) e o preto da decisão oficial (`--color-noite`, #0d0d0d). */
-export const COR_DO_PERIGO = 'rgb(180, 35, 24)'
-export const COR_DO_OFICIAL = 'rgb(13, 13, 13)'
+/** A face do perigo cheio (`--color-vermelho`, #f2545b), que é a de "Registrar a eliminação", dentro da confirmação. */
+export const COR_DO_PERIGO = 'rgb(242, 84, 91)'
+/** A face da decisão oficial (`--color-grafite`, #333333). */
+export const COR_DO_OFICIAL = 'rgb(51, 51, 51)'
 
 export const principal = (page: Page) => page.getByRole('main')
 export const busca = (page: Page) => page.getByRole('dialog', { name: TITULO_DA_BUSCA })

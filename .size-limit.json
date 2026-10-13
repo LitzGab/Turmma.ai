@@ -30,9 +30,9 @@
     "brotli": true
   },
   {
-    "name": "JS das peças do MVP de apresentação (os pedaços pecas-*.js, que só têm peças de componentes/ e componentes/ia/ divididas entre telas; o que as áreas dividem e não é peça sai em parte-*, e a galeria em galeria-*, fora desta conta; só por import(), fora do primeiro carregamento; no MVP de apresentação, com as telas do professor e do aluno, perto de 20,5 kB)",
+    "name": "JS das peças do MVP de apresentação (os pedaços pecas-*.js, que só têm peças de componentes/ e componentes/ia/ divididas entre telas; o que as áreas dividem e não é peça sai em parte-*, e a galeria em galeria-*, fora desta conta; só por import(), fora do primeiro carregamento; no MVP de apresentação, com as telas do professor e do aluno, perto de 20,5 kB; a X1 da pele o subiu de 26 para 40 kB, porque as peças revestidas e as onze novas moram aqui)",
     "path": "apps/web/dist/assets/pecas-*.js",
-    "limit": "26 kB",
+    "limit": "40 kB",
     "brotli": true
   }
 ]

@@ -56,9 +56,11 @@ const TEXTO_DA_TURMA_INDISPONIVEL =
 const DOS_APROVADOS = 'Eles contam entre os nomes da lista, mas não aparecem pelo nome: já entram com a matrícula e a senha.'
 const TEXTO_DA_TURMA_FORA_DO_ANO = 'Esta turma não está no ano letivo em curso: ela pode ter sido excluída. Volte para Estrutura e abra a turma de novo.'
 
-/** O preto da decisão oficial (`--color-noite`, #0d0d0d) e o vermelho do `perigo` (`--color-erro`, #b42318). */
-const COR_DO_OFICIAL = 'rgb(13, 13, 13)'
-const COR_DO_PERIGO = 'rgb(180, 35, 24)'
+/** O grafite da decisão oficial (`--color-grafite`, #333333) e o texto do `perigo` (`--color-vermelho-texto`, #b84045). */
+const COR_DO_OFICIAL = 'rgb(51, 51, 51)'
+const COR_DO_PERIGO = 'rgb(184, 64, 69)'
+/** A face do perigo cheio (`--color-vermelho`, #f2545b): só o botão que confirma, dentro do diálogo. */
+const COR_DO_PERIGO_CHEIO = 'rgb(242, 84, 91)'
 /** O verde do que deu certo (`--color-ok`, #0b6b47) e o tom de atenção (`--color-pendente`, #8a3e0c). */
 const COR_DO_OK = 'rgb(11, 107, 71)'
 const COR_DA_ATENCAO = 'rgb(138, 62, 12)'
@@ -624,7 +626,7 @@ test.describe('W6: a decisão do professor', () => {
     await expect(pedidosDoDialogo(page)).toHaveText([pedido(40).nome])
     await expect(noDialogo(page)).toContainText(EFEITO_DE_RECUSAR)
     const confirmarRecusa = noDialogo(page).getByRole('button', { name: 'Recusar 1 pedido' })
-    expect(await confirmarRecusa.evaluate((botao) => getComputedStyle(botao).backgroundColor)).toBe(COR_DO_PERIGO)
+    expect(await confirmarRecusa.evaluate((botao) => getComputedStyle(botao).backgroundColor)).toBe(COR_DO_PERIGO_CHEIO)
     // Nada foi recusado antes de confirmar.
     expect(decisoes).toBe(1)
     await acionar(confirmarRecusa, hasTouch)

@@ -23,13 +23,13 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 2.4 `playwright.config.ts` fixa o tema claro; a vitrine fotografa também no escuro; a linha do `TODO.md` sobre o script em linha
   - [x] 2.5 Testes: o tema no primeiro quadro; o script do `index.html` igual a `resolverTema`; Sistema acompanha o aparelho e apaga a chave; o conteúdo exato do armazenamento com duas pessoas no mesmo navegador (RF24); duas abas; o escuro nas telas de verdade, por papel, com axe
 
-- [ ] **3.0 — O botão ganha o degrau e os seis desenhos da D80, em todo o produto**
-  - [ ] 3.1 `estilos.css`: a tipografia `t-*`, o degrau, o anel de foco e a regra de movimento reduzido
-  - [ ] 3.2 `botao-secundario.ts` e `Botao.tsx`: primário, oficial, secundário, discreto, perigo e perigo cheio; o desligado
-  - [ ] 3.3 `focoVisivel`, em `e2e/__fixtures__/verificacoes.ts`, passa a exigir o contorno de 3 px na cor `foco`
-  - [ ] 3.4 Os specs que afirmam a cor e a medida do botão e do foco (`cenarios.md`, parte A)
-  - [ ] 3.5 O teto de `pecas-*` sobe de 26 para 40 kB (`.size-limit.json` e `tools/ci/tamanho-web.test.ts`), no tronco, antes das linhas
-  - [ ] 3.6 Testes: o oficial não se parece com nenhum outro, pela cor resolvida em cada tema; desligado legível; 44 px; apertado sem hover; movimento reduzido
+- [x] **3.0 — O botão ganha o degrau e os seis desenhos da D80, em todo o produto**
+  - [x] 3.1 `estilos.css`: a tipografia `t-*`, o degrau, o anel de foco e a regra de movimento reduzido
+  - [x] 3.2 `botao-secundario.ts` e `Botao.tsx`: primário, oficial, secundário, discreto, perigo e perigo cheio; o desligado
+  - [x] 3.3 `focoVisivel`, em `e2e/__fixtures__/verificacoes.ts`, passa a exigir o contorno de 3 px na cor `foco`
+  - [x] 3.4 Os specs que afirmam a cor e a medida do botão e do foco (`cenarios.md`, parte A)
+  - [x] 3.5 O teto de `pecas-*` sobe de 26 para 40 kB (`.size-limit.json` e `tools/ci/tamanho-web.test.ts`), no tronco, antes das linhas
+  - [x] 3.6 Testes: o oficial não se parece com nenhum outro, pela cor resolvida em cada tema; desligado legível; 44 px; apertado sem hover; movimento reduzido
 
 - [ ] **4.0 — Os campos na pele nova, com busca, interruptor e opção**
   - [ ] 4.1 `Campo`, `CampoDeSenha`, `CampoLongo`, `Selecao` e `seletor.ts`: borda de 2 px em `borda-campo`, fundo `campo`, anel no foco

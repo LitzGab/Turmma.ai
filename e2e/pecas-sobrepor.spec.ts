@@ -13,8 +13,9 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedenteDoDialogo, vio
 
 /** Os hex da 9.1 do `docs/interface.md`, como o navegador os devolve no estilo calculado: só os que este arquivo afirma. */
 const RGB = {
-  noite: 'rgb(13, 13, 13)',
-  erro: 'rgb(180, 35, 24)',
+  grafite: 'rgb(51, 51, 51)',
+  vermelho: 'rgb(242, 84, 91)',
+  vermelhoTexto: 'rgb(184, 64, 69)',
   superficie: 'rgb(255, 255, 255)',
 } as const
 
@@ -180,8 +181,8 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await page.keyboard.press('Enter')
     await expect(oficial).toBeVisible()
     await expect(decisao).toHaveText('')
-    // O botão que confirma é o preto, e o de cancelar tem a mesma altura (D59).
-    expect(await desenho(aprovar)).toMatchObject({ fundo: RGB.noite })
+    // O botão que confirma é o grafite do oficial, e o de cancelar tem a mesma altura (D59).
+    expect(await desenho(aprovar)).toMatchObject({ fundo: RGB.grafite })
     expect((await caixa(cancelar)).height).toBe((await caixa(aprovar)).height)
     expect((await caixa(cancelar)).height).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
     expect(await larguraExcedenteDoDialogo(page)).toBe(0)
@@ -224,16 +225,16 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await expect(rejeitar).toBeDisabled()
     await motivo.fill('A questão 3 não é do capítulo 7.')
     await expect(rejeitar).toBeEnabled()
-    expect(await desenho(rejeitar)).toMatchObject({ fundo: RGB.erro })
+    expect(await desenho(rejeitar)).toMatchObject({ fundo: RGB.vermelho })
     expect(await larguraExcedenteDoDialogo(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
     await acionar(rejeitar, hasTouch)
     await expect(decisao).toHaveText('Rejeitado')
 
-    // A ação de perigo com aviso: o cheio em erro só existe aqui dentro, e o aviso da auditoria faz parte do que o
+    // A ação de perigo com aviso: o cheio em vermelho só existe aqui dentro, e o aviso da auditoria faz parte do que o
     // leitor de tela ouve ao abrir (a descrição do diálogo), e não só do que se vê.
     const suspender = bloco.getByRole('button', { name: 'Suspender a função' })
-    expect(await desenho(suspender)).toMatchObject({ fundo: RGB.superficie, texto: RGB.erro })
+    expect(await desenho(suspender)).toMatchObject({ fundo: RGB.superficie, texto: RGB.vermelhoTexto })
     await acionar(suspender, hasTouch)
     const perigo = page.getByRole('alertdialog', { name: 'Suspender a correção de objetiva' })
     await expect(perigo).toContainText('A suspensão fica na auditoria da escola.')
@@ -241,7 +242,7 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     expect(descricao).toContain('O Assistente para de corrigir atividades nesta escola')
     expect(descricao).toContain('A suspensão fica na auditoria da escola.')
     const confirmar = perigo.getByRole('button', { name: 'Suspender a função' })
-    expect(await desenho(confirmar)).toMatchObject({ fundo: RGB.erro })
+    expect(await desenho(confirmar)).toMatchObject({ fundo: RGB.vermelho })
     await acionar(confirmar, hasTouch)
     await expect(perigo).toHaveCount(0)
     await expect(decisao).toHaveText('Suspensa')

@@ -41,8 +41,9 @@ function ItemDaNavegacao({ rotulo, rota, endereco }: PropsDoItem) {
 
 /**
  * A faixa "Operação Turmma" em `noite` (Tech Spec da A0, seção 9; `docs/interface.md` 5a): a pele é a do produto, com a
- * marca de que ali é a operação, para ninguém confundir com a tela de uma escola. Dentro dela o anel de foco é
- * `caramelo-noite` (regra `.bg-noite :focus-visible` de `estilos.css`), porque o preto some sobre o preto.
+ * marca de que ali é a operação, para ninguém confundir com a tela de uma escola. Dentro dela o anel de foco é o `foco`
+ * de 3 px de toda peça no claro (3,55:1 sobre a `noite`); no escuro a `noite` é clara, e o anel é o `sobre-grafite`, o
+ * texto da face (regra `.bg-noite :focus-visible` de `estilos.css`, que sai com a faixa preta, na 15.0).
  */
 function Faixa({ children }: { children?: ReactNode }) {
   return (

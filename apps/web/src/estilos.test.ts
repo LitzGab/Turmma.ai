@@ -172,8 +172,12 @@ function classeArbitraria(conteudo: string, posicao: number): string | null {
   return fim === -1 ? null : conteudo.slice(inicio, fim + 1)
 }
 
-/** As faces fortes de hoje, que viram com o tema: o texto em cima delas é `sobre-cor` ou `sobre-grafite`, nunca `tinta` nem branco. */
-const FACE_FORTE = /^bg-(?:noite|erro|caramelo|caramelo-claro|caramelo-fundo)$/
+/**
+ * As faces fortes, que viram com o tema ou que levam texto escuro de propósito: o texto em cima delas é `sobre-cor` ou
+ * `sobre-grafite`, nunca `tinta` nem branco. Entram aqui as que o botão da 3.0 cria (`laranja`, a face do primário;
+ * `grafite`, a do oficial; `vermelho`, a do `perigo` cheio) e as de antes (`noite`, `erro` e as três do `caramelo`).
+ */
+const FACE_FORTE = /^bg-(?:noite|erro|caramelo|caramelo-claro|caramelo-fundo|laranja|grafite|vermelho)$/
 
 /** O texto que não acompanha a face forte: `tinta` vira clara no escuro, e `white` não vira. */
 const TEXTO_QUE_NAO_ACOMPANHA = /^text-(?:tinta|white)$/
@@ -182,8 +186,11 @@ const TEXTO_QUE_NAO_ACOMPANHA = /^text-(?:tinta|white)$/
 const TEXTO_ENTRE_ASPAS = /(["'`])((?:(?!\1)[^\\\n]|\\.)*)\1/g
 
 /**
- * O texto que não acompanha a face forte, na mesma lista de classes e com a mesma variante dela: `bg-caramelo
- * text-tinta` reprova, e `disabled:bg-inativo disabled:text-tinta`, ao lado de um `bg-caramelo` sem variante, passa.
+ * O texto que não acompanha a face forte, na mesma lista de classes: com a mesma variante dela (`bg-caramelo
+ * text-tinta` reprova, e `disabled:bg-inativo disabled:text-tinta`, ao lado de um `bg-caramelo` sem variante, passa), e
+ * também quando é a **face** que troca sob uma variante e o texto é o do estado normal, sem texto da mesma variante que
+ * o acompanhe: `bg-superficie text-tinta hover:bg-laranja` fica com `tinta` sobre o laranja no hover, que no escuro dá
+ * 2,2:1. Com o texto da variante (`hover:text-sobre-cor`), passa.
  */
 function textosSobreFaceForte(conteudo: string): string[] {
   const achados: string[] = []
@@ -193,8 +200,11 @@ function textosSobreFaceForte(conteudo: string): string[] {
       return { variante: classe.slice(0, corte), nome: classe.slice(corte) }
     })
     for (const face of classes.filter(({ nome }) => FACE_FORTE.test(nome))) {
-      for (const texto of classes.filter(({ variante, nome }) => variante === face.variante && TEXTO_QUE_NAO_ACOMPANHA.test(nome))) {
-        achados.push(`${texto.variante}${texto.nome} com ${face.variante}${face.nome}`)
+      const textoDaVariante = classes.some(({ variante, nome }) => variante === face.variante && nome.startsWith('text-'))
+      for (const texto of classes.filter(({ nome }) => TEXTO_QUE_NAO_ACOMPANHA.test(nome))) {
+        const mesmaVariante = texto.variante === face.variante
+        const faceTrocaSemTexto = face.variante !== '' && texto.variante === '' && !textoDaVariante
+        if (mesmaVariante || faceTrocaSemTexto) achados.push(`${texto.variante}${texto.nome} com ${face.variante}${face.nome}`)
       }
     }
   }
@@ -239,6 +249,87 @@ function classesReprovadas(arquivo: string, conteudo: string): string[] {
     for (const cor of coresEmLinha(conteudo)) reprovadas.push(`${arquivo}: ${cor} (cor em linha)`)
   }
   return reprovadas
+}
+
+/** Um uso de `bg-grafite` ou `bg-noite` fora do oficial que ainda existe: o que ele pinta, por quê, e quem o tira. */
+interface UsoDaFaceDoOficial {
+  /** As classes, com a variante (`enabled:hover:`), que o arquivo pode escrever. Qualquer outra reprova. */
+  readonly classes: readonly string[]
+  readonly justificativa: string
+  /** A tarefa ou a spec que tira o uso da lista: `8.0`, `X3`; ou `não sai`, só no arquivo do oficial. */
+  readonly sai: string
+}
+
+/**
+ * RF6: a face do oficial (`grafite`, e a `noite` com `-alto` e `-baixo`, que no escuro vale o mesmo `#f1f7fb`) é do
+ * botão `oficial` e de mais nada. A lista é **fechada e só encolhe**: o arquivo que não está nela reprova, a classe que
+ * a entrada dele não cita reprova, e a entrada cuja classe já não está no arquivo reprova também, para a tarefa que
+ * tira o uso tirar a linha. O teto de `TETO_DA_LISTA_DO_OFICIAL` não sobe.
+ *
+ * A primeira entrada é o oficial. As outras sete são usos de antes da D80, que a `noite` pintava de preto no claro; no
+ * escuro a face deles é a mesma do oficial. Isso já acontece na tela da atividade, onde a questão aberta do mapa e o
+ * botão "Enviar a atividade" têm a mesma face (achado da 1ª rodada da 3.0, `conformidade-reviewer`).
+ */
+const FACE_DO_OFICIAL: Readonly<Record<string, UsoDaFaceDoOficial>> = {
+  'componentes/botao-secundario.ts': {
+    classes: ['bg-grafite', 'enabled:hover:bg-noite-alto'],
+    justificativa: 'é o oficial: a face das constantes e da tabela do Botao; o hover `noite-alto` só vale nas duas linhas dele',
+    sai: 'não sai: é o oficial. O hover passa a token próprio de grafite quando a `noite` sair, na 15.0',
+  },
+  'areas/aluno/Atividade.tsx': {
+    classes: ['bg-noite'],
+    justificativa: 'a questão aberta do mapa da atividade; no escuro tem a mesma face do botão oficial da mesma tela',
+    sai: 'X4 (telas-do-aluno-e-primeiro-acesso), que reveste o mapa de questões',
+  },
+  'areas/professor/Home.tsx': {
+    classes: ['bg-noite'],
+    justificativa: 'o ícone do atalho da lista de entregas esperando na Início da professora',
+    sai: 'X3 (telas-do-professor), que recompõe a Início',
+  },
+  'operacao/componentes/NavegacaoDaLista.tsx': {
+    classes: ['bg-noite'],
+    justificativa: 'a opção de ordenação marcada, na lista das escolas da operação',
+    sai: '15.0 (a operação na pele nova)',
+  },
+  'operacao/componentes/CascaDaOperacao.tsx': {
+    classes: ['bg-noite', 'enabled:hover:bg-noite-alto', 'enabled:active:bg-noite-baixo'],
+    justificativa: 'a faixa de topo da operação e o "Sair" dela, em preto no claro: é a marca de que ali é a operação',
+    sai: '15.0 (a barra de topo clara da operação)',
+  },
+  'componentes/itens-da-lateral.tsx': {
+    classes: ['bg-noite'],
+    justificativa: 'a dica do item da lateral recolhida, que aparece ao lado do ícone',
+    sai: '12.0 (a lateral nas medidas da D80)',
+  },
+  'areas/navegacao.ts': {
+    classes: ['bg-noite'],
+    justificativa: 'o avatar do Assistente na linha de "Seu time" da lateral',
+    sai: '12.0 (12.2: o ícone da função num ladrilho)',
+  },
+  'componentes/ia/AvatarAgente.tsx': {
+    classes: ['bg-noite'],
+    justificativa: 'o avatar do Assistente de ensino na conversa e nos cartões',
+    sai: '8.0 (a onça é o avatar dos três agentes)',
+  },
+}
+
+/** Sobe só com decisão: a lista do oficial é a de hoje, e cada tarefa que tira um uso a faz encolher. */
+const TETO_DA_LISTA_DO_OFICIAL = 8
+
+function listaDoOficialCresceu(lista: Readonly<Record<string, UsoDaFaceDoOficial>>): boolean {
+  return Object.keys(lista).length > TETO_DA_LISTA_DO_OFICIAL
+}
+
+/** A classe inteira, com a variante antes: `bg-grafite`, `bg-noite`, `bg-noite-alto`, `enabled:hover:bg-noite-baixo`. */
+const FACE_DO_OFICIAL_NA_CLASSE = /(?:^|[\s"'`:[])((?:[a-z-]+:)*bg-(?:grafite|noite)(?:-[a-z]+)?)(?![\w-])/g
+
+/** As faces do oficial que `arquivo` escreve e que a entrada dele na lista não cita, como `arquivo: classe (motivo)`. */
+function facesDoOficialForaDaLista(arquivo: string, conteudo: string, lista: Readonly<Record<string, UsoDaFaceDoOficial>> = FACE_DO_OFICIAL): string[] {
+  const permitidas = new Set(lista[arquivo]?.classes ?? [])
+  return [...conteudo.matchAll(FACE_DO_OFICIAL_NA_CLASSE)]
+    .map(([, classe = '']) => classe)
+    .filter((classe) => !permitidas.has(classe))
+    .map((classe) => `${arquivo}: ${classe} (face do oficial fora da lista)`)
 }
 
 function arquivosDeCodigo(pasta: string): string[] {
@@ -303,9 +394,9 @@ describe('guarda de cor em apps/web/src (U3)', () => {
     const nomes = conteudos.map(({ nome }) => nome)
     expect(nomes, 'a varredura não está achando os arquivos da web').toContain('componentes/Botao.tsx')
     expect(nomes.filter((nome) => nome.startsWith('paginas/') || nome.startsWith('areas/')).length).toBeGreaterThanOrEqual(10)
-    // As classes do botão moraram em `Botao.tsx` até o MVP de apresentação; com as cinco variantes da 11.1, a tabela
-    // que o `Botao` lê fica em `botao-secundario.ts`, e é lá que o laranja da ação primária precisa estar.
-    expect(conteudos.find(({ nome }) => nome === 'componentes/botao-secundario.ts')?.conteudo).toMatch(/\bbg-caramelo\b/)
+    // As classes do botão moraram em `Botao.tsx` até o MVP de apresentação; com as variantes da 10.2, a tabela que o
+    // `Botao` lê fica em `botao-secundario.ts`, e é lá que a face laranja da ação primária precisa estar.
+    expect(conteudos.find(({ nome }) => nome === 'componentes/botao-secundario.ts')?.conteudo).toMatch(/\bbg-laranja\b/)
     // As peças do MVP de apresentação (`docs/mvp-rapido.md`, 9.3) também são varridas: o selo "IA" pinta com a família
     // `ia`, e a pasta inteira das peças de IA entra na conta.
     expect(conteudos.find(({ nome }) => nome === 'componentes/ia/AssinaturaIA.tsx')?.conteudo).toMatch(/\bbg-ia-cx\b/)
@@ -404,18 +495,105 @@ describe('guarda de cor em apps/web/src (U3)', () => {
       '<p className="bg-caramelo text-tinta">',
       '<p className="rounded-full bg-noite px-3 text-tinta">',
       "const perigo = 'bg-erro text-white hover:bg-caramelo-claro hover:text-tinta'",
+      // As faces que a 3.0 cria: a laranja do primário, a grafite do oficial e a vermelha do perigo cheio.
+      '<p className="bg-laranja text-tinta">',
+      '<p className="bg-grafite text-white">',
+      '<p className="bg-vermelho text-tinta">',
       // O que passa: o texto que acompanha, e o `tinta` de outra variante que não a da face (o desligado do primário).
       "const primario = 'bg-caramelo text-sobre-cor enabled:active:bg-caramelo-fundo disabled:bg-inativo disabled:text-tinta'",
+      "const novo = 'bg-laranja text-sobre-cor enabled:hover:bg-caramelo-claro disabled:bg-borda disabled:text-apoio'",
+      "const oficial = 'bg-grafite text-sobre-grafite enabled:hover:bg-noite-alto'",
       '<p className="bg-noite text-sobre-grafite">',
       '<p className="bg-fundo text-tinta">',
     ].join('\n')
     expect(classesReprovadas('paginas/Fixture.tsx', fixture)).toEqual([
       'paginas/Fixture.tsx: text-white (não muda com o tema)',
+      'paginas/Fixture.tsx: text-white (não muda com o tema)',
       'paginas/Fixture.tsx: text-tinta com bg-caramelo (texto que não acompanha a face)',
       'paginas/Fixture.tsx: text-tinta com bg-noite (texto que não acompanha a face)',
       'paginas/Fixture.tsx: text-white com bg-erro (texto que não acompanha a face)',
       'paginas/Fixture.tsx: hover:text-tinta com hover:bg-caramelo-claro (texto que não acompanha a face)',
+      'paginas/Fixture.tsx: text-tinta com bg-laranja (texto que não acompanha a face)',
+      'paginas/Fixture.tsx: text-white com bg-grafite (texto que não acompanha a face)',
+      'paginas/Fixture.tsx: text-tinta com bg-vermelho (texto que não acompanha a face)',
     ])
+  })
+
+  it('a guarda reprova a face que troca sob uma variante com o texto do estado normal em tinta ou branco', () => {
+    // A recomendação da 2ª rodada da 1.0: `bg-superficie text-tinta hover:bg-caramelo` passava, e no hover o texto ficava
+    // `tinta` sobre o laranja. Com o texto da mesma variante (`hover:text-sobre-cor`), a face que troca passa.
+    const fixture = [
+      '<p className="bg-superficie text-tinta hover:bg-laranja">',
+      '<p className="bg-superficie text-white enabled:hover:bg-grafite">',
+      '<p className="bg-superficie text-tinta hover:bg-laranja hover:text-sobre-cor">',
+      '<p className="bg-fundo text-apoio hover:bg-fundo-suave">',
+    ].join('\n')
+    expect(classesReprovadas('paginas/Fixture.tsx', fixture)).toEqual([
+      'paginas/Fixture.tsx: text-white (não muda com o tema)',
+      'paginas/Fixture.tsx: text-tinta com hover:bg-laranja (texto que não acompanha a face)',
+      'paginas/Fixture.tsx: text-white com enabled:hover:bg-grafite (texto que não acompanha a face)',
+    ])
+  })
+
+  it('o que a guarda não vê fica dito: a lista quebrada em linhas e a face e o texto em textos diferentes do mesmo template', () => {
+    // `TEXTO_ENTRE_ASPAS` lê um texto de uma linha só. Estes dois casos passam na guarda e erram no escuro; quem os
+    // pega é o axe com o tema escuro (e2e/aparencia.spec.ts). O caso existe para que o limite seja decisão, e não surpresa.
+    const fixture = [
+      '<p className={`bg-laranja ${aberto ? \'text-tinta\' : \'\'}`}>',
+      '<p className={[',
+      "  'bg-laranja',",
+      "  'text-tinta',",
+      '].join(\' \')}>',
+    ].join('\n')
+    expect(classesReprovadas('paginas/Fixture.tsx', fixture)).toEqual([])
+  })
+
+  it('grafite e noite só são face onde a lista fechada do oficial diz, e a lista só encolhe', () => {
+    const conteudos = arquivosDeCodigo(raizDaWeb).map((arquivo) => ({ nome: arquivo.slice(raizDaWeb.length + 1), conteudo: readFileSync(arquivo, 'utf8') }))
+    const nomes = conteudos.map(({ nome }) => nome)
+    expect(conteudos.flatMap(({ nome, conteudo }) => facesDoOficialForaDaLista(nome, conteudo)), 'só o oficial é grafite (RF6)').toEqual([])
+    // A lista não guarda o que já saiu: entrada de arquivo que não existe, ou de classe que o arquivo já não escreve.
+    for (const [arquivo, uso] of Object.entries(FACE_DO_OFICIAL)) {
+      expect(nomes, `${arquivo} saiu do lugar: tire a entrada`).toContain(arquivo)
+      const escritas = new Set([...(conteudos.find(({ nome }) => nome === arquivo)?.conteudo ?? '').matchAll(FACE_DO_OFICIAL_NA_CLASSE)].map(([, classe]) => classe))
+      for (const classe of uso.classes) expect(escritas.has(classe), `${arquivo} já não escreve ${classe}: tire da lista`).toBe(true)
+      expect(uso.justificativa.length, `${arquivo} sem justificativa`).toBeGreaterThan(20)
+      expect(uso.sai, `${arquivo} sem a tarefa ou a spec que o tira`).toMatch(/^(?:não sai\b|\d+\.0 |X[2-4] )/)
+    }
+    // O oficial é o único que fica: nenhum uso de antes diz "não sai".
+    expect(Object.entries(FACE_DO_OFICIAL).filter(([, { sai }]) => sai.startsWith('não sai')).map(([arquivo]) => arquivo)).toEqual(['componentes/botao-secundario.ts'])
+    expect(listaDoOficialCresceu(FACE_DO_OFICIAL), 'a lista fechada do oficial só encolhe').toBe(false)
+  })
+
+  it('a guarda da face do oficial reprova o arquivo novo e a classe que a entrada não cita, e aceita só o que a lista diz', () => {
+    const fixture = [
+      '<p className="rounded-controle bg-grafite text-sobre-grafite">',
+      '<p className="bg-noite text-sobre-grafite">',
+      '<p className="enabled:hover:bg-noite-alto enabled:active:bg-noite-baixo">',
+    ].join('\n')
+    // Arquivo novo: nenhuma das faces passa, com o hover e o apertado também.
+    expect(facesDoOficialForaDaLista('paginas/Nova.tsx', fixture)).toEqual([
+      'paginas/Nova.tsx: bg-grafite (face do oficial fora da lista)',
+      'paginas/Nova.tsx: bg-noite (face do oficial fora da lista)',
+      'paginas/Nova.tsx: enabled:hover:bg-noite-alto (face do oficial fora da lista)',
+      'paginas/Nova.tsx: enabled:active:bg-noite-baixo (face do oficial fora da lista)',
+    ])
+    // O arquivo do oficial aceita a face e o hover dele, e não a `noite`: a entrada diz as classes, e não o arquivo.
+    expect(facesDoOficialForaDaLista('componentes/botao-secundario.ts', fixture)).toEqual([
+      'componentes/botao-secundario.ts: bg-noite (face do oficial fora da lista)',
+      'componentes/botao-secundario.ts: enabled:active:bg-noite-baixo (face do oficial fora da lista)',
+    ])
+    // O uso de antes aceita a `noite` e não a `grafite`: sair do oficial para outro arquivo não vale.
+    expect(facesDoOficialForaDaLista('areas/aluno/Atividade.tsx', fixture)).toEqual([
+      'areas/aluno/Atividade.tsx: bg-grafite (face do oficial fora da lista)',
+      'areas/aluno/Atividade.tsx: enabled:hover:bg-noite-alto (face do oficial fora da lista)',
+      'areas/aluno/Atividade.tsx: enabled:active:bg-noite-baixo (face do oficial fora da lista)',
+    ])
+    // O que não é face do oficial passa em qualquer arquivo: a borda, o texto, o degrau, outra família.
+    const passa = '<p className="border-noite text-sobre-grafite degrau-grafite bg-caramelo-noite bg-fundo bg-noite-ia">'
+    expect(facesDoOficialForaDaLista('paginas/Nova.tsx', passa)).toEqual(['paginas/Nova.tsx: bg-noite-ia (face do oficial fora da lista)'])
+    // A lista com uma entrada a mais cresceu, e o teto é o que a diz.
+    expect(listaDoOficialCresceu({ ...FACE_DO_OFICIAL, 'paginas/Nova.tsx': { classes: ['bg-noite'], justificativa: 'x', sai: 'x' } })).toBe(true)
   })
 
   it('a seleção de texto pinta com token, nos dois temas: fundo laranja-borda e texto tinta', () => {
@@ -443,5 +621,169 @@ describe('guarda de cor em apps/web/src (U3)', () => {
     const qr = '<svg className="bg-white"><path fill="#0d0d0d" /></svg>'
     expect(classesReprovadas('componentes/CodigoQr.tsx', qr)).toEqual([])
     expect(classesReprovadas('componentes/Outro.tsx', qr)).toEqual(['componentes/Outro.tsx: bg-white (não muda com o tema)', 'componentes/Outro.tsx: fill #0d0d0d (cor em linha)'])
+  })
+})
+
+/** O CSS sem os comentários, para a conferência não ler a explicação como se fosse regra. */
+function cssSemComentario(): string {
+  return cssDoProduto().replace(/\/\*[\s\S]*?\*\//g, '')
+}
+
+/** As declarações da regra de `seletor` (o texto exato antes da `{`), como `propriedade → valor`; vazio se a regra não existe. */
+function declaracoesDe(seletor: string, css = cssSemComentario()): Map<string, string> {
+  // O espaço em branco do seletor não conta: a quebra de linha e o recuo do CSS, ou uma vírgula sem espaço depois,
+  // não podem quebrar a busca. Entre partes de um seletor composto continua sendo um ou mais espaços.
+  const escapado = seletor
+    .trim()
+    .split(/\s+/)
+    .map((parte) => parte.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('\\s+')
+    .replace(/,\\s\+/g, ',\\s*')
+  const regra = new RegExp(`(?:^|[}\\s])${escapado}\\s*\\{([^}]*)\\}`, 'm').exec(css)
+  return new Map([...(regra?.[1] ?? '').matchAll(/([a-z-]+)\s*:\s*([^;]+);/g)].map(([, propriedade = '', valor = '']) => [propriedade, valor.trim()]))
+}
+
+interface LinhaDaTipografia {
+  readonly classe: string
+  readonly tamanho: number
+  readonly altura: number
+  readonly peso: number
+  readonly caixa: string
+}
+
+/** As linhas da tabela da 9.2 do `docs/interface.md`: o documento é a fonte, e o CSS é conferido contra ele. */
+function tipografiaDoDocumento(): LinhaDaTipografia[] {
+  const documento = readFileSync(join(raizDoRepositorio, 'docs', 'interface.md'), 'utf8')
+  const inicio = documento.indexOf('### 9.2 Tipografia')
+  if (inicio === -1) throw new Error('docs/interface.md sem a seção 9.2')
+  const fim = documento.indexOf('\n### ', inicio + 5)
+  const secao = documento.slice(inicio, fim === -1 ? undefined : fim)
+  return [...secao.matchAll(/^\|\s*`(t-[a-z-]+)`\s*\|\s*(\d+)\s*\/\s*(\d+)\s*px\s*\|\s*(\d+)\s*\|([^|]*)\|/gm)].map(([, classe = '', tamanho = '', altura = '', peso = '', caixa = '']) => ({
+    classe,
+    tamanho: Number(tamanho),
+    altura: Number(altura),
+    peso: Number(peso),
+    caixa: caixa.trim(),
+  }))
+}
+
+describe('a tipografia t-* do estilos.css (9.2 do docs/interface.md)', () => {
+  it('a tabela do documento é lida inteira: dez classes', () => {
+    // Sem a âncora o caso abaixo passaria vazio no dia em que a tabela mudasse de forma e o regex não achasse linha.
+    expect(tipografiaDoDocumento().map(({ classe }) => classe)).toEqual([
+      't-titulo',
+      't-secao',
+      't-balao',
+      't-cartao',
+      't-corpo',
+      't-apoio',
+      't-rotulo',
+      't-selo',
+      't-numero',
+      't-numero-g',
+    ])
+  })
+
+  it.each(tipografiaDoDocumento())('$classe tem o tamanho, a altura, o peso e a caixa do documento', ({ classe, tamanho, altura, peso, caixa }) => {
+    const regra = declaracoesDe(`.${classe}`)
+    expect(regra.get('font-size')).toBe(`${String(tamanho)}px`)
+    expect(regra.get('line-height')).toBe(`${String(altura)}px`)
+    expect(regra.get('font-weight')).toBe(String(peso))
+    const espacamento = /([−-]?\d+,\d+)em/.exec(caixa)?.[1]
+    expect(regra.get('letter-spacing')).toBe(espacamento === undefined ? undefined : `${espacamento.replace('−', '-').replace(',', '.').replace(/^(-?)0\./, '$10.')}em`)
+    expect(regra.get('text-transform')).toBe(caixa.includes('caixa-alta') ? 'uppercase' : undefined)
+    expect(regra.get('font-variant-numeric')).toBe(caixa.includes('tabular-nums') ? 'tabular-nums' : undefined)
+  })
+
+  it('o piso é 14 px: nenhuma classe t-* desce de 13 px, e só o t-selo tem 13', () => {
+    const tamanhos = tipografiaDoDocumento().map(({ classe }) => [classe, Number.parseFloat(declaracoesDe(`.${classe}`).get('font-size') ?? '0')] as const)
+    expect(tamanhos.filter(([, tamanho]) => tamanho < 13)).toEqual([])
+    expect(tamanhos.filter(([, tamanho]) => tamanho < 15).map(([classe]) => classe)).toEqual(['t-selo'])
+  })
+})
+
+describe('o degrau, o foco e o movimento do estilos.css (RF5, RF7 e RF8)', () => {
+  it('o degrau é sombra sólida e margem do mesmo tamanho, sem desfoque', () => {
+    const degrau = declaracoesDe('.degrau')
+    // Sombra sólida: deslocamento vertical, nenhum desfoque nem espalhamento (9.3: "nenhuma sombra com desfoque").
+    expect(degrau.get('box-shadow')).toBe('0 var(--altura-degrau, 4px) 0 0 var(--lado, var(--color-borda))')
+    // A margem de baixo é a mesma altura, para a peça apertada não mexer em nada em volta.
+    expect(degrau.get('margin-bottom')).toBe('var(--altura-degrau, 4px)')
+  })
+
+  it('só o transform anima, em --t-toque, sem curva; e --t-toque vale 100 ms', () => {
+    expect(declaracoesDe('.degrau').get('transition')).toBe('transform var(--t-toque) linear')
+    expect(cssDoProduto()).toMatch(/--t-toque:\s*100ms;/)
+  })
+
+  it('apertado, a peça desce o degrau e a sombra encolhe o que ela desceu; a peça desligada não aperta', () => {
+    const apertado = declaracoesDe(".degrau:active:not(:disabled):not([aria-disabled='true'])")
+    expect(apertado.get('transform')).toBe('translateY(var(--afunda, var(--altura-degrau, 4px)))')
+    expect(apertado.get('box-shadow')).toBe('0 calc(var(--altura-degrau, 4px) - var(--afunda, var(--altura-degrau, 4px))) 0 0 var(--lado, var(--color-borda))')
+  })
+
+  it('desligado perde a sombra e guarda a margem: a altura total não muda', () => {
+    const desligado = declaracoesDe(".degrau:disabled,\n  .degrau[aria-disabled='true']")
+    expect(desligado.get('box-shadow')).toBe('none')
+    expect(desligado.has('margin-bottom')).toBe(false)
+  })
+
+  it('cada classe de cor do degrau resolve para um token que existe nos dois temas', () => {
+    const { claro, escuro } = blocosDe(cssDoProduto())
+    const esperadas: Record<string, string> = {
+      'degrau-laranja': 'laranja-degrau',
+      'degrau-grafite': 'grafite-degrau',
+      'degrau-borda': 'borda',
+      'degrau-vermelho': 'vermelho-degrau',
+      'degrau-vermelho-borda': 'vermelho-borda',
+      'degrau-azul': 'azul-degrau',
+    }
+    for (const [classe, token] of Object.entries(esperadas)) {
+      expect(declaracoesDe(`.${classe}`).get('--lado'), classe).toBe(`var(--color-${token})`)
+      expect(claro.has(token), `${classe} no claro`).toBe(true)
+      expect(escuro.has(token), `${classe} no escuro`).toBe(true)
+    }
+    // Nenhuma outra classe de degrau escondida: a lista acima é a que o teste do botão resolve por tema.
+    const declaradas = [...cssSemComentario().matchAll(/\.(degrau-[a-z-]+)\s*\{/g)].map(([, classe]) => classe)
+    expect(declaradas.sort()).toEqual(Object.keys(esperadas).sort())
+  })
+
+  it('o anel de foco é contorno sólido de 3 px em foco, afastado 2 px, e a classe do degrau não o apaga', () => {
+    const anel = declaracoesDe(':focus-visible')
+    expect(anel.get('outline')).toBe('3px solid var(--color-foco)')
+    expect(anel.get('outline-offset')).toBe('2px')
+    expect(declaracoesDe('.degrau').has('outline')).toBe(false)
+  })
+
+  it('sobre a face noite do escuro, onde ela é clara, o anel é o texto da face; o chão próprio dentro dela volta ao foco', () => {
+    expect(declaracoesDe(":root[data-tema='escuro'] .bg-noite :focus-visible").get('outline-color')).toBe('var(--color-sobre-grafite)')
+    // O grupo da `Aparencia` na faixa da operação tem chão próprio, e o anel é desenhado sobre ele.
+    const chaoProprio = declaracoesDe(":root[data-tema='escuro'] .bg-noite .bg-fundo :focus-visible,\n  :root[data-tema='escuro'] .bg-noite .bg-superficie :focus-visible")
+    expect(chaoProprio.get('outline-color')).toBe('var(--color-foco)')
+    // O `caramelo-noite` deixou de ser a cor do anel: ele ficava a menos de 2:1 da face `noite` do escuro.
+    expect(cssSemComentario()).not.toMatch(/outline-color:\s*var\(--color-caramelo-noite\)/)
+  })
+
+  it('movimento reduzido desliga a transição e a animação de tudo, e a peça apertada não desce', () => {
+    const css = cssSemComentario()
+    const media = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'))
+    expect(media.startsWith('@media (prefers-reduced-motion: reduce)')).toBe(true)
+    const global = declaracoesDe('*,\n  ::before,\n  ::after', media)
+    expect(global.get('transition-duration')).toBe('0.01ms !important')
+    expect(global.get('animation-duration')).toBe('0.01ms !important')
+    expect(global.get('animation-iteration-count')).toBe('1 !important')
+    // A rolagem suave também é movimento: o âncora e o `scrollIntoView` saltam.
+    expect(global.get('scroll-behavior')).toBe('auto !important')
+    expect(declaracoesDe(".degrau:active:not(:disabled):not([aria-disabled='true'])", media).get('transform')).toBe('none')
+  })
+
+  it('o CSS do produto só anima transform e opacity, e nenhum laço', () => {
+    const css = cssSemComentario()
+    const propriedadesAnimadas = [...css.matchAll(/transition(?:-property)?\s*:\s*([^;}]+)[;}]/g)].flatMap(([, valor = '']) =>
+      valor.split(',').map((parte) => parte.trim().split(/\s+/)[0] ?? ''),
+    )
+    expect(propriedadesAnimadas.length).toBeGreaterThan(0)
+    expect(propriedadesAnimadas.filter((propriedade) => !['transform', 'opacity'].includes(propriedade))).toEqual([])
+    expect(css).not.toContain('infinite')
   })
 })

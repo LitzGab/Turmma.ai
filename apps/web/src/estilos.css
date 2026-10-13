@@ -295,16 +295,28 @@
   }
 
   /*
-   * Foco sempre visível, em tudo que recebe foco pelo teclado (regra 50, item 11): 2 px em `noite` com 2 px de
-   * afastamento (9.1). Sobre o preto, o anel preto some; ali ele é `caramelo-noite` (9,3:1).
+   * Foco sempre visível, em tudo que recebe foco pelo teclado (regra 50, item 11): contorno sólido de 3 px em `foco`,
+   * com 2 px de afastamento (9.1 e 10.1). É um anel só, nos dois temas: o campo, a linha de tabela e o item de menu
+   * mudam o afastamento, e nenhuma peça apaga o contorno.
    */
   :focus-visible {
-    outline: 2px solid var(--color-noite);
+    outline: 3px solid var(--color-foco);
     outline-offset: 2px;
   }
 
-  .bg-noite :focus-visible {
-    outline-color: var(--color-caramelo-noite);
+  /*
+   * A única exceção é o anel sobre a face `noite` no escuro, onde ela é clara (`#f1f7fb`) e o `foco` dá 1,99:1: ali o
+   * anel é o `sobre-grafite`, que é o texto da própria face (15:1 nos dois temas). No claro o `foco` sobre a `noite` dá
+   * 3,55:1 e a regra não existe. Peça com chão próprio dentro da face (o grupo da `Aparencia` na faixa da operação) volta
+   * ao `foco`, porque o anel é desenhado sobre o chão dela e não sobre a face.
+   */
+  :root[data-tema='escuro'] .bg-noite :focus-visible {
+    outline-color: var(--color-sobre-grafite);
+  }
+
+  :root[data-tema='escuro'] .bg-noite .bg-fundo :focus-visible,
+  :root[data-tema='escuro'] .bg-noite .bg-superficie :focus-visible {
+    outline-color: var(--color-foco);
   }
 
   /*
@@ -335,5 +347,153 @@
 
   dialog[open] {
     margin: auto;
+  }
+}
+
+/*
+ * A tipografia da 9.2 do `docs/interface.md`, uma classe por papel: tamanho, altura de linha, peso e caixa. A fonte é a
+ * do sistema (o `--font-corpo` do `@theme`), dois pesos, 500 e 700. A caixa-alta é do CSS: o texto vai escrito normal
+ * para o leitor de tela. O piso é 14 px; 13 px só no `t-selo`. Entram em `components`, abaixo das utilidades, para a tela
+ * que pede `text-sm` num botão ganhar do tamanho da classe sem brigar com ela.
+ */
+@layer components {
+  .t-titulo {
+    font-size: 24px;
+    line-height: 30px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .t-secao {
+    font-size: 20px;
+    line-height: 26px;
+    font-weight: 700;
+  }
+
+  .t-balao {
+    font-size: 20px;
+    line-height: 26px;
+    font-weight: 500;
+  }
+
+  .t-cartao {
+    font-size: 17px;
+    line-height: 22px;
+    font-weight: 700;
+  }
+
+  .t-corpo {
+    font-size: 17px;
+    line-height: 25px;
+    font-weight: 500;
+  }
+
+  .t-apoio {
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 500;
+  }
+
+  .t-rotulo {
+    font-size: 15px;
+    line-height: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .t-selo {
+    font-size: 13px;
+    line-height: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .t-numero {
+    font-size: 28px;
+    line-height: 32px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .t-numero-g {
+    font-size: 36px;
+    line-height: 40px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * O degrau (9.3): a faixa sólida embaixo da peça que se aperta. Um elemento só, que serve a `<button>` e a `<a>`: a
+   * sombra sólida de `--altura-degrau` na cor `--lado`, e a mesma altura de margem embaixo, para que apertar não mexa em
+   * nada em volta. Apertado, a peça desce `--afunda` (o degrau inteiro, se a peça não disser outro) e a sombra encolhe
+   * o que ela desceu. Peça desligada perde a sombra e guarda a margem: a altura total não muda.
+   *
+   * Só o `transform` anima, em `--t-toque` e sem curva (9.5): a sombra e a cor do hover trocam na hora, porque cor, borda
+   * e sombra repintam a página a cada quadro no Chromebook.
+   */
+  .degrau {
+    box-shadow: 0 var(--altura-degrau, 4px) 0 0 var(--lado, var(--color-borda));
+    margin-bottom: var(--altura-degrau, 4px);
+    transition: transform var(--t-toque) linear;
+  }
+
+  .degrau:active:not(:disabled):not([aria-disabled='true']) {
+    transform: translateY(var(--afunda, var(--altura-degrau, 4px)));
+    box-shadow: 0 calc(var(--altura-degrau, 4px) - var(--afunda, var(--altura-degrau, 4px))) 0 0 var(--lado, var(--color-borda));
+  }
+
+  .degrau:disabled,
+  .degrau[aria-disabled='true'] {
+    box-shadow: none;
+  }
+
+  /*
+   * A cor do degrau vem destas classes fixas, e não de um valor escrito na peça: o teste resolve cada uma por tema. A
+   * `degrau-borda` é a do secundário e dos cartões; `degrau-vermelho-borda`, a do `perigo`, que tem a borda da família
+   * vermelha; `degrau-vermelho` é a do `perigo` cheio, e `degrau-azul`, a da peça selecionada.
+   */
+  .degrau-laranja {
+    --lado: var(--color-laranja-degrau);
+  }
+
+  .degrau-grafite {
+    --lado: var(--color-grafite-degrau);
+  }
+
+  .degrau-borda {
+    --lado: var(--color-borda);
+  }
+
+  .degrau-vermelho {
+    --lado: var(--color-vermelho-degrau);
+  }
+
+  .degrau-vermelho-borda {
+    --lado: var(--color-vermelho-borda);
+  }
+
+  .degrau-azul {
+    --lado: var(--color-azul-degrau);
+  }
+}
+
+/*
+ * Movimento reduzido (9.5, item 6; RF8): nada desloca e nada anima. A regra é global, e não peça por peça, para a peça
+ * nova nascer já obedecendo. O apertado continua visível pela sombra que encolhe, sem a peça descer.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .degrau:active:not(:disabled):not([aria-disabled='true']) {
+    transform: none;
   }
 }

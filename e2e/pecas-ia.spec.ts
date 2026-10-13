@@ -15,6 +15,7 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGra
 const RGB = {
   caramelo: 'rgb(232, 115, 46)',
   noite: 'rgb(13, 13, 13)',
+  grafite: 'rgb(51, 51, 51)',
   superficie: 'rgb(255, 255, 255)',
   iaFundo: 'rgb(240, 240, 240)',
   iaTexto: 'rgb(66, 66, 66)',
@@ -117,11 +118,12 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     expect(medidaDaFerramenta.height).toBeCloseTo(medidaDaConversa.height, 0)
     expect(medidaDaFerramenta.height).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
 
-    // Mesmo desenho, e nenhum é o da ação primária (laranja) nem o da decisão oficial (preto): nenhuma é a "certa" (D59).
+    // Mesmo desenho, e nenhum é o da ação primária (laranja) nem o da decisão oficial (grafite): nenhuma é a "certa" (D59).
+    // A `noite` de antes não prova nada aqui: o oficial deixou de ser ela, e a lista com ela passaria com o oficial dentro.
     const [desenhoDaFerramenta, desenhoDaConversa] = [await desenho(ferramenta), await desenho(conversa)]
     expect(desenhoDaFerramenta).toEqual(desenhoDaConversa)
     expect(desenhoDaFerramenta.fundo).toBe(RGB.superficie)
-    expect([RGB.caramelo, RGB.noite]).not.toContain(desenhoDaFerramenta.fundo)
+    expect([RGB.caramelo, RGB.grafite]).not.toContain(desenhoDaFerramenta.fundo)
     // Nenhuma vem com o foco: o Enter de quem chega não escolhe por ela.
     expect(await opcoes.evaluateAll((botoes) => botoes.some((botao) => botao === document.activeElement))).toBe(false)
 

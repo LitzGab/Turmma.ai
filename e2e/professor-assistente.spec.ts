@@ -740,7 +740,7 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
 
     // Aprovar é o botão preto, e abre a confirmação que diz o que é, de qual turma e o que muda.
     const aprovar = pendente.getByRole('button', { name: /^Aprovar/ })
-    expect(await aprovar.evaluate((elemento) => getComputedStyle(elemento).backgroundColor)).toBe('rgb(13, 13, 13)')
+    expect(await aprovar.evaluate((elemento) => getComputedStyle(elemento).backgroundColor)).toBe('rgb(51, 51, 51)')
     await acionar(aprovar, hasTouch)
     const dialogo = page.getByRole('alertdialog', { name: 'Aprovar a versão adaptada' })
     await expect(dialogo).toContainText(adaptada.artefato.titulo)

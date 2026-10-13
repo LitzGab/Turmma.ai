@@ -50,8 +50,9 @@ const TEXTO_DA_PERGUNTA = 'O link e o código aparecem uma vez só. Se fechar ag
 const CODIGO_EM_DOIS_GRUPOS = /^[2-9A-HJKMNP-Z]{4} [2-9A-HJKMNP-Z]{4}$/
 /** O menor tamanho de letra do código, em px: é o `text-4xl`, o da tela de 360 px. */
 const LETRA_GRANDE_PX = 36
-/** O vermelho do `perigo` (`--color-erro`, #b42318). */
-const COR_DO_PERIGO = 'rgb(180, 35, 24)'
+/** O texto do perigo na seção (`--color-vermelho-texto`, #b84045) e a face do perigo cheio, só dentro da confirmação (`--color-vermelho`, #f2545b). */
+const COR_DO_PERIGO = 'rgb(184, 64, 69)'
+const COR_DO_PERIGO_CHEIO = 'rgb(242, 84, 91)'
 
 /** A leitura e o gerar (`GET` e `POST /v1/turmas/:id/acesso`), o revogar, e a turma aberta (`GET /v1/turmas/:id`). */
 const ehOAcesso = (url: URL) => /^\/v1\/turmas\/[^/]+\/acesso$/.test(url.pathname)
@@ -578,7 +579,7 @@ test.describe('W7: gerar, projetar, copiar, compartilhar e trocar o acesso', () 
     await expect(page.getByRole('dialog', { name: 'Revogar o acesso' })).toBeVisible()
     await expect(noDialogo(page).getByText(TEXTO_DO_REVOGAR, { exact: true })).toBeFocused()
     const confirmar = noDialogo(page).getByRole('button', { name: 'Revogar acesso', exact: true })
-    expect(await confirmar.evaluate((botao) => getComputedStyle(botao).backgroundColor)).toBe(COR_DO_PERIGO)
+    expect(await confirmar.evaluate((botao) => getComputedStyle(botao).backgroundColor)).toBe(COR_DO_PERIGO_CHEIO)
     await conferirDialogo(page)
     expect(await acessosVigentesDaTurma(professora.escolaId, turma.turmaId)).toBe(1)
     await acionar(confirmar, hasTouch)

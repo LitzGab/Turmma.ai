@@ -44,14 +44,25 @@ export function larguraExcedenteDoDialogo(page: Page): Promise<number> {
   return page.locator('dialog[open]').evaluate((dialogo) => dialogo.scrollWidth - dialogo.clientWidth)
 }
 
-/** O foco do elemento aparece: contorno com largura e estilo, ou sombra. */
+/**
+ * O foco do elemento aparece, e é o anel da D80: contorno **sólido** de 3 px na cor do token `foco` (RF7). A sombra deixou
+ * de valer: o degrau do botão é sombra permanente, e uma asserção que aceitasse sombra passaria sempre. O afastamento não
+ * entra, porque varia por peça (2 px; 0 no campo; por dentro na linha de tabela e no item de menu).
+ *
+ * A cor do token é lida da própria página, por uma sonda com `color: var(--color-foco)`: vale nos dois temas, sem
+ * repetir o hex aqui.
+ */
 export function focoVisivel(page: Page, seletorAtivo = ':focus-visible'): Promise<boolean> {
   return page.evaluate((seletor) => {
     const elemento = document.activeElement
     if (!elemento || !elemento.matches(seletor)) return false
+    const sonda = document.createElement('span')
+    sonda.style.color = 'var(--color-foco)'
+    document.body.append(sonda)
+    const foco = getComputedStyle(sonda).color
+    sonda.remove()
     const estilo = getComputedStyle(elemento)
-    const contorno = estilo.outlineStyle !== 'none' && Number.parseFloat(estilo.outlineWidth) >= 2
-    return contorno || estilo.boxShadow !== 'none'
+    return estilo.outlineStyle === 'solid' && estilo.outlineWidth === '3px' && estilo.outlineColor === foco
   }, seletorAtivo)
 }
 

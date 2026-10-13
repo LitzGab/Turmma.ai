@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { brotliCompressSync } from 'node:zlib'
 import { afterEach, describe, expect, it } from 'vitest'
 import { raizRepositorio } from './executar.ts'
 
@@ -72,8 +73,24 @@ function jsIncompressivel(bytesAleatorios: number): string {
   return `export const x = '${randomBytes(bytesAleatorios).toString('base64')}'\n`
 }
 
+/**
+ * JS cujo tamanho **em brotli** é o pedido, com margem de 1%: o teto é medido assim, e o base64 de bytes aleatórios
+ * comprime a uns 75% do que tem. O teto das peças é decidido na casa do kB, e o caso de 40 kB contra 41 kB não aceita
+ * a folga de um quarto que `jsIncompressivel` deixa.
+ */
+function jsComBrotliDe(bytesEmBrotli: number): string {
+  let bytesAleatorios = bytesEmBrotli
+  for (let tentativa = 0; tentativa < 8; tentativa++) {
+    const js = jsIncompressivel(bytesAleatorios)
+    const medido = brotliCompressSync(js).length
+    if (Math.abs(medido - bytesEmBrotli) <= bytesEmBrotli * 0.01) return js
+    bytesAleatorios = Math.round((bytesAleatorios * bytesEmBrotli) / medido)
+  }
+  throw new Error(`não achei um JS de ${String(bytesEmBrotli)} bytes em brotli`)
+}
+
 describe('teto do bundle da web (.size-limit.json)', () => {
-  it('declara 150 kB em brotli sobre a entrada sozinha, 60 kB sobre a operação, um teto por área da escola e 26 kB sobre as peças', () => {
+  it('declara 150 kB em brotli sobre a entrada sozinha, 60 kB sobre a operação, um teto por área da escola e 40 kB sobre as peças', () => {
     const verificacoes = JSON.parse(readFileSync(join(raizRepositorio, '.size-limit.json'), 'utf8')) as Verificacao[]
     expect(verificacoes.map(({ path, limit, brotli }) => ({ path, limit, brotli }))).toEqual([
       { path: 'apps/web/dist/assets/index-*.js', limit: '150 kB', brotli: true },
@@ -81,13 +98,13 @@ describe('teto do bundle da web (.size-limit.json)', () => {
       { path: 'apps/web/dist/assets/coordenacao-*.js', limit: '16 kB', brotli: true },
       { path: 'apps/web/dist/assets/professor-*.js', limit: '8 kB', brotli: true },
       { path: 'apps/web/dist/assets/aluno-*.js', limit: '5 kB', brotli: true },
-      { path: 'apps/web/dist/assets/pecas-*.js', limit: '26 kB', brotli: true },
+      { path: 'apps/web/dist/assets/pecas-*.js', limit: '40 kB', brotli: true },
     ])
   })
 
   it('todos os grupos pequenos passam: o controle que mostra que as reprovações abaixo vêm do tamanho', () => {
     const { codigo, saida } = sizeLimit(buildDeMentira(BUILD_PEQUENO))
-    for (const teto of ['150 kB', '60 kB', '16 kB', '8 kB', '5 kB', '26 kB']) expect(saida).toContain(teto)
+    for (const teto of ['150 kB', '60 kB', '16 kB', '8 kB', '5 kB', '40 kB']) expect(saida).toContain(teto)
     expect(codigo).toBe(0)
   })
 
@@ -125,18 +142,28 @@ describe('teto do bundle da web (.size-limit.json)', () => {
     })
   }
 
-  it('as peças acima de 26 kB em brotli reprovam, num pedaço pecas-* só ou somadas entre vários; a galeria não conta', () => {
-    // 32 kB incompressíveis num `pecas-*`: acima do teto das peças. Os outros grupos nem o enxergam.
-    const sozinho = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, 'pecas-CaixaPedido.js': jsIncompressivel(32_000) }))
+  it('as peças acima de 40 kB em brotli reprovam, num pedaço pecas-* só ou somadas entre vários; as de 40 kB passam; a galeria não conta', () => {
+    // 41 kB em brotli num `pecas-*` só: acima do teto das peças, que subiu de 26 para 40 kB na X1. Os outros grupos nem
+    // o enxergam.
+    const sozinho = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, 'pecas-CaixaPedido.js': jsComBrotliDe(41_000) }))
     expect(sozinho.saida).toMatch(/exceeded/i)
     expect(sozinho.codigo).not.toBe(0)
-    // 11 kB em três `pecas-*`: cada arquivo abaixo de 26 kB, os três juntos acima. É a soma que o teto
-    // mede, porque a mesma peça muda de arquivo quando uma segunda tela passa a usá-la.
+    // 14 kB em três `pecas-*`: cada arquivo abaixo de 40 kB, os três juntos (42 kB) acima. É a soma que o teto mede,
+    // porque a mesma peça muda de arquivo quando uma segunda tela passa a usá-la.
     const somados = sizeLimit(
-      buildDeMentira({ ...BUILD_PEQUENO, 'pecas-pequeno.js': jsIncompressivel(11_000), 'pecas-Menu.js': jsIncompressivel(11_000), 'pecas-Abas.js': jsIncompressivel(11_000) }),
+      buildDeMentira({ ...BUILD_PEQUENO, 'pecas-pequeno.js': jsComBrotliDe(14_000), 'pecas-Menu.js': jsComBrotliDe(14_000), 'pecas-Abas.js': jsComBrotliDe(14_000) }),
     )
     expect(somados.saida).toMatch(/exceeded/i)
     expect(somados.codigo).not.toBe(0)
+    // O limite de baixo: 39,6 kB, num pedaço só e somados em três, passam. Com o teto de 26 kB de antes, os dois
+    // reprovariam; é o que prova que o número novo vale.
+    // O `pecas-pequeno.js` do build de mentira é trocado, e não somado: o 1 kB dele contaria nos 40.
+    const noLimite = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, 'pecas-pequeno.js': jsComBrotliDe(39_600) }))
+    expect(noLimite.codigo).toBe(0)
+    const somadosNoLimite = sizeLimit(
+      buildDeMentira({ ...BUILD_PEQUENO, 'pecas-pequeno.js': jsComBrotliDe(13_200), 'pecas-Menu.js': jsComBrotliDe(13_200), 'pecas-Abas.js': jsComBrotliDe(13_200) }),
+    )
+    expect(somadosNoLimite.codigo).toBe(0)
     // O controle: a galeria de 40 kB não pesa nas peças. Ela é da máquina e do e2e, e leva a página dela.
     const folgado = sizeLimit(buildDeMentira({ ...BUILD_PEQUENO, 'galeria-pequeno.js': jsIncompressivel(40_000), 'pecas-Menu.js': jsIncompressivel(5_000) }))
     expect(folgado.codigo).toBe(0)

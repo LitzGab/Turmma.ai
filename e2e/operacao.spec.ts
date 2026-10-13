@@ -13,8 +13,8 @@ const CHUNK_DA_OPERACAO = /\/assets\/operacao-[^/]+\.js$/
 const TEXTO_DA_SESSAO_ENCERRADA = MENSAGENS_DE_ERRO.SESSAO_ENCERRADA
 const TEXTO_DO_503 = 'O Turmma está indisponível agora. Tente de novo em instantes.'
 const AVISO_DE_INATIVIDADE = 'Sua sessão vai terminar em 2 minutos por falta de uso.'
-/** O `caramelo-noite` da 9.9: o anel de foco sobre o preto da faixa. */
-const CARAMELO_NOITE = 'rgb(242, 162, 91)'
+/** O `foco` da 9.10 no claro: o anel de 3 px, o mesmo em toda peça, inclusive sobre o preto da faixa (3,55:1 contra a `noite`). */
+const FOCO = 'rgb(20, 110, 170)'
 
 /** Minutos e segundos no formato do relógio simulado do Playwright. */
 const tempo = (minutos: number, segundos = 0): string => `00:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`
@@ -90,8 +90,9 @@ test.describe('área do operador Turmma', () => {
     expect(await violacoesGraves(page)).toEqual([])
     await semNadaGuardadoNoNavegador(page)
 
-    // O "Sair" está na faixa preta, com alvo de toque de 44 px, e o anel de foco dele é o `caramelo-noite`: o preto
-    // da regra geral sumiria sobre o preto da faixa. Aqui na casca de verdade, e não numa faixa montada pelo teste.
+    // O "Sair" está na faixa preta, com alvo de toque de 44 px, e o anel de foco dele é o `foco` de 3 px, o mesmo de toda
+    // peça (3,55:1 contra a `noite` no claro). Aqui na casca de verdade, e não numa faixa montada pelo teste; o escuro,
+    // onde a `noite` é clara, é de `tokens.spec.ts`.
     const sair = page.getByRole('banner').getByRole('button', { name: 'Sair' })
     const caixaDoSair = await sair.boundingBox()
     expect(caixaDoSair?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
@@ -102,7 +103,7 @@ test.describe('área do operador Turmma', () => {
         const estilo = getComputedStyle(elemento)
         return { visivel: elemento.matches(':focus-visible'), estilo: estilo.outlineStyle, largura: estilo.outlineWidth, cor: estilo.outlineColor }
       })
-      expect(anel).toEqual({ visivel: true, estilo: 'solid', largura: '2px', cor: CARAMELO_NOITE })
+      expect(anel).toEqual({ visivel: true, estilo: 'solid', largura: '3px', cor: FOCO })
       expect(await sair.evaluate((elemento) => getComputedStyle(elemento.closest('header') ?? elemento).backgroundColor)).toBe('rgb(13, 13, 13)')
     }
 
