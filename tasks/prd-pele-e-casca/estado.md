@@ -6,8 +6,14 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** o `RELATÓRIO` do `Implementador`, da **5.0** (porte grande), na **linha 1**, 1ª tentativa, pedida em
-  13/10/2026 às 13h13 (a 4.0 se encontrou às 13h11, em `6627aea`). Checkout da linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch
+- **Espero (14h40 de 13/10):** o `RELATÓRIO` do `Implementador`, da **6.0**, na linha 1, em `PEDIDO de retomada`
+  (ainda 1ª tentativa: a parada foi divergência de portão, e não falha). A implementação dela está **na árvore, sem
+  commit**; falta o portão da tarefa e a Mesa. A correção `quinta-fatia-do-e2e` que a destravou está na linha, em
+  `71ff60f` (três revisores aprovados na 2ª rodada, sem push), e segue com o commit da 6.0 no encontro. **Para a
+  validação:** os revisores deixaram ao `/validar` conferir que a correção não pousa sem a 6.0 (estão na mesma
+  branch) e as recomendações recusadas na tabela de `tasks/correcoes/2026-10-13-quinta-fatia-do-e2e.md`
+- **Antes disso, o pedido original:** o `RELATÓRIO` do `Implementador`, da **6.0** (porte grande), na **linha 1**, 1ª tentativa, pedida em
+  13/10/2026 às 13h57 (a 5.0 se encontrou às 13h55, em `3ba0608`). Checkout da linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch
   `spec/pele-e-casca--l1`, ambiente de teste 1, com o `Implementador` e a `Mesa`. O pedido foi com a observação
   **"sem push"**: o commit da tarefa fica local
 - **Devo ainda:** (1) **tudo local, por decisão do Joaquim** (13/10, 08h50: "pode ficar local"): nenhum push, de
@@ -18,7 +24,8 @@
   (`portao-local.ts --e2e --infra`) uma vez, antes da validação (passo 8 do `/seguir`, "Sem GitHub"). Todo `PEDIDO`
   de tarefa leva a observação "sem push"; (2) a 3.0 é tronco e segura as outras doze; da 4.0 em diante o quadro
   autoriza linhas, mas **uma linha só** até o Joaquim dizer o contrário
-  (limite de uso); (3) nada mais sobre a revisão de spec da X3 e da X4: as duas **já têm revisão aprovada** pelos
+  (limite de uso); (2a) o `PEDIDO` da **10.0** leva a observação: "o placeholder da `CaixaPedido` fica cortado a
+  360 px; está em 'Sem aplicar' do `5_task.md`"; (3) nada mais sobre a revisão de spec da X3 e da X4: as duas **já têm revisão aprovada** pelos
   seis guardiões, quatro rodadas cada, feita pelo "Claude Code #2" a pedido do Joaquim e trazida para esta branch em
   13/10/2026 (`2f63ce0`, `7334f79`, `92cc7e5`; o Joaquim deu a palavra neste terminal: "pode"). Não repetir antes de
   cada uma começar. As decisões de desenho tomadas por delegação nelas estão na seção 12 da Tech Spec de cada uma
@@ -28,14 +35,14 @@
   `./node_modules/.bin/vite --host 127.0.0.1 --port 5190 --strictPort` dentro de
   `~/Documentos/git/Prototipo_Turmma/mockups`. Em 13/10 estava de pé na 5190 pela sessão do "Claude Code #2", e cai
   quando ela fechar: quem precisar, sobe de novo
-- **Limite de uso:** 81% do limite semanal às 07h48 de 13/10; zera em 15/10 às 15h. Uma linha, poucos agentes
+- **Limite de uso:** **94% do limite semanal às 14h32 de 13/10** (era 81% às 07h48); zera em 15/10 às 15h. Uma linha, poucos agentes
 - **A spec da X1 está APROVADA** pelos seis revisores (rodada 4, 13/10/2026 02:09, `revisao-spec.md`). As
   recomendações que sobraram estão na seção da rodada 4 e entram como subtarefa ou cenário na tarefa de cada uma
 - **Como o Orquestrador assumiu:** em 13/10/2026, 08h20, com a palavra do Joaquim no terminal dele ("pode"). O andar
   "X1 pele-e-casca" nasceu da branch que já existia (`--existing-branch`), em
   `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca`, e a `develop` (`e278845`) entrou por merge, sem
   conflito (`65ab3b1`). A 1.0 e a spec correram fora do Maestri, num checkout avulso já desfeito
-- **Base:** `spec/pele-e-casca` em `e1927a3`, com a 4.0; a linha 1 partiu dela para a 5.0. O quadro pede mais uma
+- **Base:** `spec/pele-e-casca` em `8449020`, com a 5.0; a linha 1 partiu dela para a 6.0. O quadro pede mais uma
   linha para a 9.0: não abrir (uma linha só, item 2 acima). Nada foi enviado ao GitHub: push é do Joaquim
 
 ## Concluídas
@@ -123,3 +130,6 @@ portão completo local custa de 30 a 70 minutos por vez
   hoje já mede
 - **Nenhum laço de animação, nem o de "pensando"** (D59): o documento dizia o contrário dos testes, e os testes
   venceram
+- **13/10 14h30, a 5ª fatia do e2e é correção na linha 1, no meio da 6.0** (`/seguir`, passo 6, divergência de
+  portão): o Implementador perguntou se fazia dentro da 6.0 ou em correção própria. Correção própria, com
+  `infra-guardian`, porque o `ci.yml` é comum às linhas e fora dos arquivos da tarefa
