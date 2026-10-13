@@ -19,17 +19,23 @@ de que a conversa não induz continuam provadas com a cor nova.
 - `.claude/rules/70-conformidade-cne.md`, itens 3 e 4b; D18, D36, D59
 - Código: `componentes/ia/` e o `README.md` dela; `Escolha.tsx` (`CLASSES_DA_OPCAO`, uma constante para as duas);
   `Mensagem.tsx` (`Pensando` é só texto); `CaixaPedido.tsx` ("Parar" é `secundario`)
+- **Da 8.0** (`8_task.md`, "Divergências"): no `balao`, a `AssinaturaIA` é o cabeçalho, com o balão abaixo, e não o
+  avatar ao lado (RF10; `techspec.md` 7b). Usam o `balao`: `professor/Time.tsx` e `professor/Tutor.tsx`
 
 ## Subtarefas
 
 - [ ] 10.1 — Revestir **sem mudar props, texto nem ordem de foco**: `CaixaPedido` (canto 16, borda 2; "Enviar" primário de
-  44 px; "Parar" continua `secundario`, e não oficial), `Mensagem` (a pessoa em bolha, a IA sem), `ChipFonte` e `Fontes`
+  44 px; "Parar" continua `secundario`, e não oficial; a 360 px o exemplo do campo vazio aparece inteiro, sem linha
+  cortada), `Mensagem` (a pessoa em bolha; a IA sem, na `coluna`; no `balao`, a assinatura continua em cima, seja como
+  estiver no mockup, e `Mensagem.tsx` não volta a importar o `AvatarAgente`), `ChipFonte` e `Fontes`
   (pílula de 28 px, "da web" tracejado), `MotorFormulario` (gerar primário, cancelar `secundario`, mesma altura),
   `AvisoFila`, `LinhaAprovacao` (continua o `Estado`, sem desenho próprio), `PaginaMini` e `TextoDaIA`
 - [ ] 10.2 — `Escolha`: as duas opções com **uma** constante só, borda 2 e `degrau-borda`, nenhuma laranja nem grafite, nenhuma com o
   foco ao abrir. `Pensando` e o aviso de demora seguem sem laço e sem pulso
 - [ ] 10.3 — `galeria/secoes/ia.tsx`: cada peça nos estados de hoje
 - [ ] 10.4 — Testes (tabela abaixo)
+- [ ] 10.5 — `professor/Time.tsx`: a data da entrega e o aviso de função suspensa perdem o recuo (`pl-8`, linhas 315 e
+  351), que era o do avatar ao lado do balão. Alinhamento, conferido na foto: sem teste novo
 
 ## Arquivos previstos
 
@@ -40,6 +46,7 @@ de que a conversa não induz continuam provadas com a cor nova.
 | `apps/web/src/componentes/ia/MotorFormulario.tsx`, `AvisoFila.tsx`, `LinhaAprovacao.tsx`, `PaginaMini.tsx`, `TextoDaIA.tsx` | alterados |
 | `apps/web/src/componentes/ia/Escolha.test.tsx`, `Mensagem.test.tsx`, `AvisoFila.test.tsx` | novos |
 | `apps/web/src/galeria/secoes/ia.tsx` | alterado |
+| `apps/web/src/areas/professor/Time.tsx` | alterado (o recuo, 10.5) |
 | `e2e/pecas-ia.spec.ts` | alterado |
 
 ## Testes que provam a regra
@@ -54,6 +61,7 @@ Definidos com o `test-engineer`. Não improvise aqui.
 | pausa, assunto delicado e faixa | e2e | `aluno-tutor` sem edição: a pausa sem `alert` e sem vermelho, o cartão sem animação, a faixa sem botão e presa (A55, A57, A59) |
 | a aprovação diz quem e quando | e2e | A29 e A31 inalterados; a linha tem o desenho do selo de estado, nos três estados (A30) |
 | enviar, parar, gerar, chip | e2e | "Enviar" laranja de 44 × 44, "Parar" com fundo `fundo`, "Gerar atividade" laranja e "Cancelar" da mesma altura, chip de 24 px ou mais (A33, A34, A35, A47) |
+| o exemplo cabe no celular | e2e (`celular`) | campo vazio a 360 px, na galeria: nenhuma linha do exemplo fica fora do campo (regra 50, item 2a) |
 | o aviso de fila não mostra erro cru | componente | `falha` tem `alert` e "Tentar de novo"; `demora` tem `status`; nenhum código |
 | texto como a tela mostra | e2e | as falas e a prévia continuam achadas pelo texto (A100) |
 | axe e toque | e2e | seção sem violação grave nos dois temas; alvos de 44 px no `celular` |
@@ -64,13 +72,18 @@ Definidos com o `test-engineer`. Não improvise aqui.
 - e2e a copiar: `pecas-ia.spec.ts › a Escolha da D18…` (`desenho`, `caixa`) e o de `[data-pensando]`
 - Isolado: `npx vitest run --project unidade apps/web/src/componentes/ia`;
   `node tools/ci/e2e.ts --manter-ambiente e2e/pecas-ia.spec.ts e2e/aluno-tutor.spec.ts e2e/professor-assistente.spec.ts`
-- Armadilha: A30 cruza a 6.0, que reveste o `Estado`; a igualdade vale no commit de cada uma
-- **Telas**: `/galeria` (IA), claro e escuro; `professora`, `/professor/nova-conversa` (pedir uma atividade);
-  `aluno`, `/aluno/tutor`. Mockup: `/fundamentos` (Conversar com IA)
+- O exemplo: sem precedente; o mais próximo é `pecas-ia.spec.ts › a CaixaPedido…` (`caixa(campo)`). O `scrollHeight` do
+  campo não conta o exemplo: compare a altura do campo vazio com a do mesmo texto digitado, ou leia
+  `getComputedStyle(campo, '::placeholder')`
+- Armadilha: A30. A 6.0 já revestiu o `Estado`: a igualdade vale contra ele como está
+- **Telas**: `/galeria` (IA), claro e escuro; `professora`, `/professor/nova-conversa` (pedir uma atividade), claro e
+  escuro, também a 360 px; `professora`, `/professor/time/assistente` e `/professor/time/tutor` (o balão, com a
+  assinatura em cima); `aluno`, `/aluno/tutor`. Mockup: `/fundamentos` (Conversar com IA)
 
 ## Fora do escopo desta tarefa
 
-Avatar e selo (8.0); `Estado`, `Faixa` e `Aviso` (6.0); texto novo do Tutor.
+Avatar e selo (8.0): `AssinaturaIA.tsx` não é tocada, nem a casca do selo (`ml-1` e `align-middle`, que ficam no
+`TODO.md`). O texto do exemplo (`CaixaDoAssistente.tsx`). `Estado`, `Faixa` e `Aviso` (6.0); texto novo do Tutor.
 
 ## Divergências resolvidas nesta tarefa
 
