@@ -976,9 +976,18 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
         limite, a conta passa de 60 e a tela a prende em "60 de 60"; cada um tira uma troca do pacote da turma
       - **contar não limita nada:** o encaminhamento passa na frente do freio e custa zero token; o laço segue sem
         teto próprio (item "Assunto delicado sem teto de IA", abaixo)
-      - **nenhum teste fixa a conta**, e `e2e/aluno-fluxo.spec.ts:199` afirma `Hoje: 0 de 60 perguntas` depois do
-        encaminhamento: com "gasta" o certo é 1, e a linha só passa quando lê a barra antes de a conversa ser relida.
-        Enquanto valer o "por ora": `/corrigir` para o e2e esperar 1 e um caso de integração fixar o número
+      - **a conta está fixada em teste desde 12/10/2026** (correção `2026-10-12-encaminhamento-gasta-troca`,
+        `c6e8511`): o grupo "o encaminhamento gasta uma troca, por ora" de `apps/api/src/tutor/tutor.int.test.ts`
+        (1 depois do encaminhamento; na 59ª troca ele ocupa a 60ª; no limite, 61 de 60, com o estado `limite`), e
+        `e2e/aluno-fluxo.spec.ts` passou a esperar `Hoje: 1 de 60 perguntas`, sem a corrida com a releitura da
+        conversa. Se a resposta virar "não gasta", esses casos mudam junto
+      - **o que os revisores da correção deixaram** (tabela "Recomendações sem aplicar" de
+        `tasks/correcoes/2026-10-12-encaminhamento-gasta-troca.md`): o 61 de 60 confirma o laço sem teto do item
+        "Assunto delicado sem teto de IA"; o aluno que relata algo pessoal na 59ª troca perde a última dúvida comum
+        do dia, que pesa para "não gasta"; falta um caso que afirme a conta no pacote do mês (`porMes`), para a
+        primeira tarefa que alterar o arquivo com o pacote; e falta um caso com duas chamadas em paralelo e a mesma
+        chave no encaminhamento, provando que a troca conta uma vez só (pode achar defeito de produção, que seria
+        `/corrigir` próprio)
       - **se a resposta virar "não gasta":** as quatro consultas mudam juntas, pelo `tipo` da resposta do turno, como
         `turnosParaATarefa` já filtra (`tutor.repository.ts:349`); é código do Tutor (`infra-guardian` e
         `conformidade-reviewer`) e muda o número que o professor vê (D8)
