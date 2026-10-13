@@ -913,11 +913,16 @@ A cor dominante é a face da família, lida do token, e o papel e as linhas são
 | Tarefas (3) · Matérias (13) | prova, lista e leitura, e uma por matéria, na família dela | Com a tela que os mostra (X3 e X4) |
 | Métricas (6) | alunos, tutor, aprovado, acerto, pacote, corrigidas | Com o painel que mostra o número (X2) |
 
+Os quatro da X1 se chamam `inicio`, `turmas`, `tarefas` (que ilustra Atividades) e `ferramentas` (os
+quatro quadradinhos, que o mockup chama `mais`). O visto de `tarefas` é feito de dois retângulos de
+ponta redonda, para toda forma pintar por `fill-*`. O `Icone` tem cinco tamanhos: 24, 28, 32, 40 e 48.
+
 Lugar que a D80 não ilustrou (os itens de hoje da coordenação, Minha turma) usa o ícone do
 `lucide` num `Ladrilho`, até a spec da área. Os ícones de lugar moram na entrada e somam até
 4 kB em brotli; acima disso saem dela para um `.svg` gerado pelo build, importado por URL, com hash
 no nome e teto próprio no `.size-limit.json` (`lugares-*.svg`, 6 kB em brotli). Nunca um arquivo de
-`public/`, que não tem hash nem entra em medição.
+`public/`, que não tem hash nem entra em medição. Medido na X1: os quatro ícones pesam 484 bytes em
+brotli, no HTML renderizado.
 
 **`lucide-react`** no resto, importado ícone a ícone: traço de 2,5 px; 16 px em selo, 18 px em item
 de menu, 20 px em botão.
@@ -1381,7 +1386,7 @@ prova isso (RF6 da X1).
 
 | Peça | Desenho | Estados e teclado |
 |---|---|---|
-| `Ladrilho` (N) | Quadrado de canto 12, fundo no `claro` da família, ícone a 72% do lado. De 32 a 56 px | `role="img"` com rótulo; sem ele, `aria-hidden` |
+| `Ladrilho` (N) | Quadrado de canto 12, fundo no `claro` da família, ícone a 72% do lado, com o `texto` da família como cor do `lucide` (`currentColor`). Seis tamanhos: 32, 36 (a caixa do ícone na lateral), 40, 44, 48 e 56 px | `role="img"` com rótulo; sem ele, `aria-hidden` |
 | `Estado`, o selo (R) | 24 px de altura, canto 8, `t-selo`, glifo de 16. Neutro: `fundo-suave` com `apoio`. De família: `claro` com `texto`. As famílias de hoje (`pendente`, `ok`, `erro`, `info`) continuam | Sempre com texto ou glifo |
 | `Contador` (N) | Pílula na face da família, texto `sobre-cor` em 700, tabular, de 24 px (produto: um tamanho só) | O que ele conta é texto escondido depois do número (produto: não `role="img"`, para a aba e a linha lerem o mesmo texto). Sem item, não aparece, e não pisca |
 | `Aviso` (N) | Canto 12, borda 2 na `borda` da família, fundo `claro`, sem degrau. Glifo num círculo de 28, uma forma por tom. Título em `t-cartao`; corpo em 15 / 21 px, `tinta`. Informação azul, atenção amarelo, erro vermelho, certo verde | `role="alert"` só no erro, e só no texto dele (a ação fica fora). Os outros três tons não têm papel vivo (produto: o `status` do mockup em texto parado é ruído). Não fecha |

@@ -1,0 +1,81 @@
+import type { ReactElement } from 'react'
+
+/**
+ * Os ícones ilustrados dos lugares da navegação (`docs/interface.md` 9.4; D80, item 4): os quatro que a X1 desenha, e
+ * nenhum outro. Os outros nascem com o lugar de cada um (X2 a X4).
+ *
+ * Cada desenho é **a grade de 48 por 48 e só as formas dela**: o `<svg>` é do `Icone`, que dá o tamanho, o `viewBox` e o
+ * nome. Chapados, de duas a três cores, sem contorno, sem degradê e sem sombra.
+ *
+ * - **Nenhuma cor escrita.** A cor dominante é a face da família (`fill-laranja`, `fill-azul`…), e o papel e as linhas são
+ *   `fill-icone-papel` e `fill-icone-linha`: tokens, que mudam com o tema. Por isso o ícone não leva hex, função de cor nem
+ *   `style`, e a guarda de cor (`estilos.test.ts`) o varre como a qualquer outro arquivo, sem exceção na lista. O mapa de
+ *   classes é literal: o Tailwind só gera a classe que acha escrita por inteiro.
+ * - **Sem texto.** Nenhum `<title>`, `<desc>` nem `<text>`: quem dá nome é o `rotulo` do `Icone`, ou o texto ao lado.
+ * - **Parados.** Nenhuma animação (D59).
+ * - O visto é feito de dois retângulos de ponta redonda, e não de um traço, para a cor ser sempre `fill-*`.
+ */
+
+export const NOMES_DOS_LUGARES = ['inicio', 'turmas', 'tarefas', 'ferramentas'] as const
+export type NomeDoLugar = (typeof NOMES_DOS_LUGARES)[number]
+
+/** Início, em laranja: a casa, com a porta e a chaminé na família e as janelas na linha. */
+function Inicio() {
+  return (
+    <>
+      <rect x="33" y="8" width="5" height="11" rx="1.5" className="fill-laranja" />
+      <rect x="9" y="21" width="30" height="22" rx="4" className="fill-icone-papel" />
+      <path d="M24 5 4 21.5a2.5 2.5 0 0 0 1.6 4.4h36.8a2.5 2.5 0 0 0 1.6-4.4z" className="fill-laranja" />
+      <path d="M20 43V33a4 4 0 0 1 8 0v10z" className="fill-laranja" />
+      <rect x="12.5" y="29" width="5" height="5" rx="1.5" className="fill-icone-linha" />
+      <rect x="30.5" y="29" width="5" height="5" rx="1.5" className="fill-icone-linha" />
+    </>
+  )
+}
+
+/** Turmas, em turquesa: três pessoas, a do meio na frente, na família, e as duas de trás na linha. */
+function Turmas() {
+  return (
+    <>
+      <circle cx="10" cy="21" r="4.5" className="fill-icone-linha" />
+      <path d="M2 43v-7a8 8 0 0 1 16 0v7z" className="fill-icone-linha" />
+      <circle cx="38" cy="21" r="4.5" className="fill-icone-linha" />
+      <path d="M30 43v-7a8 8 0 0 1 16 0v7z" className="fill-icone-linha" />
+      <circle cx="24" cy="15" r="7" className="fill-turquesa" />
+      <path d="M11 43v-8a13 13 0 0 1 26 0v8z" className="fill-turquesa" />
+    </>
+  )
+}
+
+/** Tarefas, em azul: a prancheta com a folha e o visto. A presilha é da linha. */
+function Tarefas() {
+  return (
+    <>
+      <rect x="9" y="7" width="30" height="37" rx="5" className="fill-azul" />
+      <rect x="13" y="13" width="22" height="27" rx="2.5" className="fill-icone-papel" />
+      <rect x="17" y="3" width="14" height="9" rx="3" className="fill-icone-linha" />
+      <rect x="14" y="27.5" width="11" height="4" rx="2" transform="rotate(45 19.5 29.5)" className="fill-azul" />
+      <rect x="18.1" y="25.5" width="16.8" height="4" rx="2" transform="rotate(-45 26.5 27.5)" className="fill-azul" />
+    </>
+  )
+}
+
+/** Ferramentas, os quatro quadradinhos: laranja, azul, verde e roxo. É o único dos quatro com mais de três cores. */
+function Ferramentas() {
+  return (
+    <>
+      <rect x="5" y="5" width="17" height="17" rx="5" className="fill-laranja" />
+      <rect x="26" y="5" width="17" height="17" rx="5" className="fill-azul" />
+      <rect x="5" y="26" width="17" height="17" rx="5" className="fill-verde" />
+      <rect x="26" y="26" width="17" height="17" rx="5" className="fill-roxo" />
+    </>
+  )
+}
+
+/** O desenho de cada lugar. A chave é o `nome` do `Icone`. */
+export const DESENHO_DO_LUGAR: Readonly<Record<NomeDoLugar, () => ReactElement>> = {
+  inicio: Inicio,
+  turmas: Turmas,
+  tarefas: Tarefas,
+  ferramentas: Ferramentas,
+}

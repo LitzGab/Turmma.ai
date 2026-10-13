@@ -57,11 +57,11 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [ ] 8.3 `docs/interface.md` 9.7 e 10.3, `docs/aia/tutor.md` e os comentários "nunca rosto"
   - [ ] 8.4 Testes: função e selo "IA" no mesmo bloco, em toda tela que desenha o avatar; dois renders iguais; nenhum temporizador nem animação; a cadeia fechada de importação (`componentes/onca/` só é importado por `AvatarAgente` e por arquivo da própria pasta; `AvatarAgente`, só por `AssinaturaIA` e `ia/Mensagem.tsx`; a seção da galeria usa a `AssinaturaIA`); o bloco `[data-assinatura]` com um `[data-agente]`, a função e um `[data-selo-ia]`, com a mutação de tirar o `SeloIA`; a onça `aria-hidden`, sem `<title>` nem `<desc>`, e nenhum nome acessível da tela casando `/onça/i`
 
-- [ ] **9.0 — Os ícones ilustrados dos lugares e o ladrilho**
-  - [ ] 9.1 `componentes/icones/lugares.tsx` e a peça `Icone`
-  - [ ] 9.2 A peça `Ladrilho`, para ícone ilustrado e para `lucide`
-  - [ ] 9.3 A medição da entrada em brotli e a decisão da Tech Spec, seção 7c: os ícones de lugar somam até 4 kB em brotli na entrada; acima disso saem para `lugares-*.svg`, com hash, teto de 6 kB em brotli no `.size-limit.json` e o caso que o reprova em `tools/ci/tamanho-web.test.ts`
-  - [ ] 9.4 Testes: nome acessível quando o ícone está sozinho; `aria-hidden` ao lado de rótulo; os dois temas; nenhuma cor fora dos tokens além da exceção nomeada
+- [x] **9.0 — Os ícones ilustrados dos lugares e o ladrilho**
+  - [x] 9.1 `componentes/icones/lugares.tsx` e a peça `Icone`
+  - [x] 9.2 A peça `Ladrilho`, para ícone ilustrado e para `lucide`
+  - [x] 9.3 A medição da entrada em brotli e a decisão da Tech Spec, seção 7c: os ícones de lugar somam até 4 kB em brotli na entrada; acima disso saem para `lugares-*.svg`, com hash, teto de 6 kB em brotli no `.size-limit.json` e o caso que o reprova em `tools/ci/tamanho-web.test.ts`
+  - [x] 9.4 Testes: nome acessível quando o ícone está sozinho; `aria-hidden` ao lado de rótulo; os dois temas; nenhuma cor fora dos tokens além da exceção nomeada
 
 - [ ] **10.0 — As peças da conversa com IA na pele nova**
   - [ ] 10.1 `CaixaPedido`, `Mensagem`, `Escolha`, `ChipFonte`, `Fontes`, `MotorFormulario`, `AvisoFila`, `LinhaAprovacao`, `PaginaMini` e `TextoDaIA` revestidos

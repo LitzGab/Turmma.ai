@@ -113,8 +113,11 @@ outras peças novas ficam fora da entrada. A entrada e o CSS são medidos em bro
 que os toca, com o número no documento da tarefa. Os ícones de lugar **somam até 4 kB em brotli
 na entrada**; acima disso saem dela para um `.svg` gerado pelo build, importado por URL, com hash no nome e teto
 próprio no `.size-limit.json` (`apps/web/dist/assets/lugares-*.svg`, 6 kB em brotli), com o caso que o reprova em
-`tools/ci/tamanho-web.test.ts`. Se ainda assim a casca passar dos 150 kB, o próximo a sair é o seletor de escola,
-por `import()` depois do primeiro quadro. O teto de `pecas-*` sobe de 26 para 40 kB, com `tools/ci/tamanho-web.test.ts`;
+`tools/ci/tamanho-web.test.ts`. **Medido na 9.0:** o HTML renderizado dos quatro ícones (`inicio`, `turmas`,
+`tarefas` e `ferramentas`, a 48 px) tem 2.197 bytes e **484 bytes em brotli**, com o teto de 3 kB no teste
+(`componentes/icones/lugares.test.tsx`): cabem na entrada, e o `.svg` do build e o teto `lugares-*.svg` **não nascem**.
+A entrada de verdade, com os ícones ligados à casca, é medida na 12.0. Se ainda assim a casca passar dos 150 kB, o
+próximo a sair é o seletor de escola, por `import()` depois do primeiro quadro. O teto de `pecas-*` sobe de 26 para 40 kB, com `tools/ci/tamanho-web.test.ts`;
 os das fachadas das áreas (16, 8 e 5 kB) e o da operação (60 kB) não sobem.
 
 ## 9. Frontend
@@ -174,7 +177,9 @@ foco e ARIA são nossos (não há Radix), e o teste de cada peça percorre o pad
 são `<dialog>` modal do navegador (prisão de foco e Esc nativos; devolver o foco é nosso); `Segmentado`,
 `Aparencia` e `Opcao` são grupo de rádio, com setas e uma parada de Tab; `Interruptor` é `role="switch"`; `Toque` é
 botão com `aria-pressed`; `Abas` e `Menu` mantêm os testes de teclado de hoje. As seções da galeria usam só nomes
-inventados (regra 20, item 17).
+inventados (regra 20, item 17). O `Ladrilho` tem seis tamanhos
+(32, 36, 40, 44, 48 e 56) e põe no `lucide` o `texto` da família sobre o `claro` dela; o `Icone` tem cinco (24, 28, 32,
+40 e 48), e o visto do ícone `tarefas` é feito de dois retângulos, para que toda forma pinte por `fill-*`.
 
 **Página.** `Tela` passa a mostrar o título (`h1` em `t-titulo`, cabeçalho de 64 px, ação à direita) e ganha a
 largura `leitura`; `conversa` vira 768, `formulario` fica 1040 e `grade`, 1200. O `<main>` da casca deixa de limitar
@@ -237,7 +242,7 @@ sobre `<dialog>` prova foco e Esc no e2e, sem dublar `showModal` no jsdom. O ró
 
 ## 12. Premissas não verificadas
 
-- `⚠️ NÃO VERIFICADO` — o peso dos ícones de lugar na entrada. Saída: o `.svg` do build, com hash e teto próprio (seção 7c)
+- `✅ VERIFICADO na 9.0` — o peso dos ícones de lugar: 484 bytes em brotli o HTML dos quatro (teto de 3 kB, dentro dos 4 kB da entrada). Fica a premissa da entrada de verdade, na 12.0; a saída, se estourar, continua o `.svg` do build com hash e teto próprio (seção 7c)
 - `⚠️ NÃO VERIFICADO` — como a fonte do ChromeOS mede o rótulo em caixa-alta de 15 px na lateral. Saída: o e2e
   mede; se cortar, o rótulo desce a 14 px
 - `⚠️ NÃO VERIFICADO` — o script em linha diante de uma política de segurança de conteúdo. Hoje o `Caddyfile` não
