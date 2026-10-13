@@ -40,6 +40,7 @@ A coordenação liga o professor à turma e à disciplina de dentro do painel de
 | Cenário | Tipo | O que prova |
 |---|---|---|
 | estados da tela | componente | carregando; erro com "Tentar de novo"; "Nenhuma turma"; com dado; o vazio do que falta só com as leituras terminadas; o foco depois de acrescentar |
+| vínculo encerrado ao lado de aberto | componente | professor com um vínculo encerrado e outro aberto: os dois aparecem com o estado certo; "Acrescentar turma" aceita de novo a turma do encerrado |
 | só o alocável | componente | convite vencido, revogado e conta desativada não têm "Acrescentar turma" |
 | o vínculo nasce pendente | e2e | o caso W4 (Alocação) de hoje, pelo painel: depois de acrescentar, "Esperando o professor confirmar", e o professor ainda não alcança a turma |
 | borda: duas disciplinas na mesma turma; professor que contestou | e2e | duas linhas; o motivo e o complemento aparecem, e corrigir é acrescentar a turma certa |

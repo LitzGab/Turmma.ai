@@ -20,8 +20,8 @@ Em toda tela da coordenação, um sino conta o que espera por ela e abre a lista
 
 - [ ] 1.1 — A âncora: `useAncoraDoSino()` e o elemento vazio na casca
 - [ ] 1.2 — A peça `Sino`, com a lista por prop: botão "Esperando você, N" ou "Esperando você, nada", `Contador` parado, e `PainelLado` com os grupos "Urgente" e "Da escola", cada item uma `Linha` que é link
-- [ ] 1.3 — Os estados: carregando, erro, leitura parcial, e o vazio com `OncaDormindo` (parada, `aria-hidden`, sem balão; só o `Sino` a importa) e "Tudo em dia"
-- [ ] 1.4 — `montarFila` (pura) e `useFilaDaCoordenacao`, como na Tech Spec
+- [ ] 1.3 — Os estados: carregando, erro, leitura parcial, e o vazio com ícone ilustrado, sem mascote, e "Tudo em dia" (com "Ver o que falta para a escola"); `completa: false` em qualquer consulta vira leitura parcial, com "Parte da lista não carregou"; "Tentar de novo" também com a fila em `erro`; "Atualizar" e "Atualizado às HH:MM" (só muda depois do clique, sem temporizador), que relê os cinco observadores pela chave exata
+- [ ] 1.4 — `montarFila` (pura) e `useFilaDaCoordenacao`, como na Tech Spec: observadores com `staleTime` de 5 min, `refetchInterval: false`, `refetchOnWindowFocus: false` e `refetchOnReconnect: false`; retry só por chave exata; um item por vínculo ou convite, `contador` só em turmas sem professor; sem ano em curso não chama turmas nem vínculos
 - [ ] 1.5 — `SinoDaCoordenacao`, por `lazy()`, em `rotas.tsx`; galeria; `PECAS_FORA_DA_ENTRADA`
 - [ ] 1.6 — Testes
 
@@ -30,7 +30,7 @@ Em toda tela da coordenação, um sino conta o que espera por ela e abre a lista
 | Arquivo | Novo ou alterado |
 |---|---|
 | `apps/web/src/componentes/sino/Sino.tsx`, `apps/web/src/componentes/sino/Sino.test.tsx` | novo |
-| `apps/web/src/componentes/onca/OncaDormindo.tsx`, `apps/web/src/componentes/ancora-do-sino.ts` | novo |
+| `apps/web/src/componentes/ancora-do-sino.ts` | novo |
 | `apps/web/src/componentes/CascaDaEscola.tsx`, `apps/web/nome-dos-chunks.ts` | alterado |
 | `apps/web/src/areas/coordenacao/fila-da-coordenacao.ts`, `apps/web/src/areas/coordenacao/fila-da-coordenacao.test.ts` | novo |
 | `apps/web/src/areas/coordenacao/SinoDaCoordenacao.tsx`, `apps/web/src/areas/coordenacao/SinoDaCoordenacao.test.tsx` | novo |
@@ -43,8 +43,15 @@ Em toda tela da coordenação, um sino conta o que espera por ela e abre a lista
 |---|---|---|
 | a conta, tipo a tipo | unidade | os cinco tipos viram item com o endereço certo; vínculo pendente e material processando não viram |
 | borda: duas disciplinas na mesma turma; turma só com vínculo contestado; sem ano em curso | unidade | conta uma vez; é sem professor; nenhum item de turma |
+| vínculo encerrado | unidade | encerrado ao lado de confirmado: não é sem professor; só encerrado: é; contestado e depois encerrado: sem item de contestação |
+| lista truncada | unidade e componente | `completa: false` em qualquer das cinco: `parcial`, sem "Tudo em dia"; em turmas ou em vínculos, cada um sozinho, suprime "turmas sem professor" |
+| um item por vínculo | unidade | um professor com duas contestações e outro com uma dão três itens, nenhum com `contador`; `id` único com a mesma contestação duas vezes e com homônimos; os tipos são só os cinco da tabela e nada em `montarFila` deriva de uso, entrega ou atividade do professor; revogar o convite tira o item; a contagem do sino é a do filtro "Sem professor" |
+| o sino não relê | componente | dois tempos, só o sino montado. (a) Com um material `processando`, avançar 10 s ou mais: zero chamadas. Mutação: tirar `refetchInterval: false`. (b) Avançar além de 5 min, com o dado velho, o foco sai e volta (`focusManager.setFocused(false)` e depois `setFocused(true)`) e a rede sai e volta (`onlineManager.setOnline(false)` e depois `setOnline(true)`): zero chamadas, de qualquer consulta, anos letivos inclusive. Um `focus` na janela ou um `online` solto não fazem o TanStack reler, e o teste passaria sem a opção. O `afterEach` restaura os dois gerenciadores, e um caso de controle prova que a mesma consulta, com a opção ligada, relê (o padrão é o de `apps/web/src/api/privacidade.test.ts`). Mutações, cada uma vermelha sozinha: tirar `refetchOnWindowFocus: false` (falha na volta do foco); tirar `refetchOnReconnect: false` (falha na volta da rede). Incidentes lidos uma vez por sessão |
+| "Tentar de novo" e "Atualizar" não leem o que é auditado | componente | sino montado sobre a lista da turma e sobre Pedidos, fila `parcial` e depois `erro`, clique em cada um: zero chamadas a `/lista`, `/reivindicacoes` e `/v1/privacidade/pedidos`; "Atualizado às" só muda depois do clique. Mutação: trocar a releitura (do retry ou do "Atualizar") por invalidação de prefixo deixa o teste vermelho |
+| sem ano letivo | componente, e2e | sem ano, ou só `planejado` ou `encerrado`: nenhuma chamada a turmas e vínculos (ou 404 tratado como vazio), `pronta`, "Tudo em dia"; e2e `--vazia` olha o sino |
+| só a coordenação | componente | nas áreas do professor e do aluno não há "Esperando você" da coordenação nem chamada a `/v1/vinculos`, `/v1/professores` ou `/v1/privacidade/incidentes` vinda do sino |
 | o que a fila não lê | componente | nenhuma chamada a `/lista`, `/reivindicacoes` nem `/v1/privacidade/pedidos`; abrir a lista não faz chamada |
-| estados da tela | componente | parcial nunca diz "Tudo em dia"; vazio só com tudo lido; a contagem no nome acessível |
+| estados da tela | componente | parcial nunca diz "Tudo em dia"; vazio só com tudo lido; a contagem no nome acessível; o vazio sem mascote |
 | do sino à tela | e2e | convite vencido: conta 1, leva a Professores e, refeito, some; foco devolvido; nada animado; 360 px |
 | recomeço: segunda pessoa; troca de escola | e2e | a fila da anterior não aparece (sem formulário, os outros casos não se aplicam) |
 
@@ -57,7 +64,7 @@ Em toda tela da coordenação, um sino conta o que espera por ela e abre a lista
 
 ## Fora do escopo desta tarefa
 
-Os lugares (3.0), o Painel (2.0), o sino do professor (X3) e item de leitura auditada.
+Os lugares (3.0), o Painel (2.0), o sino do professor (X3), item de leitura auditada e a onça de corpo inteiro no vazio (decisão do Joaquim, `techspec.md` seção 12).
 
 ## Divergências resolvidas nesta tarefa
 

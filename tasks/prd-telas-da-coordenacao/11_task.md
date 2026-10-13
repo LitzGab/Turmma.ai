@@ -13,7 +13,7 @@ A tela dos agentes vira a página "Como cada IA trabalha", dentro de Registros: 
 ## Contexto necessário
 
 - `techspec.md` seções 5 (`?ia=`), 7b e 9; `prd.md` RF19, RF22 e seção 10 (por que é página, e não painel)
-- `mockup.md` seção 5.2: o seletor "Qual IA" e os três blocos. A AIA recolhível, "Alto risco" por função e "Pausar o agente inteiro" **não entram**
+- `mockup.md` seção 5.2: o seletor "Qual IA" e os três blocos. A AIA recolhível e "Pausar o agente inteiro" **não entram**; o selo "Alto risco" e a autonomia de cada função **ficam** (11.3)
 - `.claude/rules/70-conformidade-cne.md` itens 4a, 5 e 6a; `docs/decisoes.md` D9 e D60
 - Código: `apps/web/src/areas/coordenacao/Agentes.tsx` e `nunca-faz.ts`; `apps/web/src/api/governanca.ts` (`suspenderFuncao`, `retomarFuncao`, `aplicarFuncao`)
 
@@ -21,7 +21,7 @@ A tela dos agentes vira a página "Como cada IA trabalha", dentro de Registros: 
 
 - [ ] 11.1 — `Tela` `leitura`, com "‹ Registros" e o `h1` "Como cada IA trabalha"; o lugar Registros continua aceso
 - [ ] 11.2 — `Segmentado` "Qual IA", com os nomes de função dos três agentes, no endereço (`?ia=`); abre no Assistente de ensino
-- [ ] 11.3 — O agente escolhido, numa seção com `data-agente`: `AssinaturaIA` com o selo "IA"; cada função (`data-funcao`) com o que **faz sozinha** e o que **espera aprovação**, no texto que a API devolve; o `Estado` "Suspensa", com desde quando e o motivo
+- [ ] 11.3 — O agente escolhido, numa seção com `data-agente`: `AssinaturaIA` com o selo "IA"; cada função (`data-funcao`) com o que **faz sozinha** e o que **espera aprovação**, no texto que a API devolve; o selo "Alto risco" onde a função tem avaliação de impacto, e o `Estado` "Suspensa", com desde quando e o motivo
 - [ ] 11.4 — "Suspender esta função" (perigo) e "Retomar esta função", com o diálogo de confirmação, o motivo de lista fechada opcional e o foco de volta ao botão, como hoje
 - [ ] 11.5 — "O que a IA nunca faz" (`nunca-faz.ts`), sempre à vista, igual para as três
 - [ ] 11.6 — Testes
@@ -41,6 +41,7 @@ A tela dos agentes vira a página "Como cada IA trabalha", dentro de Registros: 
 | estados da tela | componente | carregando; erro com "Tentar de novo"; com dado para cada IA (não há vazio: os três agentes sempre existem); o foco depois de suspender e de retomar |
 | o texto é o da API | componente | "faz sozinha" e "espera aprovação" são os da resposta, sem texto da tela no lugar; nenhuma frase diz que o agente é pessoa |
 | suspender e retomar | e2e | o caso de hoje: `alertdialog` "Suspender a correção de objetiva", o registro no banco com quem e o motivo, e retomar fecha a suspensão |
+| autonomia e alto risco | componente | cada função mostra o texto de autonomia da API; a função de alto risco mostra o selo "Alto risco" |
 | as três IAs | e2e | cada opção do seletor mostra o agente com o nome da função e `[data-selo-ia]`; o endereço guarda a escolha |
 | função já suspensa por outra pessoa | e2e | a tela mostra o estado de agora e o diálogo não oferece suspender de novo |
 | recomeço: segunda pessoa; falha com o diálogo aberto; clique duplo em confirmar | e2e | o aviso da tentativa anterior sai ao reabrir; uma suspensão só |

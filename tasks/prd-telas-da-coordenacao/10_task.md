@@ -41,7 +41,8 @@ A aba IA de Registros mostra o que a IA gerou e se uma pessoa aprovou, como no m
 |---|---|---|
 | estados da tela | componente | carregando; erro com "Tentar de novo"; os dois vazios da tabela, só com a leitura terminada; o do filtro; com dado; a falha de "Carregar mais" não apaga o que já foi lido |
 | sem professor nem turma | componente | a tabela não tem coluna, filtro nem ordem por professor ou por turma, e a tela não manda esses campos à API |
-| o filtro | componente | escolher "Aprovados" chama `resumo?estado=aprovada`; os quatro números não mudam com o filtro |
+| o filtro | componente | a rede falsa devolve números diferentes com `?estado=`; escolher "Aprovados" chama `resumo?estado=aprovada` e a tela mantém os quatro números do resumo sem filtro. Mutação: usar os números da resposta filtrada deixa o teste vermelho |
+| o filtro no servidor | e2e | com `montarEscolaComEntregas`, `estado` filtra a lista e os números ficam (`governanca.controller.ts`; repository) |
 | a governança de hoje | e2e | o caso `a coordenação abre em Governança…`, pelo lugar Registros: `[data-aprovacao]` com a espera e a decisão, o consumo em tokens, nenhum nome de professor na página |
 | série com um professor só | e2e | a entrega conta nos números e não entra na lista, como hoje |
 | recomeço: segunda pessoa; o filtro pelo endereço; resposta atrasada ao trocar de filtro | e2e | nada da escola anterior; a resposta do filtro antigo não cai na lista do novo. Sem diálogo, o quarto caso não se aplica |
@@ -53,7 +54,8 @@ A aba IA de Registros mostra o que a IA gerou e se uma pessoa aprovou, como no m
 - `textos-da-governanca.test.ts` já prova os textos: acrescente só os rótulos do filtro
 - Resposta atrasada: segure a primeira com `page.route` e troque o filtro
 - Rodar: `npx vitest run --project unidade apps/web/src/areas/coordenacao/Governanca.test.tsx`; `node tools/ci/e2e.ts --manter-ambiente e2e/governanca.spec.ts`
-- Premissa da `techspec.md` seção 12: se o servidor não filtrar por `estado`, pare e avise; o seletor sai
+- A premissa do filtro foi verificada no código (`techspec.md` seção 12); se o e2e do servidor falhar, pare e avise
+- Rode `EXPLAIN` da consulta com `?estado=rejeitada` numa escola com volume e anote o resultado na tarefa
 - O roteiro lê os quatro números pelo rótulo: eles não mudam, e o roteiro não é tocado
 - Telas: `coordenacao`, `/coordenacao/governanca`; também com `--vazia`; mockup `/coordenacao/registros?aba=ia`
 

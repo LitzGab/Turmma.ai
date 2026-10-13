@@ -6,7 +6,7 @@
 
 ## 1. Problema
 
-A coordenadora acha sete itens na lateral e nenhum que diga o que espera por ela: o convite vencido, a contestação e o material que falhou só aparecem para quem entra na tela certa. O Gabriel reprovou a área vendo ("muita informação, muita aba, muita coisa") e a redesenhou (D80).
+A coordenadora acha sete itens na lateral e nenhum que diga o que espera por ela: convite vencido, contestação e material que falhou só aparecem na tela certa. O Gabriel reprovou a área vendo e a redesenhou (D80).
 
 ## 2. Objetivo
 
@@ -19,7 +19,7 @@ A coordenação e a operação fazem tudo o que fazem hoje em telas compostas co
 - **Analista em conversa:** campo de pergunta, relatório em PDF, CSV, anexo
 - **Escola:** "Grade e calendário" e "Importar listas" (F2); adaptação e painel do aluno; mudar de turma; encerrar matrícula; exportar lista; retirar material com motivo; encerrar vínculo; busca
 - **Registros:** Avisos, encaminhamento, Auditoria, Exportar, Dossiê (F9, F12); o painel de cada registro; "Por série"
-- Configurações da escola, "Minha conta", introdução (X4), rede (F14) e família
+- Configurações da escola, "Minha conta", introdução (X4), rede (F14), família
 - **Operação:** custo e teto de IA, convite da secretaria, redefinir o segundo fator, grupo por rede
 - Contar o que só se lê com auditoria (seção 6)
 - Do F3: m4 e m5 pedem campo no DTO; m6 é da X3
@@ -29,9 +29,11 @@ A coordenação e a operação fazem tudo o que fazem hoje em telas compostas co
 
 | Papel | O que pode fazer | O que não pode |
 |---|---|---|
-| Coordenador | Tudo o que faz hoje, pelos quatro lugares e pelo sino | Ver indicador ou pendência por professor; abrir conversa do Tutor; ver nome de aluno sem a leitura auditada |
+| Coordenador | Tudo o que faz hoje, pelos quatro lugares e pelo sino | Ver indicador de uso ou de desempenho por professor ("provas a aprovar", "sem chamada"); abrir conversa do Tutor; ver nome de aluno sem a leitura auditada |
 | Operador Turmma | Criar rede e escola, convidar a coordenação e ver o uso, numa página | Ver dado de pessoa da escola (D76) |
 | Professor, aluno | Nada muda | Alcançar tela da coordenação |
+
+Convite vencido e contestação de vínculo são pendência da escola, sem relação com adoção (D64): um item por convite ou vínculo, que sai quando a coordenação resolve.
 
 ## 5. Requisitos funcionais
 
@@ -40,10 +42,10 @@ A coordenação e a operação fazem tudo o que fazem hoje em telas compostas co
 | RF1 | A lateral e, no celular, a barra de baixo têm **Painel, Analista, Escola e Registros**, nessa ordem, e o sino "Esperando você" em toda tela | e2e `areas`, nas três larguras |
 | RF2 | A coordenação abre no **Painel** (`/coordenacao/painel`). Nenhum endereço de hoje muda: cada um abre a tela equivalente, no lugar e na aba dela | Os e2e de hoje sem trocar `toHaveURL`, fora o de onde ela abre |
 | RF3 | De qualquer tela, toda tela de hoje fica a até dois cliques (lugar e aba); Empresas e Incidentes, a três; o que espera por ela, a dois, pelo sino | e2e conta os cliques |
-| RF4 | O sino lista o que espera a coordenação: incidente sem confirmação, professor que contestou a turma, convite vencido, material que falhou e turmas sem professor. O item leva à tela que resolve e sai quando o estado muda. Vazio: a onça dormindo e "Tudo em dia" | Teste da conta, tipo a tipo; teste de componente; e2e de um item |
+| RF4 | O sino lista o que espera a coordenação: incidente sem confirmação, professor que contestou a turma, convite vencido, material que falhou e turmas sem professor. O item leva à tela que resolve e sai quando o estado muda. Vazio: um ícone ilustrado e "Tudo em dia", só com as leituras que existem completas | Teste da conta, tipo a tipo; teste de componente; e2e de um item |
 | RF5 | O sino não pisca, não soa, não relê por tempo, e abrir a lista não faz leitura | Teste de componente conta as chamadas |
 | RF6 | O **Painel** mostra o incidente a confirmar, a função de IA suspensa, os quatro números da governança, o consumo do mês, a fila do sino e "Para terminar a escola", com o link de cada passo que falta | Teste de componente por bloco; e2e |
-| RF7 | Nenhum número do Painel é de um professor, de uma turma, de turma e disciplina, nem de pedido de titular | Teste com dois professores de pendências diferentes |
+| RF7 | Nenhum número nem item do Painel ou da fila é indicador de professor, de turma, de turma e disciplina, nem de pedido de titular; os tipos da fila são os cinco do RF4, sem contador por professor | Teste com dois professores de pendências diferentes, no Painel e no sino; teste que fecha os tipos |
 | RF8 | O **Analista** é uma página de leitura, assinada por ele: resumo a pedido, alertas como hipótese, acerto por série e disciplina só com dois ou mais professores. Sem campo de pergunta | e2e `analista`; teste: nenhum `textbox` |
 | RF9 | O dado nominal de uma turma abre na página do Analista, com o aviso antes, turma, finalidade e uma auditoria por leitura | e2e de hoje, pelo caminho novo |
 | RF10 | **Escola** tem as abas Turmas, Professores e Material | e2e: pelo clique e pelo endereço |
@@ -78,7 +80,7 @@ A coordenação e a operação fazem tudo o que fazem hoje em telas compostas co
 - **Suspender função** continua com confirmação, motivo de lista fechada e auditoria (D9, D60)
 - **Licença do material** é obrigatória, e a recusa fica na auditoria (D5, D75)
 - **Vínculo é da escola**; o professor só confirma (regra 60, item 8a)
-- **A onça não fala** (X1, seção 7b): parada, sem balão, nunca no lugar do nome da função
+- **A onça não entra no sino** nesta spec; o vazio usa ícone ilustrado. A mascote de corpo inteiro no vazio fica para o Joaquim decidir (Tech Spec, seção 12)
 
 ## 7. Casos de borda
 
@@ -90,6 +92,7 @@ A coordenação e a operação fazem tudo o que fazem hoje em telas compostas co
 | Professor que contestou a turma | Item no sino com o nome dele; o painel mostra o motivo e o complemento |
 | Fila que falha em parte | Mostra o que leu e diz que parte não carregou; nunca "Tudo em dia" |
 | Virada de ano, sem ano em curso | Turmas pede para abrir o ano; o sino não conta turmas |
+| Lista lida só até o limite de páginas | Como a fila que falha em parte, com "Parte da lista não carregou" |
 | Segunda pessoa da coordenação na mesma aba | Nada da fila, do Painel nem do painel aberto da anterior |
 
 ## 8. Dado pessoal envolvido
@@ -102,24 +105,21 @@ A fila mostra o nome de professor que a coordenação já vê em Professores. Na
 
 ## 8b. Risco regulatório (quando há IA no caminho do aluno)
 
-Nenhuma função de IA muda. O Analista continua de alto risco (regra 70): agregado, hipótese e nunca recomendação, com a regra dos dois professores no servidor. A onça de corpo inteiro estreia no vazio do sino, com parecer do `conformidade-reviewer`.
+Nenhuma função de IA muda. O Analista continua de alto risco (regra 70): agregado, hipótese e nunca recomendação, com a regra dos dois professores no servidor. O vazio do sino não leva mascote.
 
 ## 9. Métricas
 
 - Cliques até cada tela (RF3)
 - O e2e da A0b, da A1, da A5 e do F3 verde, sem perder caso
-- A foto de cada tela ao lado do mockup: o Gabriel aprova ou aponta
+- A foto de cada tela ao lado do mockup
 
 ## 10. Perguntas em aberto
 
 **Respondido por delegação**
 
-- "Sem lista" no filtro, na tabela e no sino: **não entra**. Saber se a turma tem lista é ler a lista, e cada leitura é auditada
-- Pedido de titular no sino e no Painel: **não entra**, pelo mesmo motivo. O Painel tem a porta "Pedidos dos titulares", sem número, e o prazo aparece na lista (m3)
-- "Como cada IA trabalha": **página**, e não painel: é a tela que a escola aponta (regra 70, item 5), e a suspensão já abre um diálogo
-- "Nenhum caminho mais longo que o de hoje" vira o RF3: com abas, Professores, Material e Pedidos ficam a dois cliques
-- O "⋯" da Escola teria um item só: vira o botão "Ano letivo e disciplinas"
-- O filtro por estado da tabela da IA usa o parâmetro que a API já aceita
+- "Sem lista" e pedido de titular no sino e no Painel: **não entram** (seção 6). O Painel tem a porta "Pedidos dos titulares", sem número, e o prazo aparece na lista (m3)
+- "Como cada IA trabalha": **página**: é a tela que a escola aponta (regra 70, item 5)
+- O filtro por estado da IA usa o parâmetro que a API já aceita
 
 **Para a Tech Spec**
 

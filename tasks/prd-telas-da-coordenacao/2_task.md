@@ -40,11 +40,14 @@ Em `/coordenacao/painel`, a coordenação vê os números da IA na escola, o con
 | Cenário | Tipo | O que prova |
 |---|---|---|
 | os passos | unidade | feito, falta ou "ainda não sei"; a lista de nomes nunca tem marca |
-| nenhum número por professor | componente | dois professores com pendências diferentes: só os quatro números da escola |
+| nenhum número por professor | componente | dois professores com pendências diferentes: só os quatro números da escola; na fila do Painel, nenhum número ao lado de nome de professor |
+| fila que falha em parte | componente | uma consulta falha ou vem com `completa: false`: o Painel mostra o que leu, o aviso, e nunca "Tudo em dia"; "Tentar de novo" relê só o que falhou, por chave exata |
+| quando relê | componente | o Painel só relê ao abrir se a leitura passou de 5 min (relógio falso); `staleTime` de 5 min e nenhuma releitura na volta do foco, provocada por `focusManager.setFocused(false)` e depois `setFocused(true)`, nem na volta da rede (`onlineManager.setOnline(false)` e depois `setOnline(true)`), com o dado velho; mutações: tirar `refetchOnWindowFocus: false` e tirar `refetchOnReconnect: false`, cada uma vermelha sozinha |
+| sem ano letivo | componente, e2e | o bloco "Esperando você", sem ano e com ano só `planejado` ou `encerrado`: nenhuma chamada a turmas e vínculos, e "Tudo em dia". O e2e `--vazia` do Painel confere o mesmo texto no bloco |
 | estados da tela | componente | cada bloco nos quatro estados; "A escola está montada" só com tudo lido e sem erro |
 | o que o Painel não lê | componente | nenhuma chamada a `/v1/privacidade/pedidos`, `/lista` nem `/reivindicacoes` |
 | caminho feliz, escola vazia e permissão | e2e | os números da Governança; "Comece pelo ano letivo"; não rola a 1366 × 768; 360 px; o professor vê "Página não encontrada" |
-| recomeço: segunda pessoa na mesma aba | e2e | nenhum número da anterior (sem formulário, os outros casos não se aplicam) |
+| recomeço: segunda pessoa na mesma aba; troca de escola | e2e | nenhum número nem item da anterior; os números e a fila de A não aparecem em B, nem enquanto B carrega (sem formulário, os outros casos não se aplicam) |
 
 ## Como testar
 

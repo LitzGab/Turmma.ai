@@ -12,10 +12,10 @@ e a operação) e 10.0 a 13.0 (Registros).
 - [ ] **1.0 — A coordenação vê no sino o que espera por ela**
   - [ ] 1.1 A âncora do sino na casca (`useAncoraDoSino`)
   - [ ] 1.2 A peça `Sino`, com a lista por prop, o `Contador` parado e o `PainelLado`
-  - [ ] 1.3 Os estados: carregando, erro, leitura parcial, e o vazio com a onça dormindo e "Tudo em dia"
-  - [ ] 1.4 `montarFila` (pura) e `useFilaDaCoordenacao`, só com consultas que já existem
+  - [ ] 1.3 Os estados: carregando, erro, leitura parcial, e o vazio com ícone ilustrado e "Tudo em dia"
+  - [ ] 1.4 `montarFila` (pura) e `useFilaDaCoordenacao`, só com consultas que já existem; `completa: false` em turmas ou vínculos suprime "sem professor"; `refetchInterval`, `refetchOnWindowFocus` e `refetchOnReconnect` desligados; "Atualizar" por chave exata
   - [ ] 1.5 `SinoDaCoordenacao` por `lazy()`; galeria; `PECAS_FORA_DA_ENTRADA`
-  - [ ] 1.6 Testes: a conta, tipo a tipo; nenhum pedido novo ao abrir a lista; nada pisca; a segunda pessoa não vê a fila da anterior
+  - [ ] 1.6 Testes: a conta, tipo a tipo; nenhum pedido novo ao abrir a lista nem por tempo, foco ou retry; lista truncada; vínculo encerrado; sem ano letivo; só a coordenação monta o sino; nada pisca; a segunda pessoa não vê a fila da anterior
 
 - [ ] **2.0 — O Painel mostra os números da escola, a fila e o que falta**
   - [ ] 2.1 `o-que-falta-da-escola.ts`: os passos do roteiro saem da Estrutura para um módulo puro
@@ -178,5 +178,4 @@ já não mostrasse (D45, D64); cada tela cabe em 1366 × 768 sem rolar a página
 A1, da A5 e do F3 continua provando as mesmas regras.
 
 Em detalhe: os 24 requisitos do PRD têm teste apontado na tarefa que os entrega; a contagem de casos do e2e não
-diminui; nenhuma rota, tabela ou permissão é criada; e a onça dormindo do sino tem o parecer do
-`conformidade-reviewer` (tarefa 1.0).
+diminui; nenhuma rota, tabela ou permissão é criada; e o vazio do sino não leva mascote (a onça nele é decisão do Joaquim, Tech Spec seção 12).
