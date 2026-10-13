@@ -196,7 +196,10 @@ test.describe('o fluxo do aluno contra a API real', () => {
     await expect(cartao).toContainText('eu sou uma inteligência artificial')
     await expect(cartao.getByRole('link', { name: '188' })).toHaveAttribute('href', 'tel:188')
     await expect(pausa).toHaveAttribute('data-pausa-do-tutor', 'avaliacao')
-    await expect(principal(page).locator('[data-uso-do-dia]')).toContainText('Hoje: 0 de 60 perguntas')
+    // O encaminhamento gasta uma das 60 trocas do dia, por ora (D36, D38; `tutor.int.test.ts`): a recusa da pergunta comum não
+    // gravou nada, e o assunto delicado gravou a pergunta. A barra só mostra 1 quando a conversa é relida depois do cartão, e a
+    // espera é por esse número: lida antes, ela diz 0, que é a leitura velha, e a asserção espera até o prazo da tela.
+    await expect(principal(page).locator('[data-uso-do-dia]')).toContainText('Hoje: 1 de 60 perguntas', { timeout: PRAZO_DA_TELA_MS })
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
   })
