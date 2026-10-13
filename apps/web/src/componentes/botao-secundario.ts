@@ -21,16 +21,16 @@ export const CLASSES_DO_LINK_SECUNDARIO =
 export const CLASSES_DO_BOTAO_PERIGO =
   'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-erro enabled:hover:bg-erro-cx disabled:border-linha disabled:bg-realce-suave disabled:text-inativo'
 
-/** O `perigo` cheio, com texto branco (6,6:1 sobre o `erro`): só o botão que confirma a exclusão, dentro do diálogo. */
+/** O `perigo` cheio, com o texto em `sobre-grafite` (6,6:1 sobre o `erro`, nos dois temas): só o botão que confirma a exclusão, dentro do diálogo. */
 export const CLASSES_DO_BOTAO_PERIGO_CHEIO =
-  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-erro px-4 py-2 text-base font-medium text-white disabled:bg-inativo disabled:text-tinta'
+  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-erro px-4 py-2 text-base font-medium text-sobre-grafite disabled:bg-inativo disabled:text-tinta'
 
 /**
  * O botão `oficial` (`docs/interface.md` 8.4, princípio 2, e 11.1): o preto, reservado à decisão oficial. Aprovar os
  * pedidos de nome cria a conta do aluno, e por isso não se parece com nenhum outro botão da tela (regra 50, item 8).
  */
 export const CLASSES_DO_BOTAO_OFICIAL =
-  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-noite px-4 py-2 text-base font-medium text-white enabled:hover:bg-noite-alto enabled:active:bg-noite-baixo disabled:bg-inativo disabled:text-tinta'
+  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-noite px-4 py-2 text-base font-medium text-sobre-grafite enabled:hover:bg-noite-alto enabled:active:bg-noite-baixo disabled:bg-inativo disabled:text-tinta'
 
 /**
  * As cinco variantes de botão da 11.1 do `docs/interface.md`, **e nenhuma outra**, todas em pílula. É a tabela que o
@@ -65,14 +65,14 @@ const TAMANHO_DO_BOTAO: Readonly<Record<TamanhoDeBotao, string>> = {
 
 /** O desligado é sempre outro desenho, e não a mesma cor apagada: `inativo`, que só serve a controle desabilitado (9.1). */
 const COR_DO_BOTAO: Readonly<Record<VarianteDeBotao, string>> = {
-  primario: 'bg-caramelo text-tinta enabled:hover:bg-caramelo-claro enabled:active:bg-caramelo-fundo disabled:bg-inativo',
-  oficial: 'bg-noite text-white enabled:hover:bg-noite-alto enabled:active:bg-noite-baixo disabled:bg-inativo disabled:text-tinta',
+  primario: 'bg-caramelo text-sobre-cor enabled:hover:bg-caramelo-claro enabled:active:bg-caramelo-fundo disabled:bg-inativo disabled:text-tinta',
+  oficial: 'bg-noite text-sobre-grafite enabled:hover:bg-noite-alto enabled:active:bg-noite-baixo disabled:bg-inativo disabled:text-tinta',
   secundario: 'border border-borda-campo bg-superficie text-tinta enabled:hover:bg-realce-suave disabled:border-linha disabled:bg-realce-suave disabled:text-inativo',
   discreto: 'text-sutil enabled:hover:bg-realce-suave enabled:hover:text-tinta enabled:active:bg-realce disabled:text-inativo',
   perigo: 'border border-borda-campo bg-superficie text-erro enabled:hover:bg-erro-cx disabled:border-linha disabled:bg-realce-suave disabled:text-inativo',
 }
 
-const COR_DO_PERIGO_CHEIO = 'bg-erro text-white disabled:bg-inativo disabled:text-tinta'
+const COR_DO_PERIGO_CHEIO = 'bg-erro text-sobre-grafite disabled:bg-inativo disabled:text-tinta'
 
 export interface AparenciaDoBotao {
   readonly variante?: VarianteDeBotao

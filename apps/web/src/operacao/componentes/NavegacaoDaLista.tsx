@@ -24,7 +24,7 @@ export function SeletorDeOrdem({ ordem, aoEscolher }: { ordem: OrdemDoPainel; ao
           aria-pressed={ordem === opcao}
           onClick={() => aoEscolher(opcao)}
           className={`inline-flex min-h-11 items-center justify-center rounded-full border px-4 py-2 text-sm font-medium ${
-            ordem === opcao ? 'border-noite bg-noite text-white' : 'border-borda-campo bg-superficie text-tinta hover:bg-realce-suave'
+            ordem === opcao ? 'border-noite bg-noite text-sobre-grafite' : 'border-borda-campo bg-superficie text-tinta hover:bg-realce-suave'
           }`}
         >
           {ROTULO_DA_ORDEM[opcao]}

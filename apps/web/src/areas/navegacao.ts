@@ -108,10 +108,10 @@ export interface AgenteDaLateral {
 export const SEU_TIME: Readonly<Record<PapelDeUsuario, readonly AgenteDaLateral[]>> = {
   coordenador: [],
   professor: [
-    { agente: 'assistente_de_ensino', rotulo: NOMES_DOS_AGENTES.assistente_de_ensino, caminho: ROTAS.timeDoAssistente, icone: MessagesSquare, avatar: 'bg-noite text-white', comEspera: true },
+    { agente: 'assistente_de_ensino', rotulo: NOMES_DOS_AGENTES.assistente_de_ensino, caminho: ROTAS.timeDoAssistente, icone: MessagesSquare, avatar: 'bg-noite text-sobre-grafite', comEspera: true },
     // A4: o Tutor, que a professora supervisiona. A conversa dele mostra sinais e uso da turma, e não conversa de aluno.
     // Não tem contador: sinal não é pendência que espera decisão, e ponto na lateral não vira pressão de uso (D59).
-    { agente: 'tutor', rotulo: NOMES_DOS_AGENTES.tutor, caminho: ROTAS.timeDoTutor, icone: MessageCircleQuestion, avatar: 'bg-caramelo text-tinta', comEspera: false },
+    { agente: 'tutor', rotulo: NOMES_DOS_AGENTES.tutor, caminho: ROTAS.timeDoTutor, icone: MessageCircleQuestion, avatar: 'bg-caramelo text-sobre-cor', comEspera: false },
   ],
   aluno: [],
 }

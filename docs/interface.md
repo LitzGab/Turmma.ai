@@ -625,7 +625,7 @@ este documento sobre estes valores, e o teste da X1 refaz a conta pela tabela de
 | `sobre-grafite` | `#FFFFFF` | `#131F24` | Texto em cima do oficial (12,6:1 e 15,6:1) |
 | `icone-papel` · `icone-linha` | `#EFEFEF` · `#D7D7D7` | `#37464F` · `#52656D` | O papel dos ícones ilustrados e as linhas dele |
 | `veu` | `#00000059` | `#00000099` | O véu atrás do diálogo e do painel ao lado: preto a 35% e a 60%, em hex de oito dígitos. No `::backdrop` o valor vai escrito por extenso, porque antes do Chrome 122 ele não herda variável |
-| `foco` | `#146EAA` | `#60B9F4` | O anel de foco, de 3 px (5,4:1 no chão claro; 8,3:1 no escuro) |
+| `foco` | `#146EAA` | `#60B9F4` | O anel de foco, de 3 px (5,5:1 no chão claro; 7,8:1 no escuro) |
 | `white` · `black` | `#FFFFFF` · `#000000` | os mesmos | Não mudam com o tema. Não servem de face nem de texto de peça |
 
 **As dez famílias**, cada uma com cinco tons: **face** (o preenchimento), **degrau** (sob o que se
@@ -701,7 +701,7 @@ nome novo.
 1. **`borda-campo` continua `#8F8F8F`** no claro, e é `#6B7F88` no escuro, valor escolhido aqui
    entre os dois cinzas vizinhos do mockup. O mockup usa a `borda` comum, que dá 1,3:1 e 1,7:1 e
    reprova o 3:1 de componente
-2. **`apagado` nunca é texto.** Peça desligada é face `borda` com texto `sutil`
+2. **`apagado` nunca é texto.** Peça desligada é face `borda` com texto `apoio`
 3. **Texto sobre face colorida é `sobre-cor`; sobre o oficial, `sobre-grafite`.** O mockup escreve
    `white` nos dois e conta com ele virar escuro no tema escuro
 4. **`white` e `black` não mudam com o tema.** Por isso `bg-white` e `text-white` saem das telas
@@ -734,8 +734,27 @@ tabela e os dois blocos da 9.10. Par novo entra aqui na mesma tarefa que o usa.
 | link, aba ativa e botão discreto | `azul-texto` | `fundo` | 4,5 |
 | o mesmo, no hover | `azul-texto` | `fundo-suave` | 4,5 |
 | botão perigo e erro de campo | `vermelho-texto` | `fundo` | 4,5 |
+| botão perigo, no hover | `vermelho-texto` | `fundo-suave` | 4,5 |
 | laranja, selo e selecionado | `laranja-texto` | `laranja-claro` | 4,5 |
 | azul, selo e selecionado | `azul-texto` | `azul-claro` | 4,5 |
+| apoio, linha selecionada | `apoio` | `azul-claro` | 4,5 |
+| sutil, linha selecionada | `sutil` | `azul-claro` | 4,5 |
+| laranja, texto no chão | `laranja-texto` | `fundo` | 4,5 |
+| laranja, texto no fundo suave | `laranja-texto` | `fundo-suave` | 4,5 |
+| verde, texto no chão | `verde-texto` | `fundo` | 4,5 |
+| verde, texto no fundo suave | `verde-texto` | `fundo-suave` | 4,5 |
+| amarelo, texto no chão | `amarelo-texto` | `fundo` | 4,5 |
+| amarelo, texto no fundo suave | `amarelo-texto` | `fundo-suave` | 4,5 |
+| roxo, texto no chão | `roxo-texto` | `fundo` | 4,5 |
+| roxo, texto no fundo suave | `roxo-texto` | `fundo-suave` | 4,5 |
+| turquesa, texto no chão | `turquesa-texto` | `fundo` | 4,5 |
+| turquesa, texto no fundo suave | `turquesa-texto` | `fundo-suave` | 4,5 |
+| anil, texto no chão | `anil-texto` | `fundo` | 4,5 |
+| anil, texto no fundo suave | `anil-texto` | `fundo-suave` | 4,5 |
+| lima, texto no chão | `lima-texto` | `fundo` | 4,5 |
+| lima, texto no fundo suave | `lima-texto` | `fundo-suave` | 4,5 |
+| rosa, texto no chão | `rosa-texto` | `fundo` | 4,5 |
+| rosa, texto no fundo suave | `rosa-texto` | `fundo-suave` | 4,5 |
 | verde, selo e selecionado | `verde-texto` | `verde-claro` | 4,5 |
 | amarelo, selo e selecionado | `amarelo-texto` | `amarelo-claro` | 4,5 |
 | vermelho, selo e selecionado | `vermelho-texto` | `vermelho-claro` | 4,5 |
@@ -784,6 +803,10 @@ tabela e os dois blocos da 9.10. Par novo entra aqui na mesma tarefa que o usa.
 | botão primário | `sobre-cor` | `caramelo` | 4,5 |
 | botão primário pressionado | `sobre-cor` | `caramelo-fundo` | 4,5 |
 | botão oficial de antes | `sobre-grafite` | `noite` | 4,5 |
+| botão oficial de antes, apertado | `sobre-grafite` | `noite-baixo` | 4,5 |
+| texto selecionado | `tinta` | `laranja-borda` | 4,5 |
+| aprovado, texto no chão | `ok` | `fundo` | 4,5 |
+| pendente, texto no chão | `pendente` | `fundo` | 4,5 |
 | perigo cheio de antes | `sobre-grafite` | `erro` | 4,5 |
 | desligado da D80 | `apoio` | `borda` | 4,5 |
 | desligado de antes | `tinta` | `inativo` | 4,5 |
@@ -835,7 +858,7 @@ a fonte do sistema não tem o 500, o navegador usa o regular.
 
 | Peça | Face | Degrau | Desce |
 |---|---|---|---|
-| Botão `principal` · `compacto` | 46 · 38 px | 4 | 4 |
+| Botão `principal` · `compacto` | 44 · 36 px (o `compacto`, 44 abaixo de 768) | 4 | 4 |
 | Botão só de ícone, `Toque` | 40 px (o botão, também 44 e 48) | 3 | 3 |
 | Cartão clicável, `Opcao` (no mínimo 64 px), seletor de escola (48 px) | livre | 4 | 2 |
 
@@ -884,8 +907,10 @@ A cor dominante é a face da família, lida do token, e o papel e as linhas são
 | Métricas (6) | alunos, tutor, aprovado, acerto, pacote, corrigidas | Com o painel que mostra o número (X2) |
 
 Lugar que a D80 não ilustrou (os itens de hoje da coordenação, Minha turma) usa o ícone do
-`lucide` num `Ladrilho`, até a spec da área. Os ícones de lugar moram na entrada e têm teto de
-4 kB em brotli; acima disso viram um arquivo de `public/`, usado por `<use>`.
+`lucide` num `Ladrilho`, até a spec da área. Os ícones de lugar moram na entrada e somam até
+4 kB em brotli; acima disso saem dela para um `.svg` gerado pelo build, importado por URL, com hash
+no nome e teto próprio no `.size-limit.json` (`lugares-*.svg`, 6 kB em brotli). Nunca um arquivo de
+`public/`, que não tem hash nem entra em medição.
 
 **`lucide-react`** no resto, importado ícone a ícone: traço de 2,5 px; 16 px em selo, 18 px em item
 de menu, 20 px em botão.
@@ -909,8 +934,9 @@ de menu, 20 px em botão.
    servido confere as propriedades animadas (RF8 da X1)
 2. **Só CSS.** Nenhuma biblioteca de animação entra, nem `tw-animate-css`: a abertura do menu, do
    diálogo e do painel ao lado é regra nossa
-3. **Nenhum laço decorativo.** Em laço só roda o que mostra trabalho acontecendo: os três pontos de
-   "pensando" e o esqueleto de carregamento, os dois em pulso de opacidade
+3. **Nenhum laço.** Nada na tela se mexe sozinho, nem para mostrar trabalho acontecendo: os três
+   pontos de "pensando" e o esqueleto de carregamento são parados, e o CSS servido não tem `infinite`
+   (D59)
 4. **Do mockup não entram**: o hover com `filter: brightness()`, que repinta a face; a largura da
    lateral animada, que recalcula a página (ela recolhe seca); a transição de linhas de grade na
    caixa de pedido; o `zoom` na página; e a onça piscando por temporizador
@@ -946,7 +972,7 @@ agente: **Tutor `laranja`, Assistente de ensino `azul`, Analista de desempenho e
 círculo com o ícone da função sai das telas. O avatar é `aria-hidden` e **só aparece com o nome da
 função e o selo "IA" visíveis no mesmo bloco**. Isso é garantido por estrutura, e não por
 combinado: só duas peças o desenham, `AssinaturaIA` e o balão de `MensagemIA`, e um teste reprova
-outro arquivo que importe a cabeça. Na lateral e no trilho, "Seu time" mostra o ícone da função
+outro arquivo que importe o avatar ou qualquer coisa da pasta da onça. Na lateral e no trilho, "Seu time" mostra o ícone da função
 num ladrilho, sem a onça: a casca mora na entrada, e no trilho não há lugar para o nome. As funções
 do Assistente não têm avatar próprio, e aparecem pelo nome ("Assistente · correção de objetiva").
 Tamanhos: 24 px na linha da mensagem, 32 na assinatura, 40 e 48 no cabeçalho.
@@ -996,63 +1022,16 @@ declarado uma vez, e não copiado em cada avatar.
 
 ### 9.9 Os tokens, como entram no código
 
-Vale até a tarefa 1.0 da X1 (`pele-e-casca`), que troca os dois testes para lerem a 9.10 e apaga este bloco.
-
-No Tailwind 4 de `apps/web` a paleta de fábrica já é zerada e só volta cor em hex (casca do F0).
-A paleta `slate`/`blue` de hoje dá lugar a esta, que é a do mockup com uma troca só, a
-`borda-campo` (9.1):
-
-```css
-@theme {
-  --color-*: initial;
-  --color-white: #FFFFFF;        --color-black: #000000;
-
-  /* chão e estrutura: a rampa de cinzas do ChatGPT */
-  --color-fundo: #FFFFFF;        --color-superficie: #FFFFFF;
-  --color-lateral: #F9F9F9;      --color-realce: #ECECEC;
-  --color-realce-suave: #F4F4F4;
-  --color-linha: #E8E8E8;        --color-borda-campo: #8F8F8F;
-  /* texto */
-  --color-tinta: #0D0D0D;        --color-apoio: #424242;
-  --color-sutil: #5D5D5D;        --color-inativo: #8F8F8F;
-  /* a única cor: o laranja da pinta */
-  --color-caramelo: #E8732E;     --color-caramelo-claro: #EE8747;
-  --color-caramelo-fundo: #D4651F;   --color-caramelo-texto: #B4520F;
-  --color-caramelo-noite: #F2A25B;
-  /* o preto da decisão oficial */
-  --color-noite: #0D0D0D;        --color-noite-alto: #2F2F2F;
-  --color-noite-baixo: #000000;
-  --color-creme: #F4F4F4;        --color-papel: #F4F3F0;
-  /* estado: fundo e texto */
-  --color-pendente-cx: #FDF0E8;  --color-pendente: #8A3E0C;
-  --color-ok-cx: #E9F5EE;        --color-ok: #0B6B47;
-  --color-erro-cx: #FDECEC;      --color-erro: #B42318;
-  --color-info-cx: #F4F4F4;      --color-info: #0D0D0D;
-  --color-ia-cx: #F0F0F0;        --color-ia: #424242;
-
-  --font-corpo: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
-  --font-titulo: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
-  --font-marca: "Fustat", ui-sans-serif, system-ui, sans-serif;
-
-  --radius-linha: 10px;  --radius-controle: 12px;
-  --radius-cartao: 16px; --radius-caixa: 28px;
-
-  --shadow-caixa: 0 0 0 1px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.04), 0 4px 80px 8px rgba(0,0,0,.024);
-  --shadow-flutua: 0 0 0 1px rgba(0,0,0,.05), 0 8px 28px -6px rgba(0,0,0,.16);
-
-  --t-estado: 150ms; --t-gesto: 260ms; --t-entrada: 420ms;
-  --curva-estado: cubic-bezier(.2,0,0,1);
-  --curva-entrada: cubic-bezier(.22,1,.36,1);
-}
-```
+Os tokens moram na **9.10**: os dois blocos de lá são o `estilos.css`, e os testes de token leem aquela
+seção. Aqui fica a regra que vale para toda classe de cor.
 
 **Modificador de opacidade em cor não entra** (`bg-tinta/80`, `text-apoio/50`). Conferido no
 Tailwind 4.3.3 do repositório: ele vira `color-mix()` nos dois ramos que o Tailwind gera, e
 `color-mix()` só existe a partir do Chrome 111. No Chrome 109 do laboratório a declaração é
 descartada: o hover não muda, e o fundo escurecido do diálogo simplesmente não aparece.
 
-No lugar dele, troca-se por token em hex (os hovers já têm o deles) ou pelo `veu`, em `rgba()`, no
-fundo de diálogo. `estilos.test.ts` reprova a classe com modificador, o build para quando sobra
+No lugar dele, troca-se por token em hex (os hovers já têm o deles) ou pelo `veu`, em hex de oito
+dígitos, no fundo de diálogo. `estilos.test.ts` reprova a classe com modificador, o build para quando sobra
 `color-mix(` ou `oklch(` no CSS (`rebaixar-cor.ts`), e o e2e reprova as duas no CSS servido.
 
 ### 9.10 Os tokens da D80
@@ -1357,8 +1336,8 @@ teste de componente. As medidas vêm do inventário do mockup; "(produto)" marca
 
 | Peça | Desenho | Estados e teclado |
 |---|---|---|
-| `Botao` (R) | Canto 12, rótulo em `t-rotulo` numa linha, glifo de 20 px à esquerda. `principal`: face de 46 px. `compacto`: face de 38 px, letra de 14 | Hover troca a face; apertado desce o degrau, também no toque; desligado sem degrau, face `borda`, texto `sutil` |
-| `Toque` (N) | Pílula com face de 40 px, borda 2, 15 px em 700. Escolhido em `azul-claro`, `azul-borda`, `azul-texto` | `aria-pressed`. É filtro e sugestão, não aba |
+| `Botao` (R) | Canto 12, rótulo em `t-rotulo` numa linha, glifo de 20 px à esquerda. `principal`: face de 44 px. `compacto`: face de 36 px (44 abaixo de 768), letra de 14 | Hover troca a face; apertado desce o degrau, também no toque; desligado sem degrau, face `borda`, texto `apoio` |
+| `Toque` (N) | Pílula com face de 40 px (44 abaixo de 768), borda 2, 15 px em 700. Escolhido em `azul-claro`, `azul-borda`, `azul-texto` | `aria-pressed`. É filtro e sugestão, não aba |
 | `Menu` (R) | Caixa flutuante de canto 16, largura mínima de 224 px. Item de 44 px, canto 10, 15 px em 500, glifo de 18 em `sutil` | Realçado em `fundo-suave`, perigoso em `vermelho-texto`. Teclado de `teclado-do-menu.ts` |
 
 Os seis desenhos do botão, e nenhum outro (RF5 da X1):
@@ -1384,7 +1363,7 @@ prova isso (RF6 da X1).
 | `Tabela` (R) | Moldura de canto 16. Cabeçalho de 44 px em `t-selo`; linha de 64 px, 15 px em 500. Abaixo de 768 px cada linha vira um cartão | Linha ativa em `azul-claro`. Linha que abre: inteira, por Enter e espaço. Não ordena |
 | `Abas` (R) | Linha de 48 px sobre um fio de 2 px (44 no cabeçalho de página). Rótulo em `t-rotulo`, `sutil`; a ativa em `azul-texto`, com sublinhado de 3 px em `azul`. **Até três** | Teclado de `teclado-das-abas.ts` |
 | `Tela` (R) | A moldura de toda tela, com o título e as larguras (11.2) | — |
-| Os três de `estado/` (R) | Coluna centrada, título em `t-secao` e uma ação. O vazio "Tudo em dia" leva a onça dormindo | Carregando em pulso de opacidade; o erro diz o que fazer |
+| Os três de `estado/` (R) | Coluna centrada, título em `t-secao` e uma ação. Sem onça na X1: a dormindo é da X2, com parecer (9.7) | Carregando parado, sem pulso; o erro diz o que fazer |
 
 **Marcar e informar**
 
@@ -1406,7 +1385,7 @@ prova isso (RF6 da X1).
 | `Campo`, `CampoDeSenha`, `CampoLongo`, `Selecao` (R) | 48 px (o longo, no mínimo 96), canto 12, borda 2 em `borda-campo` (produto), fundo `campo`, 17 px em 500. Rótulo de 15 px em 700; dica em `t-apoio` | Foco: o anel (produto). Inválido: borda e mensagem em `vermelho-texto`, com ícone e `role="alert"`. Desligado: `fundo-suave` |
 | `Busca` (N) | 44 px, letra de 16, lupa de 20 à esquerda | O rótulo é só para leitor de tela |
 | `Opcao` (N) | Um `<label>` com o `<input>` de verdade: degrau, canto 12, mínimo de 64 px. Texto em `t-cartao`; à direita, um círculo de 24 com o visto. Marcada em `azul-claro`, `azul-borda`, `azul-texto` | Teclado nativo. Quem usa põe o `fieldset` e a `legend` |
-| `Interruptor` (N) | Trilho de 52 × 32 px. Desligado: `borda`, com borda `borda-campo` (produto). Ligado: `azul`, com borda `azul-degrau`. Bolinha de 24 em `fundo` (produto) | `role="switch"`. Muda na hora |
+| `Interruptor` (N) | Trilho de 52 × 32 px, com alvo de toque de 44 px de altura abaixo de 768. Desligado: `borda`, com borda `borda-campo` (produto). Ligado: `azul`, com borda `azul-degrau`. Bolinha de 24 em `fundo` (produto) | `role="switch"`. Muda na hora |
 | `Segmentado` (N) | Grupo de 44 px, borda 2, canto 12. A opção ativa em `azul-claro`, `azul-borda`, `azul-texto`. Até quatro. Troca o jeito de ver; não é aba | `radiogroup`, com as setas, Home e End |
 | `Aparencia` (N) | O `Segmentado` Sistema · Claro · Escuro, em "Sua conta" | Só a escolha explícita grava; voltar a Sistema apaga a chave. Sem armazenamento, vale o sistema, calado |
 
@@ -1446,7 +1425,7 @@ perto de 127 kB, e o teto **não sobe** com a pele (RF22 da X1).
 
 | Pedaço | O que carrega | Quando |
 |---|---|---|
-| Entrada | React, TanStack Query, roteador, as páginas públicas, a casca, o tema e os ícones de lugar (até 4 kB) | Sempre |
+| Entrada | React, TanStack Query, roteador, as páginas públicas, a casca, o tema e os ícones de lugar (até 4 kB em brotli, somados) | Sempre |
 | Área do papel | As rotas da área e as telas dela, cada tela num pedaço de até 30 kB | Depois da guarda de papel |
 | Peças | As peças novas, as de `componentes/ia/` e a onça (o teto do pedaço sobe de 26 para até 40 kB) | Na primeira tela que usa |
 | Galeria | Todas as peças, nos dois temas | Só com a variável do build ligada |
@@ -1474,8 +1453,8 @@ Uma só para coordenação, professor e aluno. A lateral do professor, como fica
 │ ▣ TURMAS                 │                                                    │
 │ ──────────────────────── │                                                    │
 │ Seu time                 │                                                    │
-│  (onça) Assistente   (3) │                                                    │
-│  (onça) Tutor            │                                                    │
+│  [ícone] Assistente  (3) │                                                    │
+│  [ícone] Tutor           │                                                    │
 │ ──────────────────────── │                                                    │
 │ (CS) Camila Souza        │                                                    │
 │ ⇥ Sair                   │                                                    │

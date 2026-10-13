@@ -19,14 +19,28 @@ describe('as variantes de botão da 11.1', () => {
   it('só a oficial pinta de preto: a decisão oficial não se parece com nenhum outro botão (regra 50, item 8)', () => {
     const comOPreto = VARIANTES_DE_BOTAO.filter((variante) => classes(classesDoBotao({ variante })).has('bg-noite'))
     expect(comOPreto).toEqual(['oficial'])
-    expect(classes(classesDoBotao({ variante: 'oficial' })).has('text-white')).toBe(true)
+    // O texto em cima é `sobre-grafite`, que acompanha a face: branco no claro e escuro no escuro, onde a face clareia.
+    // `text-white` não muda com o tema, e sumiria no escuro (D80).
+    expect(classes(classesDoBotao({ variante: 'oficial' })).has('text-sobre-grafite')).toBe(true)
+    expect(classes(classesDoBotao({ variante: 'oficial' })).has('text-white')).toBe(false)
   })
 
-  it('só a primária pinta de laranja, e com texto tinta: branco sobre o laranja dá 3,0:1 e reprova (9.1)', () => {
+  it('só a primária pinta de laranja, e com texto escuro: branco sobre o laranja dá 3,0:1 e reprova (9.1)', () => {
     const comOLaranja = VARIANTES_DE_BOTAO.filter((variante) => classes(classesDoBotao({ variante })).has('bg-caramelo'))
     expect(comOLaranja).toEqual(['primario'])
-    expect(classes(classesDoBotao()).has('text-tinta')).toBe(true)
+    // `sobre-cor` é escuro nos dois temas. `text-tinta` clarearia no escuro, e daria o mesmo 3:1 do branco.
+    expect(classes(classesDoBotao()).has('text-sobre-cor')).toBe(true)
+    expect(classes(classesDoBotao()).has('text-sobre-grafite')).toBe(false)
+    expect(classes(classesDoBotao()).has('text-tinta')).toBe(false)
     expect(classes(classesDoBotao()).has('text-white')).toBe(false)
+    // Desligado, a face é `inativo`, que vira com o tema: aí o texto volta a ser `tinta`.
+    expect(classes(classesDoBotao()).has('disabled:text-tinta')).toBe(true)
+  })
+
+  it('o perigo cheio leva o texto que acompanha a face, e não branco fixo', () => {
+    const cheio = classes(classesDoBotao({ variante: 'perigo', cheio: true }))
+    expect(cheio.has('text-sobre-grafite')).toBe(true)
+    expect(cheio.has('text-white')).toBe(false)
   })
 
   it('todas são pílula, com alvo de 44 px no principal; o compacto tem 36 px só a partir de 768 px, e 44 px no celular', () => {

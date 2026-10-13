@@ -17,3 +17,18 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-13 02:05:34 | `infra-guardian` | 2ª | APROVADO | `revisao-spec` | da rodada anterior que fecharam: |
 | 2026-10-13 02:06:13 | `test-engineer` | 2ª | REPROVADO | `revisao-spec` | `2_task.md`, linha 80 (RF24): o valor da lateral recolhida está errado. A tabela exige `educa.lateral-recolhida` com valor do conjunto `1`. O código grava… |
 | 2026-10-13 02:09:02 | `test-engineer` | 3ª | APROVADO | `revisao-spec` | O parêntese da linha 80 do `2_task.md` diz "abaixo de 768 não há o que recolher". Pelo código, entre 768 e 1023 px também não há botão de recolher: só o… |
+| 2026-10-13 02:14:00 | `frontend-reviewer` | 1ª | APROVADO | `1_task` | `apps/web/src/estilos.css` (regra `.bg-noite :focus-visible`, cerca de linha 295). No escuro, `noite` vira `#f1f7fb`. O anel `caramelo-noite` (`#f2a25b`) sobre… |
+| 2026-10-13 02:15:06 | `test-engineer` | 1ª | REPROVADO | `1_task` | A guarda não reprova `text-tinta` sobre face forte. O cenário "o texto sobre face forte" exige isso, e a fixture em `apps/web/src/estilos.test.ts:249` ainda… |
+| 2026-10-13 02:15:46 | `revisor-geral` | 1ª | REPROVADO | `1_task` | A guarda deixa passar `text-tinta` sobre o laranja. Em `apps/web/src/estilos.test.ts:146-165` (`classesReprovadas`) e `:249`, a guarda não reprova `text-tinta`… |
+| 2026-10-13 02:25:00 | `frontend-reviewer` | 2ª | APROVADO | `1_task` | Foco `.bg-noite :focus-visible` no escuro. |
+| 2026-10-13 02:25:39 | `test-engineer` | 2ª | APROVADO | `1_task` | A guarda só compara classes com o mesmo prefixo de variante. Por isso `bg-superficie text-tinta hover:bg-caramelo` passa, e na tela o hover fica com `tinta`… |
+| 2026-10-13 02:26:21 | `revisor-geral` | 2ª | REPROVADO | `1_task` | `apps/web/src/estilos.test.ts:148` e `:186-192`: a guarda não pega toda cor escrita dentro do `style={{…}}`. A correção pedia reprovar qualquer hex, `rgb(` ou… |
+| 2026-10-13 02:35:52 | `frontend-reviewer` | 3ª | APROVADO | `1_task` | Foco `.bg-noite :focus-visible` no escuro. |
+| 2026-10-13 02:36:39 | `test-engineer` | 3ª | APROVADO | `1_task` | . |
+| 2026-10-13 02:36:53 | `revisor-geral` | 3ª | REPROVADO | `1_task` | `apps/web/src/estilos.test.ts:186-187` |
+| 2026-10-13 07:59:06 | `test-engineer` | 4ª | REPROVADO | `1_task` | A seção Mutações de `tasks/prd-pele-e-casca/1_task.md` (blocos das linhas 202-230) não tem bloco para duas mudanças novas desta rodada: |
+| 2026-10-13 07:59:08 | `revisor-geral` | 4ª | REPROVADO | `1_task` | A Tech Spec não diz o que o `1_task.md` afirma que ela diz. |
+| 2026-10-13 08:05:45 | `test-engineer` | 5ª | APROVADO | `1_task` | `apps/web/src/estilos.test.ts:147`: a linha nova do comentário ficou bem mais longa que as outras do bloco, porque juntou "Quem cair num deles troca o nome. O… |
+| 2026-10-13 08:05:53 | `revisor-geral` | 5ª | REPROVADO | `1_task` | `tasks/prd-pele-e-casca/techspec.md:198`: a correção pedida na 4ª rodada foi feita, mas quebrou a frase seguinte. |
+| 2026-10-13 08:13:39 | `revisor-geral` | 6ª | REPROVADO | `1_task` | `tasks/prd-pele-e-casca/techspec.md:198` (linha Unidade, "Guarda de cor") e `tasks/prd-pele-e-casca/cenarios.md:199` (U3, "oráculo novo"). |
+| 2026-10-13 08:20:43 | `revisor-geral` | 7ª | APROVADO | `1_task` | `tasks/prd-pele-e-casca/1_task.md:97`: troque "na mesma classe de uma face forte" por "na mesma lista de classes e com a mesma variante de uma face forte".… |

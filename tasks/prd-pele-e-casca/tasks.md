@@ -9,12 +9,12 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
 
 ## Lista
 
-- [ ] **1.0 — Os tokens da D80 existem no claro e no escuro, e nenhuma tela perde cor**
-  - [ ] 1.1 `estilos.css`: o bloco claro e o bloco `:root[data-tema='escuro']`, iguais aos da 9.10 do `docs/interface.md`; `veu` no fundo do diálogo; a seleção de texto
-  - [ ] 1.2 `docs/interface.md`: a 9.10 passa a ser a fonte, e o bloco antigo da 9.9 sai
-  - [ ] 1.3 Os 13 usos de `text-white` e `bg-white` trocados por `sobre-grafite`, `sobre-cor` e `superficie`
-  - [ ] 1.4 A guarda de cor: nomes novos; `white` e `black` só em lista fechada; a variante `dark:`; hex e `rgb(` em `fill`, `stroke` e `style`
-  - [ ] 1.5 Testes: os dois blocos iguais aos do documento, com o mesmo conjunto de nomes; o contraste de cada linha da tabela de pares, nos dois temas; o CSS servido nos dois temas; a medida do CSS em brotli, antes e depois
+- [x] **1.0 — Os tokens da D80 existem no claro e no escuro, e nenhuma tela perde cor**
+  - [x] 1.1 `estilos.css`: o bloco claro e o bloco `:root[data-tema='escuro']`, iguais aos da 9.10 do `docs/interface.md`; `veu` no fundo do diálogo; a seleção de texto
+  - [x] 1.2 `docs/interface.md`: a 9.10 passa a ser a fonte, e o bloco antigo da 9.9 sai
+  - [x] 1.3 Os 13 usos de `text-white` e `bg-white` trocados por `sobre-grafite`, `sobre-cor` e `superficie`
+  - [x] 1.4 A guarda de cor: nomes novos; `white` e `black` só em lista fechada; a variante `dark:`; o texto que não acompanha a face forte; a cor escrita à mão em qualquer lugar do arquivo e a cor pelo nome entre aspas
+  - [x] 1.5 Testes: os dois blocos iguais aos do documento, com o mesmo conjunto de nomes; o contraste de cada linha da tabela de pares, nos dois temas; o CSS servido nos dois temas; a medida do CSS em brotli, antes e depois
 
 - [ ] **2.0 — A pessoa escolhe a aparência, e ela vale antes de a primeira tela desenhar**
   - [ ] 2.1 O script do `index.html`, o `meta color-scheme` e `src/tema.ts` (`resolverTema`, `useAparencia`)

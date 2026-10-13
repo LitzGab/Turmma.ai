@@ -284,17 +284,28 @@ test.describe('casca da web', () => {
     expect(pedidos).toBe(1)
   })
 
-  test('E5: o CSS servido tem os hex da D72, não usa oklch() nem color-mix(), e pinta o aviso de atenção', async ({ page }) => {
+  test('E5: o CSS servido tem os hex da pele, não usa o que o Chrome 109 não entende, e pinta o aviso de atenção', async ({ page }) => {
     await page.goto('/sistema')
     const folhas = await page.locator('link[rel="stylesheet"]').evaluateAll((links) => links.map((link) => (link as HTMLLinkElement).href))
     expect(folhas.length).toBeGreaterThan(0)
     const css = (await Promise.all(folhas.map(async (folha) => (await page.request.get(folha)).text()))).join('\n')
     // Os hex que as telas do F1 pintam: o laranja do botão, o texto, a borda de campo e as duas famílias de aviso.
     for (const hex of ['#e8732e', '#0d0d0d', '#8f8f8f', '#fdf0e8', '#8a3e0c', '#fdecec', '#b42318']) expect(css, `${hex} fora do CSS servido`).toContain(hex)
+    // Os que as peças da D80 pintam: o grafite do oficial, a família vermelha, o foco, o selecionado e a borda. O
+    // build encurta o hex de dígitos repetidos (`#333333` chega como `#333`), e por isso o grafite é procurado assim.
+    expect(css, '#333333 fora do CSS servido').toMatch(/#333(?![0-9a-f])/)
+    for (const hex of ['#f2545b', '#b84045', '#146eaa', '#dff1fd', '#99d2f8', '#e5e5e5']) expect(css, `${hex} fora do CSS servido`).toContain(hex)
+    // Os do escuro (D80): o chão, o texto e a borda de campo, que só existem no bloco `[data-tema=escuro]`.
+    for (const hex of ['#131f24', '#f1f7fb', '#6b7f88']) expect(css, `${hex} fora do CSS servido`).toContain(hex)
     // O Chrome 109 do laboratório descarta a declaração inteira com qualquer um dos dois: `oklch()` é a paleta de
     // fábrica do Tailwind 4, e `color-mix()` é o que o modificador de opacidade (`bg-tinta/40`) vira (9.9).
     expect(css).not.toContain('oklch(')
     expect(css).not.toContain('color-mix(')
+    // `:has()` não existe antes do Chrome 105, e `scrollbar-width`, antes do 121: nada na pele depende deles.
+    expect(css).not.toContain(':has(')
+    expect(css).not.toContain('scrollbar-width')
+    // Nada se mexe sozinho (D59): nenhuma animação em laço chega ao navegador.
+    expect(css).not.toContain('infinite')
     // A paleta anterior saiu inteira do `@theme`, e nenhuma fonte é baixada: o logotipo vem em curvas (9.6).
     expect(css).not.toMatch(/--color-(?:slate|blue|amber|red|emerald)-/)
     expect(css).not.toContain('@font-face')

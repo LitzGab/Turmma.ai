@@ -45,7 +45,7 @@ function ItemDaNavegacao({ rotulo, rota, endereco }: PropsDoItem) {
  */
 function Faixa({ children }: { children?: ReactNode }) {
   return (
-    <header className="bg-noite text-white">
+    <header className="bg-noite text-sobre-grafite">
       <div className="mx-auto flex min-h-14 max-w-5xl items-center justify-between gap-3 px-4 py-2 sm:px-6">
         <p className="inline-flex shrink-0 items-center gap-2 text-lg font-semibold">
           <img src="/marca/turmma-pinta.svg" alt="" width={24} height={24} className="h-6 w-6 shrink-0" />
@@ -99,7 +99,7 @@ export function CascaDaOperacao({ titulo, nome, aoSair, saindo, children }: Prop
             type="button"
             onClick={aoSair}
             disabled={saindo}
-            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full border border-noite-alto px-4 py-2 text-base font-medium text-white enabled:hover:bg-noite-alto enabled:active:bg-noite-baixo"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full border border-noite-alto px-4 py-2 text-base font-medium text-sobre-grafite enabled:hover:bg-noite-alto enabled:active:bg-noite-baixo"
           >
             {saindo ? 'Saindo…' : 'Sair'}
           </button>

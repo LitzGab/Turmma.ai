@@ -27,7 +27,7 @@ export function Dica({ children }: { children: ReactNode }) {
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute top-1/2 left-full z-20 ml-2 hidden -translate-y-1/2 rounded-linha bg-noite px-2 py-1 text-sm font-normal whitespace-nowrap text-white shadow-flutua group-hover:block group-focus-visible:block"
+      className="pointer-events-none absolute top-1/2 left-full z-20 ml-2 hidden -translate-y-1/2 rounded-linha bg-noite px-2 py-1 text-sm font-normal whitespace-nowrap text-sobre-grafite shadow-flutua group-hover:block group-focus-visible:block"
     >
       {children}
     </span>

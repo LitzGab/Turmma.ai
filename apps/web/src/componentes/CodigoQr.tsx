@@ -17,6 +17,10 @@ interface Props {
  *
  * O QR é conveniência, nunca requisito: quem não tem celular — que é o caso em sala, pela Lei 15.100 — copia o
  * segredo em texto ao lado e cola no gerenciador de senhas do computador (regra 50, item 2).
+ *
+ * É a única peça que pinta com cor fixa, fora dos tokens: módulo quase preto sobre branco, **nos dois temas**. O leitor
+ * de QR precisa do contraste e da polaridade (escuro sobre claro), e por isso o fundo não vira no escuro. A guarda de
+ * `estilos.test.ts` conhece esta exceção pelo nome do arquivo.
  */
 export function CodigoQr({ conteudo, descricao }: Props) {
   const { caminho, lado } = useMemo(() => desenho(conteudo), [conteudo])

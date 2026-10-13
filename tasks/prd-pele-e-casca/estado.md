@@ -6,13 +6,18 @@
 > uma sessão limpa".
 
 ## Agora
-- **Tarefa atual:** **1.0** (os tokens da D80, no claro e no escuro), implementada e com o portão da tarefa verde;
-  falta a rodada da Mesa e o commit. Em paralelo, a **rodada 3 da revisão da spec** (`revisao-spec.md`)
-- **Espero:** o relatório da Mesa da 1.0 e o veredito da rodada 3 da spec
-- **Devo ainda:** (1) fechar a 1.0: Mesa, ordem de correção se houver, `portao-local.ts conferir`, marcar no
-  `tasks.md` e commit `(tarefa 1.0)`; (2) fechar a revisão da spec e pôr o status da Tech Spec; (3) commit dos
-  documentos das quatro specs; (4) revisão de spec da X2, da X3 e da X4, que **ainda não foram revistas por
-  guardião nenhum**; (5) seguir pela 2.0
+- **Tarefa atual:** **1.0** (os tokens da D80, no claro e no escuro), implementada e **destravada pelo Joaquim** em
+  13/10/2026, por volta das 07h50 ("pode voce corrigir qualquer coisa que esta travando pode ir alem"), depois do
+  `BLOQUEIO` da 3ª rodada. A correção do achado está na árvore, e falta a 4ª rodada da Mesa e o commit
+- **Espero:** o portão da tarefa e o relatório da Mesa da 1.0
+- **Devo ainda:** (1) fechar a 1.0: `portao-local.ts conferir`, marcar no `tasks.md` e commit `(tarefa 1.0)`; (2)
+  passar a spec ao time do Maestri, como o Joaquim pediu: o Orquestrador assume da 2.0 em diante; (3) a revisão de
+  spec da X3 (só o `frontend-reviewer` terminou, com APROVADO; a sessão caiu no meio) e da X4, que **não foi revista
+  por guardião nenhum**
+- **Limite de uso:** o terminal do Orquestrador mostrava 81% do limite semanal às 07h48 de 13/10, e ele zera em
+  15/10 às 15h. Poucos agentes de cada vez
+- **A spec da X1 está APROVADA** pelos seis revisores (rodada 4, 13/10/2026 02:09, `revisao-spec.md`). As
+  recomendações que sobraram estão na seção da rodada 4 e entram como subtarefa ou cenário na tarefa de cada uma
 - **Para uma sessão limpa:** a branch é `spec/pele-e-casca`, criada da `develop` em `426e259`, num checkout avulso
   (`~/Documentos/git/.andares-avulsos/educaia--spec-pele-e-casca`), que **não é andar do Maestri**. Para o time
   assumir: fechar a sessão que está nele, `git worktree remove` desse checkout, criar o andar com a branch que já
@@ -28,6 +33,8 @@
 | Tarefa | Commit | Modelo | Rodadas | Observação |
 |---|---|---|---|---|
 | D80 e o `docs/interface.md`, Parte B | `32c9bf3` | Opus | não se aplica | só documento: decisão, ROADMAP (X1 a X4 antes do F2), TODO e o documento de interface |
+| Revisão de spec da X2 | `c4338f0` | Sonnet conduz, guardiões em Opus | 4 | aprovada pelos seis; a onça saiu do vazio do sino e a mascote de corpo inteiro ficou como decisão do Joaquim |
+| PRD, Tech Spec e tarefas da X1 à X4 | `2ed7829` | Opus (as tarefas 8 a 15 da X1, 4 a 14 da X3 e 3 a 11 da X4, por agentes em Sonnet) | 4 da spec da X1 | só documento; a X2, a X3 e a X4 sem revisão de spec |
 
 ## Esperando o Joaquim
 
@@ -49,7 +56,23 @@
   anel de foco sem cor, alvo de toque sem medida, armazenamento sem lista fechada, orçamento da entrada). A 2ª, por
   oito resíduos de coerência entre documentos e de teste que não amarrava a regra (o texto do botão desligado em
   duas cores, a onça dormindo no catálogo, `public/` ainda citado, pares de contraste que faltavam, RF6 e RF10 sem
-  teste que caísse, RF22 contra a 7c, `2_task.md` sem o teste do script). Tudo corrigido; a 3ª rodada está correndo
+  teste que caísse, RF22 contra a 7c, `2_task.md` sem o teste do script). A 3ª, por uma linha (o valor de
+  `educa.lateral-recolhida` escrito `1`, e o código grava `sim`). A 4ª aprovou
+- **1.0, `BLOQUEIO` da Mesa (13/10/2026 02:35):** o `revisor-geral` reprovou nas três primeiras rodadas, sempre na
+  guarda de cor escrita à mão de `estilos.test.ts`, cada vez por um caso vizinho: a 1ª, a lista de nomes de
+  propriedade deixava `background` e `boxShadow` de fora; a 2ª, a cor só era pega logo depois de `propriedade:`
+  (escapavam a segunda camada da sombra e o segundo hex do gradiente); a 3ª, o hex entre colchetes era pulado, e
+  `inset-shadow-[#fff]` não é classe que a guarda de classes conheça. O `frontend-reviewer` e o `test-engineer`
+  aprovavam desde a 2ª. A causa é uma só: a regra era presa à posição ou à forma. Ficou total: a cor escrita é
+  procurada no arquivo inteiro, sem exceção de posição, e a web tem uma só, a do QR. Para a retrospectiva: a
+  primeira versão devia ter nascido assim
+- **As sessões de revisão caíram às 02h40** com "Your organization has disabled Claude subscription access for
+  Claude Code", no meio da revisão da X3. Às 07h49 voltaram a abrir. Não sei a causa
+- **O portão da 1.0 rodou três vezes**, porque duas correções da revisão da spec mexeram na tabela de pares do
+  `docs/interface.md`, que o teste de contraste lê. Nas três, verde
+- **A revisão da spec caducou para o hook** assim que o portão da 1.0 aplicou as mutações no `estilos.css`: o hook
+  mede a caducidade pela data do arquivo de código. Em andar do Maestri a spec é revista antes de existir código da
+  tarefa; aqui as duas coisas correram na mesma árvore. O commit das specs não levou código
 - **PRD e Tech Spec passam do teto de palavras** (2.189 e ~3.300): o que os revisores exigiram entrou no texto. O
   aceite está escrito no topo de cada um, por delegação
 

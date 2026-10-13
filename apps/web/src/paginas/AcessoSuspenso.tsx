@@ -35,7 +35,7 @@ export function AcessoSuspenso() {
         to={entrada}
         replace
         onClick={sairDaSessaoSuspensa}
-        className="inline-flex min-h-11 items-center justify-center self-start rounded-full bg-caramelo px-4 py-2 text-base font-medium text-tinta hover:bg-caramelo-claro active:bg-caramelo-fundo"
+        className="inline-flex min-h-11 items-center justify-center self-start rounded-full bg-caramelo px-4 py-2 text-base font-medium text-sobre-cor hover:bg-caramelo-claro active:bg-caramelo-fundo"
       >
         Ir para a entrada
       </Link>

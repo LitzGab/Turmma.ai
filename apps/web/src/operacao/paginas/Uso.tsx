@@ -119,7 +119,7 @@ function VazioDoUso() {
       <div className="mt-3">
         <Link
           to={INICIO_DA_OPERACAO}
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-caramelo px-4 py-2 text-base font-medium text-tinta hover:bg-caramelo-claro active:bg-caramelo-fundo"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-caramelo px-4 py-2 text-base font-medium text-sobre-cor hover:bg-caramelo-claro active:bg-caramelo-fundo"
         >
           {TEXTO_DO_USO_VAZIO.link}
         </Link>

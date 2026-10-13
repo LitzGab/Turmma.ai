@@ -147,7 +147,7 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
                   aria-label={rotuloNoMapa(item.numero, marcaDoItem)}
                   {...(aberta ? { 'aria-current': 'step' as const } : {})}
                   data-marca={marcaDoItem}
-                  className={`relative grid size-11 place-items-center rounded-controle border text-base font-medium ${aberta ? 'border-noite bg-noite text-white' : CLASSES_DO_MAPA[marcaDoItem]}`}
+                  className={`relative grid size-11 place-items-center rounded-controle border text-base font-medium ${aberta ? 'border-noite bg-noite text-sobre-grafite' : CLASSES_DO_MAPA[marcaDoItem]}`}
                 >
                   {item.numero}
                   {marcaDoItem === 'salva' && <Check aria-hidden="true" size={12} strokeWidth={3} className="absolute top-0.5 right-0.5" />}

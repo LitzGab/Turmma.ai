@@ -175,7 +175,7 @@ function CodigosDeRecuperacao({ codigos }: { codigos: readonly string[] }) {
       <p className="text-apoio">O segundo fator está ativo. Entre de novo com a sua senha e com o código do aplicativo.</p>
       <Link
         to={ROTAS.entrar}
-        className="inline-flex min-h-11 items-center justify-center self-start rounded-full bg-caramelo px-4 py-2 text-base font-medium text-tinta hover:bg-caramelo-claro active:bg-caramelo-fundo"
+        className="inline-flex min-h-11 items-center justify-center self-start rounded-full bg-caramelo px-4 py-2 text-base font-medium text-sobre-cor hover:bg-caramelo-claro active:bg-caramelo-fundo"
       >
         Ir para a entrada
       </Link>

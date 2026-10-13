@@ -7,8 +7,8 @@ import { ChartColumn, MessageCircleQuestion, MessagesSquare, type LucideIcon } f
  * não conversa, fica no cinza do selo "IA", com ícone `tinta` (17,1:1).
  */
 const APARENCIA_DO_AGENTE: Readonly<Record<Agente, { readonly icone: LucideIcon; readonly cor: string }>> = {
-  assistente_de_ensino: { icone: MessagesSquare, cor: 'bg-noite text-white' },
-  tutor: { icone: MessageCircleQuestion, cor: 'bg-caramelo text-tinta' },
+  assistente_de_ensino: { icone: MessagesSquare, cor: 'bg-noite text-sobre-grafite' },
+  tutor: { icone: MessageCircleQuestion, cor: 'bg-caramelo text-sobre-cor' },
   analista_de_desempenho_escolar: { icone: ChartColumn, cor: 'bg-ia-cx text-tinta' },
 }
 

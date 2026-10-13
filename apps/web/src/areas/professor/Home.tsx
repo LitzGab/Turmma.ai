@@ -122,7 +122,7 @@ export default function Home() {
                 return (
                   <li key={item.id} className="min-w-0">
                     <Link to={item.atividadeAplicadaId === null ? ROTAS_DO_PROFESSOR.timeDoAssistente : caminhoDaCorrecaoDoProfessor(item.atividadeAplicadaId)} data-esperando-voce="" className="flex h-full min-h-11 min-w-0 items-start gap-3 rounded-cartao border border-linha bg-superficie p-4 hover:bg-realce-suave">
-                      <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-linha bg-noite text-white">
+                      <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-linha bg-noite text-sobre-grafite">
                         <Icone size={18} strokeWidth={1.75} />
                       </span>
                       <span className="flex min-w-0 flex-1 flex-col">

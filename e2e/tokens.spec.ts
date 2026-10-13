@@ -6,8 +6,9 @@ import { criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/s
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
- * A pele da D72 nos componentes compartilhados (tarefa 1.0 da A0): os tokens da 9.9 do `docs/interface.md` chegam ao
- * navegador, o botão primário é o laranja com texto preto, o foco é o anel de 2 px, e a marca vem em curvas.
+ * A pele nos componentes compartilhados (tarefa 1.0 da A0; os tokens são os da D80 desde a 1.0 da X1): os dois blocos
+ * de cor da 9.10 do `docs/interface.md`, o claro e o escuro, chegam ao navegador, o botão primário é o laranja com
+ * texto escuro, o foco é o anel de 2 px, e a marca vem em curvas.
  *
  * O teste de unidade `apps/web/src/estilos.test.ts` confere o fonte. Este confere o que o navegador recebe e desenha:
  * com a paleta zerada, um token que não chegou ao CSS servido faz a classe sair sem regra nenhuma, caladamente.
@@ -25,31 +26,56 @@ const RGB = {
   inativo: 'rgb(143, 143, 143)',
 } as const
 
-/** Os tokens de cor do bloco `@theme` da 9.9, com o hex de cada um: o documento é a fonte, não uma cópia aqui. */
-function tokensDaD72(): Map<string, string> {
-  const documento = readFileSync(new URL('../docs/interface.md', import.meta.url), 'utf8')
-  const secao = documento.slice(documento.indexOf('### 9.9'))
-  const inicio = secao.indexOf('```css')
-  const bloco = secao.slice(inicio, secao.indexOf('```', inicio + 6))
-  return new Map([...bloco.matchAll(/--color-([a-z]+(?:-[a-z0-9]+)*)\s*:\s*(#[0-9a-fA-F]{6})/g)].map(([, nome, hex]) => [nome ?? '', (hex ?? '').toLowerCase()]))
-}
+type Tema = 'claro' | 'escuro'
+type Paleta = Map<string, string>
 
-/** `#fff` e `#FFFFFF` são o mesmo hex: o minificador encurta o que pode. */
+/** Quantas cores cada bloco da 9.10 declara, `white` e `black` incluídas: o mesmo número do teste de unidade. */
+const CORES_POR_BLOCO = 97
+
+const DECLARACAO_DE_COR = /--color-([a-z]+(?:-[a-z0-9]+)*)\s*:\s*([^;}]+)/g
+
+/** `#fff` e `#FFFFFF` são o mesmo hex, e `#0009` e `#00000099` também: o minificador encurta o que pode. */
 function hexCompleto(valor: string): string {
   const hex = valor.trim().toLowerCase()
-  return /^#[0-9a-f]{3}$/.test(hex) ? `#${[...hex.slice(1)].map((digito) => digito + digito).join('')}` : hex
+  return /^#(?:[0-9a-f]{3}|[0-9a-f]{4})$/.test(hex) ? `#${[...hex.slice(1)].map((digito) => digito + digito).join('')}` : hex
 }
 
-/** As declarações `--color-*` de todas as folhas que a página carrega, com o valor em hex de seis dígitos. */
-async function coresServidas(page: Page): Promise<Map<string, string>> {
+function coresDe(css: string): Paleta {
+  return new Map([...css.matchAll(DECLARACAO_DE_COR)].map(([, nome, valor]) => [nome ?? '', hexCompleto(valor ?? '')]))
+}
+
+/**
+ * Os tokens de cor dos dois blocos `css` da 9.10, com o valor de cada um: o documento é a fonte, não uma cópia aqui. O
+ * claro é o bloco do `@theme static`, e o escuro, o de `:root[data-tema='escuro']`.
+ */
+function tokensDoDocumento(): Record<Tema, Paleta> {
+  const documento = readFileSync(new URL('../docs/interface.md', import.meta.url), 'utf8')
+  const inicio = documento.indexOf('### 9.10')
+  const proxima = documento.indexOf('\n## ', inicio)
+  const secao = documento.slice(inicio, proxima === -1 ? undefined : proxima)
+  const blocos = [...secao.matchAll(/```css\n([\s\S]*?)```/g)].map(([, bloco]) => bloco ?? '')
+  const claro = blocos.find((bloco) => bloco.includes('@theme static')) ?? ''
+  const escuro = blocos.find((bloco) => bloco.includes("data-tema='escuro'")) ?? ''
+  return { claro: coresDe(claro), escuro: coresDe(escuro) }
+}
+
+/** O CSS de todas as folhas que a página carrega, junto. */
+async function cssServido(page: Page): Promise<string> {
   const folhas = await page.locator('link[rel="stylesheet"]').evaluateAll((links) => links.map((link) => (link as HTMLLinkElement).href))
   expect(folhas.length).toBeGreaterThan(0)
-  const cores = new Map<string, string>()
-  for (const folha of folhas) {
-    const css = await (await page.request.get(folha)).text()
-    for (const [, nome, valor] of css.matchAll(/--color-([a-z]+(?:-[a-z0-9]+)*)\s*:\s*([^;}]+)/g)) cores.set(nome ?? '', hexCompleto(valor ?? ''))
-  }
-  return cores
+  return (await Promise.all(folhas.map(async (folha) => (await page.request.get(folha)).text()))).join('\n')
+}
+
+/**
+ * As declarações `--color-*` que o navegador recebe, separadas pelo tema: as do bloco `[data-tema=escuro]` (o
+ * minificador tira as aspas e o `:root`) e as de fora dele. Juntas num mapa só, a última venceria e o claro sumiria.
+ */
+async function coresServidas(page: Page): Promise<Record<Tema, Paleta>> {
+  const css = await cssServido(page)
+  const abertura = css.search(/\[data-tema=["']?escuro["']?\]\s*\{/)
+  expect(abertura, 'o CSS servido não tem o bloco do escuro').toBeGreaterThan(-1)
+  const fim = css.indexOf('}', abertura)
+  return { claro: coresDe(css.slice(0, abertura) + css.slice(fim)), escuro: coresDe(css.slice(abertura, fim)) }
 }
 
 /** Luminância relativa da WCAG 2.1 de uma cor `rgb(r, g, b)` do estilo calculado. */
@@ -106,14 +132,31 @@ function portao(): { aberta: Promise<void>; abrir: () => void } {
 }
 
 test.describe('pele da D72 nos componentes compartilhados', () => {
-  test('E5: o CSS servido tem cada token de cor da 9.9, com o hex do documento', async ({ page }) => {
+  test('E5: o CSS servido tem cada token de cor da 9.10, com o hex do documento, no claro e no escuro', async ({ page }) => {
     await page.goto('/sistema')
-    const tokens = tokensDaD72()
-    // `white` e `black` incluídas; outro número é o bloco do documento lido pela metade, e o teste passaria vazio.
-    expect(tokens.size).toBe(33)
+    const tokens = tokensDoDocumento()
     const servidas = await coresServidas(page)
-    const divergentes = [...tokens].filter(([nome, hex]) => servidas.get(nome) !== hex).map(([nome, hex]) => `${nome}: a 9.9 diz ${hex}, o CSS servido tem ${servidas.get(nome) ?? 'nada'}`)
-    expect(divergentes).toEqual([])
+    for (const tema of ['claro', 'escuro'] as const) {
+      // `white` e `black` incluídas; outro número é o bloco do documento lido pela metade, e o teste passaria vazio.
+      expect(tokens[tema].size, `bloco ${tema} da 9.10`).toBe(CORES_POR_BLOCO)
+      const divergentes = [...tokens[tema]]
+        .filter(([nome, hex]) => servidas[tema].get(nome) !== hex)
+        .map(([nome, hex]) => `${tema} · ${nome}: a 9.10 diz ${hex}, o CSS servido tem ${servidas[tema].get(nome) ?? 'nada'}`)
+      expect(divergentes).toEqual([])
+    }
+  })
+
+  test('o escuro liga pelo atributo do html: o chão e o texto da página trocam, e voltam', async ({ page }) => {
+    // O bloco do escuro fica fora de camada para vencer o do Tailwind. Se perdesse, as variáveis chegariam ao navegador
+    // (o caso acima passaria) e a tela continuaria clara: aqui se mede o que o navegador desenha.
+    await page.goto('/sistema')
+    const chaoETexto = () => page.evaluate(() => [getComputedStyle(document.documentElement).backgroundColor, getComputedStyle(document.documentElement).color])
+    expect(await chaoETexto()).toEqual(['rgb(255, 255, 255)', RGB.tinta])
+    await page.evaluate(() => document.documentElement.setAttribute('data-tema', 'escuro'))
+    expect(await chaoETexto()).toEqual(['rgb(19, 31, 36)', 'rgb(241, 247, 251)'])
+    expect(await violacoesGraves(page)).toEqual([])
+    await page.evaluate(() => document.documentElement.setAttribute('data-tema', 'claro'))
+    expect(await chaoETexto()).toEqual(['rgb(255, 255, 255)', RGB.tinta])
   })
 
   test('botão primário: caramelo com texto tinta, sem violação do axe, e o desligado em inativo', async ({ page, hasTouch }) => {
