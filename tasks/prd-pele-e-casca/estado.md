@@ -6,28 +6,37 @@
 > uma sessão limpa".
 
 ## Agora
-- **Tarefa atual:** nenhuma em curso. A **1.0** está concluída (`81cc95d`), e a próxima é a **2.0** (a escolha da
-  aparência e a galeria nos dois temas), depois a 3.0: as duas são tronco, em série. Da 4.0 em diante o quadro do
-  `tasks.md` autoriza linhas
-- **Espero:** o Orquestrador assumir a spec com o time do Maestri, a pedido do Joaquim (13/10/2026: "preciso que
-  voce use os agents que tem aqui no maestro profavor os termineias tambem no caso jogar o /seguir para o
-  orquestrador")
-- **Devo ainda (quem assumir):** (1) criar o andar com a branch que já existe e trazer a `develop`, que andou até
-  `e278845`; (2) a 2.0; (3) a revisão de spec da X3 (só o `frontend-reviewer` terminou, com APROVADO; a sessão caiu
-  no meio) e da X4, que **não foi revista por guardião nenhum**, antes de cada uma começar
-- **Limite de uso:** o terminal do Orquestrador mostrava 81% do limite semanal às 07h48 de 13/10, e ele zera em
-  15/10 às 15h. Poucos agentes de cada vez
+- **Espero:** o `RELATÓRIO` do `Implementador`, da **2.0** (porte grande), na **linha 1**, 1ª tentativa, pedida em
+  13/10/2026 às 08h35. Checkout da linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch
+  `spec/pele-e-casca--l1`, ambiente de teste 1, com o `Implementador` e a `Mesa`. O pedido foi com a observação
+  **"sem push"**: o commit da tarefa fica local
+- **Devo ainda:** (1) **tudo local, por decisão do Joaquim** (13/10, 08h50: "pode ficar local"): nenhum push, de
+  ninguém, até ele mandar. O `linhas.ts encontro` não tem opção sem push: rodá-lo com o endereço de push trocado só
+  naquele comando (`GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=remote.origin.pushurl GIT_CONFIG_VALUE_0=/dev/null/sem-push`
+  na frente do `node`), e a saída esperada é "O PUSH FALHOU", que aqui é o certo: o encontro está feito. Não rodar o
+  `esteira.ts`: sem branch no GitHub não há esteira. No lugar dela, o portão completo local
+  (`portao-local.ts --e2e --infra`) uma vez, antes da validação (passo 8 do `/seguir`, "Sem GitHub"). Todo `PEDIDO`
+  de tarefa leva a observação "sem push"; (2) depois da 2.0, a 3.0, também tronco, em
+  série, na linha 1; da 4.0 em diante o quadro autoriza linhas, mas **uma linha só** até o Joaquim dizer o contrário
+  (limite de uso); (3) nada mais sobre a revisão de spec da X3 e da X4: as duas **já têm revisão aprovada** pelos
+  seis guardiões, quatro rodadas cada, feita pelo "Claude Code #2" a pedido do Joaquim e trazida para esta branch em
+  13/10/2026 (`2f63ce0`, `7334f79`, `92cc7e5`; o Joaquim deu a palavra neste terminal: "pode"). Não repetir antes de
+  cada uma começar. As decisões de desenho tomadas por delegação nelas estão na seção 12 da Tech Spec de cada uma
+  (12b na X4) e no item "(D80) Decisões que tomei por delegação" do `TODO.md`: são do Joaquim rever, e não seguram
+  nada
+- **Mockup de outubro** (as tarefas citam "Mockup: /fundamentos" e outras rotas): roda com
+  `./node_modules/.bin/vite --host 127.0.0.1 --port 5190 --strictPort` dentro de
+  `~/Documentos/git/Prototipo_Turmma/mockups`. Em 13/10 estava de pé na 5190 pela sessão do "Claude Code #2", e cai
+  quando ela fechar: quem precisar, sobe de novo
+- **Limite de uso:** 81% do limite semanal às 07h48 de 13/10; zera em 15/10 às 15h. Uma linha, poucos agentes
 - **A spec da X1 está APROVADA** pelos seis revisores (rodada 4, 13/10/2026 02:09, `revisao-spec.md`). As
   recomendações que sobraram estão na seção da rodada 4 e entram como subtarefa ou cenário na tarefa de cada uma
-- **Para uma sessão limpa:** a branch é `spec/pele-e-casca`, criada da `develop` em `426e259`, num checkout avulso
-  (`~/Documentos/git/.andares-avulsos/educaia--spec-pele-e-casca`), que **não era andar do Maestri** e foi desfeito
-  na passagem ao time, com o ambiente de teste 3 derrubado. O andar nasce com a branch que já existe
-  (`--existing-branch spec/pele-e-casca`)
-- **Como a revisão correu sem o Maestri:** o hook de revisões escreve no diretório em que a sessão **nasceu**. Por
-  isso cada rodada foi conduzida por uma sessão aberta dentro deste checkout (`claude -p`, com o pedido por
-  arquivo), que chama os revisores como subagentes: é o fim deles que registra a rodada. A primeira rodada da spec
-  não ficou registrada pelo hook, e o `revisao-spec.md` diz isso no topo
-- **Base:** `spec/pele-e-casca`, com a `develop` até `426e259`. Nada foi enviado ao GitHub: push é do Joaquim
+- **Como o Orquestrador assumiu:** em 13/10/2026, 08h20, com a palavra do Joaquim no terminal dele ("pode"). O andar
+  "X1 pele-e-casca" nasceu da branch que já existia (`--existing-branch`), em
+  `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca`, e a `develop` (`e278845`) entrou por merge, sem
+  conflito (`65ab3b1`). A 1.0 e a spec correram fora do Maestri, num checkout avulso já desfeito
+- **Base:** `spec/pele-e-casca` em `92cc7e5` (a linha 1 saiu de `65ab3b1`, antes dos três commits de documento da
+  X3 e da X4, e os recebe no encontro da 2.0). Nada foi enviado ao GitHub: push é do Joaquim
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -35,9 +44,19 @@
 | D80 e o `docs/interface.md`, Parte B | `32c9bf3` | Opus | não se aplica | só documento: decisão, ROADMAP (X1 a X4 antes do F2), TODO e o documento de interface |
 | Revisão de spec da X2 | `c4338f0` | Sonnet conduz, guardiões em Opus | 4 | aprovada pelos seis; a onça saiu do vazio do sino e a mascote de corpo inteiro ficou como decisão do Joaquim |
 | 1.0 | `81cc95d` | Opus, fora do Maestri | 7 | dois `BLOQUEIO` do `revisor-geral` (3ª e 6ª rodadas), os dois destravados pelo Joaquim; o `frontend-reviewer` aprovou desde a 1ª e o `test-engineer` desde a 2ª, com uma reprovação na 4ª por dois blocos de mutação; 17 mutações vermelhas |
+| 2.0 | `080f90c` | Sonnet 5.5 | 2 | linha 1, das 08h29 às 09h58 de 13/10; na 1ª rodada o `revisor-geral` e o `test-engineer` reprovaram (sete itens: `colorScheme` e vitrine sem dono, a medida em brotli, cláusulas sem bloco de mutação), na 2ª os quatro aprovaram; 29 mutações vermelhas; sem push |
 | PRD, Tech Spec e tarefas da X1 à X4 | `2ed7829` | Opus (as tarefas 8 a 15 da X1, 4 a 14 da X3 e 3 a 11 da X4, por agentes em Sonnet) | 4 da spec da X1 | só documento; a X2, a X3 e a X4 sem revisão de spec |
 
 ## Esperando o Joaquim
+
+### 13/10/2026 08h35 — X1, encontro da tarefa 2.0 — RESPONDIDA às 08h50: tudo local ("pode ficar local")
+Decisão: a branch da spec vai para o GitHub a cada tarefa, como o processo pede (D79), ou fica local até você mandar?
+Contexto: o encontro (`linhas.ts encontro`) e o commit do Implementador fazem push, e é o push que dispara a
+esteira. A branch nunca foi enviada, o repositório é público, e a pele vem do mockup de outubro, que é privado
+(`TODO.md`, itens da D80). A 2.0 partiu sem push e não depende da resposta; o encontro dela depende
+Opções: push a cada tarefa, com a esteira | tudo local, com o portão completo na máquina no lugar da esteira
+Recomendo: push a cada tarefa, se o que já está na branch pode ficar público: sem ele a esteira não roda, e o
+portão completo local custa de 30 a 70 minutos por vez
 
 ### 13/10/2026 — o que é dele, e não foi feito
 - **Push** de `spec/pele-e-casca` e o **pouso** na `develop`
