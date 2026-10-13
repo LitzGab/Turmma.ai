@@ -6,23 +6,23 @@
 > uma sessão limpa".
 
 ## Agora
-- **Tarefa atual:** **1.0** (os tokens da D80, no claro e no escuro), implementada e **destravada pelo Joaquim** em
-  13/10/2026, por volta das 07h50 ("pode voce corrigir qualquer coisa que esta travando pode ir alem"), depois do
-  `BLOQUEIO` da 3ª rodada. A correção do achado está na árvore, e falta a 4ª rodada da Mesa e o commit
-- **Espero:** o portão da tarefa e o relatório da Mesa da 1.0
-- **Devo ainda:** (1) fechar a 1.0: `portao-local.ts conferir`, marcar no `tasks.md` e commit `(tarefa 1.0)`; (2)
-  passar a spec ao time do Maestri, como o Joaquim pediu: o Orquestrador assume da 2.0 em diante; (3) a revisão de
-  spec da X3 (só o `frontend-reviewer` terminou, com APROVADO; a sessão caiu no meio) e da X4, que **não foi revista
-  por guardião nenhum**
+- **Tarefa atual:** nenhuma em curso. A **1.0** está concluída (`81cc95d`), e a próxima é a **2.0** (a escolha da
+  aparência e a galeria nos dois temas), depois a 3.0: as duas são tronco, em série. Da 4.0 em diante o quadro do
+  `tasks.md` autoriza linhas
+- **Espero:** o Orquestrador assumir a spec com o time do Maestri, a pedido do Joaquim (13/10/2026: "preciso que
+  voce use os agents que tem aqui no maestro profavor os termineias tambem no caso jogar o /seguir para o
+  orquestrador")
+- **Devo ainda (quem assumir):** (1) criar o andar com a branch que já existe e trazer a `develop`, que andou até
+  `e278845`; (2) a 2.0; (3) a revisão de spec da X3 (só o `frontend-reviewer` terminou, com APROVADO; a sessão caiu
+  no meio) e da X4, que **não foi revista por guardião nenhum**, antes de cada uma começar
 - **Limite de uso:** o terminal do Orquestrador mostrava 81% do limite semanal às 07h48 de 13/10, e ele zera em
   15/10 às 15h. Poucos agentes de cada vez
 - **A spec da X1 está APROVADA** pelos seis revisores (rodada 4, 13/10/2026 02:09, `revisao-spec.md`). As
   recomendações que sobraram estão na seção da rodada 4 e entram como subtarefa ou cenário na tarefa de cada uma
 - **Para uma sessão limpa:** a branch é `spec/pele-e-casca`, criada da `develop` em `426e259`, num checkout avulso
-  (`~/Documentos/git/.andares-avulsos/educaia--spec-pele-e-casca`), que **não é andar do Maestri**. Para o time
-  assumir: fechar a sessão que está nele, `git worktree remove` desse checkout, criar o andar com a branch que já
-  existe (`--existing-branch spec/pele-e-casca`) e o Joaquim digitar `/seguir pele-e-casca`. O ambiente de teste
-  deste checkout é o 3 (`.processo/ambiente`)
+  (`~/Documentos/git/.andares-avulsos/educaia--spec-pele-e-casca`), que **não era andar do Maestri** e foi desfeito
+  na passagem ao time, com o ambiente de teste 3 derrubado. O andar nasce com a branch que já existe
+  (`--existing-branch spec/pele-e-casca`)
 - **Como a revisão correu sem o Maestri:** o hook de revisões escreve no diretório em que a sessão **nasceu**. Por
   isso cada rodada foi conduzida por uma sessão aberta dentro deste checkout (`claude -p`, com o pedido por
   arquivo), que chama os revisores como subagentes: é o fim deles que registra a rodada. A primeira rodada da spec
@@ -34,6 +34,7 @@
 |---|---|---|---|---|
 | D80 e o `docs/interface.md`, Parte B | `32c9bf3` | Opus | não se aplica | só documento: decisão, ROADMAP (X1 a X4 antes do F2), TODO e o documento de interface |
 | Revisão de spec da X2 | `c4338f0` | Sonnet conduz, guardiões em Opus | 4 | aprovada pelos seis; a onça saiu do vazio do sino e a mascote de corpo inteiro ficou como decisão do Joaquim |
+| 1.0 | `81cc95d` | Opus, fora do Maestri | 7 | dois `BLOQUEIO` do `revisor-geral` (3ª e 6ª rodadas), os dois destravados pelo Joaquim; o `frontend-reviewer` aprovou desde a 1ª e o `test-engineer` desde a 2ª, com uma reprovação na 4ª por dois blocos de mutação; 17 mutações vermelhas |
 | PRD, Tech Spec e tarefas da X1 à X4 | `2ed7829` | Opus (as tarefas 8 a 15 da X1, 4 a 14 da X3 e 3 a 11 da X4, por agentes em Sonnet) | 4 da spec da X1 | só documento; a X2, a X3 e a X4 sem revisão de spec |
 
 ## Esperando o Joaquim
@@ -66,6 +67,11 @@
   aprovavam desde a 2ª. A causa é uma só: a regra era presa à posição ou à forma. Ficou total: a cor escrita é
   procurada no arquivo inteiro, sem exceção de posição, e a web tem uma só, a do QR. Para a retrospectiva: a
   primeira versão devia ter nascido assim
+- **1.0, segundo `BLOQUEIO` (13/10/2026 08:13):** depois do destravado, o `revisor-geral` reprovou a 4ª, a 5ª e a
+  6ª, e nenhuma por código: a Tech Spec, o `cenarios.md` e as subtarefas descreviam a guarda antiga, e foram
+  corrigidos um de cada vez. Destravado com a mesma palavra do Joaquim, que estava acordado e foi avisado na hora;
+  a 7ª aprovou. Para a retrospectiva: quando uma correção muda o desenho de um teste, conferir de uma vez todos os
+  documentos que o descrevem
 - **As sessões de revisão caíram às 02h40** com "Your organization has disabled Claude subscription access for
   Claude Code", no meio da revisão da X3. Às 07h49 voltaram a abrir. Não sei a causa
 - **O portão da 1.0 rodou três vezes**, porque duas correções da revisão da spec mexeram na tabela de pares do
