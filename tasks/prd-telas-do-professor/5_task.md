@@ -40,7 +40,7 @@ estado. A lista sai de Ferramentas. Nenhum dado novo: é a leitura de `GET /v1/a
 | `apps/web/src/api/artefatos.ts`, `apps/web/src/areas/navegacao.ts`, `apps/web/src/areas/navegacao.test.ts` | alterado |
 | `apps/web/src/componentes/itens-da-lateral.tsx` | alterado (o ícone de Criados) |
 | `e2e/professor-criados.spec.ts` | novo |
-| `e2e/__fixtures__/professor/criados.ts`, `e2e/professor-ferramentas.spec.ts`, `e2e/areas.spec.ts` | alterado (`ITENS_DO_PROFESSOR`) |
+| `e2e/__fixtures__/professor/criados.ts`, `e2e/professor-ferramentas.spec.ts`, `e2e/areas.spec.ts` | alterado (`ITENS_DO_PROFESSOR`; `/professor/criados` entra nos laços de papel errado) |
 
 ## Testes que provam a regra
 
@@ -54,7 +54,7 @@ Definidos com o `test-engineer`. Não improvise aqui.
 | o filtro de turma vai ao servidor | componente | trocar a turma faz uma leitura com `turmaId`; trocar o tipo não faz nenhuma |
 | o voltar devolve os filtros | e2e | filtrar, abrir um documento, voltar pelo histórico: os filtros e a lista voltam |
 | os lugares | e2e | Início, Turmas, Ferramentas e Criados, nesta ordem, nas três larguras; a barra de baixo tem os quatro |
-| isolamento | e2e | trocar de escola esvazia Criados; a turma de outra escola no endereço mostra o mesmo que um id inexistente (regra 10, itens 4 e 6) |
+| isolamento | e2e | trocar de escola esvazia Criados; a turma de B tem ao menos um artefato gerado, e com `?turma=<turma de B>` o título dele não aparece e a tela mostra o mesmo que um id inexistente (regra 10, itens 4 e 6). Mutação: o servidor deixar de filtrar a turma pela escola do token deixa o e2e vermelho |
 | recomeço | e2e | a segunda pessoa na mesma aba não vê a lista nem os filtros da primeira; resposta atrasada da lista anterior não entra. Concorrência e log não se aplicam: só leitura |
 
 ## Como testar

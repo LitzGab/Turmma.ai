@@ -1,7 +1,8 @@
 # Tech Spec — Telas do professor
 
 **PRD:** `tasks/prd-telas-do-professor/prd.md`
-**Status:** rascunho
+**Status:** revisada pelos guardiões em 13/10/2026 (rodada 4, `revisao-spec.md`) e aprovada por delegação do Joaquim; ele revê ao ler
+**Tamanho:** acima do teto de 2.000 palavras, com aceite por delegação do Joaquim (13/10/2026). Motivo: a revisão dos guardiões exigiu por escrito a releitura do sino, o teto de 12 turmas, a supervisão de Hoje e a tela inteira de "Acesso gerado". O detalhe de cada teste fica nas tarefas.
 
 ## 1. Resumo da abordagem
 
@@ -45,9 +46,12 @@ de pedidos por turma confirmada, e devolve os itens, agrupados por turma, em ord
 | Confirme sua turma | vínculo `pendente` (o contestado espera a coordenação e não conta) | `/professor/turmas` |
 
 A regra de `esperandoVoce`, hoje em `areas/professor/entregas.ts`, muda de casa para a fila, com o teste dela. O
-sino lê ao montar, quando a aba volta a ter foco e quando uma decisão invalida a consulta; **não relê por tempo**,
-e abrir a lista não faz leitura. Leitura que falha marca a fila como incompleta: o sino mostra o que leu e diz o
-que faltou.
+sino lê ao entrar na área e quando uma decisão invalida a chave. **Não relê por tempo, por foco nem por reconexão**,
+e abrir a lista não faz leitura: os observadores de `entregas`, `meus-vinculos` e da contagem usam `staleTime` de 5
+min, `refetchInterval: false`, `refetchOnWindowFocus: false` e `refetchOnReconnect: false`, como na X2 (§5 e §7c).
+"Atualizar" e "Tentar de novo" releem só pela chave exata, nunca por prefixo. Leitura que falha, recusa por limite ou
+turma além do teto marcam a fila como `incompleto`: o sino mostra o que leu e diz o que não leu, e nunca "Tudo em
+dia". "Não relê por tempo" vale só para o sino: a aba Hoje tem a regra da §7b.
 
 **Montagem.** `sino-do-papel.ts` é um mapa de papel para componente carregado por `lazy()`; a casca só importa o
 mapa. Com a X2 pousada, o mapa e a peça já existem, e a X3 acrescenta a linha dela.
@@ -63,9 +67,11 @@ links: "O que o Assistente fez" e "O que o Tutor viu".
 
 Nenhuma consulta nova no servidor: o escopo continua no repository, a partir do token. No cliente, o risco é o
 cache atravessar a troca de escola ou de pessoa. As consultas do sino usam chaves que começam pelas de hoje
-(`entregas`, `meus-vinculos`, `pedidos-da-turma`), que `main.tsx` esvazia em toda troca de sessão. Testes: o sino
+(`entregas`, `meus-vinculos`, `pedidos-da-turma`), que `main.tsx` esvazia com `resetQueries()` em toda troca de
+sessão; a lista de turmas do sino vem do cache, nunca de `useState`. Testes: o sino
 de A não aparece em B depois da troca de escola, nem para a segunda pessoa na mesma aba; o documento e a turma de
-outra escola respondem como os inexistentes (os e2e de hoje).
+outra escola respondem como os inexistentes (os de hoje: `apps/api/src/artefato/artefato.int.test.ts`,
+`apps/api/test/turma-acesso.int.test.ts` e `e2e/troca-de-escola.spec.ts`).
 
 ## 7. Dado pessoal (obrigatório)
 
@@ -77,7 +83,8 @@ outra escola respondem como os inexistentes (os e2e de hoje).
 | Retenção, autorização por objeto, DTO de saída | inalterados: quem decide é a API |
 
 O sino **não guarda nome de aluno**: a consulta de contagem descarta a lista antes do cache e fica só com o
-número e "há mais". As leituras nominais das telas continuam com `gcTime: 0`, inclusive a nova de alunos. Nenhum
+número e "há mais", sob a chave `['pedidos-da-turma', 'contagem', turmaId]`, distinta da lista nominal; `aplicarDecisao`
+a invalida por chave exata, e nenhum item do sino leva nome. O teste confere o conteúdo do `QueryCache`, não o `select`. As leituras nominais das telas continuam com `gcTime: 0`, inclusive a nova de alunos. Nenhum
 endereço leva nome. A contestação e a justificativa mantêm o aviso de não escrever sobre aluno.
 
 ## 7b. Conformidade CNE (quando há IA no caminho do aluno)
@@ -86,7 +93,13 @@ Nenhuma função muda de risco nem de autonomia. A versão adaptada continua dec
 `POST /v1/entregas/:id/decidir`; a atividade só vai à turma por "Aplicar à turma"; o lote, por `aprovar-lote`, que
 a API recusa com destaque fechado. As abas de Aprovar não mudam a ordem: o oficial fica na barra presa, visível
 nas três, e quem o libera é `podeAprovar`. A supervisão do Tutor (regra 70, item 4) fica na aba Hoje, com os
-textos de hoje: sinal e uso, nunca conversa. O teste de vocabulário de `aprovar.test.ts` (sem nota, conceito nem
+textos de hoje: sinal e uso, nunca conversa. Hoje lê `consultaSinais` ao abrir, com `refetchInterval` de 15 s enquanto a
+aba está à vista, como `Tutor.tsx` faz hoje. O aviso de atenção humana e o agregado aparecem **sem abrir painel**, com a
+contagem, a hora e o que fazer, e **sem nome de aluno**: Hoje é a aba que a professora projeta em sala (D34, D36, LGPD
+art. 14). O nome só vem por ação explícita ("Ver quem", botão dentro do aviso), no `PainelLado` (`?ver=tutor`), que começa
+pela lista de atenção humana mostra os "Sinais por aluno" (da mesma `consultaSinais`, já lida) e faz a leitura de `consultaUsoDoTutor`, a única que espera o painel. Com o painel fechado,
+nenhum nome de aluno vai à tela. O sinal que chega aos 15 s entra sem piscar, sem som e sem mover o foco, em
+`aria-live="polite"` (D59). O teste de vocabulário de `aprovar.test.ts` (sem nota, conceito nem
 pontuação) é estendido aos textos novos.
 
 ## 7c. Carga e falha (obrigatório)
@@ -94,11 +107,11 @@ pontuação) é estendido aos textos novos.
 | Item | Resposta |
 |---|---|
 | Está no caminho quente? | nenhum do servidor é novo; o sino lê em toda tela do professor |
-| Carga na manhã de segunda | por professor que abre a casca: 2 leituras de hoje (entregas e vínculos) e 1 por turma confirmada (pedidos), até 12. Com 30 professores e 6 turmas, 240 leituras curtas, contra 400 logins de alunos |
+| Carga na manhã de segunda | por professor que abre a casca: 2 leituras de hoje (entregas e vínculos) e 1 por turma confirmada (pedidos), até 12, em ordem de nome. Com 30 professores e 6 turmas, 240 leituras curtas, contra 400 logins de alunos; no teto, 14 por leitura (cerca de 28 por minuto contra 120 do limite), mais a leitura de Hoje (4 por minuto com a aba à vista, pausada escondida) |
 | Fila, limite por escola, índices, migration | não se aplicam |
-| Rate limit | nenhuma rota nova. As leituras por turma saem **em série** e param na primeira recusa por limite, que vira "incompleto" |
+| Rate limit | nenhuma rota nova. As leituras por turma saem **em série**, as 12 primeiras por nome, e param na primeira recusa por limite. A turma além da 12ª e as não lidas após a recusa marcam `incompleto`; em Turmas aparecem como "não lida" |
 | Corridas de concorrência | nenhuma nova: decidir entrega, aprovar lote e gerar acesso mantêm o envio único e o tratamento de `ENTREGA_JA_DECIDIDA` e `CONFLITO` |
-| Quando cada dependência cai | a tela mostra `EstadoErro` com "Tentar de novo"; o sino diz que não leu e não afirma "Tudo em dia" |
+| Quando cada dependência cai | a tela mostra `EstadoErro` com "Tentar de novo"; o sino diz o que não leu e não afirma "Tudo em dia" |
 | Métrica, alerta e cenário de carga | o teto do `size-limit` e o teste do build; cenário inalterado |
 
 **Orçamento.** O sino não entra na entrada: só o mapa e o `lazy()`. As abas e os painéis ficam em pedaços
@@ -120,7 +133,7 @@ entregar: nenhuma pose da onça é desenhada aqui.
 | Criados | grade | filtros à direita do título; grupos por turma, em `Linha` |
 | Documento | formulário, com a folha de 760 sobre `mesa` | abas Conteúdo · Versões adaptadas · Na turma; interruptor "Gabarito" |
 | Turmas | grade | faixa "Confirme sua turma"; cartões; contestação no `PainelLado` |
-| Turma aberta | grade | Hoje · Atividades · Alunos |
+| Turma aberta | grade | Hoje · Atividades · Alunos; Hoje com o aviso de atenção humana sem nome (§7b); Criados e Alunos paginam com "Ver mais", que basta no Chromebook fraco |
 | Aprovar | leitura | números do lote; Destaques · Outras · Resumo; barra presa com o oficial |
 
 **Nomes que não mudam** (contrato com o e2e): um `<main>`; `h1` "Turmas", "Ferramentas", "Turma <nome>", "Revisar a
@@ -135,7 +148,10 @@ para o Seu time" vira "Voltar para a turma"; "Ver e decidir em Seu time" vira "V
 do time perde "Seu time: ".
 
 **Texto da pessoa.** O que a professora escreve (pedido, contestação, justificativa) mora no estado da página:
-releitura e sessão vencida não o apagam.
+releitura e sessão vencida não o apagam; sai junto quando entra outra pessoa.
+
+**Acesso gerado.** O diálogo de "Convidar alunos" nesse passo é projetado: enquanto estiver aberto, nada da página de
+trás fica legível. O passo é uma **tela inteira**: o diálogo ocupa a janela (largura e altura), com fundo `fundo` por classe de token, e nenhuma cor nova no `::backdrop` (a guarda de cor da X1 só aceita cor no véu do diálogo). O e2e mede a caixa e o fundo calculado do `<dialog>`, nos dois temas, e não `toBeVisible` (13.0).
 
 **Chromebook e celular.** Nenhuma biblioteca nova. A 360 px, os filtros viram um botão "Filtrar" com diálogo, o
 painel ao lado vira folha de baixo, e a barra presa de Aprovar fica acima da barra de baixo da casca.
@@ -145,9 +161,9 @@ painel ao lado vira folha de baixo, e a barra presa de Aprovar fica acima da bar
 | Camada | O que será testado |
 |---|---|
 | Unidade | `filaDoProfessor`, tipo a tipo, com o contestado, as duas disciplinas na mesma turma e "100 ou mais"; filtros de Criados; estado da atividade aplicada; "Como vai sair"; vocabulário; a aba pelo endereço |
-| Componente (jsdom, `__fixtures__/tela.tsx`) | por tela: carregando, vazio, erro, com dado e o foco depois de cada ação; o sino com leitura parcial e contando as chamadas; o oficial desligado até `podeAprovar` |
-| E2E | um spec por tela, nos dois projetos, com axe e largura; os fluxos `a2-assistente`, `a3-a4-professor` e `roteiro-da-demonstracao`, por fixtures de tela |
-| Isolamento | os de hoje, mais o sino na troca de escola e na segunda pessoa |
+| Componente (jsdom, `__fixtures__/tela.tsx`) | por tela: carregando, vazio, erro, com dado e o foco depois de cada ação; o oficial desligado até `podeAprovar`. O sino, contando as chamadas: leitura parcial; recusa na 3ª leitura; 14 turmas em `incompleto`; dois tempos com o `focusManager` e o `onlineManager` (zero chamadas, e o controle relê); retry e "Atualizar" por chave exata; `JSON.stringify` do `QueryCache` sem nome. Hoje: aos 15 s sai nova leitura; recém-aberta, sem nome no DOM; sem `?ver=tutor`, nenhuma rota nominal além dos sinais |
+| E2E | um spec por tela, nos dois projetos, com axe e largura; entrega decidida em outra aba; a coordenação na mesma aba sem leituras da professora; Hoje sem nome; "Acesso gerado" sem nome nem acerto legível; os fluxos `a2-assistente`, `a3-a4-professor` e `roteiro-da-demonstracao`, por fixtures de tela |
+| Isolamento | os de hoje, mais o sino na troca de escola e na segunda pessoa; Criados com artefato na turma de B (o título dele não aparece com `?turma=` de B) |
 
 **A separação dos specs** (tarefa 2.0) move casos sem mudar título nem asserção: a contagem de `test(` em `e2e/` é
 conferida antes e depois.
@@ -170,7 +186,8 @@ conferida antes e depois.
 - `⚠️ NÃO VERIFICADO` — a web nunca leu `GET /v1/turmas/:id/alunos` como professor, e a API devolve em ordem de
   id. Saída: a 12.0 ordena por nome e confere a rota em `apps/api/test/turma-acesso.int.test.ts`
 - `⚠️ NÃO VERIFICADO` — como o teste do build nomeia o pedaço de `componentes/sino/`. Saída: `PECAS_FORA_DA_ENTRADA`
-- `⚠️ NÃO VERIFICADO` — o limite por usuário das leituras do sino. Saída: a série (seção 7c)
+- `⚠️ NÃO VERIFICADO` — o limite por usuário das leituras do sino. Saída: a série de no máximo 12 turmas (seção 7c), a conta de cerca de 28 leituras por minuto contra 120, e a parada na primeira recusa
+- **Decisão por delegação, que o Joaquim revê:** o `conformidade-reviewer` queria o nome, a hora e o que fazer da atenção humana em Hoje sem abrir painel; o `privacy-guardian` vetou o nome em Hoje (D34, D36, art. 14). Fechou o mais restritivo: aviso sem painel, sem nome; nome só por "Ver quem". Também por delegação: o sino não relê por foco, como na X2
 
 ## 13. Riscos técnicos
 

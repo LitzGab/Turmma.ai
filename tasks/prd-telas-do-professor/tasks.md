@@ -12,9 +12,10 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
 - [ ] **1.0 — O sino mostra à professora o que espera por ela**
   - [ ] 1.1 A peça `Sino`: a da X2, se já existir em `componentes/`; senão, criada com a lista por prop
   - [ ] 1.2 `fila-do-professor.ts`: os quatro tipos de item, agrupados por turma; `esperandoVoce` muda de casa
-  - [ ] 1.3 `consultaContagemDePedidos`, que guarda só o número; as leituras por turma em série
+  - [ ] 1.3 `consultaContagemDePedidos`, que guarda só o número; as leituras por turma em série, até 12 por nome, e o `incompleto` além disso
+  - [ ] 1.3a A releitura do sino como na X2: sem foco, reconexão nem tempo; "Atualizar" e "Tentar de novo" por chave exata
   - [ ] 1.4 `SinoDoProfessor` e o mapa `sino-do-papel.ts`, montados na casca por `lazy()`; a seção da galeria
-  - [ ] 1.5 Testes: a conta, tipo a tipo; os estados e a leitura parcial; nenhuma releitura por tempo; contador sem animação; troca de escola e segunda pessoa
+  - [ ] 1.5 Testes: a conta, tipo a tipo; os estados e a leitura parcial; nenhuma releitura por tempo, foco ou reconexão; mais de 12 turmas; recusa por limite; permissão; entrega decidida em outra aba; contador sem animação; troca de escola e segunda pessoa
 
 - [ ] **2.0 — A lateral do professor fica com Início, Turmas e Ferramentas, e "Seu time" sai dela**
   - [ ] 2.1 `navegacao.ts`: a ordem da D80 e `SEU_TIME` vazio; a casca e `itens-da-lateral` sem o grupo
@@ -64,7 +65,7 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [ ] 10.1 `Turma.tsx`: Hoje, Atividades e Alunos no endereço; os blocos de hoje mudam de aba sem mudar de conteúdo ("Por aluno" e o acesso vão para Alunos; "Atividades da turma", para Atividades); a tarefa liga as três abas e cria `AtividadesDaTurma.tsx` e `AlunosDaTurma.tsx` como cascas, que a 11.0 e a 12.0 preenchem sem tocar em `Turma.tsx`
   - [ ] 10.2 `TurmaHoje.tsx`: a atenção humana, os sinais, o acerto por habilidade e o painel por aluno
   - [ ] 10.3 `Tutor.tsx` vira redirecionamento; a fixture `professor/tutor.ts` aponta para Hoje
-  - [ ] 10.4 Testes: a aba pelo endereço; os estados de Hoje; nada abre conversa de aluno; o endereço antigo do Tutor
+  - [ ] 10.4 Testes: a aba pelo endereço; os estados de Hoje; Hoje relê aos 15 s e não mostra nome; sem painel, sem rota nominal; nada abre conversa de aluno; o endereço antigo do Tutor
 
 - [ ] **11.0 — Turma › Atividades**
   - [ ] 11.1 `AtividadesDaTurma.tsx`: as linhas com estado, o filtro e o painel da atividade
@@ -79,7 +80,7 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
 - [ ] **13.0 — "Convidar alunos" num diálogo**
   - [ ] 13.1 `ConvidarAlunos.tsx`: o acesso da turma em passos de um diálogo só
   - [ ] 13.2 `?convidar=1` e o convite depois de confirmar a turma
-  - [ ] 13.3 Testes: os nove casos do acesso, pelo diálogo; o link e o código uma vez
+  - [ ] 13.3 Testes: os nove casos do acesso, pelo diálogo; o link e o código uma vez; nada legível atrás de "Acesso gerado"
 
 - [ ] **14.0 — Aprovar na pele nova**
   - [ ] 14.1 `Aprovar.tsx`: os números, as abas e o destaque no painel ao lado
@@ -111,7 +112,7 @@ A 5.0 e a 9.0 não correm juntas: as duas editam `e2e/areas.spec.ts`.
 
 | Tarefa | Subagentes obrigatórios |
 |---|---|
-| 1.0 | `frontend-reviewer`, `privacy-guardian`, `infra-guardian` |
+| 1.0 | `frontend-reviewer`, `privacy-guardian`, `infra-guardian`, `tenancy-guardian` |
 | 2.0 | `frontend-reviewer`, `conformidade-reviewer` |
 | 3.0 | `frontend-reviewer`, `conformidade-reviewer` |
 | 4.0 | `frontend-reviewer`, `conformidade-reviewer` |
@@ -120,7 +121,7 @@ A 5.0 e a 9.0 não correm juntas: as duas editam `e2e/areas.spec.ts`.
 | 7.0 | `frontend-reviewer` |
 | 8.0 | `frontend-reviewer`, `conformidade-reviewer` |
 | 9.0 | `frontend-reviewer`, `privacy-guardian` |
-| 10.0 | `frontend-reviewer`, `conformidade-reviewer`, `privacy-guardian` |
+| 10.0 | `frontend-reviewer`, `conformidade-reviewer`, `privacy-guardian`, `tenancy-guardian` |
 | 11.0 | `frontend-reviewer`, `conformidade-reviewer` |
 | 12.0 | `frontend-reviewer`, `privacy-guardian`, `tenancy-guardian` |
 | 13.0 | `frontend-reviewer`, `privacy-guardian` |
