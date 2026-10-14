@@ -552,6 +552,25 @@ regra 70 com o texto final do CNE publicado.
 **Pronto quando:** nenhum caminho grava `Nota` sem autor humano, o lote não libera sem abrir
 os destaques, e as notas aprovadas saem num arquivo que o sistema de gestão importa.
 
+## F18 — `producao-na-vm` [ ]
+**Depende de:** F0 (concluída). Corre em paralelo com F2 a F5
+
+A produção do Turmma passa a rodar em **VM própria** (máquina AM5 com Proxmox, operada pelo
+Joaquim), em vez de nascer no provedor da D42 — decisão de 14/10/2026 que **revisa D31 e
+D42** (registro com `/registrar-decisao` pendente; homologação em aberto, pode nem existir).
+Três fatias: **1.** a VM de produção — compose de sempre, só a borda exposta pelo túnel da
+Cloudflare com Access, deploy e rollback ensaiados, dado sintético enquanto o portão não
+abre (regra 20); **2.** backup diário fora da VM, snapshot antes de deploy e restauração
+executada de verdade; **3.** o **painel de recursos** no Grafana (`infra/grafana`), com CPU,
+memória e disco por VM e por contêiner, alertas (disco 80%, memória 90%, CPU 85% no horário
+letivo, backup vencido) com runbook e aviso no celular. **PRD ainda não criado** — entra
+quando a fase começar.
+
+**Pronto quando:** a VM sobe sozinha depois de um desligamento e `/saude` responde em até
+5 min; o deploy troca uma API de cada vez e o rollback volta em 2 min; uma restauração de
+backup foi executada em VM nova e cronometrada; e o painel de recursos mostra as três VMs
+com alerta ensaiado chegando ao celular.
+
 ## F16 — `hardening-e-conformidade` [ ]
 **Depende de:** F15, F17
 
@@ -610,3 +629,5 @@ escolhido nesse momento (D31, D42).
 - F17 (nota oficial) corre depois de F6 e F11, em paralelo com F12 a F15
 - O teste de carga começa no F0 com um cenário mínimo e cresce a cada funcionalidade do
   caminho quente (F2, F5, F6, F9, F10), em vez de nascer inteiro no F16
+- F18 (`producao-na-vm`) corre em paralelo com F2 a F5, não depende de nenhuma delas e é o
+  que substitui o staging da D31 enquanto a decisão revisada não é registrada
