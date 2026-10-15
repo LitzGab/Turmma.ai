@@ -138,9 +138,16 @@ describe('MotorFormulario', () => {
       expect(classesDo(rotulo).has('min-h-16'), '64 px').toBe(true)
       expect(classesDo(rotulo).has('border-2')).toBe(true)
       expect(classesDo(rotulo).has('degrau-borda'), 'desmarcada, o degrau é o da borda').toBe(true)
-      // O anel sai do foco do teclado (`:focus-visible`), e não do `focus-within`, que também acende no clique do mouse.
-      expect([...classesDo(rotulo)].some((classe) => classe.startsWith('has-[:focus-visible]:outline')), 'o anel só no foco do teclado').toBe(true)
-      expect([...classesDo(rotulo)].filter((classe) => classe.startsWith('focus-within:')), 'sem `focus-within`').toEqual([])
+      // O anel é do rótulo, por `focus-within`, como o da `Opcao` (4.0: aparece também no clique, decisão registrada). Nada de
+      // `has-*` (`has-[...]`, `has-checked:`, `group-has-*`): o Tailwind o gera como `:has()`, que não existe antes do Chrome 105 e que o E5 do `casca.spec.ts` proíbe.
+      const classesDoRotulo = [...classesDo(rotulo)]
+      expect(classesDoRotulo.filter((classe) => classe.startsWith('focus-within:outline')).sort(), 'o anel por focus-within').toEqual([
+        'focus-within:outline-3',
+        'focus-within:outline-foco',
+        'focus-within:outline-offset-2',
+        'focus-within:outline-solid',
+      ])
+      expect(classesDoRotulo.filter((classe) => classe.includes('has-') || classe.includes(':has(')), 'sem `:has()`').toEqual([])
     }
     // Marcada, a caixa vira azul (borda, fundo e texto da família) e leva o degrau azul, além do visto nativo.
     await usuario.click(caixas[0] as HTMLElement)

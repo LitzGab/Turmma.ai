@@ -59,10 +59,11 @@ function CampoDeVarias({ campo, marcados, erro, aoMudar }: { campo: CampoDeMulti
           const marcado = marcados.includes(opcao.valor)
           // O `<input>` é o nativo, à vista: quem o marca por teclado, por toque ou por leitor de tela não depende de peça nossa. A
           // caixa em volta é a da `Opcao` (borda de 2 px, degrau, 64 px), com a face azul que diz "marcada" além do visto nativo.
+          // O anel é do rótulo, por `focus-within`, como o da `Opcao` (4.0): acende também no clique, e nada depende de `:has()`.
           return (
             <label
               key={opcao.valor}
-              className={`degrau flex min-h-16 min-w-0 cursor-pointer items-center gap-3 rounded-controle border-2 px-3 py-2 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-foco ${
+              className={`degrau flex min-h-16 min-w-0 cursor-pointer items-center gap-3 rounded-controle border-2 px-3 py-2 focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-solid focus-within:outline-foco ${
                 marcado ? 'border-azul-borda bg-azul-claro text-azul-texto degrau-azul' : 'border-borda bg-fundo text-tinta hover:bg-fundo-suave degrau-borda'
               }`}
             >
