@@ -1,7 +1,9 @@
+import { AxeBuilder } from '@axe-core/playwright'
+import type { Page } from '@playwright/test'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { conferirAssinaturas } from './__fixtures__/avatar.ts'
 import { abrirGaleria, acionar, caixa, conferirQueCabeNaJanela, conferirQueOFocoNaoCaiu, desenho, secao } from './__fixtures__/galeria.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, corDoToken, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, corDoToken, focoVisivel, IMPACTOS_QUE_REPROVAM, larguraExcedente, TAGS_WCAG, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * As peças do MVP de apresentação (`docs/mvp-rapido.md` 9.3; `docs/interface.md` 11.1 e 11.3), na galeria (`/galeria`),
@@ -14,7 +16,7 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, corDoToken, focoVisivel, larguraExcedente, 
 
 /** Os hex da 9.1 do `docs/interface.md`, como o navegador os devolve no estilo calculado: só os que este arquivo afirma. */
 const RGB = {
-  caramelo: 'rgb(232, 115, 46)',
+  laranja: 'rgb(232, 115, 46)',
   grafite: 'rgb(51, 51, 51)',
   superficie: 'rgb(255, 255, 255)',
   iaFundo: 'rgb(240, 240, 240)',
@@ -128,7 +130,13 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     const [desenhoDaFerramenta, desenhoDaConversa] = [await desenho(ferramenta), await desenho(conversa)]
     expect(desenhoDaFerramenta).toEqual(desenhoDaConversa)
     expect(desenhoDaFerramenta.fundo).toBe(RGB.superficie)
-    expect([RGB.caramelo, RGB.grafite]).not.toContain(desenhoDaFerramenta.fundo)
+    expect([RGB.laranja, RGB.grafite]).not.toContain(desenhoDaFerramenta.fundo)
+    // A borda de 2 px na `borda` e o degrau de 4 px na mesma cor, iguais nas duas: a peça se aperta, e nenhuma pesa mais.
+    const borda = await corDoToken(page, 'borda')
+    expect(desenhoDaFerramenta.borda).toBe(`2px solid ${borda}`)
+    expect(desenhoDaFerramenta.peso).toBe(desenhoDaConversa.peso)
+    const degraus = await opcoes.evaluateAll((botoes) => botoes.map((botao) => getComputedStyle(botao).boxShadow))
+    expect(degraus).toEqual([`${borda} 0px 4px 0px 0px`, `${borda} 0px 4px 0px 0px`])
     // Nenhuma vem com o foco: o Enter de quem chega não escolhe por ela.
     expect(await opcoes.evaluateAll((botoes) => botoes.some((botao) => botao === document.activeElement))).toBe(false)
 
@@ -142,6 +150,29 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await conferirQueOFocoNaoCaiu(page)
     // Uma linha: o cartão de duas opções deu lugar a uma pílula da altura de um texto.
     expect((await caixa(feita)).height).toBeLessThan(medidaDaConversa.height)
+  })
+
+  test('a Escolha desligada e a escolhida: as duas opções desligam juntas, sem degrau e sem cor de ação, e a linha da escolha é uma só', async ({ page }) => {
+    await abrirGaleria(page)
+    const estados = secao(page, 'escolha-estados')
+    const desligada = estados.getByRole('group', { name: 'Posso montar o plano de aula com a ferramenta, ou só conversar.' })
+    const opcoes = desligada.getByRole('button')
+    await expect(opcoes).toHaveCount(2)
+    await expect(opcoes.first()).toBeDisabled()
+    await expect(opcoes.last()).toBeDisabled()
+    const [primeira, segunda] = [await desenho(opcoes.first()), await desenho(opcoes.last())]
+    expect(primeira).toEqual(segunda)
+    // Peça desligada é outro desenho: face `borda`, texto `apoio`, sem degrau (`docs/interface.md` 9.3).
+    const [borda, apoio] = await Promise.all([corDoToken(page, 'borda'), corDoToken(page, 'apoio')])
+    expect(primeira).toMatchObject({ fundo: borda, texto: apoio })
+    expect(await opcoes.evaluateAll((botoes) => botoes.map((botao) => getComputedStyle(botao).boxShadow))).toEqual(['none', 'none'])
+    // A descrição da opção desligada também é `apoio`: o `sutil` sobre a face `borda` não chega a 4,5:1.
+    expect(await opcoes.first().locator('span span').last().evaluate((no) => getComputedStyle(no).color)).toBe(apoio)
+
+    const feita = estados.locator('[data-escolha="feita"]')
+    await expect(feita).toHaveText('Você escolheu: Só conversar')
+    await expect(estados.locator('[data-escolha="aberta"]')).toHaveCount(1)
+    expect(await desenho(feita)).toMatchObject({ borda: `2px solid ${borda}` })
   })
 
   test('o texto da IA entra como texto, com os chips no fim; o ChipFonte abre pelo teclado e pelo toque e fecha quando o foco sai', async ({ page, hasTouch }) => {
@@ -164,6 +195,9 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     const chips = texto.getByRole('button', { name: /^Fonte: / })
     await expect(chips).toHaveCount(3)
     await expect(chips).toHaveText([/p\. 142$/, /p\. 145$/, /p\. 151$/])
+    // A pílula de 28 px, com a borda de 2 px e o canto inteiro: o alvo de 24 px do piso (WCAG 2.5.8) com folga.
+    expect(await desenho(chips.first())).toMatchObject({ borda: `2px solid ${await corDoToken(page, 'borda')}`, peso: '700', fonte: '15px' })
+    expect((await caixa(chips.first())).height).toBe(28)
 
     const chip = page.getByRole('button', { name: 'Fonte: Química 2, cap. 7, p. 142' })
     await expect(chip).toHaveAttribute('aria-expanded', 'false')
@@ -249,7 +283,7 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
       await expect(enviado).toHaveText('')
       await expect.poll(async () => (await caixa(campo)).height).toBeGreaterThan(alturaDeUmaLinha)
       // O botão de enviar é o primário da tela, redondo, com 44 px.
-      expect(await desenho(enviar)).toMatchObject({ fundo: RGB.caramelo })
+      expect(await desenho(enviar)).toMatchObject({ fundo: RGB.laranja })
       const medidaDoEnviar = await caixa(enviar)
       expect(medidaDoEnviar.width).toBe(ALVO_DE_TOQUE_PRINCIPAL_PX)
       expect(medidaDoEnviar.height).toBe(ALVO_DE_TOQUE_PRINCIPAL_PX)
@@ -267,8 +301,10 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await page.keyboard.type('outro pedido')
     await page.keyboard.press('Enter')
     await expect(enviado).toHaveText('Enviado: monta uma atividade de estequiometria')
-    // O "Parar" ligado e o desligado não são o mesmo desenho; aqui ele está ligado, com o contorno do secundário.
-    expect(await desenho(parar)).toMatchObject({ fundo: RGB.superficie })
+    // O "Parar" ligado e o desligado não são o mesmo desenho; aqui ele está ligado, com o contorno do secundário, e não o
+    // oficial: parar é sair, e sair nunca é menor nem mais enfeitado que entrar (D59).
+    expect(await desenho(parar)).toMatchObject({ fundo: RGB.superficie, borda: `2px solid ${await corDoToken(page, 'borda')}` })
+    expect((await caixa(parar)).height).toBe(ALVO_DE_TOQUE_PRINCIPAL_PX)
 
     // Parar pelo teclado: só para — o pedido escrito não sai junto —, e o foco volta ao campo em vez de cair no `body`.
     await parar.focus()
@@ -306,7 +342,7 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     const motor = secao(page, 'motor')
     const gerar = motor.getByRole('button', { name: 'Gerar atividade' })
     // O botão que gera é o primário, e o de cancelar tem o mesmo tamanho.
-    expect(await desenho(gerar)).toMatchObject({ fundo: RGB.caramelo })
+    expect(await desenho(gerar)).toMatchObject({ fundo: RGB.laranja })
     expect((await caixa(motor.getByRole('button', { name: 'Cancelar' }))).height).toBe((await caixa(gerar)).height)
     // O que é obrigatório está escrito no rótulo e dito ao leitor de tela; o opcional não leva marca.
     await expect(motor.getByText('Turma (obrigatório)')).toBeVisible()
@@ -366,4 +402,85 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     expect(JSON.parse((await adaptacao.locator('[data-pedido]').textContent()) ?? '')).toEqual({ tipos: ['fonte_ampliada', 'tempo_adicional'] })
     expect(await larguraExcedente(page)).toBe(0)
   })
+
+  test('o exemplo do campo vazio aparece inteiro: a caixa mede o exemplo, e não só o que se digita', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    for (const [nome, rotulo] of [
+      ['caixa-pedido', 'Pedido ao Assistente de ensino'],
+      ['caixa-do-aluno', 'Pergunta para o Tutor'],
+    ] as const) {
+      const campo = secao(page, nome).getByLabel(rotulo)
+      const exemplo = (await campo.getAttribute('placeholder')) ?? ''
+      expect(exemplo.length, nome).toBeGreaterThan(10)
+
+      // O campo vazio é tão alto quanto o mesmo texto digitado: o `scrollHeight` não conta o exemplo, e a caixa o mede.
+      const vazio = (await caixa(campo)).height
+      await campo.fill('x')
+      const deUmaLinha = (await caixa(campo)).height
+      await campo.fill(exemplo)
+      await expect.poll(async () => (await caixa(campo)).height, nome).toBeGreaterThanOrEqual(deUmaLinha)
+      const digitado = (await caixa(campo)).height
+      expect(vazio, nome).toBeGreaterThanOrEqual(digitado)
+      // Nenhuma linha do exemplo fica fora do campo: o que a caixa mostra cobre o que o exemplo ocupa.
+      expect(await campo.evaluate((no) => no.scrollHeight <= no.clientHeight), nome).toBe(true)
+      // A 360 px a caixa tem de ser o caso que quebra o exemplo em mais de uma linha: sem isto o teste passaria vazio.
+      if (hasTouch && nome === 'caixa-pedido') expect(vazio, 'o exemplo deveria quebrar a 360 px').toBeGreaterThan(deUmaLinha)
+
+      // Apagar o texto devolve o campo à altura do exemplo.
+      await campo.fill('')
+      await expect.poll(async () => (await caixa(campo)).height, nome).toBe(vazio)
+    }
+
+    // A medida não escreve no campo em uso: quem apaga o pedido inteiro ainda desfaz com Ctrl+Z (o histórico do campo,
+    // que trocar o valor por código apagaria).
+    const campo = secao(page, 'caixa-pedido').getByLabel('Pedido ao Assistente de ensino')
+    await campo.click()
+    await page.keyboard.type('monta uma atividade de química')
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    await expect(campo).toHaveValue('')
+    await page.keyboard.press('Control+Z')
+    await expect(campo).toHaveValue('monta uma atividade de química')
+    expect(await larguraExcedente(page)).toBe(0)
+  })
+
+  for (const tema of ['claro', 'escuro'] as const) {
+    test(`as peças da conversa, no tema ${tema}: sem violação grave e com o alvo de toque do projeto`, async ({ page, hasTouch }) => {
+      await abrirGaleria(page)
+      await page.evaluate((valor) => document.documentElement.setAttribute('data-tema', valor), tema)
+      const secoes = ['selo-de-ia', 'conversa', 'escolha-estados', 'caixa-pedido', 'caixa-do-aluno', 'caixa-desligada', 'pagina-mini', 'motor', 'motor-com-falha', 'motor-da-adaptacao']
+      expect(await violacoesDasSecoes(page, secoes)).toEqual([])
+
+      // Abre o chip e a lista de fontes: o cartão e a lista também passam no axe, nos dois temas.
+      const conversa = secao(page, 'conversa')
+      await conversa.getByRole('button', { name: 'Fonte: Química 2, cap. 7, p. 142' }).click()
+      await conversa.locator('summary').click()
+      expect(await violacoesDasSecoes(page, ['conversa'])).toEqual([])
+      await page.keyboard.press('Escape')
+
+      // O alvo: 44 px no celular em toda peça de ação das seções, **inclusive os gatilhos de menu** (o chip, que corre
+      // dentro da linha, tem os 28 px da pílula e é medido à parte); no computador, o piso de 24 px (WCAG 2.5.8).
+      const minimo = hasTouch ? ALVO_DE_TOQUE_PRINCIPAL_PX : 24
+      for (const nome of secoes) {
+        const alvos = secao(page, nome).locator('button:not([data-texto-da-ia] button), summary, label:has(input), select, textarea, input:not([type="checkbox"])')
+        for (const alvo of await alvos.all()) {
+          const medida = await caixa(alvo)
+          const quem = `${nome}: ${(await alvo.textContent())?.slice(0, 30) ?? (await alvo.getAttribute('aria-label')) ?? ''}`
+          expect(medida.height, quem).toBeGreaterThanOrEqual(minimo)
+          expect(medida.width, quem).toBeGreaterThanOrEqual(minimo)
+        }
+      }
+      for (const chip of await secao(page, 'conversa').locator('[data-texto-da-ia] button[aria-expanded]').all()) expect((await caixa(chip)).height).toBeGreaterThanOrEqual(28)
+    })
+  }
 })
+
+/** O axe, só nas seções pedidas: as peças desta tarefa, e não a galeria inteira, que é de outras tarefas. */
+async function violacoesDasSecoes(page: Page, nomes: readonly string[]): Promise<{ regra: string; impacto: string; alvos: string[] }[]> {
+  let construtor = new AxeBuilder({ page }).withTags([...TAGS_WCAG])
+  for (const nome of nomes) construtor = construtor.include(`[data-galeria="${nome}"]`)
+  const resultado = await construtor.analyze()
+  return resultado.violations
+    .filter((violacao) => (IMPACTOS_QUE_REPROVAM as readonly string[]).includes(violacao.impact ?? ''))
+    .map((violacao) => ({ regra: violacao.id, impacto: violacao.impact ?? '', alvos: violacao.nodes.map((no) => no.target.join(' ')) }))
+}

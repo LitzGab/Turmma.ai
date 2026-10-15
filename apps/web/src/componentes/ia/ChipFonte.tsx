@@ -14,7 +14,8 @@ interface PropsDoChip {
 const ALTURA_DO_CARTAO = 220
 
 /**
- * O chip de fonte, `p. 142`, dentro do texto da IA (`docs/interface.md` 11.3), em família `ia`. Ao ativar, mostra **o
+ * O chip de fonte, `p. 142`, dentro do texto da IA (`docs/interface.md` 10.2 e 11.3), em família `ia`: pílula de 28 px
+ * com a borda de 2 px, sem degrau (ele corre dentro de uma linha de texto, e a margem do degrau a abriria). Ao ativar, mostra **o
  * material, a página e o trecho**: é por aqui que a professora confere, de relance, de onde a questão saiu (D6).
  *
  * - **Abre por clique, por toque e pelo teclado** (Enter ou Espaço), e não por hover: no Chromebook de toque e no
@@ -22,11 +23,12 @@ const ALTURA_DO_CARTAO = 220
  *   ordem de leitura.
  * - **Fecha** pelo mesmo botão, pelo Esc (com o foco de volta no chip), pelo toque fora e **quando o foco sai dele**: quem
  *   segue pelo Tab não deixa um cartão aberto para trás, cobrindo o texto.
- * - **Cabe dentro de um parágrafo**: é feito só de `span`, e o alvo tem 24 px de altura, a da linha do texto.
+ * - **Cabe dentro de um parágrafo**: é feito só de `span`, e o alvo tem 28 px de altura, acima dos 24 px do piso.
  * - **Não passa da janela a 360 px nem é cortado** pela lista que rola: a posição é fixa na janela, medida na abertura
  *   (`flutuante.ts`). Quando a conversa rola, o cartão fecha.
  *
- * Fonte de fora leva outro chip, "da web", de desenho diferente (D68), que nasce com a busca na web, fora do MVP.
+ * Fonte de fora leva outro chip, "da web", de desenho diferente (a mesma pílula, com a borda tracejada; D68), que nasce
+ * com a busca na web (F9): hoje nenhuma citação vem da web, e a peça não desenha o que não tem dado.
  */
 export function ChipFonte({ citacao, materiais }: PropsDoChip) {
   const [aberto, definirAberto] = useState(false)
@@ -68,7 +70,7 @@ export function ChipFonte({ citacao, materiais }: PropsDoChip) {
         aria-expanded={aberto}
         {...(aberto ? { 'aria-controls': idDoCartao } : {})}
         onClick={() => definirAberto((estava) => !estava)}
-        className={`inline-flex min-h-6 min-w-6 items-center gap-1 rounded-lg px-2 text-[13px] leading-none font-medium whitespace-nowrap text-ia hover:bg-realce ${aberto ? 'bg-realce' : 'bg-ia-cx'}`}
+        className={`inline-flex min-h-7 min-w-7 items-center justify-center gap-1 rounded-full border-2 border-borda t-apoio px-2.5 leading-none font-bold whitespace-nowrap text-ia hover:bg-realce ${aberto ? 'bg-realce' : 'bg-ia-cx'}`}
       >
         <FileText aria-hidden="true" size={12} strokeWidth={2} className="shrink-0" />
         <span className="sr-only">{nome.slice(0, nome.length - visivel.length)}</span>
@@ -84,7 +86,7 @@ export function ChipFonte({ citacao, materiais }: PropsDoChip) {
           style={estiloDoFlutuante(posicao)}
           className="fixed z-30 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-1 rounded-cartao bg-superficie p-4 text-left text-sm font-normal whitespace-normal shadow-flutua"
         >
-          <span className="text-[13px] font-medium text-sutil">Material da escola</span>
+          <span className="text-sm font-bold text-sutil">Material da escola</span>
           <span className="font-semibold break-words text-tinta">{tituloDoMaterial(citacao.materialId, materiais)}</span>
           <span className="text-sutil">Página {citacao.pagina}</span>
           <span className="mt-2 rounded-linha bg-realce-suave p-3 leading-relaxed break-words text-apoio">“{citacao.trecho}”</span>

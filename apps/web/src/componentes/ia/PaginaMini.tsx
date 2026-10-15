@@ -12,20 +12,21 @@ interface PropsDaPaginaMini {
  * o texto extraído do PDF, não o arquivo (`docs/mvp-rapido.md` 4, item 3), e o que não tem licença para estar aqui não
  * aparece nem em miniatura (D5).
  *
- * Nada menor que 12 px (9.2): a folha corta o trecho que não couber, em vez de encolher a letra até não dar para ler.
+ * Nada menor que 14 px, o piso da 9.2: a folha corta o trecho que não couber, em vez de encolher a letra até não dar
+ * para ler. A borda é de 2 px, como a de toda peça (9.3).
  */
 export function PaginaMini({ citacao, materiais }: PropsDaPaginaMini) {
   const material = tituloDoMaterial(citacao.materialId, materiais)
   return (
     <figure className="w-40 max-w-full shrink-0">
-      <div className="flex aspect-[3/4] flex-col gap-2 overflow-hidden rounded-linha border border-borda-campo bg-superficie p-3">
-        <p className="shrink-0 truncate border-b border-linha pb-1.5 text-xs font-medium text-sutil">{material}</p>
-        <p className="min-h-0 flex-1 overflow-hidden text-xs leading-snug break-words text-apoio">{citacao.trecho}</p>
-        <p aria-hidden="true" className="shrink-0 text-right text-xs text-sutil tabular-nums">
+      <div className="flex aspect-[3/4] flex-col gap-2 overflow-hidden rounded-linha border-2 border-borda bg-superficie p-3">
+        <p className="shrink-0 truncate border-b-2 border-borda pb-1.5 text-sm font-bold text-sutil">{material}</p>
+        <p className="min-h-0 flex-1 overflow-hidden text-sm leading-snug break-words text-apoio">{citacao.trecho}</p>
+        <p aria-hidden="true" className="shrink-0 text-right text-sm text-sutil tabular-nums">
           {citacao.pagina}
         </p>
       </div>
-      <figcaption className="mt-1.5 text-sm break-words text-sutil">
+      <figcaption className="t-apoio mt-1.5 break-words text-sutil">
         Página {citacao.pagina} · {material}
       </figcaption>
     </figure>

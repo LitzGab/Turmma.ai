@@ -43,14 +43,14 @@ export function MensagemIA({ children, aprovacao, acoes, variante = 'coluna', ..
       <article className="flex min-w-0 flex-col items-start gap-1.5">
         {/* O cabeçalho do balão é a assinatura inteira: o avatar, o nome da função e o selo, num bloco só (RF10). */}
         <AssinaturaIA {...quem} />
-        <div className="max-w-full min-w-0 rounded-cartao border border-linha bg-superficie px-4 py-3 text-base leading-normal break-words text-tinta sm:max-w-[85%]">{children}</div>
+        <div className="t-corpo max-w-full min-w-0 rounded-cartao border-2 border-borda bg-superficie px-4 py-3 break-words text-tinta sm:max-w-[85%]">{children}</div>
         {rodape}
       </article>
     )
   return (
     <article className="flex min-w-0 flex-col gap-2">
       <AssinaturaIA {...quem} />
-      <div className="min-w-0 text-base leading-relaxed break-words text-tinta">{children}</div>
+      <div className="t-corpo min-w-0 break-words text-tinta">{children}</div>
       {rodape}
     </article>
   )
@@ -62,13 +62,14 @@ interface PropsDaMensagemPessoa {
 }
 
 /**
- * A mensagem de quem escreve: à direita, em bolha `creme`, como no ChatGPT (11.3). O "Você:" é só para o leitor de
- * tela, que não vê de que lado a bolha está.
+ * A mensagem de quem escreve: à direita, em bolha `fundo-suave` com a borda de 2 px, até 85% da coluna (11.3; 9.3). A
+ * da IA não tem bolha: só a pessoa fala em bolha. O "Você:" é só para o leitor de tela, que não vê de que lado a bolha
+ * está.
  */
 export function MensagemPessoa({ children }: PropsDaMensagemPessoa) {
   return (
     <article className="flex min-w-0 justify-end">
-      <p className="max-w-[85%] min-w-0 rounded-cartao bg-creme px-4 py-2.5 text-base leading-normal break-words whitespace-pre-wrap text-tinta">
+      <p className="t-corpo max-w-[85%] min-w-0 rounded-cartao border-2 border-borda bg-fundo-suave px-4 py-2.5 break-words whitespace-pre-wrap text-tinta">
         <span className="sr-only">Você: </span>
         {children}
       </p>
@@ -91,7 +92,7 @@ export function Pensando({ demorando = false, ...quem }: PropsDoPensando) {
   return (
     <article data-pensando="" className="flex min-w-0 flex-col gap-2">
       <AssinaturaIA {...quem} />
-      <p aria-live="polite" className="min-w-0 text-base break-words text-sutil">
+      <p aria-live="polite" className="t-corpo min-w-0 break-words text-sutil">
         {demorando ? 'Ainda preparando a resposta. Você não precisa pedir de novo.' : 'Preparando a resposta…'}
       </p>
     </article>

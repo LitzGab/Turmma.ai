@@ -796,7 +796,7 @@ tabela e os dois blocos da 9.10. Par novo entra aqui na mesma tarefa que o usa.
 | sutil, realce | `sutil` | `realce` | 4,5 |
 | tinta, realce suave | `tinta` | `realce-suave` | 4,5 |
 | sutil, realce suave | `sutil` | `realce-suave` | 4,5 |
-| balão de quem escreve | `tinta` | `creme` | 4,5 |
+| balão de quem escreve | `tinta` | `fundo-suave` | 4,5 |
 | tinta, painel da entrada | `tinta` | `papel` | 4,5 |
 | sutil, painel da entrada | `sutil` | `papel` | 4,5 |
 | borda de campo, chão | `borda-campo` | `fundo` | 3 |
@@ -1393,7 +1393,7 @@ prova isso (RF6 da X1).
 | `Faixa` (R) | O aviso permanente, que não fecha (D8), na família `info` | `role="note"`. Não tem botão |
 | `BarraRotulada` (R) | Trilho em `ia-cx` (produto), de 12 px e ponta redonda, com o enchimento em `sutil`: a mesma cor nos dois, vazia ou cheia. O texto ("2 de 8") vai fora. Só mede o que tem fim | Só desenho, `aria-hidden` (produto): o valor está escrito ao lado, e `role="progressbar"` o diria duas vezes. Barra de acerto é neutra |
 | `NumeroPainel` (R) | O valor em `t-numero`, o rótulo em `t-selo`, `sutil` | Sem variação "boa" ou "ruim" em cor |
-| As de `componentes/ia/` (R) | O avatar da 9.7; o nome da função em 15 px e 700; o selo "IA" neutro; o chip de página, pílula de 28 px; o chip "da web", com a borda tracejada; a linha de quem aprovou, em `ok` | O chip abre por clique e por teclado |
+| As de `componentes/ia/` (R) | O avatar da 9.7; o nome da função em 15 px e 700; o selo "IA" neutro; o chip de página, pílula de 28 px com borda de 2 px e sem degrau (corre dentro da linha de texto); o chip "da web", com a borda tracejada, que **nasce com a busca na web (F9, D68)**: hoje nenhuma citação vem da web, e a peça não desenha o que não tem dado; a linha de quem aprovou, em `ok`. As duas opções da `Escolha` são uma constante só: borda de 2 px e degrau `borda`, nenhuma na face do primário nem na do oficial. A `CaixaPedido` mede o texto de exemplo, quando vazia, num espelho fora do campo (o campo em uso nunca é escrito, e o desfazer do navegador fica inteiro), para ele aparecer inteiro a 360 px. O "Tentar de novo" do `AvisoFila` é `secundario`: é uma tentativa dentro da conversa, que não decide nada e convive com o primário da caixa de pedido; o `EstadoErro` de página, que é a única ação da tela, usa o primário laranja | O chip abre por clique e por teclado |
 
 **Formulário**
 

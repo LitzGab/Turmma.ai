@@ -63,9 +63,9 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 9.3 A medição da entrada em brotli e a decisão da Tech Spec, seção 7c: os ícones de lugar somam até 4 kB em brotli na entrada; acima disso saem para `lugares-*.svg`, com hash, teto de 6 kB em brotli no `.size-limit.json` e o caso que o reprova em `tools/ci/tamanho-web.test.ts`
   - [x] 9.4 Testes: nome acessível quando o ícone está sozinho; `aria-hidden` ao lado de rótulo; os dois temas; nenhuma cor fora dos tokens além da exceção nomeada
 
-- [ ] **10.0 — As peças da conversa com IA na pele nova**
-  - [ ] 10.1 `CaixaPedido`, `Mensagem`, `Escolha`, `ChipFonte`, `Fontes`, `MotorFormulario`, `AvisoFila`, `LinhaAprovacao`, `PaginaMini` e `TextoDaIA` revestidos
-  - [ ] 10.2 Testes: as duas opções da `Escolha` iguais; "preparando a resposta" sem laço; a pausa do Tutor e o assunto delicado calmos, sem vermelho; a faixa de supervisão presa
+- [x] **10.0 — As peças da conversa com IA na pele nova**
+  - [x] 10.1 `CaixaPedido`, `Mensagem`, `Escolha`, `ChipFonte`, `Fontes`, `MotorFormulario`, `AvisoFila`, `LinhaAprovacao`, `PaginaMini` e `TextoDaIA` revestidos
+  - [x] 10.2 Testes: as duas opções da `Escolha` iguais; "preparando a resposta" sem laço; a pausa do Tutor e o assunto delicado calmos, sem vermelho; a faixa de supervisão presa
 
 - [ ] **11.0 — Toda tela aberta pela lateral mostra o título**
   - [ ] 11.1 `Tela`: título visível, cabeçalho de 64 px e as larguras novas

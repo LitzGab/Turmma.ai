@@ -1,6 +1,6 @@
 import { TAMANHO_MAXIMO_DA_PERGUNTA_AO_TUTOR, TAMANHO_MAXIMO_DO_PEDIDO } from '@educa/shared'
 import { ArrowUp, Square } from 'lucide-react'
-import { useId, useLayoutEffect, useRef, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { Botao } from '../Botao'
 import { PONTEIRO_GROSSO, useMidia } from '../midia'
 import { dicaDoEnter, podeEnviar, teclaEnvia, textoDoPedido, type EstadoDaCaixa } from './caixa-pedido'
@@ -40,14 +40,29 @@ type PropsDaCaixa = {
 const ALTURA_MAXIMA_DO_CAMPO = 192
 
 /**
+ * Ajusta a altura do campo ao que ele mostra, até o teto. O `scrollHeight` **não conta o texto de exemplo**: um exemplo
+ * que quebra em duas linhas a 360 px ficaria cortado numa linha só. Com o campo vazio, a altura é a do **espelho**: um
+ * campo igual, fora da tela, que tem o exemplo como valor. **O campo em uso nunca é escrito pela medida**: trocar o
+ * valor de um campo por código apaga o histórico do desfazer do navegador, e quem apagou o pedido inteiro perderia o
+ * Ctrl+Z.
+ */
+function ajustarAltura(campo: HTMLTextAreaElement, espelho: HTMLTextAreaElement | null): void {
+  campo.style.height = 'auto'
+  const altura = campo.value === '' && espelho !== null ? espelho.scrollHeight : campo.scrollHeight
+  campo.style.height = `${String(Math.min(altura, ALTURA_MAXIMA_DO_CAMPO))}px`
+}
+
+/**
  * A caixa de pedido (`docs/interface.md` 11.2, 11.3 e 11.6): o campo de texto que cresce com o que se escreve, e a barra
- * com o enviar. Canto de 28 px e a sombra suave da 9.3; a borda é a `borda-campo`, e não a linha clara do desenho: campo
- * de formulário de escola precisa de 3:1 de contraste na borda (9.1).
+ * com o enviar. Canto de 16 px e borda de 2 px, sem sombra (9.3); a borda é a `borda-campo`, e não a linha clara do
+ * desenho: campo de formulário de escola precisa de 3:1 de contraste na borda (9.1).
+ * - **O exemplo do campo vazio cabe inteiro**: o campo mede o exemplo num espelho, e não cresce só com o que se digita
+ *   (`ajustarAltura`).
  *
  * - **Com teclado, Enter envia e Shift+Enter quebra a linha**, e o Enter que confirma um acento não envia
  *   (`caixa-pedido.ts`). **Com o dedo, Enter quebra a linha e o envio é o botão**: no teclado virtual não há Shift+Enter.
  * - **O botão de enviar existe sempre**, com 44 px: quem está no toque não depende do Enter (regra 50, item 2a). É o
- *   `primario` da tela, o laranja (8.4, princípio 2).
+ *   `primario` da tela, o laranja (8.4, princípio 2), redondo e com o degrau de 3 px.
  * - **Enquanto a resposta chega, enviar vira "Parar"** (9.5, regra 5), e um segundo pedido não sai.
  * - **Sem texto, não envia**: só espaço não é pedido.
  * - **Enviar e parar devolvem o foco ao campo**: o botão acionado dá lugar ao outro, e o foco não cai no `body` (regra
@@ -57,6 +72,7 @@ const ALTURA_MAXIMA_DO_CAMPO = 192
  */
 export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar, estado = 'pronta', maximo, variante = 'completa', esquerda, direita }: PropsDaCaixa) {
   const campo = useRef<HTMLTextAreaElement>(null)
+  const espelho = useRef<HTMLTextAreaElement>(null)
   const idDoCampo = useId()
   const idDaDica = useId()
   const soTexto = variante === 'so-texto'
@@ -64,11 +80,24 @@ export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar
 
   // O campo cresce com o texto, até o teto, e encolhe de volta quando o texto é enviado ou apagado.
   useLayoutEffect(() => {
-    const atual = campo.current
-    if (atual === null) return
-    atual.style.height = 'auto'
-    atual.style.height = `${String(Math.min(atual.scrollHeight, ALTURA_MAXIMA_DO_CAMPO))}px`
-  }, [valor])
+    if (campo.current !== null) ajustarAltura(campo.current, espelho.current)
+  }, [valor, exemplo])
+
+  // A largura do campo muda (a lateral recolhe, o aparelho gira): o exemplo quebra em outro lugar, e o campo vazio o mede
+  // de novo. Quem se observa é o espelho, e não a caixa: o espelho não muda de altura com o campo, e assim o ajuste
+  // não provoca nova observação no mesmo quadro.
+  useEffect(() => {
+    const medido = espelho.current
+    if (medido === null || typeof ResizeObserver === 'undefined') return
+    let largura = medido.clientWidth
+    const observador = new ResizeObserver(() => {
+      if (medido.clientWidth === largura) return
+      largura = medido.clientWidth
+      if (campo.current !== null) ajustarAltura(campo.current, medido)
+    })
+    observador.observe(medido)
+    return () => observador.disconnect()
+  }, [exemplo])
 
   function enviar(): void {
     const texto = textoDoPedido(valor)
@@ -108,7 +137,7 @@ export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar
       </Botao>
     )
 
-  const entrada = (
+  const campoDeTexto = (
     <textarea
       ref={campo}
       id={idDoCampo}
@@ -122,12 +151,31 @@ export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar
       enterKeyHint={ponteiroGrosso ? 'enter' : 'send'}
       onChange={(evento) => aoMudar(evento.target.value)}
       onKeyDown={aoTeclar}
-      className="block max-h-48 min-h-11 w-full min-w-0 resize-none rounded-controle bg-superficie px-3 py-2.5 text-base text-tinta disabled:text-inativo"
+      className="t-corpo block max-h-48 min-h-11 w-full min-w-0 resize-none rounded-controle bg-campo px-3 py-2.5 text-tinta disabled:bg-fundo-suave disabled:text-apoio"
     />
   )
 
+  // O campo e o espelho dividem a largura: o espelho é do tamanho do campo, fora do fluxo, e só existe para medir o exemplo.
+  const entrada = (
+    <div className={soTexto ? 'relative min-w-0 flex-1' : 'relative min-w-0'}>
+      {campoDeTexto}
+      {exemplo !== undefined && (
+        <textarea
+          ref={espelho}
+          aria-hidden="true"
+          tabIndex={-1}
+          readOnly
+          rows={1}
+          value={exemplo}
+          data-espelho-do-exemplo=""
+          className="t-corpo pointer-events-none invisible absolute inset-x-0 top-0 block min-h-11 w-full min-w-0 resize-none px-3 py-2.5"
+        />
+      )}
+    </div>
+  )
+
   return (
-    <form onSubmit={aoSubmeter} data-caixa-pedido={variante} className="flex min-w-0 flex-col gap-1 rounded-caixa border border-borda-campo bg-superficie p-2 shadow-caixa">
+    <form onSubmit={aoSubmeter} data-caixa-pedido={variante} className="flex min-w-0 flex-col gap-1 rounded-caixa border-2 border-borda-campo bg-campo p-2">
       <label htmlFor={idDoCampo} className="sr-only">
         {rotulo}
       </label>

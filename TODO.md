@@ -1040,6 +1040,34 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       até 1.000 cartões. Cabe numa escola do recorte (dezenas); rever se a alocação de uma escola passar de algumas
       centenas (regra 50, item 1). Junto: a Alocação lê até 1.000 vínculos e 1.000 professores e, acima disso, corta sem
       o aviso que turmas e disciplinas têm (`revisor-geral`)
+- [ ] **O chip "da web" da conversa com IA** (`frontend-reviewer`, 10.0 da X1): a variante de borda tracejada não é
+      desenhada porque nenhuma citação vem da web hoje (D68 nasce com a busca, no F9, desligada por padrão). Quando a
+      busca entrar, o `ChipFonte` ganha a variante, com o link e o `Citacao` que o contrato passar a ter
+      (`docs/interface.md` 10.2)
+- [ ] **Texto de exemplo do `Campo` de linha única truncado a 360 px** (`frontend-reviewer`, 10.0 da X1): o placeholder
+      "Tema" do `MotorFormulario` é cortado no `celular`; o `Campo` não mede o exemplo como a `CaixaPedido` faz. Peça
+      de `componentes/`, fora da 10.0; rever no `/retro` da X1
+- [ ] **A demonstração `data-tabela-estreita` da galeria mostra a tabela em modo largo** (`frontend-reviewer`, 10.0 da
+      X1): a 280 px (`apps/web/src/galeria/secoes/superficies.tsx`) corta "AGENTE E FUNÇÃO". Peça de outra tarefa
+- [ ] **`violacoesDasSecoes` repete o `violacoesGraves`** (`test-engineer`, 10.0 da X1): `e2e/pecas-ia.spec.ts` tem um
+      axe por seções que repete a lógica do helper de `e2e/__fixtures__/verificacoes.ts`; o helper passaria a aceitar a
+      lista de seções. O helper é de outros specs e ficou fora da 10.0
+- [ ] **`CLASSES_DA_OPCAO` da `Escolha` repete a cor do secundário** (`revisor-geral`, 10.0 da X1): a face, a borda e o
+      desligado são os de `botao-secundario.ts` (`COR_DO_SECUNDARIO`, `DESLIGADO`). Exportar de lá e compor evita a
+      cópia que diverge; o arquivo é de todo `Botao` e ficou fora da 10.0
+- [ ] **A caixa desligada do Tutor, quando entrar numa tela** (`conformidade-reviewer`, 10.0 da X1): conferir que o
+      texto do campo desligado não pede ao aluno que espere ou volte (regra 70, item 4b). Hoje só existe na galeria
+- [ ] **A caixa desligada no tema escuro não se distingue pelo fundo** (`frontend-reviewer`, 10.0 da X1): `fundo-suave`
+      e `campo` têm o mesmo valor no escuro (`apps/web/src/estilos.css`), e o campo desligado da `CaixaPedido` só se
+      diferencia pelo texto `apoio`. Dar um sinal que não dependa do fundo; o `Campo` desligado tem o mesmo par de tokens
+      (`docs/interface.md` 10.2). Muda peça que a 6.0 revestiu: levar ao `/retro` da X1
+- [ ] **Teste do desfazer da `CaixaPedido`** (`test-engineer` e `revisor-geral`, 10.0 da X1): em
+      `CaixaPedido.test.tsx › apagar o pedido não escreve no campo`, o teste redefine `value` por cima do rastreador do
+      React, então a regra de verdade é a do Ctrl+Z do e2e (`e2e/pecas-ia.spec.ts`); dizer isso num comentário, e trocar
+      o `toBeLessThanOrEqual(1)` por `escritas` igual a `['']`
+- [ ] **Classes do campo e do espelho da `CaixaPedido` escritas duas vezes** (`revisor-geral`, 10.0 da X1): letra e
+      respiro do `textarea` e do espelho repetem as mesmas classes; uma constante única. Hoje o teste "o espelho é só para
+      medir" segura a igualdade
 
 ## Comercial
 

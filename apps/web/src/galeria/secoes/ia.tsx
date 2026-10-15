@@ -225,12 +225,38 @@ export default function SecoesDeIA() {
         </div>
       </Secao>
 
+      <Secao nome="escolha-estados" titulo="Escolha: desligada e escolhida">
+        {/* A pergunta é outra da de cima: o e2e acha a Escolha aberta pelo nome do grupo, e dois com o mesmo nome o quebrariam. */}
+        <Escolha
+          pergunta="Posso montar o plano de aula com a ferramenta, ou só conversar."
+          opcoes={[
+            { id: 'ferramenta', titulo: 'Usar a ferramenta Plano de aula', descricao: 'Salva na biblioteca e liga à turma.', icone: LayoutGrid },
+            { id: 'conversa', titulo: 'Só conversar', descricao: 'Respondo aqui, sem salvar nada.', icone: MessageSquare },
+          ]}
+          aoEscolher={() => undefined}
+          desligada
+        />
+        <Escolha
+          pergunta="Posso corrigir a lista objetiva com a ferramenta, ou só conversar."
+          opcoes={[
+            { id: 'ferramenta', titulo: 'Usar a ferramenta Correção', descricao: 'Organiza o lote e abre os casos para você.', icone: LayoutGrid },
+            { id: 'conversa', titulo: 'Só conversar', descricao: 'Respondo aqui, sem salvar nada.', icone: MessageSquare },
+          ]}
+          escolhida="conversa"
+          aoEscolher={() => undefined}
+        />
+      </Secao>
+
       <Secao nome="caixa-pedido" titulo="Caixa de pedido">
         <DemonstracaoDaCaixa variante="completa" />
       </Secao>
 
       <Secao nome="caixa-do-aluno" titulo="Caixa de pedido do aluno">
         <DemonstracaoDaCaixa variante="so-texto" />
+      </Secao>
+
+      <Secao nome="caixa-desligada" titulo="Caixa de pedido desligada">
+        <CaixaPedido variante="so-texto" rotulo="Pergunta para o Tutor, desligada" exemplo="O Tutor está pausado nesta avaliação" valor="" aoMudar={() => undefined} aoEnviar={() => undefined} estado="desligada" />
       </Secao>
 
       <Secao nome="pagina-mini" titulo="Página de origem">
@@ -240,6 +266,12 @@ export default function SecoesDeIA() {
       <Secao nome="motor" titulo="Motor de formulário">
         <Cartao>
           <DemonstracaoDoMotor descricao={ATIVIDADE} />
+        </Cartao>
+      </Secao>
+
+      <Secao nome="motor-com-falha" titulo="Motor de formulário: o que deu errado">
+        <Cartao>
+          <MotorFormulario descricao={ATIVIDADE} estado="formulario" aoGerar={() => undefined} falha="Não foi possível gerar agora. Tente de novo em instantes." />
         </Cartao>
       </Secao>
 

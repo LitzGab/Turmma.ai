@@ -22,9 +22,13 @@ interface PropsDaEscolha {
   readonly desligada?: boolean
 }
 
-/** O desenho de uma opção. **É uma constante só, para as duas**: nenhuma tem estilo de primária. */
+/**
+ * O desenho de uma opção. **É uma constante só, para as duas**: nenhuma tem estilo de primária. É o do botão
+ * `secundario` (borda de 2 px, face `superficie` e o degrau `borda`, que desce quando se aperta), e desligada perde o degrau e
+ * fica na face `borda` com o texto `apoio`, como todo botão desligado (`docs/interface.md` 10.2).
+ */
 const CLASSES_DA_OPCAO =
-  'flex min-h-11 w-full min-w-0 items-start gap-3 rounded-controle border border-borda-campo bg-superficie p-3 text-left text-tinta enabled:hover:bg-realce-suave enabled:active:bg-realce disabled:text-inativo'
+  'degrau degrau-borda flex min-h-11 w-full min-w-0 cursor-pointer items-start gap-3 rounded-controle border-2 border-borda bg-superficie p-3 text-left text-tinta enabled:hover:bg-fundo-suave disabled:cursor-not-allowed disabled:border-borda disabled:bg-borda disabled:text-apoio'
 
 /**
  * A pergunta da D18 — "quer usar a ferramenta?" — dentro da conversa (`docs/interface.md` 11.3; P16): uma frase do
@@ -59,16 +63,16 @@ export function Escolha({ pergunta, opcoes, escolhida, aoEscolher, desligada = f
 
   if (feita !== undefined)
     return (
-      <p ref={linha} tabIndex={-1} data-escolha="feita" className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-full bg-realce-suave px-3 py-1.5 text-sm text-apoio">
+      <p ref={linha} tabIndex={-1} data-escolha="feita" className="t-apoio inline-flex max-w-full min-w-0 items-center gap-2 rounded-full border-2 border-borda bg-fundo-suave px-3 py-1 text-apoio">
         <Check aria-hidden="true" size={14} strokeWidth={2.4} className="shrink-0" />
         <span className="min-w-0 break-words">
-          Você escolheu: <span className="font-medium text-tinta">{feita.titulo}</span>
+          Você escolheu: <span className="font-bold text-tinta">{feita.titulo}</span>
         </span>
       </p>
     )
   return (
-    <div role="group" aria-labelledby={idDaPergunta} data-escolha="aberta" className="flex w-full max-w-[520px] min-w-0 flex-col gap-3 rounded-cartao border border-linha bg-superficie p-3">
-      <p id={idDaPergunta} className="px-1 text-base break-words text-tinta">
+    <div role="group" aria-labelledby={idDaPergunta} data-escolha="aberta" className="flex w-full max-w-[520px] min-w-0 flex-col gap-3 rounded-cartao border-2 border-borda bg-superficie p-3">
+      <p id={idDaPergunta} className="t-corpo px-1 break-words text-tinta">
         {pergunta}
       </p>
       <div className="grid auto-rows-fr grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -78,8 +82,8 @@ export function Escolha({ pergunta, opcoes, escolhida, aoEscolher, desligada = f
             <button key={opcao.id} type="button" disabled={desligada} onClick={() => escolher(opcao.id)} className={CLASSES_DA_OPCAO}>
               <Icone aria-hidden="true" size={18} strokeWidth={1.75} className="mt-0.5 shrink-0" />
               <span className="flex min-w-0 flex-col">
-                <span className="font-medium break-words">{opcao.titulo}</span>
-                <span className={`text-sm break-words ${desligada ? '' : 'text-sutil'}`}>{opcao.descricao}</span>
+                <span className="t-cartao break-words">{opcao.titulo}</span>
+                <span className={`t-apoio break-words ${desligada ? '' : 'text-sutil'}`}>{opcao.descricao}</span>
               </span>
             </button>
           )

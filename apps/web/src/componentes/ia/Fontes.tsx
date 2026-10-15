@@ -21,16 +21,16 @@ export function Fontes({ citacoes, materiais }: PropsDasFontes) {
   if (unicas.length === 0) return null
   return (
     <details className="group min-w-0">
-      <summary className="flex min-h-11 min-w-0 cursor-pointer list-none items-center gap-1.5 rounded-linha px-1.5 text-sm text-apoio hover:bg-realce-suave">
+      <summary className="t-apoio flex min-h-11 min-w-0 cursor-pointer list-none items-center gap-1.5 rounded-linha px-1.5 text-apoio hover:bg-fundo-suave">
         <ChevronRight aria-hidden="true" size={16} strokeWidth={1.75} className="shrink-0 group-open:rotate-90" />
         <span className="min-w-0 break-words">{resumoDasFontes(citacoes, materiais)}</span>
       </summary>
       <ul className="mt-1.5 flex min-w-0 flex-col gap-1.5">
         {unicas.map((citacao) => (
-          <li key={`${citacao.materialId}-${String(citacao.pagina)}`} className="flex min-w-0 gap-2.5 rounded-controle bg-ia-cx px-3 py-2 text-sm text-ia">
+          <li key={`${citacao.materialId}-${String(citacao.pagina)}`} className="t-apoio flex min-w-0 gap-2.5 rounded-controle border-2 border-borda bg-ia-cx px-3 py-2 text-ia">
             <FileText aria-hidden="true" size={16} strokeWidth={1.75} className="mt-0.5 shrink-0" />
             <span className="flex min-w-0 flex-col">
-              <span className="font-medium break-words text-tinta">
+              <span className="font-bold break-words text-tinta">
                 {tituloDoMaterial(citacao.materialId, materiais)}, {textoDoChip(citacao.pagina)}
               </span>
               <span className="break-words">“{citacao.trecho}”</span>

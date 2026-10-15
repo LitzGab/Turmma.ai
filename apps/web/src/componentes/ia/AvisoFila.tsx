@@ -24,18 +24,19 @@ const TEXTO_DO_AVISO = {
  * **Nunca erro cru.**
  *
  * A demora é cinza (`info`) e é anunciada com calma (`status`): aviso não é alarme, e nada aqui pisca nem conta o tempo
- * (D59). A falha é `erro`, anunciada na hora (`alert`), e diz o que fazer, com o botão ao lado.
+ * (D59). A falha é `erro`, anunciada na hora (`alert`), e diz o que fazer, com o botão `secundario` ao lado. Os dois têm
+ * a borda de 2 px; nenhum tem degrau, porque o aviso se lê e não se aperta.
  */
 export function AvisoFila({ situacao, aoTentarDeNovo }: PropsDoAviso) {
   const falha = situacao === 'falha'
   const Icone = falha ? CircleAlert : Hourglass
   const { titulo, texto } = TEXTO_DO_AVISO[situacao]
   return (
-    <div data-aviso-fila={situacao} className={`flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 rounded-controle p-3 ${falha ? 'bg-erro-cx text-erro' : 'bg-info-cx text-info'}`}>
-      <p role={falha ? 'alert' : 'status'} className="flex min-w-0 flex-1 basis-56 items-start gap-2 text-base">
+    <div data-aviso-fila={situacao} className={`flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 rounded-controle border-2 p-3 ${falha ? 'border-vermelho-borda bg-erro-cx text-erro' : 'border-borda bg-info-cx text-info'}`}>
+      <p role={falha ? 'alert' : 'status'} className="t-corpo flex min-w-0 flex-1 basis-56 items-start gap-2">
         <Icone aria-hidden="true" size={18} strokeWidth={1.75} className="mt-0.5 shrink-0" />
         <span className="min-w-0 break-words">
-          <span className="font-medium">{titulo}</span> {texto}
+          <span className="font-bold">{titulo}</span> {texto}
         </span>
       </p>
       {falha && aoTentarDeNovo !== undefined && (

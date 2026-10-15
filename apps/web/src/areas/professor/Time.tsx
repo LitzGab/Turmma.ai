@@ -312,7 +312,7 @@ export default function Time() {
                   const suspensao = avisoDaFuncaoSuspensa(entrega, funcaoSuspensa(time.data, entrega.funcao))
                   return (
                   <div key={entrega.id} id={idDoCartao(entrega.id)} tabIndex={-1} data-entrega={entrega.estado} className="flex min-w-0 scroll-mt-48 flex-col gap-1 rounded-cartao">
-                    <p className="pl-8 text-[13px] text-sutil">{formatarDataHora(entrega.criadaEm)}</p>
+                    <p className="text-[13px] text-sutil">{formatarDataHora(entrega.criadaEm)}</p>
                     <MensagemIA
                       variante="balao"
                       funcao={entrega.funcao}
@@ -347,11 +347,7 @@ export default function Time() {
                     >
                       {falaDaEntrega(entrega, nomes[entrega.turmaId])}
                     </MensagemIA>
-                    {suspensao !== undefined && (
-                      <div className="pl-8">
-                        <AvisoNaEntregaDeFuncaoSuspensa texto={suspensao} />
-                      </div>
-                    )}
+                    {suspensao !== undefined && <AvisoNaEntregaDeFuncaoSuspensa texto={suspensao} />}
                   </div>
                   )
                 })}

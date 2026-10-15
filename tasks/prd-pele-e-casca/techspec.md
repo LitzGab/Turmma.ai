@@ -171,6 +171,10 @@ caixa-alta, degrau; `oficial` em `grafite`; `perigo cheio` em `vermelho` com `so
 `CampoLongo`, `Selecao`, `Cartao`, `Tabela`, `Abas`, `Menu`, `Estado`, `Faixa`, `BarraRotulada`, `NumeroPainel`,
 `Dialogo`, `DialogoDeConfirmacao`, `dialogos.tsx`, `LoginPorCima`, os três de `estado/`, e as peças de
 `componentes/ia/`.
+**Conversa com IA (10.0).** As dez peças de `componentes/ia/` mudam só de desenho. A `CaixaPedido` mede o texto de
+exemplo quando vazia, num espelho fora do campo (o `scrollHeight` não o conta, e escrever no campo em uso apagaria o desfazer) e a `Escolha` usa uma constante só para as duas opções, com borda de 2 px
+e degrau `borda`. O `MotorFormulario` dá à caixa de cada tipo a borda de 2 px, o degrau e os 64 px da `Opcao`, com o `checkbox` nativo à vista (o `.check()` do e2e depende dele). O chip "da web" fica para a busca (F9, D68):
+sem citação da web no contrato, a peça não o desenha. Na `PaginaMini`, o piso de 14 px da 9.2 vale.
 **Peças novas**, uma por arquivo, com teste de componente: `Linha` (linha inteira clicável), `Ladrilho`,
 `Segmentado`, `Toque`, `Opcao`, `Interruptor`, `Busca`, `Aviso`, `Contador`, `PainelLado`, `Aparencia`. Teclado,
 foco e ARIA são nossos (não há Radix), e o teste de cada peça percorre o padrão: `Dialogo`, `PainelLado` e a gaveta

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Botao } from '../Botao'
-import { Campo, MarcaDeObrigatorio } from '../Campo'
+import { Campo, MarcaDeObrigatorio, MensagemDeErro } from '../Campo'
 import { Selecao } from '../Selecao'
 import type { NivelDoTitulo } from '../Tela'
 import {
@@ -45,36 +45,39 @@ function CampoDeVarias({ campo, marcados, erro, aoMudar }: { campo: CampoDeMulti
   const descritoPor = [campo.dica === undefined ? undefined : idDaDica, erro === undefined ? undefined : idDoErro].filter((id) => id !== undefined).join(' ')
   return (
     <fieldset {...(descritoPor === '' ? {} : { 'aria-describedby': descritoPor })} className="flex min-w-0 flex-col gap-2">
-      <legend className="font-medium">
+      <legend className="t-apoio font-bold text-tinta">
         {campo.rotulo}
         {(campo.minimo ?? 0) > 0 && <MarcaDeObrigatorio />}
       </legend>
       {campo.dica !== undefined && (
-        <p id={idDaDica} className="text-sm text-apoio">
+        <p id={idDaDica} className="t-apoio text-apoio">
           {campo.dica}
         </p>
       )}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {campo.opcoes.map((opcao) => {
           const marcado = marcados.includes(opcao.valor)
+          // O `<input>` é o nativo, à vista: quem o marca por teclado, por toque ou por leitor de tela não depende de peça nossa. A
+          // caixa em volta é a da `Opcao` (borda de 2 px, degrau, 64 px), com a face azul que diz "marcada" além do visto nativo.
           return (
-            <label key={opcao.valor} className={`flex min-h-11 min-w-0 cursor-pointer items-center gap-3 rounded-controle border border-borda-campo px-3 py-2 ${marcado ? 'bg-realce-suave font-medium' : 'bg-superficie'}`}>
+            <label
+              key={opcao.valor}
+              className={`degrau flex min-h-16 min-w-0 cursor-pointer items-center gap-3 rounded-controle border-2 px-3 py-2 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-foco ${
+                marcado ? 'border-azul-borda bg-azul-claro text-azul-texto degrau-azul' : 'border-borda bg-fundo text-tinta hover:bg-fundo-suave degrau-borda'
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={marcado}
                 onChange={(evento) => aoMudar(evento.target.checked ? [...marcados, opcao.valor] : marcados.filter((valor) => valor !== opcao.valor))}
-                className="size-6 shrink-0 accent-noite"
+                className="size-6 shrink-0 accent-azul"
               />
-              <span className="min-w-0 break-words">{opcao.rotulo}</span>
+              <span className="t-cartao min-w-0 break-words">{opcao.rotulo}</span>
             </label>
           )
         })}
       </div>
-      {erro !== undefined && (
-        <p id={idDoErro} className="text-sm text-erro">
-          {erro}
-        </p>
-      )}
+      {erro !== undefined && <MensagemDeErro id={idDoErro}>{erro}</MensagemDeErro>}
     </fieldset>
   )
 }
@@ -124,7 +127,7 @@ export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEdit
   const problema = problemaDaDescricao({ ferramenta: descricao.ferramenta, campos })
   if (problema !== undefined)
     return (
-      <p role="alert" className="rounded-cartao border border-erro bg-erro-cx p-4 text-erro">
+      <p role="alert" className="rounded-cartao border-2 border-vermelho-borda bg-erro-cx p-4 text-erro">
         Esta ferramenta não pôde ser aberta. Avise a equipe Turmma.
       </p>
     )
@@ -155,9 +158,9 @@ export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEdit
   if (estado !== 'formulario')
     return (
       <section aria-labelledby={idDoTitulo} data-motor={estado} className="flex min-w-0 flex-col gap-4">
-        <div ref={recolhido} tabIndex={-1} className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-cartao border border-linha bg-superficie px-4 py-3">
+        <div ref={recolhido} tabIndex={-1} className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-cartao border-2 border-borda bg-superficie px-4 py-3">
           <p className="min-w-0 break-words text-apoio">
-            <span id={idDoTitulo} className="font-semibold text-tinta">
+            <span id={idDoTitulo} className="font-bold text-tinta">
               {descricao.nome}
             </span>
             {pedido !== undefined && resumoDoPedido(campos, pedido) !== '' && <> · {resumoDoPedido(campos, pedido)}</>}
@@ -169,7 +172,7 @@ export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEdit
           )}
         </div>
         {estado === 'gerando' ? (
-          <p role="status" className="rounded-cartao border border-linha bg-superficie p-4 text-apoio">
+          <p role="status" className="rounded-cartao border-2 border-borda bg-superficie p-4 text-apoio">
             Gerando… Isso leva alguns instantes.
           </p>
         ) : (
@@ -180,7 +183,7 @@ export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEdit
 
   return (
     <form ref={formulario} noValidate onSubmit={aoSubmeter} aria-labelledby={idDoTitulo} data-motor="formulario" className="flex min-w-0 flex-col gap-4">
-      <Titulo ref={titulo} tabIndex={-1} id={idDoTitulo} className="text-base font-semibold text-tinta">
+      <Titulo ref={titulo} tabIndex={-1} id={idDoTitulo} className="t-cartao text-tinta">
         {descricao.nome}
       </Titulo>
       {campos.map((campo) => {
@@ -231,7 +234,7 @@ export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEdit
           </div>
         )
       })}
-      <p role="alert" className="rounded-controle bg-erro-cx p-3 break-words text-erro empty:hidden">
+      <p role="alert" className="rounded-controle border-2 border-vermelho-borda bg-erro-cx p-3 break-words text-erro empty:hidden">
         {pendencias.length > 0 ? `Para gerar, confira: ${pendencias.map((pendencia) => pendencia.rotulo).join(', ')}.` : falha}
       </p>
       <div className="flex flex-wrap gap-3">
