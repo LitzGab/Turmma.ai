@@ -6,9 +6,12 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** o `RELATÓRIO` do `Implementador`, da **9.0** (porte pequeno; `frontend-reviewer` e
-  `infra-guardian`), na **linha 1**, 1ª tentativa, pedida em 13/10/2026 às 18h25 (a 8.0 se encontrou às
-  18h20, em `eb3a181`). Depois dela o quadro deve soltar a **10.0** (porte grande), na mesma linha. Checkout da
+- **Espero:** o `RELATÓRIO` do `Implementador`, da **10.0** (porte grande: até 4 horas sem a primeira rodada),
+  na **linha 1**, 1ª tentativa, pedida em 13/10/2026 às 18h57 (a 9.0 se encontrou às 18h50, em `db54cc6`). Antes da
+  partida o `Arquiteto` fez a triagem que o `8_task.md` pedia e ajustou o `10_task.md` (`9359288`, só documento):
+  o balão com a `AssinaturaIA` em cima, a 10.5 nova (tirar o recuo `pl-8` do `professor/Time.tsx`) e o exemplo da
+  `CaixaPedido` cortado a 360 px como item da 10.1; por isso o `PEDIDO` foi só com "sem push". A 10.0 e a 11.0 passaram
+  a tocar o mesmo arquivo e não correm juntas: depois da 10.0 o quadro deve soltar a **11.0**, na mesma linha. Checkout da
   linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch `spec/pele-e-casca--l1`, ambiente
   de teste 1, com o `Implementador` e a `Mesa`. Todo pedido vai com a observação **"sem push"**: o commit da tarefa
   fica local. **Para a validação:** a 7.0 deixou ao `/validar` o caso direto de `fechadoPeloNavegador` sob
@@ -25,15 +28,10 @@
   (`portao-local.ts --e2e --infra`) uma vez, antes da validação (passo 8 do `/seguir`, "Sem GitHub"). Todo `PEDIDO`
   de tarefa leva a observação "sem push"; (2) a 3.0 é tronco e segura as outras doze; da 4.0 em diante o quadro
   autoriza linhas, mas **uma linha só** até o Joaquim dizer o contrário
-  (limite de uso); (2a) o `PEDIDO` da **10.0** leva a observação: "o placeholder da `CaixaPedido` fica cortado a
-  360 px; está em 'Sem aplicar' do `5_task.md`", e mais: "a 8.0 mudou o balão da `MensagemIA`, que agora usa a
-  `AssinaturaIA` como cabeçalho, no lugar do avatar ao lado: muda o `Time.tsx` e o `Tutor.tsx` do professor; leia
-  'Divergências' e 'Recomendações sem aplicar' do `8_task.md`, que também deixam para a 10.0 o `ml-1` e o
-  `align-middle` da casca do selo, se ela tocar a `AssinaturaIA`". O `8_task.md` pede que esse aviso passe pelo
-  `Arquiteto` antes de a 10.0 começar: **antes da partida da 10.0**, reiniciar o `Arquiteto` no andar da spec com um
-  `PEDIDO` curto de triagem (o `10_task.md` contra as linhas do balão em "Divergências" do `8_task.md`: ajusta o
-  documento ou responde que a observação basta); e o da **12.0**: "quando o `Contador` ganhar a lateral, manter o chunk
-  `pecas-estado`; está em 'Recomendações sem aplicar' do `6_task.md`"; e o da **13.0**: "o `docs/interface.md`, na
+  (limite de uso); (2a) a observação que o `PEDIDO` de cada tarefa leva: o da **12.0**: "quando o `Contador` ganhar a lateral, manter o chunk
+  `pecas-estado`; está em 'Recomendações sem aplicar' do `6_task.md`", e mais: "a 9.0 deu ao
+  `Ladrilho` o tamanho 36, que é o da lateral, e deixou os quatro ícones fora da entrada até a 12.0 ligá-los à casca
+  (484 bytes em brotli, sem chunk `lugares-*`); leia 'Divergências' do `9_task.md`"; e o da **13.0**: "o `docs/interface.md`, na
   10.2, cita '12.0 e 13.0' para a gaveta da casca, e ela é só da 13.0; está em 'Recomendações sem aplicar' do
   `7_task.md`"; (2b) **no fechamento, levar ao `TODO.md`**, em "Marca e interface", o que a 7.0 deixou com esse
   destino e ainda não está lá: seis linhas, na tabela "Recomendações sem aplicar" do `7_task.md` e em
@@ -42,7 +40,7 @@
   vermelho"; o Tab preso do login por cima); e o que a **8.0** deixou com o mesmo destino ("Recomendações sem aplicar" do
   `8_task.md`): fechar `QUEM_IMPORTA_O_AVATAR` só na `AssinaturaIA`, com o aperto na `techspec.md` 7b (é do
   Arquiteto, e da retrospectiva), e o espaço dobrado (`ml-1`) e o `align-middle` sem asserção na casca do selo,
-  se a 10.0 não os fechar; e, para o Arquiteto ao escrever a tela que usar o `PainelLado` na X2 e
+  que a 10.0 **não** fecha (estão em "Fora do escopo" do `10_task.md`, pela triagem do Arquiteto): vão ao `TODO.md`; e, para o Arquiteto ao escrever a tela que usar o `PainelLado` na X2 e
   na X3: `infra-guardian` obrigatório e foto do menu aberto dentro do diálogo; (3) nada mais sobre a revisão de spec da X3 e da X4: as duas **já têm revisão aprovada** pelos
   seis guardiões, quatro rodadas cada, feita pelo "Claude Code #2" a pedido do Joaquim e trazida para esta branch em
   13/10/2026 (`2f63ce0`, `7334f79`, `92cc7e5`; o Joaquim deu a palavra neste terminal: "pode"). Não repetir antes de
@@ -53,14 +51,17 @@
   `./node_modules/.bin/vite --host 127.0.0.1 --port 5190 --strictPort` dentro de
   `~/Documentos/git/Prototipo_Turmma/mockups`. Em 13/10 estava de pé na 5190 pela sessão do "Claude Code #2", e cai
   quando ela fechar: quem precisar, sobe de novo
-- **Limite de uso:** **94% do limite semanal às 14h32 de 13/10** (era 81% às 07h48); zera em 15/10 às 15h. Uma linha, poucos agentes
+- **Limite de uso:** **94% do limite semanal às 14h32 de 13/10** (era 81% às 07h48); **acabou às 19h31 de 13/10**, com a
+  primeira rodada da 10.0 em curso (os quatro revisores caíram com 429, nenhuma rodada registrada). Zerou em 15/10 às 15h:
+  às 15h01 fechei o menu do limite na `Mesa` e no `Implementador`, e a `Mesa` refez a rodada 1 inteira, com a árvore
+  igual à da foto. O `Implementador` espera a resposta dela. Uma linha, poucos agentes
 - **A spec da X1 está APROVADA** pelos seis revisores (rodada 4, 13/10/2026 02:09, `revisao-spec.md`). As
   recomendações que sobraram estão na seção da rodada 4 e entram como subtarefa ou cenário na tarefa de cada uma
 - **Como o Orquestrador assumiu:** em 13/10/2026, 08h20, com a palavra do Joaquim no terminal dele ("pode"). O andar
   "X1 pele-e-casca" nasceu da branch que já existia (`--existing-branch`), em
   `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca`, e a `develop` (`e278845`) entrou por merge, sem
   conflito (`65ab3b1`). A 1.0 e a spec correram fora do Maestri, num checkout avulso já desfeito
-- **Base:** `spec/pele-e-casca` em `17ccd02`, com a 8.0 (`eb3a181`); a linha 1 partiu dela para a 9.0. Se o quadro
+- **Base:** `spec/pele-e-casca` em `9359288` (a triagem da 10.0, sobre o encontro da 9.0, `8fe379e`); a linha 1 partiu dela para a 10.0. O diário tem alterações sem commit desde o encontro da 9.0: o encontro da 10.0 as leva. Se o quadro
   pedir mais uma linha: não abrir (uma linha só, item 2 acima). Nada foi enviado ao GitHub:
   push é do Joaquim
 
@@ -77,6 +78,7 @@
 | 6.0 | `542e583` | Sonnet 5.5 | 2 | linha 1, das 13h57 às 15h10 de 13/10, com a correção `2026-10-13-quinta-fatia-do-e2e` no meio (`71ff60f`, 2 rodadas, `infra-guardian`): `DIVERGÊNCIA` de portão às 14h22, porque os 42 casos do `e2e/pecas-estado.spec.ts` levaram a suíte a 818 e o teto do e2e não cabia em quatro fatias; retomada às 14h40; o `frontend-reviewer` e o `revisor-geral` aprovaram, o `test-engineer` reprovou na 1ª (asserção que sempre passa em `Aviso.test.tsx`) e aprovou na 2ª; a Mesa viu 59 fotos; ficou para a 10.0 o mesmo placeholder da `CaixaPedido`, e para a 12.0 manter `pecas-estado` quando o `Contador` ganhar a lateral; sem push |
 | 7.0 | `dc02f60` | Sonnet 5.5 | 2 | linha 1, das 15h10 às 17h07 de 13/10; o `frontend-reviewer` e o `infra-guardian` aprovaram na 1ª; o `test-engineer` e o `revisor-geral` reprovaram na 1ª (o véu forte do login por cima sem e2e, o Tab preso da confirmação, e a 10.2 dizendo dois lugares para o perigo cheio com o teste provando seis arquivos) e aprovaram na 2ª; 34 mutações vermelhas; `--repeat-each 3` de `pecas-sobrepor`, `inatividade` e `professores` antes da 2ª rodada; o `PainelLado` nasceu sem consumidor (X2 e X3); seis recomendações com destino no `TODO.md`, ainda por escrever lá (item 2b do "Agora"); sem push |
 | 8.0 | `eb3a181` | Sonnet 5.5 | 2 | linha 1, das 17h08 às 18h18 de 13/10; os quatro revisores (`frontend-reviewer`, `conformidade-reviewer`, `test-engineer`, `revisor-geral`) aprovaram na 1ª rodada, com 9 recomendações a aplicar, e de novo na 2ª; a Mesa viu 86 fotos nos dois temas; 83 mutações vermelhas; 18 divergências e ajustes no `8_task.md`, entre eles o balão da `MensagemIA` passar a usar a `AssinaturaIA` como cabeçalho (muda o `Time.tsx` e o `Tutor.tsx` do professor, que são da 10.0); recomendações sem aplicar com destino na 10.0, no `TODO.md` e no `/validar`; sem push |
+| 9.0 | `db54cc6` | Sonnet 5.5 | 1 | linha 1, das 18h19 às 18h49 de 13/10; os quatro revisores (`frontend-reviewer`, `infra-guardian`, `test-engineer`, `revisor-geral`) aprovaram na 1ª rodada; 4 fotos do Implementador e 8 da Mesa; os quatro ícones pesam 484 bytes em brotli, e por isso a 9.4 não se aplicou (sem `lugares-*.svg`, `.size-limit.json` intacto); o `Ladrilho` ganhou o tamanho 36, para a lateral da 12.0; cinco divergências no `9_task.md`; sem push |
 | PRD, Tech Spec e tarefas da X1 à X4 | `2ed7829` | Opus (as tarefas 8 a 15 da X1, 4 a 14 da X3 e 3 a 11 da X4, por agentes em Sonnet) | 4 da spec da X1 | só documento; a X2, a X3 e a X4 sem revisão de spec |
 
 ## Esperando o Joaquim
