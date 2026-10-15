@@ -39,6 +39,7 @@ barra de topo; o último botão da tela nunca fica atrás da barra.
 |---|---|
 | `apps/web/src/componentes/CascaDaEscola.tsx`, `BarraPresa.tsx` | alterados |
 | `apps/web/src/componentes/BarraDeBaixo.tsx` e `BarraDeBaixo.test.tsx` | novos |
+| `apps/web/src/componentes/CascaDaEscola.test.tsx` | novo |
 | `e2e/__fixtures__/casca.ts` | alterado |
 | `e2e/casca.spec.ts`, `areas.spec.ts`, `meus-dados.spec.ts`, `minha-turma.spec.ts`, `acesso-da-turma.spec.ts` | alterados |
 | `e2e/professor-assistente.spec.ts`, `escola-e-vinculos.spec.ts`, `tokens.spec.ts` | alterados (linhas da parte B) |
@@ -57,6 +58,7 @@ Definidos com o `test-engineer`. Não improvise aqui.
 | o último botão acima da barra | e2e | rolar até o fim: o último botão termina acima da barra; a `BarraPresa` da aprovação do lote presa e à vista (A75); a faixa do Tutor e "Hoje: N de 60" à vista (A54, A55) |
 | gaveta modal | e2e | doze Tabs sem sair; Esc e clique fora fecham e devolvem o foco; a barra fica inerte (A15, A16) |
 | a gaveta fecha | e2e | por rota, pessoa e escola: `areas › troca de escola pelo seletor…` e `areas › falha com a gaveta aberta…`, sem edição |
+| a pessoa troca sob o mesmo caminho | componente | gaveta aberta a partir do trilho, o `/v1/eu` volta com outro `usuarioId` e a rota não muda: a gaveta fecha. É o `usuarioDaSessao` do efeito, que nenhum teste de hoje prova (`12_task.md`, "Mutações") |
 | asserções que passavam vazias | e2e | `areas.spec:171` e `meus-dados.spec:289`: o `toHaveCount(0)` olha a barra, **com o controle positivo** |
 | a fixture | e2e | os specs da parte B passam nos dois projetos |
 | recomeço | e2e | `areas › segunda pessoa…`; `inatividade › a sessão vence sozinha…` (o login por cima, com a barra por baixo) |
@@ -68,6 +70,15 @@ Definidos com o `test-engineer`. Não improvise aqui.
 - Isolado: `npx vitest run --project unidade apps/web/src/componentes/BarraDeBaixo.test.tsx`;
   `node tools/ci/e2e.ts --manter-ambiente e2e/casca-no-celular.spec.ts e2e/casca.spec.ts e2e/areas.spec.ts e2e/meus-dados.spec.ts`
 - Armadilha: `jsdom` não tem `matchMedia`: teste a `BarraDeBaixo` sozinha. A 4.0 também edita `tokens.spec.ts`
+- **A pessoa troca sob o mesmo caminho** (`CascaDaEscola.test.tsx`, caso `a pessoa da sessão troca sob o mesmo caminho`):
+  `prepararTela()` e `redeFalsa()` de `apps/web/src/__fixtures__/tela.tsx` (sessão e cliente de verdade, só a rede falsa),
+  mas com o `criarClienteDeConsultas()` num `QueryClientProvider` seu, para o caso chamar `refetchQueries(consultaEu)`;
+  `Router` com `memoryLocation({ path: ROTAS.estrutura, record: true })`, como em `SeletorDeEscola.test.tsx`. Antes do
+  render: `vi.stubGlobal('matchMedia', …)` que só casa `(min-width: 768px)` (o trilho), e `showModal`/`close` no
+  `HTMLDialogElement.prototype`, que o jsdom 30 não tem (`close` só age aberto: tira o `open` e dispara `close`).
+  Coordenador: `SEU_TIME` vazio, e a única chamada é o `/v1/eu`. "Abrir a lateral" → `dialog[aria-label="Menu"]` aberto;
+  `rede.responder` com outro `usuarioId`, `refetchQueries`; `waitFor` o `dialog` fechado e `aria-expanded="false"`, e
+  `history` igual a `[ROTAS.estrutura]`. Isolado: `npx vitest run --project unidade apps/web/src/componentes/CascaDaEscola.test.tsx`
 - **Telas**: `professora`, `/professor/turmas` (um lote, até o fim); `aluno`, `/aluno/tutor`; `coordenacao`,
   `/coordenacao/estrutura` e `text=Abrir o menu`; a 360 px. Mockup: `/professor`
 
@@ -84,7 +95,25 @@ Preenchida por quem implementa (`/executar-task`, passo 2). Sem nenhuma, escreva
 
 ## Mutações
 
-Preenchida por quem implementa (`/executar-task`, passo 2). Sem cláusula nova, escreva "nenhuma".
+Preenchida por quem implementa (`/executar-task`, passo 2), que acrescenta as dele a estas.
+
+A gaveta fecha quando a pessoa ou a escola da sessão troca, mesmo sem a rota mudar: é o `usuarioDaSessao` nas dependências do
+efeito (vindo da 12.0, onde nenhum teste o prendia). A primeira tira a dependência; a segunda a troca por um valor que não
+muda entre duas pessoas.
+
+```mutacao
+arquivo: apps/web/src/componentes/CascaDaEscola.tsx
+teste: apps/web/src/componentes/CascaDaEscola.test.tsx › a pessoa da sessão troca sob o mesmo caminho
+-  }, [caminho, usuarioDaSessao, fecharGaveta])
++  }, [caminho, fecharGaveta])
+```
+
+```mutacao
+arquivo: apps/web/src/componentes/CascaDaEscola.tsx
+teste: apps/web/src/componentes/CascaDaEscola.test.tsx › a pessoa da sessão troca sob o mesmo caminho
+-  const usuarioDaSessao = dados?.usuarioId
++  const usuarioDaSessao = dados?.usuarioId === undefined
+```
 
 ## Recomendações sem aplicar
 
