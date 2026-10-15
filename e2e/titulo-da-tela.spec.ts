@@ -25,7 +25,7 @@ import { larguraExcedente } from './__fixtures__/verificacoes.ts'
  */
 
 const ITENS_DO_PROFESSOR = [
-  { rotulo: 'Nova conversa', escondido: true },
+  { rotulo: 'Início', escondido: true },
   { rotulo: 'Ferramentas', escondido: false },
   { rotulo: 'Turmas', escondido: false },
 ] as const
@@ -121,7 +121,7 @@ async function percorrer(page: Page, itens: readonly Item[], hasTouch: boolean):
 }
 
 test.describe('o título de cada item da lateral', () => {
-  test('professor: Ferramentas e Turmas mostram o título, e a Nova conversa o esconde, com o texto de hoje', async ({ page, hasTouch }) => {
+  test('professor: Ferramentas e Turmas mostram o título, e o Início o esconde, com o texto de "Início"', async ({ page, hasTouch }) => {
     await entrarComoProfessora(page, hasTouch)
     await percorrer(page, ITENS_DO_PROFESSOR, hasTouch)
   })

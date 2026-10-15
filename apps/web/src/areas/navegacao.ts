@@ -1,6 +1,10 @@
 import { NOMES_DOS_AGENTES, type Agente, type PapelDeUsuario } from '@educa/shared'
-import { Blocks, BookOpen, Bot, ChartColumn, ClipboardList, FolderLock, GraduationCap, LayoutGrid, Lock, MessageCircleQuestion, MessagesSquare, School, ShieldCheck, SquarePen, UsersRound, type LucideIcon } from 'lucide-react'
+import { Blocks, BookOpen, Bot, ChartColumn, FolderLock, GraduationCap, Lock, MessageCircleQuestion, MessagesSquare, School, ShieldCheck, type LucideIcon } from 'lucide-react'
 import { ROTAS } from '../caminhos'
+// Só tipos, que o compilador apaga: o `Contador` e os ícones ilustrados são peças da entrada ou fora dela, e este arquivo
+// não importa nenhuma (o item 4 do guia acima). O que ele diz é qual ícone e qual família, e a casca é quem desenha.
+import type { FamiliaDeCor } from '../componentes/Contador'
+import type { NomeDoLugar } from '../componentes/icones/lugares'
 
 /*
  * COMO ENTRA UMA TELA NOVA NUMA ÁREA (MVP de apresentação; `apps/web/nome-dos-chunks.ts` e o teste dele sobre o build):
@@ -12,13 +16,21 @@ import { ROTAS } from '../caminhos'
  * Como usar cada peça (aprovação, conversa, barra presa, o que a peça não dá): `src/componentes/ia/README.md`.
  */
 
-/** Um item da lateral: o rótulo, o endereço pela raiz e o ícone de 18 px (`docs/interface.md` 9.4). */
+/**
+ * O ícone de um lugar (`docs/interface.md` 9.4): o ilustrado, onde a D80 desenhou um (Início, Turmas, Ferramentas e
+ * Atividades, que usa o `tarefas`), ou o do `lucide` dentro de um `Ladrilho`, na família do lugar. A família é categoria,
+ * e nunca julgamento: os três agentes têm a deles (Assistente azul, Tutor laranja, Analista anil), e a gestão, a escola e os
+ * registros, a que a 9.4 dá aos lugares correspondentes.
+ */
+export type IconeDoItem = { readonly lugar: NomeDoLugar } | { readonly lucide: LucideIcon; readonly familia: FamiliaDeCor }
+
+/** Um item da lateral: o rótulo, o endereço pela raiz e o ícone (`docs/interface.md` 9.4). */
 export interface ItemDaNavegacao {
   readonly rotulo: string
   readonly caminho: string
-  readonly icone: LucideIcon
+  readonly icone: IconeDoItem
   /**
-   * Outros endereços, pela raiz, em que o item também fica selecionado: a conversa aberta dentro de "Nova conversa", o
+   * Outros endereços, pela raiz, em que o item também fica selecionado: a conversa aberta dentro de "Início", o
    * artefato aberto dentro de "Ferramentas". Sem isto a lateral não diria onde a pessoa está nessas telas.
    */
   readonly tambemEm?: readonly string[]
@@ -37,28 +49,28 @@ export const NAVEGACAO: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao
   // A5: Governança, onde a coordenação abre (11.1), Agentes e Analista vêm antes da montagem da escola. F3 (6.0):
   // Privacidade, do grupo Conformidade, no fim da lista, com a aba de retenção.
   coordenador: [
-    { rotulo: 'Governança', caminho: ROTAS.governanca, icone: ShieldCheck },
-    { rotulo: 'Agentes', caminho: ROTAS.agentes, icone: Bot },
-    { rotulo: 'Analista', caminho: ROTAS.analista, icone: ChartColumn },
-    { rotulo: 'Estrutura', caminho: ROTAS.estrutura, icone: Blocks },
-    { rotulo: 'Professores', caminho: ROTAS.professores, icone: GraduationCap },
-    { rotulo: 'Material', caminho: ROTAS.material, icone: BookOpen },
-    { rotulo: 'Privacidade', caminho: ROTAS.privacidade, icone: Lock },
+    { rotulo: 'Governança', caminho: ROTAS.governanca, icone: { lucide: ShieldCheck, familia: 'anil' } },
+    { rotulo: 'Agentes', caminho: ROTAS.agentes, icone: { lucide: Bot, familia: 'anil' } },
+    { rotulo: 'Analista', caminho: ROTAS.analista, icone: { lucide: ChartColumn, familia: 'anil' } },
+    { rotulo: 'Estrutura', caminho: ROTAS.estrutura, icone: { lucide: Blocks, familia: 'azul' } },
+    { rotulo: 'Professores', caminho: ROTAS.professores, icone: { lucide: GraduationCap, familia: 'azul' } },
+    { rotulo: 'Material', caminho: ROTAS.material, icone: { lucide: BookOpen, familia: 'azul' } },
+    { rotulo: 'Privacidade', caminho: ROTAS.privacidade, icone: { lucide: Lock, familia: 'amarelo' } },
   ],
-  // A2 (D73): Nova conversa, Ferramentas e Turmas. Calendário nasce com a grade (F8) e Histórico, com o F5: nenhum
-  // aparece antes da tela dele.
+  // A2 (D73): Início, Ferramentas e Turmas. Calendário nasce com a grade (F8) e Histórico, com o F5: nenhum aparece antes da
+  // tela dele. X1 (12.0): "Nova conversa" virou "Início", no mesmo endereço, com os ícones ilustrados da D80.
   professor: [
-    { rotulo: 'Nova conversa', caminho: ROTAS.novaConversa, icone: SquarePen, tambemEm: [ROTAS.conversa] },
-    { rotulo: 'Ferramentas', caminho: ROTAS.ferramentas, icone: LayoutGrid, tambemEm: [ROTAS.artefatos] },
-    { rotulo: 'Turmas', caminho: ROTAS.turmas, icone: UsersRound },
+    { rotulo: 'Início', caminho: ROTAS.novaConversa, icone: { lugar: 'inicio' }, tambemEm: [ROTAS.conversa] },
+    { rotulo: 'Ferramentas', caminho: ROTAS.ferramentas, icone: { lugar: 'ferramentas' }, tambemEm: [ROTAS.artefatos] },
+    { rotulo: 'Turmas', caminho: ROTAS.turmas, icone: { lugar: 'turmas' } },
   ],
   // A3 e A4: Tutor, Atividades e Minha turma. "Meu desempenho" e "Avisar um adulto" nascem com a tela de cada um: nesta
   // fatia não existem, e por isso não aparecem. "Privacidade" é do rodapé fixo (`RODAPE_DA_LATERAL`), e não desta lista. A
   // conversa do Tutor e a atividade aberta ficam abaixo do endereço do item delas, que continua selecionado.
   aluno: [
-    { rotulo: 'Tutor', caminho: ROTAS.tutor, icone: MessageCircleQuestion },
-    { rotulo: 'Atividades', caminho: ROTAS.atividades, icone: ClipboardList },
-    { rotulo: 'Minha turma', caminho: ROTAS.minhaTurma, icone: School },
+    { rotulo: 'Tutor', caminho: ROTAS.tutor, icone: { lucide: MessageCircleQuestion, familia: 'laranja' } },
+    { rotulo: 'Atividades', caminho: ROTAS.atividades, icone: { lugar: 'tarefas' } },
+    { rotulo: 'Minha turma', caminho: ROTAS.minhaTurma, icone: { lucide: School, familia: 'turquesa' } },
   ],
 }
 
@@ -70,7 +82,7 @@ export const NAVEGACAO: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao
 export const RODAPE_DA_LATERAL: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao[]>> = {
   coordenador: [],
   professor: [],
-  aluno: [{ rotulo: 'Privacidade', caminho: ROTAS.privacidadeDoAluno, icone: Lock }],
+  aluno: [{ rotulo: 'Privacidade', caminho: ROTAS.privacidadeDoAluno, icone: { lucide: Lock, familia: 'verde' } }],
 }
 
 /**
@@ -80,7 +92,7 @@ export const RODAPE_DA_LATERAL: Readonly<Record<PapelDeUsuario, readonly ItemDaN
  */
 export const MENU_DA_PESSOA: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao[]>> = {
   coordenador: [],
-  professor: [{ rotulo: 'Meus dados', caminho: ROTAS.meusDadosDoProfessor, icone: FolderLock }],
+  professor: [{ rotulo: 'Meus dados', caminho: ROTAS.meusDadosDoProfessor, icone: { lucide: FolderLock, familia: 'verde' } }],
   aluno: [],
 }
 
@@ -88,14 +100,18 @@ export const MENU_DA_PESSOA: Readonly<Record<PapelDeUsuario, readonly ItemDaNave
 export const NOME_DO_RODAPE = 'Rodapé'
 export const NOME_DO_MENU_DA_PESSOA = 'Sua conta'
 
-/** Uma linha de "Seu time": o agente, o endereço da conversa dele e o ícone do avatar (círculo com ícone, nunca rosto: D58). */
+/**
+ * Uma linha de "Seu time": o agente, o endereço da conversa dele e o ícone da função, num `Ladrilho` na família do agente.
+ * **Sem a onça**: a casca é da entrada, e a cabeça da onça mora fora dela (Tech Spec da X1, seção 7b); o avatar do agente
+ * em tela é o da `AssinaturaIA`, junto do nome e do selo "IA".
+ */
 export interface AgenteDaLateral {
   readonly agente: Agente
   readonly rotulo: string
   readonly caminho: string
   readonly icone: LucideIcon
-  /** A cor do avatar, a mesma do agente no resto do produto (`docs/interface.md` 9.7): o Assistente em preto, o Tutor no laranja. */
-  readonly avatar: string
+  /** A família do agente no resto do produto (`docs/interface.md` 9.7): o Assistente em azul, o Tutor em laranja. */
+  readonly familia: FamiliaDeCor
   /** A linha leva o contador do que espera a pessoa: só o agente que deixa entrega para decidir. */
   readonly comEspera: boolean
 }
@@ -108,10 +124,10 @@ export interface AgenteDaLateral {
 export const SEU_TIME: Readonly<Record<PapelDeUsuario, readonly AgenteDaLateral[]>> = {
   coordenador: [],
   professor: [
-    { agente: 'assistente_de_ensino', rotulo: NOMES_DOS_AGENTES.assistente_de_ensino, caminho: ROTAS.timeDoAssistente, icone: MessagesSquare, avatar: 'bg-noite text-sobre-grafite', comEspera: true },
+    { agente: 'assistente_de_ensino', rotulo: NOMES_DOS_AGENTES.assistente_de_ensino, caminho: ROTAS.timeDoAssistente, icone: MessagesSquare, familia: 'azul', comEspera: true },
     // A4: o Tutor, que a professora supervisiona. A conversa dele mostra sinais e uso da turma, e não conversa de aluno.
     // Não tem contador: sinal não é pendência que espera decisão, e ponto na lateral não vira pressão de uso (D59).
-    { agente: 'tutor', rotulo: NOMES_DOS_AGENTES.tutor, caminho: ROTAS.timeDoTutor, icone: MessageCircleQuestion, avatar: 'bg-caramelo text-sobre-cor', comEspera: false },
+    { agente: 'tutor', rotulo: NOMES_DOS_AGENTES.tutor, caminho: ROTAS.timeDoTutor, icone: MessageCircleQuestion, familia: 'laranja', comEspera: false },
   ],
   aluno: [],
 }

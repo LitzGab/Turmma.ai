@@ -353,7 +353,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     // ── 5. Passo 2: a conversa, a pergunta da D18, a página citada, o PDF, a versão adaptada aprovada (A2). ──────────
     const helenaId = await usuarioDaEquipe(escolaId, helena.email)
     await test.step('a professora pede a atividade, aceita a ferramenta, vê a página citada, exporta, adapta e aprova', async () => {
-      await irPelaNavegacao(professora, 'Nova conversa', hasTouch)
+      await irPelaNavegacao(professora, 'Início', hasTouch)
       const pedido = 'monta uma atividade de estequiometria com 5 questões'
       await caixa(professora).fill(pedido)
       await professora.getByRole('button', { name: 'Enviar' }).click()

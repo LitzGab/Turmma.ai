@@ -107,17 +107,17 @@ test.describe('Material da coordenação', () => {
 
     expect(await materiaisNoBanco(cenario.coordenadora.escolaId)).toEqual([expect.objectContaining({ titulo: TITULO, estado: 'pronto', paginas: 6, trechos: 6, excluido: false })])
     expect(await larguraExcedente(page)).toBe(0)
-    // A margem da página é uma só, a da casca (16 px no celular, 24 px a partir de 768 px): a `Tela` não a repete, e o
+    // A margem da página é uma só, a da casca (16 px no celular, 32 px a partir de 768 px, A84): a `Tela` não a repete, e o
     // conteúdo começa onde o `main` começa.
     const [daCasca, daTela] = await principal(page).evaluate((main) => {
       const tela = main.querySelector('[data-tela]')
       return [getComputedStyle(main).paddingLeft, tela === null ? 'sem tela' : getComputedStyle(tela).paddingLeft]
     })
-    expect(daCasca).toBe((page.viewportSize()?.width ?? 0) >= 768 ? '24px' : '16px')
+    expect(daCasca).toBe((page.viewportSize()?.width ?? 0) >= 768 ? '32px' : '16px')
     expect(daTela).toBe('0px')
     // O título da tela se vê (RF12; tarefa 11.0): medido, e não `toBeVisible`, que também passa no `h1` do leitor de tela.
-    // A caixa tem 24 px de fonte e está num cabeçalho de 64 px ou mais. O padding do `main`, acima, é o de hoje: a moldura
-    // é da 12.0.
+    // A caixa tem 24 px de fonte e está num cabeçalho de 64 px ou mais. O padding do `main`, acima, é o da moldura da
+    // casca (32 px a partir de 768 px, 16 px abaixo).
     const titulo = await principal(page)
       .getByRole('heading', { level: 1, name: 'Material' })
       .evaluate((h1) => {

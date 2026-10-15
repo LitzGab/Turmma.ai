@@ -92,12 +92,15 @@ export async function entrarPorEmail(page: Page, pessoa: EquipeDeTeste, hasTouch
   await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
 }
 
-/** O título da aba na tela em que o professor abre. */
-export const TITULO_DA_NOVA_CONVERSA = 'Nova conversa · Turmma'
+/**
+ * O título da aba na tela em que o professor abre: "Início" (D80; era "Nova conversa"), no mesmo endereço
+ * `/professor/nova-conversa`. O nome da constante é o de antes, para os specs que a importam não mudarem.
+ */
+export const TITULO_DA_NOVA_CONVERSA = 'Início · Turmma'
 
 /**
- * O professor abre em "Nova conversa" (A2; D73; `docs/interface.md` 11.1), e não mais na página "Início": o endereço, a
- * saudação com o primeiro nome dele e, na lateral, o nome inteiro de quem entrou. É o que prova que a sessão vale e de
+ * O professor abre em "Início" (A2; D73; D80; `docs/interface.md` 11.1), a Home com a caixa de pedido, e não numa página
+ * de passagem: o endereço (`/professor/nova-conversa`, que não mudou), a saudação com o primeiro nome dele e, na lateral, o nome inteiro de quem entrou. É o que prova que a sessão vale e de
  * quem ela é: a saudação sozinha não distingue duas professoras de mesmo primeiro nome.
  *
  * No celular a lateral é a gaveta, fechada: o nome está nela, fora da vista, e o teste o lê sem abri-la.
@@ -123,7 +126,7 @@ export async function abrirAbaAlunos(page: Page, hasTouch: boolean): Promise<voi
   await expect(aba).toHaveAttribute('aria-selected', 'true')
 }
 
-/** A professora de uma escola só, em "Nova conversa", onde ela abre. */
+/** A professora de uma escola só, em "Início", onde ela abre. */
 export async function entrarComoProfessora(page: Page, hasTouch: boolean): Promise<EquipeDeTeste> {
   const professora = await criarEquipeComSenha()
   await page.goto('/entrar')

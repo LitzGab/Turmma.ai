@@ -29,8 +29,8 @@ function nomeDaEscola(acesso: AcessoDaConta): string {
 function DadosDaEscola({ acesso }: { acesso: AcessoDaConta }) {
   return (
     <span className="flex min-w-0 flex-1 flex-col">
-      <span className="font-medium break-words text-tinta">{acesso.escolaNome}</span>
-      <span className="text-sm break-words text-apoio">
+      <span className="t-apoio font-bold break-words text-tinta">{acesso.escolaNome}</span>
+      <span className="text-sm break-words text-sutil">
         {acesso.redeNome} · {NOME_DO_PAPEL[acesso.papel]}
       </span>
     </span>
@@ -82,7 +82,7 @@ export function SeletorDeEscola({ escolaAtual, acessos, usuarioAtual }: Props) {
     return (
       <p className="min-w-0 break-words px-2 py-1">
         <span className="sr-only">Escola: </span>
-        <span className="font-medium">{escolaAtual}</span>
+        <span className="t-apoio font-bold">{escolaAtual}</span>
       </p>
     )
   }
@@ -139,13 +139,13 @@ export function SeletorDeEscola({ escolaAtual, acessos, usuarioAtual }: Props) {
         aria-expanded={aberto}
         aria-controls={idDaLista}
         onClick={() => (aberto ? fechar() : abrir())}
-        className="flex min-h-11 w-full min-w-0 items-center gap-2 rounded-linha border border-borda-campo bg-superficie px-3 py-2 text-left hover:bg-realce-suave"
+        className="degrau degrau-borda flex min-h-12 w-full min-w-0 items-center gap-2 rounded-controle border-2 border-borda bg-fundo px-3 py-2 text-left hover:bg-fundo-suave"
       >
         <DadosDaEscola acesso={atual} />
-        <ChevronsUpDown aria-hidden="true" size={18} strokeWidth={1.75} className="shrink-0 text-apoio" />
+        <ChevronsUpDown aria-hidden="true" size={18} strokeWidth={2.5} className="shrink-0 text-sutil" />
       </button>
       {aberto && (
-        <ul id={idDaLista} aria-label="Suas escolas" className="flex flex-col gap-1 rounded-cartao border border-linha bg-superficie p-1 shadow-flutua">
+        <ul id={idDaLista} aria-label="Suas escolas" className="flex flex-col gap-1 rounded-cartao bg-fundo p-1 shadow-flutua">
           {acessos.map((acesso) => {
             const eAtual = acesso.usuarioId === usuarioAtual
             const estaAbrindo = trocando?.usuarioId === acesso.usuarioId
@@ -158,12 +158,12 @@ export function SeletorDeEscola({ escolaAtual, acessos, usuarioAtual }: Props) {
                   aria-current={eAtual ? 'true' : undefined}
                   aria-disabled={trocando !== undefined}
                   onClick={() => void escolher(acesso)}
-                  className="flex min-h-11 w-full min-w-0 items-center gap-2 rounded-linha px-2 py-2 text-left hover:bg-realce-suave aria-disabled:cursor-wait"
+                  className="flex min-h-12 w-full min-w-0 items-center gap-2 rounded-controle px-2 py-2 text-left hover:bg-fundo-suave aria-disabled:cursor-wait"
                 >
                   {/* A marca de escolhido: o ícone e, para o leitor de tela, o `aria-current`. As outras linhas guardam o
                       mesmo espaço, para os nomes ficarem alinhados. */}
                   <span className="flex size-[18px] shrink-0 items-center justify-center" aria-hidden="true">
-                    {eAtual && <Check size={18} strokeWidth={2} className="text-tinta" />}
+                    {eAtual && <Check size={18} strokeWidth={2.5} className="text-tinta" />}
                   </span>
                   {estaAbrindo ? (
                     <span className="min-w-0 flex-1 break-words font-medium">{abrindo}</span>
@@ -182,7 +182,7 @@ export function SeletorDeEscola({ escolaAtual, acessos, usuarioAtual }: Props) {
         {abrindo}
       </p>
       {falha !== undefined && (
-        <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-3 text-erro">
+        <p role="alert" className="rounded-controle border-2 border-erro bg-erro-cx p-3 text-erro">
           {mensagemDaTroca(falha)}
         </p>
       )}

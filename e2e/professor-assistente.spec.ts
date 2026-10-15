@@ -98,19 +98,19 @@ async function enviarPedido(page: Page, texto: string, hasTouch: boolean): Promi
 }
 
 test.describe('a navegação do professor na A2 (D73)', () => {
-  test('a lateral tem Nova conversa, Ferramentas e Turmas, e "Seu time" com o Assistente e o que espera a professora, e o Tutor sem contador; Calendário e Histórico não aparecem', async ({ page, hasTouch }) => {
+  test('a lateral tem Início, Ferramentas e Turmas, e "Seu time" com o Assistente e o que espera a professora, e o Tutor sem contador; Calendário e Histórico não aparecem', async ({ page, hasTouch }) => {
     // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
     test.slow()
     const { api, turmaId, disciplinaId } = await entrar(page, hasTouch)
     const origem = atividadeSintetica(turmaId, disciplinaId)
     api.entregas = [versaoAdaptada(origem).entrega, versaoAdaptada(origem).entrega, versaoAdaptada(origem, 'aprovada').entrega]
     await recarregar(page)
-    await irPelaNavegacao(page, 'Nova conversa', hasTouch)
+    await irPelaNavegacao(page, 'Início', hasTouch)
     await expect(page).toHaveURL(/\/professor\/nova-conversa$/)
-    await expect(page).toHaveTitle('Nova conversa · Turmma', { timeout: PRAZO_DA_TELA_MS })
+    await expect(page).toHaveTitle('Início · Turmma', { timeout: PRAZO_DA_TELA_MS })
 
     await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Nova conversa', 'Ferramentas', 'Turmas'])
+    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Início', 'Ferramentas', 'Turmas'])
     const time = lateral(page).getByRole('navigation', { name: 'Seu time' })
     // Os dois agentes que já têm tela (fase 3): o Assistente e o Tutor, que não espera ninguém e não leva contador.
     await expect(time.getByRole('link')).toHaveText([/^Assistente de ensino/, /^Tutor$/])
@@ -121,6 +121,9 @@ test.describe('a navegação do professor na A2 (D73)', () => {
     for (const fora of ['Calendário', 'Histórico']) await expect(lateral(page).getByText(fora, { exact: true })).toHaveCount(0)
     // D59: o contador não se mexe sozinho.
     expect(await assistente.locator('[data-contador-do-time]').evaluate((elemento) => getComputedStyle(elemento).animationName)).toBe('none')
+    // X1 (12.0): o ícone da função num ladrilho, na família do agente, e nenhum avatar da onça na casca (A80).
+    await expect(time.locator('[data-ladrilho]')).toHaveCount(2)
+    await expect(time.locator('[data-agente]')).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
 
     await acionar(assistente, hasTouch)
@@ -129,10 +132,10 @@ test.describe('a navegação do professor na A2 (D73)', () => {
     if (naGaveta(page)) await expect(gaveta(page)).toBeHidden()
     await abrirNavegacao(page, hasTouch)
     await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: /Assistente de ensino/ })).toHaveAttribute('aria-current', 'page')
-    // Dentro da conversa, "Nova conversa" continua selecionado; dentro de um artefato, "Ferramentas".
+    // Dentro da conversa, "Início" continua selecionado; dentro de um artefato, "Ferramentas".
     await irPara(page, '/professor/conversa')
     await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Nova conversa' })).toHaveAttribute('aria-current', 'page')
+    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Início' })).toHaveAttribute('aria-current', 'page')
   })
 })
 

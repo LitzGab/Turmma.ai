@@ -7,7 +7,7 @@ import { useTituloDaTela } from '../titulo'
 
 /**
  * A raiz de quem entrou: cada papel é levado à tela em que abre, sem ficar no histórico. A coordenação abre em Governança
- * (MVP, A5; `docs/interface.md` 11.1: é a tela que fecha a venda), o professor em "Nova conversa" (A2; D73) e o aluno
+ * (MVP, A5; `docs/interface.md` 11.1: é a tela que fecha a venda), o professor em "Início" (A2; D73; D80) e o aluno
  * em "Atividades" (A3): o que a professora passou é a primeira coisa que ele vê. A navegação de cada papel está na
  * lateral (`areas/navegacao.ts`), que também diz quem está na sessão e em qual escola.
  *
@@ -21,7 +21,7 @@ export function Inicio() {
   if (eu.isPending) return <EstadoCarregando rotulo="Carregando a sua escola…" />
   const papel = eu.data?.papel
   if (papel === 'coordenador') return <Redirect to={ROTAS.governanca} replace />
-  // O professor abre em "Nova conversa", a caixa de pedido do Assistente de ensino (A2; D73; `docs/interface.md` 11.1).
+  // O professor abre em "Início", a caixa de pedido do Assistente de ensino (A2; D73; `docs/interface.md` 11.1).
   if (papel === 'professor') return <Redirect to={ROTAS.novaConversa} replace />
   // O aluno abre em "Atividades": o que foi atribuído à turma dele (A3).
   if (papel === 'aluno') return <Redirect to={ROTAS.atividades} replace />

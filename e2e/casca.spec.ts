@@ -1,7 +1,8 @@
 import type { Locator, Page, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
-import { entrarComoProfessora, gaveta, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { entrarComoCoordenacaoNaMesmaAba, entrarComoAluno, entrarComoProfessora, gaveta, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
+import { colocarAlunoNaTurma, criarAlunoComMatricula, criarEquipeComSenha } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 const ROTA_ESTADO = '**/v1/sistema/estado'
@@ -394,8 +395,9 @@ test.describe('casca da escola', () => {
     const paradas = [
       page.getByRole('link', { name: 'Turmma, página inicial' }),
       page.getByRole('button', { name: 'Recolher a lateral' }),
-      // A2 (D73): os três itens do professor e, em "Seu time", as linhas do Assistente de ensino e do Tutor (fase 3).
-      page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Nova conversa' }),
+      // A2 (D73): os três itens do professor e, em "Seu time", as linhas do Assistente de ensino e do Tutor (fase 3). X1
+      // (12.0): "Nova conversa" virou "Início", no mesmo lugar da ordem (A17).
+      page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Início' }),
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Ferramentas' }),
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }),
       page.getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: 'Assistente de ensino' }),
@@ -420,6 +422,23 @@ test.describe('casca da escola', () => {
     await expect(page.getByText(professora.nome, { exact: true })).toBeVisible()
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
+
+    // O anel de foco inteiro no alto que rola, numa janela baixa (regra 50, item 11): o `overflow` corta o que passa do
+    // contêiner, e a folga dele precisa ser maior que o contorno mais o afastamento do anel.
+    await page.setViewportSize({ width: 1366, height: ALTURA_BAIXA_PX })
+    // O foco ainda está no "Sair", a última parada da volta de cima, e o navegador continua dali: o percurso recomeça na
+    // marca por `focus()` (a última entrada foi o teclado, e o anel aparece), e as outras seis são Tab.
+    for (const [indice, parada] of paradas.slice(0, 7).entries()) {
+      if (indice === 0) await parada.focus()
+      else await page.keyboard.press('Tab')
+      await expect(parada).toBeFocused()
+      const corte = await anelCortadoPeloQueRola(page)
+      expect(corte, 'a parada mora no alto que rola').toBeDefined()
+      expect(corte?.esquerda, 'anel cortado à esquerda').toBeLessThanOrEqual(0)
+      expect(corte?.direita, 'anel cortado à direita').toBeLessThanOrEqual(0)
+      // O alto só na primeira parada: as seguintes podem ter rolado o contêiner até elas, e aí a borda de cima é a da rolagem.
+      if (indice === 0) expect(corte?.alto, 'anel cortado no alto').toBeLessThanOrEqual(0)
+    }
   })
 
   test('W12: recolher a lateral para o trilho fica guardado, o trilho dá a dica pelo teclado, e abrir desfaz', async ({ page, hasTouch }) => {
@@ -437,8 +456,8 @@ test.describe('casca da escola', () => {
 
     // No trilho, o item é só o ícone, com o nome para o leitor de tela e a dica que aparece ao chegar pelo teclado.
     const turmas = page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' })
-    // "Turmas" é o terceiro item do professor desde a A2: antes dele vêm "Nova conversa" e "Ferramentas".
-    for (const anterior of ['Nova conversa', 'Ferramentas']) {
+    // "Turmas" é o terceiro item do professor desde a A2: antes dele vêm "Início" e "Ferramentas".
+    for (const anterior of ['Início', 'Ferramentas']) {
       await page.keyboard.press('Tab')
       await expect(page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: anterior })).toBeFocused()
     }
@@ -473,7 +492,7 @@ test.describe('casca da escola', () => {
     else await abrir.click()
     await expect(gaveta(page)).toBeVisible()
     await expect(abrir).toHaveAttribute('aria-expanded', 'true')
-    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Nova conversa', 'Ferramentas', 'Turmas'])
+    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Início', 'Ferramentas', 'Turmas'])
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
     await page.keyboard.press('Escape')
@@ -506,6 +525,174 @@ test.describe('casca da escola', () => {
     await expect(abrir).toHaveAttribute('aria-expanded', 'false')
     await expect(gaveta(page)).toBeHidden()
   })
+
+  test('W12: as medidas da D80 no computador: a lateral de 256 px e o trilho de 88, a borda de 2 px, os lugares de 52 px e a moldura de 1200', async ({ page, hasTouch }) => {
+    await page.setViewportSize({ width: 1366, height: 768 })
+    await entrarComoProfessora(page, hasTouch)
+
+    const secoes = page.getByRole('navigation', { name: 'Seções' })
+    // A lateral aberta: 256 px de largura e a borda direita de 2 px em `borda` (#E5E5E5). Ela é o ancestral fixo de "Seções".
+    const lateral = await secoes.evaluate((nav) => {
+      const caixa = nav.closest('div.sticky')
+      if (caixa === null) return undefined
+      const estilo = getComputedStyle(caixa)
+      return { largura: caixa.getBoundingClientRect().width, borda: estilo.borderRightWidth, cor: estilo.borderRightColor, fundo: estilo.backgroundColor }
+    })
+    expect(lateral).toEqual({ largura: 256, borda: '2px', cor: 'rgb(229, 229, 229)', fundo: 'rgb(255, 255, 255)' })
+    // Cada lugar tem 52 px de altura (o ícone numa caixa de 36, e o rótulo em caixa-alta), e a moldura começa onde a lateral termina.
+    for (const rotulo of ['Início', 'Ferramentas', 'Turmas']) expect((await secoes.getByRole('link', { name: rotulo }).boundingBox())?.height, rotulo).toBe(52)
+    expect((await page.getByRole('main').boundingBox())?.x).toBe(256)
+    // O ícone do lugar é decoração: o ilustrado a 32 px em Início, Ferramentas e Turmas, e o nome do link é só o rótulo.
+    for (const rotulo of ['Início', 'Ferramentas', 'Turmas']) {
+      const icone = secoes.getByRole('link', { name: rotulo, exact: true }).locator('svg[data-icone]')
+      await expect(icone).toHaveCount(1)
+      await expect(icone).toHaveAttribute('aria-hidden', 'true')
+      expect((await icone.boundingBox())?.width).toBe(32)
+    }
+
+    // O trilho: 88 px, a mesma borda, e os lugares viram quadrados de 52 px.
+    await page.getByRole('button', { name: 'Recolher a lateral' }).click()
+    await expect(page.getByRole('button', { name: 'Abrir a lateral' })).toBeFocused()
+    const trilho = await secoes.evaluate((nav) => {
+      const caixa = nav.closest('div.sticky')
+      if (caixa === null) return undefined
+      return { largura: caixa.getBoundingClientRect().width, borda: getComputedStyle(caixa).borderRightWidth }
+    })
+    expect(trilho).toEqual({ largura: 88, borda: '2px' })
+    expect(await secoes.getByRole('link', { name: 'Turmas' }).boundingBox()).toMatchObject({ width: 52, height: 52 })
+    // O trilho não anima a largura (D59): a duração da transição é zero, e o `all` que o navegador devolve sem regra não conta.
+    expect(await secoes.evaluate((nav) => getComputedStyle(nav.closest('div.sticky') ?? nav).transitionDuration)).toBe('0s')
+  })
+
+  test('W12: a moldura de 1200 px, com a margem de 32 px, e de 16 px abaixo de 768 px (A84)', async ({ page, hasTouch }) => {
+    await page.setViewportSize({ width: 1920, height: 900 })
+    await entrarComoProfessora(page, hasTouch)
+
+    const principal = page.getByRole('main')
+    // Numa janela larga o `main` para em 1200 px, com a margem de 32 px dos dois lados, centrado ao lado da lateral.
+    const larga = await principal.evaluate((main) => ({ largura: main.getBoundingClientRect().width, esquerda: getComputedStyle(main).paddingLeft, direita: getComputedStyle(main).paddingRight }))
+    expect(larga).toEqual({ largura: 1200, esquerda: '32px', direita: '32px' })
+    // Abaixo de 768 px a margem é de 16 px, e nada passa da janela.
+    await page.setViewportSize({ width: 360, height: 800 })
+    await expect.poll(() => principal.evaluate((main) => getComputedStyle(main).paddingLeft)).toBe('16px')
+    expect(await larguraExcedente(page)).toBe(0)
+  })
+})
+
+/**
+ * A casca nos três papéis (RF15, RF16, RF17; D59): os nomes acessíveis que o e2e usa não mudam, o "Sair" está à vista
+ * sem abrir nada e é do tamanho do vizinho, aberta a lateral e recolhida, a 1366 px e a 900 px.
+ */
+type PapelDaCasca = 'professor' | 'aluno' | 'coordenacao'
+
+/** A altura de um Chromebook com a barra do navegador e a de downloads abertas: o "Sair" tem de caber nela (D59). */
+const ALTURA_BAIXA_PX = 600
+
+const PAPEIS_DA_CASCA: readonly { readonly papel: PapelDaCasca; readonly navegacoes: readonly string[]; readonly ausentes: readonly string[]; readonly primeiro: string }[] = [
+  { papel: 'professor', navegacoes: ['Seções', 'Seu time', 'Sua conta'], ausentes: ['Rodapé'], primeiro: 'Início' },
+  { papel: 'aluno', navegacoes: ['Seções', 'Rodapé'], ausentes: ['Seu time', 'Sua conta'], primeiro: 'Tutor' },
+  { papel: 'coordenacao', navegacoes: ['Seções'], ausentes: ['Seu time', 'Rodapé', 'Sua conta'], primeiro: 'Governança' },
+]
+
+async function entrarNaCasca(page: Page, papel: PapelDaCasca, hasTouch: boolean): Promise<void> {
+  if (papel === 'professor') {
+    await entrarComoProfessora(page, hasTouch)
+    return
+  }
+  if (papel === 'aluno') {
+    const aluno = await criarAlunoComMatricula()
+    await colocarAlunoNaTurma(aluno)
+    await entrarComoAluno(page, aluno, hasTouch)
+    return
+  }
+  const coordenadora = await criarEquipeComSenha('coordenador')
+  await page.goto('/entrar')
+  await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
+}
+
+/** Quantos px do anel de foco do elemento focado o contêiner que rola corta (o `overflow` recorta o que passa dele). */
+function anelCortadoPeloQueRola(page: Page): Promise<{ esquerda: number; direita: number; alto: number } | undefined> {
+  return page.evaluate(() => {
+    const elemento = document.activeElement
+    const rola = elemento?.closest('.overflow-y-auto')
+    if (!elemento || !rola) return undefined
+    const estilo = getComputedStyle(elemento)
+    const anel = Number.parseFloat(estilo.outlineWidth) + Number.parseFloat(estilo.outlineOffset)
+    const caixa = elemento.getBoundingClientRect()
+    const limite = rola.getBoundingClientRect()
+    return { esquerda: limite.left - (caixa.left - anel), direita: caixa.right + anel - limite.right, alto: limite.top - (caixa.top - anel) }
+  })
+}
+
+/** O "Sair" à vista, sem abrir nada, com a altura e a largura do primeiro lugar da navegação dentro de `raiz` (A18; RF15). */
+async function conferirOSair(raiz: Locator, page: Page, primeiro: string, quadrado: boolean): Promise<void> {
+  const sair = raiz.getByRole('button', { name: 'Sair' })
+  await expect(sair).toBeVisible()
+  // Inteiro dentro da janela: `toBeInViewport()` sozinho aprova o botão cortado pela metade (a coordenação a 1366 × 768).
+  await expect(sair).toBeInViewport({ ratio: 1 })
+  const [vizinho, caixa] = await Promise.all([raiz.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: primeiro, exact: true }).boundingBox(), sair.boundingBox()])
+  expect(caixa?.height, 'altura do "Sair"').toBe(vizinho?.height)
+  expect(caixa?.width, 'largura do "Sair"').toBe(vizinho?.width)
+  expect(caixa?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+  if (quadrado) expect(caixa?.width).toBe(caixa?.height)
+  expect(await larguraExcedente(page)).toBe(0)
+}
+
+test.describe('casca da escola: os três papéis (RF15 a RF17)', () => {
+  for (const { papel, navegacoes, ausentes, primeiro } of PAPEIS_DA_CASCA) {
+    test(`W12: ${papel}: os nomes acessíveis não mudam, e o "Sair" está à vista e do tamanho do vizinho, aberta e recolhida, a 1366 e a 900 px`, async ({ page, hasTouch }) => {
+      test.setTimeout(120_000)
+      await page.setViewportSize({ width: 1366, height: 768 })
+      await entrarNaCasca(page, papel, hasTouch)
+
+      // Os nomes da Tech Spec 9 (X1): as navegações de cada papel, e só elas, o link da marca e o botão que recolhe.
+      for (const nome of navegacoes) await expect(page.getByRole('navigation', { name: nome, exact: true }), nome).toBeVisible()
+      for (const nome of ausentes) await expect(page.getByRole('navigation', { name: nome, exact: true }), nome).toHaveCount(0)
+      await expect(page.getByRole('link', { name: 'Turmma, página inicial' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Abrir o menu' })).toHaveCount(0)
+      // A lateral aberta: o "Sair" do tamanho do primeiro lugar.
+      await conferirOSair(page.locator('body'), page, primeiro, false)
+      expect(await violacoesGraves(page)).toEqual([])
+      // Numa janela baixa (o Chromebook com a barra do navegador cheia) só o alto da lateral rola: o pé, com o "Sair",
+      // continua inteiro à vista. Sem isso o botão sai da janela e a pessoa não tem como rolar até ele (D59).
+      await page.setViewportSize({ width: 1366, height: ALTURA_BAIXA_PX })
+      await conferirOSair(page.locator('body'), page, primeiro, false)
+      await page.setViewportSize({ width: 1366, height: 768 })
+
+      // Recolhida (1366 px): o trilho, com o "Sair" quadrado como os lugares, e o nome para o leitor de tela.
+      await page.getByRole('button', { name: 'Recolher a lateral' }).click()
+      await expect(page.getByRole('button', { name: 'Abrir a lateral' })).toBeVisible()
+      for (const nome of navegacoes) await expect(page.getByRole('navigation', { name: nome, exact: true }), `${nome} (trilho)`).toBeVisible()
+      await conferirOSair(page.locator('body'), page, primeiro, true)
+      expect(await violacoesGraves(page)).toEqual([])
+      // O trilho dá o nome e a dica nos três papéis (A19, A92): o foco sai do "Abrir a lateral" para o primeiro lugar, e a
+      // dica, que existe só para quem não vê o rótulo, aparece com ele.
+      await expect(page.getByRole('button', { name: 'Abrir a lateral' })).toBeFocused()
+      await page.keyboard.press('Tab')
+      const primeiroNoTrilho = page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: primeiro, exact: true })
+      await expect(primeiroNoTrilho).toBeFocused()
+      await expect(primeiroNoTrilho.getByText(primeiro, { exact: true }).last()).toBeVisible()
+      await page.setViewportSize({ width: 1366, height: ALTURA_BAIXA_PX })
+      await conferirOSair(page.locator('body'), page, primeiro, true)
+      await page.setViewportSize({ width: 1366, height: 768 })
+
+      // 900 px é o trilho, com a escolha de recolher guardada (e a de abrir por cima, que não a muda), na altura de um
+      // Chromebook e na baixa.
+      for (const altura of [768, ALTURA_BAIXA_PX]) {
+        await page.setViewportSize({ width: 900, height: altura })
+        await expect(page.getByRole('button', { name: 'Abrir a lateral' })).toBeVisible()
+        await conferirOSair(page.locator('body'), page, primeiro, true)
+        // Aberta por cima, a lateral é a mesma: o "Sair" dentro dela tem o tamanho do primeiro lugar dela.
+        await page.getByRole('button', { name: 'Abrir a lateral' }).click()
+        await expect(gaveta(page)).toBeVisible()
+        for (const nome of navegacoes) await expect(gaveta(page).getByRole('navigation', { name: nome, exact: true }), `${nome} (por cima)`).toBeVisible()
+        await conferirOSair(gaveta(page), page, primeiro, false)
+        await expect(gaveta(page).getByRole('button', { name: 'Fechar o menu' })).toBeVisible()
+        await page.keyboard.press('Escape')
+        await expect(gaveta(page)).toBeHidden()
+      }
+    })
+  }
 })
 
 async function esperarAlvoDeToqueEm(alvo: Locator): Promise<void> {

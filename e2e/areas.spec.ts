@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import type { Page, Request, Route } from '@playwright/test'
+import type { Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { NOME_DA_CONTESTACAO, NOME_DO_ESTADO_DE_VINCULO } from '../packages/shared/src/estrutura/vinculo.ts'
 import {
@@ -42,7 +42,7 @@ const TITULO_DA_FALHA = 'Não foi possível carregar esta parte do Turmma'
  * conversa" e "Ferramentas" chegaram com a A2 (D73); "Turmas" continua por último, que é onde o W2 termina.
  */
 const ITENS_DO_PROFESSOR = [
-  { rotulo: 'Nova conversa', caminho: '/professor/nova-conversa' },
+  { rotulo: 'Início', caminho: '/professor/nova-conversa' },
   { rotulo: 'Ferramentas', caminho: '/professor/ferramentas' },
   { rotulo: 'Turmas', caminho: '/professor/turmas' },
 ] as const
@@ -96,8 +96,23 @@ async function navegarSemRecarregar(page: Page, caminho: string): Promise<void> 
 
 const naoEncontrada = (page: Page) => page.getByRole('heading', { name: 'Página não encontrada' })
 
+/** O que o navegador calcula num item da lateral, e que o aceso e o apagado mudam (A23, A24). */
+async function pinturaDoItem(item: Locator): Promise<{ fundo: string; borda: string; larguraDaBorda: string; estiloDaBorda: string; texto: string; peso: string }> {
+  return item.evaluate((elemento) => {
+    const estilo = getComputedStyle(elemento)
+    return {
+      fundo: estilo.backgroundColor,
+      borda: estilo.borderTopColor,
+      larguraDaBorda: estilo.borderTopWidth,
+      estiloDaBorda: estilo.borderTopStyle,
+      texto: estilo.color,
+      peso: estilo.fontWeight,
+    }
+  })
+}
+
 /**
- * Pela marca, que leva à raiz. Para o professor a raiz é a tela em que ele abre, "Nova conversa" (A2; D73); para o aluno,
+ * Pela marca, que leva à raiz. Para o professor a raiz é a tela em que ele abre, "Início" (A2; D73; D80); para o aluno,
  * "Atividades" (A3).
  */
 async function voltarAoInicio(page: Page, hasTouch: boolean): Promise<void> {
@@ -108,9 +123,9 @@ async function voltarAoInicio(page: Page, hasTouch: boolean): Promise<void> {
 }
 
 test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
-  test('o professor vê os itens da fase dele, cada um leva à tela com as três pistas do selecionado, e a aba diz a tela', async ({ page, hasTouch }) => {
+  test('o professor vê os itens da fase dele, cada um leva à tela com as pistas do selecionado, e a aba diz a tela', async ({ page, hasTouch }) => {
     const professora = await entrarComoProfessora(page, hasTouch)
-    // O professor abre em "Nova conversa" (A2; D73), e não numa página de passagem.
+    // O professor abre em "Início" (A2; D73; D80), e não numa página de passagem.
     await expect(page).toHaveTitle(TITULO_DA_NOVA_CONVERSA)
     // A tela em que ele abre não diz que as turmas ficam para depois: sem turma confirmada, aponta para elas, a um toque
     // também no celular.
@@ -150,14 +165,13 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await expect(page.getByText('A coordenação ainda não alocou você')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(naoEncontrada(page)).toHaveCount(0)
 
-    // O selecionado tem três pistas, e não só o fundo que some no Chromebook (11.1): fundo `realce`, peso 600 e o filete
-    // `caramelo` na borda esquerda. E o `aria-current`, que o leitor de tela anuncia.
+    // O selecionado (A23; D80): o `aria-current`, que o leitor de tela anuncia, o fundo `azul-claro`, a borda de 2 px
+    // `azul-borda` e o texto `azul-texto`. O peso deixa de ser pista (os dois em 700), e o filete saiu.
     await abrirNavegacao(page, hasTouch)
     const turmas = lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' })
     await expect(turmas).toHaveAttribute('aria-current', 'page')
-    expect(await turmas.evaluate((elemento) => [getComputedStyle(elemento).backgroundColor, getComputedStyle(elemento).fontWeight])).toEqual(['rgb(236, 236, 236)', '600'])
-    const filete = turmas.locator('[data-filete]')
-    expect(await filete.evaluate((elemento) => [getComputedStyle(elemento).backgroundColor, getComputedStyle(elemento).width])).toEqual(['rgb(232, 115, 46)', '3px'])
+    expect(await pinturaDoItem(turmas)).toEqual({ fundo: 'rgb(223, 241, 253)', borda: 'rgb(153, 210, 248)', larguraDaBorda: '2px', estiloDaBorda: 'solid', texto: 'rgb(20, 110, 170)', peso: '700' })
+    await expect(turmas.locator('[data-filete]')).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
@@ -167,8 +181,15 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await expect(gaveta(page)).toBeHidden()
     await expect(page).toHaveTitle(TITULO_DA_NOVA_CONVERSA)
     await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' })).not.toHaveAttribute('aria-current', 'page')
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }).locator('[data-filete]')).toHaveCount(0)
+    const apagado = lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' })
+    await expect(apagado).not.toHaveAttribute('aria-current', 'page')
+    // A negativa (A24): sem o filete, `toHaveCount(0)` passaria vazio. O apagado tem outro fundo, a borda de 2 px transparente
+    // (o espaço que o aceso ocupa, e por isso acender não desloca nada) e o texto `sutil`: nenhuma das pistas do aceso.
+    const pintura = await pinturaDoItem(apagado)
+    expect(pintura).toEqual({ fundo: 'rgba(0, 0, 0, 0)', borda: 'rgba(0, 0, 0, 0)', larguraDaBorda: '2px', estiloDaBorda: 'solid', texto: 'rgb(93, 93, 93)', peso: '700' })
+    expect(pintura.fundo).not.toBe('rgb(223, 241, 253)')
+    expect(pintura.borda).not.toBe('rgb(153, 210, 248)')
+    await expect(apagado.locator('[data-filete]')).toHaveCount(0)
   })
 
   test('o professor no endereço da coordenação e do aluno cai em "não encontrada", sem baixar a área deles', async ({ page, hasTouch }) => {
@@ -197,7 +218,7 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
   // Separado do anterior só pelo prazo: as cinco entradas de página por `page.goto`, no perfil de rede lenta e com o
   // servidor do e2e sem compressão nem cache, passavam dos 30 s juntas (esteira `37245636814`). As asserções são as
   // mesmas de antes; cada teste começa da entrada da professora.
-  test('o endereço que não existe na área do professor responde igual ao de outro papel, e "página inicial" volta à Nova conversa', async ({ page, hasTouch }) => {
+  test('o endereço que não existe na área do professor responde igual ao de outro papel, e "página inicial" volta ao Início', async ({ page, hasTouch }) => {
     const pedidos = registrarChunks(page)
     const professora = await entrarComoProfessora(page, hasTouch)
 
@@ -210,7 +231,7 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     // Dentro da área, "página inicial" leva à raiz, e não ao começo da área (`/professor/`).
     if (hasTouch) await page.getByRole('main').getByRole('link', { name: 'página inicial', exact: true }).tap()
     else await page.getByRole('main').getByRole('link', { name: 'página inicial', exact: true }).click()
-    // A raiz leva o professor à tela em que ele abre: é por ela que se chega a "Nova conversa", e não por `/professor/`,
+    // A raiz leva o professor à tela em que ele abre: é por ela que se chega a "Início", e não por `/professor/`,
     // que não é tela nenhuma.
     await esperarNovaConversa(page, professora.nome)
     await expect(naoEncontrada(page)).toHaveCount(0)
@@ -267,7 +288,7 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
 test.describe('W5: a fronteira do import() de cada área', () => {
   test('a área do professor que não chega: o texto e o título da falha, a casca de pé, e o título de antes ao sair', async ({ page, hasTouch }) => {
     await page.route(CHUNK_DO_PROFESSOR, (rota: Route) => rota.abort('internetdisconnected'))
-    // O professor abre em "Nova conversa" (A2; D73): a área é pedida já na entrada, e é ali que ela não chega.
+    // O professor abre em "Início" (A2; D73; D80): a área é pedida já na entrada, e é ali que ela não chega.
     const professora = await criarEquipeComSenha()
     await page.goto('/entrar')
     await entrarPorEmail(page, professora, hasTouch)
@@ -387,7 +408,7 @@ test.describe('W4: os estados de "Turmas"', () => {
 
 test.describe('recomeço da tela', () => {
   test('segunda pessoa: a coordenação entra na aba do professor sem o item nem o dado dele', async ({ page, hasTouch }) => {
-    // A alocação existe antes da entrada: a Nova conversa já lê os vínculos ao abrir, e a lista que ela leu fica fresca
+    // A alocação existe antes da entrada: o Início já lê os vínculos ao abrir, e a lista que ela leu fica fresca
     // no cache por 30 s. Criada depois, a alocação perdia a corrida para essa leitura, e "Turmas" mostrava o vazio do
     // cache (esteiras 37324214757 e 37330163372; correção 2026-10-05-segunda-pessoa-cache-dos-vinculos).
     const professora = await criarEquipeComSenha()
@@ -428,7 +449,7 @@ test.describe('recomeço da tela', () => {
     expect(leiturasDosVinculos).toBe(0)
   })
 
-  test('troca de escola pelo seletor, de "Nova conversa" para "Nova conversa": a gaveta não fica aberta por cima', async ({ page, hasTouch }) => {
+  test('troca de escola pelo seletor, de "Início" para "Início": a gaveta não fica aberta por cima', async ({ page, hasTouch }) => {
     const emA = await criarEquipeComSenha()
     const emB = await criarUsuarioEmOutraEscola(emA.contaId)
     await page.goto('/entrar')
@@ -438,7 +459,7 @@ test.describe('recomeço da tela', () => {
     else await escolherA.click({ timeout: PRAZO_DA_ENTRADA_MS })
     await esperarNovaConversa(page, emA.nome)
 
-    // A tela é a mesma antes e depois da troca (o professor abre em "Nova conversa" nas duas escolas): é a pessoa da
+    // A tela é a mesma antes e depois da troca (o professor abre em "Início" nas duas escolas): é a pessoa da
     // sessão que muda, e é ela que fecha a gaveta.
     await escolherNoSeletor(page, nomeNoSeletor(emB, 'professor'), hasTouch)
     await esperarNovaConversa(page, 'Professora sintética na outra escola')
@@ -469,7 +490,7 @@ test.describe('recomeço da tela', () => {
       await segurada.aberta
       await rota.continue()
     })
-    // O professor abre em "Nova conversa" (A2; D73): a área é pedida já na entrada, e fica segurada.
+    // O professor abre em "Início" (A2; D73; D80): a área é pedida já na entrada, e fica segurada.
     const professora = await criarEquipeComSenha()
     await page.goto('/entrar')
     const pedidoDoChunk = page.waitForRequest((pedido) => CHUNK_DO_PROFESSOR.test(new URL(pedido.url()).pathname))
@@ -523,7 +544,7 @@ test.describe('recomeço da tela', () => {
     })
 
     // A aba abre direto na área: a sessão volta pelo cookie, e o papel ainda não é conhecido. O pedaço da área que a
-    // entrada baixou (o professor abre em "Nova conversa") foi com a página anterior: a conta recomeça aqui.
+    // entrada baixou (o professor abre em "Início") foi com a página anterior: a conta recomeça aqui.
     pedidos.length = 0
     await page.goto('/professor/turmas')
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Carregando…', { timeout: PRAZO_DA_ENTRADA_MS })
@@ -569,7 +590,7 @@ test.describe('recomeço da tela', () => {
     const professora = await criarEquipeComSenha()
     await page.goto('/entrar')
     await entrarPorEmail(page, professora, hasTouch)
-    // O professor abre em "Nova conversa" (A2; D73): a área começa a carregar já na entrada.
+    // O professor abre em "Início" (A2; D73; D80): a área começa a carregar já na entrada.
     await expect(page).toHaveURL(/\/professor\/nova-conversa$/, { timeout: PRAZO_DA_ENTRADA_MS })
 
     // A área está carregando, e a pessoa abre a gaveta enquanto espera.

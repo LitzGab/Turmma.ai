@@ -9,7 +9,7 @@ export const BASE_DA_AREA: Readonly<Record<PapelDeUsuario, string>> = { coordena
 
 /** As rotas da área do professor, relativas à base dela (o `Route` aninhado de `rotas.tsx`). */
 export const ROTAS_DO_PROFESSOR = {
-  /** "Nova conversa", a Home: a caixa de pedido do Assistente de ensino. É onde o professor abre (A2; D73; `docs/interface.md` 11.2). */
+  /** "Início" (era "Nova conversa"), a Home: a caixa de pedido do Assistente de ensino. É onde o professor abre (A2; D73; `docs/interface.md` 11.2). */
   novaConversa: '/nova-conversa',
   /** A conversa da professora com o Assistente: uma thread só, dela (A2; 11.3). */
   conversa: '/conversa',
@@ -153,9 +153,9 @@ export const ROTAS = {
   mfa: '/mfa',
   configurarMfa: '/mfa/configurar',
   escolherEscola: '/escolher-escola',
-  /** "Nova conversa" do professor, pela raiz: é onde ele abre (A2), e o endereço que a navegação usa. */
+  /** "Início" do professor, pela raiz: é onde ele abre (A2), e o endereço que a navegação usa. */
   novaConversa: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.novaConversa}`,
-  /** A conversa com o Assistente, pela raiz: dentro dela, "Nova conversa" continua selecionado na lateral. */
+  /** A conversa com o Assistente, pela raiz: dentro dela, "Início" continua selecionado na lateral. */
   conversa: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.conversa}`,
   /** "Ferramentas" do professor, pela raiz. */
   ferramentas: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.ferramentas}`,

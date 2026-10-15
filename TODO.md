@@ -1068,6 +1068,16 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] **Classes do campo e do espelho da `CaixaPedido` escritas duas vezes** (`revisor-geral`, 10.0 da X1): letra e
       respiro do `textarea` e do espelho repetem as mesmas classes; uma constante única. Hoje o teste "o espelho é só para
       medir" segura a igualdade
+- [ ] **`TITULO_DA_NOVA_CONVERSA` guarda `'Início · Turmma'`** (`privacy-guardian`, 12.0 da X1): o nome da constante
+      (`e2e/__fixtures__/casca.ts`) é o do rótulo antigo. Renomear (para `TITULO_DO_INICIO`) quando os specs que a usam
+      forem mexidos de novo; ela é lida por specs fora da 12.0
+- [ ] **Comentários "Nova conversa" em specs fora da 12.0** (`test-engineer`, 12.0 da X1): `e2e/inatividade.spec.ts:50`,
+      `convite.spec.ts:187`, `entrar.spec.ts:44`, `escola-e-vinculos.spec.ts:57` e `:146`, `operacao.spec.ts:327`,
+      `professores.spec.ts:507`, `professor-assistente.spec.ts:68` e `__fixtures__/fluxo-do-professor.ts:34`. Trocar por
+      "Início" quando cada arquivo for mexido (mexer só no comentário caduca a revisão de spec que não é da 12.0)
+- [ ] **O trilho da coordenação não tem folga a 600 px** (`frontend-reviewer`, 12.0 da X1): a 1366 × 600 o "Sair" passa em
+      `toBeInViewport({ ratio: 1 })` por pouco, e o trilho não rola (a dica `absolute` seria cortada). Um oitavo lugar na
+      coordenação derruba o "Sair" da janela; reabre com o oitavo lugar, ou com a barra de baixo da 13.0 mexendo no trilho
 
 ## Comercial
 

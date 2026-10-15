@@ -82,7 +82,7 @@ export default function Ferramentas() {
         {artefatos.isPending && <EstadoCarregando rotulo="Carregando o que você já gerou…" />}
         {artefatos.isError && <EstadoErro erro={artefatos.error} tentando={artefatos.isFetching} aoTentarDeNovo={() => void artefatos.refetch({ cancelRefetch: false })} />}
         {artefatos.data !== undefined && gerados.length === 0 && (
-          <EstadoVazio titulo="Nada gerado ainda" descricao="Escolha uma ferramenta acima, ou peça ao Assistente em Nova conversa. O que for gerado fica guardado aqui, ligado à turma." />
+          <EstadoVazio titulo="Nada gerado ainda" descricao="Escolha uma ferramenta acima, ou peça ao Assistente no Início. O que for gerado fica guardado aqui, ligado à turma." />
         )}
         {gerados.length > 0 && (
           <ul className="flex min-w-0 flex-col gap-2">

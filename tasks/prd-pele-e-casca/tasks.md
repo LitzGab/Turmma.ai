@@ -72,10 +72,10 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 11.2 `Estrutura`, `ListaDaTurma`, `Professores`, `Turmas`, `Turma` e `MinhaTurma` passam a usar a `Tela`, sem mudar o miolo
   - [x] 11.3 Testes: o `h1` de cada tela com o mesmo texto e a caixa medida (visível, e não só para leitor de tela), nos quatro estados; o título da aba do navegador
 
-- [ ] **12.0 — A casca da escola no computador: lateral, trilho e menu da pessoa**
-  - [ ] 12.1 `CascaDaEscola`, `itens-da-lateral`, `MenuDaPessoa` e `SeletorDeEscola` nas medidas da D80; a moldura de 1200 no `<main>`
-  - [ ] 12.2 `navegacao.ts`: "Nova conversa" vira "Início" (rótulo, `h1` e título da aba); o ícone de cada item; "Seu time" com o ícone da função num ladrilho
-  - [ ] 12.3 Testes: os nomes acessíveis não mudaram; aceso com `aria-current`; "Sair" visível sem abrir nada, do tamanho do vizinho, com "Meus dados" antes; a lateral recolhida lembrada, também com o armazenamento recusando; as mutações de `lembrarQuemEsta` e da troca de escola
+- [x] **12.0 — A casca da escola no computador: lateral, trilho e menu da pessoa**
+  - [x] 12.1 `CascaDaEscola`, `itens-da-lateral`, `MenuDaPessoa` e `SeletorDeEscola` nas medidas da D80; a moldura de 1200 no `<main>`
+  - [x] 12.2 `navegacao.ts`: "Nova conversa" vira "Início" (rótulo, `h1` e título da aba); o ícone de cada item; "Seu time" com o ícone da função num ladrilho
+  - [x] 12.3 Testes: os nomes acessíveis não mudaram; aceso com `aria-current`; "Sair" visível sem abrir nada, do tamanho do vizinho, com "Meus dados" antes; a lateral recolhida lembrada, também com o armazenamento recusando; a mutação de `lembrarQuemEsta` (a da troca de escola, `usuarioDaSessao`, fica para a 13.0: ver `12_task.md`, "Mutações")
 
 - [ ] **13.0 — A casca da escola no celular: barra de topo, barra de baixo e gaveta**
   - [ ] 13.1 A barra de topo de 56 px, com a escola ativa e "Sair", e a barra de baixo de 68 px, para o papel com até quatro itens

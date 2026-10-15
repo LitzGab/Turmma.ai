@@ -107,7 +107,9 @@ function sombrasDeclaradas(): Set<string> {
  */
 const NAO_E_COR: Record<string, RegExp> = {
   text: /^(?:xs|sm|base|lg|[2-9]?xl|left|center|right|justify|start|end|wrap|nowrap|balance|pretty|ellipsis|clip)$/,
-  border: /^(?:\d+|[xytblrse](?:-\d+)?|solid|dashed|dotted|double|hidden|none|collapse|separate)$/,
+  // `transparent` é a borda do item apagado da lateral, que guarda o espaço da borda do aceso (12.0): não é cor que deixe de
+  // virar com o tema, e é só na borda. `bg-transparent` e `text-transparent` continuam reprovando.
+  border: /^(?:\d+|[xytblrse](?:-\d+)?|solid|dashed|dotted|double|hidden|none|collapse|separate|transparent)$/,
   outline: /^(?:\d+|none|hidden|solid|dashed|dotted|double|offset-\d+)$/,
   ring: /^(?:\d+|inset|offset-\d+)$/,
   shadow: /^(?:2xs|xs|sm|md|lg|xl|2xl|none|inner)$/,
@@ -270,7 +272,7 @@ interface UsoDaFaceDoOficial {
  * a entrada dele não cita reprova, e a entrada cuja classe já não está no arquivo reprova também, para a tarefa que
  * tira o uso tirar a linha. O teto de `TETO_DA_LISTA_DO_OFICIAL` não sobe.
  *
- * A primeira entrada é o oficial. As outras sete são usos de antes da D80, que a `noite` pintava de preto no claro; no
+ * A primeira entrada é o oficial. As outras quatro são usos de antes da D80, que a `noite` pintava de preto no claro; no
  * escuro a face deles é a mesma do oficial. Isso já acontece na tela da atividade, onde a questão aberta do mapa e o
  * botão "Enviar a atividade" têm a mesma face (achado da 1ª rodada da 3.0, `conformidade-reviewer`).
  */
@@ -300,20 +302,10 @@ const FACE_DO_OFICIAL: Readonly<Record<string, UsoDaFaceDoOficial>> = {
     justificativa: 'a faixa de topo da operação e o "Sair" dela, em preto no claro: é a marca de que ali é a operação',
     sai: '15.0 (a barra de topo clara da operação)',
   },
-  'componentes/itens-da-lateral.tsx': {
-    classes: ['bg-noite'],
-    justificativa: 'a dica do item da lateral recolhida, que aparece ao lado do ícone',
-    sai: '12.0 (a lateral nas medidas da D80)',
-  },
-  'areas/navegacao.ts': {
-    classes: ['bg-noite'],
-    justificativa: 'o avatar do Assistente na linha de "Seu time" da lateral',
-    sai: '12.0 (12.2: o ícone da função num ladrilho)',
-  },
 }
 
 /** Sobe só com decisão: a lista do oficial é a de hoje, e cada tarefa que tira um uso a faz encolher. */
-const TETO_DA_LISTA_DO_OFICIAL = 7
+const TETO_DA_LISTA_DO_OFICIAL = 5
 
 function listaDoOficialCresceu(lista: Readonly<Record<string, UsoDaFaceDoOficial>>): boolean {
   return Object.keys(lista).length > TETO_DA_LISTA_DO_OFICIAL
@@ -412,8 +404,10 @@ describe('guarda de cor em apps/web/src (U3)', () => {
       '<p className="rounded-cartao border border-amber-300 bg-amber-50 p-4 text-amber-900">',
       '<p className="hover:bg-blue-700 bg-neutral-200 text-foo sm:bg-[#1d4ed8]">',
       '<p className="bg-tinta/80 text-apoio/50 enabled:hover:border-linha/[.4]">',
+      // `transparent` só passa na borda (a do item apagado da lateral): na face e no texto continua reprovando.
+      '<p className="bg-transparent text-transparent">',
       // O que passa: token da 9.10, antigo ou novo, e o que não é cor na mesma propriedade.
-      '<p className="bg-caramelo text-sobre-cor bg-laranja-claro text-azul-texto border-borda border-b border-2 text-sm/6 text-base shadow-flutua outline-offset-2 bg-[url(x.svg)]">',
+      '<p className="bg-caramelo text-sobre-cor bg-laranja-claro text-azul-texto border-borda border-b border-2 text-sm/6 text-base shadow-flutua outline-offset-2 bg-[url(x.svg)] border-transparent">',
     ].join('\n')
     expect(classesReprovadas('paginas/Fixture.tsx', fixture)).toEqual([
       'paginas/Fixture.tsx: border-amber-300 (cor fora do @theme)',
@@ -426,6 +420,8 @@ describe('guarda de cor em apps/web/src (U3)', () => {
       'paginas/Fixture.tsx: bg-tinta/80 (modificador de opacidade)',
       'paginas/Fixture.tsx: text-apoio/50 (modificador de opacidade)',
       'paginas/Fixture.tsx: border-linha/[.4] (modificador de opacidade)',
+      'paginas/Fixture.tsx: bg-transparent (cor fora do @theme)',
+      'paginas/Fixture.tsx: text-transparent (cor fora do @theme)',
       // A cor entre colchetes reprova duas vezes: como classe fora do `@theme` e como cor escrita à mão.
       'paginas/Fixture.tsx: sm:bg-[#1d4ed8] (cor em linha)',
     ])
@@ -562,7 +558,8 @@ describe('guarda de cor em apps/web/src (U3)', () => {
     // O oficial é o único que fica: nenhum uso de antes diz "não sai".
     expect(Object.entries(FACE_DO_OFICIAL).filter(([, { sai }]) => sai.startsWith('não sai')).map(([arquivo]) => arquivo)).toEqual(['componentes/botao-secundario.ts'])
     expect(listaDoOficialCresceu(FACE_DO_OFICIAL), 'a lista fechada do oficial só encolhe').toBe(false)
-    // O teto é o tamanho de hoje: quem tira um uso (a 8.0 tirou o avatar) baixa o teto junto, e a lista não ganha folga.
+    // O teto é o tamanho de hoje: quem tira um uso (a 8.0 tirou o avatar, a 12.0 a dica e o avatar da lateral) baixa o teto
+    // junto, e a lista não ganha folga.
     expect(TETO_DA_LISTA_DO_OFICIAL).toBe(Object.keys(FACE_DO_OFICIAL).length)
   })
 

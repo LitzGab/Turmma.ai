@@ -27,7 +27,7 @@ const MeusDados = lazy(() => import('../../componentes/meus-dados/MeusDados'))
 /**
  * A área do professor, relativa a `/professor` (o `Route` aninhado de `apps/web/src/rotas.tsx`), num chunk próprio,
  * `professor-*.js` (`apps/web/nome-dos-chunks.ts`), que só se baixa depois de a guarda conferir o papel. Na A2 (D73) ela
- * tem "Nova conversa" (a Home, onde o professor abre, e a conversa com o Assistente), "Ferramentas" (o catálogo, o
+ * tem "Início" (a Home, onde o professor abre, e a conversa com o Assistente), "Ferramentas" (o catálogo, o
  * formulário de cada uma e o artefato aberto), "Turmas", com a turma aberta dentro dela (A1), "Meus dados" (F3, 18.0, no
  * menu da pessoa) e, no "Seu time", a conversa do Assistente de ensino. O item da lateral continua selecionado nas telas
  * de dentro (`estaNoItem`).

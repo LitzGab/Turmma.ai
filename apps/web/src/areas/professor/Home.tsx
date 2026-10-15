@@ -27,7 +27,7 @@ import { nomesDasTurmas, turmaEscolhida, turmasDaProfessora } from './turmas-da-
 const ICONE_DA_FUNCAO: Readonly<Partial<Record<ChaveDeFuncao, LucideIcon>>> = { adaptacao: SlidersHorizontal, correcao_de_objetiva: ClipboardCheck }
 
 /**
- * A Home do professor, "Nova conversa" (D73; `docs/interface.md` 11.2): a saudação pela hora, a caixa de pedido do
+ * A Home do professor, "Início" (D73, D80; `docs/interface.md` 11.2): a saudação pela hora, a caixa de pedido do
  * Assistente de ensino e, **só quando há entrega pendente**, o que espera a professora. Sem pendência não há cartão nem
  * enfeite no lugar; não há atalho em pílula (P15), e a linha do dia nasce com a grade (F8).
  *
@@ -41,7 +41,7 @@ const ICONE_DA_FUNCAO: Readonly<Partial<Record<ChaveDeFuncao, LucideIcon>>> = { 
  * Os quatro estados são os das turmas dela: carregando, erro, vazio (o que falta, e onde resolver) e com dado.
  */
 export default function Home() {
-  useTituloDaTela('Nova conversa')
+  useTituloDaTela('Início')
   const [, navegar] = useLocation()
   const eu = useQuery(consultaEu)
   const vinculos = useInfiniteQuery(consultaMeusVinculos)
@@ -60,7 +60,7 @@ export default function Home() {
   const esperando = esperandoVoce(pendentes.data?.itens ?? [], nomesDasTurmas(itensDosVinculos))
 
   return (
-    <Tela titulo="Nova conversa" largura="conversa" tituloSoParaLeitor>
+    <Tela titulo="Início" largura="conversa" tituloSoParaLeitor>
       <div className="flex min-w-0 flex-col gap-6 pt-4 md:pt-10">
         <div className="min-w-0 text-center">
           <p className="text-[28px] leading-tight break-words text-tinta">{saudacao(eu.data?.nome, agora)}</p>

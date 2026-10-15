@@ -251,7 +251,7 @@ describe('a turma que sai com a tela aberta', () => {
 
 describe('a conversa é a exceção: o `h1` existe, escondido, com o texto de hoje', () => {
   const CONVERSAS: readonly (readonly [string, () => ReactElement, string])[] = [
-    ['Início do professor', () => <Home />, 'Nova conversa'],
+    ['Início do professor', () => <Home />, 'Início'],
     ['conversa com o Assistente de ensino', () => <Conversa />, 'Conversa com o Assistente de ensino'],
     ['time: Assistente de ensino', () => <Time />, 'Seu time: Assistente de ensino'],
     ['time: Tutor, do professor', () => <TutorDoProfessor />, 'Seu time: Tutor'],

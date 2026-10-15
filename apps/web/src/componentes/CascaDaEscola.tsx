@@ -11,14 +11,15 @@ import { NOME_DO_PAPEL } from '../papeis'
 import { useInatividade } from '../sessao/inatividade'
 import { ContextoDaGaveta, type Gaveta } from './gaveta'
 import { Dica, ItemDaLateral, ListaDeItens, SecaoDoTime, type EsperandoNoTime } from './itens-da-lateral'
+import { guardarRecolhida, lerRecolhida } from './lateral-recolhida'
 import { Marca } from './Marca'
 import { MenuDaPessoa } from './MenuDaPessoa'
 import { SeletorDeEscola } from './SeletorDeEscola'
 
 /**
  * As três larguras da casca (`docs/interface.md` 11.1, "Responsivo"; D51): abaixo de 768 px, a barra no topo com a
- * gaveta; de 768 a 1023 px, o trilho de 56 px, que abre a lateral por cima do conteúdo; a partir de 1024 px (o
- * Chromebook de 1366 × 768 cai aqui), a lateral aberta de 260 px, que recolhe para o trilho por escolha.
+ * gaveta; de 768 a 1023 px, o trilho de 88 px, que abre a lateral por cima do conteúdo; a partir de 1024 px (o
+ * Chromebook de 1366 × 768 cai aqui), a lateral aberta de 256 px, que recolhe para o trilho por escolha.
  *
  * Decidido em JavaScript, e não só no CSS, para existir na página **uma** lateral por vez: esconder as outras com
  * `display: none` deixaria dois seletores de escola e duas navegações no DOM, com os mesmos ids.
@@ -41,32 +42,8 @@ function assinarFaixa(aoMudar: () => void): () => void {
   }
 }
 
-/**
- * A lateral recolhida por escolha, no computador, fica guardada neste navegador (`docs/interface.md` 11.1). É preferência
- * de tela, sem nada da pessoa nem da escola, e por isso pode ficar no `localStorage` (regra 50, item 7). Sem acesso a
- * ele (navegação anônima, política do Chromebook gerenciado), a lateral abre aberta, como na primeira vez.
- */
-const CHAVE_DA_LATERAL_RECOLHIDA = 'educa.lateral-recolhida'
-
-function lerRecolhida(): boolean {
-  try {
-    return window.localStorage.getItem(CHAVE_DA_LATERAL_RECOLHIDA) === 'sim'
-  } catch {
-    return false
-  }
-}
-
-function guardarRecolhida(recolhida: boolean): void {
-  try {
-    if (recolhida) window.localStorage.setItem(CHAVE_DA_LATERAL_RECOLHIDA, 'sim')
-    else window.localStorage.removeItem(CHAVE_DA_LATERAL_RECOLHIDA)
-  } catch {
-    // Sem armazenamento, a escolha vale até a aba fechar: a lateral continua funcionando.
-  }
-}
-
 /** O botão só de ícone da lateral: 44 px, o nome para o leitor de tela e, no computador, a dica. */
-const CLASSE_DO_BOTAO_DE_ICONE = 'group relative flex size-11 shrink-0 items-center justify-center rounded-linha text-apoio hover:bg-realce-suave hover:text-tinta'
+const CLASSE_DO_BOTAO_DE_ICONE = 'group relative flex size-11 shrink-0 items-center justify-center rounded-controle text-sutil hover:bg-fundo-suave hover:text-tinta'
 
 interface DadosDaPessoa {
   readonly nome: string
@@ -89,28 +66,35 @@ interface PropsDaLateralAberta {
   readonly saindo: boolean
 }
 
-/** A lateral aberta, de 260 px no computador e dentro da gaveta: marca, escola, navegação e a pessoa no rodapé. */
+/**
+ * A lateral aberta, de 256 px no computador e dentro da gaveta: marca, escola, navegação e a pessoa no pé. Só o alto rola
+ * (marca, escola, navegação e "Seu time"), e é o `flex-1 min-h-0` dele que segura o pé, com a pessoa, a Aparência e o
+ * "Sair", dentro da janela em qualquer altura (RF15, A18; D59): o alto encolhe e rola, o pé não. A folga de 6 px do alto
+ * guarda o anel de foco (3 px de contorno e 2 de afastamento), que o `overflow` cortaria.
+ */
 function LateralAberta({ pessoa, itens, time, esperando, rodape, menuDaPessoa, seletor, botaoDoTopo, aoSair, saindo }: PropsDaLateralAberta) {
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-2">
-      <div className="flex items-center justify-between gap-2">
-        <Link to={ROTAS.inicio} aria-label="Turmma, página inicial" className="rounded-linha px-2 py-1.5 hover:bg-realce-suave">
-          <Marca />
-        </Link>
-        {botaoDoTopo}
+    <div className="flex h-full min-h-0 flex-col gap-3 p-3">
+      <div className="-m-1.5 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <Link to={ROTAS.inicio} aria-label="Turmma, página inicial" className="rounded-controle px-2 py-1.5 hover:bg-fundo-suave">
+            <Marca />
+          </Link>
+          {botaoDoTopo}
+        </div>
+        <div>{seletor}</div>
+        {itens.length > 0 && (
+          <nav aria-label="Seções">
+            <ul className="flex flex-col gap-2">
+              {itens.map((item) => (
+                <ItemDaLateral key={item.caminho} item={item} trilho={false} />
+              ))}
+            </ul>
+          </nav>
+        )}
+        <SecaoDoTime agentes={time} esperando={esperando} trilho={false} />
       </div>
-      <div className="px-1">{seletor}</div>
-      {itens.length > 0 && (
-        <nav aria-label="Seções">
-          <ul className="flex flex-col gap-0.5">
-            {itens.map((item) => (
-              <ItemDaLateral key={item.caminho} item={item} trilho={false} />
-            ))}
-          </ul>
-        </nav>
-      )}
-      <SecaoDoTime agentes={time} esperando={esperando} trilho={false} />
-      <div className="mt-auto flex flex-col gap-2">
+      <div className="flex shrink-0 flex-col gap-2">
         <ListaDeItens itens={rodape} rotulo={NOME_DO_RODAPE} trilho={false} />
         <MenuDaPessoa nome={pessoa?.nome} papel={pessoa?.papel} aoSair={aoSair} saindo={saindo} itens={menuDaPessoa} />
       </div>
@@ -132,23 +116,25 @@ interface PropsDoTrilho {
 }
 
 /**
- * O trilho de 56 px: a pinta, o "Abrir a lateral", os ícones com a dica de cada um e o "Sair". Nenhum rótulo sobra
- * cortado (P04): ou aparece inteiro, na dica, ou não aparece.
+ * O trilho de 88 px (D80): a pinta e o "Abrir a lateral", de 44 px, e os ícones com a dica de cada um e o "Sair", do
+ * tamanho de um lugar (52 px). Nenhum rótulo sobra cortado (P04): ou aparece inteiro, na dica, ou não aparece. Não anima a
+ * largura. Não rola (a dica `absolute` seria cortada): o "Sair" fica à vista porque a pilha inteira cabe em 600 px de
+ * altura, o que o e2e de A18 mede; um lugar a mais na coordenação pede medir de novo.
  */
 function Trilho({ itens, time, esperando, rodape, menuDaPessoa, botaoDeAbrir, aoAbrir, lateralAberta, aoSair, saindo }: PropsDoTrilho) {
   return (
-    <div className="sticky top-0 z-10 flex h-screen w-14 shrink-0 flex-col items-center gap-3 self-start border-r border-linha bg-lateral py-2">
-      <Link to={ROTAS.inicio} aria-label="Turmma, página inicial" className="flex size-11 items-center justify-center rounded-linha hover:bg-realce-suave">
-        <img src="/marca/turmma-pinta.svg" alt="" width={24} height={24} className="h-6 w-6" />
+    <div className="sticky top-0 z-10 flex h-screen w-22 shrink-0 flex-col items-center gap-3 self-start border-r-2 border-borda bg-lateral py-3">
+      <Link to={ROTAS.inicio} aria-label="Turmma, página inicial" className="flex size-11 items-center justify-center rounded-controle hover:bg-fundo-suave">
+        <img src="/marca/turmma-pinta.svg" alt="" width={28} height={28} className="h-7 w-7" />
       </Link>
       <button ref={botaoDeAbrir} type="button" onClick={aoAbrir} aria-expanded={lateralAberta} className={CLASSE_DO_BOTAO_DE_ICONE}>
-        <PanelLeftOpen aria-hidden="true" size={20} strokeWidth={1.75} />
+        <PanelLeftOpen aria-hidden="true" size={20} strokeWidth={2.5} />
         <span className="sr-only">Abrir a lateral</span>
         <Dica>Abrir a lateral</Dica>
       </button>
       {itens.length > 0 && (
         <nav aria-label="Seções">
-          <ul className="flex flex-col items-center gap-0.5">
+          <ul className="flex flex-col items-center gap-2">
             {itens.map((item) => (
               <ItemDaLateral key={item.caminho} item={item} trilho />
             ))}
@@ -156,7 +142,7 @@ function Trilho({ itens, time, esperando, rodape, menuDaPessoa, botaoDeAbrir, ao
         </nav>
       )}
       <SecaoDoTime agentes={time} esperando={esperando} trilho />
-      <div className="mt-auto flex flex-col items-center gap-0.5">
+      <div className="mt-auto flex shrink-0 flex-col items-center gap-2">
         <ListaDeItens itens={rodape} rotulo={NOME_DO_RODAPE} trilho />
         <MenuDaPessoa aoSair={aoSair} saindo={saindo} itens={menuDaPessoa} trilho />
       </div>
@@ -167,8 +153,8 @@ function Trilho({ itens, time, esperando, rodape, menuDaPessoa, botaoDeAbrir, ao
 /**
  * A casca da escola, igual nos três papéis (`docs/interface.md` 11.1; D72, D73): a lateral com a marca, o seletor de
  * escola (regra 50, item 13), a navegação do papel (`areas/navegacao.ts`) e a pessoa no rodapé, com o "Sair" a um
- * clique (P18, D59). O conteúdo da rota vem no `<main>`, em coluna, com a margem de 16 px no celular e 24 px a partir de
- * 768 px (P03).
+ * clique (P18, D59). O conteúdo da rota vem no `<main>`, em coluna, na moldura de 1200 px, com a margem de 16 px no
+ * celular e 32 px a partir de 768 px (`docs/interface.md` 9.3; P03).
  *
  * Abaixo de 768 px a lateral vira **gaveta**, num `dialog` modal: o navegador prende o foco nela, o Esc fecha, e o que
  * está atrás fica inerte. A barra do topo mostra o botão do menu, a pinta, a escola e o **Sair**, que continua a um
@@ -269,7 +255,7 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
   const seletor = dados !== undefined && <SeletorDeEscola escolaAtual={dados.escola.nome} acessos={dados.acessos} usuarioAtual={dados.usuarioId} />
 
   const conteudo = (
-    <main className="mx-auto flex w-full max-w-5xl min-w-0 flex-1 flex-col gap-6 px-4 pt-4 pb-8 md:px-6 md:pt-5">{children}</main>
+    <main className="mx-auto flex w-full max-w-[1200px] min-w-0 flex-1 flex-col gap-6 px-4 pt-4 pb-8 md:px-8 md:pt-5">{children}</main>
   )
 
   const gavetaNaPagina = faixa !== 'larga' && (
@@ -296,7 +282,7 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
         saindo={saindo}
         botaoDoTopo={
           <button type="button" onClick={fecharGaveta} className={CLASSE_DO_BOTAO_DE_ICONE}>
-            <X aria-hidden="true" size={20} strokeWidth={1.75} />
+            <X aria-hidden="true" size={20} strokeWidth={2.5} />
             <span className="sr-only">Fechar o menu</span>
           </button>
         }
@@ -316,7 +302,7 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
               aria-expanded={gavetaAberta}
               className={CLASSE_DO_BOTAO_DE_ICONE}
             >
-              <Menu aria-hidden="true" size={20} strokeWidth={1.75} />
+              <Menu aria-hidden="true" size={20} strokeWidth={2.5} />
               <span className="sr-only">Abrir o menu</span>
             </button>
             <Link to={ROTAS.inicio} aria-label="Turmma, página inicial" className="flex size-11 shrink-0 items-center justify-center rounded-linha hover:bg-realce-suave">
@@ -334,7 +320,7 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
           </header>
         )}
         {faixa === 'larga' && !recolhida ? (
-          <div className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col self-start border-r border-linha bg-lateral">
+          <div className="sticky top-0 flex h-screen w-64 shrink-0 flex-col self-start border-r-2 border-borda bg-lateral">
             <LateralAberta
               pessoa={pessoa}
               itens={itens}
@@ -347,7 +333,7 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
               saindo={saindo}
               botaoDoTopo={
                 <button ref={botaoDeRecolher} type="button" onClick={() => recolher(true)} className={CLASSE_DO_BOTAO_DE_ICONE}>
-                  <PanelLeftClose aria-hidden="true" size={20} strokeWidth={1.75} />
+                  <PanelLeftClose aria-hidden="true" size={20} strokeWidth={2.5} />
                   <span className="sr-only">Recolher a lateral</span>
                 </button>
               }
