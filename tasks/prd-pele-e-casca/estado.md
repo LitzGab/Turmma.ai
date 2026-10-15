@@ -6,12 +6,9 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** o `RELATÓRIO` do `Implementador`, da **10.0** (porte grande: até 4 horas sem a primeira rodada),
-  na **linha 1**, 1ª tentativa, pedida em 13/10/2026 às 18h57 (a 9.0 se encontrou às 18h50, em `db54cc6`). Antes da
-  partida o `Arquiteto` fez a triagem que o `8_task.md` pedia e ajustou o `10_task.md` (`9359288`, só documento):
-  o balão com a `AssinaturaIA` em cima, a 10.5 nova (tirar o recuo `pl-8` do `professor/Time.tsx`) e o exemplo da
-  `CaixaPedido` cortado a 360 px como item da 10.1; por isso o `PEDIDO` foi só com "sem push". A 10.0 e a 11.0 passaram
-  a tocar o mesmo arquivo e não correm juntas: depois da 10.0 o quadro deve soltar a **11.0**, na mesma linha. Checkout da
+- **Espero:** o `RELATÓRIO` do `Implementador`, da **11.0** (porte grande: até 4 horas sem a primeira rodada),
+  na **linha 1**, 1ª tentativa, pedida em 15/10/2026 às 15h32 (a 10.0 se encontrou às 15h29: a spec está em `8eac926`,
+  e o push falhou de propósito). O quadro pediu mais uma linha para a 14.0: não abri (uma linha só, item 2 abaixo). Checkout da
   linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch `spec/pele-e-casca--l1`, ambiente
   de teste 1, com o `Implementador` e a `Mesa`. Todo pedido vai com a observação **"sem push"**: o commit da tarefa
   fica local. **Para a validação:** a 7.0 deixou ao `/validar` o caso direto de `fechadoPeloNavegador` sob
@@ -54,14 +51,14 @@
 - **Limite de uso:** **94% do limite semanal às 14h32 de 13/10** (era 81% às 07h48); **acabou às 19h31 de 13/10**, com a
   primeira rodada da 10.0 em curso (os quatro revisores caíram com 429, nenhuma rodada registrada). Zerou em 15/10 às 15h:
   às 15h01 fechei o menu do limite na `Mesa` e no `Implementador`, e a `Mesa` refez a rodada 1 inteira, com a árvore
-  igual à da foto. O `Implementador` espera a resposta dela. Uma linha, poucos agentes
+  igual à da foto, e a 10.0 fechou na 2ª. Uma linha, poucos agentes
 - **A spec da X1 está APROVADA** pelos seis revisores (rodada 4, 13/10/2026 02:09, `revisao-spec.md`). As
   recomendações que sobraram estão na seção da rodada 4 e entram como subtarefa ou cenário na tarefa de cada uma
 - **Como o Orquestrador assumiu:** em 13/10/2026, 08h20, com a palavra do Joaquim no terminal dele ("pode"). O andar
   "X1 pele-e-casca" nasceu da branch que já existia (`--existing-branch`), em
   `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca`, e a `develop` (`e278845`) entrou por merge, sem
   conflito (`65ab3b1`). A 1.0 e a spec correram fora do Maestri, num checkout avulso já desfeito
-- **Base:** `spec/pele-e-casca` em `9359288` (a triagem da 10.0, sobre o encontro da 9.0, `8fe379e`); a linha 1 partiu dela para a 10.0. O diário tem alterações sem commit desde o encontro da 9.0: o encontro da 10.0 as leva. Se o quadro
+- **Base:** `spec/pele-e-casca` em `8eac926` (o encontro da 10.0); a linha 1 partiu dela para a 11.0. O diário tem alterações sem commit desde o encontro da 10.0: o encontro da 11.0 as leva. Se o quadro
   pedir mais uma linha: não abrir (uma linha só, item 2 acima). Nada foi enviado ao GitHub:
   push é do Joaquim
 
@@ -79,6 +76,7 @@
 | 7.0 | `dc02f60` | Sonnet 5.5 | 2 | linha 1, das 15h10 às 17h07 de 13/10; o `frontend-reviewer` e o `infra-guardian` aprovaram na 1ª; o `test-engineer` e o `revisor-geral` reprovaram na 1ª (o véu forte do login por cima sem e2e, o Tab preso da confirmação, e a 10.2 dizendo dois lugares para o perigo cheio com o teste provando seis arquivos) e aprovaram na 2ª; 34 mutações vermelhas; `--repeat-each 3` de `pecas-sobrepor`, `inatividade` e `professores` antes da 2ª rodada; o `PainelLado` nasceu sem consumidor (X2 e X3); seis recomendações com destino no `TODO.md`, ainda por escrever lá (item 2b do "Agora"); sem push |
 | 8.0 | `eb3a181` | Sonnet 5.5 | 2 | linha 1, das 17h08 às 18h18 de 13/10; os quatro revisores (`frontend-reviewer`, `conformidade-reviewer`, `test-engineer`, `revisor-geral`) aprovaram na 1ª rodada, com 9 recomendações a aplicar, e de novo na 2ª; a Mesa viu 86 fotos nos dois temas; 83 mutações vermelhas; 18 divergências e ajustes no `8_task.md`, entre eles o balão da `MensagemIA` passar a usar a `AssinaturaIA` como cabeçalho (muda o `Time.tsx` e o `Tutor.tsx` do professor, que são da 10.0); recomendações sem aplicar com destino na 10.0, no `TODO.md` e no `/validar`; sem push |
 | 9.0 | `db54cc6` | Sonnet 5.5 | 1 | linha 1, das 18h19 às 18h49 de 13/10; os quatro revisores (`frontend-reviewer`, `infra-guardian`, `test-engineer`, `revisor-geral`) aprovaram na 1ª rodada; 4 fotos do Implementador e 8 da Mesa; os quatro ícones pesam 484 bytes em brotli, e por isso a 9.4 não se aplicou (sem `lugares-*.svg`, `.size-limit.json` intacto); o `Ladrilho` ganhou o tamanho 36, para a lateral da 12.0; cinco divergências no `9_task.md`; sem push |
+| 10.0 | `35106af` | Sonnet 5.5 | 2 | linha 1, das 18h57 de 13/10 às 15h29 de 15/10, com o limite semanal parado das 19h31 de 13/10 às 15h de 15/10 (no meio da 1ª rodada, que a Mesa refez inteira); os quatro revisores (`frontend-reviewer`, `conformidade-reviewer`, `test-engineer`, `revisor-geral`) aprovaram na 2ª rodada; 95 mutações vermelhas; telas vistas pelo Implementador e pela Mesa (cheia e vazia, dois temas, computador e celular); recomendações sem aplicar copiadas para o `10_task.md`, linhas novas no `TODO.md`; sem push |
 | PRD, Tech Spec e tarefas da X1 à X4 | `2ed7829` | Opus (as tarefas 8 a 15 da X1, 4 a 14 da X3 e 3 a 11 da X4, por agentes em Sonnet) | 4 da spec da X1 | só documento; a X2, a X3 e a X4 sem revisão de spec |
 
 ## Esperando o Joaquim
