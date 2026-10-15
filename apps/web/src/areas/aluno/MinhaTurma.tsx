@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ErroDaApi } from '../../api/cliente'
 import { consultaMinhaTurma } from '../../api/minha-turma'
 import { EstadoCarregando, EstadoErro } from '../../componentes/estado'
+import { Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
 
 /**
@@ -21,8 +22,7 @@ const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. 
  * dado, o erro com "Tentar de novo" (queda de rede não é logout, regra 80, item 6) e, à parte, o aluno sem turma no ano,
  * que não é erro de ninguém e diz o que fazer.
  *
- * É aba de navegação: o `<h1>` existe só para o leitor de tela, e a lateral já diz onde a pessoa está (`docs/interface.md`
- * 6, P03).
+ * É aba de navegação: o `<h1>`, visível, é o título da tela, na `Tela` (RF12; `docs/interface.md` 11.2).
  */
 export function MinhaTurma() {
   useTituloDaTela('Minha turma')
@@ -56,11 +56,10 @@ export function MinhaTurma() {
   }
 
   return (
-    <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-minha-turma">
-      <h1 id="titulo-minha-turma" className="sr-only">
-        Minha turma
-      </h1>
-      {conteudo()}
-    </section>
+    <Tela titulo="Minha turma" idDoTitulo="titulo-minha-turma">
+      <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-minha-turma">
+        {conteudo()}
+      </section>
+    </Tela>
   )
 }

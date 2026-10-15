@@ -115,6 +115,22 @@ test.describe('Material da coordenação', () => {
     })
     expect(daCasca).toBe((page.viewportSize()?.width ?? 0) >= 768 ? '24px' : '16px')
     expect(daTela).toBe('0px')
+    // O título da tela se vê (RF12; tarefa 11.0): medido, e não `toBeVisible`, que também passa no `h1` do leitor de tela.
+    // A caixa tem 24 px de fonte e está num cabeçalho de 64 px ou mais. O padding do `main`, acima, é o de hoje: a moldura
+    // é da 12.0.
+    const titulo = await principal(page)
+      .getByRole('heading', { level: 1, name: 'Material' })
+      .evaluate((h1) => {
+        const caixa = h1.getBoundingClientRect()
+        return { largura: caixa.width, altura: caixa.height, fonte: getComputedStyle(h1).fontSize, posicao: getComputedStyle(h1).position, cabecalho: h1.closest('header')?.getBoundingClientRect().height ?? null }
+      })
+    expect(titulo.largura).toBeGreaterThan(1)
+    expect(titulo.altura).toBeGreaterThan(1)
+    expect(titulo.fonte).toBe('24px')
+    expect(titulo.posicao).not.toBe('absolute')
+    // Antes da medida, que o `h1` está num cabeçalho: sem ele a conferência de 64 px falharia sem dizer o que quebrou.
+    expect(titulo.cabecalho).not.toBeNull()
+    expect(titulo.cabecalho ?? 0).toBeGreaterThanOrEqual(64)
     expect(await violacoesGraves(page)).toEqual([])
   })
 

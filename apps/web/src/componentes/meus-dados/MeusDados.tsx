@@ -127,7 +127,7 @@ function ListaDePedidos({ pedidos, agora, aoBaixar }: PropsDaLista) {
 }
 
 interface Props {
-  /** O nome da tela: o título da aba e o `h1` (só para o leitor de tela, como o de toda aba). "Privacidade" no aluno, "Meus dados" no professor. */
+  /** O nome da tela: o título da aba e o `h1`, visível como o de toda tela aberta pela lateral. "Privacidade" no aluno, "Meus dados" no professor. */
   readonly titulo: string
   /** O nome da seção quando a tela tem um acima do conteúdo: o aluno acha "Meus dados" **dentro** de "Privacidade". */
   readonly secao?: string

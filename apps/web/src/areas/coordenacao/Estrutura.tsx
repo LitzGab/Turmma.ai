@@ -49,6 +49,7 @@ import { AlertaDaFalha, Anuncio, ConfirmacaoDePerigo, DialogoDeFormulario, useEn
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { CLASSES_DO_SELETOR } from '../../componentes/seletor'
 import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
+import { Tela } from '../../componentes/Tela'
 import { formatarData } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import { Alocacao } from './Alocacao'
@@ -214,16 +215,18 @@ export function Estrutura() {
     dialogo.abrir(tipo, item)
   }
 
-  if (anos.isPending) return <EstadoCarregando rotulo="Carregando a estrutura da escola…" />
-
-  const cabecalho = <h1 className="sr-only">Estrutura</h1>
+  if (anos.isPending)
+    return (
+      <Tela titulo="Estrutura">
+        <EstadoCarregando rotulo="Carregando a estrutura da escola…" />
+      </Tela>
+    )
 
   if (anos.isError)
     return (
-      <section className="flex min-w-0 flex-col gap-6">
-        {cabecalho}
+      <Tela titulo="Estrutura">
         <EstadoErro erro={anos.error} tentando={anos.isFetching} aoTentarDeNovo={() => void anos.refetch({ cancelRefetch: false })} />
-      </section>
+      </Tela>
     )
 
   const alocaveis = professores.data?.itens.filter((professor) => (ESTADOS_DO_PROFESSOR_ALOCAVEIS as readonly EstadoDoProfessor[]).includes(professor.estado))
@@ -242,272 +245,272 @@ export function Estrutura() {
   )
 
   return (
-    <section className="flex min-w-0 flex-col gap-8">
-      {cabecalho}
+    <Tela titulo="Estrutura">
+      <section className="flex min-w-0 flex-col gap-8">
+        {anos.data.itens.length === 0 ? (
+          <>
+            <EstadoVazio
+              titulo="Comece pelo ano letivo"
+              descricao="A escola se monta nesta ordem, e cada passo abre o seguinte. As turmas nascem no ano letivo em curso."
+              acao={{ rotulo: 'Criar o ano letivo', aoAcionar: () => abrir('ano') }}
+            />
+            <Roteiro titulo="O roteiro até a alocação" passos={passos} />
+          </>
+        ) : (
+          <>
+            <Roteiro titulo="O que falta para a escola começar" passos={passos} />
+            <AnosLetivos
+              anos={anos.data.itens}
+              tituloRef={tituloDoAno}
+              anuncio={anuncioDa('ano')}
+              aoCriar={() => abrir('ano')}
+              aoAnunciar={(texto) => anunciar('ano', texto)}
+              recarregar={recarregar}
+            />
 
-      {anos.data.itens.length === 0 ? (
-        <>
-          <EstadoVazio
-            titulo="Comece pelo ano letivo"
-            descricao="A escola se monta nesta ordem, e cada passo abre o seguinte. As turmas nascem no ano letivo em curso."
-            acao={{ rotulo: 'Criar o ano letivo', aoAcionar: () => abrir('ano') }}
+            <Secao
+              titulo="Séries"
+              tituloRef={tituloDasSeries}
+              anuncio={anuncioDa('series')}
+              acao={
+                <button type="button" onClick={() => abrir('serie')} className={CLASSES_DO_BOTAO_SECUNDARIO}>
+                  Nova série
+                </button>
+              }
+            >
+              {series.isPending ? (
+                <EstadoCarregando rotulo="Carregando as séries…" />
+              ) : series.isError ? (
+                <EstadoErro erro={series.error} tentando={series.isFetching} aoTentarDeNovo={() => void series.refetch({ cancelRefetch: false })} />
+              ) : series.data.itens.length === 0 ? (
+                <p className="text-apoio">Nenhuma série ainda. Crie as séries que a escola tem, do 6º ano ao 3º do Ensino Médio.</p>
+              ) : (
+                <ul className="flex flex-wrap gap-2">
+                  {ordenarSeries(series.data.itens).map((serie) => (
+                    <li key={serie.id} className="rounded-controle border border-linha bg-superficie px-3 py-2 break-words">
+                      {nomeDaSerie(serie)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Secao>
+
+            <Secao
+              titulo="Disciplinas"
+              tituloRef={tituloDasDisciplinas}
+              anuncio={anuncioDa('disciplinas')}
+              acao={
+                <button type="button" onClick={() => abrir('disciplina')} className={CLASSES_DO_BOTAO_SECUNDARIO}>
+                  Nova disciplina
+                </button>
+              }
+            >
+              {disciplinas.isPending ? (
+                <EstadoCarregando rotulo="Carregando as disciplinas…" />
+              ) : disciplinas.isError ? (
+                <EstadoErro erro={disciplinas.error} tentando={disciplinas.isFetching} aoTentarDeNovo={() => void disciplinas.refetch({ cancelRefetch: false })} />
+              ) : disciplinas.data.itens.length === 0 ? (
+                <p className="text-apoio">Nenhuma disciplina ainda. Crie as que os professores dão, como Matemática e Língua Portuguesa.</p>
+              ) : (
+                <>
+                  <ul className="flex flex-col gap-3">
+                    {ordenarPeloNome(disciplinas.data.itens).map((disciplina) => (
+                      <Linha key={disciplina.id} titulo={disciplina.nome}>
+                        <AcoesDaLinha
+                          nome={disciplina.nome}
+                          tipo="a disciplina"
+                          aoRenomear={() => abrir('renomear_disciplina', disciplina)}
+                          aoExcluir={() => abrir('excluir_disciplina', disciplina)}
+                        />
+                      </Linha>
+                    ))}
+                  </ul>
+                  <AvisoDeListaIncompleta completa={disciplinas.data.completa} />
+                </>
+              )}
+            </Secao>
+
+            <Secao
+              titulo={anoEmCurso === undefined ? 'Turmas' : `Turmas de ${String(anoEmCurso.ano)}`}
+              tituloRef={tituloDasTurmas}
+              anuncio={anuncioDa('turmas')}
+              acao={
+                anoEmCurso !== undefined && (
+                  <button type="button" onClick={() => abrir('turma')} className={CLASSES_DO_BOTAO_SECUNDARIO}>
+                    Nova turma
+                  </button>
+                )
+              }
+            >
+              {anoEmCurso === undefined ? (
+                <p className="text-apoio">As turmas nascem no ano letivo em curso. Abra o ano letivo acima para criar as turmas.</p>
+              ) : turmas.isPending ? (
+                <EstadoCarregando rotulo="Carregando as turmas…" />
+              ) : turmas.isError ? (
+                <EstadoErro erro={turmas.error} tentando={turmas.isFetching} aoTentarDeNovo={() => void turmas.refetch({ cancelRefetch: false })} />
+              ) : turmas.data.itens.length === 0 ? (
+                <p className="text-apoio">Nenhuma turma ainda. Crie cada turma numa série; depois abra a turma para subir a lista de nomes.</p>
+              ) : (
+                <>
+                  <ul className="flex flex-col gap-3">
+                    {ordenarTurmas(turmas.data.itens).map((turma) => (
+                      <Linha key={turma.id} titulo={turma.nome} detalhe={detalheDaTurma(turma)}>
+                        <Link to={caminhoDaTurmaNaEstrutura(turma.id)} className={CLASSES_DO_LINK_SECUNDARIO}>
+                          Lista de nomes<span className="sr-only"> da turma {turma.nome}</span>
+                        </Link>
+                        <AcoesDaLinha nome={turma.nome} tipo="a turma" aoRenomear={() => abrir('renomear_turma', turma)} aoExcluir={() => abrir('excluir_turma', turma)} />
+                      </Linha>
+                    ))}
+                  </ul>
+                  <AvisoDeListaIncompleta completa={turmas.data.completa} />
+                </>
+              )}
+            </Secao>
+
+            <Alocacao anoEmCurso={anoEmCurso !== undefined} anuncio={anuncioDa('alocacao')} aoAnunciar={(texto) => anunciar('alocacao', texto)} />
+          </>
+        )}
+
+        {aberta?.tipo === 'ano' && (
+          <NovoAnoLetivo
+            key={aberta.numero}
+            aoFechar={dialogo.fechar}
+            aoCriar={(ano) => {
+              anunciar('ano', `Ano letivo ${String(ano.ano)} criado. Abra o ano para criar as turmas.`)
+              dialogo.fecharSeAinda(aberta)
+            }}
+            recarregar={recarregar}
+            // O "Criar o ano letivo" do vazio sai da tela quando o primeiro ano chega: o foco vai para a seção do ano.
+            focoDeReserva={() => tituloDoAno.current?.focus()}
           />
-          <Roteiro titulo="O roteiro até a alocação" passos={passos} />
-        </>
-      ) : (
-        <>
-          <Roteiro titulo="O que falta para a escola começar" passos={passos} />
-          <AnosLetivos
-            anos={anos.data.itens}
-            tituloRef={tituloDoAno}
-            anuncio={anuncioDa('ano')}
-            aoCriar={() => abrir('ano')}
-            aoAnunciar={(texto) => anunciar('ano', texto)}
+        )}
+        {aberta?.tipo === 'serie' && (
+          <NovaSerie
+            key={aberta.numero}
+            existentes={series.data?.itens ?? []}
+            aoFechar={dialogo.fechar}
+            aoCriar={(serie) => {
+              anunciar('series', `${nomeDaSerie(serie)} criado.`)
+              dialogo.fecharSeAinda(aberta)
+            }}
             recarregar={recarregar}
           />
-
-          <Secao
-            titulo="Séries"
-            tituloRef={tituloDasSeries}
-            anuncio={anuncioDa('series')}
-            acao={
-              <button type="button" onClick={() => abrir('serie')} className={CLASSES_DO_BOTAO_SECUNDARIO}>
-                Nova série
-              </button>
-            }
-          >
-            {series.isPending ? (
-              <EstadoCarregando rotulo="Carregando as séries…" />
-            ) : series.isError ? (
-              <EstadoErro erro={series.error} tentando={series.isFetching} aoTentarDeNovo={() => void series.refetch({ cancelRefetch: false })} />
-            ) : series.data.itens.length === 0 ? (
-              <p className="text-apoio">Nenhuma série ainda. Crie as séries que a escola tem, do 6º ano ao 3º do Ensino Médio.</p>
-            ) : (
-              <ul className="flex flex-wrap gap-2">
-                {ordenarSeries(series.data.itens).map((serie) => (
-                  <li key={serie.id} className="rounded-controle border border-linha bg-superficie px-3 py-2 break-words">
-                    {nomeDaSerie(serie)}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Secao>
-
-          <Secao
-            titulo="Disciplinas"
-            tituloRef={tituloDasDisciplinas}
-            anuncio={anuncioDa('disciplinas')}
-            acao={
-              <button type="button" onClick={() => abrir('disciplina')} className={CLASSES_DO_BOTAO_SECUNDARIO}>
-                Nova disciplina
-              </button>
-            }
-          >
-            {disciplinas.isPending ? (
-              <EstadoCarregando rotulo="Carregando as disciplinas…" />
-            ) : disciplinas.isError ? (
-              <EstadoErro erro={disciplinas.error} tentando={disciplinas.isFetching} aoTentarDeNovo={() => void disciplinas.refetch({ cancelRefetch: false })} />
-            ) : disciplinas.data.itens.length === 0 ? (
-              <p className="text-apoio">Nenhuma disciplina ainda. Crie as que os professores dão, como Matemática e Língua Portuguesa.</p>
-            ) : (
+        )}
+        {aberta?.tipo === 'disciplina' && (
+          <NovaDisciplina
+            key={aberta.numero}
+            aoFechar={dialogo.fechar}
+            aoCriar={(disciplina) => {
+              anunciar('disciplinas', `Disciplina ${disciplina.nome} criada.`)
+              dialogo.fecharSeAinda(aberta)
+            }}
+            recarregar={recarregar}
+          />
+        )}
+        {aberta?.tipo === 'turma' && anoEmCurso !== undefined && (
+          <NovaTurma
+            key={aberta.numero}
+            anoLetivo={anoEmCurso}
+            series={series.data?.itens ?? []}
+            aoFechar={dialogo.fechar}
+            aoCriar={(turma) => {
+              anunciar('turmas', `Turma ${turma.nome} criada. Abra a turma para subir a lista de nomes.`)
+              dialogo.fecharSeAinda(aberta)
+            }}
+            recarregar={recarregar}
+          />
+        )}
+        {aberta?.tipo === 'renomear_disciplina' && alvo !== undefined && (
+          <Renomear
+            key={aberta.numero}
+            titulo="Renomear a disciplina"
+            rotulo="Nome da disciplina"
+            atual={alvo.nome}
+            maximo={TAMANHO_MAXIMO_NOME_DISCIPLINA}
+            renomear={(nome) => renomearDisciplina(alvo.id, nome)}
+            conflito="Já existe uma disciplina com este nome na escola. Escolha outro."
+            aoFechar={dialogo.fechar}
+            aoRenomear={(nome) => {
+              anunciar('disciplinas', `Disciplina renomeada para ${nome}.`)
+              dialogo.fecharSeAinda(aberta)
+            }}
+            recarregar={recarregar}
+            focoDeReserva={() => tituloDasDisciplinas.current?.focus()}
+          />
+        )}
+        {aberta?.tipo === 'renomear_turma' && alvo !== undefined && (
+          <Renomear
+            key={aberta.numero}
+            titulo="Renomear a turma"
+            rotulo="Nome da turma"
+            atual={alvo.nome}
+            maximo={TAMANHO_MAXIMO_NOME_TURMA}
+            renomear={(nome) => renomearTurma(alvo.id, nome)}
+            conflito="Já existe uma turma com este nome neste ano letivo. Escolha outro."
+            aoFechar={dialogo.fechar}
+            aoRenomear={(nome) => {
+              anunciar('turmas', `Turma renomeada para ${nome}.`)
+              dialogo.fecharSeAinda(aberta)
+            }}
+            recarregar={recarregar}
+            focoDeReserva={() => tituloDasTurmas.current?.focus()}
+          />
+        )}
+        {aberta?.tipo === 'excluir_disciplina' && alvo !== undefined && (
+          <ConfirmacaoDePerigo
+            key={aberta.numero}
+            titulo="Excluir a disciplina"
+            texto={
               <>
-                <ul className="flex flex-col gap-3">
-                  {ordenarPeloNome(disciplinas.data.itens).map((disciplina) => (
-                    <Linha key={disciplina.id} titulo={disciplina.nome}>
-                      <AcoesDaLinha
-                        nome={disciplina.nome}
-                        tipo="a disciplina"
-                        aoRenomear={() => abrir('renomear_disciplina', disciplina)}
-                        aoExcluir={() => abrir('excluir_disciplina', disciplina)}
-                      />
-                    </Linha>
-                  ))}
-                </ul>
-                <AvisoDeListaIncompleta completa={disciplinas.data.completa} />
+                A disciplina <span className="font-medium text-tinta">{alvo.nome}</span> sai da escola. Só sai a disciplina sem professor alocado nela, nem
+                em alocação já encerrada.
               </>
-            )}
-          </Secao>
-
-          <Secao
-            titulo={anoEmCurso === undefined ? 'Turmas' : `Turmas de ${String(anoEmCurso.ano)}`}
-            tituloRef={tituloDasTurmas}
-            anuncio={anuncioDa('turmas')}
-            acao={
-              anoEmCurso !== undefined && (
-                <button type="button" onClick={() => abrir('turma')} className={CLASSES_DO_BOTAO_SECUNDARIO}>
-                  Nova turma
-                </button>
-              )
             }
-          >
-            {anoEmCurso === undefined ? (
-              <p className="text-apoio">As turmas nascem no ano letivo em curso. Abra o ano letivo acima para criar as turmas.</p>
-            ) : turmas.isPending ? (
-              <EstadoCarregando rotulo="Carregando as turmas…" />
-            ) : turmas.isError ? (
-              <EstadoErro erro={turmas.error} tentando={turmas.isFetching} aoTentarDeNovo={() => void turmas.refetch({ cancelRefetch: false })} />
-            ) : turmas.data.itens.length === 0 ? (
-              <p className="text-apoio">Nenhuma turma ainda. Crie cada turma numa série; depois abra a turma para subir a lista de nomes.</p>
-            ) : (
+            rotuloDaAcao="Excluir disciplina"
+            rotuloEmAndamento="Excluindo…"
+            acao={() => excluirDisciplina(alvo.id)}
+            aoFechar={dialogo.fechar}
+            aoConcluir={() => {
+              anunciar('disciplinas', `Disciplina ${alvo.nome} excluída.`)
+              dialogo.fecharSeAinda(aberta)
+            }}
+            aoTerminar={recarregar}
+            textosDaFalha={{
+              [CodigoDeErro.CONFLITO]: 'Esta disciplina não pode sair: há professor alocado nela, também em alocação já encerrada. A lista foi atualizada.',
+              [CodigoDeErro.NAO_ENCONTRADO]: 'Esta disciplina já não existe. A lista foi atualizada.',
+            }}
+            focoDeReserva={() => tituloDasDisciplinas.current?.focus()}
+          />
+        )}
+        {aberta?.tipo === 'excluir_turma' && alvo !== undefined && (
+          <ConfirmacaoDePerigo
+            key={aberta.numero}
+            titulo="Excluir a turma"
+            texto={
               <>
-                <ul className="flex flex-col gap-3">
-                  {ordenarTurmas(turmas.data.itens).map((turma) => (
-                    <Linha key={turma.id} titulo={turma.nome} detalhe={detalheDaTurma(turma)}>
-                      <Link to={caminhoDaTurmaNaEstrutura(turma.id)} className={CLASSES_DO_LINK_SECUNDARIO}>
-                        Lista de nomes<span className="sr-only"> da turma {turma.nome}</span>
-                      </Link>
-                      <AcoesDaLinha nome={turma.nome} tipo="a turma" aoRenomear={() => abrir('renomear_turma', turma)} aoExcluir={() => abrir('excluir_turma', turma)} />
-                    </Linha>
-                  ))}
-                </ul>
-                <AvisoDeListaIncompleta completa={turmas.data.completa} />
+                A turma <span className="font-medium text-tinta">{alvo.nome}</span> sai do ano letivo. Só sai a turma vazia: sem nomes na lista, sem
+                professor alocado (também em alocação encerrada), sem pedido de aluno e sem acesso da turma em vigor.
               </>
-            )}
-          </Secao>
-
-          <Alocacao anoEmCurso={anoEmCurso !== undefined} anuncio={anuncioDa('alocacao')} aoAnunciar={(texto) => anunciar('alocacao', texto)} />
-        </>
-      )}
-
-      {aberta?.tipo === 'ano' && (
-        <NovoAnoLetivo
-          key={aberta.numero}
-          aoFechar={dialogo.fechar}
-          aoCriar={(ano) => {
-            anunciar('ano', `Ano letivo ${String(ano.ano)} criado. Abra o ano para criar as turmas.`)
-            dialogo.fecharSeAinda(aberta)
-          }}
-          recarregar={recarregar}
-          // O "Criar o ano letivo" do vazio sai da tela quando o primeiro ano chega: o foco vai para a seção do ano.
-          focoDeReserva={() => tituloDoAno.current?.focus()}
-        />
-      )}
-      {aberta?.tipo === 'serie' && (
-        <NovaSerie
-          key={aberta.numero}
-          existentes={series.data?.itens ?? []}
-          aoFechar={dialogo.fechar}
-          aoCriar={(serie) => {
-            anunciar('series', `${nomeDaSerie(serie)} criado.`)
-            dialogo.fecharSeAinda(aberta)
-          }}
-          recarregar={recarregar}
-        />
-      )}
-      {aberta?.tipo === 'disciplina' && (
-        <NovaDisciplina
-          key={aberta.numero}
-          aoFechar={dialogo.fechar}
-          aoCriar={(disciplina) => {
-            anunciar('disciplinas', `Disciplina ${disciplina.nome} criada.`)
-            dialogo.fecharSeAinda(aberta)
-          }}
-          recarregar={recarregar}
-        />
-      )}
-      {aberta?.tipo === 'turma' && anoEmCurso !== undefined && (
-        <NovaTurma
-          key={aberta.numero}
-          anoLetivo={anoEmCurso}
-          series={series.data?.itens ?? []}
-          aoFechar={dialogo.fechar}
-          aoCriar={(turma) => {
-            anunciar('turmas', `Turma ${turma.nome} criada. Abra a turma para subir a lista de nomes.`)
-            dialogo.fecharSeAinda(aberta)
-          }}
-          recarregar={recarregar}
-        />
-      )}
-      {aberta?.tipo === 'renomear_disciplina' && alvo !== undefined && (
-        <Renomear
-          key={aberta.numero}
-          titulo="Renomear a disciplina"
-          rotulo="Nome da disciplina"
-          atual={alvo.nome}
-          maximo={TAMANHO_MAXIMO_NOME_DISCIPLINA}
-          renomear={(nome) => renomearDisciplina(alvo.id, nome)}
-          conflito="Já existe uma disciplina com este nome na escola. Escolha outro."
-          aoFechar={dialogo.fechar}
-          aoRenomear={(nome) => {
-            anunciar('disciplinas', `Disciplina renomeada para ${nome}.`)
-            dialogo.fecharSeAinda(aberta)
-          }}
-          recarregar={recarregar}
-          focoDeReserva={() => tituloDasDisciplinas.current?.focus()}
-        />
-      )}
-      {aberta?.tipo === 'renomear_turma' && alvo !== undefined && (
-        <Renomear
-          key={aberta.numero}
-          titulo="Renomear a turma"
-          rotulo="Nome da turma"
-          atual={alvo.nome}
-          maximo={TAMANHO_MAXIMO_NOME_TURMA}
-          renomear={(nome) => renomearTurma(alvo.id, nome)}
-          conflito="Já existe uma turma com este nome neste ano letivo. Escolha outro."
-          aoFechar={dialogo.fechar}
-          aoRenomear={(nome) => {
-            anunciar('turmas', `Turma renomeada para ${nome}.`)
-            dialogo.fecharSeAinda(aberta)
-          }}
-          recarregar={recarregar}
-          focoDeReserva={() => tituloDasTurmas.current?.focus()}
-        />
-      )}
-      {aberta?.tipo === 'excluir_disciplina' && alvo !== undefined && (
-        <ConfirmacaoDePerigo
-          key={aberta.numero}
-          titulo="Excluir a disciplina"
-          texto={
-            <>
-              A disciplina <span className="font-medium text-tinta">{alvo.nome}</span> sai da escola. Só sai a disciplina sem professor alocado nela, nem
-              em alocação já encerrada.
-            </>
-          }
-          rotuloDaAcao="Excluir disciplina"
-          rotuloEmAndamento="Excluindo…"
-          acao={() => excluirDisciplina(alvo.id)}
-          aoFechar={dialogo.fechar}
-          aoConcluir={() => {
-            anunciar('disciplinas', `Disciplina ${alvo.nome} excluída.`)
-            dialogo.fecharSeAinda(aberta)
-          }}
-          aoTerminar={recarregar}
-          textosDaFalha={{
-            [CodigoDeErro.CONFLITO]: 'Esta disciplina não pode sair: há professor alocado nela, também em alocação já encerrada. A lista foi atualizada.',
-            [CodigoDeErro.NAO_ENCONTRADO]: 'Esta disciplina já não existe. A lista foi atualizada.',
-          }}
-          focoDeReserva={() => tituloDasDisciplinas.current?.focus()}
-        />
-      )}
-      {aberta?.tipo === 'excluir_turma' && alvo !== undefined && (
-        <ConfirmacaoDePerigo
-          key={aberta.numero}
-          titulo="Excluir a turma"
-          texto={
-            <>
-              A turma <span className="font-medium text-tinta">{alvo.nome}</span> sai do ano letivo. Só sai a turma vazia: sem nomes na lista, sem
-              professor alocado (também em alocação encerrada), sem pedido de aluno e sem acesso da turma em vigor.
-            </>
-          }
-          rotuloDaAcao="Excluir turma"
-          rotuloEmAndamento="Excluindo…"
-          acao={() => excluirTurma(alvo.id)}
-          aoFechar={dialogo.fechar}
-          aoConcluir={() => {
-            anunciar('turmas', `Turma ${alvo.nome} excluída.`)
-            dialogo.fecharSeAinda(aberta)
-          }}
-          aoTerminar={recarregar}
-          textosDaFalha={{
-            [CodigoDeErro.CONFLITO]:
-              'Esta turma não pode sair: ela ainda tem nomes na lista, professor alocado, pedido de aluno ou acesso da turma em vigor. Os nomes livres saem pela lista de nomes da turma; a alocação, o pedido e o acesso não se desfazem por esta tela. A lista foi atualizada.',
-            [CodigoDeErro.NAO_ENCONTRADO]: 'Esta turma já não existe. A lista foi atualizada.',
-          }}
-          focoDeReserva={() => tituloDasTurmas.current?.focus()}
-        />
-      )}
-    </section>
+            }
+            rotuloDaAcao="Excluir turma"
+            rotuloEmAndamento="Excluindo…"
+            acao={() => excluirTurma(alvo.id)}
+            aoFechar={dialogo.fechar}
+            aoConcluir={() => {
+              anunciar('turmas', `Turma ${alvo.nome} excluída.`)
+              dialogo.fecharSeAinda(aberta)
+            }}
+            aoTerminar={recarregar}
+            textosDaFalha={{
+              [CodigoDeErro.CONFLITO]:
+                'Esta turma não pode sair: ela ainda tem nomes na lista, professor alocado, pedido de aluno ou acesso da turma em vigor. Os nomes livres saem pela lista de nomes da turma; a alocação, o pedido e o acesso não se desfazem por esta tela. A lista foi atualizada.',
+              [CodigoDeErro.NAO_ENCONTRADO]: 'Esta turma já não existe. A lista foi atualizada.',
+            }}
+            focoDeReserva={() => tituloDasTurmas.current?.focus()}
+          />
+        )}
+      </section>
+    </Tela>
   )
 }
 

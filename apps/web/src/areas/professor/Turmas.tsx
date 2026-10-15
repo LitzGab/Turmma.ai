@@ -19,6 +19,7 @@ import { caminhoDaTurmaDoProfessor } from '../../caminhos'
 import { Botao } from '../../componentes/Botao'
 import { CLASSES_DO_LINK_SECUNDARIO } from '../../componentes/botao-secundario'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
+import { Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
 
 /** A contestação que está sendo escrita, no estado da página: a lista pode recarregar por baixo sem levá-la junto. */
@@ -47,8 +48,7 @@ function nomeDoVinculo(vinculo: Vinculo): string {
  * as que esperam vêm primeiro. Só o cartão do vínculo confirmado leva à turma aberta (15.0), onde ele gera o acesso dos
  * alunos: o encerrado e o contestado não a alcançam, e a tela não oferece o que a API recusaria.
  *
- * É aba de navegação: o `<h1>` existe só para o leitor de tela, e a lateral já diz onde a pessoa está (`docs/interface.md`
- * 6, P03).
+ * É aba de navegação: o `<h1>`, visível, é o título da tela, na `Tela` (RF12; `docs/interface.md` 11.2).
  *
  * - **O estado aparece em texto**, e não só em cor (regra 50, item 11).
  * - **Contestar mostra o que vai acontecer antes de enviar** (regra 50, item 8): a coordenação vê, e o vínculo não dá
@@ -144,45 +144,43 @@ export function Turmas() {
   }
 
   return (
-    <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-turmas">
-      <h1 id="titulo-turmas" className="sr-only">
-        Turmas
-      </h1>
+    <Tela titulo="Turmas" idDoTitulo="titulo-turmas">
+      <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-turmas">
+        {vinculos.isPending && <EstadoCarregando rotulo="Carregando as suas turmas…" />}
+        {vinculos.isError && <EstadoErro erro={vinculos.error} tentando={vinculos.isFetching} aoTentarDeNovo={() => void vinculos.refetch({ cancelRefetch: false })} />}
+        {!vinculos.isPending && !vinculos.isError && itens.length === 0 && (
+          <EstadoVazio
+            titulo="A coordenação ainda não alocou você"
+            descricao="Quem aloca o professor nas turmas é a coordenação. Quando ela alocar você, a turma aparece aqui para você confirmar; se você já deveria ter turmas neste ano, fale com ela."
+          />
+        )}
 
-      {vinculos.isPending && <EstadoCarregando rotulo="Carregando as suas turmas…" />}
-      {vinculos.isError && <EstadoErro erro={vinculos.error} tentando={vinculos.isFetching} aoTentarDeNovo={() => void vinculos.refetch({ cancelRefetch: false })} />}
-      {!vinculos.isPending && !vinculos.isError && itens.length === 0 && (
-        <EstadoVazio
-          titulo="A coordenação ainda não alocou você"
-          descricao="Quem aloca o professor nas turmas é a coordenação. Quando ela alocar você, a turma aparece aqui para você confirmar; se você já deveria ter turmas neste ano, fale com ela."
-        />
-      )}
+        {paraConfirmar.length > 0 && (
+          <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-para-confirmar">
+            <h2 id="titulo-para-confirmar" className="text-lg font-semibold text-tinta">
+              Confirme suas turmas
+            </h2>
+            <p className="text-apoio">A coordenação alocou você nestas turmas. Até você confirmar, a turma não abre para você; se algo estiver errado, conteste.</p>
+            <ul className="flex flex-col gap-3">{paraConfirmar.map(cartao)}</ul>
+          </section>
+        )}
 
-      {paraConfirmar.length > 0 && (
-        <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-para-confirmar">
-          <h2 id="titulo-para-confirmar" className="text-lg font-semibold text-tinta">
-            Confirme suas turmas
-          </h2>
-          <p className="text-apoio">A coordenação alocou você nestas turmas. Até você confirmar, a turma não abre para você; se algo estiver errado, conteste.</p>
-          <ul className="flex flex-col gap-3">{paraConfirmar.map(cartao)}</ul>
-        </section>
-      )}
+        {decididas.length > 0 && (
+          <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-decididas">
+            <h2 id="titulo-decididas" className="text-lg font-semibold text-tinta">
+              Suas turmas
+            </h2>
+            <ul className="flex flex-col gap-3">{decididas.map(cartao)}</ul>
+          </section>
+        )}
 
-      {decididas.length > 0 && (
-        <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-decididas">
-          <h2 id="titulo-decididas" className="text-lg font-semibold text-tinta">
-            Suas turmas
-          </h2>
-          <ul className="flex flex-col gap-3">{decididas.map(cartao)}</ul>
-        </section>
-      )}
-
-      {vinculos.hasNextPage && (
-        <Botao onClick={() => void vinculos.fetchNextPage()} disabled={vinculos.isFetchingNextPage} className="self-start">
-          {vinculos.isFetchingNextPage ? 'Carregando…' : 'Ver mais turmas'}
-        </Botao>
-      )}
-    </section>
+        {vinculos.hasNextPage && (
+          <Botao onClick={() => void vinculos.fetchNextPage()} disabled={vinculos.isFetchingNextPage} className="self-start">
+            {vinculos.isFetchingNextPage ? 'Carregando…' : 'Ver mais turmas'}
+          </Botao>
+        )}
+      </section>
+    </Tela>
   )
 }
 

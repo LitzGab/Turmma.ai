@@ -338,7 +338,7 @@ function ConversaComOTutor({ atividadeAplicadaId }: { atividadeAplicadaId: strin
 export default function Tutor({ atividadeAplicadaId }: { atividadeAplicadaId?: string }) {
   useTituloDaTela('Tutor')
   return (
-    <Tela titulo="Tutor" largura="conversa">
+    <Tela titulo="Tutor" largura="conversa" tituloSoParaLeitor>
       <FaixaDeSupervisao />
       {atividadeAplicadaId === undefined ? <EscolhaDaAtividade /> : <ConversaComOTutor atividadeAplicadaId={atividadeAplicadaId} />}
     </Tela>

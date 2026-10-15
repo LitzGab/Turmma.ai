@@ -67,10 +67,10 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 10.1 `CaixaPedido`, `Mensagem`, `Escolha`, `ChipFonte`, `Fontes`, `MotorFormulario`, `AvisoFila`, `LinhaAprovacao`, `PaginaMini` e `TextoDaIA` revestidos
   - [x] 10.2 Testes: as duas opções da `Escolha` iguais; "preparando a resposta" sem laço; a pausa do Tutor e o assunto delicado calmos, sem vermelho; a faixa de supervisão presa
 
-- [ ] **11.0 — Toda tela aberta pela lateral mostra o título**
-  - [ ] 11.1 `Tela`: título visível, cabeçalho de 64 px e as larguras novas
-  - [ ] 11.2 `Estrutura`, `ListaDaTurma`, `Professores`, `Turmas`, `Turma` e `MinhaTurma` passam a usar a `Tela`, sem mudar o miolo
-  - [ ] 11.3 Testes: o `h1` de cada tela com o mesmo texto e a caixa medida (visível, e não só para leitor de tela), nos quatro estados; o título da aba do navegador
+- [x] **11.0 — Toda tela aberta pela lateral mostra o título**
+  - [x] 11.1 `Tela`: título visível, cabeçalho de 64 px e as larguras novas
+  - [x] 11.2 `Estrutura`, `ListaDaTurma`, `Professores`, `Turmas`, `Turma` e `MinhaTurma` passam a usar a `Tela`, sem mudar o miolo
+  - [x] 11.3 Testes: o `h1` de cada tela com o mesmo texto e a caixa medida (visível, e não só para leitor de tela), nos quatro estados; o título da aba do navegador
 
 - [ ] **12.0 — A casca da escola no computador: lateral, trilho e menu da pessoa**
   - [ ] 12.1 `CascaDaEscola`, `itens-da-lateral`, `MenuDaPessoa` e `SeletorDeEscola` nas medidas da D80; a moldura de 1200 no `<main>`

@@ -63,7 +63,7 @@ export default function Tutor() {
   const grupos = sinais.data?.grupos ?? []
 
   return (
-    <Tela titulo="Seu time: Tutor" largura="conversa">
+    <Tela titulo="Seu time: Tutor" largura="conversa" tituloSoParaLeitor>
       <header className="flex min-w-0 flex-col gap-2">
         <AssinaturaIA agente="tutor" tamanho={32} />
         <details className="group min-w-0 rounded-cartao border border-linha bg-superficie">

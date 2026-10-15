@@ -175,7 +175,7 @@ export default function Time() {
   )
 
   return (
-    <Tela titulo="Seu time: Assistente de ensino" largura="conversa">
+    <Tela titulo="Seu time: Assistente de ensino" largura="conversa" tituloSoParaLeitor>
       <header className="flex min-w-0 flex-col gap-2">
         <AssinaturaIA agente="assistente_de_ensino" tamanho={32} />
         <details className="group min-w-0 rounded-cartao border border-linha bg-superficie">

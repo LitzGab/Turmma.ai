@@ -124,7 +124,7 @@ export default function Conversa() {
   const semNada = conversa.data !== undefined && mensagens.length === 0 && pendente === undefined && cartao === undefined
 
   return (
-    <Tela titulo="Conversa com o Assistente de ensino" largura="conversa">
+    <Tela titulo="Conversa com o Assistente de ensino" largura="conversa" tituloSoParaLeitor>
       {conversa.isPending && <EstadoCarregando rotulo="Carregando a conversa…" />}
       {conversa.isError && conversa.data === undefined && <EstadoErro erro={conversa.error} tentando={conversa.isFetching} aoTentarDeNovo={() => void conversa.refetch({ cancelRefetch: false })} />}
       {semNada && <EstadoVazio titulo="Nenhuma conversa ainda" descricao="Escreva um pedido na caixa abaixo: uma atividade, um plano de aula, uma dúvida sobre o material da turma. O Assistente responde com a página de onde tirou." />}

@@ -9,6 +9,7 @@ import { ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { Abas } from '../../componentes/Abas'
 import { EstadoCarregando, EstadoErro } from '../../componentes/estado'
 import { ListaDePedidos } from '../../componentes/pedidos/ListaDePedidos'
+import { Tela } from '../../componentes/Tela'
 import { TurmaIndisponivel } from '../../componentes/TurmaIndisponivel'
 import { useTituloDaTela } from '../../titulo'
 import { TEXTO_DA_TURMA_INDISPONIVEL, turmaIndisponivel } from './acesso-da-turma'
@@ -49,7 +50,10 @@ export function Turma({ turmaId }: { turmaId: string }) {
   const perderATurma = useCallback(() => definirPerdida(true), [])
   // A turma que a API deixou de achar sai também do título da aba.
   const indisponivel = perdida || turmaIndisponivel(turma.error)
-  useTituloDaTela(turma.data === undefined || indisponivel ? 'Turma' : `Turma ${turma.data.nome}`)
+  // O mesmo nome na aba e no `h1`; sem a turma lida, ou com ela fora do ano, é só "Turma".
+  const nomeDaTurma = turma.data === undefined || indisponivel ? 'Turma' : `Turma ${turma.data.nome}`
+  const serieDaTurma = turma.data === undefined || indisponivel ? undefined : nomeDaSerie(turma.data.serie)
+  useTituloDaTela(nomeDaTurma)
 
   const voltar = (
     // Relativo à área: o `Route` aninhado em `/professor` resolve o `to` a partir da base dela.
@@ -65,8 +69,7 @@ export function Turma({ turmaId }: { turmaId: string }) {
     // A que falhou, a turma primeiro: sem ela não há o que mostrar, e é dela o "não está disponível".
     const falha = turma.isError ? turma : eu.isError ? eu : undefined
     return (
-      <section className="flex min-w-0 flex-col gap-4">
-        {voltar}
+      <Tela titulo={nomeDaTurma} descricao={serieDaTurma} antes={voltar}>
         {indisponivel ? (
           // Com a turma já na tela, tudo o que tinha o foco saiu com ela (o diálogo aberto, os botões das seções): o foco
           // vem para o aviso. Na página que abre já sem a turma, fica onde o navegador o pôs.
@@ -76,44 +79,39 @@ export function Turma({ turmaId }: { turmaId: string }) {
         ) : (
           <EstadoErro erro={falha.error} tentando={falha.isFetching} aoTentarDeNovo={() => void falha.refetch({ cancelRefetch: false })} />
         )}
-      </section>
+      </Tela>
     )
   }
 
   return (
-    <section className="flex min-w-0 flex-col gap-6" aria-labelledby={idDoTitulo}>
-      {voltar}
-      <div>
-        <h1 id={idDoTitulo} className="text-xl font-semibold break-words sm:text-2xl">
-          Turma {turma.data.nome}
-        </h1>
-        <p className="text-apoio">{nomeDaSerie(turma.data.serie)}</p>
-      </div>
-      {/*
-        As duas abas que existem (A3; D69): a Visão Geral, com o acerto por habilidade, e Alunos, com o que a A1 já
-        mostrava (o acesso da sala e os pedidos de nome). As outras do desenho nascem com a fase delas.
-      */}
-      <Abas rotulo="Seções da turma" abas={ABAS_DA_TURMA} ativa={aba} aoMudar={(id) => definirAba(id === 'alunos' ? 'alunos' : 'visao-geral')}>
-        {aba === 'visao-geral' ? (
-          <Suspense fallback={<EstadoCarregando rotulo="Carregando a visão geral…" />}>
-            <VisaoGeralDaTurma turmaId={turmaId} />
-          </Suspense>
-        ) : (
-          <div className="flex min-w-0 flex-col gap-6">
-            <AcessoDaTurma turmaId={turmaId} escola={eu.data.escola} titulo={tituloDoAcesso} />
-            <ListaDePedidos
-              turma={{ id: turmaId, nome: turma.data.nome }}
-              quem="professor"
-              vazio={{
-                titulo: 'Nenhum pedido esperando',
-                descricao: 'Os pedidos aparecem aqui quando os alunos entram pelo link da sala ou pelo código da turma e pedem o nome. Confira se o acesso dos alunos está ativo.',
-                acao: { rotulo: 'Ver o acesso dos alunos', aoAcionar: () => tituloDoAcesso.current?.focus() },
-              }}
-              aoPerderATurma={perderATurma}
-            />
-          </div>
-        )}
-      </Abas>
-    </section>
+    <Tela titulo={nomeDaTurma} descricao={serieDaTurma} antes={voltar} idDoTitulo={idDoTitulo}>
+      <section className="flex min-w-0 flex-col gap-6" aria-labelledby={idDoTitulo}>
+        {/*
+          As duas abas que existem (A3; D69): a Visão Geral, com o acerto por habilidade, e Alunos, com o que a A1 já
+          mostrava (o acesso da sala e os pedidos de nome). As outras do desenho nascem com a fase delas.
+        */}
+        <Abas rotulo="Seções da turma" abas={ABAS_DA_TURMA} ativa={aba} aoMudar={(id) => definirAba(id === 'alunos' ? 'alunos' : 'visao-geral')}>
+          {aba === 'visao-geral' ? (
+            <Suspense fallback={<EstadoCarregando rotulo="Carregando a visão geral…" />}>
+              <VisaoGeralDaTurma turmaId={turmaId} />
+            </Suspense>
+          ) : (
+            <div className="flex min-w-0 flex-col gap-6">
+              <AcessoDaTurma turmaId={turmaId} escola={eu.data.escola} titulo={tituloDoAcesso} />
+              <ListaDePedidos
+                turma={{ id: turmaId, nome: turma.data.nome }}
+                quem="professor"
+                vazio={{
+                  titulo: 'Nenhum pedido esperando',
+                  descricao: 'Os pedidos aparecem aqui quando os alunos entram pelo link da sala ou pelo código da turma e pedem o nome. Confira se o acesso dos alunos está ativo.',
+                  acao: { rotulo: 'Ver o acesso dos alunos', aoAcionar: () => tituloDoAcesso.current?.focus() },
+                }}
+                aoPerderATurma={perderATurma}
+              />
+            </div>
+          )}
+        </Abas>
+      </section>
+    </Tela>
   )
 }

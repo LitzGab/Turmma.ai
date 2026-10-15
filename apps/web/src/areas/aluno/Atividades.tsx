@@ -44,7 +44,7 @@ function LinhaDaAtividade({ atividade }: { atividade: MinhaAtividade }) {
  * de `GET /v1/minhas-atividades` não traz nada disso. E nada aqui empurra (D59): sem contagem regressiva, sem "atrasada",
  * sem selo de conquista; o vazio diz que não há o que fazer agora, e pronto.
  *
- * É aba de navegação: o `<h1>` existe só para o leitor de tela (`Tela`).
+ * É aba de navegação: o `<h1>`, visível, é o título da tela, na `Tela` (RF12 da X1).
  */
 export default function Atividades() {
   useTituloDaTela('Atividades')

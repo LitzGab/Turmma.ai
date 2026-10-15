@@ -16,9 +16,10 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, IMPACTOS_QUE_REPROVAM, largura
 test.describe('peças do MVP de apresentação, na galeria', () => {
   test('a Tela não põe margem dentro da casca; fora dela, com `comMargem`, põe a da página', async ({ page }) => {
     await abrirGaleria(page)
-    // A galeria está fora da casca e pede a margem: 16 px no celular, 24 px a partir de 768 px, dos dois lados.
+    // A galeria está fora da casca e pede a margem: 16 px no celular, 32 px a partir de 768 px, dos dois lados (a 9.3 do
+    // `docs/interface.md`; era 24 px antes da X1).
     const tela = page.locator('[data-tela]').first()
-    const esperada = (page.viewportSize()?.width ?? 0) >= 768 ? '24px' : '16px'
+    const esperada = (page.viewportSize()?.width ?? 0) >= 768 ? '32px' : '16px'
     expect(await tela.evaluate((elemento) => [getComputedStyle(elemento).paddingLeft, getComputedStyle(elemento).paddingRight])).toEqual([esperada, esperada])
   })
 

@@ -15,6 +15,7 @@ import { AlertaDaFalha, AlertaSemFoco, Anuncio, ConfirmacaoDePerigo, DialogoDeFo
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { ListaDePedidos } from '../../componentes/pedidos/ListaDePedidos'
 import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
+import { Tela } from '../../componentes/Tela'
 import { TurmaIndisponivel } from '../../componentes/TurmaIndisponivel'
 import { formatarNumero, formatarQuantidade } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
@@ -102,7 +103,9 @@ export function ListaDaTurma({ turmaId }: { turmaId: string }) {
   // A leitura dos pedidos deixou de achar a turma: a página diz isso, como quando é a leitura da turma que não a acha.
   const [perdida, definirPerdida] = useState(false)
   const perderATurma = useCallback(() => definirPerdida(true), [])
-  useTituloDaTela(turma.data === undefined || perdida ? 'Turma' : `Turma ${turma.data.nome}`)
+  // O mesmo nome na aba e no `h1`; sem a turma lida, ou com ela fora do ano, é só "Turma".
+  const nomeDaTurma = turma.data === undefined || perdida ? 'Turma' : `Turma ${turma.data.nome}`
+  useTituloDaTela(nomeDaTurma)
 
   const voltar = (
     // Relativo à área: o `Route` aninhado em `/coordenacao` resolve o `to` a partir da base dela.
@@ -114,35 +117,28 @@ export function ListaDaTurma({ turmaId }: { turmaId: string }) {
 
   if (turma.isPending)
     return (
-      <section className="flex min-w-0 flex-col gap-4">
-        {voltar}
+      <Tela titulo={nomeDaTurma} antes={voltar}>
         <EstadoCarregando rotulo="Carregando a turma…" />
-      </section>
+      </Tela>
     )
   if (turma.isError || perdida)
     return (
-      <section className="flex min-w-0 flex-col gap-4">
-        {voltar}
+      <Tela titulo={nomeDaTurma} antes={voltar}>
         {perdida || (turma.error instanceof ErroDaApi && turma.error.codigo === CodigoDeErro.NAO_ENCONTRADO) ? (
           // Quando a turma sai com a tela aberta, o "Atualizar" que tinha o foco saiu com ela: o foco vem para o aviso.
           <TurmaIndisponivel texto={TEXTO_DA_TURMA_FORA_DO_ANO} comFoco={perdida} />
         ) : (
           <EstadoErro erro={turma.error} tentando={turma.isFetching} aoTentarDeNovo={() => void turma.refetch({ cancelRefetch: false })} />
         )}
-      </section>
+      </Tela>
     )
 
   return (
-    <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-da-turma">
-      {voltar}
-      <div>
-        <h1 id="titulo-da-turma" className="text-xl font-semibold break-words sm:text-2xl">
-          Turma {turma.data.nome}
-        </h1>
-        <p className="text-apoio">{nomeDaSerie(turma.data.serie)}</p>
-      </div>
-      <ConteudoDaLista turmaId={turmaId} turmaNome={turma.data.nome} aoPerderATurma={perderATurma} />
-    </section>
+    <Tela titulo={nomeDaTurma} descricao={nomeDaSerie(turma.data.serie)} antes={voltar} idDoTitulo="titulo-da-turma">
+      <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-da-turma">
+        <ConteudoDaLista turmaId={turmaId} turmaNome={turma.data.nome} aoPerderATurma={perderATurma} />
+      </section>
+    </Tela>
   )
 }
 

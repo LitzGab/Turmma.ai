@@ -10,6 +10,7 @@ import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
 import { DialogoDeConviteNovo, DialogoDeConviteRefeito } from '../../componentes/DialogoDoConvite'
 import { Anuncio, ConfirmacaoDePerigo } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
+import { Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
 import {
   acoesDoConviteDeProfessor,
@@ -96,128 +97,126 @@ export function Professores() {
   const erroDaLeitura = <EstadoErro erro={professores.error} tentando={professores.isFetching} aoTentarDeNovo={() => void professores.refetch({ cancelRefetch: false })} />
 
   return (
-    <section className="flex min-w-0 flex-col gap-6" aria-labelledby={idDoTitulo}>
-      <h1 ref={tituloDaTela} id={idDoTitulo} tabIndex={-1} className="sr-only">
-        Professores
-      </h1>
-
-      {professores.isPending ? (
-        <EstadoCarregando rotulo="Carregando os professores…" />
-      ) : dados === undefined ? (
-        erroDaLeitura
-      ) : dados.itens.length === 0 ? (
-        // A releitura que cai com a lista ainda vazia (logo depois do primeiro cadastro) não afirma o vazio: a lista de
-        // antes já não vale, e "Nenhum professor ainda" negaria o cadastro que acabou de acontecer.
-        professores.isError ? (
+    <Tela titulo="Professores" idDoTitulo={idDoTitulo} refDoTitulo={tituloDaTela}>
+      <section className="flex min-w-0 flex-col gap-6" aria-labelledby={idDoTitulo}>
+        {professores.isPending ? (
+          <EstadoCarregando rotulo="Carregando os professores…" />
+        ) : dados === undefined ? (
           erroDaLeitura
+        ) : dados.itens.length === 0 ? (
+          // A releitura que cai com a lista ainda vazia (logo depois do primeiro cadastro) não afirma o vazio: a lista de
+          // antes já não vale, e "Nenhum professor ainda" negaria o cadastro que acabou de acontecer.
+          professores.isError ? (
+            erroDaLeitura
+          ) : (
+            <EstadoVazio
+              titulo="Nenhum professor ainda"
+              descricao="Cadastre cada professor com o nome e o e-mail dele. O link do convite aparece uma vez, para você copiar e mandar; a pessoa abre o link e cria a senha."
+              acao={{ rotulo: 'Cadastrar professor', aoAcionar: () => abrir('cadastrar') }}
+            />
+          )
         ) : (
-          <EstadoVazio
-            titulo="Nenhum professor ainda"
-            descricao="Cadastre cada professor com o nome e o e-mail dele. O link do convite aparece uma vez, para você copiar e mandar; a pessoa abre o link e cria a senha."
-            acao={{ rotulo: 'Cadastrar professor', aoAcionar: () => abrir('cadastrar') }}
-          />
-        )
-      ) : (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 ref={tituloDaLista} tabIndex={-1} className="text-lg font-semibold text-tinta">
-              Professores da escola
-            </h2>
-            <Botao onClick={() => abrir('cadastrar')}>Cadastrar professor</Botao>
-          </div>
-          <Anuncio texto={anuncio} />
-          {professores.isError && erroDaLeitura}
-          <ul className="flex flex-col gap-3" aria-label="Professores da escola">
-            {ordenarPeloNome(dados.itens).map((professor) => (
-              <Linha key={professor.usuarioId} titulo={professor.nome} detalhe={TEXTO_DO_ESTADO_DO_PROFESSOR[professor.estado]}>
-                {acoesDoConviteDeProfessor(professor.estado).map((acao) =>
-                  acao === 'refazer' ? (
-                    <button key={acao} type="button" onClick={() => abrir('refazer', professor)} className={CLASSES_DO_BOTAO_SECUNDARIO}>
-                      Refazer<span className="sr-only"> o convite de {professor.nome}</span>
-                    </button>
-                  ) : (
-                    <button key={acao} type="button" onClick={() => abrir('revogar', professor)} className={CLASSES_DO_BOTAO_PERIGO}>
-                      Revogar<span className="sr-only"> o convite de {professor.nome}</span>
-                    </button>
-                  ),
-                )}
-              </Linha>
-            ))}
-          </ul>
-          <AvisoDeListaIncompleta completa={dados.completa} />
-        </>
-      )}
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 ref={tituloDaLista} tabIndex={-1} className="text-lg font-semibold text-tinta">
+                Professores da escola
+              </h2>
+              <Botao onClick={() => abrir('cadastrar')}>Cadastrar professor</Botao>
+            </div>
+            <Anuncio texto={anuncio} />
+            {professores.isError && erroDaLeitura}
+            <ul className="flex flex-col gap-3" aria-label="Professores da escola">
+              {ordenarPeloNome(dados.itens).map((professor) => (
+                <Linha key={professor.usuarioId} titulo={professor.nome} detalhe={TEXTO_DO_ESTADO_DO_PROFESSOR[professor.estado]}>
+                  {acoesDoConviteDeProfessor(professor.estado).map((acao) =>
+                    acao === 'refazer' ? (
+                      <button key={acao} type="button" onClick={() => abrir('refazer', professor)} className={CLASSES_DO_BOTAO_SECUNDARIO}>
+                        Refazer<span className="sr-only"> o convite de {professor.nome}</span>
+                      </button>
+                    ) : (
+                      <button key={acao} type="button" onClick={() => abrir('revogar', professor)} className={CLASSES_DO_BOTAO_PERIGO}>
+                        Revogar<span className="sr-only"> o convite de {professor.nome}</span>
+                      </button>
+                    ),
+                  )}
+                </Linha>
+              ))}
+            </ul>
+            <AvisoDeListaIncompleta completa={dados.completa} />
+          </>
+        )}
 
-      {/* O cadastro e o refazer não fecham sozinhos: a resposta deles só preenche o diálogo que a pediu. */}
-      {aberta?.tipo === 'cadastrar' && (
-        <DialogoDeConviteNovo
-          key={aberta.numero}
-          Moldura={Dialogo}
-          titulo="Cadastrar professor"
-          apresentacao="O nome e o e-mail com que a pessoa vai entrar. Você copia o link do convite e manda a ela, que cria a senha ao abrir."
-          rotulos={{ nome: 'Nome do professor', email: 'E-mail do professor' }}
-          validar={pedidoDeProfessor}
-          tituloDaRevisao="Confira antes de cadastrar"
-          resumo={(pedido) => [
-            { rotulo: 'Nome do professor', valor: pedido.nome },
-            { rotulo: 'E-mail', valor: pedido.email },
-          ]}
-          avisos={[TEXTO_DA_VALIDADE_DO_CONVITE, TEXTO_DO_LINK_UMA_VEZ]}
-          avisosDoPedido={(pedido) => (temHomonimo(dados?.itens ?? [], pedido.nome) ? [TEXTO_DO_NOME_REPETIDO] : [])}
-          acao={{ confirmar: 'Cadastrar e gerar o link', confirmando: 'Cadastrando…', anuncio: 'Cadastrando o professor…' }}
-          // A lista muda, dê certo ou não. As opções são as de `api/professores.ts`, sem nada por cima: é lá que o
-          // `gcTime: 0` tira o token do cache.
-          mutacao={mutacaoDoCadastroDeProfessor(recarregar)}
-          falha={falhaDoCadastroDeProfessor}
-          mandePara={(pedido) => mandeOLinkA(pedido.nome, pedido.email)}
-          link={TEXTOS_DO_LINK}
-          aoFechar={fechar}
-          focoDeReserva={focarNaLista}
-        />
-      )}
-      {aberta?.tipo === 'refazer' && alvo !== undefined && (
-        <DialogoDeConviteRefeito
-          key={aberta.numero}
-          Moldura={Dialogo}
-          titulo="Refazer o convite"
-          confirmacao={
-            <>
-              Um link novo para <span className="font-medium text-tinta wrap-anywhere">{alvo.nome}</span>. O link mandado antes para de valer na hora.
-            </>
-          }
-          avisos={[TEXTO_DA_VALIDADE_DO_CONVITE, TEXTO_DO_LINK_UMA_VEZ]}
-          acao={{ confirmar: 'Refazer convite', confirmando: 'Refazendo…', anuncio: 'Refazendo o convite…' }}
-          mutacao={mutacaoDoRefazerConviteDoProfessor(alvo.usuarioId, recarregar)}
-          falha={falhaDoRefazerConviteDeProfessor}
-          mandePara={mandeOLinkA(alvo.nome)}
-          link={TEXTOS_DO_LINK}
-          aoFechar={fechar}
-          focoDeReserva={focarNaLista}
-        />
-      )}
-      {aberta?.tipo === 'revogar' && alvo !== undefined && (
-        <ConfirmacaoDePerigo
-          key={aberta.numero}
-          titulo="Revogar o convite"
-          texto={
-            <>
-              O convite de <span className="font-medium text-tinta wrap-anywhere">{alvo.nome}</span> deixa de valer na hora: o link mandado não entra mais. As
-              turmas já alocadas a essa pessoa continuam esperando. Para convidar de novo, cadastre o mesmo e-mail.
-            </>
-          }
-          rotuloDaAcao="Revogar convite"
-          rotuloEmAndamento="Revogando…"
-          acao={() => revogarConviteDoProfessor(alvo.usuarioId)}
-          aoFechar={fechar}
-          aoConcluir={() => {
-            definirAnuncio(`Convite de ${alvo.nome} revogado.`)
-            dialogo.fecharSeAinda(aberta)
-          }}
-          aoTerminar={recarregar}
-          textosDaFalha={TEXTOS_DO_CONVITE_QUE_MUDOU}
-          focoDeReserva={focarNaLista}
-        />
-      )}
-    </section>
+        {/* O cadastro e o refazer não fecham sozinhos: a resposta deles só preenche o diálogo que a pediu. */}
+        {aberta?.tipo === 'cadastrar' && (
+          <DialogoDeConviteNovo
+            key={aberta.numero}
+            Moldura={Dialogo}
+            titulo="Cadastrar professor"
+            apresentacao="O nome e o e-mail com que a pessoa vai entrar. Você copia o link do convite e manda a ela, que cria a senha ao abrir."
+            rotulos={{ nome: 'Nome do professor', email: 'E-mail do professor' }}
+            validar={pedidoDeProfessor}
+            tituloDaRevisao="Confira antes de cadastrar"
+            resumo={(pedido) => [
+              { rotulo: 'Nome do professor', valor: pedido.nome },
+              { rotulo: 'E-mail', valor: pedido.email },
+            ]}
+            avisos={[TEXTO_DA_VALIDADE_DO_CONVITE, TEXTO_DO_LINK_UMA_VEZ]}
+            avisosDoPedido={(pedido) => (temHomonimo(dados?.itens ?? [], pedido.nome) ? [TEXTO_DO_NOME_REPETIDO] : [])}
+            acao={{ confirmar: 'Cadastrar e gerar o link', confirmando: 'Cadastrando…', anuncio: 'Cadastrando o professor…' }}
+            // A lista muda, dê certo ou não. As opções são as de `api/professores.ts`, sem nada por cima: é lá que o
+            // `gcTime: 0` tira o token do cache.
+            mutacao={mutacaoDoCadastroDeProfessor(recarregar)}
+            falha={falhaDoCadastroDeProfessor}
+            mandePara={(pedido) => mandeOLinkA(pedido.nome, pedido.email)}
+            link={TEXTOS_DO_LINK}
+            aoFechar={fechar}
+            focoDeReserva={focarNaLista}
+          />
+        )}
+        {aberta?.tipo === 'refazer' && alvo !== undefined && (
+          <DialogoDeConviteRefeito
+            key={aberta.numero}
+            Moldura={Dialogo}
+            titulo="Refazer o convite"
+            confirmacao={
+              <>
+                Um link novo para <span className="font-medium text-tinta wrap-anywhere">{alvo.nome}</span>. O link mandado antes para de valer na hora.
+              </>
+            }
+            avisos={[TEXTO_DA_VALIDADE_DO_CONVITE, TEXTO_DO_LINK_UMA_VEZ]}
+            acao={{ confirmar: 'Refazer convite', confirmando: 'Refazendo…', anuncio: 'Refazendo o convite…' }}
+            mutacao={mutacaoDoRefazerConviteDoProfessor(alvo.usuarioId, recarregar)}
+            falha={falhaDoRefazerConviteDeProfessor}
+            mandePara={mandeOLinkA(alvo.nome)}
+            link={TEXTOS_DO_LINK}
+            aoFechar={fechar}
+            focoDeReserva={focarNaLista}
+          />
+        )}
+        {aberta?.tipo === 'revogar' && alvo !== undefined && (
+          <ConfirmacaoDePerigo
+            key={aberta.numero}
+            titulo="Revogar o convite"
+            texto={
+              <>
+                O convite de <span className="font-medium text-tinta wrap-anywhere">{alvo.nome}</span> deixa de valer na hora: o link mandado não entra mais. As
+                turmas já alocadas a essa pessoa continuam esperando. Para convidar de novo, cadastre o mesmo e-mail.
+              </>
+            }
+            rotuloDaAcao="Revogar convite"
+            rotuloEmAndamento="Revogando…"
+            acao={() => revogarConviteDoProfessor(alvo.usuarioId)}
+            aoFechar={fechar}
+            aoConcluir={() => {
+              definirAnuncio(`Convite de ${alvo.nome} revogado.`)
+              dialogo.fecharSeAinda(aberta)
+            }}
+            aoTerminar={recarregar}
+            textosDaFalha={TEXTOS_DO_CONVITE_QUE_MUDOU}
+            focoDeReserva={focarNaLista}
+          />
+        )}
+      </section>
+    </Tela>
   )
 }

@@ -60,7 +60,7 @@ export default function Home() {
   const esperando = esperandoVoce(pendentes.data?.itens ?? [], nomesDasTurmas(itensDosVinculos))
 
   return (
-    <Tela titulo="Nova conversa" largura="conversa">
+    <Tela titulo="Nova conversa" largura="conversa" tituloSoParaLeitor>
       <div className="flex min-w-0 flex-col gap-6 pt-4 md:pt-10">
         <div className="min-w-0 text-center">
           <p className="text-[28px] leading-tight break-words text-tinta">{saudacao(eu.data?.nome, agora)}</p>
